@@ -77,6 +77,191 @@
 ;;;SOFTWARE.
 
 
+;;;; introduction: labels, lexical variables, location gensyms
+;;
+;;Let's consider the example library:
+;;
+;;   (library (demo)
+;;     (export this)
+;;     (import (vicare))
+;;     (define this 8)
+;;     (define that 9)
+;;     (let ((a 1))
+;;       (let ((a 2))
+;;         (list a this that))))
+;;
+;;and concentrate on the body:
+;;
+;;   (define this 8)
+;;   (define that 9)
+;;   (let ((a 1))
+;;     (let ((a 2))
+;;       (list a this that)))
+;;
+;;This  code defines  4  syntactic  bindings: THIS  and  THAT as  global
+;;lexical variables,  of which THIS is  also exported; outer A  as local
+;;lexical variable; inner A as local lexical variable.
+;;
+;;Renaming bindings
+;;-----------------
+;;
+;;After the expansion process every syntactic binding is renamed so that
+;;its name is unique in the whole library body.  For example:
+;;
+;;  (define lex.this 8)
+;;  (define lex.that 9)
+;;  (let ((lex.a.1 1))
+;;    (let ((lex.a.2 2))
+;;      (list lex.a.2 lex.this lex.that)))
+;;
+;;notice that  LIST is still there  because it is part  of the top-level
+;;environment; the  code undergoes  the following lexical  variable name
+;;substitutions:
+;;
+;;  original name | lexical variable name
+;;  --------------+----------------------
+;;          this  | lex.this
+;;          that  | lex.that
+;;        outer a | lex.a.1
+;;        inner a | lex.a.2
+;;
+;;where the  "lex.*" symbols are  gensyms.  Renaming bindings is  one of
+;;the core purposes of the expansion process.
+;;
+;;The expansion  process is complicated and  can be described only  by a
+;;complicated data structure: the  lexical environment, a composite data
+;;structure  resulting from  the conceptual  union among  component data
+;;structures.
+;;
+;;Lexical contours and ribs
+;;-------------------------
+;;
+;;To distinguish among  different bindings with the same  name, like the
+;;two local  bindings both named A  in the example, we  must distinguish
+;;among  different  "lexical contours"  that  is:  different regions  of
+;;visibility for a set of bindings.  Every LET-like syntax defines a new
+;;lexical  contour;  lexical  contours  can be  nested  by  nesting  LET
+;;syntaxes; the library global namespace is a lexical contour itself.
+;;
+;;A  unique  identifier  is  assigned  to  each  lexical  contour;  such
+;;identifiers are called "marks".  In practice each syntactic binding is
+;;associated to  the mark  representing its  visibility region.   So the
+;;original code is accompanied by the association:
+;;
+;;  original name | lexical contour mark
+;;  --------------+---------------------
+;;          this  | top-mark
+;;          that  | top-mark
+;;        outer a |   1-mark
+;;        inner a |   2-mark
+;;
+;;such  associations  are  registered  in a  component  of  the  lexical
+;;environment:  a  record  of  type <RIB>.   Every  lexical  contour  is
+;;described  by a  rib;  the rib  for the  top-level  contour holds  the
+;;associations:
+;;
+;;  original name | lexical contour mark
+;;  --------------+---------------------
+;;          this  | top-mark
+;;          that  | top-mark
+;;
+;;the rib of the outer LET holds the associations:
+;;
+;;  original name | lexical contour mark
+;;  --------------+---------------------
+;;        outer a |   1-mark
+;;
+;;the rib of the inner LET holds the associations:
+;;
+;;  original name | lexical contour mark
+;;  --------------+---------------------
+;;        inner a |   2-mark
+;;
+;;Label gensyms and ribs
+;;----------------------
+;;
+;;A unique  identifier is assigned  to each syntactic binding:  a gensym
+;;usually named  "label"; such associations  are also stored in  the rib
+;;representing a lexical contour:
+;;
+;;  original name | lexical contour mark | label
+;;  --------------+----------------------+---------
+;;          this  | top-mark             | lab.this
+;;          that  | top-mark             | lab.that
+;;        outer a |   1-mark             | lab.a.1
+;;        inner a |   2-mark             | lab.a.2
+;;
+;;where the symbols "lab.*" are gensyms.
+;;
+;;Lexical variable gensyms and LEXENV
+;;-----------------------------------
+;;
+;;The  fact that  the LEX  symbols are  syntactic bindings  representing
+;;lexical variables  is stored in  a portion of the  lexical environment
+;;usually named  LEXENV.RUN or LEXENV.EXPAND.   So the expanded  code is
+;;accompanied by the association:
+;;
+;;    label  | lexical variables
+;;  ---------+------------------
+;;  lab.this | lex.this
+;;  lab.that | lex.that
+;;  lab.a.1  | lex.a.1
+;;  lab.a.2  | lex.a.2
+;;
+;;Notice  that, after  the expansion:  the original  names of  the local
+;;bindings (those  defined by LET)  do not matter anymore;  the original
+;;names of the non-exported global  bindings do not matter anymore; only
+;;the original name of the exported global bindings is still important.
+;;
+;;Storage location gensyms and EXPORT-ENV
+;;---------------------------------------
+;;
+;;About the value of lexical variables:
+;;
+;;*  The value  of local  bindings (those  created by  LET) goes  on the
+;;  Scheme stack, and it exists only while the code is being evaluated.
+;;
+;;*  The value  of global  bindings (those  created by  DEFINE) must  be
+;;  stored  somewhere, because  it must  exist  for the  whole time  the
+;;  library is loaded in a running Vicare process.
+;;
+;;But where is a global variable's  value stored?  The answer is: unique
+;;symbols  are  created  for  the  sole purpose  of  acting  as  storage
+;;locations  for global  lexical variables.   Under Vicare,  symbols are
+;;data structures having  a "value" slot: such slot  has SYMBOL-VALUE as
+;;accessor and  SET-SYMBOL-VALUE! as mutator  and it is used  as storage
+;;location.
+;;
+;;To represent the association between the global lexical variable label
+;;gensyms (both the  exported ones and the non-exported  ones) and their
+;;storage location gensyms, the expander builds a data structure usually
+;;named EXPORT-ENV.
+;;
+;;Exported bindings and EXPORT-SUBST
+;;----------------------------------
+;;
+;;Not all  the global lexical variables  are exported by a  library.  To
+;;list  those  that  are,  a  data  structure  is  built  usually  named
+;;EXPORT-SUBST;  such data  structure  associates the  external name  of
+;;exported bindings to their label  gensym.  For the example library the
+;;EXPORT-SUBST represents the association:
+;;
+;;    label  | external name
+;;  ---------+--------------
+;;  lab.this | this
+;;
+;;If the EXPORT specification renames a bindings as in:
+;;
+;;   (export (rename this external-this))
+;;
+;;then the EXPORT-SUBST represents the association:
+;;
+;;    label  | external name
+;;  ---------+--------------
+;;  lab.this | external-this
+;;
+
+
 (library (psyntax expander)
   (export
     eval
@@ -1228,8 +1413,8 @@
 	      ;;
 	      ;;LEX*  is  a  list  of  gensyms to  be  used  in  binding
 	      ;;definitions   when  building   core  language   symbolic
-	      ;;expressions for the DEFINE  forms in the library.  There
-	      ;;is a gensym for every item in RHS-FORM*.
+	      ;;expressions for the glocal  DEFINE forms in the library.
+	      ;;There is a gensym for every item in RHS-FORM*.
 	      ;;
 	      ;;RHS-FORM-STX* is  a list of syntax  objects representing
 	      ;;the right-hand side expressions in the DEFINE forms from
@@ -1331,6 +1516,17 @@
     ;;EXPORT-ENV; if  the syntactic binding  is a macro  or compile-time
     ;;value: accumulate the MACRO* alist.
     ;;
+    ;;Notice that EXPORT-ENV contains an  entry for every global lexical
+    ;;variable, both the exported ones and the non-exported ones.  It is
+    ;;responsibility  of   the  EXPORT-SUBST   to  select   the  entries
+    ;;representing the exported bindings.
+    ;;
+    ;;LEX* must  be a  list of gensyms  representing the  global lexical
+    ;;variables bindings.
+    ;;
+    ;;LOC* must be a list  of gensyms representing the storage locations
+    ;;for the global lexical variables bindings.
+    ;;
     (define (%make-export-env/macro* lex* loc* lexenv.run)
       (let loop ((lexenv.run		lexenv.run)
 		 (export-env		'())
@@ -1342,15 +1538,21 @@
 		 (binding  (lexenv-entry-binding entry)))
 	    (case (syntactic-binding-type binding)
 	      ((lexical)
-	       ;;This binding is a lexical  variable.  Add to the export
-	       ;;lexical environment an entry like:
+	       ;;This binding is  a lexical variable.  When  we import a
+	       ;;lexical binding from another  library, we must see such
+	       ;;entry as "global".
 	       ;;
-	       ;;   (?label . (?type . ?loc))
+	       ;;The entry from the lexical environment looks like this:
+	       ;;
+	       ;;   (lexical . (?lexvar . ?mutable))
+	       ;;
+	       ;;Add to the EXPORT-ENV an entry like:
+	       ;;
+	       ;;   (?label ?type . ?loc)
 	       ;;
 	       ;;where  ?TYPE  is the  symbol  "mutable"  or the  symbol
-	       ;;"global".  Notice  that entries  of type  "mutable" are
-	       ;;forbidden; here  we add them nevertheless,  delaying to
-	       ;;later the validation of the EXPORT-ENV.
+	       ;;"global"; notice that the entries of type "mutable" are
+	       ;;forbidden to be exported.
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
 		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
@@ -1367,6 +1569,18 @@
 	       ;;such   binding:  the   importer  must   see  it   as  a
 	       ;;"global-macro".
 	       ;;
+	       ;;The entry from the lexical environment looks like this:
+	       ;;
+	       ;;   (local-macro . (?transformer . ?expanded-expr))
+	       ;;
+	       ;;Add to the EXPORT-ENV an entry like:
+	       ;;
+	       ;;   (?label global-macro . ?loc)
+	       ;;
+	       ;;and to the MACRO* an entry like:
+	       ;;
+	       ;;   (?loc . (?transformer . ?expanded-expr))
+	       ;;
 	       (let ((loc (gensym)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-macro loc) export-env)
@@ -1377,6 +1591,18 @@
 	       ;;local  code sees  it as  "local-macro!".  If  we export
 	       ;;such   binding:  the   importer  must   see  it   as  a
 	       ;;"global-macro!".
+	       ;;
+	       ;;The entry from the lexical environment looks like this:
+	       ;;
+	       ;;   (local-macro! . (?transformer . ?expanded-expr))
+	       ;;
+	       ;;Add to the EXPORT-ENV an entry like:
+	       ;;
+	       ;;   (?label global-macro . ?loc)
+	       ;;
+	       ;;and to the MACRO* an entry like:
+	       ;;
+	       ;;   (?loc . (?transformer . ?expanded-expr))
 	       ;;
 	       (let ((loc (gensym)))
 		 (loop (cdr lexenv.run)
@@ -1389,9 +1615,17 @@
 	       ;;export  such binding:  the importer  must see  it as  a
 	       ;;"global-ctv".
 	       ;;
-	       ;;The binding has the format:
+	       ;;The entry from the lexical environment looks like this:
 	       ;;
 	       ;;   (local-ctv . (?object . ?expanded-expr))
+	       ;;
+	       ;;Add to the EXPORT-ENV an entry like:
+	       ;;
+	       ;;   (?label global-ctv . ?loc)
+	       ;;
+	       ;;and to the MACRO* an entry like:
+	       ;;
+	       ;;   (?loc . (?object . ?expanded-expr))
 	       ;;
 	       (let ((loc (gensym)))
 		 (loop (cdr lexenv.run)
@@ -1399,7 +1633,8 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      (($rtd $module $fluid)
-	       ;;Just the entry "as is" to the export lexenv.
+	       ;;Just add the entry "as is" from the lexical environment
+	       ;;to the EXPORT-ENV.
 	       ;;
 	       (loop (cdr lexenv.run)
 		     (cons entry export-env)
@@ -2221,9 +2456,19 @@
 ;;
 ;;     (lexical . (?lexvar . ?mutable))
 ;;
-;;  where  "lexical"  is  the  symbol "lexical";  ?LEXVAR  is  a  symbol
+;;  where  "lexical"  is  the  symbol "lexical";  ?LEXVAR  is  a  gensym
 ;;  representing the  name of  the binding in  the core  language forms;
-;;  ?MUTABLE is a boolean, true if this binding is mutable.
+;;  ?MUTABLE is  a boolean, true if  somewhere in the code  the value of
+;;  this binding is mutated.
+;;
+;;*  A binding  representing a  lexical variable  imported from  another
+;;  library has the format:
+;;
+;;     (global . (?library . ?gensym))
+;;
+;;  where:  ?LIBRARY represents  the library  in which  the compile-time
+;;  value  bound to  the  variable  is defined,  ?GENSYM  is the  symbol
+;;  containing the value in its "value" field.
 ;;
 ;;* A binding  representing a non-core macro integrated  in the expander
 ;;  has the format:
@@ -2246,15 +2491,6 @@
 ;;  where:  ?LIBRARY represents  the library  in which  the compile-time
 ;;  value is defined,  ?GENSYM is the symbol  containing the transformer
 ;;  function in its "value" field.
-;;
-;;*  A binding  representing a  lexical variable  imported from  another
-;;  library has the format:
-;;
-;;     (global . (?library . ?gensym))
-;;
-;;  where:  ?LIBRARY represents  the library  in which  the compile-time
-;;  value  bound to  the  variable  is defined,  ?GENSYM  is the  symbol
-;;  containing the value in its "value" field.
 ;;
 ;;* A binding representing a  macro with variable transformer defined by
 ;;  code in an imported library has the format:
@@ -2593,18 +2829,28 @@
 (define-record <rib>
   (sym*
 		;List of symbols representing the original binding names
-		;in the source  code.  If the <RIB> is  sealed: the list
-		;is converted to a vector.
+		;in the source code.
+		;
+		;When the  <RIB> is sealed:  the list is converted  to a
+		;vector.
+
    mark**
-		;List of  lists of marks.   If the <RIB> is  sealed: the
-		;list is converted to a vector.
+		;List of  lists of marks; there  is a list of  marks for
+		;every item in SYM*.
+		;
+		;When the  <RIB> is sealed:  the list is converted  to a
+		;vector.
+
    label*
-		;List  of gensyms  representing substitution  labels for
-		;bindings.   If  the  <RIB>   is  sealed:  the  list  is
-		;converted to a vector.
+		;List  of  gensyms  uniquely identifying  the  syntactic
+		;bindings; there is a label for each item in SYM*.
+		;
+		;When the  <RIB> is sealed:  the list is converted  to a
+		;vector.
+
    sealed/freq
 		;False or  vector of  exact integers.  When  false: this
-		;<RIB> is extensible, that  is new bindings can be added
+		;<RIB> is extensible, that is  new bindings can be added
 		;to it.  When a vector: this <RIB> is selaed.
 		;
 		;See  below  the  code  section "sealing  ribs"  for  an
@@ -2892,35 +3138,6 @@
 
 
 ;;;; stuff about labels, lexical variables, location gensyms
-;;
-;;Labels are  gensyms uniquely  identifying a  syntactic binding  in the
-;;whole process.
-;;
-;;After the  expansion every binding has  a gensym as name,  so that its
-;;name is unique in the whole program.  For example:
-;;
-;;  (let ((a 1))
-;;    (define-syntax b (identifier-syntax a))
-;;    (let ((a 2))
-;;      (list a b)))
-;;
-;;is converted to the core language expression:
-;;
-;;  (let ((lex1 1))
-;;    (let ((lex2 2))
-;;      (list lex1 lex2)))
-;;
-;;notice that  LIST is still there  because it is part  of the top-level
-;;environment; the code undergoes the following substitutions:
-;;
-;;    name  | lexical variables
-;;  --------+------------------
-;;  outer a | lex1
-;;  inner a | lex2
-;;
-;;the  LEX symbols  are  gensyms.   But where  is  the variable's  value
-;;stored?  The answer is: in the "value" slot of location gensyms.
-;;
 
 (define top-level-context
   (make-parameter #f))
@@ -2992,13 +3209,12 @@
       (let* ((env   (top-level-context))
 	     (label (%gen-top-level-label id rib))
 	     (locs  (interaction-env-locs env)))
-	(values label
-		(cond ((assq label locs)
-		       => cdr)
-		      (else
-		       (let ((loc (gensym-for-lexical-var id)))
-			 (set-interaction-env-locs! env (cons (cons label loc) locs))
-			 loc)))))))
+	(values label (cond ((assq label locs)
+			     => cdr)
+			    (else
+			     (receive-and-return (loc)
+				 (gensym-for-location id)
+			       (set-interaction-env-locs! env (cons (cons label loc) locs)))))))))
 
   (define (gen-define-label id rib sd?)
     (if sd?

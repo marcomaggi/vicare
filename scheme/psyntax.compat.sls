@@ -31,6 +31,7 @@
     vector-exists
     define-inline			define-syntax-rule
     begin0				receive
+    receive-and-return
     real-pathname			file-modification-time
     vector-append
 
