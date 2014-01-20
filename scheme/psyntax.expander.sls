@@ -1885,7 +1885,7 @@
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
 		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
-		      (type      (if (lexical-mutable? bind-val)
+		      (type      (if (lexical-var-mutated? bind-val)
 				     'mutable
 				   'global)))
 		 (loop (cdr lexenv.run)
@@ -2785,10 +2785,17 @@
 ;;; --------------------------------------------------------------------
 ;;; lexical variable bindings
 
+(define (make-lexical-var-binding lex)
+  ;;Build  and  return a  syntactic  binding  representing an  immutated
+  ;;lexical variable.  LEX  must be a symbol representing the  name of a
+  ;;lexical variable in the expanded language forms.
+  ;;
+  (cons* 'lexical lex #f))
+
 ;;Accessors for the value in a lexical variable binding.
 ;;
-(define lexical-var      car)
-(define lexical-mutable? cdr)
+(define lexical-var		car)
+(define lexical-var-mutated?	cdr)
 
 (define (set-lexical-mutable! bind-val)
   ;;Mutator  for the  ?MUTATED  boolean in  a  lexical variable  binding
@@ -2798,21 +2805,20 @@
   ;;
   (set-cdr! bind-val #t))
 
-(define (add-lexical-binding label lexvar lexenv)
-  ;;Push on the  lexical environment LEXENV a new  entry representing an
-  ;;immutable  lexical variable  binding; return  the resulting  lexical
-  ;;environment.
+(define (add-lexical-binding label lex lexenv)
+  ;;Push on  the LEXENV  a new entry  representing an  immutated lexical
+  ;;variable binding; return the resulting LEXENV.
   ;;
-  ;;LABEL must be a unique symbol identifying a binding.  LEXVAR must be
-  ;;a symbol representing  the name of the binding in  the core language
+  ;;LABEL  must be  a syntactic  binding label.   LEX must  be a  symbol
+  ;;representing the name of a lexical variable in the expanded language
   ;;forms.
   ;;
-  (cons (cons* label 'lexical lexvar #f)
+  (cons (cons label (make-lexical-var-binding lex))
 	lexenv))
 
 (define (add-lexical-bindings label* lex* lexenv)
   ;;Push  on the  given LEXENV  multiple entries  representing immutated
-  ;;lexical variable bindings; return the resulting lexical environment.
+  ;;lexical variable bindings; return the resulting LEXENV.
   ;;
   ;;LABEL* must be  a list of syntactic binding labels.   LEX* must be a
   ;;list of symbols  representing the names of lexical  variables in the
