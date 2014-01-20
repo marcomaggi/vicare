@@ -2772,7 +2772,8 @@
 
 ;;Build and return a new binding.
 ;;
-(define make-binding cons)
+(define-syntax-rule (make-binding ?bind-type ?bind-val)
+  (cons ?bind-type ?bind-val))
 
 ;;Given a binding, return its type: a symbol.
 ;;
