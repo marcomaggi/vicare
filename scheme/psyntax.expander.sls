@@ -1186,30 +1186,42 @@
 
 ;;;; R6RS top level programs expander
 
-(define (compile-r6rs-top-level expr*)
-  ;;Given a  list of  SYNTAX-MATCH expression arguments  representing an
-  ;;R6RS top  level program, expand  it and  return a thunk  which, when
-  ;;evaluated,  compiles  the  program and  returns  an  INTERACTION-ENV
-  ;;struct representing the environment after the program execution.
-  ;;
-  (receive (lib* invoke-code macro* export-subst export-env)
-      (expand-top-level expr*)
-    (lambda ()
-      (for-each invoke-library lib*)
-      (initial-visit! macro*)
-      (eval-core (expanded->core invoke-code))
-      (make-interaction-env (subst->rib export-subst)
-			    (map (lambda (export-env-entry)
-				   (let* ((label      (car export-env-entry))
-					  (binding    (cdr export-env-entry))
-					  (bind-type  (syntactic-binding-type  binding))
-					  (bind-val   (syntactic-binding-value binding)))
-				     ;;Here  we know  that BIND-TYPE  is
-				     ;;one among:  GLOBAL, GLOBAL-MACRO,
-				     ;;GLOBAL-MACRO!, GLOBAL-CTV.
-				     (cons* label bind-type '*interaction* bind-val)))
-			      export-env)
-			    '()))))
+(module (compile-r6rs-top-level)
+
+  (define (compile-r6rs-top-level expr*)
+    ;;Given a list of  SYNTAX-MATCH expression arguments representing an
+    ;;R6RS top level  program, expand it and return a  thunk which, when
+    ;;evaluated,  compiles the  program and  returns an  INTERACTION-ENV
+    ;;struct representing the environment after the program execution.
+    ;;
+    (receive (lib* invoke-code macro* export-subst export-env)
+	(expand-top-level expr*)
+      (lambda ()
+	;;Make  sure  that the  code  of  all  the needed  libraries  is
+	;;compiled   and  evaluated.    The  storage   location  gensyms
+	;;associated to  the exported bindings are  initialised with the
+	;;global values.
+	(for-each invoke-library lib*)
+	;;Store  the  expanded  code  representing  the  macros  in  the
+	;;associated location gensyms.
+	(initial-visit! macro*)
+	;;Convert  the expanded  language  code to  core language  code,
+	;;compile it and evaluate it.
+	(eval-core (expanded->core invoke-code))
+	(make-interaction-env (subst->rib export-subst)
+			      (map %export-env-entry->lexenv-entry export-env)
+			      '()))))
+
+  (define (%export-env-entry->lexenv-entry export-env-entry)
+    (let* ((label           (car export-env-entry))
+	   (export-binding  (cdr export-env-entry))
+	   (type-sym        (export-binding-type export-binding))
+	   (loc             (export-binding-loc  export-binding)))
+      ;;Here we know  that TYPE-SYM is one  among: GLOBAL, GLOBAL-MACRO,
+      ;;GLOBAL-MACRO!, GLOBAL-CTV.
+      (cons* label type-sym '*interaction* loc)))
+
+  #| end of module: COMPILE-R6RS-TOP-LEVEL |# )
 
 (module (expand-top-level)
 
@@ -2994,6 +3006,46 @@
 	;;
 	(else
 	 '(displaced-lexical . #f))))
+
+
+;;;; EXPORT-ENV helpers
+;;
+;;The EXPORT-ENV  is a data structure  used to map the  label gensyms of
+;;exported  syntactic bindings  to  the  corresponding storage  location
+;;gensyms.
+;;
+;;An EXPORT-ENV is an alist whose entries have the format:
+;;
+;;   (?label . ?export-binding)
+;;
+;;and ?EXPORT-BINDING has the format:
+;;
+;;   (?type . ?loc)
+;;
+;;or shortly the entries have the format:
+;;
+;;   (?label ?type . ?loc)
+;;
+;;where: ?LABEL  is the label  gensym; ?TYPE  is a symbol  among GLOBAL,
+;;GLOBAL-MACRO,  GLOBAL-MACRO!   and  GLOBAL-CTV; ?LOC  is  the  storage
+;;location gensym.
+;;
+
+(define-syntax-rule (make-export-env-entry ?label ?type ?loc)
+  ;;Given a  label gensym, a  symbol representing an EXPORT-ENV  type, a
+  ;;loc gensym: build and return an entry of EXPORT-ENV.
+  ;;
+  (cons* ?label ?type ?loc))
+
+(define-syntax-rule (export-binding-type ?export-binding)
+  ;;Given an export binding return the symbol representin its type.
+  ;;
+  (car ?export-binding))
+
+(define-syntax-rule (export-binding-loc ?export-binding)
+  ;;Given an export binding return the loc gensym holding its value.
+  ;;
+  (cdr ?export-binding))
 
 
 ;;;; <RIB> type definition
