@@ -2917,8 +2917,9 @@
 	;;and then in the global environment.
 	;;
 	;;This is  because we  can nest  at will  FLUID-LET-SYNTAX forms
-	;;that redefine the binding.  To reach for the innermost we must
-	;;query the LEXENV first.
+	;;that  redefine  the binding  by  pushing  new entries  on  the
+	;;LEXENV.  To reach  for the innermost we must  query the LEXENV
+	;;first.
 	;;
 	(let ((label (syntactic-binding-value binding)))
 	  (cond ((assq label lexenv)
