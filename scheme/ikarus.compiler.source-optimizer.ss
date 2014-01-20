@@ -105,7 +105,7 @@
 
 ;;;; type definitions
 
-;;Represent  the   bindings  introduce   at  a  lexical   contour:  BIND
+;;Represent  the   bindings  introduced  at  a   lexical  contour:  BIND
 ;;structures,   FIX  structures,   CLAMBDA-CASE  structures.    See  the
 ;;documentation of the syntax WITH-EXTENDED-ENV for more details.
 ;;
