@@ -145,18 +145,6 @@
 (define-syntax no-source
   (lambda (x) #f))
 
-(define* (%generate-unique-symbol seed)
-  ;;Generate and return a fresh unique symbol.  SEED is used to seed the
-  ;;generation: it must be a symbol or an identifier syntax object.
-  ;;
-  (cond ((symbol? seed)
-	 (gensym seed))
-	((<stx>? seed)
-	 (%generate-unique-symbol (identifier->symbol seed)))
-	(else
-	 (assertion-violation __who__
-	   "expected symbol or identifier as argument" seed))))
-
 (define (debug-print . args)
   ;;Print arguments for debugging purposes.
   ;;
@@ -2425,11 +2413,6 @@
 ;;; --------------------------------------------------------------------
 ;;; lexical variable bindings
 
-;;Generate a  unique symbol to  represent the name  of a binding  in the
-;;core language forms.
-;;
-(define gensym-for-lexical-var %generate-unique-symbol)
-
 ;;Accessors for the value in a lexical variable binding.
 ;;
 (define lexical-var      car)
@@ -2942,25 +2925,63 @@
 (define top-level-context
   (make-parameter #f))
 
-(define (gensym-for-location lex)
-  ;;Build  and return  a gensym  to be  used as  location for  a lexical
-  ;;variable.  The "value" slot of such gensym is used to hold the value
-  ;;of the variable.  LEX must be  a gensym representing the name of the
-  ;;variable in the core language expressions.
+(define* (gensym-for-lexical-var seed)
+  ;;Generate a unique symbol to represent the name of a lexical variable
+  ;;in the core language forms.  Such  symbols have the purpose of being
+  ;;unique in the core language  expressions representing a full library
+  ;;or full program.
   ;;
-  (%generate-unique-symbol lex))
+  (if-wants-descriptive-gensyms
+      (cond ((identifier? seed)
+	     (gensym (string-append "lex." (symbol->string (identifier->symbol seed)))))
+	    ((symbol? seed)
+	     (gensym (string-append "lex." (symbol->string seed))))
+	    (else
+	     (assertion-violation __who__
+	       "expected symbol or identifier as argument" seed)))
+    (cond ((identifier? seed)
+	   (gensym (identifier->symbol seed)))
+	  ((symbol? seed)
+	   (gensym seed))
+	  (else
+	   (assertion-violation __who__
+	     "expected symbol or identifier as argument" seed)))))
 
-(define (gensym-for-label _)
+(define (gensym-for-location seed)
+  ;;Build  and return  a gensym  to be  used as  storage location  for a
+  ;;global lexical variable.  The "value" slot of such gensym is used to
+  ;;hold the value of the variable.
+  ;;
+  (if-wants-descriptive-gensyms
+      (cond ((identifier? seed)
+	     (gensym (string-append "loc." (symbol->string (identifier->symbol seed)))))
+	    ((symbol? seed)
+	     (gensym (string-append "loc." (symbol->string seed))))
+	    ((string? seed)
+	     (gensym (string-append "loc." seed)))
+	    (else
+	     (gensym)))
+    (gensym)))
+
+(define (gensym-for-label seed)
   ;;Every  syntactic binding  has a  label  associated to  it as  unique
   ;;identifier  in the  whole running  process; this  function generates
   ;;such labels as gensyms.
   ;;
-  ;;The  labels  have to  have  read/write  EQ?  invariance  to  support
-  ;;separate compilation (when we write the  expanded sexp to a file and
-  ;;then read it back, the labels  must not change and still be globally
-  ;;unique).
+  ;;Labels  must have  read/write  EQ?  invariance  to support  separate
+  ;;compilation (when we write the expanded sexp to a file and then read
+  ;;it back, the labels must not change and still be globally unique).
   ;;
-  (gensym))
+  (if-wants-descriptive-gensyms
+      (cond ((identifier? seed)
+	     (gensym (string-append "lab." (symbol->string (identifier->symbol seed)))))
+	    ((symbol? seed)
+	     (gensym (string-append "lab." (symbol->string seed))))
+	    ((string? seed)
+	     (gensym (string-append "lab." seed)))
+	    (else
+	     (gensym)))
+    (gensym)))
 
 (module (gen-define-label+loc
 	 gen-define-label)
@@ -10346,13 +10367,14 @@
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'build-library-letrec*	'scheme-indent-function 1)
-;;eval: (put 'build-application		'scheme-indent-function 1)
-;;eval: (put 'build-conditional		'scheme-indent-function 1)
-;;eval: (put 'build-lambda		'scheme-indent-function 1)
-;;eval: (put 'build-foreign-call	'scheme-indent-function 1)
-;;eval: (put 'build-sequence		'scheme-indent-function 1)
-;;eval: (put 'build-global-assignment	'scheme-indent-function 1)
-;;eval: (put 'build-lexical-assignment	'scheme-indent-function 1)
-;;eval: (put 'build-letrec*		'scheme-indent-function 1)
+;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
+;;eval: (put 'build-application			'scheme-indent-function 1)
+;;eval: (put 'build-conditional			'scheme-indent-function 1)
+;;eval: (put 'build-lambda			'scheme-indent-function 1)
+;;eval: (put 'build-foreign-call		'scheme-indent-function 1)
+;;eval: (put 'build-sequence			'scheme-indent-function 1)
+;;eval: (put 'build-global-assignment		'scheme-indent-function 1)
+;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
+;;eval: (put 'build-letrec*			'scheme-indent-function 1)
+;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
 ;;End:

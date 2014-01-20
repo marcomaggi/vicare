@@ -27,12 +27,9 @@
     if-wants-define-record	if-wants-define-struct
     if-wants-case-lambda
     if-wants-letrec*		if-wants-global-defines
-    if-wants-library-letrec*
-    base-of-interaction-library
-    vector-append)
-  (import (rnrs)
-    (only (ikarus)
-	  vector-append))
+    if-wants-library-letrec*	if-wants-descriptive-gensyms
+    base-of-interaction-library)
+  (import (rnrs))
 
 
 (define (base-of-interaction-library)
@@ -86,6 +83,11 @@
 (define-option if-wants-letrec*        #t)
 
 (define-option if-wants-library-letrec* #t)
+
+;;If true: generate gensyms with  descriptive names, which is slower but
+;;helps in debugging and understanding the code.
+;;
+(define-option if-wants-descriptive-gensyms #t)
 
 
 ;;;; done

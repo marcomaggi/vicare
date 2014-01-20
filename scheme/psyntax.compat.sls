@@ -32,6 +32,7 @@
     define-inline			define-syntax-rule
     begin0				receive
     real-pathname			file-modification-time
+    vector-append
 
     ;; runtime options
     report-errors-at-runtime		strict-r6rs

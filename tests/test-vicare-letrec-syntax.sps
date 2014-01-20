@@ -55,7 +55,7 @@
 ;;; checking illegal references to bindings
 
   ;; error
-  (check-syntax-violation ciao_0
+  (check-syntax-violation lex.ciao_0
     (let ()
       (define b (ciao))
       (define (ciao)
