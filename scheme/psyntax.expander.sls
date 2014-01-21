@@ -955,6 +955,18 @@
 ;;with the  exception that  the interaction environment  "remembers" the
 ;;bindings we define.
 ;;
+;;Notice that it is possible to use an interaction environment as second
+;;argument  to   EVAL,  allowing  for  persistence   of  bindings  among
+;;evaluations:
+;;
+;;   (eval '(begin
+;;            (define a 1)
+;;            (define b 2))
+;;         (interaction-environment))
+;;   (eval '(list a b)
+;;         (interaction-environment))
+;;   => (1 2)
+;;
 
 ;;An ENV record encapsulates a substitution and a set of libraries.
 ;;
