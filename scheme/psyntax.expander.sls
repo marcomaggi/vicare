@@ -980,9 +980,12 @@
 		;The top <RIB>  structure for the evaluation  of code in
 		;this environment.
    lexenv
-		;The LEXENV for both run time and expand time.
-   locs
-		;???
+		;The LEXENV for both run  time and expand time.  It maps
+		;labels to syntactic bindings.
+   lab.loc*
+		;An alist having  label gensyms as keys  and loc gensyms
+		;as values.  It maps  binding labels to storage location
+		;gensyms.
    )
   (lambda (S port sub-printer)
     (display "#<interaction-environment>" port)))
@@ -3035,7 +3038,7 @@
 	;;
 	((top-level-context)
 	 => (lambda (env)
-	      (cond ((assq label (interaction-env-locs env))
+	      (cond ((assq label (interaction-env-lab.loc* env))
 		     => (lambda (binding)
 			  ;;Build and  return a binding  representing an
 			  ;;immutated lexical variable.
@@ -3460,17 +3463,39 @@
 	 gen-define-label)
 
   (define (gen-define-label+lex id rib shadowing-definition?)
-    ;;Whenever a DEFINE syntax is expanded we need to generate for it: a
-    ;;label  gensym, a  lex  gensym  and a  loc  gensym.  This  function
-    ;;returns 2 values: the label and  the lex; a loc might be generated
-    ;;too.
+    ;;Whenever a DEFINE syntax:
+    ;;
+    ;;   (define ?id ?rhs)
+    ;;
+    ;;is expanded  we need  to generate  for it: a  label gensym,  a lex
+    ;;gensym  and a  loc gensym.   This function  returns 2  values: the
+    ;;label and the lex; a loc might be generated too.
     ;;
     ;;ID  must  be an  identifier  representing  the  name of  a  DEFINE
-    ;;binding.  RIB must be the  <RIB> describing the lexical contour in
-    ;;which  DEFINE  is  present.    SHADOWING-DEFINITION?   must  be  a
-    ;;boolean, true if it is fine  to generate a binding that shadows an
-    ;;already existing binding.
+    ;;binding.
     ;;
+    ;;RIB  must be  the <RIB>  describing the  lexical contour  in which
+    ;;DEFINE is present.
+    ;;
+    ;;SHADOWING-DEFINITION?  must  be a boolean,  true if it is  fine to
+    ;;generate a binding that shadows an already existing binding:
+    ;;
+    ;;* When  this argument is true:  we always generate a  new label, a
+    ;;  new lex and no loc.   Upon returning from this function, we have
+    ;;  2 choices:
+    ;;
+    ;;  - Search the relevant LEXENV for the returned label and raise an
+    ;;    error when a binding already exists.
+    ;;
+    ;;  - Create  a new binding by  pushing a new entry  on the relevant
+    ;;    LEXENV.
+    ;;
+    ;;* When  this argument  is false:  we assume  there is  a top-level
+    ;;  environment set.   If an existent binding in  such top-level env
+    ;;  captures ID:  we cause DEFINE to mutate the  existent binding by
+    ;;   returning the  already existent  label and  lex.  Otherwise  we
+    ;;  fabricate a new binding  in the top-level environment and return
+    ;;  the new label and lex (in this case we also generate a loc).
     ;;
     (if shadowing-definition?
 	;;This DEFINE binding is *allowed* to shadow an existing lexical
@@ -3478,15 +3503,16 @@
 	(values (gensym-for-label id) (gensym-for-lexical-var id))
       ;;This DEFINE binding is *forbidden* to shadow an existing lexical
       ;;binding.
-      (let* ((env   (top-level-context))
-	     (label (%gen-top-level-label id rib))
-	     (locs  (interaction-env-locs env)))
-	(values label (cond ((assq label locs)
+      (let* ((env       (top-level-context))
+	     (label     (%gen-top-level-label id rib))
+	     (lab.loc*  (interaction-env-lab.loc* env)))
+	(values label (cond ((assq label lab.loc*)
 			     => cdr)
 			    (else
 			     (receive-and-return (loc)
 				 (gensym-for-storage-location id)
-			       (set-interaction-env-locs! env (cons (cons label loc) locs)))))))))
+			       (set-interaction-env-lab.loc*! env (cons (cons label loc)
+									lab.loc*)))))))))
 
   (define (gen-define-label id rib shadowing-definition?)
     (if shadowing-definition?
