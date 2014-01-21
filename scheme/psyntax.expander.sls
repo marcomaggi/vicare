@@ -4118,8 +4118,8 @@
 
   (define (id->label id)
     ;;Given the identifier  ID search its substs for  a label associated
-    ;;with the same sym and marks.  If found return the symbol being the
-    ;;label, else return false.
+    ;;with the  same sym  and marks.   If found  return the  label, else
+    ;;return false.
     ;;
     (let ((sym (identifier->symbol id)))
       (let search ((subst* ($<stx>-subst* id))
@@ -4167,19 +4167,50 @@
   #| end of module: ID->LABEL |# )
 
 (define (id->label/intern id)
+  ;;Given the identifier ID search the lexical environment for a binding
+  ;;that captures  it; if such  binding is found: return  the associated
+  ;;label.
+  ;;
+  ;;If  no  capturing  binding  is found  but  a  top-level  interaction
+  ;;environment  is  set:  we  fabricate   a  lexical  binding  in  such
+  ;;environment so  that there exists a  lex gensym to name  the binding
+  ;;and a loc gensym in which to store a value.  This allows us to write
+  ;;"special" code on the REPL, for example:
+  ;;
+  ;;   vicare> (set! a 1)
+  ;;
+  ;;when  A is  not defined  will not  fail, rather  it will  implicitly
+  ;;define a binding as if we have typed:
+  ;;
+  ;;   vicare> (define a)
+  ;;   vicare> (set! a 1)
+  ;;
+  ;;another example of weird code that will not fail at the REPL:
+  ;;
+  ;;   vicare> (let ()
+  ;;             (set! a 1)
+  ;;             (debug-print a))
+  ;;
+  ;;will just print A as if we have typed:
+  ;;
+  ;;   vicare> (let ()
+  ;;             (define a)
+  ;;             (set! a 1)
+  ;;             (debug-print a))
+  ;;
+  ;;If neither a capturing binding  is found nor a top-level environment
+  ;;is set: return false.
+  ;;
   (or (id->label id)
       (cond ((top-level-context)
 	     => (lambda (env)
-		  ;;If ID is not captured  by a binding, but a top-level
-		  ;;environment exists:  we fabricate a  lexical binding
-		  ;;so that there exists a  loc gensym in which to store
-		  ;;a value.
 		  (let ((rib (interaction-env-rib env)))
 		    (receive (lab unused-lex)
 			(let ((shadowing-definition? #f))
 			  (gen-define-label+lex id rib shadowing-definition?))
 		      ;;FIXME (Abdulaziz Ghuloum)
-		      (extend-rib! rib id lab #t)
+		      (let ((shadowing-definition? #t))
+			(extend-rib! rib id lab shadowing-definition?))
 		      lab))))
 	    (else #f))))
 
@@ -9524,10 +9555,13 @@
 	   (let* ((binding (label->syntactic-binding label lexenv))
 		  (type    (syntactic-binding-type binding)))
 	     (case type
-	       ((lexical core-prim macro global local-macro
-			 local-macro! global-macro global-macro!
-			 displaced-lexical syntax import export $module
-			 $core-rtd library mutable local-ctv global-ctv)
+	       ((core-prim
+		 lexical global mutable
+		 local-macro local-macro!
+		 global-macro global-macro!
+		 local-ctv global-ctv
+		 macro import export library $module $core-rtd syntax
+		 displaced-lexical)
 		(values type (syntactic-binding-value binding) id))
 	       (else
 		(values 'other #f #f))))))
@@ -9540,12 +9574,13 @@
 		 (let* ((binding (label->syntactic-binding label lexenv))
 			(type    (syntactic-binding-type binding)))
 		   (case type
-		     ((define define-syntax core-macro begin macro
-			local-macro local-macro! global-macro
-			global-macro! module library set! let-syntax
-			letrec-syntax import export $core-rtd
-			local-ctv global-ctv stale-when
-			define-fluid-syntax)
+		     ((core-macro
+		       define define-syntax begin set! stale-when
+		       let-syntax letrec-syntax define-fluid-syntax
+		       local-ctv global-ctv
+		       local-macro local-macro!
+		       global-macro global-macro!
+		       macro import export library module $core-rtd)
 		      (values type (syntactic-binding-value binding) id))
 		     (else
 		      (values 'call #f #f)))))
@@ -9555,8 +9590,6 @@
 	   (if (self-evaluating? datum)
 	       (values 'constant datum #f)
 	     (values 'other #f #f))))))
-
-
 
 
 ;;;; chi procedures: helpers for SPLICE-FIRST-EXPAND
