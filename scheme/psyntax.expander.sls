@@ -1850,7 +1850,7 @@
 		  (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
 			 (rhs-form-core*   (chi-rhs*  rhs-form-stx*  lexenv.run lexenv.expand)))
 		    (unseal-rib! rib)
-		    (let ((loc.lex*      (map gensym-for-location lex*))
+		    (let ((loc.lex*      (map gensym-for-storage-location lex*))
 			  (export-subst  (%make-export-subst export-name* export-id*)))
 		      (receive (export-env macro*)
 			  (%make-export-env/macro* lex* loc.lex* lexenv.run)
@@ -1986,7 +1986,7 @@
 	       ;;
 	       ;;   (?loc . (?transformer . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym-for-location)))
+	       (let ((loc (gensym-for-storage-location)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-macro loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
@@ -2009,7 +2009,7 @@
 	       ;;
 	       ;;   (?loc . (?transformer . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym-for-location)))
+	       (let ((loc (gensym-for-storage-location)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-macro! loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
@@ -2032,7 +2032,7 @@
 	       ;;
 	       ;;   (?loc . (?object . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym-for-location)))
+	       (let ((loc (gensym-for-storage-location)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-ctv loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
@@ -3130,11 +3130,11 @@
   ;;where NAME* is a vector of symbols and LABEL* is a vector of labels,
   ;;generate a <RIB> containing:
   ;;
-  ;;* name* as the <RIB>-SYM*,
+  ;;* NAME* as the <RIB>-SYM*,
   ;;
   ;;* a list of TOP-MARK* as the <RIB>-MARK**,
   ;;
-  ;;* label* as the <RIB>-LABEL*
+  ;;* LABEL* as the <RIB>-LABEL*
   ;;
   ;;so, a name in  a top <RIB> maps to its label if  and only if its set
   ;;of marks is TOP-MARK*.
@@ -3143,11 +3143,12 @@
     (vector-for-each
         (lambda (name label)
           (if (symbol? name)
-	      (extend-rib! rib
-			   (make-<stx> name top-mark*
-				       '()  #;subst*
-				       '()) #;ae*
-			   label #t)
+	      (let ((shadowing-definition? #t))
+		(extend-rib! rib
+			     (make-<stx> name top-mark*
+					 '() #;subst*
+					 '()) #;ae*
+			     label shadowing-definition?))
             (assertion-violation __who__
 	      "Vicare bug: expected symbol as binding name" name)))
       name* label*)
@@ -3414,7 +3415,7 @@
 	   (assertion-violation __who__
 	     "expected symbol or identifier as argument" seed)))))
 
-(define gensym-for-location
+(define gensym-for-storage-location
   ;;Build  and return  a gensym  to be  used as  storage location  for a
   ;;global lexical variable.  The "value" slot of such gensym is used to
   ;;hold the value of the variable.
@@ -3455,12 +3456,28 @@
 	     (gensym)))
     (gensym)))
 
-(module (gen-define-label+loc
+(module (gen-define-label+lex
 	 gen-define-label)
 
-  (define (gen-define-label+loc id rib sd?)
+  (define (gen-define-label+lex id rib sd?)
+    ;;Whenever a DEFINE syntax is expanded we need to generate for it: a
+    ;;label  gensym, a  lex  gensym  and a  loc  gensym.  This  function
+    ;;returns 2 values: the label and  the lex; a loc might be generated
+    ;;too.
+    ;;
+    ;;ID  must  be an  identifier  representing  the  name of  a  DEFINE
+    ;;binding.  RIB must be the  <RIB> describing the lexical contour in
+    ;;which DEFINE  is present.  SD?  must  be a boolean, true  if it is
+    ;;fine  to  generate a  binding  that  shadows an  already  existing
+    ;;binding.
+    ;;
+    ;;
     (if sd?
+	;;This DEFINE binding is *allowed* to shadow an existing lexical
+	;;binding.
 	(values (gensym-for-label id) (gensym-for-lexical-var id))
+      ;;This DEFINE binding is *forbidden* to shadow an existing lexical
+      ;;binding.
       (let* ((env   (top-level-context))
 	     (label (%gen-top-level-label id rib))
 	     (locs  (interaction-env-locs env)))
@@ -3468,7 +3485,7 @@
 			     => cdr)
 			    (else
 			     (receive-and-return (loc)
-				 (gensym-for-location id)
+				 (gensym-for-storage-location id)
 			       (set-interaction-env-locs! env (cons (cons label loc) locs)))))))))
 
   (define (gen-define-label id rib sd?)
@@ -4153,10 +4170,14 @@
   (or (id->label id)
       (cond ((top-level-context)
 	     => (lambda (env)
-		  ;;Fabricate binding.
+		  ;;If ID is not captured  by a binding, but a top-level
+		  ;;environment exists:  we fabricate a  lexical binding
+		  ;;so that there exists a  loc gensym in which to store
+		  ;;a value.
 		  (let ((rib (interaction-env-rib env)))
-		    (receive (lab _loc)
-			(gen-define-label+loc id rib #f)
+		    (receive (lab unused-lex)
+			(let ((shadowing-definition? #f))
+			  (gen-define-label+lex id rib shadowing-definition?))
 		      ;;FIXME (Abdulaziz Ghuloum)
 		      (extend-rib! rib id lab #t)
 		      lab))))
@@ -10184,18 +10205,42 @@
 	     (case type
 
 	       ((define)
-		;;The body form is a core language DEFINE macro use.  We
-		;;create a label and a lex gensym in which the result of
-		;;evaluating  the right-hand  side  will  be stored;  we
-		;;register the label in the  rib.  Finally we recurse on
-		;;the rest of the body.
+		;;The body form is a core language DEFINE macro use:
+		;;
+		;;   (define ?id ?rhs)
+		;;
+		;;We create a new lexical binding:
+		;;
+		;;* We  generate a  label gensym uniquely  associated to
+		;;  the binding and a lex  gensym as name of the binding
+		;;  in the  expanded code.
+		;;
+		;;* We register the association id/label in the rib.
+		;;
+		;;*  We push  an entry  on LEXENV.RUN  to represent  the
+		;;  association label/lex.
+		;;
+		;;* Finally we recurse on the rest of the body.
+		;;
+		;;Notice that:
+		;;
+		;;* The ?RHS will be expanded later.
+		;;
+		;;*  If the  binding is  at the  top-level of  a program
+		;;  body:  we need a loc  gensym to store the  result of
+		;;  evaluating ?RHS.  This loc will be generated later.
+		;;
+		;;*  If  the binding  is  at  the  top-level of  a  REPL
+		;;  expression: we need a loc gensym to store the result
+		;;   of  evaluating  ?RHS.   In this  case  the  loc  is
+		;;  generated here by GEN-DEFINE-LABEL+LEX.
 		;;
 		(receive (id rhs)
 		    (%parse-define body-expr)
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-expr "cannot redefine keyword"))
 		  (receive (lab lex)
-		      (gen-define-label+loc id rib sd?)
+		      (gen-define-label+lex id rib sd?)
 		    (extend-rib! rib id lab sd?)
 		    (chi-body* (cdr body-expr*)
 			       (add-lexical-binding lab lex lexenv.run) lexenv.expand
