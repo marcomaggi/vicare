@@ -3941,6 +3941,39 @@
   (void))
 
 
+(parametrise ((check-test-name	'interaction-environment))
+
+  (check	;check persistence of bindings
+      (begin
+	(eval '(begin
+		 (define a 1)
+		 (define b 2))
+	      (interaction-environment))
+	(eval '(list a b)
+	      (interaction-environment)))
+    => '(1 2))
+
+  (check	;check persistence of bindings
+      (begin
+	(eval '(define c 3)
+	      (interaction-environment))
+	(eval 'c
+	      (interaction-environment)))
+    => 3)
+
+  (check	;check persistence of bindings
+      (let ((env (new-interaction-environment)))
+	(eval '(begin
+		 (define a 1)
+		 (define b 2))
+	      env)
+	(eval '(list a b)
+	      env))
+    => '(1 2))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
