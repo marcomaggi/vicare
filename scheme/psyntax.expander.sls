@@ -8977,24 +8977,24 @@
 
 ;;;; formals syntax validation
 
-(define (%verify-formals-syntax formals-stx stx)
+(define (%verify-formals-syntax formals-stx input-form-stx)
   ;;Verify  that  FORMALS-STX  is  a syntax  object  representing  valid
   ;;formals for  LAMBDA and WITH-SYNTAX syntaxes.   If successful return
   ;;unspecified values, else raise a syntax violation.
   ;;
   (syntax-match formals-stx ()
-    ((id* ...)
-     (unless (valid-bound-ids? id*)
-       (%error-invalid-formals-syntax stx formals-stx)))
+    ((?id* ...)
+     (unless (valid-bound-ids? ?id*)
+       (%error-invalid-formals-syntax input-form-stx formals-stx)))
 
-    ((id* ... . last-id)
-     (unless (valid-bound-ids? (cons last-id id*))
-       (%error-invalid-formals-syntax stx formals-stx)))
+    ((?id* ... . ?rest-id)
+     (unless (valid-bound-ids? (cons ?rest-id ?id*))
+       (%error-invalid-formals-syntax input-form-stx formals-stx)))
 
     (_
-     (stx-error stx "invalid syntax"))))
+     (stx-error input-form-stx "invalid syntax"))))
 
-(define (%error-invalid-formals-syntax stx formals-stx)
+(define (%error-invalid-formals-syntax input-form-stx formals-stx)
   ;;Raise an error  for invalid formals of LAMBDA,  CASE-LAMBDA, LET and
   ;;similar.
   ;;
@@ -9028,7 +9028,7 @@
   ;;LAMBDA syntax that takes care of formals validation.
   ;;
   (define (%synner message subform)
-    (syntax-violation #f message stx subform))
+    (syntax-violation #f message input-form-stx subform))
   (syntax-match formals-stx ()
     ((?id* ... . ?last)
      (let recur ((?id* (cond ((identifier? ?last)
@@ -9048,8 +9048,7 @@
 		(%synner "duplicate binding" (car ?id*)))))))
 
     (_
-     (%synner "malformed binding form" formals-stx))
-    ))
+     (%synner "malformed binding form" formals-stx))))
 
 
 ;;;; pattern matching helpers
@@ -10119,53 +10118,53 @@
 
 ;;;; chi procedures: definitions and lambda clauses
 
-(define (chi-lambda-clause stx fmls body-form-stx* lexenv.run lexenv.expand)
+(define (chi-lambda-clause input-form-stx formals-stx body-form-stx* lexenv.run lexenv.expand)
   (while-not-expanding-application-first-subform
-   (syntax-match fmls ()
-     ((x* ...)
+   (syntax-match formals-stx ()
+     ((?arg* ...)
       (begin
-	(%verify-formals-syntax fmls stx)
-	(let ((lex* (map gensym-for-lexical-var x*))
-	      (lab* (map gensym-for-label x*)))
+	(%verify-formals-syntax formals-stx input-form-stx)
+	(let ((lex* (map gensym-for-lexical-var ?arg*))
+	      (lab* (map gensym-for-label       ?arg*)))
 	  (values lex*
 		  (chi-internal-body (push-lexical-contour
-					 (make-full-rib x* lab*)
+					 (make-full-rib ?arg* lab*)
 				       body-form-stx*)
 				     (add-lexical-bindings lab* lex* lexenv.run)
 				     lexenv.expand)))))
-     ((x* ... . x)
+     ((?arg* ... . ?rest-arg)
       (begin
-	(%verify-formals-syntax fmls stx)
-	(let ((lex* (map gensym-for-lexical-var x*))
-	      (lab* (map gensym-for-label x*))
-	      (lex  (gensym-for-lexical-var x))
-	      (lab  (gensym-for-label x)))
+	(%verify-formals-syntax formals-stx input-form-stx)
+	(let ((lex* (map gensym-for-lexical-var ?arg*))
+	      (lab* (map gensym-for-label       ?arg*))
+	      (lex  (gensym-for-lexical-var ?rest-arg))
+	      (lab  (gensym-for-label       ?rest-arg)))
 	  (values (append lex* lex)
 		  (chi-internal-body (push-lexical-contour
-					 (make-full-rib (cons x   x*)
-							(cons lab lab*))
+					 (make-full-rib (cons ?rest-arg ?arg*)
+							(cons lab       lab*))
 				       body-form-stx*)
 				     (add-lexical-bindings (cons lab lab*)
 							   (cons lex lex*)
 							   lexenv.run)
 				     lexenv.expand)))))
      (_
-      (stx-error fmls "invalid syntax")))))
+      (stx-error formals-stx "invalid syntax")))))
 
-(define (chi-lambda-clause* stx fmls* body-form-stx** lexenv.run lexenv.expand)
+(define (chi-lambda-clause* input-form-stx fmls* body-form-stx** lexenv.run lexenv.expand)
   (if (null? fmls*)
       (values '() '())
     (receive (a b)
-	(chi-lambda-clause stx (car fmls*) (car body-form-stx**) lexenv.run lexenv.expand)
+	(chi-lambda-clause input-form-stx (car fmls*) (car body-form-stx**) lexenv.run lexenv.expand)
       (receive (a* b*)
-	  (chi-lambda-clause* stx (cdr fmls*) (cdr body-form-stx**) lexenv.run lexenv.expand)
+	  (chi-lambda-clause* input-form-stx (cdr fmls*) (cdr body-form-stx**) lexenv.run lexenv.expand)
 	(values (cons a a*) (cons b b*))))))
 
-(define (chi-defun x lexenv.run lexenv.expand)
-  (syntax-match x ()
+(define (chi-defun input-form-stx lexenv.run lexenv.expand)
+  (syntax-match input-form-stx ()
     ((_ (?ctxt . ?fmls) . ?body-form*)
      (receive (fmls body)
-	 (chi-lambda-clause ?fmls ?fmls ?body-form* lexenv.run lexenv.expand)
+	 (chi-lambda-clause input-form-stx ?fmls ?body-form* lexenv.run lexenv.expand)
        (build-lambda (syntax-annotation ?ctxt) fmls body)))))
 
 
