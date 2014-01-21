@@ -1856,7 +1856,7 @@
 		  ;;
 		  ;;We want order here!?!
 		  (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
-			 (rhs-form-core*   (chi-rhs*  qrhs*  lexenv.run lexenv.expand)))
+			 (rhs-form-core*   (chi-qrhs*  qrhs*  lexenv.run lexenv.expand)))
 		    (unseal-rib! rib)
 		    (let ((loc.lex*      (map gensym-for-storage-location lex*))
 			  (export-subst  (%make-export-subst export-name* export-id*)))
@@ -9595,7 +9595,7 @@
 	 chi-expr*
 	 chi-body*
 	 chi-internal-body
-	 chi-rhs*
+	 chi-qrhs*
 	 chi-defun
 	 chi-lambda-clause
 	 chi-lambda-clause*)
@@ -10250,7 +10250,7 @@
 ;;binding to represent the DEFINE syntax.
 ;;
 
-(define (chi-rhs qrhs lexenv.run lexenv.expand)
+(define (chi-qrhs qrhs lexenv.run lexenv.expand)
   ;;Expand a qualified right-hand side expression and return an expanded
   ;;language expression representing the result.
   ;;
@@ -10269,17 +10269,17 @@
 	       (build-void)))))
 
     (else
-     (assertion-violation 'chi-rhs "BUG: invalid qrhs" qrhs))))
+     (assertion-violation 'chi-qrhs "BUG: invalid qrhs" qrhs))))
 
-(define (chi-rhs* qrhs* lexenv.run lexenv.expand)
+(define (chi-qrhs* qrhs* lexenv.run lexenv.expand)
   ;;Expand   the  qualified   right-hand  side   expressions  in   QRHS*,
   ;;left-to-right.
   ;;
   (let loop ((ls qrhs*))
-    ;; chi-rhs in order
+    ;; chi-qrhs in order
     (if (null? ls)
 	'()
-      (let ((a (chi-rhs (car ls) lexenv.run lexenv.expand)))
+      (let ((a (chi-qrhs (car ls) lexenv.run lexenv.expand)))
 	(cons a (loop (cdr ls)))))))
 
 
@@ -10345,7 +10345,7 @@
        (let* ((all-expr-core*  (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**)
 						  trailing-expr-stx*)
 					  lexenv.run lexenv.expand))
-	      (rhs-core*       (chi-rhs* qrhs* lexenv.run lexenv.expand)))
+	      (rhs-core*       (chi-qrhs* qrhs* lexenv.run lexenv.expand)))
 	 (build-letrec* no-source
 	   (reverse lex*)
 	   (reverse rhs-core*)
