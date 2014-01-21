@@ -4198,6 +4198,9 @@
   ;;             (set! a 1)
   ;;             (debug-print a))
   ;;
+  ;;fabricating  the  lexical  binding  is  like  injecting  the  syntax
+  ;;"(define id)".
+  ;;
   ;;If neither a capturing binding  is found nor a top-level environment
   ;;is set: return false.
   ;;
