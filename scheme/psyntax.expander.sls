@@ -1826,17 +1826,17 @@
 	      ;;LEX*  is  a  list  of  gensyms to  be  used  in  binding
 	      ;;definitions   when  building   core  language   symbolic
 	      ;;expressions for the glocal  DEFINE forms in the library.
-	      ;;There is a gensym for every item in RHS-FORM*.
+	      ;;There is a gensym for every item in RHS*.
 	      ;;
-	      ;;RHS-FORM-STX* is  a list of syntax  objects representing
-	      ;;the right-hand side expressions in the DEFINE forms from
-	      ;;the body of the library.
+	      ;;RHS*   is  a   list   of   qualified  right-hand   sides
+	      ;;representing  the  right-hand  side expressions  in  the
+	      ;;DEFINE forms from the body of the library.
 	      ;;
 	      ;;INTERNAL-EXPORT*  is  a  list  of  identifiers  exported
 	      ;;through internal EXPORT syntaxes  rather than the export
 	      ;;spec at the beginning of the library.
 	      ;;
-	      (receive (init-form-stx* lexenv.run lexenv.expand lex* rhs-form-stx* internal-export*)
+	      (receive (init-form-stx* lexenv.run lexenv.expand lex* rhs* internal-export*)
 		  (%chi-library-internal body-stx* rib mix?)
 		(receive (export-name* export-id*)
 		    (let ()
@@ -1855,7 +1855,7 @@
 		  ;;
 		  ;;We want order here!?!
 		  (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
-			 (rhs-form-core*   (chi-rhs*  rhs-form-stx*  lexenv.run lexenv.expand)))
+			 (rhs-form-core*   (chi-rhs*  rhs*  lexenv.run lexenv.expand)))
 		    (unseal-rib! rib)
 		    (let ((loc.lex*      (map gensym-for-storage-location lex*))
 			  (export-subst  (%make-export-subst export-name* export-id*)))
@@ -1880,7 +1880,7 @@
     ;;
     (receive (trailing-init-form-stx*
 	      lexenv.run lexenv.expand lex*
-	      rhs-form-stx* module-init-form-stx** unused-kwd* internal-export*)
+	      rhs* module-init-form-stx** unused-kwd* internal-export*)
 	(chi-body* body-stx* '() '() '() '() '() '() '() rib mix? #t)
       ;;We build  a list of  init form  putting first the  trailing init
       ;;forms from the internal MODULE  syntaxes, then the trailing init
@@ -1892,12 +1892,12 @@
 		;;This  is a  list  of  gensyms to  be  used in  binding
 		;;definitions  when  building   core  language  symbolic
 		;;expressions  for  the  DEFINE forms  in  the  library.
-		;;There is a gensym for every item in RHS-FORM-STX*.
+		;;There is a gensym for every item in RHS*.
 		(reverse lex*)
-		;;This  is a  list  of syntax  objects representing  the
-		;;right-hand side  expressions in the DEFINE  forms from
-		;;the body of the library.
-		(reverse rhs-form-stx*)
+		;;This  is   a  list   of  qualified   right-hand  sides
+		;;representing  the right-hand  side expressions  in the
+		;;DEFINE forms from the body of the library.
+		(reverse rhs*)
 		;;This  is  a  list   of  identifiers  exported  through
 		;;internal EXPORT  syntaxes rather than the  export spec
 		;;at the beginning of the library.
@@ -10120,7 +10120,7 @@
 
 (define (chi-lambda-clause input-form-stx formals-stx body-form-stx* lexenv.run lexenv.expand)
   ;;Expand  a LAMBDA  or CASE-LAMBDA  clause  body, return  2 values:  a
-  ;;proper or  improper list  lex gensyms  representing the  formals, an
+  ;;proper or improper list of  lex gensyms representing the formals; an
   ;;expanded language expression representing the body of the clause.
   ;;
   ;;A LAMBDA clause defines a lexical  contour, so: we build a new <RIB>
@@ -10162,16 +10162,33 @@
      (_
       (stx-error formals-stx "invalid syntax")))))
 
-(define (chi-lambda-clause* input-form-stx fmls* body-form-stx** lexenv.run lexenv.expand)
-  (if (null? fmls*)
+(define (chi-lambda-clause* input-form-stx formals-stx* body-form-stx** lexenv.run lexenv.expand)
+  ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
+  ;;
+  ;;1. A list of subslist, each  sublist being a proper or improper list
+  ;;   of lex gensyms representing the formals.
+  ;;
+  ;;2.  A list  of expanded language expressions,  each representing the
+  ;;   expanded body of a clause.
+  ;;
+  (if (null? formals-stx*)
       (values '() '())
-    (receive (a b)
-	(chi-lambda-clause input-form-stx (car fmls*) (car body-form-stx**) lexenv.run lexenv.expand)
-      (receive (a* b*)
-	  (chi-lambda-clause* input-form-stx (cdr fmls*) (cdr body-form-stx**) lexenv.run lexenv.expand)
-	(values (cons a a*) (cons b b*))))))
+    (receive (formals-lex body-core)
+	(chi-lambda-clause input-form-stx (car formals-stx*) (car body-form-stx**) lexenv.run lexenv.expand)
+      (receive (formals-lex* body-core*)
+	  (chi-lambda-clause* input-form-stx (cdr formals-stx*) (cdr body-form-stx**) lexenv.run lexenv.expand)
+	(values (cons formals-lex formals-lex*)
+		(cons body-core   body-core*))))))
 
 (define (chi-defun input-form-stx lexenv.run lexenv.expand)
+  ;;Expand a syntax object representing a  DEFINE syntax for the case of
+  ;;function  definition.    Return  an  expanded   language  expression
+  ;;representing the expanded definition.
+  ;;
+  ;;NOTE  This  function assumes  the  INPUT-FORM-STX  has already  been
+  ;;parsed, and the  binding for ?CTXT has already been  added to LEXENV
+  ;;by the caller.
+  ;;
   (syntax-match input-form-stx ()
     ((_ (?ctxt . ?fmls) . ?body-form*)
      (receive (fmls body)
@@ -10179,36 +10196,67 @@
        (build-lambda (syntax-annotation ?ctxt) fmls body)))))
 
 
-;;;; chi procedures: bindings right-hand sides
+;;;; chi procedures: lexical bindings qualified right-hand sides
+;;
+;;A "qualified  right-hand side  expression" is  a pair  whose car  is a
+;;symbol specifying the type of the expression and whose cdr is a syntax
+;;object  representing  the  right-hand  side expression  of  a  lexical
+;;binding definition.
+;;
+;;For example, when expanding a body:
+;;
+;;   (define (a) 1)
+;;   (define (b) 2)
+;;   (list (a) (b))
+;;
+;;the DEFINE syntaxes are parsed  by CHI-BODY* or CHI-INTERNAL-BODY* and
+;;recognised  of type  "defun"; then  the following  QRHS compounds  are
+;;created:
+;;
+;;   (defun . #'(define (a) 1))
+;;   (defun . #'(define (b) 2))
+;;
+;;The possible types are:
+;;
+;;DEFUN -
+;;   For a function definition.
+;;
+;;EXPR -
+;;
+;;TOP-EXPR -
+;;
 
-(define (chi-rhs rhs lexenv.run lexenv.expand)
-  (case (car rhs)
+(define (chi-rhs qrhs lexenv.run lexenv.expand)
+  ;;Expand a qualified right-hand side expression and return an expanded
+  ;;language expression representing the result.
+  ;;
+  (case (car qrhs)
     ((defun)
-     (chi-defun (cdr rhs) lexenv.run lexenv.expand))
+     (chi-defun (cdr qrhs) lexenv.run lexenv.expand))
 
     ((expr)
-     (let ((expr (cdr rhs)))
+     (let ((expr (cdr qrhs)))
        (chi-expr expr lexenv.run lexenv.expand)))
 
     ((top-expr)
-     (let ((expr (cdr rhs)))
+     (let ((expr (cdr qrhs)))
        (build-sequence no-source
 	 (list (chi-expr expr lexenv.run lexenv.expand)
 	       (build-void)))))
 
     (else
-     (assertion-violation 'chi-rhs "BUG: invalid rhs" rhs))))
+     (assertion-violation 'chi-rhs "BUG: invalid qrhs" qrhs))))
 
-(define (chi-rhs* rhs* lexenv.run lexenv.expand)
-  ;;Expand the right-hand side expressions in RHS*, left-to-right.
+(define (chi-rhs* qrhs* lexenv.run lexenv.expand)
+  ;;Expand   the  qualified   right-hand  side   expressions  in   QRHS*,
+  ;;left-to-right.
   ;;
-  (let loop ((ls rhs*))
+  (let loop ((ls qrhs*))
     ;; chi-rhs in order
     (if (null? ls)
 	'()
       (let ((a (chi-rhs (car ls) lexenv.run lexenv.expand)))
-	(cons a
-	      (loop (cdr ls)))))))
+	(cons a (loop (cdr ls)))))))
 
 
 ;;;; chi procedures: internal body
@@ -10256,7 +10304,7 @@
    (let ((rib (make-empty-rib)))
      (receive (trailing-expr-stx*
 	       lexenv.run lexenv.expand
-	       lex* rhs-stx*
+	       lex* qrhs*
 	       trailing-mod-expr-stx**
 	       unused-kwd* unused-export*)
 	 (let ((mix-definitions-and-expressions?  #f)
@@ -10273,7 +10321,7 @@
        (let* ((all-expr-core*  (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**)
 						  trailing-expr-stx*)
 					  lexenv.run lexenv.expand))
-	      (rhs-core*       (chi-rhs* rhs-stx* lexenv.run lexenv.expand)))
+	      (rhs-core*       (chi-rhs* qrhs* lexenv.run lexenv.expand)))
 	 (build-letrec* no-source
 	   (reverse lex*)
 	   (reverse rhs-core*)
@@ -10293,11 +10341,11 @@
   ;;LEXENV.RUN and LEXENV.EXPAND must  be lists representing the current
   ;;lexical environment for run and expand times.
   ;;
-  ;;LEX* must be  a list of gensyms  and RHS* must be a  list of special
-  ;;objects representing  right-hand side expressions for  DEFINE syntax
-  ;;uses;  they  are  meant  to  be processed  together  item  by  item.
-  ;;Whenever the RHS  expressions are expanded: a  core language binding
-  ;;will be  created with a  LEX gensym  associate to a  RHS expression.
+  ;;LEX* must be a list of gensyms and QRHS* must be a list of qualified
+  ;;right-hand sides representing right-hand side expressions for DEFINE
+  ;;syntax uses; they  are meant to be processed together  item by item.
+  ;;Whenever the QRHS expressions are  expanded: a core language binding
+  ;;will be  created with a LEX  gensym associate to a  QRHS expression.
   ;;The special values have the formats:
   ;;
   ;; (defun . ?full-form)
@@ -10346,10 +10394,10 @@
   ;;interaction environment.  When SD? is true: attempting to redefine a
   ;;DEFINE binding will raise an exception.
   ;;
-  (define (chi-body* body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec* rib mix? sd?)
+  (define (chi-body* body-expr* lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec* rib mix? sd?)
     (while-not-expanding-application-first-subform
      (if (null? body-expr*)
-	 (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*)
+	 (values body-expr* lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)
        (let ((body-expr (car body-expr*)))
 	 (receive (type bind-val kwd)
 	     (syntax-type body-expr lexenv.run)
@@ -10389,7 +10437,7 @@
 		;;   of  evaluating  ?RHS.   In this  case  the  loc  is
 		;;  generated here by GEN-DEFINE-LABEL+LEX.
 		;;
-		(receive (id rhs)
+		(receive (id qrhs)
 		    (%parse-define body-expr)
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-expr "cannot redefine keyword"))
@@ -10398,7 +10446,7 @@
 		    (extend-rib! rib id lab sd?)
 		    (chi-body* (cdr body-expr*)
 			       (add-lexical-binding lab lex lexenv.run) lexenv.expand
-			       (cons lex lex*) (cons rhs rhs*)
+			       (cons lex lex*) (cons qrhs qrhs*)
 			       mod** kwd* export-spec* rib mix? sd?))))
 
 	       ((define-syntax)
@@ -10408,19 +10456,19 @@
 		;;the label in the rib.   Finally we recurse on the rest
 		;;of the body.
 		;;
-		(receive (id rhs)
+		(receive (id rhs-stx)
 		    (%parse-define-syntax body-expr)
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-expr "cannot redefine keyword"))
 		  ;;We want order here!?!
 		  (let* ((lab          (gen-define-syntax-label id rib sd?))
-			 (expanded-rhs (%expand-macro-transformer rhs lexenv.expand)))
+			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
 		    (extend-rib! rib id lab sd?)
 		    (let ((entry (cons lab (%eval-macro-transformer expanded-rhs))))
 		      (chi-body* (cdr body-expr*)
 				 (cons entry lexenv.run)
 				 (cons entry lexenv.expand)
-				 lex* rhs* mod** kwd* export-spec* rib
+				 lex* qrhs* mod** kwd* export-spec* rib
 				 mix? sd?)))))
 
 	       ((define-fluid-syntax)
@@ -10430,14 +10478,14 @@
 		;;the label in the rib.   Finally we recurse on the rest
 		;;of the body.
 		;;
-		(receive (id rhs)
+		(receive (id rhs-stx)
 		    (%parse-define-syntax body-expr)
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-expr "cannot redefine keyword"))
 		  ;;We want order here!?!
 		  (let* ((lab          (gen-define-syntax-label id rib sd?))
 			 (flab         (gen-define-syntax-label id rib sd?))
-			 (expanded-rhs (%expand-macro-transformer rhs lexenv.expand)))
+			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
 		    (extend-rib! rib id lab sd?)
 		    (let* ((binding  (%eval-macro-transformer expanded-rhs))
 			   ;;This  lexical environment  entry represents
@@ -10451,7 +10499,7 @@
 		      (chi-body* (cdr body-expr*)
 				 (cons* entry1 entry2 lexenv.run)
 				 (cons* entry1 entry2 lexenv.expand)
-				 lex* rhs* mod** kwd* export-spec* rib
+				 lex* qrhs* mod** kwd* export-spec* rib
 				 mix? sd?)))))
 
 	       ((let-syntax letrec-syntax)
@@ -10493,7 +10541,7 @@
 		      ;;rest of the body.
 		      (append (map cons xlab* xbind*) lexenv.run)
 		      (append (map cons xlab* xbind*) lexenv.expand)
-		      lex* rhs* mod** kwd* export-spec* rib
+		      lex* qrhs* mod** kwd* export-spec* rib
 		      mix? sd?)))))
 
 	       ((begin)
@@ -10504,7 +10552,7 @@
 		  ((_ ?expr* ...)
 		   (chi-body* (append ?expr* (cdr body-expr*))
 			      lexenv.run lexenv.expand
-			      lex* rhs* mod** kwd* export-spec* rib mix? sd?))))
+			      lex* qrhs* mod** kwd* export-spec* rib mix? sd?))))
 
 	       ((stale-when)
 		;;The body form is a STALE-WHEN syntax use.  Process the
@@ -10517,7 +10565,7 @@
 		     (handle-stale-when ?guard lexenv.expand)
 		     (chi-body* (append ?expr* (cdr body-expr*))
 				lexenv.run lexenv.expand
-				lex* rhs* mod** kwd* export-spec* rib mix? sd?)))))
+				lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))))
 
 	       ((global-macro global-macro!)
 		;;The  body form  is a  macro  use, where  the macro  is
@@ -10528,7 +10576,7 @@
 		(let ((body-expr^ (chi-global-macro bind-val body-expr lexenv.run rib)))
 		  (chi-body* (cons body-expr^ (cdr body-expr*))
 			     lexenv.run lexenv.expand
-			     lex* rhs* mod** kwd* export-spec* rib mix? sd?)))
+			     lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
 
 	       ((local-macro local-macro!)
 		;;The  body form  is a  macro  use, where  the macro  is
@@ -10538,7 +10586,7 @@
 		(let ((body-expr^ (chi-local-macro bind-val body-expr lexenv.run rib)))
 		  (chi-body* (cons body-expr^ (cdr body-expr*))
 			     lexenv.run lexenv.expand
-			     lex* rhs* mod** kwd* export-spec* rib mix? sd?)))
+			     lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
 
 	       ((macro)
 		;;The body  form is a  macro use,  where the macro  is a
@@ -10549,22 +10597,22 @@
 		(let ((body-expr^ (chi-non-core-macro bind-val body-expr lexenv.run rib)))
 		  (chi-body* (cons body-expr^ (cdr body-expr*))
 			     lexenv.run lexenv.expand
-			     lex* rhs* mod** kwd* export-spec* rib mix? sd?)))
+			     lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))
 
 	       ((module)
 		;;The body  form is  an internal module  definition.  We
 		;;process the  module, then recurse  on the rest  of the
 		;;body.
 		;;
-		(receive (lex* rhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
-		    (chi-internal-module body-expr lexenv.run lexenv.expand lex* rhs* mod** kwd*)
+		(receive (lex* qrhs* m-exp-id* m-exp-lab* lexenv.run lexenv.expand mod** kwd*)
+		    (chi-internal-module body-expr lexenv.run lexenv.expand lex* qrhs* mod** kwd*)
 		  ;;Extend the rib with  the syntactic bindings exported
 		  ;;by the module.
 		  (vector-for-each (lambda (id lab)
 				     (extend-rib! rib id lab sd?))
 		    m-exp-id* m-exp-lab*)
 		  (chi-body* (cdr body-expr*) lexenv.run lexenv.expand
-			     lex* rhs* mod** kwd* export-spec*
+			     lex* qrhs* mod** kwd* export-spec*
 			     rib mix? sd?)))
 
 	       ((library)
@@ -10574,7 +10622,7 @@
 		(expand-library (syntax->datum body-expr))
 		(chi-body* (cdr body-expr*)
 			   lexenv.run lexenv.expand
-			   lex* rhs* mod** kwd* export-spec*
+			   lex* qrhs* mod** kwd* export-spec*
 			   rib mix? sd?))
 
 	       ((export)
@@ -10586,7 +10634,7 @@
 		  ((_ ?export-spec* ...)
 		   (chi-body* (cdr body-expr*)
 			      lexenv.run lexenv.expand
-			      lex* rhs* mod** kwd*
+			      lex* qrhs* mod** kwd*
 			      (append ?export-spec* export-spec*)
 			      rib mix? sd?))))
 
@@ -10598,16 +10646,16 @@
 		;;
 		(%chi-import body-expr lexenv.run rib sd?)
 		(chi-body* (cdr body-expr*) lexenv.run lexenv.expand
-			   lex* rhs* mod** kwd* export-spec* rib mix? sd?))
+			   lex* qrhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       (else
 		(if mix?
 		    (chi-body* (cdr body-expr*)
 			       lexenv.run lexenv.expand
 			       (cons (gensym-for-lexical-var 'dummy) lex*)
-			       (cons (cons 'top-expr body-expr) rhs*)
+			       (cons (cons 'top-expr body-expr) qrhs*)
 			       mod** kwd* export-spec* rib #t sd?)
-		  (values body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* export-spec*))))))))))
+		  (values body-expr* lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*))))))))))
 
 ;;; --------------------------------------------------------------------
 
