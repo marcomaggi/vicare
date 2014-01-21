@@ -10119,6 +10119,17 @@
 ;;;; chi procedures: definitions and lambda clauses
 
 (define (chi-lambda-clause input-form-stx formals-stx body-form-stx* lexenv.run lexenv.expand)
+  ;;Expand  a LAMBDA  or CASE-LAMBDA  clause  body, return  2 values:  a
+  ;;proper or  improper list  lex gensyms  representing the  formals, an
+  ;;expanded language expression representing the body of the clause.
+  ;;
+  ;;A LAMBDA clause defines a lexical  contour, so: we build a new <RIB>
+  ;;for it,  initialised with  the id/label  associations of  the LAMBDA
+  ;;arguments; we push new lexical bindings on LEXENV.RUN.
+  ;;
+  ;;NOTE  The expander  for the  internal body  will create  yet another
+  ;;lexical contour to hold the body's internal definitions.
+  ;;
   (while-not-expanding-application-first-subform
    (syntax-match formals-stx ()
      ((?arg* ...)
@@ -10139,7 +10150,7 @@
 	      (lab* (map gensym-for-label       ?arg*))
 	      (lex  (gensym-for-lexical-var ?rest-arg))
 	      (lab  (gensym-for-label       ?rest-arg)))
-	  (values (append lex* lex)
+	  (values (append lex* lex) ;yes, this builds an improper list
 		  (chi-internal-body (push-lexical-contour
 					 (make-full-rib (cons ?rest-arg ?arg*)
 							(cons lab       lab*))
