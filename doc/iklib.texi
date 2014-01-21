@@ -4225,8 +4225,12 @@ object: set @var{env} as interaction environment.
 
 
 @defun new-interaction-environment
-Build and return a new interaction environment object.  The returned
-environment is initialised by importing the library @library{vicare}.
+@defunx new-interaction-environment @var{libname}
+Build and return a new interaction environment object.  When no argument
+is given: the returned environment is initialised by importing the
+library @library{vicare}.  When @var{libname} is used it must be a
+library name specification: the returned environment is initialised with
+the specified library.
 @end defun
 
 

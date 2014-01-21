@@ -1094,12 +1094,15 @@
       "only report version 5 is supported" n))
   (environment '(psyntax scheme-report-environment-5)))
 
-(define (new-interaction-environment)
+(case-define new-interaction-environment
   ;;Build and return a new interaction environment.
   ;;
-  (let* ((lib (find-library-by-name (base-of-interaction-library)))
-	 (rib (subst->rib (library-subst lib))))
-    (make-interaction-env rib '() '())))
+  (()
+   (new-interaction-environment (base-of-interaction-library)))
+  ((libname)
+   (let* ((lib (find-library-by-name libname))
+	  (rib (subst->rib (library-subst lib))))
+     (make-interaction-env rib '() '()))))
 
 (define interaction-environment
   ;;When  called  with  no   arguments:  return  an  environment  object

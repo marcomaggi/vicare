@@ -3961,8 +3961,20 @@
 	      (interaction-environment)))
     => 3)
 
+;;; --------------------------------------------------------------------
+
   (check	;check persistence of bindings
       (let ((env (new-interaction-environment)))
+	(eval '(begin
+		 (define a 1)
+		 (define b 2))
+	      env)
+	(eval '(list a b)
+	      env))
+    => '(1 2))
+
+  (check	;check persistence of bindings
+      (let ((env (new-interaction-environment '(rnrs base))))
 	(eval '(begin
 		 (define a 1)
 		 (define b 2))
