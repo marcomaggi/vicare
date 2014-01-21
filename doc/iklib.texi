@@ -4225,7 +4225,8 @@ object: set @var{env} as interaction environment.
 
 
 @defun new-interaction-environment
-Build and return a new interaction environment object.
+Build and return a new interaction environment object.  The returned
+environment is initialised by importing the library @library{vicare}.
 @end defun
 
 
@@ -4257,6 +4258,14 @@ persistent bindings:
   (eval '(list a b)
         env))
 @result{} (1 2)
+@end example
+
+@noindent
+and it is also possible to import additional libraries:
+
+@example
+(eval '(import (nausicaa))
+       (interaction-environment))
 @end example
 
 
