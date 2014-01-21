@@ -1111,6 +1111,15 @@
       (set! current-env env)))))
 
 ;;; --------------------------------------------------------------------
+
+;;Set to false  or a record of type INTERACTION-ENV.   This parameter is
+;;meant to hold the top-level context  when running the REPL or invoking
+;;EVAL with an INTERACTION-ENV as initial lexical environment.
+;;
+(define top-level-context
+  (make-parameter #f))
+
+;;; --------------------------------------------------------------------
 ;;; Substs.
 ;;
 ;;A "subst"  is an  alist whose  keys are "names"  and whose  values are
@@ -3402,9 +3411,6 @@
 
 ;;;; stuff about labels, lexical variables, location gensyms
 
-(define top-level-context
-  (make-parameter #f))
-
 (define* (gensym-for-lexical-var seed)
   ;;Generate a unique symbol to represent the name of a lexical variable
   ;;in the core language forms.  Such  symbols have the purpose of being
@@ -3419,13 +3425,7 @@
 	    (else
 	     (assertion-violation __who__
 	       "expected symbol or identifier as argument" seed)))
-    (cond ((identifier? seed)
-	   (gensym (identifier->symbol seed)))
-	  ((symbol? seed)
-	   (gensym seed))
-	  (else
-	   (assertion-violation __who__
-	     "expected symbol or identifier as argument" seed)))))
+    (gensym)))
 
 (define gensym-for-storage-location
   ;;Build  and return  a gensym  to be  used as  storage location  for a
