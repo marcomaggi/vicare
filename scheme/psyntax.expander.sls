@@ -635,18 +635,21 @@
 ;;The symbol ?TYPE is one among:
 ;;
 ;;GLOBAL -
-;;   To  denote a  lexical variable.   In this  case the  loc holds  the
+;;   To  denote  a  lexical  variable.   In this  case  ?LOC  holds  the
 ;;   variable's value (immutable).
 ;;
 ;;GLOBAL-MACRO -
-;;   To denote a non-identifier macro.
+;;   To  denote a  non-identifier macro.   In this  case ?LOC  holds the
+;;   macro transformer, but only after the library has been visited.
 ;;
 ;;GLOBAL-MACRO! -
-;;   To denote an identifier macro.
+;;   To denote an  identifier macro.  In this case ?LOC  holds the macro
+;;   transformer, but only after the library has been visited.
 ;;
 ;;GLOBAL-CTV -
 ;;   To denote  a compile-time value.   In this  case the loc  holds the
-;;   actual compile-time object.
+;;   actual compile-time  object, but  only after  the library  has been
+;;   visited.
 ;;
 
 
@@ -1847,13 +1850,13 @@
 		  (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
 			 (rhs-form-core*   (chi-rhs*  rhs-form-stx*  lexenv.run lexenv.expand)))
 		    (unseal-rib! rib)
-		    (let ((loc*          (map gensym-for-location lex*))
+		    (let ((loc.lex*      (map gensym-for-location lex*))
 			  (export-subst  (%make-export-subst export-name* export-id*)))
 		      (receive (export-env macro*)
-			  (%make-export-env/macro* lex* loc* lexenv.run)
+			  (%make-export-env/macro* lex* loc.lex* lexenv.run)
 			(%validate-exports export-spec* export-subst export-env)
 			(let ((invoke-code (build-library-letrec* no-source
-					     mix? lex* loc* rhs-form-core*
+					     mix? lex* loc.lex* rhs-form-core*
 					     (if (null? init-form-core*)
 						 (build-void)
 					       (build-sequence no-source init-form-core*)))))
@@ -1913,10 +1916,10 @@
       export-name* export-id*))
 
   (module (%make-export-env/macro*)
-    ;;For each entry in the  lexical environment LEXENV.RUN: convert the
-    ;;syntactic  binding to  an export  environment entry,  accumulating
-    ;;EXPORT-ENV; if  the syntactic binding  is a macro  or compile-time
-    ;;value: accumulate the MACRO* alist.
+    ;;For  each entry  in LEXENV.RUN:  convert  the LEXENV  entry to  an
+    ;;EXPORT-ENV  entry,  accumulating   EXPORT-ENV;  if  the  syntactic
+    ;;binding is  a macro or  compile-time value: accumulate  the MACRO*
+    ;;alist.
     ;;
     ;;Notice that EXPORT-ENV contains an  entry for every global lexical
     ;;variable, both the exported ones and the non-exported ones.  It is
@@ -1926,10 +1929,10 @@
     ;;LEX* must  be a  list of gensyms  representing the  global lexical
     ;;variables bindings.
     ;;
-    ;;LOC* must be a list  of gensyms representing the storage locations
-    ;;for the global lexical variables bindings.
+    ;;LOC.LEX* must be a list of storage location gensyms for the global
+    ;;lexical variables.
     ;;
-    (define (%make-export-env/macro* lex* loc* lexenv.run)
+    (define (%make-export-env/macro* lex* loc.lex* lexenv.run)
       (let loop ((lexenv.run		lexenv.run)
 		 (export-env		'())
 		 (macro*		'()))
@@ -1950,19 +1953,19 @@
 	       ;;
 	       ;;Add to the EXPORT-ENV an entry like:
 	       ;;
-	       ;;   (?label ?type . ?loc)
+	       ;;   (?label ?type . ?loc.lex)
 	       ;;
 	       ;;where  ?TYPE  is the  symbol  "mutable"  or the  symbol
 	       ;;"global"; notice that the entries of type "mutable" are
 	       ;;forbidden to be exported.
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
-		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
+		      (loc.lex   (%lookup (lexical-var bind-val) lex* loc.lex*))
 		      (type      (if (lexical-var-mutated? bind-val)
 				     'mutable
 				   'global)))
 		 (loop (cdr lexenv.run)
-		       (cons (cons* label type loc) export-env)
+		       (cons (cons* label type loc.lex) export-env)
 		       macro*)))
 
 	      ((local-macro)
@@ -1983,7 +1986,7 @@
 	       ;;
 	       ;;   (?loc . (?transformer . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym)))
+	       (let ((loc (gensym-for-location)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-macro loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
@@ -2006,7 +2009,7 @@
 	       ;;
 	       ;;   (?loc . (?transformer . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym)))
+	       (let ((loc (gensym-for-location)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-macro! loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
@@ -2029,7 +2032,7 @@
 	       ;;
 	       ;;   (?loc . (?object . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym)))
+	       (let ((loc (gensym-for-location)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-ctv loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
@@ -2048,15 +2051,15 @@
 		 (syntactic-binding-type  binding)
 		 (syntactic-binding-value binding))))))))
 
-    (define (%lookup lexical-gensym lex* loc*)
+    (define (%lookup lexical-gensym lex* loc.lex*)
       ;;Search for  LEXICAL-GENSYM in the  list LEX*: when  found return
-      ;;the corresponding  gensym from LOC*.  LEXICAL-GENSYM  must be an
-      ;;item in LEX*.
+      ;;the corresponding gensym from  LOC.LEX*.  LEXICAL-GENSYM must be
+      ;;an item in LEX*.
       ;;
       (if (pair? lex*)
 	  (if (eq? lexical-gensym (car lex*))
-	      (car loc*)
-	    (%lookup lexical-gensym (cdr lex*) (cdr loc*)))
+	      (car loc.lex*)
+	    (%lookup lexical-gensym (cdr lex*) (cdr loc.lex*)))
 	(assertion-violation 'lookup-make-export "BUG")))
 
     #| end of module: %MAKE-EXPORT-ENV/MACRO* |# )
@@ -3411,21 +3414,26 @@
 	   (assertion-violation __who__
 	     "expected symbol or identifier as argument" seed)))))
 
-(define (gensym-for-location seed)
+(define gensym-for-location
   ;;Build  and return  a gensym  to be  used as  storage location  for a
   ;;global lexical variable.  The "value" slot of such gensym is used to
   ;;hold the value of the variable.
   ;;
   (if-wants-descriptive-gensyms
-      (cond ((identifier? seed)
-	     (gensym (string-append "loc." (symbol->string (identifier->symbol seed)))))
-	    ((symbol? seed)
-	     (gensym (string-append "loc." (symbol->string seed))))
-	    ((string? seed)
-	     (gensym (string-append "loc." seed)))
-	    (else
-	     (gensym)))
-    (gensym)))
+      (case-lambda
+       (()
+	(gensym "loc.anonymous"))
+       ((seed)
+	(cond ((identifier? seed)
+	       (gensym (string-append "loc." (symbol->string (identifier->symbol seed)))))
+	      ((symbol? seed)
+	       (gensym (string-append "loc." (symbol->string seed))))
+	      ((string? seed)
+	       (gensym (string-append "loc." seed)))
+	      (else
+	       (gensym)))))
+    (lambda args
+      (gensym))))
 
 (define (gensym-for-label seed)
   ;;Every  syntactic binding  has a  label  associated to  it as  unique
@@ -3452,7 +3460,7 @@
 
   (define (gen-define-label+loc id rib sd?)
     (if sd?
-	(values (gensym) (gensym-for-lexical-var id))
+	(values (gensym-for-label id) (gensym-for-lexical-var id))
       (let* ((env   (top-level-context))
 	     (label (%gen-top-level-label id rib))
 	     (locs  (interaction-env-locs env)))
@@ -3465,7 +3473,7 @@
 
   (define (gen-define-label id rib sd?)
     (if sd?
-	(gensym)
+        (gensym-for-label id)
       (%gen-top-level-label id rib)))
 
   (define (%gen-top-level-label id rib)
@@ -3478,18 +3486,18 @@
 		  ;;If we  are here  RIB contains a  binding for  ID and
 		  ;;LABEL is its label.
 		  ;;
-		  ;;If  the symbol  LABEL is  associated to  an imported
-		  ;;binding: the data  structure implementing the symbol
-		  ;;object holds  informations about  the binding  in an
-		  ;;internal field; else such field is set to false.
+		  ;;If the  LABEL is associated to  an imported binding:
+		  ;;the  data structure  implementing the  symbol object
+		  ;;holds informations about the  binding in an internal
+		  ;;field; else such field is set to false.
 		  (if (imported-label->syntactic-binding label)
 		      ;;Create new label to shadow imported binding.
-		      (gensym)
+		      (gensym-for-label id)
 		    ;;Recycle old label.
 		    label)))
 	    (else
 	     ;;Create a new label for a new binding.
-	     (gensym)))))
+	     (gensym-for-label id)))))
 
   (define (%find sym mark* sym* mark** label*)
     ;;We know  that the list  of symbols SYM*  has at least  one element
