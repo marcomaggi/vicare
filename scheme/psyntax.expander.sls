@@ -3460,7 +3460,7 @@
     (gensym)))
 
 (module (gen-define-label+lex
-	 gen-define-label)
+	 gen-define-syntax-label)
 
   (define (gen-define-label+lex id rib shadowing-definition?)
     ;;Whenever a DEFINE syntax:
@@ -3514,7 +3514,30 @@
 			       (set-interaction-env-lab.loc*! env (cons (cons label loc)
 									lab.loc*)))))))))
 
-  (define (gen-define-label id rib shadowing-definition?)
+  (define (gen-define-syntax-label id rib shadowing-definition?)
+    ;;Whenever a DEFINE syntax:
+    ;;
+    ;;   (define-syntax ?id ?rhs)
+    ;;
+    ;;is expanded we need to generate for it: a label gensym, and that's
+    ;;all.  This function returns the label.
+    ;;
+    ;;ID must be an identifier  representing the name of a DEFINE-SYNTAX
+    ;;binding.
+    ;;
+    ;;RIB  must be  the <RIB>  describing the  lexical contour  in which
+    ;;DEFINE-SYNTAX is present.
+    ;;
+    ;;SHADOWING-DEFINITION?  must  be a boolean,  true if it is  fine to
+    ;;generate a binding that shadows an already existing binding:
+    ;;
+    ;;* When this argument is true: we always generate a new label.
+    ;;
+    ;;* When this argument is false, we first check if RIB has a binding
+    ;;  capturing ID: if it exists and it is not an imported binding, we
+    ;;  return its  already existent label; otherwise we  generate a new
+    ;;  label.
+    ;;
     (if shadowing-definition?
         (gensym-for-label id)
       (%gen-top-level-label id rib)))
@@ -3526,8 +3549,8 @@
       (cond ((and (memq sym (<rib>-sym* rib))
 		  (%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
 	     => (lambda (label)
-		  ;;If we  are here  RIB contains a  binding for  ID and
-		  ;;LABEL is its label.
+		  ;;If we are here RIB  contains a binding that captures
+		  ;;ID and LABEL is its label.
 		  ;;
 		  ;;If the  LABEL is associated to  an imported binding:
 		  ;;the  data structure  implementing the  symbol object
@@ -10321,7 +10344,7 @@
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-expr "cannot redefine keyword"))
 		  ;;We want order here!?!
-		  (let* ((lab          (gen-define-label id rib sd?))
+		  (let* ((lab          (gen-define-syntax-label id rib sd?))
 			 (expanded-rhs (%expand-macro-transformer rhs lexenv.expand)))
 		    (extend-rib! rib id lab sd?)
 		    (let ((entry (cons lab (%eval-macro-transformer expanded-rhs))))
@@ -10343,8 +10366,8 @@
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-expr "cannot redefine keyword"))
 		  ;;We want order here!?!
-		  (let* ((lab          (gen-define-label id rib sd?))
-			 (flab         (gen-define-label id rib sd?))
+		  (let* ((lab          (gen-define-syntax-label id rib sd?))
+			 (flab         (gen-define-syntax-label id rib sd?))
 			 (expanded-rhs (%expand-macro-transformer rhs lexenv.expand)))
 		    (extend-rib! rib id lab sd?)
 		    (let* ((binding  (%eval-macro-transformer expanded-rhs))
