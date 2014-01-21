@@ -4669,11 +4669,11 @@
 				     (let ((name  (car subst.entry))
 					   (label (cdr subst.entry)))
 				       (push-lexical-contour
-					(make-<rib> (list name)
-						    (list top-mark*)
-						    (list label)
-						    #f)
-					stx))))
+					   (make-<rib> (list name)
+						       (list top-mark*)
+						       (list label)
+						       #f)
+					 stx))))
 			       (else stx))))
 	    (hashtable-set! scheme-stx-hashtable sym stx)
 	    stx)))))
@@ -7749,7 +7749,8 @@
 		 (lexenv.run (add-lexical-bindings lab* lex* lexenv.run)))
 	     ;;Create  the   lexical  contour  then  process   body  and
 	     ;;right-hand sides of bindings.
-	     (let ((body (chi-internal-body (push-lexical-contour rib (cons ?body ?body*))
+	     (let ((body (chi-internal-body (push-lexical-contour rib
+					      (cons ?body ?body*))
 					    lexenv.run lexenv.expand))
 		   (rhs* (chi-expr*         (map (lambda (rhs)
 						   (push-lexical-contour rib rhs))
@@ -8662,8 +8663,9 @@
 	   ;;The expression  must be  expanded in a  lexical environment
 	   ;;augmented with the pattern variable.
 	   (define output-expr^
-	     (push-lexical-contour (make-full-rib (list ?pattern) (list label))
-				   ?output-expr))
+	     (push-lexical-contour
+		 (make-full-rib (list ?pattern) (list label))
+	       ?output-expr))
 	   (define lexenv.run^
 	     ;;Push a pattern variable entry to the lexical environment.
 	     ;;The ellipsis nesting level is 0.
@@ -8845,7 +8847,9 @@
       ;;The two methods are fully equivalent;  the one we have chosen is
       ;;a bit faster.
       ;;
-      (chi-expr (push-lexical-contour (make-full-rib ids labels) expr.stx)
+      (chi-expr (push-lexical-contour
+		    (make-full-rib ids labels)
+		  expr.stx)
 		(append bindings lexenv.run)
 		lexenv.expand))
     (build-application no-source
@@ -10115,7 +10119,7 @@
 
 ;;;; chi procedures: definitions and lambda clauses
 
-(define (chi-lambda-clause stx fmls body* lexenv.run lexenv.expand)
+(define (chi-lambda-clause stx fmls body-form-stx* lexenv.run lexenv.expand)
   (while-not-expanding-application-first-subform
    (syntax-match fmls ()
      ((x* ...)
@@ -10124,8 +10128,9 @@
 	(let ((lex* (map gensym-for-lexical-var x*))
 	      (lab* (map gensym-for-label x*)))
 	  (values lex*
-		  (chi-internal-body (push-lexical-contour (make-full-rib x* lab*)
-							   body*)
+		  (chi-internal-body (push-lexical-contour
+					 (make-full-rib x* lab*)
+				       body-form-stx*)
 				     (add-lexical-bindings lab* lex* lexenv.run)
 				     lexenv.expand)))))
      ((x* ... . x)
@@ -10136,29 +10141,32 @@
 	      (lex  (gensym-for-lexical-var x))
 	      (lab  (gensym-for-label x)))
 	  (values (append lex* lex)
-		  (chi-internal-body (push-lexical-contour (make-full-rib (cons x   x*)
-									  (cons lab lab*))
-							   body*)
-				     (add-lexical-bindings (cons lab lab*) (cons lex lex*) lexenv.run)
+		  (chi-internal-body (push-lexical-contour
+					 (make-full-rib (cons x   x*)
+							(cons lab lab*))
+				       body-form-stx*)
+				     (add-lexical-bindings (cons lab lab*)
+							   (cons lex lex*)
+							   lexenv.run)
 				     lexenv.expand)))))
      (_
       (stx-error fmls "invalid syntax")))))
 
-(define (chi-lambda-clause* stx fmls* body** lexenv.run lexenv.expand)
+(define (chi-lambda-clause* stx fmls* body-form-stx** lexenv.run lexenv.expand)
   (if (null? fmls*)
       (values '() '())
     (receive (a b)
-	(chi-lambda-clause stx (car fmls*) (car body**) lexenv.run lexenv.expand)
+	(chi-lambda-clause stx (car fmls*) (car body-form-stx**) lexenv.run lexenv.expand)
       (receive (a* b*)
-	  (chi-lambda-clause* stx (cdr fmls*) (cdr body**) lexenv.run lexenv.expand)
+	  (chi-lambda-clause* stx (cdr fmls*) (cdr body-form-stx**) lexenv.run lexenv.expand)
 	(values (cons a a*) (cons b b*))))))
 
 (define (chi-defun x lexenv.run lexenv.expand)
   (syntax-match x ()
-    ((_ (ctxt . fmls) . body*)
+    ((_ (?ctxt . ?fmls) . ?body-form*)
      (receive (fmls body)
-	 (chi-lambda-clause fmls fmls body* lexenv.run lexenv.expand)
-       (build-lambda (syntax-annotation ctxt) fmls body)))))
+	 (chi-lambda-clause ?fmls ?fmls ?body-form* lexenv.run lexenv.expand)
+       (build-lambda (syntax-annotation ?ctxt) fmls body)))))
 
 
 ;;;; chi procedures: bindings right-hand sides
@@ -10463,7 +10471,8 @@
 		      ;;Splice the internal body forms but add a lexical
 		      ;;contour to them.
 		      (append (map (lambda (internal-body-form)
-				     (push-lexical-contour xrib internal-body-form))
+				     (push-lexical-contour xrib
+				       internal-body-form))
 				?xbody*)
 			      (cdr body-expr*))
 		      ;;Push   on   the  lexical   environment   entries
@@ -11019,6 +11028,7 @@
 
 ;;; end of file
 ;;Local Variables:
+;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)
