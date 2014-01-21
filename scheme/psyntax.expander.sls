@@ -3459,7 +3459,7 @@
 (module (gen-define-label+lex
 	 gen-define-label)
 
-  (define (gen-define-label+lex id rib sd?)
+  (define (gen-define-label+lex id rib shadowing-definition?)
     ;;Whenever a DEFINE syntax is expanded we need to generate for it: a
     ;;label  gensym, a  lex  gensym  and a  loc  gensym.  This  function
     ;;returns 2 values: the label and  the lex; a loc might be generated
@@ -3467,12 +3467,12 @@
     ;;
     ;;ID  must  be an  identifier  representing  the  name of  a  DEFINE
     ;;binding.  RIB must be the  <RIB> describing the lexical contour in
-    ;;which DEFINE  is present.  SD?  must  be a boolean, true  if it is
-    ;;fine  to  generate a  binding  that  shadows an  already  existing
-    ;;binding.
+    ;;which  DEFINE  is  present.    SHADOWING-DEFINITION?   must  be  a
+    ;;boolean, true if it is fine  to generate a binding that shadows an
+    ;;already existing binding.
     ;;
     ;;
-    (if sd?
+    (if shadowing-definition?
 	;;This DEFINE binding is *allowed* to shadow an existing lexical
 	;;binding.
 	(values (gensym-for-label id) (gensym-for-lexical-var id))
@@ -3488,8 +3488,8 @@
 				 (gensym-for-storage-location id)
 			       (set-interaction-env-locs! env (cons (cons label loc) locs)))))))))
 
-  (define (gen-define-label id rib sd?)
-    (if sd?
+  (define (gen-define-label id rib shadowing-definition?)
+    (if shadowing-definition?
         (gensym-for-label id)
       (%gen-top-level-label id rib)))
 
