@@ -730,6 +730,9 @@
   (when (pair? args)
     (car args)))
 
+(define-syntax-rule (reverse-and-append ?item**)
+  (apply append (reverse ?item**)))
+
 
 ;;;; library records collectors
 
@@ -1189,7 +1192,8 @@
 		   '() '() '() '() '() rib #t #f)
       (let ((expr.core* (%expand-interaction-rhs*/init*
 			 (reverse lex*) (reverse rhs*)
-			 (append (apply append (reverse mod**)) e*)
+			 (append (reverse-and-append mod**)
+				 e*)
 			 lexenv.run^ lexenv.expand^)))
 	(let ((expr.core (cond ((null? expr.core*)
 				(build-void))
@@ -1881,7 +1885,7 @@
       ;;We build  a list of  init form  putting first the  trailing init
       ;;forms from the internal MODULE  syntaxes, then the trailing init
       ;;forms from the library body.
-      (let ((init-form-stx* (append (apply append (reverse module-init-form-stx**))
+      (let ((init-form-stx* (append (reverse-and-append module-init-form-stx**)
 				    trailing-init-form-stx*)))
 	(values init-form-stx*
 		lexenv.run lexenv.expand
@@ -7747,9 +7751,9 @@
 	     ;;right-hand sides of bindings.
 	     (let ((body (chi-internal-body (push-lexical-contour rib (cons ?body ?body*))
 					    lexenv.run lexenv.expand))
-		   (rhs* (chi-expr*    (map (lambda (rhs)
-					      (push-lexical-contour rib rhs))
-					 ?rhs*)
+		   (rhs* (chi-expr*         (map (lambda (rhs)
+						   (push-lexical-contour rib rhs))
+					      ?rhs*)
 				       lexenv.run lexenv.expand)))
 	       ;;Build  the LETREC  or  LETREC* expression  in the  core
 	       ;;language.
@@ -10191,25 +10195,72 @@
 
 ;;;; chi procedures: internal body
 
-(define (chi-internal-body expr* lexenv.run lexenv.expand)
+(define (chi-internal-body body-form-stx* lexenv.run lexenv.expand)
+  ;;This function is used to expand the internal bodies:
+  ;;
+  ;;*  The LET-like  syntaxes are  converted to  LETREC* syntaxes:  this
+  ;;  function processes the internal bodies of LETREC*.
+  ;;
+  ;;* The  LAMBDA syntaxes  are processed  as CASE-LAMBDA  clauses: this
+  ;;  function processes the internal body of CASE-LAMBDA clauses.
+  ;;
+  ;;Return  an expanded  language symbolic  expression representing  the
+  ;;expanded body.
+  ;;
+  ;;An internal body must satisfy the following constraints:
+  ;;
+  ;;* There must be at least one trailing expression, otherwise an error
+  ;;  is raised.
+  ;;
+  ;;*  Mixed  definitions  and   expressions  are  forbidden.   All  the
+  ;;  definitions must come first and the expressions last.
+  ;;
+  ;;* It is impossible to export  an internal binding from the enclosing
+  ;;  library.   The EXPORT  syntaxes present in  the internal  body are
+  ;;  discarded.
+  ;;
+  ;;An internal body having internal definitions:
+  ;;
+  ;;   (define ?id ?rhs)
+  ;;   ...
+  ;;   ?trailing-expr
+  ;;   ...
+  ;;
+  ;;is equivalent to:
+  ;;
+  ;;   (letrec* ((?id ?rhs) ...)
+  ;;     ?trailing-expr)
+  ;;
+  ;;so we create a <RIB> to describe the lexical contour of the implicit
+  ;;LETREC* and push it on the BODY-FORM-STX*.
+  ;;
   (while-not-expanding-application-first-subform
    (let ((rib (make-empty-rib)))
-     (receive (expr*^ lexenv.run lexenv.expand lex* rhs* mod** kwd* _exp*)
-	 (chi-body* (map (lambda (x)
-			   (push-lexical-contour rib x))
-		      (syntax->list expr*))
-		    lexenv.run lexenv.expand
-		    '() '() '() '() '() rib #f #t)
-       (when (null? expr*^)
-	 (stx-error expr*^ "no expression in body"))
-       (let* ((init* (chi-expr* (append (apply append (reverse mod**))
-					expr*^)
-				lexenv.run lexenv.expand))
-	      (rhs*  (chi-rhs* rhs* lexenv.run lexenv.expand)))
+     (receive (trailing-expr-stx*
+	       lexenv.run lexenv.expand
+	       lex* rhs-stx*
+	       trailing-mod-expr-stx**
+	       unused-kwd* unused-export*)
+	 (let ((mix-definitions-and-expressions?  #f)
+	       (shadowing-definitions?            #t))
+	   (chi-body* (map (lambda (x)
+			     (push-lexical-contour rib x))
+			(syntax->list body-form-stx*))
+		      lexenv.run lexenv.expand
+		      '() '() '() '() '() rib
+		      mix-definitions-and-expressions?
+		      shadowing-definitions?))
+       (when (null? trailing-expr-stx*)
+	 (stx-error trailing-expr-stx* "no expression in body"))
+       (let* ((all-expr-core*  (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**)
+						  trailing-expr-stx*)
+					  lexenv.run lexenv.expand))
+	      (rhs-core*       (chi-rhs* rhs-stx* lexenv.run lexenv.expand)))
 	 (build-letrec* no-source
 	   (reverse lex*)
-	   (reverse rhs*)
-	   (build-sequence no-source init*)))))))
+	   (reverse rhs-core*)
+	   (build-sequence no-source
+	     all-expr-core*)))))))
 
 
 ;;;; chi procedures: body
@@ -10674,21 +10725,21 @@
     (receive (name export-id* internal-body-form*)
 	(%parse-module module-form-stx)
       (let* ((module-rib               (make-empty-rib))
-	     (internal-body-form*/rib  (map (lambda (x)
-					      (push-lexical-contour module-rib x))
+	     (internal-body-form*/rib  (map (lambda (form)
+					      (push-lexical-contour module-rib form))
 					 (syntax->list internal-body-form*))))
 	(receive (leftover-body-expr* lexenv.run lexenv.expand lex* rhs* mod** kwd* _export-spec*)
 	    ;;In a module: we do not want the trailing expressions to be
 	    ;;converted to dummy definitions; rather  we want them to be
 	    ;;accumulated in the MOD** argument, for later expansion and
 	    ;;evaluation.  So we set MIX? to false.
-	    (let ((empty-export-spec*	'())
-		  (mix?			#f)
-		  (sd?			#t))
+	    (let ((empty-export-spec*      '())
+		  (mix?                    #f)
+		  (shadowing-definitions?  #t))
 	      (chi-body* internal-body-form*/rib
 			 lexenv.run lexenv.expand
 			 lex* rhs* mod** kwd* empty-export-spec*
-			 module-rib mix? sd?))
+			 module-rib mix? shadowing-definitions?))
 	  ;;The list  of exported identifiers  is not only the  one from
 	  ;;the MODULE  argument, but also  the one from all  the EXPORT
 	  ;;forms in the MODULE's body.
