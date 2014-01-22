@@ -2923,6 +2923,7 @@
       (let ((name  ($car entry))
 	    (label ($cdr entry)))
 	(cond ((assq name subst)
+	       ;;An entry for NAME already exists.
 	       => (lambda (x)
 		    (if (eq? (cdr x) label)
 			;;Same name and same label: OK.
@@ -2930,6 +2931,7 @@
 		      ;;Same name but different label: ERROR.
 		      (%error-two-import-with-different-bindings name))))
 	      (else
+	       ;;Prepend the new entry.
 	       (cons entry subst)))))
 
     #| end of module: %MERGE-EXPORT-SUBST* |# )
