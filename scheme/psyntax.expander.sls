@@ -2555,7 +2555,7 @@
 	    (begin
 	      (for-each (lambda (name.label)
 			  (%add-subst-entry! export-table name.label))
-		(%import-spec->subst ($car import-spec*)))
+		(%import-spec->export-subst ($car import-spec*)))
 	      (loop ($cdr import-spec*) export-table))
 	  (hashtable-entries export-table))))
 
@@ -2577,9 +2577,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%import-spec->subst)
+  (module (%import-spec->export-subst)
 
-    (define-inline (%import-spec->subst import-spec)
+    (define-inline (%import-spec->export-subst import-spec)
       ;;Process the IMPORT-SPEC and return the corresponding subst.
       ;;
       ;;The IMPORT-SPEC is  parsed; the specified library  is loaded and
@@ -2592,22 +2592,22 @@
       ;;
       (syntax-match import-spec ()
 	((?for ?import-set . ?import-levels)
-	 ;;FIXME Here we should validate ?IMPORT-LEVELS even if it is no
-	 ;;used by Vicare.  (Marco Maggi; Tue Apr 23, 2013)
+	 ;;FIXME Here  we should validate  ?IMPORT-LEVELS even if  it is
+	 ;;not used by Vicare.  (Marco Maggi; Tue Apr 23, 2013)
 	 (eq? (syntax->datum ?for) 'for)
-	 (%import-set->subst ?import-set import-spec))
+	 (%import-set->export-subst ?import-set import-spec))
 
 	(?import-set
-	 (%import-set->subst ?import-set import-spec))))
+	 (%import-set->export-subst ?import-set import-spec))))
 
-    (define (%import-set->subst import-set import-spec)
+    (define (%import-set->export-subst import-set import-spec)
       ;;Recursive  function.   Process  the IMPORT-SET  and  return  the
-      ;;corresponding   subst.    IMPORT-SPEC   is   the   full   import
+      ;;corresponding  EXPORT-SUBST.   IMPORT-SPEC  is the  full  import
       ;;specification from the IMPORT clause: it is used for descriptive
       ;;error reporting.
       ;;
       (define (%recurse import-set)
-	(%import-set->subst import-set import-spec))
+	(%import-set->export-subst import-set import-spec))
       (define (%local-synner message)
 	(%synner message import-spec import-set))
       (syntax-match import-set ()
@@ -2631,7 +2631,7 @@
 	   (let ((old-label* (find* ?old-name* subst ?import-set)))
 	     (let ((subst (rem* ?old-name* subst)))
 	       ;;FIXME Make sure map is valid. (Abdulaziz Ghuloum)
-	       (merge-substs (map cons ?new-name* old-label*) subst)))))
+	       (%merge-export-subst* (map cons ?new-name* old-label*) subst)))))
 
 	((?except ?import-set ?sym* ...)
 	 (and (eq? (syntax->datum ?except) 'except)
@@ -2732,7 +2732,7 @@
 
     (define (%import-library spec*)
       (receive (name version-conforms-to-reference?)
-	  (parse-library-reference spec*)
+	  (%parse-library-reference spec*)
 	(when (null? name)
 	  (%synner "empty library name" spec*))
 	;;Search  for the  library first  in the  collection of  already
@@ -2746,13 +2746,13 @@
 	  ((imp-collector) lib)
 	  (library-subst lib))))
 
-    #| end of module: %IMPORT-SPEC->SUBST |# )
+    #| end of module: %IMPORT-SPEC->EXPORT-SUBST |# )
 
 ;;; --------------------------------------------------------------------
 
-  (module (parse-library-reference)
+  (module (%parse-library-reference)
 
-    (define (parse-library-reference libref)
+    (define (%parse-library-reference libref)
       ;;Given a  SYNTAX-MATCH expression argument LIBREF  representing a
       ;;library reference  as defined  by R6RS:  parse and  validate it.
       ;;Return 2 values:
@@ -2895,13 +2895,13 @@
     (define-inline (%subversion? stx)
       (library-version-number? (syntax->datum stx)))
 
-    #| end of module: PARSE-LIBRARY-REFERENCE |# )
+    #| end of module: %PARSE-LIBRARY-REFERENCE |# )
 
 ;;; --------------------------------------------------------------------
 
-  (module (merge-substs)
+  (module (%merge-export-subst*)
 
-    (define (merge-substs subst1 subst2)
+    (define (%merge-export-subst* subst1 subst2)
       ;;Recursive function.  Given two substs: merge them and return the
       ;;result.
       ;;
@@ -2910,18 +2910,18 @@
       ;;name but different label from an entry in SUBST2: raise a syntax
       ;;error.
       ;;
-      (if (null? subst1)
-	  subst2
-	(%insert-to-subst (car subst1)
-			  (merge-substs (cdr subst1) subst2))))
+      (if (pair? subst1)
+	  (%insert-to-subst ($car subst1)
+			    (%merge-export-subst* ($cdr subst1) subst2))
+	subst2))
 
     (define-inline (%insert-to-subst entry subst)
       ;;Given a subst  ENTRY and a SUBST: insert the  entry in the subst
       ;;if it is not already present  and return the result; else return
       ;;SUBST.
       ;;
-      (let ((name  (car entry))
-	    (label (cdr entry)))
+      (let ((name  ($car entry))
+	    (label ($cdr entry)))
 	(cond ((assq name subst)
 	       => (lambda (x)
 		    (if (eq? (cdr x) label)
@@ -2932,7 +2932,7 @@
 	      (else
 	       (cons entry subst)))))
 
-    #| end of module: MERGE-SUBSTS |# )
+    #| end of module: %MERGE-EXPORT-SUBST* |# )
 
 ;;; --------------------------------------------------------------------
 
