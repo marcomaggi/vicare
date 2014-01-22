@@ -5878,32 +5878,53 @@ returns @false{}.
 @subsection Symbol values
 
 
-Symbol values have miscellaneous uses: when a symbol is the unique
-identifier for a data structure, its symbol value field is set to the
-type descriptor of the data structure; when a symbol is the unique label
-of a binding in the expander, its symbol value is a reference to the
-binding.  @ref{syslib symbols} for more details on symbol values.
+Under Vicare, Scheme symbols are data structures having a field
+@code{value} initialised, at symbol construction time, to the built--in
+value @samp{#<unbound-object>}; this field has multiple purposes:
+
+@itemize
+@item
+When the symbol is the unique identifier of a data structure type:
+@code{value} holds the @rtd{} of the data structure.
+
+@item
+When the symbol is a label gensym associated to a syntactic binding
+exported by the boot image: @code{value} holds the syntactic binding
+descriptor.
+
+@item
+When the symbol is a label gensym associated to a syntactic binding
+imported in the current lexical environment: @code{value} holds the
+syntactic binding descriptor.
+
+@item
+When the symbol is a storage location gensym associated to a lexical
+syntactic binding: @code{value} holds the current value of the lexical
+variable.
+
+@item
+When the symbol is a fresh symbol returned by a call to @func{gensym}:
+we can use @code{value} for any purpose we want.
+@end itemize
 
 The following bindings are exported by the @library{ikarus} and the
 @library{ikarus symbols} libraries.
 
 
 @defun set-symbol-value! @var{sym} @var{value}
-Store @var{value} in the @func{$symbol-value} field of the symbol
-@var{sym}.
+Store @var{value} in the @code{value} field of the symbol @var{sym}.
 @end defun
 
 
 @defun symbol-value @var{sym}
-Return the value in the @func{$symbol-value} field of the symbol
-@var{sym}.
+Return the value in the @code{value} field of the symbol @var{sym}.
 @end defun
 
 
 @defun symbol-bound? @var{sym}
-Return true if @var{sym} is a symbol and its @func{$symbol-value} field
-is @strong{not} set to the special ``unbound'' machine word value.
-@ref{objects symbols} for details.
+Return true if @var{sym} is a symbol and its @code{value} field is
+@strong{not} set to the built--in @samp{#<unbound-object>} machine word
+value.
 @end defun
 
 @c page
@@ -5911,9 +5932,8 @@ is @strong{not} set to the special ``unbound'' machine word value.
 @subsection Property lists
 
 
-Property lists are associations key/value that can be attached to any
-Scheme symbol.  The following bindings are exported by the
-@library{ikarus} and the @library{ikarus symbols} libraries.
+Property lists are key/value associations that can be attached to any
+Scheme symbol.
 
 @example
 #!ikarus
@@ -5930,6 +5950,9 @@ Scheme symbol.  The following bindings are exported by the
 
 (property-list 'ciao)           @result{} ((spanish . hola))
 @end example
+
+The following bindings are exported by the @library{ikarus} and the
+@library{ikarus symbols} libraries.
 
 
 @defun putprop @var{symbol} @var{key} @var{value}
@@ -5964,42 +5987,45 @@ creation order.
 @subsection System values
 
 
-When @value{PRJNAME}'s boot image is loaded, it initialises itself; for
-every primitive function (@func{cons}, @func{car}, @dots{})  one of the
-operations is to put the actual function (a closure object) in the
-@code{value} field of a gensym, and then put such gensym in the property
-list of the symbol being the name of the primitive, using an internal
-gensym (bound to @code{system-value-gensym}) as key.  For example, this
-is more or less what happens to @func{cons}:
+Every core primitive value has a name that is considered part of
+Vicare's core language; such primitive name is the actual public name of
+the binding exported by the boot image.  The name of the function
+@func{display} is the symbol @code{display}; the name of the
+record--type descriptor @code{&condition-rtd} is the symbol
+@code{&condition-rtd}.
+
+The property list of the name contains a special entry whose value is
+the storage location gensym of the core primitive value; we can easily
+inspect such situation as follows:
 
 @example
-(define G-cons (gensym "cons"))
-($set-symbol-value 'G-cons #<procedure cons>)
-(putprop 'cons system-value-gensym 'G-cons)
+(import (vicare)
+  (only (vicare system $symbols)
+        system-value-gensym))
+
+(getprop 'display system-value-gensym)
+@result{} loc.display
+
+(symbol-value (getprop 'display system-value-gensym))
+@result{} #<procedure display>
+
+(system-value 'display)
+@result{} #<procedure display>
+
+(system-value '&condition-rtd)
+@result{} #[rtd name=&condition ...]
 @end example
 
-@noindent
-so later we can do:
-
-@example
-($symbol-value (getprop x system-value-gensym))
-@result{} #<procedure cons>
-@end example
-
-@noindent
-or use the equivalent public @api{}:
-
-@example
-(system-value 'cons)    @result{} #<procedure cons>
-@end example
-
-The following bindings are exported by the library @library{vicare}.
+We see that the property list contains an entry with key set to the
+symbol bound to @code{system-value-gensym}; notice that this key is
+different every time we rebuild the boot image; @ref{syslib symbols,
+system-value-gensym}.
 
 
 @defun system-value @var{symbol}
-Attempt to extract from the @var{symbol} the primitive procedure of
-which @var{symbol} is the name; if successful return a closure object,
-else raise an assertion violation.
+Attempt to extract from @var{symbol} the core primitive value of which
+@var{symbol} is the name; if successful return the Scheme object, else
+raise an assertion violation.
 @end defun
 
 @c page

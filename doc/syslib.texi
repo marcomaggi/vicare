@@ -86,14 +86,22 @@ When @var{sym} is the unique identifier of a data structure type: the
 @code{value} field holds the @rtd{} of the data structure.
 
 @item
-Top level bindings in compiled Scheme code are represented by gensyms;
-the value of a top level binding is stored in the @code{value} field of
-a gensym memory block.
+When @var{sym} is a label gensym associated to a syntactic binding
+exported by the boot image: @code{value} holds the syntactic binding
+descriptor.
+
+@item
+When @var{sym} is a label gensym associated to a syntactic binding
+imported in the current lexical environment: @code{value} holds the
+syntactic binding descriptor.
+
+@item
+When @var{sym} is a fresh symbol returned by a call to @func{gensym}: we
+can use this field for any purpose we want.
 @end itemize
 
-Given the return value of @code{(gensym)}: we can use this field for any
-purpose we want.  Notice that this field is initialised to the unbound
-object, so we can test the value of a newly created symbols with:
+Notice that this field is initialised to the unbound object, so we can
+test the value of a newly created symbols with:
 
 @example
 ($unbound-object? ($symbol-value? @var{sym}))
@@ -127,6 +135,12 @@ Still to be documented.
 @deffn {Unsafe Operation} $init-symbol-function! @var{sym} @var{proc}
 Still to be documented.
 @end deffn
+
+
+@defvr Constant system-value-gensym
+A special gensym used internally to map core primitive names to their
+value; @ref{iklib symbols system, system-value}.
+@end defvr
 
 
 The following bindings are related to the symbol table collecting

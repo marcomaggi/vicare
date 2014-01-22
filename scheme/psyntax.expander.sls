@@ -454,11 +454,11 @@
 ;;Some words about core primitive values
 ;;======================================
 ;;
-;;Every core  primitive has a name  that is considered part  of Vicare's
-;;core language;  such primitive name is  the actual public name  of the
-;;binding exported by the boot image.   The name of the function DISPLAY
-;;is  the  symbol "display";  the  name  of the  record-type  descriptor
-;;&CONDITION-RTD is the symbol "&condition-rtd".
+;;Every  core primitive  value has  a name  that is  considered part  of
+;;Vicare's core language; such primitive  name is the actual public name
+;;of the binding  exported by the boot image.  The  name of the function
+;;DISPLAY  is  the  symbol  "display";   the  name  of  the  record-type
+;;descriptor &CONDITION-RTD is the symbol "&condition-rtd".
 ;;
 ;;The property list of the name  contains a special entry whose value is
 ;;the storage location gensym of the core primitive value; we can easily
