@@ -2451,7 +2451,8 @@
   (parse-import-spec*)
   ;;Given  a  list  of SYNTAX-MATCH  expression  arguments  representing
   ;;import specifications from  a LIBRARY form, as defined  by R6RS plus
-  ;;Vicare extensions:
+  ;;Vicare extensions (which can simply be  the raw sexp argument to the
+  ;;ENVIRONMENT function):
   ;;
   ;;1. Parse and validate the import specs.
   ;;
@@ -2459,13 +2460,13 @@
   ;;    add  them  to  the  current  collector  function  referenced  by
   ;;   IMP-COLLECTOR.
   ;;
-  ;;3. Apply to  visible binding names the  transformations described by
-  ;;   the import spec.
+  ;;3.   Apply to  library-exported  binding  names the  transformations
+  ;;   described by the import spec, obtaining the external names.
   ;;
   ;;4. Check for name conflicts between imported bindings.
   ;;
-  ;;Return  2  values  which can  be  used  to  build  a new  top  level
-  ;;environment object and so a top rib:
+  ;;Return 2  values which can  be used to build  a new top  level <RIB>
+  ;;record:
   ;;
   ;;1. NAME-VEC, a vector of  symbols representing the external names of
   ;;   the  imported bindings.
@@ -2528,57 +2529,51 @@
   ;;
   ;;this function returns the names and labels:
   ;;
-  ;;   #(z y q)		#(z$label x$label q$label)
+  ;;   #(z y q)		#(lab.z lab.x lab.q)
   ;;
-  ;;Imported bindings are referenced by "substs".  A "subst" is an alist
-  ;;whose keys are "names" and whose values are "labels":
-  ;;
-  ;;*  "Name" is  a syntax  object representing  the public  name of  an
-  ;;  imported binding, the one we use  to reference it in the code of a
-  ;;  library.
-  ;;
-  ;;* "Label"  is a unique symbol  associated to the binding's  entry in
-  ;;  the lexical environment.
+  ;;Externally   visible   imported   bindings  are   selected   by   an
+  ;;EXPORT-SUBST: an alist  whose keys are the external  symbol names of
+  ;;the bindings and whose values are the associated label gensyms.
   ;;
   (define-constant __who__ 'import)
 
-  (define (parse-import-spec* import-spec*)
-    (let loop ((import-spec*  import-spec*)
-	       (subst.table   (make-eq-hashtable)))
-      ;;SUBST.TABLE has subst names as  keys and subst labels as values.
-      ;;It is used  to check for duplicate names  with different labels,
-      ;;which is an error.  Example:
-      ;;
-      ;;   (import (rename (french)
-      ;;                   (salut	ciao))	;ERROR!
-      ;;           (rename (british)
-      ;;                   (hello	ciao)))	;ERROR!
-      ;;
-      (if (null? import-spec*)
-	  (hashtable-entries subst.table)
-	  ;; (receive (names labels)
-	  ;;     (hashtable-entries subst.table)
-	  ;;   (debug-print who names labels)
-	  ;;   (values names labels))
-	(begin
-	  (for-each (lambda (subst.entry)
-		      (%add-subst-entry! subst.table subst.entry))
-	    (%import-spec->subst (car import-spec*)))
-	  (loop (cdr import-spec*) subst.table)))))
+  (module (parse-import-spec*)
 
-  (define-inline (%add-subst-entry! subst.table subst.entry)
-    ;;Add  the  given  SUBST.ENTRY to  SUBST.TABLE;  return  unspecified
-    ;;values.  Raise a syntax violation if SUBST.ENTRY has the same name
-    ;;of an entry in SUBST.TABLE, but different label.
-    ;;
-    (let ((entry.name  (car subst.entry))
-	  (entry.label (cdr subst.entry)))
-      (cond ((hashtable-ref subst.table entry.name #f)
-	     => (lambda (label)
-		  (unless (eq? label entry.label)
-		    (%error-two-import-with-different-bindings entry.name))))
-	    (else
-	     (hashtable-set! subst.table entry.name entry.label)))))
+    (define (parse-import-spec* import-spec*)
+      (let loop ((import-spec*  import-spec*)
+		 (export-table  (make-eq-hashtable)))
+	;;EXPORT-TABLE has  EXPORT-SUBST names as keys  and EXPORT-SUBST
+	;;labels as  values.  It  is used to  check for  duplicate names
+	;;with different labels, which is an error.  Example:
+	;;
+	;;   (import (rename (french)
+	;;                   (salut	ciao))	;ERROR!
+	;;           (rename (british)
+	;;                   (hello	ciao)))	;ERROR!
+	;;
+	(if (pair? import-spec*)
+	    (begin
+	      (for-each (lambda (name.label)
+			  (%add-subst-entry! export-table name.label))
+		(%import-spec->subst ($car import-spec*)))
+	      (loop ($cdr import-spec*) export-table))
+	  (hashtable-entries export-table))))
+
+    (define-inline (%add-subst-entry! export-table name.label)
+      ;;Add  the   given  NAME.LABEL   entry  to   EXPORT-TABLE;  return
+      ;;unspecified values.  Raise a  syntax violation if NAME.LABEL has
+      ;;the same name of an entry in EXPORT-TABLE, but different label.
+      ;;
+      (let ((name  ($car name.label))
+	    (label ($cdr name.label)))
+	(cond ((hashtable-ref export-table name #f)
+	       => (lambda (already-existent-label)
+		    (unless (eq? already-existent-label label)
+		      (%error-two-import-with-different-bindings name))))
+	      (else
+	       (hashtable-set! export-table name label)))))
+
+    #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 
