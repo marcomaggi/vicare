@@ -451,6 +451,18 @@
 ;;condition object types.
 ;;
 ;;
+;;Fluid syntax
+;;------------
+;;
+;;A binding representing a fluid syntax has the format:
+;;
+;;   ($fluid . ?label)
+;;
+;;where ?LABEL is  the gensym associated to the  fluid syntax.  Bindings
+;;of this type  have descriptor format equal to the  ones present in the
+;;LEXENV data structures.
+;;
+;;
 ;;Some words about core primitive values
 ;;======================================
 ;;
