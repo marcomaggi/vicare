@@ -3620,6 +3620,109 @@
 	    (%display " source=")	(%display (source-position-port-id pos))))))
     (%display ">")))
 
+;;First, let's  look at identifiers,  since they're the real  reason why
+;;syntax objects are here to begin  with.  An identifier is an STX whose
+;;EXPR is a symbol; in addition to the symbol naming the identifier, the
+;;identifer has a  list of marks and a list  of substitutions.
+;;
+;;The idea  is that to get  the label of  an identifier, we look  up the
+;;identifier's substitutions for  a mapping with the same  name and same
+;;marks (see SAME-MARKS? below).
+;;
+
+(define (datum->stx id datum)
+  ;;Since all the identifier->label bindings are encapsulated within the
+  ;;identifier, converting a datum to a syntax object (non-hygienically)
+  ;;is  done simply  by creating  an  STX that  has the  same marks  and
+  ;;substitutions as the identifier.
+  ;;
+  (make-<stx> datum
+	      (<stx>-mark*  id)
+	      (<stx>-subst* id)
+	      (<stx>-ae*    id)))
+
+(define (datum->syntax id datum)
+  (if (identifier? id)
+      (datum->stx id datum)
+    (assertion-violation 'datum->syntax
+      "expected identifier as context syntax object" id)))
+
+(define (syntax->datum S)
+  (strip S '()))
+
+(define (mkstx stx/expr mark* subst* ae*)
+  ;;This is the proper constructor for wrapped syntax objects.
+  ;;
+  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
+  ;;object.  MARK* is a list of marks.  SUBST* is a list of substs.
+  ;;
+  ;;AE* == annotated expressions???
+  ;;
+  ;;When STX/EXPR  is a  raw sexp:  just build and  return a  new syntax
+  ;;object with the lexical context described by the given arguments.
+  ;;
+  ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
+  ;;given wraps, making sure that marks and anti-marks and corresponding
+  ;;shifts cancel properly.
+  ;;
+  (if (and (<stx>? stx/expr)
+	   (not (top-marked? mark*)))
+      (receive (mark* subst* ae*)
+	  (join-wraps mark* subst* ae* stx/expr)
+	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
+    (make-<stx> stx/expr mark* subst* ae*)))
+
+;;; --------------------------------------------------------------------
+
+(module (strip)
+  ;;STRIP is used  to remove the wrap  of a syntax object.   It takes an
+  ;;stx's expr  and marks.  If  the marks  contain a top-mark,  then the
+  ;;expr is returned.
+  ;;
+  (define (strip x m*)
+    (if (top-marked? m*)
+	(if (or (annotation? x)
+		(and (pair? x)
+		     (annotation? ($car x)))
+		(and (vector? x)
+		     (> ($vector-length x) 0)
+		     (annotation? ($vector-ref x 0))))
+	    ;;TODO Ask Kent  why this is a  sufficient test.  (Abdulaziz
+	    ;;Ghuloum)
+	    (strip-annotations x)
+	  x)
+      (let f ((x x))
+	(cond ((<stx>? x)
+	       (strip ($<stx>-expr x) ($<stx>-mark* x)))
+	      ((annotation? x)
+	       (annotation-stripped x))
+	      ((pair? x)
+	       (let ((a (f ($car x)))
+		     (d (f ($cdr x))))
+		 (if (and (eq? a ($car x))
+			  (eq? d ($cdr x)))
+		     x
+		   (cons a d))))
+	      ((vector? x)
+	       (let* ((old (vector->list x))
+		      (new (map f old)))
+		 (if (for-all eq? old new)
+		     x
+		   (list->vector new))))
+	      (else x)))))
+
+  (define (strip-annotations x)
+    (cond ((pair? x)
+	   (cons (strip-annotations ($car x))
+		 (strip-annotations ($cdr x))))
+	  ((vector? x)
+	   (vector-map strip-annotations x))
+	  ((annotation? x)
+	   (annotation-stripped x))
+	  (else x)))
+
+  #| end of module: STRIP |# )
+
 
 ;;;; marks
 
@@ -3843,60 +3946,6 @@
   #| end of module |# )
 
 
-;;;; syntax objects handling
-;;
-;;First, let's  look at identifiers,  since they're the real  reason why
-;;syntax objects are here to begin  with.  An identifier is an STX whose
-;;EXPR is a symbol; in addition to the symbol naming the identifier, the
-;;identifer has a  list of marks and a list  of substitutions.
-;;
-;;The idea  is that to get  the label of  an identifier, we look  up the
-;;identifier's substitutions for  a mapping with the same  name and same
-;;marks (see SAME-MARKS? below).
-;;
-
-(define (datum->stx id datum)
-  ;;Since all the identifier->label bindings are encapsulated within the
-  ;;identifier, converting a datum to a syntax object (non-hygienically)
-  ;;is  done simply  by creating  an  STX that  has the  same marks  and
-  ;;substitutions as the identifier.
-  ;;
-  (make-<stx> datum
-	      (<stx>-mark*  id)
-	      (<stx>-subst* id)
-	      (<stx>-ae*    id)))
-
-(define (datum->syntax id datum)
-  (if (identifier? id)
-      (datum->stx id datum)
-    (assertion-violation 'datum->syntax
-      "expected identifier as context syntax object" id)))
-
-(define (syntax->datum S)
-  (strip S '()))
-
-(define (mkstx stx/expr mark* subst* ae*)
-  ;;This is the proper constructor for wrapped syntax objects.
-  ;;
-  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
-  ;;object.  MARK* is a list of marks.  SUBST* is a list of substs.
-  ;;
-  ;;AE* == annotated expressions???
-  ;;
-  ;;When STX/EXPR  is a  raw sexp:  just build and  return a  new syntax
-  ;;object with the lexical context described by the given arguments.
-  ;;
-  ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
-  ;;given wraps, making sure that marks and anti-marks and corresponding
-  ;;shifts cancel properly.
-  ;;
-  (if (and (<stx>? stx/expr)
-	   (not (top-marked? mark*)))
-      (receive (mark* subst* ae*)
-	  (join-wraps mark* subst* ae* stx/expr)
-	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
-    (make-<stx> stx/expr mark* subst* ae*)))
-
 (define (bless x)
   ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
   ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
@@ -4363,65 +4412,6 @@
   (and (pair? id*)
        (or (bound-id=? id ($car id*))
 	   (bound-id-member? id ($cdr id*)))))
-
-
-(define (self-evaluating? x)
-  (or (number?		x)
-      (string?		x)
-      (char?		x)
-      (boolean?		x)
-      (bytevector?	x)
-      (keyword?		x)
-      (would-block-object? x)))
-
-(module (strip)
-  ;;STRIP is used  to remove the wrap  of a syntax object.   It takes an
-  ;;stx's expr  and marks.  If  the marks  contain a top-mark,  then the
-  ;;expr is returned.
-  ;;
-  (define (strip x m*)
-    (if (top-marked? m*)
-	(if (or (annotation? x)
-		(and (pair? x)
-		     (annotation? ($car x)))
-		(and (vector? x)
-		     (> ($vector-length x) 0)
-		     (annotation? ($vector-ref x 0))))
-	    ;;TODO Ask Kent  why this is a  sufficient test.  (Abdulaziz
-	    ;;Ghuloum)
-	    (strip-annotations x)
-	  x)
-      (let f ((x x))
-	(cond ((<stx>? x)
-	       (strip ($<stx>-expr x) ($<stx>-mark* x)))
-	      ((annotation? x)
-	       (annotation-stripped x))
-	      ((pair? x)
-	       (let ((a (f ($car x)))
-		     (d (f ($cdr x))))
-		 (if (and (eq? a ($car x))
-			  (eq? d ($cdr x)))
-		     x
-		   (cons a d))))
-	      ((vector? x)
-	       (let* ((old (vector->list x))
-		      (new (map f old)))
-		 (if (for-all eq? old new)
-		     x
-		   (list->vector new))))
-	      (else x)))))
-
-  (define (strip-annotations x)
-    (cond ((pair? x)
-	   (cons (strip-annotations ($car x))
-		 (strip-annotations ($cdr x))))
-	  ((vector? x)
-	   (vector-map strip-annotations x))
-	  ((annotation? x)
-	   (annotation-stripped x))
-	  (else x)))
-
-  #| end of module: STRIP |# )
 
 
 ;;;; identifiers and labels
@@ -9893,6 +9883,15 @@
   ;;- The binding of  the identifier (for id-stx) or the  type of car of
   ;;  the pair.
   ;;
+  (define (self-evaluating? x)
+    (or (number?		x)
+	(string?		x)
+	(char?			x)
+	(boolean?		x)
+	(bytevector?		x)
+	(keyword?		x)
+	(would-block-object?	x)))
+
   (cond ((identifier? expr-stx)
 	 (let* ((id    expr-stx)
 		(label (id->label/intern id)))
