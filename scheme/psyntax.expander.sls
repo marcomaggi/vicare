@@ -3239,7 +3239,7 @@
   (cdr ?export-binding))
 
 
-;;;; <RIB> type definition
+;;;; rib record type definition
 ;;
 ;;A  <RIB> is  a  record constructed  at every  lexical  contour in  the
 ;;program to  hold informations about  the variables introduced  in that
@@ -3250,6 +3250,25 @@
 ;;associated to those bindings; this map  is used when establishing if a
 ;;syntax  object identifier  in  reference position  is  captured by  an
 ;;existing sytactic binding.
+;;
+;;Sealing ribs
+;;------------
+;;
+;;A non-empty  <RIB> can be sealed  once all bindings are  inserted.  To
+;;seal a <RIB>, we convert the lists NAME*, MARK** and LABEL* to vectors
+;;and insert a frequency vector in the SEALED/FREQ field.  The frequency
+;;vector is a Scheme vector of exact integers.
+;;
+;;The  frequency vector  is an  optimization  that allows  the <RIB>  to
+;;reorganize itself by  bubbling frequently used mappings to  the top of
+;;the <RIB>.   This is possible because  the order in  which the binding
+;;tuples appear in a <RIB> does not matter.
+;;
+;;The vector is  maintained in non-descending order  and an identifier's
+;;entry in the <RIB> is incremented at every access.  If an identifier's
+;;frequency  exceeds the  preceeding one,  the identifier's  position is
+;;promoted  to the  top of  its  class (or  the bottom  of the  previous
+;;class).
 ;;
 (define-record <rib>
   (name*
@@ -3445,12 +3464,12 @@
   ;;   mark** = ((top)   (top))
   ;;   label* = (lab.b   lab.a)
   ;;
-  ;;Notice that  the order  in which  the binding  tuples appear  in the
-  ;;<RIB> does not matter: two tuples are different when both the symbol
-  ;;and the marks are different and it  is an error to add twice a tuple
-  ;;to the same <RIB>.
+  ;;That the order in which the  binding tuples appear in the <RIB> does
+  ;;not matter:  two tuples are different  when both the symbol  and the
+  ;;marks are different and  it is an error to add twice  a tuple to the
+  ;;same <RIB>.
   ;;
-  ;;However it  is possible  to redefine  a binding.   Let's say  we are
+  ;;However, it  is possible to  redefine a  binding.  Let's say  we are
   ;;evaluating    forms   read    from    the    REPL:   the    argument
   ;;SHADOWING-DEFINITIONS? is true.  If we type:
   ;;
@@ -3528,65 +3547,21 @@
 
   #| end of module: EXTEND-RIB! |# )
 
-
-;;;; sealing ribs
-;;
-;;A non-empty  <RIB> can be sealed  once all bindings  are inserted.  To
-;;seal a <RIB>, we convert the  lists SYM*, MARK** and LABEL* to vectors
-;;and insert a frequency vector in the SEALED/FREQ field.  The frequency
-;;vector is a Scheme vector of exact integers.
-;;
-;;The  frequency vector  is an  optimization  that allows  the <RIB>  to
-;;reorganize itself by  bubbling frequently used mappings to  the top of
-;;the <RIB>.   This is possible because  the order in  which the binding
-;;tuples appear in a <RIB> does not matter.
-;;
-;;The vector  is maintained in non-descending order  and an identifier's
-;;entry in the <RIB> is incremented at every access.  If an identifier's
-;;frequency  exceeds the  preceeding one,  the identifier's  position is
-;;promoted  to the  top of  its  class (or  the bottom  of the  previous
-;;class).
-;;
+(define* (seal-rib! (rib <rib>?))
+  (let ((name* ($<rib>-name* rib)))
+    (unless (null? name*) ;only seal if RIB is not empty
+      (let ((name* (list->vector name*)))
+	($set-<rib>-name*!       rib name*)
+	($set-<rib>-mark**!      rib (list->vector ($<rib>-mark** rib)))
+	($set-<rib>-label*!      rib (list->vector ($<rib>-label* rib)))
+	($set-<rib>-sealed/freq! rib (make-vector (vector-length name*) 0))))))
 
-(define (seal-rib! rib)
-  (let ((sym* (<rib>-name* rib)))
-    (unless (null? sym*) ;only seal if RIB is not empty
-      (let ((sym* (list->vector sym*)))
-	(set-<rib>-name*!       rib sym*)
-	(set-<rib>-mark**!      rib (list->vector (<rib>-mark** rib)))
-	(set-<rib>-label*!      rib (list->vector (<rib>-label* rib)))
-	(set-<rib>-sealed/freq! rib (make-vector (vector-length sym*) 0))))))
-
-(define (unseal-rib! rib)
-  (when (<rib>-sealed/freq rib)
-    (set-<rib>-sealed/freq! rib #f)
-    (set-<rib>-name*!       rib (vector->list (<rib>-name*  rib)))
-    (set-<rib>-mark**!      rib (vector->list (<rib>-mark** rib)))
-    (set-<rib>-label*!      rib (vector->list (<rib>-label* rib)))))
-
-(define (increment-rib-frequency! rib idx)
-  (let* ((freq* (<rib>-sealed/freq rib))
-	 (freq  (vector-ref freq* idx))
-	 (i     (let loop ((i idx))
-		  (if (zero? i)
-		      0
-		    (let ((j (- i 1)))
-		      (if (= freq (vector-ref freq* j))
-			  (loop j)
-			i))))))
-    (vector-set! freq* i (+ freq 1))
-    (unless (= i idx)
-      (let ((sym*   (<rib>-name*  rib))
-	    (mark** (<rib>-mark** rib))
-	    (label* (<rib>-label* rib)))
-	(let-syntax ((%vector-swap (syntax-rules ()
-				     ((_ ?vec ?idx1 ?idx2)
-				      (let ((V (vector-ref ?vec ?idx1)))
-					(vector-set! ?vec ?idx1 (vector-ref ?vec ?idx2))
-					(vector-set! ?vec ?idx2 V))))))
-	  (%vector-swap sym*   idx i)
-	  (%vector-swap mark** idx i)
-	  (%vector-swap label* idx i))))))
+(define* (unseal-rib! (rib <rib>?))
+  (when ($<rib>-sealed/freq rib)
+    ($set-<rib>-sealed/freq! rib #f)
+    ($set-<rib>-name*!       rib (vector->list ($<rib>-name*  rib)))
+    ($set-<rib>-mark**!      rib (vector->list ($<rib>-mark** rib)))
+    ($set-<rib>-label*!      rib (vector->list ($<rib>-label* rib)))))
 
 
 ;;;; syntax object type definition
@@ -4445,20 +4420,6 @@
 		     (%search-in-sealed-rib rib sym mark* next-search)
 		   (%search-in-rib rib sym mark* next-search))))))))
 
-  (define-inline (%search-in-sealed-rib rib sym mark* next-search)
-    (define sym* ($<rib>-name* rib))
-    (let loop ((i       0)
-	       (rib.len ($vector-length sym*)))
-      (cond (($fx= i rib.len)
-	     (next-search))
-	    ((and (eq? ($vector-ref sym* i) sym)
-		  (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
-	     (let ((label ($vector-ref ($<rib>-label* rib) i)))
-	       (increment-rib-frequency! rib i)
-	       label))
-	    (else
-	     (loop ($fxadd1 i) rib.len)))))
-
   (define-inline (%search-in-rib rib sym mark* next-search)
     (let loop ((sym*    ($<rib>-name*  rib))
 	       (mark**  ($<rib>-mark** rib))
@@ -4470,6 +4431,48 @@
 	     ($car label*))
 	    (else
 	     (loop ($cdr sym*) ($cdr mark**) ($cdr label*))))))
+
+  (module (%search-in-sealed-rib)
+
+    (define (%search-in-sealed-rib rib sym mark* next-search)
+      (define sym* ($<rib>-name* rib))
+      (let loop ((i       0)
+		 (rib.len ($vector-length sym*)))
+	(cond (($fx= i rib.len)
+	       (next-search))
+	      ((and (eq? ($vector-ref sym* i) sym)
+		    (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
+	       (let ((label ($vector-ref ($<rib>-label* rib) i)))
+		 (%increment-rib-frequency! rib i)
+		 label))
+	      (else
+	       (loop ($fxadd1 i) rib.len)))))
+
+    (define (%increment-rib-frequency! rib idx)
+      (let* ((freq* (<rib>-sealed/freq rib))
+	     (freq  (vector-ref freq* idx))
+	     (i     (let loop ((i idx))
+		      (if (zero? i)
+			  0
+			(let ((j (- i 1)))
+			  (if (= freq (vector-ref freq* j))
+			      (loop j)
+			    i))))))
+	(vector-set! freq* i (+ freq 1))
+	(unless (= i idx)
+	  (let ((sym*   (<rib>-name*  rib))
+		(mark** (<rib>-mark** rib))
+		(label* (<rib>-label* rib)))
+	    (let-syntax ((%vector-swap (syntax-rules ()
+					 ((_ ?vec ?idx1 ?idx2)
+					  (let ((V (vector-ref ?vec ?idx1)))
+					    (vector-set! ?vec ?idx1 (vector-ref ?vec ?idx2))
+					    (vector-set! ?vec ?idx2 V))))))
+	      (%vector-swap sym*   idx i)
+	      (%vector-swap mark** idx i)
+	      (%vector-swap label* idx i))))))
+
+    #| end of module: %SEARCH-IN-SEALED-RIB |# )
 
   #| end of module: ID->LABEL |# )
 
