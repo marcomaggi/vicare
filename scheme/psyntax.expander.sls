@@ -1313,7 +1313,7 @@
     ;;
     (cond ((env? env)
 	   (let ((rib (make-top-rib (env-names env) (env-labels env))))
-	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '()))
+	     (let ((expr.stx (make-<stx> expr TOP-MARK* (list rib) '()))
 		   (rtc      (make-collector))
 		   (vtc      (make-collector))
 		   (itc      (env-itc env)))
@@ -1331,7 +1331,7 @@
 	   (let ((rib         (interaction-env-rib env))
 		 (lexenv.run  (interaction-env-lexenv env))
 		 (rtc         (make-collector)))
-	     (let ((expr.stx (make-<stx> expr top-mark* (list rib) '())))
+	     (let ((expr.stx (make-<stx> expr TOP-MARK* (list rib) '())))
 	       (receive (expr.core lexenv.run^)
 		   (parametrise ((top-level-context env)
 				 (inv-collector rtc)
@@ -1968,11 +1968,13 @@
 		     (let ()
 		       (import PARSE-IMPORT-SPEC)
 		       (parse-import-spec* import-spec*))
-		   ;;NAME-VEC  is a  vector  of substs;  LABEL-VEC is  a
-		   ;;vector of gensyms acting as labels.
+		   ;;NAME-VEC is  a vector  of symbols  representing the
+		   ;;external names of the imported bindings.  LABEL-VEC
+		   ;;is a vector of label gensyms uniquely associated to
+		   ;;the imported bindings.
 		   (make-top-rib name-vec label-vec))))
 	(define (wrap x)
-	  (make-<stx> x top-mark* (list rib) '()))
+	  (make-<stx> x TOP-MARK* (list rib) '()))
 	(let ((body-stx*	(map wrap body-sexp*))
 	      (rtc		(make-collector))
 	      (vtc		(make-collector)))
@@ -2465,11 +2467,11 @@
   ;;Return  2  values  which can  be  used  to  build  a new  top  level
   ;;environment object and so a top rib:
   ;;
-  ;;1.   A vector  of symbols  representing  the external  names of  the
-  ;;   imported bindings.
+  ;;1. NAME-VEC, a vector of  symbols representing the external names of
+  ;;   the  imported bindings.
   ;;
-  ;;2. A  list of "labels":  unique symbols associated to  the binding's
-  ;;   entry in the lexical environment.
+  ;;2. LABEL-VEC is a vector of label gensyms uniquely associated to the
+  ;;   imported bindings.
   ;;
   ;;
   ;;A  quick  summary  of  R6RS syntax  definitions  along  with  Vicare
@@ -3345,37 +3347,49 @@
 	      label*
 	      #f))
 
-(define* (make-top-rib name* label*)
-  ;;A top <RIB> is constructed as follows: given a subst:
+(define* (make-top-rib name-vec label-vec)
+  ;;Build  and  return a  new  <rib>  record initialised  with  bindings
+  ;;imported  from a  set  or IMPORT  specifications  or an  environment
+  ;;record.
   ;;
-  ;;   name* -> label*
+  ;;NAME-VEC is a  vector of symbols representing the  external names of
+  ;;the  imported bindings.   LABEL-VEC  is a  vector  of label  gensyms
+  ;;uniquely associated to the imported bindings.
   ;;
-  ;;where NAME* is a vector of symbols and LABEL* is a vector of labels,
-  ;;generate a <RIB> containing:
+  ;;For example, when creating the  lexical contour for a top-level body
+  ;;(either for a library or a program) we can do:
   ;;
-  ;;* NAME* as the <RIB>-NAME*,
+  ;;   (define import-spec*
+  ;;     '((vicare) (vicare ffi)))
   ;;
-  ;;* a list of TOP-MARK* as the <RIB>-MARK**,
+  ;;   (define rib
+  ;;     (receive (name-vec label-vec)
+  ;;         (let ()
+  ;;           (import PARSE-IMPORT-SPEC)
+  ;;           (parse-import-spec* import-spec*))
+  ;;       (make-top-rib name-vec label-vec)))
   ;;
-  ;;* LABEL* as the <RIB>-LABEL*
+  ;;when  creating  the  lexical  contour  for  a  top-level  expression
+  ;;evaluated by  EVAL in the  context of a  non-interactive environment
+  ;;record we, cando:
   ;;
-  ;;so, a name in  a top <RIB> maps to its label if  and only if its set
-  ;;of marks is TOP-MARK*.
+  ;;   (define env
+  ;;     (environment '(vicare)))
+  ;;
+  ;;   (define rib
+  ;;     (make-top-rib (env-names env) (env-labels env)))
   ;;
   (receive-and-return (rib)
       (make-empty-rib)
     (vector-for-each
         (lambda (name label)
           (if (symbol? name)
-	      (let ((shadowing-definition? #t))
-		(extend-rib! rib
-			     (make-<stx> name top-mark*
-					 '()  #;subst*
-					 '()) #;ae*
-			     label shadowing-definition?))
+	      (let ((id                    (symbol->top-marked-identifier name))
+		    (shadowing-definition? #t))
+		(extend-rib! rib id label shadowing-definition?))
             (assertion-violation __who__
 	      "Vicare bug: expected symbol as binding name" name)))
-      name* label*)))
+      name-vec label-vec)))
 
 (define (subst->rib subst)
   ;;Build and return a new <RIB> structure initialised with SUBST.
@@ -3390,7 +3404,7 @@
   ;;  the lexical environment.
   ;;
   (make-<rib> (map car subst)
-	      (map (lambda (x) top-mark*) subst)
+	      (map (lambda (x) TOP-MARK*) subst)
 	      (map cdr subst)
 	      #f))
 
@@ -3579,12 +3593,19 @@
 
 ;;The body  of a library, when it  is first processed, gets  this set of
 ;;marks...
-(define top-mark* '(top))
+(define-constant TOP-MARK*
+  '(top))
 
 ;;... consequently, every syntax object that  has a TOP in its marks set
 ;;was present in the program source.
 (define-inline (top-marked? m*)
   (memq 'top m*))
+
+(define (symbol->top-marked-identifier sym)
+  ;;Given a  raw Scheme  symbol return a  syntax object  representing an
+  ;;identifier with top marks.
+  ;;
+  (make-<stx> sym TOP-MARK* '() '()))
 
 (define (top-marked-symbols rib)
   ;;Scan the <RIB> RIB and return a list of symbols representing binding
@@ -3603,7 +3624,7 @@
 		(mark** mark**))
       (cond ((null? sym*)
 	     '())
-	    ((equal? (car mark**) top-mark*)
+	    ((equal? (car mark**) TOP-MARK*)
 	     (cons (car sym*)
 		   (recur (cdr sym*) (cdr mark**))))
 	    (else
@@ -4244,7 +4265,7 @@
 				  (string? x))
 			      (gensym x)
 			    (gensym 't)))
-			top-mark* '() '()))
+			TOP-MARK* '() '()))
        ?item*))
     (_
      (assertion-violation 'generate-temporaries
@@ -4869,14 +4890,14 @@
     (lambda (sym)
       (or (hashtable-ref scheme-stx-hashtable sym #f)
 	  (let* ((subst  (library-subst (find-library-by-name '(psyntax system $all))))
-		 (stx    (make-<stx> sym top-mark* '() '()))
+		 (stx    (make-<stx> sym TOP-MARK* '() '()))
 		 (stx    (cond ((assq sym subst)
 				=> (lambda (subst.entry)
 				     (let ((name  (car subst.entry))
 					   (label (cdr subst.entry)))
 				       (push-lexical-contour
 					   (make-<rib> (list name)
-						       (list top-mark*)
+						       (list TOP-MARK*)
 						       (list label)
 						       #f)
 					 stx))))
@@ -7286,7 +7307,7 @@
 (define quasiquote-macro
   (let ()
     (define (datum x)
-      (list (scheme-stx 'quote) (mkstx x top-mark* '() '())))
+      (list (scheme-stx 'quote) (mkstx x TOP-MARK* '() '())))
     (define-syntax app
       (syntax-rules (quote)
 	((_ 'x arg* ...)
@@ -10992,14 +11013,17 @@
     (define (%library-import import-form)
       (syntax-match import-form ()
 	((?ctxt ?imp* ...)
-	 (receive (subst-names subst-labels)
-	     (begin
+	 ;;NAME-VEC  is a  vector of  symbols representing  the external
+	 ;;names of  the imported  bindings.  LABEL-VEC  is a  vector of
+	 ;;label gensyms uniquely associated to the imported bindings.
+	 (receive (name-vec label-vec)
+	     (let ()
 	       (import PARSE-IMPORT-SPEC)
 	       (parse-import-spec* (syntax->datum ?imp*)))
 	   (values (vector-map (lambda (name)
 				 (datum->stx ?ctxt name))
-		     subst-names)
-		   subst-labels)))
+		     name-vec)
+		   label-vec)))
 	(_
 	 (stx-error import-form "invalid import form"))))
 
