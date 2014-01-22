@@ -3469,8 +3469,7 @@
 	  (rib.name*   ($<rib>-name*  rib))
 	  (rib.mark**  ($<rib>-mark** rib))
 	  (rib.label*  ($<rib>-label* rib)))
-      (cond ((and (memq id.sym rib.name*)
-		  (%find id.sym id.mark* rib.name* rib.mark** rib.label*))
+      (cond ((%find-binding-with-same-marks id.sym id.mark* rib.name* rib.mark** rib.label*)
 	     ;;A binding for ID already  exists in this lexical contour.
 	     ;;For example, in an internal body we have:
 	     ;;
@@ -3497,12 +3496,18 @@
 	     ($set-<rib>-mark**! rib (cons id.mark* rib.mark**))
 	     ($set-<rib>-label*! rib (cons label    rib.label*))))))
 
+  (define-syntax-rule (%find-binding-with-same-marks id.sym id.mark*
+						     rib.name* rib.mark** rib.label*)
+    (and (memq id.sym rib.name*)
+	 (%find id.sym id.mark* rib.name* rib.mark** rib.label*)))
+
   (define (%find id.sym id.mark* rib.name* rib.mark** rib.label*)
     ;;Here we know  that the list of symbols RIB.NAME*  has at least one
     ;;element equal to ID.SYM;  we iterate through RIB.NAME*, RIB.MARK**
-    ;;and RIB.LABEL* looking for a  tuple having marks equal to ID.MARK*
-    ;;and return the  tail of RIB.LABEL* having the  associated label as
-    ;;car.  If such binding is not found return false.
+    ;;and RIB.LABEL* looking for a tuple having name equal to ID.SYM and
+    ;;marks equal to  ID.MARK* and return the tail  of RIB.LABEL* having
+    ;;the associated label as car.  If  such binding is not found return
+    ;;false.
     ;;
     (and (pair? rib.name*)
 	 (if (and (eq? id.sym ($car rib.name*))
