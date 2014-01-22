@@ -4474,11 +4474,7 @@
 		    (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
 	       (receive-and-return (label)
 		   ($vector-ref ($<rib>-label* rib) i)
-		 (%increment-rib-frequency! rib i))
-	       ;; (let ((label ($vector-ref ($<rib>-label* rib) i)))
-	       ;; 	 (%increment-rib-frequency! rib i)
-	       ;; 	 label)
-	       )
+		 (%increment-rib-frequency! rib i)))
 	      (else
 	       (loop ($fxadd1 i) rib.len)))))
 
