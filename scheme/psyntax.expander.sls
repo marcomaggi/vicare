@@ -3300,7 +3300,9 @@
   ;;If STX  is a syntax object  representing an expression that  must be
   ;;expanded in a new lexical contour, we do:
   ;;
-  ;;   (define stx  ---)
+  ;;   (define stx  #'((define a 1)
+  ;;                   (define b 2)
+  ;;                   (display a)))
   ;;   (define rib  (make-empty-rib))
   ;;   (define stx^ (push-lexical-contour rib stx))
   ;;
