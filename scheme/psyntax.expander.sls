@@ -4472,9 +4472,13 @@
 	       (next-search))
 	      ((and (eq? ($vector-ref name* i) sym)
 		    (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
-	       (let ((label ($vector-ref ($<rib>-label* rib) i)))
-		 (%increment-rib-frequency! rib i)
-		 label))
+	       (receive-and-return (label)
+		   ($vector-ref ($<rib>-label* rib) i)
+		 (%increment-rib-frequency! rib i))
+	       ;; (let ((label ($vector-ref ($<rib>-label* rib) i)))
+	       ;; 	 (%increment-rib-frequency! rib i)
+	       ;; 	 label)
+	       )
 	      (else
 	       (loop ($fxadd1 i) rib.len)))))
 
