@@ -1285,26 +1285,6 @@
 (define top-level-context
   (make-parameter #f))
 
-;;; --------------------------------------------------------------------
-;;; Substs.
-;;
-;;A "subst"  is an  alist whose  keys are "names"  and whose  values are
-;;"labels":
-;;
-;;* "Name" is an identifier representing  the public name of an imported
-;;  binding, the one we use to reference it in the code of a library.
-;;
-;;* "Label"  is a gensym uniquely  associated to the binding's  entry in
-;;  the lexical environment.
-
-;;Given the entry in a subst alist: return the name.
-;;
-(define subst-entry-name car)
-
-;;Given the entry in a subst alist: return the gensym acting as label.
-;;
-(define subst-entry-label cdr)
-
 
 (define* (eval x env)
   ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
@@ -2263,13 +2243,15 @@
     ;;
     ;;in which the mutable variable THAT is exported.
     ;;
+    (define export-subst-entry-name  car)
+    (define export-subst-entry-label cdr)
     (unless (%expanding-program? export-spec*)
       (for-each (lambda (subst)
-		  (cond ((assq (subst-entry-label subst) export-env)
+		  (cond ((assq (export-subst-entry-label subst) export-env)
 			 => (lambda (entry)
 			      (when (eq? 'mutable (syntactic-binding-type (lexenv-entry-binding entry)))
 				(syntax-violation 'export
-				  "attempt to export mutated variable" (subst-entry-name subst)))))))
+				  "attempt to export mutated variable" (export-subst-entry-name subst)))))))
 	export-subst)))
 
   #| end of module: CORE-BODY-EXPANDER |# )
