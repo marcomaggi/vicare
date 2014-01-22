@@ -3270,6 +3270,20 @@
 ;;promoted  to the  top of  its  class (or  the bottom  of the  previous
 ;;class).
 ;;
+;;An unsealed rib with 2 binings looks as follows:
+;;
+;;   name*       = (b       a)
+;;   mark**      = ((top)   (top))
+;;   label*      = (lab.b   lab.a)
+;;   sealed/freq = #f
+;;
+;;and right after sealing it:
+;;
+;;   name*       = #(b       a)
+;;   mark**      = #((top)   (top))
+;;   label*      = #(lab.b   lab.a)
+;;   sealed/freq = #(0       0)
+;;
 (define-record <rib>
   (name*
 		;List of symbols representing the original binding names
@@ -4421,26 +4435,26 @@
 		   (%search-in-rib rib sym mark* next-search))))))))
 
   (define-inline (%search-in-rib rib sym mark* next-search)
-    (let loop ((sym*    ($<rib>-name*  rib))
+    (let loop ((name*   ($<rib>-name*  rib))
 	       (mark**  ($<rib>-mark** rib))
 	       (label*  ($<rib>-label* rib)))
-      (cond ((null? sym*)
+      (cond ((null? name*)
 	     (next-search))
-	    ((and (eq? ($car sym*) sym)
+	    ((and (eq? ($car name*) sym)
 		  (same-marks? ($car mark**) mark*))
 	     ($car label*))
 	    (else
-	     (loop ($cdr sym*) ($cdr mark**) ($cdr label*))))))
+	     (loop ($cdr name*) ($cdr mark**) ($cdr label*))))))
 
   (module (%search-in-sealed-rib)
 
     (define (%search-in-sealed-rib rib sym mark* next-search)
-      (define sym* ($<rib>-name* rib))
+      (define name* ($<rib>-name* rib))
       (let loop ((i       0)
-		 (rib.len ($vector-length sym*)))
+		 (rib.len ($vector-length name*)))
 	(cond (($fx= i rib.len)
 	       (next-search))
-	      ((and (eq? ($vector-ref sym* i) sym)
+	      ((and (eq? ($vector-ref name* i) sym)
 		    (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
 	       (let ((label ($vector-ref ($<rib>-label* rib) i)))
 		 (%increment-rib-frequency! rib i)
@@ -4458,17 +4472,17 @@
 			  (if (= freq (vector-ref freq* j))
 			      (loop j)
 			    i))))))
-	(vector-set! freq* i (+ freq 1))
+	($vector-set! freq* i (+ freq 1))
 	(unless (= i idx)
-	  (let ((sym*   (<rib>-name*  rib))
+	  (let ((name*  (<rib>-name*  rib))
 		(mark** (<rib>-mark** rib))
 		(label* (<rib>-label* rib)))
 	    (let-syntax ((%vector-swap (syntax-rules ()
 					 ((_ ?vec ?idx1 ?idx2)
-					  (let ((V (vector-ref ?vec ?idx1)))
-					    (vector-set! ?vec ?idx1 (vector-ref ?vec ?idx2))
-					    (vector-set! ?vec ?idx2 V))))))
-	      (%vector-swap sym*   idx i)
+					  (let ((V ($vector-ref ?vec ?idx1)))
+					    ($vector-set! ?vec ?idx1 ($vector-ref ?vec ?idx2))
+					    ($vector-set! ?vec ?idx2 V))))))
+	      (%vector-swap name*  idx i)
 	      (%vector-swap mark** idx i)
 	      (%vector-swap label* idx i))))))
 
