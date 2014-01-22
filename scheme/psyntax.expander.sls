@@ -128,7 +128,8 @@
 ;;        outer a | lex.a.1
 ;;        inner a | lex.a.2
 ;;
-;;where the "lex.*" symbols are gensyms.
+;;where the "lex.*"  symbols are gensyms; such gensyms  are indicated as
+;;"lex".
 ;;
 ;;Renaming  bindings  is one  of  the  core  purposes of  the  expansion
 ;;process; it is  performed while visiting the source code  as a tree in
@@ -219,6 +220,7 @@
 ;;        inner a |   2-mark             | lab.a.2
 ;;
 ;;where the symbols "lab.*" are gensyms.
+;;
 ;;
 ;;Lexical variable gensyms and LEXENV
 ;;-----------------------------------
@@ -3147,9 +3149,9 @@
   (make-<rib> '() '() '() #f))
 
 (define (make-full-rib id* label*)
-  ;;Build and  return a  new <RIB> record  taking the binding  names and
-  ;;marks  from the  list  of syntax  objects  ID* and  the labels  from
-  ;;LABEL*.
+  ;;Build and  return a new  <RIB> record  taking the binding  names and
+  ;;marks from the list of syntax  object identifiers ID* and the labels
+  ;;from the list LABEL*.
   ;;
   ;;It may be a good idea to seal this <RIB>.
   ;;
@@ -3175,20 +3177,20 @@
   ;;so, a name in  a top <RIB> maps to its label if  and only if its set
   ;;of marks is TOP-MARK*.
   ;;
-  (let ((rib (make-empty-rib)))
+  (receive-and-return (rib)
+      (make-empty-rib)
     (vector-for-each
         (lambda (name label)
           (if (symbol? name)
 	      (let ((shadowing-definition? #t))
 		(extend-rib! rib
 			     (make-<stx> name top-mark*
-					 '() #;subst*
+					 '()  #;subst*
 					 '()) #;ae*
 			     label shadowing-definition?))
             (assertion-violation __who__
 	      "Vicare bug: expected symbol as binding name" name)))
-      name* label*)
-    rib))
+      name* label*)))
 
 (define (subst->rib subst)
   ;;Build and return a new <RIB> structure initialised with SUBST.
@@ -3202,11 +3204,10 @@
   ;;* "Label"  is a unique symbol  associated to the binding's  entry in
   ;;  the lexical environment.
   ;;
-  (let ((rib (make-empty-rib)))
-    ($set-<rib>-sym*!   rib (map car subst))
-    ($set-<rib>-mark**! rib (map (lambda (x) top-mark*) subst))
-    ($set-<rib>-label*! rib (map cdr subst))
-    rib))
+  (make-<rib> (map car subst)
+	      (map (lambda (x) top-mark*) subst)
+	      (map cdr subst)
+	      #f))
 
 
 ;;;; extending ribs
