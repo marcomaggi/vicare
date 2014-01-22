@@ -3284,6 +3284,22 @@
 ;;   label*      = #(lab.b   lab.a)
 ;;   sealed/freq = #(0       0)
 ;;
+;;after  accessing once  the  binding  of "b"  in  the  sealed rib,  its
+;;frequency is incremented:
+;;
+;;   name*       = #(b       a)
+;;   mark**      = #((top)   (top))
+;;   label*      = #(lab.b   lab.a)
+;;   sealed/freq = #(1       0)
+;;
+;;and after  accessing twice the binding  of "a" in the  sealed rib, the
+;;tuples are swapped:
+;;
+;;   name*       = #(a       b)
+;;   mark**      = #((top)   (top))
+;;   label*      = #(lab.a   lab.b)
+;;   sealed/freq = #(2       1)
+;;
 (define-record <rib>
   (name*
 		;List of symbols representing the original binding names
