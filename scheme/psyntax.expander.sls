@@ -1221,11 +1221,14 @@
   ;;
   (let ((itc (make-collector)))
     (parametrise ((imp-collector itc))
-      (receive (subst.names subst.labels)
+      ;;NAME-VEC is a vector of  symbols representing the external names
+      ;;of  the  imported bindings.   LABEL-VEC  is  a vector  of  label
+      ;;gensyms uniquely associated to the imported bindings.
+      (receive (name-vec label-vec)
 	  (begin
 	    (import PARSE-IMPORT-SPEC)
 	    (parse-import-spec* import-spec*))
-	(make-env subst.names subst.labels itc)))))
+	(make-env name-vec label-vec itc)))))
 
 (define (null-environment n)
   ;;Defined  by R6RS.   The null  environment is  constructed using  the
@@ -1961,71 +1964,70 @@
     (define itc (make-collector))
     (parametrise ((imp-collector      itc)
 		  (top-level-context  #f))
-      ;;SUBST-NAMES is a  vector of substs; SUBST-LABELS is  a vector of
-      ;;gensyms acting as labels.
-      (receive (subst-names subst-labels)
-	  (let ()
-	    (import PARSE-IMPORT-SPEC)
-	    (parse-import-spec* import-spec*))
-	(let ((rib (make-top-rib subst-names subst-labels)))
-	  (define (wrap x)
-	    (make-<stx> x top-mark* (list rib) '()))
-	  (let ((body-stx*	(map wrap body-sexp*))
-		(rtc		(make-collector))
-		(vtc		(make-collector)))
-	    (parametrise ((inv-collector  rtc)
-			  (vis-collector  vtc))
-	      ;;INIT-FORM-STX* is a list  of syntax objects representing
-	      ;;the trailing  non-definition forms from the  body of the
-	      ;;library and the body of the internal modules.
-	      ;;
-	      ;;LEX*  is  a  list  of  gensyms to  be  used  in  binding
-	      ;;definitions   when  building   core  language   symbolic
-	      ;;expressions for the glocal  DEFINE forms in the library.
-	      ;;There is a gensym for every item in RHS*.
-	      ;;
-	      ;;RHS*   is  a   list   of   qualified  right-hand   sides
-	      ;;representing  the  right-hand  side expressions  in  the
-	      ;;DEFINE forms from the body of the library.
-	      ;;
-	      ;;INTERNAL-EXPORT*  is  a  list  of  identifiers  exported
-	      ;;through internal EXPORT syntaxes  rather than the export
-	      ;;spec at the beginning of the library.
-	      ;;
-	      (receive (init-form-stx* lexenv.run lexenv.expand lex* qrhs* internal-export*)
-		  (%chi-library-internal body-stx* rib mixed-definitions-and-expressions?)
-		(receive (export-name* export-id*)
-		    (let ()
-		      (import PARSE-EXPORT-SPEC)
-		      (parse-export-spec* (if (%expanding-program? export-spec*)
-					      (map wrap (top-marked-symbols rib))
-					    (append (map wrap export-spec*)
-						    internal-export*))))
-		  (seal-rib! rib)
-		  ;;INIT-FORM-CORE* is a list  of core language symbolic
-		  ;;expressions representing the trailing init forms.
-		  ;;
-		  ;;RHS-FORM-CORE* is  a list of core  language symbolic
-		  ;;expressions   representing  the   DEFINE  right-hand
-		  ;;sides.
-		  ;;
-		  ;;We want order here!?!
-		  (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
-			 (rhs-form-core*   (chi-qrhs*  qrhs*  lexenv.run lexenv.expand)))
-		    (unseal-rib! rib)
-		    (let ((loc.lex*      (map gensym-for-storage-location lex*))
-			  (export-subst  (%make-export-subst export-name* export-id*)))
-		      (receive (export-env macro*)
-			  (%make-export-env/macro* lex* loc.lex* lexenv.run)
-			(%validate-exports export-spec* export-subst export-env)
-			(let ((invoke-code (build-library-letrec* no-source
-					     mixed-definitions-and-expressions?
-					     lex* loc.lex* rhs-form-core*
-					     (if (null? init-form-core*)
-						 (build-void)
-					       (build-sequence no-source init-form-core*)))))
-			  (values (itc) (rtc) (vtc)
-				  invoke-code macro* export-subst export-env)))))))))))))
+      (let ((rib (receive (name-vec label-vec)
+		     (let ()
+		       (import PARSE-IMPORT-SPEC)
+		       (parse-import-spec* import-spec*))
+		   ;;NAME-VEC  is a  vector  of substs;  LABEL-VEC is  a
+		   ;;vector of gensyms acting as labels.
+		   (make-top-rib name-vec label-vec))))
+	(define (wrap x)
+	  (make-<stx> x top-mark* (list rib) '()))
+	(let ((body-stx*	(map wrap body-sexp*))
+	      (rtc		(make-collector))
+	      (vtc		(make-collector)))
+	  (parametrise ((inv-collector  rtc)
+			(vis-collector  vtc))
+	    ;;INIT-FORM-STX* is  a list  of syntax  objects representing
+	    ;;the  trailing non-definition  forms from  the body  of the
+	    ;;library and the body of the internal modules.
+	    ;;
+	    ;;LEX*  is  a  list  of   gensyms  to  be  used  in  binding
+	    ;;definitions   when   building   core   language   symbolic
+	    ;;expressions for  the glocal  DEFINE forms in  the library.
+	    ;;There is a gensym for every item in RHS*.
+	    ;;
+	    ;;QRHS* is a list of qualified right-hand sides representing
+	    ;;the right-hand  side expressions in the  DEFINE forms from
+	    ;;the body of the library.
+	    ;;
+	    ;;INTERNAL-EXPORT* is a list of identifiers exported through
+	    ;;internal EXPORT  syntaxes rather  than the export  spec at
+	    ;;the beginning of the library.
+	    ;;
+	    (receive (init-form-stx* lexenv.run lexenv.expand lex* qrhs* internal-export*)
+		(%chi-library-internal body-stx* rib mixed-definitions-and-expressions?)
+	      (receive (export-name* export-id*)
+		  (let ()
+		    (import PARSE-EXPORT-SPEC)
+		    (parse-export-spec* (if (%expanding-program? export-spec*)
+					    (map wrap (top-marked-symbols rib))
+					  (append (map wrap export-spec*)
+						  internal-export*))))
+		(seal-rib! rib)
+		;;INIT-FORM-CORE* is  a list  of core  language symbolic
+		;;expressions representing the trailing init forms.
+		;;
+		;;RHS-FORM-CORE*  is a  list of  core language  symbolic
+		;;expressions representing the DEFINE right-hand sides.
+		;;
+		;;We want order here!?!
+		(let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
+		       (rhs-form-core*   (chi-qrhs*  qrhs*  lexenv.run lexenv.expand)))
+		  (unseal-rib! rib)
+		  (let ((loc.lex*      (map gensym-for-storage-location lex*))
+			(export-subst  (%make-export-subst export-name* export-id*)))
+		    (receive (export-env macro*)
+			(%make-export-env/macro* lex* loc.lex* lexenv.run)
+		      (%validate-exports export-spec* export-subst export-env)
+		      (let ((invoke-code (build-library-letrec* no-source
+					   mixed-definitions-and-expressions?
+					   lex* loc.lex* rhs-form-core*
+					   (if (null? init-form-core*)
+					       (build-void)
+					     (build-sequence no-source init-form-core*)))))
+			(values (itc) (rtc) (vtc)
+				invoke-code macro* export-subst export-env))))))))))))
 
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
@@ -2463,8 +2465,8 @@
   ;;Return  2  values  which can  be  used  to  build  a new  top  level
   ;;environment object and so a top rib:
   ;;
-  ;;1.   A vector  of  symbols  representing the  visible  names of  the
-  ;;   imported  bindings.
+  ;;1.   A vector  of symbols  representing  the external  names of  the
+  ;;   imported bindings.
   ;;
   ;;2. A  list of "labels":  unique symbols associated to  the binding's
   ;;   entry in the lexical environment.
