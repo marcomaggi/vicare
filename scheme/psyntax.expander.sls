@@ -3672,6 +3672,19 @@
 	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
     (make-<stx> stx/expr mark* subst* ae*)))
 
+(define (expression-position x)
+  (if (<stx>? x)
+      (let ((x (<stx>-expr x)))
+	(if (annotation? x)
+	    (annotation-textual-position x)
+	  (condition)))
+    (condition)))
+
+(define (syntax-annotation x)
+  (if (<stx>? x)
+      (<stx>-expr x)
+    x))
+
 ;;; --------------------------------------------------------------------
 
 (module (strip)
@@ -3764,6 +3777,249 @@
 		   (recur (cdr sym*) (cdr mark**))))
 	    (else
 	     (recur (cdr sym*) (cdr mark**)))))))
+
+;;;; syntax objects and marks
+
+;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
+;;exactly?
+;;
+;;A "wrapped syntax object" is just  a way of saying it's an STX record.
+;;All identifiers are  STX records (with a symbol  in their EXPR field);
+;;other objects such  as pairs and vectors may  be wrapped or unwrapped.
+;;A wrapped pair is an STX whose EXPR is a pair.  An unwrapped pair is a
+;;pair whose car  and cdr fields are themselves  syntax objects (wrapped
+;;or unwrapped).
+;;
+;;We always  maintain the  invariant that we  do not double  wrap syntax
+;;objects.  The  only way  to get a  doubly-wrapped syntax object  is by
+;;doing DATUM->STX  (above) where the  datum is itself a  wrapped syntax
+;;object (R6RS  may not even  consider wrapped syntax objects  as datum,
+;;but let's not worry now).
+;;
+;;Syntax objects  have, in  addition to the  EXPR, a  substitution field
+;;SUBST*: it is a list where each  element is either a RIB or the symbol
+;;"shift".  Normally,  a new  RIB is  added to an  STX at  every lexical
+;;contour of the program in  order to capture the bindings introduced in
+;;that contour.
+;;
+;;The MARK* field of an STX is  a list of marks; each of these marks can
+;;be  either  a  generated mark  or  an  antimark.   Two marks  must  be
+;;EQ?-comparable, so we use a string of one char (we assume that strings
+;;are mutable in the underlying Scheme implementation).
+
+(define gen-mark
+  ;;Generate a new unique mark.  We want a new string for every function
+  ;;call.
+  string)
+;;The version below is useful for debugging.
+;;
+;; (define gen-mark
+;;   (let ((i 0))
+;;     (lambda ()
+;;       (set! i (+ i 1))
+;;       (string-append "m." (number->string i)))))
+
+;;We use #f as the anti-mark.
+(define anti-mark #f)
+(define anti-mark? not)
+
+;;So, what's an anti-mark and why is it there?
+;;
+;;The theory goes like this: when a macro call is encountered, the input
+;;stx to the  macro transformer gets an extra  anti-mark, and the output
+;;of the  transformer gets a fresh  mark.  When a mark  collides with an
+;;anti-mark, they cancel one another.   Therefore, any part of the input
+;;transformer that gets copied to  the output would have a mark followed
+;;immediately by an  anti-mark, resulting in the same  syntax object (no
+;;extra marks).  Parts of the output  that were not present in the input
+;;(e.g. inserted by the macro  transformer) would have no anti-mark and,
+;;therefore, the mark would stick to them.
+;;
+;;Every time  a mark is pushed  to an <stx>-mark* list,  a corresponding
+;;'shift  is pushed  to the  <stx>-subst* list.   Every time  a mark  is
+;;cancelled  by   an  anti-mark,  the  corresponding   shifts  are  also
+;;cancelled.
+
+;;The procedure join-wraps,  here, is used to compute the  new mark* and
+;;subst* that would  result when the m1*  and s1* are added  to an stx's
+;;mark* and subst*.
+;;
+;;The only tricky part here is that  e may have an anti-mark that should
+;;cancel with the last mark in m1*.  So, if:
+;;
+;;  m1* = (mx* ... mx)
+;;  m2* = (#f my* ...)
+;;
+;;then the resulting marks should be:
+;;
+;;  (mx* ... my* ...)
+;;
+;;since mx  would cancel with the  anti-mark.  The substs would  have to
+;;also cancel since:
+;;
+;;    s1* = (sx* ... sx)
+;;    s2* = (sy sy* ...)
+;;
+;;then the resulting substs should be:
+;;
+;;    (sx* ... sy* ...)
+;;
+;;Notice that both SX and SY would be shift marks.
+;;
+;;All   this  work   is  performed   by  the   functions  ADD-MARK   and
+;;DO-MACRO-CALL.
+;;
+
+(module (join-wraps)
+
+  (define (join-wraps mark1* subst1* ae1* stx2)
+    (let ((mark2*   ($<stx>-mark*  stx2))
+	  (subst2*  ($<stx>-subst* stx2))
+	  (ae2*     ($<stx>-ae*    stx2)))
+      ;;If the first item in mark2* is an anti-mark...
+      (if (and (not (null? mark1*))
+	       (not (null? mark2*))
+	       (anti-mark? ($car mark2*)))
+	  ;;...cancel mark, anti-mark, and corresponding shifts.
+	  (values (%append-cancel-facing mark1*  mark2*)
+		  (%append-cancel-facing subst1* subst2*)
+		  (%merge-ae* ae1* ae2*))
+	;;..else no cancellation takes place.
+	(values (append mark1*  mark2*)
+		(append subst1* subst2*)
+		(%merge-ae* ae1* ae2*)))))
+
+  (define (%merge-ae* ls1 ls2)
+    (if (and (pair? ls1)
+	     (pair? ls2)
+	     (not ($car ls2)))
+	(%append-cancel-facing ls1 ls2)
+      (append ls1 ls2)))
+
+  (define (%append-cancel-facing ls1 ls2)
+    ;;Given two non-empty lists: append them discarding the last item in
+    ;;LS1 and the first item in LS2.  Examples:
+    ;;
+    ;;   (%append-cancel-facing '(1 2 3) '(4 5 6))	=> (1 2 5 6)
+    ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
+    ;;   (%append-cancel-facing '(1)     '(2))		=> ()
+    ;;
+    (let recur ((x   ($car ls1))
+		(ls1 ($cdr ls1)))
+      (if (null? ls1)
+	  ($cdr ls2)
+	(cons x (recur ($car ls1) ($cdr ls1))))))
+
+  #| end of module: JOIN-WRAPS |# )
+
+(define (same-marks? x y)
+  ;;Two lists  of marks are  considered the same  if they have  the same
+  ;;length and the corresponding marks on each are EQ?.
+  ;;
+  (or (and (null? x) (null? y)) ;(eq? x y)
+      (and (pair? x) (pair? y)
+	   (eq? ($car x) ($car y))
+	   (same-marks? ($cdr x) ($cdr y)))))
+
+(define (push-lexical-contour rib stx/expr)
+  ;;Add a rib to a syntax  object or expression and return the resulting
+  ;;syntax object.  This  procedure introduces a lexical  contour in the
+  ;;context of the given syntax object or expression.
+  ;;
+  ;;RIB must be an instance of <RIB>.
+  ;;
+  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
+  ;;object.
+  ;;
+  ;;This function prepares  a computation that will  be lazily performed
+  ;;later; the RIB will be pushed on the stack of substitutions in every
+  ;;identifier in the fully unwrapped returned syntax object.
+  ;;
+  (mkstx stx/expr
+	 '() #;mark*
+	 (list rib)
+	 '() #;ae*
+	 ))
+
+(define (add-mark mark subst expr ae)
+  ;;Build and return  a new syntax object wrapping  EXPR and having MARK
+  ;;pushed on its list of marks.
+  ;;
+  ;;SUBST can be #f or a list of substitutions.
+  ;;
+  (define (merge-ae* ls1 ls2)
+    ;;Append LS1 and LS2 and return the result; if the car or LS2 is #f:
+    ;;append LS1 and (cdr LS2).
+    ;;
+    ;;   (merge-ae* '(a b c) '(d  e f))   => (a b c d e f)
+    ;;   (merge-ae* '(a b c) '(#f e f))   => (a b c e f)
+    ;;
+    (if (and (pair? ls1)
+	     (pair? ls2)
+	     (not (car ls2)))
+	(cancel ls1 ls2)
+      (append ls1 ls2)))
+  (define (cancel ls1 ls2)
+    ;;Expect LS1 to be a proper list  of one or more elements and LS2 to
+    ;;be a proper  list of one or more elements.  Append  the cdr of LS2
+    ;;to LS1 and return the result:
+    ;;
+    ;;   (cancel '(a b c) '(d e f))
+    ;;   => (a b c e f)
+    ;;
+    ;;This function is like:
+    ;;
+    ;;   (append ls1 (cdr ls2))
+    ;;
+    ;;we just hope to be a bit more efficient.
+    ;;
+    (let recur ((A (car ls1))
+		(D (cdr ls1)))
+      (if (null? D)
+	  (cdr ls2)
+	(cons A (recur (car D) (cdr D))))))
+  (define (f sub-expr mark subst1* ae*)
+    (cond ((pair? sub-expr)
+	   (let ((a (f (car sub-expr) mark subst1* ae*))
+		 (d (f (cdr sub-expr) mark subst1* ae*)))
+	     (if (eq? a d)
+		 sub-expr
+	       (cons a d))))
+	  ((vector? sub-expr)
+	   (let* ((ls1 (vector->list sub-expr))
+		  (ls2 (map (lambda (x)
+			      (f x mark subst1* ae*))
+			 ls1)))
+	     (if (for-all eq? ls1 ls2)
+		 sub-expr
+	       (list->vector ls2))))
+	  ((<stx>? sub-expr)
+	   (let ((mark*   (<stx>-mark*  sub-expr))
+		 (subst2* (<stx>-subst* sub-expr)))
+	     (cond ((null? mark*)
+		    (f (<stx>-expr sub-expr)
+		       mark
+		       (append subst1* subst2*)
+		       (merge-ae* ae* (<stx>-ae* sub-expr))))
+		   ((eq? (car mark*) anti-mark)
+		    (make-<stx> (<stx>-expr sub-expr) (cdr mark*)
+				(cdr (append subst1* subst2*))
+				(merge-ae* ae* (<stx>-ae* sub-expr))))
+		   (else
+		    (make-<stx> (<stx>-expr sub-expr)
+				(cons mark mark*)
+				(let ((s* (cons 'shift (append subst1* subst2*))))
+				  (if subst
+				      (cons subst s*)
+				    s*))
+				(merge-ae* ae* (<stx>-ae* sub-expr)))))))
+	  ((symbol? sub-expr)
+	   (syntax-violation #f
+	     "raw symbol encountered in output of macro"
+	     expr sub-expr))
+	  (else
+	   (make-<stx> sub-expr (list mark) subst1* ae*))))
+  (mkstx (f expr mark '() '()) '() '() (list ae)))
 
 
 ;;;; stuff about labels, lexical variables, location gensyms
@@ -3972,265 +4228,32 @@
 	 '() #;ae*
 	 ))
 
-;;; --------------------------------------------------------------------
-
-(define (expression-position x)
-  (if (<stx>? x)
-      (let ((x (<stx>-expr x)))
-	(if (annotation? x)
-	    (annotation-textual-position x)
-	  (condition)))
-    (condition)))
-
-(define (syntax-annotation x)
-  (if (<stx>? x)
-      (<stx>-expr x)
-    x))
-
-
-;;;; syntax objects and marks
-
-;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
-;;exactly?
-;;
-;;A "wrapped syntax object" is just  a way of saying it's an STX record.
-;;All identifiers are  STX records (with a symbol  in their EXPR field);
-;;other objects such  as pairs and vectors may  be wrapped or unwrapped.
-;;A wrapped pair is an STX whose EXPR is a pair.  An unwrapped pair is a
-;;pair whose car  and cdr fields are themselves  syntax objects (wrapped
-;;or unwrapped).
-;;
-;;We always  maintain the  invariant that we  do not double  wrap syntax
-;;objects.  The  only way  to get a  doubly-wrapped syntax object  is by
-;;doing DATUM->STX  (above) where the  datum is itself a  wrapped syntax
-;;object (R6RS  may not even  consider wrapped syntax objects  as datum,
-;;but let's not worry now).
-;;
-;;Syntax objects  have, in  addition to the  EXPR, a  substitution field
-;;SUBST*: it is a list where each  element is either a RIB or the symbol
-;;"shift".  Normally,  a new  RIB is  added to an  STX at  every lexical
-;;contour of the program in  order to capture the bindings introduced in
-;;that contour.
-;;
-;;The MARK* field of an STX is  a list of marks; each of these marks can
-;;be  either  a  generated mark  or  an  antimark.   Two marks  must  be
-;;EQ?-comparable, so we use a string of one char (we assume that strings
-;;are mutable in the underlying Scheme implementation).
-
-(define gen-mark
-  ;;Generate a new unique mark.  We want a new string for every function
-  ;;call.
-  string)
-;;The version below is useful for debugging.
-;;
-;; (define gen-mark
-;;   (let ((i 0))
-;;     (lambda ()
-;;       (set! i (+ i 1))
-;;       (string-append "m." (number->string i)))))
-
-;;We use #f as the anti-mark.
-(define anti-mark #f)
-(define anti-mark? not)
-
-;;So, what's an anti-mark and why is it there?
-;;
-;;The theory goes like this: when a macro call is encountered, the input
-;;stx to the  macro transformer gets an extra  anti-mark, and the output
-;;of the  transformer gets a fresh  mark.  When a mark  collides with an
-;;anti-mark, they cancel one another.   Therefore, any part of the input
-;;transformer that gets copied to  the output would have a mark followed
-;;immediately by an  anti-mark, resulting in the same  syntax object (no
-;;extra marks).  Parts of the output  that were not present in the input
-;;(e.g. inserted by the macro  transformer) would have no anti-mark and,
-;;therefore, the mark would stick to them.
-;;
-;;Every time  a mark is pushed  to an <stx>-mark* list,  a corresponding
-;;'shift  is pushed  to the  <stx>-subst* list.   Every time  a mark  is
-;;cancelled  by   an  anti-mark,  the  corresponding   shifts  are  also
-;;cancelled.
-
-;;The procedure join-wraps,  here, is used to compute the  new mark* and
-;;subst* that would  result when the m1*  and s1* are added  to an stx's
-;;mark* and subst*.
-;;
-;;The only tricky part here is that  e may have an anti-mark that should
-;;cancel with the last mark in m1*.  So, if:
-;;
-;;  m1* = (mx* ... mx)
-;;  m2* = (#f my* ...)
-;;
-;;then the resulting marks should be:
-;;
-;;  (mx* ... my* ...)
-;;
-;;since mx  would cancel with the  anti-mark.  The substs would  have to
-;;also cancel since:
-;;
-;;    s1* = (sx* ... sx)
-;;    s2* = (sy sy* ...)
-;;
-;;then the resulting substs should be:
-;;
-;;    (sx* ... sy* ...)
-;;
-;;Notice that both SX and SY would be shift marks.
-;;
-;;All   this  work   is  performed   by  the   functions  ADD-MARK   and
-;;DO-MACRO-CALL.
-;;
-
-(module (join-wraps)
-
-  (define (join-wraps mark1* subst1* ae1* stx2)
-    (let ((mark2*   ($<stx>-mark*  stx2))
-	  (subst2*  ($<stx>-subst* stx2))
-	  (ae2*     ($<stx>-ae*    stx2)))
-      ;;If the first item in mark2* is an anti-mark...
-      (if (and (not (null? mark1*))
-	       (not (null? mark2*))
-	       (anti-mark? ($car mark2*)))
-	  ;;...cancel mark, anti-mark, and corresponding shifts.
-	  (values (%append-cancel-facing mark1*  mark2*)
-		  (%append-cancel-facing subst1* subst2*)
-		  (%merge-ae* ae1* ae2*))
-	;;..else no cancellation takes place.
-	(values (append mark1*  mark2*)
-		(append subst1* subst2*)
-		(%merge-ae* ae1* ae2*)))))
-
-  (define (%merge-ae* ls1 ls2)
-    (if (and (pair? ls1)
-	     (pair? ls2)
-	     (not ($car ls2)))
-	(%append-cancel-facing ls1 ls2)
-      (append ls1 ls2)))
-
-  (define (%append-cancel-facing ls1 ls2)
-    ;;Given two non-empty lists: append them discarding the last item in
-    ;;LS1 and the first item in LS2.  Examples:
-    ;;
-    ;;   (%append-cancel-facing '(1 2 3) '(4 5 6))	=> (1 2 5 6)
-    ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
-    ;;   (%append-cancel-facing '(1)     '(2))		=> ()
-    ;;
-    (let recur ((x   ($car ls1))
-		(ls1 ($cdr ls1)))
-      (if (null? ls1)
-	  ($cdr ls2)
-	(cons x (recur ($car ls1) ($cdr ls1))))))
-
-  #| end of module: JOIN-WRAPS |# )
-
-(define (same-marks? x y)
-  ;;Two lists  of marks are  considered the same  if they have  the same
-  ;;length and the corresponding marks on each are EQ?.
+(define scheme-stx
+  ;;Take a symbol  and if it's in the library:
   ;;
-  (or (and (null? x) (null? y)) ;(eq? x y)
-      (and (pair? x) (pair? y)
-	   (eq? ($car x) ($car y))
-	   (same-marks? ($cdr x) ($cdr y)))))
-
-
-(define (push-lexical-contour rib stx/expr)
-  ;;Add a rib to a syntax  object or expression and return the resulting
-  ;;syntax object.  This  procedure introduces a lexical  contour in the
-  ;;context of the given syntax object or expression.
+  ;;   (psyntax system $all)
   ;;
-  ;;RIB must be an instance of <RIB>.
+  ;;create a fresh identifier that maps  only the symbol to its label in
+  ;;that library.  Symbols not in that library become fresh.
   ;;
-  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
-  ;;object.
-  ;;
-  ;;This function prepares  a computation that will  be lazily performed
-  ;;later; the RIB will be pushed on the stack of substitutions in every
-  ;;identifier in the fully unwrapped returned syntax object.
-  ;;
-  (mkstx stx/expr
-	 '() #;mark*
-	 (list rib)
-	 '() #;ae*
-	 ))
-
-(define (add-mark mark subst expr ae)
-  ;;Build and return  a new syntax object wrapping  EXPR and having MARK
-  ;;pushed on its list of marks.
-  ;;
-  ;;SUBST can be #f or a list of substitutions.
-  ;;
-  (define (merge-ae* ls1 ls2)
-    ;;Append LS1 and LS2 and return the result; if the car or LS2 is #f:
-    ;;append LS1 and (cdr LS2).
-    ;;
-    ;;   (merge-ae* '(a b c) '(d  e f))   => (a b c d e f)
-    ;;   (merge-ae* '(a b c) '(#f e f))   => (a b c e f)
-    ;;
-    (if (and (pair? ls1)
-	     (pair? ls2)
-	     (not (car ls2)))
-	(cancel ls1 ls2)
-      (append ls1 ls2)))
-  (define (cancel ls1 ls2)
-    ;;Expect LS1 to be a proper list  of one or more elements and LS2 to
-    ;;be a proper  list of one or more elements.  Append  the cdr of LS2
-    ;;to LS1 and return the result:
-    ;;
-    ;;   (cancel '(a b c) '(d e f))
-    ;;   => (a b c e f)
-    ;;
-    ;;This function is like:
-    ;;
-    ;;   (append ls1 (cdr ls2))
-    ;;
-    ;;we just hope to be a bit more efficient.
-    ;;
-    (let recur ((A (car ls1))
-		(D (cdr ls1)))
-      (if (null? D)
-	  (cdr ls2)
-	(cons A (recur (car D) (cdr D))))))
-  (define (f sub-expr mark subst1* ae*)
-    (cond ((pair? sub-expr)
-	   (let ((a (f (car sub-expr) mark subst1* ae*))
-		 (d (f (cdr sub-expr) mark subst1* ae*)))
-	     (if (eq? a d)
-		 sub-expr
-	       (cons a d))))
-	  ((vector? sub-expr)
-	   (let* ((ls1 (vector->list sub-expr))
-		  (ls2 (map (lambda (x)
-			      (f x mark subst1* ae*))
-			 ls1)))
-	     (if (for-all eq? ls1 ls2)
-		 sub-expr
-	       (list->vector ls2))))
-	  ((<stx>? sub-expr)
-	   (let ((mark*   (<stx>-mark*  sub-expr))
-		 (subst2* (<stx>-subst* sub-expr)))
-	     (cond ((null? mark*)
-		    (f (<stx>-expr sub-expr)
-		       mark
-		       (append subst1* subst2*)
-		       (merge-ae* ae* (<stx>-ae* sub-expr))))
-		   ((eq? (car mark*) anti-mark)
-		    (make-<stx> (<stx>-expr sub-expr) (cdr mark*)
-				(cdr (append subst1* subst2*))
-				(merge-ae* ae* (<stx>-ae* sub-expr))))
-		   (else
-		    (make-<stx> (<stx>-expr sub-expr)
-				(cons mark mark*)
-				(let ((s* (cons 'shift (append subst1* subst2*))))
-				  (if subst
-				      (cons subst s*)
-				    s*))
-				(merge-ae* ae* (<stx>-ae* sub-expr)))))))
-	  ((symbol? sub-expr)
-	   (syntax-violation #f
-	     "raw symbol encountered in output of macro"
-	     expr sub-expr))
-	  (else
-	   (make-<stx> sub-expr (list mark) subst1* ae*))))
-  (mkstx (f expr mark '() '()) '() '() (list ae)))
+  (let ((scheme-stx-hashtable (make-eq-hashtable)))
+    (lambda (sym)
+      (or (hashtable-ref scheme-stx-hashtable sym #f)
+	  (let* ((subst  (library-subst (find-library-by-name '(psyntax system $all))))
+		 (stx    (make-<stx> sym TOP-MARK* '() '()))
+		 (stx    (cond ((assq sym subst)
+				=> (lambda (subst.entry)
+				     (let ((name  (car subst.entry))
+					   (label (cdr subst.entry)))
+				       (push-lexical-contour
+					   (make-<rib> (list name)
+						       (list TOP-MARK*)
+						       (list label)
+						       #f)
+					 stx))))
+			       (else stx))))
+	    (hashtable-set! scheme-stx-hashtable sym stx)
+	    stx)))))
 
 
 ;;;; deconstructors and predicates for syntax objects
@@ -4414,7 +4437,7 @@
 	   (bound-id-member? id ($cdr id*)))))
 
 
-;;;; identifiers and labels
+;;;; syntax objects: mapping identifiers to labels
 
 (module (id->label)
 
@@ -4926,34 +4949,6 @@
       #| end of module: %CONVERT-SINGLE-PATTERN |# )
 
     transformer))
-
-
-(define scheme-stx
-  ;;Take a symbol  and if it's in the library:
-  ;;
-  ;;   (psyntax system $all)
-  ;;
-  ;;create a fresh identifier that maps  only the symbol to its label in
-  ;;that library.  Symbols not in that library become fresh.
-  ;;
-  (let ((scheme-stx-hashtable (make-eq-hashtable)))
-    (lambda (sym)
-      (or (hashtable-ref scheme-stx-hashtable sym #f)
-	  (let* ((subst  (library-subst (find-library-by-name '(psyntax system $all))))
-		 (stx    (make-<stx> sym TOP-MARK* '() '()))
-		 (stx    (cond ((assq sym subst)
-				=> (lambda (subst.entry)
-				     (let ((name  (car subst.entry))
-					   (label (cdr subst.entry)))
-				       (push-lexical-contour
-					   (make-<rib> (list name)
-						       (list TOP-MARK*)
-						       (list label)
-						       #f)
-					 stx))))
-			       (else stx))))
-	    (hashtable-set! scheme-stx-hashtable sym stx)
-	    stx)))))
 
 
 (module NON-CORE-MACRO-TRANSFORMER
