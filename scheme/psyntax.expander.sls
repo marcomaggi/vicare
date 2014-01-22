@@ -3245,6 +3245,11 @@
 ;;contour; "lexical contours" are, for example, LET and similar syntaxes
 ;;that can introduce bindings.
 ;;
+;;The purpose  of ribs is  to map original  binding names to  the labels
+;;associated to those bindings; this map  is used when establishing if a
+;;syntax  object identifier  in  reference position  is  captured by  an
+;;existing sytactic binding.
+;;
 (define-record <rib>
   (name*
 		;List of symbols representing the original binding names
@@ -3254,15 +3259,16 @@
 		;vector.
 
    mark**
-		;List of  lists of marks; there  is a list of  marks for
-		;every item in NAME*.
+		;List of sublists of marks;  there is a sublist of marks
+		;for every item in NAME*.
 		;
 		;When the  <RIB> is sealed:  the list is converted  to a
 		;vector.
 
    label*
-		;List  of  gensyms  uniquely identifying  the  syntactic
-		;bindings; there is a label for each item in NAME*.
+		;List   of  label   gensyms  uniquely   identifying  the
+		;syntactic bindings; there  is a label for  each item in
+		;NAME*.
 		;
 		;When the  <RIB> is sealed:  the list is converted  to a
 		;vector.
@@ -3277,14 +3283,58 @@
    ))
 
 (define-inline (make-empty-rib)
+  ;;Build and return a new empty <RIB> record.
+  ;;
+  ;;Empty ribs are used to represent freshly created lexical contours in
+  ;;which no initial bindings are defined.  For example, internal bodies
+  ;;might contain internal definitions:
+  ;;
+  ;;   (let ()
+  ;;     (define a 1)
+  ;;     (define b 2)
+  ;;     (display a))
+  ;;
+  ;;but we  know about  them only  when we  begin their  expansion; when
+  ;;creating the lexical contour for them we must create an empty rib.
+  ;;
+  ;;If STX  is a syntax object  representing an expression that  must be
+  ;;expanded in a new lexical contour, we do:
+  ;;
+  ;;   (define stx  ---)
+  ;;   (define rib  (make-empty-rib))
+  ;;   (define stx^ (push-lexical-contour rib stx))
+  ;;
+  ;;and then  hand the resulting  syntax object STX^ to  the appropriate
+  ;;"chi-*"  function  to  perform  the expansion.   Later  we  can  add
+  ;;bindings to the rib with:
+  ;;
+  ;;   (extend-rib! rib id label shadowing-definitions?)
+  ;;
   (make-<rib> '() '() '() #f))
 
-(define (make-full-rib id* label*)
-  ;;Build and  return a new  <RIB> record  taking the binding  names and
-  ;;marks from the list of syntax  object identifiers ID* and the labels
-  ;;from the list LABEL*.
+(define (make-filled-rib id* label*)
+  ;;Build and return a new <RIB> record initialised with bindings having
+  ;;ID*  as   original  identifiers  and  LABEL*   as  associated  label
+  ;;gensyms.
   ;;
-  ;;It may be a good idea to seal this <RIB>.
+  ;;ID* must  be a  list of syntax  object identifiers  representing the
+  ;;original binding names.  LABEL* must be a list of label gensyms.
+  ;;
+  ;;For example, when creating a rib to represent the lexical context of
+  ;;a LET syntax:
+  ;;
+  ;;   (let ((?lhs* ?rhs*) ...) ?body* ...)
+  ;;
+  ;;we do:
+  ;;
+  ;;   (define lhs-ids    ?lhs*)
+  ;;   (define body-stx   ?body*)
+  ;;   (define label*     (map gensym-for-label lhs-ids))
+  ;;   (define rib        (make-filled-rib lhs-ids label*))
+  ;;   (define body-stx^  (push-lexical-contour rib body-stx))
+  ;;
+  ;;and  then  hand  the  resulting   syntax  object  BODY-STX^  to  the
+  ;;appropriate "chi-*" function to perform the expansion.
   ;;
   (make-<rib> (map identifier->symbol id*)
 	      (map <stx>-mark* id*)
@@ -7897,7 +7947,7 @@
 	   ;;
 	   ;;Notice that the region of  all the LETREC bindings includes
 	   ;;all the right-hand sides.
-	   (let ((rib        (make-full-rib ?lhs* lab*))
+	   (let ((rib        (make-filled-rib ?lhs* lab*))
 		 (lexenv.run (add-lexical-bindings lab* lex* lexenv.run)))
 	     ;;Create  the   lexical  contour  then  process   body  and
 	     ;;right-hand sides of bindings.
@@ -8816,7 +8866,7 @@
 	   ;;augmented with the pattern variable.
 	   (define output-expr^
 	     (push-lexical-contour
-		 (make-full-rib (list ?pattern) (list label))
+		 (make-filled-rib (list ?pattern) (list label))
 	       ?output-expr))
 	   (define lexenv.run^
 	     ;;Push a pattern variable entry to the lexical environment.
@@ -9000,7 +9050,7 @@
       ;;a bit faster.
       ;;
       (chi-expr (push-lexical-contour
-		    (make-full-rib ids labels)
+		    (make-filled-rib ids labels)
 		  expr.stx)
 		(append bindings lexenv.run)
 		lexenv.expand))
@@ -10126,7 +10176,7 @@
 	     (unless (valid-bound-ids? xlhs*)
 	       (stx-error e "invalid identifiers"))
 	     (let* ((xlab* (map gensym-for-label xlhs*))
-		    (xrib  (make-full-rib xlhs* xlab*))
+		    (xrib  (make-filled-rib xlhs* xlab*))
 		    (xb*   (map (lambda (x)
 				  (%eval-macro-transformer
 				   (%expand-macro-transformer (if (eq? type 'let-syntax)
@@ -10291,7 +10341,7 @@
 	      (lab* (map gensym-for-label       ?arg*)))
 	  (values lex*
 		  (chi-internal-body (push-lexical-contour
-					 (make-full-rib ?arg* lab*)
+					 (make-filled-rib ?arg* lab*)
 				       body-form-stx*)
 				     (add-lexical-bindings lab* lex* lexenv.run)
 				     lexenv.expand)))))
@@ -10304,7 +10354,7 @@
 	      (lab  (gensym-for-label       ?rest-arg)))
 	  (values (append lex* lex) ;yes, this builds an improper list
 		  (chi-internal-body (push-lexical-contour
-					 (make-full-rib (cons ?rest-arg ?arg*)
+					 (make-filled-rib (cons ?rest-arg ?arg*)
 							(cons lab       lab*))
 				       body-form-stx*)
 				     (add-lexical-bindings (cons lab lab*)
@@ -10687,7 +10737,7 @@
 		   (unless (valid-bound-ids? ?xlhs*)
 		     (stx-error body-form-stx "invalid identifiers"))
 		   (let* ((xlab*  (map gensym-for-label ?xlhs*))
-			  (xrib   (make-full-rib ?xlhs* xlab*))
+			  (xrib   (make-filled-rib ?xlhs* xlab*))
 			  (xbind* (map (lambda (x)
 					 (%eval-macro-transformer
 					  (%expand-macro-transformer
