@@ -3402,64 +3402,75 @@
 	      (map cdr export-subst)
 	      #f))
 
-
-;;;; extending ribs
-;;
-;;A <RIB>  may be extensible, or sealed.   Adding an identifier-to-label
-;;mapping  to an  extensible <RIB>  is  achieved by  performing all  the
-;;following operations:
-;;
-;;* consing the identifier's name to the list of symbols SYM*;
-;;
-;;* consing  the identifier's list of  marks to the  <RIB>'s MARK**;
-;;
-;;* consing the label to the <RIB>'s LABEL*.
-;;
-;;For example, an empty extensible <RIB> has fields:
-;;
-;;  sym*   = ()
-;;  mark** = ()
-;;  label* = ()
-;;
-;;adding a binding to it with  name "ciao", marks ("m.0") and label "G0"
-;;means mutating the fields to:
-;;
-;;  sym*   = (ciao)
-;;  mark** = (("m.0"))
-;;  label* = (G0)
-;;
-;;pushing the "binding tuple": ciao, ("m.0"), G0.
-;;
-;;Adding another binding with name  "hello", mark ("m.0") and label "G1"
-;;means mutating the fields to:
-;;
-;;  sym*   = (hello ciao)
-;;  mark** = (("m.0") ("m.0"))
-;;  label* = (G1 G0)
-;;
-;;As further example, let's consider the form:
-;;
-;;  (lambda ()
-;;    (define a 1)
-;;    (define b 2)
-;;    (list a b))
-;;
-;;when starting to process the LAMBDA syntax: a new <RIB> is created and
-;;is  added to  the  metadata of  the  LAMBDA form;  when each  internal
-;;definition is  encountered, a  new entry for  the identifier  is added
-;;(via side effect) to the <RIB>:
-;;
-;;  sym*   = (b a)
-;;  mark** = (("m.0") ("m.0"))
-;;  label* = (G1 G0)
-;;
-;;Notice that the order in which  the binding tuples appear in the <RIB>
-;;does not matter: two tuples are different when both the symbol and the
-;;marks are  different and it is  an error to  add twice a tuple  to the
-;;same <RIB>.
-;;
 (module (extend-rib!)
-
+  ;;A <RIB> can be extensible, or sealed.  Adding an identifier-to-label
+  ;;mapping to  an extensible <RIB>  is achieved by prepending  items to
+  ;;the field lists.
+  ;;
+  ;;For example, an empty extensible <RIB> has fields:
+  ;;
+  ;;   name*  = ()
+  ;;   mark** = ()
+  ;;   label* = ()
+  ;;
+  ;;adding a  binding to it  with name  "ciao", marks "(top)"  and label
+  ;;"lab.ciao" means mutating the fields to:
+  ;;
+  ;;   name*  = (ciao)
+  ;;   mark** = ((top))
+  ;;   label* = (lab.ciao)
+  ;;
+  ;;pushing the  "binding tuple": ciao, (top),  lab.ciao; adding another
+  ;;binding with name "hello", mark  "(top)" and label "lab.hello" means
+  ;;mutating the fields to:
+  ;;
+  ;;   name*  = (hello     ciao)
+  ;;   mark** = ((top)     (top))
+  ;;   label* = (lab.hello lab.ciao)
+  ;;
+  ;;As further example, let's consider the form:
+  ;;
+  ;;   (lambda ()
+  ;;     (define a 1)
+  ;;     (define b 2)
+  ;;     (list a b))
+  ;;
+  ;;when starting  to process the LAMBDA  internal body: a new  <RIB> is
+  ;;created  and  is  added  to   the  metadata  of  the  syntax  object
+  ;;representing  the  body itself;  when  each  internal definition  is
+  ;;encountered,  a new  entry for  the  identifier is  added (via  side
+  ;;effect) to the <RIB>:
+  ;;
+  ;;   name*  = (b       a)
+  ;;   mark** = ((top)   (top))
+  ;;   label* = (lab.b   lab.a)
+  ;;
+  ;;Notice that  the order  in which  the binding  tuples appear  in the
+  ;;<RIB> does not matter: two tuples are different when both the symbol
+  ;;and the marks are different and it  is an error to add twice a tuple
+  ;;to the same <RIB>.
+  ;;
+  ;;However it  is possible  to redefine  a binding.   Let's say  we are
+  ;;evaluating    forms   read    from    the    REPL:   the    argument
+  ;;SHADOWING-DEFINITIONS? is true.  If we type:
+  ;;
+  ;;   vicare> (define a 1)
+  ;;   vicare> (define a 2)
+  ;;
+  ;;after the first DEFINE is parsed the tuples are:
+  ;;
+  ;;   name*  = (a)
+  ;;   mark** = ((top))
+  ;;   label* = (lab.a.1)
+  ;;
+  ;;and after the secon DEFINE is parsed the tuples are:
+  ;;
+  ;;   name*  = (a)
+  ;;   mark** = ((top))
+  ;;   label* = (lab.a.2)
+  ;;
+  ;;we see that the label has changed.
+  ;;
   (define* (extend-rib! (rib <rib>?) (id identifier?) label shadowing-definitions?)
     (when ($<rib>-sealed/freq rib)
       (assertion-violation __who__
