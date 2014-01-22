@@ -3466,37 +3466,50 @@
     (when ($<rib>-sealed/freq rib)
       (assertion-violation __who__
 	"Vicare: internal error: attempt to extend sealed RIB" rib))
-    (let ((sym   (identifier->symbol id))
-	  (mark* ($<stx>-mark* id))
-	  (sym*  ($<rib>-name* rib)))
-      (cond ((and (memq sym ($<rib>-name* rib))
-		  (%find sym mark* sym* ($<rib>-mark** rib) ($<rib>-label* rib)))
+    (let ((id.sym      (identifier->symbol id))
+	  (id.mark*    ($<stx>-mark*  id))
+	  (rib.name*   ($<rib>-name*  rib))
+	  (rib.mark**  ($<rib>-mark** rib))
+	  (rib.label*  ($<rib>-label* rib)))
+      (cond ((and (memq id.sym rib.name*)
+		  (%find id.sym id.mark* rib.name* rib.mark** rib.label*))
+	     ;;A binding for ID already exists in this lexical contoure.
+	     ;;For example, in an internal body we have:
+	     ;;
+	     ;;   (define a 1)
+	     ;;   (define a 2)
+	     ;;
+	     ;;in an R6RS program or library we must raise an exception;
+	     ;;at the REPL we just redefine the binding.
+	     ;;
 	     => (lambda (label*-tail)
 		  (unless (eq? label (car label*-tail))
 		    (if (not shadowing-definitions?)
-			;;XXX override label
+			;;We  override the  already existent  label with
+			;;the new label.
 			(set-car! label*-tail label)
 		      ;;Signal an error if the identifier was already in
 		      ;;the rib.
 		      (syntax-violation 'expander
 			"multiple definitions of identifier" id)))))
 	    (else
-	     ($set-<rib>-name*!  rib (cons sym sym*))
-	     ($set-<rib>-mark**! rib (cons mark* ($<rib>-mark** rib)))
-	     ($set-<rib>-label*! rib (cons label ($<rib>-label* rib)))))))
+	     ;;No binding exists for ID: create a new one.
+	     ($set-<rib>-name*!  rib (cons id.sym   rib.name*))
+	     ($set-<rib>-mark**! rib (cons id.mark* rib.mark**))
+	     ($set-<rib>-label*! rib (cons label    rib.label*))))))
 
-  (define (%find sym mark* sym* mark** label*)
-    ;;We know  that the list  of symbols SYM*  has at least  one element
-    ;;equal to SYM; iterate through  SYM*, MARK** and LABEL* looking for
-    ;;a tuple having marks equal to  MARK* and return the tail of LABEL*
-    ;;having the associated label as car.   If such binding is not found
-    ;;return false.
+  (define (%find id.sym id.mark* rib.name* rib.mark** rib.label*)
+    ;;We  know that  the  list of  symbols RIB.NAME*  has  at least  one
+    ;;element equal to ID.SYM; iterate through RIB.NAME*, RIB.MARK** and
+    ;;RIB.LABEL* looking for a tuple  having marks equal to ID.MARK* and
+    ;;return the tail of RIB.LABEL*  having the associated label as car.
+    ;;If such binding is not found return false.
     ;;
-    (and (pair? sym*)
-	 (if (and (eq? sym (car sym*))
-		  (same-marks? mark* (car mark**)))
-	     label*
-	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
+    (and (pair? rib.name*)
+	 (if (and (eq? id.sym (car rib.name*))
+		  (same-marks? id.mark* (car rib.mark**)))
+	     rib.label*
+	   (%find id.sym id.mark* (cdr rib.name*) (cdr rib.mark**) (cdr rib.label*)))))
 
   #| end of module: EXTEND-RIB! |# )
 
