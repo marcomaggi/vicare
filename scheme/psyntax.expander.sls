@@ -300,43 +300,209 @@
 ;;
 
 
-;;;; introduction: lexical environments, the LEXENV component
+;;;; introduction: lexical environment, syntactic binding descriptors
 ;;
-;;A  LEXENV  is an  alist  managed  somewhat  like  a stack;  while  the
-;;expansion  proceeds, visiting  the  code in  breadth-first order:  the
-;;LEXENV is updated by pushing new  entries on the stack.  Each entry is
-;;a pair, list or improper list and represents a syntactic binding.
+;;A syntactic  binding is the  association between  a name and  a value.
+;;Syntactic bindings are created by LAMBDA and its variants, LET and its
+;;variants,  DEFINE and  its variants,  DEFINE-SYNTAX and  its variants,
+;;LET-SYNTAX and its variants.
 ;;
-;;A LEXENV entry has the following format:
-;;
-;;   (?label . ?syntactic-binding)
-;;
-;;where ?LABEL  is a label  gensym uniquely indicating the  binding, and
-;;?SYNTACTIC-BINDING has the format:
+;;A syntactic binding descriptor has the following format:
 ;;
 ;;   (?binding-type . ?binding-value)
 ;;
 ;;where  ?BINDING-TYPE is  a  symbol and  the  format of  ?BINDING-VALUE
 ;;depends on the binding type.
 ;;
+;;A syntactic  binding is  uniquely associated to  a label  gensym; such
+;;associations are registered in:
 ;;
-;;LEXENV entry types
-;;==================
+;;* A  set of label gensyms  associated to the bindings  exported by the
+;;  boot image.
+;;
+;;* The interactive and non-interactive environment records.
+;;
+;;* The LEXENV data structures.
+;;
+
+
+;;;; introduction: lexical environments, the boot image component
+;;
+;;The  syntactic bindings  exported  by  the boot  image  are all  those
+;;exported by the librarys "(psyntax system $all)".
+;;
+;;Under Vicare:  Scheme symbols  are data structures  with a  slot named
+;;"value",  accessor  "symbol-value"  and  mutator  "set-symbol-value!",
+;;usually    initialised     to    the    special     built-in    object
+;;"#<unbound-object>".   When  a  label  is associated  to  a  syntactic
+;;binding exported by the boot image, the binding's descriptor is stored
+;;in the "value" slot.
+;;
+;;We can easily inspect such situation as follows:
+;;
+;;   (import (vicare))
+;;   (define env (environment '(psyntax system $all)))
+;;
+;;   (define-values (label1 syntactic-binding-descriptor1)
+;;     (environment-binding 'display env))
+;;   syntactic-binding-descriptor1	=> (core-prim . display)
+;;   (symbol-value label1)		=> (core-prim . display)
+;;   (eq? syntactic-binding-descriptor1
+;;        (symbol-value label1))	=> #t
+;;
+;;   (define-values (label2 syntactic-binding-descriptor2)
+;;     (environment-binding 'lambda env))
+;;   syntactic-binding-descriptor2	=> (core-macro . lambda)
+;;   (symbol-value label2)		=> (core-macro . lambda)
+;;   (eq? syntactic-binding-descriptor2
+;;        (symbol-value label2))	=> #t
+;;
+;;   (define-values (label3 syntactic-binding-descriptor3)
+;;     (environment-binding 'let env))
+;;   syntactic-binding-descriptor3	=> (macro . let)
+;;   (symbol-value label3)		=> (macro . let)
+;;   (eq? syntactic-binding-descriptor3
+;;        (symbol-value label3))	=> #t
+;;
+;;   (define-values (label4 syntactic-binding-descriptor4)
+;;     (environment-binding '&condition env))
+;;   syntactic-binding-descriptor4	=> ($core-rtd $condition-rtd &condition-rcd)
+;;   (symbol-value label4)		=> ($core-rtd $condition-rtd &condition-rcd)
+;;   (eq? syntactic-binding-descriptor4
+;;        (symbol-value label4))	=> #t
+;;
+;;The  syntactic binding  exported by  the boot  image have  descriptors
+;;defined in, and only in, "makefile.sps".
+;;
+;;
+;;Boot image entry types
+;;======================
+;;
+;;Core language syntax
+;;--------------------
+;;
+;;Some syntaxes  are built-in  in the  expander and do  not even  have a
+;;transformer function: they  are part of the core  language.  A binding
+;;representing a core language syntax has the format:
+;;
+;;   (?name . ())
+;;
+;;where ?NAME is a symbol representing the name of the syntax.  The core
+;;language  syntaxes  are: DEFINE,  DEFINE-SYNTAX,  DEFINE-FLUID-SYNTAX,
+;;MODULE,   LIBRARY,   BEGIN,    IMPORT,   EXPORT,   SET!,   LET-SYNTAX,
+;;LETREC-SYNTAX, STALE-WHEN.
+;;
+;;
+;;Core macro
+;;----------
+;;
+;;A binding representing a core macro integrated in the expander has the
+;;format:
+;;
+;;   (core-macro . ?name)
+;;
+;;where ?NAME is  a symbol representing the macro name.   The core macro
+;;transformer functions  are implemented by  the expander in  the module
+;;exporting the  function CORE-MACRO-TRANSFORMER,  which is used  to map
+;;core macro names to transformer functions.
+;;
+;;
+;;Non-core macro
+;;--------------
+;;
+;;A binding representing a non-core macro integrated in the expander has
+;;the format:
+;;
+;;   (macro . ?name)
+;;
+;;where ?NAME  is a  symbol representing the  macro name.   The non-core
+;;macro transformer  functions are  implemented by  the expander  in the
+;;module  exporting the  function  NON-CORE-MACRO-TRANSFORMER, which  is
+;;used to map non-core macro names to transformer functions.
+;;
 ;;
 ;;Core primitive
 ;;--------------
 ;;
-;;A syntactic binding representing a core primitive function exported by
-;;the boot image has the format:
+;;A syntactic binding representing a core primitive exported by the boot
+;;image has the format:
 ;;
 ;;   (core-prim . ?name)
 ;;
-;;where  "core-prim"  is  the  symbol "core-prim";  ?NAME  is  a  symbol
-;;representing  the  name  of  the core  primitive.   For  example:  the
-;;primitive function DISPLAY is described by a binding:
+;;where:  "core-prim"  is the  symbol  "core-prim";  ?NAME is  a  symbol
+;;representing the name of the core primitive.
 ;;
-;;   (core-prim . display)
 ;;
+;;Core R6RS record type descriptor
+;;--------------------------------
+;;
+;;A binding representing  R6RS's record type descriptor  exported by the
+;;boot image has the format:
+;;
+;;     ($core-rtd . (?rtd-sym ?rcd-sym))
+;;
+;;where: "$rtd" is the symbol  "$rtd"; ?RTD-SYM is a symbol representing
+;;the name  of the identifier  to which  the record type  descriptor was
+;;originally bound;  ?RCD-SYM is a  symbol representing the name  of the
+;;identifier  to which  the  default record  constructor descriptor  was
+;;originally bound.
+;;
+;;For example: these  entries are used to represent  the predefined R6RS
+;;condition object types.
+;;
+;;
+;;Some words about core primitive values
+;;======================================
+;;
+;;Every core  primitive has a name  that is considered part  of Vicare's
+;;core language;  such primitive name is  the actual public name  of the
+;;binding exported by the boot image.   The name of the function DISPLAY
+;;is  the  symbol "display";  the  name  of the  record-type  descriptor
+;;&CONDITION-RTD is the symbol "&condition-rtd".
+;;
+;;The property list of the name  contains a special entry whose value is
+;;the storage location gensym of the core primitive value; we can easily
+;;inspect such situation as follows:
+;;
+;;   (import (vicare)
+;;     (only (vicare system $symbols)
+;;           system-value-gensym))
+;;
+;;   (getprop 'display system-value-gensym)
+;;   => loc.display
+;;
+;;   (symbol-value (getprop 'display system-value-gensym))
+;;   => #<procedure display>
+;;
+;;   (system-value 'display)
+;;   => #<procedure display>
+;;
+;;   (system-value '&condition-rtd)
+;;   => #[rtd name=&condition ...]
+;;
+;;Notice that the gensym bound to SYSTEM-VALUE-GENSYM is different every
+;;time we rebuild the boot image.
+;;
+
+
+;;;; introduction: lexical environments, the LEXENV component
+;;
+;;A  LEXENV  is an  alist  managed  somewhat  like  a stack;  while  the
+;;expansion  proceeds, visiting  the  code in  breadth-first order:  the
+;;LEXENV is updated by pushing new  entries on the stack.  Each entry is
+;;a  pair,  list  or improper  list  and  maps  a  label gensym  to  its
+;;associated syntactic binding descriptor.
+;;
+;;A LEXENV entry has the following format:
+;;
+;;   (?label . ?syntactic-binding)
+;;
+;;where: ?LABEL  is a label  gensym uniquely associated to  the binding;
+;;?SYNTACTIC-BINDING is a syntactic binding descriptor.
+;;
+;;
+;;LEXENV entry types
+;;==================
 ;;
 ;;Library lexical variables
 ;;-------------------------
@@ -373,23 +539,6 @@
 ;;
 ;;Labels   associated  to   these  imported   bindings  have   the  list
 ;;representing the binding itself stored in their "value" fields.
-;;
-;;
-;;Non-core macro
-;;--------------
-;;
-;;A binding representing a non-core macro integrated in the expander has
-;;the format:
-;;
-;;   (macro . ?name)
-;;
-;;where ?NAME is a symbol representing  the macro name; such entries are
-;;defined in the file "makefile.sps".
-;;
-;;The  non-core  macro  transformer  functions are  implemented  by  the
-;;expander     in     the      module     exporting     the     function
-;;NON-CORE-MACRO-TRANSFORMER, which is used  to map non-core macro names
-;;to transformer functions.
 ;;
 ;;
 ;;Library non-identifier macro
@@ -571,18 +720,6 @@
 ;;-  ?UNSAFE-FIELD-MUTATORS   is  an   alist  whose  keys   are  symbols
 ;;representing the mutable field names  and whose values are identifiers
 ;;bound to the corresponding unsafe field mutators.
-;;
-;;
-;;Core R6RS record type descriptor
-;;--------------------------------
-;;
-;;A binding representing  R6RS's record type descriptor  exported by the
-;;boot image has the format:
-;;
-;;     ($core-rtd . (?rtd-id ?rcd-id))
-;;
-;;for example: these entries are  defined by "makefile.sps" to represent
-;;the predefined R6RS condition object types.
 ;;
 ;;
 ;;Fluid syntax
@@ -3108,8 +3245,8 @@
 
 
 ;;;; <RIB> type definition
-
-;;A  <RIB> is  a  record constructed  at  every lexical  contour in  the
+;;
+;;A  <RIB> is  a  record constructed  at every  lexical  contour in  the
 ;;program to  hold informations about  the variables introduced  in that
 ;;contour; "lexical contours" are, for example, LET and similar syntaxes
 ;;that can introduce bindings.

@@ -1114,6 +1114,7 @@
     ($unbound-object?				$symbols $vicare-symbols)
     ($symbol-table-size				$symbols $vicare-symbols)
     ($log-symbol-table-status			$symbols $vicare-symbols)
+    (system-value-gensym			$symbols $vicare-symbols)
 ;;;
     (base-rtd					$structs $vicare-structs)
     ($struct-set!				$structs $vicare-structs)
