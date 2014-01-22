@@ -3458,15 +3458,38 @@
 ;;marks are  different and it is  an error to  add twice a tuple  to the
 ;;same <RIB>.
 ;;
+(module (extend-rib!)
 
-(define (extend-rib! rib id label sd?)
-  ;;Extend RIB.
-  ;;
+  (define* (extend-rib! (rib <rib>?) (id identifier?) label shadowing-definitions?)
+    ;;Extend RIB.
+    ;;
+    (when ($<rib>-sealed/freq rib)
+      (assertion-violation __who__
+	"Vicare: internal error: attempt to extend sealed RIB" rib))
+    (let ((sym   (identifier->symbol id))
+	  (mark* ($<stx>-mark* id))
+	  (sym*  ($<rib>-name* rib)))
+      (cond ((and (memq sym ($<rib>-name* rib))
+		  (%find sym mark* sym* ($<rib>-mark** rib) ($<rib>-label* rib)))
+	     => (lambda (label*-tail)
+		  (unless (eq? label (car label*-tail))
+		    (if (not shadowing-definitions?)
+			;;XXX override label
+			(set-car! label*-tail label)
+		      ;;Signal an error if the identifier was already in
+		      ;;the rib.
+		      (syntax-violation 'expander
+			"multiple definitions of identifier" id)))))
+	    (else
+	     ($set-<rib>-name*!  rib (cons sym sym*))
+	     ($set-<rib>-mark**! rib (cons mark* ($<rib>-mark** rib)))
+	     ($set-<rib>-label*! rib (cons label ($<rib>-label* rib)))))))
+
   (define (%find sym mark* sym* mark** label*)
     ;;We know  that the list  of symbols SYM*  has at least  one element
     ;;equal to SYM; iterate through  SYM*, MARK** and LABEL* looking for
     ;;a tuple having marks equal to  MARK* and return the tail of LABEL*
-    ;;having the associated label as  car.  If such binding is not found
+    ;;having the associated label as car.   If such binding is not found
     ;;return false.
     ;;
     (and (pair? sym*)
@@ -3474,26 +3497,8 @@
 		  (same-marks? mark* (car mark**)))
 	     label*
 	   (%find sym mark* (cdr sym*) (cdr mark**) (cdr label*)))))
-  (when (<rib>-sealed/freq rib)
-    (assertion-violation 'extend-rib!
-      "Vicare: internal error: attempt to extend sealed RIB" rib))
-  (let ((sym   (identifier->symbol id))
-	(mark* (<stx>-mark* id))
-	(sym*  (<rib>-name* rib)))
-    (cond ((and (memq sym (<rib>-name* rib))
-		(%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
-	   => (lambda (label*-tail)
-		(unless (eq? label (car label*-tail))
-		  (if (not sd?) ;(top-level-context)
-		      ;;XXX override label
-		      (set-car! label*-tail label)
-		    ;;Signal an error if the identifier was already in
-		    ;;the rib.
-		    (syntax-violation 'expander "multiple definitions of identifier" id)))))
-	  (else
-	   (set-<rib>-name*!  rib (cons sym sym*))
-	   (set-<rib>-mark**! rib (cons mark* (<rib>-mark** rib)))
-	   (set-<rib>-label*! rib (cons label (<rib>-label* rib)))))))
+
+  #| end of module: EXTEND-RIB! |# )
 
 
 ;;;; sealing ribs
