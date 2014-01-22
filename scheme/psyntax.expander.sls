@@ -1255,7 +1255,7 @@
    (new-interaction-environment (base-of-interaction-library)))
   ((libname)
    (let* ((lib (find-library-by-name libname))
-	  (rib (subst->rib (library-subst lib))))
+	  (rib (export-subst->rib (library-subst lib))))
      (make-interaction-env rib '() '()))))
 
 (define interaction-environment
@@ -1415,7 +1415,7 @@
 	;;Convert  the expanded  language  code to  core language  code,
 	;;compile it and evaluate it.
 	(eval-core (expanded->core invoke-code))
-	(make-interaction-env (subst->rib export-subst)
+	(make-interaction-env (export-subst->rib export-subst)
 			      (map %export-env-entry->lexenv-entry export-env)
 			      '()))))
 
@@ -3391,21 +3391,18 @@
 	      "Vicare bug: expected symbol as binding name" name)))
       name-vec label-vec)))
 
-(define (subst->rib subst)
-  ;;Build and return a new <RIB> structure initialised with SUBST.
+(define (export-subst->rib export-subst)
+  ;;Build and return a new  <RIB> structure initialised with the entries
+  ;;of EXPORT-SUBST.
   ;;
-  ;;A "subst"  is an alist whose  keys are "names" and  whose values are
-  ;;"labels":
+  ;;An EXPORT-SUBST  selects the  exported bindings among  the syntactic
+  ;;bindings defined at the top-level of a library; it is an alist whose
+  ;;keys are external symbol names of  the bindings and whose values are
+  ;;the associated label gensyms.
   ;;
-  ;;* "Name"  is a symbol  representing the  public name of  an imported
-  ;;  binding, the one we use to reference it in the code of a library.
-  ;;
-  ;;* "Label"  is a unique symbol  associated to the binding's  entry in
-  ;;  the lexical environment.
-  ;;
-  (make-<rib> (map car subst)
-	      (map (lambda (x) TOP-MARK*) subst)
-	      (map cdr subst)
+  (make-<rib> (map car export-subst)
+	      (map (lambda (x) TOP-MARK*) export-subst)
+	      (map cdr export-subst)
 	      #f))
 
 
