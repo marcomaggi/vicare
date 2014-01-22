@@ -1018,7 +1018,7 @@
   (cond ((env? x)
 	 (vector->list ($env-names x)))
 	((interaction-env? x)
-	 (map values ($<rib>-sym* ($interaction-env-rib x))))
+	 (map values ($<rib>-name* ($interaction-env-rib x))))
 	(else
 	 (assertion-violation __who__ "not an environment" x))))
 
@@ -3115,7 +3115,7 @@
 ;;that can introduce bindings.
 ;;
 (define-record <rib>
-  (sym*
+  (name*
 		;List of symbols representing the original binding names
 		;in the source code.
 		;
@@ -3124,14 +3124,14 @@
 
    mark**
 		;List of  lists of marks; there  is a list of  marks for
-		;every item in SYM*.
+		;every item in NAME*.
 		;
 		;When the  <RIB> is sealed:  the list is converted  to a
 		;vector.
 
    label*
 		;List  of  gensyms  uniquely identifying  the  syntactic
-		;bindings; there is a label for each item in SYM*.
+		;bindings; there is a label for each item in NAME*.
 		;
 		;When the  <RIB> is sealed:  the list is converted  to a
 		;vector.
@@ -3168,7 +3168,7 @@
   ;;where NAME* is a vector of symbols and LABEL* is a vector of labels,
   ;;generate a <RIB> containing:
   ;;
-  ;;* NAME* as the <RIB>-SYM*,
+  ;;* NAME* as the <RIB>-NAME*,
   ;;
   ;;* a list of TOP-MARK* as the <RIB>-MARK**,
   ;;
@@ -3286,8 +3286,8 @@
       "Vicare: internal error: attempt to extend sealed RIB" rib))
   (let ((sym   (identifier->symbol id))
 	(mark* (<stx>-mark* id))
-	(sym*  (<rib>-sym* rib)))
-    (cond ((and (memq sym (<rib>-sym* rib))
+	(sym*  (<rib>-name* rib)))
+    (cond ((and (memq sym (<rib>-name* rib))
 		(%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
 	   => (lambda (label*-tail)
 		(unless (eq? label (car label*-tail))
@@ -3298,7 +3298,7 @@
 		    ;;the rib.
 		    (syntax-violation 'expander "multiple definitions of identifier" id)))))
 	  (else
-	   (set-<rib>-sym*!   rib (cons sym sym*))
+	   (set-<rib>-name*!  rib (cons sym sym*))
 	   (set-<rib>-mark**! rib (cons mark* (<rib>-mark** rib)))
 	   (set-<rib>-label*! rib (cons label (<rib>-label* rib)))))))
 
@@ -3323,10 +3323,10 @@
 ;;
 
 (define (seal-rib! rib)
-  (let ((sym* (<rib>-sym* rib)))
+  (let ((sym* (<rib>-name* rib)))
     (unless (null? sym*) ;only seal if RIB is not empty
       (let ((sym* (list->vector sym*)))
-	(set-<rib>-sym*!        rib sym*)
+	(set-<rib>-name*!       rib sym*)
 	(set-<rib>-mark**!      rib (list->vector (<rib>-mark** rib)))
 	(set-<rib>-label*!      rib (list->vector (<rib>-label* rib)))
 	(set-<rib>-sealed/freq! rib (make-vector (vector-length sym*) 0))))))
@@ -3334,7 +3334,7 @@
 (define (unseal-rib! rib)
   (when (<rib>-sealed/freq rib)
     (set-<rib>-sealed/freq! rib #f)
-    (set-<rib>-sym*!        rib (vector->list (<rib>-sym*   rib)))
+    (set-<rib>-name*!       rib (vector->list (<rib>-name*  rib)))
     (set-<rib>-mark**!      rib (vector->list (<rib>-mark** rib)))
     (set-<rib>-label*!      rib (vector->list (<rib>-label* rib)))))
 
@@ -3350,7 +3350,7 @@
 			i))))))
     (vector-set! freq* i (+ freq 1))
     (unless (= i idx)
-      (let ((sym*   (<rib>-sym*   rib))
+      (let ((sym*   (<rib>-name*  rib))
 	    (mark** (<rib>-mark** rib))
 	    (label* (<rib>-label* rib)))
 	(let-syntax ((%vector-swap (syntax-rules ()
@@ -3408,7 +3408,7 @@
   (receive (sym* mark**)
       ;;If RIB is sealed the fields  hold vectors, else they hold lists;
       ;;we want lists here.
-      (let ((sym*   (<rib>-sym*   rib))
+      (let ((sym*   (<rib>-name*  rib))
 	    (mark** (<rib>-mark** rib)))
 	(if (<rib>-sealed/freq rib)
 	    (values (vector->list sym*)
@@ -3569,9 +3569,9 @@
 
   (define (%gen-top-level-label id rib)
     (let ((sym   (identifier->symbol id))
-	  (mark* (<stx>-mark*        id))
-	  (sym*  (<rib>-sym*         rib)))
-      (cond ((and (memq sym (<rib>-sym* rib))
+	  (mark* (<stx>-mark* id))
+	  (sym*  (<rib>-name* rib)))
+      (cond ((and (memq sym (<rib>-name* rib))
 		  (%find sym mark* sym* (<rib>-mark** rib) (<rib>-label* rib)))
 	     => (lambda (label)
 		  ;;If we are here RIB  contains a binding that captures
@@ -4213,7 +4213,7 @@
 		   (%search-in-rib rib sym mark* next-search))))))))
 
   (define-inline (%search-in-sealed-rib rib sym mark* next-search)
-    (define sym* ($<rib>-sym* rib))
+    (define sym* ($<rib>-name* rib))
     (let loop ((i       0)
 	       (rib.len ($vector-length sym*)))
       (cond (($fx= i rib.len)
@@ -4227,7 +4227,7 @@
 	     (loop ($fxadd1 i) rib.len)))))
 
   (define-inline (%search-in-rib rib sym mark* next-search)
-    (let loop ((sym*    ($<rib>-sym*   rib))
+    (let loop ((sym*    ($<rib>-name*  rib))
 	       (mark**  ($<rib>-mark** rib))
 	       (label*  ($<rib>-label* rib)))
       (cond ((null? sym*)
