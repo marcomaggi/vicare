@@ -441,11 +441,11 @@
 ;;
 ;;     ($core-rtd . (?rtd-sym ?rcd-sym))
 ;;
-;;where: "$rtd" is the symbol  "$rtd"; ?RTD-SYM is a symbol representing
-;;the name  of the identifier  to which  the record type  descriptor was
-;;originally bound;  ?RCD-SYM is a  symbol representing the name  of the
-;;identifier  to which  the  default record  constructor descriptor  was
-;;originally bound.
+;;where: "$core-rtd"  is the  symbol "$core-rtd";  ?RTD-SYM is  a symbol
+;;representing  the name  of the  identifier  to which  the record  type
+;;descriptor was originally bound; ?RCD-SYM is a symbol representing the
+;;name  of  the  identifier  to which  the  default  record  constructor
+;;descriptor was originally bound.
 ;;
 ;;For example: these  entries are used to represent  the predefined R6RS
 ;;condition object types.
@@ -3232,6 +3232,14 @@
 (define (core-rtd-binding? binding)
   (and (pair? binding)
        (eq? '$core-rtd (syntactic-binding-type binding))))
+
+(define (r6rs-record-type-descriptor-binding? binding)
+  (and (eq? '$rtd (syntactic-binding-type binding))
+       (list? (syntactic-binding-value binding))))
+
+(define (struct-type-descriptor-binding? binding)
+  (and (eq? '$rtd (syntactic-binding-type binding))
+       (not (list? (syntactic-binding-value binding)))))
 
 ;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings
@@ -8108,9 +8116,9 @@
   ;;Transformer  function   used  to  expand   Vicare's  TYPE-DESCRIPTOR
   ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
   ;;contents  of EXPR-STX  in the  context of  the lexical  environments
-  ;;LEXENV.RUN and LEXENV.EXPAND, the result must be a single identifier
-  ;;representing a Vicare struct type.   Return a sexp evaluating to the
-  ;;struct type descriptor.
+  ;;LEXENV.RUN and  LEXENV.EXPAND, the  result must  be the  struct type
+  ;;descriptor  struct.  Return  a sexp  evaluating to  the struct  type
+  ;;descriptor.
   ;;
   ;;The binding in the lexical  environment representing the struct type
   ;;descriptor looks as follows:
@@ -8123,19 +8131,18 @@
   ;;where "$rtd" is the symbol "$rtd".
   ;;
   (define-constant __who__ 'type-descriptor)
-  (define (%struct-type-descriptor-binding? binding)
-    (and (eq? '$rtd (syntactic-binding-type binding))
-	 (not (list? (syntactic-binding-value binding)))))
   (syntax-match expr-stx ()
     ((_ ?identifier)
      (identifier? ?identifier)
-     (let ((label (id->label ?identifier)))
-       (unless label
-	 (%raise-unbound-error __who__ expr-stx ?identifier))
-       (let ((binding (label->syntactic-binding label lexenv.run)))
-	 (unless (%struct-type-descriptor-binding? binding)
-	   (syntax-violation __who__ "not a struct type" expr-stx ?identifier))
-	 (build-data no-source (syntactic-binding-value binding)))))))
+     (cond ((id->label ?identifier)
+	    => (lambda (label)
+		 (let ((binding (label->syntactic-binding label lexenv.run)))
+		   (unless (struct-type-descriptor-binding? binding)
+		     (syntax-violation __who__ "not a struct type" expr-stx ?identifier))
+		   (build-data no-source (syntactic-binding-value binding)))))
+	   (else
+	    (%raise-unbound-error __who__ expr-stx ?identifier))))
+    ))
 
 
 ;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR-TRANSFORMER
@@ -8185,9 +8192,6 @@
   ;;representing  the   mutable  field   names  and  whose   values  are
   ;;identifiers bound to the corresponding unsafe field mutators.
   ;;
-  (define (%record-type-descriptor-binding? binding)
-    (and (eq? '$rtd (syntactic-binding-type binding))
-	 (list? (syntactic-binding-value binding))))
 
   (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand R6RS's RECORD-TYPE-DESCRIPTOR
@@ -8205,7 +8209,7 @@
 	 (unless label
 	   (%raise-unbound-error __who__ expr-stx ?identifier))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (%record-type-descriptor-binding? binding)
+	   (unless (r6rs-record-type-descriptor-binding? binding)
 	     (syntax-violation __who__ "not a record type" expr-stx ?identifier))
 	   (chi-expr (car (syntactic-binding-value binding))
 		     lexenv.run lexenv.expand))))))
@@ -8226,7 +8230,7 @@
 	 (unless label
 	   (%raise-unbound-error __who__ expr-stx ?identifier))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (%record-type-descriptor-binding? binding)
+	   (unless (r6rs-record-type-descriptor-binding? binding)
 	     (syntax-error __who__ "invalid type" expr-stx ?identifier))
 	   (chi-expr (cadr (syntactic-binding-value binding))
 		     lexenv.run lexenv.expand))))))
@@ -8249,7 +8253,7 @@
 	 (unless label
 	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (%record-type-descriptor-binding? binding)
+	   (unless (r6rs-record-type-descriptor-binding? binding)
 	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
 	   (let* ((table    (%get-alist-of-safe-field-accessors __who__ binding))
 		  (accessor (assq (syntax->datum ?field-name) table)))
@@ -8274,7 +8278,7 @@
 	 (unless label
 	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (%record-type-descriptor-binding? binding)
+	   (unless (r6rs-record-type-descriptor-binding? binding)
 	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
 	   (let* ((table   (%get-alist-of-safe-field-mutators __who__ binding))
 		  (mutator (assq (syntax->datum ?field-name) table)))
@@ -8300,7 +8304,7 @@
 	 (unless label
 	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (%record-type-descriptor-binding? binding)
+	   (unless (r6rs-record-type-descriptor-binding? binding)
 	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
 	   (let* ((table    (%get-alist-of-unsafe-field-accessors __who__ binding))
 		  (accessor (assq (syntax->datum ?field-name) table)))
@@ -8326,7 +8330,7 @@
 	 (unless label
 	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (%record-type-descriptor-binding? binding)
+	   (unless (r6rs-record-type-descriptor-binding? binding)
 	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
 	   (let* ((table   (%get-alist-of-unsafe-field-mutators __who__ binding))
 		  (mutator (assq (syntax->datum ?field-name) table)))
