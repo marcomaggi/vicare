@@ -1289,6 +1289,136 @@
   (make-parameter #f))
 
 
+;;;; public interface: variable transformer
+;;
+;;As  specified  by  R6RS:  we   can  define  identifier  syntaxes  with
+;;IDENTIFIER-SYNTAX  and with  MAKE-VARIABLE-TRANSFORMER; both  of these
+;;return  a "special"  value that,  when used  as right-hand  side of  a
+;;syntax  definition,  is  recognised  by the  expander  as  a  variable
+;;transformer  as opposed  to  a normal  transformer  or a  compile-time
+;;value.
+;;
+;;Let's say we define an identifier syntax with:
+;;
+;;   (define-syntax ?kwd ?expression)
+;;
+;;where ?EXPRESSION is:
+;;
+;;   (identifier-syntax ?stuff)
+;;
+;;here is what happen:
+;;
+;;1..The DEFINE-SYNTAX form is expanded and a syntax object is created:
+;;
+;;      (syntax ?expression)
+;;
+;;2..The syntax object is  expanded by %EXPAND-MACRO-TRANSFORMER and the
+;;   result is a core language sexp representing the transformer.
+;;
+;;3..The   sexp   is   compiled    and   evaluated   by   the   function
+;;   %EVAL-MACRO-TRANSFORMER.   The  result  of   the  evaluation  is  a
+;;   "special value" with format:
+;;
+;;      (identifier-macro! . ?transformer)
+;;
+;;   where ?TRANSFORMER is a transformer function.
+;;
+;;4..%EVAL-MACRO-TRANSFORMER  recognises  the  value  as  special  using
+;;   VARIABLE-TRANSFORMER?  and   transforms  it  to   a  "local-macro!"
+;;   syntactic binding.
+;;
+
+(define* (make-variable-transformer x)
+  ;;R6RS's  make-variable-transformer.   Build  and return  a  "special"
+  ;;value that, when used as right-hand  side of a syntax definition, is
+  ;;recognised by the expander as a variable transformer as opposed to a
+  ;;normal transformer or a compile-time value.
+  ;;
+  (if (procedure? x)
+      (cons 'identifier-macro! x)
+    (assertion-violation __who__ "not a procedure" x)))
+
+(define (variable-transformer? x)
+  ;;Return  true if  X  is  recognised by  the  expander  as a  variable
+  ;;transformer as  opposed to  a normal  transformer or  a compile-time
+  ;;value; otherwise return false.
+  ;;
+  (and (pair? x)
+       (eq? (car x) 'identifier-macro!)
+       (procedure? (cdr x))))
+
+(define* (variable-transformer-procedure x)
+  ;;If X is recognised by the expander as a variable transformer: return
+  ;;the  actual  transformer  function,  otherwise  raise  an  assertion
+  ;;violation.
+  ;;
+  (if (variable-transformer? x)
+      (cdr x)
+    (assertion-violation __who__ "not a variable transformer" x)))
+
+
+;;;; public interface: compile-time values
+;;
+;;Compile-time values are objects computed  at expand-time and stored in
+;;the lexical environment.  We can  define a compile-time value and push
+;;it on the lexical environment with:
+;;
+;;   (define-syntax it
+;;     (make-compile-time-value (+ 1 2)))
+;;
+;;later  we can  retrieve it  by  defining a  transformer function  that
+;;returns a function:
+;;
+;;   (define-syntax get-it
+;;     (lambda (stx)
+;;       (lambda (ctv-retriever)
+;;         (ctv-retriever #'it) => 3
+;;         )))
+;;
+;;Let's say we define a compile-time value with:
+;;
+;;   (define-syntax ?kwd ?expression)
+;;
+;;where ?EXPRESSION is:
+;;
+;;   (make-compile-time-value ?stuff)
+;;
+;;here is what happen:
+;;
+;;1..The DEFINE-SYNTAX form is expanded and a syntax object is created:
+;;
+;;      (syntax ?expression)
+;;
+;;2..The syntax object is  expanded by %EXPAND-MACRO-TRANSFORMER and the
+;;   result is a core language sexp representing the right-hand side.
+;;
+;;3..The   sexp   is   compiled    and   evaluated   by   the   function
+;;   %EVAL-MACRO-TRANSFORMER.   The  result  of   the  evaluation  is  a
+;;   "special value" with format:
+;;
+;;      (ctv! . ?obj)
+;;
+;;   where ?OBJ is the actual compile-time value.
+;;
+;;4..%EVAL-MACRO-TRANSFORMER  recognises  the  value  as  special  using
+;;   COMPILE-TIME-VALUE?  and  transforms it to a  "local-ctv" syntactic
+;;   binding.
+;;
+
+(define (make-compile-time-value obj)
+  (cons 'ctv obj))
+
+(define (compile-time-value? obj)
+  (and (pair? obj)
+       (eq? 'ctv (car obj))))
+
+(define compile-time-value-object
+  ;;Given  a compile-time  value datum:  return the  actual compile-time
+  ;;object.
+  ;;
+  cdr)
+
+
 (define* (eval x env)
   ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
   ;;expand the  expression, invoke  its invoke-required  libraries and
@@ -1302,6 +1432,7 @@
     (for-each invoke-library invoke-req*)
     (eval-core (expanded->core x))))
 
+
 (module (expand-form-to-core-language)
   (define-constant __who__ 'expand-form-to-core-language)
 
@@ -1391,8 +1522,6 @@
   #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
 
 
-;;;; R6RS top level programs expander
-
 (module (compile-r6rs-top-level)
 
   (define (compile-r6rs-top-level expr*)
@@ -1430,6 +1559,7 @@
 
   #| end of module: COMPILE-R6RS-TOP-LEVEL |# )
 
+
 (module (expand-top-level)
 
   (define (expand-top-level expr*)
@@ -3595,6 +3725,16 @@
 
 
 ;;;; syntax object type definition
+;;
+;;First, let's  look at identifiers,  since they're the real  reason why
+;;syntax objects are here to begin  with.  An identifier is an STX whose
+;;EXPR is a symbol; in addition to the symbol naming the identifier, the
+;;identifer has a list of marks and a list of substitutions.
+;;
+;;The idea  is that to get  the label of  an identifier, we look  up the
+;;identifier's substitutions for  a mapping with the same  name and same
+;;marks (see SAME-MARKS? below).
+;;
 
 (define-record <stx>
   (expr
@@ -3619,16 +3759,6 @@
 	    (%display " column=")	(%display (source-position-column  pos))
 	    (%display " source=")	(%display (source-position-port-id pos))))))
     (%display ">")))
-
-;;First, let's  look at identifiers,  since they're the real  reason why
-;;syntax objects are here to begin  with.  An identifier is an STX whose
-;;EXPR is a symbol; in addition to the symbol naming the identifier, the
-;;identifer has a  list of marks and a list  of substitutions.
-;;
-;;The idea  is that to get  the label of  an identifier, we look  up the
-;;identifier's substitutions for  a mapping with the same  name and same
-;;marks (see SAME-MARKS? below).
-;;
 
 (define (datum->stx id datum)
   ;;Since all the identifier->label bindings are encapsulated within the
@@ -3671,6 +3801,26 @@
 	  (join-wraps mark* subst* ae* stx/expr)
 	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
     (make-<stx> stx/expr mark* subst* ae*)))
+
+(define (push-lexical-contour rib stx/expr)
+  ;;Add a rib to a syntax  object or expression and return the resulting
+  ;;syntax object.  This  procedure introduces a lexical  contour in the
+  ;;context of the given syntax object or expression.
+  ;;
+  ;;RIB must be an instance of <RIB>.
+  ;;
+  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
+  ;;object.
+  ;;
+  ;;This function prepares  a computation that will  be lazily performed
+  ;;later; the RIB will be pushed on the stack of substitutions in every
+  ;;identifier in the fully unwrapped returned syntax object.
+  ;;
+  (mkstx stx/expr
+	 '() #;mark*
+	 (list rib)
+	 '() #;ae*
+	 ))
 
 (define (expression-position x)
   (if (<stx>? x)
@@ -3735,6 +3885,140 @@
 	  (else x)))
 
   #| end of module: STRIP |# )
+
+
+;;;; syntax objects: mapping identifiers to labels
+
+(module (id->label)
+
+  (define (id->label id)
+    ;;Given the identifier  ID search its substs for  a label associated
+    ;;with the  same sym  and marks.   If found  return the  label, else
+    ;;return false.
+    ;;
+    (let ((sym (identifier->symbol id)))
+      (let search ((subst* ($<stx>-subst* id))
+		   (mark*  ($<stx>-mark*  id)))
+	(cond ((null? subst*)
+	       #f)
+	      ((eq? ($car subst*) 'shift)
+	       ;;A shift is inserted when a  mark is added.  So, we search
+	       ;;the rest of the substitution without the mark.
+	       (search ($cdr subst*) ($cdr mark*)))
+	      (else
+	       (let ((rib ($car subst*)))
+		 (define (next-search)
+		   (search ($cdr subst*) mark*))
+		 (if ($<rib>-sealed/freq rib)
+		     (%search-in-sealed-rib rib sym mark* next-search)
+		   (%search-in-rib rib sym mark* next-search))))))))
+
+  (define-inline (%search-in-rib rib sym mark* next-search)
+    (let loop ((name*   ($<rib>-name*  rib))
+	       (mark**  ($<rib>-mark** rib))
+	       (label*  ($<rib>-label* rib)))
+      (cond ((null? name*)
+	     (next-search))
+	    ((and (eq? ($car name*) sym)
+		  (same-marks? ($car mark**) mark*))
+	     ($car label*))
+	    (else
+	     (loop ($cdr name*) ($cdr mark**) ($cdr label*))))))
+
+  (module (%search-in-sealed-rib)
+
+    (define (%search-in-sealed-rib rib sym mark* next-search)
+      (define name* ($<rib>-name* rib))
+      (let loop ((i       0)
+		 (rib.len ($vector-length name*)))
+	(cond (($fx= i rib.len)
+	       (next-search))
+	      ((and (eq? ($vector-ref name* i) sym)
+		    (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
+	       (receive-and-return (label)
+		   ($vector-ref ($<rib>-label* rib) i)
+		 (%increment-rib-frequency! rib i)))
+	      (else
+	       (loop ($fxadd1 i) rib.len)))))
+
+    (define (%increment-rib-frequency! rib idx)
+      (let* ((freq* (<rib>-sealed/freq rib))
+	     (freq  (vector-ref freq* idx))
+	     (i     (let loop ((i idx))
+		      (if (zero? i)
+			  0
+			(let ((j (- i 1)))
+			  (if (= freq (vector-ref freq* j))
+			      (loop j)
+			    i))))))
+	($vector-set! freq* i (+ freq 1))
+	(unless (= i idx)
+	  (let ((name*  (<rib>-name*  rib))
+		(mark** (<rib>-mark** rib))
+		(label* (<rib>-label* rib)))
+	    (let-syntax ((%vector-swap (syntax-rules ()
+					 ((_ ?vec ?idx1 ?idx2)
+					  (let ((V ($vector-ref ?vec ?idx1)))
+					    ($vector-set! ?vec ?idx1 ($vector-ref ?vec ?idx2))
+					    ($vector-set! ?vec ?idx2 V))))))
+	      (%vector-swap name*  idx i)
+	      (%vector-swap mark** idx i)
+	      (%vector-swap label* idx i))))))
+
+    #| end of module: %SEARCH-IN-SEALED-RIB |# )
+
+  #| end of module: ID->LABEL |# )
+
+(define (id->label/intern id)
+  ;;Given the identifier ID search the lexical environment for a binding
+  ;;that captures  it; if such  binding is found: return  the associated
+  ;;label.
+  ;;
+  ;;If  no  capturing  binding  is found  but  a  top-level  interaction
+  ;;environment  is  set:  we  fabricate   a  lexical  binding  in  such
+  ;;environment so  that there exists a  lex gensym to name  the binding
+  ;;and a loc gensym in which to store a value.  This allows us to write
+  ;;"special" code on the REPL, for example:
+  ;;
+  ;;   vicare> (set! a 1)
+  ;;
+  ;;when  A is  not defined  will not  fail, rather  it will  implicitly
+  ;;define a binding as if we have typed:
+  ;;
+  ;;   vicare> (define a)
+  ;;   vicare> (set! a 1)
+  ;;
+  ;;another example of weird code that will not fail at the REPL:
+  ;;
+  ;;   vicare> (let ()
+  ;;             (set! a 1)
+  ;;             (debug-print a))
+  ;;
+  ;;will just print A as if we have typed:
+  ;;
+  ;;   vicare> (let ()
+  ;;             (define a)
+  ;;             (set! a 1)
+  ;;             (debug-print a))
+  ;;
+  ;;fabricating  the  lexical  binding  is  like  injecting  the  syntax
+  ;;"(define id)".
+  ;;
+  ;;If neither a capturing binding  is found nor a top-level environment
+  ;;is set: return false.
+  ;;
+  (or (id->label id)
+      (cond ((top-level-context)
+	     => (lambda (env)
+		  (let ((rib (interaction-env-rib env)))
+		    (receive (lab unused-lex)
+			(let ((shadowing-definition? #f))
+			  (gen-define-label+lex id rib shadowing-definition?))
+		      ;;FIXME (Abdulaziz Ghuloum)
+		      (let ((shadowing-definition? #t))
+			(extend-rib! rib id lab shadowing-definition?))
+		      lab))))
+	    (else #f))))
 
 
 ;;;; marks
@@ -3920,26 +4204,6 @@
       (and (pair? x) (pair? y)
 	   (eq? ($car x) ($car y))
 	   (same-marks? ($cdr x) ($cdr y)))))
-
-(define (push-lexical-contour rib stx/expr)
-  ;;Add a rib to a syntax  object or expression and return the resulting
-  ;;syntax object.  This  procedure introduces a lexical  contour in the
-  ;;context of the given syntax object or expression.
-  ;;
-  ;;RIB must be an instance of <RIB>.
-  ;;
-  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
-  ;;object.
-  ;;
-  ;;This function prepares  a computation that will  be lazily performed
-  ;;later; the RIB will be pushed on the stack of substitutions in every
-  ;;identifier in the fully unwrapped returned syntax object.
-  ;;
-  (mkstx stx/expr
-	 '() #;mark*
-	 (list rib)
-	 '() #;ae*
-	 ))
 
 (define (add-mark mark subst expr ae)
   ;;Build and return  a new syntax object wrapping  EXPR and having MARK
@@ -4202,94 +4466,32 @@
   #| end of module |# )
 
 
-(define (bless x)
-  ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
-  ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
-  ;;return a syntax object representing the input, possibly X itself.
-  ;;
-  ;;When  X is  a sexp  or a  (partially) unwrapped  syntax object:  raw
-  ;;symbols  in X  are considered  references  to bindings  in the  core
-  ;;language:  they are  converted to  identifiers having  empty lexical
-  ;;contexts.
-  ;;
-  (mkstx (let recur ((x x))
-	   (cond ((<stx>? x)
-		  x)
-		 ((pair? x)
-		  (cons (recur (car x)) (recur (cdr x))))
-		 ((symbol? x)
-		  (scheme-stx x))
-		 ((vector? x)
-		  (list->vector (map recur (vector->list x))))
-		 ;;If we are here X is a self-evaluating datum.
-		 (else x)))
-	 '() #;mark*
-	 '() #;subst*
-	 '() #;ae*
-	 ))
-
-(define scheme-stx
-  ;;Take a symbol  and if it's in the library:
-  ;;
-  ;;   (psyntax system $all)
-  ;;
-  ;;create a fresh identifier that maps  only the symbol to its label in
-  ;;that library.  Symbols not in that library become fresh.
-  ;;
-  (let ((scheme-stx-hashtable (make-eq-hashtable)))
-    (lambda (sym)
-      (or (hashtable-ref scheme-stx-hashtable sym #f)
-	  (let* ((subst  (library-subst (find-library-by-name '(psyntax system $all))))
-		 (stx    (make-<stx> sym TOP-MARK* '() '()))
-		 (stx    (cond ((assq sym subst)
-				=> (lambda (subst.entry)
-				     (let ((name  (car subst.entry))
-					   (label (cdr subst.entry)))
-				       (push-lexical-contour
-					   (make-<rib> (list name)
-						       (list TOP-MARK*)
-						       (list label)
-						       #f)
-					 stx))))
-			       (else stx))))
-	    (hashtable-set! scheme-stx-hashtable sym stx)
-	    stx)))))
-
-
 ;;;; deconstructors and predicates for syntax objects
 
-(define (syntax-kind? x pred?)
-  (cond ((<stx>? x)
-	 (syntax-kind? (<stx>-expr x) pred?))
-	((annotation? x)
-	 (syntax-kind? (annotation-expression x) pred?))
-	(else
-	 (pred? x))))
+(module (syntax-pair?
+	 syntax-vector?
+	 syntax-null?)
 
-(define (syntax-vector->list x)
-  (cond ((<stx>? x)
-	 (let ((ls (syntax-vector->list (<stx>-expr x)))
-	       (m* (<stx>-mark* x))
-	       (s* (<stx>-subst* x))
-	       (ae* (<stx>-ae* x)))
-	   (map (lambda (x)
-		  (mkstx x m* s* ae*))
-	     ls)))
-	((annotation? x)
-	 (syntax-vector->list (annotation-expression x)))
-	((vector? x)
-	 (vector->list x))
-	(else
-	 (assertion-violation 'syntax-vector->list "BUG: not a syntax vector" x))))
+  (define (syntax-pair? x)
+    (syntax-kind? x pair?))
 
-(define (syntax-pair? x)
-  (syntax-kind? x pair?))
+  (define (syntax-vector? x)
+    (syntax-kind? x vector?))
 
-(define (syntax-vector? x)
-  (syntax-kind? x vector?))
+  (define (syntax-null? x)
+    (syntax-kind? x null?))
 
-(define (syntax-null? x)
-  (syntax-kind? x null?))
+  (define (syntax-kind? x pred?)
+    (cond ((<stx>? x)
+	   (syntax-kind? (<stx>-expr x) pred?))
+	  ((annotation? x)
+	   (syntax-kind? (annotation-expression x) pred?))
+	  (else
+	   (pred? x))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
 
 (define (syntax-list? x)
   ;;FIXME Should terminate on cyclic input.  (Abdulaziz Ghuloum)
@@ -4332,7 +4534,24 @@
 	(else
 	 (assertion-violation 'syntax->list "BUG: invalid argument" x))))
 
-;;; --------------------------------------------------------------------
+(define (syntax-vector->list x)
+  (cond ((<stx>? x)
+	 (let ((ls (syntax-vector->list (<stx>-expr x)))
+	       (m* (<stx>-mark* x))
+	       (s* (<stx>-subst* x))
+	       (ae* (<stx>-ae* x)))
+	   (map (lambda (x)
+		  (mkstx x m* s* ae*))
+	     ls)))
+	((annotation? x)
+	 (syntax-vector->list (annotation-expression x)))
+	((vector? x)
+	 (vector->list x))
+	(else
+	 (assertion-violation 'syntax-vector->list "BUG: not a syntax vector" x))))
+
+
+;;;; public interface identifiers handling
 
 (define (identifier? x)
   ;;Return true if X is an  identifier: a syntax object whose expression
@@ -4435,270 +4654,6 @@
   (and (pair? id*)
        (or (bound-id=? id ($car id*))
 	   (bound-id-member? id ($cdr id*)))))
-
-
-;;;; syntax objects: mapping identifiers to labels
-
-(module (id->label)
-
-  (define (id->label id)
-    ;;Given the identifier  ID search its substs for  a label associated
-    ;;with the  same sym  and marks.   If found  return the  label, else
-    ;;return false.
-    ;;
-    (let ((sym (identifier->symbol id)))
-      (let search ((subst* ($<stx>-subst* id))
-		   (mark*  ($<stx>-mark*  id)))
-	(cond ((null? subst*)
-	       #f)
-	      ((eq? ($car subst*) 'shift)
-	       ;;A shift is inserted when a  mark is added.  So, we search
-	       ;;the rest of the substitution without the mark.
-	       (search ($cdr subst*) ($cdr mark*)))
-	      (else
-	       (let ((rib ($car subst*)))
-		 (define (next-search)
-		   (search ($cdr subst*) mark*))
-		 (if ($<rib>-sealed/freq rib)
-		     (%search-in-sealed-rib rib sym mark* next-search)
-		   (%search-in-rib rib sym mark* next-search))))))))
-
-  (define-inline (%search-in-rib rib sym mark* next-search)
-    (let loop ((name*   ($<rib>-name*  rib))
-	       (mark**  ($<rib>-mark** rib))
-	       (label*  ($<rib>-label* rib)))
-      (cond ((null? name*)
-	     (next-search))
-	    ((and (eq? ($car name*) sym)
-		  (same-marks? ($car mark**) mark*))
-	     ($car label*))
-	    (else
-	     (loop ($cdr name*) ($cdr mark**) ($cdr label*))))))
-
-  (module (%search-in-sealed-rib)
-
-    (define (%search-in-sealed-rib rib sym mark* next-search)
-      (define name* ($<rib>-name* rib))
-      (let loop ((i       0)
-		 (rib.len ($vector-length name*)))
-	(cond (($fx= i rib.len)
-	       (next-search))
-	      ((and (eq? ($vector-ref name* i) sym)
-		    (same-marks? mark* ($vector-ref ($<rib>-mark** rib) i)))
-	       (receive-and-return (label)
-		   ($vector-ref ($<rib>-label* rib) i)
-		 (%increment-rib-frequency! rib i)))
-	      (else
-	       (loop ($fxadd1 i) rib.len)))))
-
-    (define (%increment-rib-frequency! rib idx)
-      (let* ((freq* (<rib>-sealed/freq rib))
-	     (freq  (vector-ref freq* idx))
-	     (i     (let loop ((i idx))
-		      (if (zero? i)
-			  0
-			(let ((j (- i 1)))
-			  (if (= freq (vector-ref freq* j))
-			      (loop j)
-			    i))))))
-	($vector-set! freq* i (+ freq 1))
-	(unless (= i idx)
-	  (let ((name*  (<rib>-name*  rib))
-		(mark** (<rib>-mark** rib))
-		(label* (<rib>-label* rib)))
-	    (let-syntax ((%vector-swap (syntax-rules ()
-					 ((_ ?vec ?idx1 ?idx2)
-					  (let ((V ($vector-ref ?vec ?idx1)))
-					    ($vector-set! ?vec ?idx1 ($vector-ref ?vec ?idx2))
-					    ($vector-set! ?vec ?idx2 V))))))
-	      (%vector-swap name*  idx i)
-	      (%vector-swap mark** idx i)
-	      (%vector-swap label* idx i))))))
-
-    #| end of module: %SEARCH-IN-SEALED-RIB |# )
-
-  #| end of module: ID->LABEL |# )
-
-(define (id->label/intern id)
-  ;;Given the identifier ID search the lexical environment for a binding
-  ;;that captures  it; if such  binding is found: return  the associated
-  ;;label.
-  ;;
-  ;;If  no  capturing  binding  is found  but  a  top-level  interaction
-  ;;environment  is  set:  we  fabricate   a  lexical  binding  in  such
-  ;;environment so  that there exists a  lex gensym to name  the binding
-  ;;and a loc gensym in which to store a value.  This allows us to write
-  ;;"special" code on the REPL, for example:
-  ;;
-  ;;   vicare> (set! a 1)
-  ;;
-  ;;when  A is  not defined  will not  fail, rather  it will  implicitly
-  ;;define a binding as if we have typed:
-  ;;
-  ;;   vicare> (define a)
-  ;;   vicare> (set! a 1)
-  ;;
-  ;;another example of weird code that will not fail at the REPL:
-  ;;
-  ;;   vicare> (let ()
-  ;;             (set! a 1)
-  ;;             (debug-print a))
-  ;;
-  ;;will just print A as if we have typed:
-  ;;
-  ;;   vicare> (let ()
-  ;;             (define a)
-  ;;             (set! a 1)
-  ;;             (debug-print a))
-  ;;
-  ;;fabricating  the  lexical  binding  is  like  injecting  the  syntax
-  ;;"(define id)".
-  ;;
-  ;;If neither a capturing binding  is found nor a top-level environment
-  ;;is set: return false.
-  ;;
-  (or (id->label id)
-      (cond ((top-level-context)
-	     => (lambda (env)
-		  (let ((rib (interaction-env-rib env)))
-		    (receive (lab unused-lex)
-			(let ((shadowing-definition? #f))
-			  (gen-define-label+lex id rib shadowing-definition?))
-		      ;;FIXME (Abdulaziz Ghuloum)
-		      (let ((shadowing-definition? #t))
-			(extend-rib! rib id lab shadowing-definition?))
-		      lab))))
-	    (else #f))))
-
-
-;;;; public interface: variable transformer
-;;
-;;As  specified  by  R6RS:  we   can  define  identifier  syntaxes  with
-;;IDENTIFIER-SYNTAX  and with  MAKE-VARIABLE-TRANSFORMER; both  of these
-;;return  a "special"  value that,  when used  as right-hand  side of  a
-;;syntax  definition,  is  recognised  by the  expander  as  a  variable
-;;transformer  as opposed  to  a normal  transformer  or a  compile-time
-;;value.
-;;
-;;Let's say we define an identifier syntax with:
-;;
-;;   (define-syntax ?kwd ?expression)
-;;
-;;where ?EXPRESSION is:
-;;
-;;   (identifier-syntax ?stuff)
-;;
-;;here is what happen:
-;;
-;;1..The DEFINE-SYNTAX form is expanded and a syntax object is created:
-;;
-;;      (syntax ?expression)
-;;
-;;2..The syntax object is  expanded by %EXPAND-MACRO-TRANSFORMER and the
-;;   result is a core language sexp representing the transformer.
-;;
-;;3..The   sexp   is   compiled    and   evaluated   by   the   function
-;;   %EVAL-MACRO-TRANSFORMER.   The  result  of   the  evaluation  is  a
-;;   "special value" with format:
-;;
-;;      (identifier-macro! . ?transformer)
-;;
-;;   where ?TRANSFORMER is a transformer function.
-;;
-;;4..%EVAL-MACRO-TRANSFORMER  recognises  the  value  as  special  using
-;;   VARIABLE-TRANSFORMER?  and   transforms  it  to   a  "local-macro!"
-;;   syntactic binding.
-;;
-
-(define* (make-variable-transformer x)
-  ;;R6RS's  make-variable-transformer.   Build  and return  a  "special"
-  ;;value that, when used as right-hand  side of a syntax definition, is
-  ;;recognised by the expander as a variable transformer as opposed to a
-  ;;normal transformer or a compile-time value.
-  ;;
-  (if (procedure? x)
-      (cons 'identifier-macro! x)
-    (assertion-violation __who__ "not a procedure" x)))
-
-(define (variable-transformer? x)
-  ;;Return  true if  X  is  recognised by  the  expander  as a  variable
-  ;;transformer as  opposed to  a normal  transformer or  a compile-time
-  ;;value; otherwise return false.
-  ;;
-  (and (pair? x)
-       (eq? (car x) 'identifier-macro!)
-       (procedure? (cdr x))))
-
-(define* (variable-transformer-procedure x)
-  ;;If X is recognised by the expander as a variable transformer: return
-  ;;the  actual  transformer  function,  otherwise  raise  an  assertion
-  ;;violation.
-  ;;
-  (if (variable-transformer? x)
-      (cdr x)
-    (assertion-violation __who__ "not a variable transformer" x)))
-
-
-;;;; public interface: compile-time values
-;;
-;;Compile-time values are objects computed  at expand-time and stored in
-;;the lexical environment.  We can  define a compile-time value and push
-;;it on the lexical environment with:
-;;
-;;   (define-syntax it
-;;     (make-compile-time-value (+ 1 2)))
-;;
-;;later  we can  retrieve it  by  defining a  transformer function  that
-;;returns a function:
-;;
-;;   (define-syntax get-it
-;;     (lambda (stx)
-;;       (lambda (ctv-retriever)
-;;         (ctv-retriever #'it) => 3
-;;         )))
-;;
-;;Let's say we define a compile-time value with:
-;;
-;;   (define-syntax ?kwd ?expression)
-;;
-;;where ?EXPRESSION is:
-;;
-;;   (make-compile-time-value ?stuff)
-;;
-;;here is what happen:
-;;
-;;1..The DEFINE-SYNTAX form is expanded and a syntax object is created:
-;;
-;;      (syntax ?expression)
-;;
-;;2..The syntax object is  expanded by %EXPAND-MACRO-TRANSFORMER and the
-;;   result is a core language sexp representing the right-hand side.
-;;
-;;3..The   sexp   is   compiled    and   evaluated   by   the   function
-;;   %EVAL-MACRO-TRANSFORMER.   The  result  of   the  evaluation  is  a
-;;   "special value" with format:
-;;
-;;      (ctv! . ?obj)
-;;
-;;   where ?OBJ is the actual compile-time value.
-;;
-;;4..%EVAL-MACRO-TRANSFORMER  recognises  the  value  as  special  using
-;;   COMPILE-TIME-VALUE?  and  transforms it to a  "local-ctv" syntactic
-;;   binding.
-;;
-
-(define (make-compile-time-value obj)
-  (cons 'ctv obj))
-
-(define (compile-time-value? obj)
-  (and (pair? obj)
-       (eq? 'ctv (car obj))))
-
-(define compile-time-value-object
-  ;;Given  a compile-time  value datum:  return the  actual compile-time
-  ;;object.
-  ;;
-  cdr)
 
 
 (define-syntax syntax-match
@@ -4949,6 +4904,59 @@
       #| end of module: %CONVERT-SINGLE-PATTERN |# )
 
     transformer))
+
+(define (bless x)
+  ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
+  ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
+  ;;return a syntax object representing the input, possibly X itself.
+  ;;
+  ;;When  X is  a sexp  or a  (partially) unwrapped  syntax object:  raw
+  ;;symbols  in X  are considered  references  to bindings  in the  core
+  ;;language:  they are  converted to  identifiers having  empty lexical
+  ;;contexts.
+  ;;
+  (mkstx (let recur ((x x))
+	   (cond ((<stx>? x)
+		  x)
+		 ((pair? x)
+		  (cons (recur (car x)) (recur (cdr x))))
+		 ((symbol? x)
+		  (scheme-stx x))
+		 ((vector? x)
+		  (list->vector (map recur (vector->list x))))
+		 ;;If we are here X is a self-evaluating datum.
+		 (else x)))
+	 '() #;mark*
+	 '() #;subst*
+	 '() #;ae*
+	 ))
+
+(define scheme-stx
+  ;;Take a symbol  and if it's in the library:
+  ;;
+  ;;   (psyntax system $all)
+  ;;
+  ;;create a fresh identifier that maps  only the symbol to its label in
+  ;;that library.  Symbols not in that library become fresh.
+  ;;
+  (let ((scheme-stx-hashtable (make-eq-hashtable)))
+    (lambda (sym)
+      (or (hashtable-ref scheme-stx-hashtable sym #f)
+	  (let* ((subst  (library-subst (find-library-by-name '(psyntax system $all))))
+		 (stx    (make-<stx> sym TOP-MARK* '() '()))
+		 (stx    (cond ((assq sym subst)
+				=> (lambda (subst.entry)
+				     (let ((name  (car subst.entry))
+					   (label (cdr subst.entry)))
+				       (push-lexical-contour
+					   (make-<rib> (list name)
+						       (list TOP-MARK*)
+						       (list label)
+						       #f)
+					 stx))))
+			       (else stx))))
+	    (hashtable-set! scheme-stx-hashtable sym stx)
+	    stx)))))
 
 
 (module NON-CORE-MACRO-TRANSFORMER
