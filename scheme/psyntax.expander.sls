@@ -5151,6 +5151,13 @@
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
   ;;return a syntax object that must be further expanded.
   ;;
+  ;;FIXME This should be rewritten to support the model proposed in:
+  ;;
+  ;;    William   D.   Clinger.    "Rapid  case  dispatch   in  Scheme".
+  ;;    Northeastern University.   Proceedings  of the  2006 Scheme  and
+  ;;   Functional Programming Workshop.  University of Chicago Technical
+  ;;   Report TR-2006-06.
+  ;;
   (define (case-macro expr-stx)
     (syntax-match expr-stx ()
       ((_ ?expr)
@@ -5193,15 +5200,19 @@
 
 ;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE
 
-(define (define-record-type-macro x)
+(module (define-record-type-macro)
+  ;;Transformer  function used  to expand  R6RS's CASE  macros from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
   (define-constant __who__ 'define-record-type)
 
-  (define (main stx)
-    (syntax-match stx ()
-      ((_ namespec clause* ...)
+  (define (define-record-type-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?namespec ?clause* ...)
        (begin
-	 (%verify-clauses x clause*)
-	 (%do-define-record namespec clause*)))
+	 (%verify-clauses expr-stx ?clause*)
+	 (%do-define-record ?namespec ?clause*)))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -5212,30 +5223,31 @@
     (define foo-rcd	(gensym))
     (define protocol	(gensym))
     (define make-foo	(%get-record-constructor-name namespec))
-    (define fields	(%get-fields clause*))
+    (define field-clauses
+      (%get-fields clause*))
     (define field-names
-      (%get-field-names fields))
+      (%get-field-names field-clauses))
     (define mutable-field-names
-      (%get-mutable-field-names fields))
+      (%get-mutable-field-names field-clauses))
     ;;Indexes for safe accessors and mutators.
-    (define idx*	(%enumerate fields))
+    (define idx*	(%enumerate field-clauses))
     (define set-foo-idx*
-      (%get-mutator-indices fields))
+      (%get-mutator-indices field-clauses))
     ;;Names of safe accessors and mutators.
     (define foo-x*
-      (%get-accessors foo fields))
+      (%get-accessors foo field-clauses))
     (define set-foo-x!*
-      (%get-mutators foo fields))
+      (%get-mutators foo field-clauses))
     ;;Names of unsafe accessors and mutators.
     (define unsafe-foo-x*
-      (%get-unsafe-accessors foo fields))
+      (%get-unsafe-accessors foo field-clauses))
     (define unsafe-set-foo-x!*
-      (%get-unsafe-mutators foo fields))
+      (%get-unsafe-mutators foo field-clauses))
     ;;Names for unsafe index bindings.
     (define unsafe-foo-x-idx*
-      (%get-unsafe-accessors-idx-names foo fields))
+      (%get-unsafe-accessors-idx-names foo field-clauses))
     (define unsafe-set-foo-x!-idx*
-      (%get-unsafe-mutators-idx-names foo fields))
+      (%get-unsafe-mutators-idx-names foo field-clauses))
 
     ;;Safe field accessors and mutators alists.
     (define foo-fields-safe-accessors-table
@@ -5312,13 +5324,13 @@
     (define vicare-output-code
       (if (strict-r6rs)
 	  `( ;;Binding for record type name.   It is a spcial binding in
-	     ;;the environment.
+	    ;;the environment.
 	    (define-syntax ,foo
 	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
 		    (list ,@foo-fields-safe-accessors-table)
 		    (list ,@foo-fields-safe-mutators-table))))
 	`( ;;Binding  for record type name.   It is a spcial  binding in
-	   ;;the environment.
+	  ;;the environment.
 	  (define-syntax ,foo
 	    (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
 		  (list ,@foo-fields-safe-accessors-table)
@@ -5470,7 +5482,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%get-field-names fields)
+  (define (%get-field-names field-clauses)
     ;;Given the fields specification clause return a list of identifiers
     ;;representing all the field names.
     ;;
@@ -5483,13 +5495,13 @@
 	     (name				(identifier? name)	name)
 	     (others
 	      (stx-error field "invalid field spec"))))
-      fields))
+      field-clauses))
 
-  (define (%get-mutable-field-names fields)
+  (define (%get-mutable-field-names field-clauses)
     ;;Given the fields specification clause return a list of identifiers
     ;;representing the mutable field names.
     ;;
-    (syntax-match fields (mutable immutable)
+    (syntax-match field-clauses (mutable immutable)
       (()
        '())
 
@@ -5514,12 +5526,12 @@
        (%get-mutable-field-names rest))
 
       (others
-       (stx-error fields "invalid field spec"))))
+       (stx-error field-clauses "invalid field spec"))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%get-mutator-indices fields)
-    (let recur ((fields fields) (i 0))
+  (define (%get-mutator-indices field-clauses)
+    (let recur ((fields field-clauses) (i 0))
       (syntax-match fields (mutable)
 	(()
 	 '())
@@ -5528,10 +5540,10 @@
 	((_ . rest)
 	 (recur rest (+ i 1))))))
 
-  (define (%get-mutators foo fields)
+  (define (%get-mutators foo field-clauses)
     (define (gen-name x)
       (id foo foo "-" x "-set!"))
-    (let recur ((fields fields))
+    (let recur ((fields field-clauses))
       (syntax-match fields (mutable)
 	(()
 	 '())
@@ -5542,10 +5554,10 @@
 	((_ . rest)
 	 (recur rest)))))
 
-  (define (%get-unsafe-mutators foo fields)
+  (define (%get-unsafe-mutators foo field-clauses)
     (define (gen-name x)
       (id foo "$" foo "-" x "-set!"))
-    (let f ((fields fields))
+    (let f ((fields field-clauses))
       (syntax-match fields (mutable)
 	(() '())
 	(((mutable name accessor mutator) . rest)
@@ -5554,8 +5566,8 @@
 	 (cons (gen-name name) (f rest)))
 	((_ . rest) (f rest)))))
 
-  (define (%get-unsafe-mutators-idx-names foo fields)
-    (let f ((fields fields))
+  (define (%get-unsafe-mutators-idx-names foo field-clauses)
+    (let f ((fields field-clauses))
       (syntax-match fields (mutable)
 	(() '())
 	(((mutable name accessor mutator) . rest)
@@ -5566,7 +5578,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%get-accessors foo fields)
+  (define (%get-accessors foo field-clauses)
     (define (gen-name x)
       (id foo foo "-" x))
     (map (lambda (field)
@@ -5577,9 +5589,9 @@
 	     ((immutable name)                (identifier? name) (gen-name name))
 	     (name                            (identifier? name) (gen-name name))
 	     (others (stx-error field "invalid field spec"))))
-      fields))
+      field-clauses))
 
-  (define (%get-unsafe-accessors foo fields)
+  (define (%get-unsafe-accessors foo field-clauses)
     (define (gen-name x)
       (id foo "$" foo "-" x))
     (map (lambda (field)
@@ -5590,12 +5602,12 @@
 	     ((immutable name)                (identifier? name) (gen-name name))
 	     (name                            (identifier? name) (gen-name name))
 	     (others (stx-error field "invalid field spec"))))
-      fields))
+      field-clauses))
 
-  (define (%get-unsafe-accessors-idx-names foo fields)
+  (define (%get-unsafe-accessors-idx-names foo field-clauses)
     (map (lambda (x)
 	   (gensym))
-      fields))
+      field-clauses))
 
 ;;; --------------------------------------------------------------------
 
@@ -5640,21 +5652,21 @@
     ;;result build  and return a new  identifier in the same  context of
     ;;CTXT.
     ;;
-    (datum->syntax ctxt (string->symbol (apply string-append
-					       (map (lambda (x)
-						      (cond ((symbol? x)
-							     (symbol->string x))
-							    ((string? x)
-							     x)
-							    ((identifier? x)
-							     (symbol->string (syntax->datum x)))
-							    (else
-							     (assertion-violation __who__ "BUG"))))
-						 str*)))))
+    (datum->syntax ctxt
+		   (string->symbol
+		    (apply string-append
+			   (map (lambda (x)
+				  (cond ((symbol? x)
+					 (symbol->string x))
+					((string? x)
+					 x)
+					((identifier? x)
+					 (symbol->string (syntax->datum x)))
+					(else
+					 (assertion-violation __who__ "BUG"))))
+			     str*)))))
 
-;;; --------------------------------------------------------------------
-
-  (main x))
+  #| end of module: DEFINE-RECORD-TYPE-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: RECORD-TYPE-AND-RECORD?
