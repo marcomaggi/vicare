@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -372,6 +372,72 @@
     => (void))
 
   (collect))
+
+
+(parametrise ((check-test-name	'syntaxes))
+
+  (define-struct alpha
+    (a b c))
+
+  (define-struct beta
+    (a b c))
+
+;;; --------------------------------------------------------------------
+;;; predicate
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(struct-type-and-struct? alpha stru))
+    => #t)
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(struct-type-and-struct? beta stru))
+    => #f)
+
+  (check
+      (struct-type-and-struct? beta 123)
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(list (struct-type-field-ref alpha a stru)
+	      (struct-type-field-ref alpha b stru)
+	      (struct-type-field-ref alpha c stru)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(struct-type-field-set! alpha a stru 10)
+	(struct-type-field-set! alpha b stru 20)
+	(struct-type-field-set! alpha c stru 30)
+	(list (struct-type-field-ref alpha a stru)
+	      (struct-type-field-ref alpha b stru)
+	      (struct-type-field-ref alpha c stru)))
+    => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(list ($struct-type-field-ref alpha a stru)
+	      ($struct-type-field-ref alpha b stru)
+	      ($struct-type-field-ref alpha c stru)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	($struct-type-field-set! alpha a stru 10)
+	($struct-type-field-set! alpha b stru 20)
+	($struct-type-field-set! alpha c stru 30)
+	(list ($struct-type-field-ref alpha a stru)
+	      ($struct-type-field-ref alpha b stru)
+	      ($struct-type-field-ref alpha c stru)))
+    => '(10 20 30))
+
+  #t)
 
 
 ;;;; done

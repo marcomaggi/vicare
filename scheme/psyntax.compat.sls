@@ -18,8 +18,13 @@
 (library (psyntax compat)
   (export
     define*				define-constant
-    case-define
-    define-record			make-struct-type
+    case-define				define-record
+    define-inline			define-syntax-rule
+    receive				receive-and-return
+    module				import
+    begin0
+
+    make-struct-type			struct-type-field-names
     make-parameter			parametrise
     format				gensym
     eval-core
@@ -27,11 +32,7 @@
     keyword?				pretty-print
     would-block-object?
     pretty-print*			bignum?
-    module				import
     vector-exists
-    define-inline			define-syntax-rule
-    begin0				receive
-    receive-and-return
     real-pathname			file-modification-time
     vector-append
 

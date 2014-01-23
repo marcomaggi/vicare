@@ -7997,6 +7997,11 @@
       ((syntax-case)			syntax-case-transformer)
       ((syntax)				syntax-transformer)
       ((type-descriptor)		type-descriptor-transformer)
+      ((struct-type-and-struct?)	struct-type-and-struct?-transformer)
+      ((struct-type-field-ref)		struct-type-field-ref-transformer)
+      ((struct-type-field-set!)		struct-type-field-set!-transformer)
+      (($struct-type-field-ref)		$struct-type-field-ref-transformer)
+      (($struct-type-field-set!)	$struct-type-field-set!-transformer)
       ((record-type-descriptor)		record-type-descriptor-transformer)
       ((record-constructor-descriptor)	record-constructor-descriptor-transformer)
       ((record-type-field-set!)		record-type-field-set!-transformer)
@@ -8112,37 +8117,132 @@
 
 ;;;; module core-macro-transformer: TYPE-DESCRIPTOR
 
-(define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function   used  to  expand   Vicare's  TYPE-DESCRIPTOR
-  ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
-  ;;contents  of EXPR-STX  in the  context of  the lexical  environments
-  ;;LEXENV.RUN and  LEXENV.EXPAND, the  result must  be the  struct type
-  ;;descriptor  struct.  Return  a sexp  evaluating to  the struct  type
-  ;;descriptor.
-  ;;
-  ;;The binding in the lexical  environment representing the struct type
-  ;;descriptor looks as follows:
-  ;;
-  ;;   ($rtd . #<type-descriptor-struct>)
-  ;;    |..| binding-type
-  ;;           |.......................|  binding-value
-  ;;   |................................| binding
-  ;;
-  ;;where "$rtd" is the symbol "$rtd".
-  ;;
-  (define-constant __who__ 'type-descriptor)
-  (syntax-match expr-stx ()
-    ((_ ?identifier)
-     (identifier? ?identifier)
-     (cond ((id->label ?identifier)
-	    => (lambda (label)
-		 (let ((binding (label->syntactic-binding label lexenv.run)))
-		   (unless (struct-type-descriptor-binding? binding)
-		     (syntax-violation __who__ "not a struct type" expr-stx ?identifier))
-		   (build-data no-source (syntactic-binding-value binding)))))
-	   (else
-	    (%raise-unbound-error __who__ expr-stx ?identifier))))
-    ))
+(module (type-descriptor-transformer
+	 struct-type-and-struct?-transformer
+	 struct-type-field-ref-transformer
+	 struct-type-field-set!-transformer
+	 $struct-type-field-ref-transformer
+	 $struct-type-field-set!-transformer)
+
+  (define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer  function  used  to  expand  Vicare's  TYPE-DESCRIPTOR
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;contents of  EXPR-STX in the  context of the  lexical environments
+    ;;LEXENV.RUN and LEXENV.EXPAND,  the result must be  the struct type
+    ;;descriptor struct.   Return a sexp  evaluating to the  struct type
+    ;;descriptor.
+    ;;
+    ;;The  binding in  the lexical  environment representing  the struct
+    ;;type descriptor looks as follows:
+    ;;
+    ;;   ($rtd . #<type-descriptor-struct>)
+    ;;    |..| binding-type
+    ;;           |.......................|  binding-value
+    ;;   |................................| binding
+    ;;
+    ;;where "$rtd" is the symbol "$rtd".
+    ;;
+    (define-constant __who__ 'type-descriptor)
+    (syntax-match expr-stx ()
+      ((_ ?type-id)
+       (identifier? ?type-id)
+       (build-data no-source
+	 (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
+      ))
+
+  (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
+    (define-constant __who__ 'struct-type-and-struct?)
+    (syntax-match expr-stx ()
+      ((_ ?type-id ?stru)
+       (identifier? ?type-id)
+       (let ((rtd (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
+	 (chi-expr (bless `($struct/rtd? ,?stru (quote ,rtd)))
+		   lexenv.run lexenv.expand)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (module (struct-type-field-ref-transformer
+	   $struct-type-field-ref-transformer)
+
+    (define (struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
+      (%struct-type-field-ref-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
+
+    (define ($struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
+      (%struct-type-field-ref-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
+
+    (define (%struct-type-field-ref-transformer who safe? expr-stx lexenv.run lexenv.expand)
+      (syntax-match expr-stx ()
+	((_ ?type-id ?field-id ?stru)
+	 (and (identifier? ?type-id)
+	      (identifier? ?field-id))
+	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
+		(field-names (struct-type-field-names rtd))
+		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
+	   (chi-expr (bless (if safe?
+				`(struct-ref ,?stru ,field-idx)
+			      `($struct-ref ,?stru ,field-idx)))
+		     lexenv.run lexenv.expand)))
+	))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (struct-type-field-set!-transformer
+	   $struct-type-field-set!-transformer)
+
+    (define (struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+      (%struct-type-field-set!-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
+
+    (define ($struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+      (%struct-type-field-set!-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
+
+    (define (%struct-type-field-set!-transformer who safe? expr-stx lexenv.run lexenv.expand)
+      (syntax-match expr-stx ()
+	((_ ?type-id ?field-id ?stru ?new-value)
+	 (and (identifier? ?type-id)
+	      (identifier? ?field-id))
+	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
+		(field-names (struct-type-field-names rtd))
+		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
+	   (chi-expr (bless (if safe?
+				`(struct-set! ,?stru ,field-idx ,?new-value)
+			      `($struct-set! ,?stru ,field-idx ,?new-value)))
+		     lexenv.run lexenv.expand)))
+	))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%struct-type-id->rtd who expr-stx type-id lexenv.run)
+    ;;Given the  identifier of the struct  type: find its label  and its
+    ;;syntactic binding  and return the  struct type descriptor.   If no
+    ;;binding captured the identifier or the binding does not describe a
+    ;;structure type descriptor: raise an exception.
+    ;;
+    (cond ((id->label type-id)
+	   => (lambda (label)
+		(let ((binding (label->syntactic-binding label lexenv.run)))
+		  (unless (struct-type-descriptor-binding? binding)
+		    (syntax-violation who "not a struct type" expr-stx type-id))
+		  (syntactic-binding-value binding))))
+	  (else
+	   (%raise-unbound-error who expr-stx type-id))))
+
+  (define (%field-name->field-idx who expr-stx field-names field-id)
+    (define field-sym (identifier->symbol field-id))
+    (let loop ((i 0) (ls field-names))
+      (if (pair? ls)
+	  (if (eq? field-sym (car ls))
+	      i
+	    (loop (+ 1 i) (cdr ls)))
+	(syntax-violation who
+	  "invalid struct type field name"
+	  expr-stx field-id))))
+
+  #| end of module |# )
 
 
 ;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR-TRANSFORMER
@@ -11445,5 +11545,6 @@
 ;;eval: (put 'build-global-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-letrec*			'scheme-indent-function 1)
+;;eval: (put 'build-data			'scheme-indent-function 1)
 ;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
 ;;End:

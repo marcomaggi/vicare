@@ -157,6 +157,14 @@ Notes for revision 0.3d8
        (import (hello))
        (display (list a b)))
 
+* Added struct related bindings to (vicare):
+
+     struct-type-and-struct?
+     struct-type-field-ref
+     struct-type-field-set!
+     $struct-type-field-ref
+     $struct-type-field-set!
+
 
 Notes for revision 0.3d7
 ------------------------

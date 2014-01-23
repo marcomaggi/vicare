@@ -4367,6 +4367,7 @@ structures.
 * iklib structs rtd::           Structure type descriptors.
 * iklib structs using::         Using data structures.
 * iklib structs inspect::       Inspecting data structures.
+* iklib structs fields::        Accessing and mutating fields.
 @end menu
 
 @c page
@@ -4466,6 +4467,15 @@ struct descriptor equal to the newly created @rtd{}.
 @deffn Syntax type-descriptor @meta{name}
 Evaluate to the type descriptor of the data structure @meta{name}, which
 must be the first argument to a previous use of @func{define-struct}.
+@end deffn
+
+
+@deffn Syntax struct-type-and-struct? @meta{type-name} @meta{stru}
+Return @true{} if @meta{stru} is an expression evaluating to a struct
+instance of type @meta{type-name}; otherwise return @false{}.  This
+syntax allows to test the type of a record instance through the type
+name identifier, without the need to export the predicate identifier out
+of libraries.
 @end deffn
 
 
@@ -4711,6 +4721,30 @@ same @rtd{} and equal field values according to @func{eqv?}.
 @defun struct-reset @var{stru}
 Reset to void all the fields of a structure.
 @end defun
+
+@c page
+@node iklib structs fields
+@subsection Accessing and mutating fields
+
+
+@deffn Syntax struct-type-field-ref @meta{type-name} @meta{field-name} @meta{stru}
+@deffnx Syntax struct-type-field-set! @meta{type-name} @meta{field-name} @meta{stru} @meta{new-value}
+Expand to an expression which accesses or mutates the field whose name
+is @meta{field-name} in the struct @meta{stru} of type @meta{type-name}.
+These syntaxes allow access to the fields of a struct through the type
+name identifier, without the need to export accessor and mutator
+identifiers out of libraries.
+@end deffn
+
+
+@deffn Syntax $struct-type-field-ref @meta{type-name} @meta{field-name} @meta{stru}
+@deffnx Syntax $struct-type-field-set! @meta{type-name} @meta{field-name} @meta{stru} @meta{new-value}
+Expand to an unsafe expression which accesses or mutates the field whose
+name is @meta{field-name} in the struct @meta{stru} of type
+@meta{type-name}.  These syntaxes allow unsafe access to the fields of a
+struct through the type name identifier, without the need to export
+unsafe accessor and mutator identifiers out of libraries.
+@end deffn
 
 @c page
 @node iklib records
