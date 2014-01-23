@@ -6048,28 +6048,39 @@
   #| end of module: DEFINE-STRUCT-MACRO |# )
 
 
-;;;; module non-core-macro-transformer: SYNTAX-RULES
+;;;; module non-core-macro-transformer: SYNTAX-RULES, DEFINE-SYNTAX-RULE
 
-(define syntax-rules-macro
-  (lambda (e)
-    (syntax-match e ()
-      ((_ (lits ...)
-	  (pat* tmp*) ...)
-       (begin
-	 (%verify-literals lits e)
-	 (bless `(lambda (x)
-		   (syntax-case x ,lits
-		     ,@(map (lambda (pat tmp)
-			      (syntax-match pat ()
-				((_ . rest)
-				 `((g . ,rest) (syntax ,tmp)))
-				(_
-				 (syntax-violation #f
-				   "invalid syntax-rules pattern"
-				   e pat))))
-			 pat* tmp*)))))))))
+(define (syntax-rules-macro expr-stx)
+  ;;Transformer function  used to  expand R6RS SYNTAX-RULES  macros from
+  ;;the  top-level  built  in  environment.   Process  the  contents  of
+  ;;EXPR-STX; return a syntax objects that needs to be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?literal* ...)
+	(?pattern* ?template*)
+	...)
+     (begin
+       (%verify-literals ?literal* expr-stx)
+       (bless
+	`(lambda (x)
+	   (syntax-case x ,?literal*
+	     ,@(map (lambda (pattern template)
+		      (syntax-match pattern ()
+			((_ . ??rest)
+			 `((g . ,??rest)
+			   (syntax ,template)))
+			(_
+			 (syntax-violation #f
+			   "invalid syntax-rules pattern"
+			   expr-stx pattern))))
+		 ?pattern* ?template*))))))))
 
 (define (define-syntax-rule-macro expr-stx)
+  ;;Transformer  function  used  to expand  Vicare's  DEFINE-SYNTAX-RULE
+  ;;macros  from  the  top-level  built  in  environment.   Process  the
+  ;;contents  of EXPR-STX;  return a  syntax  objects that  needs to  be
+  ;;further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ (?name ?arg* ... . ?rest) ?body0 ?body* ...)
      (identifier? ?name)
