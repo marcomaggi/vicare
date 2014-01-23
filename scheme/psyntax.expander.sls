@@ -5367,7 +5367,8 @@
 		      ))
 	      unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
 	  )))
-    (bless (append r6rs-output-code vicare-output-code)))
+    (bless
+     (append r6rs-output-code vicare-output-code)))
 
 ;;; --------------------------------------------------------------------
 
@@ -5456,9 +5457,8 @@
 	  (_
 	   (synner "invalid syntax in FIELDS clause" clause)))))
 
-    (bless
-     `(make-record-type-descriptor ',name ,parent-rtd-code
-				   ,uid-code ,sealed? ,opaque? ,fields)))
+    `(make-record-type-descriptor ',name ,parent-rtd-code
+				  ,uid-code ,sealed? ,opaque? ,fields))
 
     (define (%make-parent-rtd-code clause*)
       (syntax-match (get-clause 'parent clause*) ()
@@ -5501,8 +5501,8 @@
 
     (define (%get-protocol-code clause*)
       (syntax-match (get-clause 'protocol clause*) ()
-	((_ expr)		expr)
-	(_		#f)))
+	((_ ?expr)	?expr)
+	(#f		#f)))
 
     (define (%get-fields clause*)
       (syntax-match clause* (fields)
