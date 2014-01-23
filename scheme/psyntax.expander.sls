@@ -4969,22 +4969,24 @@
 
 (module NON-CORE-MACRO-TRANSFORMER
   (non-core-macro-transformer)
+  ;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
+  ;;non-core macros to their macro transformers.
+  ;;
   ;;We distinguish between "non-core macros" and "core macros".
   ;;
   ;;Core macros  are part of the  core language: they cannot  be further
   ;;expanded to a  composition of other more basic  macros.  Core macros
-  ;;*do*  introduce bindings,  so their  transformer functions  take the
-  ;;lexical environments as arguments.
+  ;;can introduce bindings by direct  access to the lexical environment,
+  ;;so their transformer functions take the LEXENV as arguments.
   ;;
   ;;Non-core macros are  *not* part of the core language:  they *can* be
-  ;;expanded to  a composition of  core macros.  Non-core macros  do not
-  ;;introduce bindings, so their transformer functions do *not* take the
-  ;;lexical environments as arguments.
+  ;;expanded to a composition of core macros.  Non-core macros introduce
+  ;;bindings by  returning binding syntaxes; their  transformer do *not*
+  ;;take the LEXENV as arguments.
   ;;
-  ;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
-  ;;non-core  macros  to  their   macro  transformers.   The  expression
-  ;;returned by a non-core transformer is further visited to process the
-  ;;core macros and introduce bindings.
+  ;;The transformers of non-core macros take as argument a syntax object
+  ;;representing an  expression and return a  syntax object representing
+  ;;an expression.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
@@ -5113,8 +5115,8 @@
 (define (define-auxiliary-syntaxes-macro expr-stx)
   ;;Transformer      function      used     to      expand      Vicare's
   ;;DEFINE-AUXILIARY-SYNTAXES  macros   from  the  top-level   built  in
-  ;;environment.  Expand  the contents  of EXPR-STX.  Return  a symbolic
-  ;;expression in the core language.
+  ;;environment.   Expand  the contents  of  EXPR-STX;  return a  syntax
+  ;;object that must be further expanded.
   ;;
   ;;Using an empty SYNTAX-RULES as  transformer function makes sure that
   ;;whenever an auxiliary syntax is referenced an error is raised.
@@ -5146,8 +5148,8 @@
 
 (module (case-macro)
   ;;Transformer  function used  to expand  R6RS's CASE  macros from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
-  ;;Return a sexp in the core language.
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
   ;;
   (define (case-macro expr-stx)
     (syntax-match expr-stx ()
@@ -5660,7 +5662,7 @@
 (define (record-type-and-record?-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECORD-TYPE-AND-RECORD?
   ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX.  Return a sexp in the core language.
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?type-name ?record)
@@ -5736,25 +5738,8 @@
 		    swap
 		    (lambda () ,b . ,b*)
 		    swap)))
-	    ,@(append olhs* orhs*))))
-       ;;Below is the original Ikarus code (Marco Maggi; Feb 3, 2012).
-       ;;
-       ;; (let ((lhs* (generate-temporaries olhs*))
-       ;;       (rhs* (generate-temporaries orhs*)))
-       ;;   (bless
-       ;;     `((lambda ,(append lhs* rhs*)
-       ;;         (let ((swap (lambda ()
-       ;;                       ,@(map (lambda (lhs rhs)
-       ;;                                `(let ((t (,lhs)))
-       ;;                                   (,lhs ,rhs)
-       ;;                                   (set! ,rhs t)))
-       ;;                              lhs* rhs*))))
-       ;;           (dynamic-wind
-       ;;             swap
-       ;;             (lambda () ,b . ,b*)
-       ;;             swap)))
-       ;;       ,@(append olhs* orhs*))))
-       ))))
+	    ,@(append olhs* orhs*)))))
+      )))
 
 
 ;;;; module non-core-macro-transformer: UNWIND-PROTECT
@@ -5762,7 +5747,7 @@
 (define (unwind-protect-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  UNWIND-PROTECT macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   ;;Not a  general UNWIND-PROTECT for Scheme,  but fine where we  do not
   ;;make the body return continuations to  the caller and then come back
@@ -5788,7 +5773,7 @@
 (define (with-implicits-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  WITH-IMPLICITS macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (define (%make-bindings ctx ids)
     (map (lambda (id)
@@ -5821,7 +5806,7 @@
 (define (set-cons!-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  SET-CONS! macros from
   ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?id ?obj)
@@ -5835,7 +5820,7 @@
 (define (eval-for-expand-macro expr-stx)
   ;;Transformer function used to  expand Vicare's EVAL-FOR-EXPAND macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
@@ -5948,7 +5933,7 @@
 (module (define-struct-macro)
   ;;Transformer function  used to  expand Vicare's  DEFINE-STRUCT macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (define (define-struct-macro expr-stx)
     (syntax-match expr-stx ()
@@ -6097,17 +6082,19 @@
 (define (define-syntax*-macro expr-stx)
   ;;Transformer function  used to expand Vicare's  DEFINE-SYNTAX* macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?name)
      (identifier? ?name)
      (bless
       `(define-syntax ,?name (syntax-rules ()))))
+
     ((_ ?name ?expr)
      (identifier? ?name)
      (bless
       `(define-syntax ,?name ,?expr)))
+
     ((_ (?name ?stx) ?body0 ?body* ...)
      (and (identifier? ?name)
 	  (identifier? ?stx))
@@ -7579,7 +7566,7 @@
 (define (define-values-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  DEFINE-VALUES macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ (?var* ... ?var0) ?form* ... ?form0)
@@ -7606,7 +7593,7 @@
 (define (define-constant-values-macro expr-stx)
   ;;Transformer function used  to expand Vicare's DEFINE-CONSTANT-VALUES
   ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX.  Return a sexp in the core language.
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ (?var* ... ?var0) ?form* ... ?form0)
@@ -7641,8 +7628,8 @@
 
 (define (receive-macro expr-stx)
   ;;Transformer function used to expand Vicare's RECEIVE macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
-  ;;Return a sexp in the core language.
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?producer-expression ?form0 ?form* ...)
@@ -7655,7 +7642,7 @@
 (define (receive-and-return-macro expr-stx)
   ;;Transformer  function  used  to expand  Vicare's  RECEIVE-AND-RETURN
   ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX.  Return a sexp in the core language.
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ (?retval* ...) ?producer-expression ?body0 ?body* ...)
@@ -7669,8 +7656,8 @@
 
 (define (begin0-macro expr-stx)
   ;;Transformer function used to expand  Vicare's BEGIN0 macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
-  ;;Return a sexp in the core language.
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?form0 ?form* ...)
@@ -7723,7 +7710,7 @@
 (define (define-inline-constant-macro expr-stx)
   ;;Transformer function used  to expand Vicare's DEFINE-INLINE-CONSTANT
   ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX.  Return a sexp in the core language.
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
   ;;
   ;;We want to allow a generic expression to generate the constant value
   ;;at expand time.
@@ -7743,7 +7730,7 @@
 (define (define-inline-macro expr-stx)
   ;;Transformer function  used to  expand Vicare's  DEFINE-INLINE macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
@@ -7773,8 +7760,8 @@
 
 (module (include-macro)
   ;;Transformer function used to expand Vicare's INCLUDE macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX.
-  ;;Return a sexp in the core language.
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
   ;;
   (define-constant __who__ 'include)
 
@@ -7976,22 +7963,24 @@
 (module (core-macro-transformer
 	 splice-first-envelope?
 	 splice-first-envelope-form)
+  ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
+  ;;non-core macros to their macro transformers.
+  ;;
   ;;We distinguish between "non-core macros" and "core macros".
   ;;
   ;;Core macros  are part of the  core language: they cannot  be further
   ;;expanded to a  composition of other more basic  macros.  Core macros
-  ;;*do*  introduce bindings,  so their  transformer functions  take the
-  ;;lexical environments as arguments.
+  ;;can introduce bindings by direct  access to the lexical environment,
+  ;;so their transformer functions take the LEXENV as arguments.
   ;;
   ;;Non-core macros are  *not* part of the core language:  they *can* be
-  ;;expanded to  a composition of  core macros.  Non-core macros  do not
-  ;;introduce bindings, so their transformer functions do *not* take the
-  ;;lexical environments as arguments.
+  ;;expanded to a composition of core macros.  Non-core macros introduce
+  ;;bindings by  returning binding syntaxes; their  transformer do *not*
+  ;;take the LEXENV as arguments.
   ;;
-  ;;The function  CORE-MACRO-TRANSFORMER maps symbols  representing core
-  ;;macros to  their macro transformers.   The expression returned  by a
-  ;;core transformer is expressed in the core language and does not need
-  ;;to be further processed.
+  ;;The transformers of non-core macros take as argument a syntax object
+  ;;representing an  expression and return a  syntax object representing
+  ;;an expression.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
