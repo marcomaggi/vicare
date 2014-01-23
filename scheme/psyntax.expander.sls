@@ -5218,11 +5218,11 @@
 ;;; --------------------------------------------------------------------
 
   (define (%do-define-record namespec clause*)
-    (define foo		(%get-record-name namespec))
+    (define-values (foo make-foo foo?)
+      (%parse-full-name-spec namespec))
     (define foo-rtd	(gensym))
     (define foo-rcd	(gensym))
     (define protocol	(gensym))
-    (define make-foo	(%get-record-constructor-name namespec))
     (define field-clauses
       (%get-fields clause*))
     (define field-names
@@ -5289,9 +5289,6 @@
 	(map syntax->datum mutable-field-names)
 	unsafe-set-foo-x!*))
 
-    ;;Predicate name.
-    (define foo?
-      (%get-record-predicate-name namespec))
     ;;Code  for  record-type   descriptor  and  record-type  constructor
     ;;descriptor.
     (define foo-rtd-code
@@ -5368,32 +5365,35 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%get-record-name spec)
+  (define (%parse-full-name-spec spec)
+    ;;Given  a  syntax  object  representing  a  full  record-type  name
+    ;;specification: return the name identifier.
+    ;;
     (syntax-match spec ()
-      ((foo make-foo foo?) foo)
-      (foo foo)))
-
-  (define (%get-record-constructor-name spec)
-    (syntax-match spec ()
-      ((foo make-foo foo?) make-foo)
-      (foo (identifier? foo) (id foo "make-" (syntax->datum foo)))))
-
-  (define (%get-record-predicate-name spec)
-    (syntax-match spec ()
-      ((foo make-foo foo?)
-       foo?)
+      ((?foo ?make-foo ?foo?)
+       (values ?foo ?make-foo ?foo?))
       (foo
        (identifier? foo)
-       (id foo foo "?"))))
+       (values foo
+	       (id foo "make-" (syntax->datum foo))
+	       (id foo foo "?")))
+      ))
 
-  (define (get-clause id ls)
-    (syntax-match ls ()
-      (()
-       #f)
-      (((x . rest) . ls)
-       (if (free-id=? (bless id) x)
-	   `(,x . ,rest)
-	 (get-clause id ls)))))
+  (define (get-clause sym clause*)
+    ;;Given a symbol SYM representing the  name of a clause and a syntax
+    ;;object  CLAUSE*  representing  the clauses:  search  the  selected
+    ;;clause and return it as syntax object.  When no matching clause is
+    ;;found: return false.
+    ;;
+    (let next ((id       (bless sym))
+	       (clause*  clause*))
+      (syntax-match clause* ()
+	(()
+	 #f)
+	(((?key . ?rest) . ?clause*)
+	 (if (free-id=? id ?key)
+	     `(,?key . ,?rest)
+	   (next id ?clause*))))))
 
   (define (%make-rtd-code name clause* parent-rtd-code)
     (define (convert-field-spec* ls)

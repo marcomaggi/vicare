@@ -22,7 +22,7 @@
     define-inline			define-syntax-rule
     receive				receive-and-return
     module				import
-    begin0
+    begin0				define-values
 
     make-struct-type			struct-type-field-names
     make-parameter			parametrise
