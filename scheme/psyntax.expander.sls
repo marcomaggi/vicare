@@ -5950,19 +5950,64 @@
 	      (rtd		(datum->stx ?name (make-struct-type namestr field-sym*)))
 	      (constructor-id	(string->id (string-append "make-" namestr)))
 	      (predicate-id	(string->id (string-append namestr "?")))
-	      (field-idx*	(enumerate ?field*))
-	      (getter-id*	(map (lambda (x)
-				       (string->id (string-append namestr "-" x)))
-				  field-str*))
-	      (setter-id*	(map (lambda (x)
-				       (string->id (string-append "set-" namestr "-" x "!")))
-				  field-str*))
-	      (unsafe-getter-id* (map (lambda (x)
-					(string->id (string-append "$" namestr "-" x)))
-				   field-str*))
-	      (unsafe-setter-id* (map (lambda (x)
-					(string->id (string-append "$set-" namestr "-" x "!")))
-				   field-str*)))
+	      (field-idx*	(enumerate ?field*)))
+
+	 (define getter-id*
+	   (map (lambda (x)
+		  (string->id (string-append namestr "-" x)))
+	     field-str*))
+
+	 (define setter-id*
+	   (map (lambda (x)
+		  (string->id (string-append "set-" namestr "-" x "!")))
+	     field-str*))
+
+	 (define unsafe-getter-id*
+	   (map (lambda (x)
+		  (string->id (string-append "$" namestr "-" x)))
+	     field-str*))
+
+	 (define unsafe-setter-id*
+	   (map (lambda (x)
+		  (string->id (string-append "$set-" namestr "-" x "!")))
+	     field-str*))
+
+	 (define getter-sexp*
+	   (map (lambda (getter-id unsafe-getter-id #;field-idx)
+		  `(define (,getter-id stru)
+		     (if ($struct/rtd? stru ',rtd)
+			 (,unsafe-getter-id stru) #;($struct-ref stru ,field-idx)
+		       (assertion-violation ',getter-id
+			 "not a struct of required type as struct getter argument"
+			 stru ',rtd))))
+	     getter-id* unsafe-getter-id* #;field-idx*))
+
+	 (define setter-sexp*
+	   (map (lambda (setter-id field-idx)
+		  `(define (,setter-id stru val)
+		     (if ($struct/rtd? stru ',rtd)
+			 ($struct-set! stru ,field-idx val)
+		       (assertion-violation ',setter-id
+			 "not a struct of required type as struct setter argument"
+			 stru ',rtd))))
+	     setter-id* field-idx*))
+
+	 (define unsafe-getter-sexp*
+	   (map (lambda (unsafe-getter-id field-idx)
+		  `(define-syntax ,unsafe-getter-id
+		     (syntax-rules ()
+		       ((_ ?stru)
+			($struct-ref ?stru ,field-idx)))))
+	     unsafe-getter-id* field-idx*))
+
+	 (define unsafe-setter-sexp*
+	   (map (lambda (unsafe-setter-id field-idx)
+		  `(define-syntax ,unsafe-setter-id
+		     (syntax-rules ()
+		       ((_ ?stru ?val)
+			($struct-set! ?stru ,field-idx ?val)))))
+	     unsafe-setter-id* field-idx*))
+
 	 (bless
 	  `(begin
 	     (define-syntax ,?name (cons '$rtd ',rtd))
@@ -5974,36 +6019,10 @@
 		     S))))
 	     (define ,predicate-id
 	       (lambda (x) ($struct/rtd? x ',rtd)))
-	     ,@(map (lambda (getter i)
-		      `(define ,getter
-			 (lambda (x)
-			   (if ($struct/rtd? x ',rtd)
-			       ($struct-ref x ,i)
-			     (assertion-violation ',getter
-			       "not a struct of required type as struct getter argument"
-			       x ',rtd)))))
-		 getter-id* field-idx*)
-	     ,@(map (lambda (setter i)
-		      `(define ,setter
-			 (lambda (x v)
-			   (if ($struct/rtd? x ',rtd)
-			       ($struct-set! x ,i v)
-			     (assertion-violation ',setter
-			       "not a struct of required type as struct setter argument"
-			       x ',rtd)))))
-		 setter-id* field-idx*)
-	     ,@(map (lambda (unsafe-getter i)
-		      `(define-syntax ,unsafe-getter
-			 (syntax-rules ()
-			   ((_ x)
-			    ($struct-ref x ,i)))))
-		 unsafe-getter-id* field-idx*)
-	     ,@(map (lambda (unsafe-setter i)
-		      `(define-syntax ,unsafe-setter
-			 (syntax-rules ()
-			   ((_ x v)
-			    ($struct-set! x ,i v)))))
-		 unsafe-setter-id* field-idx*))
+	     ,@getter-sexp*
+	     ,@setter-sexp*
+	     ,@unsafe-getter-sexp*
+	     ,@unsafe-setter-sexp*)
 	  )))))
 
   (define (enumerate ls)
