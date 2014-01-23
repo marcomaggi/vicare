@@ -5938,9 +5938,12 @@
 ;;;; module non-core-macro-transformer: DEFINE-STRUCT
 
 (module (define-struct-macro)
-
-  (define (define-struct-macro e)
-    (syntax-match e ()
+  ;;Transformer function  used to  expand Vicare's  DEFINE-STRUCT macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX.  Return a sexp in the core language.
+  ;;
+  (define (define-struct-macro expr-stx)
+    (syntax-match expr-stx ()
       ((_ ?name (?field* ...))
        (let* ((string->id	(lambda (str)
 				  (datum->stx ?name (string->symbol str))))
@@ -5973,24 +5976,24 @@
 	     field-str*))
 
 	 (define getter-sexp*
-	   (map (lambda (getter-id unsafe-getter-id #;field-idx)
+	   (map (lambda (getter-id unsafe-getter-id)
 		  `(define (,getter-id stru)
 		     (if ($struct/rtd? stru ',rtd)
-			 (,unsafe-getter-id stru) #;($struct-ref stru ,field-idx)
+			 (,unsafe-getter-id stru)
 		       (assertion-violation ',getter-id
 			 "not a struct of required type as struct getter argument"
 			 stru ',rtd))))
-	     getter-id* unsafe-getter-id* #;field-idx*))
+	     getter-id* unsafe-getter-id*))
 
 	 (define setter-sexp*
-	   (map (lambda (setter-id field-idx)
+	   (map (lambda (setter-id unsafe-setter-id)
 		  `(define (,setter-id stru val)
 		     (if ($struct/rtd? stru ',rtd)
-			 ($struct-set! stru ,field-idx val)
+			 (,unsafe-setter-id stru val)
 		       (assertion-violation ',setter-id
 			 "not a struct of required type as struct setter argument"
 			 stru ',rtd))))
-	     setter-id* field-idx*))
+	     setter-id* unsafe-setter-id*))
 
 	 (define unsafe-getter-sexp*
 	   (map (lambda (unsafe-getter-id field-idx)
@@ -6011,14 +6014,17 @@
 	 (bless
 	  `(begin
 	     (define-syntax ,?name (cons '$rtd ',rtd))
-	     (define ,constructor-id
-	       (lambda ,?field*
-		 (let ((S ($struct ',rtd ,@?field*)))
-		   (if ($struct-ref ',rtd 5) ;destructor
-		       ($struct-guardian S)
-		     S))))
-	     (define ,predicate-id
-	       (lambda (x) ($struct/rtd? x ',rtd)))
+	     (define (,constructor-id ,@?field*)
+	       (let ((S ($struct ',rtd ,@?field*)))
+		 ;;FIXME  The destructor  accessor  must be  implemented
+		 ;;with a proper  unsafe operation, so that  the index 5
+		 ;;is not hard-coded here.  To be fixed at the next boot
+		 ;;image rotation.  (Marco Maggi; Thu Jan 23, 2014)
+		 (if ($struct-ref ',rtd 5) ;destructor
+		     ($struct-guardian S)
+		   S)))
+	     (define (,predicate-id obj)
+	       ($struct/rtd? obj ',rtd))
 	     ,@getter-sexp*
 	     ,@setter-sexp*
 	     ,@unsafe-getter-sexp*
