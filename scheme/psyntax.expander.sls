@@ -5937,91 +5937,82 @@
 
 ;;;; module non-core-macro-transformer: DEFINE-STRUCT
 
-(define define-struct-macro
-  (if-wants-define-struct
-   (lambda (e)
-     (define enumerate
-       (lambda (ls)
-	 (let f ((i 0) (ls ls))
-	   (cond
-	    ((null? ls) '())
-	    (else (cons i (f (+ i 1) (cdr ls))))))))
-     (define mkid
-       (lambda (id str)
-	 (datum->stx id (string->symbol str))))
-     (syntax-match e ()
-       ((_ name (field* ...))
-	(let* ((namestr		(symbol->string (identifier->symbol name)))
-	       (fields		(map identifier->symbol field*))
-	       (fieldstr*	(map symbol->string fields))
-	       (rtd		(datum->stx name (make-struct-type namestr fields)))
-	       (constr		(mkid name (string-append "make-" namestr)))
-	       (pred		(mkid name (string-append namestr "?")))
-	       (i*		(enumerate field*))
-	       (getters		(map (lambda (x)
-				       (mkid name (string-append namestr "-" x)))
-				  fieldstr*))
-	       (setters		(map (lambda (x)
-				       (mkid name (string-append "set-" namestr "-" x "!")))
-				  fieldstr*))
-	       (unsafe-getters	(map (lambda (x)
-				       (mkid name (string-append "$" namestr "-" x)))
-				  fieldstr*))
-	       (unsafe-setters	(map (lambda (x)
-				       (mkid name (string-append "$set-" namestr "-" x "!")))
-				  fieldstr*)))
-	  (bless
-	   `(begin
-	      (define-syntax ,name (cons '$rtd ',rtd))
-	      (define ,constr
-		(lambda ,field*
-		  (let ((S ($struct ',rtd ,@field*)))
-		    (if ($struct-ref ',rtd 5) ;destructor
-			($struct-guardian S)
-		      S))))
-	      (define ,pred
-		(lambda (x) ($struct/rtd? x ',rtd)))
-	      ,@(map (lambda (getter i)
-		       `(define ,getter
-			  (lambda (x)
-			    (if ($struct/rtd? x ',rtd)
-				($struct-ref x ,i)
-			      (assertion-violation ',getter
-				"not a struct of required type as struct getter argument"
-				x ',rtd)))))
-		  getters i*)
-	      ,@(map (lambda (setter i)
-		       `(define ,setter
-			  (lambda (x v)
-			    (if ($struct/rtd? x ',rtd)
-				($struct-set! x ,i v)
-			      (assertion-violation ',setter
-				"not a struct of required type as struct setter argument"
-				x ',rtd)))))
-		  setters i*)
-	      ,@(map (lambda (unsafe-getter i)
-		       `(define-syntax ,unsafe-getter
-			  (syntax-rules ()
-			    ((_ x)
-			     ($struct-ref x ,i))))
-		       ;; (unquote (define ,unsafe-getter
-		       ;; 		  (lambda (x)
-		       ;; 		    ($struct-ref x ,i))))
-		       )
-		  unsafe-getters i*)
-	      ,@(map (lambda (unsafe-setter i)
-		       `(define-syntax ,unsafe-setter
-			  (syntax-rules ()
-			    ((_ x v)
-			     ($struct-set! x ,i v))))
-		       ;; (unquote (define ,unsafe-setter
-		       ;; 	       (lambda (x v)
-		       ;; 		 ($struct-set! x ,i v))))
-		       )
-		  unsafe-setters i*))
-	   )))))
-   (lambda (stx)
-     (stx-error stx "define-struct not supported"))))
+(module (define-struct-macro)
+
+  (define (define-struct-macro e)
+    (syntax-match e ()
+      ((_ ?name (?field* ...))
+       (let* ((string->id	(lambda (str)
+				  (datum->stx ?name (string->symbol str))))
+	      (namestr		(symbol->string (identifier->symbol ?name)))
+	      (field-sym*	(map identifier->symbol ?field*))
+	      (field-str*	(map symbol->string field-sym*))
+	      (rtd		(datum->stx ?name (make-struct-type namestr field-sym*)))
+	      (constructor-id	(string->id (string-append "make-" namestr)))
+	      (predicate-id	(string->id (string-append namestr "?")))
+	      (field-idx*	(enumerate ?field*))
+	      (getter-id*	(map (lambda (x)
+				       (string->id (string-append namestr "-" x)))
+				  field-str*))
+	      (setter-id*	(map (lambda (x)
+				       (string->id (string-append "set-" namestr "-" x "!")))
+				  field-str*))
+	      (unsafe-getter-id* (map (lambda (x)
+					(string->id (string-append "$" namestr "-" x)))
+				   field-str*))
+	      (unsafe-setter-id* (map (lambda (x)
+					(string->id (string-append "$set-" namestr "-" x "!")))
+				   field-str*)))
+	 (bless
+	  `(begin
+	     (define-syntax ,?name (cons '$rtd ',rtd))
+	     (define ,constructor-id
+	       (lambda ,?field*
+		 (let ((S ($struct ',rtd ,@?field*)))
+		   (if ($struct-ref ',rtd 5) ;destructor
+		       ($struct-guardian S)
+		     S))))
+	     (define ,predicate-id
+	       (lambda (x) ($struct/rtd? x ',rtd)))
+	     ,@(map (lambda (getter i)
+		      `(define ,getter
+			 (lambda (x)
+			   (if ($struct/rtd? x ',rtd)
+			       ($struct-ref x ,i)
+			     (assertion-violation ',getter
+			       "not a struct of required type as struct getter argument"
+			       x ',rtd)))))
+		 getter-id* field-idx*)
+	     ,@(map (lambda (setter i)
+		      `(define ,setter
+			 (lambda (x v)
+			   (if ($struct/rtd? x ',rtd)
+			       ($struct-set! x ,i v)
+			     (assertion-violation ',setter
+			       "not a struct of required type as struct setter argument"
+			       x ',rtd)))))
+		 setter-id* field-idx*)
+	     ,@(map (lambda (unsafe-getter i)
+		      `(define-syntax ,unsafe-getter
+			 (syntax-rules ()
+			   ((_ x)
+			    ($struct-ref x ,i)))))
+		 unsafe-getter-id* field-idx*)
+	     ,@(map (lambda (unsafe-setter i)
+		      `(define-syntax ,unsafe-setter
+			 (syntax-rules ()
+			   ((_ x v)
+			    ($struct-set! x ,i v)))))
+		 unsafe-setter-id* field-idx*))
+	  )))))
+
+  (define (enumerate ls)
+    (let recur ((i 0) (ls ls))
+      (if (null? ls)
+	  '()
+	(cons i (recur (+ i 1) (cdr ls))))))
+
+  #| end of module: DEFINE-STRUCT-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: SYNTAX-RULES

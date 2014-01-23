@@ -24,7 +24,7 @@
 
 (library (psyntax config)
   (export
-    if-wants-define-record	if-wants-define-struct
+    if-wants-define-record	#;if-wants-define-struct
     if-wants-case-lambda
     if-wants-letrec*		if-wants-global-defines
     if-wants-library-letrec*	if-wants-descriptive-gensyms
