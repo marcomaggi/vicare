@@ -3261,21 +3261,13 @@
 (module R6RS-RECORD-TYPE-SPEC
   (make-r6rs-record-type-spec
    r6rs-record-type-spec?
-   r6rs-record-type-spec-rtd-id
-   r6rs-record-type-spec-rcd-id
    r6rs-record-type-spec-safe-accessors-table
    r6rs-record-type-spec-safe-mutators-table
    r6rs-record-type-spec-unsafe-accessors-table
    r6rs-record-type-spec-unsafe-mutators-table)
 
   (define-record r6rs-record-type-spec
-    (rtd-id
-		;Identifier  to  which  the  record-type  descriptor  is
-		;bound.
-     rcd-id
-		;Identifier   to  which   the  record-type   constructor
-		;descriptor is bound.
-     safe-accessors-table
+    (safe-accessors-table
 		;Alist  mapping all  field names  to the  identifiers to
 		;which the safe accessors are bound.
      safe-mutators-table
@@ -5276,11 +5268,9 @@
 
     (define-values (foo make-foo foo?)
       (%parse-full-name-spec namespec))
-    (define foo-rtd		(gensym))
-    (define foo-rcd		(gensym))
+    (define foo-rtd		(%named-gensym foo "-rtd"))
+    (define foo-rcd		(%named-gensym foo "-rcd"))
     (define foo-protocol	(gensym))
-    (define field-clauses
-      (%get-fields clause*))
     (define-values
       (field-names
 		;A list of identifiers representing all the field names.
@@ -5305,11 +5295,10 @@
 		;A list  of identifiers representing the  unsafe mutator
 		;names.
        )
-      (%parse-field-specs foo field-clauses synner))
+      (%parse-field-specs foo (%get-fields clause*) synner))
 
     (define binding-spec
-      (%make-binding-spec foo-rtd foo-rcd
-			  field-names mutable-field-names
+      (%make-binding-spec field-names mutable-field-names
 			  foo-x* set-foo-x!*
 			  unsafe-foo-x* unsafe-set-foo-x!*))
 
@@ -5635,8 +5624,7 @@
   (module (%make-binding-spec)
     (import R6RS-RECORD-TYPE-SPEC)
 
-    (define (%make-binding-spec foo-rtd foo-rcd
-				field-names mutable-field-names
+    (define (%make-binding-spec field-names mutable-field-names
 				foo-x* set-foo-x!*
 				unsafe-foo-x* unsafe-set-foo-x!*)
 
@@ -5669,12 +5657,10 @@
 	(%make-alist mutable-field-names unsafe-set-foo-x!*))
 
       (if (strict-r6rs)
-	  (make-r6rs-record-type-spec foo-rtd foo-rcd
-				      foo-fields-safe-accessors-table
+	  (make-r6rs-record-type-spec foo-fields-safe-accessors-table
 				      foo-fields-safe-mutators-table
 				      #f #f)
-	(make-r6rs-record-type-spec foo-rtd foo-rcd
-				    foo-fields-safe-accessors-table
+	(make-r6rs-record-type-spec foo-fields-safe-accessors-table
 				    foo-fields-safe-mutators-table
 				    foo-fields-unsafe-accessors-table
 				    foo-fields-unsafe-mutators-table)))
@@ -5741,19 +5727,24 @@
     ;;result build  and return a new  identifier in the same  context of
     ;;CTXT.
     ;;
-    (datum->syntax ctxt
-		   (string->symbol
-		    (apply string-append
-			   (map (lambda (x)
-				  (cond ((symbol? x)
-					 (symbol->string x))
-					((string? x)
-					 x)
-					((identifier? x)
-					 (symbol->string (syntax->datum x)))
-					(else
-					 (assertion-violation __who__ "BUG"))))
-			     str*)))))
+    (datum->stx ctxt
+		(string->symbol
+		 (apply string-append
+			(map (lambda (x)
+			       (cond ((symbol? x)
+				      (symbol->string x))
+				     ((string? x)
+				      x)
+				     ((identifier? x)
+				      (symbol->string (syntax->datum x)))
+				     (else
+				      (assertion-violation __who__ "BUG"))))
+			  str*)))))
+
+  (define (%named-gensym foo suffix)
+    (gensym (string-append
+	     (symbol->string (syntax->datum foo))
+	     suffix)))
 
   #| end of module: DEFINE-RECORD-TYPE-MACRO |# )
 
