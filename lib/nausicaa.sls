@@ -1209,6 +1209,10 @@
     record-reset
     record-and-rtd?
     record-type-and-record?
+    record-type-field-ref
+    record-type-field-set!
+    $record-type-field-ref
+    $record-type-field-set!
     register-to-avoid-collecting
     remprop
     replace-to-avoid-collecting
@@ -1562,10 +1566,11 @@
     ;; misc
     set-cons!
     eval-for-expand
-    record-type-field-ref
-    record-type-field-set!
-    $record-type-field-ref
-    $record-type-field-set!
+    struct-type-and-struct?
+    struct-type-field-ref
+    struct-type-field-set!
+    $struct-type-field-ref
+    $struct-type-field-set!
     splice-first-expand
     values->list
     define*
