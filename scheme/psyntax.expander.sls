@@ -5658,28 +5658,36 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%verify-clauses x cls*)
-    (define VALID-KEYWORDS
-      (map bless
-	'(fields parent parent-rtd protocol sealed opaque nongenerative)))
+  (module (%verify-clauses)
+
+    (define (%verify-clauses expr-stx cls*)
+      (define VALID-KEYWORDS
+	(map bless
+	  '(fields parent parent-rtd protocol sealed opaque nongenerative)))
+      (let loop ((cls*  cls*)
+		 (seen* '()))
+	(unless (null? cls*)
+	  (syntax-match (car cls*) ()
+	    ((?kwd . ?rest)
+	     (cond ((or (not (identifier? ?kwd))
+			(not (%free-id-member? ?kwd VALID-KEYWORDS)))
+		    (stx-error ?kwd "not a valid DEFINE-RECORD-TYPE keyword"))
+		   ((bound-id-member? ?kwd seen*)
+		    (syntax-violation __who__
+		      "invalid duplicate clause in DEFINE-RECORD-TYPE"
+		      expr-stx ?kwd))
+		   (else
+		    (loop (cdr cls*) (cons ?kwd seen*)))))
+	    (?cls
+	     (stx-error ?cls "malformed define-record-type clause"))
+	    ))))
+
     (define (%free-id-member? x ls)
       (and (pair? ls)
 	   (or (free-id=? x (car ls))
 	       (%free-id-member? x (cdr ls)))))
-    (let loop ((cls*  cls*)
-	       (seen* '()))
-      (unless (null? cls*)
-	(syntax-match (car cls*) ()
-	  ((kwd . rest)
-	   (cond ((or (not (identifier? kwd))
-		      (not (%free-id-member? kwd VALID-KEYWORDS)))
-		  (stx-error kwd "not a valid define-record-type keyword"))
-		 ((bound-id-member? kwd seen*)
-		  (syntax-violation __who__ "duplicate use of keyword " x kwd))
-		 (else
-		  (loop (cdr cls*) (cons kwd seen*)))))
-	  (cls
-	   (stx-error cls "malformed define-record-type clause"))))))
+
+    #| end of module: %VERIFY-CLAUSES |# )
 
   (define (%get-clause sym clause*)
     ;;Given a symbol SYM representing the  name of a clause and a syntax
