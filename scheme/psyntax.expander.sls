@@ -698,40 +698,15 @@
 ;;
 ;;A  binding  representing an  R6RS's  record  type descriptor  and  the
 ;;default  record  constructor  descriptor  defined by  the  code  being
-;;expanded has the format:
+;;expanded has one of the formats:
 ;;
 ;;   ($rtd . (?rtd-id ?rcd-id))
+;;   ($rtd . (?rtd-id ?rcd-id . ?spec))
 ;;
 ;;where: "$rtd" is the symbol "$rtd"; ?RTD-ID is the identifier to which
 ;;the  record type  descriptor is  bound; ?RCD-ID  is the  identifier to
-;;which the default record constructor descriptor is bound.
-;;
-;;Optionally 2 or 4 additional items are present:
-;;
-;;   ($rtd . (?rtd-id ?rcd-id
-;;            ?safe-accessors-alist ?safe-mutators-alist))
-;;
-;;   ($rtd . (?rtd-id ?rcd-id
-;;            ?safe-accessors-alist ?safe-mutators-alist
-;;            ?unsafe-accessors-alist ?unsafe-mutators-alist))
-;;
-;;in which:
-;;
-;;-   ?SAFE-ACCESSORS-ALIST  is   an  alist   whose  keys   are  symbols
-;;representing all the field names  and whose values are the identifiers
-;;bound to the corresponding safe field accessors.
-;;
-;;- ?SAFE-FIELD-MUTATORS is an alist whose keys are symbols representing
-;;the mutable field names and whose  values are identifiers bound to the
-;;corresponding safe field mutators.
-;;
-;;-  ?UNSAFE-ACCESSORS-ALIST   is  an  alist  whose   keys  are  symbols
-;;representing all the field names  and whose values are the identifiers
-;;bound to the corresponding safe unfield accessors.
-;;
-;;-  ?UNSAFE-FIELD-MUTATORS   is  an   alist  whose  keys   are  symbols
-;;representing the mutable field names  and whose values are identifiers
-;;bound to the corresponding unsafe field mutators.
+;;which the default record constructor  descriptor is bound; ?SPEC is an
+;;instance of record type R6RS-RECORD-TYPE-SPEC.
 ;;
 ;;
 ;;Fluid syntax
@@ -8345,44 +8320,16 @@
 	 record-type-field-ref-transformer
 	 $record-type-field-set!-transformer
 	 $record-type-field-ref-transformer)
-  ;;The entry  in the lexical  environment representing the  record type
-  ;;and constructor descriptors looks as follows:
+  ;;The syntactic  binding representing the record  type and constructor
+  ;;descriptors has one of the formats:
   ;;
   ;;   ($rtd . (?rtd-id ?rcd-id))
-  ;;    |..| binding-type
-  ;;           |...............| binding-value
-  ;;   |.......................| binding
+  ;;   ($rtd . (?rtd-id ?rcd-id . $spec))
   ;;
-  ;;where  "$rtd" is  the symbol  "$rtd", ?RTD-ID  is the  identifier to
-  ;;which the record type descriptor is bound, ?RCD-ID is the identifier
-  ;;to which the default record constructor descriptor is bound.
-  ;;
-  ;;Optionally 2 or 4 additional fields are present:
-  ;;
-  ;;   ($rtd . (?rtd-id ?rcd-id
-  ;;            ?safe-accessors-alist ?safe-mutators-alist))
-  ;;
-  ;;   ($rtd . (?rtd-id ?rcd-id
-  ;;            ?safe-accessors-alist ?safe-mutators-alist
-  ;;            ?unsafe-accessors-alist ?unsafe-mutators-alist))
-  ;;
-  ;;in which:
-  ;;
-  ;;*  ?SAFE-ACCESSORS-ALIST   is  an  alist  whose   keys  are  symbols
-  ;;representing  all  the   field  names  and  whose   values  are  the
-  ;;identifiers bound to the corresponding safe field accessors.
-  ;;
-  ;;*  ?SAFE-FIELD-MUTATORS   is  an   alist  whose  keys   are  symbols
-  ;;representing  the   mutable  field   names  and  whose   values  are
-  ;;identifiers bound to the corresponding safe field mutators.
-  ;;
-  ;;*  ?UNSAFE-ACCESSORS-ALIST  is  an  alist  whose  keys  are  symbols
-  ;;representing  all  the   field  names  and  whose   values  are  the
-  ;;identifiers bound to the corresponding safe unfield accessors.
-  ;;
-  ;;*  ?UNSAFE-FIELD-MUTATORS  is  an   alist  whose  keys  are  symbols
-  ;;representing  the   mutable  field   names  and  whose   values  are
-  ;;identifiers bound to the corresponding unsafe field mutators.
+  ;;where; "$rtd"  is the  symbol "$rtd"; ?RTD-ID  is the  identifier to
+  ;;which the record type descriptor is bound; ?RCD-ID is the identifier
+  ;;to which the  default record constructor descriptor  is bound; ?SPEC
+  ;;is a record of type R6RS-RECORD-TYPE-SPEC.
   ;;
   (import R6RS-RECORD-TYPE-SPEC)
 
