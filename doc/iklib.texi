@@ -4782,6 +4782,26 @@ the need to export the predicate identifier out of libraries.
 @subsection Accessing and mutating fields
 
 
+@defun record-accessor @var{rtd} @var{relative-field-index}
+@defunx record-accessor @var{rtd} @var{relative-field-index} @var{accessor-who}
+As defined by @rnrs{6}, this function accepts only two arguments;
+@ref{stdlib records procedural layer, record-accessor}.  The optional
+third argument is a @value{PRJNAME} extension: it must be a symbol
+representing the name of the returned accessor function; it is used for
+descriptive error reporting.
+@end defun
+
+
+@defun record-mutator @var{rtd} @var{relative-field-index}
+@defunx record-mutator @var{rtd} @var{relative-field-index} @var{mutator-who}
+As defined by @rnrs{6}, this function accepts only two arguments;
+@ref{stdlib records procedural layer, record-mutator}.  The optional
+third argument is a @value{PRJNAME} extension: it must be a symbol
+representing the name of the returned mutator function; it is used for
+descriptive error reporting.
+@end defun
+
+
 @deffn Syntax record-type-field-ref @meta{type-name} @meta{field-name} @meta{record}
 @deffnx Syntax record-type-field-set! @meta{type-name} @meta{field-name} @meta{record} @meta{new-value}
 Expand to an expression which accesses or mutates the field whose name

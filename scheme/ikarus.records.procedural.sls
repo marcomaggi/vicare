@@ -932,58 +932,59 @@
 ;;               |0, 1, 2, 3, 4, 5, 6, 7, 8|	absolute offsets of <GAMMA>
 ;;
 
-(define (record-accessor rtd relative-field-index)
-  ;;Return a function being  the accessor for field RELATIVE-FIELD-INDEX
-  ;;of RTD.
-  ;;
-  (define who 'record-accessor)
-  (with-arguments-validation (who)
-      ((rtd	rtd)
-       (index	relative-field-index))
-    (let* ((total-number-of-fields	(<rtd>-total-fields-number rtd))
-	   (prtd			(<rtd>-parent rtd))
-	   (abs-index			(if prtd
+(case-define* record-accessor
+  ((rtd relative-field-index)
+   (record-accessor rtd relative-field-index 'a-record-accessor))
+  ((rtd relative-field-index accessor-who)
+   ;;Return a function being the accessor for field RELATIVE-FIELD-INDEX
+   ;;of RTD.
+   ;;
+   (with-arguments-validation (__who__)
+       ((rtd	rtd)
+	(index	relative-field-index))
+     (let* ((total-number-of-fields	(<rtd>-total-fields-number rtd))
+	    (prtd			(<rtd>-parent rtd))
+	    (abs-index			(if prtd
 					    (+ relative-field-index (<rtd>-total-fields-number prtd))
 					  relative-field-index)))
-      (with-arguments-validation (who)
-      	  ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
-	(lambda (obj)
-	  ;;We  must  verify  that  OBJ  is actually  an  R6RS  record
-	  ;;instance of RTD or one of its subtypes.
-	  ;;
-	  (define who 'a-record-accessor)
-	  (with-arguments-validation (who)
-	      ((record			obj)
-	       (record-instance-of-rtd	obj rtd))
-	    ($struct-ref obj abs-index)))))))
+       (with-arguments-validation (__who__)
+	   ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
+	 (lambda (obj)
+	   ;;We must verify that OBJ is actually an R6RS record instance
+	   ;;of RTD or one of its subtypes.
+	   ;;
+	   (with-arguments-validation (accessor-who)
+	       ((record			obj)
+		(record-instance-of-rtd	obj rtd))
+	     ($struct-ref obj abs-index))))))))
 
-(define (record-mutator rtd relative-field-index)
-  ;;Return a function being  the mutator for field RELATIVE-FIELD-INDEX
-  ;;of RTD.
-  ;;
-  (define who 'record-mutator)
-  (with-arguments-validation (who)
-      ((rtd	rtd)
-       (index	relative-field-index))
-    (let* ((total-number-of-fields	(<rtd>-total-fields-number rtd))
-	   (prtd			(<rtd>-parent rtd))
-	   (abs-index			(if prtd
+(case-define* record-mutator
+  ((rtd relative-field-index)
+   (record-mutator rtd relative-field-index 'a-record-mutator))
+  ((rtd relative-field-index mutator-who)
+   ;;Return a function being  the mutator for field RELATIVE-FIELD-INDEX
+   ;;of RTD.
+   ;;
+   (with-arguments-validation (__who__)
+       ((rtd	rtd)
+	(index	relative-field-index))
+     (let* ((total-number-of-fields	(<rtd>-total-fields-number rtd))
+	    (prtd			(<rtd>-parent rtd))
+	    (abs-index			(if prtd
 					    (+ relative-field-index (<rtd>-total-fields-number prtd))
 					  relative-field-index)))
-      (with-arguments-validation (who)
-	  ((absolute-field-index		abs-index total-number-of-fields
+       (with-arguments-validation (__who__)
+	   ((absolute-field-index		abs-index total-number-of-fields
 						rtd relative-field-index)
-	   (relative-index-of-mutable-field	relative-field-index rtd))
-	(let ((who (string->symbol (string-append "a-record-mutator/"
-						  (symbol->string (<rtd>-name rtd))))))
-	  (lambda (obj new-value)
-	    ;;We  must  verify  that  OBJ  is actually  an  R6RS  record
-	    ;;instance of RTD or one of its subtypes.
-	    ;;
-	    (with-arguments-validation (who)
-		((record			obj)
-		 (record-instance-of-rtd	obj rtd))
-	      ($struct-set! obj abs-index new-value))))))))
+	    (relative-index-of-mutable-field	relative-field-index rtd))
+	 (lambda (obj new-value)
+	   ;;We must verify that OBJ is actually an R6RS record instance
+	   ;;of RTD or one of its subtypes.
+	   ;;
+	   (with-arguments-validation (mutator-who)
+	       ((record			obj)
+		(record-instance-of-rtd	obj rtd))
+	     ($struct-set! obj abs-index new-value))))))))
 
 
 (define (record-predicate rtd)

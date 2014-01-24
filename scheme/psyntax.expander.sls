@@ -5325,11 +5325,11 @@
 	 (define ,make-foo (record-constructor ,foo-rcd))
 	 ;;Safe record fields accessors.
 	 ,@(map (lambda (foo-x idx)
-		  `(define ,foo-x (record-accessor ,foo-rtd ,idx)))
+		  `(define ,foo-x (record-accessor ,foo-rtd ,idx (quote ,foo-x))))
 	     foo-x* idx*)
 	 ;;Safe record fields mutators (if any).
 	 ,@(map (lambda (set-foo-x! idx)
-		  `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx)))
+		  `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx (quote ,set-foo-x!))))
 	     set-foo-x!* set-foo-idx*)))
     (define vicare-output-code
       (if (strict-r6rs)
