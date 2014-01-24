@@ -3235,11 +3235,53 @@
 
 (define (r6rs-record-type-descriptor-binding? binding)
   (and (eq? '$rtd (syntactic-binding-type binding))
-       (list? (syntactic-binding-value binding))))
+       (pair? (syntactic-binding-value binding))))
 
 (define (struct-type-descriptor-binding? binding)
   (and (eq? '$rtd (syntactic-binding-type binding))
-       (not (list? (syntactic-binding-value binding)))))
+       (not (pair? (syntactic-binding-value binding)))))
+
+(define-syntax-rule (r6rs-record-type-descriptor-binding-rtd ?binding)
+  (car ?binding))
+
+(define-syntax-rule (r6rs-record-type-descriptor-binding-rcd ?binding)
+  (cadr ?binding))
+
+(define-syntax-rule (r6rs-record-type-descriptor-binding-spec ?binding)
+  (cddr ?binding))
+
+(module R6RS-RECORD-TYPE-SPEC
+  (make-r6rs-record-type-spec
+   r6rs-record-type-spec?
+   r6rs-record-type-spec-rtd-id
+   r6rs-record-type-spec-rcd-id
+   r6rs-record-type-spec-safe-accessors-table
+   r6rs-record-type-spec-safe-mutators-table
+   r6rs-record-type-spec-unsafe-accessors-table
+   r6rs-record-type-spec-unsafe-mutators-table)
+
+  (define-record r6rs-record-type-spec
+    (rtd-id
+		;Identifier  to  which  the  record-type  descriptor  is
+		;bound.
+     rcd-id
+		;Identifier   to  which   the  record-type   constructor
+		;descriptor is bound.
+     safe-accessors-table
+		;Alist  mapping all  field names  to the  identifiers to
+		;which the safe accessors are bound.
+     safe-mutators-table
+		;Alist mapping mutable field names to the identifiers to
+		;which safe mutators are bound.
+     unsafe-accessors-table
+		;False  or   alist  mapping  all  field   names  to  the
+		;identifiers to which the unsafe accessors are bound.
+     unsafe-mutators-table
+		;False  or  alist mapping  mutable  field  names to  the
+		;identifiers to which unsafe mutators are bound.
+     ))
+
+  #| end of module |# )
 
 ;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings
@@ -5257,45 +5299,11 @@
        )
       (%parse-field-specs foo field-clauses synner))
 
-    ;;Safe field accessors and mutators alists.
-    (define foo-fields-safe-accessors-table
-      ;;Here we want to build a sexp  which will be BLESSed below in the
-      ;;output code.  The sexp will  evluate to an alist, having symbols
-      ;;representing field  names as  keys and  an identifiers  bound to
-      ;;unsafe accessors as values.
-      (map (lambda (name func)
-	     (list 'quasiquote (cons name (list 'unquote (list 'syntax func)))))
-	(map syntax->datum field-names)
-	foo-x*))
-    (define foo-fields-safe-mutators-table
-      ;;Here we want to build a sexp  which will be BLESSed below in the
-      ;;output code.  The sexp will  evluate to an alist, having symbols
-      ;;representing field  names as  keys and  an identifiers  bound to
-      ;;unsafe mutators as values.
-      (map (lambda (name func)
-	     (list 'quasiquote (cons name (list 'unquote (list 'syntax func)))))
-	(map syntax->datum mutable-field-names)
-	set-foo-x!*))
-
-    ;;Unsafe field accessors and mutators alists.
-    (define foo-fields-unsafe-accessors-table
-      ;;Here we want to build a sexp  which will be BLESSed below in the
-      ;;output code.  The sexp will  evluate to an alist, having symbols
-      ;;representing field  names as  keys and  an identifiers  bound to
-      ;;unsafe accessors as values.
-      (map (lambda (name func)
-	     (list 'quasiquote (cons name (list 'unquote (list 'syntax func)))))
-	(map syntax->datum field-names)
-	unsafe-foo-x*))
-    (define foo-fields-unsafe-mutators-table
-      ;;Here we want to build a sexp  which will be BLESSed below in the
-      ;;output code.  The sexp will  evluate to an alist, having symbols
-      ;;representing field  names as  keys and  an identifiers  bound to
-      ;;unsafe mutators as values.
-      (map (lambda (name func)
-	     (list 'quasiquote (cons name (list 'unquote (list 'syntax func)))))
-	(map syntax->datum mutable-field-names)
-	unsafe-set-foo-x!*))
+    (define binding-spec
+      (%make-binding-spec foo-rtd foo-rcd
+			  field-names mutable-field-names
+			  foo-x* set-foo-x!*
+			  unsafe-foo-x* unsafe-set-foo-x!*))
 
     ;;Code  for parent  record-type  descriptor  and parent  record-type
     ;;constructor descriptor retrieval.
@@ -5313,69 +5321,72 @@
     (define protocol-code
       (%get-protocol-code clause* synner))
 
-    (define r6rs-output-code
-      `(begin
-	 ;;Record type descriptor.
-	 (define ,foo-rtd ,foo-rtd-code)
-	 ;;Protocol function.
-	 (define ,foo-protocol ,protocol-code)
-	 ;;Record constructor descriptor.
-	 (define ,foo-rcd ,foo-rcd-code)
-	 ;;Record instance predicate.
-	 (define ,foo? (record-predicate ,foo-rtd))
-	 ;;Record instance constructor.
-	 (define ,make-foo (record-constructor ,foo-rcd))
-	 ;;Safe record fields accessors.
-	 ,@(map (lambda (foo-x idx)
-		  `(define ,foo-x (record-accessor ,foo-rtd ,idx (quote ,foo-x))))
-	     foo-x* idx*)
-	 ;;Safe record fields mutators (if any).
-	 ,@(map (lambda (set-foo-x! idx)
-		  `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx (quote ,set-foo-x!))))
-	     set-foo-x!* set-foo-idx*)))
-
-    (define vicare-output-code
-      (if (strict-r6rs)
-	  `( ;;Binding for record type name.
-	    (define-syntax ,foo
-	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
-		    (list ,@foo-fields-safe-accessors-table)
-		    (list ,@foo-fields-safe-mutators-table))))
-	(let ((foo-first-field-offset (gensym)))
-	  `( ;;Binding for record type name.
-	    (define-syntax ,foo
-	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
-		    (list ,@foo-fields-safe-accessors-table)
-		    (list ,@foo-fields-safe-mutators-table)
-		    (list ,@foo-fields-unsafe-accessors-table)
-		    (list ,@foo-fields-unsafe-mutators-table)))
-	    (define ,foo-first-field-offset
-	      ;;The field  at index 3  in the RTD  is: the index  of the
-	      ;;first field of this subtype  in the layout of instances;
-	      ;;it is the total number of fields of the parent type.
-	      ($struct-ref ,foo-rtd 3))
-	    ;; Unsafe record fields accessors.
-	    ,@(map (lambda (unsafe-foo-x idx)
-		     (let ((t (gensym)))
-		       `(begin
-			  (define ,t
-			    (fx+ ,idx ,foo-first-field-offset))
-			  (define-syntax-rule (,unsafe-foo-x x)
-			    ($struct-ref x ,t)))))
-		unsafe-foo-x* idx*)
-	    ;; Unsafe record fields mutators.
-	    ,@(map (lambda (unsafe-set-foo-x! idx)
-		     (let ((t (gensym)))
-		       `(begin
-			  (define ,t
-			    (fx+ ,idx ,foo-first-field-offset))
-			  (define-syntax-rule (,unsafe-set-foo-x! x v)
-			    ($struct-set! x ,t v)))))
-		unsafe-set-foo-x!* set-foo-idx*)
-	    ))))
-
     (bless
-     (append r6rs-output-code vicare-output-code)))
+     `(begin
+	;;Record type descriptor.
+	(define ,foo-rtd ,foo-rtd-code)
+	;;Protocol function.
+	(define ,foo-protocol ,protocol-code)
+	;;Record constructor descriptor.
+	(define ,foo-rcd ,foo-rcd-code)
+	;;Record instance predicate.
+	(define ,foo? (record-predicate ,foo-rtd))
+	;;Record instance constructor.
+	(define ,make-foo (record-constructor ,foo-rcd))
+	;;Safe record fields accessors.
+	,@(map (lambda (foo-x idx)
+		 `(define ,foo-x (record-accessor ,foo-rtd ,idx (quote ,foo-x))))
+	    foo-x* idx*)
+	;;Safe record fields mutators (if any).
+	,@(map (lambda (set-foo-x! idx)
+		 `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx (quote ,set-foo-x!))))
+	    set-foo-x!* set-foo-idx*)
+
+	;;Binding for record type name.
+	(define-syntax ,foo
+	  (cons '$rtd
+		(cons (syntax ,foo-rtd)
+		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
+
+	. ,(if (strict-r6rs)
+	       '()
+	     (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
+						unsafe-foo-x*      idx*
+						unsafe-set-foo-x!* set-foo-idx*)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
+					     unsafe-foo-x*      idx*
+					     unsafe-set-foo-x!* set-foo-idx*)
+    (define foo-first-field-offset
+      (gensym))
+    `((define ,foo-first-field-offset
+	;;The field  at index 3  in the RTD is:  the index of  the first
+	;;field of  this subtype in the  layout of instances; it  is the
+	;;total number of fields of the parent type.
+	($struct-ref ,foo-rtd 3))
+
+      ;; Unsafe record fields accessors.
+      ,@(map (lambda (unsafe-foo-x idx)
+	       (let ((t (gensym)))
+		 `(begin
+		    (define ,t
+		      (fx+ ,idx ,foo-first-field-offset))
+		    (define-syntax-rule (,unsafe-foo-x x)
+		      ($struct-ref x ,t)))))
+	  unsafe-foo-x* idx*)
+
+      ;; Unsafe record fields mutators.
+      ,@(map (lambda (unsafe-set-foo-x! idx)
+	       (let ((t (gensym)))
+		 `(begin
+		    (define ,t
+		      (fx+ ,idx ,foo-first-field-offset))
+		    (define-syntax-rule (,unsafe-set-foo-x! x v)
+		      ($struct-set! x ,t v)))))
+	  unsafe-set-foo-x!* set-foo-idx*)
+      ))
 
 ;;; --------------------------------------------------------------------
 
@@ -5612,6 +5623,60 @@
 	((?spec . ?rest)
 	 (synner "invalid field specification in DEFINE-RECORD-TYPE syntax"
 		 ?spec)))))
+
+  (module (%make-binding-spec)
+    (import R6RS-RECORD-TYPE-SPEC)
+
+    (define (%make-binding-spec foo-rtd foo-rcd
+				field-names mutable-field-names
+				foo-x* set-foo-x!*
+				unsafe-foo-x* unsafe-set-foo-x!*)
+
+      ;;A sexp which will be BLESSed  in the output code.  The sexp will
+      ;;evaluate to an alist in which: keys are symbols representing all
+      ;;the  field  names; values  are  identifiers  bound to  the  safe
+      ;;accessors.
+      (define foo-fields-safe-accessors-table
+	(%make-alist field-names foo-x*))
+
+      ;;A sexp which will be BLESSed  in the output code.  The sexp will
+      ;;evaluate to  an alist  in which:  keys are  symbols representing
+      ;;mutable  field  names;  values  are identifiers  bound  to  safe
+      ;;mutators.
+      (define foo-fields-safe-mutators-table
+	(%make-alist mutable-field-names set-foo-x!*))
+
+      ;;A sexp which will be BLESSed  in the output code.  The sexp will
+      ;;evaluate to an alist in which: keys are symbols representing all
+      ;;the  field names;  values are  identifiers bound  to the  unsafe
+      ;;accessors.
+      (define foo-fields-unsafe-accessors-table
+	(%make-alist field-names unsafe-foo-x*))
+
+      ;;A sexp which will be BLESSed  in the output code.  The sexp will
+      ;;evaluate to  an alist  in which:  keys are  symbols representing
+      ;;mutable  field names;  values  are identifiers  bound to  unsafe
+      ;;mutators.
+      (define foo-fields-unsafe-mutators-table
+	(%make-alist mutable-field-names unsafe-set-foo-x!*))
+
+      (if (strict-r6rs)
+	  (make-r6rs-record-type-spec foo-rtd foo-rcd
+				      foo-fields-safe-accessors-table
+				      foo-fields-safe-mutators-table
+				      #f #f)
+	(make-r6rs-record-type-spec foo-rtd foo-rcd
+				    foo-fields-safe-accessors-table
+				    foo-fields-safe-mutators-table
+				    foo-fields-unsafe-accessors-table
+				    foo-fields-unsafe-mutators-table)))
+
+    (define (%make-alist key-id* operator-id*)
+      (map (lambda (key-id operator-id)
+	     (cons (syntax->datum key-id) operator-id))
+	key-id* operator-id*))
+
+    #| end of module: %MAKE-BINDING-SPEC |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -8320,6 +8385,7 @@
   ;;representing  the   mutable  field   names  and  whose   values  are
   ;;identifiers bound to the corresponding unsafe field mutators.
   ;;
+  (import R6RS-RECORD-TYPE-SPEC)
 
   (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand R6RS's RECORD-TYPE-DESCRIPTOR
@@ -8339,7 +8405,8 @@
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (r6rs-record-type-descriptor-binding? binding)
 	     (syntax-violation __who__ "not a record type" expr-stx ?identifier))
-	   (chi-expr (car (syntactic-binding-value binding))
+	   (chi-expr (r6rs-record-type-descriptor-binding-rtd
+		      (syntactic-binding-value binding))
 		     lexenv.run lexenv.expand))))))
 
   (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
@@ -8360,7 +8427,8 @@
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (r6rs-record-type-descriptor-binding? binding)
 	     (syntax-error __who__ "invalid type" expr-stx ?identifier))
-	   (chi-expr (cadr (syntactic-binding-value binding))
+	   (chi-expr (r6rs-record-type-descriptor-binding-rcd
+		      (syntactic-binding-value binding))
 		     lexenv.run lexenv.expand))))))
 
 ;;; --------------------------------------------------------------------
@@ -8467,14 +8535,17 @@
 	     (chi-expr (bless `(,(cdr mutator) ,?record ,?new-value))
 		       lexenv.run lexenv.expand)))))))
 
+;;; --------------------------------------------------------------------
+
   (define (%get-alist-of-safe-field-accessors who binding)
     ;;Inspect a lexical  environment binding with key  "$rtd" and return
     ;;the alist  of safe R6RS record  field accessors.  If the  alist is
     ;;not present: raise a syntax violation.
     ;;
-    (let ((val (syntactic-binding-value binding)))
-      (if (<= 4 (length val))
-	  (list-ref val 2)
+    (let* ((val  (syntactic-binding-value binding))
+	   (spec (r6rs-record-type-descriptor-binding-spec val)))
+      (if (r6rs-record-type-spec? spec)
+	  (r6rs-record-type-spec-safe-accessors-table spec)
 	(syntax-violation who
 	  "request for safe accessors of R6RS record for which they are not defined"
 	  binding))))
@@ -8484,9 +8555,10 @@
     ;;the alist of safe R6RS record field mutators.  If the alist is not
     ;;present: raise a syntax violation.
     ;;
-    (let ((val (syntactic-binding-value binding)))
-      (if (<= 4 (length val))
-	  (list-ref val 3)
+    (let* ((val  (syntactic-binding-value binding))
+	   (spec (r6rs-record-type-descriptor-binding-spec val)))
+      (if (r6rs-record-type-spec? spec)
+	  (r6rs-record-type-spec-safe-mutators-table spec)
 	(syntax-violation who
 	  "request for safe mutators of R6RS record for which they are not defined"
 	  binding))))
@@ -8496,24 +8568,32 @@
     ;;the alist of unsafe R6RS record  field accessors.  If the alist is
     ;;not present: raise a syntax violation.
     ;;
-    (let ((val (syntactic-binding-value binding)))
-      (if (<= 6 (length val))
-	  (list-ref val 4)
-	(syntax-violation who
-	  "request for unsafe accessors of R6RS record for which they are not defined"
-	  binding))))
+    (define (%error)
+      (syntax-violation who
+	"request for unsafe accessors of R6RS record for which they are not defined"
+	binding))
+    (let* ((val  (syntactic-binding-value binding))
+	   (spec (r6rs-record-type-descriptor-binding-spec val)))
+      (if (r6rs-record-type-spec? spec)
+	  (or (r6rs-record-type-spec-unsafe-accessors-table spec)
+	      (%error))
+	(%error))))
 
   (define (%get-alist-of-unsafe-field-mutators who binding)
     ;;Inspect a lexical  environment binding with key  "$rtd" and return
     ;;the alist of  unsafe R6RS record field mutators.  If  the alist is
     ;;not present: raise a syntax violation.
     ;;
-    (let ((val (syntactic-binding-value binding)))
-      (if (<= 6 (length val))
-	  (list-ref val 5)
-	(syntax-violation who
-	  "request for unsafe mutators of R6RS record for which they are not defined"
-	  binding))))
+    (define (%error)
+      (syntax-violation who
+	"request for unsafe mutators of R6RS record for which they are not defined"
+	binding))
+    (let* ((val  (syntactic-binding-value binding))
+	   (spec (cddr val)))
+      (if (r6rs-record-type-spec? spec)
+	  (or (r6rs-record-type-spec-unsafe-mutators-table spec)
+	      (%error))
+	(%error))))
 
   #| end of module |# )
 
