@@ -3219,27 +3219,35 @@
   (cons* 'local-macro! transformer expanded-expr))
 
 ;;; --------------------------------------------------------------------
-;;; Vicare struct type descriptor bindings
-;;; R6RS record type descriptors bindings
+;;; struct/record type descriptor bindings
 
 (define (struct-or-record-type-descriptor-binding? binding)
   (and (pair? binding)
        (eq? '$rtd (syntactic-binding-type binding))))
 
-(define (make-struct-or-record-type-descriptor-binding bind-val)
-  (cons '$rtd bind-val))
+;;; --------------------------------------------------------------------
+;;; Vicare struct type descriptor bindings
+
+(define-syntax-rule (make-struct-or-record-type-descriptor-binding ?bind-val)
+  (cons '$rtd ?bind-val))
+
+(define (struct-type-descriptor-binding? binding)
+  (and (struct-or-record-type-descriptor-binding? binding)
+       (not (pair? (syntactic-binding-value binding)))))
+
+;;; --------------------------------------------------------------------
+;;; R6RS record-type descriptor binding
 
 (define (core-rtd-binding? binding)
   (and (pair? binding)
        (eq? '$core-rtd (syntactic-binding-type binding))))
 
 (define (r6rs-record-type-descriptor-binding? binding)
-  (and (eq? '$rtd (syntactic-binding-type binding))
+  (and (struct-or-record-type-descriptor-binding? binding)
        (pair? (syntactic-binding-value binding))))
 
-(define (struct-type-descriptor-binding? binding)
-  (and (eq? '$rtd (syntactic-binding-type binding))
-       (not (pair? (syntactic-binding-value binding)))))
+(define-syntax-rule (make-r6rs-record-type-descriptor-binding ?rtd-id ?rcd-id ?spec)
+  (cons '$rtd (cons ?rtd-id (cons ?rcd-id ?spec))))
 
 (define-syntax-rule (r6rs-record-type-descriptor-binding-rtd ?binding)
   (car ?binding))
