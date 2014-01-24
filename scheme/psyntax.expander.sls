@@ -5231,29 +5231,31 @@
     (define foo-protocol	(gensym))
     (define field-clauses
       (%get-fields clause*))
-    (define field-names
-      (%get-field-names field-clauses))
-    (define mutable-field-names
-      (%get-mutable-field-names field-clauses))
-    ;;Indexes for safe accessors and mutators.
-    (define idx*	(%enumerate field-clauses))
-    (define set-foo-idx*
-      (%get-mutator-indices field-clauses))
-    ;;Names of safe accessors and mutators.
-    (define foo-x*
-      (%get-accessors foo field-clauses))
-    (define set-foo-x!*
-      (%get-mutators foo field-clauses))
-    ;;Names of unsafe accessors and mutators.
-    (define unsafe-foo-x*
-      (%get-unsafe-accessors foo field-clauses))
-    (define unsafe-set-foo-x!*
-      (%get-unsafe-mutators foo field-clauses))
-    ;;Names for unsafe index bindings.
-    (define unsafe-foo-x-idx*
-      (%get-unsafe-accessors-idx-names foo field-clauses))
-    (define unsafe-set-foo-x!-idx*
-      (%get-unsafe-mutators-idx-names foo field-clauses))
+    (define-values
+      (field-names
+		;A list of identifiers representing all the field names.
+       idx*
+		;A list  of fixnums  representing all the  field indexes
+		;(zero-based).
+       foo-x*
+		;A list  of identifiers  representing the  safe accessor
+		;names.
+       unsafe-foo-x*
+		;A list of identifiers  representing the unsafe accessor
+		;names.
+       mutable-field-names
+		;A list  of identifiers  representing the  mutable field
+		;names.
+       set-foo-idx*
+		;A  list  of  fixnums  representing  the  mutable  field
+		;indexes (zero-based).
+       set-foo-x!*
+		;A list of identifiers representing the mutator names.
+       unsafe-set-foo-x!*
+		;A list  of identifiers representing the  unsafe mutator
+		;names.
+       )
+      (%parse-field-specs foo field-clauses synner))
 
     ;;Safe field accessors and mutators alists.
     (define foo-fields-safe-accessors-table
@@ -5331,16 +5333,15 @@
 	 ,@(map (lambda (set-foo-x! idx)
 		  `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx (quote ,set-foo-x!))))
 	     set-foo-x!* set-foo-idx*)))
+
     (define vicare-output-code
       (if (strict-r6rs)
-	  `( ;;Binding for record type name.   It is a spcial binding in
-	    ;;the environment.
+	  `( ;;Binding for record type name.
 	    (define-syntax ,foo
 	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
 		    (list ,@foo-fields-safe-accessors-table)
 		    (list ,@foo-fields-safe-mutators-table))))
-	`( ;;Binding  for record type name.   It is a spcial  binding in
-	  ;;the environment.
+	`( ;;Binding for record type name.
 	  (define-syntax ,foo
 	    (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
 		  (list ,@foo-fields-safe-accessors-table)
@@ -5348,32 +5349,33 @@
 		  (list ,@foo-fields-unsafe-accessors-table)
 		  (list ,@foo-fields-unsafe-mutators-table)))
 	  ;; Unsafe record fields accessors.
-	  ,@(map (lambda (unsafe-foo-x idx unsafe-foo-x-idx)
-		   `(begin
-		      (define ,unsafe-foo-x-idx
-			;;The field at index 3  in the RTD is: the index
-			;;of  the first  field  of this  subtype in  the
-			;;layout of instances; it is the total number of
-			;;fields of the parent type.
-			(fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		      (define-syntax-rule (,unsafe-foo-x x)
-			($struct-ref x ,unsafe-foo-x-idx))
-		      ))
-	      unsafe-foo-x* idx* unsafe-foo-x-idx*)
+	  ,@(map (lambda (unsafe-foo-x idx)
+		   (let ((t (gensym)))
+		     `(begin
+			(define ,t
+			  ;;The  field at  index 3  in the  RTD is:  the
+			  ;;index of the first  field of this subtype in
+			  ;;the  layout of  instances; it  is the  total
+			  ;;number of fields of the parent type.
+			  (fx+ ,idx ($struct-ref ,foo-rtd 3)))
+			(define-syntax-rule (,unsafe-foo-x x)
+			  ($struct-ref x ,t)))))
+	      unsafe-foo-x* idx*)
 	  ;; Unsafe record fields mutators.
-	  ,@(map (lambda (unsafe-set-foo-x! idx unsafe-set-foo-x!-idx)
-		   `(begin
-		      (define ,unsafe-set-foo-x!-idx
-			;;The field at index 3  in the RTD is: the index
-			;;of  the first  field  of this  subtype in  the
-			;;layout of instances; it is the total number of
-			;;fields of the parent type.
-			(fx+ ,idx ($struct-ref ,foo-rtd 3)))
-		      (define-syntax-rule (,unsafe-set-foo-x! x v)
-			($struct-set! x ,unsafe-set-foo-x!-idx v))
-		      ))
-	      unsafe-set-foo-x!* set-foo-idx* unsafe-set-foo-x!-idx*)
+	  ,@(map (lambda (unsafe-set-foo-x! idx)
+		   (let ((t (gensym)))
+		     `(begin
+			(define ,t
+			  ;;The  field at  index 3  in the  RTD is:  the
+			  ;;index of the first  field of this subtype in
+			  ;;the  layout of  instances; it  is the  total
+			  ;;number of fields of the parent type.
+			  (fx+ ,idx ($struct-ref ,foo-rtd 3)))
+			(define-syntax-rule (,unsafe-set-foo-x! x v)
+			  ($struct-set! x ,t v)))))
+	      unsafe-set-foo-x!* set-foo-idx*)
 	  )))
+
     (bless
      (append r6rs-output-code vicare-output-code)))
 
@@ -5515,146 +5517,100 @@
       ((_ . ?rest)
        (%get-fields ?rest))))
 
-;;; --------------------------------------------------------------------
-
-  (define (%get-field-names field-clauses)
-    ;;Given the fields specification clause return a list of identifiers
-    ;;representing all the field names.
+  (define (%parse-field-specs foo field-clause* synner)
+    ;;Given the  arguments of the  fields specification clause  return 4
+    ;;values:
     ;;
-    (map (lambda (field)
-	   (syntax-match field (mutable immutable)
-	     ((mutable name accessor mutator)	(identifier? accessor)	name)
-	     ((immutable name accessor)		(identifier? accessor)	name)
-	     ((mutable name)			(identifier? name)	name)
-	     ((immutable name)			(identifier? name)	name)
-	     (name				(identifier? name)	name)
-	     (others
-	      (stx-error field "invalid field spec"))))
-      field-clauses))
-
-  (define (%get-mutable-field-names field-clauses)
-    ;;Given the fields specification clause return a list of identifiers
-    ;;representing the mutable field names.
+    ;;1..The list of identifiers representing all the field names.
     ;;
-    (syntax-match field-clauses (mutable immutable)
-      (()
-       '())
-
-      (((mutable name accessor mutator) . rest)
-       (identifier? accessor)
-       (cons name (%get-mutable-field-names rest)))
-
-      (((immutable name accessor) . rest)
-       (identifier? accessor)
-       (%get-mutable-field-names rest))
-
-      (((mutable name) . rest)
-       (identifier? name)
-       (cons name (%get-mutable-field-names rest)))
-
-      (((immutable name) . rest)
-       (identifier? name)
-       (%get-mutable-field-names rest))
-
-      ((name . rest)
-       (identifier? name)
-       (%get-mutable-field-names rest))
-
-      (others
-       (stx-error field-clauses "invalid field spec"))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%get-mutator-indices field-clauses)
-    (let recur ((fields field-clauses) (i 0))
-      (syntax-match fields (mutable)
-	(()
-	 '())
-	(((mutable . _) . rest)
-	 (cons i (recur rest (+ i 1))))
-	((_ . rest)
-	 (recur rest (+ i 1))))))
-
-  (define (%get-mutators foo field-clauses)
-    (define (gen-name x)
-      (id foo foo "-" x "-set!"))
-    (let recur ((fields field-clauses))
-      (syntax-match fields (mutable)
-	(()
-	 '())
-	(((mutable name accessor mutator) . rest)
-	 (cons mutator (recur rest)))
-	(((mutable name) . rest)
-	 (cons (gen-name name) (recur rest)))
-	((_ . rest)
-	 (recur rest)))))
-
-  (define (%get-unsafe-mutators foo field-clauses)
-    (define (gen-name x)
-      (id foo "$" foo "-" x "-set!"))
-    (let f ((fields field-clauses))
-      (syntax-match fields (mutable)
-	(() '())
-	(((mutable name accessor mutator) . rest)
-	 (cons (gen-name name) (f rest)))
-	(((mutable name) . rest)
-	 (cons (gen-name name) (f rest)))
-	((_ . rest) (f rest)))))
-
-  (define (%get-unsafe-mutators-idx-names foo field-clauses)
-    (let f ((fields field-clauses))
-      (syntax-match fields (mutable)
-	(() '())
-	(((mutable name accessor mutator) . rest)
-	 (cons (gensym) (f rest)))
-	(((mutable name) . rest)
-	 (cons (gensym) (f rest)))
-	((_ . rest) (f rest)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%get-accessors foo field-clauses)
-    (define (gen-name x)
+    ;;2..The  list  of  fixnums  representings all  the  field  relative
+    ;;   indexes (zero-based).
+    ;;
+    ;;3..A list of identifiers representing the safe accessor names.
+    ;;
+    ;;4..A list of identifiers representing the unsafe accessor names.
+    ;;
+    ;;5..The list of identifiers representing the mutable field names.
+    ;;
+    ;;6..The list  of fixnums  representings the mutable  field relative
+    ;;   indexes (zero-based).
+    ;;
+    ;;7..A list of identifiers representing the safe mutator names.
+    ;;
+    ;;8..A list of identifiers representing the unsafe mutator names.
+    ;;
+    ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
+    ;;
+    (define (gen-safe-accessor-name x)
       (id foo foo "-" x))
-    (map (lambda (field)
-	   (syntax-match field (mutable immutable)
-	     ((mutable name accessor mutator) (identifier? accessor) accessor)
-	     ((immutable name accessor)       (identifier? accessor) accessor)
-	     ((mutable name)                  (identifier? name) (gen-name name))
-	     ((immutable name)                (identifier? name) (gen-name name))
-	     (name                            (identifier? name) (gen-name name))
-	     (others (stx-error field "invalid field spec"))))
-      field-clauses))
-
-  (define (%get-unsafe-accessors foo field-clauses)
-    (define (gen-name x)
+    (define (gen-unsafe-accessor-name x)
       (id foo "$" foo "-" x))
-    (map (lambda (field)
-	   (syntax-match field (mutable immutable)
-	     ((mutable name accessor mutator) (identifier? accessor) (gen-name name))
-	     ((immutable name accessor)       (identifier? accessor) (gen-name name))
-	     ((mutable name)                  (identifier? name) (gen-name name))
-	     ((immutable name)                (identifier? name) (gen-name name))
-	     (name                            (identifier? name) (gen-name name))
-	     (others (stx-error field "invalid field spec"))))
-      field-clauses))
+    (define (gen-safe-mutator-name x)
+      (id foo foo "-" x "-set!"))
+    (define (gen-unsafe-mutator-name x)
+      (id foo "$" foo "-" x "-set!"))
+    (let loop ((field-clause*		field-clause*)
+	       (i			0)
+	       (field*			'())
+	       (idx*			'())
+	       (accessor*		'())
+	       (unsafe-accessor*	'())
+	       (mutable-field*		'())
+	       (mutable-idx*		'())
+	       (mutator*		'())
+	       (unsafe-mutator*		'()))
+      (syntax-match field-clause* (mutable immutable)
+	(()
+	 (values (reverse field*) (reverse idx*) (reverse accessor*) (reverse unsafe-accessor*)
+		 (reverse mutable-field*) (reverse mutable-idx*) (reverse mutator*) (reverse unsafe-mutator*)))
 
-  (define (%get-unsafe-accessors-idx-names foo field-clauses)
-    (map (lambda (x)
-	   (gensym))
-      field-clauses))
+	(((mutable   ?name ?accessor ?mutator) . ?rest)
+	 (identifier? ?accessor)
+	 (loop ?rest (+ 1 i)
+	       (cons ?name field*)		(cons i idx*)
+	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
+	       (cons ?name mutable-field*)	(cons i mutable-idx*)
+	       (cons ?mutator mutator*)		(cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)))
 
-;;; --------------------------------------------------------------------
+	(((immutable ?name ?accessor) . ?rest)
+	 (identifier? ?accessor)
+	 (loop ?rest (+ 1 i)
+	       (cons ?name field*)		(cons i idx*)
+	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
+	       mutable-field*			mutable-idx*
+	       mutator*				unsafe-mutator*))
 
-  (define (%enumerate ls)
-    ;;Return a list of zero-based exact integers with the same length of
-    ;;LS.
-    ;;
-    (let recur ((ls ls)
-		(i  0))
-      (if (null? ls)
-	  '()
-	(cons i (recur (cdr ls) (+ i 1))))))
+	(((mutable   ?name) . ?rest)
+	 (identifier? ?name)
+	 (loop ?rest (+ 1 i)
+	       (cons ?name field*)		(cons i idx*)
+	       (cons (gen-safe-accessor-name   ?name) accessor*)
+	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
+	       (cons ?name mutable-field*)	(cons i mutable-idx*)
+	       (cons (gen-safe-mutator-name    ?name) mutator*)
+	       (cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)))
+
+	(((immutable ?name) . ?rest)
+	 (identifier? ?name)
+	 (loop ?rest (+ 1 i)
+	       (cons ?name field*)		(cons i idx*)
+	       (cons (gen-safe-accessor-name   ?name) accessor*)
+	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
+	       mutable-field*			mutable-idx*
+	       mutator*				unsafe-mutator*))
+
+	((?name . ?rest)
+	 (identifier? ?name)
+	 (loop ?rest (+ 1 i)
+	       (cons ?name field*)		(cons i idx*)
+	       (cons (gen-safe-accessor-name   ?name) accessor*)
+	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
+	       mutable-field*			mutable-idx*
+	       mutator*				unsafe-mutator*))
+
+	((?spec . ?rest)
+	 (synner "invalid field specification in DEFINE-RECORD-TYPE syntax"
+		 ?spec)))))
 
 ;;; --------------------------------------------------------------------
 
