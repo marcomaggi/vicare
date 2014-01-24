@@ -5295,12 +5295,18 @@
 	(map syntax->datum mutable-field-names)
 	unsafe-set-foo-x!*))
 
+    ;;Code  for parent  record-type  descriptor  and parent  record-type
+    ;;constructor descriptor retrieval.
+    (define-values (parent-rtd-code parent-rcd-code)
+      (%make-parent-rtd+rcd-code clause* synner))
+
     ;;Code  for  record-type   descriptor  and  record-type  constructor
     ;;descriptor.
     (define foo-rtd-code
-      (%make-rtd-code foo clause* (%make-parent-rtd-code clause*) synner))
+      (%make-rtd-code foo clause* parent-rtd-code synner))
     (define foo-rcd-code
-      (%make-rcd-code clause* foo-rtd protocol (%make-parent-rcd-code clause*)))
+      (%make-rcd-code clause* foo-rtd protocol parent-rcd-code))
+
     ;;Code for protocol.
     (define protocol-code
       (%get-protocol-code clause*))
@@ -5403,6 +5409,9 @@
 	   (next id ?clause*))))))
 
   (define (%make-rtd-code name clause* parent-rtd-code synner)
+    ;;Return a  sexp which,  when evaluated,  will return  a record-type
+    ;;descriptor.
+    ;;
     (define uid-code
       (let ((clause (get-clause 'nongenerative clause*)))
 	(syntax-match clause ()
@@ -5460,246 +5469,245 @@
     `(make-record-type-descriptor ',name ,parent-rtd-code
 				  ,uid-code ,sealed? ,opaque? ,fields))
 
-    (define (%make-parent-rtd-code clause*)
-      (syntax-match (get-clause 'parent clause*) ()
-	;;If there is  a PARENT clause insert code that  retrieves the RTD
-	;;from the parent type name.
-	((_ name)
-	 `(record-type-descriptor ,name))
+  (define (%make-rcd-code clause* foo-rtd protocol parent-rcd-code)
+    ;;Return a sexp  which, when evaluated, will  return the record-type
+    ;;default constructor descriptor.
+    ;;
+    `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,protocol))
 
-	;;If  there is  no PARENT  clause try  to retrieve  the expression
+  (define (%make-parent-rtd+rcd-code clause* synner)
+    ;;Return 2  values: a  sexp which, when  evaluated, will  return the
+    ;;parent record-type descriptor; a  sexp which, when evaluated, will
+    ;;return the parent record-type default constructor descriptor.
+    ;;
+    (let ((parent-clause (get-clause 'parent clause*)))
+      (syntax-match parent-clause ()
+	;;If there is a PARENT clause insert code that retrieves the RTD
+	;;from the parent type name.
+	((_ ?name)
+	 (values `(record-type-descriptor ,?name)
+		 `(record-constructor-descriptor ,?name)))
+
+	;;If there  is no PARENT  clause try to retrieve  the expression
 	;;evaluating to the RTD.
 	(#f
-	 (syntax-match (get-clause 'parent-rtd clause*) ()
-	   ((_ rtd rcd)
-	    rtd)
-	   ;;If neither the PARENT nor the PARENT-RTD clauses are present:
-	   ;;just return false.
-	   (#f #f)))
-	))
+	 (let ((parent-rtd-clause (get-clause 'parent-rtd clause*)))
+	   (syntax-match parent-rtd-clause ()
+	     ((_ ?rtd ?rcd)
+	      (values ?rtd ?rcd))
 
-    (define (%make-parent-rcd-code clause*)
-      (syntax-match (get-clause 'parent clause*) ()
-	;;If there is  a PARENT clause insert code that  retrieves the RCD
-	;;from the parent type name.
-	((_ name)
-	 `(record-constructor-descriptor ,name))
+	     ;;If  neither the  PARENT  nor the  PARENT-RTD clauses  are
+	     ;;present: just return false.
+	     (#f
+	      (values #f #f))
 
-	;;If  there is  no PARENT  clause try  to retrieve  the expression
-	;;evaluating to the RCD.
-	(#f
-	 (syntax-match (get-clause 'parent-rtd clause*) ()
-	   ((_ rtd rcd)
-	    rcd)
-	   ;;If neither the PARENT nor the PARENT-RTD clauses are present:
-	   ;;just return false.
-	   (#f #f)))
-	))
+	     (_
+	      (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
 
-    (define (%make-rcd-code clause* foo-rtd protocol parent-rcd-code)
-      `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,protocol))
+	(_
+	 (synner "invalid syntax in PARENT clause" parent-clause)))))
 
-    (define (%get-protocol-code clause*)
-      (syntax-match (get-clause 'protocol clause*) ()
-	((_ ?expr)	?expr)
-	(#f		#f)))
+  (define (%get-protocol-code clause*)
+    (syntax-match (get-clause 'protocol clause*) ()
+      ((_ ?expr)	?expr)
+      (#f		#f)))
 
-    (define (%get-fields clause*)
-      (syntax-match clause* (fields)
+  (define (%get-fields clause*)
+    (syntax-match clause* (fields)
+      (()
+       '())
+      (((fields f* ...) . _)
+       f*)
+      ((_ . rest)
+       (%get-fields rest))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%get-field-names field-clauses)
+    ;;Given the fields specification clause return a list of identifiers
+    ;;representing all the field names.
+    ;;
+    (map (lambda (field)
+	   (syntax-match field (mutable immutable)
+	     ((mutable name accessor mutator)	(identifier? accessor)	name)
+	     ((immutable name accessor)		(identifier? accessor)	name)
+	     ((mutable name)			(identifier? name)	name)
+	     ((immutable name)			(identifier? name)	name)
+	     (name				(identifier? name)	name)
+	     (others
+	      (stx-error field "invalid field spec"))))
+      field-clauses))
+
+  (define (%get-mutable-field-names field-clauses)
+    ;;Given the fields specification clause return a list of identifiers
+    ;;representing the mutable field names.
+    ;;
+    (syntax-match field-clauses (mutable immutable)
+      (()
+       '())
+
+      (((mutable name accessor mutator) . rest)
+       (identifier? accessor)
+       (cons name (%get-mutable-field-names rest)))
+
+      (((immutable name accessor) . rest)
+       (identifier? accessor)
+       (%get-mutable-field-names rest))
+
+      (((mutable name) . rest)
+       (identifier? name)
+       (cons name (%get-mutable-field-names rest)))
+
+      (((immutable name) . rest)
+       (identifier? name)
+       (%get-mutable-field-names rest))
+
+      ((name . rest)
+       (identifier? name)
+       (%get-mutable-field-names rest))
+
+      (others
+       (stx-error field-clauses "invalid field spec"))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%get-mutator-indices field-clauses)
+    (let recur ((fields field-clauses) (i 0))
+      (syntax-match fields (mutable)
 	(()
 	 '())
-	(((fields f* ...) . _)
-	 f*)
+	(((mutable . _) . rest)
+	 (cons i (recur rest (+ i 1))))
 	((_ . rest)
-	 (%get-fields rest))))
+	 (recur rest (+ i 1))))))
 
-;;; --------------------------------------------------------------------
-
-    (define (%get-field-names field-clauses)
-      ;;Given the fields specification clause return a list of identifiers
-      ;;representing all the field names.
-      ;;
-      (map (lambda (field)
-	     (syntax-match field (mutable immutable)
-	       ((mutable name accessor mutator)	(identifier? accessor)	name)
-	       ((immutable name accessor)		(identifier? accessor)	name)
-	       ((mutable name)			(identifier? name)	name)
-	       ((immutable name)			(identifier? name)	name)
-	       (name				(identifier? name)	name)
-	       (others
-		(stx-error field "invalid field spec"))))
-	field-clauses))
-
-    (define (%get-mutable-field-names field-clauses)
-      ;;Given the fields specification clause return a list of identifiers
-      ;;representing the mutable field names.
-      ;;
-      (syntax-match field-clauses (mutable immutable)
+  (define (%get-mutators foo field-clauses)
+    (define (gen-name x)
+      (id foo foo "-" x "-set!"))
+    (let recur ((fields field-clauses))
+      (syntax-match fields (mutable)
 	(()
 	 '())
-
 	(((mutable name accessor mutator) . rest)
-	 (identifier? accessor)
-	 (cons name (%get-mutable-field-names rest)))
-
-	(((immutable name accessor) . rest)
-	 (identifier? accessor)
-	 (%get-mutable-field-names rest))
-
+	 (cons mutator (recur rest)))
 	(((mutable name) . rest)
-	 (identifier? name)
-	 (cons name (%get-mutable-field-names rest)))
+	 (cons (gen-name name) (recur rest)))
+	((_ . rest)
+	 (recur rest)))))
 
-	(((immutable name) . rest)
-	 (identifier? name)
-	 (%get-mutable-field-names rest))
+  (define (%get-unsafe-mutators foo field-clauses)
+    (define (gen-name x)
+      (id foo "$" foo "-" x "-set!"))
+    (let f ((fields field-clauses))
+      (syntax-match fields (mutable)
+	(() '())
+	(((mutable name accessor mutator) . rest)
+	 (cons (gen-name name) (f rest)))
+	(((mutable name) . rest)
+	 (cons (gen-name name) (f rest)))
+	((_ . rest) (f rest)))))
 
-	((name . rest)
-	 (identifier? name)
-	 (%get-mutable-field-names rest))
-
-	(others
-	 (stx-error field-clauses "invalid field spec"))))
-
-;;; --------------------------------------------------------------------
-
-    (define (%get-mutator-indices field-clauses)
-      (let recur ((fields field-clauses) (i 0))
-	(syntax-match fields (mutable)
-	  (()
-	   '())
-	  (((mutable . _) . rest)
-	   (cons i (recur rest (+ i 1))))
-	  ((_ . rest)
-	   (recur rest (+ i 1))))))
-
-    (define (%get-mutators foo field-clauses)
-      (define (gen-name x)
-	(id foo foo "-" x "-set!"))
-      (let recur ((fields field-clauses))
-	(syntax-match fields (mutable)
-	  (()
-	   '())
-	  (((mutable name accessor mutator) . rest)
-	   (cons mutator (recur rest)))
-	  (((mutable name) . rest)
-	   (cons (gen-name name) (recur rest)))
-	  ((_ . rest)
-	   (recur rest)))))
-
-    (define (%get-unsafe-mutators foo field-clauses)
-      (define (gen-name x)
-	(id foo "$" foo "-" x "-set!"))
-      (let f ((fields field-clauses))
-	(syntax-match fields (mutable)
-	  (() '())
-	  (((mutable name accessor mutator) . rest)
-	   (cons (gen-name name) (f rest)))
-	  (((mutable name) . rest)
-	   (cons (gen-name name) (f rest)))
-	  ((_ . rest) (f rest)))))
-
-    (define (%get-unsafe-mutators-idx-names foo field-clauses)
-      (let f ((fields field-clauses))
-	(syntax-match fields (mutable)
-	  (() '())
-	  (((mutable name accessor mutator) . rest)
-	   (cons (gensym) (f rest)))
-	  (((mutable name) . rest)
-	   (cons (gensym) (f rest)))
-	  ((_ . rest) (f rest)))))
+  (define (%get-unsafe-mutators-idx-names foo field-clauses)
+    (let f ((fields field-clauses))
+      (syntax-match fields (mutable)
+	(() '())
+	(((mutable name accessor mutator) . rest)
+	 (cons (gensym) (f rest)))
+	(((mutable name) . rest)
+	 (cons (gensym) (f rest)))
+	((_ . rest) (f rest)))))
 
 ;;; --------------------------------------------------------------------
 
-    (define (%get-accessors foo field-clauses)
-      (define (gen-name x)
-	(id foo foo "-" x))
-      (map (lambda (field)
-	     (syntax-match field (mutable immutable)
-	       ((mutable name accessor mutator) (identifier? accessor) accessor)
-	       ((immutable name accessor)       (identifier? accessor) accessor)
-	       ((mutable name)                  (identifier? name) (gen-name name))
-	       ((immutable name)                (identifier? name) (gen-name name))
-	       (name                            (identifier? name) (gen-name name))
-	       (others (stx-error field "invalid field spec"))))
-	field-clauses))
+  (define (%get-accessors foo field-clauses)
+    (define (gen-name x)
+      (id foo foo "-" x))
+    (map (lambda (field)
+	   (syntax-match field (mutable immutable)
+	     ((mutable name accessor mutator) (identifier? accessor) accessor)
+	     ((immutable name accessor)       (identifier? accessor) accessor)
+	     ((mutable name)                  (identifier? name) (gen-name name))
+	     ((immutable name)                (identifier? name) (gen-name name))
+	     (name                            (identifier? name) (gen-name name))
+	     (others (stx-error field "invalid field spec"))))
+      field-clauses))
 
-    (define (%get-unsafe-accessors foo field-clauses)
-      (define (gen-name x)
-	(id foo "$" foo "-" x))
-      (map (lambda (field)
-	     (syntax-match field (mutable immutable)
-	       ((mutable name accessor mutator) (identifier? accessor) (gen-name name))
-	       ((immutable name accessor)       (identifier? accessor) (gen-name name))
-	       ((mutable name)                  (identifier? name) (gen-name name))
-	       ((immutable name)                (identifier? name) (gen-name name))
-	       (name                            (identifier? name) (gen-name name))
-	       (others (stx-error field "invalid field spec"))))
-	field-clauses))
+  (define (%get-unsafe-accessors foo field-clauses)
+    (define (gen-name x)
+      (id foo "$" foo "-" x))
+    (map (lambda (field)
+	   (syntax-match field (mutable immutable)
+	     ((mutable name accessor mutator) (identifier? accessor) (gen-name name))
+	     ((immutable name accessor)       (identifier? accessor) (gen-name name))
+	     ((mutable name)                  (identifier? name) (gen-name name))
+	     ((immutable name)                (identifier? name) (gen-name name))
+	     (name                            (identifier? name) (gen-name name))
+	     (others (stx-error field "invalid field spec"))))
+      field-clauses))
 
-    (define (%get-unsafe-accessors-idx-names foo field-clauses)
-      (map (lambda (x)
-	     (gensym))
-	field-clauses))
-
-;;; --------------------------------------------------------------------
-
-    (define (%enumerate ls)
-      ;;Return a list of zero-based exact integers with the same length of
-      ;;LS.
-      ;;
-      (let recur ((ls ls)
-		  (i  0))
-	(if (null? ls)
-	    '()
-	  (cons i (recur (cdr ls) (+ i 1))))))
+  (define (%get-unsafe-accessors-idx-names foo field-clauses)
+    (map (lambda (x)
+	   (gensym))
+      field-clauses))
 
 ;;; --------------------------------------------------------------------
 
-    (define (%verify-clauses x cls*)
-      (define VALID-KEYWORDS
-	(map bless
-	  '(fields parent parent-rtd protocol sealed opaque nongenerative)))
-      (define (%free-id-member? x ls)
-	(and (pair? ls)
-	     (or (free-id=? x (car ls))
-		 (%free-id-member? x (cdr ls)))))
-      (let loop ((cls*  cls*)
-		 (seen* '()))
-	(unless (null? cls*)
-	  (syntax-match (car cls*) ()
-	    ((kwd . rest)
-	     (cond ((or (not (identifier? kwd))
-			(not (%free-id-member? kwd VALID-KEYWORDS)))
-		    (stx-error kwd "not a valid define-record-type keyword"))
-		   ((bound-id-member? kwd seen*)
-		    (syntax-violation __who__ "duplicate use of keyword " x kwd))
-		   (else
-		    (loop (cdr cls*) (cons kwd seen*)))))
-	    (cls
-	     (stx-error cls "malformed define-record-type clause"))))))
+  (define (%enumerate ls)
+    ;;Return a list of zero-based exact integers with the same length of
+    ;;LS.
+    ;;
+    (let recur ((ls ls)
+		(i  0))
+      (if (null? ls)
+	  '()
+	(cons i (recur (cdr ls) (+ i 1))))))
 
-    (define (id ctxt . str*)
-      ;;Given the  identifier CTXT  and a  list of  strings or  symbols or
-      ;;identifiers  STR*: concatenate  all the  items in  STR*, with  the
-      ;;result build  and return a new  identifier in the same  context of
-      ;;CTXT.
-      ;;
-      (datum->syntax ctxt
-		     (string->symbol
-		      (apply string-append
-			     (map (lambda (x)
-				    (cond ((symbol? x)
-					   (symbol->string x))
-					  ((string? x)
-					   x)
-					  ((identifier? x)
-					   (symbol->string (syntax->datum x)))
-					  (else
-					   (assertion-violation __who__ "BUG"))))
-			       str*)))))
+;;; --------------------------------------------------------------------
 
-    #| end of module: DEFINE-RECORD-TYPE-MACRO |# )
+  (define (%verify-clauses x cls*)
+    (define VALID-KEYWORDS
+      (map bless
+	'(fields parent parent-rtd protocol sealed opaque nongenerative)))
+    (define (%free-id-member? x ls)
+      (and (pair? ls)
+	   (or (free-id=? x (car ls))
+	       (%free-id-member? x (cdr ls)))))
+    (let loop ((cls*  cls*)
+	       (seen* '()))
+      (unless (null? cls*)
+	(syntax-match (car cls*) ()
+	  ((kwd . rest)
+	   (cond ((or (not (identifier? kwd))
+		      (not (%free-id-member? kwd VALID-KEYWORDS)))
+		  (stx-error kwd "not a valid define-record-type keyword"))
+		 ((bound-id-member? kwd seen*)
+		  (syntax-violation __who__ "duplicate use of keyword " x kwd))
+		 (else
+		  (loop (cdr cls*) (cons kwd seen*)))))
+	  (cls
+	   (stx-error cls "malformed define-record-type clause"))))))
+
+  (define (id ctxt . str*)
+    ;;Given the  identifier CTXT  and a  list of  strings or  symbols or
+    ;;identifiers  STR*: concatenate  all the  items in  STR*, with  the
+    ;;result build  and return a new  identifier in the same  context of
+    ;;CTXT.
+    ;;
+    (datum->syntax ctxt
+		   (string->symbol
+		    (apply string-append
+			   (map (lambda (x)
+				  (cond ((symbol? x)
+					 (symbol->string x))
+					((string? x)
+					 x)
+					((identifier? x)
+					 (symbol->string (syntax->datum x)))
+					(else
+					 (assertion-violation __who__ "BUG"))))
+			     str*)))))
+
+  #| end of module: DEFINE-RECORD-TYPE-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: RECORD-TYPE-AND-RECORD?
