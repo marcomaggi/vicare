@@ -5341,40 +5341,38 @@
 	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
 		    (list ,@foo-fields-safe-accessors-table)
 		    (list ,@foo-fields-safe-mutators-table))))
-	`( ;;Binding for record type name.
-	  (define-syntax ,foo
-	    (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
-		  (list ,@foo-fields-safe-accessors-table)
-		  (list ,@foo-fields-safe-mutators-table)
-		  (list ,@foo-fields-unsafe-accessors-table)
-		  (list ,@foo-fields-unsafe-mutators-table)))
-	  ;; Unsafe record fields accessors.
-	  ,@(map (lambda (unsafe-foo-x idx)
-		   (let ((t (gensym)))
-		     `(begin
-			(define ,t
-			  ;;The  field at  index 3  in the  RTD is:  the
-			  ;;index of the first  field of this subtype in
-			  ;;the  layout of  instances; it  is the  total
-			  ;;number of fields of the parent type.
-			  (fx+ ,idx ($struct-ref ,foo-rtd 3)))
-			(define-syntax-rule (,unsafe-foo-x x)
-			  ($struct-ref x ,t)))))
-	      unsafe-foo-x* idx*)
-	  ;; Unsafe record fields mutators.
-	  ,@(map (lambda (unsafe-set-foo-x! idx)
-		   (let ((t (gensym)))
-		     `(begin
-			(define ,t
-			  ;;The  field at  index 3  in the  RTD is:  the
-			  ;;index of the first  field of this subtype in
-			  ;;the  layout of  instances; it  is the  total
-			  ;;number of fields of the parent type.
-			  (fx+ ,idx ($struct-ref ,foo-rtd 3)))
-			(define-syntax-rule (,unsafe-set-foo-x! x v)
-			  ($struct-set! x ,t v)))))
-	      unsafe-set-foo-x!* set-foo-idx*)
-	  )))
+	(let ((foo-first-field-offset (gensym)))
+	  `( ;;Binding for record type name.
+	    (define-syntax ,foo
+	      (list '$rtd (syntax ,foo-rtd) (syntax ,foo-rcd)
+		    (list ,@foo-fields-safe-accessors-table)
+		    (list ,@foo-fields-safe-mutators-table)
+		    (list ,@foo-fields-unsafe-accessors-table)
+		    (list ,@foo-fields-unsafe-mutators-table)))
+	    (define ,foo-first-field-offset
+	      ;;The field  at index 3  in the RTD  is: the index  of the
+	      ;;first field of this subtype  in the layout of instances;
+	      ;;it is the total number of fields of the parent type.
+	      ($struct-ref ,foo-rtd 3))
+	    ;; Unsafe record fields accessors.
+	    ,@(map (lambda (unsafe-foo-x idx)
+		     (let ((t (gensym)))
+		       `(begin
+			  (define ,t
+			    (fx+ ,idx ,foo-first-field-offset))
+			  (define-syntax-rule (,unsafe-foo-x x)
+			    ($struct-ref x ,t)))))
+		unsafe-foo-x* idx*)
+	    ;; Unsafe record fields mutators.
+	    ,@(map (lambda (unsafe-set-foo-x! idx)
+		     (let ((t (gensym)))
+		       `(begin
+			  (define ,t
+			    (fx+ ,idx ,foo-first-field-offset))
+			  (define-syntax-rule (,unsafe-set-foo-x! x v)
+			    ($struct-set! x ,t v)))))
+		unsafe-set-foo-x!* set-foo-idx*)
+	    ))))
 
     (bless
      (append r6rs-output-code vicare-output-code)))
