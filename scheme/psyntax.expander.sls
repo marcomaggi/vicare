@@ -5565,7 +5565,9 @@
 		 (reverse mutable-field*) (reverse mutable-idx*) (reverse mutator*) (reverse unsafe-mutator*)))
 
 	(((mutable   ?name ?accessor ?mutator) . ?rest)
-	 (identifier? ?accessor)
+	 (and (identifier? ?name)
+	      (identifier? ?accessor)
+	      (identifier? ?mutator))
 	 (loop ?rest (+ 1 i)
 	       (cons ?name field*)		(cons i idx*)
 	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
@@ -5573,7 +5575,8 @@
 	       (cons ?mutator mutator*)		(cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)))
 
 	(((immutable ?name ?accessor) . ?rest)
-	 (identifier? ?accessor)
+	 (and (identifier? ?name)
+	      (identifier? ?accessor))
 	 (loop ?rest (+ 1 i)
 	       (cons ?name field*)		(cons i idx*)
 	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
