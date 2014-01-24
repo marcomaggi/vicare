@@ -5226,9 +5226,9 @@
 
     (define-values (foo make-foo foo?)
       (%parse-full-name-spec namespec))
-    (define foo-rtd	(gensym))
-    (define foo-rcd	(gensym))
-    (define protocol	(gensym))
+    (define foo-rtd		(gensym))
+    (define foo-rcd		(gensym))
+    (define foo-protocol	(gensym))
     (define field-clauses
       (%get-fields clause*))
     (define field-names
@@ -5305,17 +5305,18 @@
     (define foo-rtd-code
       (%make-rtd-code foo clause* parent-rtd-code synner))
     (define foo-rcd-code
-      (%make-rcd-code clause* foo-rtd protocol parent-rcd-code))
+      (%make-rcd-code clause* foo-rtd foo-protocol parent-rcd-code))
 
     ;;Code for protocol.
     (define protocol-code
-      (%get-protocol-code clause*))
+      (%get-protocol-code clause* synner))
+
     (define r6rs-output-code
       `(begin
 	 ;;Record type descriptor.
 	 (define ,foo-rtd ,foo-rtd-code)
 	 ;;Protocol function.
-	 (define ,protocol ,protocol-code)
+	 (define ,foo-protocol ,protocol-code)
 	 ;;Record constructor descriptor.
 	 (define ,foo-rcd ,foo-rcd-code)
 	 ;;Record instance predicate.
@@ -5392,28 +5393,12 @@
 	       (id foo foo "?")))
       ))
 
-  (define (get-clause sym clause*)
-    ;;Given a symbol SYM representing the  name of a clause and a syntax
-    ;;object  CLAUSE*  representing  the clauses:  search  the  selected
-    ;;clause and return it as syntax object.  When no matching clause is
-    ;;found: return false.
-    ;;
-    (let next ((id       (bless sym))
-	       (clause*  clause*))
-      (syntax-match clause* ()
-	(()
-	 #f)
-	(((?key . ?rest) . ?clause*)
-	 (if (free-id=? id ?key)
-	     `(,?key . ,?rest)
-	   (next id ?clause*))))))
-
   (define (%make-rtd-code name clause* parent-rtd-code synner)
     ;;Return a  sexp which,  when evaluated,  will return  a record-type
     ;;descriptor.
     ;;
     (define uid-code
-      (let ((clause (get-clause 'nongenerative clause*)))
+      (let ((clause (%get-clause 'nongenerative clause*)))
 	(syntax-match clause ()
 	  ((_)
 	   (quasiquote (quote (unquote (gensym)))))
@@ -5424,9 +5409,8 @@
 	  (#f	#f)
 	  (_
 	   (synner "expected symbol or no argument in nongenerative clause" clause)))))
-
     (define sealed?
-      (let ((clause (get-clause 'sealed clause*)))
+      (let ((clause (%get-clause 'sealed clause*)))
 	(syntax-match clause ()
 	  ((_ #t)	#t)
 	  ((_ #f)	#f)
@@ -5434,9 +5418,8 @@
 	  (#f		#f)
 	  (_
 	   (synner "invalid argument in SEALED clause" clause)))))
-
     (define opaque?
-      (let ((clause (get-clause 'opaque clause*)))
+      (let ((clause (%get-clause 'opaque clause*)))
 	(syntax-match clause ()
 	  ((_ #t)	#t)
 	  ((_ #f)	#f)
@@ -5444,9 +5427,8 @@
 	  (#f		#f)
 	  (_
 	   (synner "invalid argument in OPAQUE clause" clause)))))
-
     (define fields
-      (let ((clause (get-clause 'fields clause*)))
+      (let ((clause (%get-clause 'fields clause*)))
 	(syntax-match clause ()
 	  ((_ field-spec* ...)
 	   `(quote ,(list->vector
@@ -5465,22 +5447,21 @@
 
 	  (_
 	   (synner "invalid syntax in FIELDS clause" clause)))))
-
     `(make-record-type-descriptor ',name ,parent-rtd-code
 				  ,uid-code ,sealed? ,opaque? ,fields))
 
-  (define (%make-rcd-code clause* foo-rtd protocol parent-rcd-code)
+  (define (%make-rcd-code clause* foo-rtd foo-protocol parent-rcd-code)
     ;;Return a sexp  which, when evaluated, will  return the record-type
     ;;default constructor descriptor.
     ;;
-    `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,protocol))
+    `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-protocol))
 
   (define (%make-parent-rtd+rcd-code clause* synner)
     ;;Return 2  values: a  sexp which, when  evaluated, will  return the
     ;;parent record-type descriptor; a  sexp which, when evaluated, will
     ;;return the parent record-type default constructor descriptor.
     ;;
-    (let ((parent-clause (get-clause 'parent clause*)))
+    (let ((parent-clause (%get-clause 'parent clause*)))
       (syntax-match parent-clause ()
 	;;If there is a PARENT clause insert code that retrieves the RTD
 	;;from the parent type name.
@@ -5491,7 +5472,7 @@
 	;;If there  is no PARENT  clause try to retrieve  the expression
 	;;evaluating to the RTD.
 	(#f
-	 (let ((parent-rtd-clause (get-clause 'parent-rtd clause*)))
+	 (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
 	   (syntax-match parent-rtd-clause ()
 	     ((_ ?rtd ?rcd)
 	      (values ?rtd ?rcd))
@@ -5507,19 +5488,32 @@
 	(_
 	 (synner "invalid syntax in PARENT clause" parent-clause)))))
 
-  (define (%get-protocol-code clause*)
-    (syntax-match (get-clause 'protocol clause*) ()
-      ((_ ?expr)	?expr)
-      (#f		#f)))
+  (define (%get-protocol-code clause* synner)
+    ;;Return  a  sexp  which,   when  evaluated,  returns  the  protocol
+    ;;function.
+    ;;
+    (let ((clause (%get-clause 'protocol clause*)))
+      (syntax-match clause ()
+	((_ ?expr)
+	 ?expr)
+
+	;;No matching clause found.
+	(#f	#f)
+
+	(_
+	 (synner "invalid syntax in PROTOCOL clause" clause)))))
 
   (define (%get-fields clause*)
+    ;;Return   a  list   of  syntax   objects  representing   the  field
+    ;;specifications.
+    ;;
     (syntax-match clause* (fields)
       (()
        '())
-      (((fields f* ...) . _)
-       f*)
-      ((_ . rest)
-       (%get-fields rest))))
+      (((fields ?field-spec* ...) . _)
+       ?field-spec*)
+      ((_ . ?rest)
+       (%get-fields ?rest))))
 
 ;;; --------------------------------------------------------------------
 
@@ -5686,6 +5680,22 @@
 		  (loop (cdr cls*) (cons kwd seen*)))))
 	  (cls
 	   (stx-error cls "malformed define-record-type clause"))))))
+
+  (define (%get-clause sym clause*)
+    ;;Given a symbol SYM representing the  name of a clause and a syntax
+    ;;object  CLAUSE*  representing  the clauses:  search  the  selected
+    ;;clause and return it as syntax object.  When no matching clause is
+    ;;found: return false.
+    ;;
+    (let next ((id       (bless sym))
+	       (clause*  clause*))
+      (syntax-match clause* ()
+	(()
+	 #f)
+	(((?key . ?rest) . ?clause*)
+	 (if (free-id=? id ?key)
+	     `(,?key . ,?rest)
+	   (next id ?clause*))))))
 
   (define (id ctxt . str*)
     ;;Given the  identifier CTXT  and a  list of  strings or  symbols or
