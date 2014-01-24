@@ -4680,6 +4680,25 @@
        (or (bound-id=? id ($car id*))
 	   (bound-id-member? id ($cdr id*)))))
 
+(define* (identifier-append ctxt . str*)
+  ;;Given  the identifier  CTXT  and a  list of  strings  or symbols  or
+  ;;identifiers STR*: concatenate all the items in STR*, with the result
+  ;;build and return a new identifier in the same context of CTXT.
+  ;;
+  (datum->stx ctxt
+	      (string->symbol
+	       (apply string-append
+		      (map (lambda (x)
+			     (cond ((symbol? x)
+				    (symbol->string x))
+				   ((string? x)
+				    x)
+				   ((identifier? x)
+				    (symbol->string (syntax->datum x)))
+				   (else
+				    (assertion-violation __who__ "BUG"))))
+			str*)))))
+
 
 (define-syntax syntax-match
   ;;The SYNTAX-MATCH macro is almost like SYNTAX-CASE macro.  Except that:
@@ -5372,8 +5391,8 @@
       (foo
        (identifier? foo)
        (values foo
-	       (id foo "make-" (syntax->datum foo))
-	       (id foo foo "?")))
+	       (identifier-append  foo "make-" (syntax->datum foo))
+	       (identifier-append  foo foo "?")))
       ))
 
   (define (%make-rtd-code name clause* parent-rtd-code synner)
@@ -5523,13 +5542,13 @@
     ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
     ;;
     (define (gen-safe-accessor-name x)
-      (id foo foo "-" x))
+      (identifier-append  foo foo "-" x))
     (define (gen-unsafe-accessor-name x)
-      (id foo "$" foo "-" x))
+      (identifier-append  foo "$" foo "-" x))
     (define (gen-safe-mutator-name x)
-      (id foo foo "-" x "-set!"))
+      (identifier-append  foo foo "-" x "-set!"))
     (define (gen-unsafe-mutator-name x)
-      (id foo "$" foo "-" x "-set!"))
+      (identifier-append  foo "$" foo "-" x "-set!"))
     (let loop ((field-clause*		field-clause*)
 	       (i			0)
 	       (field*			'())
@@ -5696,26 +5715,6 @@
 	     `(,?key . ,?rest)
 	   (next id ?clause*))))))
 
-  (define (id ctxt . str*)
-    ;;Given the  identifier CTXT  and a  list of  strings or  symbols or
-    ;;identifiers  STR*: concatenate  all the  items in  STR*, with  the
-    ;;result build  and return a new  identifier in the same  context of
-    ;;CTXT.
-    ;;
-    (datum->stx ctxt
-		(string->symbol
-		 (apply string-append
-			(map (lambda (x)
-			       (cond ((symbol? x)
-				      (symbol->string x))
-				     ((string? x)
-				      x)
-				     ((identifier? x)
-				      (symbol->string (syntax->datum x)))
-				     (else
-				      (assertion-violation __who__ "BUG"))))
-			  str*)))))
-
   (define (%named-gensym foo suffix)
     (gensym (string-append
 	     (symbol->string (syntax->datum foo))
@@ -5741,40 +5740,35 @@
 
 ;;;; module non-core-macro-transformer: DEFINE-CONDITION-TYPE
 
-(define define-condition-type-macro
-  (lambda (x)
-    (define (mkname name suffix)
-      (datum->syntax name
-		     (string->symbol
-		      (string-append
-		       (symbol->string (syntax->datum name))
-		       suffix))))
-    (syntax-match x ()
-      ((ctxt name super constructor predicate (field* accessor*) ...)
-       (and (identifier? name)
-	    (identifier? super)
-	    (identifier? constructor)
-	    (identifier? predicate)
-	    (for-all identifier? field*)
-	    (for-all identifier? accessor*))
-       (let ((aux-accessor* (map (lambda (x) (gensym)) accessor*)))
-	 (bless
-	  `(begin
-	     (define-record-type (,name ,constructor ,(gensym))
-	       (parent ,super)
-	       (fields ,@(map (lambda (field aux)
-				`(immutable ,field ,aux))
-			   field* aux-accessor*))
-	       (nongenerative)
-	       (sealed #f) (opaque #f))
-	     (define ,predicate (condition-predicate
-				 (record-type-descriptor ,name)))
-	     ,@(map
-		   (lambda (accessor aux)
-		     `(define ,accessor
-			(condition-accessor
-			 (record-type-descriptor ,name) ,aux)))
-		 accessor* aux-accessor*))))))))
+(define (define-condition-type-macro expr-stx)
+  (syntax-match expr-stx ()
+    ((?ctxt ?name ?super ?constructor ?predicate (?field* ?accessor*) ...)
+     (and (identifier? ?name)
+	  (identifier? ?super)
+	  (identifier? ?constructor)
+	  (identifier? ?predicate)
+	  (for-all identifier? ?field*)
+	  (for-all identifier? ?accessor*))
+     (let ((aux-accessor* (map (lambda (x)
+				 (gensym))
+			    ?accessor*)))
+       (bless
+	`(begin
+	   (define-record-type (,?name ,?constructor ,(gensym))
+	     (parent ,?super)
+	     (fields ,@(map (lambda (field aux)
+			      `(immutable ,field ,aux))
+			 ?field* aux-accessor*))
+	     (nongenerative)
+	     (sealed #f)
+	     (opaque #f))
+	   (define ,?predicate
+	     (condition-predicate (record-type-descriptor ,?name)))
+	   ,@(map
+		 (lambda (accessor aux)
+		   `(define ,accessor
+		      (condition-accessor (record-type-descriptor ,?name) ,aux)))
+	       ?accessor* aux-accessor*)))))))
 
 
 ;;;; module non-core-macro-transformer: PARAMETERIZE and PARAMETRISE
