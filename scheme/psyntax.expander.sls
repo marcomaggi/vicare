@@ -5869,19 +5869,19 @@
 
     ((_ () ?body0 ?body* ...)
      (bless
-      `(begin ,?body0 ,@?body*)))
+      `(begin ,?body0 . ,?body*)))
 
     ((_ ((?ctx ?symbol0 ?symbol* ...))
 	?body0 ?body* ...)
      (let ((BINDINGS (%make-bindings ?ctx (cons ?symbol0 ?symbol*))))
        (bless
-	`(with-syntax ,BINDINGS ,?body0 ,@?body*))))
+	`(with-syntax ,BINDINGS ,?body0 . ,?body*))))
 
     ((_ ((?ctx ?symbol0 ?symbol* ...) . ?other-clauses)
 	?body0 ?body* ...)
      (let ((BINDINGS (%make-bindings ?ctx (cons ?symbol0 ?symbol*))))
        (bless
-	`(with-syntax ,BINDINGS (with-implicits ,?other-clauses ,?body0 ,@?body*)))))
+	`(with-syntax ,BINDINGS (with-implicits ,?other-clauses ,?body0 . ,?body*)))))
 
     ))
 
@@ -5988,8 +5988,7 @@
     (syntax-violation __who__ message expr-stx subform))
   (syntax-match expr-stx ()
     ((_ ?alloc0 ?form* ...)
-     (let ()
-       (define free #f)
+     (let ((free #f))
        (define alloc*
 	 (let recur ((form-stx ?form*))
 	   (syntax-match form-stx (with)
@@ -6009,7 +6008,7 @@
 	      (cons ?alloc (recur ?form*)))
 	     )))
        (bless
-	`(begin0 (begin ,?alloc0 ,@alloc*) ,free))))
+	`(begin0 (begin ,?alloc0 . ,alloc*) ,free))))
     ))
 
 
