@@ -5741,6 +5741,10 @@
 ;;;; module non-core-macro-transformer: DEFINE-CONDITION-TYPE
 
 (define (define-condition-type-macro expr-stx)
+  ;;Transformer  function  used  to  expand  R6RS  RECORD-CONDITION-TYPE
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((?ctxt ?name ?super ?constructor ?predicate (?field* ?accessor*) ...)
      (and (identifier? ?name)
@@ -5773,34 +5777,54 @@
 
 ;;;; module non-core-macro-transformer: PARAMETERIZE and PARAMETRISE
 
-(define parameterize-macro
+(define (parameterize-macro expr-stx)
+  ;;Transformer  function used  to expand  Vicare's PARAMETERIZE  macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   ;;Notice that  MAKE-PARAMETER is  a primitive function  implemented in
-  ;;"ikarus.compiler.sls" by "E-make-parameter".
+  ;;"ikarus.compiler.sls"  by   "E-make-parameter".   Under   Vicare,  a
+  ;;parameter function  can be  called with  0, 1  or 2  arguments:
   ;;
-  (lambda (e)
-    (syntax-match e ()
-      ((_ () b b* ...)
-       (bless `(let () ,b . ,b*)))
-      ((_ ((olhs* orhs*) ...) b b* ...)
-       (let ((lhs* (generate-temporaries olhs*))
-	     (rhs* (generate-temporaries orhs*)))
-	 (bless
-	  `((lambda ,(append lhs* rhs*)
-	      (let* ((guard? #t) ;apply the guard function only the first time
-		     (swap   (lambda ()
-			       ,@(map (lambda (lhs rhs)
-					`(let ((t (,lhs)))
-					   (,lhs ,rhs guard?)
-					   (set! ,rhs t)))
-				   lhs* rhs*)
-			       (set! guard? #f))))
-		(dynamic-wind
-		    swap
-		    (lambda () ,b . ,b*)
-		    swap)))
-	    ,@(append olhs* orhs*)))))
-      )))
+  ;;* When called with 1 argument: it returns the parameter's value.
+  ;;
+  ;;* When called with 2 arguments:  it sets the parameter's value after
+  ;;  checking the new value with the guard function (if any).
+  ;;
+  ;;*  When called  with  3  arguments: it  sets  the parameter's  value
+  ;;   optionally checking  the new  value with  the guard  function (if
+  ;;  any).
+  ;;
+  ;;Under Vicare,  PARAMETERIZE applies  the guard  function to  the new
+  ;;value only the first  time it is set; if the  control flow exits and
+  ;;returns multiple times beacuse  escaping continuations are used, the
+  ;;guard function is  no more applied; this is achieved  by setting the
+  ;;flag variable GUARD?.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ () ?body ?body* ...)
+     (bless
+      `(let () ,?body . ,?body*)))
+
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     (let ((lhs* (generate-temporaries ?lhs*))
+	   (rhs* (generate-temporaries ?rhs*)))
+       (bless
+	`((lambda ,(append lhs* rhs*)
+	    (let* ((guard? #t) ;apply the guard function only the first time
+		   (swap   (lambda ()
+			     ,@(map (lambda (lhs rhs)
+				      `(let ((t (,lhs)))
+					 (,lhs ,rhs guard?)
+					 (set! ,rhs t)))
+				 lhs* rhs*)
+			     (set! guard? #f))))
+	      (dynamic-wind
+		  swap
+		  (lambda () ,?body . ,?body*)
+		  swap)))
+	  ,@(append ?lhs* ?rhs*)))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: UNWIND-PROTECT

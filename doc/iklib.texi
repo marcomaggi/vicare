@@ -7054,7 +7054,7 @@ The following is a perfectly valid Vicare program:
 Parameters in @value{PRJNAME} are intended for customizing the behavior
 of a procedure during the dynamic execution of some piece of code.
 Parameters are first class entities (represented as procedures) that
-hold the parameter value.  We can think of a parameter functions as:
+hold the parameter value.  We can think of a parameter function as:
 
 @example
 (let ((the-value @meta{init-value})
@@ -7077,26 +7077,30 @@ value.  The behaviour is as follows:
 
 @itemize
 @item
-When given no arguments: it returns the current value of the parameter.
+When applied to no arguments: the parameter function returns the current
+value of the parameter.
 
 @item
-When given a single argument: it sets the current value of the parameter
-to the return value of the guard function applied to the argument.
+When applied to a single argument: the parameter function sets the
+current value of the parameter to the return value of the guard function
+applied to the argument.
 
 @item
-When given two arguments: it sets the current value of the parameter to
-either the return value of the guard function applied to the first
-argument or directly to the first argument.
+When applied to two arguments: the parameter function sets the current
+value of the parameter to either the return value of the guard function
+applied to the first argument or directly to the first argument without
+applying the guard function.
 @end itemize
 
-As of @value{PRJNAME} version 0.2d7 the parameter's initialisation value
-is @strong{not} automatically passed through the guard function.  About
-guarding or not the initialisation value there are pros and cons for
-both the choices; @value{PRJNAME} does not guard the initialisation
-value because a parameter can be used to hold ``complex'' objects and it
-is not always desirable to create one of those at program start time.
-When needed it is possible to validate the value by explicitly writing
-the required predicate.
+Parameter functions are created by @func{make-parameter}; the
+parameter's initialisation value is @strong{not} automatically passed
+through the guard function by @func{make-parameter}.  About guarding or
+not the initialisation value there are pros and cons for both the
+choices; @value{PRJNAME} does not guard the initialisation value because
+a parameter can be used to hold ``complex'' objects and it is not always
+desirable to create one of those at program start time.  When needed it
+is possible to validate the value by explicitly writing the required
+predicate.
 
 @quotation
 As example, consider a parameter used to hold the ``current database
@@ -7104,7 +7108,7 @@ connection''; we may not want to connect to a database right at program
 start time.  With a validating parameter: we should create a ``null''
 connection object for the only purpose of initialising the parameter and
 then test for it; with a non--validating parameter: we just initialise
-the parameter to @false{} and test for it.
+the parameter to @false{}.
 @end quotation
 
 Parameters replace the older concept of using starred @code{*global*}
