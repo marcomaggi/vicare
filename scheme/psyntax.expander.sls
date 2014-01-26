@@ -5918,16 +5918,25 @@
 ;;;; module non-core-macro-transformer: compensations
 
 (define (with-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_)
-     (bless
-      (lambda (stx)
-	(syntax-error 'with "syntax \"with\" out of context"))))))
+  ;;Transformer function  used to expand  Vicare's WITH macros  from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  ;;WITH is an  auxiliary syntax that is used only  to specify component
+  ;;syntaxes for other syntaxes.
+  ;;
+  (bless
+   `(syntax-violation 'with "invalid use of WITH syntax" ,expr-stx)))
 
 (module (with-compensations/on-error-macro
 	 with-compensations-macro)
 
   (define (with-compensations/on-error-macro expr-stx)
+    ;;Transformer     function      used     to      expand     Vicare's
+    ;;WITH-COMPENSATIONS/ON-ERROR  macros from  the  top-level built  in
+    ;;environment.   Expand the  contents of  EXPR-STX; return  a syntax
+    ;;object that must be further expanded.
+    ;;
     (syntax-match expr-stx ()
       ((_ ?body0 ?body* ...)
        (bless
@@ -5937,6 +5946,11 @@
       ))
 
   (define (with-compensations-macro expr-stx)
+    ;;Transformer  function used  to expand  Vicare's WITH-COMPENSATIONS
+    ;;macros  from  the  top-level  built in  environment.   Expand  the
+    ;;contents of EXPR-STX; return a  syntax object that must be further
+    ;;expanded.
+    ;;
     (syntax-match expr-stx ()
       ((_ ?body0 ?body* ...)
        (bless
@@ -5976,6 +5990,10 @@
   #| end of module |# )
 
 (define (push-compensation-macro expr-stx)
+  ;;Transformer  function  used  to  expand  Vicare's  PUSH-COMPENSATION
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?release0 ?release* ...)
      (bless
@@ -5983,6 +6001,10 @@
     ))
 
 (define (compensate-macro expr-stx)
+  ;;Transformer function used to  expand Vicare's COMPENSATE macros from
+  ;;the  top-level  built  in   environment.   Expand  the  contents  of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (define-constant __who__ 'compensate)
   (define (%synner message subform)
     (syntax-violation __who__ message expr-stx subform))
@@ -5998,7 +6020,8 @@
 		'()))
 
 	     (()
-	      (%synner "invalid compensation syntax: missing WITH keyword" form-stx))
+	      (%synner "invalid compensation syntax: missing WITH keyword"
+		       form-stx))
 
 	     (((with))
 	      (%synner "invalid compensation syntax: empty WITH keyword"
