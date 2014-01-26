@@ -10127,7 +10127,7 @@
 		   local-macro local-macro!
 		   global-macro global-macro!
 		   local-ctv global-ctv
-		   macro import export library $module $core-rtd syntax
+		   macro import export library $module syntax
 		   displaced-lexical)
 		  (values type (syntactic-binding-value binding) id))
 		 (else
@@ -10148,7 +10148,7 @@
 			 local-ctv global-ctv
 			 local-macro local-macro!
 			 global-macro global-macro!
-			 macro import export library module $core-rtd)
+			 macro import export library module)
 			(values type (syntactic-binding-value binding) id))
 		       (else
 			(values 'call #f #f)))))
