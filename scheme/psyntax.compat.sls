@@ -24,7 +24,9 @@
     module				import
     begin0				define-values
 
-    make-struct-type			struct-type-field-names
+    make-struct-type			struct?
+    struct-type-field-names
+
     make-parameter			parametrise
     format				gensym
     eval-core

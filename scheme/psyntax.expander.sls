@@ -3196,15 +3196,15 @@
 ;;; --------------------------------------------------------------------
 ;;; struct/record type descriptor bindings
 
+(define-syntax-rule (make-struct-or-record-type-descriptor-binding ?bind-val)
+  (cons '$rtd ?bind-val))
+
 (define (struct-or-record-type-descriptor-binding? binding)
   (and (pair? binding)
        (eq? '$rtd (syntactic-binding-type binding))))
 
 ;;; --------------------------------------------------------------------
 ;;; Vicare struct type descriptor bindings
-
-(define-syntax-rule (make-struct-or-record-type-descriptor-binding ?bind-val)
-  (cons '$rtd ?bind-val))
 
 (define (struct-type-descriptor-binding? binding)
   (and (struct-or-record-type-descriptor-binding? binding)
@@ -3224,14 +3224,14 @@
 (define-syntax-rule (make-r6rs-record-type-descriptor-binding ?rtd-id ?rcd-id ?spec)
   (cons '$rtd (cons ?rtd-id (cons ?rcd-id ?spec))))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-rtd ?binding)
-  (car ?binding))
+(define-syntax-rule (r6rs-record-type-descriptor-binding-rtd ?binding-val)
+  (car ?binding-val))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-rcd ?binding)
-  (cadr ?binding))
+(define-syntax-rule (r6rs-record-type-descriptor-binding-rcd ?binding-val)
+  (cadr ?binding-val))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-spec ?binding)
-  (cddr ?binding))
+(define-syntax-rule (r6rs-record-type-descriptor-binding-spec ?binding-val)
+  (cddr ?binding-val))
 
 (module R6RS-RECORD-TYPE-SPEC
   (make-r6rs-record-type-spec
@@ -10165,6 +10165,8 @@
 		   macro import export library $module syntax
 		   displaced-lexical)
 		  (values type (syntactic-binding-value binding) id))
+		 (($rtd)
+		  (values 'type-maker-reference (syntactic-binding-value binding) id))
 		 (else
 		  (values 'other #f #f))))))
 
@@ -10193,6 +10195,8 @@
 			 global-macro global-macro!
 			 macro import export library module)
 			(values type (syntactic-binding-value binding) id))
+		       (($rtd)
+			(values 'type-maker-application (syntactic-binding-value binding) id))
 		       (else
 			(values 'call #f #f)))))
 	       ;;Here we know that EXPR-STX has the format:
@@ -10467,16 +10471,16 @@
 
 (module (chi-expr)
 
-  (define (chi-expr e lexenv.run lexenv.expand)
+  (define (chi-expr expr-stx lexenv.run lexenv.expand)
     ;;Expand a single expression form.
     ;;
     (chi-drop-splice-first-envelope-maybe
      (receive (type bind-val kwd)
-	 (expr-syntax-type e lexenv.run)
+	 (expr-syntax-type expr-stx lexenv.run)
        (case type
 	 ((core-macro)
 	  (let ((transformer (core-macro-transformer bind-val)))
-	    (transformer e lexenv.run lexenv.expand)))
+	    (transformer expr-stx lexenv.run lexenv.expand)))
 
 	 ((global)
 	  (let* ((lib (car bind-val))
@@ -10489,7 +10493,7 @@
 	    (build-primref no-source name)))
 
 	 ((call)
-	  (chi-application e lexenv.run lexenv.expand))
+	  (chi-application expr-stx lexenv.run lexenv.expand))
 
 	 ((lexical)
 	  (let ((lex (lexical-var bind-val)))
@@ -10497,7 +10501,7 @@
 
 	 ((global-macro global-macro!)
 	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-global-macro bind-val e lexenv.run #f))))
+			(chi-global-macro bind-val expr-stx lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((local-macro local-macro!)
@@ -10505,7 +10509,7 @@
 	  ;;top-level region.
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-local-macro bind-val e lexenv.run #f))))
+			(chi-local-macro bind-val expr-stx lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((macro)
@@ -10513,7 +10517,7 @@
 	  ;;integrated in the expander.
 	  ;;
 	  (let ((exp-e (while-not-expanding-application-first-subform
-			(chi-non-core-macro bind-val e lexenv.run #f))))
+			(chi-non-core-macro bind-val expr-stx lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
 	 ((constant)
@@ -10521,10 +10525,14 @@
 	    (build-data no-source datum)))
 
 	 ((set!)
-	  (chi-set! e lexenv.run lexenv.expand))
+	  (chi-set! expr-stx lexenv.run lexenv.expand))
 
 	 ((begin)
-	  (syntax-match e ()
+	  ;;Here we  expand the use of  the BEGIN core macro.   First we
+	  ;;check with SYNTAX-MATCH that the  syntax is correct, then we
+	  ;;build the expanded language expression.
+	  ;;
+	  (syntax-match expr-stx ()
 	    ((_ x x* ...)
 	     (build-sequence no-source
 	       (while-not-expanding-application-first-subform
@@ -10536,7 +10544,7 @@
 	  ;;collector.   When such  expression  evaluates  to false:  the
 	  ;;compiled library is  stale with respect to  some source file.
 	  ;;See for example the INCLUDE syntax.
-	  (syntax-match e ()
+	  (syntax-match expr-stx ()
 	    ((_ ?guard ?x ?x* ...)
 	     (begin
 	       (handle-stale-when ?guard lexenv.expand)
@@ -10545,10 +10553,10 @@
 		  (chi-expr* (cons ?x ?x*) lexenv.run lexenv.expand)))))))
 
 	 ((let-syntax letrec-syntax)
-	  (syntax-match e ()
+	  (syntax-match expr-stx ()
 	    ((_ ((xlhs* xrhs*) ...) xbody xbody* ...)
 	     (unless (valid-bound-ids? xlhs*)
-	       (stx-error e "invalid identifiers"))
+	       (stx-error expr-stx "invalid identifiers"))
 	     (let* ((xlab* (map gensym-for-label xlhs*))
 		    (xrib  (make-filled-rib xlhs* xlab*))
 		    (xb*   (map (lambda (x)
@@ -10567,35 +10575,53 @@
 			     (append (map cons xlab* xb*) lexenv.expand))))))))
 
 	 ((displaced-lexical)
-	  (stx-error e "identifier out of context"))
+	  (stx-error expr-stx "identifier out of context"))
 
 	 ((syntax)
-	  (stx-error e "reference to pattern variable outside a syntax form"))
+	  (stx-error expr-stx "reference to pattern variable outside a syntax form"))
 
 	 ((define define-syntax define-fluid-syntax module import library)
-	  (stx-error e (string-append
-			(case type
-			  ((define)              "a definition")
-			  ((define-syntax)       "a define-syntax")
-			  ((define-fluid-syntax) "a define-fluid-syntax")
-			  ((module)              "a module definition")
-			  ((library)             "a library definition")
-			  ((import)              "an import declaration")
-			  ((export)              "an export declaration")
-			  (else                  "a non-expression"))
-			" was found where an expression was expected")))
+	  (stx-error expr-stx (string-append
+			       (case type
+				 ((define)              "a definition")
+				 ((define-syntax)       "a define-syntax")
+				 ((define-fluid-syntax) "a define-fluid-syntax")
+				 ((module)              "a module definition")
+				 ((library)             "a library definition")
+				 ((import)              "an import declaration")
+				 ((export)              "an export declaration")
+				 (else                  "a non-expression"))
+			       " was found where an expression was expected")))
 
 	 ((mutable)
+	  ;;Here we  expand an  identifier in reference  position, whose
+	  ;;binding is a mutable variable.
+	  ;;
 	  (if (and (pair? bind-val)
 		   (let ((lib (car bind-val)))
 		     (eq? lib '*interaction*)))
 	      (let ((loc (cdr bind-val)))
 		(build-global-reference no-source loc))
-	    (stx-error e "attempt to reference an unexportable variable")))
+	    (stx-error expr-stx "attempt to reference an unexportable variable")))
+
+	 ((type-maker-reference)
+	  ;;Here we  expand an  identifier in reference  position, whose
+	  ;;binding is a  struct or record type name.  The  result is an
+	  ;;expression that evaluates to the struct or record maker.
+	  ;;
+	  (%process-type-maker-reference expr-stx bind-val lexenv.run lexenv.expand))
+
+	 ((type-maker-application)
+	  ;;Here  we expand  a form  whose  car is  an identifier  whose
+	  ;;binding is a  struct or record type name.  The  result is an
+	  ;;expression that  evaluates to the application  of the struct
+	  ;;or record maker.
+	  ;;
+	  (%process-type-maker-application expr-stx bind-val lexenv.run lexenv.expand))
 
 	 (else
-	  ;;(assertion-violation 'chi-expr "invalid type " type (strip e '()))
-	  (stx-error e "invalid expression"))))
+	  ;;(assertion-violation 'chi-expr "invalid type " type (strip expr-stx '()))
+	  (stx-error expr-stx "invalid expression"))))
      lexenv.run lexenv.expand))
 
   (define (chi-application expr lexenv.run lexenv.expand)
@@ -10642,8 +10668,8 @@
 	     (%build-core-expression exp-rator ?rands*)))))
       ))
 
-  (define (chi-set! e lexenv.run lexenv.expand)
-    (syntax-match e ()
+  (define (chi-set! expr-stx lexenv.run lexenv.expand)
+    (syntax-match expr-stx ()
       ((_ x v)
        (identifier? x)
        (receive (type bind-val kwd)
@@ -10655,16 +10681,16 @@
 	      (lexical-var bind-val)
 	      (chi-expr v lexenv.run lexenv.expand)))
 	   ((core-prim)
-	    (stx-error e "cannot modify imported core primitive"))
+	    (stx-error expr-stx "cannot modify imported core primitive"))
 
 	   ((global)
-	    (stx-error e "attempt to modify an immutable binding"))
+	    (stx-error expr-stx "attempt to modify an immutable binding"))
 
 	   ((global-macro!)
-	    (chi-expr (chi-global-macro bind-val e lexenv.run #f) lexenv.run lexenv.expand))
+	    (chi-expr (chi-global-macro bind-val expr-stx lexenv.run #f) lexenv.run lexenv.expand))
 
 	   ((local-macro!)
-	    (chi-expr (chi-local-macro bind-val e lexenv.run #f) lexenv.run lexenv.expand))
+	    (chi-expr (chi-local-macro bind-val expr-stx lexenv.run #f) lexenv.run lexenv.expand))
 
 	   ((mutable)
 	    (if (and (pair? bind-val)
@@ -10673,10 +10699,73 @@
 		(let ((loc (cdr bind-val)))
 		  (build-global-assignment no-source
 		    loc (chi-expr v lexenv.run lexenv.expand)))
-	      (stx-error e "attempt to modify an unexportable variable")))
+	      (stx-error expr-stx "attempt to modify an unexportable variable")))
 
 	   (else
-	    (stx-error e)))))))
+	    (stx-error expr-stx)))))))
+
+  (define (%process-type-maker-reference expr-stx bind-val lexenv.run lexenv.expand)
+    ;;BIND-VAL is the binding value of an R6RS record-type:
+    ;;
+    ;;   (?rtd-id ?rcd-id)
+    ;;   (?rtd-id ?rcd-id . ?r6rs-record-type-spec)
+    ;;
+    ;;or the binding value of a Vicare struct type:
+    ;;
+    ;;   #<struct-type-descriptor>
+    ;;
+    (cond ((pair? bind-val)
+	   ;;The binding is for an R6RS record type.
+	   (let ((rcd-id (r6rs-record-type-descriptor-binding-rcd bind-val)))
+	     (chi-expr (bless
+			`(record-constructor ,rcd-id))
+		       lexenv.run lexenv.expand)))
+
+	  ((struct? bind-val)
+	   ;;The binding is for a Vicare struct type.
+	   (let ((field-id* (struct-type-field-names bind-val)))
+	     (chi-expr (bless
+			`(lambda ,field-id*
+			   ($struct (quote ,bind-val) . ,field-id*)))
+		       lexenv.run lexenv.expand)))
+
+	  (else
+	   (stx-error expr-stx "invalid binding for identifier"))))
+
+  (define (%process-type-maker-application expr-stx bind-val lexenv.run lexenv.expand)
+    ;;BIND-VAL is the binding value of an R6RS record-type:
+    ;;
+    ;;   (?rtd-id ?rcd-id)
+    ;;   (?rtd-id ?rcd-id . ?r6rs-record-type-spec)
+    ;;
+    ;;or the binding value of a Vicare struct type:
+    ;;
+    ;;   #<struct-type-descriptor>
+    ;;
+    (cond ((pair? bind-val)
+	   ;;The binding is for an R6RS record type.
+	   (syntax-match expr-stx ()
+	     ((?rtd ?arg* ...)
+	      (let ((rcd-id (r6rs-record-type-descriptor-binding-rcd bind-val)))
+		(chi-expr (bless
+			   `((record-constructor ,rcd-id) . ,?arg*))
+			  lexenv.run lexenv.expand)))
+	     ))
+
+	  ((struct? bind-val)
+	   ;;The binding is for a Vicare struct type.
+	   (syntax-match expr-stx ()
+	     ((?rtd ?arg* ...)
+	      (let ((field-id* (struct-type-field-names bind-val)))
+		(chi-expr (bless
+			   `((lambda ,field-id*
+			       ($struct (quote ,bind-val) . ,field-id*))
+			     . ,?arg*))
+			  lexenv.run lexenv.expand)))
+	     ))
+
+	  (else
+	   (stx-error expr-stx "invalid binding for identifier"))))
 
   #| end of module |# )
 

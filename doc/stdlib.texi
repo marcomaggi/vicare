@@ -1924,7 +1924,7 @@ definition and can appear anywhere any other @meta{definition} can
 appear.
 
 
-@deffn Syntax define-record-type @meta{name-spec} @arbno{@meta{record clause}}
+@deffn Syntax define-record-type @meta{name-spec} @arbno{@meta{record-clause}}
 @c @deffnx {Auxiliary Syntax} fields
 @c @deffnx {Auxiliary Syntax} mutable
 @c @deffnx {Auxiliary Syntax} immutable

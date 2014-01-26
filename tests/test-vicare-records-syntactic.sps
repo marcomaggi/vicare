@@ -740,8 +740,53 @@
 	      (record-type-and-record? beta  A)))
     => '(#t #f))
 
-;;; --------------------------------------------------------------------
-;;; generic predicate syntax
+  #t)
+
+
+(parametrise ((check-test-name	'generic-maker-syntax))
+
+  (let ()	;application syntax
+    (define-record-type alpha
+      (fields a b c))
+
+    (define-record-type beta
+      (fields a b))
+
+    (check
+	(let ((reco (alpha 1 2 3)))
+	  (alpha? reco))
+      => #t)
+
+    (check
+	(let ((reco (beta 1 2)))
+	  (beta? reco))
+      => #t)
+
+    (void))
+
+  (let ()	;reference syntax
+    (define-record-type alpha
+      (fields a b c))
+
+    (define-record-type beta
+      (fields a b))
+
+    (check
+	(let ((reco (apply alpha 1 '(2 3))))
+	  (alpha? reco))
+      => #t)
+
+    (check
+	(let ((reco (apply beta '(1 2))))
+	  (beta? reco))
+      => #t)
+
+    (void))
+
+  #t)
+
+
+(parametrise ((check-test-name	'generic-predicate-syntax))
 
   (let ()
     (define-record-type alpha
@@ -767,6 +812,7 @@
     (check
 	(is-a? 123 beta)
       => #f)
+
     (void))
 
   #t)
