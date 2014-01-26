@@ -10169,8 +10169,16 @@
 		  (values 'other #f #f))))))
 
 	  ((syntax-pair? expr-stx)
+	   ;;Here we know that EXPR-STX has the format:
+	   ;;
+	   ;;   (?first-form ?form ...)
+	   ;;
 	   (let ((id (syntax-car expr-stx)))
 	     (if (identifier? id)
+		 ;;Here we know that EXPR-STX has the format:
+		 ;;
+		 ;;   (?id ?form ...)
+		 ;;
 		 (let ((label (id->label/intern id)))
 		   (unless label
 		     (%raise-unbound-error #f id id))
@@ -10187,6 +10195,18 @@
 			(values type (syntactic-binding-value binding) id))
 		       (else
 			(values 'call #f #f)))))
+	       ;;Here we know that EXPR-STX has the format:
+	       ;;
+	       ;;   (?non-id ?form ...)
+	       ;;
+	       ;;where ?NON-ID  can be  anything but not  an identifier.
+	       ;;In practice the only valid syntax for this case is:
+	       ;;
+	       ;;   ((?first-subform ?subform ...) ?form ...)
+	       ;;
+	       ;;because ?NON-ID  must be an expression  evaluating to a
+	       ;;closure object.
+	       ;;
 	       (values 'call #f #f))))
 
 	  (else
