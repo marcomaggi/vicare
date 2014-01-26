@@ -10092,14 +10092,74 @@
 
 ;;;; chi procedures: syntax object type inspection
 
-(define (syntax-type expr-stx lexenv)
-  ;;The type of an expression is determined by two things:
-  ;;
-  ;;- The shape of the expression (identifier, pair, or datum).
-  ;;
-  ;;- The binding of  the identifier (for id-stx) or the  type of car of
-  ;;  the pair.
-  ;;
+(module (expr-syntax-type)
+
+  (define (expr-syntax-type expr-stx lexenv)
+    ;;Determine the  syntax type of  an expression.  EXPR-STX must  be a
+    ;;syntax object representing an expression.  Return 2 values:
+    ;;
+    ;;1..A symbol representing the syntax type.
+    ;;
+    ;;2..If  the  syntax  is  a  macro application:  the  value  of  the
+    ;;    syntactic   binding  associated   to  the   macro  identifier.
+    ;;   Otherwise false.
+    ;;
+    ;;3..If  the   syntax  is   a  macro  application:   the  identifier
+    ;;   representing the macro keyword.  Otherwise false.
+    ;;
+    ;;The type of an expression is determined by two things:
+    ;;
+    ;;* The shape of the expression (identifier, pair, or datum).
+    ;;
+    ;;* The binding of the identifier (for id-stx) or the type of car of
+    ;;  the pair.
+    ;;
+    (cond ((identifier? expr-stx)
+	   (let* ((id    expr-stx)
+		  (label (id->label/intern id)))
+	     (unless label
+	       (%raise-unbound-error #f id id))
+	     (let* ((binding (label->syntactic-binding label lexenv))
+		    (type    (syntactic-binding-type binding)))
+	       (case type
+		 ((core-prim
+		   lexical global mutable
+		   local-macro local-macro!
+		   global-macro global-macro!
+		   local-ctv global-ctv
+		   macro import export library $module $core-rtd syntax
+		   displaced-lexical)
+		  (values type (syntactic-binding-value binding) id))
+		 (else
+		  (values 'other #f #f))))))
+
+	  ((syntax-pair? expr-stx)
+	   (let ((id (syntax-car expr-stx)))
+	     (if (identifier? id)
+		 (let ((label (id->label/intern id)))
+		   (unless label
+		     (%raise-unbound-error #f id id))
+		   (let* ((binding (label->syntactic-binding label lexenv))
+			  (type    (syntactic-binding-type binding)))
+		     (case type
+		       ((core-macro
+			 define define-syntax begin set! stale-when
+			 let-syntax letrec-syntax define-fluid-syntax
+			 local-ctv global-ctv
+			 local-macro local-macro!
+			 global-macro global-macro!
+			 macro import export library module $core-rtd)
+			(values type (syntactic-binding-value binding) id))
+		       (else
+			(values 'call #f #f)))))
+	       (values 'call #f #f))))
+
+	  (else
+	   (let ((datum (syntax->datum expr-stx)))
+	     (if (self-evaluating? datum)
+		 (values 'constant datum #f)
+	       (values 'other #f #f))))))
+
   (define (self-evaluating? x)
     (or (number?		x)
 	(string?		x)
@@ -10109,49 +10169,7 @@
 	(keyword?		x)
 	(would-block-object?	x)))
 
-  (cond ((identifier? expr-stx)
-	 (let* ((id    expr-stx)
-		(label (id->label/intern id)))
-	   (unless label
-	     (%raise-unbound-error #f id id))
-	   (let* ((binding (label->syntactic-binding label lexenv))
-		  (type    (syntactic-binding-type binding)))
-	     (case type
-	       ((core-prim
-		 lexical global mutable
-		 local-macro local-macro!
-		 global-macro global-macro!
-		 local-ctv global-ctv
-		 macro import export library $module $core-rtd syntax
-		 displaced-lexical)
-		(values type (syntactic-binding-value binding) id))
-	       (else
-		(values 'other #f #f))))))
-	((syntax-pair? expr-stx)
-	 (let ((id (syntax-car expr-stx)))
-	   (if (identifier? id)
-	       (let ((label (id->label/intern id)))
-		 (unless label
-		   (%raise-unbound-error #f id id))
-		 (let* ((binding (label->syntactic-binding label lexenv))
-			(type    (syntactic-binding-type binding)))
-		   (case type
-		     ((core-macro
-		       define define-syntax begin set! stale-when
-		       let-syntax letrec-syntax define-fluid-syntax
-		       local-ctv global-ctv
-		       local-macro local-macro!
-		       global-macro global-macro!
-		       macro import export library module $core-rtd)
-		      (values type (syntactic-binding-value binding) id))
-		     (else
-		      (values 'call #f #f)))))
-	     (values 'call #f #f))))
-	(else
-	 (let ((datum (syntax->datum expr-stx)))
-	   (if (self-evaluating? datum)
-	       (values 'constant datum #f)
-	     (values 'other #f #f))))))
+  #| end of module: EXPR-SYNTAX-TYPE |# )
 
 
 ;;;; chi procedures: helpers for SPLICE-FIRST-EXPAND
@@ -10399,7 +10417,7 @@
     ;;
     (chi-drop-splice-first-envelope-maybe
      (receive (type bind-val kwd)
-	 (syntax-type e lexenv.run)
+	 (expr-syntax-type e lexenv.run)
        (case type
 	 ((core-macro)
 	  (let ((transformer (core-macro-transformer bind-val)))
@@ -10574,7 +10592,7 @@
       ((_ x v)
        (identifier? x)
        (receive (type bind-val kwd)
-	   (syntax-type x lexenv.run)
+	   (expr-syntax-type x lexenv.run)
 	 (case type
 	   ((lexical)
 	    (set-lexical-mutable! bind-val)
@@ -10922,7 +10940,7 @@
 	 (values body-form-stx* lexenv.run lexenv.expand lex* qrhs* mod** kwd* export-spec*)
        (let ((body-form-stx (car body-form-stx*)))
 	 (receive (type bind-val kwd)
-	     (syntax-type body-form-stx lexenv.run)
+	     (expr-syntax-type body-form-stx lexenv.run)
 	   (let ((kwd* (if (identifier? kwd)
 			   (cons kwd kwd*)
 			 kwd*)))
@@ -11277,7 +11295,7 @@
 	((_ ?id)
 	 (identifier? ?id)
 	 (receive (type bind-val kwd)
-	     (syntax-type ?id lexenv.run)
+	     (expr-syntax-type ?id lexenv.run)
 	   (case type
 	     (($module)
 	      (let ((iface bind-val))
