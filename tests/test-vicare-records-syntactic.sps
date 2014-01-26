@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -739,6 +739,35 @@
 	(list (record-type-and-record? alpha A)
 	      (record-type-and-record? beta  A)))
     => '(#t #f))
+
+;;; --------------------------------------------------------------------
+;;; generic predicate syntax
+
+  (let ()
+    (define-record-type alpha
+      (fields a b c))
+
+    (define-record-type beta
+      (fields a b c))
+
+    (check
+	(let ((stru (make-alpha 1 2 3)))
+	  (is-a? stru alpha))
+      => #t)
+
+    (check
+	(let ((stru (make-alpha 1 2 3)))
+	  (is-a? stru beta))
+      => #f)
+
+    (check
+	(is-a? 123 alpha)
+      => #f)
+
+    (check
+	(is-a? 123 beta)
+      => #f)
+    (void))
 
   #t)
 

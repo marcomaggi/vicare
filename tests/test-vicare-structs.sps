@@ -400,6 +400,7 @@
     => #f)
 
 ;;; --------------------------------------------------------------------
+;;; safe accessors and mutators
 
   (check
       (let ((stru (make-alpha 1 2 3)))
@@ -419,6 +420,7 @@
     => '(10 20 30))
 
 ;;; --------------------------------------------------------------------
+;;; unsafe accessors and mutators
 
   (check
       (let ((stru (make-alpha 1 2 3)))
@@ -436,6 +438,27 @@
 	      ($struct-type-field-ref alpha b stru)
 	      ($struct-type-field-ref alpha c stru)))
     => '(10 20 30))
+
+;;; --------------------------------------------------------------------
+;;; generic predicate syntax
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(is-a? stru alpha))
+    => #t)
+
+  (check
+      (let ((stru (make-alpha 1 2 3)))
+	(is-a? stru beta))
+    => #f)
+
+  (check
+      (is-a? 123 alpha)
+    => #f)
+
+  (check
+      (is-a? 123 beta)
+    => #f)
 
   #t)
 

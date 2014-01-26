@@ -75,7 +75,8 @@
     ;; multimethods for output ports
     put-single			put-multi-2
     put-multi-3			put-multi-4)
-  (import (vicare)
+  (import (except (vicare)
+		  is-a?)
     (vicare language-extensions sentinels)
     (nausicaa language oopp)
     (nausicaa language multimethods)

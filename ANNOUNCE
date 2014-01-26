@@ -165,6 +165,17 @@ Notes for revision 0.3d8
      $struct-type-field-ref
      $struct-type-field-set!
 
+* Added syntax IS-A? to (vicare):
+
+     (import (vicare))
+     (define-struct doublet
+       (a b))
+     (define-record-type triplet
+       (fields a b c))
+     (is-a? (make-doublet 1 2) doublet)		=> #t
+     (is-a? (make-triplet 1 2 3) triplet)	=> #t
+     (is-a? 123 triplet)			=> #f
+
 
 Notes for revision 0.3d7
 ------------------------

@@ -285,6 +285,7 @@ Example:
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
+* iklib syntaxes predicate::    Predicate syntaxes.
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
@@ -1305,6 +1306,36 @@ the pathname @meta{filename}, which must be a string.  Everything
 happens as if the code was present in place of the @func{include} form.
 When the optional @true{} argument is given: print a message on the
 current error port describing the include operation.
+@end deffn
+
+@c page
+@node iklib syntaxes predicate
+@subsection Predicate syntaxes
+
+
+@deffn Syntax is-a? @meta{expr} @meta{type-id}
+Expand to an expression which, when evaluated, returns @true{} if
+@meta{expr} evaluates to a struct or record of type @meta{type-id}.
+
+@meta{expr} can be any expression returning a single value.
+@meta{type-id} must the type name of a Vicare struct (defined by
+@func{define-struct}) or an @rnrs{6} record type name (defined by
+@func{define-record-type}).
+
+@example
+(import (vicare))
+
+(define-struct doublet
+  (a b))
+
+(define-record-type triplet
+  (fields a b c))
+
+(is-a? (make-doublet 1 2)   doublet)    @result{} #t
+(is-a? (make-triplet 1 2 3) triplet)    @result{} #t
+
+(is-a? 123 triplet)                     @result{} #f
+@end example
 @end deffn
 
 @c page

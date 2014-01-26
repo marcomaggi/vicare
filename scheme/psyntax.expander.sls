@@ -8115,6 +8115,7 @@
       ((record-type-field-ref)		record-type-field-ref-transformer)
       (($record-type-field-set!)	$record-type-field-set!-transformer)
       (($record-type-field-ref)		$record-type-field-ref-transformer)
+      ((is-a?)				is-a?-transformer)
       ((splice-first-expand)		splice-first-expand-transformer)
       ((fluid-let-syntax)		fluid-let-syntax-transformer)
       (else
@@ -8222,7 +8223,7 @@
   (transformer expr-stx))
 
 
-;;;; module core-macro-transformer: TYPE-DESCRIPTOR
+;;;; module core-macro-transformer: TYPE-DESCRIPTOR, struct setter and getter
 
 (module (type-descriptor-transformer
 	 struct-type-and-struct?-transformer
@@ -8582,6 +8583,40 @@
 	(%error))))
 
   #| end of module |# )
+
+
+;;;; module core-macro-transformer: IS-A?
+
+(define (is-a?-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand Vicare's IS-A?  syntax uses from
+  ;;the  top-level built  in environment.   Expand the  contents of  the
+  ;;syntax object  EXPR-STX in the  context of the  lexical environments
+  ;;LEXENV.RUN  and LEXENV.EXPAND,  the  result must  be an  expression.
+  ;;Return a symbolic expression.
+  ;;
+  (define-constant __who__ 'is-a?)
+  (syntax-match expr-stx ()
+    ((_ ?expr ?type-id)
+     (identifier? ?type-id)
+     (let ((label (id->label ?type-id)))
+       (unless label
+	 (%raise-unbound-error __who__ expr-stx ?type-id))
+       (let ((binding (label->syntactic-binding label lexenv.run)))
+	 (cond ((r6rs-record-type-descriptor-binding? binding)
+		(chi-expr (bless
+			   `(record-type-and-record? ,?type-id ,?expr))
+			  lexenv.run lexenv.expand))
+
+	       ((struct-type-descriptor-binding? binding)
+		(chi-expr (bless
+			   `(struct-type-and-struct? ,?type-id ,?expr))
+			  lexenv.run lexenv.expand))
+
+	       (else
+		(syntax-violation __who__
+		  "neither a struct type nor an R6RS record type"
+		  expr-stx ?type-id))))))
+    ))
 
 
 ;;;; module core-macro-transformer: IF

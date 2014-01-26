@@ -71,7 +71,8 @@
 	       aux.shadows		aux.satisfies		aux.mixins
 	       aux.<>			aux.<-)
 	      aux.))
-  (import (vicare)
+  (import (except (vicare)
+		  is-a?)
     (nausicaa language oopp auxiliary-syntaxes)
     (nausicaa language oopp conditions)
     (for (prefix (nausicaa language oopp oopp-syntax-helpers)

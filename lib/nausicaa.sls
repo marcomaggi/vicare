@@ -1793,6 +1793,7 @@
 
   (import (for (except (vicare)
 		       define-condition-type
+		       is-a?
 
 		       ;; redefined from (rnrs conditions (6))
 		       &condition
