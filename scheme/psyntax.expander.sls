@@ -4347,8 +4347,20 @@
 	       (gensym (string-append "loc." seed)))
 	      (else
 	       (gensym)))))
-    (lambda args
-      (gensym))))
+    ;;It is  really important to  use a  seeded gensym here,  because it
+    ;;will show up in some error messages about unbound identifiers.
+    (case-lambda
+     (()
+      (gensym))
+     ((seed)
+      (cond ((identifier? seed)
+	     (gensym (symbol->string (identifier->symbol seed))))
+	    ((symbol? seed)
+	     (gensym (symbol->string seed)))
+	    ((string? seed)
+	     (gensym seed))
+	    (else
+	     (gensym)))))))
 
 (define (gensym-for-label seed)
   ;;Every  syntactic binding  has a  label  associated to  it as  unique
@@ -7659,6 +7671,10 @@
 ;;;; module non-core-macro-transformer: DEFINE-RETURNABLE, LAMBDA-RETURNABLE
 
 (define (define-returnable-macro expr-stx)
+  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-RETURNABLE
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ (?name . ?formals) ?body0 ?body* ...)
      (bless
@@ -7668,10 +7684,14 @@
 	       (fluid-let-syntax ((return (syntax-rules ()
 					    ((_ . ?args)
 					     (escape . ?args)))))
-		 ,?body0 ,@?body*))))))
+		 ,?body0 . ,?body*))))))
     ))
 
 (define (lambda-returnable-macro expr-stx)
+  ;;Transformer  function  used  to  expand  Vicare's  LAMBDA-RETURNABLE
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?body0 ?body* ...)
      (bless
@@ -7681,10 +7701,14 @@
 	       (fluid-let-syntax ((return (syntax-rules ()
 					    ((_ . ?args)
 					     (escape . ?args)))))
-		 ,?body0 ,@?body*))))))
+		 ,?body0 . ,?body*))))))
     ))
 
 (define (begin-returnable-macro expr-stx)
+  ;;Transformer function used to expand Vicare's BEGIN-RETURNABLE macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
      (bless
@@ -7693,7 +7717,7 @@
 	     (fluid-let-syntax ((return (syntax-rules ()
 					  ((_ . ?args)
 					   (escape . ?args)))))
-	       ,?body0 ,@?body*)))))
+	       ,?body0 . ,?body*)))))
     ))
 
 
