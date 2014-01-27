@@ -6374,50 +6374,66 @@
 
 ;;;; module non-core-macro-transformer: LET-VALUES
 
-(define let-values-macro
-  (lambda (stx)
-    (define (rename x old* new*)
-      (unless (identifier? x)
-	(syntax-violation #f "not an indentifier" stx x))
-      (when (bound-id-member? x old*)
-	(syntax-violation #f "duplicate binding" stx x))
-      (let ((y (gensym (syntax->datum x))))
-	(values y (cons x old*) (cons y new*))))
-    (define (rename* x* old* new*)
-      (cond
-       ((null? x*) (values '() old* new*))
-       (else
-	(let*-values (((x old* new*) (rename (car x*) old* new*))
-		      ((x* old* new*) (rename* (cdr x*) old* new*)))
-	  (values (cons x x*) old* new*)))))
-    (syntax-match stx ()
-      ((_ () b b* ...)
-       (cons* (bless 'let) '() b b*))
-      ((_ ((lhs* rhs*) ...) b b* ...)
+(module (let-values-macro)
+  ;;Transformer function used to expand  R6RS LET-VALUES macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (define-constant __who__ 'let-values)
+
+  (define (let-values-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ () ?body ?body* ...)
+       (cons* (bless 'let) '() ?body ?body*))
+
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (bless
-	(let f ((lhs* lhs*) (rhs* rhs*) (old* '()) (new* '()))
-	  (cond
-	   ((null? lhs*)
-	    `(let ,(map list old* new*) ,b . ,b*))
-	   (else
+	(let recur ((lhs*  ?lhs*)
+		    (rhs*  ?rhs*)
+		    (old*  '())
+		    (new*  '()))
+	  (if (null? lhs*)
+	      `(let ,(map list old* new*)
+		 ,?body . ,?body*)
 	    (syntax-match (car lhs*) ()
-	      ((x* ...)
-	       (let-values (((y* old* new*) (rename* x* old* new*)))
+	      ((?formal* ...)
+	       (receive (y* old* new*)
+		   (rename* ?formal* old* new* expr-stx)
 		 `(call-with-values
 		      (lambda () ,(car rhs*))
 		    (lambda ,y*
-		      ,(f (cdr lhs*) (cdr rhs*) old* new*)))))
-	      ((x* ... . x)
-	       (let*-values (((y old* new*) (rename x old* new*))
-			     ((y* old* new*) (rename* x* old* new*)))
+		      ,(recur (cdr lhs*) (cdr rhs*) old* new*)))))
+
+	      ((?formal* ... . ?rest-formal)
+	       (let*-values
+		   (((y  old* new*) (rename  ?rest-formal old* new* expr-stx))
+		    ((y* old* new*) (rename* ?formal*     old* new* expr-stx)))
 		 `(call-with-values
 		      (lambda () ,(car rhs*))
 		    (lambda ,(append y* y)
-		      ,(f (cdr lhs*) (cdr rhs*)
-			  old* new*)))))
+		      ,(recur (cdr lhs*) (cdr rhs*)
+			      old* new*)))))
 	      (others
-	       (syntax-violation #f "malformed bindings"
-				 stx others)))))))))))
+	       (syntax-violation __who__ "malformed bindings" expr-stx others)))))))
+      ))
+
+  (define (rename formal old* new* expr-stx)
+    (unless (identifier? formal)
+      (syntax-violation __who__ "not an indentifier" expr-stx formal))
+    (when (bound-id-member? formal old*)
+      (syntax-violation __who__ "duplicate binding" expr-stx formal))
+    (let ((y (gensym (syntax->datum formal))))
+      (values y (cons formal old*) (cons y new*))))
+
+  (define (rename* formal* old* new* expr-stx)
+    (if (null? formal*)
+	(values '() old* new*)
+      (let*-values
+	  (((formal  old* new*) (rename  (car formal*) old* new* expr-stx))
+	   ((formal* old* new*) (rename* (cdr formal*) old* new* expr-stx)))
+	(values (cons formal formal*) old* new*))))
+
+  #| end of module: LET-VALUES-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: LET*-VALUES
