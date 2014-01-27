@@ -6145,7 +6145,7 @@
 (define (syntax-rules-macro expr-stx)
   ;;Transformer function  used to  expand R6RS SYNTAX-RULES  macros from
   ;;the  top-level  built  in  environment.   Process  the  contents  of
-  ;;EXPR-STX; return a syntax objects that needs to be further expanded.
+  ;;EXPR-STX; return a syntax object that needs to be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ (?literal* ...)
@@ -6170,7 +6170,7 @@
 (define (define-syntax-rule-macro expr-stx)
   ;;Transformer  function  used  to expand  Vicare's  DEFINE-SYNTAX-RULE
   ;;macros  from  the  top-level  built  in  environment.   Process  the
-  ;;contents  of EXPR-STX;  return a  syntax  objects that  needs to  be
+  ;;contents  of EXPR-STX;  return  a  syntax object  that  needs to  be
   ;;further expanded.
   ;;
   (syntax-match expr-stx ()
@@ -6224,31 +6224,53 @@
 
 ;;;; module non-core-macro-transformer: WITH-SYNTAX
 
-(define with-syntax-macro
-  (lambda (e)
-    (syntax-match e ()
-      ((_ ((pat* expr*) ...) b b* ...)
-       (let ((idn*
-	      (let f ((pat* pat*))
-		(cond
-		 ((null? pat*) '())
-		 (else
-		  (let-values (((pat idn*) (convert-pattern (car pat*) '())))
-		    (append idn* (f (cdr pat*)))))))))
-	 (%verify-formals-syntax (map car idn*) e)
-	 (let ((t* (generate-temporaries expr*)))
-	   (bless
-	    `(let ,(map list t* expr*)
-	       ,(let f ((pat* pat*) (t* t*))
-		  (cond
-		   ((null? pat*) `(let () ,b . ,b*))
-		   (else
-		    `(syntax-case ,(car t*) ()
-		       (,(car pat*) ,(f (cdr pat*) (cdr t*)))
-		       (_ (assertion-violation 'with-syntax
-			    "pattern does not match value"
-			    ',(car pat*)
-			    ,(car t*)))))))))))))))
+(define (with-syntax-macro expr-stx)
+  ;;Transformer function used to expand R6RS WITH-SYNTAX macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  ;;A WITH-SYNTAX form:
+  ;;
+  ;;   (with-syntax ((?pat0 ?expr0)
+  ;;                 (?pat1 ?expr1))
+  ;;     ?body0 ?body ...)
+  ;;
+  ;;is expanded as follows:
+  ;;
+  ;;   (syntax-case ?expr0 ()
+  ;;     (?pat0
+  ;;      (syntax-case ?expr1 ()
+  ;;       (?pat1
+  ;;        (let () ?body0 ?body ...))
+  ;;       (_
+  ;;        (assertion-violation ---))))
+  ;;     (_
+  ;;      (assertion-violation ---)))
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ((?pat* ?expr*) ...) ?body ?body* ...)
+     (let ((idn* (let recur ((pat* ?pat*))
+		   (if (null? pat*)
+		       '()
+		     (receive (pat idn*)
+			 (convert-pattern (car pat*) '())
+		       (append idn* (recur (cdr pat*))))))))
+       (%verify-formals-syntax (map car idn*) expr-stx)
+       (let ((t* (generate-temporaries ?expr*)))
+	 (bless
+	  `(let ,(map list t* ?expr*)
+	     ,(let recur ((pat* ?pat*)
+			  (t*   t*))
+		(if (null? pat*)
+		    `(let () ,?body . ,?body*)
+		  `(syntax-case ,(car t*) ()
+		     (,(car pat*)
+		      ,(recur (cdr pat*) (cdr t*)))
+		     (_
+		      (assertion-violation 'with-syntax
+			"pattern does not match value"
+			',(car pat*) ,(car t*)))))))))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: IDENTIFIER-SYNTAX
