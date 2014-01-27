@@ -6379,6 +6379,24 @@
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
   ;;return a syntax object that must be further expanded.
   ;;
+  ;;A LET-VALUES syntax like:
+  ;;
+  ;;   (let-values (((a b c) rhs0)
+  ;;                ((d e f) rhs1))
+  ;;     ?body0 ?body ...)
+  ;;
+  ;;is expanded to:
+  ;;
+  ;;   (call-with-values
+  ;;       (lambda () rhs0)
+  ;;     (lambda (G.a G.b G.c)
+  ;;       (call-with-values
+  ;;           (lambda () rhs1)
+  ;;         (lambda (G.d G.e G.f)
+  ;;           (let ((a G.a) (b G.b) (c G.c)
+  ;;                 (c G.c) (d G.d) (e G.e))
+  ;;             ?body0 ?body)))))
+  ;;
   (define-constant __who__ 'let-values)
 
   (define (let-values-macro expr-stx)
@@ -6438,44 +6456,71 @@
 
 ;;;; module non-core-macro-transformer: LET*-VALUES
 
-(define let*-values-macro
-  (lambda (stx)
-    (define (check x*)
-      (unless (null? x*)
-	(let ((x (car x*)))
-	  (unless (identifier? x)
-	    (syntax-violation #f "not an identifier" stx x))
-	  (check (cdr x*))
-	  (when (bound-id-member? x (cdr x*))
-	    (syntax-violation #f "duplicate identifier" stx x)))))
-    (syntax-match stx ()
-      ((_ () b b* ...)
-       (cons* (bless 'let) '() b b*))
-      ((_ ((lhs* rhs*) ...) b b* ...)
+(module (let*-values-macro)
+  ;;Transformer function used to expand R6RS LET*-VALUES macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  ;;A LET*-VALUES syntax like:
+  ;;
+  ;;   (let*-values (((a b c) rhs0)
+  ;;                 ((d e f) rhs1))
+  ;;     ?body0 ?body ...)
+  ;;
+  ;;is expanded to:
+  ;;
+  ;;   (call-with-values
+  ;;       (lambda () rhs0)
+  ;;     (lambda (a b c)
+  ;;       (call-with-values
+  ;;           (lambda () rhs1)
+  ;;         (lambda (d e f)
+  ;;           (begin ?body0 ?body)))))
+  ;;
+  (define-constant __who__ 'let*-values)
+
+  (define (let*-values-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ () ?body ?body* ...)
+       (cons* (bless 'let) '() ?body ?body*))
+
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (bless
-	(let f ((lhs* lhs*) (rhs* rhs*))
-	  (cond
-	   ((null? lhs*)
-	    `(begin ,b . ,b*))
-	   (else
+	(let recur ((lhs* ?lhs*)
+		    (rhs* ?rhs*))
+	  (if (null? lhs*)
+	      `(begin ,?body . ,?body*)
 	    (syntax-match (car lhs*) ()
-	      ((x* ...)
+	      ((?formal* ...)
 	       (begin
-		 (check x*)
+		 (check ?formal* expr-stx)
 		 `(call-with-values
 		      (lambda () ,(car rhs*))
-		    (lambda ,x*
-		      ,(f (cdr lhs*) (cdr rhs*))))))
-	      ((x* ... . x)
+		    (lambda ,?formal*
+		      ,(recur (cdr lhs*) (cdr rhs*))))))
+
+	      ((?formal* ... . ?rest-formal)
 	       (begin
-		 (check (cons x x*))
+		 (check (cons ?rest-formal ?formal*) expr-stx)
 		 `(call-with-values
 		      (lambda () ,(car rhs*))
-		    (lambda ,(append x* x)
-		      ,(f (cdr lhs*) (cdr rhs*))))))
+		    (lambda ,(append ?formal* ?rest-formal)
+		      ,(recur (cdr lhs*) (cdr rhs*))))))
+
 	      (others
-	       (syntax-violation #f "malformed bindings"
-				 stx others)))))))))))
+	       (syntax-violation __who__ "malformed bindings" expr-stx others)))))))
+      ))
+
+  (define (check x* expr-stx)
+    (unless (null? x*)
+      (let ((x (car x*)))
+	(unless (identifier? x)
+	  (syntax-violation __who__ "not an identifier" expr-stx x))
+	(check (cdr x*) expr-stx)
+	(when (bound-id-member? x (cdr x*))
+	  (syntax-violation __who__ "duplicate identifier" expr-stx x)))))
+
+  #| end of module: LET*-VALUES-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: VALUES->LIST-MACRO
