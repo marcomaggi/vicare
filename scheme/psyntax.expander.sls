@@ -7723,29 +7723,42 @@
 
 ;;;; module non-core-macro-transformer: OR, AND
 
-(define or-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_) #f)
-      ((_ e e* ...)
-       (bless
-	(let f ((e e) (e* e*))
-	  (cond
-	   ((null? e*) `(begin #f ,e))
-	   (else
-	    `(let ((t ,e))
-	       (if t t ,(f (car e*) (cdr e*))))))))))))
+(define (or-macro expr-stx)
+  ;;Transformer  function  used  to  expand  R6RS  OR  macros  from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_) #f)
 
-(define and-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_) #t)
-      ((_ e e* ...)
-       (bless
-	(let f ((e e) (e* e*))
-	  (cond
-	   ((null? e*) `(begin #f ,e))
-	   (else `(if ,e ,(f (car e*) (cdr e*)) #f)))))))))
+    ((_ ?expr ?expr* ...)
+     (bless
+      (let recur ((e ?expr) (e* ?expr*))
+	(if (null? e*)
+	    `(begin #f ,e)
+	  `(let ((t ,e))
+	     (if t
+		 t
+	       ,(recur (car e*) (cdr e*))))))))
+    ))
+
+(define (and-macro expr-stx)
+  ;;Transformer  function  used  to  expand R6RS  AND  macros  from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_) #t)
+
+    ((_ ?expr ?expr* ...)
+     (bless
+      (let recur ((e ?expr) (e* ?expr*))
+	(if (null? e*)
+	    `(begin #f ,e)
+	  `(if ,e
+	       ,(recur (car e*) (cdr e*))
+	     #f)))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: COND
