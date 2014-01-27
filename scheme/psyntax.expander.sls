@@ -7283,54 +7283,89 @@
 
 ;;;; module non-core-macro-transformer: GUARD
 
-(define guard-macro
-  (lambda (x)
-    (define (gen-clauses raised-obj con outerk clause*)
-      (define (f x k)
-	(syntax-match x (=>)
-	  ((e => p)
-	   (let ((t (gensym)))
-	     `(let ((,t ,e))
-		(if ,t (,p ,t) ,k))))
-	  ((e)
-	   (let ((t (gensym)))
-	     `(let ((,t ,e))
-		(if ,t ,t ,k))))
-	  ((e v v* ...)
-	   `(if ,e (begin ,v ,@v*) ,k))
-	  (_ (stx-error x "invalid guard clause"))))
-      (define (f* x*)
-	(syntax-match x* (else)
-	  (()
-	   (let ((g (gensym)))
-	     (values `(,g (lambda () (raise-continuable ,raised-obj))) g)))
-	  (((else e e* ...))
-	   (values `(begin ,e ,@e*) #f))
-	  ((cls . cls*)
-	   (let-values (((e g) (f* cls*)))
-	     (values (f cls e) g)))
-	  (others (stx-error others "invalid guard clause"))))
-      (let-values (((code raisek) (f* clause*)))
-	(if raisek
-	    `((call/cc
-                  (lambda (,raisek)
-                    (,outerk
-		     (lambda () ,code)))))
-	  `(,outerk (lambda () ,code)))))
+(module (guard-macro)
+
+  (define (guard-macro x)
+    ;;Transformer function  used to  expand R6RS  GUARD macros  from the
+    ;;top-level built in environment.   Expand the contents of EXPR-STX;
+    ;;return a syntax object that must be further expanded.
+    ;;
     (syntax-match x ()
-      ((_ (con clause* ...) b b* ...)
-       (identifier? con)
-       (let ((outerk     (gensym))
-	     (raised-obj (gensym)))
+      ((_ (?variable ?clause* ...) ?body ?body* ...)
+       (identifier? ?variable)
+       (let ((outerk-id     (gensym))
+	     (raised-obj-id (gensym)))
 	 (bless
 	  `((call/cc
-		(lambda (,outerk)
+		(lambda (,outerk-id)
 		  (lambda ()
 		    (with-exception-handler
-			(lambda (,raised-obj)
-			  (let ((,con ,raised-obj))
-			    ,(gen-clauses raised-obj con outerk clause*)))
-		      (lambda () ,b ,@b*))))))))))))
+			(lambda (,raised-obj-id)
+			  (let ((,?variable ,raised-obj-id))
+			    ,(gen-clauses raised-obj-id outerk-id ?clause*)))
+		      (lambda ()
+			,?body . ,?body*))))))
+	  )))
+      ))
+
+  (define (gen-clauses raised-obj-id outerk-id clause*)
+
+    (define (%process-single-cond-clause clause kont-code-stx)
+      (syntax-match clause (=>)
+	((?test => ?proc)
+	 (let ((t (gensym)))
+	   `(let ((,t ,?test))
+	      (if ,t
+		  (,?proc ,t)
+		,kont-code-stx))))
+
+	((?test)
+	 (let ((t (gensym)))
+	   `(let ((,t ,?test))
+	      (if ,t ,t ,kont-code-stx))))
+
+	((?test ?expr ?expr* ...)
+	 `(if ,?test
+	      (begin ,?expr . ,?expr*)
+	    ,kont-code-stx))
+
+	(_
+	 (stx-error clause "invalid guard clause"))))
+
+    (define (%process-multi-cond-clauses clause*)
+      (syntax-match clause* (else)
+	;;There is no ELSE clause: introduce the raise continuation that
+	;;rethrows the exception.
+	(()
+	 (let ((raisek (gensym)))
+	   (values `(,raisek (lambda ()
+			       (raise-continuable ,raised-obj-id)))
+		   raisek)))
+
+	;;There  is an  ELSE  clause:  no need  to  introduce the  raise
+	;;continuation.
+	(((else ?else-body ?else-body* ...))
+	 (values `(begin ,?else-body . ,?else-body*)
+		 #f))
+
+	((?clause . ?clause*)
+	 (receive (code-stx raisek)
+	     (%process-multi-cond-clauses ?clause*)
+	   (values (%process-single-cond-clause ?clause code-stx)
+		   raisek)))
+
+	(others
+	 (stx-error others "invalid guard clause"))))
+
+    (receive (code-stx raisek)
+	(%process-multi-cond-clauses clause*)
+      (if raisek
+	  `((call/cc
+		(lambda (,raisek)
+		  (,outerk-id (lambda () ,code-stx)))))
+	`(,outerk-id (lambda () ,code-stx)))))
+
+  #| end of module: GUARD-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: DEFINE-ENUMERATION
