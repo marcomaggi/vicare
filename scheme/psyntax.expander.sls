@@ -77,6 +77,82 @@
 ;;;SOFTWARE.
 
 
+;;;; introduction: bibliography
+;;
+;;There  are   multiple  documents  we   can  study  to  get   a  better
+;;understanding of  the expander's code.   Most likely the  top document
+;;is:
+;;
+;;[1] Abdulaziz  Ghuloum.  "Implicit Phasing for  Library Dependencies".
+;;    Ph.D. thesis.  December 2008.
+;;
+;;from the very author of this library; it is quite long.  Here are some
+;;papers on syntax-case macros and R6RS libraries:
+;;
+;;[2]  R.   Kent  Dybvig.   "Writing  Hygienic  Macros  in  Scheme  with
+;;    Syntax-Case".  Department of Computer Science, Indiana University.
+;;    Technical Report 356.  June 1992.
+;;
+;;[3] Abdulaziz  Ghuloum, R.  Kent  Dybvig.  "Implicit Phasing  for R6RS
+;;    Libraries".  Department of Computer Science, Indiana University.
+;;
+;;and the very paper that introduced hygienic macros:
+;;
+;;[4] Eugene  Kohlbecker, Daniel P. Friedman,  Matthias Felleisen, Bruce
+;;    Duba.   "Hygienic   Macro  Expansion".   Department   of  Computer
+;;    Science, Indiana University.  1986.
+;;
+
+
+;;;; introduction: evaluation times
+;;
+;;Throughout the  code there  are several  references to  different code
+;;evaluation  times.  The  following  libraries from  [1]  allows us  to
+;;explore what those times mean.
+;;
+;; (library (times-demo)
+;;   (export
+;;     call-time invoke-time expand-time visit-time compile-time)
+;;   (import (vicare)
+;;     (prefix (srfi :19)
+;;             srfi.))
+;;
+;;   (define call-time
+;;     (lambda ()
+;;       (receive-and-return (S)
+;;           (srfi.date->string (srfi.current-date))
+;;         (printf "call time: ~a\n" S))))
+;;
+;;   (define invoke-time
+;;     (let ((t (receive-and-return (S)
+;;                  (srfi.date->string (srfi.current-date))
+;;                (printf "invoke time: ~a\n" S))))
+;;       (lambda () t)))
+;;
+;;   (define-syntax expand-time
+;;     (lambda (stx)
+;;       (receive-and-return (S)
+;;           (srfi.date->string (srfi.current-date))
+;;         (printf "expand time: ~a\n" S))))
+;;
+;;   (define-syntax visit-time
+;;     (let ((t (receive-and-return (S)
+;;                  (srfi.date->string (srfi.current-date))
+;;                (printf "visit time: ~a\n" S))))
+;;       (lambda (stx) t)))
+;;
+;;   (define-syntax compile-time
+;;     (lambda (stx)
+;;       (let-syntax ((t (lambda (stx)
+;;                         (receive-and-return (S)
+;;                             (srfi.date->string (srfi.current-date))
+;;                           (printf "compile time: ~a\n" S)))))
+;;         (t))))
+;;
+;;   #| end of library |# )
+;;
+
+
 ;;;; introduction: lexical variables, labels, location gensyms
 ;;
 ;;Let's consider the example library:
