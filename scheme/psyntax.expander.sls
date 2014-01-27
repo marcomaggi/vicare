@@ -6525,45 +6525,57 @@
 
 ;;;; module non-core-macro-transformer: VALUES->LIST-MACRO
 
-(define (values->list-macro stx)
-  (syntax-match stx ()
-    ((_ expr)
+(define (values->list-macro expr-stx)
+  ;;Transformer  function used  to expand  Vicare's VALUES->LIST  macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?expr)
      (bless
       `(call-with-values
-	   (lambda () ,expr)
+	   (lambda () ,?expr)
 	 list)))))
 
 
 ;;;; module non-core-macro-transformer: LET*-SYNTAX
 
-(define (let*-syntax-macro stx)
-  (syntax-match stx ()
+(define (let*-syntax-macro expr-stx)
+  ;;Transformer function used to expand Vicare's LET*-SYNTAX macros from
+  ;;the  top-level  built  in   environment.   Expand  the  contents  of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
     ;;No bindings.
     ((_ () ?body ?body* ...)
      (bless
-      `(begin ,?body ,@?body*)))
+      `(begin ,?body . ,?body*)))
     ;;Single binding.
     ((_ ((?lhs ?rhs)) ?body ?body* ...)
      (bless
       `(let-syntax ((,?lhs ,?rhs))
-	 ,?body ,@?body*)))
+	 ,?body . ,?body*)))
     ;;Multiple bindings
     ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
      (bless
       `(let-syntax ((,?lhs ,?rhs))
 	 (let*-syntax ,(map list ?lhs* ?rhs*)
-	   ,?body ,@?body*))))
+	   ,?body . ,?body*))))
     ))
 
 
 ;;;; module non-core-macro-transformer: LET-CONSTANTS, LET*-CONSTANTS, LETREC-CONSTANTS, LETREC*-CONSTANTS
 
-(define (let-constants-macro stx)
-  (syntax-match stx ()
+(define (let-constants-macro expr-stx)
+  ;;Transformer function  used to  expand Vicare's  LET-CONSTANTS macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
     ;;No bindings.
     ((_ () ?body ?body* ...)
      (bless
-      `(let () ,?body ,@?body*)))
+      `(let () ,?body . ,?body*)))
     ;;Multiple bindings
     ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
      (let ((SHADOW* (generate-temporaries (cons ?lhs ?lhs*))))
@@ -6572,28 +6584,36 @@
 	   (let-syntax ,(map (lambda (lhs shadow)
 			       `(,lhs (identifier-syntax ,shadow)))
 			  (cons ?lhs ?lhs*) SHADOW*)
-	     ,?body ,@?body*)))))
+	     ,?body . ,?body*)))))
     ))
 
-(define (let*-constants-macro stx)
-  (syntax-match stx ()
+(define (let*-constants-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  LET*-CONSTANTS macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
     ;;No bindings.
     ((_ () ?body ?body* ...)
      (bless
-      `(let () ,?body ,@?body*)))
+      `(let () ,?body . ,?body*)))
     ;;Multiple bindings
     ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
      (bless
       `(let-constants ((,?lhs ,?rhs))
 	 (let*-constants ,(map list ?lhs* ?rhs*)
-	   ,?body ,@?body*))))
+	   ,?body . ,?body*))))
     ))
 
-(define (letrec-constants-macro stx)
-  (syntax-match stx ()
+(define (letrec-constants-macro expr-stx)
+  ;;Transformer function used to expand Vicare's LETREC-CONSTANTS macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
     ((_ () ?body0 ?body* ...)
      (bless
-      `(let () ,?body0 ,@?body*)))
+      `(let () ,?body0 . ,?body*)))
 
     ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
      (let ((TMP* (generate-temporaries ?lhs*))
@@ -6610,14 +6630,18 @@
 	       ,@(map (lambda (var tmp)
 			`(set! ,var ,tmp))
 		   VAR* TMP*)
-	       (let () ,?body0 ,@?body*)))))))
+	       (let () ,?body0 . ,?body*)))))))
     ))
 
-(define (letrec*-constants-macro stx)
-  (syntax-match stx ()
+(define (letrec*-constants-macro expr-stx)
+  ;;Transformer  function  used  to  expand  Vicare's  LETREC*-CONSTANTS
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
     ((_ () ?body0 ?body* ...)
      (bless
-      `(let () ,?body0 ,@?body*)))
+      `(let () ,?body0 . ,?body*)))
 
     ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
      (let ((TMP* (generate-temporaries ?lhs*))
@@ -6634,19 +6658,23 @@
 	       ,@(map (lambda (var tmp)
 			`(set! ,var ,tmp))
 		   VAR* TMP*)
-	       (let () ,?body0 ,@?body*)))))))
+	       (let () ,?body0 . ,?body*)))))))
     ))
 
 
 ;;;; module non-core-macro-transformer: CASE-DEFINE
 
-(define (case-define-macro stx)
-  (syntax-match stx ()
+(define (case-define-macro expr-stx)
+  ;;Transformer function used to expand Vicare's CASE-DEFINE macros from
+  ;;the  top-level  built  in   environment.   Expand  the  contents  of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
     ((_ ?who ?cl-clause ?cl-clause* ...)
      (identifier? ?who)
      (bless
       `(define ,?who
-	 (case-lambda ,?cl-clause ,@?cl-clause*))))
+	 (case-lambda ,?cl-clause . ,?cl-clause*))))
     ))
 
 
@@ -6680,7 +6708,7 @@
   (module (define*-macro)
     ;;Transformer function  used to expand Vicare's  DEFINE* macros from
     ;;the  top-level  built  in  environment.  Expand  the  contents  of
-    ;;EXPR-STX.  Return a sexp in the core language.
+    ;;EXPR-STX.  Return a syntax object that must be further expanded.
     ;;
     ;;We want to implement the following example expansions:
     ;;
@@ -6780,7 +6808,7 @@
     (define (case-define*-macro stx)
       ;;Transformer function used to expand Vicare's CASE-DEFINE* macros
       ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a sexp in the core language.
+      ;;EXPR-STX.  Return a syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'case-define* message stx subform))
@@ -6851,7 +6879,7 @@
     (define (lambda*-macro stx)
       ;;Transformer function used to expand Vicare's LAMBDA* macros from
       ;;the  top-level built  in  environment.  Expand  the contents  of
-      ;;EXPR-STX.  Return a sexp in the core language.
+      ;;EXPR-STX.  Return a syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'lambda* message stx subform))
@@ -6913,7 +6941,7 @@
     (define (case-lambda*-macro stx)
       ;;Transformer function used to expand Vicare's CASE-LAMBDA* macros
       ;;from the top-level built in environment.  Expand the contents of
-      ;;EXPR-STX.  Return a sexp in the core language.
+      ;;EXPR-STX.  Return a syntax object that must be further expanded.
       ;;
       (define (%synner message subform)
 	(syntax-violation 'case-lambda* message stx subform))
