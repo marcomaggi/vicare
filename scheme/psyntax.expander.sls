@@ -84,7 +84,8 @@
 ;;is:
 ;;
 ;;[1] Abdulaziz  Ghuloum.  "Implicit Phasing for  Library Dependencies".
-;;    Ph.D. thesis.  December 2008.
+;;    Ph.D. thesis.  Department of Computer Science, Indiana University.
+;;    December 2008.
 ;;
 ;;from the very author of this library; it is quite long.  Here are some
 ;;papers on syntax-case macros and R6RS libraries:
@@ -101,6 +102,13 @@
 ;;[4] Eugene  Kohlbecker, Daniel P. Friedman,  Matthias Felleisen, Bruce
 ;;    Duba.   "Hygienic   Macro  Expansion".   Department   of  Computer
 ;;    Science, Indiana University.  1986.
+;;
+;;Here  is another  long document  covering muliple  components of  this
+;;Scheme implementation:
+;;
+;;[5] Oscar  Waddell.  "Extending  the Scope of  Syntactic Abstraction".
+;;    Ph.D. thesis.  Department of Computer Science, Indiana University.
+;;    August 1999.
 ;;
 
 
