@@ -6317,38 +6317,59 @@
 
 ;;;; module non-core-macro-transformer: LET, LET*, TRACE-LET
 
-(define (let-macro stx)
-  (syntax-match stx ()
-    ((_ ((lhs* rhs*) ...) b b* ...)
-     (if (valid-bound-ids? lhs*)
-	 (bless `((lambda ,lhs* ,b . ,b*) . ,rhs*))
-       (%error-invalid-formals-syntax stx lhs*)))
+(define (let-macro expr-stx)
+  ;;Transformer  function  used  to  expand R6RS  LET  macros  from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     (if (valid-bound-ids? ?lhs*)
+	 (bless
+	  `((lambda ,?lhs*
+	      ,?body . ,?body*) . ,?rhs*))
+       (%error-invalid-formals-syntax expr-stx ?lhs*)))
 
-    ((_ f ((lhs* rhs*) ...) b b* ...)
-     (identifier? f)
-     (if (valid-bound-ids? lhs*)
-	 (bless `((letrec ((,f (lambda ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-       (%error-invalid-formals-syntax stx lhs*)))
+    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     (identifier? ?recur)
+     (if (valid-bound-ids? ?lhs*)
+	 (bless
+	  `((letrec ((,?recur (lambda ,?lhs*
+				,?body . ,?body*)))
+	      ,?recur) . ,?rhs*))
+       (%error-invalid-formals-syntax expr-stx ?lhs*)))
     ))
 
-(define let*-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ ((lhs* rhs*) ...) b b* ...) (for-all identifier? lhs*)
-       (bless
-	(let f ((x* (map list lhs* rhs*)))
-	  (cond
-	   ((null? x*) `(let () ,b . ,b*))
-	   (else `(let (,(car x*)) ,(f (cdr x*)))))))))))
+(define (let*-macro expr-stx)
+  ;;Transformer  function  used to  expand  R6RS  LET* macros  from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     (for-all identifier? ?lhs*)
+     (bless
+      (let recur ((x* (map list ?lhs* ?rhs*)))
+	(if (null? x*)
+	    `(let () ,?body . ,?body*)
+	  `(let (,(car x*)) ,(recur (cdr x*)))))))
+    ))
 
-(define trace-let-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ f ((lhs* rhs*) ...) b b* ...) (identifier? f)
-       (if (valid-bound-ids? lhs*)
-	   (bless
-	    `((letrec ((,f (trace-lambda ,f ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-	 (%error-invalid-formals-syntax stx lhs*))))))
+(define (trace-let-macro expr-stx)
+  ;;Transformer function  used to expand Vicare's  TRACE-LET macros from
+  ;;the  top-level  built  in   environment.   Expand  the  contents  of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     (identifier? ?recur)
+     (if (valid-bound-ids? ?lhs*)
+	 (bless
+	  `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
+					    ,?body . ,?body*)))
+	      ,?recur) . ,?rhs*))
+       (%error-invalid-formals-syntax expr-stx ?lhs*)))
+    ))
 
 
 ;;;; module non-core-macro-transformer: LET-VALUES
