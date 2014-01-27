@@ -7535,31 +7535,38 @@
 
 ;;;; module non-core-macro-transformer: DO
 
-(define do-macro
-  (lambda (stx)
-    (define bind
-      (lambda (x)
-	(syntax-match x ()
-	  ((x init)      `(,x ,init ,x))
-	  ((x init step) `(,x ,init ,step))
-	  (_  (stx-error stx "invalid binding")))))
-    (syntax-match stx ()
-      ((_ (binding* ...)
-	  (test expr* ...)
-	  command* ...)
-       (syntax-match (map bind binding*) ()
-	 (((x* init* step*) ...)
-	  (if (valid-bound-ids? x*)
-	      (bless
-	       `(letrec ((loop
-			  (lambda ,x*
-			    (if ,test
-				(begin (if #f #f) ,@expr*)
-			      (begin
-				,@command*
-				(loop ,@step*))))))
-		  (loop ,@init*)))
-	    (stx-error stx "invalid bindings"))))))))
+(define (do-macro stx)
+  ;;Transformer  function  used  to  expand  R6RS  DO  macros  from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (define (%normalise-binding binding-stx)
+    (syntax-match binding-stx ()
+      ((?var ?init)       `(,?var ,?init ,?var))
+      ((?var ?init ?step) `(,?var ,?init ,?step))
+      (_
+       (stx-error stx "invalid binding"))))
+  (syntax-match stx ()
+    ((_ (?binding* ...)
+	(?test ?expr* ...)
+	?command* ...)
+     (syntax-match (map %normalise-binding ?binding*) ()
+       (((?var* ?init* ?step*) ...)
+	(if (valid-bound-ids? ?var*)
+	    (bless
+	     `(letrec ((loop (lambda ,?var*
+			       (if ,?test
+				   ;;If ?EXPR* is  null: make sure there
+				   ;;is  at  least   one  expression  in
+				   ;;BEGIN.
+				   (begin (if #f #f) . ,?expr*)
+				 (begin
+				   ,@?command*
+				   (loop . ,?step*))))))
+		(loop . ,?init*)))
+	  (stx-error stx "invalid bindings")))
+       ))
+    ))
 
 
 ;;;; module non-core-macro-transformer: RETURN, CONTINUE, BREAK, WHILE, UNTIL, FOR
