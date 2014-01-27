@@ -7398,6 +7398,10 @@
 ;;;; module non-core-macro-transformer: DEFINE-ENUMERATION
 
 (define (define-enumeration-macro stx)
+  ;;Transformer function  used to expand R6RS  DEFINE-ENUMERATION macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (define-constant __who__ 'define-enumeration)
   (define (set? x)
     (or (null? x)
@@ -7409,34 +7413,34 @@
       (cons (car ls)
 	    (remove-dups (remq (car ls) (cdr ls))))))
   (syntax-match stx ()
-    ((_ name (id* ...) maker)
+    ((_ ?name (?id* ...) ?maker)
      (begin
-       (unless (identifier? name)
+       (unless (identifier? ?name)
 	 (syntax-violation __who__
-	   "expected identifier as enumeration type name" stx name))
-       (unless (for-all identifier? id*)
+	   "expected identifier as enumeration type name" stx ?name))
+       (unless (for-all identifier? ?id*)
 	 (syntax-violation __who__
-	   "expected list of symbols as enumeration elements" stx id*))
-       (unless (identifier? maker)
+	   "expected list of symbols as enumeration elements" stx ?id*))
+       (unless (identifier? ?maker)
 	 (syntax-violation __who__
-	   "expected identifier as enumeration constructor syntax name" stx maker))
-       (let ((name*		(remove-dups (syntax->datum id*)))
+	   "expected identifier as enumeration constructor syntax name" stx ?maker))
+       (let ((symbol*		(remove-dups (syntax->datum ?id*)))
 	     (the-constructor	(gensym)))
 	 (bless
 	  `(begin
 	     (define ,the-constructor
-	       (enum-set-constructor (make-enumeration ',name*)))
+	       (enum-set-constructor (make-enumeration ',symbol*)))
 
-	     (define-syntax ,name
+	     (define-syntax ,?name
 	       ;;Check at macro-expansion time whether the symbol ?ARG
-	       ;;is in  the universe associated with NAME.   If it is,
+	       ;;is in  the universe associated with ?NAME.   If it is,
 	       ;;the result  of the  expansion is equivalent  to ?ARG.
 	       ;;It is a syntax violation if it is not.
 	       ;;
 	       (lambda (x)
-		 (define universe-of-symbols ',name*)
+		 (define universe-of-symbols ',symbol*)
 		 (define (%synner message subform)
-		   (syntax-violation ',name message
+		   (syntax-violation ',?name message
 				     (syntax->datum x) (syntax->datum subform)))
 		 (syntax-case x ()
 		   ((_ ?arg)
@@ -7455,21 +7459,22 @@
 		   (_
 		    (%synner "invalid enumeration validator form" #f)))))
 
-	     (define-syntax ,maker
+	     (define-syntax ,?maker
 	       ;;Given  any  finite sequence  of  the  symbols in  the
 	       ;;universe, possibly  with duplicates, expands  into an
 	       ;;expression that  evaluates to the  enumeration set of
 	       ;;those symbols.
 	       ;;
-	       ;;Check  at macro-expansion  time  whether every  input
-	       ;;symbol is in the universe associated with NAME; it is
+	       ;;Check  at  macro-expansion  time  whether  every  input
+	       ;;symbol is in the universe  associated with ?NAME; it is
 	       ;;a syntax violation if one or more is not.
 	       ;;
 	       (lambda (x)
-		 (define universe-of-symbols ',name*)
+		 (define universe-of-symbols ',symbol*)
 		 (define (%synner message subform-stx)
-		   (syntax-violation ',maker message
-				     (syntax->datum x) (syntax->datum subform-stx)))
+		   (syntax-violation ',?maker
+		     message
+		     (syntax->datum x) (syntax->datum subform-stx)))
 		 (syntax-case x ()
 		   ((_ . ?list-of-symbols)
 		    ;;Check the input  symbols one by one partitioning
