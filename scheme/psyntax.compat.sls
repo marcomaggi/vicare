@@ -57,6 +57,10 @@
     label-binding			set-label-binding!
     remove-location
 
+    ;; symbol property lists
+    putprop				getprop
+    remprop				property-list
+
     ;; error handlers
     library-version-mismatch-warning
     library-stale-warning

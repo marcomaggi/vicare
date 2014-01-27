@@ -197,6 +197,13 @@ Notes for revision 0.3d8
      (apply color 1 '(2 3))
      =>  #[r6rs-record: color red=1 green=2 blue=3]
 
+* Added some experimental functions to (vicare):
+
+    syntactic-binding-putprop
+    syntactic-binding-getprop
+    syntactic-binding-remprop
+    syntactic-binding-property-list
+
 
 Notes for revision 0.3d7
 ------------------------

@@ -3986,6 +3986,84 @@
   #t)
 
 
+(parametrise ((check-test-name	'binding-properties))
+
+;;; DEFINE-SYNTAX bindings
+
+  (check
+      (let ()
+	(define-syntax ciao
+	  (let ()
+	    (syntactic-binding-putprop #'ciao 'a 123)
+	    (lambda (stx) #t)))
+	(define-syntax (doit stx)
+	  (syntactic-binding-getprop #'ciao 'a))
+	(doit))
+    => 123)
+
+  (check
+      (let ()
+	(define-syntax (ciao stx)
+	  #t)
+	(define-syntax (doit stx)
+	  (syntactic-binding-getprop #'ciao 'a))
+	(eval-for-expand
+	  (syntactic-binding-putprop #'ciao 'a 123))
+	(doit))
+    => 123)
+
+;;; --------------------------------------------------------------------
+;;; LETREC-SYNTAX bindings
+
+  (check
+      (letrec-syntax ((ciao (let ()
+			      (syntactic-binding-putprop #'ciao 'a 123)
+			      (lambda (stx) #t))))
+	(define-syntax (doit stx)
+	  (syntactic-binding-getprop #'ciao 'a))
+	(doit))
+    => 123)
+
+;;; --------------------------------------------------------------------
+;;; LET-SYNTAX bindings
+
+  (check
+      (let-syntax ((ciao (lambda (stx) #t)))
+	(define-syntax (doit stx)
+	  (syntactic-binding-getprop #'ciao 'a))
+	(eval-for-expand
+	  (syntactic-binding-putprop #'ciao 'a 123))
+	(doit))
+    => 123)
+
+;;; --------------------------------------------------------------------
+;;; DEFINE bindings
+
+  (check
+      (let ()
+	(define ciao "ciao")
+	(define-syntax (doit stx)
+	  (syntactic-binding-getprop #'ciao 'a))
+	(eval-for-expand
+	  (syntactic-binding-putprop #'ciao 'a 123))
+	(doit))
+    => 123)
+
+;;; --------------------------------------------------------------------
+;;; LET bindings
+
+  (check
+      (let ((ciao "ciao"))
+	(define-syntax (doit stx)
+	  (syntactic-binding-getprop #'ciao 'a))
+	(eval-for-expand
+	  (syntactic-binding-putprop #'ciao 'a 123))
+	(doit))
+    => 123)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

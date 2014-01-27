@@ -289,6 +289,7 @@ Example:
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
+* iklib syntaxes properties::   Syntactic binding properties.
 @end menu
 
 @c page
@@ -1546,6 +1547,159 @@ Examples:
 @result{} (1 2 3)
 @end example
 @end deffn
+
+@c page
+@node iklib syntaxes properties
+@subsection Syntactic binding properties
+
+
+It is sometimes useful to attach properties to syntactic bindings; the
+following @api{} does so.  The following functions will fail if the
+argument @var{id} is not a bound identifier.
+
+
+@defun syntactic-binding-putprop @var{id} @var{key} @var{value}
+Like @func{putprop} for symbols, but set a property for the identifier
+@var{id}.  @var{key} must be a symbol; @var{value} can be any values.
+Return unspecified values.
+@end defun
+
+
+@defun syntactic-binding-getprop @var{id} @var{key}
+Like @func{getprop} for symbols, but retrieve a property for the
+identifier @var{id}.  @var{key} must be a symbol.  Return the property
+value or @false{} if the property is not set.
+@end defun
+
+
+@defun syntactic-binding-remprop @var{id} @var{key}
+Like @func{remprop} for symbols, but remove a property for the
+identifier @var{id}; nothing happens if the property is not set.
+@var{key} must be a symbol.  Return unspecified values.
+@end defun
+
+
+@defun syntactic-binding-property-list @var{id}
+Like @func{property-list} for symbols, but retrieve the property list
+for the identifier @var{id}.  Return the property list or null if no
+property is set.
+@end defun
+
+
+We have to remember that when evaluating the syntax:
+
+@example
+(define-syntax @meta{lhs} @meta{rhs})
+@end example
+
+@noindent
+the identifier @meta{lhs} is already bound when the expression
+@meta{rhs} is evaluated to acquire the transformer function; the same
+happens for:
+
+@example
+(letrec-syntax ((@meta{lhs} @meta{rhs}))
+  @meta{body})
+@end example
+
+@noindent
+but it does @strong{not} happen for:
+
+@example
+(let-syntax ((@meta{lhs} @meta{rhs}))
+  @meta{body})
+@end example
+
+@noindent
+when the expression @meta{rhs} is evaluated, the identifier @meta{lhs}
+is still unbound.
+
+So the following example will work:
+
+@example
+(define-syntax ciao
+  (let ()
+    (syntactic-binding-putprop #'ciao 'a 123)
+    (lambda (stx) #t)))
+
+(define-syntax (doit stx)
+  (syntactic-binding-getprop #'ciao 'a))
+
+(doit)          @result{} 123
+@end example
+
+@noindent
+notice that here the syntax @func{ciao} is never used; the following
+example will also work:
+
+@example
+(define-syntax (ciao stx)
+  #t)
+
+(define-syntax (doit stx)
+  (syntactic-binding-getprop #'ciao 'a))
+
+(eval-for-expand
+  (syntactic-binding-putprop #'ciao 'a 123))
+
+(doit)          @result{} 123
+@end example
+
+@noindent
+and the following will work, too:
+
+@example
+(letrec-syntax
+    ((ciao (let ()
+             (syntactic-binding-putprop #'ciao 'a 123)
+             (lambda (stx) #t))))
+  (define-syntax (doit stx)
+    (syntactic-binding-getprop #'ciao 'a))
+  (doit))
+@result{} 123
+@end example
+
+@noindent
+to define a binding property for a syntax defined by @func{let-syntax}
+we can do:
+
+@example
+(let-syntax ((ciao (lambda (stx) #t)))
+  (define-syntax (doit stx)
+    (syntactic-binding-getprop #'ciao 'a))
+  (eval-for-expand
+    (syntactic-binding-putprop #'ciao 'a 123))
+  (doit))
+@result{} 123
+@end example
+
+To define a binding property for a lexical variable bound by
+@func{define}:
+
+@example
+(define ciao "ciao")
+
+(define-syntax (doit stx)
+  (syntactic-binding-getprop #'ciao 'a))
+
+(eval-for-expand
+  (syntactic-binding-putprop #'ciao 'a 123))
+
+(doit)          @result{} 123
+@end example
+
+@noindent
+and for one bound by @func{let}:
+
+@example
+(let ((ciao "ciao"))
+  (define-syntax (doit stx)
+    (syntactic-binding-getprop #'ciao 'a))
+  (eval-for-expand
+    (syntactic-binding-putprop #'ciao 'a 123))
+  (doit))
+@result{} 123
+@end example
 
 @c page
 @node iklib compensations

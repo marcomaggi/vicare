@@ -1570,6 +1570,10 @@
     $struct-type-field-ref
     $struct-type-field-set!
     splice-first-expand
+    syntactic-binding-putprop
+    syntactic-binding-getprop
+    syntactic-binding-remprop
+    syntactic-binding-property-list
     values->list
     define*
     lambda*

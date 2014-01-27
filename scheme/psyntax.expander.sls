@@ -897,6 +897,12 @@
     syntax-dispatch			syntax-transpose
     ellipsis-map
 
+    ;;syntactic binding properties
+    syntactic-binding-putprop
+    syntactic-binding-getprop
+    syntactic-binding-remprop
+    syntactic-binding-property-list
+
     ;;The following are inspection functions for debugging purposes.
     (rename (<stx>?		syntax-object?)
 	    (<stx>-expr		syntax-object-expression)
@@ -4730,6 +4736,32 @@
     (assertion-violation 'bound-identifier=? "not an identifier" x)))
 
 
+;;;; identifiers: syntactic binding properties
+
+(module (syntactic-binding-putprop
+	 syntactic-binding-getprop
+	 syntactic-binding-remprop
+	 syntactic-binding-property-list)
+
+  (define* (syntactic-binding-putprop (id identifier?) (key symbol?) value)
+    (putprop (%get-label __who__ id) key value))
+
+  (define* (syntactic-binding-getprop (id identifier?) (key symbol?))
+    (getprop (%get-label __who__ id) key))
+
+  (define* (syntactic-binding-remprop (id identifier?) (key symbol?))
+    (remprop (%get-label __who__ id) key))
+
+  (define* (syntactic-binding-property-list (id identifier?))
+    (property-list (%get-label __who__ id)))
+
+  (define (%get-label who id)
+    (or (id->label id)
+	(assertion-violation who "identifier is not bound" id)))
+
+  #| end of module |# )
+
+
 ;;;; utilities for identifiers
 
 (define (bound-id=? id1 id2)
@@ -7847,27 +7879,46 @@
 
 ;;;; module non-core-macro-transformer: COND
 
-(define cond-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ cls cls* ...)
-       (bless
-	(let f ((cls cls) (cls* cls*))
-	  (cond
-	   ((null? cls*)
+(define (cond-macro stx)
+  (syntax-match stx ()
+    ((_ cls cls* ...)
+     (bless
+      (let f ((cls cls) (cls* cls*))
+	(if (null? cls*)
 	    (syntax-match cls (else =>)
-	      ((else e e* ...) `(let () #f ,e . ,e*))
-	      ((e => p) `(let ((t ,e)) (if t (,p t))))
-	      ((e) `(or ,e (if #f #f)))
-	      ((e e* ...) `(if ,e (begin . ,e*)))
-	      (_ (stx-error stx "invalid last clause"))))
-	   (else
-	    (syntax-match cls (else =>)
-	      ((else e e* ...) (stx-error stx "incorrect position of keyword else"))
-	      ((e => p) `(let ((t ,e)) (if t (,p t) ,(f (car cls*) (cdr cls*)))))
-	      ((e) `(or ,e ,(f (car cls*) (cdr cls*))))
-	      ((e e* ...) `(if ,e (begin . ,e*) ,(f (car cls*) (cdr cls*))))
-	      (_ (stx-error stx "invalid last clause")))))))))))
+	      ((else e e* ...)
+	       `(let () #f ,e . ,e*))
+
+	      ((e => p)
+	       `(let ((t ,e)) (if t (,p t))))
+
+	      ((e)
+	       `(or ,e (if #f #f)))
+
+	      ((e e* ...)
+	       `(if ,e (begin . ,e*)))
+
+	      (_
+	       (stx-error stx "invalid last clause")))
+
+	  (syntax-match cls (else =>)
+	    ((else e e* ...)
+	     (stx-error stx "incorrect position of keyword else"))
+
+	    ((e => p)
+	     `(let ((t ,e)) (if t (,p t) ,(f (car cls*) (cdr cls*)))))
+
+	    ((e)
+	     `(or ,e ,(f (car cls*) (cdr cls*))))
+
+	    ((e e* ...)
+	     `(if ,e
+		  (begin . ,e*)
+		,(f (car cls*) (cdr cls*))))
+
+	    (_
+	     (stx-error stx "invalid last clause")))))))
+    ))
 
 
 ;;;; module non-core-macro-transformer: QUASIQUOTE
@@ -11533,6 +11584,8 @@
 		  ;;We want order here!?!
 		  (let* ((lab          (gen-define-syntax-label id rib sd?))
 			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
+		    ;;First map  the identifier  to the  label, creating
+		    ;;the binding; then evaluate the macro transformer.
 		    (extend-rib! rib id lab sd?)
 		    (let ((entry (cons lab (%eval-macro-transformer expanded-rhs))))
 		      (chi-body* (cdr body-form-stx*)
@@ -11556,6 +11609,8 @@
 		  (let* ((lab          (gen-define-syntax-label id rib sd?))
 			 (flab         (gen-define-syntax-label id rib sd?))
 			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
+		    ;;First map  the identifier  to the  label, creating
+		    ;;the binding; then evaluate the macro transformer.
 		    (extend-rib! rib id lab sd?)
 		    (let* ((binding  (%eval-macro-transformer expanded-rhs))
 			   ;;This  lexical environment  entry represents
@@ -11587,6 +11642,15 @@
 		     (stx-error body-form-stx "invalid identifiers"))
 		   (let* ((xlab*  (map gensym-for-label ?xlhs*))
 			  (xrib   (make-filled-rib ?xlhs* xlab*))
+			  ;;We evaluate the  transformers for LET-SYNTAX
+			  ;;without   pushing  the   XRIB:  the   syntax
+			  ;;bindings do not exist  in the environment in
+			  ;;which the transformer is evaluated.
+			  ;;
+			  ;;We    evaluate    the    transformers    for
+			  ;;LETREC-SYNTAX  after pushing  the XRIB:  the
+			  ;;syntax bindings do  exist in the environment
+			  ;;in which the transformer is evaluated.
 			  (xbind* (map (lambda (x)
 					 (%eval-macro-transformer
 					  (%expand-macro-transformer
