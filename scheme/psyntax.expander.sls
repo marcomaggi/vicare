@@ -7572,27 +7572,31 @@
 ;;;; module non-core-macro-transformer: RETURN, CONTINUE, BREAK, WHILE, UNTIL, FOR
 
 (define (return-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_)
-     (bless
-      (lambda (stx)
-	(syntax-error 'return "syntax \"return\" out of context"))))))
+  ;;Transformer function used to expand  Vicare's RETURN macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (stx-error expr-stx "syntax RETURN out of context"))
 
 (define (continue-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_)
-     (bless
-      (lambda (stx)
-	(syntax-error 'continue "syntax \"continue\" out of any loop"))))))
+  ;;Transformer function  used to  expand Vicare's CONTINUE  macros from
+  ;;the  top-level  built  in   environment.   Expand  the  contents  of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (stx-error expr-stx "syntax CONTINUE out of context"))
 
 (define (break-macro expr-stx)
-  (syntax-match expr-stx ()
-    ((_)
-     (bless
-      (lambda (stx)
-	(syntax-error 'break "syntax \"continue\" out of any loop"))))))
+  ;;Transformer function used  to expand Vicare's BREAK  macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (stx-error expr-stx "syntax BREAK out of context"))
 
 (define (while-macro expr-stx)
+  ;;Transformer function used  to expand Vicare's WHILE  macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
      (bless
@@ -7609,6 +7613,10 @@
     ))
 
 (define (until-macro expr-stx)
+  ;;Transformer function used  to expand Vicare's UNTIL  macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?test ?body* ...)
      (bless
@@ -7625,6 +7633,10 @@
     ))
 
 (define (for-macro expr-stx)
+  ;;Transformer function  used to  expand Vicare's  FOR macros  from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ (?init ?test ?incr) ?body* ...)
      (bless
