@@ -7290,6 +7290,33 @@
     ;;top-level built in environment.   Expand the contents of EXPR-STX;
     ;;return a syntax object that must be further expanded.
     ;;
+    ;;A syntax without else clause like:
+    ;;
+    ;;   (guard (E
+    ;;           (?test0 ?expr0)
+    ;;           (?test1 ?expr1)))
+    ;;     ?body0 ?body ...)
+    ;;
+    ;;is expanded to:
+    ;;
+    ;;   ((call/cc
+    ;;        (lambda (outerk)
+    ;;          (lambda ()
+    ;;            (with-exception-handler
+    ;; 	              (lambda (raised-obj)
+    ;; 	                (let ((E raised-obj))
+    ;;                    ((call/cc
+    ;; 		               (lambda (raisek)
+    ;; 		                 (outerk (lambda ()
+    ;; 	                                   (if ?test0
+    ;; 	                                       ?expr0
+    ;;                  	             (if ?test1
+    ;; 	                                         ?expr1
+    ;; 	                                       (raisek (lambda ()
+    ;;                                                   (raise-continuable raised-obj))))))))))))
+    ;;              (lambda ()
+    ;; 	              ?body0 ?body ...))))))
+    ;;
     (syntax-match x ()
       ((_ (?variable ?clause* ...) ?body ?body* ...)
        (identifier? ?variable)
