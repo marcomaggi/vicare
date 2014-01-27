@@ -7243,25 +7243,42 @@
     ))
 
 
-;;;; module non-core-macro-transformer: TRACE-LET, TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
+;;;; module non-core-macro-transformer: TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
 
-(define trace-let/rec-syntax
-  (lambda (who)
+(module (trace-let-syntax-macro
+	 trace-letrec-syntax-macro)
+
+  (define (%trace-let/rec-syntax who)
     (lambda (stx)
       (syntax-match stx ()
-	((_ ((lhs* rhs*) ...) b b* ...)
-	 (if (valid-bound-ids? lhs*)
+	((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+	 (if (valid-bound-ids? ?lhs*)
 	     (let ((rhs* (map (lambda (lhs rhs)
 				`(make-traced-macro ',lhs ,rhs))
-			   lhs* rhs*)))
-	       (bless `(,who ,(map list lhs* rhs*) ,b . ,b*)))
-	   (%error-invalid-formals-syntax stx lhs*)))))))
+			   ?lhs* ?rhs*)))
+	       (bless
+		`(,who ,(map list ?lhs* rhs*)
+		       ,?body . ,?body*)))
+	   (%error-invalid-formals-syntax stx ?lhs*)))
+	)))
 
-(define trace-let-syntax-macro
-  (trace-let/rec-syntax 'let-syntax))
+  (define trace-let-syntax-macro
+    ;;Transformer  function  used  to expand  Vicare's  TRACE-LET-SYNTAX
+    ;;macros  from  the  top-level  built in  environment.   Expand  the
+    ;;contents of EXPR-STX; return a  syntax object that must be further
+    ;;expanded.
+    ;;
+    (%trace-let/rec-syntax 'let-syntax))
 
-(define trace-letrec-syntax-macro
-  (trace-let/rec-syntax 'letrec-syntax))
+  (define trace-letrec-syntax-macro
+    ;;Transformer function  used to expand  Vicare's TRACE-LETREC-SYNTAX
+    ;;macros  from  the  top-level  built in  environment.   Expand  the
+    ;;contents of EXPR-STX; return a  syntax object that must be further
+    ;;expanded.
+    ;;
+    (%trace-let/rec-syntax 'letrec-syntax))
+
+  #| end of module |# )
 
 
 ;;;; module non-core-macro-transformer: GUARD
