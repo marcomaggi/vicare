@@ -7171,53 +7171,76 @@
 
 ;;;; module non-core-macro-transformer: TRACE-LAMBDA, TRACE-DEFINE and TRACE-DEFINE-SYNTAX
 
-(define trace-lambda-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ who (fmls ...) b b* ...)
-       (if (valid-bound-ids? fmls)
-	   (bless `(make-traced-procedure ',who
-					  (lambda ,fmls ,b . ,b*)))
-	 (%error-invalid-formals-syntax stx fmls)))
-      ((_  who (fmls ... . last) b b* ...)
-       (if (valid-bound-ids? (cons last fmls))
-	   (bless `(make-traced-procedure ',who
-					  (lambda (,@fmls . ,last) ,b . ,b*)))
-	 (%error-invalid-formals-syntax stx (append fmls last)))))))
+(define (trace-lambda-macro expr-stx)
+  ;;Transformer  function used  to expand  Vicare's TRACE-LAMBDA  macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?who (?formal* ...) ?body ?body* ...)
+     (if (valid-bound-ids? ?formal*)
+	 (bless
+	  `(make-traced-procedure ',?who
+				  (lambda ,?formal*
+				    ,?body . ,?body*)))
+       (%error-invalid-formals-syntax expr-stx ?formal*)))
 
-(define trace-define-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ (who fmls ...) b b* ...)
-       (if (valid-bound-ids? fmls)
-	   (bless `(define ,who
-		     (make-traced-procedure ',who
-					    (lambda ,fmls ,b . ,b*))))
-	 (%error-invalid-formals-syntax stx fmls)))
-      ((_ (who fmls ... . last) b b* ...)
-       (if (valid-bound-ids? (cons last fmls))
-	   (bless `(define ,who
-		     (make-traced-procedure ',who
-					    (lambda (,@fmls . ,last) ,b . ,b*))))
-	 (%error-invalid-formals-syntax stx (append fmls last))))
-      ((_ who expr)
-       (if (identifier? who)
-	   (bless `(define ,who
-		     (let ((v ,expr))
-		       (if (procedure? v)
-			   (make-traced-procedure ',who v)
-			 v))))
-	 (stx-error stx "invalid name"))))))
+    ((_  ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
+     (if (valid-bound-ids? (cons ?rest-formal ?formal*))
+	 (bless
+	  `(make-traced-procedure ',?who
+				  (lambda (,@?formal* . ,?rest-formal)
+				    ,?body . ,?body*)))
+       (%error-invalid-formals-syntax expr-stx (append ?formal* ?rest-formal))))
+    ))
 
-(define trace-define-syntax-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ who expr)
-       (if (identifier? who)
-	   (bless
-	    `(define-syntax ,who
-	       (make-traced-macro ',who ,expr)))
-	 (stx-error stx "invalid name"))))))
+(define (trace-define-macro expr-stx)
+  ;;Transformer  function used  to expand  Vicare's TRACE-DEFINE  macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?who ?formal* ...) ?body ?body* ...)
+     (if (valid-bound-ids? ?formal*)
+	 (bless
+	  `(define ,?who
+	     (make-traced-procedure ',?who
+				    (lambda ,?formal*
+				      ,?body . ,?body*))))
+       (%error-invalid-formals-syntax expr-stx ?formal*)))
+
+    ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
+     (if (valid-bound-ids? (cons ?rest-formal ?formal*))
+	 (bless
+	  `(define ,?who
+	     (make-traced-procedure ',?who
+				    (lambda (,@?formal* . ,?rest-formal)
+				      ,?body . ,?body*))))
+       (%error-invalid-formals-syntax expr-stx (append ?formal* ?rest-formal))))
+
+    ((_ ?who ?expr)
+     (if (identifier? ?who)
+	 (bless `(define ,?who
+		   (let ((v ,?expr))
+		     (if (procedure? v)
+			 (make-traced-procedure ',?who v)
+		       v))))
+       (stx-error expr-stx "invalid name")))
+    ))
+
+(define (trace-define-syntax-macro expr-stx)
+  ;;Transformer  function used  to  expand Vicare's  TRACE-DEFINE-SYNTAX
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?who ?expr)
+     (if (identifier? ?who)
+	 (bless
+	  `(define-syntax ,?who
+	     (make-traced-macro ',?who ,?expr)))
+       (stx-error expr-stx "invalid name")))
+    ))
 
 
 ;;;; module non-core-macro-transformer: TRACE-LET, TRACE-LET-SYNTAX, TRACE-LETREC-SYNTAX
