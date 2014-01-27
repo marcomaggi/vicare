@@ -6276,53 +6276,60 @@
 ;;;; module non-core-macro-transformer: IDENTIFIER-SYNTAX
 
 (define (identifier-syntax-macro stx)
+  ;;Transformer function  used to  expand R6RS  IDENTIFIER-SYNTAX macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (syntax-match stx (set!)
-    ((_ expr)
+    ((_ ?expr)
      (bless
       `(lambda (x)
 	 (syntax-case x ()
-	   (id
-	    (identifier? (syntax id))
-	    (syntax ,expr))
-	   ((id e* ...)
-	    (identifier? (syntax id))
-	    (cons (syntax ,expr) (syntax (e* ...))))
+	   (??id
+	    (identifier? (syntax ??id))
+	    (syntax ,?expr))
+	   ((??id ??expr* ...)
+	    (identifier? (syntax ??id))
+	    (cons (syntax ,?expr) (syntax (??expr* ...))))
 	   ))))
-    ((_ (id1
-	 expr1)
-	((set! id2 expr2)
-	 expr3))
-     (and (identifier? id1)
-	  (identifier? id2)
-	  (identifier? expr2))
+
+    ((_ (?id1
+	 ?expr1)
+	((set! ?id2 ?expr2)
+	 ?expr3))
+     (and (identifier? ?id1)
+	  (identifier? ?id2)
+	  (identifier? ?expr2))
      (bless
       `(make-variable-transformer
 	(lambda (x)
 	  (syntax-case x (set!)
-	    (id
-	     (identifier? (syntax id))
-	     (syntax ,expr1))
-	    ((set! id ,expr2)
-	     (syntax ,expr3))
-	    ((id e* ...)
-	     (identifier? (syntax id))
-	     (syntax (,expr1 e* ...))))))))
+	    (??id
+	     (identifier? (syntax ??id))
+	     (syntax ,?expr1))
+	    ((set! ??id ,?expr2)
+	     (syntax ,?expr3))
+	    ((??id ??expr* ...)
+	     (identifier? (syntax ??id))
+	     (syntax (,?expr1 ??expr* ...))))))))
     ))
 
 
 ;;;; module non-core-macro-transformer: LET, LET*, TRACE-LET
 
-(define let-macro
-  (lambda (stx)
-    (syntax-match stx ()
-      ((_ ((lhs* rhs*) ...) b b* ...)
-       (if (valid-bound-ids? lhs*)
-	   (bless `((lambda ,lhs* ,b . ,b*) . ,rhs*))
-	 (%error-invalid-formals-syntax stx lhs*)))
-      ((_ f ((lhs* rhs*) ...) b b* ...) (identifier? f)
-       (if (valid-bound-ids? lhs*)
-	   (bless `((letrec ((,f (lambda ,lhs* ,b . ,b*))) ,f) . ,rhs*))
-	 (%error-invalid-formals-syntax stx lhs*))))))
+(define (let-macro stx)
+  (syntax-match stx ()
+    ((_ ((lhs* rhs*) ...) b b* ...)
+     (if (valid-bound-ids? lhs*)
+	 (bless `((lambda ,lhs* ,b . ,b*) . ,rhs*))
+       (%error-invalid-formals-syntax stx lhs*)))
+
+    ((_ f ((lhs* rhs*) ...) b b* ...)
+     (identifier? f)
+     (if (valid-bound-ids? lhs*)
+	 (bless `((letrec ((,f (lambda ,lhs* ,b . ,b*))) ,f) . ,rhs*))
+       (%error-invalid-formals-syntax stx lhs*)))
+    ))
 
 (define let*-macro
   (lambda (stx)
