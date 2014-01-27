@@ -33,7 +33,7 @@
 
 
 (define (base-of-interaction-library)
-  '(ikarus))
+  '(vicare))
 
 (define-syntax define-option
   (syntax-rules ()
