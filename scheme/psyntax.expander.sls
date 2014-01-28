@@ -7879,45 +7879,55 @@
 
 ;;;; module non-core-macro-transformer: COND
 
-(define (cond-macro stx)
-  (syntax-match stx ()
-    ((_ cls cls* ...)
+(define (cond-macro expr-stx)
+  ;;Transformer  function  used to  expand  R6RS  COND macros  from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?cls ?cls* ...)
      (bless
-      (let f ((cls cls) (cls* cls*))
+      (let recur ((cls ?cls) (cls* ?cls*))
 	(if (null? cls*)
 	    (syntax-match cls (else =>)
-	      ((else e e* ...)
-	       `(let () #f ,e . ,e*))
+	      ((else ?expr ?expr* ...)
+	       `(let () #f ,?expr . ,?expr*))
 
-	      ((e => p)
-	       `(let ((t ,e)) (if t (,p t))))
+	      ((?test => ?proc)
+	       `(let ((t ,?test))
+		  (if t (,?proc t))))
 
-	      ((e)
-	       `(or ,e (if #f #f)))
+	      ((?expr)
+	       `(or ,?expr (if #f #f)))
 
-	      ((e e* ...)
-	       `(if ,e (begin . ,e*)))
+	      ((?test ?expr* ...)
+	       `(if ,?test
+		    (begin . ,?expr*)))
 
 	      (_
-	       (stx-error stx "invalid last clause")))
+	       (stx-error expr-stx "invalid last clause")))
 
 	  (syntax-match cls (else =>)
-	    ((else e e* ...)
-	     (stx-error stx "incorrect position of keyword else"))
+	    ((else ?expr ?expr* ...)
+	     (stx-error expr-stx "incorrect position of keyword else"))
 
-	    ((e => p)
-	     `(let ((t ,e)) (if t (,p t) ,(f (car cls*) (cdr cls*)))))
+	    ((?test => ?proc)
+	     `(let ((t ,?test))
+		(if t
+		    (,?proc t)
+		  ,(recur (car cls*) (cdr cls*)))))
 
-	    ((e)
-	     `(or ,e ,(f (car cls*) (cdr cls*))))
+	    ((?expr)
+	     `(or ,?expr
+		  ,(recur (car cls*) (cdr cls*))))
 
-	    ((e e* ...)
-	     `(if ,e
-		  (begin . ,e*)
-		,(f (car cls*) (cdr cls*))))
+	    ((?test ?expr* ...)
+	     `(if ,?test
+		  (begin . ,?expr*)
+		,(recur (car cls*) (cdr cls*))))
 
 	    (_
-	     (stx-error stx "invalid last clause")))))))
+	     (stx-error expr-stx "invalid last clause")))))))
     ))
 
 
