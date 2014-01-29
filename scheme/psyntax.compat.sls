@@ -37,6 +37,7 @@
     vector-exists
     real-pathname			file-modification-time
     vector-append
+    add1				sub1
 
     ;; runtime options
     report-errors-at-runtime		strict-r6rs
