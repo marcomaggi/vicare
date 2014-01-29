@@ -321,6 +321,7 @@
 (define ikarus-system-macros
   '((define				(define))
     (define-syntax			(define-syntax))
+    (define-alias			(define-alias))
     (define-fluid-syntax		(define-fluid-syntax))
     (module				(module))
     (library				(library))
@@ -1246,6 +1247,7 @@
     (define-syntax*				i v $language)
     (define*					i v $language)
     (define-fluid-syntax			i v $language)
+    (define-alias				i v $language)
     (identifier-syntax				i v r ba)
     (if						i v r ba se ne)
     (let					i v r ba se ne)

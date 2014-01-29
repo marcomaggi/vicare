@@ -862,6 +862,19 @@ Define auxiliary syntaxes to be used as literal identifiers by
 @end example
 @end deffn
 
+
+@deffn Syntax define-alias @meta{alias-id} @meta{old-id}
+Define a new binding for @meta{alias-id} as an alias for @meta{old-id},
+which must be a bound identifier in the current lexical environment.
+
+@example
+(let ((a 1))
+  (define-alias b a)
+  b)
+@result{} 1
+@end example
+@end deffn
+
 @c page
 @node iklib syntaxes bindings
 @subsection Additional binding syntaxes

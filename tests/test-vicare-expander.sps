@@ -2156,6 +2156,55 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-alias))
+
+  (check
+      (let ((a 1))
+	(define-alias b a)
+	b)
+    => 1)
+
+  (check
+      (let ((a 1))
+	(define-alias b a)
+	(define-alias c b)
+	(define-alias d c)
+	(define-alias e d)
+	e)
+    => 1)
+
+  (check
+      (let ((a 1))
+	(define-alias b a)
+	(+ a b))
+    => 2)
+
+  (check
+      (let ()
+	(define a 1)
+	(define-alias b a)
+	b)
+    => 1)
+
+  (check
+      (let ()
+	(define-syntax a
+	  (identifier-syntax 1))
+	(define-alias b a)
+	b)
+    => 1)
+
+  (check
+      (let ()
+	(define-syntax (a stx)
+	  1)
+	(define-alias b a)
+	(b))
+    => 1)
+
+  #t)
+
+
 (parametrise ((check-test-name	'let-star-syntax))
 
   (check

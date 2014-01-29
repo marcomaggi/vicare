@@ -8681,9 +8681,9 @@
   ;;bindings by  returning binding syntaxes; their  transformer do *not*
   ;;take the LEXENV as arguments.
   ;;
-  ;;The transformers of non-core macros take as argument a syntax object
-  ;;representing an  expression and return a  syntax object representing
-  ;;an expression.
+  ;;The transformers  of core  macros take as  argument a  syntax object
+  ;;representing an expression  and return a symbolic  expression in the
+  ;;expanded language.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
@@ -10784,8 +10784,9 @@
 			  (type    (syntactic-binding-type binding)))
 		     (case type
 		       ((core-macro
-			 define define-syntax begin set! stale-when
-			 let-syntax letrec-syntax define-fluid-syntax
+			 define define-syntax define-alias define-fluid-syntax
+			 let-syntax letrec-syntax
+			 begin set! stale-when
 			 local-ctv global-ctv
 			 local-macro local-macro!
 			 global-macro global-macro!
@@ -11786,6 +11787,26 @@
 				 lex* qrhs* mod** kwd* export-spec* rib
 				 mix? sd?)))))
 
+	       ((define-alias)
+		;;The body  form is  a core language  DEFINE-ALIAS macro
+		;;use.  We add a new association identifier/label to the
+		;;current rib.   Finally we recurse  on the rest  of the
+		;;body.
+		;;
+		(receive (alias-id old-id)
+		    (%parse-define-alias body-form-stx)
+		  (when (bound-id-member? old-id kwd*)
+		    (stx-error body-form-stx "cannot redefine keyword"))
+		  (cond ((id->label old-id)
+			 => (lambda (label)
+			      (extend-rib! rib alias-id label sd?)
+			      (chi-body* (cdr body-form-stx*)
+					 lexenv.run lexenv.expand
+					 lex* qrhs* mod** kwd* export-spec* rib
+					 mix? sd?)))
+			(else
+			 (stx-error body-form-stx "unbound source identifier")))))
+
 	       ((let-syntax letrec-syntax)
 		;;The  body  form  is  a  core  language  LET-SYNTAX  or
 		;;LETREC-SYNTAX macro  use.  We expand and  evaluate the
@@ -12007,6 +12028,16 @@
        (and (identifier? ?id)
 	    (identifier? ?arg))
        (values ?id (bless `(lambda (,?arg) ,?body0 ,@?body*))))
+      ))
+
+  (define (%parse-define-alias body-form-stx)
+    ;;Syntax parser for Vicares's DEFINE-ALIAS.
+    ;;
+    (syntax-match body-form-stx ()
+      ((_ ?alias-id ?old-id)
+       (and (identifier? ?alias-id)
+	    (identifier? ?old-id))
+       (values ?alias-id ?old-id))
       ))
 
 ;;; --------------------------------------------------------------------

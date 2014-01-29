@@ -204,6 +204,15 @@ Notes for revision 0.3d8
     syntactic-binding-remprop
     syntactic-binding-property-list
 
+* Added experimental syntax DEFINE-ALIAS to (vicare):
+
+    (let ((a 1))
+      (define-alias b a)
+      b)
+
+  not sure if  it is a good  thing.  Should the full  suite of LET-ALIAS
+  and LET*-ALIAS syntaxes be added?
+
 
 Notes for revision 0.3d7
 ------------------------
