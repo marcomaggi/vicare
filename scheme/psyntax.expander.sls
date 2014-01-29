@@ -7979,7 +7979,7 @@
        (%quasivector (%vquasi x nesting-level)))
 
       (p
-       (%app 'quote p))
+       (%application 'quote p))
       ))
 
   (define (%vquasi p nesting-level)
@@ -8006,27 +8006,46 @@
   	 ))
 
       (()
-       (%app 'quote '()))
+       (%application 'quote '()))
       ))
 
-  (define (%datum x)
-    ;;Return a top-marker  syntax object representing the  datum X.  The
-    ;;returned value is equivalent to evaluating:
+  (define (%datum obj)
+    ;;Return  a  top-marked  syntax object  representing  an  expression
+    ;;evaluating to  the quoted datum  X.  Expanding and  evaluating the
+    ;;returned syntax object is equivalent to evaluating:
     ;;
-    ;;   (quote x)
+    ;;   (quote obj)
     ;;
-    (list (scheme-stx 'quote) (mkstx x TOP-MARK* '() '())))
+    (list (scheme-stx 'quote) (mkstx obj TOP-MARK* '() '())))
 
-  (define-syntax %app
+  (define-syntax %application
+    ;;Expand to an expression which, when evaluated, results in a syntax
+    ;;object representing an expression.   Such syntax object expression
+    ;;is the application of ?CONSTRUCTOR to the, possibly empty, list of
+    ;;arguments ?ARG*.
+    ;;
+    ;;?CONSTRUCTOR must be a symbol  representing the name of a function
+    ;;or syntax  from the boot  image EXPORT-ENV; candidates  are: list,
+    ;;vector, list->vector, cons, quote.
+    ;;
     (syntax-rules (quote)
-      ((_ (quote ?type) ?arg* ...)
-       (list (scheme-stx '?type) ?arg* ...))
+      ((_ (quote ?constructor) ?arg* ...)
+       (list (scheme-stx '?constructor) ?arg* ...))
       ))
 
-  (define-syntax %app*
+  (define-syntax %application*
+    ;;Expand to an expression which, when evaluated, results in a syntax
+    ;;object representing an expression.   Such syntax object expression
+    ;;is the application of ?CONSTRUCTOR to the, possibly empty, list of
+    ;;arguments ?ARG* and the list of arguments ?TAIL-ARG*.
+    ;;
+    ;;?CONSTRUCTOR must be a symbol  representing the name of a function
+    ;;or syntax  from the boot  image EXPORT-ENV; candidates  are: list,
+    ;;append, vector.
+    ;;
     (syntax-rules (quote)
-      ((_ (quote ?type) ?arg* ... ?last)
-       (cons* (scheme-stx '?type) ?arg* ... ?last))))
+      ((_ (quote ?constructor) ?arg* ... ?tail-arg*)
+       (cons* (scheme-stx '?constructor) ?arg* ... ?tail-arg*))))
 
   (define (%quasicons* x y)
     (let recur ((x x))
@@ -8039,22 +8058,22 @@
       ((quote ?dy)
        (syntax-match x (quote)
 	 ((quote ?dx)
-	  (%app 'quote (cons ?dx ?dy)))
+	  (%application 'quote (cons ?dx ?dy)))
 
 	 (_
 	  (syntax-match ?dy ()
 	    (()
-	     (%app 'list x))
+	     (%application 'list x))
 	    (_
-	     (%app 'cons x y))
+	     (%application 'cons x y))
 	    ))
 	 ))
 
       ((list ?stuff ...)
-       (%app* 'list x ?stuff))
+       (%application* 'list x ?stuff))
 
       (_
-       (%app 'cons x y))
+       (%application 'cons x y))
       ))
 
   (define (%quasiappend x y)
@@ -8071,25 +8090,25 @@
 		    (_
 		     (cons (car x) (recur (cdr x)))))))))
       (cond ((null? ls)
-	     (%app 'quote '()))
+	     (%application 'quote '()))
 	    ((null? (cdr ls))
 	     (car ls))
 	    (else
-	     (%app* 'append ls)))))
+	     (%application* 'append ls)))))
 
   (define (%quasivector x)
     (let ((pat-x x))
       (syntax-match pat-x (quote)
   	((quote (x* ...))
-  	 (%app 'quote (list->vector x*)))
+  	 (%application 'quote (list->vector x*)))
 
   	(_
   	 (let loop ((x x)
   		    (k (lambda (ls)
-  			 (%app* 'vector ls))))
+  			 (%application* 'vector ls))))
   	   (syntax-match x (list cons quote)
   	     ((quote (x* ...))
-  	      (k (map (lambda (x) (%app 'quote x)) x*)))
+  	      (k (map (lambda (x) (%application 'quote x)) x*)))
 
   	     ((list x* ...)
   	      (k x*))
@@ -8099,7 +8118,7 @@
   			(k (cons x ls)))))
 
   	     (_
-  	      (%app 'list->vector pat-x))
+  	      (%application 'list->vector pat-x))
   	     )))
   	)))
 
