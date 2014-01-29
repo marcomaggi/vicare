@@ -7933,115 +7933,156 @@
 
 ;;;; module non-core-macro-transformer: QUASIQUOTE
 
-(define quasiquote-macro
-  (let ()
-    (define (datum x)
-      (list (scheme-stx 'quote) (mkstx x TOP-MARK* '() '())))
-    (define-syntax app
-      (syntax-rules (quote)
-	((_ 'x arg* ...)
-	 (list (scheme-stx 'x) arg* ...))))
-    (define-syntax app*
-      (syntax-rules (quote)
-	((_ 'x arg* ... last)
-	 (cons* (scheme-stx 'x) arg* ... last))))
-    (define quasicons*
-      (lambda (x y)
-	(let f ((x x))
-	  (if (null? x) y (quasicons (car x) (f (cdr x)))))))
-    (define quasicons
-      (lambda (x y)
-	(syntax-match y (quote list)
-	  ((quote dy)
-	   (syntax-match x (quote)
-	     ((quote dx) (app 'quote (cons dx dy)))
-	     (_
-	      (syntax-match dy ()
-		(() (app 'list x))
-		(_  (app 'cons x y))))))
-	  ((list stuff ...)
-	   (app* 'list x stuff))
-	  (_ (app 'cons x y)))))
-    (define quasiappend
-      (lambda (x y)
-	(let ((ls (let f ((x x))
-		    (if (null? x)
-			(syntax-match y (quote)
-			  ((quote ()) '())
-			  (_ (list y)))
-		      (syntax-match (car x) (quote)
-			((quote ()) (f (cdr x)))
-			(_ (cons (car x) (f (cdr x)))))))))
-	  (cond
-	   ((null? ls) (app 'quote '()))
-	   ((null? (cdr ls)) (car ls))
-	   (else (app* 'append ls))))))
-    (define quasivector
-      (lambda (x)
-	(let ((pat-x x))
-	  (syntax-match pat-x (quote)
-	    ((quote (x* ...)) (app 'quote (list->vector x*)))
-	    (_ (let f ((x x) (k (lambda (ls) (app* 'vector ls))))
-		 (syntax-match x (quote list cons)
-		   ((quote (x* ...))
-		    (k (map (lambda (x) (app 'quote x)) x*)))
-		   ((list x* ...)
-		    (k x*))
-		   ((cons x y)
-		    (f y (lambda (ls) (k (cons x ls)))))
-		   (_ (app 'list->vector pat-x)))))))))
-    (define vquasi
-      (lambda (p lev)
-	(syntax-match p ()
-	  ((p . q)
-	   (syntax-match p (unquote unquote-splicing)
-	     ((unquote p ...)
-	      (if (= lev 0)
-		  (quasicons* p (vquasi q lev))
-		(quasicons
-		 (quasicons (datum 'unquote)
-			    (quasi p (- lev 1)))
-		 (vquasi q lev))))
-	     ((unquote-splicing p ...)
-	      (if (= lev 0)
-		  (quasiappend p (vquasi q lev))
-		(quasicons
-		 (quasicons
-		  (datum 'unquote-splicing)
-		  (quasi p (- lev 1)))
-		 (vquasi q lev))))
-	     (p (quasicons (quasi p lev) (vquasi q lev)))))
-	  (() (app 'quote '())))))
-    (define quasi
-      (lambda (p lev)
-	(syntax-match p (unquote unquote-splicing quasiquote)
-	  ((unquote p)
-	   (if (= lev 0)
-	       p
-	     (quasicons (datum 'unquote) (quasi (list p) (- lev 1)))))
-	  (((unquote p ...) . q)
-	   (if (= lev 0)
-	       (quasicons* p (quasi q lev))
+(module (quasiquote-macro)
+
+  (define (quasiquote-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ ?expr)
+       (quasi ?expr 0))
+      ))
+
+  (define (quasi p nesting-level)
+    (syntax-match p (unquote unquote-splicing quasiquote)
+      ((unquote p)
+       (if (zero? nesting-level)
+	   p
+	 (quasicons (datum 'unquote) (quasi (list p) (- nesting-level 1)))))
+
+      (((unquote p ...) . q)
+       (if (zero? nesting-level)
+	   (quasicons* p (quasi q nesting-level))
+	 (quasicons
+	  (quasicons (datum 'unquote)
+		     (quasi p (- nesting-level 1)))
+	  (quasi q nesting-level))))
+
+      (((unquote-splicing p ...) . q)
+       (if (zero? nesting-level)
+	   (quasiappend p (quasi q nesting-level))
+	 (quasicons
+	  (quasicons (datum 'unquote-splicing)
+		     (quasi p (- nesting-level 1)))
+	  (quasi q nesting-level))))
+
+      ((quasiquote p)
+       (quasicons (datum 'quasiquote)
+		  (quasi (list p) (+ nesting-level 1))))
+
+      ((p . q)
+       (quasicons (quasi p nesting-level) (quasi q nesting-level)))
+
+      (#(x ...)
+       (not (<stx>? x))
+       (quasivector (vquasi x nesting-level)))
+
+      (p
+       (app 'quote p))
+      ))
+
+  (define (vquasi p nesting-level)
+    (syntax-match p ()
+      ((p . q)
+       (syntax-match p (unquote unquote-splicing)
+	 ((unquote p ...)
+	  (if (zero? nesting-level)
+	      (quasicons* p (vquasi q nesting-level))
+	    (quasicons
+	     (quasicons (datum 'unquote)
+			(quasi p (- nesting-level 1)))
+	     (vquasi q nesting-level))))
+
+	 ((unquote-splicing p ...)
+	  (if (zero? nesting-level)
+	      (quasiappend p (vquasi q nesting-level))
+	    (quasicons
 	     (quasicons
-	      (quasicons (datum 'unquote)
-			 (quasi p (- lev 1)))
-	      (quasi q lev))))
-	  (((unquote-splicing p ...) . q)
-	   (if (= lev 0)
-	       (quasiappend p (quasi q lev))
-	     (quasicons
-	      (quasicons (datum 'unquote-splicing)
-			 (quasi p (- lev 1)))
-	      (quasi q lev))))
-	  ((quasiquote p)
-	   (quasicons (datum 'quasiquote)
-		      (quasi (list p) (+ lev 1))))
-	  ((p . q) (quasicons (quasi p lev) (quasi q lev)))
-	  (#(x ...) (not (<stx>? x)) (quasivector (vquasi x lev)))
-	  (p (app 'quote p)))))
+	      (datum 'unquote-splicing)
+	      (quasi p (- nesting-level 1)))
+	     (vquasi q nesting-level))))
+
+	 (p
+	  (quasicons (quasi p nesting-level) (vquasi q nesting-level)))
+	 ))
+
+      (()
+       (app 'quote '()))
+      ))
+
+
+
+  (define (datum x)
+    (list (scheme-stx 'quote) (mkstx x TOP-MARK* '() '())))
+
+  (define-syntax app
+    (syntax-rules (quote)
+      ((_ '?type ?arg* ...)
+       (list (scheme-stx '?type) ?arg* ...))
+      ))
+
+  (define-syntax app*
+    (syntax-rules (quote)
+      ((_ '?type ?arg* ... ?last)
+       (cons* (scheme-stx '?type) ?arg* ... ?last))))
+
+  (define (quasicons* x y)
+    (let recur ((x x))
+      (if (null? x)
+	  y
+	(quasicons (car x) (recur (cdr x))))))
+
+  (define (quasicons x y)
+    (syntax-match y (quote list)
+      ((quote ?dy)
+       (syntax-match x (quote)
+	 ((quote ?dx)
+	  (app 'quote (cons ?dx ?dy)))
+
+	 (_
+	  (syntax-match ?dy ()
+	    (()
+	     (app 'list x))
+	    (_
+	     (app 'cons x y))
+	    ))
+	 ))
+
+      ((list ?stuff ...)
+       (app* 'list x ?stuff))
+
+      (_
+       (app 'cons x y))
+      ))
+
+  (define (quasiappend x y)
+    (let ((ls (let f ((x x))
+		(if (null? x)
+		    (syntax-match y (quote)
+		      ((quote ()) '())
+		      (_ (list y)))
+		  (syntax-match (car x) (quote)
+		    ((quote ()) (f (cdr x)))
+		    (_ (cons (car x) (f (cdr x)))))))))
+      (cond
+       ((null? ls) (app 'quote '()))
+       ((null? (cdr ls)) (car ls))
+       (else (app* 'append ls)))))
+
+  (define quasivector
     (lambda (x)
-      (syntax-match x ()
-	((_ e) (quasi e 0))))))
+      (let ((pat-x x))
+	(syntax-match pat-x (quote)
+	  ((quote (x* ...)) (app 'quote (list->vector x*)))
+	  (_ (let f ((x x) (k (lambda (ls) (app* 'vector ls))))
+	       (syntax-match x (quote list cons)
+		 ((quote (x* ...))
+		  (k (map (lambda (x) (app 'quote x)) x*)))
+		 ((list x* ...)
+		  (k x*))
+		 ((cons x y)
+		  (f y (lambda (ls) (k (cons x ls)))))
+		 (_ (app 'list->vector pat-x)))))))))
+
+  #| end of module: QUASIQUOTE-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: QUASISYNTAX
