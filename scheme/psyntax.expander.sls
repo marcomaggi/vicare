@@ -7938,6 +7938,14 @@
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
   ;;return a syntax object that must be further expanded.
   ;;
+  ;;Some example expansions:
+  ;;
+  ;;   (quasiquote (1 2 (unquote (+ 3 4))))
+  ;;   ==> (list '1 '2 (+ '3 '4))
+  ;;
+  ;;   (quasiquote (1 2 (unquote (+ 3 4))))
+  ;;   ==> (vector '1 '2 (+ '3 '4))
+  ;;
   (define (quasiquote-macro expr-stx)
     (syntax-match expr-stx ()
       ((_ ?expr)
@@ -7945,29 +7953,31 @@
       ))
 
   (define (%quasi p nesting-level)
+    ;;Process a list of items representing the items from a list.
+    ;;
     (syntax-match p (unquote unquote-splicing quasiquote)
       ((unquote p)
        (if (zero? nesting-level)
 	   p
-	 (%quasicons (%datum 'unquote)
+	 (%quasicons (%keyword 'unquote)
 		     (%quasi (list p) (sub1 nesting-level)))))
 
       (((unquote p ...) . q)
        (if (zero? nesting-level)
 	   (%quasicons* p (%quasi q nesting-level))
-	 (%quasicons (%quasicons (%datum 'unquote)
+	 (%quasicons (%quasicons (%keyword 'unquote)
 				 (%quasi p (sub1 nesting-level)))
 		     (%quasi q nesting-level))))
 
       (((unquote-splicing p ...) . q)
        (if (zero? nesting-level)
 	   (%quasiappend p (%quasi q nesting-level))
-	 (%quasicons (%quasicons (%datum 'unquote-splicing)
+	 (%quasicons (%quasicons (%keyword 'unquote-splicing)
 				 (%quasi p (sub1 nesting-level)))
 		     (%quasi q nesting-level))))
 
       ((quasiquote p)
-       (%quasicons (%datum 'quasiquote)
+       (%quasicons (%keyword 'quasiquote)
 		   (%quasi (list p) (add1 nesting-level))))
 
       ((p . q)
@@ -7976,47 +7986,52 @@
 
       (#(x ...)
        (not (<stx>? x))
-       (%quasivector (%vquasi x nesting-level)))
+       (%quasivector (%vector-quasi x nesting-level)))
 
       (p
        (%application 'quote p))
       ))
 
-  (define (%vquasi p nesting-level)
+  (define (%vector-quasi p nesting-level)
+    ;;Process a list of items representing the items from a vector.
+    ;;
     (syntax-match p ()
       ((p . q)
        (syntax-match p (unquote unquote-splicing)
   	 ((unquote p ...)
   	  (if (zero? nesting-level)
-  	      (%quasicons* p (%vquasi q nesting-level))
-  	    (%quasicons (%quasicons (%datum 'unquote)
+  	      (%quasicons* p (%vector-quasi q nesting-level))
+  	    (%quasicons (%quasicons (%keyword 'unquote)
   				    (%quasi p (sub1 nesting-level)))
-  			(%vquasi q nesting-level))))
+  			(%vector-quasi q nesting-level))))
 
   	 ((unquote-splicing p ...)
   	  (if (zero? nesting-level)
-  	      (%quasiappend p (%vquasi q nesting-level))
-  	    (%quasicons (%quasicons (%datum 'unquote-splicing)
+  	      (%quasiappend p (%vector-quasi q nesting-level))
+  	    (%quasicons (%quasicons (%keyword 'unquote-splicing)
   				    (%quasi p (sub1 nesting-level)))
-  			(%vquasi q nesting-level))))
+  			(%vector-quasi q nesting-level))))
 
   	 (p
   	  (%quasicons (%quasi p nesting-level)
-  		      (%vquasi q nesting-level)))
+  		      (%vector-quasi q nesting-level)))
   	 ))
 
       (()
        (%application 'quote '()))
       ))
 
-  (define (%datum obj)
-    ;;Return  a  top-marked  syntax object  representing  an  expression
-    ;;evaluating to  the quoted datum  X.  Expanding and  evaluating the
-    ;;returned syntax object is equivalent to evaluating:
+  (define (%keyword key)
+    ;;Return a  top-marked syntax  object representing a  quoted symbol;
+    ;;the  symbol  being the  name  of  a  syntax  from the  boot  image
+    ;;EXPORT-ENV.  Expanding  and evaluating the returned  syntax object
+    ;;is equivalent to evaluating:
     ;;
-    ;;   (quote obj)
+    ;;   (quote key)
     ;;
-    (list (scheme-stx 'quote) (mkstx obj TOP-MARK* '() '())))
+    ;;where KEY is one of: quasiquote, unquote, unquote-splicing.
+    ;;
+    (list (scheme-stx 'quote) (mkstx key TOP-MARK* '() '())))
 
   (define-syntax %application
     ;;Expand to an expression which, when evaluated, results in a syntax
