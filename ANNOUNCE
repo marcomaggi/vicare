@@ -68,7 +68,7 @@ Notes for revision 0.3d8
     Whenever an expression  in OOPP syntax appears as  first subform, it
   has a single return value and  such return value is tagged: the result
   of its expansion is spliced in  the enclosing form; this allows a more
-  natural OOP--like  syntax to access  supertag members.  It  is clearly
+  natural OOP--like syntax to access field's tag members.  It is clearly
   not ``Schemey''.  Here are some examples:
 
      (<spine> L '(0 1 2 3 4))
@@ -139,7 +139,6 @@ Notes for revision 0.3d8
      ((<pair> (1 2)) car)	=> 1
      ((<pair> (1 2)) cdr)	=> 2
 
-
 * Added documentation to explain that the following is a perfectly valid
   Vicare program:
 
@@ -175,6 +174,10 @@ Notes for revision 0.3d8
      (is-a? (make-doublet 1 2) doublet)		=> #t
      (is-a? (make-triplet 1 2 3) triplet)	=> #t
      (is-a? 123 triplet)			=> #f
+
+    Notice  that this  syntax is  replaced  by (nausicaa)  with its  own
+  variant;  the variant  in  Nausicaa  does not  work  with structs  and
+  records.  Ideally, in future, the two will be merged.
 
 * Modified syntactic  bindings of  Vicare struct  types and  R6RS record
   types to  allow the identifier name  to act as reference  to the maker
