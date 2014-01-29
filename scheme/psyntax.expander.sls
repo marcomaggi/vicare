@@ -8728,7 +8728,7 @@
     ;;top-level built  in environment.  Expand the  contents of EXPR-STX
     ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
     ;;LEXENV.EXPAND; return a sexp  representing EXPR-STX fully expanded
-    ;;to the core language.
+    ;;to the expand language.
     ;;
     (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec))
 
@@ -8737,7 +8737,7 @@
     ;;top-level built  in environment.  Expand the  contents of EXPR-STX
     ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
     ;;LEXENV.EXPAND; return a sexp  representing EXPR-STX fully expanded
-    ;;to the core language.
+    ;;to the expand language.
     ;;
     (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec*))
 
@@ -8746,32 +8746,33 @@
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check  that  the  binding  names are  identifiers  and  without
        ;;duplicates.
-       (if (not (valid-bound-ids? ?lhs*))
-	   (%error-invalid-formals-syntax expr-stx ?lhs*)
-	 ;;Generate  unique variable  names  and labels  for the  LETREC
-	 ;;bindings.
-	 (let ((lex* (map gensym-for-lexical-var ?lhs*))
-	       (lab* (map gensym-for-label       ?lhs*)))
-	   ;;Generate  what is  needed to  create a  lexical contour:  a
-	   ;;<RIB>  and  an extended  lexical  environment  in which  to
-	   ;;evaluate both the right-hand sides and the body.
-	   ;;
-	   ;;Notice that the region of  all the LETREC bindings includes
-	   ;;all the right-hand sides.
-	   (let ((rib        (make-filled-rib ?lhs* lab*))
-		 (lexenv.run (add-lexical-bindings lab* lex* lexenv.run)))
-	     ;;Create  the   lexical  contour  then  process   body  and
-	     ;;right-hand sides of bindings.
-	     (let ((body (chi-internal-body (push-lexical-contour rib
-					      (cons ?body ?body*))
-					    lexenv.run lexenv.expand))
-		   (rhs* (chi-expr*         (map (lambda (rhs)
-						   (push-lexical-contour rib rhs))
-					      ?rhs*)
-				       lexenv.run lexenv.expand)))
-	       ;;Build  the LETREC  or  LETREC* expression  in the  core
-	       ;;language.
-	       (core-lang-builder no-source lex* rhs* body))))))))
+       (unless (valid-bound-ids? ?lhs*)
+	 (%error-invalid-formals-syntax expr-stx ?lhs*))
+       ;;Generate  unique  variable  names  and labels  for  the  LETREC
+       ;;bindings.
+       (let ((lex* (map gensym-for-lexical-var ?lhs*))
+	     (lab* (map gensym-for-label       ?lhs*)))
+	 ;;Generate what is needed to  create a lexical contour: a <RIB>
+	 ;;and an extended lexical environment in which to evaluate both
+	 ;;the right-hand sides and the body.
+	 ;;
+	 ;;Notice that  the region of  all the LETREC  bindings includes
+	 ;;all the right-hand sides.
+	 (let ((rib        (make-filled-rib ?lhs* lab*))
+	       (lexenv.run (add-lexical-bindings lab* lex* lexenv.run)))
+	   ;;Create the lexical contour then process body and right-hand
+	   ;;sides of bindings.
+	   (let ((body (chi-internal-body (push-lexical-contour rib
+					    (cons ?body ?body*))
+					  lexenv.run lexenv.expand))
+		 (rhs* (chi-expr*         (map (lambda (rhs)
+						 (push-lexical-contour rib rhs))
+					    ?rhs*)
+					  lexenv.run lexenv.expand)))
+	     ;;Build  the  LETREC  or  LETREC* expression  in  the  core
+	     ;;language.
+	     (core-lang-builder no-source lex* rhs* body)))))
+      ))
 
   #| end of module |# )
 
