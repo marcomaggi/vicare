@@ -8149,73 +8149,96 @@
 
 ;;;; module non-core-macro-transformer: QUASISYNTAX
 
-(define quasisyntax-macro
-  (let () ;;; FIXME: not really correct
-    (define quasi
-      (lambda (p lev)
-	(syntax-match p (unsyntax unsyntax-splicing quasisyntax)
-	  ((unsyntax p)
-	   (if (= lev 0)
-	       (let ((g (gensym)))
-		 (values (list g) (list p) g))
-	     (let-values (((lhs* rhs* p) (quasi p (- lev 1))))
-	       (values lhs* rhs* (list 'unsyntax p)))))
-	  (unsyntax
-	   (= lev 0)
-	   (stx-error p "incorrect use of unsyntax"))
-	  (((unsyntax p* ...) . q)
-	   (let-values (((lhs* rhs* q) (quasi q lev)))
-	     (if (= lev 0)
-		 (let ((g* (map (lambda (x) (gensym)) p*)))
-		   (values
-		    (append g* lhs*)
-		    (append p* rhs*)
-		    (append g* q)))
-	       (let-values (((lhs2* rhs2* p*) (quasi p* (- lev 1))))
-		 (values
-		  (append lhs2* lhs*)
-		  (append rhs2* rhs*)
-		  `((unsyntax . ,p*) . ,q))))))
-	  (((unsyntax-splicing p* ...) . q)
-	   (let-values (((lhs* rhs* q) (quasi q lev)))
-	     (if (= lev 0)
-		 (let ((g* (map (lambda (x) (gensym)) p*)))
-		   (values
-		    (append
-		     (map (lambda (g) `(,g ...)) g*)
-		     lhs*)
-		    (append p* rhs*)
-		    (append
-		     (apply append
-			    (map (lambda (g) `(,g ...)) g*))
-		     q)))
-	       (let-values (((lhs2* rhs2* p*) (quasi p* (- lev 1))))
-		 (values
-		  (append lhs2* lhs*)
-		  (append rhs2* rhs*)
-		  `((unsyntax-splicing . ,p*) . ,q))))))
-	  (unsyntax-splicing (= lev 0)
-			     (stx-error p "incorrect use of unsyntax-splicing"))
-	  ((quasisyntax p)
-	   (let-values (((lhs* rhs* p) (quasi p (+ lev 1))))
-	     (values lhs* rhs* `(quasisyntax ,p))))
-	  ((p . q)
-	   (let-values (((lhs* rhs* p) (quasi p lev))
-			((lhs2* rhs2* q) (quasi q lev)))
+(module (quasisyntax-macro)
+  ;;Transformer function used to expand R6RS QUASISYNTAX macros from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  ;;FIXME: not really correct (Abdulaziz Ghuloum).
+  ;;
+  (define (quasisyntax-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ e)
+       (receive (lhs* rhs* v)
+	   (quasi e 0)
+	 (bless
+	  `(syntax-case (list ,@rhs*) ()
+	     (,lhs*
+	      (syntax ,v))))))
+      ))
+
+  (define (quasi p nesting-level)
+    (syntax-match p (unsyntax unsyntax-splicing quasisyntax)
+      ((unsyntax p)
+       (if (zero? nesting-level)
+	   (let ((g (gensym)))
+	     (values (list g) (list p) g))
+	 (receive (lhs* rhs* p)
+	     (quasi p (sub1 nesting-level))
+	   (values lhs* rhs* (list 'unsyntax p)))))
+
+      (unsyntax
+       (zero? nesting-level)
+       (stx-error p "incorrect use of unsyntax"))
+
+      (((unsyntax p* ...) . q)
+       (receive (lhs* rhs* q)
+	   (quasi q nesting-level)
+	 (if (zero? nesting-level)
+	     (let ((g* (map (lambda (x) (gensym)) p*)))
+	       (values (append g* lhs*)
+		       (append p* rhs*)
+		       (append g* q)))
+	   (receive (lhs2* rhs2* p*)
+	       (quasi p* (sub1 nesting-level))
 	     (values (append lhs2* lhs*)
 		     (append rhs2* rhs*)
-		     (cons p q))))
-	  (#(x* ...)
-	   (let-values (((lhs* rhs* x*) (quasi x* lev)))
-	     (values lhs* rhs* (list->vector x*))))
-	  (_ (values '() '() p)))))
-    (lambda (x)
-      (syntax-match x ()
-	((_ e)
-	 (let-values (((lhs* rhs* v) (quasi e 0)))
-	   (bless
-	    `(syntax-case (list ,@rhs*) ()
-	       (,lhs* (syntax ,v))))))))))
+		     `((unsyntax . ,p*) . ,q))))))
+
+      (((unsyntax-splicing p* ...) . q)
+       (receive (lhs* rhs* q)
+	   (quasi q nesting-level)
+	 (if (zero? nesting-level)
+	     (let ((g* (map (lambda (x) (gensym)) p*)))
+	       (values (append (map (lambda (g) `(,g ...)) g*)
+			       lhs*)
+		       (append p* rhs*)
+		       (append (apply append
+				      (map (lambda (g) `(,g ...)) g*))
+			       q)))
+	   (receive (lhs2* rhs2* p*)
+	       (quasi p* (sub1 nesting-level))
+	     (values (append lhs2* lhs*)
+		     (append rhs2* rhs*)
+		     `((unsyntax-splicing . ,p*) . ,q))))))
+
+      (unsyntax-splicing
+       (zero? nesting-level)
+       (stx-error p "incorrect use of unsyntax-splicing"))
+
+      ((quasisyntax p)
+       (receive (lhs* rhs* p)
+	   (quasi p (add1 nesting-level))
+	 (values lhs* rhs* `(quasisyntax ,p))))
+
+      ((p . q)
+       (let-values
+	   (((lhs*  rhs*  p) (quasi p nesting-level))
+	    ((lhs2* rhs2* q) (quasi q nesting-level)))
+	 (values (append lhs2* lhs*)
+		 (append rhs2* rhs*)
+		 (cons p q))))
+
+      (#(x* ...)
+       (receive (lhs* rhs* x*)
+	   (quasi x* nesting-level)
+	 (values lhs* rhs* (list->vector x*))))
+
+      (_
+       (values '() '() p))
+      ))
+
+  #| end of module |# )
 
 
 ;;;; module non-core-macro-transformer: DEFINE-VALUES, DEFINE-CONSTANT-VALUES
@@ -8327,7 +8350,10 @@
     ))
 
 (module (xor-macro)
-
+  ;;Transformer function  used to  expand Vicare's  XOR macros  from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
   (define (xor-macro expr-stx)
     (syntax-match expr-stx ()
       ((_ ?expr* ...)
@@ -8355,6 +8381,10 @@
 ;;;; module non-core-macro-transformer: DEFINE-INLINE, DEFINE-CONSTANT
 
 (define (define-constant-macro expr-stx)
+  ;;Transformer function used to  expand Vicare's DEFINE-CONSTANT macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   (syntax-match expr-stx ()
     ((_ ?name ?expr)
      (bless
@@ -8495,6 +8525,10 @@
 ;;;; module non-core-macro-transformer: DEFINE-INTEGRABLE
 
 (define (define-integrable-macro expr-stx)
+  ;;Transformer  function  used  to  expand  Vicare's  DEFINE-INTEGRABLE
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
   ;;The original  syntax was  posted by "leppie"  on the  Ikarus mailing
   ;;list; subject "Macro Challenge of Last Year [Difficulty: *****]", 20
   ;;Oct 2009.
@@ -8531,6 +8565,10 @@
 ;;;; module non-core-macro-transformer: miscellanea
 
 (define (time-macro stx)
+  ;;Transformer function  used to expand  Vicare's TIME macros  from the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
   (syntax-match stx ()
     ((_ expr)
      (let ((str (receive (port getter)
