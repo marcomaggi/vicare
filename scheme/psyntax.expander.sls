@@ -7946,6 +7946,13 @@
   ;;   (quasiquote (1 2 (unquote (+ 3 4))))
   ;;   ==> (vector '1 '2 (+ '3 '4))
   ;;
+  ;;NOTE We  can test  QUASIQUOTE expansions by  evaluating at  the REPL
+  ;;expressions like:
+  ;;
+  ;;   (expand-form-to-core-language
+  ;;     '(quasiquote ?pattern)
+  ;;     (interaction-environment))
+  ;;
   (define (quasiquote-macro expr-stx)
     (syntax-match expr-stx ()
       ((_ ?expr)
