@@ -8564,26 +8564,32 @@
 
 ;;;; module non-core-macro-transformer: miscellanea
 
-(define (time-macro stx)
+(define (time-macro expr-stx)
   ;;Transformer function  used to expand  Vicare's TIME macros  from the
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
   ;;return a syntax object that must be further expanded.
   ;;
-  (syntax-match stx ()
-    ((_ expr)
+  (syntax-match expr-stx ()
+    ((_ ?expr)
      (let ((str (receive (port getter)
 		    (open-string-output-port)
-		  (write (syntax->datum expr) port)
+		  (write (syntax->datum ?expr) port)
 		  (getter))))
-       (bless `(time-it ,str (lambda () ,expr)))))))
+       (bless
+	`(time-it ,str (lambda () ,?expr)))))))
 
-(define (delay-macro stx)
-  (syntax-match stx ()
-    ((_ expr)
+(define (delay-macro expr-stx)
+  ;;Transformer  function used  to  expand R6RS  DELAY  macros from  the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?expr)
      (bless
-      `(make-promise (lambda () ,expr))))))
+      `(make-promise (lambda ()
+		       ,?expr))))))
 
-(define (assert-macro stx)
+(define (assert-macro expr-stx)
   ;;Defined by R6RS.  An ASSERT  form is evaluated by evaluating EXPR.
   ;;If  EXPR returns a  true value,  that value  is returned  from the
   ;;ASSERT  expression.   If EXPR  returns  false,  an exception  with
@@ -8595,19 +8601,19 @@
   ;;syntax  to  provide as  much  information  as  possible about  the
   ;;location of the assertion failure.
   ;;
-  (syntax-match stx ()
-    ((_ expr)
-     (let ((pos (or (expression-position stx)
-		    (expression-position expr))))
+  (syntax-match expr-stx ()
+    ((_ ?expr)
+     (let ((pos (or (expression-position expr-stx)
+		    (expression-position ?expr))))
        (bless
 	(if (source-position-condition? pos)
-	    `(or ,expr
+	    `(or ,?expr
 		 (assertion-error
-		  ',expr ,(source-position-port-id pos)
+		  ',?expr ,(source-position-port-id pos)
 		  ,(source-position-byte pos) ,(source-position-character pos)
 		  ,(source-position-line pos) ,(source-position-column    pos)))
-	  `(or ,expr
-	       (assertion-error ',expr "unknown source" #f #f #f #f))))))))
+	  `(or ,?expr
+	       (assertion-error ',?expr "unknown source" #f #f #f #f))))))))
 
 (define (file-options-macro expr-stx)
   ;;Transformer for  the FILE-OPTIONS macro.  File  options selection is
@@ -8620,7 +8626,8 @@
   (syntax-match expr-stx ()
     ((_ ?opt* ...)
      (for-all valid-option? ?opt*)
-     (bless `(make-file-options ',?opt*)))))
+     (bless
+      `(make-file-options ',?opt*)))))
 
 (define (endianness-macro expr-stx)
   ;;Transformer of  ENDIANNESS.  Support  the symbols:  "big", "little",
@@ -8647,7 +8654,8 @@
     ((_ ?name)
      (and (identifier? ?name)
 	  (memq (identifier->symbol ?name) allowed-symbol-set))
-     (bless `(quote ,?name)))))
+     (bless
+      `(quote ,?name)))))
 
 
 ;;; end of module: NON-CORE-MACRO-TRANSFORMER
