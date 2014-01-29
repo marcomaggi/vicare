@@ -6308,6 +6308,12 @@ The following bindings are exported by the @library{ikarus} and
 @library{vicare} libraries.
 
 
+@defun fxadd1 @var{fx}
+@defunx fxsub1 @var{fx}
+Add or subtract @samp{1} to @var{fx}.
+@end defun
+
+
 @defun fxabs @var{fx}
 Return the absolute value of the fixnum @var{fx} as a fixnum; if
 @var{fx} is @code{(least-fixnum)}: its absolute value is a bignum, in
@@ -6691,6 +6697,12 @@ The following bindings are exported by the @library{ikarus} and
 @c ------------------------------------------------------------
 
 @subsubheading Arithmetic functions
+
+
+@defun add1 @var{num}
+@defunx sub1 @var{num}
+Add or subtract @samp{1} to @var{num}, which can be any number.
+@end defun
 
 
 @defun square @var{num}
