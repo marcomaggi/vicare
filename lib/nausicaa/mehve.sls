@@ -852,6 +852,8 @@
     define-returnable
     define-struct
     define-syntax-rule
+    define-syntax*
+    define-alias
     ;;Replaced by the binding from (nausicaa language oopp).
     ;;
     ;;define-values
@@ -1416,8 +1418,6 @@
 
     char-in-ascii-range?
     fixnum-in-character-range?
-
-    define-syntax*
 
     ;;; syntax utilities
     identifier->string
