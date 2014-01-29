@@ -10,7 +10,7 @@ AC_CONFIG_AUX_DIR([autotools])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE([foreign dist-xz no-dist-gzip])
+AM_INIT_AUTOMAKE([1.14 foreign dist-xz no-dist-gzip])
 AM_MAINTAINER_MODE
 
 AM_PROG_AR
