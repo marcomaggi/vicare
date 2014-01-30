@@ -540,11 +540,11 @@
 ;;
 ;;A binding representing a fluid syntax has the format:
 ;;
-;;   ($fluid . ?label)
+;;   ($fluid . ?name-sym)
 ;;
-;;where ?LABEL is  the gensym associated to the  fluid syntax.  Bindings
-;;of this type  have descriptor format equal to the  ones present in the
-;;LEXENV data structures.
+;;where  ?NAME-SYM is  the symbol  representing  the name  of the  fluid
+;;syntax.  Bindings of  this type have descriptor format  similar to the
+;;ones present in the LEXENV data structures.
 ;;
 ;;
 ;;Some words about core primitive values
@@ -800,7 +800,7 @@
 ;;
 ;;   ($fluid . ?label)
 ;;
-;;where ?LABEL is the gensym associated to the fluid syntax.
+;;where ?LABEL is the label gensym associated to the fluid syntax.
 ;;
 ;;
 ;;Displaced lexical
@@ -3358,6 +3358,9 @@
   (and (pair? binding)
        (eq? '$fluid (syntactic-binding-type binding))))
 
+(define-syntax-rule (fluid-syntax-binding-fluid-label binding)
+  (syntactic-binding-value binding))
+
 ;;; --------------------------------------------------------------------
 ;;; compile-time values bindings
 
@@ -3404,19 +3407,28 @@
   (let ((binding (label->syntactic-binding/no-fluids label lexenv)))
     (if (fluid-syntax-binding? binding)
 	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
-	;;reversed logic: we  have to look them up in  the LEXENV first,
-	;;and then in the global environment.
+	;;different logic.   The lexical  environment contains  the main
+	;;fluid  syntax definition  entry  and one  or more  subordinate
+	;;fluid syntax re-definition entries.
 	;;
-	;;This is  because we  can nest  at will  FLUID-LET-SYNTAX forms
-	;;that  redefine  the binding  by  pushing  new entries  on  the
-	;;LEXENV.  To reach  for the innermost we must  query the LEXENV
-	;;first.
+	;;LABEL is associated to the  main binding definition entry; its
+	;;syntactic binding  descriptor contains the fluid  label, which
+	;;is associated  to one or more  subordinate re-definitions.  We
+	;;extract  the fluid  label from  BINDING, then  search for  the
+	;;innermost fluid binding associated to it.
 	;;
-	(let ((label (syntactic-binding-value binding)))
-	  (cond ((assq label lexenv)
+	;;Such  search for  the fluid  re-definition binding  must begin
+	;;from  LEXENV, and  then in  the global  environment.  This  is
+	;;because  we  can  nest  at will  FLUID-LET-SYNTAX  forms  that
+	;;redefine the  binding by pushing new  re-definition entries on
+	;;the  LEXENV.  To  reach for  the innermost  we must  query the
+	;;LEXENV first.
+	;;
+	(let ((fluid-label (fluid-syntax-binding-fluid-label binding)))
+	  (cond ((assq fluid-label lexenv)
 		 => syntactic-binding-value)
 		(else
-		 (label->syntactic-binding/no-fluids label '()))))
+		 (label->syntactic-binding/no-fluids fluid-label '()))))
       binding)))
 
 (define (label->syntactic-binding/no-fluids label lexenv)
@@ -8784,38 +8796,37 @@
   ;;the top-level built in environment.  Expand the contents of EXPR-STX
   ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
   ;;LEXENV.EXPAND; return a sexp representing EXPR-STX fully expanded to
-  ;;the core language.
+  ;;the expand language.
   ;;
   (define (transformer expr-stx)
     (syntax-match expr-stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the ?LHS* are all identifiers with no duplicates.
-       (if (not (valid-bound-ids? ?lhs*))
-	   (%error-invalid-formals-syntax expr-stx ?lhs*)
-	 (let ((label*       (map %lookup-binding-in-run-lexenv ?lhs*))
-	       (rhs-binding* (map (lambda (rhs)
-				    (%eval-macro-transformer
-				     (%expand-macro-transformer rhs lexenv.expand)))
-			       ?rhs*)))
-	   (chi-internal-body (cons ?body ?body*)
-			      (append (map cons label* rhs-binding*) lexenv.run)
-			      (append (map cons label* rhs-binding*) lexenv.expand)))))))
+       (unless (valid-bound-ids? ?lhs*)
+	 (%error-invalid-formals-syntax expr-stx ?lhs*))
+       (let ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
+	     (binding*     (map (lambda (rhs)
+				  (%eval-macro-transformer
+				   (%expand-macro-transformer rhs lexenv.expand)))
+			     ?rhs*)))
+	 (chi-internal-body (cons ?body ?body*)
+			    (append (map cons fluid-label* binding*) lexenv.run)
+			    (append (map cons fluid-label* binding*) lexenv.expand))))))
 
-  (define (%lookup-binding-in-run-lexenv lhs)
-    ;;Search  the  binding of  the  identifier  LHS in  LEXENV.RUN,  the
-    ;;environment for run;  if present and of type  fluid syntax: return
-    ;;the associated label.
+  (define (%lookup-binding-in-lexenv.run lhs)
+    ;;Search the binding of the identifier LHS in LEXENV.RUN, retrieving
+    ;;the main fluid definition label; if such main label is present and
+    ;;its  associated syntactic  binding  descriptor is  of type  "fluid
+    ;;syntax": return  the fluid label  that can  be used to  rebind the
+    ;;identifier.
     ;;
     (let* ((label    (or (id->label lhs)
-			 (%synner "unbound identifier" lhs)))
+			 (stx-error lhs "unbound identifier")))
 	   (binding  (label->syntactic-binding/no-fluids label lexenv.run)))
       (cond ((fluid-syntax-binding? binding)
-	     (syntactic-binding-value binding))
+	     (fluid-syntax-binding-fluid-label binding))
 	    (else
-	     (%synner "not a fluid identifier" lhs)))))
-
-  (define (%synner message subform)
-    (stx-error subform message))
+	     (stx-error lhs "not a fluid identifier")))))
 
   (transformer expr-stx))
 
@@ -11770,17 +11781,19 @@
 		  (let* ((lab          (gen-define-syntax-label id rib sd?))
 			 (flab         (gen-define-syntax-label id rib sd?))
 			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
-		    ;;First map  the identifier  to the  label, creating
-		    ;;the binding; then evaluate the macro transformer.
+		    ;;First map the identifier to  the label, so that it
+		    ;;is bound; then evaluate the macro transformer.
 		    (extend-rib! rib id lab sd?)
 		    (let* ((binding  (%eval-macro-transformer expanded-rhs))
-			   ;;This  lexical environment  entry represents
-			   ;;the definition of the fluid syntax.
+			   ;;This LEXENV entry represents the definition
+			   ;;of the fluid syntax.
 			   (entry1   (cons lab (make-fluid-syntax-binding flab)))
-			   ;;This  lexical environment  entry represents
-			   ;;the  current binding  of the  fluid syntax.
-			   ;;Other entries  like this one can  be pushed
-			   ;;to rebind the fluid syntax.
+			   ;;This  LEXENV entry  represents the  current
+			   ;;binding  of the  fluid syntax;  the binding
+			   ;;descriptor   is    of   type   LOCAL-MACRO,
+			   ;;LOCAL-MACRO!  or  LOCAL-CTV.  Other entries
+			   ;;like this  one can be pushed  to rebind the
+			   ;;fluid syntax.
 			   (entry2   (cons flab binding)))
 		      (chi-body* (cdr body-form-stx*)
 				 (cons* entry1 entry2 lexenv.run)
