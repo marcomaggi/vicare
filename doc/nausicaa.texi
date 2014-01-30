@@ -45,7 +45,7 @@
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2012, 2013
+@set COPYRIGHT_YEARS            2012, 2013, 2014
 
 @c page
 @c ------------------------------------------------------------
