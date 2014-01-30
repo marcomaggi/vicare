@@ -1241,10 +1241,11 @@
    lexenv
 		;The LEXENV for both run  time and expand time.  It maps
 		;labels to syntactic binding descriptors.
-   lab.loc*
+   lab.loc/lex*
 		;An alist having  label gensyms as keys  and loc gensyms
-		;as values.  It maps  binding labels to storage location
-		;gensyms.  The loc gensyms are also used as lex gensyms.
+		;as  values;  the  loc  gensyms are  also  used  as  lex
+		;gensyms.  It  maps binding  labels to  storage location
+		;gensyms.
    )
   (lambda (S port sub-printer)
     (display "#<interaction-environment>" port)))
@@ -3521,14 +3522,14 @@
 	;;
 	((top-level-context)
 	 => (lambda (env)
-	      (cond ((assq label (interaction-env-lab.loc* env))
-		     => (lambda (lab.loc)
+	      (cond ((assq label (interaction-env-lab.loc/lex* env))
+		     => (lambda (lab.loc/lex)
 			  ;;Fabricate a  binding descriptor representing
 			  ;;an immutated  lexical variable.  We  need to
 			  ;;remember that  for interaction environments:
 			  ;;we  reuse  the  storage location  gensym  as
 			  ;;lexical gensym.
-			  (make-lexical-var-binding (cdr lab.loc))))
+			  (make-lexical-var-binding (cdr lab.loc/lex))))
 		    (else
 		     ;;Unbound label.
 		     '(displaced-lexical . #f)))))
@@ -4601,14 +4602,16 @@
       ;;binding.
       (let* ((env       (top-level-context))
 	     (label     (%gen-top-level-label id rib))
-	     (lab.loc*  (interaction-env-lab.loc* env)))
-	(values label (cond ((assq label lab.loc*)
-			     => cdr)
-			    (else
-			     (receive-and-return (loc)
-				 (gensym-for-storage-location id)
-			       (set-interaction-env-lab.loc*! env (cons (cons label loc)
-									lab.loc*)))))))))
+	     (lab.loc/lex*  (interaction-env-lab.loc/lex* env)))
+	(values label
+		(cond ((assq label lab.loc/lex*)
+		       => cdr)
+		      (else
+		       (receive-and-return (loc)
+			   (gensym-for-storage-location id)
+			 (set-interaction-env-lab.loc/lex*! env
+			   (cons (cons label loc)
+				 lab.loc/lex*)))))))))
 
   (define (gen-define-syntax-label id rib shadowing-definition?)
     ;;Whenever a DEFINE syntax:
@@ -12527,4 +12530,5 @@
 ;;eval: (put 'build-letrec*			'scheme-indent-function 1)
 ;;eval: (put 'build-data			'scheme-indent-function 1)
 ;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
+;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
 ;;End:
