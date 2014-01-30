@@ -796,11 +796,39 @@
 ;;Fluid syntax
 ;;------------
 ;;
-;;A binding representing a fluid syntax has the format:
+;;A binding descriptor representing a fluid syntax has the format:
 ;;
-;;   ($fluid . ?label)
+;;   ($fluid . ?fluid-label)
 ;;
-;;where ?LABEL is the label gensym associated to the fluid syntax.
+;;where ?FLUID-LABEL is the label gensym associated to the fluid syntax.
+;;
+;;Let's draw  the picture.  When  a fluid  syntax binding is  created by
+;;DEFINE-FLUID-SYNTAX:
+;;
+;;   (define-fluid-syntax ?lhs ?rhs)
+;;
+;;an identifier ?LHS is associated to  a main label ?LABEL, and an entry
+;;is pushed on the lexical environment:
+;;
+;;   (?label . ($fluid . ?fluid-label))
+;;
+;;at the same time another entry is pushed on the lexical environment:
+;;
+;;   (?fluid-label . ?syntactic-binding)
+;;
+;;where ?SYNTACTIC-BINDING is the concrete binding descriptor created by
+;;expanding  ?RHS.  The  fluid syntax  can be  re-defined any  number of
+;;times by using FLUID-LET-SYNTAX:
+;;
+;;   (fluid-let-syntax ((?lhs ?inner-rhs)) . ?body)
+;;
+;;causing other entries  associated to ?FLUID-LABEL to be  pushed on the
+;;lexical environment:
+;;
+;;   (?fluid-label . ?syntactic-binding)
+;;
+;;where  ?SYNTACTIC-BINDING is  the  binding  descriptor resulting  from
+;;expanding and evaluating ?INNER-RHS.
 ;;
 ;;
 ;;Displaced lexical
@@ -8814,11 +8842,10 @@
 			    (append (map cons fluid-label* binding*) lexenv.expand))))))
 
   (define (%lookup-binding-in-lexenv.run lhs)
-    ;;Search the binding of the identifier LHS in LEXENV.RUN, retrieving
-    ;;the main fluid definition label; if such main label is present and
-    ;;its  associated syntactic  binding  descriptor is  of type  "fluid
-    ;;syntax": return  the fluid label  that can  be used to  rebind the
-    ;;identifier.
+    ;;Search the binding of the  identifier LHS retrieving its label; if
+    ;;such  label  is  present  and  its  associated  syntactic  binding
+    ;;descriptor from LEXENV.RUN  is of type "fluid  syntax": return the
+    ;;associated fluid label that can be used to rebind the identifier.
     ;;
     (let* ((label    (or (id->label lhs)
 			 (stx-error lhs "unbound identifier")))
