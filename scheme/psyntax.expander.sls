@@ -543,8 +543,65 @@
 ;;   ($fluid . ?name-sym)
 ;;
 ;;where  ?NAME-SYM is  the symbol  representing  the name  of the  fluid
-;;syntax.  Bindings of  this type have descriptor format  similar to the
-;;ones present in the LEXENV data structures.
+;;syntax and  it is used  as fluid label  to re-define the  binding.  At
+;;present (Thu  Jan 30,  2014) the  boot image does  not export  a fully
+;;defined fluid syntax.
+;;
+;;Let's draw  the picture.  When  a fluid  syntax binding is  created by
+;;DEFINE-FLUID-SYNTAX in the source code of a library or program:
+;;
+;;   (define-fluid-syntax ?lhs ?rhs)
+;;
+;;an identifier ?LHS is associated to  a main label ?LABEL, and an entry
+;;is pushed on the lexical environment:
+;;
+;;   (?label . ($fluid . ?fluid-label))
+;;
+;;at the same time another entry is pushed on the lexical environment:
+;;
+;;   (?fluid-label . ?syntactic-binding)
+;;
+;;where ?SYNTACTIC-BINDING is the concrete binding descriptor created by
+;;expanding  and evaluating  ?RHS  then interpreting  its return  value.
+;;Given the identifier  ?LHS: we can retrieve the  associated ?LABEL and
+;;so  the ?FLUID-LABEL;  then we  can "follow  through" ?FLUID-LABEL  to
+;;retrieve the actual binding descriptor.
+;;
+;;The  fluid syntax  can  be re-defined  any number  of  times by  using
+;;FLUID-LET-SYNTAX:
+;;
+;;   (fluid-let-syntax ((?lhs ?inner-rhs)) . ?body)
+;;
+;;causing other entries  associated to ?FLUID-LABEL to be  pushed on the
+;;LEXENV:
+;;
+;;   (?fluid-label . ?inner-syntactic-binding)
+;;
+;;where  ?INNER-SYNTACTIC-BINDING is  the  binding descriptor  resulting
+;;from expanding and evaluating  ?INNER-RHS then interpreting its return
+;;value.
+;;
+;;Fine.  This is  *not* what happens for the fluid  syntaxes exported by
+;;the boot  image like RETURN,  BREAK and CONTINUE.  For  these syntaxes
+;;the lexical environment  of the boot image includes  only entries with
+;;binding descriptor:
+;;
+;;   ($fluid . return)
+;;   ($fluid . break)
+;;   ($fluid . continue)
+;;
+;;and  there are  no  entries for  the fluid  labels  RETURN, BREAK  and
+;;CONTINUE.  The identifiers  for these fluid syntaxes are  bound in the
+;;environment, but they are bound to "nothing"; trying to follow through
+;;the fluid labels to the actual  binding descriptors will result in the
+;;binding descriptor:
+;;
+;;   (displaced-lexical . #f)
+;;
+;;Such  half-defined  fluid  syntaxes  are  fully  usable  as  auxiliary
+;;syntaxes and can be re-defined  with FLUID-LET-SYNTAX.  There are *no*
+;;transformer  functions   for  RETURN,  BREAK,  CONTINUE   and  similar
+;;syntaxes.
 ;;
 ;;
 ;;Some words about core primitive values
@@ -817,18 +874,24 @@
 ;;   (?fluid-label . ?syntactic-binding)
 ;;
 ;;where ?SYNTACTIC-BINDING is the concrete binding descriptor created by
-;;expanding  ?RHS.  The  fluid syntax  can be  re-defined any  number of
-;;times by using FLUID-LET-SYNTAX:
+;;expanding  and evaluating  ?RHS  then interpreting  its return  value.
+;;Given the identifier  ?LHS: we can retrieve the  associated ?LABEL and
+;;so  the ?FLUID-LABEL;  then we  can "follow  through" ?FLUID-LABEL  to
+;;retrieve the actual binding descriptor.
+;;
+;;The  fluid syntax  can  be re-defined  any number  of  times by  using
+;;FLUID-LET-SYNTAX:
 ;;
 ;;   (fluid-let-syntax ((?lhs ?inner-rhs)) . ?body)
 ;;
 ;;causing other entries  associated to ?FLUID-LABEL to be  pushed on the
-;;lexical environment:
+;;LEXENV:
 ;;
-;;   (?fluid-label . ?syntactic-binding)
+;;   (?fluid-label . ?inner-syntactic-binding)
 ;;
-;;where  ?SYNTACTIC-BINDING is  the  binding  descriptor resulting  from
-;;expanding and evaluating ?INNER-RHS.
+;;where  ?INNER-SYNTACTIC-BINDING is  the  binding descriptor  resulting
+;;from expanding and evaluating  ?INNER-RHS then interpreting its return
+;;value.
 ;;
 ;;
 ;;Displaced lexical
@@ -3463,6 +3526,11 @@
 	;;the  LEXENV.  To  reach for  the innermost  we must  query the
 	;;LEXENV first.
 	;;
+	;;If there is no binding  descriptor for FLUID-LABEL: the return
+	;;value will be:
+	;;
+	;;   (displaced-lexical . #f)
+	;;
 	(let ((fluid-label (fluid-syntax-binding-fluid-label binding)))
 	  (cond ((assq fluid-label lexenv)
 		 => syntactic-binding-value)
@@ -5311,9 +5379,6 @@
       ((eval-for-expand)		eval-for-expand-macro)
 
       ;; non-Scheme style syntaxes
-      ((return)				return-macro)
-      ((continue)			continue-macro)
-      ((break)				break-macro)
       ((while)				while-macro)
       ((until)				until-macro)
       ((for)				for-macro)
@@ -5328,7 +5393,6 @@
       ((with-compensations)		with-compensations-macro)
       ((with-compensations/on-error)	with-compensations/on-error-macro)
       ((compensate)			compensate-macro)
-      ((with)				with-macro)
       ((push-compensation)		push-compensation-macro)
 
       ((eol-style)
@@ -6130,17 +6194,6 @@
 
 
 ;;;; module non-core-macro-transformer: compensations
-
-(define (with-macro expr-stx)
-  ;;Transformer function  used to expand  Vicare's WITH macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  ;;WITH is an  auxiliary syntax that is used only  to specify component
-  ;;syntaxes for other syntaxes.
-  ;;
-  (bless
-   `(syntax-violation 'with "invalid use of WITH syntax" ,expr-stx)))
 
 (module (with-compensations/on-error-macro
 	 with-compensations-macro)
@@ -7783,28 +7836,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: RETURN, CONTINUE, BREAK, WHILE, UNTIL, FOR
-
-(define (return-macro expr-stx)
-  ;;Transformer function used to expand  Vicare's RETURN macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (stx-error expr-stx "syntax RETURN out of context"))
-
-(define (continue-macro expr-stx)
-  ;;Transformer function  used to  expand Vicare's CONTINUE  macros from
-  ;;the  top-level  built  in   environment.   Expand  the  contents  of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (stx-error expr-stx "syntax CONTINUE out of context"))
-
-(define (break-macro expr-stx)
-  ;;Transformer function used  to expand Vicare's BREAK  macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (stx-error expr-stx "syntax BREAK out of context"))
+;;;; module non-core-macro-transformer: WHILE, UNTIL, FOR
 
 (define (while-macro expr-stx)
   ;;Transformer function used  to expand Vicare's WHILE  macros from the
