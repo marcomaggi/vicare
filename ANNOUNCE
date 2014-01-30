@@ -164,6 +164,19 @@ Notes for revision 0.3d8
      $struct-type-field-ref
      $struct-type-field-set!
 
+* Modified syntax TYPE-DESCRIPTOR to work  on both struct type names and
+  R6RS record type names:
+
+     (define-struct color
+       (red green blue))
+
+     (type-descriptor color)		=> #<color rtd>
+
+     (define-record-type color1
+       (fields red green blue))
+
+     (type-descriptor color1)		=> #[rtd name=color1]
+
 * Added syntax IS-A? to (vicare):
 
      (import (vicare))

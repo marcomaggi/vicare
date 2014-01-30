@@ -8817,6 +8817,7 @@
       ((foreign-call)			foreign-call-transformer)
       ((syntax-case)			syntax-case-transformer)
       ((syntax)				syntax-transformer)
+      ((struct-type-descriptor)		struct-type-descriptor-transformer)
       ((type-descriptor)		type-descriptor-transformer)
       ((struct-type-and-struct?)	struct-type-and-struct?-transformer)
       ((struct-type-field-ref)		struct-type-field-ref-transformer)
@@ -8829,6 +8830,7 @@
       ((record-type-field-ref)		record-type-field-ref-transformer)
       (($record-type-field-set!)	$record-type-field-set!-transformer)
       (($record-type-field-ref)		$record-type-field-ref-transformer)
+      ((type-descriptor)		type-descriptor-transformer)
       ((is-a?)				is-a?-transformer)
       ((splice-first-expand)		splice-first-expand-transformer)
       ((fluid-let-syntax)		fluid-let-syntax-transformer)
@@ -8936,16 +8938,16 @@
   (transformer expr-stx))
 
 
-;;;; module core-macro-transformer: TYPE-DESCRIPTOR, struct setter and getter
+;;;; module core-macro-transformer: struct type descriptor, setter and getter
 
-(module (type-descriptor-transformer
+(module (struct-type-descriptor-transformer
 	 struct-type-and-struct?-transformer
 	 struct-type-field-ref-transformer
 	 struct-type-field-set!-transformer
 	 $struct-type-field-ref-transformer
 	 $struct-type-field-set!-transformer)
 
-  (define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  (define (struct-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer  function  used  to  expand  Vicare's  TYPE-DESCRIPTOR
     ;;syntaxes  from the  top-level  built in  environment.  Expand  the
     ;;contents of  EXPR-STX in the  context of the  lexical environments
@@ -8963,7 +8965,7 @@
     ;;
     ;;where "$rtd" is the symbol "$rtd".
     ;;
-    (define-constant __who__ 'type-descriptor)
+    (define-constant __who__ 'struct-type-descriptor)
     (syntax-match expr-stx ()
       ((_ ?type-id)
        (identifier? ?type-id)
@@ -9296,6 +9298,44 @@
 	(%error))))
 
   #| end of module |# )
+
+
+;;;; module core-macro-transformer: TYPE-DESCRIPTOR
+
+(define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer  function   used  to  expand   Vicare's  TYPE-DESCRIPTOR
+  ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
+  ;;contents  of EXPR-STX  in the  context of  the lexical  environments
+  ;;LEXENV.RUN  and  LEXENV.EXPAND, the  result  must  be an  expression
+  ;;evaluating to:
+  ;;
+  ;;* A Vicare  struct type descriptor if the  given identifier argument
+  ;;  is a struct type name.
+  ;;
+  ;;* A R6RS record type descriptor  if the given identifier argument is
+  ;;  a record type name.
+  ;;
+  (define-constant __who__ 'type-descriptor)
+  (syntax-match expr-stx ()
+    ((_ ?type-id)
+     (identifier? ?type-id)
+     (let ((label (id->label ?type-id)))
+       (unless label
+	 (%raise-unbound-error __who__ expr-stx ?type-id))
+       (let ((binding (label->syntactic-binding label lexenv.run)))
+	 (cond ((r6rs-record-type-descriptor-binding? binding)
+		(chi-expr (r6rs-record-type-descriptor-binding-rtd
+			   (syntactic-binding-value binding))
+			  lexenv.run lexenv.expand))
+
+	       ((struct-type-descriptor-binding? binding)
+		(build-data no-source (syntactic-binding-value binding)))
+
+	       (else
+		(syntax-violation __who__
+		  "neither a struct type nor an R6RS record type"
+		  expr-stx ?type-id))))))
+    ))
 
 
 ;;;; module core-macro-transformer: IS-A?

@@ -743,6 +743,22 @@
   #t)
 
 
+(parametrise ((check-test-name	'generic-rtd-syntax))
+
+  (let ()	;application syntax
+    (define-record-type alpha
+      (fields a b c))
+
+    (check
+	(eq? (record-type-descriptor alpha)
+	     (type-descriptor alpha))
+      => #t)
+
+    (void))
+
+  #t)
+
+
 (parametrise ((check-test-name	'generic-maker-syntax))
 
   (let ()	;application syntax

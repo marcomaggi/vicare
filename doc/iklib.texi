@@ -285,6 +285,7 @@ Example:
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
+* iklib syntaxes types::        Type syntaxes.
 * iklib syntaxes predicate::    Predicate syntaxes.
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
@@ -1320,6 +1321,25 @@ the pathname @meta{filename}, which must be a string.  Everything
 happens as if the code was present in place of the @func{include} form.
 When the optional @true{} argument is given: print a message on the
 current error port describing the include operation.
+@end deffn
+
+@c page
+@node iklib syntaxes types
+@subsection Type syntaxes
+
+
+@deffn Syntax type-descriptor @meta{name}
+Expand to an expression which, when evaluated, results in:
+
+@itemize
+@item
+A Vicare struct type descriptor if the given identifier argument
+@meta{name} is a struct type name.
+
+@item
+A @rnrs{6} record type descriptor if the given identifier argument
+@meta{name} is a record type name.
+@end itemize
 @end deffn
 
 @c page
@@ -4668,10 +4688,10 @@ struct descriptor equal to the newly created @rtd{}.
 @end defun
 
 
-@deffn Syntax type-descriptor @meta{name}
-Evaluate to the type descriptor of the data structure @meta{name}, which
-must be the first argument to a previous use of @func{define-struct}.
-@end deffn
+@c @deffn Syntax struct-type-descriptor @meta{name}
+@c Evaluate to the type descriptor of the data structure @meta{name}, which
+@c must be the first argument to a previous use of @func{define-struct}.
+@c @end deffn
 
 
 @deffn Syntax struct-type-and-struct? @meta{type-name} @meta{stru}
@@ -4878,7 +4898,6 @@ descriptor.
 
 
 @defun struct-rtd @var{stru}
-@defunx struct-type-descriptor @var{stru}
 Return the @var{rtd} of the data structure @var{stru}.  Notice that this
 function works with both Vicare's structs and @rnrs{6} records.
 @end defun
