@@ -278,12 +278,12 @@
   (define (boxify-struct x)
     (define (boxify-vanilla-struct x)
       (cond
-       ((record-type-descriptor? (struct-type-descriptor x))
+       ((record-type-descriptor? (struct-rtd x))
 	(call-with-string-output-port
 	    (lambda (port)
 	      (print-r6rs-record-instance x port))))
        ;;We do *not* handle opaque records specially.
-       #;((let ((rtd (struct-type-descriptor x)))
+       #;((let ((rtd (struct-rtd x)))
        (and (record-type-descriptor? rtd)
        (record-type-opaque? rtd)))
        "#<unknown>")

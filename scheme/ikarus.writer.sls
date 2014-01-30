@@ -129,7 +129,7 @@
   (define (traverse-noop x h) (void))
   (define (traverse-struct x h)
     (define (traverse-vanilla-struct x h)
-      (let ((rtd (struct-type-descriptor x)))
+      (let ((rtd (struct-rtd x)))
         (unless
 	    (and (record-type-descriptor? rtd)
 		 (record-type-opaque? rtd))
@@ -557,11 +557,11 @@
       (write-symbol-string (symbol->string x) p m)))
   (define (write-struct x p m h i)
     (define (write-vanilla-struct x p m h i)
-      (cond ((record-type-descriptor? (struct-type-descriptor x))
+      (cond ((record-type-descriptor? (struct-rtd x))
 	     (print-r6rs-record-instance x p)
 	     i)
 	    ;;We do not handle opaque records specially.
-	    #;((let ((rtd (struct-type-descriptor x)))
+	    #;((let ((rtd (struct-rtd x)))
 	    (and (record-type-descriptor? rtd)
 	    (record-type-opaque? rtd)))
       (write-char* "#<unknown>" p)
