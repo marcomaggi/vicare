@@ -1244,7 +1244,7 @@
    lab.loc*
 		;An alist having  label gensyms as keys  and loc gensyms
 		;as values.  It maps  binding labels to storage location
-		;gensyms.
+		;gensyms.  The loc gensyms are also used as lex gensyms.
    )
   (lambda (S port sub-printer)
     (display "#<interaction-environment>" port)))
@@ -3421,6 +3421,14 @@
   (cons '$module iface))
 
 ;;; --------------------------------------------------------------------
+;;; pattern variable bindings
+
+(define (pattern-variable-binding? binding)
+  (and (pair? binding)
+       (eq? 'syntax (syntactic-binding-type binding))))
+
+
+;;;; lexical environment: mapping labels to syntactic binding descriptors
 
 (define (label->syntactic-binding label lexenv)
   ;;Look up  the symbol  LABEL in the  LEXENV as well  as in  the global
@@ -3479,9 +3487,13 @@
   ;;
   (cond ((not label)
 	 ;;If LABEL is the result of a previous call to ID->LABEL for an
-	 ;;unbound identifier: LABEL is false.   We should not call this
-	 ;;function for such a value, but, for safety, we include a test
-	 ;;anyway.
+	 ;;unbound  identifier: LABEL  is  false.  This  check makes  it
+	 ;;possible to use the concise expression:
+	 ;;
+	 ;;   (define ?binding
+	 ;;     (label->syntactic-binding (id->label ?id) ?lexenv))
+	 ;;
+	 ;;provided that later we check for the type of ?BINDING.
 	 '(displaced-lexical))
 
 	;;If a label is associated to  a binding from the the boot image
@@ -3512,13 +3524,10 @@
 	      (cond ((assq label (interaction-env-lab.loc* env))
 		     => (lambda (lab.loc)
 			  ;;Fabricate a  binding descriptor representing
-			  ;;an immutated  lexical variable.  We  use the
-			  ;;storage location gensym  as lexical variable
-			  ;;name.
-			  ;;
-			  ;;FIXME Why  do we use  the loc as  lex?  Find
-			  ;;out and document it.   (Marco Maggi; Thu Jan
-			  ;;30, 2014)
+			  ;;an immutated  lexical variable.  We  need to
+			  ;;remember that  for interaction environments:
+			  ;;we  reuse  the  storage location  gensym  as
+			  ;;lexical gensym.
 			  (make-lexical-var-binding (cdr lab.loc))))
 		    (else
 		     ;;Unbound label.
@@ -4157,13 +4166,14 @@
   ;;If  no  capturing  binding  is found  but  a  top-level  interaction
   ;;environment  is  set:  we  fabricate   a  lexical  binding  in  such
   ;;environment so  that there exists a  lex gensym to name  the binding
-  ;;and a loc gensym in which to store a value.  This allows us to write
-  ;;"special" code on the REPL, for example:
+  ;;and a loc gensym in which to store a value (actually the lex and the
+  ;;loc are the same gensym).  This allows us to write "special" code on
+  ;;the REPL, for example:
   ;;
   ;;   vicare> (set! a 1)
   ;;
   ;;when  A is  not defined  will not  fail, rather  it will  implicitly
-  ;;define a binding as if we have typed:
+  ;;define a binding as if we had typed:
   ;;
   ;;   vicare> (define a)
   ;;   vicare> (set! a 1)
@@ -4174,7 +4184,7 @@
   ;;             (set! a 1)
   ;;             (debug-print a))
   ;;
-  ;;will just print A as if we have typed:
+  ;;will just print A as if we had typed:
   ;;
   ;;   vicare> (let ()
   ;;             (define a)
@@ -4184,14 +4194,18 @@
   ;;fabricating  the  lexical  binding  is  like  injecting  the  syntax
   ;;"(define id)".
   ;;
-  ;;If neither a capturing binding  is found nor a top-level environment
-  ;;is set: return false.
+  ;;If neither a capturing binding  is found nor a top-level interaction
+  ;;environment is set: return false.
   ;;
   (or (id->label id)
       (cond ((top-level-context)
 	     => (lambda (env)
 		  (let ((rib (interaction-env-rib env)))
-		    (receive (lab unused-lex)
+		    (receive (lab unused-lex/loc)
+			;;If  a binding  in the  interaction environment
+			;;captures  ID: we  retrieve  its label.   Other
+			;;wise a new binding is added to the interaction
+			;;environment.
 			(let ((shadowing-definition? #f))
 			  (gen-define-label+lex id rib shadowing-definition?))
 		      ;;FIXME (Abdulaziz Ghuloum)
@@ -4569,11 +4583,15 @@
     ;;    LEXENV.
     ;;
     ;;* When  this argument  is false:  we assume  there is  a top-level
-    ;;  environment set.   If an existent binding in  such top-level env
-    ;;  captures ID:  we cause DEFINE to mutate the  existent binding by
-    ;;   returning the  already existent  label and  lex.  Otherwise  we
-    ;;  fabricate a new binding  in the top-level environment and return
-    ;;  the new label and lex (in this case we also generate a loc).
+    ;;  interaction  environment set.
+    ;;
+    ;;  - If  an existent binding in such top-level  env captures ID: we
+    ;;    cause DEFINE  to mutate the existent binding  by returning the
+    ;;    already existent label and lex.
+    ;;
+    ;;  -  Otherwise  we  fabricate  a  new  binding  in  the  top-level
+    ;;    environment and return the new  label and lex; in this case we
+    ;;    generate a loc gensym and also use it as lex gensym.
     ;;
     (if shadowing-definition?
 	;;This DEFINE binding is *allowed* to shadow an existing lexical
@@ -9580,7 +9598,7 @@
       (?id
        (identifier? ?id)
        (let ((binding (label->syntactic-binding (id->label ?id) lexenv)))
-	 (if (eq? (syntactic-binding-type binding) 'syntax)
+	 (if (pattern-variable-binding? binding)
 	     ;;It is a reference to pattern variable.
 	     (receive (var maps)
 		 (let* ((name.level  (syntactic-binding-value binding))
