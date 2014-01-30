@@ -1237,10 +1237,10 @@
 (define-record interaction-env
   (rib
 		;The top <RIB>  structure for the evaluation  of code in
-		;this environment.
+		;this environment.  It maps bound identifiers to labels.
    lexenv
 		;The LEXENV for both run  time and expand time.  It maps
-		;labels to syntactic bindings.
+		;labels to syntactic binding descriptors.
    lab.loc*
 		;An alist having  label gensyms as keys  and loc gensyms
 		;as values.  It maps  binding labels to storage location
@@ -2333,8 +2333,8 @@
 	(if (null? lexenv.run)
 	    (values export-env macro*)
 	  (let* ((entry    (car lexenv.run))
-		 (label    (lexenv-entry-label   entry))
-		 (binding  (lexenv-entry-binding entry)))
+		 (label    (lexenv-entry-label entry))
+		 (binding  (lexenv-entry-binding-descriptor entry)))
 	    (case (syntactic-binding-type binding)
 	      ((lexical)
 	       ;;This binding is  a lexical variable.  When  we import a
@@ -2476,9 +2476,11 @@
       (for-each (lambda (subst)
 		  (cond ((assq (export-subst-entry-label subst) export-env)
 			 => (lambda (entry)
-			      (when (eq? 'mutable (syntactic-binding-type (lexenv-entry-binding entry)))
+			      (when (eq? 'mutable (syntactic-binding-type
+						   (lexenv-entry-binding-descriptor entry)))
 				(syntax-violation 'export
-				  "attempt to export mutated variable" (export-subst-entry-name subst)))))))
+				  "attempt to export mutated variable"
+				  (export-subst-entry-name subst)))))))
 	export-subst)))
 
   #| end of module: CORE-BODY-EXPANDER |# )
@@ -3237,7 +3239,7 @@
 
 ;;Given the entry from a lexical environment: return the binding value.
 ;;
-(define lexenv-entry-binding cdr)
+(define lexenv-entry-binding-descriptor cdr)
 
 ;;Build and return a new binding.
 ;;
@@ -3423,14 +3425,14 @@
 (define (label->syntactic-binding label lexenv)
   ;;Look up  the symbol  LABEL in the  LEXENV as well  as in  the global
   ;;environment.   If an  entry  with  key LABEL  is  found: return  the
-  ;;associated binding value; if no  matching entry is found, return the
-  ;;special binding:
+  ;;associated  syntactic binding  descriptor; if  no matching  entry is
+  ;;found, return one of the special descriptors:
   ;;
+  ;;   (displaced-lexical . ())
   ;;   (displaced-lexical . #f)
   ;;
-  ;;Since all labels are unique,  it doesn't matter which environment we
-  ;;consult first; we  lookup the global environment  first because it's
-  ;;faster.
+  ;;If the binding descriptor represents  a fluid syntax: follow through
+  ;;and return the innermost re-definition of the binding.
   ;;
   (let ((binding (label->syntactic-binding/no-fluids label lexenv)))
     (if (fluid-syntax-binding? binding)
@@ -3460,14 +3462,31 @@
       binding)))
 
 (define (label->syntactic-binding/no-fluids label lexenv)
-  ;;Like LABEL->SYNTACTIC-BINDING, but actually does the job.
+  ;;Look up  the symbol  LABEL in the  LEXENV as well  as in  the global
+  ;;environment.   If an  entry  with  key LABEL  is  found: return  the
+  ;;associated  syntactic binding  descriptor; if  no matching  entry is
+  ;;found, return one of the special descriptors:
   ;;
-  (cond ((not (symbol? label))
+  ;;   (displaced-lexical . ())
+  ;;   (displaced-lexical . #f)
+  ;;
+  ;;If the binding descriptor represents a fluid syntax: *do not* follow
+  ;;through and return the binding descriptor of the syntax definition.
+  ;;
+  ;;Since all labels are unique,  it doesn't matter which environment we
+  ;;consult first; we  lookup the global environment  first because it's
+  ;;faster.
+  ;;
+  (cond ((not label)
+	 ;;If LABEL is the result of a previous call to ID->LABEL for an
+	 ;;unbound identifier: LABEL is false.   We should not call this
+	 ;;function for such a value, but, for safety, we include a test
+	 ;;anyway.
 	 '(displaced-lexical))
 
 	;;If a label is associated to  a binding from the the boot image
 	;;environment or  to a binding  from a library's  EXPORT-ENV: it
-	;;has  the associated  binding in  its "value"  field; otherwise
+	;;has the associated descriptor  in its "value" field; otherwise
 	;;such field is set to #f.
 	;;
 	;;So,  if we  have a  label, we  can check  if it  references an
@@ -3484,17 +3503,23 @@
 	;;Search the given LEXENV.
 	;;
 	((assq label lexenv)
-	 => syntactic-binding-value)
+	 => lexenv-entry-binding-descriptor)
 
 	;;Search the interaction top-level environment, if any.
 	;;
 	((top-level-context)
 	 => (lambda (env)
 	      (cond ((assq label (interaction-env-lab.loc* env))
-		     => (lambda (binding)
-			  ;;Build and  return a binding  representing an
-			  ;;immutated lexical variable.
-			  (cons* 'lexical (syntactic-binding-value binding) #f)))
+		     => (lambda (lab.loc)
+			  ;;Fabricate a  binding descriptor representing
+			  ;;an immutated  lexical variable.  We  use the
+			  ;;storage location gensym  as lexical variable
+			  ;;name.
+			  ;;
+			  ;;FIXME Why  do we use  the loc as  lex?  Find
+			  ;;out and document it.   (Marco Maggi; Thu Jan
+			  ;;30, 2014)
+			  (make-lexical-var-binding (cdr lab.loc))))
 		    (else
 		     ;;Unbound label.
 		     '(displaced-lexical . #f)))))
