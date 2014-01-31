@@ -3450,11 +3450,6 @@
 (module R6RS-RECORD-TYPE-SPEC
   (make-r6rs-record-type-spec
    r6rs-record-type-spec?
-   r6rs-record-type-spec-safe-accessors-table
-   r6rs-record-type-spec-safe-mutators-table
-   r6rs-record-type-spec-unsafe-accessors-table
-   r6rs-record-type-spec-unsafe-mutators-table
-
    r6rs-record-type-descriptor-binding-safe-accessor
    r6rs-record-type-descriptor-binding-safe-mutator
    r6rs-record-type-descriptor-binding-unsafe-accessor
@@ -9242,89 +9237,65 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (record-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function used to expand RECORD-TYPE-FIELD-REF syntaxes
-    ;;from the top-level built in environment.  Expand the syntax object
-    ;;EXPR-STX in  the context of  the given LEXENV; return  an expanded
-    ;;language symbolic expression.
-    ;;
-    (define-constant __who__ 'record-type-field-ref)
-    (syntax-match expr-stx ()
-      ((_ ?type-name ?field-name ?record)
-       (and (identifier? ?type-name)
-	    (identifier? ?field-name))
-       (let* ((synner   (lambda (message)
-			  (syntax-violation __who__ message expr-stx ?type-name)))
-	      (binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-	      (accessor (r6rs-record-type-descriptor-binding-safe-accessor binding ?field-name synner)))
-	 (chi-expr (bless
-		    (list accessor ?record))
-		   lexenv.run lexenv.expand)))
-      ))
-
-  (define ($record-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer   function  used   to  expand   $RECORD-TYPE-FIELD-REF
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ '$record-type-field-ref)
-    (syntax-match expr-stx ()
-      ((_ ?type-name ?field-name ?record)
-       (and (identifier? ?type-name)
-	    (identifier? ?field-name))
-       (let* ((synner   (lambda (message)
-			  (syntax-violation __who__ message expr-stx ?type-name)))
-	      (binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-	      (accessor (r6rs-record-type-descriptor-binding-unsafe-accessor binding ?field-name synner)))
-	 (chi-expr (bless
-		    (list accessor ?record))
-		   lexenv.run lexenv.expand)))
-      ))
+  (let-syntax
+      ((define-getter-transformer
+	 (syntax-rules ()
+	   ((_ ?who ?transformer ?actor-getter)
+	    (define (?transformer expr-stx lexenv.run lexenv.expand)
+	      ;;Transformer function  used to expand ?who  syntaxes from
+	      ;;the top-level  built in environment.  Expand  the syntax
+	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
+	      ;;return an expanded language symbolic expression.
+	      ;;
+	      (define-constant __who__ '?who)
+	      (syntax-match expr-stx ()
+		((_ ?type-name ?field-name ?record)
+		 (and (identifier? ?type-name)
+		      (identifier? ?field-name))
+		 (let* ((synner   (lambda (message)
+				    (syntax-violation __who__ message expr-stx ?type-name)))
+			(binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+			(accessor (?actor-getter binding ?field-name synner)))
+		   (chi-expr (bless
+			      (list accessor ?record))
+			     lexenv.run lexenv.expand)))
+		))
+	    ))))
+    (define-getter-transformer record-type-field-ref
+      record-type-field-ref-transformer  r6rs-record-type-descriptor-binding-safe-accessor)
+    (define-getter-transformer $record-type-field-ref
+      $record-type-field-ref-transformer r6rs-record-type-descriptor-binding-unsafe-accessor))
 
 ;;; --------------------------------------------------------------------
 
-  (define (record-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer   function  used   to  expand   RECORD-TYPE-FIELD-SET!
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ 'record-type-field-set!)
-    (syntax-match expr-stx ()
-      ((_ ?type-name ?field-name ?record ?new-value)
-       (and (identifier? ?type-name)
-	    (identifier? ?field-name))
-       (let* ((synner  (lambda (message)
-			 (syntax-violation __who__ message expr-stx ?type-name)))
-	      (binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-	      (mutator (r6rs-record-type-descriptor-binding-safe-mutator binding ?field-name synner)))
-	 (chi-expr (bless
-		    (list mutator ?record ?new-value))
-		   lexenv.run lexenv.expand)))
-      ))
-
-  (define ($record-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function   used  to   expand  $RECORD-TYPE-FIELD-SET!
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ '$record-type-field-set!)
-    (syntax-match expr-stx ()
-      ((_ ?type-name ?field-name ?record ?new-value)
-       (and (identifier? ?type-name)
-	    (identifier? ?field-name))
-       (let* ((synner  (lambda (message)
-			 (syntax-violation __who__ message expr-stx ?type-name)))
-	      (binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-	      (mutator (r6rs-record-type-descriptor-binding-unsafe-mutator binding ?field-name synner)))
-(debug-print 'binding binding)
-(debug-print 'mutator mutator)
-	 (chi-expr (bless
-		    (list mutator ?record ?new-value))
-		   lexenv.run lexenv.expand)))
-      ))
+  (let-syntax
+      ((define-setter-transformer
+	 (syntax-rules ()
+	   ((_ ?who ?transformer ?actor-getter)
+	    (define (?transformer expr-stx lexenv.run lexenv.expand)
+	      ;;Transformer function  used to expand ?WHO  syntaxes from
+	      ;;the top-level  built in environment.  Expand  the syntax
+	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
+	      ;;return an expanded language symbolic expression.
+	      ;;
+	      (define-constant __who__ '?who)
+	      (syntax-match expr-stx ()
+		((_ ?type-name ?field-name ?record ?new-value)
+		 (and (identifier? ?type-name)
+		      (identifier? ?field-name))
+		 (let* ((synner  (lambda (message)
+				   (syntax-violation __who__ message expr-stx ?type-name)))
+			(binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+			(mutator (?actor-getter binding ?field-name synner)))
+		   (chi-expr (bless
+			      (list mutator ?record ?new-value))
+			     lexenv.run lexenv.expand)))
+		))
+	    ))))
+    (define-setter-transformer record-type-field-set!
+      record-type-field-set!-transformer  r6rs-record-type-descriptor-binding-safe-mutator)
+    (define-setter-transformer $record-type-field-set!
+      $record-type-field-set!-transformer r6rs-record-type-descriptor-binding-unsafe-mutator))
 
   #| end of module |# )
 
