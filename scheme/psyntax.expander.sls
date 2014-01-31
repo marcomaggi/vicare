@@ -3493,24 +3493,22 @@
     ;;the accessor or mutator for the named field.
     ;;
     ;;TABLE-GETTER must be a function which, applied to the record spec,
-    ;;returns required table.
+    ;;returns the required association list.
     ;;
     ;;ACTOR-CONSTRUCTOR  must be  one of  the symbols:  record-accessor,
     ;;record-mutator.
     ;;
     (let ((field-name-sym (syntax->datum field-name-id))
 	  (spec           (r6rs-record-type-descriptor-binding-spec binding)))
-      (if (r6rs-record-type-spec? spec)
-	  (let ((table (table-getter spec)))
-	    (cond ((assq field-name-sym table)
-		   => cdr)
-		  (else
-		   (synner "unknown field name for R6RS record type"))))
-	;;No spec  was present  in the binding.   Default to  the common
-	;;accessor or mutator constructor.
-	(let ((rtd-id (r6rs-record-type-descriptor-binding-rtd binding)))
-	  (bless
-	   `(,actor-constructor ,rtd-id (quote ,field-name-sym)))))))
+      (cond ((and (r6rs-record-type-spec? spec)
+		  (assq field-name-sym (table-getter spec)))
+	     => cdr)
+	    (else
+	     ;;Fallback  to   the  common  field  accessor   or  mutator
+	     ;;constructor.
+	     (let ((rtd-id (r6rs-record-type-descriptor-binding-rtd binding)))
+	       (bless
+		`(,actor-constructor ,rtd-id (quote ,field-name-sym))))))))
 
   #| end of module |# )
 
