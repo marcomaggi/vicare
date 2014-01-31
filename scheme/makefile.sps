@@ -828,6 +828,7 @@
     (struct-type-symbol				i v $language)
     (struct-type-field-names			i v $language)
     (struct-type-destructor			i v $language)
+    (default-struct-printer			i v $language)
     (struct-constructor				i v $language)
     (struct-predicate				i v $language)
     (struct-field-accessor			i v $language)

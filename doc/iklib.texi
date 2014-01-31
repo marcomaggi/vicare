@@ -4742,6 +4742,12 @@ represention of the structure with @func{display}, a function to be
 optionally applied to the field values to print them.
 @end defun
 
+
+@defun default-struct-printer @var{stru}
+The default struct printer function.  It can be used as @var{printer}
+argument in calls to @func{set-rtd-printer!}.
+@end defun
+
 @c ------------------------------------------------------------
 
 @subsubheading Automatic finalisation of structures
