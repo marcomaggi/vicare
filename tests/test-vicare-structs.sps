@@ -132,17 +132,17 @@
   (check
       (catch #f
 	(struct-type-name 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-type-symbol 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-type-field-names 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   #t)
 
@@ -200,27 +200,38 @@
 	      (color-blue  S)))
     => '(10 20 30))
 
+  (check
+      (let ((S (make-color 1 2 3)))
+	((struct-field-accessor color-rtd 'red) S))
+    => 1)
+
+  (check
+      (let ((S (make-color 1 2 3)))
+	((struct-field-mutator  color-rtd 'red) S 10)
+	((struct-field-accessor color-rtd 'red) S))
+    => 10)
+
 ;;; --------------------------------------------------------------------
 
   (check
       (catch #f
 	(struct-constructor 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-predicate 123))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-field-accessor 123 0))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f
 	(struct-field-mutator 123 0))
-    => '(123))
+    => '((struct-type-descriptor? std) 123))
 
   (check
       (catch #f

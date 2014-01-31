@@ -4882,15 +4882,27 @@ Return a predicate function for structures of type @var{rtd}.
 @end defun
 
 
-@defun struct-field-accessor @var{rtd} @var{index}
-Return an accessor function for the field at @var{index} of data
-structures of type @var{rtd}.
-@end defun
+@defun struct-field-accessor @var{rtd} @var{index/name}
+@defunx struct-field-mutator @var{rtd} @var{index/name}
+Return an accessor or mutator function for the field at @var{index/name}
+of data structures of type @var{rtd}.  @var{index/name} can be a field
+index or a symbol representing a field name.
 
+@example
+(define-struct color
+  (red green blue))
 
-@defun struct-field-mutator @var{rtd} @var{index}
-Return a mutator function for the field at @var{index} of data
-structures of type @var{rtd}.
+(define stru
+  (make-color 1 2 3))
+
+((struct-field-accessor (type-descriptor color) 'red)
+ stru)
+@result{} 1
+
+((struct-field-accessor (type-descriptor color) 0)
+ stru)
+@result{} 1
+@end example
 @end defun
 
 @c page
