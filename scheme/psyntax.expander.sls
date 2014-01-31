@@ -8817,8 +8817,8 @@
       ((foreign-call)			foreign-call-transformer)
       ((syntax-case)			syntax-case-transformer)
       ((syntax)				syntax-transformer)
+      ((fluid-let-syntax)		fluid-let-syntax-transformer)
       ((struct-type-descriptor)		struct-type-descriptor-transformer)
-      ((type-descriptor)		type-descriptor-transformer)
       ((struct-type-and-struct?)	struct-type-and-struct?-transformer)
       ((struct-type-field-ref)		struct-type-field-ref-transformer)
       ((struct-type-field-set!)		struct-type-field-set!-transformer)
@@ -8833,7 +8833,6 @@
       ((type-descriptor)		type-descriptor-transformer)
       ((is-a?)				is-a?-transformer)
       ((splice-first-expand)		splice-first-expand-transformer)
-      ((fluid-let-syntax)		fluid-let-syntax-transformer)
       (else
        (assertion-violation __who__
 	 "Vicare: internal error: cannot find transformer" name))))
@@ -8902,6 +8901,7 @@
   ;;the  top-level  built  in  environment.  Expand  the  syntax  object
   ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
   ;;language symbolic expression.
+  ;;
   (define (transformer expr-stx)
     (syntax-match expr-stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
@@ -8973,7 +8973,8 @@
       ((_ ?type-id ?stru)
        (identifier? ?type-id)
        (let ((rtd (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
-	 (chi-expr (bless `($struct/rtd? ,?stru (quote ,rtd)))
+	 (chi-expr (bless
+		    `($struct/rtd? ,?stru (quote ,rtd)))
 		   lexenv.run lexenv.expand)))
       ))
 
@@ -9006,9 +9007,10 @@
 	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
 		(field-names (struct-type-field-names rtd))
 		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
-	   (chi-expr (bless (if safe?
-				`(struct-ref ,?stru ,field-idx)
-			      `($struct-ref ,?stru ,field-idx)))
+	   (chi-expr (bless
+		      (if safe?
+			  `(struct-ref ,?stru ,field-idx)
+			`($struct-ref ,?stru ,field-idx)))
 		     lexenv.run lexenv.expand)))
 	))
 
@@ -9043,9 +9045,10 @@
 	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
 		(field-names (struct-type-field-names rtd))
 		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
-	   (chi-expr (bless (if safe?
-				`(struct-set! ,?stru ,field-idx ,?new-value)
-			      `($struct-set! ,?stru ,field-idx ,?new-value)))
+	   (chi-expr (bless
+		      (if safe?
+			  `(struct-set! ,?stru ,field-idx ,?new-value)
+			`($struct-set! ,?stru ,field-idx ,?new-value)))
 		     lexenv.run lexenv.expand)))
 	))
 
@@ -9085,7 +9088,7 @@
   #| end of module |# )
 
 
-;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR-TRANSFORMER
+;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR, field setter and getter
 
 (module (record-type-descriptor-transformer
 	 record-constructor-descriptor-transformer
@@ -9093,13 +9096,13 @@
 	 record-type-field-ref-transformer
 	 $record-type-field-set!-transformer
 	 $record-type-field-ref-transformer)
-  ;;The syntactic  binding representing the record  type and constructor
-  ;;descriptors has one of the formats:
+  ;;The syntactic  binding representing the R6RS  record type descriptor
+  ;;and record constructor descriptor has one of the formats:
   ;;
   ;;   ($rtd . (?rtd-id ?rcd-id))
-  ;;   ($rtd . (?rtd-id ?rcd-id . $spec))
+  ;;   ($rtd . (?rtd-id ?rcd-id . ?spec))
   ;;
-  ;;where; "$rtd"  is the  symbol "$rtd"; ?RTD-ID  is the  identifier to
+  ;;where: "$rtd"  is the  symbol "$rtd"; ?RTD-ID  is the  identifier to
   ;;which the record type descriptor is bound; ?RCD-ID is the identifier
   ;;to which the  default record constructor descriptor  is bound; ?SPEC
   ;;is a record of type R6RS-RECORD-TYPE-SPEC.

@@ -323,22 +323,22 @@
   (check
       (catch #f
 	(struct-length 123))
-    => '(123))
+    => '((struct? stru) 123))
 
   (check
       (catch #f
 	(struct-name 123))
-    => '(123))
+    => '((struct? stru) 123))
 
   (check
       (catch #f
 	(struct-set! 123 0 0))
-    => '(123))
+    => '((struct? stru) 123))
 
   (check
       (catch #f
 	(struct-ref 123 0))
-    => '(123))
+    => '((struct? stru) 123))
 
   (check
       (catch #f
