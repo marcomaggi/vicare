@@ -4703,6 +4703,13 @@ of libraries.
 @end deffn
 
 
+@defun struct-type-descriptor? @var{obj}
+Return @true{} if @var{obj} is a Vicare struct type descriptor,
+otherwise return @false{}.  This predicate returns @false{} when applied
+to @rnrs{6} record type descriptors.
+@end defun
+
+
 @defun struct-type-name @var{rtd}
 Return a string represnting the name of structures of type @var{rtd}.
 @end defun

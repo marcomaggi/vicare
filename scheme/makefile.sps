@@ -823,6 +823,7 @@
     (set-rtd-destructor!			i v $language)
     (struct?					i v $language)
     (make-struct-type				i v $language)
+    (struct-type-descriptor?			i v $language)
     (struct-type-name				i v $language)
     (struct-type-symbol				i v $language)
     (struct-type-field-names			i v $language)

@@ -158,6 +158,7 @@ Notes for revision 0.3d8
 
 * Added struct related bindings to (vicare):
 
+     struct-type-descriptor?
      struct-type-and-struct?
      struct-type-field-ref
      struct-type-field-set!

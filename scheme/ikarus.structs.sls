@@ -20,6 +20,7 @@
     make-struct-type
 
     ;; struct type descriptor inspection
+    struct-type-descriptor?
     struct-type-name		struct-type-symbol
     struct-type-field-names	struct-type-destructor
 
@@ -50,6 +51,7 @@
 		  make-struct-type
 
 		  ;; struct type descriptor inspection
+		  struct-type-descriptor?
 		  struct-type-name		struct-type-symbol
 		  struct-type-field-names	struct-type-destructor
 
@@ -90,7 +92,7 @@
   (procedure-argument-violation who "fields must be a list" fields))
 
 (define-argument-validation (rtd who rtd)
-  (rtd? rtd)
+  (struct-type-descriptor? rtd)
   (procedure-argument-violation who "expected structure rtd as argument" rtd))
 
 (define-argument-validation (struct-of-type who struct rtd)
@@ -122,10 +124,6 @@
 
 (define-inline (make-rtd name fields symbol)
   ($struct (base-rtd) name (length fields) fields #f #;printer symbol #f #;destructor))
-
-(define-inline (rtd? x)
-  (and ($struct? x)
-       (eq? ($struct-rtd x) (base-rtd))))
 
 
 ;;;; unsafe RTD fields accessors
@@ -213,6 +211,13 @@
 	(let ((rtd (make-rtd name fields uid)))
 	  (set-symbol-value! uid rtd)
 	  rtd))))))
+
+(define (struct-type-descriptor? obj)
+  ;;Return true  if OBJ  is a struct  type descriptor;  otherwise return
+  ;;false.
+  ;;
+  (and ($struct? obj)
+       (eq? ($struct-rtd obj) (base-rtd))))
 
 (define (struct-type-name rtd)
   ;;Return a string represnting the name of structures of type RTD.
@@ -389,7 +394,7 @@
     (let ((rtd ($car rest)))
       (unless (null? ($cdr rest))
 	(procedure-argument-violation who "too many arguments"))
-      (unless (rtd? rtd)
+      (unless (struct-type-descriptor? rtd)
 	(procedure-argument-violation who "not an rtd"))
       (and ($struct? x)
 	   (eq? rtd ($struct-rtd x))))))

@@ -104,6 +104,17 @@
   (define color-rtd
     (make-struct-type "color" '(red green blue)))
 
+  (define-record-type r6rs-type
+    (fields a b c))
+
+  (check
+      (struct-type-descriptor? color-rtd)
+    => #t)
+
+  (check
+      (struct-type-descriptor? (record-type-descriptor r6rs-type))
+    => #f)
+
   (check
       (struct-type-name color-rtd)
     => "color")
