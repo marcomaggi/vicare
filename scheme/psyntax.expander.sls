@@ -3392,7 +3392,16 @@
 
 (define (struct-type-descriptor-binding? binding)
   (and (struct-or-record-type-descriptor-binding? binding)
-       (not (pair? (syntactic-binding-value binding)))))
+       (struct-type-descriptor-bindval? (syntactic-binding-value binding))))
+
+(define-syntax-rule (struct-type-descriptor-binding-std ?binding)
+  (struct-type-descriptor-bindval-std (syntactic-binding-value ?binding)))
+
+(define-syntax-rule (struct-type-descriptor-bindval? ?bind-val)
+  (struct-type-descriptor? ?bind-val))
+
+(define-syntax-rule (struct-type-descriptor-bindval-std ?bind-val)
+  ?bind-val)
 
 ;;; --------------------------------------------------------------------
 ;;; R6RS record-type descriptor binding
@@ -11511,12 +11520,13 @@
 			`(record-constructor ,rcd-id))
 		       lexenv.run lexenv.expand)))
 
-	  ((struct-type-descriptor? bind-val)
+	  ((struct-type-descriptor-bindval? bind-val)
 	   ;;The binding is for a Vicare struct type.
-	   (let ((field-id* (struct-type-field-names bind-val)))
+	   (let ((field-name* (struct-type-field-names
+			       (struct-type-descriptor-bindval-std bind-val))))
 	     (chi-expr (bless
-			`(lambda ,field-id*
-			   ($struct (quote ,bind-val) . ,field-id*)))
+			`(lambda ,field-name*
+			   ($struct (quote ,bind-val) . ,field-name*)))
 		       lexenv.run lexenv.expand)))
 
 	  (else
@@ -11542,14 +11552,15 @@
 			  lexenv.run lexenv.expand)))
 	     ))
 
-	  ((struct-type-descriptor? bind-val)
+	  ((struct-type-descriptor-bindval? bind-val)
 	   ;;The binding is for a Vicare struct type.
 	   (syntax-match expr-stx ()
 	     ((?rtd ?arg* ...)
-	      (let ((field-id* (struct-type-field-names bind-val)))
+	      (let ((field-name* (struct-type-field-names
+				  (struct-type-descriptor-bindval-std bind-val))))
 		(chi-expr (bless
-			   `((lambda ,field-id*
-			       ($struct (quote ,bind-val) . ,field-id*))
+			   `((lambda ,field-name*
+			       ($struct (quote ,bind-val) . ,field-name*))
 			     . ,?arg*))
 			  lexenv.run lexenv.expand)))
 	     ))
