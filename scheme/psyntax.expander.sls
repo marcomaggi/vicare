@@ -4313,6 +4313,32 @@
 		      lab))))
 	    (else #f))))
 
+;;; --------------------------------------------------------------------
+
+(define (id->label/or-error who form id)
+  (or (id->label id)
+      (%raise-unbound-error who form id)))
+
+(define (id->r6rs-record-type-descriptor-binding who form type-name-id lexenv)
+  ;;TYPE-NAME-ID is  meant to be an  identifier bound to an  R6RS record
+  ;;type descriptor; retrieve  its label then its binding  in LEXENV and
+  ;;return the binding descriptor.
+  ;;
+  ;;If TYPE-NAME-ID is unbound: raise an "unbound identifier" exception.
+  ;;If  the syntactic  binding  descriptor does  not  represent an  R6RS
+  ;;record type descriptor: raise a syntax violation exception.
+  ;;
+  ;;When  raising an  exception: WHO  is used  for the  condition object
+  ;;"&who"; FORM is used for the condition object "&syntax".
+  ;;
+  (let* ((label   (id->label/or-error who form type-name-id))
+	 (binding (label->syntactic-binding label lexenv)))
+    (if (r6rs-record-type-descriptor-binding? binding)
+	binding
+      (syntax-violation who
+	"identifier not bound to a record type descriptor"
+	form type-name-id))))
+
 
 ;;;; marks
 
@@ -5776,6 +5802,7 @@
 	;;If there is a PARENT clause insert code that retrieves the RTD
 	;;from the parent type name.
 	((_ ?name)
+	 (identifier? ?name)
 	 (values `(record-type-descriptor ,?name)
 		 `(record-constructor-descriptor ,?name)))
 
@@ -9149,16 +9176,9 @@
     (syntax-match expr-stx ()
       ((_ ?type-name)
        (identifier? ?type-name)
-       (cond ((id->label ?type-name)
-	      => (lambda (label)
-		   (let ((binding (label->syntactic-binding label lexenv.run)))
-		     (if (r6rs-record-type-descriptor-binding? binding)
-			 (chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
-				   lexenv.run lexenv.expand)
-		       (syntax-violation __who__
-			 "not a record type" expr-stx ?type-name)))))
-	     (else
-	      (%raise-unbound-error __who__ expr-stx ?type-name))))
+       (chi-expr (r6rs-record-type-descriptor-binding-rtd
+		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+		 lexenv.run lexenv.expand))
       ))
 
   (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
@@ -9169,18 +9189,14 @@
     ;;must  be a  single  identifier representing  a  R6RS record  type.
     ;;Return a sexp evaluating to the record destructor descriptor.
     ;;
-    (define-constant __who__ 'record-constructor-descriptor-transformer)
+    (define-constant __who__ 'record-constructor-descriptor)
     (syntax-match expr-stx ()
       ((_ ?type-name)
        (identifier? ?type-name)
-       (let ((label (id->label ?type-name)))
-	 (unless label
-	   (%raise-unbound-error __who__ expr-stx ?type-name))
-	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (r6rs-record-type-descriptor-binding? binding)
-	     (syntax-error __who__ "invalid type" expr-stx ?type-name))
-	   (chi-expr (r6rs-record-type-descriptor-binding-rcd binding)
-		     lexenv.run lexenv.expand))))))
+       (chi-expr (r6rs-record-type-descriptor-binding-rcd
+		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+		 lexenv.run lexenv.expand))
+      ))
 
 ;;; --------------------------------------------------------------------
 
@@ -9196,18 +9212,15 @@
       ((_ ?type-name ?field-name ?record)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
-       (let ((label (id->label ?type-name)))
-	 (unless label
-	   (%raise-unbound-error __who__ expr-stx ?type-name))
-	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (r6rs-record-type-descriptor-binding? binding)
-	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
-	   (let* ((table    (%get-alist-of-safe-field-accessors __who__ binding))
-		  (accessor (assq (syntax->datum ?field-name) table)))
-	     (unless accessor
-	       (syntax-violation __who__ "unknown record field name" expr-stx ?field-name))
-	     (chi-expr (bless `(,(cdr accessor) ,?record))
-		       lexenv.run lexenv.expand)))))))
+       (let* ((binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+	      (table    (%get-alist-of-safe-field-accessors __who__ binding))
+	      (accessor (assq (syntax->datum ?field-name) table)))
+	 (unless accessor
+	   (syntax-violation __who__ "unknown record field name" expr-stx ?field-name))
+	 (chi-expr (bless
+		    `(,(cdr accessor) ,?record))
+		   lexenv.run lexenv.expand)))
+      ))
 
   (define (record-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand R6RS's RECORD-TYPE-FIELD-SET!
@@ -9221,18 +9234,15 @@
       ((_ ?type-name ?field-name ?record ?new-value)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
-       (let ((label (id->label ?type-name)))
-	 (unless label
-	   (%raise-unbound-error __who__ expr-stx ?type-name))
-	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (r6rs-record-type-descriptor-binding? binding)
-	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
-	   (let* ((table   (%get-alist-of-safe-field-mutators __who__ binding))
-		  (mutator (assq (syntax->datum ?field-name) table)))
-	     (unless mutator
-	       (syntax-violation __who__ "unknown record field name or immutable field" expr-stx ?field-name))
-	     (chi-expr (bless `(,(cdr mutator) ,?record ,?new-value))
-		       lexenv.run lexenv.expand)))))))
+       (let* ((binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+	      (table   (%get-alist-of-safe-field-mutators __who__ binding))
+	      (mutator (assq (syntax->datum ?field-name) table)))
+	 (unless mutator
+	   (syntax-violation __who__ "unknown record field name or immutable field" expr-stx ?field-name))
+	 (chi-expr (bless
+		    `(,(cdr mutator) ,?record ,?new-value))
+		   lexenv.run lexenv.expand)))
+      ))
 
   (define ($record-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand R6RS's $RECORD-TYPE-FIELD-REF
@@ -9247,18 +9257,15 @@
       ((_ ?type-name ?field-name ?record)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
-       (let ((label (id->label ?type-name)))
-	 (unless label
-	   (%raise-unbound-error __who__ expr-stx ?type-name))
-	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (r6rs-record-type-descriptor-binding? binding)
-	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
-	   (let* ((table    (%get-alist-of-unsafe-field-accessors __who__ binding))
-		  (accessor (assq (syntax->datum ?field-name) table)))
-	     (unless accessor
-	       (syntax-violation __who__ "unknown record field name" expr-stx ?field-name))
-	     (chi-expr (bless `(,(cdr accessor) ,?record))
-		       lexenv.run lexenv.expand)))))))
+       (let* ((binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+	      (table    (%get-alist-of-unsafe-field-accessors __who__ binding))
+	      (accessor (assq (syntax->datum ?field-name) table)))
+	 (unless accessor
+	   (syntax-violation __who__ "unknown record field name" expr-stx ?field-name))
+	 (chi-expr (bless
+		    `(,(cdr accessor) ,?record))
+		   lexenv.run lexenv.expand)))
+      ))
 
   (define ($record-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand R6RS's $RECORD-TYPE-FIELD-SET!
@@ -9273,18 +9280,14 @@
       ((_ ?type-name ?field-name ?record ?new-value)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
-       (let ((label (id->label ?type-name)))
-	 (unless label
-	   (%raise-unbound-error __who__ expr-stx ?type-name))
-	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (r6rs-record-type-descriptor-binding? binding)
-	     (syntax-violation __who__ "not a record type" expr-stx ?type-name))
-	   (let* ((table   (%get-alist-of-unsafe-field-mutators __who__ binding))
-		  (mutator (assq (syntax->datum ?field-name) table)))
-	     (unless mutator
-	       (syntax-violation __who__ "unknown record field name or immutable field" expr-stx ?field-name))
-	     (chi-expr (bless `(,(cdr mutator) ,?record ,?new-value))
-		       lexenv.run lexenv.expand)))))))
+       (let* ((binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+	      (table   (%get-alist-of-unsafe-field-mutators __who__ binding))
+	      (mutator (assq (syntax->datum ?field-name) table)))
+	 (unless mutator
+	   (syntax-violation __who__ "unknown record field name or immutable field" expr-stx ?field-name))
+	 (chi-expr (bless `(,(cdr mutator) ,?record ,?new-value))
+		   lexenv.run lexenv.expand)))
+      ))
 
 ;;; --------------------------------------------------------------------
 
