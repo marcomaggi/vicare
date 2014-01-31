@@ -3453,7 +3453,12 @@
    r6rs-record-type-spec-safe-accessors-table
    r6rs-record-type-spec-safe-mutators-table
    r6rs-record-type-spec-unsafe-accessors-table
-   r6rs-record-type-spec-unsafe-mutators-table)
+   r6rs-record-type-spec-unsafe-mutators-table
+
+   r6rs-record-type-descriptor-binding-safe-accessor
+   r6rs-record-type-descriptor-binding-safe-mutator
+   r6rs-record-type-descriptor-binding-unsafe-accessor
+   r6rs-record-type-descriptor-binding-unsafe-mutator)
 
   (define-record r6rs-record-type-spec
     (safe-accessors-table
@@ -3469,6 +3474,48 @@
 		;False  or  alist mapping  mutable  field  names to  the
 		;identifiers to which unsafe mutators are bound.
      ))
+
+  (define (r6rs-record-type-descriptor-binding-safe-accessor binding field-name-id synner)
+    (%spec-actor binding field-name-id r6rs-record-type-spec-safe-accessors-table
+		 'record-accessor synner))
+
+  (define (r6rs-record-type-descriptor-binding-safe-mutator binding field-name-id synner)
+    (%spec-actor binding field-name-id r6rs-record-type-spec-safe-mutators-table
+		 'record-mutator synner))
+
+  (define (r6rs-record-type-descriptor-binding-unsafe-accessor binding field-name-id synner)
+    (%spec-actor binding field-name-id r6rs-record-type-spec-unsafe-accessors-table
+		 'record-accessor synner))
+
+  (define (r6rs-record-type-descriptor-binding-unsafe-mutator binding field-name-id synner)
+    (%spec-actor binding field-name-id r6rs-record-type-spec-unsafe-mutators-table
+		 'record-mutator synner))
+
+  (define (%spec-actor binding field-name-id table-getter actor-constructor synner)
+    ;;Given an  R6RS record  type descriptor  binding and  an identifier
+    ;;representing  a   record  field  name:  return   a  syntax  object
+    ;;representing an expression which,  expanded and evaluated, returns
+    ;;the accessor or mutator for the named field.
+    ;;
+    ;;TABLE-GETTER must be a function which, applied to the record spec,
+    ;;returns required table.
+    ;;
+    ;;ACTOR-CONSTRUCTOR  must be  one of  the symbols:  record-accessor,
+    ;;record-mutator.
+    ;;
+    (let ((field-name-sym (syntax->datum field-name-id))
+	  (spec           (r6rs-record-type-descriptor-binding-spec binding)))
+      (if (r6rs-record-type-spec? spec)
+	  (let ((table (table-getter spec)))
+	    (cond ((assq field-name-sym table)
+		   => cdr)
+		  (else
+		   (synner "unknown field name for R6RS record type"))))
+	;;No spec  was present  in the binding.   Default to  the common
+	;;accessor or mutator constructor.
+	(let ((rtd-id (r6rs-record-type-descriptor-binding-rtd binding)))
+	  (bless
+	   `(,actor-constructor ,rtd-id (quote ,field-name-sym)))))))
 
   #| end of module |# )
 
@@ -4327,9 +4374,6 @@
   ;;If TYPE-NAME-ID is unbound: raise an "unbound identifier" exception.
   ;;If  the syntactic  binding  descriptor does  not  represent an  R6RS
   ;;record type descriptor: raise a syntax violation exception.
-  ;;
-  ;;When  raising an  exception: WHO  is used  for the  condition object
-  ;;"&who"; FORM is used for the condition object "&syntax".
   ;;
   (let* ((label   (id->label/or-error who form type-name-id))
 	 (binding (label->syntactic-binding label lexenv)))
@@ -9182,12 +9226,10 @@
       ))
 
   (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer      function      used     to      expand      R6RS's
-    ;;RECORD-CONSTRUCTOR-DESCRIPTOR syntax uses from the top-level built
-    ;;in environment.  Expand the contents of EXPR-STX in the context of
-    ;;the lexical environments LEXENV.RUN  and LEXENV.EXPAND, the result
-    ;;must  be a  single  identifier representing  a  R6RS record  type.
-    ;;Return a sexp evaluating to the record destructor descriptor.
+    ;;Transformer function used  to expand RECORD-CONSTRUCTOR-DESCRIPTOR
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
     ;;
     (define-constant __who__ 'record-constructor-descriptor)
     (syntax-match expr-stx ()
@@ -9201,150 +9243,88 @@
 ;;; --------------------------------------------------------------------
 
   (define (record-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function  used to expand  R6RS's RECORD-TYPE-FIELD-REF
-    ;;syntax uses from  the top-level built in  environment.  Expand the
-    ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN and  LEXENV.EXPAND.  Return  a core language  sexp that
-    ;;accesses the value of a field from an R6RS record.
+    ;;Transformer function used to expand RECORD-TYPE-FIELD-REF syntaxes
+    ;;from the top-level built in environment.  Expand the syntax object
+    ;;EXPR-STX in  the context of  the given LEXENV; return  an expanded
+    ;;language symbolic expression.
     ;;
     (define-constant __who__ 'record-type-field-ref)
     (syntax-match expr-stx ()
       ((_ ?type-name ?field-name ?record)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
-       (let* ((binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-	      (table    (%get-alist-of-safe-field-accessors __who__ binding))
-	      (accessor (assq (syntax->datum ?field-name) table)))
-	 (unless accessor
-	   (syntax-violation __who__ "unknown record field name" expr-stx ?field-name))
+       (let* ((synner   (lambda (message)
+			  (syntax-violation __who__ message expr-stx ?type-name)))
+	      (binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+	      (accessor (r6rs-record-type-descriptor-binding-safe-accessor binding ?field-name synner)))
 	 (chi-expr (bless
-		    `(,(cdr accessor) ,?record))
-		   lexenv.run lexenv.expand)))
-      ))
-
-  (define (record-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function used  to expand R6RS's RECORD-TYPE-FIELD-SET!
-    ;;syntax uses from  the top-level built in  environment.  Expand the
-    ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN  and LEXENV.EXPAND.   Return  core  language sexp  that
-    ;;mutates the value of a field in an R6RS record.
-    ;;
-    (define-constant __who__ 'record-type-field-set!)
-    (syntax-match expr-stx ()
-      ((_ ?type-name ?field-name ?record ?new-value)
-       (and (identifier? ?type-name)
-	    (identifier? ?field-name))
-       (let* ((binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-	      (table   (%get-alist-of-safe-field-mutators __who__ binding))
-	      (mutator (assq (syntax->datum ?field-name) table)))
-	 (unless mutator
-	   (syntax-violation __who__ "unknown record field name or immutable field" expr-stx ?field-name))
-	 (chi-expr (bless
-		    `(,(cdr mutator) ,?record ,?new-value))
+		    (list accessor ?record))
 		   lexenv.run lexenv.expand)))
       ))
 
   (define ($record-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function used  to expand R6RS's $RECORD-TYPE-FIELD-REF
-    ;;syntax uses from  the top-level built in  environment.  Expand the
-    ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN and  LEXENV.EXPAND.  Return  a core language  sexp that
-    ;;accesses the value of a field from an R6RS record using the unsafe
-    ;;accessor.
+    ;;Transformer   function  used   to  expand   $RECORD-TYPE-FIELD-REF
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
     ;;
     (define-constant __who__ '$record-type-field-ref)
     (syntax-match expr-stx ()
       ((_ ?type-name ?field-name ?record)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
-       (let* ((binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-	      (table    (%get-alist-of-unsafe-field-accessors __who__ binding))
-	      (accessor (assq (syntax->datum ?field-name) table)))
-	 (unless accessor
-	   (syntax-violation __who__ "unknown record field name" expr-stx ?field-name))
+       (let* ((synner   (lambda (message)
+			  (syntax-violation __who__ message expr-stx ?type-name)))
+	      (binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+	      (accessor (r6rs-record-type-descriptor-binding-unsafe-accessor binding ?field-name synner)))
 	 (chi-expr (bless
-		    `(,(cdr accessor) ,?record))
+		    (list accessor ?record))
+		   lexenv.run lexenv.expand)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (define (record-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer   function  used   to  expand   RECORD-TYPE-FIELD-SET!
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
+    ;;
+    (define-constant __who__ 'record-type-field-set!)
+    (syntax-match expr-stx ()
+      ((_ ?type-name ?field-name ?record ?new-value)
+       (and (identifier? ?type-name)
+	    (identifier? ?field-name))
+       (let* ((synner  (lambda (message)
+			 (syntax-violation __who__ message expr-stx ?type-name)))
+	      (binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+	      (mutator (r6rs-record-type-descriptor-binding-safe-mutator binding ?field-name synner)))
+	 (chi-expr (bless
+		    (list mutator ?record ?new-value))
 		   lexenv.run lexenv.expand)))
       ))
 
   (define ($record-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function used to expand R6RS's $RECORD-TYPE-FIELD-SET!
-    ;;syntax uses from  the top-level built in  environment.  Expand the
-    ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN and  LEXENV.EXPAND.  Return  a core language  sexp that
-    ;;mutates the  value of a field  in an R6RS record  using the unsafe
-    ;;mutator.
+    ;;Transformer  function   used  to   expand  $RECORD-TYPE-FIELD-SET!
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
     ;;
     (define-constant __who__ '$record-type-field-set!)
     (syntax-match expr-stx ()
       ((_ ?type-name ?field-name ?record ?new-value)
        (and (identifier? ?type-name)
 	    (identifier? ?field-name))
-       (let* ((binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-	      (table   (%get-alist-of-unsafe-field-mutators __who__ binding))
-	      (mutator (assq (syntax->datum ?field-name) table)))
-	 (unless mutator
-	   (syntax-violation __who__ "unknown record field name or immutable field" expr-stx ?field-name))
-	 (chi-expr (bless `(,(cdr mutator) ,?record ,?new-value))
+       (let* ((synner  (lambda (message)
+			 (syntax-violation __who__ message expr-stx ?type-name)))
+	      (binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+	      (mutator (r6rs-record-type-descriptor-binding-unsafe-mutator binding ?field-name synner)))
+(debug-print 'binding binding)
+(debug-print 'mutator mutator)
+	 (chi-expr (bless
+		    (list mutator ?record ?new-value))
 		   lexenv.run lexenv.expand)))
       ))
-
-;;; --------------------------------------------------------------------
-
-  (define (%get-alist-of-safe-field-accessors who binding)
-    ;;Inspect a lexical  environment binding with key  "$rtd" and return
-    ;;the alist  of safe R6RS record  field accessors.  If the  alist is
-    ;;not present: raise a syntax violation.
-    ;;
-    (let ((spec (r6rs-record-type-descriptor-binding-spec binding)))
-      (if (r6rs-record-type-spec? spec)
-	  (r6rs-record-type-spec-safe-accessors-table spec)
-	(syntax-violation who
-	  "request for safe accessors of R6RS record for which they are not defined"
-	  binding))))
-
-  (define (%get-alist-of-safe-field-mutators who binding)
-    ;;Inspect a lexical  environment binding with key  "$rtd" and return
-    ;;the alist of safe R6RS record field mutators.  If the alist is not
-    ;;present: raise a syntax violation.
-    ;;
-    (let ((spec (r6rs-record-type-descriptor-binding-spec binding)))
-      (if (r6rs-record-type-spec? spec)
-	  (r6rs-record-type-spec-safe-mutators-table spec)
-	(syntax-violation who
-	  "request for safe mutators of R6RS record for which they are not defined"
-	  binding))))
-
-  (define (%get-alist-of-unsafe-field-accessors who binding)
-    ;;Inspect a lexical  environment binding with key  "$rtd" and return
-    ;;the alist of unsafe R6RS record  field accessors.  If the alist is
-    ;;not present: raise a syntax violation.
-    ;;
-    (define (%error)
-      (syntax-violation who
-	"request for unsafe accessors of R6RS record for which they are not defined"
-	binding))
-    (let ((spec (r6rs-record-type-descriptor-binding-spec binding)))
-      (if (r6rs-record-type-spec? spec)
-	  (or (r6rs-record-type-spec-unsafe-accessors-table spec)
-	      (%error))
-	(%error))))
-
-  (define (%get-alist-of-unsafe-field-mutators who binding)
-    ;;Inspect a lexical  environment binding with key  "$rtd" and return
-    ;;the alist of  unsafe R6RS record field mutators.  If  the alist is
-    ;;not present: raise a syntax violation.
-    ;;
-    (define (%error)
-      (syntax-violation who
-	"request for unsafe mutators of R6RS record for which they are not defined"
-	binding))
-    (let* ((val  (syntactic-binding-value binding))
-	   (spec (cddr val)))
-      (if (r6rs-record-type-spec? spec)
-	  (or (r6rs-record-type-spec-unsafe-mutators-table spec)
-	      (%error))
-	(%error))))
 
   #| end of module |# )
 
