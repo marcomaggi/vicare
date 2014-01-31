@@ -25,7 +25,7 @@
     begin0				define-values
 
     make-struct-type			struct?
-    struct-type-field-names
+    struct-type-descriptor?		struct-type-field-names
 
     make-parameter			parametrise
     format				gensym
@@ -72,7 +72,12 @@
     $fx= $fx< $fx> $fx<= $fx>= $fxadd1
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-ref $vector-set! $vector-length)
-  (import (ikarus)
+  (import (except (ikarus)
+		  ;;FIXME This except is to  be removed at the next boot
+		  ;;image rotation.  (Marco Maggi; Fri Jan 31, 2014)
+		  struct-type-descriptor?)
+    (only (ikarus structs)
+	  struct-type-descriptor?)
     (only (ikarus.reader)
 	  ;;this is not in makefile.sps
 	  read-library-source-file)

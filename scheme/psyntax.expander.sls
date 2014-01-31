@@ -3401,21 +3401,42 @@
   (and (pair? binding)
        (eq? '$core-rtd (syntactic-binding-type binding))))
 
+;;;
+
 (define (r6rs-record-type-descriptor-binding? binding)
   (and (struct-or-record-type-descriptor-binding? binding)
        (pair? (syntactic-binding-value binding))))
 
 (define-syntax-rule (make-r6rs-record-type-descriptor-binding ?rtd-id ?rcd-id ?spec)
-  (cons '$rtd (cons ?rtd-id (cons ?rcd-id ?spec))))
+  (cons '$rtd (make-r6rs-record-type-descriptor-bindval ?rtd-id ?rcd-id ?spec)))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-rtd ?binding-val)
-  (car ?binding-val))
+(define-syntax-rule (r6rs-record-type-descriptor-binding-rtd ?binding)
+  (r6rs-record-type-descriptor-bindval-rtd (syntactic-binding-value ?binding)))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-rcd ?binding-val)
-  (cadr ?binding-val))
+(define-syntax-rule (r6rs-record-type-descriptor-binding-rcd ?binding)
+  (r6rs-record-type-descriptor-bindval-rcd (syntactic-binding-value ?binding)))
 
-(define-syntax-rule (r6rs-record-type-descriptor-binding-spec ?binding-val)
-  (cddr ?binding-val))
+(define-syntax-rule (r6rs-record-type-descriptor-binding-spec ?binding)
+  (r6rs-record-type-descriptor-bindval-spec (syntactic-binding-value ?binding)))
+
+;;;
+
+(define-syntax-rule (make-r6rs-record-type-descriptor-bindval ?rtd-id ?rcd-id ?spec)
+  (cons ?rtd-id (cons ?rcd-id ?spec)))
+
+(define-syntax-rule (r6rs-record-type-descriptor-bindval? ?bind-val)
+  (pair? ?bind-val))
+
+(define-syntax-rule (r6rs-record-type-descriptor-bindval-rtd ?bind-val)
+  (car ?bind-val))
+
+(define-syntax-rule (r6rs-record-type-descriptor-bindval-rcd ?bind-val)
+  (cadr ?bind-val))
+
+(define-syntax-rule (r6rs-record-type-descriptor-bindval-spec ?bind-val)
+  (cddr ?bind-val))
+
+;;;
 
 (module R6RS-RECORD-TYPE-SPEC
   (make-r6rs-record-type-spec
@@ -9110,26 +9131,26 @@
   (import R6RS-RECORD-TYPE-SPEC)
 
   (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function used  to expand R6RS's RECORD-TYPE-DESCRIPTOR
-    ;;syntax uses from  the top-level built in  environment.  Expand the
-    ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN  and  LEXENV.EXPAND,  the   result  must  be  a  single
-    ;;identifier  representing a  R6RS record  type.  Return  a symbolic
-    ;;expression evaluating to the record type descriptor.
+    ;;Transformer   function  used   to  expand   RECORD-TYPE-DESCRIPTOR
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
     ;;
     (define-constant __who__ 'record-type-descriptor)
     (syntax-match expr-stx ()
-      ((_ ?identifier)
-       (identifier? ?identifier)
-       (let ((label (id->label ?identifier)))
-	 (unless label
-	   (%raise-unbound-error __who__ expr-stx ?identifier))
-	 (let ((binding (label->syntactic-binding label lexenv.run)))
-	   (unless (r6rs-record-type-descriptor-binding? binding)
-	     (syntax-violation __who__ "not a record type" expr-stx ?identifier))
-	   (chi-expr (r6rs-record-type-descriptor-binding-rtd
-		      (syntactic-binding-value binding))
-		     lexenv.run lexenv.expand))))))
+      ((_ ?type-name)
+       (identifier? ?type-name)
+       (cond ((id->label ?type-name)
+	      => (lambda (label)
+		   (let ((binding (label->syntactic-binding label lexenv.run)))
+		     (if (r6rs-record-type-descriptor-binding? binding)
+			 (chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
+				   lexenv.run lexenv.expand)
+		       (syntax-violation __who__
+			 "not a record type" expr-stx ?type-name)))))
+	     (else
+	      (%raise-unbound-error __who__ expr-stx ?type-name))))
+      ))
 
   (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer      function      used     to      expand      R6RS's
@@ -9141,16 +9162,15 @@
     ;;
     (define-constant __who__ 'record-constructor-descriptor-transformer)
     (syntax-match expr-stx ()
-      ((_ ?identifier)
-       (identifier? ?identifier)
-       (let ((label (id->label ?identifier)))
+      ((_ ?type-name)
+       (identifier? ?type-name)
+       (let ((label (id->label ?type-name)))
 	 (unless label
-	   (%raise-unbound-error __who__ expr-stx ?identifier))
+	   (%raise-unbound-error __who__ expr-stx ?type-name))
 	 (let ((binding (label->syntactic-binding label lexenv.run)))
 	   (unless (r6rs-record-type-descriptor-binding? binding)
-	     (syntax-error __who__ "invalid type" expr-stx ?identifier))
-	   (chi-expr (r6rs-record-type-descriptor-binding-rcd
-		      (syntactic-binding-value binding))
+	     (syntax-error __who__ "invalid type" expr-stx ?type-name))
+	   (chi-expr (r6rs-record-type-descriptor-binding-rcd binding)
 		     lexenv.run lexenv.expand))))))
 
 ;;; --------------------------------------------------------------------
@@ -9264,8 +9284,7 @@
     ;;the alist  of safe R6RS record  field accessors.  If the  alist is
     ;;not present: raise a syntax violation.
     ;;
-    (let* ((val  (syntactic-binding-value binding))
-	   (spec (r6rs-record-type-descriptor-binding-spec val)))
+    (let ((spec (r6rs-record-type-descriptor-binding-spec binding)))
       (if (r6rs-record-type-spec? spec)
 	  (r6rs-record-type-spec-safe-accessors-table spec)
 	(syntax-violation who
@@ -9277,8 +9296,7 @@
     ;;the alist of safe R6RS record field mutators.  If the alist is not
     ;;present: raise a syntax violation.
     ;;
-    (let* ((val  (syntactic-binding-value binding))
-	   (spec (r6rs-record-type-descriptor-binding-spec val)))
+    (let ((spec (r6rs-record-type-descriptor-binding-spec binding)))
       (if (r6rs-record-type-spec? spec)
 	  (r6rs-record-type-spec-safe-mutators-table spec)
 	(syntax-violation who
@@ -9294,8 +9312,7 @@
       (syntax-violation who
 	"request for unsafe accessors of R6RS record for which they are not defined"
 	binding))
-    (let* ((val  (syntactic-binding-value binding))
-	   (spec (r6rs-record-type-descriptor-binding-spec val)))
+    (let ((spec (r6rs-record-type-descriptor-binding-spec binding)))
       (if (r6rs-record-type-spec? spec)
 	  (or (r6rs-record-type-spec-unsafe-accessors-table spec)
 	      (%error))
@@ -9344,8 +9361,7 @@
 	 (%raise-unbound-error __who__ expr-stx ?type-id))
        (let ((binding (label->syntactic-binding label lexenv.run)))
 	 (cond ((r6rs-record-type-descriptor-binding? binding)
-		(chi-expr (r6rs-record-type-descriptor-binding-rtd
-			   (syntactic-binding-value binding))
+		(chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
 			  lexenv.run lexenv.expand))
 
 	       ((struct-type-descriptor-binding? binding)
@@ -11488,14 +11504,14 @@
     ;;
     ;;   #<struct-type-descriptor>
     ;;
-    (cond ((pair? bind-val)
+    (cond ((r6rs-record-type-descriptor-bindval? bind-val)
 	   ;;The binding is for an R6RS record type.
-	   (let ((rcd-id (r6rs-record-type-descriptor-binding-rcd bind-val)))
+	   (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
 	     (chi-expr (bless
 			`(record-constructor ,rcd-id))
 		       lexenv.run lexenv.expand)))
 
-	  ((struct? bind-val)
+	  ((struct-type-descriptor? bind-val)
 	   ;;The binding is for a Vicare struct type.
 	   (let ((field-id* (struct-type-field-names bind-val)))
 	     (chi-expr (bless
@@ -11516,17 +11532,17 @@
     ;;
     ;;   #<struct-type-descriptor>
     ;;
-    (cond ((pair? bind-val)
+    (cond ((r6rs-record-type-descriptor-bindval? bind-val)
 	   ;;The binding is for an R6RS record type.
 	   (syntax-match expr-stx ()
 	     ((?rtd ?arg* ...)
-	      (let ((rcd-id (r6rs-record-type-descriptor-binding-rcd bind-val)))
+	      (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
 		(chi-expr (bless
 			   `((record-constructor ,rcd-id) . ,?arg*))
 			  lexenv.run lexenv.expand)))
 	     ))
 
-	  ((struct? bind-val)
+	  ((struct-type-descriptor? bind-val)
 	   ;;The binding is for a Vicare struct type.
 	   (syntax-match expr-stx ()
 	     ((?rtd ?arg* ...)
