@@ -36,8 +36,13 @@
     struct-field-accessor	struct-field-mutator
     struct-reset
 
+    ;;FIXME This  renaming must be removed  in future (at the  next boot
+    ;;rotation?) and the identifier  STRUCT-TYPE-DESCRIPTOR bound to the
+    ;;syntax.  (Marco Maggi; Fri Jan 31, 2014)
+    (rename (struct-rtd struct-type-descriptor))
+
     ;; structure inspection
-    struct-rtd			(rename (struct-rtd struct-type-descriptor))
+    struct-rtd
     struct-name			struct-printer
     struct-destructor		struct-length)
   (import (except (ikarus)
