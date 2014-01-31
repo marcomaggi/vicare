@@ -5056,23 +5056,123 @@ the need to export the predicate identifier out of libraries.
 @subsection Accessing and mutating fields
 
 
-@defun record-accessor @var{rtd} @var{relative-field-index}
-@defunx record-accessor @var{rtd} @var{relative-field-index} @var{accessor-who}
-As defined by @rnrs{6}, this function accepts only two arguments;
-@ref{stdlib records procedural layer, record-accessor}.  The optional
-third argument is a @value{PRJNAME} extension: it must be a symbol
+@defun record-accessor @var{rtd} @var{index/name}
+@defunx record-accessor @var{rtd} @var{index/name} @var{accessor-who}
+As defined by @rnrs{6}, this function accepts only two arguments and the
+second is a relative field index; @ref{stdlib records procedural layer,
+record-accessor}.  @value{PRJNAME} extends this function.
+
+The argument @var{index/name} can be either a relative field index, as
+specified by @rnrs{6}, or a symbol representing a field name.  In the
+second case @var{rtd} and its parents are searched for the first
+matching field specification, so fields of the sub--types take
+precedence.
+
+The optional third argument @var{accessor-who} must be a symbol
 representing the name of the returned accessor function; it is used for
 descriptive error reporting.
+
+Here is an example with the field name argument being a symbol:
+
+@example
+(import (vicare))
+(define-record-type alpha
+  (fields a b c))
+(define alpha-rtd
+  (record-type-descriptor alpha))
+(define R
+  (make-alpha 1 2 3))
+((record-accessor alpha-rtd 'a) R)      @result{} 1
+((record-accessor alpha-rtd 'b) R)      @result{} 2
+((record-accessor alpha-rtd 'c) R)      @result{} 3
+@end example
+
+@noindent
+and another example with record type inheritance; notice that both the
+record types have a field named @samp{C} and the sub--type takes
+precedence:
+
+@example
+(import (vicare))
+(define-record-type alpha
+  (fields a b C))
+(define-record-type beta
+  (parent alpha)
+  (fields C d e))
+(define beta-rtd
+  (record-type-descriptor beta))
+(define R
+  (make-beta 1 2 3 4 5 6))
+((record-accessor beta-rtd 'a) R)       @result{} 1
+((record-accessor beta-rtd 'b) R)       @result{} 2
+((record-accessor beta-rtd 'C) R)       @result{} 4
+((record-accessor beta-rtd 'd) R)       @result{} 5
+((record-accessor beta-rtd 'e) R)       @result{} 6
+@end example
 @end defun
 
 
-@defun record-mutator @var{rtd} @var{relative-field-index}
-@defunx record-mutator @var{rtd} @var{relative-field-index} @var{mutator-who}
-As defined by @rnrs{6}, this function accepts only two arguments;
-@ref{stdlib records procedural layer, record-mutator}.  The optional
-third argument is a @value{PRJNAME} extension: it must be a symbol
+@defun record-mutator @var{rtd} @var{index/name}
+@defunx record-mutator @var{rtd} @var{index/name} @var{mutator-who}
+As defined by @rnrs{6}, this function accepts only two arguments and the
+second is a relative field index; @ref{stdlib records procedural layer,
+record-mutator}.  @value{PRJNAME} extends this function.
+
+The argument @var{index/name} can be either a relative field index, as
+specified by @rnrs{6}, or a symbol representing a field name.  In the
+second case @var{rtd} and its parents are searched for the first
+matching field specification, so fields of the sub--types take
+precedence.
+
+The optional third argument @var{mutator-who} must be a symbol
 representing the name of the returned mutator function; it is used for
 descriptive error reporting.
+
+Here is an example with the field name argument being a symbol:
+
+@example
+(import (vicare))
+(define-record-type alpha
+  (fields a b c))
+(define alpha-rtd
+  (record-type-descriptor alpha))
+(define R
+  (make-alpha 1 2 3))
+((record-mutator alpha-rtd 'a) R 19)
+((record-mutator alpha-rtd 'b) R 29)
+((record-mutator alpha-rtd 'c) R 39)
+((record-accessor alpha-rtd 'a) R)      @result{} 1
+((record-accessor alpha-rtd 'b) R)      @result{} 2
+((record-accessor alpha-rtd 'c) R)      @result{} 3
+@end example
+
+@noindent
+and another example with record type inheritance; notice that both the
+record types have a field named @samp{C} and the sub--type takes
+precedence:
+
+@example
+(import (vicare))
+(define-record-type alpha
+  (fields a b C))
+(define-record-type beta
+  (parent alpha)
+  (fields C d e))
+(define beta-rtd
+  (record-type-descriptor beta))
+(define R
+  (make-beta 1 2 3 4 5 6))
+((record-mutator beta-rtd 'a) R 19)
+((record-mutator beta-rtd 'b) R 29)
+((record-mutator beta-rtd 'C) R 49)
+((record-mutator beta-rtd 'd) R 59)
+((record-mutator beta-rtd 'e) R 69)
+((record-accessor beta-rtd 'a) R)       @result{} 19
+((record-accessor beta-rtd 'b) R)       @result{} 29
+((record-accessor beta-rtd 'C) R)       @result{} 49
+((record-accessor beta-rtd 'd) R)       @result{} 59
+((record-accessor beta-rtd 'e) R)       @result{} 69
+@end example
 @end defun
 
 
@@ -5112,6 +5212,10 @@ and mutator identifiers out of libraries.
 (record-type-field-set! beta b B 22)
 (record-type-field-ref  beta b B)        @result{} 22
 @end example
+
+If @meta{field-name} does not select a field of @meta{type-name}: the
+parent record--types of @meta{type-name} are searched for the first
+matching field.
 @end deffn
 
 
@@ -5141,6 +5245,10 @@ use of these syntaxes raises a syntax violation exception.
 ($record-type-field-set! alpha a A 2)
 ($record-type-field-ref  alpha a A)      @result{} 2
 @end example
+
+If @meta{field-name} does not select a field of @meta{type-name}: the
+parent record--types of @meta{type-name} are searched for the first
+matching field.
 @end deffn
 
 @c page

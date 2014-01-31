@@ -422,6 +422,25 @@
 	  ($vector-set! normalised-vector i (cons (eq? mutability 'mutable) name))
 	  (next-field ($fxadd1 i)))))))
 
+(define (%field-name->absolute-field-index rtd field-name-sym)
+  ;;Given a  record-type descriptor  and a  symbol representing  a field
+  ;;name: search the hierarchy of RTDs for a field matching the selected
+  ;;name and  return its absolute index.   When a matching field  is not
+  ;;found the return value is false.
+  ;;
+  (let loop ((rtd  rtd)
+	     (spec ($<rtd>-fields rtd))
+	     (i    0))
+    (cond (($fx= i ($vector-length spec))
+	   (cond (($<rtd>-parent rtd)
+		  => (lambda (prtd)
+		       (%field-name->absolute-field-index prtd field-name-sym)))
+		 (else #f)))
+	  ((eq? field-name-sym (cdr ($vector-ref spec i)))
+	   ($fx+ i ($<rtd>-first-field-index rtd)))
+	  (else
+	   (loop rtd spec ($fxadd1 i))))))
+
 
 ;;;; arguments validation
 
@@ -496,7 +515,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
-  (and (fixnum? obj) ($fx<= 0 obj))
+  (and (fixnum? obj) ($fxnonnegative? obj))
   (procedure-argument-violation who "expected non-negative fixnum as field index argument" obj))
 
 (define-argument-validation (absolute-field-index who abs-index max-index rtd relative-field-index)
@@ -655,30 +674,30 @@
 	(set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))
 	rtd)))
 
-  (define (%generate-rtd name parent uid sealed? opaque? normalised-fields)
+  (define (%generate-rtd name parent-rtd uid sealed? opaque? normalised-fields)
     ;;Build and return a new instance of RTD struct.
     ;;
     ;;Here we do not care if UID is a symbol or false.
     ;;
     (let ((fields-number ($vector-length normalised-fields)))
-      (if (not parent)
+      (if (not parent-rtd)
 	  (make-<rtd> name fields-number fields-number 0
-		      parent sealed? opaque? uid normalised-fields
+		      parent-rtd sealed? opaque? uid normalised-fields
 		      (void) #;initialiser
 		      #f #;default-protocol
 		      #f #;default-rcd
 		      #f #;destructor )
 	(make-<rtd> name
-		    (fx+ fields-number (<rtd>-total-fields-number parent))
+		    (fx+ fields-number (<rtd>-total-fields-number parent-rtd))
 		    fields-number
-		    (<rtd>-total-fields-number parent)
-		    parent sealed? (or opaque? (<rtd>-opaque? parent)) uid normalised-fields
+		    (<rtd>-total-fields-number parent-rtd)
+		    parent-rtd sealed? (or opaque? (<rtd>-opaque? parent-rtd)) uid normalised-fields
 		    (void) #;initialiser
 		    #f #;default-protocol
 		    #f #;default-rcd
 		    #f #;destructor ))))
 
-  (define (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields fields)
+  (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? normalised-fields fields)
     ;;Build  and return  a  new instance  of  RTD or  return an  already
     ;;generated RTD.   If the  specified UID is  already present  in the
     ;;table of  interned RTDs: check  that the arguments  are compatible
@@ -690,14 +709,14 @@
 	  (string-append
 	   "requested access to non-generative record-type descriptor \
             with " wrong-field " not equivalent to that in the interned RTD")
-	  rtd `(,name ,parent ,uid ,sealed? ,opaque? ,fields)))
+	  rtd `(,name ,parent-rtd ,uid ,sealed? ,opaque? ,fields)))
       (if rtd
 	  ;;Should this  validation be  omitted when we  compile without
 	  ;;arguments validation?  (Marco Maggi; Sun Mar 18, 2012)
 	  ;;
 	  ;;Notice that the requested NAME can be different from the one
 	  ;;in the interned RTD.
-	  (if (eq? (<rtd>-parent  rtd) parent)
+	  (if (eq? (<rtd>-parent  rtd) parent-rtd)
 	      (if (boolean=? (<rtd>-sealed? rtd) sealed?)
 		  (if (boolean=? (<rtd>-opaque? rtd) opaque?)
 		      (if (equal? (<rtd>-fields  rtd) normalised-fields)
@@ -707,7 +726,7 @@
 		(%error "sealed"))
 	    (%error "parent"))
 	(%intern-nongenerative-rtd!
-	 uid (%generate-rtd name parent uid sealed? opaque? normalised-fields)))))
+	 uid (%generate-rtd name parent-rtd uid sealed? opaque? normalised-fields)))))
 
   #| end of module |# )
 
@@ -933,58 +952,74 @@
 ;;
 
 (case-define* record-accessor
-  ((rtd relative-field-index)
-   (record-accessor rtd relative-field-index 'a-record-accessor))
-  ((rtd relative-field-index accessor-who)
-   ;;Return a function being the accessor for field RELATIVE-FIELD-INDEX
-   ;;of RTD.
+  (((rtd <rtd>?) index/name)
+   (record-accessor rtd index/name 'a-record-accessor))
+  (((rtd <rtd>?) index/name accessor-who)
+   ;;Return a function being the accessor for field INDEX/NAME of RTD.
    ;;
-   (with-arguments-validation (__who__)
-       ((rtd	rtd)
-	(index	relative-field-index))
-     (let* ((total-number-of-fields	(<rtd>-total-fields-number rtd))
-	    (prtd			(<rtd>-parent rtd))
-	    (abs-index			(if prtd
-					    (+ relative-field-index (<rtd>-total-fields-number prtd))
-					  relative-field-index)))
-       (with-arguments-validation (__who__)
-	   ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
-	 (lambda (obj)
-	   ;;We must verify that OBJ is actually an R6RS record instance
-	   ;;of RTD or one of its subtypes.
-	   ;;
-	   (with-arguments-validation (accessor-who)
-	       ((record			obj)
-		(record-instance-of-rtd	obj rtd))
-	     ($struct-ref obj abs-index))))))))
+   (define abs-index
+     (cond ((and (fixnum? index/name)
+		 ($fxnonnegative? index/name))
+	    (let* ((relative-field-index    index/name)
+		   (total-number-of-fields  (<rtd>-total-fields-number rtd))
+		   (abs-index               (+ relative-field-index ($<rtd>-first-field-index rtd))))
+	      (with-arguments-validation (__who__)
+		  ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
+		abs-index)))
+
+	   ((symbol? index/name)
+	    (or (%field-name->absolute-field-index rtd index/name)
+		(procedure-argument-violation __who__
+		  "unknown field name for record-type descriptor"
+		  rtd index/name)))
+
+	   (else
+	    (procedure-argument-violation __who__
+	      "expected field index fixnum or symbol name as argument"
+	      index/name))))
+   (lambda (obj)
+     ;;We must  verify that OBJ is  actually an R6RS record  instance of
+     ;;RTD or one of its subtypes.
+     ;;
+     (with-arguments-validation (accessor-who)
+	 ((record			obj)
+	  (record-instance-of-rtd	obj rtd))
+       ($struct-ref obj abs-index)))))
 
 (case-define* record-mutator
-  ((rtd relative-field-index)
-   (record-mutator rtd relative-field-index 'a-record-mutator))
-  ((rtd relative-field-index mutator-who)
-   ;;Return a function being  the mutator for field RELATIVE-FIELD-INDEX
-   ;;of RTD.
+  (((rtd <rtd>?) index/name)
+   (record-mutator rtd index/name 'a-record-mutator))
+  (((rtd <rtd>?) index/name mutator-who)
+   ;;Return a function being the mutator for field INDEX/NAME of RTD.
    ;;
-   (with-arguments-validation (__who__)
-       ((rtd	rtd)
-	(index	relative-field-index))
-     (let* ((total-number-of-fields	(<rtd>-total-fields-number rtd))
-	    (prtd			(<rtd>-parent rtd))
-	    (abs-index			(if prtd
-					    (+ relative-field-index (<rtd>-total-fields-number prtd))
-					  relative-field-index)))
-       (with-arguments-validation (__who__)
-	   ((absolute-field-index		abs-index total-number-of-fields
-						rtd relative-field-index)
-	    (relative-index-of-mutable-field	relative-field-index rtd))
-	 (lambda (obj new-value)
-	   ;;We must verify that OBJ is actually an R6RS record instance
-	   ;;of RTD or one of its subtypes.
-	   ;;
-	   (with-arguments-validation (mutator-who)
-	       ((record			obj)
-		(record-instance-of-rtd	obj rtd))
-	     ($struct-set! obj abs-index new-value))))))))
+   (define abs-index
+     (cond ((and (fixnum? index/name)
+		 ($fxnonnegative? index/name))
+	    (let* ((relative-field-index    index/name)
+		   (total-number-of-fields  (<rtd>-total-fields-number rtd))
+		   (abs-index               (+ relative-field-index ($<rtd>-first-field-index rtd))))
+	      (with-arguments-validation (__who__)
+		  ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
+		abs-index)))
+
+	   ((symbol? index/name)
+	    (or (%field-name->absolute-field-index rtd index/name)
+		(procedure-argument-violation __who__
+		  "unknown field name for record-type descriptor"
+		  rtd index/name)))
+
+	   (else
+	    (procedure-argument-violation __who__
+	      "expected field index fixnum or symbol name as argument"
+	      index/name))))
+   (lambda (obj new-value)
+     ;;We must  verify that OBJ is  actually an R6RS record  instance of
+     ;;RTD or one of its subtypes.
+     ;;
+     (with-arguments-validation (mutator-who)
+	 ((record			obj)
+	  (record-instance-of-rtd	obj rtd))
+       ($struct-set! obj abs-index new-value)))))
 
 
 (define (record-predicate rtd)

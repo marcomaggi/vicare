@@ -334,6 +334,54 @@
 	      (record-type-field-ref beta c O)))
     => '(1 2 3 4 5 6))
 
+  (check	;safe accessors, with inheritance, sub-rtd access
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable d)
+		  (mutable e)
+		  (mutable f)))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(list (record-type-field-ref beta a O)
+	      (record-type-field-ref beta b O)
+	      (record-type-field-ref beta c O)
+	      (record-type-field-ref beta d O)
+	      (record-type-field-ref beta e O)
+	      (record-type-field-ref beta f O)))
+    => '(1 2 3 4 5 6))
+
+  (check	;safe accessors and mutators, with inheritance, sub-rtd access
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable d)
+		  (mutable e)
+		  (mutable f)))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(record-type-field-set! beta a O 19)
+	(record-type-field-set! beta b O 29)
+	(record-type-field-set! beta c O 39)
+	(record-type-field-set! beta d O 49)
+	(record-type-field-set! beta e O 59)
+	(record-type-field-set! beta f O 69)
+	(list (record-type-field-ref beta a O)
+	      (record-type-field-ref beta b O)
+	      (record-type-field-ref beta c O)
+	      (record-type-field-ref beta d O)
+	      (record-type-field-ref beta e O)
+	      (record-type-field-ref beta f O)))
+    => '(19 29 39 49 59 69))
+
   (check	;safe accessors and mutators, with inheritance
       (let ()
 	(define-record-type alpha
@@ -662,6 +710,88 @@
 	      ($record-type-field-ref <gamma> four  X)
 	      ))
     => '(10 2 30 4))
+
+  #t)
+
+
+(parametrise ((check-test-name	'record-accessor-constructor))
+
+  (check	;record accessor constructor with symbol argument
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define alpha-rtd
+	  (record-type-descriptor alpha))
+	(define R
+	  (make-alpha 1 2 3))
+	(list ((record-accessor alpha-rtd 'a) R)
+	      ((record-accessor alpha-rtd 'b) R)
+	      ((record-accessor alpha-rtd 'c) R)))
+    => '(1 2 3))
+
+  (check	;Record  accessor constructor  with  symbol argument;  a
+		;field in ALPHA has the same name of a field in BETA.
+      (let ()
+	(define-record-type alpha
+	  (fields a b C))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields C d e))
+	(define beta-rtd
+	  (record-type-descriptor beta))
+	(define R
+	  (make-beta 1 2 3 4 5 6))
+	(list ((record-accessor beta-rtd 'a) R)
+	      ((record-accessor beta-rtd 'b) R)
+	      ((record-accessor beta-rtd 'C) R)
+	      ((record-accessor beta-rtd 'd) R)
+	      ((record-accessor beta-rtd 'e) R)))
+    => '(1 2 4 5 6))
+
+  #t)
+
+
+(parametrise ((check-test-name	'record-mutator-constructor))
+
+  (check	;record mutator constructor with symbol argument
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define alpha-rtd
+	  (record-type-descriptor alpha))
+	(define R
+	  (make-alpha 1 2 3))
+	((record-mutator alpha-rtd 'a) R 19)
+	((record-mutator alpha-rtd 'b) R 29)
+	((record-mutator alpha-rtd 'c) R 39)
+	(list ((record-accessor alpha-rtd 'a) R)
+	      ((record-accessor alpha-rtd 'b) R)
+	      ((record-accessor alpha-rtd 'c) R)))
+    => '(19 29 39))
+
+  (check	;Record  accessor constructor  with  symbol argument;  a
+		;field in ALPHA has the same name of a field in BETA.
+      (let ()
+	(define-record-type alpha
+	  (fields a b C))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields C d e))
+	(define beta-rtd
+	  (record-type-descriptor beta))
+	(define R
+	  (make-beta 1 2 3 4 5 6))
+	((record-mutator beta-rtd 'a) R 19)
+	((record-mutator beta-rtd 'b) R 29)
+	((record-mutator beta-rtd 'C) R 49)
+	((record-mutator beta-rtd 'd) R 59)
+	((record-mutator beta-rtd 'e) R 69)
+	(list ((record-accessor beta-rtd 'a) R)
+	      ((record-accessor beta-rtd 'b) R)
+	      ((record-accessor beta-rtd 'C) R)
+	      ((record-accessor beta-rtd 'd) R)
+	      ((record-accessor beta-rtd 'e) R)))
+    => '(19 29 49 59 69))
 
   #t)
 
