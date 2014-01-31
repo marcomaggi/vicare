@@ -8845,19 +8845,17 @@
 
   (define (letrec-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer  function  used to  expand  LETREC  syntaxes from  the
-    ;;top-level built  in environment.  Expand the  contents of EXPR-STX
-    ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
-    ;;LEXENV.EXPAND; return a sexp  representing EXPR-STX fully expanded
-    ;;to the expand language.
+    ;;top-level built in environment.  Expand the syntax object EXPR-STX
+    ;;in the  context of the  given LEXENV; return an  expanded language
+    ;;symbolic expression.
     ;;
     (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec))
 
   (define (letrec*-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer  function used  to  expand LETREC*  syntaxes from  the
-    ;;top-level built  in environment.  Expand the  contents of EXPR-STX
-    ;;in  the  context  of   the  lexical  environments  LEXENV.RUN  and
-    ;;LEXENV.EXPAND; return a sexp  representing EXPR-STX fully expanded
-    ;;to the expand language.
+    ;;top-level built in environment.  Expand the syntax object EXPR-STX
+    ;;in the  context of the  given LEXENV; return an  expanded language
+    ;;symbolic expression.
     ;;
     (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec*))
 
@@ -8901,11 +8899,9 @@
 
 (define (fluid-let-syntax-transformer expr-stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand FLUID-LET-SYNTAX  syntaxes from
-  ;;the top-level built in environment.  Expand the contents of EXPR-STX
-  ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
-  ;;LEXENV.EXPAND; return a sexp representing EXPR-STX fully expanded to
-  ;;the expand language.
-  ;;
+  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
   (define (transformer expr-stx)
     (syntax-match expr-stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
@@ -8948,22 +8944,15 @@
 	 $struct-type-field-set!-transformer)
 
   (define (struct-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function  used  to  expand  Vicare's  TYPE-DESCRIPTOR
+    ;;Transformer   function  used   to  expand   STRUCT-TYPE-DESCRIPTOR
     ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;contents of  EXPR-STX in the  context of the  lexical environments
-    ;;LEXENV.RUN and LEXENV.EXPAND,  the result must be  the struct type
-    ;;descriptor struct.   Return a sexp  evaluating to the  struct type
-    ;;descriptor.
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
     ;;
-    ;;The  binding in  the lexical  environment representing  the struct
-    ;;type descriptor looks as follows:
-    ;;
-    ;;   ($rtd . #<type-descriptor-struct>)
-    ;;    |..| binding-type
-    ;;           |.......................|  binding-value
-    ;;   |................................| binding
-    ;;
-    ;;where "$rtd" is the symbol "$rtd".
+    ;;FIXME This transformer is  currently unused because the identifier
+    ;;STRUCT-TYPE-DESCRIPTOR  is bound  to  a function.   In future  the
+    ;;function  binding  will be  removed  and  replaced by  the  syntax
+    ;;binding.  (Marco Maggi; Fri Jan 31, 2014)
     ;;
     (define-constant __who__ 'struct-type-descriptor)
     (syntax-match expr-stx ()
@@ -8974,6 +8963,11 @@
       ))
 
   (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer  function   used  to   expand  STRUCT-TYPE-AND-STRUCT?
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
+    ;;
     (define-constant __who__ 'struct-type-and-struct?)
     (syntax-match expr-stx ()
       ((_ ?type-id ?stru)
@@ -8989,9 +8983,19 @@
 	   $struct-type-field-ref-transformer)
 
     (define (struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
+      ;;Transformer  function   used  to   expand  STRUCT-TYPE-FIELD-REF
+      ;;syntaxes from  the top-level  built in environment.   Expand the
+      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
+      ;;return an expanded language symbolic expression.
+      ;;
       (%struct-type-field-ref-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
 
     (define ($struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
+      ;;Transformer  function  used   to  expand  $STRUCT-TYPE-FIELD-REF
+      ;;syntaxes from  the top-level  built in environment.   Expand the
+      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
+      ;;return an expanded language symbolic expression.
+      ;;
       (%struct-type-field-ref-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
 
     (define (%struct-type-field-ref-transformer who safe? expr-stx lexenv.run lexenv.expand)
@@ -9016,9 +9020,19 @@
 	   $struct-type-field-set!-transformer)
 
     (define (struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+      ;;Transformer  function  used   to  expand  STRUCT-TYPE-FIELD-SET!
+      ;;syntaxes from  the top-level  built in environment.   Expand the
+      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
+      ;;return an expanded language symbolic expression.
+      ;;
       (%struct-type-field-set!-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
 
     (define ($struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+      ;;Transformer  function  used  to  expand  $STRUCT-TYPE-FIELD-SET!
+      ;;syntaxes from  the top-level  built in environment.   Expand the
+      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
+      ;;return an expanded language symbolic expression.
+      ;;
       (%struct-type-field-set!-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
 
     (define (%struct-type-field-set!-transformer who safe? expr-stx lexenv.run lexenv.expand)
@@ -9040,30 +9054,33 @@
 ;;; --------------------------------------------------------------------
 
   (define (%struct-type-id->rtd who expr-stx type-id lexenv.run)
-    ;;Given the  identifier of the struct  type: find its label  and its
+    ;;Given the identifier  of the struct type: find its  label then its
     ;;syntactic binding  and return the  struct type descriptor.   If no
-    ;;binding captured the identifier or the binding does not describe a
+    ;;binding captures the identifier or the binding does not describe a
     ;;structure type descriptor: raise an exception.
     ;;
     (cond ((id->label type-id)
 	   => (lambda (label)
 		(let ((binding (label->syntactic-binding label lexenv.run)))
-		  (unless (struct-type-descriptor-binding? binding)
-		    (syntax-violation who "not a struct type" expr-stx type-id))
-		  (syntactic-binding-value binding))))
+		  (if (struct-type-descriptor-binding? binding)
+		      (syntactic-binding-value binding)
+		    (syntax-violation who "not a struct type" expr-stx type-id)))))
 	  (else
 	   (%raise-unbound-error who expr-stx type-id))))
 
   (define (%field-name->field-idx who expr-stx field-names field-id)
+    ;;Given a list of symbols  FIELD-NAMES representing a struct's field
+    ;;names and an identifier FIELD-ID representing the name of a field:
+    ;;return the index of the selected field in the list.
+    ;;
     (define field-sym (identifier->symbol field-id))
     (let loop ((i 0) (ls field-names))
       (if (pair? ls)
-	  (if (eq? field-sym (car ls))
+	  (if (eq? field-sym ($car ls))
 	      i
-	    (loop (+ 1 i) (cdr ls)))
+	    (loop ($fxadd1 i) ($cdr ls)))
 	(syntax-violation who
-	  "invalid struct type field name"
-	  expr-stx field-id))))
+	  "invalid struct type field name" expr-stx field-id))))
 
   #| end of module |# )
 
