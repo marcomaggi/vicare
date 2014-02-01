@@ -9301,11 +9301,12 @@
 ;;;; module core-macro-transformer: TYPE-DESCRIPTOR
 
 (define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function   used  to  expand   Vicare's  TYPE-DESCRIPTOR
-  ;;syntaxes  from  the  top-level  built in  environment.   Expand  the
-  ;;contents  of EXPR-STX  in the  context of  the lexical  environments
-  ;;LEXENV.RUN  and  LEXENV.EXPAND, the  result  must  be an  expression
-  ;;evaluating to:
+  ;;Transformer function  used to  expand TYPE-DESCRIPTOR  syntaxes from
+  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
+  ;;
+  ;;The result must be an expression evaluating to:
   ;;
   ;;* A Vicare  struct type descriptor if the  given identifier argument
   ;;  is a struct type name.
@@ -9317,21 +9318,19 @@
   (syntax-match expr-stx ()
     ((_ ?type-id)
      (identifier? ?type-id)
-     (let ((label (id->label ?type-id)))
-       (unless label
-	 (%raise-unbound-error __who__ expr-stx ?type-id))
-       (let ((binding (label->syntactic-binding label lexenv.run)))
-	 (cond ((r6rs-record-type-descriptor-binding? binding)
-		(chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
-			  lexenv.run lexenv.expand))
+     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
+	    (binding  (label->syntactic-binding label lexenv.run)))
+       (cond ((r6rs-record-type-descriptor-binding? binding)
+	      (chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
+			lexenv.run lexenv.expand))
 
-	       ((struct-type-descriptor-binding? binding)
-		(build-data no-source (syntactic-binding-value binding)))
+	     ((struct-type-descriptor-binding? binding)
+	      (build-data no-source (syntactic-binding-value binding)))
 
-	       (else
-		(syntax-violation __who__
-		  "neither a struct type nor an R6RS record type"
-		  expr-stx ?type-id))))))
+	     (else
+	      (syntax-violation __who__
+		"neither a struct type nor an R6RS record type"
+		expr-stx ?type-id)))))
     ))
 
 
