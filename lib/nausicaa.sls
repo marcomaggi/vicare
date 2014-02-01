@@ -1797,7 +1797,7 @@
 
   (import (for (except (vicare)
 		       define-condition-type
-		       is-a?
+		       is-a? slot-ref slot-set!
 
 		       ;; redefined from (rnrs conditions (6))
 		       &condition

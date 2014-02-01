@@ -505,6 +505,46 @@
       (is-a? 123 beta)
     => #f)
 
+;;; --------------------------------------------------------------------
+;;; generic safe slot getter and setter
+
+  (check
+      (let ((stru (alpha 1 2 3)))
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (alpha 1 2 3)))
+	(slot-set! stru a alpha 19)
+	(slot-set! stru b alpha 29)
+	(slot-set! stru c alpha 39)
+	(list (slot-ref stru a alpha)
+	      (slot-ref stru b alpha)
+	      (slot-ref stru c alpha)))
+    => '(19 29 39))
+
+;;; --------------------------------------------------------------------
+;;; generic unsafe slot getter and setter
+
+  (check
+      (let ((stru (alpha 1 2 3)))
+	(list ($slot-ref stru a alpha)
+	      ($slot-ref stru b alpha)
+	      ($slot-ref stru c alpha)))
+    => '(1 2 3))
+
+  (check
+      (let ((stru (alpha 1 2 3)))
+	($slot-set! stru a alpha 19)
+	($slot-set! stru b alpha 29)
+	($slot-set! stru c alpha 39)
+	(list ($slot-ref stru a alpha)
+	      ($slot-ref stru b alpha)
+	      ($slot-ref stru c alpha)))
+    => '(19 29 39))
+
   #t)
 
 

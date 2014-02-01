@@ -8912,6 +8912,7 @@
       ((syntax-case)			syntax-case-transformer)
       ((syntax)				syntax-transformer)
       ((fluid-let-syntax)		fluid-let-syntax-transformer)
+      ((splice-first-expand)		splice-first-expand-transformer)
       ((struct-type-descriptor)		struct-type-descriptor-transformer)
       ((struct-type-and-struct?)	struct-type-and-struct?-transformer)
       ((struct-type-field-ref)		struct-type-field-ref-transformer)
@@ -8926,7 +8927,10 @@
       (($record-type-field-ref)		$record-type-field-ref-transformer)
       ((type-descriptor)		type-descriptor-transformer)
       ((is-a?)				is-a?-transformer)
-      ((splice-first-expand)		splice-first-expand-transformer)
+      ((slot-ref)			slot-ref-transformer)
+      ((slot-set!)			slot-set!-transformer)
+      (($slot-ref)			$slot-ref-transformer)
+      (($slot-set!)			$slot-set!-transformer)
       (else
        (assertion-violation __who__
 	 "Vicare: internal error: cannot find transformer" name))))
@@ -10147,10 +10151,10 @@
 ;;;; module core-macro-transformer: IS-A?
 
 (define (is-a?-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used  to  expand  IS-A?   syntaxes  from  the
-  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
-  ;;in  the context  of the  given LEXENV;  return an  expanded language
-  ;;symbolic expression.
+  ;;Transformer function  used to  expand Vicare's IS-A?   syntaxes from
+  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
   ;;
   (define-constant __who__ 'is-a?)
   (syntax-match expr-stx ()
@@ -10166,6 +10170,125 @@
 	     ((struct-type-descriptor-binding? binding)
 	      (chi-expr (bless
 			 `(struct-type-and-struct? ,?type-id ,?expr))
+			lexenv.run lexenv.expand))
+
+	     (else
+	      (syntax-violation __who__
+		"neither a struct type nor an R6RS record type"
+		expr-stx ?type-id)))))
+    ))
+
+
+;;;; module core-macro-transformer: SLOT-REF, SLOT-SET!, $SLOT-REF, $SLOT-SET!
+
+(define (slot-ref-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function used to  expand Vicare's SLOT-REF syntaxes from
+  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
+  ;;
+  (define-constant __who__ 'slot-ref)
+  (syntax-match expr-stx ()
+    ((_ ?expr ?field-name-id ?type-id)
+     (and (identifier? ?type-id)
+	  (identifier? ?field-name-id))
+     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
+	    (binding  (label->syntactic-binding label lexenv.run)))
+       (cond ((r6rs-record-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
+			lexenv.run lexenv.expand))
+
+	     ((struct-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
+			lexenv.run lexenv.expand))
+
+	     (else
+	      (syntax-violation __who__
+		"neither a struct type nor an R6RS record type"
+		expr-stx ?type-id)))))
+    ))
+
+(define (slot-set!-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand Vicare's SLOT-SET! syntaxes from
+  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
+  ;;
+  (define-constant __who__ 'slot-set!)
+  (syntax-match expr-stx ()
+    ((_ ?expr ?field-name-id ?type-id ?new-value)
+     (and (identifier? ?type-id)
+	  (identifier? ?field-name-id))
+     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
+	    (binding  (label->syntactic-binding label lexenv.run)))
+       (cond ((r6rs-record-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+			lexenv.run lexenv.expand))
+
+	     ((struct-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+			lexenv.run lexenv.expand))
+
+	     (else
+	      (syntax-violation __who__
+		"neither a struct type nor an R6RS record type"
+		expr-stx ?type-id)))))
+    ))
+
+(define ($slot-ref-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand Vicare's $SLOT-REF syntaxes from
+  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
+  ;;
+  (define-constant __who__ '$slot-ref)
+  (syntax-match expr-stx ()
+    ((_ ?expr ?field-name-id ?type-id)
+     (and (identifier? ?type-id)
+	  (identifier? ?field-name-id))
+     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
+	    (binding  (label->syntactic-binding label lexenv.run)))
+       (cond ((r6rs-record-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
+			lexenv.run lexenv.expand))
+
+	     ((struct-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
+			lexenv.run lexenv.expand))
+
+	     (else
+	      (syntax-violation __who__
+		"neither a struct type nor an R6RS record type"
+		expr-stx ?type-id)))))
+    ))
+
+(define ($slot-set!-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's $SLOT-SET!  syntaxes
+  ;;from the top-level  built in environment.  Expand  the syntax object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
+  ;;
+  (define-constant __who__ '$slot-set!)
+  (syntax-match expr-stx ()
+    ((_ ?expr ?field-name-id ?type-id ?new-value)
+     (and (identifier? ?type-id)
+	  (identifier? ?field-name-id))
+     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
+	    (binding  (label->syntactic-binding label lexenv.run)))
+       (cond ((r6rs-record-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+			lexenv.run lexenv.expand))
+
+	     ((struct-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 			lexenv.run lexenv.expand))
 
 	     (else

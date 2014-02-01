@@ -964,6 +964,65 @@
   #t)
 
 
+(parametrise ((check-test-name	'generic-slots-syntax))
+
+  (let ()
+    (define-record-type alpha
+      (fields a b c))
+
+    (define-record-type beta
+      (fields a b c))
+
+    (check
+	(let ((stru (alpha 1 2 3)))
+	  (list (slot-ref stru a alpha)
+		(slot-ref stru b alpha)
+		(slot-ref stru c alpha)))
+      => '(1 2 3))
+
+    (check
+	(let ((stru (alpha 1 2 3)))
+	  (slot-set! stru a alpha 19)
+	  (slot-set! stru b alpha 29)
+	  (slot-set! stru c alpha 39)
+	  (list (slot-ref stru a alpha)
+		(slot-ref stru b alpha)
+		(slot-ref stru c alpha)))
+      => '(19 29 39))
+
+    (void))
+
+;;; --------------------------------------------------------------------
+
+  (let ()
+    (define-record-type alpha
+      (fields a b c))
+
+    (define-record-type beta
+      (fields a b c))
+
+    (check
+	(let ((stru (alpha 1 2 3)))
+	  (list ($slot-ref stru a alpha)
+		($slot-ref stru b alpha)
+		($slot-ref stru c alpha)))
+      => '(1 2 3))
+
+    (check
+	(let ((stru (alpha 1 2 3)))
+	  ($slot-set! stru a alpha 19)
+	  ($slot-set! stru b alpha 29)
+	  ($slot-set! stru c alpha 39)
+	  (list ($slot-ref stru a alpha)
+		($slot-ref stru b alpha)
+		($slot-ref stru c alpha)))
+      => '(19 29 39))
+
+    (void))
+
+  #t)
+
+
 (parametrise ((check-test-name	'reset))
 
   (define-record-type <alpha>

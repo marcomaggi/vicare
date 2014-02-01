@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -76,7 +76,7 @@
     put-single			put-multi-2
     put-multi-3			put-multi-4)
   (import (except (vicare)
-		  is-a?)
+		  is-a? slot-ref slot-set!)
     (vicare language-extensions sentinels)
     (nausicaa language oopp)
     (nausicaa language multimethods)

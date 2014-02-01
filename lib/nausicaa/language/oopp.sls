@@ -72,7 +72,7 @@
 	       aux.<>			aux.<-)
 	      aux.))
   (import (except (vicare)
-		  is-a?)
+		  is-a? slot-ref slot-set!)
     (nausicaa language oopp auxiliary-syntaxes)
     (nausicaa language oopp conditions)
     (for (prefix (nausicaa language oopp oopp-syntax-helpers)

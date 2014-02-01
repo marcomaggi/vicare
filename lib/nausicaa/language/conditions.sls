@@ -98,7 +98,7 @@
     raise-unimplemented-error)
   (import (except (vicare)
 		  define-condition-type
-		  is-a?
+		  is-a? slot-ref slot-set!
 
 		  ;; (rnrs conditions (6))
 		  &condition

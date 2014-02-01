@@ -286,7 +286,8 @@ Example:
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
 * iklib syntaxes types::        Type syntaxes.
-* iklib syntaxes predicate::    Predicate syntaxes.
+* iklib syntaxes predicates::   Predicate syntaxes.
+* iklib syntaxes slots::        Slot getter and setter syntaxes.
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
@@ -1343,7 +1344,7 @@ A @rnrs{6} record type descriptor if the given identifier argument
 @end deffn
 
 @c page
-@node iklib syntaxes predicate
+@node iklib syntaxes predicates
 @subsection Predicate syntaxes
 
 
@@ -1370,6 +1371,134 @@ Expand to an expression which, when evaluated, returns @true{} if
 
 (is-a? 123 triplet)                     @result{} #f
 @end example
+@end deffn
+
+@c page
+@node iklib syntaxes slots
+@subsection Slot getter and setter syntaxes
+
+
+The syntaxes @func{slot-ref} and @func{slot-set!} allow both access to
+fields of Vicare's structs:
+
+@example
+(import (vicare))
+
+(define-struct color
+  (red green blue))
+
+(define S
+  (make-color 1 2 3))
+
+(slot-set! S red   color 19)
+(slot-set! S green color 29)
+(slot-set! S blue  color 39)
+
+(slot-ref S red   color)        @result{} 19
+(slot-ref S green color)        @result{} 29
+(slot-ref S blue  color)        @result{} 39
+@end example
+
+@noindent
+and access to fields of @rnrs{6} records:
+
+@example
+(import (vicare))
+
+(define-record-type color
+  (fields (mutable red)
+          (mutable green)
+          (mutable blue)))
+
+(define R
+  (make-color 1 2 3))
+
+(slot-set! R red   color 19)
+(slot-set! R green color 29)
+(slot-set! R blue  color 39)
+
+(slot-ref R red   color)        @result{} 19
+(slot-ref R green color)        @result{} 29
+(slot-ref R blue  color)        @result{} 39
+@end example
+
+
+@deffn Syntax slot-ref @meta{expr} @meta{field-name} @meta{type}
+Expand to the slot accessor of @meta{field-name} applied to @meta{expr}.
+
+@meta{expr} can be any expression evaluating to an instance of
+@meta{type}; @meta{type} must be an identifier bound to a Vicare
+struct--type descriptor or a @rnrs{6} record--type descriptor;
+@meta{field-name} must be an identifier representing the name of a
+field.
+
+When @meta{type} is bound to a struct--type descriptor: this syntax
+expands to a use of @func{struct-type-field-ref}; @ref{iklib structs
+fields, struct-type-field-ref}.
+
+When @meta{type} is bound to a record--type descriptor: this syntax
+expands to a use of @func{record-type-field-ref}; @ref{iklib records
+fields, record-type-field-ref}.
+@end deffn
+
+
+@deffn Syntax slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
+Expand to the slot mutator of @meta{field-name} applied to @meta{expr}
+and @meta{new-val}.
+
+@meta{expr} can be any expression evaluating to an instance of
+@meta{type}; @meta{type} must be an identifier bound to a Vicare
+struct--type descriptor or a @rnrs{6} record--type descriptor;
+@meta{field-name} must be an identifier representing the name of a
+field.
+
+When @meta{type} is bound to a struct--type descriptor: this syntax
+expands to a use of @func{struct-type-field-set!}; @ref{iklib structs
+fields, struct-type-field-set!}.
+
+When @meta{type} is bound to a record--type descriptor: this syntax
+expands to a use of @func{record-type-field-set!}; @ref{iklib records
+fields, record-type-field-set!}.
+@end deffn
+
+
+@deffn Syntax $slot-ref @meta{expr} @meta{field-name} @meta{type}
+Expand to the unsafe slot accessor of @meta{field-name} applied to
+@meta{expr}.
+
+@meta{expr} can be any expression evaluating to an instance of
+@meta{type}; @meta{type} must be an identifier bound to a Vicare
+struct--type descriptor or a @rnrs{6} record--type descriptor;
+@meta{field-name} must be an identifier representing the name of a
+field.
+
+When @meta{type} is bound to a struct--type descriptor: this syntax
+expands to a use of @func{$struct-type-field-ref}; @ref{iklib structs
+fields, $struct-type-field-ref}.
+
+When @meta{type} is bound to a record--type descriptor: this syntax
+expands to a use of @func{$record-type-field-ref}; @ref{iklib records
+fields, $record-type-field-ref}.
+@end deffn
+
+
+@deffn Syntax $slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
+Expand to the unsafe slot mutator of @meta{field-name} applied to
+@meta{expr} and @meta{new-val}.
+
+@meta{expr} can be any expression evaluating to an instance of
+@meta{type}; @meta{type} must be an identifier bound to a Vicare
+struct--type descriptor or a @rnrs{6} record--type descriptor;
+@meta{field-name} must be an identifier representing the name of a
+field.
+
+When @meta{type} is bound to a struct--type descriptor: this syntax
+expands to a use of @func{$struct-type-field-set!}; @ref{iklib structs
+fields, $struct-type-field-set!}.
+
+When @meta{type} is bound to a record--type descriptor: this syntax
+expands to a use of @func{$record-type-field-set!}; @ref{iklib records
+fields, $record-type-field-set!}.
 @end deffn
 
 @c page
