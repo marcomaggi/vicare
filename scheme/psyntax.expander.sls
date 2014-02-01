@@ -8932,6 +8932,75 @@
 	 "Vicare: internal error: cannot find transformer" name))))
 
 
+;;;; module core-macro-transformer: IF
+
+(define (if-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used to  expand  R6RS  IF syntaxes  from  the
+  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
+  ;;in  the context  of the  given LEXENV;  return an  expanded language
+  ;;symbolic expression.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?test ?consequent ?alternate)
+     (build-conditional no-source
+       (chi-expr ?test       lexenv.run lexenv.expand)
+       (chi-expr ?consequent lexenv.run lexenv.expand)
+       (chi-expr ?alternate  lexenv.run lexenv.expand)))
+    ((_ ?test ?consequent)
+     (build-conditional no-source
+       (chi-expr ?test       lexenv.run lexenv.expand)
+       (chi-expr ?consequent lexenv.run lexenv.expand)
+       (build-void)))
+    ))
+
+
+;;;; module core-macro-transformer: QUOTE
+
+(define (quote-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to  expand R6RS  QUOTE syntaxes  from the
+  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
+  ;;in  the context  of the  given LEXENV;  return an  expanded language
+  ;;symbolic expression.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?datum)
+     (build-data no-source
+       (syntax->datum ?datum)))))
+
+
+;;;; module core-macro-transformer: LAMBDA and CASE-LAMBDA
+
+(define (case-lambda-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand R6RS  CASE-LAMBDA syntaxes from
+  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ (?formals* ?body* ?body** ...) ...)
+     (receive (formals* body*)
+	 (chi-lambda-clause* expr-stx ?formals*
+			     (map cons ?body* ?body**)
+			     lexenv.run lexenv.expand)
+       (build-case-lambda (syntax-annotation expr-stx)
+	 formals* body*)))))
+
+(define (lambda-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand  R6RS LAMBDA syntaxes  from the
+  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
+  ;;in  the context  of the  given LEXENV;  return an  expanded language
+  ;;symbolic expression.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?formals ?body ?body* ...)
+     (receive (formals body)
+	 (chi-lambda-clause expr-stx ?formals
+			    (cons ?body ?body*)
+			    lexenv.run lexenv.expand)
+       (build-lambda (syntax-annotation expr-stx)
+	 formals body)))))
+
+
 ;;;; module core-macro-transformer: LETREC and LETREC*
 
 (module (letrec-transformer letrec*-transformer)
@@ -9028,416 +9097,13 @@
   (transformer expr-stx))
 
 
-;;;; module core-macro-transformer: struct type descriptor, setter and getter
-
-(module (struct-type-descriptor-transformer
-	 struct-type-and-struct?-transformer
-	 struct-type-field-ref-transformer
-	 struct-type-field-set!-transformer
-	 $struct-type-field-ref-transformer
-	 $struct-type-field-set!-transformer)
-
-  (define (struct-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer   function  used   to  expand   STRUCT-TYPE-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    ;;FIXME This transformer is  currently unused because the identifier
-    ;;STRUCT-TYPE-DESCRIPTOR  is bound  to  a function.   In future  the
-    ;;function  binding  will be  removed  and  replaced by  the  syntax
-    ;;binding.  (Marco Maggi; Fri Jan 31, 2014)
-    ;;
-    (define-constant __who__ 'struct-type-descriptor)
-    (syntax-match expr-stx ()
-      ((_ ?type-id)
-       (identifier? ?type-id)
-       (build-data no-source
-	 (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
-      ))
-
-  (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function   used  to   expand  STRUCT-TYPE-AND-STRUCT?
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ 'struct-type-and-struct?)
-    (syntax-match expr-stx ()
-      ((_ ?type-id ?stru)
-       (identifier? ?type-id)
-       (let ((rtd (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
-	 (chi-expr (bless
-		    `($struct/rtd? ,?stru (quote ,rtd)))
-		   lexenv.run lexenv.expand)))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (module (struct-type-field-ref-transformer
-	   $struct-type-field-ref-transformer)
-
-    (define (struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function   used  to   expand  STRUCT-TYPE-FIELD-REF
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
-      ;;
-      (%struct-type-field-ref-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
-
-    (define ($struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used   to  expand  $STRUCT-TYPE-FIELD-REF
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
-      ;;
-      (%struct-type-field-ref-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
-
-    (define (%struct-type-field-ref-transformer who safe? expr-stx lexenv.run lexenv.expand)
-      (syntax-match expr-stx ()
-	((_ ?type-id ?field-id ?stru)
-	 (and (identifier? ?type-id)
-	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
-		(field-names (struct-type-field-names rtd))
-		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
-	   (chi-expr (bless
-		      (if safe?
-			  `(struct-ref ,?stru ,field-idx)
-			`($struct-ref ,?stru ,field-idx)))
-		     lexenv.run lexenv.expand)))
-	))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (struct-type-field-set!-transformer
-	   $struct-type-field-set!-transformer)
-
-    (define (struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used   to  expand  STRUCT-TYPE-FIELD-SET!
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
-      ;;
-      (%struct-type-field-set!-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
-
-    (define ($struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used  to  expand  $STRUCT-TYPE-FIELD-SET!
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
-      ;;
-      (%struct-type-field-set!-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
-
-    (define (%struct-type-field-set!-transformer who safe? expr-stx lexenv.run lexenv.expand)
-      (syntax-match expr-stx ()
-	((_ ?type-id ?field-id ?stru ?new-value)
-	 (and (identifier? ?type-id)
-	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
-		(field-names (struct-type-field-names rtd))
-		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
-	   (chi-expr (bless
-		      (if safe?
-			  `(struct-set! ,?stru ,field-idx ,?new-value)
-			`($struct-set! ,?stru ,field-idx ,?new-value)))
-		     lexenv.run lexenv.expand)))
-	))
-
-    #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (%struct-type-id->rtd who expr-stx type-id lexenv.run)
-    ;;Given the identifier  of the struct type: find its  label then its
-    ;;syntactic binding  and return the  struct type descriptor.   If no
-    ;;binding captures the identifier or the binding does not describe a
-    ;;structure type descriptor: raise an exception.
-    ;;
-    (cond ((id->label type-id)
-	   => (lambda (label)
-		(let ((binding (label->syntactic-binding label lexenv.run)))
-		  (if (struct-type-descriptor-binding? binding)
-		      (syntactic-binding-value binding)
-		    (syntax-violation who "not a struct type" expr-stx type-id)))))
-	  (else
-	   (%raise-unbound-error who expr-stx type-id))))
-
-  (define (%field-name->field-idx who expr-stx field-names field-id)
-    ;;Given a list of symbols  FIELD-NAMES representing a struct's field
-    ;;names and an identifier FIELD-ID representing the name of a field:
-    ;;return the index of the selected field in the list.
-    ;;
-    (define field-sym (identifier->symbol field-id))
-    (let loop ((i 0) (ls field-names))
-      (if (pair? ls)
-	  (if (eq? field-sym ($car ls))
-	      i
-	    (loop ($fxadd1 i) ($cdr ls)))
-	(syntax-violation who
-	  "invalid struct type field name" expr-stx field-id))))
-
-  #| end of module |# )
-
-
-;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR, field setter and getter
-
-(module (record-type-descriptor-transformer
-	 record-constructor-descriptor-transformer
-	 record-type-field-set!-transformer
-	 record-type-field-ref-transformer
-	 $record-type-field-set!-transformer
-	 $record-type-field-ref-transformer)
-  ;;The syntactic  binding representing the R6RS  record type descriptor
-  ;;and record constructor descriptor has one of the formats:
-  ;;
-  ;;   ($rtd . (?rtd-id ?rcd-id))
-  ;;   ($rtd . (?rtd-id ?rcd-id . ?spec))
-  ;;
-  ;;where: "$rtd"  is the  symbol "$rtd"; ?RTD-ID  is the  identifier to
-  ;;which the record type descriptor is bound; ?RCD-ID is the identifier
-  ;;to which the  default record constructor descriptor  is bound; ?SPEC
-  ;;is a record of type R6RS-RECORD-TYPE-SPEC.
-  ;;
-  (import R6RS-RECORD-TYPE-SPEC)
-
-  (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer   function  used   to  expand   RECORD-TYPE-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ 'record-type-descriptor)
-    (syntax-match expr-stx ()
-      ((_ ?type-name)
-       (identifier? ?type-name)
-       (chi-expr (r6rs-record-type-descriptor-binding-rtd
-		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-		 lexenv.run lexenv.expand))
-      ))
-
-  (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function used  to expand RECORD-CONSTRUCTOR-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (define-constant __who__ 'record-constructor-descriptor)
-    (syntax-match expr-stx ()
-      ((_ ?type-name)
-       (identifier? ?type-name)
-       (chi-expr (r6rs-record-type-descriptor-binding-rcd
-		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-		 lexenv.run lexenv.expand))
-      ))
-
-;;; --------------------------------------------------------------------
-
-  (let-syntax
-      ((define-getter-transformer
-	 (syntax-rules ()
-	   ((_ ?who ?transformer ?actor-getter)
-	    (define (?transformer expr-stx lexenv.run lexenv.expand)
-	      ;;Transformer function  used to expand ?who  syntaxes from
-	      ;;the top-level  built in environment.  Expand  the syntax
-	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
-	      ;;return an expanded language symbolic expression.
-	      ;;
-	      (define-constant __who__ '?who)
-	      (syntax-match expr-stx ()
-		((_ ?type-name ?field-name ?record)
-		 (and (identifier? ?type-name)
-		      (identifier? ?field-name))
-		 (let* ((synner   (lambda (message)
-				    (syntax-violation __who__ message expr-stx ?type-name)))
-			(binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-			(accessor (?actor-getter binding ?field-name synner)))
-		   (chi-expr (bless
-			      (list accessor ?record))
-			     lexenv.run lexenv.expand)))
-		))
-	    ))))
-    (define-getter-transformer record-type-field-ref
-      record-type-field-ref-transformer  r6rs-record-type-descriptor-binding-safe-accessor)
-    (define-getter-transformer $record-type-field-ref
-      $record-type-field-ref-transformer r6rs-record-type-descriptor-binding-unsafe-accessor))
-
-;;; --------------------------------------------------------------------
-
-  (let-syntax
-      ((define-setter-transformer
-	 (syntax-rules ()
-	   ((_ ?who ?transformer ?actor-getter)
-	    (define (?transformer expr-stx lexenv.run lexenv.expand)
-	      ;;Transformer function  used to expand ?WHO  syntaxes from
-	      ;;the top-level  built in environment.  Expand  the syntax
-	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
-	      ;;return an expanded language symbolic expression.
-	      ;;
-	      (define-constant __who__ '?who)
-	      (syntax-match expr-stx ()
-		((_ ?type-name ?field-name ?record ?new-value)
-		 (and (identifier? ?type-name)
-		      (identifier? ?field-name))
-		 (let* ((synner  (lambda (message)
-				   (syntax-violation __who__ message expr-stx ?type-name)))
-			(binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
-			(mutator (?actor-getter binding ?field-name synner)))
-		   (chi-expr (bless
-			      (list mutator ?record ?new-value))
-			     lexenv.run lexenv.expand)))
-		))
-	    ))))
-    (define-setter-transformer record-type-field-set!
-      record-type-field-set!-transformer  r6rs-record-type-descriptor-binding-safe-mutator)
-    (define-setter-transformer $record-type-field-set!
-      $record-type-field-set!-transformer r6rs-record-type-descriptor-binding-unsafe-mutator))
-
-  #| end of module |# )
-
-
-;;;; module core-macro-transformer: TYPE-DESCRIPTOR
-
-(define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand TYPE-DESCRIPTOR  syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
-  ;;
-  ;;The result must be an expression evaluating to:
-  ;;
-  ;;* A Vicare  struct type descriptor if the  given identifier argument
-  ;;  is a struct type name.
-  ;;
-  ;;* A R6RS record type descriptor  if the given identifier argument is
-  ;;  a record type name.
-  ;;
-  (define-constant __who__ 'type-descriptor)
-  (syntax-match expr-stx ()
-    ((_ ?type-id)
-     (identifier? ?type-id)
-     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
-	    (binding  (label->syntactic-binding label lexenv.run)))
-       (cond ((r6rs-record-type-descriptor-binding? binding)
-	      (chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
-			lexenv.run lexenv.expand))
-
-	     ((struct-type-descriptor-binding? binding)
-	      (build-data no-source (syntactic-binding-value binding)))
-
-	     (else
-	      (syntax-violation __who__
-		"neither a struct type nor an R6RS record type"
-		expr-stx ?type-id)))))
-    ))
-
-
-;;;; module core-macro-transformer: IS-A?
-
-(define (is-a?-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand Vicare's IS-A?  syntax uses from
-  ;;the  top-level built  in environment.   Expand the  contents of  the
-  ;;syntax object  EXPR-STX in the  context of the  lexical environments
-  ;;LEXENV.RUN  and LEXENV.EXPAND,  the  result must  be an  expression.
-  ;;Return a symbolic expression.
-  ;;
-  (define-constant __who__ 'is-a?)
-  (syntax-match expr-stx ()
-    ((_ ?expr ?type-id)
-     (identifier? ?type-id)
-     (let ((label (id->label ?type-id)))
-       (unless label
-	 (%raise-unbound-error __who__ expr-stx ?type-id))
-       (let ((binding (label->syntactic-binding label lexenv.run)))
-	 (cond ((r6rs-record-type-descriptor-binding? binding)
-		(chi-expr (bless
-			   `(record-type-and-record? ,?type-id ,?expr))
-			  lexenv.run lexenv.expand))
-
-	       ((struct-type-descriptor-binding? binding)
-		(chi-expr (bless
-			   `(struct-type-and-struct? ,?type-id ,?expr))
-			  lexenv.run lexenv.expand))
-
-	       (else
-		(syntax-violation __who__
-		  "neither a struct type nor an R6RS record type"
-		  expr-stx ?type-id))))))
-    ))
-
-
-;;;; module core-macro-transformer: IF
-
-(define (if-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  R6RS's IF  syntaxes from  the
-  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
-  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
-  ;;LEXENV.EXPAND.  Return a sexp in the core language.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?test ?consequent ?alternate)
-     (build-conditional no-source
-			(chi-expr ?test       lexenv.run lexenv.expand)
-			(chi-expr ?consequent lexenv.run lexenv.expand)
-			(chi-expr ?alternate  lexenv.run lexenv.expand)))
-    ((_ ?test ?consequent)
-     (build-conditional no-source
-			(chi-expr ?test       lexenv.run lexenv.expand)
-			(chi-expr ?consequent lexenv.run lexenv.expand)
-			(build-void)))))
-
-
-;;;; module core-macro-transformer: QUOTE
-
-(define (quote-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used  to expand R6RS's QUOTE  syntaxes from the
-  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
-  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
-  ;;LEXENV.EXPAND.  Return a sexp in the core language.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?datum)
-     (build-data no-source (syntax->datum ?datum)))))
-
-
-;;;; module core-macro-transformer: LAMBDA and CASE-LAMBDA
-
-(define (case-lambda-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand R6RS's CASE-LAMBDA syntaxes from
-  ;;the top-level built in environment.  Expand the contents of EXPR-STX
-  ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
-  ;;LEXENV.EXPAND.  Return a sexp in the core language.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ (?formals* ?body* ?body** ...) ...)
-     (receive (formals* body*)
-	 (chi-lambda-clause* expr-stx ?formals*
-			     (map cons ?body* ?body**) lexenv.run lexenv.expand)
-       (build-case-lambda (syntax-annotation expr-stx) formals* body*)))))
-
-(define (lambda-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand  R6RS's LAMBDA syntaxes from the
-  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
-  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
-  ;;LEXENV.EXPAND.  Return a sexp in the core language.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?body ?body* ...)
-     (receive (formals body)
-	 (chi-lambda-clause expr-stx ?formals
-			    (cons ?body ?body*) lexenv.run lexenv.expand)
-       (build-lambda (syntax-annotation expr-stx) formals body)))))
-
-
 ;;;; module core-macro-transformer: FOREIGN-CALL
 
 (define (foreign-call-transformer expr-stx lexenv.run lexenv.expand)
   ;;Transformer function  used to expand Vicare's  FOREIGN-CALL syntaxes
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX in the  context of the lexical  environments LEXENV.RUN and
-  ;;LEXENV.EXPAND.  Return a sexp in the core language.
+  ;;from the top-level  built in environment.  Expand  the syntax object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
   ;;
   (syntax-match expr-stx ()
     ((_ ?name ?arg* ...)
@@ -10160,18 +9826,353 @@
 
   (define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
     ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
-    ;;syntaxes  from the  top-level built  in environment.   Rather than
-    ;;expanding    the   input    form:    return    an   instance    of
-    ;;SPLICE-FIRST-ENVELOPE holding the non-expanded form.
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
     ;;
     (syntax-match expr-stx ()
       ((_ ?form)
-       (begin
-	 #;(debug-print 'splice-first-envelope-for (syntax->datum ?form))
-	 (make-splice-first-envelope ?form)))
+       (make-splice-first-envelope ?form))
       ))
 
   #| end of module |# )
+
+
+;;;; module core-macro-transformer: struct type descriptor, setter and getter
+
+(module (struct-type-descriptor-transformer
+	 struct-type-and-struct?-transformer
+	 struct-type-field-ref-transformer
+	 struct-type-field-set!-transformer
+	 $struct-type-field-ref-transformer
+	 $struct-type-field-set!-transformer)
+
+  (define (struct-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer   function  used   to  expand   STRUCT-TYPE-DESCRIPTOR
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
+    ;;
+    ;;FIXME This transformer is  currently unused because the identifier
+    ;;STRUCT-TYPE-DESCRIPTOR  is bound  to  a function.   In future  the
+    ;;function  binding  will be  removed  and  replaced by  the  syntax
+    ;;binding.  (Marco Maggi; Fri Jan 31, 2014)
+    ;;
+    (define-constant __who__ 'struct-type-descriptor)
+    (syntax-match expr-stx ()
+      ((_ ?type-id)
+       (identifier? ?type-id)
+       (build-data no-source
+	 (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
+      ))
+
+  (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer  function   used  to   expand  STRUCT-TYPE-AND-STRUCT?
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
+    ;;
+    (define-constant __who__ 'struct-type-and-struct?)
+    (syntax-match expr-stx ()
+      ((_ ?type-id ?stru)
+       (identifier? ?type-id)
+       (let ((rtd (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
+	 (chi-expr (bless
+		    `($struct/rtd? ,?stru (quote ,rtd)))
+		   lexenv.run lexenv.expand)))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (module (struct-type-field-ref-transformer
+	   $struct-type-field-ref-transformer)
+
+    (define (struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
+      ;;Transformer  function   used  to   expand  STRUCT-TYPE-FIELD-REF
+      ;;syntaxes from  the top-level  built in environment.   Expand the
+      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
+      ;;return an expanded language symbolic expression.
+      ;;
+      (%struct-type-field-ref-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
+
+    (define ($struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
+      ;;Transformer  function  used   to  expand  $STRUCT-TYPE-FIELD-REF
+      ;;syntaxes from  the top-level  built in environment.   Expand the
+      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
+      ;;return an expanded language symbolic expression.
+      ;;
+      (%struct-type-field-ref-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
+
+    (define (%struct-type-field-ref-transformer who safe? expr-stx lexenv.run lexenv.expand)
+      (syntax-match expr-stx ()
+	((_ ?type-id ?field-id ?stru)
+	 (and (identifier? ?type-id)
+	      (identifier? ?field-id))
+	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
+		(field-names (struct-type-field-names rtd))
+		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
+	   (chi-expr (bless
+		      (if safe?
+			  `(struct-ref ,?stru ,field-idx)
+			`($struct-ref ,?stru ,field-idx)))
+		     lexenv.run lexenv.expand)))
+	))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (struct-type-field-set!-transformer
+	   $struct-type-field-set!-transformer)
+
+    (define (struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+      ;;Transformer  function  used   to  expand  STRUCT-TYPE-FIELD-SET!
+      ;;syntaxes from  the top-level  built in environment.   Expand the
+      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
+      ;;return an expanded language symbolic expression.
+      ;;
+      (%struct-type-field-set!-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
+
+    (define ($struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+      ;;Transformer  function  used  to  expand  $STRUCT-TYPE-FIELD-SET!
+      ;;syntaxes from  the top-level  built in environment.   Expand the
+      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
+      ;;return an expanded language symbolic expression.
+      ;;
+      (%struct-type-field-set!-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
+
+    (define (%struct-type-field-set!-transformer who safe? expr-stx lexenv.run lexenv.expand)
+      (syntax-match expr-stx ()
+	((_ ?type-id ?field-id ?stru ?new-value)
+	 (and (identifier? ?type-id)
+	      (identifier? ?field-id))
+	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
+		(field-names (struct-type-field-names rtd))
+		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
+	   (chi-expr (bless
+		      (if safe?
+			  `(struct-set! ,?stru ,field-idx ,?new-value)
+			`($struct-set! ,?stru ,field-idx ,?new-value)))
+		     lexenv.run lexenv.expand)))
+	))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%struct-type-id->rtd who expr-stx type-id lexenv.run)
+    ;;Given the identifier  of the struct type: find its  label then its
+    ;;syntactic binding  and return the  struct type descriptor.   If no
+    ;;binding captures the identifier or the binding does not describe a
+    ;;structure type descriptor: raise an exception.
+    ;;
+    (cond ((id->label type-id)
+	   => (lambda (label)
+		(let ((binding (label->syntactic-binding label lexenv.run)))
+		  (if (struct-type-descriptor-binding? binding)
+		      (syntactic-binding-value binding)
+		    (syntax-violation who "not a struct type" expr-stx type-id)))))
+	  (else
+	   (%raise-unbound-error who expr-stx type-id))))
+
+  (define (%field-name->field-idx who expr-stx field-names field-id)
+    ;;Given a list of symbols  FIELD-NAMES representing a struct's field
+    ;;names and an identifier FIELD-ID representing the name of a field:
+    ;;return the index of the selected field in the list.
+    ;;
+    (define field-sym (identifier->symbol field-id))
+    (let loop ((i 0) (ls field-names))
+      (if (pair? ls)
+	  (if (eq? field-sym ($car ls))
+	      i
+	    (loop ($fxadd1 i) ($cdr ls)))
+	(syntax-violation who
+	  "invalid struct type field name" expr-stx field-id))))
+
+  #| end of module |# )
+
+
+;;;; module core-macro-transformer: RECORD-{TYPE,CONSTRUCTOR}-DESCRIPTOR, field setter and getter
+
+(module (record-type-descriptor-transformer
+	 record-constructor-descriptor-transformer
+	 record-type-field-set!-transformer
+	 record-type-field-ref-transformer
+	 $record-type-field-set!-transformer
+	 $record-type-field-ref-transformer)
+  ;;The syntactic  binding representing the R6RS  record type descriptor
+  ;;and record constructor descriptor has one of the formats:
+  ;;
+  ;;   ($rtd . (?rtd-id ?rcd-id))
+  ;;   ($rtd . (?rtd-id ?rcd-id . ?spec))
+  ;;
+  ;;where: "$rtd"  is the  symbol "$rtd"; ?RTD-ID  is the  identifier to
+  ;;which the record type descriptor is bound; ?RCD-ID is the identifier
+  ;;to which the  default record constructor descriptor  is bound; ?SPEC
+  ;;is a record of type R6RS-RECORD-TYPE-SPEC.
+  ;;
+  (import R6RS-RECORD-TYPE-SPEC)
+
+  (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer   function  used   to  expand   RECORD-TYPE-DESCRIPTOR
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
+    ;;
+    (define-constant __who__ 'record-type-descriptor)
+    (syntax-match expr-stx ()
+      ((_ ?type-name)
+       (identifier? ?type-name)
+       (chi-expr (r6rs-record-type-descriptor-binding-rtd
+		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+		 lexenv.run lexenv.expand))
+      ))
+
+  (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+    ;;Transformer function used  to expand RECORD-CONSTRUCTOR-DESCRIPTOR
+    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+    ;;an expanded language symbolic expression.
+    ;;
+    (define-constant __who__ 'record-constructor-descriptor)
+    (syntax-match expr-stx ()
+      ((_ ?type-name)
+       (identifier? ?type-name)
+       (chi-expr (r6rs-record-type-descriptor-binding-rcd
+		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+		 lexenv.run lexenv.expand))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (let-syntax
+      ((define-getter-transformer
+	 (syntax-rules ()
+	   ((_ ?who ?transformer ?actor-getter)
+	    (define (?transformer expr-stx lexenv.run lexenv.expand)
+	      ;;Transformer function  used to expand ?who  syntaxes from
+	      ;;the top-level  built in environment.  Expand  the syntax
+	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
+	      ;;return an expanded language symbolic expression.
+	      ;;
+	      (define-constant __who__ '?who)
+	      (syntax-match expr-stx ()
+		((_ ?type-name ?field-name ?record)
+		 (and (identifier? ?type-name)
+		      (identifier? ?field-name))
+		 (let* ((synner   (lambda (message)
+				    (syntax-violation __who__ message expr-stx ?type-name)))
+			(binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+			(accessor (?actor-getter binding ?field-name synner)))
+		   (chi-expr (bless
+			      (list accessor ?record))
+			     lexenv.run lexenv.expand)))
+		))
+	    ))))
+    (define-getter-transformer record-type-field-ref
+      record-type-field-ref-transformer  r6rs-record-type-descriptor-binding-safe-accessor)
+    (define-getter-transformer $record-type-field-ref
+      $record-type-field-ref-transformer r6rs-record-type-descriptor-binding-unsafe-accessor))
+
+;;; --------------------------------------------------------------------
+
+  (let-syntax
+      ((define-setter-transformer
+	 (syntax-rules ()
+	   ((_ ?who ?transformer ?actor-getter)
+	    (define (?transformer expr-stx lexenv.run lexenv.expand)
+	      ;;Transformer function  used to expand ?WHO  syntaxes from
+	      ;;the top-level  built in environment.  Expand  the syntax
+	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
+	      ;;return an expanded language symbolic expression.
+	      ;;
+	      (define-constant __who__ '?who)
+	      (syntax-match expr-stx ()
+		((_ ?type-name ?field-name ?record ?new-value)
+		 (and (identifier? ?type-name)
+		      (identifier? ?field-name))
+		 (let* ((synner  (lambda (message)
+				   (syntax-violation __who__ message expr-stx ?type-name)))
+			(binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+			(mutator (?actor-getter binding ?field-name synner)))
+		   (chi-expr (bless
+			      (list mutator ?record ?new-value))
+			     lexenv.run lexenv.expand)))
+		))
+	    ))))
+    (define-setter-transformer record-type-field-set!
+      record-type-field-set!-transformer  r6rs-record-type-descriptor-binding-safe-mutator)
+    (define-setter-transformer $record-type-field-set!
+      $record-type-field-set!-transformer r6rs-record-type-descriptor-binding-unsafe-mutator))
+
+  #| end of module |# )
+
+
+;;;; module core-macro-transformer: TYPE-DESCRIPTOR
+
+(define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to  expand TYPE-DESCRIPTOR  syntaxes from
+  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
+  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
+  ;;language symbolic expression.
+  ;;
+  ;;The result must be an expression evaluating to:
+  ;;
+  ;;* A Vicare  struct type descriptor if the  given identifier argument
+  ;;  is a struct type name.
+  ;;
+  ;;* A R6RS record type descriptor  if the given identifier argument is
+  ;;  a record type name.
+  ;;
+  (define-constant __who__ 'type-descriptor)
+  (syntax-match expr-stx ()
+    ((_ ?type-id)
+     (identifier? ?type-id)
+     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
+	    (binding  (label->syntactic-binding label lexenv.run)))
+       (cond ((r6rs-record-type-descriptor-binding? binding)
+	      (chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
+			lexenv.run lexenv.expand))
+
+	     ((struct-type-descriptor-binding? binding)
+	      (build-data no-source (syntactic-binding-value binding)))
+
+	     (else
+	      (syntax-violation __who__
+		"neither a struct type nor an R6RS record type"
+		expr-stx ?type-id)))))
+    ))
+
+
+;;;; module core-macro-transformer: IS-A?
+
+(define (is-a?-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand  IS-A?   syntaxes  from  the
+  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
+  ;;in  the context  of the  given LEXENV;  return an  expanded language
+  ;;symbolic expression.
+  ;;
+  (define-constant __who__ 'is-a?)
+  (syntax-match expr-stx ()
+    ((_ ?expr ?type-id)
+     (identifier? ?type-id)
+     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
+	    (binding  (label->syntactic-binding label lexenv.run)))
+       (cond ((r6rs-record-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(record-type-and-record? ,?type-id ,?expr))
+			lexenv.run lexenv.expand))
+
+	     ((struct-type-descriptor-binding? binding)
+	      (chi-expr (bless
+			 `(struct-type-and-struct? ,?type-id ,?expr))
+			lexenv.run lexenv.expand))
+
+	     (else
+	      (syntax-violation __who__
+		"neither a struct type nor an R6RS record type"
+		expr-stx ?type-id)))))
+    ))
 
 
 ;;;; module core-macro-transformer
@@ -12592,6 +12593,7 @@
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)
+;;eval: (put 'build-case-lambda			'scheme-indent-function 1)
 ;;eval: (put 'build-lambda			'scheme-indent-function 1)
 ;;eval: (put 'build-foreign-call		'scheme-indent-function 1)
 ;;eval: (put 'build-sequence			'scheme-indent-function 1)
