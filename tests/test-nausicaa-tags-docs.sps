@@ -26,7 +26,7 @@
 
 #!vicare
 (import (except (vicare)
-		is-a?)
+		is-a? slot-ref slot-set!)
   (nausicaa language oopp)
   (nausicaa language builtins)
   (vicare checks))
