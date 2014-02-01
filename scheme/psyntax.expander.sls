@@ -4376,6 +4376,66 @@
 	"identifier not bound to a record type descriptor"
 	form type-name-id))))
 
+;;; --------------------------------------------------------------------
+
+(define-auxiliary-syntaxes r6rs-record-type vicare-struct-type)
+
+(define-syntax (case-object-type-binding stx)
+  ;;This syntax is meant to be used as follows:
+  ;;
+  ;;   (define-constant __who__ ...)
+  ;;   (syntax-match input-stx ()
+  ;;     ((_ ?type-id)
+  ;;      (identifier? ?type-id)
+  ;;      (case-object-type-binding __who__ input-stx ?type-id lexenv.run
+  ;;        ((r6rs-record-type)
+  ;;         ...)
+  ;;        ((vicare-struct-type)
+  ;;         ...)))
+  ;;     )
+  ;;
+  ;;where  ?TYPE-ID  is meant  to  be  an  identifier  bound to  a  R6RS
+  ;;record-type descriptor or Vicare's struct-type descriptor.
+  ;;
+  (sys.syntax-case stx (r6rs-record-type vicare-struct-type)
+    ((_ (?who ?input-stx ?type-id ?lexenv)
+	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
+	((vicare-struct-type)	?struct-body0 ?struct-body ...))
+     (and (sys.identifier? (sys.syntax ?who))
+	  (sys.identifier? (sys.syntax ?expr-stx))
+	  (sys.identifier? (sys.syntax ?type-id))
+	  (sys.identifier? (sys.syntax ?lexenv)))
+     (sys.syntax
+      (let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
+	     (binding  (label->syntactic-binding label ?lexenv)))
+	(cond ((r6rs-record-type-descriptor-binding? binding)
+	       ?r6rs-body0 ?r6rs-body ...)
+	      ((struct-type-descriptor-binding? binding)
+	       ?struct-body0 ?struct-body ...)
+	      (else
+	       (syntax-violation ?who
+		 "neither a struct type nor an R6RS record type"
+		 ?input-stx ?type-id))))))
+    ((_ (?who ?input-stx ?type-id ?lexenv ?binding)
+	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
+	((vicare-struct-type)	?struct-body0 ?struct-body ...))
+     (and (sys.identifier? (sys.syntax ?who))
+	  (sys.identifier? (sys.syntax ?expr-stx))
+	  (sys.identifier? (sys.syntax ?type-id))
+	  (sys.identifier? (sys.syntax ?lexenv)))
+     (sys.syntax
+      (let* ((label    (id->label/or-error ?who ?input-stx ?type-id))
+	     (?binding  (label->syntactic-binding label ?lexenv)))
+	(cond ((r6rs-record-type-descriptor-binding? ?binding)
+	       ?r6rs-body0 ?r6rs-body ...)
+	      ((struct-type-descriptor-binding? ?binding)
+	       ?struct-body0 ?struct-body ...)
+	      (else
+	       (syntax-violation ?who
+		 "neither a struct type nor an R6RS record type"
+		 ?input-stx ?type-id))))))
+    ))
+
 
 ;;;; marks
 
@@ -10132,19 +10192,13 @@
   (syntax-match expr-stx ()
     ((_ ?type-id)
      (identifier? ?type-id)
-     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
-	    (binding  (label->syntactic-binding label lexenv.run)))
-       (cond ((r6rs-record-type-descriptor-binding? binding)
-	      (chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
-			lexenv.run lexenv.expand))
-
-	     ((struct-type-descriptor-binding? binding)
-	      (build-data no-source (syntactic-binding-value binding)))
-
-	     (else
-	      (syntax-violation __who__
-		"neither a struct type nor an R6RS record type"
-		expr-stx ?type-id)))))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run binding)
+       ((r6rs-record-type)
+	(chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(build-data no-source
+	  (syntactic-binding-value binding)))))
     ))
 
 
@@ -10160,22 +10214,15 @@
   (syntax-match expr-stx ()
     ((_ ?expr ?type-id)
      (identifier? ?type-id)
-     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
-	    (binding  (label->syntactic-binding label lexenv.run)))
-       (cond ((r6rs-record-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(record-type-and-record? ,?type-id ,?expr))
-			lexenv.run lexenv.expand))
-
-	     ((struct-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(struct-type-and-struct? ,?type-id ,?expr))
-			lexenv.run lexenv.expand))
-
-	     (else
-	      (syntax-violation __who__
-		"neither a struct type nor an R6RS record type"
-		expr-stx ?type-id)))))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(record-type-and-record? ,?type-id ,?expr))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(struct-type-and-struct? ,?type-id ,?expr))
+		  lexenv.run lexenv.expand))))
     ))
 
 
@@ -10192,22 +10239,15 @@
     ((_ ?expr ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
-	    (binding  (label->syntactic-binding label lexenv.run)))
-       (cond ((r6rs-record-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
-			lexenv.run lexenv.expand))
-
-	     ((struct-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
-			lexenv.run lexenv.expand))
-
-	     (else
-	      (syntax-violation __who__
-		"neither a struct type nor an R6RS record type"
-		expr-stx ?type-id)))))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
+		  lexenv.run lexenv.expand))))
     ))
 
 (define (slot-set!-transformer expr-stx lexenv.run lexenv.expand)
@@ -10221,22 +10261,15 @@
     ((_ ?expr ?field-name-id ?type-id ?new-value)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
-	    (binding  (label->syntactic-binding label lexenv.run)))
-       (cond ((r6rs-record-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-			lexenv.run lexenv.expand))
-
-	     ((struct-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-			lexenv.run lexenv.expand))
-
-	     (else
-	      (syntax-violation __who__
-		"neither a struct type nor an R6RS record type"
-		expr-stx ?type-id)))))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+		  lexenv.run lexenv.expand))))
     ))
 
 (define ($slot-ref-transformer expr-stx lexenv.run lexenv.expand)
@@ -10250,22 +10283,15 @@
     ((_ ?expr ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
-	    (binding  (label->syntactic-binding label lexenv.run)))
-       (cond ((r6rs-record-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
-			lexenv.run lexenv.expand))
-
-	     ((struct-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
-			lexenv.run lexenv.expand))
-
-	     (else
-	      (syntax-violation __who__
-		"neither a struct type nor an R6RS record type"
-		expr-stx ?type-id)))))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
+		  lexenv.run lexenv.expand))))
     ))
 
 (define ($slot-set!-transformer expr-stx lexenv.run lexenv.expand)
@@ -10279,22 +10305,15 @@
     ((_ ?expr ?field-name-id ?type-id ?new-value)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (let* ((label    (id->label/or-error __who__ expr-stx ?type-id))
-	    (binding  (label->syntactic-binding label lexenv.run)))
-       (cond ((r6rs-record-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-			lexenv.run lexenv.expand))
-
-	     ((struct-type-descriptor-binding? binding)
-	      (chi-expr (bless
-			 `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-			lexenv.run lexenv.expand))
-
-	     (else
-	      (syntax-violation __who__
-		"neither a struct type nor an R6RS record type"
-		expr-stx ?type-id)))))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+		  lexenv.run lexenv.expand))))
     ))
 
 
@@ -12726,4 +12745,6 @@
 ;;eval: (put 'build-data			'scheme-indent-function 1)
 ;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
 ;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
+;;eval: (put 'case-object-type-binding		'scheme-indent-function 1)
+;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
 ;;End:

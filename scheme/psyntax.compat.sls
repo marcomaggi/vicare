@@ -20,6 +20,7 @@
     define*				define-constant
     case-define				define-record
     define-inline			define-syntax-rule
+    define-auxiliary-syntaxes
     receive				receive-and-return
     module				import
     begin0				define-values
