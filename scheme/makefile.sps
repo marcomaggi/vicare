@@ -342,6 +342,9 @@
     (fluid-let-syntax			(core-macro . fluid-let-syntax))
     (lambda					(core-macro . lambda))
     (case-lambda			(core-macro . case-lambda))
+    ;;FIXME At the next boot image  rotation this must be uncommented to
+    ;;allow  the backwards  incompatible redefinition  from function  to
+    ;;macro.  (Marco Maggi; Sun Feb 2, 2014)
     #;(struct-type-descriptor		(core-macro . struct-type-descriptor))
     (struct-type-and-struct?		(core-macro . struct-type-and-struct?))
     (struct-type-field-ref		(core-macro . struct-type-field-ref))
@@ -3768,16 +3771,18 @@
 ;;
 (time-it "the entire bootstrap process"
   (lambda ()
-    (let-values (((name* core* locs)
-		  (time-it "macro expansion"
-		    (lambda ()
-		      (parameterize ((current-library-collection bootstrap-collection))
-			(expand-all scheme-library-files))))))
-      (current-primitive-locations (lambda (x)
-;;;(pretty-print/stderr (list x (assq x locs)))
-				     (cond ((assq x locs) => cdr)
-					   (else
-					    (error 'bootstrap "no location for primitive" x)))))
+    (receive (name* core* locs)
+	(time-it "macro expansion"
+	  (lambda ()
+	    (parameterize ((current-library-collection bootstrap-collection))
+	      (expand-all scheme-library-files))))
+      (current-primitive-locations
+       (lambda (x)
+	 ;;(pretty-print/stderr (list x (assq x locs)))
+	 (cond ((assq x locs)
+		=> cdr)
+	       (else
+		(error 'bootstrap "no location for primitive" x)))))
       (let ((port (open-file-output-port boot-file-name (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()
@@ -3785,6 +3790,7 @@
 	    (debug-printf "Compiling and writing to fasl (one code object for each library form): ")
 	    (for-each (lambda (name core)
 	    		(debug-printf " ~s" name)
+			;;(debug-printf "~a\n" core)
 	    		(compile-core-expr-to-port core port))
 	      name*
 	      core*)

@@ -39,8 +39,9 @@
     struct-reset
 
     ;;FIXME This  renaming must be removed  in future (at the  next boot
-    ;;rotation?) and the identifier  STRUCT-TYPE-DESCRIPTOR bound to the
-    ;;syntax.  (Marco Maggi; Fri Jan 31, 2014)
+    ;;image rotation?)  and  the identifier STRUCT-TYPE-DESCRIPTOR bound
+    ;;to the syntax defined in the  expander.  (Marco Maggi; Fri Jan 31,
+    ;;2014)
     (rename (struct-rtd struct-type-descriptor))
 
     ;; structure inspection
