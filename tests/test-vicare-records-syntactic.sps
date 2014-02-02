@@ -756,7 +756,9 @@
   (check	;record mutator constructor with symbol argument
       (let ()
 	(define-record-type alpha
-	  (fields a b c))
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable c)))
 	(define alpha-rtd
 	  (record-type-descriptor alpha))
 	(define R
@@ -773,10 +775,14 @@
 		;field in ALPHA has the same name of a field in BETA.
       (let ()
 	(define-record-type alpha
-	  (fields a b C))
+	  (fields (mutable a)
+		  (mutable b)
+		  (mutable C)))
 	(define-record-type beta
 	  (parent alpha)
-	  (fields C d e))
+	  (fields (mutable C)
+		  (mutable d)
+		  (mutable e)))
 	(define beta-rtd
 	  (record-type-descriptor beta))
 	(define R
@@ -968,10 +974,14 @@
 
   (let ()
     (define-record-type alpha
-      (fields a b c))
+      (fields (mutable a)
+	      (mutable b)
+	      (mutable c)))
 
     (define-record-type beta
-      (fields a b c))
+      (fields (mutable a)
+	      (mutable b)
+	      (mutable c)))
 
     (check
 	(let ((stru (alpha 1 2 3)))
@@ -996,10 +1006,14 @@
 
   (let ()
     (define-record-type alpha
-      (fields a b c))
+      (fields (mutable a)
+	      (mutable b)
+	      (mutable c)))
 
     (define-record-type beta
-      (fields a b c))
+      (fields (mutable a)
+	      (mutable b)
+	      (mutable c)))
 
     (check
 	(let ((stru (alpha 1 2 3)))

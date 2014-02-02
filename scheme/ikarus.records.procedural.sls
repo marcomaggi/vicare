@@ -437,9 +437,11 @@
 	   (cond (($<rtd>-parent rtd)
 		  => (lambda (prtd)
 		       (%field-name->absolute-field-index prtd field-name-sym)))
-		 (else #f)))
-	  ((eq? field-name-sym (cdr ($vector-ref spec i)))
-	   ($fx+ i ($<rtd>-first-field-index rtd)))
+		 (else
+		  (values #f #f))))
+	  ((eq? field-name-sym ($cdr ($vector-ref spec i)))
+	   (values ($fx+ i ($<rtd>-first-field-index rtd))
+		   ($car ($vector-ref spec i))))
 	  (else
 	   (loop rtd spec ($fxadd1 i))))))
 
@@ -995,49 +997,61 @@
      (%record-actor __who__ rtd index/name mutator-who #f #f)))
 
   (define (%record-actor who rtd index/name actor-who accessor? safe?)
-    (define abs-index
-      (cond ((and (fixnum? index/name)
-		  ($fxnonnegative? index/name))
-	     (let* ((relative-field-index    index/name)
-		    (total-number-of-fields  (<rtd>-total-fields-number rtd))
-		    (abs-index               (+ relative-field-index ($<rtd>-first-field-index rtd))))
-	       (with-arguments-validation (who)
-		   ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
-		 abs-index)))
+    (receive (abs-index mutable?)
+	(cond ((and (fixnum? index/name)
+		    ($fxnonnegative? index/name))
+	       (let* ((relative-field-index    index/name)
+		      (total-number-of-fields  ($<rtd>-total-fields-number rtd))
+		      (abs-index               (+ relative-field-index ($<rtd>-first-field-index rtd))))
+		 (with-arguments-validation (who)
+		     ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
+		   (values abs-index ($car ($vector-ref ($<rtd>-fields rtd) relative-field-index))))))
 
-	    ((symbol? index/name)
-	     (or (%field-name->absolute-field-index rtd index/name)
-		 (procedure-argument-violation who
-		   "unknown field name for record-type descriptor"
-		   rtd index/name)))
+	      ((symbol? index/name)
+	       (receive (abs-index mutable?)
+		   (%field-name->absolute-field-index rtd index/name)
+		 (if abs-index
+		     (values abs-index mutable?)
+		   (procedure-argument-violation who
+		     "unknown field name for record-type descriptor"
+		     rtd index/name))))
+
+	      (else
+	       (procedure-argument-violation who
+		 "expected field index fixnum or symbol name as argument"
+		 index/name)))
+      (cond (accessor?
+	     (if safe?
+		 (lambda (obj)
+		   ;;We must verify that OBJ  is actually an R6RS record
+		   ;;instance of RTD or one of its subtypes.
+		   ;;
+		   (with-arguments-validation (actor-who)
+		       ((record			obj)
+			(record-instance-of-rtd	obj rtd))
+		     ($struct-ref obj abs-index)))
+	       (lambda (obj)
+		 ($struct-ref obj abs-index))))
+
+	    (mutable?
+	     (if safe?
+		 (lambda (obj new-value)
+		   ;;We must verify that OBJ  is actually an R6RS record
+		   ;;instance of RTD or one of its subtypes.
+		   ;;
+		   (with-arguments-validation (actor-who)
+		       ((record			obj)
+			(record-instance-of-rtd	obj rtd))
+		     ($struct-set! obj abs-index new-value)))
+	       (lambda (obj new-value)
+		 ($struct-set! obj abs-index new-value))))
 
 	    (else
+	     ;;If we  are here the  caller has requested a  mutator, but
+	     ;;the field is immutable.
 	     (procedure-argument-violation who
-	       "expected field index fixnum or symbol name as argument"
-	       index/name))))
-    (if accessor?
-	(if safe?
-	    (lambda (obj)
-	      ;;We  must verify  that  OBJ is  actually  an R6RS  record
-	      ;;instance of RTD or one of its subtypes.
-	      ;;
-	      (with-arguments-validation (actor-who)
-		  ((record			obj)
-		   (record-instance-of-rtd	obj rtd))
-		($struct-ref obj abs-index)))
-	  (lambda (obj)
-	    ($struct-ref obj abs-index)))
-      (if safe?
-	  (lambda (obj new-value)
-	    ;;We  must  verify  that  OBJ is  actually  an  R6RS  record
-	    ;;instance of RTD or one of its subtypes.
-	    ;;
-	    (with-arguments-validation (actor-who)
-		((record			obj)
-		 (record-instance-of-rtd	obj rtd))
-	      ($struct-set! obj abs-index new-value)))
-	(lambda (obj new-value)
-	  ($struct-set! obj abs-index new-value)))))
+	       "requested mutator for immutable field"
+	       rtd index/name)))))
 
   #| end of module |# )
 
