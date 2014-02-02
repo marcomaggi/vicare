@@ -169,7 +169,8 @@ Notes for revision 0.3d8
   argument either  a relative field  index, as  specified by R6RS,  or a
   symbol representing a  field's name.  In the second case:  the RTD and
   its parents are  searched for the first  matching field specification,
-  so fields of the sub-types take precedence.
+  so    fields    of    the   sub-types    take    precedence.     Added
+  UNSAFE-RECORD-ACCESSOR and UNSAFE-RECORD-MUTATOR to (vicare).
 
 * Modified syntax TYPE-DESCRIPTOR to work  on both struct type names and
   R6RS record type names:

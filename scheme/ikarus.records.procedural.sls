@@ -22,6 +22,7 @@
     (rename (<rtd>? record-type-descriptor?))
     record-constructor			record-predicate
     record-accessor			record-mutator
+    unsafe-record-accessor		unsafe-record-mutator
 
     ;; bindings for (rnrs records inspection (6))
     record?				record-rtd
@@ -41,6 +42,7 @@
 		  record-type-descriptor?
 		  record-constructor			record-predicate
 		  record-accessor			record-mutator
+		  unsafe-record-accessor		unsafe-record-mutator
 
 		  ;; bindings for (rnrs records inspection (6))
 		  record?				record-rtd
@@ -951,75 +953,93 @@
 ;;               |0, 1, 2, 3, 4, 5, 6, 7, 8|	absolute offsets of <GAMMA>
 ;;
 
-(case-define* record-accessor
-  (((rtd <rtd>?) index/name)
-   (record-accessor rtd index/name 'a-record-accessor))
-  (((rtd <rtd>?) index/name accessor-who)
-   ;;Return a function being the accessor for field INDEX/NAME of RTD.
-   ;;
-   (define abs-index
-     (cond ((and (fixnum? index/name)
-		 ($fxnonnegative? index/name))
-	    (let* ((relative-field-index    index/name)
-		   (total-number-of-fields  (<rtd>-total-fields-number rtd))
-		   (abs-index               (+ relative-field-index ($<rtd>-first-field-index rtd))))
-	      (with-arguments-validation (__who__)
-		  ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
-		abs-index)))
+(module (record-accessor
+	 record-mutator
+	 unsafe-record-accessor
+	 unsafe-record-mutator)
 
-	   ((symbol? index/name)
-	    (or (%field-name->absolute-field-index rtd index/name)
-		(procedure-argument-violation __who__
-		  "unknown field name for record-type descriptor"
-		  rtd index/name)))
+  (case-define* record-accessor
+    ;;Return a function being the  safe accessor for field INDEX/NAME of
+    ;;RTD.
+    ;;
+    (((rtd <rtd>?) index/name)
+     (%record-actor __who__ rtd index/name 'a-record-accessor #t #t))
+    (((rtd <rtd>?) index/name accessor-who)
+     (%record-actor __who__ rtd index/name accessor-who #t #t)))
 
-	   (else
-	    (procedure-argument-violation __who__
-	      "expected field index fixnum or symbol name as argument"
-	      index/name))))
-   (lambda (obj)
-     ;;We must  verify that OBJ is  actually an R6RS record  instance of
-     ;;RTD or one of its subtypes.
-     ;;
-     (with-arguments-validation (accessor-who)
-	 ((record			obj)
-	  (record-instance-of-rtd	obj rtd))
-       ($struct-ref obj abs-index)))))
+  (case-define* unsafe-record-accessor
+    ;;Return a function  being the unsafe accessor  for field INDEX/NAME
+    ;;of RTD.
+    ;;
+    (((rtd <rtd>?) index/name)
+     (%record-actor __who__ rtd index/name 'a-record-accessor #t #f))
+    (((rtd <rtd>?) index/name accessor-who)
+     (%record-actor __who__ rtd index/name accessor-who #t #f)))
 
-(case-define* record-mutator
-  (((rtd <rtd>?) index/name)
-   (record-mutator rtd index/name 'a-record-mutator))
-  (((rtd <rtd>?) index/name mutator-who)
-   ;;Return a function being the mutator for field INDEX/NAME of RTD.
-   ;;
-   (define abs-index
-     (cond ((and (fixnum? index/name)
-		 ($fxnonnegative? index/name))
-	    (let* ((relative-field-index    index/name)
-		   (total-number-of-fields  (<rtd>-total-fields-number rtd))
-		   (abs-index               (+ relative-field-index ($<rtd>-first-field-index rtd))))
-	      (with-arguments-validation (__who__)
-		  ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
-		abs-index)))
+  (case-define* record-mutator
+    ;;Return a function  being the safe mutator for  field INDEX/NAME of
+    ;;RTD.
+    ;;
+    (((rtd <rtd>?) index/name)
+     (%record-actor __who__ rtd index/name 'a-record-mutator #f #t))
+    (((rtd <rtd>?) index/name mutator-who)
+     (%record-actor __who__ rtd index/name mutator-who #f #t)))
 
-	   ((symbol? index/name)
-	    (or (%field-name->absolute-field-index rtd index/name)
-		(procedure-argument-violation __who__
-		  "unknown field name for record-type descriptor"
-		  rtd index/name)))
+  (case-define* unsafe-record-mutator
+    ;;Return a function being the unsafe mutator for field INDEX/NAME of
+    ;;RTD.
+    ;;
+    (((rtd <rtd>?) index/name)
+     (%record-actor __who__ rtd index/name 'a-record-mutator #f #f))
+    (((rtd <rtd>?) index/name mutator-who)
+     (%record-actor __who__ rtd index/name mutator-who #f #f)))
 
-	   (else
-	    (procedure-argument-violation __who__
-	      "expected field index fixnum or symbol name as argument"
-	      index/name))))
-   (lambda (obj new-value)
-     ;;We must  verify that OBJ is  actually an R6RS record  instance of
-     ;;RTD or one of its subtypes.
-     ;;
-     (with-arguments-validation (mutator-who)
-	 ((record			obj)
-	  (record-instance-of-rtd	obj rtd))
-       ($struct-set! obj abs-index new-value)))))
+  (define (%record-actor who rtd index/name actor-who accessor? safe?)
+    (define abs-index
+      (cond ((and (fixnum? index/name)
+		  ($fxnonnegative? index/name))
+	     (let* ((relative-field-index    index/name)
+		    (total-number-of-fields  (<rtd>-total-fields-number rtd))
+		    (abs-index               (+ relative-field-index ($<rtd>-first-field-index rtd))))
+	       (with-arguments-validation (who)
+		   ((absolute-field-index abs-index total-number-of-fields rtd relative-field-index))
+		 abs-index)))
+
+	    ((symbol? index/name)
+	     (or (%field-name->absolute-field-index rtd index/name)
+		 (procedure-argument-violation who
+		   "unknown field name for record-type descriptor"
+		   rtd index/name)))
+
+	    (else
+	     (procedure-argument-violation who
+	       "expected field index fixnum or symbol name as argument"
+	       index/name))))
+    (if accessor?
+	(if safe?
+	    (lambda (obj)
+	      ;;We  must verify  that  OBJ is  actually  an R6RS  record
+	      ;;instance of RTD or one of its subtypes.
+	      ;;
+	      (with-arguments-validation (actor-who)
+		  ((record			obj)
+		   (record-instance-of-rtd	obj rtd))
+		($struct-ref obj abs-index)))
+	  (lambda (obj)
+	    ($struct-ref obj abs-index)))
+      (if safe?
+	  (lambda (obj new-value)
+	    ;;We  must  verify  that  OBJ is  actually  an  R6RS  record
+	    ;;instance of RTD or one of its subtypes.
+	    ;;
+	    (with-arguments-validation (actor-who)
+		((record			obj)
+		 (record-instance-of-rtd	obj rtd))
+	      ($struct-set! obj abs-index new-value)))
+	(lambda (obj new-value)
+	  ($struct-set! obj abs-index new-value)))))
+
+  #| end of module |# )
 
 
 (define (record-predicate rtd)

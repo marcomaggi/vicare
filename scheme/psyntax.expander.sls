@@ -3480,11 +3480,11 @@
 
   (define (r6rs-record-type-descriptor-binding-unsafe-accessor binding field-name-id synner)
     (%spec-actor binding field-name-id r6rs-record-type-spec-unsafe-accessors-table
-		 'record-accessor synner))
+		 'unsafe-record-accessor synner))
 
   (define (r6rs-record-type-descriptor-binding-unsafe-mutator binding field-name-id synner)
     (%spec-actor binding field-name-id r6rs-record-type-spec-unsafe-mutators-table
-		 'record-mutator synner))
+		 'unsafe-record-mutator synner))
 
   (define (%spec-actor binding field-name-id table-getter actor-constructor synner)
     ;;Given an  R6RS record  type descriptor  binding and  an identifier

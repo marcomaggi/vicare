@@ -5305,6 +5305,20 @@ precedence:
 @end defun
 
 
+@defun unsafe-record-accessor @var{rtd} @var{index/name}
+@defunx unsafe-record-accessor @var{rtd} @var{index/name} @var{accessor-who}
+Like @func{record-accessor}, but return an unsafe field accessor that
+will not validate its arguments.
+@end defun
+
+
+@defun unsafe-record-mutator @var{rtd} @var{index/name}
+@defunx unsafe-record-mutator @var{rtd} @var{index/name} @var{mutator-who}
+Like @func{record-mutator}, but return an unsafe field mutator that will
+not validate its arguments.
+@end defun
+
+
 @deffn Syntax record-type-field-ref @meta{type-name} @meta{field-name} @meta{record}
 @deffnx Syntax record-type-field-set! @meta{type-name} @meta{field-name} @meta{record} @meta{new-value}
 Expand to an expression which accesses or mutates the field whose name
