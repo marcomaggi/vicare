@@ -5668,9 +5668,9 @@
 ;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE
 
 (module (define-record-type-macro)
-  ;;Transformer  function used  to expand  R6RS's CASE  macros from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand R6RS's DEFINE-RECORD-TYPE macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (define-constant __who__ 'define-record-type)
 
@@ -11920,7 +11920,14 @@
 
 (module (chi-body*)
   ;;The recursive function CHI-BODY* expands  the forms of a body.  Here
-  ;;is a description of the arguments.
+  ;;we  expand the  macro definitions  and the  macro uses,  but do  not
+  ;;expand  the  variable  definitions  and  trailing  expressions:  the
+  ;;variable  definitions are  accumulated  in the  argument and  return
+  ;;value  QRHS*  for  later  expansion; the  trailing  expressions  are
+  ;;accumulated  in the  argument  and return  value BODY-FORM-STX*  for
+  ;;later expansion.
+  ;;
+  ;;Here is a description of the arguments.
   ;;
   ;;BODY-FORM-STX* must be null or a list of syntax objects representing
   ;;the forms.
