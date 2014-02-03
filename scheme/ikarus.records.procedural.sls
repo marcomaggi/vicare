@@ -57,7 +57,7 @@
 		  record-reset				record-and-rtd?
 		  record-destructor-set!		record-destructor)
     (ikarus system $structs)
-    #;(vicare language-extensions syntaxes)
+    (ikarus system $symbols)
     (vicare arguments validation)
     (vicare unsafe operations))
 
@@ -633,16 +633,33 @@
 
 (module (make-record-type-descriptor)
 
-  (define-constant RTD-TABLE
-    (make-eq-hashtable))
-
+  ;;NOTE It  has been tested that  interning RTDs in a  hashtable works.
+  ;;So the code below works.
+  ;;
+  ;; (define-constant RTD-TABLE
+  ;;   (make-eq-hashtable))
+  ;;
+  ;; (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
+  ;;   (receive-and-return (rtd)
+  ;; 	?rtd
+  ;;     (hashtable-set! RTD-TABLE ?uid rtd)))
+  ;;
+  ;; (define-syntax-rule (%lookup-nongenerative-rtd ?uid)
+  ;;   (hashtable-ref RTD-TABLE ?uid #f))
+  ;;
+  ;;But  why allocate  a hashtable  when  we can  store the  RTD in  the
+  ;;"value" slot of the UID symbol?  So we try this solution below.
+  ;;
   (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
     (receive-and-return (rtd)
 	?rtd
-      (hashtable-set! RTD-TABLE ?uid rtd)))
+      ($set-symbol-value! ?uid rtd)))
 
   (define-syntax-rule (%lookup-nongenerative-rtd ?uid)
-    (hashtable-ref RTD-TABLE ?uid #f))
+    (let ((rtd ($symbol-value ?uid)))
+      (if ($unbound-object? rtd)
+	  #f
+	rtd)))
 
   (define who 'make-record-type-descriptor)
 

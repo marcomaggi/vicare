@@ -2090,6 +2090,11 @@ generated every time a @func{define-record-type} form is evaluated:
   ((f #t) (f #f)))
 @result{} #f
 @end example
+
+@quotation
+@strong{NOTE} On @value{PRJNAME}: the @code{value} slot of the symbol
+object used as @meta{uid} holds the record--type descriptor object.
+@end quotation
 @end deffn
 
 
