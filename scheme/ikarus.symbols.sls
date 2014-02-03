@@ -56,15 +56,16 @@
 		  ;; ???
 		  top-level-value top-level-bound? set-top-level-value!
 		  symbol-value symbol-bound? set-symbol-value!
-		  reset-symbol-proc! system-value system-value-gensym
+		  reset-symbol-proc! system-value
 
 		  ;; internal functions
 		  $unintern-gensym)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (vicare unsafe operations)
-    (except (ikarus system $symbols)
-	    $unintern-gensym))
+    (except (vicare system $symbols)
+	    $unintern-gensym
+	    system-value-gensym))
 
 
 ;;;; syntax helpers
