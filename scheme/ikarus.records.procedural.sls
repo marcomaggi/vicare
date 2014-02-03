@@ -186,27 +186,29 @@
 		;collected.
    ))
 
-(define (%rtd-printer S port sub-printer)
-  (define-inline (%display thing)
-    (display thing port))
-  (%display "#[rtd")
-  (%display " name=")		(%display (<rtd>-name S))
-  (%display " total-fields-number=")	(%display (<rtd>-total-fields-number S))
-  (%display " this-fields-number=")	(%display (<rtd>-fields-number S))
-  (let ((prtd (<rtd>-parent S)))
-    (if (<rtd>? prtd)
-	(begin
-	  (%display " parent-name=")
-	  (%display (<rtd>-name prtd)))
-      (begin
-	(%display " parent=")
-	(%display prtd))))
-  (%display " sealed?=")	(%display (<rtd>-sealed? S))
-  (%display " opaque?=")	(%display (<rtd>-opaque? S))
-  (%display " fields=")		(%display (<rtd>-fields  S))
-  ;;We avoid printing  the initialiser, default-protocol and default-rcd
-  ;;fields.
-  (%display "]"))
+(module ()
+  (set-rtd-printer! (type-descriptor <rtd>)
+    (lambda (S port sub-printer)
+      (define-inline (%display thing)
+	(display thing port))
+      (%display "#[rtd")
+      (%display " name=")			(%display (<rtd>-name S))
+      (%display " total-fields-number=")	(%display (<rtd>-total-fields-number S))
+      (%display " this-fields-number=")		(%display (<rtd>-fields-number S))
+      (let ((prtd (<rtd>-parent S)))
+	(if (<rtd>? prtd)
+	    (begin
+	      (%display " parent-name=")
+	      (%display (<rtd>-name prtd)))
+	  (begin
+	    (%display " parent=")
+	    (%display prtd))))
+      (%display " sealed?=")			(%display (<rtd>-sealed? S))
+      (%display " opaque?=")			(%display (<rtd>-opaque? S))
+      (%display " fields=")			(%display (<rtd>-fields  S))
+      ;;We avoid printing  the initialiser, default-protocol and default-rcd
+      ;;fields.
+      (%display "]"))))
 
 (define-struct <rcd>
   ;;R6RS record constructor descriptor.
@@ -231,16 +233,18 @@
 		;one returned by RECORD-CONSTRUCTOR.
    ))
 
-(define (%rcd-printer S port sub-printer)
-  (define-inline (%display thing)
-    (display thing port))
-  (%display "#[rcd")
-  (%display " rtd=")		(%display (<rcd>-rtd S))
-  (%display " prcd=")		(%display (<rcd>-parent-rcd S))
-  (%display " maker=")		(%display (<rcd>-maker S))
-  (%display " constructor=")	(%display (<rcd>-constructor S))
-  (%display " builder=")	(%display (<rcd>-builder S))
-  (%display "]"))
+(module ()
+  (set-rtd-printer! (type-descriptor <rcd>)
+    (lambda (S port sub-printer)
+      (define-inline (%display thing)
+	(display thing port))
+      (%display "#[rcd")
+      (%display " rtd=")		(%display (<rcd>-rtd S))
+      (%display " prcd=")		(%display (<rcd>-parent-rcd S))
+      (%display " maker=")		(%display (<rcd>-maker S))
+      (%display " constructor=")	(%display (<rcd>-constructor S))
+      (%display " builder=")		(%display (<rcd>-builder S))
+      (%display "]"))))
 
 
 ;;;; record construction helpers
@@ -727,10 +731,10 @@
 	  ;;
 	  ;;Notice that the requested NAME can be different from the one
 	  ;;in the interned RTD.
-	  (if (eq? (<rtd>-parent  rtd) parent-rtd)
-	      (if (boolean=? (<rtd>-sealed? rtd) sealed?)
-		  (if (boolean=? (<rtd>-opaque? rtd) opaque?)
-		      (if (equal? (<rtd>-fields  rtd) normalised-fields)
+	  (if (eq? ($<rtd>-parent rtd) parent-rtd)
+	      (if (boolean=? ($<rtd>-sealed? rtd) sealed?)
+		  (if (boolean=? ($<rtd>-opaque? rtd) opaque?)
+		      (if (equal? ($<rtd>-fields  rtd) normalised-fields)
 			  rtd
 			(%error "fields"))
 		    (%error "opaque"))
@@ -744,7 +748,7 @@
 
 (module (make-record-constructor-descriptor)
 
-  (define (make-record-constructor-descriptor rtd parent-rcd protocol)
+  (define* (make-record-constructor-descriptor rtd parent-rcd protocol)
     ;;Return  a   record-constructor  descriptor  specifying   a  record
     ;;constructor, which can  be used to construct record  values of the
     ;;type   specified  by   RTD,  and   which  can   be   obtained  via
@@ -757,8 +761,7 @@
     ;;PROTOCOL  must be  false  or  a function;  when  false: a  default
     ;;protocol is built, used and cached in the RTD struct.
     ;;
-    (define who 'make-record-constructor-descriptor)
-    (with-arguments-validation (who)
+    (with-arguments-validation (__who__)
 	((rtd			rtd)
 	 (protocol		protocol)
 	 (false/rcd		parent-rcd)
@@ -778,7 +781,7 @@
 						    parent-constructor-args)))
 				  initialiser))
 	     (constructor	(protocol maker)))
-	(with-arguments-validation (who)
+	(with-arguments-validation (__who__)
 	    ((constructor	constructor))
 	  (let ((builder (lambda constructor-args
 			   (%the-builder rtd constructor constructor-args))))
@@ -930,11 +933,8 @@
   #| end of module |# )
 
 
-(define (record-constructor rcd)
-  (define who 'record-constructor)
-  (with-arguments-validation (who)
-      ((rcd	rcd))
-    (<rcd>-builder rcd)))
+(define* (record-constructor (rcd <rcd>?))
+  ($<rcd>-builder rcd))
 
 
 ;;;; record accessors and mutators
@@ -1063,15 +1063,12 @@
   #| end of module |# )
 
 
-(define (record-predicate rtd)
+(define* (record-predicate (rtd <rtd>?))
   ;;Return a function being the predicate for RTD.
   ;;
-  (define who 'record-predicate)
-  (with-arguments-validation (who)
-      ((rtd	rtd))
-    (lambda (record)
-      (and ($struct? record)
-	   ($record-and-rtd? record rtd)))))
+  (lambda (record)
+    (and ($struct? record)
+	 ($record-and-rtd? record rtd))))
 
 (define (record-and-rtd? record rtd)
   ;;Vicare extension.  Return  #t if RECORD is a record  instance of RTD
@@ -1087,103 +1084,82 @@
   (let ((rtd^ ($struct-rtd record)))
     (or (eq? rtd rtd^)
 	(and (<rtd>? rtd^)
-	     (let upper-parent ((prtd^ (<rtd>-parent rtd^)))
+	     (let upper-parent ((prtd^ ($<rtd>-parent rtd^)))
 	       (and prtd^
 		    (or (eq? rtd prtd^)
-			(upper-parent (<rtd>-parent prtd^)))))))))
+			(upper-parent ($<rtd>-parent prtd^)))))))))
 
 
 ;;;; non-R6RS extensions
 
-(define (rtd-subtype? rtd prtd)
+(define* (rtd-subtype? (rtd <rtd>?) (prtd <rtd>?))
   ;;Return true if PRTD is a parent of RTD or they are equal.
   ;;
-  (define who 'rtd-subtype?)
-  (with-arguments-validation (who)
-      ((rtd	rtd)
-       (rtd	prtd))
-    (or (eq? rtd prtd)
-	(let upper-parent ((prtd^ (<rtd>-parent rtd)))
-	  (and prtd^
-	       (or (eq? prtd^ prtd)
-		   (upper-parent (<rtd>-parent prtd^))))))))
+  (or (eq? rtd prtd)
+      (let upper-parent ((prtd^ ($<rtd>-parent rtd)))
+	(and prtd^
+	     (or (eq? prtd^ prtd)
+		 (upper-parent ($<rtd>-parent prtd^)))))))
 
-(define print-r6rs-record-instance
-  (case-lambda
-   ((the-record)
-    (print-r6rs-record-instance the-record (current-error-port)))
-   ((the-record port)
-    (define who 'print-r6rs-record-instance)
-    (with-arguments-validation (who)
-	((record	the-record))
-      (let ((rtd ($struct-rtd the-record)))
-	(define (%print-fields rtd first)
-	  (let* ((fields.vec	(<rtd>-fields rtd))
-		 (fields.len	(vector-length fields.vec)))
-	    (do ((i 0     (fx+ 1 i))
-		 (j first (fx+ 1 j)))
-		((= i fields.len))
-	      (%display " ")
-	      (%display (cdr (vector-ref fields.vec i)))
-	      (%display "=")
-	      (%write ($struct-ref the-record j)))))
-	(define-inline (%display thing)
-	  (display thing port))
-	(define-inline (%write thing)
-	  (write thing port))
-	(%display (if (<rtd>-opaque? rtd)
-		      "#[opaque-r6rs-record: "
-		    "#[r6rs-record: "))
-	(%display (<rtd>-name rtd))
-	(%print-fields rtd (let upper-rtd ((rtd rtd))
-			     (let ((prtd (<rtd>-parent rtd)))
-			       (if prtd
-				   (begin
-				     (%print-fields prtd (upper-rtd prtd))
-				     (<rtd>-total-fields-number prtd))
-				 0))))
-	(%display "]"))))))
+(case-define* print-r6rs-record-instance
+  ((the-record)
+   (print-r6rs-record-instance the-record (current-error-port)))
+  (((the-record record?) (port output-port?))
+   (let ((rtd ($struct-rtd the-record)))
+     (define (%print-fields rtd first)
+       (let* ((fields.vec	($<rtd>-fields rtd))
+	      (fields.len	(vector-length fields.vec)))
+	 (do ((i 0     (fx+ 1 i))
+	      (j first (fx+ 1 j)))
+	     ((= i fields.len))
+	   (%display " ")
+	   (%display (cdr (vector-ref fields.vec i)))
+	   (%display "=")
+	   (%write ($struct-ref the-record j)))))
+     (define-inline (%display thing)
+       (display thing port))
+     (define-inline (%write thing)
+       (write thing port))
+     (%display (if ($<rtd>-opaque? rtd)
+		   "#[opaque-r6rs-record: "
+		 "#[r6rs-record: "))
+     (%display ($<rtd>-name rtd))
+     (%print-fields rtd (let upper-rtd ((rtd rtd))
+			  (let ((prtd ($<rtd>-parent rtd)))
+			    (if prtd
+				(begin
+				  (%print-fields prtd (upper-rtd prtd))
+				  ($<rtd>-total-fields-number prtd))
+			      0))))
+     (%display "]"))))
 
-(define (record-reset x)
+(define* (record-reset (x record?))
   ;;Reset to #f all the fields of a structure.
   ;;
-  (define who 'record-reset)
-  (with-arguments-validation (who)
-      ((record x))
-    ;;Remember that the first 2 fields of an R6RS record type descriptor
-    ;;have the  same meaning of  the first 2  fields of a  Vicare struct
-    ;;type descriptor.
-    (let ((len ($struct-ref ($struct-rtd x) 1)))
-      (do ((i 0 (+ 1 i)))
-	  ((= i len))
-	($struct-set! x i (void))))))
+  ;;Remember that the  first 2 fields of an R6RS  record type descriptor
+  ;;have the same meaning of the first  2 fields of a Vicare struct type
+  ;;descriptor.
+  (let ((len ($struct-ref ($struct-rtd x) 1)))
+    (do ((i 0 ($fxadd1 i)))
+	(($fx= i len))
+      ($struct-set! x i (void)))))
 
 
 ;;;; non-R6RS extensions: record destructor
 
-(define (record-destructor-set! rtd func)
+(define* (record-destructor-set! (rtd <rtd>?) (func procedure?))
   ;;Store a  function as  destructor in  a R6RS  record-type descriptor.
   ;;Return unspecified values.
   ;;
-  (define who 'record-destructor-set!)
-  (with-arguments-validation (who)
-      ((rtd		rtd)
-       (procedure	func))
-    ($set-<rtd>-destructor! rtd func)))
+  ($set-<rtd>-destructor! rtd func))
 
-(define (record-destructor rtd)
+(define* (record-destructor (rtd <rtd>?))
   ;;Return the value of the destructor field in RTD: #f or a function.
   ;;
-  (define who 'record-destructor)
-  (with-arguments-validation (who)
-      ((rtd		rtd))
-    ($<rtd>-destructor rtd)))
+  ($<rtd>-destructor rtd))
 
 
 ;;;; done
-
-(set-rtd-printer! (type-descriptor <rtd>) %rtd-printer)
-(set-rtd-printer! (type-descriptor <rcd>) %rcd-printer)
 
 )
 
