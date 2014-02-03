@@ -8965,6 +8965,8 @@
   ;;representing an expression  and return a symbolic  expression in the
   ;;expanded language.
   ;;
+  ;;At present core macros can be only expressions, not definitions.
+  ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
   ;;
