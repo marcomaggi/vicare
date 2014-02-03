@@ -38,11 +38,10 @@
     struct-field-accessor	struct-field-mutator
     struct-reset
 
-    ;;FIXME This  renaming must be removed  in future (at the  next boot
-    ;;image rotation?)  and  the identifier STRUCT-TYPE-DESCRIPTOR bound
-    ;;to the syntax defined in the  expander.  (Marco Maggi; Fri Jan 31,
-    ;;2014)
-    (rename (struct-rtd struct-type-descriptor))
+    ;;FIXME To be  removed in future (at the next  boot image rotation?)
+    ;;and  the identifier  STRUCT-TYPE-DESCRIPTOR  bound  to the  syntax
+    ;;defined in the expander.  (Marco Maggi; Fri Jan 31, 2014)
+    struct-type-descriptor
 
     ;; structure inspection
     struct-rtd
@@ -71,7 +70,7 @@
 		  struct-reset
 
 		  ;; structure inspection
-		  struct-rtd
+		  struct-rtd			struct-type-descriptor
 		  struct-name			struct-printer
 		  struct-destructor		struct-length)
     (ikarus.emergency)
@@ -81,6 +80,9 @@
     (only (vicare system $symbols)
 	  $set-symbol-value!
 	  $symbol-value))
+
+
+(define struct-type-descriptor)
 
 
 ;;;; helpers

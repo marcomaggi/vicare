@@ -254,6 +254,10 @@ Notes for revision 0.3d8
      (apply color 1 '(2 3))
      =>  #[r6rs-record: color red=1 green=2 blue=3]
 
+* BACKWARDS  INCOMPATIBILITY  The   function  STRUCT-TYPE-DESCRIPTOR  is
+  deprecated and  no more implemented.   In future this binding  will be
+  replaced by a syntax similar to RECORD-TYPE-DESCRIPTOR.
+
 * Added some experimental functions to (vicare):
 
     syntactic-binding-putprop

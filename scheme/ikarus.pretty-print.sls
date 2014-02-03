@@ -36,6 +36,8 @@
 	  get-fmt)
     (only (ikarus records procedural)
 	  print-r6rs-record-instance)
+    (only (vicare system $structs)
+	  $struct-rtd)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
@@ -278,15 +280,15 @@
   (define (boxify-struct x)
     (define (boxify-vanilla-struct x)
       (cond
-       ((record-type-descriptor? (struct-rtd x))
+       ((record-type-descriptor? ($struct-rtd x))
 	(call-with-string-output-port
 	    (lambda (port)
 	      (print-r6rs-record-instance x port))))
        ;;We do *not* handle opaque records specially.
-       #;((let ((rtd (struct-rtd x)))
-       (and (record-type-descriptor? rtd)
-       (record-type-opaque? rtd)))
-       "#<unknown>")
+       ;; ((let ((rtd ($struct-rtd x)))
+       ;; 	  (and (record-type-descriptor? rtd)
+       ;; 	       (record-type-opaque? rtd)))
+       ;; 	"#<unknown>")
        ((keyword? x)
 	(string-append "#:" (symbol->string (keyword->symbol x))))
        (else

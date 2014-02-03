@@ -24,7 +24,8 @@
 		  fasl-write)
     (ikarus system $codes)
     (only (ikarus system $structs)
-	  base-rtd)
+	  base-rtd
+	  $struct-rtd)
     (except (ikarus.code-objects)
 	    procedure-annotation)
     (vicare unsafe operations)
@@ -227,7 +228,7 @@
 			     (lambda (x) (make-graph x h))
 			   (record-type-field-names x)))
 			(else
-			 (let ((rtd (struct-rtd x)))
+			 (let ((rtd ($struct-rtd x)))
 			   (cond ((eq? rtd (base-rtd))
 				  ;;this is a struct RTD
 				  (make-graph (struct-type-name x) h)
@@ -525,7 +526,7 @@
 	((struct? x)
 	 (if (record-type-descriptor? x)
 	     (%write-r6rs-record-type-descriptor x next-mark)
-	   (let ((rtd (struct-rtd x)))
+	   (let ((rtd ($struct-rtd x)))
 	     (if (eq? rtd (base-rtd))
 		 (%write-struct-type-descriptor x next-mark)
 	       (%write-struct-instance x rtd next-mark)))))
