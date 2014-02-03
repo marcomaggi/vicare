@@ -279,6 +279,9 @@ Notes for revision 0.3d8
   not sure if  it is a good  thing.  Should the full  suite of LET-ALIAS
   and LET*-ALIAS syntaxes be added?
 
+* Added syntax  parameters.  See the documentation  node "iklib expander
+  parameters".
+
 
 Notes for revision 0.3d7
 ------------------------

@@ -2844,6 +2844,7 @@ the character.
 * iklib expander utils::            Utility functions for writing macro.
 * iklib expander clauses::          Syntax clauses helpers.
 * iklib expander ctv::              Compile-time values.
+* iklib expander parameters::       Expand--time parameters.
 @end menu
 
 @c page
@@ -4447,6 +4448,98 @@ and use its fields to produce the output of a syntax use:
 
 (get-it)        @expansion{} (quote #(1 2 3))
 @end example
+
+@c page
+@node iklib expander parameters
+@subsection Expand--time parameters
+
+
+Fluid syntaxes and compile--time values can be used to implement a sort
+of expand--time parameters, @ref{iklib parameters, Parameters}.  The
+following example shows the mechanism by defining a ``parameter''
+@samp{parm}:
+
+@example
+(import (vicare))
+
+(define-syntax (show-it stx)
+  (lambda (ctv-retriever)
+    (fprintf (current-error-port)
+             "parm ~a: ~a\n"
+             (cadr (syntax->datum stx))
+             (ctv-retriever #'parm))
+    #f))
+
+(define-fluid-syntax parm
+  (make-compile-time-value #f))
+
+(show-it "1, expect #f")
+(fluid-let-syntax ((parm (make-compile-time-value #t)))
+  (show-it "2, expect #t")
+  (fluid-let-syntax ((parm (make-compile-time-value #f)))
+    (show-it "3, expect #f"))
+  (show-it "4, expect #t"))
+(show-it "5, expect #f")
+@end example
+
+@noindent
+the output of the program is:
+
+@example
+parm 1, expect #f: #f
+parm 5, expect #f: #f
+parm 2, expect #t: #t
+parm 3, expect #f: #f
+parm 4, expect #t: #t
+@end example
+
+@noindent
+Using the @api{} described here, the example can be rewritten:
+
+@example
+(import (vicare))
+
+(define-syntax (show-it stx)
+  (fprintf (current-error-port)
+           "parm ~a: ~a\n"
+           (cadr (syntax->datum stx))
+           (syntax-parameter-value #'parm))
+  #f)
+
+(define-syntax-parameter parm #f)
+
+(show-it "1, expect #f")
+(syntax-parametrise ((parm #t))
+  (show-it "2, expect #t")
+  (syntax-parametrise ((parm #f))
+    (show-it "3, expect #f"))
+  (show-it "4, expect #t"))
+(show-it "5, expect #f")
+@end example
+
+
+@deffn Syntax define-syntax-parameter @meta{parm-id} @meta{expr}
+Define a new syntax parameter bound to the identifier @meta{parm-id}.
+The parameter is initialised to the result of evaluating the
+compile--time expression @meta{expr}.
+@end deffn
+
+
+@deffn Syntax syntax-parametrise ((@meta{parm-id} @meta{expr}) @dots{}) @metao{body} @meta{body} @dots{}
+Bind one or more syntax parameters to new compile--time values and while
+the body forms are expanded.  The arguments @meta{parm-id} must be
+identifiers previously bound to compile--time values by
+@func{define-syntax-parameter}.  The arguments @meta{expr} must be
+expressions.
+@end deffn
+
+
+@defun syntax-parameter-value @var{parm-id}
+Return the syntax parameter value bound to @var{parm-id}, which must be
+an identifier previously bound by @func{define-syntax-parameter}.  This
+function must be called only from the extent of a macro expansion; in
+practice: only by a macro transformer.
+@end defun
 
 @c page
 @node iklib shared

@@ -4113,6 +4113,110 @@
   #t)
 
 
+(parametrise ((check-test-name	'syntax-parameters))
+
+  (check	;no parametrise, ctv-retriever
+      (let ()
+	(define-syntax-parameter parm 1)
+	(define-syntax (show-it stx)
+	  (lambda (ctv-retriever)
+	    (ctv-retriever #'parm)))
+	(show-it))
+    => 1)
+
+  (check	;one parametrise, ctv-retriever
+      (let ()
+	(define-syntax-parameter parm 1)
+	(define-syntax (show-it stx)
+	  (lambda (ctv-retriever)
+	    (ctv-retriever #'parm)))
+	(syntax-parametrise ((parm 2))
+	  (show-it)))
+    => 2)
+
+  (check	;two parametrise, ctv-retriever
+      (let ()
+	(define-syntax-parameter parm 1)
+	(define-syntax (show-it stx)
+	  (lambda (ctv-retriever)
+	    (ctv-retriever #'parm)))
+	(syntax-parametrise ((parm 2))
+	  (show-it)))
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  (check	;no parametrise
+      (let ()
+  	(define-syntax-parameter parm 1)
+  	(define-syntax (show-it stx)
+	  (syntax-parameter-value #'parm))
+  	(show-it))
+    => 1)
+
+  (check	;one parametrise
+      (let ()
+  	(define-syntax-parameter parm 1)
+  	(define-syntax (show-it stx)
+  	  (syntax-parameter-value #'parm))
+  	(syntax-parametrise ((parm 2))
+  	  (show-it)))
+    => 2)
+
+  (check	;two parametrise
+      (let ()
+  	(define-syntax-parameter parm 1)
+  	(define-syntax (show-it stx)
+  	  (syntax-parameter-value #'parm))
+  	(syntax-parametrise ((parm 2))
+  	  (show-it)))
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  (check	;alternative spelling: syntax-parameterise
+      (let ()
+  	(define-syntax-parameter parm 1)
+  	(define-syntax (show-it stx)
+  	  (syntax-parameter-value #'parm))
+  	(syntax-parameterise ((parm 2))
+  	  (show-it)))
+    => 2)
+
+  (check	;alternative spelling: syntax-parameterize
+      (let ()
+  	(define-syntax-parameter parm 1)
+  	(define-syntax (show-it stx)
+  	  (syntax-parameter-value #'parm))
+  	(syntax-parameterize ((parm 2))
+  	  (show-it)))
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  (check	;documentation example
+      (with-result
+       (let ()
+	 (define-syntax (show-it stx)
+	   (syntax-parameter-value #'parm))
+	 (define-syntax-parameter parm #f)
+	 (add-result (cons 1 (show-it)))
+	 (syntax-parametrise ((parm #t))
+	   (add-result (cons 2 (show-it)))
+	   (syntax-parametrise ((parm #f))
+	     (add-result (cons 3 (show-it))))
+	   (add-result (cons 4 (show-it))))
+	 (add-result (cons 5 (show-it)))
+	 #t))
+    => '(#t ((1 . #f)
+	     (2 . #t)
+	     (3 . #f)
+	     (4 . #t)
+	     (5 . #f))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

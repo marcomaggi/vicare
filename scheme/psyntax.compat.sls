@@ -67,6 +67,7 @@
     library-version-mismatch-warning
     library-stale-warning
     file-locator-resolution-error
+    procedure-argument-violation
 
     ;; unsafe bindings
     $car $cdr

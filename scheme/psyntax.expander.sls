@@ -970,7 +970,7 @@
     compile-r6rs-top-level		boot-library-expand
 
     make-compile-time-value		compile-time-value?
-    compile-time-value-object
+    compile-time-value-object		syntax-parameter-value
 
     generate-temporaries		identifier?
     free-identifier=?			bound-identifier=?
@@ -3548,6 +3548,48 @@
   ;;
   cadr)
 
+(define (global-compile-time-value-binding-object binding)
+  (let ((lib (cadr binding))
+	(loc (cddr binding)))
+    ;;If this global binding use is the first time a binding from LIB is
+    ;;used: visit the library.
+    (unless (eq? lib '*interaction*)
+      (visit-library lib))
+    ;;FIXME The following form should really be just:
+    ;;
+    ;;   (symbol-value loc)
+    ;;
+    ;;because the value  in LOC should be the  actual compile-time value
+    ;;object.  Instead  there is at least  a case in which  the value in
+    ;;LOC is the full compile-time value:
+    ;;
+    ;;   (ctv . ?obj)
+    ;;
+    ;;It happens when the library:
+    ;;
+    ;;   (library (demo)
+    ;;     (export obj)
+    ;;     (import (vicare))
+    ;;     (define-syntax obj (make-compile-time-value 123)))
+    ;;
+    ;;is precompiled and then loaded by the program:
+    ;;
+    ;;   (import (vicare) (demo))
+    ;;   (define-syntax (doit stx)
+    ;;     (lambda (ctv-retriever) (ctv-retriever #'obj)))
+    ;;   (doit)
+    ;;
+    ;;the expansion  of "(doit)" fails  with an error because  the value
+    ;;returned  by  the  transformer  is  the  CTV  special  value.   We
+    ;;circumvent this problem  by testing below the nature  of the value
+    ;;in LOC, but it is just  a temporary workaround.  (Marco Maggi; Sun
+    ;;Jan 19, 2014)
+    ;;
+    (let ((ctv (symbol-value loc)))
+      (if (compile-time-value? ctv)
+	  (compile-time-value-object ctv)
+	ctv))))
+
 ;;; --------------------------------------------------------------------
 ;;; module bindings
 
@@ -5069,6 +5111,38 @@
   #| end of module |# )
 
 
+;;;; identifiers: syntax parameters
+
+(define current-run-lexenv
+  ;;This parameter holds  a function which is meant to  return the value
+  ;;of LEXENV.RUN  while a  user-defined macro  is being  expanded.  The
+  ;;init value below will raise an exception.
+  ;;
+  (make-parameter
+      (lambda ()
+	(syntax-violation 'current-run-lexenv
+	  "called outside the extent of a macro expansion"
+	  '(current-run-lexenv)))))
+
+(define* (syntax-parameter-value (id identifier?))
+  (let ((label (id->label id)))
+    (if label
+	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
+	  (case (syntactic-binding-type binding)
+	    ((local-ctv)
+	     (local-compile-time-value-binding-object binding))
+
+	    ((global-ctv)
+	     (global-compile-time-value-binding-object binding))
+
+	    (else
+	     (procedure-argument-violation __who__
+	       "expected identifier bound to compile-time value"
+	       id))))
+      (procedure-argument-violation __who__
+	"unbound identifier" id))))
+
+
 ;;;; utilities for identifiers
 
 (define (bound-id=? id1 id2)
@@ -5510,6 +5584,9 @@
       ((trace-define-syntax)		trace-define-syntax-macro)
       ((trace-let-syntax)		trace-let-syntax-macro)
       ((trace-letrec-syntax)		trace-letrec-syntax-macro)
+
+      ((define-syntax-parameter)	define-syntax-parameter-macro)
+      ((syntax-parametrise)		syntax-parametrise-macro)
 
       ((include)			include-macro)
       ((define-integrable)		define-integrable-macro)
@@ -8842,6 +8919,38 @@
     ))
 
 
+;;;; module non-core-macro-transformer: DEFINE-SYNTAX-PARAMETER, SYNTAX-PARAMETRISE
+
+(define (define-syntax-parameter-macro expr-stx)
+  ;;Transformer function used to expand Vicare's DEFINE-SYNTAX-PARAMETER
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?param-id ?param-expr)
+     (identifier? ?param-id)
+     (bless
+      `(define-fluid-syntax ,?param-id
+	 (make-compile-time-value ,?param-expr))))
+    ))
+
+(define (syntax-parametrise-macro expr-stx)
+  ;;Transformer      function      used     to      expand      Vicare's
+  ;;SYNTAX-PARAMETRISE-MACRO   macros  from   the  top-level   built  in
+  ;;environment.   Expand  the contents  of  EXPR-STX;  return a  syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
+     (for-all identifier? ?lhs*)
+     (bless
+      `(fluid-let-syntax ,(map (lambda (lhs rhs)
+				 (list lhs `(make-compile-time-value ,rhs)))
+			    ?lhs* ?rhs*)
+	 ,?body0 . ,?body*)))
+    ))
+
+
 ;;;; module non-core-macro-transformer: miscellanea
 
 (define (time-macro expr-stx)
@@ -11222,7 +11331,8 @@
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
-    (%do-macro-call (car bind-val) input-form-expr lexenv.run rib))
+    (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+      (%do-macro-call (car bind-val) input-form-expr lexenv.run rib)))
 
   (define (chi-global-macro bind-val input-form-expr lexenv.run rib)
     ;;This  function is  used  to  expand macro  uses  for macros  whose
@@ -11262,7 +11372,8 @@
 				 (else
 				  (assertion-violation 'chi-global-macro
 				    "Vicare: internal error: not a procedure" x)))))
-	  (%do-macro-call transformer input-form-expr lexenv.run rib)))))
+	  (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	    (%do-macro-call transformer input-form-expr lexenv.run rib))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -11271,9 +11382,9 @@
       (let ((output-form-expr (transformer
 			       ;;Put the anti-mark on the input form.
 			       (add-mark anti-mark #f input-form-expr #f))))
-	;;If  the transformer  returns  a function:  we  must apply  the
-	;;returned function  to a function acting  as compile-time value
-	;;retriever.   Such  application  must   return  a  value  as  a
+	;;If the  transformer returns  a function:  we must  apply the
+	;;returned function to a function acting as compile-time value
+	;;retriever.   Such  application  must  return a  value  as  a
 	;;transformer would do.
 	(if (procedure? output-form-expr)
 	    (%return (output-form-expr %ctv-retriever))
@@ -11320,47 +11431,7 @@
 	  ;;actual  object is  stored  in  the "value"  field  of a  loc
 	  ;;gensym.
 	  ((global-ctv)
-	   (let ((lib (cadr binding))
-		 (loc (cddr binding)))
-	     ;;If this  global binding use  is the first time  a binding
-	     ;;from LIB is used: visit the library.
-	     (unless (eq? lib '*interaction*)
-	       (visit-library lib))
-	     ;;FIXME The following form should really be just:
-	     ;;
-	     ;;   (symbol-value loc)
-	     ;;
-	     ;;because   the  value   in  LOC   should  be   the  actual
-	     ;;compile-time value  object.  Instead there is  at least a
-	     ;;case in which  the value in LOC is  the full compile-time
-	     ;;value:
-	     ;;
-	     ;;   (ctv . ?obj)
-	     ;;
-	     ;;It happens when the library:
-	     ;;
-	     ;;   (library (demo)
-	     ;;     (export obj)
-	     ;;     (import (vicare))
-	     ;;     (define-syntax obj (make-compile-time-value 123)))
-	     ;;
-	     ;;is precompiled and then loaded by the program:
-	     ;;
-	     ;;   (import (vicare) (demo))
-	     ;;   (define-syntax (doit stx)
-	     ;;     (lambda (ctv-retriever) (ctv-retriever #'obj)))
-	     ;;   (doit)
-	     ;;
-	     ;;the expansion of "(doit)" fails with an error because the
-	     ;;value  returned by  the  transformer is  the CTV  special
-	     ;;value.  We  circumvent this problem by  testing below the
-	     ;;nature of  the value in LOC,  but it is just  a temporary
-	     ;;workaround.  (Marco Maggi; Sun Jan 19, 2014)
-	     ;;
-	     (let ((ctv (symbol-value loc)))
-	       (if (compile-time-value? ctv)
-		   (compile-time-value-object ctv)
-		 ctv))))
+	   (global-compile-time-value-binding-object binding))
 
 	  ;;The given identifier is not bound to a compile-time value.
 	  (else #f))))

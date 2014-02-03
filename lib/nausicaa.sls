@@ -1563,6 +1563,13 @@
     uri-encoded-bytevector?		percent-encoded-bytevector?
     uri-encoded-string?			percent-encoded-string?
 
+    ;; syntax parameters
+    define-syntax-parameter
+    syntax-parametrise
+    syntax-parameterise
+    syntax-parameterize
+    syntax-parameter-value
+
     ;; misc
     set-cons!
     eval-for-expand
