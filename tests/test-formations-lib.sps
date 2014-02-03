@@ -151,16 +151,16 @@
     => "ciao 123")
 
   (check
-      (format #f "ciao ~:a" display)
-    => "ciao \"#<procedure display>\"")
+      (string? (format #f "ciao ~:a" display))
+    => #t)
 
   (check
       (format #f "ciao ~:s" 123)
     => "ciao 123")
 
   (check
-      (format #f "ciao ~:s" display)
-    => "ciao \"#<procedure display>\"")
+      (string? (format #f "ciao ~:s" display))
+    => #t)
 
 ;;; --------------------------------------------------------------------
 
