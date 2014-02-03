@@ -185,6 +185,15 @@ Notes for revision 0.3d8
 
      (type-descriptor color1)		=> #[rtd name=color1]
 
+* BACKWARDS INCOMPATIBILITY The  identifier STRUCT-TYPE-DESCRIPTOR is no
+  more  an   alias  of   STRUCT-RTD;  instead  it   is  a   syntax  like
+  RECORD-TYPE-DESCRIPTOR for structs:
+
+     (define-struct color
+       (red green blue))
+
+     (struct-type-descriptor color)	=> #<color rtd>
+
 * Added syntax IS-A? to (vicare):
 
      (import (vicare))
@@ -253,10 +262,6 @@ Notes for revision 0.3d8
 
      (apply color 1 '(2 3))
      =>  #[r6rs-record: color red=1 green=2 blue=3]
-
-* BACKWARDS  INCOMPATIBILITY  The   function  STRUCT-TYPE-DESCRIPTOR  is
-  deprecated and  no more implemented.   In future this binding  will be
-  replaced by a syntax similar to RECORD-TYPE-DESCRIPTOR.
 
 * Added some experimental functions to (vicare):
 

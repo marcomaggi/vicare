@@ -405,6 +405,25 @@
     (a b c))
 
 ;;; --------------------------------------------------------------------
+;;; type descriptor
+
+  (check
+      (struct-type-descriptor? (struct-type-descriptor alpha))
+    => #t)
+
+  (check
+      (struct-type-descriptor? (type-descriptor alpha))
+    => #t)
+
+  (check
+      (struct-type-descriptor? (struct-type-descriptor beta))
+    => #t)
+
+  (check
+      (struct-type-descriptor? (type-descriptor beta))
+    => #t)
+
+;;; --------------------------------------------------------------------
 ;;; predicate
 
   (check

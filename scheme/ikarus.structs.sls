@@ -38,11 +38,6 @@
     struct-field-accessor	struct-field-mutator
     struct-reset
 
-    ;;FIXME To be  removed in future (at the next  boot image rotation?)
-    ;;and  the identifier  STRUCT-TYPE-DESCRIPTOR  bound  to the  syntax
-    ;;defined in the expander.  (Marco Maggi; Fri Jan 31, 2014)
-    struct-type-descriptor
-
     ;; structure inspection
     struct-rtd
     struct-name			struct-printer
@@ -81,8 +76,6 @@
 	  $set-symbol-value!
 	  $symbol-value))
 
-
-(define struct-type-descriptor)
 
 
 ;;;; helpers

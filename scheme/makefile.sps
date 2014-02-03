@@ -342,10 +342,7 @@
     (fluid-let-syntax			(core-macro . fluid-let-syntax))
     (lambda					(core-macro . lambda))
     (case-lambda			(core-macro . case-lambda))
-    ;;FIXME At the next boot image  rotation this must be uncommented to
-    ;;allow  the backwards  incompatible redefinition  from function  to
-    ;;macro.  (Marco Maggi; Sun Feb 2, 2014)
-    #;(struct-type-descriptor		(core-macro . struct-type-descriptor))
+    (struct-type-descriptor		(core-macro . struct-type-descriptor))
     (struct-type-and-struct?		(core-macro . struct-type-and-struct?))
     (struct-type-field-ref		(core-macro . struct-type-field-ref))
     (struct-type-field-set!		(core-macro . struct-type-field-set!))
