@@ -6189,7 +6189,7 @@
 				 (gensym))
 			    ?accessor*)))
        (bless
-	`(begin
+	`(module (,?name ,?constructor ,?predicate . ,?accessor*)
 	   (define-record-type (,?name ,?constructor ,(gensym))
 	     (parent ,?super)
 	     (fields ,@(map (lambda (field aux)
@@ -6199,12 +6199,20 @@
 	     (sealed #f)
 	     (opaque #f))
 	   (define ,?predicate
+	     ;;Remember  that the  predicate has  to recognise  a simple
+	     ;;condition object embedded in a compound condition object.
 	     (condition-predicate (record-type-descriptor ,?name)))
 	   ,@(map
 		 (lambda (accessor aux)
 		   `(define ,accessor
+		      ;;Remember  that  the  accessor has  to  access  a
+		      ;;simple condition  object embedded in  a compound
+		      ;;condition object.
 		      (condition-accessor (record-type-descriptor ,?name) ,aux)))
-	       ?accessor* aux-accessor*)))))))
+	       ?accessor* aux-accessor*)
+	   #| end of module |# )
+	)))
+    ))
 
 
 ;;;; module non-core-macro-transformer: PARAMETERIZE and PARAMETRISE
