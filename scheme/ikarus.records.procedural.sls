@@ -57,7 +57,7 @@
 		  record-reset				record-and-rtd?
 		  record-destructor-set!		record-destructor)
     (ikarus system $structs)
-    (vicare language-extensions syntaxes)
+    #;(vicare language-extensions syntaxes)
     (vicare arguments validation)
     (vicare unsafe operations))
 
@@ -364,14 +364,15 @@
 
 ;;;; helpers
 
-(define-constant $error-message-expected-rtd
+(define-constant ERROR-MESSAGE-EXPECTED-RTD
   "expected record-type descriptor as argument")
 
-(define-constant $error-message-expected-rcd
-  "expected record-constructor descriptor as argument")
-
-(define-constant $error-message-expected-record
+(define-constant ERROR-MESSAGE-EXPECTED-RECORD
   "expected record as argument")
+
+(define (field-index? obj)
+  (and (fixnum? obj)
+       ($fxnonnegative? obj)))
 
 (define (%fields-specification-vector? V)
   ;;Return  true if  V is  valid as  vector specifying  the fields  of a
@@ -427,8 +428,9 @@
 (define (%field-name->absolute-field-index rtd field-name-sym)
   ;;Given a  record-type descriptor  and a  symbol representing  a field
   ;;name: search the hierarchy of RTDs for a field matching the selected
-  ;;name and  return its absolute index.   When a matching field  is not
-  ;;found the return value is false.
+  ;;name and return 2 values: its absolute index; a boolean, true if the
+  ;;field is mutable .  When a matching field is not found: return false
+  ;;and false.
   ;;
   (let loop ((rtd  rtd)
 	     (spec ($<rtd>-fields rtd))
@@ -450,7 +452,7 @@
 
 (define-argument-validation (rtd who obj)
   (<rtd>? obj)
-  (procedure-argument-violation who $error-message-expected-rtd obj))
+  (procedure-argument-violation who ERROR-MESSAGE-EXPECTED-RTD obj))
 
 (define-argument-validation (false/non-sealed-parent-rtd who obj)
   (or (not obj)
@@ -468,7 +470,7 @@
 
 (define-argument-validation (record who obj)
   (%record-object? obj)
-  (procedure-argument-violation who $error-message-expected-record obj))
+  (procedure-argument-violation who ERROR-MESSAGE-EXPECTED-RECORD obj))
 
 (define-argument-validation (non-opaque-record who obj)
   (record? obj)
@@ -519,7 +521,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (index who obj)
-  (and (fixnum? obj) ($fxnonnegative? obj))
+  (field-index? obj)
   (procedure-argument-violation who "expected non-negative fixnum as field index argument" obj))
 
 (define-argument-validation (absolute-field-index who abs-index max-index rtd relative-field-index)
@@ -559,27 +561,20 @@
   (and ($struct? x)
        (let ((rtd ($struct-rtd x)))
 	 (and (<rtd>? rtd)
-	      (not (<rtd>-opaque? rtd))))))
+	      ($<rtd>-non-opaque? rtd)))))
 
-(define (record-rtd x)
-  (define who 'record-rtd)
-  (with-arguments-validation (who)
-      ((non-opaque-record x))
-    ($struct-rtd x)))
+(define ($<rtd>-non-opaque? rtd)
+  (not ($<rtd>-opaque? rtd)))
+
+(define* (record-rtd (x record?))
+  ($struct-rtd x))
 
 
 ;;;; record-type descriptor inspection
 
-#;(define record-type-descriptor? <rtd>?)
-
-(define-syntax define-rtd-inspector
-  (syntax-rules ()
-    ((_ ?procname ?accessor)
-     (define (?procname rtd)
-       (define who '?procname)
-       (with-arguments-validation (who)
-	   ((rtd	rtd))
-	 (?accessor rtd))))))
+(define-syntax-rule (define-rtd-inspector ?procname ?accessor)
+  (define* (?procname (rtd <rtd>?))
+    (?accessor rtd)))
 
 (define-inline (not-<rtd>-uid rtd)
   (not (<rtd>-uid rtd)))
@@ -602,45 +597,38 @@
 ;;
 (define-rtd-inspector record-type-uid	<rtd>-uid)
 
-(define (record-type-field-names rtd)
+(define* (record-type-field-names (rtd <rtd>?))
   ;;Return a vector holding one Scheme symbol for each field of RTD, not
   ;;including fields  of the  parents; the order  of the symbols  is the
   ;;same of the order of the fields in the RTD definition.
   ;;
-  (define who 'record-type-field-names)
-  (with-arguments-validation (who)
-      ((rtd	rtd))
-    (let* ((fields-vector	(<rtd>-fields rtd))
-	   (number-of-fields	($vector-length fields-vector)))
-      (let next-field ((v ($make-vector number-of-fields))
-		       (i 0))
-	(if ($fx= i number-of-fields)
-	    v
-	  (begin
-	    ($vector-set! v i ($cdr ($vector-ref fields-vector i)))
-	    (next-field v ($fxadd1 i))))))))
+  (let* ((fields-vector     ($<rtd>-fields rtd))
+	 (number-of-fields  ($vector-length fields-vector)))
+    (let next-field ((v ($make-vector number-of-fields))
+		     (i 0))
+      (if ($fx= i number-of-fields)
+	  v
+	(begin
+	  ($vector-set! v i ($cdr ($vector-ref fields-vector i)))
+	  (next-field v ($fxadd1 i)))))))
 
-(define (record-field-mutable? rtd field-index)
+(define* (record-field-mutable? (rtd <rtd>?) (field-index field-index?))
   ;;Return true if field FIELD-INDEX of RTD is mutable.
   ;;
-  (define who 'record-field-mutable?)
-  (with-arguments-validation (who)
-      ((rtd	rtd)
-       (index	field-index))
-    (let* ((prtd			(<rtd>-parent rtd))
-	   (absolute-field-index	(if prtd
-					    (+ field-index (<rtd>-total-fields-number prtd))
-					  field-index)))
-      (cond ((not (fixnum? absolute-field-index))
-	     (procedure-argument-violation who
-	       "field index out of range" field-index))
-	    ((fx<? absolute-field-index (<rtd>-total-fields-number rtd))
-	     ;;Remember that the RTD structure holds a normalised vector
-	     ;;of field specifications.
-	     ($car ($vector-ref (<rtd>-fields rtd) field-index)))
-	    (else
-	     (procedure-argument-violation who
-	       "relative field index out of range for record type" field-index))))))
+  (let* ((prtd			($<rtd>-parent rtd))
+	 (absolute-field-index	(if prtd
+				    (+ field-index ($<rtd>-total-fields-number prtd))
+				  field-index)))
+    (cond ((not (fixnum? absolute-field-index))
+	   (procedure-argument-violation __who__
+	     "field index out of range" field-index))
+	  (($fx< absolute-field-index ($<rtd>-total-fields-number rtd))
+	   ;;Remember that the RTD structure holds a normalised vector
+	   ;;of field specifications.
+	   ($car ($vector-ref ($<rtd>-fields rtd) field-index)))
+	  (else
+	   (procedure-argument-violation __who__
+	     "relative field index out of range for record type" field-index)))))
 
 
 (module (make-record-type-descriptor)
@@ -648,12 +636,12 @@
   (define-constant RTD-TABLE
     (make-eq-hashtable))
 
-  (define-inline (%intern-nongenerative-rtd! ?uid ?rtd)
-    (let ((rtd ?rtd))
-      (hashtable-set! RTD-TABLE ?uid rtd)
-      rtd))
+  (define-syntax-rule (%intern-nongenerative-rtd! ?uid ?rtd)
+    (receive-and-return (rtd)
+	?rtd
+      (hashtable-set! RTD-TABLE ?uid rtd)))
 
-  (define-inline (%lookup-nongenerative-rtd ?uid)
+  (define-syntax-rule (%lookup-nongenerative-rtd ?uid)
     (hashtable-ref RTD-TABLE ?uid #f))
 
   (define who 'make-record-type-descriptor)
@@ -671,12 +659,12 @@
 	 (opaque			opaque?)
 	 (uid				uid)
 	 (fields-specification-vector	fields))
-      (let* ((normalised-fields (%normalise-fields-vector fields))
-	     (rtd (if (symbol? uid)
-		      (%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields fields)
-		    (%generate-rtd name parent uid sealed? opaque? normalised-fields))))
-	(set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))
-	rtd)))
+      (let ((normalised-fields (%normalise-fields-vector fields)))
+	(receive-and-return (rtd)
+	    (if (symbol? uid)
+		(%make-nongenerative-rtd name parent uid sealed? opaque? normalised-fields fields)
+	      (%generate-rtd name parent uid sealed? opaque? normalised-fields))
+	  ($set-<rtd>-initialiser! rtd (%make-record-initialiser rtd))))))
 
   (define (%generate-rtd name parent-rtd uid sealed? opaque? normalised-fields)
     ;;Build and return a new instance of RTD struct.
@@ -690,7 +678,8 @@
 		      (void) #;initialiser
 		      #f #;default-protocol
 		      #f #;default-rcd
-		      #f #;destructor )
+		      #f #;destructor
+		      )
 	(make-<rtd> name
 		    (fx+ fields-number (<rtd>-total-fields-number parent-rtd))
 		    fields-number
@@ -699,7 +688,8 @@
 		    (void) #;initialiser
 		    #f #;default-protocol
 		    #f #;default-rcd
-		    #f #;destructor ))))
+		    #f #;destructor
+		    ))))
 
   (define (%make-nongenerative-rtd name parent-rtd uid sealed? opaque? normalised-fields fields)
     ;;Build  and return  a  new instance  of  RTD or  return an  already
