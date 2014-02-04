@@ -11993,12 +11993,20 @@
 
 (module (chi-body*)
   ;;The recursive function CHI-BODY* expands  the forms of a body.  Here
-  ;;we  expand the  macro definitions  and the  macro uses,  but do  not
-  ;;expand  the  variable  definitions  and  trailing  expressions:  the
-  ;;variable  definitions are  accumulated  in the  argument and  return
-  ;;value  QRHS*  for  later  expansion; the  trailing  expressions  are
-  ;;accumulated  in the  argument  and return  value BODY-FORM-STX*  for
-  ;;later expansion.
+  ;;we  expand:
+  ;;
+  ;;* User-defined the macro definitions and uses.
+  ;;
+  ;;* Non-core macro uses.
+  ;;
+  ;;*  Basic  language  syntaxes: LIBRARY,  MODULE,  BEGIN,  STALE-WHEN,
+  ;;  IMPORT, EXPORT.
+  ;;
+  ;;but  expand neither  the core  macros nor  the variable  definitions
+  ;;(DEFINE forms)  and trailing  expressions: the  variable definitions
+  ;;are accumulated  in the  argument and return  value QRHS*  for later
+  ;;expansion; the trailing expressions  are accumulated in the argument
+  ;;and return value BODY-FORM-STX* for later expansion.
   ;;
   ;;Here is a description of the arguments.
   ;;
