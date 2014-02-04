@@ -110,6 +110,12 @@
 ;;    Ph.D. thesis.  Department of Computer Science, Indiana University.
 ;;    August 1999.
 ;;
+;;A discussion of  syntax parameters as implemented in Racket  is in the
+;;paper:
+;;
+;;[6] Eli  Barzilay, Ryan  Culpepper, Matthew  Flatt. "Keeping  it clean
+;;    with syntax parameters".  2011.
+;;
 
 
 ;;;; introduction: evaluation times
