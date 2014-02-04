@@ -5612,7 +5612,7 @@
       ((with-implicits)			with-implicits-macro)
       ((set-cons!)			set-cons!-macro)
 
-      ((eval-for-expand)		eval-for-expand-macro)
+      ((begin-for-expand)		begin-for-expand-macro)
 
       ;; non-Scheme style syntaxes
       ((while)				while-macro)
@@ -6425,15 +6425,15 @@
 
 ;;;; module non-core-macro-transformer: WITH-IMPLICITS
 
-(define (eval-for-expand-macro expr-stx)
-  ;;Transformer function used to  expand Vicare's EVAL-FOR-EXPAND macros
+(define (begin-for-expand-macro expr-stx)
+  ;;Transformer function used to  expand Vicare's BEGIN-FOR-EXPAND macros
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
      (bless
-      `(define-syntax ,(gensym "eval-for-expand")
+      `(define-syntax ,(gensym "begin-for-expand")
 	 (begin ,?body0 ,@?body* values))))
     ))
 

@@ -1693,12 +1693,12 @@ object.  It is meant to be used as follows:
 @end deffn
 
 
-@deffn Syntax eval-for-expand @metao{body} @meta{body} @dots{}
-Evaluate the @meta{body} forms at expand time.  An
-@func{eval-for-expand} form counts a definition in a body.
-
-Notice that definitions in the body are @strong{not} visible by other
-code evaluated for expand.
+@deffn Syntax begin-for-expand @metao{body} @meta{body} @dots{}
+@deffnx Syntax eval-for-expand @metao{body} @meta{body} @dots{}
+Evaluate the @meta{body} forms at expand time.  A
+@func{begin-for-expand} form counts as a definition in a body.  Notice
+that definitions in the body are @strong{not} visible by other code
+evaluated for expand.
 @end deffn
 
 
@@ -1815,7 +1815,7 @@ example will also work:
 (define-syntax (doit stx)
   (syntactic-binding-getprop #'ciao 'a))
 
-(eval-for-expand
+(begin-for-expand
   (syntactic-binding-putprop #'ciao 'a 123))
 
 (doit)          @result{} 123
@@ -1843,7 +1843,7 @@ we can do:
 (let-syntax ((ciao (lambda (stx) #t)))
   (define-syntax (doit stx)
     (syntactic-binding-getprop #'ciao 'a))
-  (eval-for-expand
+  (begin-for-expand
     (syntactic-binding-putprop #'ciao 'a 123))
   (doit))
 @result{} 123
@@ -1858,7 +1858,7 @@ To define a binding property for a lexical variable bound by
 (define-syntax (doit stx)
   (syntactic-binding-getprop #'ciao 'a))
 
-(eval-for-expand
+(begin-for-expand
   (syntactic-binding-putprop #'ciao 'a 123))
 
 (doit)          @result{} 123
@@ -1871,7 +1871,7 @@ and for one bound by @func{let}:
 (let ((ciao "ciao"))
   (define-syntax (doit stx)
     (syntactic-binding-getprop #'ciao 'a))
-  (eval-for-expand
+  (begin-for-expand
     (syntactic-binding-putprop #'ciao 'a 123))
   (doit))
 @result{} 123

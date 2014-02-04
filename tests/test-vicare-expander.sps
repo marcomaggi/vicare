@@ -4056,7 +4056,7 @@
 	  #t)
 	(define-syntax (doit stx)
 	  (syntactic-binding-getprop #'ciao 'a))
-	(eval-for-expand
+	(begin-for-expand
 	  (syntactic-binding-putprop #'ciao 'a 123))
 	(doit))
     => 123)
@@ -4080,7 +4080,7 @@
       (let-syntax ((ciao (lambda (stx) #t)))
 	(define-syntax (doit stx)
 	  (syntactic-binding-getprop #'ciao 'a))
-	(eval-for-expand
+	(begin-for-expand
 	  (syntactic-binding-putprop #'ciao 'a 123))
 	(doit))
     => 123)
@@ -4093,7 +4093,7 @@
 	(define ciao "ciao")
 	(define-syntax (doit stx)
 	  (syntactic-binding-getprop #'ciao 'a))
-	(eval-for-expand
+	(begin-for-expand
 	  (syntactic-binding-putprop #'ciao 'a 123))
 	(doit))
     => 123)
@@ -4105,7 +4105,7 @@
       (let ((ciao "ciao"))
 	(define-syntax (doit stx)
 	  (syntactic-binding-getprop #'ciao 'a))
-	(eval-for-expand
+	(begin-for-expand
 	  (syntactic-binding-putprop #'ciao 'a 123))
 	(doit))
     => 123)

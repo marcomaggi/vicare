@@ -451,7 +451,8 @@
     (include				(macro . include))
     (set-cons!				(macro . set-cons!))
 ;;;
-    (eval-for-expand			(macro . eval-for-expand))
+    (begin-for-expand			(macro . begin-for-expand))
+    (eval-for-expand			(macro . begin-for-expand))
 ;;;
     (__who__				($fluid . __who__))
     (return				($fluid . return))
@@ -2307,6 +2308,7 @@
     (set-cons!					i v $language)
 ;;;
     (eval-for-expand				i v $language)
+    (begin-for-expand				i v $language)
 ;;;
     (__who__					i v $language)
     (return					i v $language)
