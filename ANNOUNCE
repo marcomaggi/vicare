@@ -40,6 +40,8 @@ this project has a mailing list:
 Notes for revision 0.3d8
 ------------------------
 
+Many backwards incompatibilities... life is hard!
+
 * Added     documentation     for    the     previously     undocumented
   MAKE-COMPILE-TIME-VALUE  and  a  general  explanation of  how  to  use
   compile-time values.  See the documentation node "iklib expander ctv".
@@ -281,6 +283,10 @@ Notes for revision 0.3d8
 
 * Added syntax  parameters.  See the documentation  node "iklib expander
   parameters".
+
+* BACKWARDS  INCOMPATIBILITY The  identifier  "__who__" is  now a  fluid
+  syntax exported by (vicare).  This change should not cause significant
+  problems: most of the code should just work.
 
 
 Notes for revision 0.3d7

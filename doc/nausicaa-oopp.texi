@@ -3620,18 +3620,9 @@ equivalent to @func{define} as defined by @rnrs{6}; an untagged binding
 is equivalent to a binding tagged with @class{top}.
 
 @cindex @code{__who__}
-When the syntax is used for function definition, the @meta{body} forms
-are enclosed in a @func{let-constants} syntax as follows:
-
-@example
-(let-constants ((__who__ (quote @meta{id})))
-  @metao{body} @meta{body} @dots{})
-@end example
-
-@noindent
-so the binding @code{__who__} is available in the body forms to
-reference a symbol representing the function's name.  This is useful
-when raising exceptions with condition type @condition{who}.
+When the syntax is used for function definition: the fluid identifier
+syntax @code{__who__} is bound to the quoted function name.  This is
+useful when raising exceptions with condition type @condition{who}.
 
 When the syntax is used for function definition and procedure arguments
 validation, as defined by @library{vicare arguments validation}, is
@@ -3740,12 +3731,13 @@ arguments.  It expands as follows:
 (case-define/tags @meta{who}
   @meta{cl-clause} ...)
 @expansion{} (define @meta{who}
-      (let-constants ((__who__ (quote @meta{who})))
+      (fluid-let-syntax
+          ((__who__ (identifier-syntax (quote @meta{who}))))
         (case-lambda/tags @meta{cl-clause} ...)))
 @end example
 
 @noindent
-so the identifier @code{__who__} is available as argument for
+so the fluid syntax @code{__who__} is available as argument for
 @condition{who} condition objects.
 @end deffn
 

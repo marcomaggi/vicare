@@ -1317,12 +1317,12 @@
     ((_ ((?who ?rv-tag) . ?formals) ?body0 ?body ...)
      (all-identifiers? #'(?who ?rv-tag))
      (with-syntax
-	 ((WHO (datum->syntax #'?who '__who__))
-	  (FUN (identifier-prefix "the-" #'?who)))
+	 ((FUN (identifier-prefix "the-" #'?who)))
        #'(module (?who)
 	   (define FUN
 	     (lambda/tags ((_ ?rv-tag) . ?formals)
-	       (let-constants ((WHO '?who))
+	       (fluid-let-syntax
+		   ((__who__ (identifier-syntax (quote ?who))))
 		 ?body0 ?body ...)))
 	   (define-syntax* (?who stx)
 	     (syntax-case stx ()
@@ -1343,23 +1343,21 @@
     ;;
     ((_ ((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
      (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
-     (with-syntax
-	 ((WHO (datum->syntax #'?who '__who__)))
-       #'(define ?who
-	   (lambda/tags ((_ ?rv-tag0 ?rv-tag ...) . ?formals)
-	     (let-constants ((WHO '?who))
-	       ?body0 ?body ...)))))
+     #'(define ?who
+	 (lambda/tags ((_ ?rv-tag0 ?rv-tag ...) . ?formals)
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote ?who))))
+	     ?body0 ?body ...))))
 
     ;;Function definition.
     ;;
     ((_ (?who . ?formals) ?body0 ?body ...)
      (identifier? #'?who)
-     (with-syntax
-	 ((WHO (datum->syntax #'?who '__who__)))
-       #'(define ?who
-	   (lambda/tags ?formals
-	     (let-constants ((WHO '?who))
-	       ?body0 ?body ...)))))
+     #'(define ?who
+	 (lambda/tags ?formals
+	   (fluid-let-syntax
+	       ((__who__ (identifier-syntax (quote ?who))))
+	     ?body0 ?body ...))))
 
     (_
      (synner "syntax error in DEFINE/TAGS"))))
@@ -1408,12 +1406,12 @@
   (syntax-case stx ()
     ((_ ?who (?formals ?body0 ?body ...) ...)
      (identifier? #'?who)
-     (with-syntax
-	 ((WHO (datum->syntax #'?who '__who__)))
-       #'(define ?who
-	   (let-constants ((WHO '?who))
-	     (case-lambda/tags
-	       (?formals ?body0 ?body ...) ...)))))))
+     #'(define ?who
+	 (fluid-let-syntax
+	     ((__who__ (identifier-syntax (quote ?who))))
+	   (case-lambda/tags
+	     (?formals ?body0 ?body ...) ...))))
+    ))
 
 
 ;;;; convenience syntaxes with tags: LET and similar

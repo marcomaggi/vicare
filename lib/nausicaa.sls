@@ -1588,6 +1588,7 @@
     lambda*
     case-lambda*
     case-define*
+    __who__
 
 
 ;;;; bindings from (nausicaa language oopp)

@@ -533,19 +533,19 @@
     (check (I next)	=> 2)
     (check
     	(try
-	    (I next)
-	  (catch E
-	    (&stop-iteration
-	     (E iterator))
-	    (else E)))
+    	    (I next)
+    	  (catch E
+    	    (&stop-iteration
+    	     (E iterator))
+    	    (else E)))
       => I)
     (check	;once it is over, it is over forever
     	(try
-	    (I next)
-	  (catch E
-	    (&stop-iteration
-	     (E iterator))
-	    (else E)))
+    	    (I next)
+    	  (catch E
+    	    (&stop-iteration
+    	     (E iterator))
+    	    (else E)))
       => I)
     #f)
 

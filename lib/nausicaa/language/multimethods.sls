@@ -649,12 +649,12 @@
 	    (with-syntax ((TABLE-KEY	table-key)
 			  ((ARG ...)	(reverse arg-ids))
 			  ((TYPE ...)	(reverse type-ids))
-			  (BODY		body-stx)
-			  (WHO		(datum->syntax #'?generic-function-id '__who__)))
+			  (BODY		body-stx))
 	      #'(define dummy ;to make it a definition
 		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
 			      (type.method-lambda ((ARG TYPE) ...)
-						  (let-constants ((WHO '?generic-function-id))
+						  (fluid-let-syntax
+						      ((__who__ (identifier-syntax (quote ?generic-function-id))))
 						    . BODY))))))
 
 	   ;;Tagged return values.
@@ -663,12 +663,12 @@
 	    (with-syntax ((TABLE-KEY	table-key)
 			  ((ARG ...)	(reverse arg-ids))
 			  ((TYPE ...)	(reverse type-ids))
-			  (BODY		body-stx)
-			  (WHO		(datum->syntax #'?generic-function-id '__who__)))
+			  (BODY		body-stx))
 	      #'(define dummy ;to make it a definition
 		  (add-method ?generic-function-id TABLE-KEY (TYPE ...)
 			      (type.method-lambda ((_ ?rv-tag0 ?rv-tag ...) (ARG TYPE) ...)
-						  (let-constants ((WHO '?generic-function-id))
+						  (fluid-let-syntax
+						      ((__who__ (identifier-syntax (quote ?generic-function-id))))
 						    . BODY))))))
 	   ))
 	(((?arg ?type) . ?formals)
