@@ -529,7 +529,7 @@
 ;;A binding representing  R6RS's record type descriptor  exported by the
 ;;boot image has the format:
 ;;
-;;     ($core-rtd . (?rtd-sym ?rcd-sym))
+;;   ($core-rtd . (?rtd-sym ?rcd-sym))
 ;;
 ;;where: "$core-rtd"  is the  symbol "$core-rtd";  ?RTD-SYM is  a symbol
 ;;representing  the name  of the  identifier  to which  the record  type
@@ -4625,7 +4625,7 @@
 ;;Notice that both SX and SY would be shift marks.
 ;;
 ;;All   this  work   is  performed   by  the   functions  ADD-MARK   and
-;;DO-MACRO-CALL.
+;;%DO-MACRO-CALL.
 ;;
 
 (module (join-wraps)
@@ -5121,8 +5121,18 @@
     (property-list (%get-label __who__ id)))
 
   (define (%get-label who id)
-    (or (id->label id)
-	(assertion-violation who "identifier is not bound" id)))
+    (cond ((id->label id)
+	   => (lambda (label)
+		(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
+		  (case (syntactic-binding-type binding)
+		    ((global global-macro global-macro! global-ctv)
+		     (let ((lib (cddr binding)))
+		       (unless (eq? lib '*interaction*)
+			 (visit-library lib))))
+		    ))
+		label))
+	  (else
+	   (assertion-violation who "identifier is not bound" id))))
 
   #| end of module |# )
 
@@ -5182,7 +5192,7 @@
 ;;
 
 (define-constant *UNSAFE-VARIANT-COOKIE*
-  'vicare:expander-unsafe-variant)
+  'vicare:expander:unsafe-variant)
 
 
 ;;;; identifiers: predicates axiliary functions API
@@ -5242,24 +5252,39 @@
 ;;
 
 (define-constant *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*
-  'vicare:expander-predicate-procedure-argument-validation)
+  'vicare:expander:predicate-procedure-argument-validation)
 
 (define-constant *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
-  'vicare:expander-predicate-return-value-validation)
+  'vicare:expander:predicate-return-value-validation)
 
 
 ;;;; identifiers: syntax parameters
 
 (define current-run-lexenv
   ;;This parameter holds  a function which is meant to  return the value
-  ;;of LEXENV.RUN  while a  user-defined macro  is being  expanded.  The
-  ;;init value below will raise an exception.
+  ;;of LEXENV.RUN while a macro is being expanded.
+  ;;
+  ;;The  default  value will  return  null,  which represents  an  empty
+  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING: the
+  ;;mapping   label/binding  is   performed   only   in  the   top-level
+  ;;environment.
+  ;;
+  ;;Another possibility we could think of is to use as default value the
+  ;;function:
+  ;;
+  ;;   (lambda ()
+  ;;     (syntax-violation 'current-run-lexenv
+  ;; 	   "called outside the extent of a macro expansion"
+  ;; 	   '(current-run-lexenv)))
+  ;;
+  ;;However there are  cases where we actually want  the returned LEXENV
+  ;;to be null, for example: when evaluating the visit code of a library
+  ;;just loaded in  FASL form; such visit code might  need, for example,
+  ;;to access the  syntactic binding property lists, and it  would do it
+  ;;outside any macro expansion.
   ;;
   (make-parameter
-      (lambda ()
-	(syntax-violation 'current-run-lexenv
-	  "called outside the extent of a macro expansion"
-	  '(current-run-lexenv)))))
+      (lambda () '())))
 
 (define* (syntax-parameter-value (id identifier?))
   (let ((label (id->label id)))
@@ -9102,10 +9127,14 @@
   (syntax-match expr-stx ()
     ((_ ?safe-id ?unsafe-expr)
      (identifier? ?safe-id)
-     (begin
-       (syntactic-binding-putprop ?safe-id *UNSAFE-VARIANT-COOKIE* ?unsafe-expr)
-       (bless
-	`(module ()))))
+     ;;This must be a definition.  A module is a definition.
+     (bless
+      `(module ()
+	 (begin-for-expand
+	   (syntactic-binding-putprop (syntax ,?safe-id)
+				      (quote  ,*UNSAFE-VARIANT-COOKIE*)
+				      (syntax ,?unsafe-expr)))
+	 #| end of module |# )))
     ))
 
 
@@ -9120,12 +9149,14 @@
   (syntax-match expr-stx ()
     ((_ ?predicate-id ?validation-expr)
      (identifier? ?predicate-id)
-     (begin
-       (syntactic-binding-putprop ?predicate-id
-				  *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*
-				  ?validation-expr)
-       (bless
-	`(module ()))))
+     ;;This must be a definition.  A module is a definition.
+     (bless
+      `(module ()
+	 (begin-for-expand
+	   (syntactic-binding-putprop (syntax ,?predicate-id)
+				      (quote  ,*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)
+				      (syntax ,?validation-expr)))
+	 #| end of module |# )))
     ))
 
 (define (define-predicate-return-value-validation-macro expr-stx)
@@ -9137,12 +9168,14 @@
   (syntax-match expr-stx ()
     ((_ ?predicate-id ?validation-expr)
      (identifier? ?predicate-id)
-     (begin
-       (syntactic-binding-putprop ?predicate-id
-				  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
-				  ?validation-expr)
-       (bless
-	`(module ()))))
+     ;;This must be a definition.  A module is a definition.
+     (bless
+      `(module ()
+	 (begin-for-expand
+	   (syntactic-binding-putprop (syntax ,?predicate-id)
+				      (quote  ,*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)
+				      (syntax ,?validation-expr)))
+	 #| end of module |# )))
     ))
 
 
@@ -9455,7 +9488,8 @@
        (let ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
 	     (binding*     (map (lambda (rhs)
 				  (%eval-macro-transformer
-				   (%expand-macro-transformer rhs lexenv.expand)))
+				   (%expand-macro-transformer rhs lexenv.expand)
+				   lexenv.run))
 			     ?rhs*)))
 	 (chi-internal-body (cons ?body ?body*)
 			    (append (map cons fluid-label* binding*) lexenv.run)
@@ -10232,7 +10266,8 @@
   (syntax-match expr-stx ()
     ((_ ?id)
      (identifier? ?id)
-     (chi-expr (cond ((syntactic-binding-getprop ?id *UNSAFE-VARIANT-COOKIE*))
+     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			(syntactic-binding-getprop ?id *UNSAFE-VARIANT-COOKIE*)))
 		     (else
 		      ;;This warning will not abort the process.
 		      (%raise-warning __who__ "requested unavailable unsafe variant"
@@ -10258,8 +10293,9 @@
   (syntax-match expr-stx ()
     ((_ ?id)
      (identifier? ?id)
-     (chi-expr (cond ((syntactic-binding-getprop ?id
-			*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*))
+     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			(syntactic-binding-getprop ?id
+			  *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)))
 		     (else
 		      (stx-error expr-stx "undefined procedure argument validation")))
 	       lexenv.run lexenv.expand))
@@ -10276,8 +10312,9 @@
   (syntax-match expr-stx ()
     ((_ ?id)
      (identifier? ?id)
-     (chi-expr (cond ((syntactic-binding-getprop ?id
-			*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*))
+     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			(syntactic-binding-getprop ?id
+			  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)))
 		     (else
 		      (stx-error expr-stx "undefined return value validation")))
 	       lexenv.run lexenv.expand))
@@ -10749,7 +10786,7 @@
       (rtc))
     expanded-rhs))
 
-(define (%eval-macro-transformer expanded-expr)
+(define (%eval-macro-transformer expanded-expr lexenv.run)
   ;;Given a  core language sexp  representing the expression of  a macro
   ;;transformer: evaluate it  and return a proper  syntactic binding for
   ;;the resulting object.
@@ -10763,7 +10800,8 @@
   ;;descriptor.  If  the return value is  not of such type:  we raise an
   ;;assertion violation.
   ;;
-  (let ((rv (eval-core (expanded->core expanded-expr))))
+  (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	      (eval-core (expanded->core expanded-expr)))))
     (cond ((procedure? rv)
 	   (make-local-macro-binding rv expanded-expr))
 	  ((variable-transformer? rv)
@@ -11594,8 +11632,7 @@
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
-    (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-      (%do-macro-call (car bind-val) input-form-expr lexenv.run rib)))
+    (%do-macro-call (car bind-val) input-form-expr lexenv.run rib))
 
   (define (chi-global-macro bind-val input-form-expr lexenv.run rib)
     ;;This  function is  used  to  expand macro  uses  for macros  whose
@@ -11635,23 +11672,25 @@
 				 (else
 				  (assertion-violation 'chi-global-macro
 				    "Vicare: internal error: not a procedure" x)))))
-	  (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	    (%do-macro-call transformer input-form-expr lexenv.run rib))))))
+	  (%do-macro-call transformer input-form-expr lexenv.run rib)))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%do-macro-call transformer input-form-expr lexenv.run rib)
     (define (main)
-      (let ((output-form-expr (transformer
-			       ;;Put the anti-mark on the input form.
-			       (add-mark anti-mark #f input-form-expr #f))))
-	;;If the  transformer returns  a function:  we must  apply the
-	;;returned function to a function acting as compile-time value
-	;;retriever.   Such  application  must  return a  value  as  a
-	;;transformer would do.
-	(if (procedure? output-form-expr)
-	    (%return (output-form-expr %ctv-retriever))
-	  (%return output-form-expr))))
+      ;;We parametrise here because we can never know which transformer,
+      ;;for example, will query the syntactic binding properties.
+      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	(let ((output-form-expr (transformer
+				 ;;Put the anti-mark on the input form.
+				 (add-mark anti-mark #f input-form-expr #f))))
+	  ;;If the  transformer returns  a function:  we must  apply the
+	  ;;returned function to a function acting as compile-time value
+	  ;;retriever.   Such  application  must  return a  value  as  a
+	  ;;transformer would do.
+	  (if (procedure? output-form-expr)
+	      (%return (output-form-expr %ctv-retriever))
+	    (%return output-form-expr)))))
 
     (define (%return output-form-expr)
       ;;Check that there are no raw symbols in the value returned by the
@@ -11801,7 +11840,8 @@
 				   (%expand-macro-transformer (if (eq? type 'let-syntax)
 								  x
 								(push-lexical-contour xrib x))
-							      lexenv.expand)))
+							      lexenv.expand)
+				   lexenv.run))
 			     xrhs*)))
 	       (build-sequence no-source
 		 (while-not-expanding-application-first-subform
@@ -12404,7 +12444,7 @@
 		    ;;First map  the identifier  to the  label, creating
 		    ;;the binding; then evaluate the macro transformer.
 		    (extend-rib! rib id lab sd?)
-		    (let ((entry (cons lab (%eval-macro-transformer expanded-rhs))))
+		    (let ((entry (cons lab (%eval-macro-transformer expanded-rhs lexenv.run))))
 		      (chi-body* (cdr body-form-stx*)
 				 (cons entry lexenv.run)
 				 (cons entry lexenv.expand)
@@ -12429,7 +12469,7 @@
 		    ;;First map the identifier to  the label, so that it
 		    ;;is bound; then evaluate the macro transformer.
 		    (extend-rib! rib id lab sd?)
-		    (let* ((binding  (%eval-macro-transformer expanded-rhs))
+		    (let* ((binding  (%eval-macro-transformer expanded-rhs lexenv.run))
 			   ;;This LEXENV entry represents the definition
 			   ;;of the fluid syntax.
 			   (entry1   (cons lab (make-fluid-syntax-binding flab)))
@@ -12496,7 +12536,8 @@
 					   (if (eq? type 'let-syntax)
 					       x
 					     (push-lexical-contour xrib x))
-					   lexenv.expand)))
+					   lexenv.expand)
+					  lexenv.run))
 				    ?xrhs*)))
 		     (chi-body*
 		      ;;Splice the internal body forms but add a lexical

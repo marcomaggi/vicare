@@ -4252,7 +4252,35 @@
 		'(1 2))))
     => '(3 3 (11 22)))
 
-  (check
+  (check	;unsafe with identifier macro
+      (let ()
+	(import (vicare system $fx))
+
+	(define-syntax (safe stx)
+	  (syntax-case stx ()
+	    ((_ ?a ?b)
+	     #'(fx+ ?a ?b))))
+
+	(define-syntax $safe
+	  (make-variable-transformer
+	   (lambda (stx)
+	     #;(debug-print '$safe)
+	     (syntax-case stx ()
+	       (?id
+		(identifier? #'?id)
+		#'(lambda (a b)
+		    ($fx+ a b)))
+	       ((_ ?a ?b)
+		#'($fx+ ?a ?b))))))
+
+	(define-unsafe-variant safe $safe)
+
+	(list (safe 1 2)
+	      ($safe 3 4)
+	      ((unsafe safe) 5 6)))
+    => '(3 7 11))
+
+  (check	;unsafe with macro
       (let ()
 	(import (vicare system $fx))
 
@@ -4267,11 +4295,14 @@
 	    ((_ ?a ?b)
 	     #'($fx+ ?a ?b))))
 
-	(define-unsafe-variant safe $safe)
+	(define-unsafe-variant safe
+	  (lambda (a b)
+	    ($safe a b)))
 
 	(list (safe 1 2)
-	      ($safe 3 4)))
-    => '(3 7))
+	      ($safe 3 4)
+	      ((unsafe safe) 5 6)))
+    => '(3 7 11))
 
   #t)
 
