@@ -1973,12 +1973,32 @@ so for @func{fx+} we should do:
 
 @noindent
 because the unsafe binding @func{$fx+} is not a function, rather it is a
-primitive operation.
+primitive operation@footnote{When the compiler finds an expression
+like:
+
+@example
+((lambda (a b) ($fx+ a b)) 1 2)
+@end example
+
+@noindent
+it transforms it to:
+
+@example
+(let ((a 1) (b 2)) ($fx+ a b))
+@end example
+
+@noindent
+where @func{let} is a core language form, not the binding exported by
+@library{vicare}; so we do not have to worry about using a @func{lambda}
+form to define an unsafe variant: it will not lead to the definition of
+redundant closure objects.}.
 
 
 @deffn Syntax define-unsafe-variant @meta{safe-id} @meta{unsafe-expr}
 Specify that the unsafe variant of the binding @meta{safe-id} is the
-expression @meta{unsafe-expr}.
+expression @meta{unsafe-expr}.  @meta{unsafe-expr} is stored as syntax
+object and it is expanded and evaluated at each use of the unsafe
+variant.
 @end deffn
 
 
