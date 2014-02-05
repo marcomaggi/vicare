@@ -293,6 +293,7 @@ Example:
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 * iklib syntaxes properties::   Syntactic binding properties.
 * iklib syntaxes unsafe::       Unsafe binding variants.
+* iklib syntaxes predaux::      Predicate auxiliary functions.
 @end menu
 
 @c page
@@ -2006,6 +2007,107 @@ variant.
 Expand into an expression representing the unsafe variant of the binding
 @meta{safe-id}.  If no unsafe variant is available: raise a continuable
 @condition{warning} exception, then expand to @meta{safe-id} itself.
+@end deffn
+
+@c page
+@node iklib syntaxes predaux
+@subsection Predicate auxiliary functions
+
+
+Predicate functions, both type predicates like @func{list?} and other
+predicates, are used to validate procedure arguments and their return
+values.  The predicates auxiliary functions @api{} assumes that it is
+useful to associate to certain predicate procedures:
+
+@itemize
+@item
+A procedure that validates a tuple of values and when failing: raises an
+exception with condition object type
+@condition{procedure-argument-violation}, @ref{iklib conditions procarg,
+Procedure argument violations}.
+
+@item
+A procedure that validates a tuple of values and when failing: raises an
+exception with condition object type
+@condition{expression-return-value-violation}, @ref{iklib conditions
+exprret, Expression return value violations}.
+@end itemize
+
+Such auxiliary functions are made available through syntactic binding
+properties by just importing in the current lexical contour the
+identifier bound to the predicate function.
+
+As example, we can associate a procedure argument auxiliary function to
+@func{list?} as follows:
+
+@example
+(define (list-procedure-argument who obj)
+  (if (list? obj)
+      obj
+    (procedure-argument-violation who
+      "expected list object as argument" obj)))
+
+(define-predicate-procedure-argument-validation list?
+  list-procedure-argument?)
+
+((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
+@result{} (1 2 3)
+
+((predicate-procedure-argument-validation list?) 'hey '#(1 2 3))
+@error{} &procedure-argument-violation
+@end example
+
+@noindent
+and we can associate a return value auxiliary function to @func{list?}
+as follows:
+
+@example
+(define (list-return-value? who obj)
+  (if (list? obj)
+      obj
+    (expression-return-value-violation who
+      "expected list object as argument" obj)))
+
+(define-predicate-return-value-validation list?
+  list-return-value?)
+
+((predicate-return-value-validation list?) 'hey '(1 2 3))
+@result{} (1 2 3)
+
+((predicate-return-value-validation list?) 'hey '#(1 2 3))
+@error{} &expression-return-value-violation
+@end example
+
+
+@deffn Syntax define-predicate-procedure-argument-validation @meta{pred-id} @meta{valid-expr}
+Specify that the predicate @meta{pred-id} is associated to the procedure
+argument validation function resulting from the evaluation of the
+expression @meta{valid-expr}.  @meta{valid-expr} is stored as syntax
+object and it is expanded and evaluated at each use of the validation
+function.
+@end deffn
+
+
+@deffn Syntax predicate-procedure-argument-validation @meta{pred-id}
+Expand into an expression representing the procedure argument validation
+function associated to the predicate @meta{pred-id}.  If no validation
+function is available: raise a syntax violation.
+@end deffn
+
+
+@deffn Syntax define-predicate-return-value-validation @meta{pred-id} @meta{valid-expr}
+Specify that the predicate @meta{pred-id} is associated to the return
+value validation function resulting from the evaluation of the
+expression @meta{valid-expr}.  @meta{valid-expr} is stored as syntax
+object and it is expanded and evaluated at each use of the validation
+function.
+@end deffn
+
+
+@deffn Syntax predicate-return-value-validation @meta{pred-id}
+Expand into an expression representing the return value validation
+function associated to the predicate @meta{pred-id}.  If no validation
+function is available: raise a syntax violation.
 @end deffn
 
 @c page

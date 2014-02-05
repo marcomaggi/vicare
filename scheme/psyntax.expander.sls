@@ -5185,6 +5185,69 @@
   'vicare:expander-unsafe-variant)
 
 
+;;;; identifiers: predicates axiliary functions API
+;;
+;;Predicate functions, both type  predicates and generic predicates, are
+;;used to  validate procedure  arguments and  their return  values.  The
+;;predicates  auxiliary  functions API  assumes  that  it is  useful  to
+;;associate to certain predicate procedures:
+;;
+;;*  A procedure  that validates  a tuple  of values  and when  failing:
+;;  raises     an    exception     with     condition    object     type
+;;  &procedure-argument-violation.
+;;
+;;*  A procedure  that validates  a tuple  of values  and when  failing:
+;;  raises     an    exception     with     condition    object     type
+;;  &expression-return-value-violation.
+;;
+;;Such auxiliary functions are  made available through syntactic binding
+;;properties  by  just importing  in  the  current lexical  contour  the
+;;identifier bound to the predicate function.
+;;
+;;As example, we  can associate a procedure  argument auxiliary function
+;;to LIST? as follows:
+;;
+;;    (define (list-procedure-argument who obj)
+;;      (if (list? obj)
+;;          obj
+;;        (procedure-argument-violation who
+;;          "expected list object as argument" obj)))
+;;
+;;    (define-predicate-procedure-argument-validation list?
+;;      list-procedure-argument?)
+;;
+;;    ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
+;;    => (1 2 3)
+;;
+;;    ((predicate-procedure-argument-validation list?) 'hey '#(1 2 3))
+;;    error--> &procedure-argument-violation
+;;
+;;and we  can associate a return  value auxiliary function to  LIST?  as
+;;follows:
+;;
+;;    (define (list-return-value? who obj)
+;;      (if (list? obj)
+;;          obj
+;;        (expression-return-value-violation who
+;;          "expected list object as argument" obj)))
+;;
+;;    (define-predicate-return-value-validation list?
+;;      list-return-value?)
+;;
+;;    ((predicate-return-value-validation list?) 'hey '(1 2 3))
+;;    => (1 2 3)
+;;
+;;    ((predicate-return-value-validation list?) 'hey '#(1 2 3))
+;;    error--> &expression-return-value-violation
+;;
+
+(define-constant *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*
+  'vicare:expander-predicate-procedure-argument-validation)
+
+(define-constant *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
+  'vicare:expander-predicate-return-value-validation)
+
+
 ;;;; identifiers: syntax parameters
 
 (define current-run-lexenv
@@ -5663,6 +5726,9 @@
       ((syntax-parametrise)		syntax-parametrise-macro)
 
       ((define-unsafe-variant)		define-unsafe-variant-macro)
+
+      ((define-predicate-procedure-argument-validation)	define-predicate-procedure-argument-validation-macro)
+      ((define-predicate-return-value-validation)	define-predicate-return-value-validation-macro)
 
       ((include)			include-macro)
       ((define-integrable)		define-integrable-macro)
@@ -9043,6 +9109,43 @@
     ))
 
 
+;;;; module non-core-macro-transformer: DEFINE-PREDICATE-PROCEDURE-ARGUMENT-VALIDATION, DEFINE-PREDICATE-RETURN-VALUE-VALIDATION
+
+(define (define-predicate-procedure-argument-validation-macro expr-stx)
+  ;;Transformer      function      used     to      expand      Vicare's
+  ;;DEFINE-PREDICATE-PROCEDURE-ARGUMENT-VALIDATION   macros   from   the
+  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
+  ;;return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?predicate-id ?validation-expr)
+     (identifier? ?predicate-id)
+     (begin
+       (syntactic-binding-putprop ?predicate-id
+				  *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*
+				  ?validation-expr)
+       (bless
+	`(module ()))))
+    ))
+
+(define (define-predicate-return-value-validation-macro expr-stx)
+  ;;Transformer      function      used     to      expand      Vicare's
+  ;;DEFINE-PREDICATE-RETURN-VALUE-VALIDATION  macros from  the top-level
+  ;;built in  environment.  Expand  the contents  of EXPR-STX;  return a
+  ;;syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?predicate-id ?validation-expr)
+     (identifier? ?predicate-id)
+     (begin
+       (syntactic-binding-putprop ?predicate-id
+				  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
+				  ?validation-expr)
+       (bless
+	`(module ()))))
+    ))
+
+
 ;;;; module non-core-macro-transformer: miscellanea
 
 (define (time-macro expr-stx)
@@ -9185,6 +9288,8 @@
       ((fluid-let-syntax)		fluid-let-syntax-transformer)
       ((splice-first-expand)		splice-first-expand-transformer)
       ((unsafe)				unsafe-transformer)
+      ((predicate-procedure-argument-validation)	predicate-procedure-argument-validation-transformer)
+      ((predicate-return-value-validation)		predicate-return-value-validation-transformer)
       ((struct-type-descriptor)		struct-type-descriptor-transformer)
       ((struct-type-and-struct?)	struct-type-and-struct?-transformer)
       ((struct-type-field-ref)		struct-type-field-ref-transformer)
@@ -10130,22 +10235,51 @@
      (chi-expr (cond ((syntactic-binding-getprop ?id *UNSAFE-VARIANT-COOKIE*))
 		     (else
 		      ;;This warning will not abort the process.
-		      (raise-continuable
-		       (condition (make-warning)
-				  (make-who-condition __who__)
-				  (make-message-condition "requested unavailable unsafe variant")
-				  (make-irritants-condition (list ?id))
-				  (let ((pos (or (expression-position expr-stx)
-						 (expression-position ?id))))
-				    (if (source-position-condition? pos)
-					(make-source-position-condition
-					 (source-position-port-id   pos)
-					 (source-position-byte      pos)
-					 (source-position-character pos)
-					 (source-position-line      pos)
-					 (source-position-column    pos))
-				      (condition)))))
+		      (%raise-warning __who__ "requested unavailable unsafe variant"
+				      (or (expression-position expr-stx)
+					  (expression-position ?id))
+				      ?id)
 		      ?id))
+	       lexenv.run lexenv.expand))
+    ))
+
+
+;;;; module core-macro-transformer: PREDICATE-PROCEDURE-ARGUMENT-VALIDATION, PREDICATE-RETURN-VALUE-VALIDATION
+
+(define (predicate-procedure-argument-validation-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer      function      used     to      expand      Vicare's
+  ;;PREDICATE-PROCEDURE-ARGUMENT-VALIDATION  macros  from the  top-level
+  ;;built  in  environment.  Expand  the  contents  of EXPR-STX  in  the
+  ;;context of  the given LEXENV;  return an expanded  language symbolic
+  ;;expression.
+  ;;
+  (define-constant __who__
+    'predicate-procedure-argument-validation)
+  (syntax-match expr-stx ()
+    ((_ ?id)
+     (identifier? ?id)
+     (chi-expr (cond ((syntactic-binding-getprop ?id
+			*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*))
+		     (else
+		      (stx-error expr-stx "undefined procedure argument validation")))
+	       lexenv.run lexenv.expand))
+    ))
+
+(define (predicate-return-value-validation-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer      function      used     to      expand      Vicare's
+  ;;PREDICATE-RETURN-VALUE-VALIDATION macros from the top-level built in
+  ;;environment.  Expand the contents of  EXPR-STX in the context of the
+  ;;given LEXENV; return an expanded language symbolic expression.
+  ;;
+  (define-constant __who__
+    'predicate-return-value-validation)
+  (syntax-match expr-stx ()
+    ((_ ?id)
+     (identifier? ?id)
+     (chi-expr (cond ((syntactic-binding-getprop ?id
+			*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*))
+		     (else
+		      (stx-error expr-stx "undefined return value validation")))
 	       lexenv.run lexenv.expand))
     ))
 
@@ -12936,6 +13070,21 @@
 
   #| end of module |# )
 
+(define (%raise-warning who message position . irritants)
+  (raise-continuable
+   (condition (make-warning)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants)
+	      (if (source-position-condition? position)
+		  (make-source-position-condition
+		   (source-position-port-id   position)
+		   (source-position-byte      position)
+		   (source-position-character position)
+		   (source-position-line      position)
+		   (source-position-column    position))
+		(condition)))))
+
 
 ;;;; R6RS programs and libraries helpers
 
@@ -12956,7 +13105,6 @@
 
 ;;; end of file
 ;;Local Variables:
-;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)
@@ -12968,8 +13116,10 @@
 ;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-letrec*			'scheme-indent-function 1)
 ;;eval: (put 'build-data			'scheme-indent-function 1)
-;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
-;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
 ;;eval: (put 'case-object-type-binding		'scheme-indent-function 1)
+;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
+;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
+;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
+;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
 ;;End:

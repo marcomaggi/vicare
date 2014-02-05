@@ -362,6 +362,8 @@
     ($slot-set!				(core-macro . $slot-set!))
     (splice-first-expand		(core-macro . splice-first-expand))
     (unsafe				(core-macro . unsafe))
+    (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
+    (predicate-return-value-validation		(core-macro . predicate-return-value-validation))
     (let-values				(macro . let-values))
     (let*-values			(macro . let*-values))
     (values->list			(macro . values->list))
@@ -429,6 +431,8 @@
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
     (define-unsafe-variant		(macro . define-unsafe-variant))
+    (define-predicate-procedure-argument-validation	(macro . define-predicate-procedure-argument-validation))
+    (define-predicate-return-value-validation		(macro . define-predicate-return-value-validation))
 ;;;
     (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
     (define-syntax*			(macro . define-syntax*))
@@ -2311,6 +2315,11 @@
 ;;;
     (define-unsafe-variant			i v $language)
     (unsafe					i v $language)
+;;;
+    (define-predicate-procedure-argument-validation	i v $language)
+    (define-predicate-return-value-validation		i v $language)
+    (predicate-procedure-argument-validation		i v $language)
+    (predicate-return-value-validation			i v $language)
 ;;;
     (eval-for-expand				i v $language)
     (begin-for-expand				i v $language)

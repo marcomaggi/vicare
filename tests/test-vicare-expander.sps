@@ -4276,6 +4276,58 @@
   #t)
 
 
+(parametrise ((check-test-name	'predicate-procedure-argument-validation))
+
+  (define (list-procedure-argument? who obj)
+    (if (list? obj)
+	obj
+      (procedure-argument-violation who
+	"expected list object as argument" obj)))
+
+  (define-predicate-procedure-argument-validation list?
+    list-procedure-argument?)
+
+  (check
+      ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
+    => '(1 2 3))
+
+  (check
+      (guard (E ((procedure-argument-violation? E)
+		 (vector (condition-who E)
+			 (condition-irritants E)))
+		(else E))
+	((predicate-procedure-argument-validation list?) 'hey '#(1 2 3)))
+    => '#(hey (#(1 2 3))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'predicate-return-value-validation))
+
+  (define (list-return-value? who obj)
+    (if (list? obj)
+	obj
+      (expression-return-value-violation who
+	"expected list object as return value" obj)))
+
+  (define-predicate-return-value-validation list?
+    list-return-value?)
+
+  (check
+      ((predicate-return-value-validation list?) 'hey '(1 2 3))
+    => '(1 2 3))
+
+  (check
+      (guard (E ((expression-return-value-violation? E)
+		 (vector (condition-who E)
+			 (condition-irritants E)))
+		(else E))
+	((predicate-return-value-validation list?) 'hey '#(1 2 3)))
+    => '#(hey (#(1 2 3))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
