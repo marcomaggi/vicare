@@ -138,8 +138,8 @@
 (define-struct serialized-library
   (contents
 		;A list of values  representing a LIBRARY record holding
-		;precompiled code.  See  the function %SERIALIZE-LIBRARY
-		;in  "psyntax.library-manager.sls"  for details  on  the
+		;precompiled  code.  See  the function  SERIALIZE-ALL in
+		;"psyntax.library-manager.sls"   for   details  on   the
 		;format.
    ))
 
@@ -194,7 +194,7 @@
   ;;already compiled library write a FASL file in the repository.
   ;;
   ;;CONTENTS  must be  a list  of values  representing a  LIBRARY record
-  ;;holding precompiled  code.  See  the function  %SERIALIZE-LIBRARY in
+  ;;holding  precompiled  code.   See   the  function  SERIALIZE-ALL  in
   ;;"psyntax.library-manager.sls" for details on the format.
   ;;
   (let ((ikfasl (fasl-path filename)))
