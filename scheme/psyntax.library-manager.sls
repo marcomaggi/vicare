@@ -755,6 +755,9 @@
 			     ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
 			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
 			     (else            binding))))
+	    ;;When the library is serialized: the content of the "value"
+	    ;;slot is  not saved, so we  have to set it  here every time
+	    ;;the library is loaded.
 	    (set-label-binding! label binding1)))
       ;;This expression returns the EXPORT-ENV of the library LIB.
       (library-env lib))
