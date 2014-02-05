@@ -477,7 +477,7 @@ do_read (ikpcb* pcb, fasl_port* p)
     /* G is for gensym */
     ikptr pretty = do_read(pcb, p);
     ikptr unique = do_read(pcb, p);
-    ikptr sym = ikrt_strings_to_gensym(pretty, unique, pcb);
+    ikptr sym    = ikrt_strings_to_gensym(pretty, unique, pcb);
     if (put_mark_index) {
       p->marks[put_mark_index] = sym;
     }
