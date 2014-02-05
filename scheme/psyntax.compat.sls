@@ -30,7 +30,6 @@
 
     make-parameter			parametrise
     format				gensym
-    eval-core
     symbol-value			set-symbol-value!
     keyword?				pretty-print
     would-block-object?
@@ -39,6 +38,9 @@
     real-pathname			file-modification-time
     vector-append
     add1				sub1
+
+    ;; compiler related operations
+    eval-core
 
     ;; runtime options
     report-errors-at-runtime		strict-r6rs
@@ -68,6 +70,7 @@
     library-stale-warning
     file-locator-resolution-error
     procedure-argument-violation
+    warning
 
     ;; unsafe bindings
     $car $cdr

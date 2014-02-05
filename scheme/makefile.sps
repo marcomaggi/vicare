@@ -361,6 +361,7 @@
     ($slot-ref				(core-macro . $slot-ref))
     ($slot-set!				(core-macro . $slot-set!))
     (splice-first-expand		(core-macro . splice-first-expand))
+    (unsafe				(core-macro . unsafe))
     (let-values				(macro . let-values))
     (let*-values			(macro . let*-values))
     (values->list			(macro . values->list))
@@ -427,6 +428,7 @@
     (record-type-and-record?		(macro . record-type-and-record?))
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
+    (define-unsafe-variant		(macro . define-unsafe-variant))
 ;;;
     (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
     (define-syntax*			(macro . define-syntax*))
@@ -2306,6 +2308,9 @@
     (with-implicits				i v $language)
     (include					i v $language)
     (set-cons!					i v $language)
+;;;
+    (define-unsafe-variant			i v $language)
+    (unsafe					i v $language)
 ;;;
     (eval-for-expand				i v $language)
     (begin-for-expand				i v $language)

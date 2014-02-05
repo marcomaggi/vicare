@@ -3325,6 +3325,16 @@
 (define syntactic-binding-value cdr)
 
 ;;; --------------------------------------------------------------------
+;;; core primitive bindings
+
+(define (core-primitive-binding? binding)
+  (and (pair? binding)
+       (eq? 'core-prim (syntactic-binding-type binding))))
+
+(define-syntax-rule (core-primitive-binding-symbol ?binding)
+  (cdr ?binding))
+
+;;; --------------------------------------------------------------------
 ;;; lexical variable bindings
 
 (define (make-lexical-var-binding lex)
@@ -5117,6 +5127,64 @@
   #| end of module |# )
 
 
+;;;; identifiers: unsafe variants API
+;;
+;;With the macros DEFINE-UNSAFE-VARIANT and  UNSAFE we allow the user to
+;;select an unsafe variant of a function or (why not?) macro.
+;;
+;;The unsafe  variant of  a function  is a  function that  (not strictly
+;;speaking) neither  validates its arguments  nor its return  value.  As
+;;example, the function:
+;;
+;;   (define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
+;;     ($char->fixnum ($string-ref str idx)))
+;;
+;;can be split into:
+;;
+;;   (define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
+;;     ($string-ref-fx str idx))
+;;
+;;   (define ($string-ref-fx str idx)
+;;     ($char->fixnum ($string-ref str idx)))
+;;
+;;where  $STRING-REF-FX  is the  unsafe  variant  of STRING-REF-FX;  the
+;;unsafe variants  API allows us to  register this fact, for  use by the
+;;expander, as follows:
+;;
+;;   (define-unsafe-variant string-ref-fx $string-ref-fx)
+;;
+;;so, having imported  the binding STRING-REF-FX, we can  use its unsafe
+;;variant as follows:
+;;
+;;   ((unsafe string-ref-fx) "ciao" 2)
+;;
+;;without actually importing the binding $STRING-REF-FX.
+;;
+;;We use  syntactic binding  properties to  implement this  feature: the
+;;DEFINE-UNSAFE-VARIANT syntax puts a property in the syntactic binding,
+;;which is  later retrieved  by the UNSAFE  syntax.  The  property value
+;;must be a syntax object representing an expression which, expanded and
+;;evaluated, returns the unsafe variant.
+;;
+;;When specifying  the unsafe variant  of a  function we should  build a
+;;syntax  object   representing  an   expression  which,   expanded  and
+;;evaluated, returns a  proper function; so that it can  be used in both
+;;the expressions:
+;;
+;;  ((unsafe fx+) 1 2)
+;;  (map (unsafe fx+) '(1 2) '(3 4))
+;;
+;;so for FX+ we should do:
+;;
+;;  (define-unsafe-variant fx+ (lambda (a b) ($fx+ a b)))
+;;
+;;because $FX+ is not a function, rather it is a primitive operation.
+;;
+
+(define-constant *UNSAFE-VARIANT-COOKIE*
+  'vicare:expander-unsafe-variant)
+
+
 ;;;; identifiers: syntax parameters
 
 (define current-run-lexenv
@@ -5593,6 +5661,8 @@
 
       ((define-syntax-parameter)	define-syntax-parameter-macro)
       ((syntax-parametrise)		syntax-parametrise-macro)
+
+      ((define-unsafe-variant)		define-unsafe-variant-macro)
 
       ((include)			include-macro)
       ((define-integrable)		define-integrable-macro)
@@ -8956,6 +9026,23 @@
     ))
 
 
+;;;; module non-core-macro-transformer: DEFINE-UNSAFE-VARIANT
+
+(define (define-unsafe-variant-macro expr-stx)
+  ;;Transformer function  used to expand  Vicare's DEFINE-UNSAFE-VARIANT
+  ;;macros from the top-level built in environment.  Expand the contents
+  ;;of EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (syntax-match expr-stx ()
+    ((_ ?safe-id ?unsafe-expr)
+     (identifier? ?safe-id)
+     (begin
+       (syntactic-binding-putprop ?safe-id *UNSAFE-VARIANT-COOKIE* ?unsafe-expr)
+       (bless
+	`(module ()))))
+    ))
+
+
 ;;;; module non-core-macro-transformer: miscellanea
 
 (define (time-macro expr-stx)
@@ -9097,6 +9184,7 @@
       ((syntax)				syntax-transformer)
       ((fluid-let-syntax)		fluid-let-syntax-transformer)
       ((splice-first-expand)		splice-first-expand-transformer)
+      ((unsafe)				unsafe-transformer)
       ((struct-type-descriptor)		struct-type-descriptor-transformer)
       ((struct-type-and-struct?)	struct-type-and-struct?-transformer)
       ((struct-type-field-ref)		struct-type-field-ref-transformer)
@@ -10024,6 +10112,42 @@
       ))
 
   #| end of module |# )
+
+
+;;;; module core-macro-transformer: UNSAFE
+
+(define (unsafe-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand  Vicare's UNSAFE macros from the
+  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
+  ;;the  context  of  the  given LEXENV;  return  an  expanded  language
+  ;;symbolic expression.
+  ;;
+  (define-constant __who__
+    'unsafe)
+  (syntax-match expr-stx ()
+    ((_ ?id)
+     (identifier? ?id)
+     (chi-expr (cond ((syntactic-binding-getprop ?id *UNSAFE-VARIANT-COOKIE*))
+		     (else
+		      ;;This warning will not abort the process.
+		      (raise-continuable
+		       (condition (make-warning)
+				  (make-who-condition __who__)
+				  (make-message-condition "requested unavailable unsafe variant")
+				  (make-irritants-condition (list ?id))
+				  (let ((pos (or (expression-position expr-stx)
+						 (expression-position ?id))))
+				    (if (source-position-condition? pos)
+					(make-source-position-condition
+					 (source-position-port-id   pos)
+					 (source-position-byte      pos)
+					 (source-position-character pos)
+					 (source-position-line      pos)
+					 (source-position-column    pos))
+				      (condition)))))
+		      ?id))
+	       lexenv.run lexenv.expand))
+    ))
 
 
 ;;;; module core-macro-transformer: struct type descriptor, setter and getter

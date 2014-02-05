@@ -4217,6 +4217,65 @@
   #t)
 
 
+(parametrise ((check-test-name	'unsafe-variants))
+
+  (check
+      (let ()
+	(import (vicare system $strings)
+	  (vicare system $chars))
+
+	(define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
+	  ($string-ref-fx str idx))
+
+	(define ($string-ref-fx str idx)
+	  ($char->fixnum ($string-ref str idx)))
+
+	(define-unsafe-variant string-ref-fx $string-ref-fx)
+
+	(list (string-ref-fx "ciao" 2)
+	      ((unsafe string-ref-fx) "ciao" 2)))
+    => (list (char->integer #\a)
+	     (char->integer #\a)))
+
+  (check
+      (let ()
+	(import (vicare system $fx))
+
+	(define-unsafe-variant fx+
+	  (lambda (a b)
+	    ($fx+ a b)))
+
+	(list (fx+ 1 2)
+	      ((unsafe fx+) 1 2)
+	      (map (unsafe fx+)
+		'(10 20)
+		'(1 2))))
+    => '(3 3 (11 22)))
+
+  (check
+      (let ()
+	(import (vicare system $fx))
+
+	(define-syntax (safe stx)
+	  (syntax-case stx ()
+	    ((_ ?a ?b)
+	     #'(fx+ ?a ?b))))
+
+	(define-syntax ($safe stx)
+	  #;(debug-print '$safe)
+	  (syntax-case stx ()
+	    ((_ ?a ?b)
+	     #'($fx+ ?a ?b))))
+
+	(define-unsafe-variant safe $safe)
+
+	(list (safe 1 2)
+	      ($safe 3 4)))
+    => '(3 7))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

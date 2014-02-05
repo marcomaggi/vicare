@@ -291,6 +291,9 @@ Many backwards incompatibilities... life is hard!
 * BEGIN-FOR-EXPAND is  now an  alias for  EVAL-FOR-EXPAND, to  match the
   syntax name used by Racket.
 
+* Added unsafe variants API.  See the documentation node "iklib syntaxes
+  unsafe".
+
 
 Notes for revision 0.3d7
 ------------------------
