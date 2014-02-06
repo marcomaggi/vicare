@@ -6807,92 +6807,98 @@
   ;;
   (define (define-struct-macro expr-stx)
     (syntax-match expr-stx ()
+      ((_ (?name ?maker ?predicate) (?field* ...))
+       (%build-output-form ?name ?maker ?predicate ?field*))
       ((_ ?name (?field* ...))
-       (let* ((string->id	(lambda (str)
-				  (datum->stx ?name (string->symbol str))))
-	      (namestr		(symbol->string (identifier->symbol ?name)))
-	      (field-sym*	(map identifier->symbol ?field*))
-	      (field-str*	(map symbol->string field-sym*))
-	      (rtd		(datum->stx ?name (make-struct-type namestr field-sym*)))
-	      (constructor-id	(string->id (string-append "make-" namestr)))
-	      (predicate-id	(string->id (string-append namestr "?")))
-	      (field-idx*	(enumerate ?field*)))
+       (%build-output-form ?name #f #f ?field*))
+      ))
 
-	 (define getter-id*
-	   (map (lambda (x)
-		  (string->id (string-append namestr "-" x)))
-	     field-str*))
+  (define (%build-output-form type-id maker-id predicate-id field-name-id*)
+    (let* ((string->id		(lambda (str)
+				  (datum->stx type-id (string->symbol str))))
+	   (namestr		(symbol->string (identifier->symbol type-id)))
+	   (field-sym*		(map identifier->symbol field-name-id*))
+	   (field-str*		(map symbol->string field-sym*))
+	   (rtd			(datum->stx type-id (make-struct-type namestr field-sym*)))
+	   (constructor-id	(or maker-id     (string->id (string-append "make-" namestr))))
+	   (predicate-id	(or predicate-id (string->id (string-append namestr "?"))))
+	   (field-idx*		(enumerate field-name-id*)))
 
-	 (define setter-id*
-	   (map (lambda (x)
-		  (string->id (string-append "set-" namestr "-" x "!")))
-	     field-str*))
+      (define getter-id*
+	(map (lambda (x)
+	       (string->id (string-append namestr "-" x)))
+	  field-str*))
 
-	 (define unsafe-getter-id*
-	   (map (lambda (x)
-		  (string->id (string-append "$" namestr "-" x)))
-	     field-str*))
+      (define setter-id*
+	(map (lambda (x)
+	       (string->id (string-append "set-" namestr "-" x "!")))
+	  field-str*))
 
-	 (define unsafe-setter-id*
-	   (map (lambda (x)
-		  (string->id (string-append "$set-" namestr "-" x "!")))
-	     field-str*))
+      (define unsafe-getter-id*
+	(map (lambda (x)
+	       (string->id (string-append "$" namestr "-" x)))
+	  field-str*))
 
-	 (define getter-sexp*
-	   (map (lambda (getter-id unsafe-getter-id)
-		  `(define (,getter-id stru)
-		     (if ($struct/rtd? stru ',rtd)
-			 (,unsafe-getter-id stru)
-		       (assertion-violation ',getter-id
-			 "not a struct of required type as struct getter argument"
-			 stru ',rtd))))
-	     getter-id* unsafe-getter-id*))
+      (define unsafe-setter-id*
+	(map (lambda (x)
+	       (string->id (string-append "$set-" namestr "-" x "!")))
+	  field-str*))
 
-	 (define setter-sexp*
-	   (map (lambda (setter-id unsafe-setter-id)
-		  `(define (,setter-id stru val)
-		     (if ($struct/rtd? stru ',rtd)
-			 (,unsafe-setter-id stru val)
-		       (assertion-violation ',setter-id
-			 "not a struct of required type as struct setter argument"
-			 stru ',rtd))))
-	     setter-id* unsafe-setter-id*))
+      (define getter-sexp*
+	(map (lambda (getter-id unsafe-getter-id)
+	       `(define (,getter-id stru)
+		  (if ($struct/rtd? stru ',rtd)
+		      (,unsafe-getter-id stru)
+		    (assertion-violation ',getter-id
+		      "not a struct of required type as struct getter argument"
+		      stru ',rtd))))
+	  getter-id* unsafe-getter-id*))
 
-	 (define unsafe-getter-sexp*
-	   (map (lambda (unsafe-getter-id field-idx)
-		  `(define-syntax ,unsafe-getter-id
-		     (syntax-rules ()
-		       ((_ ?stru)
-			($struct-ref ?stru ,field-idx)))))
-	     unsafe-getter-id* field-idx*))
+      (define setter-sexp*
+	(map (lambda (setter-id unsafe-setter-id)
+	       `(define (,setter-id stru val)
+		  (if ($struct/rtd? stru ',rtd)
+		      (,unsafe-setter-id stru val)
+		    (assertion-violation ',setter-id
+		      "not a struct of required type as struct setter argument"
+		      stru ',rtd))))
+	  setter-id* unsafe-setter-id*))
 
-	 (define unsafe-setter-sexp*
-	   (map (lambda (unsafe-setter-id field-idx)
-		  `(define-syntax ,unsafe-setter-id
-		     (syntax-rules ()
-		       ((_ ?stru ?val)
-			($struct-set! ?stru ,field-idx ?val)))))
-	     unsafe-setter-id* field-idx*))
+      (define unsafe-getter-sexp*
+	(map (lambda (unsafe-getter-id field-idx)
+	       `(define-syntax ,unsafe-getter-id
+		  (syntax-rules ()
+		    ((_ ?stru)
+		     ($struct-ref ?stru ,field-idx)))))
+	  unsafe-getter-id* field-idx*))
 
-	 (bless
-	  `(begin
-	     (define-syntax ,?name (cons '$rtd ',rtd))
-	     (define (,constructor-id ,@?field*)
-	       (let ((S ($struct ',rtd ,@?field*)))
-		 ;;FIXME  The destructor  accessor  must be  implemented
-		 ;;with a proper  unsafe operation, so that  the index 5
-		 ;;is not hard-coded here.  To be fixed at the next boot
-		 ;;image rotation.  (Marco Maggi; Thu Jan 23, 2014)
-		 (if ($struct-ref ',rtd 5) ;destructor
-		     ($struct-guardian S)
-		   S)))
-	     (define (,predicate-id obj)
-	       ($struct/rtd? obj ',rtd))
-	     ,@getter-sexp*
-	     ,@setter-sexp*
-	     ,@unsafe-getter-sexp*
-	     ,@unsafe-setter-sexp*)
-	  )))))
+      (define unsafe-setter-sexp*
+	(map (lambda (unsafe-setter-id field-idx)
+	       `(define-syntax ,unsafe-setter-id
+		  (syntax-rules ()
+		    ((_ ?stru ?val)
+		     ($struct-set! ?stru ,field-idx ?val)))))
+	  unsafe-setter-id* field-idx*))
+
+      (bless
+       `(begin
+	  (define-syntax ,type-id (cons '$rtd ',rtd))
+	  (define (,constructor-id ,@field-name-id*)
+	    (let ((S ($struct ',rtd ,@field-name-id*)))
+	      ;;FIXME  The destructor  accessor  must be  implemented
+	      ;;with a proper  unsafe operation, so that  the index 5
+	      ;;is not hard-coded here.  To be fixed at the next boot
+	      ;;image rotation.  (Marco Maggi; Thu Jan 23, 2014)
+	      (if ($struct-ref ',rtd 5) ;destructor
+		  ($struct-guardian S)
+		S)))
+	  (define (,predicate-id obj)
+	    ($struct/rtd? obj ',rtd))
+	  ,@getter-sexp*
+	  ,@setter-sexp*
+	  ,@unsafe-getter-sexp*
+	  ,@unsafe-setter-sexp*)
+       )))
 
   (define (enumerate ls)
     (let recur ((i 0) (ls ls))

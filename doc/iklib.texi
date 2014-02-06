@@ -5128,14 +5128,17 @@ The following bindings are exported by the library @library{vicare}.
 
 
 @deffn Syntax define-struct @meta{name} (@meta{field} ...)
+@deffnx Syntax define-struct (@meta{name} @meta{constructor} @meta{predicate}) (@meta{field} ...)
 Define a new data structure type.  This macro is embedded in the
 expander.
 
 @meta{name} must be a symbol representing the name of the structure; it
 is used to build names for the constructor, predicate, field accessors
-and mutators.  The @meta{field} values must be symbols representing the
-names of the fields; they are used to build names for the accessors and
-mutators.
+and mutators.  When @meta{constructor} is used: it must be an identifier
+representing the name of the constructor.  When @meta{predicate} is
+used: it must be an identifier representing the name of the predicate.
+The @meta{field} values must be symbols representing the names of the
+fields; they are used to build names for the accessors and mutators.
 
 The following definition:
 
