@@ -9221,9 +9221,13 @@
      (bless
       `(module ()
 	 (begin-for-expand
-	   (syntactic-binding-putprop (syntax ,?safe-id)
-				      (quote  ,*UNSAFE-VARIANT-COOKIE*)
-				      (syntax ,?unsafe-expr)))
+	   (if (syntactic-binding-getprop (syntax ,?safe-id)
+		 (quote ,*UNSAFE-VARIANT-COOKIE*))
+	       (syntax-violation 'define-unsafe-variant
+		 "unsafe variant already defined" (syntax ,?safe-id))
+	     (syntactic-binding-putprop (syntax ,?safe-id)
+					(quote  ,*UNSAFE-VARIANT-COOKIE*)
+					(syntax ,?unsafe-expr))))
 	 #| end of module |# )))
     ))
 
@@ -9243,9 +9247,14 @@
      (bless
       `(module ()
 	 (begin-for-expand
-	   (syntactic-binding-putprop (syntax ,?predicate-id)
-				      (quote  ,*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)
-				      (syntax ,?validation-expr)))
+	   (if (syntactic-binding-getprop (syntax ,?predicate-id)
+		 (quote ,*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*))
+	       (syntax-violation 'define-predicate-procedure-argument-validation
+		 "predicate procedure argument validation already defined"
+		 (syntax ,?predicate-id))
+	     (syntactic-binding-putprop (syntax ,?predicate-id)
+					(quote  ,*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)
+					(syntax ,?validation-expr))))
 	 #| end of module |# )))
     ))
 
@@ -9262,9 +9271,14 @@
      (bless
       `(module ()
 	 (begin-for-expand
-	   (syntactic-binding-putprop (syntax ,?predicate-id)
-				      (quote  ,*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)
-				      (syntax ,?validation-expr)))
+	   (if (syntactic-binding-getprop (syntax ,?predicate-id)
+		 (quote ,*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*))
+	       (syntax-violation 'define-predicate-return-value-validation
+		 "predicate return value validation already defined"
+		 (syntax ,?predicate-id))
+	     (syntactic-binding-putprop (syntax ,?predicate-id)
+					(quote  ,*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)
+					(syntax ,?validation-expr))))
 	 #| end of module |# )))
     ))
 
