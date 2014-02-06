@@ -2202,6 +2202,32 @@
 	(b))
     => 1)
 
+;;; --------------------------------------------------------------------
+;;; free-identifier=?
+
+  (check-for-true
+   (let ()
+     (define a 1)
+     (define-alias b a)
+     (define-syntax (doit stx)
+       (syntax-case stx ()
+	 ((_ ?id1 ?id2)
+	  (free-identifier=? #'?id1 #'?id2))))
+     ;; (begin-for-expand
+     ;;   (debug-print 'equal (free-identifier=? #'a #'b)))
+     (doit a b)))
+
+  (check-for-true
+   (let ()
+     (define a 1)
+     (define-alias b a)
+     (define-alias c b)
+     (define-syntax (doit stx)
+       (syntax-case stx ()
+	 ((_ ?id1 ?id2)
+	  (free-identifier=? #'?id1 #'?id2))))
+     (doit b c)))
+
   #t)
 
 
@@ -3988,6 +4014,185 @@
     => '#(1 2 3))
 
   (void))
+
+
+(parametrise ((check-test-name	'synonym-transformers))
+
+;;; define-syntax
+
+  (check	;reference
+      (let ()
+	(define a 1)
+	(define-syntax b
+	  (make-synonym-transformer #'a))
+	(list a b))
+    => '(1 1))
+
+  (check	;mutation
+      (let ()
+	(define a 1)
+	(define-syntax b
+	  (make-synonym-transformer #'a))
+	(set! b 2)
+	(list a b))
+    => '(2 2))
+
+  (check	;nested mutation
+      (let ()
+	(define a 1)
+	(define-syntax b
+	  (make-synonym-transformer #'a))
+	(define-syntax c
+	  (make-synonym-transformer #'b))
+	(set! c 2)
+	(list a b c))
+    => '(2 2 2))
+
+  (check	;nested nested mutation
+      (let ()
+	(define a 1)
+	(define-syntax b
+	  (make-synonym-transformer #'a))
+	(define-syntax c
+	  (make-synonym-transformer #'b))
+	(define-syntax d
+	  (make-synonym-transformer #'c))
+	(set! c 2)
+	(list a b c d))
+    => '(2 2 2 2))
+
+;;; --------------------------------------------------------------------
+;;; let-syntax
+
+  (check	;reference
+      (let ()
+	(define a 1)
+	(let-syntax ((b (make-synonym-transformer #'a)))
+	  (list a b)))
+    => '(1 1))
+
+  (check	;mutation
+      (let ()
+	(define a 1)
+	(let-syntax ((b (make-synonym-transformer #'a)))
+	  (set! b 2)
+	  (list a b)))
+    => '(2 2))
+
+  (check	;nested reference
+      (let ()
+	(define a 1)
+	(let-syntax ((b (make-synonym-transformer #'a)))
+	  (let-syntax ((c (make-synonym-transformer #'b)))
+	    (list a b c))))
+    => '(1 1 1))
+
+  (check	;nested mutation
+      (let ()
+	(define a 1)
+	(let-syntax ((b (make-synonym-transformer #'a)))
+	  (let-syntax ((c (make-synonym-transformer #'b)))
+	    (set! c 2)
+	    (list a b c))))
+    => '(2 2 2))
+
+  (check	;nested nested mutation
+      (let ()
+	(define a 1)
+	(let-syntax ((b (make-synonym-transformer #'a)))
+	  (let-syntax ((c (make-synonym-transformer #'b)))
+	    (let-syntax ((d (make-synonym-transformer #'c)))
+	      (set! c 2) ;!!!
+	      (list a b c d)))))
+    => '(2 2 2 2))
+
+;;; --------------------------------------------------------------------
+;;; let*-syntax
+
+  (check	;reference
+      (let ()
+	(define a 1)
+	(let*-syntax ((b (make-synonym-transformer #'a))
+		      (c (make-synonym-transformer #'b))
+		      (d (make-synonym-transformer #'c)))
+	  (list a b c d)))
+    => '(1 1 1 1))
+
+  (check	;mutation
+      (let ()
+	(define a 1)
+	(let*-syntax ((b (make-synonym-transformer #'a))
+		      (c (make-synonym-transformer #'b))
+		      (d (make-synonym-transformer #'c)))
+	  (set! c 2)
+	  (list a b c d)))
+    => '(2 2 2 2))
+
+;;; --------------------------------------------------------------------
+;;; letrec-syntax
+
+  (check	;reference
+      (let ()
+	(define a 1)
+	(letrec-syntax ((b (make-synonym-transformer #'a))
+			(c (make-synonym-transformer #'b))
+			(d (make-synonym-transformer #'c)))
+	  (list a b c d)))
+    => '(1 1 1 1))
+
+  (check	;mutation
+      (let ()
+	(define a 1)
+	(letrec-syntax ((b (make-synonym-transformer #'a))
+			(c (make-synonym-transformer #'b))
+			(d (make-synonym-transformer #'c)))
+	  (set! c 2)
+	  (list a b c d)))
+    => '(2 2 2 2))
+
+;;; --------------------------------------------------------------------
+;;; free-identifier=?
+
+  (check
+      (let ()
+	(define a 1)
+	(define-syntax b
+	  (make-synonym-transformer #'a))
+	(define-syntax (doit stx)
+	  (syntax-case stx ()
+	    ((_ ?id1 ?id2)
+	     (free-identifier=? #'?id1 #'?id2))))
+	(doit a b))
+    => #f)
+
+  (check
+      (let ()
+	(define a 1)
+	(define-syntax b
+	  (make-synonym-transformer #'a))
+	(define-syntax c
+	  (make-synonym-transformer #'b))
+	(define-syntax (doit stx)
+	  (syntax-case stx ()
+	    ((_ ?id1 ?id2)
+	     (free-identifier=? #'?id1 #'?id2))))
+	(doit b c))
+    => #f)
+
+;;; --------------------------------------------------------------------
+;;; circular reference
+
+  (check
+      (guard (E ((syntax-violation? E)
+		 #t)
+		(else E))
+	(eval '(letrec-syntax ((b (make-synonym-transformer #'c))
+			       (c (make-synonym-transformer #'b)))
+		 (list b c))
+	      (environment '(vicare))))
+    => #t)
+
+  #t)
 
 
 (parametrise ((check-test-name	'interaction-environment))

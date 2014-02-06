@@ -294,6 +294,8 @@ Many backwards incompatibilities... life is hard!
 * Added unsafe variants API.  See the documentation node "iklib syntaxes
   unsafe".
 
+* Added synonym syntax transformers.
+
 
 Notes for revision 0.3d7
 ------------------------

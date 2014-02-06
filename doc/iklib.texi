@@ -3092,6 +3092,7 @@ the character.
 * iklib expander clauses::          Syntax clauses helpers.
 * iklib expander ctv::              Compile-time values.
 * iklib expander parameters::       Expand--time parameters.
+* iklib expander synonym::          Synonym transformers.
 @end menu
 
 @c page
@@ -4786,6 +4787,67 @@ Return the syntax parameter value bound to @var{parm-id}, which must be
 an identifier previously bound by @func{define-syntax-parameter}.  This
 function must be called only from the extent of a macro expansion; in
 practice: only by a macro transformer.
+@end defun
+
+@c page
+@node iklib expander synonym
+@subsection Synonym transformers
+
+
+Synonym transformers allow the creation of multiple identifiers which
+resolve to the same syntactic binding.  Usage examples:
+
+@example
+(import (vicare))
+
+(define a 1)
+
+(define-syntax b
+  (make-synonym-transformer #'a))
+
+(list a b)      @result{} (1 1)
+
+(define-syntax c
+  (make-synonym-transformer #'b))
+
+(list a b c)    @result{} (1 1 1)
+
+(define-syntax d
+  (make-synonym-transformer #'b))
+
+(set! c 2)
+
+(list a b c d)  @result{} (2 2 2 2)
+@end example
+
+Circular references are detected and cause a syntax violation to be
+raised.
+
+If the identifier @vari{id} is bound to a synonym transformer with
+source identifier @varii{id}: the two identifiers resolve to the same
+syntactic binding but are @strong{not} @func{free-identifier=?}.  To
+create an identifier that is @func{free-identifier=?} to another we have
+to use @func{define-alias}.
+
+
+@defun make-synonym-transformer @var{id}
+Build and return a ``special'' value that, when used as right--hand side
+of a syntax definition, is recognised by the expander as a synonym
+transformer as opposed to a normal transformer, variable transformer or
+a compile--time value.  @var{id} must be the source identifier.
+@end defun
+
+
+@defun synonym-transformer? @var{obj}
+Return @true{} if @var{obj} is recognised by the expander as a synonym
+transformer as opposed to a normal transformer, variable transformer or
+a compile--time value; otherwise return @false{}.
+@end defun
+
+
+@defun synonym-transformer-identifier @var{obj}
+If @var{obj} is recognised by the expander as a synonym transformer:
+return the source identifier, otherwise raise an exception.
 @end defun
 
 @c page

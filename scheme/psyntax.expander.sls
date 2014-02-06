@@ -900,6 +900,31 @@
 ;;value.
 ;;
 ;;
+;;Synonym syntax
+;;--------------
+;;
+;;A binding descriptor representing an synonym syntax has the format:
+;;
+;;   ($synonym . ?synonym-label)
+;;
+;;where ?SYNONYM-LABEL  is the  label gensym  associated to  the synonym
+;;syntax.
+;;
+;;Let's draw the picture.  When an synonym syntax binding is created:
+;;
+;;   (define-syntax ?lhs (make-synonym-transformer ?id))
+;;
+;;an identifier ?LHS is associated to  a main label ?LABEL, and an entry
+;;is pushed on the lexical environment:
+;;
+;;   (?label . ($synonym . ?synonym-label))
+;;
+;;where ?SYNONYM-LABEL is the label  bound to the identifier ?ID.  Given
+;;the identifier ?LHS: we can retrieve  the associated ?LABEL and so the
+;;?SYNONYM-LABEL;  then  we  can   "follow  through"  ?SYNONYM-LABEL  to
+;;retrieve the actual binding descriptor.
+;;
+;;
 ;;Displaced lexical
 ;;-----------------
 ;;
@@ -975,6 +1000,12 @@
     expand-library
     compile-r6rs-top-level		boot-library-expand
 
+    make-variable-transformer		variable-transformer?
+    variable-transformer-procedure
+
+    make-synonym-transformer		synonym-transformer?
+    synonym-transformer-identifier
+
     make-compile-time-value		compile-time-value?
     compile-time-value-object		syntax-parameter-value
 
@@ -987,9 +1018,6 @@
     ;;This must  be exported and that's  it.  I am unable  to remove it.
     ;;Sue me.  (Marco Maggi; Sun Nov 17, 2013)
     syntax-error
-
-    make-variable-transformer		variable-transformer?
-    variable-transformer-procedure
 
     syntax-dispatch			syntax-transpose
     ellipsis-map
@@ -1518,6 +1546,34 @@
   (if (variable-transformer? x)
       (cdr x)
     (assertion-violation __who__ "not a variable transformer" x)))
+
+
+;;;; public interface: synonym transformer
+;;
+;;
+
+(define* (make-synonym-transformer (x identifier?))
+  ;;Build and  return a  "special" value that,  when used  as right-hand
+  ;;side of  a syntax  definition, is  recognised by  the expander  as a
+  ;;synonym  transformer as  opposed to  a normal  transformer, variable
+  ;;transformer or a compile-time value.
+  ;;
+  (cons 'synonym-transformer x))
+
+(define (synonym-transformer? x)
+  ;;Return  true  if X  is  recognised  by  the  expander as  a  synonym
+  ;;transformer as opposed to a normal transformer, variable transformer
+  ;;or a compile-time value; otherwise return false.
+  ;;
+  (and (pair? x)
+       (eq? ($car x) 'synonym-transformer)
+       (identifier? ($cdr x))))
+
+(define* (synonym-transformer-identifier (x synonym-transformer?))
+  ;;If X is recognised by the  expander as a synonym transformer: return
+  ;;the source identifier, otherwise raise an exception.
+  ;;
+  ($cdr x))
 
 
 ;;;; public interface: compile-time values
@@ -3531,15 +3587,28 @@
 ;;; --------------------------------------------------------------------
 ;;; fluid syntax bindings
 
-(define (make-fluid-syntax-binding label)
-  (cons '$fluid label))
+(define-syntax-rule (make-fluid-syntax-binding ?label)
+  (cons '$fluid ?label))
 
 (define (fluid-syntax-binding? binding)
   (and (pair? binding)
        (eq? '$fluid (syntactic-binding-type binding))))
 
-(define-syntax-rule (fluid-syntax-binding-fluid-label binding)
-  (syntactic-binding-value binding))
+(define-syntax-rule (fluid-syntax-binding-fluid-label ?binding)
+  (syntactic-binding-value ?binding))
+
+;;; --------------------------------------------------------------------
+;;; rename bindings
+
+(define-syntax-rule (make-synonym-syntax-binding ?label)
+  (cons '$synonym ?label))
+
+(define (synonym-syntax-binding? binding)
+  (and (pair? binding)
+       (eq? '$synonym (syntactic-binding-type binding))))
+
+(define-syntax-rule (synonym-syntax-binding-synonym-label ?binding)
+  (syntactic-binding-value ?binding))
 
 ;;; --------------------------------------------------------------------
 ;;; compile-time values bindings
@@ -3622,51 +3691,74 @@
 
 ;;;; lexical environment: mapping labels to syntactic binding descriptors
 
-(define (label->syntactic-binding label lexenv)
-  ;;Look up  the symbol  LABEL in the  LEXENV as well  as in  the global
-  ;;environment.   If an  entry  with  key LABEL  is  found: return  the
-  ;;associated  syntactic binding  descriptor; if  no matching  entry is
-  ;;found, return one of the special descriptors:
-  ;;
-  ;;   (displaced-lexical . ())
-  ;;   (displaced-lexical . #f)
-  ;;
-  ;;If the binding descriptor represents  a fluid syntax: follow through
-  ;;and return the innermost re-definition of the binding.
-  ;;
-  (let ((binding (label->syntactic-binding/no-fluids label lexenv)))
-    (if (fluid-syntax-binding? binding)
-	;;Fluid syntax bindings (created by DEFINE-FLUID-SYNTAX) require
-	;;different logic.   The lexical  environment contains  the main
-	;;fluid  syntax definition  entry  and one  or more  subordinate
-	;;fluid syntax re-definition entries.
-	;;
-	;;LABEL is associated to the  main binding definition entry; its
-	;;syntactic binding  descriptor contains the fluid  label, which
-	;;is associated  to one or more  subordinate re-definitions.  We
-	;;extract  the fluid  label from  BINDING, then  search for  the
-	;;innermost fluid binding associated to it.
-	;;
-	;;Such  search for  the fluid  re-definition binding  must begin
-	;;from  LEXENV, and  then in  the global  environment.  This  is
-	;;because  we  can  nest  at will  FLUID-LET-SYNTAX  forms  that
-	;;redefine the  binding by pushing new  re-definition entries on
-	;;the  LEXENV.  To  reach for  the innermost  we must  query the
-	;;LEXENV first.
-	;;
-	;;If there is no binding  descriptor for FLUID-LABEL: the return
-	;;value will be:
-	;;
-	;;   (displaced-lexical . #f)
-	;;
-	(let ((fluid-label (fluid-syntax-binding-fluid-label binding)))
-	  (cond ((assq fluid-label lexenv)
-		 => syntactic-binding-value)
-		(else
-		 (label->syntactic-binding/no-fluids fluid-label '()))))
-      binding)))
+(module (label->syntactic-binding)
 
-(define (label->syntactic-binding/no-fluids label lexenv)
+  (case-define label->syntactic-binding
+    ;;Look up the  symbol LABEL in the  LEXENV as well as  in the global
+    ;;environment.   If an  entry with  key LABEL  is found:  return the
+    ;;associated syntactic  binding descriptor; if no  matching entry is
+    ;;found, return one of the special descriptors:
+    ;;
+    ;;   (displaced-lexical . ())
+    ;;   (displaced-lexical . #f)
+    ;;
+    ;;If the  binding descriptor  represents a  fluid syntax  or synonym
+    ;;syntax: follow  through and return the  innermost re-definition of
+    ;;the binding.
+    ;;
+    ((label lexenv)
+     (label->syntactic-binding label lexenv '()))
+    ((label lexenv accum-labels)
+     (let ((binding (label->syntactic-binding/no-indirection label lexenv)))
+       (cond ((fluid-syntax-binding? binding)
+	      ;;Fluid syntax  bindings (created  by DEFINE-FLUID-SYNTAX)
+	      ;;require  different   logic.   The   lexical  environment
+	      ;;contains the main fluid  syntax definition entry and one
+	      ;;or more subordinate fluid syntax re-definition entries.
+	      ;;
+	      ;;LABEL  is  associated  to the  main  binding  definition
+	      ;;entry;  its syntactic  binding  descriptor contains  the
+	      ;;fluid  label,  which  is   associated  to  one  or  more
+	      ;;subordinate re-definitions.  We  extract the fluid label
+	      ;;from  BINDING,  then  search  for  the  innermost  fluid
+	      ;;binding associated to it.
+	      ;;
+	      ;;Such  search for  the fluid  re-definition binding  must
+	      ;;begin from  LEXENV, and then in  the global environment.
+	      ;;This  is because  we can  nest at  will FLUID-LET-SYNTAX
+	      ;;forms  that   redefine  the   binding  by   pushing  new
+	      ;;re-definition entries  on the LEXENV.  To  reach for the
+	      ;;innermost we must query the LEXENV first.
+	      ;;
+	      ;;If there  is no binding descriptor  for FLUID-LABEL: the
+	      ;;return value will be:
+	      ;;
+	      ;;   (displaced-lexical . #f)
+	      ;;
+	      (let* ((fluid-label   (fluid-syntax-binding-fluid-label binding))
+		     (fluid-binding (cond ((assq fluid-label lexenv)
+					   => lexenv-entry-binding-descriptor)
+					  (else
+					   (label->syntactic-binding/no-indirection fluid-label '())))))
+		(if (synonym-syntax-binding? fluid-binding)
+		    (%follow-through binding lexenv accum-labels)
+		  fluid-binding)))
+
+	     ((synonym-syntax-binding? binding)
+	      (%follow-through binding lexenv accum-labels))
+
+	     (else
+	      binding)))))
+
+  (define (%follow-through binding lexenv accum-labels)
+    (let ((synonym-label (synonym-syntax-binding-synonym-label binding)))
+      (if (memq synonym-label accum-labels)
+	  (stx-error #f "circular reference detected while resolving synonym transformers")
+	(label->syntactic-binding synonym-label lexenv (cons synonym-label accum-labels)))))
+
+  #| end of module |# )
+
+(define (label->syntactic-binding/no-indirection label lexenv)
   ;;Look up  the symbol  LABEL in the  LEXENV as well  as in  the global
   ;;environment.   If an  entry  with  key LABEL  is  found: return  the
   ;;associated  syntactic binding  descriptor; if  no matching  entry is
@@ -3675,8 +3767,9 @@
   ;;   (displaced-lexical . ())
   ;;   (displaced-lexical . #f)
   ;;
-  ;;If the binding descriptor represents a fluid syntax: *do not* follow
-  ;;through and return the binding descriptor of the syntax definition.
+  ;;If the  binding descriptor  represents a fluid  syntax or  a synonym
+  ;;syntax: *do not* follow through and return the binding descriptor of
+  ;;the syntax definition.
   ;;
   ;;Since all labels are unique,  it doesn't matter which environment we
   ;;consult first; we  lookup the global environment  first because it's
@@ -5121,18 +5214,14 @@
     (property-list (%get-label __who__ id)))
 
   (define (%get-label who id)
-    (cond ((id->label id)
-	   => (lambda (label)
-		(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
-		  (case (syntactic-binding-type binding)
-		    ((global global-macro global-macro! global-ctv)
-		     (let ((lib (cddr binding)))
-		       (unless (eq? lib '*interaction*)
-			 (visit-library lib))))
-		    ))
-		label))
-	  (else
-	   (assertion-violation who "identifier is not bound" id))))
+    (let* ((label   (id->label/or-error who id id))
+	   (binding (label->syntactic-binding label ((current-run-lexenv)))))
+      (case (syntactic-binding-type binding)
+	((global global-macro global-macro! global-ctv)
+	 (let ((lib (cddr binding)))
+	   (unless (eq? lib '*interaction*)
+	     (visit-library lib)))))
+      label))
 
   #| end of module |# )
 
@@ -5322,7 +5411,8 @@
 	(t2 (id->label id2)))
     (if (or t1 t2)
 	(eq? t1 t2)
-      (eq? (identifier->symbol id1) (identifier->symbol id2)))))
+      (eq? (identifier->symbol id1)
+	   (identifier->symbol id2)))))
 
 (define (valid-bound-ids? id*)
   ;;Given a list return #t if it  is made of identifers none of which is
@@ -9503,7 +9593,7 @@
     ;;
     (let* ((label    (or (id->label lhs)
 			 (stx-error lhs "unbound identifier")))
-	   (binding  (label->syntactic-binding/no-fluids label lexenv.run)))
+	   (binding  (label->syntactic-binding/no-indirection label lexenv.run)))
       (cond ((fluid-syntax-binding? binding)
 	     (fluid-syntax-binding-fluid-label binding))
 	    (else
@@ -10810,6 +10900,9 @@
 	   rv)
 	  ((compile-time-value? rv)
 	   (make-local-compile-time-value-binding (compile-time-value-object rv) expanded-expr))
+	  ((synonym-transformer? rv)
+	   (let ((id (synonym-transformer-identifier rv)))
+	     (make-synonym-syntax-binding (id->label/or-error 'expander id id))))
 	  (else
 	   (assertion-violation 'expand
 	     "invalid return value from syntax transformer expression"
