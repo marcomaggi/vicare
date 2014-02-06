@@ -4151,6 +4151,45 @@
     => '(2 2 2 2))
 
 ;;; --------------------------------------------------------------------
+;;; fluid syntax
+
+  (check
+      (let ()
+	(define a 1)
+	(define-fluid-syntax b
+	  (make-synonym-transformer #'a))
+	(list a b))
+    => '(1 1))
+
+  (check
+      (let ()
+	(define a 1)
+	(define-fluid-syntax b
+	  (make-synonym-transformer #'a))
+	(set! a 2)
+	(list a b))
+    => '(2 2))
+
+  (check
+      (let ()
+	(define a 1)
+	(define-fluid-syntax b
+	  (lambda (stx) #f))
+	(fluid-let-syntax ((b (make-synonym-transformer #'a)))
+	  (list a b)))
+    => '(1 1))
+
+  (check
+      (let ()
+	(define a 1)
+	(define-fluid-syntax b
+	  (lambda (stx) #f))
+	(fluid-let-syntax ((b (make-synonym-transformer #'a)))
+	  (set! b 2)
+	  (list a b)))
+    => '(2 2))
+
+;;; --------------------------------------------------------------------
 ;;; free-identifier=?
 
   (check
