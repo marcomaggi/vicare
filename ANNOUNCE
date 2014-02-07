@@ -288,7 +288,7 @@ Many backwards incompatibilities... life is hard!
   syntax exported by (vicare).  This change should not cause significant
   problems: most of the code should just work.
 
-* BEGIN-FOR-EXPAND is  now an  alias for  EVAL-FOR-EXPAND, to  match the
+* BEGIN-FOR-SYNTAX is  now an  alias for  EVAL-FOR-EXPAND, to  match the
   syntax name used by Racket.
 
 * Added unsafe variants API.  See the documentation node "iklib syntaxes

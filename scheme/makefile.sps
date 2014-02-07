@@ -457,8 +457,8 @@
     (include				(macro . include))
     (set-cons!				(macro . set-cons!))
 ;;;
-    (begin-for-expand			(macro . begin-for-expand))
-    (eval-for-expand			(macro . begin-for-expand))
+    (begin-for-syntax			(macro . begin-for-syntax))
+    (eval-for-expand			(macro . begin-for-syntax))
 ;;;
     (__who__				($fluid . __who__))
     (return				($fluid . return))
@@ -2346,7 +2346,7 @@
     (predicate-return-value-validation			i v $language)
 ;;;
     (eval-for-expand				i v $language)
-    (begin-for-expand				i v $language)
+    (begin-for-syntax				i v $language)
 ;;;
     (__who__					i v $language)
     (return					i v $language)
