@@ -110,15 +110,12 @@
 
 (parametrise ((check-test-name	'spec-inspection))
 
-  #;(check
+  (check
       (let ()
   	(define-syntax (get-name stx)
   	  (syntax-case stx ()
   	    ((_ ?type-id)
-  	     (begin
-  	       (debug-print (object-spec-name (identifier-object-spec #'?type-id))
-  			    (syntax->datum #`(quote #,(object-spec-name (identifier-object-spec #'?type-id)))))
-  	       #`(quote #,(object-spec-name (identifier-object-spec #'?type-id)))))
+	     #`(quote #,(datum->syntax #'?type-id (object-spec-name (identifier-object-spec #'?type-id)))))
   	    ))
   	(get-name vector))
     => 'vector)
