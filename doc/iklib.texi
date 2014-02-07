@@ -1796,6 +1796,12 @@ It is sometimes useful to attach properties to syntactic bindings; the
 following @api{} does so.  The following functions will fail if the
 argument @var{id} is not a bound identifier.
 
+When writing a library making use of syntactic binding properties: we
+must enable the option @code{visit-upon-loading} in the options clause
+of the @code{library} form; @ref{iklib syntaxes libraries, Extended
+@code{library} syntax}.  Without this option properties may not be
+registered properly.
+
 
 @defun syntactic-binding-putprop @var{id} @var{key} @var{value}
 Like @func{putprop} for symbols, but set a property for the identifier
