@@ -5863,7 +5863,7 @@
       ((with-implicits)			with-implicits-macro)
       ((set-cons!)			set-cons!-macro)
 
-      ((begin-for-expand)		begin-for-expand-macro)
+      ((begin-for-syntax)		begin-for-syntax-macro)
 
       ;; non-Scheme style syntaxes
       ((while)				while-macro)
@@ -6676,16 +6676,16 @@
 
 ;;;; module non-core-macro-transformer: WITH-IMPLICITS
 
-(define (begin-for-expand-macro expr-stx)
-  ;;Transformer function used to  expand Vicare's BEGIN-FOR-EXPAND macros
+(define (begin-for-syntax-macro expr-stx)
+  ;;Transformer function used to  expand Vicare's BEGIN-FOR-SYNTAX macros
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
     ((_ ?body0 ?body* ...)
      (bless
-      `(define-syntax ,(gensym "begin-for-expand")
-	 (begin ,?body0 ,@?body* values))))
+      `(define-syntax ,(gensym "begin-for-syntax")
+	 (let () ,?body0 ,@?body* values))))
     ))
 
 
@@ -9226,7 +9226,7 @@
      ;;This must be a definition.  A module is a definition.
      (bless
       `(module ()
-	 (begin-for-expand
+	 (begin-for-syntax
 	   (if (syntactic-binding-getprop (syntax ,?safe-id)
 		 (quote ,*UNSAFE-VARIANT-COOKIE*))
 	       (syntax-violation 'define-unsafe-variant
@@ -9252,7 +9252,7 @@
      ;;This must be a definition.  A module is a definition.
      (bless
       `(module ()
-	 (begin-for-expand
+	 (begin-for-syntax
 	   (if (syntactic-binding-getprop (syntax ,?predicate-id)
 		 (quote ,*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*))
 	       (syntax-violation 'define-predicate-procedure-argument-validation
@@ -9276,7 +9276,7 @@
      ;;This must be a definition.  A module is a definition.
      (bless
       `(module ()
-	 (begin-for-expand
+	 (begin-for-syntax
 	   (if (syntactic-binding-getprop (syntax ,?predicate-id)
 		 (quote ,*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*))
 	       (syntax-violation 'define-predicate-return-value-validation
