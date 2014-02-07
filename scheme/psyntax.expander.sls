@@ -5374,15 +5374,15 @@
 ;;   (define* (exact-integer (obj exact-integer?))
 ;;     obj)
 ;;
-;;   (begin-for-expand
+;;   (eval-for-expand
 ;;
-;;     (define-object-spec #'fixnum
+;;     (set-identifier-object-spec! #'fixnum
 ;;       (make-object-spec 'fixnum #'fixnum #'fixnum?))
 ;;
-;;     (define-object-spec #'exact-integer
+;;     (set-identifier-object-spec! #'exact-integer
 ;;       (make-object-spec 'exact-integer #'exact-integer #'exact-integer?))
 ;;
-;;     (define-object-spec #'vector
+;;     (set-identifier-object-spec! #'vector
 ;;       (make-object-spec 'vector #'vector #'vector?))
 ;;
 ;;     #| end of begin-or-expand |# )
@@ -5395,7 +5395,7 @@
 ;;   (define (fxfunc a b c)
 ;;     (fx* a (fx+ b c)))
 ;;
-;;   (begin-for-expand
+;;   (eval-for-expand
 ;;
 ;;     (define fixnum-spec
 ;;       (object-spec #'fixnum))
@@ -5403,7 +5403,7 @@
 ;;     (define exact-integer-spec
 ;;       (object-spec #'exact-integer))
 ;;
-;;     (define-callable-spec #'func
+;;     (set-callable-object-spec! #'func
 ;;       (make-callable-spec 'func 3 3
 ;;         (lambda (type-a type-b type-c)
 ;;           (cond ((and (eq? type-a fixnum-spec)
@@ -5411,9 +5411,9 @@
 ;;                       (eq? type-c fixnum-spec))
 ;;                  (values #'fxfunc exact-integer-spec))
 ;;                 (else
-;;                  (values #'func #f)))))
+;;                  (values #'func #f))))))
 ;;
-;;     #| end of begin-for-expand |# )
+;;     #| end of eval-for-expand |# )
 ;;
 
 (define-constant *EXPAND-TIME-OBJECT-SPEC-COOKIE*
