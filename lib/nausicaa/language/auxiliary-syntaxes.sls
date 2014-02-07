@@ -11,7 +11,7 @@
 ;;;	also other auxiliary syntaxes, like  the ones for the vector and
 ;;;	string views.
 ;;;
-;;;Copyright (c) 2010-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -78,7 +78,7 @@
 		define-auxiliary-syntaxes
 		;; bindings from (rnrs records syntactic (6))
 		parent sealed opaque parent-rtd nongenerative
-		protocol fields mutable immutable =>))
+		protocol fields mutable immutable => <>))
 
 
 (define-auxiliary-syntaxes
@@ -101,7 +101,7 @@
   protected
   private
 
-  <>
+  #;<>
   <...>
   ->
   <-

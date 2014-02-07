@@ -1058,7 +1058,8 @@
     (rnrs mutable-pairs)
     (psyntax library-manager)
     (psyntax builders)
-    (psyntax compat)
+    (except (psyntax compat)
+	    debug-print)
     (psyntax config)
     (psyntax internal))
 
@@ -5231,14 +5232,21 @@
     (property-list (%get-label __who__ id)))
 
   (define (%get-label who id)
-    (let* ((label   (id->label/or-error who id id))
-	   (binding (label->syntactic-binding label ((current-run-lexenv)))))
-      (case (syntactic-binding-type binding)
-	((global global-macro global-macro! global-ctv)
-	 (let ((lib (cddr binding)))
-	   (unless (eq? lib '*interaction*)
-	     (visit-library lib)))))
-      label))
+    (id->label/or-error who id id))
+
+  ;;NOTE The variant below is  commented out because it causes problems.
+  ;;(Marco Maggi; Fri Feb 7, 2014)
+  ;;
+  ;;
+  ;;
+  ;; (define (%get-label who id)
+  ;;   (let* ((label   (id->label/or-error who id id))
+  ;; 	   (binding (label->syntactic-binding label ((current-run-lexenv)))))
+  ;;     (case (syntactic-binding-type binding)
+  ;;     	((global global-macro global-macro! global-ctv)
+  ;;     	 (let ((lib (cadr binding)))
+  ;;     	   (visit-library lib))))
+  ;;     label))
 
   #| end of module |# )
 
@@ -6043,7 +6051,8 @@
       ((file-options)
        file-options-macro)
 
-      ((... => _ else unquote unquote-splicing
+      ((... => _ <>
+	    else unquote unquote-splicing
 	    unsyntax unsyntax-splicing
 	    fields mutable immutable parent protocol
 	    sealed opaque nongenerative parent-rtd)
@@ -10886,7 +10895,26 @@
   ;;language symbolic expression.
   ;;
   (define-constant __who__ 'is-a?)
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (<>)
+    ((_ <> ?type-id)
+     (identifier? ?type-id)
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(lambda (obj)
+		      (record-type-and-record? ,?type-id obj)))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(lambda (obj)
+		      (struct-type-and-struct? ,?type-id obj)))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (chi-expr (object-spec-pred-id spec)
+		    lexenv.run lexenv.expand)))
+       ))
+
     ((_ ?expr ?type-id)
      (identifier? ?type-id)
      (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)

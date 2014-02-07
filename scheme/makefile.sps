@@ -461,6 +461,7 @@
     (eval-for-expand			(macro . begin-for-syntax))
 ;;;
     (__who__				($fluid . __who__))
+    (<>					(macro . <>))
     (return				($fluid . return))
     (continue				($fluid . continue))
     (break				($fluid . break))
@@ -2349,6 +2350,7 @@
     (begin-for-syntax				i v $language)
 ;;;
     (__who__					i v $language)
+    (<>						i v $language)
     (return					i v $language)
     (continue					i v $language)
     (break					i v $language)

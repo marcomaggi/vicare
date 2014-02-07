@@ -72,7 +72,9 @@
 	       aux.<>			aux.<-)
 	      aux.))
   (import (except (vicare)
-		  is-a? slot-ref slot-set!)
+		  slot-ref slot-set!)
+    (for (vicare expander object-spec)
+      expand)
     (nausicaa language oopp auxiliary-syntaxes)
     (nausicaa language oopp conditions)
     (for (prefix (nausicaa language oopp oopp-syntax-helpers)
@@ -137,131 +139,143 @@
   ;;
   #t)
 
-(define-syntax* (<top> stx)
-  ;;Tag syntax  for "<top>",  all the operations  involving this  tag go
-  ;;through this syntax.  This tag is  the supertag of all the class and
-  ;;label tags.
-  ;;
-  ;;In all the branches:
-  ;;
-  ;;* ?EXPR must be an expression  to be evaluated only once; its result
-  ;;must be an instance of the  subtag type.  ?EXPR can be an identifier
-  ;;but also the application of an accessor to an instance.
-  ;;
-  ;;*  ?VAR  must  be  the  identifier  bound  to  the  instance  syntax
-  ;;dispatcher.
-  ;;
-  (syntax-case stx ( ;;
-		    :flat-oopp-syntax
-		    :define :make :make-from-fields :is-a?
-		    :dispatch :mutator :getter :setter
-		    :insert-parent-clause define-record-type
-		    :insert-constructor-fields lambda
-		    :super-constructor-descriptor :assert-type-and-return
-		    :assert-procedure-argument :assert-expression-return-value
-		    :append-unique-id :list-of-unique-ids
-		    :predicate-function :accessor-function :mutator-function
-		    aux.<>)
+(define-syntax <top>
+  (let ()
+    (set-identifier-object-spec! #'<top>
+      (make-object-spec '<top> #'<top> #'<top>-predicate))
+    (lambda (stx)
+      ;;Tag syntax for "<top>", all the operations involving this tag go
+      ;;through this syntax.  This tag is  the supertag of all the class
+      ;;and label tags.
+      ;;
+      ;;In all the branches:
+      ;;
+      ;;* ?EXPR  must be an  expression to  be evaluated only  once; its
+      ;;result must be an instance of  the subtag type.  ?EXPR can be an
+      ;;identifier  but  also  the  application of  an  accessor  to  an
+      ;;instance.
+      ;;
+      ;;*  ?VAR must  be the  identifier  bound to  the instance  syntax
+      ;;dispatcher.
+      ;;
+      (case-define synner
+	((message)
+	 (syntax-violation '<top> message stx #f))
+	((message subform)
+	 (syntax-violation '<top> message stx subform)))
+      (syntax-case stx ( ;;
+			:flat-oopp-syntax
+			:define :make :make-from-fields :is-a?
+			:dispatch :mutator :getter :setter
+			:insert-parent-clause define-record-type
+			:insert-constructor-fields lambda
+			:super-constructor-descriptor :assert-type-and-return
+			:assert-procedure-argument :assert-expression-return-value
+			:append-unique-id :list-of-unique-ids
+			:predicate-function :accessor-function :mutator-function
+			aux.<>)
 
-    ;;This is special for "<top>":
-    ;;
-    ((_ #:oopp-syntax (??expr ??arg ...))
-     (synner "undefined OOPP syntax"))
+	;;This is special for "<top>":
+	;;
+	((_ #:oopp-syntax (??expr ??arg ...))
+	 (synner "undefined OOPP syntax"))
 
-    ;;This is special for "<top>":
-    ;;
-    ((_ :flat-oopp-syntax ??expr)
-     #'??expr)
-    ((_ :flat-oopp-syntax ??expr ??arg ...)
-     #'(??expr ??arg ...))
+	;;This is special for "<top>":
+	;;
+	((_ :flat-oopp-syntax ??expr)
+	 #'??expr)
+	((_ :flat-oopp-syntax ??expr ??arg ...)
+	 #'(??expr ??arg ...))
 
-    ((_ :define ?var ?expr)
-     (identifier? #'?var)
-     #'(define ?var ?expr))
+	((_ :define ?var ?expr)
+	 (identifier? #'?var)
+	 #'(define ?var ?expr))
 
-    ((_ :define ?var)
-     (identifier? #'?var)
-     #'(define ?var))
+	((_ :define ?var)
+	 (identifier? #'?var)
+	 #'(define ?var))
 
-    ((_ :make . ?args)
-     (synner "invalid maker call syntax for <top> tag"))
+	((_ :make . ?args)
+	 (synner "invalid maker call syntax for <top> tag"))
 
-    ((_ :make-from-fields . ?args)
-     (synner "invalid :make-from-fields call syntax for <top> tag"))
+	((_ :make-from-fields . ?args)
+	 (synner "invalid :make-from-fields call syntax for <top> tag"))
 
-    ;;Every  object  is of  type  "<top>"  by  definition.  We  have  to
-    ;;evaluate the given expression for its side effects.
-    ((_ :is-a? ?expr)
-     #'(begin
-	 ?expr
-	 #t))
+	;;Every  object  is of  type  "<top>"  by  definition.  We  have  to
+	;;evaluate the given expression for its side effects.
+	((_ :is-a? aux.<>)
+	 #'<top>-predicate)
+	((_ :is-a? ?expr)
+	 #'(begin
+	     ?expr
+	     #t))
 
-    ;;If a  "<top>" value receives  a dispatch  request: what do  we do?
-    ;;Raise an error because "<top>" has no members.
-    ((_ :dispatch (?expr . ?args))
-     (synner "invalid tag member"))
+	;;If a  "<top>" value receives  a dispatch  request: what do  we do?
+	;;Raise an error because "<top>" has no members.
+	((_ :dispatch (?expr . ?args))
+	 (synner "invalid tag member"))
 
-    ((_ :mutator ?expr ?keys ?value)
-     (synner "invalid tag-syntax field-mutator request"))
+	((_ :mutator ?expr ?keys ?value)
+	 (synner "invalid tag-syntax field-mutator request"))
 
-    ((_ :getter (?expr . ?args))
-     (synner "invalid tag-syntax getter request"))
+	((_ :getter (?expr . ?args))
+	 (synner "invalid tag-syntax getter request"))
 
-    ((_ :setter (?expr . ?args))
-     (synner "invalid tag-syntax setter request"))
+	((_ :setter (?expr . ?args))
+	 (synner "invalid tag-syntax setter request"))
 
-    ;;Given an R6RS record type definition: insert an appropriate PARENT
-    ;;clause so that the type is derived from "<top>-record-type".
-    ((_ :insert-parent-clause (define-record-type ?name . ?clauses))
-     #'(define-record-type ?name (parent <top>-record-type) . ?clauses))
+	;;Given an R6RS record type definition: insert an appropriate PARENT
+	;;clause so that the type is derived from "<top>-record-type".
+	((_ :insert-parent-clause (define-record-type ?name . ?clauses))
+	 #'(define-record-type ?name (parent <top>-record-type) . ?clauses))
 
-    ;;For common  tags: this rule should  insert the field names  in the
-    ;;appropriate  position  in  the  definition of  a  custom  protocol
-    ;;function.   But this  is the  "<top>" tag  which keeps  hidden its
-    ;;fields, so just return the input expression.
-    ((_ :insert-constructor-fields (lambda (make-parent-1)
-				     (lambda (V ...)
-				       ((make-parent-2 W ...) Z ...))))
-     #'(lambda (make-parent-1)
-	 (lambda (V ...)
-	   ((make-parent-2 W ...) Z ...))))
+	;;For common  tags: this rule should  insert the field names  in the
+	;;appropriate  position  in  the  definition of  a  custom  protocol
+	;;function.   But this  is the  "<top>" tag  which keeps  hidden its
+	;;fields, so just return the input expression.
+	((_ :insert-constructor-fields (lambda (make-parent-1)
+					 (lambda (V ...)
+					   ((make-parent-2 W ...) Z ...))))
+	 #'(lambda (make-parent-1)
+	     (lambda (V ...)
+	       ((make-parent-2 W ...) Z ...))))
 
-    ((_ :super-constructor-descriptor)
-     #'<top>-super-rcd)
+	((_ :super-constructor-descriptor)
+	 #'<top>-super-rcd)
 
-    ;;This is  used for values  validation by tagged variables;  it must
-    ;;work like the  R6RS ASSERT syntax.  By convention:  all the values
-    ;;are of type "<top>", so we just evaluate the expression and return
-    ;;its value.
-    ((_ :assert-type-and-return ?expr)
-     #'?expr)
-    ((_ :assert-procedure-argument ?expr)
-     #'(void))
-    ((_ :assert-expression-return-value ?expr)
-     #'?expr)
+	;;This is  used for values  validation by tagged variables;  it must
+	;;work like the  R6RS ASSERT syntax.  By convention:  all the values
+	;;are of type "<top>", so we just evaluate the expression and return
+	;;its value.
+	((_ :assert-type-and-return ?expr)
+	 #'?expr)
+	((_ :assert-procedure-argument ?expr)
+	 #'(void))
+	((_ :assert-expression-return-value ?expr)
+	 #'?expr)
 
-    ((_ :append-unique-id (?id ...))
-     #'(quote (?id ... nausicaa:builtin:<top>)))
+	((_ :append-unique-id (?id ...))
+	 #'(quote (?id ... nausicaa:builtin:<top>)))
 
-    ((_ :list-of-unique-ids)
-     ;;This is the list of UIDs for the type "<top>".
-     #'(quote (nausicaa:builtin:<top>)))
+	((_ :list-of-unique-ids)
+	 ;;This is the list of UIDs for the type "<top>".
+	 #'(quote (nausicaa:builtin:<top>)))
 
-    ((_ :predicate-function)
-     #'<top>-predicate)
+	((_ :predicate-function)
+	 #'<top>-predicate)
 
-    ;;The tag "<top>" has no accessible fields.
-    ((_ :accessor-function ?field-name)
-     (identifier? #'?field-name)
-     (synner "invalid tag-syntax field accessor function request" #'?field-name))
+	;;The tag "<top>" has no accessible fields.
+	((_ :accessor-function ?field-name)
+	 (identifier? #'?field-name)
+	 (synner "invalid tag-syntax field accessor function request" #'?field-name))
 
-    ;;The tag "<top>" has no accessible fields.
-    ((_ :mutator-function ?field-name)
-     (identifier? #'?field-name)
-     (synner "invalid tag-syntax field mutator function request" #'?field-name))
+	;;The tag "<top>" has no accessible fields.
+	((_ :mutator-function ?field-name)
+	 (identifier? #'?field-name)
+	 (synner "invalid tag-syntax field mutator function request" #'?field-name))
 
-    (_
-     (syntax-help.tag-public-syntax-transformer stx #f #'set!/tags synner))))
+	(_
+	 (syntax-help.tag-public-syntax-transformer stx #f #'set!/tags synner))))))
 
 
 ;;;; procedure label
@@ -450,6 +464,9 @@
 		    (%the-accessor	ACCESSOR-TRANSFORMER)
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
+
+		(set-identifier-object-spec! #'THE-TAG
+		  (make-object-spec 'THE-TAG #'THE-TAG #'THE-PUBLIC-PREDICATE))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -778,6 +795,9 @@
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 
+		(set-identifier-object-spec! #'THE-TAG
+		  (make-object-spec 'THE-TAG #'THE-TAG #'THE-PREDICATE))
+
 		(lambda (stx)
 		  (define (synner message subform)
 		    (syntax-violation 'THE-TAG message stx subform))
@@ -927,35 +947,6 @@
      #'(?tag :make-from-fields . ?args))
     (_
      (synner "invalid syntax in use of from-fields maker call"))))
-
-;; (define-syntax* (make stx)
-;;   (syntax-case stx ()
-;;     ((_ ?tag . ?args)
-;;      (identifier? #'?tag)
-;;      #'(?tag :make . ?args))
-;;     (_
-;;      (synner "invalid syntax in use of public maker call"))))
-
-(define-syntax* (is-a? stx)
-  ;;Test if  a given object  matches a class  type using the  :is-a? tag
-  ;;syntax.
-  ;;
-  (syntax-case stx (<top> aux.<>)
-    ;;All the objects are "<top>" instances by definition.
-    ((_ ?obj <top>)
-     (syntax #t))
-
-    ;;Expand to the predicate to be used as standalone function.
-    ((_ aux.<> ?class-name)
-     #'(?class-name :predicate-function))
-
-    ;;Apply the predicate function to the object.
-    ((_ ?obj ?tag)
-     (identifier? #'?tag)
-     #'(?tag :is-a? ?obj))
-
-    (_
-     (synner "invalid syntax in use of tag type predicate"))))
 
 (define-syntax* (slot-ref stx)
   (syntax-case stx (aux.<>)

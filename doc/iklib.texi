@@ -1351,6 +1351,8 @@ A @rnrs{6} record type descriptor if the given identifier argument
 
 
 @deffn Syntax is-a? @meta{expr} @meta{type-id}
+@deffnx Syntax is-a? <> @meta{type-id}
+@deffnx {Auxiliary Syntax} <>
 Expand to an expression which, when evaluated, returns @true{} if
 @meta{expr} evaluates to a struct or record of type @meta{type-id}.
 
@@ -1358,6 +1360,9 @@ Expand to an expression which, when evaluated, returns @true{} if
 @meta{type-id} must the type name of a Vicare struct (defined by
 @func{define-struct}) or an @rnrs{6} record type name (defined by
 @func{define-record-type}).
+
+When @code{<>} is used as first argument: the syntax evaluates to a
+predicate function.
 
 @example
 (import (vicare))
@@ -1370,6 +1375,8 @@ Expand to an expression which, when evaluated, returns @true{} if
 
 (is-a? (make-doublet 1 2)   doublet)    @result{} #t
 (is-a? (make-triplet 1 2 3) triplet)    @result{} #t
+
+((is-a? <> doublet) (make-doublet 1 2)) @result{} #t
 
 (is-a? 123 triplet)                     @result{} #f
 @end example

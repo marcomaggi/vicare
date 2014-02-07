@@ -73,7 +73,8 @@
 		    :define :make :is-a? :list-of-unique-ids :predicate-function
 		    :setter :getter
 		    :assert-type-and-return :assert-procedure-argument
-		    :assert-expression-return-value)
+		    :assert-expression-return-value
+		    aux.<>)
 
     ;;Define  internal   bindings  for   a  tagged   variable.   Without
     ;;initialisation expression.
@@ -96,6 +97,8 @@
     ((_ :make . ??args)
      #`(#,the-public-constructor . ??args))
 
+    ((_ :is-a? aux.<>)
+     the-public-predicate)
     ((_ :is-a? . ??args)
      #`(#,the-public-predicate . ??args))
 

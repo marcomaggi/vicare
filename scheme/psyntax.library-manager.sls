@@ -738,7 +738,8 @@
 			       exp-subst exp-env visit-proc invoke-proc
 			       visit-code invoke-code guard-code guard-lib*
 			       visible? source-file-name)))
-	(%install-library-record lib))))
+	(%install-library-record lib)
+	#;(visit-library lib))))
 
   (define (%install-library-record lib)
     (for-each

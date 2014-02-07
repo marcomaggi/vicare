@@ -24,6 +24,7 @@
     receive				receive-and-return
     module				import
     begin0				define-values
+    debug-print
 
     make-struct-type			struct?
     struct-type-descriptor?		struct-type-field-names

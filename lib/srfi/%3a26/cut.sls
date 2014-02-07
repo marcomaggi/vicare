@@ -37,7 +37,8 @@
 #!r6rs
 (library (srfi :26 cut)
   (export cut cute <> <...>)
-  (import (rnrs))
+  (import (rnrs)
+    (only (vicare) <>))
 
 
 (define-syntax srfi-26-internal-cut
@@ -97,7 +98,9 @@
 
 ;;;; exported syntax
 
-(define-syntax <>	(syntax-rules ()))
+;;This is already imported by (vicare).
+;;
+;;(define-syntax <>	(syntax-rules ()))
 (define-syntax <...>	(syntax-rules ()))
 
 (define-syntax cut
