@@ -1028,6 +1028,16 @@
     syntactic-binding-remprop
     syntactic-binding-property-list
 
+    ;; expand-time object specifications
+    identifier-object-spec		set-identifier-object-spec!
+    make-object-spec			object-spec?
+    object-spec-name
+    object-spec-type-id			object-spec-pred-id
+    identifier-callable-spec		set-identifier-callable-spec!
+    make-callable-spec			callable-spec?
+    callable-spec-name			callable-spec-min-arity
+    callable-spec-max-arity		callable-spec-dispatcher
+
     ;;The following are inspection functions for debugging purposes.
     (rename (<stx>?		syntax-object?)
 	    (<stx>-expr		syntax-object-expression)
@@ -4529,7 +4539,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-auxiliary-syntaxes r6rs-record-type vicare-struct-type)
+(define-auxiliary-syntaxes r6rs-record-type vicare-struct-type
+  object-spec-type)
 
 (define-syntax (case-object-type-binding stx)
   ;;This syntax is meant to be used as follows:
@@ -4548,10 +4559,11 @@
   ;;where  ?TYPE-ID  is meant  to  be  an  identifier  bound to  a  R6RS
   ;;record-type descriptor or Vicare's struct-type descriptor.
   ;;
-  (sys.syntax-case stx (r6rs-record-type vicare-struct-type)
+  (sys.syntax-case stx (r6rs-record-type vicare-struct-type object-spec-type)
     ((_ (?who ?input-stx ?type-id ?lexenv)
 	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
-	((vicare-struct-type)	?struct-body0 ?struct-body ...))
+	((vicare-struct-type)	?struct-body0 ?struct-body ...)
+	((object-spec-type)	?spec-body0   ?spec-body   ...))
      (and (sys.identifier? (sys.syntax ?who))
 	  (sys.identifier? (sys.syntax ?expr-stx))
 	  (sys.identifier? (sys.syntax ?type-id))
@@ -4563,13 +4575,16 @@
 	       ?r6rs-body0 ?r6rs-body ...)
 	      ((struct-type-descriptor-binding? binding)
 	       ?struct-body0 ?struct-body ...)
+	      ((identifier-object-spec ?type-id)
+	       ?spec-body0 ?spec-body ...)
 	      (else
 	       (syntax-violation ?who
-		 "neither a struct type nor an R6RS record type"
+		 "neither a struct type nor an R6RS record type nor a spec type"
 		 ?input-stx ?type-id))))))
     ((_ (?who ?input-stx ?type-id ?lexenv ?binding)
 	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
-	((vicare-struct-type)	?struct-body0 ?struct-body ...))
+	((vicare-struct-type)	?struct-body0 ?struct-body ...)
+	((object-spec-type)	?spec-body0   ?spec-body   ...))
      (and (sys.identifier? (sys.syntax ?who))
 	  (sys.identifier? (sys.syntax ?expr-stx))
 	  (sys.identifier? (sys.syntax ?type-id))
@@ -4581,6 +4596,8 @@
 	       ?r6rs-body0 ?r6rs-body ...)
 	      ((struct-type-descriptor-binding? ?binding)
 	       ?struct-body0 ?struct-body ...)
+	      ((identifier-object-spec ?type-id)
+	       ?spec-body0 ?spec-body ...)
 	      (else
 	       (syntax-violation ?who
 		 "neither a struct type nor an R6RS record type"
@@ -5345,6 +5362,132 @@
 
 (define-constant *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
   'vicare:expander:predicate-return-value-validation)
+
+
+;;;; identifiers: expand-time type specification
+;;
+;;Examples of OBJECT-SPEC:
+;;
+;;   (define* (fixnum (obj fixnum?))
+;;     obj)
+;;
+;;   (define* (exact-integer (obj exact-integer?))
+;;     obj)
+;;
+;;   (begin-for-expand
+;;
+;;     (define-object-spec #'fixnum
+;;       (make-object-spec 'fixnum #'fixnum #'fixnum?))
+;;
+;;     (define-object-spec #'exact-integer
+;;       (make-object-spec 'exact-integer #'exact-integer #'exact-integer?))
+;;
+;;     (define-object-spec #'vector
+;;       (make-object-spec 'vector #'vector #'vector?))
+;;
+;;     #| end of begin-or-expand |# )
+;;
+;;Examples of CALLABLE-SPEC:
+;;
+;;   (define (func a b c)
+;;     (* a (+ b c)))
+;;
+;;   (define (fxfunc a b c)
+;;     (fx* a (fx+ b c)))
+;;
+;;   (begin-for-expand
+;;
+;;     (define fixnum-spec
+;;       (object-spec #'fixnum))
+;;
+;;     (define exact-integer-spec
+;;       (object-spec #'exact-integer))
+;;
+;;     (define-callable-spec #'func
+;;       (make-callable-spec 'func 3 3
+;;         (lambda (type-a type-b type-c)
+;;           (cond ((and (eq? type-a fixnum-spec)
+;;                       (eq? type-b fixnum-spec)
+;;                       (eq? type-c fixnum-spec))
+;;                  (values #'fxfunc exact-integer-spec))
+;;                 (else
+;;                  (values #'func #f)))))
+;;
+;;     #| end of begin-for-expand |# )
+;;
+
+(define-constant *EXPAND-TIME-OBJECT-SPEC-COOKIE*
+  'vicare:expander:object-spec)
+
+(define-constant *EXPAND-TIME-CALLABLE-SPEC-COOKIE*
+  'vicare:expander:callable-spec)
+
+(define-record object-spec
+  ;;A type representing  the object type to which  expressions in syntax
+  ;;objects  will evaluate.   All the  Scheme  objects are  meant to  be
+  ;;representable with this type.
+  ;;
+  ;;Instances of  this type are meant  to be compared with  EQ?, with #f
+  ;;acting as wildcard: it represents any object type.
+  ;;
+  (name
+		;A symbol representing  this type name.  To  be used for
+		;meaningful error reporting.
+   type-id
+		;The  bound identifier  representing  the  name of  this
+		;type.  This  identifier has  this very instance  in its
+		;syntactic binding property list.
+   pred-id
+		;An identifier bound to the type predicate.
+   ))
+
+(define-record callable-spec
+  ;;A struct type representing a callable form binding, either procedure
+  ;;or macro.
+  ;;
+  (name
+		;A symbol  representing this callable name.   To be used
+		;for meaningful error reporting.
+   min-arity
+		;A fixnum  representing the minimum number  of arguments
+		;this callable must be applied to.
+   max-arity
+		;A fixnum or positive  infinity representing the maximum
+		;number of arguments this callable must be applied to.
+   dispatcher
+		;False  or  a  procedure  to be  called  with  the  type
+		;signature of a specific callable application.  The type
+		;signature  of  a tuple  of  arguments  is the  list  of
+		;instances of type OBJECT-SPEC matching the arguments.
+		;
+		;It is meant  to return two values: the  identifier of a
+		;specialised  version  of  this callable  that  is  more
+		;suited to be  applied to a tuple of  arguments with the
+		;given  type  signature;   an  instance  of  OBJECT-SPEC
+		;representing the type of the return value.
+   ))
+
+;;; --------------------------------------------------------------------
+
+(define* (set-identifier-object-spec! (type-id identifier?) (spec object-spec?))
+  (if (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE*)
+      (syntax-violation __who__
+	"object specification already defined" type-id spec)
+    (syntactic-binding-putprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE* spec)))
+
+(define* (identifier-object-spec (type-id identifier?))
+  (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE*))
+
+;;; --------------------------------------------------------------------
+
+(define* (set-identifier-callable-spec! (type-id identifier?) (spec callable-spec?))
+  (if (syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*)
+      (syntax-violation __who__
+	"callable specification already defined" type-id spec)
+    (syntactic-binding-putprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE* spec)))
+
+(define* (identifier-callable-spec (type-id identifier?))
+  (syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*))
 
 
 ;;;; identifiers: syntax parameters
@@ -10701,7 +10844,7 @@
   #| end of module |# )
 
 
-;;;; module core-macro-transformer: TYPE-DESCRIPTOR
+;;;; module core-macro-transformer: TYPE-DESCRIPTOR, IS-A?
 
 (define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
   ;;Transformer function  used to  expand TYPE-DESCRIPTOR  syntaxes from
@@ -10717,6 +10860,8 @@
   ;;* A R6RS record type descriptor  if the given identifier argument is
   ;;  a record type name.
   ;;
+  ;;* An expand-time OBJECT-SPEC instance.
+  ;;
   (define-constant __who__ 'type-descriptor)
   (syntax-match expr-stx ()
     ((_ ?type-id)
@@ -10727,11 +10872,12 @@
 		  lexenv.run lexenv.expand))
        ((vicare-struct-type)
 	(build-data no-source
-	  (syntactic-binding-value binding)))))
+	  (syntactic-binding-value binding)))
+       ((object-spec-type)
+	(build-data no-source
+	  (identifier-object-spec ?type-id)))
+       ))
     ))
-
-
-;;;; module core-macro-transformer: IS-A?
 
 (define (is-a?-transformer expr-stx lexenv.run lexenv.expand)
   ;;Transformer function  used to  expand Vicare's IS-A?   syntaxes from
@@ -10751,7 +10897,13 @@
        ((vicare-struct-type)
 	(chi-expr (bless
 		   `(struct-type-and-struct? ,?type-id ,?expr))
-		  lexenv.run lexenv.expand))))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (chi-expr (bless
+		     `(,(object-spec-pred-id spec) ,?expr))
+		    lexenv.run lexenv.expand)))
+       ))
     ))
 
 
@@ -10776,7 +10928,10 @@
        ((vicare-struct-type)
 	(chi-expr (bless
 		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(stx-error expr-stx "invalid object type"))
+       ))
     ))
 
 (define (slot-set!-transformer expr-stx lexenv.run lexenv.expand)
@@ -10798,7 +10953,10 @@
        ((vicare-struct-type)
 	(chi-expr (bless
 		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(stx-error expr-stx "invalid object type"))
+       ))
     ))
 
 (define ($slot-ref-transformer expr-stx lexenv.run lexenv.expand)
@@ -10820,7 +10978,10 @@
        ((vicare-struct-type)
 	(chi-expr (bless
 		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(stx-error expr-stx "invalid object type"))
+       ))
     ))
 
 (define ($slot-set!-transformer expr-stx lexenv.run lexenv.expand)
@@ -10842,7 +11003,10 @@
        ((vicare-struct-type)
 	(chi-expr (bless
 		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(stx-error expr-stx "invalid object type"))
+       ))
     ))
 
 

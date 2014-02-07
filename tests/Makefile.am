@@ -61,6 +61,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	test-vicare-equality.sps					\
 	test-vicare-errno.sps						\
 	test-vicare-expander.sps					\
+	test-vicare-expand-time-specs.sps				\
 	test-vicare-debugging.sps					\
 	test-vicare-fasl.sps						\
 	test-vicare-fixnums.sps						\

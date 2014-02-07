@@ -477,6 +477,9 @@
     (with				($fluid . with))
     (push-compensation			(macro . push-compensation))
 ;;;
+    (define-object-spec			(macro . define-object-spec))
+    (define-callable-spec		(macro . define-callable-spec))
+;;;
     (&condition				($core-rtd . (&condition-rtd
 						      &condition-rcd)))
     (&message				($core-rtd . (&message-rtd
@@ -660,6 +663,8 @@
 ;;;
     (posix		(vicare $posix)				#f	#t)
     ($language		(vicare language-extensions)		#t	#f)
+;;;
+    ($object-spec	(vicare expander object-spec)		#t	#f)
     ))
 
 
@@ -801,6 +806,22 @@
     (environment-libraries			i v $language)
     (environment-labels				i v $language)
     (environment-binding			i v $language)
+;;;
+    (set-identifier-object-spec!		$object-spec)
+    (identifier-object-spec			$object-spec)
+    (make-object-spec				$object-spec)
+    (object-spec?				$object-spec)
+    (object-spec-name				$object-spec)
+    (object-spec-type-id			$object-spec)
+    (object-spec-pred-id			$object-spec)
+    (set-identifier-callable-spec!		$object-spec)
+    (identifier-callable-spec			$object-spec)
+    (make-callable-spec				$object-spec)
+    (callable-spec?				$object-spec)
+    (callable-spec-name				$object-spec)
+    (callable-spec-min-arity			$object-spec)
+    (callable-spec-max-arity			$object-spec)
+    (callable-spec-dispatcher			$object-spec)
 ;;;
     (time-and-gather				i v $language)
     (stats?					i v $language)
