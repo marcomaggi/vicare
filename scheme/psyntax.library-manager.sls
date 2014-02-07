@@ -145,6 +145,8 @@
    source-file-name
 		;False or a string representing the pathname of the file
 		;from which the source code of the library was read.
+   option*
+		;A sexp holding library options.
    )
   (lambda (S port sub-printer)
     ;;Printer function.
@@ -413,7 +415,7 @@
   (define (%install-library-and-deps filename id name ver imp* vis* inv*
 				     exp-subst exp-env
 				     visit-proc invoke-proc guard-proc
-				     guard-req* visible?)
+				     guard-req* visible? library-option*)
     ;;Used  as success  continuation  function by  the  function in  the
     ;;parameter   CURRENT-PRECOMPILED-LIBRARY-LOADER.   Make   sure  all
     ;;dependencies are  met, then install  the library and  return true;
@@ -434,7 +436,7 @@
 		   (else
 		    (install-library id name ver imp* vis* inv*
 				     exp-subst exp-env visit-proc invoke-proc
-				     #f #f ''#f '() visible? #f)
+				     #f #f ''#f '() visible? #f library-option*)
 		    #t)))
 	    (else
 	     (let* ((libspec	(car  deps))
@@ -598,7 +600,8 @@
 				 (compile ($library-invoke-code lib))
 				 (compile ($library-guard-code lib))
 				 (map library-descriptor ($library-guard-req* lib))
-				 ($library-visible? lib)))))
+				 ($library-visible? lib)
+				 ($library-option* lib)))))
     ((current-library-collection))))
 
 
@@ -717,29 +720,51 @@
   ;;
   ;;SOURCE-FILE-NAME - a string representing the source file name.
   ;;
-  (define (install-library id libname ver
-			   imp* vis* inv*
-			   exp-subst exp-env
-			   visit-proc invoke-proc
-			   visit-code invoke-code
-			   guard-code guard-req*
-			   visible? source-file-name)
-    (let ((imp-lib*	(map %find-library-in-collection-by-spec/die imp*))
-	  (vis-lib*	(map %find-library-in-collection-by-spec/die vis*))
-	  (inv-lib*	(map %find-library-in-collection-by-spec/die inv*))
-	  (guard-lib*	(map %find-library-in-collection-by-spec/die guard-req*)))
-      (unless (and (symbol? id) (list? libname) (list? ver))
-	(assertion-violation 'install-library
-	  "invalid spec with id/name/ver" id libname ver))
-      (when (library-exists? libname)
-	(assertion-violation 'install-library
-	  "library is already installed" libname))
-      (let ((lib (make-library id libname ver imp-lib* vis-lib* inv-lib*
-			       exp-subst exp-env visit-proc invoke-proc
-			       visit-code invoke-code guard-code guard-lib*
-			       visible? source-file-name)))
-	(%install-library-record lib)
-	#;(visit-library lib))))
+  ;;LIBRARY-OPTION* - a sexp representing library options.
+  ;;
+  (case-define install-library
+    ;;FIXME  At  the next  boot  image  rotation the  optional  argument
+    ;;LIBRARY-OPTION*  must become  a mandatory  argument.  For  this to
+    ;;happen  the appropriate  argument must  be  added to  the uses  of
+    ;;INSTALL-LIBRARY in the "makefile.sps".
+    ((id libname ver
+	 imp* vis* inv*
+	 exp-subst exp-env
+	 visit-proc invoke-proc
+	 visit-code invoke-code
+	 guard-code guard-req*
+	 visible? source-file-name)
+     (install-library id libname ver
+		      imp* vis* inv*
+		      exp-subst exp-env
+		      visit-proc invoke-proc
+		      visit-code invoke-code
+		      guard-code guard-req*
+		      visible? source-file-name '()))
+    ((id libname ver
+	 imp* vis* inv*
+	 exp-subst exp-env
+	 visit-proc invoke-proc
+	 visit-code invoke-code
+	 guard-code guard-req*
+	 visible? source-file-name library-option*)
+     (let ((imp-lib*	(map %find-library-in-collection-by-spec/die imp*))
+	   (vis-lib*	(map %find-library-in-collection-by-spec/die vis*))
+	   (inv-lib*	(map %find-library-in-collection-by-spec/die inv*))
+	   (guard-lib*	(map %find-library-in-collection-by-spec/die guard-req*)))
+       (unless (and (symbol? id) (list? libname) (list? ver))
+	 (assertion-violation 'install-library
+	   "invalid spec with id/name/ver" id libname ver))
+       (when (library-exists? libname)
+	 (assertion-violation 'install-library
+	   "library is already installed" libname))
+       (let ((lib (make-library id libname ver imp-lib* vis-lib* inv-lib*
+				exp-subst exp-env visit-proc invoke-proc
+				visit-code invoke-code guard-code guard-lib*
+				visible? source-file-name library-option*)))
+	 (%install-library-record lib)
+	 (when (memq 'visit-upon-loading library-option*)
+	   (visit-library lib))))))
 
   (define (%install-library-record lib)
     (for-each

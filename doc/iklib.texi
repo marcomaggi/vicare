@@ -275,6 +275,7 @@ Example:
 
 
 @menu
+* iklib syntaxes libraries::    Extended @code{library} syntax.
 * iklib syntaxes lambdas::      @func{lambda}-like additional syntaxes.
 * iklib syntaxes defines::      @func{define}-like additional syntaxes.
 * iklib syntaxes defstxs::      @func{define-syntax}-like additional syntaxes.
@@ -295,6 +296,59 @@ Example:
 * iklib syntaxes unsafe::       Unsafe binding variants.
 * iklib syntaxes predaux::      Predicate auxiliary functions.
 @end menu
+
+@c page
+@node iklib syntaxes libraries
+@subsection Extended @code{library} syntax
+
+
+@cindex @clause{options}, library clause
+@cindex Library clause @clause{options}
+
+
+@value{PRJNAME} extends the format of @code{library} forms by allowing
+an optional @clause{options} clause:
+
+@example
+(libary @meta{libary-name}
+  (options @meta{option} ...)
+  (export  @meta{export-spec} ...)
+  (import  @meta{import-spec} ...)
+  @meta{library-body})
+@end example
+
+@noindent
+where each @meta{option} is a symbolic expression.
+
+
+@defvr {Library Option} visit-upon-loading
+Forces invoking and visiting a library upon its loading from the source
+or compiled file.
+
+The @rnrs{6} allows, and @value{PRJNAME} implements, a form of lazy
+evaluation of library code; an imported library is loaded but:
+
+@itemize
+@item
+Its code for run--time (the ``invoke code'' in @value{PRJNAME}'s jargon)
+is evaluated only when an exported variable is first referenced in the
+importing code.
+
+@item
+Its code for expand--time (the ``visit code'' in @value{PRJNAME}'s
+jargon) is evaluated only when an exported syntax is first referenced in
+the importing code.
+@end itemize
+
+@noindent
+This is the default operations mode for @value{PRJNAME}.  This library
+option rejects this lazy mode, requesting that this library is visited
+when the library is loaded; visiting a library implies invoking it.
+
+This option is especially useful when the library assigns properties to
+syntactic bindings (@pxref{iklib syntaxes properties}) and when adding
+methods to Nausicaa's multimethods.
+@end defvr
 
 @c page
 @node iklib syntaxes lambdas

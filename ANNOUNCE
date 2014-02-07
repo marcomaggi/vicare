@@ -296,6 +296,13 @@ Many backwards incompatibilities... life is hard!
 
 * Added synonym syntax transformers.
 
+* Extended LIBRARY form with OPTIONS clause.  Implemented library option
+  VISIT-UPON-LOADING.
+
+* BACKWARDS  INCOMPATIBILITY The  libraries in  the hierarchy  (nausicaa
+  mehve ---)  do not  need to be  initialised anymore;  the INITIALISE-*
+  functions are not exported anymore.
+
 
 Notes for revision 0.3d7
 ------------------------

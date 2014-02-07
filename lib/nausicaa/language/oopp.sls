@@ -31,6 +31,7 @@
 
 #!vicare
 (library (nausicaa language oopp)
+  (options visit-upon-loading)
   (export
     define-label		define-class		define-mixin
     make-from-fields		is-a?

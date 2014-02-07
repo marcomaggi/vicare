@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,9 +27,8 @@
 
 #!r6rs
 (library (nausicaa mehve language numerics arithmetics)
+  (options visit-upon-loading)
   (export
-    initialise-mehve-numerics-arithmetics
-
     + - * / abs
     div div0 mod mod0
     div-and-mod div0-and-mod0
@@ -164,61 +163,58 @@
 
 ;;;; arithmetics: method additions
 
-(define (initialise-mehve-numerics-arithmetics)
-  (add-method addition-2	(<fixnum>	<fixnum>)	(lambda (x y) ($fx+ x y)))
-  (add-method addition-2	(<flonum>	<flonum>)	(lambda (x y) ($fl+ x y)))
-  (add-method addition-2	(<number>	<number>)	nau.+)
+(add-method addition-2		(<fixnum>	<fixnum>)	(lambda (x y) ($fx+ x y)))
+(add-method addition-2		(<flonum>	<flonum>)	(lambda (x y) ($fl+ x y)))
+(add-method addition-2		(<number>	<number>)	nau.+)
 
-  (add-method subtraction-1	(<fixnum>)			(lambda (x) ($fx- x)))
-  (add-method subtraction-1	(<flonum>)			(lambda (x) ($fl- x)))
-  (add-method subtraction-1	(<number>)			nau.-)
+(add-method subtraction-1	(<fixnum>)			(lambda (x) ($fx- x)))
+(add-method subtraction-1	(<flonum>)			(lambda (x) ($fl- x)))
+(add-method subtraction-1	(<number>)			nau.-)
 
-  (add-method subtraction-2	(<fixnum>	<fixnum>)	(lambda (x y) ($fx- x y)))
-  (add-method subtraction-2	(<flonum>	<flonum>)	(lambda (x y) ($fl- x y)))
-  (add-method subtraction-2	(<number>	<number>)	nau.-)
+(add-method subtraction-2	(<fixnum>	<fixnum>)	(lambda (x y) ($fx- x y)))
+(add-method subtraction-2	(<flonum>	<flonum>)	(lambda (x y) ($fl- x y)))
+(add-method subtraction-2	(<number>	<number>)	nau.-)
 
-  (add-method multiplication-2	(<fixnum>	<fixnum>)	(lambda (x y) ($fx* x y)))
-  (add-method multiplication-2	(<flonum>	<flonum>)	(lambda (x y) ($fl* x y)))
-  (add-method multiplication-2	(<number>	<number>)	nau.*)
+(add-method multiplication-2	(<fixnum>	<fixnum>)	(lambda (x y) ($fx* x y)))
+(add-method multiplication-2	(<flonum>	<flonum>)	(lambda (x y) ($fl* x y)))
+(add-method multiplication-2	(<number>	<number>)	nau.*)
 
-  ;;We want  to return exact rationals,  so we use the  following rather
-  ;;than FXDIV.
-  (add-method division-1	(<fixnum>)			nau./)
-  (add-method division-1	(<flonum>)			(lambda (x) ($fl/ 1.0 x)))
-  (add-method division-1	(<number>)			nau./)
+;;We want  to return exact rationals,  so we use the  following rather
+;;than FXDIV.
+(add-method division-1		(<fixnum>)			nau./)
+(add-method division-1		(<flonum>)			(lambda (x) ($fl/ 1.0 x)))
+(add-method division-1		(<number>)			nau./)
 
-  ;;We want  to return exact rationals,  so we use the  following rather
-  ;;than FXDIV.
-  (add-method division-2	(<fixnum>	<fixnum>)	nau./)
-  (add-method division-2	(<flonum>	<flonum>)	(lambda (x y) ($fl/ x y)))
-  (add-method division-2	(<number>	<number>)	nau./)
+;;We want  to return exact rationals,  so we use the  following rather
+;;than FXDIV.
+(add-method division-2		(<fixnum>	<fixnum>)	nau./)
+(add-method division-2		(<flonum>	<flonum>)	(lambda (x y) ($fl/ x y)))
+(add-method division-2		(<number>	<number>)	nau./)
 
-  (add-method div		(<fixnum>	<fixnum>)	$fxdiv)
-  (add-method div		(<integer>	<integer>)	nau.div)
-  (add-method div		(<real>		<real>)		nau.div)
-  (add-method div0		(<fixnum>	<fixnum>)	$fxdiv0)
-  (add-method div0		(<integer>	<integer>)	nau.div0)
-  (add-method div0		(<real>		<real>)		nau.div0)
+(add-method div			(<fixnum>	<fixnum>)	$fxdiv)
+(add-method div			(<integer>	<integer>)	nau.div)
+(add-method div			(<real>		<real>)		nau.div)
+(add-method div0		(<fixnum>	<fixnum>)	$fxdiv0)
+(add-method div0		(<integer>	<integer>)	nau.div0)
+(add-method div0		(<real>		<real>)		nau.div0)
 
-  (add-method mod		(<fixnum>	<fixnum>)	$fxmod)
-  (add-method mod		(<integer>	<integer>)	nau.mod)
-  (add-method mod		(<real>		<real>)		nau.mod)
-  (add-method mod0		(<fixnum>	<fixnum>)	$fxmod0)
-  (add-method mod0		(<integer>	<integer>)	nau.mod0)
-  (add-method mod0		(<real>		<real>)		nau.mod0)
+(add-method mod			(<fixnum>	<fixnum>)	$fxmod)
+(add-method mod			(<integer>	<integer>)	nau.mod)
+(add-method mod			(<real>		<real>)		nau.mod)
+(add-method mod0		(<fixnum>	<fixnum>)	$fxmod0)
+(add-method mod0		(<integer>	<integer>)	nau.mod0)
+(add-method mod0		(<real>		<real>)		nau.mod0)
 
-  (add-method div-and-mod	(<fixnum>	<fixnum>)	$fxdiv-and-mod)
-  (add-method div-and-mod	(<integer>	<integer>)	nau.div-and-mod)
-  (add-method div-and-mod	(<real>		<real>)		nau.div-and-mod)
-  (add-method div0-and-mod0	(<fixnum>	<fixnum>)	$fxdiv0-and-mod0)
-  (add-method div0-and-mod0	(<integer>	<integer>)	nau.div0-and-mod0)
-  (add-method div0-and-mod0	(<real>		<real>)		nau.div0-and-mod0)
+(add-method div-and-mod		(<fixnum>	<fixnum>)	$fxdiv-and-mod)
+(add-method div-and-mod		(<integer>	<integer>)	nau.div-and-mod)
+(add-method div-and-mod		(<real>		<real>)		nau.div-and-mod)
+(add-method div0-and-mod0	(<fixnum>	<fixnum>)	$fxdiv0-and-mod0)
+(add-method div0-and-mod0	(<integer>	<integer>)	nau.div0-and-mod0)
+(add-method div0-and-mod0	(<real>		<real>)		nau.div0-and-mod0)
 
-  (add-method abs		(<fixnum>)			$fxabs)
-  (add-method abs		(<flonum>)			$flabs)
-  (add-method abs		(<real>)			nau.abs)
-
-  #| end of initialisation function |# )
+(add-method abs			(<fixnum>)			$fxabs)
+(add-method abs			(<flonum>)			$flabs)
+(add-method abs			(<real>)			nau.abs)
 
 
 ;;;; done

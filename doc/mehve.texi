@@ -40,7 +40,7 @@
 
 @c To be used as @value{COPYRIGHT_YEARS} whenever we need to include the
 @c list of copyright years.
-@set COPYRIGHT_YEARS            2011-2013
+@set COPYRIGHT_YEARS            2011-2014
 
 @c page
 @c ------------------------------------------------------------
@@ -139,9 +139,6 @@ methods, @nauref{multimethods, Multimethods dispatching}.
 
 Multimethods are significantly slower than functions, so, while more
 flexible, Mehve is not for every application.
-
-Before making use of the facilities of Mehve, we @strong{must} call the
-function @func{initialise-mehve}.
 
 @c page
 @c Libraries in the Mehve language

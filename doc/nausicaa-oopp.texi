@@ -184,6 +184,12 @@ The following example defines a tag to handle immutable pair values:
 (P cdr)                 @result{} 2
 @end example
 
+When writing a library implementing classes and labels for Nausicaa: we
+must enable the option @code{visit-upon-loading} in the options clause
+of the @code{library} form; @vicareref{iklib syntaxes libraries,
+Extended @code{library} syntax}.  Without this option the properties of
+the type identifiers may not be defined properly.
+
 @c page
 @node oopp notation
 @section Special syntax for labels and classes

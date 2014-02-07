@@ -8,7 +8,7 @@
 ;;;	We  interpret a  bytevector as  a  vector of  fixnums stored  in
 ;;;	words; a word is 16 bits stored in big endianness.
 ;;;
-;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,6 +27,7 @@
 
 #!vicare
 (library (nausicaa containers bitvectors)
+  (options visit-upon-loading)
   (export
     <bitvector>
     <bitvector>.vicare-arguments-validation

@@ -9,7 +9,7 @@
 ;;;	lexer and consumed  by a parser.  It is meant to  be used by all
 ;;;	the parser libraries distributed with Vicare.
 ;;;
-;;;Copyright (c) 2009-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2008 Dominique Boucher
 ;;;
 ;;;Original  code  by  Dominique  Boucher.   Port  to  R6RS  and  Vicare
@@ -32,6 +32,7 @@
 
 #!r6rs
 (library (nausicaa parser-tools lexical-tokens)
+  (options visit-upon-loading)
   (export
     <lexical-token>
     <end-of-input>

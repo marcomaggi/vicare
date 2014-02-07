@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,9 +27,8 @@
 
 #!r6rs
 (library (nausicaa mehve language input-output)
+  (options visit-upon-loading)
   (export
-    initialise-mehve-input-output
-
     display		write
 
     display-1		write-1
@@ -89,14 +88,12 @@
 (define-generic write-2		(obj port))
 
 
-(define (initialise-mehve-input-output)
+;;;; initialisation
 
-  (add-method display-1	(<top>)		nau.display)
-  (add-method display-2	(<top> <port>)	nau.display)
-  (add-method write-1	(<top>)		nau.write)
-  (add-method write-2	(<top> <port>)	nau.write)
-
-  #| end of initialisation function |# )
+(add-method display-1	(<top>)		nau.display)
+(add-method display-2	(<top> <port>)	nau.display)
+(add-method write-1	(<top>)		nau.write)
+(add-method write-2	(<top> <port>)	nau.write)
 
 
 ;;;; done

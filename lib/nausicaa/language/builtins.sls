@@ -27,6 +27,7 @@
 
 #!vicare
 (library (nausicaa language builtins)
+  (options visit-upon-loading)
   (export
     <top>
     <boolean> <symbol> <keyword> <pointer>

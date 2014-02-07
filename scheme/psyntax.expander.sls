@@ -2003,7 +2003,8 @@
 	       libname.version ;null or list of version numbers
 	       import-lib* invoke-lib* visit-lib*
 	       invoke-code macro*
-	       export-subst export-env guard-code guard-lib*)
+	       export-subst export-env guard-code guard-lib*
+	       library-option*)
 	 (begin
 	   (import CORE-LIBRARY-EXPANDER)
 	   (core-library-expander library-sexp verify-name))
@@ -2033,12 +2034,13 @@
 			  visit-code invoke-code
 			  guard-code guard-desc*
 			  #t #;visible?
-			  filename)
+			  filename library-option*)
 	 (values uid libname.ids libname.version
 		 import-desc* visit-desc* invoke-desc*
 		 invoke-code visit-code
 		 export-subst export-env
-		 guard-code guard-desc*)))))
+		 guard-code guard-desc*
+		 library-option*)))))
 
   (define (%build-visit-code macro*)
     ;;Return a sexp  representing code that initialises  the bindings of
@@ -2102,12 +2104,13 @@
     ;;name  components and  raise an  exception if  something is  wrong;
     ;;otherwise it should just return.
     ;;
-    (receive (library-name* export-spec* import-spec* body*)
+    (receive (library-name* export-spec* import-spec* body* libopt*)
 	(%parse-library library-sexp)
       (receive (libname.ids libname.version)
 	  (%parse-library-name library-name*)
 	(verify-name libname.ids libname.version)
-	(let ((stale-clt (%make-stale-collector)))
+	(let* ((library-option* (%parse-library-options libopt*))
+	       (stale-clt       (%make-stale-collector)))
 	  (receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	      (parametrise ((stale-when-collector stale-clt))
 		(let ((mixed-definitions-and-expressions? #f))
@@ -2119,7 +2122,8 @@
 	      (values libname.ids libname.version
 		      import-lib* invoke-lib* visit-lib*
 		      invoke-code macro* export-subst
-		      export-env guard-code guard-lib*)))))))
+		      export-env guard-code guard-lib*
+		      library-option*)))))))
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
@@ -2142,13 +2146,23 @@
     ;;
     (syntax-match library-sexp ()
       ((?library (?name* ...)
+		 (?options ?libopt* ...)
+		 (?export ?exp* ...)
+		 (?import ?imp* ...)
+		 ?body* ...)
+       (and (eq? (syntax->datum ?library) 'library)
+	    (eq? (syntax->datum ?options) 'options)
+	    (eq? (syntax->datum ?export)  'export)
+	    (eq? (syntax->datum ?import)  'import))
+       (values ?name* ?exp* ?imp* ?body* ?libopt*))
+      ((?library (?name* ...)
 		 (?export ?exp* ...)
 		 (?import ?imp* ...)
 		 ?body* ...)
        (and (eq? (syntax->datum ?library) 'library)
 	    (eq? (syntax->datum ?export)  'export)
 	    (eq? (syntax->datum ?import)  'import))
-       (values ?name* ?exp* ?imp* ?body*))
+       (values ?name* ?exp* ?imp* ?body* '()))
       (_
        (syntax-violation __who__ "malformed library" library-sexp))))
 
@@ -2186,6 +2200,18 @@
       (when (null? name*)
 	(syntax-violation __who__ "empty library name" libname))
       (values name* ver*)))
+
+  (define (%parse-library-options libopt*)
+    (syntax-match libopt* ()
+      (() '())
+      ((?opt . ?other*)
+       (symbol? (syntax->datum ?opt))
+       (let ((sym (syntax->datum ?opt)))
+	 (if (eq? sym 'visit-upon-loading)
+	     (cons sym (%parse-library-options ?other*))
+	   (syntax-violation __who__
+	     "invalid library option" ?opt))))
+      ))
 
   (module (%make-stale-collector)
     ;;When a library has code like:

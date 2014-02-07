@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -27,9 +27,8 @@
 
 #!r6rs
 (library (nausicaa mehve language numerics predicates)
+  (options visit-upon-loading)
   (export
-    initialise-mehve-numerics-predicates
-
     = < > <= >=
     zero? positive? negative? non-negative? non-positive?
     odd? even?
@@ -185,58 +184,56 @@
   #f)
 
 
-(define (initialise-mehve-numerics-predicates)
+;;;; initialisation
 
-  (add-method equal-predicate-2				(<fixnum> <fixnum>)	(lambda (a b) ($fx= a b)))
-  (add-method equal-predicate-2				(<flonum> <flonum>)	(lambda (a b) ($fl= a b)))
-  (add-method equal-predicate-2				(<complex> <complex>)	nau.=)
+(add-method equal-predicate-2				(<fixnum> <fixnum>)	(lambda (a b) ($fx= a b)))
+(add-method equal-predicate-2				(<flonum> <flonum>)	(lambda (a b) ($fl= a b)))
+(add-method equal-predicate-2				(<complex> <complex>)	nau.=)
 
-  (add-method less-than-predicate-2			(<fixnum> <fixnum>)	(lambda (a b) ($fx< a b)))
-  (add-method less-than-predicate-2			(<flonum> <flonum>)	(lambda (a b) ($fl< a b)))
-  (add-method less-than-predicate-2			(<real>   <real>)	nau.<)
+(add-method less-than-predicate-2			(<fixnum> <fixnum>)	(lambda (a b) ($fx< a b)))
+(add-method less-than-predicate-2			(<flonum> <flonum>)	(lambda (a b) ($fl< a b)))
+(add-method less-than-predicate-2			(<real>   <real>)	nau.<)
 
-  (add-method less-than-or-equal-to-predicate-2		(<fixnum> <fixnum>)	(lambda (a b) ($fx<= a b)))
-  (add-method less-than-or-equal-to-predicate-2		(<flonum> <flonum>)	(lambda (a b) ($fl<= a b)))
-  (add-method less-than-or-equal-to-predicate-2		(<real>   <real>)	nau.<=)
+(add-method less-than-or-equal-to-predicate-2		(<fixnum> <fixnum>)	(lambda (a b) ($fx<= a b)))
+(add-method less-than-or-equal-to-predicate-2		(<flonum> <flonum>)	(lambda (a b) ($fl<= a b)))
+(add-method less-than-or-equal-to-predicate-2		(<real>   <real>)	nau.<=)
 
-  (add-method greater-than-predicate-2			(<fixnum> <fixnum>)	(lambda (a b) ($fx> a b)))
-  (add-method greater-than-predicate-2			(<flonum> <flonum>)	(lambda (a b) ($fl> a b)))
-  (add-method greater-than-predicate-2			(<real>   <real>)	nau.>)
+(add-method greater-than-predicate-2			(<fixnum> <fixnum>)	(lambda (a b) ($fx> a b)))
+(add-method greater-than-predicate-2			(<flonum> <flonum>)	(lambda (a b) ($fl> a b)))
+(add-method greater-than-predicate-2			(<real>   <real>)	nau.>)
 
-  (add-method greater-than-or-equal-to-predicate-2	(<fixnum> <fixnum>)	(lambda (a b) ($fx>= a b)))
-  (add-method greater-than-or-equal-to-predicate-2	(<flonum> <flonum>)	(lambda (a b) ($fl>= a b)))
-  (add-method greater-than-or-equal-to-predicate-2	(<real>	  <real>)	nau.>=)
+(add-method greater-than-or-equal-to-predicate-2	(<fixnum> <fixnum>)	(lambda (a b) ($fx>= a b)))
+(add-method greater-than-or-equal-to-predicate-2	(<flonum> <flonum>)	(lambda (a b) ($fl>= a b)))
+(add-method greater-than-or-equal-to-predicate-2	(<real>	  <real>)	nau.>=)
 
-  (add-method zero?		(<fixnum>)	$fxzero?)
-  (add-method positive?		(<fixnum>)	$fxpositive?)
-  (add-method negative?		(<fixnum>)	$fxnegative?)
-  (add-method odd?		(<fixnum>)	$fxodd?)
-  (add-method even?		(<fixnum>)	$fxeven?)
+(add-method zero?		(<fixnum>)	$fxzero?)
+(add-method positive?		(<fixnum>)	$fxpositive?)
+(add-method negative?		(<fixnum>)	$fxnegative?)
+(add-method odd?		(<fixnum>)	$fxodd?)
+(add-method even?		(<fixnum>)	$fxeven?)
 
-  (add-method non-negative?	(<fixnum>)	$fxnonnegative?)
-  (add-method non-positive?	(<fixnum>)	$fxnonpositive?)
+(add-method non-negative?	(<fixnum>)	$fxnonnegative?)
+(add-method non-positive?	(<fixnum>)	$fxnonpositive?)
 
-  (add-method zero?		(<flonum>)	$flzero?)
-  (add-method positive?		(<flonum>)	$flpositive?)
-  (add-method negative?		(<flonum>)	$flnegative?)
-  (add-method odd?		(<flonum>)	$flodd?)
-  (add-method even?		(<flonum>)	$fleven?)
-  (add-method finite?		(<flonum>)	$flfinite?)
-  (add-method infinite?		(<flonum>)	$flinfinite?)
-  (add-method nan?		(<flonum>)	$flnan?)
+(add-method zero?		(<flonum>)	$flzero?)
+(add-method positive?		(<flonum>)	$flpositive?)
+(add-method negative?		(<flonum>)	$flnegative?)
+(add-method odd?		(<flonum>)	$flodd?)
+(add-method even?		(<flonum>)	$fleven?)
+(add-method finite?		(<flonum>)	$flfinite?)
+(add-method infinite?		(<flonum>)	$flinfinite?)
+(add-method nan?		(<flonum>)	$flnan?)
 
-  (add-method zero?		(<number>)	nau.zero?)
-  (add-method positive?		(<real>)	nau.positive?)
-  (add-method negative?		(<real>)	nau.negative?)
-  (add-method non-negative?	(<real>)	nau.non-negative?)
-  (add-method non-positive?	(<real>)	nau.non-positive?)
-  (add-method odd?		(<real>)	nau.odd?)
-  (add-method even?		(<real>)	nau.even?)
-  (add-method finite?		(<complex>)	nau.finite?)
-  (add-method infinite?		(<complex>)	nau.infinite?)
-  (add-method nan?		(<complex>)	nau.nan?)
-
-  #| end of initialisation function |# )
+(add-method zero?		(<number>)	nau.zero?)
+(add-method positive?		(<real>)	nau.positive?)
+(add-method negative?		(<real>)	nau.negative?)
+(add-method non-negative?	(<real>)	nau.non-negative?)
+(add-method non-positive?	(<real>)	nau.non-positive?)
+(add-method odd?		(<real>)	nau.odd?)
+(add-method even?		(<real>)	nau.even?)
+(add-method finite?		(<complex>)	nau.finite?)
+(add-method infinite?		(<complex>)	nau.infinite?)
+(add-method nan?		(<complex>)	nau.nan?)
 
 
 ;;;; done
