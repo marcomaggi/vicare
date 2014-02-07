@@ -5240,41 +5240,17 @@
 
 ;;;; identifiers: syntactic binding properties
 
-(module (syntactic-binding-putprop
-	 syntactic-binding-getprop
-	 syntactic-binding-remprop
-	 syntactic-binding-property-list)
+(define* (syntactic-binding-putprop (id identifier?) (key symbol?) value)
+  (putprop (id->label/or-error __who__ id id) key value))
 
-  (define* (syntactic-binding-putprop (id identifier?) (key symbol?) value)
-    (putprop (%get-label __who__ id) key value))
+(define* (syntactic-binding-getprop (id identifier?) (key symbol?))
+  (getprop (id->label/or-error __who__ id id) key))
 
-  (define* (syntactic-binding-getprop (id identifier?) (key symbol?))
-    (getprop (%get-label __who__ id) key))
+(define* (syntactic-binding-remprop (id identifier?) (key symbol?))
+  (remprop (id->label/or-error __who__ id id) key))
 
-  (define* (syntactic-binding-remprop (id identifier?) (key symbol?))
-    (remprop (%get-label __who__ id) key))
-
-  (define* (syntactic-binding-property-list (id identifier?))
-    (property-list (%get-label __who__ id)))
-
-  (define (%get-label who id)
-    (id->label/or-error who id id))
-
-  ;;NOTE The variant below is  commented out because it causes problems.
-  ;;(Marco Maggi; Fri Feb 7, 2014)
-  ;;
-  ;;
-  ;;
-  ;; (define (%get-label who id)
-  ;;   (let* ((label   (id->label/or-error who id id))
-  ;; 	   (binding (label->syntactic-binding label ((current-run-lexenv)))))
-  ;;     (case (syntactic-binding-type binding)
-  ;;     	((global global-macro global-macro! global-ctv)
-  ;;     	 (let ((lib (cadr binding)))
-  ;;     	   (visit-library lib))))
-  ;;     label))
-
-  #| end of module |# )
+(define* (syntactic-binding-property-list (id identifier?))
+  (property-list (id->label/or-error __who__ id id)))
 
 
 ;;;; identifiers: unsafe variants API
