@@ -207,9 +207,8 @@ Many backwards incompatibilities... life is hard!
      (is-a? (make-triplet 1 2 3) triplet)	=> #t
      (is-a? 123 triplet)			=> #f
 
-    Notice  that this  syntax is  replaced  by (nausicaa)  with its  own
-  variant;  the variant  in  Nausicaa  does not  work  with structs  and
-  records.  Ideally, in future, the two will be merged.
+    Notice  that this  syntax  is re-exported  by  (nausicaa): the  tags
+  defined by Nausicaa now interface themselves with IS-A? from (vicare).
 
 * Added syntaxes SLOT-REF, SLOT-SET!, $SLOT-REF, $SLOT-SET! to (vicare);
   they work on both Vicare structs:

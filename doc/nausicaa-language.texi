@@ -35,7 +35,7 @@ let-values let*-values
 lambda case-lambda set!
 do begin
 receive receive-and-return
-is-a? slot-ref slot-set!
+slot-ref slot-set!
 @end example
 
 @item @library{nausicaa language oopp}
