@@ -239,9 +239,9 @@ Many backwards incompatibilities... life is hard!
     (slot-ref S green color)		=> 29
     (slot-ref S blue  color)		=> 39
 
-    Notice that  the syntaxes  SLOT-REF and  SLOT-SET!  are  replaced by
-  (nausicaa) with its own variants; the variants in Nausicaa do not work
-  with structs and records.  Ideally, in future, the two will be merged.
+    Notice that the syntaxes SLOT-REF  and SLOT-SET!  are re-exported by
+  (nausicaa): the tags defined by Nausicaa now interface themselves with
+  these syntaxes.
 
 * Modified syntactic  bindings of  Vicare struct  types and  R6RS record
   types to  allow the identifier name  to act as reference  to the maker

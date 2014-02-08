@@ -72,8 +72,7 @@
 	       aux.shadows		aux.satisfies		aux.mixins
 	       aux.<>			aux.<-)
 	      aux.))
-  (import (except (vicare)
-		  slot-ref slot-set!)
+  (import (vicare)
     (for (vicare expander object-spec)
       expand)
     (nausicaa language oopp auxiliary-syntaxes)
@@ -467,7 +466,11 @@
 		    (%the-maker		MAKER-TRANSFORMER))
 
 		(set-identifier-object-spec! #'THE-TAG
-		  (make-object-spec 'THE-TAG #'THE-TAG #'THE-PUBLIC-PREDICATE))
+		  (make-object-spec 'THE-TAG #'THE-TAG #'THE-PUBLIC-PREDICATE
+				    (lambda (slot-id safe?)
+				      #`(THE-TAG :accessor-function #,slot-id))
+				    (lambda (slot-id safe?)
+				      #`(THE-TAG :mutator-function #,slot-id))))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -797,7 +800,11 @@
 		    (%the-maker		MAKER-TRANSFORMER))
 
 		(set-identifier-object-spec! #'THE-TAG
-		  (make-object-spec 'THE-TAG #'THE-TAG #'THE-PREDICATE))
+		  (make-object-spec 'THE-TAG #'THE-TAG #'THE-PREDICATE
+				    (lambda (slot-id safe?)
+				      #`(THE-TAG :accessor-function #,slot-id))
+				    (lambda (slot-id safe?)
+				      #`(THE-TAG :mutator-function #,slot-id))))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -948,44 +955,6 @@
      #'(?tag :make-from-fields . ?args))
     (_
      (synner "invalid syntax in use of from-fields maker call"))))
-
-(define-syntax* (slot-ref stx)
-  (syntax-case stx (aux.<>)
-    ((_ ?object-expr ?slot-name ?class)
-     (not (identifier? #'?slot-name))
-     (synner "expected identifier as slot name" #'?slot-name))
-
-    ((_ ?object-expr ?slot-name ?class)
-     (not (identifier? #'?class))
-     (synner "expected identifier as class name" #'?class))
-
-    ((_ aux.<> ?slot-name ?class)
-     #'(?class :accessor-function ?slot-name))
-
-    ((_ ?object-expr ?slot-name ?class)
-     #'((?class :accessor-function ?slot-name) ?object-expr))
-
-    (_
-     (synner "invalid syntax in slot-ref form"))))
-
-(define-syntax* (slot-set! stx)
-  (syntax-case stx (aux.<>)
-    ((_ ?object-expr ?slot-name ?class ?value-expr)
-     (not (identifier? #'?slot-name))
-     (synner "expected identifier as slot name" #'?slot-name))
-
-    ((_ ?object-expr ?slot-name ?class ?value-expr)
-     (not (identifier? #'?class))
-     (synner "expected identifier as class name" #'?class))
-
-    ((_ aux.<> ?slot-name ?class aux.<>)
-     #'(?class :mutator-function ?slot-name))
-
-    ((_ ?object-expr ?slot-name ?class ?value-expr)
-     #'((?class :mutator-function ?slot-name) ?object-expr ?value-expr))
-
-    (_
-     (synner "invalid syntax in slot-set! form"))))
 
 (define-syntax* (tag-unique-identifiers stx)
   (syntax-case stx ()
