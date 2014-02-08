@@ -1028,6 +1028,8 @@
     syntactic-binding-remprop
     syntactic-binding-property-list
 
+    set-identifier-unsafe-variant!
+
     ;; expand-time type specs: object specs
     identifier-object-spec		set-identifier-object-spec!
     (rename (public-make-object-spec make-object-spec))
@@ -5262,8 +5264,9 @@
 
 ;;;; identifiers: unsafe variants API
 ;;
-;;With the macros DEFINE-UNSAFE-VARIANT and  UNSAFE we allow the user to
-;;select an unsafe variant of a function or (why not?) macro.
+;;With the function SET-IDENTIFIER-UNSAFE-VARIANT! and the syntax UNSAFE
+;;we allow the  user to select an  unsafe variant of a  function or (why
+;;not?)  macro.
 ;;
 ;;The unsafe  variant of  a function  is a  function that  (not strictly
 ;;speaking) neither  validates its arguments  nor its return  value.  As
@@ -5284,7 +5287,9 @@
 ;;unsafe variants  API allows us to  register this fact, for  use by the
 ;;expander, as follows:
 ;;
-;;   (define-unsafe-variant string-ref-fx $string-ref-fx)
+;;   (begin-for-syntax
+;;     (set-identifier-unsafe-variant! #'string-ref-fx
+;;       #'$string-ref-fx))
 ;;
 ;;so, having imported  the binding STRING-REF-FX, we can  use its unsafe
 ;;variant as follows:
@@ -5293,11 +5298,11 @@
 ;;
 ;;without actually importing the binding $STRING-REF-FX.
 ;;
-;;We use  syntactic binding  properties to  implement this  feature: the
-;;DEFINE-UNSAFE-VARIANT syntax puts a property in the syntactic binding,
-;;which is  later retrieved  by the UNSAFE  syntax.  The  property value
-;;must be a syntax object representing an expression which, expanded and
-;;evaluated, returns the unsafe variant.
+;;We  use  syntactic  binding  properties  to  implement  this  feature:
+;;SET-IDENTIFIER-UNSAFE-VARIANT!   puts  a  property  in  the  syntactic
+;;binding, which is later retrieved  by the UNSAFE syntax.  The property
+;;value  must  be a  syntax  object  representing an  expression  which,
+;;expanded and evaluated, returns the unsafe variant.
 ;;
 ;;When specifying  the unsafe variant  of a  function we should  build a
 ;;syntax  object   representing  an   expression  which,   expanded  and
@@ -5309,13 +5314,21 @@
 ;;
 ;;so for FX+ we should do:
 ;;
-;;  (define-unsafe-variant fx+ (lambda (a b) ($fx+ a b)))
+;;  (begin-for-syntax
+;;    (set-identifier-unsafe-variant! #'fx+
+;;      #'(lambda (a b) ($fx+ a b))))
 ;;
 ;;because $FX+ is not a function, rather it is a primitive operation.
 ;;
 
 (define-constant *UNSAFE-VARIANT-COOKIE*
   'vicare:expander:unsafe-variant)
+
+(define* (set-identifier-unsafe-variant! (safe-id identifier?) (unsafe-expr-stx <stx>?))
+  (if (syntactic-binding-getprop safe-id *UNSAFE-VARIANT-COOKIE*)
+      (syntax-violation __who__
+	"unsafe variant already defined" safe-id unsafe-expr-stx)
+    (syntactic-binding-putprop safe-id *UNSAFE-VARIANT-COOKIE* unsafe-expr-stx)))
 
 
 ;;;; identifiers: predicates axiliary functions API
@@ -6042,8 +6055,6 @@
 
       ((define-syntax-parameter)	define-syntax-parameter-macro)
       ((syntax-parametrise)		syntax-parametrise-macro)
-
-      ((define-unsafe-variant)		define-unsafe-variant-macro)
 
       ((define-predicate-procedure-argument-validation)	define-predicate-procedure-argument-validation-macro)
       ((define-predicate-return-value-validation)	define-predicate-return-value-validation-macro)
@@ -9475,31 +9486,6 @@
 				 (list lhs `(make-compile-time-value ,rhs)))
 			    ?lhs* ?rhs*)
 	 ,?body0 . ,?body*)))
-    ))
-
-
-;;;; module non-core-macro-transformer: DEFINE-UNSAFE-VARIANT
-
-(define (define-unsafe-variant-macro expr-stx)
-  ;;Transformer function  used to expand  Vicare's DEFINE-UNSAFE-VARIANT
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?safe-id ?unsafe-expr)
-     (identifier? ?safe-id)
-     ;;This must be a definition.  A module is a definition.
-     (bless
-      `(module ()
-	 (begin-for-syntax
-	   (if (syntactic-binding-getprop (syntax ,?safe-id)
-		 (quote ,*UNSAFE-VARIANT-COOKIE*))
-	       (syntax-violation 'define-unsafe-variant
-		 "unsafe variant already defined" (syntax ,?safe-id))
-	     (syntactic-binding-putprop (syntax ,?safe-id)
-					(quote  ,*UNSAFE-VARIANT-COOKIE*)
-					(syntax ,?unsafe-expr))))
-	 #| end of module |# )))
     ))
 
 

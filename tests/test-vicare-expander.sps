@@ -4628,7 +4628,8 @@
 	(define ($string-ref-fx str idx)
 	  ($char->fixnum ($string-ref str idx)))
 
-	(define-unsafe-variant string-ref-fx $string-ref-fx)
+	(begin-for-syntax
+	  (set-identifier-unsafe-variant! #'string-ref-fx #'$string-ref-fx))
 
 	(list (string-ref-fx "ciao" 2)
 	      ((unsafe string-ref-fx) "ciao" 2)))
@@ -4639,9 +4640,10 @@
       (let ()
 	(import (vicare system $fx))
 
-	(define-unsafe-variant fx+
-	  (lambda (a b)
-	    ($fx+ a b)))
+	(begin-for-syntax
+	  (set-identifier-unsafe-variant! #'fx+
+	    #'(lambda (a b)
+		($fx+ a b))))
 
 	(list (fx+ 1 2)
 	      ((unsafe fx+) 1 2)
@@ -4671,7 +4673,8 @@
 	       ((_ ?a ?b)
 		#'($fx+ ?a ?b))))))
 
-	(define-unsafe-variant safe $safe)
+	(begin-for-syntax
+	  (set-identifier-unsafe-variant! #'safe #'$safe))
 
 	(list (safe 1 2)
 	      ($safe 3 4)
@@ -4693,9 +4696,10 @@
 	    ((_ ?a ?b)
 	     #'($fx+ ?a ?b))))
 
-	(define-unsafe-variant safe
-	  (lambda (a b)
-	    ($safe a b)))
+	(begin-for-syntax
+	  (set-identifier-unsafe-variant! #'safe
+	    #'(lambda (a b)
+		($safe a b))))
 
 	(list (safe 1 2)
 	      ($safe 3 4)
