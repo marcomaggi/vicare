@@ -1028,11 +1028,14 @@
     syntactic-binding-remprop
     syntactic-binding-property-list
 
-    ;; expand-time object specifications
+    ;; expand-time object specifications: object specs
     identifier-object-spec		set-identifier-object-spec!
-    make-object-spec			object-spec?
+    (rename (public-make-object-spec make-object-spec))
+    object-spec?
     object-spec-name
     object-spec-type-id			object-spec-pred-id
+
+    ;; expand-time object specifications: callable specs
     identifier-callable-spec		set-identifier-callable-spec!
     make-callable-spec			callable-spec?
     callable-spec-name			callable-spec-min-arity
@@ -1084,6 +1087,10 @@
 
 (define-syntax-rule (reverse-and-append ?item**)
   (apply append (reverse ?item**)))
+
+(define (false-or-procedure? obj)
+  (or (not obj)
+      (procedure? obj)))
 
 
 ;;;; library records collectors
@@ -5449,7 +5456,23 @@
 		;syntactic binding property list.
    pred-id
 		;An identifier bound to the type predicate.
+   accessor-maker
+		;False  or   a  procedure   accepting  as   argument  an
+		;identifier  representing a  slot name  and returning  a
+		;syntax object evaluating to the slot accessor.
+   mutator-maker
+		;False  or   a  procedure   accepting  as   argument  an
+		;identifier  representing a  slot name  and returning  a
+		;syntax object evaluating to the slot mutator.
    ))
+
+(case-define* public-make-object-spec
+  (((name symbol?) (type-id identifier?) (pred-id identifier?))
+   (make-object-spec name type-id pred-id #f #f))
+  (((name symbol?) (type-id identifier?) (pred-id identifier?)
+    (accessor-maker false-or-procedure?)
+    (mutator-maker  false-or-procedure?))
+   (make-object-spec name type-id pred-id accessor-maker mutator-maker)))
 
 (define-record callable-spec
   ;;A struct type representing a callable form binding, either procedure
@@ -5966,6 +5989,7 @@
       ((when)				when-macro)
       ((unless)				unless-macro)
       ((case)				case-macro)
+      ((case-identifiers)		case-identifiers-macro)
       ((identifier-syntax)		identifier-syntax-macro)
       ((time)				time-macro)
       ((delay)				delay-macro)
@@ -6099,7 +6123,7 @@
      (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
 
 
-;;;; module non-core-macro-transformer: CASE
+;;;; module non-core-macro-transformer: CASE, CASE-IDENTIFIERS
 
 (module (case-macro)
   ;;Transformer  function used  to expand  R6RS's CASE  macros from  the
@@ -6151,6 +6175,67 @@
        (%build-one clause '(if #f #f)))))
 
   #| end of module: CASE-MACRO |# )
+
+(module (case-identifiers-macro)
+  (define-constant __who__
+    'case-identifiers)
+
+  (define (case-identifiers-macro expr-stx)
+    ;;Transformer  function  used  to expand  Vicare's  CASE-IDENTIFIERS
+    ;;macros  from  the  top-level  built in  environment.   Expand  the
+    ;;contents of EXPR-STX; return a  syntax object that must be further
+    ;;expanded.
+    ;;
+    (syntax-match expr-stx ()
+      ((_ ?expr)
+       (bless
+	`(let ((t ,?expr))
+	   (if #f #f))))
+      ((_ ?expr ?clause ?clause* ...)
+       (bless
+	`(let* ((t ,?expr)
+		(p (identifier? t)))
+	   ,(let recur ((clause  ?clause)
+			(clause* ?clause*))
+	      (if (null? clause*)
+		  (%build-last expr-stx clause)
+		(%build-one expr-stx clause (recur (car clause*) (cdr clause*))))))))
+      ))
+
+  (define (%build-one expr-stx clause-stx kont)
+    (syntax-match clause-stx (=>)
+      (((?datum* ...) => ?proc)
+       (if (strict-r6rs)
+	   (syntax-violation __who__
+	     "invalid usage of auxiliary keyword => in strict R6RS mode"
+	     clause-stx)
+	 `(if ,(%build-test expr-stx ?datum*)
+	      (,?proc t)
+	    ,kont)))
+
+      (((?datum* ...) ?expr ?expr* ...)
+       `(if ,(%build-test expr-stx ?datum*)
+	    (begin ,?expr . ,?expr*)
+	  ,kont))
+      ))
+
+  (define (%build-last expr-stx clause)
+    (syntax-match clause (else)
+      ((else ?expr ?expr* ...)
+       `(let () #f ,?expr . ,?expr*))
+      (_
+       (%build-one expr-stx clause '(if #f #f)))))
+
+  (define (%build-test expr-stx datum*)
+    `(and p (or . ,(map (lambda (datum)
+			  (if (identifier? datum)
+			      `(free-identifier=? t (syntax ,datum))
+			    (syntax-violation __who__
+			      "expected identifiers as datums"
+			      expr-stx datum)))
+		     datum*))))
+
+  #| end of module: CASE-IDENTIFIERS-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE

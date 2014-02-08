@@ -11,7 +11,7 @@
 ;;;	imported  by Vicare itself,  syntaxes whose  expansion reference
 ;;;	only bindings imported by Vicare itself.
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -52,7 +52,6 @@
     case-symbols		$case-symbols
     case-chars			$case-chars
     case-strings		$case-strings
-    case-identifiers
 
     ;; miscellaneous dispatching
     cond-numeric-operand	cond-real-numeric-operand
@@ -69,8 +68,7 @@
 	  arguments-validation-forms
 	  exact-integer.vicare-arguments-validation)
     (vicare unsafe operations)
-    (vicare language-extensions define-record-extended)
-    (vicare language-extensions case-identifiers))
+    (vicare language-extensions define-record-extended))
 
 
 ;;;; some defining syntaxes

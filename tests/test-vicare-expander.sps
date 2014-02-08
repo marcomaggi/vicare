@@ -3261,6 +3261,41 @@
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
 
+  (check
+      (let ()
+	(case-define* doit
+	  (()		0)
+	  ((a)		1)
+	  ((a b c)	3))
+	(list (doit)
+	      (doit 1)
+	      (doit 1 2 3)))
+    => '(0 1 3))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (()		0)
+	  ((a)		(list a))
+	  ((a b c)	(list a b c)))
+	(vector (doit)
+		(doit 1)
+		(doit 1 2 3)))
+    => '#(0 (1) (1 2 3)))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (()			0)
+	  ((a)			(list a))
+	  ((a b c)		(list a b c))
+	  ((a b c . rest)	(cons* a b c rest)))
+	(vector (doit)
+		(doit 1)
+		(doit 1 2 3)
+		(doit 1 2 3 4 5)))
+    => '#(0 (1) (1 2 3) (1 2 3 4 5)))
+
 ;;; --------------------------------------------------------------------
 ;;; with arg predicates, list spec, without retval predicate
 
@@ -3311,6 +3346,23 @@
 	   (vector 123 a b c rest)))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
+
+  (check
+      (let ()
+	(case-define* doit
+	  (()
+	   0)
+	  (((a fixnum?))
+	   (list a))
+	  (((a fixnum?) (b fixnum?) (c fixnum?))
+	   (list a b c))
+	  (((a fixnum?) (b fixnum?) (c fixnum?) . rest)
+	   (cons* a b c rest)))
+	(vector (doit)
+		(doit 1)
+		(doit 1 2 3)
+		(doit 1 2 3 4 5)))
+    => '#(0 (1) (1 2 3) (1 2 3 4 5)))
 
   (check-for-procedure-argument-violation
       (let ()
@@ -3738,6 +3790,108 @@
 	  ((1 2 3)	=> 123)
 	  (else		'else)))
     => '#("not a procedure" (123)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'case-identifiers))
+
+  (check	;no arrow
+      (case-identifiers #'two
+	((a b c)		'symbol)
+	((one two three)	'fixnum)
+	(else			'else))
+    => 'fixnum)
+
+  (check	;no arrow
+      (case-identifiers #'c
+  	((a b c)		'symbol)
+  	((one two three)	'fixnum)
+  	(else			'else))
+    => 'symbol)
+
+  (check	;no arrow
+      (case-identifiers #'other
+  	((a b c)		'symbol)
+  	((one two three)	'fixnum)
+  	(else			'else))
+    => 'else)
+
+  (check	;no arrow, multiple values
+      (case-identifiers #'two
+  	((a b c)		'symbol)
+  	((one two three)	(values 7 8 9))
+  	(else			'else))
+    => 7 8 9)
+
+  (check	;expr is not an identifier
+      (case-identifiers 123
+  	((a b c)		'symbol)
+  	((one two three)	(values 7 8 9))
+  	(else			'else))
+    => 'else)
+
+;;; --------------------------------------------------------------------
+
+  (check	;with arrow
+      (case-identifiers #'two
+  	((a b c)		'symbol)
+  	((one two three)	=> (lambda (N) (vector N)))
+  	(else			'else))
+    (=> syntax=?)
+    (vector #'two))
+
+  (check	;with arrow
+      (case-identifiers #'a
+  	((a b c)		=> (lambda (N) (list N)))
+  	((one two three)	=> (lambda (N) (vector N)))
+  	(else			'else))
+    (=> syntax=?)
+    (list #'a))
+
+  (check	;with arrow multiple values
+      (case-identifiers #'two
+  	((a b c)		'symbol)
+  	((one two three)	=> (lambda (N) (values N N N)))
+  	(else			'else))
+    (=> syntax=?)
+    #'two #'two #'two)
+
+;;; --------------------------------------------------------------------
+;;; errors
+
+  (check	;invalid arrow in ELSE clause
+      (guard (E ((syntax-violation? E)
+  		 (condition-message E))
+  		(else E))
+  	(eval '(case-identifiers #'two
+  		 ((a b c)		'symbol)
+  		 ((one two three)	=> (lambda (N) (vector N)))
+  		 (else			=> 'else))
+  	      (environment '(vicare))))
+    => "incorrect usage of auxiliary keyword")
+
+  (check	;receiver form does not evaluate to function
+      (guard (E ((error? E)
+  		 (vector (condition-message E)
+  			 (condition-irritants E)))
+  		(else E))
+  	(case-identifiers #'two
+  	  ((a b c)		'symbol)
+  	  ((one two three)	=> 'one-two-three)
+  	  (else			'else)))
+    => '#("not a procedure" (one-two-three)))
+
+  (check	;datum is not an identifier
+      (guard (E ((syntax-violation? E)
+  		 (condition-message E))
+  		(else E))
+  	(eval '(case-identifiers #'two
+  		 ((a b c)		'symbol)
+  		 ((one 123 three)	=> (lambda (N) (vector N)))
+  		 (else			=> 'else))
+  	      (environment '(vicare))))
+    => "expected identifiers as datums")
 
   #t)
 

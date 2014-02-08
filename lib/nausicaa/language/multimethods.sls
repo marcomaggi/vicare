@@ -83,8 +83,7 @@
 		  :primary :before :after :around
 		  <-)
 	    aux.)
-    (nausicaa language multimethods auxiliary-syntaxes)
-    (vicare language-extensions case-identifiers))
+    (nausicaa language multimethods auxiliary-syntaxes))
 
 
 ;;;; next method implementation
@@ -757,5 +756,4 @@
 ;;; end of file
 ;;Local Variables:
 ;;coding: utf-8
-;;eval: (put 'case-identifiers 'scheme-indent-function 1)
 ;;End:

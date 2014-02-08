@@ -18,7 +18,8 @@
 (library (psyntax compat)
   (export
     define*				define-constant
-    case-define				define-record
+    case-define				case-define*
+    define-record
     define-inline			define-syntax-rule
     define-auxiliary-syntaxes
     receive				receive-and-return

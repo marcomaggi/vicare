@@ -91,10 +91,39 @@
     (make-object-spec 'char #'char #'char?))
 
   (set-identifier-object-spec! #'cons
-    (make-object-spec 'pair #'cons #'pair?))
+    (let ()
+      (define (accessor-maker slot-id)
+	(case-identifiers slot-id
+	  ((car) #'car)
+	  ((cdr) #'cdr)
+	  (else
+	   (syntax-violation 'pair
+	     "invalid slot name for accessor creation"
+	     slot-id))))
+      (define (mutator-maker slot-id)
+	(case-identifiers slot-id
+	  ((car) #'set-car!)
+	  ((cdr) #'set-cdr!)
+	  (else
+	   (syntax-violation 'pair
+	     "invalid slot name for mutation creation" slot-id))))
+      (make-object-spec 'pair #'cons #'pair? accessor-maker mutator-maker)))
 
   (set-identifier-object-spec! #'vector
-    (make-object-spec 'vector #'vector #'vector?))
+    (let ()
+      (define (accessor-maker slot-id)
+	(case-identifiers slot-id
+	  ((length) #'length)
+	  (else
+	   (syntax-violation 'pair
+	     "invalid slot name for accessor creation"
+	     slot-id))))
+      (define (mutator-maker slot-id)
+	(case-identifiers slot-id
+	  (else
+	   (syntax-violation 'pair
+	     "invalid slot name for mutation creation" slot-id))))
+      (make-object-spec 'vector #'vector #'vector?)))
 
   (set-identifier-object-spec! #'list
     (make-object-spec 'list #'list #'list?))

@@ -302,6 +302,10 @@ Many backwards incompatibilities... life is hard!
   mehve ---)  do not  need to be  initialised anymore;  the INITIALISE-*
   functions are not exported anymore.
 
+* BACKWARDS INCOMPATIBILITY The syntax  CASE-IDENTIFIERS is now exported
+  by  (vicare), and  not  more exported  by (vicare  language-extensions
+  syntaxes).
+
 
 Notes for revision 0.3d7
 ------------------------

@@ -52,7 +52,6 @@
     counters:		port:
     procedure:		string:)
   (import (vicare)
-    (vicare language-extensions case-identifiers)
     (prefix (vicare language-extensions makers) mk.))
 
 
