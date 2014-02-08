@@ -1500,6 +1500,8 @@ and access to fields of @rnrs{6} records:
 
 
 @deffn Syntax slot-ref @meta{expr} @meta{field-name} @meta{type}
+@deffnx Syntax slot-ref <> @meta{field-name} @meta{type}
+@deffnx {Auxiliary Syntax} <>
 Expand to the slot accessor of @meta{field-name} applied to @meta{expr}.
 
 @meta{expr} can be any expression evaluating to an instance of
@@ -1515,10 +1517,16 @@ fields, struct-type-field-ref}.
 When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{record-type-field-ref}; @ref{iklib records
 fields, record-type-field-ref}.
+
+When @code{<>} is used in place of @meta{expr}: the syntax evaluates to
+a slot accessor function.
 @end deffn
 
+@c ------------------------------------------------------------
 
 @deffn Syntax slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
+@deffnx Syntax slot-set! <> @meta{field-name} @meta{type} <>
+@deffnx {Auxiliary Syntax} <>
 Expand to the slot mutator of @meta{field-name} applied to @meta{expr}
 and @meta{new-val}.
 
@@ -1535,10 +1543,16 @@ fields, struct-type-field-set!}.
 When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{record-type-field-set!}; @ref{iklib records
 fields, record-type-field-set!}.
+
+When @code{<>} is used in place of both @meta{expr} and @meta{new-val}:
+the syntax evaluates to a slot mutator function.
 @end deffn
 
+@c ------------------------------------------------------------
 
 @deffn Syntax $slot-ref @meta{expr} @meta{field-name} @meta{type}
+@deffnx Syntax $slot-ref <> @meta{field-name} @meta{type}
+@deffnx {Auxiliary Syntax} <>
 Expand to the unsafe slot accessor of @meta{field-name} applied to
 @meta{expr}.
 
@@ -1555,10 +1569,16 @@ fields, $struct-type-field-ref}.
 When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{$record-type-field-ref}; @ref{iklib records
 fields, $record-type-field-ref}.
+
+When @code{<>} is used in place of @meta{expr}: the syntax evaluates to
+a slot accessor function.
 @end deffn
 
+@c ------------------------------------------------------------
 
 @deffn Syntax $slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
+@deffnx Syntax $slot-set! <> @meta{field-name} @meta{type} <>
+@deffnx {Auxiliary Syntax} <>
 Expand to the unsafe slot mutator of @meta{field-name} applied to
 @meta{expr} and @meta{new-val}.
 
@@ -1575,6 +1595,9 @@ fields, $struct-type-field-set!}.
 When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{$record-type-field-set!}; @ref{iklib records
 fields, $record-type-field-set!}.
+
+When @code{<>} is used in place of both @meta{expr} and @meta{new-val}:
+the syntax evaluates to a slot mutator function.
 @end deffn
 
 @c page

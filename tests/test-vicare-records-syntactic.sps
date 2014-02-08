@@ -1000,6 +1000,23 @@
 		(slot-ref stru c alpha)))
       => '(19 29 39))
 
+    (check
+	(let ((stru (alpha 1 2 3)))
+	  (list ((slot-ref <> a alpha) stru)
+		((slot-ref <> b alpha) stru)
+		((slot-ref <> c alpha) stru)))
+      => '(1 2 3))
+
+    (check
+	(let ((stru (alpha 1 2 3)))
+	  ((slot-set! <> a alpha <>) stru 19)
+	  ((slot-set! <> b alpha <>) stru 29)
+	  ((slot-set! <> c alpha <>) stru 39)
+	  (list ((slot-ref <> a alpha) stru)
+		((slot-ref <> b alpha) stru)
+		((slot-ref <> c alpha) stru)))
+      => '(19 29 39))
+
     (void))
 
 ;;; --------------------------------------------------------------------
@@ -1030,6 +1047,23 @@
 	  (list ($slot-ref stru a alpha)
 		($slot-ref stru b alpha)
 		($slot-ref stru c alpha)))
+      => '(19 29 39))
+
+    (check
+	(let ((stru (alpha 1 2 3)))
+	  (list (($slot-ref <> a alpha) stru)
+		(($slot-ref <> b alpha) stru)
+		(($slot-ref <> c alpha) stru)))
+      => '(1 2 3))
+
+    (check
+	(let ((stru (alpha 1 2 3)))
+	  (($slot-set! <> a alpha <>) stru 19)
+	  (($slot-set! <> b alpha <>) stru 29)
+	  (($slot-set! <> c alpha <>) stru 39)
+	  (list (($slot-ref <> a alpha) stru)
+		(($slot-ref <> b alpha) stru)
+		(($slot-ref <> c alpha) stru)))
       => '(19 29 39))
 
     (void))

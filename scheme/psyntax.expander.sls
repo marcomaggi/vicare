@@ -1028,14 +1028,14 @@
     syntactic-binding-remprop
     syntactic-binding-property-list
 
-    ;; expand-time object specifications: object specs
+    ;; expand-time type specs: object specs
     identifier-object-spec		set-identifier-object-spec!
     (rename (public-make-object-spec make-object-spec))
     object-spec?
     object-spec-name
     object-spec-type-id			object-spec-pred-id
 
-    ;; expand-time object specifications: callable specs
+    ;; expand-time type specs: callable specs
     identifier-callable-spec		set-identifier-callable-spec!
     make-callable-spec			callable-spec?
     callable-spec-name			callable-spec-min-arity
@@ -5399,8 +5399,28 @@
 ;;     (set-identifier-object-spec! #'exact-integer
 ;;       (make-object-spec 'exact-integer #'exact-integer #'exact-integer?))
 ;;
-;;     (set-identifier-object-spec! #'vector
-;;       (make-object-spec 'vector #'vector #'vector?))
+;;   (set-identifier-object-spec! #'cons
+;;     (let ()
+;;       (import (vicare system $pairs))
+;;
+;;       (define (accessor-maker slot-id safe?)
+;;         (case-identifiers slot-id
+;;           ((car) (if safe? #'car #'$car))
+;;           ((cdr) (if safe? #'cdr #'$cdr))
+;;           (else
+;;            (syntax-violation 'pair
+;;              "invalid slot name for accessor creation"
+;;              slot-id))))
+;;
+;;       (define (mutator-maker slot-id safe?)
+;;         (case-identifiers slot-id
+;;           ((car) (if safe? #'set-car! #'$set-car!))
+;;           ((cdr) (if safe? #'set-cdr! #'$set-cdr!))
+;;           (else
+;;            (syntax-violation 'pair
+;;              "invalid slot name for mutation creation" slot-id))))
+;;
+;;       (make-object-spec 'pair #'cons #'pair? accessor-maker mutator-maker)))
 ;;
 ;;     #| end of begin-or-expand |# )
 ;;
@@ -5457,13 +5477,19 @@
    pred-id
 		;An identifier bound to the type predicate.
    accessor-maker
-		;False  or   a  procedure   accepting  as   argument  an
-		;identifier  representing a  slot name  and returning  a
-		;syntax object evaluating to the slot accessor.
+		;False  or  an  accessor  maker  procedure  accepting  2
+		;arguments and returning 1 value.  The return value is a
+		;syntax  object  evaluating  to a  slot  accessor.   The
+		;arguments are: an identifier  representing a slot name;
+		;a  boolean, true  if  the requested  accessor is  safe,
+		;false if it is unsafe.
    mutator-maker
-		;False  or   a  procedure   accepting  as   argument  an
-		;identifier  representing a  slot name  and returning  a
-		;syntax object evaluating to the slot mutator.
+		;False  or   a  mutator  maker  procedure   accepting  2
+		;arguments and returning 1 value.  The return value is a
+		;syntax  object  evaluating  to  a  slot  mutator.   The
+		;arguments are: an identifier  representing a slot name;
+		;a boolean, true if the requested mutator is safe, false
+		;if it is unsafe.
    ))
 
 (case-define* public-make-object-spec
@@ -11031,7 +11057,32 @@
   ;;language symbolic expression.
   ;;
   (define-constant __who__ 'slot-ref)
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (<>)
+    ((_ <> ?field-name-id ?type-id)
+     (and (identifier? ?type-id)
+	  (identifier? ?field-name-id))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(lambda (obj)
+		      (record-type-field-ref ,?type-id ,?field-name-id obj)))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(lambda (obj)
+		      (struct-type-field-ref ,?type-id ,?field-name-id obj)))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (cond ((object-spec-accessor-maker spec)
+		 => (lambda (accessor-maker)
+		      (chi-expr (bless
+				 (accessor-maker ?field-name-id #t))
+				lexenv.run lexenv.expand)))
+		(else
+		 (syntax-error expr-stx "object type does not provide accessors")))))
+       ))
+
     ((_ ?expr ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
@@ -11045,7 +11096,14 @@
 		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
        ((object-spec-type)
-	(stx-error expr-stx "invalid object type"))
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (cond ((object-spec-accessor-maker spec)
+		 => (lambda (accessor-maker)
+		      (chi-expr (bless
+				 `(,(accessor-maker ?field-name-id #t) ,?expr))
+				lexenv.run lexenv.expand)))
+		(else
+		 (syntax-error expr-stx "object type does not provide accessors")))))
        ))
     ))
 
@@ -11056,7 +11114,32 @@
   ;;language symbolic expression.
   ;;
   (define-constant __who__ 'slot-set!)
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (<>)
+    ((_ <> ?field-name-id ?type-id <>)
+     (and (identifier? ?type-id)
+	  (identifier? ?field-name-id))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(lambda (obj new-value)
+		      (record-type-field-set! ,?type-id ,?field-name-id obj new-value)))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(lambda (obj new-value)
+		      (struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (cond ((object-spec-mutator-maker spec)
+		 => (lambda (mutator-maker)
+		      (chi-expr (bless
+				 (mutator-maker ?field-name-id #t))
+				lexenv.run lexenv.expand)))
+		(else
+		 (syntax-error expr-stx "object type does not provide mutator")))))
+       ))
+
     ((_ ?expr ?field-name-id ?type-id ?new-value)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
@@ -11070,7 +11153,14 @@
 		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ((object-spec-type)
-	(stx-error expr-stx "invalid object type"))
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (cond ((object-spec-mutator-maker spec)
+		 => (lambda (mutator-maker)
+		      (chi-expr (bless
+				 `(,(mutator-maker ?field-name-id #t) ,?expr ,?new-value))
+				lexenv.run lexenv.expand)))
+		(else
+		 (syntax-error expr-stx "object type does not provide mutator")))))
        ))
     ))
 
@@ -11081,21 +11171,53 @@
   ;;language symbolic expression.
   ;;
   (define-constant __who__ '$slot-ref)
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (<>)
+    ((_ <> ?field-name-id ?type-id)
+     (and (identifier? ?type-id)
+	  (identifier? ?field-name-id))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(lambda (obj)
+		      ($record-type-field-ref ,?type-id ,?field-name-id obj)))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(lambda (obj)
+		      ($struct-type-field-ref ,?type-id ,?field-name-id obj)))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (cond ((object-spec-accessor-maker spec)
+		 => (lambda (accessor-maker)
+		      (chi-expr (bless
+				 (accessor-maker ?field-name-id #f))
+				lexenv.run lexenv.expand)))
+		(else
+		 (syntax-error expr-stx "object type does not provide accessors")))))
+       ))
+
     ((_ ?expr ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
      (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
-		   `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
+		   `($record-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
        ((vicare-struct-type)
 	(chi-expr (bless
-		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
+		   `($struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
        ((object-spec-type)
-	(stx-error expr-stx "invalid object type"))
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (cond ((object-spec-accessor-maker spec)
+		 => (lambda (accessor-maker)
+		      (chi-expr (bless
+				 `(,(accessor-maker ?field-name-id #f) ,?expr))
+				lexenv.run lexenv.expand)))
+		(else
+		 (syntax-error expr-stx "object type does not provide accessors")))))
        ))
     ))
 
@@ -11106,21 +11228,53 @@
   ;;language symbolic expression.
   ;;
   (define-constant __who__ '$slot-set!)
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (<>)
+    ((_ <> ?field-name-id ?type-id <>)
+     (and (identifier? ?type-id)
+	  (identifier? ?field-name-id))
+     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+       ((r6rs-record-type)
+	(chi-expr (bless
+		   `(lambda (obj new-value)
+		      ($record-type-field-set! ,?type-id ,?field-name-id obj new-value)))
+		  lexenv.run lexenv.expand))
+       ((vicare-struct-type)
+	(chi-expr (bless
+		   `(lambda (obj new-value)
+		      ($struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
+		  lexenv.run lexenv.expand))
+       ((object-spec-type)
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (cond ((object-spec-mutator-maker spec)
+		 => (lambda (mutator-maker)
+		      (chi-expr (bless
+				 (mutator-maker ?field-name-id #f))
+				lexenv.run lexenv.expand)))
+		(else
+		 (syntax-error expr-stx "object type does not provide mutators")))))
+       ))
+
     ((_ ?expr ?field-name-id ?type-id ?new-value)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
      (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
-		   `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+		   `($record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ((vicare-struct-type)
 	(chi-expr (bless
-		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
+		   `($struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ((object-spec-type)
-	(stx-error expr-stx "invalid object type"))
+	(let ((spec (identifier-object-spec ?type-id)))
+	  (cond ((object-spec-mutator-maker spec)
+		 => (lambda (mutator-maker)
+		      (chi-expr (bless
+				 `(,(mutator-maker ?field-name-id #f) ,?expr ,?new-value))
+				lexenv.run lexenv.expand)))
+		(else
+		 (syntax-error expr-stx "object type does not provide mutators")))))
        ))
     ))
 

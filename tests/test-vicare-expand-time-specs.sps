@@ -92,18 +92,19 @@
 
   (set-identifier-object-spec! #'cons
     (let ()
-      (define (accessor-maker slot-id)
+      (import (vicare system $pairs))
+      (define (accessor-maker slot-id safe?)
 	(case-identifiers slot-id
-	  ((car) #'car)
-	  ((cdr) #'cdr)
+	  ((car) (if safe? #'car #'$car))
+	  ((cdr) (if safe? #'cdr #'$cdr))
 	  (else
 	   (syntax-violation 'pair
 	     "invalid slot name for accessor creation"
 	     slot-id))))
-      (define (mutator-maker slot-id)
+      (define (mutator-maker slot-id safe?)
 	(case-identifiers slot-id
-	  ((car) #'set-car!)
-	  ((cdr) #'set-cdr!)
+	  ((car) (if safe? #'set-car! #'$set-car!))
+	  ((cdr) (if safe? #'set-cdr! #'$set-cdr!))
 	  (else
 	   (syntax-violation 'pair
 	     "invalid slot name for mutation creation" slot-id))))
@@ -183,6 +184,49 @@
       (values (is-a? '#(1 2 3) vector)
 	      (is-a? "#(1 2 3)" vector))
     => #t #f)
+
+  #t)
+
+
+(parametrise ((check-test-name	'slots))
+
+  (check
+      (values (slot-ref '(1 . 2) car cons)
+	      (slot-ref '(1 . 2) cdr cons))
+    => 1 2)
+
+  (check
+      (values ($slot-ref '(1 . 2) car cons)
+	      ($slot-ref '(1 . 2) cdr cons))
+    => 1 2)
+
+  (check
+      (let ((P (cons 1 2)))
+	(slot-set! P car cons 10)
+	(slot-set! P cdr cons 20)
+	(values (slot-ref P car cons)
+		(slot-ref P cdr cons)))
+    => 10 20)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (values ((slot-ref <> car cons) '(1 . 2))
+	      ((slot-ref <> cdr cons) '(1 . 2)))
+    => 1 2)
+
+  (check
+      (values (($slot-ref <> car cons) '(1 . 2))
+	      (($slot-ref <> cdr cons) '(1 . 2)))
+    => 1 2)
+
+  (check
+      (let ((P (cons 1 2)))
+	((slot-set! <> car cons <>) P 10)
+	((slot-set! <> cdr cons <>) P 20)
+	(values ((slot-ref <> car cons) P)
+		((slot-ref <> cdr cons) P)))
+    => 10 20)
 
   #t)
 
