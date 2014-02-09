@@ -3263,16 +3263,23 @@ assertion violation.
 @subsection Expander facilities
 
 
-The following bindings are exported by the library @library{vicare}.
+@menu
+* iklib expander expand library:: Expanding libraries.
+* iklib expander expand program:: Expanding programs.
+* iklib expander expand form::    Expanding forms.
+@end menu
+
+@c page
+@node iklib expander expand library
+@subsubsection Expanding libraries
 
 
 @defun expand-library @var{sexp}
 @defunx expand-library @var{sexp} @var{filename}
 @defunx expand-library @var{sexp} @var{filename} @var{verify-name}
-Expand the symbolic expression representing a library and register the
-result in the internal library manager.
-
-@var{sexp} must be a symbolic expression @code{(library . ---)}.
+Expand the symbolic expression @var{sexp} representing a library and
+register the result in the internal library manager.  @var{sexp} must be
+a symbolic expression @code{(library . ---)}.
 
 The optional @var{filename} must be @false{} or a string representing
 the source file from which the library was loaded; it is used for
@@ -3286,15 +3293,14 @@ meant to perform some validation upon the library name components and
 raise an exception if something is wrong; otherwise it should just
 return.
 
-Return @math{12} values:
+Return @math{13} values:
 
-@enumerate
-@item
-@var{id}, to be documented.
+@table @var
+@item uid
+A gensym uniquely identifying this library.
 
-@item
-@var{name}: a list of symbols representing the library name.  For the
-library:
+@item libname.ids
+A list of symbols representing the library name.  For the library:
 
 @example
 (library (c i a o)
@@ -3304,11 +3310,11 @@ library:
 @end example
 
 @noindent
-@var{name} is the list @code{(c i a o)}.
+@code{libname.ids} is the list @code{(c i a o)}.
 
-@item
-@var{ver}: a list of exact integers representing the library version.
-For the library:
+@item LIBNAME.VER
+A list of exact integers representing the library version.  For the
+library:
 
 @example
 (library (ciao (1 2))
@@ -3318,90 +3324,170 @@ For the library:
 @end example
 
 @noindent
-@var{ver} is the list @code{(1 2)}.
+@code{libname.ver} is the list @code{(1 2)}.
 
-@item
-@var{imp*}, to be documented.
+@item import-desc*
+A list of library descriptors representing the libraries that need to be
+imported for the invoke code.
 
-@item
-@var{vis*}, to be documented.
+@item visit-desc*
+A list of library descriptors representing the libraries that need to be
+imported for the visit code.
 
-@item
-@var{inv*}, to be documented.
+@item invoke-desc*
+A list of library descriptors representing the libraries that need to be
+invoked to make available the values of the imported variables.
 
-@item
-@var{invoke-code}, the expanded code expressed in the core lanugage.
+@item invoke-code
+A symbolic expression representing the code to be evaluated to create
+the top--level @func{define} bindings and evaluate the trailing init
+expressions.
 
-@item
-@var{visit-code}, to be documented.
+@item visit-code -
+A symbolic expression representing the code to be evaluated to create
+the expand--time code.
 
-@item
-@var{export-subst}, to be documented.
+@item export-subst
+A subst representing the bindings to export.
 
-@item
-@var{export-env}, to be documented.
+@item export-env
+A list representing the bindings exported by the library.
 
-@item
-@var{guard-code}: a predicate expression in the core language
-representing the @func{stale-when} tests from the body of the library.
-For the library:
+@item guard-code
+A predicate expression in the core language representing the
+@func{stale-when} tests from the body of the library.
+
+@item guard-desc*
+A list of library descriptors representing the libraries that need to be
+invoked for the @func{stale-when} code.
+
+@item option*
+A list of symbolic expressions representing options from the
+@clause{options} clause of the @func{library} form.
+@end table
+@end defun
+
+
+@defun expand-library->sexp @var{sexp}
+This function is for debugging purposes.  Expand the library form
+@var{sexp} and return the return values of @func{expand-library} in an
+alist with the following symbols as keys:
+
+@example
+uid
+libname.ids libname.version
+import-desc* visit-desc* invoke-desc*
+invoke-code visit-code
+export-subst export-env
+guard-code guard-desc*
+option*
+@end example
+@end defun
+
+
+We can toy with the library expander using the following code:
+
+@example
+#!r6rs
+(import (vicare))
+(print-gensym #f)
+(debug-print (expand-library->sexp @meta{sexp}))
+@end example
+
+@noindent
+where @meta{sexp} is the @func{library} symbolic expression.  For
+example, expanding the library:
+
+@example
+(library (ciao)
+  (export var fun mac ctv)
+  (import (vicare))
+  (define var 1)
+  (define (fun)
+    2)
+  (define-syntax (mac stx)
+    3)
+  (define-syntax ctv
+    (make-compile-time-value
+     (+ 4 5))))
+@end example
+
+@noindent
+yields the @code{invoke-code}:
+
+@example
+(library-letrec*
+    ((lex.var loc.lex.var '1)
+     (lex.fun loc.lex.fun (annotated-case-lambda fun (() '2))))
+  ((primitive void)))
+@end example
+
+@noindent
+the @code{visit-code}:
+
+@example
+(begin
+  (set! loc.lab.mac
+        (annotated-case-lambda
+           (#<syntax expr=lambda mark*=(top)>
+            (#<syntax expr=stx mark*=(top)>)
+            #<syntax expr=3 mark*=(top)>)
+         ((lex.stx) '3)))
+  (set! loc.lab.ctv
+        (annotated-call
+            (make-compile-time-value (+ 4 5))
+          (primitive make-compile-time-value)
+          (annotated-call (+ 4 5) (primitive +) '4 '5))))
+@end example
+
+@noindent
+the @code{export-subst}:
+
+@example
+((ctv . lab.ctv)
+ (mac . lab.mac)
+ (fun . lab.fun)
+ (var . lab.var))
+@end example
+
+@noindent
+the @code{export-env}:
+
+@example
+((lab.var global        . loc.lex.var)
+ (lab.fun global        . loc.lex.fun)
+ (lab.mac global-macro  . loc.lab.mac)
+ (lab.ctv global-ctv    . loc.lab.ctv))
+@end example
+
+Another example, for the library:
 
 @example
 (library (ciao (1 2))
   (export doit)
   (import (vicare))
-  (stale-when (< 1 2) (define a 123))
-  (stale-when (< 2 3) (define b 123))
-  (define (doit) 123))
+  (stale-when (< 1 2)
+    (define a 123))
+  (stale-when (< 2 3)
+    (define b 123))
+  (define (doit)
+    123))
 @end example
 
 @noindent
-@var{guard-code} is:
+the @code{guard-code} is:
 
 @example
 (if (if '#f
         '#t
-      (annotated-call (< 1 2) (primitive <) '1 '2))
+       (annotated-call (< 1 2) (primitive <) '1 '2))
     '#t
   (annotated-call (< 2 3) (primitive <) '2 '3))
 @end example
 
-@item
-@var{guard-req*}, to be documented.
-@end enumerate
-
-Example:
-
-@example
-(import (vicare))
-
-(let-values (((id name ver imp* vis* inv*
-               invoke-code visit-code
-               export-subst export-env
-               guard-code guard-req*)
-              (expand-library
-               '(library (doit)
-                  (export doit)
-                  (import (vicare))
-                  (define (doit x)
-                    (if (null? x)
-                        #f
-                      (doit (cdr x))))))))
-  invoke-code)
-@result{} (library-letrec*
-     ((#@{doit |$B>4=68o!fJIWV2u|@} #@{doit |wz6BfVVqmV65xcyl|@}
-        (annotated-case-lambda doit
-          ((#@{x |ua9qt/Qp%FG%z984|@})
-            (if (annotated-call (null? x) (primitive null?)
-                  #@{x |ua9qt/Qp%FG%z984|@})
-                '#f
-                (annotated-call (doit (cdr x))
-                  #@{doit |$B>4=68o!fJIWV2u|@}
-                  (annotated-call (cdr x) (primitive cdr)
-                    #@{x |ua9qt/Qp%FG%z984|@})))))))
-     ((primitive void)))
-@end example
-@end defun
+@c page
+@node iklib expander expand program
+@subsubsection Expanding programs
 
 
 @defun expand-top-level @var{sexp}
@@ -3425,6 +3511,10 @@ Return @math{5} values:
 @var{export-env}, to be documented.
 @end enumerate
 @end defun
+
+@c page
+@node iklib expander expand form
+@subsubsection Expanding forms
 
 
 @defun expand-form-to-core-language @var{sexp} @var{env}

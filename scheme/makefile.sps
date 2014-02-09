@@ -798,6 +798,7 @@
     (make-readline-input-port			i v $language)
     (expand-form-to-core-language		i v $language)
     (expand-library				i v $language)
+    (expand-library->sexp			i v $language)
     (expand-top-level				i v $language)
 ;;;
     (environment?				i v $language)

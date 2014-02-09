@@ -997,7 +997,7 @@
     environment-labels			environment-binding
 
     expand-form-to-core-language	expand-top-level
-    expand-library
+    expand-library			expand-library->sexp
     compile-r6rs-top-level		boot-library-expand
 
     make-variable-transformer		variable-transformer?
@@ -1927,7 +1927,7 @@
   ;;
   ;;VISIT-CODE -
   ;;  A  symbolic expression  representing the code  to be  evaluated to
-  ;;  create the expand-time code.  Examples:
+  ;;  create the expand-time code.
   ;;
   ;;EXPORT-SUBST -
   ;;  A subst representing the bindings to export.
@@ -2105,6 +2105,29 @@
 	  macro*))))
 
   #| end of module: EXPAND-LIBRARY |# )
+
+(define (expand-library->sexp libsexp)
+  (receive (uid
+	    libname.ids libname.version
+	    import-desc* visit-desc* invoke-desc*
+	    invoke-code visit-code
+	    export-subst export-env
+	    guard-code guard-desc*
+	    option*)
+      (expand-library libsexp)
+    `((uid . ,uid)
+      (libname.ids . ,libname.ids)
+      (libname.version . ,libname.version)
+      (import-desc* . ,import-desc*)
+      (visit-desc* . ,visit-desc*)
+      (invoke-desc* . ,invoke-desc*)
+      (invoke-code . ,invoke-code)
+      (visit-code . ,visit-code)
+      (export-subst . ,export-subst)
+      (export-env . ,export-env)
+      (guard-code . ,guard-code)
+      (guard-desc* . ,guard-desc*)
+      (option* . ,option*))))
 
 
 (module CORE-LIBRARY-EXPANDER
