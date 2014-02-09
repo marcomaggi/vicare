@@ -996,7 +996,8 @@
     environment-symbols			environment-libraries
     environment-labels			environment-binding
 
-    expand-form-to-core-language	expand-top-level
+    expand-form-to-core-language
+    expand-top-level			expand-top-level->sexp
     expand-library			expand-library->sexp
     compile-r6rs-top-level		boot-library-expand
 
@@ -1801,6 +1802,8 @@
   #| end of module: COMPILE-R6RS-TOP-LEVEL |# )
 
 
+;;;; R6RS program expander
+
 (module (expand-top-level)
 
   (define (expand-top-level expr*)
@@ -1838,6 +1841,15 @@
 	 "top-level program is missing an (import ---) clause"))))
 
   #| end of module: EXPAND-TOP-LEVEL |# )
+
+(define (expand-top-level->sexp sexp)
+  (receive (invoke-lib* invoke-code macro* export-subst export-env)
+      (expand-top-level sexp)
+    `((invoke-lib* . ,invoke-lib*)
+      (invoke-code . ,invoke-code)
+      (macro* . ,macro*)
+      (export-subst . ,export-subst)
+      (export-env . ,export-env))))
 
 
 ;;;; R6RS library expander

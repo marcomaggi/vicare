@@ -800,6 +800,7 @@
     (expand-library				i v $language)
     (expand-library->sexp			i v $language)
     (expand-top-level				i v $language)
+    (expand-top-level->sexp			i v $language)
 ;;;
     (environment?				i v $language)
     (environment-symbols			i v $language)
