@@ -1880,7 +1880,8 @@
   ;;
   ;;The returned values are:
   ;;
-  ;;UID - a gensym uniquely identifying this library.
+  ;;UID -
+  ;;   A gensym uniquely identifying this library.
   ;;
   ;;LIBNAME.IDS - a list of  symbols representing the library name.  For
   ;;the library:
@@ -2004,6 +2005,9 @@
   ;;expressions.  Each  item in  the list is  a "library  descriptor" as
   ;;built by the LIBRARY-DESCRIPTOR function.
   ;;
+  ;;OPTION* - a  list of symbolic expressions  representing options from
+  ;;the OPTIONS clause of the LIBRARY form.
+  ;;
   (case-define expand-library
     ((library-sexp)
      (expand-library library-sexp #f       (lambda (ids ver) (values))))
@@ -2014,9 +2018,10 @@
 	       libname.version ;null or list of version numbers
 	       import-lib* invoke-lib* visit-lib*
 	       invoke-code macro*
-	       export-subst export-env guard-code guard-lib*
-	       library-option*)
-	 (begin
+	       export-subst export-env
+	       guard-code guard-lib*
+	       option*)
+	 (let ()
 	   (import CORE-LIBRARY-EXPANDER)
 	   (core-library-expander library-sexp verify-name))
        (let ((uid		(gensym)) ;library unique-symbol identifier
@@ -2045,13 +2050,13 @@
 			  visit-code invoke-code
 			  guard-code guard-desc*
 			  #t #;visible?
-			  filename library-option*)
+			  filename option*)
 	 (values uid libname.ids libname.version
 		 import-desc* visit-desc* invoke-desc*
 		 invoke-code visit-code
 		 export-subst export-env
 		 guard-code guard-desc*
-		 library-option*)))))
+		 option*)))))
 
   (define (%build-visit-code macro*)
     ;;Return a sexp  representing code that initialises  the bindings of
@@ -2120,7 +2125,7 @@
       (receive (libname.ids libname.version)
 	  (%parse-library-name library-name*)
 	(verify-name libname.ids libname.version)
-	(let* ((library-option* (%parse-library-options libopt*))
+	(let* ((option* (%parse-library-options libopt*))
 	       (stale-clt       (%make-stale-collector)))
 	  (receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	      (parametrise ((stale-when-collector stale-clt))
@@ -2134,7 +2139,7 @@
 		      import-lib* invoke-lib* visit-lib*
 		      invoke-code macro* export-subst
 		      export-env guard-code guard-lib*
-		      library-option*)))))))
+		      option*)))))))
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
@@ -2414,14 +2419,14 @@
 	      (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
 		     (rhs-form-core*   (chi-qrhs*  qrhs*  lexenv.run lexenv.expand)))
 		(unseal-rib! rib)
-		(let ((loc.lex*      (map gensym-for-storage-location lex*))
+		(let ((loc*          (map gensym-for-storage-location lex*))
 		      (export-subst  (%make-export-subst export-name* export-id*)))
 		  (receive (export-env macro*)
-		      (%make-export-env/macro* lex* loc.lex* lexenv.run)
+		      (%make-export-env/macro* lex* loc* lexenv.run)
 		    (%validate-exports export-spec* export-subst export-env)
 		    (let ((invoke-code (build-library-letrec* no-source
 					 mixed-definitions-and-expressions?
-					 lex* loc.lex* rhs-form-core*
+					 lex* loc* rhs-form-core*
 					 (if (null? init-form-core*)
 					     (build-void)
 					   (build-sequence no-source init-form-core*)))))
@@ -2497,10 +2502,10 @@
     ;;LEX* must  be a  list of gensyms  representing the  global lexical
     ;;variables bindings.
     ;;
-    ;;LOC.LEX* must be a list of storage location gensyms for the global
-    ;;lexical variables.
+    ;;LOC* must  be a list  of storage  location gensyms for  the global
+    ;;lexical variables: there must be a loc for every lex in LEX*.
     ;;
-    (define (%make-export-env/macro* lex* loc.lex* lexenv.run)
+    (define (%make-export-env/macro* lex* loc* lexenv.run)
       (let loop ((lexenv.run		lexenv.run)
 		 (export-env		'())
 		 (macro*		'()))
@@ -2515,25 +2520,25 @@
 	       ;;lexical binding from another  library, we must see such
 	       ;;entry as "global".
 	       ;;
-	       ;;The entry from the lexical environment looks like this:
+	       ;;The entry from the LEXENV looks like this:
 	       ;;
-	       ;;   (lexical . (?lexvar . ?mutable))
+	       ;;   (?label . (lexical . (?lexvar . ?mutable)))
 	       ;;
 	       ;;Add to the EXPORT-ENV an entry like:
 	       ;;
-	       ;;   (?label ?type . ?loc.lex)
+	       ;;   (?label ?type . ?loc)
 	       ;;
 	       ;;where  ?TYPE  is the  symbol  "mutable"  or the  symbol
 	       ;;"global"; notice that the entries of type "mutable" are
 	       ;;forbidden to be exported.
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
-		      (loc.lex   (%lookup (lexical-var bind-val) lex* loc.lex*))
+		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
 		      (type      (if (lexical-var-mutated? bind-val)
 				     'mutable
 				   'global)))
 		 (loop (cdr lexenv.run)
-		       (cons (cons* label type loc.lex) export-env)
+		       (cons (cons* label type loc) export-env)
 		       macro*)))
 
 	      ((local-macro)
@@ -2542,9 +2547,9 @@
 	       ;;such   binding:  the   importer  must   see  it   as  a
 	       ;;"global-macro".
 	       ;;
-	       ;;The entry from the lexical environment looks like this:
+	       ;;The entry from the LEXENV looks like this:
 	       ;;
-	       ;;   (local-macro . (?transformer . ?expanded-expr))
+	       ;;   (?label . (local-macro . (?transformer . ?expanded-expr)))
 	       ;;
 	       ;;Add to the EXPORT-ENV an entry like:
 	       ;;
@@ -2554,7 +2559,7 @@
 	       ;;
 	       ;;   (?loc . (?transformer . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym-for-storage-location)))
+	       (let ((loc (gensym-for-storage-location label)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-macro loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
@@ -2565,9 +2570,9 @@
 	       ;;such   binding:  the   importer  must   see  it   as  a
 	       ;;"global-macro!".
 	       ;;
-	       ;;The entry from the lexical environment looks like this:
+	       ;;The entry from the LEXENV looks like this:
 	       ;;
-	       ;;   (local-macro! . (?transformer . ?expanded-expr))
+	       ;;   (?label . (local-macro! . (?transformer . ?expanded-expr)))
 	       ;;
 	       ;;Add to the EXPORT-ENV an entry like:
 	       ;;
@@ -2577,7 +2582,7 @@
 	       ;;
 	       ;;   (?loc . (?transformer . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym-for-storage-location)))
+	       (let ((loc (gensym-for-storage-location label)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-macro! loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
@@ -2588,9 +2593,9 @@
 	       ;;export  such binding:  the importer  must see  it as  a
 	       ;;"global-ctv".
 	       ;;
-	       ;;The entry from the lexical environment looks like this:
+	       ;;The entry from the LEXENV looks like this:
 	       ;;
-	       ;;   (local-ctv . (?object . ?expanded-expr))
+	       ;;   (?label . (local-ctv . (?object . ?expanded-expr)))
 	       ;;
 	       ;;Add to the EXPORT-ENV an entry like:
 	       ;;
@@ -2600,12 +2605,12 @@
 	       ;;
 	       ;;   (?loc . (?object . ?expanded-expr))
 	       ;;
-	       (let ((loc (gensym-for-storage-location)))
+	       (let ((loc (gensym-for-storage-location label)))
 		 (loop (cdr lexenv.run)
 		       (cons (cons* label 'global-ctv loc) export-env)
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
-	      (($rtd $module $fluid)
+	      (($rtd $module $fluid $synonym)
 	       ;;Just add the entry "as is" from the lexical environment
 	       ;;to the EXPORT-ENV.
 	       ;;
@@ -2614,20 +2619,20 @@
 		     macro*))
 
 	      (else
-	       (assertion-violation 'expander
+	       (assertion-violation 'core-body-expander
 		 "BUG: do not know how to export"
 		 (syntactic-binding-type  binding)
 		 (syntactic-binding-value binding))))))))
 
-    (define (%lookup lexical-gensym lex* loc.lex*)
+    (define (%lookup lexical-gensym lex* loc*)
       ;;Search for  LEXICAL-GENSYM in the  list LEX*: when  found return
-      ;;the corresponding gensym from  LOC.LEX*.  LEXICAL-GENSYM must be
-      ;;an item in LEX*.
+      ;;the corresponding  gensym from LOC*.  LEXICAL-GENSYM  must be an
+      ;;item in LEX*.
       ;;
       (if (pair? lex*)
 	  (if (eq? lexical-gensym (car lex*))
-	      (car loc.lex*)
-	    (%lookup lexical-gensym (cdr lex*) (cdr loc.lex*)))
+	      (car loc*)
+	    (%lookup lexical-gensym (cdr lex*) (cdr loc*)))
 	(assertion-violation 'lookup-make-export "BUG")))
 
     #| end of module: %MAKE-EXPORT-ENV/MACRO* |# )

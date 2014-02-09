@@ -722,6 +722,7 @@
   ;;
   ;;LIBRARY-OPTION* - a sexp representing library options.
   ;;
+  (define-constant __who__ 'install-library)
   (case-define install-library
     ;;FIXME  At  the next  boot  image  rotation the  optional  argument
     ;;LIBRARY-OPTION*  must become  a mandatory  argument.  For  this to
@@ -753,10 +754,10 @@
 	   (inv-lib*	(map %find-library-in-collection-by-spec/die inv*))
 	   (guard-lib*	(map %find-library-in-collection-by-spec/die guard-req*)))
        (unless (and (symbol? id) (list? libname) (list? ver))
-	 (assertion-violation 'install-library
+	 (assertion-violation __who__
 	   "invalid spec with id/name/ver" id libname ver))
        (when (library-exists? libname)
-	 (assertion-violation 'install-library
+	 (assertion-violation __who__
 	   "library is already installed" libname))
        (let ((lib (make-library id libname ver imp-lib* vis-lib* inv-lib*
 				exp-subst exp-env visit-proc invoke-proc
@@ -780,7 +781,19 @@
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
 			     ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
 			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
-			     (else            binding))))
+			     (( ;;
+			       library import export
+			       define define-syntax define-alias define-fluid-syntax
+			       let-syntax letrec-syntax
+			       module begin set! stale-when
+			       global mutable
+			       core-prim core-macro macro
+			       $core-rtd $rtd $module $fluid $synonym)
+			      binding)
+			     (else
+			      (assertion-violation __who__
+				"invalid syntactic binding descriptor type in EXPORT-ENV entry"
+				lib export-env-entry)))))
 	    ;;When the library is serialized: the content of the "value"
 	    ;;slot is  not saved, so we  have to set it  here every time
 	    ;;the library is loaded.

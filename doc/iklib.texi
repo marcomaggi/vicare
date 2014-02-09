@@ -3258,11 +3258,6 @@ transformer: return the actual transformer function, otherwise raise an
 assertion violation.
 @end defun
 
-
-@defun syntax-transpose
-Undocumented.
-@end defun
-
 @c page
 @node iklib expander expand
 @subsection Expander facilities
