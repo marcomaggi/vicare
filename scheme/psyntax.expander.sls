@@ -1976,10 +1976,8 @@
   ;;   (begin
   ;;     (set! loc.lab.mac
   ;;           (annotated-case-lambda
-  ;;              (#<syntax expr=lambda mark*=(top)>
-  ;;               (#<syntax expr=stx mark*=(top)>)
-  ;;               #<syntax expr=3 mark*=(top)>)
-  ;;            ((lex.stx) '3)))
+  ;;               (#'lambda (#'stx) #'3)
+  ;;             ((lex.stx) '3)))
   ;;     (set! loc.lab.ctv
   ;;           (annotated-call
   ;;               (make-compile-time-value (+ 4 5))
@@ -2365,15 +2363,16 @@
   ;;   library in the example INVOKE-CODE is:
   ;;
   ;;      (library-letrec*
-  ;;          ((#{var1 |5DIy7SQkW5FM0cxk|} #{var1 |P7HvyR0HLiAhK2$r|} '1)
-  ;;           (#{var2 |E>%Ta%%32B=RWtyX|} #{var2 |aANiRYtpezblMkJf|} '2))
+  ;;          ((lex.var1 loc.lex.var1 '1)
+  ;;           (lex.var2 loc.lec.var2 '2))
   ;;        ((primitive void)))
   ;;
   ;;5. MACRO* is  a list of bindings representing the  macros defined in
   ;;   the code.  For the example library MACRO* is:
   ;;
-  ;;      ((#{g3 |wHN7M5vmyDul<JV8|} #<procedure> .
-  ;;         (annotated-case-lambda (#'lambda (#'stx) #'3) ((#'stx) '3)))
+  ;;      ((lab.mac #<procedure> .
+  ;;         (annotated-case-lambda (#'lambda (#'stx) #'3)
+  ;;           ((#'stx) '3)))
   ;;
   ;;6. EXPORT-SUBST is an alist with entries having the format:
   ;;
@@ -2384,18 +2383,18 @@
   ;;    identifying such  syntactic  binding.  For  the  library in  the
   ;;   example, EXPORT-SUBST is:
   ;;
-  ;;      ((mac      . #{g2 |b78b07G2HAdd7zR6|})
-  ;;       (the-var2 . #{g1 |PwmRW?UEJK48Q<tQ|})
-  ;;       (var1     . #{g0 |AdFJ$kPI0R39z7%r|}))
+  ;;      ((mac      . lab.mac)
+  ;;       (the-var2 . lab.var2)
+  ;;       (var1     . lab.var1))
   ;;
   ;;7. EXPORT-ENV is the lexical environment of bindings exported by the
   ;;   library.   Its format is different  from the one of  the LEXENV.*
   ;;   values used throughout the expansion process.  For the library in
   ;;   the example, EXPORT-ENV is:
   ;;
-  ;;      ((#{g0 |AdFJ$kPI0R39z7%r|} global       . #{var1 |P7HvyR0HLiAhK2$r|})
-  ;;       (#{g1 |PwmRW?UEJK48Q<tQ|} global       . #{var2 |aANiRYtpezblMkJf|})
-  ;;       (#{g2 |b78b07G2HAdd7zR6|} global-macro . #{g3   |wHN7M5vmyDul<JV8|}))
+  ;;      ((lab.var1 global       . loc.lex.var1)
+  ;;       (lab.var2 global       . loc.lex.var2)
+  ;;       (lab.mac  global-macro . loc.lab.mac))
   ;;
   (define (core-body-expander export-spec* import-spec* body-sexp* mixed-definitions-and-expressions?)
     (define itc (make-collector))

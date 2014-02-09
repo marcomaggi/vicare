@@ -3429,10 +3429,8 @@ the @code{visit-code}:
 (begin
   (set! loc.lab.mac
         (annotated-case-lambda
-           (#<syntax expr=lambda mark*=(top)>
-            (#<syntax expr=stx mark*=(top)>)
-            #<syntax expr=3 mark*=(top)>)
-         ((lex.stx) '3)))
+            (#'lambda (#'stx) #'3)
+          ((lex.stx) '3)))
   (set! loc.lab.ctv
         (annotated-call
             (make-compile-time-value (+ 4 5))
@@ -3491,7 +3489,7 @@ the @code{guard-code} is:
 
 
 @defun expand-top-level @var{sexp}
-Expand a top level program whose symbolic expression is @var{sexp}.
+Expand an @rnrs{6} program whose symbolic expression is @var{sexp}.
 Return @math{5} values:
 
 @enumerate
