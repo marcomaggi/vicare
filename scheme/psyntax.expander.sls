@@ -1029,6 +1029,8 @@
     syntactic-binding-property-list
 
     set-identifier-unsafe-variant!
+    set-predicate-procedure-argument-validation!
+    set-predicate-return-value-validation!
 
     ;; expand-time type specs: object specs
     identifier-object-spec		set-identifier-object-spec!
@@ -5353,32 +5355,34 @@
 ;;As example, we  can associate a procedure  argument auxiliary function
 ;;to LIST? as follows:
 ;;
-;;    (define (list-procedure-argument who obj)
-;;      (if (list? obj)
-;;          obj
-;;        (procedure-argument-violation who
-;;          "expected list object as argument" obj)))
+;;   (define (list-procedure-argument who obj)
+;;     (if (list? obj)
+;;         obj
+;;       (procedure-argument-violation who
+;;         "expected list object as argument" obj)))
 ;;
-;;    (define-predicate-procedure-argument-validation list?
-;;      list-procedure-argument?)
+;;   (begin-for-syntax
+;;     (set-predicate-procedure-argument-validation! #'list?
+;;       #'list-procedure-argument?))
 ;;
-;;    ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
-;;    => (1 2 3)
+;;   ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
+;;   => (1 2 3)
 ;;
-;;    ((predicate-procedure-argument-validation list?) 'hey '#(1 2 3))
-;;    error--> &procedure-argument-violation
+;;   ((predicate-procedure-argument-validation list?) 'hey '#(1 2 3))
+;;   error--> &procedure-argument-violation
 ;;
 ;;and we  can associate a return  value auxiliary function to  LIST?  as
 ;;follows:
 ;;
-;;    (define (list-return-value? who obj)
-;;      (if (list? obj)
-;;          obj
-;;        (expression-return-value-violation who
-;;          "expected list object as argument" obj)))
+;;   (define (list-return-value? who obj)
+;;     (if (list? obj)
+;;         obj
+;;       (expression-return-value-violation who
+;;         "expected list object as argument" obj)))
 ;;
-;;    (define-predicate-return-value-validation list?
-;;      list-return-value?)
+;;   (begin-for-syntax
+;;     (set-predicate-return-value-validation! #'list?
+;;       #'list-return-value?))
 ;;
 ;;    ((predicate-return-value-validation list?) 'hey '(1 2 3))
 ;;    => (1 2 3)
@@ -5392,6 +5396,22 @@
 
 (define-constant *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
   'vicare:expander:predicate-return-value-validation)
+
+(define* (set-predicate-procedure-argument-validation! (pred-id identifier?) (validation-stx <stx>?))
+  (if (syntactic-binding-getprop pred-id *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)
+      (syntax-violation __who__
+	"predicate procedure argument validation already defined"
+	pred-id validation-stx)
+    (syntactic-binding-putprop pred-id *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*
+			       validation-stx)))
+
+(define* (set-predicate-return-value-validation! (pred-id identifier?) (validation-stx <stx>?))
+  (if (syntactic-binding-getprop pred-id  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)
+      (syntax-violation __who__
+	"predicate procedure argument validation already defined"
+	pred-id validation-stx)
+    (syntactic-binding-putprop pred-id *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
+			       validation-stx)))
 
 
 ;;;; identifiers: expand-time type specification
@@ -6055,9 +6075,6 @@
 
       ((define-syntax-parameter)	define-syntax-parameter-macro)
       ((syntax-parametrise)		syntax-parametrise-macro)
-
-      ((define-predicate-procedure-argument-validation)	define-predicate-procedure-argument-validation-macro)
-      ((define-predicate-return-value-validation)	define-predicate-return-value-validation-macro)
 
       ((include)			include-macro)
       ((define-integrable)		define-integrable-macro)
@@ -9486,57 +9503,6 @@
 				 (list lhs `(make-compile-time-value ,rhs)))
 			    ?lhs* ?rhs*)
 	 ,?body0 . ,?body*)))
-    ))
-
-
-;;;; module non-core-macro-transformer: DEFINE-PREDICATE-PROCEDURE-ARGUMENT-VALIDATION, DEFINE-PREDICATE-RETURN-VALUE-VALIDATION
-
-(define (define-predicate-procedure-argument-validation-macro expr-stx)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;DEFINE-PREDICATE-PROCEDURE-ARGUMENT-VALIDATION   macros   from   the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?predicate-id ?validation-expr)
-     (identifier? ?predicate-id)
-     ;;This must be a definition.  A module is a definition.
-     (bless
-      `(module ()
-	 (begin-for-syntax
-	   (if (syntactic-binding-getprop (syntax ,?predicate-id)
-		 (quote ,*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*))
-	       (syntax-violation 'define-predicate-procedure-argument-validation
-		 "predicate procedure argument validation already defined"
-		 (syntax ,?predicate-id))
-	     (syntactic-binding-putprop (syntax ,?predicate-id)
-					(quote  ,*PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)
-					(syntax ,?validation-expr))))
-	 #| end of module |# )))
-    ))
-
-(define (define-predicate-return-value-validation-macro expr-stx)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;DEFINE-PREDICATE-RETURN-VALUE-VALIDATION  macros from  the top-level
-  ;;built in  environment.  Expand  the contents  of EXPR-STX;  return a
-  ;;syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?predicate-id ?validation-expr)
-     (identifier? ?predicate-id)
-     ;;This must be a definition.  A module is a definition.
-     (bless
-      `(module ()
-	 (begin-for-syntax
-	   (if (syntactic-binding-getprop (syntax ,?predicate-id)
-		 (quote ,*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*))
-	       (syntax-violation 'define-predicate-return-value-validation
-		 "predicate return value validation already defined"
-		 (syntax ,?predicate-id))
-	     (syntactic-binding-putprop (syntax ,?predicate-id)
-					(quote  ,*PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)
-					(syntax ,?validation-expr))))
-	 #| end of module |# )))
     ))
 
 

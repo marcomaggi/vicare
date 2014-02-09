@@ -4717,8 +4717,9 @@
       (procedure-argument-violation who
 	"expected list object as argument" obj)))
 
-  (define-predicate-procedure-argument-validation list?
-    list-procedure-argument?)
+  (begin-for-syntax
+    (set-predicate-procedure-argument-validation! #'list?
+      #'list-procedure-argument?))
 
   (check
       ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
@@ -4743,8 +4744,9 @@
       (expression-return-value-violation who
 	"expected list object as return value" obj)))
 
-  (define-predicate-return-value-validation list?
-    list-return-value?)
+  (begin-for-syntax
+    (set-predicate-return-value-validation! #'list?
+      #'list-return-value?))
 
   (check
       ((predicate-return-value-validation list?) 'hey '(1 2 3))

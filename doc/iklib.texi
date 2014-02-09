@@ -2154,8 +2154,9 @@ As example, we can associate a procedure argument auxiliary function to
     (procedure-argument-violation who
       "expected list object as argument" obj)))
 
-(define-predicate-procedure-argument-validation list?
-  list-procedure-argument?)
+(begin-for-syntax
+  (set-predicate-procedure-argument-validation! #'list?
+    #'list-procedure-argument?))
 
 ((predicate-procedure-argument-validation list?) 'hey '(1 2 3))
 @result{} (1 2 3)
@@ -2175,8 +2176,9 @@ as follows:
     (expression-return-value-violation who
       "expected list object as argument" obj)))
 
-(define-predicate-return-value-validation list?
-  list-return-value?)
+(begin-for-syntax
+  (set-predicate-return-value-validation! #'list?
+    #'list-return-value?))
 
 ((predicate-return-value-validation list?) 'hey '(1 2 3))
 @result{} (1 2 3)
@@ -2186,13 +2188,13 @@ as follows:
 @end example
 
 
-@deffn Syntax define-predicate-procedure-argument-validation @meta{pred-id} @meta{valid-expr}
-Specify that the predicate @meta{pred-id} is associated to the procedure
-argument validation function resulting from the evaluation of the
-expression @meta{valid-expr}.  @meta{valid-expr} is stored as syntax
-object and it is expanded and evaluated at each use of the validation
-function.
-@end deffn
+@defun set-predicate-procedure-argument-validation! @var{pred-id} @var{valid-stx}
+Specify that the predicate identifier @var{pred-id} is associated to the
+procedure argument validation function resulting from the expansion and
+evaluation of the syntax object @var{valid-stx}.  @var{valid-stx} is
+stored as syntax object and it is expanded and evaluated at each use of
+the validation function.
+@end defun
 
 
 @deffn Syntax predicate-procedure-argument-validation @meta{pred-id}
@@ -2202,13 +2204,13 @@ function is available: raise a syntax violation.
 @end deffn
 
 
-@deffn Syntax define-predicate-return-value-validation @meta{pred-id} @meta{valid-expr}
-Specify that the predicate @meta{pred-id} is associated to the return
-value validation function resulting from the evaluation of the
-expression @meta{valid-expr}.  @meta{valid-expr} is stored as syntax
-object and it is expanded and evaluated at each use of the validation
-function.
-@end deffn
+@defun set-predicate-return-value-validation! @var{pred-id} @var{valid-stx}
+Specify that the predicate identifier @var{pred-id} is associated to the
+return value validation function resulting from the evaluation of the
+expansion and evaluation of the syntax object @var{valid-stx}.
+@var{valid-stx} is stored as syntax object and it is expanded and
+evaluated at each use of the validation function.
+@end defun
 
 
 @deffn Syntax predicate-return-value-validation @meta{pred-id}

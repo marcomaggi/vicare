@@ -431,8 +431,6 @@
     (record-type-and-record?		(macro . record-type-and-record?))
     (define-enumeration			(macro . define-enumeration))
     (define-condition-type		(macro . define-condition-type))
-    (define-predicate-procedure-argument-validation	(macro . define-predicate-procedure-argument-validation))
-    (define-predicate-return-value-validation		(macro . define-predicate-return-value-validation))
 ;;;
     (define-auxiliary-syntaxes		(macro . define-auxiliary-syntaxes))
     (define-syntax*			(macro . define-syntax*))
@@ -2342,10 +2340,10 @@
     (unsafe					i v $language)
     (set-identifier-unsafe-variant!		i v $language)
 ;;;
-    (define-predicate-procedure-argument-validation	i v $language)
-    (define-predicate-return-value-validation		i v $language)
-    (predicate-procedure-argument-validation		i v $language)
-    (predicate-return-value-validation			i v $language)
+    (set-predicate-procedure-argument-validation! i v $language)
+    (set-predicate-return-value-validation!	i v $language)
+    (predicate-procedure-argument-validation	i v $language)
+    (predicate-return-value-validation		i v $language)
 ;;;
     (eval-for-expand				i v $language)
     (begin-for-syntax				i v $language)
