@@ -3611,24 +3611,23 @@ Example:
 @example
 (import (vicare))
 
-(let-values (((code libs)
-              (expand-form-to-core-language
-               '(define (doit x)
-                  (if (null? x)
-                      #f
-                    (doit (cdr x))))
-               (interaction-environment))))
+(receive (code libs)
+     (expand-form-to-core-language
+        '(define (doit x)
+           (if (null? x)
+               #f
+             (doit (cdr x))))
+        (environment '(vicare)))
   code)
-@result{} (set! #@{doit |UB$jGCqqJFloHg6X|@}
+@result{} (set! loc.doit
      (annotated-case-lambda doit
-       ((#@{x |O3I3z7rSrwZ9/X2O|@})
-         (if (annotated-call (null? x) (primitive null?)
-               #@{x |O3I3z7rSrwZ9/X2O|@})
-             '#f
-             (annotated-call (doit (cdr x))
-               #@{doit |UB$jGCqqJFloHg6X|@}
-               (annotated-call (cdr x) (primitive cdr)
-                 #@{x |O3I3z7rSrwZ9/X2O|@}))))))
+       ((lex.x)
+        (if (annotated-call (null? x)
+              (primitive null?) lex.x)
+            '#f
+        (annotated-call (doit (cdr x))
+          loc.doit
+          (annotated-call (cdr x) (primitive cdr) lex.x))))))
 @end example
 @end defun
 
