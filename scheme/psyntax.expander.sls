@@ -1883,130 +1883,142 @@
   ;;UID -
   ;;   A gensym uniquely identifying this library.
   ;;
-  ;;LIBNAME.IDS - a list of  symbols representing the library name.  For
-  ;;the library:
+  ;;LIBNAME.IDS -
+  ;;  A list of symbols representing the library name.  For the library:
   ;;
-  ;;   (library (c i a o)
-  ;;     (export A)
-  ;;     (import (rnrs))
-  ;;     (define A 123))
+  ;;     (library (c i a o)
+  ;;       (export A)
+  ;;       (import (rnrs))
+  ;;       (define A 123))
   ;;
-  ;;LIBNAME.IDS is the list (c i a o).
+  ;;  LIBNAME.IDS is the list (c i a o).
   ;;
-  ;;LIBNAME.VER  - a  list of  exact integers  representing the  library
-  ;;version.  For the library:
+  ;;LIBNAME.VER -
+  ;;  A  list of exact  integers representing the library  version.  For
+  ;;  the library:
   ;;
-  ;;   (library (ciao (1 2))
-  ;;     (export A)
-  ;;     (import (rnrs))
-  ;;     (define A 123))
+  ;;     (library (ciao (1 2))
+  ;;       (export A)
+  ;;       (import (rnrs))
+  ;;       (define A 123))
   ;;
-  ;;LIBNAME.VER is the list (1 2).
+  ;;  LIBNAME.VER is the list (1 2).
   ;;
-  ;;IMPORT-DESC* -  a list  representing the libraries  that need  to be
-  ;;imported for the  invoke code.  Each item in the  list is a "library
-  ;;descriptor" as built by the LIBRARY-DESCRIPTOR function.
+  ;;IMPORT-DESC* -
+  ;;  A list of library descriptors representing the libraries that need
+  ;;  to be  imported for the invoke  code.  Each item in the  list is a
+  ;;  "library descriptor" as built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;VISIT-DESC* - ???
+  ;;VISIT-DESC* -
+  ;;  A list of library descriptors representing the libraries that need
+  ;;  to  be imported for the  visit code.  Each  item in the list  is a
+  ;;  "library descriptor" as built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;INVOKE-DESC* -  a list  representing the libraries  that need  to be
-  ;;invoked  to make  available the  values of  the imported  variables.
-  ;;Each item  in the  list is  a "library descriptor"  as built  by the
-  ;;LIBRARY-DESCRIPTOR function.
+  ;;INVOKE-DESC* -
+  ;;  A list of library descriptors representing the libraries that need
+  ;;   to be  invoked  to  make available  the  values  of the  imported
+  ;;  variables.   Each item in  the list  is a "library  descriptor" as
+  ;;  built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;INVOKE-CODE  - A  symbolic expression  representing the  code to  be
-  ;;evaluated  to create  the run-time  bindings and  evaluate the  init
-  ;;expressions.  Examples:
+  ;;INVOKE-CODE -
+  ;;  A  symbolic expression  representing the code  to be  evaluated to
+  ;;  create  the top-level  DEFINE bindings  and evaluate  the trailing
+  ;;  init expressions.
   ;;
-  ;;         library source          |     INVOKE-CODE
-  ;;   ------------------------------+-----------------------------
-  ;;   (library (ciao)               |  (library-letrec*
-  ;;     (export fun mac var)        |     ((var1 var2 '1)
-  ;;     (import (vicare))           |      (fun1 fun2 (annotated-case-lambda
-  ;;     (define var 1)              |                   fun (() '2))))
-  ;;     (define (fun) 2)            |   ((primitive void)))
-  ;;     (define-syntax (mac stx)    |
-  ;;       3)                        |
-  ;;     (define-syntax val          |
-  ;;       (make-compile-time-value  |
-  ;;         (+ 4 5))))              |
+  ;;VISIT-CODE -
+  ;;  A  symbolic expression  representing the code  to be  evaluated to
+  ;;  create the expand-time code.  Examples:
   ;;
-  ;;VISIT-CODE -  - A  symbolic expression representing  the code  to be
-  ;;evaluated to create the expand-time code.  Examples:
+  ;;EXPORT-SUBST -
+  ;;  A subst representing the bindings to export.
   ;;
-  ;;         library source          |     VISIT-CODE
-  ;;   ------------------------------+-----------------------------
-  ;;   (library (ciao)               |  (begin
-  ;;     (export fun mac var)        |    (set! G3 (annotated-case-lambda
-  ;;     (import (vicare))           |	      (#<syntax expr=lambda mark*=(top)>
-  ;;     (define var 1)              |			(#<syntax expr=stx mark*=(top)>)
-  ;;     (define (fun) 2)            |			#<syntax expr=3 mark*=(top)>)
-  ;;     (define-syntax (mac stx)    |	      ((stx) '3)))
-  ;;       3)                        |    (set! G5 (annotated-call
-  ;;     (define-syntax val          |	      (make-compile-time-value (+ 4 5))
-  ;;       (make-compile-time-value  |	      (primitive make-compile-time-value)
-  ;;         (+ 4 5))))              |	      (annotated-call (+ 4 5)
-  ;;                                 |			      (primitive +) '4 '5))))
+  ;;EXPORT-ENV -
+  ;;  A list representing the bindings exported by the library.
   ;;
-  ;;EXPORT-SUBST  -  A  subst   representing  the  bindings  to  export.
-  ;;Examples:
+  ;;GUARD-CODE -
+  ;;   A predicate  expression  in the  core  language representing  the
+  ;;  stale-when tests from the body of the library.
   ;;
-  ;;         library source          |     EXPORT-SUBST
-  ;;   ------------------------------+-----------------------------
-  ;;   (library (ciao)               |  ((var . G0)
-  ;;     (export fun mac var)        |   (mac . G1)
-  ;;     (import (vicare))           |   (fun . G2))
-  ;;     (define var 1)              |
-  ;;     (define (fun) 2)            |
-  ;;     (define-syntax (mac stx)    |
-  ;;       3)                        |
-  ;;     (define-syntax val          |
-  ;;       (make-compile-time-value  |
-  ;;         (+ 4 5))))              |
+  ;;GUARD-DESC* -
+  ;;  A list of library descriptors representing the libraries that need
+  ;;  to  be invoked for  the STALE-WHEN  code; these are  the libraries
+  ;;  accumulated  by the  INV-COLLECTOR while expanding  the STALE-WHEN
+  ;;  test expressions.  Each item in the list is a "library descriptor"
+  ;;  as built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;EXPORT-ENV  -  A list  representing  the  bindings exported  by  the
-  ;;library.  Examples:
+  ;;OPTION* -
+  ;;   A list  of  symbolic expressions  representing  options from  the
+  ;;  OPTIONS clause of the LIBRARY form.
   ;;
-  ;;         library source          |     EXPORT-ENV
-  ;;   ------------------------------+-----------------------------
-  ;;   (library (ciao)               |  ((G0 global       . var2)
-  ;;     (export fun mac var)        |   (G1 global       . fun2)
-  ;;     (import (vicare))           |   (G2 global-macro . G3)
-  ;;     (define var 1)              |   (G4 global-ctv   . G5))
-  ;;     (define (fun) 2)            |
-  ;;     (define-syntax (mac stx)    |
-  ;;       3)                        |
-  ;;     (define-syntax val          |
-  ;;       (make-compile-time-value  |
-  ;;         (+ 4 5))))              |
+  ;;For example, expanding the library:
   ;;
-  ;;GUARD-CODE   -  A   predicate  expression   in  the   core  language
-  ;;representing the stale-when tests from the body of the library.  For
-  ;;the library:
+  ;;   (library (ciao)
+  ;;     (export var fun mac ctv)
+  ;;     (import (vicare))
+  ;;     (define var 1)
+  ;;     (define (fun)
+  ;;       2)
+  ;;     (define-syntax (mac stx)
+  ;;       3)
+  ;;     (define-syntax ctv
+  ;;       (make-compile-time-value
+  ;;        (+ 4 5))))
+  ;;
+  ;;yields the INVOKE-CODE:
+  ;;
+  ;;   (library-letrec*
+  ;;       ((lex.var loc.lex.var '1)
+  ;;        (lex.fun loc.lex.fun (annotated-case-lambda fun (() '2))))
+  ;;     ((primitive void)))
+  ;;
+  ;;the VISIT-CODE:
+  ;;
+  ;;   (begin
+  ;;     (set! loc.lab.mac
+  ;;           (annotated-case-lambda
+  ;;              (#<syntax expr=lambda mark*=(top)>
+  ;;               (#<syntax expr=stx mark*=(top)>)
+  ;;               #<syntax expr=3 mark*=(top)>)
+  ;;            ((lex.stx) '3)))
+  ;;     (set! loc.lab.ctv
+  ;;           (annotated-call
+  ;;               (make-compile-time-value (+ 4 5))
+  ;;             (primitive make-compile-time-value)
+  ;;             (annotated-call (+ 4 5) (primitive +) '4 '5))))
+  ;;
+  ;;the EXPORT-SUBST:
+  ;;
+  ;;   ((ctv . lab.ctv)
+  ;;    (mac . lab.mac)
+  ;;    (fun . lab.fun)
+  ;;    (var . lab.var))
+  ;;
+  ;;the EXPORT-ENV
+  ;;
+  ;;   ((lab.var global		. loc.lex.var)
+  ;;    (lab.fun global		. loc.lex.fun)
+  ;;    (lab.mac global-macro	. loc.lab.mac)
+  ;;    (lab.ctv global-ctv	. loc.lab.ctv))
+  ;;
+  ;;Another example, for the library:
   ;;
   ;;   (library (ciao (1 2))
   ;;     (export doit)
   ;;     (import (vicare))
-  ;;     (stale-when (< 1 2) (define a 123))
-  ;;     (stale-when (< 2 3) (define b 123))
-  ;;     (define (doit) 123))
+  ;;     (stale-when (< 1 2)
+  ;;       (define a 123))
+  ;;     (stale-when (< 2 3)
+  ;;       (define b 123))
+  ;;     (define (doit)
+  ;;       123))
   ;;
-  ;;GUARD-CODE is:
+  ;;the GUARD-CODE is:
   ;;
   ;;   (if (if '#f
   ;;           '#t
-  ;;         (annotated-call (< 1 2) (primitive <) '1 '2))
+  ;;          (annotated-call (< 1 2) (primitive <) '1 '2))
   ;;       '#t
   ;;     (annotated-call (< 2 3) (primitive <) '2 '3))
-  ;;
-  ;;GUARD-DESC*  - a  list representing  the libraries  that need  to be
-  ;;invoked for the STALE-WHEN code; these are the libraries accumulated
-  ;;by   the  INV-COLLECTOR   while   expanding   the  STALE-WHEN   test
-  ;;expressions.  Each  item in  the list is  a "library  descriptor" as
-  ;;built by the LIBRARY-DESCRIPTOR function.
-  ;;
-  ;;OPTION* - a  list of symbolic expressions  representing options from
-  ;;the OPTIONS clause of the LIBRARY form.
   ;;
   (case-define expand-library
     ((library-sexp)
