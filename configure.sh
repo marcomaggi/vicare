@@ -23,7 +23,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
     CFLAGS='-O3 -pedantic'				\
     CPPFLAGS="-I${LIBFFI_INCLUDEDIR}"			\
     LDFLAGS='-L/usr/local/lib -L/usr/local/lib64'	\
-    VFLAGS='-O3'					\
+    VFLAGS='-O3 --descriptive-labels'			\
     "$@"
 
 ## LDFLAGS='-L/usr/local/lib -lpthread'

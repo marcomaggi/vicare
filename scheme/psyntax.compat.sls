@@ -46,7 +46,7 @@
 
     ;; runtime options
     report-errors-at-runtime		strict-r6rs
-    enable-arguments-validation?
+    enable-arguments-validation?	descriptive-labels
 
     ;; reading source code and interpreting the resule
     get-annotated-datum			read-library-source-file
@@ -97,7 +97,8 @@
 	  file-modification-time)
     (only (vicare options)
 	  report-errors-at-runtime
-	  strict-r6rs)
+	  strict-r6rs
+	  descriptive-labels)
     (only (vicare unsafe operations)
 	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
 	  $fxzero? $fxpositive? $fxnonnegative?

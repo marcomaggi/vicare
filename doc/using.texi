@@ -300,6 +300,19 @@ Do not strictly follow @rnrs{6} specifications: enable @value{PRJNAME}
 extensions.  Disables the effect of @option{--strict-r6rs}.  This is the
 default.
 
+@item --descriptive-labels
+@cindex Command line option @option{--descriptive-labels}
+@cindex @option{--descriptive-labels}, command line option
+For debugging purposes: generate descriptive labels in expanded and
+assembly code.
+
+@item --no-descriptive-labels
+@cindex Command line option @option{--no-descriptive-labels}
+@cindex @option{--no-descriptive-labels}, command line option
+For debugging purposes: do not generate descriptive labels in expanded
+code and assembly code.  Disables the effect of
+@option{--descriptive-labels}.  This is the default.
+
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option

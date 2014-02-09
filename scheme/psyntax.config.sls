@@ -29,7 +29,10 @@
     if-wants-letrec*		if-wants-global-defines
     if-wants-library-letrec*	if-wants-descriptive-gensyms
     base-of-interaction-library)
-  (import (rnrs))
+  (import (rnrs)
+    (prefix (only (psyntax compat)
+		  descriptive-labels)
+	    config.))
 
 
 (define (base-of-interaction-library)
@@ -87,7 +90,13 @@
 ;;If true: generate gensyms with  descriptive names, which is slower but
 ;;helps in debugging and understanding the code.
 ;;
-(define-option if-wants-descriptive-gensyms #t)
+(define-syntax if-wants-descriptive-gensyms
+  (syntax-rules ()
+    ((_ ?success-kont ?failure-kont)
+     (if (config.descriptive-labels)
+	 ?success-kont
+       ?failure-kont))
+    ))
 
 
 ;;;; done

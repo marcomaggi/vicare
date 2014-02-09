@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -30,6 +30,7 @@
     print-loaded-libraries
     report-errors-at-runtime
     strict-r6rs
+    descriptive-labels
     vicare-built-with-arguments-validation-enabled)
   (import (except (vicare)
 		  vicare-built-with-arguments-validation-enabled))
@@ -49,6 +50,7 @@
   (define-boolean-option print-loaded-libraries   #f)
   (define-boolean-option report-errors-at-runtime #f)
   (define-boolean-option strict-r6rs              #f)
+  (define-boolean-option descriptive-labels       #f)
 
   (module (vicare-built-with-arguments-validation-enabled)
     (module (arguments-validation)
