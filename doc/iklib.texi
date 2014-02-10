@@ -3509,8 +3509,8 @@ Return @math{5} values:
 
 @table @var
 @item invoke-lib*
-A list of library descriptors representing the libraries that need to be
-invoked to run the code.
+A list of @code{library} structs representing the libraries that need to
+be invoked to run the code.
 
 @item invoke-code
 The fully expanded code from the body of the program.
