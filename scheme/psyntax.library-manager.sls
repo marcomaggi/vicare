@@ -366,7 +366,7 @@
   ;;precompiled file succeeds.
   ;;
   ;;For   details    on   the   success   continuation    function   see
-  ;;%INSTALL-LIBRARY-AND-DEPS.
+  ;;%INSTALL-PRECOMPILED-LIBRARY-AND-ITS-DEPENCENCIES.
   ;;
   (make-parameter
       (lambda (file-name success-kont)
@@ -398,10 +398,12 @@
     (let ((filename ((library-file-locator) requested-libname)))
       (cond ((not filename)
 	     (assertion-violation __who__ "cannot find library" requested-libname))
-	    ;;If the  precompiled library  loader returns false:  try to
-	    ;;load the source file.
-	    (((current-precompiled-library-loader) filename %install-library-and-deps))
+	    (((current-precompiled-library-loader)
+	      filename %install-precompiled-library-and-its-depencencies))
 	    (else
+	     ;;If we  are here: the precompiled  library loader returned
+	     ;;false, which means no valid  FASL file was available.  So
+	     ;;try to load the source file.
 	     ((current-library-expander)
 	      ;;Return  a symbolic  expression representing  the LIBRARY
 	      ;;form, or raise an exception.
@@ -411,11 +413,13 @@
 		(%verify-library requested-libname filename
 				 library-name.ids library-name.version)))))))
 
-  (define (%install-library-and-deps filename
-				     uid libname.ids libname.version imp* vis* inv*
-				     exp-subst export-env
-				     visit-proc invoke-proc guard-proc
-				     guard-req* visible? library-option*)
+  (define (%install-precompiled-library-and-its-depencencies
+	   filename
+	   uid libname.ids libname.version
+	   import-library-descriptor* visit-library-descriptor* invoke-library-descriptor*
+	   exp-subst export-env
+	   visit-proc invoke-proc guard-proc
+	   guard-library-descriptor* visible? library-option*)
     ;;Used  as success  continuation  function by  the  function in  the
     ;;parameter  CURRENT-PRECOMPILED-LIBRARY-LOADER.  All  the arguments
     ;;after FILENAME are the CONTENTS of the serialized library.
@@ -423,31 +427,34 @@
     ;;Make sure all  dependencies are met, then install  the library and
     ;;return true; otherwise return #f.
     ;;
-    (let loop ((library-descriptor* (append imp* vis* inv* guard-req*)))
+    (let loop ((library-descriptor* (append import-library-descriptor*
+					    visit-library-descriptor*
+					    invoke-library-descriptor*
+					    guard-library-descriptor*)))
       (cond ((null? library-descriptor*)
 	     (for-each (lambda (guard-library-descriptor)
 			 (let* ((guard-uid     (car  guard-library-descriptor))
 				(guard-libname (cadr guard-library-descriptor))
 				(guard-lib     (find-library-by-name guard-libname)))
 			   (invoke-library guard-lib)))
-	       guard-req*)
+	       guard-library-descriptor*)
 	     (if (guard-proc)
 		 ;;The precompiled library is stale.
 		 (begin
 		   (library-stale-warning libname.ids filename)
 		   #f)
-	       (let ((visit-code        #f)
-		     (invoke-code       #f)
-		     (guard-code        (quote (quote #f)))
-		     (guard-req*        '())
-		     (source-file-name  #f))
+	       (let ((visit-code		#f)
+		     (invoke-code		#f)
+		     (guard-code		(quote (quote #f)))
+		     (guard-library-descriptor*	'())
+		     (source-file-name		#f))
 		 (install-library uid
 				  libname.ids libname.version
-				  imp* vis* inv*
+				  import-library-descriptor* visit-library-descriptor* invoke-library-descriptor*
 				  exp-subst export-env
 				  visit-proc invoke-proc
 				  visit-code invoke-code
-				  guard-code guard-req*
+				  guard-code guard-library-descriptor*
 				  visible? source-file-name library-option*)
 		 #t)))
 	    (else
