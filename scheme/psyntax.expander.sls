@@ -999,7 +999,7 @@
     expand-form-to-core-language
     expand-top-level			expand-top-level->sexp
     expand-library			expand-library->sexp
-    compile-r6rs-top-level		boot-library-expand
+    expand-r6rs-top-level-make-evaluator		boot-library-expand
 
     make-variable-transformer		variable-transformer?
     variable-transformer-procedure
@@ -1764,9 +1764,9 @@
   #| end of module: EXPAND-FORM-TO-CORE-LANGUAGE |# )
 
 
-(module (compile-r6rs-top-level)
+(module (expand-r6rs-top-level-make-evaluator)
 
-  (define (compile-r6rs-top-level expr*)
+  (define (expand-r6rs-top-level-make-evaluator expr*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level  program, expand it and return a  thunk which, when
     ;;evaluated,  compiles the  program and  returns an  INTERACTION-ENV
@@ -1799,7 +1799,7 @@
       ;;GLOBAL-MACRO!, GLOBAL-CTV.
       (cons* label type-sym '*interaction* loc)))
 
-  #| end of module: COMPILE-R6RS-TOP-LEVEL |# )
+  #| end of module: EXPAND-R6RS-TOP-LEVEL-MAKE-EVALUATOR |# )
 
 
 ;;;; R6RS program expander

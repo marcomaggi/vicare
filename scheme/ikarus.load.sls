@@ -42,7 +42,7 @@
 	  serialize-all
 	  current-precompiled-library-loader)
     (only (psyntax expander)
-	  compile-r6rs-top-level)
+	  expand-r6rs-top-level-make-evaluator)
     (only (ikarus.reader)
 	  read-script-source-file)
     (prefix (only (vicare options)
@@ -265,7 +265,7 @@
   (unless (string? filename)
     (procedure-argument-violation who "expected string as file name argument" filename))
   (let* ((prog  (read-script-source-file filename))
-	 (thunk (compile-r6rs-top-level prog)))
+	 (thunk (expand-r6rs-top-level-make-evaluator prog)))
     (when serialize?
       (serialize-all (lambda (file-name contents)
 		       (do-serialize-library file-name contents))
