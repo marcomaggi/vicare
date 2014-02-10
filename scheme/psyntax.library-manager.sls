@@ -36,7 +36,7 @@
 
     ;; library operations
     visit-library		invoke-library
-    serialize-all
+    serialize-collected-libraries
 
     ;; finding libraries
     find-library-by-name	library-exists?
@@ -571,7 +571,7 @@
 	  ((procedure	obj))
 	obj))))
 
-(define (serialize-all serialize compile)
+(define (serialize-collected-libraries serialize compile)
   ;;Traverse  the  current collection  of  libraries  and serialize  the
   ;;contents  of all  the  LIBRARY  records having  a  source file  (the
   ;;records that do not have a source file represent the libraries built
@@ -586,23 +586,26 @@
   ;;COMPILE-CORE-EXPR.
   ;;
   (for-each (lambda (lib)
-	      (when ($library-source-file-name lib)
-		(serialize ($library-source-file-name lib)
-			   (list ($library-id lib)
-				 ($library-name lib)
-				 ($library-version lib)
-				 (map library-descriptor ($library-imp* lib))
-				 (map library-descriptor ($library-vis* lib))
-				 (map library-descriptor ($library-inv* lib))
-				 ($library-subst lib)
-				 ($library-env lib)
-				 (compile ($library-visit-code lib))
-				 (compile ($library-invoke-code lib))
-				 (compile ($library-guard-code lib))
-				 (map library-descriptor ($library-guard-req* lib))
-				 ($library-visible? lib)
-				 ($library-option* lib)))))
+	      (serialize-library lib serialize compile))
     ((current-library-collection))))
+
+(define* (serialize-library (lib library?) (serialize procedure?) (compile procedure?))
+  (when ($library-source-file-name lib)
+    (serialize ($library-source-file-name lib)
+	       (list ($library-id lib)
+		     ($library-name lib)
+		     ($library-version lib)
+		     (map library-descriptor ($library-imp* lib))
+		     (map library-descriptor ($library-vis* lib))
+		     (map library-descriptor ($library-inv* lib))
+		     ($library-subst lib)
+		     ($library-env lib)
+		     (compile ($library-visit-code lib))
+		     (compile ($library-invoke-code lib))
+		     (compile ($library-guard-code lib))
+		     (map library-descriptor ($library-guard-req* lib))
+		     ($library-visible? lib)
+		     ($library-option* lib)))))
 
 
 (define uninstall-library

@@ -39,7 +39,7 @@
     (only (vicare.foreign-libraries)
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
-	  serialize-all
+	  serialize-collected-libraries
 	  current-precompiled-library-loader)
     (only (psyntax expander)
 	  expand-r6rs-top-level-make-evaluator)
@@ -138,9 +138,8 @@
 (define-struct serialized-library
   (contents
 		;A list of values  representing a LIBRARY record holding
-		;precompiled  code.  See  the function  SERIALIZE-ALL in
-		;"psyntax.library-manager.sls"   for   details  on   the
-		;format.
+		;precompiled  code.   For  details  on  the  format  see
+		;SERIALIZE-LIBRARY in "psyntax.library-manager.sls".
    ))
 
 (define (load-serialized-library filename success-kont)
@@ -154,7 +153,7 @@
   ;;
   (define (%print-loaded-library name)
     (when (config.print-loaded-libraries)
-      (display (string-append "vicare loading: " name "\n")
+      (display (string-append "Vicare loading: " name "\n")
 	       (console-error-port))))
   (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))
 		  (if (null? search-path)
@@ -162,8 +161,7 @@
 		    (let ((ikfasl (make-fasl-pathname (car search-path) filename)))
 		      (if (file-exists? ikfasl)
 			  ikfasl
-			(next-prefix (cdr search-path))))))
-		#;(fasl-path filename)))
+			(next-prefix (cdr search-path))))))))
     (cond ((or (not ikfasl)
 	       (not (file-exists? ikfasl)))
 	   (%print-loaded-library filename)
@@ -194,7 +192,7 @@
   ;;already compiled library write a FASL file in the repository.
   ;;
   ;;CONTENTS  must be  a list  of values  representing a  LIBRARY record
-  ;;holding  precompiled  code.   See   the  function  SERIALIZE-ALL  in
+  ;;holding  precompiled code.   See the  function SERIALIZE-LIBRARY  in
   ;;"psyntax.library-manager.sls" for details on the format.
   ;;
   (let ((ikfasl (fasl-path filename)))
@@ -226,7 +224,7 @@
 ;;       (eval-proc x)
 ;;       (read-and-eval port eval-proc))))
 
-(define load
+(case-define* load
   ;;Load source code from FILENAME,  which must be a string representing
   ;;a filename,  expecting an  R6RS program, an  R6RS library or  just a
   ;;list of  forms and transform the contents  of the file in  a list of
@@ -236,41 +234,31 @@
   ;;When  EVAL-PROC  is  not  given:  the forms  are  evaluated  in  the
   ;;current INTERACTION-ENVIRONMENT.
   ;;
-  (case-lambda
-   ((filename)
-    (load filename load-handler))
-   ((filename eval-proc)
-    (define who 'load)
-    (unless (string? filename)
-      (procedure-argument-violation who "expected string as filename argument" filename))
-    (unless (procedure? eval-proc)
-      (procedure-argument-violation who
-	"expected procedure as symbolic expression evaluator argument" eval-proc))
-    (let next-form ((ls (read-script-source-file filename)))
-      (unless (null? ls)
-	(eval-proc (car ls))
-	(next-form (cdr ls)))))))
+  ((filename)
+   (load filename load-handler))
+  (((filename string?) (eval-proc procedure?))
+   (let next-form ((ls (read-script-source-file filename)))
+     (unless (null? ls)
+       (eval-proc (car ls))
+       (next-form (cdr ls))))))
 
-(define (load-r6rs-script filename serialize? run?)
+(define* (load-r6rs-script (filename string?) serialize? run?)
   ;;Load source code from FILENAME,  which must be a string representing
   ;;a filename, expecting an R6RS program or an R6RS library and compile
   ;;it.
   ;;
-  ;;If SERIALIZE? is true: the compiled result is serialised in the FASL
-  ;;repository.
+  ;;If  SERIALIZE? is  true: the  libraries  needed by  the program  are
+  ;;compiled, serialized and saved in FASL files.
   ;;
-  ;;If RUN? is true: the compiled result is evaluated.
+  ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
   ;;
-  (define who 'load-r6rs-script)
-  (unless (string? filename)
-    (procedure-argument-violation who "expected string as file name argument" filename))
   (let* ((prog  (read-script-source-file filename))
 	 (thunk (expand-r6rs-top-level-make-evaluator prog)))
     (when serialize?
-      (serialize-all (lambda (file-name contents)
-		       (do-serialize-library file-name contents))
-		     (lambda (core-expr)
-		       (compile-core-expr core-expr))))
+      (serialize-collected-libraries (lambda (lib-filename contents)
+				       (do-serialize-library lib-filename contents))
+				     (lambda (core-expr)
+				       (compile-core-expr core-expr))))
     (when run?
       (thunk))))
 
@@ -281,7 +269,7 @@
 ;;    (read-library-source-file filename)
 ;;    filename
 ;;    (lambda (library-ids library-version) (void)))
-;;   (serialize-all
+;;   (serialize-collected-libraries
 ;;    (lambda (file-name contents)
 ;;      (do-serialize-library file-name contents))
 ;;    (lambda (core-expr)
