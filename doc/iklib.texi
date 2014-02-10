@@ -331,7 +331,7 @@ evaluation of library code; an imported library is loaded but:
 @itemize
 @item
 Its code for run--time (the ``invoke code'' in @value{PRJNAME}'s jargon)
-is evaluated only when an exported variable is first referenced in the
+is evaluated only when an exported variable is referenced in the
 importing code.
 
 @item
