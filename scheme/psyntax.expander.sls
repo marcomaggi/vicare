@@ -4975,7 +4975,13 @@
 	    (else
 	     (assertion-violation __who__
 	       "expected symbol or identifier as argument" seed)))
-    (gensym)))
+    (cond ((identifier? seed)
+	   (gensym (symbol->string (identifier->symbol seed))))
+	  ((symbol? seed)
+	   (gensym (symbol->string seed)))
+	  (else
+	   (assertion-violation __who__
+	     "expected symbol or identifier as argument" seed)))))
 
 (define gensym-for-storage-location
   ;;Build  and return  a gensym  to be  used as  storage location  for a
