@@ -466,10 +466,10 @@
   (define (%install-precompiled-library-and-its-depencencies
 	   filename
 	   uid libname.ids libname.version
-	   import-library-descriptor* visit-library-descriptor* invoke-library-descriptor*
+	   import-descr* visit-descr* invoke-descr*
 	   export-subst export-env
 	   visit-proc invoke-proc guard-proc
-	   guard-library-descriptor* visible? library-option*)
+	   guard-descr* visible? library-option*)
     ;;Used  as success  continuation  function by  the  function in  the
     ;;parameter  CURRENT-PRECOMPILED-LIBRARY-LOADER.  All  the arguments
     ;;after FILENAME are the CONTENTS of the serialized library.
@@ -477,17 +477,14 @@
     ;;Make sure all  dependencies are met, then install  the library and
     ;;return true; otherwise return #f.
     ;;
-    (let loop ((library-descriptor* (append import-library-descriptor*
-					    visit-library-descriptor*
-					    invoke-library-descriptor*
-					    guard-library-descriptor*)))
-      (cond ((null? library-descriptor*)
+    (let loop ((descr* (append import-descr* visit-descr* invoke-descr* guard-descr*)))
+      (cond ((null? descr*)
 	     (for-each (lambda (guard-library-descriptor)
 			 (let* ((guard-uid     (car  guard-library-descriptor))
 				(guard-libname (cadr guard-library-descriptor))
 				(guard-lib     (find-library-by-name guard-libname)))
 			   (invoke-library guard-lib)))
-	       guard-library-descriptor*)
+	       guard-descr*)
 	     (if (guard-proc)
 		 ;;The precompiled library is stale.
 		 (begin
@@ -496,15 +493,15 @@
 	       (let ((visit-code		#f)
 		     (invoke-code		#f)
 		     (guard-code		(quote (quote #f)))
-		     (guard-library-descriptor*	'())
+		     (guard-descr*	'())
 		     (source-file-name		#f))
 		 (install-library uid
 				  libname.ids libname.version
-				  import-library-descriptor* visit-library-descriptor* invoke-library-descriptor*
+				  import-descr* visit-descr* invoke-descr*
 				  export-subst export-env
 				  visit-proc invoke-proc
 				  visit-code invoke-code
-				  guard-code guard-library-descriptor*
+				  guard-code guard-descr*
 				  visible? source-file-name library-option*)
 		 #t)))
 	    (else
@@ -516,13 +513,13 @@
 	     ;;and  ?LIBNAME is  the  list of  symbols representing  the
 	     ;;library name.
 	     ;;
-	     (let* ((deplib-descr	(car  library-descriptor*))
+	     (let* ((deplib-descr	(car  descr*))
 		    (deplib-uid		(car  deplib-descr))
 		    (deplib-libname	(cadr deplib-descr))
 		    (deplib-lib		(find-library-by-name deplib-libname)))
 	       (if (and (library? deplib-lib)
 			(eq? deplib-uid (library-id deplib-lib)))
-		   (loop (cdr library-descriptor*))
+		   (loop (cdr descr*))
 		 (begin
 		   (library-version-mismatch-warning libname.ids deplib-libname filename)
 		   #f)))))))
@@ -894,10 +891,23 @@
    (values)))
 
 
+;;;; utilities for the expansion process
+
 (define (imported-label->syntactic-binding lab)
+  ;;If  a label  is associated  to  a binding  from the  the boot  image
+  ;;environment or to a binding from  a library's EXPORT-ENV: it has the
+  ;;associated descriptor in its "value"  field; otherwise such field is
+  ;;set to #f.
+  ;;
+  ;;So, if we  have a label, we  can check if it  references an imported
+  ;;binding  simply  by  checking  its   "value"  field;  this  is  what
+  ;;IMPORTED-LABEL->SYNTACTIC-BINDING does.
+  ;;
   (label-binding lab))
 
 (define (invoke-library lib)
+  ;;Evaluate the invoke code for the LIBRARY struct LIB.
+  ;;
   (let ((invoke (library-invoke-state lib)))
     (when (procedure? invoke)
       (set-library-invoke-state! lib
@@ -913,6 +923,8 @@
       (set-library-invoke-state! lib #t))))
 
 (define (visit-library lib)
+  ;;Evaluate the visit code for the LIBRARY struct LIB.
+  ;;
   (let ((visit (library-visit-state lib)))
     (when (procedure? visit)
       (set-library-visit-state! lib
@@ -1004,13 +1016,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (library-name-identifiers=? sexp1 sexp2)
+(define* (library-name-identifiers=? (sexp1 library-name?) (sexp2 library-name?))
   ;;Given  two symbolic  expressions  compliant with  the definition  of
   ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
   ;;list of identifiers.
   ;;
-  (assert (library-name? sexp1))
-  (assert (library-name? sexp2))
   (for-all eq?
 	   (library-name->identifiers sexp1)
 	   (library-name->identifiers sexp2)))
@@ -1018,15 +1028,6 @@
 (module (library-name=?
 	 library-name<?
 	 library-name<=?)
-
-  (define (%library-name-comparison version-predicate sexp1 sexp2)
-    (assert (library-name? sexp1))
-    (assert (library-name? sexp2))
-    (let-values (((ids1 vrs1) (library-name-decompose sexp1))
-		 ((ids2 vrs2) (library-name-decompose sexp2)))
-      (and (= (length ids1) (length ids2))
-	   (for-all eq? ids1 ids2)
-	   (version-predicate vrs1 vrs2))))
 
   (define (library-name=? sexp1 sexp2)
     ;;Given two  symbolic expressions  compliant with the  definition of
@@ -1051,11 +1052,20 @@
     ;;
     (%library-name-comparison library-version<=? sexp1 sexp2))
 
+  (define* (%library-name-comparison version-predicate (sexp1 library-name?) (sexp2 library-name?))
+    (let-values
+	(((ids1 vrs1) (library-name-decompose sexp1))
+	 ((ids2 vrs2) (library-name-decompose sexp2)))
+      (and (= (length ids1)
+	      (length ids2))
+	   (for-all eq? ids1 ids2)
+	   (version-predicate vrs1 vrs2))))
+
   #|end of module |# )
 
 ;;; --------------------------------------------------------------------
 
-(define (library-version=? vrs1 vrs2)
+(define* (library-version=? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
   ;;Given two lists of version  numbers compliant with the definition of
   ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
   ;;numbers.
@@ -1070,8 +1080,6 @@
   ;;	(1 2 3) != (1 2 3 4)
   ;;	(1 2 3) == (1 2 3 0 0 0)
   ;;
-  (assert (library-version-numbers? vrs1))
-  (assert (library-version-numbers? vrs2))
   (let loop ((vrs1 vrs1)
 	     (vrs2 vrs2))
     (cond ((null? vrs1)
@@ -1087,7 +1095,7 @@
 	   (and ($fx= ($car vrs1) ($car vrs2))
 		(loop ($cdr vrs1) ($cdr vrs2)))))))
 
-(define (library-version<? vrs1 vrs2)
+(define* (library-version<? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
   ;;Given two lists of version  numbers compliant with the definition of
   ;;<LIBRARY NAME>  according to R6RS:  return #t if the  version number
   ;;represented by VRS1  is less than the version  number represented by
@@ -1108,8 +1116,6 @@
   ;;	(1 2 3) <  (1 2 3 4)
   ;;	(1 2 3) !< (1 2 3 0 0 0)
   ;;
-  (assert (library-version-numbers? vrs1))
-  (assert (library-version-numbers? vrs2))
   (let loop ((vrs1 vrs1)
 	     (vrs2 vrs2))
     (cond ((null? vrs1)
@@ -1127,7 +1133,7 @@
 	  (else ;;(= (car vrs1) (car vrs2))
 	   (loop ($cdr vrs1) ($cdr vrs2))))))
 
-(define (library-version<=? vrs1 vrs2)
+(define* (library-version<=? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
   ;;Given two lists of version  numbers compliant with the definition of
   ;;<LIBRARY NAME>  according to R6RS:  return #t if the  version number
   ;;represented  by VRS1 is  less than  or equal  to the  version number
@@ -1149,8 +1155,6 @@
   ;;	(1 2 3) <= (1 2 3 4)
   ;;	(1 2 3 0) <= (1 2 3)
   ;;
-  (assert (library-version-numbers? vrs1))
-  (assert (library-version-numbers? vrs2))
   (let loop ((vrs1 vrs1)
 	     (vrs2 vrs2))
     (cond ((null? vrs1)
@@ -1278,17 +1282,17 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (library-reference-identifiers=? ref1 ref2)
-  (assert (library-reference? ref1))
-  (assert (library-reference? ref2))
+(define* (library-reference-identifiers=? (ref1 library-reference?) (ref2 library-reference?))
   (let ((ids1 (library-reference->identifiers ref1))
 	(ids2 (library-reference->identifiers ref2)))
-    (and (= (length ids1) (length ids2))
+    (and (= (length ids1)
+	    (length ids2))
 	 (for-all eq? ids1 ids2))))
 
 ;;; --------------------------------------------------------------------
 
-(define (conforming-sub-version-and-sub-version-reference? sub-version sub-version-reference)
+(define* (conforming-sub-version-and-sub-version-reference? (sub-version library-sub-version?)
+							    (sub-version-reference library-sub-version-reference?))
   ;;SUB-VERSION must  be a fixnum  representing a single  version number
   ;;from a library name, as defined by R6RS.
   ;;
@@ -1303,11 +1307,8 @@
   ;;     == (or  ?sub-version-reference ...)
   ;;     == (not ?sub-version-reference)
   ;;
-  (define who 'conforming-sub-version-and-sub-version-reference?)
   (define (%recurse sub-ver-ref)
     (conforming-sub-version-and-sub-version-reference? sub-version sub-ver-ref))
-  (assert (library-sub-version? sub-version))
-  (assert (library-sub-version-reference? sub-version-reference))
   (match sub-version-reference
     ((apply library-sub-version?)
      ($fx= sub-version sub-version-reference))
@@ -1336,11 +1337,13 @@
      (not (%recurse ?sub-version-ref)))
 
     (else
-     (assertion-violation who "invalid library sub-version reference" sub-version-reference))))
+     (assertion-violation __who__
+       "invalid library sub-version reference" sub-version-reference))))
 
 ;;; --------------------------------------------------------------------
 
-(define (conforming-version-and-version-reference? version version-reference)
+(define* (conforming-version-and-version-reference? (version library-version-numbers?)
+						    (version-reference library-version-reference?))
   ;;VERSION must be a list of version numbers as specified by R6RS.
   ;;
   ;;VERSION-REFERENCE must be a version reference as specified by R6RS:
@@ -1362,9 +1365,6 @@
   ;;  ?sub-version
   ;;     == #<non-negative fixnum>
   ;;
-  (define who 'conforming-version-and-version-reference?)
-  (assert (library-version-numbers? version))
-  (assert (library-version-reference? version-reference))
   (match version-reference
     (()
      #t)
@@ -1401,9 +1401,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (conforming-library-name-and-library-reference? name reference)
-  (assert (library-name? name))
-  (assert (library-reference? reference))
+(define* (conforming-library-name-and-library-reference? (name library-name?)
+							 (reference library-reference?))
   (let-values
       (((libnam.ids libnam.version)  (library-name-decompose name))
        ((libref.ids libref.version)  (library-reference-decompose reference)))
