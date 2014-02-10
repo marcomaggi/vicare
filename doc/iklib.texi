@@ -3509,7 +3509,7 @@ Return @math{5} values:
 
 @table @var
 @item invoke-lib*
-A list of library descriptor representing the libraries that need to be
+A list of library descriptors representing the libraries that need to be
 invoked to run the code.
 
 @item invoke-code
