@@ -84,35 +84,20 @@
 		;Null or a list of non-negative fixnums representing the
 		;version number from the library name.
    imp*
-		;A list of library specifications selected by the IMPORT
+		;A list  of library  descriptors selected by  the IMPORT
 		;syntax.
    vis*
-		;A  list of  library specifications  selecting libraries
+		;A  list  of  library  descriptors  selecting  libraries
 		;needed by the visit code.
    inv*
-		;A  list of  library specifications  selecting libraries
+		;A  list  of  library  descriptors  selecting  libraries
 		;needed by the invoke code.
    subst
-		;A subst representing the exported bindings.
+		;A  subst  selecting  the  exported  bindings  from  the
+		;EXPORT-ENV.
    env
 		;The  EXPORT-ENV  representing  the  top-level  bindings
-		;defined by the library body.  It  is a list of lists in
-		;which the run-time bindings have the format:
-		;
-		;   (?label global . ?internal-name)
-		;
-		;the non-identifier macros have the format:
-		;
-		;   (?label global-macro . ?loc)
-		;
-		;the identifier macros have the format:
-		;
-		;   (?label global-macro! . ?loc)
-		;
-		;the compile-time values have the format:
-		;
-		;   (?label global-ctv . ?loc)
-		;
+		;defined by the library body.
    visit-state
 		;When set  to a procedure:  it is  the thunk to  call to
 		;compile  and  evaluate the  visit  code.   When set  to
@@ -122,16 +107,31 @@
 		;compile  and evaluate  the  invoke code.   When set  to
 		;something else: this library has been already invoked.
    visit-code
-		;A  core language  symbolic expression  representing the
-		;visit code.
+		;When this  structure is created from  source code: this
+		;field   is   a   core  language   symbolic   expression
+		;representing the visit code.
+		;
+		;When this  structure is created from  precompiled FASL:
+		;this  field is  a thunk  to be  evaluated to  visit the
+		;library.
    invoke-code
-		;A  core language  symbolic expression  representing the
-		;invoke code.
+		;When this  structure is created from  source code: this
+		;field   is   a   core  language   symbolic   expression
+		;representing the invoke code.
+		;
+		;When this  structure is created from  precompiled FASL:
+		;this field  is a  thunk to be  evaluated to  invoke the
+		;library.
    guard-code
-		;A  core language  symbolic expression  representing the
-		;test for stale-when code.
+		;When this  structure is created from  source code: this
+		;field   is   a   core  language   symbolic   expression
+		;representing the guard code.
+		;
+		;When this  structure is created from  precompiled FASL:
+		;this  field is  a  thunk  to be  evaluated  to run  the
+		;STALE-WHEN composite test expression.
    guard-req*
-		;A  list of  library specifications  selecting libraries
+		;A  list  of  library  descriptors  selecting  libraries
 		;needed by the stale-when code.
    visible?
 		;A boolean determining if  the library is visible.  This
@@ -195,8 +195,11 @@
 	obj))))
 
 
-;;;; collection of already loaded libraries
-
+;;;; collection of already installed libraries
+;;
+;;When a library  is installed: it is added to  this collection.  When a
+;;library is uninstalled: it is removed from this collection.
+;;
 (module (current-library-collection)
 
   (define (make-collection)
@@ -230,7 +233,7 @@
 	    (set! set (cons x set))))))))
 
   (define current-library-collection
-    ;;Hold a collection of LIBRARY structs.
+    ;;Hold a collection of installed LIBRARY structs.
     ;;
     (make-parameter (make-collection)
       (lambda (x)
@@ -244,17 +247,19 @@
 
 ;;;; finding source libraries on the file system
 ;;
-;;The library  file locator is a  function that converts a  library name
-;;specification into the corresponding file pathname.
+;;The library source file locator is  a function that converts a library
+;;name specification into the corresponding file pathname.
 ;;
-(module (library-file-locator)
+(module (library-source-file-locator)
+  (define-constant __who__
+    'library-source-file-locator)
 
-  (define (%default-library-file-locator libname)
-    ;;Default  value for  the LIBRARY-FILE-LOCATOR  parameter.  Given  a
-    ;;library name, scan  the library search path  for the corresponding
-    ;;file; return  a string representing  the file pathname  having the
-    ;;directory  part  equal  to  one  of  the  directory  pathnames  in
-    ;;LIBRARY-PATH.
+  (define (%default-library-source-file-locator libname)
+    ;;Default  value  for   the  LIBRARY-SOURCE-FILE-LOCATOR  parameter.
+    ;;Given a library name, as defined  by R6RS: scan the library search
+    ;;path  for   the  corresponding   source  file;  return   a  string
+    ;;representing the  source file  pathname having the  directory part
+    ;;equal to one of the directory pathnames in LIBRARY-PATH.
     ;;
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
@@ -271,7 +276,7 @@
 	     (file-locator-resolution-error libname (reverse failed-list)
 					    (let ((ls (%external-pending-libraries)))
 					      (if (null? ls)
-						  (error 'library-manager "BUG")
+						  (error __who__ "BUG")
 						(cdr ls)))))
 	    ((null? file-extensions)
 	     ;;No more extensions: try the  next directory in the search
@@ -281,76 +286,81 @@
 	     ;;Check the  file existence  in the current  directory with
 	     ;;the current  file extension;  if not  found try  the next
 	     ;;file extension.
-	     (let ((name (string-append (car directories) rootname-str (car file-extensions))))
-	       (if (file-exists? name)
-		   name
-		 (loop rootname-str directories
-		       (cdr file-extensions) (cons name failed-list))))))))
+	     (let ((pathname (string-append (car directories) rootname-str (car file-extensions))))
+	       (if (file-exists? pathname)
+		   pathname
+		 (loop rootname-str directories (cdr file-extensions) (cons pathname failed-list))))))))
 
-  (define (%library-identifiers->file-name library-name.ids)
-    ;;Convert the non-empty list of identifiers from a library name into
-    ;;a string  representing the  corresponding relative  file pathname,
-    ;;without  extension   but  including   a  leading   #\/  character.
-    ;;Examples:
-    ;;
-    ;;	(%library-identifiers->file-name '(alpha beta gamma))
-    ;;	=> "/alpha/beta/gamma"
-    ;;
-    ;;	(%library-identifiers->file-name '(alpha beta main))
-    ;;	=> "/alpha/beta/main_"
-    ;;
-    ;;notice how the component "main",  when appearing last, is "quoted"
-    ;;by appending an underscore.
-    ;;
-    (assert (not (null? library-name.ids)))
-    (let-values (((port extract) (open-string-output-port)))
-      (define (display-hex n)
-	(if (<= 0 n 9)
-	    (display n port)
-	  (write-char (integer->char (+ (char->integer #\a) (- n 10))) port)))
-      (define (main*? component-name)
-	(and (>= (string-length component-name) 4)
-	     (string=? (substring component-name 0 4) "main")
-	     (for-all (lambda (ch)
-			(char=? ch #\_))
-	       (string->list (substring component-name 4 (string-length component-name))))))
-      (let next-component ((component		(car library-name.ids))
-			   (ls			(cdr library-name.ids))
-			   (first-component?	#t))
-	(write-char #\/ port)
-	(let ((component-name (symbol->string component)))
-	  (for-each (lambda (n)
-		      (let ((c (integer->char n)))
-			(if (or (char<=? #\a c #\z)
-				(char<=? #\A c #\Z)
-				(char<=? #\0 c #\9)
-				(memv c '(#\. #\- #\+ #\_)))
-			    (write-char c port)
-			  (let-values (((D M) (div-and-mod n 16)))
-			    (write-char #\% port)
-			    (display-hex D)
-			    (display-hex M)))))
-	    (bytevector->u8-list (string->utf8 component-name)))
-	  (if (null? ls)
-	      (when (and (not first-component?)
-			 (main*? component-name))
-		(write-char #\_ port))
-	    (next-component (car ls) (cdr ls) #f))))
-      (extract)))
+  (module (%library-identifiers->file-name)
 
-  (define library-file-locator
+    (define (%library-identifiers->file-name library-name.ids)
+      ;;Convert the  non-empty list of  identifiers from a  library name
+      ;;into  a  string  representing the  corresponding  relative  file
+      ;;pathname,  without   extension  but  including  a   leading  #\/
+      ;;character.  Examples:
+      ;;
+      ;;	(%library-identifiers->file-name '(alpha beta gamma))
+      ;;	=> "/alpha/beta/gamma"
+      ;;
+      ;;	(%library-identifiers->file-name '(alpha beta main))
+      ;;	=> "/alpha/beta/main_"
+      ;;
+      ;;notice  how  the  component  "main",  when  appearing  last,  is
+      ;;"quoted" by appending an underscore.
+      ;;
+      (assert (not (null? library-name.ids)))
+      (receive (port extract)
+	  (open-string-output-port)
+	(let next-component ((component		(car library-name.ids))
+			     (ls		(cdr library-name.ids))
+			     (first-component?	#t))
+	  (write-char #\/ port)
+	  (let ((component-name (symbol->string component)))
+	    (for-each (lambda (n)
+			(let ((c (integer->char n)))
+			  (if (or (char<=? #\a c #\z)
+				  (char<=? #\A c #\Z)
+				  (char<=? #\0 c #\9)
+				  (memv c '(#\. #\- #\+ #\_)))
+			      (write-char c port)
+			    (let-values (((D M) (div-and-mod n 16)))
+			      (write-char #\% port)
+			      (display-hex D port)
+			      (display-hex M port)))))
+	      (bytevector->u8-list (string->utf8 component-name)))
+	    (if (null? ls)
+		(when (and (not first-component?)
+			   (main*? component-name))
+		  (write-char #\_ port))
+	      (next-component (car ls) (cdr ls) #f))))
+	(extract)))
+
+    (define (display-hex n port)
+      (if (<= 0 n 9)
+	  (display n port)
+	(write-char (integer->char (+ (char->integer #\a) (- n 10))) port)))
+
+    (define (main*? component-name)
+      (and (>= (string-length component-name) 4)
+	   (string=? (substring component-name 0 4) "main")
+	   (for-all (lambda (ch)
+		      (char=? ch #\_))
+	     (string->list (substring component-name 4 (string-length component-name))))))
+
+    #| end of module: %LIBRARY-IDENTIFIERS->FILE-NAME |# )
+
+  (define library-source-file-locator
     ;;Hold a  function used to  convert a library name  specification into
     ;;the corresponding file pathname.
     ;;
     (make-parameter
-	%default-library-file-locator
+	%default-library-source-file-locator
       (lambda (obj)
-	(define who 'library-file-locator)
-	(with-arguments-validation (who)
+	(with-arguments-validation (__who__)
 	    ((procedure	obj))
 	  obj))))
 
-  #| end of module: LIBRARY-FILE-LOCATOR |# )
+  #| end of module: LIBRARY-SOURCE-FILE-LOCATOR |# )
 
 
 ;;;; loading precompiled libraries from files
@@ -395,7 +405,7 @@
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
     ;;
-    (let ((filename ((library-file-locator) requested-libname)))
+    (let ((filename ((library-source-file-locator) requested-libname)))
       (cond ((not filename)
 	     (assertion-violation __who__ "cannot find library" requested-libname))
 	    (((current-precompiled-library-loader)
