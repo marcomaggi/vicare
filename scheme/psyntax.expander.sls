@@ -1008,7 +1008,7 @@
     expand-form-to-core-language
     expand-top-level			expand-top-level->sexp
     expand-library			expand-library->sexp
-    expand-r6rs-top-level-make-evaluator		boot-library-expand
+    expand-r6rs-top-level-make-evaluator boot-library-expand
 
     make-variable-transformer		variable-transformer?
     variable-transformer-procedure

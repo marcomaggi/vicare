@@ -84,14 +84,14 @@
 		;Null or a list of non-negative fixnums representing the
 		;version number from the library name.
    imp*
-		;A list  of library  descriptors selected by  the IMPORT
+		;The  list of  LIBRARY  records selected  by the  IMPORT
 		;syntax.
    vis*
-		;A  list  of  library  descriptors  selecting  libraries
-		;needed by the visit code.
+		;The list of LIBRARY  records selecting libraries needed
+		;by the visit code.
    inv*
-		;A  list  of  library  descriptors  selecting  libraries
-		;needed by the invoke code.
+		;The list of LIBRARY  records selecting libraries needed
+		;by the invoke code.
    subst
 		;A  subst  selecting  the  exported  bindings  from  the
 		;EXPORT-ENV.
@@ -131,8 +131,8 @@
 		;this  field is  a  thunk  to be  evaluated  to run  the
 		;STALE-WHEN composite test expression.
    guard-req*
-		;A  list  of  library  descriptors  selecting  libraries
-		;needed by the stale-when code.
+		;The list of LIBRARY  records selecting libraries needed
+		;by the STALE-WHEN composite test expression.
    visible?
 		;A boolean determining if  the library is visible.  This
 		;attribute  is  used  by INSTALLED-LIBRARIES  to  select
@@ -167,6 +167,17 @@
   (library? obj)
   (assertion-violation who "expected instance of library struct as argument" obj))
 
+(define* (library-descriptor lib)
+  ;;Given a library record return a list holding: the unique library id,
+  ;;the  list of  symbols from  the library  name, null  or the  list of
+  ;;version numbers from the library name.
+  ;;
+  (with-arguments-validation (__who__)
+      ((library		lib))
+    (list ($library-id      lib)
+	  ($library-name    lib)
+	  ($library-version lib))))
+
 
 ;;;; public configuration parameters
 
@@ -192,6 +203,22 @@
       (define-constant __who__ 'library-extensions)
       (with-arguments-validation (__who__)
 	  ((list-of-strings	obj))
+	obj))))
+
+
+;;;; expanding libraries
+;;
+;;The  current library  expander is  used to  expand LIBRARY  forms from
+;;source files.
+;;
+(define current-library-expander
+  (make-parameter
+      (lambda (x)
+        (assertion-violation 'current-library-expander "not initialized"))
+    (lambda (obj)
+      (define who 'current-library-expander)
+      (with-arguments-validation (who)
+	  ((procedure	obj))
 	obj))))
 
 
@@ -243,6 +270,15 @@
 	  x))))
 
   #| end of module: CURRENT-LIBRARY-COLLECTION |# )
+
+(define %external-pending-libraries
+  ;;Hold  the list  of  library names  whose  installation is  currently
+  ;;pending; used to detect circular dependencies between libraries.
+  ;;
+  ;;For this  parameter: a "library name"  is a list of  symbols without
+  ;;the version specification.
+  ;;
+  (make-parameter '()))
 
 
 ;;;; finding source libraries on the file system
@@ -392,7 +428,7 @@
 ;;;; loading libraries from files
 ;;
 ;;The  library  loader  is  a  function that  loads  a  library,  either
-;;precompiled or from source.
+;;precompiled or from source, and installs it.
 ;;
 (module (library-loader)
   (define-constant __who__ 'default-library-loader)
@@ -400,8 +436,9 @@
   (define* (default-library-loader requested-libname)
     ;;Default value  for the parameter LIBRARY-LOADER.   Given a library
     ;;name  specification:  search  the  associated  file  pathname  and
-    ;;attempt to load  the file.  Try first to load  a precompiled file,
-    ;;if any, then try to load the source file.
+    ;;attempt to load the file; try first to load a precompiled file, if
+    ;;any, then  try to  load the  source file.   The loaded  library is
+    ;;installed.
     ;;
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
@@ -530,7 +567,7 @@
 
 (define (library-exists? libname)
   ;;Given a library name search  the corresponding LIBRARY record in the
-  ;;collection of already loaded libraries: return true or false.
+  ;;collection of already installed libraries: return true or false.
   ;;
   ;;For this function, a "library name" is a list of symbols without the
   ;;version specification.
@@ -542,40 +579,44 @@
 (module (find-library-by-name)
 
   (define (find-library-by-name libname)
-    ;;Given  a library  name  return the  corresponding LIBRARY  record.
+    ;;Given a library  name: try to search  and install it if  it is not
+    ;;already   installed   (using   LIBRARY-LOADER)  and   return   the
+    ;;corresponding LIBRARY record.
+    ;;
     ;;Search  for the  library in  the  internal collection  or, if  not
-    ;;found, in the external source (for example the file system).
+    ;;found, in the external source  (for example the file system) using
+    ;;the current LIBRARY-LOADER.
     ;;
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
     ;;
     (or (%find-library-in-collection-by (lambda (x)
 					  (equal? (library-name x) libname)))
-	(%find-external-library libname)))
+	(%find-and-install-external-library libname)))
 
-  (define (%find-external-library libname)
+  (define* (%find-and-install-external-library libname)
     ;;Given a  library name  try to  load it  using the  current library
     ;;loader.
     ;;
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
     ;;
-    (define who '%find-external-library)
     (when (member libname (%external-pending-libraries))
-      (assertion-violation who "circular attempt to import library was detected" libname))
+      (assertion-violation __who__
+	"circular attempt to import library was detected" libname))
     (parametrise ((%external-pending-libraries (cons libname (%external-pending-libraries))))
       ((library-loader) libname)
       (or (%find-library-in-collection-by (lambda (x)
 					    (equal? (library-name x) libname)))
-	  (assertion-violation who
+	  (assertion-violation __who__
 	    "handling external library did not yield the correct library" libname))))
 
   #| end of module: FIND-LIBRARY-BY-NAME |# )
 
 (define (%find-library-in-collection-by pred)
-  ;;Visit the current library collection  and return the first for which
-  ;;PRED returns true.  If PRED returns false for all the entries in the
-  ;;collection: return false.
+  ;;Visit  the current  installed  libraries collection  and return  the
+  ;;first for  which PRED returns true.   If PRED returns false  for all
+  ;;the entries in the collection: return false.
   ;;
   (let next-library-struct ((ls ((current-library-collection))))
     (cond ((null? ls)
@@ -585,31 +626,19 @@
 	  (else
 	   (next-library-struct (cdr ls))))))
 
-(define (%find-library-in-collection-by-spec/die spec)
-  ;;Given a library specification, being the content of the "spec" field
-  ;;from a  "library" record, return the  corresponding "library" record
-  ;;or raise an assertion.
+(define (%find-library-in-collection-by-spec/die descr)
+  ;;Given   a  library   descriptor,  as   generated  by   the  function
+  ;;LIBRARY-DESCRIPTOR: return the corresponding LIBRARY record from the
+  ;;collection of installed libraries or raise an assertion.
   ;;
-  (let ((id (car spec)))
+  (let ((uid (car descr)))
     (or (%find-library-in-collection-by (lambda (x)
-					 (eq? id (library-id x))))
-	(assertion-violation #f "cannot find library with required spec" spec))))
-
-(define %external-pending-libraries
-  ;;Used to detect circular dependencies between libraries.
-  ;;
-  (make-parameter '()))
+					  (eq? uid (library-id x))))
+	(assertion-violation #f
+	  "cannot find installed library with required descriptor" descr))))
 
 
-(define current-library-expander
-  (make-parameter
-      (lambda (x)
-        (assertion-violation 'library-expander "not initialized"))
-    (lambda (obj)
-      (define who 'current-library-expander)
-      (with-arguments-validation (who)
-	  ((procedure	obj))
-	obj))))
+;;;; serializing precompiled libraries
 
 (define (serialize-collected-libraries serialize compile)
   ;;Traverse  the  current collection  of  libraries  and serialize  the
@@ -648,40 +677,6 @@
 		     ($library-option* lib)))))
 
 
-(case-define* uninstall-library
-  ;;Uninstall a library.
-  ;;
-  ;;THE IMPLEMENTATION OF THIS FUNCTION IS INCOMPLETE.
-  ;;
-  ((name)
-   (uninstall-library name #t))
-  ((name err?)
-   ;;FIXME: check that no other import is in progress.  (Ghuloum)
-   ;;
-   ;;FIXME: need to  unintern labels and locations  of library bindings.
-   ;;(Ghuloum)
-   (let ((lib (%find-library-in-collection-by (lambda (x)
-						(equal? (library-name x) name)))))
-     (when (and err? (not lib))
-       (assertion-violation __who__ "library not installed" name))
-     ;;Remove LIB from the current collection.
-     ((current-library-collection) lib #t)
-     ;;Remove label gensyms from the internal table.
-     (for-each (lambda (export-env-entry)
-		 ;;We expect the entry to have the format:
-		 ;;
-		 ;;   (?label . (?type . ?loc))
-		 ;;
-		 (let ((label   (car export-env-entry))
-		       (binding (cdr export-env-entry)))
-		   (remove-location label)
-		   (when (memq (car binding)
-			       '(global global-macro global-macro! global-ctv))
-		     (remove-location (cdr binding)))))
-       (library-env lib)))
-   (values)))
-
-
 ;;;; installing libraries
 
 (case-define installed-libraries
@@ -701,80 +696,85 @@
 	    (next-library-struct (cdr ls)))))))
 
 (module (install-library)
-  ;;INSTALL-LIBRARY builds  a "library"  record and  installs it  in the
+  ;;INSTALL-LIBRARY  builds a  LIBRARY  record and  installs  it in  the
   ;;internal collection of libraries; return unspecified values.  We can
   ;;see  EXPAND-LIBRARY  for  a   more  detailed  description,  but  the
   ;;arguments are:
   ;;
-  ;;ID - a gensym uniquely identifying this library.
+  ;;ID -
+  ;;   A gensym uniquely identifying this library.
   ;;
-  ;;NAME - a list of symbols representing the library name.
+  ;;NAME -
+  ;;   A list of symbols representing the library name.
   ;;
-  ;;VER - a list of exact integers representing the library version.
+  ;;VER -
+  ;;   A list of exact integers representing the library version.
   ;;
-  ;;IMP* -  a list representing the  libraries that need to  be imported
-  ;;for the invoke  code.  Each item in  the list is the  content of the
-  ;;SPEC field of LIBRARY record.
+  ;;IMP* -
+  ;;   A list of library descriptors enumerating the libraries specified
+  ;;   in the IMPORT clauses.
   ;;
-  ;;VIS* -  a list representing the  libraries that need to  be imported
-  ;;for the  visit code.  Each  item in the list  is the content  of the
-  ;;SPEC field of LIBRARY record.
+  ;;VIS* -
+  ;;   A list of library descriptors enumerating the libraries needed by
+  ;;   the visit code.
   ;;
-  ;;INV* - a list representing  the import specifications.  Each item in
-  ;;the list is the content of the SPEC field of LIBRARY record.
+  ;;INV* -
+  ;;   A list of library  descriptors enmerating the libraries needed by
+  ;;   the invoke code.
   ;;
-  ;;EXPORT-SUBST - A subst representing the bindings to export.
+  ;;EXPORT-SUBST -
+  ;;   A subst selecting the bindings to export from the EXPORT-ENV.
   ;;
-  ;;EXPORT-ENV - The export lexical environment.   It is a list of lists
-  ;;in which the run-time bindings have the format:
+  ;;EXPORT-ENV -
+  ;;   The list of top-level bindings defined by the library body.  Some
+  ;;   of them are to be exported, others are not.
   ;;
-  ;;   (?gensym global . ?internal-name)
+  ;;VISIT-PROC -
+  ;;   A thunk to evaluate to visit the library.
   ;;
-  ;;the non-identifier macros have the format:
+  ;;INVOKE-PROC -
+  ;;   A thunk to evaluate to invoke the library.
   ;;
-  ;;   (?gensym global-macro . ?internal-gensym)
+  ;;VISIT-CODE -
+  ;;   When this  argument is created from source code:  this field is a
+  ;;   core  language symbolic  expression representing the  visit code.
+  ;;   When this  argument is created from precompiled  FASL: this field
+  ;;   is a thunk to be evaluated to visit the library.
   ;;
-  ;;the identifier macros have the format:
+  ;;INVOKE-CODE -
+  ;;   When this  argument is created from source code:  this field is a
+  ;;   core  language symbolic expression representing  the invoke code.
+  ;;   When this  argument is created from precompiled  FASL: this field
+  ;;   is a thunk to be evaluated to invoke the library.
   ;;
-  ;;   (?gensym global-macro! . ?internal-gensym)
+  ;;GUARD-CODE -
+  ;;   When this  argument is created from source code:  this field is a
+  ;;   core  language symbolic  expression representing the  guard code.
+  ;;   When this  argument is created from precompiled  FASL: this field
+  ;;   is a  thunk to be evaluated to run  the STALE-WHEN composite test
+  ;;   expression.
   ;;
-  ;;the compile-time values have the format:
+  ;;GUARD-REQ* -
+  ;;   A list of library  descriptors enmerating the libraries needed by
+  ;;   the composite STALE-WHEN test expression.
   ;;
-  ;;   (?gensym global-ctv . ?internal-gensym)
+  ;;VISIBLE? -
+  ;;   A  boolean, true  if this library  is to be  made visible  to the
+  ;;   function INSTALLED-LIBRARIES.
   ;;
-  ;;VISIT-PROC - a thunk that  compiles the core language representation
-  ;;of the expand-time code into code objects and evaluates the result.
+  ;;SOURCE-FILE-NAME -
+  ;;   False or a string representing the source file name.
   ;;
-  ;;INVOKE-PROC - a thunk that compiles the core language representation
-  ;;of the run-time code into code objects and evaluates the result.
-  ;;
-  ;;VISIT-CODE - - A symbolic  expression representing the core language
-  ;;code to be evaluated to create the expand-time code.
-  ;;
-  ;;INVOKE-CODE -  A symbolic expression representing  the core language
-  ;;code to  be evaluated to  create the run-time bindings  and evaluate
-  ;;the init expressions.  It is a LIBRARY-LETREC* core language form.
-  ;;
-  ;;GUARD-CODE   -  A   predicate  expression   in  the   core  language
-  ;;representing the stale-when tests from the body of the library.
-  ;;
-  ;;GUARD-REQ* -  a list  representing the libraries  that need  for the
-  ;;STALE-WHEN code?  Each item in the list is the content of the "spec"
-  ;;field of a "library" record.
-  ;;
-  ;;VISIBLE? - a boolean, true if this  library is to be made visible to
-  ;;the function INSTALLED-LIBRARIES.
-  ;;
-  ;;SOURCE-FILE-NAME - a string representing the source file name.
-  ;;
-  ;;LIBRARY-OPTION* - a sexp representing library options.
+  ;;LIBRARY-OPTION* -
+  ;;   A list of sexps representing library options.
   ;;
   (define-constant __who__ 'install-library)
   (case-define install-library
     ;;FIXME  At  the next  boot  image  rotation the  optional  argument
     ;;LIBRARY-OPTION*  must become  a mandatory  argument.  For  this to
     ;;happen  the appropriate  argument must  be  added to  the uses  of
-    ;;INSTALL-LIBRARY in the "makefile.sps".
+    ;;INSTALL-LIBRARY in the "makefile.sps".   (Marco Maggi; Mon Feb 10,
+    ;;2014)
     ((id
       libname ver
       imp* vis* inv*
@@ -854,6 +854,46 @@
   #| end of module: INSTALL-LIBRARY |# )
 
 
+;;;; uninstalling libraries
+;;
+;;Libraries  from   the  collection   of  installed  libraries   can  be
+;;uninstalled,   either   to  free   system   resources   or  to   allow
+;;reinstallation from new files.
+;;
+(case-define* uninstall-library
+  ;;Uninstall a library.
+  ;;
+  ;;THE IMPLEMENTATION OF THIS FUNCTION IS INCOMPLETE.
+  ;;
+  ((name)
+   (uninstall-library name #t))
+  ((name err?)
+   ;;FIXME: check that no other import is in progress.  (Ghuloum)
+   ;;
+   ;;FIXME: need to  unintern labels and locations  of library bindings.
+   ;;(Ghuloum)
+   (let ((lib (%find-library-in-collection-by (lambda (x)
+						(equal? (library-name x) name)))))
+     (when (and err? (not lib))
+       (assertion-violation __who__ "library not installed" name))
+     ;;Remove LIB from the current collection.
+     ((current-library-collection) lib #t)
+     ;;Remove label gensyms from the internal table.
+     (for-each (lambda (export-env-entry)
+		 ;;We expect the entry to have the format:
+		 ;;
+		 ;;   (?label . (?type . ?loc))
+		 ;;
+		 (let ((label   (car export-env-entry))
+		       (binding (cdr export-env-entry)))
+		   (remove-location label)
+		   (when (memq (car binding)
+			       '(global global-macro global-macro! global-ctv))
+		     (remove-location (cdr binding)))))
+       (library-env lib)))
+   (values)))
+
+
 (define (imported-label->syntactic-binding lab)
   (label-binding lab))
 
@@ -886,17 +926,6 @@
 				    "first visit did not return" lib)))
       (visit)
       (set-library-visit-state! lib #t))))
-
-(define* (library-descriptor lib)
-  ;;Given a library record return a list holding: the unique library id,
-  ;;the  list of  symbols from  the library  name, null  or the  list of
-  ;;version numbers from the library name.
-  ;;
-  (with-arguments-validation (__who__)
-      ((library		lib))
-    (list ($library-id      lib)
-	  ($library-name    lib)
-	  ($library-version lib))))
 
 
 ;;;; R6RS library name and version utilities
