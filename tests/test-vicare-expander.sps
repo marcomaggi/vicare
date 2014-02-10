@@ -58,6 +58,7 @@
 #!vicare
 (import (vicare)
   (vicare language-extensions try)
+  (vicare language-extensions callables)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -4429,6 +4430,221 @@
 	(eval '(list a b)
 	      env))
     => '(1 2))
+
+  #t)
+
+
+(parametrise ((check-test-name	'begin-for-syntax))
+
+  (check	;define then reference
+      (let ()
+	(begin-for-syntax
+	  (define a 1)
+	  (define b 2))
+	(define-syntax (doit stx)
+	  #`(quote (#,a #,b)))
+	(doit))
+    => '(1 2))
+
+  (check	;define functions then reference
+      (let ()
+	(begin-for-syntax
+	  (define (a) 1)
+	  (define (b) 2))
+	(define-syntax (doit stx)
+	  #`(quote (#,(a) #,(b))))
+	(doit))
+    => '(1 2))
+
+  (check	;multiple define then reference
+      (let ()
+	(begin-for-syntax
+	  (define a 1))
+	(begin-for-syntax
+	  (define b 2))
+	(begin-for-syntax
+	  (define c (+ a b)))
+	(define-syntax (doit stx)
+	  #`(quote (#,a #,b #,c)))
+	(doit))
+    => '(1 2 3))
+
+  (check	;multiple define functions then reference
+      (let ()
+	(begin-for-syntax
+	  (define (a) 1))
+	(begin-for-syntax
+	  (define (b) 2))
+	(begin-for-syntax
+	  (define c (+ (a) (b))))
+	(define-syntax (doit stx)
+	  #`(quote (#,(a) #,(b) #,c)))
+	(doit))
+    => '(1 2 3))
+
+  (check	;define-syntax, then reference
+      (let ()
+	;;A  DEFINE-SYNTAX  alone in  the  body  of BEGIN-FOR-SYNTAX  is
+	;;special because it expands to nothing, so we have to test it.
+	(begin-for-syntax
+	  (define-syntax (a stx)
+	    1))
+	(define-syntax (doit stx)
+	  #`(quote #,(a)))
+	(doit))
+    => 1)
+
+  (check	;define, define-syntax, then reference
+      (let ()
+	(begin-for-syntax
+	  (define-syntax (a stx)
+	    1)
+	  (define b 2))
+	(define-syntax (doit stx)
+	  #`(quote (#,(a) #,b)))
+	(doit))
+    => '(1 2))
+
+  (check	;mix defininitions and expressions, then reference
+      (let ()
+	(begin-for-syntax
+	  (define a 1)
+	  (set! a 11)
+	  (define b 2))
+	(define-syntax (doit stx)
+	  #`(quote (#,a #,b)))
+	(doit))
+    => '(11 2))
+
+  (check	;mix defininitions and expressions, then reference
+      (let ()
+	(begin-for-syntax
+	  (define a 1)
+	  (set! a (lambda () 11))
+	  (define b 2))
+	(define-syntax (doit stx)
+	  #`(quote (#,(a) #,b)))
+	(doit))
+    => '(11 2))
+
+  (check	;define, mutate, then reference
+      (let ()
+	(begin-for-syntax
+	  (define a 1))
+	(begin-for-syntax
+	  (set! a 11))
+	(define-syntax (doit stx)
+	  #`(quote (#,a)))
+	(doit))
+    => '(11))
+
+;;; --------------------------------------------------------------------
+;;; imported bindings
+
+  (check	;test of import in the rhs of a define-syntax
+      (let ()
+  	(define-syntax doit
+  	  (let ()
+  	    (import (vicare language-extensions callables))
+  	    (define C
+  	      (callable 1 (lambda (self delta)
+  			    (+ self delta))))
+  	    (lambda (stx)
+  	      (C 2))))
+  	(doit))
+    => 3)
+
+  (check
+      (let ()
+	(begin-for-syntax
+	  (import (vicare language-extensions callables)))
+  	(begin-for-syntax
+  	  (define C
+  	    (callable 1 (lambda (self delta)
+  			  (+ self delta)))))
+  	(define-syntax (doit stx)
+  	  (C 2))
+  	(doit))
+    => 3)
+
+  (check
+      (let ()
+  	(begin-for-syntax
+  	  (define C
+  	    (callable 1 (lambda (self delta)
+  			  (+ self delta)))))
+  	(define-syntax (doit stx)
+  	  (C 2))
+  	(doit))
+    => 3)
+
+;;; --------------------------------------------------------------------
+
+  (check	;attempt to define the same variable multiple times
+      (guard (E ((syntax-violation? E)
+		 (values (condition-message E)
+			 (syntax->datum (syntax-violation-form E))))
+		(else E))
+	(eval '(let ()
+		 (begin-for-syntax
+		   (define a 1)
+		   (define a 2))
+		 (define-syntax (doit stx)
+		   #`(quote (#,a)))
+		 (doit))
+	      (environment '(vicare))))
+    => "multiple definitions of identifier" 'a)
+
+  (check	;attempt to define the same variable multiple times
+      (guard (E ((syntax-violation? E)
+		 (values (condition-message E)
+			 (syntax->datum (syntax-violation-form E))))
+		(else E))
+	(eval '(let ()
+		 (begin-for-syntax
+		   (define a 1))
+		 (begin-for-syntax
+		   (define a 2))
+		 (define-syntax (doit stx)
+		   #`(quote (#,a)))
+		 (doit))
+	      (environment '(vicare))))
+    => "multiple definitions of identifier" 'a)
+
+  (check	;attempt to define the same syntax multiple times
+      (guard (E ((syntax-violation? E)
+		 (values (condition-message E)
+			 (syntax->datum (syntax-violation-form E))))
+		(else E))
+	(eval '(let ()
+		 (begin-for-syntax
+		   (define-syntax (a stx)
+		     1)
+		   (define-syntax (a stx)
+		     2))
+		 (define-syntax (doit stx)
+		   #`(quote (#,(a))))
+		 (doit))
+	      (environment '(vicare))))
+    => "multiple definitions of identifier" 'a)
+
+  (check	;attempt to define the same syntax multiple times
+      (guard (E ((syntax-violation? E)
+		 (values (condition-message E)
+			 (syntax->datum (syntax-violation-form E))))
+		(else E))
+	(eval '(let ()
+		 (begin-for-syntax
+		   (define-syntax (a stx)
+		     1))
+		 (begin-for-syntax
+		   (define-syntax (a stx)
+		     2))
+		 (define-syntax (doit stx)
+		   #`(quote (#,(a))))
+		 (doit))
+	      (environment '(vicare))))
+    => "multiple definitions of identifier" 'a)
 
   #t)
 

@@ -44,9 +44,9 @@
 
   (check
       (let ()
-	(define-syntax (test stx)
-	  (identifier-property-exists? #'type1))
-	(test))
+  	(define-syntax (test stx)
+  	  (identifier-property-exists? #'type1))
+  	(test))
     => #t)
 
   (check

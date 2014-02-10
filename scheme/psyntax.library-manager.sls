@@ -784,7 +784,7 @@
 			     (( ;;
 			       library import export
 			       define define-syntax define-alias define-fluid-syntax
-			       let-syntax letrec-syntax
+			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
 			       global mutable
 			       core-prim core-macro macro

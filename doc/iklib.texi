@@ -1792,12 +1792,27 @@ object.  It is meant to be used as follows:
 @end deffn
 
 
-@deffn Syntax begin-for-expand @metao{body} @meta{body} @dots{}
+@deffn Syntax begin-for-syntax @metao{body} @meta{body} @dots{}
 @deffnx Syntax eval-for-expand @metao{body} @meta{body} @dots{}
-Evaluate the @meta{body} forms at expand time.  A
-@func{begin-for-expand} form counts as a definition in a body.  Notice
-that definitions in the body are @strong{not} visible by other code
-evaluated for expand.
+Evaluate the @meta{body} forms at expand time; these syntaxes count as
+definitions in a body.  Notice that definitions in the body are visible
+by other code evaluated for expand:
+
+@example
+(begin-for-syntax
+  (define a 1))
+
+(begin-for-syntax
+  (define b 2))
+
+(begin-for-syntax
+  (define c (+ a b)))
+
+(define-syntax (doit stx)
+  #`(quote (#,a #,b #,c)))
+
+(doit)          @result{} (1 2 3)
+@end example
 @end deffn
 
 

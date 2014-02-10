@@ -332,6 +332,8 @@
     (let-syntax				(let-syntax))
     (letrec-syntax			(letrec-syntax))
     (stale-when				(stale-when))
+    (begin-for-syntax			(begin-for-syntax))
+    (eval-for-expand			(begin-for-syntax))
     (foreign-call			(core-macro . foreign-call))
     (quote				(core-macro . quote))
     (syntax-case			(core-macro . syntax-case))
@@ -454,9 +456,6 @@
     (with-implicits			(macro . with-implicits))
     (include				(macro . include))
     (set-cons!				(macro . set-cons!))
-;;;
-    (begin-for-syntax			(macro . begin-for-syntax))
-    (eval-for-expand			(macro . begin-for-syntax))
 ;;;
     (__who__				($fluid . __who__))
     (<>					(macro . <>))

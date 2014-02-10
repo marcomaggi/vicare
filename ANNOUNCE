@@ -288,7 +288,27 @@ Many backwards incompatibilities... life is hard!
   problems: most of the code should just work.
 
 * BEGIN-FOR-SYNTAX is  now an  alias for  EVAL-FOR-EXPAND, to  match the
-  syntax name used by Racket.
+  syntax name used by Racket; in  truth: EVAL-FOR-EXPAND is now an alias
+  of BEGIN-FOR-SYNTAX.
+
+* BACKWARDS INCOMPATIBILITY  BEGIN-FOR-SYNTAX is  now a core  syntax and
+  allows bindings to be defined in a form and referenced in a later one:
+
+     (begin-for-syntax
+       (define a 1))
+
+     (begin-for-syntax
+       (define b 2))
+
+     (begin-for-syntax
+       (define c (+ a b)))
+
+     (define-syntax (doit stx)
+       #`(quote (#,a #,b #,c)))
+
+     (doit)	=> (1 2 3)
+
+  this behaviour was not present in the previous EVAL-FOR-EXPAND.
 
 * Added unsafe variants API.  See the documentation node "iklib syntaxes
   unsafe".

@@ -1813,7 +1813,7 @@
     (receive (import-spec* body*)
 	(%parse-top-level-program expr*)
       (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
-	  (begin
+	  (let ()
 	    (import CORE-BODY-EXPANDER)
 	    (core-body-expander 'all import-spec* body* #t))
 	(values invoke-lib* invoke-code macro* export-subst export-env))))
@@ -6145,8 +6145,6 @@
       ((with-implicits)			with-implicits-macro)
       ((set-cons!)			set-cons!-macro)
 
-      ((begin-for-syntax)		begin-for-syntax-macro)
-
       ;; non-Scheme style syntaxes
       ((while)				while-macro)
       ((until)				until-macro)
@@ -7015,21 +7013,6 @@
     ((_ ?id ?obj)
      (identifier? ?id)
      (bless `(set! ,?id (cons ,?obj ,?id))))
-    ))
-
-
-;;;; module non-core-macro-transformer: WITH-IMPLICITS
-
-(define (begin-for-syntax-macro expr-stx)
-  ;;Transformer function used to  expand Vicare's BEGIN-FOR-SYNTAX macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ((_ ?body0 ?body* ...)
-     (bless
-      `(define-syntax ,(gensym "begin-for-syntax")
-	 (let () ,?body0 ,@?body* values))))
     ))
 
 
@@ -12050,7 +12033,7 @@
 		     (case type
 		       ((core-macro
 			 define define-syntax define-alias define-fluid-syntax
-			 let-syntax letrec-syntax
+			 let-syntax letrec-syntax begin-for-syntax
 			 begin set! stale-when
 			 local-ctv global-ctv
 			 local-macro local-macro!
@@ -13106,6 +13089,83 @@
 		      (append (map cons xlab* xbind*) lexenv.expand)
 		      lex* qrhs* mod** kwd* export-spec* rib
 		      mix? sd?)))))
+
+	       ((begin-for-syntax)
+		;;The body  form is  a BEGIN-FOR-SYNTAX syntax  use.  We
+		;;expand the  expressions using LEXENV.EXPAND  as LEXENV
+		;;for run-time, much like what we do when evaluating the
+		;;right-hand side  of a DEFINE-SYNTAX, but  handling the
+		;;sequence of  expressions as  a body;  then we  build a
+		;;special   core   language   expression   with   global
+		;;assignments; finally we evaluate result.
+		;;
+		(syntax-match body-form-stx ()
+		  ((_ ?expr* ...)
+		   (receive ( ;;
+			     all-expr-core* rhs-core*
+			     lexenv.expand^ lexenv.super^
+			     lex*^ qrhs*^ mod**^ kwd*^ export-spec*^)
+		       (let ((rtc (make-collector)))
+			 (parametrise ((inv-collector rtc)
+				       (vis-collector (lambda (x) (values))))
+			   (receive (empty
+				     lexenv.expand^ lexenv.super^
+				     lex*^ qrhs*^ mod**^ kwd*^ export-spec*^)
+			       ;;Expand  the  sequence  as  a  top-level
+			       ;;body, accumulating the definitions.
+			       (let ((lexenv.super                     lexenv.expand)
+				     (mix-definitions-and-expressions? #t)
+				     (shadowing-definitions?           #t))
+				 (chi-body* (list (cons (bless 'begin) ?expr*))
+					    lexenv.expand lexenv.super
+					    '() '() '() '() '() rib
+					    mix-definitions-and-expressions?
+					    shadowing-definitions?))
+			     ;;There should  be no  trailing expressions
+			     ;;because we allowed mixing definitions and
+			     ;;expressions as in a top-level program.
+			     (assert (null? empty))
+			     ;;Expand  the  definitions and  the  module
+			     ;;trailing   expressions,  then   build  an
+			     ;;expanded language expression.
+			     (let* ((all-expr-core*  (chi-expr* (reverse-and-append mod**^)
+								lexenv.expand^ lexenv.super^))
+				    (rhs-core*       (chi-qrhs* qrhs*^ lexenv.expand^ lexenv.super^)))
+			       ;;Now  that we  have  fully expanded  the
+			       ;;forms:  we  invoke  all  the  libraries
+			       ;;needed to evaluate them.
+			       (for-each
+				   (let ((register-visited-library (vis-collector)))
+				     (lambda (lib)
+				       (invoke-library lib)
+				       (register-visited-library lib)))
+				 (rtc))
+			       ;;Let's  get   out  of   the  collectors'
+			       ;;PARAMETRISE syntaxes.
+			       (values all-expr-core* rhs-core*
+				       lexenv.expand^ lexenv.super^
+				       lex*^ qrhs*^ mod**^ kwd*^ export-spec*^)))))
+		     ;;Build an expanded code expression and evaluate it.
+		     (let ((code-core (build-sequence no-source
+					(list (if (null? rhs-core*)
+						  (build-void)
+						(build-sequence no-source
+						  (map (lambda (lhs rhs)
+							 (build-global-assignment no-source lhs rhs))
+						    (reverse lex*^)
+						    (reverse rhs-core*))))
+					      (if (null? all-expr-core*)
+						  (build-void)
+						(build-sequence no-source
+						  all-expr-core*))))))
+		       (parametrise ((current-run-lexenv (lambda () lexenv.run)))
+			 (eval-core (expanded->core code-core))))
+		     ;;Done!  Now go on with the next body forms.
+		     (chi-body* (cdr body-form-stx*)
+				lexenv.run lexenv.expand^
+				lex* qrhs* mod** kwd* export-spec* rib
+				mix? sd?)))
+		  ))
 
 	       ((begin)
 		;;The body form is a  BEGIN syntax use.  Just splice the
