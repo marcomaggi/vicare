@@ -400,8 +400,7 @@
 	     (assertion-violation __who__ "cannot find library" requested-libname))
 	    ;;If the  precompiled library  loader returns false:  try to
 	    ;;load the source file.
-	    (((current-precompiled-library-loader)
-	      filename %install-library-and-deps))
+	    (((current-precompiled-library-loader) filename %install-library-and-deps))
 	    (else
 	     ((current-library-expander)
 	      ;;Return  a symbolic  expression representing  the LIBRARY
@@ -412,42 +411,63 @@
 		(%verify-library requested-libname filename
 				 library-name.ids library-name.version)))))))
 
-  (define (%install-library-and-deps filename id name ver imp* vis* inv*
-				     exp-subst exp-env
+  (define (%install-library-and-deps filename
+				     uid libname.ids libname.version imp* vis* inv*
+				     exp-subst export-env
 				     visit-proc invoke-proc guard-proc
 				     guard-req* visible? library-option*)
     ;;Used  as success  continuation  function by  the  function in  the
-    ;;parameter   CURRENT-PRECOMPILED-LIBRARY-LOADER.   Make   sure  all
-    ;;dependencies are  met, then install  the library and  return true;
-    ;;otherwise return #f.
+    ;;parameter  CURRENT-PRECOMPILED-LIBRARY-LOADER.  All  the arguments
+    ;;after FILENAME are the CONTENTS of the serialized library.
     ;;
-    (let loop ((deps (append imp* vis* inv* guard-req*)))
-      (cond ((null? deps)
-	     ;; CHECK
-	     (for-each (lambda (x)
-			 (let* ((label (car x))
-				(dname (cadr x))
-				(lib   (find-library-by-name dname)))
-			   (invoke-library lib)))
+    ;;Make sure all  dependencies are met, then install  the library and
+    ;;return true; otherwise return #f.
+    ;;
+    (let loop ((library-descriptor* (append imp* vis* inv* guard-req*)))
+      (cond ((null? library-descriptor*)
+	     (for-each (lambda (guard-library-descriptor)
+			 (let* ((guard-uid     (car  guard-library-descriptor))
+				(guard-libname (cadr guard-library-descriptor))
+				(guard-lib     (find-library-by-name guard-libname)))
+			   (invoke-library guard-lib)))
 	       guard-req*)
-	     (cond ((guard-proc) ;;; stale
-		    (library-stale-warning name filename)
-		    #f)
-		   (else
-		    (install-library id name ver imp* vis* inv*
-				     exp-subst exp-env visit-proc invoke-proc
-				     #f #f ''#f '() visible? #f library-option*)
-		    #t)))
-	    (else
-	     (let* ((libspec	(car  deps))
-		    (label	(car  libspec))
-		    (libname	(cadr libspec))
-		    (lib	(find-library-by-name libname)))
-	       (if (and (library? lib)
-			(eq? label (library-id lib)))
-		   (loop (cdr deps))
+	     (if (guard-proc)
+		 ;;The precompiled library is stale.
 		 (begin
-		   (library-version-mismatch-warning name libname filename)
+		   (library-stale-warning libname.ids filename)
+		   #f)
+	       (let ((visit-code        #f)
+		     (invoke-code       #f)
+		     (guard-code        (quote (quote #f)))
+		     (guard-req*        '())
+		     (source-file-name  #f))
+		 (install-library uid
+				  libname.ids libname.version
+				  imp* vis* inv*
+				  exp-subst export-env
+				  visit-proc invoke-proc
+				  visit-code invoke-code
+				  guard-code guard-req*
+				  visible? source-file-name library-option*)
+		 #t)))
+	    (else
+	     ;;We expect each library descriptor to have the format:
+	     ;;
+	     ;;   (?uid ?libname ?version)
+	     ;;
+	     ;;where ?UID is  a unique symbol associated  to the library
+	     ;;and  ?LIBNAME is  the  list of  symbols representing  the
+	     ;;library name.
+	     ;;
+	     (let* ((deplib-descr	(car  library-descriptor*))
+		    (deplib-uid		(car  deplib-descr))
+		    (deplib-libname	(cadr deplib-descr))
+		    (deplib-lib		(find-library-by-name deplib-libname)))
+	       (if (and (library? deplib-lib)
+			(eq? deplib-uid (library-id deplib-lib)))
+		   (loop (cdr library-descriptor*))
+		 (begin
+		   (library-version-mismatch-warning libname.ids deplib-libname filename)
 		   #f)))))))
 
   (define (%verify-library requested-libname filename
@@ -735,27 +755,29 @@
     ;;LIBRARY-OPTION*  must become  a mandatory  argument.  For  this to
     ;;happen  the appropriate  argument must  be  added to  the uses  of
     ;;INSTALL-LIBRARY in the "makefile.sps".
-    ((id libname ver
-	 imp* vis* inv*
-	 exp-subst exp-env
-	 visit-proc invoke-proc
-	 visit-code invoke-code
-	 guard-code guard-req*
-	 visible? source-file-name)
+    ((id
+      libname ver
+      imp* vis* inv*
+      exp-subst export-env
+      visit-proc invoke-proc
+      visit-code invoke-code
+      guard-code guard-req*
+      visible? source-file-name)
      (install-library id libname ver
 		      imp* vis* inv*
-		      exp-subst exp-env
+		      exp-subst export-env
 		      visit-proc invoke-proc
 		      visit-code invoke-code
 		      guard-code guard-req*
 		      visible? source-file-name '()))
-    ((id libname ver
-	 imp* vis* inv*
-	 exp-subst exp-env
-	 visit-proc invoke-proc
-	 visit-code invoke-code
-	 guard-code guard-req*
-	 visible? source-file-name library-option*)
+    ((id
+      libname ver
+      imp* vis* inv*
+      exp-subst export-env
+      visit-proc invoke-proc
+      visit-code invoke-code
+      guard-code guard-req*
+      visible? source-file-name library-option*)
      (let ((imp-lib*	(map %find-library-in-collection-by-spec/die imp*))
 	   (vis-lib*	(map %find-library-in-collection-by-spec/die vis*))
 	   (inv-lib*	(map %find-library-in-collection-by-spec/die inv*))
@@ -767,7 +789,7 @@
 	 (assertion-violation __who__
 	   "library is already installed" libname))
        (let ((lib (make-library id libname ver imp-lib* vis-lib* inv-lib*
-				exp-subst exp-env visit-proc invoke-proc
+				exp-subst export-env visit-proc invoke-proc
 				visit-code invoke-code guard-code guard-lib*
 				visible? source-file-name library-option*)))
 	 (%install-library-record lib)

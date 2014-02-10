@@ -180,10 +180,10 @@
 	     #f)
 	    (else
 	     (%print-loaded-library ikfasl)
-	     (let ((x (let* ((port (open-file-input-port ikfasl))
-			     (x    (fasl-read port)))
-			(close-input-port port)
-			x)))
+	     (let ((x (let ((port (open-file-input-port ikfasl)))
+			(unwind-protect
+			    (fasl-read port)
+			  (close-input-port port)))))
 	       (if (serialized-library? x)
 		   (apply success-kont filename (serialized-library-contents x))
 		 (begin
