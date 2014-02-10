@@ -3838,11 +3838,9 @@
       (let ((port (open-file-output-port boot-file-name (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()
-	    (define i 0)
 	    (debug-printf "Compiling and writing to fasl (one code object for each library form): ")
 	    (for-each (lambda (name core)
 	    		(debug-printf " ~s" name)
-			;;(debug-printf "~a\n" core)
 	    		(compile-core-expr-to-port core port))
 	      name*
 	      core*)
