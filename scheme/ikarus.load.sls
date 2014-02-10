@@ -135,82 +135,87 @@
 
 ;;;; loading and serialising libraries
 
-(define-struct serialized-library
-  (contents
+(module (load-serialized-library
+	 serialize-library-contents)
+
+  (define-struct serialized-library
+    (contents
 		;A list of values  representing a LIBRARY record holding
 		;precompiled  code.   For  details  on  the  format  see
 		;SERIALIZE-LIBRARY in "psyntax.library-manager.sls".
-   ))
+     ))
 
-(define (load-serialized-library filename success-kont)
-  ;;Given a  source file  name load the  associated FASL file  and apply
-  ;;SUCCESS-KONT  to the  library contents,  return the  result  of such
-  ;;application.  If  a FASL  file is not  available or  invalid: return
-  ;;false.
-  ;;
-  ;;Print  to  the current  error  port  appropriate  warning about  the
-  ;;availability of the FASL file.
-  ;;
-  (define (%print-loaded-library name)
-    (when (config.print-loaded-libraries)
-      (display (string-append "Vicare loading: " name "\n")
-	       (console-error-port))))
-  (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))
-		  (if (null? search-path)
-		      #f
-		    (let ((ikfasl (make-fasl-pathname (car search-path) filename)))
-		      (if (file-exists? ikfasl)
-			  ikfasl
-			(next-prefix (cdr search-path))))))))
-    (cond ((or (not ikfasl)
-	       (not (file-exists? ikfasl)))
-	   (%print-loaded-library filename)
-	   #f)
-	  ((< (posix.file-modification-time ikfasl)
-	      (posix.file-modification-time filename))
-	   (%print-loaded-library filename)
-	   (fprintf (console-error-port)
-		    "WARNING: not using fasl file ~s because it is older \
-                     than the source file ~s\n" ikfasl filename)
-	   #f)
-	  (else
-	   (%print-loaded-library ikfasl)
-	   (let ((x (let* ((port (open-file-input-port ikfasl))
-			   (x    (fasl-read port)))
-		      (close-input-port port)
-		      x)))
-	     (if (serialized-library? x)
-		 (apply success-kont filename (serialized-library-contents x))
-	       (begin
-		 (fprintf (console-error-port)
-			  "WARNING: not using fasl file ~s because it was \
-                           compiled with a different instance of Vicare.\n" ikfasl)
-		 #f)))))))
+  (define (load-serialized-library filename success-kont)
+    ;;Given a source  file name load the associated FASL  file and apply
+    ;;SUCCESS-KONT to  the library contents,  return the result  of such
+    ;;application.  If a  FASL file is not available  or invalid: return
+    ;;false.
+    ;;
+    ;;Print  to the  current error  port appropriate  warning about  the
+    ;;availability of the FASL file.
+    ;;
+    (define (%print-loaded-library name)
+      (when (config.print-loaded-libraries)
+	(display (string-append "Vicare loading: " name "\n")
+		 (console-error-port))))
+    (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))
+		    (if (null? search-path)
+			#f
+		      (let ((ikfasl (make-fasl-pathname (car search-path) filename)))
+			(if (file-exists? ikfasl)
+			    ikfasl
+			  (next-prefix (cdr search-path))))))))
+      (cond ((or (not ikfasl)
+		 (not (file-exists? ikfasl)))
+	     (%print-loaded-library filename)
+	     #f)
+	    ((< (posix.file-modification-time ikfasl)
+		(posix.file-modification-time filename))
+	     (%print-loaded-library filename)
+	     (fprintf (console-error-port)
+		      "WARNING: not using fasl file ~s because it is older \
+                       than the source file ~s\n" ikfasl filename)
+	     #f)
+	    (else
+	     (%print-loaded-library ikfasl)
+	     (let ((x (let* ((port (open-file-input-port ikfasl))
+			     (x    (fasl-read port)))
+			(close-input-port port)
+			x)))
+	       (if (serialized-library? x)
+		   (apply success-kont filename (serialized-library-contents x))
+		 (begin
+		   (fprintf (console-error-port)
+			    "WARNING: not using fasl file ~s because it was \
+                             compiled with a different instance of Vicare.\n" ikfasl)
+		   #f)))))))
 
-(define (do-serialize-library filename contents)
-  ;;Given the source file name of  a library file and the contents of an
-  ;;already compiled library write a FASL file in the repository.
-  ;;
-  ;;CONTENTS  must be  a list  of values  representing a  LIBRARY record
-  ;;holding  precompiled code.   See the  function SERIALIZE-LIBRARY  in
-  ;;"psyntax.library-manager.sls" for details on the format.
-  ;;
-  (cond ((fasl-path filename)
-	 => (lambda (ikfasl)
-	      (define-syntax-rule (%display ?thing)
-		(display ?thing stderr))
-	      (%display "serialising ")
-	      (%display ikfasl)
-	      (%display " ... ")
-	      (receive (dir name)
-		  (posix.split-pathname-root-and-tail ikfasl)
-		(posix.mkdir/parents dir #o755))
-	      (let ((port (open-file-output-port ikfasl (file-options no-fail))))
-		(unwind-protect
-		    (fasl-write (make-serialized-library contents) port
-				(retrieve-filename-foreign-libraries filename))
-		  (close-output-port port)))
-	      (%display "done\n")))))
+  (define (serialize-library-contents filename contents)
+    ;;Given the source  file name of a library file  and the contents of
+    ;;an already compiled library write a FASL file in the repository.
+    ;;
+    ;;CONTENTS must  be a list  of values representing a  LIBRARY record
+    ;;holding precompiled  code.  See the function  SERIALIZE-LIBRARY in
+    ;;"psyntax.library-manager.sls" for details on the format.
+    ;;
+    (cond ((fasl-path filename)
+	   => (lambda (ikfasl)
+		(define-syntax-rule (%display ?thing)
+		  (display ?thing stderr))
+		(%display "serialising ")
+		(%display ikfasl)
+		(%display " ... ")
+		(receive (dir name)
+		    (posix.split-pathname-root-and-tail ikfasl)
+		  (posix.mkdir/parents dir #o755))
+		(let ((port (open-file-output-port ikfasl (file-options no-fail))))
+		  (unwind-protect
+		      (fasl-write (make-serialized-library contents) port
+				  (retrieve-filename-foreign-libraries filename))
+		    (close-output-port port)))
+		(%display "done\n")))))
+
+  #| end of module |# )
 
 
 ;;;; loading programs and libraries
@@ -254,7 +259,7 @@
 	 (thunk (expand-r6rs-top-level-make-evaluator prog)))
     (when serialize?
       (serialize-collected-libraries (lambda (lib-filename contents)
-				       (do-serialize-library lib-filename contents))
+				       (serialize-library-contents lib-filename contents))
 				     (lambda (core-expr)
 				       (compile-core-expr core-expr))))
     (when run?
