@@ -626,7 +626,7 @@
 	  (else
 	   (next-library-struct (cdr ls))))))
 
-(define (%find-library-in-collection-by-spec/die descr)
+(define (%find-library-in-collection-by-descr/die descr)
   ;;Given   a  library   descriptor,  as   generated  by   the  function
   ;;LIBRARY-DESCRIPTOR: return the corresponding LIBRARY record from the
   ;;collection of installed libraries or raise an assertion.
@@ -710,15 +710,15 @@
   ;;VER -
   ;;   A list of exact integers representing the library version.
   ;;
-  ;;IMP* -
+  ;;IMPORT-DESCR* -
   ;;   A list of library descriptors enumerating the libraries specified
   ;;   in the IMPORT clauses.
   ;;
-  ;;VIS* -
+  ;;VISIT-DESCR* -
   ;;   A list of library descriptors enumerating the libraries needed by
   ;;   the visit code.
   ;;
-  ;;INV* -
+  ;;INVOKE-DESCR* -
   ;;   A list of library  descriptors enmerating the libraries needed by
   ;;   the invoke code.
   ;;
@@ -754,7 +754,7 @@
   ;;   is a  thunk to be evaluated to run  the STALE-WHEN composite test
   ;;   expression.
   ;;
-  ;;GUARD-REQ* -
+  ;;GUARD-DESCR* -
   ;;   A list of library  descriptors enmerating the libraries needed by
   ;;   the composite STALE-WHEN test expression.
   ;;
@@ -777,39 +777,39 @@
     ;;2014)
     ((id
       libname ver
-      imp* vis* inv*
-      exp-subst export-env
+      import-descr* visit-descr* invoke-descr*
+      export-subst export-env
       visit-proc invoke-proc
       visit-code invoke-code
-      guard-code guard-req*
+      guard-code guard-descr*
       visible? source-file-name)
      (install-library id libname ver
-		      imp* vis* inv*
-		      exp-subst export-env
+		      import-descr* visit-descr* invoke-descr*
+		      export-subst export-env
 		      visit-proc invoke-proc
 		      visit-code invoke-code
-		      guard-code guard-req*
+		      guard-code guard-descr*
 		      visible? source-file-name '()))
     ((id
       libname ver
-      imp* vis* inv*
-      exp-subst export-env
+      import-descr* visit-descr* invoke-descr*
+      export-subst export-env
       visit-proc invoke-proc
       visit-code invoke-code
-      guard-code guard-req*
+      guard-code guard-descr*
       visible? source-file-name library-option*)
-     (let ((imp-lib*	(map %find-library-in-collection-by-spec/die imp*))
-	   (vis-lib*	(map %find-library-in-collection-by-spec/die vis*))
-	   (inv-lib*	(map %find-library-in-collection-by-spec/die inv*))
-	   (guard-lib*	(map %find-library-in-collection-by-spec/die guard-req*)))
+     (let ((import-lib*	(map %find-library-in-collection-by-descr/die import-descr*))
+	   (visit-lib*	(map %find-library-in-collection-by-descr/die visit-descr*))
+	   (invoke-lib*	(map %find-library-in-collection-by-descr/die invoke-descr*))
+	   (guard-lib*	(map %find-library-in-collection-by-descr/die guard-descr*)))
        (unless (and (symbol? id) (list? libname) (list? ver))
 	 (assertion-violation __who__
 	   "invalid spec with id/name/ver" id libname ver))
        (when (library-exists? libname)
 	 (assertion-violation __who__
 	   "library is already installed" libname))
-       (let ((lib (make-library id libname ver imp-lib* vis-lib* inv-lib*
-				exp-subst export-env visit-proc invoke-proc
+       (let ((lib (make-library id libname ver import-lib* visit-lib* invoke-lib*
+				export-subst export-env visit-proc invoke-proc
 				visit-code invoke-code guard-code guard-lib*
 				visible? source-file-name library-option*)))
 	 (%install-library-record lib)
