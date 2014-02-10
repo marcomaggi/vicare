@@ -95,23 +95,23 @@
    subst
 		;A subst representing the exported bindings.
    env
-		;The  export   environment  representing   the  exported
-		;bindings.  It is a list of lists
-		;in which the run-time bindings have the format:
+		;The  EXPORT-ENV  representing  the  top-level  bindings
+		;defined by the library body.  It  is a list of lists in
+		;which the run-time bindings have the format:
 		;
-		;   (?gensym global . ?internal-name)
+		;   (?label global . ?internal-name)
 		;
 		;the non-identifier macros have the format:
 		;
-		;   (?gensym global-macro . ?internal-gensym)
+		;   (?label global-macro . ?loc)
 		;
 		;the identifier macros have the format:
 		;
-		;   (?gensym global-macro! . ?internal-gensym)
+		;   (?label global-macro! . ?loc)
 		;
 		;the compile-time values have the format:
 		;
-		;   (?gensym global-ctv . ?internal-gensym)
+		;   (?label global-ctv . ?loc)
 		;
    visit-state
 		;When set  to a procedure:  it is  the thunk to  call to
@@ -608,34 +608,38 @@
 		     ($library-option* lib)))))
 
 
-(define uninstall-library
+(case-define* uninstall-library
   ;;Uninstall a library.
   ;;
   ;;THE IMPLEMENTATION OF THIS FUNCTION IS INCOMPLETE.
   ;;
-  (case-lambda
-   ((name)
-    (uninstall-library name #t))
-   ((name err?)
-    (define who 'uninstall-library)
-       ;;; FIXME: check that no other import is in progress
-       ;;; FIXME: need to unintern labels and locations of
-       ;;;        library bindings
-    (let ((lib (%find-library-in-collection-by (lambda (x)
-						 (equal? (library-name x) name)))))
-      (when (and err? (not lib))
-	(assertion-violation who "library not installed" name))
-      ;;Remove LIB from the current collection.
-      ((current-library-collection) lib #t)
-      ;;Remove label gensyms from the internal table.
-      (for-each (lambda (x)
-		  (let ((label   (car x))
-			(binding (cdr x)))
-		    (remove-location label)
-		    (when (memq (car binding) '(global global-macro global-macro! global-ctv))
-		      (remove-location (cdr binding)))))
-	(library-env lib)))
-    (values))))
+  ((name)
+   (uninstall-library name #t))
+  ((name err?)
+   ;;FIXME: check that no other import is in progress.  (Ghuloum)
+   ;;
+   ;;FIXME: need to  unintern labels and locations  of library bindings.
+   ;;(Ghuloum)
+   (let ((lib (%find-library-in-collection-by (lambda (x)
+						(equal? (library-name x) name)))))
+     (when (and err? (not lib))
+       (assertion-violation __who__ "library not installed" name))
+     ;;Remove LIB from the current collection.
+     ((current-library-collection) lib #t)
+     ;;Remove label gensyms from the internal table.
+     (for-each (lambda (export-env-entry)
+		 ;;We expect the entry to have the format:
+		 ;;
+		 ;;   (?label . (?type . ?loc))
+		 ;;
+		 (let ((label   (car export-env-entry))
+		       (binding (cdr export-env-entry)))
+		   (remove-location label)
+		   (when (memq (car binding)
+			       '(global global-macro global-macro! global-ctv))
+		     (remove-location (cdr binding)))))
+       (library-env lib)))
+   (values)))
 
 
 ;;;; installing libraries

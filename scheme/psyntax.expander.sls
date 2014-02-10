@@ -946,8 +946,10 @@
 ;;;; introduction: EXPORT-ENV
 ;;
 ;;The EXPORT-ENV  is a data structure  used to map the  label gensyms of
-;;exported  syntactic bindings  to  the  corresponding storage  location
-;;gensyms.
+;;top-level  syntactic bindings  to the  corresponding storage  location
+;;gensyms.   Not  all  the  entries  in  EXPORT-ENV  represent  exported
+;;bindings: it  is the role of  the EXPORT-SUBST to select  the exported
+;;ones.
 ;;
 ;;An EXPORT-ENV is an alist whose entries have the format:
 ;;
@@ -967,21 +969,28 @@
 ;;The symbol ?TYPE is one among:
 ;;
 ;;GLOBAL -
-;;   To  denote  a  lexical  variable.   In this  case  ?LOC  holds  the
-;;   variable's value (immutable).
+;;   To denote  a lexical immutated  variable.  In this case  ?LOC holds
+;;   the variable's value (immutable).  This binding can be exported.
+;;
+;;MUTABLE -
+;;   To denote a lexical variable that is mutated somewhere in the code.
+;;   In this case ?LOC holds  the variable's value.  This binding cannot
+;;   be exported.
 ;;
 ;;GLOBAL-MACRO -
 ;;   To  denote a  non-identifier macro.   In this  case ?LOC  holds the
-;;   macro transformer, but only after the library has been visited.
+;;   macro transformer,  but only  after the  library has  been visited.
+;;   This binding can be exported.
 ;;
 ;;GLOBAL-MACRO! -
 ;;   To denote an  identifier macro.  In this case ?LOC  holds the macro
-;;   transformer, but only after the library has been visited.
+;;   transformer, but  only after  the library  has been  visited.  This
+;;   binding can be exported.
 ;;
 ;;GLOBAL-CTV -
 ;;   To denote  a compile-time value.   In this  case the loc  holds the
 ;;   actual compile-time  object, but  only after  the library  has been
-;;   visited.
+;;   visited.  This binding can be exported.
 ;;
 
 
