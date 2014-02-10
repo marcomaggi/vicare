@@ -195,52 +195,50 @@
   ;;holding  precompiled code.   See the  function SERIALIZE-LIBRARY  in
   ;;"psyntax.library-manager.sls" for details on the format.
   ;;
-  (let ((ikfasl (fasl-path filename)))
-    (when ikfasl
-      (let ((stderr (current-error-port)))
-	(define-inline (%display thing)
-	  (display thing stderr))
-	(%display "serialising ")
-	(%display ikfasl)
-	(%display " ... ")
-	(let-values (((dir name) (posix.split-pathname-root-and-tail ikfasl)))
-	  (posix.mkdir/parents dir #o755))
-	(let ((port (open-file-output-port ikfasl (file-options no-fail))))
-	  (unwind-protect
-	      (fasl-write (make-serialized-library contents) port
-			  (retrieve-filename-foreign-libraries filename))
-	    (close-output-port port)))
-	(%display "done\n")))))
+  (cond ((fasl-path filename)
+	 => (lambda (ikfasl)
+	      (define-syntax-rule (%display ?thing)
+		(display ?thing stderr))
+	      (%display "serialising ")
+	      (%display ikfasl)
+	      (%display " ... ")
+	      (receive (dir name)
+		  (posix.split-pathname-root-and-tail ikfasl)
+		(posix.mkdir/parents dir #o755))
+	      (let ((port (open-file-output-port ikfasl (file-options no-fail))))
+		(unwind-protect
+		    (fasl-write (make-serialized-library contents) port
+				(retrieve-filename-foreign-libraries filename))
+		  (close-output-port port)))
+	      (%display "done\n")))))
 
 
-(define (load-handler x)
-  (eval x (interaction-environment)))
+;;;; loading programs and libraries
 
-;;Commented out because unused (Marco Maggi; Oct 25, 2011).
-;;
-;; (define (read-and-eval port eval-proc)
-;;   (let ((x (read port)))
-;;     (unless (eof-object? x)
-;;       (eval-proc x)
-;;       (read-and-eval port eval-proc))))
+(module (load)
 
-(case-define* load
-  ;;Load source code from FILENAME,  which must be a string representing
-  ;;a filename,  expecting an  R6RS program, an  R6RS library or  just a
-  ;;list of  forms and transform the contents  of the file in  a list of
-  ;;symbolic expressions.   For each form in the  source apply EVAL-PROC
-  ;;to the corresponding symbolic expression.
-  ;;
-  ;;When  EVAL-PROC  is  not  given:  the forms  are  evaluated  in  the
-  ;;current INTERACTION-ENVIRONMENT.
-  ;;
-  ((filename)
-   (load filename load-handler))
-  (((filename string?) (eval-proc procedure?))
-   (let next-form ((ls (read-script-source-file filename)))
-     (unless (null? ls)
-       (eval-proc (car ls))
-       (next-form (cdr ls))))))
+  (case-define* load
+    ;;Load  source   code  from  FILENAME,   which  must  be   a  string
+    ;;representing  a  filename, expecting:  an  R6RS  program, an  R6RS
+    ;;library or just  a list of forms.  Then transform  the contents of
+    ;;the file in  a list of symbolic expressions; for  each form in the
+    ;;source apply EVAL-PROC to the corresponding symbolic expression.
+    ;;
+    ;;When  EVAL-PROC is  not  given:  the forms  are  evaluated in  the
+    ;;current INTERACTION-ENVIRONMENT.
+    ;;
+    ((filename)
+     (load filename load-handler))
+    (((filename string?) (eval-proc procedure?))
+     (let next-form ((ls (read-script-source-file filename)))
+       (unless (null? ls)
+	 (eval-proc (car ls))
+	 (next-form (cdr ls))))))
+
+  (define (load-handler x)
+    (eval x (interaction-environment)))
+
+  #| end of module: LOAD |# )
 
 (define* (load-r6rs-script (filename string?) serialize? run?)
   ;;Load source code from FILENAME,  which must be a string representing
@@ -261,19 +259,6 @@
 				       (compile-core-expr core-expr))))
     (when run?
       (thunk))))
-
-;;Someday I will write this function.  (Marco Maggi; Mon Jun 4, 2012)
-;;
-;; (define (compile-r6rs-library filename)
-;;   ((current-library-expander)
-;;    (read-library-source-file filename)
-;;    filename
-;;    (lambda (library-ids library-version) (void)))
-;;   (serialize-collected-libraries
-;;    (lambda (file-name contents)
-;;      (do-serialize-library file-name contents))
-;;    (lambda (core-expr)
-;;      (compile-core-expr core-expr))))
 
 
 ;;;; done
