@@ -252,9 +252,9 @@
 ;;
 (module (library-source-file-locator)
   (define-constant __who__
-    'library-source-file-locator)
+    'default-library-source-file-locator)
 
-  (define (%default-library-source-file-locator libname)
+  (define (default-library-source-file-locator libname)
     ;;Default  value  for   the  LIBRARY-SOURCE-FILE-LOCATOR  parameter.
     ;;Given a library name, as defined  by R6RS: scan the library search
     ;;path  for   the  corresponding   source  file;  return   a  string
@@ -299,11 +299,11 @@
       ;;pathname,  without   extension  but  including  a   leading  #\/
       ;;character.  Examples:
       ;;
-      ;;	(%library-identifiers->file-name '(alpha beta gamma))
-      ;;	=> "/alpha/beta/gamma"
+      ;;   (%library-identifiers->file-name '(alpha beta gamma))
+      ;;   => "/alpha/beta/gamma"
       ;;
-      ;;	(%library-identifiers->file-name '(alpha beta main))
-      ;;	=> "/alpha/beta/main_"
+      ;;   (%library-identifiers->file-name '(alpha beta main))
+      ;;   => "/alpha/beta/main_"
       ;;
       ;;notice  how  the  component  "main",  when  appearing  last,  is
       ;;"quoted" by appending an underscore.
@@ -354,9 +354,10 @@
     ;;the corresponding file pathname.
     ;;
     (make-parameter
-	%default-library-source-file-locator
+	default-library-source-file-locator
       (lambda (obj)
-	(with-arguments-validation (__who__)
+	(define who 'library-source-file-locator)
+	(with-arguments-validation (who)
 	    ((procedure	obj))
 	  obj))))
 
@@ -408,6 +409,8 @@
     (let ((filename ((library-source-file-locator) requested-libname)))
       (cond ((not filename)
 	     (assertion-violation __who__ "cannot find library" requested-libname))
+	    ;;Try to load  a FASL library file associated  to the source
+	    ;;file pathname.
 	    (((current-precompiled-library-loader)
 	      filename %install-precompiled-library-and-its-depencencies))
 	    (else
@@ -427,7 +430,7 @@
 	   filename
 	   uid libname.ids libname.version
 	   import-library-descriptor* visit-library-descriptor* invoke-library-descriptor*
-	   exp-subst export-env
+	   export-subst export-env
 	   visit-proc invoke-proc guard-proc
 	   guard-library-descriptor* visible? library-option*)
     ;;Used  as success  continuation  function by  the  function in  the
@@ -461,7 +464,7 @@
 		 (install-library uid
 				  libname.ids libname.version
 				  import-library-descriptor* visit-library-descriptor* invoke-library-descriptor*
-				  exp-subst export-env
+				  export-subst export-env
 				  visit-proc invoke-proc
 				  visit-code invoke-code
 				  guard-code guard-library-descriptor*
