@@ -63,80 +63,82 @@
 
 ;;;; handling of FASL repository file names
 
-;;The file extension of serialised FASL files.
-(define FASL-EXTENSION
-  (boot.case-word-size
-   ((32)	".vicare-32bit-fasl")
-   ((64)	".vicare-64bit-fasl")))
+(module (fasl-search-path
+	 fasl-directory
+	 fasl-path
+	 %make-fasl-pathname)
 
-(define DEFAULT-FASL-DIRECTORY
-  (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
-    (if (and P
-	     ;;FILE-EXISTS? will raise an error if P is empty.
-	     (not (zero? (string-length P)))
-	     (file-exists? P))
-	(posix.real-pathname P)
-      (let ((P (posix.getenv "HOME")))
-	(if (and P
-		 ;;FILE-EXISTS? will raise an error if P is empty.
-		 (not (zero? (string-length P)))
-		 (file-exists? P))
-	    (string-append (posix.real-pathname P) "/.vicare/precompiled")
-	  ""))))
-  ;;The following  code was the  original in Ikarus.  (Marco  Maggi; Sat
-  ;;Mar 10, 2012)
-  #;(cond ((posix.getenv "VICARE_FASL_DIRECTORY"))
-	((posix.getenv "HOME")
-	 => (lambda (s)
-	      (string-append s "/.vicare/precompiled")))
-	(else "")))
+  (define (%file-exists? filename)
+    ;;FILE-EXISTS? will raise an error if P is empty, so we wrap it.
+    ;;
+    (and filename
+	 (string? filename)
+	 (not (fxzero? (string-length filename)))
+	 (file-exists? filename)))
 
-;;The search  path to look for FASL  files.  Notice that we  do not test
-;;the existence of the directories.
-;;
-(define fasl-search-path
-  (make-parameter (list DEFAULT-FASL-DIRECTORY)
-    (lambda (P)
-      (define who 'fasl-path)
-      (with-arguments-validation (who)
-	  ((search-path	P))
-	P))))
+  ;;The file extension of serialised FASL files.
+  (define-constant FASL-EXTENSION
+    (boot.case-word-size
+     ((32)	".vicare-32bit-fasl")
+     ((64)	".vicare-64bit-fasl")))
 
-;;The directory under which serialised FASL files must be saved.
-;;
-(define fasl-directory
-  (make-parameter DEFAULT-FASL-DIRECTORY
-    (lambda (P)
-      (define who 'fasl-directory)
-      (if (string? P)
-	  (if (file-exists? P)
-	      (posix.real-pathname P)
-	    (error who "attempt to set non-existent directory pathname" P))
-	(error who "expected string as directory pathname" P)))))
+  (define-constant DEFAULT-FASL-DIRECTORY
+    (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
+      (if (%file-exists? P)
+	  (posix.real-pathname P)
+	(let ((P (posix.getenv "HOME")))
+	  (if (%file-exists? P)
+	      (string-append (posix.real-pathname P) "/.vicare/precompiled")
+	    "")))))
 
-(define (fasl-path filename)
-  ;;Given a source  file name return the associated  full FASL file name
-  ;;using  the  current  value   of  FASL-DIRECTORY.   Return  false  if
-  ;;FASL-DIRECTORY is unset (which should never happen).
+  ;;The search path to look for FASL  files.  Notice that we do not test
+  ;;the existence of the directories.
   ;;
-  (let ((d (fasl-directory)))
-    (and (not (string=? d ""))
-	 (make-fasl-pathname d filename))))
+  (define fasl-search-path
+    (make-parameter (list DEFAULT-FASL-DIRECTORY)
+      (lambda (P)
+	(define who 'fasl-path)
+	(with-arguments-validation (who)
+	    ((search-path	P))
+	  P))))
 
-(define (make-fasl-pathname prefix-pathname source-file-pathname)
-  ;;We  assume that  PREFIX-PATHNAME,  if it  exists,  has already  been
-  ;;normalised; if  PREFIX-PATHNAME does not  exist: it will  be created
-  ;;when the FASL file is created.
+  ;;The directory under which serialised FASL files must be saved.
   ;;
-  (string-append prefix-pathname
-		 (posix.real-pathname source-file-pathname)
-		 FASL-EXTENSION))
+  (define fasl-directory
+    (make-parameter DEFAULT-FASL-DIRECTORY
+      (lambda (P)
+	(define who 'fasl-directory)
+	(if (string? P)
+	    (if (file-exists? P)
+		(posix.real-pathname P)
+	      (error who "attempt to set non-existent directory pathname" P))
+	  (error who "expected string as directory pathname" P)))))
+
+  (define (fasl-path filename)
+    ;;Given a source file name return the associated full FASL file name
+    ;;using  the  current  value  of FASL-DIRECTORY.   Return  false  if
+    ;;FASL-DIRECTORY is unset (which should never happen).
+    ;;
+    (let ((d (fasl-directory)))
+      (and (not (string=? d ""))
+	   (%make-fasl-pathname d filename))))
+
+  (define (%make-fasl-pathname prefix-pathname source-file-pathname)
+    ;;We assume  that PREFIX-PATHNAME,  if it  exists, has  already been
+    ;;normalised; if PREFIX-PATHNAME does not  exist: it will be created
+    ;;when the FASL file is created.
+    ;;
+    (string-append prefix-pathname
+		   (posix.real-pathname source-file-pathname)
+		   FASL-EXTENSION))
+
+  #| end of module |# )
 
 
 ;;;; loading and serialising libraries
 
 (module (load-serialized-library
-	 serialize-library-contents)
+	 %serialize-library-contents)
 
   (define-struct serialized-library
     (contents
@@ -161,7 +163,7 @@
     (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))
 		    (if (null? search-path)
 			#f
-		      (let ((ikfasl (make-fasl-pathname (car search-path) filename)))
+		      (let ((ikfasl (%make-fasl-pathname (car search-path) filename)))
 			(if (file-exists? ikfasl)
 			    ikfasl
 			  (next-prefix (cdr search-path))))))))
@@ -190,7 +192,7 @@
                              compiled with a different instance of Vicare.\n" ikfasl)
 		   #f)))))))
 
-  (define (serialize-library-contents filename contents)
+  (define (%serialize-library-contents filename contents)
     ;;Given the source  file name of a library file  and the contents of
     ;;an already compiled library write a FASL file in the repository.
     ;;
@@ -259,7 +261,7 @@
 	 (thunk (expand-r6rs-top-level-make-evaluator prog)))
     (when serialize?
       (serialize-collected-libraries (lambda (lib-filename contents)
-				       (serialize-library-contents lib-filename contents))
+				       (%serialize-library-contents lib-filename contents))
 				     (lambda (core-expr)
 				       (compile-core-expr core-expr))))
     (when run?
