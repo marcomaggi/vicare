@@ -40,7 +40,7 @@
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
 	  serialize-collected-libraries
-	  current-precompiled-library-loader)
+	  current-serialized-library-loader)
     (only (psyntax expander)
 	  expand-r6rs-top-level-make-evaluator)
     (only (ikarus.reader)
@@ -135,7 +135,30 @@
   #| end of module |# )
 
 
-;;;; loading and serialising libraries
+;;;; loading source programs
+
+(define* (load-r6rs-script (filename string?) serialize? run?)
+  ;;Load source code from FILENAME,  which must be a string representing
+  ;;a filename, expecting an R6RS program or an R6RS library and compile
+  ;;it.
+  ;;
+  ;;If  SERIALIZE? is  true: the  libraries  needed by  the program  are
+  ;;compiled, serialized and saved in FASL files.
+  ;;
+  ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
+  ;;
+  (let* ((prog  (read-script-source-file filename))
+	 (thunk (expand-r6rs-top-level-make-evaluator prog)))
+    (when serialize?
+      (serialize-collected-libraries (lambda (lib-filename contents)
+				       (store-serialized-library lib-filename contents))
+				     (lambda (core-expr)
+				       (compile-core-expr core-expr))))
+    (when run?
+      (thunk))))
+
+
+;;;; loading and storing precompiled library files
 
 (module (load-serialized-library
 	 store-serialized-library)
@@ -155,6 +178,9 @@
     ;;
     ;;Print  to the  current error  port appropriate  warning about  the
     ;;availability of the FASL file.
+    ;;
+    ;;This   function   is  the   default   value   for  the   parameter
+    ;;CURRENT-SERIALIZED-LIBRARY-LOADER.
     ;;
     (define (%print-loaded-library name)
       (when (config.print-loaded-libraries)
@@ -220,7 +246,7 @@
   #| end of module |# )
 
 
-;;;; loading programs and libraries
+;;;; general loading of programs and libraries
 
 (module (load)
 
@@ -247,30 +273,10 @@
 
   #| end of module: LOAD |# )
 
-(define* (load-r6rs-script (filename string?) serialize? run?)
-  ;;Load source code from FILENAME,  which must be a string representing
-  ;;a filename, expecting an R6RS program or an R6RS library and compile
-  ;;it.
-  ;;
-  ;;If  SERIALIZE? is  true: the  libraries  needed by  the program  are
-  ;;compiled, serialized and saved in FASL files.
-  ;;
-  ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
-  ;;
-  (let* ((prog  (read-script-source-file filename))
-	 (thunk (expand-r6rs-top-level-make-evaluator prog)))
-    (when serialize?
-      (serialize-collected-libraries (lambda (lib-filename contents)
-				       (store-serialized-library lib-filename contents))
-				     (lambda (core-expr)
-				       (compile-core-expr core-expr))))
-    (when run?
-      (thunk))))
-
 
 ;;;; done
 
-(current-precompiled-library-loader load-serialized-library)
+(current-serialized-library-loader load-serialized-library)
 
 )
 

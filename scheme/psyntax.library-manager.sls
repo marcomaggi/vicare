@@ -44,7 +44,7 @@
 
     current-library-expander
     current-library-collection
-    current-precompiled-library-loader
+    current-serialized-library-loader
 
     ;; library names and version numbers
     library-name?
@@ -402,7 +402,7 @@
 
 ;;;; loading precompiled libraries from files
 
-(define current-precompiled-library-loader
+(define current-serialized-library-loader
   ;;Hold a function  used to load a precompiled  library; this parameter
   ;;is    initialised   in    "ikarus.load.sls"   with    the   function
   ;;LOAD-SERIALIZED-LIBRARY.
@@ -419,7 +419,7 @@
       (lambda (file-name success-kont)
 	#f)
     (lambda (obj)
-      (define who 'current-precompiled-library-loader)
+      (define who 'current-serialized-library-loader)
       (with-arguments-validation (who)
 	  ((procedure	obj))
 	obj))))
@@ -448,7 +448,7 @@
 	     (assertion-violation __who__ "cannot find library" requested-libname))
 	    ;;Try to load  a FASL library file associated  to the source
 	    ;;file pathname.
-	    (((current-precompiled-library-loader)
+	    (((current-serialized-library-loader)
 	      filename %install-precompiled-library-and-its-depencencies))
 	    (else
 	     ;;If we  are here: the precompiled  library loader returned
@@ -471,7 +471,7 @@
 	   visit-proc invoke-proc guard-proc
 	   guard-descr* visible? library-option*)
     ;;Used  as success  continuation  function by  the  function in  the
-    ;;parameter  CURRENT-PRECOMPILED-LIBRARY-LOADER.  All  the arguments
+    ;;parameter  CURRENT-SERIALIZED-LIBRARY-LOADER.   All the  arguments
     ;;after FILENAME are the CONTENTS of the serialized library.
     ;;
     ;;Make sure all  dependencies are met, then install  the library and
