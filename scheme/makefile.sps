@@ -3587,123 +3587,6 @@
 	(set! list-of-library-records (cons x list-of-library-records)))))))
 
 
-(module (make-system-data)
-  (define who 'make-system-data)
-
-  (define (make-system-data export-subst export-env)
-    ;;EXPORT-SUBST has an entry for each  binding to export from all the
-    ;;source libraries in  the boot image.  EXPORT-ENV has  an entry for
-    ;;each  global binding  from all  the source  libraries in  the boot
-    ;;image.
-    ;;
-    (let ((export-subst-clt    (make-collection))
-	  (export-env-clt      (make-collection))
-	  (export-primlocs-clt (make-collection)))
-      ;;Build bindings for the macros  exported by the boot image.  Here
-      ;;we create the binding labels.
-      (each-for ikarus-system-macros
-	(lambda (entry)
-	  ;;The expected format of the entries is:
-	  ;;
-	  ;;   (?macro-name ?binding)
-	  ;;
-	  ;;and specifically:
-	  ;;
-	  ;;   (?built-in-macro-name	(?built-in-macro-name))
-	  ;;   (?core-macro-name	(core-macro	. ?core-macro-name))
-	  ;;   (?non-core-macro-name	(macro		. ?non-core-macro-name))
-	  ;;   (?fluid-macro-name	($fluid		. $fluid-macro-name))
-	  ;;   (?condition-type-name	($core-rtd	. (?condition-rtd ?condition-rcd)))
-	  ;;
-	  ;;We  accumulate   in  the  subst  and   env  collections  the
-	  ;;associations name/label and label/binding
-	  ;;
-	  (let ((name		(car  entry))
-		(binding	(cadr entry))
-		(label		(gensym)))
-	    (export-subst-clt (cons name label))
-	    (export-env-clt   (cons label binding)))))
-      ;;For every exported  primitive function we expect an  entry to be
-      ;;present in EXPORT-ENV with the format:
-      ;;
-      ;;   (?label ?type . ?loc)
-      ;;
-      ;;we add to the subst collection an entry:
-      ;;
-      ;;   (?func-name . ?label)
-      ;;
-      ;;to the env collection an entry:
-      ;;
-      ;;   (?label . (core-prim . ?name))
-      ;;
-      ;;to the primlocs collection an entry:
-      ;;
-      ;;   (?name . ?loc)
-      ;;
-      (each-for (map car identifier->library-map)
-	(lambda (x)
-	  (when (procedure-identifier? x)
-	    (cond ((assq x (export-subst-clt))
-		   (error who "identifier exported twice?" x))
-
-		  ((assq1 x export-subst)
-		   ;;Primitive  defined  (exported)  within  the  compiled
-		   ;;libraries.
-		   => (lambda (name.label)
-			(unless (pair? name.label)
-			  (error who "invalid exports" name.label x))
-			(let ((label (cdr name.label)))
-			  (cond ((assq label export-env)
-				 => (lambda (label.binding)
-				      (let ((binding (cdr label.binding)))
-					(case (car binding)
-					  ((global)
-					   (export-subst-clt    (cons x     label))
-					   (export-env-clt      (cons label (cons 'core-prim x)))
-					   (export-primlocs-clt (cons x     (cdr binding))))
-					  (else
-					   (error who "invalid binding for identifier" label.binding x))))))
-				(else
-				 (error who
-				   "binding from the export list not present in the global environment"
-				   x label))))))
-
-		  (else
-		   ;;Core primitive with no  backing definition from the
-		   ;;expanded  libraries; we  assume  it  is defined  in
-		   ;;other strata of the system
-		   ;;
-		   #;(fprintf (console-error-port) "undefined primitive ~s\n" x)
-		   (let ((label (gensym)))
-		     (export-subst-clt (cons x     label))
-		     (export-env-clt   (cons label (cons 'core-prim x)))))))))
-
-      (values (export-subst-clt) (export-env-clt) (export-primlocs-clt))))
-
-  (define (macro-identifier? x)
-    (and (assq x ikarus-system-macros) #t))
-
-  (define (procedure-identifier? x)
-    (not (macro-identifier? x)))
-
-  (define (assq1 x ls)
-    (let loop ((x x) (ls ls) (p #f))
-      (cond ((null? ls)
-	     p)
-	    ((eq? x (caar ls))
-	     (if p
-		 (if (pair? p)
-		     (if (eq? (cdr p) (cdar ls))
-			 (loop x (cdr ls) p)
-		       (loop x (cdr ls) 2))
-		   (loop x (cdr ls) (+ p 1)))
-	       (loop x (cdr ls) (car ls))))
-	    (else
-	     (loop x (cdr ls) p)))))
-
-  #| end of module: MAKE-SYSTEM-DATA |# )
-
-
 (define (build-system-library export-subst export-env primlocs)
   (define (main export-subst export-env primlocs)
     (let ((code `(library (ikarus primlocs)
@@ -3911,6 +3794,117 @@
 	  (else
 	   (cons (car export-subst)
 		 (prune-subst (cdr export-subst) export-env)))))
+
+  (define (make-system-data export-subst export-env)
+    ;;EXPORT-SUBST has an entry for each  binding to export from all the
+    ;;source libraries in  the boot image.  EXPORT-ENV has  an entry for
+    ;;each  global binding  from all  the source  libraries in  the boot
+    ;;image.
+    ;;
+    ;;Return 3 values: an EXPORT-SUBST alist with entries:
+    ;;
+    ;;   (?func-name  . ?label)
+    ;;   (?macro-name . ?label)
+    ;;
+    ;;an EXPORT-ENV alist with entries:
+    ;;
+    ;;   (?label . (core-prim . ?func-name))
+    ;;   (?label . ?macro-binding)
+    ;;
+    ;;a primlocs alist with entries:
+    ;;
+    ;;   (?func-name . ?loc)
+    ;;
+    (define-constant __who__ 'make-system-data)
+    (define-syntax-rule (macro-identifier? x)
+      (and (assq x ikarus-system-macros) #t))
+    (define-syntax-rule (procedure-identifier? x)
+      (not (macro-identifier? x)))
+    (let ((export-subst-clt    (make-collection))
+	  (export-env-clt      (make-collection))
+	  (export-primlocs-clt (make-collection)))
+      ;;Build bindings for the macros  exported by the boot image.  Here
+      ;;we  create  the binding  labels.   The  expected format  of  the
+      ;;entries is:
+      ;;
+      ;;   (?macro-name ?binding)
+      ;;
+      ;;and specifically:
+      ;;
+      ;;   (?built-in-macro-name	(?built-in-macro-name))
+      ;;   (?core-macro-name		(core-macro	. ?core-macro-name))
+      ;;   (?non-core-macro-name	(macro		. ?non-core-macro-name))
+      ;;   (?fluid-macro-name		($fluid		. $fluid-macro-name))
+      ;;   (?condition-type-name	($core-rtd	. (?condition-rtd ?condition-rcd)))
+      ;;
+      ;;We accumulate in the subst  and env collections the associations
+      ;;name/label and label/binding
+      ;;
+      (each-for ikarus-system-macros
+	(lambda (entry)
+	  (let ((name		(car  entry))
+		(binding	(cadr entry))
+		(label		(gensym)))
+	    (export-subst-clt (cons name label))
+	    (export-env-clt   (cons label binding)))))
+      ;;For every exported  primitive function we expect an  entry to be
+      ;;present in EXPORT-ENV with the format:
+      ;;
+      ;;   (?label ?type . ?loc)
+      ;;
+      ;;here we add to the subst collection an entry:
+      ;;
+      ;;   (?func-name . ?label)
+      ;;
+      ;;to the env collection an entry:
+      ;;
+      ;;   (?label . (core-prim . ?func-name))
+      ;;
+      ;;to the primlocs collection an entry:
+      ;;
+      ;;   (?func-name . ?loc)
+      ;;
+      (each-for (map car identifier->library-map)
+	(lambda (prim-name)
+	  (when (procedure-identifier? prim-name)
+	    (cond ((assq prim-name (export-subst-clt))
+		   (error __who__ "identifier exported twice?" prim-name))
+
+		  ((assq prim-name export-subst)
+		   ;;Primitive  defined  (exported)  within  the  compiled
+		   ;;libraries.
+		   => (lambda (name.label)
+			(unless (pair? name.label)
+			  (error __who__ "invalid exports" name.label prim-name))
+			(let ((label (cdr name.label)))
+			  (cond ((assq label export-env)
+				 => (lambda (label.binding)
+				      (let ((binding (cdr label.binding)))
+					(case (car binding)
+					  ((global)
+					   (export-subst-clt    (cons prim-name     label))
+					   (export-env-clt      (cons label (cons 'core-prim prim-name)))
+					   (export-primlocs-clt (cons prim-name     (cdr binding))))
+					  (else
+					   (error __who__
+					     "invalid binding for identifier"
+					     label.binding prim-name))))))
+				(else
+				 (error __who__
+				   "binding from the export list not present in the global environment"
+				   prim-name label))))))
+
+		  (else
+		   ;;Core primitive with no  backing definition from the
+		   ;;expanded  libraries; we  assume  it  is defined  in
+		   ;;other strata of the system
+		   ;;
+		   #;(fprintf (console-error-port) "undefined primitive ~s\n" prim-name)
+		   (let ((label (gensym)))
+		     (export-subst-clt (cons prim-name label))
+		     (export-env-clt   (cons label     (cons 'core-prim prim-name)))))))))
+
+      (values (export-subst-clt) (export-env-clt) (export-primlocs-clt))))
 
   #| end of module: EXPAND-ALL |# )
 
