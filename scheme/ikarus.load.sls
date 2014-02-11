@@ -138,7 +138,7 @@
 ;;;; loading and serialising libraries
 
 (module (load-serialized-library
-	 %serialize-library-contents)
+	 store-serialized-library)
 
   (define-struct serialized-library
     (contents
@@ -192,7 +192,7 @@
                              compiled with a different instance of Vicare.\n" ikfasl)
 		   #f)))))))
 
-  (define (%serialize-library-contents filename contents)
+  (define (store-serialized-library filename contents)
     ;;Given the source  file name of a library file  and the contents of
     ;;an already compiled library write a FASL file in the repository.
     ;;
@@ -261,7 +261,7 @@
 	 (thunk (expand-r6rs-top-level-make-evaluator prog)))
     (when serialize?
       (serialize-collected-libraries (lambda (lib-filename contents)
-				       (%serialize-library-contents lib-filename contents))
+				       (store-serialized-library lib-filename contents))
 				     (lambda (core-expr)
 				       (compile-core-expr core-expr))))
     (when run?
