@@ -3587,16 +3587,84 @@
 	(set! list-of-library-records (cons x list-of-library-records)))))))
 
 
-(define (make-system-data subst env)
-  ;;SUBST  is  an  alist  representing  the  substitutions  of  all  the
-  ;;libraries  in the  boot  image,  ENV is  an  alist representing  the
-  ;;environment of all the libraries in the boot image.
-  ;;
+(module (make-system-data)
   (define who 'make-system-data)
+
+  (define (make-system-data export-subst export-env)
+    ;;EXPORT-SUBST has an entry for each  binding to export from all the
+    ;;source libraries in  the boot image.  EXPORT-ENV has  an entry for
+    ;;each  global binding  from all  the source  libraries in  the boot
+    ;;image.
+    ;;
+    (let ((export-subst-clt    (make-collection))
+	  (export-env-clt      (make-collection))
+	  (export-primlocs-clt (make-collection)))
+      ;;Build bindings for the macros  exported by the boot image.  Here
+      ;;we create the binding labels.
+      (each-for ikarus-system-macros
+	(lambda (entry)
+	  ;;The expected format of the entries is:
+	  ;;
+	  ;;   (?macro-name ?binding)
+	  ;;
+	  ;;and specifically:
+	  ;;
+	  ;;   (?built-in-macro-name	(?built-in-macro-name))
+	  ;;   (?core-macro-name	(core-macro	. ?core-macro-name))
+	  ;;   (?non-core-macro-name	(macro		. ?non-core-macro-name))
+	  ;;   (?fluid-macro-name	($fluid		. $fluid-macro-name))
+	  ;;   (?condition-type-name	($core-rtd	. (?condition-rtd ?condition-rcd)))
+	  ;;
+	  ;;We  accumulate   in  the  subst  and   env  collections  the
+	  ;;associations name/label and label/binding
+	  ;;
+	  (let ((name		(car  entry))
+		(binding	(cadr entry))
+		(label		(gensym)))
+	    (export-subst-clt (cons name label))
+	    (export-env-clt   (cons label binding)))))
+      (each-for (map car identifier->library-map)
+	(lambda (x)
+	  (when (procedure-identifier? x)
+	    (cond ((assq x (export-subst-clt))
+		   (error who "ambiguous export" x))
+
+		  ((assq1 x export-subst)
+		   ;;Primitive  defined  (exported)  within  the  compiled
+		   ;;libraries.
+		   => (lambda (p)
+			(unless (pair? p)
+			  (error who "invalid exports" p x))
+			(let ((label (cdr p)))
+			  (cond ((assq label export-env)
+				 => (lambda (p)
+				      (let ((binding (cdr p)))
+					(case (car binding)
+					  ((global)
+					   (export-subst-clt    (cons x label))
+					   (export-env-clt      (cons label (cons 'core-prim x)))
+					   (export-primlocs-clt (cons x (cdr binding))))
+					  (else
+					   (error who "invalid binding for identifier" p x))))))
+				(else
+				 (error who "cannot find binding" x label))))))
+
+		  (else
+		   ;;Core primitive with no backing definition, assumed to
+		   ;;be defined in other strata of the system
+;;;		 (fprintf (console-error-port) "undefined primitive ~s\n" x)
+		   (let ((label (gensym)))
+		     (export-subst-clt (cons x label))
+		     (export-env-clt (cons label (cons 'core-prim x)))))))))
+
+      (values (export-subst-clt) (export-env-clt) (export-primlocs-clt))))
+
   (define (macro-identifier? x)
     (and (assq x ikarus-system-macros) #t))
+
   (define (procedure-identifier? x)
     (not (macro-identifier? x)))
+
   (define (assq1 x ls)
     (let loop ((x x) (ls ls) (p #f))
       (cond ((null? ls)
@@ -3612,50 +3680,7 @@
 	    (else
 	     (loop x (cdr ls) p)))))
 
-  (let ((export-subst    (make-collection))
-        (export-env      (make-collection))
-        (export-primlocs (make-collection)))
-
-    (each-for ikarus-system-macros
-      (lambda (x)
-	(let ((name	(car  x))
-	      (binding	(cadr x))
-	      (label	(gensym)))
-	  (export-subst (cons name label))
-	  (export-env   (cons label binding)))))
-    (each-for (map car identifier->library-map)
-      (lambda (x)
-	(when (procedure-identifier? x)
-	  (cond ((assq x (export-subst))
-		 (error who "ambiguous export" x))
-		((assq1 x subst) =>
-		 ;;Primitive  defined  (exported)  within  the  compiled
-		 ;;libraries.
-		 (lambda (p)
-		   (unless (pair? p)
-		     (error who "invalid exports" p x))
-		   (let ((label (cdr p)))
-		     (cond ((assq label env) =>
-			    (lambda (p)
-			      (let ((binding (cdr p)))
-				(case (car binding)
-				  ((global)
-				   (export-subst (cons x label))
-				   (export-env   (cons label (cons 'core-prim x)))
-				   (export-primlocs (cons x (cdr binding))))
-				  (else
-				   (error who "invalid binding for identifier" p x))))))
-			   (else
-			    (error who "cannot find binding" x label))))))
-		(else
-		 ;;Core primitive with no backing definition, assumed to
-		 ;;be defined in other strata of the system
-;;;		 (fprintf (console-error-port) "undefined primitive ~s\n" x)
-		 (let ((label (gensym)))
-		   (export-subst (cons x label))
-		   (export-env (cons label (cons 'core-prim x)))))))))
-
-    (values (export-subst) (export-env) (export-primlocs))))
+  #| end of module: MAKE-SYSTEM-DATA |# )
 
 
 (define (build-system-library export-subst export-env primlocs)
@@ -3748,9 +3773,8 @@
     ;;   A list of symbols representing the library name.
     ;;
     ;;INVOKE-CODE* -
-    ;;   A list  of symbolic expressions, each evaluating  to the object
-    ;;   to  bind to a global  library binding; there must  be an object
-    ;;   for each entry in the return value EXPORT-ENV.
+    ;;   A list of symbolic expressions, each representing the body of a
+    ;;   library.
     ;;
     ;;EXPORT-SUBST -
     ;;   A subst selecting the bindings  to be exported from the ones in
@@ -3829,12 +3853,12 @@
     ;;itself initialised, by storing the function in the appropriate loc
     ;;gensym.
     ;;
-    (let ((proc	(gensym))
-	  (loc	(gensym))
+    (let ((proc		(gensym))
+	  (loc		(gensym))
 	  (label	(gensym))
-	  (sym	(gensym))
-	  (val	(gensym))
-	  (args	(gensym)))
+	  (sym		(gensym))
+	  (val		(gensym))
+	  (args		(gensym)))
       (values (list '(ikarus.init))
 	      (list `((case-lambda
 		       ;;Apply $SET-SYMBOL-VALUE! to itself.
@@ -3855,16 +3879,17 @@
 	      `(($init-symbol-value! . ,label))
 	      `((,label . (global . ,loc))))))
 
-  (define (prune-subst subst env)
-    ;;Remove all re-exported identifiers (those with labels in SUBST but
-    ;;no binding in ENV).
+  (define (prune-subst export-subst export-env)
+    ;;Remove  all   re-exported  identifiers   (those  with   labels  in
+    ;;EXPORT-SUBST but no binding in EXPORT-ENV).
     ;;
-    (cond ((null? subst)
+    (cond ((null? export-subst)
 	   '())
-	  ((not (assq (cdar subst) env))
-	   (prune-subst (cdr subst) env))
+	  ((not (assq (cdar export-subst) export-env))
+	   (prune-subst (cdr export-subst) export-env))
 	  (else
-	   (cons (car subst) (prune-subst (cdr subst) env)))))
+	   (cons (car export-subst)
+		 (prune-subst (cdr export-subst) export-env)))))
 
   #| end of module: EXPAND-ALL |# )
 
