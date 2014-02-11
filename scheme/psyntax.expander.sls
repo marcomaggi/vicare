@@ -1876,9 +1876,8 @@
   ;;   A list of symbols representing the library name.
   ;;
   ;;INVOKE-CODE -
-  ;;   A list of symbolic expressions,  each evaluating to the object to
-  ;;   bind  to a global  library binding; there  must be an  object for
-  ;;   each entry in the return value EXPORT-ENV.
+  ;;    A list  of symbolic  expressions  representing the  body of  the
+  ;;   library.
   ;;
   ;;EXPORT-SUBST -
   ;;   A  subst selecting the bindings  to be exported from  the ones in
