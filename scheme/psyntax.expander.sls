@@ -1889,9 +1889,11 @@
   ;;
   (receive (id
 	    name ver
-	    imp* vis* inv*
-	    invoke-code visit-code export-subst export-env
-	    guard-code guard-dep*)
+	    imp-descr* vis-descr* inv-descr*
+	    invoke-code visit-code
+	    export-subst export-env
+	    guard-code guard-descr*
+	    option*)
       (expand-library library-sexp)
     (values name invoke-code export-subst export-env)))
 

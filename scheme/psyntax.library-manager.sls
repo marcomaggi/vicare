@@ -179,6 +179,7 @@
   ;;the  list of  symbols from  the library  name, null  or the  list of
   ;;version numbers from the library name.
   ;;
+  (define __who__ 'library-descriptor)
   (with-arguments-validation (__who__)
       ((library		lib))
     (list ($library-id      lib)
