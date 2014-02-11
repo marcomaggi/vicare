@@ -34,7 +34,15 @@ AC_DEFINE([_GNU_SOURCE],[1],[enable everything GNU])
 AC_DEFINE([IK_PROTECT_FROM_STACK_OVERFLOW],[1],
   [Define to true to protect the Scheme stack from overflow.])
 
-AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS,["-O2"])])
+# Command  line  options  for  the executable  "vicare".   The  variable
+# AX_VFLAGS is  for options preselected by  the building infrastructure.
+# The variable VFLAGS  is for user options selected on  the command line
+# of "configure" and "make", for example:
+#
+#    $ make VFLAGS="-g --print-loaded-libraries"
+#
+AS_VAR_SET(AX_VFLAGS,["-O2"])
+AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS)])
 
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
   [whether debugging features are included in compiled Scheme libraries],
@@ -43,7 +51,7 @@ AM_CONDITIONAL([WANT_DEBUG],
   [test "x$vicare_enable_DEBUG" = xyes])
 
 AM_COND_IF([WANT_DEBUG],
-  [AS_VAR_SET(VFLAGS,"$VFLAGS -g")])
+  [AS_VAR_SET(AX_VFLAGS,"$AX_VFLAGS -g")])
 
 VICARE_ENABLE_OPTION([ARGUMENTS_VALIDATION],[arguments-validation],[yes],
   [whether arguments validation is enabled],
@@ -1729,6 +1737,7 @@ AC_CACHE_SAVE
 #page
 #### finish
 
+AC_SUBST([AX_VFLAGS])
 AC_SUBST([VFLAGS])
 
 AC_CONFIG_HEADERS([config.h])

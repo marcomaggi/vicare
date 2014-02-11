@@ -41,11 +41,15 @@ ikarus.config.ss: Makefile ../config.h
 #page
 # To  create the  new boot  image we  use a  prebuilt boot  image; the
 # environment variable names are  hardcoded in the prebuilt boot image
-# and are the Ikarus' ones.
+# and are the Vicare's ones.
 #
-#Notice that VICARE_FASL_DIRECTORY is set to the empty string: this is
-#because  the  fasl  files  are  not generated  by  the  prebuilt  and
-#distributed boot image, and so they cannot be used here.
+# Notice that VICARE_FASL_DIRECTORY  is set to the  empty string: this
+# is because  the fasl  files are  not generated  by the  prebuilt and
+# distributed boot image, and so they cannot be used here.
+#
+# The boot image is  "special": when building it we do  not use any of
+# the command  line options selected  by AX_VFLAGS and  VFLAGS; rather
+# all the options are set in the script "makefile.sps".
 #
 $(NEW_BOOT_FILE): $(EXTRA_DIST) ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\

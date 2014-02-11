@@ -501,16 +501,9 @@ if WANT_TIME_TESTS
 VICARE_TIME_TESTS	= $(TIME_PROGRAM) -p
 endif
 
-# The variable "VFLAGS" is for the user  to be set on the command line
-# of "make" or "configure", for example:
-#
-#   make VFLAGS="-g -O2 --print-loaded-libraries"
-#
-VFLAGS		= @VFLAGS@
-
 VICARE		= $(builddir)/../src/vicare
 VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
-VICARE_FLAGS	= -b $(VICARE_BOOT) $(VFLAGS) --r6rs-script
+VICARE_FLAGS	= -b $(VICARE_BOOT) $(AX_VFLAGS) $(VFLAGS) --r6rs-script
 VICARE_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY); export VICARE_FASL_DIRECTORY;	\
@@ -566,9 +559,7 @@ lalr-test:
 
 VIE			= $(srcdir)/../scripts/vie
 
-# The variable "user_flags"  is for the user to be  set on the command
-# line of "make".
-VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(VFLAGS) $(user_flags)
+VICARE_TEST_RUN_FLAGS	= -b $(VICARE_BOOT) $(AX_VFLAGS) $(VFLAGS)
 VICARE_TEST_RUN_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
@@ -599,14 +590,14 @@ test-exec-modes:
 AM_TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes; export VICARE_CHECK_QUIET; $(VICARE_ENV)
 TEST_EXTENSIONS		= .sps
 SPS_LOG_COMPILER	= $(VICARE)
-AM_SPS_LOG_FLAGS	= -b $(VICARE_BOOT) $(user_flags)
+AM_SPS_LOG_FLAGS	= -b $(VICARE_BOOT) $(AX_VFLAGS) $(VFLAGS)
 
 #page
 #### interface to "make instcheck"
 
 VICARE_INSTCHECK_LIBRARY_PATH = $(DESTDIR)$(VICARE_LIBDIR):$(VICARE_LIBRARY_PATH):$(srcdir):$(srcdir)/../scheme
 
-VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(user_flags)
+VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries  $(AX_VFLAGS) $(VFLAGS)
 VICARE_INSTCHECK_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_INSTCHECK_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
 	LD_LIBRARY_PATH=$(DESTDIR)$(libdir);			export LD_LIBRARY_PATH;		\
