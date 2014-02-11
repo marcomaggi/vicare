@@ -73,7 +73,8 @@
 	       aux.<>			aux.<-)
 	      aux.))
   (import (vicare)
-    (for (vicare expander object-spec)
+    (for (prefix (vicare expander object-spec)
+		 type-specs.)
       expand)
     (nausicaa language oopp auxiliary-syntaxes)
     (nausicaa language oopp conditions)
@@ -141,8 +142,8 @@
 
 (define-syntax <top>
   (let ()
-    (set-identifier-object-spec! #'<top>
-      (make-object-spec '<top> #'<top> #'<top>-predicate))
+    (type-specs.set-identifier-object-spec! #'<top>
+      (type-specs.make-object-spec '<top> #'<top> #'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
       ;;through this syntax.  This tag is  the supertag of all the class
@@ -465,12 +466,12 @@
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 
-		(set-identifier-object-spec! #'THE-TAG
-		  (make-object-spec 'THE-TAG #'THE-TAG #'THE-PUBLIC-PREDICATE
-				    (lambda (slot-id safe?)
-				      #`(THE-TAG :accessor-function #,slot-id))
-				    (lambda (slot-id safe?)
-				      #`(THE-TAG :mutator-function #,slot-id))))
+		(type-specs.set-identifier-object-spec! #'THE-TAG
+		  (type-specs.make-object-spec 'THE-TAG #'THE-TAG #'THE-PUBLIC-PREDICATE
+					       (lambda (slot-id safe?)
+						 #`(THE-TAG :accessor-function #,slot-id))
+					       (lambda (slot-id safe?)
+						 #`(THE-TAG :mutator-function #,slot-id))))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -799,12 +800,12 @@
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 
-		(set-identifier-object-spec! #'THE-TAG
-		  (make-object-spec 'THE-TAG #'THE-TAG #'THE-PREDICATE
-				    (lambda (slot-id safe?)
-				      #`(THE-TAG :accessor-function #,slot-id))
-				    (lambda (slot-id safe?)
-				      #`(THE-TAG :mutator-function #,slot-id))))
+		(type-specs.set-identifier-object-spec! #'THE-TAG
+		  (type-specs.make-object-spec 'THE-TAG #'THE-TAG #'THE-PREDICATE
+					       (lambda (slot-id safe?)
+						 #`(THE-TAG :accessor-function #,slot-id))
+					       (lambda (slot-id safe?)
+						 #`(THE-TAG :mutator-function #,slot-id))))
 
 		(lambda (stx)
 		  (define (synner message subform)
