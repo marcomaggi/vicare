@@ -3855,25 +3855,36 @@
       ;;
       ;;   (?func-name . ?loc)
       ;;
-      ;;Build  a  form  for   the  library  "(ikarus  primlocs)",  which
-      ;;initialises the loc gensyms  of the primitive functions exported
-      ;;by the boot image, and expand  it.  Return 2 values: the library
-      ;;name and the library invoke-code.
+      ;;Build a form for the library "(ikarus primlocs)" which:
+      ;;
+      ;;*  Iterates the  symbol names  representing primitive  functions
+      ;;  exported by the boot  image, storing the associated loc gensym
+      ;;  in their "value" slot.
+      ;;
+      ;;* Initialises the compiler parameter CURRENT-PRIMITIVE-LOCATIONS
+      ;;  to an appropriate function.  This way the compile can retrieve
+      ;;  the loc gensym from the primitive function symbol name.
+      ;;
+      ;;* Installs all the libraries composing the boot image.
+      ;;
+      ;;Return 2 values: the library name and the library invoke-code.
       ;;
       (define library-sexp
 	`(library (ikarus primlocs)
 	   (export) ;;; must be empty
-	   (import (only (ikarus.symbols) system-value-gensym)
+	   (import (only (ikarus.symbols)
+			 system-value-gensym)
 	     (only (psyntax library-manager)
 		   install-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
 	     (ikarus))
 	   (let ((g system-value-gensym))
-	     (for-each (lambda (x)
-			 (putprop (car x) g (cdr x)))
+	     (for-each (lambda (func-name.loc)
+			 (putprop (car func-name.loc) g (cdr func-name.loc)))
 	       ',export-primlocs)
-	     (let ((proc (lambda (x) (getprop x g))))
+	     (let ((proc (lambda (func-name)
+			   (getprop func-name g))))
 	       (current-primitive-locations proc)))
 	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
@@ -3914,12 +3925,12 @@
 			  '() ;; invoke-libs
 			  ',subst ',env void void '#f '#f '#f '() ',visible? '#f)))
 
-    (define (get-export-subset nickname subst)
-      ;;Given the  alist of  substitutions SUBST,  build and  return the
-      ;;subset  of substitutions  corresponding  to  identifiers in  the
+    (define (get-export-subset nickname export-subst)
+      ;;Given the alist of  substitutions EXPORT-SUBST, build and return
+      ;;the subset of substitutions  corresponding to identifiers in the
       ;;library selected by NICKNAME.
       ;;
-      (let loop ((ls subst))
+      (let loop ((ls export-subst))
 	(if (null? ls)
 	    '()
 	  (let ((x (car ls)))
@@ -3955,18 +3966,20 @@
 ;;
 (time-it "the entire bootstrap process"
   (lambda ()
-    (receive (name* core* locs)
+    (receive (name* invoke-code* export-primlocs)
 	(time-it "macro expansion"
 	  (lambda ()
 	    (parameterize ((current-library-collection bootstrap-collection))
 	      (expand-all scheme-library-files))))
       (current-primitive-locations
-       (lambda (x)
-	 ;;(pretty-print/stderr (list x (assq x locs)))
-	 (cond ((assq x locs)
+       (lambda (func-name)
+	 ;;(pretty-print/stderr (list func-name (assq func-name export-primlocs)))
+	 (cond ((assq func-name export-primlocs)
 		=> cdr)
 	       (else
-		(error 'bootstrap "no location for primitive" x)))))
+		(error 'bootstrap
+		  "no location for primitive function"
+		  func-name)))))
       (let ((port (open-file-output-port boot-file-name (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()
@@ -3975,7 +3988,7 @@
 	    		(debug-printf " ~s" name)
 	    		(compile-core-expr-to-port core port))
 	      name*
-	      core*)
+	      invoke-code*)
 	    (debug-printf "\n")))
 	(close-output-port port)))))
 
