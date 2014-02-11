@@ -16,9 +16,10 @@
 
 (library (ikarus load)
   (export
-    load		load-r6rs-script
-    library-path	library-extensions
-    fasl-directory	fasl-path
+    load			load-r6rs-script
+    compile-r6rs-script		run-serialized-r6rs-script
+    library-path		library-extensions
+    fasl-directory		fasl-path
     fasl-search-path)
   (import (except (ikarus)
 		  fixnum-width
@@ -41,6 +42,9 @@
     (only (vicare.foreign-libraries)
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
+	  library-descriptor
+	  visit-library
+	  find-library-by-descr
 	  serialize-collected-libraries
 	  current-library-source-file-locator
 	  current-library-source-loader
@@ -48,7 +52,8 @@
 	  current-include-file-locator
 	  current-include-file-loader)
     (only (psyntax expander)
-	  expand-r6rs-top-level-make-evaluator)
+	  expand-r6rs-top-level-make-evaluator
+	  expand-r6rs-top-level-make-compiler)
     (only (ikarus.reader)
 	  get-annotated-datum
 	  read-script-source-file
@@ -71,6 +76,12 @@
 
 ;;;; handling of FASL repository file names
 
+;;The file extension of serialised FASL files.
+(define-constant FASL-EXTENSION
+  (boot.case-word-size
+   ((32)	".vicare-32bit-fasl")
+   ((64)	".vicare-64bit-fasl")))
+
 (module (fasl-search-path
 	 fasl-directory
 	 fasl-path
@@ -83,12 +94,6 @@
 	 (string? filename)
 	 (not (fxzero? (string-length filename)))
 	 (file-exists? filename)))
-
-  ;;The file extension of serialised FASL files.
-  (define-constant FASL-EXTENSION
-    (boot.case-word-size
-     ((32)	".vicare-32bit-fasl")
-     ((64)	".vicare-64bit-fasl")))
 
   (define-constant DEFAULT-FASL-DIRECTORY
     (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
@@ -164,6 +169,88 @@
 				       (compile-core-expr core-expr))))
     (when run?
       (thunk))))
+
+
+;;;; compiling source programs
+
+(module (compile-r6rs-script
+	 run-serialized-r6rs-script)
+
+  (define-struct serialized-program
+    (lib-descr*
+		;A   list  of   library  descriptors   representing  the
+		;libraries needed to run the program.
+     closure
+		;A  closure  object  representing the  program.   To  be
+		;evaluated after having invoked the required libraries.
+     ))
+
+  (define* (compile-r6rs-script (source-filename %non-empty-string?))
+    (receive (lib-descr* thunk)
+	((expand-r6rs-top-level-make-compiler (read-script-source-file source-filename)))
+      (store-serialized-program source-filename lib-descr* thunk)))
+
+  (define* (run-serialized-r6rs-script (fasl-filename %non-empty-string?))
+    (receive (lib-descr* closure)
+	(load-serialized-program fasl-filename)
+      (map (lambda (descr)
+	     (cond ((find-library-by-descr descr)
+		    => (lambda (lib)
+			 #;(debug-print 'visit-library lib)
+			 (visit-library lib)))
+		   (else
+		    (error __who__
+		      "unable to load library required by program" descr))))
+	lib-descr*)
+      #;(debug-print 'running-thunk closure)
+      (closure)))
+
+  (define* (load-serialized-program fasl-filename)
+    ;;Given the  file name of a  serialized program: load it  and verify
+    ;;its  contents.  Return  2 values:  a list  of library  descriptors
+    ;;representing the program dependencies; a closure object (thunk) to
+    ;;be called to run the program.
+    ;;
+    (if (file-exists? fasl-filename)
+	(let ((x (let ((port (open-file-input-port fasl-filename)))
+		   (unwind-protect
+		       (fasl-read port)
+		     (close-input-port port)))))
+	  (if (serialized-program? x)
+	      (values (serialized-program-lib-descr* x)
+		      (serialized-program-closure    x))
+	    (error __who__
+	      "invalid contents in selected serialized program file"
+	      fasl-filename)))
+      (error __who__
+	"selected serialized program file does not exist" fasl-filename)))
+
+  (define (store-serialized-program source-filename lib-descr* closure)
+    ;;Given  the source  name of  an R6RS  script, the  list of  library
+    ;;descriptors required  for its  execution, a  closure object  to be
+    ;;called to run it: write the serialized program FASL file.
+    ;;
+    (define-syntax-rule (%display ?thing)
+      (display ?thing stderr))
+    (let ((fasl-filename (string-append source-filename FASL-EXTENSION)))
+      (%display "serialising ")
+      (%display fasl-filename)
+      (%display " ... ")
+      (receive (dir name)
+	  (posix.split-pathname-root-and-tail fasl-filename)
+	(posix.mkdir/parents dir #o755))
+      (let ((port (open-file-output-port fasl-filename (file-options no-fail))))
+	(unwind-protect
+	    (fasl-write (make-serialized-program lib-descr* closure) port
+			(retrieve-filename-foreign-libraries source-filename))
+	  (close-output-port port)))
+      (%display "done\n")))
+
+  (define (%non-empty-string? obj)
+    (and (string? obj)
+	 (not (fxzero? (string-length obj)))))
+
+  #| end of module |# )
 
 
 ;;;; locating source library files

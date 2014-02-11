@@ -53,8 +53,10 @@ The synopsis of the @value{EXECUTABLE} program is as follows:
 @smallexample
 @value{RAWEXECUTABLE} [@var{OPTIONS}] [PROGRAM]                      [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-program PROGRAM         [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-program PROGRAM      [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM [-- [@var{PROGRAM OPTS}]]
 @end smallexample
 
@@ -91,6 +93,12 @@ $ @value{RAWEXECUTABLE} --r6rs-script test.sps hi there
 ("test.sps" "hi" "there")
 @end example
 
+@item --r6rs-program @var{PROGRAM}
+@cindex Command line option @option{--r6rs-program}
+@cindex @option{--r6rs-program}, command line option
+Start Vicare in @rnrs{6}--program mode.  The @var{PROGRAM} file is
+handled as a serialized @rnrs{6} program: it is loaded and executed.
+
 @item --r6rs-repl @var{PROGRAM}
 @cindex Command line option @option{--r6rs-repl}
 @cindex @option{--r6rs-repl}, command line option
@@ -114,6 +122,13 @@ $ cat test.sps
 $ @value{RAWEXECUTABLE} --script test.sps hi there
 ("test.sps" "hi" "there")
 @end example
+
+@item --compile-program @var{PROGRAM}
+@cindex Command line option @option{--compile-program}
+@cindex @option{--compile-program}, command line option
+Load the source @rnrs{6} program @var{PROGRAM}, compile it and store a
+serialized version of it in a file whose name is built from
+@var{PROGRAM}.  @var{PROGRAM} itself is not evaluated.
 
 @item --compile-dependencies @var{IMPORTS-FILE}
 @cindex Command line option @option{--compile-dependencies}

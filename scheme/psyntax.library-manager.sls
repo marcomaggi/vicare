@@ -39,7 +39,8 @@
     serialize-collected-libraries
 
     ;; finding and loading libraries
-    find-library-by-name	library-exists?
+    library-exists?
+    find-library-by-name	find-library-by-descr
 
     current-library-expander
     current-library-collection
@@ -174,7 +175,7 @@
   (library? obj)
   (assertion-violation who "expected instance of library struct as argument" obj))
 
-(define* (library-descriptor lib)
+(define* (library-descriptor (lib library?))
   ;;Given a library record return a list holding: the unique library id,
   ;;the  list of  symbols from  the library  name, null  or the  list of
   ;;version numbers from the library name.
@@ -592,6 +593,9 @@
 	    "handling external library did not yield the correct library" libname))))
 
   #| end of module: FIND-LIBRARY-BY-NAME |# )
+
+(define (find-library-by-descr descr)
+  (find-library-by-name (cadr descr)))
 
 (define (%find-library-in-collection-by pred)
   ;;Visit  the current  installed  libraries collection  and return  the

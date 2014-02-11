@@ -1009,6 +1009,7 @@
     expand-top-level			expand-top-level->sexp
     expand-library			expand-library->sexp
     expand-r6rs-top-level-make-evaluator boot-library-expand
+    expand-r6rs-top-level-make-compiler
 
     make-variable-transformer		variable-transformer?
     variable-transformer-procedure
@@ -1809,6 +1810,25 @@
       (cons* label type-sym '*interaction* loc)))
 
   #| end of module: EXPAND-R6RS-TOP-LEVEL-MAKE-EVALUATOR |# )
+
+(define (expand-r6rs-top-level-make-compiler expr*)
+  ;;Given a  list of  SYNTAX-MATCH expression arguments  representing an
+  ;;R6RS top level program, expand it and return a thunk to be evaluated
+  ;;to obtain a closure representing the program.
+  ;;
+  (receive (lib* invoke-code macro* export-subst export-env)
+      (expand-top-level expr*)
+    (lambda ()
+      ;;Make sure that the code of  all the needed libraries is compiled
+      ;;and evaluated.   The storage location gensyms  associated to the
+      ;;exported bindings are initialised with the global values.
+      (for-each invoke-library lib*)
+      ;;Store  the   expanded  code  representing  the   macros  in  the
+      ;;associated location gensyms.
+      (initial-visit! macro*)
+      (values (map library-descriptor lib*)
+	      ;;Convert the expanded language code to core language code.
+	      (compile-core-expr (expanded->core invoke-code))))))
 
 
 ;;;; R6RS program expander

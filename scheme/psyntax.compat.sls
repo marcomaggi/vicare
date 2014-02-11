@@ -39,7 +39,7 @@
     fprintf				debug-print
 
     ;; compiler related operations
-    eval-core
+    eval-core				compile-core-expr
 
     ;; runtime options
     report-errors-at-runtime		strict-r6rs
@@ -84,7 +84,8 @@
     (only (ikarus structs)
 	  struct-type-descriptor?)
     (only (ikarus.compiler)
-	  eval-core)
+	  eval-core
+	  compile-core-expr)
     (only (ikarus system $symbols)
 	  $unintern-gensym)
     (only (vicare options)
