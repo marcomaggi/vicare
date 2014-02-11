@@ -9411,11 +9411,9 @@
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
   ;;return a syntax object that must be further expanded.
   ;;
-  (define-constant __who__ 'include)
-
   (define (include-macro expr-stx)
     (define (%synner message subform)
-      (syntax-violation __who__ message expr-stx subform))
+      (syntax-violation 'include message expr-stx subform))
     (syntax-match expr-stx ()
       ((?context ?filename)
        (%include-file ?filename ?context #f %synner))
@@ -9424,14 +9422,12 @@
       ))
 
   (define (%include-file filename-stx context-id verbose? synner)
-    (when verbose?
-      (display (string-append "Vicare: searching include file: "
-			      (syntax->datum filename-stx) "\n")
-	       (current-error-port)))
-    (let ((pathname (%filename-stx->pathname filename-stx synner)))
-      (when verbose?
-	(display (string-append "Vicare: including file: " pathname "\n")
-		 (current-error-port)))
+    (receive (pathname contents)
+	;;FIXME Why in  fuck I cannot use the  parameter here?!?  (Marco
+	;;Maggi; Tue Feb 11, 2014)
+	(default-include-loader #;(current-include-loader)
+	 (syntax->datum filename-stx) verbose? synner)
+      ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (let ()
 		      (import (only (vicare $posix)
@@ -9439,46 +9435,9 @@
 		      (or (not (file-exists? ,pathname))
 			  (> (file-modification-time ,pathname)
 			     ,(file-modification-time pathname))))
-	  ,@(%read-content context-id pathname)))))
-
-  (define (%filename-stx->pathname filename-stx synner)
-    ;;Convert  the  string  FILENAME  into the  string  pathname  of  an
-    ;;existing file; return the pathname.
-    ;;
-    (define filename
-      (syntax->datum filename-stx))
-    (unless (and (string? filename)
-		 (not (fxzero? (string-length filename))))
-      (synner "file name must be a nonempty string" filename-stx))
-    (if (char=? (string-ref filename 0) #\/)
-	;;It is an absolute pathname.
-	(real-pathname filename)
-      ;;It is a relative pathname.  Search the file in the library path.
-      (let loop ((ls (library-path)))
-	(if (null? ls)
-	    (synner "file does not exist in library path" filename-stx)
-	  (let ((ptn (string-append (car ls) "/" filename)))
-	    (if (file-exists? ptn)
-		(real-pathname ptn)
-	      (loop (cdr ls))))))))
-
-  (define (%read-content context-id pathname)
-    ;;Open the  file PATHNAME, read all  the datums and convert  them to
-    ;;syntax object  in the  lexical context  of CONTEXT-ID;  return the
-    ;;resulting syntax object.
-    ;;
-    (with-exception-handler
-	(lambda (E)
-	  (raise-continuable (condition (make-who-condition __who__) E)))
-      (lambda ()
-	(with-input-from-file pathname
-	  (lambda ()
-	    (let recur ()
-	      (let ((datum (get-annotated-datum (current-input-port))))
-		(if (eof-object? datum)
-		    '()
-		  (cons (datum->syntax context-id datum)
-			(recur))))))))))
+	  . ,(map (lambda (item)
+		    (datum->syntax context-id item))
+	       contents)))))
 
   #| end of module: INCLUDE-MACRO |# )
 

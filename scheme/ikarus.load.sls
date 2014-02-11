@@ -17,6 +17,7 @@
 (library (ikarus load)
   (export
     load		load-r6rs-script
+    library-path	library-extensions
     fasl-directory	fasl-path
     fasl-search-path)
   (import (except (ikarus)
@@ -25,8 +26,9 @@
 		  least-fixnum
 
 		  load			load-r6rs-script
+		  library-path		library-extensions
 		  fasl-directory	fasl-path
-		  fasl-search-path)
+		  fasl-search-path	get-annotated-datum)
     (prefix (only (ikarus.posix)
 		  getenv
 		  mkdir/parents
@@ -40,11 +42,15 @@
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
 	  serialize-collected-libraries
-	  current-source-library-loader
-	  current-serialized-library-loader)
+	  current-library-source-file-locator
+	  current-library-source-loader
+	  current-library-serialized-loader
+	  current-include-file-locator
+	  current-include-file-loader)
     (only (psyntax expander)
 	  expand-r6rs-top-level-make-evaluator)
     (only (ikarus.reader)
+	  get-annotated-datum
 	  read-script-source-file
 	  read-library-source-file)
     (prefix (only (vicare options)
@@ -160,6 +166,165 @@
       (thunk))))
 
 
+;;;; locating source library files
+;;
+;;The library source file locator is  a function that converts a library
+;;name specification into the corresponding file pathname.
+;;
+(module (locate-library-source-file
+	 library-path
+	 library-extensions)
+  (define-constant __who__
+    'locate-library-source-file)
+
+  (define library-path
+    ;;Hold a list of strings  representing directory pathnames being the
+    ;;search path.
+    ;;
+    (make-parameter
+	'(".")
+      (lambda (obj)
+	(define-constant __who__ 'library-path)
+	(with-arguments-validation (__who__)
+	    ((list-of-strings	obj))
+	  obj))))
+
+  (define library-extensions
+    ;;Hold a list of strings  representing file name extensions, leading
+    ;;dot included.
+    ;;
+    (make-parameter
+	'(".vicare.sls" ".sls")
+      (lambda (obj)
+	(define-constant __who__ 'library-extensions)
+	(with-arguments-validation (__who__)
+	    ((list-of-strings	obj))
+	  obj))))
+
+  (define (locate-library-source-file libname pending-libraries)
+    ;;Default   value    for   the   CURRENT-LIBRARY-SOURCE-FILE-LOCATOR
+    ;;parameter.  Given  a library  name, as defined  by R6RS:  scan the
+    ;;library search  path for the  corresponding source file;  return a
+    ;;string representing the source file pathname having:
+    ;;
+    ;;* The  directory part equal to  one of the directory  pathnames in
+    ;;  the parameter  LIBRARY-PATH.
+    ;;
+    ;;*  File extension  part  equal to  one of  the  extensions in  the
+    ;;  parameter LIBRARY-EXTENSIONS.
+    ;;
+    ;;For this function,  a "library name" is a list  of symbols without
+    ;;the version specification.
+    ;;
+    ;;PENDING-LIBRARIES must be  a possibly empty list  of library names
+    ;;whose installation is currently  pending; when non-empty, the list
+    ;;represents   the  libraries   that  are   requesting  LIBNAME   as
+    ;;dependency.
+    ;;
+    (let loop ((rootname-str     (%library-identifiers->file-name libname))
+	       (directories      (library-path))
+	       (file-extensions  (library-extensions))
+	       (failed-list      '()))
+      (cond ((null? directories)
+	     ;;No suitable library was found.
+	     (%file-locator-resolution-error libname (reverse failed-list)
+					     pending-libraries))
+
+	    ((null? file-extensions)
+	     ;;No more extensions: try the  next directory in the search
+	     ;;path.
+	     (loop rootname-str (cdr directories) (library-extensions) failed-list))
+	    (else
+	     ;;Check the  file existence  in the current  directory with
+	     ;;the current  file extension;  if not  found try  the next
+	     ;;file extension.
+	     (let ((pathname (string-append (car directories) rootname-str (car file-extensions))))
+	       (if (file-exists? pathname)
+		   pathname
+		 (loop rootname-str directories (cdr file-extensions) (cons pathname failed-list))))))))
+
+  (module (%library-identifiers->file-name)
+
+    (define (%library-identifiers->file-name library-name.ids)
+      ;;Convert the  non-empty list of  identifiers from a  library name
+      ;;into  a  string  representing the  corresponding  relative  file
+      ;;pathname,  without   extension  but  including  a   leading  #\/
+      ;;character.  Examples:
+      ;;
+      ;;   (%library-identifiers->file-name '(alpha beta gamma))
+      ;;   => "/alpha/beta/gamma"
+      ;;
+      ;;   (%library-identifiers->file-name '(alpha beta main))
+      ;;   => "/alpha/beta/main_"
+      ;;
+      ;;notice  how  the  component  "main",  when  appearing  last,  is
+      ;;"quoted" by appending an underscore.
+      ;;
+      (assert (not (null? library-name.ids)))
+      (receive (port extract)
+	  (open-string-output-port)
+	(let next-component ((component		(car library-name.ids))
+			     (ls		(cdr library-name.ids))
+			     (first-component?	#t))
+	  (write-char #\/ port)
+	  (let ((component-name (symbol->string component)))
+	    (for-each (lambda (n)
+			(let ((c (integer->char n)))
+			  (if (or (char<=? #\a c #\z)
+				  (char<=? #\A c #\Z)
+				  (char<=? #\0 c #\9)
+				  (memv c '(#\. #\- #\+ #\_)))
+			      (write-char c port)
+			    (let-values (((D M) (div-and-mod n 16)))
+			      (write-char #\% port)
+			      (display-hex D port)
+			      (display-hex M port)))))
+	      (bytevector->u8-list (string->utf8 component-name)))
+	    (if (null? ls)
+		(when (and (not first-component?)
+			   (main*? component-name))
+		  (write-char #\_ port))
+	      (next-component (car ls) (cdr ls) #f))))
+	(extract)))
+
+    (define (display-hex n port)
+      (if (<= 0 n 9)
+	  (display n port)
+	(write-char (integer->char (+ (char->integer #\a) (- n 10))) port)))
+
+    (define (main*? component-name)
+      (and (>= (string-length component-name) 4)
+	   (string=? (substring component-name 0 4) "main")
+	   (for-all (lambda (ch)
+		      (char=? ch #\_))
+	     (string->list (substring component-name 4 (string-length component-name))))))
+
+    #| end of module: %LIBRARY-IDENTIFIERS->FILE-NAME |# )
+
+  (define (%file-locator-resolution-error libname failed-list pending-libraries)
+    (raise
+     (apply condition (make-error)
+	    (make-who-condition 'expander)
+	    (make-message-condition "cannot locate library in library-path")
+	    (make-library-resolution-condition libname failed-list)
+	    (map make-imported-from-condition pending-libraries))))
+
+  (define-condition-type &library-resolution
+      &condition
+    make-library-resolution-condition
+    library-resolution-condition?
+    (library condition-library)
+    (files condition-files))
+
+  (define-condition-type &imported-from
+      &condition
+    make-imported-from-condition
+    imported-from-condition?
+    (importing-library importing-library))
+
+  #| end of module: LOCATE-LIBRARY-SOURCE-FILE |# )
+
+
 ;;;; loading and storing precompiled library files
 
 (module (load-serialized-library
@@ -182,7 +347,7 @@
     ;;availability of the FASL file.
     ;;
     ;;This   function   is  the   default   value   for  the   parameter
-    ;;CURRENT-SERIALIZED-LIBRARY-LOADER.
+    ;;CURRENT-LIBRARY-SERIALIZED-LOADER.
     ;;
     (define (%print-loaded-library name)
       (when (config.print-loaded-libraries)
@@ -276,10 +441,53 @@
   #| end of module: LOAD |# )
 
 
+;;;; locating and loading include files
+
+(define (locate-include-file filename synner)
+  ;;Convert the string FILENAME into  the string pathname of an existing
+  ;;file; return the pathname.
+  ;;
+  (unless (and (string? filename)
+	       (not (fxzero? (string-length filename))))
+    (synner "file name must be a nonempty string" filename))
+  (if (char=? (string-ref filename 0) #\/)
+      ;;It is an absolute pathname.
+      (posix.real-pathname filename)
+    ;;It is a relative pathname.  Search the file in the library path.
+    (let loop ((ls (library-path)))
+      (if (null? ls)
+	  (synner "file does not exist in library path" filename)
+	(let ((ptn (string-append (car ls) "/" filename)))
+	  (if (file-exists? ptn)
+	      (posix.real-pathname ptn)
+	    (loop (cdr ls))))))))
+
+(define (read-include-file pathname synner)
+  ;;Open the file PATHNAME, read all  the datums and return them.  If an
+  ;;error occurs call SYNNER.
+  ;;
+  ;;We expect the  returned contents to be a list  of annotated symbolic
+  ;;expressions.
+  ;;
+  (guard (E (else
+	     (synner (condition-message E) pathname)))
+    (let ((port (open-input-file pathname)))
+      (unwind-protect
+	  (let recur ()
+	    (let ((datum (get-annotated-datum port)))
+	      (if (eof-object? datum)
+		  '()
+		(cons datum (recur)))))
+	(close-input-port port)))))
+
+
 ;;;; done
 
-(current-source-library-loader		read-library-source-file)
-(current-serialized-library-loader	load-serialized-library)
+(current-library-source-file-locator	locate-library-source-file)
+(current-library-source-loader		read-library-source-file)
+(current-library-serialized-loader	load-serialized-library)
+(current-include-file-locator		locate-include-file)
+(current-include-file-loader		read-include-file)
 
 )
 

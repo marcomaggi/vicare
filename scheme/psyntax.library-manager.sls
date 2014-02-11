@@ -38,14 +38,20 @@
     visit-library		invoke-library
     serialize-collected-libraries
 
-    ;; finding libraries
+    ;; finding and loading libraries
     find-library-by-name	library-exists?
-    library-path		library-extensions
 
     current-library-expander
     current-library-collection
-    current-source-library-loader
-    current-serialized-library-loader
+    current-library-source-file-locator
+    current-library-source-loader
+    current-library-serialized-loader
+
+    ;; finding and loading include files
+    default-include-loader
+    current-include-loader
+    current-include-file-locator
+    current-include-file-loader
 
     ;; library names and version numbers
     library-name?
@@ -180,33 +186,6 @@
 	  ($library-version lib))))
 
 
-;;;; public configuration parameters
-
-(define library-path
-  ;;Hold a  list of strings  representing directory pathnames  being the
-  ;;search path.
-  ;;
-  (make-parameter
-      '(".")
-    (lambda (obj)
-      (define-constant __who__ 'library-path)
-      (with-arguments-validation (__who__)
-	  ((list-of-strings	obj))
-	obj))))
-
-(define library-extensions
-  ;;Hold a  list of strings  representing file name  extensions, leading
-  ;;dot included.
-  ;;
-  (make-parameter
-      '(".vicare.sls" ".sls")
-    (lambda (obj)
-      (define-constant __who__ 'library-extensions)
-      (with-arguments-validation (__who__)
-	  ((list-of-strings	obj))
-	obj))))
-
-
 ;;;; expanding libraries
 ;;
 ;;The  current library  expander is  used to  expand LIBRARY  forms from
@@ -282,128 +261,30 @@
   (make-parameter '()))
 
 
-;;;; finding source libraries on the file system
-;;
-;;The library source file locator is  a function that converts a library
-;;name specification into the corresponding file pathname.
-;;
-(module (library-source-file-locator)
-  (define-constant __who__
-    'default-library-source-file-locator)
-
-  (define (default-library-source-file-locator libname)
-    ;;Default  value  for   the  LIBRARY-SOURCE-FILE-LOCATOR  parameter.
-    ;;Given a library name, as defined  by R6RS: scan the library search
-    ;;path  for   the  corresponding   source  file;  return   a  string
-    ;;representing the  source file  pathname having the  directory part
-    ;;equal to one of the directory pathnames in LIBRARY-PATH.
-    ;;
-    ;;For this function,  a "library name" is a list  of symbols without
-    ;;the version specification.
-    ;;
-    ;;If a  matching file is not  found call a function  from the compat
-    ;;library: FILE-LOCATOR-RESOLUTION-ERROR.
-    ;;
-    (let loop ((rootname-str     (%library-identifiers->file-name libname))
-	       (directories      (library-path))
-	       (file-extensions  (library-extensions))
-	       (failed-list      '()))
-      (cond ((null? directories)
-	     ;;No suitable library was found.
-	     (file-locator-resolution-error libname (reverse failed-list)
-					    (let ((ls (%external-pending-libraries)))
-					      (if (null? ls)
-						  (error __who__ "BUG")
-						(cdr ls)))))
-	    ((null? file-extensions)
-	     ;;No more extensions: try the  next directory in the search
-	     ;;path.
-	     (loop rootname-str (cdr directories) (library-extensions) failed-list))
-	    (else
-	     ;;Check the  file existence  in the current  directory with
-	     ;;the current  file extension;  if not  found try  the next
-	     ;;file extension.
-	     (let ((pathname (string-append (car directories) rootname-str (car file-extensions))))
-	       (if (file-exists? pathname)
-		   pathname
-		 (loop rootname-str directories (cdr file-extensions) (cons pathname failed-list))))))))
-
-  (module (%library-identifiers->file-name)
-
-    (define (%library-identifiers->file-name library-name.ids)
-      ;;Convert the  non-empty list of  identifiers from a  library name
-      ;;into  a  string  representing the  corresponding  relative  file
-      ;;pathname,  without   extension  but  including  a   leading  #\/
-      ;;character.  Examples:
-      ;;
-      ;;   (%library-identifiers->file-name '(alpha beta gamma))
-      ;;   => "/alpha/beta/gamma"
-      ;;
-      ;;   (%library-identifiers->file-name '(alpha beta main))
-      ;;   => "/alpha/beta/main_"
-      ;;
-      ;;notice  how  the  component  "main",  when  appearing  last,  is
-      ;;"quoted" by appending an underscore.
-      ;;
-      (assert (not (null? library-name.ids)))
-      (receive (port extract)
-	  (open-string-output-port)
-	(let next-component ((component		(car library-name.ids))
-			     (ls		(cdr library-name.ids))
-			     (first-component?	#t))
-	  (write-char #\/ port)
-	  (let ((component-name (symbol->string component)))
-	    (for-each (lambda (n)
-			(let ((c (integer->char n)))
-			  (if (or (char<=? #\a c #\z)
-				  (char<=? #\A c #\Z)
-				  (char<=? #\0 c #\9)
-				  (memv c '(#\. #\- #\+ #\_)))
-			      (write-char c port)
-			    (let-values (((D M) (div-and-mod n 16)))
-			      (write-char #\% port)
-			      (display-hex D port)
-			      (display-hex M port)))))
-	      (bytevector->u8-list (string->utf8 component-name)))
-	    (if (null? ls)
-		(when (and (not first-component?)
-			   (main*? component-name))
-		  (write-char #\_ port))
-	      (next-component (car ls) (cdr ls) #f))))
-	(extract)))
-
-    (define (display-hex n port)
-      (if (<= 0 n 9)
-	  (display n port)
-	(write-char (integer->char (+ (char->integer #\a) (- n 10))) port)))
-
-    (define (main*? component-name)
-      (and (>= (string-length component-name) 4)
-	   (string=? (substring component-name 0 4) "main")
-	   (for-all (lambda (ch)
-		      (char=? ch #\_))
-	     (string->list (substring component-name 4 (string-length component-name))))))
-
-    #| end of module: %LIBRARY-IDENTIFIERS->FILE-NAME |# )
-
-  (define library-source-file-locator
-    ;;Hold a  function used to  convert a library name  specification into
-    ;;the corresponding file pathname.
-    ;;
-    (make-parameter
-	default-library-source-file-locator
-      (lambda (obj)
-	(define who 'library-source-file-locator)
-	(with-arguments-validation (who)
-	    ((procedure	obj))
-	  obj))))
-
-  #| end of module: LIBRARY-SOURCE-FILE-LOCATOR |# )
-
-
 ;;;; loading source and serialized libraries from files
 
-(define current-source-library-loader
+(define current-library-source-file-locator
+  ;;Hold a  function used to  convert a library name  specification into
+  ;;the  corresponding  file  pathname; this  parameter  is  initialised
+  ;;"ikarus.load.sls" with the function LOCATE-LIBRARY-SOURCE-FILE.
+  ;;
+  ;;The selected  function must accept  2 values: a  string representing
+  ;;the source  library file  name; the possibly  empty list  of library
+  ;;names that  representing the  libraries that requested  this library
+  ;;loading.  The second argument is the cdr of the current value in the
+  ;;parameter %EXTERNAL-PENDING-LIBRARIES.
+  ;;
+  (make-parameter
+      (lambda (filename pending-libraries)
+	(error 'current-library-source-file-locator
+	  "source library locator not set" filename))
+    (lambda (obj)
+      (define who 'current-library-source-file-locator)
+      (with-arguments-validation (who)
+	  ((procedure	obj))
+	obj))))
+
+(define current-library-source-loader
   ;;Hold a  function used to  laod a  source library; this  parameter is
   ;;initialised      "ikarus.load.sls"       with      the      function
   ;;READ-LIBRARY-SOURCE-FILE.
@@ -414,15 +295,15 @@
   ;;
   (make-parameter
       (lambda (filename)
-	(error 'current-source-library-loader
+	(error 'current-library-source-loader
 	  "source library loader not set" filename))
     (lambda (obj)
-      (define who 'current-source-library-loader)
+      (define who 'current-library-source-loader)
       (with-arguments-validation (who)
 	  ((procedure	obj))
 	obj))))
 
-(define current-serialized-library-loader
+(define current-library-serialized-loader
   ;;Hold a function  used to load a precompiled  library; this parameter
   ;;is    initialised   in    "ikarus.load.sls"   with    the   function
   ;;LOAD-SERIALIZED-LIBRARY.
@@ -439,7 +320,84 @@
       (lambda (file-name success-kont)
 	#f)
     (lambda (obj)
-      (define who 'current-serialized-library-loader)
+      (define who 'current-library-serialized-loader)
+      (with-arguments-validation (who)
+	  ((procedure	obj))
+	obj))))
+
+
+;;;; including files
+
+(module (current-include-loader
+	 default-include-loader)
+
+  (define* (default-include-loader (filename string?) verbose? synner)
+    ;;Default value for the parameter CURRENT-INCLUDE-LOADER.  Search an
+    ;;include file with name FILENAME.  When successful return 2 values:
+    ;;the  full pathname  from which  the  file was  loaded, a  symbolic
+    ;;expresison representing the file  contents.  When an error occurs:
+    ;;call the procedure SYNNER.
+    ;;
+    ;;If VERBOSE? is true: display verbose messages on the current error
+    ;;port describing the including process.
+    ;;
+    (when verbose?
+      (fprintf (current-error-port)
+	       "Vicare: searching include file: ~a\n" filename))
+    (let ((pathname ((current-include-file-locator) filename synner)))
+      (when verbose?
+	(fprintf (current-error-port)
+		 "Vicare: including file: ~a\n" pathname))
+      (values pathname ((current-include-file-loader) pathname synner))))
+
+  (define current-include-loader
+    ;;Hold a function used to load an include file.
+    ;;
+    (make-parameter
+	default-include-loader
+      (lambda (obj)
+	(define who 'current-include-loader)
+	(with-arguments-validation (who)
+	    ((procedure	obj))
+	  obj))))
+
+  #| end of module: CURRENT-INCLUDE-LOADER |# )
+
+(define current-include-file-locator
+  ;;Hold  a function  used  to convert  an include  file  name into  the
+  ;;corresponding   file  pathname;   this   parameter  is   initialised
+  ;;"ikarus.load.sls" with the function LOCATE-INCLUDE-FILE.
+  ;;
+  ;;The referenced function must accept  3 values: a string representing
+  ;;the include  file name; a  boolean, true  if the process  of loading
+  ;;must display  verbose messages on  the current error port;  a synner
+  ;;function used to report errors.
+  ;;
+  (make-parameter
+      (lambda (filename pending-libraries)
+	(error 'current-include-file-locator
+	  "include file locator not set" filename))
+    (lambda (obj)
+      (define who 'current-include-file-locator)
+      (with-arguments-validation (who)
+	  ((procedure	obj))
+	obj))))
+
+(define current-include-file-loader
+  ;;Hold a  function used  to laod  an include  file; this  parameter is
+  ;;initialised "ikarus.load.sls" with the function READ-INCLUDE-FILE.
+  ;;
+  ;;The referenced function must accept  3 values: a string representing
+  ;;an existent file pathname; a boolean, true if the process of loading
+  ;;must display  verbose messages on  the current error port;  a synner
+  ;;function used to report errors.
+  ;;
+  (make-parameter
+      (lambda (filename)
+	(error 'current-include-file-loader
+	  "include file loader not set" filename))
+    (lambda (obj)
+      (define who 'current-include-file-loader)
       (with-arguments-validation (who)
 	  ((procedure	obj))
 	obj))))
@@ -463,12 +421,14 @@
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
     ;;
-    (let ((filename ((library-source-file-locator) requested-libname)))
+    (let ((filename ((current-library-source-file-locator)
+		     requested-libname
+		     (cdr (%external-pending-libraries)))))
       (cond ((not filename)
 	     (assertion-violation __who__ "cannot find library" requested-libname))
 	    ;;Try to load  a FASL library file associated  to the source
 	    ;;file pathname.
-	    (((current-serialized-library-loader)
+	    (((current-library-serialized-loader)
 	      filename %install-precompiled-library-and-its-depencencies))
 	    (else
 	     ;;If we  are here: the precompiled  library loader returned
@@ -477,7 +437,7 @@
 	     ((current-library-expander)
 	      ;;Return  a symbolic  expression representing  the LIBRARY
 	      ;;form, or raise an exception.
-	      ((current-source-library-loader) filename)
+	      ((current-library-source-loader) filename)
 	      filename
 	      (lambda (library-name.ids library-name.version)
 		(%verify-library requested-libname filename
@@ -491,7 +451,7 @@
 	   visit-proc invoke-proc guard-proc
 	   guard-descr* visible? library-option*)
     ;;Used  as success  continuation  function by  the  function in  the
-    ;;parameter  CURRENT-SERIALIZED-LIBRARY-LOADER.   All the  arguments
+    ;;parameter  CURRENT-LIBRARY-SERIALIZED-LOADER.   All the  arguments
     ;;after FILENAME are the CONTENTS of the serialized library.
     ;;
     ;;Make sure all  dependencies are met, then install  the library and
@@ -510,11 +470,11 @@
 		 (begin
 		   (library-stale-warning libname.ids filename)
 		   #f)
-	       (let ((visit-code		#f)
-		     (invoke-code		#f)
-		     (guard-code		(quote (quote #f)))
-		     (guard-descr*	'())
-		     (source-file-name		#f))
+	       (let ((visit-code        #f)
+		     (invoke-code       #f)
+		     (guard-code        (quote (quote #f)))
+		     (guard-descr*      '())
+		     (source-file-name  #f))
 		 (install-library uid
 				  libname.ids libname.version
 				  import-descr* visit-descr* invoke-descr*
@@ -577,7 +537,7 @@
 	    ((procedure	f))
 	  f))))
 
-  #| end of module: SOURCE-LIBRARY-LOADER |# )
+  #| end of module: CURRENT-LIBRARY-LOADER |# )
 
 
 ;;;; finding libraries, already loaded or not
@@ -596,9 +556,9 @@
 (module (find-library-by-name)
 
   (define (find-library-by-name libname)
-    ;;Given a library  name: try to search  and install it if  it is not
-    ;;already  installed (using  CURRENT-LIBRARY-LOADER) and  return the
-    ;;corresponding LIBRARY record.
+    ;;Given a library name: try  to search and install the corresponding
+    ;;library, if  it is not  already installed; when  successful return
+    ;;the corresponding LIBRARY record.
     ;;
     ;;Search  for the  library in  the  internal collection  or, if  not
     ;;found, in the external source  (for example the file system) using

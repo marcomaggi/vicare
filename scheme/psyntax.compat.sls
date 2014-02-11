@@ -25,21 +25,18 @@
     receive				receive-and-return
     module				import
     begin0				define-values
-    debug-print
 
     make-struct-type			struct?
     struct-type-descriptor?		struct-type-field-names
 
     make-parameter			parametrise
-    format				gensym
     symbol-value			set-symbol-value!
-    keyword?				pretty-print
-    would-block-object?
-    pretty-print*			bignum?
-    vector-exists
-    real-pathname			file-modification-time
-    vector-append
+    keyword?				would-block-object?
+    bignum?				gensym
+    vector-append			vector-exists
     add1				sub1
+    pretty-print			pretty-print*
+    fprintf				debug-print
 
     ;; compiler related operations
     eval-core
@@ -48,8 +45,7 @@
     report-errors-at-runtime		strict-r6rs
     enable-arguments-validation?	descriptive-labels
 
-    ;; reading source code and interpreting the resule
-    get-annotated-datum
+    ;; interpreting the result of reading annotated sources
     annotation?				annotation-expression
     annotation-stripped			annotation-source
     annotation-textual-position
@@ -70,9 +66,11 @@
     ;; error handlers
     library-version-mismatch-warning
     library-stale-warning
-    file-locator-resolution-error
     procedure-argument-violation
     warning
+
+    ;; system stuff
+    file-modification-time
 
     ;; unsafe bindings
     $car $cdr
@@ -89,13 +87,15 @@
 	  eval-core)
     (only (ikarus system $symbols)
 	  $unintern-gensym)
-    (only (vicare $posix)
-	  real-pathname
-	  file-modification-time)
     (only (vicare options)
 	  report-errors-at-runtime
 	  strict-r6rs
 	  descriptive-labels)
+    (only (ikarus.posix)
+	  ;;This is used by INCLUDE to register the modification time of
+	  ;;the files included  at expand-time.  Such time is  used in a
+	  ;;STALE-WHEN test.
+	  file-modification-time)
     (only (vicare unsafe operations)
 	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
 	  $fxzero? $fxpositive? $fxnonnegative?
@@ -114,22 +114,6 @@
 	   "*** Vicare warning: library ~s is stale; file ~s will be \
             recompiled from source.\n"
 	   name filename))
-
-(define (file-locator-resolution-error libname failed-list pending-list)
-  (define-condition-type &library-resolution &condition
-    make-library-resolution-condition
-    library-resolution-condition?
-    (library condition-library)
-    (files condition-files))
-  (define-condition-type &imported-from &condition
-    make-imported-from-condition imported-from-condition?
-    (importing-library importing-library))
-  (raise
-   (apply condition (make-error)
-	  (make-who-condition 'expander)
-	  (make-message-condition "cannot locate library in library-path")
-	  (make-library-resolution-condition libname failed-list)
-	  (map make-imported-from-condition pending-list))))
 
 (define-syntax define-record
   (syntax-rules ()
