@@ -3727,10 +3727,45 @@
 
 
 (define (make-init-code)
+  ;;Return values representing a fake  library "(ikarus.init)", as if we
+  ;;have processed a file "ikarus.init.sls"  as first library to include
+  ;;in the boot image.  The returned values are:
+  ;;
+  ;;NAME* -
+  ;;   A list of symbols representing the library name.
+  ;;
+  ;;INVOKE-CODE* -
+  ;;   A list of symbolic expressions,  each evaluating to the object to
+  ;;   bind  to a global  library binding; there  must be an  object for
+  ;;   each entry in the return value EXPORT-ENV.
+  ;;
+  ;;EXPORT-SUBST -
+  ;;   A  subst selecting the bindings  to be exported from  the ones in
+  ;;   EXPORT-ENV.
+  ;;
+  ;;EXPORT-ENV -
+  ;;   Represents the global bindings defined by the library body.
+  ;;
   ;;The first  code to  run on  the system is  one that  initializes the
-  ;;value  and  proc  fields  of  the  location  of  $init-symbol-value!
-  ;;Otherwise,  all  subsequent  inits   to  any  global  variable  will
-  ;;segfault.
+  ;;value  and  proc  fields  of the  location  of  $INIT-SYMBOL-VALUE!,
+  ;;otherwise all subsequent inits to any global variable will segfault.
+  ;;We fake a library as if we have processed the following form:
+  ;;
+  ;;   (library (ikarus.init)
+  ;;     (export $init-symbol-value!)
+  ;;     (import (vicare))
+  ;;     (define ($init-symbol-value! sym val)
+  ;; 	   ($set-symbol-value! sym val)
+  ;; 	   (if (procedure? val)
+  ;; 	       ($set-symbol-proc! sym val)
+  ;; 	     ($set-symbol-proc! sym
+  ;; 	       (lambda args
+  ;; 	         (error 'apply "not a procedure"
+  ;; 	           ($symbol-value sym)))))))
+  ;;
+  ;;but we  cannot do it  this way because $INIT-SYMBOL-VALUE!   must be
+  ;;itself initialised, by  storing the function in  the appropriate loc
+  ;;gensym.
   ;;
   (let ((proc	(gensym))
 	(loc	(gensym))
@@ -3740,7 +3775,9 @@
 	(args	(gensym)))
     (values (list '(ikarus.init))
 	    (list `((case-lambda
-		     ((,proc) (,proc ',loc ,proc)))
+		     ;;Apply $SET-SYMBOL-VALUE! to itself.
+		     ((,proc)
+		      (,proc ',loc ,proc)))
 		    (case-lambda
 		     ((,sym ,val)
 		      (begin
@@ -3779,29 +3816,50 @@
 	  (else
 	   (cons (car subst) (prune-subst (cdr subst) env)))))
 
-  ;;For each library: accumulate all the code in the CODE* variable, all
-  ;;the substitutions in SUBST, the whole environment in ENV.
-  (let-values (((name* code* subst env) (make-init-code)))
+  ;;Every time we expand a library we expect the following return values
+  ;;from BOOT-LIBRARY-EXPAND:
+  ;;
+  ;;NAME* -
+  ;;   A list of symbols representing the library name.
+  ;;
+  ;;INVOKE-CODE* -
+  ;;   A list of symbolic expressions,  each evaluating to the object to
+  ;;   bind  to a global  library binding; there  must be an  object for
+  ;;   each entry in the return value EXPORT-ENV.
+  ;;
+  ;;EXPORT-SUBST -
+  ;;   A  subst selecting the bindings  to be exported from  the ones in
+  ;;   EXPORT-ENV.
+  ;;
+  ;;EXPORT-ENV -
+  ;;   Represents the global bindings defined by the library body.
+  ;;
+  ;;and we accumulate  them in lists.  Notice that, from  the results of
+  ;;library expansion,  we discard  all the macros  and all  the library
+  ;;descriptors representing the library dependencies.
+  ;;
+  (receive (name* invoke-code* subst env)
+      (make-init-code)
     (debug-printf "Expanding:\n")
     (for-each (lambda (file)
 		(debug-printf " ~s\n" file)
 		;;For each  library in the  file apply the  function for
 		;;its side effects.
 		(load (string-append src-dir "/" file)
-		      (lambda (x)
-			(let-values (((name code export-subst export-env)
-				      (boot-library-expand x)))
-			  (set! name* (cons name name*))
-			  (set! code* (cons code code*))
-			  (set! subst (append export-subst subst))
-			  (set! env   (append export-env   env))))))
+		      (lambda (library-sexp)
+			(receive (name code export-subst export-env)
+			    (boot-library-expand library-sexp)
+			  (set! name*        (cons name name*))
+			  (set! invoke-code* (cons code invoke-code*))
+			  (set! subst        (append export-subst subst))
+			  (set! env          (append export-env   env))))))
       files)
-    ;;;(debug-printf "\n")
-    (let-values (((export-subst export-env export-locs)
-                  (make-system-data (prune-subst subst env) env)))
-      (let-values (((name code) (build-system-library export-subst export-env export-locs)))
-        (values (reverse (cons* (car name*) name (cdr name*)))
-		(reverse (cons* (car code*) code (cdr code*)))
+    (receive (export-subst export-env export-locs)
+	(make-system-data (prune-subst subst env) env)
+      (receive (name code)
+	  (build-system-library export-subst export-env export-locs)
+        (values (reverse (cons* (car name*)        name (cdr name*)))
+		(reverse (cons* (car invoke-code*) code (cdr invoke-code*)))
 		export-locs)))))
 
 

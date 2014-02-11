@@ -1863,16 +1863,36 @@
 
 ;;;; R6RS library expander
 
-(define (boot-library-expand x)
+(define (boot-library-expand library-sexp)
+  ;;This function  is used  to expand the  libraries composing  the boot
+  ;;image; see "makefile.sps" for details on how it is used.
+  ;;
   ;;When bootstrapping  the system,  visit-code is  not (and  cannot be)
   ;;used in the "next" system.  So, we drop it.
+  ;;
+  ;;The returned values are:
+  ;;
+  ;;NAME* -
+  ;;   A list of symbols representing the library name.
+  ;;
+  ;;INVOKE-CODE -
+  ;;   A list of symbolic expressions,  each evaluating to the object to
+  ;;   bind  to a global  library binding; there  must be an  object for
+  ;;   each entry in the return value EXPORT-ENV.
+  ;;
+  ;;EXPORT-SUBST -
+  ;;   A  subst selecting the bindings  to be exported from  the ones in
+  ;;   EXPORT-ENV.
+  ;;
+  ;;EXPORT-ENV -
+  ;;   Represents the global bindings defined by the library body.
   ;;
   (receive (id
 	    name ver
 	    imp* vis* inv*
 	    invoke-code visit-code export-subst export-env
 	    guard-code guard-dep*)
-      (expand-library x)
+      (expand-library library-sexp)
     (values name invoke-code export-subst export-env)))
 
 (module (expand-library)
