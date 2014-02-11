@@ -43,7 +43,8 @@
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
 	  library-descriptor
-	  visit-library
+	  invoke-library
+	  #;visit-library
 	  find-library-by-descr
 	  serialize-collected-libraries
 	  current-library-source-file-locator
@@ -196,8 +197,8 @@
       (map (lambda (descr)
 	     (cond ((find-library-by-descr descr)
 		    => (lambda (lib)
-			 #;(debug-print 'visit-library lib)
-			 (visit-library lib)))
+			 #;(debug-print 'invoke-library lib)
+			 (invoke-library lib)))
 		   (else
 		    (error __who__
 		      "unable to load library required by program" descr))))
