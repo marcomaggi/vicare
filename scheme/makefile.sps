@@ -3587,74 +3587,6 @@
 	(set! list-of-library-records (cons x list-of-library-records)))))))
 
 
-(define (build-system-library export-subst export-env primlocs)
-  (define (main export-subst export-env primlocs)
-    (let ((code `(library (ikarus primlocs)
-		   (export) ;;; must be empty
-		   (import (only (ikarus.symbols) system-value-gensym)
-		     (only (psyntax library-manager)
-			   install-library)
-		     (only (ikarus.compiler)
-			   current-primitive-locations)
-		     (ikarus))
-		   (let ((g system-value-gensym))
-		     (for-each (lambda (x)
-				 (putprop (car x) g (cdr x)))
-		       ',primlocs)
-		     (let ((proc (lambda (x) (getprop x g))))
-		       (current-primitive-locations proc)))
-		   ;;This evaluates to a spliced list of INSTALL-LIBRARY
-		   ;;forms.
-		   ,@(map build-install-library-form library-legend))))
-      ;;Expand  the library in  CODE; we  know that  the EXPORT  form is
-      ;;empty,  so  we  know  that  the  last  two  values  returned  by
-      ;;BOOT-LIBRARY-EXPAND are empty.
-      ;;
-      (let-values (((name code empty-subst empty-env)
-		    (boot-library-expand code)))
-	(values name code))))
-
-  (define (build-install-library-form legend-entry)
-    (let* ((nickname	(car	legend-entry))
-	   (name	(cadr	legend-entry))
-	   (visible?	(caddr	legend-entry))
-	   (id		(gensym))
-	   (version	(if (eq? 'rnrs (car name)) '(6) '()))
-	   (system-all?	(equal? name '(psyntax system $all)))
-	   (env		(if system-all? export-env '()))
-	   (subst	(if system-all?
-			    export-subst
-			  (get-export-subset nickname export-subst))))
-      ;;Datums  embedded in  this  symbolic expression  are quoted  to
-      ;;allow the sexp to be handed to EVAL (I guess; Marco Maggi, Aug
-      ;;26, 2011).
-      `(install-library ',id ',name ',version
-			'() ;; import-libs
-			'() ;; visit-libs
-			'() ;; invoke-libs
-			',subst ',env void void '#f '#f '#f '() ',visible? '#f)))
-
-  (define (get-export-subset nickname subst)
-    ;;Given  the alist  of  substitutions SUBST,  build  and return  the
-    ;;subset  of  substitutions  corresponding  to  identifiers  in  the
-    ;;library selected by NICKNAME.
-    ;;
-    (let loop ((ls subst))
-      (if (null? ls)
-	  '()
-	(let ((x (car ls)))
-	  (let ((name (car x)))
-	    (cond ((assq name identifier->library-map)
-		   => (lambda (q)
-			(if (memq nickname (cdr q))
-			    (cons x (loop (cdr ls)))
-			  (loop (cdr ls)))))
-		  (else ;not going to any library?
-		   (loop (cdr ls)))))))))
-
-  (main export-subst export-env primlocs))
-
-
 (module (expand-all)
 
   (define (expand-all files)
@@ -3707,13 +3639,13 @@
 			    (set! subst        (append export-subst subst))
 			    (set! env          (append export-env   env))))))
 	files)
-      (receive (export-subst export-env export-locs)
+      (receive (export-subst export-env export-primlocs)
 	  (make-system-data (prune-subst subst env) env)
-	(receive (name code)
-	    (build-system-library export-subst export-env export-locs)
-	  (values (reverse (cons* (car name*)        name (cdr name*)))
-		  (reverse (cons* (car invoke-code*) code (cdr invoke-code*)))
-		  export-locs)))))
+	(receive (primlocs-lib-name primlocs-lib-code)
+	    (build-system-library export-subst export-env export-primlocs)
+	  (values (reverse (cons* (car name*)        primlocs-lib-name (cdr name*)))
+		  (reverse (cons* (car invoke-code*) primlocs-lib-code (cdr invoke-code*)))
+		  export-primlocs)))))
 
   (define (make-init-code)
     ;;Return values  representing a fake library  "(ikarus.init)", as if
@@ -3811,7 +3743,7 @@
     ;;   (?label . (core-prim . ?func-name))
     ;;   (?label . ?macro-binding)
     ;;
-    ;;a primlocs alist with entries:
+    ;;an EXPORT-PRIMLOCS alist with entries:
     ;;
     ;;   (?func-name . ?loc)
     ;;
@@ -3905,6 +3837,102 @@
 		     (export-env-clt   (cons label     (cons 'core-prim prim-name)))))))))
 
       (values (export-subst-clt) (export-env-clt) (export-primlocs-clt))))
+
+  (module (build-system-library)
+
+    (define (build-system-library export-subst export-env export-primlocs)
+      ;;EXPORT-SUBST is an alist with entries:
+      ;;
+      ;;   (?func-name  . ?label)
+      ;;   (?macro-name . ?label)
+      ;;
+      ;;EXPORT-ENV is an alist with entries:
+      ;;
+      ;;   (?label . (core-prim . ?func-name))
+      ;;   (?label . ?macro-binding)
+      ;;
+      ;;EXPORT-PRIMLOCS is an alist with entries:
+      ;;
+      ;;   (?func-name . ?loc)
+      ;;
+      ;;Build  a  form  for   the  library  "(ikarus  primlocs)",  which
+      ;;initialises the loc gensyms  of the primitive functions exported
+      ;;by the boot image, and expand  it.  Return 2 values: the library
+      ;;name and the library invoke-code.
+      ;;
+      (define library-sexp
+	`(library (ikarus primlocs)
+	   (export) ;;; must be empty
+	   (import (only (ikarus.symbols) system-value-gensym)
+	     (only (psyntax library-manager)
+		   install-library)
+	     (only (ikarus.compiler)
+		   current-primitive-locations)
+	     (ikarus))
+	   (let ((g system-value-gensym))
+	     (for-each (lambda (x)
+			 (putprop (car x) g (cdr x)))
+	       ',export-primlocs)
+	     (let ((proc (lambda (x) (getprop x g))))
+	       (current-primitive-locations proc)))
+	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
+	   ,@(map (lambda (legend-entry)
+		    (build-install-library-form legend-entry export-subst export-env))
+	       library-legend)))
+      ;;Expand the  library in  CODE; we  know that  the EXPORT  form is
+      ;;empty,  so  we  know  that  the  last  two  values  returned  by
+      ;;BOOT-LIBRARY-EXPAND are empty.
+      ;;
+      (receive (name invoke-code empty-subst empty-env)
+	  (boot-library-expand library-sexp)
+	(values name invoke-code)))
+
+    (define (build-install-library-form legend-entry export-subst export-env)
+      ;;Return   a   sexp   representing   a  call   to   the   function
+      ;;INSTALL-LIBRARY.
+      ;;
+      ;;Each entry from the LIBRARY-LEGEND has the format:
+      ;;
+      ;;   (?nickname	?fullname	?visible	?required)
+      ;;
+      (let* ((nickname		(car	legend-entry))
+	     (fullname		(cadr	legend-entry))
+	     (visible?		(caddr	legend-entry))
+	     (id		(gensym))
+	     (version		(if (eq? 'rnrs (car fullname)) '(6) '()))
+	     (system-all?	(equal? fullname '(psyntax system $all)))
+	     (env		(if system-all? export-env '()))
+	     (subst		(if system-all?
+				    export-subst
+				  (get-export-subset nickname export-subst))))
+	;;Datums  embedded in  this  symbolic expression  are quoted  to
+	;;allow the sexp to be handed to EVAL (I guess; Marco Maggi, Aug
+	;;26, 2011).
+	`(install-library ',id ',fullname ',version
+			  '() ;; import-libs
+			  '() ;; visit-libs
+			  '() ;; invoke-libs
+			  ',subst ',env void void '#f '#f '#f '() ',visible? '#f)))
+
+    (define (get-export-subset nickname subst)
+      ;;Given the  alist of  substitutions SUBST,  build and  return the
+      ;;subset  of substitutions  corresponding  to  identifiers in  the
+      ;;library selected by NICKNAME.
+      ;;
+      (let loop ((ls subst))
+	(if (null? ls)
+	    '()
+	  (let ((x (car ls)))
+	    (let ((name (car x)))
+	      (cond ((assq name identifier->library-map)
+		     => (lambda (q)
+			  (if (memq nickname (cdr q))
+			      (cons x (loop (cdr ls)))
+			    (loop (cdr ls)))))
+		    (else ;not going to any library?
+		     (loop (cdr ls)))))))))
+
+    #| end of module: BUILD-SYSTEM-LIBRARY |# )
 
   #| end of module: EXPAND-ALL |# )
 
