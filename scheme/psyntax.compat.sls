@@ -49,7 +49,7 @@
     enable-arguments-validation?	descriptive-labels
 
     ;; reading source code and interpreting the resule
-    get-annotated-datum			read-library-source-file
+    get-annotated-datum
     annotation?				annotation-expression
     annotation-stripped			annotation-source
     annotation-textual-position
@@ -85,9 +85,6 @@
 		  struct-type-descriptor?)
     (only (ikarus structs)
 	  struct-type-descriptor?)
-    (only (ikarus.reader)
-	  ;;this is not in makefile.sps
-	  read-library-source-file)
     (only (ikarus.compiler)
 	  eval-core)
     (only (ikarus system $symbols)

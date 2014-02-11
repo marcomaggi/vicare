@@ -40,11 +40,13 @@
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
 	  serialize-collected-libraries
+	  current-source-library-loader
 	  current-serialized-library-loader)
     (only (psyntax expander)
 	  expand-r6rs-top-level-make-evaluator)
     (only (ikarus.reader)
-	  read-script-source-file)
+	  read-script-source-file
+	  read-library-source-file)
     (prefix (only (vicare options)
 		  print-loaded-libraries)
 	    config.)
@@ -276,7 +278,8 @@
 
 ;;;; done
 
-(current-serialized-library-loader load-serialized-library)
+(current-source-library-loader		read-library-source-file)
+(current-serialized-library-loader	load-serialized-library)
 
 )
 

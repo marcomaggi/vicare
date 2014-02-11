@@ -44,6 +44,7 @@
 
     current-library-expander
     current-library-collection
+    current-source-library-loader
     current-serialized-library-loader
 
     ;; library names and version numbers
@@ -400,7 +401,26 @@
   #| end of module: LIBRARY-SOURCE-FILE-LOCATOR |# )
 
 
-;;;; loading precompiled libraries from files
+;;;; loading source and serialized libraries from files
+
+(define current-source-library-loader
+  ;;Hold a  function used to  laod a  source library; this  parameter is
+  ;;initialised      "ikarus.load.sls"       with      the      function
+  ;;READ-LIBRARY-SOURCE-FILE.
+  ;;
+  ;;The  referenced function  must:  accept a  string  file pathname  as
+  ;;single  argument,  open the  pathname  for  input using  the  native
+  ;;transcoder, read the first datum, close the port, return the datum.
+  ;;
+  (make-parameter
+      (lambda (filename)
+	(error 'current-source-library-loader
+	  "source library loader not set" filename))
+    (lambda (obj)
+      (define who 'current-source-library-loader)
+      (with-arguments-validation (who)
+	  ((procedure	obj))
+	obj))))
 
 (define current-serialized-library-loader
   ;;Hold a function  used to load a precompiled  library; this parameter
@@ -430,15 +450,15 @@
 ;;The  library  loader  is  a  function that  loads  a  library,  either
 ;;precompiled or from source, and installs it.
 ;;
-(module (library-loader)
+(module (current-library-loader)
   (define-constant __who__ 'default-library-loader)
 
   (define* (default-library-loader requested-libname)
-    ;;Default value  for the parameter LIBRARY-LOADER.   Given a library
-    ;;name  specification:  search  the  associated  file  pathname  and
-    ;;attempt to load the file; try first to load a precompiled file, if
-    ;;any, then  try to  load the  source file.   The loaded  library is
-    ;;installed.
+    ;;Default value  for the parameter CURRENT-LIBRARY-LOADER.   Given a
+    ;;library name  specification: search  the associated  file pathname
+    ;;and attempt  to load  the file;  try first  to load  a precompiled
+    ;;file,  if any,  then  try to  load the  source  file.  The  loaded
+    ;;library is installed.
     ;;
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
@@ -457,7 +477,7 @@
 	     ((current-library-expander)
 	      ;;Return  a symbolic  expression representing  the LIBRARY
 	      ;;form, or raise an exception.
-	      (read-library-source-file filename)
+	      ((current-source-library-loader) filename)
 	      filename
 	      (lambda (library-name.ids library-name.version)
 		(%verify-library requested-libname filename
@@ -545,19 +565,19 @@
 	  (display " instead" port)
 	  (extract)))))
 
-  (define library-loader
+  (define current-library-loader
     ;;Hold a function used to load a library, either precompiled or from
     ;;source.
     ;;
     (make-parameter
 	default-library-loader
       (lambda (f)
-	(define who 'library-loader)
+	(define who 'current-library-loader)
 	(with-arguments-validation (who)
 	    ((procedure	f))
 	  f))))
 
-  #| end of module: LIBRARY-LOADER |# )
+  #| end of module: SOURCE-LIBRARY-LOADER |# )
 
 
 ;;;; finding libraries, already loaded or not
@@ -577,12 +597,12 @@
 
   (define (find-library-by-name libname)
     ;;Given a library  name: try to search  and install it if  it is not
-    ;;already   installed   (using   LIBRARY-LOADER)  and   return   the
+    ;;already  installed (using  CURRENT-LIBRARY-LOADER) and  return the
     ;;corresponding LIBRARY record.
     ;;
     ;;Search  for the  library in  the  internal collection  or, if  not
     ;;found, in the external source  (for example the file system) using
-    ;;the current LIBRARY-LOADER.
+    ;;the current CURRENT-LIBRARY-LOADER.
     ;;
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
@@ -602,7 +622,9 @@
       (assertion-violation __who__
 	"circular attempt to import library was detected" libname))
     (parametrise ((%external-pending-libraries (cons libname (%external-pending-libraries))))
-      ((library-loader) libname)
+      ;;Load the  library, either from  source file or  serialized file,
+      ;;and install it.
+      ((current-library-loader) libname)
       (or (%find-library-in-collection-by (lambda (x)
 					    (equal? (library-name x) libname)))
 	  (assertion-violation __who__
