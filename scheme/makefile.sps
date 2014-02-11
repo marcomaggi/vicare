@@ -3623,39 +3623,60 @@
 		(label		(gensym)))
 	    (export-subst-clt (cons name label))
 	    (export-env-clt   (cons label binding)))))
+      ;;For every exported  primitive function we expect an  entry to be
+      ;;present in EXPORT-ENV with the format:
+      ;;
+      ;;   (?label ?type . ?loc)
+      ;;
+      ;;we add to the subst collection an entry:
+      ;;
+      ;;   (?func-name . ?label)
+      ;;
+      ;;to the env collection an entry:
+      ;;
+      ;;   (?label . (core-prim . ?name))
+      ;;
+      ;;to the primlocs collection an entry:
+      ;;
+      ;;   (?name . ?loc)
+      ;;
       (each-for (map car identifier->library-map)
 	(lambda (x)
 	  (when (procedure-identifier? x)
 	    (cond ((assq x (export-subst-clt))
-		   (error who "ambiguous export" x))
+		   (error who "identifier exported twice?" x))
 
 		  ((assq1 x export-subst)
 		   ;;Primitive  defined  (exported)  within  the  compiled
 		   ;;libraries.
-		   => (lambda (p)
-			(unless (pair? p)
-			  (error who "invalid exports" p x))
-			(let ((label (cdr p)))
+		   => (lambda (name.label)
+			(unless (pair? name.label)
+			  (error who "invalid exports" name.label x))
+			(let ((label (cdr name.label)))
 			  (cond ((assq label export-env)
-				 => (lambda (p)
-				      (let ((binding (cdr p)))
+				 => (lambda (label.binding)
+				      (let ((binding (cdr label.binding)))
 					(case (car binding)
 					  ((global)
-					   (export-subst-clt    (cons x label))
+					   (export-subst-clt    (cons x     label))
 					   (export-env-clt      (cons label (cons 'core-prim x)))
-					   (export-primlocs-clt (cons x (cdr binding))))
+					   (export-primlocs-clt (cons x     (cdr binding))))
 					  (else
-					   (error who "invalid binding for identifier" p x))))))
+					   (error who "invalid binding for identifier" label.binding x))))))
 				(else
-				 (error who "cannot find binding" x label))))))
+				 (error who
+				   "binding from the export list not present in the global environment"
+				   x label))))))
 
 		  (else
-		   ;;Core primitive with no backing definition, assumed to
-		   ;;be defined in other strata of the system
-;;;		 (fprintf (console-error-port) "undefined primitive ~s\n" x)
+		   ;;Core primitive with no  backing definition from the
+		   ;;expanded  libraries; we  assume  it  is defined  in
+		   ;;other strata of the system
+		   ;;
+		   #;(fprintf (console-error-port) "undefined primitive ~s\n" x)
 		   (let ((label (gensym)))
-		     (export-subst-clt (cons x label))
-		     (export-env-clt (cons label (cons 'core-prim x)))))))))
+		     (export-subst-clt (cons x     label))
+		     (export-env-clt   (cons label (cons 'core-prim x)))))))))
 
       (values (export-subst-clt) (export-env-clt) (export-primlocs-clt))))
 
