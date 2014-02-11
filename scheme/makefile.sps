@@ -3726,85 +3726,135 @@
   (main export-subst export-env primlocs))
 
 
-(define (make-init-code)
-  ;;Return values representing a fake  library "(ikarus.init)", as if we
-  ;;have processed a file "ikarus.init.sls"  as first library to include
-  ;;in the boot image.  The returned values are:
-  ;;
-  ;;NAME* -
-  ;;   A list of symbols representing the library name.
-  ;;
-  ;;INVOKE-CODE* -
-  ;;   A list of symbolic expressions,  each evaluating to the object to
-  ;;   bind  to a global  library binding; there  must be an  object for
-  ;;   each entry in the return value EXPORT-ENV.
-  ;;
-  ;;EXPORT-SUBST -
-  ;;   A  subst selecting the bindings  to be exported from  the ones in
-  ;;   EXPORT-ENV.
-  ;;
-  ;;EXPORT-ENV -
-  ;;   Represents the global bindings defined by the library body.
-  ;;
-  ;;The first  code to  run on  the system is  one that  initializes the
-  ;;value  and  proc  fields  of the  location  of  $INIT-SYMBOL-VALUE!,
-  ;;otherwise all subsequent inits to any global variable will segfault.
-  ;;We fake a library as if we have processed the following form:
-  ;;
-  ;;   (library (ikarus.init)
-  ;;     (export $init-symbol-value!)
-  ;;     (import (vicare))
-  ;;     (define ($init-symbol-value! sym val)
-  ;; 	   ($set-symbol-value! sym val)
-  ;; 	   (if (procedure? val)
-  ;; 	       ($set-symbol-proc! sym val)
-  ;; 	     ($set-symbol-proc! sym
-  ;; 	       (lambda args
-  ;; 	         (error 'apply "not a procedure"
-  ;; 	           ($symbol-value sym)))))))
-  ;;
-  ;;but we  cannot do it  this way because $INIT-SYMBOL-VALUE!   must be
-  ;;itself initialised, by  storing the function in  the appropriate loc
-  ;;gensym.
-  ;;
-  (let ((proc	(gensym))
-	(loc	(gensym))
-	(label	(gensym))
-	(sym	(gensym))
-	(val	(gensym))
-	(args	(gensym)))
-    (values (list '(ikarus.init))
-	    (list `((case-lambda
-		     ;;Apply $SET-SYMBOL-VALUE! to itself.
-		     ((,proc)
-		      (,proc ',loc ,proc)))
-		    (case-lambda
-		     ((,sym ,val)
-		      (begin
-			((primitive $set-symbol-value!) ,sym ,val)
-			(if ((primitive procedure?) ,val)
-			    ((primitive $set-symbol-proc!) ,sym ,val)
-			  ((primitive $set-symbol-proc!) ,sym
-			   (case-lambda
-			    (,args
-			     ((primitive error) 'apply
-			      (quote "not a procedure") ((primitive $symbol-value) ,sym)))))))))))
-	    `(($init-symbol-value! . ,label))
-	    `((,label . (global . ,loc))))))
+(module (expand-all)
 
-
-(define (expand-all files)
-  ;;Expand all the  libraries in FILES, which must be  a list of strings
-  ;;representing  file  pathnames  under  SRC-DIR.
-  ;;
-  ;;Return  3  values:  the  list  of  library  specifications,  a  list
-  ;;representing  all  the  code  forms  from  all  the  libraries,  the
-  ;;EXPORT-LOCS.
-  ;;
-  ;;Notice that the  last code to be executed is the  one of the (ikarus
-  ;;main)  library,  and  the one  before  it  is  the one  returned  by
-  ;;BUILD-SYSTEM-LIBRARY.
-  ;;
+  (define (expand-all files)
+    ;;Expand all the libraries in FILES, which must be a list of strings
+    ;;representing file pathnames under SRC-DIR.
+    ;;
+    ;;Return  3  values: the  list  of  library specifications,  a  list
+    ;;representing  all  the code  forms  from  all the  libraries,  the
+    ;;EXPORT-LOCS.
+    ;;
+    ;;Notice that the last code to be executed is the one of the (ikarus
+    ;;main)  library, and  the  one before  it is  the  one returned  by
+    ;;BUILD-SYSTEM-LIBRARY.
+    ;;
+
+    ;;Every  time we  expand a  library we  expect the  following return
+    ;;values from BOOT-LIBRARY-EXPAND:
+    ;;
+    ;;NAME* -
+    ;;   A list of symbols representing the library name.
+    ;;
+    ;;INVOKE-CODE* -
+    ;;   A list  of symbolic expressions, each evaluating  to the object
+    ;;   to  bind to a global  library binding; there must  be an object
+    ;;   for each entry in the return value EXPORT-ENV.
+    ;;
+    ;;EXPORT-SUBST -
+    ;;   A subst selecting the bindings  to be exported from the ones in
+    ;;   EXPORT-ENV.
+    ;;
+    ;;EXPORT-ENV -
+    ;;   Represents the global bindings defined by the library body.
+    ;;
+    ;;and we accumulate them in lists.  Notice that, from the results of
+    ;;library expansion, we  discard all the macros and  all the library
+    ;;descriptors representing the library dependencies.
+    ;;
+    (receive (name* invoke-code* subst env)
+	(make-init-code)
+      (debug-printf "Expanding:\n")
+      (for-each (lambda (file)
+		  (debug-printf " ~s\n" file)
+		  ;;For each library in the  file apply the function for
+		  ;;its side effects.
+		  (load (string-append src-dir "/" file)
+			(lambda (library-sexp)
+			  (receive (name code export-subst export-env)
+			      (boot-library-expand library-sexp)
+			    (set! name*        (cons name name*))
+			    (set! invoke-code* (cons code invoke-code*))
+			    (set! subst        (append export-subst subst))
+			    (set! env          (append export-env   env))))))
+	files)
+      (receive (export-subst export-env export-locs)
+	  (make-system-data (prune-subst subst env) env)
+	(receive (name code)
+	    (build-system-library export-subst export-env export-locs)
+	  (values (reverse (cons* (car name*)        name (cdr name*)))
+		  (reverse (cons* (car invoke-code*) code (cdr invoke-code*)))
+		  export-locs)))))
+
+  (define (make-init-code)
+    ;;Return values  representing a fake library  "(ikarus.init)", as if
+    ;;we have  processed a  file "ikarus.init.sls"  as first  library to
+    ;;include in the boot image.  The returned values are:
+    ;;
+    ;;NAME* -
+    ;;   A list of symbols representing the library name.
+    ;;
+    ;;INVOKE-CODE* -
+    ;;   A list  of symbolic expressions, each evaluating  to the object
+    ;;   to  bind to a global  library binding; there must  be an object
+    ;;   for each entry in the return value EXPORT-ENV.
+    ;;
+    ;;EXPORT-SUBST -
+    ;;   A subst selecting the bindings  to be exported from the ones in
+    ;;   EXPORT-ENV.
+    ;;
+    ;;EXPORT-ENV -
+    ;;   Represents the global bindings defined by the library body.
+    ;;
+    ;;The first  code to run on  the system is one  that initializes the
+    ;;value  and proc  fields  of the  location of  $INIT-SYMBOL-VALUE!,
+    ;;otherwise  all  subsequent  inits  to  any  global  variable  will
+    ;;segfault.  We fake a library as if we have processed the following
+    ;;form:
+    ;;
+    ;;   (library (ikarus.init)
+    ;;     (export $init-symbol-value!)
+    ;;     (import (vicare))
+    ;;     (define ($init-symbol-value! sym val)
+    ;; 	   ($set-symbol-value! sym val)
+    ;; 	   (if (procedure? val)
+    ;; 	       ($set-symbol-proc! sym val)
+    ;; 	     ($set-symbol-proc! sym
+    ;; 	       (lambda args
+    ;; 	         (error 'apply "not a procedure"
+    ;; 	           ($symbol-value sym)))))))
+    ;;
+    ;;but we cannot do it  this way because $INIT-SYMBOL-VALUE!  must be
+    ;;itself initialised, by storing the function in the appropriate loc
+    ;;gensym.
+    ;;
+    (let ((proc	(gensym))
+	  (loc	(gensym))
+	  (label	(gensym))
+	  (sym	(gensym))
+	  (val	(gensym))
+	  (args	(gensym)))
+      (values (list '(ikarus.init))
+	      (list `((case-lambda
+		       ;;Apply $SET-SYMBOL-VALUE! to itself.
+		       ((,proc)
+			(,proc ',loc ,proc)))
+		      (case-lambda
+		       ((,sym ,val)
+			(begin
+			  ((primitive $set-symbol-value!) ,sym ,val)
+			  (if ((primitive procedure?) ,val)
+			      ((primitive $set-symbol-proc!) ,sym ,val)
+			    ((primitive $set-symbol-proc!) ,sym
+			     (case-lambda
+			      (,args
+			       ((primitive error) 'apply
+				(quote "not a procedure")
+				((primitive $symbol-value) ,sym)))))))))))
+	      `(($init-symbol-value! . ,label))
+	      `((,label . (global . ,loc))))))
+
   (define (prune-subst subst env)
     ;;Remove all re-exported identifiers (those with labels in SUBST but
     ;;no binding in ENV).
@@ -3816,51 +3866,7 @@
 	  (else
 	   (cons (car subst) (prune-subst (cdr subst) env)))))
 
-  ;;Every time we expand a library we expect the following return values
-  ;;from BOOT-LIBRARY-EXPAND:
-  ;;
-  ;;NAME* -
-  ;;   A list of symbols representing the library name.
-  ;;
-  ;;INVOKE-CODE* -
-  ;;   A list of symbolic expressions,  each evaluating to the object to
-  ;;   bind  to a global  library binding; there  must be an  object for
-  ;;   each entry in the return value EXPORT-ENV.
-  ;;
-  ;;EXPORT-SUBST -
-  ;;   A  subst selecting the bindings  to be exported from  the ones in
-  ;;   EXPORT-ENV.
-  ;;
-  ;;EXPORT-ENV -
-  ;;   Represents the global bindings defined by the library body.
-  ;;
-  ;;and we accumulate  them in lists.  Notice that, from  the results of
-  ;;library expansion,  we discard  all the macros  and all  the library
-  ;;descriptors representing the library dependencies.
-  ;;
-  (receive (name* invoke-code* subst env)
-      (make-init-code)
-    (debug-printf "Expanding:\n")
-    (for-each (lambda (file)
-		(debug-printf " ~s\n" file)
-		;;For each  library in the  file apply the  function for
-		;;its side effects.
-		(load (string-append src-dir "/" file)
-		      (lambda (library-sexp)
-			(receive (name code export-subst export-env)
-			    (boot-library-expand library-sexp)
-			  (set! name*        (cons name name*))
-			  (set! invoke-code* (cons code invoke-code*))
-			  (set! subst        (append export-subst subst))
-			  (set! env          (append export-env   env))))))
-      files)
-    (receive (export-subst export-env export-locs)
-	(make-system-data (prune-subst subst env) env)
-      (receive (name code)
-	  (build-system-library export-subst export-env export-locs)
-        (values (reverse (cons* (car name*)        name (cdr name*)))
-		(reverse (cons* (car invoke-code*) code (cdr invoke-code*)))
-		export-locs)))))
+  #| end of module: EXPAND-ALL |# )
 
 
 ;;;; Go!
@@ -3904,8 +3910,6 @@
 	      core*)
 	    (debug-printf "\n")))
 	(close-output-port port)))))
-
-;(print-missing-prims)
 
 (fprintf (console-error-port) "Happy Happy Joy Joy\n")
 
