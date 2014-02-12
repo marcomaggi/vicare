@@ -55,7 +55,8 @@ The synopsis of the @value{EXECUTABLE} program is as follows:
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-script PROGRAM          [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --r6rs-repl PROGRAM            [-- [@var{PROGRAM OPTS}]]
 @value{RAWEXECUTABLE} [@var{OPTIONS}] --script CODE                  [-- [@var{PROGRAM OPTS}]]
-@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM [-- [@var{PROGRAM OPTS}]]
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-library LIBFILE
+@value{RAWEXECUTABLE} [@var{OPTIONS}] --compile-dependencies PROGRAM
 @end smallexample
 
 @noindent
@@ -121,6 +122,12 @@ $ @value{RAWEXECUTABLE} --script test.sps hi there
 Load the @rnrs{6} program @var{IMPORTS-FILE}, compile all the libraries
 upon which it depends and store them in the FASL repository.
 @var{IMPORTS-FILE} itself is not evaluated.
+
+@item --compile-library @var{LIBFILE}
+@cindex Command line option @option{--compile-library}
+@cindex @option{--compile-library}, command line option
+Load the @rnrs{6} library source @var{LIBFILE}, compile it and save the
+result in the @fasl{} repository.
 @end table
 
 When none of these options is given, but a standalone @var{PROGRAM}

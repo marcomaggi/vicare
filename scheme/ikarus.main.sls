@@ -53,6 +53,7 @@
 		  least-fixnum
 
 		  load-r6rs-script
+		  load-and-serialize-source-library
 		  load
 		  host-info
 		  $struct-guardian
@@ -101,6 +102,7 @@
     (prefix (only (ikarus load)
 		  load
 		  load-r6rs-script
+		  load-and-serialize-source-library
 		  fasl-directory
 		  fasl-search-path)
 	    loading.)
@@ -155,13 +157,13 @@
 (define-struct run-time-config
   (exec-mode
 		;A  symbol representing  the  requested execution  mode:
-		;R6RS-SCRIPT,  R6RS-REPL, SCRIPT,  COMPILE, R6RS-EXPAND,
-		;REPL.
+		;R6RS-SCRIPT,   R6RS-REPL,    SCRIPT,   COMPILE-LIBRARY,
+		;COMPILE-DEPENDENCIES, R6RS-EXPAND, REPL.
    script
 		;A  string representing  a file  name: the  main script.
-		;When in  R6RS-SCRIPT or COMPILE  mode: it must  hold an
-		;R6RS  program.  When  in script  mode: it  must  hold a
-		;script.
+		;When     in     R6RS-SCRIPT,     COMPILE-LIBRARY     or
+		;COMPILE-DEPENDENCIES  mode:   it  must  hold   an  R6RS
+		;program.  When in script mode: it must hold a script.
 
    rcfiles	;#f,  #t, null or  a list  of strings  representing file
 		;names.  When #f: avoid executing any run-command files;
@@ -479,6 +481,17 @@
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
+	  ((%option= "--compile-library")
+	   (cond ((null? (cdr args))
+		  (%error-and-exit "option --compile-library requires a library name"))
+		 ((run-time-config-exec-mode cfg)
+		  (%error-and-exit
+		   "option --compile-library given after other mode option"))
+		 (else
+		  (set-run-time-config-exec-mode! cfg 'compile-library)
+		  (set-run-time-config-script!    cfg (cadr args))
+		  (next-option (cddr args) k))))
+
 	  ((%option= "--compile-dependencies")
 	   (cond ((null? (cdr args))
 		  (%error-and-exit "option --compile-dependencies requires a script name"))
@@ -486,7 +499,7 @@
 		  (%error-and-exit
 		   "option --compile-dependencies given after other mode option"))
 		 (else
-		  (set-run-time-config-exec-mode! cfg 'compile)
+		  (set-run-time-config-exec-mode! cfg 'compile-dependencies)
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
@@ -761,6 +774,7 @@ vicare [OPTIONS] [FILENAME]                     [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-script PROGRAM          [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-repl PROGRAM            [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --script CODE                  [-- [PROGRAM OPTS]]
+vicare [OPTIONS] --compile-library LIBFILE      [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-dependencies PROGRAM [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-expand PROGRAM          [-- [PROGRAM OPTS]]
 
@@ -783,6 +797,10 @@ Options controlling execution modes:
         Start Vicare in  evaluation mode.  The CODEFILE is  handled as a
        	sequence of R6RS expressions: such expressions are used as first
        	argument for EVAL under the interaction environment.
+
+   --compile-library LIBFILE
+        Load the  R6RS library source  LIBFILE, compile it and  save the
+        result in the FASL repository.
 
    --compile-dependencies PROGRAM
         Load  the R6RS program  PROGRAM, compile all the  libraries upon
@@ -1115,6 +1133,10 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (doit (load-r6rs-script cfg.script (serialize? #t) (run? #f)))))
 
+(define (compile-library cfg)
+  (with-run-time-config (cfg)
+    (doit (loading.load-and-serialize-source-library cfg.script))))
+
 (define (load-evaluated-script cfg)
   (with-run-time-config (cfg)
     (doit (loading.load cfg.script))))
@@ -1412,6 +1434,9 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
       ((compile)
        (compile-dependencies cfg))
+
+      ((compile-library)
+       (compile-library cfg))
 
       ((script)
        (load-evaluated-script cfg))

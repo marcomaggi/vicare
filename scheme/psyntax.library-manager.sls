@@ -37,6 +37,7 @@
     ;; library operations
     visit-library		invoke-library
     serialize-collected-libraries
+    serialize-loaded-library
 
     ;; finding and loading libraries
     find-library-by-name	library-exists?
@@ -45,6 +46,7 @@
     current-library-collection
     current-library-source-file-locator
     current-library-source-loader
+    current-library-source-loader-by-filename
     current-library-serialized-loader
 
     ;; finding and loading include files
@@ -409,40 +411,92 @@
 ;;The  library  loader  is  a  function that  loads  a  library,  either
 ;;precompiled or from source, and installs it.
 ;;
-(module (current-library-loader)
-  (define-constant __who__ 'default-library-loader)
+(module (current-library-loader
+	 current-library-source-loader-by-filename)
 
-  (define* (default-library-loader requested-libname)
-    ;;Default value  for the parameter CURRENT-LIBRARY-LOADER.   Given a
-    ;;library name  specification: search  the associated  file pathname
-    ;;and attempt  to load  the file;  try first  to load  a precompiled
-    ;;file,  if any,  then  try to  load the  source  file.  The  loaded
-    ;;library is installed.
+  (module (default-library-loader)
+    (define-constant __who__ 'default-library-loader)
+
+    (define* (default-library-loader requested-libname)
+      ;;Default value for the parameter CURRENT-LIBRARY-LOADER.  Given a
+      ;;library name specification: search  the associated file pathname
+      ;;and attempt  to load the file;  try first to load  a precompiled
+      ;;file, if  any, then  try to  load the  source file.   The loaded
+      ;;library is installed.
+      ;;
+      ;;For this function, a "library name" is a list of symbols without
+      ;;the version specification.
+      ;;
+      (let ((filename ((current-library-source-file-locator)
+		       requested-libname
+		       (cdr (%external-pending-libraries)))))
+	(cond ((not filename)
+	       (assertion-violation __who__ "cannot find library" requested-libname))
+	      ;;Try to load a FASL library file associated to the source
+	      ;;file pathname.
+	      (((current-library-serialized-loader)
+		filename %install-precompiled-library-and-its-depencencies))
+	      (else
+	       ;;If we are here: the precompiled library loader returned
+	       ;;false, which  means no  valid FASL file  was available.
+	       ;;So try to load the source file.
+	       ((current-library-expander)
+		;;Return a symbolic  expression representing the LIBRARY
+		;;form, or raise an exception.
+		((current-library-source-loader) filename)
+		filename
+		(lambda (library-name.ids library-name.version)
+		  (%verify-library requested-libname filename
+				   library-name.ids library-name.version)))))))
+
+    (define (%verify-library requested-libname filename
+			     found-library-name.ids found-library-name.version)
+      ;;Verify  the name  of  loaded  library against  the  name of  the
+      ;;requested library.
+      ;;
+      ;;FOUND-LIBRARY-NAME.IDS is  the list of symbols  from the library
+      ;;name.  FOUND-LIBRARY-NAME.VERSION  is null or the  list of exact
+      ;;integers representing the library version.
+      ;;
+      (unless (equal? found-library-name.ids requested-libname)
+	(assertion-violation __who__
+	  (receive (port extract)
+	      (open-string-output-port)
+	    (display "expected to find library " port)
+	    (write requested-libname port)
+	    (display " in file " port)
+	    (display filename port)
+	    (display ", found " port)
+	    (write found-library-name.ids port)
+	    (display " instead" port)
+	    (extract)))))
+
+    #| end of module: DEFAULT-LIBRARY-LOADER |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (default-library-source-loader-by-filename filename)
+    ;;Default          value          for         the          parameter
+    ;;CURRENT-LIBRARY-SOURCE-LOADER-BY-FILENAME.   Given a  library file
+    ;;pathname: load  the file, expand  the first LIBRARY  form, compile
+    ;;the result, install the  library, return the corresponding LIBRARY
+    ;;record.
     ;;
-    ;;For this function,  a "library name" is a list  of symbols without
-    ;;the version specification.
-    ;;
-    (let ((filename ((current-library-source-file-locator)
-		     requested-libname
-		     (cdr (%external-pending-libraries)))))
-      (cond ((not filename)
-	     (assertion-violation __who__ "cannot find library" requested-libname))
-	    ;;Try to load  a FASL library file associated  to the source
-	    ;;file pathname.
-	    (((current-library-serialized-loader)
-	      filename %install-precompiled-library-and-its-depencencies))
-	    (else
-	     ;;If we  are here: the precompiled  library loader returned
-	     ;;false, which means no valid  FASL file was available.  So
-	     ;;try to load the source file.
-	     ((current-library-expander)
-	      ;;Return  a symbolic  expression representing  the LIBRARY
-	      ;;form, or raise an exception.
-	      ((current-library-source-loader) filename)
-	      filename
-	      (lambda (library-name.ids library-name.version)
-		(%verify-library requested-libname filename
-				 library-name.ids library-name.version)))))))
+    (receive (uid
+	      libname.ids libname.version
+	      import-desc* visit-desc* invoke-desc*
+	      invoke-code visit-code
+	      export-subst export-env
+	      guard-code guard-desc*
+	      option*)
+	((current-library-expander)
+	 ((current-library-source-loader) filename)
+	 filename
+	 (lambda (library-name.ids library-name.version)
+	   #t))
+      (find-library-by-name libname.ids)))
+
+;;; --------------------------------------------------------------------
 
   (define (%install-precompiled-library-and-its-depencencies
 	   filename
@@ -505,35 +559,28 @@
 		   (library-version-mismatch-warning libname.ids deplib-libname filename)
 		   #f)))))))
 
-  (define (%verify-library requested-libname filename
-			   found-library-name.ids found-library-name.version)
-    ;;Verify  the  name  of  loaded  library against  the  name  of  the
-    ;;requested library.
-    ;;
-    ;;FOUND-LIBRARY-NAME.IDS  is the  list of  symbols from  the library
-    ;;name.   FOUND-LIBRARY-NAME.VERSION is  null or  the list  of exact
-    ;;integers representing the library version.
-    ;;
-    (unless (equal? found-library-name.ids requested-libname)
-      (assertion-violation __who__
-	(let-values (((port extract) (open-string-output-port)))
-	  (display "expected to find library " port)
-	  (write requested-libname port)
-	  (display " in file " port)
-	  (display filename port)
-	  (display ", found " port)
-	  (write found-library-name.ids port)
-	  (display " instead" port)
-	  (extract)))))
+;;; --------------------------------------------------------------------
 
   (define current-library-loader
     ;;Hold a function used to load a library, either precompiled or from
-    ;;source.
+    ;;source, given a library name.
     ;;
     (make-parameter
 	default-library-loader
       (lambda (f)
 	(define who 'current-library-loader)
+	(with-arguments-validation (who)
+	    ((procedure	f))
+	  f))))
+
+  (define current-library-source-loader-by-filename
+    ;;Hold  a function  used to  load a  source library  given the  file
+    ;;pathname.
+    ;;
+    (make-parameter
+	default-library-source-loader-by-filename
+      (lambda (f)
+	(define who 'current-library-source-loader-by-filename)
 	(with-arguments-validation (who)
 	    ((procedure	f))
 	  f))))
@@ -637,6 +684,11 @@
   (for-each (lambda (lib)
 	      (serialize-library lib serialize compile))
     ((current-library-collection))))
+
+(define* (serialize-loaded-library (lib library?) (serialize procedure?) (compile procedure?))
+  ;;Compile and serialize the given library record.
+  ;;
+  (serialize-library lib serialize compile))
 
 (define* (serialize-library (lib library?) (serialize procedure?) (compile procedure?))
   (when ($library-source-file-name lib)

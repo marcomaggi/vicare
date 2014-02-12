@@ -17,6 +17,7 @@
 (library (ikarus load)
   (export
     load		load-r6rs-script
+    load-and-serialize-source-library
     library-path	library-extensions
     fasl-directory	fasl-path
     fasl-search-path)
@@ -42,8 +43,10 @@
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
 	  serialize-collected-libraries
+	  serialize-loaded-library
 	  current-library-source-file-locator
 	  current-library-source-loader
+	  current-library-source-loader-by-filename
 	  current-library-serialized-loader
 	  current-include-file-locator
 	  current-include-file-loader)
@@ -164,6 +167,29 @@
 				       (compile-core-expr core-expr))))
     (when run?
       (thunk))))
+
+
+;;;; loading source libraries then serializing them
+
+(define* (load-and-serialize-source-library (source-filename string?))
+  ;;Load a source library filename, expand it, compile it, serialize it.
+  ;;Return unspecified values.
+  ;;
+  (define verbose? #t)
+  (when verbose?
+    (fprintf (current-error-port)
+	     "loading source library: ~a\n"
+	     source-filename))
+  (let ((lib ((current-library-source-loader-by-filename) source-filename)))
+    (when verbose?
+      (fprintf (current-error-port)
+	       "serializing library: ~a\n"
+	       (fasl-path source-filename)))
+    (serialize-loaded-library lib
+			      (lambda (source-filename contents)
+				(store-serialized-library source-filename contents))
+			      (lambda (core-expr)
+				(compile-core-expr core-expr)))))
 
 
 ;;;; locating source library files
