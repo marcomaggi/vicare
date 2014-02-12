@@ -20,6 +20,8 @@
 .emacs.*
 .gdb_history
 .vimview
+*.vicare-32bit-fasl
+*.vicare-64bit-fasl
 Makefile
 Makefile.in
 aclocal.m4
