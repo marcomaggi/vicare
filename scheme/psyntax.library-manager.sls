@@ -406,13 +406,12 @@
 	obj))))
 
 
-;;;; loading libraries from files
+;;;; loading libraries from files: requesting by library name
 ;;
 ;;The  library  loader  is  a  function that  loads  a  library,  either
 ;;precompiled or from source, and installs it.
 ;;
-(module (current-library-loader
-	 current-library-source-loader-by-filename)
+(module (current-library-loader)
 
   (module (default-library-loader)
     (define-constant __who__ 'default-library-loader)
@@ -422,7 +421,7 @@
       ;;library name specification: search  the associated file pathname
       ;;and attempt  to load the file;  try first to load  a precompiled
       ;;file, if  any, then  try to  load the  source file.   The loaded
-      ;;library is installed.
+      ;;library is installed.  Return unspecified values.
       ;;
       ;;For this function, a "library name" is a list of symbols without
       ;;the version specification.
@@ -441,8 +440,6 @@
 	       ;;false, which  means no  valid FASL file  was available.
 	       ;;So try to load the source file.
 	       ((current-library-expander)
-		;;Return a symbolic  expression representing the LIBRARY
-		;;form, or raise an exception.
 		((current-library-source-loader) filename)
 		filename
 		(lambda (library-name.ids library-name.version)
@@ -471,9 +468,89 @@
 	    (display " instead" port)
 	    (extract)))))
 
+    (define (%install-precompiled-library-and-its-depencencies
+	     filename
+	     uid libname.ids libname.version
+	     import-descr* visit-descr* invoke-descr*
+	     export-subst export-env
+	     visit-proc invoke-proc guard-proc
+	     guard-descr* visible? library-option*)
+      ;;Used as  success continuation  function by  the function  in the
+      ;;parameter CURRENT-LIBRARY-SERIALIZED-LOADER.   All the arguments
+      ;;after FILENAME are the CONTENTS of the serialized library.
+      ;;
+      ;;Make sure all dependencies are met, then install the library and
+      ;;return true; otherwise return #f.
+      ;;
+      (let loop ((descr* (append import-descr* visit-descr* invoke-descr* guard-descr*)))
+	(cond ((null? descr*)
+	       (for-each (lambda (guard-library-descriptor)
+			   (let* ((guard-uid     (car  guard-library-descriptor))
+				  (guard-libname (cadr guard-library-descriptor))
+				  (guard-lib     (find-library-by-name guard-libname)))
+			     (invoke-library guard-lib)))
+		 guard-descr*)
+	       (if (guard-proc)
+		   ;;The precompiled library is stale.
+		   (begin
+		     (library-stale-warning libname.ids filename)
+		     #f)
+		 (let ((visit-code        #f)
+		       (invoke-code       #f)
+		       (guard-code        (quote (quote #f)))
+		       (guard-descr*      '())
+		       (source-file-name  #f))
+		   (install-library uid
+				    libname.ids libname.version
+				    import-descr* visit-descr* invoke-descr*
+				    export-subst export-env
+				    visit-proc invoke-proc
+				    visit-code invoke-code
+				    guard-code guard-descr*
+				    visible? source-file-name library-option*)
+		   #t)))
+	      (else
+	       ;;We expect each library descriptor to have the format:
+	       ;;
+	       ;;   (?uid ?libname ?version)
+	       ;;
+	       ;;where ?UID is a unique symbol associated to the library
+	       ;;and ?LIBNAME  is the  list of symbols  representing the
+	       ;;library name.
+	       ;;
+	       (let* ((deplib-descr	(car  descr*))
+		      (deplib-uid		(car  deplib-descr))
+		      (deplib-libname	(cadr deplib-descr))
+		      (deplib-lib		(find-library-by-name deplib-libname)))
+		 (if (and (library? deplib-lib)
+			  (eq? deplib-uid (library-id deplib-lib)))
+		     (loop (cdr descr*))
+		   (begin
+		     (library-version-mismatch-warning libname.ids deplib-libname filename)
+		     #f)))))))
+
     #| end of module: DEFAULT-LIBRARY-LOADER |# )
 
 ;;; --------------------------------------------------------------------
+
+  (define current-library-loader
+    ;;Hold a function used to load a library, either precompiled or from
+    ;;source, given a library name.
+    ;;
+    (make-parameter
+	default-library-loader
+      (lambda (f)
+	(define who 'current-library-loader)
+	(with-arguments-validation (who)
+	    ((procedure	f))
+	  f))))
+
+  #| end of module: CURRENT-LIBRARY-LOADER |# )
+
+
+;;;; loading libraries from files: requesting by library file pathname
+
+(module (current-library-source-loader-by-filename)
 
   (define (default-library-source-loader-by-filename filename)
     ;;Default          value          for         the          parameter
@@ -496,83 +573,6 @@
 	   #t))
       (find-library-by-name libname.ids)))
 
-;;; --------------------------------------------------------------------
-
-  (define (%install-precompiled-library-and-its-depencencies
-	   filename
-	   uid libname.ids libname.version
-	   import-descr* visit-descr* invoke-descr*
-	   export-subst export-env
-	   visit-proc invoke-proc guard-proc
-	   guard-descr* visible? library-option*)
-    ;;Used  as success  continuation  function by  the  function in  the
-    ;;parameter  CURRENT-LIBRARY-SERIALIZED-LOADER.   All the  arguments
-    ;;after FILENAME are the CONTENTS of the serialized library.
-    ;;
-    ;;Make sure all  dependencies are met, then install  the library and
-    ;;return true; otherwise return #f.
-    ;;
-    (let loop ((descr* (append import-descr* visit-descr* invoke-descr* guard-descr*)))
-      (cond ((null? descr*)
-	     (for-each (lambda (guard-library-descriptor)
-			 (let* ((guard-uid     (car  guard-library-descriptor))
-				(guard-libname (cadr guard-library-descriptor))
-				(guard-lib     (find-library-by-name guard-libname)))
-			   (invoke-library guard-lib)))
-	       guard-descr*)
-	     (if (guard-proc)
-		 ;;The precompiled library is stale.
-		 (begin
-		   (library-stale-warning libname.ids filename)
-		   #f)
-	       (let ((visit-code        #f)
-		     (invoke-code       #f)
-		     (guard-code        (quote (quote #f)))
-		     (guard-descr*      '())
-		     (source-file-name  #f))
-		 (install-library uid
-				  libname.ids libname.version
-				  import-descr* visit-descr* invoke-descr*
-				  export-subst export-env
-				  visit-proc invoke-proc
-				  visit-code invoke-code
-				  guard-code guard-descr*
-				  visible? source-file-name library-option*)
-		 #t)))
-	    (else
-	     ;;We expect each library descriptor to have the format:
-	     ;;
-	     ;;   (?uid ?libname ?version)
-	     ;;
-	     ;;where ?UID is  a unique symbol associated  to the library
-	     ;;and  ?LIBNAME is  the  list of  symbols representing  the
-	     ;;library name.
-	     ;;
-	     (let* ((deplib-descr	(car  descr*))
-		    (deplib-uid		(car  deplib-descr))
-		    (deplib-libname	(cadr deplib-descr))
-		    (deplib-lib		(find-library-by-name deplib-libname)))
-	       (if (and (library? deplib-lib)
-			(eq? deplib-uid (library-id deplib-lib)))
-		   (loop (cdr descr*))
-		 (begin
-		   (library-version-mismatch-warning libname.ids deplib-libname filename)
-		   #f)))))))
-
-;;; --------------------------------------------------------------------
-
-  (define current-library-loader
-    ;;Hold a function used to load a library, either precompiled or from
-    ;;source, given a library name.
-    ;;
-    (make-parameter
-	default-library-loader
-      (lambda (f)
-	(define who 'current-library-loader)
-	(with-arguments-validation (who)
-	    ((procedure	f))
-	  f))))
-
   (define current-library-source-loader-by-filename
     ;;Hold  a function  used to  load a  source library  given the  file
     ;;pathname.
@@ -585,7 +585,7 @@
 	    ((procedure	f))
 	  f))))
 
-  #| end of module: CURRENT-LIBRARY-LOADER |# )
+  #| end of module |# )
 
 
 ;;;; finding libraries, already loaded or not

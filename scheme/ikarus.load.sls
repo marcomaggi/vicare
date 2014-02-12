@@ -71,6 +71,11 @@
   (procedure-argument-violation who
     "expected list of strings representing directory pathnames as search path" obj))
 
+(define (%false-or-non-empty-string? S)
+  (or (not S)
+      (and (string? S)
+	   (not (fxzero? (string-length S))))))
+
 
 ;;;; handling of FASL repository file names
 
@@ -171,7 +176,8 @@
 
 ;;;; loading source libraries then serializing them
 
-(define* (load-and-serialize-source-library (source-filename string?))
+(define* (load-and-serialize-source-library (source-filename string?)
+					    (output-filename %false-or-non-empty-string?))
   ;;Load a source library filename, expand it, compile it, serialize it.
   ;;Return unspecified values.
   ;;
@@ -184,10 +190,11 @@
     (when verbose?
       (fprintf (current-error-port)
 	       "serializing library: ~a\n"
-	       (fasl-path source-filename)))
+	       (or output-filename
+		   (fasl-path source-filename))))
     (serialize-loaded-library lib
 			      (lambda (source-filename contents)
-				(store-serialized-library source-filename contents))
+				(store-serialized-library source-filename contents output-filename))
 			      (lambda (core-expr)
 				(compile-core-expr core-expr)))))
 
@@ -411,30 +418,38 @@
                              compiled with a different instance of Vicare.\n" ikfasl)
 		   #f)))))))
 
-  (define (store-serialized-library filename contents)
-    ;;Given the source  file name of a library file  and the contents of
-    ;;an already compiled library write a FASL file in the repository.
-    ;;
-    ;;CONTENTS must  be a list  of values representing a  LIBRARY record
-    ;;holding precompiled  code.  See the function  SERIALIZE-LIBRARY in
-    ;;"psyntax.library-manager.sls" for details on the format.
-    ;;
-    (cond ((fasl-path filename)
-	   => (lambda (ikfasl)
-		(define-syntax-rule (%display ?thing)
-		  (display ?thing stderr))
-		(%display "serialising ")
-		(%display ikfasl)
-		(%display " ... ")
-		(receive (dir name)
-		    (posix.split-pathname-root-and-tail ikfasl)
-		  (posix.mkdir/parents dir #o755))
-		(let ((port (open-file-output-port ikfasl (file-options no-fail))))
-		  (unwind-protect
-		      (fasl-write (make-serialized-library contents) port
-				  (retrieve-filename-foreign-libraries filename))
-		    (close-output-port port)))
-		(%display "done\n")))))
+  (case-define store-serialized-library
+    ((source-filename contents)
+     (store-serialized-library source-filename contents #f))
+    ((source-filename contents output-filename)
+     ;;Given the source file name of  a library file and the contents of
+     ;;an already compiled library write a FASL file in the repository.
+     ;;
+     ;;CONTENTS must be  a list of values representing  a LIBRARY record
+     ;;holding precompiled code.  See  the function SERIALIZE-LIBRARY in
+     ;;"psyntax.library-manager.sls" for details on the format.
+     ;;
+     ;;The optional OUTPUT-FILENAME must be false or the pathname of the
+     ;;output FASL file.
+     ;;
+     (cond ((or output-filename
+		(fasl-path source-filename))
+	    => (lambda (ikfasl)
+		 (define-syntax-rule (%display ?thing)
+		   (display ?thing stderr))
+		 (%display "serialising ")
+		 (%display ikfasl)
+		 (%display " ... ")
+		 (receive (dir name)
+		     (posix.split-pathname-root-and-tail ikfasl)
+		   (unless (string-empty? dir)
+		     (posix.mkdir/parents dir #o755)))
+		 (let ((port (open-file-output-port ikfasl (file-options no-fail))))
+		   (unwind-protect
+		       (fasl-write (make-serialized-library contents) port
+				   (retrieve-filename-foreign-libraries source-filename))
+		     (close-output-port port)))
+		 (%display "done\n"))))))
 
   #| end of module |# )
 

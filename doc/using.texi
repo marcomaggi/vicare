@@ -163,6 +163,14 @@ Load and evaluate @var{FILE} as an @rnrs{6} program at startup, before
 loading libraries, evaluating codes and running the main script.  This
 option can be used multiple times.
 
+@item -o @var{OFILE}
+@itemx --output @var{OFILE}
+@cindex Command line option @option{--output}
+@cindex @option{--output}, command line option
+Select the pathname of an output file.  This selection has multiple
+purposes and it is ignored when irrelevant.  @var{OFILE} is used as:
+output @fasl{} file name when compiling individual library files.
+
 @item -l @var{LIBFILE}
 @itemx --load-library @var{LIBFILE}
 @cindex Command line option @option{-l}

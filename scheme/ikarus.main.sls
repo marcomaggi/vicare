@@ -226,6 +226,10 @@
    raw-repl
 		;If true  do not create  a readline console  input port,
 		;even when the readline interface is available.
+   output-file
+		;False or  a non-empty string representing  the pathname
+		;of an  output file.   It has multiple  purposes: output
+		;file for compiled libraries.
    ))
 
 (define-inline (run-time-config-load-libraries-register! cfg pathname)
@@ -277,7 +281,8 @@
 	      (CFG.FASL-SEARCH-PATH	(%dot-id ".fasl-search-path"))
 	      (CFG.FASL-DIRECTORY	(%dot-id ".fasl-directory"))
 	      (CFG.MORE-FILE-EXTENSIONS	(%dot-id ".more-file-extensions"))
-	      (CFG.RAW-REPL		(%dot-id ".raw-repl")))
+	      (CFG.RAW-REPL		(%dot-id ".raw-repl"))
+	      (CFG.OUTPUT-FILE		(%dot-id ".output-file")))
 	   #'(let-syntax
 		 ((CFG.EXEC-MODE
 		   (identifier-syntax
@@ -365,7 +370,11 @@
 
 		  (CFG.RAW-REPL
 		   (identifier-syntax
-		    (run-time-config-raw-repl ?cfg))))
+		    (run-time-config-raw-repl ?cfg)))
+
+		  (CFG.OUTPUT-FILE
+		   (identifier-syntax
+		    (run-time-config-output-file ?cfg))))
 	       . ?body)))))))
 
 
@@ -407,6 +416,7 @@
 			  #f		;fasl-directory
 			  #f		;more-file-extensions
 			  #f		;raw-repl
+			  #f		;output-file
 			  ))
 
   (let next-option ((args	(command-line-arguments))
@@ -578,6 +588,13 @@
 
 ;;; --------------------------------------------------------------------
 ;;; Vicare options with argument
+
+	  ((%option= "-o" "--output")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--output requires a file name argument")
+	     (begin
+	       (set-run-time-config-output-file! cfg (cadr args))
+	       (next-option (cddr args) k))))
 
 	  ((%option= "--rcfile")
 	   (if (null? (cdr args))
@@ -825,6 +842,10 @@ Other options:
 
    --no-rcfile
         Disable loading of run-command files.
+
+   -o OFILE
+   --output OFILE
+        Select the pathname of the output file.
 
    --rcfile RCFILE
         Load and evaluate  RCFILE as an R6RS program  at startup, before
@@ -1135,7 +1156,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define (compile-library cfg)
   (with-run-time-config (cfg)
-    (doit (loading.load-and-serialize-source-library cfg.script))))
+    (doit (loading.load-and-serialize-source-library cfg.script cfg.output-file))))
 
 (define (load-evaluated-script cfg)
   (with-run-time-config (cfg)
