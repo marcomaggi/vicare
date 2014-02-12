@@ -47,7 +47,8 @@ do
     if test -f "$item"
     then
         echo "*** compiling: $item"
-        vicare -O2 --fasl-directory "$fasldir" --compile-dependencies "$item" || true
+        vicare -O2 --verbose \
+	    --fasl-directory "$fasldir" --compile-dependencies "$item" || true
     else echo "*** skipping: $item"
     fi
 done
