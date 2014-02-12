@@ -338,6 +338,10 @@ Many backwards incompatibilities... life is hard!
         --output libname.vicare-64bit-fasl \
         --compile-library libname.sls
 
+* Added  command  line  options  --verbose and  --silent.   By  default:
+  execution is now silent.
+
+
 Notes for revision 0.3d7
 ------------------------
 

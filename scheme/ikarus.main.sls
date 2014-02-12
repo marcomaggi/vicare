@@ -55,7 +55,6 @@
 		  load-r6rs-script
 		  load-and-serialize-source-library
 		  load
-		  host-info
 		  $struct-guardian
 		  struct-guardian-logger
 		  struct-guardian-log
@@ -73,11 +72,12 @@
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
+		  verbose?
 		  print-loaded-libraries
 		  report-errors-at-runtime
 		  strict-r6rs
 		  descriptive-labels)
-	    config.)
+	    options.)
     (prefix (only (ikarus.compiler)
 		  $optimize-level
 		  $generate-debug-calls
@@ -562,28 +562,36 @@
 	   (set-run-time-config-print-libraries! cfg #f)
 	   (next-option (cdr args) k))
 
+	  ((%option= "--verbose")
+	   (options.verbose? #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--silent")
+	   (options.verbose? #f)
+	   (next-option (cdr args) k))
+
 	  ((%option= "--report-errors-at-runtime")
-	   (config.report-errors-at-runtime #t)
+	   (options.report-errors-at-runtime #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-report-errors-at-runtime")
-	   (config.report-errors-at-runtime #f)
+	   (options.report-errors-at-runtime #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--strict-r6rs")
-	   (config.strict-r6rs #t)
+	   (options.strict-r6rs #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-strict-r6rs")
-	   (config.strict-r6rs #f)
+	   (options.strict-r6rs #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--descriptive-labels")
-	   (config.descriptive-labels #t)
+	   (options.descriptive-labels #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-descriptive-labels")
-	   (config.descriptive-labels #f)
+	   (options.descriptive-labels #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
@@ -1427,7 +1435,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (init-library-path cfg)
     (init-fasl-search-path cfg)
     (load-rc-files-as-r6rs-scripts cfg)
-    (config.print-loaded-libraries cfg.print-libraries)
+    (options.print-loaded-libraries cfg.print-libraries)
 
     (execution-state-initialisation-according-to-command-line-options)
 

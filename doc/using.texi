@@ -400,6 +400,16 @@ Display the help message then exit.
 @cindex @option{--}, command line option
 Mark the end of @value{EXECUTABLE} options; all the arguments after this
 marker can be obtained by calling the @func{command-line} procedure.
+
+@item --verbose
+@cindex Command line option @option{--verbose}
+@cindex @option{--verbose}, command line option
+Turn on verbose messages describing expander and compiler operations.
+
+@item --silent
+@cindex Command line option @option{--silent}
+@cindex @option{--silent}, command line option
+Turn off verbose messages describing compiler operations.
 @end table
 
 @cindex @env{VICARE_RC_FILES}

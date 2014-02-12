@@ -27,6 +27,7 @@
 #!r6rs
 (library (vicare options)
   (export
+    verbose?
     print-loaded-libraries
     report-errors-at-runtime
     strict-r6rs
@@ -47,6 +48,7 @@
 	     (set! bool (and value #t)))))))
       ))
 
+  (define-boolean-option verbose?		  #f)
   (define-boolean-option print-loaded-libraries   #f)
   (define-boolean-option report-errors-at-runtime #f)
   (define-boolean-option strict-r6rs              #f)

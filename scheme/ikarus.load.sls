@@ -57,8 +57,9 @@
 	  read-script-source-file
 	  read-library-source-file)
     (prefix (only (vicare options)
-		  print-loaded-libraries)
-	    config.)
+		  print-loaded-libraries
+		  verbose?)
+	    options.)
     (vicare arguments validation))
 
   (include "ikarus.wordsize.scm")
@@ -181,13 +182,12 @@
   ;;Load a source library filename, expand it, compile it, serialize it.
   ;;Return unspecified values.
   ;;
-  (define verbose? #t)
-  (when verbose?
+  (when (options.verbose?)
     (fprintf (current-error-port)
 	     "loading source library: ~a\n"
 	     source-filename))
   (let ((lib ((current-library-source-loader-by-filename) source-filename)))
-    (when verbose?
+    (when (options.verbose?)
       (fprintf (current-error-port)
 	       "serializing library: ~a\n"
 	       (or output-filename
@@ -383,7 +383,7 @@
     ;;CURRENT-LIBRARY-SERIALIZED-LOADER.
     ;;
     (define (%print-loaded-library name)
-      (when (config.print-loaded-libraries)
+      (when (options.print-loaded-libraries)
 	(display (string-append "Vicare loading: " name "\n")
 		 (console-error-port))))
     (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))
@@ -400,9 +400,10 @@
 	    ((< (posix.file-modification-time ikfasl)
 		(posix.file-modification-time filename))
 	     (%print-loaded-library filename)
-	     (fprintf (console-error-port)
-		      "WARNING: not using fasl file ~s because it is older \
-                       than the source file ~s\n" ikfasl filename)
+	     (when (options.verbose?)
+	       (fprintf (console-error-port)
+			"WARNING: not using fasl file ~s because it is older \
+                         than the source file ~s\n" ikfasl filename))
 	     #f)
 	    (else
 	     (%print-loaded-library ikfasl)
@@ -413,9 +414,10 @@
 	       (if (serialized-library? x)
 		   (apply success-kont filename (serialized-library-contents x))
 		 (begin
-		   (fprintf (console-error-port)
-			    "WARNING: not using fasl file ~s because it was \
-                             compiled with a different instance of Vicare.\n" ikfasl)
+		   (when (options.verbose?)
+		     (fprintf (console-error-port)
+			      "WARNING: not using fasl file ~s because invalid or \
+                               compiled with a different instance of Vicare\n" ikfasl))
 		   #f)))))))
 
   (case-define store-serialized-library
@@ -437,9 +439,10 @@
 	    => (lambda (ikfasl)
 		 (define-syntax-rule (%display ?thing)
 		   (display ?thing stderr))
-		 (%display "serialising ")
-		 (%display ikfasl)
-		 (%display " ... ")
+		 (when (options.verbose?)
+		   (%display "serialising ")
+		   (%display ikfasl)
+		   (%display " ... "))
 		 (receive (dir name)
 		     (posix.split-pathname-root-and-tail ikfasl)
 		   (unless (string-empty? dir)
@@ -449,7 +452,8 @@
 		       (fasl-write (make-serialized-library contents) port
 				   (retrieve-filename-foreign-libraries source-filename))
 		     (close-output-port port)))
-		 (%display "done\n"))))))
+		 (when (options.verbose?)
+		   (%display "done\n")))))))
 
   #| end of module |# )
 

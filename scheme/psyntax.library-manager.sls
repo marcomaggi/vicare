@@ -78,7 +78,11 @@
   (import (rnrs)
     (psyntax compat)
     (vicare arguments validation)
-    (vicare language-extensions simple-match))
+    (vicare language-extensions simple-match)
+    (prefix (only (vicare options)
+		  print-loaded-libraries
+		  verbose?)
+	    options.))
 
 
 ;;;; type definitions: library record

@@ -41,7 +41,7 @@ AC_DEFINE([IK_PROTECT_FROM_STACK_OVERFLOW],[1],
 #
 #    $ make VFLAGS="-g --print-loaded-libraries"
 #
-AS_VAR_SET(AX_VFLAGS,["-O2"])
+AS_VAR_SET(AX_VFLAGS,["-O2 --verbose"])
 AS_VAR_SET_IF(VFLAGS,,[AS_VAR_SET(VFLAGS)])
 
 VICARE_ENABLE_OPTION([DEBUG],[debug],[no],
