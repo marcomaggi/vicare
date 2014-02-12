@@ -6,10 +6,10 @@ Subject: [announce] Vicare Scheme revision 0.3d8
 
 Vicare Scheme is an R6RS compliant fork of Ikarus Scheme, aiming to be a
 native compiler for R6 Scheme producing single threaded programs running
-on  Intel x86 32-bit  processors, with  experimental support  for 64-bit
-machines; it is tested only  on GNU+Linux, no official support for other
-platforms is present.  It implements a foreign-functions interface based
-on Libffi.  "Vicare" is pronounced the etruscan way.
+on  Intel  x86 32-bit  and  64-bit  processors;  it  is tested  only  on
+GNU+Linux, no  official support for  other platforms is present,  but it
+should run  on Mac  OS X.  It  implements a  foreign-functions interface
+based on Libffi.  "Vicare" is pronounced the etruscan way.
 
   The latest version of this package can be downloaded from:
 

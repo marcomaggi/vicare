@@ -34,9 +34,9 @@ Straaten.
 programming language;  it is  the creation  of Abdulaziz  Ghuloum, which
 retired from  development in 2010.   Vicare Scheme is an  R6RS compliant
 fork of Ikarus Scheme, aiming to  become a native compiler for R6 Scheme
-producing  single   threaded  programs  running  on   Intel  x86  32-bit
-processors, with experimental support for  64-bit machines; it is tested
-only on GNU+Linux, no official support for other platforms is present.
+producing  single threaded  programs  running on  Intel  x86 32-bit  and
+64-bit processors; it  is tested only on GNU+Linux,  no official support
+for other platforms is present, but it should run on Mac OS X.
 
   "Vicare" is pronounced  the etruscan way.  The logo of  the project is
 the greek capital letter Upsilon (U+03D2).
@@ -343,7 +343,7 @@ Vicare's GitHub site:
 C. Resources
 ------------
 
-The latest version of this package can be downloaded from Google Code:
+The latest version of this package can be downloaded from:
 
 	 <http://sourceforge.net/projects/vicare-scheme/files/>
 
