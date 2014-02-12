@@ -1453,7 +1453,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	 (new-cafe (lambda (x)
 		     (doit (eval x env))))))
 
-      ((compile)
+      ((compile-dependencies)
        (compile-dependencies cfg))
 
       ((compile-library)
