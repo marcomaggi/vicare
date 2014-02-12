@@ -326,6 +326,17 @@ Many backwards incompatibilities... life is hard!
   by  (vicare), and  not  more exported  by (vicare  language-extensions
   syntaxes).
 
+* It is  now possible to  compile individual library files,  producing a
+  single FASL file;  one FASL file for each LIBRARY  form.  To write the
+  FASL file to the repository:
+
+     $ vicare --compile-library libname.sls
+
+  the explicitly select an output file name:
+
+     $ vicare \
+        --output libname.vicare-64bit-fasl \
+        --compile-library libname.sls
 
 Notes for revision 0.3d7
 ------------------------
