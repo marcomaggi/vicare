@@ -9,6 +9,8 @@ EXTRA_DIST		= \
 	RFC/rfc5735.ipv4-special-use-addresses.txt	\
 	RFC/rfc3986.uri.txt
 
+dist_man_MANS = vicare.1
+
 info_TEXINFOS		= \
 	vicare-scheme.texi			\
 	vicare-libs.texi			\

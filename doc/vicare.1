@@ -1,0 +1,139 @@
+.\" Copyright (C), 2014  Marco Maggi
+.\" You may distribute this file under the terms of the GNU Free
+.\" Documentation License.
+.TH vicare 1 2014-02-12
+.SH NAME
+vicare \- A compiler for R6RS Scheme
+.SH SYNOPSIS
+.sp
+.nf
+\fBvicare\fR \fI[<vicare opts>]\fR \fB\-\-r6rs-script\fR \fI<script> [\-\- [<program opts]]\fR
+\fBvicare\fR \fI[<vicare opts>]\fR \fB\-\-compile\-dependencies\fR \fI<script>\fR
+.fi
+.sp
+.SH DESCRIPTION
+.PP
+Vicare Scheme is an R6RS compliant implementation of the programming
+language Scheme, aiming to become a native compiler producing single
+threaded programs running on Intel x86 32-bit and 64-bit processors; it
+is tested only on GNU+Linux, no official support for other platforms is
+present, but it should run on Mac OS X.
+
+.\" ------------------------------------------------------------
+
+.SH SOME RUNNING MODE OPTIONS
+.PP
+\fB\-\-r6rs\-script\fR \fIscript\fR
+.RS 4
+Start \fIVicare\fR in R6RS\-script mode.  Load the \fIscript\fR as an
+R6RS top\-level program and execute it.
+.RE
+
+.PP
+\fB\-\-compile\-dependencies\fR \fIscript\fR
+.RS 4
+Load the \fIscript\fR as an R6RS top\-level program, load all the
+imported libraries, compile them and write them as FASL files to the
+FASL repository.
+.RE
+
+.PP
+\fB\-\-license\fR
+.RS 4
+Display the license message then exit.
+.RE
+
+.PP
+\fB\-\-version\fR
+.RS 4
+Display version informations then exit.
+.RE
+
+.\" ------------------------------------------------------------
+
+.SH SOME CONFIGURATION OPTIONS
+.PP
+\fB\-L\fR \fIdirectory\fR,
+\fB\-\-search\-path\fR \fIdirectory\fR
+.RS 4
+Add \fIdirectory\fR to the search path for libraries and include files.
+This option can be used multiple times.
+.RE
+
+.PP
+\fB\-F\fR \fIdirectory\fR,
+\fB\-\-fasl\-path\fR \fIdirectory\fR
+.RS 4
+Add \fIdirectory\fR to the search path for precompiled FASL files.  This
+option can be used multiple times.
+.RE
+
+.PP
+\fB\-\-fasl\-directory\fR \fIdirectory\fR
+.RS 4
+Select \fIdirectory\fR as top pathname under which FASL files are stored
+when libraries are compiled; \fIdirectory\fR must exist.  When used
+multiple times: the last one wins.  The selected directory is always
+prepended to the FASL search path.
+.RE
+
+.PP
+\fB\-\-more\-file\-extensions\fR
+.RS 4
+Rather than searching only libraries with extension \fB.vicare.sls\fR
+and \fB.sls\fR, search also for \fB.vicare.ss\fR, \fB.ss\fR,
+\fB.vicare.scm\fR, \fB.scm\fR and the \fBmain\fR file.
+.RE
+
+.PP
+\fB\-\-\fR
+.RS 4
+Mark the end of \fBvicare\fR options and the beginning of user program
+options; all the arguments after this marker can be obtained by calling
+the \fBcommand-line\fR procedure.
+.RE
+
+.\" ------------------------------------------------------------
+
+.SH "SEE ALSO"
+.PP
+The official documentation is distributed in Texinfo format; see the
+files \fBvicare-scheme\fR, \fBvicare-libs\fR, \fBnausicaa\fR,
+\fBmehve\fR.
+.PP
+The latest version of this package can be downloaded from:
+.PP
+.RS 4
+\%http://sourceforge.net/projects/vicare-scheme/files/
+.RE
+.PP
+The home page of the Vicare project is at:
+.PP
+.RS 4
+\%http://marcomaggi.github.com/vicare.html
+.RE
+.PP
+Development takes place at:
+.PP
+.RS 4
+\%http://github.com/marcomaggi/vicare/
+.RE
+
+.\" ------------------------------------------------------------
+
+.SH BUGS
+.PP
+See the issues at the Github project page:
+.PP
+.RS 4
+\%http://github.com/marcomaggi/vicare/issues
+.RE
+
+.\" ------------------------------------------------------------
+
+.SH AUTHOR
+Marco Maggi <marco.maggi-ipsu@poste.it>
+.\" Local Variables:
+.\" fill-column: 72
+.\" default-justification: left
+.\" End:
