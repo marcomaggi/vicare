@@ -1920,7 +1920,17 @@
   ;;The returned values are:
   ;;
   ;;UID -
-  ;;   A gensym uniquely identifying this library.
+  ;;
+  ;;  A gensym  uniquely  identifying this  library.
+  ;;
+  ;;  This gensym is registered: in the LIBRARY record in the collection
+  ;;  of installed  libraries; in the FASL file  containing this library
+  ;;  in compiled and serialized form;  in the FASL files containing the
+  ;;  compiled  libraries that import this one.
+  ;;
+  ;;  Whenever  a compiled library imports  this one, the UID  stored in
+  ;;  the fasl files are compared: if they are EQ? the compiled versions
+  ;;  are in sync, otherwise they must be recompiled.
   ;;
   ;;LIBNAME -
   ;;  A R6RS library name.  For the library:
