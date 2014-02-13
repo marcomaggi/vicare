@@ -27,6 +27,10 @@
     module				import
     begin0				define-values
 
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Thu Feb 13, 2014)
+    #;__who__
+
     make-struct-type			struct?
     struct-type-descriptor?		struct-type-field-names
 
