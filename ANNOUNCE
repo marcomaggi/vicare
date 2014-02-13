@@ -341,6 +341,10 @@ Many backwards incompatibilities... life is hard!
 * Added  command  line  options  --verbose and  --silent.   By  default:
   execution is now silent.
 
+* BACKWARDS  INCOMPATIBILITY  The  third   (and  optional)  argument  of
+  EXPAND-LIBRARY now must be a function accepting a R6RS library name as
+  single argument.
+
 
 Notes for revision 0.3d7
 ------------------------

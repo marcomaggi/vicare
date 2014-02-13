@@ -19,6 +19,7 @@
   (export
     define*				define-constant
     case-define				case-define*
+    case-lambda*			lambda*
     define-record
     define-inline			define-syntax-rule
     define-auxiliary-syntaxes
@@ -37,13 +38,15 @@
     add1				sub1
     pretty-print			pretty-print*
     fprintf				debug-print
+    void
 
     ;; compiler related operations
     eval-core
 
     ;; runtime options
-    report-errors-at-runtime		strict-r6rs
-    enable-arguments-validation?	descriptive-labels
+    options.strict-r6rs
+    options.enable-arguments-validation?
+    options.descriptive-labels
 
     ;; interpreting the result of reading annotated sources
     annotation?				annotation-expression
@@ -72,6 +75,27 @@
     ;; system stuff
     file-modification-time
 
+    ;; library names and version numbers
+    library-name?
+    library-version-numbers?		library-version-number?
+    library-name-decompose
+    library-name->identifiers		library-name->version
+    library-name-identifiers=?		library-name=?
+    library-name<?			library-name<=?
+    library-version=?
+    library-version<?			library-version<=?
+
+    ;; library references and conformity
+    library-reference?			library-version-reference?
+    library-sub-version-reference?	library-sub-version?
+    library-reference-decompose
+    library-reference->identifiers
+    library-reference->version-reference
+    library-reference-identifiers=?
+    conforming-sub-version-and-sub-version-reference?
+    conforming-version-and-version-reference?
+    conforming-library-name-and-library-reference?
+
     ;; unsafe bindings
     $car $cdr
     $fx= $fx< $fx> $fx<= $fx>= $fxadd1
@@ -80,17 +104,28 @@
   (import (except (ikarus)
 		  ;;FIXME This except is to  be removed at the next boot
 		  ;;image rotation.  (Marco Maggi; Fri Jan 31, 2014)
-		  struct-type-descriptor?)
+		  struct-type-descriptor?
+		  ;;FIXME This except is to  be removed at the next boot
+		  ;;image rotation.  (Marco Maggi; Fri Jan 31, 2014)
+		  library-sub-version?)
     (only (ikarus structs)
 	  struct-type-descriptor?)
     (only (ikarus.compiler)
 	  eval-core)
     (only (ikarus system $symbols)
 	  $unintern-gensym)
-    (only (vicare options)
-	  report-errors-at-runtime
-	  strict-r6rs
-	  descriptive-labels)
+    (prefix (rename (only (vicare options)
+			  verbose?
+			  strict-r6rs
+			  descriptive-labels
+			  vicare-built-with-arguments-validation-enabled)
+		    (vicare-built-with-arguments-validation-enabled
+		     enable-arguments-validation?))
+	    options.)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Thu Feb 13, 2014)
+    (only (ikarus library-utils)
+	  library-sub-version?)
     (only (ikarus.posix)
 	  ;;This is used by INCLUDE to register the modification time of
 	  ;;the files included  at expand-time.  Such time is  used in a
@@ -104,16 +139,18 @@
 
 
 (define (library-version-mismatch-warning name depname filename)
-  (fprintf (current-error-port)
-	   "*** Vicare warning: library ~s has an inconsistent dependency \
-            on library ~s; file ~s will be recompiled from source.\n"
-	   name depname filename))
+  (when (options.verbose?)
+    (fprintf (current-error-port)
+	     "*** Vicare warning: library ~s has an inconsistent dependency \
+              on library ~s; file ~s will be recompiled from source.\n"
+	     name depname filename)))
 
 (define (library-stale-warning name filename)
-  (fprintf (current-error-port)
-	   "*** Vicare warning: library ~s is stale; file ~s will be \
-            recompiled from source.\n"
-	   name filename))
+  (when (options.verbose?)
+    (fprintf (current-error-port)
+	     "*** Vicare warning: library ~s is stale; file ~s will be \
+              recompiled from source.\n"
+	     name filename)))
 
 (define-syntax define-record
   (syntax-rules ()

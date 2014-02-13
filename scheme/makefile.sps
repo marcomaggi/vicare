@@ -292,6 +292,7 @@
     "ikarus.fasl.write.sls"
     "ikarus.fasl.read.sls"
     "ikarus.compiler.sls"
+    "ikarus.library-utils.sls"
     "psyntax.compat.sls"
     "psyntax.library-manager.sls"
     "psyntax.internal.sls"
@@ -2864,6 +2865,7 @@
     (library-reference?					i v $language)
     (library-version-reference?				i v $language)
     (library-sub-version-reference?			i v $language)
+    (library-sub-version?				i v $language)
     (library-reference-decompose			i v $language)
     (library-reference->identifiers			i v $language)
     (library-reference->version-reference		i v $language)
@@ -3919,7 +3921,8 @@
 	;;Datums  embedded in  this  symbolic expression  are quoted  to
 	;;allow the sexp to be handed to EVAL (I guess; Marco Maggi, Aug
 	;;26, 2011).
-	`(install-library ',id ',fullname ',version
+	`(install-library ',id
+			  (quote ,(append fullname (list version)))  ;;',fullname ',version
 			  '() ;; import-libs
 			  '() ;; visit-libs
 			  '() ;; invoke-libs

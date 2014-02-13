@@ -16,10 +16,10 @@
 
 (library (ikarus load)
   (export
-    load		load-r6rs-script
     load-and-serialize-source-library
-    library-path	library-extensions
-    fasl-directory	fasl-path
+    load			load-r6rs-script
+    library-path		library-extensions
+    fasl-directory		fasl-path
     fasl-search-path)
   (import (except (ikarus)
 		  fixnum-width
@@ -43,7 +43,7 @@
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
 	  serialize-collected-libraries
-	  serialize-loaded-library
+	  serialize-library
 	  current-library-source-file-locator
 	  current-library-source-loader
 	  current-library-source-loader-by-filename
@@ -178,7 +178,7 @@
 ;;;; loading source libraries then serializing them
 
 (define* (load-and-serialize-source-library (source-filename string?)
-					    (output-filename %false-or-non-empty-string?))
+					    (fasl-filename %false-or-non-empty-string?))
   ;;Load a source library filename, expand it, compile it, serialize it.
   ;;Return unspecified values.
   ;;
@@ -186,17 +186,20 @@
     (fprintf (current-error-port)
 	     "loading source library: ~a\n"
 	     source-filename))
-  (let ((lib ((current-library-source-loader-by-filename) source-filename)))
+  (let ((lib ((current-library-source-loader-by-filename) source-filename
+	      ;;This  is  a predicate  function  to  apply to  the  R6RS
+	      ;;library name of the loaded library.
+	      (lambda (libname) #t))))
     (when (options.verbose?)
       (fprintf (current-error-port)
 	       "serializing library: ~a\n"
-	       (or output-filename
+	       (or fasl-filename
 		   (fasl-path source-filename))))
-    (serialize-loaded-library lib
-			      (lambda (source-filename contents)
-				(store-serialized-library source-filename contents output-filename))
-			      (lambda (core-expr)
-				(compile-core-expr core-expr)))))
+    (serialize-library lib
+		       (lambda (source-filename contents)
+			 (store-serialized-library source-filename contents fasl-filename))
+		       (lambda (core-expr)
+			 (compile-core-expr core-expr)))))
 
 
 ;;;; locating source library files
@@ -234,11 +237,11 @@
 	    ((list-of-strings	obj))
 	  obj))))
 
-  (define (locate-library-source-file libname pending-libraries)
+  (define* (locate-library-source-file (libref library-reference?) pending-libraries)
     ;;Default   value    for   the   CURRENT-LIBRARY-SOURCE-FILE-LOCATOR
-    ;;parameter.  Given  a library  name, as defined  by R6RS:  scan the
-    ;;library search  path for the  corresponding source file;  return a
-    ;;string representing the source file pathname having:
+    ;;parameter.   Given  a R6RS  library  reference:  scan the  library
+    ;;search path  for the  corresponding source  file; return  a string
+    ;;representing the source file pathname having:
     ;;
     ;;* The  directory part equal to  one of the directory  pathnames in
     ;;  the parameter  LIBRARY-PATH.
@@ -249,18 +252,19 @@
     ;;For this function,  a "library name" is a list  of symbols without
     ;;the version specification.
     ;;
-    ;;PENDING-LIBRARIES must be  a possibly empty list  of library names
-    ;;whose installation is currently  pending; when non-empty, the list
-    ;;represents   the  libraries   that  are   requesting  LIBNAME   as
+    ;;PENDING-LIBRARIES must be a possibly  empty list items, item being
+    ;;a  list of  R6RS library  name identifiers;  such items  represent
+    ;;libraries whose installation is currently pending; when non-empty,
+    ;;the list  represents the libraries  that are requesting  LIBREF as
     ;;dependency.
     ;;
-    (let loop ((rootname-str     (%library-identifiers->file-name libname))
+    (let loop ((rootname-str     (%libref->filename libref))
 	       (directories      (library-path))
 	       (file-extensions  (library-extensions))
 	       (failed-list      '()))
       (cond ((null? directories)
 	     ;;No suitable library was found.
-	     (%file-locator-resolution-error libname (reverse failed-list)
+	     (%file-locator-resolution-error libref (reverse failed-list)
 					     pending-libraries))
 
 	    ((null? file-extensions)
@@ -276,24 +280,25 @@
 		   pathname
 		 (loop rootname-str directories (cdr file-extensions) (cons pathname failed-list))))))))
 
-  (module (%library-identifiers->file-name)
+  (module (%libref->filename)
 
-    (define (%library-identifiers->file-name library-name.ids)
+    (define (%libref->filename libref)
       ;;Convert the  non-empty list of  identifiers from a  library name
       ;;into  a  string  representing the  corresponding  relative  file
       ;;pathname,  without   extension  but  including  a   leading  #\/
       ;;character.  Examples:
       ;;
-      ;;   (%library-identifiers->file-name '(alpha beta gamma))
+      ;;   (%libref->filename '(alpha beta gamma))
       ;;   => "/alpha/beta/gamma"
       ;;
-      ;;   (%library-identifiers->file-name '(alpha beta main))
+      ;;   (%libref->filename '(alpha beta main))
       ;;   => "/alpha/beta/main_"
       ;;
       ;;notice  how  the  component  "main",  when  appearing  last,  is
       ;;"quoted" by appending an underscore.
       ;;
-      (assert (not (null? library-name.ids)))
+      (define library-name.ids
+	(library-reference->identifiers libref))
       (receive (port extract)
 	  (open-string-output-port)
 	(let next-component ((component		(car library-name.ids))
@@ -332,14 +337,14 @@
 		      (char=? ch #\_))
 	     (string->list (substring component-name 4 (string-length component-name))))))
 
-    #| end of module: %LIBRARY-IDENTIFIERS->FILE-NAME |# )
+    #| end of module: %LIBREF->FILENAME |# )
 
-  (define (%file-locator-resolution-error libname failed-list pending-libraries)
+  (define (%file-locator-resolution-error libref failed-list pending-libraries)
     (raise
      (apply condition (make-error)
 	    (make-who-condition 'expander)
 	    (make-message-condition "cannot locate library in library-path")
-	    (make-library-resolution-condition libname failed-list)
+	    (make-library-resolution-condition libref failed-list)
 	    (map make-imported-from-condition pending-libraries))))
 
   (define-condition-type &library-resolution
@@ -382,48 +387,49 @@
     ;;This   function   is  the   default   value   for  the   parameter
     ;;CURRENT-LIBRARY-SERIALIZED-LOADER.
     ;;
-    (define (%print-loaded-library name)
+    (define (%print-loaded-library pathname)
       (when (options.print-loaded-libraries)
-	(display (string-append "Vicare loading: " name "\n")
+	(display (string-append "Vicare loading: " pathname "\n")
 		 (console-error-port))))
-    (let ((ikfasl (let next-prefix ((search-path (fasl-search-path)))
-		    (if (null? search-path)
-			#f
-		      (let ((ikfasl (%make-fasl-pathname (car search-path) filename)))
-			(if (file-exists? ikfasl)
-			    ikfasl
-			  (next-prefix (cdr search-path))))))))
-      (cond ((or (not ikfasl)
-		 (not (file-exists? ikfasl)))
-	     (%print-loaded-library filename)
-	     #f)
-	    ((< (posix.file-modification-time ikfasl)
-		(posix.file-modification-time filename))
-	     (%print-loaded-library filename)
-	     (when (options.verbose?)
-	       (fprintf (console-error-port)
-			"WARNING: not using fasl file ~s because it is older \
-                         than the source file ~s\n" ikfasl filename))
-	     #f)
-	    (else
-	     (%print-loaded-library ikfasl)
-	     (let ((x (let ((port (open-file-input-port ikfasl)))
-			(unwind-protect
-			    (fasl-read port)
-			  (close-input-port port)))))
-	       (if (serialized-library? x)
-		   (apply success-kont filename (serialized-library-contents x))
-		 (begin
-		   (when (options.verbose?)
-		     (fprintf (console-error-port)
-			      "WARNING: not using fasl file ~s because invalid or \
-                               compiled with a different instance of Vicare\n" ikfasl))
-		   #f)))))))
+    (define fasl-filename
+      (let next-prefix ((search-path (fasl-search-path)))
+	(if (null? search-path)
+	    #f
+	  (let ((fasl-filename (%make-fasl-pathname (car search-path) filename)))
+	    (if (file-exists? fasl-filename)
+		fasl-filename
+	      (next-prefix (cdr search-path)))))))
+    (cond ((or (not fasl-filename)
+	       (not (file-exists? fasl-filename)))
+	   (%print-loaded-library filename)
+	   #f)
+	  ((< (posix.file-modification-time fasl-filename)
+	      (posix.file-modification-time filename))
+	   (%print-loaded-library filename)
+	   (when (options.verbose?)
+	     (fprintf (console-error-port)
+		      "WARNING: not using fasl file ~s because it is older \
+                       than the source file ~s\n" fasl-filename filename))
+	   #f)
+	  (else
+	   (%print-loaded-library fasl-filename)
+	   (let ((x (let ((port (open-file-input-port fasl-filename)))
+		      (unwind-protect
+			  (fasl-read port)
+			(close-input-port port)))))
+	     (if (serialized-library? x)
+		 (apply success-kont filename (serialized-library-contents x))
+	       (begin
+		 (when (options.verbose?)
+		   (fprintf (console-error-port)
+			    "WARNING: not using fasl file ~s because invalid or \
+                             compiled with a different instance of Vicare\n" fasl-filename))
+		 #f))))))
 
   (case-define store-serialized-library
     ((source-filename contents)
      (store-serialized-library source-filename contents #f))
-    ((source-filename contents output-filename)
+    ((source-filename contents fasl-filename)
      ;;Given the source file name of  a library file and the contents of
      ;;an already compiled library write a FASL file in the repository.
      ;;
@@ -431,23 +437,22 @@
      ;;holding precompiled code.  See  the function SERIALIZE-LIBRARY in
      ;;"psyntax.library-manager.sls" for details on the format.
      ;;
-     ;;The optional OUTPUT-FILENAME must be false or the pathname of the
+     ;;The optional FASL-FILENAME  must be false or the  pathname of the
      ;;output FASL file.
      ;;
-     (cond ((or output-filename
-		(fasl-path source-filename))
-	    => (lambda (ikfasl)
+     (cond ((or fasl-filename (fasl-path source-filename))
+	    => (lambda (fasl-filename)
 		 (define-syntax-rule (%display ?thing)
 		   (display ?thing stderr))
 		 (when (options.verbose?)
 		   (%display "serialising ")
-		   (%display ikfasl)
+		   (%display fasl-filename)
 		   (%display " ... "))
 		 (receive (dir name)
-		     (posix.split-pathname-root-and-tail ikfasl)
+		     (posix.split-pathname-root-and-tail fasl-filename)
 		   (unless (string-empty? dir)
 		     (posix.mkdir/parents dir #o755)))
-		 (let ((port (open-file-output-port ikfasl (file-options no-fail))))
+		 (let ((port (open-file-output-port fasl-filename (file-options no-fail))))
 		   (unwind-protect
 		       (fasl-write (make-serialized-library contents) port
 				   (retrieve-filename-foreign-libraries source-filename))

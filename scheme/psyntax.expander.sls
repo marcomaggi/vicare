@@ -1478,7 +1478,7 @@
    (new-interaction-environment (base-of-interaction-library)))
   ((libname)
    (let* ((lib (find-library-by-name libname))
-	  (rib (export-subst->rib (library-subst lib))))
+	  (rib (export-subst->rib (library-export-subst lib))))
      (make-interaction-env rib '() '()))))
 
 (define interaction-environment
@@ -1872,8 +1872,8 @@
   ;;
   ;;The returned values are:
   ;;
-  ;;NAME* -
-  ;;   A list of symbols representing the library name.
+  ;;LIBNAME -
+  ;;   A R6RS library name.
   ;;
   ;;INVOKE-CODE -
   ;;    A list  of symbolic  expressions  representing the  body of  the
@@ -1886,15 +1886,14 @@
   ;;EXPORT-ENV -
   ;;   Represents the global bindings defined by the library body.
   ;;
-  (receive (id
-	    name ver
-	    imp-descr* vis-descr* inv-descr*
-	    invoke-code visit-code
-	    export-subst export-env
-	    guard-code guard-descr*
-	    option*)
+  (receive (uid libname
+		imp-libdesc* vis-libdesc* inv-libdesc*
+		invoke-code visit-code
+		export-subst export-env
+		guard-code guard-libdesc*
+		option*)
       (expand-library library-sexp)
-    (values name invoke-code export-subst export-env)))
+    (values libname invoke-code export-subst export-env)))
 
 (module (expand-library)
   ;;EXPAND-LIBRARY  is  the  default  library  expander;  it  expands  a
@@ -1912,11 +1911,9 @@
   ;;file from which  the library was loaded; it is  used for information
   ;;purposes.
   ;;
-  ;;The optional VERIFY-NAME  must be a procedure  accepting 2 arguments
-  ;;and returning  unspecified values: the  first argument is a  list of
-  ;;symbols from a  library name; the second argument is  null or a list
-  ;;of exact integers representing  the library version.  VERIFY-NAME is
-  ;;meant to  perform some validation  upon the library  name components
+  ;;The optional argument VERIFY-LIBNAME must be a procedure accepting a
+  ;;R6RS library name  as argument and returning  unspecified values; it
+  ;;is meant to perform some validation upon the library name components
   ;;and raise  an exception if  something is wrong; otherwise  it should
   ;;just return.
   ;;
@@ -1925,38 +1922,27 @@
   ;;UID -
   ;;   A gensym uniquely identifying this library.
   ;;
-  ;;LIBNAME.IDS -
-  ;;  A list of symbols representing the library name.  For the library:
-  ;;
-  ;;     (library (c i a o)
-  ;;       (export A)
-  ;;       (import (rnrs))
-  ;;       (define A 123))
-  ;;
-  ;;  LIBNAME.IDS is the list (c i a o).
-  ;;
-  ;;LIBNAME.VER -
-  ;;  A  list of exact  integers representing the library  version.  For
-  ;;  the library:
+  ;;LIBNAME -
+  ;;  A R6RS library name.  For the library:
   ;;
   ;;     (library (ciao (1 2))
   ;;       (export A)
   ;;       (import (rnrs))
   ;;       (define A 123))
   ;;
-  ;;  LIBNAME.VER is the list (1 2).
+  ;;  LIBNAME is the list (ciao (1 2)).
   ;;
-  ;;IMPORT-DESC* -
+  ;;IMPORT-LIBDESC* -
   ;;  A list of library descriptors representing the libraries that need
   ;;  to be  imported for the invoke  code.  Each item in the  list is a
   ;;  "library descriptor" as built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;VISIT-DESC* -
+  ;;VISIT-LIBDESC* -
   ;;  A list of library descriptors representing the libraries that need
   ;;  to  be imported for the  visit code.  Each  item in the list  is a
   ;;  "library descriptor" as built by the LIBRARY-DESCRIPTOR function.
   ;;
-  ;;INVOKE-DESC* -
+  ;;INVOKE-LIBDESC* -
   ;;  A list of library descriptors representing the libraries that need
   ;;   to be  invoked  to  make available  the  values  of the  imported
   ;;  variables.   Each item in  the list  is a "library  descriptor" as
@@ -1981,7 +1967,7 @@
   ;;   A predicate  expression  in the  core  language representing  the
   ;;  stale-when tests from the body of the library.
   ;;
-  ;;GUARD-DESC* -
+  ;;GUARD-LIBDESC* -
   ;;  A list of library descriptors representing the libraries that need
   ;;  to  be invoked for  the STALE-WHEN  code; these are  the libraries
   ;;  accumulated  by the  INV-COLLECTOR while expanding  the STALE-WHEN
@@ -2062,12 +2048,11 @@
   ;;
   (case-define expand-library
     ((library-sexp)
-     (expand-library library-sexp #f       (lambda (ids ver) (values))))
+     (expand-library library-sexp #f       (lambda (libname) (void))))
     ((library-sexp filename)
-     (expand-library library-sexp filename (lambda (ids ver) (values))))
-    ((library-sexp filename verify-name)
-     (receive (libname.ids     ;list of library name symbols
-	       libname.version ;null or list of version numbers
+     (expand-library library-sexp filename (lambda (libname) (void))))
+    ((library-sexp filename verify-libname)
+     (receive (libname
 	       import-lib* invoke-lib* visit-lib*
 	       invoke-code macro*
 	       export-subst export-env
@@ -2075,39 +2060,32 @@
 	       option*)
 	 (let ()
 	   (import CORE-LIBRARY-EXPANDER)
-	   (core-library-expander library-sexp verify-name))
+	   (core-library-expander library-sexp verify-libname))
        (let ((uid		(gensym)) ;library unique-symbol identifier
-
-	     ;;From  list   of  LIBRARY  records  to   list  of  library
-	     ;;descriptors; each descriptor is a list:
-	     ;;
-	     ;;   (?library-uid ?library-name-ids ?library-version)
-	     ;;
-	     (import-desc*	(map library-descriptor import-lib*))
-	     (visit-desc*	(map library-descriptor visit-lib*))
-	     (invoke-desc*	(map library-descriptor invoke-lib*))
-	     (guard-desc*	(map library-descriptor guard-lib*))
-
+	     (import-libdesc*	(map library-descriptor import-lib*))
+	     (visit-libdesc*	(map library-descriptor visit-lib*))
+	     (invoke-libdesc*	(map library-descriptor invoke-lib*))
+	     (guard-libdesc*	(map library-descriptor guard-lib*))
 	     ;;Thunk to eval to visit the library.
 	     (visit-proc	(lambda ()
 				  (initial-visit! macro*)))
 	     ;;Thunk to eval to invoke the library.
 	     (invoke-proc	(lambda ()
 				  (eval-core (expanded->core invoke-code))))
-	     (visit-code	(%build-visit-code macro*)))
-	 (install-library uid libname.ids libname.version
-			  import-desc* visit-desc* invoke-desc*
+	     (visit-code	(%build-visit-code macro*))
+	     (visible?		#t))
+	 (install-library uid libname
+			  import-libdesc* visit-libdesc* invoke-libdesc*
 			  export-subst export-env
 			  visit-proc invoke-proc
 			  visit-code invoke-code
-			  guard-code guard-desc*
-			  #t #;visible?
-			  filename option*)
-	 (values uid libname.ids libname.version
-		 import-desc* visit-desc* invoke-desc*
+			  guard-code guard-libdesc*
+			  visible? filename option*)
+	 (values uid libname
+		 import-libdesc* visit-libdesc* invoke-libdesc*
 		 invoke-code visit-code
 		 export-subst export-env
-		 guard-code guard-desc*
+		 guard-code guard-libdesc*
 		 option*)))))
 
   (define (%build-visit-code macro*)
@@ -2147,34 +2125,32 @@
   #| end of module: EXPAND-LIBRARY |# )
 
 (define (expand-library->sexp libsexp)
-  (receive (uid
-	    libname.ids libname.version
-	    import-desc* visit-desc* invoke-desc*
+  (receive (uid libname
+	    import-libdesc* visit-libdesc* invoke-libdesc*
 	    invoke-code visit-code
 	    export-subst export-env
-	    guard-code guard-desc*
+	    guard-code guard-libdesc*
 	    option*)
       (expand-library libsexp)
-    `((uid . ,uid)
-      (libname.ids . ,libname.ids)
-      (libname.version . ,libname.version)
-      (import-desc* . ,import-desc*)
-      (visit-desc* . ,visit-desc*)
-      (invoke-desc* . ,invoke-desc*)
-      (invoke-code . ,invoke-code)
-      (visit-code . ,visit-code)
-      (export-subst . ,export-subst)
-      (export-env . ,export-env)
-      (guard-code . ,guard-code)
-      (guard-desc* . ,guard-desc*)
-      (option* . ,option*))))
+    `((uid		. ,uid)
+      (libname		. ,libname)
+      (import-libdesc*	. ,import-libdesc*)
+      (visit-libdesc*	. ,visit-libdesc*)
+      (invoke-libdesc*	. ,invoke-libdesc*)
+      (invoke-code	. ,invoke-code)
+      (visit-code	. ,visit-code)
+      (export-subst	. ,export-subst)
+      (export-env	. ,export-env)
+      (guard-code	. ,guard-code)
+      (guard-libdesc*	. ,guard-libdesc*)
+      (option*		. ,option*))))
 
 
 (module CORE-LIBRARY-EXPANDER
   (core-library-expander)
   (define-constant __who__ 'core-library-expander)
 
-  (define (core-library-expander library-sexp verify-name)
+  (define (core-library-expander library-sexp verify-libname)
     ;;Given a  SYNTAX-MATCH expression  argument representing  a LIBRARY
     ;;form:
     ;;
@@ -2183,38 +2159,30 @@
     ;;parse  it  and return  multiple  values  representing the  library
     ;;contents.
     ;;
-    ;;VERIFY-NAME  must  be  a   procedure  accepting  2  arguments  and
-    ;;returning  unspecified values:
+    ;;VERIFY-LIBNAME must be  a procedure accepting a  R6RS library name
+    ;;as  argument and  returning  unspecified values;  it  is meant  to
+    ;;perform some validation upon the library name components and raise
+    ;;an  exception if  something  is wrong;  otherwise  it should  just
+    ;;return.
     ;;
-    ;;* The first argument is a list of symbols from a library name.
-    ;;
-    ;;*  The  second argument  is  null  or  a  list of  exact  integers
-    ;;  representing the library version.
-    ;;
-    ;;VERIFY-NAME is meant  to perform some validation  upon the library
-    ;;name  components and  raise an  exception if  something is  wrong;
-    ;;otherwise it should just return.
-    ;;
-    (receive (library-name* export-spec* import-spec* body* libopt*)
+    (receive (libname export-spec* import-spec* body* libopt*)
 	(%parse-library library-sexp)
-      (receive (libname.ids libname.version)
-	  (%parse-library-name library-name*)
-	(verify-name libname.ids libname.version)
-	(let* ((option* (%parse-library-options libopt*))
-	       (stale-clt       (%make-stale-collector)))
-	  (receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
-	      (parametrise ((stale-when-collector stale-clt))
-		(let ((mixed-definitions-and-expressions? #f))
-		  (import CORE-BODY-EXPANDER)
-		  (core-body-expander export-spec* import-spec* body*
-				      mixed-definitions-and-expressions?)))
-	    (receive (guard-code guard-lib*)
-		(stale-clt)
-	      (values libname.ids libname.version
-		      import-lib* invoke-lib* visit-lib*
-		      invoke-code macro* export-subst
-		      export-env guard-code guard-lib*
-		      option*)))))))
+      (%validate-library-name libname verify-libname)
+      (let* ((option*    (%parse-library-options libopt*))
+	     (stale-clt  (%make-stale-collector)))
+	(receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
+	    (parametrise ((stale-when-collector stale-clt))
+	      (let ((mixed-definitions-and-expressions? #f))
+		(import CORE-BODY-EXPANDER)
+		(core-body-expander export-spec* import-spec* body*
+				    mixed-definitions-and-expressions?)))
+	  (receive (guard-code guard-lib*)
+	      (stale-clt)
+	    (values (syntax->datum libname)
+		    import-lib* invoke-lib* visit-lib*
+		    invoke-code macro* export-subst
+		    export-env guard-code guard-lib*
+		    option*))))))
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic
@@ -2257,18 +2225,10 @@
       (_
        (syntax-violation __who__ "malformed library" library-sexp))))
 
-  (define (%parse-library-name libname)
-    ;;Given a  SYNTAX-MATCH expression  argument LIBNAME  representing a
-    ;;library name as defined by R6RS, return 2 values:
-    ;;
-    ;;1. A list of symbols representing the name identifiers.
-    ;;
-    ;;2. A list of fixnums representing the version of the library.
-    ;;
-    ;;Example:
-    ;;
-    ;;   (%parse-library-name (foo bar (1 2 3)))
-    ;;   => (foo bar) (1 2 3)
+  (define (%validate-library-name libname verify-libname)
+    ;;Given a SYNTAX-MATCH expression argument LIBNAME which is meant to
+    ;;represent a R6RS library name: validate it and, if success, return
+    ;;it; otherwise raise ane exception.
     ;;
     (receive (name* ver*)
 	(let recur ((sexp libname))
@@ -2289,8 +2249,8 @@
 	    (_
 	     (syntax-violation __who__ "invalid library name" libname))))
       (when (null? name*)
-	(syntax-violation __who__ "empty library name" libname))
-      (values name* ver*)))
+	(syntax-violation __who__ "empty library name" libname)))
+    (verify-libname (syntax->datum libname)))
 
   (define (%parse-library-options libopt*)
     (syntax-match libopt* ()
@@ -2808,7 +2768,7 @@
 	   (and (eq? (syntax->datum ?prefix) 'prefix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-prefix))
-	   (if (strict-r6rs)
+	   (if (options.strict-r6rs)
 	       (%synner "prefix export specification forbidden in strict R6RS mode")
 	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
 		    (external*  (map (lambda (id)
@@ -2826,7 +2786,7 @@
 	   (and (eq? (syntax->datum ?deprefix) 'deprefix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-prefix))
-	   (if (strict-r6rs)
+	   (if (options.strict-r6rs)
 	       (%synner "deprefix export specification forbidden in strict R6RS mode")
 	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
 		    (prefix.len (string-length prefix.str))
@@ -2852,7 +2812,7 @@
 	   (and (eq? (syntax->datum ?suffix) 'suffix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-suffix))
-	   (if (strict-r6rs)
+	   (if (options.strict-r6rs)
 	       (%synner "suffix export specification forbidden in strict R6RS mode")
 	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
 		    (external*  (map (lambda (id)
@@ -2870,7 +2830,7 @@
 	   (and (eq? (syntax->datum ?desuffix) 'desuffix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-suffix))
-	   (if (strict-r6rs)
+	   (if (options.strict-r6rs)
 	       (%synner "desuffix export specification forbidden in strict R6RS mode")
 	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
 		    (suffix.len (string-length suffix.str))
@@ -3142,7 +3102,7 @@
 	((?deprefix ?import-set ?the-prefix)
 	 (and (eq? (syntax->datum ?deprefix) 'deprefix)
 	      (id-stx? ?the-prefix))
-	 (if (strict-r6rs)
+	 (if (options.strict-r6rs)
 	     (%local-synner "deprefix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
 		  (prefix.str  (symbol->string (syntax->datum ?the-prefix)))
@@ -3165,7 +3125,7 @@
 	((?suffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?suffix) 'suffix)
 	      (id-stx? ?suffix))
-	 (if (strict-r6rs)
+	 (if (options.strict-r6rs)
 	     (%local-synner "suffix import specification forbidden in strict R6RS mode")
 	   (let ((subst   (%recurse ?import-set))
 		 (suffix  (symbol->string (syntax->datum ?the-suffix))))
@@ -3178,7 +3138,7 @@
 	((?desuffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?desuffix) 'desuffix)
 	      (id-stx? ?the-suffix))
-	 (if (strict-r6rs)
+	 (if (options.strict-r6rs)
 	     (%local-synner "desuffix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
 		  (suffix.str  (symbol->string (syntax->datum ?the-suffix)))
@@ -3210,21 +3170,19 @@
 	(_
 	 (%synner "invalid import set" import-spec import-set))))
 
-    (define (%import-library spec*)
+    (define (%import-library libref)
       (receive (name version-conforms-to-reference?)
-	  (%parse-library-reference spec*)
+	  (%parse-library-reference libref)
 	(when (null? name)
-	  (%synner "empty library name" spec*))
+	  (%synner "empty library name" libref))
 	;;Search  for the  library first  in the  collection of  already
 	;;installed libraires, then on  the file system.  If successful:
 	;;LIB is an instance of LIBRARY struct.
-	(let ((lib (find-library-by-name name)))
-	  (unless lib
-	    (%synner "cannot find library with required name" name))
-	  (unless (version-conforms-to-reference? (library-version lib))
-	    (%synner "library does not satisfy version specification" spec* lib))
+	(let ((lib (find-library-by-name (syntax->datum libref))))
+	  (unless (version-conforms-to-reference? (library-name->version (library-name lib)))
+	    (%synner "library does not satisfy version specification" libref lib))
 	  ((imp-collector) lib)
-	  (library-subst lib))))
+	  (library-export-subst lib))))
 
     #| end of module: %IMPORT-SPEC->EXPORT-SUBST |# )
 
@@ -6069,7 +6027,7 @@
   (let ((scheme-stx-hashtable (make-eq-hashtable)))
     (lambda (sym)
       (or (hashtable-ref scheme-stx-hashtable sym #f)
-	  (let* ((subst  (library-subst (find-library-by-name '(psyntax system $all))))
+	  (let* ((subst  (library-export-subst (find-library-by-name '(psyntax system $all))))
 		 (stx    (make-<stx> sym TOP-MARK* '() '()))
 		 (stx    (cond ((assq sym subst)
 				=> (lambda (subst.entry)
@@ -6293,7 +6251,7 @@
   (define (%build-one clause-stx k)
     (syntax-match clause-stx (=>)
       (((?datum* ...) => ?expr)
-       (if (strict-r6rs)
+       (if (options.strict-r6rs)
 	   (syntax-violation 'case
 	     "invalid usage of auxiliary keyword => in strict R6RS mode"
 	     clause-stx)
@@ -6344,7 +6302,7 @@
   (define (%build-one expr-stx clause-stx kont)
     (syntax-match clause-stx (=>)
       (((?datum* ...) => ?proc)
-       (if (strict-r6rs)
+       (if (options.strict-r6rs)
 	   (syntax-violation __who__
 	     "invalid usage of auxiliary keyword => in strict R6RS mode"
 	     clause-stx)
@@ -6482,7 +6440,7 @@
 		(cons (syntax ,foo-rtd)
 		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
 
-	. ,(if (strict-r6rs)
+	. ,(if (options.strict-r6rs)
 	       '()
 	     (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
 						unsafe-foo-x*      idx*
@@ -6794,7 +6752,7 @@
       (define foo-fields-unsafe-mutators-table
 	(%make-alist mutable-field-names unsafe-set-foo-x!*))
 
-      (if (strict-r6rs)
+      (if (options.strict-r6rs)
 	  (make-r6rs-record-type-spec foo-fields-safe-accessors-table
 				      foo-fields-safe-mutators-table
 				      #f #f)
@@ -8267,7 +8225,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%make-arg-validation-forms arg-validation-spec* synner)
-    (if (enable-arguments-validation?)
+    (if (options.enable-arguments-validation?)
 	(map (lambda (spec)
 	       (let ((?arg-expr (argument-validation-spec-expr   spec))
 		     (?arg-id   (argument-validation-spec-arg-id spec)))
@@ -8279,7 +8237,7 @@
       '()))
 
   (define (%make-ret-validation-form retval-validation-spec* synner)
-    (if (enable-arguments-validation?)
+    (if (options.enable-arguments-validation?)
 	`(begin
 	   ,@(map (lambda (spec)
 		    (let ((?pred (retval-validation-spec-pred  spec))

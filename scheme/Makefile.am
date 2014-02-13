@@ -166,6 +166,7 @@ EXTRA_DIST= \
 	ikarus.keywords.sls				\
 	ikarus.intel-assembler.sls			\
 	ikarus.io.sls					\
+	ikarus.library-utils.sls			\
 	ikarus.lists.sls				\
 	ikarus.load.sls					\
 	ikarus.main.sls					\

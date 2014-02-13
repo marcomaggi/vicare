@@ -3291,7 +3291,7 @@ assertion violation.
 
 @defun expand-library @var{sexp}
 @defunx expand-library @var{sexp} @var{filename}
-@defunx expand-library @var{sexp} @var{filename} @var{verify-name}
+@defunx expand-library @var{sexp} @var{filename} @var{verify-libname}
 Expand the symbolic expression @var{sexp} representing a library and
 register the result in the internal library manager.  @var{sexp} must be
 a symbolic expression @code{(library . ---)}.
@@ -3300,56 +3300,30 @@ The optional @var{filename} must be @false{} or a string representing
 the source file from which the library was loaded; it is used for
 information purposes.  When not given defaults to @false{}.
 
-The optional @var{verify-name} must be a procedure accepting @math{2}
-arguments and returning unspecified values: the first argument is a list
-of symbols from a library name; the second argument is null or a list of
-exact integers representing the library version.  @var{verify-name} is
-meant to perform some validation upon the library name components and
+The optional argument @var{verify-libname} must be a procedure accepting
+a @rnrs{6} library name as argument and returning unspecified values; it
+is meant to perform some validation upon the library name components and
 raise an exception if something is wrong; otherwise it should just
 return.
 
-Return @math{13} values:
+Return @math{12} values:
 
 @table @var
 @item uid
 A gensym uniquely identifying this library.
 
-@item libname.ids
-A list of symbols representing the library name.  For the library:
+@item libname
+A @rnrs{6} library name.
 
-@example
-(library (c i a o)
-  (export A)
-  (import (rnrs))
-  (define A 123))
-@end example
-
-@noindent
-@code{libname.ids} is the list @code{(c i a o)}.
-
-@item LIBNAME.VER
-A list of exact integers representing the library version.  For the
-library:
-
-@example
-(library (ciao (1 2))
-  (export A)
-  (import (rnrs))
-  (define A 123))
-@end example
-
-@noindent
-@code{libname.ver} is the list @code{(1 2)}.
-
-@item import-desc*
+@item import-libdesc*
 A list of library descriptors representing the libraries that need to be
 imported for the invoke code.
 
-@item visit-desc*
+@item visit-libdesc*
 A list of library descriptors representing the libraries that need to be
 imported for the visit code.
 
-@item invoke-desc*
+@item invoke-libdesc*
 A list of library descriptors representing the libraries that need to be
 invoked to make available the values of the imported variables.
 
@@ -3372,7 +3346,7 @@ A list representing the bindings exported by the library.
 A predicate expression in the core language representing the
 @func{stale-when} tests from the body of the library.
 
-@item guard-desc*
+@item guard-libdesc*
 A list of library descriptors representing the libraries that need to be
 invoked for the @func{stale-when} code.
 
@@ -3389,12 +3363,11 @@ This function is for debugging purposes.  Expand the library form
 alist with the following symbols as keys:
 
 @example
-uid
-libname.ids libname.version
-import-desc* visit-desc* invoke-desc*
+uid libname
+import-libdesc* visit-libdesc* invoke-libdesc*
 invoke-code visit-code
 export-subst export-env
-guard-code guard-desc*
+guard-code guard-libdesc*
 option*
 @end example
 @end defun
