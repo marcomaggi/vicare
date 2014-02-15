@@ -16,7 +16,10 @@
 
 
 (library (ikarus fasl read)
-  (export fasl-read)
+  (export
+    fasl-read
+    fasl-read-header
+    fasl-read-object)
   (import (except (ikarus)
 		  fixnum-width
 		  greatest-fixnum
@@ -28,6 +31,8 @@
 	  intern-string)
     (only (vicare.foreign-libraries)
 	  autoload-filename-foreign-library)
+    (only (ikarus.io)
+	  binary-input-port?)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
@@ -43,26 +48,38 @@
   ;;Read and  validate the  FASL header,  then load  the whole  file and
   ;;return the result.
   ;;
-  (define (%assert x y)
-    (unless (eq? x y)
-      (assertion-violation who
-	(format "while reading fasl header expected ~s, got ~s\n" y x))))
   (with-arguments-validation (who)
       ((input-port	port))
-    (%assert (read-u8-as-char port) #\#)
-    (%assert (read-u8-as-char port) #\@)
-    (%assert (read-u8-as-char port) #\I)
-    (%assert (read-u8-as-char port) #\K)
-    (%assert (read-u8-as-char port) #\0)
-    (boot.case-word-size
-     ((32)
-      (%assert (read-u8-as-char port) #\1))
-     ((64)
-      (%assert (read-u8-as-char port) #\2)))
-    (let ((v (%do-read port)))
+    ($fasl-read-header port)
+    (let ((v ($fasl-read-object port)))
       (if (port-eof? port)
 	  v
 	(assertion-violation who "port did not reach EOF at the end of fasl file")))))
+
+(define* (fasl-read-header (port binary-input-port?))
+  ($fasl-read-header port))
+
+(define ($fasl-read-header port)
+  (define (%assert-chars x y)
+    (unless (eq? x y)
+      (assertion-violation who
+	(format "while reading fasl header expected ~s, got ~s\n" y x))))
+  (%assert-chars (read-u8-as-char port) #\#)
+  (%assert-chars (read-u8-as-char port) #\@)
+  (%assert-chars (read-u8-as-char port) #\I)
+  (%assert-chars (read-u8-as-char port) #\K)
+  (%assert-chars (read-u8-as-char port) #\0)
+  (boot.case-word-size
+   ((32)
+    (%assert-chars (read-u8-as-char port) #\1))
+   ((64)
+    (%assert-chars (read-u8-as-char port) #\2))))
+
+(define* (fasl-read-object (port binary-input-port?))
+  ($fasl-read-object port))
+
+(define ($fasl-read-object port)
+  (%do-read port))
 
 
 (define (%do-read port)

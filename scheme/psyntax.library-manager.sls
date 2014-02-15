@@ -39,15 +39,26 @@
     serialize-collected-libraries
     serialize-library
 
-    ;; finding and loading libraries
+    ;; installed library collection
     find-library-by-name	library-exists?
-
-    current-library-expander
     current-library-collection
-    current-library-source-file-locator
-    current-library-source-loader
-    current-library-source-loader-by-filename
-    current-library-serialized-loader
+
+    ;; finding and loading libraries
+    current-library-locator
+    current-source-library-file-locator
+    current-source-library-loader
+    current-binary-library-file-locator
+    current-binary-library-loader
+    failed-library-location-collector
+
+    current-source-library-loader-by-filename
+
+    ;; library locator options
+    library-locator-options
+    library-locator-options-no-raise-when-open-fails?
+
+    ;; expander
+    current-library-expander
 
     ;; finding and loading include files
     default-include-loader
@@ -55,7 +66,8 @@
     current-include-file-locator
     current-include-file-loader)
   (import (rnrs)
-    (psyntax compat))
+    (psyntax compat)
+    (ikarus.emergency))
 
 
 ;;;; type definitions: library record
@@ -63,6 +75,17 @@
 (define-record library
   (uid
 		;A gensym uniquely identifying this library.
+		;
+		;This gensym is registered: in the LIBRARY record in the
+		;collection  of installed  libraries; in  the FASL  file
+		;containing  this  library  in compiled  and  serialized
+		;form;  in  the  FASL   files  containing  the  compiled
+		;libraries that import this one.
+		;
+		;Whenever a  compiled library imports this  one, the UID
+		;stored in the FASL files  is compared to this field: if
+		;they  are  EQ?   the  compiled versions  are  in  sync,
+		;otherwise the importing library must be recompiled.
    name
 		;A library name as defined by R6RS:
 		;
@@ -194,84 +217,6 @@
 ;;When a library  is installed: it is added to  this collection.  When a
 ;;library is uninstalled: it is removed from this collection.
 ;;
-(module (current-library-collection)
-
-  (define (make-collection)
-    ;;Build  and return  a "collection":  a lambda  closed upon  a list.
-    ;;Interface:
-    ;;
-    ;;* When called with no arguments: return the list.
-    ;;
-    ;;* When called  with one argument: add the argument  to the list if
-    ;;  it is not already there according to EQ?.
-    ;;
-    ;;* When called with two arguments:
-    ;;
-    ;;  - If the second argument is true: remove the first argument from
-    ;;    the list, if present according to EQ?.
-    ;;
-    ;;  - If the second argument is false: add the first argument to the
-    ;;    list, if not already there according to EQ?.
-    ;;
-    (let ((set '()))
-      (case-lambda*
-       (()
-	set)
-       (((lib library?))
-	(unless (memq lib set)
-	  (set! set (cons lib set))))
-       (((lib library?) del?)
-	(if del?
-	    (set! set (remq lib set))
-	  (unless (memq lib set)
-	    (set! set (cons lib set))))))))
-
-  (define current-library-collection
-    ;;Hold a collection of installed LIBRARY structs.
-    ;;
-    (make-parameter (make-collection)
-      (lambda* ((obj procedure?))
-	obj)))
-
-  #| end of module: CURRENT-LIBRARY-COLLECTION |# )
-
-
-;;;; pending library requests
-
-(module (with-pending-library-request %external-pending-libraries)
-
-  (define %external-pending-libraries
-    ;;Hold a list of items representing the libraries whose installation
-    ;;is currently pending.  Each item is  the list of R6RS library name
-    ;;identifiers.   Used   to  detect  circular   dependencies  between
-    ;;libraries.
-    ;;
-    (make-parameter '()))
-
-  (define (%pending-library-request? libref)
-    (member (library-reference->identifiers libref)
-	    (%external-pending-libraries)))
-
-  (define (%assert-not-pending-library-request who libref)
-    (when (%pending-library-request? libref)
-      (assertion-violation who
-	"circular attempt to import library was detected" libref)))
-
-  (define-syntax (with-pending-library-request stx)
-    (syntax-case stx ()
-      ((_ (?who ?libref) ?body0 ?body ...)
-       (identifier? #'?who)
-       #'(let ((libref ?libref))
-	   (%assert-not-pending-library-request ?who libref)
-	   (parametrise ((%external-pending-libraries (cons libref (%external-pending-libraries))))
-	     ?body0 ?body ...)))
-      ))
-
-  #| end of module |# )
-
-
-;;;; finding libraries, already loaded or not
-;;
 ;;When reasoning about loading libraries, remember that:
 ;;
 ;;* A R6RS library name is a perfectly valid R6RS library reference.
@@ -280,18 +225,74 @@
 ;;  specific  list of library  name identifiers; it is  forbidden to
 ;;  load two libraries having the same library name identifiers.
 ;;
+(define current-library-collection
+  ;;Hold a collection of installed LIBRARY structs.  A "collection" is a
+  ;;lambda closed upon a list.  Interface:
+  ;;
+  ;;* When called with no arguments: return the list.
+  ;;
+  ;;* When called with one argument: add  the argument to the list if it
+  ;;  is not already there according to EQ?.
+  ;;
+  ;;* When called with two arguments:
+  ;;
+  ;;  - If  the second argument is true: remove  the first argument from
+  ;;    the list, if present according to EQ?.
+  ;;
+  ;;  - If the  second argument is false: add the  first argument to the
+  ;;    list, if not already there according to EQ?.
+  ;;
+  (make-parameter (let ((set '()))
+		    (case-lambda*
+		      (()
+		       set)
+		      (((lib library?))
+		       (unless (memq lib set)
+			 (set! set (cons lib set))))
+		      (((lib library?) del?)
+		       (if del?
+			   (set! set (remq lib set))
+			 (unless (memq lib set)
+			   (set! set (cons lib set)))))))
+    (lambda* ((obj procedure?))
+      obj)))
 
-(module (library-exists?
-	 find-library-by-name
-	 find-library-in-collection-by-reference)
+(define (library-exists? libref)
+  ;;Given  a R6RS  library  reference search  the corresponding  LIBRARY
+  ;;record  in  the  collection   of  already  installed  libraries:  if
+  ;;successful return true, otherwise return false.
+  ;;
+  (and (find-library-in-collection-by-reference libref)
+       #t))
 
-  (define (library-exists? libref)
-    ;;Given a  R6RS library  reference search the  corresponding LIBRARY
-    ;;record in  the collection  of already installed  libraries: return
-    ;;true or false.
-    ;;
-    (and (find-library-in-collection-by-reference libref)
-	 #t))
+(define (find-library-in-collection-by-predicate pred)
+  ;;Visit  the current  installed  libraries collection  and return  the
+  ;;first for  which PRED returns true.   If PRED returns false  for all
+  ;;the entries in the collection: return false.
+  ;;
+  (let next-library-struct ((ls ((current-library-collection))))
+    (cond ((null? ls)
+	   #f)
+	  ((pred ($car ls))
+	   ($car ls))
+	  (else
+	   (next-library-struct ($cdr ls))))))
+
+(define* (find-library-in-collection-by-descriptor libdesc)
+  ;;Given   a  library   descriptor,  as   generated  by   the  function
+  ;;LIBRARY-DESCRIPTOR: return the corresponding LIBRARY record from the
+  ;;collection of installed libraries or raise an assertion.
+  ;;
+  (let ((uid (library-descriptor-uid libdesc)))
+    (or (find-library-in-collection-by-predicate
+	 (lambda (lib)
+	   (eq? uid ($library-uid lib))))
+	(assertion-violation __who__
+	  "cannot find installed library with required descriptor" libdesc))))
+
+(module (find-library-by-name
+	 find-library-in-collection-by-reference
+	 %external-pending-libraries)
 
   (define (find-library-by-name libref)
     ;;Given  a R6RS  library reference:  try to  search and  install the
@@ -327,32 +328,38 @@
 	    "cannot find library conforming to requested library reference"
 	    libref))))
 
+  (module (with-pending-library-request %external-pending-libraries)
+
+    (define %external-pending-libraries
+      ;;Hold  a   list  of   items  representing  the   libraries  whose
+      ;;installation is  currently pending.   Each item  is the  list of
+      ;;R6RS  library   name  identifiers.   Used  to   detect  circular
+      ;;dependencies between libraries.
+      ;;
+      (make-parameter '()))
+
+    (define (%pending-library-request? libref)
+      (member (library-reference->identifiers libref)
+	      (%external-pending-libraries)))
+
+    (define (%assert-not-pending-library-request who libref)
+      (when (%pending-library-request? libref)
+	(assertion-violation who
+	  "circular attempt to import library was detected" libref)))
+
+    (define-syntax (with-pending-library-request stx)
+      (syntax-case stx ()
+	((_ (?who ?libref) ?body0 ?body ...)
+	 (identifier? #'?who)
+	 #'(let ((libref ?libref))
+	     (%assert-not-pending-library-request ?who libref)
+	     (parametrise ((%external-pending-libraries (cons libref (%external-pending-libraries))))
+	       ?body0 ?body ...)))
+	))
+
+    #| end of module |# )
+
   #| end of module |# )
-
-(define (find-library-in-collection-by-predicate pred)
-  ;;Visit  the current  installed  libraries collection  and return  the
-  ;;first for  which PRED returns true.   If PRED returns false  for all
-  ;;the entries in the collection: return false.
-  ;;
-  (let next-library-struct ((ls ((current-library-collection))))
-    (cond ((null? ls)
-	   #f)
-	  ((pred ($car ls))
-	   ($car ls))
-	  (else
-	   (next-library-struct ($cdr ls))))))
-
-(define* (find-library-in-collection-by-descriptor libdesc)
-  ;;Given   a  library   descriptor,  as   generated  by   the  function
-  ;;LIBRARY-DESCRIPTOR: return the corresponding LIBRARY record from the
-  ;;collection of installed libraries or raise an assertion.
-  ;;
-  (let ((uid (library-descriptor-uid libdesc)))
-    (or (find-library-in-collection-by-predicate
-	 (lambda (lib)
-	   (eq? uid ($library-uid lib))))
-	(assertion-violation __who__
-	  "cannot find installed library with required descriptor" libdesc))))
 
 
 ;;;; expanding libraries
@@ -368,9 +375,84 @@
       obj)))
 
 
-;;;; loading source and serialized libraries from files
+;;;; loading source and binary libraries
 
-(define current-library-source-file-locator
+(define-enumeration library-locator-option
+  (move-on-when-open-fails
+		;If attempting  to open  a file fails:  do not  raise an
+		;exception, rather move on with the search.
+   )
+  library-locator-options)
+
+(define (library-locator-options-no-raise-when-open-fails? options)
+  (enum-set-member? 'move-on-when-open-fails options))
+
+(define current-library-locator
+  ;;Hold  a function  used to  locate a  library from  its R6RS  library
+  ;;reference; this parameter is  initialised "ikarus.load.sls" with the
+  ;;function LIBRARY-LOCATOR.
+  ;;
+  ;;The selected locator function must  accept as  arguments:
+  ;;
+  ;;1. A R6RS library reference.
+  ;;
+  ;;2. An enumeration set of type LIBRARY-LOCATOR-OPTIONS.
+  ;;
+  ;;and it must return 2 values:
+  ;;
+  ;;1. An input port from which the  library can be read; if the port is
+  ;;   binary: a  compiled library can be  read from it; if  the port is
+  ;;    textual  a   source  library  can  be  read  from   it.   It  is
+  ;;   responsibility of  the caller to close the returned  port when no
+  ;;   more needed.
+  ;;
+  ;;2. A  thunk to be  called to continue the  search; it must  have the
+  ;;   same API  of the locator function.  This thunk  allows the caller
+  ;;    to  reject  a  library  if it  does  not  meet  some  additional
+  ;;   constraint; for  example: if its version number  does not conform
+  ;;   to LIBREF.
+  ;;
+  ;;When no matching library is found: return false and false.
+  ;;
+  (make-parameter
+      (lambda (libref options)
+	(error 'current-library-locator "library locator not set"))
+    (lambda* ((obj procedure?))
+      obj)))
+
+(define failed-library-location-collector
+  ;;Hold  a function  that is  used to  register queried  locations that
+  ;;failed  to provide  a  requested library.   Such  locations must  be
+  ;;represented by a printable object, for example a string.
+  ;;
+  ;;The collector  function must  accept 1 or  0 arguments:  when called
+  ;;with one argument  it must register it as  location descriptor; when
+  ;;called with zero arguments it  must return the registered collection
+  ;;or locations as list of  objects.  The collector function can return
+  ;;unspecified values.
+  ;;
+  ;;For example, set the collector function can be set to:
+  ;;
+  ;;   (let ((ell '()))
+  ;;     (case-lambda
+  ;;      (()
+  ;;       ell)
+  ;;      ((location)
+  ;;       (set! ell (cons location ell)))))
+  ;;
+  ;;and used to  collect library file names that where  tried but do not
+  ;;exist or failed to be opened.
+  ;;
+  (make-parameter
+      (lambda (origin)
+	(error 'failed-library-location-collector
+	  "failed library locations collector not set"))
+    (lambda* ((obj procedure?))
+      obj)))
+
+;;; --------------------------------------------------------------------
+
+(define current-source-library-file-locator
   ;;Hold a  function used to convert  a R6RS library reference  into the
   ;;corresponding source  file pathname;  this parameter  is initialised
   ;;"ikarus.load.sls" with the function LOCATE-LIBRARY-SOURCE-FILE.
@@ -383,15 +465,15 @@
   ;;
   (make-parameter
       (lambda (libref pending-libraries)
-	(error 'current-library-source-file-locator
+	(error 'current-source-library-file-locator
 	  "source library locator not set"))
     (lambda* ((obj procedure?))
       obj)))
 
-(define current-library-source-loader
+(define current-source-library-loader
   ;;Hold a  function used  to laod  a library from  a source  file; this
   ;;parameter  is initialised  in  "ikarus.load.sls"  with the  function
-  ;;READ-LIBRARY-SOURCE-FILE.
+  ;;DEFAULT-SOURCE-LIBRARY-LOADER.
   ;;
   ;;The  referenced function  must:  accept a  string  file pathname  as
   ;;single  argument,  open the  pathname  for  input using  the  native
@@ -399,20 +481,40 @@
   ;;
   (make-parameter
       (lambda (filename)
-	(error 'current-library-source-loader
+	(error 'current-source-library-loader
 	  "source library loader not set"))
     (lambda* ((obj procedure?))
       obj)))
 
-(define current-library-serialized-loader
+;;; --------------------------------------------------------------------
+
+(define current-binary-library-file-locator
+  ;;Hold a  function used to convert  a R6RS library reference  into the
+  ;;corresponding  FASL file  pathname;  this  parameter is  initialised
+  ;;"ikarus.load.sls" with the function LOCATE-LIBRARY-SERIALIZED-FILE.
+  ;;
+  ;;The  selected  function  must  accept   2  values:  a  R6RS  library
+  ;;reference;   the  possibly   empty  list   of  R6RS   library  names
+  ;;representing the libraries that requested this library loading.  The
+  ;;second argument  is the cdr  of the  current value in  the parameter
+  ;;%EXTERNAL-PENDING-LIBRARIES.
+  ;;
+  (make-parameter
+      (lambda (libref pending-libraries)
+	(error 'current-binary-library-file-locator
+	  "serialized library locator not set"))
+    (lambda* ((obj procedure?))
+      obj)))
+
+(define current-binary-library-loader
   ;;Hold a function  used to load a precompiled  library; this parameter
   ;;is    initialised   in    "ikarus.load.sls"   with    the   function
   ;;LOAD-SERIALIZED-LIBRARY.
   ;;
   ;;The  referenced   function  must   accept  2  arguments:   a  string
-  ;;representing the  pathname of the  file from which a  library source
-  ;;can be read;  a continuation function to be  called whenever loading
-  ;;the precompiled file succeeds.
+  ;;representing  the  pathname of  the  file  from which  a  serialized
+  ;;library can be  read; a continuation function to  be called whenever
+  ;;loading the precompiled file succeeds.
   ;;
   ;;The success continuation must return true if loading the precompiled
   ;;library succeeds, otherwise it must  return false.  For more details
@@ -448,96 +550,104 @@
       ;;
       ;;   (?identifier0 ?identifier ... . ?version-reference)
       ;;
-      (let ((source-filename ((current-library-source-file-locator)
-			      libref
-			      (cdr (%external-pending-libraries)))))
-	(cond ((not source-filename)
-	       (assertion-violation __who__ "cannot find library" libref))
-	      ;;Try to load a FASL library file associated to the source
-	      ;;file pathname.
-	      (((current-library-serialized-loader)
-		source-filename %install-precompiled-library-and-its-depencencies)
-	       (void))
-	      (else
-	       ;;If we are here: the precompiled library loader returned
-	       ;;false, which  means no  valid FASL file  was available.
-	       ;;So try to load the source file.
-	       ((current-library-expander)
-		((current-library-source-loader) source-filename)
-		source-filename
-		(lambda (libname)
-		  ;;LIBNAME must be a library name as defined by R6RS:
-		  ;;
-		  ;;   (?identifier0 ?identifier ... . ?version)
-		  ;;
-		  (unless (conforming-library-name-and-library-reference? libname libref)
-		    (raise-non-conforming-library __who__ libname libref source-filename))))
-	       (void)))))
+      (parametrise
+	  ((failed-library-location-collector (let ((ell '()))
+						(case-lambda
+						 (()
+						  ell)
+						 ((location)
+						  (set! ell (cons location ell)))))))
+	(receive (port next-locator-search)
+	    ((current-library-locator) libref (library-locator-options move-on-when-open-fails))
+	  (cond ((binary-port? port)
+		 ;;A binary location was found.   We can read the binary
+		 ;;library from PORT.
+		 (%print-loading-library port)
+		 (let ((rv (unwind-protect
+			       ((current-binary-library-loader) libref port
+				%install-binary-library-and-its-depencencies)
+			     (close-input-port port))))
+		   (if rv
+		       ;;Success.  The library  and all its dependencies
+		       ;;have been successfully loaded and installed.
+		       (begin
+			 (%print-loaded-library)
+			 #t)
+		     ;;Failure.   The library  read from  port has  been
+		     ;;rejected; try to go on with the search.
+		     (begin
+		       (%print-rejected-library)
+		       (next-locator-search)))))
 
-    (define (%install-precompiled-library-and-its-depencencies
-	     source-filename
-	     uid libname
-	     import-libdesc* visit-libdesc* invoke-libdesc*
-	     export-subst export-env
-	     visit-proc invoke-proc guard-proc
-	     guard-libdesc* visible? library-option*)
-      ;;Used as  success continuation  function by  the function  in the
-      ;;parameter CURRENT-LIBRARY-SERIALIZED-LOADER.   All the arguments
-      ;;after  SOURCE-FILENAME  are  the   CONTENTS  of  the  serialized
-      ;;library.
-      ;;
-      ;;Make sure all dependencies are met, then install the library and
-      ;;return true; otherwise return #f.
-      ;;
-      (let loop ((libdesc* (append import-libdesc* visit-libdesc* invoke-libdesc* guard-libdesc*)))
-	(if (null? libdesc*)
-	    (begin
-	      ;;Invoke all  the guard libraries  so we can  evaluate the
-	      ;;composite STALE-WHEN test expression.
-	      (for-each (lambda (guard-libdesc)
-			  (invoke-library
-			   (find-library-by-name (library-descriptor-name guard-libdesc))))
-		guard-libdesc*)
-	      ;;Evaluate  the composite  STALE-WHEN test  expression and
-	      ;;react appropriately.
-	      (if (guard-proc)
-		  ;;The precompiled library is stale: print a message to
-		  ;;warn the user then return false.
-		  (begin
-		    (library-stale-warning libname source-filename)
-		    #f)
-		;;The precompiled library is fine: install it and return
-		;;true.
-		(let ((visit-code        #f)
-		      (invoke-code       #f)
-		      (guard-code        (quote (quote #f)))
-		      (guard-libdesc*    '())
-		      (source-file-name  #f))
-		  (install-library uid libname
-				   import-libdesc* visit-libdesc* invoke-libdesc*
-				   export-subst export-env
-				   visit-proc invoke-proc
-				   visit-code invoke-code
-				   guard-code guard-libdesc*
-				   visible? source-file-name library-option*)
-		  #t)))
-	  (begin
-	    ;;For every library descriptor:  search the library, load it
-	    ;;if needed and install it.
-	    ;;
-	    (let* ((deplib-descr    (car libdesc*))
-		   (deplib-libname  (library-descriptor-name deplib-descr))
-		   (deplib-lib      (find-library-by-name deplib-libname)))
-	      (if (and (library? deplib-lib)
-		       (eq? (library-descriptor-uid deplib-descr)
-			    (library-uid            deplib-lib)))
-		  (loop (cdr libdesc*))
-		(begin
-		  ;;Print a message to warn the user.
-		  (library-version-mismatch-warning libname deplib-libname source-filename)
-		  #f)))))))
+		((textual-port? port)
+		 ;;A source location was found.   We can read the source
+		 ;;library  from  PORT;  we  assume  that  applying  the
+		 ;;function PORT-ID to PROT  will return the source file
+		 ;;name.
+		 (%print-loading-library port)
+		 (let ((rv (unwind-protect
+			       ((current-source-library-loader) libref port)
+			     (close-input-port port))))
+		   (if rv
+		       ;;Success.  The library  and all its dependencies
+		       ;;have been successfully loaded and installed.
+		       (begin
+			 (%print-loaded-library)
+			 #t)
+		     ;;Failure.   The library  read from  port has  been
+		     ;;rejected; try to go on with the search.
+		     (begin
+		       (%print-rejected-library)
+		       (next-locator-search)))))
+
+		((not port)
+		 ;;No suitable library was found.
+		 (%file-locator-resolution-error libref
+						 (reverse ((failed-library-location-collector)))
+						 (cdr (%external-pending-libraries))))
+
+		(else
+		 (assertion-violation __who__
+		   "internal error: invalid return values from library locator"
+		   port next-locator-search))))))
+
+    (define (%print-loading-library port)
+      (when (options.print-loaded-libraries)
+	(display (string-append "Vicare loading: " (port-id port) " ... ")
+		 (console-error-port))))
+
+    (define (%print-loaded-library)
+      (when (options.print-loaded-libraries)
+	(display "done\n" (console-error-port))))
+
+    (define (%print-rejected-library)
+      (when (options.print-loaded-libraries)
+	(display "rejected\n" (console-error-port))))
 
     #| end of module: DEFAULT-LIBRARY-LOADER |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%file-locator-resolution-error libref failed-list pending-libraries)
+    (raise
+     (apply condition (make-error)
+  	    (make-who-condition 'expander)
+  	    (make-message-condition "cannot locate library in library-path")
+  	    (make-library-resolution-condition libref failed-list)
+  	    (map make-imported-from-condition pending-libraries))))
+
+  (define-condition-type &library-resolution
+      &condition
+    make-library-resolution-condition
+    library-resolution-condition?
+    (library condition-library)
+    (files condition-files))
+
+  (define-condition-type &imported-from
+      &condition
+    make-imported-from-condition
+    imported-from-condition?
+    (importing-library importing-library))
 
 ;;; --------------------------------------------------------------------
 
@@ -555,11 +665,11 @@
 
 ;;;; loading libraries from files: requesting by library file pathname
 
-(module (current-library-source-loader-by-filename)
+(module (current-source-library-loader-by-filename)
 
   (define (default-library-source-loader-by-filename filename libname-predicate)
     ;;Default          value          for         the          parameter
-    ;;CURRENT-LIBRARY-SOURCE-LOADER-BY-FILENAME.   Given a  library file
+    ;;CURRENT-SOURCE-LIBRARY-LOADER-BY-FILENAME.   Given a  library file
     ;;pathname: load  the file, expand  the first LIBRARY  form, compile
     ;;the result, install the  library, return the corresponding LIBRARY
     ;;record.
@@ -574,11 +684,11 @@
 		  guard-code guard-desc*
 		  option*)
 	((current-library-expander)
-	 ((current-library-source-loader) filename)
+	 ((current-source-library-loader) filename)
 	 filename libname-predicate)
       (find-library-by-name libname)))
 
-  (define current-library-source-loader-by-filename
+  (define current-source-library-loader-by-filename
     ;;Hold  a function  used to  load a  source library  given the  file
     ;;pathname.
     ;;
@@ -612,9 +722,9 @@
 (define* (serialize-library (lib library?) (serialize procedure?) (compile procedure?))
   ;;Compile and serialize the given library record.
   ;;
-  (define srcname ($library-source-file-name lib))
-  (when srcname
-    (serialize srcname
+  (define source-pathname ($library-source-file-name lib))
+  (when source-pathname
+    (serialize source-pathname ($library-name lib)
 	       (list ($library-uid lib)
 		     ($library-name lib)
 		     (map library-descriptor ($library-imp-lib* lib))
@@ -627,7 +737,69 @@
 		     (compile ($library-guard-code lib))
 		     (map library-descriptor ($library-guard-lib* lib))
 		     ($library-visible? lib)
-		     ($library-option* lib)))))
+		     ($library-option* lib)
+		     source-pathname))))
+
+(define (%install-binary-library-and-its-depencencies
+	 uid libname
+	 import-libdesc* visit-libdesc* invoke-libdesc*
+	 export-subst export-env
+	 visit-proc invoke-proc guard-proc
+	 guard-libdesc* visible? library-option* source-filename)
+  ;;Used  as  success  continuation  function by  the  function  in  the
+  ;;parameter  CURRENT-BINARY-LIBRARY-LOADER.  All  the arguments  after
+  ;;SOURCE-FILENAME are the CONTENTS of the serialized library.
+  ;;
+  ;;Make sure  all dependencies  are met, then  install the  library and
+  ;;return true; otherwise return #f.
+  ;;
+  (let loop ((libdesc* (append import-libdesc* visit-libdesc* invoke-libdesc* guard-libdesc*)))
+    (if (null? libdesc*)
+	(begin
+	  ;;Invoke  all  the guard  libraries  so  we can  evaluate  the
+	  ;;composite STALE-WHEN test expression.
+	  (for-each (lambda (guard-libdesc)
+		      (invoke-library
+		       (find-library-by-name (library-descriptor-name guard-libdesc))))
+	    guard-libdesc*)
+	  ;;Evaluate the composite STALE-WHEN  test expression and react
+	  ;;appropriately.
+	  (if (guard-proc)
+	      ;;The  precompiled library  is stale:  print a  message to
+	      ;;warn the user then return false.
+	      (begin
+		(library-stale-warning libname source-filename)
+		#f)
+	    ;;The  precompiled library  is fine:  install it  and return
+	    ;;true.
+	    (let ((visit-code        #f)
+		  (invoke-code       #f)
+		  (guard-code        (quote (quote #f)))
+		  (guard-libdesc*    '())
+		  (source-file-name  #f))
+	      (install-library uid libname
+			       import-libdesc* visit-libdesc* invoke-libdesc*
+			       export-subst export-env
+			       visit-proc invoke-proc
+			       visit-code invoke-code
+			       guard-code guard-libdesc*
+			       visible? source-file-name library-option*)
+	      #t)))
+      (begin
+	;;For every library  descriptor: search the library,  load it if
+	;;needed and install it.
+	;;
+	(let* ((deplib-descr    (car libdesc*))
+	       (deplib-libname  (library-descriptor-name deplib-descr))
+	       (deplib-lib      (find-library-by-name deplib-libname)))
+	  (if (and (library? deplib-lib)
+		   (eq? (library-descriptor-uid deplib-descr)
+			(library-uid            deplib-lib)))
+	      (loop (cdr libdesc*))
+	    (begin
+	      ;;Print a message to warn the user.
+	      (library-version-mismatch-warning libname deplib-libname source-filename)
+	      #f)))))))
 
 
 ;;;; installing libraries
@@ -950,6 +1122,11 @@
 
 
 ;;;; done
+
+(define dummy
+  (begin
+    (emergency-write "EXPANDER HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    #t))
 
 )
 

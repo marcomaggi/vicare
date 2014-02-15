@@ -38,15 +38,7 @@
 
     ;; automatic R6RS records finalisation
     $record-guardian
-    record-guardian-logger		record-guardian-log
-
-    ;; vicare configuration options
-    vicare-built-with-srfi-enabled
-    vicare-built-with-ffi-enabled
-    vicare-built-with-iconv-enabled
-    vicare-built-with-posix-enabled
-    vicare-built-with-glibc-enabled
-    vicare-built-with-linux-enabled)
+    record-guardian-logger		record-guardian-log)
   (import (except (ikarus)
 		  fixnum-width
 		  greatest-fixnum
@@ -61,14 +53,7 @@
 		  $record-guardian
 		  record-guardian-logger
 		  record-guardian-log
-		  expand-top-level
-
-		  vicare-built-with-srfi-enabled
-		  vicare-built-with-ffi-enabled
-		  vicare-built-with-iconv-enabled
-		  vicare-built-with-posix-enabled
-		  vicare-built-with-glibc-enabled
-		  vicare-built-with-linux-enabled)
+		  expand-top-level)
     (prefix (ikarus startup)
 	    config.)
     (prefix (only (vicare options)
@@ -118,7 +103,8 @@
     (prefix (only (ikarus.readline)
 		  readline-enabled?
 		  make-readline-input-port)
-	    readline.))
+	    readline.)
+    (ikarus.emergency))
 
   (include "ikarus.wordsize.scm")
 
@@ -150,6 +136,11 @@
       (if (eof-object? form)
 	  (cons 'begin (reverse the-expr))
 	(loop port (cons form the-expr))))))
+
+(define dummy
+  (begin
+    (emergency-write "HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    #t))
 
 
 ;;;; data types
@@ -1402,31 +1393,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   #| end of module |# )
 
 
-;;;; vicare configuration options
-
-(define (vicare-built-with-srfi-enabled)
-  (foreign-call "ikrt_vicare_built_with_srfi_enabled"))
-
-(define (vicare-built-with-ffi-enabled)
-  (foreign-call "ikrt_vicare_built_with_ffi_enabled"))
-
-(define (vicare-built-with-iconv-enabled)
-  (foreign-call "ikrt_vicare_built_with_iconv_enabled"))
-
-(define (vicare-built-with-posix-enabled)
-  (foreign-call "ikrt_vicare_built_with_posix_enabled"))
-
-(define (vicare-built-with-glibc-enabled)
-  (foreign-call "ikrt_vicare_built_with_glibc_enabled"))
-
-(define (vicare-built-with-linux-enabled)
-  (foreign-call "ikrt_vicare_built_with_linux_enabled"))
-
-
 ;;;; main expressions
 
 (let-values (((cfg execution-state-initialisation-according-to-command-line-options)
 	      (parse-command-line-arguments)))
+
   (with-run-time-config (cfg)
     (define-inline (%print-greetings)
       (unless cfg.no-greetings
@@ -1434,6 +1405,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
     (init-library-path cfg)
     (init-fasl-search-path cfg)
+(debug-print 'init-stuff)
     (load-rc-files-as-r6rs-scripts cfg)
     (options.print-loaded-libraries cfg.print-libraries)
 
@@ -1449,6 +1421,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
     (load-libraries cfg)
     (evaluate-codes cfg)
+
+(debug-print 'enter-main)
 
     (case cfg.exec-mode
       ((r6rs-script)

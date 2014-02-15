@@ -21,7 +21,7 @@
 ;;;	allocated as a  vector whose first word is  tagged with the port
 ;;;	tag.
 ;;;
-;;;Copyright (c) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -391,6 +391,10 @@
     ;; predicates
     port? input-port? output-port? input/output-port?
     textual-port? binary-port?
+    binary-input-port?			textual-input-port?
+    binary-output-port?			textual-output-port?
+    binary-input/output-port?		textual-input/output-port?
+
     port-eof?
 
     ;; generic port functions
@@ -524,6 +528,9 @@
 		  ;; predicates
 		  port? input-port? output-port? input/output-port?
 		  textual-port? binary-port?
+		  binary-input-port?			textual-input-port?
+		  binary-output-port?			textual-output-port?
+		  binary-input/output-port?		textual-input/output-port?
 		  port-eof?
 
 		  ;; generic port functions
@@ -2231,6 +2238,34 @@
        (let ((flags ($port-tag x)))
 	 (or ($fx= ($fxand flags OUTPUT-PORT-TAG) OUTPUT-PORT-TAG)
 	     ($fx= ($fxand flags INPUT/OUTPUT-PORT-TAG) INPUT/OUTPUT-PORT-TAG)))))
+
+;;; --------------------------------------------------------------------
+
+(define (binary-input-port? obj)
+  (and (input-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-input-port? obj)
+  (and (input-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+(define (binary-output-port? obj)
+  (and (output-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-output-port? obj)
+  (and (output-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+(define (binary-input/output-port? obj)
+  (and (input/output-port? obj)
+       ($fx= ($fxand ($port-tag obj) BINARY-PORT-TAG) BINARY-PORT-TAG)))
+
+(define (textual-input/output-port? obj)
+  (and (input/output-port?  obj)
+       ($fx= ($fxand ($port-tag obj) TEXTUAL-PORT-TAG) TEXTUAL-PORT-TAG)))
+
+;;; --------------------------------------------------------------------
 
 ;;The following predicates have to be used after the argument has
 ;;been validated as  port value.  They are *not*  affected by the

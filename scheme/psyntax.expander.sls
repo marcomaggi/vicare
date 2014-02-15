@@ -1912,25 +1912,15 @@
   ;;purposes.
   ;;
   ;;The optional argument VERIFY-LIBNAME must be a procedure accepting a
-  ;;R6RS library name  as argument and returning  unspecified values; it
-  ;;is meant to perform some validation upon the library name components
+  ;;R6RS  library  name  as  argument;  it  is  meant  to  perform  some
+  ;;validation upon the library name components (especially the version)
   ;;and raise  an exception if  something is wrong; otherwise  it should
   ;;just return.
   ;;
   ;;The returned values are:
   ;;
   ;;UID -
-  ;;
-  ;;  A gensym  uniquely  identifying this  library.
-  ;;
-  ;;  This gensym is registered: in the LIBRARY record in the collection
-  ;;  of installed  libraries; in the FASL file  containing this library
-  ;;  in compiled and serialized form;  in the FASL files containing the
-  ;;  compiled  libraries that import this one.
-  ;;
-  ;;  Whenever  a compiled library imports  this one, the UID  stored in
-  ;;  the fasl files are compared: if they are EQ? the compiled versions
-  ;;  are in sync, otherwise they must be recompiled.
+  ;;  A gensym uniquely identifying this library.
   ;;
   ;;LIBNAME -
   ;;  A R6RS library name.  For the library:
@@ -2169,11 +2159,11 @@
     ;;parse  it  and return  multiple  values  representing the  library
     ;;contents.
     ;;
-    ;;VERIFY-LIBNAME must be  a procedure accepting a  R6RS library name
-    ;;as  argument and  returning  unspecified values;  it  is meant  to
-    ;;perform some validation upon the library name components and raise
-    ;;an  exception if  something  is wrong;  otherwise  it should  just
-    ;;return.
+    ;;The optional argument VERIFY-LIBNAME must be a procedure accepting
+    ;;a  R6RS library  name as  argument; it  is meant  to perform  some
+    ;;validation  upon  the  library  name  components  (especially  the
+    ;;version) and raise  an exception if something  is wrong; otherwise
+    ;;it should just return.
     ;;
     (receive (libname export-spec* import-spec* body* libopt*)
 	(%parse-library library-sexp)

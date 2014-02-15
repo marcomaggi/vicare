@@ -29,7 +29,7 @@
 
     ;; internal functions only for Vicare
     read-source-file		read-script-source-file
-    read-library-source-file)
+    read-library-source-file	read-library-source-port)
   (import (except (ikarus)
 		  ;; public functions
 		  read				get-datum
@@ -611,6 +611,7 @@
 ;;   read-source-file
 ;;   read-script-source-file
 ;;   read-library-source-file
+;;   read-library-source-port
 ;;
 ;;but all of them call $GET-ANNOTATED-DATUM.
 ;;
@@ -625,6 +626,18 @@
       (unwind-protect
 	  ($get-annotated-datum port)
 	(close-input-port port)))))
+
+(define (read-library-source-port port)
+  ;;Read a library  symbolic expression from the textual  input PORT and
+  ;;return the result.  We assume  that applying the function PORT-ID to
+  ;;PORT will return a string representing a file name associated to the
+  ;;port (or equivalent).  After reading: the PORT is left open with the
+  ;;cursor after the end of the library datum.
+  ;;
+  (parameterize
+      ((current-library-file		(port-id port))
+       (shared-library-loading-enabled?	#t))
+    ($get-annotated-datum port)))
 
 (define (read-source-file filename)
   ;;Open FILENAME for input only  using the native transcoder, then read

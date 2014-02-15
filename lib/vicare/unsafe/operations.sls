@@ -32,7 +32,7 @@
 ;;;        decreasing order of significance.
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -468,7 +468,19 @@
 	    ($bytevector-set!	$bytevector-set!)
 	    ($bytevector-set!	$bytevector-u8-set!)
 	    ($bytevector-set!	$bytevector-s8-set!))
-    (ikarus system $chars)
+    (except (ikarus system $chars)
+	    $char=
+	    $char<
+	    $char>
+	    $char>=
+	    $char<=)
+    (prefix (only (ikarus system $chars)
+		  $char=
+		  $char<
+		  $char>
+		  $char>=
+		  $char<=)
+	    sys.)
     (ikarus system $strings)
     (ikarus system $codes)
     (ikarus system $pointers)
@@ -655,22 +667,28 @@
 
 ;;; --------------------------------------------------------------------
 
-(let-syntax ((define-fx-compar (syntax-rules ()
-				  ((_ ?proc sys.?proc)
-				   (define-syntax ?proc
-				    (syntax-rules ()
-				      ((_ ?op1 ?op2)
-				       (sys.?proc ?op1 ?op2))
-				      ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
-				       (let ((op2 ?op2))
-					 (and (sys.?proc ?op1 op2)
-					      (?proc op2 ?op3 ?op4 (... ...))))))))
-				 )))
-  (define-fx-compar $fx=  sys.$fx=)
-  (define-fx-compar $fx<  sys.$fx<)
-  (define-fx-compar $fx<= sys.$fx<=)
-  (define-fx-compar $fx>  sys.$fx>)
-  (define-fx-compar $fx>= sys.$fx>=))
+(let-syntax ((define-compar (syntax-rules ()
+			      ((_ ?proc sys.?proc)
+			       (define-syntax ?proc
+				 (syntax-rules ()
+				   ((_ ?op1 ?op2)
+				    (sys.?proc ?op1 ?op2))
+				   ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
+				    (let ((op2 ?op2))
+				      (and (sys.?proc ?op1 op2)
+					   (?proc op2 ?op3 ?op4 (... ...))))))))
+			      )))
+  (define-compar $fx=  sys.$fx=)
+  (define-compar $fx<  sys.$fx<)
+  (define-compar $fx<= sys.$fx<=)
+  (define-compar $fx>  sys.$fx>)
+  (define-compar $fx>= sys.$fx>=)
+
+  (define-compar $char=  sys.$char=)
+  (define-compar $char<  sys.$char<)
+  (define-compar $char<= sys.$char<=)
+  (define-compar $char>  sys.$char>)
+  (define-compar $char>= sys.$char>=))
 
 
 ;;;; bignums

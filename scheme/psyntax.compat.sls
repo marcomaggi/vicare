@@ -20,9 +20,9 @@
     define*				define-constant
     case-define				case-define*
     case-lambda*			lambda*
-    define-record
+    define-record			define-auxiliary-syntaxes
     define-inline			define-syntax-rule
-    define-auxiliary-syntaxes
+    unwind-protect
     receive				receive-and-return
     module				import
     begin0				define-values
@@ -42,7 +42,8 @@
     add1				sub1
     pretty-print			pretty-print*
     fprintf				debug-print
-    void
+    void				port-id
+    console-error-port
 
     ;; compiler related operations
     eval-core
@@ -51,6 +52,7 @@
     options.strict-r6rs
     options.enable-arguments-validation?
     options.descriptive-labels
+    options.print-loaded-libraries
 
     ;; interpreting the result of reading annotated sources
     annotation?				annotation-expression
@@ -122,6 +124,7 @@
 			  verbose?
 			  strict-r6rs
 			  descriptive-labels
+			  print-loaded-libraries
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
