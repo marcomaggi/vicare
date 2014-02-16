@@ -345,6 +345,12 @@ Many backwards incompatibilities... life is hard!
   EXPAND-LIBRARY now must be a function accepting a R6RS library name as
   single argument.
 
+* Added port predicates to (vicare):
+
+    binary-input-port?			textual-input-port?
+    binary-output-port?			textual-output-port?
+    binary-input/output-port?		textual-input/output-port?
+
 
 Notes for revision 0.3d7
 ------------------------
