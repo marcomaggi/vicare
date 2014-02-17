@@ -1,5 +1,5 @@
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012, 2013  Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2012, 2013, 2014  Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 
     ;; internal functions only for Vicare
     read-source-file		read-script-source-file
-    read-library-source-file)
+    read-library-source-file	read-library-source-port)
   (import (except (ikarus)
 		  ;; public functions
 		  read				get-datum
@@ -620,11 +620,26 @@
   ;;and return the first datum; close the port.
   ;;
   (let ((port (open-input-file filename)))
-    (parameterize ((current-library-file		filename)
-		   (shared-library-loading-enabled?	#t))
-      (unwind-protect
-	  ($get-annotated-datum port)
-	(close-input-port port)))))
+    (unwind-protect
+	(read-library-source-port port filename)
+      (close-input-port port))))
+
+(define read-library-source-port
+  (case-lambda
+   ((port)
+    (read-library-source-port port #f))
+   ((port filename)
+    ;;Read a library symbolic expression from the textual input PORT and
+    ;;return the result.   We assume that applying  the function PORT-ID
+    ;;to PORT will  return a string representing a  file name associated
+    ;;to the port (or equivalent).  After reading: the PORT is left open
+    ;;with the cursor after the end of the library datum.
+    ;;
+    (parameterize
+	((current-library-file			(or filename (port-id port)))
+	 (shared-library-loading-enabled?	#t))
+      ($get-annotated-datum port)))
+   ))
 
 (define (read-source-file filename)
   ;;Open FILENAME for input only  using the native transcoder, then read
