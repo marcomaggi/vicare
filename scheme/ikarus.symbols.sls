@@ -275,7 +275,8 @@
 		    accum))))))
 
 
-(define system-value-gensym (gensym))
+(define system-value-gensym
+  (gensym "system-value-gensym"))
 
 (define* (system-value (x symbol?))
   ;;When  the boot  image is  loaded, it  initialises itself;  for every

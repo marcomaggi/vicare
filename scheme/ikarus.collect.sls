@@ -115,7 +115,7 @@
 (define (collect-key)
   (or ($collect-key)
       (begin
-        ($collect-key (gensym))
+        ($collect-key (gensym "collect-key"))
         (collect-key))))
 
 
