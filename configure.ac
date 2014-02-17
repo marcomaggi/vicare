@@ -77,45 +77,50 @@ VICARE_ENABLE_OPTION([SRFI],[srfi],[yes],
   [enable installation of SRFI libraries])
 AM_CONDITIONAL([WANT_SRFI],[test "x$vicare_enable_SRFI" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_SRFI_ENABLED,[f])
 AM_COND_IF([WANT_SRFI],
-  [AC_DEFINE([VICARE_BUILT_WITH_SRFI_ENABLED],[1],
-     [defined if SRFI libraries were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_SRFI_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_SRFI_ENABLED])
 
 VICARE_ENABLE_OPTION([NAUSICAA],[nausicaa],[yes],
   [whether to install the Nausicaa libraries],
   [enable installation of Nausicaa libraries])
 AM_CONDITIONAL([WANT_NAUSICAA],[test "x$vicare_enable_NAUSICAA" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_NAUSICAA_ENABLED,[f])
 AM_COND_IF([WANT_NAUSICAA],
-  [AC_DEFINE([VICARE_BUILT_WITH_NAUSICAA_ENABLED],[1],
-     [defined if Nausicaa libraries were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_NAUSICAA_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_NAUSICAA_ENABLED])
 
 VICARE_ENABLE_OPTION([POSIX],[posix],[yes],
   [whether POSIX features are enabled],
   [enable POSIX features])
 AM_CONDITIONAL([WANT_POSIX],[test "x$vicare_enable_POSIX" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_POSIX_ENABLED,[f])
 AM_COND_IF([WANT_POSIX],
-  [AC_DEFINE([VICARE_BUILT_WITH_POSIX_ENABLED],[1],
-     [defined if POSIX features were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_POSIX_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_POSIX_ENABLED])
 
 VICARE_ENABLE_OPTION([GLIBC],[glibc],[yes],
   [whether GNU C Library features are enabled],
   [enable GNU C Library features])
 AM_CONDITIONAL([WANT_GLIBC],[test "x$vicare_enable_GLIBC" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_GLIBC_ENABLED,[f])
 AM_COND_IF([WANT_GLIBC],
-  [AC_DEFINE([VICARE_BUILT_WITH_GLIBC_ENABLED],[1],
-     [defined if GLIBC features were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_GLIBC_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_GLIBC_ENABLED])
 
 VICARE_ENABLE_OPTION([LINUX],[linux],[yes],
   [whether Linux features are enabled],
   [enable Linux features])
 AM_CONDITIONAL([WANT_LINUX],[test "x$vicare_enable_LINUX" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_LINUX_ENABLED,[f])
 AM_COND_IF([WANT_LINUX],
-  [AC_DEFINE([VICARE_BUILT_WITH_LINUX_ENABLED],[1],
-     [defined if LINUX features were requested at configuration time])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_LINUX_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_LINUX_ENABLED])
 
 dnl --------------------------------------------------------------------
 
@@ -1606,9 +1611,10 @@ VICARE_WITH_LIBRARY([LIBFFI],[libffi],[check],
   [ffi.h],[ffi],[ffi_call])
 AM_CONDITIONAL([WANT_LIBFFI],[test "x$vicare_with_LIBFFI" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_FFI_ENABLED,[f])
 AM_COND_IF([WANT_LIBFFI],
-  [AC_DEFINE([VICARE_BUILT_WITH_FFI_ENABLED],[1],
-     [defined if Libffi support is enabled])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_FFI_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_FFI_ENABLED])
 
 dnl --------------------------------------------------------------------
 dnl Check for Libiconv (optional)
@@ -1645,9 +1651,10 @@ AS_IF([test "x$with_libiconv" != xno],
 dnl
 AM_CONDITIONAL([WANT_LIBICONV],[test "x$vicare_with_LIBICONV" = xyes])
 
+AS_VAR_SET(VICARE_BUILT_WITH_ICONV_ENABLED,[f])
 AM_COND_IF([WANT_LIBICONV],
-  [AC_DEFINE([VICARE_BUILT_WITH_ICONV_ENABLED],[1],
-     [defined if Libiconv support is enabled])])
+  [AS_VAR_SET(VICARE_BUILT_WITH_ICONV_ENABLED,[t])])
+AC_SUBST([VICARE_BUILT_WITH_ICONV_ENABLED])
 
 dnl --------------------------------------------------------------------
 dnl Optional binding for GNU Readline or compatible library

@@ -37,6 +37,13 @@ ikarus.config.ss: Makefile ../config.h
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))' >>$@
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))' >>$@
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")' >>$@
+	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>$@
+	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>$@
+	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>$@
+	echo '(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #$(VICARE_BUILT_WITH_NAUSICAA_ENABLED))' >>$@
+	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>$@
+	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>$@
+	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>$@
 
 #page
 # To  create the  new boot  image we  use a  prebuilt boot  image; the
@@ -72,6 +79,13 @@ boot-image-32-bit:
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.ss
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.ss
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #$(VICARE_BUILT_WITH_NAUSICAA_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
@@ -89,6 +103,13 @@ boot-image-64-bit:
 	echo '(define platform-endianness (quote $(VICARE_PLATFORM_ENDIANNESS)))'	>>ikarus.config.ss
 	echo '(define arguments-validation #$(VICARE_ARGUMENTS_VALIDATION))'		>>ikarus.config.ss
 	echo '(define bootfile "$(pkglibdir)/vicare.boot")'				>>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_SRFI_ENABLED     #$(VICARE_BUILT_WITH_SRFI_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_ICONV_ENABLED    #$(VICARE_BUILT_WITH_ICONV_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_FFI_ENABLED      #$(VICARE_BUILT_WITH_FFI_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_NAUSICAA_ENABLED #$(VICARE_BUILT_WITH_NAUSICAA_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.ss
+	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.ss
 	VICARE_SRC_DIR=$(srcdir)			\
   VICARE_BUILD_DIR=$(builddir)				\
   VICARE_LIBRARY_PATH=$(BOOT_IMAGE_SEARCH_PATH)		\
