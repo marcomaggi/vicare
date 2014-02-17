@@ -4132,7 +4132,7 @@
   ;;   |                           |
   ;;           low memory
   ;;
-  (let ((L_CALL (label (gensym))))
+  (let ((L_CALL (label (gensym "call_label"))))
     (define %adjust-frame-pointer-register
       (let ((FPR-DELTA (if (or (fxzero? frame-words-count)
 			       (fx=? frame-words-count 1))
@@ -4242,7 +4242,7 @@
       ;;
       (struct-case x
 	((codes x.clambda* x.body)
-	 (cons (cons* 0 (label (gensym))
+	 (cons (cons* 0 (label (gensym "main_label"))
 		      (let ((accum (list '(nop))))
 			(parameterize ((exceptions-conc accum))
 			  (T x.body accum))))
@@ -4336,7 +4336,7 @@
 	    ;;representing the  CPU register holding the  pointer to the
 	    ;;current  closure object,  and  whose cdr  is  the list  of
 	    ;;properized formals.
-	    (let ((next-case-entry-point-label (unique-label)))
+	    (let ((next-case-entry-point-label (unique-label "clambda_branch_label")))
 	      (cons* `(cmpl ,(argc-convention (if x.info.proper?
 						  (length (cdr x.info.args))
 						(length (cddr x.info.args))))
@@ -4417,10 +4417,10 @@
       ;;knowing  that  "fixnum  3"  will  be ignored  and  the  list  is
       ;;allocated on the heap.
       ;;
-      (define CONTINUE_LABEL	(unique-label))
-      (define DONE_LABEL	(unique-label))
-      (define CONS_LABEL	(unique-label))
-      (define LOOP_HEAD		(unique-label))
+      (define CONTINUE_LABEL	(unique-label "varargs_continue_label"))
+      (define DONE_LABEL	(unique-label "varargs_done_label"))
+      (define CONS_LABEL	(unique-label "varargs_cons_label"))
+      (define LOOP_HEAD		(unique-label "varargs_loop_head"))
       (define mandatory-formals-count
 	(fxsub1 properized-formals-count))
       (define properized-formals-argc
@@ -4587,7 +4587,7 @@
 
       ((conditional x.test x.conseq x.altern)
        (let ((label-for-true-predicate  #f)
-	     (label-for-false-predicate (unique-label)))
+	     (label-for-false-predicate (unique-label "false_label")))
          (P x.test label-for-true-predicate label-for-false-predicate
 	    (T x.conseq
 	       (cons label-for-false-predicate
@@ -4655,19 +4655,37 @@
 
 	((conditional x.test x.conseq x.altern)
 	 (cond ((interrupt? x.conseq)
-		(let ((L (or (exception-label)
-			     (error who "no exception label"))))
-		  (P x.test L #f (E x.altern accum))))
+		(let ((label-true  (or (exception-label)
+				      (error who "no exception label")))
+		      (label-false #f))
+		  (P x.test label-true label-false
+		     (E x.altern accum))))
 	       ((interrupt? x.altern)
-		(let ((L (or (exception-label)
-			     (error who "no exception label"))))
-		  (P x.test #f L (E x.conseq accum))))
+		(let ((label-true  #f)
+		      (label-false (or (exception-label)
+				       (error who "no exception label"))))
+		  (P x.test label-true label-false
+		     (E x.conseq accum))))
 	       (else
-		(let ((lf (unique-label))
-		      (le (unique-label)))
-		  (P x.test #f lf (E x.conseq (cons* `(jmp ,le)
-						     lf
-						     (E x.altern (cons le accum)))))))))
+		;;For  this conditional  case  we generate  code as  the
+		;;following pseudo-code shows:
+		;;
+		;;     x.test
+		;;   jump-if-false label_false
+		;;     x.conseq
+		;;     jmp label_end
+		;;   label_false:
+		;;     x.altern
+		;;   label_end:
+		;;     accum
+		;;
+		(let ((label-true  #f)
+		      (label-false (unique-label "label_false"))
+		      (label-end   (unique-label "label_end")))
+		  (P x.test label-true label-false
+		     (E x.conseq (cons* `(jmp ,label-end)
+					label-false
+					(E x.altern (cons label-end accum)))))))))
 
 	((ntcall target value args mask size)
 	 (E-ntcall target value args mask size accum))
@@ -4902,8 +4920,12 @@
   (define (unique-interrupt-label)
     (label (gensym "ERROR")))
 
-  (define (unique-label)
-    (label (gensym)))
+  (define unique-label
+    (case-lambda
+     (()
+      (label (gensym)))
+     ((name)
+      (label (gensym name)))))
 
 ;;; --------------------------------------------------------------------
 
