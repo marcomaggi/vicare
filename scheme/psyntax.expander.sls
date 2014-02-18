@@ -6288,8 +6288,16 @@
 
       ((__file__)
        (lambda (stx)
-	 (bless
-	  `(quote ,(source-code-location)))))
+	 (let ((expr (<stx>-expr stx)))
+	   (if (annotation? expr)
+	       (let ((pos (annotation-textual-position expr)))
+		 (if (source-position-condition? pos)
+		     (bless
+		      `(quote ,(source-position-port-id pos)))
+		   (bless
+		    `(quote ,(source-code-location)))))
+	     (bless
+	      `(quote ,(source-code-location)))))))
 
       ((__line__)
        (lambda (stx)
