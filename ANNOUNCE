@@ -354,6 +354,9 @@ Many backwards incompatibilities... life is hard!
 * Added  syntax  DEFINE-FLUID-OVERRIDE  to (vicare);  it  rebinds  fluid
   syntaxes like FLUID-LET-SYNTAX.
 
+* Added identifier syntax "__file__" to (vicare); it expands to a string
+  representing the source code location.
+
 
 Notes for revision 0.3d7
 ------------------------

@@ -76,7 +76,8 @@
     (only (psyntax expander)
 	  expand-top-level)
     (only (psyntax library-manager)
-	  current-library-expander)
+	  current-library-expander
+	  source-code-location)
     (only (ikarus.reader)
 	  read-source-file
 	  read-script-source-file)
@@ -1112,10 +1113,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ;;there is only one internal collection of loaded libraries.
   ;;
   (with-run-time-config (cfg)
-    (doit (for-each (lambda (filename)
+    (doit (for-each (lambda (source-filename)
 		      (for-each (lambda (library-form)
-				  ((current-library-expander) library-form))
-			(read-source-file filename)))
+				  (parametrise ((source-code-location source-filename))
+				    ((current-library-expander) library-form)))
+			(read-source-file source-filename)))
 	    cfg.load-libraries))))
 
 (define (evaluate-codes cfg)

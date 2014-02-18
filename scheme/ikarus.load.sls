@@ -49,7 +49,8 @@
 	  current-library-source-loader-by-filename
 	  current-library-serialized-loader
 	  current-include-file-locator
-	  current-include-file-loader)
+	  current-include-file-loader
+	  source-code-location)
     (only (psyntax expander)
 	  expand-r6rs-top-level-make-evaluator)
     (only (ikarus.reader)
@@ -165,7 +166,8 @@
   ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
   ;;
   (let* ((prog  (read-script-source-file filename))
-	 (thunk (expand-r6rs-top-level-make-evaluator prog)))
+	 (thunk (parametrise ((source-code-location filename))
+		  (expand-r6rs-top-level-make-evaluator prog))))
     (when serialize?
       (serialize-collected-libraries (lambda (lib-filename contents)
 				       (store-serialized-library lib-filename contents))

@@ -1792,6 +1792,12 @@ object.  It is meant to be used as follows:
 @end deffn
 
 
+@deffn {Identifier Syntax} __file__
+Expand to a quoted string representing the source code location, for
+example the source file pathname.
+@end deffn
+
+
 @deffn Syntax begin-for-syntax @metao{body} @meta{body} @dots{}
 @deffnx Syntax eval-for-expand @metao{body} @meta{body} @dots{}
 Evaluate the @meta{body} forms at expand time; these syntaxes count as

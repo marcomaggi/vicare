@@ -5023,6 +5023,22 @@
   #t)
 
 
+(parametrise ((check-test-name	'non-hygienic-identifier-syntaxes))
+
+  (check-for-true
+   (string? __file__))
+
+  (check
+      (let ((len (string-length "test-vicare-expander.sps"))
+	    (S   __file__))
+	(substring S
+		   (- (string-length S) len)
+		   (string-length S)))
+    => "test-vicare-expander.sps")
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

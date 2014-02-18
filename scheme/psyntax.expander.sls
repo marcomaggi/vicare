@@ -1871,14 +1871,14 @@
 
 (module (expand-r6rs-top-level-make-evaluator)
 
-  (define (expand-r6rs-top-level-make-evaluator expr*)
+  (define (expand-r6rs-top-level-make-evaluator program-form*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level  program, expand it and return a  thunk which, when
     ;;evaluated,  compiles the  program and  returns an  INTERACTION-ENV
     ;;struct representing the environment after the program execution.
     ;;
     (receive (lib* invoke-code macro* export-subst export-env)
-	(expand-top-level expr*)
+	(expand-top-level program-form*)
       (lambda ()
 	;;Make  sure  that the  code  of  all  the needed  libraries  is
 	;;compiled   and  evaluated.    The  storage   location  gensyms
@@ -1911,19 +1911,19 @@
 
 (module (expand-top-level)
 
-  (define (expand-top-level expr*)
+  (define (expand-top-level program-form*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level program, expand it.
     ;;
     (receive (import-spec* body*)
-	(%parse-top-level-program expr*)
+	(%parse-top-level-program program-form*)
       (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	  (let ()
 	    (import CORE-BODY-EXPANDER)
 	    (core-body-expander 'all import-spec* body* #t))
 	(values invoke-lib* invoke-code macro* export-subst export-env))))
 
-  (define (%parse-top-level-program expr*)
+  (define (%parse-top-level-program program-form*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level program, parse it and return 2 values:
     ;;
@@ -1931,7 +1931,7 @@
     ;;
     ;;2. A list of body forms.
     ;;
-    (syntax-match expr* ()
+    (syntax-match program-form* ()
       (((?import ?import-spec* ...) body* ...)
        (eq? (syntax->datum ?import) 'import)
        (values ?import-spec* body*))
@@ -1939,7 +1939,7 @@
       (((?import . x) . y)
        (eq? (syntax->datum ?import) 'import)
        (syntax-violation 'expander
-	 "invalid syntax of top-level program" (syntax-car expr*)))
+	 "invalid syntax of top-level program" (syntax-car program-form*)))
 
       (_
        (assertion-violation 'expander
@@ -2164,9 +2164,10 @@
 	       export-subst export-env
 	       guard-code guard-lib*
 	       option*)
-	 (let ()
-	   (import CORE-LIBRARY-EXPANDER)
-	   (core-library-expander library-sexp verify-libname))
+	 (parametrise ((source-code-location (or filename (source-code-location))))
+	   (let ()
+	     (import CORE-LIBRARY-EXPANDER)
+	     (core-library-expander library-sexp verify-libname)))
        (let ((uid		(gensym)) ;library unique-symbol identifier
 	     (import-libdesc*	(map library-descriptor import-lib*))
 	     (visit-libdesc*	(map library-descriptor visit-lib*))
@@ -6285,6 +6286,11 @@
        (lambda (expr-stx)
 	 (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 
+      ((__file__)
+       (lambda (stx)
+	 (bless
+	  `(quote ,(source-code-location)))))
+
       (else
        (%error-invalid-macro))))
 
@@ -9504,11 +9510,15 @@
       ))
 
   (define (%include-file filename-stx context-id verbose? synner)
+    (define filename.str
+      (syntax->datum filename-stx))
+    (unless (string? filename.str)
+      (stx-error filename-stx "expected string as include file pathname"))
     (receive (pathname contents)
 	;;FIXME Why in  fuck I cannot use the  parameter here?!?  (Marco
 	;;Maggi; Tue Feb 11, 2014)
 	(default-include-loader #;(current-include-loader)
-	 (syntax->datum filename-stx) verbose? synner)
+	  filename.str verbose? synner)
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (let ()
@@ -12053,12 +12063,12 @@
 	     (let* ((binding (label->syntactic-binding label lexenv))
 		    (type    (syntactic-binding-type binding)))
 	       (case type
-		 ((core-prim
+		 ((core-prim core-macro!
 		   lexical global mutable
 		   local-macro local-macro!
 		   global-macro global-macro!
 		   local-ctv global-ctv
-		   macro import export library $module syntax
+		   macro macro! import export library $module syntax
 		   displaced-lexical)
 		  (values type (syntactic-binding-value binding) id))
 		 (($rtd)
@@ -12377,7 +12387,7 @@
 			(chi-local-macro bind-val expr-stx lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
-	 ((macro)
+	 ((macro macro!)
 	  ;;Here we expand the use of a non-core macro.  Such macros are
 	  ;;integrated in the expander.
 	  ;;
