@@ -746,7 +746,7 @@
   ;;"Serializing"  means to  write the  precompiled contents  in a  FASL
   ;;file.
   ;;
-  ;;SERIALIZE must be a closure wrapping DO-SERIALIZE-LIBRARY.
+  ;;SERIALIZE must be a closure wrapping STORE-SERIALIZE-LIBRARY.
   ;;
   ;;COMPILE must be a closure wrapping the function COMPILE-CORE-EXPR.
   ;;
