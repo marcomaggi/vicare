@@ -776,7 +776,8 @@
 			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
 			     (( ;;
 			       library import export
-			       define define-syntax define-alias define-fluid-syntax
+			       define define-syntax define-alias
+			       define-fluid-syntax
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
 			       global mutable

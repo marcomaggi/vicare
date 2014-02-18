@@ -9809,15 +9809,16 @@
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (unless (valid-bound-ids? ?lhs*)
 	 (%error-invalid-formals-syntax expr-stx ?lhs*))
-       (let ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
-	     (binding*     (map (lambda (rhs)
-				  (%eval-macro-transformer
-				   (%expand-macro-transformer rhs lexenv.expand)
-				   lexenv.run))
-			     ?rhs*)))
+       (let* ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
+	      (binding*     (map (lambda (rhs)
+				   (%eval-macro-transformer
+				    (%expand-macro-transformer rhs lexenv.expand)
+				    lexenv.run))
+			      ?rhs*))
+	      (entry*       (map cons fluid-label* binding*)))
 	 (chi-internal-body (cons ?body ?body*)
-			    (append (map cons fluid-label* binding*) lexenv.run)
-			    (append (map cons fluid-label* binding*) lexenv.expand))))))
+			    (append entry* lexenv.run)
+			    (append entry* lexenv.expand))))))
 
   (define (%lookup-binding-in-lexenv.run lhs)
     ;;Search the binding of the  identifier LHS retrieving its label; if
@@ -11995,7 +11996,8 @@
 			  (type    (syntactic-binding-type binding)))
 		     (case type
 		       ((core-macro
-			 define define-syntax define-alias define-fluid-syntax
+			 define define-syntax define-alias
+			 define-fluid-syntax
 			 let-syntax letrec-syntax begin-for-syntax
 			 begin set! stale-when
 			 local-ctv global-ctv
@@ -12760,28 +12762,33 @@
   ;;
   (while-not-expanding-application-first-subform
    (let ((rib (make-empty-rib)))
-     (receive (trailing-expr-stx*
-	       lexenv.run lexenv.expand
-	       lex* qrhs*
-	       trailing-mod-expr-stx**
-	       unused-kwd* unused-export*)
-	 (let ((mix-definitions-and-expressions?  #f)
+     (receive (trailing-expr-stx*^
+	       lexenv.run^ lexenv.expand^
+	       lex*^ qrhs*^
+	       trailing-mod-expr-stx**^
+	       unused-kwd*^ unused-export-spec*^)
+	 (let ((lex*                              '())
+	       (qrhs*                             '())
+	       (mod**                             '())
+	       (kwd*                              '())
+	       (export-spec*                      '())
+	       (mix-definitions-and-expressions?  #f)
 	       (shadowing-definitions?            #t))
 	   (chi-body* (map (lambda (x)
 			     (push-lexical-contour rib x))
 			(syntax->list body-form-stx*))
 		      lexenv.run lexenv.expand
-		      '() '() '() '() '() rib
+		      lex* qrhs* mod** kwd* export-spec* rib
 		      mix-definitions-and-expressions?
 		      shadowing-definitions?))
-       (when (null? trailing-expr-stx*)
-	 (stx-error trailing-expr-stx* "no expression in body"))
-       (let* ((all-expr-core*  (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**)
-						  trailing-expr-stx*)
-					  lexenv.run lexenv.expand))
-	      (rhs-core*       (chi-qrhs* qrhs* lexenv.run lexenv.expand)))
+       (when (null? trailing-expr-stx*^)
+	 (stx-error body-form-stx* "no expression in body"))
+       (let* ((all-expr-core*  (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**^)
+						  trailing-expr-stx*^)
+					  lexenv.run^ lexenv.expand^))
+	      (rhs-core*       (chi-qrhs* qrhs*^ lexenv.run^ lexenv.expand^)))
 	 (build-letrec* no-source
-	   (reverse lex*)
+	   (reverse lex*^)
 	   (reverse rhs-core*)
 	   (build-sequence no-source
 	     all-expr-core*)))))))

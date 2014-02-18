@@ -321,11 +321,11 @@
 
 (define ikarus-system-macros
   (append
-   `((__who__					($fluid . ,(gensym '__who__)))
-     (return					($fluid . ,(gensym 'return)))
-     (continue					($fluid . ,(gensym 'continue)))
-     (break					($fluid . ,(gensym 'break)))
-     (with					($fluid . ,(gensym 'with))))
+   `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
+     (return					($fluid . ,(gensym "fluid-label.return")))
+     (continue					($fluid . ,(gensym "fluid-label.continue")))
+     (break					($fluid . ,(gensym "fluid-label.break")))
+     (with					($fluid . ,(gensym "fluid-label.with"))))
    '((define					(define))
      (define-syntax				(define-syntax))
      (define-alias				(define-alias))
@@ -348,9 +348,9 @@
      (letrec					(core-macro . letrec))
      (letrec*					(core-macro . letrec*))
      (if					(core-macro . if))
-     (fluid-let-syntax				(core-macro . fluid-let-syntax))
      (lambda						(core-macro . lambda))
      (case-lambda				(core-macro . case-lambda))
+     (fluid-let-syntax				(core-macro . fluid-let-syntax))
      (struct-type-descriptor			(core-macro . struct-type-descriptor))
      (struct-type-and-struct?			(core-macro . struct-type-and-struct?))
      (struct-type-field-ref			(core-macro . struct-type-field-ref))
@@ -3783,9 +3783,9 @@
       ;;
       (each-for ikarus-system-macros
 	(lambda (entry)
-	  (let ((name		(car  entry))
-		(binding	(cadr entry))
-		(label		(gensym)))
+	  (let* ((name		(car  entry))
+		 (binding	(cadr entry))
+		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
 	    (export-env-clt   (cons label binding)))))
       ;;For every exported  primitive function we expect an  entry to be
@@ -3841,7 +3841,7 @@
 		   ;;other strata of the system
 		   ;;
 		   #;(fprintf (console-error-port) "undefined primitive ~s\n" prim-name)
-		   (let ((label (gensym)))
+		   (let ((label (gensym (string-append "prim-label." (symbol->string prim-name)))))
 		     (export-subst-clt (cons prim-name label))
 		     (export-env-clt   (cons label     (cons 'core-prim prim-name)))))))))
 
