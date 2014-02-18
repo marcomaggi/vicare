@@ -599,7 +599,7 @@
 		 (%print-loading-library port)
 		 (let ((rv (unwind-protect
 			       ((current-binary-library-loader) libref port
-				%install-binary-library-and-its-depencencies)
+				%install-binary-library-and-its-dependencies)
 			     (close-input-port port))))
 		   (if rv
 		       ;;Success.  The library  and all its dependencies
@@ -775,7 +775,7 @@
 		     ($library-option* lib)
 		     source-pathname))))
 
-(define (%install-binary-library-and-its-depencencies
+(define (%install-binary-library-and-its-dependencies
 	 uid libname
 	 import-libdesc* visit-libdesc* invoke-libdesc*
 	 export-subst export-env
