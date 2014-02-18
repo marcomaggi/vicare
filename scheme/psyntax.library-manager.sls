@@ -42,6 +42,7 @@
     ;; installed library collection
     find-library-by-name	library-exists?
     current-library-collection
+    install-binary-library-and-its-dependencies
 
     ;; finding and loading libraries
     current-library-locator
@@ -598,8 +599,7 @@
 		 ;;library from PORT.
 		 (%print-loading-library port)
 		 (let ((rv (unwind-protect
-			       ((current-binary-library-loader) libref port
-				%install-binary-library-and-its-dependencies)
+			       ((current-binary-library-loader) libref port)
 			     (close-input-port port))))
 		   (if rv
 		       ;;Success.  The library  and all its dependencies
@@ -775,7 +775,7 @@
 		     ($library-option* lib)
 		     source-pathname))))
 
-(define (%install-binary-library-and-its-dependencies
+(define (install-binary-library-and-its-dependencies
 	 uid libname
 	 import-libdesc* visit-libdesc* invoke-libdesc*
 	 export-subst export-env
@@ -785,8 +785,10 @@
   ;;parameter  CURRENT-BINARY-LIBRARY-LOADER.  All  the arguments  after
   ;;SOURCE-FILENAME are the CONTENTS of the serialized library.
   ;;
-  ;;Make sure  all dependencies  are met, then  install the  library and
-  ;;return true; otherwise return #f.
+  ;;Make  sure all  dependencies  are met,  by  loading the  appropriate
+  ;;libraries, then install the library represented by the arguments and
+  ;;return a  sexp representing the  R6RS library name of  the installed
+  ;;library; otherwise return #f.
   ;;
   (let loop ((libdesc* (append import-libdesc* visit-libdesc* invoke-libdesc* guard-libdesc*)))
     (if (null? libdesc*)
@@ -819,10 +821,10 @@
 			       visit-code invoke-code
 			       guard-code guard-libdesc*
 			       visible? source-file-name library-option*)
-	      #t)))
+	      libname)))
       (begin
-	;;For every library  descriptor: search the library,  load it if
-	;;needed and install it.
+	;;For  every library  descriptor  in the  list of  dependencies:
+	;;search the library, load it if needed and install it.
 	;;
 	(let* ((deplib-descr    (car libdesc*))
 	       (deplib-libname  (library-descriptor-name deplib-descr))

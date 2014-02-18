@@ -55,7 +55,8 @@
 	  current-source-library-loader-by-filename
 	  current-include-file-locator
 	  current-include-file-loader
-	  source-code-location)
+	  source-code-location
+	  install-binary-library-and-its-dependencies)
     (only (psyntax expander)
 	  expand-r6rs-top-level-make-evaluator)
     (only (ikarus.reader)
@@ -651,10 +652,12 @@
 (define* (default-source-library-loader (libref library-reference?) (port input-port?))
   ;;Default value fo the parameter CURRENT-SOURCE-LIBRARY-LOADER.  Given
   ;;a textual  input PORT: read  from it a LIBRARY  symbolic expression;
-  ;;verify that  its version  reference conforms  to LIBREF;  expand it;
-  ;;compile it; install it.
+  ;;verify  that its  version  reference conforms  to  LIBREF; load  and
+  ;;install all its dependency libraries; expand it; compile it; install
+  ;;it.
   ;;
-  ;;If successful return true; otherwise return false.
+  ;;If successful  return a sexp  representing the R6RS library  name of
+  ;;the loaded library; otherwise return false.
   ;;
   ;;We assume that  applying the function PORT-ID to PORT  will return a
   ;;string  representing  a  file  name   associated  to  the  port  (or
@@ -668,27 +671,36 @@
     ;;object; we catch it here and return false.
     (guard (E ((eq? E reject-key)
 	       #f))
-      ((current-library-expander) library-sexp source-filename
-       (lambda (libname)
-	 ;;We expect LIBNAME to be  the R6RS library name extracted from
-	 ;;LIBRARY-SEXP.
-	 (unless (conforming-library-name-and-library-reference? libname libref)
-	   (raise reject-key)))))))
+      (receive (uid libname
+		    import-libdesc* visit-libdesc* invoke-libdesc*
+		    invoke-code visit-code
+		    export-subst export-env
+		    guard-code guard-libdesc*
+		    option*)
+	  ((current-library-expander) library-sexp source-filename
+	   (lambda (libname)
+	     ;;We expect LIBNAME to be  the R6RS library name extracted from
+	     ;;LIBRARY-SEXP.
+	     (unless (conforming-library-name-and-library-reference? libname libref)
+	       (raise reject-key))))
+	libname))))
 
 
 ;;;; loading libraries from serialised locations
 
-(define* (default-binary-library-loader (libref library-reference?) (port input-port?)
-	   (success-kont procedure?))
+(define* (default-binary-library-loader (libref library-reference?) (port input-port?))
   ;;Default value fo the parameter CURRENT-BINARY-LIBRARY-LOADER.  Given
   ;;a binary input PORT: read from  it a serialized library; verify that
-  ;;its version reference conforms to LIBREF; install it.
+  ;;its version  reference conforms to  LIBREF; install it (and  all its
+  ;;dependency libraries).
   ;;
-  ;;If successful return true; otherwise return false.
+  ;;If successful  return a sexp  representing the R6RS library  name of
+  ;;the installed library; otherwise return false.
   ;;
   ;;We assume that  applying the function PORT-ID to PORT  will return a
   ;;string  representing  a  file  name   associated  to  the  port  (or
   ;;equivalent).
+  ;;
   ;;
   (define fasl-pathname (port-id port))
   (define reject-key    (gensym))
@@ -697,12 +709,13 @@
   ;;we catch it here and return false.
   (guard (E ((eq? E reject-key)
 	     #f))
-    (let ((rv (load-serialized-library port success-kont
+    (let ((rv (load-serialized-library port install-binary-library-and-its-dependencies
 		(lambda (libname)
-		  ;;We  expect  LIBNAME  to  be  the  R6RS  library  name
-		  ;;extracted the FASL file.
+		  ;;We  expect  LIBNAME  to  be the  R6RS  library  name
+		  ;;extracted from the serialized library.
 		  (unless (conforming-library-name-and-library-reference? libname libref)
 		    (raise reject-key))))))
+      (assert (library-name? rv))
       (or rv
 	  (begin
 	    (%print-verbose-message "WARNING: not using fasl file ~s because invalid or \
