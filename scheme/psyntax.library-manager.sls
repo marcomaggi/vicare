@@ -54,7 +54,6 @@
     current-source-library-loader-by-filename
 
     ;; library locator options
-    library-locator-options
     library-locator-options-no-raise-when-open-fails?
 
     ;; expander
@@ -69,8 +68,7 @@
     ;;other parameters
     source-code-location)
   (import (rnrs)
-    (psyntax compat)
-    (ikarus.emergency))
+    (psyntax compat))
 
 
 ;;;; type definitions: library record
@@ -389,15 +387,39 @@
 
 ;;;; loading source and binary libraries
 
-(define-enumeration library-locator-option
-  (move-on-when-open-fails
-		;If attempting  to open  a file fails:  do not  raise an
-		;exception, rather move on with the search.
-   )
-  library-locator-options)
+;;NOTE Here we would like to use a proper enumeration definition and the
+;;predicate function below  to test for library locator  options; but we
+;;cannot.  First because using  DEFINE-ENUMERATION causes the boot image
+;;to crash  at initialisation time (for  no fucking reason I  can figure
+;;out);    second    because    we     cannot    export    the    syntax
+;;LIBRARY-LOCATOR-OPTIONS from a library component of the boot image, we
+;;could do  it by defining  the syntax  in an external  library.  (Marco
+;;Maggi; Tue Feb 18, 2014)
+;;
+;; (define-enumeration library-locator-option
+;;   (move-on-when-open-fails
+;; 		;If attempting  to open  a file fails:  do not  raise an
+;; 		;exception, rather move on with the search.
+;;    )
+;;   library-locator-options)
+;;
+;; (define (library-locator-options-no-raise-when-open-fails? options)
+;;   (enum-set-member? 'move-on-when-open-fails options))
+;;
+(define-syntax (library-locator-options stx)
+  (syntax-case stx ()
+    ((_ ?sym ...)
+     (and (all-identifiers? #'(?sym ...))
+	  (let ((syms (syntax->datum #'(?sym ...))))
+	    (for-all (lambda (sym)
+		       (memq sym '(move-on-when-open-fails)))
+	      syms)))
+     #'(list (quote ?sym) ...))))
 
 (define (library-locator-options-no-raise-when-open-fails? options)
-  (enum-set-member? 'move-on-when-open-fails options))
+  (memq 'move-on-when-open-fails options))
+
+;;; --------------------------------------------------------------------
 
 (define current-library-locator
   ;;Hold  a function  used to  locate a  library from  its R6RS  library
@@ -1137,10 +1159,11 @@
 
 ;;;; done
 
-(define dummy
-  (begin
-    (emergency-write "EXPANDER HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    #t))
+;; #!vicare
+;; (define dummy
+;;   (let ()
+;;     (import (vicare))
+;;     (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.library-manager"))))
 
 )
 

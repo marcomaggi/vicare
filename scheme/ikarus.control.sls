@@ -31,8 +31,7 @@
     (ikarus system $stack)
     (ikarus system $pairs)
     (ikarus system $fx)
-    (vicare arguments validation)
-    #;(ikarus.emergency))
+    (vicare arguments validation))
 
 
 ;;;; helpers
@@ -202,10 +201,8 @@
   ;;
   (if ($fp-at-base)
       (begin
-	#;(emergency-write "primitive-call/cf: stack at base")
 	(func ($current-frame)))
     (begin
-      #;(emergency-write "primitive-call/cf: freezing the stack")
       ($seal-frame-and-call func))))
 
 (define (call/cf func)

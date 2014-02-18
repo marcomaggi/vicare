@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!rnrs
 (library (ikarus library-utils)
   (export
     ;; library names and version numbers
@@ -544,6 +544,10 @@
 
 
 ;;;; done
+
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "library-utils")))
 
 )
 

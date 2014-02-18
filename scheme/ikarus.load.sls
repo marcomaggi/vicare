@@ -20,8 +20,7 @@
     load			load-r6rs-script
     library-path		library-extensions
     fasl-directory		fasl-path
-    fasl-search-path
-    library-locator-options)
+    fasl-search-path)
   (import (except (ikarus)
 		  fixnum-width
 		  greatest-fixnum
@@ -48,7 +47,6 @@
 	  current-binary-library-file-locator
 	  current-binary-library-loader
 	  current-library-locator
-	  library-locator-options
 	  library-locator-options-no-raise-when-open-fails?
 	  failed-library-location-collector
 	  current-library-expander
@@ -271,7 +269,7 @@
 	     (loop tailname.str ($cdr directories) (library-extensions)))
 
 	    (else
-	     ;;Build the file  pathanme with the next  directory and the
+	     ;;Build the file  pathname with the next  directory and the
 	     ;;next  extension, then  check  the its  existence; if  not
 	     ;;found try the next file extension.
 	     (let* ((pathname (string-append ($car directories)

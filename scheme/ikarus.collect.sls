@@ -41,8 +41,7 @@
     (ikarus system $fx)
     (ikarus system $arg-list)
     (vicare language-extensions syntaxes)
-    (vicare arguments validation)
-    (ikarus.emergency))
+    (vicare arguments validation))
 
 
 (define post-gc-hooks

@@ -66,6 +66,13 @@ ik_print_no_newline (ikptr x)
   print_object(stderr, x, 0);
 }
 
+ikptr
+ikrt_print_emergency (ikptr s_str, ikpcb *pcb)
+{
+  fprintf(stderr, "\nemergency!!! %s\n\n", IK_BYTEVECTOR_DATA_CHARP(s_str));
+  return IK_FALSE;
+}
+
 
 static void
 print_indentation (FILE* fh, int nested_level)

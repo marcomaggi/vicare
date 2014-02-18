@@ -112,8 +112,7 @@
 	    capi.)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)
-    (vicare arguments validation)
-    #;(ikarus.emergency))
+    (vicare arguments validation))
 
 
 ;;;; arguments validation
@@ -429,9 +428,6 @@
 (define ($file-exists? pathname)
   (define who 'file-exists?)
   (with-pathnames ((pathname.bv pathname))
-    ;; (emergency-write pathname)
-    ;; (emergency-write (utf8->string pathname.bv))
-    ;; (emergency-write (if (capi.posix-file-exists? pathname.bv) "yes" "no"))
     (let ((rv (capi.posix-file-exists? pathname.bv)))
       (if (boolean? rv)
 	  rv

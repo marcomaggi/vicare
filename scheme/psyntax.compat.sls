@@ -43,7 +43,7 @@
     pretty-print			pretty-print*
     fprintf				debug-print
     void				port-id
-    console-error-port
+    console-error-port			all-identifiers?
 
     ;; compiler related operations
     eval-core
@@ -180,17 +180,11 @@
   ($unintern-gensym x))
 
 
-;;;; configuration
-
-(module (enable-arguments-validation?)
-  (module (arguments-validation)
-    (include "ikarus.config.ss" #t))
-  (define (enable-arguments-validation?)
-    arguments-validation)
-  #| end of module |# )
-
-
 ;;;; done
+
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.compat")))
 
 )
 

@@ -68,7 +68,6 @@
 		  struct-rtd			struct-type-descriptor
 		  struct-name			struct-printer
 		  struct-destructor		struct-length)
-    (ikarus.emergency)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (vicare system $structs)

@@ -104,8 +104,11 @@
     (prefix (only (ikarus.readline)
 		  readline-enabled?
 		  make-readline-input-port)
-	    readline.)
-    (ikarus.emergency))
+	    readline.))
+
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.main")))
 
   (include "ikarus.wordsize.scm")
 
@@ -137,11 +140,6 @@
       (if (eof-object? form)
 	  (cons 'begin (reverse the-expr))
 	(loop port (cons form the-expr))))))
-
-(define dummy
-  (begin
-    (emergency-write "HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    #t))
 
 
 ;;;; data types
@@ -1407,7 +1405,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
     (init-library-path cfg)
     (init-fasl-search-path cfg)
-(debug-print 'init-stuff)
     (load-rc-files-as-r6rs-scripts cfg)
     (options.print-loaded-libraries cfg.print-libraries)
 
@@ -1423,8 +1420,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
     (load-libraries cfg)
     (evaluate-codes cfg)
-
-(debug-print 'enter-main)
 
     (case cfg.exec-mode
       ((r6rs-script)
