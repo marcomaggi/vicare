@@ -946,10 +946,11 @@
 ;;;; introduction: EXPORT-ENV
 ;;
 ;;The EXPORT-ENV  is a data structure  used to map the  label gensyms of
-;;top-level  syntactic bindings  to the  corresponding storage  location
-;;gensyms.   Not  all  the  entries  in  EXPORT-ENV  represent  exported
-;;bindings: it  is the role of  the EXPORT-SUBST to select  the exported
-;;ones.
+;;global syntactic  bindings, defined  by a library  or program,  to the
+;;corresponding storage  location gensyms.   "Global bindings"  does not
+;;mean "exported bindings": not all  the entries in EXPORT-ENV represent
+;;exported bindings,  it is the role  of the EXPORT-SUBST to  select the
+;;exported ones.
 ;;
 ;;An EXPORT-ENV is an alist whose entries have the format:
 ;;
@@ -991,6 +992,104 @@
 ;;   To denote  a compile-time value.   In this  case the loc  holds the
 ;;   actual compile-time  object, but  only after  the library  has been
 ;;   visited.  This binding can be exported.
+;;
+
+
+;;;; core macros, non-core macros, user-defined macros
+;;
+;;First some notes on "languages" Vicare jargon:
+;;
+;;* The "expanded language" is a low level Scheme-like language which is
+;;  the result of  the expansion process: expanding a  Scheme library or
+;;  program  means  to transform  the  input  language into  a  symbolic
+;;  expression in the expanded language.
+;;
+;;* The "core language" is a low level Scheme-like language which is the
+;;  input recognised by the compiler.
+;;
+;;at present the expanded language and  the core language are equal, but
+;;this might change in the future.
+;;
+;;
+;;Core macros
+;;-----------
+;;
+;;These are basic syntaxes into which all the other macros are expanded;
+;;despite being  called "core",  they are neither  part of  the expanded
+;;language nor of  the core language.  Core macros are  split into three
+;;groups, those that can appear in definition context only:
+;;
+;;   define				define-syntax
+;;   define-alias			define-fluid-syntax
+;;   module				library
+;;   begin				import
+;;   export				set!
+;;   stale-when				begin-for-syntax
+;;   eval-for-expand
+;;
+;;and those that can appear only in expression context only:
+;;
+;;   foreign-call			quote
+;;   syntax-case			syntax
+;;   letrec				letrec*
+;;   if					lambda
+;;   case-lambda			fluid-let-syntax
+;;   struct-type-descriptor		struct-type-and-struct?
+;;   struct-type-field-ref		struct-type-field-set!
+;;   $struct-type-field-ref		$struct-type-field-set!
+;;   record-type-descriptor		record-constructor-descriptor
+;;   record-type-field-set!		record-type-field-ref
+;;   $record-type-field-set!		$record-type-field-ref
+;;   type-descriptor			is-a?
+;;   slot-ref				slot-set!
+;;   $slot-ref				$slot-set!
+;;   splice-first-expand		unsafe
+;;   predicate-procedure-argument-validation
+;;   predicate-return-value-validation
+;;
+;;those  that  can appear  in  both  definition context  and  expression
+;;context:
+;;
+;;   let-syntax				letrec-syntax
+;;
+;;The implementation  of core macros  that appear in  definition context
+;;only is integrated in the function CHI-BODY*.
+;;
+;;The implementation  of core macros  that appear in  definition context
+;;only consists of proper transformer functions selected by the function
+;;CORE-MACRO-TRANSFORMER.  Such transformers are  applied to input forms
+;;by the function CHI-EXPR.
+;;
+;;Macros  that can  appear  in both  definition  context and  expression
+;;context have double implementation: one  in the function CHI-BODY* and
+;;one in the function CHI-EXPR.
+;;
+;;Core macros  can introduce  bindings by direct  access to  the lexical
+;;environment: their  transformer functions  create new rib  records and
+;;push new entries on the LEXENV.
+;;
+;;
+;;Non-core macros
+;;---------------
+;;
+;;These are macros that expand themselves into uses of core macros; they
+;;have a  proper transformer function  accepting as single  argument the
+;;input form syntax object and returning as single value the output form
+;;syntax object.   The only  difference between a  non-core macro  and a
+;;user-defined macro is that the former is integrated in the expander.
+;;
+;;Non-core   macro   transformers   are   selected   by   the   function
+;;NON-CORE-MACRO-TRANSFORMER.
+;;
+;;
+;;User-defined macros
+;;-------------------
+;;
+;;These are macros defined  by DEFINE-SYNTAX, LET-SYNTAX, LETREC-SYNTAX,
+;;DEFINE-FLUID-SYNTAX  and  their  derivatives.   Such  syntaxes  expand
+;;themselves into  uses of core  or non-core macros.   Their transformer
+;;functions accept as  single argument the input form  syntax object and
+;;return as single value the output form syntax object.
 ;;
 
 
@@ -6054,26 +6153,23 @@
 	    stx)))))
 
 
+;;;; utilities for SPLICE-FIRST-EXPAND
+
+(module SPLICE-FIRST-ENVELOPE
+  (make-splice-first-envelope
+   splice-first-envelope?
+   splice-first-envelope-form)
+
+  (define-record splice-first-envelope
+    (form))
+
+  #| end of module |# )
+
+
 (module NON-CORE-MACRO-TRANSFORMER
   (non-core-macro-transformer)
   ;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
   ;;non-core macros to their macro transformers.
-  ;;
-  ;;We distinguish between "non-core macros" and "core macros".
-  ;;
-  ;;Core macros  are part of the  core language: they cannot  be further
-  ;;expanded to a  composition of other more basic  macros.  Core macros
-  ;;can introduce bindings by direct  access to the lexical environment,
-  ;;so their transformer functions take the LEXENV as arguments.
-  ;;
-  ;;Non-core macros are  *not* part of the core language:  they *can* be
-  ;;expanded to a composition of core macros.  Non-core macros introduce
-  ;;bindings by  returning binding syntaxes; their  transformer do *not*
-  ;;take the LEXENV as arguments.
-  ;;
-  ;;The transformers of non-core macros take as argument a syntax object
-  ;;representing an  expression and return a  syntax object representing
-  ;;an expression.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
@@ -9604,29 +9700,12 @@
 )
 
 
-(module (core-macro-transformer
-	 splice-first-envelope?
-	 splice-first-envelope-form)
+(module CORE-MACRO-TRANSFORMER
+  (core-macro-transformer)
   ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
   ;;non-core macros to their macro transformers.
   ;;
   ;;We distinguish between "non-core macros" and "core macros".
-  ;;
-  ;;Core macros  are part of the  core language: they cannot  be further
-  ;;expanded to a  composition of other more basic  macros.  Core macros
-  ;;can introduce bindings by direct  access to the lexical environment,
-  ;;so their transformer functions take the LEXENV as arguments.
-  ;;
-  ;;Non-core macros are  *not* part of the core language:  they *can* be
-  ;;expanded to a composition of core macros.  Non-core macros introduce
-  ;;bindings by  returning binding syntaxes; their  transformer do *not*
-  ;;take the LEXENV as arguments.
-  ;;
-  ;;The transformers  of core  macros take as  argument a  syntax object
-  ;;representing an expression  and return a symbolic  expression in the
-  ;;expanded language.
-  ;;
-  ;;At present core macros can be only expressions, not definitions.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
@@ -10577,25 +10656,17 @@
 
 ;;;; module core-macro-transformer: SPLICE-FIRST-EXPAND
 
-(module (splice-first-expand-transformer
-	 splice-first-envelope?
-	 splice-first-envelope-form)
-
-  (define-record splice-first-envelope
-    (form))
-
-  (define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (syntax-match expr-stx ()
-      ((_ ?form)
-       (make-splice-first-envelope ?form))
-      ))
-
-  #| end of module |# )
+(define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
+  ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+  ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+  ;;an expanded language symbolic expression.
+  ;;
+  (import SPLICE-FIRST-ENVELOPE)
+  (syntax-match expr-stx ()
+    ((_ ?form)
+     (make-splice-first-envelope ?form))
+    ))
 
 
 ;;;; module core-macro-transformer: UNSAFE
@@ -12091,6 +12162,7 @@
   ;;EXPR;  otherwise if  EXPR is  a splice-first  envelope: extract  its
   ;;form, expand it and return the result.
   ;;
+  (import SPLICE-FIRST-ENVELOPE)
   (if (splice-first-envelope? expr)
       (if (expanding-application-first-subform?)
 	  expr
@@ -12121,8 +12193,9 @@
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
-    (import NON-CORE-MACRO-TRANSFORMER)
-    (%do-macro-call (non-core-macro-transformer procname)
+    (%do-macro-call (let ()
+		      (import NON-CORE-MACRO-TRANSFORMER)
+		      (non-core-macro-transformer procname))
 		    input-form-expr lexenv.run rib))
 
   (define (chi-local-macro bind-val input-form-expr lexenv.run rib)
@@ -12272,7 +12345,9 @@
 	 (expr-syntax-type expr-stx lexenv.run)
        (case type
 	 ((core-macro)
-	  (let ((transformer (core-macro-transformer bind-val)))
+	  (let ((transformer (let ()
+			       (import CORE-MACRO-TRANSFORMER)
+			       (core-macro-transformer bind-val))))
 	    (transformer expr-stx lexenv.run lexenv.expand)))
 
 	 ((global)
@@ -12450,6 +12525,7 @@
 	 ;;expanding to a SPLICE-FIRST-EXPAND form.
 	 (let ((exp-rator (while-expanding-application-first-subform
 			   (chi-expr ?rator lexenv.run lexenv.expand))))
+	   (import SPLICE-FIRST-ENVELOPE)
 	   (if (splice-first-envelope? exp-rator)
 	       (syntax-match (splice-first-envelope-form exp-rator) ()
 		 ((?int-rator ?int-rands* ...)
