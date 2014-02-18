@@ -9803,6 +9803,26 @@
   ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
   ;;language symbolic expression.
   ;;
+  ;;FLUID-LET-SYNTAX is  similar, but  not equal, to  LET-SYNTAX; rather
+  ;;than defining new ?LHS bindings, it temporarily rebinds the keywords
+  ;;to new transformers while expanding the ?BODY forms.  The given ?LHS
+  ;;must   be    already   bound   to   fluid    syntaxes   defined   by
+  ;;DEFINE-FLUID-SYNTAX.
+  ;;
+  ;;There are  two differences between FLUID-LET-SYNTAX  and LET-SYNTAX:
+  ;;FLUID-LET-SYNTAX  must  appear  in   expression  context  only;  the
+  ;;internal ?BODY forms are *not* spliced in the enclosing body.
+  ;;
+  ;;NOTE  We would  truly like  to splice  the inner  body forms  in the
+  ;;surrounding body,  so that  this syntax  could act  like LET-SYNTAX,
+  ;;which is useful; but we really cannot do it with this implementation
+  ;;of the expander algorithm.  This  is because LET-SYNTAX both creates
+  ;;a  new  rib  and  adds  new  id/label  entries  to  it,  and  pushes
+  ;;label/descriptor  entries to  the  LEXENV; instead  FLUID-LET-SYNTAX
+  ;;only pushes entries to the LEXENV: there is no way to keep the fluid
+  ;;LEXENV entries  visible only to  a subsequence  of forms in  a body.
+  ;;(Marco Maggi; Tue Feb 18, 2014)
+  ;;
   (define (transformer expr-stx)
     (syntax-match expr-stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)

@@ -3943,6 +3943,27 @@ Here is an example of module exporting a binding with @func{export}:
 @subsection Fluid syntaxes
 
 
+Fluid syntaxes are macro bindings that can be temporarily redefined
+while expanding a sequence of forms:
+
+@example
+(import (vicare))
+
+(define-fluid-syntax ciao
+  (identifier-syntax "ciao"))
+
+ciao    @result{} "ciao"
+
+(fluid-let-syntax ((ciao (identifier-syntax "hello")))
+  ciao) @result{} "hello"
+
+(fluid-let-syntax ((ciao (identifier-syntax "ohayo")))
+  ciao) @result{} "ohayo"
+
+ciao    @result{} "ciao"
+@end example
+
+
 @deffn Syntax define-fluid-syntax @meta{keyword} @meta{expr}
 Like @func{define-syntax} define a new syntax binding the transformer to
 @meta{keyword}, but mark @meta{keyword} as fluid so that later it can be
@@ -3951,11 +3972,16 @@ rebound by @func{fluid-let-syntax}.
 
 
 @deffn Syntax fluid-let-syntax ((@meta{keyword} @meta{expr}) ...) @metao{body} @meta{body}
-Similar to @func{let-syntax}, but rather than defining new
-@meta{keyword} bindings, rebind temporarily rebind the keywords to new
-transformers while expanding the body forms.  The given @meta{keyword}
-must be already bound to fluid syntaxes defined by
+Similar, but not equal, to @func{let-syntax}; rather than defining new
+@meta{keyword} bindings, temporarily rebind the keywords to new
+transformers while expanding the @meta{body} forms.  The given
+@meta{keyword} must be already bound to fluid syntaxes defined by
 @func{define-fluid-syntax}.
+
+There are two differences between @func{fluid-let-syntax} and
+@func{let-syntax}: @func{fluid-let-syntax} must appear in expression
+context only; the internal @meta{body} forms are @strong{not} spliced in
+the enclosing body.
 @end deffn
 
 @c page
