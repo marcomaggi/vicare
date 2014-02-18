@@ -32,6 +32,7 @@
     report-errors-at-runtime
     strict-r6rs
     descriptive-labels
+    ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
     vicare-built-with-srfi-enabled
     vicare-built-with-ffi-enabled
@@ -72,30 +73,32 @@
 
 ;;;; vicare build configuration options
 
-(module (vicare-built-with-arguments-validation-enabled)
-  (module (arguments-validation)
+(module (vicare-built-with-arguments-validation-enabled
+	 vicare-built-with-srfi-enabled
+	 vicare-built-with-ffi-enabled
+	 vicare-built-with-iconv-enabled
+	 vicare-built-with-posix-enabled
+	 vicare-built-with-glibc-enabled
+	 vicare-built-with-linux-enabled)
+  (module (arguments-validation
+	   VICARE_BUILT_WITH_SRFI_ENABLED
+	   VICARE_BUILT_WITH_ICONV_ENABLED
+	   VICARE_BUILT_WITH_FFI_ENABLED
+	   VICARE_BUILT_WITH_NAUSICAA_ENABLED
+	   VICARE_BUILT_WITH_POSIX_ENABLED
+	   VICARE_BUILT_WITH_GLIBC_ENABLED
+	   VICARE_BUILT_WITH_LINUX_ENABLED)
     (include "ikarus.config.ss" #t))
   (define (vicare-built-with-arguments-validation-enabled)
     arguments-validation)
+  (define (vicare-built-with-srfi-enabled)	VICARE_BUILT_WITH_SRFI_ENABLED)
+  (define (vicare-built-with-iconv-enabled)	VICARE_BUILT_WITH_ICONV_ENABLED)
+  (define (vicare-built-with-ffi-enabled)	VICARE_BUILT_WITH_FFI_ENABLED)
+  (define (vicare-built-with-nausicaa-enabled)	VICARE_BUILT_WITH_NAUSICAA_ENABLED)
+  (define (vicare-built-with-posix-enabled)	VICARE_BUILT_WITH_POSIX_ENABLED)
+  (define (vicare-built-with-glibc-enabled)	VICARE_BUILT_WITH_GLIBC_ENABLED)
+  (define (vicare-built-with-linux-enabled)	VICARE_BUILT_WITH_LINUX_ENABLED)
   #| end of module |# )
-
-(define (vicare-built-with-srfi-enabled)
-  (foreign-call "ikrt_vicare_built_with_srfi_enabled"))
-
-(define (vicare-built-with-ffi-enabled)
-  (foreign-call "ikrt_vicare_built_with_ffi_enabled"))
-
-(define (vicare-built-with-iconv-enabled)
-  (foreign-call "ikrt_vicare_built_with_iconv_enabled"))
-
-(define (vicare-built-with-posix-enabled)
-  (foreign-call "ikrt_vicare_built_with_posix_enabled"))
-
-(define (vicare-built-with-glibc-enabled)
-  (foreign-call "ikrt_vicare_built_with_glibc_enabled"))
-
-(define (vicare-built-with-linux-enabled)
-  (foreign-call "ikrt_vicare_built_with_linux_enabled"))
 
 
 ;;;; done

@@ -20,11 +20,13 @@
     fasl-read
     fasl-read-header
     fasl-read-object)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
-		  fasl-read)
+		  fasl-read
+		  fasl-read-header
+		  fasl-read-object)
     (except (ikarus.code-objects)
 	    procedure-annotation)
     (only (ikarus.strings-table)
@@ -42,27 +44,31 @@
 
 ;;;; main functions
 
-(define who 'fasl-read)
+(define-constant __who__ 'fasl-read)
 
 (define (fasl-read port)
   ;;Read and  validate the  FASL header,  then load  the whole  file and
   ;;return the result.
   ;;
-  (with-arguments-validation (who)
+  (define (%assert x y)
+    (unless (eq? x y)
+      (assertion-violation __who__
+	(format "while reading fasl header expected ~s, got ~s\n" y x))))
+  (with-arguments-validation (__who__)
       ((input-port	port))
     ($fasl-read-header port)
     (let ((v ($fasl-read-object port)))
       (if (port-eof? port)
-	  v
-	(assertion-violation who "port did not reach EOF at the end of fasl file")))))
+ 	  v
+ 	(assertion-violation __who__ "port did not reach EOF at the end of fasl file")))))
 
 (define* (fasl-read-header (port binary-input-port?))
   ($fasl-read-header port))
 
-(define ($fasl-read-header port)
+(define* ($fasl-read-header port)
   (define (%assert-chars x y)
     (unless (eq? x y)
-      (assertion-violation who
+      (assertion-violation __who__
 	(format "while reading fasl header expected ~s, got ~s\n" y x))))
   (%assert-chars (read-u8-as-char port) #\#)
   (%assert-chars (read-u8-as-char port) #\@)
@@ -106,7 +112,7 @@
 	;;in generating the code.  (Marco Maggi; Oct 7, 2012)
 	(let ((good ($vector-ref MARKS m)))
 	  (if good
-	      (assertion-violation who "mark set twice" m port)
+	      (assertion-violation __who__ "mark set twice" m port)
 	    ($vector-set! MARKS m obj)))
       (let* ((n MARKS.len)
 	     (v (make-vector ($fxmax ($fx* n 2) ($fxadd1 m)) #f)))
@@ -245,8 +251,8 @@
 	 (let ((m (read-u32 port)))
 	   (if ($fx< m MARKS.len)
 	       (or ($vector-ref MARKS m)
-		   (error who "uninitialized mark" m))
-	     (assertion-violation who "invalid mark" m))))
+		   (error __who__ "uninitialized mark" m))
+	     (assertion-violation __who__ "invalid mark" m))))
 	((#\l) ;list of length <= 255
 	 (%read-list (read-u8 port) m))
 	((#\L) ;list of length > 255
@@ -319,7 +325,7 @@
 	 ;;recurse to satisfy the request to return an object
 	 (%read/mark m))
 	(else
-	 (assertion-violation who "unexpected char as fasl object header" ch port)))))
+	 (assertion-violation __who__ "unexpected char as fasl object header" ch port)))))
 
   (define (%read-code code-mark closure-mark)
     ;;Read and  return a  code object.  Unless  CODE-MARK is  false: the
@@ -373,7 +379,7 @@
 	((#\<)
 	 (let ((closure-mark (read-u32 port)))
 	   (unless ($fx< closure-mark MARKS.len)
-	     (assertion-violation who "invalid mark" mark))
+	     (assertion-violation __who__ "invalid mark" mark))
 	   (let* ((code ($vector-ref MARKS closure-mark))
 		  (proc ($code->closure code)))
 	     (when mark (%put-mark mark proc))
@@ -382,13 +388,13 @@
 	 (let ((closure-mark (read-u32 port))
 	       (ch           (read-u8-as-char port)))
 	   (unless ($char= ch #\x)
-	     (assertion-violation who "expected char \"x\"" ch))
+	     (assertion-violation __who__ "expected char \"x\"" ch))
 	   (let ((code (%read-code closure-mark mark)))
 	     (if mark
 		 ($vector-ref MARKS mark)
 	       ($code->closure code)))))
 	(else
-	 (assertion-violation who "invalid code header" ch)))))
+	 (assertion-violation __who__ "invalid code header" ch)))))
 
   (define (%read-list len mark)
     ;;Read and  return a list  of LEN  elements.  Unless MARK  is false:
@@ -423,7 +429,7 @@
 (define (read-u8 port)
   (let ((byte (get-u8 port)))
     (if (eof-object? byte)
-	(error who "invalid eof encountered" port)
+	(error __who__ "invalid eof encountered" port)
       byte)))
 
 (define (read-u8-as-char port)
@@ -431,8 +437,8 @@
 
 (define (char->int x)
   (if (char? x)
-      (char->integer x)
-    (assertion-violation who "unexpected EOF inside a fasl object")))
+      ($char->fixnum x)
+    (assertion-violation __who__ "unexpected EOF inside a fasl object")))
 
 (define (read-u32 port)
   ;;Read from  the input PORT 4  bytes representing an  exact integer in

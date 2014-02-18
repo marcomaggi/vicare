@@ -1314,6 +1314,9 @@ ikrt_exit (ikptr status, ikpcb* pcb)
  ** Configuration options commands.
  ** ----------------------------------------------------------------- */
 
+/* FIXME All  these functions  must be  removed at  the next  boot image
+   rotation.  (Marco Maggi; Mon Feb 17, 2014) */
+
 ikptr
 ikrt_vicare_built_with_srfi_enabled (ikpcb * pcb)
 {
@@ -1368,5 +1371,6 @@ ikrt_vicare_built_with_linux_enabled (ikpcb * pcb)
   return IK_FALSE;
 #endif
 }
+
 
 /* end of file */

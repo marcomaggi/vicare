@@ -847,6 +847,7 @@
     define-constant
     define-constant-values
     define-fluid-syntax
+    define-fluid-override
     define-inline
     define-inline-constant
     define-integrable
@@ -1569,6 +1570,14 @@
     syntax-parameterize
     syntax-parameter-value
 
+    ;; input/output predicates
+    binary-input-port?
+    textual-input-port?
+    binary-output-port?
+    textual-output-port?
+    binary-input/output-port?
+    textual-input/output-port?
+
     ;; misc
     set-cons!
     eval-for-expand
@@ -1588,6 +1597,8 @@
     case-lambda*
     case-define*
     __who__
+    __file__
+    __line__
 
 
 ;;;; bindings from (nausicaa language oopp)

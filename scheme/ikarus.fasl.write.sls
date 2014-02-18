@@ -25,8 +25,8 @@
 		  greatest-fixnum
 		  least-fixnum
 		  fasl-write)
-    (ikarus system $codes)
-    (only (ikarus system $structs)
+    (vicare system $codes)
+    (only (vicare system $structs)
 	  base-rtd
 	  $struct-rtd)
     (except (ikarus.code-objects)

@@ -394,7 +394,6 @@
     binary-input-port?			textual-input-port?
     binary-output-port?			textual-output-port?
     binary-input/output-port?		textual-input/output-port?
-
     port-eof?
 
     ;; generic port functions

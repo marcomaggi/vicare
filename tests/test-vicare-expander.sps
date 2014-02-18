@@ -732,6 +732,50 @@
   #t)
 
 
+(parametrise ((check-test-name	'fluid-syntaxes))
+
+  (check
+      (with-result
+       (let ()
+	 (define-fluid-syntax ciao
+	   (identifier-syntax "ciao"))
+	 (add-result ciao)
+	 (fluid-let-syntax ((ciao (identifier-syntax "hello")))
+	   (add-result ciao))
+	 (fluid-let-syntax ((ciao (identifier-syntax "ohayo")))
+	   (add-result ciao))
+	 ciao))
+    => '("ciao" ("ciao" "hello" "ohayo")))
+
+  (check
+      (with-result
+       (let ()
+	 (define-fluid-syntax ciao
+	   (identifier-syntax "ciao"))
+	 (add-result ciao)
+	 (fluid-let-syntax ((ciao (identifier-syntax "hello")))
+	   (fluid-let-syntax ((ciao (identifier-syntax "ohayo")))
+	     (add-result ciao))
+	   (add-result ciao))
+	 ciao))
+    => '("ciao" ("ciao" "ohayo" "hello")))
+
+  (check
+      (with-result
+       (let ()
+	 (define-fluid-syntax ciao
+	   (identifier-syntax "ciao"))
+	 (add-result ciao)
+	 (let ()
+	   (define-fluid-override ciao
+	     (identifier-syntax "hello"))
+	   (add-result ciao))
+	 ciao))
+    => '("ciao" ("ciao" "hello")))
+
+  #t)
+
+
 (parametrise ((check-test-name	'define-integrable))
 
   (check
@@ -4975,6 +5019,30 @@
 		(else E))
 	((predicate-return-value-validation list?) 'hey '#(1 2 3)))
     => '#(hey (#(1 2 3))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'non-hygienic-identifier-syntaxes))
+
+  (check-for-true
+   (string? __file__))
+
+  (check
+      (let ((len (string-length "test-vicare-expander.sps"))
+	    (S   __file__))
+	(substring S
+		   (- (string-length S) len)
+		   (string-length S)))
+    => "test-vicare-expander.sps")
+
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (number? __line__))
+
+  (when #f
+    (fprintf stderr "line number ~a\n" __line__))
 
   #t)
 

@@ -864,7 +864,9 @@
   (define-constant UNIQUE-PROPERTY-KEY
     (let-syntax
 	((expand-time-gensym (lambda (x)
-			       (with-syntax ((SYM (datum->syntax #'here (gensym))))
+			       (with-syntax
+				   ((SYM (datum->syntax #'here
+							(gensym "primitive-operation-property"))))
 				 #'(quote SYM)))))
       (expand-time-gensym)))
 

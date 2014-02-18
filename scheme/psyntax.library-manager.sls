@@ -64,7 +64,10 @@
     default-include-loader
     current-include-loader
     current-include-file-locator
-    current-include-file-loader)
+    current-include-file-loader
+
+    ;;other parameters
+    source-code-location)
   (import (rnrs)
     (psyntax compat)
     (ikarus.emergency))
@@ -362,16 +365,25 @@
   #| end of module |# )
 
 
-;;;; expanding libraries
-;;
-;;The  current library  expander is  used to  expand LIBRARY  forms from
-;;source files.
-;;
+;;;; parameters
+
 (define current-library-expander
+  ;;The current  library expander is  used to expand LIBRARY  forms from
+  ;;source files.
+  ;;
   (make-parameter
       (lambda (library-sexp)
         (assertion-violation 'current-library-expander "not initialized"))
     (lambda* ((obj procedure?))
+      obj)))
+
+(define source-code-location
+  ;;This parameter is  used to expand the  identifier syntax "__file__".
+  ;;It is  meant to be  set to a string  representing the source  of the
+  ;;code being expanded; for example the source file name.
+  ;;
+  (make-parameter "<unknown-source-location>"
+    (lambda* ((obj string?))
       obj)))
 
 
@@ -667,7 +679,7 @@
 
 (module (current-source-library-loader-by-filename)
 
-  (define (default-library-source-loader-by-filename filename libname-predicate)
+  (define (default-library-source-loader-by-filename source-pathname libname-predicate)
     ;;Default          value          for         the          parameter
     ;;CURRENT-SOURCE-LIBRARY-LOADER-BY-FILENAME.   Given a  library file
     ;;pathname: load  the file, expand  the first LIBRARY  form, compile
@@ -683,9 +695,10 @@
 		  export-subst export-env
 		  guard-code guard-desc*
 		  option*)
-	((current-library-expander)
-	 ((current-source-library-loader) filename)
-	 filename libname-predicate)
+	(parametrise ((source-code-location source-pathname))
+	  ((current-library-expander)
+	   ((current-source-library-loader) source-pathname)
+	   source-pathname libname-predicate))
       (find-library-by-name libname)))
 
   (define current-source-library-loader-by-filename
@@ -946,13 +959,14 @@
 			     ((global-macro)  (cons* 'global-macro  lib (cdr binding)))
 			     ((global-macro!) (cons* 'global-macro! lib (cdr binding)))
 			     ((global-ctv)    (cons* 'global-ctv    lib (cdr binding)))
-			     (( ;;
+			     ((core-prim
 			       library import export
-			       define define-syntax define-alias define-fluid-syntax
+			       define define-syntax define-alias
+			       define-fluid-syntax define-fluid-override
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
 			       global mutable
-			       core-prim core-macro macro
+			       core-macro macro macro!
 			       $core-rtd $rtd $module $fluid $synonym)
 			      binding)
 			     (else

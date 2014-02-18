@@ -1465,7 +1465,7 @@
       ;;
       ((case-lambda)
        (let ((clause* (E-clambda-clause* ($cdr X) ctxt)))
-	 (make-clambda (gensym) clause* #f #f
+	 (make-clambda (gensym "clambda") clause* #f #f
 		       (and (symbol? ctxt) ctxt))))
 
       ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
@@ -1475,7 +1475,7 @@
       ((annotated-case-lambda)
        (let ((annotated-expr ($cadr X))
 	     (clause*        (E-clambda-clause* ($cddr X) ctxt)))
-	 (make-clambda (gensym) clause* #f #f
+	 (make-clambda (gensym "clambda") clause* #f #f
 		       (cons (and (symbol? ctxt) ctxt)
 			     ;;This  annotation  is excluded  only  when
 			     ;;building the boot image.
@@ -1610,7 +1610,7 @@
 			;;a symbol or improper list.
 			(proper? (list? fml*)))
 		   (ungen-fml* fml*)
-		   (make-clambda-case (make-case-info (gensym) (properize fml*^) proper?)
+		   (make-clambda-case (make-case-info (gensym "clambda-case") (properize fml*^) proper?)
 				      body^)))))
 	clause*))
 

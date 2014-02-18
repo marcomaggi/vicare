@@ -1,4 +1,4 @@
-Subject: [announce] Vicare Scheme revision 0.3d8
+Subject: [announce] Vicare Scheme revision 0.4d0
 
                              Vicare Scheme
                              =============
@@ -37,7 +37,7 @@ this project has a mailing list:
 	     <http://groups.google.com/group/vicare-users>
 
 
-Notes for revision 0.3d8
+Notes for revision 0.4d0
 ------------------------
 
 Many backwards incompatibilities... life is hard!
@@ -344,6 +344,19 @@ Many backwards incompatibilities... life is hard!
 * BACKWARDS  INCOMPATIBILITY  The  third   (and  optional)  argument  of
   EXPAND-LIBRARY now must be a function accepting a R6RS library name as
   single argument.
+
+* Added port predicates to (vicare):
+
+    binary-input-port?			textual-input-port?
+    binary-output-port?			textual-output-port?
+    binary-input/output-port?		textual-input/output-port?
+
+* Added  syntax  DEFINE-FLUID-OVERRIDE  to (vicare);  it  rebinds  fluid
+  syntaxes like FLUID-LET-SYNTAX.
+
+* Added identifier  syntaxes "__file__" and "__line__"  to (vicare); the
+  former expands to a string  representing the source code location; the
+  latter expands to a number representing the line number.
 
 
 Notes for revision 0.3d7

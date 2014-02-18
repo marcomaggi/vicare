@@ -440,9 +440,9 @@
     $set-code-annotation!
 
     #| end of export |# )
-  (import (ikarus)
-    (ikarus system $structs)
-    (except (ikarus system $fx)
+  (import (vicare)
+    (vicare system $structs)
+    (except (vicare system $fx)
 	    $fxmax
 	    $fxmin
 	    $fx<
@@ -450,40 +450,40 @@
 	    $fx>=
 	    $fx<=
 	    $fx=)
-    (prefix (only (ikarus system $fx)
+    (prefix (only (vicare system $fx)
 		  $fx<
 		  $fx>
 		  $fx>=
 		  $fx<=
 		  $fx=)
 	    sys.)
-    (ikarus system $bignums)
-    (ikarus system $ratnums)
-    (ikarus system $flonums)
-    (ikarus system $compnums)
-    (ikarus system $pairs)
+    (vicare system $bignums)
+    (vicare system $ratnums)
+    (vicare system $flonums)
+    (vicare system $compnums)
+    (vicare system $pairs)
     (vicare system $lists)
-    (ikarus system $vectors)
-    (rename (ikarus system $bytevectors)
+    (vicare system $vectors)
+    (rename (vicare system $bytevectors)
 	    ($bytevector-set!	$bytevector-set!)
 	    ($bytevector-set!	$bytevector-u8-set!)
 	    ($bytevector-set!	$bytevector-s8-set!))
-    (except (ikarus system $chars)
+    (except (vicare system $chars)
 	    $char=
 	    $char<
 	    $char>
 	    $char>=
 	    $char<=)
-    (prefix (only (ikarus system $chars)
+    (prefix (only (vicare system $chars)
 		  $char=
 		  $char<
 		  $char>
 		  $char>=
 		  $char<=)
 	    sys.)
-    (ikarus system $strings)
-    (ikarus system $codes)
-    (ikarus system $pointers)
+    (vicare system $strings)
+    (vicare system $codes)
+    (vicare system $pointers)
     (vicare system $hashtables)
     (for (prefix (only (vicare platform configuration)
 		       platform-endianness)
@@ -682,13 +682,7 @@
   (define-compar $fx<  sys.$fx<)
   (define-compar $fx<= sys.$fx<=)
   (define-compar $fx>  sys.$fx>)
-  (define-compar $fx>= sys.$fx>=)
-
-  (define-compar $char=  sys.$char=)
-  (define-compar $char<  sys.$char<)
-  (define-compar $char<= sys.$char<=)
-  (define-compar $char>  sys.$char>)
-  (define-compar $char>= sys.$char>=))
+  (define-compar $fx>= sys.$fx>=))
 
 
 ;;;; bignums
@@ -1452,6 +1446,25 @@
   ;;
   (or ($fx= ch #\x000A)	  ;linefeed
       ($fx= ch #\x0085))) ;next line
+
+;;; --------------------------------------------------------------------
+
+(let-syntax ((define-compar (syntax-rules ()
+			      ((_ ?proc sys.?proc)
+			       (define-syntax ?proc
+				 (syntax-rules ()
+				   ((_ ?op1 ?op2)
+				    (sys.?proc ?op1 ?op2))
+				   ((_ ?op1 ?op2 ?op3 ?op4 (... ...))
+				    (let ((op2 ?op2))
+				      (and (sys.?proc ?op1 op2)
+					   (?proc op2 ?op3 ?op4 (... ...))))))))
+			      )))
+  (define-compar $char=  sys.$char=)
+  (define-compar $char<  sys.$char<)
+  (define-compar $char<= sys.$char<=)
+  (define-compar $char>  sys.$char>)
+  (define-compar $char>= sys.$char>=))
 
 
 ;;;; done

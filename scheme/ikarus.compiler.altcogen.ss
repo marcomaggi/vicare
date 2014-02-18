@@ -4132,7 +4132,7 @@
   ;;   |                           |
   ;;           low memory
   ;;
-  (let ((L_CALL (label (gensym))))
+  (let ((L_CALL (label (gensym "call_label"))))
     (define %adjust-frame-pointer-register
       (let ((FPR-DELTA (if (or (fxzero? frame-words-count)
 			       (fx=? frame-words-count 1))
@@ -4201,16 +4201,16 @@
   ;;The main  routine is built  by traversing the input  depth-first and
   ;;accumulating a list of assembly instructions; the error handlers are
   ;;appended to such accumulated list by storing a reference to the last
-  ;;pair  in  the  main  list into  the  parameter  EXCEPTIONS-CONC  and
-  ;;prepending to the tail error handler routines as follows:
+  ;;pair in  the main  list into the  parameter EXCEPTIONS-CONCATENATION
+  ;;and prepending to the tail error handler routines as follows:
   ;;
-  ;;  (let ((tail-pair (exceptions-conc)))
+  ;;  (let ((tail-pair (exceptions-concatenation)))
   ;;    (set-cdr! tail-pair (append ?error-handler-instructions
   ;;                                (cdr tail-pair))))
   ;;
   (define who 'alt-cogen.flatten-codes)
 
-  (define exceptions-conc
+  (define exceptions-concatenation
     (make-parameter #f))
 
   (define exception-label (make-parameter #f))
@@ -4242,9 +4242,9 @@
       ;;
       (struct-case x
 	((codes x.clambda* x.body)
-	 (cons (cons* 0 (label (gensym))
+	 (cons (cons* 0 (label (gensym "main_label"))
 		      (let ((accum (list '(nop))))
-			(parameterize ((exceptions-conc accum))
+			(parameterize ((exceptions-concatenation accum))
 			  (T x.body accum))))
 	       (map Clambda x.clambda*)))))
 
@@ -4279,7 +4279,7 @@
 		`(name ,name)
 		(label L)
 		(let ((accum (list '(nop))))
-		  (parameterize ((exceptions-conc accum))
+		  (parameterize ((exceptions-concatenation accum))
 		    (let recur ((case* case*))
 		      (if (null? case*)
 			  (cons `(jmp (label ,(sl-invalid-args-label))) accum)
@@ -4290,7 +4290,7 @@
       ;;Flatten the struct instance of  type CLAMBDA-CASE into a list of
       ;;assembly instructions  prepended to  the accumulator  ACCUM; the
       ;;error  handler  routines are  prepended  to  the tail  of  ACCUM
-      ;;referenced by EXCEPTIONS-CONC.
+      ;;referenced by EXCEPTIONS-CONCATENATION.
       ;;
       ;;The generated assembly code must  check if this CLAMBDA case has
       ;;a specification  of requested  arguments matching  the arguments
@@ -4336,7 +4336,7 @@
 	    ;;representing the  CPU register holding the  pointer to the
 	    ;;current  closure object,  and  whose cdr  is  the list  of
 	    ;;properized formals.
-	    (let ((next-case-entry-point-label (unique-label)))
+	    (let ((next-case-entry-point-label (unique-label "L_clambda_branch")))
 	      (cons* `(cmpl ,(argc-convention (if x.info.proper?
 						  (length (cdr x.info.args))
 						(length (cddr x.info.args))))
@@ -4417,10 +4417,10 @@
       ;;knowing  that  "fixnum  3"  will  be ignored  and  the  list  is
       ;;allocated on the heap.
       ;;
-      (define CONTINUE_LABEL	(unique-label))
-      (define DONE_LABEL	(unique-label))
-      (define CONS_LABEL	(unique-label))
-      (define LOOP_HEAD		(unique-label))
+      (define CONTINUE_LABEL	(unique-label "L_varargs_continue_"))
+      (define DONE_LABEL	(unique-label "L_varargs_done"))
+      (define CONS_LABEL	(unique-label "L_varargs_cons"))
+      (define LOOP_HEAD		(unique-label "L_varargs_loop_head"))
       (define mandatory-formals-count
 	(fxsub1 properized-formals-count))
       (define properized-formals-argc
@@ -4587,7 +4587,7 @@
 
       ((conditional x.test x.conseq x.altern)
        (let ((label-for-true-predicate  #f)
-	     (label-for-false-predicate (unique-label)))
+	     (label-for-false-predicate (unique-label "L_false")))
          (P x.test label-for-true-predicate label-for-false-predicate
 	    (T x.conseq
 	       (cons label-for-false-predicate
@@ -4628,7 +4628,7 @@
        ;;
        (let ((L (unique-interrupt-label)))
 	 (let* ((handler^ (cons L (T handler '())))
-		(tc       (exceptions-conc)))
+		(tc       (exceptions-concatenation)))
 	   (set-cdr! tc (append handler^ (cdr tc))))
          (parameterize ((exception-label L))
            (T body accum))))
@@ -4655,19 +4655,37 @@
 
 	((conditional x.test x.conseq x.altern)
 	 (cond ((interrupt? x.conseq)
-		(let ((L (or (exception-label)
-			     (error who "no exception label"))))
-		  (P x.test L #f (E x.altern accum))))
+		(let ((label-true  (or (exception-label)
+				      (error who "no exception label")))
+		      (label-false #f))
+		  (P x.test label-true label-false
+		     (E x.altern accum))))
 	       ((interrupt? x.altern)
-		(let ((L (or (exception-label)
-			     (error who "no exception label"))))
-		  (P x.test #f L (E x.conseq accum))))
+		(let ((label-true  #f)
+		      (label-false (or (exception-label)
+				       (error who "no exception label"))))
+		  (P x.test label-true label-false
+		     (E x.conseq accum))))
 	       (else
-		(let ((lf (unique-label))
-		      (le (unique-label)))
-		  (P x.test #f lf (E x.conseq (cons* `(jmp ,le)
-						     lf
-						     (E x.altern (cons le accum)))))))))
+		;;For  this conditional  case  we generate  code as  the
+		;;following pseudo-code shows:
+		;;
+		;;     x.test
+		;;   jump-if-false label_false
+		;;     x.conseq
+		;;     jmp label_end
+		;;   label_false:
+		;;     x.altern
+		;;   label_end:
+		;;     accum
+		;;
+		(let ((label-true  #f)
+		      (label-false (unique-label "L_false"))
+		      (label-end   (unique-label "L_end")))
+		  (P x.test label-true label-false
+		     (E x.conseq (cons* `(jmp ,label-end)
+					label-false
+					(E x.altern (cons label-end accum)))))))))
 
 	((ntcall target value args mask size)
 	 (E-ntcall target value args mask size accum))
@@ -4683,23 +4701,25 @@
 	 ;;
 	 ;;  (body-asm)
 	 ;;  ...
-	 ;;  (label L2)
+	 ;;  (jmp L_interrupt)
+	 ;;  ...
+	 ;;  (label L_return_from_interrupt)
 	 ;;
 	 ;;and  prepend to  the exception  routines the  flattened handler
 	 ;;instructions:
 	 ;;
-	 ;;  (label L)
+	 ;;  (label L_interrupt)
 	 ;;  (handler-asm)
 	 ;;  ...
-	 ;;  (jmp L2)
+	 ;;  (jmp L_return_from_interrupt)
 	 ;;
-	 (let ((L  (unique-interrupt-label))
-	       (L2 (unique-label)))
-	   (let* ((handler^ (cons L (E handler `((jmp ,L2)))))
-		  (tc       (exceptions-conc)))
+	 (let ((L_interrupt (unique-interrupt-label))
+	       (L_return    (unique-label "L_return_from_interrupt")))
+	   (let* ((handler^ (cons L_interrupt (E handler `((jmp ,L_return)))))
+		  (tc       (exceptions-concatenation)))
 	     (set-cdr! tc (append handler^ (cdr tc))))
-	   (parameterize ((exception-label L))
-	     (E body (cons L2 accum)))))
+	   (parameterize ((exception-label L_interrupt))
+	     (E body (cons L_return accum)))))
 
 	(else
 	 (error who "invalid effect" (unparse-recordized-code x)))))
@@ -4900,10 +4920,14 @@
 ;;; --------------------------------------------------------------------
 
   (define (unique-interrupt-label)
-    (label (gensym "ERROR")))
+    (label (gensym "L_error_interrupt")))
 
-  (define (unique-label)
-    (label (gensym)))
+  (define unique-label
+    (case-lambda
+     (()
+      (label (gensym)))
+     ((name)
+      (label (gensym name)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4938,59 +4962,59 @@
 	((seq e0 e1)
 	 (E e0 (P e1 label-true label-false accum)))
 
-	((conditional e0 e1 e2)
-	 (P-conditional e0 e1 e2 label-true label-false accum))
+	((conditional x.test x.conseq x.altern)
+	 (P-conditional x.test x.conseq x.altern label-true label-false accum))
 
 	((asm-instr op a0 a1)
 	 (P-asm-instr op a0 a1 label-true label-false accum))
 
 	((shortcut body handler)
-	 (let ((L  (unique-interrupt-label))
-	       (lj (unique-label)))
+	 (let ((L_interrupt (unique-interrupt-label))
+	       (L_end       (unique-label "L_end")))
 	   (let ((accum (if (and label-true label-false)
 			    accum
-			  (cons lj accum))))
-	     (let* ((hand (cons L (P handler (or label-true lj) (or label-false lj) '())))
-		    (tc   (exceptions-conc)))
-	       (set-cdr! tc (append hand (cdr tc))))
-	     (parameterize ((exception-label L))
+			  (cons L_end accum))))
+	     (let* ((handler^ (cons L_interrupt (P handler (or label-true L_end) (or label-false L_end) '())))
+		    (tc       (exceptions-concatenation)))
+	       (set-cdr! tc (append handler^ (cdr tc))))
+	     (parameterize ((exception-label L_interrupt))
 	       (P body label-true label-false accum)))))
 
 	(else
 	 (error who "invalid pred" x))))
 
-    (define (P-conditional e0 e1 e2 label-true label-false accum)
-      (cond ((and (constant=? e1 #t)
-		  (constant=? e2 #f))
-	     (P e0 label-true label-false accum))
+    (define (P-conditional x.test x.conseq x.altern label-true label-false accum)
+      (cond ((and (constant=? x.conseq #t)
+		  (constant=? x.altern #f))
+	     (P x.test label-true label-false accum))
 
-	    ((and (constant=? e1 #f)
-		  (constant=? e2 #t))
-	     (P e0 label-false label-true accum))
+	    ((and (constant=? x.conseq #f)
+		  (constant=? x.altern #t))
+	     (P x.test label-false label-true accum))
 
 	    ((and label-true label-false)
-	     (let ((l (unique-label)))
-	       (P e0 #f l (P e1 label-true label-false
-			     (cons l (P e2 label-true label-false accum))))))
+	     (let ((l (unique-label "L_false")))
+	       (P x.test #f l (P x.conseq label-true label-false
+				 (cons l (P x.altern label-true label-false accum))))))
 
 	    (label-true
-	     (let ((label-false (unique-label))
-		   (l (unique-label)))
-	       (P e0 #f l (P e1 label-true label-false
-			     (cons l (P e2 label-true #f (cons label-false accum)))))))
+	     (let ((label-false (unique-label "L_false"))
+		   (l           (unique-label "L_false")))
+	       (P x.test #f l (P x.conseq label-true label-false
+				 (cons l (P x.altern label-true #f (cons label-false accum)))))))
 
 	    (label-false
-	     (let ((label-true (unique-label))
-		   (l  (unique-label)))
-	       (P e0 #f l (P e1 label-true label-false
-			     (cons l (P e2 #f label-false (cons label-true accum)))))))
+	     (let ((label-true (unique-label "L_true"))
+		   (l          (unique-label "L_false")))
+	       (P x.test #f l (P x.conseq label-true label-false
+				 (cons l (P x.altern #f label-false (cons label-true accum)))))))
 
 	    (else
-	     (let ((label-false (unique-label))
-		   (l  (unique-label)))
-	       (P e0 #f l (P e1 #f #f
-			     (cons `(jmp ,label-false)
-				   (cons l (P e2 #f #f (cons label-false accum))))))))))
+	     (let ((label-false (unique-label "L_false"))
+		   (l           (unique-label "L_false")))
+	       (P x.test #f l (P x.conseq #f #f
+				 (cons `(jmp ,label-false)
+				       (cons l (P x.altern #f #f (cons label-false accum))))))))))
 
     (module (P-asm-instr)
 

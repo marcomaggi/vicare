@@ -477,10 +477,7 @@
 ;;
 ;;   (?name . ())
 ;;
-;;where ?NAME is a symbol representing the name of the syntax.  The core
-;;language  syntaxes  are: DEFINE,  DEFINE-SYNTAX,  DEFINE-FLUID-SYNTAX,
-;;MODULE,   LIBRARY,   BEGIN,    IMPORT,   EXPORT,   SET!,   LET-SYNTAX,
-;;LETREC-SYNTAX, STALE-WHEN.
+;;where ?NAME is a symbol representing the name of the syntax.
 ;;
 ;;
 ;;Core macro
@@ -946,10 +943,11 @@
 ;;;; introduction: EXPORT-ENV
 ;;
 ;;The EXPORT-ENV  is a data structure  used to map the  label gensyms of
-;;top-level  syntactic bindings  to the  corresponding storage  location
-;;gensyms.   Not  all  the  entries  in  EXPORT-ENV  represent  exported
-;;bindings: it  is the role of  the EXPORT-SUBST to select  the exported
-;;ones.
+;;global syntactic  bindings, defined  by a library  or program,  to the
+;;corresponding storage  location gensyms.   "Global bindings"  does not
+;;mean "exported bindings": not all  the entries in EXPORT-ENV represent
+;;exported bindings,  it is the role  of the EXPORT-SUBST to  select the
+;;exported ones.
 ;;
 ;;An EXPORT-ENV is an alist whose entries have the format:
 ;;
@@ -991,6 +989,104 @@
 ;;   To denote  a compile-time value.   In this  case the loc  holds the
 ;;   actual compile-time  object, but  only after  the library  has been
 ;;   visited.  This binding can be exported.
+;;
+
+
+;;;; core macros, non-core macros, user-defined macros
+;;
+;;First some notes on "languages" Vicare jargon:
+;;
+;;* The "expanded language" is a low level Scheme-like language which is
+;;  the result of  the expansion process: expanding a  Scheme library or
+;;  program  means  to transform  the  input  language into  a  symbolic
+;;  expression in the expanded language.
+;;
+;;* The "core language" is a low level Scheme-like language which is the
+;;  input recognised by the compiler.
+;;
+;;at present the expanded language and  the core language are equal, but
+;;this might change in the future.
+;;
+;;
+;;Core macros
+;;-----------
+;;
+;;These are basic syntaxes into which all the other macros are expanded;
+;;despite being  called "core",  they are neither  part of  the expanded
+;;language nor of  the core language.  Core macros are  split into three
+;;groups, those that can appear in definition context only:
+;;
+;;   define				define-syntax
+;;   define-alias			define-fluid-syntax
+;;   module				library
+;;   begin				import
+;;   export				set!
+;;   stale-when				begin-for-syntax
+;;   eval-for-expand			define-fluid-override
+;;
+;;and those that can appear only in expression context only:
+;;
+;;   foreign-call			quote
+;;   syntax-case			syntax
+;;   letrec				letrec*
+;;   if					lambda
+;;   case-lambda			fluid-let-syntax
+;;   struct-type-descriptor		struct-type-and-struct?
+;;   struct-type-field-ref		struct-type-field-set!
+;;   $struct-type-field-ref		$struct-type-field-set!
+;;   record-type-descriptor		record-constructor-descriptor
+;;   record-type-field-set!		record-type-field-ref
+;;   $record-type-field-set!		$record-type-field-ref
+;;   type-descriptor			is-a?
+;;   slot-ref				slot-set!
+;;   $slot-ref				$slot-set!
+;;   splice-first-expand		unsafe
+;;   predicate-procedure-argument-validation
+;;   predicate-return-value-validation
+;;
+;;those  that  can appear  in  both  definition context  and  expression
+;;context:
+;;
+;;   let-syntax				letrec-syntax
+;;
+;;The implementation  of core macros  that appear in  definition context
+;;only is integrated in the function CHI-BODY*.
+;;
+;;The implementation  of core macros  that appear in  definition context
+;;only consists of proper transformer functions selected by the function
+;;CORE-MACRO-TRANSFORMER.  Such transformers are  applied to input forms
+;;by the function CHI-EXPR.
+;;
+;;Macros  that can  appear  in both  definition  context and  expression
+;;context have double implementation: one  in the function CHI-BODY* and
+;;one in the function CHI-EXPR.
+;;
+;;Core macros  can introduce  bindings by direct  access to  the lexical
+;;environment: their  transformer functions  create new rib  records and
+;;push new entries on the LEXENV.
+;;
+;;
+;;Non-core macros
+;;---------------
+;;
+;;These are macros that expand themselves into uses of core macros; they
+;;have a  proper transformer function  accepting as single  argument the
+;;input form syntax object and returning as single value the output form
+;;syntax object.   The only  difference between a  non-core macro  and a
+;;user-defined macro is that the former is integrated in the expander.
+;;
+;;Non-core   macro   transformers   are   selected   by   the   function
+;;NON-CORE-MACRO-TRANSFORMER.
+;;
+;;
+;;User-defined macros
+;;-------------------
+;;
+;;These are macros defined  by DEFINE-SYNTAX, LET-SYNTAX, LETREC-SYNTAX,
+;;DEFINE-FLUID-SYNTAX  and  their  derivatives.   Such  syntaxes  expand
+;;themselves into  uses of core  or non-core macros.   Their transformer
+;;functions accept as  single argument the input form  syntax object and
+;;return as single value the output form syntax object.
 ;;
 
 
@@ -1775,14 +1871,14 @@
 
 (module (expand-r6rs-top-level-make-evaluator)
 
-  (define (expand-r6rs-top-level-make-evaluator expr*)
+  (define (expand-r6rs-top-level-make-evaluator program-form*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level  program, expand it and return a  thunk which, when
     ;;evaluated,  compiles the  program and  returns an  INTERACTION-ENV
     ;;struct representing the environment after the program execution.
     ;;
     (receive (lib* invoke-code macro* export-subst export-env)
-	(expand-top-level expr*)
+	(expand-top-level program-form*)
       (lambda ()
 	;;Make  sure  that the  code  of  all  the needed  libraries  is
 	;;compiled   and  evaluated.    The  storage   location  gensyms
@@ -1815,19 +1911,19 @@
 
 (module (expand-top-level)
 
-  (define (expand-top-level expr*)
+  (define (expand-top-level program-form*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level program, expand it.
     ;;
     (receive (import-spec* body*)
-	(%parse-top-level-program expr*)
+	(%parse-top-level-program program-form*)
       (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	  (let ()
 	    (import CORE-BODY-EXPANDER)
 	    (core-body-expander 'all import-spec* body* #t))
 	(values invoke-lib* invoke-code macro* export-subst export-env))))
 
-  (define (%parse-top-level-program expr*)
+  (define (%parse-top-level-program program-form*)
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level program, parse it and return 2 values:
     ;;
@@ -1835,7 +1931,7 @@
     ;;
     ;;2. A list of body forms.
     ;;
-    (syntax-match expr* ()
+    (syntax-match program-form* ()
       (((?import ?import-spec* ...) body* ...)
        (eq? (syntax->datum ?import) 'import)
        (values ?import-spec* body*))
@@ -1843,7 +1939,7 @@
       (((?import . x) . y)
        (eq? (syntax->datum ?import) 'import)
        (syntax-violation 'expander
-	 "invalid syntax of top-level program" (syntax-car expr*)))
+	 "invalid syntax of top-level program" (syntax-car program-form*)))
 
       (_
        (assertion-violation 'expander
@@ -2058,9 +2154,10 @@
 	       export-subst export-env
 	       guard-code guard-lib*
 	       option*)
-	 (let ()
-	   (import CORE-LIBRARY-EXPANDER)
-	   (core-library-expander library-sexp verify-libname))
+	 (parametrise ((source-code-location (or filename (source-code-location))))
+	   (let ()
+	     (import CORE-LIBRARY-EXPANDER)
+	     (core-library-expander library-sexp verify-libname)))
        (let ((uid		(gensym)) ;library unique-symbol identifier
 	     (import-libdesc*	(map library-descriptor import-lib*))
 	     (visit-libdesc*	(map library-descriptor visit-lib*))
@@ -6044,26 +6141,23 @@
 	    stx)))))
 
 
+;;;; utilities for SPLICE-FIRST-EXPAND
+
+(module SPLICE-FIRST-ENVELOPE
+  (make-splice-first-envelope
+   splice-first-envelope?
+   splice-first-envelope-form)
+
+  (define-record splice-first-envelope
+    (form))
+
+  #| end of module |# )
+
+
 (module NON-CORE-MACRO-TRANSFORMER
   (non-core-macro-transformer)
   ;;The  function NON-CORE-MACRO-TRANSFORMER  maps symbols  representing
   ;;non-core macros to their macro transformers.
-  ;;
-  ;;We distinguish between "non-core macros" and "core macros".
-  ;;
-  ;;Core macros  are part of the  core language: they cannot  be further
-  ;;expanded to a  composition of other more basic  macros.  Core macros
-  ;;can introduce bindings by direct  access to the lexical environment,
-  ;;so their transformer functions take the LEXENV as arguments.
-  ;;
-  ;;Non-core macros are  *not* part of the core language:  they *can* be
-  ;;expanded to a composition of core macros.  Non-core macros introduce
-  ;;bindings by  returning binding syntaxes; their  transformer do *not*
-  ;;take the LEXENV as arguments.
-  ;;
-  ;;The transformers of non-core macros take as argument a syntax object
-  ;;representing an  expression and return a  syntax object representing
-  ;;an expression.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
@@ -6181,6 +6275,30 @@
 	    sealed opaque nongenerative parent-rtd)
        (lambda (expr-stx)
 	 (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
+
+      ((__file__)
+       (lambda (stx)
+	 (let ((expr (<stx>-expr stx)))
+	   (if (annotation? expr)
+	       (let ((pos (annotation-textual-position expr)))
+		 (if (source-position-condition? pos)
+		     (bless
+		      `(quote ,(source-position-port-id pos)))
+		   (bless
+		    `(quote ,(source-code-location)))))
+	     (bless
+	      `(quote ,(source-code-location)))))))
+
+      ((__line__)
+       (lambda (stx)
+	 (let ((expr (<stx>-expr stx)))
+	   (if (annotation? expr)
+	       (let ((pos (annotation-textual-position expr)))
+		 (if (source-position-condition? pos)
+		     (bless
+		      `(quote ,(source-position-line pos)))
+		   (bless '(quote #f))))
+	     (bless '(quote #f))))))
 
       (else
        (%error-invalid-macro))))
@@ -9401,11 +9519,15 @@
       ))
 
   (define (%include-file filename-stx context-id verbose? synner)
+    (define filename.str
+      (syntax->datum filename-stx))
+    (unless (string? filename.str)
+      (stx-error filename-stx "expected string as include file pathname"))
     (receive (pathname contents)
 	;;FIXME Why in  fuck I cannot use the  parameter here?!?  (Marco
 	;;Maggi; Tue Feb 11, 2014)
 	(default-include-loader #;(current-include-loader)
-	 (syntax->datum filename-stx) verbose? synner)
+	  filename.str verbose? synner)
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (let ()
@@ -9594,29 +9716,12 @@
 )
 
 
-(module (core-macro-transformer
-	 splice-first-envelope?
-	 splice-first-envelope-form)
+(module CORE-MACRO-TRANSFORMER
+  (core-macro-transformer)
   ;;The  function   CORE-MACRO-TRANSFORMER  maps   symbols  representing
   ;;non-core macros to their macro transformers.
   ;;
   ;;We distinguish between "non-core macros" and "core macros".
-  ;;
-  ;;Core macros  are part of the  core language: they cannot  be further
-  ;;expanded to a  composition of other more basic  macros.  Core macros
-  ;;can introduce bindings by direct  access to the lexical environment,
-  ;;so their transformer functions take the LEXENV as arguments.
-  ;;
-  ;;Non-core macros are  *not* part of the core language:  they *can* be
-  ;;expanded to a composition of core macros.  Non-core macros introduce
-  ;;bindings by  returning binding syntaxes; their  transformer do *not*
-  ;;take the LEXENV as arguments.
-  ;;
-  ;;The transformers  of core  macros take as  argument a  syntax object
-  ;;representing an expression  and return a symbolic  expression in the
-  ;;expanded language.
-  ;;
-  ;;At present core macros can be only expressions, not definitions.
   ;;
   ;;NOTE This  module is very  long, so it  is split into  multiple code
   ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
@@ -9793,21 +9898,42 @@
   ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
   ;;language symbolic expression.
   ;;
+  ;;FLUID-LET-SYNTAX is  similar, but  not equal, to  LET-SYNTAX; rather
+  ;;than defining new ?LHS bindings, it temporarily rebinds the keywords
+  ;;to new transformers while expanding the ?BODY forms.  The given ?LHS
+  ;;must   be    already   bound   to   fluid    syntaxes   defined   by
+  ;;DEFINE-FLUID-SYNTAX.
+  ;;
+  ;;There are  two differences between FLUID-LET-SYNTAX  and LET-SYNTAX:
+  ;;FLUID-LET-SYNTAX  must  appear  in   expression  context  only;  the
+  ;;internal ?BODY forms are *not* spliced in the enclosing body.
+  ;;
+  ;;NOTE  We would  truly like  to splice  the inner  body forms  in the
+  ;;surrounding body,  so that  this syntax  could act  like LET-SYNTAX,
+  ;;which is useful; but we really cannot do it with this implementation
+  ;;of the expander algorithm.  This  is because LET-SYNTAX both creates
+  ;;a  new  rib  and  adds  new  id/label  entries  to  it,  and  pushes
+  ;;label/descriptor  entries to  the  LEXENV; instead  FLUID-LET-SYNTAX
+  ;;only pushes entries to the LEXENV: there is no way to keep the fluid
+  ;;LEXENV entries  visible only to  a subsequence  of forms in  a body.
+  ;;(Marco Maggi; Tue Feb 18, 2014)
+  ;;
   (define (transformer expr-stx)
     (syntax-match expr-stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (unless (valid-bound-ids? ?lhs*)
 	 (%error-invalid-formals-syntax expr-stx ?lhs*))
-       (let ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
-	     (binding*     (map (lambda (rhs)
-				  (%eval-macro-transformer
-				   (%expand-macro-transformer rhs lexenv.expand)
-				   lexenv.run))
-			     ?rhs*)))
+       (let* ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
+	      (binding*     (map (lambda (rhs)
+				   (%eval-macro-transformer
+				    (%expand-macro-transformer rhs lexenv.expand)
+				    lexenv.run))
+			      ?rhs*))
+	      (entry*       (map cons fluid-label* binding*)))
 	 (chi-internal-body (cons ?body ?body*)
-			    (append (map cons fluid-label* binding*) lexenv.run)
-			    (append (map cons fluid-label* binding*) lexenv.expand))))))
+			    (append entry* lexenv.run)
+			    (append entry* lexenv.expand))))))
 
   (define (%lookup-binding-in-lexenv.run lhs)
     ;;Search the binding of the  identifier LHS retrieving its label; if
@@ -10546,25 +10672,17 @@
 
 ;;;; module core-macro-transformer: SPLICE-FIRST-EXPAND
 
-(module (splice-first-expand-transformer
-	 splice-first-envelope?
-	 splice-first-envelope-form)
-
-  (define-record splice-first-envelope
-    (form))
-
-  (define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
-    ;;
-    (syntax-match expr-stx ()
-      ((_ ?form)
-       (make-splice-first-envelope ?form))
-      ))
-
-  #| end of module |# )
+(define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
+  ;;syntaxes  from the  top-level  built in  environment.  Expand  the
+  ;;syntax object EXPR-STX in the  context of the given LEXENV; return
+  ;;an expanded language symbolic expression.
+  ;;
+  (import SPLICE-FIRST-ENVELOPE)
+  (syntax-match expr-stx ()
+    ((_ ?form)
+     (make-splice-first-envelope ?form))
+    ))
 
 
 ;;;; module core-macro-transformer: UNSAFE
@@ -11954,12 +12072,12 @@
 	     (let* ((binding (label->syntactic-binding label lexenv))
 		    (type    (syntactic-binding-type binding)))
 	       (case type
-		 ((core-prim
+		 ((core-prim core-macro!
 		   lexical global mutable
 		   local-macro local-macro!
 		   global-macro global-macro!
 		   local-ctv global-ctv
-		   macro import export library $module syntax
+		   macro macro! import export library $module syntax
 		   displaced-lexical)
 		  (values type (syntactic-binding-value binding) id))
 		 (($rtd)
@@ -11985,7 +12103,8 @@
 			  (type    (syntactic-binding-type binding)))
 		     (case type
 		       ((core-macro
-			 define define-syntax define-alias define-fluid-syntax
+			 define define-syntax define-alias
+			 define-fluid-syntax define-fluid-override
 			 let-syntax letrec-syntax begin-for-syntax
 			 begin set! stale-when
 			 local-ctv global-ctv
@@ -12059,6 +12178,7 @@
   ;;EXPR;  otherwise if  EXPR is  a splice-first  envelope: extract  its
   ;;form, expand it and return the result.
   ;;
+  (import SPLICE-FIRST-ENVELOPE)
   (if (splice-first-envelope? expr)
       (if (expanding-application-first-subform?)
 	  expr
@@ -12089,8 +12209,9 @@
     ;;
     ;;RIB is false or a struct of type "<rib>".
     ;;
-    (import NON-CORE-MACRO-TRANSFORMER)
-    (%do-macro-call (non-core-macro-transformer procname)
+    (%do-macro-call (let ()
+		      (import NON-CORE-MACRO-TRANSFORMER)
+		      (non-core-macro-transformer procname))
 		    input-form-expr lexenv.run rib))
 
   (define (chi-local-macro bind-val input-form-expr lexenv.run rib)
@@ -12240,7 +12361,9 @@
 	 (expr-syntax-type expr-stx lexenv.run)
        (case type
 	 ((core-macro)
-	  (let ((transformer (core-macro-transformer bind-val)))
+	  (let ((transformer (let ()
+			       (import CORE-MACRO-TRANSFORMER)
+			       (core-macro-transformer bind-val))))
 	    (transformer expr-stx lexenv.run lexenv.expand)))
 
 	 ((global)
@@ -12273,7 +12396,7 @@
 			(chi-local-macro bind-val expr-stx lexenv.run #f))))
 	    (chi-expr exp-e lexenv.run lexenv.expand)))
 
-	 ((macro)
+	 ((macro macro!)
 	  ;;Here we expand the use of a non-core macro.  Such macros are
 	  ;;integrated in the expander.
 	  ;;
@@ -12342,17 +12465,19 @@
 	 ((syntax)
 	  (stx-error expr-stx "reference to pattern variable outside a syntax form"))
 
-	 ((define define-syntax define-fluid-syntax module import library)
+	 ((define define-syntax define-fluid-syntax define-fluid-override define-alias module import library)
 	  (stx-error expr-stx (string-append
 			       (case type
-				 ((define)              "a definition")
-				 ((define-syntax)       "a define-syntax")
-				 ((define-fluid-syntax) "a define-fluid-syntax")
-				 ((module)              "a module definition")
-				 ((library)             "a library definition")
-				 ((import)              "an import declaration")
-				 ((export)              "an export declaration")
-				 (else                  "a non-expression"))
+				 ((define)                 "a definition")
+				 ((define-syntax)          "a define-syntax")
+				 ((define-fluid-syntax)    "a define-fluid-syntax")
+				 ((define-fluid-override)  "a define-fluid-override")
+				 ((define-alias)           "a define-alias")
+				 ((module)                 "a module definition")
+				 ((library)                "a library definition")
+				 ((import)                 "an import declaration")
+				 ((export)                 "an export declaration")
+				 (else                     "a non-expression"))
 			       " was found where an expression was expected")))
 
 	 ((mutable)
@@ -12418,6 +12543,7 @@
 	 ;;expanding to a SPLICE-FIRST-EXPAND form.
 	 (let ((exp-rator (while-expanding-application-first-subform
 			   (chi-expr ?rator lexenv.run lexenv.expand))))
+	   (import SPLICE-FIRST-ENVELOPE)
 	   (if (splice-first-envelope? exp-rator)
 	       (syntax-match (splice-first-envelope-form exp-rator) ()
 		 ((?int-rator ?int-rands* ...)
@@ -12750,28 +12876,33 @@
   ;;
   (while-not-expanding-application-first-subform
    (let ((rib (make-empty-rib)))
-     (receive (trailing-expr-stx*
-	       lexenv.run lexenv.expand
-	       lex* qrhs*
-	       trailing-mod-expr-stx**
-	       unused-kwd* unused-export*)
-	 (let ((mix-definitions-and-expressions?  #f)
+     (receive (trailing-expr-stx*^
+	       lexenv.run^ lexenv.expand^
+	       lex*^ qrhs*^
+	       trailing-mod-expr-stx**^
+	       unused-kwd*^ unused-export-spec*^)
+	 (let ((lex*                              '())
+	       (qrhs*                             '())
+	       (mod**                             '())
+	       (kwd*                              '())
+	       (export-spec*                      '())
+	       (mix-definitions-and-expressions?  #f)
 	       (shadowing-definitions?            #t))
 	   (chi-body* (map (lambda (x)
 			     (push-lexical-contour rib x))
 			(syntax->list body-form-stx*))
 		      lexenv.run lexenv.expand
-		      '() '() '() '() '() rib
+		      lex* qrhs* mod** kwd* export-spec* rib
 		      mix-definitions-and-expressions?
 		      shadowing-definitions?))
-       (when (null? trailing-expr-stx*)
-	 (stx-error trailing-expr-stx* "no expression in body"))
-       (let* ((all-expr-core*  (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**)
-						  trailing-expr-stx*)
-					  lexenv.run lexenv.expand))
-	      (rhs-core*       (chi-qrhs* qrhs* lexenv.run lexenv.expand)))
+       (when (null? trailing-expr-stx*^)
+	 (stx-error body-form-stx* "no expression in body"))
+       (let* ((all-expr-core*  (chi-expr* (append (reverse-and-append trailing-mod-expr-stx**^)
+						  trailing-expr-stx*^)
+					  lexenv.run^ lexenv.expand^))
+	      (rhs-core*       (chi-qrhs* qrhs*^ lexenv.run^ lexenv.expand^)))
 	 (build-letrec* no-source
-	   (reverse lex*)
+	   (reverse lex*^)
 	   (reverse rhs-core*)
 	   (build-sequence no-source
 	     all-expr-core*)))))))
@@ -12970,6 +13101,35 @@
 				 (cons* entry1 entry2 lexenv.expand)
 				 lex* qrhs* mod** kwd* export-spec* rib
 				 mix? sd?)))))
+
+	       ((define-fluid-override)
+		;;The body form is a core language DEFINE-FLUID-OVERRIDE
+		;;macro use.   We push  new entries  on the  LEXENV then
+		;;recurse on the rest of the body.
+		;;
+		;;For a  description of  how to re-bind  fluid syntaxes:
+		;;see the transformer for FLUID-LET-SYNTAX.
+		;;
+		(receive (id rhs-stx)
+		    (%parse-define-syntax body-form-stx)
+		  (when (bound-id-member? id kwd*)
+		    (stx-error body-form-stx "cannot redefine keyword"))
+		  (let* ((fluid-label (let* ((label    (or (id->label id)
+							   (stx-error id "unbound identifier")))
+					     (binding  (label->syntactic-binding/no-indirection label lexenv.run)))
+					(cond ((fluid-syntax-binding? binding)
+					       (fluid-syntax-binding-fluid-label binding))
+					      (else
+					       (stx-error id "not a fluid identifier")))))
+			 (binding     (%eval-macro-transformer
+				       (%expand-macro-transformer rhs-stx lexenv.expand)
+				       lexenv.run))
+			 (entry       (cons fluid-label binding)))
+		    (chi-body* (cdr body-form-stx*)
+			       (cons entry lexenv.run)
+			       (cons entry lexenv.expand)
+			       lex* qrhs* mod** kwd* export-spec* rib
+			       mix? sd?))))
 
 	       ((define-alias)
 		;;The body  form is  a core language  DEFINE-ALIAS macro

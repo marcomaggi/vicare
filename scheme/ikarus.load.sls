@@ -56,7 +56,8 @@
 	  serialize-library
 	  current-source-library-loader-by-filename
 	  current-include-file-locator
-	  current-include-file-loader)
+	  current-include-file-loader
+	  source-code-location)
     (only (psyntax expander)
 	  expand-r6rs-top-level-make-evaluator)
     (only (ikarus.reader)
@@ -100,7 +101,7 @@
     (apply fprintf (current-error-port) message format-args)))
 
 
-;;;; locating serialized libraries store din FASL files
+;;;; locating serialized libraries stored in FASL files
 
 (module (locate-binary-library-file
 	 fasl-search-path
@@ -616,7 +617,8 @@
 					     compile-time-library-locator
 					   run-time-library-locator)))
     (let* ((prog  (read-script-source-file filename))
-	   (thunk (expand-r6rs-top-level-make-evaluator prog)))
+	   (thunk (parametrise ((source-code-location filename))
+		    (expand-r6rs-top-level-make-evaluator prog))))
       (when serialize?
 	(serialize-collected-libraries (lambda (source-pathname libname contents)
 					 (store-serialized-library (fasl-path source-pathname)

@@ -83,7 +83,7 @@
   ;;This  module has  the  only  purpose of  making  the binding  COOKIE
   ;;visible only to PRIMOP?, GET-PRIMOP and SET-PRIMOP!.
   ;;
-  (define cookie (gensym))
+  (define cookie (gensym "primitive-operation-cookie"))
 
   (define (primop? x)
     (and (getprop x cookie) #t))

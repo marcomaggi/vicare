@@ -922,7 +922,7 @@
      ((32)
       (error 'intel-assembler "no pc-relative jumps in 32-bit mode"))
      ((64)
-      (let ((G (gensym)))
+      (let ((G (gensym "L_jump")))
 	(CODE code0
 	      (CODE code1 (cons* `(local-relative . ,G)
 				 `(bottom-code (label . ,G)
