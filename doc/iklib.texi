@@ -3967,7 +3967,7 @@ ciao    @result{} "ciao"
 @deffn Syntax define-fluid-syntax @meta{keyword} @meta{expr}
 Like @func{define-syntax} define a new syntax binding the transformer to
 @meta{keyword}, but mark @meta{keyword} as fluid so that later it can be
-rebound by @func{fluid-let-syntax}.
+rebound by @func{fluid-let-syntax} or @func{define-fluid-override}.
 @end deffn
 
 
@@ -3982,6 +3982,14 @@ There are two differences between @func{fluid-let-syntax} and
 @func{let-syntax}: @func{fluid-let-syntax} must appear in expression
 context only; the internal @meta{body} forms are @strong{not} spliced in
 the enclosing body.
+@end deffn
+
+
+@deffn Syntax define-fluid-override @meta{keyword} @meta{expr}
+Temporarily rebind the @meta{keyword} to a new transformer while
+expanding the body forms in which this syntax is used.  The given
+@meta{keyword} must be already bound to a fluid syntaxe defined by
+@func{define-fluid-syntax}.
 @end deffn
 
 @c page

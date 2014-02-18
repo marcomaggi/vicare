@@ -777,7 +777,7 @@
 			     (( ;;
 			       library import export
 			       define define-syntax define-alias
-			       define-fluid-syntax
+			       define-fluid-syntax define-fluid-override
 			       let-syntax letrec-syntax begin-for-syntax
 			       module begin set! stale-when
 			       global mutable

@@ -847,6 +847,7 @@
     define-constant
     define-constant-values
     define-fluid-syntax
+    define-fluid-override
     define-inline
     define-inline-constant
     define-integrable

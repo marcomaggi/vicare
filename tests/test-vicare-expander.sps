@@ -732,6 +732,50 @@
   #t)
 
 
+(parametrise ((check-test-name	'fluid-syntaxes))
+
+  (check
+      (with-result
+       (let ()
+	 (define-fluid-syntax ciao
+	   (identifier-syntax "ciao"))
+	 (add-result ciao)
+	 (fluid-let-syntax ((ciao (identifier-syntax "hello")))
+	   (add-result ciao))
+	 (fluid-let-syntax ((ciao (identifier-syntax "ohayo")))
+	   (add-result ciao))
+	 ciao))
+    => '("ciao" ("ciao" "hello" "ohayo")))
+
+  (check
+      (with-result
+       (let ()
+	 (define-fluid-syntax ciao
+	   (identifier-syntax "ciao"))
+	 (add-result ciao)
+	 (fluid-let-syntax ((ciao (identifier-syntax "hello")))
+	   (fluid-let-syntax ((ciao (identifier-syntax "ohayo")))
+	     (add-result ciao))
+	   (add-result ciao))
+	 ciao))
+    => '("ciao" ("ciao" "ohayo" "hello")))
+
+  (check
+      (with-result
+       (let ()
+	 (define-fluid-syntax ciao
+	   (identifier-syntax "ciao"))
+	 (add-result ciao)
+	 (let ()
+	   (define-fluid-override ciao
+	     (identifier-syntax "hello"))
+	   (add-result ciao))
+	 ciao))
+    => '("ciao" ("ciao" "hello")))
+
+  #t)
+
+
 (parametrise ((check-test-name	'define-integrable))
 
   (check

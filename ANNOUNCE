@@ -351,6 +351,9 @@ Many backwards incompatibilities... life is hard!
     binary-output-port?			textual-output-port?
     binary-input/output-port?		textual-input/output-port?
 
+* Added  syntax  DEFINE-FLUID-OVERRIDE  to (vicare);  it  rebinds  fluid
+  syntaxes like FLUID-LET-SYNTAX.
+
 
 Notes for revision 0.3d7
 ------------------------
