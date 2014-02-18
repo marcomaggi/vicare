@@ -5036,6 +5036,14 @@
 		   (string-length S)))
     => "test-vicare-expander.sps")
 
+;;; --------------------------------------------------------------------
+
+  (check-for-true
+   (number? __line__))
+
+  (when #f
+    (fprintf stderr "line number ~a\n" __line__))
+
   #t)
 
 

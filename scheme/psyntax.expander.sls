@@ -6291,6 +6291,17 @@
 	 (bless
 	  `(quote ,(source-code-location)))))
 
+      ((__line__)
+       (lambda (stx)
+	 (let ((expr (<stx>-expr stx)))
+	   (if (annotation? expr)
+	       (let ((pos (annotation-textual-position expr)))
+		 (if (source-position-condition? pos)
+		     (bless
+		      `(quote ,(source-position-line pos)))
+		   (bless '(quote #f))))
+	     (bless '(quote #f))))))
+
       (else
        (%error-invalid-macro))))
 

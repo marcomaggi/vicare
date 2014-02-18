@@ -1798,6 +1798,11 @@ example the source file pathname.
 @end deffn
 
 
+@deffn {Identifier Syntax} __line__
+Expand to @false{} or a number representing the line number.
+@end deffn
+
+
 @deffn Syntax begin-for-syntax @metao{body} @meta{body} @dots{}
 @deffnx Syntax eval-for-expand @metao{body} @meta{body} @dots{}
 Evaluate the @meta{body} forms at expand time; these syntaxes count as

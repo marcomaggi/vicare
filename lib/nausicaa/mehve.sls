@@ -1598,6 +1598,7 @@
     case-define*
     __who__
     __file__
+    __line__
 
 
 ;;;; bindings from (nausicaa language oopp)

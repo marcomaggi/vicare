@@ -322,7 +322,6 @@
 (define ikarus-system-macros
   (append
    `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
-;;;     (__file__					($fluid . ,(gensym "fluid-label.__file__")))
      (return					($fluid . ,(gensym "fluid-label.return")))
      (continue					($fluid . ,(gensym "fluid-label.continue")))
      (break					($fluid . ,(gensym "fluid-label.break")))
@@ -376,6 +375,7 @@
      (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
      (predicate-return-value-validation		(core-macro . predicate-return-value-validation))
      (__file__					(macro! . __file__))
+     (__line__					(macro! . __line__))
      (let-values				(macro . let-values))
      (let*-values				(macro . let*-values))
      (values->list				(macro . values->list))
@@ -2363,6 +2363,7 @@
 ;;;
     (__who__					i v $language)
     (__file__					i v $language)
+    (__line__					i v $language)
     (<>						i v $language)
     (return					i v $language)
     (continue					i v $language)
