@@ -3925,7 +3925,12 @@
 	     (fullname		(cadr	legend-entry))
 	     (visible?		(caddr	legend-entry))
 	     (id		(gensym))
-	     (version		(if (eq? 'rnrs (car fullname)) '(6) '()))
+	     (version		(cond ((eq? 'rnrs (car fullname))
+				       '(6))
+				      ((equal? '(vicare) fullname)
+				       '(0 4))
+				      (else
+				       '())))
 	     (system-all?	(equal? fullname '(psyntax system $all)))
 	     (env		(if system-all? export-env '()))
 	     (subst		(if system-all?
