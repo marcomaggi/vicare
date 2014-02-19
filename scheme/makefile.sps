@@ -3928,7 +3928,7 @@
 	     (version		(cond ((eq? 'rnrs (car fullname))
 				       '(6))
 				      ((equal? '(vicare) fullname)
-				       '(0 4))
+				       (%vicare-version-numbers))
 				      (else
 				       '())))
 	     (system-all?	(equal? fullname '(psyntax system $all)))
@@ -3963,6 +3963,13 @@
 			    (loop (cdr ls)))))
 		    (else ;not going to any library?
 		     (loop (cdr ls)))))))))
+
+    (define (%vicare-version-numbers)
+      ;;Here  we build  a version  list with  fixnums representing:  the
+      ;;major version number, the minor  version number, the build year,
+      ;;the build month, the build day.
+      ;;
+      (append '(0 4) (vector->list (foreign-call "ikrt_current_time_fixnums"))))
 
     #| end of module: BUILD-SYSTEM-LIBRARY |# )
 

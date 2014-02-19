@@ -9,7 +9,7 @@
 	functions in this module,  see the official Vicare documentation
 	in Texinfo format.
 
-  Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+  Copyright (C) 2011, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
   Copyright (C) 2006,2007,2008	Abdulaziz Ghuloum
 
   This program is  free software: you can redistribute	it and/or modify
@@ -4739,6 +4739,26 @@ ikrt_bvftime (ikptr outbv, ikptr fmtbv)
     ik_debug_message("error in strftime: %s\n", strerror(errno));
 #endif
   return IK_FIX(rv);
+#else
+  feature_failure(__func__);
+#endif
+}
+ikptr
+ikrt_current_time_fixnums (ikpcb * pcb)
+{
+#if ((defined HAVE_TIME) && (defined HAVE_GMTIME_R))
+  time_t	T;
+  struct tm	D;
+  ikptr		s_vec;
+  T     = time(NULL);
+  errno = 0;
+  localtime_r(&T, &D);
+  errno = 0;
+  s_vec = ika_vector_alloc_and_init(pcb, 3);
+  IK_ITEM(s_vec, 0) = IK_FIX(D.tm_year + 1900);
+  IK_ITEM(s_vec, 1) = IK_FIX(D.tm_mon  + 1);
+  IK_ITEM(s_vec, 2) = IK_FIX(D.tm_mday);
+  return s_vec;
 #else
   feature_failure(__func__);
 #endif
