@@ -3927,7 +3927,8 @@
 	     (id		(gensym))
 	     (version		(cond ((eq? 'rnrs (car fullname))
 				       '(6))
-				      ((equal? '(vicare) fullname)
+				      ((or (equal? fullname '(vicare))
+					   (equal? fullname '(vicare language-extensions)))
 				       (%vicare-version-numbers))
 				      (else
 				       '())))
