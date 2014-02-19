@@ -1171,8 +1171,7 @@
     (rnrs mutable-pairs)
     (psyntax library-manager)
     (psyntax builders)
-    (except (psyntax compat)
-	    debug-print)
+    (psyntax compat)
     (psyntax config)
     (psyntax internal))
 
@@ -1185,15 +1184,6 @@
 ;;
 (define-syntax no-source
   (lambda (x) #f))
-
-(define (debug-print . args)
-  ;;Print arguments for debugging purposes.
-  ;;
-  (pretty-print args (current-error-port))
-  (newline (current-error-port))
-  (newline (current-error-port))
-  (when (pair? args)
-    (car args)))
 
 (define-syntax-rule (reverse-and-append ?item**)
   (apply append (reverse ?item**)))
