@@ -81,7 +81,7 @@
 (define (%log-loaded-library template . args)
   (when (options.print-loaded-libraries)
     (apply fprintf (current-error-port)
-	   (string-append "vicare ***: " template)
+	   (string-append "vicare: " template)
 	   args)))
 
 (module (%log-library-debug-message)
@@ -95,7 +95,7 @@
 
   (define (%logger template . args)
     (apply fprintf (current-error-port)
-	   (string-append "vicare ***: " template)
+	   (string-append "vicare ***: " template "\n")
 	   args))
 
   #| end of module |# )
@@ -279,13 +279,13 @@
 		       set)
 		      (((lib library?))
 		       (unless (memq lib set)
-			 (%log-library-debug-message "installed library: ~a\n" (library-name lib))
+			 (%log-library-debug-message "installed library: ~a" (library-name lib))
 			 (set! set (cons lib set))))
 		      (((lib library?) del?)
 		       (if del?
 			   (set! set (remq lib set))
 			 (unless (memq lib set)
-			   (%log-library-debug-message "installed library: ~a\n" (library-name lib))
+			   (%log-library-debug-message "installed library: ~a" (library-name lib))
 			   (set! set (cons lib set)))))))
     (lambda* ((obj procedure?))
       obj)))
@@ -616,7 +616,7 @@
       ;;
       ;;   (?identifier0 ?identifier ... . ?version-reference)
       ;;
-      (%log-library-debug-message "~a: searching: ~a\n" __who__ libref)
+      (%log-library-debug-message "~a: searching: ~a" __who__ libref)
       (parametrise
 	  ((failed-library-location-collector (let ((ell '()))
 						(case-lambda
@@ -629,7 +629,7 @@
 					 (library-locator-options move-on-when-open-fails))))
 	  (receive (port further-locator-search)
 	      (next-locator-search)
-	    (%log-library-debug-message "~a: reading from port: ~a, ~a\n" __who__ libref port)
+	    (%log-library-debug-message "~a: reading from: ~a" __who__ port)
 	    (cond ((binary-port? port)
 		   ;;A binary location was found.   We can read the binary
 		   ;;library from PORT.
@@ -682,13 +682,13 @@
 		     port further-locator-search)))))))
 
     (define (%print-loading-library port)
-      (%log-loaded-library (string-append "loading: " (port-id port) " ...\n")))
+      (%log-loaded-library "loading: ~a ...\n" (port-id port)))
 
     (define (%print-loaded-library port)
-      (%log-loaded-library (string-append "Vicare loading: " (port-id port) " done\n")))
+      (%log-loaded-library "loading: ~a done\n" (port-id port)))
 
     (define (%print-rejected-library port)
-      (%log-loaded-library (string-append "Vicare loading: " (port-id port) " rejected\n")))
+      (%log-loaded-library "loading: ~a rejected\n" (port-id port)))
 
     #| end of module: DEFAULT-LIBRARY-LOADER |# )
 
@@ -743,7 +743,7 @@
     ;;LIBNAME-PREDICATE must  be a  predicate function  to apply  to the
     ;;R6RS library name of the loaded library.
     ;;
-    (%log-library-debug-message "~a: searching: ~a\n" __who__ source-pathname)
+    (%log-library-debug-message "~a: searching: ~a" __who__ source-pathname)
     (receive (uid libname
 		  import-desc* visit-desc* invoke-desc*
 		  invoke-code visit-code
@@ -792,7 +792,7 @@
   ;;
   (define source-pathname ($library-source-file-name lib))
   (when source-pathname
-    (%log-library-debug-message "~a: serializing: ~a\n" __who__ ($library-name lib))
+    (%log-library-debug-message "~a: serializing: ~a" __who__ ($library-name lib))
     (serialize source-pathname ($library-name lib)
 	       (list ($library-uid lib)
 		     ($library-name lib)
