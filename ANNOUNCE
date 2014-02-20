@@ -40,7 +40,46 @@ this project has a mailing list:
 Notes for revision 0.4d0
 ------------------------
 
-Many backwards incompatibilities... life is hard!
+Lots of backwards incompatibilities... life is hard!
+
+* BACKWARDS  INCOMPATIBILITY  The   libraries  infrastructure  has  been
+  completely overhauled.  There are too  many changes to list them here,
+  but here the most important stuff:
+
+  - Version numbers are supported.
+
+  - The library (vicare) now has a version number; the full library name
+    is:
+
+       (vicare (0 4 ?year ?month ?day))
+
+    where ?YEAR,  ?MONTH and ?DAY  are fixnums representing the  date of
+    the last build.
+
+  - The default of this package (and  in future for all the other Vicare
+    packages) is to  install only the FASL files, and  leave the sources
+    uninstalled.
+
+  - When running  "make all" from  the build directory of  this package:
+    the libraries are compiled.
+
+  - Previously  there  were   2  file  extensions  for   FASL  files  to
+    distinguish a 32-bit build from a 64-bit build:
+
+       .vicare-32bit-fasl
+       .vicare-32bit-fasl
+
+    there  is now  a single  FASL  file extension:  ".fasl".  We  should
+    arrange  the  package configuration  to  install  32-bit FASL  files
+    under:
+
+       $(prefix)/lib/vicare-scheme
+
+    and 64-bit FASL files under:
+
+       $(prefix)/lib64/vicare-scheme
+
+  See the documentation node "using libraries".
 
 * BACKWARDS INCOMPATIBILITIES Removed undocumented libraries exported by
   the boot image:

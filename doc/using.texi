@@ -428,6 +428,13 @@ selected by the @env{HOME} environment variable.
 Scheme scripts can be executed using the following command:
 
 @example
+@value{RAWEXECUTABLE} --r6rs-script @var{PROGRAM}
+@end example
+
+@noindent
+or the shorter:
+
+@example
 @value{RAWEXECUTABLE} @var{PROGRAM}
 @end example
 
@@ -518,10 +525,11 @@ executed.  The @code{.command} extension can be hidden from the
 @section @rnrs{6} libraries
 
 
-A library exports features that can be imported into programs; a library
-is named by a list, e.g., @library{yoyodyne
-block-transfer-computations}.  The core features of the language is
-provided in the library @library{rnrs}.
+A library exports features that can be imported into programs and other
+libraries; a library is named by a list of symbols, for example
+@library{nausicaa uri pathname}.  The core features of the @rnrs{6}
+language is provided in the library @library{rnrs}; the full
+@value{PRJNAME} features are provided by the library @library{vicare}.
 
 @menu
 * using libraries intro::       Introduction to @value{PRJNAME} libraries.
@@ -561,11 +569,16 @@ We can import @library{sample} into another library, a script, or a
 @end example
 
 Library names are lists, thus allowing the writer of one or more
-libraries to group related libraries together.  For example, as well as
-@library{yoyodyne block-transfer-computations}, we might also have
-@library{yoyodyne tardis navigation} and @library{yoyodyne tardis
-diagnostics}.  Leaving the parentheses off a single--component library
-name is a common error.
+libraries to group related libraries together.  For example,
+@value{PRJNAME} installs a whole hierarchy of libraries under
+@library{vicare language-extensions}:
+
+@example
+(vicare language-extensions amb)
+(vicare language-extensions coroutines))
+(vicare language-extensions infix))
+...
+@end example
 
 @c page
 @node using libraries searching
@@ -575,14 +588,18 @@ name is a common error.
 @findex library-path
 
 
-In @value{PRJNAME}, a library is a file with the same name as the last
-component of the library name.  For example, the library
-@library{sample} will correspond to a file named @file{sample.sls}
-somewhere in the file system.  The file extension @code{.sls} stands for
-``Scheme library source''; although @value{PRJNAME} will also accept the
-extensions @code{.ss} and @code{.scm} when the command line option
-@option{--more-file-extensions} is used, these really indicate scripts
-rather than libraries.
+A library is a file with the same name as the last component of the
+library name.  For example, the library @library{sample} will correspond
+to a source file named @file{sample.sls} and a binary file named
+@file{sample.fasl} somewhere in the file system.  The file extension
+@code{.sls} stands for ``Scheme Library Source'' and @code{.fasl} stands
+for ``FASt Loading''.
+
+@quotation
+@strong{NOTE} @value{PRJNAME} will also accept the extensions @code{.ss}
+and @code{.scm} when the command line option
+@option{--more-file-extensions} is used.
+@end quotation
 
 @value{PRJNAME} has a search algorithm for libraries that is similar to
 those used in other languages.  @value{PRJNAME}'s search path comprises
@@ -597,14 +614,16 @@ Here is an example of each case:
 @itemize
 @item
 Importing @library{sample} causes @value{PRJNAME} to look in each
-directory on the path for a file named @file{sample.sls}.
+directory on the path for a binary file named @file{sample.fasl} and a
+source file named @file{sample.sls}.
 
 @item
 Importing @library{yoyodyne sample} causes @value{PRJNAME} to look in
 each directory on the path for a directory named @file{yoyodyne}, and
-within that a file named @file{sample.sls}.  The @func{library} form for
-this library must still specify the library name as @library{yoyodyne
-sample}, not @library{sample}.
+within that a binary file named @file{sample.fasl} and a source file
+named @file{sample.sls}.  The @func{library} form for this library must
+still specify the library name as @library{yoyodyne sample}, not
+@library{sample}.
 @end itemize
 
 @value{PRJNAME}'s own Scheme libraries and the boot image are installed
@@ -622,16 +641,16 @@ for example on @gnu{}+Linux systems:
 @end example
 
 @noindent
-and are under the @library{vicare ---} and @library{srfi ---}
-hierarchies; for example the library @library{vicare ffi} on
-@gnu{}+Linux systems is installed as:
+and are under the @library{vicare ---}, @library{srfi ---} and
+@library{nausicaa ---} hierarchies; for example the library
+@library{vicare ffi} on @gnu{}+Linux systems is installed as:
 
 @example
-/usr/local/lib/vicare-scheme/vicare/ffi.sls
+/usr/local/lib/vicare-scheme/vicare/ffi.fasl
 @end example
 
-User libraries that are meant to be usable by @value{PRJNAME} should be
-installed in the directory:
+User libraries that are meant to be usable by @value{PRJNAME} and other
+@rnrs{6} implementations should be installed in the directory:
 
 @example
 $(libdir)/scheme/r6rs
@@ -663,12 +682,36 @@ on @gnu{}+Linux systems:
 
 @noindent
 other directories can be added to the search path in two ways: by
-modifying an environment variable, or by setting @value{PRJNAME}'s
-@func{library-path} parameter.  @value{PRJNAME} consults the environment
-variable @env{VICARE_LIBRARY_PATH} at the beginning of execution, and
-places each of the directories there into its search path.  The search
-path is then set to the value of the parameter @func{library-path},
-which can be updated as necessary.
+modifying a system environment variable, or programmatically by setting
+@value{PRJNAME}'s parameters.
+
+@c ------------------------------------------------------------
+
+@subsubheading Library search paths
+
+
+There are two search paths, one for binary libraries and one for source
+libraries:
+
+@itemize
+@item
+When looking for source libraries, at the beginning of execution
+@value{PRJNAME} consults the environment variable
+@env{VICARE_LIBRARY_PATH} expecting a colon separated list of directory
+pathnames; it parses the list and places each of the directories into
+its sources search path, prepending these directories, in the given
+order, to the default ones.  The sources search path is stored in the
+parameter @func{library-path}, which can be updated as necessary.
+
+@item
+When looking for binary libraries, at the beginning of execution
+@value{PRJNAME} consults the environment variable @env{VICARE_FASL_PATH}
+expecting a colon separated list of directory pathnames; it parses the
+list and places each of the directories into its binaries search path,
+prepending these directories, in the given order, to the default ones.
+The binaries search path is stored in the parameter
+@func{fasl-search-path}, which can be updated as necessary.
+@end itemize
 
 In the following example session: the user sets
 @env{VICARE_LIBRARY_PATH}; the settings are reflected in the value of
@@ -698,8 +741,8 @@ $ @value{RAWEXECUTABLE}
 
 In programs intended to be distributed, we should resist the urge to set
 @code{(library-path)}, as the user's file hierarchies might not match
-ours; for most libraries, simply telling the user to install the library
-in one of the libraries on the search path is good enough.
+ours; for most libraries, simply telling the user to install the files
+in one of the directories on the search path is good enough.
 
 There are two refinements of the library search algorithm, which are
 performed when the @option{--more-file-extensions} command line option
@@ -718,10 +761,11 @@ allows us to use a simpler technique where the main library is stored in
 @file{lib/extras.sls} and @file{lib/frills.sls}, respectively.
 
 @item
-@value{PRJNAME} will also look in @file{lib/main.vicare.sls} before
-trying @file{lib/main.sls}.  This allows us to provide a
-@value{PRJNAME}--specific implementation as well as a generic
-implementation.
+When searching for source libraries: @value{PRJNAME} will also look in
+@file{lib/main.vicare.sls} before trying @file{lib/main.sls}; this
+allows us to provide a @value{PRJNAME}--specific implementation as well
+as a generic implementation.  When searching for binary libraries: only
+the file @file{lib/main.fasl} is searched.
 @end itemize
 
 @c page
