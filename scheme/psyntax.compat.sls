@@ -44,11 +44,13 @@
     fprintf				debug-print
     void				port-id
     console-error-port			all-identifiers?
+    string-empty?
 
     ;; compiler related operations
     eval-core
 
     ;; runtime options
+    options.verbose-about-libraries?
     options.strict-r6rs
     options.enable-arguments-validation?
     options.descriptive-labels
@@ -122,6 +124,7 @@
 	  $unintern-gensym)
     (prefix (rename (only (vicare options)
 			  verbose?
+			  verbose-about-libraries?
 			  strict-r6rs
 			  descriptive-labels
 			  print-loaded-libraries

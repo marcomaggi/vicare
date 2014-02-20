@@ -802,6 +802,28 @@ ikrt_posix_file_exists (ikptr s_pathname)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_posix_directory_exists (ikptr s_pathname)
+{
+#ifdef HAVE_STAT
+  char *	pathname;
+  struct stat	S;
+  int		rv;
+  pathname = IK_BYTEVECTOR_DATA_CHARP(s_pathname);
+  errno	   = 0;
+  rv	   = stat(pathname, &S);
+  if (0 == rv)
+    /* NOTE It is not enough to do "S.st_mode & flag", we really have to
+       do "flag == (S.st_mode & flag)". */
+    return (S_IFDIR == (S.st_mode & S_IFDIR))? IK_TRUE_OBJECT : IK_FALSE_OBJECT;
+  else if ((ENOENT == errno) || (ENOTDIR == errno))
+    return IK_FALSE_OBJECT;
+  else
+    return ik_errno_to_code();
+#else
+  feature_failure(__func__);
+#endif
+}
 
 
 /** --------------------------------------------------------------------

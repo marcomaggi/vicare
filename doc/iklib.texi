@@ -9624,6 +9624,12 @@ the function returned by @func{filename->string-func}, which defaults to
 @end deffn
 
 
+@defun directory-exists? @var{ptn}
+Return @true{} if @var{ptn} is a string or bytevector representing the
+pathname of an existent directory; otherwise return @false{}.
+@end defun
+
+
 The following bindings are exported by the library @library{vicare
 $posix}.
 

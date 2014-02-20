@@ -2206,6 +2206,7 @@
     (vector-sort				i v r sr)
     (vector-sort!				i v r sr)
     (file-exists?				i v r fi)
+    (directory-exists?				i v $language)
     (delete-file				i v r fi)
     (define-record-type				i v r rs)
     (record-type-descriptor			i v r rs)

@@ -491,8 +491,8 @@ VICARE_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
 VICARE_LIBDIR		= $(libdir)/scheme/r6rs
 
 VICARE_FASL_DIRECTORY	= $(builddir)/../lib/fasl
-VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
 VICARE_TEST_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
+VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
 
 # Enable timing of test files  execution.  We cannot include this in the
 # separator  because  it needs  to  be  placed  between the  environment
@@ -506,6 +506,7 @@ VICARE_BOOT	= $(builddir)/../scheme/vicare.boot
 VICARE_FLAGS	= -b $(VICARE_BOOT) $(AX_VFLAGS) $(VFLAGS) --r6rs-script
 VICARE_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
+	VICARE_FASL_PATH=$(VICARE_TEST_FASL_PATH); export VICARE_FASL_PATH;		\
 	VICARE_FASL_DIRECTORY=$(VICARE_FASL_DIRECTORY); export VICARE_FASL_DIRECTORY;	\
 	CHECK_TEST_NAME=$(name); export CHECK_TEST_NAME;				\
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\

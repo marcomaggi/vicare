@@ -1028,11 +1028,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	(error 'init-fasl-search-path
 	  "invalid fasl directory pathname" cfg.fasl-directory)))
     (loading.fasl-search-path (append
-			       (if cfg.fasl-directory
-				   (if (file-exists? cfg.fasl-directory)
-				       (list (posix.real-pathname cfg.fasl-directory))
-				     '())
-				 '())
 			       (reverse cfg.fasl-search-path)
 			       (cond ((posix.getenv "VICARE_FASL_PATH")
 				      => split-path)

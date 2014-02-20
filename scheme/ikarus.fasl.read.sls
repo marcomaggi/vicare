@@ -65,11 +65,20 @@
 (define* (fasl-read-header (port binary-input-port?))
   ($fasl-read-header port))
 
+(define-condition-type &i/o-wrong-fasl-header-error
+    &i/o
+  make-i/o-wrong-fasl-header-error
+  i/o-wrong-fasl-header-error?)
+
 (define* ($fasl-read-header port)
   (define (%assert-chars x y)
     (unless (eq? x y)
-      (assertion-violation __who__
-	(format "while reading fasl header expected ~s, got ~s\n" y x))))
+      (raise
+       (condition (make-assertion-violation)
+		  (make-i/o-wrong-fasl-header-error)
+		  (make-who-condition __who__)
+		  (make-message-condition (format "while reading fasl header expected ~s, got ~s\n" y x))
+		  (make-irritants-condition (list port))))))
   (%assert-chars (read-u8-as-char port) #\#)
   (%assert-chars (read-u8-as-char port) #\@)
   (%assert-chars (read-u8-as-char port) #\I)

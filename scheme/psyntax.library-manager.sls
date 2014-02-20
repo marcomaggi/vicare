@@ -72,6 +72,35 @@
     (psyntax compat))
 
 
+;;;; helpers
+
+(define (string-pathname? obj)
+  (and (string? obj)
+       (not (string-empty? obj))))
+
+(define (%log-loaded-library template . args)
+  (when (options.print-loaded-libraries)
+    (apply fprintf (current-error-port)
+	   (string-append "vicare ***: " template)
+	   args)))
+
+(module (%log-library-debug-message)
+
+  (define-syntax %log-library-debug-message
+    (if (options.verbose-about-libraries?)
+	(syntax-rules ()
+	  ((_ ?template ?arg ...)
+	   (%logger ?template ?arg ...)))
+      (lambda (stx) #'(void))))
+
+  (define (%logger template . args)
+    (apply fprintf (current-error-port)
+	   (string-append "vicare ***: " template)
+	   args))
+
+  #| end of module |# )
+
+
 ;;;; type definitions: library record
 
 (define-record library
@@ -250,11 +279,13 @@
 		       set)
 		      (((lib library?))
 		       (unless (memq lib set)
+			 (%log-library-debug-message "installed library: ~a\n" (library-name lib))
 			 (set! set (cons lib set))))
 		      (((lib library?) del?)
 		       (if del?
 			   (set! set (remq lib set))
 			 (unless (memq lib set)
+			   (%log-library-debug-message "installed library: ~a\n" (library-name lib))
 			   (set! set (cons lib set)))))))
     (lambda* ((obj procedure?))
       obj)))
@@ -425,7 +456,7 @@
 (define current-library-locator
   ;;Hold  a function  used to  locate a  library from  its R6RS  library
   ;;reference; this parameter is  initialised "ikarus.load.sls" with the
-  ;;function LIBRARY-LOCATOR.
+  ;;function RUN-TIME-LIBRARY-LOCATOR or COMPILE-TIME-LIBRARY-LOCATOR.
   ;;
   ;;The selected locator function must  accept as  arguments:
   ;;
@@ -433,7 +464,8 @@
   ;;
   ;;2. An enumeration set of type LIBRARY-LOCATOR-OPTIONS.
   ;;
-  ;;and it must return 2 values:
+  ;;and it must return a thunk  as single value.  When invoked, returned
+  ;;thunk returns 2 values:
   ;;
   ;;1. An input port from which the  library can be read; if the port is
   ;;   binary: a  compiled library can be  read from it; if  the port is
@@ -442,16 +474,15 @@
   ;;   more needed.
   ;;
   ;;2. A  thunk to be  called to continue the  search; it must  have the
-  ;;   same API  of the locator function.  This thunk  allows the caller
-  ;;    to  reject  a  library  if it  does  not  meet  some  additional
-  ;;   constraint; for  example: if its version number  does not conform
-  ;;   to LIBREF.
+  ;;   same  API of the  thunk returned  by the locator  function.  This
+  ;;   thunk allows the  caller to reject a library if  it does not meet
+  ;;   some  additional constraint; for  example: if its  version number
+  ;;   does not conform to LIBREF.
   ;;
   ;;When no matching library is found: return false and false.
   ;;
   (make-parameter
-      (lambda (libref options)
-	(error 'current-library-locator "library locator not set"))
+      #f
     (lambda* ((obj procedure?))
       obj)))
 
@@ -585,6 +616,7 @@
       ;;
       ;;   (?identifier0 ?identifier ... . ?version-reference)
       ;;
+      (%log-library-debug-message "~a: searching: ~a\n" __who__ libref)
       (parametrise
 	  ((failed-library-location-collector (let ((ell '()))
 						(case-lambda
@@ -592,71 +624,71 @@
 						  ell)
 						 ((location)
 						  (set! ell (cons location ell)))))))
-	(receive (port next-locator-search)
-	    ((current-library-locator) libref (library-locator-options move-on-when-open-fails))
-	  (cond ((binary-port? port)
-		 ;;A binary location was found.   We can read the binary
-		 ;;library from PORT.
-		 (%print-loading-library port)
-		 (let ((rv (unwind-protect
-			       ((current-binary-library-loader) libref port)
-			     (close-input-port port))))
-		   (if rv
-		       ;;Success.  The library  and all its dependencies
-		       ;;have been successfully loaded and installed.
+	(let loop ((next-locator-search ((current-library-locator)
+					 libref
+					 (library-locator-options move-on-when-open-fails))))
+	  (receive (port further-locator-search)
+	      (next-locator-search)
+	    (%log-library-debug-message "~a: reading from port: ~a, ~a\n" __who__ libref port)
+	    (cond ((binary-port? port)
+		   ;;A binary location was found.   We can read the binary
+		   ;;library from PORT.
+		   (%print-loading-library port)
+		   (let ((rv (unwind-protect
+				 ((current-binary-library-loader) libref port)
+			       (close-input-port port))))
+		     (if rv
+			 ;;Success.  The library  and all its dependencies
+			 ;;have been successfully loaded and installed.
+			 (begin
+			   (%print-loaded-library port)
+			   #t)
+		       ;;Failure.   The library  read from  port has  been
+		       ;;rejected; try to go on with the search.
 		       (begin
-			 (%print-loaded-library)
-			 #t)
-		     ;;Failure.   The library  read from  port has  been
-		     ;;rejected; try to go on with the search.
-		     (begin
-		       (%print-rejected-library)
-		       (next-locator-search)))))
+			 (%print-rejected-library port)
+			 (loop further-locator-search)))))
 
-		((textual-port? port)
-		 ;;A source location was found.   We can read the source
-		 ;;library  from  PORT;  we  assume  that  applying  the
-		 ;;function PORT-ID to PROT  will return the source file
-		 ;;name.
-		 (%print-loading-library port)
-		 (let ((rv (unwind-protect
-			       ((current-source-library-loader) libref port)
-			     (close-input-port port))))
-		   (if rv
-		       ;;Success.  The library  and all its dependencies
-		       ;;have been successfully loaded and installed.
+		  ((textual-port? port)
+		   ;;A source location was found.   We can read the source
+		   ;;library  from  PORT;  we  assume  that  applying  the
+		   ;;function PORT-ID to PROT  will return the source file
+		   ;;name.
+		   (%print-loading-library port)
+		   (let ((rv (unwind-protect
+				 ((current-source-library-loader) libref port)
+			       (close-input-port port))))
+		     (if rv
+			 ;;Success.  The library  and all its dependencies
+			 ;;have been successfully loaded and installed.
+			 (begin
+			   (%print-loaded-library port)
+			   #t)
+		       ;;Failure.   The library  read from  port has  been
+		       ;;rejected; try to go on with the search.
 		       (begin
-			 (%print-loaded-library)
-			 #t)
-		     ;;Failure.   The library  read from  port has  been
-		     ;;rejected; try to go on with the search.
-		     (begin
-		       (%print-rejected-library)
-		       (next-locator-search)))))
+			 (%print-rejected-library port)
+			 (loop further-locator-search)))))
 
-		((not port)
-		 ;;No suitable library was found.
-		 (%file-locator-resolution-error libref
-						 (reverse ((failed-library-location-collector)))
-						 (cdr (%external-pending-libraries))))
+		  ((not port)
+		   ;;No suitable library was found.
+		   (%file-locator-resolution-error libref
+						   (reverse ((failed-library-location-collector)))
+						   (cdr (%external-pending-libraries))))
 
-		(else
-		 (assertion-violation __who__
-		   "internal error: invalid return values from library locator"
-		   port next-locator-search))))))
+		  (else
+		   (assertion-violation __who__
+		     "internal error: invalid return values from library locator"
+		     port further-locator-search)))))))
 
     (define (%print-loading-library port)
-      (when (options.print-loaded-libraries)
-	(display (string-append "Vicare loading: " (port-id port) " ... ")
-		 (console-error-port))))
+      (%log-loaded-library (string-append "loading: " (port-id port) " ...\n")))
 
-    (define (%print-loaded-library)
-      (when (options.print-loaded-libraries)
-	(display "done\n" (console-error-port))))
+    (define (%print-loaded-library port)
+      (%log-loaded-library (string-append "Vicare loading: " (port-id port) " done\n")))
 
-    (define (%print-rejected-library)
-      (when (options.print-loaded-libraries)
-	(display "rejected\n" (console-error-port))))
+    (define (%print-rejected-library port)
+      (%log-loaded-library (string-append "Vicare loading: " (port-id port) " rejected\n")))
 
     #| end of module: DEFAULT-LIBRARY-LOADER |# )
 
@@ -701,7 +733,7 @@
 
 (module (current-source-library-loader-by-filename)
 
-  (define (default-library-source-loader-by-filename source-pathname libname-predicate)
+  (define* (default-library-source-loader-by-filename (source-pathname string-pathname?) (libname-predicate procedure?))
     ;;Default          value          for         the          parameter
     ;;CURRENT-SOURCE-LIBRARY-LOADER-BY-FILENAME.   Given a  library file
     ;;pathname: load  the file, expand  the first LIBRARY  form, compile
@@ -711,6 +743,7 @@
     ;;LIBNAME-PREDICATE must  be a  predicate function  to apply  to the
     ;;R6RS library name of the loaded library.
     ;;
+    (%log-library-debug-message "~a: searching: ~a\n" __who__ source-pathname)
     (receive (uid libname
 		  import-desc* visit-desc* invoke-desc*
 		  invoke-code visit-code
@@ -759,6 +792,7 @@
   ;;
   (define source-pathname ($library-source-file-name lib))
   (when source-pathname
+    (%log-library-debug-message "~a: serializing: ~a\n" __who__ ($library-name lib))
     (serialize source-pathname ($library-name lib)
 	       (list ($library-uid lib)
 		     ($library-name lib)
