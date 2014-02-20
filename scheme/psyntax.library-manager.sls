@@ -78,12 +78,6 @@
   (and (string? obj)
        (not (string-empty? obj))))
 
-(define (%log-loaded-library template . args)
-  (when (options.print-loaded-libraries)
-    (apply fprintf (current-error-port)
-	   (string-append "vicare: " template)
-	   args)))
-
 (module (%log-library-debug-message)
 
   (define-syntax %log-library-debug-message
@@ -681,14 +675,16 @@
 		     "internal error: invalid return values from library locator"
 		     port further-locator-search)))))))
 
-    (define (%print-loading-library port)
-      (%log-loaded-library "loading: ~a ...\n" (port-id port)))
+    ;;Keep the library names aligned!!!                                     VV
+    (define (%print-loading-library port)   (%log-loaded-library "loading:  ~a ..." (port-id port)))
+    (define (%print-loaded-library port)    (%log-loaded-library "loaded:   ~a" (port-id port)))
+    (define (%print-rejected-library port)  (%log-loaded-library "rejected: ~a" (port-id port)))
 
-    (define (%print-loaded-library port)
-      (%log-loaded-library "loading: ~a done\n" (port-id port)))
-
-    (define (%print-rejected-library port)
-      (%log-loaded-library "loading: ~a rejected\n" (port-id port)))
+    (define (%log-loaded-library template . args)
+      (when (options.print-loaded-libraries)
+	(apply fprintf (current-error-port)
+	       (string-append "vicare: " template "\n")
+	       args)))
 
     #| end of module: DEFAULT-LIBRARY-LOADER |# )
 
