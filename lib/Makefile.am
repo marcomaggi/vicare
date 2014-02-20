@@ -446,6 +446,7 @@ endif
 #page
 ## library compilation rules
 
+NEW_BOOT_FILE			= $(builddir)/../scheme/vicare.boot
 VICARE_FASL_DIRECTORY		= $(builddir)
 VICARE_COMPILE_LIBRARY_PATH	= $(builddir):$(srcdir):$(VICARE_LIBRARY_PATH)
 VICARE_COMPILE_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
@@ -465,11 +466,7 @@ VICARE_INST	= $(bindir)/vicare
 VICARE_INST_ENV	= VICARE_LIBRARY_PATH=$(VICARE_LIBRARY_PATH);			export VICARE_LIBRARY_PATH;
 VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
 
-.PHONY: vfasl vfasl-installed
-
-all:
-
-vfasl: \
+ALLFASL	= \
 	$(nobase_dist_libvicare_DATA)		\
 	$(nobase_dist_libsrfi_DATA)		\
 	$(nobase_dist_libnausicaa_DATA)		\
@@ -483,7 +480,11 @@ vfasl: \
 	$(nobase_dist_libreadline_DATA)		\
 	$(nobase_dist_libcre2_DATA)
 
-$(nobase_dist_libvicare_DATA):
+.PHONY: vfasl vfasl-installed
+
+vfasl: $(ALLFASL)
+
+$(nobase_dist_libvicare_DATA): $(NEW_BOOT_FILE)
 	test -d $(VICARE_FASL_DIRECTORY) || $(MKDIR_P) $(VICARE_FASL_DIRECTORY)
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-platform.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-unsafe.sps
@@ -495,12 +496,12 @@ $(nobase_dist_libvicare_DATA):
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-net.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-misc.sps
 
-$(nobase_dist_libsrfi_DATA):
+$(nobase_dist_libsrfi_DATA): $(NEW_BOOT_FILE)
 if WANT_SRFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
 endif
 
-$(nobase_dist_libnausicaa_DATA):
+$(nobase_dist_libnausicaa_DATA): $(NEW_BOOT_FILE)
 if WANT_NAUSICAA
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-language.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-containers.sps
@@ -509,29 +510,29 @@ if WANT_NAUSICAA
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-mehve-language.sps
 endif
 
-$(nobase_dist_libffi_DATA):
+$(nobase_dist_libffi_DATA): $(NEW_BOOT_FILE)
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
 endif
 
-$(nobase_dist_libposix_DATA):
+$(nobase_dist_libposix_DATA): $(NEW_BOOT_FILE)
 if WANT_POSIX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-posix.sps
 endif
 
-$(nobase_dist_libsrfiposix_DATA):
+$(nobase_dist_libsrfiposix_DATA): $(NEW_BOOT_FILE)
 if WANT_POSIX
 if WANT_SRFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi-posix.sps
 endif
 endif
 
-$(nobase_dist_libglibc_DATA):
+$(nobase_dist_libglibc_DATA): $(NEW_BOOT_FILE)
 if WANT_GLIBC
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
 endif
 
-$(nobase_dist_libgcc_DATA):
+$(nobase_dist_libgcc_DATA): $(NEW_BOOT_FILE)
 if WANT_LIBFFI
 if WANT_POSIX
 if WANT_GLIBC
@@ -540,22 +541,22 @@ endif
 endif
 endif
 
-$(nobase_dist_liblinux_DATA):
+$(nobase_dist_liblinux_DATA): $(NEW_BOOT_FILE)
 if WANT_LINUX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
 endif
 
-$(nobase_dist_libiconv_DATA):
+$(nobase_dist_libiconv_DATA): $(NEW_BOOT_FILE)
 if WANT_LIBICONV
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-iconv.sps
 endif
 
-$(nobase_dist_libreadline_DATA):
+$(nobase_dist_libreadline_DATA): $(NEW_BOOT_FILE)
 if WANT_READLINE
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-readline.sps
 endif
 
-$(nobase_dist_libcre2_DATA):
+$(nobase_dist_libcre2_DATA): $(NEW_BOOT_FILE)
 if WANT_CRE2
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
 endif
@@ -616,7 +617,7 @@ vicare/platform/features.sls : features
 
 ## --------------------------------------------------------------------
 
-CLEANFILES	= vicare/platform/features.sls
+CLEANFILES	= vicare/platform/features.sls $(ALLFASL)
 
 clean-local:
 	-rm -rf $(VICARE_FASL_DIRECTORY)
