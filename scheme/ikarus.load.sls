@@ -895,7 +895,7 @@
     ;;holding precompiled  code.  See the function  SERIALIZE-LIBRARY in
     ;;"psyntax.library-manager.sls" for details on the format.
     ;;
-    (%print-verbose-message "serialising ~a ..." fasl-pathname)
+    (%print-verbose-message "serializing ~a ..." fasl-pathname)
     (receive (dir name)
 	(posix.split-pathname-root-and-tail fasl-pathname)
       (unless (string-empty? dir)
@@ -908,7 +908,7 @@
 	    (fasl-write-object (make-serialized-library contents) port
 			       (retrieve-filename-foreign-libraries source-pathname)))
 	(close-output-port port)))
-    (%print-verbose-message "done\n"))
+    (%print-verbose-message " done\n"))
 
   #| end of module |# )
 
