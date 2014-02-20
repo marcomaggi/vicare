@@ -3,6 +3,7 @@
 (import
     (only (vicare assembler inspection))
   (only (vicare debugging compiler))
+  (only (vicare parser-logic))
 
   (only (vicare irregex))
   (only (vicare pregexp))

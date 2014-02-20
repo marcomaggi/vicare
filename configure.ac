@@ -1756,8 +1756,7 @@ AC_CONFIG_FILES(Makefile
                 lib/vicare/platform/constants.sls
                 lib/vicare/platform/errno.sls
                 lib/vicare/platform/words.sls
-                lib/nausicaa/uri/pathnames.sls
-                meta/slackware/doinst.sh)
+                lib/nausicaa/uri/pathnames.sls)
 AC_OUTPUT
 
 ### end of file

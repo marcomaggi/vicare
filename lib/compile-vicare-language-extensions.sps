@@ -2,7 +2,12 @@
 
 (import
     (only (vicare language-extensions cond-expand))
+  (only (vicare language-extensions cond-expand OS-id-features))
+  (only (vicare language-extensions cond-expand feature-cond))
   (only (vicare language-extensions cond-expand helpers))
+  (only (vicare language-extensions cond-expand platform-features))
+  (only (vicare language-extensions cond-expand configuration-features))
+  (only (vicare language-extensions cond-expand registry))
 
   (only (vicare arguments validation))
   (only (vicare arguments general-c-buffers))

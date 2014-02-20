@@ -203,11 +203,15 @@
 	 (not (string-empty? dir-pathname))
 	 (posix.directory-exists? dir-pathname)))
 
-  ;;The file extension of serialised FASL files.
   (define-constant FASL-EXTENSION
-    (boot.case-word-size
-     ((32)	".vicare-32bit-fasl")
-     ((64)	".vicare-64bit-fasl")))
+    ;;The file extension of serialised FASL files.
+    ;;
+    ;;NOTE   In    previous   versions   there   were    2   extensions:
+    ;;".vicare-32bit-fasl" for 32-bit platforms and ".vicare-64bit-fasl"
+    ;;for 64-bit  platforms.  But  since version 0.4  there is  a single
+    ;;extension.  (Marco Maggi; Thu Feb 20, 2014)
+    ;;
+    ".fasl")
 
   (define-constant DEFAULT-FASL-DIRECTORY
     ;;Default  value  for  the   FASL-DIRECTORY  parameter;  it  is  the

@@ -490,7 +490,7 @@ VICARE_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
 
 VICARE_LIBDIR		= $(libdir)/scheme/r6rs
 
-VICARE_FASL_DIRECTORY	= $(builddir)/../lib/fasl
+VICARE_FASL_DIRECTORY	= $(builddir)/../lib
 VICARE_TEST_FASL_PATH	= $(VICARE_FASL_DIRECTORY):$(VICARE_FASL_PATH)
 VICARE_TEST_SEARCH_PATH	= $(srcdir):$(srcdir)/../lib:$(builddir)/../lib:$(srcdir)/../scheme
 
