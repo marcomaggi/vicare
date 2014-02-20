@@ -42,6 +42,13 @@ Notes for revision 0.4d0
 
 Many backwards incompatibilities... life is hard!
 
+* BACKWARDS INCOMPATIBILITIES Removed undocumented libraries exported by
+  the boot image:
+
+     (chez modules)
+     (ikarus symbols)
+     (ikarus parameters)
+
 * Added     documentation     for    the     previously     undocumented
   MAKE-COMPILE-TIME-VALUE  and  a  general  explanation of  how  to  use
   compile-time values.  See the documentation node "iklib expander ctv".
