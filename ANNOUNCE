@@ -49,6 +49,9 @@ Many backwards incompatibilities... life is hard!
      (ikarus symbols)
      (ikarus parameters)
 
+* BACKWARDS INCOMPATIBILITY The library (vicare $posix) has been renamed
+  to (vicare language-extensions $posix).
+
 * Added     documentation     for    the     previously     undocumented
   MAKE-COMPILE-TIME-VALUE  and  a  general  explanation of  how  to  use
   compile-time values.  See the documentation node "iklib expander ctv".

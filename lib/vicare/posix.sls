@@ -1,5 +1,5 @@
 ;;;Vicare Scheme -- A compiler for R6RS Scheme.
-;;;Copyright (C) 2011, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
@@ -141,7 +141,7 @@
     directory-stream-pathname		directory-stream-pointer
     directory-stream-fd			directory-stream-closed?
 
-    ;; reexported from (vicare $posix)
+    ;; reexported from (vicare language-extensions posix)
     (deprefix (posix.split-pathname-root-and-tail
 	       posix.search-file-in-environment-path
 	       posix.search-file-in-list-path
@@ -422,7 +422,7 @@
 		  remove		time
 		  read			write
 		  truncate)
-    (prefix (only (vicare $posix)
+    (prefix (only (vicare language-extensions posix)
 		  errno->string
 		  split-pathname-root-and-tail
 		  search-file-in-environment-path

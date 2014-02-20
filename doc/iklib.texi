@@ -9631,7 +9631,7 @@ pathname of an existent directory; otherwise return @false{}.
 
 
 The following bindings are exported by the library @library{vicare
-$posix}.
+language-extensions posix}.
 
 
 @defun file-pathname? @var{obj}

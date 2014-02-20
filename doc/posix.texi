@@ -988,8 +988,8 @@ exception.
 
 
 The library @library{vicare posix} reexports the following bindings from
-@library{vicare $posix} (@vicareref{iklib io pathnames, Pathnames
-handling}):
+@library{vicare language-extensions posix} (@vicareref{iklib io
+pathnames, Pathnames handling}):
 @findex split-pathname
 @findex search-file-in-environment-path
 @findex search-file-in-list-path

@@ -75,7 +75,7 @@
     (vicare parser-tools silex nested-comment-l)
     (prefix (vicare language-extensions makers) mk.)
     (vicare arguments validation)
-    (vicare $posix))
+    (vicare language-extensions posix))
 
 
 ;;;; helpers
