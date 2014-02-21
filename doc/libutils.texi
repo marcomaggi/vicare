@@ -754,6 +754,11 @@ invalid: raise an assertion violation.
 @section Locating libraries
 
 
+The library @library{vicare libraries} exposes some of the
+infrastructure used by @value{PRJNAME} to locate and load Scheme
+libraries; for details on the default algorithms @ref{using libraries,
+@rnrs{6} libraries}.
+
 @menu
 * libutils locating general::   Finding library locations.
 * libutils locating files::     Finding library files.

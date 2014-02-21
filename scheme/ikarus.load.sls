@@ -588,6 +588,9 @@
     ;;   accept  it and  prepare as  next search  the acceptance  of the
     ;;   source file.
     ;;
+    ;;5.  If no  source file  exists: scan  the FASL  search path  for a
+    ;;   binary library.
+    ;;
     ;;Remember  that the  FASL  file  can be  rejected  if  it has  been
     ;;compiled by another boot image or it has the wrong library UID.
     ;;
@@ -614,13 +617,19 @@
     ;;false and false.
     ;;
     (%log-library-debug-message "~a: start search for library: ~a" __who__ libref)
-    (let ((source-locator (current-source-library-file-locator)))
+    (let ((source-locator (current-source-library-file-locator))
+	  (binary-locator (current-binary-library-file-locator)))
+      (define (%binary-search-start)
+	(%binary-search-step options
+			     (lambda ()
+			       (binary-locator libref))
+			     (lambda ()
+			       (values #f #f))))
       (lambda ()
 	(%source-search-step options libref
 			     (lambda ()
 			       (source-locator libref))
-			     (lambda ()
-			       (values #f #f))))))
+			     %binary-search-start))))
 
 ;;; --------------------------------------------------------------------
 
@@ -641,8 +650,17 @@
 		(begin
 		  ((failed-library-location-collector) binary-pathname)
 		  (%handle-source-file-match options libref source-pathname further-source-file-match search-fail-kont))
-	      (%handle-binary-file-match options libref binary-pathname source-pathname
-					 further-source-file-match search-fail-kont)))
+	      (%handle-local-binary-file-match options libref binary-pathname source-pathname
+					       further-source-file-match search-fail-kont)))
+	(search-fail-kont))))
+
+  (define (%binary-search-step options next-binary-file-match search-fail-kont)
+    (receive (binary-pathname further-binary-file-match)
+	(next-binary-file-match)
+      (if binary-pathname
+	  (%handle-binary-file-match options binary-pathname
+				     (lambda ()
+				       (%binary-search-step options further-binary-file-match search-fail-kont)))
 	(search-fail-kont))))
 
 ;;; --------------------------------------------------------------------
@@ -665,8 +683,8 @@
 		(%open-source source-pathname)))
 	    %continue))
 
-  (define (%handle-binary-file-match options libref binary-pathname source-pathname
-				     next-source-file-match search-fail-kont)
+  (define (%handle-local-binary-file-match options libref binary-pathname source-pathname
+					   next-source-file-match search-fail-kont)
     (define (%continue)
       ((failed-library-location-collector) binary-pathname)
       (%log-library-debug-message "~a: rejected: ~a" __who__ binary-pathname)
@@ -680,6 +698,22 @@
 		    (raise E)))
 	      (lambda ()
 		(%log-library-debug-message "~a: opening: ~a" __who__ binary-pathname)
+		(%open-binary binary-pathname)))
+	    %continue))
+
+  (define (%handle-binary-file-match options binary-pathname next-binary-search-step)
+    (define (%continue)
+      ;;If we are here it means the previous pathname was rejected.
+      ((failed-library-location-collector) binary-pathname)
+      (next-binary-search-step))
+    (values (with-exception-handler
+		(lambda (E)
+		  (if (i/o-error? E)
+		      (if (library-locator-options-no-raise-when-open-fails? options)
+			  (%continue)
+			(raise E))
+		    (raise E)))
+	      (lambda ()
 		(%open-binary binary-pathname)))
 	    %continue))
 

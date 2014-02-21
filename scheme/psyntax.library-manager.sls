@@ -683,9 +683,13 @@
 
     (define (%log-loaded-library template . args)
       (when (options.print-loaded-libraries)
-	(apply fprintf (current-error-port)
-	       (string-append "vicare: " template "\n")
-	       args)))
+	(guard (E (else
+		   ;;We do not  want an exception from the  I/O layer to
+		   ;;ruin things.
+		   (void)))
+	  (apply fprintf (current-error-port)
+		 (string-append "vicare: " template "\n")
+		 args))))
 
     #| end of module: DEFAULT-LIBRARY-LOADER |# )
 
