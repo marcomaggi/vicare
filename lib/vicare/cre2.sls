@@ -9,7 +9,7 @@
 ;;;	Built in  binding to the CRE2  library: a C wrapper  for the RE2
 ;;;	regular expressions library from Google.
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -62,12 +62,6 @@
 	  define-argument-validation
 	  with-arguments-validation)
     (vicare unsafe operations)
-    (prefix (only (vicare ffi)
-		  dlopen
-		  pointer?
-		  pointer-null?
-		  null-pointer)
-	    ffi.)
     (prefix (only (vicare platform words)
 		  signed-int?)
 	    words.))
@@ -265,8 +259,8 @@
       (with-bytevectors ((pattern.bv pattern))
 	(let ((rv (capi.cre2-new pattern.bv (if opts
 						(options-pointer opts)
-					      (ffi.null-pointer)))))
-	  (cond ((ffi.pointer? rv)
+					      (null-pointer)))))
+	  (cond ((pointer? rv)
 		 (regexp-guardian (make-regexp rv)))
 		((not rv)
 		 (error who
@@ -318,7 +312,7 @@
 (define (%make-options)
   (define who 'cre2.make-options)
   (let ((rv (capi.cre2-opt-new)))
-    (if (ffi.pointer-null? rv)
+    (if (pointer-null? rv)
 	(error who
 	  "memory allocation error while building RE2 options object")
       (options-guardian (make-options rv)))))
