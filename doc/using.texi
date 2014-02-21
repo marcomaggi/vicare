@@ -533,8 +533,9 @@ language is provided in the library @library{rnrs}; the full
 
 @menu
 * using libraries intro::       Introduction to @value{PRJNAME} libraries.
-* using libraries searching::   How @value{PRJNAME} finds libraries.
-* using libraries summary::     Library search summary.
+* using libraries filenames::   File names from library references.
+* using libraries paths::       Library search paths.
+* using libraries searching::   Library search algorithms.
 * using libraries examples::    Examples of libraries usage.
 @end menu
 
@@ -580,12 +581,49 @@ libraries to group related libraries together.  For example,
 ...
 @end example
 
+@noindent
+@value{PRJNAME}'s own Scheme libraries are under the hierarchies:
+@library{vicare ---}, @library{srfi ---} and @library{nausicaa ---}.
+
+@value{PRJNAME}'s boot image and distributed libraries are installed in
+the directory:
+
+@example
+$(libdir)/vicare-scheme
+@end example
+
+@noindent
+for example on 32-bit @gnu{}+Linux systems:
+
+@example
+/usr/local/lib/vicare-scheme
+@end example
+
+@noindent
+for example the library @library{vicare ffi} on @gnu{}+Linux systems is
+installed as:
+
+@example
+/usr/local/lib/vicare-scheme/vicare/ffi.fasl
+@end example
+
+User libraries that are meant to be usable by @value{PRJNAME} and other
+@rnrs{6} implementations should be installed in the directory:
+
+@example
+$(libdir)/scheme/r6rs
+@end example
+
+@noindent
+on 32-bit @gnu{}+Linux systems:
+
+@example
+/usr/local/lib/scheme/r6rs
+@end example
+
 @c page
-@node using libraries searching
-@subsection How @value{PRJNAME} finds libraries
-
-
-@findex library-path
+@node using libraries filenames
+@subsection File names from library references
 
 
 A library is a file with the same name as the last component of the
@@ -601,152 +639,33 @@ and @code{.scm} when the command line option
 @option{--more-file-extensions} is used.
 @end quotation
 
-@value{PRJNAME} has a search algorithm for libraries that is similar to
-those used in other languages.  @value{PRJNAME}'s search path comprises
-a series of directories; when we try to import a library whose name
-contains just one component, @value{PRJNAME} will examine each directory
-in the search path for a file with a matching name.  Importing a library
-whose name is a list of components causes @value{PRJNAME} to match to a
-series of subdirectories with matching names.
-
 Here is an example of each case:
 
 @itemize
 @item
-Importing @library{sample} causes @value{PRJNAME} to look in each
-directory on the path for a binary file named @file{sample.fasl} and a
-source file named @file{sample.sls}.
+Importing @library{sample} causes @value{PRJNAME} to look for a binary
+file named @file{sample.fasl} and a source file named @file{sample.sls}.
 
 @item
-Importing @library{yoyodyne sample} causes @value{PRJNAME} to look in
-each directory on the path for a directory named @file{yoyodyne}, and
-within that a binary file named @file{sample.fasl} and a source file
-named @file{sample.sls}.  The @func{library} form for this library must
-still specify the library name as @library{yoyodyne sample}, not
-@library{sample}.
+Importing @library{yoyodyne sample} causes @value{PRJNAME} to look for a
+directory named @file{yoyodyne}, and within that a binary file named
+@file{sample.fasl} and a source file named @file{sample.sls}.  The
+@func{library} form for this library must still specify the library name
+as @library{yoyodyne sample}, not @library{sample}.
 @end itemize
 
-@value{PRJNAME}'s own Scheme libraries and the boot image are installed
-in the directory:
+By default, @value{PRJNAME} attempts to import the library @library{a b
+c} in binary format as follows: build file ``stem'' @code{/a/b/c},
+append the string @code{.fasl} to the stem; it also attempts to import
+the library @library{a b c} from source as follows: build file ``stem''
+@code{/a/b/c}, append each of the following strings to the stem:
+@code{.vicare.sls}, @code{.sls}.  Directories from the search paths are
+prepended to the file stem plus extension and searched on the file
+system, stopping at the first match.
 
-@example
-$(libdir)/vicare-scheme
-@end example
-
-@noindent
-for example on @gnu{}+Linux systems:
-
-@example
-/usr/local/lib/vicare-scheme
-@end example
-
-@noindent
-and are under the @library{vicare ---}, @library{srfi ---} and
-@library{nausicaa ---} hierarchies; for example the library
-@library{vicare ffi} on @gnu{}+Linux systems is installed as:
-
-@example
-/usr/local/lib/vicare-scheme/vicare/ffi.fasl
-@end example
-
-User libraries that are meant to be usable by @value{PRJNAME} and other
-@rnrs{6} implementations should be installed in the directory:
-
-@example
-$(libdir)/scheme/r6rs
-@end example
-
-@noindent
-on @gnu{}+Linux systems:
-
-@example
-/usr/local/lib/scheme/r6rs
-@end example
-
-@cindex @env{VICARE_LIBRARY_PATH}
-By default @value{PRJNAME} puts the following directories in the search
-path, in this order:
-
-@example
-$(libdir)/scheme/r6rs
-$(libdir)/vicare-scheme
-@end example
-
-@noindent
-on @gnu{}+Linux systems:
-
-@example
-/usr/local/lib/scheme/r6rs
-/usr/local/lib/vicare-scheme
-@end example
-
-@noindent
-other directories can be added to the search path in two ways: by
-modifying a system environment variable, or programmatically by setting
-@value{PRJNAME}'s parameters.
-
-@c ------------------------------------------------------------
-
-@subsubheading Library search paths
-
-
-There are two search paths, one for binary libraries and one for source
-libraries:
-
-@itemize
-@item
-When looking for source libraries, at the beginning of execution
-@value{PRJNAME} consults the environment variable
-@env{VICARE_LIBRARY_PATH} expecting a colon separated list of directory
-pathnames; it parses the list and places each of the directories into
-its sources search path, prepending these directories, in the given
-order, to the default ones.  The sources search path is stored in the
-parameter @func{library-path}, which can be updated as necessary.
-
-@item
-When looking for binary libraries, at the beginning of execution
-@value{PRJNAME} consults the environment variable @env{VICARE_FASL_PATH}
-expecting a colon separated list of directory pathnames; it parses the
-list and places each of the directories into its binaries search path,
-prepending these directories, in the given order, to the default ones.
-The binaries search path is stored in the parameter
-@func{fasl-search-path}, which can be updated as necessary.
-@end itemize
-
-In the following example session: the user sets
-@env{VICARE_LIBRARY_PATH}; the settings are reflected in the value of
-@code{(library-path)}; a further directory is then set during the
-session:
-
-@example
-$ export VICARE_LIBRARY_PATH=$HOME/scheme:/tmp/library
-$ echo $VICARE_LIBRARY_PATH
-/home/marco/scheme:/tmp/library
-$ @value{RAWEXECUTABLE}
-...
-
-> (library-path)
-("/home/marco/scheme"
- "/tmp/library"
- "/usr/local/lib/scheme/r6rs"
- "/usr/local/lib/vicare-scheme")
-> (library-path (cons "/opt/sw/extra-libraries" (library-path)))
-> (library-path)
-("/opt/sw/extra-libraries"
- "/home/marco/scheme"
- "/tmp/library"
- "/usr/local/lib/scheme/r6rs"
- "/usr/local/lib/vicare-scheme")
-@end example
-
-In programs intended to be distributed, we should resist the urge to set
-@code{(library-path)}, as the user's file hierarchies might not match
-ours; for most libraries, simply telling the user to install the files
-in one of the directories on the search path is good enough.
-
-There are two refinements of the library search algorithm, which are
-performed when the @option{--more-file-extensions} command line option
-is used.
+There are two refinements of the library search algorithm for source
+libraries, which are performed when the @option{--more-file-extensions}
+command line option is used.
 
 @itemize
 @item
@@ -768,37 +687,15 @@ as a generic implementation.  When searching for binary libraries: only
 the file @file{lib/main.fasl} is searched.
 @end itemize
 
-@c page
-@node using libraries summary
-@subsection Library search algorithm summary
-
-
-By default, @value{PRJNAME} attempts to import the library @library{a b
-c} as follows, for each directory in the search path:
+When the the command line option @option{--more-file-extensions} is used
+and the library @library{a b c} is imported in source form:
 
 @enumerate
 @item
-Build the rootname @file{a/b/c}.
+The file ``stem'' is built: @code{/a/b/c}.
 
 @item
-Append each of the following strings to the rootname, in order, until a
-matching file is found:
-
-@example
-.vicare.sls
-.sls
-@end example
-@end enumerate
-
-When the the command line option @option{--more-file-extensions} is
-used, for each directory in the search path:
-
-@enumerate
-@item
-Build the rootname @file{a/b/c}.
-
-@item
-Append each of the following strings to the rootname, in order, until a
+Each of the following strings is appended to the stem, in order, until a
 matching file is found:
 
 @example
@@ -817,10 +714,11 @@ matching file is found:
 @end example
 @end enumerate
 
-If there is no match, then the import request is in error.
+@noindent
+if there is no match, then the import request fails.
 
 Whenever the library name component @code{main} appears as last and not
-unique component: when building the file rootname such component is
+unique component: when building the file stem such component is
 ``quoted'' by appending an underscore character; examples:
 
 @example
@@ -830,33 +728,458 @@ unique component: when building the file rootname such component is
 @end example
 
 @c page
+@node using libraries paths
+@subsection Library search paths
+
+
+@cindex Library source path
+@cindex Binary library source path
+@cindex Source library source path
+@cindex @fasl{} file source path
+@cindex @func{library-path}
+@cindex @func{fasl-search-path}
+@cindex @env{VICARE_LIBRARY_PATH}, system environment variable
+@cindex @env{VICARE_FASL_PATH}, system environment variable
+@cindex @env{VICARE_FASL_DIRECTORY}, system environment variable
+@cindex Environment variable @env{VICARE_LIBRARY_PATH}
+@cindex Environment variable @env{VICARE_FASL_PATH}
+@cindex Environment variable @env{VICARE_FASL_DIRECTORY}
+
+
+@value{PRJNAME} has a search algorithm for libraries that is similar to
+those used in other languages.  @value{PRJNAME}'s search path comprises
+a series of directories; when we try to import a library whose name
+contains just one component, @value{PRJNAME} will examine each directory
+in the search path for a file with a matching name.  Importing a library
+whose name is a list of components causes @value{PRJNAME} to look for a
+series of subdirectories with matching names.
+
+There are two search paths, one for binary libraries and one for source
+libraries:
+
+@itemize
+@item
+The source libraries search path is stored in the parameter
+@func{library-path}.
+
+@item
+The binary libraries search path is stored in the parameter
+@func{fasl-search-path}.
+@end itemize
+
+@noindent
+both these parameters are meant to contain lists of strings representing
+directory pathnames and can be updated as necessary.
+
+In addition the parameter @func{fasl-directory} is meant to hold a
+string representing a directory pathname; such directory is searched
+when looking for a compiled version of a library from an existent source
+file.
+
+@c ------------------------------------------------------------
+
+@subsubheading Source path initialisation
+
+
+The parameter @func{library-path} is initialised as follows:
+
+@enumerate
+@item
+The parameter is initialised to the empty list.
+
+@item
+At the beginning of execution @value{PRJNAME} consults the environment
+variable @env{VICARE_LIBRARY_PATH}; when set, it is expected to hold a
+colon separated list of directory pathnames, in Unix--style.  The list
+is parsed and the directories are placed, in the given order, in
+@func{library-path}.
+
+@item
+If the options @option{-L} and @option{--search-path} are present on the
+command line: their value is expected to be a string representing a
+directory pathname.  Such pathnames are prepended, in the given order,
+to @func{library-path}.
+
+@item
+While @value{RAWEXECUTABLE} is running: we can modify at will the content of
+@func{libary-path}.
+@end enumerate
+
+@c ------------------------------------------------------------
+
+@subsubheading Binary path initialisation
+
+
+The parameter @func{fasl-search-path} is initialised as follows:
+
+@enumerate
+@item
+The parameter is initialised to a list of directory pathnames built at
+package configuration time, in this order:
+
+@example
+$(libdir)/scheme/r6rs
+$(libdir)/vicare-scheme
+@end example
+
+@noindent
+on 64-bit @gnu{}+Linux systems, these are usually:
+
+@example
+/usr/local/lib64/scheme/r6rs
+/usr/local/lib64/vicare-scheme
+@end example
+
+@noindent
+and on 32-bit @gnu{}+Linux systems:
+
+@example
+/usr/local/lib/scheme/r6rs
+/usr/local/lib/vicare-scheme
+@end example
+
+@item
+At the beginning of execution @value{PRJNAME} consults the environment
+variable @env{VICARE_FASL_PATH}; when set, it is expected to hold a
+colon separated list of directory pathnames, in Unix--style.  The list
+is parsed and the directories are placed, in the given order, in
+@func{fasl-search-path}.
+
+@item
+If the options @option{-F} and @option{--fasl-path} are present on the
+command line: their value is expected to be a string representing a
+directory pathname.  Such pathnames are prepended, in the given order,
+to @func{fasl-search-path}.
+
+@item
+While @value{RAWEXECUTABLE} is running: we can modify at will the
+content of @func{fasl-search-path}.
+@end enumerate
+
+In the following example session the user sets
+@env{VICARE_FASL_PATH}; the settings are reflected in the value of
+@code{(fasl-search-path)}; a further directory is then set during the
+session:
+
+@example
+$ export VICARE_FASL_PATH=$HOME/scheme:/tmp/library
+$ echo $VICARE_FASL_PATH
+/home/marco/scheme:/tmp/library
+$ @value{RAWEXECUTABLE}
+...
+
+> (fasl-search-path)
+("/home/marco/scheme"
+ "/tmp/library"
+ "/usr/local/lib/scheme/r6rs"
+ "/usr/local/lib/vicare-scheme")
+> (fasl-search-path
+     (cons "/opt/sw/extra-libraries" (fasl-search-path)))
+> (fasl-search-path)
+("/opt/sw/extra-libraries"
+ "/home/marco/scheme"
+ "/tmp/library"
+ "/usr/local/lib/scheme/r6rs"
+ "/usr/local/lib/vicare-scheme")
+@end example
+
+In programs intended to be distributed, we should resist the urge to set
+@func{fasl-search-path} and @func{library-path}, as the user's file
+hierarchies might not match ours; for most libraries, simply telling the
+user to install the files in one of the directories on the search path
+is good enough.
+
+@c ------------------------------------------------------------
+
+@subsubheading @fasl{} directory initialisation
+
+
+The parameter @func{fasl-search-path} is initialised as follows:
+
+@enumerate
+@item
+At the beginning of execution @value{PRJNAME} consults the system
+environment variable @env{VICARE_FASL_DIRECTORY}; when set, it is
+expected to hold a a directory pathname.  Such pathname is stored in
+@func{fasl-directory}.
+
+@item
+If the system environment variable @env{VICARE_FASL_DIRECTORY} is unset
+or set to an empty or invalid string: an attempt is made to set
+@file{fasl-directory} to:
+
+@example
+~/.vicare/precompiled
+@end example
+
+@noindent
+for this to work the system environment variable @env{HOME} must exist
+and be set to a string representing a directory pathname.
+
+@item
+If the system environment variable @env{VICARE_FASL_DIRECTORY} is unset
+or set to an empty or invalid string and it is not possible to build a
+valid pathname for @file{~/.vicare/precompiled}: @func{fasl-directory}
+is set to the dot pathname, which represents the current working
+directory.
+
+@item
+If the option @option{--fasl-directory} is present on the command line:
+its value is meant to represent a directory pathname.  Such pathname is
+stored in @func{fasl-directory}.
+@end enumerate
+
+@c page
+@node using libraries searching
+@subsection Library search algorithms
+
+
+In the typical scenario: packages compile source libraries in binary
+format and store them in @fasl{} files; then such @fasl{} files are
+installed in one of the directory referenced by the parameter
+@func{fasl-search-path}; finally, when running an application, imported
+libraries are loaded in binary form from @fasl{} files.
+
+There are two basic modes to search for libraries:
+
+@table @strong
+@item run--time search
+To be used when executing a program with the purpose of running an
+application.
+
+@item compile--time search
+To be used when executing a program with the purpose of compiling source
+libraries to binary format for installation.  This mode is selected only
+when the command line option @option{--compile-dependencies} is used.
+@end table
+
+A library is imported by specifying a @rnrs{6} library reference in an
+@clause{import} clause.  A library loaded from a @fasl{} file can be
+accepted as matching the reference or rejected; the causes for rejection
+are:
+
+@itemize
+@item
+The identifiers in the @rnrs{6} library name from the @fasl{} file do
+not match the identifiers in the library reference.
+
+@item
+The version specification in the @rnrs{6} library name from the @fasl{}
+file does not comply with the version reference specification in the
+library reference.
+
+@item
+The @fasl{} file has been compiled with a @value{PRJNAME} boot image
+different from the one used to load it.
+
+@item
+A library @samp{X} is importing another compiled library @samp{Y};
+@samp{X} was compiled using the binary object @samp{Y.1}, but now the
+binary object @samp{Y.2} is being loaded: @samp{Y.2} is rejected.
+@end itemize
+
+@noindent
+A library loaded from a source file can be accepted as matching the
+reference or rejected; the causes for rejection are:
+
+@itemize
+@item
+The identifiers in the @rnrs{6} library name from the source file do not
+match the identifiers in the library reference.
+
+@item
+The version specification in the @rnrs{6} library name from the source
+file does not comply with the version reference specification in the
+library reference.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Run--time libraries search
+
+
+Given a @rnrs{6} library reference, @value{PRJNAME} performs the
+following operations:
+
+@enumerate
+@item
+Build the ``stem'' of the library file, joining the identifiers from the
+library reference with a directory separator and adding a directory
+separator as prefix.  For example the library reference @library{alpha
+beta (1 2)} generates the stem @code{/alpha/beta}.
+
+@item
+All the directories listed in the parameter @func{fasl-search-path} are
+visited, in order: the directory is prepended to the stem and the
+@fasl{} file extension is appended to it; the resulting file is tested
+for existence stopping at the first match.  For example the following
+files might be tested:
+
+@example
+~/.vicare/precompiled/alpha/beta.fasl
+/usr/local/lib64/scheme/r6rs/alpha/beta.fasl
+/usr/local/lib64/vicare-scheme/alpha/beta.fasl
+@end example
+
+@item
+If a @fasl{} file exists: it is loaded expecting it to contain a binary
+library.  If the library is accepted the search terminates; if the
+library is rejected the search goes on with the next directory from
+@func{fasl-search-path}.
+
+@item
+If no matching @fasl{} file is found or all the binary libraries found
+are rejected: the search continues for source files.  All the
+directories listed in the parameter @func{library-path} are visited, in
+order: the directory is prepended to the stem and the source file
+extensions are appended to it; the resulting file is tested for
+existence stopping at the first match.  For example the following files
+might be tested:
+
+@example
+~/share/vicare-scheme/alpha/beta.vicare.sls
+~/share/vicare-scheme/alpha/beta.sls
+/usr/local/share/scheme/r6rs/alpha/beta.vicare.sls
+/usr/local/share/scheme/r6rs/alpha/beta.sls
+/usr/local/share/vicare-scheme/alpha/beta.vicare.sls
+/usr/local/share/vicare-scheme/alpha/beta.sls
+@end example
+
+@item
+If a source file exists: it is loaded expecting it to contain a source
+library.  If the library is accepted the search terminates; if the
+library is rejected the search goes on with the next file or the next
+directory from @func{library-path}.
+
+@item
+If no source file is found or all the source libraries found are
+rejected: the search fails.
+@end enumerate
+
+@c ------------------------------------------------------------
+
+@subsubheading Compile--time libraries search
+
+
+Given a @rnrs{6} library reference, @value{PRJNAME} performs the
+following operations:
+
+@enumerate
+@item
+Build the ``stem'' of the library file, joining the identifiers from the
+library reference with a directory separator and adding a directory
+separator as prefix.  For example the library reference @library{alpha
+beta (1 2)} generates the stem @code{/alpha/beta}.
+
+@item
+All the directories listed in the parameter @func{libary-path} are
+visited, in order: the directory is prepended to the stem and the source
+file extensions are appended to it; the resulting files are tested for
+existence stopping at the first match.  For example, in the source tree
+of a package, if:
+
+@example
+(library-path)  @result{} ("./lib")
+@end example
+
+@noindent
+the following files are be tested:
+
+@example
+./lib/alpha/beta.vicare.sls
+./lib/alpha/beta.sls
+@end example
+
+@item
+If a source file exists:
+
+@enumerate A
+@item
+The content of the parameter @func{fasl-directory} is retrieved
+expecting it to be the pathname of a directory.
+@item
+The name of a @fasl{} file is built from the stem and the value in
+@func{fasl-directory}.  For example, if:
+
+@example
+(fasl-directory)        @result{} "./build/lib"
+@end example
+
+@noindent
+the following file is tested:
+
+@example
+./build/lib/alpha/beta.fasl
+@end example
+
+@item
+If the @fasl{} file exists and it is newer than the source file: the
+@fasl{} file is loaded expecting it to contain a binary library.  If the
+binary library is accepted the search terminates; if the binary library
+is rejected: the search goes on.
+
+@item
+If the @fasl{} file does not exist, or it is older than the source file,
+or it contains a library that is rejected: the source file is loaded,
+expecting it to contain a source library.  If the source library is
+accepted: the search terminates; if the source library is rejected: the
+search continues with the next file extension or the next directory from
+@func{library-path}.
+@end enumerate
+
+@item
+If a source file does not exist: the search continues looking for a
+binary library.  All the directories listed in the parameter
+@func{fasl-search-path} are visited, in order: the directory is
+prepended to the stem and the @fasl{} file extension is appended to it;
+the resulting file is tested for existence stopping at the first match.
+For example the following files might be tested:
+
+@example
+~/.vicare/precompiled/alpha/beta.fasl
+/usr/local/lib64/scheme/r6rs/alpha/beta.fasl
+/usr/local/lib64/vicare-scheme/alpha/beta.fasl
+@end example
+
+@item
+If a @fasl{} file exists: it is loaded expecting it to contain a binary
+library.  If the library is accepted the search terminates; if the
+library is rejected the search goes on with the next directory from
+@func{fasl-search-path}.
+
+@item
+If no matching @fasl{} file is found or all the binary libraries found
+are rejected: the search fails.
+@end enumerate
+
+@c page
 @node using libraries examples
 @subsection Examples of library usage
 
 
-Consider a program using @func{pretty-print} procedure to format some
-code, and suppose further that pretty printing is just a nice add--on
-(e.g. using @file{write} suffices, but pretty--printing is @emph{just
-prettier}).
+Consider a program using the procedure @func{pretty-print} to format
+some code, and suppose further that pretty printing is just a nice
+add--on (e.g. using @file{write} suffices, but pretty--printing is
+@emph{just prettier}).
 
 @value{PRJNAME} exports a good pretty--printing facility in its
-@library{ikarus} library.  However, since @func{pretty-print} is not a
+@library{vicare} library.  However, since @func{pretty-print} is not a
 standard procedure, a program that uses it would be rendered unportable
 to other @rnrs{6} Scheme implementations.
 
-The programmer can put the @code{.vicare.*} extensions to use in this
+The programmer can put the @code{.vicare.sls} extension to use in this
 situation, by writing two versions of a @library{pretty-printing}
 library: one for use by @value{PRJNAME}, and one portable for other
 implementations.
 
 @example
-;; pretty-printing.vicare.ss --
+;; pretty-printing.vicare.sls --
 ;;
 ;; Can be used only by @value{PRJNAME} Scheme.
 
 (library (pretty-printing)
   (export pretty-print)
-  (import (only (ikarus) pretty-print)))
+  (import (only (vicare) pretty-print)))
 
 ;;; end of file
 @end example
