@@ -385,7 +385,7 @@
   (with-arguments-validation (who)
       ((rex				rex)
        (string/bytevector		text)
-       (non-negative-fixnum/index	start)
+       (non-negative-fixnum/false	start)
        (non-negative-fixnum/false	end)
        (symbol				anchor))
     (with-bytevectors ((text.bv text))
