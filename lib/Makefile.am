@@ -791,19 +791,42 @@ VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH);		export VICARE_
 VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY)  $(AX_VFLAGS) $(VFLAGS)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
-ALLFASL	= \
-	$(nobase_dist_libvicare_DATA)		\
-	$(nobase_dist_libsrfi_DATA)		\
-	$(nobase_dist_libnausicaa_DATA)		\
-	$(nobase_dist_libffi_DATA)		\
-	$(nobase_dist_libposix_DATA)		\
-	$(nobase_dist_libsrfiposix_DATA)	\
-	$(nobase_dist_libglibc_DATA)		\
-	$(nobase_dist_libgcc_DATA)		\
-	$(nobase_dist_liblinux_DATA)		\
-	$(nobase_dist_libiconv_DATA)		\
-	$(nobase_dist_libreadline_DATA)		\
-	$(nobase_dist_libcre2_DATA)
+ALLFASL		= $(nobase_dist_libvicare_DATA)
+if WANT_SRFI
+ALLFASL		+= $(nobase_dist_libsrfi_DATA)
+endif
+if WANT_NAUSICAA
+ALLFASL		+= $(nobase_dist_libnausicaa_DATA)
+endif
+if WANT_LIBFFI
+ALLFASL		+= $(nobase_dist_libffi_DATA)
+endif
+if WANT_POSIX
+ALLFASL		+= $(nobase_dist_libposix_DATA)
+endif
+if WANT_POSIX
+if WANT_SRFI
+ALLFASL		+= $(nobase_dist_libsrfiposix_DATA)
+endif
+endif
+if WANT_GLIBC
+ALLFASL		+= $(nobase_dist_libglibc_DATA)
+endif
+if WANT_GLIBC
+ALLFASL		+= $(nobase_dist_libgcc_DATA)
+endif
+if WANT_LINUX
+ALLFASL		+= $(nobase_dist_liblinux_DATA)
+endif
+if WANT_LIBICONV
+ALLFASL		+= $(nobase_dist_libiconv_DATA)
+endif
+if WANT_READLINE
+ALLFASL		+= $(nobase_dist_libreadline_DATA)
+endif
+if WANT_CRE2
+ALLFASL		+= $(nobase_dist_libcre2_DATA)
+endif
 
 .PHONY: vfasl
 
