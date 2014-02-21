@@ -1,6 +1,33 @@
 ## Process this file with automake to produce Makefile.in
 
 EXTRA_DIST = \
+	compile-vicare-platform.sps					\
+	compile-vicare-unsafe.sps					\
+	compile-vicare-language-extensions.sps				\
+	compile-vicare-crypto.sps					\
+	compile-vicare-numerics.sps					\
+	compile-vicare-containers.sps					\
+	compile-vicare-parser-tools.sps					\
+	compile-vicare-net.sps						\
+	compile-vicare-misc.sps						\
+	\
+	compile-srfi.sps						\
+	compile-srfi-posix.sps						\
+	compile-nausicaa-language.sps					\
+	compile-nausicaa-containers.sps					\
+	compile-nausicaa-parser-tools.sps				\
+	compile-nausicaa-misc.sps					\
+	compile-mehve-language.sps					\
+	compile-ffi.sps							\
+	compile-posix.sps						\
+	compile-glibc.sps						\
+	compile-iconv.sps						\
+	compile-gcc.sps							\
+	compile-linux.sps						\
+	compile-readline.sps						\
+	compile-cre2.sps
+
+EXTRA_DIST += \
 	vicare/platform/configuration.sls.in				\
 	vicare/platform/constants.sls.in				\
 	vicare/platform/errno.sls.in					\
@@ -346,33 +373,7 @@ EXTRA_DIST = \
 	vicare/gcc.sls							\
 	vicare/linux.sls						\
 	vicare/readline.sls						\
-	vicare/cre2.sls							\
-	\
-	compile-vicare-platform.sps					\
-	compile-vicare-unsafe.sps					\
-	compile-vicare-language-extensions.sps				\
-	compile-vicare-crypto.sps					\
-	compile-vicare-numerics.sps					\
-	compile-vicare-containers.sps					\
-	compile-vicare-parser-tools.sps					\
-	compile-vicare-net.sps						\
-	compile-vicare-misc.sps						\
-	\
-	compile-srfi.sps						\
-	compile-srfi-posix.sps						\
-	compile-nausicaa-language.sps					\
-	compile-nausicaa-containers.sps					\
-	compile-nausicaa-parser-tools.sps				\
-	compile-nausicaa-misc.sps					\
-	compile-mehve-language.sps					\
-	compile-ffi.sps							\
-	compile-posix.sps						\
-	compile-glibc.sps						\
-	compile-iconv.sps						\
-	compile-gcc.sps							\
-	compile-linux.sps						\
-	compile-readline.sps						\
-	compile-cre2.sps
+	vicare/cre2.sls
 
 #page
 #### fasl file lists
@@ -761,7 +762,18 @@ nobase_dist_libcre2_DATA	= $(fasldir)/vicare/cre2.fasl
 endif
 
 #page
-## library compilation rules
+#### built sources
+
+noinst_PROGRAMS		= features
+features_SOURCES	= features.c
+
+vicare/platform/features.sls : features
+	$(MKDIR_P) vicare/platform && ./features >$@
+
+vicare/platform/features.fasl : vicare/platform/features.sls
+
+#page
+#### library compilation rules
 
 NEW_BOOT_FILE			= $(builddir)/../scheme/vicare.boot
 VICARE_FASL_DIRECTORY		= $(builddir)
@@ -877,16 +889,6 @@ $(nobase_dist_libcre2_DATA): $(nobase_dist_libvicare_DATA)
 if WANT_CRE2
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
 endif
-
-## --------------------------------------------------------------------
-
-noinst_PROGRAMS		= features
-features_SOURCES	= features.c
-
-vicare/platform/features.sls : features
-	$(MKDIR_P) vicare/platform && ./features >$@
-
-vicare/platform/features.fasl : vicare/platform/features.sls
 
 ## --------------------------------------------------------------------
 
