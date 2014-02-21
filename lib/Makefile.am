@@ -779,10 +779,6 @@ VICARE_ENV	= VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH);		export VICARE_
 VICARE_FLAGS	= -b $(VICARE_BOOT) --fasl-directory $(VICARE_FASL_DIRECTORY)  $(AX_VFLAGS) $(VFLAGS)
 VICARE_RUN	= $(VICARE_ENV) $(VICARE) $(VICARE_FLAGS)
 
-VICARE_INST	= $(bindir)/vicare
-VICARE_INST_ENV	= VICARE_LIBRARY_PATH=$(VICARE_LIBRARY_PATH);			export VICARE_LIBRARY_PATH;
-VICARE_INST_RUN	= $(VICARE_INST_ENV) $(VICARE_INST)
-
 ALLFASL	= \
 	$(nobase_dist_libvicare_DATA)		\
 	$(nobase_dist_libsrfi_DATA)		\
@@ -797,7 +793,7 @@ ALLFASL	= \
 	$(nobase_dist_libreadline_DATA)		\
 	$(nobase_dist_libcre2_DATA)
 
-.PHONY: vfasl vfasl-installed
+.PHONY: vfasl
 
 vfasl: $(ALLFASL)
 
@@ -880,52 +876,6 @@ endif
 $(nobase_dist_libcre2_DATA): $(nobase_dist_libvicare_DATA)
 if WANT_CRE2
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
-endif
-
-vfasl-installed:
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-platform.sps
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-unsafe.sps
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-language-extensions.sps
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-crypto.sps
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-numerics.sps
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-containers.sps
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-parser-tools.sps
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-net.sps
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-vicare-misc.sps
-if WANT_SRFI
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
-endif
-if WANT_NAUSICAA
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-language.sps
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-containers.sps
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-parser-tools.sps
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-misc.sps
-	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-mehve-language.sps
-endif
-if WANT_LIBFFI
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
-endif
-if WANT_POSIX
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-posix.sps
-endif
-if WANT_GLIBC
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
-endif
-if WANT_LIBFFI
-if WANT_POSIX
-if WANT_GLIBC
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-gcc.sps
-endif
-endif
-endif
-if WANT_LINUX
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
-endif
-if WANT_READLINE
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-readline.sps
-endif
-if WANT_CRE2
-	$(VICARE_INST_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
 endif
 
 ## --------------------------------------------------------------------
