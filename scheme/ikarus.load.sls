@@ -18,6 +18,8 @@
 (library (ikarus load)
   (export
     load-and-serialize-source-library
+    run-time-library-locator
+    compile-time-library-locator
     load			load-r6rs-script
     library-path		library-extensions
     fasl-directory		fasl-path
@@ -31,6 +33,12 @@
 		  library-path		library-extensions
 		  fasl-directory	fasl-path
 		  fasl-search-path	get-annotated-datum)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Fri Feb 21, 2014)
+    (prefix (only (ikarus.io)
+		  textual-input-port?
+		  binary-input-port?)
+	    io.)
     (prefix (only (ikarus.posix)
 		  file-string-pathname?
 		  directory-exists?
@@ -216,7 +224,7 @@
   (define-constant DEFAULT-FASL-DIRECTORY
     ;;Default  value  for  the   FASL-DIRECTORY  parameter;  it  is  the
     ;;directory under which new FASL  files holding binary libraries are
-    ;;created.
+    ;;created when using the "compile dependencies" execution mode.
     ;;
     ;;It is initialised with with  the value of the environment variable
     ;;VICARE_FASL_DIRECTORY, if  set and  holding an  existent pathname;
@@ -235,27 +243,6 @@
 	  (if (%existent-directory-pathname? P)
 	      (string-append (posix.real-pathname P) "/.vicare/precompiled")
 	    ".")))))
-
-  (define fasl-search-path
-    ;;The search path  to in which to look for  FASL files.  Notice that
-    ;;we  do not  test for  directories existence:  a directory  may not
-    ;;exist at the time this search  path is initialised, but be created
-    ;;later.
-    ;;
-    (make-parameter
-	(let ()
-	  (module (target-os-uid
-		   scheme-lib-dir
-		   vicare-lib-dir)
-	    (include "ikarus.config.ss"))
-	  (case target-os-uid
-	    ((linux bsd darwin cygwin)
-	     (list scheme-lib-dir vicare-lib-dir))
-	    (else
-	     (error 'fasl-search-path
-	       "internal error: invalid target OS UID" target-os-uid))))
-      (lambda* ((P search-path?))
-	P)))
 
   (define fasl-directory
     ;;The directory under which serialised FASL files must be saved.  It
@@ -278,6 +265,27 @@
 	       (posix.real-pathname P))
 	      (else
 	       (error __who__ "attempt to set non-existent directory pathname" P))))))
+
+  (define fasl-search-path
+    ;;The search path  to in which to look for  FASL files.  Notice that
+    ;;we  do not  test for  directories existence:  a directory  may not
+    ;;exist at the time this search  path is initialised, but be created
+    ;;later.
+    ;;
+    (make-parameter
+	(let ()
+	  (module (target-os-uid
+		   scheme-lib-dir
+		   vicare-lib-dir)
+	    (include "ikarus.config.ss"))
+	  (case target-os-uid
+	    ((linux bsd darwin cygwin)
+	     (list scheme-lib-dir vicare-lib-dir))
+	    (else
+	     (error 'fasl-search-path
+	       "internal error: invalid target OS UID" target-os-uid))))
+      (lambda* ((P search-path?))
+	P)))
 
   (define* (fasl-path (libref library-reference?))
     ;;Given  a  R6RS  library  reference:  build  and  return  a  string
@@ -698,22 +706,17 @@
   ;;If RUN? is true: the loaded R6RS program is compiled and evaluated.
   ;;
   (%log-library-debug-message "~a: loading R6RS script: ~a" __who__ file-pathname)
-  (parametrise ((current-library-locator (cond ((current-library-locator))
-					       (serialize?
-						compile-time-library-locator)
-					       (else
-						run-time-library-locator))))
-    (let* ((prog  (read-script-source-file file-pathname))
-	   (thunk (parametrise ((source-code-location file-pathname))
-		    (expand-r6rs-top-level-make-evaluator prog))))
-      (when serialize?
-	(serialize-collected-libraries (lambda (source-pathname libname contents)
-					 (store-serialized-library (fasl-path libname)
-								   source-pathname libname contents))
-				       (lambda (core-expr)
-					 (compile-core-expr core-expr))))
-      (when run?
-	(thunk)))))
+  (let* ((prog  (read-script-source-file file-pathname))
+	 (thunk (parametrise ((source-code-location file-pathname))
+		  (expand-r6rs-top-level-make-evaluator prog))))
+    (when serialize?
+      (serialize-collected-libraries (lambda (source-pathname libname contents)
+				       (store-serialized-library (fasl-path libname)
+								 source-pathname libname contents))
+				     (lambda (core-expr)
+				       (compile-core-expr core-expr))))
+    (when run?
+      (thunk))))
 
 (case-define* load
   ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
@@ -735,10 +738,34 @@
        (eval-proc (car ls))
        (next-form (cdr ls))))))
 
+(define* (load-and-serialize-source-library (source-pathname posix.file-string-pathname?)
+					    (binary-pathname false-or-file-string-pathname?))
+  ;;Load a source library filename, expand it, compile it, serialize it.
+  ;;Return unspecified values.
+  ;;
+  (%log-library-debug-message "~a: loading library: ~a" __who__ source-pathname)
+  (%print-verbose-message "loading library: ~a\n" source-pathname)
+  (let ((lib ((current-source-library-loader-by-filename) source-pathname
+	      ;;This is a function to apply  to the R6RS library name of
+	      ;;the loaded library to verify  if its version conforms to
+	      ;;the requested one.  There  is no requested version here,
+	      ;;so we always return doing nothing.
+	      (lambda (libname) (void)))))
+    (define binary-pathname^
+      (or binary-pathname (fasl-path (library-name lib))))
+    (%print-verbose-message "serializing library: ~a\n" binary-pathname^)
+    (%log-library-debug-message "~a: serializing library: ~a" __who__ source-pathname)
+    (serialize-library lib
+		       (lambda (source-pathname libname contents)
+			 (store-serialized-library binary-pathname^ source-pathname
+						   libname contents))
+		       (lambda (core-expr)
+			 (compile-core-expr core-expr)))))
+
 
 ;;;; loading libraries from source
 
-(define* (default-source-library-loader (libref library-reference?) (port input-port?))
+(define* (default-source-library-loader (libref library-reference?) (port io.textual-input-port?))
   ;;Default value fo the parameter CURRENT-SOURCE-LIBRARY-LOADER.  Given
   ;;a textual  input PORT: read  from it a LIBRARY  symbolic expression;
   ;;verify  that its  version  reference conforms  to  LIBREF; load  and
@@ -779,7 +806,7 @@
 
 ;;;; loading libraries from serialised locations
 
-(define* (default-binary-library-loader (libref library-reference?) (port input-port?))
+(define* (default-binary-library-loader (libref library-reference?) (port io.binary-input-port?))
   ;;Default value fo the parameter CURRENT-BINARY-LIBRARY-LOADER.  Given
   ;;a binary input PORT: read from  it a serialized library; verify that
   ;;its version  reference conforms to  LIBREF; install it (and  all its
@@ -816,33 +843,6 @@
                                   compiled with a different instance of Vicare\n"
 				    fasl-pathname)
 	    #f)))))
-
-
-;;;; loading source libraries then serializing them
-
-(define* (load-and-serialize-source-library (source-pathname posix.file-string-pathname?)
-					    (binary-pathname false-or-file-string-pathname?))
-  ;;Load a source library filename, expand it, compile it, serialize it.
-  ;;Return unspecified values.
-  ;;
-  (%log-library-debug-message "~a: loading library: ~a" __who__ source-pathname)
-  (%print-verbose-message "loading library: ~a\n" source-pathname)
-  (let ((lib ((current-source-library-loader-by-filename) source-pathname
-	      ;;This is a function to apply  to the R6RS library name of
-	      ;;the loaded library to verify  if its version conforms to
-	      ;;the requested one.  There  is no requested version here,
-	      ;;so we always return doing nothing.
-	      (lambda (libname) (void)))))
-    (define binary-pathname^
-      (or binary-pathname (fasl-path (library-name lib))))
-    (%print-verbose-message "serializing library: ~a\n" binary-pathname^)
-    (%log-library-debug-message "~a: serializing library: ~a" __who__ source-pathname)
-    (serialize-library lib
-		       (lambda (source-pathname libname contents)
-			 (store-serialized-library binary-pathname^ source-pathname
-						   libname contents))
-		       (lambda (core-expr)
-			 (compile-core-expr core-expr)))))
 
 
 ;;;; loading and storing precompiled library files

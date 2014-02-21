@@ -449,8 +449,13 @@
 
 (define current-library-locator
   ;;Hold  a function  used to  locate a  library from  its R6RS  library
-  ;;reference; this parameter is  initialised "ikarus.load.sls" with the
-  ;;function RUN-TIME-LIBRARY-LOCATOR or COMPILE-TIME-LIBRARY-LOCATOR.
+  ;;reference; this parameter  is initialised to false here  and must be
+  ;;by "ikarus.main.sls" with one of the functions:
+  ;;
+  ;;   run-time-library-locator
+  ;;   compile-time-library-locator
+  ;;
+  ;;or a custom function selected by the user.
   ;;
   ;;The selected locator function must  accept as  arguments:
   ;;

@@ -19,8 +19,6 @@
 ;;within the compiler itself.
 (library (ikarus startup)
   (export
-    vicare-lib-dir
-    scheme-lib-dir
     vicare-version
     bootfile
     host-info)
@@ -73,11 +71,14 @@
 	    compiler.)
     (only (ikarus.debugger)
 	  guarded-start)
-    (only (psyntax expander)
-	  expand-top-level)
-    (only (psyntax library-manager)
-	  current-library-expander
-	  source-code-location)
+    (prefix (only (psyntax expander)
+		  expand-top-level)
+	    psyntax.)
+    (prefix (only (psyntax library-manager)
+		  current-library-expander
+		  source-code-location
+		  current-library-locator)
+	    psyntax.)
     (only (ikarus.reader)
 	  read-source-file
 	  read-script-source-file)
@@ -90,8 +91,10 @@
 		  load-r6rs-script
 		  load-and-serialize-source-library
 		  fasl-directory
-		  fasl-search-path)
-	    loading.)
+		  fasl-search-path
+		  compile-time-library-locator
+		  run-time-library-locator)
+	    load.)
     (prefix (only (ikarus.posix)
 		  getenv
 		  real-pathname)
@@ -131,7 +134,7 @@
 (define-syntax load-r6rs-script
   (syntax-rules (serialize? run?)
     ((_ ?filename (serialize? ?ser) (run? ?run))
-     (loading.load-r6rs-script ?filename ?ser ?run))))
+     (load.load-r6rs-script ?filename ?ser ?run))))
 
 (define (%string->sexp expr-string)
   (let loop ((port     (open-string-input-port expr-string))
@@ -167,10 +170,6 @@
 		;libraries to be instantiated,  adding the result to the
 		;interaction environment, after  the RC files and before
 		;the load scripts.
-
-   print-libraries
-		;For debugging  purposes: when  true print a  message to
-		;stderr showing which library file is loaded.
 
    eval-codes
 		;Null or  an alist with entries:
@@ -263,7 +262,6 @@
 	      (CFG.SCRIPT		(%dot-id ".script"))
 	      (CFG.RCFILES		(%dot-id ".rcfiles"))
 	      (CFG.LOAD-LIBRARIES	(%dot-id ".load-libraries"))
-	      (CFG.PRINT-LIBRARIES	(%dot-id ".print-libraries"))
 	      (CFG.EVAL-CODES		(%dot-id ".eval-codes"))
 	      (CFG.PROGRAM-OPTIONS	(%dot-id ".program-options"))
 	      (CFG.NO-GREETINGS		(%dot-id ".no-greetings"))
@@ -301,13 +299,6 @@
 		     (run-time-config-load-libraries ?cfg))
 		    ((set! _ ?val)
 		     (set-run-time-config-load-libraries! ?cfg ?val))))
-
-		  (CFG.PRINT-LIBRARIES
-		   (identifier-syntax
-		    (_
-		     (run-time-config-print-libraries ?cfg))
-		    ((set! _ ?val)
-		     (set-run-time-config-print-libraries! ?cfg ?val))))
 
 		  (CFG.EVAL-CODES
 		   (identifier-syntax
@@ -397,7 +388,6 @@
 			  #f		;script
 			  #t		;rcfiles
 			  '()		;load-libraries
-			  #f		;print-libraries
 			  '()		;eval-codes
 			  '()		;program-options
 			  #f		;no-greetings
@@ -545,11 +535,11 @@
 	   (next-option (cdr args) k))
 
 	  ((%option= "--print-loaded-libraries")
-	   (set-run-time-config-print-libraries! cfg #t)
+	   (options.print-loaded-libraries #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-print-loaded-libraries")
-	   (set-run-time-config-print-libraries! cfg #f)
+	   (options.print-loaded-libraries #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--verbose")
@@ -1013,9 +1003,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (library-path (append (reverse cfg.search-path)
 			  (cond ((posix.getenv "VICARE_LIBRARY_PATH")
 				 => split-path)
-				(else '()))
-			  (list config.scheme-lib-dir
-				config.vicare-lib-dir)))
+				(else '()))))
     (when cfg.more-file-extensions
       (library-extensions (%prefix "/main"
 				   (%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
@@ -1024,15 +1012,15 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (when cfg.fasl-directory
       (if (file-exists? cfg.fasl-directory)
-	  (loading.fasl-directory (posix.real-pathname cfg.fasl-directory))
+	  (load.fasl-directory (posix.real-pathname cfg.fasl-directory))
 	(error 'init-fasl-search-path
 	  "invalid fasl directory pathname" cfg.fasl-directory)))
-    (loading.fasl-search-path (append
+    (load.fasl-search-path (append
 			       (reverse cfg.fasl-search-path)
 			       (cond ((posix.getenv "VICARE_FASL_PATH")
 				      => split-path)
 				     (else '()))
-			       (loading.fasl-search-path)))))
+			       (load.fasl-search-path)))))
 
 (define (split-path input-string)
   ;;Convert  the  input  string  holding  a  search  pathname  as  colon
@@ -1114,8 +1102,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (doit (for-each (lambda (source-filename)
 		      (for-each (lambda (library-form)
-				  (parametrise ((source-code-location source-filename))
-				    ((current-library-expander) library-form)))
+				  (parametrise ((psyntax.source-code-location source-filename))
+				    ((psyntax.current-library-expander) library-form)))
 			(read-source-file source-filename)))
 	    cfg.load-libraries))))
 
@@ -1129,7 +1117,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
     (doit (for-each (lambda (entry)
 		      (case (car entry)
 			((file)
-			 (loading.load (cdr entry)))
+			 (load.load (cdr entry)))
 			((expr)
 			 (eval (cdr entry) (interaction-environment)))
 			(else
@@ -1150,11 +1138,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 (define (compile-library cfg)
   (with-run-time-config (cfg)
-    (doit (loading.load-and-serialize-source-library cfg.script cfg.output-file))))
+    (doit (load.load-and-serialize-source-library cfg.script cfg.output-file))))
 
 (define (load-evaluated-script cfg)
   (with-run-time-config (cfg)
-    (doit (loading.load cfg.script))))
+    (doit (load.load cfg.script))))
 
 (define (expand-program cfg)
   ;;FIXME Currently undocumented because the output really really really
@@ -1163,8 +1151,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ;;
   (with-run-time-config (cfg)
     (doit
-     (let-values (((lib* invoke-code macro* export-subst export-env)
-		   (expand-top-level (read-script-source-file cfg.script))))
+     (receive (lib* invoke-code macro* export-subst export-env)
+	 (psyntax.expand-top-level (read-script-source-file cfg.script))
        (define port (current-output-port))
        (pretty-print invoke-code port)
        ;; (newline port)
@@ -1390,8 +1378,8 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
 ;;;; main expressions
 
-(let-values (((cfg execution-state-initialisation-according-to-command-line-options)
-	      (parse-command-line-arguments)))
+(receive (cfg execution-state-initialisation-according-to-command-line-options)
+    (parse-command-line-arguments)
 
   (with-run-time-config (cfg)
     (define-inline (%print-greetings)
@@ -1400,9 +1388,16 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
     (init-library-path cfg)
     (init-fasl-search-path cfg)
+    (psyntax.current-library-locator
+     ;;If  a library  locator has  already been  selected (perhaps  by a
+     ;;command  line option):  accept it.   Otherwise explicitly  select
+     ;;one.
+     (cond ((psyntax.current-library-locator))
+	   ((memq cfg.exec-mode '(compile-dependencies))
+	    load.compile-time-library-locator)
+	   (else
+	    load.run-time-library-locator)))
     (load-rc-files-as-r6rs-scripts cfg)
-    (options.print-loaded-libraries cfg.print-libraries)
-
     (execution-state-initialisation-according-to-command-line-options)
 
     (when (and (readline.readline-enabled?) (not cfg.raw-repl))
