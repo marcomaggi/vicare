@@ -11,11 +11,6 @@ EXTRA_DIST = \
 	vicare/unsafe/operations.sls					\
 	vicare/unsafe/unicode.sls					\
 	\
-	vicare/platform/configuration.sls				\
-	vicare/platform/constants.sls					\
-	vicare/platform/errno.sls					\
-	vicare/platform/features.sls					\
-	vicare/platform/words.sls					\
 	vicare/platform/utilities.sls					\
 	\
 	vicare/language-extensions/cond-expand.sls			\
@@ -315,7 +310,6 @@ EXTRA_DIST = \
 	\
 	nausicaa/uri/ip.sls						\
 	nausicaa/uri.sls						\
-	nausicaa/uri/pathnames.sls					\
 	nausicaa/uri/pathnames/unix.sls					\
 	nausicaa/uri/pathnames/abstract.sls				\
 	\
@@ -807,7 +801,7 @@ ALLFASL	= \
 
 vfasl: $(ALLFASL)
 
-$(nobase_dist_libvicare_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libvicare_DATA): $(NEW_BOOT_FILE) vicare/platform/features.sls
 	test -d $(VICARE_FASL_DIRECTORY) || $(MKDIR_P) $(VICARE_FASL_DIRECTORY)
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-platform.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-unsafe.sps
@@ -824,7 +818,7 @@ if WANT_SRFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi.sps
 endif
 
-$(nobase_dist_libnausicaa_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libnausicaa_DATA): $(nobase_dist_libvicare_DATA)
 if WANT_NAUSICAA
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-language.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-nausicaa-containers.sps
@@ -833,29 +827,31 @@ if WANT_NAUSICAA
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-mehve-language.sps
 endif
 
-$(nobase_dist_libffi_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libffi_DATA): $(nobase_dist_libvicare_DATA)
 if WANT_LIBFFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-ffi.sps
 endif
 
-$(nobase_dist_libposix_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libposix_DATA): $(nobase_dist_libvicare_DATA)
 if WANT_POSIX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-posix.sps
 endif
 
-$(nobase_dist_libsrfiposix_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libsrfiposix_DATA): $(nobase_dist_libposix_DATA) $(nobase_dist_libsrfi_DATA)
 if WANT_POSIX
 if WANT_SRFI
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-srfi-posix.sps
 endif
 endif
 
-$(nobase_dist_libglibc_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libglibc_DATA): $(nobase_dist_libposix_DATA)
 if WANT_GLIBC
+if WANT_POSIX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-glibc.sps
 endif
+endif
 
-$(nobase_dist_libgcc_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libgcc_DATA): $(nobase_dist_libposix_DATA) $(nobase_dist_libglibc_DATA) $(nobase_dist_libffi_DATA)
 if WANT_LIBFFI
 if WANT_POSIX
 if WANT_GLIBC
@@ -864,22 +860,24 @@ endif
 endif
 endif
 
-$(nobase_dist_liblinux_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_liblinux_DATA): $(nobase_dist_libposix_DATA)
 if WANT_LINUX
+if WANT_POSIX
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-linux.sps
 endif
+endif
 
-$(nobase_dist_libiconv_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libiconv_DATA): $(nobase_dist_libvicare_DATA)
 if WANT_LIBICONV
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-iconv.sps
 endif
 
-$(nobase_dist_libreadline_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libreadline_DATA): $(nobase_dist_libvicare_DATA)
 if WANT_READLINE
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-readline.sps
 endif
 
-$(nobase_dist_libcre2_DATA): $(NEW_BOOT_FILE)
+$(nobase_dist_libcre2_DATA): $(nobase_dist_libvicare_DATA)
 if WANT_CRE2
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-cre2.sps
 endif
@@ -937,6 +935,8 @@ features_SOURCES	= features.c
 
 vicare/platform/features.sls : features
 	$(MKDIR_P) vicare/platform && ./features >$@
+
+vicare/platform/features.fasl : vicare/platform/features.sls
 
 ## --------------------------------------------------------------------
 
