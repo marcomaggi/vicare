@@ -232,6 +232,7 @@ Trademarks used herein are the property of their respective owners.
 * baselib::                     Base library.
 * stdlib::                      Standard libraries.
 * iklib::                       Language extensions.
+* libutils::                    Scheme libraries utility functions.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
 * capi::                        C language programming interface.
@@ -281,6 +282,7 @@ External documents
 @include baselib.texi
 @include stdlib.texi
 @include iklib.texi
+@include libutils.texi
 @include ffi.texi
 @include syslib.texi
 @include capi.texi

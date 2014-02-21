@@ -461,10 +461,10 @@
   ;;
   ;;1. A R6RS library reference.
   ;;
-  ;;2. An enumeration set of type LIBRARY-LOCATOR-OPTIONS.
+  ;;2. A list of symbols representing options.
   ;;
-  ;;and it must return a thunk  as single value.  When invoked, returned
-  ;;thunk returns 2 values:
+  ;;and  it must  return a  thunk as  single value.   When invoked,  the
+  ;;returned thunk must return two values:
   ;;
   ;;1. An input port from which the  library can be read; if the port is
   ;;   binary: a  compiled library can be  read from it; if  the port is
@@ -509,9 +509,11 @@
   ;;exist or failed to be opened.
   ;;
   (make-parameter
-      (lambda (origin)
-	(error 'failed-library-location-collector
-	  "failed library locations collector not set"))
+      (case-lambda
+       (()
+	'())
+       ((origin)
+	(void)))
     (lambda* ((obj procedure?))
       obj)))
 
@@ -519,14 +521,13 @@
 
 (define current-source-library-file-locator
   ;;Hold a  function used to convert  a R6RS library reference  into the
-  ;;corresponding source  file pathname;  this parameter  is initialised
-  ;;"ikarus.load.sls" with the function LOCATE-LIBRARY-SOURCE-FILE.
+  ;;corresponding source file pathname.
   ;;
-  ;;The  selected  function  must  accept   2  values:  a  R6RS  library
-  ;;reference;   the  possibly   empty  list   of  R6RS   library  names
-  ;;representing the libraries that requested this library loading.  The
-  ;;second argument  is the cdr  of the  current value in  the parameter
-  ;;%EXTERNAL-PENDING-LIBRARIES.
+  ;;The referenced function must accept, as single value, a R6RS library
+  ;;reference and it must return  two values.  When successful: a string
+  ;;representing  the source  file pathname;  a  thunk to  be called  to
+  ;;continue  the search  from the  next directory  in the  search path.
+  ;;Otherwise return: false and false.
   ;;
   (make-parameter
       (lambda (libref pending-libraries)
@@ -536,9 +537,7 @@
       obj)))
 
 (define current-source-library-loader
-  ;;Hold a  function used  to laod  a library from  a source  file; this
-  ;;parameter  is initialised  in  "ikarus.load.sls"  with the  function
-  ;;DEFAULT-SOURCE-LIBRARY-LOADER.
+  ;;Hold a function used to laod a library from a source file.
   ;;
   ;;The  referenced function  must:  accept a  string  file pathname  as
   ;;single  argument,  open the  pathname  for  input using  the  native
@@ -555,14 +554,13 @@
 
 (define current-binary-library-file-locator
   ;;Hold a  function used to convert  a R6RS library reference  into the
-  ;;corresponding  FASL file  pathname;  this  parameter is  initialised
-  ;;"ikarus.load.sls" with the function LOCATE-LIBRARY-SERIALIZED-FILE.
+  ;;corresponding FASL file pathname.
   ;;
-  ;;The  selected  function  must  accept   2  values:  a  R6RS  library
-  ;;reference;   the  possibly   empty  list   of  R6RS   library  names
-  ;;representing the libraries that requested this library loading.  The
-  ;;second argument  is the cdr  of the  current value in  the parameter
-  ;;%EXTERNAL-PENDING-LIBRARIES.
+  ;;The referenced function must accept, as single value, a R6RS library
+  ;;reference and it must return  two values.  When successful: a string
+  ;;representing  the  FASL file  pathname;  a  thunk  to be  called  to
+  ;;continue  the search  from the  next directory  in the  search path.
+  ;;Otherwise return: false and false.
   ;;
   (make-parameter
       (lambda (libref pending-libraries)
@@ -572,9 +570,7 @@
       obj)))
 
 (define current-binary-library-loader
-  ;;Hold a function  used to load a precompiled  library; this parameter
-  ;;is    initialised   in    "ikarus.load.sls"   with    the   function
-  ;;LOAD-SERIALIZED-LIBRARY.
+  ;;Hold a function used to load a precompiled library.
   ;;
   ;;The  referenced   function  must   accept  2  arguments:   a  string
   ;;representing  the  pathname of  the  file  from which  a  serialized

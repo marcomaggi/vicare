@@ -20,6 +20,8 @@
     load-and-serialize-source-library
     run-time-library-locator
     compile-time-library-locator
+    default-source-library-file-locator
+    default-binary-library-file-locator
     load			load-r6rs-script
     library-path		library-extensions
     fasl-directory		fasl-path
@@ -200,7 +202,7 @@
 
 ;;;; locating serialized libraries stored in FASL files
 
-(module (locate-binary-library-file
+(module (default-binary-library-file-locator
 	 fasl-search-path
 	 fasl-directory
 	 fasl-path)
@@ -313,7 +315,7 @@
     (string-append (library-reference->filename-stem libref)
 		   FASL-EXTENSION))
 
-  (define* (locate-binary-library-file (libref library-reference?))
+  (define* (default-binary-library-file-locator (libref library-reference?))
     ;;Default   value    for   the   CURRENT-BINARY-LIBRARY-FILE-LOCATOR
     ;;parameter.  Given a R6RS library  reference: scan the FASL library
     ;;search path for the corresponding FASL file.
@@ -355,7 +357,7 @@
 
 ;;;; locating source libraries stored in files
 
-(module (locate-source-library-file
+(module (default-source-library-file-locator
 	 library-path
 	 library-extensions)
 
@@ -383,7 +385,7 @@
 	    ((list-of-strings	obj))
 	  obj))))
 
-  (define* (locate-source-library-file (libref library-reference?))
+  (define* (default-source-library-file-locator (libref library-reference?))
     ;;Default   value    for   the   CURRENT-SOURCE-LIBRARY-FILE-LOCATOR
     ;;parameter.   Given  a  R6RS  library reference:  scan  the  source
     ;;library search  path for the  corresponding file.
@@ -426,7 +428,7 @@
 		   ((failed-library-location-collector) pathname)
 		   (continue))))))))
 
-  #| end of module: LOCATE-SOURCE-LIBRARY-FILE |# )
+  #| end of module: DEFAULT-SOURCE-LIBRARY-FILE-LOCATOR |# )
 
 
 ;;;; locating source and binary libraries: run-time locator
@@ -444,10 +446,13 @@
     ;;
     ;;The returned thunk  scans the search path for  binary libraries in
     ;;search of a  matching FASL library file; if a  compiled library is
-    ;;not found: scan the search  path for source libraries libraries in
-    ;;search of a matching source library file.
+    ;;not found: scan the search path  for source libraries in search of
+    ;;a matching source library file.
     ;;
-    ;;OPTIONS must be an enum set returned by LIBRARY-LOCATION-OPTIONS.
+    ;;OPTIONS  must be  a  list  of symbols;  at  present the  supported
+    ;;options are:
+    ;;
+    ;;   move-on-when-open-fails
     ;;
     ;;When successful the returned thunk return 2 values:
     ;;
@@ -462,7 +467,8 @@
     ;;   additional constraint; for example:  if its version number does
     ;;   not conform to LIBREF.
     ;;
-    ;;When no matching library is found: return false and false.
+    ;;When  no matching  library is  found: the  returned thunk  returns
+    ;;false and false.
     ;;
     (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
     (let ((binary-locator (current-binary-library-file-locator))
@@ -585,7 +591,10 @@
     ;;Remember  that the  FASL  file  can be  rejected  if  it has  been
     ;;compiled by another boot image or it has the wrong library UID.
     ;;
-    ;;OPTIONS must be an enum set returned by LIBRARY-LOCATION-OPTIONS.
+    ;;OPTIONS  must be  a  list  of symbols;  at  present the  supported
+    ;;options are:
+    ;;
+    ;;   move-on-when-open-fails
     ;;
     ;;When successful (a source or binary file is accepted) the returned
     ;;thunk returns 2 values:
@@ -601,7 +610,8 @@
     ;;   additional constraint; for example:  if its version number does
     ;;   not conform to LIBREF.
     ;;
-    ;;When no matching library is found: return false and false.
+    ;;When  no matching  library is  found: the  returned thunk  returns
+    ;;false and false.
     ;;
     (%log-library-debug-message "~a: start search for library: ~a" __who__ libref)
     (let ((source-locator (current-source-library-file-locator)))
@@ -955,10 +965,10 @@
 
 ;;;; done
 
-(current-source-library-file-locator	locate-source-library-file)
+(current-source-library-file-locator	default-source-library-file-locator)
 (current-source-library-loader		default-source-library-loader)
 
-(current-binary-library-file-locator	locate-binary-library-file)
+(current-binary-library-file-locator	default-binary-library-file-locator)
 (current-binary-library-loader		default-binary-library-loader)
 
 (current-include-file-locator		locate-include-file)

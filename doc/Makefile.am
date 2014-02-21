@@ -28,6 +28,7 @@ vicare_scheme_TEXINFOS	= \
 	stdlib.texi				\
 	exception-handlers-implementation.texi	\
 	iklib.texi				\
+	libutils.texi				\
 	ffi.texi				\
 	syslib.texi				\
 	capi.texi				\

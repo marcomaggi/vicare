@@ -661,6 +661,7 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
+    ($libraries		(vicare libraries)			#t	#f)
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#f)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
@@ -2859,36 +2860,48 @@
 ;;; --------------------------------------------------------------------
 ;;; library names
 
-    (library-name?				i v $language)
-    (library-version-numbers?			i v $language)
-    (library-version-number?			i v $language)
-    (library-name-decompose			i v $language)
-    (library-name->identifiers			i v $language)
-    (library-name->version			i v $language)
-    (library-name-identifiers=?			i v $language)
-    (library-name=?				i v $language)
-    (library-name<?				i v $language)
-    (library-name<=?				i v $language)
-    (library-version=?				i v $language)
-    (library-version<?				i v $language)
-    (library-version<=?				i v $language)
+    (library-name?					$libraries)
+    (library-version-numbers?				$libraries)
+    (library-version-number?				$libraries)
+    (library-name-decompose				$libraries)
+    (library-name->identifiers				$libraries)
+    (library-name->version				$libraries)
+    (library-name-identifiers=?				$libraries)
+    (library-name=?					$libraries)
+    (library-name<?					$libraries)
+    (library-name<=?					$libraries)
+    (library-version=?					$libraries)
+    (library-version<?					$libraries)
+    (library-version<=?					$libraries)
 
 ;;; --------------------------------------------------------------------
 ;;; library references and conformity
 
-    (library-reference?					i v $language)
-    (library-version-reference?				i v $language)
-    (library-sub-version-reference?			i v $language)
-    (library-sub-version?				i v $language)
-    (library-reference-decompose			i v $language)
-    (library-reference->identifiers			i v $language)
-    (library-reference->version-reference		i v $language)
-    (library-reference-identifiers=?			i v $language)
-    (conforming-sub-version-and-sub-version-reference?	i v $language)
-    (conforming-version-and-version-reference?		i v $language)
-    (conforming-library-name-and-library-reference?	i v $language)
+    (library-reference?					$libraries)
+    (library-version-reference?				$libraries)
+    (library-sub-version-reference?			$libraries)
+    (library-sub-version?				$libraries)
+    (library-reference-decompose			$libraries)
+    (library-reference->identifiers			$libraries)
+    (library-reference->version-reference		$libraries)
+    (library-reference-identifiers=?			$libraries)
+    (conforming-sub-version-and-sub-version-reference?	$libraries)
+    (conforming-version-and-version-reference?		$libraries)
+    (conforming-library-name-and-library-reference?	$libraries)
 
 ;;; --------------------------------------------------------------------
+;;; library infrastructure
+
+    (current-library-locator				$libraries)
+    (run-time-library-locator				$libraries)
+    (compile-time-library-locator			$libraries)
+    (current-source-library-file-locator		$libraries)
+    (current-binary-library-file-locator		$libraries)
+    (default-source-library-file-locator		$libraries)
+    (default-binary-library-file-locator		$libraries)
+
+;;; --------------------------------------------------------------------
+;;; compiler stuff
 
     ($current-letrec-pass			$compiler $vicare-compiler)
     ($check-for-illegal-letrec			$compiler $vicare-compiler)

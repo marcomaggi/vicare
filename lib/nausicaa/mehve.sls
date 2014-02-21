@@ -821,9 +821,6 @@
     compnum?
     condition-errno
     condition-h_errno
-    conforming-library-name-and-library-reference?
-    conforming-sub-version-and-sub-version-reference?
-    conforming-version-and-version-reference?
     console-error-port
     console-input-port
     console-output-port
@@ -996,27 +993,7 @@
     last-pair
     library
     library-extensions
-    library-name<=?
-    library-name<?
-    library-name=?
-    library-name?
-    library-name-decompose
-    library-name->identifiers
-    library-name-identifiers=?
-    library-name->version
     library-path
-    library-reference?
-    library-reference-decompose
-    library-reference->identifiers
-    library-reference-identifiers=?
-    library-reference->version-reference
-    library-sub-version-reference?
-    library-version<=?
-    library-version<?
-    library-version=?
-    library-version-number?
-    library-version-numbers?
-    library-version-reference?
     load
     load-r6rs-script
     lookahead-two-u8

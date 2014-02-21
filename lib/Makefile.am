@@ -762,7 +762,346 @@ nobase_dist_libcre2_DATA	= $(fasldir)/vicare/cre2.fasl
 endif
 
 #page
+#### prerequisites
+
+# vicare/unsafe/capi.fasl
+# vicare/unsafe/operations.fasl
+# vicare/unsafe/unicode.fasl
+
+# vicare/platform/configuration.fasl
+# vicare/platform/constants.fasl
+# vicare/platform/errno.fasl
+# vicare/platform/features.fasl
+# vicare/platform/words.fasl
+# vicare/platform/utilities.fasl
+
+# vicare/language-extensions/cond-expand.fasl
+# vicare/language-extensions/cond-expand/OS-id-features.fasl
+# vicare/language-extensions/cond-expand/feature-cond.fasl
+# vicare/language-extensions/cond-expand/helpers.fasl
+# vicare/language-extensions/cond-expand/platform-features.fasl
+# vicare/language-extensions/cond-expand/configuration-features.fasl
+# vicare/language-extensions/cond-expand/registry.fasl
+
+# vicare/arguments/general-c-buffers.fasl
+# vicare/arguments/validation.fasl
+
+# vicare/language-extensions/amb.fasl
+# vicare/language-extensions/ascii-chars/syntaxes.fasl
+# vicare/language-extensions/ascii-chars.fasl
+# vicare/language-extensions/c-enumerations.fasl
+# vicare/language-extensions/callables.fasl
+# vicare/language-extensions/comparisons.fasl
+# vicare/language-extensions/coroutines.fasl
+# vicare/language-extensions/custom-ports.fasl
+# vicare/language-extensions/define-record-extended.fasl
+# vicare/language-extensions/hooks.fasl
+# vicare/language-extensions/identifier-alists.fasl
+# vicare/language-extensions/identifier-properties.fasl
+# vicare/language-extensions/identifier-substitutions.fasl
+# vicare/language-extensions/increments.fasl
+# vicare/language-extensions/infix/auxiliary-syntaxes.fasl
+# vicare/language-extensions/infix/lr-driver.fasl
+# vicare/language-extensions/infix/parser-table.fasl
+# vicare/language-extensions/infix/parser-utils.fasl
+# vicare/language-extensions/infix/tokens.fasl
+# vicare/language-extensions/infix.fasl
+# vicare/language-extensions/makers.fasl
+# vicare/language-extensions/keywords.fasl
+# vicare/language-extensions/loops.fasl
+# vicare/language-extensions/namespaces.fasl
+# vicare/language-extensions/sentinels.fasl
+# vicare/language-extensions/simple-match.fasl
+# vicare/language-extensions/streams.fasl
+# vicare/language-extensions/syntaxes.fasl
+# vicare/language-extensions/try.fasl
+# vicare/language-extensions/variables.fasl
+
+# vicare/crypto/randomisations.fasl
+# vicare/crypto/randomisations/low.fasl
+# vicare/crypto/randomisations/blum-blum-shub.fasl
+# vicare/crypto/randomisations/borosh.fasl
+# vicare/crypto/randomisations/cmrg.fasl
+# vicare/crypto/randomisations/distributions.fasl
+# vicare/crypto/randomisations/lists.fasl
+# vicare/crypto/randomisations/marsaglia.fasl
+# vicare/crypto/randomisations/mersenne.fasl
+# vicare/crypto/randomisations/strings.fasl
+# vicare/crypto/randomisations/vectors.fasl
+
+# vicare/numerics/constants.fasl
+# vicare/numerics/flonum-formatter.fasl
+# vicare/numerics/flonum-parser.fasl
+
+# vicare/containers/auxiliary-syntaxes.fasl
+# vicare/containers/bytevectors.fasl
+# vicare/containers/bytevector-compounds.fasl
+# vicare/containers/bytevector-compounds/core.fasl
+# vicare/containers/bytevector-compounds/unsafe.fasl
+# vicare/containers/weak-hashtables.fasl
+# vicare/containers/object-properties.fasl
+# vicare/containers/lists/stx.fasl
+# vicare/containers/lists/low.fasl
+# vicare/containers/lists.fasl
+# vicare/containers/vectors/low.fasl
+# vicare/containers/vectors.fasl
+# vicare/containers/strings/low.fasl
+# vicare/containers/strings.fasl
+# vicare/containers/strings/rabin-karp.fasl
+# vicare/containers/knuth-morris-pratt.fasl
+# vicare/containers/char-sets.fasl
+# vicare/containers/char-sets/blocks.fasl
+# vicare/containers/char-sets/categories.fasl
+# vicare/containers/levenshtein.fasl
+# vicare/containers/one-dimension-co.fasl
+# vicare/containers/one-dimension-cc.fasl
+# vicare/containers/bytevectors/generic-low.fasl
+# vicare/containers/bytevectors/generic.fasl
+# vicare/containers/bytevectors/s8.fasl
+# vicare/containers/bytevectors/s8low.fasl
+# vicare/containers/bytevectors/u8.fasl
+# vicare/containers/bytevectors/u8low.fasl
+# vicare/containers/arrays.fasl
+# vicare/containers/stacks.fasl
+# vicare/containers/queues.fasl
+
+# vicare/assembler/inspection.fasl
+# vicare/checks.fasl
+# vicare/debugging/compiler.fasl
+# vicare/parser-logic.fasl
+
+# vicare/net/channels.fasl
+
+# vicare/irregex.fasl
+# vicare/irregex/compat.fasl
+# vicare/pregexp.fasl
+# vicare/getopts.fasl
+# vicare/formations.fasl
+
+# vicare/parser-tools/silex/action-l.fasl
+# vicare/parser-tools/silex/char-lexer-driver.fasl
+# vicare/parser-tools/silex/class-l.fasl
+# vicare/parser-tools/silex/code-lexer-driver.fasl
+# vicare/parser-tools/silex/input-system.fasl
+# vicare/parser-tools/silex/lexer.fasl
+# vicare/parser-tools/silex/macro-l.fasl
+# vicare/parser-tools/silex/nested-comment-l.fasl
+# vicare/parser-tools/silex/regexp-l.fasl
+# vicare/parser-tools/silex/semantic.fasl
+# vicare/parser-tools/silex.fasl
+# vicare/parser-tools/silex/string-l.fasl
+# vicare/parser-tools/silex/tree-lexer-driver.fasl
+# vicare/parser-tools/silex/utilities.fasl
+
+# vicare/parser-tools/unix-pathnames.fasl
+
+# srfi/%3a0.fasl
+# srfi/%3a0/cond-expand.fasl
+
+# srfi/%3a1.fasl
+# srfi/%3a1/lists.fasl
+
+# srfi/%3a2.fasl
+# srfi/%3a2/and-let%2a.fasl
+
+# srfi/%3a6.fasl
+# srfi/%3a6/basic-string-ports.fasl
+
+# srfi/%3a8.fasl
+# srfi/%3a8/receive.fasl
+
+# srfi/%3a9.fasl
+# srfi/%3a9/records.fasl
+
+# srfi/%3a11.fasl
+# srfi/%3a11/let-values.fasl
+
+# srfi/%3a13.fasl
+# srfi/%3a13/strings.fasl
+
+# srfi/%3a14.fasl
+# srfi/%3a14/char-sets.fasl
+
+# srfi/%3a16.fasl
+# srfi/%3a16/case-lambda.fasl
+
+# srfi/%3a19.fasl
+# srfi/%3a19/time.fasl
+
+# srfi/%3a23.fasl
+# srfi/%3a23/error.fasl
+
+# srfi/%3a25.fasl
+# srfi/%3a25/multi-dimensional-arrays.fasl
+
+# srfi/%3a26.fasl
+# srfi/%3a26/cut.fasl
+
+# srfi/%3a27.fasl
+# srfi/%3a27/random-bits.fasl
+
+# srfi/%3a28.fasl
+# srfi/%3a28/basic-format-strings.fasl
+
+# srfi/%3a31.fasl
+# srfi/%3a31/rec.fasl
+
+# srfi/%3a37.fasl
+# srfi/%3a37/args-fold.fasl
+
+# srfi/%3a38.fasl
+# srfi/%3a38/with-shared-structure.fasl
+
+# srfi/%3a39.fasl
+# srfi/%3a39/parameters.fasl
+
+# srfi/%3a41.fasl
+# srfi/%3a41/streams.fasl
+# srfi/%3a41/streams/derived.fasl
+# srfi/%3a41/streams/primitive.fasl
+
+# srfi/%3a42.fasl
+# srfi/%3a42/eager-comprehensions.fasl
+
+# srfi/%3a43.fasl
+# srfi/%3a43/vectors.fasl
+
+# srfi/%3a45.fasl
+# srfi/%3a45/lazy.fasl
+
+# srfi/%3a48.fasl
+# srfi/%3a48/intermediate-format-strings.fasl
+
+# srfi/%3a61/cond.fasl
+# srfi/%3a61.fasl
+
+# srfi/%3a64.fasl
+# srfi/%3a64/testing.fasl
+
+# srfi/%3a67/compare-procedures.fasl
+# srfi/%3a67.fasl
+
+# srfi/%3a69/basic-hash-tables.fasl
+# srfi/%3a69.fasl
+
+# srfi/%3a78.fasl
+# srfi/%3a78/lightweight-testing.fasl
+
+# srfi/%3a98.fasl
+# srfi/%3a98/os-environment-variables.fasl
+
+# srfi/%3a99.fasl
+# srfi/%3a99/records.fasl
+# srfi/%3a99/records/helper.fasl
+# srfi/%3a99/records/inspection.fasl
+# srfi/%3a99/records/procedural.fasl
+# srfi/%3a99/records/syntactic.fasl
+
+# srfi/%3a101.fasl
+# srfi/%3a101/random-access-lists.fasl
+# srfi/%3a101/random-access-lists/procedures.fasl
+# srfi/%3a101/random-access-lists/syntax.fasl
+# srfi/%3a101/random-access-lists/equal.fasl
+
+# srfi/%3a111.fasl
+# srfi/%3a111/boxes.fasl
+
+# srfi/%3a112.fasl
+# srfi/%3a112/environment-inquiry.fasl
+
+# srfi/%3a106.fasl
+# srfi/%3a106/socket.fasl
+# srfi/%3a106/compat.fasl
+
+# nausicaa/language/auxiliary-syntaxes.fasl
+# nausicaa/language/symbols-tree.fasl
+
+# nausicaa/language/oopp.fasl
+# nausicaa/language/oopp/auxiliary-syntaxes.fasl
+# nausicaa/language/oopp/configuration.fasl
+# nausicaa/language/oopp/conditions.fasl
+# nausicaa/language/oopp/definition-parser-helpers.fasl
+# nausicaa/language/oopp/oopp-syntax-helpers.fasl
+
+# nausicaa/language/multimethods.fasl
+# nausicaa/language/multimethods/auxiliary-syntaxes.fasl
+# nausicaa/language/multimethods/methods-table.fasl
+# nausicaa/language/multimethods/types.fasl
+
+# nausicaa/language/builtins.fasl
+# nausicaa/language/conditions.fasl
+# nausicaa/language/increments.fasl
+# nausicaa/language/simple-match.fasl
+# nausicaa/language/infix.fasl
+
+# nausicaa.fasl
+
+# nausicaa/containers/lists.fasl
+# nausicaa/containers/vectors.fasl
+# nausicaa/containers/strings.fasl
+# nausicaa/containers/arrays.fasl
+# nausicaa/containers/stacks.fasl
+# nausicaa/containers/queues.fasl
+# nausicaa/containers/bitvectors.fasl
+# nausicaa/containers/iterators.fasl
+
+# nausicaa/parser-tools/source-locations.fasl
+# nausicaa/parser-tools/lexical-tokens.fasl
+# nausicaa/parser-tools/silex/default-error-handler.fasl
+# nausicaa/parser-tools/lalr/lr-driver.fasl
+# nausicaa/parser-tools/lalr/glr-driver.fasl
+# nausicaa/parser-tools/lalr.fasl
+
+# nausicaa/uri/ip.fasl
+# nausicaa/uri.fasl
+# nausicaa/uri/pathnames.fasl
+# nausicaa/uri/pathnames/unix.fasl
+# nausicaa/uri/pathnames/abstract.fasl
+
+# nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.fasl
+# nausicaa/parser-tools/ip-addresses/ipv4-address-parser.fasl
+# nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.fasl
+# nausicaa/parser-tools/ip-addresses/ipv6-address-parser.fasl
+# nausicaa/parser-tools/ipv4-addresses.fasl
+# nausicaa/parser-tools/ipv6-addresses.fasl
+# nausicaa/parser-tools/uri.fasl
+# nausicaa/parser-tools/uri/utilities.fasl
+
+# nausicaa/mehve.fasl
+# nausicaa/mehve/language/numerics/predicates.fasl
+# nausicaa/mehve/language/numerics/arithmetics.fasl
+# nausicaa/mehve/language/numerics/parts.fasl
+# nausicaa/mehve/language/numerics/transcendental.fasl
+# nausicaa/mehve/language/infix.fasl
+# nausicaa/mehve/language/input-output.fasl
+
+# vicare/ffi.fasl
+# vicare/ffi/foreign-pointer-wrapper.fasl
+
+# vicare/posix.fasl
+# vicare/posix/pid-files.fasl
+# vicare/posix/lock-pid-files.fasl
+# vicare/posix/log-files.fasl
+# vicare/posix/daemonisations.fasl
+# vicare/posix/simple-event-loop.fasl
+# vicare/posix/tcp-server-sockets.fasl
+
+# vicare/glibc.fasl
+
+# vicare/iconv.fasl
+
+# vicare/gcc.fasl
+
+# vicare/linux.fasl
+
+# vicare/readline.fasl
+
+# vicare/cre2.fasl
+
+#page
 #### built sources
+
+BUILT_SOURCES		= vicare/platform/features.sls
 
 noinst_PROGRAMS		= features
 features_SOURCES	= features.c
@@ -832,7 +1171,7 @@ endif
 
 vfasl: $(ALLFASL)
 
-$(nobase_dist_libvicare_DATA): $(NEW_BOOT_FILE) vicare/platform/features.sls
+$(nobase_dist_libvicare_DATA): $(NEW_BOOT_FILE)
 	test -d $(VICARE_FASL_DIRECTORY) || $(MKDIR_P) $(VICARE_FASL_DIRECTORY)
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-platform.sps
 	$(VICARE_RUN) --compile-dependencies $(srcdir)/compile-vicare-unsafe.sps
