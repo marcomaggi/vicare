@@ -10,6 +10,7 @@ in the boot image.
 * libutils names::              Library name utilities.
 * libutils refs::               Library reference utilities.
 * libutils locating::           Locating libraries.
+* libutils inspection::         Inspecting libraries.
 @end menu
 
 @c page
@@ -781,6 +782,7 @@ functions:
 @example
 run-time-library-locator
 compile-time-library-locator
+source-library-locator
 @end example
 
 @noindent
@@ -922,6 +924,43 @@ When no matching library is found: the returned thunk returns @false{}
 and @false{}.
 @end defun
 
+
+@defun source-library-locator @var{libref} @var{options}
+Possible value for the parameter @func{current-library-locator}; this
+function is meant to be used to search for source libraries.
+
+Given a @rnrs{6} library reference and a list of search options: return
+a thunk to be used to start the search for a matching library.
+
+The returned thunk scans the search path for source libraries in search
+of a matching source library file.
+
+@var{options} must be a list of symbols; at present the supported
+options are:
+
+@example
+move-on-when-open-fails
+@end example
+
+When successful the returned thunk returns two values:
+
+@enumerate
+@item
+A textual input port from which the library can be read.  It is
+responsibility of the caller to close the returned port when no more
+needed.
+
+@item
+A thunk to be called to continue the search.  This thunk allows the
+caller to reject a library if it does not meet some additional
+constraint; for example: if its version number does not conform to
+@var{libref}.
+@end enumerate
+
+When no matching library is found: the returned thunk returns @false{}
+and @false{}.
+@end defun
+
 @c page
 @node libutils locating files
 @subsection Finding library files
@@ -978,6 +1017,22 @@ Return two values.  When successful: a string representing the @fasl{}
 file pathname; a thunk to be called to continue the search from the next
 directory in the search path.  Otherwise it must return @false{} and
 @false{}.
+@end defun
+
+@c page
+@node libutils inspection
+@section Inspecting libraries
+
+
+The following bindings are exported by the library @library{vicare
+libraries}.
+
+
+@defun installed-libraries
+@defunx installed-libraries @var{all?}
+Return a list of LIBRARY structs being already installed.  If ALL?  is
+true: return all the installed libraries, else return only the visible
+ones.
 @end defun
 
 @c end of file

@@ -20,6 +20,7 @@
     load-and-serialize-source-library
     run-time-library-locator
     compile-time-library-locator
+    source-library-locator
     default-source-library-file-locator
     default-binary-library-file-locator
     load			load-r6rs-script
@@ -56,6 +57,8 @@
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
 	  library-name
+	  library-build-dependency-rule
+	  current-library-collection
 	  current-source-library-file-locator
 	  current-source-library-loader
 	  current-binary-library-file-locator
@@ -737,9 +740,93 @@
   #| end of module: COMPILE-TIME-LIBRARY-LOCATOR |# )
 
 
+;;;; locating source and binary libraries: source-onlye locator
+
+(module (source-library-locator)
+
+  (define* (source-library-locator (libref library-reference?) options)
+    ;;Possible  value for  the  parameter CURRENT-LIBRARY-LOCATOR;  this
+    ;;function is meant to be used to search for source libraries only.
+    ;;
+    ;;Given  a R6RS  library reference  and  a list  of search  options:
+    ;;return  a thunk  to be  used to  start the  search for  a matching
+    ;;library.
+    ;;
+    ;;The returned thunk  scans the search path for  source libraries in
+    ;;search of a matching source library file.
+    ;;
+    ;;OPTIONS  must be  a  list  of symbols;  at  present the  supported
+    ;;options are:
+    ;;
+    ;;   move-on-when-open-fails
+    ;;
+    ;;When successful the returned thunk return 2 values:
+    ;;
+    ;;1. A textual input port from which the library can be read.  It is
+    ;;   responsibility of the caller to close the returned port when no
+    ;;   more needed.
+    ;;
+    ;;2. A thunk to be called to continue the search.  This thunk allows
+    ;;    the caller  to  reject a  library  if it  does  not meet  some
+    ;;   additional constraint; for example:  if its version number does
+    ;;   not conform to LIBREF.
+    ;;
+    ;;When  no matching  library is  found: the  returned thunk  returns
+    ;;false and false.
+    ;;
+    (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
+    (let ((source-locator (current-source-library-file-locator)))
+      (define (%source-search-start)
+	(%source-search-step options
+			     (lambda ()
+			       (source-locator libref))
+			     (lambda ()
+			       (values #f #f))))
+      %source-search-start))
+
+;;; --------------------------------------------------------------------
+
+  (define (%source-search-step options next-source-file-match search-fail-kont)
+    (receive (source-pathname further-source-file-match)
+	(next-source-file-match)
+      (if source-pathname
+	  (%handle-source-file-match options source-pathname
+				     (lambda ()
+				       (%source-search-step options further-source-file-match search-fail-kont)))
+	(search-fail-kont))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%handle-source-file-match options source-pathname next-source-search-step)
+    (define (%continue)
+      ;;If we are here it means the previous pathname was rejected.
+      ((failed-library-location-collector) source-pathname)
+      (next-source-search-step))
+    (values (with-exception-handler
+		(lambda (E)
+		  (if (i/o-error? E)
+		      (if (library-locator-options-no-raise-when-open-fails? options)
+			  (%continue)
+			(raise E))
+		    (raise E)))
+	      (lambda ()
+		(%open-source source-pathname)))
+	    %continue))
+
+;;; --------------------------------------------------------------------
+
+  (define-syntax-rule (%open-source ?pathname)
+    (open-file-input-port ?pathname
+      (file-options)
+      (buffer-mode block)
+      (native-transcoder)))
+
+  #| end of module: SOURCE-LIBRARY-LOCATOR |# )
+
+
 ;;;; loading source programs
 
-(define* (load-r6rs-script (file-pathname posix.file-string-pathname?) serialize? run?)
+(define* (load-r6rs-script (file-pathname posix.file-string-pathname?) serialize? run? print-dependencies?)
   ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
   ;;representing a file  pathname, expecting an R6RS program  or an R6RS
   ;;library and compile it.
@@ -759,6 +846,16 @@
 								 source-pathname libname contents))
 				     (lambda (core-expr)
 				       (compile-core-expr core-expr))))
+    (when print-dependencies?
+      (fold-left (lambda (knil lib)
+		   (let ((rule (library-build-dependency-rule lib)))
+		     (when rule
+		       (fprintf stderr "~a\n" rule))
+		     (if rule
+			 (cons rule knil)
+		       knil)))
+	'()
+	((current-library-collection))))
     (when run?
       (thunk))))
 

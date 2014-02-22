@@ -896,8 +896,6 @@
     (pointer-value				i v $language)
 ;;;
     (apropos					i v $language)
-    (installed-libraries			i v $language)
-    (uninstall-library				i v $language)
     (library-path				i v $language)
     (library-extensions				i v $language)
     (current-primitive-locations		$boot)
@@ -2313,7 +2311,6 @@
     (string-titlecase				i v r uc)
     (string-upcase				i v r uc)
     (load					i v $language)
-    (load-r6rs-script				i v $language)
     (void					i v $language $boot)
     (gensym					i v $language $boot)
     (symbol-value				i v $language $boot)
@@ -2895,10 +2892,13 @@
     (current-library-locator				$libraries)
     (run-time-library-locator				$libraries)
     (compile-time-library-locator			$libraries)
+    (source-library-locator				$libraries)
     (current-source-library-file-locator		$libraries)
     (current-binary-library-file-locator		$libraries)
     (default-source-library-file-locator		$libraries)
     (default-binary-library-file-locator		$libraries)
+    (installed-libraries				$libraries)
+    (uninstall-library					$libraries)
 
 ;;; --------------------------------------------------------------------
 ;;; compiler stuff

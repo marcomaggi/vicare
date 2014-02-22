@@ -29,6 +29,7 @@
     library-descriptor		library-export-subst
     library-name-identifiers
     imported-label->syntactic-binding
+    library-build-dependency-rule
 
     ;; library installation
     install-library		uninstall-library
@@ -791,7 +792,17 @@
 (define* (serialize-library (lib library?) (serialize procedure?) (compile procedure?))
   ;;Compile and serialize the given library record.
   ;;
+  ;;NOTE We  do *not* write the  source file pathname to  the FASL file.
+  ;;When, later, the FASL file will  be loaded and the library installed
+  ;;in the collection: the absence of  the source pathname will mark the
+  ;;LIBRARY record as coming from a FASL file rather than a source file;
+  ;;only  records coming  from a  source files  are serialized  when the
+  ;;--compile-dependencies option  is used.   (Marco Maggi; Sat  Feb 22,
+  ;;2014)
+  ;;
   (define source-pathname ($library-source-file-name lib))
+  ;;We serialize  only libraries having  a source file in  their LIBRARY
+  ;;record.
   (when source-pathname
     (%log-library-debug-message "~a: serializing: ~a" __who__ ($library-name lib))
     (serialize source-pathname ($library-name lib)
@@ -1124,6 +1135,20 @@
 					 "first visit did not return" lib)))
       (visit)
       ($set-library-visit-state! lib #t))))
+
+
+;;;; other library utilities
+
+(define* (library-build-dependency-rule (lib library?))
+  (and ($library-source-file-name lib)
+       (cons ($library-name lib)
+	     (fold-left (lambda (knil dep-lib)
+			  (if ($library-source-file-name dep-lib)
+			      (cons (library-descriptor-name (library-descriptor dep-lib))
+				    knil)
+			    knil))
+	       '()
+	       ($library-imp-lib* lib)))))
 
 
 ;;;; including files

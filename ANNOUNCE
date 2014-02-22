@@ -79,7 +79,8 @@ Lots of backwards incompatibilities... life is hard!
 
        $(prefix)/lib64/vicare-scheme
 
-  See the documentation node "using libraries".
+  See the documentation  node "using libraries".  Most  likely this code
+  needs to be ironed out.
 
 * BACKWARDS INCOMPATIBILITY  The functions that deal  with library names
   and library references have been move to the library (vicare library),

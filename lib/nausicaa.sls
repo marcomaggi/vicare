@@ -976,7 +976,6 @@
     input-file-buffer-size
     input/output-file-buffer-size
     input/output-socket-buffer-size
-    installed-libraries
     integer->machine-word
     integer->pointer
     interaction-environment
@@ -996,7 +995,6 @@
     library-extensions
     library-path
     load
-    load-r6rs-script
     lookahead-two-u8
     machine-word->integer
     make-binary-file-descriptor-input/output-port
@@ -1356,7 +1354,6 @@
     u64l-list->bytevector
     u64n-list->bytevector
     unicode-printable-char?
-    uninstall-library
     until
     unwind-protect
     utf-16be-codec
