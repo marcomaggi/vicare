@@ -82,11 +82,12 @@ Lots of backwards incompatibilities... life is hard!
   See the documentation  node "using libraries".  Most  likely this code
   needs to be ironed out.
 
-* BACKWARDS INCOMPATIBILITY  The functions that deal  with library names
-  and library references have been move to the library (vicare library),
-  which is  implemented by  the boot  image; such  bindings are  no more
-  reexported  by   (nausicaa)  and   (nausicaa  mehve).    The  relevant
-  documentation has been moved to the node "libutils".
+* BACKWARDS INCOMPATIBILITY  The bindings that deal  with library names,
+  library references, search paths and  related stuff have been moved to
+  the  library (vicare  libraries),  which is  implemented  by the  boot
+  image; such  bindings are no  more reexported by  (vicare), (nausicaa)
+  and (nausicaa  mehve).  The relevant  documentation has been  moved to
+  the node "libutils".
 
 * BACKWARDS INCOMPATIBILITIES Removed undocumented libraries exported by
   the boot image:

@@ -868,14 +868,15 @@ $ echo $VICARE_FASL_PATH
 $ @value{RAWEXECUTABLE}
 ...
 
-> (fasl-search-path)
+> (import (prefix (vicare libraries) libs.))
+> (libs.fasl-search-path)
 ("/home/marco/scheme"
  "/tmp/library"
  "/usr/local/lib/scheme/r6rs"
  "/usr/local/lib/vicare-scheme")
-> (fasl-search-path
-     (cons "/opt/sw/extra-libraries" (fasl-search-path)))
-> (fasl-search-path)
+> (libs.fasl-search-path
+     (cons "/opt/sw/extra-libraries" (libs.fasl-search-path)))
+> (libs.fasl-search-path)
 ("/opt/sw/extra-libraries"
  "/home/marco/scheme"
  "/tmp/library"

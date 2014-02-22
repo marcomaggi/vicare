@@ -888,10 +888,7 @@
     f8b-list->bytevector
     f8l-list->bytevector
     f8n-list->bytevector
-    fasl-directory
-    fasl-path
     fasl-read
-    fasl-search-path
     fasl-write
     filename->string-func
     fixnum->string
@@ -992,8 +989,6 @@
     lambda-returnable
     last-pair
     library
-    library-extensions
-    library-path
     load
     lookahead-two-u8
     machine-word->integer

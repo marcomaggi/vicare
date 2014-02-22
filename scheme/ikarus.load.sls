@@ -369,12 +369,9 @@
     ;;search path.
     ;;
     (make-parameter
-	'(".")
-      (lambda (obj)
-	(define-constant __who__ 'library-path)
-	(with-arguments-validation (__who__)
-	    ((list-of-strings	obj))
-	  obj))))
+	'()
+      (lambda* ((P search-path?))
+	P)))
 
   (define library-extensions
     ;;Hold a list of strings  representing file name extensions, leading

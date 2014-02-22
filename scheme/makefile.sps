@@ -896,8 +896,6 @@
     (pointer-value				i v $language)
 ;;;
     (apropos					i v $language)
-    (library-path				i v $language)
-    (library-extensions				i v $language)
     (current-primitive-locations		$boot)
     (boot-library-expand			$boot)
     (current-library-collection			$boot)
@@ -1280,9 +1278,6 @@
     (error@fxsub1)
     (fasl-write					i v $language)
     (fasl-read					i v $language)
-    (fasl-directory				i v $language)
-    (fasl-path					i v $language)
-    (fasl-search-path				i v $language)
     (lambda						i v r ba se ne)
     (lambda*					i v $language)
     (case-lambda*				i v $language)
@@ -2888,6 +2883,12 @@
 
 ;;; --------------------------------------------------------------------
 ;;; library infrastructure
+
+    (library-path					$libraries)
+    (library-extensions					$libraries)
+    (fasl-directory					$libraries)
+    (fasl-search-path					$libraries)
+    (fasl-path						$libraries)
 
     (current-library-locator				$libraries)
     (run-time-library-locator				$libraries)
