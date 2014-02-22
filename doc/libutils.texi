@@ -927,13 +927,16 @@ and @false{}.
 
 @defun source-library-locator @var{libref} @var{options}
 Possible value for the parameter @func{current-library-locator}; this
-function is meant to be used to search for source libraries.
+function is meant to be used to search for source libraries first and
+for binary libraries next.
 
 Given a @rnrs{6} library reference and a list of search options: return
 a thunk to be used to start the search for a matching library.
 
 The returned thunk scans the search path for source libraries in search
-of a matching source library file.
+of a matching source library file; if a source library is not found: it
+scans the search path for binary libraries in search of a matching
+@fasl{} library file.
 
 @var{options} must be a list of symbols; at present the supported
 options are:
@@ -946,9 +949,10 @@ When successful the returned thunk returns two values:
 
 @enumerate
 @item
-A textual input port from which the library can be read.  It is
-responsibility of the caller to close the returned port when no more
-needed.
+An input port from which the library can be read; if the port is binary:
+a compiled library can be read from it; if the port is textual a source
+library can be read from it.  It is responsibility of the caller to
+close the returned port when no more needed.
 
 @item
 A thunk to be called to continue the search.  This thunk allows the

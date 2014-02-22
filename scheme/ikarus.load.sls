@@ -434,136 +434,213 @@
   #| end of module: DEFAULT-SOURCE-LIBRARY-FILE-LOCATOR |# )
 
 
-;;;; locating source and binary libraries: run-time locator
+;;;; locating source and binary libraries: utilities
 
-(module (run-time-library-locator)
+(module LIBRARY-LOCATOR-UTILS
+  (%source-search-start
+   %binary-search-start
+   %open-source-library
+   %open-binary-library)
 
-  (define* (run-time-library-locator (libref library-reference?) options)
-    ;;Possible  value for  the  parameter CURRENT-LIBRARY-LOCATOR;  this
-    ;;function is meant to be used  to search for libraries when running
-    ;;an application.
+  (module (%source-search-start)
+    ;;This function can  be used to visit the directories  in the source
+    ;;libraries  search path  and find  a  source file  matching a  R6RS
+    ;;library reference.
     ;;
-    ;;Given  a R6RS  library reference  and  a list  of search  options:
-    ;;return  a thunk  to be  used to  start the  search for  a matching
-    ;;library.
-    ;;
-    ;;The returned thunk  scans the search path for  binary libraries in
-    ;;search of a  matching FASL library file; if a  compiled library is
-    ;;not found: scan the search path  for source libraries in search of
-    ;;a matching source library file.
-    ;;
-    ;;OPTIONS  must be  a  list  of symbols;  at  present the  supported
-    ;;options are:
+    ;;LIBREF  must be  a R6RS  library reference.   FAIL-KONT must  be a
+    ;;thunk to be called when the  search fails.  OPTIONS must be a list
+    ;;of symbols; at present the supported options are:
     ;;
     ;;   move-on-when-open-fails
     ;;
-    ;;When successful the returned thunk return 2 values:
+    ;;The return value is a thunk to call to start the search.  When the
+    ;;returned thunk  finds a matching  library source file,  it returns
+    ;;two values:
     ;;
-    ;;1. An input port  from which the library can be  read; if the port
-    ;;   is binary: a compiled library can  be read from it; if the port
-    ;;    is textual  a  source library  can  be read  from  it.  It  is
-    ;;   responsibility of the caller to close the returned port when no
-    ;;   more needed.
+    ;;1. A textual input port from which the source library can be read;
+    ;;   it is  responsibility of the caller to close  the returned port
+    ;;   when no more needed.
     ;;
     ;;2. A thunk to be called to continue the search.  This thunk allows
     ;;    the caller  to  reject a  library  if it  does  not meet  some
     ;;   additional constraint; for example:  if its version number does
     ;;   not conform to LIBREF.
     ;;
-    ;;When  no matching  library is  found: the  returned thunk  returns
-    ;;false and false.
+    ;;When  no  matching library  is  found:  the returned  thunk  calls
+    ;;FAIL-KONT  and  returns  its   return  values;  the  default  fail
+    ;;continuation returns false and false.
     ;;
-    (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
-    (let ((binary-locator (current-binary-library-file-locator))
-	  (source-locator (current-source-library-file-locator)))
-      (define (%source-search-start)
-	(%source-search-step options
-			     (lambda ()
-			       (source-locator libref))
-			     (lambda ()
-			       (values #f #f))))
-      (define (%binary-search-start)
-	(%binary-search-step options
-			     (lambda ()
-			       (binary-locator libref))
-			     %source-search-start))
-      %binary-search-start))
+    (case-define* %source-search-start
+      (((libref library-reference?) options)
+       (%source-search-start libref options (lambda ()
+					      (values #f #f))))
+      (((libref library-reference?) options (fail-kont procedure?))
+       (let ((source-locator (current-source-library-file-locator)))
+	 (lambda ()
+	   (%source-search-step options
+				(lambda ()
+				  (source-locator libref))
+				fail-kont)))))
+
+    (define (%source-search-step options next-source-file-match search-fail-kont)
+      (receive (source-pathname further-source-file-match)
+	  (next-source-file-match)
+	(if source-pathname
+	    (%handle-source-file-match options source-pathname
+				       (lambda ()
+					 (%source-search-step options further-source-file-match search-fail-kont)))
+	  (search-fail-kont))))
+
+    (define (%handle-source-file-match options source-pathname next-source-search-step)
+      (define (%continue)
+	;;If we are here it means the previous pathname was rejected.
+	((failed-library-location-collector) source-pathname)
+	(next-source-search-step))
+      (values (with-exception-handler
+		  (lambda (E)
+		    (if (i/o-error? E)
+			(if (library-locator-options-no-raise-when-open-fails? options)
+			    (%continue)
+			  (raise E))
+		      (raise E)))
+		(lambda ()
+		  (%open-source-library source-pathname)))
+	      %continue))
+
+    #| end of module: %SOURCE-SEARCH-START |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%binary-search-step options next-binary-file-match search-fail-kont)
-    (receive (binary-pathname further-binary-file-match)
-	(next-binary-file-match)
-      (if binary-pathname
-	  (%handle-binary-file-match options binary-pathname
-				     (lambda ()
-				       (%binary-search-step options further-binary-file-match search-fail-kont)))
-	(search-fail-kont))))
+  (module (%binary-search-start)
+    ;;This function can  be used to visit the directories  in the binary
+    ;;libraries search path and find a FASL file matching a R6RS library
+    ;;reference.
+    ;;
+    ;;LIBREF  must be  a R6RS  library reference.   FAIL-KONT must  be a
+    ;;thunk to be called when the  search fails.  OPTIONS must be a list
+    ;;of symbols; at present the supported options are:
+    ;;
+    ;;   move-on-when-open-fails
+    ;;
+    ;;The return value is a thunk to call to start the search.  When the
+    ;;returned thunk finds a matching  library FASL file, it returns two
+    ;;values:
+    ;;
+    ;;1. A binary input port from  which the binary library can be read;
+    ;;   it is  responsibility of the caller to close  the returned port
+    ;;   when no more needed.
+    ;;
+    ;;2. A thunk to be called to continue the search.  This thunk allows
+    ;;    the caller  to  reject a  library  if it  does  not meet  some
+    ;;   additional constraint; for example:  if its version number does
+    ;;   not conform to LIBREF.
+    ;;
+    ;;When  no  matching library  is  found:  the returned  thunk  calls
+    ;;FAIL-KONT  and  returns  its   return  values;  the  default  fail
+    ;;continuation returns false and false.
+    ;;
+    (case-define* %binary-search-start
+      (((libref library-reference?) options)
+       (%binary-search-start libref options (lambda ()
+					      (values #f #f))))
+      (((libref library-reference?) options (fail-kont procedure?))
+       (let ((binary-locator (current-binary-library-file-locator)))
+	 (lambda ()
+	   (%binary-search-step options
+				(lambda ()
+				  (binary-locator libref))
+				fail-kont)))))
 
-  (define (%source-search-step options next-source-file-match search-fail-kont)
-    (receive (source-pathname further-source-file-match)
-	(next-source-file-match)
-      (if source-pathname
-	  (%handle-source-file-match options source-pathname
-				     (lambda ()
-				       (%source-search-step options further-source-file-match search-fail-kont)))
-	(search-fail-kont))))
+    (define (%binary-search-step options next-binary-file-match search-fail-kont)
+      (receive (binary-pathname further-binary-file-match)
+	  (next-binary-file-match)
+	(if binary-pathname
+	    (%handle-binary-file-match options binary-pathname
+				       (lambda ()
+					 (%binary-search-step options further-binary-file-match search-fail-kont)))
+	  (search-fail-kont))))
+
+    (define (%handle-binary-file-match options binary-pathname next-binary-search-step)
+      (define (%continue)
+	;;If we are here it means the previous pathname was rejected.
+	((failed-library-location-collector) binary-pathname)
+	(next-binary-search-step))
+      (values (with-exception-handler
+		  (lambda (E)
+		    (if (i/o-error? E)
+			(if (library-locator-options-no-raise-when-open-fails? options)
+			    (%continue)
+			  (raise E))
+		      (raise E)))
+		(lambda ()
+		  (%open-binary-library binary-pathname)))
+	      %continue))
+
+    #| end of module: %BINARY-SEARCH-START |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%handle-binary-file-match options binary-pathname next-binary-search-step)
-    (define (%continue)
-      ;;If we are here it means the previous pathname was rejected.
-      ((failed-library-location-collector) binary-pathname)
-      (next-binary-search-step))
-    (values (with-exception-handler
-		(lambda (E)
-		  (if (i/o-error? E)
-		      (if (library-locator-options-no-raise-when-open-fails? options)
-			  (%continue)
-			(raise E))
-		    (raise E)))
-	      (lambda ()
-		(%open-binary binary-pathname)))
-	    %continue))
-
-  (define (%handle-source-file-match options source-pathname next-source-search-step)
-    (define (%continue)
-      ;;If we are here it means the previous pathname was rejected.
-      ((failed-library-location-collector) source-pathname)
-      (next-source-search-step))
-    (values (with-exception-handler
-		(lambda (E)
-		  (if (i/o-error? E)
-		      (if (library-locator-options-no-raise-when-open-fails? options)
-			  (%continue)
-			(raise E))
-		    (raise E)))
-	      (lambda ()
-		(%open-source source-pathname)))
-	    %continue))
-
-;;; --------------------------------------------------------------------
-
-  (define-syntax-rule (%open-binary ?pathname)
+  (define-syntax-rule (%open-binary-library ?pathname)
     (receive-and-return (port)
 	(open-file-input-port ?pathname
 	  (file-options)
 	  (buffer-mode block))
       (fasl-read-header port)))
 
-  (define-syntax-rule (%open-source ?pathname)
+  (define-syntax-rule (%open-source-library ?pathname)
     (open-file-input-port ?pathname
       (file-options)
       (buffer-mode block)
       (native-transcoder)))
 
-  #| end of module: RUN-TIME-LIBRARY-LOCATOR |# )
+  #| end of module |# )
+
+
+;;;; locating source and binary libraries: run-time locator
+
+(define* (run-time-library-locator (libref library-reference?) options)
+  ;;Possible  value  for  the  parameter  CURRENT-LIBRARY-LOCATOR;  this
+  ;;function is meant to be used to search for libraries when running an
+  ;;application.
+  ;;
+  ;;Given a R6RS library reference and  a list of search options: return
+  ;;a thunk to be used to start the search for a matching library.
+  ;;
+  ;;The returned  thunk scans  the search path  for binary  libraries in
+  ;;search of a  matching FASL library file; if a  binary library is not
+  ;;found: it scans the search path  for source libraries in search of a
+  ;;matching source library file.
+  ;;
+  ;;OPTIONS must be a list of  symbols; at present the supported options
+  ;;are:
+  ;;
+  ;;   move-on-when-open-fails
+  ;;
+  ;;When successful the returned thunk return 2 values:
+  ;;
+  ;;1. An input port from which the  library can be read; if the port is
+  ;;   binary: a  compiled library can be  read from it; if  the port is
+  ;;    textual  a   source  library  can  be  read  from   it.   It  is
+  ;;   responsibility of  the caller to close the returned  port when no
+  ;;   more needed.
+  ;;
+  ;;2. A thunk  to be called to continue the  search.  This thunk allows
+  ;;    the  caller  to reject  a  library  if  it  does not  meet  some
+  ;;   additional  constraint; for example:  if its version  number does
+  ;;   not conform to LIBREF.
+  ;;
+  ;;When no matching library is  found: the returned thunk returns false
+  ;;and false.
+  ;;
+  (import LIBRARY-LOCATOR-UTILS)
+  (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
+  (%binary-search-start libref options (%source-search-start libref options)))
 
 
 ;;;; locating source and binary libraries: compile-time locator
 
 (module (compile-time-library-locator)
+  (import LIBRARY-LOCATOR-UTILS)
   (define-constant __who__ 'compile-time-library-locator)
 
   (define* (compile-time-library-locator (libref library-reference?) options)
@@ -619,72 +696,49 @@
     ;;When  no matching  library is  found: the  returned thunk  returns
     ;;false and false.
     ;;
+    (import LIBRARY-LOCATOR-UTILS)
     (%log-library-debug-message "~a: start search for library: ~a" __who__ libref)
     (let ((source-locator (current-source-library-file-locator))
-	  (binary-locator (current-binary-library-file-locator)))
-      (define (%binary-search-start)
-	(%binary-search-step options
-			     (lambda ()
-			       (binary-locator libref))
-			     (lambda ()
-			       (values #f #f))))
+	  (fail-kont      (%binary-search-start libref options)))
       (lambda ()
-	(%source-search-step options libref
-			     (lambda ()
-			       (source-locator libref))
-			     %binary-search-start))))
+	(%binary/source-search-step options libref
+				    (lambda ()
+				      (source-locator libref))
+				    fail-kont))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%source-search-step options libref next-source-file-match search-fail-kont)
+  (define (%binary/source-search-step options libref next-source-file-match search-fail-kont)
     (receive (source-pathname further-source-file-match)
 	(next-source-file-match)
       (if source-pathname
-	  (let ((binary-pathname (fasl-path libref)))
-	    (if (or (not (file-exists? binary-pathname))
-		    (receive-and-return (rv)
-			(< (posix.file-modification-time binary-pathname)
-			   (posix.file-modification-time source-pathname))
-		      (when rv
-			(%print-verbose-message "WARNING: not using fasl file ~s \
-                                                 because it is older \
-                                                 than the source file ~s\n"
-						binary-pathname source-pathname))))
+	  (begin
+	    (%log-library-debug-message "~a: found source: ~a" __who__ source-pathname)
+	    (let ((binary-pathname (fasl-path libref)))
+	      (%log-library-debug-message "~a: checking binary: ~a" __who__ binary-pathname)
+	      (if (and (file-exists? binary-pathname)
+		       (receive-and-return (rv)
+			   (< (posix.file-modification-time source-pathname)
+			      (posix.file-modification-time binary-pathname))
+			 (unless rv
+			   (%print-verbose-message "WARNING: not using fasl file ~s \
+                                                    because it is older \
+                                                    than the source file ~s\n"
+						   binary-pathname source-pathname))))
+		  ;;We  try the  binary  library first,  and the  source
+		  ;;library next.
+		  (%handle-local-binary-file-match options libref binary-pathname source-pathname
+						   further-source-file-match search-fail-kont)
+		;;No  suitable binary  library, try  the source  library
+		;;directly.
 		(begin
 		  ((failed-library-location-collector) binary-pathname)
-		  (%handle-source-file-match options libref source-pathname further-source-file-match search-fail-kont))
-	      (%handle-local-binary-file-match options libref binary-pathname source-pathname
-					       further-source-file-match search-fail-kont)))
-	(search-fail-kont))))
-
-  (define (%binary-search-step options next-binary-file-match search-fail-kont)
-    (receive (binary-pathname further-binary-file-match)
-	(next-binary-file-match)
-      (if binary-pathname
-	  (%handle-binary-file-match options binary-pathname
-				     (lambda ()
-				       (%binary-search-step options further-binary-file-match search-fail-kont)))
-	(search-fail-kont))))
+		  (%handle-source-file-match options libref source-pathname further-source-file-match search-fail-kont)))))
+	(begin
+	  (%log-library-debug-message "~a: no source file for: ~a" __who__ libref)
+	  (search-fail-kont)))))
 
 ;;; --------------------------------------------------------------------
-
-  (define (%handle-source-file-match options libref source-pathname next-source-file-match search-fail-kont)
-    (define (%continue)
-      ;;If we are here it means the previous pathname was rejected.
-      ((failed-library-location-collector) source-pathname)
-      (%log-library-debug-message "~a: rejected: ~a" __who__ source-pathname)
-      (%source-search-step options libref next-source-file-match search-fail-kont))
-    (values (with-exception-handler
-		(lambda (E)
-		  (if (i/o-error? E)
-		      (if (library-locator-options-no-raise-when-open-fails? options)
-			  (%continue)
-			(raise E))
-		    (raise E)))
-	      (lambda ()
-		(%log-library-debug-message "~a: opening: ~a" __who__ source-pathname)
-		(%open-source source-pathname)))
-	    %continue))
 
   (define (%handle-local-binary-file-match options libref binary-pathname source-pathname
 					   next-source-file-match search-fail-kont)
@@ -701,14 +755,15 @@
 		    (raise E)))
 	      (lambda ()
 		(%log-library-debug-message "~a: opening: ~a" __who__ binary-pathname)
-		(%open-binary binary-pathname)))
+		(%open-binary-library binary-pathname)))
 	    %continue))
 
-  (define (%handle-binary-file-match options binary-pathname next-binary-search-step)
+  (define (%handle-source-file-match options libref source-pathname next-source-file-match search-fail-kont)
     (define (%continue)
       ;;If we are here it means the previous pathname was rejected.
-      ((failed-library-location-collector) binary-pathname)
-      (next-binary-search-step))
+      ((failed-library-location-collector) source-pathname)
+      (%log-library-debug-message "~a: rejected: ~a" __who__ source-pathname)
+      (%binary/source-search-step options libref next-source-file-match search-fail-kont))
     (values (with-exception-handler
 		(lambda (E)
 		  (if (i/o-error? E)
@@ -717,111 +772,52 @@
 			(raise E))
 		    (raise E)))
 	      (lambda ()
-		(%open-binary binary-pathname)))
+		(%log-library-debug-message "~a: opening: ~a" __who__ source-pathname)
+		(%open-source-library source-pathname)))
 	    %continue))
-
-;;; --------------------------------------------------------------------
-
-  (define-syntax-rule (%open-binary ?pathname)
-    (receive-and-return (port)
-	(open-file-input-port ?pathname
-	  (file-options)
-	  (buffer-mode block))
-      ;;If  the  header is  wrong  this  will  raise an  exception  with
-      ;;compound condition objects "&i/o-error" and "&assertion".
-      (fasl-read-header port)))
-
-  (define-syntax-rule (%open-source ?pathname)
-    (open-file-input-port ?pathname
-      (file-options)
-      (buffer-mode block)
-      (native-transcoder)))
 
   #| end of module: COMPILE-TIME-LIBRARY-LOCATOR |# )
 
 
 ;;;; locating source and binary libraries: source-onlye locator
 
-(module (source-library-locator)
-
-  (define* (source-library-locator (libref library-reference?) options)
-    ;;Possible  value for  the  parameter CURRENT-LIBRARY-LOCATOR;  this
-    ;;function is meant to be used to search for source libraries only.
-    ;;
-    ;;Given  a R6RS  library reference  and  a list  of search  options:
-    ;;return  a thunk  to be  used to  start the  search for  a matching
-    ;;library.
-    ;;
-    ;;The returned thunk  scans the search path for  source libraries in
-    ;;search of a matching source library file.
-    ;;
-    ;;OPTIONS  must be  a  list  of symbols;  at  present the  supported
-    ;;options are:
-    ;;
-    ;;   move-on-when-open-fails
-    ;;
-    ;;When successful the returned thunk return 2 values:
-    ;;
-    ;;1. A textual input port from which the library can be read.  It is
-    ;;   responsibility of the caller to close the returned port when no
-    ;;   more needed.
-    ;;
-    ;;2. A thunk to be called to continue the search.  This thunk allows
-    ;;    the caller  to  reject a  library  if it  does  not meet  some
-    ;;   additional constraint; for example:  if its version number does
-    ;;   not conform to LIBREF.
-    ;;
-    ;;When  no matching  library is  found: the  returned thunk  returns
-    ;;false and false.
-    ;;
-    (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
-    (let ((source-locator (current-source-library-file-locator)))
-      (define (%source-search-start)
-	(%source-search-step options
-			     (lambda ()
-			       (source-locator libref))
-			     (lambda ()
-			       (values #f #f))))
-      %source-search-start))
-
-;;; --------------------------------------------------------------------
-
-  (define (%source-search-step options next-source-file-match search-fail-kont)
-    (receive (source-pathname further-source-file-match)
-	(next-source-file-match)
-      (if source-pathname
-	  (%handle-source-file-match options source-pathname
-				     (lambda ()
-				       (%source-search-step options further-source-file-match search-fail-kont)))
-	(search-fail-kont))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%handle-source-file-match options source-pathname next-source-search-step)
-    (define (%continue)
-      ;;If we are here it means the previous pathname was rejected.
-      ((failed-library-location-collector) source-pathname)
-      (next-source-search-step))
-    (values (with-exception-handler
-		(lambda (E)
-		  (if (i/o-error? E)
-		      (if (library-locator-options-no-raise-when-open-fails? options)
-			  (%continue)
-			(raise E))
-		    (raise E)))
-	      (lambda ()
-		(%open-source source-pathname)))
-	    %continue))
-
-;;; --------------------------------------------------------------------
-
-  (define-syntax-rule (%open-source ?pathname)
-    (open-file-input-port ?pathname
-      (file-options)
-      (buffer-mode block)
-      (native-transcoder)))
-
-  #| end of module: SOURCE-LIBRARY-LOCATOR |# )
+(define* (source-library-locator (libref library-reference?) options)
+  ;;Possible  value  for  the  parameter  CURRENT-LIBRARY-LOCATOR;  this
+  ;;function is  meant to be used  to search for source  libraries first
+  ;;and the for binary libraries.
+  ;;
+  ;;Given a R6RS library reference and  a list of search options: return
+  ;;a thunk to be used to start the search for a matching library.
+  ;;
+  ;;The returned  thunk scans  the search path  for source  libraries in
+  ;;search of a matching source library file; if a source library is not
+  ;;found: it scans the search path  for binary libraries in search of a
+  ;;matching FASL library file.
+  ;;
+  ;;OPTIONS must be a list of  symbols; at present the supported options
+  ;;are:
+  ;;
+  ;;   move-on-when-open-fails
+  ;;
+  ;;When successful the returned thunk return 2 values:
+  ;;
+  ;;1. An input port from which the  library can be read; if the port is
+  ;;   binary: a  compiled library can be  read from it; if  the port is
+  ;;    textual  a   source  library  can  be  read  from   it.   It  is
+  ;;   responsibility of  the caller to close the returned  port when no
+  ;;   more needed.
+  ;;
+  ;;2. A thunk  to be called to continue the  search.  This thunk allows
+  ;;    the  caller  to reject  a  library  if  it  does not  meet  some
+  ;;   additional  constraint; for example:  if its version  number does
+  ;;   not conform to LIBREF.
+  ;;
+  ;;When no matching library is  found: the returned thunk returns false
+  ;;and false.
+  ;;
+  (import LIBRARY-LOCATOR-UTILS)
+  (%log-library-debug-message "~a: locating library for: ~a" __who__ libref)
+  (%source-search-start libref options (%binary-search-start libref options)))
 
 
 ;;;; loading source programs
