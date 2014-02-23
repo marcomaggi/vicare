@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -257,7 +257,10 @@
     => #t)
 
   (check
-      (px.struct-passwd? (px.getpwnam (px.getlogin/string)))
+      (let ((name (px.getlogin/string)))
+	(if name
+	    (px.struct-passwd? (px.getpwnam name))
+	  #t))
     => #t)
 
   (check
