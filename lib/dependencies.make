@@ -106,6 +106,10 @@ $(fasldir)/srfi/%3a1/lists.fasl: $(fasldir)/srfi/%3a8/receive.fasl $(fasldir)/vi
 $(fasldir)/srfi/%3a0.fasl: $(fasldir)/srfi/%3a0/cond-expand.fasl
 $(fasldir)/srfi/%3a0/cond-expand.fasl: $(fasldir)/vicare/language-extensions/cond-expand/registry.fasl
 $(fasldir)/vicare/cre2.fasl: $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/unsafe/operations.fasl
+$(fasldir)/vicare/formations.fasl: $(fasldir)/vicare/language-extensions/infix.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/arguments/validation.fasl
+$(fasldir)/vicare/getopts.fasl: $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl
+$(fasldir)/vicare/irregex.fasl: $(fasldir)/vicare/irregex/compat.fasl
+$(fasldir)/vicare/parser-logic.fasl: $(fasldir)/vicare/unsafe/operations.fasl
 $(fasldir)/vicare/readline.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/unsafe/operations.fasl
 $(fasldir)/vicare/linux.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/arguments/general-c-buffers.fasl $(fasldir)/vicare/platform/words.fasl $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/cond-expand.fasl $(fasldir)/vicare/platform/features.fasl $(fasldir)/vicare/language-extensions/cond-expand/helpers.fasl
 $(fasldir)/vicare/gcc.fasl: $(fasldir)/vicare/ffi.fasl $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/glibc.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl

@@ -1273,7 +1273,10 @@ VICARE_ENV	= \
 VICARE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
 VICARE_RUN	= $(VICARE_ENV) vicare $(VICARE_FLAGS)
 
-%.fasl : %.vicare.sls $(VICARE_NEW_BOOT)
+lib/vicare/irregex/compat.fasl : lib/vicare/irregex/compat.vicare.sls $(VICARE_NEW_BOOT)
+	$(VICARE_RUN) --output $@ --compile-library $<
+
+lib/srfi/%3a106/compat.fasl : lib/srfi/%3a106/compat.vicare.sls $(VICARE_NEW_BOOT)
 	$(VICARE_RUN) --output $@ --compile-library $<
 
 %.fasl : %.sls $(VICARE_NEW_BOOT)

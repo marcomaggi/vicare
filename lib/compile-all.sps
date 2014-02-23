@@ -120,6 +120,15 @@
   (only (vicare linux))
   (only (vicare readline))
 
+  (only (vicare assembler inspection))
+  (only (vicare debugging compiler))
+  (only (vicare parser-logic))
+
+  (only (vicare irregex))
+  (only (vicare pregexp))
+  (only (vicare getopts))
+  (only (vicare formations))
+
   (only (vicare cre2))
 
   (only (srfi :0))
