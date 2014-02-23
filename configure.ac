@@ -10,7 +10,7 @@ AC_CONFIG_AUX_DIR([autotools])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AM_INIT_AUTOMAKE([1.14 foreign dist-xz no-dist-gzip])
+AM_INIT_AUTOMAKE([1.14 foreign subdir-objects dist-xz no-dist-gzip])
 AM_MAINTAINER_MODE
 
 AM_PROG_AR
@@ -1749,8 +1749,6 @@ AC_SUBST([VFLAGS])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES(Makefile
-                src/Makefile scheme/Makefile doc/Makefile lib/Makefile
-                tests/Makefile demos/Makefile
                 src/vicare-platform.h
                 lib/vicare/platform/configuration.sls
                 lib/vicare/platform/constants.sls

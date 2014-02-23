@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 NEW_BOOT_FILE		= vicare.boot
-NEW_EXECUTABLE		= $(builddir)/../src/vicare
+NEW_EXECUTABLE		= ../vicare
 
 # The  "exec" portion  of the  Makefile variable  names  will instruct
 # Automake to  generate installation rules  to install the  boot image

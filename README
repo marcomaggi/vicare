@@ -382,7 +382,7 @@ images do not contain the latest version of the code.
 
   When executing "make all" a new boot image is built:
 
-    $(builddir)/scheme/vicare.boot
+    $(builddir)/vicare.boot
 
 and this image is then installed  on the system by "make install".  This
 new boot image is the one containing the latest version of the code.
@@ -394,7 +394,7 @@ boot images, he just replaces by hand:
 
 with:
 
-    $(builddir)/scheme/vicare.boot
+    $(builddir)/vicare.boot
 
 then he does:
 
@@ -402,7 +402,7 @@ then he does:
 
 to (blindly) generate:
 
-    $(builddir)/scheme/vicare.boot.8.prebuilt
+    $(builddir)/vicare.boot.8.prebuilt
 
 and make it become the new:
 
@@ -410,7 +410,7 @@ and make it become the new:
 
   When building the 64-bit image, the file:
 
-    $(builddir)/scheme/ikarus.config.ss
+    $(builddir)/ikarus.config.ss
 
 is filled with values that are invalid on a 32-bit system, so we have to
 remove it to return to building 32-bit images.
