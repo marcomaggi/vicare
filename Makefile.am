@@ -37,7 +37,7 @@ info_TEXINFOS		= \
 	doc/nausicaa.texi		\
 	doc/mehve.texi
 
-vicare_scheme_TEXINFOS	= \
+doc_vicare_scheme_TEXINFOS	= \
 	doc/gpl-3.0.texi				\
 	doc/macros.texi					\
 	\
@@ -67,7 +67,7 @@ vicare_scheme_TEXINFOS	= \
 	doc/history.texi				\
 	doc/references.texi
 
-vicare_libs_TEXINFOS = \
+doc_vicare_libs_TEXINFOS = \
 	doc/gpl-3.0.texi				\
 	doc/macros.texi					\
 	\
@@ -155,7 +155,7 @@ vicare_libs_TEXINFOS = \
 	doc/srfi-vectors.texi				\
 	doc/srfi-functional-pairs.texi
 
-nausicaa_TEXINFOS	= \
+doc_nausicaa_TEXINFOS	= \
 	doc/nausicaa-language.texi			\
 	doc/nausicaa-oopp.texi				\
 	doc/nausicaa-multimethods.texi			\
@@ -187,7 +187,7 @@ nausicaa_TEXINFOS	= \
 	doc/fdl-1.3.texi				\
 	doc/gpl-3.0.texi
 
-mehve_TEXINFOS	= \
+doc_mehve_TEXINFOS	= \
 	doc/mehve-language.texi				\
 	\
 	doc/macros.texi					\
@@ -509,31 +509,7 @@ try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
 #page
 #### compiling bundled libraries: source files
 
-EXTRA_DIST += \
-	lib/compile-vicare-platform.sps			\
-	lib/compile-vicare-unsafe.sps			\
-	lib/compile-vicare-language-extensions.sps	\
-	lib/compile-vicare-crypto.sps			\
-	lib/compile-vicare-numerics.sps			\
-	lib/compile-vicare-containers.sps		\
-	lib/compile-vicare-parser-tools.sps		\
-	lib/compile-vicare-net.sps			\
-	lib/compile-vicare-misc.sps			\
-	lib/compile-srfi.sps				\
-	lib/compile-srfi-posix.sps			\
-	lib/compile-nausicaa-language.sps		\
-	lib/compile-nausicaa-containers.sps		\
-	lib/compile-nausicaa-parser-tools.sps		\
-	lib/compile-nausicaa-misc.sps			\
-	lib/compile-mehve-language.sps			\
-	lib/compile-ffi.sps				\
-	lib/compile-posix.sps				\
-	lib/compile-glibc.sps				\
-	lib/compile-iconv.sps				\
-	lib/compile-gcc.sps				\
-	lib/compile-linux.sps				\
-	lib/compile-readline.sps			\
-	lib/compile-cre2.sps
+EXTRA_DIST += lib/compile-all.sps
 
 EXTRA_DIST += \
 	lib/vicare/platform/configuration.sls.in			\
@@ -887,7 +863,7 @@ EXTRA_DIST += \
 #### compiling bundled libraries: fasl files
 
 libvicaredir	= $(instdir)
-nobase_dist_libvicare_DATA	= \
+nobase_nodist_libvicare_DATA	= \
 	$(fasldir)/vicare/unsafe/capi.fasl				\
 	$(fasldir)/vicare/unsafe/operations.fasl			\
 	$(fasldir)/vicare/unsafe/unicode.fasl				\
@@ -1021,7 +997,7 @@ nobase_dist_libvicare_DATA	= \
 
 if WANT_SRFI
 libsrfidir			= $(instdir)
-nobase_dist_libsrfi_DATA	= \
+nobase_nodist_libsrfi_DATA	= \
 	$(fasldir)/srfi/%3a0.fasl					\
 	$(fasldir)/srfi/%3a0/cond-expand.fasl				\
 	\
@@ -1140,7 +1116,7 @@ endif
 if WANT_SRFI
 if WANT_POSIX
 libsrfiposixdir			= $(instdir)
-nobase_dist_libsrfiposix_DATA	= \
+nobase_nodist_libsrfiposix_DATA	= \
 	$(fasldir)/srfi/%3a106.fasl					\
 	$(fasldir)/srfi/%3a106/socket.fasl				\
 	$(fasldir)/srfi/%3a106/compat.fasl
@@ -1149,7 +1125,7 @@ endif
 
 if WANT_NAUSICAA
 libnausicaadir			= $(instdir)
-nobase_dist_libnausicaa_DATA	= \
+nobase_nodist_libnausicaa_DATA	= \
 	$(fasldir)/nausicaa/language/auxiliary-syntaxes.fasl		\
 	$(fasldir)/nausicaa/language/symbols-tree.fasl			\
 	\
@@ -1215,14 +1191,14 @@ endif
 
 if WANT_LIBFFI
 libffidir		= $(instdir)
-nobase_dist_libffi_DATA	= \
+nobase_nodist_libffi_DATA	= \
 	$(fasldir)/vicare/ffi.fasl					\
 	$(fasldir)/vicare/ffi/foreign-pointer-wrapper.fasl
 endif
 
 if WANT_POSIX
 libposixdir			= $(instdir)
-nobase_dist_libposix_DATA	= \
+nobase_nodist_libposix_DATA	= \
 	$(fasldir)/vicare/posix.fasl					\
 	$(fasldir)/vicare/posix/pid-files.fasl				\
 	$(fasldir)/vicare/posix/lock-pid-files.fasl			\
@@ -1234,36 +1210,36 @@ endif
 
 if WANT_GLIBC
 libglibcdir			= $(instdir)
-nobase_dist_libglibc_DATA	= $(fasldir)/vicare/glibc.fasl
+nobase_nodist_libglibc_DATA	= $(fasldir)/vicare/glibc.fasl
 endif
 
 if WANT_LIBICONV
 libiconvdir			= $(instdir)
-nobase_dist_libiconv_DATA	= $(fasldir)/vicare/iconv.fasl
+nobase_nodist_libiconv_DATA	= $(fasldir)/vicare/iconv.fasl
 endif
 
 if WANT_LIBFFI
 if WANT_POSIX
 if WANT_GLIBC
 libgccdir			= $(instdir)
-nobase_dist_libgcc_DATA		= $(fasldir)/vicare/gcc.fasl
+nobase_nodist_libgcc_DATA		= $(fasldir)/vicare/gcc.fasl
 endif
 endif
 endif
 
 if WANT_LINUX
 liblinuxdir			= $(instdir)
-nobase_dist_liblinux_DATA	= $(fasldir)/vicare/linux.fasl
+nobase_nodist_liblinux_DATA	= $(fasldir)/vicare/linux.fasl
 endif
 
 if WANT_READLINE
 libreadlinedir			= $(instdir)
-nobase_dist_libreadline_DATA	= $(fasldir)/vicare/readline.fasl
+nobase_nodist_libreadline_DATA	= $(fasldir)/vicare/readline.fasl
 endif
 
 if WANT_CRE2
 libcre2dir			= $(instdir)
-nobase_dist_libcre2_DATA	= $(fasldir)/vicare/cre2.fasl
+nobase_nodist_libcre2_DATA	= $(fasldir)/vicare/cre2.fasl
 endif
 
 #page
@@ -1280,75 +1256,6 @@ lib/vicare/platform/features.sls : features
 lib/vicare/platform/features.fasl : lib/vicare/platform/features.sls
 
 CLEANFILES	+= vicare/platform/features.sls
-
-#page
-#### compiling bundled libraries: prerequisites
-
-COMPILESCRIPTS = \
-	--eval-file $(srcdir)/lib/compile-vicare-platform.sps			\
-	--eval-file $(srcdir)/lib/compile-vicare-unsafe.sps			\
-	--eval-file $(srcdir)/lib/compile-vicare-language-extensions.sps	\
-	--eval-file $(srcdir)/lib/compile-vicare-crypto.sps			\
-	--eval-file $(srcdir)/lib/compile-vicare-numerics.sps			\
-	--eval-file $(srcdir)/lib/compile-vicare-containers.sps		\
-	--eval-file $(srcdir)/lib/compile-vicare-parser-tools.sps		\
-	--eval-file $(srcdir)/lib/compile-vicare-net.sps
-if WANT_SRFI
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-srfi.sps
-endif
-if WANT_NAUSICAA
-COMPILESCRIPTS += \
-	--eval-file $(srcdir)/lib/compile-nausicaa-language.sps		\
-	--eval-file $(srcdir)/lib/compile-nausicaa-containers.sps		\
-	--eval-file $(srcdir)/lib/compile-nausicaa-parser-tools.sps		\
-	--eval-file $(srcdir)/lib/compile-nausicaa-misc.sps			\
-	--eval-file $(srcdir)/lib/compile-mehve-language.sps
-endif
-if WANT_LIBFFI
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-ffi.sps
-endif
-if WANT_POSIX
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-posix.sps
-endif
-if WANT_POSIX
-if WANT_SRFI
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-srfi-posix.sps
-endif
-endif
-if WANT_GLIBC
-if WANT_POSIX
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-glibc.sps
-endif
-endif
-if WANT_LIBFFI
-if WANT_POSIX
-if WANT_GLIBC
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-gcc.sps
-endif
-endif
-endif
-if WANT_LINUX
-if WANT_POSIX
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-linux.sps
-endif
-endif
-if WANT_LIBICONV
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-iconv.sps
-endif
-if WANT_READLINE
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-readline.sps
-endif
-if WANT_CRE2
-COMPILESCRIPTS += --eval-file $(srcdir)/lib/compile-cre2.sps
-endif
-
-.PHONY: dependencies
-
-dependencies:
-	$(VICARE_RUN) $(COMPILESCRIPTS) \
-		--print-dependencies $(srcdir)/lib/compile-vicare-misc.sps >$(srcdir)/lib/dependencies.make
-
-include $(srcdir)/lib/dependencies.make
 
 #page
 #### compiling bundled libraries: build rules
@@ -1372,19 +1279,30 @@ VICARE_RUN	= $(VICARE_ENV) vicare $(VICARE_FLAGS)
 %.fasl : %.sls $(VICARE_NEW_BOOT)
 	$(VICARE_RUN) --output $@ --compile-library $<
 
+## --------------------------------------------------------------------
+
+.PHONY: dependencies
+
+dependencies:
+	$(VICARE_RUN) --print-dependencies $(srcdir)/lib/compile-all.sps >$(srcdir)/lib/dependencies.make
+
+include $(srcdir)/lib/dependencies.make
+
+## --------------------------------------------------------------------
+
 CLEANFILES	+= \
-	$(nobase_dist_libvicare_DATA)	\
-	$(nobase_dist_libsrfi_DATA)	\
-	$(nobase_dist_libsrfiposix_DATA)\
-	$(nobase_dist_libnausicaa_DATA)	\
-	$(nobase_dist_libffi_DATA)	\
-	$(nobase_dist_libposix_DATA)	\
-	$(nobase_dist_libglibc_DATA)	\
-	$(nobase_dist_libiconv_DATA)	\
-	$(nobase_dist_libgcc_DATA)	\
-	$(nobase_dist_liblinux_DATA)	\
-	$(nobase_dist_libreadline_DATA)	\
-	$(nobase_dist_libcre2_DATA)
+	$(nobase_nodist_libvicare_DATA)		\
+	$(nobase_nodist_libsrfi_DATA)		\
+	$(nobase_nodist_libsrfiposix_DATA)	\
+	$(nobase_nodist_libnausicaa_DATA)	\
+	$(nobase_nodist_libffi_DATA)		\
+	$(nobase_nodist_libposix_DATA)		\
+	$(nobase_nodist_libglibc_DATA)		\
+	$(nobase_nodist_libiconv_DATA)		\
+	$(nobase_nodist_libgcc_DATA)		\
+	$(nobase_nodist_liblinux_DATA)		\
+	$(nobase_nodist_libreadline_DATA)	\
+	$(nobase_nodist_libcre2_DATA)
 
 #page
 #### special library rules: SILex lexers building

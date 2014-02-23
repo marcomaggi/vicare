@@ -1,25 +1,3 @@
-$(fasldir)/vicare/formations.fasl: $(fasldir)/vicare/language-extensions/infix.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/arguments/validation.fasl
-$(fasldir)/vicare/getopts.fasl: $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl
-$(fasldir)/vicare/irregex.fasl: $(fasldir)/vicare/irregex/compat.fasl
-$(fasldir)/vicare/parser-logic.fasl: $(fasldir)/vicare/unsafe/operations.fasl
-$(fasldir)/vicare/cre2.fasl: $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/unsafe/operations.fasl
-$(fasldir)/vicare/readline.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/unsafe/operations.fasl
-$(fasldir)/vicare/iconv.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/unsafe/operations.fasl
-$(fasldir)/vicare/linux.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/arguments/general-c-buffers.fasl $(fasldir)/vicare/platform/words.fasl $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/cond-expand.fasl $(fasldir)/vicare/platform/features.fasl $(fasldir)/vicare/language-extensions/cond-expand/helpers.fasl
-$(fasldir)/vicare/gcc.fasl: $(fasldir)/vicare/ffi.fasl $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/glibc.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl
-$(fasldir)/vicare/glibc.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/platform/words.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/cond-expand.fasl $(fasldir)/vicare/platform/features.fasl $(fasldir)/vicare/language-extensions/cond-expand/helpers.fasl
-$(fasldir)/srfi/%3a106.fasl: $(fasldir)/srfi/%3a106/socket.fasl
-$(fasldir)/srfi/%3a106/socket.fasl: $(fasldir)/srfi/%3a106/compat.fasl
-$(fasldir)/srfi/%3a106/compat.fasl: $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/posix.fasl
-$(fasldir)/vicare/posix/tcp-server-sockets.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl
-$(fasldir)/vicare/posix/simple-event-loop.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/platform/utilities.fasl
-$(fasldir)/vicare/posix/daemonisations.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/platform/constants.fasl
-$(fasldir)/vicare/posix/log-files.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/arguments/validation.fasl
-$(fasldir)/vicare/posix/lock-pid-files.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl
-$(fasldir)/vicare/posix/pid-files.fasl: $(fasldir)/vicare/posix.fasl
-$(fasldir)/vicare/posix.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/arguments/general-c-buffers.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/platform/words.fasl $(fasldir)/vicare/language-extensions/cond-expand.fasl $(fasldir)/vicare/containers/weak-hashtables.fasl $(fasldir)/vicare/platform/features.fasl $(fasldir)/vicare/language-extensions/cond-expand/helpers.fasl
-$(fasldir)/vicare/ffi/foreign-pointer-wrapper.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/arguments/validation.fasl
-$(fasldir)/vicare/ffi.fasl: $(fasldir)/vicare/platform/errno.fasl
 $(fasldir)/nausicaa/mehve.fasl: $(fasldir)/nausicaa.fasl $(fasldir)/nausicaa/mehve/language/numerics/predicates.fasl $(fasldir)/nausicaa/mehve/language/numerics/arithmetics.fasl $(fasldir)/nausicaa/mehve/language/numerics/parts.fasl $(fasldir)/nausicaa/mehve/language/numerics/transcendental.fasl $(fasldir)/nausicaa/mehve/language/infix.fasl $(fasldir)/nausicaa/mehve/language/input-output.fasl
 $(fasldir)/nausicaa/mehve/language/input-output.fasl: $(fasldir)/nausicaa.fasl
 $(fasldir)/nausicaa/mehve/language/infix.fasl: $(fasldir)/nausicaa.fasl $(fasldir)/vicare/language-extensions/infix/parser-utils.fasl $(fasldir)/vicare/language-extensions/infix/tokens.fasl $(fasldir)/nausicaa/mehve/language/numerics/predicates.fasl $(fasldir)/nausicaa/mehve/language/numerics/arithmetics.fasl $(fasldir)/nausicaa/mehve/language/numerics/parts.fasl $(fasldir)/nausicaa/mehve/language/numerics/transcendental.fasl
@@ -68,6 +46,9 @@ $(fasldir)/nausicaa/language/oopp/oopp-syntax-helpers.fasl: $(fasldir)/nausicaa/
 $(fasldir)/nausicaa/language/oopp/definition-parser-helpers.fasl: $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/identifier-substitutions.fasl $(fasldir)/nausicaa/language/oopp/configuration.fasl $(fasldir)/nausicaa/language/oopp/auxiliary-syntaxes.fasl $(fasldir)/nausicaa/language/auxiliary-syntaxes.fasl
 $(fasldir)/srfi/%3a112.fasl: $(fasldir)/srfi/%3a112/environment-inquiry.fasl
 $(fasldir)/srfi/%3a111.fasl: $(fasldir)/srfi/%3a111/boxes.fasl
+$(fasldir)/srfi/%3a106.fasl: $(fasldir)/srfi/%3a106/socket.fasl
+$(fasldir)/srfi/%3a106/socket.fasl: $(fasldir)/srfi/%3a106/compat.fasl
+$(fasldir)/srfi/%3a106/compat.fasl: $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/posix.fasl
 $(fasldir)/srfi/%3a101/random-access-lists/equal.fasl: $(fasldir)/srfi/%3a101.fasl
 $(fasldir)/srfi/%3a101/random-access-lists/syntax.fasl: $(fasldir)/srfi/%3a101.fasl
 $(fasldir)/srfi/%3a101/random-access-lists/procedures.fasl: $(fasldir)/srfi/%3a101.fasl
@@ -124,6 +105,21 @@ $(fasldir)/srfi/%3a1.fasl: $(fasldir)/srfi/%3a1/lists.fasl
 $(fasldir)/srfi/%3a1/lists.fasl: $(fasldir)/srfi/%3a8/receive.fasl $(fasldir)/vicare/arguments/validation.fasl
 $(fasldir)/srfi/%3a0.fasl: $(fasldir)/srfi/%3a0/cond-expand.fasl
 $(fasldir)/srfi/%3a0/cond-expand.fasl: $(fasldir)/vicare/language-extensions/cond-expand/registry.fasl
+$(fasldir)/vicare/cre2.fasl: $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/unsafe/operations.fasl
+$(fasldir)/vicare/readline.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/unsafe/operations.fasl
+$(fasldir)/vicare/linux.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/arguments/general-c-buffers.fasl $(fasldir)/vicare/platform/words.fasl $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/cond-expand.fasl $(fasldir)/vicare/platform/features.fasl $(fasldir)/vicare/language-extensions/cond-expand/helpers.fasl
+$(fasldir)/vicare/gcc.fasl: $(fasldir)/vicare/ffi.fasl $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/glibc.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl
+$(fasldir)/vicare/glibc.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/platform/words.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/cond-expand.fasl $(fasldir)/vicare/platform/features.fasl $(fasldir)/vicare/language-extensions/cond-expand/helpers.fasl
+$(fasldir)/vicare/posix/tcp-server-sockets.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl
+$(fasldir)/vicare/posix/simple-event-loop.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/platform/utilities.fasl
+$(fasldir)/vicare/posix/daemonisations.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/platform/constants.fasl
+$(fasldir)/vicare/posix/log-files.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/arguments/validation.fasl
+$(fasldir)/vicare/posix/lock-pid-files.fasl: $(fasldir)/vicare/posix.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl
+$(fasldir)/vicare/posix/pid-files.fasl: $(fasldir)/vicare/posix.fasl
+$(fasldir)/vicare/posix.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/arguments/general-c-buffers.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/platform/words.fasl $(fasldir)/vicare/language-extensions/cond-expand.fasl $(fasldir)/vicare/containers/weak-hashtables.fasl $(fasldir)/vicare/platform/features.fasl $(fasldir)/vicare/language-extensions/cond-expand/helpers.fasl
+$(fasldir)/vicare/iconv.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/platform/constants.fasl $(fasldir)/vicare/unsafe/capi.fasl $(fasldir)/vicare/unsafe/operations.fasl
+$(fasldir)/vicare/ffi/foreign-pointer-wrapper.fasl: $(fasldir)/vicare/language-extensions/syntaxes.fasl $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/arguments/validation.fasl
+$(fasldir)/vicare/ffi.fasl: $(fasldir)/vicare/platform/errno.fasl
 $(fasldir)/vicare/net/channels.fasl: $(fasldir)/vicare/unsafe/operations.fasl $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/language-extensions/syntaxes.fasl
 $(fasldir)/vicare/parser-tools/unix-pathnames.fasl: $(fasldir)/vicare/unsafe/operations.fasl
 $(fasldir)/vicare/parser-tools/silex.fasl: $(fasldir)/vicare/parser-tools/silex/lexer.fasl $(fasldir)/vicare/parser-tools/silex/semantic.fasl $(fasldir)/vicare/parser-tools/silex/action-l.fasl $(fasldir)/vicare/parser-tools/silex/class-l.fasl $(fasldir)/vicare/parser-tools/silex/macro-l.fasl $(fasldir)/vicare/parser-tools/silex/regexp-l.fasl $(fasldir)/vicare/parser-tools/silex/string-l.fasl $(fasldir)/vicare/parser-tools/silex/nested-comment-l.fasl $(fasldir)/vicare/language-extensions/makers.fasl $(fasldir)/vicare/arguments/validation.fasl
