@@ -56,6 +56,7 @@
     (only (vicare.foreign-libraries)
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
+	  find-library-by-name
 	  library-name
 	  library-build-dependency-rule
 	  current-library-collection
@@ -208,7 +209,8 @@
 (module (default-binary-library-file-locator
 	 fasl-search-path
 	 fasl-directory
-	 fasl-path)
+	 fasl-path
+	 fasl-stem+extension)
   (import LIBRARY-REFERENCE-TO-FILENAME-STEM)
 
   (define (%existent-directory-pathname? dir-pathname)
@@ -302,7 +304,7 @@
 		   (library-reference->filename-stem libref)
 		   FASL-EXTENSION))
 
-  (define* (fasl-stem (libref library-reference?))
+  (define* (fasl-stem+extension (libref library-reference?))
     ;;Given  a  R6RS  library  reference:  build  and  return  a  string
     ;;representing  the pathname  stem of  the  FASL file  in which  the
     ;;corresponding  binary library  can  be stored.   The  "stem" is  a
@@ -842,8 +844,16 @@
     (when print-dependencies?
       (fold-left (lambda (knil lib)
 		   (let ((rule (library-build-dependency-rule lib)))
-		     (when rule
-		       (fprintf stderr "~a\n" rule))
+		     (when (and rule
+				(not (null? (cdr rule))))
+		       (fprintf stdout "$(fasldir)~a:"
+				(fasl-stem+extension (car rule)))
+		       (for-each (lambda (libname)
+				   (fprintf stdout " $(fasldir)~a"
+					    (fasl-stem+extension libname)))
+			 (cdr rule))
+		       (fprintf stdout "\n")
+		       (flush-output-port stdout))
 		     (if rule
 			 (cons rule knil)
 		       knil)))
@@ -877,24 +887,34 @@
   ;;Load a source library filename, expand it, compile it, serialize it.
   ;;Return unspecified values.
   ;;
-  (%log-library-debug-message "~a: loading library: ~a" __who__ source-pathname)
-  (%print-verbose-message "loading library: ~a\n" source-pathname)
-  (let ((lib ((current-source-library-loader-by-filename) source-pathname
-	      ;;This is a function to apply  to the R6RS library name of
-	      ;;the loaded library to verify  if its version conforms to
-	      ;;the requested one.  There  is no requested version here,
-	      ;;so we always return doing nothing.
-	      (lambda (libname) (void)))))
-    (define binary-pathname^
-      (or binary-pathname (fasl-path (library-name lib))))
-    (%print-verbose-message "serializing library: ~a\n" binary-pathname^)
-    (%log-library-debug-message "~a: serializing library: ~a" __who__ source-pathname)
-    (serialize-library lib
-		       (lambda (source-pathname libname contents)
-			 (store-serialized-library binary-pathname^ source-pathname
-						   libname contents))
-		       (lambda (core-expr)
-			 (compile-core-expr core-expr)))))
+  (define lib
+    (let* ((port          (let ()
+			    (import LIBRARY-LOCATOR-UTILS)
+			    (%log-library-debug-message "~a: loading library: ~a" __who__ source-pathname)
+			    (%print-verbose-message "loading library: ~a\n" source-pathname)
+			    (%open-source-library source-pathname)))
+	   (library-sexp  (read-library-source-port port))
+	   (reject-key    (gensym)))
+      (receive (uid libname
+		    import-libdesc* visit-libdesc* invoke-libdesc*
+		    invoke-code visit-code
+		    export-subst export-env
+		    guard-code guard-libdesc*
+		    option*)
+	  ((current-library-expander) library-sexp source-pathname (lambda (libname) (void)))
+	(find-library-by-name libname))))
+  (when lib
+    (let ()
+      (define binary-pathname^
+	(or binary-pathname (fasl-path (library-name lib))))
+      (%print-verbose-message "serializing library: ~a\n" binary-pathname^)
+      (%log-library-debug-message "~a: serializing library: ~a" __who__ source-pathname)
+      (serialize-library lib
+			 (lambda (source-pathname libname contents)
+			   (store-serialized-library binary-pathname^ source-pathname
+						     libname contents))
+			 (lambda (core-expr)
+			   (compile-core-expr core-expr))))))
 
 
 ;;;; loading libraries from source

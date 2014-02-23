@@ -18,6 +18,7 @@ vicare_test_RULES	= \
 
 vicare_lib_RULES	= \
 	vfasl				\
+	dependencies			\
 	silex-internals			\
 	silex-backup			\
 	ip-address-tables

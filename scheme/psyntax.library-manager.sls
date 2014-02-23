@@ -1144,7 +1144,7 @@
        (cons ($library-name lib)
 	     (fold-left (lambda (knil dep-lib)
 			  (if ($library-source-file-name dep-lib)
-			      (cons (library-descriptor-name (library-descriptor dep-lib))
+			      (cons ($library-name dep-lib)
 				    knil)
 			    knil))
 	       '()

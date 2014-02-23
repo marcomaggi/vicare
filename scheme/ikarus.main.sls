@@ -1421,7 +1421,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
      ;;command  line option):  accept it.   Otherwise explicitly  select
      ;;one.
      (cond ((psyntax.current-library-locator))
-	   ((memq cfg.exec-mode '(compile-dependencies))
+	   ((memq cfg.exec-mode '(compile-dependencies compile-library))
 	    load.compile-time-library-locator)
 	   ((memq cfg.exec-mode '(print-dependencies))
 	    load.source-library-locator)
