@@ -21,7 +21,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
     CFLAGS='-m32 -O3 -pedantic'				\
     CPPFLAGS=""						\
     LDFLAGS='-m32'					\
-    VFLAGS='-O3 --descriptive-labels'			\
+    VFLAGS='-O3'					\
     "$@"
 
 ## LDFLAGS='-L/usr/local/lib -lpthread'
