@@ -42,6 +42,10 @@ Notes for revision 0.4d0
 
 Lots of backwards incompatibilities... life is hard!
 
+* The package is  now using a single,  big, all-inclusive "Makefile.am".
+  Building  the package  is probably  slower then  before; using  the -j
+  option of "make" helps a bit.
+
 * BACKWARDS  INCOMPATIBILITY  The   libraries  infrastructure  has  been
   completely overhauled.  There are too  many changes to list them here,
   but here the most important stuff:
