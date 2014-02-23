@@ -17,7 +17,6 @@ vicare_test_RULES	= \
 	silex-test lalr-test
 
 vicare_lib_RULES	= \
-	vfasl				\
 	dependencies			\
 	silex-internals			\
 	silex-backup			\
