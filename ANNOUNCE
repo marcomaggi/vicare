@@ -420,6 +420,11 @@ Lots of backwards incompatibilities... life is hard!
   former expands to a string  representing the source code location; the
   latter expands to a number representing the line number.
 
+* BACKWARDS INCOMPATIBILITY The following libraries have been removed:
+
+     (vicare language-extensions identifier-alists)
+     (vicare language-extensions identifier-properties)
+
 
 Notes for revision 0.3d7
 ------------------------

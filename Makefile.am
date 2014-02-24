@@ -91,8 +91,6 @@ doc_vicare_libs_TEXINFOS = \
 	doc/libs-formations.texi			\
 	doc/libs-getopts.texi				\
 	doc/libs-gcc.texi				\
-	doc/libs-identifier-alists.texi			\
-	doc/libs-identifier-properties.texi		\
 	doc/libs-irregex.texi				\
 	doc/libs-knuth-morris-pratt.texi		\
 	doc/libs-levenshtein.texi			\
@@ -545,8 +543,6 @@ EXTRA_DIST += \
 	lib/vicare/language-extensions/custom-ports.sls			\
 	lib/vicare/language-extensions/define-record-extended.sls	\
 	lib/vicare/language-extensions/hooks.sls			\
-	lib/vicare/language-extensions/identifier-alists.sls		\
-	lib/vicare/language-extensions/identifier-properties.sls	\
 	lib/vicare/language-extensions/identifier-substitutions.sls	\
 	lib/vicare/language-extensions/increments.sls			\
 	lib/vicare/language-extensions/infix/auxiliary-syntaxes.sls	\
@@ -896,8 +892,6 @@ nobase_nodist_libvicare_DATA	= \
 	$(fasldir)/vicare/language-extensions/custom-ports.fasl		\
 	$(fasldir)/vicare/language-extensions/define-record-extended.fasl	\
 	$(fasldir)/vicare/language-extensions/hooks.fasl		\
-	$(fasldir)/vicare/language-extensions/identifier-alists.fasl	\
-	$(fasldir)/vicare/language-extensions/identifier-properties.fasl	\
 	$(fasldir)/vicare/language-extensions/identifier-substitutions.fasl	\
 	$(fasldir)/vicare/language-extensions/increments.fasl		\
 	$(fasldir)/vicare/language-extensions/infix/auxiliary-syntaxes.fasl	\
@@ -1500,8 +1494,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-coroutines.sps		\
 	tests/test-vicare-language-extensions-custom-ports.sps		\
 	tests/test-vicare-language-extensions-hooks.sps			\
-	tests/test-vicare-language-extensions-identifier-alists.sps	\
-	tests/test-vicare-language-extensions-identifier-properties.sps	\
 	tests/test-vicare-language-extensions-identifier-substitutions.sps	\
 	tests/test-vicare-language-extensions-infix.sps			\
 	tests/test-vicare-language-extensions-keywords.sps		\

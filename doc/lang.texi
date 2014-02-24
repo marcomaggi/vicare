@@ -24,8 +24,6 @@
 * streams::                     Streams.
 * loops::                       Loop constructs.
 * comparisons::                 Comparison functions.
-* identifier alists::           Utilities for alists of identifiers.
-* identifier properties::       Expand-time identifier properties.
 @end menu
 
 @c page
@@ -4210,7 +4208,5 @@ the definition of the enumeration, no error is raised.
 @include libs-streams.texi
 @include libs-loops.texi
 @include libs-comparisons.texi
-@include libs-identifier-alists.texi
-@include libs-identifier-properties.texi
 
 @c end of file

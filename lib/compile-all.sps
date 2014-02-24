@@ -43,8 +43,6 @@
   (only (vicare language-extensions callables))
   (only (vicare language-extensions define-record-extended))
   (only (vicare language-extensions c-enumerations))
-  (only (vicare language-extensions identifier-alists))
-  (only (vicare language-extensions identifier-properties))
   (only (vicare language-extensions identifier-substitutions))
   (only (vicare language-extensions makers))
   (only (vicare language-extensions try))

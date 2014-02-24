@@ -173,7 +173,6 @@ $(fasldir)/vicare/crypto/randomisations/distributions.fasl: $(fasldir)/vicare/cr
 $(fasldir)/vicare/crypto/randomisations/cmrg.fasl: $(fasldir)/vicare/crypto/randomisations.fasl $(fasldir)/vicare/crypto/randomisations/low.fasl
 $(fasldir)/vicare/crypto/randomisations/borosh.fasl: $(fasldir)/vicare/crypto/randomisations.fasl $(fasldir)/vicare/crypto/randomisations/low.fasl
 $(fasldir)/vicare/crypto/randomisations/blum-blum-shub.fasl: $(fasldir)/vicare/crypto/randomisations.fasl $(fasldir)/vicare/crypto/randomisations/low.fasl
-$(fasldir)/vicare/language-extensions/identifier-properties.fasl: $(fasldir)/vicare/arguments/validation.fasl $(fasldir)/vicare/language-extensions/identifier-alists.fasl $(fasldir)/vicare/language-extensions/sentinels.fasl $(fasldir)/vicare/language-extensions/variables.fasl
 $(fasldir)/vicare/language-extensions/callables.fasl: $(fasldir)/vicare/arguments/validation.fasl
 $(fasldir)/vicare/language-extensions/hooks.fasl: $(fasldir)/vicare/arguments/validation.fasl
 $(fasldir)/vicare/language-extensions/comparisons.fasl: $(fasldir)/vicare/crypto/randomisations.fasl
