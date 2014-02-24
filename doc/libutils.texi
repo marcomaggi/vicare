@@ -1082,4 +1082,98 @@ true: return all the installed libraries, else return only the visible
 ones.
 @end defun
 
+
+@defun find-library-by-name @var{libref}
+Given a @rnrs{6} library reference: try to search and install the
+corresponding library, if it is not already installed; when successful
+return the corresponding @objtype{library} record, otherwise raise an
+exception.
+@end defun
+
+
+@defun library? @var{obj}
+Return @true{} if @var{obj} is a struct of type @objtype{library};
+otherwise return @false{}.
+@end defun
+
+
+@defun library-uid @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-name @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-imp-lib* @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-vis-lib* @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-inv-lib* @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-export-subst @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-export-env @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-visit-state @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-invoke-state @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-visit-code @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-invoke-code @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-guard-code @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-guard-lib* @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-visible? @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-source-file-name @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
+
+@defun library-option* @var{lib}
+Accessor for structs of type @objtype{library}.
+@end defun
+
 @c end of file

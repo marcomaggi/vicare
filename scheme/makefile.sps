@@ -899,8 +899,8 @@
     (current-primitive-locations		$boot)
     (boot-library-expand			$boot)
     (current-library-collection			$boot)
-    (library-name				$boot)
-    (find-library-by-name			$boot)
+    (library-name				$boot $libraries)
+    (find-library-by-name			$boot $libraries)
 
 ;;; --------------------------------------------------------------------
     ($car					$pairs $vicare-pairs)
@@ -2884,11 +2884,32 @@
 ;;; --------------------------------------------------------------------
 ;;; library infrastructure
 
+    (library?						$libraries)
+    (library-uid					$libraries)
+;;; These are exported above.
+;;; (library-name					$libraries)
+;;; (find-library-by-name				$libraries)
+    (library-imp-lib*					$libraries)
+    (library-vis-lib*					$libraries)
+    (library-inv-lib*					$libraries)
+    (library-export-subst				$libraries)
+    (library-export-env					$libraries)
+    (library-visit-state				$libraries)
+    (library-invoke-state				$libraries)
+    (library-visit-code					$libraries)
+    (library-invoke-code				$libraries)
+    (library-guard-code					$libraries)
+    (library-guard-lib*					$libraries)
+    (library-visible?					$libraries)
+    (library-source-file-name				$libraries)
+    (library-option*					$libraries)
+
     (library-path					$libraries)
     (library-extensions					$libraries)
     (fasl-directory					$libraries)
     (fasl-search-path					$libraries)
     (fasl-path						$libraries)
+    (fasl-stem+extension				$libraries)
 
     (current-library-locator				$libraries)
     (run-time-library-locator				$libraries)

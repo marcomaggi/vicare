@@ -26,7 +26,7 @@
     load			load-r6rs-script
     library-path		library-extensions
     fasl-directory		fasl-path
-    fasl-search-path)
+    fasl-search-path		fasl-stem+extension)
   (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
@@ -58,7 +58,6 @@
     (only (psyntax library-manager)
 	  find-library-by-name
 	  library-name
-	  library-build-dependency-rule
 	  current-library-collection
 	  current-source-library-file-locator
 	  current-source-library-loader
@@ -821,7 +820,7 @@
 
 ;;;; loading source programs
 
-(define* (load-r6rs-script (file-pathname posix.file-string-pathname?) serialize? run? print-dependencies?)
+(define* (load-r6rs-script (file-pathname posix.file-string-pathname?) serialize? run?)
   ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
   ;;representing a file  pathname, expecting an R6RS program  or an R6RS
   ;;library and compile it.
@@ -841,24 +840,6 @@
 								 source-pathname libname contents))
 				     (lambda (core-expr)
 				       (compile-core-expr core-expr))))
-    (when print-dependencies?
-      (fold-left (lambda (knil lib)
-		   (let ((rule (library-build-dependency-rule lib)))
-		     (when (and rule
-				(not (null? (cdr rule))))
-		       (fprintf stdout "$(fasldir)~a:"
-				(fasl-stem+extension (car rule)))
-		       (for-each (lambda (libname)
-				   (fprintf stdout " $(fasldir)~a"
-					    (fasl-stem+extension libname)))
-			 (cdr rule))
-		       (fprintf stdout "\n")
-		       (flush-output-port stdout))
-		     (if rule
-			 (cons rule knil)
-		       knil)))
-	'()
-	((current-library-collection))))
     (when run?
       (thunk))))
 

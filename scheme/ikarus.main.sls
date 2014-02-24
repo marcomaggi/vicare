@@ -131,15 +131,14 @@
 
 (define-auxiliary-syntaxes
   serialize?
-  run?
-  print-dependencies?)
+  run?)
 
 (define-syntax load-r6rs-script
   (syntax-rules (serialize? run?)
     ((_ ?filename (serialize? ?ser) (run? ?run))
-     (load.load-r6rs-script ?filename ?ser ?run #f))
-    ((_ ?filename (serialize? ?ser) (run? ?run) (print-dependencies? ?print))
-     (load.load-r6rs-script ?filename ?ser ?run ?print))
+     (load.load-r6rs-script ?filename ?ser ?run))
+    ((_ ?filename (serialize? ?ser) (run? ?run))
+     (load.load-r6rs-script ?filename ?ser ?run))
     ))
 
 (define (%string->sexp expr-string)
@@ -157,8 +156,7 @@
   (exec-mode
 		;A  symbol representing  the  requested execution  mode:
 		;R6RS-SCRIPT,   R6RS-REPL,    SCRIPT,   COMPILE-LIBRARY,
-		;COMPILE-DEPENDENCIES,  PRINT-DEPENDENCIES, R6RS-EXPAND,
-		;REPL.
+		;COMPILE-DEPENDENCIES, R6RS-EXPAND, REPL.
    script
 		;A  string representing  a file  name: the  main script.
 		;When     in     R6RS-SCRIPT,     COMPILE-LIBRARY     or
@@ -500,17 +498,6 @@
 		  (set-run-time-config-script!    cfg (cadr args))
 		  (next-option (cddr args) k))))
 
-	  ((%option= "--print-dependencies")
-	   (cond ((null? (cdr args))
-		  (%error-and-exit "option --print-dependencies requires a script name"))
-		 ((run-time-config-exec-mode cfg)
-		  (%error-and-exit
-		   "option --print-dependencies given after other mode option"))
-		 (else
-		  (set-run-time-config-exec-mode! cfg 'print-dependencies)
-		  (set-run-time-config-script!    cfg (cadr args))
-		  (next-option (cddr args) k))))
-
 	  ((%option= "--r6rs-expand")
 	   (cond ((null? (cdr args))
 		  (%error-and-exit "option --r6rs-expand requires a script name"))
@@ -799,7 +786,6 @@ vicare [OPTIONS] --r6rs-repl PROGRAM            [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --script CODE                  [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-library LIBFILE      [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --compile-dependencies PROGRAM [-- [PROGRAM OPTS]]
-vicare [OPTIONS] --print-dependencies PROGRAM   [-- [PROGRAM OPTS]]
 vicare [OPTIONS] --r6rs-expand PROGRAM          [-- [PROGRAM OPTS]]
 
 the  OPTIONS are  interpreted by  vicare, PROGRAM  OPTS can  be obtained
@@ -830,11 +816,6 @@ Options controlling execution modes:
         Load  the R6RS program  PROGRAM, compile all the  libraries upon
 	which it depends  and save them in the FASL repository.  PROGRAM
 	itself is not evaluated.
-
-   --print-dependencies PROGRAM
-        Load  the R6RS program  PROGRAM, compile all the  libraries upon
-	which it depends  and print  to stderr  the list of dependecies.
-        PROGRAM itself is not evaluated.
 
    --r6rs-expand PROGRAM
         Start Vicare  in R6RS-script mode.  The PROGRAM  file is handled
@@ -1160,10 +1141,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   (with-run-time-config (cfg)
     (doit (load-r6rs-script cfg.script (serialize? #t) (run? #f)))))
 
-(define (print-dependencies cfg)
-  (with-run-time-config (cfg)
-    (doit (load-r6rs-script cfg.script (serialize? #f) (run? #f) (print-dependencies? #t)))))
-
 (define (compile-library cfg)
   (with-run-time-config (cfg)
     (doit (load.load-and-serialize-source-library cfg.script cfg.output-file))))
@@ -1423,8 +1400,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
      (cond ((psyntax.current-library-locator))
 	   ((memq cfg.exec-mode '(compile-dependencies compile-library))
 	    load.compile-time-library-locator)
-	   ((memq cfg.exec-mode '(print-dependencies))
-	    load.source-library-locator)
 	   (else
 	    load.run-time-library-locator)))
     (load-rc-files-as-r6rs-scripts cfg)
@@ -1457,9 +1432,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 
       ((compile-library)
        (compile-library cfg))
-
-      ((print-dependencies)
-       (print-dependencies cfg))
 
       ((script)
        (load-evaluated-script cfg))

@@ -25,11 +25,18 @@
 (library (psyntax library-manager)
   (export
     ;; library inspection
-    library?			library-name
-    library-descriptor		library-export-subst
+    library?
+    library-uid			library-name
+    library-imp-lib*		library-vis-lib*
+    library-inv-lib*		library-export-subst
+    library-export-env		library-visit-state
+    library-invoke-state	library-visit-code
+    library-invoke-code		library-guard-code
+    library-guard-lib*		library-visible?
+    library-source-file-name	library-option*
+    library-descriptor
     library-name-identifiers
     imported-label->syntactic-binding
-    library-build-dependency-rule
 
     ;; library installation
     install-library		uninstall-library
@@ -1135,20 +1142,6 @@
 					 "first visit did not return" lib)))
       (visit)
       ($set-library-visit-state! lib #t))))
-
-
-;;;; other library utilities
-
-(define* (library-build-dependency-rule (lib library?))
-  (and ($library-source-file-name lib)
-       (cons ($library-name lib)
-	     (fold-left (lambda (knil dep-lib)
-			  (if ($library-source-file-name dep-lib)
-			      (cons ($library-name dep-lib)
-				    knil)
-			    knil))
-	       '()
-	       ($library-imp-lib* lib)))))
 
 
 ;;;; including files
