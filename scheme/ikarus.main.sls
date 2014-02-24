@@ -749,7 +749,7 @@
   (%newline)
   (%display "
 Copyright (c) 2006-2010 Abdulaziz Ghuloum and contributors
-Copyright (c) 2011-2013 Marco Maggi\n\n"))
+Copyright (c) 2011-2014 Marco Maggi\n\n"))
 
 (define (print-version-screen)
   ;;Print the version screen.
