@@ -1252,30 +1252,30 @@ VICARE_COMPILE_LIBRARY_PATH	= $(fasldir):$(slsdir):$(VICARE_LIBRARY_PATH)
 VICARE_COMPILE_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
 VICARE_COMPILE_LD_PATH		= $(builddir)/.libs
 
-VICARE_ENV	= \
+VICARE_COMPILE_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
 	VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH);		export VICARE_FASL_PATH;	\
 	SILEX_PATH=$(srcdir)/vicare/parser-tools/silex/macros;	export SILEX_PATH;		\
 	LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export DYLD_LIBRARY_PATH;
-VICARE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
-VICARE_RUN	= $(VICARE_ENV) vicare $(VICARE_FLAGS)
+VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
+VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) vicare $(VICARE_COMPILE_FLAGS)
 
 $(fasldir)/vicare/irregex/compat.fasl : lib/vicare/irregex/compat.vicare.sls $(VICARE_NEW_BOOT)
-	$(VICARE_RUN) --output $@ --compile-library $<
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 $(fasldir)/srfi/%3a106/compat.fasl : lib/srfi/%3a106/compat.vicare.sls $(VICARE_NEW_BOOT)
-	$(VICARE_RUN) --output $@ --compile-library $<
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-.sls.fasl : $(VICARE_NEW_BOOT)
-	$(VICARE_RUN) --output $@ --compile-library $<
+%.fasl: %.sls $(VICARE_NEW_BOOT)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 ## --------------------------------------------------------------------
 
 .PHONY: dependencies
 
 dependencies:
-	$(VICARE_RUN) --print-dependencies $(slsdir)/compile-all.sps >$(slsdir)/dependencies.make
+	$(VICARE_COMPILE_RUN) --print-dependencies $(slsdir)/compile-all.sps >$(slsdir)/dependencies.make
 
 include $(slsdir)/dependencies.make
 
@@ -1293,7 +1293,7 @@ NAUIPADDR_SRCDIR	= $(slsdir)/nausicaa/parser-tools/ip-addresses
 
 silex-internals:
 	@echo; echo "*** Special rule: rebuilding SILex internals lexer tables"; echo
-	@export SILEX_SRCDIR=$(SILEX_SRCDIR); $(VICARE_RUN) $(SILEX_SRCDIR)/make-tables.sps
+	@export SILEX_SRCDIR=$(SILEX_SRCDIR); $(VICARE_COMPILE_RUN) $(SILEX_SRCDIR)/make-tables.sps
 
 silex-backup:
 	@echo; echo "*** Special rule: backup of SILex internals lexer tables"; echo
@@ -1301,7 +1301,7 @@ silex-backup:
 
 ip-address-tables:
 	@echo; echo "*** Special rule: rebuilding net libraries tables"; echo
-	@export NAUIPADDR_SRCDIR=$(NAUIPADDR_SRCDIR); $(VICARE_RUN) $(NAUIPADDR_SRCDIR)/make-tables.sps
+	@export NAUIPADDR_SRCDIR=$(NAUIPADDR_SRCDIR); $(VICARE_COMPILE_RUN) $(NAUIPADDR_SRCDIR)/make-tables.sps
 
 #page
 #### running the test suite: test files
