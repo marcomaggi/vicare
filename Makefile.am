@@ -7,9 +7,11 @@ EXTRA_DIST		= configure.sh configure32.sh configure64.sh	\
 			  scripts/vie					\
 			  autotools/config.rpath
 
+slsdir			= $(srcdir)/lib
 fasldir			= $(builddir)/lib
-instdir			= $(libdir)/vicare-scheme
 testdir			= $(srcdir)/tests
+bundledlibsdir		= $(libdir)/vicare-scheme
+instdir			= $(bundledlibsdir)
 
 CLEANFILES		=
 MAINTAINERCLEANFILES	=
@@ -240,7 +242,9 @@ CLEANFILES		+= bootfileloc.h
 
 BUILT_SOURCES		+= $(srcdir)/src/last-revision.h bootfileloc.h
 
-bootfileloc.h: Makefile
+# Strictly speaking: this  target should depend on  Makfile, but doing
+# it that way causes a lot of unnecessary rebuilds.
+bootfileloc.h:
 	echo '#define BOOTFILE "$(pkglibdir)/vicare.boot"' >$@
 	echo '#define EXEFILE "$(bindir)/vicare"' >>$@
 
@@ -390,7 +394,7 @@ VICARE_NEW_BOOT		= vicare.boot
 bootexecdir		= $(pkglibdir)
 bootexec_DATA		= $(VICARE_NEW_BOOT)
 
-BOOT_SEARCH_PATH	= $(srcdir)/scheme:$(builddir)/scheme:$(srcdir)/lib:$(builddir)/lib:$(builddir)
+BOOT_SEARCH_PATH	= $(srcdir)/scheme:$(builddir)/scheme:$(slsdir):$(fasldir):$(builddir)
 VICARE_PREBUILT_BOOT	= $(srcdir)/scheme/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 
 VICARE_BOOT_ENV		= \
@@ -402,7 +406,9 @@ CLEANFILES		+= ikarus.config.ss $(VICARE_NEW_BOOT)
 
 ## --------------------------------------------------------------------
 
-ikarus.config.ss: Makefile
+# Strictly speaking: this  target should depend on  Makfile, but doing
+# it that way causes a lot of unnecessary rebuilds.
+ikarus.config.ss:
 	echo '(define vicare-version "$(PACKAGE_VERSION)")' >$@
 	echo '(define vicare-lib-dir "$(pkglibdir)")' >>$@
 	echo '(define scheme-lib-dir "$(libdir)/scheme/r6rs")' >>$@
@@ -858,8 +864,7 @@ EXTRA_DIST += \
 #page
 #### compiling bundled libraries: fasl files
 
-libvicaredir	= $(instdir)
-nobase_nodist_libvicare_DATA	= \
+nobase_nodist_bundledlibs_DATA	= \
 	$(fasldir)/vicare/unsafe/capi.fasl				\
 	$(fasldir)/vicare/unsafe/operations.fasl			\
 	$(fasldir)/vicare/unsafe/unicode.fasl				\
@@ -990,8 +995,7 @@ nobase_nodist_libvicare_DATA	= \
 	$(fasldir)/vicare/parser-tools/unix-pathnames.fasl
 
 if WANT_SRFI
-libsrfidir			= $(instdir)
-nobase_nodist_libsrfi_DATA	= \
+nobase_nodist_bundledlibs_DATA	+= \
 	$(fasldir)/srfi/%3a0.fasl					\
 	$(fasldir)/srfi/%3a0/cond-expand.fasl				\
 	\
@@ -1109,8 +1113,7 @@ endif
 
 if WANT_SRFI
 if WANT_POSIX
-libsrfiposixdir			= $(instdir)
-nobase_nodist_libsrfiposix_DATA	= \
+nobase_nodist_bundledlibs_DATA	+= \
 	$(fasldir)/srfi/%3a106.fasl					\
 	$(fasldir)/srfi/%3a106/socket.fasl				\
 	$(fasldir)/srfi/%3a106/compat.fasl
@@ -1118,8 +1121,7 @@ endif
 endif
 
 if WANT_NAUSICAA
-libnausicaadir			= $(instdir)
-nobase_nodist_libnausicaa_DATA	= \
+nobase_nodist_bundledlibs_DATA	+= \
 	$(fasldir)/nausicaa/language/auxiliary-syntaxes.fasl		\
 	$(fasldir)/nausicaa/language/symbols-tree.fasl			\
 	\
@@ -1184,15 +1186,13 @@ nobase_nodist_libnausicaa_DATA	= \
 endif
 
 if WANT_LIBFFI
-libffidir		= $(instdir)
-nobase_nodist_libffi_DATA	= \
+nobase_nodist_bundledlibs_DATA	+= \
 	$(fasldir)/vicare/ffi.fasl					\
 	$(fasldir)/vicare/ffi/foreign-pointer-wrapper.fasl
 endif
 
 if WANT_POSIX
-libposixdir			= $(instdir)
-nobase_nodist_libposix_DATA	= \
+nobase_nodist_bundledlibs_DATA	+= \
 	$(fasldir)/vicare/posix.fasl					\
 	$(fasldir)/vicare/posix/pid-files.fasl				\
 	$(fasldir)/vicare/posix/lock-pid-files.fasl			\
@@ -1203,37 +1203,31 @@ nobase_nodist_libposix_DATA	= \
 endif
 
 if WANT_GLIBC
-libglibcdir			= $(instdir)
-nobase_nodist_libglibc_DATA	= $(fasldir)/vicare/glibc.fasl
+nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/glibc.fasl
 endif
 
 if WANT_LIBICONV
-libiconvdir			= $(instdir)
-nobase_nodist_libiconv_DATA	= $(fasldir)/vicare/iconv.fasl
+nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/iconv.fasl
 endif
 
 if WANT_LIBFFI
 if WANT_POSIX
 if WANT_GLIBC
-libgccdir			= $(instdir)
-nobase_nodist_libgcc_DATA		= $(fasldir)/vicare/gcc.fasl
+nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/gcc.fasl
 endif
 endif
 endif
 
 if WANT_LINUX
-liblinuxdir			= $(instdir)
-nobase_nodist_liblinux_DATA	= $(fasldir)/vicare/linux.fasl
+nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/linux.fasl
 endif
 
 if WANT_READLINE
-libreadlinedir			= $(instdir)
-nobase_nodist_libreadline_DATA	= $(fasldir)/vicare/readline.fasl
+nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/readline.fasl
 endif
 
 if WANT_CRE2
-libcre2dir			= $(instdir)
-nobase_nodist_libcre2_DATA	= $(fasldir)/vicare/cre2.fasl
+nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/cre2.fasl
 endif
 
 #page
@@ -1247,14 +1241,14 @@ features_SOURCES	= lib/features.c
 lib/vicare/platform/features.sls : features
 	$(MKDIR_P) lib/vicare/platform && ./features >$@
 
-lib/vicare/platform/features.fasl : lib/vicare/platform/features.sls
+$(fasldir)/vicare/platform/features.fasl : lib/vicare/platform/features.sls
 
 CLEANFILES	+= vicare/platform/features.sls
 
 #page
 #### compiling bundled libraries: build rules
 
-VICARE_COMPILE_LIBRARY_PATH	= $(builddir)/lib:$(srcdir)/lib:$(VICARE_LIBRARY_PATH)
+VICARE_COMPILE_LIBRARY_PATH	= $(fasldir):$(slsdir):$(VICARE_LIBRARY_PATH)
 VICARE_COMPILE_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
 VICARE_COMPILE_LD_PATH		= $(builddir)/.libs
 
@@ -1267,13 +1261,13 @@ VICARE_ENV	= \
 VICARE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
 VICARE_RUN	= $(VICARE_ENV) vicare $(VICARE_FLAGS)
 
-lib/vicare/irregex/compat.fasl : lib/vicare/irregex/compat.vicare.sls $(VICARE_NEW_BOOT)
+$(fasldir)/vicare/irregex/compat.fasl : lib/vicare/irregex/compat.vicare.sls $(VICARE_NEW_BOOT)
 	$(VICARE_RUN) --output $@ --compile-library $<
 
-lib/srfi/%3a106/compat.fasl : lib/srfi/%3a106/compat.vicare.sls $(VICARE_NEW_BOOT)
+$(fasldir)/srfi/%3a106/compat.fasl : lib/srfi/%3a106/compat.vicare.sls $(VICARE_NEW_BOOT)
 	$(VICARE_RUN) --output $@ --compile-library $<
 
-%.fasl : %.sls $(VICARE_NEW_BOOT)
+.sls.fasl : $(VICARE_NEW_BOOT)
 	$(VICARE_RUN) --output $@ --compile-library $<
 
 ## --------------------------------------------------------------------
@@ -1281,31 +1275,19 @@ lib/srfi/%3a106/compat.fasl : lib/srfi/%3a106/compat.vicare.sls $(VICARE_NEW_BOO
 .PHONY: dependencies
 
 dependencies:
-	$(VICARE_RUN) --print-dependencies $(srcdir)/lib/compile-all.sps >$(srcdir)/lib/dependencies.make
+	$(VICARE_RUN) --print-dependencies $(slsdir)/compile-all.sps >$(slsdir)/dependencies.make
 
-include $(srcdir)/lib/dependencies.make
+include $(slsdir)/dependencies.make
 
 ## --------------------------------------------------------------------
 
-CLEANFILES	+= \
-	$(nobase_nodist_libvicare_DATA)		\
-	$(nobase_nodist_libsrfi_DATA)		\
-	$(nobase_nodist_libsrfiposix_DATA)	\
-	$(nobase_nodist_libnausicaa_DATA)	\
-	$(nobase_nodist_libffi_DATA)		\
-	$(nobase_nodist_libposix_DATA)		\
-	$(nobase_nodist_libglibc_DATA)		\
-	$(nobase_nodist_libiconv_DATA)		\
-	$(nobase_nodist_libgcc_DATA)		\
-	$(nobase_nodist_liblinux_DATA)		\
-	$(nobase_nodist_libreadline_DATA)	\
-	$(nobase_nodist_libcre2_DATA)
+CLEANFILES	+= $(nobase_nodist_bundledlibs_DATA)
 
 #page
 #### special library rules: SILex lexers building
 
-SILEX_SRCDIR		= $(srcdir)/lib/vicare/parser-tools/silex
-NAUIPADDR_SRCDIR	= $(srcdir)/lib/nausicaa/parser-tools/ip-addresses
+SILEX_SRCDIR		= $(slsdir)/vicare/parser-tools/silex
+NAUIPADDR_SRCDIR	= $(slsdir)/nausicaa/parser-tools/ip-addresses
 
 .PHONY: silex-internals silex-backup ip-address-tables
 
@@ -1811,7 +1793,7 @@ VICARE_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
 VICARE_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
 
 VICARE_TEST_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_TEST_SEARCH_PATH	= $(srcdir)/tests:$(srcdir)/lib:$(builddir)/lib:$(srcdir)/scheme
+VICARE_TEST_SEARCH_PATH	= $(srcdir)/tests:$(slsdir):$(fasldir):$(srcdir)/scheme
 
 # Enable timing  of test files  execution.  We cannot include  this in
 # the separator because it needs  to be placed between the environment
@@ -1915,7 +1897,7 @@ VICARE_TERMINAL_RUN_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
 	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
-	SILEX_PATH=$(srcdir)/lib/vicare/parser-tools/silex; export SILEX_PATH;
+	SILEX_PATH=$(slsdir)/vicare/parser-tools/silex; export SILEX_PATH;
 VICARE_TERMINAL_RUN	= $(VICARE_TERMINAL_RUN_ENV) vicare $(VICARE_TERMINAL_RUN_FLAGS)
 VICARE_TERMINAL_VIE	= $(VICARE_TERMINAL_RUN_ENV) $(VIE) vicare --raw-repl $(VICARE_TERMINAL_RUN_FLAGS)
 
@@ -1937,7 +1919,9 @@ if WANT_BINFMT
 rcddir			= $(sysconfdir)/rc.d
 rcd_SCRIPTS		= rc.vicare-scheme
 
-rc.vicare-scheme: Makefile
+# Strictly speaking: this  target should depend on  Makfile, but doing
+# it that way causes a lot of unnecessary rebuilds.
+rc.vicare-scheme:
 	@echo '#!/bin/sh' >$(@)
 	@echo '#' >>$(@)
 	@echo '# Setup the  Linux module  "binfmt_misc" to automatically  recognise and' >>$(@)
