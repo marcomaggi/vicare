@@ -14,7 +14,7 @@
   '("lib/vicare/platform/features.sls"))
 
 (define-constant LIBRARIES-SPECS
-  '((#f
+  '((()
      (vicare platform configuration)
      (vicare platform words)
      (vicare platform errno)
@@ -59,6 +59,8 @@
      (vicare language-extensions identifier-substitutions)
      (vicare language-extensions makers)
      (vicare language-extensions try)
+
+     (vicare build-tools automake)
 
      (vicare checks)
 
@@ -143,7 +145,7 @@
     ((WANT_READLINE)
      (vicare readline))
 
-    (#f
+    (()
      (vicare assembler inspection)
      (vicare debugging compiler)
      (vicare parser-logic)

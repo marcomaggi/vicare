@@ -530,6 +530,16 @@ nodist_lib_vicare_language_extensions_try_fasl_DATA = lib/vicare/language-extens
 EXTRA_DIST += lib/vicare/language-extensions/try.sls
 CLEANFILES += lib/vicare/language-extensions/try.fasl
 
+lib/vicare/build-tools/automake.fasl: \
+		lib/vicare/build-tools/automake.sls \
+		$(VICARE_NEW_BOOT)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_build_tools_automake_fasldir = $(bundledlibsdir)/vicare/build-tools
+nodist_lib_vicare_build_tools_automake_fasl_DATA = lib/vicare/build-tools/automake.fasl
+EXTRA_DIST += lib/vicare/build-tools/automake.sls
+CLEANFILES += lib/vicare/build-tools/automake.fasl
+
 lib/vicare/checks.fasl: \
 		lib/vicare/checks.sls \
 		$(VICARE_NEW_BOOT)
