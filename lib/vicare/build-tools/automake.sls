@@ -139,7 +139,7 @@
       (for-each (lambda (libname)
 		  (print-recipe " \\\n\t\tlib~a" (libs.fasl-stem+extension libname)))
 	(cdr dependencies-list)))
-    (print-recipe " \\\n\t\t$(VICARE_NEW_BOOT)\n")
+    (print-recipe " \\\n\t\t$(FASL_PREREQUISITES)\n")
     (print-recipe "\t$(VICARE_COMPILE_RUN) --output $@ --compile-library $<\n\n"))
 
   (define (%build-installation-stuff binary-pathname source-pathname)

@@ -439,7 +439,7 @@ ikarus.config.ss:
 # all the options are set in the script "makefile.sps".
 #
 $(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.ss scheme/makefile.sps
-	$(VICARE_BOOT_ENV) $(GDB) vicare -b $(VICARE_PREBUILT_BOOT) \
+	$(VICARE_BOOT_ENV) $(GDB) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
 		--r6rs-script $(srcdir)/scheme/makefile.sps
 
 ## --------------------------------------------------------------------
@@ -463,7 +463,7 @@ boot-image-32-bit: vicare
 	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.ss
-	$(VICARE_BOOT_ENV) vicare -b $(VICARE_PREBUILT_BOOT)	\
+	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT)	\
 		--r6rs-script $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.4.prebuilt
 
@@ -484,7 +484,7 @@ boot-image-64-bit: vicare
 	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.ss
-	$(VICARE_BOOT_ENV) vicare -b $(VICARE_PREBUILT_BOOT)	\
+	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT)	\
 		--r6rs-script $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.8.prebuilt
 
@@ -507,7 +507,7 @@ boot-image-64-bit: vicare
 # but keep backups of the original one!!!
 #
 try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
-	$(VICARE_BOOT_ENV) vicare -b $(builddir)/vicare.boot.try	\
+	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(builddir)/vicare.boot.try	\
 		--r6rs-script $(srcdir)/scheme/makefile.sps
 
 #page
@@ -541,7 +541,9 @@ VICARE_COMPILE_ENV	= \
 	LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export LD_LIBRARY_PATH;		\
 	DYLD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export DYLD_LIBRARY_PATH;
 VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
-VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) vicare $(VICARE_COMPILE_FLAGS)
+VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(builddir)/vicare $(VICARE_COMPILE_FLAGS)
+
+FASL_PREREQUISITES	= $(VICARE_NEW_BOOT)
 
 # %.fasl: %.sls $(VICARE_NEW_BOOT)
 # 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
@@ -1094,7 +1096,7 @@ VICARE_TEST_ENV		= \
 	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex/macros; export SILEX_PATH;\
 	LD_LIBRARY_PATH=$(builddir)/../src/.libs; export LD_LIBRARY_PATH;
 	DYLD_LIBRARY_PATH=$(builddir)/../src/.libs; export DYLD_LIBRARY_PATH;
-VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) vicare $(VICARE_TEST_FLAGS)
+VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(builddir)/vicare $(VICARE_TEST_FLAGS)
 
 ## --------------------------------------------------------------------
 ## interface to "make check"
@@ -1180,8 +1182,8 @@ VICARE_TERMINAL_RUN_ENV	= \
 	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
 	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
 	SILEX_PATH=$(slsdir)/vicare/parser-tools/silex; export SILEX_PATH;
-VICARE_TERMINAL_RUN	= $(VICARE_TERMINAL_RUN_ENV) vicare $(VICARE_TERMINAL_RUN_FLAGS)
-VICARE_TERMINAL_VIE	= $(VICARE_TERMINAL_RUN_ENV) $(VIE) vicare --raw-repl $(VICARE_TERMINAL_RUN_FLAGS)
+VICARE_TERMINAL_RUN	= $(VICARE_TERMINAL_RUN_ENV) $(builddir)/vicare $(VICARE_TERMINAL_RUN_FLAGS)
+VICARE_TERMINAL_VIE	= $(VICARE_TERMINAL_RUN_ENV) $(VIE) $(builddir)/vicare --raw-repl $(VICARE_TERMINAL_RUN_FLAGS)
 
 .PHONY: test-run test-vie test-exec-modes
 
@@ -1192,7 +1194,7 @@ test-vie:
 	$(VICARE_TERMINAL_VIE)
 
 test-exec-modes:
-	$(VICARE_TERMINAL_RUN_ENV) $(testdir)/test-exec-modes.sh vicare $(VICARE_NEW_BOOT) $(testdir)
+	$(VICARE_TERMINAL_RUN_ENV) $(testdir)/test-exec-modes.sh $(builddir)/vicare $(VICARE_NEW_BOOT) $(testdir)
 
 #page
 #### Linux binfmt support

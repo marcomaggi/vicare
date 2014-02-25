@@ -11,7 +11,7 @@ EXTRA_DIST +=  \
 
 lib/vicare/platform/configuration.fasl: \
 		lib/vicare/platform/configuration.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_platform_configuration_fasldir = $(bundledlibsdir)/vicare/platform
@@ -21,7 +21,7 @@ CLEANFILES += lib/vicare/platform/configuration.fasl
 lib/vicare/platform/words.fasl: \
 		lib/vicare/platform/words.sls \
 		lib/vicare/platform/configuration.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_platform_words_fasldir = $(bundledlibsdir)/vicare/platform
@@ -30,7 +30,7 @@ CLEANFILES += lib/vicare/platform/words.fasl
 
 lib/vicare/platform/errno.fasl: \
 		lib/vicare/platform/errno.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_platform_errno_fasldir = $(bundledlibsdir)/vicare/platform
@@ -40,7 +40,7 @@ CLEANFILES += lib/vicare/platform/errno.fasl
 lib/vicare/platform/constants.fasl: \
 		lib/vicare/platform/constants.sls \
 		lib/vicare/platform/errno.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_platform_constants_fasldir = $(bundledlibsdir)/vicare/platform
@@ -49,7 +49,7 @@ CLEANFILES += lib/vicare/platform/constants.fasl
 
 lib/vicare/platform/features.fasl: \
 		lib/vicare/platform/features.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_platform_features_fasldir = $(bundledlibsdir)/vicare/platform
@@ -59,7 +59,7 @@ CLEANFILES += lib/vicare/platform/features.fasl
 lib/vicare/platform/utilities.fasl: \
 		lib/vicare/platform/utilities.sls \
 		lib/vicare/platform/constants.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_platform_utilities_fasldir = $(bundledlibsdir)/vicare/platform
@@ -69,7 +69,7 @@ CLEANFILES += lib/vicare/platform/utilities.fasl
 
 lib/vicare/unsafe/capi.fasl: \
 		lib/vicare/unsafe/capi.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_unsafe_capi_fasldir = $(bundledlibsdir)/vicare/unsafe
@@ -80,7 +80,7 @@ CLEANFILES += lib/vicare/unsafe/capi.fasl
 lib/vicare/unsafe/operations.fasl: \
 		lib/vicare/unsafe/operations.sls \
 		lib/vicare/platform/configuration.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_unsafe_operations_fasldir = $(bundledlibsdir)/vicare/unsafe
@@ -91,7 +91,7 @@ CLEANFILES += lib/vicare/unsafe/operations.fasl
 lib/vicare/unsafe/unicode.fasl: \
 		lib/vicare/unsafe/unicode.sls \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_unsafe_unicode_fasldir = $(bundledlibsdir)/vicare/unsafe
@@ -102,7 +102,7 @@ CLEANFILES += lib/vicare/unsafe/unicode.fasl
 lib/vicare/language-extensions/cond-expand.fasl: \
 		lib/vicare/language-extensions/cond-expand.sls \
 		lib/vicare/language-extensions/cond-expand/registry.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -114,7 +114,7 @@ lib/vicare/language-extensions/cond-expand/registry.fasl: \
 		lib/vicare/language-extensions/cond-expand/registry.sls \
 		lib/vicare/language-extensions/cond-expand/platform-features.fasl \
 		lib/vicare/language-extensions/cond-expand/configuration-features.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_registry_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
@@ -125,7 +125,7 @@ CLEANFILES += lib/vicare/language-extensions/cond-expand/registry.fasl
 lib/vicare/language-extensions/cond-expand/platform-features.fasl: \
 		lib/vicare/language-extensions/cond-expand/platform-features.sls \
 		lib/vicare/language-extensions/cond-expand/OS-id-features.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_platform_features_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
@@ -135,7 +135,7 @@ CLEANFILES += lib/vicare/language-extensions/cond-expand/platform-features.fasl
 
 lib/vicare/language-extensions/cond-expand/OS-id-features.fasl: \
 		lib/vicare/language-extensions/cond-expand/OS-id-features.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_OS_id_features_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
@@ -145,7 +145,7 @@ CLEANFILES += lib/vicare/language-extensions/cond-expand/OS-id-features.fasl
 
 lib/vicare/language-extensions/cond-expand/configuration-features.fasl: \
 		lib/vicare/language-extensions/cond-expand/configuration-features.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_configuration_features_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
@@ -156,7 +156,7 @@ CLEANFILES += lib/vicare/language-extensions/cond-expand/configuration-features.
 lib/vicare/language-extensions/cond-expand/feature-cond.fasl: \
 		lib/vicare/language-extensions/cond-expand/feature-cond.sls \
 		lib/vicare/language-extensions/cond-expand/registry.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_feature_cond_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
@@ -166,7 +166,7 @@ CLEANFILES += lib/vicare/language-extensions/cond-expand/feature-cond.fasl
 
 lib/vicare/language-extensions/cond-expand/helpers.fasl: \
 		lib/vicare/language-extensions/cond-expand/helpers.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_cond_expand_helpers_fasldir = $(bundledlibsdir)/vicare/language-extensions/cond-expand
@@ -180,7 +180,7 @@ lib/vicare/arguments/validation.fasl: \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/platform/words.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_arguments_validation_fasldir = $(bundledlibsdir)/vicare/arguments
@@ -193,7 +193,7 @@ lib/vicare/arguments/general-c-buffers.fasl: \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_arguments_general_c_buffers_fasldir = $(bundledlibsdir)/vicare/arguments
@@ -207,7 +207,7 @@ lib/vicare/language-extensions/syntaxes.fasl: \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/define-record-extended.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_syntaxes_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -218,7 +218,7 @@ CLEANFILES += lib/vicare/language-extensions/syntaxes.fasl
 lib/vicare/language-extensions/define-record-extended.fasl: \
 		lib/vicare/language-extensions/define-record-extended.sls \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_define_record_extended_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -229,7 +229,7 @@ CLEANFILES += lib/vicare/language-extensions/define-record-extended.fasl
 lib/vicare/language-extensions/amb.fasl: \
 		lib/vicare/language-extensions/amb.sls \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_amb_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -240,7 +240,7 @@ CLEANFILES += lib/vicare/language-extensions/amb.fasl
 lib/vicare/language-extensions/simple-match.fasl: \
 		lib/vicare/language-extensions/simple-match.sls \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_simple_match_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -251,7 +251,7 @@ CLEANFILES += lib/vicare/language-extensions/simple-match.fasl
 lib/vicare/language-extensions/coroutines.fasl: \
 		lib/vicare/language-extensions/coroutines.sls \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_coroutines_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -261,7 +261,7 @@ CLEANFILES += lib/vicare/language-extensions/coroutines.fasl
 
 lib/vicare/language-extensions/increments.fasl: \
 		lib/vicare/language-extensions/increments.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_increments_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -274,7 +274,7 @@ lib/vicare/language-extensions/infix.fasl: \
 		lib/vicare/language-extensions/infix/parser-utils.fasl \
 		lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl \
 		lib/vicare/language-extensions/increments.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_infix_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -288,7 +288,7 @@ lib/vicare/language-extensions/infix/parser-utils.fasl: \
 		lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl \
 		lib/vicare/language-extensions/infix/tokens.fasl \
 		lib/vicare/language-extensions/infix/parser-table.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_infix_parser_utils_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
@@ -298,7 +298,7 @@ CLEANFILES += lib/vicare/language-extensions/infix/parser-utils.fasl
 
 lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl: \
 		lib/vicare/language-extensions/infix/auxiliary-syntaxes.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_infix_auxiliary_syntaxes_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
@@ -308,7 +308,7 @@ CLEANFILES += lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl
 
 lib/vicare/language-extensions/infix/tokens.fasl: \
 		lib/vicare/language-extensions/infix/tokens.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_infix_tokens_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
@@ -319,7 +319,7 @@ CLEANFILES += lib/vicare/language-extensions/infix/tokens.fasl
 lib/vicare/language-extensions/infix/parser-table.fasl: \
 		lib/vicare/language-extensions/infix/parser-table.sls \
 		lib/vicare/language-extensions/infix/lr-driver.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_infix_parser_table_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
@@ -330,7 +330,7 @@ CLEANFILES += lib/vicare/language-extensions/infix/parser-table.fasl
 lib/vicare/language-extensions/infix/lr-driver.fasl: \
 		lib/vicare/language-extensions/infix/lr-driver.sls \
 		lib/vicare/language-extensions/infix/tokens.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_infix_lr_driver_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
@@ -342,7 +342,7 @@ lib/vicare/language-extensions/keywords.fasl: \
 		lib/vicare/language-extensions/keywords.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_keywords_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -352,7 +352,7 @@ CLEANFILES += lib/vicare/language-extensions/keywords.fasl
 
 lib/vicare/language-extensions/sentinels.fasl: \
 		lib/vicare/language-extensions/sentinels.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_sentinels_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -362,7 +362,7 @@ CLEANFILES += lib/vicare/language-extensions/sentinels.fasl
 
 lib/vicare/language-extensions/namespaces.fasl: \
 		lib/vicare/language-extensions/namespaces.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_namespaces_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -373,7 +373,7 @@ CLEANFILES += lib/vicare/language-extensions/namespaces.fasl
 lib/vicare/language-extensions/custom-ports.fasl: \
 		lib/vicare/language-extensions/custom-ports.sls \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_custom_ports_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -383,7 +383,7 @@ CLEANFILES += lib/vicare/language-extensions/custom-ports.fasl
 
 lib/vicare/language-extensions/variables.fasl: \
 		lib/vicare/language-extensions/variables.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_variables_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -393,7 +393,7 @@ CLEANFILES += lib/vicare/language-extensions/variables.fasl
 
 lib/vicare/language-extensions/streams.fasl: \
 		lib/vicare/language-extensions/streams.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_streams_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -403,7 +403,7 @@ CLEANFILES += lib/vicare/language-extensions/streams.fasl
 
 lib/vicare/language-extensions/loops.fasl: \
 		lib/vicare/language-extensions/loops.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_loops_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -416,7 +416,7 @@ lib/vicare/language-extensions/ascii-chars.fasl: \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/ascii-chars/syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_ascii_chars_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -428,7 +428,7 @@ lib/vicare/language-extensions/ascii-chars/syntaxes.fasl: \
 		lib/vicare/language-extensions/ascii-chars/syntaxes.sls \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_ascii_chars_syntaxes_fasldir = $(bundledlibsdir)/vicare/language-extensions/ascii-chars
@@ -439,7 +439,7 @@ CLEANFILES += lib/vicare/language-extensions/ascii-chars/syntaxes.fasl
 lib/vicare/language-extensions/comparisons.fasl: \
 		lib/vicare/language-extensions/comparisons.sls \
 		lib/vicare/crypto/randomisations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_comparisons_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -450,7 +450,7 @@ CLEANFILES += lib/vicare/language-extensions/comparisons.fasl
 lib/vicare/crypto/randomisations.fasl: \
 		lib/vicare/crypto/randomisations.sls \
 		lib/vicare/crypto/randomisations/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_fasldir = $(bundledlibsdir)/vicare/crypto
@@ -460,7 +460,7 @@ CLEANFILES += lib/vicare/crypto/randomisations.fasl
 
 lib/vicare/crypto/randomisations/low.fasl: \
 		lib/vicare/crypto/randomisations/low.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_low_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -471,7 +471,7 @@ CLEANFILES += lib/vicare/crypto/randomisations/low.fasl
 lib/vicare/language-extensions/hooks.fasl: \
 		lib/vicare/language-extensions/hooks.sls \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_hooks_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -482,7 +482,7 @@ CLEANFILES += lib/vicare/language-extensions/hooks.fasl
 lib/vicare/language-extensions/callables.fasl: \
 		lib/vicare/language-extensions/callables.sls \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_callables_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -492,7 +492,7 @@ CLEANFILES += lib/vicare/language-extensions/callables.fasl
 
 lib/vicare/language-extensions/c-enumerations.fasl: \
 		lib/vicare/language-extensions/c-enumerations.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_c_enumerations_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -502,7 +502,7 @@ CLEANFILES += lib/vicare/language-extensions/c-enumerations.fasl
 
 lib/vicare/language-extensions/identifier-substitutions.fasl: \
 		lib/vicare/language-extensions/identifier-substitutions.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_identifier_substitutions_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -512,7 +512,7 @@ CLEANFILES += lib/vicare/language-extensions/identifier-substitutions.fasl
 
 lib/vicare/language-extensions/makers.fasl: \
 		lib/vicare/language-extensions/makers.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_makers_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -522,7 +522,7 @@ CLEANFILES += lib/vicare/language-extensions/makers.fasl
 
 lib/vicare/language-extensions/try.fasl: \
 		lib/vicare/language-extensions/try.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_language_extensions_try_fasldir = $(bundledlibsdir)/vicare/language-extensions
@@ -532,7 +532,7 @@ CLEANFILES += lib/vicare/language-extensions/try.fasl
 
 lib/vicare/build-tools/automake.fasl: \
 		lib/vicare/build-tools/automake.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_build_tools_automake_fasldir = $(bundledlibsdir)/vicare/build-tools
@@ -542,7 +542,7 @@ CLEANFILES += lib/vicare/build-tools/automake.fasl
 
 lib/vicare/checks.fasl: \
 		lib/vicare/checks.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_checks_fasldir = $(bundledlibsdir)/vicare
@@ -554,7 +554,7 @@ lib/vicare/crypto/randomisations/blum-blum-shub.fasl: \
 		lib/vicare/crypto/randomisations/blum-blum-shub.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_blum_blum_shub_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -566,7 +566,7 @@ lib/vicare/crypto/randomisations/borosh.fasl: \
 		lib/vicare/crypto/randomisations/borosh.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_borosh_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -578,7 +578,7 @@ lib/vicare/crypto/randomisations/cmrg.fasl: \
 		lib/vicare/crypto/randomisations/cmrg.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_cmrg_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -589,7 +589,7 @@ CLEANFILES += lib/vicare/crypto/randomisations/cmrg.fasl
 lib/vicare/crypto/randomisations/distributions.fasl: \
 		lib/vicare/crypto/randomisations/distributions.sls \
 		lib/vicare/crypto/randomisations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_distributions_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -600,7 +600,7 @@ CLEANFILES += lib/vicare/crypto/randomisations/distributions.fasl
 lib/vicare/crypto/randomisations/lists.fasl: \
 		lib/vicare/crypto/randomisations/lists.sls \
 		lib/vicare/crypto/randomisations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_lists_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -612,7 +612,7 @@ lib/vicare/crypto/randomisations/marsaglia.fasl: \
 		lib/vicare/crypto/randomisations/marsaglia.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_marsaglia_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -624,7 +624,7 @@ lib/vicare/crypto/randomisations/mersenne.fasl: \
 		lib/vicare/crypto/randomisations/mersenne.sls \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/crypto/randomisations/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_mersenne_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -637,7 +637,7 @@ lib/vicare/crypto/randomisations/strings.fasl: \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/containers/strings/low.fasl \
 		lib/vicare/containers/strings.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_strings_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -649,7 +649,7 @@ lib/vicare/containers/strings/low.fasl: \
 		lib/vicare/containers/strings/low.sls \
 		lib/vicare/containers/char-sets.fasl \
 		lib/vicare/containers/knuth-morris-pratt.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_strings_low_fasldir = $(bundledlibsdir)/vicare/containers/strings
@@ -659,7 +659,7 @@ CLEANFILES += lib/vicare/containers/strings/low.fasl
 
 lib/vicare/containers/char-sets.fasl: \
 		lib/vicare/containers/char-sets.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_char_sets_fasldir = $(bundledlibsdir)/vicare/containers
@@ -669,7 +669,7 @@ CLEANFILES += lib/vicare/containers/char-sets.fasl
 
 lib/vicare/containers/knuth-morris-pratt.fasl: \
 		lib/vicare/containers/knuth-morris-pratt.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_knuth_morris_pratt_fasldir = $(bundledlibsdir)/vicare/containers
@@ -681,7 +681,7 @@ lib/vicare/containers/strings.fasl: \
 		lib/vicare/containers/strings.sls \
 		lib/vicare/containers/strings/low.fasl \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_strings_fasldir = $(bundledlibsdir)/vicare/containers
@@ -691,7 +691,7 @@ CLEANFILES += lib/vicare/containers/strings.fasl
 
 lib/vicare/containers/auxiliary-syntaxes.fasl: \
 		lib/vicare/containers/auxiliary-syntaxes.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_auxiliary_syntaxes_fasldir = $(bundledlibsdir)/vicare/containers
@@ -704,7 +704,7 @@ lib/vicare/crypto/randomisations/vectors.fasl: \
 		lib/vicare/crypto/randomisations.fasl \
 		lib/vicare/containers/vectors/low.fasl \
 		lib/vicare/containers/vectors.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_crypto_randomisations_vectors_fasldir = $(bundledlibsdir)/vicare/crypto/randomisations
@@ -715,7 +715,7 @@ CLEANFILES += lib/vicare/crypto/randomisations/vectors.fasl
 lib/vicare/containers/vectors/low.fasl: \
 		lib/vicare/containers/vectors/low.sls \
 		lib/vicare/containers/knuth-morris-pratt.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_vectors_low_fasldir = $(bundledlibsdir)/vicare/containers/vectors
@@ -727,7 +727,7 @@ lib/vicare/containers/vectors.fasl: \
 		lib/vicare/containers/vectors.sls \
 		lib/vicare/containers/vectors/low.fasl \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_vectors_fasldir = $(bundledlibsdir)/vicare/containers
@@ -737,7 +737,7 @@ CLEANFILES += lib/vicare/containers/vectors.fasl
 
 lib/vicare/numerics/constants.fasl: \
 		lib/vicare/numerics/constants.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_numerics_constants_fasldir = $(bundledlibsdir)/vicare/numerics
@@ -748,7 +748,7 @@ CLEANFILES += lib/vicare/numerics/constants.fasl
 lib/vicare/numerics/flonum-parser.fasl: \
 		lib/vicare/numerics/flonum-parser.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_numerics_flonum_parser_fasldir = $(bundledlibsdir)/vicare/numerics
@@ -759,7 +759,7 @@ CLEANFILES += lib/vicare/numerics/flonum-parser.fasl
 lib/vicare/numerics/flonum-formatter.fasl: \
 		lib/vicare/numerics/flonum-formatter.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_numerics_flonum_formatter_fasldir = $(bundledlibsdir)/vicare/numerics
@@ -769,7 +769,7 @@ CLEANFILES += lib/vicare/numerics/flonum-formatter.fasl
 
 lib/vicare/containers/bytevectors.fasl: \
 		lib/vicare/containers/bytevectors.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_fasldir = $(bundledlibsdir)/vicare/containers
@@ -782,7 +782,7 @@ lib/vicare/containers/weak-hashtables.fasl: \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_weak_hashtables_fasldir = $(bundledlibsdir)/vicare/containers
@@ -794,7 +794,7 @@ lib/vicare/containers/object-properties.fasl: \
 		lib/vicare/containers/object-properties.sls \
 		lib/vicare/containers/weak-hashtables.fasl \
 		lib/vicare/language-extensions/sentinels.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_object_properties_fasldir = $(bundledlibsdir)/vicare/containers
@@ -807,7 +807,7 @@ lib/vicare/containers/bytevector-compounds/core.fasl: \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevector_compounds_core_fasldir = $(bundledlibsdir)/vicare/containers/bytevector-compounds
@@ -818,7 +818,7 @@ CLEANFILES += lib/vicare/containers/bytevector-compounds/core.fasl
 lib/vicare/containers/bytevector-compounds.fasl: \
 		lib/vicare/containers/bytevector-compounds.sls \
 		lib/vicare/containers/bytevector-compounds/core.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevector_compounds_fasldir = $(bundledlibsdir)/vicare/containers
@@ -829,7 +829,7 @@ CLEANFILES += lib/vicare/containers/bytevector-compounds.fasl
 lib/vicare/containers/bytevector-compounds/unsafe.fasl: \
 		lib/vicare/containers/bytevector-compounds/unsafe.sls \
 		lib/vicare/containers/bytevector-compounds/core.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevector_compounds_unsafe_fasldir = $(bundledlibsdir)/vicare/containers/bytevector-compounds
@@ -840,7 +840,7 @@ CLEANFILES += lib/vicare/containers/bytevector-compounds/unsafe.fasl
 lib/vicare/containers/char-sets/blocks.fasl: \
 		lib/vicare/containers/char-sets/blocks.sls \
 		lib/vicare/containers/char-sets.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_char_sets_blocks_fasldir = $(bundledlibsdir)/vicare/containers/char-sets
@@ -851,7 +851,7 @@ CLEANFILES += lib/vicare/containers/char-sets/blocks.fasl
 lib/vicare/containers/char-sets/categories.fasl: \
 		lib/vicare/containers/char-sets/categories.sls \
 		lib/vicare/containers/char-sets.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_char_sets_categories_fasldir = $(bundledlibsdir)/vicare/containers/char-sets
@@ -862,7 +862,7 @@ CLEANFILES += lib/vicare/containers/char-sets/categories.fasl
 lib/vicare/containers/lists/stx.fasl: \
 		lib/vicare/containers/lists/stx.sls \
 		lib/vicare/containers/lists/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_lists_stx_fasldir = $(bundledlibsdir)/vicare/containers/lists
@@ -872,7 +872,7 @@ CLEANFILES += lib/vicare/containers/lists/stx.fasl
 
 lib/vicare/containers/lists/low.fasl: \
 		lib/vicare/containers/lists/low.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_lists_low_fasldir = $(bundledlibsdir)/vicare/containers/lists
@@ -884,7 +884,7 @@ lib/vicare/containers/lists.fasl: \
 		lib/vicare/containers/lists.sls \
 		lib/vicare/containers/lists/stx.fasl \
 		lib/vicare/containers/lists/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_lists_fasldir = $(bundledlibsdir)/vicare/containers
@@ -897,7 +897,7 @@ lib/vicare/containers/strings/rabin-karp.fasl: \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/infix.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_strings_rabin_karp_fasldir = $(bundledlibsdir)/vicare/containers/strings
@@ -907,7 +907,7 @@ CLEANFILES += lib/vicare/containers/strings/rabin-karp.fasl
 
 lib/vicare/containers/levenshtein.fasl: \
 		lib/vicare/containers/levenshtein.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_levenshtein_fasldir = $(bundledlibsdir)/vicare/containers
@@ -918,7 +918,7 @@ CLEANFILES += lib/vicare/containers/levenshtein.fasl
 lib/vicare/containers/one-dimension-co.fasl: \
 		lib/vicare/containers/one-dimension-co.sls \
 		lib/vicare/containers/lists.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_one_dimension_co_fasldir = $(bundledlibsdir)/vicare/containers
@@ -929,7 +929,7 @@ CLEANFILES += lib/vicare/containers/one-dimension-co.fasl
 lib/vicare/containers/one-dimension-cc.fasl: \
 		lib/vicare/containers/one-dimension-cc.sls \
 		lib/vicare/containers/lists.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_one_dimension_cc_fasldir = $(bundledlibsdir)/vicare/containers
@@ -943,7 +943,7 @@ lib/vicare/containers/bytevectors/u8.fasl: \
 		lib/vicare/containers/bytevectors/u8low.fasl \
 		lib/vicare/containers/bytevectors/generic.fasl \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_u8_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
@@ -956,7 +956,7 @@ lib/vicare/containers/bytevectors/u8low.fasl: \
 		lib/vicare/containers/bytevectors/generic-low.fasl \
 		lib/vicare/containers/char-sets.fasl \
 		lib/vicare/containers/knuth-morris-pratt.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_u8low_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
@@ -967,7 +967,7 @@ CLEANFILES += lib/vicare/containers/bytevectors/u8low.fasl
 lib/vicare/containers/bytevectors/generic-low.fasl: \
 		lib/vicare/containers/bytevectors/generic-low.sls \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_generic_low_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
@@ -978,7 +978,7 @@ CLEANFILES += lib/vicare/containers/bytevectors/generic-low.fasl
 lib/vicare/containers/bytevectors/generic.fasl: \
 		lib/vicare/containers/bytevectors/generic.sls \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_generic_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
@@ -992,7 +992,7 @@ lib/vicare/containers/bytevectors/s8.fasl: \
 		lib/vicare/containers/bytevectors/s8low.fasl \
 		lib/vicare/containers/bytevectors/generic.fasl \
 		lib/vicare/containers/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_s8_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
@@ -1005,7 +1005,7 @@ lib/vicare/containers/bytevectors/s8low.fasl: \
 		lib/vicare/containers/bytevectors/generic-low.fasl \
 		lib/vicare/containers/char-sets.fasl \
 		lib/vicare/containers/knuth-morris-pratt.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_bytevectors_s8low_fasldir = $(bundledlibsdir)/vicare/containers/bytevectors
@@ -1017,7 +1017,7 @@ lib/vicare/containers/arrays.fasl: \
 		lib/vicare/containers/arrays.sls \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_arrays_fasldir = $(bundledlibsdir)/vicare/containers
@@ -1029,7 +1029,7 @@ lib/vicare/containers/stacks.fasl: \
 		lib/vicare/containers/stacks.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_stacks_fasldir = $(bundledlibsdir)/vicare/containers
@@ -1041,7 +1041,7 @@ lib/vicare/containers/queues.fasl: \
 		lib/vicare/containers/queues.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_containers_queues_fasldir = $(bundledlibsdir)/vicare/containers
@@ -1055,7 +1055,7 @@ lib/vicare/parser-tools/silex/lexer.fasl: \
 		lib/vicare/parser-tools/silex/code-lexer-driver.fasl \
 		lib/vicare/parser-tools/silex/tree-lexer-driver.fasl \
 		lib/vicare/parser-tools/silex/char-lexer-driver.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_lexer_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1066,7 +1066,7 @@ CLEANFILES += lib/vicare/parser-tools/silex/lexer.fasl
 lib/vicare/parser-tools/silex/input-system.fasl: \
 		lib/vicare/parser-tools/silex/input-system.sls \
 		lib/vicare/language-extensions/makers.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_input_system_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1076,7 +1076,7 @@ CLEANFILES += lib/vicare/parser-tools/silex/input-system.fasl
 
 lib/vicare/parser-tools/silex/code-lexer-driver.fasl: \
 		lib/vicare/parser-tools/silex/code-lexer-driver.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_code_lexer_driver_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1088,7 +1088,7 @@ lib/vicare/parser-tools/silex/tree-lexer-driver.fasl: \
 		lib/vicare/parser-tools/silex/tree-lexer-driver.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_tree_lexer_driver_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1100,7 +1100,7 @@ lib/vicare/parser-tools/silex/char-lexer-driver.fasl: \
 		lib/vicare/parser-tools/silex/char-lexer-driver.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/tree-lexer-driver.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_char_lexer_driver_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1120,7 +1120,7 @@ lib/vicare/parser-tools/silex.fasl: \
 		lib/vicare/parser-tools/silex/nested-comment-l.fasl \
 		lib/vicare/language-extensions/makers.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_fasldir = $(bundledlibsdir)/vicare/parser-tools
@@ -1130,7 +1130,7 @@ CLEANFILES += lib/vicare/parser-tools/silex.fasl
 
 lib/vicare/parser-tools/silex/semantic.fasl: \
 		lib/vicare/parser-tools/silex/semantic.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_semantic_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1142,7 +1142,7 @@ lib/vicare/parser-tools/silex/action-l.fasl: \
 		lib/vicare/parser-tools/silex/action-l.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_action_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1154,7 +1154,7 @@ lib/vicare/parser-tools/silex/class-l.fasl: \
 		lib/vicare/parser-tools/silex/class-l.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_class_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1166,7 +1166,7 @@ lib/vicare/parser-tools/silex/macro-l.fasl: \
 		lib/vicare/parser-tools/silex/macro-l.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_macro_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1178,7 +1178,7 @@ lib/vicare/parser-tools/silex/regexp-l.fasl: \
 		lib/vicare/parser-tools/silex/regexp-l.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_regexp_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1190,7 +1190,7 @@ lib/vicare/parser-tools/silex/string-l.fasl: \
 		lib/vicare/parser-tools/silex/string-l.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_string_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1202,7 +1202,7 @@ lib/vicare/parser-tools/silex/nested-comment-l.fasl: \
 		lib/vicare/parser-tools/silex/nested-comment-l.sls \
 		lib/vicare/parser-tools/silex/input-system.fasl \
 		lib/vicare/parser-tools/silex/semantic.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_nested_comment_l_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1212,7 +1212,7 @@ CLEANFILES += lib/vicare/parser-tools/silex/nested-comment-l.fasl
 
 lib/vicare/parser-tools/silex/utilities.fasl: \
 		lib/vicare/parser-tools/silex/utilities.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_silex_utilities_fasldir = $(bundledlibsdir)/vicare/parser-tools/silex
@@ -1223,7 +1223,7 @@ CLEANFILES += lib/vicare/parser-tools/silex/utilities.fasl
 lib/vicare/parser-tools/unix-pathnames.fasl: \
 		lib/vicare/parser-tools/unix-pathnames.sls \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_tools_unix_pathnames_fasldir = $(bundledlibsdir)/vicare/parser-tools
@@ -1236,7 +1236,7 @@ lib/vicare/net/channels.fasl: \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_net_channels_fasldir = $(bundledlibsdir)/vicare/net
@@ -1247,7 +1247,7 @@ CLEANFILES += lib/vicare/net/channels.fasl
 lib/vicare/ffi.fasl: \
 		lib/vicare/ffi.sls \
 		lib/vicare/platform/errno.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_LIBFFI
@@ -1262,7 +1262,7 @@ lib/vicare/ffi/foreign-pointer-wrapper.fasl: \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_LIBFFI
@@ -1278,7 +1278,7 @@ lib/vicare/iconv.fasl: \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/unsafe/capi.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_LIBICONV
@@ -1301,7 +1301,7 @@ lib/vicare/posix.fasl: \
 		lib/vicare/containers/weak-hashtables.fasl \
 		lib/vicare/platform/features.fasl \
 		lib/vicare/language-extensions/cond-expand/helpers.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
@@ -1314,7 +1314,7 @@ endif
 lib/vicare/posix/pid-files.fasl: \
 		lib/vicare/posix/pid-files.sls \
 		lib/vicare/posix.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
@@ -1329,7 +1329,7 @@ lib/vicare/posix/lock-pid-files.fasl: \
 		lib/vicare/posix.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
@@ -1343,7 +1343,7 @@ lib/vicare/posix/log-files.fasl: \
 		lib/vicare/posix/log-files.sls \
 		lib/vicare/posix.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
@@ -1357,7 +1357,7 @@ lib/vicare/posix/daemonisations.fasl: \
 		lib/vicare/posix/daemonisations.sls \
 		lib/vicare/posix.fasl \
 		lib/vicare/platform/constants.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
@@ -1375,7 +1375,7 @@ lib/vicare/posix/simple-event-loop.fasl: \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/platform/utilities.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
@@ -1390,7 +1390,7 @@ lib/vicare/posix/tcp-server-sockets.fasl: \
 		lib/vicare/posix.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
@@ -1412,7 +1412,7 @@ lib/vicare/glibc.fasl: \
 		lib/vicare/language-extensions/cond-expand.fasl \
 		lib/vicare/platform/features.fasl \
 		lib/vicare/language-extensions/cond-expand/helpers.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_GLIBC
@@ -1429,7 +1429,7 @@ lib/vicare/gcc.fasl: \
 		lib/vicare/glibc.fasl \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_LIBFFI
@@ -1456,7 +1456,7 @@ lib/vicare/linux.fasl: \
 		lib/vicare/language-extensions/cond-expand.fasl \
 		lib/vicare/platform/features.fasl \
 		lib/vicare/language-extensions/cond-expand/helpers.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_POSIX
@@ -1472,7 +1472,7 @@ lib/vicare/readline.fasl: \
 		lib/vicare/readline.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_READLINE
@@ -1484,7 +1484,7 @@ endif
 
 lib/vicare/assembler/inspection.fasl: \
 		lib/vicare/assembler/inspection.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_assembler_inspection_fasldir = $(bundledlibsdir)/vicare/assembler
@@ -1494,7 +1494,7 @@ CLEANFILES += lib/vicare/assembler/inspection.fasl
 
 lib/vicare/debugging/compiler.fasl: \
 		lib/vicare/debugging/compiler.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_debugging_compiler_fasldir = $(bundledlibsdir)/vicare/debugging
@@ -1505,7 +1505,7 @@ CLEANFILES += lib/vicare/debugging/compiler.fasl
 lib/vicare/parser-logic.fasl: \
 		lib/vicare/parser-logic.sls \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_parser_logic_fasldir = $(bundledlibsdir)/vicare
@@ -1516,7 +1516,7 @@ CLEANFILES += lib/vicare/parser-logic.fasl
 lib/vicare/irregex.fasl: \
 		lib/vicare/irregex.sls \
 		lib/vicare/irregex/compat.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_irregex_fasldir = $(bundledlibsdir)/vicare
@@ -1526,7 +1526,7 @@ CLEANFILES += lib/vicare/irregex.fasl
 
 lib/vicare/irregex/compat.fasl: \
 		lib/vicare/irregex/compat.vicare.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_irregex_compat_fasldir = $(bundledlibsdir)/vicare/irregex
@@ -1536,7 +1536,7 @@ CLEANFILES += lib/vicare/irregex/compat.fasl
 
 lib/vicare/pregexp.fasl: \
 		lib/vicare/pregexp.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_pregexp_fasldir = $(bundledlibsdir)/vicare
@@ -1549,7 +1549,7 @@ lib/vicare/getopts.fasl: \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_getopts_fasldir = $(bundledlibsdir)/vicare
@@ -1562,7 +1562,7 @@ lib/vicare/formations.fasl: \
 		lib/vicare/language-extensions/infix.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 lib_vicare_formations_fasldir = $(bundledlibsdir)/vicare
@@ -1574,7 +1574,7 @@ lib/vicare/cre2.fasl: \
 		lib/vicare/cre2.sls \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_CRE2
@@ -1587,7 +1587,7 @@ endif
 lib/srfi/%3a0.fasl: \
 		lib/srfi/%3a0.sls \
 		lib/srfi/%3a0/cond-expand.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1600,7 +1600,7 @@ endif
 lib/srfi/%3a0/cond-expand.fasl: \
 		lib/srfi/%3a0/cond-expand.sls \
 		lib/vicare/language-extensions/cond-expand/registry.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1613,7 +1613,7 @@ endif
 lib/srfi/%3a1.fasl: \
 		lib/srfi/%3a1.sls \
 		lib/srfi/%3a1/lists.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1627,7 +1627,7 @@ lib/srfi/%3a1/lists.fasl: \
 		lib/srfi/%3a1/lists.sls \
 		lib/srfi/%3a8/receive.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1639,7 +1639,7 @@ endif
 
 lib/srfi/%3a8/receive.fasl: \
 		lib/srfi/%3a8/receive.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1652,7 +1652,7 @@ endif
 lib/srfi/%3a2.fasl: \
 		lib/srfi/%3a2.sls \
 		lib/srfi/%3a2/and-let%2a.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1664,7 +1664,7 @@ endif
 
 lib/srfi/%3a2/and-let%2a.fasl: \
 		lib/srfi/%3a2/and-let%2a.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1677,7 +1677,7 @@ endif
 lib/srfi/%3a6.fasl: \
 		lib/srfi/%3a6.sls \
 		lib/srfi/%3a6/basic-string-ports.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1689,7 +1689,7 @@ endif
 
 lib/srfi/%3a6/basic-string-ports.fasl: \
 		lib/srfi/%3a6/basic-string-ports.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1702,7 +1702,7 @@ endif
 lib/srfi/%3a8.fasl: \
 		lib/srfi/%3a8.sls \
 		lib/srfi/%3a8/receive.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1715,7 +1715,7 @@ endif
 lib/srfi/%3a9.fasl: \
 		lib/srfi/%3a9.sls \
 		lib/srfi/%3a9/records.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1727,7 +1727,7 @@ endif
 
 lib/srfi/%3a9/records.fasl: \
 		lib/srfi/%3a9/records.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1740,7 +1740,7 @@ endif
 lib/srfi/%3a11.fasl: \
 		lib/srfi/%3a11.sls \
 		lib/srfi/%3a11/let-values.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1752,7 +1752,7 @@ endif
 
 lib/srfi/%3a11/let-values.fasl: \
 		lib/srfi/%3a11/let-values.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1765,7 +1765,7 @@ endif
 lib/srfi/%3a13.fasl: \
 		lib/srfi/%3a13.sls \
 		lib/srfi/%3a13/strings.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1781,7 +1781,7 @@ lib/srfi/%3a13/strings.fasl: \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1794,7 +1794,7 @@ endif
 lib/srfi/%3a14/char-sets.fasl: \
 		lib/srfi/%3a14/char-sets.sls \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1807,7 +1807,7 @@ endif
 lib/srfi/%3a14.fasl: \
 		lib/srfi/%3a14.sls \
 		lib/srfi/%3a14/char-sets.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1820,7 +1820,7 @@ endif
 lib/srfi/%3a16.fasl: \
 		lib/srfi/%3a16.sls \
 		lib/srfi/%3a16/case-lambda.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1832,7 +1832,7 @@ endif
 
 lib/srfi/%3a16/case-lambda.fasl: \
 		lib/srfi/%3a16/case-lambda.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1845,7 +1845,7 @@ endif
 lib/srfi/%3a19.fasl: \
 		lib/srfi/%3a19.sls \
 		lib/srfi/%3a19/time.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1858,7 +1858,7 @@ endif
 lib/srfi/%3a19/time.fasl: \
 		lib/srfi/%3a19/time.sls \
 		lib/srfi/%3a6/basic-string-ports.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1871,7 +1871,7 @@ endif
 lib/srfi/%3a23.fasl: \
 		lib/srfi/%3a23.sls \
 		lib/srfi/%3a23/error.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1883,7 +1883,7 @@ endif
 
 lib/srfi/%3a23/error.fasl: \
 		lib/srfi/%3a23/error.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1896,7 +1896,7 @@ endif
 lib/srfi/%3a25.fasl: \
 		lib/srfi/%3a25.sls \
 		lib/srfi/%3a25/multi-dimensional-arrays.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1911,7 +1911,7 @@ lib/srfi/%3a25/multi-dimensional-arrays.fasl: \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/language-extensions/syntaxes.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1924,7 +1924,7 @@ endif
 lib/srfi/%3a26.fasl: \
 		lib/srfi/%3a26.sls \
 		lib/srfi/%3a26/cut.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1936,7 +1936,7 @@ endif
 
 lib/srfi/%3a26/cut.fasl: \
 		lib/srfi/%3a26/cut.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1949,7 +1949,7 @@ endif
 lib/srfi/%3a27.fasl: \
 		lib/srfi/%3a27.sls \
 		lib/srfi/%3a27/random-bits.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1962,7 +1962,7 @@ endif
 lib/srfi/%3a27/random-bits.fasl: \
 		lib/srfi/%3a27/random-bits.sls \
 		lib/srfi/%3a19/time.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1975,7 +1975,7 @@ endif
 lib/srfi/%3a28.fasl: \
 		lib/srfi/%3a28.sls \
 		lib/srfi/%3a28/basic-format-strings.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -1988,7 +1988,7 @@ endif
 lib/srfi/%3a28/basic-format-strings.fasl: \
 		lib/srfi/%3a28/basic-format-strings.sls \
 		lib/srfi/%3a6.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2001,7 +2001,7 @@ endif
 lib/srfi/%3a31.fasl: \
 		lib/srfi/%3a31.sls \
 		lib/srfi/%3a31/rec.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2013,7 +2013,7 @@ endif
 
 lib/srfi/%3a31/rec.fasl: \
 		lib/srfi/%3a31/rec.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2026,7 +2026,7 @@ endif
 lib/srfi/%3a37.fasl: \
 		lib/srfi/%3a37.sls \
 		lib/srfi/%3a37/args-fold.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2038,7 +2038,7 @@ endif
 
 lib/srfi/%3a37/args-fold.fasl: \
 		lib/srfi/%3a37/args-fold.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2051,7 +2051,7 @@ endif
 lib/srfi/%3a38.fasl: \
 		lib/srfi/%3a38.sls \
 		lib/srfi/%3a38/with-shared-structure.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2063,7 +2063,7 @@ endif
 
 lib/srfi/%3a38/with-shared-structure.fasl: \
 		lib/srfi/%3a38/with-shared-structure.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2076,7 +2076,7 @@ endif
 lib/srfi/%3a39.fasl: \
 		lib/srfi/%3a39.sls \
 		lib/srfi/%3a39/parameters.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2088,7 +2088,7 @@ endif
 
 lib/srfi/%3a39/parameters.fasl: \
 		lib/srfi/%3a39/parameters.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2101,7 +2101,7 @@ endif
 lib/srfi/%3a41.fasl: \
 		lib/srfi/%3a41.sls \
 		lib/srfi/%3a41/streams.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2115,7 +2115,7 @@ lib/srfi/%3a41/streams.fasl: \
 		lib/srfi/%3a41/streams.sls \
 		lib/srfi/%3a41/streams/primitive.fasl \
 		lib/srfi/%3a41/streams/derived.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2127,7 +2127,7 @@ endif
 
 lib/srfi/%3a41/streams/primitive.fasl: \
 		lib/srfi/%3a41/streams/primitive.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2140,7 +2140,7 @@ endif
 lib/srfi/%3a41/streams/derived.fasl: \
 		lib/srfi/%3a41/streams/derived.sls \
 		lib/srfi/%3a41/streams/primitive.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2153,7 +2153,7 @@ endif
 lib/srfi/%3a42.fasl: \
 		lib/srfi/%3a42.sls \
 		lib/srfi/%3a42/eager-comprehensions.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2166,7 +2166,7 @@ endif
 lib/srfi/%3a42/eager-comprehensions.fasl: \
 		lib/srfi/%3a42/eager-comprehensions.sls \
 		lib/srfi/%3a39/parameters.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2179,7 +2179,7 @@ endif
 lib/srfi/%3a43.fasl: \
 		lib/srfi/%3a43.sls \
 		lib/srfi/%3a43/vectors.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2192,7 +2192,7 @@ endif
 lib/srfi/%3a43/vectors.fasl: \
 		lib/srfi/%3a43/vectors.sls \
 		lib/srfi/%3a8/receive.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2205,7 +2205,7 @@ endif
 lib/srfi/%3a45.fasl: \
 		lib/srfi/%3a45.sls \
 		lib/srfi/%3a45/lazy.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2217,7 +2217,7 @@ endif
 
 lib/srfi/%3a45/lazy.fasl: \
 		lib/srfi/%3a45/lazy.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2230,7 +2230,7 @@ endif
 lib/srfi/%3a48.fasl: \
 		lib/srfi/%3a48.sls \
 		lib/srfi/%3a48/intermediate-format-strings.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2244,7 +2244,7 @@ lib/srfi/%3a48/intermediate-format-strings.fasl: \
 		lib/srfi/%3a48/intermediate-format-strings.sls \
 		lib/srfi/%3a6/basic-string-ports.fasl \
 		lib/srfi/%3a38/with-shared-structure.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2257,7 +2257,7 @@ endif
 lib/srfi/%3a61.fasl: \
 		lib/srfi/%3a61.sls \
 		lib/srfi/%3a61/cond.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2269,7 +2269,7 @@ endif
 
 lib/srfi/%3a61/cond.fasl: \
 		lib/srfi/%3a61/cond.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2282,7 +2282,7 @@ endif
 lib/srfi/%3a64.fasl: \
 		lib/srfi/%3a64.sls \
 		lib/srfi/%3a64/testing.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2299,7 +2299,7 @@ lib/srfi/%3a64/testing.fasl: \
 		lib/srfi/%3a6/basic-string-ports.fasl \
 		lib/srfi/%3a9/records.fasl \
 		lib/srfi/%3a39/parameters.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2312,7 +2312,7 @@ endif
 lib/srfi/%3a67.fasl: \
 		lib/srfi/%3a67.sls \
 		lib/srfi/%3a67/compare-procedures.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2325,7 +2325,7 @@ endif
 lib/srfi/%3a67/compare-procedures.fasl: \
 		lib/srfi/%3a67/compare-procedures.sls \
 		lib/srfi/%3a27/random-bits.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2338,7 +2338,7 @@ endif
 lib/srfi/%3a69.fasl: \
 		lib/srfi/%3a69.sls \
 		lib/srfi/%3a69/basic-hash-tables.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2350,7 +2350,7 @@ endif
 
 lib/srfi/%3a69/basic-hash-tables.fasl: \
 		lib/srfi/%3a69/basic-hash-tables.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2363,7 +2363,7 @@ endif
 lib/srfi/%3a78.fasl: \
 		lib/srfi/%3a78.sls \
 		lib/srfi/%3a78/lightweight-testing.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2377,7 +2377,7 @@ lib/srfi/%3a78/lightweight-testing.fasl: \
 		lib/srfi/%3a78/lightweight-testing.sls \
 		lib/srfi/%3a39/parameters.fasl \
 		lib/srfi/%3a42/eager-comprehensions.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2390,7 +2390,7 @@ endif
 lib/srfi/%3a98.fasl: \
 		lib/srfi/%3a98.sls \
 		lib/srfi/%3a98/os-environment-variables.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2402,7 +2402,7 @@ endif
 
 lib/srfi/%3a98/os-environment-variables.fasl: \
 		lib/srfi/%3a98/os-environment-variables.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2415,7 +2415,7 @@ endif
 lib/srfi/%3a99.fasl: \
 		lib/srfi/%3a99.sls \
 		lib/srfi/%3a99/records.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2430,7 +2430,7 @@ lib/srfi/%3a99/records.fasl: \
 		lib/srfi/%3a99/records/inspection.fasl \
 		lib/srfi/%3a99/records/procedural.fasl \
 		lib/srfi/%3a99/records/syntactic.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2443,7 +2443,7 @@ endif
 lib/srfi/%3a99/records/inspection.fasl: \
 		lib/srfi/%3a99/records/inspection.sls \
 		lib/srfi/%3a99/records/helper.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2455,7 +2455,7 @@ endif
 
 lib/srfi/%3a99/records/helper.fasl: \
 		lib/srfi/%3a99/records/helper.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2468,7 +2468,7 @@ endif
 lib/srfi/%3a99/records/procedural.fasl: \
 		lib/srfi/%3a99/records/procedural.sls \
 		lib/srfi/%3a99/records/inspection.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2481,7 +2481,7 @@ endif
 lib/srfi/%3a99/records/syntactic.fasl: \
 		lib/srfi/%3a99/records/syntactic.sls \
 		lib/srfi/%3a99/records/procedural.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2493,7 +2493,7 @@ endif
 
 lib/srfi/%3a101.fasl: \
 		lib/srfi/%3a101.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2506,7 +2506,7 @@ endif
 lib/srfi/%3a101/random-access-lists.fasl: \
 		lib/srfi/%3a101/random-access-lists.sls \
 		lib/srfi/%3a101.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2519,7 +2519,7 @@ endif
 lib/srfi/%3a101/random-access-lists/procedures.fasl: \
 		lib/srfi/%3a101/random-access-lists/procedures.sls \
 		lib/srfi/%3a101.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2532,7 +2532,7 @@ endif
 lib/srfi/%3a101/random-access-lists/syntax.fasl: \
 		lib/srfi/%3a101/random-access-lists/syntax.sls \
 		lib/srfi/%3a101.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2545,7 +2545,7 @@ endif
 lib/srfi/%3a101/random-access-lists/equal.fasl: \
 		lib/srfi/%3a101/random-access-lists/equal.sls \
 		lib/srfi/%3a101.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2558,7 +2558,7 @@ endif
 lib/srfi/%3a111.fasl: \
 		lib/srfi/%3a111.sls \
 		lib/srfi/%3a111/boxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2570,7 +2570,7 @@ endif
 
 lib/srfi/%3a111/boxes.fasl: \
 		lib/srfi/%3a111/boxes.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2583,7 +2583,7 @@ endif
 lib/srfi/%3a112.fasl: \
 		lib/srfi/%3a112.sls \
 		lib/srfi/%3a112/environment-inquiry.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2595,7 +2595,7 @@ endif
 
 lib/srfi/%3a112/environment-inquiry.fasl: \
 		lib/srfi/%3a112/environment-inquiry.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2608,7 +2608,7 @@ endif
 lib/srfi/%3a106.fasl: \
 		lib/srfi/%3a106.sls \
 		lib/srfi/%3a106/socket.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2623,7 +2623,7 @@ endif
 lib/srfi/%3a106/socket.fasl: \
 		lib/srfi/%3a106/socket.sls \
 		lib/srfi/%3a106/compat.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2639,7 +2639,7 @@ lib/srfi/%3a106/compat.fasl: \
 		lib/srfi/%3a106/compat.vicare.sls \
 		lib/vicare/platform/constants.fasl \
 		lib/vicare/posix.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_SRFI
@@ -2653,7 +2653,7 @@ endif
 
 lib/nausicaa/language/auxiliary-syntaxes.fasl: \
 		lib/nausicaa/language/auxiliary-syntaxes.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2672,7 +2672,7 @@ lib/nausicaa/language/oopp.fasl: \
 		lib/nausicaa/language/oopp/configuration.fasl \
 		lib/nausicaa/language/auxiliary-syntaxes.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2684,7 +2684,7 @@ endif
 
 lib/nausicaa/language/oopp/auxiliary-syntaxes.fasl: \
 		lib/nausicaa/language/oopp/auxiliary-syntaxes.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2696,7 +2696,7 @@ endif
 
 lib/nausicaa/language/oopp/conditions.fasl: \
 		lib/nausicaa/language/oopp/conditions.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2714,7 +2714,7 @@ lib/nausicaa/language/oopp/oopp-syntax-helpers.fasl: \
 		lib/nausicaa/language/oopp/conditions.fasl \
 		lib/vicare/language-extensions/identifier-substitutions.fasl \
 		lib/nausicaa/language/oopp/definition-parser-helpers.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2726,7 +2726,7 @@ endif
 
 lib/nausicaa/language/oopp/configuration.fasl: \
 		lib/nausicaa/language/oopp/configuration.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2743,7 +2743,7 @@ lib/nausicaa/language/oopp/definition-parser-helpers.fasl: \
 		lib/nausicaa/language/oopp/configuration.fasl \
 		lib/nausicaa/language/oopp/auxiliary-syntaxes.fasl \
 		lib/nausicaa/language/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2759,7 +2759,7 @@ lib/nausicaa/language/multimethods.fasl: \
 		lib/nausicaa/language/multimethods/methods-table.fasl \
 		lib/nausicaa/language/auxiliary-syntaxes.fasl \
 		lib/nausicaa/language/multimethods/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2772,7 +2772,7 @@ endif
 lib/nausicaa/language/multimethods/types.fasl: \
 		lib/nausicaa/language/multimethods/types.sls \
 		lib/nausicaa/language/oopp.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2786,7 +2786,7 @@ lib/nausicaa/language/multimethods/methods-table.fasl: \
 		lib/nausicaa/language/multimethods/methods-table.sls \
 		lib/nausicaa/language/symbols-tree.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2798,7 +2798,7 @@ endif
 
 lib/nausicaa/language/symbols-tree.fasl: \
 		lib/nausicaa/language/symbols-tree.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2810,7 +2810,7 @@ endif
 
 lib/nausicaa/language/multimethods/auxiliary-syntaxes.fasl: \
 		lib/nausicaa/language/multimethods/auxiliary-syntaxes.sls \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2827,7 +2827,7 @@ lib/nausicaa/language/builtins.fasl: \
 		lib/nausicaa/language/multimethods.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/containers/bytevectors.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2842,7 +2842,7 @@ lib/nausicaa/language/conditions.fasl: \
 		lib/nausicaa/language/oopp.fasl \
 		lib/nausicaa/language/builtins.fasl \
 		lib/nausicaa/language/auxiliary-syntaxes.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2856,7 +2856,7 @@ lib/nausicaa/language/simple-match.fasl: \
 		lib/nausicaa/language/simple-match.sls \
 		lib/nausicaa/language/oopp.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2873,7 +2873,7 @@ lib/nausicaa/language/infix.fasl: \
 		lib/vicare/language-extensions/infix/tokens.fasl \
 		lib/nausicaa/language/increments.fasl \
 		lib/nausicaa/language/oopp.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2886,7 +2886,7 @@ endif
 lib/nausicaa/language/increments.fasl: \
 		lib/nausicaa/language/increments.sls \
 		lib/nausicaa/language/oopp.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2907,7 +2907,7 @@ lib/nausicaa.fasl: \
 		lib/nausicaa/language/infix.fasl \
 		lib/vicare/language-extensions/namespaces.fasl \
 		lib/vicare/language-extensions/sentinels.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2921,7 +2921,7 @@ lib/nausicaa/containers/lists.fasl: \
 		lib/nausicaa/containers/lists.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/lists.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2935,7 +2935,7 @@ lib/nausicaa/containers/vectors.fasl: \
 		lib/nausicaa/containers/vectors.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/vectors.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2950,7 +2950,7 @@ lib/nausicaa/containers/strings.fasl: \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/strings.fasl \
 		lib/vicare/containers/strings/low.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2969,7 +2969,7 @@ lib/nausicaa/containers/arrays.fasl: \
 		lib/nausicaa/containers/lists.fasl \
 		lib/nausicaa/containers/vectors.fasl \
 		lib/nausicaa/containers/strings.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2983,7 +2983,7 @@ lib/nausicaa/containers/stacks.fasl: \
 		lib/nausicaa/containers/stacks.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/stacks.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -2997,7 +2997,7 @@ lib/nausicaa/containers/queues.fasl: \
 		lib/nausicaa/containers/queues.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/containers/queues.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3013,7 +3013,7 @@ lib/nausicaa/containers/bitvectors.fasl: \
 		lib/vicare/platform/words.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3029,7 +3029,7 @@ lib/nausicaa/containers/iterators.fasl: \
 		lib/vicare/language-extensions/makers.fasl \
 		lib/vicare/arguments/validation.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3044,7 +3044,7 @@ lib/nausicaa/parser-tools/source-locations.fasl: \
 		lib/nausicaa.fasl \
 		lib/vicare/language-extensions/makers.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3060,7 +3060,7 @@ lib/nausicaa/parser-tools/lexical-tokens.fasl: \
 		lib/nausicaa/parser-tools/source-locations.fasl \
 		lib/vicare/language-extensions/makers.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3075,7 +3075,7 @@ lib/nausicaa/parser-tools/silex/default-error-handler.fasl: \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3090,7 +3090,7 @@ lib/nausicaa/parser-tools/lalr/lr-driver.fasl: \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3105,7 +3105,7 @@ lib/nausicaa/parser-tools/lalr/glr-driver.fasl: \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3121,7 +3121,7 @@ lib/nausicaa/parser-tools/lalr.fasl: \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
 		lib/vicare/language-extensions/makers.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3138,7 +3138,7 @@ lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.fasl: \
 		lib/nausicaa/parser-tools/silex/default-error-handler.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3154,7 +3154,7 @@ lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.fasl: \
 		lib/nausicaa/parser-tools/lalr/lr-driver.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3171,7 +3171,7 @@ lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.fasl: \
 		lib/nausicaa/parser-tools/silex/default-error-handler.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3187,7 +3187,7 @@ lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.fasl: \
 		lib/nausicaa/parser-tools/lalr/lr-driver.fasl \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3207,7 +3207,7 @@ lib/nausicaa/parser-tools/ipv4-addresses.fasl: \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3227,7 +3227,7 @@ lib/nausicaa/parser-tools/ipv6-addresses.fasl: \
 		lib/nausicaa/parser-tools/lexical-tokens.fasl \
 		lib/nausicaa/parser-tools/source-locations.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3246,7 +3246,7 @@ lib/nausicaa/parser-tools/uri.fasl: \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/ascii-chars.fasl \
 		lib/vicare/arguments/validation.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3262,7 +3262,7 @@ lib/nausicaa/uri/ip.fasl: \
 		lib/vicare/language-extensions/keywords.fasl \
 		lib/vicare/language-extensions/ascii-chars.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3279,7 +3279,7 @@ lib/nausicaa/uri.fasl: \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/ascii-chars.fasl \
 		lib/nausicaa/uri/ip.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3294,7 +3294,7 @@ lib/nausicaa/parser-tools/uri/utilities.fasl: \
 		lib/nausicaa.fasl \
 		lib/nausicaa/parser-tools/uri.fasl \
 		lib/nausicaa/uri.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3308,7 +3308,7 @@ lib/nausicaa/uri/pathnames/abstract.fasl: \
 		lib/nausicaa/uri/pathnames/abstract.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3324,7 +3324,7 @@ lib/nausicaa/uri/pathnames/unix.fasl: \
 		lib/vicare/unsafe/operations.fasl \
 		lib/nausicaa/uri/pathnames/abstract.fasl \
 		lib/vicare/parser-tools/unix-pathnames.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3337,7 +3337,7 @@ endif
 lib/nausicaa/uri/pathnames.fasl: \
 		lib/nausicaa/uri/pathnames.sls \
 		lib/nausicaa/uri/pathnames/unix.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3355,7 +3355,7 @@ lib/nausicaa/mehve.fasl: \
 		lib/nausicaa/mehve/language/numerics/transcendental.fasl \
 		lib/nausicaa/mehve/language/infix.fasl \
 		lib/nausicaa/mehve/language/input-output.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3369,7 +3369,7 @@ lib/nausicaa/mehve/language/numerics/predicates.fasl: \
 		lib/nausicaa/mehve/language/numerics/predicates.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3383,7 +3383,7 @@ lib/nausicaa/mehve/language/numerics/arithmetics.fasl: \
 		lib/nausicaa/mehve/language/numerics/arithmetics.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3397,7 +3397,7 @@ lib/nausicaa/mehve/language/numerics/parts.fasl: \
 		lib/nausicaa/mehve/language/numerics/parts.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3411,7 +3411,7 @@ lib/nausicaa/mehve/language/numerics/transcendental.fasl: \
 		lib/nausicaa/mehve/language/numerics/transcendental.sls \
 		lib/nausicaa.fasl \
 		lib/vicare/unsafe/operations.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3430,7 +3430,7 @@ lib/nausicaa/mehve/language/infix.fasl: \
 		lib/nausicaa/mehve/language/numerics/arithmetics.fasl \
 		lib/nausicaa/mehve/language/numerics/parts.fasl \
 		lib/nausicaa/mehve/language/numerics/transcendental.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
@@ -3443,7 +3443,7 @@ endif
 lib/nausicaa/mehve/language/input-output.fasl: \
 		lib/nausicaa/mehve/language/input-output.sls \
 		lib/nausicaa.fasl \
-		$(VICARE_NEW_BOOT)
+		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 if WANT_NAUSICAA
