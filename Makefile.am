@@ -565,8 +565,6 @@ EXTRA_DIST += lib/libraries.scm
 clean-fasl:
 	find $(fasldir) -name \*.fasl -execdir rm -v '{}' ';'
 
-CLEANFILES	+= $(nobase_nodist_bundledlibs_DATA)
-
 #page
 #### special library rules: SILex lexers building
 

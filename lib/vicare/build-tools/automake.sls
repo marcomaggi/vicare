@@ -234,8 +234,7 @@
 
   ;;We want to load source files only.
   (parametrise
-      ((libs.current-library-locator libs.source-library-locator)
-       (libs.fasl-search-path        '()))
+      ((libs.current-library-locator libs.source-library-locator))
 
     (from-templates-source-files-table
      (receive-and-return (T)

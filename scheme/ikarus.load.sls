@@ -335,7 +335,7 @@
       (if (null? directories)
 	  ;;No suitable library file was found.
 	  (begin
-	    (%log-library-debug-message "~a: no binary library file found for: ~a" __who__ libref)
+	    (%log-library-debug-message "~a: exhausted search path, no binary library file found for: ~a" __who__ libref)
 	    (values #f #f))
 	;;Check the  file existence  in the  current directory  with the
 	;;current  file  extension;  if  not found  try  the  next  file
@@ -403,7 +403,7 @@
 	       (directories   (library-path))
 	       (extensions    (library-extensions)))
       (cond ((null? directories)
-	     (%log-library-debug-message "~a: no binary library file found for: ~a" __who__ libref)
+	     (%log-library-debug-message "~a: exhausted search path, no source library file found for: ~a" __who__ libref)
 	     (values #f #f))
 
 	    ((null? extensions)
@@ -487,7 +487,9 @@
 	    (%handle-source-file-match options source-pathname
 				       (lambda ()
 					 (%source-search-step options further-source-file-match search-fail-kont)))
-	  (search-fail-kont))))
+	  (begin
+	    ((failed-library-location-collector) source-pathname)
+	    (search-fail-kont)))))
 
     (define (%handle-source-file-match options source-pathname next-source-search-step)
       (define (%continue)
@@ -556,7 +558,9 @@
 	    (%handle-binary-file-match options binary-pathname
 				       (lambda ()
 					 (%binary-search-step options further-binary-file-match search-fail-kont)))
-	  (search-fail-kont))))
+	  (begin
+	    ((failed-library-location-collector) binary-pathname)
+	    (search-fail-kont)))))
 
     (define (%handle-binary-file-match options binary-pathname next-binary-search-step)
       (define (%continue)
