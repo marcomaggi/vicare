@@ -438,7 +438,7 @@ ikarus.config.ss:
 # the command  line options selected  by AX_VFLAGS and  VFLAGS; rather
 # all the options are set in the script "makefile.sps".
 #
-$(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
+$(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.ss scheme/makefile.sps
 	$(VICARE_BOOT_ENV) $(GDB) vicare -b $(VICARE_PREBUILT_BOOT) \
 		--r6rs-script $(srcdir)/scheme/makefile.sps
 
@@ -513,726 +513,6 @@ try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
 #page
 #### compiling bundled libraries: source files
 
-EXTRA_DIST += lib/compile-all.sps
-
-EXTRA_DIST += \
-	lib/vicare/platform/configuration.sls.in			\
-	lib/vicare/platform/constants.sls.in				\
-	lib/vicare/platform/errno.sls.in				\
-	lib/vicare/platform/words.sls.in				\
-	lib/nausicaa/uri/pathnames.sls.in				\
-	\
-	lib/vicare/unsafe/capi.sls					\
-	lib/vicare/unsafe/operations.sls				\
-	lib/vicare/unsafe/unicode.sls					\
-	\
-	lib/vicare/platform/utilities.sls				\
-	\
-	lib/vicare/language-extensions/cond-expand.sls			\
-	lib/vicare/language-extensions/cond-expand/OS-id-features.sls	\
-	lib/vicare/language-extensions/cond-expand/feature-cond.sls	\
-	lib/vicare/language-extensions/cond-expand/helpers.sls		\
-	lib/vicare/language-extensions/cond-expand/platform-features.sls\
-	lib/vicare/language-extensions/cond-expand/configuration-features.sls	\
-	lib/vicare/language-extensions/cond-expand/registry.sls		\
-	\
-	lib/vicare/arguments/general-c-buffers.sls			\
-	lib/vicare/arguments/validation.sls				\
-	\
-	lib/vicare/language-extensions/amb.sls				\
-	lib/vicare/language-extensions/ascii-chars/syntaxes.sls		\
-	lib/vicare/language-extensions/ascii-chars.sls			\
-	lib/vicare/language-extensions/c-enumerations.sls		\
-	lib/vicare/language-extensions/callables.sls			\
-	lib/vicare/language-extensions/comparisons.sls			\
-	lib/vicare/language-extensions/coroutines.sls			\
-	lib/vicare/language-extensions/custom-ports.sls			\
-	lib/vicare/language-extensions/define-record-extended.sls	\
-	lib/vicare/language-extensions/hooks.sls			\
-	lib/vicare/language-extensions/identifier-substitutions.sls	\
-	lib/vicare/language-extensions/increments.sls			\
-	lib/vicare/language-extensions/infix/auxiliary-syntaxes.sls	\
-	lib/vicare/language-extensions/infix/lr-driver.sls		\
-	lib/vicare/language-extensions/infix/parser-table.sls		\
-	lib/vicare/language-extensions/infix/parser-utils.sls		\
-	lib/vicare/language-extensions/infix/tokens.sls			\
-	lib/vicare/language-extensions/infix.sls			\
-	lib/vicare/language-extensions/makers.sls			\
-	lib/vicare/language-extensions/keywords.sls			\
-	lib/vicare/language-extensions/loops.sls			\
-	lib/vicare/language-extensions/namespaces.sls			\
-	lib/vicare/language-extensions/sentinels.sls			\
-	lib/vicare/language-extensions/simple-match.sls			\
-	lib/vicare/language-extensions/streams.sls			\
-	lib/vicare/language-extensions/syntaxes.sls			\
-	lib/vicare/language-extensions/try.sls				\
-	lib/vicare/language-extensions/variables.sls			\
-	\
-	lib/vicare/crypto/randomisations.sls				\
-	lib/vicare/crypto/randomisations/low.sls			\
-	lib/vicare/crypto/randomisations/blum-blum-shub.sls		\
-	lib/vicare/crypto/randomisations/borosh.sls			\
-	lib/vicare/crypto/randomisations/cmrg.sls			\
-	lib/vicare/crypto/randomisations/distributions.sls		\
-	lib/vicare/crypto/randomisations/lists.sls			\
-	lib/vicare/crypto/randomisations/marsaglia.sls			\
-	lib/vicare/crypto/randomisations/mersenne.sls			\
-	lib/vicare/crypto/randomisations/strings.sls			\
-	lib/vicare/crypto/randomisations/vectors.sls			\
-	\
-	lib/vicare/numerics/constants.sls				\
-	lib/vicare/numerics/flonum-formatter.sls			\
-	lib/vicare/numerics/flonum-parser.sls				\
-	\
-	lib/vicare/containers/auxiliary-syntaxes.sls			\
-	lib/vicare/containers/bytevectors.sls				\
-	lib/vicare/containers/bytevector-compounds.sls			\
-	lib/vicare/containers/bytevector-compounds/core.sls		\
-	lib/vicare/containers/bytevector-compounds/unsafe.sls		\
-	lib/vicare/containers/weak-hashtables.sls			\
-	lib/vicare/containers/object-properties.sls			\
-	lib/vicare/containers/lists/stx.sls				\
-	lib/vicare/containers/lists/low.sls				\
-	lib/vicare/containers/lists.sls					\
-	lib/vicare/containers/vectors/low.sls				\
-	lib/vicare/containers/vectors.sls				\
-	lib/vicare/containers/strings/low.sls				\
-	lib/vicare/containers/strings.sls				\
-	lib/vicare/containers/strings/rabin-karp.sls			\
-	lib/vicare/containers/knuth-morris-pratt.sls			\
-	lib/vicare/containers/char-sets.sls				\
-	lib/vicare/containers/char-sets/blocks.sls			\
-	lib/vicare/containers/char-sets/categories.sls			\
-	lib/vicare/containers/levenshtein.sls				\
-	lib/vicare/containers/one-dimension-co.sls			\
-	lib/vicare/containers/one-dimension-cc.sls			\
-	lib/vicare/containers/bytevectors/generic-low.sls		\
-	lib/vicare/containers/bytevectors/generic.sls			\
-	lib/vicare/containers/bytevectors/s8.sls			\
-	lib/vicare/containers/bytevectors/s8low.sls			\
-	lib/vicare/containers/bytevectors/u8.sls			\
-	lib/vicare/containers/bytevectors/u8low.sls			\
-	lib/vicare/containers/arrays.sls				\
-	lib/vicare/containers/stacks.sls				\
-	lib/vicare/containers/queues.sls				\
-	\
-	lib/vicare/assembler/inspection.sls				\
-	lib/vicare/checks.sls						\
-	lib/vicare/debugging/compiler.sls				\
-	lib/vicare/parser-logic.sls					\
-	\
-	lib/vicare/net/channels.sls					\
-	\
-	lib/vicare/irregex.sls						\
-	lib/vicare/irregex/compat.vicare.sls				\
-	lib/vicare/pregexp.sls						\
-	lib/vicare/getopts.sls						\
-	lib/vicare/formations.sls					\
-	\
-	lib/vicare/parser-tools/silex/make-tables.sps			\
-	lib/vicare/parser-tools/silex/action.l				\
-	lib/vicare/parser-tools/silex/class.l				\
-	lib/vicare/parser-tools/silex/macro.l				\
-	lib/vicare/parser-tools/silex/nested-comment.l			\
-	lib/vicare/parser-tools/silex/regexp.l				\
-	lib/vicare/parser-tools/silex/string.l				\
-	lib/vicare/parser-tools/silex/macros/identifier.macros.l	\
-	lib/vicare/parser-tools/silex/macros/string.macros.l		\
-	lib/vicare/parser-tools/silex/macros/unicode.macros.l		\
-	lib/vicare/parser-tools/silex/macros/whitespaces-and-comments.macros.l \
-	\
-	lib/vicare/parser-tools/silex/action-l.sls			\
-	lib/vicare/parser-tools/silex/char-lexer-driver.sls		\
-	lib/vicare/parser-tools/silex/class-l.sls			\
-	lib/vicare/parser-tools/silex/code-lexer-driver.sls		\
-	lib/vicare/parser-tools/silex/input-system.sls			\
-	lib/vicare/parser-tools/silex/lexer.sls				\
-	lib/vicare/parser-tools/silex/macro-l.sls			\
-	lib/vicare/parser-tools/silex/nested-comment-l.sls		\
-	lib/vicare/parser-tools/silex/regexp-l.sls			\
-	lib/vicare/parser-tools/silex/semantic.sls			\
-	lib/vicare/parser-tools/silex.sls				\
-	lib/vicare/parser-tools/silex/string-l.sls			\
-	lib/vicare/parser-tools/silex/tree-lexer-driver.sls		\
-	lib/vicare/parser-tools/silex/utilities.sls			\
-	\
-	lib/vicare/parser-tools/unix-pathnames.sls			\
-	\
-	lib/srfi/%3a0.sls						\
-	lib/srfi/%3a0/cond-expand.sls					\
-	\
-	lib/srfi/%3a1.sls						\
-	lib/srfi/%3a1/lists.sls						\
-	\
-	lib/srfi/%3a2.sls						\
-	lib/srfi/%3a2/and-let%2a.sls					\
-	\
-	lib/srfi/%3a6.sls						\
-	lib/srfi/%3a6/basic-string-ports.sls				\
-	\
-	lib/srfi/%3a8.sls						\
-	lib/srfi/%3a8/receive.sls					\
-	\
-	lib/srfi/%3a9.sls						\
-	lib/srfi/%3a9/records.sls					\
-	\
-	lib/srfi/%3a11.sls						\
-	lib/srfi/%3a11/let-values.sls					\
-	\
-	lib/srfi/%3a13.sls						\
-	lib/srfi/%3a13/strings.sls					\
-	\
-	lib/srfi/%3a14.sls						\
-	lib/srfi/%3a14/char-sets.sls					\
-	\
-	lib/srfi/%3a16.sls						\
-	lib/srfi/%3a16/case-lambda.sls					\
-	\
-	lib/srfi/%3a19.sls						\
-	lib/srfi/%3a19/time.sls						\
-	\
-	lib/srfi/%3a23.sls						\
-	lib/srfi/%3a23/error.sls					\
-	\
-	lib/srfi/%3a25.sls						\
-	lib/srfi/%3a25/multi-dimensional-arrays.sls			\
-	lib/srfi/%3a25/arlib.scm					\
-	lib/srfi/%3a25/list.scm						\
-	\
-	lib/srfi/%3a26.sls						\
-	lib/srfi/%3a26/cut.sls						\
-	\
-	lib/srfi/%3a27.sls						\
-	lib/srfi/%3a27/random-bits.sls					\
-	\
-	lib/srfi/%3a28.sls						\
-	lib/srfi/%3a28/basic-format-strings.sls				\
-	\
-	lib/srfi/%3a31.sls						\
-	lib/srfi/%3a31/rec.sls						\
-	\
-	lib/srfi/%3a37.sls						\
-	lib/srfi/%3a37/args-fold.sls					\
-	\
-	lib/srfi/%3a38.sls						\
-	lib/srfi/%3a38/with-shared-structure.sls			\
-	\
-	lib/srfi/%3a39.sls						\
-	lib/srfi/%3a39/parameters.sls					\
-	\
-	lib/srfi/%3a41.sls						\
-	lib/srfi/%3a41/streams.sls					\
-	lib/srfi/%3a41/streams/derived.sls				\
-	lib/srfi/%3a41/streams/primitive.sls				\
-	\
-	lib/srfi/%3a42.sls						\
-	lib/srfi/%3a42/eager-comprehensions.sls				\
-	\
-	lib/srfi/%3a43.sls						\
-	lib/srfi/%3a43/vectors.sls					\
-	\
-	lib/srfi/%3a45.sls						\
-	lib/srfi/%3a45/lazy.sls						\
-	\
-	lib/srfi/%3a48.sls						\
-	lib/srfi/%3a48/intermediate-format-strings.sls			\
-	\
-	lib/srfi/%3a61/cond.sls						\
-	lib/srfi/%3a61.sls						\
-	\
-	lib/srfi/%3a64.sls						\
-	lib/srfi/%3a64/testing.sls					\
-	\
-	lib/srfi/%3a67/compare-procedures.sls				\
-	lib/srfi/%3a67.sls						\
-	\
-	lib/srfi/%3a69/basic-hash-tables.sls				\
-	lib/srfi/%3a69.sls						\
-	\
-	lib/srfi/%3a78.sls						\
-	lib/srfi/%3a78/lightweight-testing.sls				\
-	\
-	lib/srfi/%3a98.sls						\
-	lib/srfi/%3a98/os-environment-variables.sls			\
-	\
-	lib/srfi/%3a99.sls						\
-	lib/srfi/%3a99/records.sls					\
-	lib/srfi/%3a99/records/helper.sls				\
-	lib/srfi/%3a99/records/inspection.sls				\
-	lib/srfi/%3a99/records/procedural.sls				\
-	lib/srfi/%3a99/records/syntactic.sls				\
-	\
-	lib/srfi/%3a101.sls						\
-	lib/srfi/%3a101/random-access-lists.sls				\
-	lib/srfi/%3a101/random-access-lists/procedures.sls		\
-	lib/srfi/%3a101/random-access-lists/syntax.sls			\
-	lib/srfi/%3a101/random-access-lists/equal.sls			\
-	\
-	lib/srfi/%3a111.sls						\
-	lib/srfi/%3a111/boxes.sls					\
-	\
-	lib/srfi/%3a112.sls						\
-	lib/srfi/%3a112/environment-inquiry.sls				\
-	\
-	lib/srfi/%3a106.sls						\
-	lib/srfi/%3a106/socket.sls					\
-	lib/srfi/%3a106/compat.vicare.sls				\
-	\
-	lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.l	\
-	lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.l	\
-	lib/nausicaa/parser-tools/ip-addresses/make-tables.sps		\
-	\
-	lib/nausicaa/language/auxiliary-syntaxes.sls			\
-	lib/nausicaa/language/symbols-tree.sls				\
-	\
-	lib/nausicaa/language/oopp.sls					\
-	lib/nausicaa/language/oopp/auxiliary-syntaxes.sls		\
-	lib/nausicaa/language/oopp/configuration.sls			\
-	lib/nausicaa/language/oopp/conditions.sls			\
-	lib/nausicaa/language/oopp/definition-parser-helpers.sls	\
-	lib/nausicaa/language/oopp/oopp-syntax-helpers.sls		\
-	\
-	lib/nausicaa/language/multimethods.sls				\
-	lib/nausicaa/language/multimethods/auxiliary-syntaxes.sls	\
-	lib/nausicaa/language/multimethods/methods-table.sls		\
-	lib/nausicaa/language/multimethods/types.sls			\
-	\
-	lib/nausicaa/language/builtins.sls				\
-	lib/nausicaa/language/conditions.sls				\
-	lib/nausicaa/language/increments.sls				\
-	lib/nausicaa/language/simple-match.sls				\
-	lib/nausicaa/language/infix.sls					\
-	\
-	lib/nausicaa.sls						\
-	\
-	lib/nausicaa/containers/lists.sls				\
-	lib/nausicaa/containers/vectors.sls				\
-	lib/nausicaa/containers/strings.sls				\
-	lib/nausicaa/containers/arrays.sls				\
-	lib/nausicaa/containers/stacks.sls				\
-	lib/nausicaa/containers/queues.sls				\
-	lib/nausicaa/containers/bitvectors.sls				\
-	lib/nausicaa/containers/iterators.sls				\
-	\
-	lib/nausicaa/parser-tools/source-locations.sls			\
-	lib/nausicaa/parser-tools/lexical-tokens.sls			\
-	lib/nausicaa/parser-tools/silex/default-error-handler.sls	\
-	lib/nausicaa/parser-tools/lalr/lr-driver.sls			\
-	lib/nausicaa/parser-tools/lalr/glr-driver.sls			\
-	lib/nausicaa/parser-tools/lalr.sls				\
-	\
-	lib/nausicaa/uri/ip.sls						\
-	lib/nausicaa/uri.sls						\
-	lib/nausicaa/uri/pathnames/unix.sls				\
-	lib/nausicaa/uri/pathnames/abstract.sls				\
-	\
-	lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls	\
-	lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls	\
-	lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.sls	\
-	lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.sls	\
-	lib/nausicaa/parser-tools/ipv4-addresses.sls			\
-	lib/nausicaa/parser-tools/ipv6-addresses.sls			\
-	lib/nausicaa/parser-tools/uri.sls				\
-	lib/nausicaa/parser-tools/uri/utilities.sls			\
-	\
-	lib/nausicaa/mehve.sls						\
-	lib/nausicaa/mehve/language/numerics/predicates.sls		\
-	lib/nausicaa/mehve/language/numerics/arithmetics.sls		\
-	lib/nausicaa/mehve/language/numerics/parts.sls			\
-	lib/nausicaa/mehve/language/numerics/transcendental.sls		\
-	lib/nausicaa/mehve/language/infix.sls				\
-	lib/nausicaa/mehve/language/input-output.sls			\
-	\
-	lib/vicare/ffi.sls						\
-	lib/vicare/ffi/foreign-pointer-wrapper.sls			\
-	\
-	lib/vicare/posix.sls						\
-	lib/vicare/posix/pid-files.sls					\
-	lib/vicare/posix/lock-pid-files.sls				\
-	lib/vicare/posix/log-files.sls					\
-	lib/vicare/posix/daemonisations.sls				\
-	lib/vicare/posix/simple-event-loop.sls				\
-	lib/vicare/posix/tcp-server-sockets.sls				\
-	\
-	lib/vicare/glibc.sls						\
-	lib/vicare/iconv.sls						\
-	lib/vicare/gcc.sls						\
-	lib/vicare/linux.sls						\
-	lib/vicare/readline.sls						\
-	lib/vicare/cre2.sls
-
-#page
-#### compiling bundled libraries: fasl files
-
-nobase_nodist_bundledlibs_DATA	= \
-	$(fasldir)/vicare/unsafe/capi.fasl				\
-	$(fasldir)/vicare/unsafe/operations.fasl			\
-	$(fasldir)/vicare/unsafe/unicode.fasl				\
-	\
-	$(fasldir)/vicare/platform/configuration.fasl			\
-	$(fasldir)/vicare/platform/constants.fasl			\
-	$(fasldir)/vicare/platform/errno.fasl				\
-	$(fasldir)/vicare/platform/features.fasl			\
-	$(fasldir)/vicare/platform/words.fasl				\
-	$(fasldir)/vicare/platform/utilities.fasl			\
-	\
-	$(fasldir)/vicare/language-extensions/cond-expand.fasl				\
-	$(fasldir)/vicare/language-extensions/cond-expand/OS-id-features.fasl		\
-	$(fasldir)/vicare/language-extensions/cond-expand/feature-cond.fasl		\
-	$(fasldir)/vicare/language-extensions/cond-expand/helpers.fasl			\
-	$(fasldir)/vicare/language-extensions/cond-expand/platform-features.fasl	\
-	$(fasldir)/vicare/language-extensions/cond-expand/configuration-features.fasl	\
-	$(fasldir)/vicare/language-extensions/cond-expand/registry.fasl			\
-	\
-	$(fasldir)/vicare/arguments/general-c-buffers.fasl		\
-	$(fasldir)/vicare/arguments/validation.fasl			\
-	\
-	$(fasldir)/vicare/language-extensions/amb.fasl			\
-	$(fasldir)/vicare/language-extensions/ascii-chars/syntaxes.fasl	\
-	$(fasldir)/vicare/language-extensions/ascii-chars.fasl		\
-	$(fasldir)/vicare/language-extensions/c-enumerations.fasl	\
-	$(fasldir)/vicare/language-extensions/callables.fasl		\
-	$(fasldir)/vicare/language-extensions/comparisons.fasl		\
-	$(fasldir)/vicare/language-extensions/coroutines.fasl		\
-	$(fasldir)/vicare/language-extensions/custom-ports.fasl		\
-	$(fasldir)/vicare/language-extensions/define-record-extended.fasl	\
-	$(fasldir)/vicare/language-extensions/hooks.fasl		\
-	$(fasldir)/vicare/language-extensions/identifier-substitutions.fasl	\
-	$(fasldir)/vicare/language-extensions/increments.fasl		\
-	$(fasldir)/vicare/language-extensions/infix/auxiliary-syntaxes.fasl	\
-	$(fasldir)/vicare/language-extensions/infix/lr-driver.fasl	\
-	$(fasldir)/vicare/language-extensions/infix/parser-table.fasl	\
-	$(fasldir)/vicare/language-extensions/infix/parser-utils.fasl	\
-	$(fasldir)/vicare/language-extensions/infix/tokens.fasl		\
-	$(fasldir)/vicare/language-extensions/infix.fasl		\
-	$(fasldir)/vicare/language-extensions/makers.fasl		\
-	$(fasldir)/vicare/language-extensions/keywords.fasl		\
-	$(fasldir)/vicare/language-extensions/loops.fasl		\
-	$(fasldir)/vicare/language-extensions/namespaces.fasl		\
-	$(fasldir)/vicare/language-extensions/sentinels.fasl		\
-	$(fasldir)/vicare/language-extensions/simple-match.fasl		\
-	$(fasldir)/vicare/language-extensions/streams.fasl		\
-	$(fasldir)/vicare/language-extensions/syntaxes.fasl		\
-	$(fasldir)/vicare/language-extensions/try.fasl			\
-	$(fasldir)/vicare/language-extensions/variables.fasl		\
-	\
-	$(fasldir)/vicare/crypto/randomisations.fasl			\
-	$(fasldir)/vicare/crypto/randomisations/low.fasl		\
-	$(fasldir)/vicare/crypto/randomisations/blum-blum-shub.fasl	\
-	$(fasldir)/vicare/crypto/randomisations/borosh.fasl		\
-	$(fasldir)/vicare/crypto/randomisations/cmrg.fasl		\
-	$(fasldir)/vicare/crypto/randomisations/distributions.fasl	\
-	$(fasldir)/vicare/crypto/randomisations/lists.fasl		\
-	$(fasldir)/vicare/crypto/randomisations/marsaglia.fasl		\
-	$(fasldir)/vicare/crypto/randomisations/mersenne.fasl		\
-	$(fasldir)/vicare/crypto/randomisations/strings.fasl		\
-	$(fasldir)/vicare/crypto/randomisations/vectors.fasl		\
-	\
-	$(fasldir)/vicare/numerics/constants.fasl			\
-	$(fasldir)/vicare/numerics/flonum-formatter.fasl		\
-	$(fasldir)/vicare/numerics/flonum-parser.fasl			\
-	\
-	$(fasldir)/vicare/containers/auxiliary-syntaxes.fasl		\
-	$(fasldir)/vicare/containers/bytevectors.fasl			\
-	$(fasldir)/vicare/containers/bytevector-compounds.fasl		\
-	$(fasldir)/vicare/containers/bytevector-compounds/core.fasl	\
-	$(fasldir)/vicare/containers/bytevector-compounds/unsafe.fasl	\
-	$(fasldir)/vicare/containers/weak-hashtables.fasl		\
-	$(fasldir)/vicare/containers/object-properties.fasl		\
-	$(fasldir)/vicare/containers/lists/stx.fasl			\
-	$(fasldir)/vicare/containers/lists/low.fasl			\
-	$(fasldir)/vicare/containers/lists.fasl				\
-	$(fasldir)/vicare/containers/vectors/low.fasl			\
-	$(fasldir)/vicare/containers/vectors.fasl			\
-	$(fasldir)/vicare/containers/strings/low.fasl			\
-	$(fasldir)/vicare/containers/strings.fasl			\
-	$(fasldir)/vicare/containers/strings/rabin-karp.fasl		\
-	$(fasldir)/vicare/containers/knuth-morris-pratt.fasl		\
-	$(fasldir)/vicare/containers/char-sets.fasl			\
-	$(fasldir)/vicare/containers/char-sets/blocks.fasl		\
-	$(fasldir)/vicare/containers/char-sets/categories.fasl		\
-	$(fasldir)/vicare/containers/levenshtein.fasl			\
-	$(fasldir)/vicare/containers/one-dimension-co.fasl		\
-	$(fasldir)/vicare/containers/one-dimension-cc.fasl		\
-	$(fasldir)/vicare/containers/bytevectors/generic-low.fasl	\
-	$(fasldir)/vicare/containers/bytevectors/generic.fasl		\
-	$(fasldir)/vicare/containers/bytevectors/s8.fasl		\
-	$(fasldir)/vicare/containers/bytevectors/s8low.fasl		\
-	$(fasldir)/vicare/containers/bytevectors/u8.fasl		\
-	$(fasldir)/vicare/containers/bytevectors/u8low.fasl		\
-	$(fasldir)/vicare/containers/arrays.fasl			\
-	$(fasldir)/vicare/containers/stacks.fasl			\
-	$(fasldir)/vicare/containers/queues.fasl			\
-	\
-	$(fasldir)/vicare/assembler/inspection.fasl			\
-	$(fasldir)/vicare/checks.fasl					\
-	$(fasldir)/vicare/debugging/compiler.fasl			\
-	$(fasldir)/vicare/parser-logic.fasl				\
-	\
-	$(fasldir)/vicare/net/channels.fasl				\
-	\
-	$(fasldir)/vicare/irregex.fasl					\
-	$(fasldir)/vicare/irregex/compat.fasl				\
-	$(fasldir)/vicare/pregexp.fasl					\
-	$(fasldir)/vicare/getopts.fasl					\
-	$(fasldir)/vicare/formations.fasl				\
-	\
-	$(fasldir)/vicare/parser-tools/silex/action-l.fasl		\
-	$(fasldir)/vicare/parser-tools/silex/char-lexer-driver.fasl	\
-	$(fasldir)/vicare/parser-tools/silex/class-l.fasl		\
-	$(fasldir)/vicare/parser-tools/silex/code-lexer-driver.fasl	\
-	$(fasldir)/vicare/parser-tools/silex/input-system.fasl		\
-	$(fasldir)/vicare/parser-tools/silex/lexer.fasl			\
-	$(fasldir)/vicare/parser-tools/silex/macro-l.fasl		\
-	$(fasldir)/vicare/parser-tools/silex/nested-comment-l.fasl	\
-	$(fasldir)/vicare/parser-tools/silex/regexp-l.fasl		\
-	$(fasldir)/vicare/parser-tools/silex/semantic.fasl		\
-	$(fasldir)/vicare/parser-tools/silex.fasl			\
-	$(fasldir)/vicare/parser-tools/silex/string-l.fasl		\
-	$(fasldir)/vicare/parser-tools/silex/tree-lexer-driver.fasl	\
-	$(fasldir)/vicare/parser-tools/silex/utilities.fasl		\
-	\
-	$(fasldir)/vicare/parser-tools/unix-pathnames.fasl
-
-if WANT_SRFI
-nobase_nodist_bundledlibs_DATA	+= \
-	$(fasldir)/srfi/%3a0.fasl					\
-	$(fasldir)/srfi/%3a0/cond-expand.fasl				\
-	\
-	$(fasldir)/srfi/%3a1.fasl					\
-	$(fasldir)/srfi/%3a1/lists.fasl					\
-	\
-	$(fasldir)/srfi/%3a2.fasl					\
-	$(fasldir)/srfi/%3a2/and-let%2a.fasl				\
-	\
-	$(fasldir)/srfi/%3a6.fasl					\
-	$(fasldir)/srfi/%3a6/basic-string-ports.fasl			\
-	\
-	$(fasldir)/srfi/%3a8.fasl					\
-	$(fasldir)/srfi/%3a8/receive.fasl				\
-	\
-	$(fasldir)/srfi/%3a9.fasl					\
-	$(fasldir)/srfi/%3a9/records.fasl				\
-	\
-	$(fasldir)/srfi/%3a11.fasl					\
-	$(fasldir)/srfi/%3a11/let-values.fasl				\
-	\
-	$(fasldir)/srfi/%3a13.fasl					\
-	$(fasldir)/srfi/%3a13/strings.fasl				\
-	\
-	$(fasldir)/srfi/%3a14.fasl					\
-	$(fasldir)/srfi/%3a14/char-sets.fasl				\
-	\
-	$(fasldir)/srfi/%3a16.fasl					\
-	$(fasldir)/srfi/%3a16/case-lambda.fasl				\
-	\
-	$(fasldir)/srfi/%3a19.fasl					\
-	$(fasldir)/srfi/%3a19/time.fasl					\
-	\
-	$(fasldir)/srfi/%3a23.fasl					\
-	$(fasldir)/srfi/%3a23/error.fasl				\
-	\
-	$(fasldir)/srfi/%3a25.fasl					\
-	$(fasldir)/srfi/%3a25/multi-dimensional-arrays.fasl		\
-	\
-	$(fasldir)/srfi/%3a26.fasl					\
-	$(fasldir)/srfi/%3a26/cut.fasl					\
-	\
-	$(fasldir)/srfi/%3a27.fasl					\
-	$(fasldir)/srfi/%3a27/random-bits.fasl				\
-	\
-	$(fasldir)/srfi/%3a28.fasl					\
-	$(fasldir)/srfi/%3a28/basic-format-strings.fasl			\
-	\
-	$(fasldir)/srfi/%3a31.fasl					\
-	$(fasldir)/srfi/%3a31/rec.fasl					\
-	\
-	$(fasldir)/srfi/%3a37.fasl					\
-	$(fasldir)/srfi/%3a37/args-fold.fasl				\
-	\
-	$(fasldir)/srfi/%3a38.fasl					\
-	$(fasldir)/srfi/%3a38/with-shared-structure.fasl		\
-	\
-	$(fasldir)/srfi/%3a39.fasl					\
-	$(fasldir)/srfi/%3a39/parameters.fasl				\
-	\
-	$(fasldir)/srfi/%3a41.fasl					\
-	$(fasldir)/srfi/%3a41/streams.fasl				\
-	$(fasldir)/srfi/%3a41/streams/derived.fasl			\
-	$(fasldir)/srfi/%3a41/streams/primitive.fasl			\
-	\
-	$(fasldir)/srfi/%3a42.fasl					\
-	$(fasldir)/srfi/%3a42/eager-comprehensions.fasl			\
-	\
-	$(fasldir)/srfi/%3a43.fasl					\
-	$(fasldir)/srfi/%3a43/vectors.fasl				\
-	\
-	$(fasldir)/srfi/%3a45.fasl					\
-	$(fasldir)/srfi/%3a45/lazy.fasl					\
-	\
-	$(fasldir)/srfi/%3a48.fasl					\
-	$(fasldir)/srfi/%3a48/intermediate-format-strings.fasl		\
-	\
-	$(fasldir)/srfi/%3a61/cond.fasl					\
-	$(fasldir)/srfi/%3a61.fasl					\
-	\
-	$(fasldir)/srfi/%3a64.fasl					\
-	$(fasldir)/srfi/%3a64/testing.fasl				\
-	\
-	$(fasldir)/srfi/%3a67/compare-procedures.fasl			\
-	$(fasldir)/srfi/%3a67.fasl					\
-	\
-	$(fasldir)/srfi/%3a69/basic-hash-tables.fasl			\
-	$(fasldir)/srfi/%3a69.fasl					\
-	\
-	$(fasldir)/srfi/%3a78.fasl					\
-	$(fasldir)/srfi/%3a78/lightweight-testing.fasl			\
-	\
-	$(fasldir)/srfi/%3a98.fasl					\
-	$(fasldir)/srfi/%3a98/os-environment-variables.fasl		\
-	\
-	$(fasldir)/srfi/%3a99.fasl					\
-	$(fasldir)/srfi/%3a99/records.fasl				\
-	$(fasldir)/srfi/%3a99/records/helper.fasl			\
-	$(fasldir)/srfi/%3a99/records/inspection.fasl			\
-	$(fasldir)/srfi/%3a99/records/procedural.fasl			\
-	$(fasldir)/srfi/%3a99/records/syntactic.fasl			\
-	\
-	$(fasldir)/srfi/%3a101.fasl					\
-	$(fasldir)/srfi/%3a101/random-access-lists.fasl			\
-	$(fasldir)/srfi/%3a101/random-access-lists/procedures.fasl	\
-	$(fasldir)/srfi/%3a101/random-access-lists/syntax.fasl		\
-	$(fasldir)/srfi/%3a101/random-access-lists/equal.fasl		\
-	\
-	$(fasldir)/srfi/%3a111.fasl					\
-	$(fasldir)/srfi/%3a111/boxes.fasl				\
-	\
-	$(fasldir)/srfi/%3a112.fasl					\
-	$(fasldir)/srfi/%3a112/environment-inquiry.fasl
-endif
-
-if WANT_SRFI
-if WANT_POSIX
-nobase_nodist_bundledlibs_DATA	+= \
-	$(fasldir)/srfi/%3a106.fasl					\
-	$(fasldir)/srfi/%3a106/socket.fasl				\
-	$(fasldir)/srfi/%3a106/compat.fasl
-endif
-endif
-
-if WANT_NAUSICAA
-nobase_nodist_bundledlibs_DATA	+= \
-	$(fasldir)/nausicaa/language/auxiliary-syntaxes.fasl		\
-	$(fasldir)/nausicaa/language/symbols-tree.fasl			\
-	\
-	$(fasldir)/nausicaa/language/oopp.fasl				\
-	$(fasldir)/nausicaa/language/oopp/auxiliary-syntaxes.fasl	\
-	$(fasldir)/nausicaa/language/oopp/configuration.fasl		\
-	$(fasldir)/nausicaa/language/oopp/conditions.fasl		\
-	$(fasldir)/nausicaa/language/oopp/definition-parser-helpers.fasl \
-	$(fasldir)/nausicaa/language/oopp/oopp-syntax-helpers.fasl	\
-	\
-	$(fasldir)/nausicaa/language/multimethods.fasl			\
-	$(fasldir)/nausicaa/language/multimethods/auxiliary-syntaxes.fasl \
-	$(fasldir)/nausicaa/language/multimethods/methods-table.fasl	\
-	$(fasldir)/nausicaa/language/multimethods/types.fasl		\
-	\
-	$(fasldir)/nausicaa/language/builtins.fasl			\
-	$(fasldir)/nausicaa/language/conditions.fasl			\
-	$(fasldir)/nausicaa/language/increments.fasl			\
-	$(fasldir)/nausicaa/language/simple-match.fasl			\
-	$(fasldir)/nausicaa/language/infix.fasl				\
-	\
-	$(fasldir)/nausicaa.fasl					\
-	\
-	$(fasldir)/nausicaa/containers/lists.fasl			\
-	$(fasldir)/nausicaa/containers/vectors.fasl			\
-	$(fasldir)/nausicaa/containers/strings.fasl			\
-	$(fasldir)/nausicaa/containers/arrays.fasl			\
-	$(fasldir)/nausicaa/containers/stacks.fasl			\
-	$(fasldir)/nausicaa/containers/queues.fasl			\
-	$(fasldir)/nausicaa/containers/bitvectors.fasl			\
-	$(fasldir)/nausicaa/containers/iterators.fasl			\
-	\
-	$(fasldir)/nausicaa/parser-tools/source-locations.fasl		\
-	$(fasldir)/nausicaa/parser-tools/lexical-tokens.fasl		\
-	$(fasldir)/nausicaa/parser-tools/silex/default-error-handler.fasl \
-	$(fasldir)/nausicaa/parser-tools/lalr/lr-driver.fasl		\
-	$(fasldir)/nausicaa/parser-tools/lalr/glr-driver.fasl		\
-	$(fasldir)/nausicaa/parser-tools/lalr.fasl			\
-	\
-	$(fasldir)/nausicaa/uri/ip.fasl					\
-	$(fasldir)/nausicaa/uri.fasl					\
-	$(fasldir)/nausicaa/uri/pathnames.fasl				\
-	$(fasldir)/nausicaa/uri/pathnames/unix.fasl			\
-	$(fasldir)/nausicaa/uri/pathnames/abstract.fasl			\
-	\
-	$(fasldir)/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.fasl	\
-	$(fasldir)/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.fasl	\
-	$(fasldir)/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.fasl	\
-	$(fasldir)/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.fasl	\
-	$(fasldir)/nausicaa/parser-tools/ipv4-addresses.fasl		\
-	$(fasldir)/nausicaa/parser-tools/ipv6-addresses.fasl		\
-	$(fasldir)/nausicaa/parser-tools/uri.fasl			\
-	$(fasldir)/nausicaa/parser-tools/uri/utilities.fasl
-	\
-	$(fasldir)/nausicaa/mehve.fasl					\
-	$(fasldir)/nausicaa/mehve/language/numerics/predicates.fasl	\
-	$(fasldir)/nausicaa/mehve/language/numerics/arithmetics.fasl	\
-	$(fasldir)/nausicaa/mehve/language/numerics/parts.fasl		\
-	$(fasldir)/nausicaa/mehve/language/numerics/transcendental.fasl	\
-	$(fasldir)/nausicaa/mehve/language/infix.fasl			\
-	$(fasldir)/nausicaa/mehve/language/input-output.fasl
-endif
-
-if WANT_LIBFFI
-nobase_nodist_bundledlibs_DATA	+= \
-	$(fasldir)/vicare/ffi.fasl					\
-	$(fasldir)/vicare/ffi/foreign-pointer-wrapper.fasl
-endif
-
-if WANT_POSIX
-nobase_nodist_bundledlibs_DATA	+= \
-	$(fasldir)/vicare/posix.fasl					\
-	$(fasldir)/vicare/posix/pid-files.fasl				\
-	$(fasldir)/vicare/posix/lock-pid-files.fasl			\
-	$(fasldir)/vicare/posix/log-files.fasl				\
-	$(fasldir)/vicare/posix/daemonisations.fasl			\
-	$(fasldir)/vicare/posix/simple-event-loop.fasl			\
-	$(fasldir)/vicare/posix/tcp-server-sockets.fasl
-endif
-
-if WANT_GLIBC
-nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/glibc.fasl
-endif
-
-if WANT_LIBICONV
-nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/iconv.fasl
-endif
-
-if WANT_LIBFFI
-if WANT_POSIX
-if WANT_GLIBC
-nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/gcc.fasl
-endif
-endif
-endif
-
-if WANT_LINUX
-nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/linux.fasl
-endif
-
-if WANT_READLINE
-nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/readline.fasl
-endif
-
-if WANT_CRE2
-nobase_nodist_bundledlibs_DATA	+= $(fasldir)/vicare/cre2.fasl
-endif
-
-#page
-#### compiling bundled libraries: features library
-
 BUILT_SOURCES		+= lib/vicare/platform/features.sls
 
 noinst_PROGRAMS		= features
@@ -1241,9 +521,356 @@ features_SOURCES	= lib/features.c
 lib/vicare/platform/features.sls : features
 	$(MKDIR_P) lib/vicare/platform && ./features >$@
 
-$(fasldir)/vicare/platform/features.fasl : lib/vicare/platform/features.sls
+## --------------------------------------------------------------------
 
-CLEANFILES	+= vicare/platform/features.sls
+EXTRA_DIST += scripts/compile-all.sps scripts/build-makefile-rules.sps
+
+# EXTRA_DIST += \
+# 	lib/vicare/platform/configuration.sls.in			\
+# 	lib/vicare/platform/constants.sls.in				\
+# 	lib/vicare/platform/errno.sls.in				\
+# 	lib/vicare/platform/words.sls.in				\
+# 	lib/nausicaa/uri/pathnames.sls.in
+
+# EXTRA_DIST += \
+# 	lib/vicare/unsafe/capi.sls					\
+# 	lib/vicare/unsafe/operations.sls				\
+# 	lib/vicare/unsafe/unicode.sls					\
+# 	\
+# 	lib/vicare/platform/utilities.sls				\
+# 	\
+# 	lib/vicare/language-extensions/cond-expand.sls			\
+# 	lib/vicare/language-extensions/cond-expand/OS-id-features.sls	\
+# 	lib/vicare/language-extensions/cond-expand/feature-cond.sls	\
+# 	lib/vicare/language-extensions/cond-expand/helpers.sls		\
+# 	lib/vicare/language-extensions/cond-expand/platform-features.sls\
+# 	lib/vicare/language-extensions/cond-expand/configuration-features.sls	\
+# 	lib/vicare/language-extensions/cond-expand/registry.sls		\
+# 	\
+# 	lib/vicare/arguments/general-c-buffers.sls			\
+# 	lib/vicare/arguments/validation.sls				\
+# 	\
+# 	lib/vicare/language-extensions/amb.sls				\
+# 	lib/vicare/language-extensions/ascii-chars/syntaxes.sls		\
+# 	lib/vicare/language-extensions/ascii-chars.sls			\
+# 	lib/vicare/language-extensions/c-enumerations.sls		\
+# 	lib/vicare/language-extensions/callables.sls			\
+# 	lib/vicare/language-extensions/comparisons.sls			\
+# 	lib/vicare/language-extensions/coroutines.sls			\
+# 	lib/vicare/language-extensions/custom-ports.sls			\
+# 	lib/vicare/language-extensions/define-record-extended.sls	\
+# 	lib/vicare/language-extensions/hooks.sls			\
+# 	lib/vicare/language-extensions/identifier-substitutions.sls	\
+# 	lib/vicare/language-extensions/increments.sls			\
+# 	lib/vicare/language-extensions/infix/auxiliary-syntaxes.sls	\
+# 	lib/vicare/language-extensions/infix/lr-driver.sls		\
+# 	lib/vicare/language-extensions/infix/parser-table.sls		\
+# 	lib/vicare/language-extensions/infix/parser-utils.sls		\
+# 	lib/vicare/language-extensions/infix/tokens.sls			\
+# 	lib/vicare/language-extensions/infix.sls			\
+# 	lib/vicare/language-extensions/makers.sls			\
+# 	lib/vicare/language-extensions/keywords.sls			\
+# 	lib/vicare/language-extensions/loops.sls			\
+# 	lib/vicare/language-extensions/namespaces.sls			\
+# 	lib/vicare/language-extensions/sentinels.sls			\
+# 	lib/vicare/language-extensions/simple-match.sls			\
+# 	lib/vicare/language-extensions/streams.sls			\
+# 	lib/vicare/language-extensions/syntaxes.sls			\
+# 	lib/vicare/language-extensions/try.sls				\
+# 	lib/vicare/language-extensions/variables.sls			\
+# 	\
+# 	lib/vicare/crypto/randomisations.sls				\
+# 	lib/vicare/crypto/randomisations/low.sls			\
+# 	lib/vicare/crypto/randomisations/blum-blum-shub.sls		\
+# 	lib/vicare/crypto/randomisations/borosh.sls			\
+# 	lib/vicare/crypto/randomisations/cmrg.sls			\
+# 	lib/vicare/crypto/randomisations/distributions.sls		\
+# 	lib/vicare/crypto/randomisations/lists.sls			\
+# 	lib/vicare/crypto/randomisations/marsaglia.sls			\
+# 	lib/vicare/crypto/randomisations/mersenne.sls			\
+# 	lib/vicare/crypto/randomisations/strings.sls			\
+# 	lib/vicare/crypto/randomisations/vectors.sls			\
+# 	\
+# 	lib/vicare/numerics/constants.sls				\
+# 	lib/vicare/numerics/flonum-formatter.sls			\
+# 	lib/vicare/numerics/flonum-parser.sls				\
+# 	\
+# 	lib/vicare/containers/auxiliary-syntaxes.sls			\
+# 	lib/vicare/containers/bytevectors.sls				\
+# 	lib/vicare/containers/bytevector-compounds.sls			\
+# 	lib/vicare/containers/bytevector-compounds/core.sls		\
+# 	lib/vicare/containers/bytevector-compounds/unsafe.sls		\
+# 	lib/vicare/containers/weak-hashtables.sls			\
+# 	lib/vicare/containers/object-properties.sls			\
+# 	lib/vicare/containers/lists/stx.sls				\
+# 	lib/vicare/containers/lists/low.sls				\
+# 	lib/vicare/containers/lists.sls					\
+# 	lib/vicare/containers/vectors/low.sls				\
+# 	lib/vicare/containers/vectors.sls				\
+# 	lib/vicare/containers/strings/low.sls				\
+# 	lib/vicare/containers/strings.sls				\
+# 	lib/vicare/containers/strings/rabin-karp.sls			\
+# 	lib/vicare/containers/knuth-morris-pratt.sls			\
+# 	lib/vicare/containers/char-sets.sls				\
+# 	lib/vicare/containers/char-sets/blocks.sls			\
+# 	lib/vicare/containers/char-sets/categories.sls			\
+# 	lib/vicare/containers/levenshtein.sls				\
+# 	lib/vicare/containers/one-dimension-co.sls			\
+# 	lib/vicare/containers/one-dimension-cc.sls			\
+# 	lib/vicare/containers/bytevectors/generic-low.sls		\
+# 	lib/vicare/containers/bytevectors/generic.sls			\
+# 	lib/vicare/containers/bytevectors/s8.sls			\
+# 	lib/vicare/containers/bytevectors/s8low.sls			\
+# 	lib/vicare/containers/bytevectors/u8.sls			\
+# 	lib/vicare/containers/bytevectors/u8low.sls			\
+# 	lib/vicare/containers/arrays.sls				\
+# 	lib/vicare/containers/stacks.sls				\
+# 	lib/vicare/containers/queues.sls				\
+# 	\
+# 	lib/vicare/assembler/inspection.sls				\
+# 	lib/vicare/checks.sls						\
+# 	lib/vicare/debugging/compiler.sls				\
+# 	lib/vicare/parser-logic.sls					\
+# 	\
+# 	lib/vicare/net/channels.sls					\
+# 	\
+# 	lib/vicare/irregex.sls						\
+# 	lib/vicare/irregex/compat.vicare.sls				\
+# 	lib/vicare/pregexp.sls						\
+# 	lib/vicare/getopts.sls						\
+# 	lib/vicare/formations.sls					\
+# 	\
+# 	lib/vicare/parser-tools/silex/make-tables.sps			\
+# 	lib/vicare/parser-tools/silex/action.l				\
+# 	lib/vicare/parser-tools/silex/class.l				\
+# 	lib/vicare/parser-tools/silex/macro.l				\
+# 	lib/vicare/parser-tools/silex/nested-comment.l			\
+# 	lib/vicare/parser-tools/silex/regexp.l				\
+# 	lib/vicare/parser-tools/silex/string.l				\
+# 	lib/vicare/parser-tools/silex/macros/identifier.macros.l	\
+# 	lib/vicare/parser-tools/silex/macros/string.macros.l		\
+# 	lib/vicare/parser-tools/silex/macros/unicode.macros.l		\
+# 	lib/vicare/parser-tools/silex/macros/whitespaces-and-comments.macros.l \
+# 	\
+# 	lib/vicare/parser-tools/silex/action-l.sls			\
+# 	lib/vicare/parser-tools/silex/char-lexer-driver.sls		\
+# 	lib/vicare/parser-tools/silex/class-l.sls			\
+# 	lib/vicare/parser-tools/silex/code-lexer-driver.sls		\
+# 	lib/vicare/parser-tools/silex/input-system.sls			\
+# 	lib/vicare/parser-tools/silex/lexer.sls				\
+# 	lib/vicare/parser-tools/silex/macro-l.sls			\
+# 	lib/vicare/parser-tools/silex/nested-comment-l.sls		\
+# 	lib/vicare/parser-tools/silex/regexp-l.sls			\
+# 	lib/vicare/parser-tools/silex/semantic.sls			\
+# 	lib/vicare/parser-tools/silex.sls				\
+# 	lib/vicare/parser-tools/silex/string-l.sls			\
+# 	lib/vicare/parser-tools/silex/tree-lexer-driver.sls		\
+# 	lib/vicare/parser-tools/silex/utilities.sls			\
+# 	\
+# 	lib/vicare/parser-tools/unix-pathnames.sls			\
+# 	\
+# 	lib/srfi/%3a0.sls						\
+# 	lib/srfi/%3a0/cond-expand.sls					\
+# 	\
+# 	lib/srfi/%3a1.sls						\
+# 	lib/srfi/%3a1/lists.sls						\
+# 	\
+# 	lib/srfi/%3a2.sls						\
+# 	lib/srfi/%3a2/and-let%2a.sls					\
+# 	\
+# 	lib/srfi/%3a6.sls						\
+# 	lib/srfi/%3a6/basic-string-ports.sls				\
+# 	\
+# 	lib/srfi/%3a8.sls						\
+# 	lib/srfi/%3a8/receive.sls					\
+# 	\
+# 	lib/srfi/%3a9.sls						\
+# 	lib/srfi/%3a9/records.sls					\
+# 	\
+# 	lib/srfi/%3a11.sls						\
+# 	lib/srfi/%3a11/let-values.sls					\
+# 	\
+# 	lib/srfi/%3a13.sls						\
+# 	lib/srfi/%3a13/strings.sls					\
+# 	\
+# 	lib/srfi/%3a14.sls						\
+# 	lib/srfi/%3a14/char-sets.sls					\
+# 	\
+# 	lib/srfi/%3a16.sls						\
+# 	lib/srfi/%3a16/case-lambda.sls					\
+# 	\
+# 	lib/srfi/%3a19.sls						\
+# 	lib/srfi/%3a19/time.sls						\
+# 	\
+# 	lib/srfi/%3a23.sls						\
+# 	lib/srfi/%3a23/error.sls					\
+# 	\
+# 	lib/srfi/%3a25.sls						\
+# 	lib/srfi/%3a25/multi-dimensional-arrays.sls			\
+# 	lib/srfi/%3a25/arlib.scm					\
+# 	lib/srfi/%3a25/list.scm						\
+# 	\
+# 	lib/srfi/%3a26.sls						\
+# 	lib/srfi/%3a26/cut.sls						\
+# 	\
+# 	lib/srfi/%3a27.sls						\
+# 	lib/srfi/%3a27/random-bits.sls					\
+# 	\
+# 	lib/srfi/%3a28.sls						\
+# 	lib/srfi/%3a28/basic-format-strings.sls				\
+# 	\
+# 	lib/srfi/%3a31.sls						\
+# 	lib/srfi/%3a31/rec.sls						\
+# 	\
+# 	lib/srfi/%3a37.sls						\
+# 	lib/srfi/%3a37/args-fold.sls					\
+# 	\
+# 	lib/srfi/%3a38.sls						\
+# 	lib/srfi/%3a38/with-shared-structure.sls			\
+# 	\
+# 	lib/srfi/%3a39.sls						\
+# 	lib/srfi/%3a39/parameters.sls					\
+# 	\
+# 	lib/srfi/%3a41.sls						\
+# 	lib/srfi/%3a41/streams.sls					\
+# 	lib/srfi/%3a41/streams/derived.sls				\
+# 	lib/srfi/%3a41/streams/primitive.sls				\
+# 	\
+# 	lib/srfi/%3a42.sls						\
+# 	lib/srfi/%3a42/eager-comprehensions.sls				\
+# 	\
+# 	lib/srfi/%3a43.sls						\
+# 	lib/srfi/%3a43/vectors.sls					\
+# 	\
+# 	lib/srfi/%3a45.sls						\
+# 	lib/srfi/%3a45/lazy.sls						\
+# 	\
+# 	lib/srfi/%3a48.sls						\
+# 	lib/srfi/%3a48/intermediate-format-strings.sls			\
+# 	\
+# 	lib/srfi/%3a61/cond.sls						\
+# 	lib/srfi/%3a61.sls						\
+# 	\
+# 	lib/srfi/%3a64.sls						\
+# 	lib/srfi/%3a64/testing.sls					\
+# 	\
+# 	lib/srfi/%3a67/compare-procedures.sls				\
+# 	lib/srfi/%3a67.sls						\
+# 	\
+# 	lib/srfi/%3a69/basic-hash-tables.sls				\
+# 	lib/srfi/%3a69.sls						\
+# 	\
+# 	lib/srfi/%3a78.sls						\
+# 	lib/srfi/%3a78/lightweight-testing.sls				\
+# 	\
+# 	lib/srfi/%3a98.sls						\
+# 	lib/srfi/%3a98/os-environment-variables.sls			\
+# 	\
+# 	lib/srfi/%3a99.sls						\
+# 	lib/srfi/%3a99/records.sls					\
+# 	lib/srfi/%3a99/records/helper.sls				\
+# 	lib/srfi/%3a99/records/inspection.sls				\
+# 	lib/srfi/%3a99/records/procedural.sls				\
+# 	lib/srfi/%3a99/records/syntactic.sls				\
+# 	\
+# 	lib/srfi/%3a101.sls						\
+# 	lib/srfi/%3a101/random-access-lists.sls				\
+# 	lib/srfi/%3a101/random-access-lists/procedures.sls		\
+# 	lib/srfi/%3a101/random-access-lists/syntax.sls			\
+# 	lib/srfi/%3a101/random-access-lists/equal.sls			\
+# 	\
+# 	lib/srfi/%3a111.sls						\
+# 	lib/srfi/%3a111/boxes.sls					\
+# 	\
+# 	lib/srfi/%3a112.sls						\
+# 	lib/srfi/%3a112/environment-inquiry.sls				\
+# 	\
+# 	lib/srfi/%3a106.sls						\
+# 	lib/srfi/%3a106/socket.sls					\
+# 	lib/srfi/%3a106/compat.vicare.sls				\
+# 	\
+# 	lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.l	\
+# 	lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.l	\
+# 	lib/nausicaa/parser-tools/ip-addresses/make-tables.sps		\
+# 	\
+# 	lib/nausicaa/language/auxiliary-syntaxes.sls			\
+# 	lib/nausicaa/language/symbols-tree.sls				\
+# 	\
+# 	lib/nausicaa/language/oopp.sls					\
+# 	lib/nausicaa/language/oopp/auxiliary-syntaxes.sls		\
+# 	lib/nausicaa/language/oopp/configuration.sls			\
+# 	lib/nausicaa/language/oopp/conditions.sls			\
+# 	lib/nausicaa/language/oopp/definition-parser-helpers.sls	\
+# 	lib/nausicaa/language/oopp/oopp-syntax-helpers.sls		\
+# 	\
+# 	lib/nausicaa/language/multimethods.sls				\
+# 	lib/nausicaa/language/multimethods/auxiliary-syntaxes.sls	\
+# 	lib/nausicaa/language/multimethods/methods-table.sls		\
+# 	lib/nausicaa/language/multimethods/types.sls			\
+# 	\
+# 	lib/nausicaa/language/builtins.sls				\
+# 	lib/nausicaa/language/conditions.sls				\
+# 	lib/nausicaa/language/increments.sls				\
+# 	lib/nausicaa/language/simple-match.sls				\
+# 	lib/nausicaa/language/infix.sls					\
+# 	\
+# 	lib/nausicaa.sls						\
+# 	\
+# 	lib/nausicaa/containers/lists.sls				\
+# 	lib/nausicaa/containers/vectors.sls				\
+# 	lib/nausicaa/containers/strings.sls				\
+# 	lib/nausicaa/containers/arrays.sls				\
+# 	lib/nausicaa/containers/stacks.sls				\
+# 	lib/nausicaa/containers/queues.sls				\
+# 	lib/nausicaa/containers/bitvectors.sls				\
+# 	lib/nausicaa/containers/iterators.sls				\
+# 	\
+# 	lib/nausicaa/parser-tools/source-locations.sls			\
+# 	lib/nausicaa/parser-tools/lexical-tokens.sls			\
+# 	lib/nausicaa/parser-tools/silex/default-error-handler.sls	\
+# 	lib/nausicaa/parser-tools/lalr/lr-driver.sls			\
+# 	lib/nausicaa/parser-tools/lalr/glr-driver.sls			\
+# 	lib/nausicaa/parser-tools/lalr.sls				\
+# 	\
+# 	lib/nausicaa/uri/ip.sls						\
+# 	lib/nausicaa/uri.sls						\
+# 	lib/nausicaa/uri/pathnames/unix.sls				\
+# 	lib/nausicaa/uri/pathnames/abstract.sls				\
+# 	\
+# 	lib/nausicaa/parser-tools/ip-addresses/ipv4-address-lexer.sls	\
+# 	lib/nausicaa/parser-tools/ip-addresses/ipv4-address-parser.sls	\
+# 	lib/nausicaa/parser-tools/ip-addresses/ipv6-address-lexer.sls	\
+# 	lib/nausicaa/parser-tools/ip-addresses/ipv6-address-parser.sls	\
+# 	lib/nausicaa/parser-tools/ipv4-addresses.sls			\
+# 	lib/nausicaa/parser-tools/ipv6-addresses.sls			\
+# 	lib/nausicaa/parser-tools/uri.sls				\
+# 	lib/nausicaa/parser-tools/uri/utilities.sls			\
+# 	\
+# 	lib/nausicaa/mehve.sls						\
+# 	lib/nausicaa/mehve/language/numerics/predicates.sls		\
+# 	lib/nausicaa/mehve/language/numerics/arithmetics.sls		\
+# 	lib/nausicaa/mehve/language/numerics/parts.sls			\
+# 	lib/nausicaa/mehve/language/numerics/transcendental.sls		\
+# 	lib/nausicaa/mehve/language/infix.sls				\
+# 	lib/nausicaa/mehve/language/input-output.sls			\
+# 	\
+# 	lib/vicare/ffi.sls						\
+# 	lib/vicare/ffi/foreign-pointer-wrapper.sls			\
+# 	\
+# 	lib/vicare/posix.sls						\
+# 	lib/vicare/posix/pid-files.sls					\
+# 	lib/vicare/posix/lock-pid-files.sls				\
+# 	lib/vicare/posix/log-files.sls					\
+# 	lib/vicare/posix/daemonisations.sls				\
+# 	lib/vicare/posix/simple-event-loop.sls				\
+# 	lib/vicare/posix/tcp-server-sockets.sls				\
+# 	\
+# 	lib/vicare/glibc.sls						\
+# 	lib/vicare/iconv.sls						\
+# 	lib/vicare/gcc.sls						\
+# 	lib/vicare/linux.sls						\
+# 	lib/vicare/readline.sls						\
+# 	lib/vicare/cre2.sls
 
 #page
 #### compiling bundled libraries: build rules
@@ -1261,25 +888,31 @@ VICARE_COMPILE_ENV	= \
 VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
 VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) vicare $(VICARE_COMPILE_FLAGS)
 
-$(fasldir)/vicare/irregex/compat.fasl : lib/vicare/irregex/compat.vicare.sls $(VICARE_NEW_BOOT)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+# $(fasldir)/vicare/irregex/compat.fasl : lib/vicare/irregex/compat.vicare.sls $(VICARE_NEW_BOOT)
+# 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-$(fasldir)/srfi/%3a106/compat.fasl : lib/srfi/%3a106/compat.vicare.sls $(VICARE_NEW_BOOT)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+# $(fasldir)/srfi/%3a106/compat.fasl : lib/srfi/%3a106/compat.vicare.sls $(VICARE_NEW_BOOT)
+# 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
-%.fasl: %.sls $(VICARE_NEW_BOOT)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+# %.fasl: %.sls $(VICARE_NEW_BOOT)
+# 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 ## --------------------------------------------------------------------
 
 .PHONY: dependencies
 
 dependencies:
-	$(VICARE_COMPILE_RUN) --print-dependencies $(slsdir)/compile-all.sps >$(slsdir)/dependencies.make
+	$(VICARE_COMPILE_RUN) --print-loaded-libraries \
+		--r6rs-script $(srcdir)/scripts/build-makefile-rules.sps >$(slsdir)/dependencies.make
 
-include $(slsdir)/dependencies.make
+include $(top_srcdir)/lib/dependencies.make
 
 ## --------------------------------------------------------------------
+
+.PHONY: clean-fasl
+
+clean-fasl:
+	find $(fasldir) -name \*.fasl -execdir rm -v '{}' ';'
 
 CLEANFILES	+= $(nobase_nodist_bundledlibs_DATA)
 
@@ -1793,7 +1426,7 @@ VICARE_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
 VICARE_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
 
 VICARE_TEST_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_TEST_SEARCH_PATH	= $(srcdir)/tests:$(slsdir):$(fasldir):$(srcdir)/scheme
+VICARE_TEST_SEARCH_PATH	= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
 
 # Enable timing  of test files  execution.  We cannot include  this in
 # the separator because it needs  to be placed between the environment
@@ -1870,7 +1503,7 @@ lalr-test:
 #page
 #### interface to "make instcheck"
 
-VICARE_INSTCHECK_LIBRARY_PATH = $(VICARE_LIBRARY_PATH):$(srcdir):$(srcdir)/scheme
+VICARE_INSTCHECK_LIBRARY_PATH = $(testdir):$(srcdir):$(srcdir)/scheme:$(VICARE_LIBRARY_PATH)
 
 VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(AX_VFLAGS) $(VFLAGS)
 VICARE_INSTCHECK_ENV	= \
@@ -1910,7 +1543,7 @@ test-vie:
 	$(VICARE_TERMINAL_VIE)
 
 test-exec-modes:
-	$(VICARE_TERMINAL_RUN_ENV) $(srcdir)/tests/test-exec-modes.sh vicare $(VICARE_NEW_BOOT) $(srcdir)/tests
+	$(VICARE_TERMINAL_RUN_ENV) $(testdir)/test-exec-modes.sh vicare $(VICARE_NEW_BOOT) $(testdir)
 
 #page
 #### Linux binfmt support

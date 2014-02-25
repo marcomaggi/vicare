@@ -1,5 +1,10 @@
-;;; build-makefile-rules.sps --
-
+;; build-makefile-rules.sps --
+;;
+;;FIXME  We are  not tracking  the  include files  among the  libraries'
+;;precedences,  but we  should.  At  present the  include files  are not
+;;collected by the  expander, but maybe they should.   (Marco Maggi; Tue
+;;Feb 25, 2014)
+;;
 #!r6rs
 (import (vicare)
   (prefix (vicare libraries) libs.)
@@ -9,249 +14,43 @@
 (libs.current-library-locator libs.source-library-locator)
 (libs.fasl-search-path '())
 
-;;We perform  this import through eval,  so that it happens  at run-time
-;;after we have set the source library locator.
-(eval '(import
-	   (only (vicare platform configuration))
-	 (only (vicare platform words))
-	 (only (vicare platform errno))
-	 (only (vicare platform constants))
-	 (only (vicare platform features))
-	 (only (vicare platform utilities))
-
-	 (only (vicare unsafe capi))
-	 (only (vicare unsafe operations))
-	 (only (vicare unsafe unicode))
-
-	 (only (vicare language-extensions cond-expand))
-	 (only (vicare language-extensions cond-expand OS-id-features))
-	 (only (vicare language-extensions cond-expand feature-cond))
-	 (only (vicare language-extensions cond-expand helpers))
-	 (only (vicare language-extensions cond-expand platform-features))
-	 (only (vicare language-extensions cond-expand configuration-features))
-	 (only (vicare language-extensions cond-expand registry))
-
-	 (only (vicare arguments validation))
-	 (only (vicare arguments general-c-buffers))
-
-	 (only (vicare language-extensions syntaxes))
-	 (only (vicare language-extensions amb))
-	 (only (vicare language-extensions simple-match))
-	 (only (vicare language-extensions coroutines))
-	 (only (vicare language-extensions increments))
-	 (only (vicare language-extensions infix))
-	 (only (vicare language-extensions keywords))
-	 (only (vicare language-extensions sentinels))
-	 (only (vicare language-extensions namespaces))
-	 (only (vicare language-extensions custom-ports))
-	 (only (vicare language-extensions variables))
-	 (only (vicare language-extensions streams))
-	 (only (vicare language-extensions loops))
-	 (only (vicare language-extensions ascii-chars))
-	 (only (vicare language-extensions comparisons))
-	 (only (vicare language-extensions hooks))
-	 (only (vicare language-extensions callables))
-	 (only (vicare language-extensions define-record-extended))
-	 (only (vicare language-extensions c-enumerations))
-	 (only (vicare language-extensions identifier-substitutions))
-	 (only (vicare language-extensions makers))
-	 (only (vicare language-extensions try))
-
-	 (only (vicare checks))
-
-	 (only (vicare crypto randomisations low))
-	 (only (vicare crypto randomisations))
-	 (only (vicare crypto randomisations blum-blum-shub))
-	 (only (vicare crypto randomisations borosh))
-	 (only (vicare crypto randomisations cmrg))
-	 (only (vicare crypto randomisations distributions))
-	 (only (vicare crypto randomisations lists))
-	 (only (vicare crypto randomisations marsaglia))
-	 (only (vicare crypto randomisations mersenne))
-	 (only (vicare crypto randomisations strings))
-	 (only (vicare crypto randomisations vectors))
-
-	 (only (vicare numerics constants))
-	 (only (vicare numerics flonum-parser))
-	 (only (vicare numerics flonum-formatter))
-
-	 (only (vicare containers bytevectors))
-	 (only (vicare containers auxiliary-syntaxes))
-	 (only (vicare containers weak-hashtables))
-	 (only (vicare containers object-properties))
-	 (only (vicare containers knuth-morris-pratt))
-	 (only (vicare containers bytevector-compounds core))
-	 (only (vicare containers bytevector-compounds))
-	 (only (vicare containers bytevector-compounds unsafe))
-	 (only (vicare containers char-sets))
-	 (only (vicare containers char-sets blocks))
-	 (only (vicare containers char-sets categories))
-	 (only (vicare containers lists stx))
-	 (only (vicare containers lists low))
-	 (only (vicare containers lists))
-	 (only (vicare containers vectors low))
-	 (only (vicare containers vectors))
-	 (only (vicare containers strings low))
-	 (only (vicare containers strings))
-	 (only (vicare containers strings rabin-karp))
-	 (only (vicare containers levenshtein))
-	 (only (vicare containers one-dimension-co))
-	 (only (vicare containers one-dimension-cc))
-	 (only (vicare containers bytevectors u8))
-	 (only (vicare containers bytevectors s8))
-	 (only (vicare containers arrays))
-	 (only (vicare containers stacks))
-	 (only (vicare containers queues))
-
-	 (only (vicare parser-tools silex lexer))
-	 (only (vicare parser-tools silex))
-	 (only (vicare parser-tools silex utilities))
-	 (only (vicare parser-tools unix-pathnames))
-
-	 (only (vicare net channels))
-
-	 (only (vicare ffi))
-	 (only (vicare ffi foreign-pointer-wrapper))
-
-	 (only (vicare iconv))
-
-	 (only (vicare posix))
-	 (only (vicare posix pid-files))
-	 (only (vicare posix lock-pid-files))
-	 (only (vicare posix log-files))
-	 (only (vicare posix daemonisations))
-	 (only (vicare posix simple-event-loop))
-	 (only (vicare posix tcp-server-sockets))
-
-	 (only (vicare glibc))
-	 (only (vicare gcc))
-	 (only (vicare linux))
-	 (only (vicare readline))
-
-	 (only (vicare assembler inspection))
-	 (only (vicare debugging compiler))
-	 (only (vicare parser-logic))
-
-	 (only (vicare irregex))
-	 (only (vicare pregexp))
-	 (only (vicare getopts))
-	 (only (vicare formations))
-
-	 (only (vicare cre2))
-
-	 (only (srfi :0))
-	 (only (srfi :1))
-	 (only (srfi :2))
-	 (only (srfi :6))
-	 (only (srfi :8))
-	 (only (srfi :9))
-	 (only (srfi :11))
-	 (only (srfi :13))
-	 (only (srfi :14))
-	 (only (srfi :16))
-	 (only (srfi :19))
-	 (only (srfi :23))
-	 (only (srfi :25))
-;;;(only (srfi :25 multi-dimensional-arrays arlib))
-	 (only (srfi :26))
-	 (only (srfi :27))
-	 (only (srfi :28))
-	 (only (srfi :31))
-	 (only (srfi :37))
-	 (only (srfi :38))
-	 (only (srfi :39))
-	 (only (srfi :41))
-	 (only (srfi :42))
-	 (only (srfi :43))
-	 (only (srfi :45))
-	 (only (srfi :48))
-	 (only (srfi :61))
-	 (only (srfi :64))
-	 (only (srfi :67))
-	 (only (srfi :69))
-	 (only (srfi :78))
-	 (only (srfi :98))
-	 (only (srfi :99))
-	 ;;We  really   need  all   of  these  for   this  SRFI,   because  the
-	 ;;implementation is in (srfi :101).
-	 (only (srfi :101))
-	 (only (srfi :101 random-access-lists))
-	 (only (srfi :101 random-access-lists procedures))
-	 (only (srfi :101 random-access-lists syntax))
-	 (only (srfi :101 random-access-lists equal))
-	 ;;This SRFI depends upon (vicare posix).
-	 (only (srfi :106))
-	 (only (srfi :111))
-	 (only (srfi :112))
-
-	 (only (nausicaa language auxiliary-syntaxes))
-	 (only (nausicaa language oopp))
-	 (only (nausicaa language multimethods))
-	 (only (nausicaa language builtins))
-	 (only (nausicaa language conditions))
-	 (only (nausicaa language simple-match))
-	 (only (nausicaa language infix))
-	 (only (nausicaa))
-
-	 (only (nausicaa containers lists))
-	 (only (nausicaa containers vectors))
-	 (only (nausicaa containers strings))
-	 (only (nausicaa containers arrays))
-	 (only (nausicaa containers stacks))
-	 (only (nausicaa containers queues))
-	 (only (nausicaa containers bitvectors))
-	 (only (nausicaa containers iterators))
-
-	 (only (nausicaa parser-tools source-locations))
-	 (only (nausicaa parser-tools lexical-tokens))
-	 (only (nausicaa parser-tools silex default-error-handler))
-	 (only (nausicaa parser-tools lalr lr-driver))
-	 (only (nausicaa parser-tools lalr glr-driver))
-	 (only (nausicaa parser-tools lalr))
-
-	 (only (nausicaa parser-tools ip-addresses ipv4-address-lexer))
-	 (only (nausicaa parser-tools ip-addresses ipv4-address-parser))
-	 (only (nausicaa parser-tools ip-addresses ipv6-address-lexer))
-	 (only (nausicaa parser-tools ip-addresses ipv6-address-parser))
-	 (only (nausicaa parser-tools ipv4-addresses))
-	 (only (nausicaa parser-tools ipv6-addresses))
-	 (only (nausicaa parser-tools uri))
-
-	 (only (nausicaa uri ip))
-	 (only (nausicaa uri))
-	 (only (nausicaa parser-tools uri utilities))
-	 (only (nausicaa uri pathnames abstract))
-	 (only (nausicaa uri pathnames unix))
-	 (only (nausicaa uri pathnames))
-
-	 (only (nausicaa mehve))
-
-	 #| end of import |# )
-      (interaction-environment))
-
 
 ;;;; string pathname helpers
 
 (module (strip-source-file-prefix
-	 %string-prefix?)
+	 strip-lib-prefix)
 
   (define* (strip-source-file-prefix (pathname string?))
     ;;Given  a source  file  pathname:  if it  starts  with "../lib"  or
     ;;"./lib"  or a  directory in  the  source search  path: strip  such
     ;;prefix and return the result; otherwise return PATHNAME itself.
     ;;
-    (cond ((%string-prefix? "../lib/" pathname)
-	   (%deprefix "../lib/" pathname))
-	  ((%string-prefix? "./lib/" pathname)
-	   (%deprefix "../lib/" pathname))
+    (define pathname^
+      (cond ((%string-prefix? "../lib" pathname)
+	     (%deprefix "../lib" pathname))
+	    ((%string-prefix? "./lib" pathname)
+	     (%deprefix "../lib" pathname))
+	    (else
+	     (let loop ((dirs (libs.library-path)))
+	       (cond ((null? dirs)
+		      pathname)
+		     ((%string-prefix? (car dirs) pathname)
+		      (%deprefix (car dirs) pathname))
+		     (else
+		      (loop (cdr dirs))))))))
+    ;;Strip all the leading slashes.
+    (let loop ((ptn pathname^))
+      (if (char=? #\/ (string-ref ptn 0))
+	  (loop (substring ptn 1 (string-length ptn)))
+	ptn)))
+
+  (define* (strip-lib-prefix (pathname string?))
+    (cond ((%string-prefix? "lib/" pathname)
+	   (%deprefix "lib/" pathname))
+	  ((string=? "lib" pathname)
+	   "")
 	  (else
-	   (let loop ((dirs (libs.library-path)))
-	     (cond ((null? dirs)
-		    pathname)
-		   ((%string-prefix? (car dirs) pathname)
-		    (%deprefix (car dirs) pathname))
-		   (else
-		    (loop (cdr dirs))))))))
+	   pathname)))
 
   (define (%string-prefix? prefix str)
     (let ((prefix.len (string-length prefix)))
@@ -264,112 +63,90 @@
   #| end of module |# )
 
 
-;;;; installation groups helpers
+;;;; the meat
 
-(module (install-group-register
-	 install-group-makefile-declarations)
+(module (%process-library-reference)
 
-  (define-constant TABLE
+  (define-constant ALREADY-PROCESSED-TABLE
+    ;;After processing a library reference: we store its source pathname
+    ;;here.   This  way we  can  safely  recursively visit  the  library
+    ;;dependencies and  output stuff  for them.  This  allows us  not to
+    ;;list  all  the  libraries  in   the  library  specs,  because  the
+    ;;precedences are included automatically.
     (make-hashtable string-hash string=?))
 
-  (define (install-group-register fasl-pathname)
-    ;;FASL-PATHNAME is the FASL file name, starting with a slash.
-    ;;
-    (receive (dir file)
-	(px.split-pathname-root-and-tail fasl-pathname)
-      (let ((record (hashtable-ref TABLE dir #f)))
-	(if record
-	    (set-cdr! (last-pair record) (list fasl-pathname))
-	  (hashtable-set! TABLE dir (list fasl-pathname))))))
+  (define* (%process-library-reference (libref libs.library-reference?))
+    (define lib
+      (receive-and-return (lib)
+	  (libs.find-library-by-name libref)
+	(unless lib
+	  (error __who__ "cannot find library record for library reference" libref))))
+    (define dependencies-list
+      ;;False  or  a list  of  library  names:  the  first name  is  the
+      ;;target's, the  rest is  the list of  libnames of  libraries upon
+      ;;which the target depends.
+      (%library-build-dependency-list lib))
+    (when dependencies-list
+      (let ((source-pathname (string-append "lib/" (strip-source-file-prefix (libs.library-source-file-name lib))))
+	    ;;Remember that the stem+extension starts with a slash!!!
+	    (binary-pathname (string-append "lib" (libs.fasl-stem+extension libref))))
+	(unless (hashtable-ref ALREADY-PROCESSED-TABLE source-pathname #f)
+	  (fprintf stderr "processing: ~a\n" source-pathname)
+	  (%build-recipe dependencies-list binary-pathname source-pathname)
+	  (%build-installation-stuff binary-pathname source-pathname)
+	  (hashtable-set! ALREADY-PROCESSED-TABLE source-pathname #t)
+	  (for-each-in-order
+	      %process-library-reference
+	    (cdr dependencies-list))))))
 
-  (define (install-group-makefile-declarations)
-    (let ((keys (vector-sort string<? (hashtable-keys TABLE))))
-      (receive (port getter)
-	  (open-string-output-port)
-	(vector-for-each
-	    (lambda (dir)
-	      ;;DIR is a  fasl pathname directory part,  starting with a
-	      ;;slash.
-	      (let* ((val  (hashtable-ref TABLE dir #f))
-		     (stem (string-replace-nasty-chars '(#\/ #\- #\%) #\_ dir)))
-		(receive (opening closing)
-		    (%build-conditional-enclosure stem)
-		  (opening port)
-		  (fprintf port "fasl_~adir = $(bundledlibsdir)~a\nnodist_fasl_~a_DATA ="
-			   stem dir stem)
-		  (for-each (lambda (fasl-pathname)
-			      (fprintf port " \\\n\tlib~a" fasl-pathname))
-		    val)
-		  (fprintf port "\n")
-		  (closing port)
-		  (fprintf port "\n"))))
-	  keys)
-	(getter))))
+  (define* (%library-build-dependency-list (lib libs.library?))
+    ;;Return  a list  of  R6RS  library names;  the  first  name is  the
+    ;;target's, the rest is the list  of library names of libraries upon
+    ;;which the  target depends.   Only libraries  having a  source file
+    ;;field are included.
+    (and (libs.library-source-file-name lib)
+	 (cons (libs.library-name lib)
+	       (fold-left (lambda (knil dep-lib)
+			    (if (libs.library-source-file-name dep-lib)
+				(cons (libs.library-name dep-lib)
+				      knil)
+			      knil))
+		 '()
+		 (libs.library-imp-lib* lib)))))
 
-  (define (%build-conditional-enclosure stem)
-;;;(fprintf stderr "conditional enclosure for: ~a\n" stem)
-    (cond ((%string-prefix? "_srfi__3a106" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_SRFI\nif WANT_POSIX\n"))
-		   (lambda (port)
-		     (fprintf port "endif\nendif\n"))))
-	  ((%string-prefix? "_srfi" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_SRFI\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  ((%string-prefix? "_vicare_ffi" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_LIBFFI\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  ((%string-prefix? "_vicare_posix" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_POSIX\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  ((%string-prefix? "_vicare_glibc" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_GLIBC\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  ((%string-prefix? "_vicare_iconv" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_LIBICONV\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  ((%string-prefix? "_vicare_gcc" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_LIBFFI\nif WANT_POSIX\nif WANT_GLIBC\n"))
-		   (lambda (port)
-		     (fprintf port "endif\nendif\nendif\n"))))
-	  ((%string-prefix? "_vicare_linux" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_LINUX\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  ((%string-prefix? "_vicare_readline" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_READLINE\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  ((%string-prefix? "_vicare_cre2" stem)
-	   (values (lambda (port)
-		     (fprintf port "if WANT_CRE2\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  ((or (%string-prefix? "_nausicaa" stem)
-	       ;;This is a  special case: only (nausicaa) is  in the top
-	       ;;directory.
-	       (string-empty? stem))
-	   (values (lambda (port)
-		     (fprintf port "if WANT_NAUSICAA\n"))
-		   (lambda (port)
-		     (fprintf port "endif\n"))))
-	  (else
-	   (values values values))))
+  (define (%build-recipe dependencies-list binary-pathname source-pathname)
+    (print-recipe "~a: \\\n\t\t~a" binary-pathname source-pathname)
+    (unless (null? (cdr dependencies-list))
+      (for-each (lambda (libname)
+		  (print-recipe " \\\n\t\tlib~a" (libs.fasl-stem+extension libname)))
+	(cdr dependencies-list)))
+    (print-recipe " \\\n\t\t$(VICARE_NEW_BOOT)\n")
+    (print-recipe "\t$(VICARE_COMPILE_RUN) --output $@ --compile-library $<\n\n"))
 
-  (define (string-replace-nasty-chars chs ch.repl str1)
+  (define (%build-installation-stuff binary-pathname source-pathname)
+    (let ((stem (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ binary-pathname)))
+      (when (conditionals)
+	(for-each-in-order
+	    (lambda (conditional)
+	      (print-recipe "if ~a\n" conditional))
+	  (conditionals)))
+      (receive (dir file)
+	  (px.split-pathname-root-and-tail binary-pathname)
+	(print-recipe "~adir = $(bundledlibsdir)/~a\n" stem
+		      (strip-lib-prefix dir)))
+      (print-recipe "nodist_~a_DATA = ~a\n" stem binary-pathname)
+      (unless (or (hashtable-ref FROM-TEMPLATES-SOURCE-FILES source-pathname #f)
+		  (hashtable-ref BUILT-SOURCE-FILES          source-pathname #f))
+	(print-recipe "EXTRA_DIST += ~a\n" source-pathname))
+      (print-recipe "CLEANFILES += ~a\n" binary-pathname)
+      (when (conditionals)
+	(for-each-in-order
+	    (lambda (conditional)
+	      (print-recipe "endif\n"))
+	  (conditionals)))
+      (print-recipe "\n")))
+
+  (define (%string-replace-nasty-chars chs ch.repl str1)
     (receive-and-return (str2)
 	(make-string (string-length str1))
       (do ((i 0 (fxadd1 i)))
@@ -382,58 +159,307 @@
   #| end of module |# )
 
 
-;;;; the meat
+;;;; libraries specifications
 
-(define* (library-build-dependency-list (lib libs.library?))
-  ;;Return a list of R6RS library names; the first name is the target's,
-  ;;the rest  is the list of  library names of libraries  upon which the
-  ;;target  depends.  Only  libraries  having a  source  file field  are
-  ;;included.
+(define-constant FROM-TEMPLATES-SOURCE-FILES
+  ;;Here we store the pathnames of source library files that are created
+  ;;by  running "configure"  and processing  ".sls.in" templates.   Such
+  ;;source fiels must *not* be included in the EXTRA_DIST list of files.
   ;;
-  (and (libs.library-source-file-name lib)
-       (cons (libs.library-name lib)
-	     (fold-left (lambda (knil dep-lib)
-			  (if (libs.library-source-file-name dep-lib)
-			      (cons (libs.library-name dep-lib)
-				    knil)
-			    knil))
-	       '()
-	       (libs.library-imp-lib* lib)))))
+  (receive-and-return (T)
+      (make-hashtable string-hash string=?)
+    (for-each
+	(lambda (source-pathname)
+	  (hashtable-set! T source-pathname #t))
+      '("lib/vicare/platform/configuration.sls"
+	"lib/vicare/platform/constants.sls"
+	"lib/vicare/platform/errno.sls"
+	"lib/vicare/platform/words.sls"
+	"lib/nausicaa/uri/pathnames.sls"))))
 
-(define (process-rule lib rule port)
-;;;(fprintf stderr "processing: ~a\n" lib)
-  (let* ((libname       (car rule))
-	 (fasl-pathname (libs.fasl-stem+extension libname)))
-    ;;Remember that FASL-PATHNAME starts with a slash!!!
-    (install-group-register fasl-pathname)
-    (fprintf port "lib~a: \\\n\t\tlib~a \\\n"
-	     fasl-pathname
-	     (strip-source-file-prefix (libs.library-source-file-name lib)))
-    (when (not (null? (cdr rule)))
-      (for-each (lambda (libname)
-		  (fprintf port "\t\tlib~a \\\n"
-			   (libs.fasl-stem+extension libname)))
-	(cdr rule)))
-    (fprintf port
-	     (string-append "\t\t$(VICARE_NEW_BOOT)\n"
-			    "\t$(VICARE_COMPILE_RUN) --output $@ --compile-library $<\n\n"))))
+(define-constant BUILT-SOURCE-FILES
+  ;;Here we store the pathnames of source library files that are created
+  ;;by  some  makefile rule;  such  files  are  listed in  the  makefile
+  ;;BUILT_SOURCES variable.  Such source fiels must *not* be included in
+  ;;the EXTRA_DIST list of files.
+  ;;
+  (receive-and-return (T)
+      (make-hashtable string-hash string=?)
+    (for-each
+	(lambda (source-pathname)
+	  (hashtable-set! T source-pathname #t))
+      '("lib/vicare/platform/features.sls"))))
+
+(define-constant lib-spec
+  '((#f
+     (vicare platform configuration)
+     (vicare platform words)
+     (vicare platform errno)
+     (vicare platform constants)
+     (vicare platform features)
+     (vicare platform utilities)
+
+     (vicare unsafe capi)
+     (vicare unsafe operations)
+     (vicare unsafe unicode)
+
+     (vicare language-extensions cond-expand)
+     (vicare language-extensions cond-expand OS-id-features)
+     (vicare language-extensions cond-expand feature-cond)
+     (vicare language-extensions cond-expand helpers)
+     (vicare language-extensions cond-expand platform-features)
+     (vicare language-extensions cond-expand configuration-features)
+     (vicare language-extensions cond-expand registry)
+
+     (vicare arguments validation)
+     (vicare arguments general-c-buffers)
+
+     (vicare language-extensions syntaxes)
+     (vicare language-extensions amb)
+     (vicare language-extensions simple-match)
+     (vicare language-extensions coroutines)
+     (vicare language-extensions increments)
+     (vicare language-extensions infix)
+     (vicare language-extensions keywords)
+     (vicare language-extensions sentinels)
+     (vicare language-extensions namespaces)
+     (vicare language-extensions custom-ports)
+     (vicare language-extensions variables)
+     (vicare language-extensions streams)
+     (vicare language-extensions loops)
+     (vicare language-extensions ascii-chars)
+     (vicare language-extensions comparisons)
+     (vicare language-extensions hooks)
+     (vicare language-extensions callables)
+     (vicare language-extensions define-record-extended)
+     (vicare language-extensions c-enumerations)
+     (vicare language-extensions identifier-substitutions)
+     (vicare language-extensions makers)
+     (vicare language-extensions try)
+
+     (vicare checks)
+
+     (vicare crypto randomisations low)
+     (vicare crypto randomisations)
+     (vicare crypto randomisations blum-blum-shub)
+     (vicare crypto randomisations borosh)
+     (vicare crypto randomisations cmrg)
+     (vicare crypto randomisations distributions)
+     (vicare crypto randomisations lists)
+     (vicare crypto randomisations marsaglia)
+     (vicare crypto randomisations mersenne)
+     (vicare crypto randomisations strings)
+     (vicare crypto randomisations vectors)
+
+     (vicare numerics constants)
+     (vicare numerics flonum-parser)
+     (vicare numerics flonum-formatter)
+
+     (vicare containers bytevectors)
+     (vicare containers auxiliary-syntaxes)
+     (vicare containers weak-hashtables)
+     (vicare containers object-properties)
+     (vicare containers knuth-morris-pratt)
+     (vicare containers bytevector-compounds core)
+     (vicare containers bytevector-compounds)
+     (vicare containers bytevector-compounds unsafe)
+     (vicare containers char-sets)
+     (vicare containers char-sets blocks)
+     (vicare containers char-sets categories)
+     (vicare containers lists stx)
+     (vicare containers lists low)
+     (vicare containers lists)
+     (vicare containers vectors low)
+     (vicare containers vectors)
+     (vicare containers strings low)
+     (vicare containers strings)
+     (vicare containers strings rabin-karp)
+     (vicare containers levenshtein)
+     (vicare containers one-dimension-co)
+     (vicare containers one-dimension-cc)
+     (vicare containers bytevectors u8)
+     (vicare containers bytevectors s8)
+     (vicare containers arrays)
+     (vicare containers stacks)
+     (vicare containers queues)
+
+     (vicare parser-tools silex lexer)
+     (vicare parser-tools silex)
+     (vicare parser-tools silex utilities)
+     (vicare parser-tools unix-pathnames)
+
+     (vicare net channels)
+
+     #| end no conditional |# )
+
+    ((WANT_LIBFFI)
+     (vicare ffi)
+     (vicare ffi foreign-pointer-wrapper))
+
+    ((WANT_LIBICONV)
+     (vicare iconv))
+
+    ((WANT_POSIX)
+     (vicare posix)
+     (vicare posix pid-files)
+     (vicare posix lock-pid-files)
+     (vicare posix log-files)
+     (vicare posix daemonisations)
+     (vicare posix simple-event-loop)
+     (vicare posix tcp-server-sockets))
+
+    ((WANT_GLIBC)
+     (vicare glibc))
+
+    ((WANT_LIBFFI WANT_POSIX WANT_GLIBC)
+     (vicare gcc))
+
+    ((WANT_POSIX WANT_LINUX)
+     (vicare linux))
+
+    ((WANT_READLINE)
+     (vicare readline))
+
+    (#f
+     (vicare assembler inspection)
+     (vicare debugging compiler)
+     (vicare parser-logic)
+
+     (vicare irregex)
+     (vicare pregexp)
+     (vicare getopts)
+     (vicare formations))
+
+    ((WANT_CRE2)
+     (vicare cre2))
+
+    ((WANT_SRFI)
+     (srfi :0)
+     (srfi :1)
+     (srfi :2)
+     (srfi :6)
+     (srfi :8)
+     (srfi :9)
+     (srfi :11)
+     (srfi :13)
+     (srfi :14)
+     (srfi :16)
+     (srfi :19)
+     (srfi :23)
+     (srfi :25)
+;;;(srfi :25 multi-dimensional-arrays arlib)
+     (srfi :26)
+     (srfi :27)
+     (srfi :28)
+     (srfi :31)
+     (srfi :37)
+     (srfi :38)
+     (srfi :39)
+     (srfi :41)
+     (srfi :42)
+     (srfi :43)
+     (srfi :45)
+     (srfi :48)
+     (srfi :61)
+     (srfi :64)
+     (srfi :67)
+     (srfi :69)
+     (srfi :78)
+     (srfi :98)
+     (srfi :99)
+     ;;We  really   need  all   of  these  for   this  SRFI,   because  the
+     ;;implementation is in (srfi :101).
+     (srfi :101)
+     (srfi :101 random-access-lists)
+     (srfi :101 random-access-lists procedures)
+     (srfi :101 random-access-lists syntax)
+     (srfi :101 random-access-lists equal)
+     (srfi :111)
+     (srfi :112))
+
+    ((WANT_SRFI WANT_POSIX)
+     (srfi :106))
+
+    ((WANT_NAUSICAA)
+     (nausicaa language auxiliary-syntaxes)
+     (nausicaa language oopp)
+     (nausicaa language multimethods)
+     (nausicaa language builtins)
+     (nausicaa language conditions)
+     (nausicaa language simple-match)
+     (nausicaa language infix)
+     (nausicaa)
+
+     (nausicaa containers lists)
+     (nausicaa containers vectors)
+     (nausicaa containers strings)
+     (nausicaa containers arrays)
+     (nausicaa containers stacks)
+     (nausicaa containers queues)
+     (nausicaa containers bitvectors)
+     (nausicaa containers iterators)
+
+     (nausicaa parser-tools source-locations)
+     (nausicaa parser-tools lexical-tokens)
+     (nausicaa parser-tools silex default-error-handler)
+     (nausicaa parser-tools lalr lr-driver)
+     (nausicaa parser-tools lalr glr-driver)
+     (nausicaa parser-tools lalr)
+
+     (nausicaa parser-tools ip-addresses ipv4-address-lexer)
+     (nausicaa parser-tools ip-addresses ipv4-address-parser)
+     (nausicaa parser-tools ip-addresses ipv6-address-lexer)
+     (nausicaa parser-tools ip-addresses ipv6-address-parser)
+     (nausicaa parser-tools ipv4-addresses)
+     (nausicaa parser-tools ipv6-addresses)
+     (nausicaa parser-tools uri)
+
+     (nausicaa uri ip)
+     (nausicaa uri)
+     (nausicaa parser-tools uri utilities)
+     (nausicaa uri pathnames abstract)
+     (nausicaa uri pathnames unix)
+     (nausicaa uri pathnames)
+
+     (nausicaa mehve)
+
+     #| end of nausicaa conditional |# )
+
+    #| end of spec |# ))
 
 
 ;;;; go!!!
 
+(define conditionals
+  (make-parameter #f))
+
+(define build-recipes-port
+  (make-parameter #f))
+
+(define (print-recipe template . args)
+  (apply fprintf (build-recipes-port) template args))
+
 (fprintf stdout "## dependencies.make --\n#\n# Automatically built.\n\n")
 
-(receive (port getter)
+(fprintf stdout "EXTRA_DIST += ")
+(vector-for-each
+    (lambda (source-pathname)
+      (fprintf stdout " \\\n\t~a.in" source-pathname))
+  (hashtable-keys FROM-TEMPLATES-SOURCE-FILES))
+(fprintf stdout "\n\n")
+
+(receive (port get-build-recipes)
     (open-string-output-port)
-  (for-each (lambda (lib)
-	      (let ((rule (library-build-dependency-list lib)))
-		(when rule
-		  (process-rule lib rule port))))
-    (libs.installed-libraries))
-  (display (getter) stdout)
+  (for-each-in-order
+      (lambda (spec-entry)
+	(parametrise ((conditionals       (car spec-entry))
+		      (build-recipes-port port))
+	  (let ((library-names (cdr spec-entry)))
+	    (for-each-in-order %process-library-reference library-names))))
+    lib-spec)
+  (display (get-build-recipes) stdout)
   (flush-output-port stdout))
 
-(fprintf stdout (install-group-makefile-declarations))
 (fprintf stdout "\n### end of file\n# Local Variables:\n# mode: makefile-automake\n# End:\n")
 (flush-output-port stdout)
 
