@@ -521,6 +521,8 @@ features_SOURCES	= lib/features.c
 lib/vicare/platform/features.sls : features
 	$(MKDIR_P) lib/vicare/platform && ./features >$@
 
+CLEANFILES += lib/vicare/platform/features.sls
+
 ## --------------------------------------------------------------------
 
 EXTRA_DIST += scripts/compile-all.sps scripts/build-makefile-rules.sps
@@ -553,6 +555,8 @@ dependencies:
 		--r6rs-script $(srcdir)/scripts/build-makefile-rules.sps >$(slsdir)/dependencies.make
 
 include $(top_srcdir)/lib/dependencies.make
+
+EXTRA_DIST += lib/libraries.scm
 
 ## --------------------------------------------------------------------
 
