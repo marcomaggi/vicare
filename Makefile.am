@@ -1154,13 +1154,16 @@ lalr-test:
 #page
 #### interface to "make instcheck"
 
-VICARE_INSTCHECK_LIBRARY_PATH = $(testdir):$(srcdir):$(srcdir)/scheme:$(VICARE_LIBRARY_PATH)
+VICARE_INSTCHECK_LIBRARY_PATH	= $(DESTDIR)$(bundledlibsdir):$(testdir):$(srcdir)/scheme:$(VICARE_LIBRARY_PATH)
+VICARE_INSTCHECK_FASL_PATH	= $(DESTDIR)$(bundledlibsdir):$(VICARE_FASL_PATH)
+VICARE_INSTCHECK_LD_PATH	= $(DESTDIR)$(libdir)
+VICARE_INSTCHECK_DYLD_PATH	= $(DESTDIR)$(libdir)
 
 VICARE_INSTCHECK_FLAGS	= --print-loaded-libraries $(AX_VFLAGS) $(VFLAGS)
 VICARE_INSTCHECK_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_INSTCHECK_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
-	LD_LIBRARY_PATH=$(DESTDIR)$(libdir);			export LD_LIBRARY_PATH;		\
-	DYLD_LIBRARY_PATH=$(DESTDIR)$(libdir);			export DYLD_LIBRARY_PATH;	\
+	LD_LIBRARY_PATH=$(VICARE_INSTCHECK_LD_PATH);		export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(VICARE_INSTCHECK_DYLD_PATH);	export DYLD_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir);				export VICARE_SRC_DIR;		\
 	VICARE_CHECK_QUIET=no;					export VICARE_CHECK_QUIET;	\
 	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex;	export SILEX_PATH;
