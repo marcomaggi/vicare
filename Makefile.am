@@ -17,6 +17,9 @@ CLEANFILES		=
 MAINTAINERCLEANFILES	=
 BUILT_SOURCES		=
 
+# This must be the pathname to the SILex macros files.
+SILEX_PATH		= $(srcdir)/lib/vicare/parser-tools/silex/macros
+
 #page
 #### documentation
 
@@ -511,35 +514,19 @@ try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
 		--r6rs-script $(srcdir)/scheme/makefile.sps
 
 #page
-#### compiling bundled libraries: source files
-
-BUILT_SOURCES		+= lib/vicare/platform/features.sls
-
-noinst_PROGRAMS		= features
-features_SOURCES	= lib/features.c
-
-lib/vicare/platform/features.sls : features
-	$(MKDIR_P) lib/vicare/platform && ./features >$@
-
-CLEANFILES += lib/vicare/platform/features.sls
-
-## --------------------------------------------------------------------
-
-EXTRA_DIST += scripts/compile-all.sps scripts/build-makefile-rules.sps
-
-#page
 #### compiling bundled libraries: build rules
 
 VICARE_COMPILE_LIBRARY_PATH	= $(fasldir):$(slsdir):$(VICARE_LIBRARY_PATH)
 VICARE_COMPILE_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_COMPILE_LD_PATH		= $(builddir)/.libs
+VICARE_COMPILE_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
+VICARE_COMPILE_DYLD_PATH	= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 VICARE_COMPILE_ENV	= \
 	VICARE_LIBRARY_PATH=$(VICARE_COMPILE_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
 	VICARE_FASL_PATH=$(VICARE_COMPILE_FASL_PATH);		export VICARE_FASL_PATH;	\
-	SILEX_PATH=$(srcdir)/vicare/parser-tools/silex/macros;	export SILEX_PATH;		\
+	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
 	LD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export LD_LIBRARY_PATH;		\
-	DYLD_LIBRARY_PATH=$(VICARE_COMPILE_LD_PATH);		export DYLD_LIBRARY_PATH;
+	DYLD_LIBRARY_PATH=$(VICARE_COMPILE_DYLD_PATH);		export DYLD_LIBRARY_PATH;
 VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VFLAGS) $(VFLAGS)
 VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(builddir)/vicare $(VICARE_COMPILE_FLAGS)
 
@@ -550,15 +537,28 @@ FASL_PREREQUISITES	= $(VICARE_NEW_BOOT)
 
 ## --------------------------------------------------------------------
 
+BUILT_SOURCES		+= lib/vicare/platform/features.sls
+CLEANFILES		+= lib/vicare/platform/features.sls
+noinst_PROGRAMS		= features
+features_SOURCES	= lib/features.c
+
+lib/vicare/platform/features.sls : features
+	$(MKDIR_P) lib/vicare/platform && ./features >$@
+
+## --------------------------------------------------------------------
+
+EXTRA_DIST += \
+	lib/libraries.scm			\
+	scripts/compile-all.sps			\
+	scripts/build-makefile-rules.sps
+
 .PHONY: dependencies
 
 dependencies:
-	$(VICARE_COMPILE_RUN) --print-loaded-libraries \
+	$(VICARE_COMPILE_RUN) --print-loaded-libraries --library-locator source \
 		--r6rs-script $(srcdir)/scripts/build-makefile-rules.sps >$(slsdir)/dependencies.make
 
 include $(top_srcdir)/lib/dependencies.make
-
-EXTRA_DIST += lib/libraries.scm
 
 ## --------------------------------------------------------------------
 
@@ -1075,9 +1075,10 @@ VICARE_SELECTED_TESTS		= $(testdir)/test-*$(file)*.sps
 VICARE_SELECTED_LONG_TESTS	= $(testdir)/long-test-*$(file)*.sps
 VICARE_SELECTED_FOREIGN_TESTS	= $(testdir)/foreign-test-*$(file)*.sps
 VICARE_SELECTED_DEMOS		= $(testdir)/demo-*$(file)*.sps
-
-VICARE_TEST_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
-VICARE_TEST_SEARCH_PATH	= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
+VICARE_TEST_FASL_PATH		= $(fasldir):$(VICARE_FASL_PATH)
+VICARE_TEST_SEARCH_PATH		= $(testdir):$(slsdir):$(fasldir):$(srcdir)/scheme
+VICARE_TEST_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
+VICARE_TEST_DYLD_PATH		= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
 
 # Enable timing  of test files  execution.  We cannot include  this in
 # the separator because it needs  to be placed between the environment
@@ -1088,14 +1089,14 @@ endif
 
 VICARE_TEST_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --r6rs-script
 VICARE_TEST_ENV		= \
-	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
-	VICARE_FASL_PATH=$(VICARE_TEST_FASL_PATH); export VICARE_FASL_PATH;		\
-	CHECK_TEST_NAME=$(name); export CHECK_TEST_NAME;				\
-	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
-	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
-	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex/macros; export SILEX_PATH;\
-	LD_LIBRARY_PATH=$(builddir)/../src/.libs; export LD_LIBRARY_PATH;
-	DYLD_LIBRARY_PATH=$(builddir)/../src/.libs; export DYLD_LIBRARY_PATH;
+	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH);	export VICARE_LIBRARY_PATH;	\
+	VICARE_FASL_PATH=$(VICARE_TEST_FASL_PATH);	export VICARE_FASL_PATH;	\
+	CHECK_TEST_NAME=$(name);			export CHECK_TEST_NAME;		\
+	VICARE_SRC_DIR=$(srcdir);			export VICARE_SRC_DIR;		\
+	VICARE_BUILDDIR=$(builddir);			export VICARE_BUILDDIR;		\
+	SILEX_PATH=$(SILEX_PATH);			export SILEX_PATH;		\
+	LD_LIBRARY_PATH=$(VICARE_TEST_LD_PATH);		export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(VICARE_TEST_DYLD_PATH);	export DYLD_LIBRARY_PATH;
 VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(builddir)/vicare $(VICARE_TEST_FLAGS)
 
 ## --------------------------------------------------------------------
@@ -1166,7 +1167,7 @@ VICARE_INSTCHECK_ENV	= \
 	DYLD_LIBRARY_PATH=$(VICARE_INSTCHECK_DYLD_PATH);	export DYLD_LIBRARY_PATH;	\
 	VICARE_SRC_DIR=$(srcdir);				export VICARE_SRC_DIR;		\
 	VICARE_CHECK_QUIET=no;					export VICARE_CHECK_QUIET;	\
-	SILEX_PATH=$(srcdir)/../lib/vicare/parser-tools/silex;	export SILEX_PATH;
+	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;
 VICARE_INSTCHECK_RUN	= \
 	$(VICARE_INSTCHECK_ENV) $(DESTDIR)$(bindir)/vicare $(VICARE_INSTCHECK_FLAGS)
 
@@ -1178,13 +1179,20 @@ installcheck-local:
 
 VIE			= $(srcdir)/scripts/vie
 
+VICARE_TERMINAL_FASL_PATH	= $(fasldir):$(VICARE_FASL_PATH)
+VICARE_TERMINAL_LIBRARY_PATH	= $(slsdir):$(VICARE_LIBRARY_PATH)
+VICARE_TERMINAL_LD_PATH		= $(builddir)/.libs:$(LD_LIBRARY_PATH)
+VICARE_TERMINAL_DYLD_PATH	= $(builddir)/.libs:$(DYLD_LIBRARY_PATH)
+
 VICARE_TERMINAL_RUN_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)
-VICARE_TERMINAL_RUN_ENV	= \
-	VICARE_FASL_PATH=$(fasldir):$(VICARE_FASL_PATH); export VICARE_FASL_PATH;	\
-	VICARE_LIBRARY_PATH=$(VICARE_TEST_SEARCH_PATH); export VICARE_LIBRARY_PATH;	\
-	VICARE_SRC_DIR=$(srcdir); export VICARE_SRC_DIR;				\
-	VICARE_BUILDDIR=$(builddir); export VICARE_BUILDDIR;				\
-	SILEX_PATH=$(slsdir)/vicare/parser-tools/silex; export SILEX_PATH;
+VICARE_TERMINAL_RUN_ENV		= \
+	VICARE_FASL_PATH=$(VICARE_TERMINAL_FASL_PATH);		export VICARE_FASL_PATH;	\
+	VICARE_LIBRARY_PATH=$(VICARE_TERMINAL_LIBRARY_PATH);	export VICARE_LIBRARY_PATH;	\
+	VICARE_SRC_DIR=$(srcdir);				export VICARE_SRC_DIR;		\
+	VICARE_BUILDDIR=$(builddir);				export VICARE_BUILDDIR;		\
+	SILEX_PATH=$(SILEX_PATH);				export SILEX_PATH;		\
+	LD_LIBRARY_PATH=$(VICARE_TERMINAL_LD_PATH);		export LD_LIBRARY_PATH;		\
+	DYLD_LIBRARY_PATH=$(VICARE_TERMINAL_DYLD_PATH);		export DYLD_LIBRARY_PATH;
 VICARE_TERMINAL_RUN	= $(VICARE_TERMINAL_RUN_ENV) $(builddir)/vicare $(VICARE_TERMINAL_RUN_FLAGS)
 VICARE_TERMINAL_VIE	= $(VICARE_TERMINAL_RUN_ENV) $(VIE) $(builddir)/vicare --raw-repl $(VICARE_TERMINAL_RUN_FLAGS)
 
