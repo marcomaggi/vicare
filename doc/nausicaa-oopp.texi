@@ -1290,6 +1290,14 @@ parent, but not vice versa.  Label types are defined by
 fields, methods, @oopp{} notation and simple construction protocol.
 @end itemize
 
+@quotation
+@strong{NOTE} When writing a library implementing classes and labels for
+Nausicaa: we must enable the option @code{visit-upon-loading} in the
+options clause of the @code{library} form; @vicareref{iklib syntaxes
+libraries, Extended @code{library} syntax}.  Without this option the
+properties of the type identifiers may not be defined properly.
+@end quotation
+
 
 @defmac define-class @meta{name} @meta{clause} ...
 Define a new record type satisfying the constraints of a class
@@ -2749,6 +2757,14 @@ the identifier of the enclosing class or label, @class{delta} and
 @item
 The resulting clauses are added to the enclosing definition.
 @end enumerate
+
+@quotation
+@strong{NOTE} When writing a library implementing mixins for Nausicaa:
+we must enable the option @code{visit-upon-loading} in the options
+clause of the @code{library} form; @vicareref{iklib syntaxes libraries,
+Extended @code{library} syntax}.  Without this option the properties of
+the type identifiers may not be defined properly.
+@end quotation
 
 
 @deffn {Auxiliary Syntax} mixins @meta{spec} @dots{}

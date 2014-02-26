@@ -21,11 +21,13 @@ functions} may have qualified primary, before, after and around methods
 for each possible tuple of argument types; the methods are applied
 (composed) according to a defined protocol.
 
-When writing a library implementing methods for Nausicaa multimethods:
-we must enable the option @code{visit-upon-loading} in the options
-clause of the @code{library} form; @vicareref{iklib syntaxes libraries,
-Extended @code{library} syntax}.  Without this option methods may not be
-registered properly.
+@quotation
+@strong{NOTE} When writing a library implementing methods for Nausicaa
+multimethods: we must enable the option @code{visit-upon-loading} in the
+options clause of the @code{library} form; @vicareref{iklib syntaxes
+libraries, Extended @code{library} syntax}.  Without this option methods
+may not be registered properly.
+@end quotation
 
 @menu
 * multimethods examples::       Examples of method dispatching.
