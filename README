@@ -102,7 +102,7 @@ to be dynamically loaded.
   By default  only compiled Scheme  libraries are installed;  to install
 also the source libraries we must configure with:
 
-   $ configure --enable-sources-installation ...
+   $ ../configure --enable-sources-installation ...
 
   If, instead,  we have checked out  a revision from the  repository, we
 will have  to first build the  infrastructure by running a  Bourne shell
@@ -164,6 +164,19 @@ the files under a temporary location; example:
   By default, the Scheme libraries are installed under the directory:
 
 			$(libdir)/vicare-scheme
+
+we should  arrange the  package configuration  to install  32-bit binary
+libraries under:
+
+		      $(prefix)/lib/vicare-scheme
+
+and 64-bit binary libraries under:
+
+		     $(prefix)/lib64/vicare-scheme
+
+by configuring, for example, with:
+
+   $ ../configure --libdir=/usr/local/lib64 ...
 
   The variable VFLAGS is available  to the user when running "configure"
 and "make" to add command line options to the execution of "vicare" when
