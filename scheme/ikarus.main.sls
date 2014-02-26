@@ -645,6 +645,21 @@
 	     (let ((prompt (cadr args)))
 	       (next-option (cddr args) (lambda () (k) (waiter-prompt-string prompt))))))
 
+	  ((%option= "--library-locator")
+	   (if (null? (cdr args))
+	       (%error-and-exit "--library-locator requires a locator name")
+	     (let ((name (cadr args)))
+	       (psyntax.current-library-locator
+		(cond ((string=? name "run-time")
+		       load.run-time-library-locator)
+		      ((string=? name "compile-time")
+		       load.compile-time-library-locator)
+		      ((string=? name "source")
+		       load.source-library-locator)
+		      (else
+		       (%error-and-exit "invalid library location selection"))))
+	       (next-option (cddr args) k))))
+
 ;;; --------------------------------------------------------------------
 ;;; compiler options with argument
 
@@ -944,6 +959,10 @@ Other options:
         For debugging  purposes: do  not generate descriptive  labels in
         expanded  code  and  assembly code.  Disables   the   effect  of
         --descriptive-labels.  This is the default.
+
+    --library-locator NAME
+        Select a  library  locator.  NAME can  be one  among:  run-time,
+        compile-time, source.
 
    -O0
         Turn off the source optimizer.

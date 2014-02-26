@@ -328,6 +328,15 @@ For debugging purposes: do not generate descriptive labels in expanded
 code and assembly code.  Disables the effect of
 @option{--descriptive-labels}.  This is the default.
 
+@item --library-locator @var{NAME}
+@cindex Command line option @option{--library-loader}
+@cindex @option{--library-loader}, command line option
+Select a Scheme library locator.  @var{NAME} can be one among:
+@samp{run-time}, @samp{compile-time}, @samp{source}. For details on
+searching libraries @ref{using libraries searching, Library search
+algorithms}.  For details on the built--in library locators @api{}
+@ref{libutils locating general, Finding library locations}.
+
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
