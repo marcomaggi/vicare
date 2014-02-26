@@ -2257,6 +2257,7 @@
     (free-identifier=?				i v r sc)
     (generate-temporaries			i v r sc)
     (identifier?				i v r sc)
+    (identifier-bound?				i v $language)
     (make-variable-transformer			i v r sc)
     (variable-transformer?			i v $language)
     (variable-transformer-procedure		i v $language)

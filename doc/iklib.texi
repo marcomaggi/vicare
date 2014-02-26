@@ -4047,6 +4047,51 @@ a string error message and the optional second argument being a subform;
 @subsubsection Identifiers processing: generic functions
 
 
+@defun identifier-bound? @var{id}
+Return @true{} if the identifier @var{id} is lexically bound; otherwise
+return @false{}.
+
+@example
+(import (vicare))
+
+(identifier-bound? #'woppa-woppa-woppa)
+@result{} #f
+
+(let ((ciao 123))
+  (define-syntax (doit stx)
+    (identifier-bound? #'ciao))
+  (doit))
+@result{} #t
+
+(let ((ciao 123))
+  (define-syntax (doit stx)
+    (syntax-case stx ()
+      ((_ ?id)
+       (identifier-bound? #'?id))))
+  (doit ciao))
+@result{} #t
+
+(let ()
+  (define ciao 123)
+  (define-syntax (doit stx)
+    (syntax-case stx ()
+      ((_ ?id)
+       (identifier-bound? #'?id))))
+  (doit ciao))
+@result{} #t
+
+(let ()
+  (let-syntax ((ciao (identifier-syntax 123)))
+    (define-syntax (doit stx)
+      (syntax-case stx ()
+        ((_ ?id)
+         (identifier-bound? #'?id))))
+    (doit ciao)))
+@result{} #t
+@end example
+@end defun
+
+
 @defun identifier->string @var{id}
 Return a string representing the name of the identifier @var{id}.
 @end defun

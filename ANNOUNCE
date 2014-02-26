@@ -337,6 +337,7 @@ Lots of backwards incompatibilities... life is hard!
     syntactic-binding-getprop
     syntactic-binding-remprop
     syntactic-binding-property-list
+    identifier-bound?
 
 * Added experimental syntax DEFINE-ALIAS to (vicare):
 

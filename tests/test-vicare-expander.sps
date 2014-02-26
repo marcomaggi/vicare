@@ -4693,6 +4693,46 @@
   #t)
 
 
+(parametrise ((check-test-name	'identifier-bound))
+
+  (check-for-false
+   (identifier-bound? #'woppa-woppa-woppa))
+
+  (check-for-true
+   (let ((ciao 123))
+     (define-syntax (doit stx)
+       (identifier-bound? #'ciao))
+     (doit)))
+
+  (check-for-true
+   (let ((ciao 123))
+     (define-syntax (doit stx)
+       (syntax-case stx ()
+	 ((_ ?id)
+	  (identifier-bound? #'?id))))
+     (doit ciao)))
+
+  (check-for-true
+   (let ()
+     (define ciao 123)
+     (define-syntax (doit stx)
+       (syntax-case stx ()
+	 ((_ ?id)
+	  (identifier-bound? #'?id))))
+     (doit ciao)))
+
+  (check-for-true
+   (let ()
+     (let-syntax ((ciao (identifier-syntax 123)))
+       (define-syntax (doit stx)
+	 (syntax-case stx ()
+	   ((_ ?id)
+	    (identifier-bound? #'?id))))
+       (doit ciao))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'binding-properties))
 
 ;;; DEFINE-SYNTAX bindings

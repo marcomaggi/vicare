@@ -1117,6 +1117,7 @@
 
     generate-temporaries		identifier?
     free-identifier=?			bound-identifier=?
+    identifier-bound?
     datum->syntax			syntax->datum
 
     syntax-violation			assertion-error
@@ -5759,6 +5760,9 @@
 	       id))))
       (procedure-argument-violation __who__
 	"unbound identifier" id))))
+
+(define* (identifier-bound? (id identifier?))
+  (and (id->label id) #t))
 
 
 ;;;; utilities for identifiers
