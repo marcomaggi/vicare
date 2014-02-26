@@ -124,6 +124,14 @@ AC_SUBST([VICARE_BUILT_WITH_LINUX_ENABLED])
 
 dnl --------------------------------------------------------------------
 
+VICARE_ENABLE_OPTION([INSTALL_SOURCES],[sources-installation],[no],
+  [whether to install source Scheme libraries],
+  [enable installation of source Scheme libraries])
+AM_CONDITIONAL([WANT_INSTALL_SOURCES],
+  [test "x$vicare_enable_INSTALL_SOURCES" = xyes])
+
+dnl --------------------------------------------------------------------
+
 VICARE_ENABLE_OPTION([BINFMT],[binfmt],[no],
   [whether usage of the binfmt_misc Linux kernel module is enabled],
   [enable usage of the binfmt_misc linux kernel module])

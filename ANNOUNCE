@@ -43,15 +43,17 @@ Notes for revision 0.4d0
 Lots of backwards incompatibilities... life is hard!
 
 * The package is  now using a single,  big, all-inclusive "Makefile.am".
-  Building  the package  is probably  slower then  before; using  the -j
-  option  of "make"  helps a  bit,  but I  am  not sure  it can  rebuild
-  reliably.
+  Building the  package is  probably slower then  before.  Using  the -j
+  option of "make" helps  a bit; I am not sure  it can rebuild reliably,
+  but it should.
 
 * BACKWARDS  INCOMPATIBILITY  The   libraries  infrastructure  has  been
   completely overhauled.  There are too  many changes to list them here,
   but here the most important stuff:
 
-  - Version numbers are supported.
+  - Version numbers are supported.  If,  while scanning the search path,
+    a  library is  loaded  and its  version number  does  not match  the
+    version reference: that library is discarded and the search goes on.
 
   - The library (vicare) now has a version number; the full library name
     is:
@@ -63,7 +65,10 @@ Lots of backwards incompatibilities... life is hard!
 
   - The default of this package (and  in future for all the other Vicare
     packages) is to  install only the FASL files, and  leave the sources
-    uninstalled.
+    uninstalled; to install also the  source libraries we must configure
+    with:
+
+       $ configure --enable-sources-installation ...
 
   - When running  "make all" from  the build directory of  this package:
     the libraries are compiled.
@@ -72,7 +77,7 @@ Lots of backwards incompatibilities... life is hard!
     distinguish a 32-bit build from a 64-bit build:
 
        .vicare-32bit-fasl
-       .vicare-32bit-fasl
+       .vicare-64bit-fasl
 
     there  is now  a single  FASL  file extension:  ".fasl".  We  should
     arrange  the  package configuration  to  install  32-bit FASL  files

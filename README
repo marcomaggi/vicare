@@ -99,6 +99,11 @@ to be dynamically loaded.
 
    $ make check
 
+  By default  only compiled Scheme  libraries are installed;  to install
+also the source libraries we must configure with:
+
+   $ configure --enable-sources-installation ...
+
   If, instead,  we have checked out  a revision from the  repository, we
 will have  to first build the  infrastructure by running a  Bourne shell
 script from the top source directory:

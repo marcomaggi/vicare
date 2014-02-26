@@ -143,7 +143,8 @@
     (print-recipe "\t$(VICARE_COMPILE_RUN) --output $@ --compile-library $<\n\n"))
 
   (define (%build-installation-stuff binary-pathname source-pathname)
-    (let ((stem (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ binary-pathname)))
+    (let ((fasl-stem (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ binary-pathname))
+	  (sls-stem  (%string-replace-nasty-chars '(#\/ #\- #\% #\.) #\_ source-pathname)))
       (when (conditionals)
 	(for-each-in-order
 	    (lambda (conditional)
@@ -151,9 +152,12 @@
 	  (conditionals)))
       (receive (dir file)
 	  (px.split-pathname-root-and-tail binary-pathname)
-	(print-recipe "~adir = $(bundledlibsdir)/~a\n" stem
-		      (strip-lib-prefix dir)))
-      (print-recipe "nodist_~a_DATA = ~a\n" stem binary-pathname)
+	(let ((instdir-suffix (strip-lib-prefix dir)))
+	  (print-recipe "~adir = $(bundledlibsdir)/~a\n"  fasl-stem instdir-suffix)
+	  (print-recipe "~adir  = $(bundledlibsdir)/~a\n" sls-stem  instdir-suffix)))
+      (print-recipe "nodist_~a_DATA = ~a\n" fasl-stem binary-pathname)
+      (print-recipe "if WANT_INSTALL_SOURCES\ndist_~a_DATA = ~a\nendif\n"
+		    sls-stem source-pathname)
       (unless (or (hashtable-ref (from-templates-source-files-table) source-pathname #f)
 		  (hashtable-ref (built-source-files-table)          source-pathname #f))
 	(print-recipe "EXTRA_DIST += ~a\n" source-pathname))
