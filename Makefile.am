@@ -1108,7 +1108,7 @@ VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(builddir)/vi
 # We must make sure that this ends with a semicolon!!!
 AM_TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes; export VICARE_CHECK_QUIET; $(VICARE_TEST_ENV)
 TEST_EXTENSIONS		= .sps
-SPS_LOG_COMPILER	= vicare
+SPS_LOG_COMPILER	= $(builddir)/vicare
 AM_SPS_LOG_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)
 
 ## --------------------------------------------------------------------

@@ -12,11 +12,7 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
 
 ../configure \
     --enable-maintainer-mode				\
-    --config-cache					\
-    --cache-file=config.cache				\
     --prefix="${prefix}"				\
-    --enable-binfmt					\
-    --enable-time-tests					\
     --with-pthread					\
     CFLAGS='-m32 -O3 -pedantic'				\
     CPPFLAGS=""						\
