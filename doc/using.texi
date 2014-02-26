@@ -960,7 +960,8 @@ application.
 @item compile--time search
 To be used when executing a program with the purpose of compiling source
 libraries to binary format for installation.  This mode is selected only
-when the command line option @option{--compile-dependencies} is used.
+when one of the command line options @option{--compile-dependencies} and
+@option{--compile-library} is used.
 @end table
 
 A library is imported by specifying a @rnrs{6} library reference in an
