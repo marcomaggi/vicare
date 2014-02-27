@@ -92,6 +92,8 @@
 		  load-and-serialize-source-library
 		  fasl-directory
 		  fasl-search-path
+		  library-path
+		  library-extensions
 		  compile-time-library-locator
 		  run-time-library-locator
 		  source-library-locator)
@@ -1024,13 +1026,13 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	      ls)
 	    ls))
   (with-run-time-config (cfg)
-    (library-path (append (reverse cfg.search-path)
-			  (cond ((posix.getenv "VICARE_LIBRARY_PATH")
-				 => split-path)
-				(else '()))))
+    (load.library-path (append (reverse cfg.search-path)
+			       (cond ((posix.getenv "VICARE_LIBRARY_PATH")
+				      => split-path)
+				     (else '()))))
     (when cfg.more-file-extensions
-      (library-extensions (%prefix "/main"
-				   (%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
+      (load.library-extensions (%prefix "/main"
+					(%prefix ".vicare" '(".sls" ".ss" ".scm")))))))
 
 (define (init-fasl-search-path cfg)
   (with-run-time-config (cfg)

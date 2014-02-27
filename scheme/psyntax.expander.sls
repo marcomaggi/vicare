@@ -9525,7 +9525,8 @@
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (let ()
-		      (import (only (vicare language-extensions posix)
+		      (import (only #;(vicare language-extensions posix)
+			       (vicare $posix)
 				    file-modification-time))
 		      (or (not (file-exists? ,pathname))
 			  (> (file-modification-time ,pathname)

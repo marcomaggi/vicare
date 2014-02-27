@@ -114,11 +114,6 @@
     $bytevector-concatenate	$bytevector-reverse-and-concatenate
     $bytevector-copy)
   (import (except (ikarus)
-		  ;;FIXME This exception  has to be removed  at the next
-		  ;;boot  image rotation.   (Marco  Maggi;  Fri Jan  10,
-		  ;;2014)
-		  non-negative-exact-integer?
-
 		  make-bytevector	bytevector-length
 		  bytevector-empty?
 		  bytevector-copy!	bytevector-fill!
@@ -237,13 +232,6 @@
   (and (fixnum? obj)
        ($fx>= obj -128)
        ($fx<= obj 255)))
-
-;;FIXME To  be removed at the  next boot image rotation.   (Marco Maggi;
-;;Tue Dec 3, 2013)
-(define (non-negative-exact-integer? obj)
-  (cond ((fixnum? obj) ($fxnonnegative? obj))
-	((bignum? obj) ($bignum-non-negative? obj))
-	(else #f)))
 
 ;;; --------------------------------------------------------------------
 

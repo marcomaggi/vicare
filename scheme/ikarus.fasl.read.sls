@@ -24,6 +24,7 @@
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
+		  __who__
 		  fasl-read
 		  fasl-read-header
 		  fasl-read-object)
@@ -33,8 +34,6 @@
 	  intern-string)
     (only (vicare.foreign-libraries)
 	  autoload-filename-foreign-library)
-    (only (ikarus.io)
-	  binary-input-port?)
     (vicare unsafe operations)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))

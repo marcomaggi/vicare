@@ -27,9 +27,7 @@
     module				import
     begin0				define-values
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Thu Feb 13, 2014)
-    #;__who__
+    __who__
 
     make-struct-type			struct?
     struct-type-descriptor?		struct-type-field-names
@@ -109,18 +107,12 @@
     $fx= $fx< $fx> $fx<= $fx>= $fxadd1
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-ref $vector-set! $vector-length)
-  (import (except (ikarus)
-		  ;;FIXME This except is to  be removed at the next boot
-		  ;;image rotation.  (Marco Maggi; Fri Jan 31, 2014)
-		  struct-type-descriptor?
-		  ;;FIXME This except is to  be removed at the next boot
-		  ;;image rotation.  (Marco Maggi; Fri Jan 31, 2014)
-		  library-sub-version?)
-    (only (ikarus structs)
-	  struct-type-descriptor?)
+  (import (vicare)
+    ;; (only (ikarus structs)
+    ;; 	  struct-type-descriptor?)
     (only (ikarus.compiler)
 	  eval-core)
-    (only (ikarus system $symbols)
+    (only (vicare system $symbols)
 	  $unintern-gensym)
     (prefix (rename (only (vicare options)
 			  verbose?
@@ -134,17 +126,18 @@
 	    options.)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Thu Feb 13, 2014)
-    (only (ikarus library-utils)
-	  library-sub-version?)
+    (ikarus library-utils)
     (only (ikarus.posix)
 	  ;;This is used by INCLUDE to register the modification time of
 	  ;;the files included  at expand-time.  Such time is  used in a
 	  ;;STALE-WHEN test.
 	  file-modification-time)
-    (only (vicare unsafe operations)
+    (only (vicare system $fx)
 	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
-	  $fxzero? $fxpositive? $fxnonnegative?
-	  $car $cdr
+	  $fxzero? $fxpositive? $fxnonnegative?)
+    (only (vicare system $pairs)
+	  $car $cdr)
+    (only (vicare system $vectors)
 	  $vector-ref $vector-set! $vector-length))
 
 

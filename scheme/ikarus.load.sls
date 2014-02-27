@@ -36,12 +36,6 @@
 		  library-path		library-extensions
 		  fasl-directory	fasl-path
 		  fasl-search-path	get-annotated-datum)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Fri Feb 21, 2014)
-    (prefix (only (ikarus.io)
-		  textual-input-port?
-		  binary-input-port?)
-	    io.)
     (prefix (only (ikarus.posix)
 		  file-string-pathname?
 		  directory-exists?
@@ -81,6 +75,11 @@
 	  read-script-source-file
 	  read-library-source-port
 	  read-library-source-file)
+    (only (ikarus library-utils)
+	  library-reference?
+	  library-name?
+	  library-reference->identifiers
+	  conforming-library-name-and-library-reference?)
     (only (ikarus fasl read)
 	  fasl-read-header
 	  fasl-read-object)
@@ -904,7 +903,7 @@
 
 ;;;; loading libraries from source
 
-(define* (default-source-library-loader (libref library-reference?) (port io.textual-input-port?))
+(define* (default-source-library-loader (libref library-reference?) (port textual-input-port?))
   ;;Default value fo the parameter CURRENT-SOURCE-LIBRARY-LOADER.  Given
   ;;a textual  input PORT: read  from it a LIBRARY  symbolic expression;
   ;;verify  that its  version  reference conforms  to  LIBREF; load  and
@@ -945,7 +944,7 @@
 
 ;;;; loading libraries from serialised locations
 
-(define* (default-binary-library-loader (libref library-reference?) (port io.binary-input-port?))
+(define* (default-binary-library-loader (libref library-reference?) (port binary-input-port?))
   ;;Default value fo the parameter CURRENT-BINARY-LIBRARY-LOADER.  Given
   ;;a binary input PORT: read from  it a serialized library; verify that
   ;;its version  reference conforms to  LIBREF; install it (and  all its

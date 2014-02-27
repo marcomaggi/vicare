@@ -20,7 +20,8 @@
 		  apropos)
     (only (psyntax library-manager)
 	  library-export-subst
-	  library-name-identifiers)
+	  library-name-identifiers
+	  installed-libraries)
     (vicare unsafe operations))
 
 
