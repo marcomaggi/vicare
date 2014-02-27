@@ -77,19 +77,15 @@
     put-single			put-multi-2
     put-multi-3			put-multi-4)
   (import (vicare)
-    (vicare language-extensions sentinels)
-    (nausicaa language oopp)
-    (nausicaa language multimethods)
-    (vicare unsafe operations)
     (only (vicare system $symbols)
 	  $symbol-value
 	  $set-symbol-value!
 	  $unbound-object?)
+    (vicare unsafe operations)
+    (vicare language-extensions sentinels)
     (vicare containers bytevectors)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    (only (vicare system $bytevectors)
-	  $bytevector-copy))
+    (nausicaa language oopp)
+    (nausicaa language multimethods))
 
 
 ;;;; helpers

@@ -19,7 +19,7 @@
   (export
     make-string			string
     substring			string-length
-    string-empty?		$string-empty?
+    string-empty?
     string-ref			string-set!
     string->list		list->string
     string-append		string-for-each
@@ -61,7 +61,7 @@
 	    (uri-encoded-string?	percent-encoded-string?))
 
     ;; unsafe operations
-    $string
+    $string			$string-empty?
     $string=			$string-total-length
     $string-concatenate		$string-reverse-and-concatenate
 
@@ -86,7 +86,7 @@
 	    ($uri-encoded-bytevector?	$percent-encoded-bytevector?)
 	    ($uri-encoded-string?	$percent-encoded-string?))
     #| end of export |# )
-  (import (except (ikarus)
+  (import (except (vicare)
 		  make-string			string
 		  substring			string-length
 		  string-empty?
@@ -125,30 +125,38 @@
 		  uri-encoded-string?		percent-encoded-string?
 		  #| end of except |# )
     (vicare arguments validation)
-    (except (vicare unsafe operations)
-	    $string
-	    $string=
-	    $string-total-length
-	    $string-concatenate
-	    $string-reverse-and-concatenate
-	    $string-empty?
-
-	    $string->ascii			$ascii->string
-	    $ascii-encoded-bytevector?		$ascii-encoded-string?
-
-	    $string->latin1			$latin1->string
-	    $latin1-encoded-bytevector?		$latin1-encoded-string?
-
-	    $string-base64->bytevector		$bytevector->string-base64
-	    $bytevector->base64			$base64->bytevector
-
-	    $uri-encode				$uri-decode
-	    $normalise-uri-encoding
-	    $uri-encoded-bytevector?		$uri-encoded-string?
-	    $percent-encode			$percent-decode
-	    $percent-normalise-encoding
-	    $percent-encoded-bytevector?	$percent-encoded-string?)
-    (vicare system $pairs))
+    ;;NOTE  Let's try  to import  unsafe operations  only from  built-in
+    ;;libraries, when  possible, avoiding the use  of external libraries
+    ;;of macros.
+    (except (vicare system $fx)
+	    $fx<=)
+    (vicare system $pairs)
+    (only (vicare system $chars)
+	  $char=
+	  $char<
+	  $char->fixnum
+	  $fixnum->char)
+    (only (vicare system $vectors)
+	  $vector-ref)
+    (only (vicare system $bytevectors)
+	  $make-bytevector
+	  $bytevector-length
+	  $bytevector-set!
+	  $bytevector-u8-ref)
+    (only (vicare system $strings)
+	  $make-string
+	  $string-length
+	  $string-ref
+	  $string-set!)
+    (only (vicare unsafe operations)
+	  $fx<=
+	  $fxincr!
+	  $string-self-copy-forwards!
+	  $string-self-copy-backwards!
+	  $string-fill!
+	  $string-copy!
+	  $string-copy!/count
+	  $substring))
 
 
 ;;;; arguments validation
@@ -1068,7 +1076,7 @@
     (let* ((ch  ($string-ref str i))
 	   (chi ($char->fixnum ch)))
       (if ($fx<= 0 chi 255)
-	  ($bytevector-u8-set! bv i chi)
+	  ($bytevector-set! bv i chi)
 	(procedure-argument-violation __who__
 	  "impossible conversion from character to octet" ch str)))))
 
@@ -1107,7 +1115,7 @@
       (let ((code-point ($char->fixnum ($string-ref str i))))
 	(with-dangerous-arguments-validation (who)
 	    ((latin1 code-point str))
-	  ($bytevector-u8-set! bv i code-point))))))
+	  ($bytevector-set! bv i code-point))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1190,7 +1198,7 @@
       (let ((code-point ($char->fixnum ($string-ref str i))))
 	(with-dangerous-arguments-validation (who)
 	    ((ascii	code-point str))
-	  ($bytevector-u8-set! bv i code-point))))))
+	  ($bytevector-set! bv i code-point))))))
 
 ;;; --------------------------------------------------------------------
 

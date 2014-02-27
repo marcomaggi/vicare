@@ -661,9 +661,9 @@
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
 ;;;
-    ($libraries		(vicare libraries)			#t	#f)
+    ($libraries		(vicare libraries)			#t	#t)
     ($language		(vicare language-extensions)		#t	#f)
-    ($posix		(vicare language-extensions posix)	#t	#f)
+    ($posix		(vicare language-extensions posix)	#t	#t)
     ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
     ;;Maggi; Thu Feb 20, 2014)
     (stale-posix	(vicare $posix)				#f	#t)
@@ -3973,16 +3973,19 @@
 	     (env		(if system-all? export-env '()))
 	     (subst		(if system-all?
 				    export-subst
-				  (get-export-subset nickname export-subst))))
+				  (get-export-subset nickname export-subst)))
+	     (source-file-name	#f)
+	     (option*		'()))
 	;;Datums  embedded in  this  symbolic expression  are quoted  to
 	;;allow the sexp to be handed to EVAL (I guess; Marco Maggi, Aug
 	;;26, 2011).
 	`(install-library ',id
-			  (quote ,(append fullname (list version)))  ;;',fullname ',version
+			  (quote ,(append fullname (list version)))
 			  '() ;; import-libs
 			  '() ;; visit-libs
 			  '() ;; invoke-libs
-			  ',subst ',env void void '#f '#f '#f '() ',visible? '#f)))
+			  ',subst ',env void void '#f '#f '#f '() ',visible?
+			  (quote ,source-file-name) (quote ,option*))))
 
     (define (get-export-subset nickname export-subst)
       ;;Given the alist of  substitutions EXPORT-SUBST, build and return

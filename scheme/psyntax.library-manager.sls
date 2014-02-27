@@ -986,20 +986,20 @@
     ;;happen  the appropriate  argument must  be  added to  the uses  of
     ;;INSTALL-LIBRARY in the "makefile.sps".   (Marco Maggi; Mon Feb 10,
     ;;2014)
-    ((uid libname
-	  import-libdesc* visit-libdesc* invoke-libdesc*
-	  export-subst export-env
-	  visit-proc invoke-proc
-	  visit-code invoke-code
-	  guard-code guard-libdesc*
-	  visible? source-file-name)
-     (install-library uid libname
-		      import-libdesc* visit-libdesc* invoke-libdesc*
-		      export-subst export-env
-		      visit-proc invoke-proc
-		      visit-code invoke-code
-		      guard-code guard-libdesc*
-		      visible? source-file-name '()))
+    ;; ((uid libname
+    ;; 	  import-libdesc* visit-libdesc* invoke-libdesc*
+    ;; 	  export-subst export-env
+    ;; 	  visit-proc invoke-proc
+    ;; 	  visit-code invoke-code
+    ;; 	  guard-code guard-libdesc*
+    ;; 	  visible? source-file-name)
+    ;;  (install-library uid libname
+    ;; 		      import-libdesc* visit-libdesc* invoke-libdesc*
+    ;; 		      export-subst export-env
+    ;; 		      visit-proc invoke-proc
+    ;; 		      visit-code invoke-code
+    ;; 		      guard-code guard-libdesc*
+    ;; 		      visible? source-file-name '()))
     (((uid symbol?) (libname library-name?)
       import-libdesc* visit-libdesc* invoke-libdesc*
       export-subst export-env

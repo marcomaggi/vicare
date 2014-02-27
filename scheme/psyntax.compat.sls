@@ -108,12 +108,8 @@
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-ref $vector-set! $vector-length)
   (import (vicare)
-    ;; (only (ikarus structs)
-    ;; 	  struct-type-descriptor?)
     (only (ikarus.compiler)
 	  eval-core)
-    (only (vicare system $symbols)
-	  $unintern-gensym)
     (prefix (rename (only (vicare options)
 			  verbose?
 			  verbose-about-libraries?
@@ -124,14 +120,17 @@
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
 	    options.)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Thu Feb 13, 2014)
     (ikarus library-utils)
     (only (ikarus.posix)
 	  ;;This is used by INCLUDE to register the modification time of
 	  ;;the files included  at expand-time.  Such time is  used in a
 	  ;;STALE-WHEN test.
 	  file-modification-time)
+    ;;NOTE Let's try  to import the unsafe operations  from the built-in
+    ;;libraries, when possible, rather  that using external libraries of
+    ;;macros.
+    (only (vicare system $symbols)
+	  $unintern-gensym)
     (only (vicare system $fx)
 	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
 	  $fxzero? $fxpositive? $fxnonnegative?)

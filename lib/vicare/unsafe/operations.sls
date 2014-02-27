@@ -274,9 +274,7 @@
 
     $bytevector=
     $bytevector-fill!
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    #;$bytevector-copy
+    $bytevector-copy
     $bytevector-copy!
     $bytevector-copy!/count
     $bytevector-self-copy-forwards!
@@ -314,10 +312,8 @@
 ;;; --------------------------------------------------------------------
 
     $length
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    #;$map1
-    #;$for-each1
+    $map1
+    $for-each1
     $for-all1
     $exists1
 
@@ -382,11 +378,9 @@
     $string-concatenate
     $string-reverse-and-concatenate
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Tue Nov 26, 2013)
-    #;$string->octets
-    #;$octets->string
-    #;$octets-encoded-bytevector?
+    $string->octets
+    $octets->string
+    $octets-encoded-bytevector?
 
     $string->ascii
     $ascii->string

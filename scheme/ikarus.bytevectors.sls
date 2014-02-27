@@ -19,7 +19,7 @@
 (library (ikarus bytevectors)
   (export
     make-bytevector		bytevector-length
-    bytevector-empty?		$bytevector-empty?
+    bytevector-empty?
     bytevector-copy!		bytevector-fill!
     bytevector-copy		bytevector-append
     bytevector=?		native-endianness
@@ -110,10 +110,11 @@
     subbytevector-s8		subbytevector-s8/count
 
     ;; unsafe bindings, to be exported by (ikarus system $bytevectors)
+    $bytevector-empty?
     $bytevector=		$bytevector-total-length
     $bytevector-concatenate	$bytevector-reverse-and-concatenate
     $bytevector-copy)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  make-bytevector	bytevector-length
 		  bytevector-empty?
 		  bytevector-copy!	bytevector-fill!
@@ -205,6 +206,7 @@
 		  subbytevector-s8	subbytevector-s8/count)
     (prefix (vicare platform words) words.)
     (except (vicare unsafe operations)
+	    $bytevector-copy
 	    $bytevector=
 	    $bytevector-total-length
 	    $bytevector-concatenate
