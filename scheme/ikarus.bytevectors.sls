@@ -1944,7 +1944,7 @@
 (library (ikarus system bytevectors)
   (export $make-bytevector $bytevector-length
 	  $bytevector-u8-ref $bytevector-set!)
-  (import (ikarus))
+  (import (vicare))
   (define ($bytevector-set! dst.bv dst.index N)
     (if (<= 0 N)
 	(bytevector-u8-set! dst.bv dst.index N)

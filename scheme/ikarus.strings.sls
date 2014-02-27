@@ -1735,7 +1735,7 @@
 	  $string-length
 	  $string-ref
 	  $string-set!)
-  (import (ikarus))
+  (import (vicare))
   (define $make-string		make-string)
   (define $string-length	string-length)
   (define $string-ref		string-ref)

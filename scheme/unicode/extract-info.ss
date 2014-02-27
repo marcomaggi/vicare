@@ -1,26 +1,25 @@
 ;;; Copyright (C) 2008  Abdulaziz Ghuloum, R. Kent Dybvig
 ;;; Copyright (C) 2006,2007  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; Permission is hereby granted, free of charge, to any person obtaining a
 ;;; copy of this software and associated documentation files (the "Software"),
 ;;; to deal in the Software without restriction, including without limitation
 ;;; the rights to use, copy, modify, merge, publish, distribute, sublicense,
 ;;; and/or sell copies of the Software, and to permit persons to whom the
 ;;; Software is furnished to do so, subject to the following conditions:
-;;; 
+;;;
 ;;; The above copyright notice and this permission notice shall be included in
 ;;; all copies or substantial portions of the Software.
-;;; 
+;;;
 ;;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 ;;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 ;;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
 ;;; THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 ;;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-;;; DEALINGS IN THE SOFTWARE. 
+;;; DEALINGS IN THE SOFTWARE.
 
-(import 
-  (ikarus)
+(import (vicare)
   (unicode-data))
 
 (include "extract-common.ss")
@@ -126,9 +125,9 @@
 ;;; Uppercase = Lu + Other_Uppercase
 ;;; Lowercase = Ll + Other_Lowercase
 ;;; Titlecase = Lt
-;;; Alphabetic = Lu + Ll + Lt + Lm + Lo + Nl + Other_Alphabetic 
+;;; Alphabetic = Lu + Ll + Lt + Lm + Lo + Nl + Other_Alphabetic
 ;;; Numeric = ???
-;;; White_Space = 
+;;; White_Space =
 
 ;;; cased property:
 ;;;   D120: A character C is defined to be cased if and only if C has the
@@ -211,7 +210,7 @@
       [(equal? (cdar ls) (cdr st)) (f (+ i 1) st (cdr ls) ac)]
       [else (f 1 (car ls) (cdr ls) (cons (cons i st) ac))])))
 
-(define (string-suffix? s1 s2) 
+(define (string-suffix? s1 s2)
   (let ([n1 (string-length s1)] [n2 (string-length s2)])
     (and (>= n1 n2) (string=? (substring s1 (- n1 n2) n1) s2))))
 
@@ -273,16 +272,16 @@
             [name (list-ref x 1)])
         (cond
           [(assoc name proplist-properties) =>
-           (lambda (a) 
+           (lambda (a)
              (let ([n (cadr a)])
                (let f ([i (car range)] [j (cdr range)])
-                 (unless (> i j) 
+                 (unless (> i j)
                    (setprop i (fxlogor (getprop i) n))
                    (f (+ i 1) j)))))])))
     (get-unicode-data "UNIDATA/PropList.txt"))
   (commonize* tbl)
   (with-output-to-file* "unicode-charinfo.ss"
-    (lambda () 
+    (lambda ()
       (parameterize ([print-graph #t])
         (pretty-print
           `(module ($char-constituent? $char-upper-case? $char-lower-case? $char-title-case? $char-alphabetic?

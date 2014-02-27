@@ -33,7 +33,7 @@
     transcoder?		weak-pair?
     not)
   (import
-    (except (ikarus)
+    (except (vicare)
 	    fixnum?		flonum?		bignum?
 	    ratnum?		compnum?	cflonum?
             number?		complex?	real?
@@ -63,7 +63,7 @@
     (only (vicare language-extensions syntaxes)
 	  cond-numeric-operand)
     ;;These are the ones implemented as primitive operations.
-    (rename (only (ikarus)
+    (rename (only (vicare)
 		  fixnum? flonum? bignum? ratnum? compnum? cflonum?
                   eof-object? bwp-object?
 		  immediate? boolean? char? vector? string?
@@ -288,7 +288,7 @@
   (sys:eq? x y))
 
 (define (eqv? x y)
-  (import (ikarus))
+  (import (vicare))
   (cond ((eq? x y)
 	 #t)
 

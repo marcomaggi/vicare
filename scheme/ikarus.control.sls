@@ -22,7 +22,7 @@
     dynamic-wind
     (rename (call/cc call-with-current-continuation))
     exit		exit-hooks)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  call/cf		call/cc
 		  call-with-current-continuation
 		  dynamic-wind

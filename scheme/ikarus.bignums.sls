@@ -31,7 +31,7 @@
 	    ($bignum-negative?	$bignum-non-positive?))
     $bignum-even?	$bignum-odd?
     $bignum->flonum)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  bignum-positive?
 		  bignum-negative?
 		  bignum-non-negative?

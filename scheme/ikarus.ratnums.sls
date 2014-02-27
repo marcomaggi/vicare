@@ -20,7 +20,7 @@
     $ratnum->flonum
     $ratnum-positive?		$ratnum-negative?
     $ratnum-non-positive?	$ratnum-non-negative?)
-  (import (ikarus)
+  (import (vicare)
     (except (ikarus system $ratnums)
 	    $ratnum->flonum
 	    $ratnum-positive?		$ratnum-negative?

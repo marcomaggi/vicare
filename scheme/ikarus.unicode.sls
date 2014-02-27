@@ -31,7 +31,7 @@
     string-foldcase string-titlecase  string-ci<? string-ci<=?
     string-ci=? string-ci>? string-ci>=? string-normalize-nfd
     string-normalize-nfkd string-normalize-nfc string-normalize-nfkc )
-  (import (except (ikarus)
+  (import (except (vicare)
 		  unicode-printable-char?
 		  char-upcase char-downcase char-titlecase char-foldcase
 		  char-whitespace? char-lower-case? char-upper-case?

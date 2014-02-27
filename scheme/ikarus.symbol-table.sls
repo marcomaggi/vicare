@@ -20,7 +20,7 @@
     $initialize-symbol-table!
     (rename (%symbol-table-size		$symbol-table-size))
     $log-symbol-table-status)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  string->symbol
 		  $symbol-table-size
 		  $log-symbol-table-status)

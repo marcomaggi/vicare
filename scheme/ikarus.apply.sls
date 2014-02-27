@@ -16,7 +16,7 @@
 
 (library (ikarus apply)
   (export apply)
-  (import (except (ikarus) apply)
+  (import (except (vicare) apply)
     (vicare unsafe operations)
     (vicare arguments validation)
     (ikarus system $stack))

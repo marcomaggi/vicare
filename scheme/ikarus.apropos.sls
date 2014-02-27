@@ -16,7 +16,7 @@
 
 (library (ikarus.apropos)
   (export apropos)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  apropos)
     (only (psyntax library-manager)
 	  library-export-subst

@@ -39,7 +39,7 @@
           make-transcoder native-transcoder buffer-mode?
           transcoder-codec transcoder-eol-style
           transcoder-error-handling-mode)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  native-eol-style
 		  latin-1-codec utf-8-codec utf-bom-codec
 		  utf-16-codec utf-16le-codec utf-16be-codec utf-16n-codec

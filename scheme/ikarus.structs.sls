@@ -42,7 +42,7 @@
     struct-rtd
     struct-name			struct-printer
     struct-destructor		struct-length)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; struct type descriptor constructor
 		  make-struct-type
 
@@ -423,7 +423,7 @@
 
 (library (ikarus systems structs)
   (export $struct-ref $struct/rtd?)
-  (import (ikarus))
+  (import (vicare))
   (define $struct-ref struct-ref)
   (define ($struct/rtd? x rtd)
     (import (ikarus system $structs))

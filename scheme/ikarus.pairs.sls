@@ -21,12 +21,12 @@
     cadaar cddaar caadar cdadar caddar cdddar caaadr cdaadr cadadr
     cddadr caaddr cdaddr cadddr cddddr)
   (import
-    (except (ikarus) cons weak-cons set-car! set-cdr! car cdr caar
+    (except (vicare) cons weak-cons set-car! set-cdr! car cdr caar
             cdar cadr cddr caaar cdaar cadar cddar caadr cdadr caddr
             cdddr caaaar cdaaar cadaar cddaar caadar cdadar caddar
             cdddar caaadr cdaadr cadadr cddadr caaddr cdaddr cadddr
             cddddr)
-    (rename (only (ikarus)
+    (rename (only (vicare)
 		  cons)
 	    (cons sys:cons))
     (vicare language-extensions syntaxes)
@@ -115,7 +115,7 @@
 
 (library (ikarus system pairs)
   (export $car $cdr)
-  (import (ikarus))
+  (import (vicare))
   (define $car car)
   (define $cdr cdr))
 

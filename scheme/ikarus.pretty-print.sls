@@ -23,7 +23,7 @@
 
     debug-print-enabled?
     debug-print			debug-print*)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  pretty-print		pretty-print*
 		  pretty-width
 

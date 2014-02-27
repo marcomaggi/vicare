@@ -21,7 +21,7 @@
     raise		raise-continuable
     error		warning
     assertion-violation	die)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  with-exception-handler
 		  raise			raise-continuable
 		  error			warning

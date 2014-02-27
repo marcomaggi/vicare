@@ -28,7 +28,7 @@
     retrieve-to-avoid-collecting
     collection-avoidance-list
     purge-collection-avoidance-list)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  collect		collect-key
 		  post-gc-hooks
 

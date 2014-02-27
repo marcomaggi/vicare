@@ -26,7 +26,7 @@
 ;;;
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (ikarus-test-framework))
 
 (define file (src-file "rn100"))

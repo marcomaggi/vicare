@@ -24,7 +24,7 @@
 ;;
 (library (ikarus guardians)
   (export make-guardian)
-  (import (except (ikarus) make-guardian))
+  (import (except (vicare) make-guardian))
   (define (make-guardian)
     (let ((tc (let ((x (cons #f #f)))
 		(cons x x))))

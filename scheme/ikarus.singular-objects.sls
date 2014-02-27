@@ -18,7 +18,7 @@
 (library (ikarus.singular-objects)
   (export base-rtd eof-object void fixnum-width least-fixnum
           greatest-fixnum)
-  (import (rename (ikarus)
+  (import (rename (vicare)
 		  (fixnum-width		sys:fixnum-width)
 		  (least-fixnum		sys:least-fixnum)
 		  (greatest-fixnum	sys:greatest-fixnum)

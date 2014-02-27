@@ -17,7 +17,7 @@
 
 (library (ikarus rationalize)
   (export rationalize)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  rationalize)
     (vicare language-extensions syntaxes))
 

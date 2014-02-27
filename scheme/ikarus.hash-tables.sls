@@ -49,7 +49,7 @@
     (ikarus system $vectors)
     (ikarus system $tcbuckets)
     (ikarus system $fx)
-    (except (ikarus)
+    (except (vicare)
 	    make-eq-hashtable		make-eqv-hashtable
 	    make-hashtable
 	    hashtable?			hashtable-mutable?

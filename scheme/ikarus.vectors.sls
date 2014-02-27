@@ -35,7 +35,7 @@
     $vector-for-all1
     $vector-exists1
     )
-  (import (except (ikarus)
+  (import (except (vicare)
 		  make-vector		vector
 		  subvector		vector-length
 		  vector-empty?
@@ -804,7 +804,7 @@
 
 (library (ikarus system vectors)
   (export $vector-ref $vector-length)
-  (import (ikarus))
+  (import (vicare))
   (define $vector-ref vector-ref)
   (define $vector-length vector-length))
 

@@ -101,7 +101,7 @@
 	  expression-return-value-violation?
 	  expression-return-value-violation
 	  )
-  (import (except (ikarus)
+  (import (except (vicare)
 		  define-condition-type condition? simple-conditions
 		  condition condition-predicate condition-accessor
 		  print-condition

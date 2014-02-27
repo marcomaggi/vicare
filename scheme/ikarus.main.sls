@@ -22,7 +22,7 @@
     vicare-version
     bootfile
     host-info)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  host-info))
   (include "ikarus.config.ss"))
 
@@ -37,7 +37,7 @@
     ;; automatic R6RS records finalisation
     $record-guardian
     record-guardian-logger		record-guardian-log)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum

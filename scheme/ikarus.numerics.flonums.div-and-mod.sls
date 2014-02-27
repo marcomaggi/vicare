@@ -24,7 +24,7 @@
     $fldiv		$flmod
     $fldiv0		$flmod0
     $fldiv-and-mod	$fldiv0-and-mod0)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fldiv			flmod
 		  fldiv0		flmod0
 		  fldiv-and-mod		fldiv0-and-mod0)

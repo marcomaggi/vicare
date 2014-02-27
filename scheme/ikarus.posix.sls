@@ -63,7 +63,7 @@
     ;; program name
     vicare-argv0
     vicare-argv0-string)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; errno handling
 		  strerror
 		  errno->string

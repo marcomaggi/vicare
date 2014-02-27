@@ -160,7 +160,7 @@
 
     array-set-c-size_t!			array-set-c-ssize_t!
     array-set-c-off_t!			array-set-c-ptrdiff_t!)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; pointer objects
 		  pointer?
 		  null-pointer				pointer-null?

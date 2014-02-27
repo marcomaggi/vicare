@@ -32,7 +32,7 @@
     run-compensations
     run-compensations-store
     push-compensation-thunk)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  compensations
 		  run-compensations
 		  push-compensation-thunk))

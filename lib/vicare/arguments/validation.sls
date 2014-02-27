@@ -304,7 +304,7 @@
     identifier.vicare-arguments-validation
     identifier/false.vicare-arguments-validation
     )
-  (import (ikarus)
+  (import (vicare)
     (for (prefix (vicare platform configuration)
 		 config.)
 	 expand)

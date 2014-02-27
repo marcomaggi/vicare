@@ -25,7 +25,7 @@
     div			div0
     mod			mod0
     div-and-mod		div0-and-mod0)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  div			div0
 		  mod			mod0
 		  div-and-mod		div0-and-mod0)

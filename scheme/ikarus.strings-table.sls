@@ -31,7 +31,7 @@
     $initialize-interned-strings-table!
     intern-string
     $interned-strings)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  intern-string)
     (vicare arguments validation)
     (vicare unsafe operations))

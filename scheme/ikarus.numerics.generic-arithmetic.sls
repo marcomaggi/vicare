@@ -388,7 +388,7 @@
     )
 
 
-(import (except (ikarus)
+(import (except (vicare)
 		+ - * / = < <= > >=
 		min				max
 		add1				sub1
@@ -6457,7 +6457,7 @@
   ;;By importing  the library here  we shadow the bindings,  causing the
   ;;forms  below to  be expanded  by  the optimizer  with the  primitive
   ;;operations.
-  (import (ikarus))
+  (import (vicare))
   (cond ((fixnum? x)	(+ (greatest-fixnum) 1))
 	((number? x)	(+ x 1))
 	(else
@@ -6467,7 +6467,7 @@
   ;;By importing  the library here  we shadow the binding  ADD1, causing
   ;;the form  below to be expanded  by the optimizer with  the primitive
   ;;operation ADD1.
-  (import (only (ikarus)
+  (import (only (vicare)
 		add1))
   (add1 x))
 
@@ -6478,7 +6478,7 @@
   ;;By importing  the library here  we shadow the bindings,  causing the
   ;;forms  below to  be expanded  by  the optimizer  with the  primitive
   ;;operations.
-  (import (ikarus))
+  (import (vicare))
   (cond ((fixnum? x)	(- (least-fixnum) 1))
 	((number? x)	(- x 1))
 	(else
@@ -6488,7 +6488,7 @@
   ;;By importing  the library here  we shadow the binding  SUB1, causing
   ;;the form  below to be expanded  by the optimizer with  the primitive
   ;;operation SUB1.
-  (import (ikarus))
+  (import (vicare))
   (sub1 x))
 
 

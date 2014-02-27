@@ -407,18 +407,7 @@
     linux-ether_ntohost	linux-ether_hostton
     linux-ether_line
     )
-  (import (ikarus))
-
-
-;;;; helpers
-
-;; (define-syntax define-inline
-;;   (syntax-rules ()
-;;     ((_ (?name ?arg ... . ?rest) ?form0 ?form ...)
-;;      (define-syntax ?name
-;;        (syntax-rules ()
-;; 	 ((_ ?arg ... . ?rest)
-;; 	  (begin ?form0 ?form ...)))))))
+  (import (vicare))
 
 
 ;;;; foreign functions interface

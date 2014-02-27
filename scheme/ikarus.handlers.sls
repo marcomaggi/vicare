@@ -16,19 +16,19 @@
 
 (library (ikarus system parameters)
   (export make-parameter)
-  (import (except (ikarus) make-parameter))
+  (import (except (vicare) make-parameter))
   (define make-parameter
     (let ()
-      (import (ikarus))
+      (import (vicare))
       (case-lambda
         ((x guard) (make-parameter x guard))
         ((x) (make-parameter x))))))
 
 (library (ikarus.pointer-value)
   (export pointer-value)
-  (import (only (ikarus) define import))
+  (import (only (vicare) define import))
   (define (pointer-value x)
-    (import (ikarus))
+    (import (vicare))
     (pointer-value x)))
 
 
@@ -39,7 +39,7 @@
     $incorrect-args-error-handler
     $multiple-values-error
     $do-event)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  interrupt-handler
 		  engine-handler)
           (only (ikarus system $interrupts)

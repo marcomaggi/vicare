@@ -83,7 +83,7 @@
 	  $code->closure)
     (only (ikarus system $structs)
 	  $struct-ref $struct/rtd?)
-    (except (ikarus)
+    (except (vicare)
 	    fixnum-width
 	    greatest-fixnum
 	    least-fixnum

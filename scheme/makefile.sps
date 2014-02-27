@@ -147,8 +147,8 @@
 ;;
 
 
-(import (only (ikarus) import))
-(import (except (ikarus)
+(import (only (vicare) import))
+(import (except (vicare)
 		current-letrec-pass
 		current-core-eval
 		assembler-output optimize-cp optimize-level
@@ -664,7 +664,6 @@
     ($libraries		(vicare libraries)			#t	#t)
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#t)
-;;;    (stale-posix	(vicare $posix)	#t	#t)
 ;;;
     ($object-spec	(vicare expander object-spec)		#t	#f)
     ))
@@ -3936,7 +3935,7 @@
 		   install-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
-	     (ikarus))
+	     (vicare))
 	   (let ((g system-value-gensym))
 	     (for-each (lambda (func-name.loc)
 			 (putprop (car func-name.loc) g (cdr func-name.loc)))

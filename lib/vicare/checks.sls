@@ -52,7 +52,7 @@
     check-write
     check-newline
     check-pretty-print)
-  (import (rename (ikarus)
+  (import (rename (vicare)
 		  (display	ikarus:display)
 		  (write	ikarus:write)
 		  (newline	ikarus:newline)

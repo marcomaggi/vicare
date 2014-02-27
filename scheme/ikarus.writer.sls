@@ -26,7 +26,7 @@
 
     ;;The following are not in "makefile.sps".
     traverse		traversal-helpers)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum

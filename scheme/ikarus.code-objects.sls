@@ -22,7 +22,7 @@
     set-code-annotation! procedure-annotation
     make-annotation-indirect annotation-indirect?
     code->thunk)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  make-code code-reloc-vector code-freevars
 		  code-size code-ref code-set! set-code-reloc-vector!
 		  set-code-annotation! procedure-annotation)

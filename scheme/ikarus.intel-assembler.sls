@@ -20,11 +20,10 @@
     assemble-sources
     code-entry-adjustment
     assembler-property-key)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
-		  least-fixnum
-		  )
+		  least-fixnum)
     (except (ikarus.code-objects)
 	    procedure-annotation)
     (vicare unsafe operations)

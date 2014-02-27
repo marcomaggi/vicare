@@ -28,7 +28,7 @@
 	  $length
 	  $map1		$for-each1
 	  $for-all1	$exists1)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  list? list cons* make-list append reverse
 		  last-pair length list-ref memq memp memv member find
 		  assq assp assv assoc remq remv remove remp filter

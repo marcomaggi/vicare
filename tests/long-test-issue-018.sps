@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (ikarus)
+(import (vicare)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

@@ -30,7 +30,7 @@
     ;; internal functions only for Vicare
     read-source-file		read-script-source-file
     read-library-source-file	read-library-source-port)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; public functions
 		  read				get-datum
 		  get-annotated-datum

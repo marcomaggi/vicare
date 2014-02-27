@@ -510,7 +510,7 @@
     make-textual-socket-output-port*
     make-textual-socket-input/output-port
     make-textual-socket-input/output-port*)
-  (import (except (ikarus)
+  (import (except (vicare)
 
 		  ;; would block object
 		  would-block-object			would-block-object?
@@ -651,7 +651,7 @@
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
     ;;and $SET-PORT-* bindings.
     (ikarus system $io)
-    (prefix (only (ikarus) port?) primop.)
+    (prefix (only (vicare) port?) primop.)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
     (prefix (vicare unsafe capi)

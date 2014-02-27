@@ -1,28 +1,28 @@
 ;;; Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;; Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
-;;; 
+;;;
 ;;; This program is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License version 3 as
 ;;; published by the Free Software Foundation.
-;;; 
+;;;
 ;;; This program is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
-;;; 
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 (library (ikarus.pretty-formats)
   (export get-fmt pretty-format)
-  (import (except (ikarus) pretty-format))
+  (import (except (vicare) pretty-format))
 
   (define h (make-eq-hashtable))
 
   (define (get-fmt name)
     (hashtable-ref h name #f))
-  
+
   (define (set-fmt! name fmt)
     (hashtable-set! h name fmt))
 
@@ -44,7 +44,7 @@
   (set-fmt! 'unsyntax '(read-macro . "#,"))
   (set-fmt! 'unsyntax-splicing '(read-macro . "#,@"))
   ;(set-fmt! '|#primitive| '(read-macro . "#%"))
-  (set-fmt! 'let '(alt 
+  (set-fmt! 'let '(alt
                     (_ (0 [e 0 e] ...) tab e ...)
                     (_ x (0 [e 0 e] ...) tab e ...)))
   (set-fmt! 'letrec '(_ (0 [e 0 e] ...) tab e ...))
@@ -56,9 +56,9 @@
   (set-fmt! 'cond '(_ tab [0 e ...] ...))
   (set-fmt! 'define '(_ name tab e ...))
   (set-fmt! 'set! '(_ name tab e))
-  (set-fmt! 'case-lambda 
+  (set-fmt! 'case-lambda
      '(_ tab [0 e ...] ...))
-  (set-fmt! 'struct-case 
+  (set-fmt! 'struct-case
      '(_ e tab [e 0 e ...] ...))
   (set-fmt! 'if '(_ test 3 e ...))
   (set-fmt! 'and '(and test 4 e ...))
@@ -67,7 +67,7 @@
   (set-fmt! 'lambda '(_ fmls tab e tab e* ...))
   (set-fmt! 'case '(_ e tab [e 0 e] ...))
   (set-fmt! 'syntax-rules '(_ kwd* tab [e 0 e] ...))
-  (set-fmt! 'syntax-case '(_ expr kwd*  
+  (set-fmt! 'syntax-case '(_ expr kwd*
                              tab (e 0 e 0 e ...) ...))
   (set-fmt! 'module '(alt (_ (fill ...) tab e ...)
                           (_ name (fill ...) tab e ...)))
@@ -96,7 +96,7 @@
 (test 'hello)
 (test '(foo bar))
 (test '
-  (define pp 
+  (define pp
     (case-lambda
       [(x) (pretty x (current-output-port))]
       [(x p)
@@ -119,7 +119,7 @@
 
 (define (test-file x)
   (printf "testing file ~s ...\n" x)
-  (with-input-from-file x 
+  (with-input-from-file x
     (lambda ()
       (let f ([i 0])
         (let ([x (read)] [fname (format "tmp.~a.pp" i)])
@@ -127,7 +127,7 @@
             (let ([y
                    (begin
                      (call-with-output-file fname
-                        (lambda (p) 
+                        (lambda (p)
                           (pretty-print x p))
                         'replace)
                      (with-input-from-file fname read))])

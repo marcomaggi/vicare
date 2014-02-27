@@ -27,7 +27,7 @@
 
 
 #!ikarus
-(import (ikarus)
+(import (vicare)
   (ikarus-test-framework)
   (vicare checks))
 

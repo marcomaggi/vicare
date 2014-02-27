@@ -36,7 +36,7 @@
     rtd-subtype?			print-r6rs-record-instance
     record-reset			record-and-rtd?
     record-destructor-set!		record-destructor)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
 		  record-type-descriptor?

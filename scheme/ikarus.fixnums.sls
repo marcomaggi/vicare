@@ -76,7 +76,7 @@
     error@fxsub1
     error@fxarithmetic-shift-left
     error@fxarithmetic-shift-right)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fxzero?
 		  fxpositive?		fxnegative?
 		  fxnonnegative?	fxnonpositive?
@@ -115,7 +115,7 @@
 		  fxarithmetic-shift
 
 		  fixnum->string)
-    (prefix (only (ikarus)
+    (prefix (only (vicare)
 		  fx+ fx* fx-)
 	    sys:)
     (except (ikarus system $fx)
@@ -297,17 +297,17 @@
 ;;; --------------------------------------------------------------------
 
 (define (fxarithmetic-shift-right x y)
-  (import (ikarus))
+  (import (vicare))
   (fxarithmetic-shift-right x y))
 
 (define (fxarithmetic-shift-left x y)
-  (import (ikarus))
+  (import (vicare))
   (fxarithmetic-shift-left x y))
 
 (module (fxarithmetic-shift)
 
   (define (fxarithmetic-shift x y)
-    (import (ikarus))
+    (import (vicare))
     (define who 'fxarithmetic-shift)
     (with-arguments-validation (who)
 	((fixnum	x)
@@ -371,11 +371,11 @@
    ((x)   (sys:fx- x))))
 
 (define (fxadd1 n)
-  (import (ikarus))
+  (import (vicare))
   (fxadd1 n))
 
 (define (fxsub1 n)
-  (import (ikarus))
+  (import (vicare))
   (fxsub1 n))
 
 ;;; --------------------------------------------------------------------
@@ -849,7 +849,7 @@
     $fxsll		$fxsra
     $fxlogor		$fxlogand
     $fxlognot)
-  (import (ikarus))
+  (import (vicare))
   (define $fxzero? fxzero?)
   #;(define $fxpositive? fxpositive?)
   #;(define $fxnegative? fxnegative?)

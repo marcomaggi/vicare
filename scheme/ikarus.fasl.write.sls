@@ -20,7 +20,7 @@
     fasl-write
     fasl-write-header
     fasl-write-object)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum

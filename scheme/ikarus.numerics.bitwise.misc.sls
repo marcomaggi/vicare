@@ -31,7 +31,7 @@
 
     $fxcopy-bit			$fxcopy-bit-field
     $fxrotate-bit-field		$fxbit-field)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum

@@ -36,7 +36,7 @@
 
 (library (ikarus.equal)
   (export equal?)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  equal?)
     (ikarus system $pointers))
 

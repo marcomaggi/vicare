@@ -80,7 +80,7 @@
 
     flonum-parts	flonum-bytes
     bytevector->flonum	flonum->bytevector)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  inexact->exact	exact		fixnum->flonum
 		  flzero?		flpositive?	flnegative?
 		  flzero?/positive	flzero?/negative
@@ -1007,7 +1007,7 @@
 
 (library (ikarus system flonums)
   (export $fixnum->flonum)
-  (import (ikarus))
+  (import (vicare))
   (define $fixnum->flonum fixnum->flonum))
 
 ;;; end of file

@@ -27,7 +27,7 @@
     time=?
     time<?		time<=?
     time>?		time>=?)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;;This is the function TIME!!!
 		  time
 

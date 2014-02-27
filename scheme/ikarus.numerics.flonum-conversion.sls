@@ -19,7 +19,7 @@
   (export
     string->flonum
     flonum->string)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  flonum->string
 		  string->flonum)
     (rnrs bytevectors)

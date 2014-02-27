@@ -34,7 +34,7 @@
     register-filename-foreign-library
     retrieve-filename-foreign-libraries
     autoload-filename-foreign-library)
-  (import (ikarus)
+  (import (vicare)
     (prefix (ikarus system $foreign) ffi.))
 
 

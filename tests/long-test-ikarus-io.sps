@@ -28,7 +28,7 @@
 
 
 #!r6rs
-(import (ikarus)
+(import (vicare)
   (prefix (vicare posix) px.) ;for FILE-SIZE
   (vicare checks))
 

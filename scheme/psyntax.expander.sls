@@ -1403,7 +1403,7 @@
 ;;Whenever  a REPL  is created  (Vicare can  launch multiple  REPLs), an
 ;;interaction environment is created to  serve as top level environment.
 ;;The  interaction  environment  is  initialised with  the  core  Vicare
-;;library  "(ikarus)";  an  interaction environment  is  *mutable*:  new
+;;library  "(vicare)";  an  interaction environment  is  *mutable*:  new
 ;;bindings can be added to it.  For this reason interaction environments
 ;;are  represented by  records of  type INTERACTION-ENV,  whose internal
 ;;format allows adding new bindings.

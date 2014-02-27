@@ -17,7 +17,7 @@
 #!r6rs
 (library (ikarus multiple-values)
   (export call-with-values values)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  call-with-values
 		  values)
     (ikarus system $stack))

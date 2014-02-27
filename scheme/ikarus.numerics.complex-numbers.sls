@@ -33,7 +33,7 @@
     $complex-conjugate-compnum	$complex-conjugate-cflonum
 
     $make-rectangular)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  make-rectangular	make-polar
 		  real-part		imag-part
 		  angle			magnitude

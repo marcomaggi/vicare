@@ -33,7 +33,7 @@
     keyword?
     keyword=?
     keyword-hash)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  symbol->keyword
 		  keyword->symbol
 		  keyword?

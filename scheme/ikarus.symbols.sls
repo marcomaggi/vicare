@@ -38,7 +38,7 @@
     top-level-value top-level-bound? set-top-level-value!
     symbol-value symbol-bound? set-symbol-value!
     reset-symbol-proc! system-value system-value-gensym)
-  (import (except (ikarus)
+  (import (except (vicare)
 		  ;; R6RS functions
 		  symbol->string
 
