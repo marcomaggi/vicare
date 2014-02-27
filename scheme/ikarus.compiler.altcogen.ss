@@ -5024,7 +5024,7 @@
 	      (label-true
 	       (cmp op a0 a1 label-true accum))
 	      (label-false
-	       (cmp (notop op) a0 a1 label-false accum))
+	       (cmp (%select-negated-P-asm-instr op) a0 a1 label-false accum))
 	      (else
 	       accum)))
 
@@ -5050,7 +5050,7 @@
 	      (else
 	       (error who "invalid cmpops" a0 a1))))
 
-      (define (notop x)
+      (define (%select-negated-P-asm-instr x)
 	(cond ((assq x '((= !=) (!= =) (< >=) (<= >) (> <=) (>= <)
 			 (u< u>=) (u<= u>) (u> u<=) (u>= u<)
 			 (fl:= fl:o!=) (fl:!= fl:o=)
@@ -5058,7 +5058,7 @@
 			 (fl:> fl:o<=) (fl:>= fl:o<)))
 	       => cadr)
 	      (else
-	       (error who "invalid notop" x))))
+	       (error who "assembly instruction invalid in predicate context" x))))
 
       (define (jmpname x)
 	(cond ((assq x '((= je) (!= jne) (< jl) (<= jle) (> jg) (>= jge)

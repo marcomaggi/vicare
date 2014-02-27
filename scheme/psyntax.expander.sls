@@ -7318,11 +7318,7 @@
 	  (define-syntax ,type-id (cons '$rtd ',rtd))
 	  (define (,constructor-id ,@field-name-id*)
 	    (let ((S ($struct ',rtd ,@field-name-id*)))
-	      ;;FIXME  The destructor  accessor  must be  implemented
-	      ;;with a proper  unsafe operation, so that  the index 5
-	      ;;is not hard-coded here.  To be fixed at the next boot
-	      ;;image rotation.  (Marco Maggi; Thu Jan 23, 2014)
-	      (if ($struct-ref ',rtd 5) ;destructor
+	      (if ($struct-rtd-destructor ',rtd) ;destructor
 		  ($struct-guardian S)
 		S)))
 	  (define (,predicate-id obj)

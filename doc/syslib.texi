@@ -5092,6 +5092,48 @@ many words as given @var{value} arguments and initialise the fields with
 such values.  Return a reference to the structure.
 @end deffn
 
+@c ------------------------------------------------------------
+
+@subsubheading Operations on struct type descriptors
+
+
+@deffn {Unsafe Operation} $struct-rtd-std @var{std}
+Given a struct type descriptor return its struct type descriptor.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-rtd-name @var{std}
+Given a struct type descriptor return its name as a string.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-rtd-length @var{std}
+Given a struct type descriptor return a non--negative fixnum
+representing the number of fields.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-rtd-fields @var{std}
+Given a struct type descriptor return a list of symbols representing the
+field names.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-rtd-printer @var{std}
+Given a struct type descriptor return its printer function.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-rtd-symbol @var{std}
+Given a struct type descriptor return its @uid{} symbol.
+@end deffn
+
+
+@deffn {Unsafe Operation} $struct-rtd-destructor @var{std}
+Given a struct type descriptor return @false{} or its destructor
+function.
+@end deffn
+
 @c page
 @node syslib vectors
 @section Low level vector operations

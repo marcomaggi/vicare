@@ -651,6 +651,83 @@
   #t)
 
 
+(parametrise ((check-test-name	'unsafe-std-operations))
+
+  (define-struct alpha
+    (a b c))
+
+  (define-struct beta
+    (a b c))
+
+  (define (the-beta-destructor S)
+    #t)
+
+  (module ()
+    (set-rtd-destructor! (struct-type-descriptor beta) the-beta-destructor))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($struct-rtd-std (struct-type-descriptor alpha))
+    => (base-rtd))
+
+  (check
+      ($struct-rtd-name (struct-type-descriptor alpha))
+    => "alpha")
+
+  (check
+      ($struct-rtd-length (struct-type-descriptor alpha))
+    => 3)
+
+  (check
+      ($struct-rtd-fields (struct-type-descriptor alpha))
+    => '(a b c))
+
+  (check
+      ($struct-rtd-printer (struct-type-descriptor alpha))
+    => default-struct-printer)
+
+  (check
+      (gensym? ($struct-rtd-symbol (struct-type-descriptor alpha)))
+    => #t)
+
+  (check
+      ($struct-rtd-destructor (struct-type-descriptor alpha))
+    => #f)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      ($struct-rtd-std (struct-type-descriptor beta))
+    => (base-rtd))
+
+  (check
+      ($struct-rtd-name (struct-type-descriptor beta))
+    => "beta")
+
+  (check
+      ($struct-rtd-length (struct-type-descriptor beta))
+    => 3)
+
+  (check
+      ($struct-rtd-fields (struct-type-descriptor beta))
+    => '(a b c))
+
+  (check
+      ($struct-rtd-printer (struct-type-descriptor beta))
+    => default-struct-printer)
+
+  (check
+      (gensym? ($struct-rtd-symbol (struct-type-descriptor beta)))
+    => #t)
+
+  (check
+      ($struct-rtd-destructor (struct-type-descriptor beta))
+    => the-beta-destructor)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

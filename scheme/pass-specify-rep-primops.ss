@@ -3173,25 +3173,19 @@
    ((V stru)
     (prm 'mref (T stru) (K off-std-printer)))
    ((E stru)
-    (nop))
-   ((P stru)
-    #t))
+    (nop)))
 
  (define-primop $struct-rtd-symbol unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-symbol)))
    ((E stru)
-    (nop))
-   ((P stru)
-    #t))
+    (nop)))
 
  (define-primop $struct-rtd-destructor unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-destructor)))
    ((E stru)
-    (nop))
-   ((P stru)
-    #t))
+    (nop)))
 
 ;;; --------------------------------------------------------------------
 
