@@ -67,8 +67,8 @@ element of the returned list will be the string @samp{*interactive*},
 corresponding to the script name in @rnrs{6}--script mode.
 
 Some options cause code to be evaluated in the interaction environment:
-it initially contains all the bindings exported from the
-@library{ikarus} library.
+it initially contains all the bindings exported from the library
+@library{vicare}.
 
 The @value{EXECUTABLE} executable recognises a few command line switches
 that influence how @value{PACKAGE} starts; the following are the main

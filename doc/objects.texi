@@ -841,7 +841,7 @@ words.
 We can simulate the computation with:
 
 @example
-(import (ikarus))
+(import (vicare))
 
 (define sizeof-ikptr
   (make-parameter #f))

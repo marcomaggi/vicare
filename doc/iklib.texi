@@ -4,8 +4,6 @@
 
 @cindex Library @library{vicare}
 @cindex @library{vicare}, library
-@cindex Library @library{ikarus}
-@cindex @library{ikarus}, library
 @cindex Library @library{vicare language-extensions}
 @cindex @library{vicare language-extensions}, library
 
@@ -15,12 +13,9 @@ In addition to the libraries listed in the @rnrs{6} standard,
 here is a list of some of them:
 
 @table @asis
-@item @library{ikarus}
+@item @library{vicare}
 It is a composite library, it exports a superset of all the supported
 bindings of @rnrs{6}.
-
-@item @library{vicare}
-It exports the same bindings of @library{ikarus}.
 
 @item @library{vicare language-extensions}
 It exports all the bindings exported by @library{vicare} that are
@@ -3106,7 +3101,7 @@ reader (e.g. @func{read} and @func{get-datum}) from reading the rest of
 the file.
 
 @example
-(import (ikarus))
+(import (vicare))
 <some code>
 (display "goodbye\n")
 
@@ -7240,8 +7235,7 @@ When the symbol is a fresh symbol returned by a call to @func{gensym}:
 we can use @code{value} for any purpose we want.
 @end itemize
 
-The following bindings are exported by the @library{ikarus} and the
-@library{ikarus symbols} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun set-symbol-value! @var{sym} @var{value}
@@ -7270,7 +7264,7 @@ Scheme symbol.
 
 @example
 #!ikarus
-(import (ikarus))
+(import (vicare))
 
 (putprop 'ciao 'british 'hello)
 (putprop 'ciao 'spanish 'hola)
@@ -7284,8 +7278,7 @@ Scheme symbol.
 (property-list 'ciao)           @result{} ((spanish . hola))
 @end example
 
-The following bindings are exported by the @library{ikarus} and the
-@library{ikarus symbols} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun putprop @var{symbol} @var{key} @var{value}
@@ -7366,8 +7359,7 @@ raise an assertion violation.
 @section Additional functions on fixnums
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun fxadd1 @var{fx}
@@ -7411,8 +7403,7 @@ non--negative; else return @false{}.
 @section Additional functions on flonums
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 @c ------------------------------------------------------------
 
@@ -7643,8 +7634,7 @@ multiplied by @math{3/4}.
 @subsection Additional numeric predicates
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun bignum? @var{obj}
@@ -7753,8 +7743,7 @@ Return the greatest negative bignum.
 @subsection Additional math functions
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 @c ------------------------------------------------------------
 
@@ -7881,8 +7870,7 @@ Return the complex conjugate of the number object @var{num}.
 @subsection Additional bitwise functions
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun sra @var{integer} @var{offset}
@@ -7899,8 +7887,7 @@ An alias for @func{bitwise-arithmetic-shift-left}.
 @section Additional functions on enumerations
 
 
-The following bindings are exported by the @library{ikarus} and
-@library{vicare} libraries.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun enum-set? @var{obj}
@@ -9247,8 +9234,8 @@ Return the garbage collection bytes major field of @var{stats}.
 
 @defun collect
 Run the garbage collector.  If post--garbage collection hooks are
-registered, they are run.  This binding is exported by the
-@library{ikarus} library.
+registered, they are run.  This binding is exported by the library
+@library{vicare}.
 @end defun
 
 @c ------------------------------------------------------------
@@ -9339,7 +9326,7 @@ Reset to empty the list of objects registered to avoid collection with
 @cindex Finalisers, objects and guardians
 
 
-Guardians are available in the @library{ikarus} library; quoting
+Guardians are available in the @library{vicare} library; quoting
 @bibref{DYBGUA}:
 
 @quotation
@@ -9371,7 +9358,7 @@ If we use the blocks synchronously with the evaluation of forms, we do
 @func{dynamic-wind} is fine):
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 (define (do-something-with . args)
@@ -9394,7 +9381,7 @@ If we use the blocks synchronously with the evaluation of forms, we do
 and we can define a syntax for it:
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 (define (do-something-with . args)
@@ -9430,7 +9417,7 @@ store the pointer value that references a block in a thunk (a closure
 that takes no arguments):
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 (define *event-source* '())
@@ -9476,7 +9463,7 @@ The following script shows the usage of a guardian to free a memory
 block:
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 (define g (make-guardian))
@@ -9501,7 +9488,7 @@ into the guardian, and then periodically enqueue as event a call to the
 guardian:
 
 @example
-(import (ikarus)
+(import (vicare)
   (vicare ffi))
 
 ;; Event source handling.
@@ -9894,7 +9881,7 @@ directory only if such directory is listed in the given path.
 @subsection Transcoders and additional codecs
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
 
 
 @defun transcoder? @var{obj}
@@ -10318,7 +10305,7 @@ the would--block object is returned.
 @subsection Additional binary port features
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
 
 
 @defun binary-input-port? @var{obj}
@@ -10423,7 +10410,7 @@ Socket ports do @strong{not} support port position operations.
 @subsection Additional textual port features
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
 
 
 @defun textual-input-port? @var{obj}
@@ -10559,7 +10546,7 @@ If no input characters are available: the EOF object is returned.
 @subsection Buffer size customisation
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
 
 
 @deffn Parameter bytevector-port-buffer-size
@@ -10643,7 +10630,7 @@ Return a new association list representing the property list of
 @subsection Miscellaneous port functions
 
 
-The following bindings are exported by the @library{ikarus} library.
+The following bindings are exported by the @library{vicare} library.
 
 
 @defun input/output-port? @var{port}
@@ -10728,9 +10715,9 @@ location.
 @noindent
 pointers also have @func{pointer=?} as specialised comparison predicate.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun pointer? @var{obj}
@@ -10830,9 +10817,9 @@ argument must be an exact integer in the range of the C language type
 functions @strong{do not} scale the offset to the size of the poked
 value; pointer arithmetics is performed with byte offsets.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 @macro bitpoker{BYTENUM,BITNUM}
 Set to @var{value} the \BYTENUM\ of memory located at @var{offset} from
@@ -10983,9 +10970,9 @@ offset to a pointer: all the following functions @strong{do not} scale
 the offset to the size of the peeked value; pointer arithmetics is
 performed with byte offsets.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 @macro bitpeeker{BITNUM}
 Peek the \BITNUM\ bits located at @var{offset} from @var{memory} and
@@ -11134,9 +11121,9 @@ argument must be an exact integer in the range of the C language type
 @code{ptrdiff_t}.  When adding an offset to a pointer: all the following
 functions @strong{do} scale the index to the size of the poked value.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 @macro abitpoker{BYTENUM,BITNUM}
 Set to @var{value} the \BYTENUM\ of memory located at @var{index} from
@@ -11285,9 +11272,9 @@ in the range of the C language type @code{ptrdiff_t}.  When adding an
 offset to a pointer: all the following functions @strong{do} scale the
 index to the size of the peeked value.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 @macro abitpeeker{BITNUM}
 Peek the \BITNUM\ bits located at @var{index} from @var{memory} and
@@ -11471,9 +11458,9 @@ getting bytes from specific locations in memory.
 @subsection Allocating and freeing memory
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun malloc @var{number-of-bytes}
@@ -11641,9 +11628,9 @@ The memory blocks are actually allocated on the stack of
 @subsection Memory operations
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun memcpy @var{dst} @var{src} @var{count}
@@ -11728,9 +11715,9 @@ components: @condition{who}, @condition{message},
 @subsection Memory blocks
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @deftp {Struct Type} memory-block
@@ -11800,9 +11787,9 @@ Build and return a new instance of @code{memory-block} holding a new
 @subsection Memory allocation condition objects
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @deftp {Condition Type} &out-of-memory-error
@@ -11826,8 +11813,8 @@ Maker and predicate for condition objects of type
 The following functions perform operations on raw @ascii{} coded strings
 terminated by a zero byte, for short @asciiz{} strings; some functions
 act upon raw @utf{}-16 strings.  The following bindings are exported by
-the libraries @library{vicare}, @library{ikarus} and @library{ikarus
-system $foreign} and reexported by the library @library{vicare ffi}.
+the libraries @library{vicare} and @library{ikarus system $foreign} and
+reexported by the library @library{vicare ffi}.
 
 
 @defun bytevector->cstring @var{bv}
@@ -12068,9 +12055,9 @@ If some error codes are not defined on a platform: the corresponding
 binding evaluates to @true{}.  Notice that if no error occurred
 @code{errno} is set to the fixnum zero.
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus} and @library{ikarus system $foreign} and reexported by
-the library @library{vicare ffi}.
+The following bindings are exported by the libraries @library{vicare}
+and @library{ikarus system $foreign} and reexported by the library
+@library{vicare ffi}.
 
 
 @defun errno
@@ -12111,8 +12098,7 @@ return value from the foreign function and the value of the C variable
 @section Basic time and date functions
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus}.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun current-time
@@ -12213,10 +12199,10 @@ Return @true{} if the @vari{time} is greater than or equal to
 @section Readline interface
 
 
-The following bindings are exported by the libraries @library{vicare},
-@library{ikarus}.  An extended @api{} for @gnu{} Readline is available
-through the @library{vicare readline} library; @libsref{readline,
-Extended interface to @gnu{} Readline} for details.
+The following bindings are exported by the library @library{vicare}.  An
+extended @api{} for @gnu{} Readline is available through the
+@library{vicare readline} library; @libsref{readline, Extended interface
+to @gnu{} Readline} for details.
 
 
 @defun readline-enabled?
@@ -12329,7 +12315,7 @@ Useful when using the @repl{}.  Example:
 
 @example
 vicare> (apropos "-length")
-*** in library (ikarus):
+*** in library (vicare):
 (bitwise-length bytevector-length string-length
   struct-length vector-length)
 

@@ -8,7 +8,7 @@ by the compiler; mostly they are defined in the source file
 
 They are unsafe because when acting upon wrong arguments will cause
 undefined behaviour (probably a crash).  They are also faster than the
-public interface exported by @library{ikarus} and @library{rnrs}.
+public interface exported by @library{vicare} and @library{rnrs}.
 
 @menu
 * syslib symbols::              Low level symbol operations.

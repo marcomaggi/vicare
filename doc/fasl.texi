@@ -217,8 +217,7 @@ library file name.
 @appendixsec @fasl{} files @api{}
 
 
-The following bindings are exported by the libraries @library{ikarus}
-and @library{vicare}.
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun fasl-write @var{obj} @var{port}
@@ -242,12 +241,11 @@ Read and return a serialised object from the binary input @var{port}.
 @findex @func{foreign-call}
 
 
-The macro @func{foreign-call}, exported by the libraries
-@library{ikarus} and @library{vicare}, is expanded to compiled code
-which invokes a C function from the process image; the first argument to
-@func{foreign-call} is a string naming the C function.  Whenever the
-code is compiled, the C pointer to the named function is retrieved with
-a call to:
+The macro @func{foreign-call}, exported by the library @library{vicare},
+is expanded to compiled code which invokes a C function from the process
+image; the first argument to @func{foreign-call} is a string naming the
+C function.  Whenever the code is compiled, the C pointer to the named
+function is retrieved with a call to:
 
 @example
 dlsym(RTLD_DEFAULT, function_name);
