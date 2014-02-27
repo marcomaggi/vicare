@@ -42,10 +42,16 @@ Notes for revision 0.4d0
 
 Lots of backwards incompatibilities... life is hard!
 
+* The boot images have been rotated.
+
 * The package is  now using a single,  big, all-inclusive "Makefile.am".
   Building the  package is  probably slower then  before.  Using  the -j
   option of "make" helps  a bit; I am not sure  it can rebuild reliably,
   but it should.
+
+* BACKWARDS INCOMPATIBILITY Ikarus is no more.  The library (ikarus) and
+  the  libraries in  the  hierarchy  (ikarus system  ---)  do not  exist
+  anymore.
 
 * BACKWARDS  INCOMPATIBILITY  The   libraries  infrastructure  has  been
   completely overhauled.  There are too  many changes to list them here,
