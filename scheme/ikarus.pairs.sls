@@ -31,7 +31,7 @@
 	    (cons sys:cons))
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (ikarus system $pairs))
+    (vicare system $pairs))
 
 
 (define (cons x y)
@@ -113,7 +113,7 @@
 )
 
 
-(library (ikarus system pairs)
+(library (vicare system pairs)
   (export $car $cdr)
   (import (vicare))
   (define $car car)

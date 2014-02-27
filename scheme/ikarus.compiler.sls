@@ -28,7 +28,7 @@
     eval-core				current-core-eval
     compile-core-expr-to-port		compile-core-expr
 
-    ;; these go in (ikarus system $compiler)
+    ;; these go in (vicare system $compiler)
     (rename
      ;; configuration parameters
      (current-letrec-pass			$current-letrec-pass)
@@ -79,9 +79,9 @@
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import
       (rnrs hashtables)
-    (only (ikarus system $codes)
+    (only (vicare system $codes)
 	  $code->closure)
-    (only (ikarus system $structs)
+    (only (vicare system $structs)
 	  $struct-ref $struct/rtd?)
     (except (vicare)
 	    fixnum-width
@@ -121,7 +121,7 @@
 	  $fxlogand $fxlogor $fxlognot $fxsra $fxsll
 	  $fxzero?)
 
-    #;(ikarus system $pairs)
+    #;(vicare system $pairs)
     (begin
       (define $car car)
       (define $cdr cdr)
@@ -135,7 +135,7 @@
 	   (set-cdr! ?var ?val))))
       #| end of begin |# )
 
-    #;(ikarus system $fx)
+    #;(vicare system $fx)
     (begin
       (define $fxzero?	 fxzero?)
       (define $fx=	fx=?)
@@ -155,12 +155,12 @@
       (define ($fxsub1 x)
 	(fx- x 1))
       (define ($fxsra x count)
-	(import (prefix (ikarus system $fx) unsafe.))
+	(import (prefix (vicare system $fx) unsafe.))
 	(assert (fixnum? x))
 	(assert (fixnum? count))
 	(unsafe.$fxsra x count))
       (define ($fxsll x count)
-	(import (prefix (ikarus system $fx) unsafe.))
+	(import (prefix (vicare system $fx) unsafe.))
 	(assert (fixnum? x))
 	(assert (fixnum? count))
 	(unsafe.$fxsll x count))
@@ -5652,7 +5652,7 @@
   ;;other values are not processed and are returned as they are.
   ;;
   (define who 'unparse-recordized-code/pretty)
-  (import (only (ikarus system $symbols)
+  (import (only (vicare system $symbols)
 		$symbol-string))
 
   (define (unparse-recordized-code/pretty x)

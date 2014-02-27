@@ -148,7 +148,7 @@
 )
 
 
-(library (ikarus system chars)
+(library (vicare system chars)
   (export $char= $char->fixnum $fixnum->char)
   (import (vicare))
   (define $char=	char=?)

@@ -28,9 +28,9 @@
 		  dynamic-wind
 		  exit			exit-hooks
 		  list-tail)
-    (ikarus system $stack)
-    (ikarus system $pairs)
-    (ikarus system $fx)
+    (vicare system $stack)
+    (vicare system $pairs)
+    (vicare system $fx)
     (vicare arguments validation))
 
 

@@ -31,10 +31,10 @@
 		  string->utf16n	utf16n->string
 		  string->utf32		utf32->string
                   string->bytevector	bytevector->string)
-    (ikarus system $strings)
-    (ikarus system $bytevectors)
-    (ikarus system $fx)
-    (ikarus system $chars))
+    (vicare system $strings)
+    (vicare system $bytevectors)
+    (vicare system $fx)
+    (vicare system $chars))
 
 
 ;;; From http://en.wikipedia.org/wiki/UTF-8

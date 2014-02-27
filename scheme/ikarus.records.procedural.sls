@@ -56,8 +56,8 @@
 		  rtd-subtype?				print-r6rs-record-instance
 		  record-reset				record-and-rtd?
 		  record-destructor-set!		record-destructor)
-    (ikarus system $structs)
-    (ikarus system $symbols)
+    (vicare system $structs)
+    (vicare system $symbols)
     (vicare arguments validation)
     (vicare unsafe operations))
 

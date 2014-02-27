@@ -109,7 +109,7 @@
     (rnrs mutable-pairs)
     (srfi :8 receive)
     (vicare arguments validation)
-    (ikarus system $pairs))
+    (vicare system $pairs))
 
 
 ;;;; constructors

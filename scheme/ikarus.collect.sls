@@ -38,8 +38,8 @@
 		  retrieve-to-avoid-collecting
 		  collection-avoidance-list
 		  purge-collection-avoidance-list)
-    (ikarus system $fx)
-    (ikarus system $arg-list)
+    (vicare system $fx)
+    (vicare system $arg-list)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
 

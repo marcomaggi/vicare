@@ -188,7 +188,7 @@
     array-set-c-size_t!			array-set-c-ssize_t!
     array-set-c-off_t!			array-set-c-ptrdiff_t!)
   (import (vicare)
-    (ikarus system $foreign)
+    (vicare system $foreign)
     (vicare platform errno))
 
 

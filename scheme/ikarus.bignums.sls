@@ -40,12 +40,12 @@
 		  bignum-even?
 		  least-positive-bignum
 		  greatest-negative-bignum)
-    (except (ikarus system $bignums)
+    (except (vicare system $bignums)
 	    $bignum-positive?		$bignum-negative?
 	    $bignum-non-positive?	$bignum-non-negative?
 	    $bignum-even?		$bignum-odd?
 	    $bignum->flonum)
-    (ikarus system $flonums)
+    (vicare system $flonums)
     (vicare arguments validation))
 
 

@@ -23,8 +23,8 @@
 		  flonum->string
 		  string->flonum)
     (rnrs bytevectors)
-    (ikarus system $bytevectors)
-    (ikarus system $flonums))
+    (vicare system $bytevectors)
+    (vicare system $flonums))
 
 
 (module (flonum->string)

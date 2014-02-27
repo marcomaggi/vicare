@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (ikarus system $strings)
+  (vicare system $strings)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

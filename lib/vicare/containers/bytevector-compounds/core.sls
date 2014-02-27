@@ -70,7 +70,7 @@
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (vicare unsafe operations)
-    (only (ikarus system $numerics)
+    (only (vicare system $numerics)
 	  $add-number-fixnum))
 
 

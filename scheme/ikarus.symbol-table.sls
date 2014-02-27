@@ -24,7 +24,7 @@
 		  string->symbol
 		  $symbol-table-size
 		  $log-symbol-table-status)
-    (except (ikarus system $symbols)
+    (except (vicare system $symbols)
 	    $symbol-table-size
 	    $log-symbol-table-status)
     (vicare language-extensions syntaxes)

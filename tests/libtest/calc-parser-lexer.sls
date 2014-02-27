@@ -4,7 +4,7 @@
     calc-parser-lexer-table)
   (import (nausicaa)
 (vicare parser-tools silex input-system)
-(ikarus system $fx)
+(vicare system $fx)
 (prefix (nausicaa parser-tools lexical-tokens) lt.)
 (prefix (nausicaa parser-tools source-locations) sl.)
 (nausicaa parser-tools silex default-error-handler)

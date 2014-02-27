@@ -37,7 +37,7 @@
 		  print-error		debug-print
 		  print-unicode		print-graph
 		  printer-integer-radix)
-    (only (ikarus system $symbols)
+    (only (vicare system $symbols)
 	  $unbound-object?)
     (only (vicare system $structs)
 	  $struct-rtd)

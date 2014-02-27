@@ -5,8 +5,8 @@
 
 #!vicare
 (import (vicare)
-  (ikarus system $flonums)
-  (ikarus system $numerics))
+  (vicare system $flonums)
+  (vicare system $numerics))
 
 (define LEAST-FX	-536870912)
 

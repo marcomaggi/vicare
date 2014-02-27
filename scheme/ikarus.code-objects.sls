@@ -26,8 +26,8 @@
 		  make-code code-reloc-vector code-freevars
 		  code-size code-ref code-set! set-code-reloc-vector!
 		  set-code-annotation! procedure-annotation)
-    (ikarus system $fx)
-    (ikarus system $codes)
+    (vicare system $fx)
+    (vicare system $codes)
     (vicare arguments validation))
 
 

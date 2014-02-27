@@ -35,7 +35,7 @@
     else let quote quasiquote and or not apply eval syntax ... _ =>)
   (import (vicare)
     (vicare unsafe operations)
-    (only (ikarus system $bytevectors)
+    (only (vicare system $bytevectors)
 	  $bytevector=))
 
 

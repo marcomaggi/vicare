@@ -46,8 +46,8 @@
 		  make-transcoder native-transcoder
 		  buffer-mode? transcoder-codec
 		  transcoder-eol-style transcoder-error-handling-mode)
-    (ikarus system $transcoders)
-    (prefix (rename (ikarus system $fx)
+    (vicare system $transcoders)
+    (prefix (rename (vicare system $fx)
 		    ($fx=	fx=)	;comparison
 		    ($fxlogor	fxior)	;inclusive logic OR
 		    ($fxlogand	fxand))	;logic AND

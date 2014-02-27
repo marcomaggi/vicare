@@ -4568,7 +4568,7 @@ referenced by the closure's code.
 
 
 We can take a look at the free variables referenced by a closure with
-the facilities of the library @library{ikarus system $codes}.  In a
+the facilities of the library @library{vicare system $codes}.  In a
 normal application: we must @strong{not} mess with the internals of
 closure and code objects.
 
@@ -4579,7 +4579,7 @@ variables:
 @example
 #!r6rs
 (import (rnrs)
-  (ikarus system $codes))
+  (vicare system $codes))
 (define a 123)
 (define (f)
   a)
@@ -4593,7 +4593,7 @@ directly in the closure's slot:
 @example
 #!r6rs
 (import (rnrs)
-  (ikarus system $codes))
+  (vicare system $codes))
 (define f
   (let ((a 123))
     (lambda () a)))
@@ -4607,7 +4607,7 @@ when there are two such variables:
 @example
 #!r6rs
 (import (vicare)
-  (ikarus system $codes))
+  (vicare system $codes))
 
 (define f
   (let ((a 123)
@@ -4626,7 +4626,7 @@ referenced by the slots of the closures:
 @example
 #!r6rs
 (import (rnrs)
-  (ikarus system $codes))
+  (vicare system $codes))
 (define f #f)
 (define g #f)
 (let ((a 123))

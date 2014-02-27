@@ -124,7 +124,7 @@
     bytevector->bignum		bignum->bytevector
 
 ;;; --------------------------------------------------------------------
-;;; the following go in (ikarus system $numerics)
+;;; the following go in (vicare system $numerics)
 
     $neg-number		$neg-fixnum	$neg-bignum
     $neg-flonum		$neg-ratnum	$neg-compnum
@@ -453,13 +453,13 @@
 		random
 		error@add1			error@sub1
 		bytevector->bignum		bignum->bytevector)
-  (ikarus system $pairs)
-  (ikarus system $fx)
-  (ikarus system $flonums)
+  (vicare system $pairs)
+  (vicare system $fx)
+  (vicare system $flonums)
   ;;FIXME For  no reason I  can figure out now:  here we really  need to
-  ;;import  from "(ikarus  flonums)", rather  than from  "(ikarus system
+  ;;import  from "(ikarus  flonums)", rather  than from  "(vicare system
   ;;$flonums)".  (Marco Maggi; Thu Sep 19, 2013)
-  (rename (only (ikarus flonums) #;(ikarus system $flonums)
+  (rename (only (ikarus flonums) #;(vicare system $flonums)
 		$flexp
 		$flsin
 		$flcos
@@ -477,11 +477,11 @@
 	  ($flcosh	$cosh-flonum)
 	  ($fltanh	$tanh-flonum)
 	  ($flasinh	$asinh-flonum))
-  (ikarus system $ratnums)
-  (ikarus system $bignums)
-  (ikarus system $compnums)
-  (ikarus system $chars)
-  (ikarus system $strings)
+  (vicare system $ratnums)
+  (vicare system $bignums)
+  (vicare system $compnums)
+  (vicare system $chars)
+  (vicare system $strings)
   (vicare arguments validation)
   (vicare language-extensions syntaxes))
 

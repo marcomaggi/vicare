@@ -74,7 +74,7 @@
     EUNATCH		EUSERS		EWOULDBLOCK
     EXDEV		EXFULL)
   (import (vicare)
-    (only (ikarus system $fx)
+    (only (vicare system $fx)
 	  $fx=))
 
 

@@ -802,7 +802,7 @@
 )
 
 
-(library (ikarus system vectors)
+(library (vicare system vectors)
   (export $vector-ref $vector-length)
   (import (vicare))
   (define $vector-ref vector-ref)

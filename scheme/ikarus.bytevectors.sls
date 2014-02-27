@@ -109,7 +109,7 @@
     subbytevector-u8		subbytevector-u8/count
     subbytevector-s8		subbytevector-s8/count
 
-    ;; unsafe bindings, to be exported by (ikarus system $bytevectors)
+    ;; unsafe bindings, to be exported by (vicare system $bytevectors)
     $bytevector-empty?
     $bytevector=		$bytevector-total-length
     $bytevector-concatenate	$bytevector-reverse-and-concatenate
@@ -1941,7 +1941,7 @@
 #| end of library |#  )
 
 
-(library (ikarus system bytevectors)
+(library (vicare system bytevectors)
   (export $make-bytevector $bytevector-length
 	  $bytevector-u8-ref $bytevector-set!)
   (import (vicare))

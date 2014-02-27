@@ -43,13 +43,13 @@
 		  fxcopy-bit			fxcopy-bit-field
 		  fxrotate-bit-field		fxreverse-bit-field
 		  fxbit-field)
-    (except (ikarus system $fx)
+    (except (vicare system $fx)
 	    $fxcopy-bit
 	    $fxcopy-bit-field
 	    $fxrotate-bit-field
 	    $fxbit-field)
-    (ikarus system $bignums)
-    (ikarus system $flonums)
+    (vicare system $bignums)
+    (vicare system $flonums)
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
@@ -60,7 +60,7 @@
 	 fxfirst-bit-set)
 
   (define (byte-first-bit-set x i)
-    (import (ikarus system $bytevectors))
+    (import (vicare system $bytevectors))
     (define-syntax make-first-bit-set-bytevector
       (lambda (x)
 	(define (fst n)

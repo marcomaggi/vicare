@@ -38,18 +38,18 @@
   (export equal?)
   (import (except (vicare)
 		  equal?)
-    (ikarus system $pointers))
+    (vicare system $pointers))
 
   (module UNSAFE
     (< <= > >= = + - vector-ref vector-length car cdr)
     (import
-      (rename (ikarus system $vectors)
+      (rename (vicare system $vectors)
         ($vector-length vector-length)
         ($vector-ref    vector-ref))
-      (rename (ikarus system $pairs)
+      (rename (vicare system $pairs)
         ($car   car)
         ($cdr   cdr))
-      (rename (ikarus system $fx)
+      (rename (vicare system $fx)
         ($fx+      +)
         ($fx-      -)
         ($fx<      <)

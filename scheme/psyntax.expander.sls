@@ -1509,7 +1509,7 @@
     (assertion-violation __who__
       "expected non-interaction environment object as argument" env))
   (let ((P (vector-exists (lambda (name label)
-			    (import (ikarus system $symbols))
+			    (import (vicare system $symbols))
 			    (and (eq? sym name)
 				 (cons label ($symbol-value label))))
 	     ($env-names  env)

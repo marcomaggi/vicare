@@ -26,7 +26,7 @@ the Scheme program to @dfn{call out} to system procedures as well as
 allow the native procedures to @dfn{call back} into Scheme.
 
 Additionally, @library{vicare ffi} reexports all the bindings from the
-library @library{ikarus system $foreign}.
+library @library{vicare system $foreign}.
 
 The availability of the Libffi @api{} can be tested at run--time with
 the function @func{vicare-built-with-ffi-enabled} from @library{vicare}

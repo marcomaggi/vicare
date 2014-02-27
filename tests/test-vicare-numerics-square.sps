@@ -28,10 +28,10 @@
 #!r6rs
 (import (vicare)
   (numerics helpers)
-  (ikarus system $flonums)
-  (ikarus system $ratnums)
-  (ikarus system $compnums)
-  (ikarus system $numerics)
+  (vicare system $flonums)
+  (vicare system $ratnums)
+  (vicare system $compnums)
+  (vicare system $numerics)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

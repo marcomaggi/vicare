@@ -579,7 +579,7 @@
 	((real? exact?)	?body-re0 ?body-re ...)
 	(else		?body-el0 ?body-el ...))
      (let ((num ?num))
-       (import (only (ikarus system $fx)
+       (import (only (vicare system $fx)
 		     $fxzero?))
        (cond ((flonum? num)
 	      ?body-fl0 ?body-fl ...)

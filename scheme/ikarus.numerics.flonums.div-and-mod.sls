@@ -28,8 +28,8 @@
 		  fldiv			flmod
 		  fldiv0		flmod0
 		  fldiv-and-mod		fldiv0-and-mod0)
-    (ikarus system $fx)
-    (except (ikarus system $flonums)
+    (vicare system $fx)
+    (except (vicare system $flonums)
 	    $fldiv		$flmod
 	    $fldiv0		$flmod0
 	    $fldiv-and-mod	$fldiv0-and-mod0)

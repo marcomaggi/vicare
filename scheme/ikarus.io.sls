@@ -650,7 +650,7 @@
 	  strict-r6rs)
     ;;This internal  library is  the one exporting:  $MAKE-PORT, $PORT-*
     ;;and $SET-PORT-* bindings.
-    (ikarus system $io)
+    (vicare system $io)
     (prefix (only (vicare) port?) primop.)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)

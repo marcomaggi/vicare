@@ -34,8 +34,8 @@
 
 
 (module (div-and-mod*)
-  (import (ikarus system $fx)
-    (only (ikarus system $flonums)
+  (import (vicare system $fx)
+    (only (vicare system $flonums)
 	  $fl=)
     (ikarus flonums))
 
@@ -141,7 +141,7 @@
 
 (define (div n m)
   (define who 'div)
-  (import (ikarus system $fx))
+  (import (vicare system $fx))
   (if (and (fixnum? n)
 	   (fixnum? m))
       (case-fixnums m
@@ -168,7 +168,7 @@
 
 (define (mod n m)
   (define who 'mod)
-  (import (ikarus system $fx))
+  (import (vicare system $fx))
   (if (and (fixnum? n)
 	   (fixnum? m))
       (case-fixnums m

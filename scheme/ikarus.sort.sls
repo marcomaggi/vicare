@@ -25,13 +25,13 @@
      fx+ fx- fxarithmetic-shift-right
      vector-ref vector-set! car cdr)
     (import
-      (rename (ikarus system $pairs)
+      (rename (vicare system $pairs)
         ($car    car)
         ($cdr    cdr))
-      (rename (ikarus system $vectors)
+      (rename (vicare system $vectors)
         ($vector-ref    vector-ref)
         ($vector-set!   vector-set!))
-      (rename (ikarus system $fx)
+      (rename (vicare system $fx)
         ($fxsra    fxarithmetic-shift-right)
         ($fx+      fx+)
         ($fx-      fx-)

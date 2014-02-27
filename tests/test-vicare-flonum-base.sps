@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (ikarus system $flonums)
+  (vicare system $flonums)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

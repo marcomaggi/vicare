@@ -10716,7 +10716,7 @@ location.
 pointers also have @func{pointer=?} as specialised comparison predicate.
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 
@@ -10818,7 +10818,7 @@ functions @strong{do not} scale the offset to the size of the poked
 value; pointer arithmetics is performed with byte offsets.
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 @macro bitpoker{BYTENUM,BITNUM}
@@ -10971,7 +10971,7 @@ the offset to the size of the peeked value; pointer arithmetics is
 performed with byte offsets.
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 @macro bitpeeker{BITNUM}
@@ -11122,7 +11122,7 @@ argument must be an exact integer in the range of the C language type
 functions @strong{do} scale the index to the size of the poked value.
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 @macro abitpoker{BYTENUM,BITNUM}
@@ -11273,7 +11273,7 @@ offset to a pointer: all the following functions @strong{do} scale the
 index to the size of the peeked value.
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 @macro abitpeeker{BITNUM}
@@ -11459,7 +11459,7 @@ getting bytes from specific locations in memory.
 
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 
@@ -11629,7 +11629,7 @@ The memory blocks are actually allocated on the stack of
 
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 
@@ -11716,7 +11716,7 @@ components: @condition{who}, @condition{message},
 
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 
@@ -11788,7 +11788,7 @@ Build and return a new instance of @code{memory-block} holding a new
 
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 
@@ -11813,7 +11813,7 @@ Maker and predicate for condition objects of type
 The following functions perform operations on raw @ascii{} coded strings
 terminated by a zero byte, for short @asciiz{} strings; some functions
 act upon raw @utf{}-16 strings.  The following bindings are exported by
-the libraries @library{vicare} and @library{ikarus system $foreign} and
+the libraries @library{vicare} and @library{vicare system $foreign} and
 reexported by the library @library{vicare ffi}.
 
 
@@ -12056,7 +12056,7 @@ binding evaluates to @true{}.  Notice that if no error occurred
 @code{errno} is set to the fixnum zero.
 
 The following bindings are exported by the libraries @library{vicare}
-and @library{ikarus system $foreign} and reexported by the library
+and @library{vicare system $foreign} and reexported by the library
 @library{vicare ffi}.
 
 

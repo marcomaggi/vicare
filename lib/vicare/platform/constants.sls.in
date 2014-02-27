@@ -664,7 +664,7 @@
     SIGINFO)
   (import (vicare)
     (vicare platform errno)
-    (only (ikarus system $fx)
+    (only (vicare system $fx)
 	  $fx=))
 
 

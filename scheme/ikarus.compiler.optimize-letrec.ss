@@ -720,7 +720,7 @@
   ;;                (set! d_0 '123)
   ;;                b_0))))
   ;;
-  (import (only (ikarus system $vectors)
+  (import (only (vicare system $vectors)
 		$vector-set!
 		$vector-ref))
   (define who 'optimize-letrec/waddell)

@@ -20,7 +20,7 @@
   (import (except (vicare)
 		  call-with-values
 		  values)
-    (ikarus system $stack))
+    (vicare system $stack))
 
   ;;The implementation of these two functions is as assembly subroutines
   ;;defined by the compiler.

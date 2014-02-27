@@ -28,7 +28,7 @@
 #!vicare
 (import (vicare)
   (vicare checks)
-  (ikarus system $structs))
+  (vicare system $structs))
 
 (print-unicode #f)
 (check-set-mode! 'report-failed)

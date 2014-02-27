@@ -38,7 +38,7 @@
     (only (nausicaa language oopp)
 	  let/tags)
     (vicare unsafe operations)
-    (only (ikarus system $bytevectors)
+    (only (vicare system $bytevectors)
 	  $bytevector=))
 
 

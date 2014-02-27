@@ -21,11 +21,11 @@
     $ratnum-positive?		$ratnum-negative?
     $ratnum-non-positive?	$ratnum-non-negative?)
   (import (vicare)
-    (except (ikarus system $ratnums)
+    (except (vicare system $ratnums)
 	    $ratnum->flonum
 	    $ratnum-positive?		$ratnum-negative?
 	    $ratnum-non-positive?	$ratnum-non-negative?)
-    (ikarus system $flonums))
+    (vicare system $flonums))
 
 
 (module ($ratnum->flonum)

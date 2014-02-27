@@ -198,7 +198,7 @@
     (except (vicare unsafe operations)
 	    $string-copy!
 	    $string-fill!)
-    (only (ikarus system $numerics)
+    (only (vicare system $numerics)
 	  $min-fixnum-fixnum
 	  $add-number-fixnum))
 

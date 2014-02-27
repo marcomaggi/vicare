@@ -24,7 +24,7 @@
 		  (greatest-fixnum	sys:greatest-fixnum)
 		  (void			sys:void)
 		  (eof-object		sys:eof-object))
-    (rename (ikarus system $structs)
+    (rename (vicare system $structs)
 	    (base-rtd	sys:base-rtd)))
   ;;For 64-bit platforms.
   #;(begin

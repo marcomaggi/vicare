@@ -27,8 +27,8 @@
 
 #!vicare
 (import (vicare)
-  (ikarus system $fx)
-  (ikarus system $flonums)
+  (vicare system $fx)
+  (vicare system $flonums)
   (vicare checks))
 
 (print-unicode #f)

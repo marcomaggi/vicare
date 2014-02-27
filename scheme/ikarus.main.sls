@@ -102,7 +102,7 @@
 		  getenv
 		  real-pathname)
 	    posix.)
-    (only (ikarus system $structs)
+    (only (vicare system $structs)
 	  $struct-ref
 	  $struct-rtd)
     (only (ikarus cafe)

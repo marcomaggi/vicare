@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(library (ikarus system time-and-date)
+(library (ikarus time-and-date)
   (export
     current-time	time-from-now
     time?

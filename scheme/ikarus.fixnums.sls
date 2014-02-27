@@ -118,7 +118,7 @@
     (prefix (only (vicare)
 		  fx+ fx* fx-)
 	    sys:)
-    (except (ikarus system $fx)
+    (except (vicare system $fx)
 	    $fxpositive?	$fxnegative?
 	    $fxnonpositive?	$fxnonnegative?
 	    $fxeven?		$fxodd?
@@ -130,9 +130,9 @@
 	    $fxdiv-and-mod	$fxdiv0-and-mod0
 	    $fxabs
 	    $fixnum->string)
-    (ikarus system $chars)
-    (ikarus system $pairs)
-    (ikarus system $strings)
+    (vicare system $chars)
+    (vicare system $pairs)
+    (vicare system $strings)
     (vicare arguments validation)
     (vicare language-extensions syntaxes))
 

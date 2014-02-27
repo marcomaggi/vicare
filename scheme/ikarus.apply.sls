@@ -19,7 +19,7 @@
   (import (except (vicare) apply)
     (vicare unsafe operations)
     (vicare arguments validation)
-    (ikarus system $stack))
+    (vicare system $stack))
 
 
 ;;;; constants

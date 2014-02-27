@@ -2272,7 +2272,7 @@
   ;;
   (import IntegerSet)
   (import conflict-helpers)
-  (import (ikarus system $vectors))
+  (import (vicare system $vectors))
   (define who 'uncover-frame-conflicts)
 
   (define spill-set
@@ -2708,7 +2708,7 @@
 (module (alt-cogen.assign-frame-sizes)
   (import IntegerSet)
   (import conflict-helpers)
-  (import (only (ikarus system $vectors)
+  (import (only (vicare system $vectors)
 		$vector-ref
 		$vector-set!))
   (define who 'alt-cogen.assign-frame-sizes)

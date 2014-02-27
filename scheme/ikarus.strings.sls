@@ -1730,7 +1730,7 @@
 )
 
 
-(library (ikarus system strings)
+(library (vicare system strings)
   (export $make-string
 	  $string-length
 	  $string-ref

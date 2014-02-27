@@ -45,10 +45,10 @@
     $string-hash		$string-ci-hash
     $symbol-hash		$bytevector-hash)
   (import
-      (ikarus system $pairs)
-    (ikarus system $vectors)
-    (ikarus system $tcbuckets)
-    (ikarus system $fx)
+      (vicare system $pairs)
+    (vicare system $vectors)
+    (vicare system $tcbuckets)
+    (vicare system $fx)
     (except (vicare)
 	    make-eq-hashtable		make-eqv-hashtable
 	    make-hashtable

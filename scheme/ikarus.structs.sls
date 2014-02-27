@@ -421,12 +421,12 @@
 #| end of libray (ikarus structs) |# )
 
 
-(library (ikarus systems structs)
+(library (vicare systems structs)
   (export $struct-ref $struct/rtd?)
   (import (vicare))
   (define $struct-ref struct-ref)
   (define ($struct/rtd? x rtd)
-    (import (ikarus system $structs))
+    (import (vicare system $structs))
     ($struct/rtd? x rtd)))
 
 ;;; end of file

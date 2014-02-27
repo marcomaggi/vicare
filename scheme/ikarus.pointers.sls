@@ -302,7 +302,7 @@
 
 		  array-set-c-size_t!			array-set-c-ssize_t!
 		  array-set-c-off_t!			array-set-c-ptrdiff_t!)
-    (only (ikarus system $pointers)
+    (only (vicare system $pointers)
 	  $pointer=)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)

@@ -27,7 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (ikarus system $fx)
+  (vicare system $fx)
   (vicare language-extensions syntaxes)
   (only (vicare platform words)
 	case-word-size)

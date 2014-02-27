@@ -4,7 +4,7 @@
     ipv4-address-lexer-table)
   (import (nausicaa)
 (vicare parser-tools silex input-system)
-(ikarus system $fx)
+(vicare system $fx)
 (nausicaa parser-tools silex default-error-handler)
 (prefix (nausicaa parser-tools lexical-tokens) lt.)
 (prefix (nausicaa parser-tools source-locations) sl.)
