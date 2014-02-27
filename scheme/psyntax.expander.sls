@@ -9525,9 +9525,7 @@
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
        `(stale-when (let ()
-		      ;;FIXME To be fixed at the next boot image rotation.
-		      (import (only #;(vicare language-extensions posix)
-			       (vicare $posix)
+		      (import (only (vicare language-extensions posix)
 				    file-modification-time))
 		      (or (not (file-exists? ,pathname))
 			  (> (file-modification-time ,pathname)

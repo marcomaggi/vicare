@@ -3134,6 +3134,67 @@
    ((P stru)
     #t))
 
+;;; --------------------------------------------------------------------
+;;; struct type descriptor accessor
+
+ (define-primop $struct-rtd-std unsafe
+   ((V stru)
+    (prm 'mref (T stru) (K off-std-std)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    #t))
+
+ (define-primop $struct-rtd-name unsafe
+   ((V stru)
+    (prm 'mref (T stru) (K off-std-name)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    #t))
+
+ (define-primop $struct-rtd-length unsafe
+   ((V stru)
+    (prm 'mref (T stru) (K off-std-length)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    #t))
+
+ (define-primop $struct-rtd-fields unsafe
+   ((V stru)
+    (prm 'mref (T stru) (K off-std-fields)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    #t))
+
+ (define-primop $struct-rtd-printer unsafe
+   ((V stru)
+    (prm 'mref (T stru) (K off-std-printer)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    #t))
+
+ (define-primop $struct-rtd-symbol unsafe
+   ((V stru)
+    (prm 'mref (T stru) (K off-std-symbol)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    #t))
+
+ (define-primop $struct-rtd-destructor unsafe
+   ((V stru)
+    (prm 'mref (T stru) (K off-std-destructor)))
+   ((E stru)
+    (nop))
+   ((P stru)
+    #t))
+
+;;; --------------------------------------------------------------------
+
  (define-primop $struct-ref unsafe
    ;;Return the  word in the  field at index  I.  Accessing a  struct is
    ;;like accessing a vector.

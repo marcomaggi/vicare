@@ -981,25 +981,6 @@
   ;;
   (define-constant __who__ 'install-library)
   (case-define* install-library
-    ;;FIXME  At  the next  boot  image  rotation the  optional  argument
-    ;;LIBRARY-OPTION*  must become  a mandatory  argument.  For  this to
-    ;;happen  the appropriate  argument must  be  added to  the uses  of
-    ;;INSTALL-LIBRARY in the "makefile.sps".   (Marco Maggi; Mon Feb 10,
-    ;;2014)
-    ;; ((uid libname
-    ;; 	  import-libdesc* visit-libdesc* invoke-libdesc*
-    ;; 	  export-subst export-env
-    ;; 	  visit-proc invoke-proc
-    ;; 	  visit-code invoke-code
-    ;; 	  guard-code guard-libdesc*
-    ;; 	  visible? source-file-name)
-    ;;  (install-library uid libname
-    ;; 		      import-libdesc* visit-libdesc* invoke-libdesc*
-    ;; 		      export-subst export-env
-    ;; 		      visit-proc invoke-proc
-    ;; 		      visit-code invoke-code
-    ;; 		      guard-code guard-libdesc*
-    ;; 		      visible? source-file-name '()))
     (((uid symbol?) (libname library-name?)
       import-libdesc* visit-libdesc* invoke-libdesc*
       export-subst export-env

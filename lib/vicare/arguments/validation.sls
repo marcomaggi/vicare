@@ -312,15 +312,8 @@
 	  FD_SETSIZE)
     (prefix (vicare platform words)
 	    words.)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Thu Feb 20, 2014)
-    (prefix (vicare $posix)
-	    posix.)
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Thu Feb 20, 2014)
-    ;;
-    ;; (prefix (vicare language-extensions posix)
-    ;; 	    posix.)
+    (prefix (vicare language-extensions posix)
+     	    posix.)
     (vicare unsafe operations))
 
 

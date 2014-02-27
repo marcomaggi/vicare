@@ -3917,6 +3917,25 @@
 (define off-struct-std			(fx- disp-struct-std  vector-tag))
 (define off-struct-data			(fx- disp-struct-data vector-tag))
 
+;;Struct type descriptor fields.
+(define disp-std-rtd			0)
+(define disp-std-std			0)
+(define disp-std-name			(fx* 1 wordsize))
+(define disp-std-length			(fx* 2 wordsize))
+(define disp-std-fields			(fx* 3 wordsize))
+(define disp-std-printer		(fx* 4 wordsize))
+(define disp-std-symbol			(fx* 5 wordsize))
+(define disp-std-destructor		(fx* 6 wordsize))
+
+(define off-std-rtd			(fx- disp-std-rtd	 vector-tag))
+(define off-std-std			(fx- disp-std-std	 vector-tag))
+(define off-std-name			(fx- disp-std-name	 vector-tag))
+(define off-std-length			(fx- disp-std-length	 vector-tag))
+(define off-std-fields			(fx- disp-std-fields	 vector-tag))
+(define off-std-printer			(fx- disp-std-printer	 vector-tag))
+(define off-std-symbol			(fx- disp-std-symbol	 vector-tag))
+(define off-std-destructor		(fx- disp-std-destructor vector-tag))
+
 ;;; --------------------------------------------------------------------
 ;;; strings
 
