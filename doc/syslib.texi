@@ -5063,10 +5063,11 @@ Allocate a new data structure of type @var{rtd} capable of holding
 @var{fx} words and return a reference to it.
 
 @quotation
-@strong{NOTE} This operation does @strong{not} initialise the field
-words, leaving them holding whatever is on the heap.  We must be careful
-not to trigger a garbage collection before those fields are initialised
-with valid values, else the behaviour is undefined.
+@strong{NOTE} This operation initialises only the @code{std} field,
+leaving all the other fields set to a machine word with all the bits set
+to @code{1}.  We must be careful not to trigger a garbage collection
+before those fields are initialised with valid values, else the
+behaviour is undefined.
 @end quotation
 @end deffn
 
