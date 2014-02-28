@@ -53,6 +53,16 @@ AM_CONDITIONAL([WANT_DEBUG],
 AM_COND_IF([WANT_DEBUG],
   [AS_VAR_SET(AX_VFLAGS,"$AX_VFLAGS -g")])
 
+VICARE_ENABLE_OPTION([GC_INTEGRITY],[gc-integrity],[no],
+  [whether to enable garbage collection integrity checks],
+  [to enable garbage collection integrity checks])
+AM_CONDITIONAL([WANT_GC_INTEGRITY],
+  [test "x$vicare_enable_GC_INTEGRITY" = xyes])
+
+AM_COND_IF([WANT_GC_INTEGRITY],
+  [AC_DEFINE([VICARE_GC_INTEGRITY],[1],
+     [when defined enables garbage collection integrity checks])])
+
 VICARE_ENABLE_OPTION([ARGUMENTS_VALIDATION],[arguments-validation],[yes],
   [whether arguments validation is enabled],
   [enable arguments validation in the boot image])

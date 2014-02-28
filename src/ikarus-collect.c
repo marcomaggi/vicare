@@ -298,7 +298,7 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
   ikmemblock *		old_heap_pages;
 
   /* fprintf(stderr, "%s: enter\n", __func__); */
-#if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+#if (0 || (defined VICARE_GC_INTEGRITY) || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "entry");
 #endif
 
@@ -469,7 +469,7 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
 #endif
   } /* Finished allocating a new nursery heap hot block. */
 
-#if (0 || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
+#if (0 || (defined VICARE_GC_INTEGRITY) || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
   ik_verify_integrity(pcb, "exit");
 #endif
 
