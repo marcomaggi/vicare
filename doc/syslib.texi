@@ -5098,51 +5098,51 @@ such values.  Return a reference to the structure.
 @subsubheading Operations on struct type descriptors
 
 
-@deffn {Unsafe Operation} $struct-rtd-std @var{std}
-@deffnx {Unsafe Operation} $set-struct-rtd-std! @var{std} @var{new-std}
+@deffn {Unsafe Operation} $std-std @var{std}
+@deffnx {Unsafe Operation} $set-std-std! @var{std} @var{new-std}
 Given a struct type descriptor return its struct type descriptor or set
 a new type descriptor.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct-rtd-name @var{std}
-@deffnx {Unsafe Operation} $set-struct-rtd-name! @var{std} @var{new-name}
+@deffn {Unsafe Operation} $std-name @var{std}
+@deffnx {Unsafe Operation} $set-std-name! @var{std} @var{new-name}
 Given a struct type descriptor return its name as a string or set a new
 name.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct-rtd-length @var{std}
-@deffnx {Unsafe Operation} $set-struct-rtd-length! @var{std} @var{new-len}
+@deffn {Unsafe Operation} $std-length @var{std}
+@deffnx {Unsafe Operation} $set-std-length! @var{std} @var{new-len}
 Given a struct type descriptor return a non--negative fixnum
 representing the number of fields or set a new number of fields.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct-rtd-fields @var{std}
-@deffnx {Unsafe Operation} $set-struct-rtd-fields! @var{std} @var{fields}
+@deffn {Unsafe Operation} $std-fields @var{std}
+@deffnx {Unsafe Operation} $set-std-fields! @var{std} @var{fields}
 Given a struct type descriptor return a list of symbols representing the
 field names or set a new list of field names.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct-rtd-printer @var{std}
-@deffnx {Unsafe Operation} $set-struct-rtd-printer! @var{std} @var{new-printer}
+@deffn {Unsafe Operation} $std-printer @var{std}
+@deffnx {Unsafe Operation} $set-std-printer! @var{std} @var{new-printer}
 Given a struct type descriptor return its printer function or set a new
 printer function.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct-rtd-symbol @var{std}
-@deffnx {Unsafe Operation} $set-struct-rtd-symbol! @var{std} @var{new-uid}
+@deffn {Unsafe Operation} $std-symbol @var{std}
+@deffnx {Unsafe Operation} $set-std-symbol! @var{std} @var{new-uid}
 Given a struct type descriptor return its @uid{} symbol or set a new
 @uid{} symbol.  When setting a new struct @uid{} we must store the
 struct type descriptor in the @code{value} slot of the @uid{}.
 @end deffn
 
 
-@deffn {Unsafe Operation} $struct-rtd-destructor @var{std}
-@deffnx {Unsafe Operation} $set-struct-rtd-destructor! @var{std} @var{new-destr}
+@deffn {Unsafe Operation} $std-destructor @var{std}
+@deffnx {Unsafe Operation} $set-std-destructor! @var{std} @var{new-destr}
 Given a struct type descriptor return @false{} or its destructor
 function or set a new destructor function.
 @end deffn

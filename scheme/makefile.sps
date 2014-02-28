@@ -1157,6 +1157,22 @@
     ($struct-guardian				$structs)
     ($record-guardian				$structs)
 
+    ($std-std					$structs)
+    ($std-name					$structs)
+    ($std-length				$structs)
+    ($std-fields				$structs)
+    ($std-printer				$structs)
+    ($std-symbol				$structs)
+    ($std-destructor				$structs)
+
+    ($set-std-std!				$structs)
+    ($set-std-name!				$structs)
+    ($set-std-length!				$structs)
+    ($set-std-fields!				$structs)
+    ($set-std-printer!				$structs)
+    ($set-std-symbol!				$structs)
+    ($set-std-destructor!			$structs)
+
     ($struct-rtd-std				$structs)
     ($struct-rtd-name				$structs)
     ($struct-rtd-length				$structs)
