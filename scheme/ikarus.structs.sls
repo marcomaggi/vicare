@@ -92,7 +92,7 @@
 (define-argument-validation (index who index struct)
   (and (fixnum? index)
        ($fx>= index 0)
-       ($fx<  index ($std-length ($struct-rtd struct))))
+       ($fx<  index ($struct-rtd-length ($struct-rtd struct))))
   (procedure-argument-violation who
     "expected fixnum in range for structure field as index argument" index struct))
 
@@ -108,23 +108,23 @@
 ;;; --------------------------------------------------------------------
 ;;; unsafe RTD fields accessors
 
-(define-syntax-rule ($std-name std)
-  ($struct-ref std 0))
+;; (define-syntax-rule ($std-name std)
+;;   ($struct-ref std 0))
 
-(define-syntax-rule ($std-length std)
-  ($struct-ref std 1))
+;; (define-syntax-rule ($std-length std)
+;;   ($struct-ref std 1))
 
-(define-syntax-rule ($std-fields std)
-  ($struct-ref std 2))
+;; (define-syntax-rule ($std-fields std)
+;;   ($struct-ref std 2))
 
-(define-syntax-rule ($std-printer std)
-  ($struct-ref std 3))
+;; (define-syntax-rule ($std-printer std)
+;;   ($struct-ref std 3))
 
-(define-syntax-rule ($std-symbol std)
-  ($struct-ref std 4))
+;; (define-syntax-rule ($std-symbol std)
+;;   ($struct-ref std 4))
 
-(define-syntax-rule ($std-destructor std)
-  ($struct-ref std 5))
+;; (define-syntax-rule ($std-destructor std)
+;;   ($struct-ref std 5))
 
 ;;; --------------------------------------------------------------------
 ;;; unsafe STD fields mutators
@@ -186,23 +186,23 @@
 (define* (struct-type-name (std struct-type-descriptor?))
   ;;Return a string represnting the name of structures of type RTD.
   ;;
-  ($std-name std))
+  ($struct-rtd-name std))
 
 (define* (struct-type-symbol (std struct-type-descriptor?))
   ;;Return a symbol uniquely identifying the data structure type STD.
   ;;
-  ($std-symbol std))
+  ($struct-rtd-symbol std))
 
 (define* (struct-type-field-names (std struct-type-descriptor?))
   ;;Return  a  list of  symbols  representing  the  names of  fields  in
   ;;structures of type STD.
   ;;
-  ($std-fields std))
+  ($struct-rtd-fields std))
 
 (define* (struct-type-destructor (std struct-type-descriptor?))
   ;;Return false or a procedure being the destructor of STD.
   ;;
-  ($std-destructor std))
+  ($struct-rtd-destructor std))
 
 ;;; --------------------------------------------------------------------
 
@@ -232,12 +232,12 @@
   ;;
   (define* (struct-constructor (std struct-type-descriptor?))
     (lambda args
-      (let* ((field-num ($std-length std))
+      (let* ((field-num ($struct-rtd-length std))
 	     (stru      ($make-struct std field-num)))
 	(if (%set-fields stru args 0 field-num)
 	    ;;Notice  that the  expander also  has this  operation in  its
 	    ;;implementation of DEFINE-STRUCT.
-	    (if ($std-destructor std)
+	    (if ($struct-rtd-destructor std)
 		($struct-guardian stru)
 	      stru)
 	  (assertion-violation __who__
@@ -290,13 +290,13 @@
   (define (%field-index index/name std who)
     (cond ((fixnum? index/name)
 	   (unless (and ($fx>= index/name 0)
-			($fx<  index/name ($std-length std)))
+			($fx<  index/name ($struct-rtd-length std)))
 	     (procedure-argument-violation who
 	       "struct field index out of range for std" index/name std))
 	   index/name)
 	  ((symbol? index/name)
 	   (let loop ((field-idx   0)
-		      (field-name* ($std-fields std)))
+		      (field-name* ($struct-rtd-fields std)))
 	     (cond ((null? field-name*)
 		    (procedure-argument-violation who
 		      "not a struct field name" index/name std))
@@ -341,26 +341,26 @@
   ;;Return the number of fields in the data structure STRU.  Notice that
   ;;this function works with both Vicare's structs and R6RS records.
   ;;
-  ($std-length ($struct-rtd stru)))
+  ($struct-rtd-length ($struct-rtd stru)))
 
 (define* (struct-name (stru struct?))
   ;;Return a  string representing the  name of the data  structure STRU.
   ;;Notice that this function works  with both Vicare's structs and R6RS
   ;;records.
   ;;
-  ($std-name ($struct-rtd stru)))
+  ($struct-rtd-name ($struct-rtd stru)))
 
 (define* (struct-printer (stru struct?))
   ;;Return  the  procedure  being  the printer  function  for  the  data
   ;;structure STRU.
   ;;
-  ($std-printer ($struct-rtd stru)))
+  ($struct-rtd-printer ($struct-rtd stru)))
 
 (define* (struct-destructor (stru struct?))
   ;;Return  the procedure  being the  destructor function  for the  data
   ;;structure STRU.
   ;;
-  ($std-destructor ($struct-rtd stru)))
+  ($struct-rtd-destructor ($struct-rtd stru)))
 
 (define* (struct-ref (stru struct?) i)
   ;;Return the value of field at index I in the data structure stru.
@@ -384,7 +384,7 @@
        (struct? obj2)
        (let ((std1 ($struct-rtd obj1)))
 	 (and (eq? std1 ($struct-rtd obj2))
-	      (let ((len ($std-length std1)))
+	      (let ((len ($struct-rtd-length std1)))
 		(let loop ((i 0))
 		  (or ($fx= i len)
 		      (and (eqv? ($struct-ref obj1 i)
@@ -399,9 +399,9 @@
 		 "#[std type="
 	       "#[struct type=")
 	     port)
-    (display ($std-name std) port)
+    (display ($struct-rtd-name std) port)
     (do ((i 0 ($fxadd1 i))
-	 (field-names ($std-fields std) (cdr field-names)))
+	 (field-names ($struct-rtd-fields std) (cdr field-names)))
 	((null? field-names))
       (display " " port)
       (display (car field-names) port)

@@ -3132,7 +3132,7 @@
    ((E stru)
     (nop))
    ((P stru)
-    #t))
+    (K #t)))
 
 ;;; --------------------------------------------------------------------
 ;;; struct type descriptor accessor
@@ -3143,7 +3143,7 @@
    ((E stru)
     (nop))
    ((P stru)
-    #t))
+    (K #t)))
 
  (define-primop $struct-rtd-name unsafe
    ((V stru)
@@ -3151,7 +3151,7 @@
    ((E stru)
     (nop))
    ((P stru)
-    #t))
+    (K #t)))
 
  (define-primop $struct-rtd-length unsafe
    ((V stru)
@@ -3159,7 +3159,7 @@
    ((E stru)
     (nop))
    ((P stru)
-    #t))
+    (K #t)))
 
  (define-primop $struct-rtd-fields unsafe
    ((V stru)
@@ -3167,7 +3167,7 @@
    ((E stru)
     (nop))
    ((P stru)
-    #t))
+    (K #t)))
 
  (define-primop $struct-rtd-printer unsafe
    ((V stru)
@@ -3179,13 +3179,103 @@
    ((V stru)
     (prm 'mref (T stru) (K off-std-symbol)))
    ((E stru)
-    (nop)))
+    (nop))
+   ((P stru)
+    ;;The UID is always set.
+    (K #t)))
 
  (define-primop $struct-rtd-destructor unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-destructor)))
    ((E stru)
     (nop)))
+
+;;; --------------------------------------------------------------------
+;;; struct type descriptor mutators
+
+ (define-primop $set-struct-rtd-std! unsafe
+   ((V stru new-std)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-std) (T new-std))
+     (K void-object)))
+   ((E stru new-std)
+    (prm 'mset (T stru) (K off-std-std) (T new-std)))
+   ((P stru new-std)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-std) (T new-std))
+     (K #t))))
+
+ (define-primop $set-struct-rtd-name! unsafe
+   ((V stru new-name)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-name) (T new-name))
+     (K void-object)))
+   ((E stru new-name)
+    (prm 'mset (T stru) (K off-std-name) (T new-name)))
+   ((P stru new-name)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-name) (T new-name))
+     (K #t))))
+
+ (define-primop $set-struct-rtd-length! unsafe
+   ((V stru new-length)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-length) (T new-length))
+     (K void-object)))
+   ((E stru new-length)
+    (prm 'mset (T stru) (K off-std-length) (T new-length)))
+   ((P stru new-length)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-length) (T new-length))
+     (K #t))))
+
+ (define-primop $set-struct-rtd-fields! unsafe
+   ((V stru new-fields)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-fields) (T new-fields))
+     (K void-object)))
+   ((E stru new-fields)
+    (prm 'mset (T stru) (K off-std-fields) (T new-fields)))
+   ((P stru new-fields)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-fields) (T new-fields))
+     (K #t))))
+
+ (define-primop $set-struct-rtd-printer! unsafe
+   ((V stru new-printer)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-printer) (T new-printer))
+     (K void-object)))
+   ((E stru new-printer)
+    (prm 'mset (T stru) (K off-std-printer) (T new-printer)))
+   ((P stru new-printer)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-printer) (T new-printer))
+     (K #t))))
+
+ (define-primop $set-struct-rtd-symbol! unsafe
+   ((V stru new-symbol)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-symbol) (T new-symbol))
+     (K void-object)))
+   ((E stru new-symbol)
+    (prm 'mset (T stru) (K off-std-symbol) (T new-symbol)))
+   ((P stru new-symbol)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-symbol) (T new-symbol))
+     (K #t))))
+
+ (define-primop $set-struct-rtd-destructor! unsafe
+   ((V stru new-destructor)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-destructor) (T new-destructor))
+     (K void-object)))
+   ((E stru new-destructor)
+    (prm 'mset (T stru) (K off-std-destructor) (T new-destructor)))
+   ((P stru new-destructor)
+    (multiple-forms-sequence
+     (prm 'mset (T stru) (K off-std-destructor) (T new-destructor))
+     (K #t))))
 
 ;;; --------------------------------------------------------------------
 
