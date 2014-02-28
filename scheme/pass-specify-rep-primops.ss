@@ -142,7 +142,8 @@
      ;;BASE must be  a struct instance representing  a (possibly tagged)
      ;;base address.
      ;;
-     ;;OFFSET must be an exact integer representing an offset in bytes.
+     ;;OFFSET must be an exact  integer representing an offset in number
+     ;;of bytes.
      ;;
      (struct-case v
        ((constant value)
@@ -3199,89 +3200,33 @@
 ;;; --------------------------------------------------------------------
 ;;; struct type descriptor mutators
 
- (define-primop $set-std-std! unsafe
-   ((V stru new-std)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-std) (T new-std))
-     (K void-object)))
-   ((E stru new-std)
-    (prm 'mset (T stru) (K off-std-std) (T new-std)))
-   ((P stru new-std)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-std) (T new-std))
-     (K #t))))
-
- (define-primop $set-std-name! unsafe
-   ((V stru new-name)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-name) (T new-name))
-     (K void-object)))
-   ((E stru new-name)
-    (prm 'mset (T stru) (K off-std-name) (T new-name)))
-   ((P stru new-name)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-name) (T new-name))
-     (K #t))))
-
- (define-primop $set-std-length! unsafe
-   ((V stru new-length)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-length) (T new-length))
-     (K void-object)))
-   ((E stru new-length)
-    (prm 'mset (T stru) (K off-std-length) (T new-length)))
-   ((P stru new-length)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-length) (T new-length))
-     (K #t))))
-
- (define-primop $set-std-fields! unsafe
-   ((V stru new-fields)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-fields) (T new-fields))
-     (K void-object)))
-   ((E stru new-fields)
-    (prm 'mset (T stru) (K off-std-fields) (T new-fields)))
-   ((P stru new-fields)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-fields) (T new-fields))
-     (K #t))))
-
- (define-primop $set-std-printer! unsafe
-   ((V stru new-printer)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-printer) (T new-printer))
-     (K void-object)))
-   ((E stru new-printer)
-    (prm 'mset (T stru) (K off-std-printer) (T new-printer)))
-   ((P stru new-printer)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-printer) (T new-printer))
-     (K #t))))
-
- (define-primop $set-std-symbol! unsafe
-   ((V stru new-symbol)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-symbol) (T new-symbol))
-     (K void-object)))
-   ((E stru new-symbol)
-    (prm 'mset (T stru) (K off-std-symbol) (T new-symbol)))
-   ((P stru new-symbol)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-symbol) (T new-symbol))
-     (K #t))))
-
- (define-primop $set-std-destructor! unsafe
-   ((V stru new-destructor)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-destructor) (T new-destructor))
-     (K void-object)))
-   ((E stru new-destructor)
-    (prm 'mset (T stru) (K off-std-destructor) (T new-destructor)))
-   ((P stru new-destructor)
-    (multiple-forms-sequence
-     (prm 'mset (T stru) (K off-std-destructor) (T new-destructor))
-     (K #t))))
+ ;;NOTE Remember that when mutating a storage location we have to update
+ ;;the dirty  vector; for this reason  we use the MEM-ASSIGN  which does
+ ;;the right thing.  (Marco Maggi; Fri Feb 28, 2014)
+ (let-syntax
+     ((define-std-mutator (syntax-rules ()
+			    ((_ ?who ?off)
+			     (define-primop ?who unsafe
+			       ((V stru v)
+				(multiple-forms-sequence
+				 (mem-assign v (T stru) ?off)
+				 (K void-object)))
+			       ((E stru v)
+				(mem-assign v (T stru) ?off))
+			       ((P stru v)
+				(multiple-forms-sequence
+				 (mem-assign v (T stru) ?off)
+				 (K #t)))
+			       ))
+			    )))
+   (define-std-mutator $set-std-std!		off-std-std)
+   (define-std-mutator $set-std-name!		off-std-name)
+   (define-std-mutator $set-std-length!		off-std-length)
+   (define-std-mutator $set-std-fields!		off-std-fields)
+   (define-std-mutator $set-std-printer!	off-std-printer)
+   (define-std-mutator $set-std-symbol!		off-std-symbol)
+   (define-std-mutator $set-std-destructor!	off-std-destructor)
+   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 

@@ -71,19 +71,7 @@
 		  struct-destructor		struct-length)
     (vicare language-extensions syntaxes)
     (vicare unsafe operations)
-    (except (vicare system $structs)
-	    ;; $std-name
-	    ;; $std-length
-	    ;; $std-fields
-	    ;; $std-printer
-	    ;; $std-symbol
-	    ;; $std-destructor
-	    $set-std-name!
-	    $set-std-length!
-	    $set-std-fields!
-	    $set-std-printer!
-	    $set-std-symbol!
-	    $set-std-destructor!)
+    (vicare system $structs)
     (only (vicare system $symbols)
 	  $set-symbol-value!
 	  $symbol-value))
@@ -142,23 +130,23 @@
 ;;; --------------------------------------------------------------------
 ;;; unsafe STD fields mutators
 
-(define-syntax-rule ($set-std-name! std name)
-  ($struct-set! std 0 name))
+;; (define-syntax-rule ($set-std-name! std name)
+;;   ($struct-set! std 0 name))
 
-(define-syntax-rule ($set-std-length! std n)
-  ($struct-set! std 1 n))
+;; (define-syntax-rule ($set-std-length! std n)
+;;   ($struct-set! std 1 n))
 
-(define-syntax-rule ($set-std-fields! std fields)
-  ($struct-set! std 2 fields))
+;; (define-syntax-rule ($set-std-fields! std fields)
+;;   ($struct-set! std 2 fields))
 
-(define-syntax-rule ($set-std-printer! std printer)
-  ($struct-set! std 3 printer))
+;; (define-syntax-rule ($set-std-printer! std printer)
+;;   ($struct-set! std 3 printer))
 
-(define-syntax-rule ($set-std-symbol! std symbol)
-  ($struct-set! std 4 symbol))
+;; (define-syntax-rule ($set-std-symbol! std symbol)
+;;   ($struct-set! std 4 symbol))
 
-(define-syntax-rule ($set-std-destructor! std destructor-func)
-  ($struct-set! std 5 destructor-func))
+;; (define-syntax-rule ($set-std-destructor! std destructor-func)
+;;   ($struct-set! std 5 destructor-func))
 
 
 ;;;; structure type descriptor

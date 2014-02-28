@@ -421,27 +421,31 @@
   (define-struct alpha
     (a b c))
 
-  (set-rtd-destructor! (type-descriptor alpha)
-		       (lambda (S)
-			 (void)))
+  (define (alpha-destructor S)
+    (display "alpha-destructor\n" stderr)
+    (void))
+
+  (set-rtd-destructor! (type-descriptor alpha) alpha-destructor)
+
+  (debug-print ($std-destructor (type-descriptor alpha)))
 
   (check
       (parametrise ((struct-guardian-logger #t))
-	(let ((S (make-alpha 1 2 3)))
-	  (check-pretty-print S)
-	  (collect)))
+  	(let ((S (make-alpha 1 2 3)))
+  	  (check-pretty-print S)
+  	  (collect)))
     => (void))
 
   (check
       (let ((S (make-alpha 1 2 3)))
-	(check-pretty-print S)
-	(collect))
+  	(check-pretty-print S)
+  	(collect))
     => (void))
 
   (check
       (let ((S (make-alpha 1 2 3)))
-	(check-pretty-print S)
-	(collect))
+  	(check-pretty-print S)
+  	(collect))
     => (void))
 
   (collect))
