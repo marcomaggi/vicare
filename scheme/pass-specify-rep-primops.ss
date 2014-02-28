@@ -3097,7 +3097,13 @@
 
  (define-primop $make-struct unsafe
    ;;Allocate a  new data structure of  type STD capable of  holding LEN
-   ;;words/fields.  The returned struct has the fields uninitialised.
+   ;;words/fields.
+   ;;
+   ;;NOTE This operation initialises only the std field, leaving all the
+   ;;other fields set to a machine word  with all the bits set to 1.  We
+   ;;must be  careful not to  trigger a garbage collection  before those
+   ;;fields are  initialised with  valid values,  else the  behaviour is
+   ;;undefined.
    ;;
    ((V std len)
     (struct-case len
