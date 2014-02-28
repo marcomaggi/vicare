@@ -106,27 +106,6 @@
     ($set-symbol-value! uid std)))
 
 ;;; --------------------------------------------------------------------
-;;; unsafe RTD fields accessors
-
-;; (define-syntax-rule ($std-name std)
-;;   ($struct-ref std 0))
-
-;; (define-syntax-rule ($std-length std)
-;;   ($struct-ref std 1))
-
-;; (define-syntax-rule ($std-fields std)
-;;   ($struct-ref std 2))
-
-;; (define-syntax-rule ($std-printer std)
-;;   ($struct-ref std 3))
-
-;; (define-syntax-rule ($std-symbol std)
-;;   ($struct-ref std 4))
-
-;; (define-syntax-rule ($std-destructor std)
-;;   ($struct-ref std 5))
-
-;;; --------------------------------------------------------------------
 ;;; unsafe STD fields mutators
 
 (define-syntax-rule ($set-std-name! std name)
@@ -184,7 +163,7 @@
   ($struct/rtd? obj (base-rtd)))
 
 (define* (struct-type-name (std struct-type-descriptor?))
-  ;;Return a string represnting the name of structures of type RTD.
+  ;;Return a string representing the name of structures of type RTD.
   ;;
   ($struct-rtd-name std))
 
