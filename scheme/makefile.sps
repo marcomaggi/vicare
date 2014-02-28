@@ -1173,22 +1173,6 @@
     ($set-std-symbol!				$structs)
     ($set-std-destructor!			$structs)
 
-    ($struct-rtd-std				$structs)
-    ($struct-rtd-name				$structs)
-    ($struct-rtd-length				$structs)
-    ($struct-rtd-fields				$structs)
-    ($struct-rtd-printer			$structs)
-    ($struct-rtd-symbol				$structs)
-    ($struct-rtd-destructor			$structs)
-
-    ($set-struct-rtd-std!			$structs)
-    ($set-struct-rtd-name!			$structs)
-    ($set-struct-rtd-length!			$structs)
-    ($set-struct-rtd-fields!			$structs)
-    ($set-struct-rtd-printer!			$structs)
-    ($set-struct-rtd-symbol!			$structs)
-    ($set-struct-rtd-destructor!		$structs)
-
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
     ($pointer?					$pointers)
