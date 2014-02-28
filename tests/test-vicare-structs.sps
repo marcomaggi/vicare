@@ -668,68 +668,112 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      ($struct-rtd-std (struct-type-descriptor alpha))
+      ($std-std (struct-type-descriptor alpha))
     => (base-rtd))
 
   (check
-      ($struct-rtd-name (struct-type-descriptor alpha))
+      ($std-name (struct-type-descriptor alpha))
     => "alpha")
 
   (check
-      ($struct-rtd-length (struct-type-descriptor alpha))
+      ($std-length (struct-type-descriptor alpha))
     => 3)
 
   (check
-      ($struct-rtd-fields (struct-type-descriptor alpha))
+      ($std-fields (struct-type-descriptor alpha))
     => '(a b c))
 
   (check
-      ($struct-rtd-printer (struct-type-descriptor alpha))
+      ($std-printer (struct-type-descriptor alpha))
     => default-struct-printer)
 
   (check
-      (gensym? ($struct-rtd-symbol (struct-type-descriptor alpha)))
+      (gensym? ($std-symbol (struct-type-descriptor alpha)))
     => #t)
 
   (check
-      ($struct-rtd-destructor (struct-type-descriptor alpha))
+      ($std-destructor (struct-type-descriptor alpha))
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      ($struct-rtd-std (struct-type-descriptor beta))
+      ($std-std (struct-type-descriptor beta))
     => (base-rtd))
 
   (check
-      ($struct-rtd-name (struct-type-descriptor beta))
+      ($std-name (struct-type-descriptor beta))
     => "beta")
 
   (check
-      ($struct-rtd-length (struct-type-descriptor beta))
+      ($std-length (struct-type-descriptor beta))
     => 3)
 
   (check
-      ($struct-rtd-fields (struct-type-descriptor beta))
+      ($std-fields (struct-type-descriptor beta))
     => '(a b c))
 
   (check
-      ($struct-rtd-printer (struct-type-descriptor beta))
+      ($std-printer (struct-type-descriptor beta))
     => default-struct-printer)
 
   (check
-      (gensym? ($struct-rtd-symbol (struct-type-descriptor beta)))
+      (gensym? ($std-symbol (struct-type-descriptor beta)))
     => #t)
 
   (check
-      ($struct-rtd-destructor (struct-type-descriptor beta))
+      ($std-destructor (struct-type-descriptor beta))
     => the-beta-destructor)
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-name! std "ciao")
+	($std-name std))
+    => "ciao")
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-length! std 2)
+	($std-length std))
+    => 2)
+
+  (check
+      (let ((std (struct-type-descriptor beta)))
+	($set-std-fields! std '(A B))
+	($std-fields std))
+    => '(A B))
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (fun (lambda args (void))))
+	($set-std-printer! std fun)
+	(eq? fun ($std-printer std)))
+    => #t)
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (fun (lambda args (void))))
+	($set-std-destructor! std fun)
+	(eq? fun ($std-destructor std)))
+    => #t)
+
+  (check
+      (let ((std (struct-type-descriptor beta))
+	    (uid (gensym "uid")))
+	(set-symbol-value! uid std)
+	($set-std-symbol! std uid)
+	(values (eq? uid ($std-symbol std))
+		(eq? std (symbol-value uid))))
+    => #t #t)
 
   #t)
 
 
 ;;;; done
 
+(collect)
 (check-report)
 
 ;;; end of file

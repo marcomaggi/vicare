@@ -428,6 +428,9 @@
 ;;Initialise the fields of the base RTD.
 ($set-std-name!       (base-rtd) "base-rtd")
 ($set-std-fields!     (base-rtd) '(name length fields printer symbol destructor))
+;; (let ((uid (gensym "base-rtd")))
+;;   ($set-std-symbol! (base-rtd) uid)
+;;   ($set-symbol-value! uid (base-rtd)))
 ($set-std-destructor! (base-rtd) #f)
 ($set-std-printer!    (base-rtd) default-struct-printer)
 

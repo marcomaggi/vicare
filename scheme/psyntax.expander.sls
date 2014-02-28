@@ -7318,7 +7318,7 @@
 	  (define-syntax ,type-id (cons '$rtd ',rtd))
 	  (define (,constructor-id ,@field-name-id*)
 	    (let ((S ($struct ',rtd ,@field-name-id*)))
-	      (if ($struct-rtd-destructor ',rtd) #;($std-destructor ',rtd) ;destructor
+	      (if ($std-destructor ',rtd)
 		  ($struct-guardian S)
 		S)))
 	  (define (,predicate-id obj)
