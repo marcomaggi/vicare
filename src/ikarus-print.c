@@ -222,8 +222,11 @@ print_object (FILE* fh, ikptr x, int nested_level)
     }
     fprintf(fh, ")");
   }
+  else if (IK_FORWARD_PTR == x) {
+    fprintf(fh, "#<forward-ptr>");
+  }
   else {
-    fprintf(fh, "#<unknown>");
+    fprintf(fh, "#<unknown 0x%016lx>", x);
   }
 }
 
