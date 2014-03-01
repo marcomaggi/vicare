@@ -36,6 +36,10 @@ config.cache-bare
 configure
 depcomp
 test-driver
+features
+ikarus.config.ss
+bootfileloc.h
+vicare.boot
 doc/mdate-sh
 doc/stamp-vti
 doc/stamp-*

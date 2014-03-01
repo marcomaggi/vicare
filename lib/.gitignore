@@ -1,0 +1,5 @@
+vicare/platform/constants.sls
+vicare/platform/configuration.sls
+vicare/platform/errno.sls
+vicare/platform/words.sls
+nausicaa/uri/pathnames.sls
