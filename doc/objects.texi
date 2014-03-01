@@ -398,7 +398,7 @@ notice how @strong{none} of the tags for reference words is
 @code{#b111}, which is reserved for immediate values; also notice how
 @code{#b100} must @strong{not} be used as tag, because on 32-bit
 platforms it would match the fixnums with the least significant bit set
-to zero.
+to one.
 
 The vector tag is used to tag machine word references to multiple object
 types: vectors, bignums, structures, flonums, ratnums, compnums,
