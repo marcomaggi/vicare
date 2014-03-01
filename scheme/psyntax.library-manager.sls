@@ -86,6 +86,9 @@
   (and (string? obj)
        (not (string-empty? obj))))
 
+(define (false-or-library? obj)
+  (or (not obj) (library? obj)))
+
 (module (%log-library-debug-message)
 
   (define-syntax %log-library-debug-message
@@ -300,7 +303,7 @@
   (and (find-library-in-collection-by-reference libref)
        #t))
 
-(define (find-library-in-collection-by-predicate pred)
+(define* ((find-library-in-collection-by-predicate false-or-library?) (pred procedure?))
   ;;Visit  the current  installed  libraries collection  and return  the
   ;;first for  which PRED returns true.   If PRED returns false  for all
   ;;the entries in the collection: return false.
@@ -342,7 +345,7 @@
     (or (find-library-in-collection-by-reference libref)
 	(%find-and-install-external-library libref)))
 
-  (define (find-library-in-collection-by-reference libref)
+  (define* (find-library-in-collection-by-reference (libref library-reference?))
     (find-library-in-collection-by-predicate (lambda (lib)
 					       (%conforming-identifiers? libref lib))))
 
@@ -474,11 +477,16 @@
   ;;and  it must  return a  thunk as  single value.   When invoked,  the
   ;;returned thunk must return two values:
   ;;
-  ;;1. An input port from which the  library can be read; if the port is
-  ;;   binary: a  compiled library can be  read from it; if  the port is
-  ;;    textual  a   source  library  can  be  read  from   it.   It  is
-  ;;   responsibility of  the caller to close the returned  port when no
-  ;;   more needed.
+  ;;1. Either:
+  ;;
+  ;;   - An input  port from which the library can be  read; if the port
+  ;;     is binary: a compiled library can  be read from it; if the port
+  ;;      is textual  a  source library  can  be read  from  it.  It  is
+  ;;     responsibility of the caller to close the returned port when no
+  ;;     more needed.
+  ;;
+  ;;   - The boolean true.  It means the library has already been loaded
+  ;;     and installed in the collection.
   ;;
   ;;2. A  thunk to be  called to continue the  search; it must  have the
   ;;   same  API of the  thunk returned  by the locator  function.  This
@@ -672,6 +680,17 @@
 		       (begin
 			 (%print-rejected-library port)
 			 (loop further-locator-search)))))
+
+		  ((and (boolean? port)
+			port)
+		   ;;When the  library locator  returns #t:  it declares
+		   ;;that the library has been  loaded and it is already
+		   ;;in  the installed  libraries collection.   So let's
+		   ;;try to retrieve it.
+		   (let ((lib (find-library-in-collection-by-reference libref)))
+		     (if lib
+			 #t
+		       (loop further-locator-search))))
 
 		  ((not port)
 		   ;;No suitable library was found.

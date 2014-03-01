@@ -689,6 +689,9 @@
     ;;   responsibility of the caller to close the returned port when no
     ;;   more needed.
     ;;
+    ;;   -  The boolean  true.  It  means the  library has  already been
+    ;;     loaded and installed in the collection.
+    ;;
     ;;2. A thunk to be called to continue the search.  This thunk allows
     ;;    the caller  to  reject a  library  if it  does  not meet  some
     ;;   additional constraint; for example:  if its version number does
@@ -800,7 +803,7 @@
   ;;
   ;;   move-on-when-open-fails
   ;;
-  ;;When successful the returned thunk return 2 values:
+  ;;When successful the returned thunk returns 2 values:
   ;;
   ;;1. An input port from which the  library can be read; if the port is
   ;;   binary: a  compiled library can be  read from it; if  the port is

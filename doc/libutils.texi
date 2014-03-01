@@ -844,14 +844,24 @@ A list of symbols representing options.
 
 @noindent
 and it must return a thunk as single value.  When invoked, the returned
-thunk must return two values:
+thunk must search for a library conforming to the given reference; if it
+finds one, it must return two values:
 
 @enumerate
+@item
+Either:
+
+@itemize
 @item
 An input port from which the library can be read; if the port is binary:
 a compiled library can be read from it; if the port is textual a source
 library can be read from it.  It is responsibility of the caller to
 close the returned port when no more needed.
+
+@item
+The boolean @true{}.  It means the library has already been loaded and
+added to the internal collection of installed libraries.
+@end itemize
 
 @item
 A thunk to be called to continue the search; it must have the same
