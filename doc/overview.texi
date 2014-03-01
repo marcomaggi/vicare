@@ -83,9 +83,8 @@ virtual address space could be used and unneeded memory is released back
 to the operating system.
 
 @item Supports many operating systems
-@value{PRJNAME} runs on @gnu{}+Linux, but it is possible to port it to
-the most popular and widely used operating systems for servers and
-personal computers.
+@value{PRJNAME} runs on @gnu{}+Linux; it should work on @posix{}
+platforms, but not on Cygwin.
 @end table
 
 @c page
