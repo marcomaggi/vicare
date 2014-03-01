@@ -89,9 +89,9 @@ verify_code_small (char* p, int s IK_UNUSED, unsigned d IK_UNUSED,
 	ik_print(s_code_size);
 	ik_debug_message_no_newline("%s: code object: ", __func__);
 	ik_print(((ikptr)p) | code_primary_tag);
-	ik_debug_message_no_newline("%s: reloc vector ref: 0x%016lx\n", __func__,
+	ik_debug_message_no_newline("%s: code object: reloc vector ref: 0x%016lx\n", __func__,
 				    IK_REF(((ikptr)p), disp_code_reloc_vector));
-	ik_debug_message_no_newline("%s: free vars: 0x%016lx\n", __func__,
+	ik_debug_message_no_newline("%s: code object: free vars: 0x%016lx\n", __func__,
 				    IK_REF(((ikptr)p), disp_code_freevars));
 	ik_abort("integrity check failed");
       }

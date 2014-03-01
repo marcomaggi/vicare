@@ -519,6 +519,12 @@
 	  ((%option= "-nd" "--no-debug")
 	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #f))))
 
+	  ((%option= "--gc-integrity-checks")
+	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_enable_gc_integrity_checks"))))
+
+	  ((%option= "--no-gc-integrity-checks")
+	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_disable_gc_integrity_checks"))))
+
 	  ((%option= "--no-greetings")
 	   (set-run-time-config-no-greetings! cfg #t)
 	   (next-option (cdr args) k))
@@ -929,6 +935,14 @@ Other options:
    -nd
    --no-debug
         Turn off debugging mode.
+
+   --gc-integrity-checks
+        Enable garbage collection integrity checks.  This slows down the
+        garbage collection.
+
+   --no-gc-integrity-checks
+        Disable   garbage   collection integrity   checks.  This  is the
+        default.
 
    --print-loaded-libraries
         Whenever a library file is loaded print a message on the console

@@ -280,6 +280,17 @@ inspection.
 @cindex @option{-nd}, command line option
 Turn off debugging mode.
 
+@item --gc-integrity-checks
+@cindex Command line option @option{--gc-integrity-checks}
+@cindex @option{--gc-integrity-checks}, command line option
+Enable garbage collection integrity checks.  This slows down the garbage
+collection.
+
+@item --no-gc-integrity-checks
+@cindex Command line option @option{--no-gc-integrity-checks}
+@cindex @option{--no-gc-integrity-checks}, command line option
+Disable garbage collection integrity checks.  This is the default.
+
 @item --print-loaded-libraries
 @cindex Command line option @option{--print-loaded-libraries}
 @cindex @option{--print-loaded-libraries}, command line option

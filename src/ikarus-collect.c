@@ -160,6 +160,19 @@ static const unsigned int META_MT[meta_count] = {
   SYMBOLS_MT
 };
 
+/* ------------------------------------------------------------------ */
+
+static int verify_gc_integrity_option = 0;
+
+ikptr
+ikrt_enable_gc_integrity_checks (ikpcb * pcb) {
+  verify_gc_integrity_option = 1;
+}
+ikptr
+ikrt_disable_gc_integrity_checks (ikpcb * pcb) {
+  verify_gc_integrity_option = 0;
+}
+
 
 /** --------------------------------------------------------------------
  ** Helpers.
@@ -299,9 +312,11 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
 
   /* fprintf(stderr, "%s: enter\n", __func__); */
 #if (0 || (defined VICARE_GC_INTEGRITY) || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-  ik_verify_integrity(pcb, "entry");
+  verify_gc_integrity_option = 1;
 #endif
-
+  if (verify_gc_integrity_option) {
+    ik_verify_integrity(pcb, "entry");
+  }
   { /* accounting */
     long bytes = ((long)pcb->allocation_pointer) - ((long)pcb->heap_base);
     register_to_collect_count(pcb, bytes);
@@ -470,9 +485,11 @@ ik_collect (ik_ulong mem_req, ikpcb* pcb)
   } /* Finished allocating a new nursery heap hot block. */
 
 #if (0 || (defined VICARE_GC_INTEGRITY) || (defined VICARE_DEBUGGING) && (defined VICARE_DEBUGGING_GC))
-  ik_verify_integrity(pcb, "exit");
+  verify_gc_integrity_option = 1;
 #endif
-
+  if (verify_gc_integrity_option) {
+    ik_verify_integrity(pcb, "exit");
+  }
   { /* for GC statistics */
     getrusage(RUSAGE_SELF, &t1);
     gettimeofday(&rt1, 0);
