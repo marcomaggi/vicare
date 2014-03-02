@@ -7082,11 +7082,42 @@
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
+  ;;This  macro  is   a  wrapper  for  WITH-SYNTAX   which  defines  the
+  ;;identifiers ?SYMBOL with the same context  of ?CTX.  ?CTX must be an
+  ;;expression evaluating to  an identifier; it is  evaluated only once.
+  ;;?SYMBOL must be Scheme symbols.  For example:
+  ;;
+  ;;   (syntax-case stx ()
+  ;;     ((id)
+  ;;      (identifier? #'id)
+  ;;      (with-implicits ((#'id x y))
+  ;;        #'(list x y))))
+  ;;
+  ;;is equivalent to:
+  ;;
+  ;;   (syntax-case stx ()
+  ;;     ((id)
+  ;;      (identifier? #'id)
+  ;;      (with-syntax ((x (datum->syntax #'id 'x))
+  ;;                    (y (datum->syntax #'id 'y)))
+  ;;        #'(list x y))))
+  ;;
+  ;;NOTE This  macro is  derived from  WITH-IMPLICIT, documented  in the
+  ;;Chez Scheme User's Guide.  The  two macros have different API; where
+  ;;we would use Vicare's variant as:
+  ;;
+  ;;   (with-implicits ((#'id x y))
+  ;;     #'(list x y))
+  ;;
+  ;;we would use Chez's variant as:
+  ;;
+  ;;   (with-implicit ((id x y))
+  ;;     #'(list x y))
+  ;;
   (define (%make-bindings ctx ids)
     (map (lambda (id)
 	   `(,id (datum->syntax ,ctx (quote ,id))))
       ids))
-
   (syntax-match expr-stx ()
 
     ((_ () ?body0 ?body* ...)
@@ -7104,7 +7135,6 @@
      (let ((BINDINGS (%make-bindings ?ctx (cons ?symbol0 ?symbol*))))
        (bless
 	`(with-syntax ,BINDINGS (with-implicits ,?other-clauses ,?body0 . ,?body*)))))
-
     ))
 
 
