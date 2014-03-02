@@ -568,6 +568,7 @@ language is provided in the library @library{rnrs}; the full
 * using libraries filenames::   File names from library references.
 * using libraries paths::       Library search paths.
 * using libraries searching::   Library search algorithms.
+* using libraries compiling::   Compiling libraries in binary format.
 * using libraries examples::    Examples of libraries usage.
 @end menu
 
@@ -1192,6 +1193,308 @@ library is rejected the search goes on with the next directory from
 If no matching @fasl{} file is found or all the binary libraries found
 are rejected: the search fails.
 @end enumerate
+
+@c page
+@node using libraries compiling
+@subsection Compiling libraries in binary format
+
+
+@menu
+* using libraries compiling lib::   Compiling a single library.
+* using libraries compiling deps::  Compiling all the dependencies.
+* using libraries compiling cache:: Caching compiled libraries.
+@end menu
+
+@c page
+@node using libraries compiling lib
+@subsubsection Compiling a single library
+
+
+This library compilation strategy is implemented by a proper execution
+mode of @command{vicare}; in this mode:
+
+@itemize
+@item
+The compile--time library locator is selected, @ref{using libraries
+searching, Compile--time libraries search}.
+
+@item
+A @rnrs{6} library is loaded from an explicitly selected source file,
+compiled, and possibly invoked and visited.
+
+@item
+It is assumed that all the library's dependency libraries are available
+in binary format.
+
+@item
+The loaded library is serialized to a @fasl{} file either in an
+explicitly selected output file or in the selected
+@func{fasl-directory}.
+@end itemize
+
+This execution mode is enabled by the command line option
+@option{--compile-library} of @command{vicare}; when using this mode the
+command line option @option{--cache-compiled-libraries} is
+@strong{ignored}.
+
+Let's say we have the libraries:
+
+@example
+(alpha beta (1 0))
+(alpha gamma (1 2))
+@end example
+
+@noindent
+in the files:
+
+@example
+$(srcdir)/lib/alpha/beta.sls
+$(srcdir)/lib/alpha/gamma.sls
+@end example
+
+@noindent
+we want to compile them to:
+
+@example
+$(builddir)/lib/alpha/beta.fasl
+$(builddir)/lib/alpha/gamma.fasl
+@end example
+
+@noindent
+and @library{alpha gamma (1 2)} imports @library{alpha beta (1 0)}.  We
+have multiple options:
+
+@itemize
+@item
+We explicitly execute (in the correct order) the commands that compile
+one library at a time, explicitly selecting the source and binary file
+pathnames.  First, to compile @library{alpha beta (1 0)}, we do:
+
+@example
+vicare \
+  --compile-library $(srcdir)/lib/alpha/beta.sls \
+  --output $(builddir)/lib/alpha/beta.fasl
+@end example
+
+@noindent
+then, to compile @library{alpha gamma (1 2)}, we do:
+
+@example
+vicare \
+  --fasl-path $(builddir)/lib \
+  --compile-library $(srcdir)/lib/alpha/gamma.sls \
+  --output $(builddir)/lib/alpha/gamma.fasl
+@end example
+
+@item
+We explicitly execute (in the correct order) the commands that compile
+one library at a time, explicitly selecting the output directory for
+@fasl{} files.  First, to compile @library{alpha beta (1 0)}, we do:
+
+@example
+vicare \
+  --fasl-directory $(builddir)/lib \
+  --compile-library $(srcdir)/lib/alpha/beta.sls
+@end example
+
+@noindent
+then, to compile @library{alpha gamma (1 2)}, we do:
+
+@example
+vicare \
+  --fasl-directory $(builddir)/lib \
+  --fasl-path $(builddir)/lib \
+  --compile-library $(srcdir)/lib/alpha/gamma.sls
+@end example
+@end itemize
+
+This compilation strategy is useful when compiling a ``big'' number of
+libraries with a traditional @file{Makefile}:
+
+@itemize
+@item
+It allows compiling only libraries for which the source is newer than
+the binary.
+
+@item
+It allows running the compilation commands in parallel when possible,
+using, for example, the @option{-j} option of @gnu{} Make.
+@end itemize
+
+To use this strategy effectively we need to write all the compilation
+commands, correctly tracking the dependencies; this is tedius, but there
+are ways to automatically generate the needed commands.
+
+@c page
+@node using libraries compiling deps
+@subsubsection Compiling all the dependencies of a program
+
+
+This library compilation strategy is implemented by a proper execution
+mode of @command{vicare}; in this mode:
+
+@itemize
+@item
+The compile--time library locator is selected, @ref{using libraries
+searching, Compile--time libraries search}.
+
+@item
+A @rnrs{6} program is loaded from a file but @strong{not} executed.
+
+@item
+All the program's dependency libraries are loaded, compiled, and
+possibly invoked and visited.
+
+@item
+All the libraries loaded from a source file are serialized to @fasl{}
+files in the selected @func{fasl-directory}; all the libraries loaded
+from a @fasl{} file are left untouched.
+@end itemize
+
+This execution mode is enabled by the command line option
+@option{--compile-dependencies} of @command{vicare}; when using this
+mode the command line options @option{--output} and
+@option{--cache-compiled-libraries} are @strong{ignored}.
+
+Let's say we have the libraries:
+
+@example
+(alpha beta (1 0))
+(alpha gamma (1 2))
+@end example
+
+@noindent
+in the files:
+
+@example
+$(srcdir)/lib/alpha/beta.sls
+$(srcdir)/lib/alpha/gamma.sls
+@end example
+
+@noindent
+and we want to compile them to:
+
+@example
+$(builddir)/lib/alpha/beta.fasl
+$(builddir)/lib/alpha/gamma.fasl
+@end example
+
+@noindent
+we prepare a Scheme script for this purpose, containing the required
+@func{import} forms:
+
+@example
+;; compile-all.sps --
+;;
+
+(import (only (alpha beta))
+        (only (alpha beta)))
+
+;;; end of file
+@end example
+
+@noindent
+and we execute it as follows:
+
+@example
+vicare \
+   --search-path $(srcdir)/lib \
+   --fasl-directory $(builddir)/lib \
+   --compile-dependencies compile-all.sps
+@end example
+
+If a selected library depends on the other selected library:
+@value{PRJNAME} will automatically take care of generating the
+appropriate binary formats.  If a selected library depends on other
+libraries, not explicitly selected by the script: @value{PRJNAME} will
+automatically take care of generating the appropriate binary formats and
+@fasl{} files in the selected @func{fasl-directory}.
+
+@c page
+@node using libraries compiling cache
+@subsubsection Caching compiled libraries
+
+
+This library compilation strategy is enabled by a command line option
+that does not interfere with the execution modes of @command{vicare}.
+Caching of compiled libraries is off by default; it is enabled by the
+command line option @option{--cache-compiled-libraries}.  With this
+strategy:
+
+@enumerate
+@item
+We install in binary form the libraries that we know will not need to be
+recompiled because of dependencies violations.  The libraries bundled
+with @value{PRJNAME}'s distribution fall in this category: they need to
+be recompiled only when @value{PRJNAME}'s boot image is rebuilt.
+
+@item
+We install in source form the libraries that we know will need to be
+recompiled because of dependencies violations.  All the libraries from
+extensions and third party distributions fall in this category.
+
+@item
+We select a directory to be used as cache for compiled libraries and set
+it as @func{fasl-directory}; by default it is:
+
+@example
+~/.vicare/precompiled
+@end example
+
+@item
+If we install the source libraries in the directories:
+
+@example
+/usr/local/lib/vicare-scheme
+/usr/lib/vicare-scheme
+@end example
+
+@noindent
+we take care of adding these directories to the library search path, and
+the corresponding cache subdirectories to the @fasl{} search path.  For
+example we can use the command line arguments:
+
+@example
+CACHE=~/.vicare/precompiled
+
+vicare \
+   --cache-compiled-libraries \
+   --search-path=/usr/local/lib/vicare-scheme \
+   --search-path=/usr/lib/vicare-scheme \
+   --fasl-path=$CACHE/usr/local/lib/vicare-scheme \
+   --fasl-path=$CACHE/usr/lib/vicare-scheme
+@end example
+
+@item
+We run programs that load libraries.  When executing a program with the
+run--time library locator, the first time:
+
+@enumerate A
+@item
+@value{PRJNAME} will search binary libraries in the @fasl{} search path;
+the cache directories come first, then come the common installation
+directories.
+
+@item
+If a binary library is not found: @value{PRJNAME} will search source
+files in the library search path, load them, compile them, and serialize
+them in the cache; a @fasl{} file for each source file.
+@end enumerate
+
+@noindent
+the second time: @value{PRJNAME} will find the compiled libraries in the
+cache, so it will avoid scanning the source library search path.
+
+@item
+Whenever we reinstall a source library: we have to take care of cleaning
+the corresponding cache directory, so the library will be recompiled and
+cached.  Cleaning the cache is a significant problem.
+@end enumerate
+
+Caching is disabled when the option @option{--compile-dependencies} or
+@option{--compile-library} is used.  When using this strategy the
+command line option @option{--output} is @strong{ignored} for the
+purpose of building the @fasl{} file pathnames.
 
 @c page
 @node using libraries examples

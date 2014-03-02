@@ -1453,10 +1453,12 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	    load.compile-time-library-locator)
 	   (else
 	    load.run-time-library-locator)))
-    ;;When  the execution  mode  is "compile  library dependencies":  we
-    ;;disable caching compiled libraries  loaded in source form; because
-    ;;these two options would to the same thing.
-    (when (eq? cfg.exec-mode 'compile-dependencies)
+    ;;When  the  execution mode  is  "compile  library dependencies"  or
+    ;;"compile  this library":  we  disable  caching compiled  libraries
+    ;;loaded in  source form; because  these options have  different and
+    ;;incompatible  ways  to produce  FASL  file  pathnames from  source
+    ;;libraries.
+    (when (memq cfg.exec-mode '(compile-dependencies compile-library))
       (option.cache-compiled-libraries #f))
     (load-rc-files-as-r6rs-scripts cfg)
     (execution-state-initialisation-according-to-command-line-options)
