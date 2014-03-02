@@ -59,8 +59,8 @@
     current-binary-library-file-locator
     current-binary-library-loader
     failed-library-location-collector
-
     current-source-library-loader-by-filename
+    current-library-record-serializer
 
     ;; library locator options
     library-locator-options-no-raise-when-open-fails?
@@ -92,7 +92,7 @@
 (module (%log-library-debug-message)
 
   (define-syntax %log-library-debug-message
-    (if (options.verbose-about-libraries?)
+    (if (option.verbose-about-libraries?)
 	(syntax-rules ()
 	  ((_ ?template ?arg ...)
 	   (%logger ?template ?arg ...)))
@@ -537,7 +537,8 @@
 
 (define current-source-library-file-locator
   ;;Hold a  function used to convert  a R6RS library reference  into the
-  ;;corresponding source file pathname.
+  ;;corresponding source file pathname and  search for it in the library
+  ;;search path.
   ;;
   ;;The referenced function must accept, as single value, a R6RS library
   ;;reference and it must return  two values.  When successful: a string
@@ -553,11 +554,17 @@
       obj)))
 
 (define current-source-library-loader
-  ;;Hold a function used to laod a library from a source file.
+  ;;Hold a function used to laod a library from a textual input port.
   ;;
-  ;;The  referenced function  must:  accept a  string  file pathname  as
-  ;;single  argument,  open the  pathname  for  input using  the  native
-  ;;transcoder, read the first datum, close the port, return the datum.
+  ;;The referenced  function must accept  two arguments: a  R6RS library
+  ;;reference, a textual input port from which the source library can be
+  ;;read.  It  must: read from  the port a LIBRARY  symbolic expression;
+  ;;verify that its library name conforms to the library reference; load
+  ;;and install  all its  dependency libraries;  expand it;  compile it;
+  ;;install it.
+  ;;
+  ;;If successful the function must  return a sexp representing the R6RS
+  ;;library name of the loaded library; otherwise return false.
   ;;
   (make-parameter
       (lambda (filename)
@@ -570,7 +577,8 @@
 
 (define current-binary-library-file-locator
   ;;Hold a  function used to convert  a R6RS library reference  into the
-  ;;corresponding FASL file pathname.
+  ;;corresponding  FASL file  pathname and  search  for it  in the  FASL
+  ;;search path.
   ;;
   ;;The referenced function must accept, as single value, a R6RS library
   ;;reference and it must return  two values.  When successful: a string
@@ -586,17 +594,16 @@
       obj)))
 
 (define current-binary-library-loader
-  ;;Hold a function used to load a precompiled library.
+  ;;Hold a function used to load a serialized library.
   ;;
-  ;;The  referenced   function  must   accept  2  arguments:   a  string
-  ;;representing  the  pathname of  the  file  from which  a  serialized
-  ;;library can be  read; a continuation function to  be called whenever
-  ;;loading the precompiled file succeeds.
+  ;;The referenced  function must accept  two arguments: a  R6RS library
+  ;;reference, a binary input port from which the serialized library can
+  ;;be read.  It  must: read from the port a  serialized library; verify
+  ;;that its library name conforms  to the library reference; install it
+  ;;(and all its dependency libraries).
   ;;
-  ;;The success continuation must return true if loading the precompiled
-  ;;library succeeds, otherwise it must  return false.  For more details
-  ;;on       the      success       continuation      function       see
-  ;;%INSTALL-PRECOMPILED-LIBRARY-AND-ITS-DEPENCENCIES.
+  ;;If successful the function must  return a sexp representing the R6RS
+  ;;library name of the installed library; otherwise return false.
   ;;
   (make-parameter
       (lambda (pathname success-kont)
@@ -645,20 +652,20 @@
 		   ;;A binary location was found.   We can read the binary
 		   ;;library from PORT.
 		   (%print-loading-library port)
-		   (let ((rv (unwind-protect
-				 ((current-binary-library-loader) libref port)
-			       (close-input-port port))))
-		     (if rv
-			 ;;Success.  The library  and all its dependencies
-			 ;;have been successfully loaded and installed.
-			 (begin
-			   (%print-loaded-library port)
-			   #t)
-		       ;;Failure.   The library  read from  port has  been
-		       ;;rejected; try to go on with the search.
-		       (begin
-			 (%print-rejected-library port)
-			 (loop further-locator-search)))))
+		   (cond ((unwind-protect
+			      ((current-binary-library-loader) libref port)
+			    (close-input-port port))
+			  ;;Success.    The   library    and   all   its
+			  ;;dependencies  have been  successfully loaded
+			  ;;and installed.
+			  => (lambda (libname)
+			       (%print-loaded-library port)
+			       #t))
+			 (else
+			  ;;Failure.   The library  read  from port  has
+			  ;;been rejected; try to go on with the search.
+			  (%print-rejected-library port)
+			  (loop further-locator-search))))
 
 		  ((textual-port? port)
 		   ;;A source location was found.   We can read the source
@@ -666,20 +673,22 @@
 		   ;;function PORT-ID to PROT  will return the source file
 		   ;;name.
 		   (%print-loading-library port)
-		   (let ((rv (unwind-protect
-				 ((current-source-library-loader) libref port)
-			       (close-input-port port))))
-		     (if rv
-			 ;;Success.  The library  and all its dependencies
-			 ;;have been successfully loaded and installed.
-			 (begin
-			   (%print-loaded-library port)
-			   #t)
-		       ;;Failure.   The library  read from  port has  been
-		       ;;rejected; try to go on with the search.
-		       (begin
-			 (%print-rejected-library port)
-			 (loop further-locator-search)))))
+		   (cond ((unwind-protect
+			      ((current-source-library-loader) libref port)
+			    (close-input-port port))
+			  ;;Success.    The   library    and   all   its
+			  ;;dependencies  have been  successfully loaded
+			  ;;and installed.
+			  => (lambda (libname)
+			       (when (option.cache-compiled-libraries)
+				 ((current-library-record-serializer) (find-library-by-name libname)))
+			       (%print-loaded-library port)
+			       #t))
+			 ;;Failure.  The library read from port has been
+			 ;;rejected; try to go on with the search.
+			 (else
+			  (%print-rejected-library port)
+			  (loop further-locator-search))))
 
 		  ((and (boolean? port)
 			port)
@@ -709,7 +718,7 @@
     (define (%print-rejected-library port)  (%log-loaded-library "rejected: ~a" (port-id port)))
 
     (define (%log-loaded-library template . args)
-      (when (options.print-loaded-libraries)
+      (when (option.print-loaded-libraries)
 	(guard (E (else
 		   ;;We do not  want an exception from the  I/O layer to
 		   ;;ruin things.
@@ -798,11 +807,29 @@
 
 ;;;; serializing precompiled libraries
 
+(define current-library-record-serializer
+  ;;References a  function used to serialize  in a FASL file  a compiled
+  ;;library loaded from a source file.
+  ;;
+  ;;The  referenced function  must accept  1 or  2 arguments:  a library
+  ;;record and  an optional string  file pathname representing  the FASL
+  ;;pathname; it  can return unspecified  values; if an error  occurs it
+  ;;must raise  an exception.  Only  libraries loaded form  source files
+  ;;are serialized:  if the given library  was loaded from a  FASL file:
+  ;;nothing  happens.  When  the FASL  pathname is  not given  or it  is
+  ;;false: a binary pathname is automatically built.
+  ;;
+  (make-parameter
+      (lambda (lib)
+        (assertion-violation 'current-library-record-serializer "not initialized"))
+    (lambda* ((obj procedure?))
+      obj)))
+
 (define (serialize-collected-libraries serialize compile)
   ;;Traverse  the  current collection  of  libraries  and serialize  the
   ;;contents  of all  the  LIBRARY  records having  a  source file  (the
   ;;records that do not have a source file represent the libraries built
-  ;;in the boot image).
+  ;;in the boot image).  Return unspecified values.
   ;;
   ;;"Serializing"  means to  write the  precompiled contents  in a  FASL
   ;;file.
@@ -816,7 +843,8 @@
     ((current-library-collection))))
 
 (define* (serialize-library (lib library?) (serialize procedure?) (compile procedure?))
-  ;;Compile and serialize the given library record.
+  ;;Compile and serialize the  given library record.  Return unspecified
+  ;;values.
   ;;
   ;;NOTE We  do *not* write the  source file pathname to  the FASL file.
   ;;When, later, the FASL file will  be loaded and the library installed

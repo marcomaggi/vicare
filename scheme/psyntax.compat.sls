@@ -48,11 +48,12 @@
     eval-core
 
     ;; runtime options
-    options.verbose-about-libraries?
-    options.strict-r6rs
-    options.enable-arguments-validation?
-    options.descriptive-labels
-    options.print-loaded-libraries
+    option.verbose-about-libraries?
+    option.strict-r6rs
+    option.enable-arguments-validation?
+    option.descriptive-labels
+    option.print-loaded-libraries
+    option.cache-compiled-libraries
 
     ;; interpreting the result of reading annotated sources
     annotation?				annotation-expression
@@ -116,10 +117,11 @@
 			  strict-r6rs
 			  descriptive-labels
 			  print-loaded-libraries
+			  cache-compiled-libraries
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
-	    options.)
+	    option.)
     (ikarus library-utils)
     (only (ikarus.posix)
 	  ;;This is used by INCLUDE to register the modification time of
@@ -141,14 +143,14 @@
 
 
 (define (library-version-mismatch-warning name depname filename)
-  (when (options.verbose?)
+  (when (option.verbose?)
     (fprintf (current-error-port)
 	     "*** Vicare warning: library ~s has an inconsistent dependency \
               on library ~s; file ~s will be recompiled from source.\n"
 	     name depname filename)))
 
 (define (library-stale-warning name filename)
-  (when (options.verbose?)
+  (when (option.verbose?)
     (fprintf (current-error-port)
 	     "*** Vicare warning: library ~s is stale; file ~s will be \
               recompiled from source.\n"

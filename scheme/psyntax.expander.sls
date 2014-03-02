@@ -2856,7 +2856,7 @@
 	   (and (eq? (syntax->datum ?prefix) 'prefix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-prefix))
-	   (if (options.strict-r6rs)
+	   (if (option.strict-r6rs)
 	       (%synner "prefix export specification forbidden in strict R6RS mode")
 	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
 		    (external*  (map (lambda (id)
@@ -2874,7 +2874,7 @@
 	   (and (eq? (syntax->datum ?deprefix) 'deprefix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-prefix))
-	   (if (options.strict-r6rs)
+	   (if (option.strict-r6rs)
 	       (%synner "deprefix export specification forbidden in strict R6RS mode")
 	     (let* ((prefix.str (symbol->string (syntax->datum ?the-prefix)))
 		    (prefix.len (string-length prefix.str))
@@ -2900,7 +2900,7 @@
 	   (and (eq? (syntax->datum ?suffix) 'suffix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-suffix))
-	   (if (options.strict-r6rs)
+	   (if (option.strict-r6rs)
 	       (%synner "suffix export specification forbidden in strict R6RS mode")
 	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
 		    (external*  (map (lambda (id)
@@ -2918,7 +2918,7 @@
 	   (and (eq? (syntax->datum ?desuffix) 'desuffix)
 		(for-all identifier? ?internal*)
 		(identifier? ?the-suffix))
-	   (if (options.strict-r6rs)
+	   (if (option.strict-r6rs)
 	       (%synner "desuffix export specification forbidden in strict R6RS mode")
 	     (let* ((suffix.str (symbol->string (syntax->datum ?the-suffix)))
 		    (suffix.len (string-length suffix.str))
@@ -3190,7 +3190,7 @@
 	((?deprefix ?import-set ?the-prefix)
 	 (and (eq? (syntax->datum ?deprefix) 'deprefix)
 	      (id-stx? ?the-prefix))
-	 (if (options.strict-r6rs)
+	 (if (option.strict-r6rs)
 	     (%local-synner "deprefix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
 		  (prefix.str  (symbol->string (syntax->datum ?the-prefix)))
@@ -3213,7 +3213,7 @@
 	((?suffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?suffix) 'suffix)
 	      (id-stx? ?suffix))
-	 (if (options.strict-r6rs)
+	 (if (option.strict-r6rs)
 	     (%local-synner "suffix import specification forbidden in strict R6RS mode")
 	   (let ((subst   (%recurse ?import-set))
 		 (suffix  (symbol->string (syntax->datum ?the-suffix))))
@@ -3226,7 +3226,7 @@
 	((?desuffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?desuffix) 'desuffix)
 	      (id-stx? ?the-suffix))
-	 (if (options.strict-r6rs)
+	 (if (option.strict-r6rs)
 	     (%local-synner "desuffix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
 		  (suffix.str  (symbol->string (syntax->datum ?the-suffix)))
@@ -6363,7 +6363,7 @@
   (define (%build-one clause-stx k)
     (syntax-match clause-stx (=>)
       (((?datum* ...) => ?expr)
-       (if (options.strict-r6rs)
+       (if (option.strict-r6rs)
 	   (syntax-violation 'case
 	     "invalid usage of auxiliary keyword => in strict R6RS mode"
 	     clause-stx)
@@ -6414,7 +6414,7 @@
   (define (%build-one expr-stx clause-stx kont)
     (syntax-match clause-stx (=>)
       (((?datum* ...) => ?proc)
-       (if (options.strict-r6rs)
+       (if (option.strict-r6rs)
 	   (syntax-violation __who__
 	     "invalid usage of auxiliary keyword => in strict R6RS mode"
 	     clause-stx)
@@ -6552,7 +6552,7 @@
 		(cons (syntax ,foo-rtd)
 		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
 
-	. ,(if (options.strict-r6rs)
+	. ,(if (option.strict-r6rs)
 	       '()
 	     (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
 						unsafe-foo-x*      idx*
@@ -6864,7 +6864,7 @@
       (define foo-fields-unsafe-mutators-table
 	(%make-alist mutable-field-names unsafe-set-foo-x!*))
 
-      (if (options.strict-r6rs)
+      (if (option.strict-r6rs)
 	  (make-r6rs-record-type-spec foo-fields-safe-accessors-table
 				      foo-fields-safe-mutators-table
 				      #f #f)
@@ -8363,7 +8363,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%make-arg-validation-forms arg-validation-spec* synner)
-    (if (options.enable-arguments-validation?)
+    (if (option.enable-arguments-validation?)
 	(map (lambda (spec)
 	       (let ((?arg-expr (argument-validation-spec-expr   spec))
 		     (?arg-id   (argument-validation-spec-arg-id spec)))
@@ -8375,7 +8375,7 @@
       '()))
 
   (define (%make-ret-validation-form retval-validation-spec* synner)
-    (if (options.enable-arguments-validation?)
+    (if (option.enable-arguments-validation?)
 	`(begin
 	   ,@(map (lambda (spec)
 		    (let ((?pred (retval-validation-spec-pred  spec))

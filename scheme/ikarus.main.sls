@@ -57,10 +57,11 @@
     (prefix (only (vicare options)
 		  verbose?
 		  print-loaded-libraries
+		  cache-compiled-libraries
 		  report-errors-at-runtime
 		  strict-r6rs
 		  descriptive-labels)
-	    options.)
+	    option.)
     (prefix (only (ikarus.compiler)
 		  $optimize-level
 		  $generate-debug-calls
@@ -547,44 +548,52 @@
 	   (set-run-time-config-raw-repl! cfg #t)
 	   (next-option (cdr args) k))
 
+	  ((%option= "--cache-compiled-libraries")
+	   (option.cache-compiled-libraries #t)
+	   (next-option (cdr args) k))
+
+	  ((%option= "--no-cache-compiled-libraries")
+	   (option.cache-compiled-libraries #f)
+	   (next-option (cdr args) k))
+
 	  ((%option= "--print-loaded-libraries")
-	   (options.print-loaded-libraries #t)
+	   (option.print-loaded-libraries #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-print-loaded-libraries")
-	   (options.print-loaded-libraries #f)
+	   (option.print-loaded-libraries #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--verbose")
-	   (options.verbose? #t)
+	   (option.verbose? #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--silent")
-	   (options.verbose? #f)
+	   (option.verbose? #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--report-errors-at-runtime")
-	   (options.report-errors-at-runtime #t)
+	   (option.report-errors-at-runtime #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-report-errors-at-runtime")
-	   (options.report-errors-at-runtime #f)
+	   (option.report-errors-at-runtime #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--strict-r6rs")
-	   (options.strict-r6rs #t)
+	   (option.strict-r6rs #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-strict-r6rs")
-	   (options.strict-r6rs #f)
+	   (option.strict-r6rs #f)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--descriptive-labels")
-	   (options.descriptive-labels #t)
+	   (option.descriptive-labels #t)
 	   (next-option (cdr args) k))
 
 	  ((%option= "--no-descriptive-labels")
-	   (options.descriptive-labels #f)
+	   (option.descriptive-labels #f)
 	   (next-option (cdr args) k))
 
 ;;; --------------------------------------------------------------------
@@ -943,6 +952,13 @@ Other options:
    --no-gc-integrity-checks
         Disable   garbage   collection integrity   checks.  This  is the
         default.
+
+   --cache-compiled-libraries
+        Whenever a  library file is  loaded in source  form: compile and
+        serialize it in a FASL file in the selected FASL directory.
+
+   --no-cache-compiled-libraries
+        Disables the effect of --cache-compiled-libraries.
 
    --print-loaded-libraries
         Whenever a library file is loaded print a message on the console
@@ -1437,6 +1453,11 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
 	    load.compile-time-library-locator)
 	   (else
 	    load.run-time-library-locator)))
+    ;;When  the execution  mode  is "compile  library dependencies":  we
+    ;;disable caching compiled libraries  loaded in source form; because
+    ;;these two options would to the same thing.
+    (when (eq? cfg.exec-mode 'compile-dependencies)
+      (option.cache-compiled-libraries #f))
     (load-rc-files-as-r6rs-scripts cfg)
     (execution-state-initialisation-according-to-command-line-options)
 

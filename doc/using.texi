@@ -291,6 +291,18 @@ collection.
 @cindex @option{--no-gc-integrity-checks}, command line option
 Disable garbage collection integrity checks.  This is the default.
 
+@item --cache-compiled-libraries
+@cindex Command line option @option{--cache-compiled-libraries}
+@cindex @option{--cache-compiled-libraries}, command line option
+Whenever a library file is loaded in source form: compile and serialize
+it in a @fasl{} file in the selected @fasl{} directory.  This option is
+ignored when the execution mode is @option{--compile-dependencies}.
+
+@item --no-cache-compiled-libraries
+@cindex Command line option @option{--no-cache-compiled-libraries}
+@cindex @option{--no-cache-compiled-libraries}, command line option
+Disables the effect of @option{--cache-compiled-libraries}.
+
 @item --print-loaded-libraries
 @cindex Command line option @option{--print-loaded-libraries}
 @cindex @option{--print-loaded-libraries}, command line option
@@ -757,6 +769,7 @@ unique component: when building the file stem such component is
 @cindex Source library source path
 @cindex @fasl{} file source path
 @cindex @func{library-path}
+@cindex @func{fasl-directory}
 @cindex @func{fasl-search-path}
 @cindex @env{VICARE_LIBRARY_PATH}, system environment variable
 @cindex @env{VICARE_FASL_PATH}, system environment variable
@@ -921,7 +934,7 @@ The parameter @func{fasl-search-path} is initialised as follows:
 @item
 At the beginning of execution @value{PRJNAME} consults the system
 environment variable @env{VICARE_FASL_DIRECTORY}; when set, it is
-expected to hold a a directory pathname.  Such pathname is stored in
+expected to hold a directory pathname.  Such pathname is stored in
 @func{fasl-directory}.
 
 @item
@@ -941,8 +954,14 @@ and be set to a string representing a directory pathname.
 If the system environment variable @env{VICARE_FASL_DIRECTORY} is unset
 or set to an empty or invalid string and it is not possible to build a
 valid pathname for @file{~/.vicare/precompiled}: @func{fasl-directory}
-is set to the dot pathname, which represents the current working
-directory.
+is set to the fallback directory:
+
+@example
+/tmp/vicare/precompiled
+@end example
+
+@noindent
+which is probably not what we want.
 
 @item
 If the option @option{--fasl-directory} is present on the command line:

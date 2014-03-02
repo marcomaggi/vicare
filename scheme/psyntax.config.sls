@@ -31,7 +31,7 @@
     base-of-interaction-library)
   (import (rnrs)
     (only (psyntax compat)
-	  options.descriptive-labels))
+	  option.descriptive-labels))
 
 
 (define (base-of-interaction-library)
@@ -92,7 +92,7 @@
 (define-syntax if-wants-descriptive-gensyms
   (syntax-rules ()
     ((_ ?success-kont ?failure-kont)
-     (if (options.descriptive-labels)
+     (if (option.descriptive-labels)
 	 ?success-kont
        ?failure-kont))
     ))

@@ -18,6 +18,7 @@
 (library (ikarus load)
   (export
     load-and-serialize-source-library
+    serialize-library-record
     run-time-library-locator
     compile-time-library-locator
     source-library-locator
@@ -50,8 +51,10 @@
     (only (vicare.foreign-libraries)
 	  retrieve-filename-foreign-libraries)
     (only (psyntax library-manager)
-	  find-library-by-name
+	  library?
 	  library-name
+	  library-source-file-name
+	  find-library-by-name
 	  current-library-collection
 	  current-source-library-file-locator
 	  current-source-library-loader
@@ -64,6 +67,7 @@
 	  serialize-collected-libraries
 	  serialize-library
 	  current-source-library-loader-by-filename
+	  current-library-record-serializer
 	  current-include-file-locator
 	  current-include-file-loader
 	  source-code-location
@@ -202,6 +206,49 @@
   #| end of module: LIBRARY-REFERENCE->FILENAME-STEM |# )
 
 
+;;;; converting source pathnames to binary pathnames
+
+(module SOURCE-PATHNAME->BINARY-PATHNAME
+  (source-pathname->binary-pathname)
+
+  (define* (source-pathname->binary-pathname (source-pathname posix.file-string-pathname?))
+    (define (%error ptn)
+      (assertion-violation __who__
+	"unable to build valid FASL file pathname from source pathname"
+	source-pathname ptn))
+    (let ((ptn (cond ((%string-suffix? source-pathname ".vicare.sls")
+		      (%desuffix       source-pathname ".vicare.sls"))
+		     ((%string-suffix? source-pathname ".sls")
+		      (%desuffix       source-pathname ".sls"))
+		     ((%string-suffix? source-pathname ".vicare.ss")
+		      (%desuffix       source-pathname ".vicare.ss"))
+		     ((%string-suffix? source-pathname ".ss")
+		      (%desuffix       source-pathname ".ss"))
+		     ((%string-suffix? source-pathname ".vicare.scm")
+		      (%desuffix       source-pathname ".vicare.scm"))
+		     ((%string-suffix? source-pathname ".scm")
+		      (%desuffix       source-pathname ".scm"))
+		     (else
+		      source-pathname))))
+      (if (posix.file-string-pathname? ptn)
+	  (let ((binary-pathname (string-append (fasl-directory) "/" ptn ".fasl")))
+	    (if (posix.file-string-pathname? binary-pathname)
+		binary-pathname
+	      (%error binary-pathname)))
+	(%error ptn))))
+
+  (define (%string-suffix? str suffix)
+    (let ((str.len    (string-length str))
+	  (suffix.len (string-length suffix)))
+      (and (fx< suffix.len str.len)
+	   (string=? suffix (substring str (fx- str.len suffix.len) str.len)))))
+
+  (define (%desuffix str suffix)
+    (substring str 0 (fx- (string-length str) (string-length suffix))))
+
+  #| end of module |# )
+
+
 ;;;; locating serialized libraries stored in FASL files
 
 (module (default-binary-library-file-locator
@@ -238,8 +285,9 @@
     ;;   ~/.vicare/precompiled
     ;;
     ;;if  it is  possible  to determine  the value  of  the user's  home
-    ;;directory; otherwise it is initialised  to ".", which will put the
-    ;;new files in the current working directory.
+    ;;directory;      otherwise      it      is      initialised      to:
+    ;;
+    ;;   /tmp/vicare/precompiled
     ;;
     (let ((P (posix.getenv "VICARE_FASL_DIRECTORY")))
       (if (%existent-directory-pathname? P)
@@ -247,7 +295,7 @@
 	(let ((P (posix.getenv "HOME")))
 	  (if (%existent-directory-pathname? P)
 	      (string-append (posix.real-pathname P) "/.vicare/precompiled")
-	    ".")))))
+	    "/tmp/vicare/precompiled")))))
 
   (define fasl-directory
     ;;The directory under which serialised FASL files must be saved.  It
@@ -891,17 +939,7 @@
 	  ((current-library-expander) library-sexp source-pathname (lambda (libname) (void)))
 	(find-library-by-name libname))))
   (when lib
-    (let ()
-      (define binary-pathname^
-	(or binary-pathname (fasl-path (library-name lib))))
-      (%print-verbose-message "serializing library: ~a\n" binary-pathname^)
-      (%log-library-debug-message "~a: serializing library: ~a" __who__ source-pathname)
-      (serialize-library lib
-			 (lambda (source-pathname libname contents)
-			   (store-serialized-library binary-pathname^ source-pathname
-						     libname contents))
-			 (lambda (core-expr)
-			   (compile-core-expr core-expr))))))
+    (serialize-library-record lib binary-pathname)))
 
 
 ;;;; loading libraries from source
@@ -988,6 +1026,38 @@
 
 ;;;; loading and storing precompiled library files
 
+(case-define* serialize-library-record
+  ;;This   function   is   the   default   value   for   the   parameter
+  ;;CURRENT-LIBRARY-RECORD-SERIALIZER.
+  ;;
+  ;;Given an already installed LIBRARY  record and an optional FASL file
+  ;;pathname: serialize  the compiled  library in  a FASL  file.  Return
+  ;;unspecified  values.  Only  libraries loaded  form source  files are
+  ;;serialized:  if a  library  was  loaded from  a  FASL file:  nothing
+  ;;happens.   If a  FASL file  already exists  for the  library: it  is
+  ;;silently overwritten.
+  ;;
+  ;;When  the binary  pathname is  not given  or it  is false:  a binary
+  ;;pathname is built from the source pathname FASL-DIRECTORY as prefix.
+  ;;
+  (((lib library?))
+   (serialize-library-record lib #f))
+  (((lib library?) (binary-pathname false-or-file-string-pathname?))
+   (cond ((library-source-file-name lib)
+	  => (lambda (source-pathname)
+	       (define binary-pathname^
+		 (or binary-pathname (let ()
+				       (import SOURCE-PATHNAME->BINARY-PATHNAME)
+				       (source-pathname->binary-pathname source-pathname))))
+	       (%print-verbose-message "serializing library: ~a\n" binary-pathname^)
+	       (%log-library-debug-message "~a: serializing library: ~a" __who__ source-pathname)
+	       (serialize-library lib
+				  (lambda (source-pathname libname contents)
+				    (store-serialized-library binary-pathname^ source-pathname
+							      libname contents))
+				  (lambda (core-expr)
+				    (compile-core-expr core-expr))))))))
+
 (module (load-serialized-library
 	 store-serialized-library)
 
@@ -1022,7 +1092,7 @@
   (define (store-serialized-library fasl-pathname source-pathname libname contents)
     ;;Given the  FASL pathname of  a compiled library to  be serialized:
     ;;store the CONTENTS into it, creating  a new file or overwriting an
-    ;;existing one.
+    ;;existing one.  Return unspecified values.
     ;;
     ;;FASL-PATHNAME must  be a string  representing the pathname  of the
     ;;binary library FASL file.
@@ -1101,6 +1171,8 @@
 
 (current-binary-library-file-locator	default-binary-library-file-locator)
 (current-binary-library-loader		default-binary-library-loader)
+
+(current-library-record-serializer	serialize-library-record)
 
 (current-include-file-locator		locate-include-file)
 (current-include-file-loader		read-include-file)
