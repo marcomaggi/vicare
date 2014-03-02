@@ -167,10 +167,12 @@ static int verify_gc_integrity_option = 0;
 ikptr
 ikrt_enable_gc_integrity_checks (ikpcb * pcb) {
   verify_gc_integrity_option = 1;
+  return IK_VOID;
 }
 ikptr
 ikrt_disable_gc_integrity_checks (ikpcb * pcb) {
   verify_gc_integrity_option = 0;
+  return IK_VOID;
 }
 
 
