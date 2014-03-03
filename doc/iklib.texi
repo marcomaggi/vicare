@@ -1798,6 +1798,19 @@ Expand to @false{} or a number representing the line number.
 @end deffn
 
 
+@deffn {Fluid Syntax} brace
+A fluid syntax which is free to be bound to whatever user code needs.
+When the Scheme code reader is in @code{#!vicare} mode: brace lists are
+read as @func{brace} forms as follows:
+
+@example
+@{@}              @expansion{} (brace)
+@{1 2 3@}         @expansion{} (brace 1 2 3)
+@{1 . 2@}         @expansion{} (brace 1 . 2)
+@end example
+@end deffn
+
+
 @deffn Syntax begin-for-syntax @metao{body} @meta{body} @dots{}
 @deffnx Syntax eval-for-expand @metao{body} @meta{body} @dots{}
 Evaluate the @meta{body} forms at expand time; these syntaxes count as
@@ -2750,6 +2763,9 @@ Special symbols: @code{++}, @code{--}.
 @item
 Special symbols beginning with @code{+g} and @code{-g}, to allow reading
 symbols starting with @code{+greek-pi} and @code{-greek-pi}.
+
+@item
+Brace lists @code{@{ ... @}} are read as @code{(brace ...)}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,

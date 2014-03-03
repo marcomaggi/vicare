@@ -436,6 +436,15 @@ Lots of backwards incompatibilities... life is hard!
      (vicare language-extensions identifier-alists)
      (vicare language-extensions identifier-properties)
 
+* Added BRACE to (vicare) and brace lists to the reader.  A fluid syntax
+  which  is free  to be  bound to  whatever user  code needs.   When the
+  Scheme code  reader is in Vicare  mode: brace lists are  read as BRACE
+  forms as follows:
+
+     {}			-> (brace)
+     {1 2 3}		-> (brace 1 2 3)
+     {1 . 2}		-> (brace 1 . 2)
+
 
 Notes for revision 0.3d7
 ------------------------

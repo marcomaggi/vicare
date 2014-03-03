@@ -695,7 +695,8 @@
 ;;;; helpers for public functions
 
 (define (read-expr port locations kont)
-  (let-values (((token pos) (start-tokenising/pos port)))
+  (receive (token pos)
+      (start-tokenising/pos port)
     (finalise-tokenisation port locations kont token pos)))
 
 (define (reduce-loc! port)
@@ -866,6 +867,8 @@
   ;;rparen			The token is a right paranthesis.
   ;;lbrack			The token is a left bracket.
   ;;rbrack			The token is a right bracket.
+  ;;lbrace			The token is a left brace.
+  ;;rbrace			The token is a right brace.
   ;;(datum . <num>)		The token is the number <NUM>.
   ;;(datum . <sym>)		The token is the symbol <SYM>.
   ;;(datum . <str>)		The token is the string <STR>.
@@ -890,6 +893,12 @@
 	(($char= #\) ch)   'rparen)
 	(($char= #\[ ch)   'lbrack)
 	(($char= #\] ch)   'rbrack)
+	(($char= #\{ ch)   (if (port-in-vicare-mode? port)
+			       'lbrace
+			     (%error "{ syntax is invalid in #!r6rs mode")))
+	(($char= #\} ch)   (if (port-in-vicare-mode? port)
+			       'rbrace
+			     (%error "} syntax is invalid in #!r6rs mode")))
 	(($char= #\' ch)   '(macro . quote))
 	(($char= #\` ch)   '(macro . quasiquote))
 
@@ -1010,10 +1019,6 @@
 	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
 	(($char= #\\ ch)
 	 (finish-tokenisation-of-identifier/backslash '() port #t))
-
-;;;Unused for now.
-;;;
-;;;     (($char= #\{ ch) 'lbrace)
 
 	(else
 	 (%error-1 "invalid syntax" ch))))
@@ -1906,20 +1911,28 @@
 
 	  ;;Read list that was opened by a round parenthesis.
 	  ((eq? token 'lparen)
-	   (let-values (((ls ls/ann locations kont)
-			 (finish-tokenisation-of-list port pos locations kont 'rparen 'rbrack)))
+	   (receive (ls ls/ann locations kont)
+	       (finish-tokenisation-of-list port pos locations kont 'rparen 'rbrack 'rbrace)
 	     (values ls (annotate ls ls/ann pos) locations kont)))
 
 	  ;;Read list that was opened by a square bracket.
 	  ((eq? token 'lbrack)
-	   (let-values (((ls ls/ann locations kont)
-			 (finish-tokenisation-of-list port pos locations kont 'rbrack 'rparen)))
+	   (receive (ls ls/ann locations kont)
+	       (finish-tokenisation-of-list port pos locations kont 'rbrack 'rparen 'rbrace)
 	     (values ls (annotate ls ls/ann pos) locations kont)))
+
+	  ;;Read brace list that was opened by a brace parenthesis.
+	  ((eq? token 'lbrace)
+	   (receive (ls ls/ann locations kont)
+	       (finish-tokenisation-of-list port pos locations kont 'rbrace 'rparen 'rbrack)
+	     (let ((x     (cons 'brace ls))
+		   (x/ann (cons (annotate-simple 'brace pos) ls/ann)))
+	       (values x (annotate x x/ann pos) locations kont))))
 
 	  ;;Read a vector opened by "#(".
 	  ((eq? token 'vparen)
-	   (let-values (((vec vec/ann locations kont)
-			 (finish-tokenisation-of-vector port locations kont 0 '() '())))
+	   (receive (vec vec/ann locations kont)
+	       (finish-tokenisation-of-vector port locations kont 0 '() '())
 	     (values vec (annotate vec vec/ann pos) locations kont)))
 
 	  ;;Read a bytevector.
@@ -1931,109 +1944,108 @@
 			 vf4l  vf4b  vf4n   vf8l  vf8b  vf8n
 			 vc4l  vc4b  vc4n   vc8l  vc8b  vc8n
 			 ve))
-	   (let-values
-	       (((bv bv/ann locations kont)
-		 (cond ((eq? token 'vu8)
-			(finish-tokenisation-of-bytevector-u8 port locations kont 0 '()))
-		       ((eq? token 'vs8)
-			(finish-tokenisation-of-bytevector-s8 port locations kont 0 '()))
+	   (receive (bv bv/ann locations kont)
+	       (cond ((eq? token 'vu8)
+		      (finish-tokenisation-of-bytevector-u8 port locations kont 0 '()))
+		     ((eq? token 'vs8)
+		      (finish-tokenisation-of-bytevector-s8 port locations kont 0 '()))
 
-		       ((eq? token 'vu16l)
-			(finish-tokenisation-of-bytevector-u16l port locations kont 0 '()))
-		       ((eq? token 'vs16l)
-			(finish-tokenisation-of-bytevector-s16l port locations kont 0 '()))
+		     ((eq? token 'vu16l)
+		      (finish-tokenisation-of-bytevector-u16l port locations kont 0 '()))
+		     ((eq? token 'vs16l)
+		      (finish-tokenisation-of-bytevector-s16l port locations kont 0 '()))
 
-		       ((eq? token 'vu16b)
-			(finish-tokenisation-of-bytevector-u16b port locations kont 0 '()))
-		       ((eq? token 'vs16b)
-			(finish-tokenisation-of-bytevector-s16b port locations kont 0 '()))
+		     ((eq? token 'vu16b)
+		      (finish-tokenisation-of-bytevector-u16b port locations kont 0 '()))
+		     ((eq? token 'vs16b)
+		      (finish-tokenisation-of-bytevector-s16b port locations kont 0 '()))
 
-		       ((eq? token 'vu16n)
-			(finish-tokenisation-of-bytevector-u16n port locations kont 0 '()))
-		       ((eq? token 'vs16n)
-			(finish-tokenisation-of-bytevector-s16n port locations kont 0 '()))
+		     ((eq? token 'vu16n)
+		      (finish-tokenisation-of-bytevector-u16n port locations kont 0 '()))
+		     ((eq? token 'vs16n)
+		      (finish-tokenisation-of-bytevector-s16n port locations kont 0 '()))
 
-		       ((eq? token 'vu32l)
-			(finish-tokenisation-of-bytevector-u32l port locations kont 0 '()))
-		       ((eq? token 'vs32l)
-			(finish-tokenisation-of-bytevector-s32l port locations kont 0 '()))
+		     ((eq? token 'vu32l)
+		      (finish-tokenisation-of-bytevector-u32l port locations kont 0 '()))
+		     ((eq? token 'vs32l)
+		      (finish-tokenisation-of-bytevector-s32l port locations kont 0 '()))
 
-		       ((eq? token 'vu32b)
-			(finish-tokenisation-of-bytevector-u32b port locations kont 0 '()))
-		       ((eq? token 'vs32b)
-			(finish-tokenisation-of-bytevector-s32b port locations kont 0 '()))
+		     ((eq? token 'vu32b)
+		      (finish-tokenisation-of-bytevector-u32b port locations kont 0 '()))
+		     ((eq? token 'vs32b)
+		      (finish-tokenisation-of-bytevector-s32b port locations kont 0 '()))
 
-		       ((eq? token 'vu32n)
-			(finish-tokenisation-of-bytevector-u32n port locations kont 0 '()))
-		       ((eq? token 'vs32n)
-			(finish-tokenisation-of-bytevector-s32n port locations kont 0 '()))
+		     ((eq? token 'vu32n)
+		      (finish-tokenisation-of-bytevector-u32n port locations kont 0 '()))
+		     ((eq? token 'vs32n)
+		      (finish-tokenisation-of-bytevector-s32n port locations kont 0 '()))
 
-		       ((eq? token 'vu64l)
-			(finish-tokenisation-of-bytevector-u64l port locations kont 0 '()))
-		       ((eq? token 'vs64l)
-			(finish-tokenisation-of-bytevector-s64l port locations kont 0 '()))
+		     ((eq? token 'vu64l)
+		      (finish-tokenisation-of-bytevector-u64l port locations kont 0 '()))
+		     ((eq? token 'vs64l)
+		      (finish-tokenisation-of-bytevector-s64l port locations kont 0 '()))
 
-		       ((eq? token 'vu64b)
-			(finish-tokenisation-of-bytevector-u64b port locations kont 0 '()))
-		       ((eq? token 'vs64b)
-			(finish-tokenisation-of-bytevector-s64b port locations kont 0 '()))
+		     ((eq? token 'vu64b)
+		      (finish-tokenisation-of-bytevector-u64b port locations kont 0 '()))
+		     ((eq? token 'vs64b)
+		      (finish-tokenisation-of-bytevector-s64b port locations kont 0 '()))
 
-		       ((eq? token 'vu64n)
-			(finish-tokenisation-of-bytevector-u64n port locations kont 0 '()))
-		       ((eq? token 'vs64n)
-			(finish-tokenisation-of-bytevector-s64n port locations kont 0 '()))
+		     ((eq? token 'vu64n)
+		      (finish-tokenisation-of-bytevector-u64n port locations kont 0 '()))
+		     ((eq? token 'vs64n)
+		      (finish-tokenisation-of-bytevector-s64n port locations kont 0 '()))
 
-		       ((eq? token 'vf4l)
-			(finish-tokenisation-of-bytevector-f4l port locations kont 0 '()))
-		       ((eq? token 'vf4b)
-			(finish-tokenisation-of-bytevector-f4b port locations kont 0 '()))
-		       ((eq? token 'vf4n)
-			(finish-tokenisation-of-bytevector-f4n port locations kont 0 '()))
+		     ((eq? token 'vf4l)
+		      (finish-tokenisation-of-bytevector-f4l port locations kont 0 '()))
+		     ((eq? token 'vf4b)
+		      (finish-tokenisation-of-bytevector-f4b port locations kont 0 '()))
+		     ((eq? token 'vf4n)
+		      (finish-tokenisation-of-bytevector-f4n port locations kont 0 '()))
 
-		       ((eq? token 'vf8l)
-			(finish-tokenisation-of-bytevector-f8l port locations kont 0 '()))
-		       ((eq? token 'vf8b)
-			(finish-tokenisation-of-bytevector-f8b port locations kont 0 '()))
-		       ((eq? token 'vf8n)
-			(finish-tokenisation-of-bytevector-f8n port locations kont 0 '()))
+		     ((eq? token 'vf8l)
+		      (finish-tokenisation-of-bytevector-f8l port locations kont 0 '()))
+		     ((eq? token 'vf8b)
+		      (finish-tokenisation-of-bytevector-f8b port locations kont 0 '()))
+		     ((eq? token 'vf8n)
+		      (finish-tokenisation-of-bytevector-f8n port locations kont 0 '()))
 
-		       ((eq? token 'vc4l)
-			(finish-tokenisation-of-bytevector-c4l port locations kont 0 '()))
-		       ((eq? token 'vc4b)
-			(finish-tokenisation-of-bytevector-c4b port locations kont 0 '()))
-		       ((eq? token 'vc4n)
-			(finish-tokenisation-of-bytevector-c4n port locations kont 0 '()))
+		     ((eq? token 'vc4l)
+		      (finish-tokenisation-of-bytevector-c4l port locations kont 0 '()))
+		     ((eq? token 'vc4b)
+		      (finish-tokenisation-of-bytevector-c4b port locations kont 0 '()))
+		     ((eq? token 'vc4n)
+		      (finish-tokenisation-of-bytevector-c4n port locations kont 0 '()))
 
-		       ((eq? token 'vc8l)
-			(finish-tokenisation-of-bytevector-c8l port locations kont 0 '()))
-		       ((eq? token 'vc8b)
-			(finish-tokenisation-of-bytevector-c8b port locations kont 0 '()))
-		       ((eq? token 'vc8n)
-			(finish-tokenisation-of-bytevector-c8n port locations kont 0 '()))
-		       ((eq? token 've)
-			(finish-tokenisation-of-bytevector-ve  port locations kont))
-		       )))
+		     ((eq? token 'vc8l)
+		      (finish-tokenisation-of-bytevector-c8l port locations kont 0 '()))
+		     ((eq? token 'vc8b)
+		      (finish-tokenisation-of-bytevector-c8b port locations kont 0 '()))
+		     ((eq? token 'vc8n)
+		      (finish-tokenisation-of-bytevector-c8n port locations kont 0 '()))
+		     ((eq? token 've)
+		      (finish-tokenisation-of-bytevector-ve  port locations kont)))
 	     (values bv (annotate bv bv/ann pos) locations kont)))
 
 	  ;;Read a comment list.
 	  ((eq? token 'comment-paren)
-	   (let-values (((ls ls/ann locations kont)
-			 (finish-tokenisation-of-list port pos locations kont 'rparen 'rbrack)))
+	   (receive (ls ls/ann locations kont)
+	       (finish-tokenisation-of-list port pos locations kont 'rparen 'rbrack 'rbrace)
 	     (%process-comment-list port ls)
 	     ;;Go on with the next token.
-	     (let-values (((token pos) (start-tokenising/pos port)))
+	     (receive (token pos)
+		 (start-tokenising/pos port)
 	       (finalise-tokenisation port locations kont token pos))))
 
 	  ((eq? token 'case-sensitive)
-	   (let-values (((expr expr/ann locations kont)
-			 (parametrise ((case-insensitive? #f))
-			   (read-expr port locations kont))))
+	   (receive (expr expr/ann locations kont)
+	       (parametrise ((case-insensitive? #f))
+		 (read-expr port locations kont))
 	     (values expr expr/ann locations kont)))
 
 	  ((eq? token 'case-insensitive)
-	   (let-values (((expr expr/ann locations kont)
-			 (parametrise ((case-insensitive? #t))
-			   (read-expr port locations kont))))
+	   (receive (expr expr/ann locations kont)
+	       (parametrise ((case-insensitive? #t))
+		 (read-expr port locations kont))
 	     (values expr expr/ann locations kont)))
 
 	  ((pair? token)
@@ -2055,13 +2067,15 @@
 	    ((eq? class 'macro)
 	     (let ((quoting-keyword ($cdr token)))
 	       (define (%read-quoted-sexp)
-		 (let-values (((token1 pos) (start-tokenising/pos port)))
+		 (receive (token1 pos)
+		     (start-tokenising/pos port)
 		   (if (eof-object? token1)
 		       (%error (string-append "invalid EOF after "
 					      (symbol->string quoting-keyword)
 					      " read macro" ))
 		     (finalise-tokenisation port locations kont token1 pos))))
-	       (let-values (((expr expr/ann locations kont) (%read-quoted-sexp)))
+	       (receive (expr expr/ann locations kont)
+		   (%read-quoted-sexp)
 		 (let ((d     (list expr))
 		       (d/ann (list expr/ann)))
 		   (let ((x     (cons quoting-keyword d))
@@ -2104,8 +2118,8 @@
 	    ;;
 	    ((eq? class 'mark)
 	     (let ((N ($cdr token)))
-	       (let-values (((expr expr/ann locations kont)
-			     (read-expr port locations kont)))
+	       (receive (expr expr/ann locations kont)
+		   (read-expr port locations kont)
 		 (cond ((assq N locations)
 			=> (lambda (pair)
 			     (let ((loc ($cdr pair)))
@@ -2741,7 +2755,7 @@
 	  (else ch))))
 
 
-(define-inline (finish-tokenisation-of-list port start-pos locs kont matching-paren wrong-paren)
+(case-define finish-tokenisation-of-list
   ;;Finish tokenisation  of list datum  reading from PORT; to  be called
   ;;after the opening parenthesis has been already tokenised.
   ;;
@@ -2762,73 +2776,79 @@
   ;;far.
   ;;
   ;;MATCHING-PAREN must be either the symbol RPAREN or the symbol RBRACK
-  ;;and it represents the token matching the opening parenthesis.
+  ;;or  the symbol  RBRACE  and  it represents  the  token matching  the
+  ;;opening parenthesis.
   ;;
-  ;;WRONG-PAREN must  be either the  symbol RPAREN or the  symbol RBRACK
-  ;;and it  represents the  which, if found,  causes a  mismatch between
-  ;;opening and closing parentheses.
+  ;;WRONG-PAREN1 and  WRONG-PAREN2 must be  either the symbol  RPAREN or
+  ;;the symbol RBRACK  or the symbol RBRACE and it  represents the token
+  ;;which,  if found,  causes  a mismatch  between  opening and  closing
+  ;;parentheses.
   ;;
-  (%finish-tokenisation-of-list port start-pos locs kont matching-paren wrong-paren #t))
-
-(define (%finish-tokenisation-of-list port start-pos locs kont matching-paren wrong-paren
-				      reading-first-item?)
-  (define-inline (recurse-to-read-cdr locs1 kont1)
-    (%finish-tokenisation-of-list port start-pos locs1 kont1 matching-paren wrong-paren #f))
-  (define-syntax-rule (%error msg . irritants)
-    (die/p port 'vicare-reader msg . irritants))
-  (define-syntax-rule (%error-1 msg . irritants)
-    (die/p-1 port 'vicare-reader msg . irritants))
-  (define-inline (%paren-symbol->char paren)
-    (if (eq? paren 'rparen) #\) #\]))
-  (define (%mismatched-paren-error)
-    (%error (format "mismatching parenthesis while reading list, \
+  ((port start-pos locs kont matching-paren wrong-paren1 wrong-paren2)
+   (finish-tokenisation-of-list port start-pos locs kont matching-paren wrong-paren1 wrong-paren2 #t))
+  ((port start-pos locs kont matching-paren wrong-paren1 wrong-paren2 reading-first-item?)
+   (define (recurse-to-read-cdr locs1 kont1)
+     (finish-tokenisation-of-list port start-pos locs1 kont1 matching-paren wrong-paren1 wrong-paren2 #f))
+   (define-syntax-rule (%error msg . irritants)
+     (die/p port 'vicare-reader msg . irritants))
+   (define-syntax-rule (%error-1 msg . irritants)
+     (die/p-1 port 'vicare-reader msg . irritants))
+   (define-inline (%paren-symbol->char paren)
+     (if (eq? paren 'rparen) #\) #\]))
+   (define (%mismatched-paren-error wrong-paren)
+     (%error (format "mismatching parenthesis while reading list, \
                      expecting \"~a\" found \"~a\""
-	      (%paren-symbol->char matching-paren)
-	      (%paren-symbol->char wrong-paren))))
+	       (%paren-symbol->char matching-paren)
+	       (%paren-symbol->char wrong-paren))))
 
-  (let-values (((token pos) (start-tokenising/pos port)))
-    (cond ((eof-object? token)
-	   (%error (string-append "unexpected end of file while reading list \
+   (receive (token pos)
+       (start-tokenising/pos port)
+     (cond ((eof-object? token)
+	    (%error (string-append "unexpected end of file while reading list \
                                    started at line "
-				  (number->string (compound-position-line   start-pos))
-				  " column "
-				  (number->string (compound-position-column start-pos)))))
+				   (number->string (compound-position-line   start-pos))
+				   " column "
+				   (number->string (compound-position-column start-pos)))))
 
-	  ;;the correct ending parenthesis was found
-	  ((eq? token matching-paren)
-	   (values '() '() locs kont))
+	   ;;the correct ending parenthesis was found
+	   ((eq? token matching-paren)
+	    (values '() '() locs kont))
 
-	  ;;a mismatched ending parenthesis was found
-	  ((eq? token wrong-paren)
-	   (%mismatched-paren-error))
+	   ;;a mismatched ending parenthesis was found
+	   ((eq? token wrong-paren1)
+	    (%mismatched-paren-error wrong-paren1))
+	   ((eq? token wrong-paren2)
+	    (%mismatched-paren-error wrong-paren2))
 
-	  ;;The token is  a dot, the next token must be  the last in the
-	  ;;list.
-	  ((eq? token 'dot)
-	   (when reading-first-item?
-	     (%error "invalid dot as first item while reading list"))
-	   (let*-values (((the-cdr the-cdr/ann locs1 kont1) (read-expr port locs kont))
-	   		 ((token1 pos1)                     (start-tokenising/pos port)))
-	     (cond ((eq? token1 matching-paren)
-		    (values the-cdr the-cdr/ann locs1 kont1))
-		   ((eq? token1 wrong-paren)
-		    (%mismatched-paren-error))
-		   ((eq? token1 'dot)
-		    (%error "invalid second dot while reading list"))
-		   (else
-		    (%error "invalid second form after dot while reading list" token1)))))
+	   ;;The token is  a dot, the next token must be  the last in the
+	   ;;list.
+	   ((eq? token 'dot)
+	    (when reading-first-item?
+	      (%error "invalid dot as first item while reading list"))
+	    (let*-values (((the-cdr the-cdr/ann locs1 kont1) (read-expr port locs kont))
+			  ((token1 pos1)                     (start-tokenising/pos port)))
+	      (cond ((eq? token1 matching-paren)
+		     (values the-cdr the-cdr/ann locs1 kont1))
+		    ((eq? token1 wrong-paren1)
+		     (%mismatched-paren-error wrong-paren1))
+		    ((eq? token1 wrong-paren2)
+		     (%mismatched-paren-error wrong-paren2))
+		    ((eq? token1 'dot)
+		     (%error "invalid second dot while reading list"))
+		    (else
+		     (%error "invalid second form after dot while reading list" token1)))))
 
-	  ;;It is an item.
-	  (else
-	   (let*-values (((the-car the-car/ann locs1 kont1)
-			  (finalise-tokenisation port locs kont token pos))
-	   		 ((the-cdr the-cdr/ann locs2 kont2)
-			  (recurse-to-read-cdr locs1 kont1)))
-	     (let ((the-list      (cons the-car     the-cdr))
-		   (the-list/ann  (cons the-car/ann the-cdr/ann)))
-	       (values the-list the-list/ann locs2
-		       (extend-graph-notation-kont-for-pair the-list the-list/ann
-							    the-car the-cdr kont2))))))))
+	   ;;It is an item.
+	   (else
+	    (let*-values (((the-car the-car/ann locs1 kont1)
+			   (finalise-tokenisation port locs kont token pos))
+			  ((the-cdr the-cdr/ann locs2 kont2)
+			   (recurse-to-read-cdr locs1 kont1)))
+	      (let ((the-list      (cons the-car     the-cdr))
+		    (the-list/ann  (cons the-car/ann the-cdr/ann)))
+		(values the-list the-list/ann locs2
+			(extend-graph-notation-kont-for-pair the-list the-list/ann
+							     the-car the-cdr kont2)))))))))
 
 (define (extend-graph-notation-kont-for-pair pair pair/ann the-car the-cdr kont)
   ;;Return a new KONT thunk to finalise the graph notation locations for
