@@ -1569,6 +1569,7 @@
     __who__
     __file__
     __line__
+    brace
 
 
 ;;;; bindings from (nausicaa language oopp)
