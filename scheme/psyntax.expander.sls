@@ -9946,9 +9946,16 @@
 	 (%error-invalid-formals-syntax expr-stx ?lhs*))
        (let* ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
 	      (binding*     (map (lambda (rhs)
-				   (%eval-macro-transformer
-				    (%expand-macro-transformer rhs lexenv.expand)
-				    lexenv.run))
+				   (with-exception-handler
+				       (lambda (E)
+					 (raise
+					  (condition
+					   (make-macro-input-form-condition rhs)
+					   E)))
+				     (lambda ()
+				       (%eval-macro-transformer
+					(%expand-macro-transformer rhs lexenv.expand)
+					lexenv.run))))
 			      ?rhs*))
 	      (entry*       (map cons fluid-label* binding*)))
 	 (chi-internal-body (cons ?body ?body*)
@@ -11434,9 +11441,13 @@
 	   (let ((id (synonym-transformer-identifier rv)))
 	     (make-synonym-syntax-binding (id->label/or-error 'expander id id))))
 	  (else
-	   (assertion-violation 'expand
-	     "invalid return value from syntax transformer expression"
-	     rv)))))
+	   (raise
+	    (condition
+	     (make-assertion-violation)
+	     (make-who-condition 'expand)
+	     (make-message-condition "invalid return value from syntax transformer expression")
+	     (make-macro-expanded-input-form-condition expanded-expr)
+	     (make-irritants-condition (list rv))))))))
 
 
 ;;;; formals syntax validation
@@ -12464,12 +12475,17 @@
 	     (let* ((xlab* (map gensym-for-label xlhs*))
 		    (xrib  (make-filled-rib xlhs* xlab*))
 		    (xb*   (map (lambda (x)
-				  (%eval-macro-transformer
-				   (%expand-macro-transformer (if (eq? type 'let-syntax)
-								  x
-								(push-lexical-contour xrib x))
-							      lexenv.expand)
-				   lexenv.run))
+				  (let ((in-form (if (eq? type 'let-syntax)
+						     x
+						   (push-lexical-contour xrib x))))
+				    (with-exception-handler
+					(lambda (E)
+					  (raise
+					   (condition E (make-macro-input-form-condition in-form))))
+				      (lambda ()
+					(%eval-macro-transformer
+					 (%expand-macro-transformer in-form lexenv.expand)
+					 lexenv.run)))))
 			     xrhs*)))
 	       (build-sequence no-source
 		 (while-not-expanding-application-first-subform
@@ -13076,11 +13092,21 @@
 		    (stx-error body-form-stx "cannot redefine keyword"))
 		  ;;We want order here!?!
 		  (let* ((lab          (gen-define-syntax-label id rib sd?))
-			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
+			 (expanded-rhs (with-exception-handler
+					   (lambda (E)
+					     (raise
+					      (condition E (make-macro-input-form-condition rhs-stx))))
+					 (lambda ()
+					   (%expand-macro-transformer rhs-stx lexenv.expand)))))
 		    ;;First map  the identifier  to the  label, creating
 		    ;;the binding; then evaluate the macro transformer.
 		    (extend-rib! rib id lab sd?)
-		    (let ((entry (cons lab (%eval-macro-transformer expanded-rhs lexenv.run))))
+		    (let ((entry (cons lab (with-exception-handler
+					       (lambda (E)
+						 (raise
+						  (condition E (make-macro-input-form-condition rhs-stx))))
+					     (lambda ()
+					       (%eval-macro-transformer expanded-rhs lexenv.run))))))
 		      (chi-body* (cdr body-form-stx*)
 				 (cons entry lexenv.run)
 				 (cons entry lexenv.expand)
@@ -13101,11 +13127,21 @@
 		  ;;We want order here!?!
 		  (let* ((lab          (gen-define-syntax-label id rib sd?))
 			 (flab         (gen-define-syntax-label id rib sd?))
-			 (expanded-rhs (%expand-macro-transformer rhs-stx lexenv.expand)))
+			 (expanded-rhs (with-exception-handler
+					   (lambda (E)
+					     (raise
+					      (condition E (make-macro-input-form-condition rhs-stx))))
+					 (lambda ()
+					   (%expand-macro-transformer rhs-stx lexenv.expand)))))
 		    ;;First map the identifier to  the label, so that it
 		    ;;is bound; then evaluate the macro transformer.
 		    (extend-rib! rib id lab sd?)
-		    (let* ((binding  (%eval-macro-transformer expanded-rhs lexenv.run))
+		    (let* ((binding  (with-exception-handler
+					 (lambda (E)
+					   (raise
+					    (condition E (make-macro-input-form-condition rhs-stx))))
+					 (lambda ()
+					   (%eval-macro-transformer expanded-rhs lexenv.run))))
 			   ;;This LEXENV entry represents the definition
 			   ;;of the fluid syntax.
 			   (entry1   (cons lab (make-fluid-syntax-binding flab)))
@@ -13141,9 +13177,14 @@
 					       (fluid-syntax-binding-fluid-label binding))
 					      (else
 					       (stx-error id "not a fluid identifier")))))
-			 (binding     (%eval-macro-transformer
-				       (%expand-macro-transformer rhs-stx lexenv.expand)
-				       lexenv.run))
+			 (binding     (with-exception-handler
+					  (lambda (E)
+					    (raise
+					     (condition E (make-macro-input-form-condition rhs-stx))))
+					(lambda ()
+					  (%eval-macro-transformer
+					   (%expand-macro-transformer rhs-stx lexenv.expand)
+					   lexenv.run))))
 			 (entry       (cons fluid-label binding)))
 		    (chi-body* (cdr body-form-stx*)
 			       (cons entry lexenv.run)
@@ -13196,13 +13237,17 @@
 			  ;;syntax bindings do  exist in the environment
 			  ;;in which the transformer is evaluated.
 			  (xbind* (map (lambda (x)
-					 (%eval-macro-transformer
-					  (%expand-macro-transformer
-					   (if (eq? type 'let-syntax)
-					       x
-					     (push-lexical-contour xrib x))
-					   lexenv.expand)
-					  lexenv.run))
+					 (let ((in-form (if (eq? type 'let-syntax)
+							    x
+							  (push-lexical-contour xrib x))))
+					   (with-exception-handler
+					       (lambda (E)
+						 (raise
+						  (condition E (make-macro-input-form-condition in-form))))
+					     (lambda ()
+					       (%eval-macro-transformer
+						(%expand-macro-transformer in-form lexenv.expand)
+						lexenv.run)))))
 				    ?xrhs*)))
 		     (chi-body*
 		      ;;Splice the internal body forms but add a lexical
@@ -13712,6 +13757,18 @@
 
 
 ;;;; errors
+
+(define-condition-type &macro-input-form
+    &condition
+  make-macro-input-form-condition
+  macro-input-form-condition?
+  (form macro-input-form-condition-object))
+
+(define-condition-type &macro-expanded-input-form
+    &condition
+  make-macro-expanded-input-form-condition
+  macro-expanded-input-form-condition?
+  (form macro-expanded-input-form-condition-object))
 
 (define (assertion-error expr source-identifier
 			 byte-offset character-offset
