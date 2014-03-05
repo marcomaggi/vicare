@@ -3228,13 +3228,25 @@ a use of @meta{tagged-variable} must have one of the formats:
 
 @example
 @meta{variable}
-(@meta{variable} @meta{tag})
-#(@meta{variable} @meta{tag})
+(brace @meta{variable} @meta{tag})
 @end example
 
 @noindent
 where: @meta{variable} is an identifier representing the binding name,
-@meta{tag} is an identifier representing a class or label type.
+@meta{tag} is an identifier representing a class or label type,
+@func{brace} is the identifier exported by @library{vicare} and
+reexported by @library{nausicaa language oopp}.
+
+@quotation
+@strong{NOTE} When the reader is in @code{#!vicare} mode: braces can be
+used to build a @func{brace} syntax, @vicareref{iklib reader mode,
+Textual input port modes}.  So the following syntax is possible for
+@meta{tagged-variable}:
+
+@example
+@{@meta{variable} @meta{tag}@}
+@end example
+@end quotation
 
 Whenever in the original syntaxes a @meta{bindings} form appears, in the
 @oopp{} syntaxes a @meta{tagged-bindings} form appears; a use of
@@ -3257,17 +3269,10 @@ Whenever in the original syntaxes a @meta{formals} form appears, in the
 @meta{tagged-formals} must have one of the formats:
 
 @example
-@meta{variable}
-#(@meta{variable} @meta{tag})
+@meta{tagged-variable}
 (@meta{tagged-variable} ...)
-(@metao{tagged-variable} @meta{tagged-variable} ... . @metan{variable})
-(@metao{tagged-variable} @meta{tagged-variable} ... . #(@meta{variable} @meta{tag}))
+(@metao{tagged-variable} @meta{tagged-variable} ... . @metan{tagged-variable})
 @end example
-
-@noindent
-notice that a tagged rest argument must be specified using the vector
-syntax @code{#(@meta{variable} @meta{tag})}, the list syntax
-@code{(@meta{variable} @meta{tag})} would be a syntax error.
 
 @c page
 @node oopp bindings let
@@ -3281,21 +3286,10 @@ defines @oopp{} notation syntaxes for already existent bindings; the
 names of the new bindings are equal to the names of the already existent
 bindings.
 
-Each @meta{tagged-variable} must have one of the formats:
-
-@example
-(@meta{variable} @meta{tag})
-#(@meta{variable} @meta{tag})
-@end example
-
-@noindent
-where: @meta{variable} is an identifier representing the binding name,
-@meta{tag} is an identifier representing a class or label type.
-
 Usage example:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
@@ -3304,7 +3298,7 @@ Usage example:
 
 (define A (<alpha> (1 2)))
 
-(with-tags ((A <alpha>))
+(with-tags (@{A <alpha>@})
   (A a))
 @result{} 1
 @end example
@@ -3321,12 +3315,12 @@ to a binding tagged with @class{top}.
 Usage example:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
-(let/tags (((a <list>) '(1 2 3))
-           ((b <pair>) '(a . b)))
+(let/tags ((@{a <list>@} '(1 2 3))
+           (@{b <pair>@} '(a . b)))
   (a car)               @result{} 1
   (b car))              @result{} a
 @end example
@@ -3342,12 +3336,12 @@ tagged with @class{top}.
 Usage example:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
-(let*/tags (((a <number>) 123)
-            ((b <string>) (a string)))
+(let*/tags ((@{a <number>@} 123)
+            (@{b <string>@} (a string)))
   b)                    @result{} "123"
 @end example
 @end deffn
@@ -3398,11 +3392,11 @@ binding is equivalent to a binding tagged with @class{top}.
 Usage example:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
-(receive/tags ((a <number>) (b <number>))
+(receive/tags (@{a <number>@} @{b <number>@})
     (values 1 2)
   (a string)            @result{} "1"
   (b string))           @result{} "2"
@@ -3424,11 +3418,10 @@ Usage example:
 (import (rnrs)
   (nausicaa language oopp))
 
-(receive-and-return/tags ((a <number>) (b <number>))
+(receive-and-return/tags (@{a <number>@} @{b <number>@})
     (values 1 2)
   (a string)            @result{} "1"
-  (b string)            @result{} "2"
-  )
+  (b string))           @result{} "2"
 @result{} 1, 2 ;;two values
 @end example
 @end deffn
@@ -3472,7 +3465,7 @@ of failure.
 If the first element of @meta{tagged-formals} has the format:
 
 @example
-(_ @metao{tag} @meta{tag} ...)
+@{_ @metao{tag} @meta{tag} ...@}
 @end example
 
 @noindent
@@ -3488,12 +3481,12 @@ Usage examples:
 Function with two tagged arguments:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
 (define f
-  (lambda/tags ((a <number>) (b <number>))
+  (lambda/tags (@{a <number>@} @{b <number>@})
     (list (a string) (b string))))
 
 (f 1 2)                 @result{} ("1" "2")
@@ -3503,12 +3496,12 @@ Function with two tagged arguments:
 Function with two mandatory arguments and the rest argument:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
 (define g
-  (lambda/tags ((a <number>) (b <number>) . #(args <list>))
+  (lambda/tags (@{a <number>@} @{b <number>@} . @{args <list>@})
     (list (a string)
           (b string)
           (args length))))
@@ -3516,21 +3509,16 @@ Function with two mandatory arguments and the rest argument:
 (g 1 2 3 4 5)           @result{} ("1" "2" 3)
 @end example
 
-@noindent
-notice that a tagged rest argument must be specified using the vector
-syntax @code{#(args <list>)}, the list syntax @code{(args <list>)} would
-be a syntax error.
-
 @item
 Function with only the rest argument:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
 (define g
-  (lambda/tags #(args <list>)
+  (lambda/tags @{args <list>@}
     (args length)))
 
 (g 1 2 3)               @result{} 3
@@ -3540,12 +3528,12 @@ Function with only the rest argument:
 Functions with a single validated return value:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
 (define f
-  (lambda/tags ((_ <fixnum>) val)
+  (lambda/tags (@{_ <fixnum>@} val)
     val))
 
 (f 1)                   @result{} 1
@@ -3555,12 +3543,12 @@ Functions with a single validated return value:
 Functions with multiple validated return values:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
 (define f
-  (lambda/tags ((_ <fixnum> <string>) a b)
+  (lambda/tags (@{_ <fixnum> <string>@} a b)
     (values a b)))
 
 (f 1 "2")               @result{} 1, "2"
@@ -3594,7 +3582,7 @@ of failure.
 If the first element of @meta{tagged-formals} has the format:
 
 @example
-(_ @metao{tag} @meta{tag} ...)
+@{_ @metao{tag} @meta{tag} ...@}
 @end example
 
 @noindent
@@ -3606,18 +3594,18 @@ validated as specified by the @meta{tag} identifiers.
 Usage examples:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
 (define f
   (case-lambda/tags
-   (((a <number>))
+   ((@{a <number>@})
     (a string))))
 
 (define g
   (case-lambda/tags
-   (#(args <list>)
+   (@{args <list>@}
     (args length))))
 
 (f 123)                 @result{} "123"
@@ -3632,10 +3620,10 @@ Usage examples:
 
 @deffn Syntax define/tags @meta{variable}
 @deffnx Syntax define/tags @meta{variable} @meta{expression}
-@deffnx Syntax define/tags #(@meta{variable} @meta{tag})
-@deffnx Syntax define/tags #(@meta{variable} @meta{tag}) @meta{expression}
+@deffnx Syntax define/tags @{@meta{variable} @meta{tag}@}
+@deffnx Syntax define/tags @{@meta{variable} @meta{tag}@} @meta{expression}
 @deffnx Syntax define/tags (@meta{variable} . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
-@deffnx Syntax define/tags ((@meta{variable} @metao{tag} @meta{tag} @dots{}) . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
+@deffnx Syntax define/tags (@{@meta{variable} @metao{tag} @meta{tag} @dots{}@} . @meta{tagged-formals}) @metao{body} @meta{body} @dots{}
 Like @func{define} and defines the @oopp{} bindings for function
 arguments.  When all the bindings have no tags: this syntax is almost
 equivalent to @func{define} as defined by @rnrs{6}; an untagged binding
@@ -3670,11 +3658,11 @@ Usage examples:
 Function with two tagged arguments:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
-(define/tags (f (a <number>) (b <number>))
+(define/tags (f @{a <number>@} @{b <number>@})
   (list (a string) (b string)))
 
 (f 1 2)                 @result{} ("1" "2")
@@ -3684,11 +3672,11 @@ Function with two tagged arguments:
 Function with two mandatory arguments and the rest argument:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
-(define/tags (g (a <number>) (b <number>) . #(args <list>))
+(define/tags (g @{a <number>@} @{b <number>@} . @{args <list>@})
   (list (a string)
         (b string)
         (args length)))
@@ -3696,20 +3684,15 @@ Function with two mandatory arguments and the rest argument:
 (g 1 2 3 4 5)           @result{} ("1" "2" 3)
 @end example
 
-@noindent
-notice that a tagged rest argument must be specified using the vector
-syntax @code{#(args <list>)}, the list syntax @code{(args <list>)} would
-be a syntax error.
-
 @item
 Function with only the rest argument:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
-(define/tags (g . #(args <list>))
+(define/tags (g . @{args <list>@})
   (args length))
 
 (g 1 2 3)               @result{} 3
@@ -3719,11 +3702,11 @@ Function with only the rest argument:
 Tagged variable definition:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
-(define/tags #(a <number>) 123)
+(define/tags @{a <number>@} 123)
 
 (a string)              @result{} "123"
 @end example
@@ -3732,11 +3715,11 @@ Tagged variable definition:
 Tagged variable definition initially left uninitialised:
 
 @example
-#!r6rs
+#!vicare
 (import (rnrs)
   (nausicaa language oopp))
 
-(define/tags #(a <number>))
+(define/tags @{a <number>@})
 (set! a 123)
 (a string)              @result{} "123"
 @end example
@@ -3775,10 +3758,14 @@ Evaluate the given forms and bind the, possibly multiple, result of the
 last one to the given @meta{tagged-variables}.
 
 @example
+#!vicare
+(import (rnrs)
+  (nausicaa language oopp))
+
 (define-values (a b c)
   (values 1 2 3))
 
-(define-values ((A <integer>) (B <string>) (C <pair>))
+(define-values (@{A <integer>@} @{B <string>@} @{C <pair>@})
   (values 123 "ciao" '(1 . 2)))
 
 (list a b c)    @result{} (1 2 3)
@@ -3794,7 +3781,7 @@ last one to the given @meta{tagged-variables}.
 @subsection @oopp{} bindings: @func{do}--like syntaxes
 
 
-@deffn Syntax do/tags ((@meta{tagged-variable} @meta{init} @meta{step}) ...) (@meta{test} @meta{expression} ...) @meta{command} ...
+@deffn Syntax do/tags ((@meta{tagged-variable} @meta{init} @meta{step}) @dots{}) (@meta{test} @meta{expression} @dots{}) @meta{command} @dots{}
 Like @func{do} and defines the @oopp{} bindings for the arguments.  When
 all the bindings have no tags: this syntax is equivalent to @func{do} as
 defined by @rnrs{6}; an untagged binding is equivalent to a binding
@@ -3804,7 +3791,7 @@ bindings.
 @end deffn
 
 
-@deffn Syntax do*/tags ((@meta{tagged-variable} @meta{init} @meta{step}) ...) (@meta{test} @meta{expression} ...) @meta{command} ...
+@deffn Syntax do*/tags ((@meta{tagged-variable} @meta{init} @meta{step}) @dots{}) (@meta{test} @meta{expression} @dots{}) @meta{command} @dots{}
 Like @func{do} and defines the @oopp{} bindings for the arguments; in
 addition the bindings are created in a @func{let*} style.  When all the
 bindings have no tags: this syntax is equivalent to @func{do} as defined
@@ -3818,8 +3805,8 @@ expressions can use @oopp{} notation when accessing the binding.
 @section Miscellaneous syntaxes
 
 
-@deffn Macro tag-case @meta{expr} ((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} ...) ...
-@deffnx Macro tag-case @meta{expr} ((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
+@deffn Macro tag-case @meta{expr} ((@metao{tag} @meta{tag} @dots{}) @metao{tag-body} @meta{tag-body} @dots{}) @dots{}
+@deffnx Macro tag-case @meta{expr} ((@metao{tag} @meta{tag} @dots{}) @metao{tag-body} @meta{tag-body} @dots{}) @dots{} (else @metao{else-body} @meta{else-body} @dots{})
 @deffnx {Auxiliary Syntax} else
 Syntax similar to @func{case}.  @func{else} must be the binding exported
 by @library{rnrs} and @library{vicare}.
