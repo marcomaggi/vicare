@@ -104,7 +104,7 @@ Now let's look at the same definition using the facilities of
 (define-class <alpha>
   (fields (mutable a)
           (immutable b))
-  (method (sum (o <alpha>))
+  (method (sum @{o <alpha>@})
      (+ (o a) (o b))))
 @end example
 
@@ -145,7 +145,7 @@ Also notice that the @rnrs{6} bindings defined by
 (define-class <alpha>
   (fields (mutable a)
           (immutable b))
-  (method (sum (o <alpha>))
+  (method (sum @{o <alpha>@})
      (+ (o a) (o b))))
 
 (define o (make-<alpha> 1 2))
@@ -649,7 +649,7 @@ happens as follows:
   (import (nausicaa))
   (define-class <alpha>
     (fields a b))
-  (define ((doit <alpha>) a b)
+  (define (@{doit <alpha>@} a b)
     (<alpha> (a b))))
 @end example
 
@@ -1106,10 +1106,10 @@ Example of supertag field mutation:
   (fields (mutable v)))
 
 (define-class <beta>
-  (fields (immutable (a <alpha>))))
+  (fields (immutable @{a <alpha>@})))
 
 (define-class <gamma>
-  (fields (immutable (b <beta>))))
+  (fields (immutable @{b <beta>@})))
 
 (<alpha> A (<> (1)))
 (<beta>  B (<> (A)))
@@ -1138,13 +1138,13 @@ Example of nested field setter transformer invocation:
                #'(vector-set! ?var ?idx ?expr))))))
 
 (define-class <alpha>
-  (fields (immutable (v <vector>))))
+  (fields (immutable @{v <vector>@})))
 
 (define-class <beta>
-  (fields (immutable (a <alpha>))))
+  (fields (immutable @{a <alpha>@})))
 
 (define-class <gamma>
-  (fields (immutable (b <beta>))))
+  (fields (immutable @{b <beta>@})))
 
 (<alpha> A (<> ((vector 1 2 3))))
 (<beta>  B (<> (A)))
@@ -1225,10 +1225,10 @@ The tags @class{top} and @class{procedure} are special because they do
 
 @example
 (define-class <alpha>
-  (fields (immutable (fun <procedure>))))
+  (fields (immutable @{fun <procedure>@})))
 
 (define-class <beta>
-  (fields (immutable (fun <top>))))
+  (fields (immutable @{fun <top>@})))
 
 (<alpha> A (<> (+)))
 (<beta>  B (<> (*)))
@@ -1567,7 +1567,7 @@ the following is an example of label inheriting from a class:
   (predicate <alpha>?)
   (protocol (lambda () make-<alpha>))
   (virtual-fields (immutable sum
-                             (lambda/tags ((O <beta>))
+                             (lambda/tags (@{O <beta>@})
                                (+ (O a) (O b))))))
 
 (<beta> O (<> (1 2)))
@@ -2054,13 +2054,15 @@ where @meta{field} has one of the following syntaxes:
 
 @example
 @meta{field-name-id}
-(@meta{field-name-id} @meta{type-tag-id})
-#(@meta{field-name-id} @meta{type-tag-id})
+(brace @meta{field-name-id} @meta{type-tag-id})
 @end example
 
 @noindent
-where @meta{field-name-id} is an identifier representing the field name
-and @meta{type-tag-id} is an identifier representing the field type tag.
+where: @meta{field-name-id} is an identifier representing the field
+name, @meta{type-tag-id} is an identifier representing the field type
+tag, @func{brace} is the identifier exported by @library{vicare} and
+reexported by @library{nausicaa language oopp}.
+
 The format of the @meta{field-spec} arguments is similar to the one
 defined by @rnrs{6} in the syntactic records layer, extended with type
 tags.  When @meta{accessor} and @meta{mutator} are @strong{not}
@@ -2149,16 +2151,17 @@ accessor and mutator are defined as expressions inlined in the class
 definition:
 
 @example
+#!vicare
 (import (nausicaa)
   (vicare numerics constants))
 
 (define-class <angle>
-  (fields (mutable (radians <real>)))
+  (fields (mutable @{radians <real>@}))
   (virtual-fields
-    (mutable (degrees <real>)
-      (lambda ((A <angle>))
+    (mutable @{degrees <real>@}
+      (lambda (@{A <angle>@})
         (* (/ 180.0 greek-pi) (A radians)))
-      (lambda ((A <angle>) (deg <real>))
+      (lambda (@{A <angle>@} @{deg <real>@})
         (set! (A radians) (* (/ greek-pi 180.0) deg))))
    ))
 
@@ -2174,17 +2177,18 @@ here is the same definition with accessor and mutator defined as
 functions and the default names:
 
 @example
+#!vicare
 (import (nausicaa)
   (vicare numerics constants))
 
 (define-class <angle>
-  (fields (mutable (radians <real>)))
-  (virtual-fields (mutable (degrees <real>))))
+  (fields (mutable @{radians <real>@}))
+  (virtual-fields (mutable @{degrees <real>@})))
 
-(define (<angle>-degrees (A <angle>))
+(define (<angle>-degrees @{A <angle>@})
   (* (/ 180.0 greek-pi) (A radians)))
 
-(define (<angle>-degrees-set! (A <angle>) (deg <real>))
+(define (<angle>-degrees-set! @{A <angle>@} @{deg <real>@})
   (set! (A radians) (* (/ greek-pi 180.0) deg)))
 @end example
 
@@ -2193,20 +2197,21 @@ and here is again the same definition with accessor and mutator defined
 as syntaxes:
 
 @example
+#!vicare
 (import (nausicaa)
   (vicare numerics constants))
 
 (define-class <angle>
-  (fields (mutable (radians <real>)))
-  (virtual-fields (mutable (degrees <real>))))
+  (fields (mutable @{radians <real>@}))
+  (virtual-fields (mutable @{degrees <real>@})))
 
 (define-inline (<angle>-degrees A)
-  (let (((A <angle>) A))
+  (let ((@{A <angle>@} A))
     (* (/ 180.0 greek-pi) (A radians))))
 
 (define-inline (<angle>-degrees-set! A deg)
-  (let (((A <angle>)  A)
-        ((deg <real>) deg))
+  (let ((@{A <angle>@}  A)
+        (@{deg <real>@} deg))
     (set! (A radians) (* (/ greek-pi 180.0) deg))))
 @end example
 
@@ -2225,13 +2230,15 @@ The @meta{method} arguments can be of the form:
 @example
 @meta{method-name}
 (@meta{method-name} @meta{invokable-name})
-((@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
-(#(@meta{method-name} @meta{rv-tag}) @meta{invokable-name})
+((brace @meta{method-name} @meta{rv-tag}) @meta{invokable-name})
 @end example
 
 @noindent
-where @meta{method-name} and @meta{invokable-name} must be identifiers;
-in the first two forms the invokable name is built in the same way the
+where @meta{method-name} and @meta{invokable-name} must be identifiers,
+@func{brace} is the identifier exported by @library{vicare} and
+reexported by @library{nausicaa language oopp}.
+
+In the first two forms the invokable name is built in the same way the
 field accessor names are built: appending a dash and @meta{method-name}
 to the type name.  When @meta{rv-tag} is used: it must be the tag
 identifier representing the type of a return value, the method is then
@@ -2249,7 +2256,7 @@ Here is a usage example of the first form:
   (fields a b)
   (methods sum))
 
-(define/tags (<stuff>-sum (S <stuff>))
+(define/tags (<stuff>-sum @{S <stuff>@})
   (+ (S a) (S b)))
 
 (<stuff> S (<> (1 2)))
@@ -2264,7 +2271,7 @@ here is a usage example of the third form with a method function:
   (fields a b)
   (methods (sum <stuff>-sum)))
 
-(define/tags (<stuff>-sum (S <stuff>))
+(define/tags (<stuff>-sum @{S <stuff>@})
   (+ (S a) (S b)))
 
 (<stuff> S (<> (1 2)))
@@ -2283,7 +2290,7 @@ and here is a usage example of the third form with a method syntax:
   (lambda (stx)
     (syntax-case stx ()
       ((_ ?instance)
-       #'(let (((S <stuff>) ?instance))
+       #'(let ((@{S <stuff>@} ?instance))
            (+ (S a) (S b)))))))
 
 (<stuff> S (<> (1 2)))
@@ -2304,8 +2311,7 @@ the following formats:
 
 @example
 @meta{method-name}
-(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
-#(@meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
+(brace @meta{method-name} @metao{rv-tag} @meta{rv-tag} ...)
 @end example
 
 @noindent
@@ -2314,17 +2320,19 @@ the following formats:
 
 @example
 @meta{method-name}
-#(@meta{method-name} @meta{rv-tag})
+(brace @meta{method-name} @meta{rv-tag})
 @end example
 
 @noindent
 where: @meta{method-name} must be an identifier representing the method
 name; @meta{rv-tag} must be a tag identifier representing the type of a
-return value.  When a single return value tag is specified: the method
-is available for nested method invocation according to @oopp{} syntax
-specifications.  When the first form is used: the return value tags are
-used to validate the returned arguments as described for
-@func{lambda/tags}.
+return value; @func{brace} is the identifier exported by
+@library{vicare} and reexported by @library{nausicaa language oopp}.
+
+When a single return value tag is specified: the method is available for
+nested method invocation according to @oopp{} syntax specifications.
+When the first form is used: the return value tags are used to validate
+the returned arguments as described for @func{lambda/tags}.
 
 @itemize
 @item
@@ -2340,8 +2348,8 @@ the function definition is expanded to:
 
 @example
 (define function-name
-  (lambda/tags ((_ @metao{rv-tag} @meta{rv-tag} ...) . @meta{formals})
-    . @meta{body})
+  (lambda/tags (@{_ @metao{rv-tag} @meta{rv-tag} ...@} . @meta{formals})
+    . @meta{body}))
 @end example
 
 @noindent
@@ -2376,7 +2384,7 @@ Here is an example of the first form:
 @example
 (define-class <stuff>
   (fields a b)
-  (method (sum (S <stuff>))
+  (method (sum @{S <stuff>@})
     (+ (S a) (S b))))
 
 (<stuff> S (<> (1 2)))
@@ -2390,7 +2398,7 @@ and an example of the second form:
 (define-class <stuff>
   (fields a b)
   (method sum
-    (lambda/tags ((S <stuff>))
+    (lambda/tags (@{S <stuff>@})
       (+ (S a) (S b)))))
 
 (<stuff> S (<> (1 2)))
@@ -2409,17 +2417,18 @@ The argument @meta{method} can have one of the following formats:
 
 @example
 @meta{method-name}
-(@meta{method-name} @meta{rv-tag})
-#(@meta{method-name} @meta{rv-tag})
+(brace @meta{method-name} @meta{rv-tag})
 @end example
 
 @noindent
 where: @meta{method-name} must be an identifier representing the method
 name; @meta{rv-tag} must be a tag identifier representing the type of
-the single return value.  When the single return value tag is specified:
-the method is available for nested method invocation according to
-@oopp{} syntax specifications.  When the method returns multiple values:
-no type tag must be specified.
+the single return value; @func{brace} is the identifier exported by
+@library{vicare} and reexported by @library{nausicaa language oopp}.
+
+When the single return value tag is specified: the method is available
+for nested method invocation according to @oopp{} syntax specifications.
+When the method returns multiple values: no type tag must be specified.
 
 The method definition is added to the methods list as if the following
 clause had been used:
@@ -2452,7 +2461,7 @@ Here is an example of method syntax:
     (lambda (stx)
       (syntax-case stx ()
         ((_ ?instance)
-         #'(let (((S <stuff>) ?instance))
+         #'(let ((@{S <stuff>@} ?instance))
              (+ (S a) (S b))))))))
 
 (<stuff> S (<> (1 2)))
@@ -2469,19 +2478,19 @@ language oopp} library, but we can do it using the facilities of the
 @library{nausicaa language generics} library.  Example:
 
 @example
-#!r6rs
+#!vicare
 (import (nausicaa))
 
 (define-class <alpha>
   (fields a)
   (methods doit))
 
-(define-generic <alpha>-doit (o v))
+(define-generic <alpha>-doit @{o v@})
 
-(define-method (<alpha>-doit (o <alpha>) (v <char>))
+(define-method (<alpha>-doit @{o <alpha>@} @{v <char>@})
   (cons 'char v))
 
-(define-method (<alpha>-doit (o <alpha>) (v <integer>))
+(define-method (<alpha>-doit @{o <alpha>@} @{v <integer>@})
   (cons 'int  v))
 
 (<alpha> o (<> (1)))
@@ -2685,7 +2694,7 @@ setter clause.
 Let's consider this situation:
 
 @example
-#!r6rs
+#!vicare
 (import (nausicaa))
 
 (define-class <alpha>
@@ -2697,13 +2706,13 @@ Let's consider this situation:
 (define-class <delta>
   (parent <alpha>)
   (fields v)
-  (method (doit (o <delta>))
+  (method (doit @{o <delta>@})
     (+ 1 (o v))))
 
 (define-class <gamma>
   (parent <beta>)
   (fields v)
-  (method (doit (o <gamma>))
+  (method (doit @{o <gamma>@})
     (+ 1 (o v))))
 @end example
 
@@ -2716,7 +2725,7 @@ definitions?  Yes, with mixins.  The example above is equivalent to the
 following:
 
 @example
-#!r6rs
+#!vicare
 (import (nausicaa))
 
 (define-class <alpha>
@@ -2727,7 +2736,7 @@ following:
 
 (define-mixin <stuff>
   (field v)
-  (method (doit (o <stuff>))
+  (method (doit @{o <stuff>@})
     (+ 1 (o v))))
 
 (define-class <delta>
@@ -2841,7 +2850,7 @@ order in which the mixin identifiers appear in the @clause{mixins}
 clauses.  For example the following definitions:
 
 @example
-#!r6rs
+#!vicare
 (import (nausicaa))
 
 (define-mixin <alpha>
@@ -2866,7 +2875,7 @@ clauses.  For example the following definitions:
 are equivalent to the following single definition:
 
 @example
-#!r6rs
+#!vicare
 (import (nausicaa))
 
 (define-class <red>
@@ -2993,7 +3002,7 @@ by redefining @func{define-condition-type} so that it creates both a
 condition object type and a corresponding label:
 
 @smallexample
-#!r6rs
+#!vicare
 (import (except (nausicaa)
                 define-condition-type
                 &warning)
@@ -3034,7 +3043,7 @@ condition object type and a corresponding label:
   ((&my-warning) E)             @result{} #t
   (is-a? E &my-warning))        @result{} #t
 
-(let/tags (((E &warning-with-fields) (&warning-with-fields (1 2))))
+(let/tags ((@{E &warning-with-fields@} (&warning-with-fields (1 2))))
   (warning-with-fields? E)              @result{} #t
   ((&warning-with-fields) E)            @result{} #t
   (is-a? E &warning-with-fields)        @result{} #t
