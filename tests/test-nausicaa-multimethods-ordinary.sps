@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2008-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2008-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,8 +24,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (rnrs eval)
   (vicare checks))
 
@@ -152,13 +152,13 @@
 
     (define-generic alpha (o))
 
-    (define-method alpha ((o <one>))
+    (define-method alpha ({o <one>})
       (<one>-a o))
 
-    (define-method alpha ((o <two>))
+    (define-method alpha ({o <two>})
       (o d))
 
-    (define-method alpha ((o <three>))
+    (define-method alpha ({o <three>})
       (<three>-g o))
 
     ;;Direct public constructor call.
@@ -199,10 +199,10 @@
 
     (define-generic alpha (o))
 
-    (define-method alpha ((o <one>))
+    (define-method alpha ({o <one>})
       (<one>-a o))
 
-    (define-method alpha ((o <one>))
+    (define-method alpha ({o <one>})
       (<one>-b o))
 
     (let ((o (make-<two> 1 2 3 4 5 6)))
@@ -217,12 +217,12 @@
 
     (define-generic alpha (o))
 
-    (define-method alpha ((o <fixnum>))		'<fixnum>)
-    (define-method alpha ((o <flonum>))		'<flonum>)
-    (define-method alpha ((o <integer>))	'<integer>)
-    (define-method alpha ((o <real>))		'<real>)
-    (define-method alpha ((o <complex>))	'<complex>)
-    (define-method alpha ((o <number>))		'<number>)
+    (define-method alpha ({o <fixnum>})		'<fixnum>)
+    (define-method alpha ({o <flonum>})		'<flonum>)
+    (define-method alpha ({o <integer>})	'<integer>)
+    (define-method alpha ({o <real>})		'<real>)
+    (define-method alpha ({o <complex>})	'<complex>)
+    (define-method alpha ({o <number>})		'<number>)
 
     (check (alpha 12)		=> '<fixnum>)
     (check (alpha (expt 12 65)) => '<integer>)
@@ -249,13 +249,13 @@
 
     (define-generic alpha (o))
 
-    (define-method alpha ((o <one>))
+    (define-method alpha ({o <one>})
       (<one>-a o))
 
-    (define-method alpha ((o <two>))
+    (define-method alpha ({o <two>})
       (<two>-b o))
 
-    (define-method alpha ((o <three>))
+    (define-method alpha ({o <three>})
       (<three>-c o))
 
     (check
@@ -291,14 +291,14 @@
 
   (define-generic alpha (o))
 
-  (define-method (alpha (o <one>))
+  (define-method (alpha {o <one>})
     (<one>-a o))
 
-  (define-method alpha ((o <two>))
+  (define-method alpha ({o <two>})
     (cons (<two>-d o)
 	  (call-next-method)))
 
-  (define-method alpha ((o <three>))
+  (define-method alpha ({o <three>})
     (cons (<three>-g o)
 	  (call-next-method)))
 
@@ -357,8 +357,8 @@
 ;;; Two levels specificity.
   (let ()
     (define-generic alpha (p q r))
-    (define-method (alpha (p <1>) (q <2>) (r <3>)) 1)
-    (define-method (alpha (p <a>) (q <b>) (r <c>)) 2)
+    (define-method (alpha {p <1>} {q <2>} {r <3>}) 1)
+    (define-method (alpha {p <a>} {q <b>} {r <c>}) 2)
     (check (alpha n1 n2 n3) => 1)
     (check (alpha  a n2 n3) => 2)
     (check (alpha n1  b n3) => 2)
@@ -370,9 +370,9 @@
 ;;; Mixed levels specificity.
   (let ()
     (define-generic alpha (p q r))
-    (define-method (alpha (p <1>) (q <2>) (r <3>)) 1)
-    (define-method (alpha (p <1>) (q <b>) (r <3>)) 2)
-    (define-method (alpha (p <a>) (q <b>) (r <c>)) 3)
+    (define-method (alpha {p <1>} {q <2>} {r <3>}) 1)
+    (define-method (alpha {p <1>} {q <b>} {r <3>}) 2)
+    (define-method (alpha {p <a>} {q <b>} {r <c>}) 3)
     (check (alpha n1 n2 n3) => 1)
     (check (alpha  a n2 n3) => 3)
     (check (alpha n1  b n3) => 2)
@@ -381,9 +381,9 @@
     )
   (let ()
     (define-generic alpha (p q r))
-    (define-method (alpha (p <1>) (q <2>) (r <3>)) 1)
-    (define-method (alpha (p <1>) (q <b>) (r <c>)) 2)
-    (define-method (alpha (p <a>) (q <b>) (r <c>)) 3)
+    (define-method (alpha {p <1>} {q <2>} {r <3>}) 1)
+    (define-method (alpha {p <1>} {q <b>} {r <c>}) 2)
+    (define-method (alpha {p <a>} {q <b>} {r <c>}) 3)
     (check (alpha n1 n2 n3) => 1)
     (check (alpha  a n2 n3) => 3)
     (check (alpha n1  b n3) => 2)
@@ -395,8 +395,8 @@
 ;;; Overwriting existing method.
   (let ()
     (define-generic alpha (p))
-    (define-method (alpha (p <1>)) 123)
-    (define-method (alpha (p <1>)) 456)
+    (define-method (alpha {p <1>}) 123)
+    (define-method (alpha {p <1>}) 456)
     (check (alpha n1) => 456))
 
   #t)
@@ -426,13 +426,13 @@
     (define-generic alpha (o))
     (define-generic beta  (o))
 
-    (define-method (alpha (o <one>))
+    (define-method (alpha {o <one>})
       'alpha-one)
 
-    (define-method (alpha (o <two>))
+    (define-method (alpha {o <two>})
       'alpha-two)
 
-    (define-method (beta (o <three>))
+    (define-method (beta {o <three>})
       'beta-three)
 
     (define-generic gamma (o)
@@ -472,16 +472,16 @@
     (define-generic alpha (o))
     (define-generic beta  (o))
 
-    (define-method (alpha (o <one>))
+    (define-method (alpha {o <one>})
       'alpha-one)
 
-    (define-method (alpha (o <two>))
+    (define-method (alpha {o <two>})
       'alpha-two)
 
-    (define-method (beta (o <three>))
+    (define-method (beta {o <three>})
       'beta-three)
 
-    (define-method (beta (o <two>))	;this is discarded when merging
+    (define-method (beta {o <two>})	;this is discarded when merging
       'beta-two)
 
     (define-generic gamma (o)
@@ -516,9 +516,9 @@
 	      (mutable f)))
 
     (define-generic alpha (o))
-    (define-method (alpha (o <one>))
+    (define-method (alpha {o <one>})
       1)
-    (define-method (alpha (o <two>))
+    (define-method (alpha {o <two>})
       2)
 
     (check	;fills the cache
@@ -556,16 +556,16 @@
 
     (define-generic alpha (p q r))
 
-    (define-method (alpha (p <a>) (q <b>) (r <c>)) 'abc)
-    (define-method (alpha (p <d>) (q <e>) (r <f>)) 'def)
-    (define-method (alpha (p <g>) (q <h>) (r <i>)) 'ghi)
-    (define-method (alpha (p <l>) (q <a>) (r <b>)) 'lab)
-    (define-method (alpha (p <c>) (q <d>) (r <e>)) 'cde)
-    (define-method (alpha (p <f>) (q <g>) (r <h>)) 'fgh)
-    (define-method (alpha (p <i>) (q <l>) (r <a>)) 'ila)
-    (define-method (alpha (p <b>) (q <c>) (r <d>)) 'bcd)
-    (define-method (alpha (p <e>) (q <f>) (r <g>)) 'efg)
-    (define-method (alpha (p <h>) (q <i>) (r <l>)) 'hil)
+    (define-method (alpha {p <a>} {q <b>} {r <c>}) 'abc)
+    (define-method (alpha {p <d>} {q <e>} {r <f>}) 'def)
+    (define-method (alpha {p <g>} {q <h>} {r <i>}) 'ghi)
+    (define-method (alpha {p <l>} {q <a>} {r <b>}) 'lab)
+    (define-method (alpha {p <c>} {q <d>} {r <e>}) 'cde)
+    (define-method (alpha {p <f>} {q <g>} {r <h>}) 'fgh)
+    (define-method (alpha {p <i>} {q <l>} {r <a>}) 'ila)
+    (define-method (alpha {p <b>} {q <c>} {r <d>}) 'bcd)
+    (define-method (alpha {p <e>} {q <f>} {r <g>}) 'efg)
+    (define-method (alpha {p <h>} {q <i>} {r <l>}) 'hil)
 
     (define a (<a> ()))
     (define b (<b> ()))
@@ -628,10 +628,10 @@
   (let ((a (make-<alpha> "alpha"))
 	(b (make-<beta>  "beta")))
 
-    (define-method (object->string (o <alpha>))
+    (define-method (object->string {o <alpha>})
       (<alpha>-the-string o))
 
-    (define-method object->string ((o <beta>))
+    (define-method object->string ({o <beta>})
       (<beta>-the-string o))
 
     (check

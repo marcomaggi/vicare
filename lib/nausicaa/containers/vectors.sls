@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa containers vectors)
   (options visit-upon-loading)
   (export <xvector>)

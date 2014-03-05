@@ -27,7 +27,7 @@
 
 
 #!vicare
-(library (nausicaa language oopp definition-parser-helpers)
+(library (nausicaa language oopp definition-parser-helpers (0 4))
   (export
     parse-label-definition		parse-class-definition
     parse-mixin-definition
@@ -60,19 +60,19 @@
 
     <label-spec>?
     <label-spec>-satisfaction-clauses)
-  (import (for (vicare) run expand)
+  (import (for (vicare (0 4)) run expand)
     (for (only (rnrs)
 	       lambda define define-syntax set!)
       (meta -1))
     (vicare unsafe operations)
     (only (vicare language-extensions identifier-substitutions)
 	  multi-identifier-subst)
-    (prefix (only (nausicaa language oopp configuration)
+    (prefix (only (nausicaa language oopp configuration (0 4))
 		  enable-satisfactions)
 	    config.)
-    (for (nausicaa language oopp auxiliary-syntaxes)
+    (for (nausicaa language oopp auxiliary-syntaxes (0 4))
       (meta -1))
-    (for (prefix (only (nausicaa language auxiliary-syntaxes)
+    (for (prefix (only (nausicaa language auxiliary-syntaxes (0 4))
 		       parent		nongenerative
 		       sealed		opaque
 		       predicate	abstract
@@ -1117,25 +1117,23 @@
   ;;where ?METHOD-INT has one of the syntaxes:
   ;;
   ;;  ?method-name-id
-  ;;  (?method-name-id ?rv-tag0 ?rv-tag ...)
-  ;;  #(?method-name-id ?rv-tag0 ?rv-tag ...)
+  ;;  (brace ?method-name-id ?rv-tag0 ?rv-tag ...)
   ;;
-  ;;where ?METHOD-EXT has one of the syntaxes:
+  ;;and ?METHOD-EXT has one of the syntaxes:
   ;;
   ;;  ?method-name-id
-  ;;  #(?method-name-id ?rv-tag)
+  ;;  (brace ?method-name-id ?rv-tag)
   ;;
   ;;?ARG has one of the syntaxes:
   ;;
   ;;  ?arg-id
-  ;;  (?arg-id ?arg-tag-id)
-  ;;  #(?arg-id ?arg-tag-id)
+  ;;  (brace ?arg-id ?arg-tag-id)
   ;;
   ;;?REST has one of the syntaxes:
   ;;
   ;;  ()
   ;;  ?rest-id
-  ;;  #(?rest-id ?rest-tag-id)
+  ;;  (brace ?rest-id ?rest-tag-id)
   ;;
   (define (clause-arguments-parser:single-method parsed-spec args synner)
     ;;We expect ARGS to have the format:
@@ -1151,7 +1149,51 @@
     (define-syntax TOP-ID	(identifier-syntax (<parsed-spec>-top-id    parsed-spec)))
     (define-syntax NAME-ID	(identifier-syntax (<parsed-spec>-name-id   parsed-spec)))
     (define-syntax LAMBDA-ID	(identifier-syntax (<parsed-spec>-lambda-id parsed-spec)))
-    (syntax-case method-spec-stx ()
+    (syntax-case method-spec-stx (brace)
+
+      ;;Tagged single return value method definition.  The clause is:
+      ;;
+      ;;   (method ((brace ?method-name-id ?rv-tag) . ?formals)
+      ;;     ?body0 ?body ...)
+      ;;
+      (#(((brace ?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
+       (and (identifier? #'?method-name-id)
+	    (identifier? #'?rv-tag))
+       (%add-method parsed-spec #'?method-name-id #'?rv-tag
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-ID ((brace _ ?rv-tag) . ?formals) ?body0 ?body ...)
+		    synner))
+
+      ;;Tagged multiple return values method definition.  The clause is:
+      ;;
+      ;;   (method ((brace ?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals)
+      ;;     ?body0 ?body ...)
+      ;;
+      (#(((brace ?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+       (and (identifier? #'?method-name-id)
+	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
+       (%add-method parsed-spec #'?method-name-id TOP-ID
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #`(#,LAMBDA-ID ((brace _ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+		    synner))
+
+      ;;Tagged external lambda method definition.  The clause is:
+      ;;
+      ;;   (method (brace ?method-name-id ?rv-tag)
+      ;;     ?lambda-expr))
+      ;;
+      (#((brace ?method-name-id ?rv-tag) ?lambda-expr)
+       (and (identifier? #'?method-name-id)
+	    (identifier? #'?rv-tag))
+       (%add-method parsed-spec #'?method-name-id #'?rv-tag
+		    (make-method-identifier NAME-ID #'?method-name-id)
+		    #'?lambda-expr synner))
+
+      ;;Untagged method definition.  The clause is:
+      ;;
+      ;;   (method (?method-name-id . ?formals)
+      ;;     ?body0 ?body ...)
+      ;;
       (#((?method-name-id . ?formals) ?body0 ?body ...)
        (identifier? #'?method-name-id)
        (%add-method parsed-spec #'?method-name-id TOP-ID
@@ -1159,63 +1201,18 @@
 		    #`(#,LAMBDA-ID ?formals ?body0 ?body ...)
 		    synner))
 
-      ;;Tagged  single   return  value  method  definition.    List  tag
-      ;;specification.
-      (#(((?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
-       (and (identifier? #'?method-name-id)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name-id #'?rv-tag
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag) . ?formals) ?body0 ?body ...)
-		    synner))
-
-      ;;Tagged  single  return  value  method  definition.   Vector  tag
-      ;;specification.
-      (#((#(?method-name-id ?rv-tag) . ?formals) ?body0 ?body ...)
-       (and (identifier? #'?method-name-id)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name-id #'?rv-tag
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag) . ?formals) ?body0 ?body ...)
-		    synner))
-
-      ;;Tagged  multiple  return  values method  definition.   List  tag
-      ;;specification.
-      (#(((?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-       (and (identifier? #'?method-name-id)
-	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
-       (%add-method parsed-spec #'?method-name-id TOP-ID
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-		    synner))
-
-      ;;Tagged  multiple return  values method  definition.  Vector  tag
-      ;;specification.
-      (#((#(?method-name-id ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-       (and (identifier? #'?method-name-id)
-	    (all-identifiers? #'(?rv-tag0 ?rv-tag ...)))
-       (%add-method parsed-spec #'?method-name-id TOP-ID
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #`(#,LAMBDA-ID ((_ ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-		    synner))
-
-      ;;Untagged external lambda method definition.
+      ;;Untagged external lambda method definition.  The clause is:
+      ;;
+      ;;   (method ?method-name-id ?lambda-expr)
+      ;;
       (#(?method-name-id ?lambda-expr)
        (identifier? #'?method-name-id)
        (%add-method parsed-spec #'?method-name-id TOP-ID
 		    (make-method-identifier NAME-ID #'?method-name-id)
 		    #'?lambda-expr synner))
 
-      ;;Tagged external lambda method definition.
-      (#(#(?method-name-id ?rv-tag) ?lambda-expr)
-       (and (identifier? #'?method-name-id)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name-id #'?rv-tag
-		    (make-method-identifier NAME-ID #'?method-name-id)
-		    #'?lambda-expr synner))
-
       (_
-       (synner "invalid method specification in METHOD-SYNTAX clause" method-spec-stx))))
+       (synner "invalid method specification in SINGLE-METHOD clause" method-spec-stx))))
 
   (define (%add-method parsed-spec method-name-id method-rv-tag-id method-implementation-id method-expr synner)
     (<parsed-spec>-member-identifiers-cons! parsed-spec method-name-id "method name" synner)
@@ -1237,8 +1234,7 @@
   ;;and ?METHOD has one of the following syntaxes:
   ;;
   ;;  ?method-name-id
-  ;;  (?method-name-id ?rv-tag)
-  ;;  #(?method-name-id ?rv-tag)
+  ;;  (brace ?method-name-id ?rv-tag)
   ;;
   ;;where:  ?METHOD-NAME-ID is  an  identifier  representing the  method
   ;;name;  ?RV-TAG is  an identifier  representing the  type tag  of the
@@ -1261,26 +1257,19 @@
       (identifier-syntax ($<parsed-spec>-top-id parsed-spec)))
     (define-syntax NAME-ID
       (identifier-syntax ($<parsed-spec>-name-id parsed-spec)))
-    (syntax-case method-spec-stx ()
+    (syntax-case method-spec-stx (brace)
+      ;;Tagged return value method definition.
+      ;;
+      (#((brace ?method-name ?rv-tag) ?transformer-expr)
+       (and (identifier? #'?method-name)
+	    (identifier? #'?rv-tag))
+       (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
+
       ;;Untagged return value method definition.
       ;;
       (#(?method-name ?transformer-expr)
        (identifier? #'?method-name)
        (%add-method parsed-spec #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
-
-      ;;Tagged return value method definition.  List tag specification.
-      ;;
-      (#((?method-name ?rv-tag) ?transformer-expr)
-       (and (identifier? #'?method-name)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
-
-      ;;Tagged return value method definition.  Vector tag specification.
-      ;;
-      (#(#(?method-name ?rv-tag) ?transformer-expr)
-       (and (identifier? #'?method-name)
-	    (identifier? #'?rv-tag))
-       (%add-method parsed-spec #'?method-name #'?rv-tag (make-method-identifier NAME-ID #'?method-name) #'?transformer-expr synner))
 
       (_
        (synner "invalid method specification in METHOD-SYNTAX clause" method-spec-stx))))
@@ -1309,8 +1298,7 @@
   ;;and ?METHOD has one of the following syntaxes:
   ;;
   ;;  ?method-name-id
-  ;;  (?method-name-id ?rv-tag)
-  ;;  #(?method-name-id ?rv-tag)
+  ;;  (brace ?method-name-id ?rv-tag)
   ;;
   ;;where:  ?METHOD-NAME-ID is  an  identifier  representing the  method
   ;;name;  ?RV-TAG is  an identifier  representing the  type tag  of the
@@ -1338,7 +1326,7 @@
       (identifier-syntax (<parsed-spec>-top-id parsed-spec)))
     (define-syntax NAME-ID
       (identifier-syntax (<parsed-spec>-name-id parsed-spec)))
-    (syntax-case method-spec-stx ()
+    (syntax-case method-spec-stx (brace)
       (?method-name
        (identifier? #'?method-name)
        (%add-method parsed-spec #'?method-name TOP-ID (make-method-identifier NAME-ID #'?method-name) synner))
@@ -1349,16 +1337,8 @@
 	    (identifier? #'?invocable-name))
        (%add-method parsed-spec #'?method-name TOP-ID #'?invocable-name synner))
 
-      ;;Tagged return value method definition.  List tag specification.
-      (((?method-name ?rv-tag) ?invocable-name)
-       (and (identifier? #'?method-name)
-	    (identifier? #'?rv-tag)
-	    (identifier? #'?invocable-name))
-       (%add-method parsed-spec #'?method-name #'?rv-tag #'?invocable-name synner))
-
-      ;;Tagged   return    value   method   definition.     Vector   tag
-      ;;specification.
-      ((#(?method-name ?rv-tag) ?invocable-name)
+      ;;Tagged return value method definition.
+      (((brace ?method-name ?rv-tag) ?invocable-name)
        (and (identifier? #'?method-name)
 	    (identifier? #'?rv-tag)
 	    (identifier? #'?invocable-name))
@@ -1417,17 +1397,12 @@
        (synner "invalid virtual-field specification" field-spec-stx))))
 
   (define (%parse-field field-stx parsed-spec synner)
-    (syntax-case field-stx ()
+    (syntax-case field-stx (brace)
       (?field-name-id
        (identifier? #'?field-name-id)
        (values #'?field-name-id (<parsed-spec>-top-id parsed-spec)))
 
-      ((?field-name-id ?type-tag-id)
-       (and (identifier? #'?field-name-id)
-	    (identifier? #'?type-tag-id))
-       (values #'?field-name-id #'?type-tag-id))
-
-      (#(?field-name-id ?type-tag-id)
+      ((brace ?field-name-id ?type-tag-id)
        (and (identifier? #'?field-name-id)
 	    (identifier? #'?type-tag-id))
        (values #'?field-name-id #'?type-tag-id))
@@ -1458,8 +1433,7 @@
   ;;where ?FIELD has one of the following syntaxes:
   ;;
   ;;  ?field-name-id
-  ;;  (?field-name-id ?type-tag-id)
-  ;;  #(?field-name-id ?type-tag-id)
+  ;;  (brace ?field-name-id ?type-tag-id)
   ;;
   ;;both ?ACCESSOR and ?MUTATOR must be identifiers.
   ;;
@@ -1553,8 +1527,7 @@
   ;;where ?FIELD has one of the following syntaxes:
   ;;
   ;;  ?field-name-id
-  ;;  (?field-name-id ?type-tag-id)
-  ;;  #(?field-name-id ?type-tag-id)
+  ;;  (brace ?field-name-id ?type-tag-id)
   ;;
   ;;both ?ACCESSOR  and ?MUTATOR can  be identifiers bound  to functions
   ;;and syntaxes or arbitrary expressions evaluating to the accessor and

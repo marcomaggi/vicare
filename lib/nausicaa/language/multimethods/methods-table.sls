@@ -38,7 +38,7 @@
 
 
 #!r6rs
-(library (nausicaa language multimethods methods-table)
+(library (nausicaa language multimethods methods-table (0 4))
   (export
     define-methods-table
     compute-applicable-methods
@@ -50,8 +50,8 @@
     ;;exported if there is the need.  (Marco Maggi; Mon Nov 25, 2013)
     ;;
     #;add-method-to-methods-alist)
-  (import (vicare)
-    (only (nausicaa language symbols-tree)
+  (import (vicare (0 4))
+    (only (nausicaa language symbols-tree (0 4))
 	  tree-cons
 	  treeq)
     (vicare unsafe operations))

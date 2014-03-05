@@ -28,7 +28,7 @@
 
 
 #!vicare
-(library (nausicaa)
+(library (nausicaa (0 4))
   (export
 
 ;;;; (rnrs base (6))
@@ -1784,7 +1784,7 @@
 )
 
 
-  (import (for (except (vicare)
+  (import (for (except (vicare (0 4))
 		       define-condition-type
 		       is-a? slot-ref slot-set!
 
@@ -1830,17 +1830,17 @@
 		       &i/o-eagain
 		       &out-of-memory-error)
 	    expand run)
-    (for (except (nausicaa language oopp)
+    (for (except (nausicaa language oopp (0 4))
 		 &tagged-binding-violation
 		 make-tagged-binding-violation
 		 tagged-binding-violation?)
       expand run)
-    (for (nausicaa language multimethods)		expand run)
-    (for (nausicaa language builtins)			expand run)
-    (for (nausicaa language conditions)			expand run)
-    (for (nausicaa language increments)			expand run)
-    (for (nausicaa language simple-match)		expand run)
-    (for (nausicaa language infix)			expand run)
+    (for (nausicaa language multimethods (0 4))		expand run)
+    (for (nausicaa language builtins (0 4))		expand run)
+    (for (nausicaa language conditions (0 4))		expand run)
+    (for (nausicaa language increments (0 4))		expand run)
+    (for (nausicaa language simple-match (0 4))		expand run)
+    (for (nausicaa language infix (0 4))		expand run)
     (for (vicare language-extensions namespaces)	expand run)
     (for (vicare language-extensions sentinels)		expand run)
     ))

@@ -16,7 +16,7 @@
 ;;;
 ;;;		nausicaa/language/infix/sexp-parser.sls
 ;;;
-;;;Copyright (c) 2010, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2008 Dominique Boucher
 ;;;Copyright (C) 2000 The Free Software Foundation
 ;;;
@@ -36,7 +36,7 @@
 
 
 #!vicare
-(library (nausicaa language infix)
+(library (nausicaa language infix (0 4))
   (export
     infix incr! decr! xor ? :
     % && !! ^^ ~~
@@ -44,14 +44,14 @@
 	    (decr!	--))
     & ! ^ ~ << >>
     fx& fx! fx^ fx~ fx<< fx>>)
-  (import (vicare)
+  (import (vicare (0 4))
     (except (vicare language-extensions infix)
 	    infix incr! decr!)
     (vicare language-extensions infix parser-utils)
     (vicare language-extensions infix tokens)
-    (for (nausicaa language increments)
+    (for (nausicaa language increments (0 4))
       run expand)
-    (for (only (nausicaa language oopp)
+    (for (only (nausicaa language oopp (0 4))
 	       begin/tags)
       run expand))
 

@@ -26,7 +26,7 @@
 
 
 #!vicare
-(library (nausicaa language builtins)
+(library (nausicaa language builtins (0 4))
   (options visit-upon-loading)
   (export
     <top>
@@ -76,7 +76,7 @@
     ;; multimethods for output ports
     put-single			put-multi-2
     put-multi-3			put-multi-4)
-  (import (vicare)
+  (import (vicare (0 4))
     (only (vicare system $symbols)
 	  $symbol-value
 	  $set-symbol-value!
@@ -84,8 +84,8 @@
     (vicare unsafe operations)
     (vicare language-extensions sentinels)
     (vicare containers bytevectors)
-    (nausicaa language oopp)
-    (nausicaa language multimethods))
+    (nausicaa language oopp (0 4))
+    (nausicaa language multimethods (0 4)))
 
 
 ;;;; helpers
@@ -113,8 +113,9 @@
 
 (define-builtin-label <symbol>
   (predicate symbol?)
-  (virtual-fields (immutable (string <string>)	symbol->string))
-  (method-syntax hash
+  (virtual-fields
+   (immutable (brace string <string>) symbol->string))
+  (method-syntax (brace hash <fixnum>)
     (syntax-rules ()
       ((_ ?o)
        (symbol-hash ?o)))))
@@ -130,58 +131,60 @@
 		      (else
 		       (assertion-violation '<keyword>
 			 "expected symbol or string as constructor argument" arg))))))
-  (virtual-fields (immutable (string <string>) (lambda/tags ((K <keyword>))
-						 (symbol->string (K symbol))))
-		  (immutable (symbol <symbol>) keyword->symbol)))
+  (virtual-fields
+   (immutable (brace string <string>)
+	      (lambda/tags ((brace K <keyword>))
+		((K symbol) string)))
+   (immutable (brace symbol <symbol>) keyword->symbol)))
 
 (define-builtin-label <pointer>
   (predicate pointer?)
   (protocol (lambda () integer->pointer))
   (virtual-fields
-   (immutable (null?	<boolean>)	pointer-null?)
-   (immutable (integer	<integer>)	pointer->integer))
+   (immutable (brace null?	<boolean>)	pointer-null?)
+   (immutable (brace integer	<integer>)	pointer->integer))
 
-  (method-syntax =
+  (method-syntax (brace = <boolean>)
     (syntax-rules ()
       ((_ ?ptr1 ?ptr2)
        (pointer=? ?ptr1 ?ptr2))))
 
-  (method-syntax <>
+  (method-syntax (brace <> <boolean>)
     (syntax-rules ()
       ((_ ?ptr1 ?ptr2)
        (pointer<>? ?ptr1 ?ptr2))))
 
-  (method-syntax <
+  (method-syntax (brace < <boolean>)
     (syntax-rules ()
       ((_ ?ptr1 ?ptr2)
        (pointer<? ?ptr1 ?ptr2))))
 
-  (method-syntax >
+  (method-syntax (brace > <boolean>)
     (syntax-rules ()
       ((_ ?ptr1 ?ptr2)
        (pointer>? ?ptr1 ?ptr2))))
 
-  (method-syntax <=
+  (method-syntax (brace <= <boolean>)
     (syntax-rules ()
       ((_ ?ptr1 ?ptr2)
        (pointer<=? ?ptr1 ?ptr2))))
 
-  (method-syntax >=
+  (method-syntax (brace >= <boolean>)
     (syntax-rules ()
       ((_ ?ptr1 ?ptr2)
        (pointer>=? ?ptr1 ?ptr2))))
 
-  (method-syntax add
+  (method-syntax (brace add <pointer>)
     (syntax-rules ()
       ((_ ?ptr ?offfset)
        (pointer-add ?ptr ?offset))))
 
-  (method-syntax diff
+  (method-syntax (brace diff <exact-integer>)
     (syntax-rules ()
       ((_ ?ptr1 ?ptr2)
        (pointer-diff ?ptr1 ?ptr2))))
 
-  (method-syntax clone
+  (method-syntax (brace clone <pointer>)
     (syntax-rules ()
       ((_ ?ptr)
        (pointer-clone ?ptr))))
@@ -202,7 +205,7 @@
   ;;without fully validating it first.
   ;;
   (protocol (lambda ()
-	      (lambda/tags (A (D <spine>))
+	      (lambda/tags (A (brace D <spine>))
 		(cons A D))))
 
   (predicate (lambda (obj)
@@ -219,13 +222,14 @@
 	      #'(make-<spine> ?car ?cdr))
 	     )))
 
-  (virtual-fields (immutable (length	<exact-integer>)	length)
-		  (immutable (null?	<boolean>) 		null?)
-		  (immutable (pair?	<boolean>)		pair?)
-		  (immutable car				car)
-		  (immutable (cdr	<spine>)		cdr)
-		  (immutable $car				$car)
-		  (immutable ($cdr	<spine>)		$cdr))
+  (virtual-fields
+   (immutable (brace length	<exact-integer>)	length)
+   (immutable (brace null?	<boolean>) 		null?)
+   (immutable (brace pair?	<boolean>)		pair?)
+   (immutable car					car)
+   (immutable (brace cdr	<spine>)		cdr)
+   (immutable $car					$car)
+   (immutable (brace $cdr	<spine>)		$cdr))
 
   ;; --------------------------------------------------------------------
 
@@ -291,7 +295,7 @@
 
   ;; --------------------------------------------------------------------
 
-  (method-syntax map
+  (method-syntax (brace map <list>)
     (syntax-rules ()
       ((_ o proc . lists)
        (map proc o . lists))))
@@ -306,7 +310,7 @@
       ((_ o proc)
        (find proc o))))
 
-  (method-syntax reverse
+  (method-syntax (brace reverse <list>)
     (syntax-rules ()
       ((_ o)
        (reverse o))))
@@ -341,22 +345,22 @@
       ((_ o nil proc)
        (fold-right proc nil o))))
 
-  (method-syntax remp
+  (method-syntax (brace remp <list>)
     (syntax-rules ()
       ((_ o proc)
        (remp proc o))))
 
-  (method-syntax remove
+  (method-syntax (brace remove <list>)
     (syntax-rules ()
       ((_ o proc)
        (remove proc o))))
 
-  (method-syntax remv
+  (method-syntax (brace remv <list>)
     (syntax-rules ()
       ((_ o proc)
        (remv proc o))))
 
-  (method-syntax remq
+  (method-syntax (brace remq <list>)
     (syntax-rules ()
       ((_ o proc)
        (remq proc o))))
@@ -408,19 +412,21 @@
 (define-builtin-label <pair>
   (protocol (lambda () cons))
   (predicate pair?)
-  (virtual-fields (immutable car car)
-		  (immutable cdr cdr)
-		  (immutable $car $car)
-		  (immutable $cdr $cdr)))
+  (virtual-fields
+   (immutable car car)
+   (immutable cdr cdr)
+   (immutable $car $car)
+   (immutable $cdr $cdr)))
 
 (define-builtin-label <mutable-pair>
   (parent <pair>)
   (protocol (lambda () cons))
   (predicate pair?)
-  (virtual-fields (mutable car car set-car!)
-		  (mutable cdr cdr set-cdr!)
-		  (mutable $car $car $set-car!)
-		  (mutable $cdr $cdr $set-cdr!)))
+  (virtual-fields
+   (mutable car car set-car!)
+   (mutable cdr cdr set-cdr!)
+   (mutable $car $car $set-car!)
+   (mutable $cdr $cdr $set-cdr!)))
 
 ;;; --------------------------------------------------------------------
 
@@ -439,17 +445,19 @@
 
 (define-mixin <array>
   (virtual-fields
-   (immutable (empty?    <boolean>)	(lambda/tags ((S <array>))
-					  ($fxzero? (S length))))
-   (immutable ($empty?   <boolean>)	(lambda/tags ((S <array>))
-					  ($fxzero? (S $length)))))
+   (immutable (brace empty?    <boolean>)
+	      (lambda/tags ((brace S <array>))
+		($fxzero? (S length))))
+   (immutable (brace $empty?   <boolean>)
+	      (lambda/tags ((brace S <array>))
+		($fxzero? (S $length)))))
 
-  (method (%normalise-index (S <array>) (idx <fixnum>))
+  (method (%normalise-index (brace S <array>) (brace idx <fixnum>))
     ;;This is private.  Non-negative indexes are handled as specified by
     ;;R6RS; negative  indexes are handled as  counts from the end  o the
     ;;array.
     ;;
-    (define who '%normalise-index)
+    (define-fluid-override __who__ (identifier-syntax '%normalise-index))
     (cond ((or ($fxzero? idx)
 	       (and ($fxpositive? idx)
 		    ($fx< idx (S $length))))
@@ -458,7 +466,7 @@
 		($fx< ($fx- idx) (S $length)))
 	   ($fx+ idx (S $length)))
 	  (else
-	   (assertion-violation who "array index out of range" idx))))
+	   (assertion-violation __who__ "array index out of range" idx))))
 
   (getter (lambda (stx the-tag)
 	    (syntax-case stx ()
@@ -480,19 +488,20 @@
 
 (define-builtin-label <char>
   (predicate char?)
-  (virtual-fields (immutable (upcase    <char>)	char-upcase)
-		  (immutable (downcase  <char>)	char-downcase)
-		  (immutable (titlecase <char>)	char-titlecase)
-		  (immutable (foldcase  <char>)	char-foldcase)
+  (virtual-fields
+   (immutable (brace upcase    <char>)	char-upcase)
+   (immutable (brace downcase  <char>)	char-downcase)
+   (immutable (brace titlecase <char>)	char-titlecase)
+   (immutable (brace foldcase  <char>)	char-foldcase)
 
-		  (immutable (alphabetic? <boolean>)	char-alphabetic?)
-		  (immutable (numeric?    <boolean>)	char-numeric?)
-		  (immutable (whitespace? <boolean>)	char-whitespace?)
-		  (immutable (upper-case? <boolean>)	char-upper-case?)
-		  (immutable (lower-case? <boolean>)	char-lower-case?)
-		  (immutable (title-case? <boolean>)	char-title-case?)
+   (immutable (brace alphabetic? <boolean>)	char-alphabetic?)
+   (immutable (brace numeric?    <boolean>)	char-numeric?)
+   (immutable (brace whitespace? <boolean>)	char-whitespace?)
+   (immutable (brace upper-case? <boolean>)	char-upper-case?)
+   (immutable (brace lower-case? <boolean>)	char-lower-case?)
+   (immutable (brace title-case? <boolean>)	char-title-case?)
 
-		  (immutable (general-category <symbol>) char-general-category)))
+   (immutable (brace general-category <symbol>) char-general-category)))
 
 ;;; --------------------------------------------------------------------
 
@@ -501,53 +510,53 @@
   (protocol (lambda () string))
   (predicate string?)
   (virtual-fields
-   (immutable (length		<fixnum>)			string-length)
-   (immutable ($length		<fixnum>)			$string-length)
-   (immutable (upcase		<string>)			string-upcase)
-   (immutable (downcase		<string>)			string-downcase)
-   (immutable (titlecase	<string>)			string-titlecase)
-   (immutable (foldcase		<string>)			string-foldcase)
+   (immutable (brace length		<fixnum>)			string-length)
+   (immutable (brace $length		<fixnum>)			$string-length)
+   (immutable (brace upcase		<string>)			string-upcase)
+   (immutable (brace downcase		<string>)			string-downcase)
+   (immutable (brace titlecase		<string>)			string-titlecase)
+   (immutable (brace foldcase		<string>)			string-foldcase)
 
-   (immutable (ascii		<ascii-bytevector>)		string->ascii)
-   (immutable (latin1		<bytevector-u8>)		string->latin1)
-   (immutable (utf8		<bytevector-u8>)		string->utf8)
-   (immutable (utf16		<bytevector>)			string->utf16)
-   (immutable (utf16le		<bytevector-u16l>)		string->utf16le)
-   (immutable (utf16be		<bytevector-u16b>)		string->utf16be)
-   (immutable (utf16n		<bytevector-u16n>)		string->utf16n)
-   (immutable (utf32		<bytevector-u32>)		string->utf32)
-   (immutable (percent-encoding	<percent-encoded-bytevector>)	string->uri-encoding)
+   (immutable (brace ascii		<ascii-bytevector>)		string->ascii)
+   (immutable (brace latin1		<bytevector-u8>)		string->latin1)
+   (immutable (brace utf8		<bytevector-u8>)		string->utf8)
+   (immutable (brace utf16		<bytevector>)			string->utf16)
+   (immutable (brace utf16le		<bytevector-u16l>)		string->utf16le)
+   (immutable (brace utf16be		<bytevector-u16b>)		string->utf16be)
+   (immutable (brace utf16n		<bytevector-u16n>)		string->utf16n)
+   (immutable (brace utf32		<bytevector-u32>)		string->utf32)
+   (immutable (brace percent-encoding	<percent-encoded-bytevector>)	string->uri-encoding)
 
-   (immutable ($ascii		<ascii-bytevector>)		$string->ascii)
-   (immutable ($latin1		<bytevector-u8>)		$string->latin1)
+   (immutable (brace $ascii		<ascii-bytevector>)		$string->ascii)
+   (immutable (brace $latin1		<bytevector-u8>)		$string->latin1)
 
    #| end of virtual-fields |#)
 
-  (method (ref (S <string>) (idx <fixnum>))
+  (method (ref (brace S <string>) (brace idx <fixnum>))
     ($string-ref S (S %normalise-index idx)))
 
-  (method-syntax hash
+  (method-syntax (brace hash <fixnum>)
     (syntax-rules ()
       ((_ ?o)
        (string-hash ?o))))
 
-  (method substring
+  (method (brace substring <string>)
     (case-lambda/tags
-     (((S <string>) (start <fixnum>))
-      (substring S
-		 (S %normalise-index start)
-		 (S $length)))
-     (((S <string>) (start <fixnum>) (end <fixnum>))
-      (substring S
-		 (S %normalise-index start)
-		 (S %normalise-index end)))))
+      (((brace S <string>) (brace start <fixnum>))
+       (substring S
+		  (S %normalise-index start)
+		  (S $length)))
+      (((brace S <string>) (brace start <fixnum>) (brace end <fixnum>))
+       (substring S
+		  (S %normalise-index start)
+		  (S %normalise-index end)))))
 
-  (method-syntax append
+  (method-syntax (brace append <string>)
     (syntax-rules ()
       ((_ ?o . ?strings)
        (string-append ?o . ?strings))))
 
-  (method-syntax list
+  (method-syntax (brace list <list>)
     (syntax-rules ()
       ((_ ?o)
        (string->list ?o))))
@@ -557,7 +566,7 @@
       ((_ ?o ?proc)
        (string-for-each ?proc ?o))))
 
-  (method-syntax copy
+  (method-syntax (brace copy <string>)
     (syntax-rules ()
       ((_ ?o)
        (string-copy ?o)))))
@@ -567,7 +576,7 @@
   (mixins <mutable-array>)
   (protocol (lambda () string))
   (predicate string?)
-  (method (set! (S <mutable-string>) (idx <fixnum>) (ch <char>))
+  (method (set! (brace S <mutable-string>) (brace idx <fixnum>) (brace ch <char>))
     ($string-set! S (S %normalise-index idx) ch)))
 
 (define-builtin-label <percent-encoded-string>
@@ -592,31 +601,32 @@
   (mixins <array> <mutable-array>)
   (protocol (lambda () vector))
   (predicate vector?)
-  (virtual-fields (immutable (length	<fixnum>)	vector-length)
-		  (immutable ($length	<fixnum>)	$vector-length))
+  (virtual-fields
+   (immutable (brace length	<fixnum>)	vector-length)
+   (immutable (brace $length	<fixnum>)	$vector-length))
 
 ;;; --------------------------------------------------------------------
 
-  (method (ref (S <vector>) (idx <fixnum>))
+  (method (ref (brace S <vector>) (brace idx <fixnum>))
     ($vector-ref S (S %normalise-index idx)))
 
-  (method (set! (S <vector>) (idx <fixnum>) item)
+  (method (set! (brace S <vector>) (brace idx <fixnum>) item)
     ($vector-set! S (S %normalise-index idx) item))
 
 ;;; --------------------------------------------------------------------
 
-  (method subvector
+  (method (brace subvector <vector>)
     (case-lambda/tags
-     (((S <vector>) (start <fixnum>))
-      (subvector S
-		 (S %normalise-index start)
-		 (S $length)))
-     (((S <vector>) (start <fixnum>) (end <fixnum>))
-      (subvector S
-		 (S %normalise-index start)
-		 (S %normalise-index end)))))
+      (((brace S <vector>) (brace start <fixnum>))
+       (subvector S
+		  (S %normalise-index start)
+		  (S $length)))
+      (((brace S <vector>) (brace start <fixnum>) (brace end <fixnum>))
+       (subvector S
+		  (S %normalise-index start)
+		  (S %normalise-index end)))))
 
-  (method-syntax map
+  (method-syntax (brace map <list>)
     (syntax-rules ()
       ((_ o proc . vectors)
        (vector-map proc o . vectors))))
@@ -650,51 +660,51 @@
   (predicate bytevector?)
 
   (virtual-fields
-   (immutable (length			<fixnum>)			bytevector-length)
-   (immutable ($length			<fixnum>)			$bytevector-length)
+   (immutable (brace length		<fixnum>)			bytevector-length)
+   (immutable (brace $length		<fixnum>)			$bytevector-length)
 
-   (immutable (percent-encoded?		<boolean>)			percent-encoded-bytevector?)
-   (immutable ($percent-encoded?	<boolean>)			$percent-encoded-bytevector?)
+   (immutable (brace percent-encoded?	<boolean>)			percent-encoded-bytevector?)
+   (immutable (brace $percent-encoded?	<boolean>)			$percent-encoded-bytevector?)
 
-   (immutable (ascii-encoded?		<boolean>)			ascii-encoded-bytevector?)
-   (immutable ($ascii-encoded?		<boolean>)			$ascii-encoded-bytevector?)
+   (immutable (brace ascii-encoded?	<boolean>)			ascii-encoded-bytevector?)
+   (immutable (brace $ascii-encoded?	<boolean>)			$ascii-encoded-bytevector?)
 
-   (immutable (latin1-encoded?		<boolean>)			latin1-encoded-bytevector?)
-   (immutable ($latin1-encoded?		<boolean>)			$latin1-encoded-bytevector?)
+   (immutable (brace latin1-encoded?	<boolean>)			latin1-encoded-bytevector?)
+   (immutable (brace $latin1-encoded?	<boolean>)			$latin1-encoded-bytevector?)
 
-   (immutable (percent-encoded		<percent-encoded-bytevector>)	percent-encode)
-   (immutable ($percent-encoded		<percent-encoded-bytevector>)	$percent-encode)
+   (immutable (brace percent-encoded	<percent-encoded-bytevector>)	percent-encode)
+   (immutable (brace $percent-encoded	<percent-encoded-bytevector>)	$percent-encode)
 
-   (immutable (percent-decoded		<bytevector>)			percent-decode)
-   (immutable ($percent-decoded		<bytevector>)			$percent-decode)
+   (immutable (brace percent-decoded	<bytevector>)			percent-decode)
+   (immutable (brace $percent-decoded	<bytevector>)			$percent-decode)
 
-   (immutable (octets-string		<string>)			octets->string)
-   (immutable (ascii-string		<string>)			ascii->string)
-   (immutable (latin1-string		<string>)			latin1->string)
-   (immutable (uri-string		<string>)			uri-encoding->string)
-   (immutable (utf8-string		<string>)			utf8->string)
-   (immutable (utf16be-string		<string>)			utf16be->string)
-   (immutable (utf16le-string		<string>)			utf16le->string)
-   (immutable (utf16n-string		<string>)			utf16n->string)
+   (immutable (brace octets-string	<string>)			octets->string)
+   (immutable (brace ascii-string	<string>)			ascii->string)
+   (immutable (brace latin1-string	<string>)			latin1->string)
+   (immutable (brace uri-string		<string>)			uri-encoding->string)
+   (immutable (brace utf8-string	<string>)			utf8->string)
+   (immutable (brace utf16be-string	<string>)			utf16be->string)
+   (immutable (brace utf16le-string	<string>)			utf16le->string)
+   (immutable (brace utf16n-string	<string>)			utf16n->string)
 
    #| end of virtual-fields|# )
 
-  (method-syntax copy
+  (method-syntax (brace copy <bytevector>)
     (syntax-rules ()
       ((_ ?bv)
        (bytevector-copy ?bv))))
 
-  (method-syntax $copy
+  (method-syntax (brace $copy <bytevector>)
     (syntax-rules ()
       ((_ ?bv)
        ($bytevector-copy ?bv))))
 
-  (method-syntax hash
+  (method-syntax (brace hash <fixnum>)
     (syntax-rules ()
       ((_ ?bv)
        (bytevector-hash ?bv))))
 
-  (method-syntax $hash
+  (method-syntax (brace $hash <fixnum>)
     (syntax-rules ()
       ((_ ?bv)
        ($bytevector-hash ?bv))))
@@ -790,10 +800,10 @@
 
 (define-builtin-label <hashtable>
   (predicate hashtable?)
-  (virtual-fields (immutable size hashtable-size)
-		  (immutable keys hashtable-keys)
-		  (immutable entries hashtable-entries)
-		  (immutable (mutable? <boolean>) hashtable-mutable?))
+  (virtual-fields
+   (immutable (brace size <exact-integer>)	hashtable-size)
+   (immutable (brace keys <vector>)		hashtable-keys)
+   (immutable (brace mutable? <boolean>)	hashtable-mutable?))
   (getter (lambda (stx the-tag)
 	    (syntax-case stx ()
 	      ((?expr ((?key)))
@@ -807,12 +817,18 @@
 	      ((?expr ((?index)) ?val)
 	       #'(hashtable-set! ?expr ?index ?val)))))
 
+  ;;This returns 2 values, so it cannot be a field.
+  (method-syntax entries
+    (syntax-rules ()
+      ((_ ?table)
+       (hashtable-entries ?table))))
+
   (method-syntax delete!
     (syntax-rules ()
       ((_ ?table ?key)
        (hashtable-delete! ?table ?key))))
 
-  (method-syntax contains?
+  (method-syntax (brace contains? <boolean>)
     (syntax-rules ()
       ((_ ?table ?key)
        (hashtable-contains? ?table ?key))))
@@ -822,7 +838,7 @@
       ((_ ?table)
        (hashtable-clear! ?table))))
 
-  (method-syntax copy
+  (method-syntax (brace copy <hashtable>)
     (syntax-rules ()
       ((_ ?table)
        (hashtable-copy ?table))
@@ -947,30 +963,31 @@
 
 (define-builtin-label <record-type-descriptor>
   (predicate record-type-descriptor?)
-  (virtual-fields (immutable (name		<symbol>)			record-type-name)
-		  (immutable (parent		<record-type-descriptor>)	record-type-parent)
-		  (immutable (uid		<symbol>)			record-type-uid)
-		  (immutable (generative?	<boolean>)			record-type-generative?)
-		  (immutable (sealed?		<boolean>)			record-type-sealed?)
-		  (immutable (opaque?		<boolean>)			record-type-opaque?)
-		  (immutable (field-names	<vector>)			record-type-field-names))
+  (virtual-fields
+   (immutable (brace name		<symbol>)			record-type-name)
+   (immutable (brace parent		<record-type-descriptor>)	record-type-parent)
+   (immutable (brace uid		<symbol>)			record-type-uid)
+   (immutable (brace generative?	<boolean>)			record-type-generative?)
+   (immutable (brace sealed?		<boolean>)			record-type-sealed?)
+   (immutable (brace opaque?		<boolean>)			record-type-opaque?)
+   (immutable (brace field-names	<vector>)			record-type-field-names))
 
-  (method-syntax predicate
+  (method-syntax (brace predicate <procedure>)
     (syntax-rules ()
       ((_ ?rtd)
        (record-predicate ?rtd))))
 
-  (method-syntax accessor
+  (method-syntax (brace accessor <procedure>)
     (syntax-rules ()
       ((_ ?rtd ?field-idx)
        (record-accessor ?rtd ?field-idx))))
 
-  (method-syntax mutator
+  (method-syntax (brace mutator <procedure>)
     (syntax-rules ()
       ((_ ?rtd ?field-idx)
        (record-mutator ?rtd ?field-idx))))
 
-  (method-syntax field-mutable?
+  (method-syntax (brace field-mutable? <boolean>)
     (syntax-rules ()
       ((_ ?rtd ?field-idx)
        (record-field-mutable? ?rtd ?field-idx))))
@@ -979,7 +996,8 @@
 
 (define-builtin-label <record>
   (predicate record?)
-  (virtual-fields (immutable (rtd <record-type-descriptor>) record-rtd)))
+  (virtual-fields
+   (immutable (brace rtd <record-type-descriptor>) record-rtd)))
 
 
 ;;;; built-in types: condition objects
@@ -1008,9 +1026,10 @@
 	     ((_ ?codec ?eol-style ?error-handling-mode)
 	      #'(make-<transcoder> ?codec ?eol-style ?error-handling-mode))
 	     )))
-  (virtual-fields (immutable codec transcoder-codec)
-		  (immutable (eol-style <symbol>) transcoder-eol-style)
-		  (immutable (error-handling-mode <symbol>) transcoder-error-handling-mode)))
+  (virtual-fields
+   (immutable codec transcoder-codec)
+   (immutable (brace eol-style <symbol>)		transcoder-eol-style)
+   (immutable (brace error-handling-mode <symbol>)	transcoder-error-handling-mode)))
 
 
 ;;;; built-in types: port objects
@@ -1018,25 +1037,25 @@
 (define-builtin-label <port>
   (predicate port?)
   (virtual-fields
-   (immutable (transcoder		<transcoder>)	port-transcoder)
+   (immutable (brace transcoder			<transcoder>)	port-transcoder)
 
-   (immutable (textual?			<boolean>)	textual-port?)
-   (immutable (binary?			<boolean>)	binary-port?)
-   (immutable (input?			<boolean>)	input-port?)
-   (immutable (output?			<boolean>)	output-port?)
+   (immutable (brace textual?			<boolean>)	textual-port?)
+   (immutable (brace binary?			<boolean>)	binary-port?)
+   (immutable (brace input?			<boolean>)	input-port?)
+   (immutable (brace output?			<boolean>)	output-port?)
 
-   (immutable (has-port-position?	<boolean>)	port-has-port-position?)
-   (immutable (has-set-port-position?	<boolean>)	port-has-set-port-position!?)
-   (mutable   (port-position		<integer>)	port-position set-port-position!)
+   (immutable (brace has-port-position?		<boolean>)	port-has-port-position?)
+   (immutable (brace has-set-port-position?	<boolean>)	port-has-set-port-position!?)
+   (mutable   (brace port-position		<integer>)	port-position set-port-position!)
 
-   (immutable (closed?			<boolean>)	port-closed?)
+   (immutable (brace closed?			<boolean>)	port-closed?)
 
-   (immutable fd					port-fd)
-   (immutable (id			<string>)	port-id)
-   (immutable (uid			<symbol>)	port-uid)
-   (immutable (hash			<integer>)	port-hash)
+   (immutable fd						port-fd)
+   (immutable (brace id				<string>)	port-id)
+   (immutable (brace uid			<symbol>)	port-uid)
+   (immutable (brace hash			<integer>)	port-hash)
 
-   (mutable   (non-blocking-mode?	<boolean>)
+   (mutable   (brace non-blocking-mode?	<boolean>)
 	      port-in-non-blocking-mode?
 	      (lambda (port bool)
 		(if bool
@@ -1062,7 +1081,7 @@
 
   (define-mixin <input-port-clauses>
     (virtual-fields
-     (immutable (eof? <boolean>) port-eof?))
+     (immutable (brace eof? <boolean>) port-eof?))
     (methods (get-single	get-single)
 	     (lookahead-single	lookahead-single)
 	     (get-multi-n	get-multi-n)
@@ -1072,7 +1091,7 @@
 
   (define-mixin <output-port-clauses>
     (virtual-fields
-     (mutable (buffer-mode <symbol>) output-port-buffer-mode	set-port-buffer-mode!))
+     (mutable (brace buffer-mode <symbol>) output-port-buffer-mode	set-port-buffer-mode!))
     (method-syntax flush
       (syntax-rules ()
 	((_ ?port)
@@ -1180,19 +1199,19 @@
 
   ;;predicates
   (virtual-fields
-   (immutable (zero?		<boolean>)	zero?)
-   (immutable (finite?		<boolean>)	finite?)
-   (immutable (infinite?	<boolean>)	infinite?)
-   (immutable (nan?		<boolean>)	nan?))
+   (immutable (brace zero?		<boolean>)	zero?)
+   (immutable (brace finite?		<boolean>)	finite?)
+   (immutable (brace infinite?		<boolean>)	infinite?)
+   (immutable (brace nan?		<boolean>)	nan?))
 
   ;; exactness
   (virtual-fields
-   (immutable (exact?		<boolean>)	exact?)
-   (immutable (inexact?		<boolean>)	inexact?))
+   (immutable (brace exact?		<boolean>)	exact?)
+   (immutable (brace inexact?		<boolean>)	inexact?))
 
   ;; conversion
   (virtual-fields
-   (immutable (string		<string>)	number->string))
+   (immutable (brace string		<string>)	number->string))
 
   ;;This method supports the optional arguments of NUMBER->STRING.
   (methods (string-radix number->string))
@@ -1200,65 +1219,65 @@
 ;;; math functions from (rnrs base (6)) and (vicare)
 
   ;; arithmetic
-  (method-syntax +
+  (method-syntax (brace + <number>)
     (syntax-rules ()
       ((_ ?num . ?nums)
        (+ ?num . ?nums))))
 
-  (method-syntax -
+  (method-syntax (brace - <number>)
     (syntax-rules ()
       ((_ ?num . ?nums)
        (- ?num . ?nums))))
 
-  (method-syntax *
+  (method-syntax (brace * <number>)
     (syntax-rules ()
       ((_ ?num . ?nums)
        (* ?num . ?nums))))
 
-  (method-syntax /
+  (method-syntax (brace / <number>)
     (syntax-rules ()
       ((_ ?num . ?nums)
        (/ ?num . ?nums))))
 
   ;; exactness
-  (method-syntax exact
+  (method-syntax (brace exact <number>)
     (syntax-rules ()
       ((_ ?num)
        (exact ?num))))
 
-  (method-syntax inexact
+  (method-syntax (brace inexact <number>)
     (syntax-rules ()
       ((_ ?num)
        (inexact ?num))))
 
   ;; powers
-  (method-syntax expt
+  (method-syntax (brace expt <number>)
     (syntax-rules ()
       ((_ ?num ?exp)
        (expt ?num ?exp))))
 
-  (method-syntax square
+  (method-syntax (brace square <number>)
     (syntax-rules ()
       ((_ ?num)
        (square ?num))))
 
-  (method-syntax cube
+  (method-syntax (brace cube <number>)
     (syntax-rules ()
       ((_ ?num)
        (cube ?num))))
 
-  (method-syntax sqrt
+  (method-syntax (brace sqrt <number>)
     (syntax-rules ()
       ((_ ?num)
        (sqrt ?num))))
 
   ;; exponentiation and logarithms
-  (method-syntax exp
+  (method-syntax (brace exp <number>)
     (syntax-rules ()
       ((_ ?num)
        (exp ?num))))
 
-  (method-syntax log
+  (method-syntax (brace log <number>)
     (syntax-rules ()
       ((_ ?num)
        (log ?num))
@@ -1267,89 +1286,89 @@
       ))
 
   ;; trigonometric functions
-  (method-syntax sin
+  (method-syntax (brace sin <number>)
     (syntax-rules ()
       ((_ ?num)
        (sin ?num))))
 
-  (method-syntax cos
+  (method-syntax (brace cos <number>)
     (syntax-rules ()
       ((_ ?num)
        (cos ?num))))
 
-  (method-syntax tan
+  (method-syntax (brace tan <number>)
     (syntax-rules ()
       ((_ ?num)
        (tan ?num))))
 
-  (method-syntax asin
+  (method-syntax (brace asin <number>)
     (syntax-rules ()
       ((_ ?num)
        (asin ?num))))
 
-  (method-syntax acos
+  (method-syntax (brace acos <number>)
     (syntax-rules ()
       ((_ ?num)
        (acos ?num))))
 
-  (method-syntax atan
+  (method-syntax (brace atan <number>)
     (syntax-rules ()
       ((_ ?num)
        (atan ?num))))
 
   ;; hyperbolic functions
-  (method-syntax sinh
+  (method-syntax (brace sinh <number>)
     (syntax-rules ()
       ((_ ?num)
        (sinh ?num))))
 
-  (method-syntax cosh
+  (method-syntax (brace cosh <number>)
     (syntax-rules ()
       ((_ ?num)
        (cosh ?num))))
 
-  (method-syntax tanh
+  (method-syntax (brace tanh <number>)
     (syntax-rules ()
       ((_ ?num)
        (tanh ?num))))
 
-  (method-syntax asinh
+  (method-syntax (brace asinh <number>)
     (syntax-rules ()
       ((_ ?num)
        (asinh ?num))))
 
-  (method-syntax acosh
+  (method-syntax (brace acosh <number>)
     (syntax-rules ()
       ((_ ?num)
        (acosh ?num))))
 
-  (method-syntax atanh
+  (method-syntax (brace atanh <number>)
     (syntax-rules ()
       ((_ ?num)
        (atanh ?num))))
 
   ;; complex numbers typical operations
-  (method-syntax conjugate
+  (method-syntax (brace conjugate <number>)
     (syntax-rules ()
       ((_ ?num)
        (complex-conjugate ?num))))
 
-  (method-syntax real-part
+  (method-syntax (brace real-part <number>)
     (syntax-rules ()
       ((_ ?num)
        (real-part ?num))))
 
-  (method-syntax imag-part
+  (method-syntax (brace imag-part <number>)
     (syntax-rules ()
       ((_ ?num)
        (imag-part ?num))))
 
-  (method-syntax magnitude
+  (method-syntax (brace magnitude <number>)
     (syntax-rules ()
       ((_ ?num)
        (magnitude ?num))))
 
-  (method-syntax angle
+  (method-syntax (brace angle <number>)
     (syntax-rules ()
       ((_ ?num)
        (angle ?num)))))
@@ -1373,16 +1392,17 @@
 (define-builtin-label <real-valued>
   (parent <complex>)
   (predicate real-valued?)
-  (virtual-fields (immutable (positive?		<boolean>)	positive?)
-		  (immutable (negative?		<boolean>)	negative?)
-		  (immutable (non-positive?	<boolean>)	non-positive?)
-		  (immutable (non-negative?	<boolean>)	non-negative?)
-		  (immutable (sign		<fixnum>)	sign))
+  (virtual-fields
+   (immutable (brace positive?		<boolean>)	positive?)
+   (immutable (brace negative?		<boolean>)	negative?)
+   (immutable (brace non-positive?	<boolean>)	non-positive?)
+   (immutable (brace non-negative?	<boolean>)	non-negative?)
+   (immutable (brace sign		<fixnum>)	sign))
 
   ;; rational numbers typical operations
   (virtual-fields
-   (immutable (numerator	<real-valued>)	numerator)
-   (immutable (denominator	<real-valued>)	denominator))
+   (immutable (brace numerator		<real-valued>)	numerator)
+   (immutable (brace denominator	<real-valued>)	denominator))
 
   ;; methods: rounding
   (method-syntax floor
@@ -1415,7 +1435,8 @@
 (define-builtin-label <real>
   (parent <real-valued>)
   (predicate real?)
-  (virtual-fields (immutable (abs	<real>)		abs)))
+  (virtual-fields
+   (immutable (brace abs <real>) abs)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1447,8 +1468,8 @@
   (parent <integer-valued>)
   (predicate integer?)
   (virtual-fields
-   (immutable (odd?	<boolean>)	odd?)
-   (immutable (even?	<boolean>)	even?)))
+   (immutable (brace odd?	<boolean>)	odd?)
+   (immutable (brace even?	<boolean>)	even?)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1477,27 +1498,27 @@
   (predicate fixnum?)
 
   (virtual-fields
-   (immutable (even?		<boolean>)	fxeven?)
-   (immutable (odd?		<boolean>)	fxodd?)
-   (immutable (negative?	<boolean>)	fxnegative?)
-   (immutable (positive?	<boolean>)	fxpositive?)
-   (immutable (non-negative?	<boolean>)	fxnonnegative?)
-   (immutable (non-positive?	<boolean>)	fxnonpositive?)
-   (immutable (zero?		<boolean>)	fxzero?)
-   (immutable (sign		<fixnum>)	fxsign)
+   (immutable (brace even?		<boolean>)	fxeven?)
+   (immutable (brace odd?		<boolean>)	fxodd?)
+   (immutable (brace negative?		<boolean>)	fxnegative?)
+   (immutable (brace positive?		<boolean>)	fxpositive?)
+   (immutable (brace non-negative?	<boolean>)	fxnonnegative?)
+   (immutable (brace non-positive?	<boolean>)	fxnonpositive?)
+   (immutable (brace zero?		<boolean>)	fxzero?)
+   (immutable (brace sign		<fixnum>)	fxsign)
 
-   (immutable ($even?		<boolean>)	$fxeven?)
-   (immutable ($odd?		<boolean>)	$fxodd?)
-   (immutable ($negative?	<boolean>)	$fxnegative?)
-   (immutable ($positive?	<boolean>)	$fxpositive?)
-   (immutable ($non-negative?	<boolean>)	$fxnonnegative?)
-   (immutable ($non-positive?	<boolean>)	$fxnonpositive?)
-   (immutable ($zero?		<boolean>)	$fxzero?)
-   (immutable ($sign		<fixnum>)	$fxsign)
+   (immutable (brace $even?		<boolean>)	$fxeven?)
+   (immutable (brace $odd?		<boolean>)	$fxodd?)
+   (immutable (brace $negative?		<boolean>)	$fxnegative?)
+   (immutable (brace $positive?		<boolean>)	$fxpositive?)
+   (immutable (brace $non-negative?	<boolean>)	$fxnonnegative?)
+   (immutable (brace $non-positive?	<boolean>)	$fxnonpositive?)
+   (immutable (brace $zero?		<boolean>)	$fxzero?)
+   (immutable (brace $sign		<fixnum>)	$fxsign)
    #| end of virtual-fields |# )
 
   ;; methods: conversion
-  (method-syntax string
+  (method-syntax (brace string <string>)
     (syntax-rules ()
       ((_ ?fx)
        (fixnum->string ?fx))
@@ -1505,7 +1526,7 @@
        (fixnum->string ?fx ?base))
       ))
 
-  (method-syntax $string
+  (method-syntax (brace $string <string>)
     (syntax-rules ()
       ((_ ?fx)
        ($fixnum->string ?fx 10))
@@ -1513,23 +1534,23 @@
        ($fixnum->string ?fx ?base))
       ))
 
-  (method-syntax flonum
+  (method-syntax (brace flonum <flonum>)
     (syntax-rules ()
       ((_ ?fx)
        (fixnum->flonum ?fx))))
 
-  (method-syntax $flonum
+  (method-syntax (brace $flonum <flonum>)
     (syntax-rules ()
       ((_ ?fx)
        ($fixnum->flonum ?fx))))
 
   ;; methods: arithmetic operations
-  (method-syntax abs
+  (method-syntax (brace abs <exact-integer>)
     (syntax-rules ()
       ((_ ?fx)
        (fxabs ?fx))))
 
-  (method-syntax *
+  (method-syntax (brace * <exact-integer>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fx* ?fx1 ?fx2))))
@@ -1539,7 +1560,7 @@
       ((_ ?fx1 ?fx2 ?fx3)
        (fx*/carry ?fx1 ?fx2 ?fx3))))
 
-  (method-syntax +
+  (method-syntax (brace + <exact-integer>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fx+ ?fx1 ?fx2))))
@@ -1549,17 +1570,17 @@
       ((_ ?fx1 ?fx2 ?fx3)
        (fx+/carry ?fx1 ?fx2 ?fx3))))
 
-  (method-syntax add1
+  (method-syntax (brace add1 <exact-integer>)
     (syntax-rules ()
       ((_ ?fx)
        (fx+ ?fx 1))))
 
-  (method-syntax $add1
+  (method-syntax (brace $add1 <exact-integer>)
     (syntax-rules ()
       ((_ ?fx)
        ($fxadd1 ?fx))))
 
-  (method-syntax -
+  (method-syntax (brace - <exact-integer>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fx- ?fx1 ?fx2))))
@@ -1569,22 +1590,22 @@
       ((_ ?fx1 ?fx2 ?fx3)
        (fx-/carry ?fx1 ?fx2 ?fx3))))
 
-  (method-syntax sub1
+  (method-syntax (brace sub1 <exact-integer>)
     (syntax-rules ()
       ((_ ?fx)
        (fx- ?fx 1))))
 
-  (method-syntax $sub1
+  (method-syntax (brace $sub1 <exact-integer>)
     (syntax-rules ()
       ((_ ?fx)
        ($fxsub1 ?fx))))
 
-  (method-syntax div
+  (method-syntax (brace div <exact-integer>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fxdiv ?fx1 ?fx2))))
 
-  (method-syntax mod
+  (method-syntax (brace mod <exact-integer>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fxmod ?fx1 ?fx2))))
@@ -1594,12 +1615,12 @@
       ((_ ?fx1 ?fx2)
        (fxdiv-and-mod ?fx1 ?fx2))))
 
-  (method-syntax div0
+  (method-syntax (brace div0 <exact-integer>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fxdiv0 ?fx1 ?fx2))))
 
-  (method-syntax mod0
+  (method-syntax (brace mod0 <exact-integer>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fxmod0 ?fx1 ?fx2))))
@@ -1610,80 +1631,80 @@
        (fxdiv0-and-mod0 ?fx1 ?fx2))))
 
   ;; methods: comparison operations
-  (method-syntax =
+  (method-syntax (brace = <boolean>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx ...)
        (fx=? ?fx1 ?fx2 ?fx ...))))
 
-  (method-syntax <
+  (method-syntax (brace < <boolean>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx ...)
        (fx<? ?fx1 ?fx2 ?fx ...))))
 
-  (method-syntax >
+  (method-syntax (brace > <boolean>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx ...)
        (fx>? ?fx1 ?fx2 ?fx ...))))
 
-  (method-syntax <=
+  (method-syntax (brace <= <boolean>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx ...)
        (fx<=? ?fx1 ?fx2 ?fx ...))))
 
-  (method-syntax >=
+  (method-syntax (brace >= <boolean>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx ...)
        (fx>=? ?fx1 ?fx2 ?fx ...))))
 
   ;; methods: logic operations
-  (method-syntax and
+  (method-syntax (brace and <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx ...)
        (fxand ?fx1 ?fx2 ?fx ...))))
 
-  (method-syntax ior
+  (method-syntax (brace ior <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx ...)
        (fxior ?fx1 ?fx2 ?fx ...))))
 
-  (method-syntax xor
+  (method-syntax (brace xor <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx ...)
        (fxxor ?fx1 ?fx2 ?fx ...))))
 
-  (method-syntax not
+  (method-syntax (brace not <fixnum>)
     (syntax-rules ()
       ((_ ?fx)
        (fxnot ?fx))))
 
   ;; methods: shift operations
-  (method-syntax arithmetic-shift
+  (method-syntax (brace arithmetic-shift <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fxarithmetic-shift ?fx1 ?fx2))))
 
-  (method-syntax arithmetic-shift-left
+  (method-syntax (brace arithmetic-shift-left <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fxarithmetic-shift-left ?fx1 ?fx2))))
 
-  (method-syntax arithmetic-shift-right
+  (method-syntax (brace arithmetic-shift-right <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fxarithmetic-shift-right ?fx1 ?fx2))))
 
   ;; methods: bitwise operations
-  (method-syntax bit-set?
+  (method-syntax (brace bit-set? <boolean>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2)
        (fxbit-set? ?fx1 ?fx2))))
 
-  (method-syntax bit-count
+  (method-syntax (brace bit-count <fixnum>)
     (syntax-rules ()
       ((_ ?fx)
        (fxbit-count ?fx))))
 
-  (method-syntax bit-field
+  (method-syntax (brace bit-field <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx3)
        (fxbit-field ?fx1 ?fx2 ?fx3))))
@@ -1698,38 +1719,38 @@
       ((_ ?fx1 ?fx2 ?fx3 ?fx4)
        (fxcopy-bit-field ?fx1 ?fx2 ?fx3 ?fx4))))
 
-  (method-syntax first-bit-set
+  (method-syntax (brace first-bit-set <fixnum>)
     (syntax-rules ()
       ((_ ?fx)
        (fxfirst-bit-set ?fx))))
 
-  (method-syntax if
+  (method-syntax (brace if <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx3)
        (fxif ?fx1 ?fx2 ?fx3))))
 
-  (method-syntax length
+  (method-syntax (brace length <fixnum>)
     (syntax-rules ()
       ((_ ?fx)
        (fxlength ?fx))))
 
-  (method-syntax reverse-bit-field
+  (method-syntax (brace reverse-bit-field <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx3)
        (fxreverse-bit-field ?fx1 ?fx2 ?fx3))))
 
-  (method-syntax rotate-bit-field
+  (method-syntax (brace rotate-bit-field <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx3 ?fx4)
        (fxrotate-bit-field ?fx1 ?fx2 ?fx3 ?fx4))))
 
   ;; methods: min and max
-  (method-syntax max
+  (method-syntax (brace max <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx ...)
        (fxmax ?fx1 ?fx ...))))
 
-  (method-syntax min
+  (method-syntax (brace min <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx ...)
        (fxmin ?fx1 ?fx ...)))))
@@ -1768,78 +1789,78 @@
   (predicate flonum?)
 
   (virtual-fields
-   (immutable (integer?		<boolean>)	flinteger?)
-   (immutable (finite?		<boolean>)	flfinite?)
-   (immutable (infinite?	<boolean>)	flinfinite?)
-   (immutable (nan?		<boolean>)	flnan?)
-   (immutable (negative?	<boolean>)	flnegative?)
-   (immutable (positive?	<boolean>)	flpositive?)
-   (immutable (nonnegative?	<boolean>)	flnonnegative?)
-   (immutable (nonpositive?	<boolean>)	flnonpositive?)
-   (immutable (zero?		<boolean>)	flzero?)
-   (immutable (zero?/positive	<boolean>)	flzero?/positive)
-   (immutable (zero?/negative	<boolean>)	flzero?/negative)
-   (immutable (even?		<boolean>)	fleven?)
-   (immutable (odd?		<boolean>)	flodd?)
+   (immutable (brace integer?		<boolean>)	flinteger?)
+   (immutable (brace finite?		<boolean>)	flfinite?)
+   (immutable (brace infinite?		<boolean>)	flinfinite?)
+   (immutable (brace nan?		<boolean>)	flnan?)
+   (immutable (brace negative?		<boolean>)	flnegative?)
+   (immutable (brace positive?		<boolean>)	flpositive?)
+   (immutable (brace nonnegative?	<boolean>)	flnonnegative?)
+   (immutable (brace nonpositive?	<boolean>)	flnonpositive?)
+   (immutable (brace zero?		<boolean>)	flzero?)
+   (immutable (brace zero?/positive	<boolean>)	flzero?/positive)
+   (immutable (brace zero?/negative	<boolean>)	flzero?/negative)
+   (immutable (brace even?		<boolean>)	fleven?)
+   (immutable (brace odd?		<boolean>)	flodd?)
 
-   (immutable ($integer?	<boolean>)	$flonum-integer?)
-   (immutable ($finite?		<boolean>)	$flfinite?)
-   (immutable ($infinite?	<boolean>)	$flinfinite?)
-   (immutable ($nan?		<boolean>)	$flnan?)
-   (immutable ($negative?	<boolean>)	$flnegative?)
-   (immutable ($positive?	<boolean>)	$flpositive?)
-   (immutable ($nonnegative?	<boolean>)	$flnonnegative?)
-   (immutable ($nonpositive?	<boolean>)	$flnonpositive?)
-   (immutable ($zero?		<boolean>)	$flzero?)
-   (immutable ($zero?/positive	<boolean>)	$flzero?/positive)
-   (immutable ($zero?/negative	<boolean>)	$flzero?/negative)
-   (immutable ($even?		<boolean>)	$fleven?)
-   (immutable ($odd?		<boolean>)	$flodd?)
+   (immutable (brace $integer?		<boolean>)	$flonum-integer?)
+   (immutable (brace $finite?		<boolean>)	$flfinite?)
+   (immutable (brace $infinite?		<boolean>)	$flinfinite?)
+   (immutable (brace $nan?		<boolean>)	$flnan?)
+   (immutable (brace $negative?		<boolean>)	$flnegative?)
+   (immutable (brace $positive?		<boolean>)	$flpositive?)
+   (immutable (brace $nonnegative?	<boolean>)	$flnonnegative?)
+   (immutable (brace $nonpositive?	<boolean>)	$flnonpositive?)
+   (immutable (brace $zero?		<boolean>)	$flzero?)
+   (immutable (brace $zero?/positive	<boolean>)	$flzero?/positive)
+   (immutable (brace $zero?/negative	<boolean>)	$flzero?/negative)
+   (immutable (brace $even?		<boolean>)	$fleven?)
+   (immutable (brace $odd?		<boolean>)	$flodd?)
    #| end of virtual-fields |# )
 
   ;; methods: conversion
-  (method-syntax string
+  (method-syntax (brace string <string>)
     (syntax-rules ()
       ((_ ?fx)
        (flonum->string ?fx))))
 
   ;; methods: arithmetic functions
-  (method-syntax abs
+  (method-syntax (brace abs <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flabs ?fl))))
 
-  (method-syntax $abs
+  (method-syntax (brace $abs <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        ($flabs ?fl))))
 
-  (method-syntax *
+  (method-syntax (brace * <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl ...)
        (fl* ?fl1 ?fl ...))))
 
-  (method-syntax +
+  (method-syntax (brace + <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl ...)
        (fl+ ?fl1 ?fl ...))))
 
-  (method-syntax -
+  (method-syntax (brace - <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl ...)
        (fl- ?fl1 ?fl ...))))
 
-  (method-syntax /
+  (method-syntax (brace / <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl ...)
        (fl/ ?fl1 ?fl ...))))
 
-  (method-syntax div
+  (method-syntax (brace div <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2)
        (fldiv ?fl1 ?fl2))))
 
-  (method-syntax mod
+  (method-syntax (brace mod <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2)
        (flmod ?fl1 ?fl2))))
@@ -1849,12 +1870,12 @@
       ((_ ?fl1 ?fl2)
        (fldiv-and-mod ?fl1 ?fl2))))
 
-  (method-syntax div0
+  (method-syntax (brace div0 <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2)
        (fldiv0 ?fl1 ?fl2))))
 
-  (method-syntax mod0
+  (method-syntax (brace mod0 <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2)
        (flmod0 ?fl1 ?fl2))))
@@ -1865,84 +1886,84 @@
        (fldiv0-and-mod0 ?fl1 ?fl2))))
 
   ;; methods: power functions
-  (method-syntax expt
+  (method-syntax (brace expt <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2)
        (flexpt ?fl1 ?fl2))))
 
-  (method-syntax square
+  (method-syntax (brace square <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flsquare ?fl))))
 
-  (method-syntax cube
+  (method-syntax (brace cube <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flcube ?fl))))
 
-  (method-syntax sqrt
+  (method-syntax (brace sqrt <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flsqrt ?fl))))
 
-  (method-syntax cbrt
+  (method-syntax (brace cbrt <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flcbrt ?fl))))
 
   ;; methods: comparison functions
-  (method-syntax =
+  (method-syntax (brace = <boolean>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2 ?fl ...)
        (fl=? ?fl1 ?fl2 ?fl ...))))
 
-  (method-syntax <
+  (method-syntax (brace < <boolean>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2 ?fl ...)
        (fl<? ?fl1 ?fl2 ?fl ...))))
 
-  (method-syntax >
+  (method-syntax (brace > <boolean>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2 ?fl ...)
        (fl>? ?fl1 ?fl2 ?fl ...))))
 
-  (method-syntax <=
+  (method-syntax (brace <= <boolean>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2 ?fl ...)
        (fl<=? ?fl1 ?fl2 ?fl ...))))
 
-  (method-syntax >=
+  (method-syntax (brace >= <boolean>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2 ?fl ...)
        (fl>=? ?fl1 ?fl2 ?fl ...))))
 
   ;; methods: trigonometric functions
-  (method-syntax sin
+  (method-syntax (brace sin <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flsin ?fl))))
 
-  (method-syntax cos
+  (method-syntax (brace cos <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flcos ?fl))))
 
-  (method-syntax tan
+  (method-syntax (brace tan <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (fltan ?fl))))
 
-  (method-syntax acos
+  (method-syntax (brace acos <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flacos ?fl))))
 
-  (method-syntax asin
+  (method-syntax (brace asin <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flasin ?fl))))
 
-  (method-syntax atan
+  (method-syntax (brace atan <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flatan ?fl))
@@ -1951,75 +1972,75 @@
       ))
 
   ;; methods: hyperbolic functions
-  (method-syntax sinh
+  (method-syntax (brace sinh <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flsinh ?fl))))
 
-  (method-syntax cosh
+  (method-syntax (brace cosh <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flcosh ?fl))))
 
-  (method-syntax tanh
+  (method-syntax (brace tanh <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (fltanh ?fl))))
 
-  (method-syntax acosh
+  (method-syntax (brace acosh <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flacosh ?fl))))
 
-  (method-syntax asinh
+  (method-syntax (brace asinh <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flasinh ?fl))))
 
-  (method-syntax atanh
+  (method-syntax (brace atanh <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flatanh ?fl))))
 
   ;; methods: rounding functions
-  (method-syntax ceiling
+  (method-syntax (brace ceiling <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flceiling ?fl))))
 
-  (method-syntax floor
+  (method-syntax (brace floor <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flfloor ?fl))))
 
-  (method-syntax round
+  (method-syntax (brace round <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flround ?fl))))
 
-  (method-syntax truncate
+  (method-syntax (brace truncate <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (fltruncate ?fl))))
 
   ;; methods: rationals operations
-  (method-syntax numerator
+  (method-syntax (brace numerator <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flnumerator ?fl))))
 
-  (method-syntax denominator
+  (method-syntax (brace denominator <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (fldenominator ?fl))))
 
   ;; methods: exponentiation and logarithms
-  (method-syntax exp
+  (method-syntax (brace exp <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flexp ?fl))))
 
-  (method-syntax log
+  (method-syntax (brace log <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (fllog ?fl))
@@ -2027,28 +2048,28 @@
        (fllog ?fl1 ?fl2))
       ))
 
-  (method-syntax log1p
+  (method-syntax (brace log1p <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (fllog1p ?fl))))
 
-  (method-syntax expm1
+  (method-syntax (brace expm1 <flonum>)
     (syntax-rules ()
       ((_ ?fl)
        (flexpm1 ?fl))))
 
-  (method-syntax hypot
+  (method-syntax (brace hypot <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl2)
        (flhypot ?fl1 ?fl2))))
 
   ;; methods: min and max
-  (method-syntax max
+  (method-syntax (brace max <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl ...)
        (flmax ?fl1 ?fl ...))))
 
-  (method-syntax min
+  (method-syntax (brace min <flonum>)
     (syntax-rules ()
       ((_ ?fl1 ?fl ...)
        (flmin ?fl1 ?fl ...))))
@@ -2249,17 +2270,17 @@
 ;;;; common mixins
 
 (define-mixin <hashable-and-properties-clauses>
-  (fields (mutable (%uid	<symbol>)))
+  (fields (mutable (brace %uid	<symbol>)))
 
   (virtual-fields
-   (immutable (uid <symbol>)
-	      (lambda/tags ((O <class>))
+   (immutable (brace uid <symbol>)
+	      (lambda/tags ((brace O <class>))
 		(or (O $%uid)
 		    (receive-and-return (sym)
 			(gensym)
 		      (set!/tags (O $%uid) sym)))))
-   (immutable (hash <exact-integer>)
-	      (lambda/tags ((O <class>))
+   (immutable (brace hash <fixnum>)
+	      (lambda/tags ((brace O <class>))
 		;;We memoize the hash value  in the "value" field of the
 		;;symbol's data structure.
 		(if ($unbound-object? ($symbol-value (O uid)))
@@ -2268,16 +2289,16 @@
 		      ($set-symbol-value! (O $%uid) H))
 		  ($symbol-value (O $%uid))))))
 
-  (method (putprop (O <class>) (key <symbol>) value)
+  (method (putprop (brace O <class>) (brace key <symbol>) value)
     (putprop (O uid) key value))
 
-  (method (getprop (O <class>) (key <symbol>))
+  (method (getprop (brace O <class>) (brace key <symbol>))
     (getprop (O uid) key))
 
-  (method (remprop (O <class>) (key <symbol>))
+  (method (remprop (brace O <class>) (brace key <symbol>))
     (remprop (O uid) key))
 
-  (method (property-list (O <class>))
+  (method (property-list (brace O <class>))
     (property-list (O uid)))
 
   #| end of mixin |# )

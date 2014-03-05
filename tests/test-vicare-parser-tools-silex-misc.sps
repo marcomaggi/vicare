@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,8 +25,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (prefix (vicare parser-tools silex) lex.)
   (prefix (vicare parser-tools silex lexer) lex.)
   (prefix (nausicaa parser-tools lexical-tokens) pt.)
@@ -71,10 +71,10 @@ A		(<lexical-token>
       (let* ((IS	(lex.make-IS (lex.string: "AAA")
 				     (lex.counters: 'all)))
 	     (lexer (lex.make-lexer table IS)))
-        (let* (((T1 pt.<lexical-token>) (lexer))
-	       ((T2 pt.<lexical-token>) (lexer))
-	       ((T3 pt.<lexical-token>) (lexer))
-	       ((T4 pt.<lexical-token>) (lexer)))
+        (let* (({T1 pt.<lexical-token>} (lexer))
+	       ({T2 pt.<lexical-token>} (lexer))
+	       ({T3 pt.<lexical-token>} (lexer))
+	       ({T4 pt.<lexical-token>} (lexer)))
 	  (list (T1 category)
 		(T2 category)
 		(T3 category)
@@ -85,10 +85,10 @@ A		(<lexical-token>
       (let* ((IS	(lex.make-IS (lex.string: "AAAB")
 				     (lex.counters: 'all)))
 	     (lexer (lex.make-lexer table IS)))
-        (let* (((T1 pt.<lexical-token>) (lexer))
-	       ((T2 pt.<lexical-token>) (lexer))
-	       ((T3 pt.<lexical-token>) (lexer))
-	       ((T4 pt.<lexical-token>) (lexer)))
+        (let* (({T1 pt.<lexical-token>} (lexer))
+	       ({T2 pt.<lexical-token>} (lexer))
+	       ({T3 pt.<lexical-token>} (lexer))
+	       ({T4 pt.<lexical-token>} (lexer)))
 	  (list (T1 category)
 		(T2 category)
 		(T3 category)
@@ -99,16 +99,16 @@ A		(<lexical-token>
       (let* ((IS	(lex.make-IS (lex.string: "AAABBAA")
 				     (lex.counters: 'all)))
 	     (lexer (lex.make-lexer table IS)))
-        (let* (((T1 pt.<lexical-token>) (lexer))
-	       ((T2 pt.<lexical-token>) (lexer))
-	       ((T3 pt.<lexical-token>) (lexer))
-	       ((T4 pt.<lexical-token>) (lexer)))
+        (let* (({T1 pt.<lexical-token>} (lexer))
+	       ({T2 pt.<lexical-token>} (lexer))
+	       ({T3 pt.<lexical-token>} (lexer))
+	       ({T4 pt.<lexical-token>} (lexer)))
 	  (let ((getc (lex.lexer-get-func-getc IS)))
 	    (getc)
 	    (getc))
-	  (let* (((T5 pt.<lexical-token>) (lexer))
-		 ((T6 pt.<lexical-token>) (lexer))
-		 ((T7 pt.<lexical-token>) (lexer)))
+	  (let* (({T5 pt.<lexical-token>} (lexer))
+		 ({T6 pt.<lexical-token>} (lexer))
+		 ({T7 pt.<lexical-token>} (lexer)))
 	    (list (T1 category) (T2 category) (T3 category)
 		  (T4 category)
 		  (T5 category) (T6 category) (T7 category)))))
@@ -161,10 +161,10 @@ B		(begin
       (let* ((IS	(lex.make-IS (lex.string: "AAA")
 				     (lex.counters: 'all)))
 	     (lexer (lex.make-lexer table IS)))
-        (let* (((T1 pt.<lexical-token>) (lexer))
-	       ((T2 pt.<lexical-token>) (lexer))
-	       ((T3 pt.<lexical-token>) (lexer))
-	       ((T4 pt.<lexical-token>) (lexer)))
+        (let* (({T1 pt.<lexical-token>} (lexer))
+	       ({T2 pt.<lexical-token>} (lexer))
+	       ({T3 pt.<lexical-token>} (lexer))
+	       ({T4 pt.<lexical-token>} (lexer)))
 	  (list (T1 category)
 		(T2 category)
 		(T3 category)
@@ -176,12 +176,12 @@ B		(begin
       (let* ((IS	(lex.make-IS (lex.string: "AAABCDA")
 				     (lex.counters: 'all)))
 	     (lexer (lex.make-lexer table IS)))
-        (let* (((T1 pt.<lexical-token>) (lexer))
-	       ((T2 pt.<lexical-token>) (lexer))
-	       ((T3 pt.<lexical-token>) (lexer))
-	       ((T4 pt.<lexical-token>) (lexer))
-	       ((T5 pt.<lexical-token>) (lexer))
-	       ((T6 pt.<lexical-token>) (lexer)))
+        (let* (({T1 pt.<lexical-token>} (lexer))
+	       ({T2 pt.<lexical-token>} (lexer))
+	       ({T3 pt.<lexical-token>} (lexer))
+	       ({T4 pt.<lexical-token>} (lexer))
+	       ({T5 pt.<lexical-token>} (lexer))
+	       ({T6 pt.<lexical-token>} (lexer)))
 	  (list (T1 category) (T2 category) (T3 category)
 		(T4 category) (T5 category) (T6 category))))
     => '(A A A B A *eoi*))

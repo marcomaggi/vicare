@@ -27,7 +27,7 @@
 
 
 #!vicare
-(library (nausicaa language oopp oopp-syntax-helpers)
+(library (nausicaa language oopp oopp-syntax-helpers (0 4))
   (export
     parse-with-tags-bindings		parse-let-bindings
     parse-let-values-bindings		parse-formals-bindings
@@ -36,22 +36,22 @@
     tag-public-syntax-transformer	tag-private-common-syntax-transformer
     make-accessor-transformer		make-mutator-transformer
     process-method-application		process-shadowed-identifier)
-  (import (vicare)
-    (prefix (only (nausicaa language oopp configuration)
+  (import (vicare (0 4))
+    (prefix (only (nausicaa language oopp configuration (0 4))
 		  validate-tagged-values?)
 	    config.)
-    (for (nausicaa language oopp auxiliary-syntaxes)
+    (for (nausicaa language oopp auxiliary-syntaxes (0 4))
       (meta -1))
-    (for (prefix (only (nausicaa language auxiliary-syntaxes)
+    (for (prefix (only (nausicaa language auxiliary-syntaxes (0 4))
 		       <>)
 		 aux.)
       (meta -1))
-    (for (only (nausicaa language oopp conditions)
+    (for (only (nausicaa language oopp conditions (0 4))
 	       tagged-binding-violation)
       (meta -1))
     (only (vicare language-extensions identifier-substitutions)
 	  single-identifier-subst)
-    (for (prefix (nausicaa language oopp definition-parser-helpers)
+    (for (prefix (nausicaa language oopp definition-parser-helpers (0 4))
 		 parser-help.)
       expand))
 
@@ -778,8 +778,7 @@
    ;;
    ;;where each ?VAR must have the following syntax:
    ;;
-   ;;   (?var-id ?tag-id)
-   ;;   #(?var-id ?tag-id)
+   ;;   (brace ?var-id ?tag-id)
    ;;
    ;;The return value is a syntax object with the structure:
    ;;
@@ -791,13 +790,13 @@
    ;;
    ;;SYNNER must be a closure to be used to raise syntax violations.
    ;;
-   (syntax-case bindings-stx ()
+   (syntax-case bindings-stx (brace)
      ;;No more bindings.
      (()
       (list (reverse vars) (reverse tags) (reverse syntax-bindings)))
 
-     ;;Tagged binding, parentheses envelope.
-     (((?var ?tag) . ?other-bindings)
+     ;;Tagged binding, brace envelope.
+     (((brace ?var ?tag) . ?other-bindings)
       (and (identifier? #'?var)
 	   (identifier? #'?tag))
       (let ((tag-id #'?tag))
@@ -807,18 +806,6 @@
 				  (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
 					syntax-bindings))))
 
-     ;;Tagged binding, vector envelope.
-     ((#(?var ?tag) . ?other-bindings)
-      (and (identifier? #'?var)
-	   (identifier? #'?tag))
-      (let ((tag-id #'?tag))
-	(parse-with-tags-bindings #'?other-bindings synner
-				  (cons #'?var vars)
-				  (cons tag-id tags)
-				  (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
-					syntax-bindings))))
-
-     ;;Syntax error.
      (_
       (synner "invalid bindings syntax" bindings-stx)))))
 
@@ -836,9 +823,7 @@
    ;;where each ?VAR must have one of the following syntaxes:
    ;;
    ;;   ?var-id
-   ;;   (?var-id)
-   ;;   (?var-id ?tag-id)
-   ;;   #(?var-id ?tag-id)
+   ;;   (brace ?var-id ?tag-id)
    ;;
    ;;The return value is a syntax object with the structure:
    ;;
@@ -860,26 +845,13 @@
    ;;is used as default when no tag is given for a binding.  SYNNER must
    ;;be a closure to be used to raise syntax violations.
    ;;
-   (syntax-case bindings-stx ()
+   (syntax-case bindings-stx (brace)
      ;;No more bindings.
      (()
       (list (reverse vars) (reverse tags) (reverse syntax-bindings)))
 
-     ;;Tagged binding, parentheses envelope.
-     (((?var ?tag) . ?other-bindings)
-      (and (identifier? #'?var)
-	   (identifier? #'?tag))
-      (let ((tag-id #'?tag))
-	(parse-let-bindings #'?other-bindings top-id synner
-			    (cons #'?var vars)
-			    (cons tag-id tags)
-			    (if (free-identifier=? tag-id top-id)
-				syntax-bindings
-			      (cons #'(?var (make-tagged-variable-transformer #'?tag #'?var))
-				    syntax-bindings)))))
-
-     ;;Tagged binding, vector envelope.
-     ((#(?var ?tag) . ?other-bindings)
+     ;;Tagged binding, brace envelope.
+     (((brace ?var ?tag) . ?other-bindings)
       (and (identifier? #'?var)
 	   (identifier? #'?tag))
       (let ((tag-id #'?tag))
@@ -899,18 +871,6 @@
 			  (cons top-id tags)
 			  syntax-bindings))
 
-     ;;Special case of non-tagged binding in parens.
-     ;;
-     ;;FIXME Why are we supporting this?  Is there some special case I do
-     ;;not rememeber?  (Marco Maggi; Thu Jul 18, 2013)
-     (((?var) . ?other-bindings)
-      (identifier? #'?var)
-      (parse-let-bindings #'?other-bindings top-id synner
-			  (cons #'?var vars)
-			  (cons top-id tags)
-			  syntax-bindings))
-
-     ;;Syntax error.
      (_
       (synner "invalid bindings syntax" bindings-stx)))))
 
@@ -934,9 +894,7 @@
    ;;and each ?VAR must have one of the following syntaxes:
    ;;
    ;;   ?var-id
-   ;;   (?var-id)
-   ;;   (?var-id ?tag-id)
-   ;;   #(?var-id ?tag-id)
+   ;;   (brace ?var-id ?tag-id)
    ;;
    ;;The return value is a syntax object with the structure:
    ;;
@@ -958,8 +916,8 @@
    ;;is used as default when no tag is given for a binding.  SYNNER must
    ;;be a closure to be used to raise syntax violations.
    ;;
-   (define-inline (%final stx)
-     (reverse (syntax->list stx)))
+   (define-syntax-rule (%final ?stx)
+     (reverse (syntax->list ?stx)))
    (syntax-case bindings-stx ()
      (()
       (list (%final values-vars) (%final syntax-bindings)))
@@ -981,7 +939,7 @@
   ;;
   ;;   ()
   ;;   ?args-id
-  ;;   #(?args-id ?tag-id)
+  ;;   (brace ?args-id ?tag-id)
   ;;   (?var0 ?var ...)
   ;;   (?var0 ?var ... . ?rest)
   ;;
@@ -989,14 +947,12 @@
   ;;following syntaxes:
   ;;
   ;;   ?var-id
-  ;;   (?var-id)
-  ;;   (?var-id ?tag-id)
-  ;;   #(?var-id ?tag-id)
+  ;;   (brace ?var-id ?tag-id)
   ;;
   ;;and ?REST must have one of the following syntaxes:
   ;;
   ;;   ?rest-id
-  ;;   #(?rest-id ?tag-id)
+  ;;   (brace ?rest-id ?tag-id)
   ;;
   ;;notice  that  tagging  for  ?ARGS-ID  is not  supported  because  no
   ;;suitable syntax is possible.
@@ -1026,17 +982,17 @@
   ;;TOP-ID must  the the  identifier bound to  the "<top>"  tag.  SYNNER
   ;;must be a closure to be used to raise syntax violations.
   ;;
-  (syntax-case formals-stx ()
+  (syntax-case formals-stx (brace)
     ;;No arguments.
     (()
      #'(() () ()))
 
     ;;List of all the arguments, with tag.
-    (#(?args-id ?tag-id)
+    ((brace ?args-id ?tag-id)
      (and (identifier? #'?args-id)
 	  (identifier? #'?tag-id))
      (with-syntax ((((VAR) (TAG) (BINDING))
-		    (parse-let-bindings #'((?args-id ?tag-id)) top-id synner)))
+		    (parse-let-bindings #'((brace ?args-id ?tag-id)) top-id synner)))
        #'(VAR ((TAG VAR)) (BINDING))))
 
     ;;List of all the arguments, no tag.
@@ -1044,27 +1000,24 @@
      (identifier? #'?args-id)
      #'(?args-id () ()))
 
-    ;;Fixed number of arguments.
-    ((?var ...)
-     (with-syntax ((((VAR ...) (TAG ...) (BINDING ...))
-		    (parse-let-bindings #'(?var ...) top-id synner)))
-       #'((VAR ...) ((TAG VAR) ...) (BINDING ...))))
-
     ;;Mandatory arguments plus untagged rest argument.
     ((?var0 ?var ... . ?rest)
      (identifier? #'?rest)
      (with-syntax ((((REST-VAR VAR ...) (REST-TAG TAG ...) (BINDING ...))
 		    (parse-let-bindings #'(?rest ?var0 ?var ...) top-id synner)))
-       #'((VAR ... . REST-VAR) ((TAG VAR) ...) (BINDING ...))))
-
-    ;;Mandatory arguments plus tagged rest argument.
-    ((?var0 ?var ... . #(?rest-id ?tag-id))
-     (and (identifier? #'?rest)
-	  (identifier? #'?tag-id))
-     (with-syntax ((((REST-VAR VAR ...) (REST-TAG TAG ...) (BINDING ...))
-		    (parse-let-bindings #'(#(?rest-id ?tag-id) ?var0 ?var ...) top-id synner)))
        #'((VAR ... . REST-VAR) ((TAG VAR) ... (REST-TAG REST-VAR)) (BINDING ...))))
 
+    ;;Mandatory arguments plus tagged rest argument.
+    ((?var0 ?var ... . (brace ?rest ?rest-tag))
+     (with-syntax ((((REST-VAR VAR ...) (REST-TAG TAG ...) (BINDING ...))
+		    (parse-let-bindings #'((brace ?rest ?rest-tag) ?var0 ?var ...) top-id synner)))
+       #'((VAR ... . REST-VAR) ((TAG VAR) ... (REST-TAG REST-VAR)) (BINDING ...))))
+
+    ;;Fixed number of arguments.
+    ((?var ...)
+     (with-syntax ((((VAR ...) (TAG ...) (BINDING ...))
+		    (parse-let-bindings #'(?var ...) top-id synner)))
+       #'((VAR ...) ((TAG VAR) ...) (BINDING ...))))
     ))
 
 

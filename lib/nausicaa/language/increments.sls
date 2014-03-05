@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa language increments)
+(library (nausicaa language increments (0 4))
   (export
     (rename (pre-incr!	incr!)
 	    (pre-decr!	decr!))
@@ -36,8 +36,8 @@
 	    ($pre-decr!	$decr!))
     $pre-incr!		$post-incr!
     $pre-decr!		$post-decr!)
-  (import (vicare)
-    (only (nausicaa language oopp)
+  (import (vicare (0 4))
+    (only (nausicaa language oopp (0 4))
 	  set!/tags)
     (only (vicare system $numerics)
 	  $add-number-fixnum

@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,8 +24,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (rnrs eval)
   (nausicaa language multimethods)
   (vicare checks))
@@ -49,13 +49,13 @@
   (define-class <beta>
     (fields b))
 
-  (define-method (iface-one (o <alpha>))	'(one . alpha))
-  (define-method (iface-two (o <alpha>))	'(two . alpha))
-  (define-method (iface-one (o <beta>))		'(one . beta))
-  (define-method (iface-two (o <beta>))		'(two . beta))
+  (define-method (iface-one {o <alpha>})	'(one . alpha))
+  (define-method (iface-two {o <alpha>})	'(two . alpha))
+  (define-method (iface-one {o <beta>})		'(one . beta))
+  (define-method (iface-two {o <beta>})		'(two . beta))
 
-  (let (((p <iface>) (<alpha> (1)))
-	((q <iface>) (<beta>  (2))))
+  (let (({p <iface>} (<alpha> (1)))
+	({q <iface>} (<beta>  (2))))
     (check (p one) => '(one . alpha))
     (check (p two) => '(two . alpha))
     (check (q one) => '(one . beta))

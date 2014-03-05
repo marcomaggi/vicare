@@ -25,18 +25,18 @@
 ;;;
 
 
-#!r6rs
-(library (nausicaa mehve language input-output)
+#!vicare
+(library (nausicaa mehve language input-output (0 4))
   (options visit-upon-loading)
   (export
     display		write
 
     display-1		write-1
     display-2		write-2)
-  (import (except (nausicaa)
+  (import (except (nausicaa (0 4))
 		  display
 		  write)
-    (prefix (only (nausicaa)
+    (prefix (only (nausicaa (0 4))
 		  display
 		  write)
 	    nau.))

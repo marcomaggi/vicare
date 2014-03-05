@@ -24,8 +24,8 @@
 ;;;
 
 
-#!r6rs
-(import (nausicaa)
+#!vicare
+(import (nausicaa (0 4))
   (rnrs eval)
   (vicare checks))
 
@@ -91,7 +91,7 @@
   (let ()
     (define-mixin <stuff>
       (fields c)
-      (method (doit (o <stuff>))
+      (method (doit {o <stuff>})
 	(+ 1 (o c))))
 
     (define-class <base>
@@ -108,12 +108,12 @@
       (mixins <stuff>))
 
     (check
-	(let (((o <one>) (<one> (#;a 10 #;p 20 #;c 30))))
+	(let (({o <one>} (<one> (#;a 10 #;p 20 #;c 30))))
 	  (o doit))
       => 31)
 
     (check
-	(let (((o <two>) (<two> (#;a 10 #;q 20 #;c 30))))
+	(let (({o <two>} (<two> (#;a 10 #;q 20 #;c 30))))
 	  (o doit))
       => 31)
 
@@ -125,7 +125,7 @@
 
     (define-mixin <stuff1>
       (fields c)
-      (method (doit (o <stuff1>))
+      (method (doit {o <stuff1>})
 	(+ (o a) (o c))))
 
     (define-class <alpha1>
@@ -133,7 +133,7 @@
       (mixins <stuff1>))
 
     (check
-	(let (((o <alpha1>) (<alpha1> (#;c 1 #;a 2))))
+	(let (({o <alpha1>} (<alpha1> (#;c 1 #;a 2))))
 	  (o doit))
       => 3)
 
@@ -146,7 +146,7 @@
 
   (define-mixin <stuff2>
     (virtual-fields (immutable c car))
-    (method (doit (o <stuff2>))
+    (method (doit {o <stuff2>})
       (+ 1 (o c))))
 
   (define-label <one2>
@@ -158,12 +158,12 @@
     (mixins <stuff2>))
 
   (check
-      (let (((o <one2>) '(10 . 20)))
+      (let (({o <one2>} '(10 . 20)))
         (o doit))
     => 11)
 
   (check
-      (let (((o <two2>) '(10 . 20)))
+      (let (({o <two2>} '(10 . 20)))
         (o doit))
     => 11)
 
@@ -174,7 +174,7 @@
 
   (define-mixin <stuff3>
     (fields second)
-    (method (doit (o <stuff3>))
+    (method (doit {o <stuff3>})
       (+ 1 (o second))))
 
   (define-mixin <other-stuff3>
@@ -188,12 +188,12 @@
     (mixins <stuff3> <other-stuff3>))
 
   (check
-      (let (((o <one3>) (<one3> (#;first 10 #;second 20 #;third 30))))
+      (let (({o <one3>} (<one3> (#;first 10 #;second 20 #;third 30))))
         (o doit))
     => 21)
 
   (check
-      (let (((o <one3>) (<one3> (#;first 10 #;second 20 #;third 30))))
+      (let (({o <one3>} (<one3> (#;first 10 #;second 20 #;third 30))))
         (list (o first) (o second) (o third)))
     => '(10 20 30))
 
@@ -204,7 +204,7 @@
 
   (define-mixin <stuff4>
     (fields c)
-    (method (doit (o <stuff4>))
+    (method (doit {o <stuff4>})
       (+ 1 (o c))))
 
   (define-mixin <other-stuff4>
@@ -219,12 +219,12 @@
     (mixins <other-stuff4>))
 
   (check
-      (let (((o <one4>) (<one4> (#;a 10 #;p 20 #;c 30))))
+      (let (({o <one4>} (<one4> (#;a 10 #;p 20 #;c 30))))
         (o doit))
     => 31)
 
   (check
-      (let (((o <one4>) (<one4> (#;a 10 #;p 20 #;c 30))))
+      (let (({o <one4>} (<one4> (#;a 10 #;p 20 #;c 30))))
         (list (o a) (o p) (o c)))
     => '(10 20 30))
 
@@ -238,8 +238,8 @@
     (define-syntax <sequence> (syntax-rules ()))
 
     (define-mixin <the-sequence>
-      (fields (subject <sequence>))
-      (method (get-first (o <the-sequence>))
+      (fields {subject <sequence>})
+      (method (get-first {o <the-sequence>})
 	(o subject[0])))
 
     (define-class <the-string>
@@ -251,12 +251,12 @@
 	       (<sequence>       <vector>))))
 
     (check
-	(let (((o <the-string>) (<the-string> ("ciao"))))
+	(let (({o <the-string>} (<the-string> ("ciao"))))
 	  (list (o subject length) (o get-first)))
       => '(4 #\c))
 
     (check
-	(let (((o <the-vector>) (<the-vector> ((vector 'c 'i 'a 'o)))))
+	(let (({o <the-vector>} (<the-vector> ((vector 'c 'i 'a 'o)))))
 	  (list (o subject length) (o get-first)))
       => '(4 c))
 

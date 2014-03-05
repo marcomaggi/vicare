@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009, 2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (nausicaa containers arrays)
   (vicare checks))
@@ -71,8 +71,8 @@
 ;;; --------------------------------------------------------------------
 ;;; label interface
 
-  (let (((pos  <position>) (<position> (1 2 3 4 5)))
-	((pos2 <position>) (<position> (8 7 6 5 4))))
+  (let (({pos  <position>} (<position> (1 2 3 4 5)))
+	({pos2 <position>} (<position> (8 7 6 5 4))))
 
     (check (is-a? pos <position>) => #t)
     (check (pos string) => "#<array-position -- 1 2 3 4 5>")
@@ -188,12 +188,12 @@
 ;;; --------------------------------------------------------------------
 ;;; class interface
 
-  (let (((shape <shape>)	(<shape> ('#(1 2 3 4 5)
+  (let (({shape <shape>}	(<shape> ('#(1 2 3 4 5)
 					  '#(6 7 8 9 10))))
-	((shape2 <shape>)	(<shape> ('#(5 4 3 2 1)
+	({shape2 <shape>}	(<shape> ('#(5 4 3 2 1)
 					  '#(10 9 8 7 6))))
-	((pos  <position>)	(<position> (2 3 4  5 6)))
-	((pos2 <position>)	(<position> (2 3 4 20 6))))
+	({pos  <position>}	(<position> (2 3 4  5 6)))
+	({pos2 <position>}	(<position> (2 3 4 20 6))))
 
     (check (is-a? shape <shape>) => #t)
     (check (shape number-of-dimensions) => 5)
@@ -234,11 +234,11 @@
 
     #f)
 
-  (let (((shape <shape>)  (<shape> ('#(0 0 0 0 0)
+  (let (({shape <shape>}  (<shape> ('#(0 0 0 0 0)
 				    '#(5 6 7 8 9))))
-	((shape2 <shape>) (<shape> ('#(0 0 0 0 0)
+	({shape2 <shape>} (<shape> ('#(0 0 0 0 0)
 				    '#(4 5 6 7 8))))
-	((shape3 <shape>) (<shape> ('#(0 0 0 0 0)
+	({shape3 <shape>} (<shape> ('#(0 0 0 0 0)
 				    '#(5 6 2 8 9)))))
 
     (check-for-true (shape supershape? shape2))
@@ -429,25 +429,25 @@
 
 (parameterise ((check-test-name 'array-class))
 
-  (let (((array <array>)	(<array> ((<shape> ('#(1 2 3 4 5)
+  (let (({array <array>}	(<array> ((<shape> ('#(1 2 3 4 5)
 						    '#(6 7 8 9 10)))
 					  0)))
-  	((array2 <array>)	(<array> ((<shape> ('#(5 4 3 2 1)
+  	({array2 <array>}	(<array> ((<shape> ('#(5 4 3 2 1)
 						    '#(10 9 8 7 6)))
 					  1)))
-  	((array3 <array>)	(<array> ((<shape> ('#(0 0 0 0)
+  	({array3 <array>}	(<array> ((<shape> ('#(0 0 0 0)
 						    '#(3 4 5 6)))
 					  #f)))
-  	((array4 <array>)	(<array> ((<shape> ('#(0 0 0)
+  	({array4 <array>}	(<array> ((<shape> ('#(0 0 0)
 						    '#(2 3 4)))
 					  #f)))
 	;;this is small, good for string representation
-  	((array5 <array>)	(array (<shape> ('#(0 0 0) '#(2 3 4)))
+  	({array5 <array>}	(array (<shape> ('#(0 0 0) '#(2 3 4)))
   				       1  2  3  4  5  6  7  8  9  10
   				       11 12 13 14 15 16 17 18 19 20
   				       21 22 23 24))
-  	((pos <position>)	(array-position  2 3 4 5 6))
-  	((pos2 <position>)	(array-position  2 3 4 20 6)))
+  	({pos <position>}	(array-position  2 3 4 5 6))
+  	({pos2 <position>}	(array-position  2 3 4 20 6)))
 
     (check (is-a? array <shape>) => #t)
     (check (array number-of-dimensions) => 5)
@@ -466,11 +466,11 @@
     (check (array-shape->string array) => "#<array-shape -- 1 2 3 4 5 -- 6 7 8 9 10>")
 
     (check
-    	(with-tags ((array <shape>))
+    	(with-tags ({array <shape>})
     	  (array = array))
       => #t)
     (check
-    	(with-tags ((array <shape>))
+    	(with-tags ({array <shape>})
     	  (array = array2))
       => #f)
 
@@ -481,14 +481,14 @@
     (check (array = = array2) => #f)
 
     (check
-    	(with-tags ((array <shape>))
+    	(with-tags ({array <shape>})
     	  (call-with-string-output-port
     	      (lambda (port)
     		(array display port))))
       => "#<array-shape -- 1 2 3 4 5 -- 6 7 8 9 10>")
 
     (check
-    	(with-tags ((array <shape>))
+    	(with-tags ({array <shape>})
     	  (call-with-string-output-port
     	      (lambda (port)
     		(array write port))))
@@ -549,7 +549,7 @@
     (check (array5[1][2][2]) => 23)
     (check (array5[1][2][3]) => 24)
 
-    (let (((view <array>) (array-view array5 (lambda (position)
+    (let (({view <array>} (array-view array5 (lambda (position)
     					       (vector 1
     						       (vector-ref position 0)
     						       (vector-ref position 1))))))
@@ -578,13 +578,13 @@
 
     #f)
 
-  (let (((array <array>)	(<array> ((array-shape '#(0 0 0 0 0)
+  (let (({array <array>}	(<array> ((array-shape '#(0 0 0 0 0)
 						       '#(5 6 7 8 9))
 					  #f)))
-	((array2 <array>)	(<array> ((array-shape '#(0 0 0 0 0)
+	({array2 <array>}	(<array> ((array-shape '#(0 0 0 0 0)
 						       '#(4 5 6 7 8))
 					  #f)))
-	((array3 <array>)	(<array> ((array-shape '#(0 0 0 0 0)
+	({array3 <array>}	(<array> ((array-shape '#(0 0 0 0 0)
 						       '#(5 6 2 8 9))
 					  #f))))
 

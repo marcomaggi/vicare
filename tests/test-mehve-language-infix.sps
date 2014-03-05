@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa mehve)
   ;;This nausicaa import is to make sure that bindings from nausicaa are
   ;;the same as bindings from mehve.

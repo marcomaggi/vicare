@@ -7,7 +7,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa)
   (rnrs eval)
   (nausicaa language multimethods)
@@ -116,24 +116,24 @@
 
   (define-generic doit (o arg))
 
-  (define-method (doit (o <alpha>) arg)
+  (define-method (doit {o <alpha>} arg)
     (list 'doit-alpha arg))
 
-  (define-method (doit (o <beta>) arg)
+  (define-method (doit {o <beta>} arg)
     (list 'doit-beta arg))
 
   (check
-      (let (((o <alpha>) (<alpha> (1))))
+      (let (({o <alpha>} (<alpha> (1))))
 	(o doit 10))
     => '(doit-alpha 10))
 
   (check
-      (let (((o <beta>) (<beta> (1 2))))
+      (let (({o <beta>} (<beta> (1 2))))
 	(o doit 20))
     => '(doit-beta 20))
 
   (check
-      (let (((o <alpha>) (<beta> (1 2))))
+      (let (({o <alpha>} (<beta> (1 2))))
 	(o doit 30))
     => '(doit-beta 30))
 
@@ -157,27 +157,27 @@
 
   (define-generic* doit (o arg))
 
-  (define-method (doit (o <alpha>) arg)
+  (define-method (doit {o <alpha>} arg)
     (list 'doit-alpha arg))
 
-  (define-method (doit (o <beta>) arg)
+  (define-method (doit {o <beta>} arg)
     (list 'doit-beta arg))
 
-  (define-method doit :before ((o <alpha>) arg)
+  (define-method doit :before ({o <alpha>} arg)
     (add-result 'before-alpha))
 
-  (define-method doit :after ((o <alpha>) arg)
+  (define-method doit :after ({o <alpha>} arg)
     (add-result 'after-alpha))
 
-  (define-method doit :before ((o <beta>) arg)
+  (define-method doit :before ({o <beta>} arg)
     (add-result 'before-beta))
 
-  (define-method doit :after ((o <beta>) arg)
+  (define-method doit :after ({o <beta>} arg)
     (add-result 'after-beta))
 
   (check
       (with-result
-       (let (((o <alpha>) (<beta> (1 2))))
+       (let (({o <alpha>} (<beta> (1 2))))
 	 (o doit 30)))
     => '((doit-beta 30)
 	 (before-alpha before-beta after-alpha after-beta)))

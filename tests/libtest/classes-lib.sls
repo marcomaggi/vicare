@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -25,11 +25,11 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (libtest classes-lib)
   (export <alpha> <beta> <gamma>)
   (import (rnrs)
-    (nausicaa language oopp))
+    (nausicaa language oopp (0 4)))
 
   (define-class <alpha>
     (nongenerative classes-lib:<alpha>)
@@ -55,11 +55,11 @@
 		    (mutable theta theta-ref theta-set!)))
 
   (define (beta-def-ref o)
-    (with-tags ((o <beta>))
+    (with-tags ({o <beta>})
       (list (o d) (o e) (o f))))
 
   (define (beta-def-set! o ell)
-    (with-tags ((o <beta>))
+    (with-tags ({o <beta>})
       (set!/tags (o d) (car ell))
       (set!/tags (o f) (cadr ell))))
 

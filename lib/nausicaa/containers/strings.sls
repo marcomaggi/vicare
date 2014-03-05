@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa containers strings)
   (options visit-upon-loading)
   (export <xstring>)

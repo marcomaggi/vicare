@@ -29,7 +29,7 @@
 
 
 #!r6rs
-(library (nausicaa language auxiliary-syntaxes)
+(library (nausicaa language auxiliary-syntaxes (0 4))
   (export
     ;; bindings from (rnrs records syntactic (6))
     parent sealed opaque parent-rtd nongenerative
@@ -74,7 +74,7 @@
 
     ;; miscellaneous
     <> <...> -> <- =>)
-  (import (only (vicare)
+  (import (only (vicare (0 4))
 		define-auxiliary-syntaxes
 		;; bindings from (rnrs records syntactic (6))
 		parent sealed opaque parent-rtd nongenerative

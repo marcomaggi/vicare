@@ -26,7 +26,7 @@
 
 
 #!vicare
-(library (nausicaa mehve)
+(library (nausicaa mehve (0 4))
   (options visit-upon-loading)
   (export
 
@@ -1781,7 +1781,7 @@
 )
 
 
-  (import (for (except (nausicaa)
+  (import (for (except (nausicaa (0 4))
 		       ;; redefined by numeric predicates
 		       = < > <= >=
 		       zero? positive? negative? non-negative? non-positive?
@@ -1810,12 +1810,12 @@
 		       ;; redefined by infix
 		       infix)
 	    expand run)
-    (for (nausicaa mehve language numerics predicates)		expand run)
-    (for (nausicaa mehve language numerics arithmetics)		expand run)
-    (for (nausicaa mehve language numerics parts)		expand run)
-    (for (nausicaa mehve language numerics transcendental)	expand run)
-    (for (nausicaa mehve language infix)			expand run)
-    (for (nausicaa mehve language input-output)			expand run))
+    (for (nausicaa mehve language numerics predicates (0 4))		expand run)
+    (for (nausicaa mehve language numerics arithmetics (0 4))		expand run)
+    (for (nausicaa mehve language numerics parts (0 4))			expand run)
+    (for (nausicaa mehve language numerics transcendental (0 4))	expand run)
+    (for (nausicaa mehve language infix (0 4))				expand run)
+    (for (nausicaa mehve language input-output (0 4))			expand run))
 
 
 ;;;; done

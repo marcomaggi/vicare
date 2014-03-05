@@ -96,14 +96,14 @@
       (values 0 0)
     (div-and-mod offset (fixnum-width))))
 
-(define (%most-significant-word (O <bitvector>))
+(define (%most-significant-word {O <bitvector>})
   ;;Return a fixnum holding the bits of the most significant word in the
   ;;bytevector; all the other bits are set to 0.
   ;;
   (fxand (%bit-mask (O number-of-bits-in-last-word))
 	 ($vector-ref (O pool) (O index-of-last-word))))
 
-(define (%normalise-last-word! (O <bitvector>))
+(define (%normalise-last-word! {O <bitvector>})
   ;;The last  fixnum in the  pool may  be partially used;  this function
   ;;normalises it so that all the unused bits are set to zero.
   ;;
@@ -136,7 +136,7 @@
     ;;Return a fixnum holding the bits of the most significant word in the
     ;;bytevector; all the other bits are set to 0.
     ;;
-    (let (((o <bits>) o))
+    (let (({o <bits>} o))
       (fxand (%bit-mask  (o number-of-bits-in-last-word))
 	     (vector-ref (o pool) (o index-of-last-word)))))
 
@@ -155,25 +155,25 @@
 
   (fields (mutable the-uid))
 
-  (method (uid (O <class>))
+  (method (uid {O <class>})
     (or (O the-uid)
 	(receive-and-return (uid)
 	    (gensym)
 	  (set! (O the-uid) uid))))
 
-  (method (hash (O <class>))
+  (method (hash {O <class>})
     (symbol-hash (O uid)))
 
-  (method (putprop (O <class>) (key <symbol>) value)
+  (method (putprop {O <class>} {key <symbol>} value)
     (putprop (O uid) key value))
 
-  (method (getprop (O <class>) (key <symbol>))
+  (method (getprop {O <class>} {key <symbol>})
     (getprop (O uid) key))
 
-  (method (remprop (O <class>) (key <symbol>))
+  (method (remprop {O <class>} {key <symbol>})
     (remprop (O uid) key))
 
-  (method (property-list (O <class>))
+  (method (property-list {O <class>})
     (property-list (O uid)))
 
   #| end of mixin |# )
@@ -189,20 +189,20 @@
   (mixins (<common-uid-clauses>
 	   (<class>	<bitvector>)))
   (fields
-   (immutable (pool <vector>))
+   (immutable {pool <vector>})
 		;The vector of fixnums used as storage for bit values.
-   (immutable (length <integer>))
+   (immutable {length <integer>})
 		;The number of bits in the bitvector.
-   (immutable (number-of-full-words <integer>))
+   (immutable {number-of-full-words <integer>})
 		;= index of last word
-   (immutable (number-of-bits-in-last-word <integer>)
+   (immutable {number-of-bits-in-last-word <integer>}
 		;The number  of bits,  in the last  fixnum of  the pool,
 		;which are part of the bitvector.
 	      ))
 
   (virtual-fields
    (immutable index-of-last-word <bitvector>-number-of-full-words)
-   (immutable $pool-length (lambda ((B <bitvector>))
+   (immutable $pool-length (lambda ({B <bitvector>})
 			     ($vector-length (B pool)))))
 
   (protocol
@@ -225,8 +225,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method (clone (O <bitvector>))
-    (receive-and-return ((R <bitvector>))
+  (method (clone {O <bitvector>})
+    (receive-and-return ({R <bitvector>})
 	(<bitvector> ((O length)))
       ($vector-copy! (O pool) 0
 		     (R pool) 0
@@ -246,7 +246,7 @@
 	       #`(#,tag #:oopp-syntax (?O bit-ref ?offset)))
 	      )))
 
-  (method (bit-set! (O <bitvector>) offset boolean-value)
+  (method (bit-set! {O <bitvector>} offset boolean-value)
     (define who '<bitvector>-bit-set!)
     (with-arguments-validation (who)
 	((bit-offset	O offset))
@@ -255,7 +255,7 @@
 	(let ((word ($vector-ref (O pool) word-index)))
 	  ($vector-set! (O pool) word-index (%bit-set! word bit-index boolean-value))))))
 
-  (method (bit-ref (O <bitvector>) offset)
+  (method (bit-ref {O <bitvector>} offset)
     (define who '<bitvector>-bit-ref)
     (with-arguments-validation (who)
 	((bit-offset	O offset))
@@ -263,13 +263,13 @@
 	  (offset->indexes offset)
 	(%bit-ref ($vector-ref (O pool) word-index) bit-index))))
 
-  (method (set-all! (O <bitvector>))
+  (method (set-all! {O <bitvector>})
     ($vector-fill! (O pool) 0 (O $pool-length) (greatest-fixnum)))
 
-  (method (clear-all! (O <bitvector>))
+  (method (clear-all! {O <bitvector>})
     ($vector-fill! (O pool) 0 (O $pool-length) 0))
 
-  (method (toggle! (O <bitvector>) offset)
+  (method (toggle! {O <bitvector>} offset)
     (define who '<bitvector>-toggle!)
     (with-arguments-validation (who)
 	((bit-offset	O offset))
@@ -280,7 +280,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method (= (A <bitvector>) (B <bitvector>))
+  (method (= {A <bitvector>} {B <bitvector>})
     ;;Normalise the last (possibly partially used) word...
     (%normalise-last-word! A)
     (%normalise-last-word! B)
@@ -289,14 +289,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method (not (O <bitvector>))
-    (receive-and-return ((R <bitvector>))
+  (method (not {O <bitvector>})
+    (receive-and-return ({R <bitvector>})
 	(<bitvector> ((O length)))
       (do ((i 0 (+ 1 i)))
 	  ((= i (O $pool-length)))
 	($vector-set! (R pool) i (fxnot ($vector-ref (O pool) i))))))
 
-  (method (not! (O <bitvector>))
+  (method (not! {O <bitvector>})
     (do ((i 0 (+ 1 i)))
 	((= i (O $pool-length))
 	 O)
@@ -304,18 +304,18 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method (and (A <bitvector>) (B <bitvector>))
+  (method (and {A <bitvector>} {B <bitvector>})
     (define who '<bitvector>-and)
     (with-arguments-validation (who)
 	((bitvectors-of-equal-length	A B))
-      (receive-and-return ((R <bitvector>))
+      (receive-and-return ({R <bitvector>})
 	  (<bitvector> ((A length)))
 	(do ((i 0 (+ 1 i)))
 	    ((= i (A $pool-length)))
 	  ($vector-set! (R pool) i (fxand ($vector-ref (A pool) i)
 					  ($vector-ref (B pool) i)))))))
 
-  (method (and! (A <bitvector>) (B <bitvector>))
+  (method (and! {A <bitvector>} {B <bitvector>})
     (define who '<bitvector>-and!)
     (with-arguments-validation (who)
 	((bitvectors-of-equal-length	A B))
@@ -327,18 +327,18 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method (ior (A <bitvector>) (B <bitvector>))
+  (method (ior {A <bitvector>} {B <bitvector>})
     (define who '<bitvector>-ior)
     (with-arguments-validation (who)
 	((bitvectors-of-equal-length	A B))
-      (receive-and-return ((R <bitvector>))
+      (receive-and-return ({R <bitvector>})
 	  (<bitvector> ((A length)))
 	(do ((i 0 (+ 1 i)))
 	    ((= i (A $pool-length)))
 	  ($vector-set! (R pool) i (fxior ($vector-ref (A pool) i)
 					  ($vector-ref (B pool) i)))))))
 
-  (method (ior! (A <bitvector>) (B <bitvector>))
+  (method (ior! {A <bitvector>} {B <bitvector>})
     (define who '<bitvector>-ior!)
     (with-arguments-validation (who)
 	((bitvectors-of-equal-length	A B))
@@ -350,18 +350,18 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method (xor (A <bitvector>) (B <bitvector>))
+  (method (xor {A <bitvector>} {B <bitvector>})
     (define who '<bitvector>-xor)
     (with-arguments-validation (who)
 	((bitvectors-of-equal-length	A B))
-    (receive-and-return ((R <bitvector>))
+    (receive-and-return ({R <bitvector>})
 	(<bitvector> ((A length)))
       (do ((i 0 (+ 1 i)))
 	  ((= i (A $pool-length)))
 	($vector-set! (R pool) i (fxxor ($vector-ref (A pool) i)
 					($vector-ref (B pool) i)))))))
 
-  (method (xor! (A <bitvector>) (B <bitvector>))
+  (method (xor! {A <bitvector>} {B <bitvector>})
     (define who '<bitvector>-xor!)
     (with-arguments-validation (who)
 	((bitvectors-of-equal-length	A B))
@@ -373,14 +373,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method (bit-count (O <bitvector>))
+  (method (bit-count {O <bitvector>})
     (let ((count 0))
       (do ((i 0 (+ 1 i)))
 	  ((= i (O index-of-last-word))
 	   (+ count (fxbit-count (%most-significant-word O))))
 	(incr! count (fxbit-count ($vector-ref (O pool) i))))))
 
-  (method (first-bit-set (O <bitvector>))
+  (method (first-bit-set {O <bitvector>})
     (let next-word ((i 0) (offset 0) (word ($vector-ref (O pool) 0)))
       (let ((c (fxfirst-bit-set word)))
 	(if (fx=? c -1)
@@ -395,7 +395,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (method (list (O <bitvector>))
+  (method (list {O <bitvector>})
     (let words-loop ((bits '()) (full-word-index 0))
       (if (= full-word-index (O number-of-full-words))
 	  (let ((word ($vector-ref (O pool) full-word-index)))
@@ -415,7 +415,7 @@
 				    (+ 1 bit-index))))
 	   (+ 1 full-word-index))))))
 
-  (method (vector (O <bitvector>))
+  (method (vector {O <bitvector>})
     (let ((V (make-vector (O length))))
       (do ((full-word-index 0 (+ 1 full-word-index))
 	   (vector-index    0 vector-index)) ;we increment it below
@@ -437,7 +437,7 @@
   #| end of class definition |# )
 
 (define-argument-validation (<bitvector> who obj)
-  ((<bitvector>) obj)
+  (is-a? obj <bitvector>)
   (procedure-argument-violation who "expected <bitvector> as argument" obj))
 
 (define-argument-validation (bitvectors-of-equal-length who A B)
@@ -450,19 +450,18 @@
 ;;;; bitvector functions
 
 (define (list->bitvector ell)
-  (define who 'list-bitvector)
-  (with-arguments-validation (who)
+  (with-arguments-validation (__who__)
       ((list		ell))
     (let* ((len (length ell))
-	   ((bv <bitvector>) (<bitvector> [len])))
+	   ({bv <bitvector>} (<bitvector> [len])))
       (do ((i 0 (add1 i))
 	   (ell ell ($cdr ell)))
 	  ((= i len)
 	   bv)
 	(set! bv[i] ($car ell))))))
 
-(define (vector->bitvector (V <vector>))
-  (receive-and-return ((bv <bitvector>))
+(define (vector->bitvector {V <vector>})
+  (receive-and-return ({bv <bitvector>})
       (<bitvector> ((V length)))
     (do ((i 0 (+ 1 i)))
 	((= i (V length)))

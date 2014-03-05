@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (nausicaa)
+(import (nausicaa (0 4))
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -58,9 +58,9 @@
   (check	;accessors for immutable tagged fields
       (let ()
 	(define-class <alpha>
-	  (fields (immutable (a <fixnum>))
-		  (immutable (b <fixnum>))
-		  (immutable (c <fixnum>))))
+	  (fields (immutable {a <fixnum>})
+		  (immutable {b <fixnum>})
+		  (immutable {c <fixnum>})))
 	(<alpha> A (<> (1 2 3)))
 	(list (A $a) (A $b) (A $c)))
     => '(1 2 3))
@@ -68,9 +68,9 @@
   (check	;accessors for mutable tagged fields
       (let ()
 	(define-class <alpha>
-	  (fields (mutable (a <fixnum>))
-		  (mutable (b <fixnum>))
-		  (mutable (c <fixnum>))))
+	  (fields (mutable {a <fixnum>})
+		  (mutable {b <fixnum>})
+		  (mutable {c <fixnum>})))
 	(<alpha> A (<> (1 2 3)))
 	(list (A $a) (A $b) (A $c)))
     => '(1 2 3))
@@ -98,9 +98,9 @@
   (check	;mutators for mutable tagged fields
       (let ()
 	(define-class <alpha>
-	  (fields (mutable (a <fixnum>))
-		  (mutable (b <fixnum>))
-		  (mutable (c <fixnum>))))
+	  (fields (mutable {a <fixnum>})
+		  (mutable {b <fixnum>})
+		  (mutable {c <fixnum>})))
 	(<alpha> A (<> (1 2 3)))
 	(set! (A $a) 11)
 	(set! (A $b) 22)
@@ -168,14 +168,14 @@
   (check	;accessors for immutable tagged fields
       (let ()
 	(define-class <alpha>
-	  (fields (immutable (a <fixnum>))
-		  (immutable (b <fixnum>))
-		  (immutable (c <fixnum>))))
+	  (fields (immutable {a <fixnum>})
+		  (immutable {b <fixnum>})
+		  (immutable {c <fixnum>})))
 	(define-class <beta>
 	  (parent <alpha>)
-	  (fields (immutable (d <fixnum>))
-		  (immutable (e <fixnum>))
-		  (immutable (f <fixnum>))))
+	  (fields (immutable {d <fixnum>})
+		  (immutable {e <fixnum>})
+		  (immutable {f <fixnum>})))
 	(<beta> B (<> (1 2 3 4 5 6)))
 	(list (B $a) (B $b) (B $c)
 	      (B $d) (B $e) (B $f)))
@@ -184,14 +184,14 @@
   (check	;accessors for mutable tagged fields
       (let ()
 	(define-class <alpha>
-	  (fields (mutable (a <fixnum>))
-		  (mutable (b <fixnum>))
-		  (mutable (c <fixnum>))))
+	  (fields (mutable {a <fixnum>})
+		  (mutable {b <fixnum>})
+		  (mutable {c <fixnum>})))
 	(define-class <beta>
 	  (parent <alpha>)
-	  (fields (mutable (d <fixnum>))
-		  (mutable (e <fixnum>))
-		  (mutable (f <fixnum>))))
+	  (fields (mutable {d <fixnum>})
+		  (mutable {e <fixnum>})
+		  (mutable {f <fixnum>})))
 	(<beta> B (<> (1 2 3 4 5 6)))
 	(list (B $a) (B $b) (B $c)
 	      (B $d) (B $e) (B $f)))
@@ -200,19 +200,19 @@
   (check	;accessors for mutable tagged fields
       (let ()
 	(define-class <alpha>
-	  (fields (mutable (a <fixnum>))
-		  (mutable (b <fixnum>))
-		  (mutable (c <fixnum>))))
+	  (fields (mutable {a <fixnum>})
+		  (mutable {b <fixnum>})
+		  (mutable {c <fixnum>})))
 	(define-class <beta>
 	  (parent <alpha>)
-	  (fields (mutable (d <fixnum>))
-		  (mutable (e <fixnum>))
-		  (mutable (f <fixnum>))))
+	  (fields (mutable {d <fixnum>})
+		  (mutable {e <fixnum>})
+		  (mutable {f <fixnum>})))
 	(define-class <gamma>
 	  (parent <beta>)
-	  (fields (mutable (g <fixnum>))
-		  (mutable (h <fixnum>))
-		  (mutable (i <fixnum>))))
+	  (fields (mutable {g <fixnum>})
+		  (mutable {h <fixnum>})
+		  (mutable {i <fixnum>})))
 	(<gamma> G (<> (1 2 3 4 5 6 7 8 9)))
 	(list (G $a) (G $b) (G $c)
 	      (G $d) (G $e) (G $f)
@@ -282,14 +282,14 @@
   (check	;mutators for mutable tagged fields
       (let ()
 	(define-class <alpha>
-	  (fields (mutable (a <fixnum>))
-		  (mutable (b <fixnum>))
-		  (mutable (c <fixnum>))))
+	  (fields (mutable {a <fixnum>})
+		  (mutable {b <fixnum>})
+		  (mutable {c <fixnum>})))
 	(define-class <beta>
 	  (parent <alpha>)
-	  (fields (mutable (d <fixnum>))
-		  (mutable (e <fixnum>))
-		  (mutable (f <fixnum>))))
+	  (fields (mutable {d <fixnum>})
+		  (mutable {e <fixnum>})
+		  (mutable {f <fixnum>})))
 	(<beta> B (<> (1 2 3 4 5 6)))
 	(set! (B $a) 11)
 	(set! (B $b) 22)
@@ -304,19 +304,19 @@
   (check	;mutators for mutable tagged fields
       (let ()
 	(define-class <alpha>
-	  (fields (mutable (a <fixnum>))
-		  (mutable (b <fixnum>))
-		  (mutable (c <fixnum>))))
+	  (fields (mutable {a <fixnum>})
+		  (mutable {b <fixnum>})
+		  (mutable {c <fixnum>})))
 	(define-class <beta>
 	  (parent <alpha>)
-	  (fields (mutable (d <fixnum>))
-		  (mutable (e <fixnum>))
-		  (mutable (f <fixnum>))))
+	  (fields (mutable {d <fixnum>})
+		  (mutable {e <fixnum>})
+		  (mutable {f <fixnum>})))
 	(define-class <gamma>
 	  (parent <beta>)
-	  (fields (mutable (g <fixnum>))
-		  (mutable (h <fixnum>))
-		  (mutable (i <fixnum>))))
+	  (fields (mutable {g <fixnum>})
+		  (mutable {h <fixnum>})
+		  (mutable {i <fixnum>})))
 	(<gamma> G (<> (1 2 3 4 5 6 7 8 9)))
 	(set! (G $a) 11)
 	(set! (G $b) 22)
@@ -348,9 +348,9 @@
   (check	;immutable field accessors
       (let ()
 	(define-class <class>
-	  (fields (immutable (A <alpha>))
-		  (immutable (B <beta>))
-		  (immutable (C <gamma>))))
+	  (fields (immutable {A <alpha>})
+		  (immutable {B <beta>})
+		  (immutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -364,9 +364,9 @@
   (check	;mutable field accessors
       (let ()
 	(define-class <class>
-	  (fields (mutable (A <alpha>))
-		  (mutable (B <beta>))
-		  (mutable (C <gamma>))))
+	  (fields (mutable {A <alpha>})
+		  (mutable {B <beta>})
+		  (mutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -392,9 +392,9 @@
   (check	;mutable field mutators, unsafe unsafe
       (let ()
 	(define-class <class>
-	  (fields (mutable (A <alpha>))
-		  (mutable (B <beta>))
-		  (mutable (C <gamma>))))
+	  (fields (mutable {A <alpha>})
+		  (mutable {B <beta>})
+		  (mutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -409,9 +409,9 @@
   (check	;mutable field mutators, safe unsafe
       (let ()
 	(define-class <class>
-	  (fields (mutable (A <alpha>))
-		  (mutable (B <beta>))
-		  (mutable (C <gamma>))))
+	  (fields (mutable {A <alpha>})
+		  (mutable {B <beta>})
+		  (mutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -426,9 +426,9 @@
   (check	;mutable field mutators, unsafe safe
       (let ()
 	(define-class <class>
-	  (fields (mutable (A <alpha>))
-		  (mutable (B <beta>))
-		  (mutable (C <gamma>))))
+	  (fields (mutable {A <alpha>})
+		  (mutable {B <beta>})
+		  (mutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -447,15 +447,15 @@
 
   (define-class <alpha>
     (fields a)
-    (method (doit-a (A <alpha>))
+    (method (doit-a {A <alpha>})
       (A $a)))
   (define-class <beta>
     (fields b)
-    (method (doit-b (B <beta>))
+    (method (doit-b {B <beta>})
       (B $b)))
   (define-class <gamma>
     (fields c)
-    (method (doit-c (C <gamma>))
+    (method (doit-c {C <gamma>})
       (C $c)))
 
 ;;; --------------------------------------------------------------------
@@ -463,9 +463,9 @@
   (check	;immutable field methods
       (let ()
 	(define-class <class>
-	  (fields (immutable (A <alpha>))
-		  (immutable (B <beta>))
-		  (immutable (C <gamma>))))
+	  (fields (immutable {A <alpha>})
+		  (immutable {B <beta>})
+		  (immutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -479,9 +479,9 @@
   (check	;mutable field methods
       (let ()
 	(define-class <class>
-	  (fields (mutable (A <alpha>))
-		  (mutable (B <beta>))
-		  (mutable (C <gamma>))))
+	  (fields (mutable {A <alpha>})
+		  (mutable {B <beta>})
+		  (mutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -519,9 +519,9 @@
   (check	;immutable field getters
       (let ()
 	(define-class <class>
-	  (fields (immutable (A <alpha>))
-		  (immutable (B <beta>))
-		  (immutable (C <gamma>))))
+	  (fields (immutable {A <alpha>})
+		  (immutable {B <beta>})
+		  (immutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -535,9 +535,9 @@
   (check	;mutable field getters
       (let ()
 	(define-class <class>
-	  (fields (mutable (A <alpha>))
-		  (mutable (B <beta>))
-		  (mutable (C <gamma>))))
+	  (fields (mutable {A <alpha>})
+		  (mutable {B <beta>})
+		  (mutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -589,9 +589,9 @@
   (check	;immutable field setters
       (let ()
 	(define-class <class>
-	  (fields (immutable (A <alpha>))
-		  (immutable (B <beta>))
-		  (immutable (C <gamma>))))
+	  (fields (immutable {A <alpha>})
+		  (immutable {B <beta>})
+		  (immutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))
@@ -608,9 +608,9 @@
   (check	;mutable field setters
       (let ()
 	(define-class <class>
-	  (fields (mutable (A <alpha>))
-		  (mutable (B <beta>))
-		  (mutable (C <gamma>))))
+	  (fields (mutable {A <alpha>})
+		  (mutable {B <beta>})
+		  (mutable {C <gamma>})))
 	(<class> C (<> [(<alpha> (1))
 			(<beta>  (2))
 			(<gamma> (3))]))

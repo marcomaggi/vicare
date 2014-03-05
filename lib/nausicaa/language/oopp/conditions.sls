@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,13 +26,13 @@
 
 
 #!r6rs
-(library (nausicaa language oopp conditions)
+(library (nausicaa language oopp conditions (0 4))
   (export
     &tagged-binding-violation
     make-tagged-binding-violation
     tagged-binding-violation?
     tagged-binding-violation)
-  (import (vicare))
+  (import (vicare (0 4)))
 
   (define-condition-type &tagged-binding-violation
       &assertion

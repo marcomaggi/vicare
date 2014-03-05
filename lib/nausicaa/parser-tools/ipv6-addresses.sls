@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (nausicaa parser-tools ipv6-addresses)
   (options visit-upon-loading)
   (export
@@ -70,7 +70,7 @@
    ((who irritants)
     (make-ipv6-address-parser-error-handler who irritants make-error))
    ((who irritants condition-maker)
-    (lambda ((message <string>) (token lt.<lexical-token>))
+    (lambda ({message <string>} {token lt.<lexical-token>})
       (raise
        (condition (make-ipv6-address-parser-error-condition)
 		  (condition-maker)
@@ -117,9 +117,8 @@
 	 parse-ipv6-address)
 
   (define (parse-ipv6-address the-string)
-    (define who 'parse-ipv6-address)
     (let* ((lexer	(make-ipv6-address-lexer (lex.string: the-string)))
-	   (parser	(%make-ipv6-address-parser who lexer the-string))
+	   (parser	(%make-ipv6-address-parser __who__ lexer the-string))
 	   (ell		(parser)))
       (receive (addr-ell number-of-bits-in-prefix)
 	  (ipv6-address-parsed-list-split ell)
@@ -129,36 +128,34 @@
 	      (begin
 		($set-last-pair! addr-ell^ (list (list number-of-bits-in-prefix)))
 		(list->vector addr-ell^))
-	    (%raise-parser-error who the-string))))))
+	    (%raise-parser-error __who__ the-string))))))
 
   (define (parse-ipv6-address-only the-string)
-    (define who 'parse-ipv6-address-only)
     (let* ((lexer	(make-ipv6-address-lexer (lex.string: the-string)))
-	   (parser	(%make-ipv6-address-parser who lexer the-string))
+	   (parser	(%make-ipv6-address-parser __who__ lexer the-string))
 	   (ell		(parser)))
       (receive (addr-ell number-of-bits-in-prefix)
 	  (ipv6-address-parsed-list-split ell)
 	(when number-of-bits-in-prefix
-	  (%raise-parser-error who the-string))
+	  (%raise-parser-error __who__ the-string))
 	(cond ((ipv6-address-parsed-list-expand addr-ell)
 	       => list->vector)
 	      (else
-	       (%raise-parser-error who the-string))))))
+	       (%raise-parser-error __who__ the-string))))))
 
   (define (parse-ipv6-address-prefix the-string)
-    (define who 'parse-ipv6-address-prefix)
     (let* ((lexer	(make-ipv6-address-lexer (lex.string: the-string)))
-	   (parser	(%make-ipv6-address-parser who lexer the-string))
+	   (parser	(%make-ipv6-address-parser __who__ lexer the-string))
 	   (ell		(parser)))
       (receive (addr-ell number-of-bits-in-prefix)
 	  (ipv6-address-parsed-list-split ell)
 	(unless number-of-bits-in-prefix
-	  (%raise-parser-error who the-string))
+	  (%raise-parser-error __who__ the-string))
 	(cond ((ipv6-address-parsed-list-expand addr-ell)
 	       => (lambda (addr-ell)
 		    (values (list->vector addr-ell) number-of-bits-in-prefix)))
 	      (else
-	       (%raise-parser-error who the-string))))))
+	       (%raise-parser-error __who__ the-string))))))
 
 ;;; --------------------------------------------------------------------
 

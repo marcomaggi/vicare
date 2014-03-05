@@ -30,7 +30,7 @@
 
 
 #!vicare
-(library (nausicaa language oopp)
+(library (nausicaa language oopp (0 4))
   (options visit-upon-loading)
   (export
     define-label		define-class		define-mixin
@@ -61,7 +61,7 @@
     tagged-binding-violation?
 
     ;; auxiliary syntaxes
-    =>
+    => brace
     (deprefix (aux.parent		aux.nongenerative	aux.abstract
 	       aux.sealed		aux.opaque		aux.predicate
 	       aux.fields		aux.virtual-fields
@@ -72,23 +72,23 @@
 	       aux.shadows		aux.satisfies		aux.mixins
 	       aux.<>			aux.<-)
 	      aux.))
-  (import (vicare)
+  (import (vicare (0 4))
     (for (prefix (vicare expander object-spec)
 		 type-specs.)
       expand)
-    (nausicaa language oopp auxiliary-syntaxes)
-    (nausicaa language oopp conditions)
-    (for (prefix (nausicaa language oopp oopp-syntax-helpers)
+    (nausicaa language oopp auxiliary-syntaxes (0 4))
+    (nausicaa language oopp conditions (0 4))
+    (for (prefix (nausicaa language oopp oopp-syntax-helpers (0 4))
     		 syntax-help.)
     	 expand)
-    (for (prefix (nausicaa language oopp definition-parser-helpers)
+    (for (prefix (nausicaa language oopp definition-parser-helpers (0 4))
 		 parser-help.)
 	 expand)
-    (for (prefix (only (nausicaa language oopp configuration)
+    (for (prefix (only (nausicaa language oopp configuration (0 4))
 		       validate-tagged-values?)
 		 config.)
 	 expand)
-    (prefix (only (nausicaa language auxiliary-syntaxes)
+    (prefix (only (nausicaa language auxiliary-syntaxes (0 4))
 		  <>			<-
 		  parent		nongenerative
 		  sealed		opaque
@@ -1016,31 +1016,31 @@
   ;;Transform:
   ;;
   ;;  (with-tagged-arguments-validation (who)
-  ;;       ((<fixnum>  X)
-  ;;        (<integer> Y))
+  ;;      ((<fixnum>  X)
+  ;;       (<integer> Y))
   ;;    (do-this)
   ;;    (do-that))
   ;;
   ;;into:
   ;;
-  ;;  (if ((<fixnum>) X)
-  ;;      (if ((<integer>) Y)
-  ;;          (begin
-  ;;            (do-this)
-  ;;            (do-that))
-  ;;        (procedure-argument-violation who "invalid tagged argument" '<integer> Y))
-  ;;    (procedure-argument-violation who "invalid tagged argument" '<fixnum> X))
+  ;;  (begin
+  ;;    (<fixnum> :assert-procedure-argument X)
+  ;;    (begin
+  ;;      (<integer> :assert-procedure-argument Y)
+  ;;      (let ()
+  ;;        (do-this)
+  ;;        (do-that))))
   ;;
   ;;As a special case:
   ;;
   ;;  (with-tagged-arguments-validation (who)
-  ;;       ((<top>  X))
+  ;;      ((<top>  X))
   ;;    (do-this)
   ;;    (do-that))
   ;;
   ;;expands to:
   ;;
-  ;;  (begin
+  ;;  (let ()
   ;;    (do-this)
   ;;    (do-that))
   ;;
@@ -1048,7 +1048,7 @@
     (syntax-case stx ()
       ((_ (?who) ((?validator ?arg) ...) . ?body)
        (identifier? #'?who)
-       (let* ((body		#'(begin . ?body))
+       (let* ((body		#'(let () . ?body))
 	      (output-form	(%build-output-form #'?who
 						    #'(?validator ...)
 						    (syntax->list #'(?arg ...))
@@ -1062,7 +1062,7 @@
   (define (%build-output-form who validators args body)
     (syntax-case validators (<top>)
       (()
-       #`(let () #,body))
+       body)
 
       ;;Accept "<top>" as special validator meaning "always valid".
       ((<top> . ?other-validators)
@@ -1120,7 +1120,7 @@
 ;;;; convenience syntaxes with tags: LAMBDA, CASE-LAMBDA
 
 (define-syntax* (lambda/tags stx)
-  (syntax-case stx ()
+  (syntax-case stx (brace)
 
     ;;Thunk definition.
     ;;
@@ -1128,30 +1128,44 @@
      #'(lambda () ?body0 ?body ...))
 
     ;;Function with tagged return values.
-    ((_ ((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+    ((_ ((brace ?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
      (and (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
 	  (identifier=symbol? #'?who '_))
      #'(lambda/tags ?formals (begin/tags (aux.<- ?rv-tag0 ?rv-tag ...) ?body0 ?body ...)))
 
     ;;Function with untagged args argument.
     ;;
-    ((_ ?formals ?body0 ?body ...)
-     (identifier? #'?formals)
-     #'(lambda ?formals ?body0 ?body ...))
+    ((_ ?args ?body0 ?body ...)
+     (identifier? #'?args)
+     #'(lambda ?args ?body0 ?body ...))
 
     ;;Function with tagged args argument.
     ;;
-    ((_ #(?args-id ?tag-id) ?body0 ?body ...)
+    ((_ (brace ?args-id ?tag-id) ?body0 ?body ...)
      (and (identifier? #'?args-id)
 	  (identifier? #'?tag-id))
      (with-syntax ((((FORMAL) VALIDATIONS (SYNTAX-BINDING ...))
-		    (syntax-help.parse-formals-bindings #'(#(?args-id ?tag-id)) #'<top> synner)))
+		    (syntax-help.parse-formals-bindings #'((brace ?args-id ?tag-id)) #'<top> synner)))
        #`(lambda FORMAL
-	   (define who 'lambda/tags)
-	   (with-tagged-arguments-validation (who)
-	       VALIDATIONS
-	     (let-syntax (SYNTAX-BINDING ...)
-	       ?body0 ?body ...)))))
+	   (fluid-let-syntax ((__who__ (identifier-syntax 'lambda/tags)))
+	     (with-tagged-arguments-validation (__who__)
+		 VALIDATIONS
+	       (let-syntax (SYNTAX-BINDING ...)
+		 ?body0 ?body ...))))))
+
+    ;;Mandatory arguments and tagged rest argument.
+    ;;
+    ((_ (?var0 ?var ... . (brace ?rest-id ?tag-id)) ?body0 ?body ...)
+     (and (identifier? #'?rest-id)
+	  (identifier? #'?tag-id))
+     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
+		    (syntax-help.parse-formals-bindings #'(?var0 ?var ... . (brace ?rest-id ?tag-id)) #'<top> synner)))
+       #`(lambda FORMALS
+	   (fluid-let-syntax ((__who__ (identifier-syntax 'lambda/tags)))
+	     (with-tagged-arguments-validation (__who__)
+		 VALIDATIONS
+	       (let-syntax (SYNTAX-BINDING ...)
+		 ?body0 ?body ...))))))
 
     ;;Mandatory arguments and untagged rest argument.
     ;;
@@ -1160,25 +1174,11 @@
      (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
 		    (syntax-help.parse-formals-bindings #'(?var0 ?var ... . ?args) #'<top> synner)))
        #`(lambda FORMALS
-	   (define who 'lambda/tags)
-	   (with-tagged-arguments-validation (who)
-	       VALIDATIONS
-	     (let-syntax (SYNTAX-BINDING ...)
-	       ?body0 ?body ...)))))
-
-    ;;Mandatory arguments and tagged rest argument.
-    ;;
-    ((_ (?var0 ?var ... . #(?args-id ?tag-id)) ?body0 ?body ...)
-     (and (identifier? #'?args)
-	  (identifier? #'?tag))
-     (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-		    (syntax-help.parse-formals-bindings #'(?var0 ?var ... . #(?args-id ?tag-id)) #'<top> synner)))
-       #`(lambda FORMALS
-	   (define who 'lambda/tags)
-	   (with-tagged-arguments-validation (who)
-	       VALIDATIONS
-	     (let-syntax (SYNTAX-BINDING ...)
-	       ?body0 ?body ...)))))
+	   (fluid-let-syntax ((__who__ (identifier-syntax 'lambda/tags)))
+	     (with-tagged-arguments-validation (__who__)
+		 VALIDATIONS
+	       (let-syntax (SYNTAX-BINDING ...)
+		 ?body0 ?body ...))))))
 
     ;;Mandatory arguments and no rest argument.
     ;;
@@ -1186,51 +1186,43 @@
      (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
 		    (syntax-help.parse-formals-bindings #'(?var0 ?var ...) #'<top> synner)))
        #`(lambda FORMALS
-	   (define who 'lambda/tags)
-	   (with-tagged-arguments-validation (who)
-	       VALIDATIONS
-	     (let-syntax (SYNTAX-BINDING ...)
-	       ?body0 ?body ...)))))
+	   (fluid-let-syntax ((__who__ (identifier-syntax 'lambda/tags)))
+	     (with-tagged-arguments-validation (__who__)
+		 VALIDATIONS
+	       (let-syntax (SYNTAX-BINDING ...)
+		 ?body0 ?body ...))))))
 
     (_
      (synner "syntax error in LAMBDA/TAGS"))))
 
 (define-syntax* (case-lambda/tags stx)
+  (define (%process-clause clause-stx)
+    (syntax-case clause-stx (brace)
+      ;;Clause with tagged return values.
+      ((((brace ?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+       (and (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
+	    (identifier=symbol? #'?who '_))
+       (%process-clause #'(?formals
+			   (begin/tags (aux.<- ?rv-tag0 ?rv-tag ...) ?body0 ?body ...))))
+      ;;Clause with UNtagged return values.
+      ((?formals ?body0 ?body ...)
+       (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
+		      (syntax-help.parse-formals-bindings #'?formals #'<top> synner)))
+	 #'(FORMALS
+	    (define who 'case-lambda/tags)
+	    (with-tagged-arguments-validation (who)
+		VALIDATIONS
+	      (let-syntax (SYNTAX-BINDING ...)
+		?body0 ?body ...)))))
+      (_
+       (synner "invalid clause syntax" clause-stx))))
   (syntax-case stx ()
     ((_)
      #'(case-lambda))
 
     ((_ ?clause ...)
-     (let loop ((in-clauses #'(?clause ...))
-		(ou-clauses '()))
-       (syntax-case in-clauses ()
-	 (()
-	  (cons #'case-lambda (reverse ou-clauses)))
-
-	 ;;Function with tagged return values.
-	 (((((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...) . ?other-clauses)
-	  (and (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
-	       (identifier=symbol? #'?who '_))
-	  (loop #'((?formals
-		    (begin/tags (aux.<- ?rv-tag0 ?rv-tag ...) ?body0 ?body ...))
-		   . ?other-clauses)
-		ou-clauses))
-
-	 (((?formals ?body0 ?body ...) . ?other-clauses)
-	  (begin
-	    (with-syntax (((FORMALS VALIDATIONS (SYNTAX-BINDING ...))
-			   (syntax-help.parse-formals-bindings #'?formals #'<top> synner)))
-	      (loop #'?other-clauses
-		    (cons #'(FORMALS
-			     (define who 'case-lambda/tags)
-			     (with-tagged-arguments-validation (who)
-				 VALIDATIONS
-			       (let-syntax (SYNTAX-BINDING ...)
-				 ?body0 ?body ...)))
-			  ou-clauses)))))
-
-	 ((?clause . ?other-clauses)
-	  (synner "invalid clause syntax" #'?clause)))))
+     (cons #'case-lambda
+	   (map %process-clause (syntax->list #'(?clause ...)))))
 
     (_
      (synner "invalid syntax in case-lambda definition"))))
@@ -1239,7 +1231,7 @@
 ;;;; convenience syntaxes with tags: DEFINE, DEFINE-VALUES, CASE-DEFINE
 
 (define-syntax* (define/tags stx)
-  (syntax-case stx ()
+  (syntax-case stx (brace)
 
     ;;Untagged, uninitialised variable.
     ;;
@@ -1249,7 +1241,7 @@
 
     ;;Tagged, uninitialised variable.
     ;;
-    ((_ #(?who ?tag))
+    ((_ (brace ?who ?tag))
      (and (identifier? #'?who)
 	  (identifier? #'?tag))
      #'(?tag ?who))
@@ -1262,27 +1254,21 @@
 
     ;;Tagged, initialised variable.
     ;;
-    ((_ #(?who ?tag) ?expr)
+    ((_ (brace ?who ?tag) ?expr)
      (and (identifier? #'?who)
 	  (identifier? #'?tag))
      #'(?tag ?who ?expr))
 
-    ;;Function definition with tagged  return values through tagged who,
-    ;;vector spec.
-    ;;
-    ((?kwd (#(?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
-     #'(?kwd ((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...))
-
     ;;Function definition with tagged single return value through tagged
     ;;who.
     ;;
-    ((_ ((?who ?rv-tag) . ?formals) ?body0 ?body ...)
+    ((_ ((brace ?who ?rv-tag) . ?formals) ?body0 ?body ...)
      (all-identifiers? #'(?who ?rv-tag))
      (with-syntax
 	 ((FUN (identifier-prefix "the-" #'?who)))
        #'(module (?who)
 	   (define FUN
-	     (lambda/tags ((_ ?rv-tag) . ?formals)
+	     (lambda/tags ((brace _ ?rv-tag) . ?formals)
 	       (fluid-let-syntax
 		   ((__who__ (identifier-syntax (quote ?who))))
 		 ?body0 ?body ...)))
@@ -1292,21 +1278,17 @@
 		(identifier? #'?id)
 		#'FUN)
 	       ((_ ?arg (... ...))
-		(begin
-		  ;; (debug-print 'define/tags
-		  ;; 	       (syntax->datum stx)
-		  ;; 	       (syntax->datum #'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...)))))
-		  #'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...)))))
+		#'(?rv-tag #:nested-oopp-syntax (FUN ?arg (... ...))))
 	       ))
 	   #| end of module |# )))
 
     ;;Function  definition with  tagged multiple  return values  through
     ;;tagged who.
     ;;
-    ((_ ((?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
+    ((_ ((brace ?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
      (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
      #'(define ?who
-	 (lambda/tags ((_ ?rv-tag0 ?rv-tag ...) . ?formals)
+	 (lambda/tags ((brace _ ?rv-tag0 ?rv-tag ...) . ?formals)
 	   (fluid-let-syntax
 	       ((__who__ (identifier-syntax (quote ?who))))
 	     ?body0 ?body ...))))
@@ -1332,7 +1314,7 @@
       ((_ (?var ... ?var0) ?form ... ?form0)
        (let ((vars-stx #'(?var ... ?var0)))
 	 (with-syntax
-	     (((VAR ... VAR0) (%process-vars vars-stx (lambda (id tag) (vector id tag))))
+	     (((VAR ... VAR0) (%process-vars vars-stx (lambda (id tag) #`(brace #,id #,tag))))
 	      ((ID  ... ID0)  (%process-vars vars-stx (lambda (id tag) id)))
 	      ((TMP ...)      (generate-temporaries #'(?var ...))))
 	   #'(begin
@@ -1350,12 +1332,12 @@
 		     TMP0)))))))))
 
   (define (%process-vars vars-stx maker)
-    (syntax-case vars-stx ()
+    (syntax-case vars-stx (brace)
       (() '())
       ((?id ?var ...)
        (identifier? #'?id)
        (cons (maker #'?id #'<top>) (%process-vars #'(?var ...) maker)))
-      (((?id ?tag) ?var ...)
+      (((brace ?id ?tag) ?var ...)
        (and (identifier? #'?id)
 	    (identifier? #'?tag))
        (cons (maker #'?id #'?tag) (%process-vars #'(?var ...) maker)))
@@ -1558,12 +1540,12 @@
 
 (define-syntax* (do*/tags stx)
   (define (%parse-var stx)
-    (syntax-case stx ()
+    (syntax-case stx (brace)
       (?id
        (identifier? #'?id)
        #'?id)
-      ((?id ?tag ...)
-       (all-identifiers? #'(?id ?tag ...))
+      ((brace ?id ?tag)
+       (all-identifiers? #'(?id ?tag))
        #'?id)
       (_
        (synner "invalid binding declaration"))))

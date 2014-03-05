@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa mehve)
   (prefix (nausicaa mehve language numerics arithmetics)
 	  mehve.)
@@ -67,16 +67,16 @@
 
 (parametrise ((check-test-name	'arithmetic-addition))
 
-  (define-method (mehve.addition-1 (o <vector>))
+  (define-method (mehve.addition-1 {o <vector>})
     o)
 
-  (define-method (mehve.addition-2 (a <vector>) (b <vector>))
+  (define-method (mehve.addition-2 {a <vector>} {b <vector>})
     (a map + b))
 
-  (define-method (mehve.addition-1 (o <spine>))
+  (define-method (mehve.addition-1 {o <spine>})
     o)
 
-  (define-method (mehve.addition-2 (a <spine>) (b <spine>))
+  (define-method (mehve.addition-2 {a <spine>} {b <spine>})
     (a map + b))
 
 ;;; --------------------------------------------------------------------
@@ -130,16 +130,16 @@
 
 (parametrise ((check-test-name	'arithmetic-subtraction))
 
-  (define-method (mehve.subtraction-1 (o <vector>))
+  (define-method (mehve.subtraction-1 {o <vector>})
     (vector-map - o))
 
-  (define-method (mehve.subtraction-2 (a <vector>) (b <vector>))
+  (define-method (mehve.subtraction-2 {a <vector>} {b <vector>})
     (vector-map - a b))
 
-  (define-method (mehve.subtraction-1 (o <spine>))
+  (define-method (mehve.subtraction-1 {o <spine>})
     (map - o))
 
-  (define-method (mehve.subtraction-2 (a <spine>) (b <spine>))
+  (define-method (mehve.subtraction-2 {a <spine>} {b <spine>})
     (map - a b))
 
 ;;; --------------------------------------------------------------------
@@ -195,16 +195,16 @@
 
 (parametrise ((check-test-name	'arithmetic-multiplication))
 
-  (define-method (mehve.multiplication-1 (o <vector>))
+  (define-method (mehve.multiplication-1 {o <vector>})
     o)
 
-  (define-method (mehve.multiplication-2 (a <vector>) (b <vector>))
+  (define-method (mehve.multiplication-2 {a <vector>} {b <vector>})
     (vector-map * a b))
 
-  (define-method (mehve.multiplication-1 (o <spine>))
+  (define-method (mehve.multiplication-1 {o <spine>})
     o)
 
-  (define-method (mehve.multiplication-2 (a <spine>) (b <spine>))
+  (define-method (mehve.multiplication-2 {a <spine>} {b <spine>})
     (map * a b))
 
 ;;; --------------------------------------------------------------------
@@ -259,16 +259,16 @@
 
 (parametrise ((check-test-name	'arithmetic-division))
 
-  (define-method (mehve.division-1 (o <vector>))
+  (define-method (mehve.division-1 {o <vector>})
     (vector-map / o))
 
-  (define-method (mehve.division-2 (a <vector>) (b <vector>))
+  (define-method (mehve.division-2 {a <vector>} {b <vector>})
     (vector-map / a b))
 
-  (define-method (mehve.division-1 (o <spine>))
+  (define-method (mehve.division-1 {o <spine>})
     (map / o))
 
-  (define-method (mehve.division-2 (a <spine>) (b <spine>))
+  (define-method (mehve.division-2 {a <spine>} {b <spine>})
     (map / a b))
 
 ;;; --------------------------------------------------------------------
@@ -324,33 +324,33 @@
 
 (parametrise ((check-test-name	'arithmetic-division-and-modulus))
 
-  (define-method (mehve.div (a <vector>) (b <vector>))
+  (define-method (mehve.div {a <vector>} {b <vector>})
     (vector-map div a b))
 
-  (define-method (mehve.div (a <spine>) (b <spine>))
+  (define-method (mehve.div {a <spine>} {b <spine>})
     (map div a b))
 
-  (define-method (mehve.div0 (a <vector>) (b <vector>))
+  (define-method (mehve.div0 {a <vector>} {b <vector>})
     (vector-map div0 a b))
 
-  (define-method (mehve.div0 (a <spine>) (b <spine>))
+  (define-method (mehve.div0 {a <spine>} {b <spine>})
     (map div0 a b))
 
-  (define-method (mehve.mod (a <vector>) (b <vector>))
+  (define-method (mehve.mod {a <vector>} {b <vector>})
     (vector-map mod a b))
 
-  (define-method (mehve.mod (a <spine>) (b <spine>))
+  (define-method (mehve.mod {a <spine>} {b <spine>})
     (map mod a b))
 
-  (define-method (mehve.mod0 (a <vector>) (b <vector>))
+  (define-method (mehve.mod0 {a <vector>} {b <vector>})
     (vector-map mod0 a b))
 
-  (define-method (mehve.mod0 (a <spine>) (b <spine>))
+  (define-method (mehve.mod0 {a <spine>} {b <spine>})
     (map mod0 a b))
 
-  (define-method (mehve.div-and-mod (a <vector>) (b <vector>))
-    (let (((D <vector>) (make-vector (a length)))
-	  ((M <vector>) (make-vector (a length))))
+  (define-method (mehve.div-and-mod {a <vector>} {b <vector>})
+    (let (({D <vector>} (make-vector (a length)))
+	  ({M <vector>} (make-vector (a length))))
       (do ((i 0 (+ 1 i)))
 	  ((= i (a length))
 	   (values D M))
@@ -359,7 +359,7 @@
 	  (set! D[i] d)
 	  (set! M[i] m)))))
 
-  (define-method (mehve.div-and-mod (a <spine>) (b <spine>))
+  (define-method (mehve.div-and-mod {a <spine>} {b <spine>})
     (let recur ((a a) (b b))
       (if (null? a)
 	  (values '() '())
@@ -369,9 +369,9 @@
 	      (recur (cdr a) (cdr b))
 	    (values (cons d D) (cons m M)))))))
 
-  (define-method (mehve.div0-and-mod0 (a <vector>) (b <vector>))
-    (let (((D <vector>) (make-vector (a length)))
-	  ((M <vector>) (make-vector (a length))))
+  (define-method (mehve.div0-and-mod0 {a <vector>} {b <vector>})
+    (let (({D <vector>} (make-vector (a length)))
+	  ({M <vector>} (make-vector (a length))))
       (do ((i 0 (+ 1 i)))
 	  ((= i (a length))
 	   (values D M))
@@ -380,7 +380,7 @@
 	  (set! D[i] d)
 	  (set! M[i] m)))))
 
-  (define-method (mehve.div0-and-mod0 (a <spine>) (b <spine>))
+  (define-method (mehve.div0-and-mod0 {a <spine>} {b <spine>})
     (let recur ((a a) (b b))
       (if (null? a)
 	  (values '() '())
@@ -480,10 +480,10 @@
 
 (parametrise ((check-test-name	'arithmetic-absolute))
 
-  (define-method (mehve.abs (o <vector>))
+  (define-method (mehve.abs {o <vector>})
     (o map abs))
 
-  (define-method (mehve.abs (o <spine>))
+  (define-method (mehve.abs {o <spine>})
     (o map abs))
 
 ;;; --------------------------------------------------------------------

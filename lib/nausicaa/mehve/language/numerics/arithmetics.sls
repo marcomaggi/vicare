@@ -25,8 +25,8 @@
 ;;;
 
 
-#!r6rs
-(library (nausicaa mehve language numerics arithmetics)
+#!vicare
+(library (nausicaa mehve language numerics arithmetics (0 4))
   (options visit-upon-loading)
   (export
     + - * / abs
@@ -40,11 +40,11 @@
     multiplication-0		division-0
     multiplication-1		division-1
     multiplication-2		division-2)
-  (import (except (nausicaa)
+  (import (except (nausicaa (0 4))
 		  + - * / abs
 		  div div0 mod mod0
 		  div-and-mod div0-and-mod0)
-    (prefix (only (nausicaa)
+    (prefix (only (nausicaa (0 4))
 		  + - * / abs
 		  div div0 mod mod0
 		  div-and-mod div0-and-mod0)
@@ -118,7 +118,7 @@
   ;;
   0)
 
-(define-method (addition-1 (a <number>))
+(define-method (addition-1 {a <number>})
   a)
 
 ;;; --------------------------------------------------------------------
@@ -135,7 +135,7 @@
   ;;
   1)
 
-(define-method (multiplication-1 (a <number>))
+(define-method (multiplication-1 {a <number>})
   a)
 
 ;;; --------------------------------------------------------------------

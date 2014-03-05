@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2010-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (nausicaa)
+(import (nausicaa (0 4))
   (prefix (nausicaa parser-tools uri)  uri.)
   (prefix (nausicaa uri) uri.)
   (vicare checks))
@@ -52,17 +52,17 @@
 (parametrise ((check-test-name	'conditions))
 
   (check
-      (let (((C uri.&uri-parser-error) (uri.&uri-parser-error (10))))
+      (let (({C uri.&uri-parser-error} (uri.&uri-parser-error (10))))
 	((uri.&uri-parser-error #:predicate) C))
     => #t)
 
   (check
-      (let (((C uri.&uri-parser-error) (uri.&uri-parser-error (10))))
+      (let (({C uri.&uri-parser-error} (uri.&uri-parser-error (10))))
 	(C offset))
     => 10)
 
   (check
-      (let (((C uri.&uri-parser-error) (uri.&uri-parser-error (10))))
+      (let (({C uri.&uri-parser-error} (uri.&uri-parser-error (10))))
 	(try
 	    (raise C)
 	  (catch E

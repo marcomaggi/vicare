@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(library (nausicaa mehve language infix)
+(library (nausicaa mehve language infix (0 4))
   (export infix)
   (import (except (nausicaa)
 		  ;; redefined by numeric predicates
@@ -58,10 +58,10 @@
 		  infix)
     (vicare language-extensions infix parser-utils)
     (vicare language-extensions infix tokens)
-    (nausicaa mehve language numerics predicates)
-    (nausicaa mehve language numerics arithmetics)
-    (nausicaa mehve language numerics parts)
-    (nausicaa mehve language numerics transcendental))
+    (nausicaa mehve language numerics predicates (0 4))
+    (nausicaa mehve language numerics arithmetics (0 4))
+    (nausicaa mehve language numerics parts (0 4))
+    (nausicaa mehve language numerics transcendental (0 4)))
 
 
 (define-syntax infix

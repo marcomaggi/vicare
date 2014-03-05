@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (nausicaa mehve)
   (prefix (nausicaa mehve language input-output) mehve.)
   (vicare checks))
@@ -36,11 +36,11 @@
 
 (parametrise ((check-test-name	'display))
 
-  (define-method (mehve.display-2 (o <vector>) (p <port>))
+  (define-method (mehve.display-2 {o <vector>} {p <port>})
     (o for-each (lambda (item)
 		  (display item p))))
 
-  (define-method (mehve.write-2 (o <vector>) (p <port>))
+  (define-method (mehve.write-2 {o <vector>} {p <port>})
     (o for-each (lambda (item)
 		  (write item p))))
 

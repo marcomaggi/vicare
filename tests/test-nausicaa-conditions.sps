@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2011, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -108,8 +108,8 @@
   (let ()	;tagged fields with accessors
     (define-condition-type &alpha
       (parent &assertion)
-      (fields ((a <string>)  get-a)
-	      ((b <integer>) get-b)))
+      (fields ({a <string>}  get-a)
+	      ({b <integer>} get-b)))
 
     (check
 	(let ((E (make-alpha-condition "ciao" 2)))
@@ -128,12 +128,12 @@
       => '(#f #t))
 
     (check
-	(let (((E &alpha) (make-alpha-condition "ciao" 2)))
+	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
 	  (list (E a) (E b)))
       => '("ciao" 2))
 
     (check
-	(let (((E &alpha) (make-alpha-condition "ciao" 2)))
+	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
 	  (list (E a length) (E b positive?)))
       => '(4 #t))
 
@@ -142,8 +142,8 @@
   (let ()	;tagged fields without accessors
     (define-condition-type &alpha
       (parent &assertion)
-      (fields ((a <string>))
-	      ((b <integer>))))
+      (fields ({a <string>})
+	      ({b <integer>})))
 
     (check
 	(let ((E (make-alpha-condition "ciao" 2)))
@@ -162,12 +162,12 @@
       => '(#f #t))
 
     (check
-	(let (((E &alpha) (make-alpha-condition "ciao" 2)))
+	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
 	  (list (E a) (E b)))
       => '("ciao" 2))
 
     (check
-	(let (((E &alpha) (make-alpha-condition "ciao" 2)))
+	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
 	  (list (E a length) (E b positive?)))
       => '(4 #t))
 
