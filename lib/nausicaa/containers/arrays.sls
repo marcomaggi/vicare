@@ -228,7 +228,7 @@
 ;;; inspection
 
 (define (array-shape-number-of-dimensions {shape <shape>})
-  (shape starts length))
+  ((shape starts) length))
 
 (define (array-shape-number-of-elements {shape <shape>})
   (vectors.vector-fold-left (lambda (sum start past)
@@ -238,13 +238,13 @@
 			    (shape pasts)))
 
 (define (array-shape-index-start {shape <shape>} dimension)
-  (shape starts[dimension]))
+  ((shape starts)[dimension]))
 
 (define (array-shape-index-past {shape <shape>} dimension)
-  (shape pasts[dimension]))
+  ((shape pasts)[dimension]))
 
 (define (array-shape-index-last {shape <shape>} dimension)
-  (+ -1 (shape pasts[dimension])))
+  (+ -1 ((shape pasts)[dimension])))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -277,7 +277,7 @@
   (case-lambda
    (({A <shape>} {B <shape>})
     (and (= (A number-of-dimensions) (B number-of-dimensions))
-	 (let ((len (A starts length)))
+	 (let ((len ((A starts) length)))
 	   (let loop ((A-is-strict-supershape? #f)
 		      (i 0))
 	     (if (= i len)
@@ -309,9 +309,9 @@
 
 (define (array-shape->string {S <shape>})
   (string-append "#<array-shape -- "
-		 (strings.string-join (vector->list (S starts map number->string)) " ")
+		 (strings.string-join (vector->list ((S starts) map number->string)) " ")
 		 " -- "
-		 (strings.string-join (vector->list (S pasts map number->string)) " ")
+		 (strings.string-join (vector->list ((S pasts) map number->string)) " ")
 		 ">"))
 
 (define array-shape-display
@@ -430,12 +430,12 @@
 
 (define (array-copy {A <array>})
   (make-from-fields <array>
-    (A starts copy)
-    (A pasts copy)
-    (A dimensions copy)
-    (A factors copy)
+    ((A starts) copy)
+    ((A pasts) copy)
+    ((A dimensions) copy)
+    ((A factors) copy)
     (A mapper)
-    (A vector copy)))
+    ((A vector) copy)))
 
 (define (array-view {A <array>} mapper)
   (make-from-fields <array>
@@ -486,20 +486,20 @@
       position)))
 
 (define (array-ref {A <array>} position)
-  (A vector [(%compute-index 'array-ref A position)]))
+  ((A vector) [(%compute-index 'array-ref A position)]))
 
 (define (array-set! {A <array>} position value)
-  (set! (A vector [(%compute-index 'array-set! A position)]) value))
+  (set! ((A vector) [(%compute-index 'array-set! A position)]) value))
 
 ;;; --------------------------------------------------------------------
 ;;; Conversion and port output
 
 (define (array->string {A <array>} element->string)
   (string-append "#<array " (array-shape->string A) " "
-		 (A vector fold-right
-		    (lambda (item string)
-		      (string-append (element->string item) " " string))
-		    "")
+		 ((A vector) fold-right
+		  (lambda (item string)
+		    (string-append (element->string item) " " string))
+		  "")
 		 ">"))
 
 (define array-display
@@ -517,9 +517,9 @@
     (display "(array " port)
     (array-shape-write A port)
     (display " " port)
-    (display (A vector fold-right (lambda (item string)
-				    (string-append (element->string item) " " string))
-		"")
+    (display ((A vector) fold-right (lambda (item string)
+				      (string-append (element->string item) " " string))
+	      "")
 	     port)
     (display ")" port))))
 

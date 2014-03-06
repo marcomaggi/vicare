@@ -48,12 +48,12 @@
       (let (({T lt.<lexical-token>} (lt.<lexical-token> ((lt.category: 'category)
 							 (lt.value:    'value)
 							 (lt.length:   5)))))
-	(list (T category) (T location unspecified?) (T value) (T length)))
+	(list (T category) ((T location) unspecified?) (T value) (T length)))
     => '(category #t value 5))
 
   (check
       (let (({T lt.<lexical-token>} (lt.<lexical-token> ((lt.category: 'woppa)))))
-	(list (T category) (T location unspecified?) (T value) (T length)))
+	(list (T category) ((T location) unspecified?) (T value) (T length)))
     => '(woppa #t #f 0))
 
 ;;; --------------------------------------------------------------------
@@ -85,7 +85,7 @@
 
   (check
       (let (({T lt.<end-of-input>} (lt.<end-of-input> ())))
-	(list (T category) (T location unspecified?) (T value) (T length)))
+	(list (T category) ((T location) unspecified?) (T value) (T length)))
     => `(*eoi* #t ,(eof-object) 0))
 
 ;;; --------------------------------------------------------------------
@@ -107,7 +107,7 @@
 
   (check
       (let (({T lt.<lexer-error>} (lt.<lexer-error> ((lt.error-message: "darn!")))))
-	(list (T category) (T location unspecified?) (T value) (T length)
+	(list (T category) ((T location) unspecified?) (T value) (T length)
 	      (T message)))
     => `(*lexer-error* #t #f 0 "darn!"))
 

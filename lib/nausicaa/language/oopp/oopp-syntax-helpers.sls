@@ -32,7 +32,7 @@
     parse-with-tags-bindings		parse-let-bindings
     parse-let-values-bindings		parse-formals-bindings
 
-    make-tagged-variable-transformer	oopp-syntax-transformer
+    make-tagged-variable-transformer
     tag-public-syntax-transformer	tag-private-common-syntax-transformer
     make-accessor-transformer		make-mutator-transformer
     process-method-application		process-shadowed-identifier)
@@ -54,6 +54,64 @@
     (for (prefix (nausicaa language oopp definition-parser-helpers (0 4))
 		 parser-help.)
       expand))
+
+
+(define* (make-tagged-variable-transformer (tag-id identifier?) (src-var-id identifier?))
+  ;;Build  and   return  the   transformer  function   implementing  the
+  ;;identifier syntax  for tagged  variables.  When  we define  a tagged
+  ;;variable with:
+  ;;
+  ;;   (define {a <integer>} 123)
+  ;;
+  ;;we can imagine the following expansion:
+  ;;
+  ;;   (define src-var 123)
+  ;;   (define-syntax a
+  ;;     (make-tagged-variable-transformer #'<integer> #'src-var))
+  ;;
+  ;;and when we define a tagged variable with:
+  ;;
+  ;;   (let/tags (({a <integer>} 123)) ---)
+  ;;
+  ;;we can imagine the following expansion:
+  ;;
+  ;;   (let ((src-var 123))
+  ;;     (let-syntax
+  ;;         ((a (make-tagged-variable-transformer
+  ;;               #'<integer> #'src-var)))
+  ;;       ---))
+  ;;
+  ;;TAG-ID must be the identifier  bound to the tag syntax (defined with
+  ;;DEFINE-LABEL or DEFINE-CLASS).
+  ;;
+  ;;SRC-VAR-ID must be  the identifier to which the  value of the tagged
+  ;;variable is bound.
+  ;;
+  (make-variable-transformer
+   (lambda (stx)
+     (syntax-case stx (set!)
+
+       ;;Syntax to reference the value of the binding.
+       (?var
+	(identifier? #'?var)
+	src-var-id)
+
+       ;;Syntax to mutate the value of the binding.
+       ((set! ?var ?val)
+	#`(set! #,src-var-id (#,tag-id :assert-type-and-return ?val)))
+
+       ;;This  rule matches  always, whatever  the syntax  in which  the
+       ;;tagged identifier is used.  Examples:
+       ;;
+       ;;   (?var ?field-name)
+       ;;   (?var (?key0) (?key) ...)
+       ;;   (set!/tags (?var ?field-name) ?new-value)
+       ;;   (set!/tags (?var (?key0) (?key) ...) ?new-value)
+       ;;   (set!/tags ?var (?key0) (?key) ... ?new-value)
+       ;;
+       (_
+	#`(#,tag-id #:oopp-syntax #,stx))
+       ))))
 
 
 (define (tag-private-common-syntax-transformer stx the-public-constructor the-public-predicate the-list-of-uids
@@ -168,12 +226,21 @@
 
     ;;NOTE Put the clauses with literals and keyword objects first!!!
 
-    ;;OOPP syntax for arbitrary expression.
+    ;;OOPP syntax  for arbitrary  expressions.  This  syntax is  used to
+    ;;process  all  the OOPP  expressions  in  which a  tagged  variable
+    ;;appears.  Examples:
     ;;
-    ((?tag #:oopp-syntax (?expr ?arg ...))
-     (oopp-syntax-transformer #'?tag #'(?expr ?arg ...) set-tags-id synner))
+    ;;   (?tag #:oopp-syntax (?var ?field-name))
+    ;;   (?tag #:oopp-syntax (?var (?key0) (?key) ...))
+    ;;   (?tag #:oopp-syntax (set!/tags (?var ?field-name) ?new-value))
+    ;;   (?tag #:oopp-syntax (set!/tags (?var (?key0) (?key) ...) ?new-value))
+    ;;   (?tag #:oopp-syntax (set!/tags ?var (?key0) (?key) ... ?new-value))
+    ;;
+    ((?tag #:oopp-syntax (?expr0 ?expr ...))
+     (%oopp-syntax-transformer #'?tag #'(?expr0 ?expr ...) set-tags-id synner))
 
-    ;;OOPP syntax for arbitrary expression spliced when first subform.
+    ;;OOPP syntax  for arbitrary expression spliced  when first subform.
+    ;;?EXPR must be an expression evaluating to an object of type ?TAG.
     ;;
     ((?tag #:nested-oopp-syntax ?expr)
      #'(splice-first-expand (?tag :flat-oopp-syntax ?expr)))
@@ -187,11 +254,18 @@
     ;;enclosing form, we want the expansion:
     ;;
     ;;   ((?tag #:nested-oopp-syntax ?expr) ?arg ...)
+    ;;   ==> ((splice-first-expand (?tag :flat-oopp-syntax ?expr)) ?arg ...)
+    ;;   ==> (?tag :flat-oopp-syntax ?expr ?arg ...)
     ;;   ==> (?tag #:oopp-syntax (?expr ?arg ...))
     ;;
     ;;otherwise we want the expansion:
     ;;
-    ;;   (begin (?tag #:nested-oopp-syntax ?expr))
+    ;;   (begin
+    ;;     (?tag #:nested-oopp-syntax ?expr))
+    ;;   ==> (begin
+    ;;         ((splice-first-expand (?tag :flat-oopp-syntax ?expr))))
+    ;;   ==> (begin
+    ;;         (?tag :flat-oopp-syntax ?expr))
     ;;   ==> (begin ?expr)
     ;;
     ((?tag :flat-oopp-syntax ?expr)
@@ -246,59 +320,7 @@
     (_
      (synner "invalid tag syntax" #f))))
 
-
-(define* (make-tagged-variable-transformer (tag-id identifier?) (src-var-id identifier?))
-  ;;Build  and   return  the   transformer  function   implementing  the
-  ;;identifier syntax  for tagged  variables.  When  we define  a tagged
-  ;;variable with:
-  ;;
-  ;;   (<integer> a 123)
-  ;;
-  ;;we can imagine the following expansion:
-  ;;
-  ;;   (define src-var 123)
-  ;;   (define-syntax a
-  ;;     (make-tagged-variable-transformer #'<integer> #'src-var))
-  ;;
-  ;;and when we define a tagged variable with:
-  ;;
-  ;;   (let/tags (((a <integer>) 123)) ---)
-  ;;
-  ;;we can imagine the following expansion:
-  ;;
-  ;;   (let ((src-var 123))
-  ;;     (let-syntax
-  ;;         ((a (make-tagged-variable-transformer
-  ;;               #'<integer> #'src-var)))
-  ;;       ---))
-  ;;
-  ;;TAG-ID must be the identifier  bound to the tag syntax (defined with
-  ;;DEFINE-LABEL or DEFINE-CLASS).
-  ;;
-  ;;SRC-VAR-ID must be  the identifier to which the  value of the tagged
-  ;;variable is bound.
-  ;;
-  (make-variable-transformer
-   (lambda (stx)
-     (syntax-case stx (set!)
-
-       ;;Syntax to reference the value of the binding.
-       (?var
-	(identifier? #'?var)
-	src-var-id)
-
-       ;;Syntax to mutate the value of the binding.
-       ((set! ?var ?val)
-	#`(set! #,src-var-id (#,tag-id :assert-type-and-return ?val)))
-
-       (?form
-	#`(#,tag-id #:oopp-syntax ?form))
-
-       (_
-	(syntax-violation (syntax->datum tag-id)
-	  "invalid tagged-variable syntax use" stx))))))
-
-(define (oopp-syntax-transformer tag-id form-stx set-bang-id synner)
+(define (%oopp-syntax-transformer tag-id form-stx set-bang-id synner)
   ;;This function is  called to expand the usage of  OOPP syntax, either
   ;;through a tagged variable:
   ;;
@@ -316,40 +338,37 @@
     ;;Setter syntax.   Main syntax to invoke  the setter for the  tag of
     ;;?VAR;  it  supports  multiple  sets  of  keys  for  nested  setter
     ;;invocations.
-    ((?set (?expr (?key0 ...) (?key ...) ...) ?value)
+    ((?set (?expr (?key0 ...) (?key ...) ...) ?new-value)
      (and (identifier? #'?set)
-	  (free-identifier=? #'?set set-bang-id))
-     #`(#,tag-id :setter (?expr ((?key0 ...) (?key ...) ...) ?value)))
+    	  (free-identifier=? #'?set set-bang-id))
+     #`(#,tag-id :setter (?expr ((?key0 ...) (?key ...) ...) ?new-value)))
 
     ;;Setter syntax.   Alternative syntax to  invoke the setter  for the
     ;;tag of ?EXPR; it supports multiple  sets of keys for nested setter
     ;;invocations.
-    ((?set ?expr (?key0 ...) (?key ...) ... ?value)
+    ((?set ?expr (?key0 ...) (?key ...) ... ?new-value)
      (and (identifier? #'?set)
-	  (free-identifier=? #'?set set-bang-id))
-     #`(#,tag-id :setter (?expr ((?key0 ...) (?key ...) ...) ?value)))
+    	  (free-identifier=? #'?set set-bang-id))
+     #`(#,tag-id :setter (?expr ((?key0 ...) (?key ...) ...) ?new-value)))
 
     ;;Setter syntax.  Syntax to invoke the  field mutator for the tag of
-    ;;?EXPR.  Notice that  this may also be a  nested setter invocation,
-    ;;as in:
-    ;;
-    ;;   (set!/tags (O a b c[777]) 999)
-    ;;
-    ;;for this reason we do not validate ?ARG in any way.
-    ;;
-    ((?set (?expr ?field-name ?arg ...) ?val)
+    ;;?EXPR.
+    ((?set (?expr ?field-name) ?new-value)
      (and (identifier? #'?set)
-	  (free-identifier=? #'?set set-bang-id))
-     #`(#,tag-id :mutator ?expr (?field-name ?arg ...) ?val))
+    	  (free-identifier=? #'?set set-bang-id))
+     (if (identifier? #'?field-name)
+	 #`(#,tag-id :mutator ?expr ?field-name ?new-value)
+       (synner "expected identifier as field name for mutator" #'?field-name)))
 
     ;;Syntax to apply the field mutator for the tag of ?EXPR.
-    ((?expr :mutator (?field-name ?arg ...) ?value)
-     (identifier? #'?field-name)
-     #`(#,tag-id :mutator ?expr (?field-name ?arg ...) ?value))
+    ((?expr :mutator ?field-name ?new-value)
+     (if (identifier? #'?field-name)
+	 #`(#,tag-id :mutator ?expr ?field-name ?new-value)
+       (synner "expected identifier as field name for mutator" #'?field-name)))
 
     ;;Syntax to apply the setter for the tag of ?EXPR.
-    ((?expr :setter ((?key ...) ...) ?value)
-     #`(#,tag-id :setter (?expr ((?key ...) ...) ?value)))
+    ((?expr :setter ((?key ...) ...) ?new-value)
+     #`(#,tag-id :setter (?expr ((?key ...) ...) ?new-value)))
 
     ;;Syntax to  apply the getter for  the tag of ?EXPR.   A plain getter
     ;;syntax is as follows:
@@ -376,15 +395,17 @@
   ;;
   ;;Whenever a tagged variable is referenced in a form like:
   ;;
-  ;;   (?var ?arg0 ?arg ...)
+  ;;   (?var ?member-id ?arg ...)
   ;;
-  ;;first the symbol ?ARG0 is compared  to the names of the tag methods:
+  ;;first the  symbol ?MEMBER-ID  is compared  to the  names of  the tag
+  ;;methods:
   ;;
-  ;;1. If  it matches,  the form  is a  method call.
+  ;;1. If it matches, the form is a method call.  This step is performed
+  ;;   elsewhere.
   ;;
   ;;2. If  no method name  matches, the form  is handed to  the accessor
-  ;;   transformer function to attempt a match between ?ARG0 and a field
-  ;;   name.
+  ;;   transformer function to attempt  a match between ?MEMBER-ID and a
+  ;;   field name.
   ;;
   ;;3. If no field name matches, the form is handed to the parent tag to
   ;;   attempt a match with the parent tag's members.
@@ -394,39 +415,43 @@
   ;;   (define-label <alpha>
   ;;     (fields a)
   ;;     (getter ---)
-  ;;     (method (do O) ---))
+  ;;     (method (do O x y)
+  ;;       ---))
   ;;
   ;;   (define-label <beta>
-  ;;     (fields (b <alpha>)))
+  ;;     (fields {b <alpha>}))
   ;;
   ;;   (define-label <gamma>
-  ;;     (fields (c <beta>)))
+  ;;     (fields {c <beta>}))
   ;;
   ;;   (<gamma> O ---)
   ;;
-  ;;where  O is  the tagged  variable; the  following  syntax expansions
+  ;;where  O is  the tagged  variable; the  following syntax  expansions
   ;;should happen:
   ;;
   ;;   (O c)
   ;;   ==> (<gamma>-c O)
   ;;
-  ;;   (O c b)
+  ;;   ((O c) b)
   ;;   ==> (<beta>-b (<gamma>-c O))
   ;;
-  ;;   (O c b a)
+  ;;   (((O c) b) a)
   ;;   ==> (<alpha>-a (<beta>-b (<gamma>-c O)))
-  ;;
-  ;;we  also want  to support  nested  getter invocations,  that is  the
-  ;;following expansion should happen:
-  ;;
-  ;;   (O c b[123])
-  ;;   ==> (<alpha> :getter ((<beta>-b (<gamma>-c O)) ([123])))
   ;;
   ;;we  also want  to support  nested  method invocations,  that is  the
   ;;following expansion should hapen:
   ;;
-  ;;   (O c b do)
-  ;;   ==> (<alpha> :dispatch ((<beta>-b (<gamma>-c O)) do))
+  ;;   (((O c) b) do 1 2)
+  ;;   ==> (<alpha> :dispatch ((<beta>-b (<gamma>-c O)) do 1 2))
+  ;;   ==> (<alpha>-do (<beta>-b (<gamma>-c O)) 1 2)
+  ;;
+  ;;We  also want  to support  nested  getter invocations,  that is  the
+  ;;following expansion should happen:
+  ;;
+  ;;   (((O c) b) [123])
+  ;;   ==> (<alpha> :getter ((<beta>-b (<gamma>-c O)) ([123])))
+  ;;
+  ;;but this case is not processed here.
   ;;
   ;;Notice that the  getter syntax is handled by  the getter transformer
   ;;function, not by the accessor function.
@@ -448,103 +473,64 @@
 	(parser-help.<parsed-spec>-unsafe-immutable-fields-data spec))
        (((MUTABLE-CONCRETE-FIELD UNSAFE-MUTABLE-CONCRETE-FIELD MUTABLE-CONCRETE-TAG) ...)
 	(parser-help.<parsed-spec>-unsafe-mutable-fields-data spec)))
-    #'(lambda (original-stx expr-stx args-stx)
+    #'(lambda (original-stx expr-stx member-id args-stx synner)
 	;;Process  a  field  accessor  form in  which:  EXPR-STX  is  an
 	;;expression  evaluating to  a  Scheme object  of type  THE-TAG;
-	;;ARGS-STX is the list of  syntax objects representing the field
-	;;name and additional subordinate arguments.
+	;;MEMBER-ID is  an identifier representing the  tag member name;
+	;;ARGS-STX is the list of additional arguments.
 	;;
 	;;ORIGINAL-STX is  a syntax  object holding the  original syntax
 	;;use that generated the accessor call.
 	;;
-	(syntax-case args-stx ()
-
-	  ;;Try to match the access to a field.
-	  ((??field-name)
-	   (identifier? #'??field-name)
-	   (case (syntax->datum #'??field-name)
-	     ;;Safe accessors.
-	     ((IMMUTABLE-FIELD)
-	      #`(IMMUTABLE-TAG #:nested-oopp-syntax (IMMUTABLE-ACCESSOR #,expr-stx)))
-	     ...
-	     ((MUTABLE-FIELD)
-	      #`(MUTABLE-TAG   #:nested-oopp-syntax (MUTABLE-ACCESSOR   #,expr-stx)))
-	     ...
-	     ;;Unsafe accessors.
-	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-	      #`(IMMUTABLE-CONCRETE-TAG #:nested-oopp-syntax
-					($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx)))
-	     ...
-	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-	      #`(MUTABLE-CONCRETE-TAG #:nested-oopp-syntax
-				      ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx)))
-	     ...
-	     (else
-	      #`(THE-PARENT :dispatch (#,expr-stx ??field-name)))))
-
-	  ;;Try to match a field name followed by the getter syntax.
-	  ((??field-name (??key0 (... ...)) (??key (... ...)) (... ...))
-	   (identifier? #'??field-name)
-	   (with-syntax ((KEYS #'((??key0 (... ...)) (??key (... ...)) (... ...))))
-	     (case (syntax->datum #'??field-name)
-	       ;;Safe accessors.
-	       ((IMMUTABLE-FIELD)
-		#`(IMMUTABLE-TAG :getter ((IMMUTABLE-ACCESSOR #,expr-stx) KEYS)))
-	       ...
-	       ((MUTABLE-FIELD)
-		#`(MUTABLE-TAG   :getter ((MUTABLE-ACCESSOR   #,expr-stx) KEYS)))
-	       ...
-	       ;;Unsafe accessors.
-	       ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-		#`(IMMUTABLE-CONCRETE-TAG :getter
-					  (($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) KEYS)))
-	       ...
-	       ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-		#`(MUTABLE-CONCRETE-TAG   :getter
-					  (($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) KEYS)))
-	       ...
-	       (else
-		#`(THE-PARENT :dispatch (#,expr-stx ??field-name . KEYS))))))
-
-	  ;;Try to match a field name followed by arguments.
-	  ((??field-name . ??args)
-	   (identifier? #'??field-name)
-	   (case (syntax->datum #'??field-name)
-	     ;;Safe accessors.
-	     ((IMMUTABLE-FIELD)
-	      #`(IMMUTABLE-TAG :dispatch ((IMMUTABLE-ACCESSOR #,expr-stx) . ??args)))
-	     ...
-	     ((MUTABLE-FIELD)
-	      #`(MUTABLE-TAG   :dispatch ((MUTABLE-ACCESSOR   #,expr-stx) . ??args)))
-	     ...
-	     ;;Unsafe accessors.
-	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-	      #`(IMMUTABLE-CONCRETE-TAG :dispatch
-					(($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx) . ??args)))
-	     ...
-	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-	      #`(MUTABLE-CONCRETE-TAG   :dispatch
-					(($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx) . ??args)))
-	     ...
-	     (else
-	      #`(THE-PARENT :dispatch (#,expr-stx ??field-name . ??args)))))
-
-	  (_
-	   (syntax-violation 'THE-TAG "invalid :accessor tag syntax" original-stx))))))
+	;;We try to  match MEMBER-ID agains the field  names of THE-TAG,
+	;;if  there is  a  match:  this is  a  field  accessor call  and
+	;;ARGS-STX  must  be  null.   If  there  is  no  match  we  hand
+	;;everything to the parent tag.
+	;;
+	;;In the latter case  it may be that MEMBER-ID is  the name of a
+	;;parent's method, and ARGS-STX are the arguments for the method
+	;;call.
+	;;
+	(define (%assert-null-args)
+	  (unless (null? (syntax->datum args-stx))
+	    (synner "invalid additional arguments in reference to tag field" args-stx)))
+	(case (syntax->datum member-id)
+	  ;;Safe accessors.
+	  ((IMMUTABLE-FIELD)
+	   (%assert-null-args)
+	   #`(IMMUTABLE-TAG #:nested-oopp-syntax (IMMUTABLE-ACCESSOR #,expr-stx)))
+	  ...
+	  ((MUTABLE-FIELD)
+	   (%assert-null-args)
+	   #`(MUTABLE-TAG   #:nested-oopp-syntax (MUTABLE-ACCESSOR   #,expr-stx)))
+	  ...
+	  ;;Unsafe accessors.
+	  ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
+	   (%assert-null-args)
+	   #`(IMMUTABLE-CONCRETE-TAG #:nested-oopp-syntax
+				     ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx)))
+	  ...
+	  ((UNSAFE-MUTABLE-CONCRETE-FIELD)
+	   (%assert-null-args)
+	   #`(MUTABLE-CONCRETE-TAG #:nested-oopp-syntax
+				   ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx)))
+	  ...
+	  (else
+	   #`(THE-PARENT :dispatch (#,expr-stx #,member-id . #,args-stx)))))))
 
 
 (define* (make-mutator-transformer (spec parser-help.<parsed-spec>?))
-  ;;Given  the "parser-help.<parsed-spec>"  instance  SPEC: return  a syntax  object
-  ;;representing the mutator transformer function for the tag.
+  ;;Given the "parser-help.<parsed-spec>" instance SPEC: return a syntax
+  ;;object representing the mutator transformer function for the tag.
   ;;
   ;;Whenever a tagged variable is referenced in a form like:
   ;;
-  ;;   (set!/tags (?var ?arg0 ?arg ...) ?val)
+  ;;   (set!/tags (?var ?field-name) ?val)
   ;;
   ;;the  syntax  object  holding  the  form is  handed  to  the  mutator
-  ;;transformer function  to attempt a  match between ?ARG0 and  a field
-  ;;name; if  no field name  matches, the form  is handed to  the parent
-  ;;tag's mutator transformer.
+  ;;transformer function  to attempt a  match between ?FIELD-NAME  and a
+  ;;field name;  if no  field name  matches, the form  is handed  to the
+  ;;parent tag's mutator transformer.
   ;;
   ;;Let's consider the example:
   ;;
@@ -566,17 +552,19 @@
   ;;   (set!/tags (O c) 99)
   ;;   ==> (<gamma>-c-set! O 99)
   ;;
-  ;;   (set!/tags (O c b) 99)
+  ;;   (set!/tags ((O c) b) 99)
   ;;   ==> (<beta>-b-set! (<gamma>-c O) 99)
   ;;
-  ;;   (set!/tags (O c b a) 99)
+  ;;   (set!/tags (((O c) b) a) 99)
   ;;   ==> (<alpha>-a-set! (<beta>-b (<gamma>-c O)) 99)
   ;;
-  ;;we  also want  to support  nested  setter invocations,  that is  the
+  ;;We  also want  to support  nested  setter invocations,  that is  the
   ;;following expansion should happen:
   ;;
-  ;;   (set!/tags (O c b[77]) 99)
+  ;;   (set!/tags (((O c) b)[77]) 99)
   ;;   ==> (<alpha> :setter ((<gamma>-c (<beta>-b O)) ([77]) 99))
+  ;;
+  ;;but this case is not processed here.
   ;;
   (with-syntax
       ((THE-TAG
@@ -595,96 +583,35 @@
 	(parser-help.<parsed-spec>-unsafe-immutable-fields-data spec))
        (((MUTABLE-CONCRETE-FIELD UNSAFE-MUTABLE-CONCRETE-FIELD MUTABLE-CONCRETE-TAG) ...)
 	(parser-help.<parsed-spec>-unsafe-mutable-fields-data spec)))
-    #'(lambda (original-stx expr-stx keys-stx value-stx)
-	;;Process a mutator form equivalent to:
-	;;
-	;;   (set!/tags (?var ?field-name0 ?arg ...) ?value)
-	;;
-	;;which has been previously decomposed so that KEYS-STX is:
-	;;
-	;;   (?field-name0 ?arg ...)
-	;;
-	;;and  VALUE-STX is  ?VALUE.  ?VAR  is a  tagged  variable whose
-	;;actual value is in EXPR-STX.
+    #'(lambda (original-stx expr-stx field-name-id new-value-stx)
+	;;Process  a   mutator  form.   EXPR-STX  is   a  syntax  object
+	;;representing an expression that will  evaluate to an object of
+	;;type  THE-TAG.  FIELD-NAME-ID  is an  identifier that  must be
+	;;matched against  the field  names.  NEW-VALUE-STX is  a syntax
+	;;object representing  an expression  that will evaluate  to the
+	;;new field's value.
 	;;
 	;;ORIGINAL-STX is  a syntax  object holding the  original syntax
 	;;use that generated the mutator call.
 	;;
-	(syntax-case keys-stx ()
-	  ((??field-name)
-	   (identifier? #'??field-name)
-	   (case (syntax->datum #'??field-name)
-	     ;;Safe mutators.
-	     ((MUTABLE-FIELD)
-	      #`(MUTABLE-MUTATOR #,expr-stx (MUTABLE-TAG :assert-type-and-return #,value-stx)))
-	     ...
-	     ((IMMUTABLE-FIELD)
-	      (syntax-violation 'THE-TAG "attempt to mutate immutable field" original-stx #'IMMUTABLE-FIELD))
-	     ...
-	     ;;Unsafe mutators.
-	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-	      #`($record-type-field-set! THE-RECORD-TYPE MUTABLE-CONCRETE-FIELD #,expr-stx
-					 (MUTABLE-CONCRETE-TAG :assert-type-and-return #,value-stx)))
-	     ...
-	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-	      (syntax-violation 'THE-TAG "attempt to mutate immutable field" original-stx #'IMMUTABLE-CONCRETE-FIELD))
-	     ...
-	     (else
-	      #`(THE-PARENT :mutator #,expr-stx (??field-name) #,value-stx))))
-
-	  ;;Try to  match a  field name followed  by the  getter syntax.
-	  ;;This is the setter syntax with  the keys *not* enclosed in a
-	  ;;list.
-	  ((??field-name (??key0 (... ...)) (??key (... ...)) (... ...))
-	   (identifier? #'??field-name)
-	   (with-syntax ((KEYS #'((??key0 (... ...)) (??key (... ...)) (... ...))))
-	     (case (syntax->datum #'??field-name)
-	       ;;Safe mutators.
-	       ((MUTABLE-FIELD)
-		#`(MUTABLE-TAG   :setter ((MUTABLE-ACCESSOR   #,expr-stx) KEYS #,value-stx)))
-	       ...
-	       ((IMMUTABLE-FIELD)
-		#`(IMMUTABLE-TAG :setter ((IMMUTABLE-ACCESSOR #,expr-stx) KEYS #,value-stx)))
-	       ...
-	       ;;Unsafe mutators.
-	       ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-		#`(MUTABLE-CONCRETE-TAG   :setter
-					  (($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx)
-					   KEYS #,value-stx)))
-	       ...
-	       ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-		#`(IMMUTABLE-CONCRETE-TAG :setter
-					  (($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx)
-					   KEYS #,value-stx)))
-	       ...
-	       (else
-		#`(THE-PARENT :mutator #,expr-stx #,keys-stx #,value-stx)))))
-
-	  ;;Try to match a field name followed by arguments.
-	  ((??field-name0 ??arg (... ...))
-	   (identifier? #'??field-name0)
-	   (case (syntax->datum #'??field-name0)
-	     ;;Safe mutators.
-	     ((MUTABLE-FIELD)
-	      #`(MUTABLE-TAG   :mutator (MUTABLE-ACCESSOR   #,expr-stx) (??arg (... ...)) #,value-stx))
-	     ...
-	     ((IMMUTABLE-FIELD)
-	      #`(IMMUTABLE-TAG :mutator (IMMUTABLE-ACCESSOR #,expr-stx) (??arg (... ...)) #,value-stx))
-	     ...
-	     ;;Unsafe mutators.
-	     ((UNSAFE-MUTABLE-CONCRETE-FIELD)
-	      #`(MUTABLE-CONCRETE-TAG   :mutator ($record-type-field-ref THE-RECORD-TYPE   MUTABLE-CONCRETE-FIELD #,expr-stx)
-					(??arg (... ...)) #,value-stx))
-	     ...
-	     ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
-	      #`(IMMUTABLE-CONCRETE-TAG :mutator ($record-type-field-ref THE-RECORD-TYPE IMMUTABLE-CONCRETE-FIELD #,expr-stx)
-					(??arg (... ...)) #,value-stx))
-	     ...
-	     (else
-	      #`(THE-PARENT :mutator #,expr-stx (??field-name0 ??arg (... ...)) #,value-stx))))
-
-	  (_
-	   (syntax-violation 'THE-TAG "invalid :mutator tag syntax" original-stx))))))
+	(case (syntax->datum field-name-id)
+	  ;;Safe mutators.
+	  ((MUTABLE-FIELD)
+	   #`(MUTABLE-MUTATOR #,expr-stx (MUTABLE-TAG :assert-type-and-return #,new-value-stx)))
+	  ...
+	  ((IMMUTABLE-FIELD)
+	   (syntax-violation 'THE-TAG "attempt to mutate immutable field" original-stx #'IMMUTABLE-FIELD))
+	  ...
+	  ;;Unsafe mutators.
+	  ((UNSAFE-MUTABLE-CONCRETE-FIELD)
+	   #`($record-type-field-set! THE-RECORD-TYPE MUTABLE-CONCRETE-FIELD #,expr-stx
+				      (MUTABLE-CONCRETE-TAG :assert-type-and-return #,new-value-stx)))
+	  ...
+	  ((UNSAFE-IMMUTABLE-CONCRETE-FIELD)
+	   (syntax-violation 'THE-TAG "attempt to mutate immutable field" original-stx #'IMMUTABLE-CONCRETE-FIELD))
+	  ...
+	  (else
+	   #`(THE-PARENT :mutator #,expr-stx #,field-name-id #,new-value-stx))))))
 
 
 (define (process-method-application rv-tag-id application-stx)

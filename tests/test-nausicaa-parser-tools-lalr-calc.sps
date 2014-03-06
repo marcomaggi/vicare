@@ -50,12 +50,12 @@
     (if (not (is-a? token lt.<lexical-token>))
 	message
       (let (({T lt.<lexical-token>} token))
-	(if (T location unspecified?)
+	(if ((T location) unspecified?)
 	    message
 	  (let (({P sl.<source-location>} (T location)))
 	    (string-append message
-			   " line "   (if (P line)   (P line string)   "?")
-			   " column " (if (P column) (P column string) "?"))))))
+			   " line "   (if (P line)   ((P line) string)   "?")
+			   " column " (if (P column) ((P column) string) "?"))))))
     token))
 
 

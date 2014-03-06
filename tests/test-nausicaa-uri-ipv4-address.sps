@@ -302,7 +302,7 @@
        (condition (make-parser-error-condition)
 		  (make-who-condition who)
 		  (make-message-condition (string-append "invalid IPv4 address input at column "
-							 (token location column string) ": "
+							 (((token location) column) string) ": "
 							 message))
 		  (make-irritants-condition (list string (token value)))))))
 

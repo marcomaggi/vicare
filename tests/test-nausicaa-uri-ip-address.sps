@@ -63,10 +63,10 @@
 	  (fields (immutable {num <number>})))
 
 	(define-method (ip.ip-address->string {O <one-address>})
-	  (O num string))
+	  ((O num) string))
 
 	(define-method (ip.ip-address->bytevector {O <one-address>})
-	  (O num string percent-encoding))
+	  (((O num) string) percent-encoding))
 
 	(<one-address> O (<> (123)))
 
@@ -88,7 +88,7 @@
 	  (fields (immutable {num <number>})))
 
 	(define-method (ip.ip-address->string {O <two-address>})
-	  (O num string))
+	  ((O num) string))
 
 	(<two-address> O (<> (123)))
 
@@ -114,10 +114,10 @@
 	  (fields (immutable {num <number>})))
 
 	(define-method (ip.ip-address->string {O <one-address>})
-	  (O num string))
+	  ((O num) string))
 
 	(define-method (ip.ip-address->bytevector {O <one-address>})
-	  (O num string percent-encoding))
+	  (((O num) string) percent-encoding))
 
 	(define-method (ip.ip-address->bignum {O <one-address>})
 	  (O num))
@@ -146,7 +146,7 @@
 	  (fields (immutable {num <number>})))
 
 	(define-method (ip.ip-address->string {O <two-address>})
-	  (O num string))
+	  ((O num) string))
 
 	(define-method (ip.ip-address->bignum {O <two-address>})
 	  (O num))

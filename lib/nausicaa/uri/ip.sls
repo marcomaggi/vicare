@@ -373,10 +373,10 @@
   ;;Build  and return  a string  representation  of the  address in  the
   ;;format specified for URIs by RFC 3986.
   ;;
-  (string-append (O $third  $string) "."
-		 (O $second $string) "."
-		 (O $first  $string) "."
-		 (O $zeroth $string)))
+  (string-append ((O $third)  $string) "."
+		 ((O $second) $string) "."
+		 ((O $first)  $string) "."
+		 ((O $zeroth) $string)))
 
 
 ;;;; IPv4 address prefix class
@@ -408,11 +408,11 @@
   (virtual-fields
    (immutable {string <string>}
 	      (lambda ({O <ipv4-address-prefix>})
-		(string-append (O $third   $string) "."
-			       (O $second  $string) "."
-			       (O $first   $string) "."
-			       (O $zeroth  $string) "/"
-			       (O $prefix-length $string))))
+		(string-append ((O $third)   $string) "."
+			       ((O $second)  $string) "."
+			       ((O $first)   $string) "."
+			       ((O $zeroth)  $string) "/"
+			       ((O $prefix-length) $string))))
 
    (immutable {bytevector <ascii-bytevector>}
 	      (lambda ({O <ipv4-address-prefix>})
@@ -491,14 +491,14 @@
 	      (lambda ({o <ipv6-address>})
 		(or (o memoized-unspecified?)
 		    (receive-and-return (B)
-			(and (o $zeroth  $zero?)
-			     (o $first   $zero?)
-			     (o $second  $zero?)
-			     (o $third   $zero?)
-			     (o $fourth  $zero?)
-			     (o $fifth   $zero?)
-			     (o $sixth   $zero?)
-			     (o $seventh $zero?))
+			(and ((o $zeroth)  $zero?)
+			     ((o $first)   $zero?)
+			     ((o $second)  $zero?)
+			     ((o $third)   $zero?)
+			     ((o $fourth)  $zero?)
+			     ((o $fifth)   $zero?)
+			     ((o $sixth)   $zero?)
+			     ((o $seventh) $zero?))
 		      (set! (o $memoized-unspecified?) B)))))
 
    (immutable {loopback? <boolean>}
@@ -506,13 +506,13 @@
 		(or (o $memoized-unspecified?)
 		    (receive-and-return (B)
 			(and ($fx= 1   (o $zeroth))
-			     (o $first   $zero?)
-			     (o $second  $zero?)
-			     (o $third   $zero?)
-			     (o $fourth  $zero?)
-			     (o $fifth   $zero?)
-			     (o $sixth   $zero?)
-			     (o $seventh $zero?))
+			     ((o $first)   $zero?)
+			     ((o $second)  $zero?)
+			     ((o $third)   $zero?)
+			     ((o $fourth)  $zero?)
+			     ((o $fifth)   $zero?)
+			     ((o $sixth)   $zero?)
+			     ((o $seventh) $zero?))
 		      (set! (o $memoized-unspecified?) B)))))
 
    (immutable {multicast? <boolean>}
@@ -552,14 +552,14 @@
   ;;format specified for URIs by RFC 3986.
   ;;
   (string-append "["
-		 (O $seventh $string 16) ":"
-		 (O $sixth   $string 16) ":"
-		 (O $fifth   $string 16) ":"
-		 (O $fourth  $string 16) ":"
-		 (O $third   $string 16) ":"
-		 (O $second  $string 16) ":"
-		 (O $first   $string 16) ":"
-		 (O $zeroth  $string 16) "]"))
+		 ((O $seventh) $string 16) ":"
+		 ((O $sixth)   $string 16) ":"
+		 ((O $fifth)   $string 16) ":"
+		 ((O $fourth)  $string 16) ":"
+		 ((O $third)   $string 16) ":"
+		 ((O $second)  $string 16) ":"
+		 ((O $first)   $string 16) ":"
+		 ((O $zeroth)  $string 16) "]"))
 
 (define-method (ip-address->bytevector {O <ipv6-address>})
   ;;Build and return  a bytevector representation of the  address in the
@@ -607,15 +607,15 @@
   (virtual-fields
    (immutable {string <string>}
 	      (lambda ({O <ipv6-address-prefix>})
-		(string-append (O $seventh $string 16) ":"
-			       (O $sixth   $string 16) ":"
-			       (O $fifth   $string 16) ":"
-			       (O $fourth  $string 16) ":"
-			       (O $third   $string 16) ":"
-			       (O $second  $string 16) ":"
-			       (O $first   $string 16) ":"
-			       (O $zeroth  $string 16) "/"
-			       (O $prefix-length $string))))
+		(string-append ((O $seventh) $string 16) ":"
+			       ((O $sixth)   $string 16) ":"
+			       ((O $fifth)   $string 16) ":"
+			       ((O $fourth)  $string 16) ":"
+			       ((O $third)   $string 16) ":"
+			       ((O $second)  $string 16) ":"
+			       ((O $first)   $string 16) ":"
+			       ((O $zeroth)  $string 16) "/"
+			       ((O $prefix-length) $string))))
 
    (immutable {bytevector <ascii-bytevector>}
 	      (lambda ({O <ipv6-address-prefix>})

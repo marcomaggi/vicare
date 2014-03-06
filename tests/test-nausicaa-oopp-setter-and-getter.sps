@@ -236,8 +236,8 @@
 
       (check	;one key set, nested getter setter
 	  (let (({o <beta>} (<beta>[(<alpha>[1]) 2])))
-	    (set! (o a[777]) 999)
-	    (o a[777]))
+	    (set! ((o a)[777]) 999)
+	    ((o a)[777]))
 	=> '#(777 (777 . 999)))
 
       (check	;two key sets, setter syntax 1

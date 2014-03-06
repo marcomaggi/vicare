@@ -76,7 +76,7 @@
 		  (condition-maker)
 		  (make-who-condition who)
 		  (make-message-condition (string-append "invalid IPv6 address input at column "
-							 (token location column string) ": " message))
+							 (((token location) column) string) ": " message))
 		  (make-irritants-condition (cons (token value) irritants))))))))
 
 

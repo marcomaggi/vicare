@@ -137,17 +137,17 @@
       => #t)
 
     (check
-    	((<alpha> #:predicate) (O b a))
+    	((<alpha> #:predicate) ((O b) a))
       => #t)
 
     (check
-    	(O b a v)
+    	(((O b) a) v)
       => 1)
 
-    (set!/tags (O b a v) 2)
+    (set!/tags (((O b) a) v) 2)
 
     (check
-    	(O b a v)
+    	(((O b) a) v)
       => 2)
 
     #f)
@@ -186,26 +186,26 @@
 	((<beta> #:predicate) (O b))
       => #t)
     (check
-	((<alpha> #:predicate) (O b a))
+	((<alpha> #:predicate) ((O b) a))
       => #t)
     (check
-    	(O b a v)
+    	(((O b) a) v)
       => '#(1 2 3))
     (check
-    	(O b a v[0])
+    	((((O b) a) v)[0])
       => 1)
     (check
-    	(O b a v[1])
+    	((((O b) a) v)[1])
       => 2)
     (check
-    	(O b a v[2])
+    	((((O b) a) v)[2])
       => 3)
 
-    (set!/tags (O b a v[0]) 10)
-    (set!/tags (O b a v[1]) 20)
-    (set!/tags (O b a v[2]) 30)
+    (set!/tags ((((O b) a) v)[0]) 10)
+    (set!/tags ((((O b) a) v)[1]) 20)
+    (set!/tags ((((O b) a) v)[2]) 30)
     (check
-    	(O b a v)
+    	(((O b) a) v)
       => '#(10 20 30))
 
     #f)

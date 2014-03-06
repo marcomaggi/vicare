@@ -282,35 +282,35 @@
   (check	;recursive access to fields
       (let ()
   	(<the-pair> b '((1 . 2) . (3 . 4)))
-	(vector (b car car) (b car cdr)
-		(b cdr car) (b cdr cdr)))
+	(vector ((b car) car) ((b car) cdr)
+		((b cdr) car) ((b cdr) cdr)))
     => '#(1 2 3 4))
 
   (check	;recursive access to fields
       (let ()
   	(<the-pair> b '(((1 . 2) . (3 . 4)) . ((5 . 6) . (7 . 8))))
-	(vector (b car car car)
-		(b car car cdr)
+	(vector (((b car) car) car)
+		(((b car) car) cdr)
 
-		(b car cdr car)
-		(b car cdr cdr)
+		(((b car) cdr) car)
+		(((b car) cdr) cdr)
 
-		(b cdr car car)
-		(b cdr car cdr)
+		(((b cdr) car) car)
+		(((b cdr) car) cdr)
 
-		(b cdr cdr car)
-		(b cdr cdr cdr)))
+		(((b cdr) cdr) car)
+		(((b cdr) cdr) cdr)))
     => '#(1 2 3 4 5 6 7 8))
 
   (check	;recursive mutation of fields
       (let ()
   	(<the-pair> b (cons (cons 1 2) (cons 3 4)))
-	(set! (b car car) 19)
-	(set! (b car cdr) 29)
-	(set! (b cdr car) 39)
-	(set! (b cdr cdr) 49)
-	(vector (b car car) (b car cdr)
-		(b cdr car) (b cdr cdr)))
+	(set! ((b car) car) 19)
+	(set! ((b car) cdr) 29)
+	(set! ((b cdr) car) 39)
+	(set! ((b cdr) cdr) 49)
+	(vector ((b car) car) ((b car) cdr)
+		((b cdr) car) ((b cdr) cdr)))
     => '#(19 29 39 49))
 
   (check	;recursive mutation of fields
@@ -320,17 +320,17 @@
 			    (cons (cons 5 6)
 				  (cons 7 8))))
 
-	(set! (b car car car) 19)
-	(set! (b car car cdr) 29)
+	(set! (((b car) car) car) 19)
+	(set! (((b car) car) cdr) 29)
 
-	(set! (b car cdr car) 39)
-	(set! (b car cdr cdr) 49)
+	(set! (((b car) cdr) car) 39)
+	(set! (((b car) cdr) cdr) 49)
 
-	(set! (b cdr car car) 59)
-	(set! (b cdr car cdr) 69)
+	(set! (((b cdr) car) car) 59)
+	(set! (((b cdr) car) cdr) 69)
 
-	(set! (b cdr cdr car) 79)
-	(set! (b cdr cdr cdr) 89)
+	(set! (((b cdr) cdr) car) 79)
+	(set! (((b cdr) cdr) cdr) 89)
 
 	b)
     => '(((19 . 29) . (39 . 49)) . ((59 . 69) . (79 . 89))))
@@ -639,17 +639,17 @@
 
     (check
 	(let (({O <gamma>} #f))
-	  (list (O c b a) (O c b) (O c)))
+	  (list (((O c) b) a) ((O c) b) (O c)))
       => '(a b c))
 
     (check
 	(let (({O <gamma>} #f))
-	  (O c b[99]))
+	  (((O c) b)[99]))
       => 123)
 
     (check
 	(let (({O <gamma>} #f))
-	  (O c b doit 99))
+	  (((O c) b) doit 99))
       => '(456 . 99))
 
     #f)
@@ -680,17 +680,17 @@
 
     (check
 	(let (({O <gamma>} #f))
-	  (list (O c b a) (O c b) (O c)))
+	  (list (((O c) b) a) ((O c) b) (O c)))
       => '(a b c))
 
     (check
 	(let (({O <gamma>} #f))
-	  (O c b[99]))
+	  (((O c) b)[99]))
       => 123)
 
     (check
 	(let (({O <gamma>} #f))
-	  (O c b doit 99))
+	  (((O c) b) doit 99))
       => '(456 . 99))
 
     #f)
@@ -724,14 +724,14 @@
 
     (check
 	(let (({O <gamma>} #f))
-	  (list (set! (O c b a) 1)
-		(set! (O c b) 2)
+	  (list (set! (((O c) b) a) 1)
+		(set! ((O c) b) 2)
 		(set! (O c) 3)))
       => '(A B C))
 
     (check
 	(let (({O <gamma>} #f))
-	  (set! (O c b[777]) 999))
+	  (set! (((O c) b)[777]) 999))
       => '(123 777 999))
 
     #f)
@@ -763,14 +763,19 @@
 
     (check
 	(let (({O <gamma>} #f))
-	  (list (set! (O c b a) 1)
-		(set! (O c b) 2)
+	  (list (set! (((O c) b) a) 1)
+		(set! ((O c) b) 2)
 		(set! (O c) 3)))
       => '(A B C))
 
     (check
 	(let (({O <gamma>} #f))
-	  (set! (O c b[777]) 999))
+	  (set! (((O c) b)[777]) 999))
+      => '(123 777 999))
+
+    (check
+	(let (({O <gamma>} #f))
+	  (set! ((O c) b) [777] 999))
       => '(123 777 999))
 
     #f)

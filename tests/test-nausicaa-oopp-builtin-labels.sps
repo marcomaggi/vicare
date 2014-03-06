@@ -63,7 +63,7 @@
 
   (check
       (let (({o <symbol>} 'ciao))
-        (o string length))
+        ((o string) length))
     => 4)
 
 ;;; --------------------------------------------------------------------
@@ -101,7 +101,7 @@
 
   (check
       (let (({o <keyword>} #:ciao))
-        (o string length))
+        ((o string) length))
     => 4)
 
   (check
@@ -268,12 +268,12 @@
 
   (check
       (let (({L <list>} '(1 2 3)))
-	(L cdr car))
+	((L cdr) car))
     => 2)
 
   (check
       (let (({L <list>} '(1 2 3)))
-	(L cdr cdr))
+	((L cdr) cdr))
     => '(3))
 
   (check
@@ -387,7 +387,7 @@
 
   (check
       (let (({C <char>} #\xA))
-	(C general-category string))
+	((C general-category) string))
     => "Cc")
 
   #t)
@@ -605,8 +605,8 @@
 	(define-class <beta>
 	  (parent <alpha>))
 	(<beta> B (<> ((string-copy "ciao"))))
-	(set! (B str[1]) #\I)
-	(vector (B str[0]) (B str[1])))
+	(set! (B str)[1] #\I)
+	(vector ((B str)[0]) ((B str)[1])))
     => '#(#\c #\I))
 
   (check
@@ -616,8 +616,8 @@
 	(define-class <beta>
 	  (fields {a <alpha>}))
 	(<beta> B (<> ((<alpha> ((string-copy "ciao"))))))
-	(set! (B a str[1]) #\I)
-	(vector (B a str[0]) (B a str[1])))
+	(set! (((B a) str)[1]) #\I)
+	(vector (((B a) str)[0]) (((B a) str)[1])))
     => '#(#\c #\I))
 
 ;;; --------------------------------------------------------------------

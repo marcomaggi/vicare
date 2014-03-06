@@ -134,7 +134,7 @@
 
     (check
 	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
-	  (list (E a length) (E b positive?)))
+	  (list ((E a) length) ((E b) positive?)))
       => '(4 #t))
 
     #f)
@@ -168,7 +168,7 @@
 
     (check
 	(let (({E &alpha} (make-alpha-condition "ciao" 2)))
-	  (list (E a length) (E b positive?)))
+	  (list ((E a) length) ((E b) positive?)))
       => '(4 #t))
 
     #f)

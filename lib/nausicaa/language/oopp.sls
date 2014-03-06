@@ -216,7 +216,7 @@
 	((_ :dispatch (?expr . ?args))
 	 (synner "invalid tag member"))
 
-	((_ :mutator ?expr ?keys ?value)
+	((_ :mutator ?expr ?field-name ?value)
 	 (synner "invalid tag-syntax field-mutator request"))
 
 	((_ :getter (?expr . ?args))
@@ -301,7 +301,7 @@
     ((_ :dispatch (?expr ?id . ?args))
      (synner "invalid OOPP syntax"))
 
-    ((_ :mutator ?expr ?keys ?value)
+    ((_ :mutator ?expr ?field-name ?value)
      (synner "invalid OOPP syntax"))
 
     ((_ :make ?expr)
@@ -483,29 +483,31 @@
 				    aux.<>)
 
 		    ;;Try to  match the tagged-variable use  to a method
-		    ;;call for the tag; if  no method name matches ??ID,
-		    ;;try to match a field name.
-		    ((_ :dispatch (??expr ??id . ??args))
-		     (identifier? #'??id)
-		     (case (syntax->datum #'??id)
+		    ;;call  for  the  tag;  if no  method  name  matches
+		    ;;??MEMBER-ID,  try to  match  a field  name; if  no
+		    ;;field name matches ??MEMBER-ID, hand everything to
+		    ;;the parent tag.
+		    ((_ :dispatch (??expr ??member-id . ??args))
+		     (identifier? #'??member-id)
+		     (case (syntax->datum #'??member-id)
 		       ((METHOD-NAME)
 			(syntax-help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		       ...
 		       (else
-			(%the-accessor stx #'??expr (cons #'??id #'??args)))))
+			(%the-accessor stx #'??expr #'??member-id #'??args synner))))
 
 		    ;;Invoke the mutator syntax transformer.  The syntax
 		    ;;use:
 		    ;;
-		    ;;   (set!/tags (?var ?field-name ?arg ...) ?val)
+		    ;;   (set!/tags (?var ?field-name) ?new-val)
 		    ;;
 		    ;;is expanded to:
 		    ;;
-		    ;;   (?var :mutator (?field-name ?arg ...) ?val)
+		    ;;   (?var :mutator ?field-name ?new-val)
 		    ;;
 		    ;;and then to:
 		    ;;
-		    ;;   (THE-TAG :mutator SRC-VAR (?field-name ?arg ...) ?val)
+		    ;;   (THE-TAG :mutator SRC-VAR ?field-name ?new-val)
 		    ;;
 		    ;;where  SRC-VAR  is  the identifier  bound  to  the
 		    ;;actual  instance.   Then,  depending on  the  ?ARG
@@ -513,31 +515,37 @@
 		    ;;mutator  invocation,  or  to  a  subfield  mutator
 		    ;;invocation, or to a submethod invocation.
 		    ;;
-		    ((_ :mutator ??expr ??keys ??value)
-		     (%the-mutator stx #'??expr #'??keys #'??value))
+		    ((_ :mutator ??expr ??field-name ??new-value)
+		     (if (identifier? #'?field-name)
+			 (%the-mutator stx #'??expr #'??field-name #'??new-value)
+		       (synner "expected identifier as field name for mutator" #'??field-name)))
 
 		    ((_ :append-unique-id (??id (... ...)))
 		     #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
 
 		    ((_ :accessor-function ??field-name)
-		     (identifier? #'??field-name)
-		     (case (syntax->datum #'??field-name)
-		       ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
-		       ((MUTABLE-FIELD)		#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
-		       (else
-			#'(THE-PARENT :mutator-function ??field-name))))
+		     (if (identifier? #'??field-name)
+			 (case (syntax->datum #'??field-name)
+			   ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj)))
+			   ...
+			   ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj)))
+			   ...
+			   (else
+			    #'(THE-PARENT :accessor-function ??field-name)))
+		       (synner "expected identifier as field name for accessor function" #'??field-name)))
 
 		    ((_ :mutator-function ??field-name)
-		     (identifier? #'??field-name)
-		     (case (syntax->datum #'??field-name)
-		       ((MUTABLE-FIELD)
-			#'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
-		       ...
-		       ((IMMUTABLE-FIELD)
-			(synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
-		       ...
-		       (else
-			#'(THE-PARENT :mutator-function ??field-name))))
+		     (if (identifier? #'??field-name)
+			 (case (syntax->datum #'??field-name)
+			   ((MUTABLE-FIELD)
+			    #'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
+			   ...
+			   ((IMMUTABLE-FIELD)
+			    (synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
+			   ...
+			   (else
+			    #'(THE-PARENT :mutator-function ??field-name)))
+		       (synner "expected identifier as field name for mutator function" #'??field-name)))
 
 		    ;;Replace  all the  occurrences of  ??SRC-ID in  the
 		    ;;??BODY forms  with the identifier selected  by the
@@ -848,19 +856,42 @@
 		     #'the-super-constructor-descriptor)
 
 		    ;;Try to  match the tagged-variable use  to a method
-		    ;;call for the tag; if  no method name matches ??ID,
-		    ;;try to match a field name.
-		    ((_ :dispatch (??expr ??id . ??args))
-		     (identifier? #'??id)
-		     (case (syntax->datum #'??id)
+		    ;;call  for  the  tag;  if no  method  name  matches
+		    ;;??MEMBER-ID,  try to  match  a field  name; if  no
+		    ;;field name matches ??MEMBER-ID, hand everything to
+		    ;;the parent tag.
+		    ((_ :dispatch (??expr ??member-id . ??args))
+		     (identifier? #'??member-id)
+		     (case (syntax->datum #'??member-id)
 		       ((METHOD-NAME)
 			(syntax-help.process-method-application #'METHOD-RV-TAG #'(METHOD-IMPLEMENTATION ??expr . ??args)))
 		       ...
 		       (else
-			(%the-accessor stx #'??expr (cons #'??id #'??args)))))
+			(%the-accessor stx #'??expr #'??member-id #'??args synner))))
 
-		    ((_ :mutator ??expr ??keys ??value)
-		     (%the-mutator stx #'??expr #'??keys #'??value))
+		    ;;Invoke the mutator syntax transformer.  The syntax
+		    ;;use:
+		    ;;
+		    ;;   (set!/tags (?var ?field-name) ?new-val)
+		    ;;
+		    ;;is expanded to:
+		    ;;
+		    ;;   (?var :mutator ?field-name ?new-val)
+		    ;;
+		    ;;and then to:
+		    ;;
+		    ;;   (THE-TAG :mutator SRC-VAR ?field-name ?new-val)
+		    ;;
+		    ;;where  SRC-VAR  is  the identifier  bound  to  the
+		    ;;actual  instance.   Then,  depending on  the  ?ARG
+		    ;;forms, the  mutator can expand to:  a simple field
+		    ;;mutator  invocation,  or  to  a  subfield  mutator
+		    ;;invocation, or to a submethod invocation.
+		    ;;
+		    ((_ :mutator ??expr ??field-name ??new-value)
+		     (if (identifier? #'?field-name)
+			 (%the-mutator stx #'??expr #'??field-name #'??new-value)
+		       (synner "expected identifier as field name for mutator" #'??field-name)))
 
 		    ((_ :make-from-fields . ??args)
 		     #'(THE-FROM-FIELDS-CONSTRUCTOR . ??args))
@@ -869,24 +900,28 @@
 		     #'(THE-PARENT :append-unique-id (??id (... ...) NONGENERATIVE-UID)))
 
 		    ((_ :accessor-function ??field-name)
-		     (identifier? #'??field-name)
-		     (case (syntax->datum #'??field-name)
-		       ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj))) ...
-		       ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj))) ...
-		       (else
-			#'(THE-PARENT :accessor-function ??field-name))))
+		     (if (identifier? #'??field-name)
+			 (case (syntax->datum #'??field-name)
+			   ((IMMUTABLE-FIELD)	#'(lambda (obj) (IMMUTABLE-ACCESSOR obj)))
+			   ...
+			   ((MUTABLE-FIELD)	#'(lambda (obj) (MUTABLE-ACCESSOR   obj)))
+			   ...
+			   (else
+			    #'(THE-PARENT :accessor-function ??field-name)))
+		       (synner "expected identifier as field name for accessor function" #'??field-name)))
 
 		    ((_ :mutator-function ??field-name)
-		     (identifier? #'??field-name)
-		     (case (syntax->datum #'??field-name)
-		       ((MUTABLE-FIELD)
-			#'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
-		       ...
-		       ((IMMUTABLE-FIELD)
-			(synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
-		       ...
-		       (else
-			#'(THE-PARENT :mutator-function ??field-name))))
+		     (if (identifier? #'??field-name)
+			 (case (syntax->datum #'??field-name)
+			   ((MUTABLE-FIELD)
+			    #'(lambda (obj val) (MUTABLE-MUTATOR obj val)))
+			   ...
+			   ((IMMUTABLE-FIELD)
+			    (synner "request of mutator function for immutable field" #'IMMUTABLE-FIELD))
+			   ...
+			   (else
+			    #'(THE-PARENT :mutator-function ??field-name)))
+		       (synner "expected identifier as field name for mutator function" #'??field-name)))
 
 		    (_
 		     (syntax-help.tag-private-common-syntax-transformer
@@ -982,33 +1017,63 @@
   (syntax-case stx ()
 
     ;;Main syntax to invoke the setter  for the tag of ?VAR; it supports
-    ;;multiple sets of keys for nested setter invocations.
-    ((_ (?var (?key0 ...) (?key ...) ...) ?value)
+    ;;multiple sets of keys for nested setter invocations.  For example:
+    ;;
+    ;;   (define {V <vector>} '#(1 2 3))
+    ;;   (set!/tags (V [1]) #\B)
+    ;;   (V [1]) => #\B
+    ;;
+    ((_ (?var (?key0 ...) (?key ...) ...) ?new-value)
      (identifier? #'?var)
-     #'(?var :setter ((?key0 ...) (?key ...) ...) ?value))
+     #'(?var :setter ((?key0 ...) (?key ...) ...) ?new-value))
 
-    ;;Alternative syntax  to invoke the setter  for the tag  of ?VAR; it
-    ;;supports multiple sets of keys for nested setter invocations.
-    ((_ ?var (?key0 ...) (?key ...) ... ?value)
+    ;;Alternative syntax  to invoke the setter  for the tag of  ?VAR; it
+    ;;supports multiple sets of keys for nested setter invocations.  For
+    ;;example:
+    ;;
+    ;;   (define {V <vector>} '#(1 2 3))
+    ;;   (set!/tags V[1] #\B)
+    ;;   (V [1]) => #\B
+    ;;
+    ((_ ?var (?key0 ...) (?key ...) ... ?new-value)
      (identifier? #'?var)
-     #'(?var :setter ((?key0 ...) (?key ...) ...) ?value))
+     #'(?var :setter ((?key0 ...) (?key ...) ...) ?new-value))
 
-    ;;Syntax to  invoke the field mutator  for the tag  of ?VAR.  Notice
-    ;;that this may also be a nested setter invocation, as in:
+    ;;Syntax to invoke  the getter of a value  resulting from evaluating
+    ;;?EXPR.  For example:
     ;;
-    ;;   (set!/tags (O a b c[777]) 999)
+    ;;   (define-class <alpha>
+    ;;     (fields (mutable {vec <vector>})))
+    ;;   (define {A <alpha>} (<alpha> (#(1 2 3))))
+    ;;   (set!/tags ((A V) [1]) #\B)
+    ;;   ((A V) [1]) => #\B
     ;;
-    ;;for this reason we do not validate ?ARG in any way.
+    ((_ (?expr (?key0 ...) (?key ...) ...) ?new-value)
+     (not (identifier? #'?expr))
+     #'(?expr :setter ((?key0 ...) (?key ...) ...) ?new-value))
+    ((_ ?expr (?key0 ...) (?key ...) ... ?new-value)
+     (not (identifier? #'?expr))
+     #'(?expr :setter ((?key0 ...) (?key ...) ...) ?new-value))
+
+    ;;Syntax to invoke a field mutator.
     ;;
-    ((_ (?var ?field-name ?arg ...) ?val)
+    ((_ (?var ?field-name) ?new-value)
      (and (identifier? #'?var)
 	  (identifier? #'?field-name))
-     #'(?var :mutator (?field-name ?arg ...) ?val))
+     #'(?var :mutator ?field-name ?new-value))
+
+    ;;Syntax to invoke the field mutator  for the tagged return value of
+    ;;an expression.
+    ;;
+    ((_ (?expr ?field-name) ?new-value)
+     (and (not (identifier? #'?expr))
+	  (identifier? #'?field-name))
+     #'(?expr :mutator ?field-name ?new-value))
 
     ;;Syntax to mutate a binding with R6RS's SET!.
-    ((_ ?var ?val)
+    ((_ ?var ?new-value)
      (identifier? #'?var)
-     #'(set! ?var ?val))
+     #'(set! ?var ?new-value))
     ))
 
 

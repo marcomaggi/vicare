@@ -593,7 +593,7 @@
   #| end of class |# )
 
 (define-method (uri-path-put-bytevector {O <path>} {port <binary-output-port>})
-  (O path put-bytevector port))
+  ((O path) put-bytevector port))
 
 ;;; --------------------------------------------------------------------
 
@@ -827,11 +827,11 @@
     ;;
     (when (O has-authority?)
       (when (O has-userinfo?)
-	(O userinfo put-bytevector port))
+	((O userinfo) put-bytevector port))
       ;;The authority is defined only when the host is defined.
-      (O host put-bytevector port)
+      ((O host) put-bytevector port)
       (when (O has-port?)
-	(O port put-bytevector port))))
+	((O port) put-bytevector port))))
 
   #| end of mixin |# )
 
@@ -895,13 +895,13 @@
   (method (put-bytevector {O <uri>} {port <binary-output-port>})
     ;;We  want  to  recompose  the  URI  as  described  in  section  5.3
     ;;"Component Recomposition" of RFC 3986.
-    (O $scheme put-bytevector port)
+    ((O $scheme) put-bytevector port)
     (O put-hier-part-bytevector port)
-    (O $path put-bytevector port)
+    ((O $path) put-bytevector port)
     (when (O has-query?)
-      (O query put-bytevector port))
+      ((O query) put-bytevector port))
     (when (O has-fragment?)
-      (O fragment put-bytevector port)))
+      ((O fragment) put-bytevector port)))
 
   (method (put-hier-part-bytevector {O <uri>} {port <binary-output-port>})
     ;;Notice that the leading "//" is part of the "hier-part" component.
@@ -975,11 +975,11 @@
     ;;We  want  to  recompose  the  URI  as  described  in  section  5.3
     ;;"Component Recomposition" of RFC 3986.
     (O put-relative-part-bytevector port)
-    (O $path put-bytevector port)
+    ((O $path) put-bytevector port)
     (when (O has-query?)
-      (O query put-bytevector port))
+      ((O query) put-bytevector port))
     (when (O has-fragment?)
-      (O fragment put-bytevector port)))
+      ((O fragment) put-bytevector port)))
 
   (method (put-relative-part-bytevector {O <relative-ref>} {port <binary-output-port>})
     ;;Notice that the leading "//" is part of the "relative-part" component.

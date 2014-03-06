@@ -548,17 +548,17 @@
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (list (O c b a) (O c b) (O c)))
+	  (list (((O c) b) a) ((O c) b) (O c)))
       => '(a b c))
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (O c b[99]))
+	  (((O c) b)[99]))
       => 123)
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (O c b doit 99))
+	  (((O c) b) doit 99))
       => '(456 . 99))
 
     #f)
@@ -589,17 +589,17 @@
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (list (O c b a) (O c b) (O c)))
+	  (list (((O c) b) a) ((O c) b) (O c)))
       => '(a b c))
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (O c b[99]))
+	  (((O c) b)[99]))
       => 123)
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (O c b doit 99))
+	  (((O c) b) doit 99))
       => '(456 . 99))
 
     #f)
@@ -633,14 +633,14 @@
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (list (set! (O c b a) 1)
-		(set! (O c b)   (<alpha> ()))
-		(set! (O c)     (<beta>  ()))))
+	  (list (set! (((O c) b) a) 1)
+		(set! ((O c) b)     (<alpha> ()))
+		(set! (O c)         (<beta>  ()))))
       => '(A B C))
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (set! (O c b[777]) 999))
+	  (set! (((O c) b)[777]) 999))
       => '(123 777 999))
 
     #f)
@@ -672,14 +672,19 @@
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (list (set! (O c b a) 1)
-		(set! (O c b)   (<alpha> ()))
-		(set! (O c)     (<beta>  ()))))
+	  (list (set! (((O c) b) a) 1)
+		(set! ((O c) b  )   (<alpha> ()))
+		(set! (O c)         (<beta>  ()))))
       => '(A B C))
 
     (check
 	(let (({O <gamma>} (<gamma> ())))
-	  (set! (O c b[777]) 999))
+	  (set! (((O c) b)[777]) 999))
+      => '(123 777 999))
+
+    (check
+	(let (({O <gamma>} (<gamma> ())))
+	  (set! ((O c) b) [777] 999))
       => '(123 777 999))
 
     #f)

@@ -240,7 +240,7 @@
     (define-mixin <the-sequence>
       (fields {subject <sequence>})
       (method (get-first {o <the-sequence>})
-	(o subject[0])))
+	((o subject)[0])))
 
     (define-class <the-string>
       (mixins (<the-sequence>
@@ -252,12 +252,12 @@
 
     (check
 	(let (({o <the-string>} (<the-string> ("ciao"))))
-	  (list (o subject length) (o get-first)))
+	  (list ((o subject) length) (o get-first)))
       => '(4 #\c))
 
     (check
 	(let (({o <the-vector>} (<the-vector> ((vector 'c 'i 'a 'o)))))
-	  (list (o subject length) (o get-first)))
+	  (list ((o subject) length) (o get-first)))
       => '(4 c))
 
     #f)

@@ -424,7 +424,7 @@
       (let (({S sl.<source-location>} (sl.<source-location> ((sl.line: 10)
 							     (sl.column: 20)
 							     (sl.offset: 30)))))
-	(list (S line string) (S column string) (S offset string)))
+	(list ((S line) string) ((S column) string) ((S offset) string)))
     => '("10" "20" "30"))
 
   #t)
