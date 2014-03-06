@@ -321,8 +321,7 @@ in the syntax; example:
 Example using the maker transformer:
 
 @example
-(define-syntax pair
-  (syntax-rules ()))
+(define-auxiliary-syntaxes pair)
 
 (define-label <pair>
   (maker (lambda (stx)
@@ -537,15 +536,15 @@ achieved by using some keyword objects as arguments for the type tag.
 The syntax:
 
 @example
-(@meta{type} #:oopp-syntax (@meta{expr} @meta{arg} ...))
+(@meta{type} #:oopp-syntax (@metao{expr} @meta{expr} ...))
 @end example
 
 @noindent
-will interpret @meta{expr} as an expression evaluating to a Scheme
+can interpret @metao{expr} as an expression evaluating to a Scheme
 object of type @meta{type}; the form:
 
 @example
-(@meta{expr} @meta{arg} ...)
+(@metao{expr} @meta{expr} ...)
 @end example
 
 @noindent
