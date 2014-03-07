@@ -1748,6 +1748,9 @@ Here is an example of default constructor usage; notice that no
 field values as arguments:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
   (fields a b))
 
@@ -1755,11 +1758,13 @@ field values as arguments:
   (parent <alpha>)
   (fields c d))
 
-(<alpha> A (<> (1 2)))
+(define @{A <alpha>@}
+  (<> (1 2)))
 (A a)                   @result{} 1
 (A b)                   @result{} 2
 
-(<beta> B (<> (1 2 3 4)))
+(define @{B <beta>@}
+  (<> (1 2 3 4)))
 (B a)                   @result{} 1
 (B b)                   @result{} 2
 (B c)                   @result{} 3
@@ -1770,6 +1775,9 @@ The following code makes use of explicitly defined common protocols
 completely equivalent to the default ones:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
   (fields a b)
   (protocol (lambda (make-top)
@@ -1783,11 +1791,13 @@ completely equivalent to the default ones:
               (lambda (a b c d)
                 ((make-alpha a b) c d)))))
 
-(<alpha> A (<> (1 2)))
+(define @{A <alpha>@}
+  (<> (1 2)))
 (A a)                   @result{} 1
 (A b)                   @result{} 2
 
-(<beta> B (<> (1 2 3 4)))
+(define @{B <beta>@}
+  (<> (1 2 3 4)))
 (B a)                   @result{} 1
 (B b)                   @result{} 2
 (B c)                   @result{} 3
@@ -1797,6 +1807,9 @@ completely equivalent to the default ones:
 The following code makes use of the @func{make-from-fields} syntax:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
   (fields a b))
 
@@ -1804,11 +1817,13 @@ The following code makes use of the @func{make-from-fields} syntax:
   (parent <alpha>)
   (fields c d))
 
-(<alpha> A (make-from-fields <alpha> 1 2))
+(define @{A <alpha>@}
+  (make-from-fields <alpha> 1 2))
 (A a)                   @result{} 1
 (A b)                   @result{} 2
 
-(<beta> B (make-from-fields <beta> 1 2 3 4))
+(define @{B <beta>@}
+  (make-from-fields <beta> 1 2 3 4))
 (B a)                   @result{} 1
 (B b)                   @result{} 2
 (B c)                   @result{} 3
@@ -1819,6 +1834,9 @@ The following code defines a common protocol accepting only some of the
 fields' values:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
   (fields a b)
   (protocol (lambda (make-top)
@@ -1832,11 +1850,13 @@ fields' values:
               (lambda (a c)
                 ((make-alpha a) c 4)))))
 
-(<alpha> A (<> (1)))
+(define @{A <alpha>@}
+  (<> (1)))
 (A a)                   @result{} 1
 (A b)                   @result{} 2
 
-(<beta> B (<> (1 3)))
+(define @{B <beta>@}
+  (<> (1 3)))
 (B a)                   @result{} 1
 (B b)                   @result{} 2
 (B c)                   @result{} 3
@@ -1846,6 +1866,9 @@ fields' values:
 The following code shows how to use the super and public protocols:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
   (fields a b)
   (public-protocol (lambda (make-top)
@@ -1862,11 +1885,13 @@ The following code shows how to use the super and public protocols:
                      (lambda (a b)
                        ((make-alpha a b) 3 4)))))
 
-(<alpha> A (<> ()))
+(define @{A <alpha>@}
+  (<> ()))
 (A a)                   @result{} 1
 (A b)                   @result{} 2
 
-(<beta> B (<> (1 2)))
+(define @{B <beta>@}
+  (<> (1 2)))
 (B a)                   @result{} 10
 (B b)                   @result{} 20
 (B c)                   @result{} 3
@@ -1926,12 +1951,16 @@ must evaluate to the protocol function.
 Here is an example of common protocol definition for a labeled value:
 
 @example
-(define-label <the-pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (protocol (lambda () cons))
   (virtual-fields (immutable car car)
                   (immutable cdr cdr)))
 
-(<the-pair> P (<> (1 2)))
+(define @{P <a-pair>@}
+  (<> (1 2)))
 (P car)                 @result{} 1
 (P cdr)                 @result{} 2
 @end example
