@@ -1276,7 +1276,7 @@ In the context of the library @library{nausicaa language oopp}:
 A @dfn{class type} is a regular record type as defined by
 @rsixlibrary{records syntactic}, with the constraints of being
 non--generative and derived only from record types defined with the
-syntax @func{define-syntax}.  New class types are defined by
+syntax @func{define-class}.  New class types are defined by
 @func{define-class} which generates auxiliary syntaxes to allow for
 virtual fields, methods, @oopp{} notation and multiple construction
 protocols.
@@ -1463,11 +1463,11 @@ syntactic or procedural layers of @rnrs{6} libraries.  Label types can
 inherit from either a class or label type.
 
 
-@deffn {Auxiliary Syntax} parent @meta{type}
-The @code{parent} binding is the one exported by the
-@rsixlibrary{records syntactic} library.  This clause is accepted in
-both class and label types.  Make the type of the enclosing definition a
-subtype of @meta{type}, which must be a type identifier.
+@deffn {Auxiliary Syntax} parent @meta{super-type}
+Make the type of the enclosing definition a subtype of
+@meta{super-type}, which must be a type identifier.  The @code{parent}
+binding is the one exported by the @rsixlibrary{records syntactic}
+library.  This clause is accepted in both class and label types.
 
 When this clause is not present in a type definition: inheritance from
 @class{top} is implicitly assumed.
@@ -1478,10 +1478,14 @@ The following is an example of class definition inheriting from
 @class{top}:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
   (fields a))
 
-(<alpha> O (1))
+(define @{O <alpha>@}
+  (<> (1)))
 (is-a? O <alpha>)       @result{} #t
 (is-a? O <top>)         @result{} #t
 @end example
@@ -1491,6 +1495,9 @@ the following is an example of class definition inheriting from another
 class:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
   (fields a))
 
@@ -1498,7 +1505,8 @@ class:
   (parent <alpha>)
   (fields b))
 
-(<beta> O (1 2))
+(define @{O <beta>@}
+  (<> (1 2)))
 
 (is-a? O <beta>)        @result{} #t
 (is-a? O <alpha>)       @result{} #t
@@ -1513,14 +1521,18 @@ the following is an example of label definition inheriting from
 @class{top}:
 
 @example
-(define-label <pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (protocol (lambda () cons))
   (predicate pair?)
   (virtual-fields (immutable car car)
                   (immutable cdr cdr)))
 
-(<pair> O (1 2))
-(is-a? O <pair>)        @result{} #t
+(define @{O <a-pair>@}
+  '(1 2))
+(is-a? O <a-pair>)      @result{} #t
 (is-a? O <top>)         @result{} #t
 
 (O car)                 @result{} 1
@@ -1532,6 +1544,9 @@ the following is an example of label definitions inheriting from other
 labels:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-label <car>
   (virtual-fields (immutable car car)))
 
@@ -1539,13 +1554,14 @@ labels:
   (parent <car>)
   (virtual-fields (immutable cdr cdr)))
 
-(define-label <pair>
+(define-label <a-pair>
   (parent <car-and-cdr>)
   (predicate pair?))
 
-(<pair> O '(1 . 2))
+(define @{O <a-pair>@}
+  '(1 . 2))
 
-(is-a? O <pair>)        @result{} #t
+(is-a? O <a-pair>)      @result{} #t
 (is-a? O <car-and-cdr>) @result{} #t
 (is-a? O <car>)         @result{} #t
 (is-a? O <top>)         @result{} #t
@@ -1558,6 +1574,9 @@ labels:
 the following is an example of label inheriting from a class:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
   (fields a b))
 
@@ -1569,7 +1588,8 @@ the following is an example of label inheriting from a class:
                              (lambda/tags (@{O <beta>@})
                                (+ (O a) (O b))))))
 
-(<beta> O (<> (1 2)))
+(define @{O <beta>@}
+  (<> (1 2)))
 
 (is-a? O <beta>)        @result{} #t
 (is-a? O <alpha>)       @result{} #t
