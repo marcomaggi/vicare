@@ -1607,14 +1607,64 @@ the following is an example of label inheriting from a class:
 
 @deffn {Auxiliary Syntax} abstract
 Makes a class type non instantiable; it is meant to be used for class
-definitions in which some methods are generic functions and the
-subclasses are responsible to provide implementations.  This clause is
-accepted in class and mixins definitions.  This clause can be used only
-once.
+definitions in which some methods are implemented as multimethods
+(@pxref{multimethods}) and the subclasses are responsible to provide
+implementations.  This clause is accepted in class and mixin
+definitions.  This clause can be used only once.
 
 It is a syntax violation to specify a public or common protocol in the
 definition of an abstract class; only the super protocol is allowed.
 @end deffn
+
+
+Here is an example of abstract class:
+
+@example
+#!vicare
+(import (nausicaa))
+
+(define-class <alpha>
+  (abstract)
+  (fields a))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields b))
+
+(define @{O <beta>@}
+  (<> (1 2))
+
+(O a)           @result{} 1
+(O b)           @result{} 2
+
+(<alpha> (1))   @error{} &syntax
+@end example
+
+@noindent
+another example with the @clause{super-protocol}:
+
+@example
+#!vicare
+(import (nausicaa))
+
+(define-class <alpha>
+  (abstract)
+  (super-protocol
+    (lambda (make-top)
+      (lambda (a)
+        ((make-top) (number->string a)))))
+  (fields a))
+
+(define-class <beta>
+  (parent <alpha>)
+  (fields b))
+
+(define @{O <beta>@}
+  (<> (1 2)))
+
+(O a)           @result{} "1"
+(O b)           @result{} 2
+@end example
 
 @c page
 @node oopp protocol
