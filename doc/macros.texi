@@ -416,6 +416,10 @@ Revised^6 Report on the algorithmic language Scheme
 @ref{\NODE\,\TITLE\,\TITLE\,vicare-scheme}
 @end macro
 
+@macro vicarepref{NODE, TITLE}
+@pxref{\NODE\,\TITLE\,\TITLE\,vicare-scheme}
+@end macro
+
 @macro libsref{NODE, TITLE}
 @ref{\NODE\,\TITLE\,\TITLE\,vicare-libs}
 @end macro

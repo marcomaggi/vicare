@@ -2773,7 +2773,8 @@ Special symbols beginning with @code{+g} and @code{-g}, to allow reading
 symbols starting with @code{+greek-pi} and @code{-greek-pi}.
 
 @item
-Brace lists @code{@{ ... @}} are read as @code{(brace ...)}.
+Brace lists @code{@{ ... @}} are read as @code{(brace ...)}, @ref{iklib
+syntaxes misc, brace}.
 @end itemize
 
 The syntax extensions are made available by default on all input ports,

@@ -6,7 +6,7 @@
 @cindex Library @library{nausicaa language oopp}
 
 
-The @library{nausicaa language oopp} library is an alternative to the
+The library @library{nausicaa language oopp} is an alternative to the
 @rsixlibrary{records syntactic} library; it is built upon
 @rsixlibrary{records syntactic} and @rsixlibrary{records procedural} and
 it adds some features like object--oriented perfumed programming
@@ -22,6 +22,11 @@ just importing @library{nausicaa language oopp}, but the recommended
 way is to import the full @library{nausicaa} language.  Once a type is
 defined, it is possible to make full use of it by just importing its
 identifier.
+
+To make the syntax shorter we should put the Scheme reader in
+@code{#!vicare} mode; this way the reader will convert braces @samp{@{
+... @}} into @func{brace} syntaxes, @vicareref{iklib reader mode,
+#!vicare}.
 
 @menu
 * oopp overview::               Overview of labels and classes.
@@ -285,16 +290,17 @@ It is the identifier syntax we use to handle a type instance.
 It is a generic expression.
 
 @item @code{<>}
-It is the auxiliary syntax exported by both @library{nausicaa language
-oopp} and @library{nausicaa language auxiliary-syntaxes}.
+It is the fluid syntax exported by @library{vicare} and reexported by
+both @library{nausicaa language oopp} and @library{nausicaa language
+auxiliary-syntaxes}.
 
-@item @meta{id}
+@item @meta{member-id}
 It is an identifier used to select a type's method or field name.  When
-the syntax transformer attempts to match it against method and field
-names: the identifier is first converted to symbol, with
-@func{syntax->datum}, and then compared to method and field names with
-@func{eq?}.  Notice that methods and fields cannot have the same name in
-a type definition.
+the @oopp{} syntax transformers attempt to match it against method and
+field names: the identifier is first converted to symbol, with
+@func{syntax->datum}, and then compared to method and field name symbols
+with @func{eq?}.  Notice that methods and fields cannot have the same
+name in a type definition.
 
 @item @meta{form}
 It is a generic form: an expression, an auxiliary syntax, @dots{}.
@@ -337,21 +343,21 @@ subform of an enclosing form, the nested @oopp{} syntax is available.
 Examples with the public constructor:
 
 @example
-(define-label <pair>
+(define-label <a-pair>
   (protocol (lambda () cons)))
 
-(define-label <list>
+(define-label <a-list>
   (protocol (lambda () list)))
 
-(<pair> (1 2))          @result{} (1 . 2)
-(<list> (1 2 3))        @result{} (1 2 3)
+(<a-pair> (1 2))          @result{} (1 . 2)
+(<a-list> (1 2 3))        @result{} (1 2 3)
 @end example
 
 @noindent
 we can think of this syntax as implementing the following expansion:
 
 @example
-(<pair> (1 2)) @expansion{} (make-<pair> 1 2) @equiv{} (cons 1 2)
+(<a-pair> (1 2)) @expansion{} (make-<a-pair> 1 2) @equiv{} (cons 1 2)
 @end example
 
 If the constructor takes no arguments: we just use null as second form
@@ -375,7 +381,7 @@ Example using the maker transformer:
 @example
 (define-auxiliary-syntaxes pair)
 
-(define-label <pair>
+(define-label <a-pair>
   (maker (lambda (stx)
            (syntax-case stx (pair car cdr)
              ((?type (pair (car ?a) (cdr ?d)))
@@ -385,12 +391,12 @@ Example using the maker transformer:
   (virtual-fields (immutable car car)
                   (immutable cdr cdr)))
 
-(<pair> (pair
-          (car 1)
-          (cdr 2)))
+(<a-pair> (pair
+            (car 1)
+            (cdr 2)))
 @result{} (1 . 2)
 
-(<pair> (1 2))
+(<a-pair> (1 2))
 @result{} (1 . 2)
 @end example
 
@@ -423,17 +429,20 @@ has no predicate: the result is a function taking one argument and
 always returning @true{}.  Examples:
 
 @example
-(define-label <pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (predicate pair?))
 
 (define-label <any>)  ;no predicate
 
-((<pair> #:predicate) '(1 . 2)) @result{} #t
-((<pair> #:predicate) "ciao")   @result{} #f
+((<a-pair> #:predicate) '(1 . 2)) @result{} #t
+((<a-pair> #:predicate) "ciao")   @result{} #f
 
 ((<any> #:predicate) "ciao")    @result{} #t
 
-(for-all (<pair> #:predicate)
+(for-all (<a-pair> #:predicate)
   '((1 . 2) (3 . 4)))           @result{} #t
 @end example
 
@@ -441,21 +450,33 @@ We can also directly apply the predicate to the result of an expression
 as follows:
 
 @example
-(define-label <pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (predicate pair?))
 
-(<pair> #:is-a? '(1 . 2))       @result{} #t
-(<pair> #:is-a? "12")           @result{} #f
+(<a-pair> #:is-a? '(1 . 2))     @result{} #t
+(<a-pair> #:is-a? "12")         @result{} #f
 @end example
 
-Furthermore we can use the @func{is-a?} syntax:
+Furthermore we can use the @func{is-a?} syntax (@vicarepref{iklib
+syntaxes predicates, is-a?}):
 
 @example
-(define-label <pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (predicate pair?))
 
-(is-a? '(1 . 2) <pair>)       @result{} #t
-(is-a? "12"     <pair>)       @result{} #f
+(is-a? '(1 . 2) <a-pair>)       @result{} #t
+(is-a? "12"     <a-pair>)       @result{} #f
+
+((is-a? <> <a-pair>) '(1 . 2))  @result{} #t
+
+(for-all (is-a? <> <a-pair>)
+  '((1 . 2) (3 . 4)))           @result{} #t
 @end example
 
 @c page
@@ -468,25 +489,36 @@ To define a tagged variable we write:
 @example
 (@meta{type} @meta{var})
 (@meta{type} @meta{var} @meta{expr})
-(@meta{type} @meta{var} (<> (@meta{form} ...)))
+(define/tags (brace @meta{var} @meta{type}))
+(define/tags (brace @meta{var} @meta{type}) @meta{expr})
 @end example
 
 @noindent
-these syntaxes expand to internal definitions that bind @meta{var} to
-intances of @meta{type}.  Notice that if values validation is turned on:
-the value of the binding must be an instance of @meta{type} according to
-its predicate (if any).
+where @func{define/tags} is exported by @library{nausicaa language oopp}
+and reexported renamed to @func{define} by @library{nausicaa};
+@func{brace} is the binding exported by @library{vicare} and reexported
+by both @library{nausicaa language oopp} and @library{nausicaa},
+@vicareref{iklib syntaxes misc, brace}.
+
+These syntaxes expand to internal definitions that bind @meta{var} to
+intances of @meta{type}; that if values validation is turned on: the
+result of evaluating @meta{expr}, and values that are later assigned to
+@meta{var}, must be instances of @meta{type} according to its predicate
+(if any).
 
 @itemize
 @item
-The first syntax defines an identifier syntax for an uninitialised
+The first form defines an identifier syntax for an uninitialised tagged
 variable; example:
 
 @example
-(define-label <pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (predicate pair?))
 
-(<pair> O)
+(<a-pair> O)
 @end example
 
 @noindent
@@ -504,21 +536,29 @@ we can think of the last form as expanding to:
 where @code{G0} is an automatically generated identifier.
 
 @item
-The second syntax defines an identifier syntax for a variable
+The second form defines an identifier syntax for a tagged variable
 initialised to the result of evaluating @meta{expr}; example:
 
 @example
-(define-label <pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (predicate pair?))
 
-(<pair> O '(1 . 2))
+(<a-pair> O '(1 . 2))
 @end example
 
-@noindent
-we can think of the last form as expanding to:
+When an initialisation expression @meta{expr} is used: the fluid syntax
+@func{<>} is bound to a synonym of @meta{type} while the expansion of
+@meta{expr} is performed.  We can think of the last form as expanding
+to:
 
 @example
-(define G0 '(1 . 2))
+(define G0
+  (fluid-let-syntax
+      ((<> (make-synonym-transformer #'<a-pair>)))
+    '(1 . 2)))
 (define-syntax O
   (make-variable-transformer
     (lambda (stx)
@@ -529,40 +569,46 @@ we can think of the last form as expanding to:
 where @code{G0} is an automatically generated identifier.
 
 @item
-The third syntax defines an identifier syntax for a variable initialised
-to the result of applying the maker transformer of @meta{type} to the
-syntax object:
+The third and fourth forms are equivalent to the first and second:
 
 @example
-#'(@meta{type} (@meta{form} ...))
+(define/tags (brace @meta{var} @meta{type}))
+@expansion{} (@meta{type} @meta{var})
+
+(define/tags (brace @meta{var} @meta{type}) @meta{expr})
+@expansion{} (@meta{type} @meta{var} @meta{expr})
 @end example
+@end itemize
 
-@noindent
-if @meta{type} has no maker transformer: the variable is initialised to
-the result of applying the public constructor of @meta{type} to the
-results of evaluating the @meta{form} forms.  Example with the public
-constructor:
+The fluid syntax @func{<>} allows us to build an instance of @meta{type}
+without retyping the identifier @meta{type} in the initialisation
+expression @meta{expr}; example:
 
 @example
-(define-label <pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (protocol (lambda () cons))
   (predicate pair?))
 
-(<pair> O (<> (1 2)))
+(define @{O <a-pair>@}
+  (<> (1 2)))
 @end example
 
 @noindent
 we can think of the last form as expanding to:
 
 @example
-(<pair> O (<pair> (1 2)))
+(define @{O <a-pair>@}
+  (<a-pair> (1 2)))
 @end example
 
 @noindent
 and so to:
 
 @example
-(define G0 (make-<pair> 1 2))
+(define G0 (make-<a-pair> 1 2))
 (define-syntax O
   (make-variable-transformer
     (lambda (stx)
@@ -571,7 +617,27 @@ and so to:
 
 @noindent
 where @code{G0} is an automatically generated identifier.
-@end itemize
+
+The initialisation expression can be more complex:
+
+@example
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
+  (protocol (lambda () cons))
+  (predicate pair?))
+
+(define @{O <a-pair>@}
+  (let ((a 1)
+        (d 2))
+    (<> (a d))))
+
+(define @{Q <a-pair>@}
+  ((lambda (a d)
+     (<> (a d)))
+   1 2))
+@end example
 
 @c page
 @node oopp notation type expr
@@ -579,9 +645,10 @@ where @code{G0} is an automatically generated identifier.
 
 
 It is possible to use the @oopp{} notation not only with tagged
-variables, but with any expression; for an introduction to @oopp{}
-syntax @ref{oopp notation var, How to use tagged variables}.  This is
-achieved by using some keyword objects as arguments for the type tag.
+variables, but with any expression evaluating to an object of a specific
+@meta{type}; for an introduction to @oopp{} syntax @ref{oopp notation
+var, How to use tagged variables}.  This is achieved by using some
+keyword objects as arguments for the type tag.
 
 @cindex oopp-syntax, keyword
 @cindex Keyword oopp-syntax
@@ -631,7 +698,8 @@ expansion if it appears as first subform, with the following expansion:
 @expansion{} (@meta{type} #:oopp-syntax (@meta{expr} @meta{arg} ...))
 @end example
 
-Examples:
+@noindent
+examples:
 
 @example
 ((<fixnum> #:nested-oopp-syntax 123) positive?)
@@ -654,7 +722,7 @@ It is possible to use @oopp{} syntaxes with data values, too; we use the
 ``cast'' syntax:
 
 @example
-((@meta{tag}) @meta{expr})
+((@meta{type}) @meta{expr})
 @end example
 
 @noindent
@@ -662,16 +730,16 @@ whenever this syntax appears as first subform of an enclosing form, the
 following chain of expansions takes place:
 
 @example
-(((@meta{tag}) @meta{expr}) @meta{arg} ...)
-@expansion{} ((@meta{tag} #:nested-oopp-syntax @meta{expr}) @meta{arg} ...)
-@expansion{} (@meta{tag} #:oopp-syntax (@meta{expr} @meta{arg} ...))
+(((@meta{type}) @meta{expr}) @meta{arg} ...)
+@expansion{} ((@meta{type} #:nested-oopp-syntax @meta{expr}) @meta{arg} ...)
+@expansion{} (@meta{type} #:oopp-syntax (@meta{expr} @meta{arg} ...))
 @end example
 
 @noindent
 otherwise the expansion is just:
 
 @example
-((@meta{tag}) @meta{expr})
+((@meta{type}) @meta{expr})
 @expansion{} @meta{expr}
 @end example
 
@@ -695,6 +763,7 @@ constitutes, in practice, an @api{} leaking between contexts.  It
 happens as follows:
 
 @example
+#!vicare
 (library (leaking-demo)
   (export doit)
   (import (nausicaa))
