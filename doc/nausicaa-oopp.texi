@@ -57,23 +57,24 @@ can define a new record type with the syntax:
 
 @example
 (define-record-type <alpha>
-  (fields (mutable a)
+  (fields (mutable   a)
           (immutable b)))
 
-(define (<alpha>-sum o)
-  (+ (<alpha>-a o)
-     (<alpha>-b o)))
+(define (<alpha>-sum O)
+  (+ (<alpha>-a O)
+     (<alpha>-b O)))
 @end example
 
 @noindent
 and then use it with code like:
 
 @example
-(define o (make-<alpha> 1 2))
-(<alpha>? o)            @result{} #t
-(<alpha>-a o)           @result{} 1
-(<alpha>-b o)           @result{} 2
-(<alpha>-sum o)         @result{} 3
+(define O (make-<alpha> 1 2))
+(<alpha>? O)            @result{} #t
+(<alpha>-a O)           @result{} 1
+(<alpha>-a-set! O 10)
+(<alpha>-b O)           @result{} 2
+(<alpha>-sum O)         @result{} 3
 @end example
 
 @noindent
@@ -84,7 +85,7 @@ we notice that:
 If we define a type in a library and then we want to use it in another
 library, we have to export all the associated identifiers:
 @class{alpha}, @func{<alpha>?}, @func{<alpha>-a}, @func{<alpha>-b},
-@func{<alpha>-sum}.
+@func{<alpha>-a-set!}, @func{<alpha>-sum}.
 
 @item
 There is no way to define a function tied to this record type, neither a
@@ -93,30 +94,75 @@ syntax to use such function: functions acting on @rnrs{6} records, like
 
 @item
 If we use @class{alpha} in a chunk of code and later we change the
-record type to something else: we have to change all the function names;
-there is no syntax to define interfaces implemented by multiple types.
+record type name to something else: we have to change all the function
+names; there is no syntax to define interfaces implemented by multiple
+types.
 @end itemize
 
-Now let's look at the same definition using the facilities of
-@library{nausicaa language oopp} to define a class:
+Some of these shortcomings are mitigated by syntaxes exported by
+@library{vicare}, with which we can write:
 
 @example
+(define O (make-<alpha> 1 2))
+(is-a? O <alpha>)               @result{} #t
+(slot-ref  O a <alpha>)         @result{} 1
+(slot-set! O a <alpha> 10)
+(slot-ref  O b <alpha>)         @result{} 2
+(<alpha>-sum O)                 @result{} 3
+@end example
+
+@noindent
+the syntaxes @func{is-a?}, @func{slot-ref} and @func{slot-set!} work on
+any @rnrs{6} record type (and @value{PRJNAME} struct type).  These
+syntaxes are quite verbose.
+
+Now let's look at the same definition using the facilities of the
+library @library{nausicaa language oopp}, adapted by the library
+@library{nausicaa}; to define a class:
+
+@example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
-  (fields (mutable a)
+  (fields (mutable   a)
           (immutable b))
-  (method (sum @{o <alpha>@})
-     (+ (o a) (o b))))
+  (method (sum @{O <alpha>@})
+     (+ (O a) (O b))))
 @end example
 
 @noindent
 it is pretty similar; we can use this type with code like:
 
 @example
-(<alpha> o (<> (1 2)))
-(<alpha> #:is-a? o)     @result{} #t
-(o a)                   @result{} 1
-(o b)                   @result{} 2
-(o sum)                 @result{} 3
+(define @{O <alpha>@} (<> (1 2)))
+(is-a? O <alpha>)       @result{} #t
+(O a)                   @result{} 1
+(set! (O a) 11)
+(O b)                   @result{} 2
+(O sum)                 @result{} 3
+@end example
+
+@noindent
+or using only the type identifier @class{alpha}:
+
+@example
+(<alpha> O (<> (1 2)))
+(<alpha> #:is-a? O)     @result{} #t
+(O a)                   @result{} 1
+(set! (O a) 11)
+(O b)                   @result{} 2
+(O sum)                 @result{} 3
+@end example
+
+@noindent
+the syntaxes defined by @library{vicare} are still usable:
+
+@example
+(is-a? O <alpha>)               @result{} #t
+(slot-ref  O a <alpha>)         @result{} 1
+(slot-set! O a <alpha> 10)
+(slot-ref  O b <alpha>)         @result{} 2
 @end example
 
 @noindent
@@ -137,13 +183,16 @@ the type name, which appears in few places; it is possible to define
 interfaces implemented by multiple types.
 @end itemize
 
-Also notice that the @rnrs{6} bindings defined by
-@func{define-record-type} are available also with the facilities of
+Notice that the @rnrs{6}--style bindings defined by
+@func{define-record-type} are also available with the facilities of
 @library{nausicaa language oopp}:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <alpha>
-  (fields (mutable a)
+  (fields (mutable   a)
           (immutable b))
   (method (sum @{o <alpha>@})
      (+ (o a) (o b))))
@@ -159,7 +208,8 @@ Also notice that the @rnrs{6} bindings defined by
 so it is easy to convert existing record type definitions to classes
 definitions; notice, however, that it is not possible to just substitute
 @func{define-record-type} with @func{define-class}: some clauses of the
-former are not supported by the latter.
+former are not supported by the latter (most notably
+@clause{parent-rtd}).
 
 So, classes can be used to define new record types when we would use
 @func{define-record-type} in plain @rnrs{6} code; @library{nausicaa
@@ -171,14 +221,16 @@ handle any value.
 The following example defines a tag to handle immutable pair values:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-label <pair>
-  (protocol (lambda ()
-              cons))
+  (protocol (lambda () cons))
   (predicate pair?)
   (virtual-fields (immutable car car)
                   (immutable cdr cdr)))
 
-(<pair> P '(1 . 2))
+(define @{P <pair>@} '(1 . 2))
 (is-a? P <pair>)        @result{} #t
 (P car)                 @result{} 1
 (P cdr)                 @result{} 2
@@ -695,7 +747,7 @@ This behaviour may change in the future.
 @subsubsection Referencing tagged variables
 
 
-Referencing a tagged variable @meta{var} works just like referencing any
+Internal definition of tagged variables is Referencing a tagged variable @meta{var} works just like referencing any
 Scheme variable, we just write its identifier:
 
 @example
@@ -706,10 +758,13 @@ Scheme variable, we just write its identifier:
 example:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-label <pair>
   (predicate pair?))
 
-(<pair> O '(1 . 2))
+(define @{O <pair>@} '(1 . 2))
 
 O   @result{} '(1 . 2)
 @end example
@@ -734,10 +789,13 @@ validation is turned on: the new value must be an instance of the type
 according to its predicate (if any).  Example:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-label <pair>
   (predicate pair?))
 
-(<pair> O '(1 . 2))
+(define @{O <pair>@} '(1 . 2))
 (set!/tags O '(3 . 4))
 O                       @result{} '(3 . 4)
 
