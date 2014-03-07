@@ -285,16 +285,12 @@
 
     ;; ------------------------------------------------------------
 
-    ;;Define an  internal variable with initialisation  expression using
-    ;;the tag constructor.
-    ((?tag ?var (aux.<> (?arg ...)))
-     (identifier? #'?var)
-     #'(?tag ?var (?tag (?arg ...))))
-
     ;;Internal definition with initialisation expression.
     ((?tag ?var ?expr)
      (identifier? #'?var)
-     #'(?tag :define ?var ?expr))
+     #'(?tag :define ?var (fluid-let-syntax
+			      ((aux.<> (make-synonym-transformer #'?tag)))
+			    ?expr)))
 
     ;;Internal definition without initialisation expression.
     ((?tag ?var)

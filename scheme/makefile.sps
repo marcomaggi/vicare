@@ -326,7 +326,8 @@
      (continue					($fluid . ,(gensym "fluid-label.continue")))
      (break					($fluid . ,(gensym "fluid-label.break")))
      (with					($fluid . ,(gensym "fluid-label.with")))
-     (brace					($fluid . ,(gensym "fluid-label.brace"))))
+     (brace					($fluid . ,(gensym "fluid-label.brace")))
+     (<>					($fluid . ,(gensym "fluid-label.<>"))))
    '((define					(define))
      (define-syntax				(define-syntax))
      (define-alias				(define-alias))
@@ -468,7 +469,6 @@
      (include					(macro . include))
      (set-cons!					(macro . set-cons!))
 ;;;
-     (<>					(macro . <>))
      (while					(macro . while))
      (until					(macro . until))
      (for					(macro . for))

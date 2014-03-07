@@ -6262,7 +6262,7 @@
       ((file-options)
        file-options-macro)
 
-      ((... => _ <>
+      ((... => _
 	    else unquote unquote-splicing
 	    unsyntax unsyntax-splicing
 	    fields mutable immutable parent protocol

@@ -1811,6 +1811,14 @@ read as @func{brace} forms as follows:
 @end deffn
 
 
+@deffn {Fluid Syntax} {<>}
+A fluid syntax which is free to be bound to whatever user code needs.
+It is meant to be a placeholder for some expression defined by the local
+context; for example: it is used by the syntaxes @func{is-a?},
+@func{slot-ref} and @func{slot-set!}.
+@end deffn
+
+
 @deffn Syntax begin-for-syntax @metao{body} @meta{body} @dots{}
 @deffnx Syntax eval-for-expand @metao{body} @meta{body} @dots{}
 Evaluate the @meta{body} forms at expand time; these syntaxes count as
