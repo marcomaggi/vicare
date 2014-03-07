@@ -355,6 +355,29 @@
 
     #f)
 
+;;; --------------------------------------------------------------------
+
+  (let ()	;nested OOPP syntax
+    (define-label <a-string>
+      (getter (lambda (stx tag)
+		(syntax-case stx ()
+		  ((?expr ((?idx)))
+		   #'(<char> #:nested-oopp-syntax (string-ref ?expr ?idx)))))))
+
+    (check
+	(let ()
+	  (define/tags {S <a-string>} "abc")
+	  (list (S[0]) (S[1]) (S[2])))
+      => '(#\a #\b #\c))
+
+    (check
+	(let ()
+	  (define/tags {S <a-string>} "abc")
+	  ((S[1]) upcase))
+      => #\B)
+
+    #f)
+
   #t)
 
 
@@ -655,6 +678,21 @@
     (check
 	((G fun) 1 2 3)
       => 6)
+
+    (void))
+
+  (let ()
+
+    (define/tags ({the-str <string>})
+      "ciao")
+
+    (check
+	((the-str) upcase)
+      => "CIAO")
+
+    (check
+	((the-str) [1])
+      => #\i)
 
     (void))
 
