@@ -101,7 +101,6 @@
   protected
   private
 
-  #;<>
   <...>
   ->
   <-
