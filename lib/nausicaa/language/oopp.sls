@@ -321,7 +321,7 @@
 
     (_
      (syntax-help.tag-private-common-syntax-transformer
-      stx #'values #'procedure? #'<procedure>-list-of-uids
+      stx #f #'values #'procedure? #'<procedure>-list-of-uids
       %the-setter-and-getter %the-setter-and-getter
       (lambda ()
 	(syntax-help.tag-public-syntax-transformer stx #f #'set!/tags synner))))))
@@ -564,7 +564,7 @@
 
 		    (_
 		     (syntax-help.tag-private-common-syntax-transformer
-		      stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PUBLIC-PREDICATE #'THE-LIST-OF-UIDS
+		      stx #f #'THE-PUBLIC-CONSTRUCTOR #'THE-PUBLIC-PREDICATE #'THE-LIST-OF-UIDS
 		      %the-getter %the-setter
 		      (lambda ()
 			(syntax-help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))
@@ -606,6 +606,7 @@
 	 (THE-PUBLIC-CONSTRUCTOR		(parser-help.<parsed-spec>-public-constructor-id spec))
 	 (THE-LIST-OF-UIDS			(parser-help.<parsed-spec>-list-of-uids-id spec))
 	 (NONGENERATIVE-UID			(parser-help.<parsed-spec>-nongenerative-uid spec))
+	 (ABSTRACT?				abstract?)
 	 (SEALED?				(parser-help.<parsed-spec>-sealed? spec))
 	 (OPAQUE?				(parser-help.<parsed-spec>-opaque? spec))
 
@@ -925,7 +926,7 @@
 
 		    (_
 		     (syntax-help.tag-private-common-syntax-transformer
-		      stx #'THE-PUBLIC-CONSTRUCTOR #'THE-PREDICATE #'THE-LIST-OF-UIDS
+		      stx ABSTRACT? #'THE-PUBLIC-CONSTRUCTOR #'THE-PREDICATE #'THE-LIST-OF-UIDS
 		      %the-getter %the-setter
 		      (lambda ()
 			(syntax-help.tag-public-syntax-transformer stx %the-maker #'set!/tags synner))))))

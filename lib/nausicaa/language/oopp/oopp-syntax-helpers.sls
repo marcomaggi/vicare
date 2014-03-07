@@ -114,7 +114,7 @@
        ))))
 
 
-(define (tag-private-common-syntax-transformer stx the-public-constructor the-public-predicate the-list-of-uids
+(define (tag-private-common-syntax-transformer stx abstract? the-public-constructor the-public-predicate the-list-of-uids
 					       the-getter the-setter kont)
   ;;Transformer function  for the  private syntaxes available  through a
   ;;tag identifier,  only the ones  common for both labels  and classes.
@@ -152,8 +152,11 @@
 	 (define-syntax ?var
 	   (make-tagged-variable-transformer #'?tag #'src-var))))
 
-    ((_ :make . ??args)
-     #`(#,the-public-constructor . ??args))
+    ((?tag :make . ??args)
+     (if abstract?
+	 (syntax-violation (syntax->datum #'?tag)
+	   "attempt to instantiate abstract syntax" stx)
+       #`(#,the-public-constructor . ??args)))
 
     ((_ :is-a? aux.<>)
      the-public-predicate)

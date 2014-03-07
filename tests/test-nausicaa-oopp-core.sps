@@ -1917,16 +1917,43 @@
 
     #f)
 
-  (let ()
+;;; --------------------------------------------------------------------
+
+  (let ()	;super-protocol
+
+    (define-class <alpha>
+      (abstract)
+      (super-protocol
+       (lambda (make-top)
+	 (lambda (a)
+	   ((make-top) (number->string a)))))
+      (fields a))
+
+    (define-class <beta>
+      (parent <alpha>)
+      (fields b))
+
+    (check
+	(let ()
+	  (define {O <beta>}
+	    (<> (1 2)))
+	  (values (O a) (O b)))
+      => "1" 2)
+
+    (void))
+
+;;; --------------------------------------------------------------------
+
+  (let ()	;attempt to instantiate abstract class
 
     (define-class <alpha>
       (abstract)
       (fields a))
 
     (check
-	(catch-assertion #f
-	  (<alpha> (1)))
-      => '())
+	(catch-syntax-violation #f
+	  (%eval '(<alpha> (1))))
+      => '<alpha>)
 
     #f)
 
