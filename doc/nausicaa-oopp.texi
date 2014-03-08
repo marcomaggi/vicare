@@ -2096,13 +2096,13 @@ first; example:
 #!vicare
 (import (nausicaa))
 
-(define-label <list>
+(define-label <a-list>
   (predicate list?)
   (virtual-fields (immutable car car)
                   (immutable cdr cdr)))
 
 (define-label <list-of-numbers>
-  (parent <list>)
+  (parent <a-list>)
   (predicate (lambda (ell)
                (for-all number? ell))))
 
@@ -2110,15 +2110,15 @@ first; example:
 (define M '(a b c))
 (define N "abc")
 
-(is-a? L <list>)             @result{} #t
+(is-a? L <a-list>)           @result{} #t
 (is-a? L <list-of-numbers>)  @result{} #t
-(<list>? L)                  @result{} #t
+(<a-list>? L)                @result{} #t
 (<list-of-numbers>? L)       @result{} #t
 
-(is-a? M <list>)             @result{} #t
+(is-a? M <a-list>)           @result{} #t
 (is-a? M <list-of-numbers>)  @result{} #f
 
-(is-a? N <list>)             @result{} #f
+(is-a? N <a-list>)           @result{} #f
 (is-a? N <list-of-numbers>)  @result{} #f
 @end example
 
@@ -2223,7 +2223,7 @@ specified in a @clause{virtual-fields} clause they can be:
 Identifiers representing the names of the accessor and mutator.  It is
 responsibility of the user code to bind such identifiers to functions or
 syntaxes that can be used to access or mutate the fields.  The
-identifiers are used as follows.
+identifiers are used as follows:
 
 @example
 (@meta{accessor} @meta{instance})
@@ -2275,7 +2275,8 @@ definition:
         (set! (A radians) (* (/ greek-pi 180.0) deg))))
    ))
 
-(<angle> A (<> (greek-pi)))
+(define @{A <angle>@}
+  (<> (greek-pi)))
 (A radians)             @result{} greek-pi
 (A degrees)             @result{} 180.0
 (set! (A degrees) 90.0)
@@ -2330,6 +2331,18 @@ as syntaxes:
 @section Defining classes having methods
 
 
+@menu
+* oopp method methods::         The @clause{methods} clause.
+* oopp method method::          The @clause{method} clause.
+* oopp method method-syntax::   The @clause{method-syntax} clause.
+* oopp method overloading::     Method overloading.
+@end menu
+
+@c page
+@node oopp method methods
+@subsection The @clause{methods} clause
+
+
 @deffn {Auxiliary Syntax} methods @meta{method} @dots{}
 Add methods to the enclosing class, label or mixin definition; the
 methods are applicable only through a syntax use in @oopp{} notation.
@@ -2362,53 +2375,116 @@ argument the type instance which is the subject of the application.
 Here is a usage example of the first form:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <stuff>
   (fields a b)
   (methods sum))
 
-(define/tags (<stuff>-sum @{S <stuff>@})
+(define (<stuff>-sum @{S <stuff>@})
   (+ (S a) (S b)))
 
-(<stuff> S (<> (1 2)))
+(define @{S <stuff>@}
+  (<> (1 2)))
+
 (S sum)                 @result{} 3
 @end example
 
 @noindent
-here is a usage example of the third form with a method function:
+here is a usage example of the second form with a method function:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <stuff>
   (fields a b)
   (methods (sum <stuff>-sum)))
 
-(define/tags (<stuff>-sum @{S <stuff>@})
+(define (<stuff>-sum @{S <stuff>@})
   (+ (S a) (S b)))
 
-(<stuff> S (<> (1 2)))
+(define @{S <stuff>@}
+  (<> (1 2)))
+
 (S sum)                 @result{} 3
 @end example
 
 @noindent
-and here is a usage example of the third form with a method syntax:
+and here is a usage example of the second form with a method syntax:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <stuff>
   (fields a b)
   (methods (sum <stuff>-sum)))
 
-(define-syntax <stuff>-sum
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?instance)
-       #'(let ((@{S <stuff>@} ?instance))
-           (+ (S a) (S b)))))))
+(define-syntax (<stuff>-sum stx)
+  (syntax-case stx ()
+    ((_ ?instance)
+     #'(let ((@{S <stuff>@} ?instance))
+         (+ (S a) (S b))))))
 
-(<stuff> S (<> (1 2)))
+(define @{S <stuff>@}
+  (<> (1 2)))
+
 (S sum)                 @result{} 3
+@end example
+
+@noindent
+here is a usage example of the third form with a method function; the
+return value tag is in the @clause{methods} clause:
+
+@example
+#!vicare
+(import (nausicaa))
+
+(define-class <stuff>
+  (fields @{a <exact-integer>@}
+          @{b <exact-integer>@})
+  (methods (@{sum <exact-integer>@} <stuff>-sum)))
+
+(define (<stuff>-sum @{S <stuff>@})
+  (+ (S a) (S b)))
+
+(define @{S <stuff>@}
+  (<> (1 2)))
+
+(S sum)                 @result{} 3
+((S sum) positive?)     @result{} #t
+@end example
+
+@noindent
+here is a usage example of the third form with a method function; the
+return value tag is in the method's function definition:
+
+@example
+#!vicare
+(import (nausicaa))
+
+(define-class <stuff>
+  (fields @{a <exact-integer>@}
+          @{b <exact-integer>@})
+  (methods (sum <stuff>-sum)))
+
+(define (@{<stuff>-sum <exact-integer>@} @{S <stuff>@})
+  (+ (S a) (S b)))
+
+(define @{S <stuff>@}
+  (<> (1 2)))
+
+(S sum)                 @result{} 3
+((S sum) positive?)     @result{} #t
 @end example
 @end deffn
 
-@c ------------------------------------------------------------
+@c page
+@node oopp method method
+@subsection The @clause{method} clause
+
 
 @deffn {Auxiliary Syntax} method (@meta{method} . @meta{formals}) . @meta{body}
 @deffnx {Auxiliary Syntax} method @meta{method} @meta{expression}
@@ -2492,6 +2568,9 @@ argument: the type instance.
 Here is an example of the first form:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <stuff>
   (fields a b)
   (method (sum @{S <stuff>@})
@@ -2505,6 +2584,9 @@ Here is an example of the first form:
 and an example of the second form:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <stuff>
   (fields a b)
   (method sum
@@ -2516,7 +2598,10 @@ and an example of the second form:
 @end example
 @end deffn
 
-@c ------------------------------------------------------------
+@c page
+@node oopp method method-syntax
+@subsection The @clause{method-syntax} clause
+
 
 @deffn {Auxiliary Syntax} method-syntax @meta{method} @meta{transformer}
 Add a method to the enclosing class, label or mixin definition; the
@@ -2565,6 +2650,9 @@ type instance.
 Here is an example of method syntax:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-class <stuff>
   (fields a b)
   (method-syntax sum
@@ -2579,9 +2667,10 @@ Here is an example of method syntax:
 @end example
 @end deffn
 
-@c ------------------------------------------------------------
+@c page
+@node oopp method overloading
+@subsection Method overloading
 
-@subsubheading Method overloading
 
 There is no support for methods overloading in the @library{nausicaa
 language oopp} library, but we can do it using the facilities of the
@@ -2603,9 +2692,11 @@ language oopp} library, but we can do it using the facilities of the
 (define-method (<alpha>-doit @{o <alpha>@} @{v <integer>@})
   (cons 'int  v))
 
-(<alpha> o (<> (1)))
-(o doit #\a)                    @result{} (char . #\a)
-(o doit 2)                      @result{} (int . 2)
+(define @{O <alpha>@}
+  (<> (1)))
+
+(O doit #\a)                    @result{} (char . #\a)
+(O doit 2)                      @result{} (int . 2)
 @end example
 
 @c page

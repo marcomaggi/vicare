@@ -719,6 +719,47 @@
   #t)
 
 
+(parametrise ((check-test-name	'methods))
+
+  (check	;method with tagged return value
+      (let ()
+	(import (nausicaa))
+	(define-class <stuff>
+	  (fields {a <exact-integer>}
+		  {b <exact-integer>})
+	  (methods ({sum <exact-integer>} <stuff>-sum)))
+
+	(define (<stuff>-sum {S <stuff>})
+	  (+ (S a) (S b)))
+
+	(define {S <stuff>}
+	  (<> (1 2)))
+
+	(values (S sum)
+		((S sum) positive?)))
+    => 3 #t)
+
+  (check	;method with tagged return value in the function
+      (let ()
+	(import (nausicaa))
+	(define-class <stuff>
+	  (fields {a <exact-integer>}
+		  {b <exact-integer>})
+	  (methods (sum <stuff>-sum)))
+
+	(define ({<stuff>-sum <exact-integer>} {S <stuff>})
+	  (+ (S a) (S b)))
+
+	(define {S <stuff>}
+	  (<> (1 2)))
+
+	(values (S sum)
+		((S sum) positive?)))
+    => 3 #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
