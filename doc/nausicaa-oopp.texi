@@ -2741,6 +2741,7 @@ mixin has been imported.
 Getter definition examples:
 
 @example
+#!vicare
 (import (nausicaa))
 
 (define-label <vector>
@@ -2757,9 +2758,12 @@ Getter definition examples:
                     (vector-ref ?var ?row)
                     ?col))))))
 
-(<vector> V '#(1 2 3))
-(<matrix> M '#(#(1 2 3)
-               #(4 5 6)))
+(define @{V <vector>@}
+  '#(1 2 3))
+
+(define @{M <matrix>@}
+  '#(#(1 2 3)
+     #(4 5 6)))
 
 (V[0])                  @result{} 1
 (V[1])                  @result{} 2
@@ -2772,6 +2776,7 @@ Getter definition examples:
 Getter definition examples with nested syntax support:
 
 @example
+#!vicare
 (import (nausicaa))
 
 (define-label <fixnum-vector>
@@ -2783,7 +2788,8 @@ Getter definition examples with nested syntax support:
         #'(<fixnum> #:nested-oopp-syntax
                     (vector-ref ?expr ?index)))))))
 
-(<fixnum-vector> O '#(0 1 2 3))
+(define @{O <fixnum-vector>@}
+  '#(0 1 2 3))
 
 ((O[1]) string)         @result{} "1"
 ((O[1]) odd?)           @result{} #t
@@ -2809,8 +2815,8 @@ Whenever a tagged variable @meta{var} is used as follows (lookout for
 the parentheses):
 
 @example
-(set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
-(set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr})
+(set!/tags (@meta{var} (@metao{key} ...) (@meta{key} ...) ...) @meta{expr})
+(set!/tags @meta{var} (@metao{key} ...) (@meta{key} ...) ... @meta{expr})
 @end example
 
 @noindent
@@ -2818,7 +2824,7 @@ the setter transformer is applied to the syntax object (lookout for the
 parentheses):
 
 @example
-#'(@meta{var} ((@metao{form} ...) (@meta{form} ...) ...) @meta{expr})
+#'(@meta{var} ((@metao{key} ...) (@meta{key} ...) ...) @meta{expr})
 @end example
 
 @noindent
@@ -2831,6 +2837,9 @@ mixin has been imported.
 Setter definition examples:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-label <vector>
   (setter (lambda (stx tag)
             (syntax-case stx ()
@@ -2846,23 +2855,26 @@ Setter definition examples:
                     ?col ?expr))))))
 
 ;;We can mutate only dynamically built objects.
-(<vector> V (vector 1 2 3))
-(<matrix> M (vector (vector 1 2 3)
-                    (vector 4 5 6)))
+(define @{V <vector>@}
+  (vector 1 2 3))
 
-(set!/tags V[1] 77)
-(set!/tags (V[2]) 99)
+(define @{M <matrix>@}
+  (vector (vector 1 2 3)
+          (vector 4 5 6)))
+
+(set! V[1] 77)
+(set! (V[2]) 99)
 V               @result{} #(1 77 99)
 
-(set!/tags M[0][2] 77)
-(set!/tags (M[1][1]) 99)
+(set! M[0][2] 77)
+(set! (M[1][1]) 99)
 M               @result{} #(#(1 2 77) #(4 99 6))
 @end example
 @end deffn
 
 
 @deffn Syntax set!/tags @meta{id} @meta{val}
-@deffnx Syntax set!/tags (@meta{var} @meta{field-name} @meta{arg} ...) @meta{val}
+@deffnx Syntax set!/tags (@meta{var} @meta{field-name}) @meta{val}
 @deffnx Syntax set!/tags (@meta{var} (@metao{form} ...) (@meta{form} ...) ...) @meta{expr}
 @deffnx Syntax set!/tags @meta{var} (@metao{form} ...) (@meta{form} ...) ... @meta{expr}
 A syntax that generalises @func{set!} as defined by @rnrs{6} to support
@@ -2874,15 +2886,16 @@ In the first form, in which @meta{id} is an identifier and @meta{val}
 and expression, it is equivalent to @func{set!} as defined by @rnrs{6}.
 
 @item
-In the second form, in which @meta{var} is a tagged variable, the
-mutator of the field @meta{field-name} is applied to the given arguments
-as documented in the @oopp{} syntax definition, @ref{oopp notation}.
+In the second form, in which @meta{var} is a tagged variable or
+expression, the mutator of the field @meta{field-name} is applied to the
+given arguments as documented in the @oopp{} syntax definition,
+@ref{oopp notation}.
 
 @item
-In the third and fourth forms, in which @meta{var} is a tagged variable,
-the setter transformer for @meta{var} is applied to the form as
-documented in the @oopp{} syntax definition, @ref{oopp notation}, and the
-setter clause.
+In the third and fourth forms, in which @meta{var} is a tagged variable
+or expression, the setter transformer for @meta{var} is applied to the
+form as documented in the @oopp{} syntax definition, @ref{oopp
+notation}, and the setter clause.
 @end itemize
 @end deffn
 
