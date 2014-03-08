@@ -2007,6 +2007,11 @@ an exception.
 Example:
 
 @example
+#!vicare
+(import (nausicaa))
+
+(define-auxiliary-syntaxes rec pol)
+
 (define-class <rect-coords>
   (fields x y)
   (maker (lambda (stx)
@@ -2019,12 +2024,13 @@ Example:
              ((_ (rec ?x ?y))
               #'(make-<rect-coords> ?x ?y))))))
 
-(<rect-coords> R (<> (rec 1.0 2.0)))
+(define @{R <rect-coords>@}
+  (<> (rec 1.0 2.0)))
 (R x)                   @result{} 1.0
 (R y)                   @result{} 2.0
 
-
-(<rect-coords> Q (<> (pol 1.0 2.0)))
+(define @{Q <rect-coords>@}
+  (<> (pol 1.0 2.0)))
 (R x)                   @result{} -0.4161468365471424
 (R y)                   @result{} +0.9092974268256817
 @end example
@@ -2053,7 +2059,7 @@ for instances of the class type.
 
 
 Predicate clauses allow the definition of custom predicates for labeled
-values; they cannot be used in the definition of class types.
+values; they @strong{cannot} be used in the definition of class types.
 
 
 @deffn {Auxiliary Syntax} predicate @meta{expression}
@@ -2070,13 +2076,16 @@ function.
 Usage example:
 
 @example
-(define-label <pair>
+#!vicare
+(import (nausicaa))
+
+(define-label <a-pair>
   (predicate pair?)
   (virtual-fields (immutable car car)
                   (immutable cdr cdr)))
 
-(is-a? '(1 . 2) <pair>)         @result{} #t
-(is-a? 123      <pair>)         @result{} #f
+(is-a? '(1 . 2) <a-pair>)       @result{} #t
+(is-a? 123      <a-pair>)       @result{} #f
 @end example
 
 Custom predicates of sublabels are composed with the custom predicates
@@ -2084,6 +2093,9 @@ of their superlabels, with the predicate of the superlabel applied
 first; example:
 
 @example
+#!vicare
+(import (nausicaa))
+
 (define-label <list>
   (predicate list?)
   (virtual-fields (immutable car car)
