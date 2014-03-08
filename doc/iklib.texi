@@ -1600,13 +1600,9 @@ the syntax evaluates to a slot mutator function.
 @subsection The @func{try}, @func{catch}, @func{finally} syntaxes
 
 
-@cindex Library @library{vicare language-extensions try}
-@cindex @library{vicare language-extensions try}, library
-
-
-The following bindings are exported by the library @library{vicare
-language-extensions try} and are candidates to be included in the boot
-image.
+The syntax @func{try} can be used to handle raised exceptions in
+addition to the @rnrs{6}--defined syntaxes @func{with-exception-handler}
+and @func{guard}.
 
 
 @deffn Syntax try @meta{body} (catch @meta{var} @metao{catch-clause} @meta{catch-clause} @dots{})
@@ -1618,8 +1614,7 @@ This syntax is a wrapper for @func{guard} from @rsixlibrary{exceptions}.
 Every @meta{catch-clause} has one of the forms:
 
 @example
-(@meta{tag} @metao{tag-body} @meta{tag-body} @dots{})
-((@meta{tag}) @metao{tag-body} @meta{tag-body} @dots{})
+((@metao{tag} @meta{tag} ...) @metao{tag-body} @meta{tag-body} @dots{})
 (else @metao{else-body} @meta{else-body} @dots{})
 @end example
 
@@ -1632,7 +1627,9 @@ clause, it will expand to:
 
 @example
 (guard (@meta{var}
-          ((record-type-and-record? @meta{tag} @meta{var})
+          ((or (is-a? @meta{var} @metao{tag})
+               (is-a? @meta{var} @meta{tag})
+               ...)
            @metao{tag-body}
            @meta{tag-body}
            ...)
@@ -1645,7 +1642,9 @@ and with the @clause{else} clause:
 
 @example
 (guard (@meta{var}
-          ((record-type-and-record? @meta{tag} @meta{var})
+          ((or (is-a? @meta{var} @metao{tag})
+               (is-a? @meta{var} @meta{tag})
+               ...)
            @metao{tag-body}
            @meta{tag-body}
            ...)
@@ -1671,6 +1670,45 @@ Compensation stacks}):
   (guard ---))
 @end example
 @end deffn
+
+
+Some usage examples without the @clause{finally} clause:
+
+@example
+(import (vicare))
+
+(define-condition-type &this
+    &error
+  make-this-condition
+  condition-this?
+  (a condition-this.a)
+  (b condition-this.b)
+  (c condition-this.c))
+
+(define (doit thunk)
+  (try
+      (thunk)
+    (catch E
+      ((&this)
+       (list (condition-this.a E)
+             (condition-this.b E)
+             (condition-this.c E)))
+      ((&message)
+       (condition-message E))
+      (else E))))
+
+(doit (lambda ()
+        (raise (make-this-condition 1 2 3))))
+@result{} (1 2 3)
+
+(doit (lambda ()
+        (raise (make-message-condition "ciao"))))
+@result{} "ciao"
+
+(doit (lambda ()
+        (raise 123)))
+@result{} 123
+@end example
 
 @c page
 @node iklib syntaxes splice1st

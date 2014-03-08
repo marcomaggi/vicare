@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (vicare)
+(import (except (vicare) catch)
   (prefix (vicare platform words) words.)
   (vicare unsafe operations)
   (vicare checks))

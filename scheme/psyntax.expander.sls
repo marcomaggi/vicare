@@ -6234,6 +6234,7 @@
       ((define-returnable)		define-returnable-macro)
       ((lambda-returnable)		lambda-returnable-macro)
       ((begin-returnable)		begin-returnable-macro)
+      ((try)				try-macro)
 
       ((parameterize)			parameterize-macro)
       ((parametrise)			parameterize-macro)
@@ -6266,7 +6267,8 @@
 	    else unquote unquote-splicing
 	    unsyntax unsyntax-splicing
 	    fields mutable immutable parent protocol
-	    sealed opaque nongenerative parent-rtd)
+	    sealed opaque nongenerative parent-rtd
+	    catch finally)
        (lambda (expr-stx)
 	 (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 
@@ -8913,6 +8915,66 @@
 					   (escape . ?args)))))
 	       ,?body0 . ,?body*)))))
     ))
+
+
+;;;; module non-core-macro-transformer: TRY
+
+(module (try-macro)
+  (define-constant __who__ 'try)
+
+  (define (try-macro expr-stx)
+    ;;Transformer  function  used  to  expand Vicare's  TRY  ...   CATCH
+    ;;...  FINALLY  macros  from  the top-level  built  in  environment.
+    ;;Expand the contents of EXPR-STX;  return a syntax object that must
+    ;;be further expanded.
+    ;;
+    (syntax-match expr-stx (catch finally)
+      ;;Full syntax.
+      ((_ ?body (catch ?var ?catch-clause0 ?catch-clause* ...) (finally ?finally-body0 ?finally-body* ...))
+       (begin
+	 (validate-variable expr-stx ?var)
+	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*))))
+	   (bless
+	    `(with-compensations
+	       (push-compensation ,?finally-body0 . ,?finally-body*)
+	       (guard (,?var . ,GUARD-CLAUSE*) ,?body))))))
+
+      ;;Only catch, no finally.
+      ((_ ?body (catch ?var ?catch-clause0 ?catch-clause* ...))
+       (begin
+	 (validate-variable expr-stx ?var)
+	 (let ((GUARD-CLAUSE* (parse-multiple-catch-clauses expr-stx ?var (cons ?catch-clause0 ?catch-clause*))))
+	   (bless
+	    `(guard (,?var . ,GUARD-CLAUSE*) ,?body)))))))
+
+  (define (parse-multiple-catch-clauses expr-stx var-id clauses-stx)
+    (syntax-match clauses-stx (else)
+      ;;Match when  there is no  ELSE clause.  Remember that  GUARD will
+      ;;reraise the exception when there is no ELSE clause.
+      (()
+       '())
+      ;;This branch  with the ELSE  clause must come first!!!   The ELSE
+      ;;clause is valid only if it is the last.
+      (((else ?else-body0 ?else-body ...))
+       clauses-stx)
+      ((((?tag0 ?tag* ...) ?tag-body0 ?tag-body* ...) . ?other-clauses)
+       (all-identifiers? (cons ?tag0 ?tag*))
+       (cons `((or (is-a? ,var-id ,?tag0)
+		   . ,(map (lambda (tag-id)
+			     `(is-a? ,var-id ,tag-id))
+			?tag*))
+	       ,?tag-body0 . ,?tag-body*)
+	     (parse-multiple-catch-clauses expr-stx var-id ?other-clauses)))
+      ((?clause . ?other-clauses)
+       (syntax-violation __who__
+	 "invalid catch clause in try syntax" expr-stx ?clause))))
+
+  (define (validate-variable expr-stx var-id)
+    (unless (identifier? var-id)
+      (syntax-violation __who__
+	"expected identifier as variable" expr-stx var-id)))
+
+  #| end of module |# )
 
 
 ;;;; module non-core-macro-transformer: OR, AND

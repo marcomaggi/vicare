@@ -1786,6 +1786,7 @@
 
   (import (for (except (vicare (0 4))
 		       define-condition-type
+		       try finally catch
 		       is-a? slot-ref slot-set!
 
 		       ;; redefined from (rnrs conditions (6))

@@ -57,7 +57,6 @@
 
 #!vicare
 (import (vicare)
-  (vicare language-extensions try)
   (vicare language-extensions callables)
   (vicare checks))
 
@@ -3607,11 +3606,11 @@
       (try
 	  (thunk)
 	(catch E
-	  (&this
+	  ((&this)
 	   (list (condition-this.a E)
 		 (condition-this.b E)
 		 (condition-this.c E)))
-	  (&message
+	  ((&message)
 	   (condition-message E))
 	  (else E))))
 
@@ -3660,11 +3659,11 @@
       (try
 	  (thunk)
 	(catch T
-	  (&that
+	  ((&that)
 	   (list (condition-that.a T)
 		 (condition-that.b T)
 		 (condition-that.c T)))
-	  (&message
+	  ((&message)
 	   (condition-message T))
 	  (else T))))
 
@@ -3702,11 +3701,11 @@
 	(try
 	    (thunk)
 	  (catch E
-	    (&those
+	    ((&those)
 	     (list (condition-those.a E)
 		   (condition-those.b E)
 		   (condition-those.c E)))
-	    (&message
+	    ((&message)
 	     (condition-message E))))))
 
     (check
@@ -3734,8 +3733,8 @@
 	(try
 	    (set! a (+ a 10))
 	  (catch E
-	    (&error	E)
-	    (&warning	E)
+	    ((&error)	E)
+	    ((&warning)	E)
 	    (else	E))
 	  (finally
 	   (set! a (+ a 100))))
@@ -3747,8 +3746,8 @@
 	(try
 	    (raise (make-warning))
 	  (catch E
-	    (&error	E)
-	    (&warning	(set! a (+ a 10)))
+	    ((&error)	E)
+	    ((&warning)	(set! a (+ a 10)))
 	    (else	E))
 	  (finally
 	   (set! a (+ a 100))))

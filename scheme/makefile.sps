@@ -476,6 +476,10 @@
      (lambda-returnable				(macro . lambda-returnable))
      (begin-returnable				(macro . begin-returnable))
 ;;;
+     (try					(macro . try))
+     (catch					(macro . catch))
+     (finally					(macro . finally))
+;;;
      (with-compensations			(macro . with-compensations))
      (with-compensations/on-error		(macro . with-compensations/on-error))
      (compensate				(macro . compensate))
@@ -2357,6 +2361,9 @@
     (define-returnable				v $language)
     (lambda-returnable				v $language)
     (begin-returnable				v $language)
+    (try					v $language)
+    (catch					v $language)
+    (finally					v $language)
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)

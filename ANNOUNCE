@@ -445,6 +445,9 @@ Lots of backwards incompatibilities... life is hard!
      {1 2 3}		-> (brace 1 2 3)
      {1 . 2}		-> (brace 1 . 2)
 
+* The library (vicare) now exports the TRY syntax; see the documentation
+  node "iklib syntaxes try".
+
 
 Notes for revision 0.3d7
 ------------------------

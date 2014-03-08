@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (vicare)
+(import (except (vicare) catch)
   (vicare system $compnums)
   (vicare system $numerics)
   (vicare checks))

@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (vicare)
+(import (except (vicare) catch)
   (vicare checks)
   (vicare language-extensions syntaxes)
   (prefix (vicare platform words)

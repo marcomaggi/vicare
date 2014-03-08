@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (vicare)
+(import (except (vicare) catch)
   (vicare language-extensions syntaxes)
   (vicare system $structs)
   (libtest records-lib)

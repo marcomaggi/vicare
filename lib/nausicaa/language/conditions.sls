@@ -98,6 +98,7 @@
     raise-unimplemented-error)
   (import (except (vicare)
 		  define-condition-type
+		  try finally catch
 
 		  ;; (rnrs conditions (6))
 		  &condition

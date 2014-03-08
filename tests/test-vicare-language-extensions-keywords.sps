@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (vicare)
+(import (except (vicare) catch)
   (vicare language-extensions keywords)
   (vicare checks))
 

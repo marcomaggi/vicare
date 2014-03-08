@@ -26,7 +26,7 @@
 
 
 #!r6rs
-(import (rename (vicare)
+(import (rename (except (vicare) catch)
 		(make-record-type-descriptor make-record-type-descriptor*)
 		(make-record-constructor-descriptor make-record-constructor-descriptor*))
   (vicare language-extensions syntaxes)

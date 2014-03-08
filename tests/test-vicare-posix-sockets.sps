@@ -26,7 +26,7 @@
 
 
 #!vicare
-(import (vicare)
+(import (except (vicare) catch)
   (prefix (vicare posix) px.)
   (vicare platform constants)
   (vicare checks))
