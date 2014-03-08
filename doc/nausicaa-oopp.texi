@@ -3257,7 +3257,7 @@ condition object type and a corresponding label:
   ((&my-warning) E)             @result{} #t
   (is-a? E &my-warning))        @result{} #t
 
-(let/tags ((@{E &warning-with-fields@} (&warning-with-fields (1 2))))
+(let ((@{E &warning-with-fields@} (&warning-with-fields (1 2))))
   (warning-with-fields? E)              @result{} #t
   ((&warning-with-fields) E)            @result{} #t
   (is-a? E &warning-with-fields)        @result{} #t
