@@ -38,6 +38,7 @@
     $symbol->string
 
     ;; ???
+    unbound-object unbound-object?
     top-level-value top-level-bound? set-top-level-value!
     symbol-value symbol-bound? set-symbol-value!
     reset-symbol-proc! system-value system-value-gensym)
@@ -58,6 +59,7 @@
 
 		  ;; ???
 		  top-level-value top-level-bound? set-top-level-value!
+		  unbound-object unbound-object?
 		  symbol-value symbol-bound? set-symbol-value!
 		  reset-symbol-proc! system-value
 
@@ -144,6 +146,12 @@
 	(procedure-argument-violation 'print-gensym "not in #t|#f|pretty" x)))))
 
 
+(define (unbound-object? x)
+  ($unbound-object? x))
+
+(define (unbound-object)
+  (foreign-call "ikrt_unbound_object"))
+
 (define* (top-level-value (x symbol?))
   (receive-and-return (v)
       ($symbol-value x)

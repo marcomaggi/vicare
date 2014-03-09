@@ -695,6 +695,7 @@
     (machine-word->integer			v $language)
     (make-list					v $language)
     (last-pair					v $language)
+    (bwp-object					v $language)
     (bwp-object?				v $language)
     (weak-cons					v $language)
     (weak-pair?					v $language)
@@ -2313,6 +2314,8 @@
     (symbol-value				v $language $boot)
     (system-value				v $language)
     (set-symbol-value!				v $language $boot)
+    (unbound-object				v $language)
+    (unbound-object?				v $language)
     (eval-core					$boot)
     (current-core-eval				v $language) ;;; temp
     (pretty-print				v $language $boot)

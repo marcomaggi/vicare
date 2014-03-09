@@ -12236,7 +12236,9 @@
 	(boolean?		x)
 	(bytevector?		x)
 	(keyword?		x)
-	(would-block-object?	x)))
+	(would-block-object?	x)
+	(unbound-object?	x)
+	(bwp-object?		x)))
 
   #| end of module: EXPR-SYNTAX-TYPE |# )
 

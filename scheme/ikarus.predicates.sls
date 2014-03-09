@@ -31,7 +31,7 @@
     boolean=?		symbol=?
     immediate?		code?
     transcoder?		weak-pair?
-    not)
+    not			bwp-object)
   (import
     (except (vicare)
 	    fixnum?		flonum?		bignum?
@@ -49,7 +49,7 @@
 	    boolean=?		symbol=?
             immediate?		code?
             transcoder?		weak-pair?
-	    not)
+	    not			bwp-object)
     (vicare system $fx)
     (vicare system $flonums)
     (vicare system $compnums)
@@ -282,6 +282,9 @@
 
 (define (not x)
   (if x #f #t))
+
+(define (bwp-object)
+  (foreign-call "ikrt_bwp_object"))
 
 
 (define (eq? x y)

@@ -2798,6 +2798,12 @@ End--of--file marker, @code{#!eof}.
 Would--block object, @code{#!would-block}.
 
 @item
+Unbound object, @code{#!unbound}.
+
+@item
+@acronym{BWP} object, @code{#!bwp}.
+
+@item
 Gensym syntax, @code{#@{gensym@}}.
 
 @item
@@ -6474,10 +6480,15 @@ Return true if @var{obj} is a weak pair.
 @end defun
 
 
-@defun bwp-obejct? @var{obj}
+@defun bwp-object
+Return the @acronym{BWP} object.  @acronym{BWP} stands for ``broken weak
+pointer''.
+@end defun
+
+
+@defun bwp-object? @var{obj}
 Return true if @var{obj} is a weak reference to a value which has been
-already garbage collected (@samp{bwp} stands for ``broken weak
-pointer'').  Example:
+already garbage collected.  Example:
 
 @example
 vicare> (define x (weak-cons (cons 1 2) #f))
@@ -7316,6 +7327,16 @@ Return the value in the @code{value} field of the symbol @var{sym}.
 Return true if @var{sym} is a symbol and its @code{value} field is
 @strong{not} set to the built--in @samp{#<unbound-object>} machine word
 value.
+@end defun
+
+
+@defun unbound-object
+Return the unbound object.
+@end defun
+
+
+@defun unbound-object? @var{obj}
+Return @true{} if @var{obj} is the unbound object.
 @end defun
 
 @c page

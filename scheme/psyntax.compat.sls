@@ -35,6 +35,7 @@
     make-parameter			parametrise
     symbol-value			set-symbol-value!
     keyword?				would-block-object?
+    unbound-object?			bwp-object?
     bignum?				gensym
     vector-append			vector-exists
     add1				sub1
@@ -108,7 +109,10 @@
     $fx= $fx< $fx> $fx<= $fx>= $fxadd1
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-ref $vector-set! $vector-length)
-  (import (vicare)
+  (import (except (vicare)
+		  ;;FIXME To be removed at the next boot image rotation.
+		  ;;(Marco Maggi; Sun Mar 9, 2014)
+		  unbound-object? bwp-object?)
     (only (ikarus.compiler)
 	  eval-core)
     (prefix (rename (only (vicare options)
@@ -122,6 +126,14 @@
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))
 	    option.)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    (only (ikarus.symbols)
+	  unbound-object?)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    (only (ikarus predicates)
+	  bwp-object?)
     (ikarus library-utils)
     (only (ikarus.posix)
 	  ;;This is used by INCLUDE to register the modification time of

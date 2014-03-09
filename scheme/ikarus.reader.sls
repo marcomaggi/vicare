@@ -40,9 +40,21 @@
 		  annotation-expression		annotation-stripped
 		  annotation-source		annotation-textual-position
 
+		  ;;FIXME To be removed at the next boot image rotation.
+		  ;;(Marco Maggi; Sun Mar 9, 2014)
+		  unbound-object bwp-object
+
 		  ;; internal functions only for Vicare
 		  read-source-file		read-script-source-file
 		  read-library-source-file	read-library-source-port)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    (only (ikarus.symbols)
+	  unbound-object)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    (only (ikarus predicates)
+	  bwp-object)
     (only (vicare.foreign-libraries)
 	  register-filename-foreign-library
 	  autoload-filename-foreign-library)
@@ -1129,6 +1141,14 @@
 		  (if (port-in-r6rs-mode? port)
 		      (%error-1 "invalid syntax" "#!would-block")
 		    `(datum . ,(would-block-object))))
+		 ((unbound)
+		  (if (port-in-r6rs-mode? port)
+		      (%error-1 "invalid syntax" "#!unbound")
+		    `(datum . ,(unbound-object))))
+		 ((bwp)
+		  (if (port-in-r6rs-mode? port)
+		      (%error-1 "invalid syntax" "#!bwp")
+		    `(datum . ,(bwp-object))))
 		 (else
 		  ;;If not  recognised, just handle it as  a comment and
 		  ;;read the next datum.

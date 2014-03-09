@@ -24,11 +24,23 @@
     debug-print-enabled?
     debug-print			debug-print*)
   (import (except (vicare)
-		  pretty-print		pretty-print*
+		  ;;FIXME To be removed at the next boot image rotation.
+		  ;;(Marco Maggi; Sun Mar 9, 2014)
+		  unbound-object?		bwp-object?
+
+		  pretty-print			pretty-print*
 		  pretty-width
 
 		  debug-print-enabled?
 		  debug-print			debug-print*)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    (only (ikarus.symbols)
+	  unbound-object?)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    (only (ikarus predicates)
+	  bwp-object?)
     (only (ikarus writer)
 	  traverse
 	  traversal-helpers)
@@ -354,7 +366,9 @@
      ;;Right now the would block object is a struct instance, so we have
      ;;to check for  it before checking for structs.   (Marco Maggi; Mon
      ;;May 13, 2013)
-     ((would-block-object? x) (format "~s" x))
+     ((would-block-object? x)	"#<would-block-object>")
+     ((bwp-object? x)		"#<bwp-object>")
+     ((unbound-object? x)	"#<unbound-object>")
      ((struct? x)        (boxify-shared x boxify-struct))
 ;;;((setbox? x)
 ;;; (let ((i (format "#~a=" (setbox-idx x)))
