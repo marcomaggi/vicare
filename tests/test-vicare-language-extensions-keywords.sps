@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -78,16 +78,6 @@
       (let ((K (symbol->keyword 'ciao)))
 	(keyword=? K K))
     => #t)
-
-  (check
-      (keyword=? (symbol->keyword 'ciao)
-		 'ciao)
-    => #f)
-
-  (check
-      (keyword=? 'ciao
-		 (symbol->keyword 'ciao))
-    => #f)
 
 ;;; --------------------------------------------------------------------
 ;;; EQ? comparison

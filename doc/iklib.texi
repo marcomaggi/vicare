@@ -6428,9 +6428,10 @@ Return @true{} if @var{obj} is a keyword object, else return @false{}.
 
 
 @defun keyword=? @vari{keyword} @varii{keyword}
-Return @true{} if both @vari{keyword} and @varii{keyword} are keyword
-objects and they are equal.  A keyword object is equal to itself; two
-distinct keyword objects are equal if they have the same symbol.
+The arguments @vari{keyword} and @varii{keyword} must be keyword
+objects, otherwise an exception is raised.  Return @true{} if the
+arguments are equal.  A keyword object is equal to itself; two distinct
+keyword objects are equal if they have the same symbol.
 @end defun
 
 

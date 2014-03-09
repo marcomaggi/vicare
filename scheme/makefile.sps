@@ -620,6 +620,9 @@
     ($rat		(vicare system $ratnums)		#f	#t)
     ($comp		(vicare system $compnums)		#f	#t)
     ($symbols		(vicare system $symbols)		#f	#t)
+    ;;FIXME To be made required at the next boot image rotation.  (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    ($keywords		(vicare system $keywords)		#f	#f)
     ($structs		(vicare system $structs)		#f	#t)
     ($pointers		(vicare system $pointers)		#f	#t)
     ($codes		(vicare system $codes)			#f	#t)
@@ -1152,6 +1155,11 @@
     ($symbol-table-size				$symbols)
     ($log-symbol-table-status			$symbols)
     (system-value-gensym			$symbols)
+;;;
+    ($symbol->keyword				$keywords)
+    ($keyword->symbol				$keywords)
+    ($keyword-hash				$keywords)
+    ($keyword=?					$keywords)
 ;;;
     (base-rtd					$structs)
     ($struct-set!				$structs)

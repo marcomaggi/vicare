@@ -12,6 +12,7 @@ public interface exported by @library{vicare} and @library{rnrs}.
 
 @menu
 * syslib symbols::              Low level symbol operations.
+* syslib keywords::             Low level keyword operations.
 * syslib fixnums::              Low level fixnum operations.
 * syslib bignums::              Low level bignum operations.
 * syslib flonums::              Low level flonum operations.
@@ -173,6 +174,39 @@ Vicare internal symbol table status:
 vicare>
 @end example
 @end defun
+
+@c page
+@node syslib keywords
+@section Low level keyword operations
+
+
+@cindex @library{vicare system $keywords}, library
+@cindex Library @library{vicare system $keywords}
+
+
+The arguments @var{key} must be references to keyword objects, the
+arguments @var{symb} must be references to symbol objects.  The
+following bindings are exported by the library @library{vicare system
+$keywords}.
+
+
+@deffn {Unsafe Operation} $symbol->keyword @var{sym}
+@deffnx {Unsafe Operation} $keyword->symbol @var{key}
+Convert between a symbol and a keyword.
+@end deffn
+
+
+@deffn {Unsafe Operation} $keyword=? @vari{key} @varii{key}
+Return @true{} if the arguments are equal.  A keyword object is equal to
+itself; two distinct keyword objects are equal if they have the same
+symbol.
+@end deffn
+
+
+@deffn {Unsafe Operation} $keyword-hash @var{keyword}
+Return an exact integer suitable to be used as hash value for
+@var{keyword} used as key for hashtables.
+@end deffn
 
 @c page
 @node syslib fixnums

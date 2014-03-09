@@ -417,6 +417,16 @@
 
 ;;; --------------------------------------------------------------------
 
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    ;;
+    ;; $symbol->keyword
+    ;; $keyword->symbol
+    ;; $keyword-hash
+    ;; $keyword=?
+
+;;; --------------------------------------------------------------------
+
     $pointer?
     $pointer=
 
@@ -439,6 +449,10 @@
 
     #| end of export |# )
   (import (vicare)
+    (vicare system $symbols)
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    #;(vicare system $keywords)
     (vicare system $structs)
     (except (vicare system $fx)
 	    $fxmax

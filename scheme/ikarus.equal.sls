@@ -38,7 +38,14 @@
   (export equal?)
   (import (except (vicare)
 		  equal?)
-    (vicare system $pointers))
+    (vicare system $pointers)
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    #;(vicare system $keywords)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    (only (ikarus.keywords)
+	  $keyword=?))
 
   (module UNSAFE
     (< <= > >= = + - vector-ref vector-length car cdr)
@@ -124,7 +131,7 @@
 	      k))
 	((keyword? x)
 	 (and (keyword? y)
-	      (keyword=? x y)
+	      ($keyword=? x y)
 	      k))
 	(else	;chars, numbers, booleans, other non-compound value
 	 (and (eqv? x y) k))))
