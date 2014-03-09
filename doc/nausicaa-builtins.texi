@@ -195,19 +195,13 @@ must be a symbol or string.
 
 @c ------------------------------------------------------------
 
-@subsubheading Safe accessors
+@subsubheading Safe and unsafe accessors
 
 
 @deftypecv {Immutable virtual field} @aclass{keyword} @aclass{symbol} symbol
+@deftypecvx {Immutable virtual field} @aclass{keyword} @aclass{symbol} $symbol
 Accessing this field is like applying @func{keyword->symbol} to the
 instance.
-@end deftypecv
-
-
-@deftypecv {Immutable virtual field} @aclass{keyword} @aclass{string} string
-Return a the string representing the name of the symbol embedded in the
-keyword object.  Mutating the returned string leads to undefined
-behaviour.
 @end deftypecv
 
 @c ------------------------------------------------------------

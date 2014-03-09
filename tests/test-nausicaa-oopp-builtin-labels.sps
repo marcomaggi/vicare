@@ -113,12 +113,12 @@
 
   (check
       (let (({o <keyword>} #:ciao))
-        (o string))
+        ((o symbol) string))
     => "ciao")
 
   (check
       (let (({o <keyword>} #:ciao))
-        ((o string) length))
+        (((o symbol) string) length))
     => 4)
 
   (check

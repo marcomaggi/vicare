@@ -83,6 +83,7 @@
 	  $string->symbol
 	  $set-symbol-value!
 	  $unbound-object?)
+    (vicare system $keywords)
     (vicare unsafe operations)
     (vicare language-extensions sentinels)
     (vicare containers bytevectors)
@@ -132,17 +133,15 @@
    (lambda ()
      (lambda/tags ({_ <keyword>} arg)
        (cond ((symbol? arg)
-	      (symbol->keyword arg))
+	      ($symbol->keyword arg))
 	     ((string? arg)
-	      (symbol->keyword (string->symbol arg)))
+	      ($symbol->keyword ($string->symbol arg)))
 	     (else
 	      (assertion-violation '<keyword>
 		"expected symbol or string as constructor argument" arg))))))
   (virtual-fields
-   (immutable (brace string <string>)
-	      (lambda/tags ((brace K <keyword>))
-		((K symbol) string)))
-   (immutable (brace symbol <symbol>) keyword->symbol)))
+   (immutable (brace symbol	<symbol>)	keyword->symbol)
+   (immutable (brace $symbol	<symbol>)	$keyword->symbol)))
 
 (define-builtin-label <pointer>
   (predicate pointer?)
