@@ -165,7 +165,7 @@
       ($symbol-value x)
     (when ($unbound-object? obj)
       (procedure-argument-violation __who__
-	"expected bound symbol as argument" obj))))
+	"expected bound symbol as argument" x obj))))
 
 (define* (symbol-bound? (x symbol?))
   (not ($unbound-object? ($symbol-value x))))
