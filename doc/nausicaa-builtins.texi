@@ -147,28 +147,26 @@ Conventional type for objects satisfying @func{symbol?}.
 @end deftp
 
 
-@deftypeop {Common constructor} @aclass{symbol} @aclass{symbol} constructor @var{string}
+@deftypeop {Common constructor} @aclass{symbol} @aclass{symbol} constructor @var{STRING}
 Return the result of applying @func{string->symbol} to @var{string}.
 @end deftypeop
 
 @c ------------------------------------------------------------
 
-@subsubheading Safe accessors
+@subsubheading Safe and unsafe accessors
 
 
 @deftypecv {Immutable virtual field} @aclass{symbol} @aclass{string} string
+@deftypecvx {Immutable virtual field} @aclass{symbol} @aclass{string} $string
 Accessing this field is like applying @func{symbol->string} to the
 instance.
 @end deftypecv
 
-@c ------------------------------------------------------------
 
-@subsubheading Methods
-
-
-@defmethod @aclass{symbol} hash
-Return an integer usable as hash value of the instance.
-@end defmethod
+@deftypecv {Immutable virtual field} @aclass{symbol} @aclass{fixnum} hash
+@deftypecvx {Immutable virtual field} @aclass{symbol} @aclass{fixnum} $hash
+Return a fixnum usable as hash value of the instance.
+@end deftypecv
 
 @c ------------------------------------------------------------
 

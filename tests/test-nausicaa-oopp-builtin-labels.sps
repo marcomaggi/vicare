@@ -48,6 +48,8 @@
 
 (parametrise ((check-test-name	'symbols))
 
+;;; predicate
+
   (check
       (is-a? 'ciao <symbol>)
     => #t)
@@ -55,6 +57,20 @@
   (check
       (is-a? 123 <symbol>)
     => #f)
+
+;;; --------------------------------------------------------------------
+;;; constructor
+
+  (check
+      (<symbol> ("ciao"))
+    => 'ciao)
+
+  (check
+      ((<symbol> ("ciao")) string)
+    => "ciao")
+
+;;; --------------------------------------------------------------------
+;;; fields and methods
 
   (check
       (let (({o <symbol>} 'ciao))
@@ -67,10 +83,11 @@
     => 4)
 
 ;;; --------------------------------------------------------------------
+;;; fields and methods
 
   (check
       (let (({S <symbol>} 'ciao))
-	(integer? (S hash)))
+	(fixnum? (S hash)))
     => #t)
 
   #t)

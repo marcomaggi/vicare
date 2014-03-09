@@ -79,6 +79,8 @@
   (import (vicare (0 4))
     (only (vicare system $symbols)
 	  $symbol-value
+	  $symbol->string
+	  $string->symbol
 	  $set-symbol-value!
 	  $unbound-object?)
     (vicare unsafe operations)
@@ -112,25 +114,30 @@
   (predicate boolean?))
 
 (define-builtin-label <symbol>
+  (protocol
+   (lambda ()
+     (lambda/tags ({_ <symbol>} {S <string>})
+       ($string->symbol S))))
   (predicate symbol?)
   (virtual-fields
-   (immutable (brace string <string>) symbol->string))
-  (method-syntax (brace hash <fixnum>)
-    (syntax-rules ()
-      ((_ ?o)
-       (symbol-hash ?o)))))
+   (immutable (brace string	<string>) symbol->string)
+   (immutable (brace $string	<string>) $symbol->string)
+   (immutable (brace hash	<fixnum>) symbol-hash)
+   (immutable (brace $hash	<fixnum>) $symbol-hash))
+  #| end of label |# )
 
 (define-builtin-label <keyword>
   (predicate keyword?)
-  (protocol (lambda ()
-	      (lambda (arg)
-		(cond ((symbol? arg)
-		       (symbol->keyword arg))
-		      ((string? arg)
-		       (symbol->keyword (string->symbol arg)))
-		      (else
-		       (assertion-violation '<keyword>
-			 "expected symbol or string as constructor argument" arg))))))
+  (protocol
+   (lambda ()
+     (lambda/tags ({_ <keyword>} arg)
+       (cond ((symbol? arg)
+	      (symbol->keyword arg))
+	     ((string? arg)
+	      (symbol->keyword (string->symbol arg)))
+	     (else
+	      (assertion-violation '<keyword>
+		"expected symbol or string as constructor argument" arg))))))
   (virtual-fields
    (immutable (brace string <string>)
 	      (lambda/tags ((brace K <keyword>))
