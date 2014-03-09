@@ -82,7 +82,11 @@
 	  $symbol->string
 	  $string->symbol
 	  $set-symbol-value!
-	  $unbound-object?)
+	  $unbound-object?
+	  $putprop
+	  $getprop
+	  $remprop
+	  $property-list)
     (vicare system $keywords)
     (vicare unsafe operations)
     (vicare language-extensions sentinels)
@@ -132,6 +136,14 @@
    (mutable   (brace value	<top>)		symbol-value set-symbol-value!)
    (mutable   (brace $value	<top>)		$symbol-value $set-symbol-value!)
    #| end of virtual-fields |# )
+  (method (putprop {S <symbol>} {K <symbol>} V)
+    ($putprop S K V))
+  (method (getprop {S <symbol>} {K <symbol>})
+    ($getprop S K))
+  (method (remprop {S <symbol>} {K <symbol>})
+    ($remprop S K))
+  (method (property-list {S <symbol>})
+    ($property-list S))
   #| end of define-label |# )
 
 (define-builtin-label <keyword>

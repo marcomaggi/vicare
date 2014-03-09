@@ -184,6 +184,36 @@ The object stored in the @code{value} slot of the symbol object;
 
 @c ------------------------------------------------------------
 
+@subsubheading Methods
+
+
+@deftypemethod @aclass{symbol} putprop @{@var{key} @aclass{symbol}@} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+the symbol object.  @var{key} must be a symbol, @var{value} can be any
+value.  If @var{key} is already set: the old entry is mutated to
+reference the new @var{value}.
+@end deftypemethod
+
+
+@deftypemethod @aclass{symbol} getprop @{@var{key} @aclass{symbol}@}
+Return the value of the property @var{key} in the property list of the
+symbol object; if @var{key} is not set return false.
+@end deftypemethod
+
+
+@deftypemethod @aclass{symbol} remprop @{@var{key} @aclass{symbol}@}
+Remove property @var{key} from the list associated to the symbol object.
+@end deftypemethod
+
+
+@deftypemethod @aclass{symbol} property-list
+Return a new association list representing the property list of the
+symbol object.  The order of the entries is the same as the property
+creation order.
+@end deftypemethod
+
+@c ------------------------------------------------------------
+
 @subsubheading @oopp{} syntaxes
 
 

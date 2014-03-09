@@ -175,6 +175,38 @@ vicare>
 @end example
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Property lists
+
+
+@deffn {Unsafe Operation} $putprop @var{symbol} @var{key} @var{value}
+Add a new property @var{key} with @var{value} to the property list of
+@var{symbol}.  @var{key} must be a symbol, @var{value} can be any value.
+
+If @var{key} is already set: the old entry is mutated to reference the
+new @var{value}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $getprop @var{symbol} @var{key}
+Return the value of the property @var{key} in the property list of
+@var{symbol}; if @var{key} is not set return false.  @var{key} must be a
+symbol.
+@end deffn
+
+
+@deffn {Unsafe Operation} $remprop @var{symbol} @var{key}
+Remove property @var{key} from the list associated to @var{symbol}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $property-list @var{symbol}
+Return a new association list representing the property list of
+@var{symbol}.  The order of the entries is the same as the property
+creation order.
+@end deffn
+
 @c page
 @node syslib keywords
 @section Low level keyword operations

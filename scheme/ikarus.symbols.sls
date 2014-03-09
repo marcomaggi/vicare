@@ -36,6 +36,7 @@
 
     ;; unsafe operations
     $symbol->string
+    $getprop $putprop $remprop $property-list
 
     ;; ???
     unbound-object unbound-object?
@@ -72,6 +73,7 @@
 	    $symbol->string)
     (except (vicare system $symbols)
 	    $symbol->string
+	    $getprop $putprop $remprop $property-list
 	    $unintern-gensym
 	    system-value-gensym))
 
@@ -241,6 +243,9 @@
   ;;Add a new property K with value V to the property list of the symbol
   ;;X.  K must be a symbol, V can be any value.
   ;;
+  ($putprop x k v))
+
+(define ($putprop x k v)
   (let ((p ($symbol-plist x)))
     (cond ((assq k p)
 	   => (lambda (x)
@@ -252,6 +257,9 @@
   ;;Return  the value  of the  property K  in the  property list  of the
   ;;symbol X; if K is not set return false.  K must be a symbol.
   ;;
+  ($getprop x k))
+
+(define ($getprop x k)
   (let ((p ($symbol-plist x)))
     (cond ((assq k p)
 	   => cdr)
@@ -260,6 +268,9 @@
 (define* (remprop (x symbol?) (k symbol?))
   ;;Remove property K from the list associated to the symbol X.
   ;;
+  ($remprop x k))
+
+(define ($remprop x k)
   (let ((plist ($symbol-plist x)))
     (unless (null? plist)
       (let ((a ($car plist)))
@@ -281,6 +292,9 @@
   ;;that modifying the returned value does not affect the internal state
   ;;of the property list.
   ;;
+  ($property-list x))
+
+(define ($property-list x)
   (let loop ((ls    ($symbol-plist x))
 	     (accum '()))
     (if (null? ls)

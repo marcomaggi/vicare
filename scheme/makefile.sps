@@ -1156,6 +1156,10 @@
     ($symbol-table-size				$symbols)
     ($log-symbol-table-status			$symbols)
     (system-value-gensym			$symbols)
+    ($getprop					$symbols)
+    ($putprop					$symbols)
+    ($remprop					$symbols)
+    ($property-list				$symbols)
 ;;;
     ($symbol->keyword				$keywords)
     ($keyword->symbol				$keywords)

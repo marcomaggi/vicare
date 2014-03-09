@@ -414,6 +414,10 @@
     ;;Maggi; Sun Mar 9, 2014)
     #;$symbol->string
     #;$string->symbol
+    #;$putprop
+    #;$getprop
+    #;$remprop
+    #;$property-list
 
 ;;; --------------------------------------------------------------------
 

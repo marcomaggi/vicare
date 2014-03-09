@@ -109,6 +109,42 @@
 	(values (S value) (S bound?)))
     => 123 #t)
 
+;;; --------------------------------------------------------------------
+;;; fields and methods: properties
+
+  (let (({S <symbol>} 'ciao))
+    (S putprop 'british 'hello)
+    (S putprop 'spanish 'hola))
+
+  (check
+      (let (({S <symbol>} 'ciao))
+	(S getprop 'british))
+    => 'hello)
+
+  (check
+      (let (({S <symbol>} 'ciao))
+	(S getprop 'spanish))
+    => 'hola)
+
+  (check
+      (let (({S <symbol>} 'ciao))
+	(S property-list))
+    => '((british . hello)
+	 (spanish . hola)))
+
+  (let (({S <symbol>} 'ciao))
+    (S remprop 'british))
+
+  (check
+      (let (({S <symbol>} 'ciao))
+	(S getprop 'british))
+    => #f)
+
+  (check
+      (let (({S <symbol>} 'ciao))
+	(S property-list))
+    => '((spanish . hola)))
+
   #t)
 
 
