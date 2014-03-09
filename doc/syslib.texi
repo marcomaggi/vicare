@@ -59,6 +59,16 @@ meaning ``unbound''.  The @code{plist} field is initialised to nil.
 @end deffn
 
 
+@deffn {Unsafe Operation} $string->symbol @var{str}
+Return an interned symbol having the string @var{str} as name.
+@end deffn
+
+
+@deffn {Unsafe Operation} $symbol->string @var{sym}
+Return the string name of @var{sym}, generating one if needed.
+@end deffn
+
+
 @deffn {Unsafe Operation} $symbol-string @var{sym}
 @deffnx {Unsafe Operation} $symbol-unique-string @var{sym}
 @deffnx {Unsafe Operation} $symbol-plist @var{sym}

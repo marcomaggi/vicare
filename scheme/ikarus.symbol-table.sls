@@ -16,7 +16,7 @@
 
 (library (ikarus.symbol-table)
   (export
-    string->symbol
+    string->symbol			$string->symbol
     $initialize-symbol-table!
     (rename (%symbol-table-size		$symbol-table-size))
     $log-symbol-table-status)
@@ -24,12 +24,21 @@
 		  string->symbol
 		  $symbol-table-size
 		  $log-symbol-table-status)
+    ;;FIXME To  be removed after  the next boot image  rotation.  (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    (only (ikarus.symbols)
+	  $symbol->string)
     (except (vicare system $symbols)
+	    ;;FIXME  To  be  uncommented   after  the  next  boot  image
+	    ;;rotation.  (Marco Maggi; Sun Mar 9, 2014)
+	    #;$symbol->string
+	    $string->symbol
 	    $symbol-table-size
 	    $log-symbol-table-status)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
-    (vicare unsafe operations))
+    (except (vicare unsafe operations)
+	    $string->symbol))
 
 
 ;;;; symbol table data structure
@@ -143,29 +152,31 @@
   (flush-output-port port))
 
 
-(define (string->symbol str)
-  ;;Defined by R6RS.  Return a symbol whose name is STR.
-  ;;
-  ;;Lookup  the symbol  in the  symbol table:  if it  is  already there,
-  ;;return it; else create a new entry and return the new symbol.
-  ;;
-  (define who 'string->symbol)
+(module (string->symbol $string->symbol)
+
+  (define* (string->symbol (str string?))
+    ;;Defined by R6RS.  Return a symbol whose name is STR.
+    ;;
+    ($string->symbol str))
+
+  (define ($string->symbol str)
+    ;;Lookup the  symbol in the  symbol table:  if it is  already there,
+    ;;return it; else create a new entry and return the new symbol.
+    ;;
+    (let* ((idx ($fxand ($string-hash str)
+			(symbol-table-mask THE-SYMBOL-TABLE)))
+	   (list-of-interned-symbols ($vector-ref ($symbol-table-buckets THE-SYMBOL-TABLE) idx)))
+      (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols)))
+
   (define (lookup str idx table ls)
     (if (null? ls)
 	(bleed-guardian (intern str idx table) table)
       (let ((interned-symbol ($car ls)))
-	;;FIXME  Can we  use $SYMBOL-STRING  rather  than SYMBOL->STRING
-	;;here?  (Marco Maggi; Oct 31, 2011)
-	(if (string=? str (symbol->string interned-symbol))
+	(if (string=? str ($symbol->string interned-symbol))
 	    (bleed-guardian interned-symbol table)
 	  (lookup str idx table ($cdr ls))))))
 
-  (with-arguments-validation (who)
-      ((string  str))
-    (let* ((idx ($fxand (string-hash str)
-			      (symbol-table-mask THE-SYMBOL-TABLE)))
-	   (list-of-interned-symbols ($vector-ref (symbol-table-buckets THE-SYMBOL-TABLE) idx)))
-      (lookup str idx THE-SYMBOL-TABLE list-of-interned-symbols))))
+  #| end of module |# )
 
 
 (define (intern str idx table)

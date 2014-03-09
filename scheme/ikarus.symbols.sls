@@ -34,6 +34,9 @@
     string-or-symbol->string
     string-or-symbol->symbol
 
+    ;; unsafe operations
+    $symbol->string
+
     ;; ???
     top-level-value top-level-bound? set-top-level-value!
     symbol-value symbol-bound? set-symbol-value!
@@ -61,8 +64,12 @@
 		  ;; internal functions
 		  $unintern-gensym)
     (vicare arguments validation)
-    (vicare unsafe operations)
+    (only (vicare system $numerics)
+	  $add1-integer)
+    (except (vicare unsafe operations)
+	    $symbol->string)
     (except (vicare system $symbols)
+	    $symbol->string
 	    $unintern-gensym
 	    system-value-gensym))
 
@@ -192,14 +199,15 @@
   ($symbol->string x))
 
 (define ($symbol->string x)
+  ;;Return the string name of the symbol X.
+  ;;
   (let ((str ($symbol-string x)))
     (or str
 	(let ((ct (gensym-count)))
-	  ;;FIXME What if gensym-count is a bignum?  (Marco Maggi)
 	  (receive-and-return (str)
-	      (string-append (gensym-prefix) (fixnum->string ct))
+	      (string-append (gensym-prefix) (number->string ct))
 	    ($set-symbol-string! x str)
-	    (gensym-count ($fxadd1 ct)))))))
+	    (gensym-count ($add1-integer ct)))))))
 
 (define* (string-or-symbol->string (obj string-or-symbol?))
   ;;Defined by Vicare.  If OBJ is a string return a copy of it; if it is

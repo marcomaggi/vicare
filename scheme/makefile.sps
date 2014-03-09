@@ -1134,6 +1134,8 @@
     ($fixnum->string				$fx)
 ;;;
     ($make-symbol				$symbols)
+    ($string->symbol				$symbols)
+    ($symbol->string				$symbols)
     ($symbol-unique-string			$symbols)
     ($symbol-value				$symbols)
     ($symbol-proc				$symbols)

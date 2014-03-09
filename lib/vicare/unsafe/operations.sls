@@ -410,6 +410,10 @@
     $string-ci-hash
     $symbol-hash
     $bytevector-hash
+    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
+    ;;Maggi; Sun Mar 9, 2014)
+    #;$symbol->string
+    #;$string->symbol
 
 ;;; --------------------------------------------------------------------
 
