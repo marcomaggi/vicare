@@ -124,8 +124,15 @@
    (immutable (brace string	<string>) symbol->string)
    (immutable (brace $string	<string>) $symbol->string)
    (immutable (brace hash	<fixnum>) symbol-hash)
-   (immutable (brace $hash	<fixnum>) $symbol-hash))
-  #| end of label |# )
+   (immutable (brace $hash	<fixnum>) $symbol-hash)
+
+   (immutable (brace bound?	<boolean>)	symbol-bound?)
+   (immutable (brace $bound?	<boolean>)	$symbol-bound?)
+
+   (mutable   (brace value	<top>)		symbol-value set-symbol-value!)
+   (mutable   (brace $value	<top>)		$symbol-value $set-symbol-value!)
+   #| end of virtual-fields |# )
+  #| end of define-label |# )
 
 (define-builtin-label <keyword>
   (predicate keyword?)

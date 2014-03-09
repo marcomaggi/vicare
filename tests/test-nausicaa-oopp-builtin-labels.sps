@@ -70,7 +70,7 @@
     => "ciao")
 
 ;;; --------------------------------------------------------------------
-;;; fields and methods
+;;; fields and methods: string
 
   (check
       (let (({o <symbol>} 'ciao))
@@ -83,12 +83,31 @@
     => 4)
 
 ;;; --------------------------------------------------------------------
-;;; fields and methods
+;;; fields and methods: hash
 
   (check
       (let (({S <symbol>} 'ciao))
 	(fixnum? (S hash)))
     => #t)
+
+;;; --------------------------------------------------------------------
+;;; fields and methods: value
+
+  (check
+      (let (({S <symbol>} (gensym)))
+	(S bound?))
+    => #f)
+
+  (check
+      (let (({S <symbol>} (gensym)))
+	(unbound-object? (S $value)))
+    => #t)
+
+  (check
+      (let (({S <symbol>} (gensym)))
+	(set! (S value) 123)
+	(values (S value) (S bound?)))
+    => 123 #t)
 
   #t)
 

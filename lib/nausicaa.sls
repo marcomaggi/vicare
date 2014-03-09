@@ -747,7 +747,6 @@
     bignum?
     bignum->bytevector
     break
-    bwp-object?
     bytevector-append
     bytevector-empty?
     bytevector->base64
@@ -1386,6 +1385,10 @@
     with-output-to-string
     would-block-object
     would-block-object?
+    unbound-object
+    unbound-object?
+    bwp-object
+    bwp-object?
     xor
 
     char-in-ascii-range?

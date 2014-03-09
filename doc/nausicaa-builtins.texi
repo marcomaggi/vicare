@@ -165,7 +165,21 @@ instance.
 
 @deftypecv {Immutable virtual field} @aclass{symbol} @aclass{fixnum} hash
 @deftypecvx {Immutable virtual field} @aclass{symbol} @aclass{fixnum} $hash
-Return a fixnum usable as hash value of the instance.
+A fixnum usable as hash value of the instance.
+@end deftypecv
+
+
+@deftypecv {Immutable virtual field} @aclass{symbol} @aclass{boolean} bound?
+@deftypecvx {Immutable virtual field} @aclass{symbol} @aclass{boolean} $bound?
+A boolean: @true{} if the symbol is bound, @false{} if it is unbound;
+@vicareref{iklib symbols value, Symbol values}.
+@end deftypecv
+
+
+@deftypecv {Mutable virtual field} @aclass{symbol} @aclass{top} value
+@deftypecvx {Mutable virtual field} @aclass{symbol} @aclass{top} $value
+The object stored in the @code{value} slot of the symbol object;
+@vicareref{iklib symbols value, Symbol values}.
 @end deftypecv
 
 @c ------------------------------------------------------------
