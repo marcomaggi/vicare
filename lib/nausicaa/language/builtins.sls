@@ -582,13 +582,13 @@
   (method (brace substring <string>)
     (case-lambda/tags
       (((brace S <string>) (brace start <fixnum>))
-       (substring S
-		  (S %normalise-index start)
-		  (S $length)))
+       ($substring S
+		   (S %normalise-index start)
+		   (S $length)))
       (((brace S <string>) (brace start <fixnum>) (brace end <fixnum>))
-       (substring S
-		  (S %normalise-index start)
-		  (S %normalise-index end)))))
+       ($substring S
+		   (S %normalise-index start)
+		   (S %normalise-index end)))))
 
   (method-syntax (brace append <string>)
     (syntax-rules ()

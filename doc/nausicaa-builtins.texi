@@ -916,7 +916,7 @@ operations from @library{vicare system $strings}.
 @subsubheading Methods
 
 
-@deftypemethod @aclass{string} @aclass{integer} hash
+@deftypemethod @aclass{string} @aclass{fixnum} hash
 Return the result of applying @func{string-hash} to the string instance.
 @end deftypemethod
 
@@ -979,7 +979,7 @@ penultimate character and so on.
 @end deftypemethod
 
 
-@deftypemethod @aclass{string} @aclass{top} ref (@var{index} @aclass{fixnum}) (@var{ch} @aclass{char})
+@deftypemethod @aclass{string} @aclass{top} set! (@var{index} @aclass{fixnum}) (@var{ch} @aclass{char})
 When @var{index} is zero or positive: this method behaves like
 @func{string-set!} from @rsixlibrary{base}.  If @var{index} is negative:
 it is first normalised with:
