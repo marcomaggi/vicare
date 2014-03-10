@@ -7447,6 +7447,13 @@ raise an assertion violation.
 The following bindings are exported by the library @library{vicare}.
 
 
+@defun fx!=? @vari{fx} @varii{fx}
+@defunx fx!= @vari{fx} @varii{fx}
+Return @true{} if the arguments are different; otherwise return
+@false{}.  The arguments must be fixnums.
+@end defun
+
+
 @defun fxadd1 @var{fx}
 @defunx fxsub1 @var{fx}
 Add or subtract @samp{1} to @var{fx}.
@@ -7618,6 +7625,7 @@ representing the mantissa's @math{53} bits.
 
 @menu
 * iklib numerics constants::    Numeric constants.
+* iklib numerics compar::       Additional comparison functions.
 * iklib numerics preds::        Additional numeric predicates.
 * iklib numerics bignums::      Additional bignum functions.
 * iklib numerics math::         Additional math functions.
@@ -7713,6 +7721,20 @@ Evaluate to a constant flonum object representing plus or minus pi
 multiplied by @math{3/4}.
 @end deffn
 
+@c page
+@node iklib numerics compar
+@subsection Additional comparison functions
+
+
+@defun != @vari{Z} @varii{Z} @variii{Z} @dots{}
+Return @true{} if all the arguments are equal, otherwise return
+@false{}; all the arguments must be numbers according to
+@func{number?}.  This function is equivalent to:
+
+@example
+(not (= @vari{Z} @varii{Z} @variii{Z} ...))
+@end example
+@end defun
 
 @c page
 @node iklib numerics preds

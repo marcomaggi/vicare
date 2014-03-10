@@ -45,6 +45,7 @@
     fxarithmetic-shift
 
     fx=			fx=?
+    fx!=		fx!=?
     fx<			fx<?
     fx<=		fx<=?
     fx>			fx>?
@@ -100,6 +101,7 @@
 		  fxsll			fxsra
 
 		  fx=			fx=?
+		  fx!=			fx!=?
 		  fx<			fx<?
 		  fx<=			fx<=?
 		  fx>			fx>?
@@ -459,7 +461,11 @@
 	    #| end of module |# )
 	  ))))
 
+  (define ($fx!= fx1 fx2)
+    (not ($fx= fx1 fx2)))
+
   (define-fxcmp fx=?	fx=	$fx=)
+  (define-fxcmp fx!=?	fx!=	$fx!=)
   (define-fxcmp fx<?	fx<	$fx<)
   (define-fxcmp fx<=?	fx<=	$fx<=)
   (define-fxcmp fx>?	fx>	$fx>)

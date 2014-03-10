@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -63,6 +63,17 @@
     => (case-word-size
 	((32)	30)
 	((64)	61)))
+
+  #t)
+
+
+(parametrise ((check-test-name	'compar))
+
+  (check-for-true	(fx!=? 1 2))
+  (check-for-false	(fx!=? 1 1))
+
+  (check-for-true	(fx!= 1 2))
+  (check-for-false	(fx!= 1 1))
 
   #t)
 

@@ -57,7 +57,7 @@
 (library (ikarus generic-arithmetic)
   (export
     + - * /
-    = < <= > >=
+    = != < <= > >=
     min				max
     add1			sub1
     quotient			remainder
@@ -389,7 +389,7 @@
 
 
 (import (except (vicare)
-		+ - * / = < <= > >=
+		+ - * / = != < <= > >=
 		min				max
 		add1				sub1
 		quotient			remainder
@@ -5899,6 +5899,163 @@
 	    (flfl= y  ($cflonum-real x))))
       ((compnum?)	(cncf= y x))
       ((cflonum?)	(cfcf= x y))
+      (else
+       (%error-not-number y))))
+
+;;; --------------------------------------------------------------------
+
+  (define (cncn= x y)
+    (and (= ($compnum-real x) ($compnum-real y))
+	 (= ($compnum-imag x) ($compnum-imag y))))
+
+  (define (cncf= x y)
+    (and (= ($compnum-real x) ($cflonum-real y))
+	 (= ($compnum-imag x) ($cflonum-imag y))))
+
+  (define (cfcf= x y)
+    (and (= ($cflonum-real x) ($cflonum-real y))
+	 (= ($cflonum-imag x) ($cflonum-imag y))))
+
+  #| end of module |# )
+
+
+(module (!=)
+  (define who (quote !=))
+
+  (define !=
+    (case-lambda
+     ((x y)
+      (cond-numeric-operand x
+	((fixnum?)	($fixnum!=number?  x y))
+	((bignum?)	($bignum!=number?  x y))
+	((flonum?)	($flonum!=number?  x y))
+	((ratnum?)	($ratnum!=number?  x y))
+	((compnum?)	($compnum!=number? x y))
+	((cflonum?)	($cflonum!=number? x y))
+	(else
+	 (%error-not-number x))))
+
+     ((x y z)
+      (cond ((= x y)
+	     (!= y z))
+	    ((number? z)
+	     #t)
+	    (else
+	     (%error-not-number z))))
+
+     ((x)
+      (if (number? x)
+	  #f
+	(%error-not-number x)))
+
+     ((x y . ls)
+      (cond-numeric-operand x
+	((fixnum?)	(%doloop $fixnum!=number?  x y ls))
+	((bignum?)	(%doloop $bignum!=number?  x y ls))
+	((flonum?)	(%doloop $flonum!=number?  x y ls))
+	((ratnum?)	(%doloop $ratnum!=number?  x y ls))
+	((compnum?)	(%doloop $compnum!=number? x y ls))
+	((cflonum?)	(%doloop $cflonum!=number? x y ls))
+	(else
+	 (%error-not-number x))))))
+
+;;; --------------------------------------------------------------------
+
+  (define-syntax %doloop
+    (syntax-rules ()
+      ((_ ?cmp ?x0 ?y0 ?ls0)
+       (let loop ((x  ?x0)
+		  (y  ?y0)
+		  (ls ?ls0))
+	 (if (?cmp x y)
+	     (or (null? ls)
+		 (%validate-rest-arguments ($car ls) ($cdr ls)))
+	   (if (null? ls)
+	       #f
+	     (loop x ($car ls) ($cdr ls))))))))
+
+  (define (%validate-rest-arguments x ls)
+    (if (number? x)
+	(if (null? ls)
+	    #t
+	  (%validate-rest-arguments ($car ls) ($cdr ls)))
+      (%error-not-number x)))
+
+;;; --------------------------------------------------------------------
+
+  (define ($fixnum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	(not ($fx= x y)))
+      ((bignum?)	#t)
+      ((flonum?)	(not (fxfl= x y)))
+      ((ratnum?)	#t)
+      ((compnum?)	#t) ;remember that a compnum has non-zero imag part
+      ((cflonum?)
+       (and ($flzero? ($cflonum-imag y))
+	    (not (fxfl= x  ($cflonum-real y)))))
+      (else
+       (%error-not-number y))))
+
+  (define ($bignum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	#t)
+      ((bignum?)	(not (bnbn= x y)))
+      ((flonum?)	(not (bnfl= x y)))
+      ((ratnum?)	#t)
+      ((compnum?)	#t) ;remember that a compnum has non-zero imag part
+      ((cflonum?)
+       (and ($flzero? ($cflonum-imag y))
+	    (not (bnfl= x  ($cflonum-real y)))))
+      (else
+       (%error-not-number y))))
+
+  (define ($flonum!=number? x y)
+    (cond-numeric-operand y
+      ((flonum?)	(not (flfl= x y)))
+      ((cflonum?)
+       (and ($flzero? ($cflonum-imag y))
+	    (not (flfl= x  ($cflonum-real y)))))
+      ((fixnum?)	(not (flfx= x y)))
+      ((bignum?)	(not (flbn= x y)))
+      ((ratnum?)	(not (flrt= x y)))
+      ((compnum?)	#t) ;remember that a compnum has non-zero imag part
+      (else
+       (%error-not-number y))))
+
+  (define ($ratnum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	#t)
+      ((bignum?)	#t)
+      ((ratnum?)	(not (rtrt= x y)))
+      ((flonum?)	(not (rtfl= x y)))
+      ((compnum?)	#t) ;remember that a compnum has non-zero imag part
+      ((cflonum?)
+       (and ($flzero? ($cflonum-imag y))
+	    (not (rtfl= x  ($cflonum-real y)))))
+      (else
+       (%error-not-number y))))
+
+  (define ($compnum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	#t)
+      ((bignum?)	#t)
+      ((ratnum?)	#t)
+      ((flonum?)	#t)
+      ((compnum?)	(not (cncn= x y)))
+      ((cflonum?)	(not (cncf= x y)))
+      (else
+       (%error-not-number y))))
+
+  (define ($cflonum!=number? x y)
+    (cond-numeric-operand y
+      ((fixnum?)	#t)
+      ((bignum?)	#t)
+      ((ratnum?)	#t)
+      ((flonum?)
+       (and ($flzero? ($cflonum-imag x))
+	    (not (flfl= y  ($cflonum-real x)))))
+      ((compnum?)	(not (cncf= y x)))
+      ((cflonum?)	(not (cfcf= x y)))
       (else
        (%error-not-number y))))
 
