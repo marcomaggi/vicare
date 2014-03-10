@@ -181,6 +181,43 @@
         (o symbol))
     => 'ciao)
 
+  (check
+      (let (({o <keyword>} #:ciao))
+        (o string))
+    => "#:ciao")
+
+  #t)
+
+
+(parametrise ((check-test-name	'pointers))
+
+  (check
+      ((<pointer> #:predicate) (<pointer> (123)))
+    => #t)
+
+  (check
+      (let (({P <pointer>} (<pointer> (123))))
+	(P integer))
+    => 123)
+
+;;; --------------------------------------------------------------------
+;;; fields and methods: comparisons
+
+  (check
+      (let* (({P <pointer>} (<pointer> (123)))
+	     ({Q <pointer>} (<pointer> (987))))
+	(P != Q))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; fields and methods: clone
+
+  (check
+      (let* (({P <pointer>} (<pointer> (123)))
+	     ({Q <pointer>} (P clone)))
+	(P = Q))
+    => #t)
+
   #t)
 
 
@@ -1805,26 +1842,6 @@
       (let (({N <fixnum>} 123))
 	(N $flonum))
     => 123.0)
-
-  #t)
-
-
-(parametrise ((check-test-name	'pointers))
-
-  (check
-      ((<pointer> #:predicate) (<pointer> (123)))
-    => #t)
-
-  (check
-      (let (({P <pointer>} (<pointer> (123))))
-	(P integer))
-    => 123)
-
-  (check
-      (let* (({P <pointer>} (<pointer> (123)))
-	     ({Q <pointer>} (P clone)))
-	(P = Q))
-    => #t)
 
   #t)
 

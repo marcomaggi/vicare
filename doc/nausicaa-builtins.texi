@@ -248,6 +248,18 @@ Accessing this field is like applying @func{keyword->symbol} to the
 instance.
 @end deftypecv
 
+
+@deftypecv {Immutable virtual field} @aclass{keyword} @aclass{string} string
+A string representation of the keyword object.  Example:
+
+@example
+#!vicare
+(import (nausicaa))
+
+(((<keyword>)#:ciao) string)    @result{} "#:ciao"
+@end example
+@end deftypecv
+
 @c ------------------------------------------------------------
 
 @subsubheading @oopp{} syntaxes
@@ -296,56 +308,56 @@ Accessing this field is like applying to the instance the function
 @subsubheading Methods: comparison functions
 
 
-@defmethod @aclass{pointer} = @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} = @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer=?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} <> @varii{pointer}
-Calling this method is like applying to the instance, and the argument,
-the function @func{pointer<>?} from @library{vicare}.
-@end defmethod
+@deftypemethod @aclass{pointer} @aclass{boolean} != @varii{pointer}
+Calling this method is like aplying to the instance, and the argument,
+the function @func{pointer!=?} from @library{vicare}.
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} < @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} < @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer<?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} > @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} > @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer>?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} <= @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} <= @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer<=?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} >= @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{boolean} >= @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer>=?} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
 @subsubheading Methods: pointer arithmetic
 
 
-@defmethod @aclass{pointer} add @var{offset}
+@deftypemethod @aclass{pointer} @aclass{pointer} add @var{offset}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer-add} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 
-@defmethod @aclass{pointer} diff @varii{pointer}
+@deftypemethod @aclass{pointer} @aclass{exact-integer} diff @varii{pointer}
 Calling this method is like applying to the instance, and the argument,
 the function @func{pointer-diff} from @library{vicare}.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 

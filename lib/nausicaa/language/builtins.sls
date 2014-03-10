@@ -160,7 +160,12 @@
 		"expected symbol or string as constructor argument" arg))))))
   (virtual-fields
    (immutable (brace symbol	<symbol>)	keyword->symbol)
-   (immutable (brace $symbol	<symbol>)	$keyword->symbol)))
+   (immutable (brace $symbol	<symbol>)	$keyword->symbol)
+   (immutable (brace string	<string>)
+	      (lambda/tags ({K <keyword>})
+		(string-append "#:" ((K symbol) string))))
+   #| end of virtual-fields |# )
+  #| end of define-label |# )
 
 (define-builtin-label <pointer>
   (predicate pointer?)
@@ -174,10 +179,10 @@
       ((_ ?ptr1 ?ptr2)
        (pointer=? ?ptr1 ?ptr2))))
 
-  (method-syntax (brace <> <boolean>)
+  (method-syntax (brace != <boolean>)
     (syntax-rules ()
       ((_ ?ptr1 ?ptr2)
-       (pointer<>? ?ptr1 ?ptr2))))
+       (pointer!=? ?ptr1 ?ptr2))))
 
   (method-syntax (brace < <boolean>)
     (syntax-rules ()
