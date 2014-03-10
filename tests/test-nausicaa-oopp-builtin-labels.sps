@@ -423,6 +423,30 @@
   #t)
 
 
+(parametrise ((check-test-name	'nonempty-lists))
+
+  (check
+      (<nonempty-list> (1 2 3))
+    => '(1 2 3))
+
+;;; --------------------------------------------------------------------
+;;; predicate
+
+  (check
+      (is-a? '(1 2 3) <nonempty-list>)
+    => #t)
+
+  (check
+      (is-a? '() <nonempty-list>)
+    => #f)
+
+  (check
+      (is-a? 123 <nonempty-list>)
+    => #f)
+
+  #t)
+
+
 (parametrise ((check-test-name	'chars))
 
   (check

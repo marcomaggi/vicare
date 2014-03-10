@@ -479,7 +479,9 @@ the expressions @meta{car} and @meta{cdr}.
 
 A @dfn{spine} is the head of a proper list: null or a pair whose cdr is
 null or a pair.  It can be used to iterate over a proper list without
-fully validating it first.
+fully validating it first; spines exist because it is not always good to
+iterate once over an object to prove that it is a proper list and then
+iterate over it again to perform a computation.
 
 
 @deftp {Builtin Label} @aclass{spine}
@@ -488,9 +490,8 @@ and, in the case of a pair, having null or a pair as cdr.
 @end deftp
 
 
-@deftypeop {Common constructor} @aclass{spine} @aclass{spine} constructor @var{car} @var{cdr}
+@deftypeop {Common constructor} @aclass{spine} @aclass{spine} constructor @var{car} @{@var{cdr} @aclass{spine}@}
 Return the result of applying @func{cons} to @var{car} and @var{cdr}.
-@var{cdr} must be a @class{spine}.
 @end deftypeop
 
 @c ------------------------------------------------------------
@@ -511,7 +512,7 @@ pair using @func{cdr}.
 
 
 @deftypecv {Immutable virtual field} @aclass{spine} @aclass{exact-integer} length
-Access the length of the list.
+The length of the list; it is computed with @func{length}.
 @end deftypecv
 
 
@@ -564,45 +565,54 @@ methods may raise an error if the list structure is not suitable.
 @end defmethod
 
 
-@defmethod @aclass{spine} map @var{proc} . @var{lists}
-Apply @func{map} to the instance list and the optional @var{lists}.
-@end defmethod
+@deftypemethod @aclass{spine} @aclass{list} map @var{proc} . @var{lists}
+Apply @func{map} to the instance list and the optional @var{lists},
+@vicareref{baselib lists, map}.
+@end deftypemethod
 
 
 @defmethod @aclass{spine} for-each @var{proc} . @var{lists}
-Apply @func{for-each} to the instance list and the optional @var{lists}.
-@end defmethod
-
-
-@defmethod @aclass{spine} find @var{proc}
-Apply @func{find} to the list.
+Apply @func{for-each} to the instance list and the optional @var{lists},
+@vicareref{baselib lists, for-each}.
 @end defmethod
 
 
 @defmethod @aclass{spine} reverse @var{proc}
-Apply @func{reverse} to the list.
+Apply @func{reverse} to the list, , @vicareref{baselib lists, map}.
+@end defmethod
+
+
+@defmethod @aclass{spine} append @var{proc}
+Apply @func{append} to the list, , @vicareref{baselib lists, append}.
+@end defmethod
+
+
+@defmethod @aclass{spine} find @var{proc}
+Apply @func{find} to the list, @vicareref{stdlib list, find}.
 @end defmethod
 
 
 @defmethod @aclass{spine} for-all @var{proc}
 @defmethodx @aclass{lits} exists @var{proc}
-Apply @func{for-all} and @func{exists} to the list.
+Apply @func{for-all} and @func{exists} to the list, @vicareref{stdlib
+list, for-all}.
 @end defmethod
 
 
 @defmethod @aclass{spine} filter @var{proc}
 @defmethodx @aclass{spine} partition @var{proc}
-Apply @func{filter} and @func{partition} to the list.
+Apply @func{filter} and @func{partition} to the list, @vicareref{stdlib
+list, filter}.
 @end defmethod
 
 
 @defmethod @aclass{spine} fold-left @var{nil} @var{combine}
-Apply @func{fold-left} to the list.
+Apply @func{fold-left} to the list, @vicareref{stdlib list, fold-left}.
 @end defmethod
 
 
 @defmethod @aclass{spine} fold-right @var{nil} @var{combine}
-Apply @func{fold-right} to the list.
+Apply @func{fold-right} to the list, @vicareref{stdlib list, fold-right}.
 @end defmethod
 
 
@@ -611,7 +621,7 @@ Apply @func{fold-right} to the list.
 @defmethodx @aclass{spine} remv @var{obj}
 @defmethodx @aclass{spine} remq @var{obj}
 Apply @func{remp}, @func{remove}, @func{remv}, @func{remq} to the list
-and the given argument.
+and the given argument, @vicareref{stdlib list, remp}.
 @end defmethod
 
 
@@ -620,7 +630,7 @@ and the given argument.
 @defmethodx @aclass{spine} memv @var{obj} @var{list}
 @defmethodx @aclass{spine} memq @var{obj} @var{list}
 Apply @func{memp}, @func{member}, @func{memv}, @func{memq} to the list
-and the given arguments.
+and the given arguments, @vicareref{stdlib list, memp}.
 @end defmethod
 
 
@@ -629,7 +639,7 @@ and the given arguments.
 @defmethodx @aclass{spine} assv @var{obj}
 @defmethodx @aclass{spine} assq @var{obj}
 Apply @func{assp}, @func{assoc}, @func{assv}, @func{assq} to the list
-and the given argument.
+and the given argument, @vicareref{stdlib list, assp}.
 @end defmethod
 
 @c ------------------------------------------------------------
@@ -664,12 +674,23 @@ it is derived from @class{list}.
 Return the result of applying @func{list} to the @var{item} arguments.
 @end deftypeop
 
+
+@deftypeop {Common constructor} @aclass{nonempty-list} @aclass{nonempty-list} constructor @varo{item} @var{item} @dots{}
+Return the result of applying @func{list} to the @var{item} arguments.
+@end deftypeop
+
 @c ------------------------------------------------------------
 
 @subsubheading @oopp{} syntaxes
 
 
 @defop Maker @aclass{list} @aclass{list} (@meta{item} @dots{})
+Return the result of applying @func{list} to the results of evaluating
+the expressions @meta{item}.
+@end defop
+
+
+@defop Maker @aclass{nonempty-list} @aclass{list} (@metao{item} @meta{item} @dots{})
 Return the result of applying @func{list} to the results of evaluating
 the expressions @meta{item}.
 @end defop

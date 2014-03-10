@@ -335,15 +335,22 @@
       ((_ o proc . lists)
        (for-each proc o . lists))))
 
-  (method-syntax find
-    (syntax-rules ()
-      ((_ o proc)
-       (find proc o))))
-
   (method-syntax (brace reverse <list>)
     (syntax-rules ()
       ((_ o)
        (reverse o))))
+
+  (method-syntax (brace append <list>)
+    (syntax-rules ()
+      ((_ o . lists)
+       (append o . lists))))
+
+;;; --------------------------------------------------------------------
+
+  (method-syntax find
+    (syntax-rules ()
+      ((_ o proc)
+       (find proc o))))
 
   (method-syntax for-all
     (syntax-rules ()
@@ -467,7 +474,9 @@
 
 (define-builtin-label <nonempty-list>
   (parent <list>)
-  (protocol (lambda () list))
+  (protocol (lambda ()
+	      (lambda (item . items)
+		(cons item items))))
   (predicate pair?))
 
 
