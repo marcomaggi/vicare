@@ -10896,7 +10896,7 @@ without causing a pointer overflow or underflow.
 
 
 @defun pointer=? @vari{ptr} @varii{ptr}
-@defunx pointer<>? @vari{ptr} @varii{ptr}
+@defunx pointer!=? @vari{ptr} @varii{ptr}
 @defunx pointer<? @vari{ptr} @varii{ptr}
 @defunx pointer>? @vari{ptr} @varii{ptr}
 @defunx pointer<=? @vari{ptr} @varii{ptr}

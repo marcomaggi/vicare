@@ -2575,7 +2575,7 @@
     (pointer-add				v $language $for)
     (pointer-and-offset?			v $language $for)
     (pointer=?					v $language $for)
-    (pointer<>?					v $language $for)
+    (pointer!=?					v $language $for)
     (pointer<?					v $language $for)
     (pointer>?					v $language $for)
     (pointer<=?					v $language $for)

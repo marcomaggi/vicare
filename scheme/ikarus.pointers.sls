@@ -24,7 +24,7 @@
     pointer->integer			integer->pointer
     pointer-clone			pointer-and-offset?
     pointer-diff			pointer-add
-    pointer=?				pointer<>?
+    pointer=?				pointer!=?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
     set-pointer-null!
@@ -167,7 +167,7 @@
 		  pointer->integer			integer->pointer
 		  pointer-clone				pointer-and-offset?
 		  pointer-diff				pointer-add
-		  pointer=?				pointer<>?
+		  pointer=?				pointer!=?
 		  pointer<?				pointer>?
 		  pointer<=?				pointer>=?
 		  set-pointer-null!
@@ -666,7 +666,7 @@
 		      (?pred ptr1 ptr2)))))))
 
   (define-pointer-comparison pointer=?		$pointer=)
-  (define-pointer-comparison pointer<>?		capi.ffi-pointer-neq)
+  (define-pointer-comparison pointer!=?		capi.ffi-pointer-neq)
   (define-pointer-comparison pointer<?		capi.ffi-pointer-lt)
   (define-pointer-comparison pointer>?		capi.ffi-pointer-gt)
   (define-pointer-comparison pointer<=?		capi.ffi-pointer-le)

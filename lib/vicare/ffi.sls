@@ -62,7 +62,7 @@
     pointer->integer			integer->pointer
     pointer-clone			pointer-and-offset?
     pointer-diff			pointer-add
-    pointer=?				pointer<>?
+    pointer=?				pointer!=?
     pointer<?				pointer>?
     pointer<=?				pointer>=?
     set-pointer-null!

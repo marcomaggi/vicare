@@ -1065,7 +1065,7 @@
     parametrise
     pathname->string-func
     pointer<=?
-    pointer<>?
+    pointer!=?
     pointer<?
     pointer=?
     pointer>=?
