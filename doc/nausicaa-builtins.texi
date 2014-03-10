@@ -1085,10 +1085,10 @@ value and so on.
 @end deftypemethod
 
 
-@defmethod @aclass{vector} map @var{proc} . @var{vectors}
+@deftypemethod @aclass{vector} @aclass{vector} map @var{proc} . @var{vectors}
 Apply @func{vector-map} to the instance vector and the optional
 @var{vectors}.
-@end defmethod
+@end deftypemethod
 
 
 @defmethod @aclass{vector} for-each @var{proc} . @var{vectors}
@@ -1308,8 +1308,8 @@ Build and return a copy of the instance.
 @end deftypemethod
 
 
-@deftypemethod @aclass{bytevector} @aclass{exact-integer} hash
-@deftypemethodx @aclass{bytevector} @aclass{exact-integer} $hash
+@deftypemethod @aclass{bytevector} @aclass{hash} hash
+@deftypemethodx @aclass{bytevector} @aclass{hash} $hash
 Compute a hash value of bytevector instance using
 @func{bytevector-hash}, @vicareref{iklib bytevectors generic, Generic
 bytevector operations}.

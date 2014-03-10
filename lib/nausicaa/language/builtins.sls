@@ -657,15 +657,15 @@
   (method (brace subvector <vector>)
     (case-lambda/tags
       (((brace S <vector>) (brace start <fixnum>))
-       (subvector S
-		  (S %normalise-index start)
-		  (S $length)))
+       ($subvector S
+		   (S %normalise-index start)
+		   (S $length)))
       (((brace S <vector>) (brace start <fixnum>) (brace end <fixnum>))
-       (subvector S
-		  (S %normalise-index start)
-		  (S %normalise-index end)))))
+       ($subvector S
+		   (S %normalise-index start)
+		   (S %normalise-index end)))))
 
-  (method-syntax (brace map <list>)
+  (method-syntax (brace map <vector>)
     (syntax-rules ()
       ((_ o proc . vectors)
        (vector-map proc o . vectors))))
