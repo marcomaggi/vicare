@@ -8122,13 +8122,6 @@
 	      (for-all identifier? ?ret-pred*))
 	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
 
-	;;Ret-pred with vector spec.
-	((?kwd (#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
-
 	;;No ret-pred.
 	((?kwd ?formals ?body0 ?body* ...)
 	 (%generate-lambda-output-form/without-ret-pred ?kwd ?formals ?body0 ?body* %synner))
@@ -8188,13 +8181,6 @@
       (syntax-match ?clause ()
 	;;Ret-pred with list spec.
 	((((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
-
-	;;Ret-pred with vector spec.
-	(((#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (and (%underscore? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
@@ -8393,7 +8379,7 @@
 
   (define (%underscore? stx)
     (and (identifier? stx)
-	 (eq? '_ (syntax->datum stx))))
+	 (free-identifier=? stx (scheme-stx '_))))
 
   #| end of module |# )
 

@@ -3692,9 +3692,11 @@ If the first element of @meta{tagged-formals} has the format:
 @end example
 
 @noindent
-where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
-will be enclosed in a @func{begin/tags} syntax, and the returned values
-validated as specified by the @meta{tag} identifiers.
+where @code{_} is the binding exported by the library @rsixlibrary{base}
+and reexported by the library @library{nausicaa language oopp}: the
+@meta{body} forms will be enclosed in a @func{begin/tags} syntax, and
+the returned values validated as specified by the @meta{tag}
+identifiers.
 @end itemize
 
 Usage examples:
@@ -3809,9 +3811,11 @@ If the first element of @meta{tagged-formals} has the format:
 @end example
 
 @noindent
-where @code{_} is exactly the symbol @code{_}: the @meta{body} forms
-will be enclosed in a @func{begin/tags} syntax, and the returned values
-validated as specified by the @meta{tag} identifiers.
+where @code{_} is the binding exported by the library @rsixlibrary{base}
+and reexported by the library @library{nausicaa language oopp}: the
+@meta{body} forms will be enclosed in a @func{begin/tags} syntax, and
+the returned values validated as specified by the @meta{tag}
+identifiers.
 @end itemize
 
 Usage examples:

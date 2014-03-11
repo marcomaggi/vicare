@@ -1196,7 +1196,7 @@
     ;;Function with tagged return values.
     ((_ ((brace ?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
      (and (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
-	  (identifier=symbol? #'?who '_))
+	  (free-identifier=? #'?who #'_))
      #'(lambda/tags ?formals (begin/tags (aux.<- ?rv-tag0 ?rv-tag ...) ?body0 ?body ...)))
 
     ;;Function with untagged args argument.
@@ -1267,7 +1267,7 @@
       ;;Clause with tagged return values.
       ((((brace ?who ?rv-tag0 ?rv-tag ...) . ?formals) ?body0 ?body ...)
        (and (all-identifiers? #'(?who ?rv-tag0 ?rv-tag ...))
-	    (identifier=symbol? #'?who '_))
+	    (free-identifier=? #'?who #'_))
        (%process-clause #'(?formals
 			   (begin/tags (aux.<- ?rv-tag0 ?rv-tag ...) ?body0 ?body ...))))
       ;;Clause with UNtagged return values.

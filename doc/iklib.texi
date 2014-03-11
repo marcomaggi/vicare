@@ -429,10 +429,10 @@ The first item in the @meta{pred-formals} can have the special syntax:
 @end example
 
 @noindent
-where @code{_} is exactly the symbol @code{_} (not the auxiliary syntax
-exported by @rsixlibrary{base}); in this case such item does
-@strong{not} represent a formal argument, it just selects predicates to
-validate the values returned by the last @meta{body} form.
+where @code{_} is the binding exported by @rsixlibrary{base}; in this
+case such item does @strong{not} represent a formal argument, it just
+selects predicates to validate the values returned by the last
+@meta{body} form.
 
 @c ------------------------------------------------------------
 
