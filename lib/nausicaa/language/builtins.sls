@@ -1253,7 +1253,7 @@
    (immutable (brace string		<string>)	number->string))
 
   ;;This method supports the optional arguments of NUMBER->STRING.
-  (methods (string-radix number->string))
+  (methods ({string-radix <string>} number->string))
 
 ;;; math functions from (rnrs base (6)) and (vicare)
 
@@ -1392,22 +1392,22 @@
       ((_ ?num)
        (complex-conjugate ?num))))
 
-  (method-syntax (brace real-part <number>)
+  (method-syntax (brace real-part <real>)
     (syntax-rules ()
       ((_ ?num)
        (real-part ?num))))
 
-  (method-syntax (brace imag-part <number>)
+  (method-syntax (brace imag-part <real>)
     (syntax-rules ()
       ((_ ?num)
        (imag-part ?num))))
 
-  (method-syntax (brace magnitude <number>)
+  (method-syntax (brace magnitude <real>)
     (syntax-rules ()
       ((_ ?num)
        (magnitude ?num))))
 
-  (method-syntax (brace angle <number>)
+  (method-syntax (brace angle <real>)
     (syntax-rules ()
       ((_ ?num)
        (angle ?num)))))
@@ -1430,44 +1430,7 @@
 
 (define-builtin-label <real-valued>
   (parent <complex>)
-  (predicate real-valued?)
-  (virtual-fields
-   (immutable (brace positive?		<boolean>)	positive?)
-   (immutable (brace negative?		<boolean>)	negative?)
-   (immutable (brace non-positive?	<boolean>)	non-positive?)
-   (immutable (brace non-negative?	<boolean>)	non-negative?)
-   (immutable (brace sign		<fixnum>)	sign))
-
-  ;; rational numbers typical operations
-  (virtual-fields
-   (immutable (brace numerator		<real-valued>)	numerator)
-   (immutable (brace denominator	<real-valued>)	denominator))
-
-  ;; methods: rounding
-  (method-syntax floor
-    (syntax-rules ()
-      ((_ ?num)
-       (floor ?num))))
-
-  (method-syntax ceiling
-    (syntax-rules ()
-      ((_ ?num)
-       (ceiling ?num))))
-
-  (method-syntax truncate
-    (syntax-rules ()
-      ((_ ?num)
-       (truncate ?num))))
-
-  (method-syntax round
-    (syntax-rules ()
-      ((_ ?num)
-       (round ?num))))
-
-  (method-syntax rationalize
-    (syntax-rules ()
-      ((_ ?num ?tolerance)
-       (rationalize ?num ?tolerance)))))
+  (predicate real-valued?))
 
 ;;; --------------------------------------------------------------------
 
@@ -1475,7 +1438,41 @@
   (parent <real-valued>)
   (predicate real?)
   (virtual-fields
-   (immutable (brace abs <real>) abs)))
+   (immutable (brace abs		<real>)		abs)
+   (immutable (brace positive?		<boolean>)	positive?)
+   (immutable (brace negative?		<boolean>)	negative?)
+   (immutable (brace non-positive?	<boolean>)	non-positive?)
+   (immutable (brace non-negative?	<boolean>)	non-negative?)
+   (immutable (brace sign		<fixnum>)	sign))
+  ;; rational numbers typical operations
+  (virtual-fields
+   (immutable (brace numerator		<real>)		numerator)
+   (immutable (brace denominator	<real>)		denominator))
+  ;; methods: rounding
+  (method-syntax {floor <real>}
+    (syntax-rules ()
+      ((_ ?num)
+       (floor ?num))))
+
+  (method-syntax {ceiling <real>}
+    (syntax-rules ()
+      ((_ ?num)
+       (ceiling ?num))))
+
+  (method-syntax {truncate <real>}
+    (syntax-rules ()
+      ((_ ?num)
+       (truncate ?num))))
+
+  (method-syntax {round <real>}
+    (syntax-rules ()
+      ((_ ?num)
+       (round ?num))))
+
+  (method-syntax {rationalize <real>}
+    (syntax-rules ()
+      ((_ ?num ?tolerance)
+       (rationalize ?num ?tolerance)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1493,7 +1490,10 @@
 
 (define-builtin-label <ratnum>
   (parent <rational>)
-  (predicate ratnum?))
+  (predicate ratnum?)
+  (virtual-fields
+   (immutable (brace numerator		<exact-integer>)	numerator)
+   (immutable (brace denominator	<exact-integer>)	denominator)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1748,12 +1748,12 @@
       ((_ ?fx1 ?fx2 ?fx3)
        (fxbit-field ?fx1 ?fx2 ?fx3))))
 
-  (method-syntax copy-bit
+  (method-syntax (brace copy-bit <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx3)
        (fxcopy-bit ?fx1 ?fx2 ?fx3))))
 
-  (method-syntax copy-bit-field
+  (method-syntax (brace copy-bit-field <fixnum>)
     (syntax-rules ()
       ((_ ?fx1 ?fx2 ?fx3 ?fx4)
        (fxcopy-bit-field ?fx1 ?fx2 ?fx3 ?fx4))))
