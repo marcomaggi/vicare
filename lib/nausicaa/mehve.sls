@@ -675,6 +675,7 @@
 ;;   (flush-output-port (current-output-port))
 ;;
 
+    !=
     acosh
     add1
     andmap

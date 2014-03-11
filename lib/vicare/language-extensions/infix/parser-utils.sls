@@ -11,7 +11,7 @@
 ;;;	the Lalr-scm package  by Dominique Boucher; the  parser table is
 ;;;	also generated using Lalr-scm.
 ;;;
-;;;Copyright (c) 2010, 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2010, 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2008 Dominique Boucher
 ;;;Copyright (C) 2000 The Free Software Foundation
 ;;;
@@ -65,6 +65,7 @@
       ((<=)		tok.le)
       ((>=)		tok.ge)
       ((=)		tok.eq)
+      ((!=)		tok.neq)
       ((eq?)		tok.eq?)
       ((eqv?)		tok.eqv?)
       ((equal?)		tok.equal?)
@@ -149,6 +150,7 @@
   (define tok.le		(make-<lexical-token> 'LE #'<=))
   (define tok.ge		(make-<lexical-token> 'GE #'>=))
   (define tok.eq		(make-<lexical-token> 'EQ #'=))
+  (define tok.neq		(make-<lexical-token> 'EQ #'!=))
   (define tok.eq?		(make-<lexical-token> 'EQ #'eq?))
   (define tok.eqv?		(make-<lexical-token> 'EQ #'eqv?))
   (define tok.equal?		(make-<lexical-token> 'EQ #'equal?))

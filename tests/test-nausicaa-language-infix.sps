@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009-2010, 2012-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2010, 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -213,6 +213,9 @@
 (check (infix 1 <= 3)		=> (<= 1 3))
 (check (infix 1 >= 3)		=> (>= 1 3))
 (check (infix 1 = 3)		=> (=  1 3))
+(check (infix 1 = 1)		=> (=  1 1))
+(check (infix 1 != 3)		=> (!= 1 3))
+(check (infix 1 != 1)		=> (!= 1 1))
 
 (check
     (infix 'a eq? 'a)

@@ -211,6 +211,7 @@
   (check (infix 1 <= 3)		=> (<= 1 3))
   (check (infix 1 >= 3)		=> (>= 1 3))
   (check (infix 1 = 3)		=> (=  1 3))
+  (check (infix 1 != 3)		=> (!= 1 3))
 
 ;;; bitwise operators
 
