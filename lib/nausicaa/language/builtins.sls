@@ -1092,7 +1092,7 @@
    (immutable fd						port-fd)
    (immutable (brace id				<string>)	port-id)
    (immutable (brace uid			<symbol>)	port-uid)
-   (immutable (brace hash			<integer>)	port-hash)
+   (immutable (brace hash			<fixnum>)	port-hash)
 
    (mutable   (brace non-blocking-mode?	<boolean>)
 	      port-in-non-blocking-mode?
