@@ -1610,15 +1610,15 @@ use symbols as keys.
 @subsubheading Safe accessors
 
 
-@defcv {Immutable virtual field} @aclass{hashtable} size
+@deftypecv {Immutable virtual field} @aclass{hashtable} @aclass{exact-integer} size
 Access the size of the table.
-@end defcv
+@end deftypecv
 
 
-@defcv {Immutable virtual field} @aclass{hashtable} keys
+@deftypecv {Immutable virtual field} @aclass{hashtable} @aclass{vector} keys
 Access the keys.  Retrieving this field is like applying
 @func{hashtable-keys} to the hashtable.
-@end defcv
+@end deftypecv
 
 
 @deftypecv {Immutable virtual field} @aclass{hashtable} @aclass{boolean} mutable?
@@ -1657,10 +1657,10 @@ Equivalent to applying @func{hashtable-update!} to the instance.
 @end defmethod
 
 
-@defmethod @aclass{hashtable} copy
-@defmethodx @aclass{hashtable} copy @var{mutable?}
+@deftypemethod @aclass{hashtable} @aclass{hashtable} copy
+@deftypemethodx @aclass{hashtable} @aclass{hashtable} copy @var{mutable?}
 Equivalent to applying @func{hashtable-copy} to the instance.
-@end defmethod
+@end deftypemethod
 
 @c ------------------------------------------------------------
 
