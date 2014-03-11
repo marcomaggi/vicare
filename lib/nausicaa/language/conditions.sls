@@ -417,10 +417,10 @@
       ;;The one with the ELSE clause must come first!!!
       (((else ?else-body0 ?else-body ...))
        clauses-stx)
-      (((?tag ?tag-body0 ?tag-body ...) . ?other-clauses)
+      ((((?tag) ?tag-body0 ?tag-body ...) . ?other-clauses)
        (identifier? #'?tag)
        (cons #`((is-a? #,var-id ?tag)
-		(with-tags ({#,var-id ?tag})
+		(with-tags ((brace #,var-id ?tag))
 		  ?tag-body0 ?tag-body ...))
 	     (parse-multiple-catch-clauses var-id #'?other-clauses)))
       ((?clause . ?other-clauses)

@@ -48,7 +48,7 @@
       (try
 	  (raise (&ipv4-address-parser-error ()))
 	(catch E
-	  (&ipv4-address-parser-error
+	  ((&ipv4-address-parser-error)
 	   #t)
 	  (else #f)))
     => #t)
@@ -357,7 +357,7 @@
       (try
 	  (parse-address "1.2.3.4.5")
 	(catch E
-	  (&parser-error	#t)
+	  ((&parser-error)	#t)
 	  (else			#f)))
     => #t)
 
@@ -365,7 +365,7 @@
       (try
 	  (parse-address "1,")
 	(catch E
-	  (&parser-error	#t)
+	  ((&parser-error)	#t)
 	  (else			#f)))
     => #t)
 
@@ -373,7 +373,7 @@
       (try
 	  (parse-address "1..2..3")
 	(catch E
-	  (&parser-error	#t)
+	  ((&parser-error)	#t)
 	  (else			#f)))
     => #t)
 
@@ -414,7 +414,7 @@
       (try
 	  (parse-ipv4-address-only "1.2.3.4/5")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -422,7 +422,7 @@
       (try
 	  (parse-ipv4-address-only "1.2.3.4.5")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -430,7 +430,7 @@
       (try
 	  (parse-ipv4-address-only "1,")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -438,7 +438,7 @@
       (try
 	  (parse-ipv4-address-only "1..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -446,7 +446,7 @@
       (try
 	  (parse-ipv4-address-only "1..2..")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -454,7 +454,7 @@
       (try
 	  (parse-ipv4-address-only "..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -479,7 +479,7 @@
       (try
 	  (parse-ipv4-address-prefix "1.2.3.4")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -487,7 +487,7 @@
       (try
 	  (parse-ipv4-address-prefix "1.2.3.4.5")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -495,7 +495,7 @@
       (try
 	  (parse-ipv4-address-prefix "1,")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -503,7 +503,7 @@
       (try
 	  (parse-ipv4-address-prefix "1..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -511,7 +511,7 @@
       (try
 	  (parse-ipv4-address-prefix "1..2..")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -519,7 +519,7 @@
       (try
 	  (parse-ipv4-address-prefix "..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -548,7 +548,7 @@
       (try
 	  (parse-ipv4-address "1.2.3.4.5")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -556,7 +556,7 @@
       (try
 	  (parse-ipv4-address "1,")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -564,7 +564,7 @@
       (try
 	  (parse-ipv4-address "1..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -572,7 +572,7 @@
       (try
 	  (parse-ipv4-address "1..2..")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -580,7 +580,7 @@
       (try
 	  (parse-ipv4-address "..2..3")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 
@@ -779,7 +779,7 @@
       (try
 	  (parse-ipv4-address-only "1..2")
 	(catch E
-	  (&ipv4-address-parser-error	#t)
+	  ((&ipv4-address-parser-error)	#t)
 	  (else				#f)))
     => #t)
 

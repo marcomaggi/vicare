@@ -128,7 +128,7 @@
 	    (<absolute-unix-pathname> O (<> ("path/to/file.ext")))
 	    O)
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -229,7 +229,7 @@
 	    (<relative-unix-pathname> O (<> ("/path/to/file.ext")))
 	    O)
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -538,7 +538,7 @@
 	(try
 	    (doit ?pathname "two" "nothing")
 	  (catch E
-	    (&unix-pathname-normalisation-error
+	    ((&unix-pathname-normalisation-error)
 	     (condition-message E))
 	    (else E)))
       => "cannot append extension to special directory pathname"))

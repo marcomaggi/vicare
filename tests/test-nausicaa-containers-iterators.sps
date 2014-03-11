@@ -89,7 +89,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -97,7 +97,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -129,7 +129,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -137,7 +137,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -169,7 +169,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -177,7 +177,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -204,7 +204,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -212,7 +212,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -247,7 +247,7 @@
     	(try
     	    (I next)
     	  (catch E
-    	    (&stop-iteration
+    	    ((&stop-iteration)
     	     (E iterator))
     	    (else E)))
       => I)
@@ -255,7 +255,7 @@
     	(try
     	    (I next)
     	  (catch E
-    	    (&stop-iteration
+    	    ((&stop-iteration)
     	     (E iterator))
     	    (else E)))
       => I)
@@ -278,7 +278,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -286,7 +286,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -308,7 +308,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -316,7 +316,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -337,7 +337,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -345,7 +345,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -376,7 +376,7 @@
     	(try
     	    (I next)
     	  (catch E
-    	    (&stop-iteration
+    	    ((&stop-iteration)
     	     (E iterator))
     	    (else E)))
       => I)
@@ -384,7 +384,7 @@
     	(try
     	    (I next)
     	  (catch E
-    	    (&stop-iteration
+    	    ((&stop-iteration)
     	     (E iterator))
     	    (else E)))
       => I)
@@ -407,7 +407,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -415,7 +415,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -437,7 +437,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -445,7 +445,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -475,7 +475,7 @@
     	(try
     	    (I next)
     	  (catch E
-    	    (&stop-iteration
+    	    ((&stop-iteration)
     	     (E iterator))
     	    (else E)))
       => I)
@@ -483,7 +483,7 @@
     	(try
     	    (I next)
     	  (catch E
-    	    (&stop-iteration
+    	    ((&stop-iteration)
     	     (E iterator))
     	    (else E)))
       => I)
@@ -506,7 +506,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -514,7 +514,7 @@
     	(try
 	    (I next)
 	  (catch E
-	    (&stop-iteration
+	    ((&stop-iteration)
 	     (E iterator))
 	    (else E)))
       => I)
@@ -536,7 +536,7 @@
     	(try
     	    (I next)
     	  (catch E
-    	    (&stop-iteration
+    	    ((&stop-iteration)
     	     (E iterator))
     	    (else E)))
       => I)
@@ -544,7 +544,7 @@
     	(try
     	    (I next)
     	  (catch E
-    	    (&stop-iteration
+    	    ((&stop-iteration)
     	     (E iterator))
     	    (else E)))
       => I)

@@ -730,7 +730,7 @@
       (try
 	  (values bv (ip.parse-ipv4-address-only (ascii->string bv)))
 	(catch E
-	  (ip.&ipv4-address-parser-error
+	  ((ip.&ipv4-address-parser-error)
 	   (%error))
 	  (else
 	   (raise E)))))))
@@ -770,7 +770,7 @@
       (try
 	  (values bv (ip.parse-ipv6-address-only (ascii->string bv)))
 	(catch E
-	  (ip.&ipv6-address-parser-error
+	  ((ip.&ipv6-address-parser-error)
 	   (%error))
 	  (else
 	   (raise E)))))))

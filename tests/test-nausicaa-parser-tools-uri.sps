@@ -66,7 +66,7 @@
 	(try
 	    (raise C)
 	  (catch E
-	    (uri.&uri-parser-error
+	    ((uri.&uri-parser-error)
 	     #t)
 	    (else #f))))
     => #t)
@@ -75,7 +75,7 @@
       (try
 	  (uri.raise-uri-parser-error 'ciao "message" 123)
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else #f)))
     => #t)
@@ -1005,7 +1005,7 @@
       (try
 	  (ascii->string (uri.parse-segment (mkport "ciao%3d%3,ciao")))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1014,7 +1014,7 @@
       (try
 	  (ascii->string (uri.parse-segment (mkport "ciao%,3%3dciao")))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1107,7 +1107,7 @@
       (try
 	  (ascii->string (uri.parse-segment-nz (mkport "ciao%3d%3,ciao")))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1116,7 +1116,7 @@
       (try
 	  (ascii->string (uri.parse-segment-nz (mkport "ciao%,3%3dciao")))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1219,7 +1219,7 @@
       (try
 	  (ascii->string (uri.parse-segment-nz-nc (mkport "ciao%3d%3,ciao")))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1228,7 +1228,7 @@
       (try
 	  (ascii->string (uri.parse-segment-nz-nc (mkport "ciao%,3%3dciao")))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1314,7 +1314,7 @@
       (try
 	  (ascii->string (uri.parse-slash-and-segment (mkport "/ciao%3d%3,ciao")))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1323,7 +1323,7 @@
       (try
 	  (ascii->string (uri.parse-slash-and-segment (mkport "/ciao%,3%3dciao")))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1811,7 +1811,7 @@
       (try
 	  (uri.parse-path (mkport "?query"))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -1820,7 +1820,7 @@
       (try
 	  (uri.parse-path (mkport "#fragment"))
 	(catch E
-	  (uri.&uri-parser-error
+	  ((uri.&uri-parser-error)
 	   #t)
 	  (else E)))
     => #t)
@@ -2171,7 +2171,7 @@
 	(try
 	    (uri.normalise-list-of-segments (map string->ascii (quote ?in)))
 	  (catch E
-	    (&assertion
+	    ((&assertion)
 	     (condition-irritants E))
 	    (else E)))
       => (quote ?out)))

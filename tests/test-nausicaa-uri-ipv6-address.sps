@@ -458,7 +458,7 @@
 			    (try
 				(parse-address ?string)
 			      (catch E
-				(&ipv6-address-parser-error
+				((&ipv6-address-parser-error)
 				 #t)
 				(else #f)))))))
     (check-it "1,")
@@ -604,7 +604,7 @@
 				(try
 				    (parse-ipv6-address ?string)
 				  (catch E
-				    (&ipv6-address-parser-error
+				    ((&ipv6-address-parser-error)
 				     #t)
 				    (else #f)))
 			      => #t)))))
@@ -698,7 +698,7 @@
 				(try
 				    (parse-ipv6-address-only ?string)
 				  (catch E
-				    (&ipv6-address-parser-error
+				    ((&ipv6-address-parser-error)
 				     #t)
 				    (else #f)))
 			      => #t)))))
@@ -799,7 +799,7 @@
 				(try
 				    (parse-ipv6-address-prefix ?string)
 				  (catch E
-				    (&ipv6-address-parser-error
+				    ((&ipv6-address-parser-error)
 				     #t)
 				    (else #f)))
 			      => #t)))))

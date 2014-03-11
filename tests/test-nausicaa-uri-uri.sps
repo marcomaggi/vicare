@@ -96,7 +96,7 @@
 	  (let (({O uri.<scheme>} '#vu8()))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -161,7 +161,7 @@
 	  (let (({O uri.<userinfo>} '#vu8(0)))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -334,7 +334,7 @@
 	  (let (({O uri.<port-number>} "ciao"))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -375,7 +375,7 @@
 	  (let (({O uri.<segment>} '#vu8()))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -385,7 +385,7 @@
 	  (let (({O uri.<segment>} "ciao%Z"))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -462,7 +462,7 @@
 	  (let (({O uri.<list-of-segments>} '(#ve(ascii "ciao%Z"))))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -577,7 +577,7 @@
       (try
 	  (uri.<path-abempty> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -658,7 +658,7 @@
       (try
 	  (uri.<path-absolute> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -712,7 +712,7 @@
       (try
 	  (uri.<path-rootless> ('()))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -721,7 +721,7 @@
       (try
 	  (uri.<path-rootless> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -775,7 +775,7 @@
       (try
 	  (uri.<path-noscheme> ('()))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -784,7 +784,7 @@
       (try
 	  (uri.<path-noscheme> ('(#ve(ascii "ciao%Z"))))
 	(catch E
-	  (&procedure-argument-violation
+	  ((&procedure-argument-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -887,7 +887,7 @@
 	  (let (({O uri.<query>} "ciao%Z"))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
@@ -938,7 +938,7 @@
 	  (let (({O uri.<fragment>} "ciao%Z"))
 	    #f)
 	(catch E
-	  (&tagged-binding-violation
+	  ((&tagged-binding-violation)
 	   #t)
 	  (else E)))
     => #t)
