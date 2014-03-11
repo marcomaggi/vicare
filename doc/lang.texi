@@ -1513,7 +1513,7 @@ expt
 mod mod0
 * / div div0
 + -
-< > <= >= = eq? eqv? equal?
+< > <= >= = != eq? eqv? equal?
 not
 and or xor
 @end example
