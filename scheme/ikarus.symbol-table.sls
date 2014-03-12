@@ -26,12 +26,7 @@
 		  string->symbol
 		  $symbol-table-size
 		  $log-symbol-table-status)
-    ;;FIXME To  be removed after  the next boot image  rotation.  (Marco
-    ;;Maggi; Sun Mar 9, 2014)
-    (only (ikarus.symbols)
-	  $symbol->string)
     (except (vicare system $symbols)
-	    $symbol->string
 	    $string->symbol
 	    $symbol-table-size
 	    $log-symbol-table-status)

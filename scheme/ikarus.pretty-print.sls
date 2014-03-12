@@ -24,23 +24,11 @@
     debug-print-enabled?
     debug-print			debug-print*)
   (import (except (vicare)
-		  ;;FIXME To be removed at the next boot image rotation.
-		  ;;(Marco Maggi; Sun Mar 9, 2014)
-		  unbound-object?		bwp-object?
-
 		  pretty-print			pretty-print*
 		  pretty-width
 
 		  debug-print-enabled?
 		  debug-print			debug-print*)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Sun Mar 9, 2014)
-    (only (ikarus.symbols)
-	  unbound-object?)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Sun Mar 9, 2014)
-    (only (ikarus predicates)
-	  bwp-object?)
     (only (ikarus writer)
 	  traverse
 	  traversal-helpers)

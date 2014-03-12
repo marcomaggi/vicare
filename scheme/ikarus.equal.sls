@@ -39,12 +39,7 @@
   (import (except (vicare)
 		  equal?)
     (vicare system $pointers)
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sun Mar 9, 2014)
-    #;(vicare system $keywords)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Sun Mar 9, 2014)
-    (only (ikarus.keywords)
+    (only (vicare system $keywords)
 	  $keyword=?))
 
   (module UNSAFE
@@ -183,7 +178,7 @@
 	     k))
        ((keyword? x)
 	(and (keyword? y)
-	     (keyword=? x y)
+	     ($keyword=? x y)
 	     k))
        (else
 	(and (eqv? x y) k))))
@@ -220,7 +215,7 @@
 	       k))
 	 ((keyword? x)
 	  (and (keyword? y)
-	       (keyword=? x y)
+	       ($keyword=? x y)
 	       k))
 	 (else
 	  (and (eqv? x y)
