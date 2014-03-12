@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare language-extensions ascii-chars)
   (export
     fixnum-in-ascii-range?	$fixnum-in-ascii-range?
@@ -142,12 +142,12 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (ascii-upcase (fx fixnum-in-ascii-range?))
+(define* (ascii-upcase {fx fixnum-in-ascii-range?})
   ($ascii-upcase fx))
 
 ;;; --------------------------------------------------------------------
 
-(define* (ascii-downcase (fx fixnum-in-ascii-range?))
+(define* (ascii-downcase {fx fixnum-in-ascii-range?})
   ($ascii-downcase fx))
 
 ;;; --------------------------------------------------------------------
@@ -159,22 +159,22 @@
 
 ;;;; conversion
 
-(define* (ascii-dec->fixnum (chi ascii-dec-digit?))
+(define* (ascii-dec->fixnum {chi ascii-dec-digit?})
   ($ascii-dec->fixnum chi))
 
 ;;; --------------------------------------------------------------------
 
-(define* (fixnum->ascii-dec (chi fixnum-in-base10-range?))
+(define* (fixnum->ascii-dec {chi fixnum-in-base10-range?})
   ($ascii-dec->fixnum chi))
 
 ;;; --------------------------------------------------------------------
 
-(define* (ascii-hex->fixnum (chi ascii-hex-digit?))
+(define* (ascii-hex->fixnum {chi ascii-hex-digit?})
   ($ascii-hex->fixnum chi))
 
 ;;; --------------------------------------------------------------------
 
-(define* (fixnum->ascii-hex (chi fixnum-in-base16-range?))
+(define* (fixnum->ascii-hex {chi fixnum-in-base16-range?})
   ($ascii-hex->fixnum chi))
 
 

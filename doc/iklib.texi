@@ -357,17 +357,18 @@ the return value; a predicate function accepts a single argument and
 returns true or @false{}.  Examples:
 
 @example
+#!vicare
 (import (vicare)
   (vicare system $fx))
 
 (define add
   ;;Fail if called with a non-fixnum argument.
-  (lambda* ((a fixnum?) (b fixnum?))
+  (lambda* (@{a fixnum?@} @{b fixnum?@})
     ($fx+ a b)))
 
 (define vec
   ;;Fail if attempting to return a non-vector.
-  (lambda* ((_ vector?) fun)
+  (lambda* (@{_ vector?@} fun)
     (fun 1 2)))
 
 (add 1 2)       @result{} 3
@@ -379,8 +380,9 @@ returns true or @false{}.  Examples:
 
 @noindent
 in the definition of the function bound to @func{vec}: notice that
-@code{(_ vector?)} is not a function argument, it is a special notation
-used to select a predicate function to validate the return value.
+@code{@{_ vector?@}} is not a function argument, it is a special
+notation used to select a predicate function to validate the return
+value.
 
 In the extended @func{lambda*} and @func{case-lambda*} syntaxes the
 @meta{pred-formals} can have any of the forms:
@@ -398,34 +400,32 @@ identifier is used to name a formal argument, in the extended
 
 @example
 @meta{id}
-(@meta{id} @meta{pred})
-#(@meta{id} @meta{pred})
+(brace @meta{id} @meta{pred})
 @end example
 
 @noindent
-where @meta{id} is an identifier naming the formal argument and
-@meta{pred} is an identifier which, at run time, must evaluate to a
-predicate function; the formal argument @meta{rest} can have only one of
-the following forms:
+where @meta{id} is an identifier naming the formal argument; @meta{pred}
+is an identifier which, at run time, must evaluate to a predicate
+function; @func{brace} is the binding exported by @library{vicare}.  The
+formal argument @meta{rest} can have only one of the following forms:
 
 @example
 @meta{rest-id}
-#(@meta{rest-id} @meta{pred})
+(brace @meta{rest-id} @meta{pred})
 @end example
 
 @noindent
-and the formal argument @meta{args} can have only one of the following
-forms:
+and the formal argument @meta{args} can have one of the following forms:
 
 @example
 @meta{args-id}
-#(@meta{args-id} @meta{pred})
+(brace @meta{args-id} @meta{pred})
 @end example
 
 The first item in the @meta{pred-formals} can have the special syntax:
 
 @example
-(_ @metao{pred} @meta{pred} ...)
+(brace _ @metao{pred} @meta{pred} ...)
 @end example
 
 @noindent
@@ -462,15 +462,13 @@ ignored and @func{lambda*} behaves like the standard @func{lambda}.
 If the first element of @meta{pred-formals} has the format:
 
 @example
-(_ @metao{pred} @meta{pred} ...)
+(brace _ @metao{pred} @meta{pred} ...)
 @end example
 
 @noindent
-where @code{_} is exactly the symbol @code{_} (not the auxiliary syntax
-exported by @rsixlibrary{base}), the values returned by the last
-@meta{body} form are validated using the given @meta{pred}: if a
-predicate fails for its returned value, an exception is raised using
-@condition{expression-return-value-violation}.
+the values returned by the last @meta{body} form are validated using the
+given @meta{pred}: if a predicate fails for its returned value, an
+exception is raised using @condition{expression-return-value-violation}.
 @end itemize
 
 In addition the fluid identifier syntax @code{__who__} is bound to the
@@ -483,9 +481,10 @@ Usage examples:
 Function with two predicate arguments:
 
 @example
+#!vicare
 (import (vicare))
 (define f
-  (lambda* ((a number?) (b number?))
+  (lambda* (@{a number?@} @{b number?@})
     (list (number->string a) (number->string b))))
 
 (f 1 2)         @result{} ("1" "2")
@@ -495,6 +494,7 @@ Function with two predicate arguments:
 Function with two mandatory arguments and the rest argument:
 
 @example
+#!vicare
 (import (vicare))
 
 (define (list-of-numbers? obj)
@@ -502,8 +502,8 @@ Function with two mandatory arguments and the rest argument:
        (for-all number? obj)))
 
 (define f
-  (lambda* ((a number?) (b number?)
-            . #(rest list-of-numbers?))
+  (lambda* (@{a number?@} @{b number?@}
+            . @{rest list-of-numbers?@})
     (list (number->string a)
           (number->string b)
           (length rest))))
@@ -511,20 +511,11 @@ Function with two mandatory arguments and the rest argument:
 (f 1 2 3 4 5)           @result{} ("1" "2" 3)
 @end example
 
-@noindent
-notice that a predicate rest argument must be specified using the vector
-syntax @code{#(rest list-of-numbers?)}, the list syntax @code{(rest
-list-of-numbers?)} would be interpreted as:
-
-@example
-((a number?) (b number?) . (rest list-of-numbers?))
-@expansion{} ((a number?) (b number?) rest list-of-numbers?)
-@end example
-
 @item
 Function with the @meta{args} argument:
 
 @example
+#!vicare
 (import (vicare))
 
 (define (list-of-numbers? obj)
@@ -532,7 +523,7 @@ Function with the @meta{args} argument:
        (for-all number? obj)))
 
 (define f
-  (lambda* #(args list-of-numbers?)
+  (lambda* @{args list-of-numbers?@}
     (length args)))
 
 (f 1 2 3)               @result{} 3
@@ -542,10 +533,11 @@ Function with the @meta{args} argument:
 Function with a single validated return value:
 
 @example
+#!vicare
 (import (vicare))
 
 (define f
-  (lambda* ((_ fixnum?) val)
+  (lambda* (@{_ fixnum?@} val)
     val))
 
 (f 1)                   @result{} 1
@@ -555,10 +547,11 @@ Function with a single validated return value:
 Function with multiple validated return values:
 
 @example
+#!vicare
 (import (vicare))
 
 (define f
-  (lambda* ((_ fixnum? string?) a b)
+  (lambda* (@{_ fixnum? string?@} a b)
     (values a b)))
 
 (f 1 "2")               @result{} 1, "2"
@@ -580,16 +573,17 @@ quoted symbol @code{_}.
 Usage examples:
 
 @example
+#!vicare
 (import (vicare))
 
 (define f
   (case-lambda*
-   (((a number?))
+   ((@{a number?@})
     (number->string a))))
 
 (define g
   (case-lambda*
-   (#(args list?)
+   (@{args list?@}
     (length args))))
 
 (f 123)                 @result{} "123"
@@ -637,9 +631,10 @@ Usage examples:
 Function with two predicate arguments:
 
 @example
+#!vicare
 (import (vicare))
 
-(define* (f (a number?) (b number?))
+(define* (f @{a number?@} @{b number?@})
   (list (number->string a) (number->string b)))
 
 (f 1 2)         @result{} ("1" "2")
@@ -649,14 +644,15 @@ Function with two predicate arguments:
 Function with two mandatory arguments and the rest argument:
 
 @example
+#!vicare
 (import (vicare))
 
 (define (list-of-numbers? obj)
   (and (list? obj)
        (for-all number? obj)))
 
-(define* (f (a number?) (b number?)
-            . #(rest list-of-numbers?))
+(define* (f @{a number?@} @{b number?@}
+            . @{rest list-of-numbers?@})
   (list (number->string a)
         (number->string b)
         (length rest)))
@@ -664,27 +660,18 @@ Function with two mandatory arguments and the rest argument:
 (f 1 2 3 4 5)           @result{} ("1" "2" 3)
 @end example
 
-@noindent
-notice that a predicate rest argument must be specified using the vector
-syntax @code{#(rest list-of-numbers?)}, the list syntax @code{(rest
-list-of-numbers?)} would be interpreted as:
-
-@example
-((a number?) (b number?) . (rest list-of-numbers?))
-@expansion{} ((a number?) (b number?) rest list-of-numbers?)
-@end example
-
 @item
 Function with the @meta{args} argument:
 
 @example
+#!vicare
 (import (vicare))
 
 (define (list-of-numbers? obj)
   (and (list? obj)
        (for-all number? obj)))
 
-(define* (f . #(args list-of-numbers?))
+(define* (f . @{args list-of-numbers?@})
   (length args))
 
 (f 1 2 3)               @result{} 3
@@ -694,9 +681,10 @@ Function with the @meta{args} argument:
 Function with a single validated return value:
 
 @example
+#!vicare
 (import (vicare))
 
-(define* ((f fixnum?) val)
+(define* (@{f fixnum?@} val)
   val)
 
 (f 1)                   @result{} 1
@@ -706,9 +694,10 @@ Function with a single validated return value:
 Function with multiple validated return values:
 
 @example
+#!vicare
 (import (vicare))
 
-(define* ((f fixnum? string?) a b)
+(define* (@{f fixnum? string?@} a b)
   (values a b))
 
 (f 1 "2")               @result{} 1, "2"

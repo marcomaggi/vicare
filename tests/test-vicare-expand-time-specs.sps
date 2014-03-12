@@ -36,31 +36,31 @@
 
 ;;;; type specifications
 
-(define* (fixnum (obj fixnum?))
+(define* (fixnum {obj fixnum?})
   obj)
 
-(define* (bignum (obj bignum?))
+(define* (bignum {obj bignum?})
   obj)
 
-(define* (exact-integer (obj exact-integer?))
+(define* (exact-integer {obj exact-integer?})
   obj)
 
-(define* (ratnum (obj ratnum?))
+(define* (ratnum {obj ratnum?})
   obj)
 
-(define* (flonum (obj flonum?))
+(define* (flonum {obj flonum?})
   obj)
 
-(define* (compnum (obj compnum?))
+(define* (compnum {obj compnum?})
   obj)
 
-(define* (cflonum (obj cflonum?))
+(define* (cflonum {obj cflonum?})
   obj)
 
-(define* (char (obj char?))
+(define* (char {obj char?})
   obj)
 
-(define* (bytevector (obj bytevector?))
+(define* (bytevector {obj bytevector?})
   obj)
 
 (eval-for-expand

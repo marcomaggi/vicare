@@ -56,7 +56,7 @@
       expand))
 
 
-(define* (make-tagged-variable-transformer (tag-id identifier?) (src-var-id identifier?))
+(define* (make-tagged-variable-transformer {tag-id identifier?} {src-var-id identifier?})
   ;;Build  and   return  the   transformer  function   implementing  the
   ;;identifier syntax  for tagged  variables.  When  we define  a tagged
   ;;variable with:
@@ -388,7 +388,7 @@
      (synner "invalid OOPP syntax" form-stx))))
 
 
-(define* (make-accessor-transformer (spec parser-help.<parsed-spec>?))
+(define* (make-accessor-transformer {spec parser-help.<parsed-spec>?})
   ;;Given  the "<parsed-spec>"  instance  SPEC: return  a syntax  object
   ;;representing the accessor transformer function for the tag.
   ;;
@@ -518,7 +518,7 @@
 	   #`(THE-PARENT :dispatch (#,expr-stx #,member-id . #,args-stx)))))))
 
 
-(define* (make-mutator-transformer (spec parser-help.<parsed-spec>?))
+(define* (make-mutator-transformer {spec parser-help.<parsed-spec>?})
   ;;Given the "parser-help.<parsed-spec>" instance SPEC: return a syntax
   ;;object representing the mutator transformer function for the tag.
   ;;

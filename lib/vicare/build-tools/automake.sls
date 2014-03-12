@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (vicare build-tools automake)
   (export
     build-library-dependencies)
@@ -39,7 +39,7 @@
 (module (strip-source-file-prefix
 	 strip-lib-prefix)
 
-  (define* (strip-source-file-prefix (pathname string?))
+  (define* (strip-source-file-prefix {pathname string?})
     ;;Given  a source  file  pathname:  if it  starts  with "../lib"  or
     ;;"./lib"  or a  directory in  the  source search  path: strip  such
     ;;prefix and return the result; otherwise return PATHNAME itself.
@@ -63,7 +63,7 @@
 	  (loop (substring ptn 1 (string-length ptn)))
 	ptn)))
 
-  (define* (strip-lib-prefix (pathname string?))
+  (define* (strip-lib-prefix {pathname string?})
     (cond ((%string-prefix? "lib/" pathname)
 	   (%deprefix "lib/" pathname))
 	  ((string=? "lib" pathname)
@@ -94,7 +94,7 @@
     ;;precedences are included automatically.
     (make-hashtable string-hash string=?))
 
-  (define* (%process-library-reference (libref libs.library-reference?))
+  (define* (%process-library-reference {libref libs.library-reference?})
     (define lib
       (receive-and-return (lib)
 	  (libs.find-library-by-name libref)
@@ -118,7 +118,7 @@
 	      %process-library-reference
 	    (cdr dependencies-list))))))
 
-  (define* (%library-build-dependency-list (lib libs.library?))
+  (define* (%library-build-dependency-list {lib libs.library?})
     ;;Return  a list  of  R6RS  library names;  the  first  name is  the
     ;;target's, the rest is the list  of library names of libraries upon
     ;;which the  target depends.   Only libraries  having a  source file

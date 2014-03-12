@@ -166,7 +166,7 @@
   (nongenerative nausicaa:language:oopp:<parsed-spec>)
   (protocol
    (lambda (make-instance)
-     (lambda* ((name-id identifier?) (top-id identifier?) (lambda-id identifier?))
+     (lambda* ({name-id identifier?} {top-id identifier?} {lambda-id identifier?})
        (make-instance name-id top-id lambda-id
 	 '() #;member-identifiers	'() #;definitions
 	 #f  #;abstract?		#f  #;public-constructor-id
@@ -377,7 +377,7 @@
   (nongenerative nausicaa:language:oopp:helpers:<field-spec>)
   (protocol
    (lambda (make-record)
-     (lambda* ((name identifier?) (acc identifier?) (mut %false-or-identifier?) (tag %false-or-identifier?))
+     (lambda* ({name identifier?} {acc identifier?} {mut %false-or-identifier?} {tag %false-or-identifier?})
        (make-record name acc mut tag))))
   (fields (immutable name-id)
 		;Identifier representing the field name.
@@ -406,7 +406,7 @@
 
 ;;;; data type methods: small functions
 
-(define* (<parsed-spec>-member-identifiers-cons! (parsed-spec <parsed-spec>?) id what-string synner)
+(define* (<parsed-spec>-member-identifiers-cons! {parsed-spec <parsed-spec>?} id what-string synner)
   ;;Add  the  identifier  ID  to  the  list  of  member  identifiers  in
   ;;PARSED-SPEC.  If such identifier  is already present: raise a syntax
   ;;violation.
@@ -418,35 +418,35 @@
 	  (else
 	   ($<parsed-spec>-member-identifiers-set! parsed-spec (cons id member-identifiers))))))
 
-(define* (<parsed-spec>-definitions-cons! (parsed-spec <parsed-spec>?) definition)
+(define* (<parsed-spec>-definitions-cons! {parsed-spec <parsed-spec>?} definition)
   ;;Prepend a definition form to the list of definitions in PARSED-SPEC.
   ;;
   ($<parsed-spec>-definitions-set! parsed-spec (cons definition ($<parsed-spec>-definitions parsed-spec))))
 
-(define* (<parsed-spec>-concrete-fields-cons! (parsed-spec <parsed-spec>?) field-record)
+(define* (<parsed-spec>-concrete-fields-cons! {parsed-spec <parsed-spec>?} field-record)
   ;;Prepend a  field record  to the  list of  concrete field  records in
   ;;PARSED-SPEC.
   ;;
   ($<parsed-spec>-concrete-fields-set! parsed-spec (cons field-record ($<parsed-spec>-concrete-fields parsed-spec))))
 
-(define* (<parsed-spec>-virtual-fields-cons! (parsed-spec <parsed-spec>?) field-record)
+(define* (<parsed-spec>-virtual-fields-cons! {parsed-spec <parsed-spec>?} field-record)
   ;;Prepend  a field  record to  the list  of virtual  field  records in
   ;;PARSED-SPEC.
   ;;
   ($<parsed-spec>-virtual-fields-set! parsed-spec (cons field-record ($<parsed-spec>-virtual-fields parsed-spec))))
 
-(define* (<parsed-spec>-methods-table-cons! (parsed-spec <parsed-spec>?)
+(define* (<parsed-spec>-methods-table-cons! {parsed-spec <parsed-spec>?}
 					    method-name-id method-rv-tag-id method-implementation-id)
   ;;Prepend an entry in the methods table.
   ;;
   ($<parsed-spec>-methods-table-set! parsed-spec (cons (list method-name-id method-rv-tag-id method-implementation-id)
 						       ($<parsed-spec>-methods-table parsed-spec))))
 
-(define* (<parsed-spec>-satisfactions-cons! (parsed-spec <parsed-spec>?) id)
+(define* (<parsed-spec>-satisfactions-cons! {parsed-spec <parsed-spec>?} id)
   (when config.enable-satisfactions
     ($<parsed-spec>-satisfactions-set! parsed-spec (cons id ($<parsed-spec>-satisfactions parsed-spec)))))
 
-(define* (<parsed-spec>-mixins-inclusions-cons! (parsed-spec <parsed-spec>?) mixin-inclusion-spec synner)
+(define* (<parsed-spec>-mixins-inclusions-cons! {parsed-spec <parsed-spec>?} mixin-inclusion-spec synner)
   ($<parsed-spec>-mixins-inclusions-set! parsed-spec (cons mixin-inclusion-spec
 							   ($<parsed-spec>-mixins-inclusions parsed-spec))))
 
@@ -455,18 +455,18 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (<parsed-spec>-list-of-uids-id (parsed-spec <parsed-spec>?))
+(define* (<parsed-spec>-list-of-uids-id {parsed-spec <parsed-spec>?})
   (tag-id->list-of-uids-id ($<parsed-spec>-name-id parsed-spec)))
 
-(define* (<class-spec>-default-protocol-id (class-spec <class-spec>?))
+(define* (<class-spec>-default-protocol-id {class-spec <class-spec>?})
   (tag-id->default-protocol-id ($<parsed-spec>-name-id class-spec)))
 
-(define* (<class-spec>-from-fields-constructor-id (class-spec <class-spec>?))
+(define* (<class-spec>-from-fields-constructor-id {class-spec <class-spec>?})
   (tag-id->from-fields-constructor-id ($<parsed-spec>-name-id class-spec)))
 
 ;;; --------------------------------------------------------------------
 
-(define* (<parsed-spec>-mutable-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-mutable-fields-data {spec <parsed-spec>?})
   ;;Select the mutable fields among  the concrete and virtual fields and
   ;;return a list of lists with the format:
   ;;
@@ -484,7 +484,7 @@
 		  ($<parsed-spec>-virtual-fields spec))
 	($<parsed-spec>-virtual-fields spec)))))
 
-(define* (<parsed-spec>-unsafe-mutable-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-unsafe-mutable-fields-data {spec <parsed-spec>?})
   ;;Select the  mutable fields  among the concrete  fields and  return a
   ;;list of lists with the format:
   ;;
@@ -504,7 +504,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (<parsed-spec>-immutable-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-immutable-fields-data {spec <parsed-spec>?})
   ;;Select the  immutable fields among  the concrete and  virtual fields
   ;;and return a list of lists with the format:
   ;;
@@ -521,7 +521,7 @@
 		  ($<parsed-spec>-virtual-fields  spec))
 	($<parsed-spec>-virtual-fields spec)))))
 
-(define* (<parsed-spec>-unsafe-immutable-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-unsafe-immutable-fields-data {spec <parsed-spec>?})
   ;;Select the immutable  fields among the concrete fields  and return a
   ;;list of lists with the format:
   ;;
@@ -541,7 +541,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (<parsed-spec>-concrete-fields-data (spec <parsed-spec>?))
+(define* (<parsed-spec>-concrete-fields-data {spec <parsed-spec>?})
   ;;Take the concrete fields and return a list of lists with the format:
   ;;
   ;;   (?field-spec ...)
@@ -563,7 +563,7 @@
 	     (list #'aux.immutable name-id accessor-id))))
     ($<parsed-spec>-concrete-fields spec)))
 
-(define* (<parsed-spec>-concrete-fields-names (spec <parsed-spec>?))
+(define* (<parsed-spec>-concrete-fields-names {spec <parsed-spec>?})
   ;;Take the concrete fields and return a list with the format:
   ;;
   ;;   (?field-name ...)
@@ -579,7 +579,7 @@
 (module (<label-spec>-satisfaction-clauses
 	 <class-spec>-satisfaction-clauses)
 
-  (define* (<label-spec>-satisfaction-clauses (spec <parsed-spec>?))
+  (define* (<label-spec>-satisfaction-clauses {spec <parsed-spec>?})
     (receive (virtual-mutable-fields virtual-immutable-fields)
 	(%field-spec-satisfaction-clauses ($<parsed-spec>-virtual-fields spec))
       (list (list ($<parsed-spec>-name-id spec)
@@ -595,7 +595,7 @@
 	    (list #'aux.shadows		($<parsed-spec>-shadowed-identifier spec))
 	    )))
 
-  (define* (<class-spec>-satisfaction-clauses (spec <parsed-spec>?))
+  (define* (<class-spec>-satisfaction-clauses {spec <parsed-spec>?})
     (let-values (((concrete-mutable-fields concrete-immutable-fields)
 		  (%field-spec-satisfaction-clauses ($<parsed-spec>-concrete-fields spec)))
 		 ((virtual-mutable-fields virtual-immutable-fields)
@@ -775,7 +775,7 @@
       (_
        (synner "invalid name specification in tag definition" stx))))
 
-  (define* (%process-mixin-inclusion-requests! (parsed-spec <parsed-spec>?) ctv-retriever synner)
+  (define* (%process-mixin-inclusion-requests! {parsed-spec <parsed-spec>?} ctv-retriever synner)
     ;;For  each mixin  inclusion  request in  PARSED-SPEC: retrieve  the
     ;;corresponding compile-time  value (CTV),  which is an  instance of
     ;;"<mixin-clauses-ctv>",  and  apply  the  identifiers  map  to  the
@@ -818,7 +818,7 @@
       ;;order in which they appear in the MIXINS clauses.
       ($<parsed-spec>-mixins-inclusions parsed-spec)))
 
-  (define* (%finalise-clauses-parsing! (parsed-spec <parsed-spec>?) synner)
+  (define* (%finalise-clauses-parsing! {parsed-spec <parsed-spec>?} synner)
     ;;Normalise  the results  of parsing  class, label  or mixin  clauses.
     ;;Mutate PARSED-SPEC.  Return unspecified values.
     ;;
@@ -1360,10 +1360,10 @@
   (%parse-field-spec)
 
   (define* (%parse-field-spec field-spec-stx
-			      (parsed-spec <parsed-spec>?)
-			      (register-mutable-field   procedure?)
-			      (register-immutable-field procedure?)
-			      (synner procedure?))
+			      {parsed-spec <parsed-spec>?}
+			      {register-mutable-field   procedure?}
+			      {register-immutable-field procedure?}
+			      {synner procedure?})
     ;;Parse  a concrete  or virtual  field specification  and apply  the
     ;;proper function to the result.
     ;;
@@ -1471,9 +1471,9 @@
       (make-<concrete-field-spec> field-name-id accessor-id #f type-tag-id))
     (%add-field-record parsed-spec field-spec synner))
 
-  (define* (%parse-concrete-field-acc/mut-spec (field-name-id identifier?)
+  (define* (%parse-concrete-field-acc/mut-spec {field-name-id identifier?}
 					       acc/mut-stx
-					       (parsed-spec <parsed-spec>?)
+					       {parsed-spec <parsed-spec>?}
 					       make-default-id synner)
     ;;Arguments:  the  field  name identifier  FIELD-NAME-ID,  a  syntax
     ;;object   ACC/MUT-STX   representing   the  accessor   or   mutator
@@ -1496,7 +1496,7 @@
 	   (synner "expected identifier as field accessor or mutator specification"
 		   acc/mut-stx))))
 
-  (define* (%add-field-record (parsed-spec <parsed-spec>?) (field-record <field-spec>?) synner)
+  (define* (%add-field-record {parsed-spec <parsed-spec>?} {field-record <field-spec>?} synner)
     ;;Add a record representing a field specification to the appropriate
     ;;field in PARSED-SPEC.  Check for duplicate names in members.
     ;;
@@ -1567,9 +1567,9 @@
       (make-<virtual-field-spec> field-name-id accessor-id #f type-tag-id))
     (%add-field-record parsed-spec field-spec synner))
 
-  (define* (%parse-virtual-field-acc/mut-spec (field-name-id identifier?)
+  (define* (%parse-virtual-field-acc/mut-spec {field-name-id identifier?}
 					      acc/mut-stx
-					      (parsed-spec <parsed-spec>?)
+					      {parsed-spec <parsed-spec>?}
 					      make-default-id synner)
     ;;Arguments:  the  field  name identifier  FIELD-NAME-ID,  a  syntax
     ;;object   ACC/MUT-STX   representing   the  accessor   or   mutator
@@ -1601,7 +1601,7 @@
 	  (<parsed-spec>-definitions-cons! parsed-spec (list #'define acc/mut-id acc/mut-stx)))
 	acc/mut-id)))
 
-  (define* (%add-field-record (parsed-spec <parsed-spec>?) (field-record <field-spec>?) synner)
+  (define* (%add-field-record {parsed-spec <parsed-spec>?} {field-record <field-spec>?} synner)
     ;;Add a record representing a field specification to the appropriate
     ;;field in PARSED-SPEC.  Check for duplicate names in members.
     ;;

@@ -448,6 +448,10 @@ Lots of backwards incompatibilities... life is hard!
 * The library (vicare) now exports the TRY syntax; see the documentation
   node "iklib syntaxes try".
 
+* The syntaxes LAMBDA*, DEFINE*,  CASE-LAMBDA*, CASE-DEFINE* now use the
+  brace  syntax  to  tag  argument and  return  values  with  validation
+  predicates.
+
 
 Notes for revision 0.3d7
 ------------------------

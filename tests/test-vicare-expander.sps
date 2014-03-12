@@ -2414,7 +2414,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((a fixnum?))
+	  (lambda* ({a fixnum?})
 	    (vector 123 a)))
 	(doit 456))
     => '#(123 456))
@@ -2422,7 +2422,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((a fixnum?) (b fixnum?) (c fixnum?))
+	  (lambda* ({a fixnum?} {b fixnum?} {c fixnum?})
 	    (vector 123 a b c)))
 	(doit 4 5 6))
     => '#(123 4 5 6))
@@ -2430,15 +2430,15 @@
   (check
       (let ()
 	(define doit
-	  (lambda* #(rest list-of-fixnums?)
-	    (vector 123 rest)))
+	  (lambda* {args list-of-fixnums?}
+	    (vector 123 args)))
 	(doit 4 5 6))
     => '#(123 (4 5 6)))
 
   (check
       (let ()
 	(define doit
-	  (lambda* ((a fixnum?) . #(rest list-of-fixnums?))
+	  (lambda* ({a fixnum?} . {rest list-of-fixnums?})
 	    (vector 123 a rest)))
 	(doit 4 5 6))
     => '#(123 4 (5 6)))
@@ -2446,7 +2446,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	  (lambda* ({a fixnum?} {b fixnum?} . {rest list-of-fixnums?})
 	    (vector 123 a b rest)))
 	(doit 4 5 6))
     => '#(123 4 5 (6)))
@@ -2454,7 +2454,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	  (lambda* ({a fixnum?} {b fixnum?} {c fixnum?} . {rest list-of-fixnums?})
 	    (vector 123 a b c rest)))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
@@ -2462,66 +2462,7 @@
   (check-for-procedure-argument-violation
       (let ()
 	(define doit
-	  (lambda* ((a fixnum?) (b fixnum?) (c fixnum?))
-	    (vector 123 a b c)))
-	(doit 4 #\5 6))
-    => '(_ ((fixnum? b) #\5)))
-
-;;; --------------------------------------------------------------------
-;;; with arg predicates, vector spec, without retval predicate
-
-  (check
-      (let ()
-	(define doit
-	  (lambda* (#(a fixnum?))
-	    (vector 123 a)))
-	(doit 456))
-    => '#(123 456))
-
-  (check
-      (let ()
-	(define doit
-	  (lambda* (#(a fixnum?) #(b fixnum?) #(c fixnum?))
-	    (vector 123 a b c)))
-	(doit 4 5 6))
-    => '#(123 4 5 6))
-
-  (check
-      (let ()
-	(define doit
-	  (lambda* #(rest list-of-fixnums?)
-	    (vector 123 rest)))
-	(doit 4 5 6))
-    => '#(123 (4 5 6)))
-
-  (check
-      (let ()
-	(define doit
-	  (lambda* (#(a fixnum?) . #(rest list-of-fixnums?))
-	    (vector 123 a rest)))
-	(doit 4 5 6))
-    => '#(123 4 (5 6)))
-
-  (check
-      (let ()
-	(define doit
-	  (lambda* (#(a fixnum?) #(b fixnum?) . #(rest list-of-fixnums?))
-	    (vector 123 a b rest)))
-	(doit 4 5 6))
-    => '#(123 4 5 (6)))
-
-  (check
-      (let ()
-	(define doit
-	  (lambda* (#(a fixnum?) #(b fixnum?) #(c fixnum?) . #(rest list-of-fixnums?))
-	    (vector 123 a b c rest)))
-	(doit 4 5 6))
-    => '#(123 4 5 6 ()))
-
-  (check-for-procedure-argument-violation
-      (let ()
-	(define doit
-	  (lambda* (#(a fixnum?) #(b fixnum?) #(c fixnum?))
+	  (lambda* ({a fixnum?} {b fixnum?} {c fixnum?})
 	    (vector 123 a b c)))
 	(doit 4 #\5 6))
     => '(_ ((fixnum? b) #\5)))
@@ -2532,7 +2473,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ fixnum?))
+	  (lambda* ({_ fixnum?})
 	    123))
 	(doit))
     => 123)
@@ -2540,7 +2481,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ vector?) (a fixnum?))
+	  (lambda* ({_ vector?} {a fixnum?})
 	    (vector 123 a)))
 	(doit 456))
     => '#(123 456))
@@ -2548,7 +2489,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?))
+	  (lambda* ({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?})
 	    (vector 123 a b c)))
 	(doit 4 5 6))
     => '#(123 4 5 6))
@@ -2556,7 +2497,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ vector?) . #(rest list-of-fixnums?))
+	  (lambda* ({_ vector?} . {rest list-of-fixnums?})
 	    (vector 123 rest)))
 	(doit 4 5 6))
     => '#(123 (4 5 6)))
@@ -2564,7 +2505,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ vector?) (a fixnum?) . #(rest list-of-fixnums?))
+	  (lambda* ({_ vector?} {a fixnum?} . {rest list-of-fixnums?})
 	    (vector 123 a rest)))
 	(doit 4 5 6))
     => '#(123 4 (5 6)))
@@ -2572,7 +2513,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ vector?) (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	  (lambda* ({_ vector?} {a fixnum?} {b fixnum?} . {rest list-of-fixnums?})
 	    (vector 123 a b rest)))
 	(doit 4 5 6))
     => '#(123 4 5 (6)))
@@ -2580,7 +2521,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	  (lambda* ({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?} . {rest list-of-fixnums?})
 	    (vector 123 a b c rest)))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
@@ -2588,7 +2529,7 @@
   (check-for-procedure-argument-violation
       (let ()
 	(define doit
-	  (lambda* ((a fixnum?) (b fixnum?) (c fixnum?))
+	  (lambda* ({a fixnum?} {b fixnum?} {c fixnum?})
 	    (vector 123 a b c)))
 	(doit 4 #\5 6))
     => '(_ ((fixnum? b) #\5)))
@@ -2596,7 +2537,7 @@
   (check-for-expression-return-value-violation
       (let ()
 	(define doit
-	  (lambda* ((_ list?) (a fixnum?) (b fixnum?) (c fixnum?))
+	  (lambda* ({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
 	    (vector 123 a b c)))
 	(doit 4 5 6))
     => '(_ ((list? #(123 4 5 6)))))
@@ -2607,7 +2548,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ fixnum? string? char?))
+	  (lambda* ({_ fixnum? string? char?})
 	    (values 1 "2" #\3)))
 	(doit))
     => 1 "2" #\3)
@@ -2615,7 +2556,7 @@
   (check-for-expression-return-value-violation
       (let ()
 	(define doit
-	  (lambda* ((_ fixnum? string? char?))
+	  (lambda* ({_ fixnum? string? char?})
 	    (values 1 'a #\3)))
 	(doit))
     => '(_ ((string? a))))
@@ -2634,7 +2575,7 @@
   (check
       (let ()
 	(define doit
-	  (lambda* ((_ symbol?))
+	  (lambda* ({_ symbol?})
 	    __who__))
 	(doit))
     => '_)
@@ -2721,7 +2662,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((a fixnum?))
+	    (({a fixnum?})
 	     (vector 123 a))))
 	(doit 456))
     => '#(123 456))
@@ -2730,7 +2671,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((a fixnum?) (b fixnum?) (c fixnum?))
+	    (({a fixnum?} {b fixnum?} {c fixnum?})
 	     (vector 123 a b c))))
 	(doit 4 5 6))
     => '#(123 4 5 6))
@@ -2739,8 +2680,8 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (#(rest list-of-fixnums?)
-	     (vector 123 rest))))
+	    ({args list-of-fixnums?}
+	     (vector 123 args))))
 	(doit 4 5 6))
     => '#(123 (4 5 6)))
 
@@ -2748,7 +2689,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((a fixnum?) . #(rest list-of-fixnums?))
+	    (({a fixnum?} . {rest list-of-fixnums?})
 	     (vector 123 a rest))))
 	(doit 4 5 6))
     => '#(123 4 (5 6)))
@@ -2757,7 +2698,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	    (({a fixnum?} {b fixnum?} . {rest list-of-fixnums?})
 	     (vector 123 a b rest))))
 	(doit 4 5 6))
     => '#(123 4 5 (6)))
@@ -2766,7 +2707,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	    (({a fixnum?} {b fixnum?} {c fixnum?} . {rest list-of-fixnums?})
 	     (vector 123 a b c rest))))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
@@ -2775,73 +2716,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((a fixnum?) (b fixnum?) (c fixnum?))
-	     (vector 123 a b c))))
-	(doit 4 #\5 6))
-    => '(_ ((fixnum? b) #\5)))
-
-;;; --------------------------------------------------------------------
-;;; with arg predicates, vector spec, without retval predicate
-
-  (check
-      (let ()
-	(define doit
-	  (case-lambda*
-	    ((#(a fixnum?))
-	     (vector 123 a))))
-	(doit 456))
-    => '#(123 456))
-
-  (check
-      (let ()
-	(define doit
-	  (case-lambda*
-	    ((#(a fixnum?) #(b fixnum?) #(c fixnum?))
-	     (vector 123 a b c))))
-	(doit 4 5 6))
-    => '#(123 4 5 6))
-
-  (check
-      (let ()
-	(define doit
-	  (case-lambda*
-	    (#(rest list-of-fixnums?)
-	     (vector 123 rest))))
-	(doit 4 5 6))
-    => '#(123 (4 5 6)))
-
-  (check
-      (let ()
-	(define doit
-	  (case-lambda*
-	    ((#(a fixnum?) . #(rest list-of-fixnums?))
-	     (vector 123 a rest))))
-	(doit 4 5 6))
-    => '#(123 4 (5 6)))
-
-  (check
-      (let ()
-	(define doit
-	  (case-lambda*
-	    ((#(a fixnum?) #(b fixnum?) . #(rest list-of-fixnums?))
-	     (vector 123 a b rest))))
-	(doit 4 5 6))
-    => '#(123 4 5 (6)))
-
-  (check
-      (let ()
-	(define doit
-	  (case-lambda*
-	    ((#(a fixnum?) #(b fixnum?) #(c fixnum?) . #(rest list-of-fixnums?))
-	     (vector 123 a b c rest))))
-	(doit 4 5 6))
-    => '#(123 4 5 6 ()))
-
-  (check-for-procedure-argument-violation
-      (let ()
-	(define doit
-	  (case-lambda*
-	    ((#(a fixnum?) #(b fixnum?) #(c fixnum?))
+	    (({a fixnum?} {b fixnum?} {c fixnum?})
 	     (vector 123 a b c))))
 	(doit 4 #\5 6))
     => '(_ ((fixnum? b) #\5)))
@@ -2853,7 +2728,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ fixnum?))
+	    (({_ fixnum?})
 	     123)))
 	(doit))
     => 123)
@@ -2862,7 +2737,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ vector?) (a fixnum?))
+	    (({_ vector?} {a fixnum?})
 	     (vector 123 a))))
 	(doit 456))
     => '#(123 456))
@@ -2871,7 +2746,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?))
+	    (({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?})
 	     (vector 123 a b c))))
 	(doit 4 5 6))
     => '#(123 4 5 6))
@@ -2880,7 +2755,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ vector?) . #(rest list-of-fixnums?))
+	    (({_ vector?} . {rest list-of-fixnums?})
 	     (vector 123 rest))))
 	(doit 4 5 6))
     => '#(123 (4 5 6)))
@@ -2889,7 +2764,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ vector?) (a fixnum?) . #(rest list-of-fixnums?))
+	    (({_ vector?} {a fixnum?} . {rest list-of-fixnums?})
 	     (vector 123 a rest))))
 	(doit 4 5 6))
     => '#(123 4 (5 6)))
@@ -2898,7 +2773,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ vector?) (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	    (({_ vector?} {a fixnum?} {b fixnum?} . {rest list-of-fixnums?})
 	     (vector 123 a b rest))))
 	(doit 4 5 6))
     => '#(123 4 5 (6)))
@@ -2907,7 +2782,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	    (({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?} . {rest list-of-fixnums?})
 	     (vector 123 a b c rest))))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
@@ -2916,7 +2791,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((a fixnum?) (b fixnum?) (c fixnum?))
+	    (({a fixnum?} {b fixnum?} {c fixnum?})
 	     (vector 123 a b c))))
 	(doit 4 #\5 6))
     => '(_ ((fixnum? b) #\5)))
@@ -2925,7 +2800,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ list?) (a fixnum?) (b fixnum?) (c fixnum?))
+	    (({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
 	     (vector 123 a b c))))
 	(doit 4 5 6))
     => '(_ ((list? #(123 4 5 6)))))
@@ -2937,7 +2812,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ fixnum? string? char?))
+	    (({_ fixnum? string? char?})
 	     (values 1 "2" #\3))))
 	(doit))
     => 1 "2" #\3)
@@ -2946,7 +2821,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ fixnum? string? char?))
+	    (({_ fixnum? string? char?})
 	     (values 1 'a #\3))))
 	(doit))
     => '(_ ((string? a))))
@@ -2967,7 +2842,7 @@
       (let ()
 	(define doit
 	  (case-lambda*
-	    (((_ symbol?))
+	    (({_ symbol?})
 	     __who__)))
 	(doit))
     => '_)
@@ -3038,101 +2913,49 @@
 
   (check
       (let ()
-	(define* (doit (a fixnum?))
+	(define* (doit {a fixnum?})
 	  (vector 123 a))
 	(doit 456))
     => '#(123 456))
 
   (check
       (let ()
-	(define* (doit (a fixnum?) (b fixnum?) (c fixnum?))
+	(define* (doit {a fixnum?} {b fixnum?} {c fixnum?})
 	  (vector 123 a b c))
 	(doit 4 5 6))
     => '#(123 4 5 6))
 
   (check
       (let ()
-	(define* (doit . #(rest list-of-fixnums?))
+	(define* (doit . {rest list-of-fixnums?})
 	  (vector 123 rest))
 	(doit 4 5 6))
     => '#(123 (4 5 6)))
 
   (check
       (let ()
-	(define* (doit (a fixnum?) . #(rest list-of-fixnums?))
+	(define* (doit {a fixnum?} . {rest list-of-fixnums?})
 	  (vector 123 a rest))
 	(doit 4 5 6))
     => '#(123 4 (5 6)))
 
   (check
       (let ()
-	(define* (doit (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	(define* (doit {a fixnum?} {b fixnum?} . {rest list-of-fixnums?})
 	  (vector 123 a b rest))
 	(doit 4 5 6))
     => '#(123 4 5 (6)))
 
   (check
       (let ()
-	(define* (doit (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	(define* (doit {a fixnum?} {b fixnum?} {c fixnum?} . {rest list-of-fixnums?})
 	  (vector 123 a b c rest))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
 
   (check-for-procedure-argument-violation
       (let ()
-	(define* (doit (a fixnum?) (b fixnum?) (c fixnum?))
-	  (vector 123 a b c))
-	(doit 4 #\5 6))
-    => '(doit ((fixnum? b) #\5)))
-
-;;; --------------------------------------------------------------------
-;;; with arg predicates, vector spec, without retval predicate
-
-  (check
-      (let ()
-	(define* (doit #(a fixnum?))
-	  (vector 123 a))
-	(doit 456))
-    => '#(123 456))
-
-  (check
-      (let ()
-	(define* (doit #(a fixnum?) #(b fixnum?) #(c fixnum?))
-	  (vector 123 a b c))
-	(doit 4 5 6))
-    => '#(123 4 5 6))
-
-  (check
-      (let ()
-	(define* (doit . #(rest list-of-fixnums?))
-	  (vector 123 rest))
-	(doit 4 5 6))
-    => '#(123 (4 5 6)))
-
-  (check
-      (let ()
-	(define* (doit #(a fixnum?) . #(rest list-of-fixnums?))
-	  (vector 123 a rest))
-	(doit 4 5 6))
-    => '#(123 4 (5 6)))
-
-  (check
-      (let ()
-	(define* (doit #(a fixnum?) #(b fixnum?) . #(rest list-of-fixnums?))
-	  (vector 123 a b rest))
-	(doit 4 5 6))
-    => '#(123 4 5 (6)))
-
-  (check
-      (let ()
-	(define* (doit #(a fixnum?) #(b fixnum?) #(c fixnum?) . #(rest list-of-fixnums?))
-	  (vector 123 a b c rest))
-	(doit 4 5 6))
-    => '#(123 4 5 6 ()))
-
-  (check-for-procedure-argument-violation
-      (let ()
-	(define* (doit #(a fixnum?) #(b fixnum?) #(c fixnum?))
+	(define* (doit {a fixnum?} {b fixnum?} {c fixnum?})
 	  (vector 123 a b c))
 	(doit 4 #\5 6))
     => '(doit ((fixnum? b) #\5)))
@@ -3142,63 +2965,63 @@
 
   (check
       (let ()
-	(define* ((doit fixnum?))
+	(define* ({doit fixnum?})
 	  123)
 	(doit))
     => 123)
 
   (check
       (let ()
-	(define* ((doit vector?) (a fixnum?))
+	(define* ({doit vector?} {a fixnum?})
 	  (vector 123 a))
 	(doit 456))
     => '#(123 456))
 
   (check
       (let ()
-	(define* ((doit vector?) (a fixnum?) (b fixnum?) (c fixnum?))
+	(define* ({doit vector?} {a fixnum?} {b fixnum?} {c fixnum?})
 	  (vector 123 a b c))
 	(doit 4 5 6))
     => '#(123 4 5 6))
 
   (check
       (let ()
-	(define* ((doit vector?) . #(rest list-of-fixnums?))
+	(define* ({doit vector?} . {rest list-of-fixnums?})
 	  (vector 123 rest))
 	(doit 4 5 6))
     => '#(123 (4 5 6)))
 
   (check
       (let ()
-	(define* ((doit vector?) (a fixnum?) . #(rest list-of-fixnums?))
+	(define* ({doit vector?} {a fixnum?} . {rest list-of-fixnums?})
 	  (vector 123 a rest))
 	(doit 4 5 6))
     => '#(123 4 (5 6)))
 
   (check
       (let ()
-	(define* ((doit vector?) (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	(define* ({doit vector?} {a fixnum?} {b fixnum?} . {rest list-of-fixnums?})
 	  (vector 123 a b rest))
 	(doit 4 5 6))
     => '#(123 4 5 (6)))
 
   (check
       (let ()
-	(define* ((doit vector?) (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	(define* ({doit vector?} {a fixnum?} {b fixnum?} {c fixnum?} . {rest list-of-fixnums?})
 	  (vector 123 a b c rest))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
 
   (check-for-procedure-argument-violation
       (let ()
-	(define* (doit (a fixnum?) (b fixnum?) (c fixnum?))
+	(define* ({doit vector?} {a fixnum?} {b fixnum?} {c fixnum?})
 	  (vector 123 a b c))
 	(doit 4 #\5 6))
     => '(doit ((fixnum? b) #\5)))
 
   (check-for-expression-return-value-violation
       (let ()
-	(define* ((doit list?) (a fixnum?) (b fixnum?) (c fixnum?))
+	(define* ({doit list?} {a fixnum?} {b fixnum?} {c fixnum?})
 	  (vector 123 a b c))
 	(doit 4 5 6))
     => '(doit ((list? #(123 4 5 6)))))
@@ -3208,14 +3031,14 @@
 
   (check
       (let ()
-	(define* ((doit fixnum? string? char?))
+	(define* ({doit fixnum? string? char?})
 	  (values 1 "2" #\3))
 	(doit))
     => 1 "2" #\3)
 
   (check-for-expression-return-value-violation
       (let ()
-	(define* ((doit fixnum? string? char?))
+	(define* ({doit fixnum? string? char?})
 	  (values 1 'a #\3))
 	(doit))
     => '(doit ((string? a))))
@@ -3232,7 +3055,7 @@
 
   (check
       (let ()
-	(define* ((doit symbol?))
+	(define* ({doit symbol?})
 	  __who__)
 	(doit))
     => 'doit)
@@ -3346,7 +3169,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((a fixnum?))
+	  (({a fixnum?})
 	   (vector 123 a)))
 	(doit 456))
     => '#(123 456))
@@ -3354,7 +3177,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((a fixnum?) (b fixnum?) (c fixnum?))
+	  (({a fixnum?} {b fixnum?} {c fixnum?})
 	   (vector 123 a b c)))
 	(doit 4 5 6))
     => '#(123 4 5 6))
@@ -3362,7 +3185,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (#(rest list-of-fixnums?)
+	  ({rest list-of-fixnums?}
 	   (vector 123 rest)))
 	(doit 4 5 6))
     => '#(123 (4 5 6)))
@@ -3370,7 +3193,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((a fixnum?) . #(rest list-of-fixnums?))
+	  (({a fixnum?} . {rest list-of-fixnums?})
 	   (vector 123 a rest)))
 	(doit 4 5 6))
     => '#(123 4 (5 6)))
@@ -3378,7 +3201,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	  (({a fixnum?} {b fixnum?} . {rest list-of-fixnums?})
 	   (vector 123 a b rest)))
 	(doit 4 5 6))
     => '#(123 4 5 (6)))
@@ -3386,7 +3209,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	  (({a fixnum?} {b fixnum?} {c fixnum?} . {rest list-of-fixnums?})
 	   (vector 123 a b c rest)))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
@@ -3396,11 +3219,11 @@
 	(case-define* doit
 	  (()
 	   0)
-	  (((a fixnum?))
+	  (({a fixnum?})
 	   (list a))
-	  (((a fixnum?) (b fixnum?) (c fixnum?))
+	  (({a fixnum?} {b fixnum?} {c fixnum?})
 	   (list a b c))
-	  (((a fixnum?) (b fixnum?) (c fixnum?) . rest)
+	  (({a fixnum?} {b fixnum?} {c fixnum?} . rest)
 	   (cons* a b c rest)))
 	(vector (doit)
 		(doit 1)
@@ -3411,66 +3234,7 @@
   (check-for-procedure-argument-violation
       (let ()
 	(case-define* doit
-	  (((a fixnum?) (b fixnum?) (c fixnum?))
-	   (vector 123 a b c)))
-	(doit 4 #\5 6))
-    => '(doit ((fixnum? b) #\5)))
-
-;;; --------------------------------------------------------------------
-;;; with arg predicates, vector spec, without retval predicate
-
-  (check
-      (let ()
-	(case-define* doit
-	  ((#(a fixnum?))
-	   (vector 123 a)))
-	(doit 456))
-    => '#(123 456))
-
-  (check
-      (let ()
-	(case-define* doit
-	  ((#(a fixnum?) #(b fixnum?) #(c fixnum?))
-	   (vector 123 a b c)))
-	(doit 4 5 6))
-    => '#(123 4 5 6))
-
-  (check
-      (let ()
-	(case-define* doit
-	  (#(rest list-of-fixnums?)
-	   (vector 123 rest)))
-	(doit 4 5 6))
-    => '#(123 (4 5 6)))
-
-  (check
-      (let ()
-	(case-define* doit
-	  ((#(a fixnum?) . #(rest list-of-fixnums?))
-	   (vector 123 a rest)))
-	(doit 4 5 6))
-    => '#(123 4 (5 6)))
-
-  (check
-      (let ()
-	(case-define* doit
-	  ((#(a fixnum?) #(b fixnum?) . #(rest list-of-fixnums?))
-	   (vector 123 a b rest)))
-	(doit 4 5 6))
-    => '#(123 4 5 (6)))
-
-  (check
-      (let ()
-	(case-define* doit
-	  ((#(a fixnum?) #(b fixnum?) #(c fixnum?) . #(rest list-of-fixnums?))
-	   (vector 123 a b c rest)))
-	(doit 4 5 6))
-    => '#(123 4 5 6 ()))
-
-  (check-for-procedure-argument-violation
-      (let ()
-	(case-define* doit
-	  ((#(a fixnum?) #(b fixnum?) #(c fixnum?))
+	  (({a fixnum?} {b fixnum?} {c fixnum?})
 	   (vector 123 a b c)))
 	(doit 4 #\5 6))
     => '(doit ((fixnum? b) #\5)))
@@ -3481,7 +3245,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ fixnum?))
+	  (({_ fixnum?})
 	   123))
 	(doit))
     => 123)
@@ -3489,7 +3253,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ vector?) (a fixnum?))
+	  (({_ vector?} {a fixnum?})
 	   (vector 123 a)))
 	(doit 456))
     => '#(123 456))
@@ -3497,7 +3261,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?))
+	  (({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?})
 	   (vector 123 a b c)))
 	(doit 4 5 6))
     => '#(123 4 5 6))
@@ -3505,7 +3269,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ vector?) . #(rest list-of-fixnums?))
+	  (({_ vector?} . {rest list-of-fixnums?})
 	   (vector 123 rest)))
 	(doit 4 5 6))
     => '#(123 (4 5 6)))
@@ -3513,7 +3277,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ vector?) (a fixnum?) . #(rest list-of-fixnums?))
+	  (({_ vector?} {a fixnum?} . {rest list-of-fixnums?})
 	   (vector 123 a rest)))
 	(doit 4 5 6))
     => '#(123 4 (5 6)))
@@ -3521,7 +3285,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ vector?) (a fixnum?) (b fixnum?) . #(rest list-of-fixnums?))
+	  (({_ vector?} {a fixnum?} {b fixnum?} . {rest list-of-fixnums?})
 	   (vector 123 a b rest)))
 	(doit 4 5 6))
     => '#(123 4 5 (6)))
@@ -3529,7 +3293,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ vector?) (a fixnum?) (b fixnum?) (c fixnum?) . #(rest list-of-fixnums?))
+	  (({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?} . (rest list-of-fixnums?))
 	   (vector 123 a b c rest)))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))
@@ -3537,7 +3301,7 @@
   (check-for-procedure-argument-violation
       (let ()
 	(case-define* doit
-	  (((a fixnum?) (b fixnum?) (c fixnum?))
+	  (({a fixnum?} {b fixnum?} {c fixnum?})
 	   (vector 123 a b c)))
 	(doit 4 #\5 6))
     => '(doit ((fixnum? b) #\5)))
@@ -3545,7 +3309,7 @@
   (check-for-expression-return-value-violation
       (let ()
 	(case-define* doit
-	  (((_ list?) (a fixnum?) (b fixnum?) (c fixnum?))
+	  (({_ list?} {a fixnum?} {b fixnum?} {c fixnum?})
 	   (vector 123 a b c)))
 	(doit 4 5 6))
     => '(doit ((list? #(123 4 5 6)))))
@@ -3556,7 +3320,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ fixnum? string? char?))
+	  (({_ fixnum? string? char?})
 	   (values 1 "2" #\3)))
 	(doit))
     => 1 "2" #\3)
@@ -3564,7 +3328,7 @@
   (check-for-expression-return-value-violation
       (let ()
 	(case-define* doit
-	  (((_ fixnum? string? char?))
+	  (({_ fixnum? string? char?})
 	   (values 1 'a #\3)))
 	(doit))
     => '(doit ((string? a))))
@@ -3583,7 +3347,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (((_ symbol?))
+	  (({_ symbol?})
 	   __who__))
 	(doit))
     => 'doit)
@@ -4921,7 +4685,7 @@
 	(import (vicare system $strings)
 	  (vicare system $chars))
 
-	(define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
+	(define* ({string-ref-fx fixnum?} {str string?} {idx fixnum?})
 	  ($string-ref-fx str idx))
 
 	(define ($string-ref-fx str idx)
