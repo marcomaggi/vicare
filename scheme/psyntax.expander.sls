@@ -1147,6 +1147,11 @@
     object-spec-name
     object-spec-type-id			object-spec-pred-id
 
+    ;; tagged binding variables
+    tagged-identifier?
+    parse-tagged-identifier		parse-tagged-identifiers
+    parse-tagged-formals
+
     ;; expand-time type specs: callable specs
     identifier-callable-spec		set-identifier-callable-spec!
     make-callable-spec			callable-spec?
@@ -5325,7 +5330,7 @@
 	 (assertion-violation 'syntax-vector->list "BUG: not a syntax vector" x))))
 
 
-;;;; public interface identifiers handling
+;;;; public interface: identifiers handling
 
 (define (identifier? x)
   ;;Return true if X is an  identifier: a syntax object whose expression
@@ -5381,6 +5386,164 @@
 	  (bound-id=? x y)
 	(assertion-violation 'bound-identifier=? "not an identifier" y))
     (assertion-violation 'bound-identifier=? "not an identifier" x)))
+
+
+;;;; public interface: tagged identifiers handling
+
+(define (tagged-identifier? x)
+  (syntax-match x (brace)
+    ((brace ?id ?tag)
+     (and (identifier? ?id)
+	  (identifier? ?tag)))
+    (?id
+     (identifier? ?id))
+    ))
+
+(define (parse-tagged-identifier stx)
+  (syntax-match stx (brace)
+    ((brace ?id ?tag)
+     (values ?id ?tag))
+    (?id
+     (identifier? ?id)
+     (values ?id #f))
+    ))
+
+(define (parse-tagged-identifiers stx)
+  ;;Assume STX is a syntax object representing a proper list of possibly
+  ;;tagged binding  identifiers; parse the  list and return 2  values: a
+  ;;list of identifiers representing the  binding identifiers, a list of
+  ;;identifiers and  #f representing the type  tags; #f is used  when no
+  ;;tag is present.
+  ;;
+  ;;The returned  binding identifiers are not  validated for duplicates;
+  ;;such check is left to the caller.
+  ;;
+  (syntax-match stx (brace)
+    (()
+     (values '() '()))
+    (((brace ?id ?tag) . ?other-id*)
+     (receive (id* tag*)
+	 (parse-tagged-identifiers ?other-id*)
+       (values (cons ?id id*) (cons ?tag tag*))))
+    ((?id . ?other-id*)
+     (identifier? ?id)
+     (receive (id* tag*)
+	 (parse-tagged-identifiers ?other-id*)
+       (values (cons ?id id*) (cons #f tag*))))
+    ))
+
+(define* (parse-tagged-formals formals-stx)
+  ;;Given  a syntax  object  representing tagged  LAMBDA formals:  split
+  ;;formals from tags.  Do *not* test for duplicate bindings.
+  ;;
+  ;;We  use the  conventions: ?ID,  ?REST-ID and  ?ARGS-ID are  argument
+  ;;identifiers;  ?PRED  is  a  predicate  identifier.   We  accept  the
+  ;;following standard formals formats:
+  ;;
+  ;;   ?args-id
+  ;;   (?id ...)
+  ;;   (?id0 ?id ... . ?rest-id)
+  ;;
+  ;;and in addition the following tagged formals:
+  ;;
+  ;;   (brace ?args-id ?args-pred)
+  ;;   (?arg ...)
+  ;;   (?arg0 ?arg ... . ?rest-arg)
+  ;;
+  ;;where ?ARG is a predicate argument with one of the formats:
+  ;;
+  ;;   ?id
+  ;;   (brace ?id ?tag)
+  ;;
+  ;;Return 2 values:
+  ;;
+  ;;1.  A  proper  or  improper list  of  identifiers  representing  the
+  ;;   standard formals.
+  ;;
+  ;;2. A proper  or improper list of identifiers or  #f representing the
+  ;;   tags.  #f is used when no tag is present.
+  ;;
+  (define (%process-args recur args-stx)
+    (receive (standard-formals tags)
+	(recur (cdr args-stx))
+      (let ((arg-stx (car args-stx)))
+	(syntax-match arg-stx (brace)
+	  ;;Untagged argument.
+	  (?id
+	   (identifier? ?id)
+	   (values (cons ?id standard-formals) (cons #f tags)))
+	  ;;Tagged argument.
+	  ((brace ?id ?tag)
+	   (and (identifier? ?id)
+		(identifier? ?tag))
+	   (values (cons ?id standard-formals) (cons ?tag tags)))
+	  (else
+	   (syntax-violation __who__ "invalid argument specification" formals-stx arg-stx))))))
+    (syntax-match formals-stx (brace)
+
+      ;;Tagged args, as in:
+      ;;
+      ;;   (lambda {args list-of-fixnums} . ?body)
+      ;;
+      ((brace ?args-id ?args-tag)
+       (and (identifier? ?args-id)
+	    (identifier? ?args-tag))
+       (values ?args-id ?args-tag))
+
+      ;;Possibly tagged identifiers with tagged rest argument, as in:
+      ;;
+      ;;   (lambda (?arg ... . {rest list-of-fixnums}) . ?body)
+      ;;
+      ((?arg* ... . (brace ?rest-id ?rest-tag))
+       (begin
+	 (unless (and (identifier? ?rest-id)
+		      (identifier? ?rest-tag))
+	   (syntax-violation __who__
+	     "invalid rest argument specification" formals-stx (cons 'brace ?rest-id ?rest-tag)))
+	 (let recur ((?arg* ?arg*))
+	   (if (pair? ?arg*)
+	       (%process-args recur ?arg*)
+	     ;;Process rest argument.
+	     (values ?rest-id ?rest-tag)))))
+
+      ;;Possibly tagged identifiers with UNtagged rest argument, as in:
+      ;;
+      ;;   (lambda (?arg ... . rest) . ?body)
+      ;;
+      ((?arg* ... . ?rest-id)
+       (identifier? ?rest-id)
+       (let recur ((?arg* ?arg*))
+	 (if (pair? ?arg*)
+	     (%process-args recur ?arg*)
+	   (values ?rest-id #f))))
+
+      ;;Standard formals: untagged identifiers without rest argument.
+      ;;
+      ((?id* ...)
+       (for-all identifier? ?id*)
+       (values ?id* (map (lambda (id) #f) ?id*)))
+
+      ;;Standard formals: untagged identifiers with rest argument.
+      ;;
+      ((?id* ... . ?rest-id)
+       (and (for-all identifier? ?id*)
+	    (identifier? ?rest-id))
+       (values formals-stx (cons* (map (lambda (id) #f) ?id*) #f)))
+
+      ;;Standard formals: untagged args.
+      ;;
+      (?args-id
+       (identifier? ?args-id)
+       (values ?args-id #f))
+
+      ;;Possibly tagged identifiers without rest argument.
+      ;;
+      ((?arg* ...)
+       (let recur ((?arg* ?arg*))
+	 (if (pair? ?arg*)
+	     (%process-args recur ?arg*)
+	   (values '() '()))))
+      ))
 
 
 ;;;; identifiers: syntactic binding properties

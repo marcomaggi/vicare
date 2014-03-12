@@ -788,6 +788,11 @@
     (environment-labels				v $language)
     (environment-binding			v $language)
 ;;;
+    (tagged-identifier?				$object-spec)
+    (parse-tagged-identifier			$object-spec)
+    (parse-tagged-identifiers			$object-spec)
+    (parse-tagged-formals			$object-spec)
+
     (set-identifier-object-spec!		$object-spec)
     (identifier-object-spec			$object-spec)
     (make-object-spec				$object-spec)
