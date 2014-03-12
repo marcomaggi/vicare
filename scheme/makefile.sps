@@ -788,9 +788,16 @@
     (environment-labels				v $language)
     (environment-binding			v $language)
 ;;;
+    (set-identifier-type-tagging!		$object-spec)
+    (identifier-type-tagging			$object-spec)
+    ;;NOTE Should these be exported too, for debugging purposes?  (Marco
+    ;;Maggi; Wed Mar 12, 2014)
+    #;(set-label-type-tagging!			$object-spec)
+    #;(label-type-tagging			$object-spec)
     (tagged-identifier?				$object-spec)
+    (tagged-formals?				$object-spec)
     (parse-tagged-identifier			$object-spec)
-    (parse-tagged-identifiers			$object-spec)
+    (parse-tagged-bindings			$object-spec)
     (parse-tagged-formals			$object-spec)
 
     (set-identifier-object-spec!		$object-spec)

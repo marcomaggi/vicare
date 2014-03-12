@@ -1148,8 +1148,10 @@
     object-spec-type-id			object-spec-pred-id
 
     ;; tagged binding variables
-    tagged-identifier?
-    parse-tagged-identifier		parse-tagged-identifiers
+    set-identifier-type-tagging!	identifier-type-tagging
+    set-label-type-tagging!		label-type-tagging
+    tagged-identifier?			tagged-formals?
+    parse-tagged-identifier		parse-tagged-bindings
     parse-tagged-formals
 
     ;; expand-time type specs: callable specs
@@ -5408,7 +5410,9 @@
      (values ?id #f))
     ))
 
-(define (parse-tagged-identifiers stx)
+;;; --------------------------------------------------------------------
+
+(define (parse-tagged-bindings stx)
   ;;Assume STX is a syntax object representing a proper list of possibly
   ;;tagged binding  identifiers; parse the  list and return 2  values: a
   ;;list of identifiers representing the  binding identifiers, a list of
@@ -5423,14 +5427,26 @@
      (values '() '()))
     (((brace ?id ?tag) . ?other-id*)
      (receive (id* tag*)
-	 (parse-tagged-identifiers ?other-id*)
+	 (parse-tagged-bindings ?other-id*)
        (values (cons ?id id*) (cons ?tag tag*))))
     ((?id . ?other-id*)
      (identifier? ?id)
      (receive (id* tag*)
-	 (parse-tagged-identifiers ?other-id*)
+	 (parse-tagged-bindings ?other-id*)
        (values (cons ?id id*) (cons #f tag*))))
     ))
+
+(define* (tagged-bindings? lhs*)
+  ;;Return  true if  lhs*  is  a list  of  possibly tagged  identifiers;
+  ;;otherwise return false.
+  ;;
+  (guard (E ((syntax-violation? E)
+	     #f))
+    (receive (id* tag*)
+	(parse-tagged-bindings lhs*)
+      #t)))
+
+;;; --------------------------------------------------------------------
 
 (define* (parse-tagged-formals formals-stx)
   ;;Given  a syntax  object  representing tagged  LAMBDA formals:  split
@@ -5544,6 +5560,16 @@
 	     (%process-args recur ?arg*)
 	   (values '() '()))))
       ))
+
+(define* (tagged-formals? formals-stx)
+  ;;Return true  if FORMALS-STX  is a  syntax object  representing valid
+  ;;tagged formals for a LAMBDA syntax.
+  ;;
+  (guard (E ((syntax-violation? E)
+	     #f))
+    (receive (standard-formals tags)
+	(parse-tagged-formals formals-stx)
+      #t)))
 
 
 ;;;; identifiers: syntactic binding properties
@@ -5711,7 +5737,7 @@
 			       validation-stx)))
 
 
-;;;; identifiers: expand-time type specification
+;;;; identifiers: expand-time object type specification
 ;;
 ;;Examples of OBJECT-SPEC:
 ;;
@@ -5877,6 +5903,32 @@
 
 (define* (identifier-callable-spec {type-id identifier?})
   (syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*))
+
+
+;;;; identifiers: expand-time binding type tagging
+
+(define-constant *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*
+  'vicare:expander:binding-type-tagging)
+
+(define* (set-identifier-type-tagging! {binding-id identifier?} {tag identifier?})
+  (if (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*)
+      (syntax-violation __who__
+	"identifier binding tag already defined" binding-id tag)
+    (syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE* tag)))
+
+(define* (identifier-type-tagging {binding-id identifier?})
+  (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*))
+
+;;; --------------------------------------------------------------------
+
+(define* (set-label-type-tagging! {label symbol?} {tag identifier?})
+  (if (getprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*)
+      (syntax-violation __who__
+	"label binding tag already defined" label tag)
+    (putprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE* tag)))
+
+(define* (label-type-tagging {label identifier?})
+  (getprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*))
 
 
 ;;;; identifiers: syntax parameters
@@ -7716,21 +7768,47 @@
   ;;return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
+    ;;R6RS standard syntax.
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     (all-identifiers? ?lhs*)
      (if (valid-bound-ids? ?lhs*)
 	 (bless
 	  `((lambda ,?lhs*
 	      ,?body . ,?body*) . ,?rhs*))
        (%error-invalid-formals-syntax expr-stx ?lhs*)))
 
+    ;;R6RS standard named syntax.
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (identifier? ?recur)
+     (and (identifier? ?recur)
+	  (all-identifiers? ?lhs*))
      (if (valid-bound-ids? ?lhs*)
 	 (bless
 	  `((letrec ((,?recur (lambda ,?lhs*
 				,?body . ,?body*)))
 	      ,?recur) . ,?rhs*))
        (%error-invalid-formals-syntax expr-stx ?lhs*)))
+
+    ;;Extended tagged syntax.
+    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     (receive (lhs* tag*)
+	 (parse-tagged-bindings ?lhs*)
+       (if (valid-bound-ids? lhs*)
+	   (bless
+	    `((lambda ,?lhs*
+		,?body . ,?body*) . ,?rhs*))
+	 (%error-invalid-formals-syntax expr-stx ?lhs*))))
+
+    ;;Extended tagged named syntax.
+    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+     (identifier? ?recur)
+     (receive (lhs* tag*)
+	 (parse-tagged-bindings ?lhs*)
+       (if (valid-bound-ids? lhs*)
+	   (bless
+	    `((letrec ((,?recur (lambda ,?lhs*
+				  ,?body . ,?body*)))
+		,?recur) . ,?rhs*))
+	 (%error-invalid-formals-syntax expr-stx ?lhs*))))
     ))
 
 (define (let*-macro expr-stx)
@@ -7740,7 +7818,7 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (for-all identifier? ?lhs*)
+     (tagged-bindings? ?lhs*)
      (bless
       (let recur ((x* (map list ?lhs* ?rhs*)))
 	(if (null? x*)
@@ -7756,12 +7834,14 @@
   (syntax-match expr-stx ()
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
-     (if (valid-bound-ids? ?lhs*)
-	 (bless
-	  `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
-					    ,?body . ,?body*)))
-	      ,?recur) . ,?rhs*))
-       (%error-invalid-formals-syntax expr-stx ?lhs*)))
+     (receive (lhs* tag*)
+	 (parse-tagged-bindings ?lhs*)
+       (if (valid-bound-ids? lhs*)
+	   (bless
+	    `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
+					      ,?body . ,?body*)))
+		,?recur) . ,?rhs*))
+	 (%error-invalid-formals-syntax expr-stx ?lhs*))))
     ))
 
 
@@ -8554,20 +8634,23 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?who (?formal* ...) ?body ?body* ...)
-     (if (valid-bound-ids? ?formal*)
-	 (bless
-	  `(make-traced-procedure ',?who
-				  (lambda ,?formal*
-				    ,?body . ,?body*)))
-       (%error-invalid-formals-syntax expr-stx ?formal*)))
+     (receive (standard-formals-stx tags)
+	 (parse-tagged-formals ?formal*)
+       (if (valid-bound-ids? standard-formals-stx)
+	   (bless
+	    `(make-traced-procedure ',?who
+				    (lambda ,?formal*
+				      ,?body . ,?body*)))
+	 (%error-invalid-formals-syntax expr-stx ?formal*))))
 
-    ((_  ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
-     (if (valid-bound-ids? (cons ?rest-formal ?formal*))
-	 (bless
-	  `(make-traced-procedure ',?who
-				  (lambda (,@?formal* . ,?rest-formal)
-				    ,?body . ,?body*)))
-       (%error-invalid-formals-syntax expr-stx (append ?formal* ?rest-formal))))
+    ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
+     (receive (standard-formals-stx tags)
+	 (parse-tagged-formals ?formal*)
+       (%verify-formals-syntax standard-formals-stx expr-stx)
+       (bless
+	`(make-traced-procedure ',?who
+				(lambda (,@?formal* . ,?rest-formal)
+				  ,?body . ,?body*)))))
     ))
 
 (define (trace-define-macro expr-stx)
@@ -8577,22 +8660,25 @@
   ;;
   (syntax-match expr-stx ()
     ((_ (?who ?formal* ...) ?body ?body* ...)
-     (if (valid-bound-ids? ?formal*)
-	 (bless
-	  `(define ,?who
-	     (make-traced-procedure ',?who
-				    (lambda ,?formal*
-				      ,?body . ,?body*))))
-       (%error-invalid-formals-syntax expr-stx ?formal*)))
+     (receive (standard-formals-stx tags)
+	 (parse-tagged-formals ?formal*)
+       (if (valid-bound-ids? standard-formals-stx)
+	   (bless
+	    `(define ,?who
+	       (make-traced-procedure ',?who
+				      (lambda ,?formal*
+					,?body . ,?body*))))
+	 (%error-invalid-formals-syntax expr-stx ?formal*))))
 
     ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
-     (if (valid-bound-ids? (cons ?rest-formal ?formal*))
-	 (bless
-	  `(define ,?who
-	     (make-traced-procedure ',?who
-				    (lambda (,@?formal* . ,?rest-formal)
-				      ,?body . ,?body*))))
-       (%error-invalid-formals-syntax expr-stx (append ?formal* ?rest-formal))))
+     (receive (standard-formals-stx tags)
+	 (parse-tagged-formals ?formal*)
+       (%verify-formals-syntax standard-formals-stx expr-stx)
+       (bless
+	`(define ,?who
+	   (make-traced-procedure ',?who
+				  (lambda (,@?formal* . ,?rest-formal)
+				    ,?body . ,?body*))))))
 
     ((_ ?who ?expr)
      (if (identifier? ?who)
@@ -10088,32 +10174,37 @@
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check  that  the  binding  names are  identifiers  and  without
        ;;duplicates.
-       (unless (valid-bound-ids? ?lhs*)
-	 (%error-invalid-formals-syntax expr-stx ?lhs*))
-       ;;Generate  unique  variable  names  and labels  for  the  LETREC
-       ;;bindings.
-       (let ((lex* (map gensym-for-lexical-var ?lhs*))
-	     (lab* (map gensym-for-label       ?lhs*)))
-	 ;;Generate what is needed to  create a lexical contour: a <RIB>
-	 ;;and an extended lexical environment in which to evaluate both
-	 ;;the right-hand sides and the body.
-	 ;;
-	 ;;Notice that  the region of  all the LETREC  bindings includes
-	 ;;all the right-hand sides.
-	 (let ((rib        (make-filled-rib ?lhs* lab*))
-	       (lexenv.run (add-lexical-bindings lab* lex* lexenv.run)))
-	   ;;Create the lexical contour then process body and right-hand
-	   ;;sides of bindings.
-	   (let ((body (chi-internal-body (push-lexical-contour rib
-					    (cons ?body ?body*))
-					  lexenv.run lexenv.expand))
-		 (rhs* (chi-expr*         (map (lambda (rhs)
-						 (push-lexical-contour rib rhs))
-					    ?rhs*)
-					  lexenv.run lexenv.expand)))
-	     ;;Build  the  LETREC  or  LETREC* expression  in  the  core
-	     ;;language.
-	     (core-lang-builder no-source lex* rhs* body)))))
+       (receive (lhs* tag*)
+	   (parse-tagged-bindings ?lhs*)
+	 (unless (valid-bound-ids? lhs*)
+	   (%error-invalid-formals-syntax expr-stx ?lhs*))
+	 ;;Generate  unique variable  names  and labels  for the  LETREC
+	 ;;bindings.
+	 (let ((lex* (map gensym-for-lexical-var lhs*))
+	       (lab* (map gensym-for-label       lhs*)))
+	   (map (lambda (label tag)
+		  (and tag (set-label-type-tagging! label tag)))
+	     lab* tag*)
+	   ;;Generate  what is  needed to  create a  lexical contour:  a
+	   ;;<RIB>  and  an extended  lexical  environment  in which  to
+	   ;;evaluate both the right-hand sides and the body.
+	   ;;
+	   ;;Notice that the region of  all the LETREC bindings includes
+	   ;;all the right-hand sides.
+	   (let ((rib		(make-filled-rib lhs* lab*))
+		 (lexenv.run	(add-lexical-bindings lab* lex* lexenv.run)))
+	     ;;Create  the   lexical  contour  then  process   body  and
+	     ;;right-hand sides of bindings.
+	     (let ((body (chi-internal-body (push-lexical-contour rib
+					      (cons ?body ?body*))
+					    lexenv.run lexenv.expand))
+		   (rhs* (chi-expr*         (map (lambda (rhs)
+						   (push-lexical-contour rib rhs))
+					      ?rhs*)
+					    lexenv.run lexenv.expand)))
+	       ;;Build  the LETREC  or  LETREC* expression  in the  core
+	       ;;language.
+	       (core-lang-builder no-source lex* rhs* body))))))
       ))
 
   #| end of module |# )
@@ -12933,36 +13024,89 @@
   ;;lexical contour to hold the body's internal definitions.
   ;;
   (while-not-expanding-application-first-subform
-   (syntax-match formals-stx ()
-     ((?arg* ...)
-      (begin
-	(%verify-formals-syntax formals-stx input-form-stx)
-	(let ((lex* (map gensym-for-lexical-var ?arg*))
-	      (lab* (map gensym-for-label       ?arg*)))
-	  (values lex*
-		  (chi-internal-body (push-lexical-contour
-					 (make-filled-rib ?arg* lab*)
-				       body-form-stx*)
-				     (add-lexical-bindings lab* lex* lexenv.run)
-				     lexenv.expand)))))
-     ((?arg* ... . ?rest-arg)
-      (begin
-	(%verify-formals-syntax formals-stx input-form-stx)
-	(let ((lex* (map gensym-for-lexical-var ?arg*))
-	      (lab* (map gensym-for-label       ?arg*))
-	      (lex  (gensym-for-lexical-var ?rest-arg))
-	      (lab  (gensym-for-label       ?rest-arg)))
-	  (values (append lex* lex) ;yes, this builds an improper list
-		  (chi-internal-body (push-lexical-contour
-					 (make-filled-rib (cons ?rest-arg ?arg*)
-							(cons lab       lab*))
-				       body-form-stx*)
-				     (add-lexical-bindings (cons lab lab*)
-							   (cons lex lex*)
-							   lexenv.run)
-				     lexenv.expand)))))
-     (_
-      (stx-error formals-stx "invalid syntax")))))
+   (if (tagged-formals? formals-stx)
+       ;;Extended tagged formals, with or without rest argument.
+       (receive (standard-formals-stx tags)
+	   (parse-tagged-formals formals-stx)
+	 #;(debug-print 'formals-stx (syntax->datum standard-formals-stx) (syntax->datum tags))
+	 (%verify-formals-syntax standard-formals-stx input-form-stx)
+	 (syntax-match standard-formals-stx ()
+	   ((?arg* ...)
+	    (let ((lex* (map gensym-for-lexical-var ?arg*))
+		  (lab* (map gensym-for-label       ?arg*)))
+	      (define body-form-stx*^
+		(push-lexical-contour
+		    (make-filled-rib ?arg* lab*)
+		  body-form-stx*))
+	      (define lexenv.run^
+		(add-lexical-bindings lab* lex* lexenv.run))
+	      (map (lambda (label tag)
+		     (and tag (set-label-type-tagging! label tag)))
+		lab* tags)
+	      (values lex* (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
+
+	   ((?arg* ... . ?rest-arg)
+	    (let ((lex*		(map gensym-for-lexical-var ?arg*))
+		  (lab*		(map gensym-for-label       ?arg*))
+		  (rest-lex	(gensym-for-lexical-var ?rest-arg))
+		  (rest-lab	(gensym-for-label       ?rest-arg)))
+	      (define body-form-stx*^
+		(push-lexical-contour
+		    (make-filled-rib (cons ?rest-arg ?arg*)
+				     (cons rest-lab  lab*))
+		  body-form-stx*))
+	      (define lexenv.run^
+		(add-lexical-bindings (cons rest-lab lab*)
+				      (cons rest-lex lex*)
+				      lexenv.run))
+	      ;;Here we know that TAGS is an improper list with the same
+	      ;;structure of FORMALS-STX; which  means that the "proper"
+	      ;;portion of TAGS is a list  with the same number of items
+	      ;;as LAB*.
+	      (let loop ((tags tags)
+			 (lab* lab*))
+		(if (pair? tags)
+		    (begin
+		      (and (car tags) (set-label-type-tagging! (car lab*) (car tags)))
+		      (loop (cdr tags) (cdr lab*)))
+		  (and tags (set-label-type-tagging! rest-lab tags))))
+	      (values (append lex* rest-lex) ;yes, this builds an improper list
+		      (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
+	   (_
+	    (stx-error formals-stx "invalid syntax"))))
+     (syntax-match formals-stx ()
+       ;;R6RS standard formals with no rest argument.
+       ((?arg* ...)
+	(begin
+	  (%verify-formals-syntax formals-stx input-form-stx)
+	  (let ((lex* (map gensym-for-lexical-var ?arg*))
+		(lab* (map gensym-for-label       ?arg*)))
+	    (values lex*
+		    (chi-internal-body (push-lexical-contour
+					   (make-filled-rib ?arg* lab*)
+					 body-form-stx*)
+				       (add-lexical-bindings lab* lex* lexenv.run)
+				       lexenv.expand)))))
+
+       ;;R6RS standard formals with rest argument.
+       ((?arg* ... . ?rest-arg)
+	(begin
+	  (%verify-formals-syntax formals-stx input-form-stx)
+	  (let ((lex* (map gensym-for-lexical-var ?arg*))
+		(lab* (map gensym-for-label       ?arg*))
+		(lex  (gensym-for-lexical-var ?rest-arg))
+		(lab  (gensym-for-label       ?rest-arg)))
+	    (values (append lex* lex) ;yes, this builds an improper list
+		    (chi-internal-body (push-lexical-contour
+					   (make-filled-rib (cons ?rest-arg ?arg*)
+							    (cons lab       lab*))
+					 body-form-stx*)
+				       (add-lexical-bindings (cons lab lab*)
+							     (cons lex lex*)
+							     lexenv.run)
+				       lexenv.expand)))))
+       (_
+	(stx-error formals-stx "invalid syntax"))))))
 
 (define (chi-lambda-clause* input-form-stx formals-stx* body-form-stx** lexenv.run lexenv.expand)
   ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
