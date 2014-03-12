@@ -410,24 +410,19 @@
     $string-ci-hash
     $symbol-hash
     $bytevector-hash
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sun Mar 9, 2014)
-    #;$symbol->string
-    #;$string->symbol
-    #;$putprop
-    #;$getprop
-    #;$remprop
-    #;$property-list
+    $symbol->string
+    $string->symbol
+    $putprop
+    $getprop
+    $remprop
+    $property-list
 
 ;;; --------------------------------------------------------------------
 
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sun Mar 9, 2014)
-    ;;
-    ;; $symbol->keyword
-    ;; $keyword->symbol
-    ;; $keyword-hash
-    ;; $keyword=?
+    $symbol->keyword
+    $keyword->symbol
+    $keyword-hash
+    $keyword=?
 
 ;;; --------------------------------------------------------------------
 
@@ -454,9 +449,7 @@
     #| end of export |# )
   (import (vicare)
     (vicare system $symbols)
-    ;;FIXME To be  uncommented at the next boot  image rotation.  (Marco
-    ;;Maggi; Sun Mar 9, 2014)
-    #;(vicare system $keywords)
+    (vicare system $keywords)
     (vicare system $structs)
     (except (vicare system $fx)
 	    $fxmax

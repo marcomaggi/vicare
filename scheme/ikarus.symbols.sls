@@ -67,11 +67,11 @@
 
 		  ;; internal functions
 		  $unintern-gensym)
-    (vicare arguments validation)
     (only (vicare system $numerics)
 	  $add1-integer)
     (except (vicare unsafe operations)
-	    $symbol->string)
+	    $symbol->string
+	    $getprop $putprop $remprop $property-list)
     (except (vicare system $symbols)
 	    $symbol->string
 	    $getprop $putprop $remprop $property-list
@@ -103,11 +103,9 @@
        (let ((s ($symbol-unique-string x)))
 	 (and s #t))))
 
-(define* ($unintern-gensym x)
-  (with-arguments-validation (__who__)
-      ((symbol x))
-    (foreign-call "ikrt_unintern_gensym" x)
-    (void)))
+(define* ($unintern-gensym {x symbol?})
+  (foreign-call "ikrt_unintern_gensym" x)
+  (void))
 
 (define* (gensym->unique-string {x symbol?})
   (let ((us ($symbol-unique-string x)))
