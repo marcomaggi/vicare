@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus load)
   (export
     load-and-serialize-source-library
@@ -140,7 +141,7 @@
 (module LIBRARY-REFERENCE-TO-FILENAME-STEM
   (library-reference->filename-stem)
 
-  (define* (library-reference->filename-stem (libref library-reference?))
+  (define* (library-reference->filename-stem {libref library-reference?})
     ;;Convert  the non-empty  list of  identifiers from  a R6RS  library
     ;;reference into  a string  representing the  corresponding relative
     ;;file  pathname,  without extension  but  including  a leading  #\/
@@ -211,7 +212,7 @@
 (module SOURCE-PATHNAME->BINARY-PATHNAME
   (source-pathname->binary-pathname)
 
-  (define* (source-pathname->binary-pathname (source-pathname posix.file-string-pathname?))
+  (define* (source-pathname->binary-pathname {source-pathname posix.file-string-pathname?})
     (define (%error ptn)
       (assertion-violation __who__
 	"unable to build valid FASL file pathname from source pathname"
@@ -337,10 +338,10 @@
 	    (else
 	     (error 'fasl-search-path
 	       "internal error: invalid target OS UID" target-os-uid))))
-      (lambda* ((P search-path?))
+      (lambda* ({P search-path?})
 	P)))
 
-  (define* (fasl-path (libref library-reference?))
+  (define* (fasl-path {libref library-reference?})
     ;;Given  a  R6RS  library  reference:  build  and  return  a  string
     ;;representing  the  pathname   of  the  FASL  file   in  which  the
     ;;corresponding binary library can be  stored.  The directory of the
@@ -350,7 +351,7 @@
 		   (library-reference->filename-stem libref)
 		   FASL-EXTENSION))
 
-  (define* (fasl-stem+extension (libref library-reference?))
+  (define* (fasl-stem+extension {libref library-reference?})
     ;;Given  a  R6RS  library  reference:  build  and  return  a  string
     ;;representing  the pathname  stem of  the  FASL file  in which  the
     ;;corresponding  binary library  can  be stored.   The  "stem" is  a
@@ -366,7 +367,7 @@
     (string-append (library-reference->filename-stem libref)
 		   FASL-EXTENSION))
 
-  (define* (default-binary-library-file-locator (libref library-reference?))
+  (define* (default-binary-library-file-locator {libref library-reference?})
     ;;Default   value    for   the   CURRENT-BINARY-LIBRARY-FILE-LOCATOR
     ;;parameter.  Given a R6RS library  reference: scan the FASL library
     ;;search path for the corresponding FASL file.
@@ -418,7 +419,7 @@
     ;;
     (make-parameter
 	'()
-      (lambda* ((P search-path?))
+      (lambda* ({P search-path?})
 	P)))
 
   (define library-extensions
@@ -433,7 +434,7 @@
 	    ((list-of-strings	obj))
 	  obj))))
 
-  (define* (default-source-library-file-locator (libref library-reference?))
+  (define* (default-source-library-file-locator {libref library-reference?})
     ;;Default   value    for   the   CURRENT-SOURCE-LIBRARY-FILE-LOCATOR
     ;;parameter.   Given  a  R6RS  library reference:  scan  the  source
     ;;library search  path for the  corresponding file.
@@ -516,10 +517,10 @@
     ;;continuation returns false and false.
     ;;
     (case-define* %source-search-start
-      (((libref library-reference?) options)
+      (({libref library-reference?} options)
        (%source-search-start libref options (lambda ()
 					      (values #f #f))))
-      (((libref library-reference?) options (fail-kont procedure?))
+      (({libref library-reference?} options {fail-kont procedure?})
        (let ((source-locator (current-source-library-file-locator)))
 	 (lambda ()
 	   (%source-search-step options
@@ -587,10 +588,10 @@
     ;;continuation returns false and false.
     ;;
     (case-define* %binary-search-start
-      (((libref library-reference?) options)
+      (({libref library-reference?} options)
        (%binary-search-start libref options (lambda ()
 					      (values #f #f))))
-      (((libref library-reference?) options (fail-kont procedure?))
+      (({libref library-reference?} options {fail-kont procedure?})
        (let ((binary-locator (current-binary-library-file-locator)))
 	 (lambda ()
 	   (%binary-search-step options
@@ -647,7 +648,7 @@
 
 ;;;; locating source and binary libraries: run-time locator
 
-(define* (run-time-library-locator (libref library-reference?) options)
+(define* (run-time-library-locator {libref library-reference?} options)
   ;;Possible  value  for  the  parameter  CURRENT-LIBRARY-LOCATOR;  this
   ;;function is meant to be used to search for libraries when running an
   ;;application.
@@ -692,7 +693,7 @@
   (import LIBRARY-LOCATOR-UTILS)
   (define-constant __who__ 'compile-time-library-locator)
 
-  (define* (compile-time-library-locator (libref library-reference?) options)
+  (define* (compile-time-library-locator {libref library-reference?} options)
     ;;Possible  value for  the  parameter CURRENT-LIBRARY-LOCATOR;  this
     ;;function  is meant  to  be  used to  search  for  libraries to  be
     ;;compiled for installation, for example by a package.
@@ -833,7 +834,7 @@
 
 ;;;; locating source and binary libraries: source-onlye locator
 
-(define* (source-library-locator (libref library-reference?) options)
+(define* (source-library-locator {libref library-reference?} options)
   ;;Possible  value  for  the  parameter  CURRENT-LIBRARY-LOCATOR;  this
   ;;function is  meant to be used  to search for source  libraries first
   ;;and the for binary libraries.
@@ -874,7 +875,7 @@
 
 ;;;; loading source programs
 
-(define* (load-r6rs-script (file-pathname posix.file-string-pathname?) serialize? run?)
+(define* (load-r6rs-script {file-pathname posix.file-string-pathname?} serialize? run?)
   ;;Load  source  code  from  FILE-PATHNAME,  which  must  be  a  string
   ;;representing a file  pathname, expecting an R6RS program  or an R6RS
   ;;library and compile it.
@@ -910,15 +911,15 @@
   ((file-pathname)
    (load file-pathname (lambda (sexp)
 			 (eval sexp (interaction-environment)))))
-  (((file-pathname posix.file-string-pathname?) (eval-proc procedure?))
+  (({file-pathname posix.file-string-pathname?} {eval-proc procedure?})
    (%log-library-debug-message "~a: loading script: ~a" __who__ file-pathname)
    (let next-form ((ls (read-script-source-file file-pathname)))
      (unless (null? ls)
        (eval-proc (car ls))
        (next-form (cdr ls))))))
 
-(define* (load-and-serialize-source-library (source-pathname posix.file-string-pathname?)
-					    (binary-pathname false-or-file-string-pathname?))
+(define* (load-and-serialize-source-library {source-pathname posix.file-string-pathname?}
+					    {binary-pathname false-or-file-string-pathname?})
   ;;Load a source library filename, expand it, compile it, serialize it.
   ;;Return unspecified values.
   ;;
@@ -944,7 +945,7 @@
 
 ;;;; loading libraries from source
 
-(define* (default-source-library-loader (libref library-reference?) (port textual-input-port?))
+(define* (default-source-library-loader {libref library-reference?} {port textual-input-port?})
   ;;Default value fo the parameter CURRENT-SOURCE-LIBRARY-LOADER.  Given
   ;;a textual  input PORT: read  from it a LIBRARY  symbolic expression;
   ;;verify  that its  version  reference conforms  to  LIBREF; load  and
@@ -985,7 +986,7 @@
 
 ;;;; loading libraries from serialised locations
 
-(define* (default-binary-library-loader (libref library-reference?) (port binary-input-port?))
+(define* (default-binary-library-loader {libref library-reference?} {port binary-input-port?})
   ;;Default value fo the parameter CURRENT-BINARY-LIBRARY-LOADER.  Given
   ;;a binary input PORT: read from  it a serialized library; verify that
   ;;its version  reference conforms to  LIBREF; install it (and  all its
@@ -1040,9 +1041,9 @@
   ;;When  the binary  pathname is  not given  or it  is false:  a binary
   ;;pathname is built from the source pathname FASL-DIRECTORY as prefix.
   ;;
-  (((lib library?))
+  (({lib library?})
    (serialize-library-record lib #f))
-  (((lib library?) (binary-pathname false-or-file-string-pathname?))
+  (({lib library?} {binary-pathname false-or-file-string-pathname?})
    (cond ((library-source-file-name lib)
 	  => (lambda (source-pathname)
 	       (define binary-pathname^

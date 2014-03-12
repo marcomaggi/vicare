@@ -3293,7 +3293,7 @@
   (check
       (let ()
 	(case-define* doit
-	  (({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?} . (rest list-of-fixnums?))
+	  (({_ vector?} {a fixnum?} {b fixnum?} {c fixnum?} . {rest list-of-fixnums?})
 	   (vector 123 a b c rest)))
 	(doit 4 5 6))
     => '#(123 4 5 6 ()))

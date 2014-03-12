@@ -334,7 +334,7 @@
  (define-primop bwp-object? safe
    ;;This is the implementation of the Scheme function BWP-OBJECT?.
    ;;
-   ((P x) (prm '= (T x) (K bwp-object)))
+   ((P x) (prm '= (T x) (K BWP-OBJECT)))
    ((E x) (nop)))
 
  (define-primop $forward-ptr? unsafe

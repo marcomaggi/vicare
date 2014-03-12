@@ -61,7 +61,7 @@
  	  v
  	(assertion-violation __who__ "port did not reach EOF at the end of fasl file")))))
 
-(define* (fasl-read-header (port binary-input-port?))
+(define* (fasl-read-header {port binary-input-port?})
   ($fasl-read-header port))
 
 (define-condition-type &i/o-wrong-fasl-header-error
@@ -89,7 +89,7 @@
    ((64)
     (%assert-chars (read-u8-as-char port) #\2))))
 
-(define* (fasl-read-object (port binary-input-port?))
+(define* (fasl-read-object {port binary-input-port?})
   ($fasl-read-object port))
 
 (define ($fasl-read-object port)

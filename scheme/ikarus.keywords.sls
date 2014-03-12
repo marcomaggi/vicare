@@ -25,7 +25,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.keywords)
   (export
     symbol->keyword
@@ -51,17 +51,17 @@
 (define-struct keyword
   (symbol))
 
-(define* (symbol->keyword (S symbol?))
+(define* (symbol->keyword {S symbol?})
   (make-keyword S))
 
-(define* (keyword->symbol (K keyword?))
+(define* (keyword->symbol {K keyword?})
   ($keyword-symbol K))
 
 (define ($keyword->symbol K)
   ;;Remember that the unsafe operation $KEYWORD-SYMBOL is a syntax!!!
   ($keyword-symbol K))
 
-(define* (keyword=? (K1 keyword?) (K2 keyword?))
+(define* (keyword=? {K1 keyword?} {K2 keyword?})
   ($keyword=? K1 K2))
 
 (define ($keyword=? K1 K2)
@@ -69,7 +69,7 @@
       (eq? ($keyword->symbol K1)
 	   ($keyword->symbol K2))))
 
-(define* (keyword-hash (K keyword?))
+(define* (keyword-hash {K keyword?})
   ($keyword-hash K))
 
 (define ($keyword-hash K)

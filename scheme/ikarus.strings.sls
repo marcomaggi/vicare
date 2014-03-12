@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus strings)
   (export
     make-string			string
@@ -1046,7 +1047,7 @@
 
 ;;;; octets bytevectors to/from strings
 
-(define* (octets-encoded-string? (str string?))
+(define* (octets-encoded-string? {str string?})
   ($octets-encoded-string? str))
 
 (define ($octets-encoded-string? str)
@@ -1057,7 +1058,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (octets-encoded-bytevector? (bv bytevector?))
+(define* (octets-encoded-bytevector? {bv bytevector?})
   #t)
 
 (define ($octets-encoded-bytevector? bv)
@@ -1065,7 +1066,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (string->octets (str string?))
+(define* (string->octets {str string?})
   ($string->octets str))
 
 (define* ($string->octets str)
@@ -1082,7 +1083,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (octets->string (bv bytevector?))
+(define* (octets->string {bv bytevector?})
   ($octets->string bv))
 
 (define ($octets->string bv)
@@ -1361,13 +1362,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (string-base64->bytevector S)
+(define* (string-base64->bytevector {S string?})
   ;;Defined by Vicare.   Convert the string S into  a bytevector holding
   ;;the byte representation of the Base64 sequences.
   ;;
-  (with-arguments-validation (__who__)
-      ((string	S))
-    ($string-base64->bytevector S)))
+  ($string-base64->bytevector S))
 
 (define* ($string-base64->bytevector S)
   (let ((bv (foreign-call "ikrt_bytevector_from_base64" ($string->ascii S))))

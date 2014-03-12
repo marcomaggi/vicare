@@ -39,7 +39,7 @@
 	    (lambda args
 	      (exit -1)))))
 
-(define* (with-exception-handler (handler procedure?) (proc2 procedure?))
+(define* (with-exception-handler {handler procedure?} {proc2 procedure?})
   (parameterize ((handlers (cons handler (handlers))))
     (proc2)))
 
@@ -66,7 +66,7 @@
   (let-syntax ((define-raiser
 		 (syntax-rules ()
 		   ((_ ?who ?raiser ?make-main-condition)
-		    (define* (?who (who false-or-string-or-symbol?) (msg string?) . irritants)
+		    (define* (?who {who false-or-string-or-symbol?} {msg string?} . irritants)
 		      (%raise-exception (quote ?who)
 					?raiser ?make-main-condition
 					who msg irritants))))))

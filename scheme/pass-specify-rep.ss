@@ -790,7 +790,7 @@
 	   (make-constant void-object))
 
 	  ((bwp-object? c)
-	   (make-constant bwp-object))
+	   (make-constant BWP-OBJECT))
 
 	  ((char? c)
 	   ;;Here we  are interested in Scheme  characters as standalone

@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus bignums)
   (export
     bignum-positive?
@@ -63,7 +64,7 @@
 (define-syntax define-bn-operation/one
   (syntax-rules ()
     ((_ ?safe-who ?unsafe-who)
-     (define* (?safe-who (x bignum?))
+     (define* (?safe-who {x bignum?})
        (?unsafe-who x)))))
 
 (define-bn-operation/one bignum-positive?	$bignum-positive?)

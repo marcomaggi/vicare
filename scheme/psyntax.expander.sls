@@ -1090,6 +1090,7 @@
 ;;
 
 
+#!vicare
 (library (psyntax expander)
   (export
     eval
@@ -1671,7 +1672,7 @@
 ;;
 ;;
 
-(define* (make-synonym-transformer (x identifier?))
+(define* (make-synonym-transformer {x identifier?})
   ;;Build and  return a  "special" value that,  when used  as right-hand
   ;;side of  a syntax  definition, is  recognised by  the expander  as a
   ;;synonym  transformer as  opposed to  a normal  transformer, variable
@@ -1688,7 +1689,7 @@
        (eq? ($car x) 'synonym-transformer)
        (identifier? ($cdr x))))
 
-(define* (synonym-transformer-identifier (x synonym-transformer?))
+(define* (synonym-transformer-identifier {x synonym-transformer?})
   ;;If X is recognised by the  expander as a synonym transformer: return
   ;;the source identifier, otherwise raise an exception.
   ;;
@@ -4304,7 +4305,7 @@
   ;;
   ;;we see that the label has changed.
   ;;
-  (define* (extend-rib! (rib <rib>?) (id identifier?) label shadowing-definitions?)
+  (define* (extend-rib! {rib <rib>?} {id identifier?} label shadowing-definitions?)
     (when ($<rib>-sealed/freq rib)
       (assertion-violation __who__
 	"Vicare: internal error: attempt to extend sealed RIB" rib))
@@ -4361,7 +4362,7 @@
 
   #| end of module: EXTEND-RIB! |# )
 
-(define* (seal-rib! (rib <rib>?))
+(define* (seal-rib! {rib <rib>?})
   (let ((name* ($<rib>-name* rib)))
     (unless (null? name*) ;only seal if RIB is not empty
       (let ((name* (list->vector name*)))
@@ -4370,7 +4371,7 @@
 	($set-<rib>-label*!      rib (list->vector ($<rib>-label* rib)))
 	($set-<rib>-sealed/freq! rib (make-vector (vector-length name*) 0))))))
 
-(define* (unseal-rib! (rib <rib>?))
+(define* (unseal-rib! {rib <rib>?})
   (when ($<rib>-sealed/freq rib)
     ($set-<rib>-sealed/freq! rib #f)
     ($set-<rib>-name*!       rib (vector->list ($<rib>-name*  rib)))
@@ -5384,16 +5385,16 @@
 
 ;;;; identifiers: syntactic binding properties
 
-(define* (syntactic-binding-putprop (id identifier?) (key symbol?) value)
+(define* (syntactic-binding-putprop {id identifier?} {key symbol?} value)
   (putprop (id->label/or-error __who__ id id) key value))
 
-(define* (syntactic-binding-getprop (id identifier?) (key symbol?))
+(define* (syntactic-binding-getprop {id identifier?} {key symbol?})
   (getprop (id->label/or-error __who__ id id) key))
 
-(define* (syntactic-binding-remprop (id identifier?) (key symbol?))
+(define* (syntactic-binding-remprop {id identifier?} {key symbol?})
   (remprop (id->label/or-error __who__ id id) key))
 
-(define* (syntactic-binding-property-list (id identifier?))
+(define* (syntactic-binding-property-list {id identifier?})
   (property-list (id->label/or-error __who__ id id)))
 
 
@@ -5459,7 +5460,7 @@
 (define-constant *UNSAFE-VARIANT-COOKIE*
   'vicare:expander:unsafe-variant)
 
-(define* (set-identifier-unsafe-variant! (safe-id identifier?) (unsafe-expr-stx <stx>?))
+(define* (set-identifier-unsafe-variant! {safe-id identifier?} {unsafe-expr-stx <stx>?})
   (if (syntactic-binding-getprop safe-id *UNSAFE-VARIANT-COOKIE*)
       (syntax-violation __who__
 	"unsafe variant already defined" safe-id unsafe-expr-stx)
@@ -5530,7 +5531,7 @@
 (define-constant *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*
   'vicare:expander:predicate-return-value-validation)
 
-(define* (set-predicate-procedure-argument-validation! (pred-id identifier?) (validation-stx <stx>?))
+(define* (set-predicate-procedure-argument-validation! {pred-id identifier?} {validation-stx <stx>?})
   (if (syntactic-binding-getprop pred-id *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)
       (syntax-violation __who__
 	"predicate procedure argument validation already defined"
@@ -5538,7 +5539,7 @@
     (syntactic-binding-putprop pred-id *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*
 			       validation-stx)))
 
-(define* (set-predicate-return-value-validation! (pred-id identifier?) (validation-stx <stx>?))
+(define* (set-predicate-return-value-validation! {pred-id identifier?} {validation-stx <stx>?})
   (if (syntactic-binding-getprop pred-id  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)
       (syntax-violation __who__
 	"predicate procedure argument validation already defined"
@@ -5659,11 +5660,11 @@
    ))
 
 (case-define* public-make-object-spec
-  (((name symbol?) (type-id identifier?) (pred-id identifier?))
+  (({name symbol?} {type-id identifier?} {pred-id identifier?})
    (make-object-spec name type-id pred-id #f #f))
-  (((name symbol?) (type-id identifier?) (pred-id identifier?)
-    (accessor-maker false-or-procedure?)
-    (mutator-maker  false-or-procedure?))
+  (({name symbol?} {type-id identifier?} {pred-id identifier?}
+    {accessor-maker false-or-procedure?}
+    {mutator-maker  false-or-procedure?})
    (make-object-spec name type-id pred-id accessor-maker mutator-maker)))
 
 (define-record callable-spec
@@ -5694,24 +5695,24 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-identifier-object-spec! (type-id identifier?) (spec object-spec?))
+(define* (set-identifier-object-spec! {type-id identifier?} {spec object-spec?})
   (if (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE*)
       (syntax-violation __who__
 	"object specification already defined" type-id spec)
     (syntactic-binding-putprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE* spec)))
 
-(define* (identifier-object-spec (type-id identifier?))
+(define* (identifier-object-spec {type-id identifier?})
   (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE*))
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-identifier-callable-spec! (type-id identifier?) (spec callable-spec?))
+(define* (set-identifier-callable-spec! {type-id identifier?} {spec callable-spec?})
   (if (syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*)
       (syntax-violation __who__
 	"callable specification already defined" type-id spec)
     (syntactic-binding-putprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE* spec)))
 
-(define* (identifier-callable-spec (type-id identifier?))
+(define* (identifier-callable-spec {type-id identifier?})
   (syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*))
 
 
@@ -5743,7 +5744,7 @@
   (make-parameter
       (lambda () '())))
 
-(define* (syntax-parameter-value (id identifier?))
+(define* (syntax-parameter-value {id identifier?})
   (let ((label (id->label id)))
     (if label
 	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
@@ -5761,7 +5762,7 @@
       (procedure-argument-violation __who__
 	"unbound identifier" id))))
 
-(define* (identifier-bound? (id identifier?))
+(define* (identifier-bound? {id identifier?})
   (and (id->label id) #t))
 
 
@@ -7950,7 +7951,7 @@
     ;;            ((__who__ (identifier-syntax (quote ?who))))
     ;;          (let () . ?body)))
     ;;
-    ;;  (define* (?who (?var ?pred)) . ?body)
+    ;;  (define* (?who (brace ?var ?pred)) . ?body)
     ;;  ==> (define (?who ?var)
     ;;        (fluid-let-syntax
     ;;            ((__who__ (identifier-syntax (quote ?who))))
@@ -7959,7 +7960,7 @@
     ;; 	            "failed argument validation" '(?pred ?var) ?var))
     ;;          (let () . ?body)))
     ;;
-    ;;  (define* ((?who ?pred) ?var) . ?body)
+    ;;  (define* ((brace ?who ?pred) ?var) . ?body)
     ;;  ==> (define (?who ?var)
     ;;        (fluid-let-syntax
     ;;            ((__who__ (identifier-syntax (quote ?who))))
@@ -7972,21 +7973,14 @@
     (define (define*-macro stx)
       (define (%synner message subform)
 	(syntax-violation 'define* message stx subform))
-      (syntax-match stx ()
+      (syntax-match stx (brace)
 	;;No ret-pred.
 	((_ (?who . ?formals) ?body0 ?body* ...)
 	 (identifier? ?who)
 	 (%generate-define-output-form/without-ret-pred ?who ?formals (cons ?body0 ?body*) %synner))
 
-	;;Ret-pred with list spec.
-	((_ ((?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (identifier? ?who)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-define-output-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals (cons ?body0 ?body*) %synner))
-
-	;;Ret-pred with vector spec.
-	((_ (#(?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	;;Return value predicates.
+	((_ ((brace ?who ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (and (identifier? ?who)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
@@ -8056,16 +8050,9 @@
 	))
 
     (define (%generate-case-define-form ?who ?clause synner)
-      (syntax-match ?clause ()
-	;;Ret-pred with list spec.
-	((((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
-	      (identifier? ?ret-pred0)
-	      (for-all identifier? ?ret-pred*))
-	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
-
-	;;Ret-pred with vector spec.
-	(((#(?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+      (syntax-match ?clause (brace)
+	;;Return value predicates.
+	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (and (%underscore? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
@@ -8114,9 +8101,9 @@
       ;;
       (define (%synner message subform)
 	(syntax-violation 'lambda* message stx subform))
-      (syntax-match stx ()
+      (syntax-match stx (brace)
 	;;Ret-pred with list spec.
-	((?kwd ((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	((?kwd ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (and (%underscore? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
@@ -8178,9 +8165,9 @@
 	))
 
     (define (%generate-case-lambda-form ?ctx ?clause synner)
-      (syntax-match ?clause ()
+      (syntax-match ?clause (brace)
 	;;Ret-pred with list spec.
-	((((?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
+	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
 	 (and (%underscore? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
@@ -8226,8 +8213,7 @@
     ;;formals against duplicate bindings.
     ;;
     ;;We use  the conventions: ?ID,  ?REST-ID and ?ARGS-ID  are argument
-    ;;identifiers;  ?PRED   is  a  predicate  identifier;   ?EXPR  is  a
-    ;;validation expression.
+    ;;identifiers; ?PRED is a predicate identifier.
     ;;
     ;;We accept the following standard formals formats:
     ;;
@@ -8237,38 +8223,104 @@
     ;;
     ;;and in addition the following predicate formals:
     ;;
-    ;;   #(?args-id ?pred ?expr ...)
-    ;;   (?pred-arg ...)
-    ;;   (?pred-arg0 ?pred-arg ... . ?rest-id)
-    ;;   (?pred-arg0 ?pred-arg ... . #(?rest ?pred ?expr ...))
+    ;;   (brace ?args-id ?args-pred)
+    ;;   (?arg ...)
+    ;;   (?arg0 ?arg ... . ?rest-arg)
     ;;
-    ;;where ?PRED-ARG is a predicate argument with one of the formats:
+    ;;where ?ARG is a predicate argument with one of the formats:
     ;;
     ;;   ?id
-    ;;   (?id ?pred ?expr ...)
+    ;;   (brace ?id ?pred)
     ;;
-    ;;Return 3 values:
+    ;;Return 2 values:
     ;;
     ;;* A list  of syntax objects representing the  standard formals for
-    ;;the DEFINE, LAMBDA and CASE-LAMBDA syntaxes.
+    ;;  the DEFINE, LAMBDA and CASE-LAMBDA syntaxes.
     ;;
     ;;* A list of  ARGUMENT-VALIDATION-SPEC structures each representing
-    ;;a validation predicate.
+    ;;  a validation predicate.
     ;;
-    (syntax-match ?predicate-formals ()
+    (syntax-match ?predicate-formals (brace)
 
-      ;;Untagged identifiers without rest argument.
+      ;;Tagged args.
+      ;;
+      ((brace ?args-id ?args-pred)
+       (and (identifier? ?args-id)
+	    (identifier? ?args-pred))
+       (values ?args-id
+	       (list (make-argument-validation-spec ?args-id (list ?args-pred ?args-id)))))
+
+      ;;Possibly tagged identifiers with tagged rest argument.
+      ;;
+      ((?pred-arg* ... . (brace ?rest-id ?rest-pred))
+       (begin
+	 (unless (and (identifier? ?rest-id)
+		      (identifier? ?rest-pred))
+	   (synner "invalid rest argument specification" (cons 'brace ?rest-id ?rest-pred)))
+	 (let recur ((?pred-arg* ?pred-arg*))
+	   (if (pair? ?pred-arg*)
+	       (receive (?standard-formals arg-validation-spec*)
+		   (recur (cdr ?pred-arg*))
+		 (let ((?pred-arg (car ?pred-arg*)))
+		   (syntax-match ?pred-arg (brace)
+		     ;;Untagged argument.
+		     (?id
+		      (identifier? ?id)
+		      (values (cons ?id ?standard-formals) arg-validation-spec*))
+		     ;;Tagged argument.
+		     ((brace ?id ?pred)
+		      (and (identifier? ?id)
+			   (identifier? ?pred))
+		      (values (cons ?id ?standard-formals)
+			      (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
+		     (else
+		      (synner "invalid argument specification" ?pred-arg)))))
+	     ;;Process rest argument.
+	     (values ?rest-id
+		     (list (make-argument-validation-spec ?rest-id (list ?rest-pred ?rest-id))))))))
+
+      ;;Possibly tagged identifiers with UNtagged rest argument.
+      ;;
+      ((?pred-arg* ... . ?rest-id)
+       (identifier? ?rest-id)
+       (let recur ((?pred-arg* ?pred-arg*))
+	 (if (pair? ?pred-arg*)
+	     (receive (?standard-formals arg-validation-spec*)
+		 (recur (cdr ?pred-arg*))
+	       (let ((?pred-arg (car ?pred-arg*)))
+		 (syntax-match ?pred-arg (brace)
+		   ;;Untagged argument.
+		   (?id
+		    (identifier? ?id)
+		    (values (cons ?id ?standard-formals) arg-validation-spec*))
+		   ;;Tagged argument.
+		   ((brace ?id ?pred)
+		    (and (identifier? ?id)
+			 (identifier? ?pred))
+		    (values (cons ?id ?standard-formals)
+			    (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
+		   (else
+		    (synner "invalid argument specification" ?pred-arg)))))
+	   (values ?rest-id '()))))
+
+      ;;Standard formals: untagged identifiers without rest argument.
       ;;
       ((?id* ...)
        (for-all identifier? ?id*)
        (values ?id* '()))
 
-      ;;Untagged identifiers with rest argument.
+      ;;Standard formals: untagged identifiers with rest argument.
       ;;
       ((?id* ... . ?rest-id)
        (and (for-all identifier? ?id*)
 	    (identifier? ?rest-id))
        (values ?predicate-formals '()))
+
+      ;;Standard formals: untagged args.
+      ;;
+      (?args-id
+       (identifier? ?args-id)
+       (values ?args-id '()))
 
       ;;Possibly tagged identifiers without rest argument.
       ;;
@@ -8278,74 +8330,20 @@
 	     (receive (?standard-formals arg-validation-spec*)
 		 (recur (cdr ?pred-arg*))
 	       (let ((?pred-arg (car ?pred-arg*)))
-		 (syntax-match ?pred-arg ()
+		 (syntax-match ?pred-arg (brace)
 		   ;;Untagged argument.
 		   (?id
 		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals)
-			    arg-validation-spec*))
-		   ;;Tagged argument, list spec.
-		   ((?id ?pred)
+		    (values (cons ?id ?standard-formals) arg-validation-spec*))
+		   ;;Tagged argument.
+		   ((brace ?id ?pred)
 		    (and (identifier? ?id)
 			 (identifier? ?pred))
 		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
-				  arg-validation-spec*)))
-		   ;;Tagged argument, vector spec.
-		   (#(?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
-				  arg-validation-spec*)))
+			    (cons (make-argument-validation-spec ?id (list ?pred ?id)) arg-validation-spec*)))
 		   (else
 		    (synner "invalid argument specification" ?pred-arg)))))
 	   (values '() '()))))
-
-      ;;Possibly tagged identifiers with rest argument.
-      ;;
-      ((?pred-arg* ... . ?rest-var)
-       (let recur ((?pred-arg* ?pred-arg*))
-	 (if (pair? ?pred-arg*)
-	     (receive (?standard-formals arg-validation-spec*)
-		 (recur (cdr ?pred-arg*))
-	       (let ((?pred-arg (car ?pred-arg*)))
-		 (syntax-match ?pred-arg ()
-		   ;;Untagged argument.
-		   (?id
-		    (identifier? ?id)
-		    (values (cons ?id ?standard-formals)
-			    arg-validation-spec*))
-		   ;;Tagged argument, list spec.
-		   ((?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
-				  arg-validation-spec*)))
-		   ;;Tagged argument, vector spec.
-		   (#(?id ?pred)
-		    (and (identifier? ?id)
-			 (identifier? ?pred))
-		    (values (cons ?id ?standard-formals)
-			    (cons (make-argument-validation-spec ?id (list ?pred ?id))
-				  arg-validation-spec*)))
-		   (else
-		    (synner "invalid argument specification" ?pred-arg)))))
-	   ;;Process rest argument.
-	   (syntax-match ?rest-var ()
-	     ;;Untagged rest argument.
-	     (?rest-id
-	      (identifier? ?rest-id)
-	      (values ?rest-id '()))
-	     ;;Tagged rest argument.
-	     (#(?rest-id ?rest-pred)
-	      (and (identifier? ?rest-id)
-		   (identifier? ?rest-pred))
-	      (values ?rest-id
-		      (list (make-argument-validation-spec ?rest-id (list ?rest-pred ?rest-id)))))
-	     (else
-	      (synner "invalid argument specification" ?rest-var))))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -12274,7 +12272,7 @@
 	 chi-local-macro
 	 chi-global-macro)
 
-  (define* (chi-non-core-macro (procname symbol?) input-form-expr lexenv.run rib)
+  (define* (chi-non-core-macro {procname symbol?} input-form-expr lexenv.run rib)
     ;;Expand an expression representing the use of a non-core macro; the
     ;;transformer function is integrated in the expander.
     ;;

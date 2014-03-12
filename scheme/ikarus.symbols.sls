@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus.symbols)
   (export
     ;; R6RS functions
@@ -108,7 +109,7 @@
     (foreign-call "ikrt_unintern_gensym" x)
     (void)))
 
-(define* (gensym->unique-string (x symbol?))
+(define* (gensym->unique-string {x symbol?})
   (let ((us ($symbol-unique-string x)))
     (cond ((string? us)
 	   us)
@@ -154,7 +155,7 @@
 (define (unbound-object)
   (foreign-call "ikrt_unbound_object"))
 
-(define* (top-level-value (x symbol?))
+(define* (top-level-value {x symbol?})
   (receive-and-return (v)
       ($symbol-value x)
     (when ($unbound-object? v)
@@ -164,23 +165,23 @@
 		  (make-message-condition "unbound variable")
 		  (make-irritants-condition (list (string->symbol (symbol->string x)))))))))
 
-(define* (top-level-bound? (x symbol?))
+(define* (top-level-bound? {x symbol?})
   (not ($unbound-object? ($symbol-value x))))
 
-(define* (set-top-level-value! (x symbol?) v)
+(define* (set-top-level-value! {x symbol?} v)
   ($set-symbol-value! x v))
 
-(define* (symbol-value (x symbol?))
+(define* (symbol-value {x symbol?})
   (receive-and-return (obj)
       ($symbol-value x)
     (when ($unbound-object? obj)
       (procedure-argument-violation __who__
 	"expected bound symbol as argument" x obj))))
 
-(define* (symbol-bound? (x symbol?))
+(define* (symbol-bound? {x symbol?})
   (not ($unbound-object? ($symbol-value x))))
 
-(define* (set-symbol-value! (x symbol?) v)
+(define* (set-symbol-value! {x symbol?} v)
   ($set-symbol-value! x v)
   ;;If  V is  not a  procedure: raise  an exception  if the  client code
   ;;attemtps to apply it.
@@ -190,7 +191,7 @@
 			    (procedure-argument-violation 'apply
 			      "not a procedure" ($symbol-value x))))))
 
-(define* (reset-symbol-proc! (x symbol?))
+(define* (reset-symbol-proc! {x symbol?})
   (let ((v ($symbol-value x)))
     ($set-symbol-proc! x (if (procedure? v)
 			     v
@@ -202,7 +203,7 @@
 ;;   (foreign-call "ikrt_string_to_symbol" x))
 
 
-(define* (symbol->string (x symbol?))
+(define* (symbol->string {x symbol?})
   ;;Defined by  R6RS.  Return the name  of the symbol X  as an immutable
   ;;string.
   ;;
@@ -219,7 +220,7 @@
 	    ($set-symbol-string! x str)
 	    (gensym-count ($add1-integer ct)))))))
 
-(define* (string-or-symbol->string (obj string-or-symbol?))
+(define* (string-or-symbol->string {obj string-or-symbol?})
   ;;Defined by Vicare.  If OBJ is a string return a copy of it; if it is
   ;;a symbol return a new string object equal to its string name.
   ;;
@@ -228,7 +229,7 @@
 	       ($symbol->string obj))))
     ($substring str 0 ($string-length str))))
 
-(define* (string-or-symbol->symbol (obj string-or-symbol?))
+(define* (string-or-symbol->symbol {obj string-or-symbol?})
   ;;Defined by Vicare.  If OBJ is a  symbol return it; if it is a string
   ;;return a symbol having it as string name.
   ;;
@@ -239,7 +240,7 @@
 
 ;;;; property lists
 
-(define* (putprop (x symbol?) (k symbol?) v)
+(define* (putprop {x symbol?} {k symbol?} v)
   ;;Add a new property K with value V to the property list of the symbol
   ;;X.  K must be a symbol, V can be any value.
   ;;
@@ -253,7 +254,7 @@
 	  (else
 	   ($set-symbol-plist! x (cons (cons k v) p))))))
 
-(define* (getprop (x symbol?) (k symbol?))
+(define* (getprop {x symbol?} {k symbol?})
   ;;Return  the value  of the  property K  in the  property list  of the
   ;;symbol X; if K is not set return false.  K must be a symbol.
   ;;
@@ -265,7 +266,7 @@
 	   => cdr)
 	  (else #f))))
 
-(define* (remprop (x symbol?) (k symbol?))
+(define* (remprop {x symbol?} {k symbol?})
   ;;Remove property K from the list associated to the symbol X.
   ;;
   ($remprop x k))
@@ -284,7 +285,7 @@
 		    ($set-cdr! q ($cdr plist))
 		  (loop plist ($cdr plist)))))))))))
 
-(define* (property-list (x symbol?))
+(define* (property-list {x symbol?})
   ;;Return a new association list  representing the property list of the
   ;;symbol X.
   ;;
@@ -308,7 +309,7 @@
 (define system-value-gensym
   (gensym "system-value-gensym"))
 
-(define* (system-value (x symbol?))
+(define* (system-value {x symbol?})
   ;;When  the boot  image is  loaded, it  initialises itself;  for every
   ;;primitive function (CONS, CAR, ...)  one of the operations is to put
   ;;the actual  function (a closure  object) in  the "value" field  of a

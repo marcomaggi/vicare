@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (ikarus.posix)
   (export
 
@@ -419,7 +420,7 @@
 
 ;;;; file predicates
 
-(define* (file-exists? (pathname file-pathname?))
+(define* (file-exists? {pathname file-pathname?})
   ;;Defined by R6RS.
   ;;
   ($file-exists? pathname))
@@ -433,7 +434,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (directory-exists? (pathname file-pathname?))
+(define* (directory-exists? {pathname file-pathname?})
   ($directory-exists? pathname))
 
 (define* ($directory-exists? pathname)

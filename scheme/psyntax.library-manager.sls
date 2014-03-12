@@ -22,6 +22,7 @@
 ;;;SOFTWARE.
 
 
+#!vicare
 (library (psyntax library-manager)
   (export
     ;; library inspection
@@ -205,7 +206,7 @@
     (%display " filename=")	(%write ($library-source-file-name S))
     (%display ">")))
 
-(define* (library-descriptor (lib library?))
+(define* (library-descriptor {lib library?})
   ;;Given a library  record return a pair having the  library UID as car
   ;;and the library name as cdr.
   ;;
@@ -223,7 +224,7 @@
 (define-syntax-rule (library-descriptor-name ?lib)
   (cdr ?lib))
 
-(define* (library-name-identifiers (lib library?))
+(define* (library-name-identifiers {lib library?})
   (library-name->identifiers ($library-name lib)))
 
 
@@ -282,17 +283,17 @@
 		    (case-lambda*
 		      (()
 		       set)
-		      (((lib library?))
+		      (({lib library?})
 		       (unless (memq lib set)
 			 (%log-library-debug-message "installed library: ~a" (library-name lib))
 			 (set! set (cons lib set))))
-		      (((lib library?) del?)
+		      (({lib library?} del?)
 		       (if del?
 			   (set! set (remq lib set))
 			 (unless (memq lib set)
 			   (%log-library-debug-message "installed library: ~a" (library-name lib))
 			   (set! set (cons lib set)))))))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 (define (library-exists? libref)
@@ -303,7 +304,7 @@
   (and (find-library-in-collection-by-reference libref)
        #t))
 
-(define* ((find-library-in-collection-by-predicate false-or-library?) (pred procedure?))
+(define* ({find-library-in-collection-by-predicate false-or-library?} {pred procedure?})
   ;;Visit  the current  installed  libraries collection  and return  the
   ;;first for  which PRED returns true.   If PRED returns false  for all
   ;;the entries in the collection: return false.
@@ -345,7 +346,7 @@
     (or (find-library-in-collection-by-reference libref)
 	(%find-and-install-external-library libref)))
 
-  (define* (find-library-in-collection-by-reference (libref library-reference?))
+  (define* (find-library-in-collection-by-reference {libref library-reference?})
     (find-library-in-collection-by-predicate (lambda (lib)
 					       (%conforming-identifiers? libref lib))))
 
@@ -409,7 +410,7 @@
   (make-parameter
       (lambda (library-sexp)
         (assertion-violation 'current-library-expander "not initialized"))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 (define source-code-location
@@ -418,7 +419,7 @@
   ;;code being expanded; for example the source file name.
   ;;
   (make-parameter "<unknown-source-location>"
-    (lambda* ((obj string?))
+    (lambda* ({obj string?})
       obj)))
 
 
@@ -498,7 +499,7 @@
   ;;
   (make-parameter
       #f
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 (define failed-library-location-collector
@@ -530,7 +531,7 @@
 	'())
        ((origin)
 	(void)))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 ;;; --------------------------------------------------------------------
@@ -550,7 +551,7 @@
       (lambda (libref pending-libraries)
 	(error 'current-source-library-file-locator
 	  "source library locator not set"))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 (define current-source-library-loader
@@ -570,7 +571,7 @@
       (lambda (filename)
 	(error 'current-source-library-loader
 	  "source library loader not set"))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 ;;; --------------------------------------------------------------------
@@ -590,7 +591,7 @@
       (lambda (libref pending-libraries)
 	(error 'current-binary-library-file-locator
 	  "serialized library locator not set"))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 (define current-binary-library-loader
@@ -608,7 +609,7 @@
   (make-parameter
       (lambda (pathname success-kont)
 	#f)
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 
@@ -760,7 +761,7 @@
     ;;
     (make-parameter
 	default-library-loader
-      (lambda* ((obj procedure?))
+      (lambda* ({obj procedure?})
 	obj)))
 
   #| end of module: CURRENT-LIBRARY-LOADER |# )
@@ -770,7 +771,7 @@
 
 (module (current-source-library-loader-by-filename)
 
-  (define* (default-library-source-loader-by-filename (source-pathname string-pathname?) (libname-predicate procedure?))
+  (define* (default-library-source-loader-by-filename {source-pathname string-pathname?} {libname-predicate procedure?})
     ;;Default          value          for         the          parameter
     ;;CURRENT-SOURCE-LIBRARY-LOADER-BY-FILENAME.   Given a  library file
     ;;pathname: load  the file, expand  the first LIBRARY  form, compile
@@ -799,7 +800,7 @@
     ;;
     (make-parameter
 	default-library-source-loader-by-filename
-      (lambda* ((obj procedure?))
+      (lambda* ({obj procedure?})
 	obj)))
 
   #| end of module |# )
@@ -822,7 +823,7 @@
   (make-parameter
       (lambda (lib)
         (assertion-violation 'current-library-record-serializer "not initialized"))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 (define (serialize-collected-libraries serialize compile)
@@ -842,7 +843,7 @@
 	      (serialize-library lib serialize compile))
     ((current-library-collection))))
 
-(define* (serialize-library (lib library?) (serialize procedure?) (compile procedure?))
+(define* (serialize-library {lib library?} {serialize procedure?} {compile procedure?})
   ;;Compile and serialize the  given library record.  Return unspecified
   ;;values.
   ;;
@@ -1028,7 +1029,7 @@
   ;;
   (define-constant __who__ 'install-library)
   (case-define* install-library
-    (((uid symbol?) (libname library-name?)
+    (({uid symbol?} {libname library-name?}
       import-libdesc* visit-libdesc* invoke-libdesc*
       export-subst export-env
       visit-proc invoke-proc
@@ -1103,7 +1104,7 @@
   ;;
   ((libname)
    (uninstall-library libname #t))
-  (((libname library-name?) err?)
+  (({libname library-name?} err?)
    ;;FIXME: check that no other import is in progress.  (Ghuloum)
    (cond ((find-library-in-collection-by-reference libname)
 	  => (lambda (lib)
@@ -1141,7 +1142,7 @@
   ;;
   (label-binding lab))
 
-(define* (invoke-library (lib library?))
+(define* (invoke-library {lib library?})
   ;;Evaluate the invoke.
   ;;
   (let ((invoke (library-invoke-state lib)))
@@ -1156,7 +1157,7 @@
       (invoke)
       ($set-library-invoke-state! lib #t))))
 
-(define* (visit-library (lib library?))
+(define* (visit-library {lib library?})
   ;;Evaluate the visit code.
   ;;
   (let ((visit ($library-visit-state lib)))
@@ -1177,7 +1178,7 @@
 (module (current-include-loader
 	 default-include-loader)
 
-  (define* (default-include-loader (filename string?) verbose? synner)
+  (define* (default-include-loader {filename string?} verbose? synner)
     ;;Default value for the parameter CURRENT-INCLUDE-LOADER.  Search an
     ;;include file with name FILENAME.  When successful return 2 values:
     ;;the  full pathname  from which  the  file was  loaded, a  symbolic
@@ -1201,7 +1202,7 @@
     ;;
     (make-parameter
 	default-include-loader
-      (lambda* ((obj procedure?))
+      (lambda* ({obj procedure?})
 	obj)))
 
   #| end of module: CURRENT-INCLUDE-LOADER |# )
@@ -1220,7 +1221,7 @@
       (lambda (filename pending-libraries)
 	(error 'current-include-file-locator
 	  "include file locator not set" filename))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 (define current-include-file-loader
@@ -1236,7 +1237,7 @@
       (lambda (filename)
 	(error 'current-include-file-loader
 	  "include file loader not set" filename))
-    (lambda* ((obj procedure?))
+    (lambda* ({obj procedure?})
       obj)))
 
 

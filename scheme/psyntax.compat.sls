@@ -15,6 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#!vicare
 (library (psyntax compat)
   (export
     define*				define-constant
@@ -27,7 +28,7 @@
     module				import
     begin0				define-values
 
-    __who__
+    __who__				brace
 
     make-struct-type			struct?
     struct-type-descriptor?		struct-type-field-names

@@ -3756,7 +3756,7 @@
 (define eof				#x5F)
 (define unbound				#x6F)
 (define void-object			#x7F)
-(define bwp-object			#x8F)
+(define BWP-OBJECT			#x8F)
 
 ;;; --------------------------------------------------------------------
 ;;; characters

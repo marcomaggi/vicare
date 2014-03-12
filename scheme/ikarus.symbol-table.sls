@@ -14,6 +14,8 @@
 ;;;You should  have received  a copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#!vicare
 (library (ikarus.symbol-table)
   (export
     string->symbol			$string->symbol
@@ -29,15 +31,14 @@
     (only (ikarus.symbols)
 	  $symbol->string)
     (except (vicare system $symbols)
-	    ;;FIXME  To  be  uncommented   after  the  next  boot  image
-	    ;;rotation.  (Marco Maggi; Sun Mar 9, 2014)
-	    #;$symbol->string
+	    $symbol->string
 	    $string->symbol
 	    $symbol-table-size
 	    $log-symbol-table-status)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)
+	    $symbol->string
 	    $string->symbol))
 
 
@@ -154,7 +155,7 @@
 
 (module (string->symbol $string->symbol)
 
-  (define* (string->symbol (str string?))
+  (define* (string->symbol {str string?})
     ;;Defined by R6RS.  Return a symbol whose name is STR.
     ;;
     ($string->symbol str))

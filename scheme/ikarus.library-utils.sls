@@ -25,7 +25,7 @@
 ;;;
 
 
-#!rnrs
+#!vicare
 (library (ikarus library-utils)
   (export
     ;; library names and version numbers
@@ -149,7 +149,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (library-name-identifiers=? (sexp1 library-name?) (sexp2 library-name?))
+(define* (library-name-identifiers=? {sexp1 library-name?} {sexp2 library-name?})
   ;;Given  two symbolic  expressions  compliant with  the definition  of
   ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
   ;;list of identifiers.
@@ -185,7 +185,7 @@
     ;;
     (%library-name-comparison library-version<=? sexp1 sexp2))
 
-  (define* (%library-name-comparison version-predicate (sexp1 library-name?) (sexp2 library-name?))
+  (define* (%library-name-comparison version-predicate {sexp1 library-name?} {sexp2 library-name?})
     (let-values
 	(((ids1 vrs1) (library-name-decompose sexp1))
 	 ((ids2 vrs2) (library-name-decompose sexp2)))
@@ -198,7 +198,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (library-version=? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
+(define* (library-version=? {vrs1 library-version-numbers?} {vrs2 library-version-numbers?})
   ;;Given two lists of version  numbers compliant with the definition of
   ;;<LIBRARY NAME>  according to R6RS: return  #t if they  have the same
   ;;numbers.
@@ -228,7 +228,7 @@
 	   (and ($fx= ($car vrs1) ($car vrs2))
 		(loop ($cdr vrs1) ($cdr vrs2)))))))
 
-(define* (library-version<? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
+(define* (library-version<? {vrs1 library-version-numbers?} {vrs2 library-version-numbers?})
   ;;Given two lists of version  numbers compliant with the definition of
   ;;<LIBRARY NAME>  according to R6RS:  return #t if the  version number
   ;;represented by VRS1  is less than the version  number represented by
@@ -266,7 +266,7 @@
 	  (else ;;(= (car vrs1) (car vrs2))
 	   (loop ($cdr vrs1) ($cdr vrs2))))))
 
-(define* (library-version<=? (vrs1 library-version-numbers?) (vrs2 library-version-numbers?))
+(define* (library-version<=? {vrs1 library-version-numbers?} {vrs2 library-version-numbers?})
   ;;Given two lists of version  numbers compliant with the definition of
   ;;<LIBRARY NAME>  according to R6RS:  return #t if the  version number
   ;;represented  by VRS1 is  less than  or equal  to the  version number
@@ -415,7 +415,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (library-reference-identifiers=? (ref1 library-reference?) (ref2 library-reference?))
+(define* (library-reference-identifiers=? {ref1 library-reference?} {ref2 library-reference?})
   (let ((ids1 (library-reference->identifiers ref1))
 	(ids2 (library-reference->identifiers ref2)))
     (and (= (length ids1)
@@ -424,8 +424,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (conforming-sub-version-and-sub-version-reference? (sub-version library-sub-version?)
-							    (sub-version-reference library-sub-version-reference?))
+(define* (conforming-sub-version-and-sub-version-reference? {sub-version library-sub-version?}
+							    {sub-version-reference library-sub-version-reference?})
   ;;SUB-VERSION must  be a fixnum  representing a single  version number
   ;;from a library name, as defined by R6RS.
   ;;
@@ -475,8 +475,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (conforming-version-and-version-reference? (version library-version-numbers?)
-						    (version-reference library-version-reference?))
+(define* (conforming-version-and-version-reference? {version library-version-numbers?}
+						    {version-reference library-version-reference?})
   ;;VERSION must be a list of version numbers as specified by R6RS.
   ;;
   ;;VERSION-REFERENCE must be a version reference as specified by R6RS:
@@ -534,8 +534,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (conforming-library-name-and-library-reference? (name library-name?)
-							 (reference library-reference?))
+(define* (conforming-library-name-and-library-reference? {name library-name?}
+							 {reference library-reference?})
   (let-values
       (((libnam.ids libnam.version)  (library-name-decompose name))
        ((libref.ids libref.version)  (library-reference-decompose reference)))
