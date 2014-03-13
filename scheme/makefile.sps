@@ -794,6 +794,12 @@
     ;;Maggi; Wed Mar 12, 2014)
     #;(set-label-type-tagging!			$object-spec)
     #;(label-type-tagging			$object-spec)
+    (set-identifier-retval-tagging!		$object-spec)
+    (identifier-retval-tagging			$object-spec)
+    ;;NOTE Should these be exported too, for debugging purposes?  (Marco
+    ;;Maggi; Thu Mar 13, 2014)
+    #;(set-label-retval-tagging!		$object-spec)
+    #;(label-retval-tagging			$object-spec)
     (tagged-identifier?				$object-spec)
     (tagged-formals?				$object-spec)
     (parse-tagged-identifier			$object-spec)

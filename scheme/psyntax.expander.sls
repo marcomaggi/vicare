@@ -1150,6 +1150,8 @@
     ;; tagged binding variables
     set-identifier-type-tagging!	identifier-type-tagging
     set-label-type-tagging!		label-type-tagging
+    set-identifier-retval-tagging!	identifier-retval-tagging
+    set-label-retval-tagging!		label-retval-tagging
     tagged-identifier?			tagged-formals?
     parse-tagged-identifier		parse-tagged-bindings
     parse-tagged-formals
@@ -5344,6 +5346,10 @@
 		      (annotation-stripped expr)
 		    expr)))))
 
+(define (false-or-identifier? x)
+  (or (not x)
+      (identifier? x)))
+
 (define* (identifier->symbol x)
   ;;Given an identifier return its symbol expression.
   ;;
@@ -5412,29 +5418,43 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (parse-tagged-bindings stx)
-  ;;Assume STX is a syntax object representing a proper list of possibly
-  ;;tagged binding  identifiers; parse the  list and return 2  values: a
-  ;;list of identifiers representing the  binding identifiers, a list of
-  ;;identifiers and  #f representing the type  tags; #f is used  when no
-  ;;tag is present.
-  ;;
-  ;;The returned  binding identifiers are not  validated for duplicates;
-  ;;such check is left to the caller.
-  ;;
-  (syntax-match stx (brace)
-    (()
-     (values '() '()))
-    (((brace ?id ?tag) . ?other-id*)
-     (receive (id* tag*)
-	 (parse-tagged-bindings ?other-id*)
-       (values (cons ?id id*) (cons ?tag tag*))))
-    ((?id . ?other-id*)
-     (identifier? ?id)
-     (receive (id* tag*)
-	 (parse-tagged-bindings ?other-id*)
-       (values (cons ?id id*) (cons #f tag*))))
-    ))
+(case-define* parse-tagged-bindings
+  ((stx)
+   (parse-tagged-bindings stx #f))
+  ((stx input-form-stx)
+   ;;Assume STX is a syntax object representing a proper list of possibly
+   ;;tagged binding  identifiers; parse the  list and return 2  values: a
+   ;;list of identifiers representing the  binding identifiers, a list of
+   ;;identifiers and  #f representing the type  tags; #f is used  when no
+   ;;tag is present.
+   ;;
+   (define (%parse bind*)
+     (syntax-match bind* (brace)
+       (()
+	(values '() '()))
+       (((brace ?id ?tag) . ?other-id*)
+	(receive (id* tag*)
+	    (%parse ?other-id*)
+	  (values (cons ?id id*) (cons ?tag tag*))))
+       ((?id . ?other-id*)
+	(identifier? ?id)
+	(receive (id* tag*)
+	    (%parse ?other-id*)
+	  (values (cons ?id id*) (cons #f tag*))))
+       (_
+	(if input-form-stx
+	    (syntax-violation __who__ "invalid tagged bindings syntax" input-form-stx stx)
+	  (syntax-violation __who__ "invalid tagged bindings syntax" stx)))))
+   (receive-and-return (id* tag*)
+       (%parse stx)
+     (unless (distinct-bound-ids? id*)
+       (if input-form-stx
+	   (syntax-violation __who__
+	     "duplicate identifiers in bindings specification"
+	     input-form-stx stx)
+	 (syntax-violation __who__
+	   "duplicate identifiers in bindings specification"
+	   stx))))))
 
 (define* (tagged-bindings? lhs*)
   ;;Return  true if  lhs*  is  a list  of  possibly tagged  identifiers;
@@ -5448,118 +5468,138 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (parse-tagged-formals formals-stx)
-  ;;Given  a syntax  object  representing tagged  LAMBDA formals:  split
-  ;;formals from tags.  Do *not* test for duplicate bindings.
-  ;;
-  ;;We  use the  conventions: ?ID,  ?REST-ID and  ?ARGS-ID are  argument
-  ;;identifiers;  ?PRED  is  a  predicate  identifier.   We  accept  the
-  ;;following standard formals formats:
-  ;;
-  ;;   ?args-id
-  ;;   (?id ...)
-  ;;   (?id0 ?id ... . ?rest-id)
-  ;;
-  ;;and in addition the following tagged formals:
-  ;;
-  ;;   (brace ?args-id ?args-pred)
-  ;;   (?arg ...)
-  ;;   (?arg0 ?arg ... . ?rest-arg)
-  ;;
-  ;;where ?ARG is a predicate argument with one of the formats:
-  ;;
-  ;;   ?id
-  ;;   (brace ?id ?tag)
-  ;;
-  ;;Return 2 values:
-  ;;
-  ;;1.  A  proper  or  improper list  of  identifiers  representing  the
-  ;;   standard formals.
-  ;;
-  ;;2. A proper  or improper list of identifiers or  #f representing the
-  ;;   tags.  #f is used when no tag is present.
-  ;;
-  (define (%process-args recur args-stx)
-    (receive (standard-formals tags)
-	(recur (cdr args-stx))
-      (let ((arg-stx (car args-stx)))
-	(syntax-match arg-stx (brace)
-	  ;;Untagged argument.
-	  (?id
-	   (identifier? ?id)
-	   (values (cons ?id standard-formals) (cons #f tags)))
-	  ;;Tagged argument.
-	  ((brace ?id ?tag)
-	   (and (identifier? ?id)
-		(identifier? ?tag))
-	   (values (cons ?id standard-formals) (cons ?tag tags)))
-	  (else
-	   (syntax-violation __who__ "invalid argument specification" formals-stx arg-stx))))))
-    (syntax-match formals-stx (brace)
+(case-define* parse-tagged-formals
+  ((formals-stx)
+   (parse-tagged-formals formals-stx #f))
+  ((formals-stx input-form-stx)
+   ;;Given  a syntax  object representing  tagged LAMBDA  formals: split
+   ;;formals from tags.  Do *not* test for duplicate bindings.
+   ;;
+   ;;We use  the conventions:  ?ID, ?REST-ID  and ?ARGS-ID  are argument
+   ;;identifiers;  ?PRED  is  a  predicate identifier.   We  accept  the
+   ;;following standard formals formats:
+   ;;
+   ;;   ?args-id
+   ;;   (?id ...)
+   ;;   (?id0 ?id ... . ?rest-id)
+   ;;
+   ;;and in addition the following tagged formals:
+   ;;
+   ;;   (brace ?args-id ?args-pred)
+   ;;   (?arg ...)
+   ;;   (?arg0 ?arg ... . ?rest-arg)
+   ;;
+   ;;where ?ARG is a predicate argument with one of the formats:
+   ;;
+   ;;   ?id
+   ;;   (brace ?id ?tag)
+   ;;
+   ;;Return 2 values:
+   ;;
+   ;;1.  A  proper  or  improper list  of  identifiers  representing  the
+   ;;   standard formals.
+   ;;
+   ;;2. A proper  or improper list of identifiers or  #f representing the
+   ;;   tags.  #f is used when no tag is present.
+   ;;
+   (define (%process-args recur args-stx)
+     (receive (standard-formals tags)
+	 (recur (cdr args-stx))
+       (let ((arg-stx (car args-stx)))
+	 (syntax-match arg-stx (brace)
+	   ;;Untagged argument.
+	   (?id
+	    (identifier? ?id)
+	    (values (cons ?id standard-formals) (cons #f tags)))
+	   ;;Tagged argument.
+	   ((brace ?id ?tag)
+	    (and (identifier? ?id)
+		 (identifier? ?tag))
+	    (values (cons ?id standard-formals) (cons ?tag tags)))
+	   (else
+	    (syntax-violation __who__
+	      "invalid argument specification"
+	      (or input-form-stx formals-stx) arg-stx))))))
+   (define (%validate-formals standard-formals-stx)
+     (unless (distinct-bound-formals? standard-formals-stx)
+       (syntax-violation __who__
+	 "duplicate identifiers in formals specification"
+	 (or input-form-stx formals-stx))))
+   (syntax-match formals-stx (brace)
 
-      ;;Tagged args, as in:
-      ;;
-      ;;   (lambda {args list-of-fixnums} . ?body)
-      ;;
-      ((brace ?args-id ?args-tag)
-       (and (identifier? ?args-id)
-	    (identifier? ?args-tag))
-       (values ?args-id ?args-tag))
+     ;;Tagged args, as in:
+     ;;
+     ;;   (lambda {args list-of-fixnums} . ?body)
+     ;;
+     ((brace ?args-id ?args-tag)
+      (and (identifier? ?args-id)
+	   (identifier? ?args-tag))
+      (values ?args-id ?args-tag))
 
-      ;;Possibly tagged identifiers with tagged rest argument, as in:
-      ;;
-      ;;   (lambda (?arg ... . {rest list-of-fixnums}) . ?body)
-      ;;
-      ((?arg* ... . (brace ?rest-id ?rest-tag))
-       (begin
-	 (unless (and (identifier? ?rest-id)
-		      (identifier? ?rest-tag))
-	   (syntax-violation __who__
-	     "invalid rest argument specification" formals-stx (cons 'brace ?rest-id ?rest-tag)))
-	 (let recur ((?arg* ?arg*))
-	   (if (pair? ?arg*)
-	       (%process-args recur ?arg*)
-	     ;;Process rest argument.
-	     (values ?rest-id ?rest-tag)))))
+     ;;Possibly tagged identifiers with tagged rest argument, as in:
+     ;;
+     ;;   (lambda (?arg ... . {rest list-of-fixnums}) . ?body)
+     ;;
+     ((?arg* ... . (brace ?rest-id ?rest-tag))
+      (begin
+	(unless (and (identifier? ?rest-id)
+		     (identifier? ?rest-tag))
+	  (syntax-violation __who__
+	    "invalid rest argument specification" formals-stx (cons 'brace ?rest-id ?rest-tag)))
+	(receive-and-return (standard-formals-stx tags)
+	    (let recur ((?arg* ?arg*))
+	      (if (pair? ?arg*)
+		  (%process-args recur ?arg*)
+		;;Process rest argument.
+		(values ?rest-id ?rest-tag)))
+	  (%validate-formals standard-formals-stx))))
 
-      ;;Possibly tagged identifiers with UNtagged rest argument, as in:
-      ;;
-      ;;   (lambda (?arg ... . rest) . ?body)
-      ;;
-      ((?arg* ... . ?rest-id)
-       (identifier? ?rest-id)
-       (let recur ((?arg* ?arg*))
-	 (if (pair? ?arg*)
-	     (%process-args recur ?arg*)
-	   (values ?rest-id #f))))
+     ;;Possibly tagged identifiers with UNtagged rest argument, as in:
+     ;;
+     ;;   (lambda (?arg ... . rest) . ?body)
+     ;;
+     ((?arg* ... . ?rest-id)
+      (identifier? ?rest-id)
+      (receive-and-return (standard-formals-stx tags)
+	  (let recur ((?arg* ?arg*))
+	    (if (pair? ?arg*)
+		(%process-args recur ?arg*)
+	      (values ?rest-id #f)))
+	(%validate-formals standard-formals-stx)))
 
-      ;;Standard formals: untagged identifiers without rest argument.
-      ;;
-      ((?id* ...)
-       (for-all identifier? ?id*)
-       (values ?id* (map (lambda (id) #f) ?id*)))
+     ;;Standard formals: untagged identifiers without rest argument.
+     ;;
+     ((?id* ...)
+      (for-all identifier? ?id*)
+      (begin
+	(%validate-formals ?id*)
+	(values ?id* (map (lambda (id) #f) ?id*))))
 
-      ;;Standard formals: untagged identifiers with rest argument.
-      ;;
-      ((?id* ... . ?rest-id)
-       (and (for-all identifier? ?id*)
-	    (identifier? ?rest-id))
-       (values formals-stx (cons* (map (lambda (id) #f) ?id*) #f)))
+     ;;Standard formals: untagged identifiers with rest argument.
+     ;;
+     ((?id* ... . ?rest-id)
+      (and (for-all identifier? ?id*)
+	   (identifier? ?rest-id))
+      (begin
+	(%validate-formals formals-stx)
+	(values formals-stx (cons* (map (lambda (id) #f) ?id*) #f))))
 
-      ;;Standard formals: untagged args.
-      ;;
-      (?args-id
-       (identifier? ?args-id)
-       (values ?args-id #f))
+     ;;Standard formals: untagged args.
+     ;;
+     (?args-id
+      (identifier? ?args-id)
+      (values ?args-id #f))
 
-      ;;Possibly tagged identifiers without rest argument.
-      ;;
-      ((?arg* ...)
-       (let recur ((?arg* ?arg*))
-	 (if (pair? ?arg*)
-	     (%process-args recur ?arg*)
-	   (values '() '()))))
-      ))
+     ;;Possibly tagged identifiers without rest argument.
+     ;;
+     ((?arg* ...)
+      (receive-and-return (standard-formals-stx tags)
+	  (let recur ((?arg* ?arg*))
+	    (if (pair? ?arg*)
+		(%process-args recur ?arg*)
+	      (values '() '())))
+	(%validate-formals standard-formals-stx)))
+     )))
 
 (define* (tagged-formals? formals-stx)
   ;;Return true  if FORMALS-STX  is a  syntax object  representing valid
@@ -5910,25 +5950,113 @@
 (define-constant *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*
   'vicare:expander:binding-type-tagging)
 
-(define* (set-identifier-type-tagging! {binding-id identifier?} {tag identifier?})
-  (if (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*)
-      (syntax-violation __who__
-	"identifier binding tag already defined" binding-id tag)
-    (syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE* tag)))
+(define-constant *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*
+  'vicare:expander:binding-retval-tagging)
+
+;;; --------------------------------------------------------------------
+
+(define* (set-label-type-tagging! {label symbol?} {tag false-or-identifier?})
+  ;;Given a  syntactic binding LABEL:  add TAG  to its property  list as
+  ;;binding type  tagging.  This  tag should  represent the  object type
+  ;;referenced by the binding.
+  ;;
+  (cond ((getprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*)
+	 => (lambda (old-tag)
+	      (syntax-violation __who__
+		"label binding tag already defined" label old-tag tag)))
+	(else
+	 (putprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE* tag))))
+
+(define* (label-type-tagging {label identifier?})
+  ;;Given a syntactic binding LABEL: retrieve from its property list the
+  ;;identifier  representing   the  binding  type  tagging.    This  tag
+  ;;identifier  should  represent  the  object type  referenced  by  the
+  ;;binding.
+  ;;
+  (getprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*))
+
+;;; --------------------------------------------------------------------
+
+(define* (set-identifier-type-tagging! {binding-id identifier?} {tag false-or-identifier?})
+  ;;Given a syntactic  binding identifier: add TAG to  its property list
+  ;;as binding type tagging.  This  tag should represent the object type
+  ;;referenced by the binding.
+  ;;
+  (cond ((syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*)
+	 => (lambda (old-tag)
+	      (syntax-violation __who__
+		"identifier binding tag already defined"
+		binding-id old-tag tag)))
+	(else
+	 (syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE* tag))))
 
 (define* (identifier-type-tagging {binding-id identifier?})
+  ;;Given  a syntactic  binding identifier:  retrieve from  its property
+  ;;list the identifier representing the binding type tagging.  This tag
+  ;;identifier  should  represent  the  object type  referenced  by  the
+  ;;binding.
+  ;;
   (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*))
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-label-type-tagging! {label symbol?} {tag identifier?})
-  (if (getprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*)
-      (syntax-violation __who__
-	"label binding tag already defined" label tag)
-    (putprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE* tag)))
+(define* (set-label-retval-tagging! {label symbol?} {rv-tag* all-identifiers?})
+  ;;Given a syntactic binding LABEL  for a function binding: add RV-TAG*
+  ;;to its property list as type tagging for the returned values.  These
+  ;;tags  should represent  the  object type  of  the function's  return
+  ;;values.
+  ;;
+  ;;RV-TAG* must  be a possibly  empty list of  identifiers representing
+  ;;the type  tags of the values  returned by the function.   RV-TAG* is
+  ;;null  when: the  binding  is  a function  returning  no values;  the
+  ;;binding  is  a  function  returning  values for  which  no  tag  was
+  ;;specified.
+  ;;
+  (cond ((getprop label *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*)
+	 => (lambda (old-rv-tag*)
+	      (syntax-violation __who__
+		"label binding return value tags already defined"
+		label old-rv-tag* rv-tag*)))
+	(else
+	 (putprop label *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE* rv-tag*))))
 
-(define* (label-type-tagging {label identifier?})
-  (getprop label *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*))
+(define* (label-retval-tagging {label identifier?})
+  ;;Given a  syntactic binding  LABEL for  a function  binding: retrieve
+  ;;from its property list the list of identifiers representing the type
+  ;;tagging  for  the returned  values.   These  tag identifiers  should
+  ;;represent the object type of the function's return values.
+  ;;
+  (getprop label *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*))
+
+;;; --------------------------------------------------------------------
+
+(define* (set-identifier-retval-tagging! {binding-id identifier?} {rv-tag* all-identifiers?})
+  ;;Given a  syntactic binding  identifier for  a function  binding: add
+  ;;RV-TAG*  to its  property  list  as type  tagging  for the  returned
+  ;;values.   These  tags  should  represent  the  object  type  of  the
+  ;;function's return values.
+  ;;
+  ;;RV-TAG* must  be a possibly  empty list of  identifiers representing
+  ;;the type  tags of the values  returned by the function.   RV-TAG* is
+  ;;null  when: the  binding  is  a function  returning  no values;  the
+  ;;binding  is  a  function  returning  values for  which  no  tag  was
+  ;;specified.
+  ;;
+  (cond ((syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*)
+	 => (lambda (old-rv-tag*)
+	      (syntax-violation __who__
+		"identifier binding return value tags already defined"
+		binding-id old-rv-tag* rv-tag*)))
+	(else
+	 (syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE* rv-tag*))))
+
+(define* (identifier-retval-tagging {binding-id identifier?})
+  ;;Given  a  syntactic  binding  identifier  for  a  function  binding:
+  ;;retrieve from its property list the list of identifiers representing
+  ;;the type  tagging for  the returned  values.  These  tag identifiers
+  ;;should represent the object type of the function's return values.
+  ;;
+  (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*))
 
 
 ;;;; identifiers: syntax parameters
@@ -6019,6 +6147,29 @@
   (or (null? id*)
       (and (not (bound-id-member? ($car id*) ($cdr id*)))
 	   (distinct-bound-ids? ($cdr id*)))))
+
+(define (distinct-bound-formals? standard-formals-stx)
+  ;;Given  a  syntax  object  representing a  list  of  UNtagged  LAMBDA
+  ;;formals:  return true  if non  of the  identifiers is  BOUND-ID=? to
+  ;;another; else return #f.
+  ;;
+  (let recur ((fmls          standard-formals-stx)
+	      (collected-id* '()))
+    (syntax-match fmls ()
+      ;;STANDARD-FORMALS-STX is a proper list and it ends here.  Good.
+      (() #t)
+      ;;STANDARD-FORMALS-STX is an IMproper list and it ends here with a
+      ;;rest argument.  Check it.
+      (?rest
+       (identifier? ?rest)
+       (not (bound-id-member? ?rest collected-id*)))
+      ((?id . ?rest)
+       (identifier? ?id)
+       (if (bound-id-member? ?id collected-id*)
+	   #f
+	 (recur ?rest (cons ?id collected-id*))))
+      (_
+       (stx-error standard-formals-stx "invalid formals")))))
 
 (define (bound-id-member? id id*)
   ;;Given an identifier  ID and a list of identifiers  ID*: return #t if
@@ -7791,24 +7942,20 @@
     ;;Extended tagged syntax.
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (receive (lhs* tag*)
-	 (parse-tagged-bindings ?lhs*)
-       (if (valid-bound-ids? lhs*)
-	   (bless
-	    `((lambda ,?lhs*
-		,?body . ,?body*) . ,?rhs*))
-	 (%error-invalid-formals-syntax expr-stx ?lhs*))))
+	 (parse-tagged-bindings ?lhs* expr-stx)
+       (bless
+	`((lambda ,?lhs*
+	    ,?body . ,?body*) . ,?rhs*))))
 
     ;;Extended tagged named syntax.
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
      (receive (lhs* tag*)
 	 (parse-tagged-bindings ?lhs*)
-       (if (valid-bound-ids? lhs*)
-	   (bless
-	    `((letrec ((,?recur (lambda ,?lhs*
-				  ,?body . ,?body*)))
-		,?recur) . ,?rhs*))
-	 (%error-invalid-formals-syntax expr-stx ?lhs*))))
+       (bless
+	`((letrec ((,?recur (lambda ,?lhs*
+			      ,?body . ,?body*)))
+	    ,?recur) . ,?rhs*))))
     ))
 
 (define (let*-macro expr-stx)
@@ -7818,7 +7965,9 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (tagged-bindings? ?lhs*)
+     ;;Remember that LET* allows bindings with duplicate identifiers, so
+     ;;we do not use TAGGED-BINDINGS? here.
+     (for-all tagged-identifier? ?lhs*)
      (bless
       (let recur ((x* (map list ?lhs* ?rhs*)))
 	(if (null? x*)
@@ -7836,12 +7985,10 @@
      (identifier? ?recur)
      (receive (lhs* tag*)
 	 (parse-tagged-bindings ?lhs*)
-       (if (valid-bound-ids? lhs*)
-	   (bless
-	    `((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
-					      ,?body . ,?body*)))
-		,?recur) . ,?rhs*))
-	 (%error-invalid-formals-syntax expr-stx ?lhs*))))
+       (bless
+	`((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
+					  ,?body . ,?body*)))
+	    ,?recur) . ,?rhs*))))
     ))
 
 
@@ -8635,18 +8782,15 @@
   (syntax-match expr-stx ()
     ((_ ?who (?formal* ...) ?body ?body* ...)
      (receive (standard-formals-stx tags)
-	 (parse-tagged-formals ?formal*)
-       (if (valid-bound-ids? standard-formals-stx)
-	   (bless
-	    `(make-traced-procedure ',?who
-				    (lambda ,?formal*
-				      ,?body . ,?body*)))
-	 (%error-invalid-formals-syntax expr-stx ?formal*))))
+	 (parse-tagged-formals ?formal* expr-stx)
+       (bless
+	`(make-traced-procedure ',?who
+				(lambda ,?formal*
+				  ,?body . ,?body*)))))
 
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
      (receive (standard-formals-stx tags)
-	 (parse-tagged-formals ?formal*)
-       (%verify-formals-syntax standard-formals-stx expr-stx)
+	 (parse-tagged-formals ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda (,@?formal* . ,?rest-formal)
@@ -8661,19 +8805,16 @@
   (syntax-match expr-stx ()
     ((_ (?who ?formal* ...) ?body ?body* ...)
      (receive (standard-formals-stx tags)
-	 (parse-tagged-formals ?formal*)
-       (if (valid-bound-ids? standard-formals-stx)
-	   (bless
-	    `(define ,?who
-	       (make-traced-procedure ',?who
-				      (lambda ,?formal*
-					,?body . ,?body*))))
-	 (%error-invalid-formals-syntax expr-stx ?formal*))))
+	 (parse-tagged-formals ?formal* expr-stx)
+       (bless
+	`(define ,?who
+	   (make-traced-procedure ',?who
+				  (lambda ,?formal*
+				    ,?body . ,?body*))))))
 
     ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
      (receive (standard-formals-stx tags)
-	 (parse-tagged-formals ?formal*)
-       (%verify-formals-syntax standard-formals-stx expr-stx)
+	 (parse-tagged-formals ?formal* expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -8997,36 +9138,40 @@
 
 ;;;; module non-core-macro-transformer: DO
 
-(define (do-macro stx)
+(define (do-macro expr-stx)
   ;;Transformer  function  used  to  expand  R6RS  DO  macros  from  the
   ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
   ;;return a syntax object that must be further expanded.
   ;;
   (define (%normalise-binding binding-stx)
     (syntax-match binding-stx ()
-      ((?var ?init)       `(,?var ,?init ,?var))
-      ((?var ?init ?step) `(,?var ,?init ,?step))
+      ((?var ?init)
+       (receive (id tag)
+	   (parse-tagged-identifier ?var)
+	 `(,?var ,?init ,id)))
+      ((?var ?init ?step)
+       `(,?var ,?init ,?step))
       (_
-       (stx-error stx "invalid binding"))))
-  (syntax-match stx ()
+       (stx-error expr-stx "invalid binding"))))
+  (syntax-match expr-stx ()
     ((_ (?binding* ...)
 	(?test ?expr* ...)
 	?command* ...)
      (syntax-match (map %normalise-binding ?binding*) ()
        (((?var* ?init* ?step*) ...)
-	(if (valid-bound-ids? ?var*)
-	    (bless
-	     `(letrec ((loop (lambda ,?var*
-			       (if ,?test
-				   ;;If ?EXPR* is  null: make sure there
-				   ;;is  at  least   one  expression  in
-				   ;;BEGIN.
-				   (begin (if #f #f) . ,?expr*)
-				 (begin
-				   ,@?command*
-				   (loop . ,?step*))))))
-		(loop . ,?init*)))
-	  (stx-error stx "invalid bindings")))
+	(receive (id* tag*)
+	    (parse-tagged-bindings ?var* expr-stx)
+	  (bless
+	   `(letrec ((loop (lambda ,?var*
+			     (if ,?test
+				 ;;If ?EXPR* is  null: make sure there
+				 ;;is  at  least   one  expression  in
+				 ;;BEGIN.
+				 (begin (if #f #f) . ,?expr*)
+			       (begin
+				 ,@?command*
+				 (loop . ,?step*))))))
+	      (loop . ,?init*)))))
        ))
     ))
 
@@ -9623,24 +9768,25 @@
   ;;
   (syntax-match expr-stx ()
     ((_ (?var* ... ?var0) ?form* ... ?form0)
-     (let ((TMP* (generate-temporaries ?var*)))
-       (bless
-	`(begin
-	   ;;We must make sure that the ?FORMs do not capture the ?VARs.
-	   (define (return-multiple-values)
-	     ,@?form* ,?form0)
-	   ,@(map (lambda (var)
-		    `(define ,var #f))
-	       ?var*)
-	   (define ,?var0
-	     (call-with-values
-		 return-multiple-values
-	       (lambda (,@TMP* T0)
-		 ,@(map (lambda (var TMP)
-			  `(set! ,var ,TMP))
-		     ?var* TMP*)
-		 T0)))
-	   ))))
+     (receive (id* tag*)
+	 (parse-tagged-bindings ?var* expr-stx)
+       (let ((TMP* (generate-temporaries id*)))
+	 (bless
+	  `(begin
+	     (define (return-multiple-values)
+	       ,@?form* ,?form0)
+	     ,@(map (lambda (var)
+		      `(define ,var #f))
+		 ?var*)
+	     (define ,?var0
+	       (call-with-values
+		   return-multiple-values
+		 (lambda (,@TMP* T0)
+		   ,@(map (lambda (var TMP)
+			    `(set! ,var ,TMP))
+		       id* TMP*)
+		   T0)))
+	     )))))
     ))
 
 (define (define-constant-values-macro expr-stx)
@@ -10175,9 +10321,7 @@
        ;;Check  that  the  binding  names are  identifiers  and  without
        ;;duplicates.
        (receive (lhs* tag*)
-	   (parse-tagged-bindings ?lhs*)
-	 (unless (valid-bound-ids? lhs*)
-	   (%error-invalid-formals-syntax expr-stx ?lhs*))
+	   (parse-tagged-bindings ?lhs* expr-stx)
 	 ;;Generate  unique variable  names  and labels  for the  LETREC
 	 ;;bindings.
 	 (let ((lex* (map gensym-for-lexical-var lhs*))
@@ -11757,17 +11901,22 @@
   ;;formals for  LAMBDA and WITH-SYNTAX syntaxes.   If successful return
   ;;unspecified values, else raise a syntax violation.
   ;;
-  (syntax-match formals-stx ()
-    ((?id* ...)
-     (unless (valid-bound-ids? ?id*)
-       (%error-invalid-formals-syntax input-form-stx formals-stx)))
-
-    ((?id* ... . ?rest-id)
-     (unless (valid-bound-ids? (cons ?rest-id ?id*))
-       (%error-invalid-formals-syntax input-form-stx formals-stx)))
-
-    (_
-     (stx-error input-form-stx "invalid syntax"))))
+  (receive (standard-formals-stx tags)
+      (parse-tagged-formals formals-stx input-form-stx)
+    (void)))
+;;;NOTE This is the old version,  before tagging.  (Marco Maggi; Thu Mar
+;;;13, 2014)
+;;;
+;;;(define (%verify-formals-syntax formals-stx input-form-stx)
+;;; (syntax-match formals-stx ()
+;;;   ((?id* ...)
+;;;    (unless (valid-bound-ids? ?id*)
+;;;      (%error-invalid-formals-syntax input-form-stx formals-stx)))
+;;;   ((?id* ... . ?rest-id)
+;;;    (unless (valid-bound-ids? (cons ?rest-id ?id*))
+;;;      (%error-invalid-formals-syntax input-form-stx formals-stx)))
+;;;   (_
+;;;    (stx-error input-form-stx "invalid syntax"))))
 
 (define (%error-invalid-formals-syntax input-form-stx formals-stx)
   ;;Raise an error  for invalid formals of LAMBDA,  CASE-LAMBDA, LET and
@@ -13027,9 +13176,8 @@
    (if (tagged-formals? formals-stx)
        ;;Extended tagged formals, with or without rest argument.
        (receive (standard-formals-stx tags)
-	   (parse-tagged-formals formals-stx)
+	   (parse-tagged-formals formals-stx input-form-stx)
 	 #;(debug-print 'formals-stx (syntax->datum standard-formals-stx) (syntax->datum tags))
-	 (%verify-formals-syntax standard-formals-stx input-form-stx)
 	 (syntax-match standard-formals-stx ()
 	   ((?arg* ...)
 	    (let ((lex* (map gensym-for-lexical-var ?arg*))
@@ -13422,13 +13570,15 @@
 		;;   of  evaluating  ?RHS.   In this  case  the  loc  is
 		;;  generated here by GEN-DEFINE-LABEL+LEX.
 		;;
-		(receive (id qrhs)
+		(receive (id id-tag rv-tag* qrhs)
 		    (%parse-define body-form-stx)
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-form-stx "cannot redefine keyword"))
 		  (receive (lab lex)
 		      (gen-define-label+lex id rib sd?)
 		    (extend-rib! rib id lab sd?)
+		    (set-label-type-tagging!   lab id-tag)
+		    (set-label-retval-tagging! lab rv-tag*)
 		    (chi-body* (cdr body-form-stx*)
 			       (add-lexical-binding lab lex lexenv.run) lexenv.expand
 			       (cons lex lex*) (cons qrhs qrhs*)
@@ -13833,23 +13983,61 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%parse-define x)
-    ;;Syntax parser for R6RS's DEFINE.
+  (define (%parse-define input-form-stx)
+    ;;Syntax  parser  for R6RS's  DEFINE  and  extended tagged  bindings
+    ;;syntax.  Return 4 values:
     ;;
-    (syntax-match x ()
+    ;;1. The identifier of the binding variable.
+    ;;
+    ;;2. False or  a an identifier representing the  binding tag.  False
+    ;;is used when no tag is specified.
+    ;;
+    ;;3. A possibly empty list of identifiers representing the type tags
+    ;;of the  values returned by  the function.  Null is  returned when:
+    ;;the binding is not a function; the binding is a function returning
+    ;;no values; the binding is a function returning values for which no
+    ;;tag was specified.
+    ;;
+    ;;4.  A qualified right-hand side expression (QRHS) representing the
+    ;;binding to create.
+    ;;
+    (syntax-match input-form-stx (brace)
+      ;;Function definition with tagged return values.
+      ((_ ((brace ?id ?tag0 ?tag* ...) . ?fmls) ?b ?b* ...)
+       (identifier? ?id)
+       (let ((rv-tag* (cons ?tag0 ?tag*)))
+	 (unless (all-identifiers? rv-tag*)
+	   (stx-error input-form-stx "invalid syntax in return values tags"))
+	 (%verify-formals-syntax ?fmls input-form-stx)
+	 (values ?id '<procedure> rv-tag* (cons 'defun input-form-stx))))
+
+      ;;Variable definition with tagged identifier.
+      ((_ (brace ?id ?tag) ?val)
+       (identifier? ?id)
+       (values ?id ?tag '() (cons 'expr ?val)))
+
+      ;;Variable definition with tagged identifier, no init.
+      ((_ (brace ?id ?tag))
+       (identifier? ?id)
+       (values ?id ?tag '() (cons 'expr (bless '(void)))))
+
+      ;;R6RS function definition.
       ((_ (?id . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (begin
-	 (%verify-formals-syntax ?fmls x)
-	 (values ?id (cons 'defun x))))
+	 (%verify-formals-syntax ?fmls input-form-stx)
+	 (values ?id #f '() (cons 'defun input-form-stx))))
 
+      ;;R6RS variable definition.
       ((_ ?id ?val)
        (identifier? ?id)
-       (values ?id (cons 'expr ?val)))
+       (values ?id #f '() (cons 'expr ?val)))
 
+      ;;R6RS variable definition, no init.
       ((_ ?id)
        (identifier? ?id)
-       (values ?id (cons 'expr (bless '(void)))))
+       (values ?id #f '() (cons 'expr (bless '(void)))))
+
       ))
 
   (define (%parse-define-syntax stx)

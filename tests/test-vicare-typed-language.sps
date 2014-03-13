@@ -36,21 +36,15 @@
 
 ;;;; helpers
 
-(define (fixnums ell)
-  (and (list? ell)
-       (for-all fixnum? ell)))
-
-(define* (flonum {obj flonum?})
-  obj)
-
-(define* (ratnum {obj ratnum?})
-  obj)
+(define-auxiliary-syntaxes
+  <fixnum> <flonum> <ratnum> <string> <list>
+  <fixnums>)
 
 
 (parametrise ((check-test-name	'parsing-tagged-bindings))
 
   (check
-      (typ.tagged-identifier? #'(brace X fixnum))
+      (typ.tagged-identifier? #'(brace X <fixnum>))
     => #t)
 
   (check
@@ -64,9 +58,9 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (typ.parse-tagged-identifier #'(brace X fixnum))
+      (typ.parse-tagged-identifier #'(brace X <fixnum>))
     (=> syntax=?)
-    #'X #'fixnum)
+    #'X #'<fixnum>)
 
   (check
       (typ.parse-tagged-identifier #'X)
@@ -77,22 +71,22 @@
 ;;; list of tagged identifiers
 
   (check
-      (typ.parse-tagged-bindings #'({a fixnum}))
+      (typ.parse-tagged-bindings #'({a <fixnum>}))
     (=> syntax=?)
-    #'(a) #'(fixnum))
+    #'(a) #'(<fixnum>))
 
   (check
-      (typ.parse-tagged-bindings #'({a fixnum}
-				    {b string}))
+      (typ.parse-tagged-bindings #'({a <fixnum>}
+				    {b <string>}))
     (=> syntax=?)
-    #'(a b) #'(fixnum string))
+    #'(a b) #'(<fixnum> <string>))
 
   (check
-      (typ.parse-tagged-bindings #'({a fixnum}
-				    {b string}
-				    {c vector}))
+      (typ.parse-tagged-bindings #'({a <fixnum>}
+				    {b <string>}
+				    {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(fixnum string vector))
+    #'(a b c) #'(<fixnum> <string> <vector>))
 
 ;;;
 
@@ -115,36 +109,36 @@
 
   (check
       (typ.parse-tagged-bindings #'(a
-				    {b string}))
+				    {b <string>}))
     (=> syntax=?)
-    #'(a b) #'(#f string))
+    #'(a b) #'(#f <string>))
 
   (check
-      (typ.parse-tagged-bindings #'({a fixnum}
+      (typ.parse-tagged-bindings #'({a <fixnum>}
 				    b))
     (=> syntax=?)
-    #'(a b) #'(fixnum #f))
+    #'(a b) #'(<fixnum> #f))
 
   (check
       (typ.parse-tagged-bindings #'(a
-				    {b string}
-				    {c vector}))
+				    {b <string>}
+				    {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(#f string vector))
+    #'(a b c) #'(#f <string> <vector>))
 
   (check
-      (typ.parse-tagged-bindings #'({a fixnum}
+      (typ.parse-tagged-bindings #'({a <fixnum>}
 				    b
-				    {c vector}))
+				    {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(fixnum #f vector))
+    #'(a b c) #'(<fixnum> #f <vector>))
 
   (check
-      (typ.parse-tagged-bindings #'({a fixnum}
-				    {b string}
+      (typ.parse-tagged-bindings #'({a <fixnum>}
+				    {b <string>}
 				    c))
     (=> syntax=?)
-    #'(a b c) #'(fixnum string #f))
+    #'(a b c) #'(<fixnum> <string> #f))
 
 ;;; --------------------------------------------------------------------
 ;;; tagged formals
@@ -152,17 +146,17 @@
 ;;; tagged
 
   (check
-      (typ.parse-tagged-formals #'({a fixnum}
-				   {b string}))
+      (typ.parse-tagged-formals #'({a <fixnum>}
+				   {b <string>}))
     (=> syntax=?)
-    #'(a b) #'(fixnum string))
+    #'(a b) #'(<fixnum> <string>))
 
   (check
-      (typ.parse-tagged-formals #'({a fixnum}
-				   {b string}
-				   {c vector}))
+      (typ.parse-tagged-formals #'({a <fixnum>}
+				   {b <string>}
+				   {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(fixnum string vector))
+    #'(a b c) #'(<fixnum> <string> <vector>))
 
 ;;; untagged
 
@@ -185,43 +179,43 @@
 
   (check
       (typ.parse-tagged-formals #'(a
-				   {b string}))
+				   {b <string>}))
     (=> syntax=?)
-    #'(a b) #'(#f string))
+    #'(a b) #'(#f <string>))
 
   (check
-      (typ.parse-tagged-formals #'({a fixnum}
+      (typ.parse-tagged-formals #'({a <fixnum>}
 				   b))
     (=> syntax=?)
-    #'(a b) #'(fixnum #f))
+    #'(a b) #'(<fixnum> #f))
 
   (check
       (typ.parse-tagged-formals #'(a
-				   {b string}
-				   {c vector}))
+				   {b <string>}
+				   {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(#f string vector))
+    #'(a b c) #'(#f <string> <vector>))
 
   (check
-      (typ.parse-tagged-formals #'({a fixnum}
+      (typ.parse-tagged-formals #'({a <fixnum>}
 				   b
-				   {c vector}))
+				   {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(fixnum #f vector))
+    #'(a b c) #'(<fixnum> #f <vector>))
 
   (check
-      (typ.parse-tagged-formals #'({a fixnum}
-				   {b string}
+      (typ.parse-tagged-formals #'({a <fixnum>}
+				   {b <string>}
 				   c))
     (=> syntax=?)
-    #'(a b c) #'(fixnum string #f))
+    #'(a b c) #'(<fixnum> <string> #f))
 
 ;;; args argument
 
   (check	;tagged args argument
-      (typ.parse-tagged-formals #'{args list-of-fixnums})
+      (typ.parse-tagged-formals #'{args <fixnums>})
     (=> syntax=?)
-    #'args #'list-of-fixnums)
+    #'args #'<fixnums>)
 
   (check	;UNtagged args argument
       (typ.parse-tagged-formals #'args)
@@ -231,30 +225,30 @@
 ;;; rest argument
 
   (check	;tagged rest
-      (typ.parse-tagged-formals #'({a fixnum} . {rest fixnums}))
+      (typ.parse-tagged-formals #'({a <fixnum>} . {rest <fixnums>}))
     (=> syntax=?)
-    #'(a . rest) #'(fixnum . fixnums))
+    #'(a . rest) #'(<fixnum> . <fixnums>))
 
   (check	;UNtagged rest
-      (typ.parse-tagged-formals #'({a fixnum} . rest))
+      (typ.parse-tagged-formals #'({a <fixnum>} . rest))
     (=> syntax=?)
-    #'(a . rest) #'(fixnum . #f))
+    #'(a . rest) #'(<fixnum> . #f))
 
   (check	;tagged rest
-      (typ.parse-tagged-formals #'({a fixnum} {b string} . {rest fixnums}))
+      (typ.parse-tagged-formals #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
     (=> syntax=?)
-    #'(a b . rest) #'(fixnum string . fixnums))
+    #'(a b . rest) #'(<fixnum> <string> . <fixnums>))
 
   (check	;UNtagged rest
-      (typ.parse-tagged-formals #'({a fixnum} {b string} . rest))
+      (typ.parse-tagged-formals #'({a <fixnum>} {b <string>} . rest))
     (=> syntax=?)
-    #'(a b . rest) #'(fixnum string . #f))
+    #'(a b . rest) #'(<fixnum> <string> . #f))
 
 ;;; --------------------------------------------------------------------
 ;;; tagged formals predicate
 
   (check-for-true
-   (typ.tagged-formals? #'({a fixnum} {b string})))
+   (typ.tagged-formals? #'({a <fixnum>} {b <string>})))
 
   #t)
 
@@ -302,38 +296,126 @@
 ;;; tagged bindings
 
   (check
-      ((lambda {args fixnums}
+      ((lambda {args <fixnums>}
 	 (define-syntax (inspect stx)
-	   (free-identifier=? #'fixnums (typ.identifier-type-tagging #'args)))
+	   (free-identifier=? #'<fixnums> (typ.identifier-type-tagging #'args)))
 	 (values args (inspect)))
        1 2 3)
     => '(1 2 3) #t)
 
   (check
-      ((lambda ({a flonum})
+      ((lambda ({a <flonum>})
 	 (define-syntax (inspect stx)
-	   (free-identifier=? #'flonum (typ.identifier-type-tagging #'a)))
+	   (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'a)))
 	 (values a (inspect)))
        1.1)
     => 1.1 #t)
 
   (check
-      ((lambda ({a flonum} {b ratnum})
+      ((lambda ({a <flonum>} {b <ratnum>})
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (free-identifier=? #'flonum (typ.identifier-type-tagging #'a))
-			    (free-identifier=? #'ratnum (typ.identifier-type-tagging #'b)))))
+	   #`(quote #,(list (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'a))
+			    (free-identifier=? #'<ratnum> (typ.identifier-type-tagging #'b)))))
 	 (values a b (inspect)))
        1.1 2/3)
     => 1.1 2/3 '(#t #t))
 
   (check
-      ((lambda ({a flonum} {b ratnum} . {rest fixnums})
+      ((lambda ({a <flonum>} {b <ratnum>} . {rest <fixnums>})
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (free-identifier=? #'flonum  (typ.identifier-type-tagging #'a))
-			    (free-identifier=? #'ratnum  (typ.identifier-type-tagging #'b))
-			    (free-identifier=? #'fixnums (typ.identifier-type-tagging #'rest)))))
+	   #`(quote #,(list (free-identifier=? #'<flonum>  (typ.identifier-type-tagging #'a))
+			    (free-identifier=? #'<ratnum>  (typ.identifier-type-tagging #'b))
+			    (free-identifier=? #'<fixnums> (typ.identifier-type-tagging #'rest)))))
 	 (values a b rest (inspect)))
        1.1 2/3 3 4)
+    => 1.1 2/3 '(3 4) '(#t #t #t))
+
+  #t)
+
+
+(parametrise ((check-test-name	'tagged-bindings-define))
+
+;;;untagged bindings
+
+  (check
+      (let ()
+	(define (fun . args)
+	  (define-syntax (inspect stx)
+	    (typ.identifier-type-tagging #'args))
+	  (values args (inspect)))
+	(fun 1))
+    => '(1) #f)
+
+  (check
+      (let ()
+	(define (fun a)
+	  (define-syntax (inspect stx)
+	    (typ.identifier-type-tagging #'a))
+	  (values a (inspect)))
+	(fun 1))
+    => 1 #f)
+
+  (check
+      (let ()
+	(define (fun a b)
+	  (define-syntax (inspect stx)
+	    #`(quote #,(list (typ.identifier-type-tagging #'a)
+			     (typ.identifier-type-tagging #'b))))
+	  (values a b (inspect)))
+	(fun 1 2))
+    => 1 2 '(#f #f))
+
+  (check
+      (let ()
+	(define (fun a b . rest)
+	  (define-syntax (inspect stx)
+	    #`(quote #,(list (typ.identifier-type-tagging #'a)
+			     (typ.identifier-type-tagging #'b)
+			     (typ.identifier-type-tagging #'rest))))
+	  (values a b rest (inspect)))
+	(fun 1 2 3 4))
+    => 1 2 '(3 4) '(#f #f #f))
+
+;;; --------------------------------------------------------------------
+;;; tagged bindings
+
+  (check
+      (let ()
+	(define (fun . {args <fixnums>})
+	  (define-syntax (inspect stx)
+	    (free-identifier=? #'<fixnums> (typ.identifier-type-tagging #'args)))
+	  (values args (inspect)))
+	(fun 1 2 3))
+    => '(1 2 3) #t)
+
+  (check
+      (let ()
+	(define (fun {a <flonum>})
+	  (define-syntax (inspect stx)
+	    (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'a)))
+	  (values a (inspect)))
+	(fun 1.1))
+    => 1.1 #t)
+
+  (check
+      (let ()
+	(define (fun {a <flonum>} {b <ratnum>})
+	  (define-syntax (inspect stx)
+	    #`(quote #,(list (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'a))
+			     (free-identifier=? #'<ratnum> (typ.identifier-type-tagging #'b)))))
+	  (values a b (inspect)))
+	(fun 1.1 2/3))
+    => 1.1 2/3 '(#t #t))
+
+  (check
+      (let ()
+	(define (fun {a <flonum>} {b <ratnum>} . {rest <fixnums>})
+	  (define-syntax (inspect stx)
+	    #`(quote #,(list (free-identifier=? #'<flonum>  (typ.identifier-type-tagging #'a))
+			     (free-identifier=? #'<ratnum>  (typ.identifier-type-tagging #'b))
+			     (free-identifier=? #'<fixnums> (typ.identifier-type-tagging #'rest)))))
+	  (values a b rest (inspect)))
+	(fun 1.1 2/3 3 4))
     => 1.1 2/3 '(3 4) '(#t #t #t))
 
   #t)
@@ -387,39 +469,39 @@
 
   (check
       ((case-lambda
-	({args fixnums}
+	({args <fixnums>}
 	 (define-syntax (inspect stx)
-	   (free-identifier=? #'fixnums (typ.identifier-type-tagging #'args)))
+	   (free-identifier=? #'<fixnums> (typ.identifier-type-tagging #'args)))
 	 (values args (inspect))))
        1 2 3)
     => '(1 2 3) #t)
 
   (check
       ((case-lambda
-	(({a flonum})
+	(({a <flonum>})
 	 (define-syntax (inspect stx)
-	   (free-identifier=? #'flonum (typ.identifier-type-tagging #'a)))
+	   (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'a)))
 	 (values a (inspect))))
        1.1)
     => 1.1 #t)
 
   (check
       ((case-lambda
-	(({a flonum} {b ratnum})
+	(({a <flonum>} {b <ratnum>})
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (free-identifier=? #'flonum (typ.identifier-type-tagging #'a))
-			    (free-identifier=? #'ratnum (typ.identifier-type-tagging #'b)))))
+	   #`(quote #,(list (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'a))
+			    (free-identifier=? #'<ratnum> (typ.identifier-type-tagging #'b)))))
 	 (values a b (inspect))))
        1.1 2/3)
     => 1.1 2/3 '(#t #t))
 
   (check
       ((case-lambda
-	(({a flonum} {b ratnum} . {rest fixnums})
+	(({a <flonum>} {b <ratnum>} . {rest <fixnums>})
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (free-identifier=? #'flonum  (typ.identifier-type-tagging #'a))
-			    (free-identifier=? #'ratnum  (typ.identifier-type-tagging #'b))
-			    (free-identifier=? #'fixnums (typ.identifier-type-tagging #'rest)))))
+	   #`(quote #,(list (free-identifier=? #'<flonum>  (typ.identifier-type-tagging #'a))
+			    (free-identifier=? #'<ratnum>  (typ.identifier-type-tagging #'b))
+			    (free-identifier=? #'<fixnums> (typ.identifier-type-tagging #'rest)))))
 	 (values a b rest (inspect))))
        1.1 2/3 3 4)
     => 1.1 2/3 '(3 4) '(#t #t #t))
@@ -451,18 +533,18 @@
 ;;; tagged bindings
 
   (check
-      (let (({a fixnum} 1))
+      (let (({a <fixnum>} 1))
 	(define-syntax (inspect stx)
-	  (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a)))
+	  (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a)))
 	(values a (inspect)))
     => 1 #t)
 
   (check
-      (let (({a fixnum} 1)
-	    ({b flonum} 2.2))
+      (let (({a <fixnum>} 1)
+	    ({b <flonum>} 2.2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a))
-			   (free-identifier=? #'flonum (typ.identifier-type-tagging #'b)))))
+	  #`(quote #,(list (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a))
+			   (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'b)))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -493,18 +575,18 @@
 ;;; tagged bindings
 
   (check
-      (trace-let name (({a fixnum} 1))
+      (trace-let name (({a <fixnum>} 1))
 	(define-syntax (inspect stx)
-	  (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a)))
+	  (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a)))
 	(values a (inspect)))
     => 1 #t)
 
   (check
-      (trace-let name (({a fixnum} 1)
-		       ({b flonum} 2.2))
+      (trace-let name (({a <fixnum>} 1)
+		       ({b <flonum>} 2.2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a))
-			   (free-identifier=? #'flonum (typ.identifier-type-tagging #'b)))))
+	  #`(quote #,(list (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a))
+			   (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'b)))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -535,18 +617,18 @@
 ;;; tagged bindings
 
   (check
-      (let* (({a fixnum} 1))
+      (let* (({a <fixnum>} 1))
 	(define-syntax (inspect stx)
-	  (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a)))
+	  (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a)))
 	(values a (inspect)))
     => 1 #t)
 
   (check
-      (let* (({a fixnum} 1)
-	     ({b flonum} 2.2))
+      (let* (({a <fixnum>} 1)
+	     ({b <flonum>} 2.2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a))
-			   (free-identifier=? #'flonum (typ.identifier-type-tagging #'b)))))
+	  #`(quote #,(list (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a))
+			   (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'b)))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -577,18 +659,18 @@
 ;;; tagged bindings
 
   (check
-      (letrec (({a fixnum} 1))
+      (letrec (({a <fixnum>} 1))
 	(define-syntax (inspect stx)
-	  (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a)))
+	  (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a)))
 	(values a (inspect)))
     => 1 #t)
 
   (check
-      (letrec (({a fixnum} 1)
-	       ({b flonum} 2.2))
+      (letrec (({a <fixnum>} 1)
+	       ({b <flonum>} 2.2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a))
-			   (free-identifier=? #'flonum (typ.identifier-type-tagging #'b)))))
+	  #`(quote #,(list (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a))
+			   (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'b)))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -619,27 +701,179 @@
 ;;; tagged bindings
 
   (check
-      (letrec* (({a fixnum} 1))
+      (letrec* (({a <fixnum>} 1))
 	(define-syntax (inspect stx)
-	  (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a)))
+	  (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a)))
 	(values a (inspect)))
     => 1 #t)
 
   (check
-      (letrec* (({a fixnum} 1)
-		({b flonum} 2.2))
+      (letrec* (({a <fixnum>} 1)
+		({b <flonum>} 2.2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (free-identifier=? #'fixnum (typ.identifier-type-tagging #'a))
-			   (free-identifier=? #'flonum (typ.identifier-type-tagging #'b)))))
+	  #`(quote #,(list (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a))
+			   (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'b)))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
   #t)
 
 
+(parametrise ((check-test-name	'tagged-bindings-define-values))
+
+;;; untagged bindings
+
+  (check
+      (let ()
+	(define-values (a)
+	  1)
+	a)
+    => 1)
+
+  (check
+      (with-result
+       (let ()
+	 (define-values (a)
+	   (add-result 2)
+	   1)
+	 a))
+    => '(1 (2)))
+
+  (check
+      (let ()
+  	(define-values (a b c)
+  	  #t
+  	  (values 1 2 3))
+  	(list a b c))
+    => '(1 2 3))
+
+  (check
+      (let ((a 2))
+  	(define-values (a)
+  	  (values 1))
+  	a)
+    => 1)
+
+  (check	;recursive binding
+      (with-result
+       (let ()
+	 (define-values (f)
+	   (lambda (arg)
+	     (if (positive? arg)
+		 (begin
+		   (add-result arg)
+		   (f (- arg 1)))
+	       arg)))
+	 (f 2)))
+    => '(0 (2 1)))
+
+;;; --------------------------------------------------------------------
+;;; tagged bindings
+
+  (check
+      (with-result
+       (let ()
+  	 (define-values ({a <fixnum>})
+  	   (define-syntax (inspect stx)
+  	     (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a)))
+  	   (add-result (inspect))
+  	   1)
+  	 a))
+    => '(1 (#t)))
+
+  (check
+      (with-result
+       (let ()
+	 (define-values ({a <fixnum>} {b <flonum>} {c <ratnum>})
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a))
+			      (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'b))
+			      (free-identifier=? #'<ratnum> (typ.identifier-type-tagging #'c)))))
+	   (add-result (inspect))
+	   (values 1 2.2 3/4))
+	 (vector a b c)))
+    => '(#(1 2.2 3/4) ((#t #t #t))))
+
+  (check
+      (with-result
+       (let (({a <flonum>} 2.2))
+	 (define-values ({a <fixnum>})
+	   (define-syntax (inspect stx)
+	     (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a)))
+	   (add-result (inspect))
+	   1)
+	 a))
+    => '(1 (#t)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'tagged-bindings-let-values))
 
+  #t)
 
+
+(parametrise ((check-test-name	'tagged-bindings-let*-values))
+
+
+
+  #t)
+
+
+(parametrise ((check-test-name	'tagged-bindings-do))
+
+;;; untagged bindings
+
+  (check
+      (with-result
+       (do ((a 1 (+ 1 a)))
+	   ((= 2 a)
+	    a)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (typ.identifier-type-tagging #'a))
+	   (add-result (inspect)))))
+    => '(2 (#f)))
+
+  (check
+      (with-result
+       (do ((a 1 (+ 1 a))
+	    (b 9))
+	   ((= 2 a)
+	    (vector a b))
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (typ.identifier-type-tagging #'a)
+			      (typ.identifier-type-tagging #'b))))
+	   (add-result (inspect)))))
+    => '(#(2 9) ((#f #f))))
+
+;;; --------------------------------------------------------------------
+;;; tagged bindings
+
+  (check
+      (with-result
+       (do (({a <fixnum>} 1 (+ 1 a)))
+	   ((= 2 a)
+	    a)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a)))
+	   (add-result (inspect)))))
+    => '(2 (#t)))
+
+  (check
+      (with-result
+       (do (({a <fixnum>} 1 (+ 1 a))
+	    ({b <flonum>} 2.2))
+	   ((= 2 a)
+	    (vector a b))
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (free-identifier=? #'<fixnum> (typ.identifier-type-tagging #'a))
+			      (free-identifier=? #'<flonum> (typ.identifier-type-tagging #'b)))))
+	   (add-result (inspect)))))
+    => '(#(2 2.2) ((#t #t))))
 
   #t)
 
