@@ -1384,7 +1384,6 @@
 	      ((ID  ... ID0)  (%process-vars vars-stx (lambda (id tag) id)))
 	      ((TMP ...)      (generate-temporaries #'(?var ...))))
 	   #'(begin
-	       ;;We must make sure that the ?FORMs do not capture the ?VARs.
 	       (define (return-multiple-values)
 		 ?form ... ?form0)
 	       (define/tags VAR)
