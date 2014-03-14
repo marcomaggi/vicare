@@ -37,11 +37,22 @@
 
 ;;;; helpers
 
+(define-auxiliary-syntaxes <fixnums>)
+
+(define (fixnums? obj)
+  (and (list? obj)
+       (for-all fixnum? obj)))
+
 (begin-for-syntax
   (define-syntax-rule (tag=tagging? ?tag ?var)
     (free-identifier=? #'?tag (typ.identifier-type-tagging #'?var)))
   (define-syntax-rule (top-tagged? ?var)
-    (tag=tagging? <top> ?var)))
+    (tag=tagging? <top> ?var))
+
+  (typ.set-identifier-object-spec! #'<fixnums>
+    (typ.make-object-spec #'<fixnums> #'fixnums?))
+
+  #| end of begin-for-syntax |# )
 
 
 (parametrise ((check-test-name	'parsing-tagged-bindings))
@@ -1044,4 +1055,5 @@
 
 ;;; end of file
 ;; Local Variables:
+;; eval: (put 'typ.set-identifier-object-spec! 'scheme-indent-function 1)
 ;; End:

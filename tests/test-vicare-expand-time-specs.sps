@@ -44,8 +44,6 @@
   	  (syntax-case stx ()
   	    ((_ ?type-id)
 	     (begin
-	       (debug-print (identifier-object-spec #'<vector>))
-	       (debug-print (identifier-object-spec #'?type-id))
 	       #`(quote #,(object-spec-type-id (identifier-object-spec #'?type-id)))))
   	    ))
   	(get-name <vector>))

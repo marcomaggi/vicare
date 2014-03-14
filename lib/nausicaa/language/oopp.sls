@@ -286,45 +286,54 @@
   ;;
   (<top> :append-unique-id (nausicaa:builtin:<procedure>)))
 
-(define-syntax* (<procedure> stx)
-  (define (%the-setter-and-getter . args)
-    (synner "invalid OOPP syntax"))
-  (syntax-case stx ( ;;
-		    :make :dispatch :mutator :append-unique-id
-		    :accessor-function :mutator-function
-		    :process-shadowed-identifier)
+(define-syntax <procedure>
+  (let ()
+    (type-specs.set-identifier-object-spec! #'<procedure>
+      (type-specs.make-object-spec #'<procedure> #'procedure?))
+    (lambda (stx)
+      (case-define synner
+	((message)
+	 (syntax-violation '<procedure> message stx #f))
+	((message subform)
+	 (syntax-violation '<procedure> message stx subform)))
+      (define (%the-setter-and-getter . args)
+	(synner "invalid OOPP syntax"))
+      (syntax-case stx ( ;;
+			:make :dispatch :mutator :append-unique-id
+			:accessor-function :mutator-function
+			:process-shadowed-identifier)
 
-    ;;This clause is special for "<procedure>".
-    ((_ #:nested-oopp-syntax ?expr)
-     #'?expr)
+	;;This clause is special for "<procedure>".
+	((_ #:nested-oopp-syntax ?expr)
+	 #'?expr)
 
-    ((_ :dispatch (?expr ?id . ?args))
-     (synner "invalid OOPP syntax"))
+	((_ :dispatch (?expr ?id . ?args))
+	 (synner "invalid OOPP syntax"))
 
-    ((_ :mutator ?expr ?field-name ?value)
-     (synner "invalid OOPP syntax"))
+	((_ :mutator ?expr ?field-name ?value)
+	 (synner "invalid OOPP syntax"))
 
-    ((_ :make ?expr)
-     #'?expt)
+	((_ :make ?expr)
+	 #'?expt)
 
-    ((_ :append-unique-id (?id ...))
-     #'(<top> :append-unique-id (?id ... nausicaa:builtin:<procedure>)))
+	((_ :append-unique-id (?id ...))
+	 #'(<top> :append-unique-id (?id ... nausicaa:builtin:<procedure>)))
 
-    ((_ :accessor-function ?field-name)
-     (synner "invalid OOPP syntax"))
+	((_ :accessor-function ?field-name)
+	 (synner "invalid OOPP syntax"))
 
-    ((_ :mutator-function ?field-name)
-     (synner "invalid OOPP syntax"))
+	((_ :mutator-function ?field-name)
+	 (synner "invalid OOPP syntax"))
 
-    ((_ :process-shadowed-identifier ?body0 ?body ...)
-     (synner "invalid OOPP syntax"))
+	((_ :process-shadowed-identifier ?body0 ?body ...)
+	 (synner "invalid OOPP syntax"))
 
-    (_
-     (syntax-help.tag-private-common-syntax-transformer
-      stx #f #'values #'procedure? #'<procedure>-list-of-uids
-      %the-setter-and-getter %the-setter-and-getter
-      (lambda ()
-	(syntax-help.tag-public-syntax-transformer stx #f #'set!/tags synner))))))
+	(_
+	 (syntax-help.tag-private-common-syntax-transformer
+	  stx #f #'values #'procedure? #'<procedure>-list-of-uids
+	  %the-setter-and-getter %the-setter-and-getter
+	  (lambda ()
+	    (syntax-help.tag-public-syntax-transformer stx #f #'set!/tags synner))))))))
 
 
 (define-syntax* (define-label stx)

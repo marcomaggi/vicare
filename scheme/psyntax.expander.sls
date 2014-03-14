@@ -5410,7 +5410,9 @@
 (define (parse-tagged-identifier stx)
   (syntax-match stx (brace)
     ((brace ?id ?tag)
-     (values ?id ?tag))
+     (begin
+       (assert-tag-identifier? ?tag)
+       (values ?id ?tag)))
     (?id
      (identifier? ?id)
      (values ?id <top>))
@@ -5433,9 +5435,11 @@
        (()
 	(values '() '()))
        (((brace ?id ?tag) . ?other-id*)
-	(receive (id* tag*)
-	    (%parse ?other-id*)
-	  (values (cons ?id id*) (cons ?tag tag*))))
+	(begin
+	  (assert-tag-identifier? ?tag)
+	  (receive (id* tag*)
+	      (%parse ?other-id*)
+	    (values (cons ?id id*) (cons ?tag tag*)))))
        ((?id . ?other-id*)
 	(identifier? ?id)
 	(receive (id* tag*)
@@ -5514,10 +5518,12 @@
      ;;then we parse the rest of the formals.
      (syntax-match original-formals-stx (brace _)
        ;;With return values tagging.
-       (((brace _ ?tag0 ?tag* ...) . ?formals)
-	(receive (standard-formals formals-tags)
-	    (%parse-formals input-form-stx original-formals-stx ?formals)
-	  (values standard-formals (cons (cons ?tag0 ?tag*) formals-tags))))
+       (((brace _ ?rv-tag0 ?rv-tag* ...) . ?formals)
+	(let ((rv-tag* (cons ?rv-tag0 ?rv-tag*)))
+	  (for-each assert-tag-identifier? rv-tag*)
+	  (receive (standard-formals formals-tags)
+	      (%parse-formals input-form-stx original-formals-stx ?formals)
+	    (values standard-formals (cons rv-tag* formals-tags)))))
        ;;Without return values tagging.
        (?formals
 	(receive (standard-formals formals-tags)
@@ -5534,7 +5540,9 @@
       ((brace ?args-id ?args-tag)
        (and (identifier? ?args-id)
 	    (identifier? ?args-tag))
-       (values ?args-id ?args-tag))
+       (begin
+	 (assert-tag-identifier? ?args-tag)
+	 (values ?args-id ?args-tag)))
 
       ;;Possibly tagged identifiers with tagged rest argument, as in:
       ;;
@@ -5546,6 +5554,7 @@
 		      (identifier? ?rest-tag))
 	   (syntax-violation __who__
 	     "invalid rest argument specification" original-formals-stx (cons 'brace ?rest-id ?rest-tag)))
+	 (assert-tag-identifier? ?rest-tag)
 	 (receive-and-return (standard-formals-stx tags)
 	     (let recur ((?arg* ?arg*))
 	       (if (pair? ?arg*)
@@ -5614,7 +5623,9 @@
 	  ((brace ?id ?tag)
 	   (and (identifier? ?id)
 		(identifier? ?tag))
-	   (values (cons ?id standard-formals) (cons ?tag tags)))
+	   (begin
+	     (assert-tag-identifier? ?tag)
+	     (values (cons ?id standard-formals) (cons ?tag tags))))
 	  (else
 	   (syntax-violation __who__
 	     "invalid argument specification"
@@ -6010,6 +6021,11 @@
   (and (identifier? obj)
        (and (identifier-object-spec obj)
 	    #t)))
+
+(define (assert-tag-identifier? obj)
+  (unless (tag-identifier? obj)
+    (syntax-violation #f
+      "expected tag identifier with selected object-spec" obj)))
 
 
 ;;;; identifiers: expand-time binding type tagging
@@ -6651,6 +6667,7 @@
 				      (or memoized-id
 					  (receive-and-return (id)
 					      (scheme-stx '?tag)
+					    #;(assert-tag-identifier? id)
 					    (set! memoized-id id))))))
 				(define-syntax ?tag
 				  (identifier-syntax (retriever))))))))
