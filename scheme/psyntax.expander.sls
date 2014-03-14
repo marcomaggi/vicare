@@ -13275,85 +13275,53 @@
   ;;lexical contour to hold the body's internal definitions.
   ;;
   (while-not-expanding-application-first-subform
-   (if (tagged-formals? formals-stx)
-       ;;Extended tagged formals, with or without rest argument.
-       (receive (standard-formals-stx tags)
-	   (parse-tagged-formals formals-stx input-form-stx)
-	 (syntax-match standard-formals-stx ()
-	   ((?arg* ...)
-	    (let ((lex* (map gensym-for-lexical-var ?arg*))
-		  (lab* (map gensym-for-label       ?arg*)))
-	      (define body-form-stx*^
-		(push-lexical-contour
-		    (make-filled-rib ?arg* lab*)
-		  body-form-stx*))
-	      (define lexenv.run^
-		(add-lexical-bindings lab* lex* lexenv.run))
-	      (map (lambda (label tag)
-		     (and tag (set-label-type-tagging! label tag)))
-		lab* tags)
-	      (values lex* (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
-
-	   ((?arg* ... . ?rest-arg)
-	    (let ((lex*		(map gensym-for-lexical-var ?arg*))
-		  (lab*		(map gensym-for-label       ?arg*))
-		  (rest-lex	(gensym-for-lexical-var ?rest-arg))
-		  (rest-lab	(gensym-for-label       ?rest-arg)))
-	      (define body-form-stx*^
-		(push-lexical-contour
-		    (make-filled-rib (cons ?rest-arg ?arg*)
-				     (cons rest-lab  lab*))
-		  body-form-stx*))
-	      (define lexenv.run^
-		(add-lexical-bindings (cons rest-lab lab*)
-				      (cons rest-lex lex*)
-				      lexenv.run))
-	      ;;Here we know that TAGS is an improper list with the same
-	      ;;structure of FORMALS-STX; which  means that the "proper"
-	      ;;portion of TAGS is a list  with the same number of items
-	      ;;as LAB*.
-	      (let loop ((tags tags)
-			 (lab* lab*))
-		(if (pair? tags)
-		    (begin
-		      (and (car tags) (set-label-type-tagging! (car lab*) (car tags)))
-		      (loop (cdr tags) (cdr lab*)))
-		  (and tags (set-label-type-tagging! rest-lab tags))))
-	      (values (append lex* rest-lex) ;yes, this builds an improper list
-		      (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
-	   (_
-	    (stx-error formals-stx "invalid syntax"))))
-     (syntax-match formals-stx ()
-       ;;R6RS standard formals with no rest argument.
+   ;;Here  we support  both the  R6RS  standard LAMBDA  formals and  the
+   ;;extended tagged formals, with or without rest argument.
+   (receive (standard-formals-stx tags)
+       (parse-tagged-formals formals-stx input-form-stx)
+     (syntax-match standard-formals-stx ()
+       ;;Without rest argument.
        ((?arg* ...)
-	(begin
-	  (%verify-formals-syntax formals-stx input-form-stx)
-	  (let ((lex* (map gensym-for-lexical-var ?arg*))
-		(lab* (map gensym-for-label       ?arg*)))
-	    (values lex*
-		    (chi-internal-body (push-lexical-contour
-					   (make-filled-rib ?arg* lab*)
-					 body-form-stx*)
-				       (add-lexical-bindings lab* lex* lexenv.run)
-				       lexenv.expand)))))
-
-       ;;R6RS standard formals with rest argument.
+	(let ((lex* (map gensym-for-lexical-var ?arg*))
+	      (lab* (map gensym-for-label       ?arg*)))
+	  (define body-form-stx*^
+	    (push-lexical-contour
+		(make-filled-rib ?arg* lab*)
+	      body-form-stx*))
+	  (define lexenv.run^
+	    (add-lexical-bindings lab* lex* lexenv.run))
+	  (map (lambda (label tag)
+		 (and tag (set-label-type-tagging! label tag)))
+	    lab* tags)
+	  (values lex* (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
+       ;;With rest argument.
        ((?arg* ... . ?rest-arg)
-	(begin
-	  (%verify-formals-syntax formals-stx input-form-stx)
-	  (let ((lex* (map gensym-for-lexical-var ?arg*))
-		(lab* (map gensym-for-label       ?arg*))
-		(lex  (gensym-for-lexical-var ?rest-arg))
-		(lab  (gensym-for-label       ?rest-arg)))
-	    (values (append lex* lex) ;yes, this builds an improper list
-		    (chi-internal-body (push-lexical-contour
-					   (make-filled-rib (cons ?rest-arg ?arg*)
-							    (cons lab       lab*))
-					 body-form-stx*)
-				       (add-lexical-bindings (cons lab lab*)
-							     (cons lex lex*)
-							     lexenv.run)
-				       lexenv.expand)))))
+	(let ((lex*		(map gensym-for-lexical-var ?arg*))
+	      (lab*		(map gensym-for-label       ?arg*))
+	      (rest-lex	(gensym-for-lexical-var ?rest-arg))
+	      (rest-lab	(gensym-for-label       ?rest-arg)))
+	  (define body-form-stx*^
+	    (push-lexical-contour
+		(make-filled-rib (cons ?rest-arg ?arg*)
+				 (cons rest-lab  lab*))
+	      body-form-stx*))
+	  (define lexenv.run^
+	    (add-lexical-bindings (cons rest-lab lab*)
+				  (cons rest-lex lex*)
+				  lexenv.run))
+	  ;;Here we  know that TAGS  is an  improper list with  the same
+	  ;;structure  of FORMALS-STX;  which  means  that the  "proper"
+	  ;;portion of TAGS  is a list with the same  number of items as
+	  ;;LAB*.
+	  (let loop ((tags tags)
+		     (lab* lab*))
+	    (if (pair? tags)
+		(begin
+		  (and (car tags) (set-label-type-tagging! (car lab*) (car tags)))
+		  (loop (cdr tags) (cdr lab*)))
+	      (and tags (set-label-type-tagging! rest-lab tags))))
+	  (values (append lex* rest-lex) ;yes, this builds an improper list
+		  (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
        (_
 	(stx-error formals-stx "invalid syntax"))))))
 
