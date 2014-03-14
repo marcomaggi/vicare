@@ -1150,8 +1150,8 @@
     ;; tagged binding variables
     set-identifier-type-tagging!	identifier-type-tagging
     set-label-type-tagging!		label-type-tagging
-    set-identifier-retval-tagging!	identifier-retval-tagging
-    set-label-retval-tagging!		label-retval-tagging
+    set-identifier-function-signature!	identifier-function-signature
+    set-label-function-signature!	label-function-signature
     tagged-identifier?			tagged-formals?
     parse-tagged-identifier		parse-tagged-bindings
     parse-tagged-formals
@@ -5413,7 +5413,7 @@
      (values ?id ?tag))
     (?id
      (identifier? ?id)
-     (values ?id #f))
+     (values ?id <top>))
     ))
 
 ;;; --------------------------------------------------------------------
@@ -5440,7 +5440,7 @@
 	(identifier? ?id)
 	(receive (id* tag*)
 	    (%parse ?other-id*)
-	  (values (cons ?id id*) (cons #f tag*))))
+	  (values (cons ?id id*) (cons <top> tag*))))
        (_
 	(if input-form-stx
 	    (syntax-violation __who__ "invalid tagged bindings syntax" input-form-stx stx)
@@ -5500,7 +5500,7 @@
    ;;   standard formals.
    ;;
    ;;2. A proper  or improper list of identifiers or  #f representing the
-   ;;   tags.  #f is used when no tag is present.
+   ;;   tags.  This return value can be #f.
    ;;
    (define (%process-args recur args-stx)
      (receive (standard-formals tags)
@@ -5510,7 +5510,7 @@
 	   ;;Untagged argument.
 	   (?id
 	    (identifier? ?id)
-	    (values (cons ?id standard-formals) (cons #f tags)))
+	    (values (cons ?id standard-formals) (cons <top> tags)))
 	   ;;Tagged argument.
 	   ((brace ?id ?tag)
 	    (and (identifier? ?id)
@@ -5564,7 +5564,7 @@
 	  (let recur ((?arg* ?arg*))
 	    (if (pair? ?arg*)
 		(%process-args recur ?arg*)
-	      (values ?rest-id #f)))
+	      (values ?rest-id <top>)))
 	(%validate-formals standard-formals-stx)))
 
      ;;Standard formals: untagged identifiers without rest argument.
@@ -5573,7 +5573,7 @@
       (for-all identifier? ?id*)
       (begin
 	(%validate-formals ?id*)
-	(values ?id* (map (lambda (id) #f) ?id*))))
+	(values ?id* (map (lambda (id) <top>) ?id*))))
 
      ;;Standard formals: untagged identifiers with rest argument.
      ;;
@@ -5582,13 +5582,13 @@
 	   (identifier? ?rest-id))
       (begin
 	(%validate-formals formals-stx)
-	(values formals-stx (cons* (map (lambda (id) #f) ?id*) #f))))
+	(values formals-stx (cons* (map (lambda (id) <top>) ?id*) <top>))))
 
      ;;Standard formals: untagged args.
      ;;
      (?args-id
       (identifier? ?args-id)
-      (values ?args-id #f))
+      (values ?args-id <top>))
 
      ;;Possibly tagged identifiers without rest argument.
      ;;
@@ -5950,12 +5950,12 @@
 (define-constant *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*
   'vicare:expander:binding-type-tagging)
 
-(define-constant *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*
-  'vicare:expander:binding-retval-tagging)
+(define-constant *EXPAND-TIME-BINDING-FUNCTION-SIGNATURE-COOKIE*
+  'vicare:expander:binding-function-signature)
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-label-type-tagging! {label symbol?} {tag false-or-identifier?})
+(define* (set-label-type-tagging! {label symbol?} {tag identifier?})
   ;;Given a  syntactic binding LABEL:  add TAG  to its property  list as
   ;;binding type  tagging.  This  tag should  represent the  object type
   ;;referenced by the binding.
@@ -5977,7 +5977,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-identifier-type-tagging! {binding-id identifier?} {tag false-or-identifier?})
+(define* (set-identifier-type-tagging! {binding-id identifier?} {tag identifier?})
   ;;Given a syntactic  binding identifier: add TAG to  its property list
   ;;as binding type tagging.  This  tag should represent the object type
   ;;referenced by the binding.
@@ -6000,63 +6000,123 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-label-retval-tagging! {label symbol?} {rv-tag* all-identifiers?})
-  ;;Given a syntactic binding LABEL  for a function binding: add RV-TAG*
-  ;;to its property list as type tagging for the returned values.  These
-  ;;tags  should represent  the  object type  of  the function's  return
-  ;;values.
+(define* (set-label-function-signature! {label symbol?} {signature-tags function-tagging-signature?})
+  ;;Given  a  syntactic  binding  LABEL  for  a  function  binding:  add
+  ;;SIGNATURE-TAGS  to  its  property  list  as  type  tagging  for  the
+  ;;function.
   ;;
-  ;;RV-TAG* must  be a possibly  empty list of  identifiers representing
-  ;;the type  tags of the values  returned by the function.   RV-TAG* is
-  ;;null  when: the  binding  is  a function  returning  no values;  the
-  ;;binding  is  a  function  returning  values for  which  no  tag  was
-  ;;specified.
-  ;;
-  (cond ((getprop label *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*)
-	 => (lambda (old-rv-tag*)
+  (cond ((getprop label *EXPAND-TIME-BINDING-FUNCTION-SIGNATURE-COOKIE*)
+	 => (lambda (old-signature-tags)
 	      (syntax-violation __who__
-		"label binding return value tags already defined"
-		label old-rv-tag* rv-tag*)))
+		"label binding function tagging signature already defined"
+		label signature-tags signature-tags)))
 	(else
-	 (putprop label *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE* rv-tag*))))
+	 (putprop label *EXPAND-TIME-BINDING-FUNCTION-SIGNATURE-COOKIE* signature-tags))))
 
-(define* (label-retval-tagging {label identifier?})
+(define* (label-function-signature {label identifier?})
   ;;Given a  syntactic binding  LABEL for  a function  binding: retrieve
-  ;;from its property list the list of identifiers representing the type
-  ;;tagging  for  the returned  values.   These  tag identifiers  should
-  ;;represent the object type of the function's return values.
+  ;;from  its  property list  the  tagging  signature of  the  function.
+  ;;Return false if no signature is defined.
   ;;
-  (getprop label *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*))
+  (getprop label *EXPAND-TIME-BINDING-FUNCTION-SIGNATURE-COOKIE*))
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-identifier-retval-tagging! {binding-id identifier?} {rv-tag* all-identifiers?})
+(define* (set-identifier-function-signature! {binding-id identifier?} {signature-tags function-tagging-signature?})
   ;;Given a  syntactic binding  identifier for  a function  binding: add
-  ;;RV-TAG*  to its  property  list  as type  tagging  for the  returned
-  ;;values.   These  tags  should  represent  the  object  type  of  the
-  ;;function's return values.
+  ;;SIGNATURE-TAGS  to  its  property  list  as  type  tagging  for  the
+  ;;function.
   ;;
-  ;;RV-TAG* must  be a possibly  empty list of  identifiers representing
-  ;;the type  tags of the values  returned by the function.   RV-TAG* is
-  ;;null  when: the  binding  is  a function  returning  no values;  the
-  ;;binding  is  a  function  returning  values for  which  no  tag  was
-  ;;specified.
-  ;;
-  (cond ((syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*)
-	 => (lambda (old-rv-tag*)
+  (cond ((syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-FUNCTION-SIGNATURE-COOKIE*)
+	 => (lambda (old-signature-tags)
 	      (syntax-violation __who__
-		"identifier binding return value tags already defined"
-		binding-id old-rv-tag* rv-tag*)))
+		"identifier binding function tagging signature already defined"
+		binding-id old-signature-tags signature-tags)))
 	(else
-	 (syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE* rv-tag*))))
+	 (syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-FUNCTION-SIGNATURE-COOKIE* signature-tags))))
 
-(define* (identifier-retval-tagging {binding-id identifier?})
+(define* (identifier-function-signature {binding-id identifier?})
   ;;Given  a  syntactic  binding  identifier  for  a  function  binding:
-  ;;retrieve from its property list the list of identifiers representing
-  ;;the type  tagging for  the returned  values.  These  tag identifiers
-  ;;should represent the object type of the function's return values.
+  ;;retrieve  from  its  property  list the  tagging  signature  of  the
+  ;;function.  Return false if no signature is defined.
   ;;
-  (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-RETVAL-TAGGING-COOKIE*))
+  (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-FUNCTION-SIGNATURE-COOKIE*))
+
+;;; --------------------------------------------------------------------
+
+(define (function-tagging-signature? obj)
+  ;;Return  true  if  OBJ   represents  a  function  tagging  signature;
+  ;;otherwise return false.
+  ;;
+  ;;OBJ is a function tagging signature if it is a pair and:
+  ;;
+  ;;*  Its  car  is  null  or a  possibly  proper  list  of  identifiers
+  ;;  representing the return value tags.
+  ;;
+  ;;* Its cdr  is a proper or improper list  of identifiers representing
+  ;;  the tags of the arguments.
+  ;;
+  ;;Examples of functions and associated tagging signature:
+  ;;
+  ;;   (define (doit) ---)			==> (() . ())
+  ;;   (define (doit . args) ---)		==> (() . <top>)
+  ;;   (define (doit . {args <list>}) ---)	==> (() . <list>)
+  ;;
+  ;;   (define ({doit <fixnum>} {a <fixnum>})
+  ;;     ---)
+  ;;   ==> ((<fixnum>) . (<fixnum>))
+  ;;
+  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>})
+  ;;     ---)
+  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum>))
+  ;;
+  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>} . rest)
+  ;;     ---)
+  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum> . <top>))
+  ;;
+  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>} . {rest <list>})
+  ;;     ---)
+  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum> . <list>))
+  ;;
+  ;;   (define ({doit <fixnum> <flonum>} a)
+  ;;     ---)
+  ;;   ==> ((<fixnum> <flonum>) . (<top>))
+  ;;
+  (syntax-match obj ()
+    ((?rv-tag* . ?formals-tags)
+     (and (or (not ?rv-tag*)
+	      (function-return-values-tags? ?rv-tag*))
+	  (or (not ?formals-tags)
+	      (function-arguments-tags?     ?formals-tags))))
+    (_
+     #f)))
+
+(define (function-return-values-tags? rv-tag*)
+  ;;Return  true  if RV-TAG*  represents  the  tags of  function  return
+  ;;values; otherwise return false.
+  ;;
+  ;;RV-TAG* represents  the tags of  function return  values if it  is a
+  ;;proper list of identifiers.
+  ;;
+  (all-identifiers? rv-tag*))
+
+(define (function-arguments-tags? formals-tags)
+  ;;Return  true  if  FORMALS-TAGS   represents  the  tags  of  function
+  ;;arguments; otherwise return false.
+  ;;
+  ;;FORMALS-TAGS  represents the  tags of  function formals  if it  is a
+  ;;proper or improper list of identifiers.
+  ;;
+  (let loop ((fmls formals-tags))
+    (syntax-match fmls ()
+      ((?tag . ?rest)
+       (identifier? ?tag)
+       (loop ?rest))
+      (?rest
+       (identifier? ?rest)
+       #t)
+      (() #t)
+      (_  #f))))
 
 
 ;;;; identifiers: syntax parameters
@@ -6448,6 +6508,9 @@
 
     transformer))
 
+
+;;;; identifiers from the built-in environment
+
 (define (bless x)
   ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
   ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
@@ -6500,6 +6563,33 @@
 			       (else stx))))
 	    (hashtable-set! scheme-stx-hashtable sym stx)
 	    stx)))))
+
+;;Here  we define  identifier syntaxes  expanding to  the identifier  of
+;;built-in tags.  We need to do all this mess rather than the simpler:
+;;
+;;   (define-constant <top>
+;;     (scheme-stx '<top>))
+;;
+;;because  to use  SCHEME-STX successfully  we  need the  boot image  to
+;;finish its initialisation; SCHEME-STX uses the library (psyntax system
+;;$all), and this library is initialised last.
+;;
+(let-syntax
+    ((define-tag-retriever (syntax-rules ()
+			     ((_ ?tag)
+			      (begin
+				(define retriever
+				  (let ((memoized-id #f))
+				    (lambda ()
+				      (or memoized-id
+					  (receive-and-return (id)
+					      (scheme-stx '?tag)
+					    (set! memoized-id id))))))
+				(define-syntax ?tag
+				  (identifier-syntax (retriever))))))))
+  (define-tag-retriever <top>)
+  (define-tag-retriever <procedure>)
+  #| end of let-syntax |# )
 
 
 ;;;; utilities for SPLICE-FIRST-EXPAND
@@ -6662,6 +6752,18 @@
 		      `(quote ,(source-position-line pos)))
 		   (bless '(quote #f))))
 	     (bless '(quote #f))))))
+
+      ;;Expander tags.
+      ((<top>
+	<boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure>
+	<fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum> <integer> <exact-integer> <real> <complex> <number>
+	<string> <vector> <pair> <list> <bytevector> <hashtable>
+	<record> <record-type-descriptor> <struct> <struct-type-descriptor> <condition>
+	<port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port>
+	<textual-input-port> <textual-output-port> <textual-input/output-port>
+	<binary-input-port> <binary-output-port> <binary-input/output-port>)
+       (lambda (expr-stx)
+	 (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
 
       (else
        (%error-invalid-macro))))
@@ -13177,7 +13279,6 @@
        ;;Extended tagged formals, with or without rest argument.
        (receive (standard-formals-stx tags)
 	   (parse-tagged-formals formals-stx input-form-stx)
-	 #;(debug-print 'formals-stx (syntax->datum standard-formals-stx) (syntax->datum tags))
 	 (syntax-match standard-formals-stx ()
 	   ((?arg* ...)
 	    (let ((lex* (map gensym-for-lexical-var ?arg*))
@@ -13570,15 +13671,18 @@
 		;;   of  evaluating  ?RHS.   In this  case  the  loc  is
 		;;  generated here by GEN-DEFINE-LABEL+LEX.
 		;;
-		(receive (id id-tag rv-tag* qrhs)
+		(receive (id id-tag signature-tags qrhs)
 		    (%parse-define body-form-stx)
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-form-stx "cannot redefine keyword"))
 		  (receive (lab lex)
 		      (gen-define-label+lex id rib sd?)
 		    (extend-rib! rib id lab sd?)
-		    (set-label-type-tagging!   lab id-tag)
-		    (set-label-retval-tagging! lab rv-tag*)
+		    (set-label-type-tagging! lab id-tag)
+		    ;;If the  binding is not a  function: SIGNATURE-TAGS
+		    ;;is false.
+		    (when signature-tags
+		      (set-label-function-signature! lab signature-tags))
 		    (chi-body* (cdr body-form-stx*)
 			       (add-lexical-binding lab lex lexenv.run) lexenv.expand
 			       (cons lex lex*) (cons qrhs qrhs*)
@@ -13989,17 +14093,15 @@
     ;;
     ;;1. The identifier of the binding variable.
     ;;
-    ;;2. False or  a an identifier representing the  binding tag.  False
-    ;;is used when no tag is specified.
+    ;;2. An  identifier representing the  binding tag.  "<top>"  is used
+    ;;    when  no  tag  is  specified; "<procedure>"  is  used  when  a
+    ;;   procedure is defined.
     ;;
-    ;;3. A possibly empty list of identifiers representing the type tags
-    ;;of the  values returned by  the function.  Null is  returned when:
-    ;;the binding is not a function; the binding is a function returning
-    ;;no values; the binding is a function returning values for which no
-    ;;tag was specified.
+    ;;3. False or  an object representing a  function tagging signature;
+    ;;   false is  returned when the binding is not  a function.
     ;;
     ;;4.  A qualified right-hand side expression (QRHS) representing the
-    ;;binding to create.
+    ;;   binding to create.
     ;;
     (syntax-match input-form-stx (brace)
       ;;Function definition with tagged return values.
@@ -14008,35 +14110,36 @@
        (let ((rv-tag* (cons ?tag0 ?tag*)))
 	 (unless (all-identifiers? rv-tag*)
 	   (stx-error input-form-stx "invalid syntax in return values tags"))
-	 (%verify-formals-syntax ?fmls input-form-stx)
-	 (values ?id '<procedure> rv-tag* (cons 'defun input-form-stx))))
+	 (receive (standard-formals-stx arg-tags)
+	     (parse-tagged-formals ?fmls input-form-stx)
+	   (values ?id <procedure> (cons rv-tag* arg-tags) (cons 'defun input-form-stx)))))
 
       ;;Variable definition with tagged identifier.
       ((_ (brace ?id ?tag) ?val)
        (identifier? ?id)
-       (values ?id ?tag '() (cons 'expr ?val)))
+       (values ?id ?tag #f (cons 'expr ?val)))
 
       ;;Variable definition with tagged identifier, no init.
       ((_ (brace ?id ?tag))
        (identifier? ?id)
-       (values ?id ?tag '() (cons 'expr (bless '(void)))))
+       (values ?id ?tag #f (cons 'expr (bless '(void)))))
 
-      ;;R6RS function definition.
+      ;;Function definition with possible tagged arguments.
       ((_ (?id . ?fmls) ?b ?b* ...)
        (identifier? ?id)
-       (begin
-	 (%verify-formals-syntax ?fmls input-form-stx)
-	 (values ?id #f '() (cons 'defun input-form-stx))))
+       (receive (standard-formals-stx arg-tags)
+	   (parse-tagged-formals ?fmls input-form-stx)
+	 (values ?id <procedure> (cons '() arg-tags) (cons 'defun input-form-stx))))
 
       ;;R6RS variable definition.
       ((_ ?id ?val)
        (identifier? ?id)
-       (values ?id #f '() (cons 'expr ?val)))
+       (values ?id <top> #f (cons 'expr ?val)))
 
       ;;R6RS variable definition, no init.
       ((_ ?id)
        (identifier? ?id)
-       (values ?id #f '() (cons 'expr (bless '(void)))))
+       (values ?id <top> #f (cons 'expr (bless '(void)))))
 
       ))
 

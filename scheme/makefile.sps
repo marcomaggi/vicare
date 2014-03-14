@@ -560,6 +560,53 @@
 							      &procedure-argument-violation-rcd)))
      (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
 							      &expression-return-value-violation-rcd)))
+;;;
+     (<top>					(macro . <top>))
+     (<boolean>					(macro . <boolean>))
+     (<char>					(macro . <char>))
+     (<symbol>					(macro . <symbol>))
+     (<keyword>					(macro . <keyword>))
+     (<pointer>					(macro . <pointer>))
+     (<transcoder>				(macro . <transcoder>))
+     (<procedure>				(macro . <procedure>))
+
+     (<fixnum>					(macro . <fixnum>))
+     (<flonum>					(macro . <ratnum>))
+     (<ratnum>					(macro . <ratnum>))
+     (<bignum>					(macro . <bignum>))
+     (<compnum>					(macro . <compnum>))
+     (<cflonum>					(macro . <cflonum>))
+     (<integer>					(macro . <integer>))
+     (<exact-integer>				(macro . <exact-integer>))
+     (<real>					(macro . <real>))
+     (<complex>					(macro . <complex>))
+     (<number>					(macro . <number>))
+
+     (<string>					(macro . <string>))
+     (<vector>					(macro . <vector>))
+     (<pair>					(macro . <pair>))
+     (<list>					(macro . <list>))
+     (<bytevector>				(macro . <bytevector>))
+     (<hashtable>				(macro . <hashtable>))
+     (<record>					(macro . <record>))
+     (<record-type-descriptor>			(macro . <record-type-descriptor>))
+     (<struct>					(macro . <struct>))
+     (<struct-type-descriptor>			(macro . <struct-type-descriptor>))
+     (<condition>				(macro . <condition>))
+
+     (<port>					(macro . <port>))
+     (<input-port>				(macro . <input-port>))
+     (<output-port>				(macro . <output-port>))
+     (<input/output-port>			(macro . <input/output-port>))
+     (<textual-port>				(macro . <textual-port>))
+     (<binary-port>				(macro . <binary-port>))
+     (<textual-input-port>			(macro . <textual-input-port>))
+     (<textual-output-port>			(macro . <textual-output-port>))
+     (<textual-input/output-port>		(macro . <textual-input/output-port>))
+     (<binary-input-port>			(macro . <binary-input-port>))
+     (<binary-output-port>			(macro . <binary-output-port>))
+     (<binary-input/output-port>		(macro . <binary-input/output-port>))
+
      )))
 
 
@@ -642,6 +689,7 @@
     ($posix		(vicare language-extensions posix)	#t	#t)
 ;;;
     ($object-spec	(vicare expander object-spec)		#t	#f)
+    ($expander-tags	(vicare expander tags)			#t	#f)
     ))
 
 
@@ -794,12 +842,12 @@
     ;;Maggi; Wed Mar 12, 2014)
     #;(set-label-type-tagging!			$object-spec)
     #;(label-type-tagging			$object-spec)
-    (set-identifier-retval-tagging!		$object-spec)
-    (identifier-retval-tagging			$object-spec)
+    (set-identifier-function-signature!		$object-spec)
+    (identifier-function-signature		$object-spec)
     ;;NOTE Should these be exported too, for debugging purposes?  (Marco
     ;;Maggi; Thu Mar 13, 2014)
-    #;(set-label-retval-tagging!		$object-spec)
-    #;(label-retval-tagging			$object-spec)
+    #;(set-label-function-signature!		$object-spec)
+    #;(label-function-signature			$object-spec)
     (tagged-identifier?				$object-spec)
     (tagged-formals?				$object-spec)
     (parse-tagged-identifier			$object-spec)
@@ -900,7 +948,7 @@
     ($cdr					$pairs)
     ($set-car!					$pairs)
     ($set-cdr!					$pairs)
-;;
+    ;;
     ($length					$lists)
     ($map1					$lists)
     ($for-each1					$lists)
@@ -942,7 +990,7 @@
     ($bytevector->string-base64			$strings)
     ($uri-encoded-string?			$strings)
     ($percent-encoded-string?			$strings)
-;;
+    ;;
     ($make-bytevector				$bytes)
     ($bytevector-length				$bytes)
     ($bytevector-empty?				$bytes)
@@ -1403,7 +1451,7 @@
     (call/cc					v r ba)
     (call-with-values				v r ba)
     (ceiling					v r ba)
-;;
+    ;;
     (char->integer				v r ba)
     (char<=?					v r ba)
     (char<?					v r ba)
@@ -1413,7 +1461,7 @@
     (char?					v r ba)
     (char-in-ascii-range?			v $language)
     (fixnum-in-character-range?			v $language)
-;;
+    ;;
     (complex?					v r ba)
     (cons					v r ba)
     (cos					v r ba)
@@ -3619,6 +3667,56 @@
     ($string-ci-hash				$hashtables)
     ($symbol-hash				$hashtables)
     ($bytevector-hash				$hashtables)
+
+;;; --------------------------------------------------------------------
+;;; expander tags
+
+    (<top>					$expander-tags)
+    (<boolean>					$expander-tags)
+    (<char>					$expander-tags)
+    (<symbol>					$expander-tags)
+    (<keyword>					$expander-tags)
+    (<pointer>					$expander-tags)
+    (<transcoder>				$expander-tags)
+    (<procedure>				$expander-tags)
+
+    (<fixnum>					$expander-tags)
+    (<flonum>					$expander-tags)
+    (<ratnum>					$expander-tags)
+    (<bignum>					$expander-tags)
+    (<compnum>					$expander-tags)
+    (<cflonum>					$expander-tags)
+    (<integer>					$expander-tags)
+    (<exact-integer>				$expander-tags)
+    (<real>					$expander-tags)
+    (<complex>					$expander-tags)
+    (<number>					$expander-tags)
+
+    (<string>					$expander-tags)
+    (<vector>					$expander-tags)
+    (<pair>					$expander-tags)
+    (<list>					$expander-tags)
+    (<bytevector>				$expander-tags)
+    (<hashtable>				$expander-tags)
+    (<record>					$expander-tags)
+    (<record-type-descriptor>			$expander-tags)
+    (<struct>					$expander-tags)
+    (<struct-type-descriptor>			$expander-tags)
+    (<condition>				$expander-tags)
+
+    (<port>					$expander-tags)
+    (<input-port>				$expander-tags)
+    (<output-port>				$expander-tags)
+    (<input/output-port>			$expander-tags)
+    (<textual-port>				$expander-tags)
+    (<binary-port>				$expander-tags)
+    (<textual-input-port>			$expander-tags)
+    (<textual-output-port>			$expander-tags)
+    (<textual-input/output-port>		$expander-tags)
+    (<binary-input-port>			$expander-tags)
+    (<binary-output-port>			$expander-tags)
+    (<binary-input/output-port>			$expander-tags)
+
     ))
 
 
