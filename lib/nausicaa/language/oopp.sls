@@ -143,7 +143,7 @@
 (define-syntax <top>
   (let ()
     (type-specs.set-identifier-object-spec! #'<top>
-      (type-specs.make-object-spec '<top> #'<top> #'<top>-predicate))
+      (type-specs.make-object-spec #'<top> #'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
       ;;through this syntax.  This tag is  the supertag of all the class
@@ -467,7 +467,7 @@
 		    (%the-maker		MAKER-TRANSFORMER))
 
 		(type-specs.set-identifier-object-spec! #'THE-TAG
-		  (type-specs.make-object-spec 'THE-TAG #'THE-TAG #'THE-PUBLIC-PREDICATE
+		  (type-specs.make-object-spec #'THE-TAG #'THE-PUBLIC-PREDICATE
 					       (lambda (slot-id safe?)
 						 #`(THE-TAG :accessor-function #,slot-id))
 					       (lambda (slot-id safe?)
@@ -810,7 +810,7 @@
 		    (%the-maker		MAKER-TRANSFORMER))
 
 		(type-specs.set-identifier-object-spec! #'THE-TAG
-		  (type-specs.make-object-spec 'THE-TAG #'THE-TAG #'THE-PREDICATE
+		  (type-specs.make-object-spec #'THE-TAG #'THE-PREDICATE
 					       (lambda (slot-id safe?)
 						 #`(THE-TAG :accessor-function #,slot-id))
 					       (lambda (slot-id safe?)

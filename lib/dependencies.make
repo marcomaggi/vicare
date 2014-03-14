@@ -708,6 +708,20 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/makers.sls
 CLEANFILES += lib/vicare/language-extensions/makers.fasl
 
+lib/vicare/language-extensions/tags.fasl: \
+		lib/vicare/language-extensions/tags.sls \
+		$(FASL_PREREQUISITES)
+	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
+
+lib_vicare_language_extensions_tags_fasldir = $(bundledlibsdir)/vicare/language-extensions
+lib_vicare_language_extensions_tags_slsdir  = $(bundledlibsdir)/vicare/language-extensions
+nodist_lib_vicare_language_extensions_tags_fasl_DATA = lib/vicare/language-extensions/tags.fasl
+if WANT_INSTALL_SOURCES
+dist_lib_vicare_language_extensions_tags_sls_DATA = lib/vicare/language-extensions/tags.sls
+endif
+EXTRA_DIST += lib/vicare/language-extensions/tags.sls
+CLEANFILES += lib/vicare/language-extensions/tags.fasl
+
 lib/vicare/build-tools/automake.fasl: \
 		lib/vicare/build-tools/automake.sls \
 		$(FASL_PREREQUISITES)
@@ -3712,11 +3726,11 @@ endif
 
 lib/nausicaa/language/builtins.fasl: \
 		lib/nausicaa/language/builtins.sls \
+		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/language-extensions/sentinels.fasl \
+		lib/vicare/containers/bytevectors.fasl \
 		lib/nausicaa/language/oopp.fasl \
 		lib/nausicaa/language/multimethods.fasl \
-		lib/vicare/unsafe/operations.fasl \
-		lib/vicare/containers/bytevectors.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 

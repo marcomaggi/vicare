@@ -838,16 +838,12 @@
 ;;;
     (set-identifier-type-tagging!		$object-spec)
     (identifier-type-tagging			$object-spec)
-    ;;NOTE Should these be exported too, for debugging purposes?  (Marco
-    ;;Maggi; Wed Mar 12, 2014)
-    #;(set-label-type-tagging!			$object-spec)
-    #;(label-type-tagging			$object-spec)
+    (set-label-type-tagging!			$object-spec)
+    (label-type-tagging				$object-spec)
     (set-identifier-function-signature!		$object-spec)
     (identifier-function-signature		$object-spec)
-    ;;NOTE Should these be exported too, for debugging purposes?  (Marco
-    ;;Maggi; Thu Mar 13, 2014)
-    #;(set-label-function-signature!		$object-spec)
-    #;(label-function-signature			$object-spec)
+    (set-label-function-signature!		$object-spec)
+    (label-function-signature			$object-spec)
     (tagged-identifier?				$object-spec)
     (tagged-lambda-formals?			$object-spec)
     (parse-tagged-identifier			$object-spec)
@@ -856,9 +852,10 @@
 
     (set-identifier-object-spec!		$object-spec)
     (identifier-object-spec			$object-spec)
+    (set-label-object-spec!			$object-spec)
+    (label-object-spec				$object-spec)
     (make-object-spec				$object-spec)
     (object-spec?				$object-spec)
-    (object-spec-name				$object-spec)
     (object-spec-type-id			$object-spec)
     (object-spec-pred-id			$object-spec)
     (set-identifier-callable-spec!		$object-spec)
@@ -4058,9 +4055,15 @@
 		   current-primitive-locations)
 	     (vicare))
 	   (let ((g system-value-gensym))
+	     ;;Store in the property  list of each primitive procedure's
+	     ;;symbol name its loc gensym.
 	     (for-each (lambda (func-name.loc)
 			 (putprop (car func-name.loc) g (cdr func-name.loc)))
 	       ',export-primlocs)
+	     ;;Initialise         the         internal         parameter
+	     ;;CURRENT-PRIMITIVE-LOCATIONS  with a  function capable  of
+	     ;;retrieving a  primitive procedure's loc gensym  given its
+	     ;;symbol name.
 	     (let ((proc (lambda (func-name)
 			   (getprop func-name g))))
 	       (current-primitive-locations proc)))
@@ -4068,6 +4071,11 @@
 	   ,@(map (lambda (legend-entry)
 		    (build-install-library-form legend-entry export-subst export-env))
 	       library-legend)))
+
+      ;;Logging this  symbolic expression gives some  insight about what
+      ;;happens at boot image initialisation time.
+      #;(debug-print library-sexp)
+
       ;;Expand the  library in  CODE; we  know that  the EXPORT  form is
       ;;empty,  so  we  know  that  the  last  two  values  returned  by
       ;;BOOT-LIBRARY-EXPAND are empty.

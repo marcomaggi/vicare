@@ -28,7 +28,7 @@
 #!vicare
 (import (vicare)
   (prefix (vicare expander object-spec) typ.)
-  (vicare expander tags)
+  (vicare language-extensions tags)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

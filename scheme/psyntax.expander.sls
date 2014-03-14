@@ -1144,8 +1144,8 @@
     identifier-object-spec		set-identifier-object-spec!
     (rename (public-make-object-spec make-object-spec))
     object-spec?
-    object-spec-name
     object-spec-type-id			object-spec-pred-id
+    tag-identifier?
 
     ;; tagged binding variables
     set-identifier-type-tagging!	identifier-type-tagging
@@ -5906,10 +5906,7 @@
   ;;Instances of  this type are meant  to be compared with  EQ?, with #f
   ;;acting as wildcard: it represents any object type.
   ;;
-  (name
-		;A symbol representing  this type name.  To  be used for
-		;meaningful error reporting.
-   type-id
+  (type-id
 		;The  bound identifier  representing  the  name of  this
 		;type.  This  identifier has  this very instance  in its
 		;syntactic binding property list.
@@ -5932,12 +5929,12 @@
    ))
 
 (case-define* public-make-object-spec
-  (({name symbol?} {type-id identifier?} {pred-id identifier?})
-   (make-object-spec name type-id pred-id #f #f))
-  (({name symbol?} {type-id identifier?} {pred-id identifier?}
+  (({type-id identifier?} {pred-id identifier?})
+   (public-make-object-spec type-id pred-id #f #f))
+  (({type-id identifier?} {pred-id identifier?}
     {accessor-maker false-or-procedure?}
     {mutator-maker  false-or-procedure?})
-   (make-object-spec name type-id pred-id accessor-maker mutator-maker)))
+   (make-object-spec type-id pred-id accessor-maker mutator-maker)))
 
 (define-record callable-spec
   ;;A struct type representing a callable form binding, either procedure
@@ -5965,6 +5962,10 @@
 		;representing the type of the return value.
    ))
 
+(define (false-or-object-spec? obj)
+  (or (not obj)
+      (object-spec? obj)))
+
 ;;; --------------------------------------------------------------------
 
 (define* (set-identifier-object-spec! {type-id identifier?} {spec object-spec?})
@@ -5973,8 +5974,21 @@
 	"object specification already defined" type-id spec)
     (syntactic-binding-putprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE* spec)))
 
-(define* (identifier-object-spec {type-id identifier?})
+(define* ({identifier-object-spec false-or-object-spec?} {type-id identifier?})
   (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-SPEC-COOKIE*))
+
+;;; --------------------------------------------------------------------
+
+(define* (set-label-object-spec! {label symbol?} {spec object-spec?})
+  (cond ((getprop label *EXPAND-TIME-OBJECT-SPEC-COOKIE*)
+	 => (lambda (old-spec)
+	      (syntax-violation __who__
+		"object specification already defined" label old-spec spec)))
+	(else
+	 (putprop label *EXPAND-TIME-OBJECT-SPEC-COOKIE* spec))))
+
+(define* ({label-object-spec false-or-object-spec?} {label symbol?})
+  (getprop label *EXPAND-TIME-OBJECT-SPEC-COOKIE*))
 
 ;;; --------------------------------------------------------------------
 
@@ -5986,6 +6000,16 @@
 
 (define* (identifier-callable-spec {type-id identifier?})
   (syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*))
+
+;;; --------------------------------------------------------------------
+
+(define (tag-identifier? obj)
+  ;;Return true if  OBJ is an identifier with  object-spec property set;
+  ;;otherwise return false.
+  ;;
+  (and (identifier? obj)
+       (and (identifier-object-spec obj)
+	    #t)))
 
 
 ;;;; identifiers: expand-time binding type tagging
