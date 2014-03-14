@@ -149,109 +149,132 @@
 ;;; tagged
 
   (check
-      (typ.parse-tagged-formals #'({a <fixnum>}
-				   {b <string>}))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
+					  {b <string>}))
     (=> syntax=?)
-    #'(a b) #'(<fixnum> <string>))
+    #'(a b) #'(() <fixnum> <string>))
 
   (check
-      (typ.parse-tagged-formals #'({a <fixnum>}
-				   {b <string>}
-				   {c <vector>}))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
+					  {b <string>}
+					  {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(<fixnum> <string> <vector>))
+    #'(a b c) #'(() <fixnum> <string> <vector>))
 
 ;;; untagged
 
   (check
-      (typ.parse-tagged-formals #'(a))
+      (typ.parse-tagged-lambda-formals #'(a))
     (=> syntax=?)
-    #'(a) #'(<top>))
+    #'(a) #'(() <top>))
 
   (check
-      (typ.parse-tagged-formals #'(a b))
+      (typ.parse-tagged-lambda-formals #'(a b))
     (=> syntax=?)
-    #'(a b) #'(<top> <top>))
+    #'(a b) #'(() <top> <top>))
 
   (check
-      (typ.parse-tagged-formals #'(a b c))
+      (typ.parse-tagged-lambda-formals #'(a b c))
     (=> syntax=?)
-    #'(a b c) #'(<top> <top> <top>))
+    #'(a b c) #'(() <top> <top> <top>))
 
 ;;; mixed tagged and untagged
 
   (check
-      (typ.parse-tagged-formals #'(a
-				   {b <string>}))
+      (typ.parse-tagged-lambda-formals #'(a
+					  {b <string>}))
     (=> syntax=?)
-    #'(a b) #'(<top> <string>))
+    #'(a b) #'(() <top> <string>))
 
   (check
-      (typ.parse-tagged-formals #'({a <fixnum>}
-				   b))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
+					  b))
     (=> syntax=?)
-    #'(a b) #'(<fixnum> <top>))
+    #'(a b) #'(() <fixnum> <top>))
 
   (check
-      (typ.parse-tagged-formals #'(a
-				   {b <string>}
-				   {c <vector>}))
+      (typ.parse-tagged-lambda-formals #'(a
+					  {b <string>}
+					  {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(<top> <string> <vector>))
+    #'(a b c) #'(() <top> <string> <vector>))
 
   (check
-      (typ.parse-tagged-formals #'({a <fixnum>}
-				   b
-				   {c <vector>}))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
+					  b
+					  {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(<fixnum> <top> <vector>))
+    #'(a b c) #'(() <fixnum> <top> <vector>))
 
   (check
-      (typ.parse-tagged-formals #'({a <fixnum>}
-				   {b <string>}
-				   c))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
+					  {b <string>}
+					  c))
     (=> syntax=?)
-    #'(a b c) #'(<fixnum> <string> <top>))
+    #'(a b c) #'(() <fixnum> <string> <top>))
 
 ;;; args argument
 
   (check	;tagged args argument
-      (typ.parse-tagged-formals #'{args <fixnums>})
+      (typ.parse-tagged-lambda-formals #'{args <fixnums>})
     (=> syntax=?)
-    #'args #'<fixnums>)
+    #'args #'(() . <fixnums>))
 
   (check	;UNtagged args argument
-      (typ.parse-tagged-formals #'args)
+      (typ.parse-tagged-lambda-formals #'args)
     (=> syntax=?)
-    #'args #'<top>)
+    #'args #'(() . <top>))
 
 ;;; rest argument
 
   (check	;tagged rest
-      (typ.parse-tagged-formals #'({a <fixnum>} . {rest <fixnums>}))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>} . {rest <fixnums>}))
     (=> syntax=?)
-    #'(a . rest) #'(<fixnum> . <fixnums>))
+    #'(a . rest) #'(() <fixnum> . <fixnums>))
 
   (check	;UNtagged rest
-      (typ.parse-tagged-formals #'({a <fixnum>} . rest))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>} . rest))
     (=> syntax=?)
-    #'(a . rest) #'(<fixnum> . <top>))
+    #'(a . rest) #'(() <fixnum> . <top>))
 
   (check	;tagged rest
-      (typ.parse-tagged-formals #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
     (=> syntax=?)
-    #'(a b . rest) #'(<fixnum> <string> . <fixnums>))
+    #'(a b . rest) #'(() <fixnum> <string> . <fixnums>))
 
   (check	;UNtagged rest
-      (typ.parse-tagged-formals #'({a <fixnum>} {b <string>} . rest))
+      (typ.parse-tagged-lambda-formals #'({a <fixnum>} {b <string>} . rest))
     (=> syntax=?)
-    #'(a b . rest) #'(<fixnum> <string> . <top>))
+    #'(a b . rest) #'(() <fixnum> <string> . <top>))
+
+;;; return values tagging
+
+  (check
+      (typ.parse-tagged-lambda-formals #'({_ <fixnum>} a b))
+    (=> syntax=?)
+    #'(a b) #'((<fixnum>) <top> <top>))
+
+  (check
+      (typ.parse-tagged-lambda-formals #'({_ <fixnum>} {a <flonum>} {b <string>}))
+    (=> syntax=?)
+    #'(a b) #'((<fixnum>) <flonum> <string>))
+
+  (check
+      (typ.parse-tagged-lambda-formals #'({_ <fixnum> <flonum>} {a <vector>} {b <string>}))
+    (=> syntax=?)
+    #'(a b) #'((<fixnum> <flonum>) <vector> <string>))
+
+  (check
+      (typ.parse-tagged-lambda-formals #'({_ <fixnum> <flonum>} . {args <fixnums>}))
+    (=> syntax=?)
+    #'args #'((<fixnum> <flonum>) . <fixnums>))
+
 
 ;;; --------------------------------------------------------------------
 ;;; tagged formals predicate
 
   (check-for-true
-   (typ.tagged-formals? #'({a <fixnum>} {b <string>})))
+   (typ.tagged-lambda-formals? #'({a <fixnum>} {b <string>})))
 
   #t)
 
@@ -325,6 +348,44 @@
 
   (check
       ((lambda ({a <flonum>} {b <ratnum>} . {rest <fixnums>})
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (tag=tagging? <flonum>  a)
+			    (tag=tagging? <ratnum>  b)
+			    (tag=tagging? <fixnums> rest))))
+	 (values a b rest (inspect)))
+       1.1 2/3 3 4)
+    (=> syntax=?) 1.1 2/3 '(3 4) '(#t #t #t))
+
+;;; --------------------------------------------------------------------
+;;; tagged bindings and return values
+
+  (check
+      ((lambda ({_ <list> <boolean> <boolean>} . {args <fixnums>})
+	 (define-syntax (inspect stx)
+	   (tag=tagging? <fixnums> args))
+	 (values args (inspect)))
+       1 2 3)
+    (=> syntax=?) '(1 2 3) #t)
+
+  (check
+      ((lambda ({_ <flonum> <boolean>} {a <flonum>})
+	 (define-syntax (inspect stx)
+	   (tag=tagging? <flonum> a))
+	 (values a (inspect)))
+       1.1)
+    (=> syntax=?) 1.1 #t)
+
+  (check
+      ((lambda ({_ <flonum> <ratnum> <list>} {a <flonum>} {b <ratnum>})
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (tag=tagging? <flonum> a)
+			    (tag=tagging? <ratnum> b))))
+	 (values a b (inspect)))
+       1.1 2/3)
+    (=> syntax=?) 1.1 2/3 '(#t #t))
+
+  (check
+      ((lambda ({_ <flonum> <ratnum> <list> <list>} {a <flonum>} {b <ratnum>} . {rest <fixnums>})
 	 (define-syntax (inspect stx)
 	   #`(quote #,(list (tag=tagging? <flonum>  a)
 			    (tag=tagging? <ratnum>  b)
@@ -456,7 +517,8 @@
        (let ()
 	 (define ({fun <fixnum>} . {args <fixnums>})
 	   (define-syntax (inspect stx)
-	     (tag=tagging? <fixnums> args))
+	     #`(quote #,(list (tag=tagging? <procedure> fun)
+			      (tag=tagging? <fixnums> args))))
 	   (define-syntax (signature stx)
 	     (syntax=? (typ.identifier-function-signature #'fun)
 		       #'((<fixnum>) . <fixnums>)))
@@ -464,7 +526,23 @@
 	   (add-result (signature))
 	   (apply + args))
 	 (fun 1 10 100)))
-    => '(111 (#t #t)))
+    => '(111 ((#t #t) #t)))
+
+  (check	;tagged args, tagged return value
+      (with-result
+       (let ()
+	 (define ({fun <fixnum> <flonum>} . {args <fixnums>})
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (tag=tagging? <procedure> fun)
+			      (tag=tagging? <fixnums> args))))
+	   (define-syntax (signature stx)
+	     (syntax=? (typ.identifier-function-signature #'fun)
+		       #'((<fixnum> <flonum>) . <fixnums>)))
+	   (add-result (inspect))
+	   (add-result (signature))
+           (list (apply + args) 2.2))
+	 (fun 1 10 100)))
+    => '((111 2.2) ((#t #t) #t)))
 
   (check	;tagged args, single tagged return values
       (with-result

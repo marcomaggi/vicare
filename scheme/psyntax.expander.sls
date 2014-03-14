@@ -1152,9 +1152,9 @@
     set-label-type-tagging!		label-type-tagging
     set-identifier-function-signature!	identifier-function-signature
     set-label-function-signature!	label-function-signature
-    tagged-identifier?			tagged-formals?
+    tagged-identifier?			tagged-lambda-formals?
     parse-tagged-identifier		parse-tagged-bindings
-    parse-tagged-formals
+    parse-tagged-lambda-formals
 
     ;; expand-time type specs: callable specs
     identifier-callable-spec		set-identifier-callable-spec!
@@ -5468,148 +5468,191 @@
 
 ;;; --------------------------------------------------------------------
 
-(case-define* parse-tagged-formals
-  ((formals-stx)
-   (parse-tagged-formals formals-stx #f))
-  ((formals-stx input-form-stx)
-   ;;Given  a syntax  object representing  tagged LAMBDA  formals: split
-   ;;formals from tags.  Do *not* test for duplicate bindings.
-   ;;
-   ;;We use  the conventions:  ?ID, ?REST-ID  and ?ARGS-ID  are argument
-   ;;identifiers;  ?PRED  is  a  predicate identifier.   We  accept  the
-   ;;following standard formals formats:
-   ;;
-   ;;   ?args-id
-   ;;   (?id ...)
-   ;;   (?id0 ?id ... . ?rest-id)
-   ;;
-   ;;and in addition the following tagged formals:
-   ;;
-   ;;   (brace ?args-id ?args-pred)
-   ;;   (?arg ...)
-   ;;   (?arg0 ?arg ... . ?rest-arg)
-   ;;
-   ;;where ?ARG is a predicate argument with one of the formats:
-   ;;
-   ;;   ?id
-   ;;   (brace ?id ?tag)
-   ;;
-   ;;Return 2 values:
-   ;;
-   ;;1.  A  proper  or  improper list  of  identifiers  representing  the
-   ;;   standard formals.
-   ;;
-   ;;2. A proper  or improper list of identifiers or  #f representing the
-   ;;   tags.  This return value can be #f.
-   ;;
-   (define (%process-args recur args-stx)
-     (receive (standard-formals tags)
-	 (recur (cdr args-stx))
-       (let ((arg-stx (car args-stx)))
-	 (syntax-match arg-stx (brace)
-	   ;;Untagged argument.
-	   (?id
-	    (identifier? ?id)
-	    (values (cons ?id standard-formals) (cons <top> tags)))
-	   ;;Tagged argument.
-	   ((brace ?id ?tag)
-	    (and (identifier? ?id)
-		 (identifier? ?tag))
-	    (values (cons ?id standard-formals) (cons ?tag tags)))
-	   (else
-	    (syntax-violation __who__
-	      "invalid argument specification"
-	      (or input-form-stx formals-stx) arg-stx))))))
-   (define (%validate-formals standard-formals-stx)
-     (unless (distinct-bound-formals? standard-formals-stx)
-       (syntax-violation __who__
-	 "duplicate identifiers in formals specification"
-	 (or input-form-stx formals-stx))))
-   (syntax-match formals-stx (brace)
+(module (parse-tagged-lambda-formals)
+  ;;Given  a syntax  object  representing tagged  LAMBDA formals:  split
+  ;;formals from tags.  Do *not* test for duplicate bindings.
+  ;;
+  ;;We  use the  conventions: ?ID,  ?REST-ID and  ?ARGS-ID are  argument
+  ;;identifiers;  ?PRED  is  a  predicate  identifier.   We  accept  the
+  ;;following standard formals formats:
+  ;;
+  ;;   ?args-id
+  ;;   (?id ...)
+  ;;   (?id0 ?id ... . ?rest-id)
+  ;;
+  ;;and in addition the following tagged formals:
+  ;;
+  ;;   (brace ?args-id ?args-pred)
+  ;;   (?arg ...)
+  ;;   (?arg0 ?arg ... . ?rest-arg)
+  ;;   ((brace _ ?rv-tag0 ?rv-tag ...) ?arg ...)
+  ;;   ((brace _ ?rv-tag0 ?rv-tag ...) ?arg ... . ?rest-arg)
+  ;;
+  ;;where ?ARG is a tagged argument with one of the formats:
+  ;;
+  ;;   ?arg-id
+  ;;   (brace ?arg-id ?arg-tag)
+  ;;
+  ;;and the first item with identifier _ is a special syntax that allows
+  ;;to specify the tags of the LAMBDA return values.
+  ;;
+  ;;Return 2 values:
+  ;;
+  ;;1.  A  proper  or  improper list  of  identifiers  representing  the
+  ;;   standard formals.
+  ;;
+  ;;2. An object representing the LAMBDA tagging signature.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'parse-tagged-lambda-formals))
 
-     ;;Tagged args, as in:
-     ;;
-     ;;   (lambda {args list-of-fixnums} . ?body)
-     ;;
-     ((brace ?args-id ?args-tag)
-      (and (identifier? ?args-id)
-	   (identifier? ?args-tag))
-      (values ?args-id ?args-tag))
+  (case-define* parse-tagged-lambda-formals
+    (({_ standard-lambda-formals? function-tagging-signature?} original-formals-stx)
+     (parse-tagged-lambda-formals original-formals-stx #f))
+    (({_ standard-lambda-formals? function-tagging-signature?} original-formals-stx input-form-stx)
+     ;;First we  parse and  extract the return  values tagging,  if any;
+     ;;then we parse the rest of the formals.
+     (syntax-match original-formals-stx (brace _)
+       ;;With return values tagging.
+       (((brace _ ?tag0 ?tag* ...) . ?formals)
+	(receive (standard-formals formals-tags)
+	    (%parse-formals input-form-stx original-formals-stx ?formals)
+	  (values standard-formals (cons (cons ?tag0 ?tag*) formals-tags))))
+       ;;Without return values tagging.
+       (?formals
+	(receive (standard-formals formals-tags)
+	    (%parse-formals input-form-stx original-formals-stx ?formals)
+	  (values standard-formals (cons '()                formals-tags)))))))
 
-     ;;Possibly tagged identifiers with tagged rest argument, as in:
-     ;;
-     ;;   (lambda (?arg ... . {rest list-of-fixnums}) . ?body)
-     ;;
-     ((?arg* ... . (brace ?rest-id ?rest-tag))
-      (begin
-	(unless (and (identifier? ?rest-id)
-		     (identifier? ?rest-tag))
-	  (syntax-violation __who__
-	    "invalid rest argument specification" formals-stx (cons 'brace ?rest-id ?rest-tag)))
-	(receive-and-return (standard-formals-stx tags)
-	    (let recur ((?arg* ?arg*))
-	      (if (pair? ?arg*)
-		  (%process-args recur ?arg*)
-		;;Process rest argument.
-		(values ?rest-id ?rest-tag)))
-	  (%validate-formals standard-formals-stx))))
+  (define (%parse-formals input-form-stx original-formals-stx formals-stx)
+    (syntax-match formals-stx (brace)
 
-     ;;Possibly tagged identifiers with UNtagged rest argument, as in:
-     ;;
-     ;;   (lambda (?arg ... . rest) . ?body)
-     ;;
-     ((?arg* ... . ?rest-id)
-      (identifier? ?rest-id)
-      (receive-and-return (standard-formals-stx tags)
-	  (let recur ((?arg* ?arg*))
-	    (if (pair? ?arg*)
-		(%process-args recur ?arg*)
-	      (values ?rest-id <top>)))
-	(%validate-formals standard-formals-stx)))
+      ;;Tagged args, as in:
+      ;;
+      ;;   (lambda {args list-of-fixnums} . ?body)
+      ;;
+      ((brace ?args-id ?args-tag)
+       (and (identifier? ?args-id)
+	    (identifier? ?args-tag))
+       (values ?args-id ?args-tag))
 
-     ;;Standard formals: untagged identifiers without rest argument.
-     ;;
-     ((?id* ...)
-      (for-all identifier? ?id*)
-      (begin
-	(%validate-formals ?id*)
-	(values ?id* (map (lambda (id) <top>) ?id*))))
+      ;;Possibly tagged identifiers with tagged rest argument, as in:
+      ;;
+      ;;   (lambda (?arg ... . {rest list-of-fixnums}) . ?body)
+      ;;
+      ((?arg* ... . (brace ?rest-id ?rest-tag))
+       (begin
+	 (unless (and (identifier? ?rest-id)
+		      (identifier? ?rest-tag))
+	   (syntax-violation __who__
+	     "invalid rest argument specification" original-formals-stx (cons 'brace ?rest-id ?rest-tag)))
+	 (receive-and-return (standard-formals-stx tags)
+	     (let recur ((?arg* ?arg*))
+	       (if (pair? ?arg*)
+		   (%process-args input-form-stx original-formals-stx recur ?arg*)
+		 ;;Process rest argument.
+		 (values ?rest-id ?rest-tag)))
+	   (%validate-formals input-form-stx original-formals-stx standard-formals-stx))))
 
-     ;;Standard formals: untagged identifiers with rest argument.
-     ;;
-     ((?id* ... . ?rest-id)
-      (and (for-all identifier? ?id*)
-	   (identifier? ?rest-id))
-      (begin
-	(%validate-formals formals-stx)
-	(values formals-stx (cons* (map (lambda (id) <top>) ?id*) <top>))))
+      ;;Possibly tagged identifiers with UNtagged rest argument, as in:
+      ;;
+      ;;   (lambda (?arg ... . rest) . ?body)
+      ;;
+      ((?arg* ... . ?rest-id)
+       (identifier? ?rest-id)
+       (receive-and-return (standard-formals-stx tags)
+	   (let recur ((?arg* ?arg*))
+	     (if (pair? ?arg*)
+		 (%process-args input-form-stx original-formals-stx recur ?arg*)
+	       (values ?rest-id <top>)))
+	 (%validate-formals input-form-stx original-formals-stx standard-formals-stx)))
 
-     ;;Standard formals: untagged args.
-     ;;
-     (?args-id
-      (identifier? ?args-id)
-      (values ?args-id <top>))
+      ;;Standard formals: untagged identifiers without rest argument.
+      ;;
+      ((?id* ...)
+       (for-all identifier? ?id*)
+       (begin
+	 (%validate-formals input-form-stx original-formals-stx ?id*)
+	 (values ?id* (map (lambda (id) <top>) ?id*))))
 
-     ;;Possibly tagged identifiers without rest argument.
-     ;;
-     ((?arg* ...)
-      (receive-and-return (standard-formals-stx tags)
-	  (let recur ((?arg* ?arg*))
-	    (if (pair? ?arg*)
-		(%process-args recur ?arg*)
-	      (values '() '())))
-	(%validate-formals standard-formals-stx)))
-     )))
+      ;;Standard formals: untagged identifiers with rest argument.
+      ;;
+      ((?id* ... . ?rest-id)
+       (and (for-all identifier? ?id*)
+	    (identifier? ?rest-id))
+       (begin
+	 (%validate-formals input-form-stx original-formals-stx (append ?id* ?rest-id))
+	 (values formals-stx (cons* (map (lambda (id) <top>) ?id*) <top>))))
 
-(define* (tagged-formals? formals-stx)
+      ;;Standard formals: untagged args.
+      ;;
+      (?args-id
+       (identifier? ?args-id)
+       (values ?args-id <top>))
+
+      ;;Possibly tagged identifiers without rest argument.
+      ;;
+      ((?arg* ...)
+       (receive-and-return (standard-formals-stx tags)
+	   (let recur ((?arg* ?arg*))
+	     (if (pair? ?arg*)
+		 (%process-args input-form-stx original-formals-stx recur ?arg*)
+	       (values '() '())))
+	 (%validate-formals input-form-stx original-formals-stx standard-formals-stx)))
+      ))
+
+  (define (%process-args input-form-stx original-formals-stx recur args-stx)
+    (receive (standard-formals tags)
+	(recur (cdr args-stx))
+      (let ((arg-stx (car args-stx)))
+	(syntax-match arg-stx (brace)
+	  ;;Untagged argument.
+	  (?id
+	   (identifier? ?id)
+	   (values (cons ?id standard-formals) (cons <top> tags)))
+	  ;;Tagged argument.
+	  ((brace ?id ?tag)
+	   (and (identifier? ?id)
+		(identifier? ?tag))
+	   (values (cons ?id standard-formals) (cons ?tag tags)))
+	  (else
+	   (syntax-violation __who__
+	     "invalid argument specification"
+	     (or input-form-stx original-formals-stx) arg-stx))))))
+
+  (define (%validate-formals input-form-stx original-formals-stx standard-formals-stx)
+    (unless (distinct-bound-formals? standard-formals-stx)
+      (syntax-violation __who__
+	"duplicate identifiers in formals specification"
+	(or input-form-stx original-formals-stx))))
+
+  #| end of module |# )
+
+(define* (tagged-lambda-formals? formals-stx)
   ;;Return true  if FORMALS-STX  is a  syntax object  representing valid
   ;;tagged formals for a LAMBDA syntax.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
-    (receive (standard-formals tags)
-	(parse-tagged-formals formals-stx)
+    (receive (standard-formals signature-tags)
+	(parse-tagged-lambda-formals formals-stx)
       #t)))
+
+(define (standard-lambda-formals? stx)
+  ;;Return true  if STX  is a syntax  object representing  R6RS standard
+  ;;LAMBDA formals; otherwise return false.  The return value is true if
+  ;;STX is a  proper or improper list of identifiers,  with a standalone
+  ;;identifier being acceptable.
+  ;;
+  (syntax-match stx ()
+    (()
+     #t)
+    ((?id . ?rest)
+     (identifier? ?id)
+     (standard-lambda-formals? ?rest))
+    (?rest
+     (identifier? ?rest)
+     #t)))
 
 
 ;;;; identifiers: syntactic binding properties
@@ -8883,16 +8926,16 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?who (?formal* ...) ?body ?body* ...)
-     (receive (standard-formals-stx tags)
-	 (parse-tagged-formals ?formal* expr-stx)
+     (receive (standard-formals-stx signature-tags)
+	 (parse-tagged-lambda-formals ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda ,?formal*
 				  ,?body . ,?body*)))))
 
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
-     (receive (standard-formals-stx tags)
-	 (parse-tagged-formals ?formal* expr-stx)
+     (receive (standard-formals-stx signature-tags)
+	 (parse-tagged-lambda-formals ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda (,@?formal* . ,?rest-formal)
@@ -8906,8 +8949,8 @@
   ;;
   (syntax-match expr-stx ()
     ((_ (?who ?formal* ...) ?body ?body* ...)
-     (receive (standard-formals-stx tags)
-	 (parse-tagged-formals ?formal* expr-stx)
+     (receive (standard-formals-stx signature-tags)
+	 (parse-tagged-lambda-formals ?formal* expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -8915,8 +8958,8 @@
 				    ,?body . ,?body*))))))
 
     ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
-     (receive (standard-formals-stx tags)
-	 (parse-tagged-formals ?formal* expr-stx)
+     (receive (standard-formals-stx signature-tags)
+	 (parse-tagged-lambda-formals ?formal* expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -12003,22 +12046,9 @@
   ;;formals for  LAMBDA and WITH-SYNTAX syntaxes.   If successful return
   ;;unspecified values, else raise a syntax violation.
   ;;
-  (receive (standard-formals-stx tags)
-      (parse-tagged-formals formals-stx input-form-stx)
+  (receive (standard-formals-stx signature-tags)
+      (parse-tagged-lambda-formals formals-stx input-form-stx)
     (void)))
-;;;NOTE This is the old version,  before tagging.  (Marco Maggi; Thu Mar
-;;;13, 2014)
-;;;
-;;;(define (%verify-formals-syntax formals-stx input-form-stx)
-;;; (syntax-match formals-stx ()
-;;;   ((?id* ...)
-;;;    (unless (valid-bound-ids? ?id*)
-;;;      (%error-invalid-formals-syntax input-form-stx formals-stx)))
-;;;   ((?id* ... . ?rest-id)
-;;;    (unless (valid-bound-ids? (cons ?rest-id ?id*))
-;;;      (%error-invalid-formals-syntax input-form-stx formals-stx)))
-;;;   (_
-;;;    (stx-error input-form-stx "invalid syntax"))))
 
 (define (%error-invalid-formals-syntax input-form-stx formals-stx)
   ;;Raise an error  for invalid formals of LAMBDA,  CASE-LAMBDA, LET and
@@ -13277,8 +13307,8 @@
   (while-not-expanding-application-first-subform
    ;;Here  we support  both the  R6RS  standard LAMBDA  formals and  the
    ;;extended tagged formals, with or without rest argument.
-   (receive (standard-formals-stx tags)
-       (parse-tagged-formals formals-stx input-form-stx)
+   (receive (standard-formals-stx signature-tags)
+       (parse-tagged-lambda-formals formals-stx input-form-stx)
      (syntax-match standard-formals-stx ()
        ;;Without rest argument.
        ((?arg* ...)
@@ -13292,7 +13322,7 @@
 	    (add-lexical-bindings lab* lex* lexenv.run))
 	  (map (lambda (label tag)
 		 (and tag (set-label-type-tagging! label tag)))
-	    lab* tags)
+	    lab* (cdr signature-tags))
 	  (values lex* (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
        ;;With rest argument.
        ((?arg* ... . ?rest-arg)
@@ -13309,11 +13339,11 @@
 	    (add-lexical-bindings (cons rest-lab lab*)
 				  (cons rest-lex lex*)
 				  lexenv.run))
-	  ;;Here we  know that TAGS  is an  improper list with  the same
-	  ;;structure  of FORMALS-STX;  which  means  that the  "proper"
-	  ;;portion of TAGS  is a list with the same  number of items as
-	  ;;LAB*.
-	  (let loop ((tags tags)
+	  ;;Here we know  that the cdr of SIGNATURE-TAGS  is an improper
+	  ;;list  with the  same structure  of FORMALS-STX;  which means
+	  ;;that the  "proper" portion of TAGS  is a list with  the same
+	  ;;number of items as LAB*.
+	  (let loop ((tags (cdr signature-tags))
 		     (lab* lab*))
 	    (if (pair? tags)
 		(begin
@@ -13352,11 +13382,18 @@
   ;;parsed, and the  binding for ?CTXT has already been  added to LEXENV
   ;;by the caller.
   ;;
-  (syntax-match input-form-stx ()
+  (define (%expand ctxt-id formals-stx body-stx)
+    (receive (formals-stx^ body-stx^)
+	(chi-lambda-clause input-form-stx formals-stx body-stx lexenv.run lexenv.expand)
+      (build-lambda (syntax-annotation ctxt-id) formals-stx^ body-stx^)))
+  (syntax-match input-form-stx (brace)
+    ((_ ((brace ?ctxt ?tag0 ?tag* ...) . ?fmls) . ?body-form*)
+     (%expand ?ctxt (bless
+		     `((brace _ ,?tag0 . ,?tag*) . ,?fmls))
+	      ?body-form*))
     ((_ (?ctxt . ?fmls) . ?body-form*)
-     (receive (fmls body)
-	 (chi-lambda-clause input-form-stx ?fmls ?body-form* lexenv.run lexenv.expand)
-       (build-lambda (syntax-annotation ?ctxt) fmls body)))))
+     (%expand ?ctxt ?fmls ?body-form*))
+    ))
 
 
 ;;;; chi procedures: lexical bindings qualified right-hand sides
@@ -14073,14 +14110,13 @@
     ;;
     (syntax-match input-form-stx (brace)
       ;;Function definition with tagged return values.
-      ((_ ((brace ?id ?tag0 ?tag* ...) . ?fmls) ?b ?b* ...)
+      ((_ ((brace ?id ?rv-tag0 ?rv-tag* ...) . ?fmls) ?b ?b* ...)
        (identifier? ?id)
-       (let ((rv-tag* (cons ?tag0 ?tag*)))
-	 (unless (all-identifiers? rv-tag*)
-	   (stx-error input-form-stx "invalid syntax in return values tags"))
-	 (receive (standard-formals-stx arg-tags)
-	     (parse-tagged-formals ?fmls input-form-stx)
-	   (values ?id <procedure> (cons rv-tag* arg-tags) (cons 'defun input-form-stx)))))
+       (receive (standard-formals-stx signature-tags)
+	   (parse-tagged-lambda-formals (bless
+					 `((brace _ ,?rv-tag0 . ,?rv-tag*) . ,?fmls))
+					input-form-stx)
+	 (values ?id <procedure> signature-tags (cons 'defun input-form-stx))))
 
       ;;Variable definition with tagged identifier.
       ((_ (brace ?id ?tag) ?val)
@@ -14095,9 +14131,9 @@
       ;;Function definition with possible tagged arguments.
       ((_ (?id . ?fmls) ?b ?b* ...)
        (identifier? ?id)
-       (receive (standard-formals-stx arg-tags)
-	   (parse-tagged-formals ?fmls input-form-stx)
-	 (values ?id <procedure> (cons '() arg-tags) (cons 'defun input-form-stx))))
+       (receive (standard-formals-stx signature-tags)
+	   (parse-tagged-lambda-formals ?fmls input-form-stx)
+	 (values ?id <procedure> signature-tags (cons 'defun input-form-stx))))
 
       ;;R6RS variable definition.
       ((_ ?id ?val)

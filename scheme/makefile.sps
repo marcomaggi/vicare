@@ -849,10 +849,10 @@
     #;(set-label-function-signature!		$object-spec)
     #;(label-function-signature			$object-spec)
     (tagged-identifier?				$object-spec)
-    (tagged-formals?				$object-spec)
+    (tagged-lambda-formals?			$object-spec)
     (parse-tagged-identifier			$object-spec)
     (parse-tagged-bindings			$object-spec)
-    (parse-tagged-formals			$object-spec)
+    (parse-tagged-lambda-formals		$object-spec)
 
     (set-identifier-object-spec!		$object-spec)
     (identifier-object-spec			$object-spec)
