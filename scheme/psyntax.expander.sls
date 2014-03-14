@@ -1203,6 +1203,16 @@
   (or (not obj)
       (procedure? obj)))
 
+(define (improper-list->list-and-rest ell)
+  (let loop ((ell   ell)
+	     (item* '()))
+    (cond ((pair? ell)
+	   (loop (cdr ell) (cons (car ell) item*)))
+	  ((null? ell)
+	   (values (reverse item*) '()))
+	  (else
+	   (values (reverse item*) ell)))))
+
 
 ;;;; library records collectors
 
@@ -10030,13 +10040,24 @@
   ;;of EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
-    ((_ (?retval* ...) ?producer-expression ?body0 ?body* ...)
-     (bless
-      `(call-with-values
-	   (lambda () ,?producer-expression)
-	 (lambda ,?retval*
-	   ,?body0 ,@?body*
-	   (values ,@?retval*)))))
+    ((_ ?formals ?producer-expression ?body0 ?body* ...)
+     (receive (standard-formals signature-tags)
+	 (parse-tagged-lambda-formals ?formals expr-stx)
+       (let ((rv-form (cond ((list? standard-formals)
+			     `(values . ,standard-formals))
+			    ((pair? standard-formals)
+			     (receive (rv* rv-rest)
+				 (improper-list->list-and-rest standard-formals)
+			       `(values ,@rv* ,rv-rest)))
+			    (else
+			     ;;It's a standalone identifier.
+			     standard-formals))))
+	 (bless
+	  `(call-with-values
+	       (lambda () ,?producer-expression)
+	     (lambda ,?formals
+	       ,?body0 ,@?body*
+	       ,rv-form))))))
     ))
 
 (define (begin0-macro expr-stx)

@@ -45,7 +45,11 @@
 
 (begin-for-syntax
   (define-syntax-rule (tag=tagging? ?tag ?var)
-    (free-identifier=? #'?tag (typ.identifier-type-tagging #'?var)))
+    (let ((id (typ.identifier-type-tagging #'?var)))
+      (if (identifier? id)
+	  (free-identifier=? #'?tag id)
+	"no-id")))
+
   (define-syntax-rule (top-tagged? ?var)
     (tag=tagging? <top> ?var))
 
@@ -979,18 +983,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'tagged-bindings-let-values))
-
-  #t)
-
-
-(parametrise ((check-test-name	'tagged-bindings-let*-values))
-
-
-
-  #t)
-
-
 (parametrise ((check-test-name	'tagged-bindings-do))
 
 ;;; untagged bindings
@@ -1047,6 +1039,221 @@
     => '(#(2 2.2) ((#t #t))))
 
   #t)
+
+
+(parametrise ((check-test-name	'tagged-bindings-receive))
+
+  (check
+      (with-result
+       (receive (a)
+	   1
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (top-tagged? a))
+	   (add-result (inspect))
+	   a)))
+    => '(1 (#t)))
+
+  (check
+      (with-result
+       (receive (a b c)
+	   (values 1 2 3)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (top-tagged? a)
+			      (top-tagged? b)
+			      (top-tagged? c))))
+	   (add-result (inspect))
+	   (list a b c))))
+    => '((1 2 3) ((#t #t #t))))
+
+  (check
+      (with-result
+       (receive args
+	   (values 1 2 3)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (top-tagged? args))
+	   (add-result (inspect))
+	   args)))
+    => '((1 2 3) (#t)))
+
+  (check
+      (with-result
+       (receive (a b c . args)
+	   (values 1 2 3 4 5)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (top-tagged? a)
+			      (top-tagged? b)
+			      (top-tagged? c)
+			      (top-tagged? args))))
+	   (add-result (inspect))
+	   (list a b c args))))
+    => '((1 2 3 (4 5)) ((#t #t #t #t))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (receive ({a <fixnum>})
+	   1
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (tag=tagging? <fixnum> a))
+	   (add-result (inspect))
+	   a)))
+    => '(1 (#t)))
+
+  (check
+      (with-result
+       (receive ({a <fixnum>} {b <flonum>} {c <ratnum>})
+	   (values 1 2.2 3/4)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (tag=tagging? <fixnum> a)
+			      (tag=tagging? <flonum> b)
+			      (tag=tagging? <ratnum> c))))
+	   (add-result (inspect))
+	   (list a b c))))
+    => '((1 2.2 3/4) ((#t #t #t))))
+
+  (check
+      (with-result
+       (receive {args <list>}
+	   (values 1 2 3)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (tag=tagging? <list> args))
+	   (add-result (inspect))
+	   args)))
+    => '((1 2 3) (#t)))
+
+  (check
+      (with-result
+       (receive ({a <fixnum>} {b <flonum>} {c <ratnum>} . {args <fixnums>})
+	   (values 1 2.2 3/4 4 5)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (tag=tagging? <fixnum> a)
+			      (tag=tagging? <flonum> b)
+			      (tag=tagging? <ratnum> c)
+			      (tag=tagging? <fixnums> args))))
+	   (add-result (inspect))
+	   (list a b c args))))
+    => '((1 2.2 3/4 (4 5)) ((#t #t #t #t))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'tagged-bindings-receive-and-return))
+
+  (check
+      (with-result
+       (receive-and-return (a)
+	   1
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (top-tagged? a))
+	   (add-result (inspect)))))
+    => '(1 (#t)))
+
+  (check
+      (with-result
+       (receive-and-return (a b c)
+	   (values 1 2 3)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (top-tagged? a)
+			      (top-tagged? b)
+			      (top-tagged? c))))
+	   (add-result (inspect)))))
+    => '(1 2 3 ((#t #t #t))))
+
+  (check
+      (with-result
+       (receive-and-return args
+	   (values 1 2 3)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (top-tagged? args))
+	   (add-result (inspect)))))
+    => '((1 2 3) (#t)))
+
+  (check
+      (with-result
+       (receive-and-return (a b c . args)
+	   (values 1 2 3 4 5)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (top-tagged? a)
+			      (top-tagged? b)
+			      (top-tagged? c)
+			      (top-tagged? args))))
+	   (add-result (inspect)))))
+    => '(1 2 3 (4 5) ((#t #t #t #t))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (with-result
+       (receive-and-return ({a <fixnum>})
+	   1
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (tag=tagging? <fixnum> a))
+	   (add-result (inspect)))))
+    => '(1 (#t)))
+
+  (check
+      (with-result
+       (receive-and-return ({a <fixnum>} {b <flonum>} {c <ratnum>})
+	   (values 1 2.2 3/4)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (tag=tagging? <fixnum> a)
+			      (tag=tagging? <flonum> b)
+			      (tag=tagging? <ratnum> c))))
+	   (add-result (inspect)))))
+    => '(1 2.2 3/4 ((#t #t #t))))
+
+  (check
+      (with-result
+       (receive-and-return {args <list>}
+	   (values 1 2 3)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     (tag=tagging? <list> args))
+	   (add-result (inspect)))))
+    => '((1 2 3) (#t)))
+
+  (check
+      (with-result
+       (receive-and-return ({a <fixnum>} {b <flonum>} {c <ratnum>} . {args <fixnums>})
+	   (values 1 2.2 3/4 4 5)
+	 (let ()
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (tag=tagging? <fixnum> a)
+			      (tag=tagging? <flonum> b)
+			      (tag=tagging? <ratnum> c)
+			      (tag=tagging? <fixnums> args))))
+	   (add-result (inspect)))))
+    => '(1 2.2 3/4 (4 5) ((#t #t #t #t))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'tagged-bindings-let-values))
+
+  #t)
+
+
+(parametrise ((check-test-name	'tagged-bindings-let*-values))
+
+
+
+  #t)
+
 
 
 ;;;; done

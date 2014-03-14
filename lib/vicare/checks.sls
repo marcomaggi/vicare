@@ -280,10 +280,10 @@
     ((_ ?form ... ?last-form)
      (parameterize ((result '()))
        ?form ...
-       (let ((last-result ?last-form))
-		;We  need  to make  sure  that  ?LAST-FORM is  evaluated
-		;before (GET-RESULT).
-	 (list last-result (get-result)))))))
+       (call-with-values
+	   (lambda () ?last-form)
+	 (lambda args
+	   (append args (list (get-result)))))))))
 
 (define (add-result value)
   (result (cons value (result)))

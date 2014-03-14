@@ -1,12 +1,17 @@
 * Syntaxes for which tagging must be implemented.
 
+
 ** let-values
+
 ** let*-values
+
 ** define-constant-values
+
 ** define-constant
+
 ** let-constants
-** receive
-** receive-and-return
+
 ** define-inline
+
 ** define-integrable
 
