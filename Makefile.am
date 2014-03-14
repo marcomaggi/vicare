@@ -807,7 +807,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-formations-lib.sps					\
 	\
 	tests/test-vicare-parser-tools-silex-file.sps			\
-	tests/test-vicare-parser-tools-silex-misc.sps			\
 	tests/test-vicare-parser-tools-silex-online.sps			\
 	tests/test-vicare-parser-tools-unix-pathnames.sps
 
@@ -887,6 +886,7 @@ VICARE_SCHEME_NAUSICAA_TESTS	= \
 	\
 	tests/test-nausicaa-parser-tools-lexical-token.sps		\
 	tests/test-nausicaa-parser-tools-source-location.sps		\
+	tests/test-nausicaa-parser-tools-silex-misc.sps			\
 	tests/test-nausicaa-parser-tools-lalr-lr.sps			\
 	tests/test-nausicaa-parser-tools-lalr-glr.sps			\
 	tests/test-nausicaa-parser-tools-lalr-calc.sps			\
