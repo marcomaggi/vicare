@@ -1,17 +1,9 @@
 * Syntaxes for which tagging must be implemented.
 
 
-** let-values
-
 ** let*-values
 
-** define-constant-values
+** let-constants, let*-constants, letrec-constants, letrec*-constants
 
-** define-constant
-
-** let-constants
-
-** define-inline
-
-** define-integrable
+   Add the tags to the ghost bindings.
 

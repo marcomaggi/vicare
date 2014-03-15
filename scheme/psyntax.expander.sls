@@ -1206,12 +1206,40 @@
 (define (improper-list->list-and-rest ell)
   (let loop ((ell   ell)
 	     (item* '()))
-    (cond ((pair? ell)
-	   (loop (cdr ell) (cons (car ell) item*)))
-	  ((null? ell)
-	   (values (reverse item*) '()))
-	  (else
-	   (values (reverse item*) ell)))))
+    (syntax-match ell ()
+      ((?car . ?cdr)
+       (loop ?cdr (cons ?car item*)))
+      (()
+       (values (reverse item*) '()))
+      (_
+       (values (reverse item*) ell)))
+    ;; (cond ((pair? ell)
+    ;; 	   (loop (cdr ell) (cons (car ell) item*)))
+    ;; 	  ((null? ell)
+    ;; 	   (values (reverse item*) '()))
+    ;; 	  (else
+    ;; 	   (values (reverse item*) ell)))
+    ))
+
+(define (syntax-unwrap stx)
+  ;;Given a syntax object STX  decompose it and return the corresponding
+  ;;S-expression holding datums and identifiers.  Take care of returning
+  ;;a proper  list when the  input is a  syntax object holding  a proper
+  ;;list.
+  ;;
+  (syntax-match stx ()
+    (()
+     '())
+    ((?car . ?cdr)
+     (cons (syntax-unwrap ?car)
+	   (syntax-unwrap ?cdr)))
+    (#(?item* ...)
+     (list->vector (syntax-unwrap ?item*)))
+    (?atom
+     (identifier? ?atom)
+     ?atom)
+    (?atom
+     (syntax->datum ?atom))))
 
 
 ;;;; library records collectors
@@ -5642,10 +5670,12 @@
 	     (or input-form-stx original-formals-stx) arg-stx))))))
 
   (define (%validate-formals input-form-stx original-formals-stx standard-formals-stx)
-    (unless (distinct-bound-formals? standard-formals-stx)
-      (syntax-violation __who__
-	"duplicate identifiers in formals specification"
-	(or input-form-stx original-formals-stx))))
+    (cond ((duplicate-bound-formals? standard-formals-stx)
+	   => (lambda (duplicate-id)
+		(syntax-violation __who__
+		  "duplicate identifiers in formals specification"
+		  (or input-form-stx original-formals-stx)
+		  duplicate-id)))))
 
   #| end of module |# )
 
@@ -6301,25 +6331,27 @@
       (and (not (bound-id-member? ($car id*) ($cdr id*)))
 	   (distinct-bound-ids? ($cdr id*)))))
 
-(define (distinct-bound-formals? standard-formals-stx)
+(define (duplicate-bound-formals? standard-formals-stx)
   ;;Given  a  syntax  object  representing a  list  of  UNtagged  LAMBDA
-  ;;formals:  return true  if non  of the  identifiers is  BOUND-ID=? to
-  ;;another; else return #f.
+  ;;formals:  return #f  if none  of the  identifiers is  BOUND-ID=?  to
+  ;;another; else return a duplicate identifier.
   ;;
   (let recur ((fmls          standard-formals-stx)
 	      (collected-id* '()))
     (syntax-match fmls ()
       ;;STANDARD-FORMALS-STX is a proper list and it ends here.  Good.
-      (() #t)
+      (() #f)
       ;;STANDARD-FORMALS-STX is an IMproper list and it ends here with a
       ;;rest argument.  Check it.
       (?rest
        (identifier? ?rest)
-       (not (bound-id-member? ?rest collected-id*)))
+       (if (bound-id-member? ?rest collected-id*)
+	   ?rest
+	 #f))
       ((?id . ?rest)
        (identifier? ?id)
        (if (bound-id-member? ?id collected-id*)
-	   #f
+	   ?id
 	 (recur ?rest (cons ?id collected-id*))))
       (_
        (stx-error standard-formals-stx "invalid formals")))))
@@ -6630,10 +6662,11 @@
 	 '() #;ae*
 	 ))
 
-(define (trace-bless x)
-  (receive-and-return (stx)
-      (bless x)
-    (debug-print 'bless-output (syntax->datum x))))
+(define (trace-bless input-stx)
+  (receive-and-return (output-stx)
+      (bless input-stx)
+    (debug-print 'bless-input  (syntax->datum input-stx)
+		 'bless-output (syntax->datum output-stx))))
 
 (define scheme-stx
   ;;Take a symbol  and if it's in the library:
@@ -8218,7 +8251,8 @@
   ;;                 (c G.c) (d G.d) (e G.e))
   ;;             ?body0 ?body)))))
   ;;
-  (define-constant __who__ 'let-values)
+  (define-fluid-override __who__
+    (identifier-syntax 'let-values))
 
   (define (let-values-macro expr-stx)
     (syntax-match expr-stx ()
@@ -8226,51 +8260,61 @@
        (cons* (bless 'let) '() ?body ?body*))
 
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (bless
-	(let recur ((lhs*  ?lhs*)
-		    (rhs*  ?rhs*)
-		    (old*  '())
-		    (new*  '()))
-	  (if (null? lhs*)
-	      `(let ,(map list old* new*)
-		 ,?body . ,?body*)
-	    (syntax-match (car lhs*) ()
-	      ((?formal* ...)
-	       (receive (y* old* new*)
-		   (rename* ?formal* old* new* expr-stx)
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,y*
-		      ,(recur (cdr lhs*) (cdr rhs*) old* new*)))))
+       (let ((standard-lhs* (map (lambda (lhs)
+				   (receive (standard-lhs signature-tags)
+				       (parse-tagged-lambda-formals lhs expr-stx)
+				     standard-lhs))
+			      ?lhs*)))
+	 (bless
+	  (let recur ((standard-lhs*  standard-lhs*)
+		      (tagged-lhs*    (syntax-unwrap ?lhs*))
+		      (rhs*           ?rhs*)
+		      (standard-old*  '())
+		      (tagged-old*    '())
+		      (new*           '()))
+	    (if (null? standard-lhs*)
+		`(let ,(map list tagged-old* new*)
+		   ,?body . ,?body*)
+	      (syntax-match (car standard-lhs*) ()
+		((?standard-formal* ...)
+		 (receive (y* standard-old* tagged-old* new*)
+		     (%rename* ?standard-formal* (car tagged-lhs*) standard-old* tagged-old* new* expr-stx)
+		   `(call-with-values
+			(lambda () ,(car rhs*))
+		      (lambda ,y*
+			,(recur (cdr standard-lhs*) (cdr tagged-lhs*) (cdr rhs*) standard-old* tagged-old* new*)))))
 
-	      ((?formal* ... . ?rest-formal)
-	       (let*-values
-		   (((y  old* new*) (rename  ?rest-formal old* new* expr-stx))
-		    ((y* old* new*) (rename* ?formal*     old* new* expr-stx)))
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,(append y* y)
-		      ,(recur (cdr lhs*) (cdr rhs*)
-			      old* new*)))))
-	      (others
-	       (syntax-violation __who__ "malformed bindings" expr-stx others)))))))
+		((?standard-formal* ... . ?standard-rest-formal)
+		 (receive (tagged-formal* tagged-rest-formal)
+		     (improper-list->list-and-rest (car tagged-lhs*))
+		   (let*-values
+		       (((y  standard-old* tagged-old* new*)
+			 (%rename  ?standard-rest-formal tagged-rest-formal standard-old* tagged-old* new* expr-stx))
+			((y* standard-old* tagged-old* new*)
+			 (%rename* ?standard-formal*     tagged-formal*     standard-old* tagged-old* new* expr-stx)))
+		     `(call-with-values
+			  (lambda () ,(car rhs*))
+			(lambda ,(append y* y)
+			  ,(recur (cdr standard-lhs*) (cdr tagged-lhs*) (cdr rhs*) standard-old* tagged-old* new*))))))
+		(?others
+		 (syntax-violation __who__ "malformed bindings" expr-stx ?others))))))))
       ))
 
-  (define (rename formal old* new* expr-stx)
-    (unless (identifier? formal)
-      (syntax-violation __who__ "not an indentifier" expr-stx formal))
-    (when (bound-id-member? formal old*)
-      (syntax-violation __who__ "duplicate binding" expr-stx formal))
-    (let ((y (gensym (syntax->datum formal))))
-      (values y (cons formal old*) (cons y new*))))
+  (define (%rename standard-formal tagged-formal standard-old* tagged-old* new* expr-stx)
+    (when (bound-id-member? standard-formal standard-old*)
+      (syntax-violation __who__ "duplicate binding" expr-stx standard-formal))
+    (let ((y (gensym (syntax->datum standard-formal))))
+      (values y (cons standard-formal standard-old*) (cons tagged-formal tagged-old*) (cons y new*))))
 
-  (define (rename* formal* old* new* expr-stx)
-    (if (null? formal*)
-	(values '() old* new*)
+  (define (%rename* standard-formal* tagged-formal* standard-old* tagged-old* new* expr-stx)
+    (if (null? standard-formal*)
+	(values '() standard-old* tagged-old* new*)
       (let*-values
-	  (((formal  old* new*) (rename  (car formal*) old* new* expr-stx))
-	   ((formal* old* new*) (rename* (cdr formal*) old* new* expr-stx)))
-	(values (cons formal formal*) old* new*))))
+	  (((y  standard-old* tagged-old* new*)
+	    (%rename  (car standard-formal*) (car tagged-formal*) standard-old* tagged-old* new* expr-stx))
+	   ((y* standard-old* tagged-old* new*)
+	    (%rename* (cdr standard-formal*) (cdr tagged-formal*) standard-old* tagged-old* new* expr-stx)))
+	(values (cons y y*) standard-old* tagged-old* new*))))
 
   #| end of module: LET-VALUES-MACRO |# )
 
@@ -10116,8 +10160,17 @@
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match expr-stx (brace)
+    ((_ (brace ?name ?tag) ?expr)
+     (and (identifier? ?name)
+	  (tag-identifier? ?tag))
+     (bless
+      `(begin
+	 (define (brace ghost ?tag) ,?expr)
+	 (define-syntax ,?name
+	   (identifier-syntax ghost)))))
     ((_ ?name ?expr)
+     (identifier? ?name)
      (bless
       `(begin
 	 (define ghost ,?expr)

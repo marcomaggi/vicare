@@ -58,6 +58,24 @@
 
   #| end of begin-for-syntax |# )
 
+(define-syntax %eval
+  (syntax-rules ()
+    ((_ ?form)
+     (eval ?form (environment '(vicare)
+			      '(vicare language-extensions tags))))))
+
+(define-syntax catch-syntax-violation
+  (syntax-rules ()
+    ((_ ?verbose . ?body)
+     (guard (E ((syntax-violation? E)
+		(when ?verbose
+		  (debug-print (condition-message E)
+			       (syntax-violation-form E)
+			       (syntax-violation-subform E)))
+		(syntax->datum (syntax-violation-subform E)))
+	       (else E))
+       . ?body))))
+
 
 (parametrise ((check-test-name	'parsing-tagged-bindings))
 
@@ -1330,7 +1348,197 @@
   #t)
 
 
+(parametrise ((check-test-name	'tagged-bindings-define-integrable))
+
+  (check
+      (with-result
+       (let ()
+	 (define-integrable (fact n)
+	   (define-syntax (inspect stx)
+	     (top-tagged? n))
+	   (add-result (inspect))
+	   (if (< n 2)
+	       1
+	     (* n (fact (- n 1)))))
+	 (fact 5)))
+    => '(120 (#t #t #t #t #t)))
+
+  (check	;here the integrable is never called
+      (let ()
+	(define-integrable (f x)
+	  (+ x 1))
+	(eq? f f))
+    => #t)
+
+  (check
+      (with-result
+       (let ()
+	 (define-integrable (even? n)
+	   (define-syntax (inspect stx)
+	     (top-tagged? n))
+	   (add-result (inspect))
+	   (or (zero? n) (odd? (- n 1))))
+	 (define-integrable (odd? n)
+	   (define-syntax (inspect stx)
+	     (top-tagged? n))
+	   (add-result (inspect))
+	   (not (even? n)))
+	 (even? 5)))
+    => '(#f (#t #t #t #t #t #t #t #t #t #t #t)))
+
+  (check
+      (with-result
+       (let ()
+	 (define-integrable (incr x)
+	   (define-syntax (inspect stx)
+	     (top-tagged? x))
+	   (add-result (inspect))
+	   (+ x 1))
+	 (map incr '(10 20 30))))
+    => '((11 21 31) (#t #t #t)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'tagged-bindings-let-values))
+
+  (check	;no bindings
+      (let-values ()
+	1)
+    => 1)
+
+  (check	;special case, var specification is a symbol
+      (with-result
+       (let-values ((a (values 1 2 3)))
+	 (define-syntax (inspect stx)
+	   (top-tagged? a))
+	 (add-result (inspect))
+	 a))
+    => '((1 2 3) (#t)))
+
+;;; --------------------------------------------------------------------
+
+  (check	;single binding, single id, no tags
+      (let-values (((a) 1))
+	a)
+    => 1)
+
+  (check	;single binding, multiple ids, no tags
+      (let-values (((a b c) (values 1 2 3)))
+	(list a b c))
+    => '(1 2 3))
+
+  (check	;multiple bindings, single id, no tags
+      (let-values (((a) 1)
+		   ((b) 2)
+		   ((c) 3))
+	(list a b c))
+    => '(1 2 3))
+
+  (check	;multiple bindings, multiple ids, no tags
+      (let-values (((a b c) (values 1 2 3))
+		   ((d e f) (values 4 5 6))
+		   ((g h i) (values 7 8 9)))
+	(list a b c d e f g h i))
+    => '(1 2 3 4 5 6 7 8 9))
+
+  (check	;mixed bindings, no tags
+      (let-values (((a)	1)
+		   ((d)	4)
+		   ((g h i)	(values 7 8 9)))
+	(list a d g h i))
+    => '(1 4 7 8 9))
+
+  (check	;mixed bindings, no tags
+      (let-values (((a b c)	(values 1 2 3))
+		   ((d)	4)
+		   ((g h i)	(values 7 8 9)))
+	(list a b c  d  g h i))
+    => '(1 2 3 4 7 8 9))
+
+  (check	;mixed bindings, no tags
+      (let-values (((a b c)	(values 1 2 3))
+		   ((d)	4)
+		   ((g)	7))
+	(list a b c d g))
+    => '(1 2 3 4 7))
+
+;;; --------------------------------------------------------------------
+;;; tagged
+
+  (check	;single binding, single id, single tag
+      (let-values ((({a <fixnum>}) 1))
+	a)
+    => 1)
+
+  (check	;single binding, multiple ids, single tag
+      (let-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3)))
+  	(values a b c))
+    => 1 2 3)
+
+  (check	;multiple bindings, single id, single tags
+      (let-values ((({a <fixnum>}) 1)
+		   (({b <fixnum>}) 2)
+		   (({c <fixnum>}) 3))
+  	(values a b c))
+    => 1 2 3)
+
+  (check	;multiple bindings, multiple ids, with tags
+      (let-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3))
+		   (({d <fixnum>} {e <fixnum>} {f <fixnum>}) (values 4 5 6))
+		   (({g <fixnum>} {h <fixnum>} {i <fixnum>}) (values 7 8 9)))
+  	(values a b c d e f g h i))
+    => 1 2 3 4 5 6 7 8 9)
+
+  (check	;mixed bindings, with tags
+      (let-values ((({a <fixnum>})	1)
+		   ((d)			4)
+		   ((g {h <fixnum>} i)	(values 7 8 9)))
+  	(values a d g h i))
+    => 1 4 7 8 9)
+
+  (check	;mixed bindings, with tags
+      (let-values ((({a <fixnum>})			1)
+		   ((d)					4)
+		   (({g <fixnum>} {h <fixnum>} i)	(values 7 8 9)))
+  	(values a d g h i))
+    => 1 4 7 8 9)
+
+;;; --------------------------------------------------------------------
+
+  (check	;multiple bindings, scope rules
+      (let ((a 4) (b 5) (c 6))
+	(let-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3))
+		     (({d <fixnum>} {e <fixnum>} {f <fixnum>}) (values a b c))
+		     (({g <fixnum>} {h <fixnum>} {i <fixnum>}) (values 7 8 9)))
+	  (values a b c d e f g h i)))
+    => 1 2 3 4 5 6 7 8 9)
+
+;;; --------------------------------------------------------------------
+
+  (check	;error, invalid syntax for list of bindings
+      (catch-syntax-violation #f
+	(%eval '(let-values #(((a) 1))
+		  a)))
+    => #f)
+
+  (check	;error, invalid syntax in single binding
+      (catch-syntax-violation #f
+	(%eval '(let-values (((a) 1) #(b 2))
+		  a)))
+    => #f)
+
+  (check	;error, duplicate identifiers
+      (catch-syntax-violation #f
+	(%eval '(let-values (((a {a <fixnum>}) (values 1 2)))
+		  a)))
+    => 'a)
+
+  (check	;error, duplicate identifiers
+      (catch-syntax-violation #f
+	(%eval '(let-values (((a) 1) ((a) 2))
+		  a)))
+    => 'a)
 
   #t)
 
@@ -1350,4 +1558,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; eval: (put 'typ.set-identifier-object-spec! 'scheme-indent-function 1)
+;; eval: (put 'catch-syntax-violation 'scheme-indent-function 1)
 ;; End:
