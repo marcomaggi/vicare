@@ -1243,6 +1243,93 @@
   #t)
 
 
+(parametrise ((check-test-name	'tagged-bindings-define-inline))
+
+;;; untyped
+
+  (check
+      (with-result
+       (let ()
+	 (define-inline (ciao a b)
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (top-tagged? a)
+			      (top-tagged? b))))
+	   (add-result (inspect))
+	   (+ a b))
+	 (ciao 1 2)))
+    => '(3 ((#t #t))))
+
+  (check
+      (let ()
+	(define-inline (ciao)
+	  (+ 1 2))
+	(ciao))
+    => 3)
+
+  (check
+      (with-result
+       (let ()
+	 (define-inline (ciao . rest)
+	   (define-syntax (inspect stx)
+	     (top-tagged? rest))
+	   (add-result (inspect))
+	   (apply + rest))
+	 (ciao 1 2)))
+    => '(3 (#t)))
+
+  (check
+      (with-result
+       (let ()
+	 (define-inline (ciao a . rest)
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (top-tagged? a)
+			      (top-tagged? rest))))
+	   (add-result (inspect))
+	   (apply + a rest))
+	 (ciao 1 2)))
+    => '(3 ((#t #t))))
+
+;;; --------------------------------------------------------------------
+;;; typed
+
+  (check
+      (with-result
+       (let ()
+	 (define-inline (ciao {a <fixnum>} {b <flonum>})
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (tag=tagging? <fixnum> a)
+			      (tag=tagging? <flonum> b))))
+	   (add-result (inspect))
+	   (+ a b))
+	 (ciao 1 2.2)))
+    => '(3.2 ((#t #t))))
+
+  (check
+      (with-result
+       (let ()
+	 (define-inline (ciao . {rest <fixnums>})
+	   (define-syntax (inspect stx)
+	     (tag=tagging? <fixnums> rest))
+	   (add-result (inspect))
+	   (apply + rest))
+	 (ciao 1 2)))
+    => '(3 (#t)))
+
+  (check
+      (with-result
+       (let ()
+	 (define-inline (ciao {a <fixnum>} . {rest <fixnums>})
+	   (define-syntax (inspect stx)
+	     #`(quote #,(list (tag=tagging? <fixnum> a)
+			      (tag=tagging? <fixnums> rest))))
+	   (add-result (inspect))
+	   (apply + a rest))
+	 (ciao 1 2)))
+    => '(3 ((#t #t))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'tagged-bindings-let-values))
 
   #t)

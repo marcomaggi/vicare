@@ -6630,6 +6630,11 @@
 	 '() #;ae*
 	 ))
 
+(define (trace-bless x)
+  (receive-and-return (stx)
+      (bless x)
+    (debug-print 'bless-output (syntax->datum x))))
+
 (define scheme-stx
   ;;Take a symbol  and if it's in the library:
   ;;
@@ -10145,27 +10150,32 @@
   ;;from the  top-level built  in environment.   Expand the  contents of
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (define (%output name-id arg-stx* rest-stx body-stx)
+    (let ((TMP* (generate-temporaries arg-stx*))
+	  (REST (gensym)))
+      (bless
+       `(define-fluid-syntax ,name-id
+	  (syntax-rules ()
+	    ((_ ,@TMP* . REST)
+	     (fluid-let-syntax
+		 ((,name-id (lambda (stx)
+			      (syntax-violation (quote ,name-id)
+				"cannot recursively expand inline expression"
+				stx))))
+	       (let ,(append (map list arg-stx* TMP*)
+			     (if (null? (syntax->datum rest-stx))
+				 '()
+			       `((,rest-stx (list . REST)))))
+		 . ,body-stx))))))))
+  (syntax-match expr-stx (brace)
+    ((_ (?name ?arg* ... . (brace ?rest ?rest-tag)) ?form0 ?form* ...)
+     (and (identifier? ?name)
+	  (tagged-lambda-formals? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
+     (%output ?name ?arg* (bless `(brace ,?rest ,?rest-tag)) (cons ?form0 ?form*)))
     ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (for-all identifier? ?arg*)
-	  (or (null? (syntax->datum ?rest))
-	      (identifier? ?rest)))
-     (let ((TMP* (generate-temporaries ?arg*)))
-       (bless
-	`(define-fluid-syntax ,?name
-	   (syntax-rules ()
-	     ((_ ,@TMP* . rest)
-	      (fluid-let-syntax
-		  ((,?name (lambda (stx)
-			     (syntax-violation (quote ,?name)
-			       "cannot recursively expand inline expression"
-			       stx))))
-		(let ,(append (map list ?arg* TMP*)
-			      (if (null? (syntax->datum ?rest))
-				  '()
-				`((,?rest (list . rest)))))
-		  ,?form0 ,@?form*))))))))
+	  (tagged-lambda-formals? (append ?arg* ?rest)))
+     (%output ?name ?arg* ?rest (cons ?form0 ?form*)))
     ))
 
 
