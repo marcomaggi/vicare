@@ -7948,7 +7948,33 @@
 
       (bless
        `(begin
-	  (define-syntax ,type-id (cons '$rtd ',rtd))
+	  (define-syntax ,type-id
+	    (let ()
+	      (import (prefix (vicare expander object-spec) typ.))
+	      (define (%retrieve-getter-id slot-id safe?)
+		(case (syntax->datum slot-id)
+		  ,@(map (lambda (field-sym getter-id unsafe-getter-id)
+			   `((,field-sym)
+			     (if safe? (syntax ,getter-id) (syntax ,unsafe-getter-id))))
+		      field-sym* getter-id* unsafe-getter-id*)
+		  (else
+		   (syntax-violation ',type-id
+		     "unknown struct field name for accessor" slot-id))))
+	      (define (%retrieve-setter-id slot-id safe?)
+		(case (syntax->datum slot-id)
+		  ,@(map (lambda (field-sym setter-id unsafe-setter-id)
+			   `((,field-sym)
+			     (if safe? (syntax ,setter-id) (syntax ,unsafe-setter-id))))
+		      field-sym* setter-id* unsafe-setter-id*)
+		  (else
+		   (syntax-violation ',type-id
+		     "unknown struct field name for mutator" slot-id))))
+	      (typ.set-identifier-object-spec! (syntax ,type-id)
+		(typ.make-object-spec (syntax ,type-id)
+				      (syntax ,predicate-id)
+				      %retrieve-getter-id
+				      %retrieve-setter-id))
+	      (cons '$rtd ',rtd)))
 	  (define (,constructor-id ,@field-name-id*)
 	    (let ((S ($struct ',rtd ,@field-name-id*)))
 	      (if ($std-destructor ',rtd)
@@ -11873,6 +11899,27 @@
 		(else
 		 (syntax-error expr-stx "object type does not provide accessors")))))
        ))
+
+    ;;Missing type identifier.  Try to retrieve the type from the tag of
+    ;;the subject.
+    ((_ ?id ?field-name-id)
+     (and (identifier? ?id)
+	  (identifier? ?field-name-id))
+     (cond ((identifier-type-tagging ?id)
+	    => (lambda (tag-id)
+		 (cond ((identifier-object-spec tag-id)
+			=> (lambda (spec)
+			     (cond ((object-spec-accessor-maker spec)
+				    => (lambda (accessor-maker)
+					 (chi-expr (bless
+						    `(,(accessor-maker ?field-name-id #t) ,?id))
+						   lexenv.run lexenv.expand)))
+				   (else
+				    (syntax-error expr-stx "object type does not provide accessors")))))
+		       (else
+			(syntax-error expr-stx "type tag of expression has no object-spec")))))
+	   (else
+	    (syntax-error expr-stx "unable to determine type tag of expression"))))
     ))
 
 (define (slot-set!-transformer expr-stx lexenv.run lexenv.expand)
@@ -11930,6 +11977,27 @@
 		(else
 		 (syntax-error expr-stx "object type does not provide mutator")))))
        ))
+
+    ;;Missing type identifier.  Try to retrieve the type from the tag of
+    ;;the subject.
+    ((_ ?id ?field-name-id ?new-value)
+     (and (identifier? ?id)
+	  (identifier? ?field-name-id))
+     (cond ((identifier-type-tagging ?id)
+	    => (lambda (tag-id)
+		 (cond ((identifier-object-spec tag-id)
+			=> (lambda (spec)
+			     (cond ((object-spec-mutator-maker spec)
+				    => (lambda (mutator-maker)
+					 (chi-expr (bless
+						    `(,(mutator-maker ?field-name-id #t) ,?id ,?new-value))
+						   lexenv.run lexenv.expand)))
+				   (else
+				    (syntax-error expr-stx "object type does not provide mutators")))))
+		       (else
+			(syntax-error expr-stx "type tag of expression has no object-spec")))))
+	   (else
+	    (syntax-error expr-stx "unable to determine type tag of expression"))))
     ))
 
 (define ($slot-ref-transformer expr-stx lexenv.run lexenv.expand)
@@ -11987,6 +12055,27 @@
 		(else
 		 (syntax-error expr-stx "object type does not provide accessors")))))
        ))
+
+    ;;Missing type identifier.  Try to retrieve the type from the tag of
+    ;;the subject.
+    ((_ ?id ?field-name-id)
+     (and (identifier? ?id)
+	  (identifier? ?field-name-id))
+     (cond ((identifier-type-tagging ?id)
+	    => (lambda (tag-id)
+		 (cond ((identifier-object-spec tag-id)
+			=> (lambda (spec)
+			     (cond ((object-spec-accessor-maker spec)
+				    => (lambda (accessor-maker)
+					 (chi-expr (bless
+						    `(,(accessor-maker ?field-name-id #f) ,?id))
+						   lexenv.run lexenv.expand)))
+				   (else
+				    (syntax-error expr-stx "object type does not provide accessors")))))
+		       (else
+			(syntax-error expr-stx "type tag of expression has no object-spec")))))
+	   (else
+	    (syntax-error expr-stx "unable to determine type tag of expression"))))
     ))
 
 (define ($slot-set!-transformer expr-stx lexenv.run lexenv.expand)
@@ -12044,6 +12133,27 @@
 		(else
 		 (syntax-error expr-stx "object type does not provide mutators")))))
        ))
+
+    ;;Missing type identifier.  Try to retrieve the type from the tag of
+    ;;the subject.
+    ((_ ?id ?field-name-id ?new-value)
+     (and (identifier? ?id)
+	  (identifier? ?field-name-id))
+     (cond ((identifier-type-tagging ?id)
+	    => (lambda (tag-id)
+		 (cond ((identifier-object-spec tag-id)
+			=> (lambda (spec)
+			     (cond ((object-spec-mutator-maker spec)
+				    => (lambda (mutator-maker)
+					 (chi-expr (bless
+						    `(,(mutator-maker ?field-name-id #f) ,?id ,?new-value))
+						   lexenv.run lexenv.expand)))
+				   (else
+				    (syntax-error expr-stx "object type does not provide mutators")))))
+		       (else
+			(syntax-error expr-stx "type tag of expression has no object-spec")))))
+	   (else
+	    (syntax-error expr-stx "unable to determine type tag of expression"))))
     ))
 
 
