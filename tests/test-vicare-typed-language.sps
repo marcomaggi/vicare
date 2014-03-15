@@ -1419,62 +1419,126 @@
 ;;; --------------------------------------------------------------------
 
   (check	;single binding, single id, no tags
-      (let-values (((a) 1))
-	a)
-    => 1)
+      (with-result
+       (let-values (((a) 1))
+	 (define-syntax (inspect stx)
+	   (top-tagged? a))
+	 (add-result (inspect))
+	 a))
+    => '(1 (#t)))
 
   (check	;single binding, multiple ids, no tags
-      (let-values (((a b c) (values 1 2 3)))
-	(list a b c))
-    => '(1 2 3))
+      (with-result
+       (let-values (((a b c) (values 1 2 3)))
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (top-tagged? a)
+			    (top-tagged? b)
+			    (top-tagged? c))))
+	 (add-result (inspect))
+	 (list a b c)))
+    => '((1 2 3) ((#t #t #t))))
 
   (check	;multiple bindings, single id, no tags
-      (let-values (((a) 1)
-		   ((b) 2)
-		   ((c) 3))
-	(list a b c))
-    => '(1 2 3))
+      (with-result
+       (let-values (((a) 1)
+		    ((b) 2)
+		    ((c) 3))
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (top-tagged? a)
+			    (top-tagged? b)
+			    (top-tagged? c))))
+	 (add-result (inspect))
+	 (list a b c)))
+    => '((1 2 3) ((#t #t #t))))
 
   (check	;multiple bindings, multiple ids, no tags
-      (let-values (((a b c) (values 1 2 3))
-		   ((d e f) (values 4 5 6))
-		   ((g h i) (values 7 8 9)))
-	(list a b c d e f g h i))
-    => '(1 2 3 4 5 6 7 8 9))
+      (with-result
+       (let-values (((a b c) (values 1 2 3))
+		    ((d e f) (values 4 5 6))
+		    ((g h i) (values 7 8 9)))
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (top-tagged? a)
+			    (top-tagged? b)
+			    (top-tagged? c)
+			    (top-tagged? d)
+			    (top-tagged? e)
+			    (top-tagged? f)
+			    (top-tagged? g)
+			    (top-tagged? h)
+			    (top-tagged? i))))
+	 (add-result (inspect))
+	 (list a b c d e f g h i)))
+    => '((1 2 3 4 5 6 7 8 9) ((#t #t #t  #t #t #t  #t #t #t))))
 
   (check	;mixed bindings, no tags
-      (let-values (((a)	1)
-		   ((d)	4)
-		   ((g h i)	(values 7 8 9)))
-	(list a d g h i))
-    => '(1 4 7 8 9))
+      (with-result
+       (let-values (((a)	1)
+		    ((d)	4)
+		    ((g h i)	(values 7 8 9)))
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (top-tagged? a)
+			    (top-tagged? d)
+			    (top-tagged? g)
+			    (top-tagged? h)
+			    (top-tagged? i))))
+	 (add-result (inspect))
+	 (list a d g h i)))
+    => '((1 4 7 8 9) ((#t #t #t #t #t))))
 
   (check	;mixed bindings, no tags
-      (let-values (((a b c)	(values 1 2 3))
-		   ((d)	4)
-		   ((g h i)	(values 7 8 9)))
-	(list a b c  d  g h i))
-    => '(1 2 3 4 7 8 9))
+      (with-result
+       (let-values (((a b c)	(values 1 2 3))
+		    ((d)	4)
+		    ((g h i)	(values 7 8 9)))
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (top-tagged? a)
+			    (top-tagged? b)
+			    (top-tagged? c)
+			    (top-tagged? d)
+			    (top-tagged? g)
+			    (top-tagged? h)
+			    (top-tagged? i))))
+	 (add-result (inspect))
+	 (list a b c  d  g h i)))
+    => '((1 2 3 4 7 8 9) ((#t #t #t  #t  #t #t #t))))
 
   (check	;mixed bindings, no tags
-      (let-values (((a b c)	(values 1 2 3))
-		   ((d)	4)
-		   ((g)	7))
-	(list a b c d g))
-    => '(1 2 3 4 7))
+      (with-result
+       (let-values (((a b c)	(values 1 2 3))
+		    ((d)	4)
+		    ((g)	7))
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (top-tagged? a)
+			    (top-tagged? b)
+			    (top-tagged? c)
+			    (top-tagged? d)
+			    (top-tagged? g))))
+	 (add-result (inspect))
+	 (list a b c d g)))
+    => '((1 2 3 4 7) ((#t #t #t #t #t))))
 
 ;;; --------------------------------------------------------------------
 ;;; tagged
 
   (check	;single binding, single id, single tag
-      (let-values ((({a <fixnum>}) 1))
-	a)
-    => 1)
+      (with-result
+       (let-values ((({a <fixnum>}) 1))
+	 (define-syntax (inspect stx)
+	   (tag=tagging? <fixnum> a))
+	 (add-result (inspect))
+	 a))
+    => '(1 (#t)))
 
   (check	;single binding, multiple ids, single tag
-      (let-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3)))
-  	(values a b c))
-    => 1 2 3)
+      (with-result
+       (let-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3)))
+	 (define-syntax (inspect stx)
+	   #`(quote #,(list (tag=tagging? <fixnum> a)
+			    (tag=tagging? <fixnum> b)
+			    (tag=tagging? <fixnum> c))))
+	 (add-result (inspect))
+	 (values a b c)))
+    => '(1 2 3 ((#t #t #t))))
 
   (check	;multiple bindings, single id, single tags
       (let-values ((({a <fixnum>}) 1)
@@ -1545,7 +1609,167 @@
 
 (parametrise ((check-test-name	'tagged-bindings-let*-values))
 
+  (check	;no bindings
+      (let*-values ()
+	1)
+    => 1)
 
+  (check	;special case, var specification is a symbol
+      (with-result
+       (let*-values ((a (values 1 2 3)))
+	 (define-syntax (inspect stx)
+	   (top-tagged? a))
+	 (add-result (inspect))
+	 a))
+    => '((1 2 3) (#t)))
+
+;;; --------------------------------------------------------------------
+
+  (check	;single binding, single id, no tags
+      (let*-values (((a) 1))
+	a)
+    => 1)
+
+  (check	;single binding, multiple ids, no tags
+      (let*-values (((a b c) (values 1 2 3)))
+	(list a b c))
+    => '(1 2 3))
+
+  (check	;multiple bindings, single id, no tags
+      (let*-values (((a) 1)
+		    ((b) 2)
+		    ((c) 3))
+	(list a b c))
+    => '(1 2 3))
+
+  (check	;multiple bindings, multiple ids, no tags
+      (let*-values (((a b c) (values 1 2 3))
+		    ((d e f) (values 4 5 6))
+		    ((g h i) (values 7 8 9)))
+	(list a b c d e f g h i))
+    => '(1 2 3 4 5 6 7 8 9))
+
+  (check	;mixed bindings, no tags
+      (let*-values (((a)	1)
+		    ((d)	4)
+		    ((g h i)	(values 7 8 9)))
+	(list a d g h i))
+    => '(1 4 7 8 9))
+
+  (check	;mixed bindings, no tags
+      (let*-values (((a b c)	(values 1 2 3))
+		    ((d)	4)
+		    ((g h i)	(values 7 8 9)))
+	(list a b c  d  g h i))
+    => '(1 2 3 4 7 8 9))
+
+  (check	;mixed bindings, no tags
+      (let*-values (((a b c)	(values 1 2 3))
+		    ((d)	4)
+		    ((g)	7))
+	(list a b c d g))
+    => '(1 2 3 4 7))
+
+  (check	;correct duplicate identifiers, no tags
+      (let*-values (((a) 1)
+		    ((a) 2))
+	a)
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  (check	;single binding, single id, single tag
+      (with-result
+       (let*-values ((({a <fixnum>}) 1))
+	 (define-syntax (inspect stx)
+	   (tag=tagging? <fixnum> a))
+	 (add-result (inspect))
+	 a))
+    => '(1 (#t)))
+
+  (check	;single binding, multiple ids, single tag
+      (let*-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3)))
+	(values a b c))
+    => 1 2 3)
+
+  (check	;multiple bindings, single id, single tags
+      (let*-values ((({a <fixnum>}) 1)
+		    (({b <fixnum>}) 2)
+		    (({c <fixnum>}) 3))
+	(values a b c))
+    => 1 2 3)
+
+  (check	;multiple bindings, multiple ids, with tags
+      (let*-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3))
+		    (({d <fixnum>} {e <fixnum>} {f <fixnum>}) (values 4 5 6))
+		    (({g <fixnum>} {h <fixnum>} {i <fixnum>}) (values 7 8 9)))
+	(values a b c d e f g h i))
+    => 1 2 3 4 5 6 7 8 9)
+
+  (check	;mixed bindings, with tags
+      (let*-values ((({a <fixnum>})	1)
+		    ((d)		4)
+		    ((g {h <fixnum>} i)	(values 7 8 9)))
+	(values a d g h i))
+    => 1 4 7 8 9)
+
+  (check	;mixed bindings, with tags
+      (let*-values ((({a <fixnum>})			1)
+		    ((d)				4)
+		    (({g <fixnum>} {h <fixnum>} i)	(values 7 8 9)))
+	(values a d g h i))
+    => 1 4 7 8 9)
+
+  (check	;mixed bindings, with tags
+      (let*-values ((({a <fixnum>})			1)
+		    ((d)				4)
+		    ((g {h <fixnum>} {i <fixnum>})	(values 7 8 9)))
+	(values a d g h i))
+    => 1 4 7 8 9)
+
+;;; --------------------------------------------------------------------
+
+  (check	;multiple bindings, scope rules
+      (let ((a 4) (b 5) (c 6))
+	(let*-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3))
+		      (({d <fixnum>} {e <fixnum>} {f <fixnum>}) (values a b c))
+		      (({g <fixnum>} {h <fixnum>} {i <fixnum>}) (values 7 8 9)))
+	  (values  a b c d e f g h i)))
+    => 1 2 3 1 2 3 7 8 9)
+
+  (check	;multiple bindings, scope rules
+      (let ((a 4) (b 5) (c 6))
+	(let*-values ((({a <fixnum>} {b <fixnum>} {c <fixnum>}) (values 1 2 3))
+		      (({d <fixnum>} {e <fixnum>} {f <fixnum>}) (values (- a) (- b) (- c)))
+		      (({g <fixnum>} {h <fixnum>} {i <fixnum>}) (values 7 8 9)))
+	  (values a b c d e f g h i)))
+    => 1 2 3 -1 -2 -3 7 8 9)
+
+  (check	;correct duplicate identifiers, no tags
+      (let*-values ((({a <fixnum>}) 1)
+		    (({a <fixnum>}) 2))
+	a)
+    => 2)
+
+;;; --------------------------------------------------------------------
+
+  (check	;error, invalid syntax for list of bindings
+      (catch-syntax-violation #f
+	(%eval '(let*-values #(((a) 1))
+		  a)))
+    => #f)
+
+  (check	;error, invalid syntax in single binding
+      (catch-syntax-violation #f
+	(%eval '(let*-values (((a) 1) #(b 2))
+		  a)))
+    => #f)
+
+  (check	;error, duplicate identifiers
+      (catch-syntax-violation #f
+	(%eval '(let*-values (((a {a <fixnum>}) (values 1 2)))
+		  a)))
+    => 'a)
 
   #t)
 

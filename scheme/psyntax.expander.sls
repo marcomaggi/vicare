@@ -8349,41 +8349,57 @@
       ((_ () ?body ?body* ...)
        (cons* (bless 'let) '() ?body ?body*))
 
-      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+      ((_ ((?lhs ?rhs)) ?body ?body* ...)
        (bless
-	(let recur ((lhs* ?lhs*)
-		    (rhs* ?rhs*))
-	  (if (null? lhs*)
-	      `(begin ,?body . ,?body*)
-	    (syntax-match (car lhs*) ()
-	      ((?formal* ...)
-	       (begin
-		 (check ?formal* expr-stx)
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,?formal*
-		      ,(recur (cdr lhs*) (cdr rhs*))))))
+	`(let-values ((,?lhs ,?rhs)) ,?body . ,?body*)))
 
-	      ((?formal* ... . ?rest-formal)
-	       (begin
-		 (check (cons ?rest-formal ?formal*) expr-stx)
-		 `(call-with-values
-		      (lambda () ,(car rhs*))
-		    (lambda ,(append ?formal* ?rest-formal)
-		      ,(recur (cdr lhs*) (cdr rhs*))))))
-
-	      (others
-	       (syntax-violation __who__ "malformed bindings" expr-stx others)))))))
+      ((_ ((?lhs0 ?rhs0) (?lhs* ?rhs*) ...) ?body ?body* ...)
+       (bless
+	`(let-values ((,?lhs0 ,?rhs0))
+	   (let*-values ,(map list ?lhs* ?rhs*)
+	     ,?body . ,?body*))))
       ))
 
-  (define (check x* expr-stx)
-    (unless (null? x*)
-      (let ((x (car x*)))
-	(unless (identifier? x)
-	  (syntax-violation __who__ "not an identifier" expr-stx x))
-	(check (cdr x*) expr-stx)
-	(when (bound-id-member? x (cdr x*))
-	  (syntax-violation __who__ "duplicate identifier" expr-stx x)))))
+  ;; (define (let*-values-macro expr-stx)
+  ;;   (syntax-match expr-stx ()
+  ;;     ((_ () ?body ?body* ...)
+  ;;      (cons* (bless 'let) '() ?body ?body*))
+
+  ;;     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+  ;;      (bless
+  ;; 	(let recur ((lhs* ?lhs*)
+  ;; 		    (rhs* ?rhs*))
+  ;; 	  (if (null? lhs*)
+  ;; 	      `(begin ,?body . ,?body*)
+  ;; 	    (syntax-match (car lhs*) ()
+  ;; 	      ((?formal* ...)
+  ;; 	       (begin
+  ;; 		 (check ?formal* expr-stx)
+  ;; 		 `(call-with-values
+  ;; 		      (lambda () ,(car rhs*))
+  ;; 		    (lambda ,?formal*
+  ;; 		      ,(recur (cdr lhs*) (cdr rhs*))))))
+
+  ;; 	      ((?formal* ... . ?rest-formal)
+  ;; 	       (begin
+  ;; 		 (check (cons ?rest-formal ?formal*) expr-stx)
+  ;; 		 `(call-with-values
+  ;; 		      (lambda () ,(car rhs*))
+  ;; 		    (lambda ,(append ?formal* ?rest-formal)
+  ;; 		      ,(recur (cdr lhs*) (cdr rhs*))))))
+
+  ;; 	      (others
+  ;; 	       (syntax-violation __who__ "malformed bindings" expr-stx others)))))))
+  ;;     ))
+
+  ;; (define (check x* expr-stx)
+  ;;   (unless (null? x*)
+  ;;     (let ((x (car x*)))
+  ;; 	(unless (identifier? x)
+  ;; 	  (syntax-violation __who__ "not an identifier" expr-stx x))
+  ;; 	(check (cdr x*) expr-stx)
+  ;; 	(when (bound-id-member? x (cdr x*))
+  ;; 	  (syntax-violation __who__ "duplicate identifier" expr-stx x)))))
 
   #| end of module: LET*-VALUES-MACRO |# )
 
