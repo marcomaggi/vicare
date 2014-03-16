@@ -485,7 +485,7 @@
      (compensate				(macro . compensate))
      (push-compensation				(macro . push-compensation))
 ;;;
-     (define-object-spec			(macro . define-object-spec))
+     (define-type-spec				(macro . define-type-spec))
      (define-callable-spec			(macro . define-callable-spec))
 ;;;
      (&condition				($core-rtd . (&condition-rtd
@@ -554,8 +554,8 @@
 							      &no-nans-rcd)))
      (&interrupted				($core-rtd . (&interrupted-rtd
 							      &interrupted-rcd)))
-     (&source					($core-rtd . (&source-rtd
-							      &source-rcd)))
+     (&source-position				($core-rtd . (&source-position-rtd
+							      &source-position-rcd)))
      (&procedure-argument-violation		($core-rtd . (&procedure-argument-violation-rtd
 							      &procedure-argument-violation-rcd)))
      (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
@@ -688,7 +688,7 @@
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#t)
 ;;;
-    ($object-spec	(vicare expander object-spec)		#t	#f)
+    ($type-spec		(vicare expander type-spec)		#t	#f)
     ($expander-tags	(vicare expander tags)			#t	#f)
     ))
 
@@ -836,36 +836,39 @@
     (environment-labels				v $language)
     (environment-binding			v $language)
 ;;;
-    (set-identifier-type-tagging!		$object-spec)
-    (identifier-type-tagging			$object-spec)
-    (set-label-type-tagging!			$object-spec)
-    (label-type-tagging				$object-spec)
-    (set-identifier-function-signature!		$object-spec)
-    (identifier-function-signature		$object-spec)
-    (set-label-function-signature!		$object-spec)
-    (label-function-signature			$object-spec)
-    (tagged-identifier?				$object-spec)
-    (tagged-lambda-formals?			$object-spec)
-    (parse-tagged-identifier			$object-spec)
-    (parse-tagged-bindings			$object-spec)
-    (parse-tagged-lambda-formals		$object-spec)
+    (set-identifier-type-tagging!		$type-spec)
+    (identifier-type-tagging			$type-spec)
+    (set-label-type-tagging!			$type-spec)
+    (label-type-tagging				$type-spec)
+    (set-identifier-function-signature!		$type-spec)
+    (identifier-function-signature		$type-spec)
+    (set-label-function-signature!		$type-spec)
+    (label-function-signature			$type-spec)
+    (tagged-identifier?				$type-spec)
+    (tagged-lambda-formals?			$type-spec)
+    (parse-tagged-identifier			$type-spec)
+    (parse-tagged-bindings			$type-spec)
+    (parse-tagged-lambda-formals		$type-spec)
 
-    (set-identifier-object-spec!		$object-spec)
-    (identifier-object-spec			$object-spec)
-    (set-label-object-spec!			$object-spec)
-    (label-object-spec				$object-spec)
-    (make-object-spec				$object-spec)
-    (object-spec?				$object-spec)
-    (object-spec-type-id			$object-spec)
-    (object-spec-pred-id			$object-spec)
-    (set-identifier-callable-spec!		$object-spec)
-    (identifier-callable-spec			$object-spec)
-    (make-callable-spec				$object-spec)
-    (callable-spec?				$object-spec)
-    (callable-spec-name				$object-spec)
-    (callable-spec-min-arity			$object-spec)
-    (callable-spec-max-arity			$object-spec)
-    (callable-spec-dispatcher			$object-spec)
+    (set-identifier-type-spec!			$type-spec)
+    (identifier-type-spec			$type-spec)
+    (set-label-type-spec!			$type-spec)
+    (label-type-spec				$type-spec)
+    (make-type-spec				$type-spec)
+    (type-spec?					$type-spec)
+    (type-spec-type-id				$type-spec)
+    (type-spec-pred-id				$type-spec)
+    (identifier-type-spec-accessor		$type-spec)
+    (identifier-type-spec-mutator		$type-spec)
+
+    (set-identifier-callable-spec!		$type-spec)
+    (identifier-callable-spec			$type-spec)
+    (make-callable-spec				$type-spec)
+    (callable-spec?				$type-spec)
+    (callable-spec-name				$type-spec)
+    (callable-spec-min-arity			$type-spec)
+    (callable-spec-max-arity			$type-spec)
+    (callable-spec-dispatcher			$type-spec)
 ;;;
     (time-and-gather				v $language)
     (stats?					v $language)
@@ -2554,8 +2557,8 @@
     (&no-nans-rcd)
     (&interrupted-rtd)
     (&interrupted-rcd)
-    (&source-rtd)
-    (&source-rcd)
+    (&source-position-rtd)
+    (&source-position-rcd)
 
 ;;; --------------------------------------------------------------------
 ;;; configuration options

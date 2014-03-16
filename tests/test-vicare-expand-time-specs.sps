@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (for (vicare expander object-spec)
+  (for (vicare expander type-spec)
     expand)
   (vicare language-extensions tags)
   (vicare checks))
@@ -44,7 +44,7 @@
   	  (syntax-case stx ()
   	    ((_ ?type-id)
 	     (begin
-	       #`(quote #,(object-spec-type-id (identifier-object-spec #'?type-id)))))
+	       #`(quote #,(type-spec-type-id (identifier-type-spec #'?type-id)))))
   	    ))
   	(get-name <vector>))
     => '<vector>)
@@ -55,13 +55,13 @@
 (parametrise ((check-test-name	'type-descriptor))
 
   (check-for-true
-   (object-spec? (type-descriptor <vector>)))
+   (type-spec? (type-descriptor <vector>)))
 
   (check-for-true
-   (object-spec? (type-descriptor <fixnum>)))
+   (type-spec? (type-descriptor <fixnum>)))
 
   (check-for-true
-   (object-spec? (type-descriptor <exact-integer>)))
+   (type-spec? (type-descriptor <exact-integer>)))
 
   #t)
 
@@ -143,10 +143,10 @@
   (eval-for-expand
 
     (define fixnum-spec
-      (identifier-object-spec #'<fixnum>))
+      (identifier-type-spec #'<fixnum>))
 
     (define exact-integer-spec
-      (identifier-object-spec #'<exact-integer>))
+      (identifier-type-spec #'<exact-integer>))
 
     (set-identifier-callable-spec! #'func
       (make-callable-spec 'func 3 3
@@ -174,7 +174,7 @@
 	  (syntax-case stx ()
 	    ((_ ?who . ?args)
 	     (let ((dispatcher (callable-spec-dispatcher (identifier-callable-spec #'?who)))
-		   (fx-spec    (identifier-object-spec #'<fixnum>)))
+		   (fx-spec    (identifier-type-spec #'<fixnum>)))
 	       (receive (id rv-spec)
 		   (dispatcher fx-spec fx-spec fx-spec)
 		 #`(#,id . ?args))))

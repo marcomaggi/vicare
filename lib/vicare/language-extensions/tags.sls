@@ -77,7 +77,7 @@
     <binary-input/output-port>
     )
   (import (vicare)
-    (vicare expander object-spec)
+    (vicare expander type-spec)
     (vicare expander tags))
 
 
@@ -94,52 +94,52 @@
   ;;when the library is loaded from  source; to have this code evaluated
   ;;when the library is loaded in binary form we have to do it this way.
   (begin
-    (set-identifier-object-spec! #'<top>
-      (make-object-spec #'<top> #'<top>?))
-    (set-identifier-object-spec! #'<boolean>
-      (make-object-spec #'<boolean> #'boolean?))
-    (set-identifier-object-spec! #'<char>
-      (make-object-spec #'<char> #'char?))
-    (set-identifier-object-spec! #'<symbol>
-      (make-object-spec #'<symbol> #'symbol?))
-    (set-identifier-object-spec! #'<keyword>
-      (make-object-spec #'<keyword> #'keyword?))
-    (set-identifier-object-spec! #'<pointer>
-      (make-object-spec #'<pointer> #'pointer?))
-    (set-identifier-object-spec! #'<transcoder>
-      (make-object-spec #'<transcoder> #'transcoder?))
-    (set-identifier-object-spec! #'<procedure>
-      (make-object-spec #'<procedure> #'procedure?))
+    (set-identifier-type-spec! #'<top>
+      (make-type-spec #'<top> #'<top>?))
+    (set-identifier-type-spec! #'<boolean>
+      (make-type-spec #'<boolean> #'boolean?))
+    (set-identifier-type-spec! #'<char>
+      (make-type-spec #'<char> #'char?))
+    (set-identifier-type-spec! #'<symbol>
+      (make-type-spec #'<symbol> #'symbol?))
+    (set-identifier-type-spec! #'<keyword>
+      (make-type-spec #'<keyword> #'keyword?))
+    (set-identifier-type-spec! #'<pointer>
+      (make-type-spec #'<pointer> #'pointer?))
+    (set-identifier-type-spec! #'<transcoder>
+      (make-type-spec #'<transcoder> #'transcoder?))
+    (set-identifier-type-spec! #'<procedure>
+      (make-type-spec #'<procedure> #'procedure?))
 
-    (set-identifier-object-spec! #'<fixnum>
-      (make-object-spec #'<fixnum> #'fixnum?))
-    (set-identifier-object-spec! #'<flonum>
-      (make-object-spec #'<flonum> #'flonum?))
-    (set-identifier-object-spec! #'<ratnum>
-      (make-object-spec #'<ratnum> #'ratnum?))
-    (set-identifier-object-spec! #'<bignum>
-      (make-object-spec #'<bignum> #'bignum?))
-    (set-identifier-object-spec! #'<compnum>
-      (make-object-spec #'<compnum> #'compnum?))
-    (set-identifier-object-spec! #'<cflonum>
-      (make-object-spec #'<cflonum> #'cflonum?))
-    (set-identifier-object-spec! #'<integer>
-      (make-object-spec #'<integer> #'integer?))
-    (set-identifier-object-spec! #'<exact-integer>
-      (make-object-spec #'<exact-integer> #'exact-integer?))
-    (set-identifier-object-spec! #'<real>
-      (make-object-spec #'<real> #'real?))
-    (set-identifier-object-spec! #'<complex>
-      (make-object-spec #'<complex> #'complex?))
-    (set-identifier-object-spec! #'<number>
-      (make-object-spec #'<number> #'number?))
+    (set-identifier-type-spec! #'<fixnum>
+      (make-type-spec #'<fixnum> #'fixnum?))
+    (set-identifier-type-spec! #'<flonum>
+      (make-type-spec #'<flonum> #'flonum?))
+    (set-identifier-type-spec! #'<ratnum>
+      (make-type-spec #'<ratnum> #'ratnum?))
+    (set-identifier-type-spec! #'<bignum>
+      (make-type-spec #'<bignum> #'bignum?))
+    (set-identifier-type-spec! #'<compnum>
+      (make-type-spec #'<compnum> #'compnum?))
+    (set-identifier-type-spec! #'<cflonum>
+      (make-type-spec #'<cflonum> #'cflonum?))
+    (set-identifier-type-spec! #'<integer>
+      (make-type-spec #'<integer> #'integer?))
+    (set-identifier-type-spec! #'<exact-integer>
+      (make-type-spec #'<exact-integer> #'exact-integer?))
+    (set-identifier-type-spec! #'<real>
+      (make-type-spec #'<real> #'real?))
+    (set-identifier-type-spec! #'<complex>
+      (make-type-spec #'<complex> #'complex?))
+    (set-identifier-type-spec! #'<number>
+      (make-type-spec #'<number> #'number?))
 
-    (set-identifier-object-spec! #'<string>
-      (make-object-spec #'<string> #'string?))
-    (set-identifier-object-spec! #'<vector>
-      (make-object-spec #'<vector> #'vector?))
-    (set-identifier-object-spec! #'<pair>
-      (make-object-spec #'<pair> #'pair?
+    (set-identifier-type-spec! #'<string>
+      (make-type-spec #'<string> #'string?))
+    (set-identifier-type-spec! #'<vector>
+      (make-type-spec #'<vector> #'vector?))
+    (set-identifier-type-spec! #'<pair>
+      (make-type-spec #'<pair> #'pair?
 			(lambda (slot-name-id safe?)
 			  (case-identifiers slot-name-id
 			    ((car)	#'car)
@@ -152,47 +152,47 @@
 			    ((cdr)	#'set-cdr!)
 			    (else
 			     (syntax-violation '<pair> "unknown slot name" slot-name-id))))))
-    (set-identifier-object-spec! #'<list>
-      (make-object-spec #'<list> #'list?))
-    (set-identifier-object-spec! #'<bytevector>
-      (make-object-spec #'<bytevector> #'bytevector?))
-    (set-identifier-object-spec! #'<hashtable>
-      (make-object-spec #'<hashtable> #'hashtable?))
-    (set-identifier-object-spec! #'<record>
-      (make-object-spec #'<record> #'record?))
-    (set-identifier-object-spec! #'<record-type-descriptor>
-      (make-object-spec #'<record-type-descriptor> #'record-type-descriptor?))
-    (set-identifier-object-spec! #'<struct>
-      (make-object-spec #'<struct> #'<struct>?))
-    (set-identifier-object-spec! #'<struct-type-descriptor>
-      (make-object-spec #'<struct-type-descriptor> #'struct-type-descriptor?))
-    (set-identifier-object-spec! #'<condition>
-      (make-object-spec #'<condition> #'condition?))
+    (set-identifier-type-spec! #'<list>
+      (make-type-spec #'<list> #'list?))
+    (set-identifier-type-spec! #'<bytevector>
+      (make-type-spec #'<bytevector> #'bytevector?))
+    (set-identifier-type-spec! #'<hashtable>
+      (make-type-spec #'<hashtable> #'hashtable?))
+    (set-identifier-type-spec! #'<record>
+      (make-type-spec #'<record> #'record?))
+    (set-identifier-type-spec! #'<record-type-descriptor>
+      (make-type-spec #'<record-type-descriptor> #'record-type-descriptor?))
+    (set-identifier-type-spec! #'<struct>
+      (make-type-spec #'<struct> #'<struct>?))
+    (set-identifier-type-spec! #'<struct-type-descriptor>
+      (make-type-spec #'<struct-type-descriptor> #'struct-type-descriptor?))
+    (set-identifier-type-spec! #'<condition>
+      (make-type-spec #'<condition> #'condition?))
 
-    (set-identifier-object-spec! #'<port>
-      (make-object-spec #'<port> #'port?))
-    (set-identifier-object-spec! #'<input-port>
-      (make-object-spec #'<input-port> #'input-port?))
-    (set-identifier-object-spec! #'<output-port>
-      (make-object-spec #'<output-port> #'output-port?))
-    (set-identifier-object-spec! #'<input/output-port>
-      (make-object-spec #'<input/output-port> #'input/output-port?))
-    (set-identifier-object-spec! #'<textual-port>
-      (make-object-spec #'<textual-port> #'textual-port?))
-    (set-identifier-object-spec! #'<binary-port>
-      (make-object-spec #'<binary-port> #'binary-port?))
-    (set-identifier-object-spec! #'<textual-input-port>
-      (make-object-spec #'<textual-input-port> #'textual-input-port?))
-    (set-identifier-object-spec! #'<textual-output-port>
-      (make-object-spec #'<textual-output-port> #'textual-output-port?))
-    (set-identifier-object-spec! #'<textual-input/output-port>
-      (make-object-spec #'<textual-input/output-port> #'textual-input/output-port?))
-    (set-identifier-object-spec! #'<binary-input-port>
-      (make-object-spec #'<binary-input-port> #'binary-input-port?))
-    (set-identifier-object-spec! #'<binary-output-port>
-      (make-object-spec #'<binary-output-port> #'binary-output-port?))
-    (set-identifier-object-spec! #'<binary-input/output-port>
-      (make-object-spec #'<binary-input/output-port> #'binary-input/output-port?))
+    (set-identifier-type-spec! #'<port>
+      (make-type-spec #'<port> #'port?))
+    (set-identifier-type-spec! #'<input-port>
+      (make-type-spec #'<input-port> #'input-port?))
+    (set-identifier-type-spec! #'<output-port>
+      (make-type-spec #'<output-port> #'output-port?))
+    (set-identifier-type-spec! #'<input/output-port>
+      (make-type-spec #'<input/output-port> #'input/output-port?))
+    (set-identifier-type-spec! #'<textual-port>
+      (make-type-spec #'<textual-port> #'textual-port?))
+    (set-identifier-type-spec! #'<binary-port>
+      (make-type-spec #'<binary-port> #'binary-port?))
+    (set-identifier-type-spec! #'<textual-input-port>
+      (make-type-spec #'<textual-input-port> #'textual-input-port?))
+    (set-identifier-type-spec! #'<textual-output-port>
+      (make-type-spec #'<textual-output-port> #'textual-output-port?))
+    (set-identifier-type-spec! #'<textual-input/output-port>
+      (make-type-spec #'<textual-input/output-port> #'textual-input/output-port?))
+    (set-identifier-type-spec! #'<binary-input-port>
+      (make-type-spec #'<binary-input-port> #'binary-input-port?))
+    (set-identifier-type-spec! #'<binary-output-port>
+      (make-type-spec #'<binary-output-port> #'binary-output-port?))
+    (set-identifier-type-spec! #'<binary-input/output-port>
+      (make-type-spec #'<binary-input/output-port> #'binary-input/output-port?))
 
     (lambda (stx) #'(void))))
 
@@ -203,5 +203,5 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'set-identifier-object-spec! 'scheme-indent-function 1)
+;; eval: (put 'set-identifier-type-spec! 'scheme-indent-function 1)
 ;; End:

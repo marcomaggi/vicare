@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare expander object-spec) typ.)
+  (prefix (vicare expander type-spec) typ.)
   (vicare language-extensions tags)
   (vicare checks))
 
@@ -53,8 +53,8 @@
   (define-syntax-rule (top-tagged? ?var)
     (tag=tagging? <top> ?var))
 
-  (typ.set-identifier-object-spec! #'<fixnums>
-    (typ.make-object-spec #'<fixnums> #'fixnums?))
+  (typ.set-identifier-type-spec! #'<fixnums>
+    (typ.make-type-spec #'<fixnums> #'fixnums?))
 
   #| end of begin-for-syntax |# )
 
@@ -1917,6 +1917,89 @@
 	      (slot-ref O c)))
     => '(11 2 33))
 
+;;; --------------------------------------------------------------------
+;;; searching the slot of the parent
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable   a1)
+		  (immutable a2)
+		  (mutable   a3)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable   b1)
+		  (immutable b2)
+		  (mutable   b3)))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(list (slot-ref O a1) (slot-ref O a2) (slot-ref O a3)
+	      (slot-ref O b1) (slot-ref O b2) (slot-ref O b3)))
+    => '(1 2 3 4 5 6))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable   a1)
+		  (immutable a2)
+		  (mutable   a3)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable   b1)
+		  (immutable b2)
+		  (mutable   b3)))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(slot-set! O a1 11)
+	#;(slot-set! O a2 22)
+	(slot-set! O a3 33)
+	(slot-set! O b1 44)
+	#;(slot-set! O b2 55)
+	(slot-set! O b3 66)
+	(list (slot-ref O a1) (slot-ref O a2) (slot-ref O a3)
+	      (slot-ref O b1) (slot-ref O b2) (slot-ref O b3)))
+    => '(11 2 33 44 5 66))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable   a1)
+		  (immutable a2)
+		  (mutable   a3)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable   b1)
+		  (immutable b2)
+		  (mutable   b3)))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(list ($slot-ref O a1) ($slot-ref O a2) ($slot-ref O a3)
+	      ($slot-ref O b1) ($slot-ref O b2) ($slot-ref O b3)))
+    => '(1 2 3 4 5 6))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable   a1)
+		  (immutable a2)
+		  (mutable   a3)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable   b1)
+		  (immutable b2)
+		  (mutable   b3)))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	($slot-set! O a1 11)
+	#;($slot-set! O a2 22)
+	($slot-set! O a3 33)
+	($slot-set! O b1 44)
+	#;($slot-set! O b2 55)
+	($slot-set! O b3 66)
+	(list ($slot-ref O a1) ($slot-ref O a2) ($slot-ref O a3)
+	      ($slot-ref O b1) ($slot-ref O b2) ($slot-ref O b3)))
+    => '(11 2 33 44 5 66))
+
   #t)
 
 
@@ -1926,6 +2009,6 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'typ.set-identifier-object-spec! 'scheme-indent-function 1)
+;; eval: (put 'typ.set-identifier-type-spec! 'scheme-indent-function 1)
 ;; eval: (put 'catch-syntax-violation 'scheme-indent-function 1)
 ;; End:

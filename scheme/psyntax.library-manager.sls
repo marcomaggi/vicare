@@ -106,6 +106,16 @@
 
   #| end of module |# )
 
+(define (%log-loaded-library template . args)
+  (when (option.print-loaded-libraries)
+    (guard (E (else
+	       ;;We do not  want an exception from the  I/O layer to
+	       ;;ruin things.
+	       (void)))
+      (apply fprintf (current-error-port)
+	     (string-append "vicare: " template "\n")
+	     args))))
+
 
 ;;;; type definitions: library record
 
@@ -718,16 +728,6 @@
     (define (%print-loaded-library port)    (%log-loaded-library "loaded:   ~a" (port-id port)))
     (define (%print-rejected-library port)  (%log-loaded-library "rejected: ~a" (port-id port)))
 
-    (define (%log-loaded-library template . args)
-      (when (option.print-loaded-libraries)
-	(guard (E (else
-		   ;;We do not  want an exception from the  I/O layer to
-		   ;;ruin things.
-		   (void)))
-	  (apply fprintf (current-error-port)
-		 (string-append "vicare: " template "\n")
-		 args))))
-
     #| end of module: DEFAULT-LIBRARY-LOADER |# )
 
 ;;; --------------------------------------------------------------------
@@ -1048,6 +1048,7 @@
 				visible? source-file-name library-option*)))
 	 (%install-library-record lib)
 	 (when (memq 'visit-upon-loading library-option*)
+	   (%log-loaded-library "visiting: ~a" libname)
 	   (visit-library lib))))
      (void)))
 

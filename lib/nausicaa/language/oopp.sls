@@ -73,7 +73,7 @@
 	       aux.<>			aux.<-)
 	      aux.))
   (import (vicare (0 4))
-    (for (prefix (vicare expander object-spec)
+    (for (prefix (vicare expander type-spec)
 		 type-specs.)
       expand)
     (nausicaa language oopp auxiliary-syntaxes (0 4))
@@ -142,8 +142,8 @@
 
 (define-syntax <top>
   (let ()
-    (type-specs.set-identifier-object-spec! #'<top>
-      (type-specs.make-object-spec #'<top> #'<top>-predicate))
+    (type-specs.set-identifier-type-spec! #'<top>
+      (type-specs.make-type-spec #'<top> #'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
       ;;through this syntax.  This tag is  the supertag of all the class
@@ -288,8 +288,8 @@
 
 (define-syntax <procedure>
   (let ()
-    (type-specs.set-identifier-object-spec! #'<procedure>
-      (type-specs.make-object-spec #'<procedure> #'procedure?))
+    (type-specs.set-identifier-type-spec! #'<procedure>
+      (type-specs.make-type-spec #'<procedure> #'procedure?))
     (lambda (stx)
       (case-define synner
 	((message)
@@ -475,12 +475,12 @@
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 
-		(type-specs.set-identifier-object-spec! #'THE-TAG
-		  (type-specs.make-object-spec #'THE-TAG #'THE-PUBLIC-PREDICATE
-					       (lambda (slot-id safe?)
-						 #`(THE-TAG :accessor-function #,slot-id))
-					       (lambda (slot-id safe?)
-						 #`(THE-TAG :mutator-function #,slot-id))))
+		(type-specs.set-identifier-type-spec! #'THE-TAG
+		  (type-specs.make-type-spec #'THE-TAG #'THE-PUBLIC-PREDICATE
+					     (lambda (slot-id safe?)
+					       #`(THE-TAG :accessor-function #,slot-id))
+					     (lambda (slot-id safe?)
+					       #`(THE-TAG :mutator-function #,slot-id))))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -818,12 +818,12 @@
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 
-		(type-specs.set-identifier-object-spec! #'THE-TAG
-		  (type-specs.make-object-spec #'THE-TAG #'THE-PREDICATE
-					       (lambda (slot-id safe?)
-						 #`(THE-TAG :accessor-function #,slot-id))
-					       (lambda (slot-id safe?)
-						 #`(THE-TAG :mutator-function #,slot-id))))
+		(type-specs.set-identifier-type-spec! #'THE-TAG
+		  (type-specs.make-type-spec #'THE-TAG #'THE-PREDICATE
+					     (lambda (slot-id safe?)
+					       #`(THE-TAG :accessor-function #,slot-id))
+					     (lambda (slot-id safe?)
+					       #`(THE-TAG :mutator-function #,slot-id))))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -1694,4 +1694,5 @@
 ;; eval: (put 'aux.method 'scheme-indent-function 1)
 ;; eval: (put 'THE-PARENT 'scheme-indent-function 1)
 ;; eval: (put 'receive-and-return/tags 'scheme-indent-function 2)
+;; eval: (put 'type-specs.set-identifier-type-spec! 'scheme-indent-function 1)
 ;; End:

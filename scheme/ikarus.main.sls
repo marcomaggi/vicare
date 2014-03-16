@@ -73,7 +73,8 @@
     (only (ikarus.debugger)
 	  guarded-start)
     (prefix (only (psyntax expander)
-		  expand-top-level)
+		  expand-top-level
+		  initialise-type-spec-for-built-in-object-types)
 	    psyntax.)
     (prefix (only (psyntax library-manager)
 		  current-library-expander
@@ -1462,6 +1463,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       (option.cache-compiled-libraries #f))
     (load-rc-files-as-r6rs-scripts cfg)
     (execution-state-initialisation-according-to-command-line-options)
+    (psyntax.initialise-type-spec-for-built-in-object-types)
 
     (when (and (readline.readline-enabled?) (not cfg.raw-repl))
       (cafe-input-port (readline.make-readline-input-port)))
