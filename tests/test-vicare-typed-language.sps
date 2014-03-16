@@ -1831,6 +1831,95 @@
   #t)
 
 
+(parametrise ((check-test-name	'slot-ref-set-records))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(list (slot-ref O a)
+	      (slot-ref O b)
+	      (slot-ref O c)))
+    => '(1 2 3))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(slot-set! O a 11)
+	(slot-set! O b 22)
+	(slot-set! O c 33)
+	(list (slot-ref O a)
+	      (slot-ref O b)
+	      (slot-ref O c)))
+    => '(11 22 33))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(list ($slot-ref O a)
+	      ($slot-ref O b)
+	      ($slot-ref O c)))
+    => '(1 2 3))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	($slot-set! O a 11)
+	($slot-set! O b 22)
+	($slot-set! O c 33)
+	(list ($slot-ref O a)
+	      ($slot-ref O b)
+	      ($slot-ref O c)))
+    => '(11 22 33))
+
+;;; --------------------------------------------------------------------
+;;; some immutable fields below
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(list (slot-ref O a)
+	      (slot-ref O b)
+	      (slot-ref O c)))
+    => '(1 2 3))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a)
+		  (immutable b)
+		  (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(slot-set! O a 11)
+	#;(slot-set! O b 22)
+	(slot-set! O c 33)
+	(list (slot-ref O a)
+	      (slot-ref O b)
+	      (slot-ref O c)))
+    => '(11 2 33))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

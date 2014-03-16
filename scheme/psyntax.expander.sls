@@ -7082,7 +7082,7 @@
     (define foo-rcd		(%named-gensym foo "-rcd"))
     (define foo-protocol	(gensym))
     (define-values
-      (field-names
+      (x*
 		;A list of identifiers representing all the field names.
        idx*
 		;A list  of fixnums  representing all the  field indexes
@@ -7093,28 +7093,26 @@
        unsafe-foo-x*
 		;A list of identifiers  representing the unsafe accessor
 		;names.
-       mutable-field-names
+       mutable-x*
 		;A list  of identifiers  representing the  mutable field
 		;names.
        set-foo-idx*
 		;A  list  of  fixnums  representing  the  mutable  field
 		;indexes (zero-based).
-       set-foo-x!*
+       foo-x-set!*
 		;A list of identifiers representing the mutator names.
-       unsafe-set-foo-x!*
+       unsafe-foo-x-set!*
 		;A list  of identifiers representing the  unsafe mutator
+		;names.
+       immutable-x*
+		;A list of identifiers  representing the immutable field
 		;names.
        )
       (%parse-field-specs foo (%get-fields clause*) synner))
 
-    (define binding-spec
-      (%make-binding-spec field-names mutable-field-names
-			  foo-x* set-foo-x!*
-			  unsafe-foo-x* unsafe-set-foo-x!*))
-
     ;;Code  for parent  record-type  descriptor  and parent  record-type
     ;;constructor descriptor retrieval.
-    (define-values (parent-rtd-code parent-rcd-code)
+    (define-values (foo-parent parent-rtd-code parent-rcd-code)
       (%make-parent-rtd+rcd-code clause* synner))
 
     ;;Code  for  record-type   descriptor  and  record-type  constructor
@@ -7127,6 +7125,19 @@
     ;;Code for protocol.
     (define protocol-code
       (%get-protocol-code clause* synner))
+
+    (define binding-spec
+      (%make-binding-spec x* mutable-x*
+			  foo-x* foo-x-set!*
+			  unsafe-foo-x* unsafe-foo-x-set!*))
+
+    (define object-spec-form
+      ;;The  object-spec stuff  is used  to add  a tag  property to  the
+      ;;record type identifier.
+      (%make-object-spec-form foo foo? foo-parent
+			      x* foo-x* unsafe-foo-x*
+			      mutable-x* foo-x-set!* unsafe-foo-x-set!*
+			      immutable-x*))
 
     (bless
      `(begin
@@ -7145,27 +7156,29 @@
 		 `(define ,foo-x (record-accessor ,foo-rtd ,idx (quote ,foo-x))))
 	    foo-x* idx*)
 	;;Safe record fields mutators (if any).
-	,@(map (lambda (set-foo-x! idx)
-		 `(define ,set-foo-x! (record-mutator ,foo-rtd ,idx (quote ,set-foo-x!))))
-	    set-foo-x!* set-foo-idx*)
+	,@(map (lambda (foo-x-set! idx)
+		 `(define ,foo-x-set! (record-mutator ,foo-rtd ,idx (quote ,foo-x-set!))))
+	    foo-x-set!* set-foo-idx*)
 
 	;;Binding for record type name.
 	(define-syntax ,foo
-	  (cons '$rtd
-		(cons (syntax ,foo-rtd)
-		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
+	  (let ()
+	    ,object-spec-form
+	    (cons '$rtd
+		  (cons (syntax ,foo-rtd)
+			(cons (syntax ,foo-rcd) (quote ,binding-spec))))))
 
 	. ,(if (option.strict-r6rs)
 	       '()
 	     (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
 						unsafe-foo-x*      idx*
-						unsafe-set-foo-x!* set-foo-idx*)))))
+						unsafe-foo-x-set!* set-foo-idx*)))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
 					     unsafe-foo-x*      idx*
-					     unsafe-set-foo-x!* set-foo-idx*)
+					     unsafe-foo-x-set!* set-foo-idx*)
     (define foo-first-field-offset
       (gensym))
     `((define ,foo-first-field-offset
@@ -7185,14 +7198,14 @@
 	  unsafe-foo-x* idx*)
 
       ;; Unsafe record fields mutators.
-      ,@(map (lambda (unsafe-set-foo-x! idx)
+      ,@(map (lambda (unsafe-foo-x-set! idx)
 	       (let ((t (gensym)))
 		 `(begin
 		    (define ,t
 		      (fx+ ,idx ,foo-first-field-offset))
-		    (define-syntax-rule (,unsafe-set-foo-x! x v)
+		    (define-syntax-rule (,unsafe-foo-x-set! x v)
 		      ($struct-set! x ,t v)))))
-	  unsafe-set-foo-x!* set-foo-idx*)
+	  unsafe-foo-x-set!* set-foo-idx*)
       ))
 
 ;;; --------------------------------------------------------------------
@@ -7275,9 +7288,17 @@
     `(make-record-constructor-descriptor ,foo-rtd ,parent-rcd-code ,foo-protocol))
 
   (define (%make-parent-rtd+rcd-code clause* synner)
-    ;;Return 2  values: a  sexp which, when  evaluated, will  return the
-    ;;parent record-type descriptor; a  sexp which, when evaluated, will
-    ;;return the parent record-type default constructor descriptor.
+    ;;Return 3 values:
+    ;;
+    ;;1. An identifier  representing the parent type, or  false if there
+    ;;is no  parent or  the parent is  specified through  the procedural
+    ;;layer.
+    ;;
+    ;;2.  A  sexp   which,  when  evaluated,  will   return  the  parent
+    ;;record-type descriptor.
+    ;;
+    ;;3.  A  sexp   which,  when  evaluated,  will   return  the  parent
+    ;;record-type default constructor descriptor.
     ;;
     (let ((parent-clause (%get-clause 'parent clause*)))
       (syntax-match parent-clause ()
@@ -7285,7 +7306,8 @@
 	;;from the parent type name.
 	((_ ?name)
 	 (identifier? ?name)
-	 (values `(record-type-descriptor ,?name)
+	 (values ?name
+		 `(record-type-descriptor ,?name)
 		 `(record-constructor-descriptor ,?name)))
 
 	;;If there  is no PARENT  clause try to retrieve  the expression
@@ -7294,12 +7316,12 @@
 	 (let ((parent-rtd-clause (%get-clause 'parent-rtd clause*)))
 	   (syntax-match parent-rtd-clause ()
 	     ((_ ?rtd ?rcd)
-	      (values ?rtd ?rcd))
+	      (values #f ?rtd ?rcd))
 
 	     ;;If  neither the  PARENT  nor the  PARENT-RTD clauses  are
 	     ;;present: just return false.
 	     (#f
-	      (values #f #f))
+	      (values #f #f #f))
 
 	     (_
 	      (synner "invalid syntax in PARENT-RTD clause" parent-rtd-clause)))))
@@ -7334,6 +7356,8 @@
       ((_ . ?rest)
        (%get-fields ?rest))))
 
+;;; --------------------------------------------------------------------
+
   (define (%parse-field-specs foo field-clause* synner)
     ;;Given the  arguments of the  fields specification clause  return 4
     ;;values:
@@ -7356,6 +7380,8 @@
     ;;
     ;;8..A list of identifiers representing the unsafe mutator names.
     ;;
+    ;;9..The list of identifiers representing the immutable field names.
+    ;;
     ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
     ;;
     (define (gen-safe-accessor-name x)
@@ -7375,11 +7401,13 @@
 	       (mutable-field*		'())
 	       (mutable-idx*		'())
 	       (mutator*		'())
-	       (unsafe-mutator*		'()))
+	       (unsafe-mutator*		'())
+	       (immutable-field*	'()))
       (syntax-match field-clause* (mutable immutable)
 	(()
 	 (values (reverse field*) (reverse idx*) (reverse accessor*) (reverse unsafe-accessor*)
-		 (reverse mutable-field*) (reverse mutable-idx*) (reverse mutator*) (reverse unsafe-mutator*)))
+		 (reverse mutable-field*) (reverse mutable-idx*) (reverse mutator*) (reverse unsafe-mutator*)
+		 (reverse immutable-field*)))
 
 	(((mutable   ?name ?accessor ?mutator) . ?rest)
 	 (and (identifier? ?name)
@@ -7389,7 +7417,8 @@
 	       (cons ?name field*)		(cons i idx*)
 	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
 	       (cons ?name mutable-field*)	(cons i mutable-idx*)
-	       (cons ?mutator mutator*)		(cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)))
+	       (cons ?mutator mutator*)		(cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)
+	       immutable-field*))
 
 	(((immutable ?name ?accessor) . ?rest)
 	 (and (identifier? ?name)
@@ -7398,7 +7427,8 @@
 	       (cons ?name field*)		(cons i idx*)
 	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
 	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*))
+	       mutator*				unsafe-mutator*
+	       (cons ?name immutable-field*)))
 
 	(((mutable   ?name) . ?rest)
 	 (identifier? ?name)
@@ -7408,7 +7438,8 @@
 	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
 	       (cons ?name mutable-field*)	(cons i mutable-idx*)
 	       (cons (gen-safe-mutator-name    ?name) mutator*)
-	       (cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)))
+	       (cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)
+	       immutable-field*))
 
 	(((immutable ?name) . ?rest)
 	 (identifier? ?name)
@@ -7417,7 +7448,8 @@
 	       (cons (gen-safe-accessor-name   ?name) accessor*)
 	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
 	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*))
+	       mutator*				unsafe-mutator*
+	       (cons ?name immutable-field*)))
 
 	((?name . ?rest)
 	 (identifier? ?name)
@@ -7426,46 +7458,49 @@
 	       (cons (gen-safe-accessor-name   ?name) accessor*)
 	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
 	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*))
+	       mutator*				unsafe-mutator*
+	       (cons ?name immutable-field*)))
 
 	((?spec . ?rest)
 	 (synner "invalid field specification in DEFINE-RECORD-TYPE syntax"
 		 ?spec)))))
 
+;;; --------------------------------------------------------------------
+
   (module (%make-binding-spec)
     (import R6RS-RECORD-TYPE-SPEC)
 
-    (define (%make-binding-spec field-names mutable-field-names
-				foo-x* set-foo-x!*
-				unsafe-foo-x* unsafe-set-foo-x!*)
+    (define (%make-binding-spec x* mutable-x*
+				foo-x* foo-x-set!*
+				unsafe-foo-x* unsafe-foo-x-set!*)
 
       ;;A sexp which will be BLESSed  in the output code.  The sexp will
       ;;evaluate to an alist in which: keys are symbols representing all
       ;;the  field  names; values  are  identifiers  bound to  the  safe
       ;;accessors.
       (define foo-fields-safe-accessors-table
-	(%make-alist field-names foo-x*))
+	(%make-alist x* foo-x*))
 
       ;;A sexp which will be BLESSed  in the output code.  The sexp will
       ;;evaluate to  an alist  in which:  keys are  symbols representing
       ;;mutable  field  names;  values  are identifiers  bound  to  safe
       ;;mutators.
       (define foo-fields-safe-mutators-table
-	(%make-alist mutable-field-names set-foo-x!*))
+	(%make-alist mutable-x* foo-x-set!*))
 
       ;;A sexp which will be BLESSed  in the output code.  The sexp will
       ;;evaluate to an alist in which: keys are symbols representing all
       ;;the  field names;  values are  identifiers bound  to the  unsafe
       ;;accessors.
       (define foo-fields-unsafe-accessors-table
-	(%make-alist field-names unsafe-foo-x*))
+	(%make-alist x* unsafe-foo-x*))
 
       ;;A sexp which will be BLESSed  in the output code.  The sexp will
       ;;evaluate to  an alist  in which:  keys are  symbols representing
       ;;mutable  field names;  values  are identifiers  bound to  unsafe
       ;;mutators.
       (define foo-fields-unsafe-mutators-table
-	(%make-alist mutable-field-names unsafe-set-foo-x!*))
+	(%make-alist mutable-x* unsafe-foo-x-set!*))
 
       (if (option.strict-r6rs)
 	  (make-r6rs-record-type-spec foo-fields-safe-accessors-table
@@ -7482,6 +7517,44 @@
 	key-id* operator-id*))
 
     #| end of module: %MAKE-BINDING-SPEC |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-object-spec-form foo foo? foo-parent
+				  x* foo-x* unsafe-foo-x*
+				  mutable-x* foo-x-set!* unsafe-foo-x-set!*
+				  immutable-x*)
+    `(begin
+       (import (prefix (vicare expander object-spec) typ.))
+       (define (%retrieve-accessor-id slot-id safe?)
+	 (case (syntax->datum slot-id)
+	   ,@(map (lambda (field-name accessor-id unsafe-accessor-id)
+		    `((,field-name)
+		      (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))))
+	       x* foo-x* unsafe-foo-x*)
+	   (else
+	    (syntax-violation ',foo
+	      "unknown record field name for accessor" slot-id))))
+       (define (%retrieve-mutator-id slot-id safe?)
+	 (case (syntax->datum slot-id)
+	   ,@(map (lambda (field-name mutator-id unsafe-mutator-id)
+		    `((,field-name)
+		      (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))))
+	       mutable-x* foo-x-set!* unsafe-foo-x-set!*)
+	   ,@(map (lambda (field-name)
+		    `((,field-name)
+		      (syntax-violation ',foo
+			"requested mutator of immutable record field name" slot-id)))
+	       immutable-x*)
+	   (else
+	    (syntax-violation ',foo
+	      "unknown or immutable record field name for mutator" slot-id))))
+       (define spec
+	 (typ.make-object-spec (syntax ,foo)
+			       (syntax ,foo?)
+			       %retrieve-accessor-id
+			       %retrieve-mutator-id))
+       (typ.set-identifier-object-spec! (syntax ,foo) spec)))
 
 ;;; --------------------------------------------------------------------
 
@@ -7890,90 +7963,90 @@
 	   (predicate-id	(or predicate-id (string->id (string-append namestr "?"))))
 	   (field-idx*		(enumerate field-name-id*)))
 
-      (define getter-id*
+      (define accessor-id*
 	(map (lambda (x)
 	       (string->id (string-append namestr "-" x)))
 	  field-str*))
 
-      (define setter-id*
+      (define mutator-id*
 	(map (lambda (x)
 	       (string->id (string-append "set-" namestr "-" x "!")))
 	  field-str*))
 
-      (define unsafe-getter-id*
+      (define unsafe-accessor-id*
 	(map (lambda (x)
 	       (string->id (string-append "$" namestr "-" x)))
 	  field-str*))
 
-      (define unsafe-setter-id*
+      (define unsafe-mutator-id*
 	(map (lambda (x)
 	       (string->id (string-append "$set-" namestr "-" x "!")))
 	  field-str*))
 
-      (define getter-sexp*
-	(map (lambda (getter-id unsafe-getter-id)
-	       `(define (,getter-id stru)
+      (define accessor-sexp*
+	(map (lambda (accessor-id unsafe-accessor-id)
+	       `(define (,accessor-id stru)
 		  (if ($struct/rtd? stru ',rtd)
-		      (,unsafe-getter-id stru)
-		    (assertion-violation ',getter-id
-		      "not a struct of required type as struct getter argument"
+		      (,unsafe-accessor-id stru)
+		    (assertion-violation ',accessor-id
+		      "not a struct of required type as struct accessor argument"
 		      stru ',rtd))))
-	  getter-id* unsafe-getter-id*))
+	  accessor-id* unsafe-accessor-id*))
 
-      (define setter-sexp*
-	(map (lambda (setter-id unsafe-setter-id)
-	       `(define (,setter-id stru val)
+      (define mutator-sexp*
+	(map (lambda (mutator-id unsafe-mutator-id)
+	       `(define (,mutator-id stru val)
 		  (if ($struct/rtd? stru ',rtd)
-		      (,unsafe-setter-id stru val)
-		    (assertion-violation ',setter-id
-		      "not a struct of required type as struct setter argument"
+		      (,unsafe-mutator-id stru val)
+		    (assertion-violation ',mutator-id
+		      "not a struct of required type as struct mutator argument"
 		      stru ',rtd))))
-	  setter-id* unsafe-setter-id*))
+	  mutator-id* unsafe-mutator-id*))
 
-      (define unsafe-getter-sexp*
-	(map (lambda (unsafe-getter-id field-idx)
-	       `(define-syntax ,unsafe-getter-id
+      (define unsafe-accessor-sexp*
+	(map (lambda (unsafe-accessor-id field-idx)
+	       `(define-syntax ,unsafe-accessor-id
 		  (syntax-rules ()
 		    ((_ ?stru)
 		     ($struct-ref ?stru ,field-idx)))))
-	  unsafe-getter-id* field-idx*))
+	  unsafe-accessor-id* field-idx*))
 
-      (define unsafe-setter-sexp*
-	(map (lambda (unsafe-setter-id field-idx)
-	       `(define-syntax ,unsafe-setter-id
+      (define unsafe-mutator-sexp*
+	(map (lambda (unsafe-mutator-id field-idx)
+	       `(define-syntax ,unsafe-mutator-id
 		  (syntax-rules ()
 		    ((_ ?stru ?val)
 		     ($struct-set! ?stru ,field-idx ?val)))))
-	  unsafe-setter-id* field-idx*))
+	  unsafe-mutator-id* field-idx*))
 
       (bless
        `(begin
 	  (define-syntax ,type-id
 	    (let ()
 	      (import (prefix (vicare expander object-spec) typ.))
-	      (define (%retrieve-getter-id slot-id safe?)
+	      (define (%retrieve-accessor-id slot-id safe?)
 		(case (syntax->datum slot-id)
-		  ,@(map (lambda (field-sym getter-id unsafe-getter-id)
+		  ,@(map (lambda (field-sym accessor-id unsafe-accessor-id)
 			   `((,field-sym)
-			     (if safe? (syntax ,getter-id) (syntax ,unsafe-getter-id))))
-		      field-sym* getter-id* unsafe-getter-id*)
+			     (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))))
+		      field-sym* accessor-id* unsafe-accessor-id*)
 		  (else
 		   (syntax-violation ',type-id
 		     "unknown struct field name for accessor" slot-id))))
-	      (define (%retrieve-setter-id slot-id safe?)
+	      (define (%retrieve-mutator-id slot-id safe?)
 		(case (syntax->datum slot-id)
-		  ,@(map (lambda (field-sym setter-id unsafe-setter-id)
+		  ,@(map (lambda (field-sym mutator-id unsafe-mutator-id)
 			   `((,field-sym)
-			     (if safe? (syntax ,setter-id) (syntax ,unsafe-setter-id))))
-		      field-sym* setter-id* unsafe-setter-id*)
+			     (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))))
+		      field-sym* mutator-id* unsafe-mutator-id*)
 		  (else
 		   (syntax-violation ',type-id
 		     "unknown struct field name for mutator" slot-id))))
 	      (typ.set-identifier-object-spec! (syntax ,type-id)
 		(typ.make-object-spec (syntax ,type-id)
 				      (syntax ,predicate-id)
-				      %retrieve-getter-id
-				      %retrieve-setter-id))
+				      %retrieve-accessor-id
+				      %retrieve-mutator-id))
 	      (cons '$rtd ',rtd)))
 	  (define (,constructor-id ,@field-name-id*)
 	    (let ((S ($struct ',rtd ,@field-name-id*)))
@@ -7982,10 +8055,10 @@
 		S)))
 	  (define (,predicate-id obj)
 	    ($struct/rtd? obj ',rtd))
-	  ,@getter-sexp*
-	  ,@setter-sexp*
-	  ,@unsafe-getter-sexp*
-	  ,@unsafe-setter-sexp*)
+	  ,@accessor-sexp*
+	  ,@mutator-sexp*
+	  ,@unsafe-accessor-sexp*
+	  ,@unsafe-mutator-sexp*)
        )))
 
   (define (enumerate ls)
