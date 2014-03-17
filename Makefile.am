@@ -281,23 +281,6 @@ endif
 #page
 #### compiling the boot image: source files
 
-EXTRA_DIST += \
-	$(VICARE_BOOT_SRCS)					\
-	scheme/makefile.sps					\
-	scheme/vicare.boot.4.prebuilt				\
-	scheme/vicare.boot.8.prebuilt				\
-	scheme/unicode-data.sls					\
-	scheme/unicode/unicode-char-cases.ss			\
-	scheme/unicode/unicode-charinfo.ss			\
-	scheme/unicode/unicode-data.ss				\
-	scheme/unicode/UNIDATA/CaseFolding.txt			\
-	scheme/unicode/UNIDATA/CompositionExclusions.txt	\
-	scheme/unicode/UNIDATA/NormalizationTest.txt		\
-	scheme/unicode/UNIDATA/PropList.txt			\
-	scheme/unicode/UNIDATA/SpecialCasing.txt		\
-	scheme/unicode/UNIDATA/UnicodeData.txt			\
-	scheme/unicode/UNIDATA/WordBreakProperty.txt
-
 VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm				\
 	scheme/ikarus.compiler.sls				\
@@ -389,6 +372,23 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.expander.non-core-macro-transformers.scm		\
 	scheme/psyntax.internal.sls					\
 	scheme/psyntax.library-manager.sls
+
+EXTRA_DIST += \
+	$(VICARE_BOOT_SRCS)					\
+	scheme/makefile.sps					\
+	scheme/vicare.boot.4.prebuilt				\
+	scheme/vicare.boot.8.prebuilt				\
+	scheme/unicode-data.sls					\
+	scheme/unicode/unicode-char-cases.ss			\
+	scheme/unicode/unicode-charinfo.ss			\
+	scheme/unicode/unicode-data.ss				\
+	scheme/unicode/UNIDATA/CaseFolding.txt			\
+	scheme/unicode/UNIDATA/CompositionExclusions.txt	\
+	scheme/unicode/UNIDATA/NormalizationTest.txt		\
+	scheme/unicode/UNIDATA/PropList.txt			\
+	scheme/unicode/UNIDATA/SpecialCasing.txt		\
+	scheme/unicode/UNIDATA/UnicodeData.txt			\
+	scheme/unicode/UNIDATA/WordBreakProperty.txt
 
 #page
 #### compiling the boot image: build rules

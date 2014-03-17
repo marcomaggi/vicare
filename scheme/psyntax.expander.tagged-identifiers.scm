@@ -442,6 +442,12 @@
     (syntax-violation #f
       "expected tag identifier, identifier with object-type-spec set" obj)))
 
+(define* (tag-super-and-sub? {super-tag tag-identifier?} {sub-tag tag-identifier?})
+  ;;Given   two   tag  identifiers:   return   true   if  SUPER-TAG   is
+  ;;FREE-IDENTIFIER=? to SUB-TAG or one of its ancestors.
+  ;;
+  (free-identifier=? super-tag sub-tag))
+
 ;;; --------------------------------------------------------------------
 
 (case-define* identifier-object-type-spec-accessor

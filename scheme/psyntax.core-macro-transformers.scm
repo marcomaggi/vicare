@@ -1673,31 +1673,29 @@
   ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
   ;;language symbolic expression.
   ;;
+  ;;FIXME In  future we will attempt  to determine the type  of ?EXPR at
+  ;;expand-time  and, when  successful, perform  the type  validation at
+  ;;expand-time  rather than  at run-time.   (Marco Maggi;  Mon Mar  17,
+  ;;2014)
+  ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert))
-  (define (%output-expression tag-id expr-stx)
-    (chi-expr (bless
-	       `(let ((V ,expr-stx))
-		  (unless (is-a? V ,tag-id)
-		    (assertion-violation (quote ,tag-id)
-		      "expression with wrong result type" (quote ,expr-stx) V))))
-	      lexenv.run lexenv.expand))
   (syntax-match expr-stx ()
     ((_ ?tag ?expr)
      (tag-identifier? ?tag)
-     (if (and (identifier? ?expr)
-	      (identifier-with-tagging? ?expr))
-	 (let ((tag-id (identifier-type-tagging ?expr)))
-	   (cond ((free-identifier=? <top> tag-id)
-		  (%output-expression ?tag ?expr))
-		 ((tag-super-and-sub? ?tag tag-id)
-		  ;;We know at expand time  that the type is correct, so
-		  ;;we do not insert the validation.
-		  (chi-expr ?expr lexenv.run lexenv.expand))
-		 (else
-		  (syntax-violation __who__
-		    "expression with wrong type tagging" expr-stx tag-id))))
-       (%output-expression ?tag ?expr)))
+     (cond ((and (identifier? ?expr)
+		 (identifier-type-tagging ?expr))
+	    => (lambda (tag-id)
+		 (if (free-identifier=? ?tag tag-id)
+		     (chi-expr ?expr lexenv.run lexenv.expand)
+		   (syntax-violation __who__
+		     "wrong type value" expr-stx tag-id))))
+	   (else
+	    (chi-expr (bless
+		       `(let ((V ,?expr))
+			  (unless (is-a? V ,?tag)
+			    (assertion-violation (quote ,?tag) "wrong type value" V))))
+		      lexenv.run lexenv.expand))))
     ))
 
 (define (tag-assert-and-return-transformer expr-stx lexenv.run lexenv.expand)
@@ -1706,32 +1704,30 @@
   ;;object  EXPR-STX in  the  context  of the  given  LEXENV; return  an
   ;;expanded language symbolic expression.
   ;;
+  ;;FIXME In  future we will attempt  to determine the type  of ?EXPR at
+  ;;expand-time  and, when  successful, perform  the type  validation at
+  ;;expand-time  rather than  at run-time.   (Marco Maggi;  Mon Mar  17,
+  ;;2014)
+  ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert-and-return))
-  (define (%output-expression tag-id expr-stx)
-    (chi-expr (bless
-	       `(receive-and-return (V)
-		    ,expr-stx
-		  (unless (is-a? V ,tag-id)
-		    (assertion-violation (quote ,tag-id)
-		      "expression with wrong result type" (quote ,expr-stx) V))))
-	      lexenv.run lexenv.expand))
   (syntax-match expr-stx ()
     ((_ ?tag ?expr)
      (tag-identifier? ?tag)
-     (if (and (identifier? ?expr)
-	      (identifier-with-tagging? ?expr))
-	 (let ((tag-id (identifier-type-tagging ?expr)))
-	   (cond ((free-identifier=? <top> tag-id)
-		  (%output-expression ?tag ?expr))
-		 ((tag-super-and-sub? ?tag tag-id)
-		  ;;We know at expand time  that the type is correct, so
-		  ;;we do not insert the validation.
-		  (chi-expr ?expr lexenv.run lexenv.expand))
-		 (else
-		  (syntax-violation __who__
-		    "expression with wrong type tagging" expr-stx tag-id))))
-       (%output-expression ?tag ?expr)))
+     (cond ((and (identifier? ?expr)
+		 (identifier-type-tagging ?expr))
+	    => (lambda (tag-id)
+		 (if (free-identifier=? ?tag tag-id)
+		     (chi-expr ?expr lexenv.run lexenv.expand)
+		   (syntax-violation __who__
+		     "wrong type value" expr-stx tag-id))))
+	   (else
+	    (chi-expr (bless
+		       `(receive-and-return (V)
+			    ,?expr
+			  (unless (is-a? V ,?tag)
+			    (assertion-violation (quote ,?tag) "wrong type value" V))))
+		      lexenv.run lexenv.expand))))
     ))
 
 

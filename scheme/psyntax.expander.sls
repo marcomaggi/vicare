@@ -1146,7 +1146,7 @@
     tagged-lambda-formals-syntax?		parse-tagged-lambda-formals-syntax
 
     ;; expand-time object type specs: identifiers defining types
-    tag-identifier?
+    tag-identifier?				tag-super-and-sub?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
     make-object-type-spec			object-type-spec?

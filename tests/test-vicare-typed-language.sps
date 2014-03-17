@@ -2003,6 +2003,130 @@
   #t)
 
 
+(parametrise ((check-test-name	'tag-assert))
+
+  (check
+      (begin
+	(tag-assert <fixnum> 123)
+	#t)
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check	;the ?EXPR is not explicitly tagged
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define O
+	  (make-alpha 1 2 3))
+	(tag-assert alpha O)
+	#t)
+    => #t)
+
+  (check	;the ?EXPR is expliticly tagged
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(tag-assert alpha O)
+	#t)
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; record with parent
+
+  (check	;the ?EXPR is not explicitly tagged
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(tag-assert alpha O)
+	(tag-assert beta  O)
+	#t)
+    => #t)
+
+  (check	;the ?EXPR is expliticly tagged
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(tag-assert alpha O)
+	(tag-assert beta  O)
+	#t)
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'tag-assert-and-return))
+
+  (check
+      (tag-assert-and-return <fixnum> 123)
+    => 123)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check	;the ?EXPR is not explicitly tagged
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define O
+	  (make-alpha 1 2 3))
+	(alpha? (tag-assert-and-return alpha O)))
+    => #t)
+
+  (check	;the ?EXPR is expliticly tagged
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(alpha? (tag-assert-and-return alpha O)))
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; record with parent
+
+  (check	;the ?EXPR is not explicitly tagged
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(define O
+	  (make-beta 1 2 3 4 5 6))
+	(list (alpha? (tag-assert-and-return alpha O))
+	      (beta?  (tag-assert-and-return beta  O))))
+    => '(#t #t))
+
+  (check	;the ?EXPR is expliticly tagged
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(list (alpha? (tag-assert-and-return alpha O))
+	      (beta?  (tag-assert-and-return beta  O))))
+    => '(#t #t))
+
+  #t)
+
+
 (parametrise ((check-test-name	'dispatching-structs))
 
   (check
