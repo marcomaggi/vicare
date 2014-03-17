@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare expander type-spec) typ.)
+  (prefix (vicare expander object-type-specs) typ.)
   (vicare language-extensions tags)
   (vicare checks))
 
@@ -53,8 +53,8 @@
   (define-syntax-rule (top-tagged? ?var)
     (tag=tagging? <top> ?var))
 
-  (typ.set-identifier-type-spec! #'<fixnums>
-    (typ.make-type-spec #'<fixnums> #'fixnums?))
+  (typ.set-identifier-object-type-spec! #'<fixnums>
+    (typ.make-object-type-spec #'<fixnums> #'fixnums?))
 
   #| end of begin-for-syntax |# )
 
@@ -2003,12 +2003,64 @@
   #t)
 
 
+(parametrise ((check-test-name	'dispatching-structs))
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In this syntax the dispatching form is evaluated by CHI-BODY.
+	(O a))
+    => 1)
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
+	;;CHI-EXPR.
+	(values (O a) (O b) (O c)))
+    => 1 2 3)
+
+  #t)
+
+
+(parametrise ((check-test-name	'dispatching-records))
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In this syntax the dispatching form is evaluated by CHI-BODY.
+	(O a))
+    => 1)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
+	;;CHI-EXPR.
+	(values (O a) (O b) (O c)))
+    => 1 2 3)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'typ.set-identifier-type-spec! 'scheme-indent-function 1)
+;; eval: (put 'typ.set-identifier-object-type-spec! 'scheme-indent-function 1)
 ;; eval: (put 'catch-syntax-violation 'scheme-indent-function 1)
 ;; End:

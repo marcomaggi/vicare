@@ -1140,23 +1140,25 @@
     set-predicate-procedure-argument-validation!
     set-predicate-return-value-validation!
 
-    ;; expand-time type specs: object specs
-    identifier-type-spec		set-identifier-type-spec!
-    (rename (public-make-type-spec make-type-spec))
-    type-spec?
-    type-spec-type-id			type-spec-pred-id
-    identifier-type-spec-accessor	identifier-type-spec-mutator
+    ;; expand-time object type specs: parsing tagged identifiers
+    tagged-identifier?			tagged-lambda-formals?		tagged-bindings?
+    parse-tagged-identifier		parse-tagged-bindings		parse-tagged-lambda-formals
+
+    ;; expand-time object type specs: identifiers defining types
     tag-identifier?
+    identifier-object-type-spec			set-identifier-object-type-spec!
+    label-object-type-spec			set-label-object-type-spec!
+    make-object-type-spec			object-type-spec?
+    object-type-spec-type-id			object-type-spec-pred-id
+    identifier-object-type-spec-accessor	identifier-object-type-spec-mutator
     initialise-type-spec-for-built-in-object-types
 
-    ;; tagged binding variables
-    set-identifier-type-tagging!	identifier-type-tagging
-    set-label-type-tagging!		label-type-tagging
-    set-identifier-function-signature!	identifier-function-signature
-    set-label-function-signature!	label-function-signature
-    tagged-identifier?			tagged-lambda-formals?
-    parse-tagged-identifier		parse-tagged-bindings
-    parse-tagged-lambda-formals
+    ;; expand-time object type specs: tagged binding identifiers
+    identifier-with-tagging?
+    set-identifier-type-tagging!		identifier-type-tagging
+    set-label-type-tagging!			label-type-tagging
+    set-identifier-function-signature!		identifier-function-signature
+    set-label-function-signature!		label-function-signature
 
     ;; expand-time type specs: callable specs
     identifier-callable-spec		set-identifier-callable-spec!
@@ -4754,8 +4756,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-auxiliary-syntaxes r6rs-record-type vicare-struct-type
-  type-spec-type)
+(define-auxiliary-syntaxes r6rs-record-type vicare-struct-type)
 
 (define-syntax (case-object-type-binding stx)
   ;;This syntax is meant to be used as follows:
@@ -4774,7 +4775,7 @@
   ;;where  ?TYPE-ID  is meant  to  be  an  identifier  bound to  a  R6RS
   ;;record-type descriptor or Vicare's struct-type descriptor.
   ;;
-  (sys.syntax-case stx (r6rs-record-type vicare-struct-type type-spec-type)
+  (sys.syntax-case stx (r6rs-record-type vicare-struct-type object-type-spec)
     ((_ (?who ?input-stx ?type-id ?lexenv)
 	((r6rs-record-type)	?r6rs-body0   ?r6rs-body   ...)
 	((vicare-struct-type)	?struct-body0 ?struct-body ...)
@@ -4790,7 +4791,7 @@
 	       ?r6rs-body0 ?r6rs-body ...)
 	      ((struct-type-descriptor-binding? binding)
 	       ?struct-body0 ?struct-body ...)
-	      ((identifier-type-spec ?type-id)
+	      ((identifier-object-type-spec ?type-id)
 	       ?spec-body0 ?spec-body ...)
 	      (else
 	       (syntax-violation ?who
@@ -4811,7 +4812,7 @@
 	       ?r6rs-body0 ?r6rs-body ...)
 	      ((struct-type-descriptor-binding? ?binding)
 	       ?struct-body0 ?struct-body ...)
-	      ((identifier-type-spec ?type-id)
+	      ((identifier-object-type-spec ?type-id)
 	       ?spec-body0 ?spec-body ...)
 	      (else
 	       (syntax-violation ?who
@@ -5875,7 +5876,7 @@
 
 ;;;; identifiers: expand-time object type specification
 
-(define-record type-spec
+(define-record (object-type-spec %make-object-type-spec object-type-spec?)
   ;;A type representing  the object type to which  expressions in syntax
   ;;objects  will evaluate.   All the  Scheme  objects are  meant to  be
   ;;representable with this type.
@@ -5898,15 +5899,15 @@
 		;  safe, false if it is unsafe.
 		;
 		;* The return  value is a syntax object  evaluating to a
-		;  slot accessor, or false  if this type-spec does not
-		;  provide an accessor for the selected slot.
+		;  slot accessor, or false if this object-type-spec does
+		;  not provide an accessor for the selected slot.
 		;
 		;If  the  slot name  is  invalid  for some  reason  (for
 		;example the slot is hidden): the proceure must raise an
-		;exception.  If this type-spec  does not implement the
-		;selected slot: the  return value must be  false and the
-		;slot  will be  searched in  the parent  type-spec, if
-		;any.
+		;exception.  If this object-type-spec does not implement
+		;the selected slot:  the return value must  be false and
+		;the   slot    will   be   searched   in    the   parent
+		;object-type-spec, if any.
    mutator-maker
 		;False  or   a  mutator  maker  procedure   accepting  2
 		;arguments and returning 1 value.
@@ -5916,148 +5917,170 @@
 		;  safe, false  if it is unsafe.
 		;
 		;* The return  value is a syntax object  evaluating to a
-		;  slot mutator,  or false if this  type-spec does not
-		;  provide a mutator for the selected slot.
+		;  slot mutator, or  false if this object-type-spec does
+		;  not provide a mutator for the selected slot.
 		;
 		;If  the  slot name  is  invalid  for some  reason  (for
 		;example the slot is immutable): the proceure must raise
-		;an exception.   If this type-spec does  not implement
-		;the selected slot:  the return value must  be false and
-		;the slot will be searched in the parent type-spec, if
-		;any.
+		;an  exception.   If   this  object-type-spec  does  not
+		;implement the  selected slot: the return  value must be
+		;false  and the  slot  will be  searched  in the  parent
+		;object-type-spec, if any.
+   dispatcher
+		;False  or a  dispatcher  procedure  accepting a  single
+		;argument and returning 1 value, and acting like a macro
+		;transformer.
+		;
+		;The argument must be  a syntax object representing with
+		;the format:
+		;
+		;   (?var ?arg0 ?arg ...)
+		;
+		;where  ?VAR is  an  expression evaluating  to a  single
+		;object whose type is  described by this structure.  The
+		;return value  must be a syntax  object representing the
+		;output form: an expression to be further expanded.
+		;
    parent-spec
-		;False or  an instance  of "type-spec"  describing the
+		;False or an instance of object-type-spec describing the
 		;parent of this type.
    ))
 
-(case-define* public-make-type-spec
+(case-define* make-object-type-spec
   (({type-id identifier?} {pred-id identifier?})
-   (public-make-type-spec type-id pred-id #f #f))
+   (%make-object-type-spec type-id pred-id #f #f #f #f))
+
   (({type-id identifier?} {pred-id identifier?}
     {accessor-maker false-or-procedure?}
     {mutator-maker  false-or-procedure?})
-   (public-make-type-spec type-id pred-id accessor-maker mutator-maker #f))
+   (%make-object-type-spec type-id pred-id accessor-maker mutator-maker #f #f))
+
   (({type-id identifier?} {pred-id identifier?}
     {accessor-maker false-or-procedure?}
     {mutator-maker  false-or-procedure?}
-    {parent-id false-or-identifier?})
+    {dispatcher     false-or-procedure?}
+    {parent-id      false-or-identifier?})
 ;; (debug-print type-id pred-id accessor-maker mutator-maker parent-id
-;; 	     (and parent-id (identifier-type-spec parent-id)))
+;; 	     (and parent-id (identifier-object-type-spec parent-id)))
    (let ((parent-spec (cond ((not parent-id)
 			     #f)
-			    ((identifier-type-spec parent-id))
+			    ((identifier-object-type-spec parent-id))
 			    (else
 			     ;;FIXME  When  Nausicaa  is  used  and  the
 			     ;;record   type  created   by  classes   is
-			     ;;selected   as   parent  the   type-spec
+			     ;;selected  as parent  the object-type-spec
 			     ;;appears to  be unset.  (Marco  Maggi; Sun
 			     ;;Mar 16, 2014)
 			     ;;
-			     ;; (syntax-violation 'make-type-spec
-			     ;;   "selected parent tag identifier has no type-spec"
+			     ;; (syntax-violation 'make-object-type-spec
+			     ;;   "selected parent tag identifier has no object-type-spec"
 			     ;;   parent-id)
 			     #f))))
-     (make-type-spec type-id pred-id accessor-maker mutator-maker parent-spec))))
+     (%make-object-type-spec type-id pred-id accessor-maker mutator-maker dispatcher parent-spec))))
 
-(define (false-or-type-spec? obj)
+(define (false-or-object-type-spec? obj)
   (or (not obj)
-      (type-spec? obj)))
+      (object-type-spec? obj)))
 
 ;;; --------------------------------------------------------------------
 
-(define-constant *EXPAND-TIME-TYPE-SPEC-COOKIE*
-  'vicare:expander:type-spec)
+(define-constant *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*
+  'vicare:expander:object-type-spec)
 
-(define* (set-identifier-type-spec! {type-id identifier?} {spec type-spec?})
-  (if (syntactic-binding-getprop type-id *EXPAND-TIME-TYPE-SPEC-COOKIE*)
+(define* (set-identifier-object-type-spec! {type-id identifier?} {spec object-type-spec?})
+  (if (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
       (syntax-violation __who__
 	"object specification already defined" type-id spec)
-    (syntactic-binding-putprop type-id *EXPAND-TIME-TYPE-SPEC-COOKIE* spec)))
+    (syntactic-binding-putprop type-id *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE* spec)))
 
-(define* ({identifier-type-spec false-or-type-spec?} {type-id identifier?})
-  (syntactic-binding-getprop type-id *EXPAND-TIME-TYPE-SPEC-COOKIE*))
+(define* ({identifier-object-type-spec false-or-object-type-spec?} {type-id identifier?})
+  (syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*))
 
-(define* (set-label-type-spec! {label symbol?} {spec type-spec?})
-  (cond ((getprop label *EXPAND-TIME-TYPE-SPEC-COOKIE*)
+(define* (set-label-object-type-spec! {label symbol?} {spec object-type-spec?})
+  (cond ((getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
 	 => (lambda (old-spec)
 	      (syntax-violation __who__
 		"object specification already defined" label old-spec spec)))
 	(else
-	 (putprop label *EXPAND-TIME-TYPE-SPEC-COOKIE* spec))))
+	 (putprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE* spec))))
 
-(define* ({label-type-spec false-or-type-spec?} {label symbol?})
-  (getprop label *EXPAND-TIME-TYPE-SPEC-COOKIE*))
+(define* ({label-object-type-spec false-or-object-type-spec?} {label symbol?})
+  (getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*))
 
 ;;; --------------------------------------------------------------------
 
 (define (tag-identifier? obj)
-  ;;Return true if  OBJ is an identifier with  type-spec property set;
-  ;;otherwise return false.
+  ;;Return true if  OBJ is an identifier  with object-type-spec property
+  ;;set; otherwise return false.
   ;;
   (and (identifier? obj)
-       (and (identifier-type-spec obj)
+       (and (identifier-object-type-spec obj)
 	    #t)))
 
 (define (assert-tag-identifier? obj)
   (unless (tag-identifier? obj)
     (syntax-violation #f
-      "expected tag identifier with selected type-spec" obj)))
+      "expected tag identifier, identifier with object-type-spec set" obj)))
 
 ;;; --------------------------------------------------------------------
 
-(case-define* identifier-type-spec-accessor
+(case-define* identifier-object-type-spec-accessor
   ((tag-id field-name-id safe-accessor?)
-   (identifier-type-spec-accessor tag-id field-name-id safe-accessor? #f))
+   (identifier-object-type-spec-accessor tag-id field-name-id safe-accessor? #f))
   (({tag-id tag-identifier?} {field-name-id identifier?} safe-accessor? input-form-stx)
    ;;Given a  tag identifier and a  field name: search the  hierarchy of
-   ;;type-spec associated  to TAG-ID for  an accessor of  the selected
-   ;;field.   If  successful: return  a  syntax  object representing  an
-   ;;expression which,  when evaluated, will return  the field accessor;
-   ;;if no accessor is found: raise an exception.
+   ;;object-type-spec  associated  to  TAG-ID  for an  accessor  of  the
+   ;;selected field.  If successful: return a syntax object representing
+   ;;an  expression  which,  when   evaluated,  will  return  the  field
+   ;;accessor; if no accessor is found: raise an exception.
    ;;
-   (let loop ((spec (identifier-type-spec tag-id)))
+   (let loop ((spec (identifier-object-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If we are here: we have traversed upwards the hierarchy of
-	    ;;type-specs until an type-spec  without parent has been
-	    ;;found.  The serach for the field accessor has failed.
+	    ;;object-type-specs until an object-type-spec without parent
+	    ;;has been  found.  The  serach for  the field  accessor has
+	    ;;failed.
 	    (syntax-violation __who__
 	      "object type does not provide selected field accessor"
 	       input-form-stx field-name-id))
-	   ((type-spec-accessor-maker spec)
+	   ((object-type-spec-accessor-maker spec)
 	    => (lambda (accessor-maker)
 		 (or (accessor-maker field-name-id safe-accessor?)
 		     ;;The field is unknown: try with the parent.
-		     (loop (type-spec-parent-spec spec)))))
+		     (loop (object-type-spec-parent-spec spec)))))
 	   (else
-	    ;;The type-spec has no accessor maker: try with the parent.
-	    (loop (type-spec-parent-spec spec)))))))
+	    ;;The object-type-spec  has no accessor maker:  try with the
+	    ;;parent.
+	    (loop (object-type-spec-parent-spec spec)))))))
 
-(case-define* identifier-type-spec-mutator
+(case-define* identifier-object-type-spec-mutator
   ((tag-id field-name-id safe-accessor?)
-   (identifier-type-spec-mutator tag-id field-name-id safe-accessor? #f))
+   (identifier-object-type-spec-mutator tag-id field-name-id safe-accessor? #f))
   (({tag-id tag-identifier?} {field-name-id identifier?} safe-mutator? input-form-stx)
    ;;Given a  tag identifier and a  field name: search the  hierarchy of
-   ;;type-spec associated  to TAG-ID  for an  mutator of  the selected
-   ;;field.   If  successful: return  a  syntax  object representing  an
-   ;;expression which, when evaluated, will return the field mutator; if
-   ;;no mutator is found: raise an exception.
+   ;;object-type-spec  associated  to  TAG-ID  for  an  mutator  of  the
+   ;;selected field.  If successful: return a syntax object representing
+   ;;an expression which, when evaluated, will return the field mutator;
+   ;;if no mutator is found: raise an exception.
    ;;
-   (let loop ((spec (identifier-type-spec tag-id)))
+   (let loop ((spec (identifier-object-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If we are here: we have traversed upwards the hierarchy of
-	    ;;type-specs until an type-spec  without parent has been
-	    ;;found.  The serach for the field mutator has failed.
+	    ;;object-type-specs until an object-type-spec without parent
+	    ;;has  been found.   The serach  for the  field mutator  has
+	    ;;failed.
 	    (syntax-violation __who__
 	      "object type does not provide selected field mutator"
 	      input-form-stx field-name-id))
-	   ((type-spec-mutator-maker spec)
+	   ((object-type-spec-mutator-maker spec)
 	    => (lambda (mutator-maker)
 		 (or (mutator-maker field-name-id safe-mutator?)
 		     ;;The field is unknown: try with the parent.
-		     (loop (type-spec-parent-spec spec)))))
+		     (loop (object-type-spec-parent-spec spec)))))
 	   (else
-	    ;;The type-spec has no mutator maker: try with the parent.
-	    (loop (type-spec-parent-spec spec)))))))
+	    ;;The object-type-spec  has no  mutator maker: try  with the
+	    ;;parent.
+	    (loop (object-type-spec-parent-spec spec)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -6065,8 +6088,8 @@
   (define (%register name-sym pred-sym)
     (let ((name-id (scheme-stx name-sym))
 	  (pred-id (scheme-stx pred-sym)))
-      (set-identifier-type-spec! name-id
-	(public-make-type-spec name-id pred-id))))
+      (set-identifier-object-type-spec! name-id
+	(make-object-type-spec name-id pred-id))))
   (%register '&condition				'condition?)
   (%register '&message					'message-condition?)
   (%register '&warning					'warning?)
@@ -6128,12 +6151,13 @@
 		;False  or  a  procedure  to be  called  with  the  type
 		;signature of a specific callable application.  The type
 		;signature  of  a tuple  of  arguments  is the  list  of
-		;instances of type TYPE-SPEC matching the arguments.
+		;instances   of  type   object-type-spec  matching   the
+		;arguments.
 		;
 		;It is meant  to return two values: the  identifier of a
 		;specialised  version  of  this callable  that  is  more
 		;suited to be  applied to a tuple of  arguments with the
-		;given  type  signature;   an  instance  of  TYPE-SPEC
+		;given type  signature; an instance  of object-type-spec
 		;representing the type of the return value.
    ))
 
@@ -6201,6 +6225,37 @@
   ;;binding.
   ;;
   (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TYPE-TAGGING-COOKIE*))
+
+(define* (identifier-with-tagging? {id identifier?})
+  ;;Return #t  if ID is an  identifier having a type  tagging; otherwise
+  ;;return false.  If the return value is true: ID is a bound identifier
+  ;;created by some binding syntaxes (define, let, letrec, ...).
+  ;;
+  (and (identifier-type-tagging id)
+       #t))
+
+(define* (identifier-with-tagging-dispatcher? {id identifier?})
+  ;;Return #t if ID  is an identifier having a type  tagging and the tag
+  ;;identifier  has a  dispatcher transformer  in its  object-type-spec;
+  ;;otherwise return false.  If the return  value is true: ID is a bound
+  ;;identifier created  by some  binding syntaxes (define,  let, letrec,
+  ;;...)  and it can be used in forms like:
+  ;;
+  ;;   (?id ?arg ...)
+  ;;
+  (cond ((identifier-type-tagging id)
+	 => (lambda (tag-id)
+	      (let ((spec (identifier-object-type-spec tag-id)))
+		(and spec
+		     (object-type-spec-dispatcher spec)
+		     #t))))
+	(else #f)))
+
+(define* (identifier-tagging-apply-dispatcher {id identifier-with-tagging-dispatcher?}
+					      input-form-stx)
+  (let* ((tag-id (identifier-type-tagging id))
+	 (spec   (identifier-object-type-spec tag-id)))
+    ((object-type-spec-dispatcher spec) input-form-stx)))
 
 ;;; --------------------------------------------------------------------
 
@@ -7212,13 +7267,13 @@
 			  foo-x* foo-x-set!*
 			  unsafe-foo-x* unsafe-foo-x-set!*))
 
-    (define type-spec-form
-      ;;The  type-spec stuff  is used  to add  a tag  property to  the
+    (define object-type-spec-form
+      ;;The object-type-spec stuff is used to  add a tag property to the
       ;;record type identifier.
-      (%make-type-spec-form foo foo? foo-parent
-			    x* foo-x* unsafe-foo-x*
-			    mutable-x* foo-x-set!* unsafe-foo-x-set!*
-			    immutable-x*))
+      (%make-object-type-spec-form foo foo? foo-parent
+				   x* foo-x* unsafe-foo-x*
+				   mutable-x* foo-x-set!* unsafe-foo-x-set!*
+				   immutable-x*))
 
     (bless
      `(begin
@@ -7244,7 +7299,7 @@
 	;;Binding for record type name.
 	(define-syntax ,foo
 	  (let ()
-	    ,type-spec-form
+	    ,object-type-spec-form
 	    (cons '$rtd
 		  (cons (syntax ,foo-rtd)
 			(cons (syntax ,foo-rcd) (quote ,binding-spec))))))
@@ -7601,12 +7656,13 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-type-spec-form foo foo? foo-parent
-				x* foo-x* unsafe-foo-x*
-				mutable-x* foo-x-set!* unsafe-foo-x-set!*
-				immutable-x*)
+  (define (%make-object-type-spec-form foo foo? foo-parent
+				       x* foo-x* unsafe-foo-x*
+				       mutable-x* foo-x-set!* unsafe-foo-x-set!*
+				       immutable-x*)
     `(let ()
-       (import (prefix (vicare expander type-spec) typ.))
+       (import (vicare)
+	 (prefix (vicare expander object-type-specs) typ.))
        (define (%retrieve-accessor-id slot-id safe?)
 	 (case (syntax->datum slot-id)
 	   ,@(map (lambda (field-name accessor-id unsafe-accessor-id)
@@ -7626,15 +7682,20 @@
 			"requested mutator of immutable record field name" slot-id)))
 	       immutable-x*)
 	   (else #f)))
-       (define spec
-	 (typ.make-type-spec (syntax ,foo)
-			       (syntax ,foo?)
-			       %retrieve-accessor-id
-			       %retrieve-mutator-id
-			       ,(if foo-parent
-				    `(syntax ,foo-parent)
-				  #f)))
-       (typ.set-identifier-type-spec! (syntax ,foo) spec)))
+       (define (%dispatcher input-form-stx)
+	 (syntax-case input-form-stx ()
+	   ((?tagged-expr ?arg0 ?arg ...)
+	    #`(#,(%retrieve-accessor-id #'?arg0 #t) ?tagged-expr))))
+       (define object-type-spec
+	 (typ.make-object-type-spec (syntax ,foo)
+				    (syntax ,foo?)
+				    %retrieve-accessor-id
+				    %retrieve-mutator-id
+				    %dispatcher
+				    ,(if foo-parent
+					 `(syntax ,foo-parent)
+				       #f)))
+       (typ.set-identifier-object-type-spec! (syntax ,foo) object-type-spec)))
 
 ;;; --------------------------------------------------------------------
 
@@ -8103,26 +8164,35 @@
        `(begin
 	  (define-syntax ,type-id
 	    (let ()
-	      (import (prefix (vicare expander type-spec) typ.))
-	      (define (%retrieve-accessor-id slot-id safe?)
-		(case (syntax->datum slot-id)
-		  ,@(map (lambda (field-sym accessor-id unsafe-accessor-id)
-			   `((,field-sym)
-			     (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))))
-		      field-sym* accessor-id* unsafe-accessor-id*)
-		  (else #f)))
-	      (define (%retrieve-mutator-id slot-id safe?)
-		(case (syntax->datum slot-id)
-		  ,@(map (lambda (field-sym mutator-id unsafe-mutator-id)
-			   `((,field-sym)
-			     (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))))
-		      field-sym* mutator-id* unsafe-mutator-id*)
-		  (else #f)))
-	      (typ.set-identifier-type-spec! (syntax ,type-id)
-		(typ.make-type-spec (syntax ,type-id)
-				      (syntax ,predicate-id)
-				      %retrieve-accessor-id
-				      %retrieve-mutator-id))
+	      (let ()
+		(import (vicare)
+		  (prefix (vicare expander object-type-specs) typ.))
+		(define (%retrieve-accessor-id slot-id safe?)
+		  (case (syntax->datum slot-id)
+		    ,@(map (lambda (field-sym accessor-id unsafe-accessor-id)
+			     `((,field-sym)
+			       (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))))
+			field-sym* accessor-id* unsafe-accessor-id*)
+		    (else #f)))
+		(define (%retrieve-mutator-id slot-id safe?)
+		  (case (syntax->datum slot-id)
+		    ,@(map (lambda (field-sym mutator-id unsafe-mutator-id)
+			     `((,field-sym)
+			       (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))))
+			field-sym* mutator-id* unsafe-mutator-id*)
+		    (else #f)))
+		(define (%dispatcher input-form-stx)
+		  (syntax-case input-form-stx ()
+		    ((?tagged-expr ?arg0 ?arg ...)
+		     #`(#,(%retrieve-accessor-id #'?arg0 #t) ?tagged-expr))))
+		(define object-type-spec
+		  (typ.make-object-type-spec (syntax ,type-id)
+					     (syntax ,predicate-id)
+					     %retrieve-accessor-id
+					     %retrieve-mutator-id
+					     %dispatcher
+					     #f))
+		(typ.set-identifier-object-type-spec! (syntax ,type-id) object-type-spec))
 	      (cons '$rtd ',rtd)))
 	  (define (,constructor-id ,@field-name-id*)
 	    (let ((S ($struct ',rtd ,@field-name-id*)))
@@ -11925,7 +11995,7 @@
   ;;* A R6RS record type descriptor  if the given identifier argument is
   ;;  a record type name.
   ;;
-  ;;* An expand-time TYPE-SPEC instance.
+  ;;* An expand-time OBJECT-TYPE-SPEC instance.
   ;;
   (define-constant __who__ 'type-descriptor)
   (syntax-match expr-stx ()
@@ -11938,9 +12008,9 @@
        ((vicare-struct-type)
 	(build-data no-source
 	  (syntactic-binding-value binding)))
-       ((type-spec-type)
+       ((object-type-spec)
 	(build-data no-source
-	  (identifier-type-spec ?type-id)))
+	  (identifier-object-type-spec ?type-id)))
        ))
     ))
 
@@ -11965,9 +12035,9 @@
 		   `(lambda (obj)
 		      (struct-type-and-struct? ,?type-id obj)))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
-	(let ((spec (identifier-type-spec ?type-id)))
-	  (chi-expr (type-spec-pred-id spec)
+       ((object-type-spec)
+	(let ((spec (identifier-object-type-spec ?type-id)))
+	  (chi-expr (object-type-spec-pred-id spec)
 		    lexenv.run lexenv.expand)))
        ))
 
@@ -11982,10 +12052,10 @@
 	(chi-expr (bless
 		   `(struct-type-and-struct? ,?type-id ,?expr))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
-	(let ((spec (identifier-type-spec ?type-id)))
+       ((object-type-spec)
+	(let ((spec (identifier-object-type-spec ?type-id)))
 	  (chi-expr (bless
-		     `(,(type-spec-pred-id spec) ,?expr))
+		     `(,(object-type-spec-pred-id spec) ,?expr))
 		    lexenv.run lexenv.expand)))
        ))
     ))
@@ -12015,8 +12085,8 @@
 		   `(lambda (obj)
 		      (struct-type-field-ref ,?type-id ,?field-name-id obj)))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
-	(chi-expr (identifier-type-spec-accessor ?type-id ?field-name-id #t expr-stx)
+       ((object-type-spec)
+	(chi-expr (identifier-object-type-spec-accessor ?type-id ?field-name-id #t expr-stx)
 		  lexenv.run lexenv.expand))
        ))
 
@@ -12032,9 +12102,9 @@
 	(chi-expr (bless
 		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
+       ((object-type-spec)
 	(chi-expr (bless
-		   `(,(identifier-type-spec-accessor ?type-id ?field-name-id #t expr-stx) ,?expr))
+		   `(,(identifier-object-type-spec-accessor ?type-id ?field-name-id #t expr-stx) ,?expr))
 		  lexenv.run lexenv.expand))
        ))
 
@@ -12046,7 +12116,7 @@
      (cond ((identifier-type-tagging ?id)
 	    => (lambda (tag-id)
 		 (chi-expr (bless
-			    `(,(identifier-type-spec-accessor tag-id ?field-name-id #t expr-stx) ,?id))
+			    `(,(identifier-object-type-spec-accessor tag-id ?field-name-id #t expr-stx) ,?id))
 			   lexenv.run lexenv.expand)))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
@@ -12074,8 +12144,8 @@
 		   `(lambda (obj new-value)
 		      (struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
-	(chi-expr (identifier-type-spec-mutator ?type-id ?field-name-id #t expr-stx)
+       ((object-type-spec)
+	(chi-expr (identifier-object-type-spec-mutator ?type-id ?field-name-id #t expr-stx)
 		  lexenv.run lexenv.expand))
        ))
 
@@ -12091,9 +12161,9 @@
 	(chi-expr (bless
 		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
+       ((object-type-spec)
 	(chi-expr (bless
-		   `(,(identifier-type-spec-mutator ?type-id ?field-name-id #t expr-stx) ,?expr ,?new-value))
+		   `(,(identifier-object-type-spec-mutator ?type-id ?field-name-id #t expr-stx) ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ))
 
@@ -12105,7 +12175,7 @@
      (cond ((identifier-type-tagging ?id)
 	    => (lambda (tag-id)
 		 (chi-expr (bless
-			    `(,(identifier-type-spec-mutator tag-id ?field-name-id #t expr-stx) ,?id ,?new-value))
+			    `(,(identifier-object-type-spec-mutator tag-id ?field-name-id #t expr-stx) ,?id ,?new-value))
 			   lexenv.run lexenv.expand)))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
@@ -12133,8 +12203,8 @@
 		   `(lambda (obj)
 		      ($struct-type-field-ref ,?type-id ,?field-name-id obj)))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
-	(chi-expr (identifier-type-spec-accessor ?type-id ?field-name-id #f expr-stx)
+       ((object-type-spec)
+	(chi-expr (identifier-object-type-spec-accessor ?type-id ?field-name-id #f expr-stx)
 		  lexenv.run lexenv.expand))
        ))
 
@@ -12150,9 +12220,9 @@
 	(chi-expr (bless
 		   `($struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
+       ((object-type-spec)
 	(chi-expr (bless
-		   `(,(identifier-type-spec-accessor ?type-id ?field-name-id #f expr-stx) ,?expr))
+		   `(,(identifier-object-type-spec-accessor ?type-id ?field-name-id #f expr-stx) ,?expr))
 		  lexenv.run lexenv.expand))
        ))
 
@@ -12164,7 +12234,7 @@
      (cond ((identifier-type-tagging ?id)
 	    => (lambda (tag-id)
 		 (chi-expr (bless
-			    `(,(identifier-type-spec-accessor tag-id ?field-name-id #t expr-stx) ,?id))
+			    `(,(identifier-object-type-spec-accessor tag-id ?field-name-id #t expr-stx) ,?id))
 			   lexenv.run lexenv.expand)))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
@@ -12192,8 +12262,8 @@
 		   `(lambda (obj new-value)
 		      ($struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
-	(chi-expr (identifier-type-spec-mutator ?type-id ?field-name-id #f expr-stx)
+       ((object-type-spec)
+	(chi-expr (identifier-object-type-spec-mutator ?type-id ?field-name-id #f expr-stx)
 		  lexenv.run lexenv.expand))
        ))
 
@@ -12209,9 +12279,9 @@
 	(chi-expr (bless
 		   `($struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
-       ((type-spec-type)
+       ((object-type-spec)
 	(chi-expr (bless
-		   `(,(identifier-type-spec-mutator ?type-id ?field-name-id #f expr-stx) ,?expr ,?new-value))
+		   `(,(identifier-object-type-spec-mutator ?type-id ?field-name-id #f expr-stx) ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ))
 
@@ -12223,7 +12293,7 @@
      (cond ((identifier-type-tagging ?id)
 	    => (lambda (tag-id)
 		 (chi-expr (bless
-			    `(,(identifier-type-spec-mutator tag-id ?field-name-id #f expr-stx) ,?id ,?new-value))
+			    `(,(identifier-object-type-spec-mutator tag-id ?field-name-id #f expr-stx) ,?id ,?new-value))
 			   lexenv.run lexenv.expand)))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
@@ -12981,44 +13051,53 @@
 	   ;;   (?first-form ?form ...)
 	   ;;
 	   (let ((id (syntax-car expr-stx)))
-	     (if (identifier? id)
-		 ;;Here we know that EXPR-STX has the format:
-		 ;;
-		 ;;   (?id ?form ...)
-		 ;;
-		 (let ((label (id->label/intern id)))
-		   (unless label
-		     (%raise-unbound-error #f id id))
-		   (let* ((binding (label->syntactic-binding label lexenv))
-			  (type    (syntactic-binding-type binding)))
-		     (case type
-		       ((core-macro
-			 define define-syntax define-alias
-			 define-fluid-syntax define-fluid-override
-			 let-syntax letrec-syntax begin-for-syntax
-			 begin set! stale-when
-			 local-ctv global-ctv
-			 local-macro local-macro!
-			 global-macro global-macro!
-			 macro import export library module)
-			(values type (syntactic-binding-value binding) id))
-		       (($rtd)
-			(values 'type-maker-application (syntactic-binding-value binding) id))
-		       (else
-			(values 'call #f #f)))))
-	       ;;Here we know that EXPR-STX has the format:
-	       ;;
-	       ;;   (?non-id ?form ...)
-	       ;;
-	       ;;where ?NON-ID  can be  anything but not  an identifier.
-	       ;;In practice the only valid syntax for this case is:
-	       ;;
-	       ;;   ((?first-subform ?subform ...) ?form ...)
-	       ;;
-	       ;;because ?NON-ID  must be an expression  evaluating to a
-	       ;;closure object.
-	       ;;
-	       (values 'call #f #f))))
+	     (cond ((and (identifier? id)
+			 (identifier-with-tagging-dispatcher? id))
+		    ;;Here we know that EXPR-STX has the format:
+		    ;;
+		    ;;   (?tagged-id ?form ...)
+		    ;;
+		    (values 'tagged-dispatching #f id))
+		   ((identifier? id)
+		    ;;Here we know that EXPR-STX has the format:
+		    ;;
+		    ;;   (?id ?form ...)
+		    ;;
+		    (let ((label (id->label/intern id)))
+		      (unless label
+			(%raise-unbound-error #f id id))
+		      (let* ((binding (label->syntactic-binding label lexenv))
+			     (type    (syntactic-binding-type binding)))
+			(case type
+			  ((core-macro
+			    define define-syntax define-alias
+			    define-fluid-syntax define-fluid-override
+			    let-syntax letrec-syntax begin-for-syntax
+			    begin set! stale-when
+			    local-ctv global-ctv
+			    local-macro local-macro!
+			    global-macro global-macro!
+			    macro import export library module)
+			   (values type (syntactic-binding-value binding) id))
+			  (($rtd)
+			   (values 'type-maker-application (syntactic-binding-value binding) id))
+			  (else
+			   (values 'call #f #f))))))
+		   (else
+		    ;;Here we know that EXPR-STX has the format:
+		    ;;
+		    ;;   (?non-id ?form ...)
+		    ;;
+		    ;;where  ?NON-ID   can  be   anything  but   not  an
+		    ;;identifier.  In practice the only valid syntax for
+		    ;;this case is:
+		    ;;
+		    ;;   ((?first-subform ?subform ...) ?form ...)
+		    ;;
+		    ;;because ?NON-ID  must be an  expression evaluating
+		    ;;to a closure object.
+		    ;;
+		    (values 'call #f #f)))))
 
 	  (else
 	   (let ((datum (syntax->datum expr-stx)))
@@ -13274,6 +13353,10 @@
 	 ((lexical)
 	  (let ((lex (lexical-var bind-val)))
 	    (build-lexical-reference no-source lex)))
+
+	 ((tagged-dispatching)
+	  (chi-expr (identifier-tagging-apply-dispatcher kwd expr-stx)
+		    lexenv.run lexenv.expand))
 
 	 ((global-macro global-macro!)
 	  (let ((exp-e (while-not-expanding-application-first-subform
@@ -14259,6 +14342,12 @@
 		     (chi-body* (append ?expr* (cdr body-form-stx*))
 				lexenv.run lexenv.expand
 				lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))))
+
+	       ((tagged-dispatching)
+		(chi-body* (cons (identifier-tagging-apply-dispatcher kwd body-form-stx)
+				 (cdr body-form-stx*))
+			   lexenv.run lexenv.expand
+			   lex* qrhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       ((global-macro global-macro!)
 		;;The  body form  is a  macro  use, where  the macro  is
