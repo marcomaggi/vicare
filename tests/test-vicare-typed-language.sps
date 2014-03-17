@@ -80,26 +80,26 @@
 (parametrise ((check-test-name	'parsing-tagged-bindings))
 
   (check
-      (typ.tagged-identifier? #'(brace X <fixnum>))
+      (typ.tagged-identifier-syntax? #'(brace X <fixnum>))
     => #t)
 
   (check
-      (typ.tagged-identifier? #'X)
+      (typ.tagged-identifier-syntax? #'X)
     => #t)
 
   (check
-      (typ.tagged-identifier? 123)
+      (typ.tagged-identifier-syntax? 123)
     => #f)
 
 ;;; --------------------------------------------------------------------
 
   (check
-      (typ.parse-tagged-identifier #'(brace X <fixnum>))
+      (typ.parse-tagged-identifier-syntax #'(brace X <fixnum>))
     (=> syntax=?)
     #'X #'<fixnum>)
 
   (check
-      (typ.parse-tagged-identifier #'X)
+      (typ.parse-tagged-identifier-syntax #'X)
     (=> syntax=?)
     #'X #'<top>)
 
@@ -107,72 +107,72 @@
 ;;; list of tagged identifiers
 
   (check
-      (typ.parse-tagged-bindings #'({a <fixnum>}))
+      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}))
     (=> syntax=?)
     #'(a) #'(<fixnum>))
 
   (check
-      (typ.parse-tagged-bindings #'({a <fixnum>}
-				    {b <string>}))
+      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
+					   {b <string>}))
     (=> syntax=?)
     #'(a b) #'(<fixnum> <string>))
 
   (check
-      (typ.parse-tagged-bindings #'({a <fixnum>}
-				    {b <string>}
-				    {c <vector>}))
+      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
+					   {b <string>}
+					   {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(<fixnum> <string> <vector>))
 
 ;;;
 
   (check
-      (typ.parse-tagged-bindings #'(a))
+      (typ.parse-tagged-bindings-syntax #'(a))
     (=> syntax=?)
     #'(a) #'(<top>))
 
   (check
-      (typ.parse-tagged-bindings #'(a b))
+      (typ.parse-tagged-bindings-syntax #'(a b))
     (=> syntax=?)
     #'(a b) #'(<top> <top>))
 
   (check
-      (typ.parse-tagged-bindings #'(a b c))
+      (typ.parse-tagged-bindings-syntax #'(a b c))
     (=> syntax=?)
     #'(a b c) #'(<top> <top> <top>))
 
 ;;;
 
   (check
-      (typ.parse-tagged-bindings #'(a
-				    {b <string>}))
+      (typ.parse-tagged-bindings-syntax #'(a
+					   {b <string>}))
     (=> syntax=?)
     #'(a b) #'(<top> <string>))
 
   (check
-      (typ.parse-tagged-bindings #'({a <fixnum>}
-				    b))
+      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
+					   b))
     (=> syntax=?)
     #'(a b) #'(<fixnum> <top>))
 
   (check
-      (typ.parse-tagged-bindings #'(a
-				    {b <string>}
-				    {c <vector>}))
+      (typ.parse-tagged-bindings-syntax #'(a
+					   {b <string>}
+					   {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(<top> <string> <vector>))
 
   (check
-      (typ.parse-tagged-bindings #'({a <fixnum>}
-				    b
-				    {c <vector>}))
+      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
+					   b
+					   {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(<fixnum> <top> <vector>))
 
   (check
-      (typ.parse-tagged-bindings #'({a <fixnum>}
-				    {b <string>}
-				    c))
+      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
+					   {b <string>}
+					   c))
     (=> syntax=?)
     #'(a b c) #'(<fixnum> <string> <top>))
 
@@ -182,123 +182,123 @@
 ;;; tagged
 
   (check
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
-					  {b <string>}))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
+						 {b <string>}))
     (=> syntax=?)
     #'(a b) #'(() <fixnum> <string>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
-					  {b <string>}
-					  {c <vector>}))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
+						 {b <string>}
+						 {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(() <fixnum> <string> <vector>))
 
 ;;; untagged
 
   (check
-      (typ.parse-tagged-lambda-formals #'(a))
+      (typ.parse-tagged-lambda-formals-syntax #'(a))
     (=> syntax=?)
     #'(a) #'(() <top>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'(a b))
+      (typ.parse-tagged-lambda-formals-syntax #'(a b))
     (=> syntax=?)
     #'(a b) #'(() <top> <top>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'(a b c))
+      (typ.parse-tagged-lambda-formals-syntax #'(a b c))
     (=> syntax=?)
     #'(a b c) #'(() <top> <top> <top>))
 
 ;;; mixed tagged and untagged
 
   (check
-      (typ.parse-tagged-lambda-formals #'(a
-					  {b <string>}))
+      (typ.parse-tagged-lambda-formals-syntax #'(a
+						 {b <string>}))
     (=> syntax=?)
     #'(a b) #'(() <top> <string>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
-					  b))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
+						 b))
     (=> syntax=?)
     #'(a b) #'(() <fixnum> <top>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'(a
-					  {b <string>}
-					  {c <vector>}))
+      (typ.parse-tagged-lambda-formals-syntax #'(a
+						 {b <string>}
+						 {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(() <top> <string> <vector>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
-					  b
-					  {c <vector>}))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
+						 b
+						 {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(() <fixnum> <top> <vector>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>}
-					  {b <string>}
-					  c))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
+						 {b <string>}
+						 c))
     (=> syntax=?)
     #'(a b c) #'(() <fixnum> <string> <top>))
 
 ;;; args argument
 
   (check	;tagged args argument
-      (typ.parse-tagged-lambda-formals #'{args <fixnums>})
+      (typ.parse-tagged-lambda-formals-syntax #'{args <fixnums>})
     (=> syntax=?)
     #'args #'(() . <fixnums>))
 
   (check	;UNtagged args argument
-      (typ.parse-tagged-lambda-formals #'args)
+      (typ.parse-tagged-lambda-formals-syntax #'args)
     (=> syntax=?)
     #'args #'(() . <top>))
 
 ;;; rest argument
 
   (check	;tagged rest
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>} . {rest <fixnums>}))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>} . {rest <fixnums>}))
     (=> syntax=?)
     #'(a . rest) #'(() <fixnum> . <fixnums>))
 
   (check	;UNtagged rest
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>} . rest))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>} . rest))
     (=> syntax=?)
     #'(a . rest) #'(() <fixnum> . <top>))
 
   (check	;tagged rest
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
     (=> syntax=?)
     #'(a b . rest) #'(() <fixnum> <string> . <fixnums>))
 
   (check	;UNtagged rest
-      (typ.parse-tagged-lambda-formals #'({a <fixnum>} {b <string>} . rest))
+      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>} {b <string>} . rest))
     (=> syntax=?)
     #'(a b . rest) #'(() <fixnum> <string> . <top>))
 
 ;;; return values tagging
 
   (check
-      (typ.parse-tagged-lambda-formals #'({_ <fixnum>} a b))
+      (typ.parse-tagged-lambda-formals-syntax #'({_ <fixnum>} a b))
     (=> syntax=?)
     #'(a b) #'((<fixnum>) <top> <top>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'({_ <fixnum>} {a <flonum>} {b <string>}))
+      (typ.parse-tagged-lambda-formals-syntax #'({_ <fixnum>} {a <flonum>} {b <string>}))
     (=> syntax=?)
     #'(a b) #'((<fixnum>) <flonum> <string>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'({_ <fixnum> <flonum>} {a <vector>} {b <string>}))
+      (typ.parse-tagged-lambda-formals-syntax #'({_ <fixnum> <flonum>} {a <vector>} {b <string>}))
     (=> syntax=?)
     #'(a b) #'((<fixnum> <flonum>) <vector> <string>))
 
   (check
-      (typ.parse-tagged-lambda-formals #'({_ <fixnum> <flonum>} . {args <fixnums>}))
+      (typ.parse-tagged-lambda-formals-syntax #'({_ <fixnum> <flonum>} . {args <fixnums>}))
     (=> syntax=?)
     #'args #'((<fixnum> <flonum>) . <fixnums>))
 
@@ -307,7 +307,7 @@
 ;;; tagged formals predicate
 
   (check-for-true
-   (typ.tagged-lambda-formals? #'({a <fixnum>} {b <string>})))
+   (typ.tagged-lambda-formals-syntax? #'({a <fixnum>} {b <string>})))
 
   #t)
 
@@ -2051,6 +2051,26 @@
 	;;CHI-EXPR.
 	(values (O a) (O b) (O c)))
     => 1 2 3)
+
+;;; --------------------------------------------------------------------
+;;; record types with parents
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable   a1)
+		  (immutable a2)
+		  (mutable   a3)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable   b1)
+		  (immutable b2)
+		  (mutable   b3)))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(list (O a1) (O a2) (O a3)
+	      (O b1) (O b2) (O b3)))
+    => '(1 2 3 4 5 6))
 
   #t)
 

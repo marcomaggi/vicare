@@ -836,12 +836,12 @@
     (environment-labels				v $language)
     (environment-binding			v $language)
 ;;;
-    (tagged-identifier?				$type-specs)
-    (tagged-bindings?				$type-specs)
-    (tagged-lambda-formals?			$type-specs)
-    (parse-tagged-identifier			$type-specs)
-    (parse-tagged-bindings			$type-specs)
-    (parse-tagged-lambda-formals		$type-specs)
+    (tagged-identifier-syntax?			$type-specs)
+    (tagged-bindings-syntax?			$type-specs)
+    (tagged-lambda-formals-syntax?		$type-specs)
+    (parse-tagged-identifier-syntax		$type-specs)
+    (parse-tagged-bindings-syntax		$type-specs)
+    (parse-tagged-lambda-formals-syntax		$type-specs)
 
     (tag-identifier?				$type-specs)
     (set-identifier-object-type-spec!		$type-specs)

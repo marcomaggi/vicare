@@ -1141,8 +1141,9 @@
     set-predicate-return-value-validation!
 
     ;; expand-time object type specs: parsing tagged identifiers
-    tagged-identifier?			tagged-lambda-formals?		tagged-bindings?
-    parse-tagged-identifier		parse-tagged-bindings		parse-tagged-lambda-formals
+    tagged-identifier-syntax?			parse-tagged-identifier-syntax
+    tagged-bindings-syntax?			parse-tagged-bindings-syntax
+    tagged-lambda-formals-syntax?		parse-tagged-lambda-formals-syntax
 
     ;; expand-time object type specs: identifiers defining types
     tag-identifier?
@@ -5439,7 +5440,7 @@
 
 ;;;; public interface: tagged identifiers handling
 
-(define (tagged-identifier? x)
+(define (tagged-identifier-syntax? x)
   (syntax-match x (brace)
     ((brace ?id ?tag)
      (and (identifier? ?id)
@@ -5448,7 +5449,7 @@
      (identifier? ?id))
     ))
 
-(define (parse-tagged-identifier stx)
+(define (parse-tagged-identifier-syntax stx)
   (syntax-match stx (brace)
     ((brace ?id ?tag)
      (begin
@@ -5461,9 +5462,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(case-define* parse-tagged-bindings
+(case-define* parse-tagged-bindings-syntax
   ((stx)
-   (parse-tagged-bindings stx #f))
+   (parse-tagged-bindings-syntax stx #f))
   ((stx input-form-stx)
    ;;Assume STX is a syntax object representing a proper list of possibly
    ;;tagged binding  identifiers; parse the  list and return 2  values: a
@@ -5501,19 +5502,19 @@
 	   "duplicate identifiers in bindings specification"
 	   stx))))))
 
-(define* (tagged-bindings? lhs*)
+(define* (tagged-bindings-syntax? lhs*)
   ;;Return  true if  lhs*  is  a list  of  possibly tagged  identifiers;
   ;;otherwise return false.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
     (receive (id* tag*)
-	(parse-tagged-bindings lhs*)
+	(parse-tagged-bindings-syntax lhs*)
       #t)))
 
 ;;; --------------------------------------------------------------------
 
-(module (parse-tagged-lambda-formals)
+(module (parse-tagged-lambda-formals-syntax)
   ;;Given  a syntax  object  representing tagged  LAMBDA formals:  split
   ;;formals from tags.  Do *not* test for duplicate bindings.
   ;;
@@ -5549,11 +5550,11 @@
   ;;2. An object representing the LAMBDA tagging signature.
   ;;
   (define-fluid-override __who__
-    (identifier-syntax 'parse-tagged-lambda-formals))
+    (identifier-syntax 'parse-tagged-lambda-formals-syntax))
 
-  (case-define* parse-tagged-lambda-formals
+  (case-define* parse-tagged-lambda-formals-syntax
     (({_ standard-lambda-formals? function-tagging-signature?} original-formals-stx)
-     (parse-tagged-lambda-formals original-formals-stx #f))
+     (parse-tagged-lambda-formals-syntax original-formals-stx #f))
     (({_ standard-lambda-formals? function-tagging-signature?} original-formals-stx input-form-stx)
      ;;First we  parse and  extract the return  values tagging,  if any;
      ;;then we parse the rest of the formals.
@@ -5682,14 +5683,14 @@
 
   #| end of module |# )
 
-(define* (tagged-lambda-formals? formals-stx)
+(define* (tagged-lambda-formals-syntax? formals-stx)
   ;;Return true  if FORMALS-STX  is a  syntax object  representing valid
   ;;tagged formals for a LAMBDA syntax.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
     (receive (standard-formals signature-tags)
-	(parse-tagged-lambda-formals formals-stx)
+	(parse-tagged-lambda-formals-syntax formals-stx)
       #t)))
 
 (define (standard-lambda-formals? stx)
@@ -7684,8 +7685,13 @@
 	   (else #f)))
        (define (%dispatcher input-form-stx)
 	 (syntax-case input-form-stx ()
-	   ((?tagged-expr ?arg0 ?arg ...)
-	    #`(#,(%retrieve-accessor-id #'?arg0 #t) ?tagged-expr))))
+	   ((?tagged-expr ?field-name)
+	    (identifier? #'?field-name)
+	    #`(#,(identifier-object-type-spec-accessor (syntax ,foo) #'?field-name #t) ?tagged-expr))
+	   (_
+	    (syntax-violation (quote ,foo)
+	      "invalid tagged dispatcher syntax for R6RS record"
+	      input-form-stx #'?field-name))))
        (define object-type-spec
 	 (typ.make-object-type-spec (syntax ,foo)
 				    (syntax ,foo?)
@@ -8160,39 +8166,16 @@
 		     ($struct-set! ?stru ,field-idx ?val)))))
 	  unsafe-mutator-id* field-idx*))
 
+      (define object-type-spec-form
+	(%build-object-type-spec type-id predicate-id field-sym*
+				 accessor-id* unsafe-accessor-id*
+				 mutator-id*  unsafe-mutator-id*))
+
       (bless
        `(begin
 	  (define-syntax ,type-id
 	    (let ()
-	      (let ()
-		(import (vicare)
-		  (prefix (vicare expander object-type-specs) typ.))
-		(define (%retrieve-accessor-id slot-id safe?)
-		  (case (syntax->datum slot-id)
-		    ,@(map (lambda (field-sym accessor-id unsafe-accessor-id)
-			     `((,field-sym)
-			       (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))))
-			field-sym* accessor-id* unsafe-accessor-id*)
-		    (else #f)))
-		(define (%retrieve-mutator-id slot-id safe?)
-		  (case (syntax->datum slot-id)
-		    ,@(map (lambda (field-sym mutator-id unsafe-mutator-id)
-			     `((,field-sym)
-			       (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))))
-			field-sym* mutator-id* unsafe-mutator-id*)
-		    (else #f)))
-		(define (%dispatcher input-form-stx)
-		  (syntax-case input-form-stx ()
-		    ((?tagged-expr ?arg0 ?arg ...)
-		     #`(#,(%retrieve-accessor-id #'?arg0 #t) ?tagged-expr))))
-		(define object-type-spec
-		  (typ.make-object-type-spec (syntax ,type-id)
-					     (syntax ,predicate-id)
-					     %retrieve-accessor-id
-					     %retrieve-mutator-id
-					     %dispatcher
-					     #f))
-		(typ.set-identifier-object-type-spec! (syntax ,type-id) object-type-spec))
+	      ,object-type-spec-form
 	      (cons '$rtd ',rtd)))
 	  (define (,constructor-id ,@field-name-id*)
 	    (let ((S ($struct ',rtd ,@field-name-id*)))
@@ -8204,8 +8187,50 @@
 	  ,@accessor-sexp*
 	  ,@mutator-sexp*
 	  ,@unsafe-accessor-sexp*
-	  ,@unsafe-mutator-sexp*)
-       )))
+	  ,@unsafe-mutator-sexp*))))
+
+  (define (%build-object-type-spec type-id predicate-id field-sym*
+				   accessor-id* unsafe-accessor-id*
+				   mutator-id*  unsafe-mutator-id*)
+    `(let ()
+       (import (vicare)
+	 (prefix (vicare expander object-type-specs) typ.))
+
+       (define (%retrieve-accessor-id slot-id safe?)
+	 (case (syntax->datum slot-id)
+	   ,@(map (lambda (field-sym accessor-id unsafe-accessor-id)
+		    `((,field-sym)
+		      (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))))
+	       field-sym* accessor-id* unsafe-accessor-id*)
+	   (else #f)))
+
+       (define (%retrieve-mutator-id slot-id safe?)
+	 (case (syntax->datum slot-id)
+	   ,@(map (lambda (field-sym mutator-id unsafe-mutator-id)
+		    `((,field-sym)
+		      (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))))
+	       field-sym* mutator-id* unsafe-mutator-id*)
+	   (else #f)))
+
+       (define (%dispatcher input-form-stx)
+	 (syntax-case input-form-stx ()
+	   ((?tagged-expr ?field-name)
+	    (identifier? #'?field-name)
+	    #`(#,(identifier-object-type-spec-accessor (syntax ,type-id) #'?field-name #t) ?tagged-expr))
+	   (_
+	    (syntax-violation (quote ,type-id)
+	      "invalid tagged dispatcher syntax for Vicare struct"
+	      input-form-stx #'?field-name))))
+
+       (define object-type-spec
+	 (typ.make-object-type-spec (syntax ,type-id)
+				    (syntax ,predicate-id)
+				    %retrieve-accessor-id
+				    %retrieve-mutator-id
+				    %dispatcher
+				    #f))
+
+       (typ.set-identifier-object-type-spec! (syntax ,type-id) object-type-spec)))
 
   (define (enumerate ls)
     (let recur ((i 0) (ls ls))
@@ -8421,7 +8446,7 @@
     ;;Extended tagged syntax.
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (receive (lhs* tag*)
-	 (parse-tagged-bindings ?lhs* expr-stx)
+	 (parse-tagged-bindings-syntax ?lhs* expr-stx)
        (bless
 	`((lambda ,?lhs*
 	    ,?body . ,?body*) . ,?rhs*))))
@@ -8430,7 +8455,7 @@
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
      (receive (lhs* tag*)
-	 (parse-tagged-bindings ?lhs*)
+	 (parse-tagged-bindings-syntax ?lhs*)
        (bless
 	`((letrec ((,?recur (lambda ,?lhs*
 			      ,?body . ,?body*)))
@@ -8445,8 +8470,8 @@
   (syntax-match expr-stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      ;;Remember that LET* allows bindings with duplicate identifiers, so
-     ;;we do not use TAGGED-BINDINGS? here.
-     (for-all tagged-identifier? ?lhs*)
+     ;;we do *not* use TAGGED-BINDINGS-SYNTAX? here.
+     (for-all tagged-identifier-syntax? ?lhs*)
      (bless
       (let recur ((x* (map list ?lhs* ?rhs*)))
 	(if (null? x*)
@@ -8463,7 +8488,7 @@
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
      (receive (lhs* tag*)
-	 (parse-tagged-bindings ?lhs*)
+	 (parse-tagged-bindings-syntax ?lhs*)
        (bless
 	`((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
 					  ,?body . ,?body*)))
@@ -8507,7 +8532,7 @@
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (let ((standard-lhs* (map (lambda (lhs)
 				   (receive (standard-lhs signature-tags)
-				       (parse-tagged-lambda-formals lhs expr-stx)
+				       (parse-tagged-lambda-formals-syntax lhs expr-stx)
 				     standard-lhs))
 			      ?lhs*)))
 	 (bless
@@ -9242,7 +9267,7 @@
   (syntax-match expr-stx ()
     ((_ ?who (?formal* ...) ?body ?body* ...)
      (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals ?formal* expr-stx)
+	 (parse-tagged-lambda-formals-syntax ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda ,?formal*
@@ -9250,7 +9275,7 @@
 
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
      (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals ?formal* expr-stx)
+	 (parse-tagged-lambda-formals-syntax ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda (,@?formal* . ,?rest-formal)
@@ -9265,7 +9290,7 @@
   (syntax-match expr-stx ()
     ((_ (?who ?formal* ...) ?body ?body* ...)
      (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals ?formal* expr-stx)
+	 (parse-tagged-lambda-formals-syntax ?formal* expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -9274,7 +9299,7 @@
 
     ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
      (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals ?formal* expr-stx)
+	 (parse-tagged-lambda-formals-syntax ?formal* expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -9607,7 +9632,7 @@
     (syntax-match binding-stx ()
       ((?var ?init)
        (receive (id tag)
-	   (parse-tagged-identifier ?var)
+	   (parse-tagged-identifier-syntax ?var)
 	 `(,?var ,?init ,id)))
       ((?var ?init ?step)
        `(,?var ,?init ,?step))
@@ -9620,7 +9645,7 @@
      (syntax-match (map %normalise-binding ?binding*) ()
        (((?var* ?init* ?step*) ...)
 	(receive (id* tag*)
-	    (parse-tagged-bindings ?var* expr-stx)
+	    (parse-tagged-bindings-syntax ?var* expr-stx)
 	  (bless
 	   `(letrec ((loop (lambda ,?var*
 			     (if ,?test
@@ -10229,7 +10254,7 @@
   (syntax-match expr-stx ()
     ((_ (?var* ... ?var0) ?form* ... ?form0)
      (receive (id* tag*)
-	 (parse-tagged-bindings ?var* expr-stx)
+	 (parse-tagged-bindings-syntax ?var* expr-stx)
        (let ((TMP* (generate-temporaries id*)))
 	 (bless
 	  `(begin
@@ -10306,7 +10331,7 @@
   (syntax-match expr-stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals signature-tags)
-	 (parse-tagged-lambda-formals ?formals expr-stx)
+	 (parse-tagged-lambda-formals-syntax ?formals expr-stx)
        (let ((rv-form (cond ((list? standard-formals)
 			     `(values . ,standard-formals))
 			    ((pair? standard-formals)
@@ -10438,11 +10463,11 @@
   (syntax-match expr-stx (brace)
     ((_ (?name ?arg* ... . (brace ?rest ?rest-tag)) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-lambda-formals? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
+	  (tagged-lambda-formals-syntax? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
      (%output ?name ?arg* (bless `(brace ,?rest ,?rest-tag)) (cons ?form0 ?form*)))
     ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-lambda-formals? (append ?arg* ?rest)))
+	  (tagged-lambda-formals-syntax? (append ?arg* ?rest)))
      (%output ?name ?arg* ?rest (cons ?form0 ?form*)))
     ))
 
@@ -10806,7 +10831,7 @@
        ;;Check  that  the  binding  names are  identifiers  and  without
        ;;duplicates.
        (receive (lhs* tag*)
-	   (parse-tagged-bindings ?lhs* expr-stx)
+	   (parse-tagged-bindings-syntax ?lhs* expr-stx)
 	 ;;Generate  unique variable  names  and labels  for the  LETREC
 	 ;;bindings.
 	 (let ((lex* (map gensym-for-lexical-var lhs*))
@@ -12395,7 +12420,7 @@
   ;;unspecified values, else raise a syntax violation.
   ;;
   (receive (standard-formals-stx signature-tags)
-      (parse-tagged-lambda-formals formals-stx input-form-stx)
+      (parse-tagged-lambda-formals-syntax formals-stx input-form-stx)
     (void)))
 
 (define (%error-invalid-formals-syntax input-form-stx formals-stx)
@@ -13669,7 +13694,7 @@
    ;;Here  we support  both the  R6RS  standard LAMBDA  formals and  the
    ;;extended tagged formals, with or without rest argument.
    (receive (standard-formals-stx signature-tags)
-       (parse-tagged-lambda-formals formals-stx input-form-stx)
+       (parse-tagged-lambda-formals-syntax formals-stx input-form-stx)
      (syntax-match standard-formals-stx ()
        ;;Without rest argument.
        ((?arg* ...)
@@ -14480,9 +14505,9 @@
       ((_ ((brace ?id ?rv-tag0 ?rv-tag* ...) . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature-tags)
-	   (parse-tagged-lambda-formals (bless
-					 `((brace _ ,?rv-tag0 . ,?rv-tag*) . ,?fmls))
-					input-form-stx)
+	   (parse-tagged-lambda-formals-syntax (bless
+						`((brace _ ,?rv-tag0 . ,?rv-tag*) . ,?fmls))
+					       input-form-stx)
 	 (values ?id <procedure> signature-tags (cons 'defun input-form-stx))))
 
       ;;Variable definition with tagged identifier.
@@ -14499,7 +14524,7 @@
       ((_ (?id . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature-tags)
-	   (parse-tagged-lambda-formals ?fmls input-form-stx)
+	   (parse-tagged-lambda-formals-syntax ?fmls input-form-stx)
 	 (values ?id <procedure> signature-tags (cons 'defun input-form-stx))))
 
       ;;R6RS variable definition.
