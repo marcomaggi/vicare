@@ -2037,6 +2037,15 @@
 	  (fields (mutable a) (mutable b) (mutable c)))
 	(define {O alpha}
 	  (make-alpha 1 2 3))
+	(alpha? O))
+    => #t)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
 	;;In this syntax the dispatching form is evaluated by CHI-BODY.
 	(O a))
     => 1)
