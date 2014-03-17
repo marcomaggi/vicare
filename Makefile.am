@@ -379,11 +379,15 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.vectors.sls				\
 	scheme/ikarus.writer.sls				\
 	\
-	scheme/psyntax.builders.sls				\
-	scheme/psyntax.compat.sls				\
-	scheme/psyntax.config.sls				\
-	scheme/psyntax.expander.sls				\
-	scheme/psyntax.internal.sls				\
+	scheme/psyntax.builders.sls					\
+	scheme/psyntax.compat.sls					\
+	scheme/psyntax.config.sls					\
+	scheme/psyntax.expander.sls					\
+	scheme/psyntax.expander.syntactic-binding-properties.scm	\
+	scheme/psyntax.expander.tagged-identifiers.scm			\
+	scheme/psyntax.expander.core-macro-transformers.scm		\
+	scheme/psyntax.expander.non-core-macro-transformers.scm		\
+	scheme/psyntax.internal.sls					\
 	scheme/psyntax.library-manager.sls
 
 #page

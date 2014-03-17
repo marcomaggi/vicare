@@ -27,6 +27,7 @@
     receive				receive-and-return
     module				import
     begin0				define-values
+    include
 
     __who__				brace
 
