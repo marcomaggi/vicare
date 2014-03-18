@@ -5106,8 +5106,10 @@
 	   (same-marks? ($cdr x) ($cdr y)))))
 
 (define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* ribs-and-shifts?} stx1.ae {stx2 <stx>?})
-  ;;Join the given wraps with the ones in STX2; with "wraps" we mean the
-  ;;marks and ribs.  The scenario is this:
+  ;;Join the given wraps with the  ones in STX2 and return the resulting
+  ;;wraps; with "wraps" we mean the marks and ribs, with the addition of
+  ;;the annotated  expressions for debugging purposes.   The scenario is
+  ;;this:
   ;;
   ;;* A syntax object STX1 (wrapped or partially unwrapped) contains the
   ;;  syntax object STX2 (an instance of <stx>) as subexpression.
@@ -5118,6 +5120,9 @@
   ;;
   ;;* In practice: the  marks of STX1 must be prepended  to the marks of
   ;;  STX2, the ribs of STX1 must be prepended to the ribs of STX2.
+  ;;
+  ;;this is what this function does.  But: we must also handle anti-mark
+  ;;annihilation and the associated removal of shifts from the ribs.
   ;;
   (import WRAPS-UTILITIES)
   (let ((stx2.mark* ($<stx>-mark* stx2))
