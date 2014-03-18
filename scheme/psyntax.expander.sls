@@ -5172,11 +5172,7 @@
     ;;The return value  can be either a <stx> instance  or a (partially)
     ;;unwrapped syntax object.
     ;;
-    #;(debug-print 'add-mark-enter expr)
-    (receive-and-return (R)
-	(%find-meaningful-stx expr mark rib expr '() (list ae))
-      #;(debug-print 'add-mark-exit R)
-      (void)))
+    (%find-meaningful-stx expr mark rib expr '() (list ae)))
 
   ;;NOTE The one  below was the original (modified,  but still original)
   ;;implementation of this function; it  is kept here for reference.  In
@@ -5242,6 +5238,7 @@
 		    (%recurse ($<stx>-expr expr)
 			      (append accum-rib* expr.rib*)
 			      (%merge-annotated-expr* ae* ($<stx>-ae* expr))))
+
 		   ((eq? (car expr.mark*) anti-mark)
 		    ;;EXPR with non-empty MARK*  having the anti-mark as
 		    ;;first mark; this means EXPR is the input form of a
@@ -5255,7 +5252,7 @@
 		    ;;to the  anti-mark (it is  a "shift" symbol)  so we
 		    ;;drop it.
 		    ;;
-		    (assert (or (and (not (null? accum-rib*))
+		    #;(assert (or (and (not (null? accum-rib*))
 				     (eq? 'shift (car accum-rib*)))
 				(and (not (null? expr.rib*))
 				     (eq? 'shift (car expr.rib*)))))
@@ -5264,6 +5261,7 @@
 		      (make-<stx> ($<stx>-expr expr) (cdr expr.mark*)
 				  result.rib*
 				  (%merge-annotated-expr* ae* ($<stx>-ae* expr)))))
+
 		   (else
 		    ;;EXPR with non-empty MARK*  having a proper mark as
 		    ;;first  mark; this  means EXPR  is a  syntax object
@@ -5295,7 +5293,7 @@
 	   ;;If  we are  here EXPR  is a  non-compound datum  (booleans,
 	   ;;numbers, strings, ..., structs, records).
 	   #;(assert (non-compound-sexp? expr))
-	   (make-<stx> expr (list new-mark) accum-rib* ae*))))
+	   expr)))
 
   #| end of module: ADD-MARK |# )
 
