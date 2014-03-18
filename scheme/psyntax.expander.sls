@@ -5037,19 +5037,21 @@
     ;;
     #;(debug-print 'add-mark-enter expr)
     (receive-and-return (R)
-	(mkstx (%post-order-visit expr expr mark subst '() '()) ;stx
+	(mkstx (%post-order-visit expr mark subst expr '() '()) ;stx
 	       '()						;mark*
 	       '()						;subst*
 	       (list ae))					;ae*
       #;(debug-print 'add-mark-exit R)
       (void)))
 
-  (define (%post-order-visit top-expr sub-expr new-mark start-subst subst1* ae*)
+  (define (%post-order-visit top-expr new-mark top-subst sub-expr subst1* ae*)
+    (define-syntax-rule (%recurse ?sub-expr ?subst1* ?ae*)
+      (%post-order-visit top-expr new-mark top-subst ?sub-expr ?subst1* ?ae*))
     (cond ((pair? sub-expr)
 	   ;;Visit the  items in the  pair.  If the visited  items equal
 	   ;;the original items: keep SUB-EXPR as result.
-	   (let ((A (%post-order-visit top-expr (car sub-expr) new-mark start-subst subst1* ae*))
-		 (D (%post-order-visit top-expr (cdr sub-expr) new-mark start-subst subst1* ae*)))
+	   (let ((A (%recurse (car sub-expr) subst1* ae*))
+		 (D (%recurse (cdr sub-expr) subst1* ae*)))
 	     (if (eq? A D)
 		 sub-expr
 	       (cons A D))))
@@ -5059,7 +5061,7 @@
 	   ;;equal the original items: keep SUB-EXPR as result.
 	   (let* ((ls1 (vector->list sub-expr))
 		  (ls2 (map (lambda (item)
-			      (%post-order-visit top-expr item new-mark start-subst subst1* ae*))
+			      (%recurse item subst1* ae*))
 			 ls1)))
 	     (if (for-all eq? ls1 ls2)
 		 sub-expr
@@ -5069,10 +5071,9 @@
 	   (let ((mark*   ($<stx>-mark*  sub-expr))
 		 (subst2* ($<stx>-subst* sub-expr)))
 	     (cond ((null? mark*)
-		    (%post-order-visit top-expr ($<stx>-expr sub-expr)
-				       new-mark start-subst
-				       (append subst1* subst2*)
-				       (%merge-annotated-expr* ae* ($<stx>-ae* sub-expr))))
+		    (%recurse ($<stx>-expr sub-expr)
+			      (append subst1* subst2*)
+			      (%merge-annotated-expr* ae* ($<stx>-ae* sub-expr))))
 		   ((eq? (car mark*) anti-mark)
 		    (make-<stx> ($<stx>-expr sub-expr) (cdr mark*)
 				(cdr (append subst1* subst2*))
@@ -5081,8 +5082,8 @@
 		    (make-<stx> ($<stx>-expr sub-expr)
 				(cons new-mark mark*)
 				(let ((s* (cons 'shift (append subst1* subst2*))))
-				  (if start-subst
-				      (cons start-subst s*)
+				  (if top-subst
+				      (cons top-subst s*)
 				    s*))
 				(%merge-annotated-expr* ae* ($<stx>-ae* sub-expr)))))))
 
@@ -5093,6 +5094,8 @@
 	     top-expr sub-expr))
 
 	  (else
+	   ;;If  we  are  here  SUB-EXPR  is  a  self  evaluating  datum
+	   ;;(booleans, numbers, strings, ...).
 	   (make-<stx> sub-expr (list new-mark) subst1* ae*))))
 
   (module (%merge-annotated-expr*)
