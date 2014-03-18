@@ -3300,7 +3300,7 @@ Return @true{} if @var{stx} is a syntax object, else return @false{}.
 
 @defun syntax-object-expression @var{stx}
 @defunx syntax-object-marks @var{stx}
-@defunx syntax-object-substs @var{stx}
+@defunx syntax-object-ribs @var{stx}
 @defunx syntax-object-source-objects @var{stx}
 Field accessors for the syntax object structure type, to be used for
 debugging purposes.

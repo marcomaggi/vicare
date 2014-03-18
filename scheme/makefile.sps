@@ -2355,7 +2355,7 @@
     (syntax-object?				v $language)
     (syntax-object-expression			v $language)
     (syntax-object-marks			v $language)
-    (syntax-object-substs			v $language)
+    (syntax-object-ribs				v $language)
     (syntax-object-source-objects		v $language)
     (char-alphabetic?				v r uc)
     (char-ci<=?					v r uc)

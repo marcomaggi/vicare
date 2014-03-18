@@ -1305,7 +1305,7 @@
     syntax-object-expression
     syntax-object-marks
     syntax-object-source-objects
-    syntax-object-substs
+    syntax-object-ribs
     syntax-transpose
     system-value
     tanh

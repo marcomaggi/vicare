@@ -1171,7 +1171,7 @@
     (rename (<stx>?		syntax-object?)
 	    (<stx>-expr		syntax-object-expression)
 	    (<stx>-mark*	syntax-object-marks)
-	    (<stx>-subst*	syntax-object-substs)
+	    (<stx>-rib*		syntax-object-ribs)
 	    (<stx>-ae*		syntax-object-source-objects)))
   (import (except (rnrs)
 		  eval
@@ -4098,6 +4098,64 @@
   (cdr ?export-binding))
 
 
+;;;; marks of lexical contours
+
+(define gen-mark
+  ;;Generate a new unique mark.  We want a new string for every function
+  ;;call.
+  string)
+;;The version below is useful for debugging.
+;;
+;; (define gen-mark
+;;   (let ((i 0))
+;;     (lambda ()
+;;       (set! i (+ i 1))
+;;       (string-append "m." (number->string i)))))
+
+;;We use #f as the anti-mark.
+(define-constant anti-mark #f)
+(define anti-mark? not)
+
+;;The body of  a library, when it  is first processed, gets  this set of
+;;marks...
+(define-constant TOP-MARK*
+  '(top))
+
+;;... consequently, every  syntax object that has a "top"  symbol in its
+;;marks set was present in the program source.
+(define-syntax-rule (top-marked? mark*)
+  (memq 'top mark*))
+
+(define* (symbol->top-marked-identifier {sym symbol?})
+  ;;Given a  raw Scheme  symbol return a  syntax object  representing an
+  ;;identifier with top marks.
+  ;;
+  (make-<stx> sym TOP-MARK* '() '()))
+
+(define* (top-marked-symbols {rib rib?})
+  ;;Scan the <rib> RIB and return a list of symbols representing binding
+  ;;names and having the top mark.
+  ;;
+  (receive (sym* mark**)
+      ;;If RIB is sealed the fields  hold vectors, else they hold lists;
+      ;;we want lists here.
+      (let ((sym*   ($<rib>-name*  rib))
+	    (mark** ($<rib>-mark** rib)))
+	(if ($<rib>-sealed/freq rib)
+	    (values (vector->list sym*)
+		    (vector->list mark**))
+	  (values sym* mark**)))
+    (let recur ((sym*   sym*)
+		(mark** mark**))
+      (cond ((null? sym*)
+	     '())
+	    ((equal? ($car mark**) TOP-MARK*)
+	     (cons ($car sym*)
+		   (recur ($cdr sym*) ($cdr mark**))))
+	    (else
+	     (recur ($cdr sym*) ($cdr mark**)))))))
+
+
 ;;;; rib record type definition
 ;;
 ;;A  <RIB> is  a  record constructed  at every  lexical  contour in  the
@@ -4480,12 +4538,40 @@
 ;;First, let's  look at identifiers,  since they're the real  reason why
 ;;syntax objects are here to begin  with.  An identifier is an STX whose
 ;;EXPR is a symbol; in addition to the symbol naming the identifier, the
-;;identifer has a list of marks and a list of substitutions.
+;;identifer has a list of marks and a list of ribs (and shifts).
 ;;
 ;;The idea  is that to get  the label of  an identifier, we look  up the
-;;identifier's substitutions for  a mapping with the same  name and same
-;;marks (see SAME-MARKS? below).
+;;identifier's ribs for a mapping with the same name and same marks (see
+;;SAME-MARKS? below).
 ;;
+;;---
+;;
+;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
+;;exactly?
+;;
+;;A "wrapped syntax object" is just  a way of saying it's an STX record.
+;;All identifiers are  STX records (with a symbol  in their EXPR field);
+;;other objects such  as pairs and vectors may  be wrapped or unwrapped.
+;;A wrapped pair is an STX whose EXPR is a pair.  An unwrapped pair is a
+;;pair whose car  and cdr fields are themselves  syntax objects (wrapped
+;;or unwrapped).
+;;
+;;We always  maintain the invariant  that we  do not double  wrap syntax
+;;objects.  The  only way to  get a  doubly-wrapped syntax object  is by
+;;doing  $DATUM->SYNTAX (above)  where  the datum  is  itself a  wrapped
+;;syntax object  (R6RS may not  even consider wrapped syntax  objects as
+;;datum, but let's not worry now).
+;;
+;;Syntax objects have, in addition  to the EXPR, a ribs-and-shifts field
+;;RIB*: it is a list where each  element is either a <rib> or the symbol
+;;"shift".  Normally,  a new  RIB is  added to an  STX at  every lexical
+;;contour of the program in order  to capture the bindings introduced in
+;;that contour.
+;;
+;;The MARK* field of an STX is  a list of marks; each of these marks can
+;;be  either  a  generated mark  or  an  antimark.   Two marks  must  be
+;;EQ?-comparable, so we use a string of one char (we assume that strings
+;;are mutable in the underlying Scheme implementation).
 
 (define-record <stx>
   (expr
@@ -4494,18 +4580,18 @@
    mark*
 		;Null or  a proper list  of marks, including  the symbol
 		;"top".
-   subst*
+   rib*
 		;Null or  a proper  list of  <rib> instances  or "shift"
 		;symbols.   Every  <rib>  represents  a  nested  lexical
 		;contour; a  "shift" represents the return  from a macro
 		;transformer application.
 		;
-		;NOTE The items  in the fields MARK* and  SUBST* are not
+		;NOTE The  items in  the fields MARK*  and RIB*  are not
 		;associated:  the two  lists can  grow independently  of
-		;each  other.  But  considering the  whole structure  of
+		;each other.   But, considering  the whole  structure of
 		;nested  <stx> instances:  the  items in  all the  MARK*
-		;fields are associated  to the items in  all the SUBST*,
-		;see the function ADD-MARK for details.
+		;fields are associated to the items in all the RIB*, see
+		;the functions JOIN-WRAPS and ADD-MARK for details.
    ae*
 		;List of  annotated expressions:  null or a  proper list
 		;whose items are #f or  input forms of macro transformer
@@ -4537,8 +4623,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (<stx>-subst*? obj)
-  ;;Return true if OBJ  is a valid value for the  field SUBST* of <stx>;
+(define (ribs-and-shifts? obj)
+  ;;Return true  if OBJ is  a valid value for  the field RIB*  of <stx>;
   ;;otherwise return #f.
   ;;
   (and (list? obj)
@@ -4555,18 +4641,19 @@
 (define ($datum->syntax id datum)
   ;;Since all the identifier->label bindings are encapsulated within the
   ;;identifier, converting a datum to a syntax object (non-hygienically)
-  ;;is  done simply  by creating  an  STX that  has the  same marks  and
-  ;;substitutions as the identifier.
+  ;;is done simply by creating an <stx> that has the same marks and ribs
+  ;;as the identifier.
   ;;
-  (make-<stx> datum
-	      ($<stx>-mark*  id)
-	      ($<stx>-subst* id)
-	      ($<stx>-ae*    id)))
+  ;;We  include also  the  annotated expression  from  ID because,  when
+  ;;showing  an error  trace,  it  helps to  understand  from where  the
+  ;;returned object comes.
+  ;;
+  (make-<stx> datum ($<stx>-mark* id) ($<stx>-rib* id) ($<stx>-ae* id)))
 
 (define (syntax->datum S)
   (strip S '()))
 
-(define* (mkstx expr-stx mark* {subst* <stx>-subst*?} ae*)
+(define* (mkstx expr-stx mark* {rib* ribs-and-shifts?} ae*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
   ;;EXPR-STX can  be a raw sexp,  an instance of <STX>  or a (partially)
@@ -4575,7 +4662,7 @@
   ;;MARK* must be  null or a proper list of  marks, including the symbol
   ;;"top".
   ;;
-  ;;SUBST* must be null or a  proper list of <rib> instances and "shift"
+  ;;RIB* must  be null or a  proper list of <rib>  instances and "shift"
   ;;symbols.
   ;;
   ;;AE* must be  null or a proper list of  annotated expressions: syntax
@@ -4591,10 +4678,10 @@
   ;;
   (if (and (<stx>? expr-stx)
 	   (not (top-marked? mark*)))
-      (receive (mark* subst* ae*)
-	  (join-wraps mark* subst* ae* expr-stx)
-	(make-<stx> (<stx>-expr expr-stx) mark* subst* ae*))
-    (make-<stx> expr-stx mark* subst* ae*)))
+      (receive (mark* rib* ae*)
+	  (join-wraps mark* rib* ae* expr-stx)
+	(make-<stx> (<stx>-expr expr-stx) mark* rib* ae*))
+    (make-<stx> expr-stx mark* rib* ae*)))
 
 (define* (push-lexical-contour {rib rib?} expr-stx)
   ;;Add a rib to a syntax  object or expression and return the resulting
@@ -4609,8 +4696,9 @@
   ;;object.
   ;;
   ;;This function prepares  a computation that will  be lazily performed
-  ;;later; the RIB will be pushed on the stack of substitutions in every
-  ;;identifier in the fully unwrapped returned syntax object.
+  ;;later;  the  RIB will  be  pushed  on the  stack  of  ribs in  every
+  ;;identifier in  the fully  unwrapped version  of the  returned syntax
+  ;;object.
   ;;
   (let ((mark*	'())
 	(ae*	'()))
@@ -4686,28 +4774,27 @@
 (module (id->label)
 
   (define (id->label id)
-    ;;Given the identifier  ID search its substs for  a label associated
+    ;;Given the  identifier ID  search its ribs  for a  label associated
     ;;with the  same sym  and marks.   If found  return the  label, else
     ;;return false.
     ;;
     (let ((sym (identifier->symbol id)))
-      (let search ((subst* ($<stx>-subst* id))
-		   (mark*  ($<stx>-mark*  id)))
-	(cond ((null? subst*)
+      (let search ((rib*  ($<stx>-rib*  id))
+		   (mark* ($<stx>-mark* id)))
+	(cond ((null? rib*)
 	       #f)
-	      ((eq? ($car subst*) 'shift)
+	      ((eq? ($car rib*) 'shift)
 	       ;;This is the  only place in the expander  where a symbol
-	       ;;"shift" in a SUBST* makes some difference; a "shift" is
-	       ;;pushed  on the  SUBST* when  a  mark is  pushed on  the
-	       ;;MARK*.
+	       ;;"shift" in a  RIB* makes some difference;  a "shift" is
+	       ;;pushed on the RIB* when a mark is pushed on the MARK*.
 	       ;;
-	       ;;When  we  find  a  "shift"   in  SUBST*:  we  skip  the
+	       ;;When  we   find  a  "shift"   in  RIB*:  we   skip  the
 	       ;;corresponding mark in MARK*.
-	       (search ($cdr subst*) ($cdr mark*)))
+	       (search ($cdr rib*) ($cdr mark*)))
 	      (else
-	       (let ((rib ($car subst*)))
+	       (let ((rib ($car rib*)))
 		 (define (next-search)
-		   (search ($cdr subst*) mark*))
+		   (search ($cdr rib*) mark*))
 		 (if ($<rib>-sealed/freq rib)
 		     (%search-in-sealed-rib rib sym mark* next-search)
 		   (%search-in-rib rib sym mark* next-search))))))))
@@ -4914,93 +5001,6 @@
     ))
 
 
-;;;; marks
-
-;;The body  of a library, when it  is first processed, gets  this set of
-;;marks...
-(define-constant TOP-MARK*
-  '(top))
-
-;;... consequently, every syntax object that  has a TOP in its marks set
-;;was present in the program source.
-(define-inline (top-marked? m*)
-  (memq 'top m*))
-
-(define (symbol->top-marked-identifier sym)
-  ;;Given a  raw Scheme  symbol return a  syntax object  representing an
-  ;;identifier with top marks.
-  ;;
-  (make-<stx> sym TOP-MARK* '() '()))
-
-(define (top-marked-symbols rib)
-  ;;Scan the <RIB> RIB and return a list of symbols representing binding
-  ;;names and having the top mark.
-  ;;
-  (receive (sym* mark**)
-      ;;If RIB is sealed the fields  hold vectors, else they hold lists;
-      ;;we want lists here.
-      (let ((sym*   (<rib>-name*  rib))
-	    (mark** (<rib>-mark** rib)))
-	(if (<rib>-sealed/freq rib)
-	    (values (vector->list sym*)
-		    (vector->list mark**))
-	  (values sym* mark**)))
-    (let recur ((sym*   sym*)
-		(mark** mark**))
-      (cond ((null? sym*)
-	     '())
-	    ((equal? (car mark**) TOP-MARK*)
-	     (cons (car sym*)
-		   (recur (cdr sym*) (cdr mark**))))
-	    (else
-	     (recur (cdr sym*) (cdr mark**)))))))
-
-;;;; syntax objects and marks
-
-;;A syntax  object may be wrapped  or unwrapped, so what  does that mean
-;;exactly?
-;;
-;;A "wrapped syntax object" is just  a way of saying it's an STX record.
-;;All identifiers are  STX records (with a symbol  in their EXPR field);
-;;other objects such  as pairs and vectors may  be wrapped or unwrapped.
-;;A wrapped pair is an STX whose EXPR is a pair.  An unwrapped pair is a
-;;pair whose car  and cdr fields are themselves  syntax objects (wrapped
-;;or unwrapped).
-;;
-;;We always  maintain the invariant  that we  do not double  wrap syntax
-;;objects.  The  only way to  get a  doubly-wrapped syntax object  is by
-;;doing  $DATUM->SYNTAX (above)  where  the datum  is  itself a  wrapped
-;;syntax object  (R6RS may not  even consider wrapped syntax  objects as
-;;datum, but let's not worry now).
-;;
-;;Syntax objects  have, in  addition to the  EXPR, a  substitution field
-;;SUBST*: it is a list where each  element is either a RIB or the symbol
-;;"shift".  Normally,  a new  RIB is  added to an  STX at  every lexical
-;;contour of the program in  order to capture the bindings introduced in
-;;that contour.
-;;
-;;The MARK* field of an STX is  a list of marks; each of these marks can
-;;be  either  a  generated mark  or  an  antimark.   Two marks  must  be
-;;EQ?-comparable, so we use a string of one char (we assume that strings
-;;are mutable in the underlying Scheme implementation).
-
-(define gen-mark
-  ;;Generate a new unique mark.  We want a new string for every function
-  ;;call.
-  string)
-;;The version below is useful for debugging.
-;;
-;; (define gen-mark
-;;   (let ((i 0))
-;;     (lambda ()
-;;       (set! i (+ i 1))
-;;       (string-append "m." (number->string i)))))
-
-;;We use #f as the anti-mark.
-(define anti-mark #f)
-(define anti-mark? not)
-
-
 ;;So, what's an anti-mark and why is it there?
 ;;
 ;;The theory goes like this: when a macro call is encountered, the input
@@ -5014,13 +5014,13 @@
 ;;therefore, the mark would stick to them.
 ;;
 ;;Every time  a mark is pushed  to an <stx>-mark* list,  a corresponding
-;;'shift  is pushed  to the  <stx>-subst* list.   Every time  a mark  is
+;;'shift  is pushed  to  the  <stx>-rib* list.   Every  time  a mark  is
 ;;cancelled  by   an  anti-mark,  the  corresponding   shifts  are  also
 ;;cancelled.
 
-;;The procedure join-wraps,  here, is used to compute the  new mark* and
-;;subst* that would  result when the m1*  and s1* are added  to an stx's
-;;mark* and subst*.
+;;The procedure join-wraps,  here, is used to compute the  new MARK* and
+;;RIB* that  would result  when the m1*  and s1* are  added to  an stx's
+;;MARK* and RIB*.
 ;;
 ;;The only tricky part here is that  e may have an anti-mark that should
 ;;cancel with the last mark in m1*.  So, if:
@@ -5032,13 +5032,13 @@
 ;;
 ;;  (mx* ... my* ...)
 ;;
-;;since mx  would cancel with the  anti-mark.  The substs would  have to
-;;also cancel since:
+;;since mx would cancel with the anti-mark.  The ribs would have to also
+;;cancel since:
 ;;
 ;;    s1* = (sx* ... sx)
 ;;    s2* = (sy sy* ...)
 ;;
-;;then the resulting substs should be:
+;;then the resulting ribs should be:
 ;;
 ;;    (sx* ... sy* ...)
 ;;
@@ -5097,31 +5097,38 @@
 	   (eq? ($car x) ($car y))
 	   (same-marks? ($cdr x) ($cdr y)))))
 
-(define (join-wraps mark1* subst1* ae1* stx2)
+(define (join-wraps stx1.mark* stx1.rib* stx1.ae stx2)
   (import WRAPS-UTILITIES)
-  (let ((mark2*   ($<stx>-mark*  stx2))
-	(subst2*  ($<stx>-subst* stx2))
-	(ae2*     ($<stx>-ae*    stx2)))
-    ;;If the first item in mark2* is an anti-mark...
-    (if (and (not (null? mark1*))
-	     (not (null? mark2*))
-	     (anti-mark? ($car mark2*)))
+  (let ((stx2.mark* ($<stx>-mark* stx2))
+	(stx2.rib*  ($<stx>-rib*  stx2))
+	(stx2.ae*   ($<stx>-ae*   stx2)))
+    ;;If the first item in stx2.mark* is an anti-mark...
+    (if (and (not (null? stx1.mark*))
+	     (not (null? stx2.mark*))
+	     (anti-mark? ($car stx2.mark*)))
 	;;...cancel mark, anti-mark, and corresponding shifts.
-	(values (%append-cancel-facing mark1*  mark2*)
-		(%append-cancel-facing subst1* subst2*)
-		(%merge-annotated-expr* ae1* ae2*))
+	(values (%append-cancel-facing stx1.mark* stx2.mark*)
+		(%append-cancel-facing stx1.rib*  stx2.rib*)
+		(%merge-annotated-expr* stx1.ae stx2.ae*))
       ;;..else no cancellation takes place.
-      (values (append mark1*  mark2*)
-	      (append subst1* subst2*)
-	      (%merge-annotated-expr* ae1* ae2*)))))
+      (values (append stx1.mark* stx2.mark*)
+	      (append stx1.rib*  stx2.rib*)
+	      (%merge-annotated-expr* stx1.ae stx2.ae*)))))
 
 (module ADD-MARK
   (add-mark)
   (import WRAPS-UTILITIES)
 
   (define* (add-mark mark {rib false-or-rib?} expr ae)
-    ;;Build and return  a new syntax object wrapping  EXPR and having MARK
-    ;;pushed on its list of marks.
+    ;;Build and return a new syntax object wrapping EXPR and having MARK
+    ;;pushed  on its  list  of  marks.  This  function  used  only in  2
+    ;;places:
+    ;;
+    ;;* It  is applied to  the input form  of a macro  transformer, with
+    ;;  MARK being the anti-mark.
+    ;;
+    ;;* It  is applied to the  output form of a  macro transformer, with
+    ;;  MARK being a proper mark.
     ;;
     ;;MARK is either the anti-mark or a new mark.
     ;;
@@ -5139,14 +5146,14 @@
     ;;
     #;(debug-print 'add-mark-enter expr)
     (receive-and-return (R)
-	(mkstx (%post-order-visit expr mark rib expr '() '()) ;stx
+	(mkstx (%find-foreign-stx expr mark rib expr '() '()) ;stx
 	       '()					      ;mark*
-	       '()					      ;subst*
+	       '()					      ;rib*
 	       (list ae))				      ;ae*
       #;(debug-print 'add-mark-exit R)
       (void)))
 
-  (define (%post-order-visit top-expr new-mark rib expr outer-subst* ae*)
+  (define (%find-foreign-stx top-expr new-mark rib expr outer-rib* ae*)
     ;;Recursively visit EXPR while EXPR is: a pair, a vector or an <stx>
     ;;with empty MARK*.  Stop the recursion  when EXPR is: an <stx> with
     ;;non-empty MARK* or a  non-compound datum (boolean, number, string,
@@ -5159,17 +5166,17 @@
     ;;Return a wrapped  or (partially) unwrapped syntax  object with the
     ;;mark added.
     ;;
-    ;;OUTER-SUBST* is  the list  of SUBST*  (ribs and  "shift" symbols),
-    ;;from  outer  to  inner,  collected so  far  while  visiting  <stx>
-    ;;instances with empty MARK*.
+    ;;OUTER-RIB* is  the list of  RIB* (ribs and "shift"  symbols), from
+    ;;outer to  inner, collected so  far while visiting  <stx> instances
+    ;;with empty MARK*.
     ;;
-    (define-syntax-rule (%recurse ?expr ?outer-subst* ?ae*)
-      (%post-order-visit top-expr new-mark rib ?expr ?outer-subst* ?ae*))
+    (define-syntax-rule (%recurse ?expr ?outer-rib* ?ae*)
+      (%find-foreign-stx top-expr new-mark rib ?expr ?outer-rib* ?ae*))
     (cond ((pair? expr)
 	   ;;Visit the  items in the  pair.  If the visited  items equal
 	   ;;the original items: keep EXPR as result.
-	   (let ((A (%recurse (car expr) outer-subst* ae*))
-		 (D (%recurse (cdr expr) outer-subst* ae*)))
+	   (let ((A (%recurse (car expr) outer-rib* ae*))
+		 (D (%recurse (cdr expr) outer-rib* ae*)))
 	     (if (eq? A D)
 		 expr
 	       (cons A D))))
@@ -5179,20 +5186,20 @@
 	   ;;equal the original items: keep EXPR as result.
 	   (let* ((ls1 (vector->list expr))
 		  (ls2 (map (lambda (item)
-			      (%recurse item outer-subst* ae*))
+			      (%recurse item outer-rib* ae*))
 			 ls1)))
 	     (if (for-all eq? ls1 ls2)
 		 expr
 	       (list->vector ls2))))
 
 	  ((<stx>? expr)
-	   (let ((expr.mark*   ($<stx>-mark*  expr))
-		 (expr.subst* ($<stx>-subst* expr)))
+	   (let ((expr.mark* ($<stx>-mark* expr))
+		 (expr.rib*  ($<stx>-rib*  expr)))
 	     (cond ((null? expr.mark*)
-		    ;;EXPR  with empty  MARK*: collect  its SUBST*  then
+		    ;;EXPR  with  empty  MARK*: collect  its  RIB*  then
 		    ;;recurse into its expression.
 		    (%recurse ($<stx>-expr expr)
-			      (append outer-subst* expr.subst*)
+			      (append outer-rib* expr.rib*)
 			      (%merge-annotated-expr* ae* ($<stx>-ae* expr))))
 		   ((eq? (car expr.mark*) anti-mark)
 		    ;;EXPR with non-empty MARK*  having the anti-mark as
@@ -5202,19 +5209,19 @@
 		    ;;Drop  both   NEW-MARK  and  the   anti-mark  (they
 		    ;;annihilate each other) from the resulting MARK*.
 		    ;;
-		    ;;Join the collected OUTER-SUBST* with the SUBST* of
-		    ;;EXPR; the  first item  in the resulting  SUBST* is
-		    ;;associated  to  the  anti-mark (it  is  a  "shift"
-		    ;;symbol) so we drop it.
+		    ;;Join the collected  OUTER-RIB* with the EXPR.RIB*;
+		    ;;the first item in the resulting RIB* is associated
+		    ;;to the  anti-mark (it is  a "shift" symbol)  so we
+		    ;;drop it.
 		    ;;
-		    (assert (or (and (not (null? outer-subst*))
-				     (eq? 'shift (car outer-subst*)))
-				(and (not (null? expr.subst*))
-				     (eq? 'shift (car expr.subst*)))))
-		    (let* ((result.subst* (append outer-subst* expr.subst*))
-			   (result.subst* (cdr result.subst*)))
+		    (assert (or (and (not (null? outer-rib*))
+				     (eq? 'shift (car outer-rib*)))
+				(and (not (null? expr.rib*))
+				     (eq? 'shift (car expr.rib*)))))
+		    (let* ((result.rib* (append outer-rib* expr.rib*))
+			   (result.rib* (cdr result.rib*)))
 		      (make-<stx> ($<stx>-expr expr) (cdr expr.mark*)
-				  result.subst*
+				  result.rib*
 				  (%merge-annotated-expr* ae* ($<stx>-ae* expr)))))
 		   (else
 		    ;;EXPR with non-empty MARK*  having a proper mark as
@@ -5224,17 +5231,17 @@
 		    ;;
 		    ;;Push NEW-MARK on the resulting MARK*.
 		    ;;
-		    ;;Join the collected OUTER-SUBST* with the SUBST* of
-		    ;;EXPR;  push a  "shift"  on  the resulting  SUBST*,
+		    ;;Join the  collected OUTER-RIB* with  the EXPR.RIB*
+		    ;;of  EXPR; push  a "shift"  on the  resulting RIB*,
 		    ;;associated to NEW-MARK in MARK*.
 		    ;;
-		    (let* ((result.subst* (append outer-subst* expr.subst*))
-			   (result.subst* (cons 'shift result.subst*))
-			   (result.subst* (if rib
-					      (cons rib result.subst*)
-					    result.subst*)))
+		    (let* ((result.rib* (append outer-rib* expr.rib*))
+			   (result.rib* (cons 'shift result.rib*))
+			   (result.rib* (if rib
+					    (cons rib result.rib*)
+					  result.rib*)))
 		      (make-<stx> ($<stx>-expr expr) (cons new-mark expr.mark*)
-				  result.subst*
+				  result.rib*
 				  (%merge-annotated-expr* ae* ($<stx>-ae* expr))))))))
 
 	  ((symbol? expr)
@@ -5247,7 +5254,7 @@
 	   ;;If  we are  here EXPR  is a  non-compound datum  (booleans,
 	   ;;numbers, strings, ..., structs, records).
 	   #;(assert (non-compound-sexp? expr))
-	   (make-<stx> expr (list new-mark) outer-subst* ae*))))
+	   (make-<stx> expr (list new-mark) outer-rib* ae*))))
 
   #| end of module: ADD-MARK |# )
 
@@ -5493,7 +5500,7 @@
   (cond ((<stx>? x)
 	 (mkstx (syntax-car ($<stx>-expr x))
 		($<stx>-mark*  x)
-		($<stx>-subst* x)
+		($<stx>-rib* x)
 		($<stx>-ae*    x)))
 	((annotation? x)
 	 (syntax-car (annotation-expression x)))
@@ -5506,7 +5513,7 @@
   (cond ((<stx>? x)
 	 (mkstx (syntax-cdr ($<stx>-expr x))
 		($<stx>-mark*  x)
-		($<stx>-subst* x)
+		($<stx>-rib* x)
 		($<stx>-ae*    x)))
 	((annotation? x)
 	 (syntax-cdr (annotation-expression x)))
@@ -5528,7 +5535,7 @@
   (cond ((<stx>? x)
 	 (let ((ls (syntax-vector->list (<stx>-expr x)))
 	       (m* (<stx>-mark* x))
-	       (s* (<stx>-subst* x))
+	       (s* (<stx>-rib* x))
 	       (ae* (<stx>-ae* x)))
 	   (map (lambda (x)
 		  (mkstx x m* s* ae*))
@@ -6030,7 +6037,7 @@
 		      (assert (non-compound-sexp? input-stx))
 		      input-stx)))
 	     '()  ;mark*
-	     '()  ;subst*
+	     '()  ;rib*
 	     '()) ;ae*
     ;; (debug-print 'bless-input  (syntax->datum input-stx)
     ;; 		 'bless-output (syntax->datum output-stx))
@@ -6449,55 +6456,55 @@
       (%synner "not an identifier" new-id))
     (unless (free-identifier=? base-id new-id)
       (%synner "not the same identifier" base-id new-id))
-    (receive (mark* subst* annotated-expr*)
+    (receive (mark* rib* annotated-expr*)
 	(diff (car ($<stx>-mark* base-id))
-	      ($<stx>-mark*   new-id)
-	      ($<stx>-subst*  new-id)
-	      ($<stx>-ae*     new-id)
+	      ($<stx>-mark* new-id)
+	      ($<stx>-rib*  new-id)
+	      ($<stx>-ae*   new-id)
 	      (lambda ()
 		(%synner "unmatched identifiers" base-id new-id)))
       (if (and (null? mark*)
-	       (null? subst*))
+	       (null? rib*))
 	  object
-	(mkstx object mark* subst* annotated-expr*))))
+	(mkstx object mark* rib* annotated-expr*))))
 
-  (define (diff base.mark new.mark* new.subst* new.annotated-expr* error)
+  (define (diff base.mark new.mark* new.rib* new.annotated-expr* error)
     (if (null? new.mark*)
 	(error)
       (let ((new.mark1 (car new.mark*)))
 	(if (eq? base.mark new.mark1)
-	    (values '() (final new.subst*) '())
+	    (values '() (final new.rib*) '())
 	  (receive (subst1* subst2*)
-	      (split new.subst*)
+	      (split new.rib*)
 	    (receive (nm* ns* nae*)
 		(diff base.mark (cdr new.mark*) subst2* (cdr new.annotated-expr*) error)
 	      (values (cons new.mark1 nm*)
 		      (append subst1* ns*)
 		      (cons (car new.annotated-expr*) nae*))))))))
 
-  (define (split subst*)
-    ;;Non-tail recursive  function.  Split  SUBST* and return  2 values:
-    ;;the prefix  of SUBST*  up to  and including  the first  shift, the
-    ;;suffix of SUBST* from the first shift excluded to the end.
+  (define (split rib*)
+    ;;Non-tail recursive function.  Split RIB*  and return 2 values: the
+    ;;prefix of RIB* up to and  including the first shift, the suffix of
+    ;;RIB* from the first shift excluded to the end.
     ;;
-    (if (eq? (car subst*) 'shift)
+    (if (eq? (car rib*) 'shift)
 	(values (list 'shift)
-		(cdr subst*))
-      (receive (subst1* subst2*)
-	  (split (cdr subst*))
-	(values (cons (car subst*) subst1*)
-		subst2*))))
+		(cdr rib*))
+      (receive (rib1* rib2*)
+	  (split (cdr rib*))
+	(values (cons (car rib*) rib1*)
+		rib2*))))
 
-  (define (final subst*)
-    ;;Non-tail recursive  function.  Return the  prefix of SUBST*  up to
-    ;;and not including  the first shift.  The returned prefix  is a new
-    ;;list spine sharing the cars with SUBST*.
+  (define (final rib*)
+    ;;Non-tail recursive function.  Return the  prefix of RIB* up to and
+    ;;not including the first shift.  The  returned prefix is a new list
+    ;;spine sharing the cars with RIB*.
     ;;
-    (if (or (null? subst*)
-	    (eq? (car subst*) 'shift))
+    (if (or (null? rib*)
+	    (eq? (car rib*) 'shift))
 	'()
-      (cons (car subst*)
-	    (final (cdr subst*)))))
+      (cons (car rib*)
+	    (final (cdr rib*)))))
 
   (define-syntax-rule (%synner ?message ?irritant ...)
     (assertion-violation __who__ ?message ?irritant ...))
@@ -6537,12 +6544,12 @@
   (define (syntax-dispatch expr pattern)
     (%match expr pattern
 	    '() #;mark*
-	    '() #;subst*
+	    '() #;rib*
 	    '() #;annotated-expr*
 	    '() #;pvar*
 	    ))
 
-  (define (%match expr pattern mark* subst* annotated-expr* pvar*)
+  (define (%match expr pattern mark* rib* annotated-expr* pvar*)
     (cond ((not pvar*)
 	   ;;No match.
 	   #f)
@@ -6551,21 +6558,21 @@
 	   pvar*)
 	  ((eq? pattern 'any)
 	   ;;Match anything, bind a pattern variable.
-	   (cons (%make-syntax-object expr mark* subst* annotated-expr*)
+	   (cons (%make-syntax-object expr mark* rib* annotated-expr*)
 		 pvar*))
 	  ((<stx>? expr)
 	   ;;Visit the syntax object.
 	   (and (not (top-marked? mark*))
-		(receive (mark*^ subst*^ annotated-expr*^)
-		    (join-wraps mark* subst* annotated-expr* expr)
-		  (%match (<stx>-expr expr) pattern mark*^ subst*^ annotated-expr*^ pvar*))))
+		(receive (mark*^ rib*^ annotated-expr*^)
+		    (join-wraps mark* rib* annotated-expr* expr)
+		  (%match (<stx>-expr expr) pattern mark*^ rib*^ annotated-expr*^ pvar*))))
 	  ((annotation? expr)
 	   ;;Visit the ANNOTATION struct.
-	   (%match (annotation-expression expr) pattern mark* subst* annotated-expr* pvar*))
+	   (%match (annotation-expression expr) pattern mark* rib* annotated-expr* pvar*))
 	  (else
-	   (%match* expr pattern mark* subst* annotated-expr* pvar*))))
+	   (%match* expr pattern mark* rib* annotated-expr* pvar*))))
 
-  (define (%match* expr pattern mark* subst* annotated-expr* pvar*)
+  (define (%match* expr pattern mark* rib* annotated-expr* pvar*)
     (cond
      ;;End of list pattern: match the end of a list expression.
      ;;
@@ -6577,8 +6584,8 @@
      ;;
      ((pair? pattern)
       (and (pair? expr)
-	   (%match (car expr) (car pattern) mark* subst* annotated-expr*
-		   (%match (cdr expr) (cdr pattern) mark* subst* annotated-expr* pvar*))))
+	   (%match (car expr) (car pattern) mark* rib* annotated-expr*
+		   (%match (cdr expr) (cdr pattern) mark* rib* annotated-expr* pvar*))))
 
      ;;Match any  proper list  expression and  bind a  pattern variable.
      ;;This happens when the original pattern symbolic expression is:
@@ -6589,7 +6596,7 @@
      ;;variable ?VAR.
      ;;
      ((eq? pattern 'each-any)
-      (let ((l (%match-each-any expr mark* subst* annotated-expr*)))
+      (let ((l (%match-each-any expr mark* rib* annotated-expr*)))
 	(and l (cons l pvar*))))
 
      (else
@@ -6612,7 +6619,7 @@
 	 (if (null? expr)
 	     (%match-empty (vector-ref pattern 1) pvar*)
 	   (let ((pvar** (%match-each expr (vector-ref pattern 1)
-				      mark* subst* annotated-expr*)))
+				      mark* rib* annotated-expr*)))
 	     (and pvar**
 		  (%combine pvar** pvar*)))))
 
@@ -6626,7 +6633,7 @@
 	((free-id)
 	 (and (symbol? expr)
 	      (top-marked? mark*)
-	      (free-id=? (%make-syntax-object expr mark* subst* annotated-expr*)
+	      (free-id=? (%make-syntax-object expr mark* rib* annotated-expr*)
 			 (vector-ref pattern 1))
 	      pvar*))
 
@@ -6641,7 +6648,7 @@
 	((scheme-id)
 	 (and (symbol? expr)
 	      (top-marked? mark*)
-	      (free-id=? (%make-syntax-object expr mark* subst* annotated-expr*)
+	      (free-id=? (%make-syntax-object expr mark* rib* annotated-expr*)
 			 (scheme-stx (vector-ref pattern 1)))
 	      pvar*))
 
@@ -6661,7 +6668,7 @@
 			   (vector-ref pattern 1)
 			   (vector-ref pattern 2)
 			   (vector-ref pattern 3)
-			   mark* subst* annotated-expr* pvar*)
+			   mark* rib* annotated-expr* pvar*)
 	   (and pvar*
 		(null? y-pat)
 		(if (null? xr*)
@@ -6690,71 +6697,71 @@
 	((vector)
 	 (and (vector? expr)
 	      (%match (vector->list expr) (vector-ref pattern 1)
-		      mark* subst* annotated-expr* pvar*)))
+		      mark* rib* annotated-expr* pvar*)))
 
 	(else
 	 (assertion-violation 'syntax-dispatch "invalid pattern" pattern))))))
 
-  (define (%match-each expr pattern mark* subst* annotated-expr*)
+  (define (%match-each expr pattern mark* rib* annotated-expr*)
     ;;Recursive function.   The expression  matches if it  is a  list in
     ;;which  every item  matches  PATTERN.   Return null  or  a list  of
     ;;sublists, each sublist being a list of pattern variable values.
     ;;
     (cond ((pair? expr)
-	   (let ((first (%match (car expr) pattern mark* subst* annotated-expr* '())))
+	   (let ((first (%match (car expr) pattern mark* rib* annotated-expr* '())))
 	     (and first
-		  (let ((rest (%match-each (cdr expr) pattern mark* subst* annotated-expr*)))
+		  (let ((rest (%match-each (cdr expr) pattern mark* rib* annotated-expr*)))
 		    (and rest (cons first rest))))))
 	  ((null? expr)
 	   '())
 	  ((<stx>? expr)
 	   (and (not (top-marked? mark*))
-		(receive (mark*^ subst*^ annotated-expr*^)
-		    (join-wraps mark* subst* annotated-expr* expr)
-		  (%match-each (<stx>-expr expr) pattern mark*^ subst*^ annotated-expr*^))))
+		(receive (mark*^ rib*^ annotated-expr*^)
+		    (join-wraps mark* rib* annotated-expr* expr)
+		  (%match-each (<stx>-expr expr) pattern mark*^ rib*^ annotated-expr*^))))
 	  ((annotation? expr)
-	   (%match-each (annotation-expression expr) pattern mark* subst* annotated-expr*))
+	   (%match-each (annotation-expression expr) pattern mark* rib* annotated-expr*))
 	  (else #f)))
 
-  (define (%match-each+ e x-pat y-pat z-pat mark* subst* annotated-expr* pvar*)
-    (let loop ((e e) (mark* mark*) (subst* subst*) (annotated-expr* annotated-expr*))
+  (define (%match-each+ e x-pat y-pat z-pat mark* rib* annotated-expr* pvar*)
+    (let loop ((e e) (mark* mark*) (rib* rib*) (annotated-expr* annotated-expr*))
       (cond ((pair? e)
 	     (receive (xr* y-pat pvar*)
-		 (loop (cdr e) mark* subst* annotated-expr*)
+		 (loop (cdr e) mark* rib* annotated-expr*)
 	       (if pvar*
 		   (if (null? y-pat)
-		       (let ((xr (%match (car e) x-pat mark* subst* annotated-expr* '())))
+		       (let ((xr (%match (car e) x-pat mark* rib* annotated-expr* '())))
 			 (if xr
 			     (values (cons xr xr*) y-pat pvar*)
 			   (values #f #f #f)))
 		     (values '()
 			     (cdr y-pat)
-			     (%match (car e) (car y-pat) mark* subst* annotated-expr* pvar*)))
+			     (%match (car e) (car y-pat) mark* rib* annotated-expr* pvar*)))
 		 (values #f #f #f))))
 	    ((<stx>? e)
 	     (if (top-marked? mark*)
-		 (values '() y-pat (%match e z-pat mark* subst* annotated-expr* pvar*))
-	       (receive (mark* subst* annotated-expr*)
-		   (join-wraps mark* subst* annotated-expr* e)
-		 (loop (<stx>-expr e) mark* subst* annotated-expr*))))
+		 (values '() y-pat (%match e z-pat mark* rib* annotated-expr* pvar*))
+	       (receive (mark* rib* annotated-expr*)
+		   (join-wraps mark* rib* annotated-expr* e)
+		 (loop (<stx>-expr e) mark* rib* annotated-expr*))))
 	    ((annotation? e)
-	     (loop (annotation-expression e) mark* subst* annotated-expr*))
+	     (loop (annotation-expression e) mark* rib* annotated-expr*))
 	    (else
-	     (values '() y-pat (%match e z-pat mark* subst* annotated-expr* pvar*))))))
+	     (values '() y-pat (%match e z-pat mark* rib* annotated-expr* pvar*))))))
 
-  (define (%match-each-any e mark* subst* annotated-expr*)
+  (define (%match-each-any e mark* rib* annotated-expr*)
     (cond ((pair? e)
-	   (let ((l (%match-each-any (cdr e) mark* subst* annotated-expr*)))
-	     (and l (cons (%make-syntax-object (car e) mark* subst* annotated-expr*) l))))
+	   (let ((l (%match-each-any (cdr e) mark* rib* annotated-expr*)))
+	     (and l (cons (%make-syntax-object (car e) mark* rib* annotated-expr*) l))))
 	  ((null? e)
 	   '())
 	  ((<stx>? e)
 	   (and (not (top-marked? mark*))
-		(receive (mark* subst* annotated-expr*)
-		    (join-wraps mark* subst* annotated-expr* e)
-		  (%match-each-any (<stx>-expr e) mark* subst* annotated-expr*))))
+		(receive (mark* rib* annotated-expr*)
+		    (join-wraps mark* rib* annotated-expr* e)
+		  (%match-each-any (<stx>-expr e) mark* rib* annotated-expr*))))
 	  ((annotation? e)
-	   (%match-each-any (annotation-expression e) mark* subst* annotated-expr*))
+	   (%match-each-any (annotation-expression e) mark* rib* annotated-expr*))
 	  (else #f)))
 
   (define (%match-empty p pvar*)
@@ -6785,12 +6792,12 @@
 	     (else
 	      (assertion-violation 'syntax-dispatch "invalid pattern" p))))))
 
-  (define (%make-syntax-object stx mark* subst* annotated-expr*)
+  (define (%make-syntax-object stx mark* rib* annotated-expr*)
     (if (and (null? mark*)
-	     (null? subst*)
+	     (null? rib*)
 	     (null? annotated-expr*))
 	stx
-      (mkstx stx mark* subst* annotated-expr*)))
+      (mkstx stx mark* rib* annotated-expr*)))
 
   (define (%combine pvar** pvar*)
     (if (null? (car pvar**))
@@ -8480,15 +8487,17 @@
 	      ;;the enclosing lexical environment.
 	      (let* ((name-label (gensym-for-label 'module))
 		     (iface      (make-module-interface
-				  (car (<stx>-mark* name))
+				  (car ($<stx>-mark* name))
 				  (vector-map
 				      (lambda (x)
 					;;This   is   a  syntax   object
 					;;holding an identifier.
-					(make-<stx> (<stx>-expr x) ;expression
-						    (<stx>-mark* x) ;list of marks
-						    '() ;list of substs
-						    '())) ;annotated expressions
+					(let ((rib* '())
+					      (ae*  '()))
+					  (make-<stx> ($<stx>-expr x)
+						      ($<stx>-mark* x)
+						      rib*
+						      ae*)))
 				    all-export-id*)
 				  all-export-lab*))
 		     (binding    (make-module-binding iface))
@@ -8534,10 +8543,12 @@
 	    id-vec
 	  (vector-map
 	      (lambda (x)
-		(make-<stx> (<stx>-expr x)		  ;expression
-			    (append diff (<stx>-mark* x)) ;list of marks
-			    '()	  ;list of substs
-			    '())) ;annotated expressions
+		(let ((rib* '())
+		      (ae*  '()))
+		  (make-<stx> ($<stx>-expr x)
+			      (append diff ($<stx>-mark* x))
+			      rib*
+			      ae*)))
 	    id-vec))))
 
     (define (%diff-marks mark* the-mark)
