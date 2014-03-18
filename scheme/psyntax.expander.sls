@@ -4439,6 +4439,10 @@
     ($set-<rib>-mark**!      rib (vector->list ($<rib>-mark** rib)))
     ($set-<rib>-label*!      rib (vector->list ($<rib>-label* rib)))))
 
+(define (false-or-rib? obj)
+  (or (not obj)
+      (<rib>? obj)))
+
 
 ;;;; syntax object type definition
 ;;
@@ -5018,13 +5022,14 @@
 (module ADD-MARK
   (add-mark)
 
-  (define (add-mark mark subst expr ae)
+  (define* (add-mark mark {rib false-or-rib?} expr ae)
     ;;Build and return  a new syntax object wrapping  EXPR and having MARK
     ;;pushed on its list of marks.
     ;;
     ;;MARK is either the anti-mark or a new mark.
     ;;
-    ;;SUBST can be #f or a list of substitutions.
+    ;;RIB can be #f (when MARK is the anti-mark) or an instance of <rib>
+    ;;(when MARK is a new mark).
     ;;
     ;;EXPR is either  the input form of a macro  transformer call or the
     ;;output  form of  a macro  transformer call;  it must  be a  syntax
@@ -5037,16 +5042,16 @@
     ;;
     #;(debug-print 'add-mark-enter expr)
     (receive-and-return (R)
-	(mkstx (%post-order-visit expr mark subst expr '() '()) ;stx
-	       '()						;mark*
-	       '()						;subst*
-	       (list ae))					;ae*
+	(mkstx (%post-order-visit expr mark rib expr '() '()) ;stx
+	       '()					      ;mark*
+	       '()					      ;subst*
+	       (list ae))				      ;ae*
       #;(debug-print 'add-mark-exit R)
       (void)))
 
-  (define (%post-order-visit top-expr new-mark top-subst sub-expr subst1* ae*)
+  (define (%post-order-visit top-expr new-mark rib sub-expr subst1* ae*)
     (define-syntax-rule (%recurse ?sub-expr ?subst1* ?ae*)
-      (%post-order-visit top-expr new-mark top-subst ?sub-expr ?subst1* ?ae*))
+      (%post-order-visit top-expr new-mark rib ?sub-expr ?subst1* ?ae*))
     (cond ((pair? sub-expr)
 	   ;;Visit the  items in the  pair.  If the visited  items equal
 	   ;;the original items: keep SUB-EXPR as result.
@@ -5082,8 +5087,8 @@
 		    (make-<stx> ($<stx>-expr sub-expr)
 				(cons new-mark mark*)
 				(let ((s* (cons 'shift (append subst1* subst2*))))
-				  (if top-subst
-				      (cons top-subst s*)
+				  (if rib
+				      (cons rib s*)
 				    s*))
 				(%merge-annotated-expr* ae* ($<stx>-ae* sub-expr)))))))
 
@@ -6865,7 +6870,7 @@
 	 chi-local-macro
 	 chi-global-macro)
 
-  (define* (chi-non-core-macro {procname symbol?} input-form-expr lexenv.run rib)
+  (define* (chi-non-core-macro {procname symbol?} input-form-expr lexenv.run {rib false-or-rib?})
     ;;Expand an expression representing the use of a non-core macro; the
     ;;transformer function is integrated in the expander.
     ;;
@@ -6886,7 +6891,7 @@
 		      (non-core-macro-transformer procname))
 		    input-form-expr lexenv.run rib))
 
-  (define (chi-local-macro bind-val input-form-expr lexenv.run rib)
+  (define* (chi-local-macro bind-val input-form-expr lexenv.run {rib false-or-rib?})
     ;;This  function is  used  to  expand macro  uses  for macros  whose
     ;;transformer  is defined  by local  user code,  but not  identifier
     ;;syntaxes;  these are  the lexical  environment entries  with types
@@ -6912,7 +6917,7 @@
     ;;
     (%do-macro-call (car bind-val) input-form-expr lexenv.run rib))
 
-  (define (chi-global-macro bind-val input-form-expr lexenv.run rib)
+  (define* (chi-global-macro bind-val input-form-expr lexenv.run {rib false-or-rib?})
     ;;This  function is  used  to  expand macro  uses  for macros  whose
     ;;transformer is defined  by user code in  imported libraries; these
     ;;are the lexical environment  entries with types "global-macro" and
@@ -6954,7 +6959,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%do-macro-call transformer input-form-expr lexenv.run rib)
+  (define* (%do-macro-call transformer input-form-expr lexenv.run {rib false-or-rib?})
     (import ADD-MARK)
     (define (main)
       ;;We parametrise here because we can never know which transformer,
