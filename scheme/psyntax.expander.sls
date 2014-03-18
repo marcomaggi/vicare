@@ -4500,8 +4500,12 @@
 		;contour; a  "shift" represents the return  from a macro
 		;transformer application.
 		;
-		;NOTE The items in MARK*  and SUBST* are not associated:
-		;the two lists grow independently of each other.
+		;NOTE The items  in the fields MARK* and  SUBST* are not
+		;associated:  the two  lists can  grow independently  of
+		;each  other.  But  considering the  whole structure  of
+		;nested  <stx> instances:  the  items in  all the  MARK*
+		;fields are associated  to the items in  all the SUBST*,
+		;see the function ADD-MARK for details.
    ae*
 		;List of  annotated expressions:  null or a  proper list
 		;whose items are #f or  input forms of macro transformer
@@ -5142,20 +5146,30 @@
       #;(debug-print 'add-mark-exit R)
       (void)))
 
-  (define (%post-order-visit top-expr new-mark rib expr upper-subst* ae*)
-    ;;Recursively visit EXPR, return  a wrapped or (partially) unwrapped
-    ;;syntax object with the mark added.
+  (define (%post-order-visit top-expr new-mark rib expr outer-subst* ae*)
+    ;;Recursively visit EXPR while EXPR is: a pair, a vector or an <stx>
+    ;;with empty MARK*.  Stop the recursion  when EXPR is: an <stx> with
+    ;;non-empty MARK* or a  non-compound datum (boolean, number, string,
+    ;;..., struct, record,  null).  Raise an exception if EXPR  is a raw
+    ;;symbol.
     ;;
-    ;;UPPER-SUBST* is the  list of ribs and "shift"  symbols, from outer
-    ;;to inner, collected so far.
+    ;;When a  <stx> with non-empty  MARK* is found: perform  the action;
+    ;;see below for details.
     ;;
-    (define-syntax-rule (%recurse ?expr ?upper-subst* ?ae*)
-      (%post-order-visit top-expr new-mark rib ?expr ?upper-subst* ?ae*))
+    ;;Return a wrapped  or (partially) unwrapped syntax  object with the
+    ;;mark added.
+    ;;
+    ;;OUTER-SUBST* is  the list  of SUBST*  (ribs and  "shift" symbols),
+    ;;from  outer  to  inner,  collected so  far  while  visiting  <stx>
+    ;;instances with empty MARK*.
+    ;;
+    (define-syntax-rule (%recurse ?expr ?outer-subst* ?ae*)
+      (%post-order-visit top-expr new-mark rib ?expr ?outer-subst* ?ae*))
     (cond ((pair? expr)
 	   ;;Visit the  items in the  pair.  If the visited  items equal
 	   ;;the original items: keep EXPR as result.
-	   (let ((A (%recurse (car expr) upper-subst* ae*))
-		 (D (%recurse (cdr expr) upper-subst* ae*)))
+	   (let ((A (%recurse (car expr) outer-subst* ae*))
+		 (D (%recurse (cdr expr) outer-subst* ae*)))
 	     (if (eq? A D)
 		 expr
 	       (cons A D))))
@@ -5165,33 +5179,63 @@
 	   ;;equal the original items: keep EXPR as result.
 	   (let* ((ls1 (vector->list expr))
 		  (ls2 (map (lambda (item)
-			      (%recurse item upper-subst* ae*))
+			      (%recurse item outer-subst* ae*))
 			 ls1)))
 	     (if (for-all eq? ls1 ls2)
 		 expr
 	       (list->vector ls2))))
 
 	  ((<stx>? expr)
-	   (let ((mark*   ($<stx>-mark*  expr))
-		 (subst2* ($<stx>-subst* expr)))
-	     (cond ((null? mark*)
+	   (let ((expr.mark*   ($<stx>-mark*  expr))
+		 (expr.subst* ($<stx>-subst* expr)))
+	     (cond ((null? expr.mark*)
+		    ;;EXPR  with empty  MARK*: collect  its SUBST*  then
+		    ;;recurse into its expression.
 		    (%recurse ($<stx>-expr expr)
-			      (append upper-subst* subst2*)
+			      (append outer-subst* expr.subst*)
 			      (%merge-annotated-expr* ae* ($<stx>-ae* expr))))
-		   ((eq? (car mark*) anti-mark)
-		    (make-<stx> ($<stx>-expr expr) (cdr mark*)
-				(cdr (append upper-subst* subst2*))
-				(%merge-annotated-expr* ae* ($<stx>-ae* expr))))
+		   ((eq? (car expr.mark*) anti-mark)
+		    ;;EXPR with non-empty MARK*  having the anti-mark as
+		    ;;first mark; this means EXPR is the input form of a
+		    ;;macro transformer call.
+		    ;;
+		    ;;Drop  both   NEW-MARK  and  the   anti-mark  (they
+		    ;;annihilate each other) from the resulting MARK*.
+		    ;;
+		    ;;Join the collected OUTER-SUBST* with the SUBST* of
+		    ;;EXPR; the  first item  in the resulting  SUBST* is
+		    ;;associated  to  the  anti-mark (it  is  a  "shift"
+		    ;;symbol) so we drop it.
+		    ;;
+		    (assert (or (and (not (null? outer-subst*))
+				     (eq? 'shift (car outer-subst*)))
+				(and (not (null? expr.subst*))
+				     (eq? 'shift (car expr.subst*)))))
+		    (let* ((result.subst* (append outer-subst* expr.subst*))
+			   (result.subst* (cdr result.subst*)))
+		      (make-<stx> ($<stx>-expr expr) (cdr expr.mark*)
+				  result.subst*
+				  (%merge-annotated-expr* ae* ($<stx>-ae* expr)))))
 		   (else
-		    ;;We are really pushing a new mark: add a "shift" to
-		    ;;the list of substs.
-		    (make-<stx> ($<stx>-expr expr)
-				(cons new-mark mark*)
-				(let ((s* (cons 'shift (append upper-subst* subst2*))))
-				  (if rib
-				      (cons rib s*)
-				    s*))
-				(%merge-annotated-expr* ae* ($<stx>-ae* expr)))))))
+		    ;;EXPR with non-empty MARK*  having a proper mark as
+		    ;;first  mark; this  means EXPR  is a  syntax object
+		    ;;created by a macro transformer and inserted in its
+		    ;;output form.
+		    ;;
+		    ;;Push NEW-MARK on the resulting MARK*.
+		    ;;
+		    ;;Join the collected OUTER-SUBST* with the SUBST* of
+		    ;;EXPR;  push a  "shift"  on  the resulting  SUBST*,
+		    ;;associated to NEW-MARK in MARK*.
+		    ;;
+		    (let* ((result.subst* (append outer-subst* expr.subst*))
+			   (result.subst* (cons 'shift result.subst*))
+			   (result.subst* (if rib
+					      (cons rib result.subst*)
+					    result.subst*)))
+		      (make-<stx> ($<stx>-expr expr) (cons new-mark expr.mark*)
+				  result.subst*
+				  (%merge-annotated-expr* ae* ($<stx>-ae* expr))))))))
 
 	  ((symbol? expr)
 	   ;;A raw symbol is invalid.
@@ -5202,8 +5246,8 @@
 	  (else
 	   ;;If  we are  here EXPR  is a  non-compound datum  (booleans,
 	   ;;numbers, strings, ..., structs, records).
-	   (assert (non-compound-sexp? expr))
-	   (make-<stx> expr (list new-mark) upper-subst* ae*))))
+	   #;(assert (non-compound-sexp? expr))
+	   (make-<stx> expr (list new-mark) outer-subst* ae*))))
 
   #| end of module: ADD-MARK |# )
 
@@ -5979,18 +6023,19 @@
 		      (scheme-stx input-stx))
 		     ((vector? input-stx)
 		      (list->vector (map recur (vector->list input-stx))))
-		     ;;If we are here X is a self-evaluating datum.
-		     (else input-stx)))
+		     (else
+		      ;;If we are here INPUT-STX is a non-compound datum
+		      ;;(boolean, number,  string, ...,  struct, record,
+		      ;;null).
+		      (assert (non-compound-sexp? input-stx))
+		      input-stx)))
 	     '()  ;mark*
 	     '()  ;subst*
 	     '()) ;ae*
-    #;(debug-print 'bless-input
-		 input-stx
-		 ;;(syntax->datum input-stx)
-		 'bless-output
-		 output-stx
-		 ;;(syntax->datum output-stx)
-		 )
+    ;; (debug-print 'bless-input  (syntax->datum input-stx)
+    ;; 		 'bless-output (syntax->datum output-stx))
+    ;; (debug-print 'bless-input  input-stx
+    ;; 		 'bless-output output-stx)
     (void)))
 
 (define (trace-bless input-stx)
