@@ -4121,6 +4121,14 @@
 (define-constant TOP-MARK*
   '(top))
 
+(define (list-of-marks? obj)
+  (and (list? obj)
+       (for-all (lambda (item)
+		  (or (eq? 'top obj) ;proper top mark
+		      (string? obj)  ;proper lexical contour mark
+		      (not obj)))    ;anti-mark
+	 obj)))
+
 ;;... consequently, every  syntax object that has a "top"  symbol in its
 ;;marks set was present in the program source.
 (define-syntax-rule (top-marked? mark*)
@@ -5097,7 +5105,20 @@
 	   (eq? ($car x) ($car y))
 	   (same-marks? ($cdr x) ($cdr y)))))
 
-(define (join-wraps stx1.mark* stx1.rib* stx1.ae stx2)
+(define* (join-wraps {stx1.mark* list-of-marks?} {stx1.rib* ribs-and-shifts?} stx1.ae {stx2 <stx>?})
+  ;;Join the given wraps with the ones in STX2; with "wraps" we mean the
+  ;;marks and ribs.  The scenario is this:
+  ;;
+  ;;* A syntax object STX1 (wrapped or partially unwrapped) contains the
+  ;;  syntax object STX2 (an instance of <stx>) as subexpression.
+  ;;
+  ;;* Whenever STX1 is fully unwrapped (for example by SYNTAX-MATCH) its
+  ;;   marks  and  ribs  must   be  propagated  to  all  its  identifier
+  ;;  subexpressions.
+  ;;
+  ;;* In practice: the  marks of STX1 must be prepended  to the marks of
+  ;;  STX2, the ribs of STX1 must be prepended to the ribs of STX2.
+  ;;
   (import WRAPS-UTILITIES)
   (let ((stx2.mark* ($<stx>-mark* stx2))
 	(stx2.rib*  ($<stx>-rib*  stx2))
