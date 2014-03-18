@@ -1255,6 +1255,23 @@
 	(debug-print (quote ?name) 'retvals retvals)
 	(apply values retvals)))))
 
+(define (self-evaluating? x)
+  (or (number?			x)
+      (string?			x)
+      (char?			x)
+      (boolean?			x)
+      (bytevector?		x)
+      (keyword?			x)
+      (would-block-object?	x)
+      (unbound-object?		x)
+      (bwp-object?		x)))
+
+(define (non-compound-sexp? obj)
+  (or (null? obj)
+      (self-evaluating? obj)
+      ;;Notice that struct instances are not self evaluating.
+      (struct? obj)))
+
 
 ;;;; library records collectors
 
@@ -5125,61 +5142,68 @@
       #;(debug-print 'add-mark-exit R)
       (void)))
 
-  (define (%post-order-visit top-expr new-mark rib sub-expr subst1* ae*)
-    (define-syntax-rule (%recurse ?sub-expr ?subst1* ?ae*)
-      (%post-order-visit top-expr new-mark rib ?sub-expr ?subst1* ?ae*))
-    (cond ((pair? sub-expr)
+  (define (%post-order-visit top-expr new-mark rib expr upper-subst* ae*)
+    ;;Recursively visit EXPR, return  a wrapped or (partially) unwrapped
+    ;;syntax object with the mark added.
+    ;;
+    ;;UPPER-SUBST* is the  list of ribs and "shift"  symbols, from outer
+    ;;to inner, collected so far.
+    ;;
+    (define-syntax-rule (%recurse ?expr ?upper-subst* ?ae*)
+      (%post-order-visit top-expr new-mark rib ?expr ?upper-subst* ?ae*))
+    (cond ((pair? expr)
 	   ;;Visit the  items in the  pair.  If the visited  items equal
-	   ;;the original items: keep SUB-EXPR as result.
-	   (let ((A (%recurse (car sub-expr) subst1* ae*))
-		 (D (%recurse (cdr sub-expr) subst1* ae*)))
+	   ;;the original items: keep EXPR as result.
+	   (let ((A (%recurse (car expr) upper-subst* ae*))
+		 (D (%recurse (cdr expr) upper-subst* ae*)))
 	     (if (eq? A D)
-		 sub-expr
+		 expr
 	       (cons A D))))
 
-	  ((vector? sub-expr)
+	  ((vector? expr)
 	   ;;Visit all  the items in  the vector.  If the  visited items
-	   ;;equal the original items: keep SUB-EXPR as result.
-	   (let* ((ls1 (vector->list sub-expr))
+	   ;;equal the original items: keep EXPR as result.
+	   (let* ((ls1 (vector->list expr))
 		  (ls2 (map (lambda (item)
-			      (%recurse item subst1* ae*))
+			      (%recurse item upper-subst* ae*))
 			 ls1)))
 	     (if (for-all eq? ls1 ls2)
-		 sub-expr
+		 expr
 	       (list->vector ls2))))
 
-	  ((<stx>? sub-expr)
-	   (let ((mark*   ($<stx>-mark*  sub-expr))
-		 (subst2* ($<stx>-subst* sub-expr)))
+	  ((<stx>? expr)
+	   (let ((mark*   ($<stx>-mark*  expr))
+		 (subst2* ($<stx>-subst* expr)))
 	     (cond ((null? mark*)
-		    (%recurse ($<stx>-expr sub-expr)
-			      (append subst1* subst2*)
-			      (%merge-annotated-expr* ae* ($<stx>-ae* sub-expr))))
+		    (%recurse ($<stx>-expr expr)
+			      (append upper-subst* subst2*)
+			      (%merge-annotated-expr* ae* ($<stx>-ae* expr))))
 		   ((eq? (car mark*) anti-mark)
-		    (make-<stx> ($<stx>-expr sub-expr) (cdr mark*)
-				(cdr (append subst1* subst2*))
-				(%merge-annotated-expr* ae* ($<stx>-ae* sub-expr))))
+		    (make-<stx> ($<stx>-expr expr) (cdr mark*)
+				(cdr (append upper-subst* subst2*))
+				(%merge-annotated-expr* ae* ($<stx>-ae* expr))))
 		   (else
 		    ;;We are really pushing a new mark: add a "shift" to
 		    ;;the list of substs.
-		    (make-<stx> ($<stx>-expr sub-expr)
+		    (make-<stx> ($<stx>-expr expr)
 				(cons new-mark mark*)
-				(let ((s* (cons 'shift (append subst1* subst2*))))
+				(let ((s* (cons 'shift (append upper-subst* subst2*))))
 				  (if rib
 				      (cons rib s*)
 				    s*))
-				(%merge-annotated-expr* ae* ($<stx>-ae* sub-expr)))))))
+				(%merge-annotated-expr* ae* ($<stx>-ae* expr)))))))
 
-	  ((symbol? sub-expr)
+	  ((symbol? expr)
 	   ;;A raw symbol is invalid.
 	   (syntax-violation #f
 	     "raw symbol encountered in output of macro"
-	     top-expr sub-expr))
+	     top-expr expr))
 
 	  (else
-	   ;;If  we  are  here  SUB-EXPR  is  a  self  evaluating  datum
-	   ;;(booleans, numbers, strings, ...).
-	   (make-<stx> sub-expr (list new-mark) subst1* ae*))))
+	   ;;If  we are  here EXPR  is a  non-compound datum  (booleans,
+	   ;;numbers, strings, ..., structs, records).
+	   (assert (non-compound-sexp? expr))
+	   (make-<stx> expr (list new-mark) upper-subst* ae*))))
 
   #| end of module: ADD-MARK |# )
 
@@ -6749,121 +6773,104 @@
 
 ;;;; chi procedures: syntax object type inspection
 
-(module (expr-syntax-type)
+(define (expr-syntax-type expr-stx lexenv)
+  ;;Determine  the syntax  type of  an expression.   EXPR-STX must  be a
+  ;;syntax object representing an expression.  Return 2 values:
+  ;;
+  ;;1..A symbol representing the syntax type.
+  ;;
+  ;;2..If the syntax is a macro  application: the value of the syntactic
+  ;;   binding associated to the macro identifier.  Otherwise false.
+  ;;
+  ;;3..If the syntax is a macro application: the identifier representing
+  ;;   the macro keyword.  Otherwise false.
+  ;;
+  ;;The type of an expression is determined by two things:
+  ;;
+  ;;* The shape of the expression (identifier, pair, or datum).
+  ;;
+  ;;* The binding of  the identifier (for id-stx) or the  type of car of
+  ;;  the pair.
+  ;;
+  (cond ((identifier? expr-stx)
+	 (let* ((id    expr-stx)
+		(label (id->label/intern id)))
+	   (unless label
+	     (%raise-unbound-error #f id id))
+	   (let* ((binding (label->syntactic-binding label lexenv))
+		  (type    (syntactic-binding-type binding)))
+	     (case type
+	       ((core-prim core-macro!
+			   lexical global mutable
+			   local-macro local-macro!
+			   global-macro global-macro!
+			   local-ctv global-ctv
+			   macro macro! import export library $module syntax
+			   displaced-lexical)
+		(values type (syntactic-binding-value binding) id))
+	       (($rtd)
+		(values 'type-maker-reference (syntactic-binding-value binding) id))
+	       (else
+		(values 'other #f #f))))))
 
-  (define (expr-syntax-type expr-stx lexenv)
-    ;;Determine the  syntax type of  an expression.  EXPR-STX must  be a
-    ;;syntax object representing an expression.  Return 2 values:
-    ;;
-    ;;1..A symbol representing the syntax type.
-    ;;
-    ;;2..If  the  syntax  is  a  macro application:  the  value  of  the
-    ;;    syntactic   binding  associated   to  the   macro  identifier.
-    ;;   Otherwise false.
-    ;;
-    ;;3..If  the   syntax  is   a  macro  application:   the  identifier
-    ;;   representing the macro keyword.  Otherwise false.
-    ;;
-    ;;The type of an expression is determined by two things:
-    ;;
-    ;;* The shape of the expression (identifier, pair, or datum).
-    ;;
-    ;;* The binding of the identifier (for id-stx) or the type of car of
-    ;;  the pair.
-    ;;
-    (cond ((identifier? expr-stx)
-	   (let* ((id    expr-stx)
-		  (label (id->label/intern id)))
-	     (unless label
-	       (%raise-unbound-error #f id id))
-	     (let* ((binding (label->syntactic-binding label lexenv))
-		    (type    (syntactic-binding-type binding)))
-	       (case type
-		 ((core-prim core-macro!
-		   lexical global mutable
-		   local-macro local-macro!
-		   global-macro global-macro!
-		   local-ctv global-ctv
-		   macro macro! import export library $module syntax
-		   displaced-lexical)
-		  (values type (syntactic-binding-value binding) id))
-		 (($rtd)
-		  (values 'type-maker-reference (syntactic-binding-value binding) id))
+	((syntax-pair? expr-stx)
+	 ;;Here we know that EXPR-STX has the format:
+	 ;;
+	 ;;   (?first-form ?form ...)
+	 ;;
+	 (let ((id (syntax-car expr-stx)))
+	   (cond ((and (identifier? id)
+		       (identifier-with-tagging-dispatcher? id))
+		  ;;Here we know that EXPR-STX has the format:
+		  ;;
+		  ;;   (?tagged-id ?form ...)
+		  ;;
+		  (values 'tagged-dispatching #f id))
+		 ((identifier? id)
+		  ;;Here we know that EXPR-STX has the format:
+		  ;;
+		  ;;   (?id ?form ...)
+		  ;;
+		  (let ((label (id->label/intern id)))
+		    (unless label
+		      (%raise-unbound-error #f id id))
+		    (let* ((binding (label->syntactic-binding label lexenv))
+			   (type    (syntactic-binding-type binding)))
+		      (case type
+			((core-macro
+			  define define-syntax define-alias
+			  define-fluid-syntax define-fluid-override
+			  let-syntax letrec-syntax begin-for-syntax
+			  begin set! stale-when
+			  local-ctv global-ctv
+			  local-macro local-macro!
+			  global-macro global-macro!
+			  macro import export library module)
+			 (values type (syntactic-binding-value binding) id))
+			(($rtd)
+			 (values 'type-maker-application (syntactic-binding-value binding) id))
+			(else
+			 (values 'call #f #f))))))
 		 (else
-		  (values 'other #f #f))))))
+		  ;;Here we know that EXPR-STX has the format:
+		  ;;
+		  ;;   (?non-id ?form ...)
+		  ;;
+		  ;;where ?NON-ID can be anything but not an identifier.
+		  ;;In practice the only valid syntax for this case is:
+		  ;;
+		  ;;   ((?first-subform ?subform ...) ?form ...)
+		  ;;
+		  ;;because ?NON-ID must be  an expression evaluating to
+		  ;;a closure object.
+		  ;;
+		  (values 'call #f #f)))))
 
-	  ((syntax-pair? expr-stx)
-	   ;;Here we know that EXPR-STX has the format:
-	   ;;
-	   ;;   (?first-form ?form ...)
-	   ;;
-	   (let ((id (syntax-car expr-stx)))
-	     (cond ((and (identifier? id)
-			 (identifier-with-tagging-dispatcher? id))
-		    ;;Here we know that EXPR-STX has the format:
-		    ;;
-		    ;;   (?tagged-id ?form ...)
-		    ;;
-		    (values 'tagged-dispatching #f id))
-		   ((identifier? id)
-		    ;;Here we know that EXPR-STX has the format:
-		    ;;
-		    ;;   (?id ?form ...)
-		    ;;
-		    (let ((label (id->label/intern id)))
-		      (unless label
-			(%raise-unbound-error #f id id))
-		      (let* ((binding (label->syntactic-binding label lexenv))
-			     (type    (syntactic-binding-type binding)))
-			(case type
-			  ((core-macro
-			    define define-syntax define-alias
-			    define-fluid-syntax define-fluid-override
-			    let-syntax letrec-syntax begin-for-syntax
-			    begin set! stale-when
-			    local-ctv global-ctv
-			    local-macro local-macro!
-			    global-macro global-macro!
-			    macro import export library module)
-			   (values type (syntactic-binding-value binding) id))
-			  (($rtd)
-			   (values 'type-maker-application (syntactic-binding-value binding) id))
-			  (else
-			   (values 'call #f #f))))))
-		   (else
-		    ;;Here we know that EXPR-STX has the format:
-		    ;;
-		    ;;   (?non-id ?form ...)
-		    ;;
-		    ;;where  ?NON-ID   can  be   anything  but   not  an
-		    ;;identifier.  In practice the only valid syntax for
-		    ;;this case is:
-		    ;;
-		    ;;   ((?first-subform ?subform ...) ?form ...)
-		    ;;
-		    ;;because ?NON-ID  must be an  expression evaluating
-		    ;;to a closure object.
-		    ;;
-		    (values 'call #f #f)))))
-
-	  (else
-	   (let ((datum (syntax->datum expr-stx)))
-	     (if (self-evaluating? datum)
-		 (values 'constant datum #f)
-	       (values 'other #f #f))))))
-
-  (define (self-evaluating? x)
-    (or (number?		x)
-	(string?		x)
-	(char?			x)
-	(boolean?		x)
-	(bytevector?		x)
-	(keyword?		x)
-	(would-block-object?	x)
-	(unbound-object?	x)
-	(bwp-object?		x)))
-
-  #| end of module: EXPR-SYNTAX-TYPE |# )
+	(else
+	 (let ((datum (syntax->datum expr-stx)))
+	   (if (self-evaluating? datum)
+	       (values 'constant datum #f)
+	     (values 'other #f #f))))))
 
 
 ;;;; chi procedures: helpers for SPLICE-FIRST-EXPAND
