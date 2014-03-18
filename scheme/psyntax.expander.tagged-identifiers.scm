@@ -446,7 +446,13 @@
   ;;Given   two   tag  identifiers:   return   true   if  SUPER-TAG   is
   ;;FREE-IDENTIFIER=? to SUB-TAG or one of its ancestors.
   ;;
-  (free-identifier=? super-tag sub-tag))
+  (or (free-identifier=? super-tag sub-tag)
+      (let* ((spec  (identifier-object-type-spec sub-tag))
+	     (pspec (object-type-spec-parent-spec spec)))
+	(and pspec
+	     (let ((sub-ptag (object-type-spec-type-id pspec)))
+	       (and (not (free-identifier=? <top> sub-ptag))
+		    (tag-super-and-sub? super-tag sub-ptag)))))))
 
 ;;; --------------------------------------------------------------------
 

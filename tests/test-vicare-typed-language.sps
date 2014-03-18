@@ -77,6 +77,38 @@
        . ?body))))
 
 
+(parametrise ((check-test-name	'built-in-tags))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<number> #'<complex>))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<complex> #'<real>))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<real> #'<integer>))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<integer> #'<exact-integer>))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<exact-integer> #'<fixnum>))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<exact-integer> #'<bignum>))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<real> #'<flonum>))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<complex> #'<compnum>))
+
+  (check-for-true
+   (typ.tag-super-and-sub? #'<complex> #'<cflonum>))
+
+  #t)
+
+
 (parametrise ((check-test-name	'parsing-tagged-bindings))
 
   (check

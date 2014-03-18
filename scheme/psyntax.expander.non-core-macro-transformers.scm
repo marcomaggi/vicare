@@ -171,7 +171,9 @@
     ;;Expander tags.
     ((<top>
       <boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure>
-      <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum> <integer> <exact-integer> <real> <complex> <number>
+      <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
+      <rational-valued> <rational> <integer> <integer-valued>
+      <exact-integer> <real> <real-valued> <complex> <number>
       <string> <vector> <pair> <list> <bytevector> <hashtable>
       <record> <record-type-descriptor> <struct> <struct-type-descriptor> <condition>
       <port> <input-port> <output-port> <input/output-port> <textual-port> <binary-port>

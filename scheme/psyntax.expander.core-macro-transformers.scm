@@ -1676,14 +1676,12 @@
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert))
   (define (%output-expression tag-id expr-stx)
-    (receive-and-return (V)
-	(chi-expr (bless
-		   `(let ((V ,expr-stx))
-		      (unless (is-a? V ,tag-id)
-			(assertion-violation (quote ,tag-id)
-			  "expression with wrong result type" (quote ,expr-stx) V))))
-		  lexenv.run lexenv.expand)
-      (debug-print 'exit V)))
+    (chi-expr (bless
+	       `(let ((V ,expr-stx))
+		  (unless (is-a? V ,tag-id)
+		    (assertion-violation (quote ,tag-id)
+		      "expression with wrong result type" (quote ,expr-stx) V))))
+	      lexenv.run lexenv.expand))
   (syntax-match expr-stx ()
     ((_ ?tag ?expr)
      (cond ((not (tag-identifier? ?tag))

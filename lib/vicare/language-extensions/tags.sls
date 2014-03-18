@@ -45,8 +45,12 @@
     <bignum>
     <compnum>
     <cflonum>
-    <integer>
     <exact-integer>
+    <integer-valued>
+    <integer>
+    <rational-valued>
+    <rational>
+    <real-valued>
     <real>
     <complex>
     <number>
@@ -97,42 +101,70 @@
     (set-identifier-object-type-spec! #'<top>
       (make-object-type-spec #'<top> #'<top>?))
     (set-identifier-object-type-spec! #'<boolean>
-      (make-object-type-spec #'<boolean> #'boolean?))
+      (make-object-type-spec #'<boolean> #'boolean? #f #f #f #'<top>))
     (set-identifier-object-type-spec! #'<char>
-      (make-object-type-spec #'<char> #'char?))
+      (make-object-type-spec #'<char> #'char? #f #f #f #'<top>))
     (set-identifier-object-type-spec! #'<symbol>
-      (make-object-type-spec #'<symbol> #'symbol?))
+      (make-object-type-spec #'<symbol> #'symbol? #f #f #f #'<top>))
     (set-identifier-object-type-spec! #'<keyword>
-      (make-object-type-spec #'<keyword> #'keyword?))
+      (make-object-type-spec #'<keyword> #'keyword? #f #f #f #'<top>))
     (set-identifier-object-type-spec! #'<pointer>
-      (make-object-type-spec #'<pointer> #'pointer?))
+      (make-object-type-spec #'<pointer> #'pointer? #f #f #f #'<top>))
     (set-identifier-object-type-spec! #'<transcoder>
-      (make-object-type-spec #'<transcoder> #'transcoder?))
+      (make-object-type-spec #'<transcoder> #'transcoder? #f #f #f #'<top>))
     (set-identifier-object-type-spec! #'<procedure>
-      (make-object-type-spec #'<procedure> #'procedure?))
+      (make-object-type-spec #'<procedure> #'procedure? #f #f #f #'<top>))
+
+;;; --------------------------------------------------------------------
+;;; numbers
+
+    (set-identifier-object-type-spec! #'<number>
+      (make-object-type-spec #'<number> #'number? #f #f #f #'<number>))
+
+    (set-identifier-object-type-spec! #'<complex>
+      (make-object-type-spec #'<complex> #'complex? #f #f #f #'<number>))
+
+    (set-identifier-object-type-spec! #'<real-valued>
+      (make-object-type-spec #'<real-valued> #'real-valued? #f #f #f #'<complex>))
+
+    (set-identifier-object-type-spec! #'<real>
+      (make-object-type-spec #'<real> #'real? #f #f #f #'<real-valued>))
+
+    (set-identifier-object-type-spec! #'<rational-valued>
+      (make-object-type-spec #'<rational-valued> #'rational-valued? #f #f #f #'<real>))
+
+    (set-identifier-object-type-spec! #'<rational>
+      (make-object-type-spec #'<rational> #'rational? #f #f #f #'<rational-valued>))
+
+    (set-identifier-object-type-spec! #'<integer-valued>
+      (make-object-type-spec #'<integer-valued> #'integer-valued? #f #f #f #'<rational-valued>))
+
+    (set-identifier-object-type-spec! #'<integer>
+      (make-object-type-spec #'<integer> #'integer? #f #f #f #'<rational-valued>))
+
+    (set-identifier-object-type-spec! #'<exact-integer>
+      (make-object-type-spec #'<exact-integer> #'exact-integer? #f #f #f #'<integer>))
 
     (set-identifier-object-type-spec! #'<fixnum>
-      (make-object-type-spec #'<fixnum> #'fixnum?))
-    (set-identifier-object-type-spec! #'<flonum>
-      (make-object-type-spec #'<flonum> #'flonum?))
-    (set-identifier-object-type-spec! #'<ratnum>
-      (make-object-type-spec #'<ratnum> #'ratnum?))
+      (make-object-type-spec #'<fixnum> #'fixnum? #f #f #f #'<exact-integer>))
+
     (set-identifier-object-type-spec! #'<bignum>
-      (make-object-type-spec #'<bignum> #'bignum?))
+      (make-object-type-spec #'<bignum> #'bignum? #f #f #f #'<exact-integer>))
+
+    (set-identifier-object-type-spec! #'<flonum>
+      (make-object-type-spec #'<flonum> #'flonum? #f #f #f #'<real>))
+
+    (set-identifier-object-type-spec! #'<ratnum>
+      (make-object-type-spec #'<ratnum> #'ratnum? #f #f #f #'<rational>))
+
     (set-identifier-object-type-spec! #'<compnum>
-      (make-object-type-spec #'<compnum> #'compnum?))
+      (make-object-type-spec #'<compnum> #'compnum? #f #f #f #'<complex>))
+
     (set-identifier-object-type-spec! #'<cflonum>
-      (make-object-type-spec #'<cflonum> #'cflonum?))
-    (set-identifier-object-type-spec! #'<integer>
-      (make-object-type-spec #'<integer> #'integer?))
-    (set-identifier-object-type-spec! #'<exact-integer>
-      (make-object-type-spec #'<exact-integer> #'exact-integer?))
-    (set-identifier-object-type-spec! #'<real>
-      (make-object-type-spec #'<real> #'real?))
-    (set-identifier-object-type-spec! #'<complex>
-      (make-object-type-spec #'<complex> #'complex?))
-    (set-identifier-object-type-spec! #'<number>
-      (make-object-type-spec #'<number> #'number?))
+      (make-object-type-spec #'<cflonum> #'cflonum? #f #f #f #'<complex>))
+
+;;; --------------------------------------------------------------------
+;;; compound objects
 
     (set-identifier-object-type-spec! #'<string>
       (make-object-type-spec #'<string> #'string?))
@@ -168,6 +200,9 @@
       (make-object-type-spec #'<struct-type-descriptor> #'struct-type-descriptor?))
     (set-identifier-object-type-spec! #'<condition>
       (make-object-type-spec #'<condition> #'condition?))
+
+;;; --------------------------------------------------------------------
+;;; input/output ports
 
     (set-identifier-object-type-spec! #'<port>
       (make-object-type-spec #'<port> #'port?))
