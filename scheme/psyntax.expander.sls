@@ -4172,7 +4172,20 @@
 		;
 		;See  below  the  code  section "sealing  ribs"  for  an
 		;explanation of the frequency vector.
-   ))
+   )
+  (lambda (S port subwriter) ;record printer function
+    (define-syntax-rule (%display ?thing)
+      (display ?thing port))
+    (define-syntax-rule (%write ?thing)
+      (write ?thing port))
+    (define-syntax-rule (%pretty-print ?thing)
+      (pretty-print* ?thing port 0 #f))
+    (%display "#<rib")
+    (%display " name*=")	(%pretty-print (<rib>-name*  S))
+    (%display " mark**=")	(%pretty-print (<rib>-mark** S))
+    (%display " label*=")	(%pretty-print (<rib>-label* S))
+    (%display " sealed/freq=")	(%pretty-print (<rib>-sealed/freq S))
+    (%display ">")))
 
 (define (false-or-rib? obj)
   (or (not obj)
@@ -4238,10 +4251,10 @@
   ;;and  then  hand  the  resulting   syntax  object  BODY-STX^  to  the
   ;;appropriate "chi-*" function to perform the expansion.
   ;;
-  (make-<rib> (map identifier->symbol id*)
-	      (map <stx>-mark* id*)
-	      label*
-	      #f))
+  (let ((name*        (map identifier->symbol id*))
+	(mark**       (map <stx>-mark* id*))
+	(sealed/freq  #f))
+    (make-<rib> name* mark** label* sealed/freq)))
 
 (define* (make-top-rib name-vec label-vec)
   ;;Build  and  return a  new  <rib>  record initialised  with  bindings
@@ -4296,10 +4309,11 @@
   ;;keys are external symbol names of  the bindings and whose values are
   ;;the associated label gensyms.
   ;;
-  (make-<rib> (map car export-subst)
-	      (map (lambda (x) TOP-MARK*) export-subst)
-	      (map cdr export-subst)
-	      #f))
+  (let ((name*        (map car export-subst)) ;exported binding names
+	(mark**       (map (lambda (x) TOP-MARK*) export-subst))
+	(label*       (map cdr export-subst))
+	(sealed/freq  #f))
+    (make-<rib> name* mark** label* sealed/freq)))
 
 (module (extend-rib!)
   ;;A <RIB> can be extensible, or sealed.  Adding an identifier-to-label
@@ -4464,7 +4478,8 @@
 		;Null or  a proper list  of marks, including  the symbol
 		;"top".
    subst*
-		;Null or a list of
+		;Null or  a proper  list of  <rib> instances  or "shift"
+		;symbols.
    ae*
 		;List of  annotated expressions:  null or a  proper list
 		;whose items are #f or  input forms of macro transformer
@@ -4494,6 +4509,20 @@
 	    (%display " source=")	(%display (source-position-port-id pos))))))
     (%display ">")))
 
+;;; --------------------------------------------------------------------
+
+(define (<stx>-subst*? obj)
+  ;;Return true if OBJ  is a valid value for the  field SUBST* of <stx>;
+  ;;otherwise return #f.
+  ;;
+  (and (list? obj)
+       (for-all (lambda (item)
+		  (or (rib? item)
+		      (eq? item 'shift)))
+	 obj)))
+
+;;; --------------------------------------------------------------------
+
 (define* (datum->syntax {id identifier?} datum)
   ($datum->syntax id datum))
 
@@ -4511,7 +4540,7 @@
 (define (syntax->datum S)
   (strip S '()))
 
-(define (mkstx expr-stx mark* subst* ae*)
+(define* (mkstx expr-stx mark* {subst* <stx>-subst*?} ae*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
   ;;EXPR-STX can  be a raw sexp,  an instance of <STX>  or a (partially)
@@ -4519,6 +4548,9 @@
   ;;
   ;;MARK* must be  null or a proper list of  marks, including the symbol
   ;;"top".
+  ;;
+  ;;SUBST* must be null or a  proper list of <rib> instances and "shift"
+  ;;symbols.
   ;;
   ;;AE* must be  null or a proper list of  annotated expressions: syntax
   ;;objects being input forms for macro transformer calls.
@@ -5098,6 +5130,8 @@
 				(cdr (append subst1* subst2*))
 				(%merge-annotated-expr* ae* ($<stx>-ae* sub-expr))))
 		   (else
+		    ;;We are really pushing a new mark: add a "shift" to
+		    ;;the list of substs.
 		    (make-<stx> ($<stx>-expr sub-expr)
 				(cons new-mark mark*)
 				(let ((s* (cons 'shift (append subst1* subst2*))))

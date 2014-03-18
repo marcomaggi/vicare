@@ -162,14 +162,21 @@
 
 (define-syntax define-record
   (syntax-rules ()
-    [(_ name (field* ...) printer)
+    ((_ (?name ?maker ?pred) (?field* ...) ?printer)
      (begin
-       (define-struct name (field* ...))
+       (define-struct (?name ?maker ?pred) (?field* ...))
        (module ()
-	 (set-rtd-printer! (type-descriptor name)
-			   printer)))]
-    [(_ name (field* ...))
-     (define-struct name (field* ...))]))
+	 (set-rtd-printer! (type-descriptor ?name)
+	   ?printer))))
+    ((_ ?name (?field* ...) ?printer)
+     (begin
+       (define-struct ?name (?field* ...))
+       (module ()
+	 (set-rtd-printer! (type-descriptor ?name)
+	   ?printer))))
+    ((_ ?name (?field* ...))
+     (define-struct ?name (?field* ...)))
+    ))
 
 (define (set-label-binding! label binding)
   (set-symbol-value! label binding))
