@@ -1246,6 +1246,15 @@
     (?atom
      (syntax->datum ?atom))))
 
+(define-syntax-rule (trace-define (?name . ?formals) . ?body)
+  (define (?name . ?formals)
+    (debug-print (quote ?name) 'arguments . ?formals)
+    (call-with-values
+	(lambda () . ?body)
+      (lambda retvals
+	(debug-print (quote ?name) 'retvals retvals)
+	(apply values retvals)))))
+
 
 ;;;; library records collectors
 
@@ -5006,85 +5015,124 @@
 	   (eq? ($car x) ($car y))
 	   (same-marks? ($cdr x) ($cdr y)))))
 
-(define (add-mark mark subst expr ae)
-  ;;Build and return  a new syntax object wrapping  EXPR and having MARK
-  ;;pushed on its list of marks.
-  ;;
-  ;;SUBST can be #f or a list of substitutions.
-  ;;
-  (define (merge-ae* ls1 ls2)
-    ;;Append LS1 and LS2 and return the result; if the car or LS2 is #f:
-    ;;append LS1 and (cdr LS2).
+(module ADD-MARK
+  (add-mark)
+
+  (define (add-mark mark subst expr ae)
+    ;;Build and return  a new syntax object wrapping  EXPR and having MARK
+    ;;pushed on its list of marks.
     ;;
-    ;;   (merge-ae* '(a b c) '(d  e f))   => (a b c d e f)
-    ;;   (merge-ae* '(a b c) '(#f e f))   => (a b c e f)
+    ;;MARK is either the anti-mark or a new mark.
     ;;
-    (if (and (pair? ls1)
-	     (pair? ls2)
-	     (not (car ls2)))
-	(cancel ls1 ls2)
-      (append ls1 ls2)))
-  (define (cancel ls1 ls2)
-    ;;Expect LS1 to be a proper list  of one or more elements and LS2 to
-    ;;be a proper  list of one or more elements.  Append  the cdr of LS2
-    ;;to LS1 and return the result:
+    ;;SUBST can be #f or a list of substitutions.
     ;;
-    ;;   (cancel '(a b c) '(d e f))
-    ;;   => (a b c e f)
+    ;;EXPR is either  the input form of a macro  transformer call or the
+    ;;output  form of  a macro  transformer call;  it must  be a  syntax
+    ;;object, either wrapped or unwrapped.
     ;;
-    ;;This function is like:
+    ;;AE is either #f (when MARK is  the anti-mark) or the input form of
+    ;;a macro call (when MARK is a  new mark).  This argument is used to
+    ;;keep track of  the transformation a form  undergoes when processed
+    ;;as macro use.
     ;;
-    ;;   (append ls1 (cdr ls2))
-    ;;
-    ;;we just hope to be a bit more efficient.
-    ;;
-    (let recur ((A (car ls1))
-		(D (cdr ls1)))
-      (if (null? D)
-	  (cdr ls2)
-	(cons A (recur (car D) (cdr D))))))
-  (define (f sub-expr mark subst1* ae*)
+    #;(debug-print 'add-mark-enter expr)
+    (receive-and-return (R)
+	(mkstx (%post-order-visit expr expr mark subst '() '()) ;stx
+	       '()						;mark*
+	       '()						;subst*
+	       (list ae))					;ae*
+      #;(debug-print 'add-mark-exit R)
+      (void)))
+
+  (define (%post-order-visit top-expr sub-expr new-mark start-subst subst1* ae*)
     (cond ((pair? sub-expr)
-	   (let ((a (f (car sub-expr) mark subst1* ae*))
-		 (d (f (cdr sub-expr) mark subst1* ae*)))
-	     (if (eq? a d)
+	   ;;Visit the  items in the  pair.  If the visited  items equal
+	   ;;the original items: keep SUB-EXPR as result.
+	   (let ((A (%post-order-visit top-expr (car sub-expr) new-mark start-subst subst1* ae*))
+		 (D (%post-order-visit top-expr (cdr sub-expr) new-mark start-subst subst1* ae*)))
+	     (if (eq? A D)
 		 sub-expr
-	       (cons a d))))
+	       (cons A D))))
+
 	  ((vector? sub-expr)
+	   ;;Visit all  the items in  the vector.  If the  visited items
+	   ;;equal the original items: keep SUB-EXPR as result.
 	   (let* ((ls1 (vector->list sub-expr))
-		  (ls2 (map (lambda (x)
-			      (f x mark subst1* ae*))
+		  (ls2 (map (lambda (item)
+			      (%post-order-visit top-expr item new-mark start-subst subst1* ae*))
 			 ls1)))
 	     (if (for-all eq? ls1 ls2)
 		 sub-expr
 	       (list->vector ls2))))
+
 	  ((<stx>? sub-expr)
-	   (let ((mark*   (<stx>-mark*  sub-expr))
-		 (subst2* (<stx>-subst* sub-expr)))
+	   (let ((mark*   ($<stx>-mark*  sub-expr))
+		 (subst2* ($<stx>-subst* sub-expr)))
 	     (cond ((null? mark*)
-		    (f (<stx>-expr sub-expr)
-		       mark
-		       (append subst1* subst2*)
-		       (merge-ae* ae* (<stx>-ae* sub-expr))))
+		    (%post-order-visit top-expr ($<stx>-expr sub-expr)
+				       new-mark start-subst
+				       (append subst1* subst2*)
+				       (%merge-annotated-expr* ae* ($<stx>-ae* sub-expr))))
 		   ((eq? (car mark*) anti-mark)
-		    (make-<stx> (<stx>-expr sub-expr) (cdr mark*)
+		    (make-<stx> ($<stx>-expr sub-expr) (cdr mark*)
 				(cdr (append subst1* subst2*))
-				(merge-ae* ae* (<stx>-ae* sub-expr))))
+				(%merge-annotated-expr* ae* ($<stx>-ae* sub-expr))))
 		   (else
-		    (make-<stx> (<stx>-expr sub-expr)
-				(cons mark mark*)
+		    (make-<stx> ($<stx>-expr sub-expr)
+				(cons new-mark mark*)
 				(let ((s* (cons 'shift (append subst1* subst2*))))
-				  (if subst
-				      (cons subst s*)
+				  (if start-subst
+				      (cons start-subst s*)
 				    s*))
-				(merge-ae* ae* (<stx>-ae* sub-expr)))))))
+				(%merge-annotated-expr* ae* ($<stx>-ae* sub-expr)))))))
+
 	  ((symbol? sub-expr)
+	   ;;A raw symbol is invalid.
 	   (syntax-violation #f
 	     "raw symbol encountered in output of macro"
-	     expr sub-expr))
+	     top-expr sub-expr))
+
 	  (else
-	   (make-<stx> sub-expr (list mark) subst1* ae*))))
-  (mkstx (f expr mark '() '()) '() '() (list ae)))
+	   (make-<stx> sub-expr (list new-mark) subst1* ae*))))
+
+  (module (%merge-annotated-expr*)
+
+    (define (%merge-annotated-expr* ls1 ls2)
+      ;;Append LS1 and LS2  and return the result; if the  car or LS2 is
+      ;;#f: append LS1 and (cdr LS2).
+      ;;
+      ;;   (%merge-annotated-expr* '(a b c) '(d  e f))   => (a b c d e f)
+      ;;   (%merge-annotated-expr* '(a b c) '(#f e f))   => (a b c e f)
+      ;;
+      (if (and (pair? ls1)
+	       (pair? ls2)
+	       (not ($car ls2)))
+	  (%cancel ls1 ls2)
+	(append ls1 ls2)))
+
+    (define (%cancel ls1 ls2)
+      ;;Expect LS1 to be  a proper list of one or  more elements and LS2
+      ;;to be a proper list of one  or more elements.  Append the cdr of
+      ;;LS2 to LS1 and return the result:
+      ;;
+      ;;   (%cancel '(a b c) '(d e f))
+      ;;   => (a b c e f)
+      ;;
+      ;;This function is like:
+      ;;
+      ;;   (append ls1 (cdr ls2))
+      ;;
+      ;;we just hope to be a bit more efficient.
+      ;;
+      (let recur ((A1 ($car ls1))
+		  (D1 ($cdr ls1)))
+	(if (null? D1)
+	    ($cdr ls2)
+	  (cons A1 (recur ($car D1) ($cdr D1))))))
+
+    #| end of module: MERGE-ANNOTATED-EXPR* |# )
+
+  #| end of module: ADD-MARK |# )
 
 
 ;;;; stuff about labels, lexical variables, location gensyms
@@ -5838,7 +5886,7 @@
 
 ;;;; identifiers from the built-in environment
 
-(define (bless x)
+(define (bless input-stx)
   ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
   ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
   ;;return a syntax object representing the input, possibly X itself.
@@ -5848,21 +5896,29 @@
   ;;language:  they are  converted to  identifiers having  empty lexical
   ;;contexts.
   ;;
-  (mkstx (let recur ((x x))
-	   (cond ((<stx>? x)
-		  x)
-		 ((pair? x)
-		  (cons (recur (car x)) (recur (cdr x))))
-		 ((symbol? x)
-		  (scheme-stx x))
-		 ((vector? x)
-		  (list->vector (map recur (vector->list x))))
-		 ;;If we are here X is a self-evaluating datum.
-		 (else x)))
-	 '() #;mark*
-	 '() #;subst*
-	 '() #;ae*
-	 ))
+  (receive-and-return (output-stx)
+      (mkstx (let recur ((input-stx input-stx))
+	       (cond ((<stx>? input-stx)
+		      input-stx)
+		     ((pair? input-stx)
+		      (cons (recur (car input-stx)) (recur (cdr input-stx))))
+		     ((symbol? input-stx)
+		      (scheme-stx input-stx))
+		     ((vector? input-stx)
+		      (list->vector (map recur (vector->list input-stx))))
+		     ;;If we are here X is a self-evaluating datum.
+		     (else input-stx)))
+	     '()  ;mark*
+	     '()  ;subst*
+	     '()) ;ae*
+    #;(debug-print 'bless-input
+		 input-stx
+		 ;;(syntax->datum input-stx)
+		 'bless-output
+		 output-stx
+		 ;;(syntax->datum output-stx)
+		 )
+    (void)))
 
 (define (trace-bless input-stx)
   (receive-and-return (output-stx)
@@ -6896,6 +6952,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%do-macro-call transformer input-form-expr lexenv.run rib)
+    (import ADD-MARK)
     (define (main)
       ;;We parametrise here because we can never know which transformer,
       ;;for example, will query the syntactic binding properties.

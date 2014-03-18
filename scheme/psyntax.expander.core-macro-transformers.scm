@@ -1676,28 +1676,34 @@
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert))
   (define (%output-expression tag-id expr-stx)
-    (chi-expr (bless
-	       `(let ((V ,expr-stx))
-		  (unless (is-a? V ,tag-id)
-		    (assertion-violation (quote ,tag-id)
-		      "expression with wrong result type" (quote ,expr-stx) V))))
-	      lexenv.run lexenv.expand))
+    (receive-and-return (V)
+	(chi-expr (bless
+		   `(let ((V ,expr-stx))
+		      (unless (is-a? V ,tag-id)
+			(assertion-violation (quote ,tag-id)
+			  "expression with wrong result type" (quote ,expr-stx) V))))
+		  lexenv.run lexenv.expand)
+      (debug-print 'exit V)))
   (syntax-match expr-stx ()
     ((_ ?tag ?expr)
-     (tag-identifier? ?tag)
-     (if (and (identifier? ?expr)
+     (cond ((not (tag-identifier? ?tag))
+	    (syntax-violation __who__
+	      "expected tag identifier as first argument" expr-stx ?tag))
+
+	   ((and (identifier? ?expr)
 	      (identifier-with-tagging? ?expr))
-	 (let ((tag-id (identifier-type-tagging ?expr)))
-	   (cond ((free-identifier=? <top> tag-id)
-		  (%output-expression ?tag ?expr))
-		 ((tag-super-and-sub? ?tag tag-id)
-		  ;;We know at expand time  that the type is correct, so
-		  ;;we do not insert the validation.
-		  (chi-expr ?expr lexenv.run lexenv.expand))
-		 (else
-		  (syntax-violation __who__
-		    "expression with wrong type tagging" expr-stx tag-id))))
-       (%output-expression ?tag ?expr)))
+	    (let ((tag-id (identifier-type-tagging ?expr)))
+	      (cond ((free-identifier=? <top> tag-id)
+		     (%output-expression ?tag ?expr))
+		    ((tag-super-and-sub? ?tag tag-id)
+		     ;;We know at expand time  that the type is correct, so
+		     ;;we do not insert the validation.
+		     (chi-expr ?expr lexenv.run lexenv.expand))
+		    (else
+		     (syntax-violation __who__
+		       "expression with wrong type tagging" expr-stx tag-id)))))
+	   (else
+	    (%output-expression ?tag ?expr))))
     ))
 
 (define (tag-assert-and-return-transformer expr-stx lexenv.run lexenv.expand)
@@ -1718,20 +1724,24 @@
 	      lexenv.run lexenv.expand))
   (syntax-match expr-stx ()
     ((_ ?tag ?expr)
-     (tag-identifier? ?tag)
-     (if (and (identifier? ?expr)
-	      (identifier-with-tagging? ?expr))
-	 (let ((tag-id (identifier-type-tagging ?expr)))
-	   (cond ((free-identifier=? <top> tag-id)
-		  (%output-expression ?tag ?expr))
-		 ((tag-super-and-sub? ?tag tag-id)
-		  ;;We know at expand time  that the type is correct, so
-		  ;;we do not insert the validation.
-		  (chi-expr ?expr lexenv.run lexenv.expand))
-		 (else
-		  (syntax-violation __who__
-		    "expression with wrong type tagging" expr-stx tag-id))))
-       (%output-expression ?tag ?expr)))
+     (cond ((not (tag-identifier? ?tag))
+	    (syntax-violation __who__
+	      "expected tag identifier as first argument" expr-stx ?tag))
+
+	   ((and (identifier? ?expr)
+		 (identifier-with-tagging? ?expr))
+	    (let ((tag-id (identifier-type-tagging ?expr)))
+	      (cond ((free-identifier=? <top> tag-id)
+		     (%output-expression ?tag ?expr))
+		    ((tag-super-and-sub? ?tag tag-id)
+		     ;;We know at expand time  that the type is correct, so
+		     ;;we do not insert the validation.
+		     (chi-expr ?expr lexenv.run lexenv.expand))
+		    (else
+		     (syntax-violation __who__
+		       "expression with wrong type tagging" expr-stx tag-id)))))
+	   (else
+	    (%output-expression ?tag ?expr))))
     ))
 
 
