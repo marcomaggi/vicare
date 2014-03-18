@@ -1247,11 +1247,11 @@
 
   (define (%build-output-form type-id maker-id predicate-id field-name-id*)
     (let* ((string->id		(lambda (str)
-				  (datum->stx type-id (string->symbol str))))
+				  ($datum->syntax type-id (string->symbol str))))
 	   (namestr		(symbol->string (identifier->symbol type-id)))
 	   (field-sym*		(map identifier->symbol field-name-id*))
 	   (field-str*		(map symbol->string field-sym*))
-	   (rtd			(datum->stx type-id (make-struct-type namestr field-sym*)))
+	   (rtd			($datum->syntax type-id (make-struct-type namestr field-sym*)))
 	   (constructor-id	(or maker-id     (string->id (string-append "make-" namestr))))
 	   (predicate-id	(or predicate-id (string->id (string-append namestr "?"))))
 	   (field-idx*		(enumerate field-name-id*)))

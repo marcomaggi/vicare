@@ -3211,8 +3211,8 @@
 
 	((?rename ?import-set (?old-name* ?new-name*) ...)
 	 (and (eq? (syntax->datum ?rename) 'rename)
-	      (for-all id-stx? ?old-name*)
-	      (for-all id-stx? ?new-name*))
+	      (for-all symbol-syntax? ?old-name*)
+	      (for-all symbol-syntax? ?new-name*))
 	 (let ((subst       (%recurse ?import-set))
 	       (?old-name*  (map syntax->datum ?old-name*))
 	       (?new-name*  (map syntax->datum ?new-name*)))
@@ -3225,13 +3225,13 @@
 
 	((?except ?import-set ?sym* ...)
 	 (and (eq? (syntax->datum ?except) 'except)
-	      (for-all id-stx? ?sym*))
+	      (for-all symbol-syntax? ?sym*))
 	 (let ((subst (%recurse ?import-set)))
 	   (rem* (map syntax->datum ?sym*) subst)))
 
 	((?only ?import-set ?name* ...)
 	 (and (eq? (syntax->datum ?only) 'only)
-	      (for-all id-stx? ?name*))
+	      (for-all symbol-syntax? ?name*))
 	 (let* ((subst  (%recurse ?import-set))
 		(name*  (map syntax->datum ?name*))
 		(name*  (remove-dups name*))
@@ -3240,7 +3240,7 @@
 
 	((?prefix ?import-set ?the-prefix)
 	 (and (eq? (syntax->datum ?prefix) 'prefix)
-	      (id-stx? ?prefix))
+	      (symbol-syntax? ?prefix))
 	 (let ((subst   (%recurse ?import-set))
 	       (prefix  (symbol->string (syntax->datum ?the-prefix))))
 	   (map (lambda (x)
@@ -3251,7 +3251,7 @@
 
 	((?deprefix ?import-set ?the-prefix)
 	 (and (eq? (syntax->datum ?deprefix) 'deprefix)
-	      (id-stx? ?the-prefix))
+	      (symbol-syntax? ?the-prefix))
 	 (if (option.strict-r6rs)
 	     (%local-synner "deprefix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
@@ -3274,7 +3274,7 @@
 
 	((?suffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?suffix) 'suffix)
-	      (id-stx? ?suffix))
+	      (symbol-syntax? ?suffix))
 	 (if (option.strict-r6rs)
 	     (%local-synner "suffix import specification forbidden in strict R6RS mode")
 	   (let ((subst   (%recurse ?import-set))
@@ -3287,7 +3287,7 @@
 
 	((?desuffix ?import-set ?the-suffix)
 	 (and (eq? (syntax->datum ?desuffix) 'desuffix)
-	      (id-stx? ?the-suffix))
+	      (symbol-syntax? ?the-suffix))
 	 (if (option.strict-r6rs)
 	     (%local-synner "desuffix import specification forbidden in strict R6RS mode")
 	   (let* ((subst       (%recurse ?import-set))
@@ -3357,7 +3357,7 @@
 	   (values '() (%build-version-pred ?version-spec* libref)))
 
 	  ((?id . ?rest*)
-	   (id-stx? ?id)
+	   (symbol-syntax? ?id)
 	   (receive (name pred)
 	       (recur ?rest*)
 	     (values (cons (syntax->datum ?id) name)
@@ -3574,12 +3574,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (id-stx? x)
-    ;;Return true if X is an identifier.
-    ;;
-    (symbol? (syntax->datum x)))
-
-;;; --------------------------------------------------------------------
+  (define (symbol-syntax? obj)
+    (symbol? (syntax->datum obj)))
 
   (define (%error-two-import-with-different-bindings name)
     (%synner "two imports with different bindings" name))
@@ -4146,7 +4142,7 @@
 ;;   label*      = #(lab.a   lab.b)
 ;;   sealed/freq = #(2       1)
 ;;
-(define-record <rib>
+(define-record (<rib> make-<rib> rib?)
   (name*
 		;List of symbols representing the original binding names
 		;in the source code.
@@ -4177,6 +4173,10 @@
 		;See  below  the  code  section "sealing  ribs"  for  an
 		;explanation of the frequency vector.
    ))
+
+(define (false-or-rib? obj)
+  (or (not obj)
+      (rib? obj)))
 
 (define-inline (make-empty-rib)
   ;;Build and return a new empty <RIB> record.
@@ -4366,7 +4366,7 @@
   ;;
   ;;we see that the label has changed.
   ;;
-  (define* (extend-rib! {rib <rib>?} {id identifier?} label shadowing-definitions?)
+  (define* (extend-rib! {rib rib?} {id identifier?} label shadowing-definitions?)
     (when ($<rib>-sealed/freq rib)
       (assertion-violation __who__
 	"Vicare: internal error: attempt to extend sealed RIB" rib))
@@ -4423,7 +4423,7 @@
 
   #| end of module: EXTEND-RIB! |# )
 
-(define* (seal-rib! {rib <rib>?})
+(define* (seal-rib! {rib rib?})
   (let ((name* ($<rib>-name* rib)))
     (unless (null? name*) ;only seal if RIB is not empty
       (let ((name* (list->vector name*)))
@@ -4432,16 +4432,12 @@
 	($set-<rib>-label*!      rib (list->vector ($<rib>-label* rib)))
 	($set-<rib>-sealed/freq! rib (make-vector (vector-length name*) 0))))))
 
-(define* (unseal-rib! {rib <rib>?})
+(define* (unseal-rib! {rib rib?})
   (when ($<rib>-sealed/freq rib)
     ($set-<rib>-sealed/freq! rib #f)
     ($set-<rib>-name*!       rib (vector->list ($<rib>-name*  rib)))
     ($set-<rib>-mark**!      rib (vector->list ($<rib>-mark** rib)))
     ($set-<rib>-label*!      rib (vector->list ($<rib>-label* rib)))))
-
-(define (false-or-rib? obj)
-  (or (not obj)
-      (<rib>? obj)))
 
 
 ;;;; syntax object type definition
@@ -4458,16 +4454,30 @@
 
 (define-record <stx>
   (expr
+		;A  symbolic   expression,  possibly   annotated,  whose
+		;subexpressions can also be instances of <stx>.
    mark*
+		;Null or  a proper list  of marks, including  the symbol
+		;"top".
    subst*
-   ae*)
+		;Null or a list of
+   ae*
+		;List of  annotated expressions:  null or a  proper list
+		;whose items are #f or  input forms of macro transformer
+		;calls.  It is used to  trace the transformations a form
+		;undergoes when it is processed as macro use.
+		;
+		;The  #f items  are inserted  when it  this instance  is
+		;processed as input form of  a macro call, but are later
+		;discarded.
+   )
   (lambda (S port subwriter) ;record printer function
-    (define-inline (%display thing)
-      (display thing port))
-    (define-inline (%write thing)
-      (write thing port))
-    (define-inline (%pretty-print thing)
-      (pretty-print* thing port 0 #f))
+    (define-syntax-rule (%display ?thing)
+      (display ?thing port))
+    (define-syntax-rule (%write ?thing)
+      (write ?thing port))
+    (define-syntax-rule (%pretty-print ?thing)
+      (pretty-print* ?thing port 0 #f))
     (%display "#<syntax")
     (%display " expr=")		(%pretty-print (syntax->datum S))
     (%display " mark*=")	(%pretty-print (<stx>-mark* S))
@@ -4480,22 +4490,19 @@
 	    (%display " source=")	(%display (source-position-port-id pos))))))
     (%display ">")))
 
-(define (datum->stx id datum)
+(define* (datum->syntax {id identifier?} datum)
+  ($datum->syntax id datum))
+
+(define ($datum->syntax id datum)
   ;;Since all the identifier->label bindings are encapsulated within the
   ;;identifier, converting a datum to a syntax object (non-hygienically)
   ;;is  done simply  by creating  an  STX that  has the  same marks  and
   ;;substitutions as the identifier.
   ;;
   (make-<stx> datum
-	      (<stx>-mark*  id)
-	      (<stx>-subst* id)
-	      (<stx>-ae*    id)))
-
-(define (datum->syntax id datum)
-  (if (identifier? id)
-      (datum->stx id datum)
-    (assertion-violation 'datum->syntax
-      "expected identifier as context syntax object" id)))
+	      ($<stx>-mark*  id)
+	      ($<stx>-subst* id)
+	      ($<stx>-ae*    id)))
 
 (define (syntax->datum S)
   (strip S '()))
@@ -4522,7 +4529,7 @@
 	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
     (make-<stx> stx/expr mark* subst* ae*)))
 
-(define (push-lexical-contour rib stx/expr)
+(define* (push-lexical-contour {rib rib?} stx/expr)
   ;;Add a rib to a syntax  object or expression and return the resulting
   ;;syntax object.  This  procedure introduces a lexical  contour in the
   ;;context of the given syntax object or expression.
@@ -4888,11 +4895,11 @@
 ;;pair whose car  and cdr fields are themselves  syntax objects (wrapped
 ;;or unwrapped).
 ;;
-;;We always  maintain the  invariant that we  do not double  wrap syntax
-;;objects.  The  only way  to get a  doubly-wrapped syntax object  is by
-;;doing DATUM->STX  (above) where the  datum is itself a  wrapped syntax
-;;object (R6RS  may not even  consider wrapped syntax objects  as datum,
-;;but let's not worry now).
+;;We always  maintain the invariant  that we  do not double  wrap syntax
+;;objects.  The  only way to  get a  doubly-wrapped syntax object  is by
+;;doing  $DATUM->SYNTAX (above)  where  the datum  is  itself a  wrapped
+;;syntax object  (R6RS may not  even consider wrapped syntax  objects as
+;;datum, but let's not worry now).
 ;;
 ;;Syntax objects  have, in  addition to the  EXPR, a  substitution field
 ;;SUBST*: it is a list where each  element is either a RIB or the symbol
@@ -5622,24 +5629,24 @@
        (or (bound-id=? id ($car id*))
 	   (bound-id-member? id ($cdr id*)))))
 
-(define* (identifier-append ctxt . str*)
+(define* (identifier-append {ctxt identifier?} . str*)
   ;;Given  the identifier  CTXT  and a  list of  strings  or symbols  or
   ;;identifiers STR*: concatenate all the items in STR*, with the result
   ;;build and return a new identifier in the same context of CTXT.
   ;;
-  (datum->stx ctxt
-	      (string->symbol
-	       (apply string-append
-		      (map (lambda (x)
-			     (cond ((symbol? x)
-				    (symbol->string x))
-				   ((string? x)
-				    x)
-				   ((identifier? x)
-				    (symbol->string (syntax->datum x)))
-				   (else
-				    (assertion-violation __who__ "BUG"))))
-			str*)))))
+  ($datum->syntax ctxt
+		  (string->symbol
+		   (apply string-append
+			  (map (lambda (x)
+				 (cond ((symbol? x)
+					(symbol->string x))
+				       ((string? x)
+					x)
+				       ((identifier? x)
+					(symbol->string (syntax->datum x)))
+				       (else
+					(assertion-violation __who__ "BUG"))))
+			    str*)))))
 
 
 (define-syntax syntax-match
@@ -8310,7 +8317,7 @@
 	       (import PARSE-IMPORT-SPEC)
 	       (parse-import-spec* (syntax->datum ?imp*)))
 	   (values (vector-map (lambda (name)
-				 (datum->stx ?ctxt name))
+				 ($datum->syntax ?ctxt name))
 		     name-vec)
 		   label-vec)))
 	(_
