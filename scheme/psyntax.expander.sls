@@ -4979,6 +4979,7 @@
 (define anti-mark #f)
 (define anti-mark? not)
 
+
 ;;So, what's an anti-mark and why is it there?
 ;;
 ;;The theory goes like this: when a macro call is encountered, the input
@@ -5026,26 +5027,17 @@
 ;;%DO-MACRO-CALL.
 ;;
 
-(module (join-wraps)
+(module WRAPS-UTILITIES
+  (%merge-annotated-expr*
+   %append-cancel-facing)
 
-  (define (join-wraps mark1* subst1* ae1* stx2)
-    (let ((mark2*   ($<stx>-mark*  stx2))
-	  (subst2*  ($<stx>-subst* stx2))
-	  (ae2*     ($<stx>-ae*    stx2)))
-      ;;If the first item in mark2* is an anti-mark...
-      (if (and (not (null? mark1*))
-	       (not (null? mark2*))
-	       (anti-mark? ($car mark2*)))
-	  ;;...cancel mark, anti-mark, and corresponding shifts.
-	  (values (%append-cancel-facing mark1*  mark2*)
-		  (%append-cancel-facing subst1* subst2*)
-		  (%merge-ae* ae1* ae2*))
-	;;..else no cancellation takes place.
-	(values (append mark1*  mark2*)
-		(append subst1* subst2*)
-		(%merge-ae* ae1* ae2*)))))
-
-  (define (%merge-ae* ls1 ls2)
+  (define (%merge-annotated-expr* ls1 ls2)
+    ;;Append LS1 and LS2 and return the result; if the car or LS2 is #f:
+    ;;append LS1 and (cdr LS2).
+    ;;
+    ;;   (%merge-annotated-expr* '(a b c) '(d  e f))   => (a b c d e f)
+    ;;   (%merge-annotated-expr* '(a b c) '(#f e f))   => (a b c e f)
+    ;;
     (if (and (pair? ls1)
 	     (pair? ls2)
 	     (not ($car ls2)))
@@ -5053,32 +5045,58 @@
       (append ls1 ls2)))
 
   (define (%append-cancel-facing ls1 ls2)
-    ;;Given two non-empty lists: append them discarding the last item in
-    ;;LS1 and the first item in LS2.  Examples:
+    ;;Expect LS1 to be a proper list  of one or more elements and LS2 to
+    ;;be a proper list  of one or more elements.  Append  the cdr of LS2
+    ;;to LS1 and return the result:
     ;;
     ;;   (%append-cancel-facing '(1 2 3) '(4 5 6))	=> (1 2 5 6)
     ;;   (%append-cancel-facing '(1)     '(2 3 4))	=> (3 4)
     ;;   (%append-cancel-facing '(1)     '(2))		=> ()
     ;;
-    (let recur ((x   ($car ls1))
-		(ls1 ($cdr ls1)))
-      (if (null? ls1)
+    ;;This function is like:
+    ;;
+    ;;   (append ls1 (cdr ls2))
+    ;;
+    ;;we just hope to be a bit more efficient.
+    ;;
+    (let recur ((A1 ($car ls1))
+		(D1 ($cdr ls1)))
+      (if (null? D1)
 	  ($cdr ls2)
-	(cons x (recur ($car ls1) ($cdr ls1))))))
+	(cons A1 (recur ($car D1) ($cdr D1))))))
 
-  #| end of module: JOIN-WRAPS |# )
+  #| end of module: WRAPS-UTILITIES |# )
 
 (define (same-marks? x y)
   ;;Two lists  of marks are  considered the same  if they have  the same
   ;;length and the corresponding marks on each are EQ?.
   ;;
-  (or (and (null? x) (null? y)) ;(eq? x y)
+  (or (eq? x y)
       (and (pair? x) (pair? y)
 	   (eq? ($car x) ($car y))
 	   (same-marks? ($cdr x) ($cdr y)))))
 
+(define (join-wraps mark1* subst1* ae1* stx2)
+  (import WRAPS-UTILITIES)
+  (let ((mark2*   ($<stx>-mark*  stx2))
+	(subst2*  ($<stx>-subst* stx2))
+	(ae2*     ($<stx>-ae*    stx2)))
+    ;;If the first item in mark2* is an anti-mark...
+    (if (and (not (null? mark1*))
+	     (not (null? mark2*))
+	     (anti-mark? ($car mark2*)))
+	;;...cancel mark, anti-mark, and corresponding shifts.
+	(values (%append-cancel-facing mark1*  mark2*)
+		(%append-cancel-facing subst1* subst2*)
+		(%merge-annotated-expr* ae1* ae2*))
+      ;;..else no cancellation takes place.
+      (values (append mark1*  mark2*)
+	      (append subst1* subst2*)
+	      (%merge-annotated-expr* ae1* ae2*)))))
+
 (module ADD-MARK
   (add-mark)
+  (import WRAPS-UTILITIES)
 
   (define* (add-mark mark {rib false-or-rib?} expr ae)
     ;;Build and return  a new syntax object wrapping  EXPR and having MARK
@@ -5162,43 +5180,6 @@
 	   ;;If  we  are  here  SUB-EXPR  is  a  self  evaluating  datum
 	   ;;(booleans, numbers, strings, ...).
 	   (make-<stx> sub-expr (list new-mark) subst1* ae*))))
-
-  (module (%merge-annotated-expr*)
-
-    (define (%merge-annotated-expr* ls1 ls2)
-      ;;Append LS1 and LS2  and return the result; if the  car or LS2 is
-      ;;#f: append LS1 and (cdr LS2).
-      ;;
-      ;;   (%merge-annotated-expr* '(a b c) '(d  e f))   => (a b c d e f)
-      ;;   (%merge-annotated-expr* '(a b c) '(#f e f))   => (a b c e f)
-      ;;
-      (if (and (pair? ls1)
-	       (pair? ls2)
-	       (not ($car ls2)))
-	  (%cancel ls1 ls2)
-	(append ls1 ls2)))
-
-    (define (%cancel ls1 ls2)
-      ;;Expect LS1 to be  a proper list of one or  more elements and LS2
-      ;;to be a proper list of one  or more elements.  Append the cdr of
-      ;;LS2 to LS1 and return the result:
-      ;;
-      ;;   (%cancel '(a b c) '(d e f))
-      ;;   => (a b c e f)
-      ;;
-      ;;This function is like:
-      ;;
-      ;;   (append ls1 (cdr ls2))
-      ;;
-      ;;we just hope to be a bit more efficient.
-      ;;
-      (let recur ((A1 ($car ls1))
-		  (D1 ($cdr ls1)))
-	(if (null? D1)
-	    ($cdr ls2)
-	  (cons A1 (recur ($car D1) ($cdr D1))))))
-
-    #| end of module: MERGE-ANNOTATED-EXPR* |# )
 
   #| end of module: ADD-MARK |# )
 
