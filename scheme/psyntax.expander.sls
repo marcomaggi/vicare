@@ -5147,8 +5147,7 @@
 
   (define* (add-mark mark {rib false-or-rib?} expr ae)
     ;;Build and return a new syntax object wrapping EXPR and having MARK
-    ;;pushed  on its  list  of  marks.  This  function  used  only in  2
-    ;;places:
+    ;;pushed on its list of marks.  This function used only in 2 places:
     ;;
     ;;* It  is applied to  the input form  of a macro  transformer, with
     ;;  MARK being the anti-mark.
@@ -5170,16 +5169,32 @@
     ;;keep track of  the transformation a form  undergoes when processed
     ;;as macro use.
     ;;
+    ;;The return value  can be either a <stx> instance  or a (partially)
+    ;;unwrapped syntax object.
+    ;;
     #;(debug-print 'add-mark-enter expr)
     (receive-and-return (R)
-	(mkstx (%find-foreign-stx expr mark rib expr '() '()) ;stx
-	       '()					      ;mark*
-	       '()					      ;rib*
-	       (list ae))				      ;ae*
+	(%find-meaningful-stx expr mark rib expr '() (list ae))
       #;(debug-print 'add-mark-exit R)
       (void)))
 
-  (define (%find-foreign-stx top-expr new-mark rib expr outer-rib* ae*)
+  ;;NOTE The one  below was the original (modified,  but still original)
+  ;;implementation of this function; it  is kept here for reference.  In
+  ;;my  eternal ignorance,  I do  not understand  why the  syntax object
+  ;;return value of the recursive  function is enclosed in another <stx>
+  ;;with empty wraps; so I removed  such an envelope object.  It appears
+  ;;that there  is no need  for this function  to return an  instance of
+  ;;<stx>: the  code works fine when  the return value is  a (partially)
+  ;;unwrapped syntax object.  (Marco Maggi; Tue Mar 18, 2014)
+  ;;
+  ;; (define* ({add-mark <stx>?} mark {rib false-or-rib?} expr ae)
+  ;;   (let ((mark* '())
+  ;;         (rib*  '())
+  ;;         (ae*   (list ae)))
+  ;;     (mkstx (%find-meaningful-stx expr mark rib expr '() '())
+  ;;            mark* rib* ae*)))
+
+  (define (%find-meaningful-stx top-expr new-mark rib expr accum-rib* ae*)
     ;;Recursively visit EXPR while EXPR is: a pair, a vector or an <stx>
     ;;with empty MARK*.  Stop the recursion  when EXPR is: an <stx> with
     ;;non-empty MARK* or a  non-compound datum (boolean, number, string,
@@ -5192,17 +5207,17 @@
     ;;Return a wrapped  or (partially) unwrapped syntax  object with the
     ;;mark added.
     ;;
-    ;;OUTER-RIB* is  the list of  RIB* (ribs and "shift"  symbols), from
+    ;;ACCUM-RIB* is  the list of  RIB* (ribs and "shift"  symbols), from
     ;;outer to  inner, collected so  far while visiting  <stx> instances
     ;;with empty MARK*.
     ;;
-    (define-syntax-rule (%recurse ?expr ?outer-rib* ?ae*)
-      (%find-foreign-stx top-expr new-mark rib ?expr ?outer-rib* ?ae*))
+    (define-syntax-rule (%recurse ?expr ?accum-rib* ?ae*)
+      (%find-meaningful-stx top-expr new-mark rib ?expr ?accum-rib* ?ae*))
     (cond ((pair? expr)
 	   ;;Visit the  items in the  pair.  If the visited  items equal
 	   ;;the original items: keep EXPR as result.
-	   (let ((A (%recurse (car expr) outer-rib* ae*))
-		 (D (%recurse (cdr expr) outer-rib* ae*)))
+	   (let ((A (%recurse (car expr) accum-rib* ae*))
+		 (D (%recurse (cdr expr) accum-rib* ae*)))
 	     (if (eq? A D)
 		 expr
 	       (cons A D))))
@@ -5212,7 +5227,7 @@
 	   ;;equal the original items: keep EXPR as result.
 	   (let* ((ls1 (vector->list expr))
 		  (ls2 (map (lambda (item)
-			      (%recurse item outer-rib* ae*))
+			      (%recurse item accum-rib* ae*))
 			 ls1)))
 	     (if (for-all eq? ls1 ls2)
 		 expr
@@ -5225,7 +5240,7 @@
 		    ;;EXPR  with  empty  MARK*: collect  its  RIB*  then
 		    ;;recurse into its expression.
 		    (%recurse ($<stx>-expr expr)
-			      (append outer-rib* expr.rib*)
+			      (append accum-rib* expr.rib*)
 			      (%merge-annotated-expr* ae* ($<stx>-ae* expr))))
 		   ((eq? (car expr.mark*) anti-mark)
 		    ;;EXPR with non-empty MARK*  having the anti-mark as
@@ -5235,16 +5250,16 @@
 		    ;;Drop  both   NEW-MARK  and  the   anti-mark  (they
 		    ;;annihilate each other) from the resulting MARK*.
 		    ;;
-		    ;;Join the collected  OUTER-RIB* with the EXPR.RIB*;
+		    ;;Join the collected  ACCUM-RIB* with the EXPR.RIB*;
 		    ;;the first item in the resulting RIB* is associated
 		    ;;to the  anti-mark (it is  a "shift" symbol)  so we
 		    ;;drop it.
 		    ;;
-		    (assert (or (and (not (null? outer-rib*))
-				     (eq? 'shift (car outer-rib*)))
+		    (assert (or (and (not (null? accum-rib*))
+				     (eq? 'shift (car accum-rib*)))
 				(and (not (null? expr.rib*))
 				     (eq? 'shift (car expr.rib*)))))
-		    (let* ((result.rib* (append outer-rib* expr.rib*))
+		    (let* ((result.rib* (append accum-rib* expr.rib*))
 			   (result.rib* (cdr result.rib*)))
 		      (make-<stx> ($<stx>-expr expr) (cdr expr.mark*)
 				  result.rib*
@@ -5257,11 +5272,11 @@
 		    ;;
 		    ;;Push NEW-MARK on the resulting MARK*.
 		    ;;
-		    ;;Join the  collected OUTER-RIB* with  the EXPR.RIB*
+		    ;;Join the  collected ACCUM-RIB* with  the EXPR.RIB*
 		    ;;of  EXPR; push  a "shift"  on the  resulting RIB*,
 		    ;;associated to NEW-MARK in MARK*.
 		    ;;
-		    (let* ((result.rib* (append outer-rib* expr.rib*))
+		    (let* ((result.rib* (append accum-rib* expr.rib*))
 			   (result.rib* (cons 'shift result.rib*))
 			   (result.rib* (if rib
 					    (cons rib result.rib*)
@@ -5280,7 +5295,7 @@
 	   ;;If  we are  here EXPR  is a  non-compound datum  (booleans,
 	   ;;numbers, strings, ..., structs, records).
 	   #;(assert (non-compound-sexp? expr))
-	   (make-<stx> expr (list new-mark) outer-rib* ae*))))
+	   (make-<stx> expr (list new-mark) accum-rib* ae*))))
 
   #| end of module: ADD-MARK |# )
 
@@ -5525,9 +5540,9 @@
 (define (syntax-car x)
   (cond ((<stx>? x)
 	 (mkstx (syntax-car ($<stx>-expr x))
-		($<stx>-mark*  x)
-		($<stx>-rib* x)
-		($<stx>-ae*    x)))
+		($<stx>-mark* x)
+		($<stx>-rib*  x)
+		($<stx>-ae*   x)))
 	((annotation? x)
 	 (syntax-car (annotation-expression x)))
 	((pair? x)
@@ -5538,9 +5553,9 @@
 (define (syntax-cdr x)
   (cond ((<stx>? x)
 	 (mkstx (syntax-cdr ($<stx>-expr x))
-		($<stx>-mark*  x)
-		($<stx>-rib* x)
-		($<stx>-ae*    x)))
+		($<stx>-mark* x)
+		($<stx>-rib*  x)
+		($<stx>-ae*   x)))
 	((annotation? x)
 	 (syntax-cdr (annotation-expression x)))
 	((pair? x)
@@ -5559,12 +5574,12 @@
 
 (define (syntax-vector->list x)
   (cond ((<stx>? x)
-	 (let ((ls (syntax-vector->list (<stx>-expr x)))
-	       (m* (<stx>-mark* x))
-	       (s* (<stx>-rib* x))
-	       (ae* (<stx>-ae* x)))
+	 (let ((ls     (syntax-vector->list (<stx>-expr x)))
+	       (mark*  (<stx>-mark* x))
+	       (rib*   (<stx>-rib*  x))
+	       (ae*    (<stx>-ae*   x)))
 	   (map (lambda (x)
-		  (mkstx x m* s* ae*))
+		  (mkstx x mark* rib* ae*))
 	     ls)))
 	((annotation? x)
 	 (syntax-vector->list (annotation-expression x)))
