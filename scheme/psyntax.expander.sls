@@ -4479,7 +4479,12 @@
 		;"top".
    subst*
 		;Null or  a proper  list of  <rib> instances  or "shift"
-		;symbols.
+		;symbols.   Every  <rib>  represents  a  nested  lexical
+		;contour; a  "shift" represents the return  from a macro
+		;transformer application.
+		;
+		;NOTE The items in MARK*  and SUBST* are not associated:
+		;the two lists grow independently of each other.
    ae*
 		;List of  annotated expressions:  null or a  proper list
 		;whose items are #f or  input forms of macro transformer
@@ -4572,8 +4577,10 @@
 
 (define* (push-lexical-contour {rib rib?} expr-stx)
   ;;Add a rib to a syntax  object or expression and return the resulting
-  ;;syntax object.  This  procedure introduces a lexical  contour in the
-  ;;context of the given syntax object or expression.
+  ;;syntax object.   During the  expansion process  we visit  the nested
+  ;;subexpressions  in a  syntax  object repesenting  source code:  this
+  ;;procedure introduces a  lexical contour in the  context of EXPR-STX,
+  ;;for example when we enter a LET syntax.
   ;;
   ;;RIB must be an instance of <RIB>.
   ;;
@@ -4668,8 +4675,13 @@
 	(cond ((null? subst*)
 	       #f)
 	      ((eq? ($car subst*) 'shift)
-	       ;;A shift is inserted when a  mark is added.  So, we search
-	       ;;the rest of the substitution without the mark.
+	       ;;This is the  only place in the expander  where a symbol
+	       ;;"shift" in a SUBST* makes some difference; a "shift" is
+	       ;;pushed  on the  SUBST* when  a  mark is  pushed on  the
+	       ;;MARK*.
+	       ;;
+	       ;;When  we  find  a  "shift"   in  SUBST*:  we  skip  the
+	       ;;corresponding mark in MARK*.
 	       (search ($cdr subst*) ($cdr mark*)))
 	      (else
 	       (let ((rib ($car subst*)))
