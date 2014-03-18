@@ -4178,6 +4178,10 @@
   (or (not obj)
       (rib? obj)))
 
+(define (list-of-ribs? obj)
+  (and (list? obj)
+       (for-all rib? obj)))
+
 (define-inline (make-empty-rib)
   ;;Build and return a new empty <RIB> record.
   ;;
@@ -4507,47 +4511,50 @@
 (define (syntax->datum S)
   (strip S '()))
 
-(define (mkstx stx/expr mark* subst* ae*)
+(define (mkstx expr-stx mark* subst* ae*)
   ;;This is the proper constructor for wrapped syntax objects.
   ;;
-  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
-  ;;object.  MARK* is a list of marks.  SUBST* is a list of substs.
+  ;;EXPR-STX can  be a raw sexp,  an instance of <STX>  or a (partially)
+  ;;unwrapped syntax object.
   ;;
-  ;;AE* == annotated expressions???
+  ;;MARK* must be  null or a proper list of  marks, including the symbol
+  ;;"top".
   ;;
-  ;;When STX/EXPR  is a  raw sexp:  just build and  return a  new syntax
-  ;;object with the lexical context described by the given arguments.
+  ;;AE* must be  null or a proper list of  annotated expressions: syntax
+  ;;objects being input forms for macro transformer calls.
   ;;
-  ;;When STX/EXPR is a syntax object:  join the wraps from STX/EXPR with
+  ;;When EXPR-STX  is a  raw sexp  or an  unwrapped syntax  object: just
+  ;;build  and return  a  new  syntax object  with  the lexical  context
+  ;;described by the given arguments.
+  ;;
+  ;;When EXPR-STX is a <stx> instance: join the wraps from EXPR-STX with
   ;;given wraps, making sure that marks and anti-marks and corresponding
   ;;shifts cancel properly.
   ;;
-  (if (and (<stx>? stx/expr)
+  (if (and (<stx>? expr-stx)
 	   (not (top-marked? mark*)))
       (receive (mark* subst* ae*)
-	  (join-wraps mark* subst* ae* stx/expr)
-	(make-<stx> (<stx>-expr stx/expr) mark* subst* ae*))
-    (make-<stx> stx/expr mark* subst* ae*)))
+	  (join-wraps mark* subst* ae* expr-stx)
+	(make-<stx> (<stx>-expr expr-stx) mark* subst* ae*))
+    (make-<stx> expr-stx mark* subst* ae*)))
 
-(define* (push-lexical-contour {rib rib?} stx/expr)
+(define* (push-lexical-contour {rib rib?} expr-stx)
   ;;Add a rib to a syntax  object or expression and return the resulting
   ;;syntax object.  This  procedure introduces a lexical  contour in the
   ;;context of the given syntax object or expression.
   ;;
   ;;RIB must be an instance of <RIB>.
   ;;
-  ;;STX/EXPR can be a raw sexp, an instance of <STX> or a wrapped syntax
+  ;;EXPR-STX can be a raw sexp, an instance of <STX> or a wrapped syntax
   ;;object.
   ;;
   ;;This function prepares  a computation that will  be lazily performed
   ;;later; the RIB will be pushed on the stack of substitutions in every
   ;;identifier in the fully unwrapped returned syntax object.
   ;;
-  (mkstx stx/expr
-	 '() #;mark*
-	 (list rib)
-	 '() #;ae*
-	 ))
+  (let ((mark*	'())
+	(ae*	'()))
+    (mkstx expr-stx mark* (list rib) ae*)))
 
 (define (expression-position x)
   (if (<stx>? x)
@@ -4575,11 +4582,11 @@
 		(and (pair? x)
 		     (annotation? ($car x)))
 		(and (vector? x)
-		     (> ($vector-length x) 0)
+		     (not ($vector-empty? x))
 		     (annotation? ($vector-ref x 0))))
 	    ;;TODO Ask Kent  why this is a  sufficient test.  (Abdulaziz
 	    ;;Ghuloum)
-	    (strip-annotations x)
+	    (%strip-annotations x)
 	  x)
       (let f ((x x))
 	(cond ((<stx>? x)
@@ -4601,12 +4608,12 @@
 		   (list->vector new))))
 	      (else x)))))
 
-  (define (strip-annotations x)
+  (define (%strip-annotations x)
     (cond ((pair? x)
-	   (cons (strip-annotations ($car x))
-		 (strip-annotations ($cdr x))))
+	   (cons (%strip-annotations ($car x))
+		 (%strip-annotations ($cdr x))))
 	  ((vector? x)
-	   (vector-map strip-annotations x))
+	   (vector-map %strip-annotations x))
 	  ((annotation? x)
 	   (annotation-stripped x))
 	  (else x)))

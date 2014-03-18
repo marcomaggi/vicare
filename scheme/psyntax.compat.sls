@@ -110,7 +110,7 @@
     $car $cdr
     $fx= $fx< $fx> $fx<= $fx>= $fxadd1
     $fxzero? $fxpositive? $fxnonnegative?
-    $vector-ref $vector-set! $vector-length)
+    $vector-length $vector-empty? $vector-ref $vector-set!)
   (import (vicare)
     (only (ikarus.compiler)
 	  eval-core)
@@ -142,7 +142,8 @@
     (only (vicare system $pairs)
 	  $car $cdr)
     (only (vicare system $vectors)
-	  $vector-ref $vector-set! $vector-length))
+	  $vector-empty? $vector-length
+	  $vector-ref $vector-set!))
 
 
 (define (library-version-mismatch-warning name depname filename)
