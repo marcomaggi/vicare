@@ -41,6 +41,17 @@ public interface exported by @library{vicare} and @library{rnrs}.
 @section Low level symbol operations
 
 
+@menu
+* syslib symbols unsafe::       Unsafe symbol operations.
+* syslib symbols system::       System values.
+* syslib symbols labels::       Retrieving syntactic binding labels.
+@end menu
+
+@c page
+@node syslib symbols unsafe
+@subsection Unsafe symbol operations
+
+
 @cindex @library{vicare system $symbols}, library
 @cindex Library @library{vicare system $symbols}
 
@@ -145,19 +156,6 @@ Still to be documented.
 @end deffn
 
 
-@defvr Constant system-value-gensym
-A special gensym used internally to map core primitive names to their
-value; @ref{iklib symbols system, system-value}.
-@end defvr
-
-
-@defvr Constant system-label-gensym
-A special gensym used internally to map core primitive names to their
-syntactic binding label gensym; @ref{iklib symbols labels,
-system-label}.
-@end defvr
-
-
 The following bindings are related to the symbol table collecting
 interned symbols.
 
@@ -213,6 +211,110 @@ Return a new association list representing the property list of
 @var{symbol}.  The order of the entries is the same as the property
 creation order.
 @end deffn
+
+@c page
+@node syslib symbols system
+@subsection System values
+
+
+Every core primitive value has a name that is considered part of
+Vicare's core language; such primitive name is the actual public name of
+the binding exported by the boot image.  The name of the function
+@func{display} is the symbol @code{display}; the name of the
+record--type descriptor @code{&condition-rtd} is the symbol
+@code{&condition-rtd}.
+
+The property list of the name contains a special entry whose value is
+the storage location gensym of the core primitive value; we can easily
+inspect such situation as follows:
+
+@example
+(import (vicare)
+  (only (vicare system $symbols)
+        system-value-gensym
+        system-value))
+
+(getprop 'display system-value-gensym)
+@result{} loc.display
+
+(symbol-value (getprop 'display system-value-gensym))
+@result{} #<procedure display>
+
+(system-value 'display)
+@result{} #<procedure display>
+
+(system-value '&condition-rtd)
+@result{} #[rtd name=&condition ...]
+@end example
+
+We see that the property list contains an entry with key set to the
+symbol bound to @code{system-value-gensym}; notice that this key is
+different every time we rebuild the boot image; @ref{syslib symbols,
+system-value-gensym}.
+
+
+@defun system-value @var{symbol}
+Attempt to extract from @var{symbol} the core primitive value of which
+@var{symbol} is the name; if successful return the Scheme object, else
+raise an assertion violation.
+@end defun
+
+
+@defvr Constant system-value-gensym
+A special gensym used internally to map core primitive names to their
+value.
+@end defvr
+
+
+@c page
+@node syslib symbols labels
+@subsection Retrieving syntactic binding labels
+
+
+Every core primitive syntactic binding has a unique label gensym
+associated to it; such primitive name is the actual public name of the
+binding exported by the boot image.  The name of the function
+@func{display} is the symbol @code{display}; the name of the
+record--type descriptor @code{&condition-rtd} is the symbol
+@code{&condition-rtd}.
+
+The property list of the name contains a special entry whose value is
+the label gensym of the core primitive syntactic binding; we can easily
+inspect such situation as follows:
+
+@example
+(import (vicare)
+  (only (vicare system $symbols)
+        system-label-gensym
+        system-label))
+
+(getprop 'display system-label-gensym)
+@result{} lab.display
+
+(symbol-value (getprop 'display system-label-gensym))
+@result{} (core-prim . display)
+
+(system-label 'display)
+@result{} lab.display
+@end example
+
+We see that the property list contains an entry with key set to the
+symbol bound to @code{system-label-gensym}; notice that this key is
+different every time we rebuild the boot image; @ref{syslib symbols,
+system-label-gensym}.
+
+
+@defun system-label @var{symbol}
+Attempt to extract from @var{symbol} the core primitive syntactic
+binding label of which @var{symbol} is the name; if successful return
+the Scheme object, else raise an assertion violation.
+@end defun
+
+
+@defvr Constant system-label-gensym
+A special gensym used internally to map core primitive names to their
+syntactic binding label gensym.
+@end defvr
 
 @c page
 @node syslib keywords

@@ -1308,7 +1308,6 @@
     syntax-object-source-objects
     syntax-object-ribs
     syntax-transpose
-    system-value
     tanh
     time
     time<=?
