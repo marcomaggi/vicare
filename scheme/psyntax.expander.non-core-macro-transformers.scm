@@ -180,7 +180,7 @@
       <textual-input-port> <textual-output-port> <textual-input/output-port>
       <binary-input-port> <binary-output-port> <binary-input/output-port>)
      (lambda (expr-stx)
-       (syntax-violation #f "incorrect usage of auxiliary keyword" expr-stx)))
+       (syntax-violation #f "incorrect usage of built-in tag keyword" expr-stx)))
 
     (else
      (%error-invalid-macro))))

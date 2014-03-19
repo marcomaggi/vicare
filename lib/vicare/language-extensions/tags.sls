@@ -87,9 +87,6 @@
 
 ;;;; helpers
 
-(define (<top>? obj)
-  #t)
-
 
 (define-syntax init
   ;;Why  are  we   using  this  DEFINE-SYNTAX  rather   than  a  simpler
@@ -98,8 +95,6 @@
   ;;when the library is loaded from  source; to have this code evaluated
   ;;when the library is loaded in binary form we have to do it this way.
   (begin
-    (set-identifier-object-type-spec! #'<top>
-      (make-object-type-spec #'<top> #'<top>?))
     (set-identifier-object-type-spec! #'<boolean>
       (make-object-type-spec #'<boolean> #'boolean? #f #f #f #'<top>))
     (set-identifier-object-type-spec! #'<char>
@@ -112,8 +107,6 @@
       (make-object-type-spec #'<pointer> #'pointer? #f #f #f #'<top>))
     (set-identifier-object-type-spec! #'<transcoder>
       (make-object-type-spec #'<transcoder> #'transcoder? #f #f #f #'<top>))
-    (set-identifier-object-type-spec! #'<procedure>
-      (make-object-type-spec #'<procedure> #'procedure? #f #f #f #'<top>))
 
 ;;; --------------------------------------------------------------------
 ;;; numbers

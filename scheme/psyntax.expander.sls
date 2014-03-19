@@ -1156,7 +1156,6 @@
     make-object-type-spec			object-type-spec?
     object-type-spec-type-id			object-type-spec-pred-id
     identifier-object-type-spec-accessor	identifier-object-type-spec-mutator
-    initialise-type-spec-for-built-in-object-types
 
     ;; expand-time object type specs: tagged binding identifiers
     identifier-with-tagging?
@@ -1170,6 +1169,10 @@
     make-callable-spec			callable-spec?
     callable-spec-name			callable-spec-min-arity
     callable-spec-max-arity		callable-spec-dispatcher
+
+    ;; expant-time type specs: stuff for built-in tags
+    initialise-type-spec-for-built-in-object-types
+    <top>?
 
     ;;The following are inspection functions for debugging purposes.
     (rename (<stx>?		syntax-object?)
@@ -6905,8 +6908,7 @@
 	 ;;   (?first-form ?form ...)
 	 ;;
 	 (let ((id (syntax-car expr-stx)))
-	   (cond ((and (identifier? id)
-		       (identifier-with-tagging-dispatcher? id))
+	   (cond ((%bound-identifier-with-tag-dispatcher? id)
 		  ;;Here we know that EXPR-STX has the format:
 		  ;;
 		  ;;   (?tagged-id ?form ...)
@@ -7196,7 +7198,7 @@
 	    (build-lexical-reference no-source lex)))
 
 	 ((tagged-dispatching)
-	  (chi-expr (identifier-tagging-apply-dispatcher kwd expr-stx)
+	  (chi-expr (tag-identifier-apply-dispatcher kwd expr-stx)
 		    lexenv.run lexenv.expand))
 
 	 ((global-macro global-macro!)
@@ -8185,7 +8187,7 @@
 				lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))))
 
 	       ((tagged-dispatching)
-		(chi-body* (cons (identifier-tagging-apply-dispatcher kwd body-form-stx)
+		(chi-body* (cons (tag-identifier-apply-dispatcher kwd body-form-stx)
 				 (cdr body-form-stx*))
 			   lexenv.run lexenv.expand
 			   lex* qrhs* mod** kwd* export-spec* rib mix? sd?))

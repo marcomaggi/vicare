@@ -3698,6 +3698,7 @@
 ;;; expander tags
 
     (<top>					$expander-tags)
+    (<top>?					$expander-tags)
     (<boolean>					$expander-tags)
     (<char>					$expander-tags)
     (<symbol>					$expander-tags)

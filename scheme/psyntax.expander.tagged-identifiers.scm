@@ -559,10 +559,10 @@
   (let loop ((fmls formals-tags))
     (syntax-match fmls ()
       ((?tag . ?rest)
-       (identifier? ?tag)
+       (tag-identifier? ?tag)
        (loop ?rest))
       (?rest
-       (identifier? ?rest)
+       (tag-identifier? ?rest)
        #t)
       (() #t)
       (_  #f))))
@@ -708,6 +708,7 @@
   ;;set; otherwise return false.
   ;;
   (and (identifier? obj)
+       (identifier-bound? obj)
        (and (identifier-object-type-spec obj)
 	    #t)))
 
@@ -798,7 +799,11 @@
 	    ;;parent.
 	    (loop (object-type-spec-parent-spec spec)))))))
 
-;;; --------------------------------------------------------------------
+
+;;;; built in tags
+
+(define (<top>? obj)
+  #t)
 
 (define (initialise-type-spec-for-built-in-object-types)
   (define (%register name-sym pred-sym)
@@ -806,6 +811,13 @@
 	  (pred-id (scheme-stx pred-sym)))
       (set-identifier-object-type-spec! name-id
 	(make-object-type-spec name-id pred-id))))
+  (%register '<top>					'<top>?)
+  (let ((name-id   (scheme-stx '<procedure>))
+	(pred-id   (scheme-stx 'procedure?))
+	(parent-id (scheme-stx '<top>)))
+    (set-identifier-object-type-spec! name-id
+      (make-object-type-spec name-id pred-id #f #f #f parent-id)))
+
   (%register '&condition				'condition?)
   (%register '&message					'message-condition?)
   (%register '&warning					'warning?)
@@ -842,6 +854,7 @@
   (%register '&source-position				'source-position-condition?)
   (%register '&procedure-argument-violation		'procedure-argument-violation?)
   (%register '&expression-return-value-violation	'expression-return-value-violation?)
+
   (void))
 
 
@@ -950,25 +963,27 @@
   (and (identifier-type-tagging id)
        #t))
 
-(define* (identifier-with-tagging-dispatcher? {id identifier?})
-  ;;Return #t if ID  is an identifier having a type  tagging and the tag
-  ;;identifier  has a  dispatcher transformer  in its  object-type-spec;
+(define* (%bound-identifier-with-tag-dispatcher? id)
+  ;;Return #t if ID is a bound  identifier having a type tagging and the
+  ;;tag identifier has a dispatcher transformer in its object-type-spec;
   ;;otherwise return false.  If the return  value is true: ID is a bound
   ;;identifier created  by some  binding syntaxes (define,  let, letrec,
   ;;...)  and it can be used in forms like:
   ;;
   ;;   (?id ?arg ...)
   ;;
-  (cond ((identifier-type-tagging id)
-	 => (lambda (tag-id)
-	      (let ((spec (identifier-object-type-spec tag-id)))
-		(and spec
-		     (object-type-spec-dispatcher spec)
-		     #t))))
-	(else #f)))
+  (and (identifier? id)
+       (identifier-bound? id)
+       (cond ((identifier-type-tagging id)
+	      => (lambda (tag-id)
+		   (let ((spec (identifier-object-type-spec tag-id)))
+		     (and spec
+			  (object-type-spec-dispatcher spec)
+			  #t))))
+	     (else #f))))
 
-(define* (identifier-tagging-apply-dispatcher {id identifier-with-tagging-dispatcher?}
-					      input-form-stx)
+(define* (tag-identifier-apply-dispatcher {id %bound-identifier-with-tag-dispatcher?}
+					  input-form-stx)
   (let* ((tag-id (identifier-type-tagging id))
 	 (spec   (identifier-object-type-spec tag-id)))
     ((object-type-spec-dispatcher spec) input-form-stx)))
