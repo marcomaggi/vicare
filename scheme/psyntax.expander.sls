@@ -1144,9 +1144,13 @@
     tagged-identifier-syntax?			parse-tagged-identifier-syntax
     tagged-bindings-syntax?			parse-tagged-bindings-syntax
     tagged-lambda-formals-syntax?		parse-tagged-lambda-formals-syntax
+    tagged-values-formals-syntax?		parse-tagged-values-formals-syntax
+    standard-lambda-formals-syntax?		standard-values-formals-syntax?
+    lambda-tagging-signature?			values-tagging-signature?
 
     ;; expand-time object type specs: identifiers defining types
-    tag-identifier?				tag-super-and-sub?
+    tag-identifier?				all-tag-identifiers?
+    tag-super-and-sub?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
     make-object-type-spec			object-type-spec?
@@ -6250,15 +6254,6 @@
 
 
 ;;;; formals syntax validation
-
-(define (%verify-formals-syntax formals-stx input-form-stx)
-  ;;Verify  that  FORMALS-STX  is  a syntax  object  representing  valid
-  ;;formals for  LAMBDA and WITH-SYNTAX syntaxes.   If successful return
-  ;;unspecified values, else raise a syntax violation.
-  ;;
-  (receive (standard-formals-stx signature-tags)
-      (parse-tagged-lambda-formals-syntax formals-stx input-form-stx)
-    (void)))
 
 (define (%error-invalid-formals-syntax input-form-stx formals-stx)
   ;;Raise an error  for invalid formals of LAMBDA,  CASE-LAMBDA, LET and

@@ -116,6 +116,10 @@
     => #t)
 
   (check
+      (typ.tagged-identifier-syntax? #'{X <fixnum>})
+    => #t)
+
+  (check
       (typ.tagged-identifier-syntax? #'X)
     => #t)
 

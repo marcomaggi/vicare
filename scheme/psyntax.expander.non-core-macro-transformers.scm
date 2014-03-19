@@ -1503,7 +1503,9 @@
 		     (receive (pat idn*)
 			 (convert-pattern (car pat*) '())
 		       (append idn* (recur (cdr pat*))))))))
-       (%verify-formals-syntax (map car idn*) expr-stx)
+       (let ((formals (map car idn*)))
+	 (unless (standard-lambda-formals-syntax? formals)
+	   (%error-invalid-formals-syntax expr-stx formals)))
        (let ((t* (generate-temporaries ?expr*)))
 	 (bless
 	  `(let ,(map list t* ?expr*)
@@ -1680,7 +1682,7 @@
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (let ((standard-lhs* (map (lambda (lhs)
 				   (receive (standard-lhs signature-tags)
-				       (parse-tagged-lambda-formals-syntax lhs expr-stx)
+				       (parse-tagged-values-formals-syntax lhs expr-stx)
 				     standard-lhs))
 			      ?lhs*)))
 	 (bless
@@ -2423,7 +2425,7 @@
 
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
      (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals-syntax ?formal* expr-stx)
+	 (parse-tagged-lambda-formals-syntax (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda (,@?formal* . ,?rest-formal)
@@ -2447,7 +2449,7 @@
 
     ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
      (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals-syntax ?formal* expr-stx)
+	 (parse-tagged-lambda-formals-syntax (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who

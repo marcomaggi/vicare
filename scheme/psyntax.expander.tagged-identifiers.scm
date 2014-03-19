@@ -22,7 +22,7 @@
 ;;;SOFTWARE.
 
 
-;;;; identifiers: tagged identifiers handling
+;;;; tagged binding parsing: standalone identifiers
 
 (define (tagged-identifier-syntax? stx)
   ;;Return  true if  STX is  a syntax  object representing  a tagged  or
@@ -52,17 +52,18 @@
      (values ?id <top>))
     ))
 
-;;; --------------------------------------------------------------------
+
+;;;; tagged binding parsing: proper lists of bindings left-hand sides
 
 (case-define* parse-tagged-bindings-syntax
   ((stx)
    (parse-tagged-bindings-syntax stx #f))
   ((stx input-form-stx)
-   ;;Assume STX is a syntax object representing a proper list of possibly
-   ;;tagged binding  identifiers; parse the  list and return 2  values: a
-   ;;list of identifiers representing the  binding identifiers, a list of
-   ;;identifiers and  #f representing the type  tags; #f is used  when no
-   ;;tag is present.
+   ;;Assume  STX  is a  syntax  object  representing  a proper  list  of
+   ;;possibly tagged  binding identifiers; parse  the list and  return 2
+   ;;values: a list of identifiers representing the binding identifiers,
+   ;;a list  of identifiers  representing the type  tags; <top>  is used
+   ;;when no tag is present.
    ;;
    (define (%parse bind*)
      (syntax-match bind* (brace)
@@ -104,14 +105,15 @@
 	(parse-tagged-bindings-syntax lhs*)
       #t)))
 
-;;; --------------------------------------------------------------------
+
+;;;; tagged binding parsing: lambda formals
 
 (module (parse-tagged-lambda-formals-syntax)
   ;;Given  a syntax  object  representing tagged  LAMBDA formals:  split
-  ;;formals from tags.  Do *not* test for duplicate bindings.
+  ;;formals from tags.  Do test for duplicate bindings.
   ;;
   ;;We  use the  conventions: ?ID,  ?REST-ID and  ?ARGS-ID are  argument
-  ;;identifiers;  ?PRED  is  a  predicate  identifier.   We  accept  the
+  ;;identifiers; ?TAG and ?RV-TAG are  a tag identifiers.  We accept the
   ;;following standard formals formats:
   ;;
   ;;   ?args-id
@@ -120,7 +122,7 @@
   ;;
   ;;and in addition the following tagged formals:
   ;;
-  ;;   (brace ?args-id ?args-pred)
+  ;;   (brace ?args-id ?args-tag)
   ;;   (?arg ...)
   ;;   (?arg0 ?arg ... . ?rest-arg)
   ;;   ((brace _ ?rv-tag0 ?rv-tag ...) ?arg ...)
@@ -145,9 +147,9 @@
     (identifier-syntax 'parse-tagged-lambda-formals-syntax))
 
   (case-define* parse-tagged-lambda-formals-syntax
-    (({_ standard-lambda-formals-syntax? function-tagging-signature?} original-formals-stx)
+    (({_ standard-lambda-formals-syntax? lambda-tagging-signature?} original-formals-stx)
      (parse-tagged-lambda-formals-syntax original-formals-stx #f))
-    (({_ standard-lambda-formals-syntax? function-tagging-signature?} original-formals-stx input-form-stx)
+    (({_ standard-lambda-formals-syntax? lambda-tagging-signature?} original-formals-stx input-form-stx)
      ;;First we  parse and  extract the return  values tagging,  if any;
      ;;then we parse the rest of the formals.
      (syntax-match original-formals-stx (brace _)
@@ -292,14 +294,278 @@
   ;;identifier being acceptable.
   ;;
   (syntax-match stx ()
-    (()
-     #t)
+    (() #t)
     ((?id . ?rest)
      (identifier? ?id)
      (standard-lambda-formals-syntax? ?rest))
     (?rest
      (identifier? ?rest)
-     #t)))
+     #t)
+    (_ #f)))
+
+
+;;;; tagged binding parsing: let-values formals
+
+(module (parse-tagged-values-formals-syntax)
+  ;;Given a syntax object  representing tagged LET-VALUES formals: split
+  ;;formals from tags.  Do test for duplicate bindings.
+  ;;
+  ;;We  use the  conventions: ?ID,  ?REST-ID and  ?ARGS-ID are  argument
+  ;;identifiers; ?TAG and ?RV-TAG are  a tag identifiers.  We accept the
+  ;;following standard formals formats:
+  ;;
+  ;;   ?args-id
+  ;;   (?id ...)
+  ;;   (?id0 ?id ... . ?rest-id)
+  ;;
+  ;;and in addition the following tagged formals:
+  ;;
+  ;;   (brace ?args-id ?args-tag)
+  ;;   (?arg ...)
+  ;;   (?arg0 ?arg ... . ?rest-arg)
+  ;;
+  ;;where ?ARG is a tagged argument with one of the formats:
+  ;;
+  ;;   ?arg-id
+  ;;   (brace ?arg-id ?arg-tag)
+  ;;
+  ;;Return 2 values:
+  ;;
+  ;;1.  A  proper  or  improper list  of  identifiers  representing  the
+  ;;   standard formals.
+  ;;
+  ;;2. An object representing the LET-VALUES tagging signature.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'parse-tagged-values-formals-syntax))
+
+  (case-define* parse-tagged-values-formals-syntax
+    (({_ standard-values-formals-syntax? values-tagging-signature?} original-formals-stx)
+     (parse-tagged-values-formals-syntax original-formals-stx #f))
+    (({_ standard-values-formals-syntax? values-tagging-signature?} original-formals-stx input-form-stx)
+     (receive (standard-formals formals-tags)
+	 (%parse-formals input-form-stx original-formals-stx original-formals-stx)
+       (values standard-formals formals-tags))))
+
+  (define (%parse-formals input-form-stx original-formals-stx formals-stx)
+    (syntax-match formals-stx (brace)
+
+      ;;Tagged args, as in:
+      ;;
+      ;;   (let-values (({args list-of-fixnums} ?expr)) . ?body)
+      ;;
+      ((brace ?args-id ?args-tag)
+       (and (identifier? ?args-id)
+	    (identifier? ?args-tag))
+       (begin
+	 (assert-tag-identifier? ?args-tag)
+	 (values ?args-id ?args-tag)))
+
+      ;;Possibly tagged identifiers with tagged rest argument, as in:
+      ;;
+      ;;   (let-values (((?arg ... . {rest list-of-fixnums}) ?expr)) . ?body)
+      ;;
+      ((?arg* ... . (brace ?rest-id ?rest-tag))
+       (begin
+	 (unless (and (identifier? ?rest-id)
+		      (identifier? ?rest-tag))
+	   (syntax-violation __who__
+	     "invalid rest argument specification" original-formals-stx (cons 'brace ?rest-id ?rest-tag)))
+	 (assert-tag-identifier? ?rest-tag)
+	 (receive-and-return (standard-formals-stx tags)
+	     (let recur ((?arg* ?arg*))
+	       (if (pair? ?arg*)
+		   (%process-args input-form-stx original-formals-stx recur ?arg*)
+		 ;;Process rest argument.
+		 (values ?rest-id ?rest-tag)))
+	   (%validate-formals input-form-stx original-formals-stx standard-formals-stx))))
+
+      ;;Possibly tagged identifiers with UNtagged rest argument, as in:
+      ;;
+      ;;   (let-values (((?arg ... . rest) ?expr)) . ?body)
+      ;;
+      ((?arg* ... . ?rest-id)
+       (identifier? ?rest-id)
+       (receive-and-return (standard-formals-stx tags)
+	   (let recur ((?arg* ?arg*))
+	     (if (pair? ?arg*)
+		 (%process-args input-form-stx original-formals-stx recur ?arg*)
+	       (values ?rest-id <top>)))
+	 (%validate-formals input-form-stx original-formals-stx standard-formals-stx)))
+
+      ;;Standard formals: untagged identifiers without rest argument.
+      ;;
+      ((?id* ...)
+       (for-all identifier? ?id*)
+       (begin
+	 (%validate-formals input-form-stx original-formals-stx ?id*)
+	 (values ?id* (map (lambda (id) <top>) ?id*))))
+
+      ;;Standard formals: untagged identifiers with rest argument.
+      ;;
+      ((?id* ... . ?rest-id)
+       (and (for-all identifier? ?id*)
+	    (identifier? ?rest-id))
+       (begin
+	 (%validate-formals input-form-stx original-formals-stx (append ?id* ?rest-id))
+	 (values formals-stx (cons* (map (lambda (id) <top>) ?id*) <top>))))
+
+      ;;Standard formals: untagged args.
+      ;;
+      (?args-id
+       (identifier? ?args-id)
+       (values ?args-id <top>))
+
+      ;;Possibly tagged identifiers without rest argument.
+      ;;
+      ((?arg* ...)
+       (receive-and-return (standard-formals-stx tags)
+	   (let recur ((?arg* ?arg*))
+	     (if (pair? ?arg*)
+		 (%process-args input-form-stx original-formals-stx recur ?arg*)
+	       (values '() '())))
+	 (%validate-formals input-form-stx original-formals-stx standard-formals-stx)))
+      ))
+
+  (define (%process-args input-form-stx original-formals-stx recur args-stx)
+    (receive (standard-formals tags)
+	(recur (cdr args-stx))
+      (let ((arg-stx (car args-stx)))
+	(syntax-match arg-stx (brace)
+	  ;;Untagged argument.
+	  (?id
+	   (identifier? ?id)
+	   (values (cons ?id standard-formals) (cons <top> tags)))
+	  ;;Tagged argument.
+	  ((brace ?id ?tag)
+	   (and (identifier? ?id)
+		(identifier? ?tag))
+	   (begin
+	     (assert-tag-identifier? ?tag)
+	     (values (cons ?id standard-formals) (cons ?tag tags))))
+	  (else
+	   (syntax-violation __who__
+	     "invalid argument specification"
+	     (or input-form-stx original-formals-stx) arg-stx))))))
+
+  (define (%validate-formals input-form-stx original-formals-stx standard-formals-stx)
+    (cond ((duplicate-bound-formals? standard-formals-stx)
+	   => (lambda (duplicate-id)
+		(syntax-violation __who__
+		  "duplicate identifiers in formals specification"
+		  (or input-form-stx original-formals-stx)
+		  duplicate-id)))))
+
+  #| end of module |# )
+
+(define* (tagged-values-formals-syntax? formals-stx)
+  ;;Return true  if FORMALS-STX  is a  syntax object  representing valid
+  ;;tagged formals for a LAMBDA syntax.
+  ;;
+  (guard (E ((syntax-violation? E)
+	     #f))
+    (receive (standard-formals signature-tags)
+	(parse-tagged-values-formals-syntax formals-stx)
+      #t)))
+
+(define (standard-values-formals-syntax? stx)
+  ;;Return true  if STX  is a syntax  object representing  R6RS standard
+  ;;LAMBDA formals; otherwise return false.  The return value is true if
+  ;;STX is a  proper or improper list of identifiers,  with a standalone
+  ;;identifier being acceptable.
+  ;;
+  (syntax-match stx ()
+    (() #t)
+    ((?id . ?rest)
+     (identifier? ?id)
+     (standard-values-formals-syntax? ?rest))
+    (?rest
+     (identifier? ?rest)
+     #t)
+    (_ #f)))
+
+
+;;;; tagged binding parsing: validation functions
+
+(define (lambda-tagging-signature? obj)
+  ;;Return true if OBJ represents  a LAMBDA tagging signature; otherwise
+  ;;return false.   OBJ is a  LAMBDA tagging signature  if it is  a pair
+  ;;and:
+  ;;
+  ;;* Its car  is null or a proper list  of tag identifiers representing
+  ;;  the return value tags.
+  ;;
+  ;;*  Its  cdr  is  a  proper  or  improper  list  of  tag  identifiers
+  ;;  representing the tags of the arguments.
+  ;;
+  ;;Examples of functions and associated tagging signatures:
+  ;;
+  ;;   (define (doit) ---)			==> (() . ())
+  ;;   (define (doit . args) ---)		==> (() . <top>)
+  ;;   (define (doit . {args <list>}) ---)	==> (() . <list>)
+  ;;
+  ;;   (define ({doit <fixnum>} {a <fixnum>})
+  ;;     ---)
+  ;;   ==> ((<fixnum>) . (<fixnum>))
+  ;;
+  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>})
+  ;;     ---)
+  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum>))
+  ;;
+  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>} . rest)
+  ;;     ---)
+  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum> . <top>))
+  ;;
+  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>} . {rest <list>})
+  ;;     ---)
+  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum> . <list>))
+  ;;
+  ;;   (define ({doit <fixnum> <flonum>} a)
+  ;;     ---)
+  ;;   ==> ((<fixnum> <flonum>) . (<top>))
+  ;;
+  (syntax-match obj ()
+    ((?rv-tag* . ?formals-tags)
+     (and (function-return-values-tags? ?rv-tag*)
+	  (function-arguments-tags?     ?formals-tags)))
+    (_ #f)))
+
+(define (values-tagging-signature? obj)
+  ;;Return  true  if  OBJ  represents a  LET-VALUES  tagging  signature;
+  ;;otherwise return  false.  OBJ is a  LET-VALUES signature if it  is a
+  ;;proper or improper list of  tag identifiers representing the tags of
+  ;;the bindings.
+  ;;
+  (function-arguments-tags? obj))
+
+;;; --------------------------------------------------------------------
+
+(define (function-return-values-tags? rv-tag*)
+  ;;Return  true  if RV-TAG*  represents  the  tags of  function  return
+  ;;values; otherwise return false.
+  ;;
+  ;;RV-TAG* represents  the tags of  function return  values if it  is a
+  ;;proper list of tag identifiers.
+  ;;
+  (all-identifiers? rv-tag*))
+
+(define (function-arguments-tags? formals-tags)
+  ;;Return  true  if  FORMALS-TAGS   represents  the  tags  of  function
+  ;;arguments; otherwise return false.
+  ;;
+  ;;FORMALS-TAGS  represents the  tags of  function formals  if it  is a
+  ;;proper or improper list of tag identifiers.
+  ;;
+  (let loop ((fmls formals-tags))
+    (syntax-match fmls ()
+      ((?tag . ?rest)
+       (identifier? ?tag)
+       (loop ?rest))
+      (?rest
+       (identifier? ?rest)
+       #t)
+      (() #t)
+      (_  #f))))
 
 
 ;;;; identifiers: expand-time object type specification
@@ -461,6 +727,16 @@
 	     (let ((sub-ptag (object-type-spec-type-id pspec)))
 	       (and (not (free-identifier=? <top> sub-ptag))
 		    (tag-super-and-sub? super-tag sub-ptag)))))))
+
+(define (all-tag-identifiers? stx)
+  (syntax-match stx ()
+    (() #t)
+    ((?arg . ?rest)
+     (tag-identifier? ?arg)
+     (all-tag-identifiers? ?rest))
+    (?rest
+     (tag-identifier? ?rest))
+    (_ #f)))
 
 ;;; --------------------------------------------------------------------
 
@@ -699,7 +975,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-label-function-signature! {label symbol?} {signature-tags function-tagging-signature?})
+(define* (set-label-function-signature! {label symbol?} {signature-tags lambda-tagging-signature?})
   ;;Given  a  syntactic  binding  LABEL  for  a  function  binding:  add
   ;;SIGNATURE-TAGS  to  its  property  list  as  type  tagging  for  the
   ;;function.
@@ -721,7 +997,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-identifier-function-signature! {binding-id identifier?} {signature-tags function-tagging-signature?})
+(define* (set-identifier-function-signature! {binding-id identifier?} {signature-tags lambda-tagging-signature?})
   ;;Given a  syntactic binding  identifier for  a function  binding: add
   ;;SIGNATURE-TAGS  to  its  property  list  as  type  tagging  for  the
   ;;function.
@@ -740,82 +1016,6 @@
   ;;function.  Return false if no signature is defined.
   ;;
   (syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-FUNCTION-SIGNATURE-COOKIE*))
-
-;;; --------------------------------------------------------------------
-
-(define (function-tagging-signature? obj)
-  ;;Return  true  if  OBJ   represents  a  function  tagging  signature;
-  ;;otherwise return false.
-  ;;
-  ;;OBJ is a function tagging signature if it is a pair and:
-  ;;
-  ;;*  Its  car  is  null  or a  possibly  proper  list  of  identifiers
-  ;;  representing the return value tags.
-  ;;
-  ;;* Its cdr  is a proper or improper list  of identifiers representing
-  ;;  the tags of the arguments.
-  ;;
-  ;;Examples of functions and associated tagging signature:
-  ;;
-  ;;   (define (doit) ---)			==> (() . ())
-  ;;   (define (doit . args) ---)		==> (() . <top>)
-  ;;   (define (doit . {args <list>}) ---)	==> (() . <list>)
-  ;;
-  ;;   (define ({doit <fixnum>} {a <fixnum>})
-  ;;     ---)
-  ;;   ==> ((<fixnum>) . (<fixnum>))
-  ;;
-  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>})
-  ;;     ---)
-  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum>))
-  ;;
-  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>} . rest)
-  ;;     ---)
-  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum> . <top>))
-  ;;
-  ;;   (define ({doit <fixnum>} {a <fixnum>} {b <fixnum>} . {rest <list>})
-  ;;     ---)
-  ;;   ==> ((<fixnum>) . (<fixnum> <fixnum> . <list>))
-  ;;
-  ;;   (define ({doit <fixnum> <flonum>} a)
-  ;;     ---)
-  ;;   ==> ((<fixnum> <flonum>) . (<top>))
-  ;;
-  (syntax-match obj ()
-    ((?rv-tag* . ?formals-tags)
-     (and (or (not ?rv-tag*)
-	      (function-return-values-tags? ?rv-tag*))
-	  (or (not ?formals-tags)
-	      (function-arguments-tags?     ?formals-tags))))
-    (_
-     #f)))
-
-(define (function-return-values-tags? rv-tag*)
-  ;;Return  true  if RV-TAG*  represents  the  tags of  function  return
-  ;;values; otherwise return false.
-  ;;
-  ;;RV-TAG* represents  the tags of  function return  values if it  is a
-  ;;proper list of identifiers.
-  ;;
-  (all-identifiers? rv-tag*))
-
-(define (function-arguments-tags? formals-tags)
-  ;;Return  true  if  FORMALS-TAGS   represents  the  tags  of  function
-  ;;arguments; otherwise return false.
-  ;;
-  ;;FORMALS-TAGS  represents the  tags of  function formals  if it  is a
-  ;;proper or improper list of identifiers.
-  ;;
-  (let loop ((fmls formals-tags))
-    (syntax-match fmls ()
-      ((?tag . ?rest)
-       (identifier? ?tag)
-       (loop ?rest))
-      (?rest
-       (identifier? ?rest)
-       #t)
-      (() #t)
-      (_  #f))))
 
 ;;; end of file
 ;; Local Variables:
