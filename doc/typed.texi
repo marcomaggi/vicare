@@ -1,0 +1,13 @@
+@node typed
+@chapter Experimental typed language
+
+
+@value{PRJNAME}'s expander implements an extension to the language
+defined by @rnrs{6} that allows the definition of typed bindings;
+
+@quotation
+@strong{NOTE} Typed language support is currently experimental.
+@end quotation
+
+
+@c end of file

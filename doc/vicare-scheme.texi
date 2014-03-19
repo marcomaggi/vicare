@@ -235,6 +235,7 @@ Trademarks used herein are the property of their respective owners.
 * libutils::                    Scheme libraries utility functions.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
+* typed::                       Experimental typed language.
 * capi::                        C language programming interface.
 
 Internals
@@ -285,6 +286,7 @@ External documents
 @include libutils.texi
 @include ffi.texi
 @include syslib.texi
+@include typed.texi
 @include capi.texi
 
 @include objects.texi
