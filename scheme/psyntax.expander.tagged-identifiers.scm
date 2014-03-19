@@ -547,7 +547,7 @@
   ;;RV-TAG* represents  the tags of  function return  values if it  is a
   ;;proper list of tag identifiers.
   ;;
-  (all-identifiers? rv-tag*))
+  (all-tag-identifiers? rv-tag*))
 
 (define (function-arguments-tags? formals-tags)
   ;;Return  true  if  FORMALS-TAGS   represents  the  tags  of  function

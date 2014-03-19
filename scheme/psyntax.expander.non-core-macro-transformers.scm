@@ -3467,6 +3467,7 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?producer-expression ?form0 ?form* ...)
+     (tagged-values-formals-syntax? ?formals)
      (bless
       `(call-with-values
 	   (lambda () ,?producer-expression)
@@ -3481,7 +3482,7 @@
   (syntax-match expr-stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals signature-tags)
-	 (parse-tagged-lambda-formals-syntax ?formals expr-stx)
+	 (parse-tagged-values-formals-syntax ?formals expr-stx)
        (let ((rv-form (cond ((list? standard-formals)
 			     `(values . ,standard-formals))
 			    ((pair? standard-formals)
