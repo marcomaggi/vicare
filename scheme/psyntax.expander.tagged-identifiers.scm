@@ -24,16 +24,24 @@
 
 ;;;; identifiers: tagged identifiers handling
 
-(define (tagged-identifier-syntax? x)
-  (syntax-match x (brace)
+(define (tagged-identifier-syntax? stx)
+  ;;Return  true if  STX is  a syntax  object representing  a tagged  or
+  ;;untagged identifier, otherwise return false.
+  ;;
+  (syntax-match stx (brace)
     ((brace ?id ?tag)
      (and (identifier? ?id)
-	  (identifier? ?tag)))
+	  (tag-identifier? ?tag)))
     (?id
      (identifier? ?id))
     ))
 
 (define (parse-tagged-identifier-syntax stx)
+  ;;If STX  is a  tagged or  untagged identifier,  return 2  values: the
+  ;;identifier  representing   the  binding  name  and   the  identifier
+  ;;representing the tag; otherwise raise  an exception.  When no tag is
+  ;;present: the tag identifier defaults to <top>.
+  ;;
   (syntax-match stx (brace)
     ((brace ?id ?tag)
      (begin
@@ -137,9 +145,9 @@
     (identifier-syntax 'parse-tagged-lambda-formals-syntax))
 
   (case-define* parse-tagged-lambda-formals-syntax
-    (({_ standard-lambda-formals? function-tagging-signature?} original-formals-stx)
+    (({_ standard-lambda-formals-syntax? function-tagging-signature?} original-formals-stx)
      (parse-tagged-lambda-formals-syntax original-formals-stx #f))
-    (({_ standard-lambda-formals? function-tagging-signature?} original-formals-stx input-form-stx)
+    (({_ standard-lambda-formals-syntax? function-tagging-signature?} original-formals-stx input-form-stx)
      ;;First we  parse and  extract the return  values tagging,  if any;
      ;;then we parse the rest of the formals.
      (syntax-match original-formals-stx (brace _)
@@ -277,7 +285,7 @@
 	(parse-tagged-lambda-formals-syntax formals-stx)
       #t)))
 
-(define (standard-lambda-formals? stx)
+(define (standard-lambda-formals-syntax? stx)
   ;;Return true  if STX  is a syntax  object representing  R6RS standard
   ;;LAMBDA formals; otherwise return false.  The return value is true if
   ;;STX is a  proper or improper list of identifiers,  with a standalone
@@ -288,7 +296,7 @@
      #t)
     ((?id . ?rest)
      (identifier? ?id)
-     (standard-lambda-formals? ?rest))
+     (standard-lambda-formals-syntax? ?rest))
     (?rest
      (identifier? ?rest)
      #t)))
