@@ -1244,6 +1244,7 @@
     ($symbol-table-size				$symbols)
     ($log-symbol-table-status			$symbols)
     (system-value-gensym			$symbols)
+    (system-label-gensym			$symbols)
     ($getprop					$symbols)
     ($putprop					$symbols)
     ($remprop					$symbols)
@@ -2407,6 +2408,7 @@
     (gensym					v $language $boot)
     (symbol-value				v $language $boot)
     (system-value				v $language)
+    (system-label				v $language)
     (set-symbol-value!				v $language $boot)
     (unbound-object				v $language)
     (unbound-object?				v $language)
@@ -3942,7 +3944,7 @@
     ;;each  global binding  from all  the source  libraries in  the boot
     ;;image.
     ;;
-    ;;Return 3 values: an EXPORT-SUBST alist with entries:
+    ;;Return 4 values: an EXPORT-SUBST alist with entries:
     ;;
     ;;   (?func-name  . ?label)
     ;;   (?macro-name . ?label)
@@ -4023,9 +4025,9 @@
 				      (let ((binding (cdr label.binding)))
 					(case (car binding)
 					  ((global)
-					   (export-subst-clt    (cons prim-name     label))
-					   (export-env-clt      (cons label (cons 'core-prim prim-name)))
-					   (export-primlocs-clt (cons prim-name     (cdr binding))))
+					   (export-subst-clt    (cons prim-name label))
+					   (export-env-clt      (cons label     (cons 'core-prim prim-name)))
+					   (export-primlocs-clt (cons prim-name (cdr binding))))
 					  (else
 					   (error __who__
 					     "invalid binding for identifier"
@@ -4082,7 +4084,8 @@
 	`(library (ikarus primlocs)
 	   (export) ;;; must be empty
 	   (import (only (ikarus.symbols)
-			 system-value-gensym)
+			 system-value-gensym
+			 system-label-gensym)
 	     (only (psyntax library-manager)
 		   install-library)
 	     (only (ikarus.compiler)
@@ -4101,6 +4104,11 @@
 	     (let ((proc (lambda (func-name)
 			   (getprop func-name g))))
 	       (current-primitive-locations proc)))
+	   ;;Store in  the property  list of each  primitive procedure's
+	   ;;symbol name its label gensym.
+	   (for-each (lambda (func-name.lab)
+		       (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
+	     ',export-subst)
 	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
 		    (build-install-library-form legend-entry export-subst export-env))

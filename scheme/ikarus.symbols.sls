@@ -42,8 +42,9 @@
     ;; ???
     unbound-object unbound-object?
     top-level-value top-level-bound? set-top-level-value!
-    symbol-value symbol-bound? set-symbol-value!
-    reset-symbol-proc! system-value system-value-gensym)
+    symbol-value symbol-bound? set-symbol-value! reset-symbol-proc!
+    system-value system-value-gensym
+    system-label system-label-gensym)
   (import (except (vicare)
 		  ;; R6RS functions
 		  symbol->string
@@ -307,6 +308,9 @@
 (define system-value-gensym
   (gensym "system-value-gensym"))
 
+(define system-label-gensym
+  (gensym "system-label-gensym"))
+
 (define* (system-value {x symbol?})
   ;;When  the boot  image is  loaded, it  initialises itself;  for every
   ;;primitive function (CONS, CAR, ...)  one of the operations is to put
@@ -337,6 +341,14 @@
 		(when ($unbound-object? v)
 		  (procedure-argument-violation __who__
 		    "not a system symbol" x)))))
+	(else
+	 (procedure-argument-violation __who__ "not a system symbol" x))))
+
+(define* (system-label {x symbol?})
+  ;;If  X is  the  symbol  name of  a  primitive  procedure: return  its
+  ;;syntactic binding label gensym.
+  ;;
+  (cond ((getprop x system-label-gensym))
 	(else
 	 (procedure-argument-violation __who__ "not a system symbol" x))))
 

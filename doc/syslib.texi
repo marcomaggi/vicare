@@ -151,6 +151,13 @@ value; @ref{iklib symbols system, system-value}.
 @end defvr
 
 
+@defvr Constant system-label-gensym
+A special gensym used internally to map core primitive names to their
+syntactic binding label gensym; @ref{iklib symbols labels,
+system-label}.
+@end defvr
+
+
 The following bindings are related to the symbol table collecting
 interned symbols.
 
