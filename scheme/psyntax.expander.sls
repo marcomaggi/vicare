@@ -1143,26 +1143,38 @@
     ;; expand-time object type specs: parsing tagged identifiers
     tagged-identifier-syntax?			parse-tagged-identifier-syntax
     tagged-bindings-syntax?			parse-tagged-bindings-syntax
-    tagged-lambda-formals-syntax?		parse-tagged-lambda-formals-syntax
-    tagged-values-formals-syntax?		parse-tagged-values-formals-syntax
+    tagged-applicable-spec-syntax?		parse-tagged-applicable-spec-syntax
+    tagged-formals-syntax?			parse-tagged-formals-syntax
     standard-lambda-formals-syntax?		standard-values-formals-syntax?
-    lambda-tagging-signature?			values-tagging-signature?
+
+    make-callable-signature		callable-signature?
+    callable-signature-formals		callable-signature-return-values
+    make-formals-signature		formals-signature?		formals-signature-tags
+    make-return-values-signature	return-values-signature?	return-values-signature-tags
+    false-or-return-values-signature?
+    callable-signature-formals-tags
+    callable-signature-return-values-tags
+    callable-signature=?		formals-signature=?		return-values-signature=?
 
     ;; expand-time object type specs: identifiers defining types
+    top-id
     tag-identifier?				all-tag-identifiers?
     tag-super-and-sub?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
+
     make-object-type-spec			object-type-spec?
-    object-type-spec-type-id			object-type-spec-pred-id
-    identifier-object-type-spec-accessor	identifier-object-type-spec-mutator
+    object-type-spec-parent-spec
+    object-type-spec-type-id			object-type-spec-pred-stx
+    object-type-spec-accessor-maker		object-type-spec-mutator-maker
+    object-type-spec-setter-maker		object-type-spec-dispatcher
 
     ;; expand-time object type specs: tagged binding identifiers
-    identifier-with-tagging?
-    set-identifier-type-tagging!		identifier-type-tagging
-    set-label-type-tagging!			label-type-tagging
-    set-identifier-function-signature!		identifier-function-signature
-    set-label-function-signature!		label-function-signature
+    tagged-identifier?
+    set-identifier-tag!				identifier-tag
+    set-label-tag!				label-tag
+    set-identifier-callable-signature!		identifier-callable-signature
+    set-label-callable-signature!		label-callable-signature
 
     ;; expand-time type specs: callable specs
     identifier-callable-spec		set-identifier-callable-spec!
@@ -1172,7 +1184,6 @@
 
     ;; expant-time type specs: stuff for built-in tags
     initialise-type-spec-for-built-in-object-types
-    <top>?
 
     ;;The following are inspection functions for debugging purposes.
     (rename (<stx>?		syntax-object?)
@@ -4638,6 +4649,22 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (syntax-object? obj)
+  ;;Return #t if OBJ is a  wrapped or unwrapped syntax object; otherwise
+  ;;return #f.  This is not a full validation, because a component <stx>
+  ;;may contain a raw symbol.
+  ;;
+  (cond ((<stx>? obj)
+	 obj)
+	((pair? obj)
+	 (cons (syntax-object? ($car obj)) (syntax-object? ($cdr obj))))
+	((symbol? obj)
+	 #f)
+	((vector? obj)
+	 (vector-map syntax-object? obj))
+	(else
+	 (non-compound-sexp? obj))))
+
 (define (ribs-and-shifts? obj)
   ;;Return true  if OBJ is  a valid value for  the field RIB*  of <stx>;
   ;;otherwise return #f.
@@ -5709,7 +5736,15 @@
 	"unbound identifier" id))))
 
 (define* (identifier-bound? {id identifier?})
+  ($identifier-bound? id))
+
+(define ($identifier-bound? id)
   (and (id->label id) #t))
+
+(define (false-or-identifier-bound? id)
+  (or (not id)
+      (and (identifier? id)
+	   ($identifier-bound? id))))
 
 
 ;;;; utilities for identifiers
@@ -6908,7 +6943,7 @@
 	 ;;   (?first-form ?form ...)
 	 ;;
 	 (let ((id (syntax-car expr-stx)))
-	   (cond ((%bound-identifier-with-tag-dispatcher? id)
+	   (cond ((%tagged-identifier-with-dispatcher? id)
 		  ;;Here we know that EXPR-STX has the format:
 		  ;;
 		  ;;   (?tagged-id ?form ...)
@@ -7198,7 +7233,7 @@
 	    (build-lexical-reference no-source lex)))
 
 	 ((tagged-dispatching)
-	  (chi-expr (tag-identifier-apply-dispatcher kwd expr-stx)
+	  (chi-expr (tag-identifier-dispatch (identifier-tag kwd) expr-stx)
 		    lexenv.run lexenv.expand))
 
 	 ((global-macro global-macro!)
@@ -7511,8 +7546,8 @@
   (while-not-expanding-application-first-subform
    ;;Here  we support  both the  R6RS  standard LAMBDA  formals and  the
    ;;extended tagged formals, with or without rest argument.
-   (receive (standard-formals-stx signature-tags)
-       (parse-tagged-lambda-formals-syntax formals-stx input-form-stx)
+   (receive (standard-formals-stx signature)
+       (parse-tagged-applicable-spec-syntax formals-stx input-form-stx)
      (syntax-match standard-formals-stx ()
        ;;Without rest argument.
        ((?arg* ...)
@@ -7524,9 +7559,10 @@
 	      body-form-stx*))
 	  (define lexenv.run^
 	    (add-lexical-bindings lab* lex* lexenv.run))
-	  (map (lambda (label tag)
-		 (and tag (set-label-type-tagging! label tag)))
-	    lab* (cdr signature-tags))
+	  ;;Here we know that the formals  signature is a proper list of
+	  ;;tag identifiers with the same structure of FORMALS-STX.
+	  (map set-label-tag!
+	    lab* (callable-signature-formals-tags signature))
 	  (values lex* (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
        ;;With rest argument.
        ((?arg* ... . ?rest-arg)
@@ -7543,17 +7579,15 @@
 	    (add-lexical-bindings (cons rest-lab lab*)
 				  (cons rest-lex lex*)
 				  lexenv.run))
-	  ;;Here we know  that the cdr of SIGNATURE-TAGS  is an improper
-	  ;;list  with the  same structure  of FORMALS-STX;  which means
-	  ;;that the  "proper" portion of TAGS  is a list with  the same
-	  ;;number of items as LAB*.
-	  (let loop ((tags (cdr signature-tags))
-		     (lab* lab*))
+	  ;;Here we know that the  formals signature is an improper list
+	  ;;with the same structure of FORMALS-STX.
+	  (let loop ((lab* lab*)
+		     (tags (callable-signature-formals-tags signature)))
 	    (if (pair? tags)
 		(begin
-		  (and (car tags) (set-label-type-tagging! (car lab*) (car tags)))
-		  (loop (cdr tags) (cdr lab*)))
-	      (and tags (set-label-type-tagging! rest-lab tags))))
+		  (set-label-tag! (car lab*) (car tags))
+		  (loop (cdr lab*) (cdr tags)))
+	      (set-label-tag! rest-lab tags)))
 	  (values (append lex* rest-lex) ;yes, this builds an improper list
 		  (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
        (_
@@ -7858,7 +7892,7 @@
 		;;
 		;;* We  generate a  label gensym uniquely  associated to
 		;;  the binding and a lex  gensym as name of the binding
-		;;  in the  expanded code.
+		;;  in the expanded code.
 		;;
 		;;* We register the association id/label in the rib.
 		;;
@@ -7880,18 +7914,18 @@
 		;;   of  evaluating  ?RHS.   In this  case  the  loc  is
 		;;  generated here by GEN-DEFINE-LABEL+LEX.
 		;;
-		(receive (id id-tag signature-tags qrhs)
+		(receive (id id-tag signature qrhs)
 		    (%parse-define body-form-stx)
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-form-stx "cannot redefine keyword"))
 		  (receive (lab lex)
 		      (gen-define-label+lex id rib sd?)
 		    (extend-rib! rib id lab sd?)
-		    (set-label-type-tagging! lab id-tag)
-		    ;;If the  binding is not a  function: SIGNATURE-TAGS
-		    ;;is false.
-		    (when signature-tags
-		      (set-label-function-signature! lab signature-tags))
+		    (set-label-tag! lab id-tag)
+		    ;;If  the binding  is not  a function:  SIGNATURE is
+		    ;;false.
+		    (when signature
+		      (set-label-callable-signature! lab signature))
 		    (chi-body* (cdr body-form-stx*)
 			       (add-lexical-binding lab lex lexenv.run) lexenv.expand
 			       (cons lex lex*) (cons qrhs qrhs*)
@@ -8187,7 +8221,7 @@
 				lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))))
 
 	       ((tagged-dispatching)
-		(chi-body* (cons (tag-identifier-apply-dispatcher kwd body-form-stx)
+		(chi-body* (cons (tag-identifier-dispatch (identifier-tag kwd) body-form-stx)
 				 (cdr body-form-stx*))
 			   lexenv.run lexenv.expand
 			   lex* qrhs* mod** kwd* export-spec* rib mix? sd?))
@@ -8306,27 +8340,26 @@
     ;;Syntax  parser  for R6RS's  DEFINE  and  extended tagged  bindings
     ;;syntax.  Return 4 values:
     ;;
-    ;;1. The identifier of the binding variable.
+    ;;1..The identifier of the binding variable.
     ;;
-    ;;2. An  identifier representing the  binding tag.  "<top>"  is used
-    ;;    when  no  tag  is  specified; "<procedure>"  is  used  when  a
-    ;;   procedure is defined.
+    ;;2..An identifier representing the binding tag.   "<top>" is used when no tag is
+    ;;   specified; "<procedure>" is used when a procedure is defined.
     ;;
-    ;;3. False or  an object representing a  function tagging signature;
-    ;;   false is  returned when the binding is not  a function.
+    ;;3..False or an  object representing an instance  of "callable-signature"; false
+    ;;   is returned when the binding is not a function.
     ;;
-    ;;4.  A qualified right-hand side expression (QRHS) representing the
-    ;;   binding to create.
+    ;;4..A qualified  right-hand side expression  (QRHS) representing the  binding to
+    ;;   create.
     ;;
     (syntax-match input-form-stx (brace)
       ;;Function definition with tagged return values.
       ((_ ((brace ?id ?rv-tag0 ?rv-tag* ...) . ?fmls) ?b ?b* ...)
        (identifier? ?id)
-       (receive (standard-formals-stx signature-tags)
-	   (parse-tagged-lambda-formals-syntax (bless
-						`((brace _ ,?rv-tag0 . ,?rv-tag*) . ,?fmls))
-					       input-form-stx)
-	 (values ?id <procedure> signature-tags (cons 'defun input-form-stx))))
+       (receive (standard-formals-stx signature)
+	   (parse-tagged-applicable-spec-syntax (bless
+						 `((brace _ ,?rv-tag0 . ,?rv-tag*) . ,?fmls))
+						input-form-stx)
+	 (values ?id <procedure> signature (cons 'defun input-form-stx))))
 
       ;;Variable definition with tagged identifier.
       ((_ (brace ?id ?tag) ?val)
@@ -8341,9 +8374,9 @@
       ;;Function definition with possible tagged arguments.
       ((_ (?id . ?fmls) ?b ?b* ...)
        (identifier? ?id)
-       (receive (standard-formals-stx signature-tags)
-	   (parse-tagged-lambda-formals-syntax ?fmls input-form-stx)
-	 (values ?id <procedure> signature-tags (cons 'defun input-form-stx))))
+       (receive (standard-formals-stx signature)
+	   (parse-tagged-applicable-spec-syntax ?fmls input-form-stx)
+	 (values ?id <procedure> signature (cons 'defun input-form-stx))))
 
       ;;R6RS variable definition.
       ((_ ?id ?val)

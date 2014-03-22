@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (for (vicare expander object-type-specs)
+  (for (prefix (vicare expander object-type-specs) typ.)
     expand)
   (vicare language-extensions tags)
   (vicare checks))
@@ -44,7 +44,7 @@
   	  (syntax-case stx ()
   	    ((_ ?type-id)
 	     (begin
-	       #`(quote #,(object-type-spec-type-id (identifier-object-type-spec #'?type-id)))))
+	       #`(quote #,(typ.object-type-spec-type-id (typ.identifier-object-type-spec #'?type-id)))))
   	    ))
   	(get-name <vector>))
     => '<vector>)
@@ -55,13 +55,13 @@
 (parametrise ((check-test-name	'type-descriptor))
 
   (check-for-true
-   (object-type-spec? (type-descriptor <vector>)))
+   (typ.object-type-spec? (type-descriptor <vector>)))
 
   (check-for-true
-   (object-type-spec? (type-descriptor <fixnum>)))
+   (typ.object-type-spec? (type-descriptor <fixnum>)))
 
   (check-for-true
-   (object-type-spec? (type-descriptor <exact-integer>)))
+   (typ.object-type-spec? (type-descriptor <exact-integer>)))
 
   #t)
 
@@ -101,10 +101,18 @@
 
   (check
       (let ((P (cons 1 2)))
-	(slot-set! P car <pair> 10)
-	(slot-set! P cdr <pair> 20)
-	(values (slot-ref P car <pair>)
-		(slot-ref P cdr <pair>)))
+  	(slot-set! P car <pair> 10)
+  	(slot-set! P cdr <pair> 20)
+  	(values (slot-ref P car <pair>)
+  		(slot-ref P cdr <pair>)))
+    => 10 20)
+
+  (check
+      (let ((P (cons 1 2)))
+  	($slot-set! P car <pair> 10)
+  	($slot-set! P cdr <pair> 20)
+  	(values ($slot-ref P car <pair>)
+  		($slot-ref P cdr <pair>)))
     => 10 20)
 
 ;;; --------------------------------------------------------------------
@@ -114,7 +122,7 @@
 	      ((slot-ref <> cdr <pair>) '(1 . 2)))
     => 1 2)
 
-  (check
+   (check
       (values (($slot-ref <> car <pair>) '(1 . 2))
 	      (($slot-ref <> cdr <pair>) '(1 . 2)))
     => 1 2)
@@ -125,6 +133,14 @@
 	((slot-set! <> cdr <pair> <>) P 20)
 	(values ((slot-ref <> car <pair>) P)
 		((slot-ref <> cdr <pair>) P)))
+    => 10 20)
+
+  (check
+      (let ((P (cons 1 2)))
+	(($slot-set! <> car <pair> <>) P 10)
+	(($slot-set! <> cdr <pair> <>) P 20)
+	(values (($slot-ref <> car <pair>) P)
+		(($slot-ref <> cdr <pair>) P)))
     => 10 20)
 
   #t)
@@ -143,13 +159,13 @@
   (eval-for-expand
 
     (define fixnum-spec
-      (identifier-object-type-spec #'<fixnum>))
+      (typ.identifier-object-type-spec #'<fixnum>))
 
     (define exact-integer-spec
-      (identifier-object-type-spec #'<exact-integer>))
+      (typ.identifier-object-type-spec #'<exact-integer>))
 
-    (set-identifier-callable-spec! #'func
-      (make-callable-spec 'func 3 3
+    (typ.set-identifier-callable-spec! #'func
+      (typ.make-callable-spec 'func 3 3
 			  (lambda (type-a type-b type-c)
 			    (cond ((and (eq? type-a fixnum-spec)
 					(eq? type-b fixnum-spec)
@@ -173,8 +189,8 @@
 	(define-syntax (doit stx)
 	  (syntax-case stx ()
 	    ((_ ?who . ?args)
-	     (let ((dispatcher (callable-spec-dispatcher (identifier-callable-spec #'?who)))
-		   (fx-spec    (identifier-object-type-spec #'<fixnum>)))
+	     (let ((dispatcher (typ.callable-spec-dispatcher (typ.identifier-callable-spec #'?who)))
+		   (fx-spec    (typ.identifier-object-type-spec #'<fixnum>)))
 	       (receive (id rv-spec)
 		   (dispatcher fx-spec fx-spec fx-spec)
 		 #`(#,id . ?args))))

@@ -177,7 +177,7 @@
 	 (let ((lex* (map gensym-for-lexical-var lhs*))
 	       (lab* (map gensym-for-label       lhs*)))
 	   (map (lambda (label tag)
-		  (and tag (set-label-type-tagging! label tag)))
+		  (and tag (set-label-tag! label tag)))
 	     lab* tag*)
 	   ;;Generate  what is  needed to  create a  lexical contour:  a
 	   ;;<RIB>  and  an extended  lexical  environment  in which  to
@@ -1402,7 +1402,7 @@
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
 	(let ((spec (identifier-object-type-spec ?type-id)))
-	  (chi-expr (object-type-spec-pred-id spec)
+	  (chi-expr (object-type-spec-pred-stx spec)
 		    lexenv.run lexenv.expand)))
        ))
 
@@ -1420,7 +1420,7 @@
        ((object-type-spec)
 	(let ((spec (identifier-object-type-spec ?type-id)))
 	  (chi-expr (bless
-		     `(,(object-type-spec-pred-id spec) ,?expr))
+		     `(,(object-type-spec-pred-stx spec) ,?expr))
 		    lexenv.run lexenv.expand)))
        ))
     ))
@@ -1451,8 +1451,9 @@
 		      (struct-type-field-ref ,?type-id ,?field-name-id obj)))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(chi-expr (identifier-object-type-spec-accessor ?type-id ?field-name-id #t expr-stx)
-		  lexenv.run lexenv.expand))
+	(receive (accessor-stx rv-tag)
+	    (tag-identifier-accessor ?type-id ?field-name-id #t expr-stx)
+	  (chi-expr accessor-stx lexenv.run lexenv.expand)))
        ))
 
     ((_ ?expr ?field-name-id ?type-id)
@@ -1468,9 +1469,11 @@
 		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(chi-expr (bless
-		   `(,(identifier-object-type-spec-accessor ?type-id ?field-name-id #t expr-stx) ,?expr))
-		  lexenv.run lexenv.expand))
+	(receive (accessor-stx rv-tag)
+	    (tag-identifier-accessor ?type-id ?field-name-id #t expr-stx)
+	  (chi-expr (bless
+		     `(,accessor-stx ,?expr))
+		    lexenv.run lexenv.expand)))
        ))
 
     ;;Missing type identifier.  Try to retrieve the type from the tag of
@@ -1478,11 +1481,13 @@
     ((_ ?id ?field-name-id)
      (and (identifier? ?id)
 	  (identifier? ?field-name-id))
-     (cond ((identifier-type-tagging ?id)
+     (cond ((identifier-tag ?id)
 	    => (lambda (tag-id)
-		 (chi-expr (bless
-			    `(,(identifier-object-type-spec-accessor tag-id ?field-name-id #t expr-stx) ,?id))
-			   lexenv.run lexenv.expand)))
+		 (receive (accessor-stx rv-tag)
+		     (tag-identifier-accessor tag-id ?field-name-id #t expr-stx)
+		   (chi-expr (bless
+			      `(,accessor-stx ,?id))
+			     lexenv.run lexenv.expand))))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
     ))
@@ -1510,8 +1515,9 @@
 		      (struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(chi-expr (identifier-object-type-spec-mutator ?type-id ?field-name-id #t expr-stx)
-		  lexenv.run lexenv.expand))
+	(receive (mutator-stx new-value-tag)
+	    (tag-identifier-mutator ?type-id ?field-name-id #t expr-stx)
+	  (chi-expr mutator-stx lexenv.run lexenv.expand)))
        ))
 
     ((_ ?expr ?field-name-id ?type-id ?new-value)
@@ -1527,9 +1533,11 @@
 		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(chi-expr (bless
-		   `(,(identifier-object-type-spec-mutator ?type-id ?field-name-id #t expr-stx) ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
+	(receive (mutator-stx new-value-tag)
+	    (tag-identifier-mutator ?type-id ?field-name-id #t expr-stx)
+	  (chi-expr (bless
+		     `(,mutator-stx ,?expr (tag-assert-and-return ,new-value-tag ,?new-value)))
+		    lexenv.run lexenv.expand)))
        ))
 
     ;;Missing type identifier.  Try to retrieve the type from the tag of
@@ -1537,11 +1545,13 @@
     ((_ ?id ?field-name-id ?new-value)
      (and (identifier? ?id)
 	  (identifier? ?field-name-id))
-     (cond ((identifier-type-tagging ?id)
+     (cond ((identifier-tag ?id)
 	    => (lambda (tag-id)
-		 (chi-expr (bless
-			    `(,(identifier-object-type-spec-mutator tag-id ?field-name-id #t expr-stx) ,?id ,?new-value))
-			   lexenv.run lexenv.expand)))
+		 (receive (mutator-stx new-value-tag)
+		     (tag-identifier-mutator tag-id ?field-name-id #t expr-stx)
+		   (chi-expr (bless
+			      `(,mutator-stx ,?id (tag-assert-and-return ,new-value-tag ,?new-value)))
+			     lexenv.run lexenv.expand))))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
     ))
@@ -1569,8 +1579,9 @@
 		      ($struct-type-field-ref ,?type-id ,?field-name-id obj)))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(chi-expr (identifier-object-type-spec-accessor ?type-id ?field-name-id #f expr-stx)
-		  lexenv.run lexenv.expand))
+	(receive (accessor-stx rv-tag)
+	    (tag-identifier-accessor ?type-id ?field-name-id #f expr-stx)
+	  (chi-expr accessor-stx lexenv.run lexenv.expand)))
        ))
 
     ((_ ?expr ?field-name-id ?type-id)
@@ -1586,9 +1597,11 @@
 		   `($struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(chi-expr (bless
-		   `(,(identifier-object-type-spec-accessor ?type-id ?field-name-id #f expr-stx) ,?expr))
-		  lexenv.run lexenv.expand))
+	(receive (accessor-stx rv-tag)
+	    (tag-identifier-accessor ?type-id ?field-name-id #f expr-stx)
+	  (chi-expr (bless
+		     `(,accessor-stx ,?expr))
+		    lexenv.run lexenv.expand)))
        ))
 
     ;;Missing type identifier.  Try to retrieve the type from the tag of
@@ -1596,11 +1609,13 @@
     ((_ ?id ?field-name-id)
      (and (identifier? ?id)
 	  (identifier? ?field-name-id))
-     (cond ((identifier-type-tagging ?id)
+     (cond ((identifier-tag ?id)
 	    => (lambda (tag-id)
-		 (chi-expr (bless
-			    `(,(identifier-object-type-spec-accessor tag-id ?field-name-id #t expr-stx) ,?id))
-			   lexenv.run lexenv.expand)))
+		 (receive (accessor-stx rv-tag)
+		     (tag-identifier-accessor tag-id ?field-name-id #t expr-stx)
+		   (chi-expr (bless
+			      `(,accessor-stx ,?id))
+			     lexenv.run lexenv.expand))))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
     ))
@@ -1628,8 +1643,9 @@
 		      ($struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(chi-expr (identifier-object-type-spec-mutator ?type-id ?field-name-id #f expr-stx)
-		  lexenv.run lexenv.expand))
+	(receive (mutator-stx new-value-tag)
+	    (tag-identifier-mutator ?type-id ?field-name-id #f expr-stx)
+	  (chi-expr mutator-stx lexenv.run lexenv.expand)))
        ))
 
     ((_ ?expr ?field-name-id ?type-id ?new-value)
@@ -1645,9 +1661,11 @@
 		   `($struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(chi-expr (bless
-		   `(,(identifier-object-type-spec-mutator ?type-id ?field-name-id #f expr-stx) ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
+	(receive (mutator-stx new-value-tag)
+	    (tag-identifier-mutator ?type-id ?field-name-id #f expr-stx)
+	  (chi-expr (bless
+		     `(,mutator-stx ,?expr (tag-assert-and-return ,new-value-tag ,?new-value)))
+		    lexenv.run lexenv.expand)))
        ))
 
     ;;Missing type identifier.  Try to retrieve the type from the tag of
@@ -1655,11 +1673,13 @@
     ((_ ?id ?field-name-id ?new-value)
      (and (identifier? ?id)
 	  (identifier? ?field-name-id))
-     (cond ((identifier-type-tagging ?id)
+     (cond ((identifier-tag ?id)
 	    => (lambda (tag-id)
-		 (chi-expr (bless
-			    `(,(identifier-object-type-spec-mutator tag-id ?field-name-id #f expr-stx) ,?id ,?new-value))
-			   lexenv.run lexenv.expand)))
+		 (receive (mutator-stx new-value-tag)
+		     (tag-identifier-mutator tag-id ?field-name-id #f expr-stx)
+		   (chi-expr (bless
+			      `(,mutator-stx ,?id (tag-assert-and-return ,new-value-tag ,?new-value)))
+			     lexenv.run lexenv.expand))))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
     ))
@@ -1688,9 +1708,13 @@
 	    (syntax-violation __who__
 	      "expected tag identifier as first argument" expr-stx ?tag))
 
+	   ((free-identifier=? <top> ?tag)
+	    ;;All the objects are of type <top>.
+	    (chi-expr ?expr lexenv.run lexenv.expand))
+
 	   ((and (identifier? ?expr)
-	      (identifier-with-tagging? ?expr))
-	    (let ((tag-id (identifier-type-tagging ?expr)))
+		 (tagged-identifier? ?expr))
+	    (let ((tag-id (identifier-tag ?expr)))
 	      (cond ((free-identifier=? <top> tag-id)
 		     (%output-expression ?tag ?expr))
 		    ((tag-super-and-sub? ?tag tag-id)
@@ -1726,9 +1750,13 @@
 	    (syntax-violation __who__
 	      "expected tag identifier as first argument" expr-stx ?tag))
 
+	   ((free-identifier=? <top> ?tag)
+	    ;;All the objects are of type <top>.
+	    (chi-expr ?expr lexenv.run lexenv.expand))
+
 	   ((and (identifier? ?expr)
-		 (identifier-with-tagging? ?expr))
-	    (let ((tag-id (identifier-type-tagging ?expr)))
+		 (tagged-identifier? ?expr))
+	    (let ((tag-id (identifier-tag ?expr)))
 	      (cond ((free-identifier=? <top> tag-id)
 		     (%output-expression ?tag ?expr))
 		    ((tag-super-and-sub? ?tag tag-id)
@@ -1738,6 +1766,7 @@
 		    (else
 		     (syntax-violation __who__
 		       "expression with wrong type tagging" expr-stx tag-id)))))
+
 	   (else
 	    (%output-expression ?tag ?expr))))
     ))

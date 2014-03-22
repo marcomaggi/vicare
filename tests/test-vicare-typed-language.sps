@@ -45,7 +45,7 @@
 
 (begin-for-syntax
   (define-syntax-rule (tag=tagging? ?tag ?var)
-    (let ((id (typ.identifier-type-tagging #'?var)))
+    (let ((id (typ.identifier-tag #'?var)))
       (if (identifier? id)
 	  (free-identifier=? #'?tag id)
 	"no-id")))
@@ -54,7 +54,7 @@
     (tag=tagging? <top> ?var))
 
   (typ.set-identifier-object-type-spec! #'<fixnums>
-    (typ.make-object-type-spec #'<fixnums> #'fixnums?))
+    (typ.make-object-type-spec #'<fixnums> #'<top> #'fixnums?))
 
   #| end of begin-for-syntax |# )
 
@@ -109,7 +109,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'parsing-tagged-bindings))
+(parametrise ((check-test-name	'parsing-tagged-bindings/identifiers))
 
   (check
       (typ.tagged-identifier-syntax? #'(brace X <fixnum>))
@@ -139,7 +139,11 @@
     (=> syntax=?)
     #'X #'<top>)
 
-;;; --------------------------------------------------------------------
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-tagged-bindings/bindings))
+
 ;;; list of tagged identifiers
 
   (check
@@ -212,138 +216,152 @@
     (=> syntax=?)
     #'(a b c) #'(<fixnum> <string> <top>))
 
-;;; --------------------------------------------------------------------
-;;; tagged formals
+  #t)
+
+
+(parametrise ((check-test-name	'parsing-tagged-bindings/applicables))
+
+  (define-syntax-rule (split ?input)
+    (receive (standard-formals-stx callable)
+	(typ.parse-tagged-applicable-spec-syntax ?input)
+      (let ((formals-tags (typ.callable-signature-formals-tags callable))
+	    (rv-tags      (typ.callable-signature-return-values-tags callable)))
+	(values standard-formals-stx rv-tags formals-tags))))
 
 ;;; tagged
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
-						 {b <string>}))
+      (split #'({a <fixnum>}
+		{b <string>}))
     (=> syntax=?)
-    #'(a b) #'(() <fixnum> <string>))
+    #'(a b) #f #'(<fixnum> <string>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
-						 {b <string>}
-						 {c <vector>}))
+      (split #'({a <fixnum>}
+		{b <string>}
+		{c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(() <fixnum> <string> <vector>))
+    #'(a b c) #f #'(<fixnum> <string> <vector>))
 
 ;;; untagged
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'(a))
+      (split #'(a))
     (=> syntax=?)
-    #'(a) #'(() <top>))
+    #'(a) #f #'(<top>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'(a b))
+      (split #'(a b))
     (=> syntax=?)
-    #'(a b) #'(() <top> <top>))
+    #'(a b) #f #'(<top> <top>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'(a b c))
+      (split #'(a b c))
     (=> syntax=?)
-    #'(a b c) #'(() <top> <top> <top>))
+    #'(a b c) #f #'(<top> <top> <top>))
 
 ;;; mixed tagged and untagged
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'(a
-						 {b <string>}))
+      (split #'(a
+		{b <string>}))
     (=> syntax=?)
-    #'(a b) #'(() <top> <string>))
+    #'(a b) #f #'(<top> <string>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
-						 b))
+      (split #'({a <fixnum>}
+		b))
     (=> syntax=?)
-    #'(a b) #'(() <fixnum> <top>))
+    #'(a b) #f #'(<fixnum> <top>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'(a
-						 {b <string>}
-						 {c <vector>}))
+      (split #'(a
+		{b <string>}
+		{c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(() <top> <string> <vector>))
+    #'(a b c) #f #'(<top> <string> <vector>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
-						 b
-						 {c <vector>}))
+      (split #'({a <fixnum>}
+		b
+		{c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(() <fixnum> <top> <vector>))
+    #'(a b c) #f #'(<fixnum> <top> <vector>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>}
-						 {b <string>}
-						 c))
+      (split #'({a <fixnum>}
+		{b <string>}
+		c))
     (=> syntax=?)
-    #'(a b c) #'(() <fixnum> <string> <top>))
+    #'(a b c) #f #'(<fixnum> <string> <top>))
 
 ;;; args argument
 
   (check	;tagged args argument
-      (typ.parse-tagged-lambda-formals-syntax #'{args <fixnums>})
+      (split #'{args <fixnums>})
     (=> syntax=?)
-    #'args #'(() . <fixnums>))
+    #'args #f #'<fixnums>)
 
   (check	;UNtagged args argument
-      (typ.parse-tagged-lambda-formals-syntax #'args)
+      (split #'args)
     (=> syntax=?)
-    #'args #'(() . <top>))
+    #'args #f #'<top>)
 
 ;;; rest argument
 
   (check	;tagged rest
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>} . {rest <fixnums>}))
+      (split #'({a <fixnum>} . {rest <fixnums>}))
     (=> syntax=?)
-    #'(a . rest) #'(() <fixnum> . <fixnums>))
+    #'(a . rest) #f #'(<fixnum> . <fixnums>))
 
   (check	;UNtagged rest
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>} . rest))
+      (split #'({a <fixnum>} . rest))
     (=> syntax=?)
-    #'(a . rest) #'(() <fixnum> . <top>))
+    #'(a . rest) #f #'(<fixnum> . <top>))
 
   (check	;tagged rest
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
+      (split #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
     (=> syntax=?)
-    #'(a b . rest) #'(() <fixnum> <string> . <fixnums>))
+    #'(a b . rest) #f #'(<fixnum> <string> . <fixnums>))
 
   (check	;UNtagged rest
-      (typ.parse-tagged-lambda-formals-syntax #'({a <fixnum>} {b <string>} . rest))
+      (split #'({a <fixnum>} {b <string>} . rest))
     (=> syntax=?)
-    #'(a b . rest) #'(() <fixnum> <string> . <top>))
+    #'(a b . rest) #f #'(<fixnum> <string> . <top>))
 
 ;;; return values tagging
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({_ <fixnum>} a b))
+      (split #'({_} a b))
     (=> syntax=?)
-    #'(a b) #'((<fixnum>) <top> <top>))
+    #'(a b) '() #'(<top> <top>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({_ <fixnum>} {a <flonum>} {b <string>}))
+      (split #'({_ <fixnum>} a b))
     (=> syntax=?)
-    #'(a b) #'((<fixnum>) <flonum> <string>))
+    #'(a b) #'(<fixnum>) #'(<top> <top>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({_ <fixnum> <flonum>} {a <vector>} {b <string>}))
+      (split #'({_ <fixnum>} {a <flonum>} {b <string>}))
     (=> syntax=?)
-    #'(a b) #'((<fixnum> <flonum>) <vector> <string>))
+    #'(a b) #'(<fixnum>) #'(<flonum> <string>))
 
   (check
-      (typ.parse-tagged-lambda-formals-syntax #'({_ <fixnum> <flonum>} . {args <fixnums>}))
+      (split #'({_ <fixnum> <flonum>} {a <vector>} {b <string>}))
     (=> syntax=?)
-    #'args #'((<fixnum> <flonum>) . <fixnums>))
+    #'(a b) #'(<fixnum> <flonum>) #'(<vector> <string>))
+
+  (check
+      (split #'({_ <fixnum> <flonum>} . {args <fixnums>}))
+    (=> syntax=?)
+    #'args #'(<fixnum> <flonum>) #'<fixnums>)
 
 
 ;;; --------------------------------------------------------------------
 ;;; tagged formals predicate
 
   (check-for-true
-   (typ.tagged-lambda-formals-syntax? #'({a <fixnum>} {b <string>})))
+   (typ.tagged-applicable-spec-syntax? #'({a <fixnum>} {b <string>})))
 
   #t)
 
@@ -468,6 +486,14 @@
 
 (parametrise ((check-test-name	'tagged-bindings-define))
 
+  (begin-for-syntax
+    (define* (callable-signature->stx {fun-id identifier?})
+      (let* ((signature    (typ.identifier-callable-signature fun-id))
+	     (formals-tags (typ.callable-signature-formals-tags signature))
+	     (rv-tags      (typ.callable-signature-return-values-tags signature)))
+	(cons rv-tags formals-tags))))
+
+;;; --------------------------------------------------------------------
 ;;;untagged bindings
 
   (check
@@ -477,7 +503,7 @@
 	    #`(quote #,(list (tag=tagging? <procedure> fun)
 			     (top-tagged? args))))
 	  (define-syntax (signature stx)
-	    (syntax=? #'(() . <top>) (typ.identifier-function-signature #'fun)))
+	    (syntax=? #'(#f . <top>) (callable-signature->stx #'fun)))
 	  (values args (inspect) (signature)))
 	(fun 1))
     => '(1) '(#t #t) #t)
@@ -488,7 +514,7 @@
 	  (define-syntax (inspect stx)
 	    (tag=tagging? <procedure> fun))
 	  (define-syntax (signature stx)
-	    (syntax=? #'(() . ()) (typ.identifier-function-signature #'fun)))
+	    (syntax=? #'(#f . ()) (callable-signature->stx #'fun)))
 	  (values (inspect) (signature)))
 	(fun))
     => #t #t)
@@ -575,8 +601,8 @@
 	  (define-syntax (inspect stx)
 	    (tag=tagging? <fixnums> args))
 	  (define-syntax (signature stx)
-	    (syntax=? (typ.identifier-function-signature #'fun)
-		      #'(() . <fixnums>)))
+	    (syntax=? (callable-signature->stx #'fun)
+		      #'(#f . <fixnums>)))
 	  (values args (inspect) (signature)))
 	(fun 1 2 3))
     => '(1 2 3) #t #t)
@@ -589,7 +615,7 @@
 	     #`(quote #,(list (tag=tagging? <procedure> fun)
 			      (tag=tagging? <fixnums> args))))
 	   (define-syntax (signature stx)
-	     (syntax=? (typ.identifier-function-signature #'fun)
+	     (syntax=? (callable-signature->stx #'fun)
 		       #'((<fixnum>) . <fixnums>)))
 	   (add-result (inspect))
 	   (add-result (signature))
@@ -605,7 +631,7 @@
 	     #`(quote #,(list (tag=tagging? <procedure> fun)
 			      (tag=tagging? <fixnums> args))))
 	   (define-syntax (signature stx)
-	     (syntax=? (typ.identifier-function-signature #'fun)
+	     (syntax=? (callable-signature->stx #'fun)
 		       #'((<fixnum> <flonum>) . <fixnums>)))
 	   (add-result (inspect))
 	   (add-result (signature))
@@ -623,7 +649,7 @@
 			      (tag=tagging? <fixnum> b)
 			      (tag=tagging? <fixnum> c))))
 	   (define-syntax (signature stx)
-	     (syntax=? (typ.identifier-function-signature #'fun)
+	     (syntax=? (callable-signature->stx #'fun)
 		       #'((<fixnum>) . (<fixnum> <fixnum> <fixnum>))))
 	   (add-result (inspect))
 	   (add-result (signature))
@@ -2070,6 +2096,16 @@
 	#t)
     => #t)
 
+  (check
+      (catch-syntax-violation #f
+       (%eval '(let ()
+		 (define-record-type alpha
+		   (fields a b c))
+		 (define {O alpha}
+		   (make-alpha 1 2 3))
+		 (tag-assert <fixnum> O))))
+    => 'alpha)
+
 ;;; --------------------------------------------------------------------
 ;;; record with parent
 
@@ -2130,6 +2166,16 @@
 	  (make-alpha 1 2 3))
 	(alpha? (tag-assert-and-return alpha O)))
     => #t)
+
+  (check
+      (catch-syntax-violation #f
+       (%eval '(let ()
+		 (define-record-type alpha
+		   (fields a b c))
+		 (define {O alpha}
+		   (make-alpha 1 2 3))
+		 (tag-assert-and-return <fixnum> O))))
+    => 'alpha)
 
 ;;; --------------------------------------------------------------------
 ;;; record with parent

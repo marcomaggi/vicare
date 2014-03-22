@@ -10,8 +10,108 @@ defined by @rnrs{6} that allows the definition of typed bindings;
 @end quotation
 
 @menu
+* typed object specs::          Object type specification.
 * typed parsers::               Parsing tagged syntaxes.
 @end menu
+
+@c page
+@node typed object specs
+@section Object type specification
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@deftp {Struct Type} object-type-spec
+Type of structs representing the object type to which expressions in
+syntax objects will evaluate; all the Scheme objects are meant to be
+representable with this type specification.  It has the following
+fields:
+
+@table @code
+@item type-id
+A bound identifier representing the name of this type; what matters is
+that it is bound, not what it is bound to.  This identifier has this
+very instance in its syntactic binding property list.
+
+@item pred-id
+An identifier bound to the type predicate.
+
+@item accessor-maker
+@false{} or an accessor maker procedure accepting 2 arguments and
+returning 1 value.
+
+@itemize
+@item
+The arguments are: an identifier representing a slot name; a boolean,
+true if the requested accessor is safe, false if it is unsafe.
+
+@item
+The return value is a syntax object evaluating to a slot accessor, or
+false if this @objtype{object-type-spec} does not provide an accessor
+for the selected slot.
+@end itemize
+
+If the slot name is invalid for some reason (for example the slot is
+hidden): the proceure must raise an exception.  If this
+@objtype{object-type-spec} does not implement the selected slot: the
+return value must be @false{} and the slot will be searched in the
+parent @objtype{object-type-spec}, if any.
+
+@item mutator-maker
+@false{} or a mutator maker procedure accepting 2 arguments and
+returning 1 value.
+
+@itemize
+@item
+The arguments are: an identifier representing a slot name; a boolean,
+true if the requested mutator is safe, false if it is unsafe.
+
+@item
+The return value is a syntax object evaluating to a slot mutator, or
+false if this @objtype{object-type-spec} does not provide a mutator for
+the selected slot.
+@end itemize
+
+If the slot name is invalid for some reason (for example the slot is
+immutable): the proceure must raise an exception.  If this
+@objtype{object-type-spec} does not implement the selected slot: the
+return value must be false and the slot will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+@item dispatcher
+False or a dispatcher procedure accepting a single argument and
+returning a single value, and acting like a macro transformer.
+
+The argument must be a syntax object representing with the format:
+
+@example
+(@meta{var} @metao{arg} @meta{arg} ...)
+@end example
+
+@noindent
+where @meta{var} is an expression evaluating to a single object whose
+type is described by this structure.  The return value must be a syntax
+object representing the output form: an expression to be further
+expanded.
+
+@item parent-spec
+@false{} or an instance of @objtype{object-type-spec} describing the
+parent of this type.
+@end table
+@end deftp
+
+
+@defun make-object-type-spec @var{type-id} @var{pred-id}
+@defunx make-object-type-spec @var{type-id} @var{pred-id} @var{accessor-maker} @var{mutator-maker} @var{dispatcher} @var{parent-id}
+Build and return a new instance of @objtype{object-type-spec}.
+@end defun
+
+
+@defun object-type-spec? @var{obj}
+
+@end defun
 
 @c page
 @node typed parsers
@@ -307,7 +407,7 @@ with a standalone identifier being acceptable.
 @end defun
 
 
-@defun tagged-lambda-formals-syntax? @var{stx}
+@defun tagged-applicable-spec-syntax? @var{stx}
 Return @true{} if @var{stx} is a syntax object representing valid tagged
 or untagged formals for a @func{lambda} syntax; otherwise return
 @false{}.
@@ -318,99 +418,99 @@ or untagged formals for a @func{lambda} syntax; otherwise return
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.tagged-lambda-formals-syntax? #'(@{a <fixnum>@}
+(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
                                       @{b <string>@}))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax? #'(@{a <fixnum>@}
+(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
                                       @{b <string>@}
                                       @{c <vector>@}))
 @result{} #t
 
 ;;; untagged
 
-(typ.tagged-lambda-formals-syntax? #'(a))
+(typ.tagged-applicable-spec-syntax? #'(a))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax? #'(a b))
+(typ.tagged-applicable-spec-syntax? #'(a b))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax? #'(a b c))
+(typ.tagged-applicable-spec-syntax? #'(a b c))
 @result{} #t
 
 ;;; mixed tagged and untagged
 
-(typ.tagged-lambda-formals-syntax? #'(a
+(typ.tagged-applicable-spec-syntax? #'(a
                                       @{b <string>@}))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax? #'(@{a <fixnum>@}
+(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
                                       b))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax? #'(a
+(typ.tagged-applicable-spec-syntax? #'(a
                                       @{b <string>@}
                                       @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax? #'(@{a <fixnum>@}
+(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
                                       b
                                       @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax? #'(@{a <fixnum>@}
+(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
                                       @{b <string>@}
                                       c)
 @result{} #t
 
 ;;; args argument
 
-(typ.tagged-lambda-formals-syntax? #'@{args <fixnums>@})
+(typ.tagged-applicable-spec-syntax? #'@{args <fixnums>@})
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax? #'args)
+(typ.tagged-applicable-spec-syntax? #'args)
 @result{} #t
 
 ;;; rest argument
 
-(typ.tagged-lambda-formals-syntax?
+(typ.tagged-applicable-spec-syntax?
     #'(@{a <fixnum>@} . @{rest <fixnums>@}))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax?
+(typ.tagged-applicable-spec-syntax?
     #'(@{a <fixnum>@} . rest))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax?
+(typ.tagged-applicable-spec-syntax?
     #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax?
+(typ.tagged-applicable-spec-syntax?
     #'(@{a <fixnum>@} @{b <string>@} . rest))
 @result{} #t
 
 ;;; return values tagging
 
-(typ.tagged-lambda-formals-syntax? #'(@{_ <fixnum>@} a b))
+(typ.tagged-applicable-spec-syntax? #'(@{_ <fixnum>@} a b))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax?
+(typ.tagged-applicable-spec-syntax?
     #'(@{_ <fixnum>@} @{a <flonum>@} @{b <string>@}))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax?
+(typ.tagged-applicable-spec-syntax?
     #'(@{_ <fixnum> <flonum>@} @{a <vector>@} @{b <string>@}))
 @result{} #t
 
-(typ.tagged-lambda-formals-syntax?
+(typ.tagged-applicable-spec-syntax?
     #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
 @result{} #t
 @end example
 @end defun
 
 
-@defun parse-tagged-lambda-formals-syntax @var{stx}
-@defunx parse-tagged-lambda-formals-syntax @var{stx} @var{input-form-stx}
+@defun parse-tagged-applicable-spec-syntax @var{stx}
+@defunx parse-tagged-applicable-spec-syntax @var{stx} @var{input-form-stx}
 Given a syntax object @var{stx} representing tagged @func{lambda}
 formals: parse it and split formals from tags.  If successful return 2
 values: a proper or improper list of identifiers representing the
@@ -427,91 +527,91 @@ used as @code{form} field when raising a syntax violation.
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.parse-tagged-lambda-formals-syntax #'(@{a <fixnum>@}
+(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
                                            @{b <string>@}))
 @result{} (#'a #'b) (() #'<fixnum> #'<string>)
 
-(typ.parse-tagged-lambda-formals-syntax #'(@{a <fixnum>@}
+(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
                                            @{b <string>@}
                                            @{c <vector>@}))
 @result{} (a b c) (() <fixnum> <string> <vector>))
 
 ;;; untagged
 
-(typ.parse-tagged-lambda-formals-syntax #'(a))
+(typ.parse-tagged-applicable-spec-syntax #'(a))
 @result{} (#'a) (() #'<top>)
 
-(typ.parse-tagged-lambda-formals-syntax #'(a b))
+(typ.parse-tagged-applicable-spec-syntax #'(a b))
 @result{} (#'a #'b) (() #'<top> #'<top>)
 
-(typ.parse-tagged-lambda-formals-syntax #'(a b c))
+(typ.parse-tagged-applicable-spec-syntax #'(a b c))
 @result{} (#'a #'b #'c) (() #'<top> #'<top> #'<top>)
 
 ;;; mixed tagged and untagged
 
-(typ.parse-tagged-lambda-formals-syntax #'(a
+(typ.parse-tagged-applicable-spec-syntax #'(a
                                            @{b <string>@}))
 @result{} (#'a #'b) (() #'<top> #'<string>)
 
-(typ.parse-tagged-lambda-formals-syntax #'(@{a <fixnum>@}
+(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
                                            b))
 @result{} (#'a #'b) (() #'<fixnum> #'<top>)
 
-(typ.parse-tagged-lambda-formals-syntax #'(a
+(typ.parse-tagged-applicable-spec-syntax #'(a
                                            @{b <string>@}
                                            @{c <vector>@}))
 @result{} (#'a #'b #'c) (() #'<top> #'<string> #'<vector>)
 
-(typ.parse-tagged-lambda-formals-syntax #'(@{a <fixnum>@}
+(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
                                            b
                                            @{c <vector>@}))
 @result{} (#'a #'b #'c) (() #'<fixnum> #'<top> #'<vector>)
 
-(typ.parse-tagged-lambda-formals-syntax #'(@{a <fixnum>@}
+(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
                                            @{b <string>@}
                                            c)
 @result{} (#'a #'b #'c) (() #'<fixnum> #'<string> #'<top>)
 
 ;;; args argument
 
-(typ.parse-tagged-lambda-formals-syntax #'@{args <fixnums>@})
+(typ.parse-tagged-applicable-spec-syntax #'@{args <fixnums>@})
 @result{} #'args (() . #'<fixnums>)
 
-(typ.parse-tagged-lambda-formals-syntax #'args)
+(typ.parse-tagged-applicable-spec-syntax #'args)
 @result{} #'args (() . #'<top>)
 
 ;;; rest argument
 
-(typ.parse-tagged-lambda-formals-syntax
+(typ.parse-tagged-applicable-spec-syntax
     #'(@{a <fixnum>@} . @{rest <fixnums>@}))
 @result{} (#'a . #'rest) (() #'<fixnum> . #'<fixnums>)
 
-(typ.parse-tagged-lambda-formals-syntax
+(typ.parse-tagged-applicable-spec-syntax
     #'(@{a <fixnum>@} . rest))
 @result{} (#'a . #'rest) (() #'<fixnum> . #'<top>)
 
-(typ.parse-tagged-lambda-formals-syntax
+(typ.parse-tagged-applicable-spec-syntax
     #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
 @result{} (#'a #'b . #'rest) (() #'<fixnum> #'<string> . #'<fixnums>)
 
-(typ.parse-tagged-lambda-formals-syntax
+(typ.parse-tagged-applicable-spec-syntax
     #'(@{a <fixnum>@} @{b <string>@} . rest))
 @result{} (#'a #'b . #'rest) (() #'<fixnum> #'<string> . #'<top>)
 
 ;;; return values tagging
 
-(typ.parse-tagged-lambda-formals-syntax #'(@{_ <fixnum>@} a b))
+(typ.parse-tagged-applicable-spec-syntax #'(@{_ <fixnum>@} a b))
 @result{} (#'a #'b) ((#'<fixnum>) #'<top> #'<top>)
 
-(typ.parse-tagged-lambda-formals-syntax
+(typ.parse-tagged-applicable-spec-syntax
     #'(@{_ <fixnum>@} @{a <flonum>@} @{b <string>@}))
 @result{} (#'a #'b) ((#'<fixnum>) #'<flonum> #'<string>)
 
-(typ.parse-tagged-lambda-formals-syntax
+(typ.parse-tagged-applicable-spec-syntax
     #'(@{_ <fixnum> <flonum>@} @{a <vector>@} @{b <string>@}))
 @result{} (#'a #'b) ((#'<fixnum> #'<flonum>) #'<vector> #'<string>)
 
-(typ.parse-tagged-lambda-formals-syntax
+(typ.parse-tagged-applicable-spec-syntax
     #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
 @result{} #'args ((#'<fixnum> #'<flonum>) . #'<fixnums>)
 @end example

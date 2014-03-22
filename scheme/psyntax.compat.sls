@@ -45,7 +45,7 @@
     fprintf				debug-print
     void				port-id
     console-error-port			all-identifiers?
-    string-empty?
+    string-empty?			syntax=?
 
     ;; compiler related operations
     eval-core
@@ -110,7 +110,8 @@
     $car $cdr
     $fx= $fx< $fx> $fx<= $fx>= $fxadd1
     $fxzero? $fxpositive? $fxnonnegative?
-    $vector-length $vector-empty? $vector-ref $vector-set!)
+    $vector-length $vector-empty? $vector-ref $vector-set!
+    $putprop $getprop $remprop $property-list)
   (import (vicare)
     (only (ikarus.compiler)
 	  eval-core)
@@ -135,7 +136,8 @@
     ;;libraries, when possible, rather  that using external libraries of
     ;;macros.
     (only (vicare system $symbols)
-	  $unintern-gensym)
+	  $unintern-gensym
+	  $putprop $getprop $remprop $property-list)
     (only (vicare system $fx)
 	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
 	  $fxzero? $fxpositive? $fxnonnegative?)

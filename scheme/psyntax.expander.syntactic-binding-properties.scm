@@ -25,16 +25,30 @@
 ;;;; identifiers: syntactic binding properties
 
 (define* (syntactic-binding-putprop {id identifier?} {key symbol?} value)
-  (putprop (id->label/or-error __who__ id id) key value))
+  ($syntactic-binding-putprop id key value))
 
 (define* (syntactic-binding-getprop {id identifier?} {key symbol?})
-  (getprop (id->label/or-error __who__ id id) key))
+  ($syntactic-binding-getprop id key))
 
 (define* (syntactic-binding-remprop {id identifier?} {key symbol?})
-  (remprop (id->label/or-error __who__ id id) key))
+  ($syntactic-binding-remprop id key))
 
 (define* (syntactic-binding-property-list {id identifier?})
-  (property-list (id->label/or-error __who__ id id)))
+  ($syntactic-binding-property-list id))
+
+;;; --------------------------------------------------------------------
+
+(define ($syntactic-binding-putprop id key value)
+  ($putprop (id->label/or-error __who__ id id) key value))
+
+(define ($syntactic-binding-getprop id key)
+  ($getprop (id->label/or-error __who__ id id) key))
+
+(define ($syntactic-binding-remprop id key)
+  ($remprop (id->label/or-error __who__ id id) key))
+
+(define ($syntactic-binding-property-list id)
+  ($property-list (id->label/or-error __who__ id id)))
 
 
 ;;;; identifiers: unsafe variants API

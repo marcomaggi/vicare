@@ -12356,6 +12356,12 @@ return a meaningful value.
 @end defun
 
 
+@defun always-true @var{arg} @dots{}
+@defunx always-false @var{arg} @dots{}
+Always return @true{} or @false{}, ignoring the arguments.
+@end defun
+
+
 @defun apropos @var{key}
 Given a string or symbol @var{key}, search among the internally
 installed libraries all the exported bindings having @var{key} as

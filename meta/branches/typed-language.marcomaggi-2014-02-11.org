@@ -4,3 +4,7 @@
 
    Add the tags to the ghost bindings.
 
+* Documentation
+
+  Update documentation for changes in psyntax.tagged-identifiers module.
+

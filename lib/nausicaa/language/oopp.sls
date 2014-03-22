@@ -76,6 +76,9 @@
     (for (prefix (vicare expander object-type-specs)
 		 type-specs.)
       expand)
+    (prefix (only (vicare expander tags)
+		  <top>)
+	    type-specs.)
     (nausicaa language oopp auxiliary-syntaxes (0 4))
     (nausicaa language oopp conditions (0 4))
     (for (prefix (nausicaa language oopp oopp-syntax-helpers (0 4))
@@ -143,7 +146,8 @@
 (define-syntax <top>
   (let ()
     (type-specs.set-identifier-object-type-spec! #'<top>
-      (type-specs.make-object-type-spec #'<top> #'<top>-predicate))
+      (type-specs.make-object-type-spec #'<top> #'type-specs.<top>
+					#'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
       ;;through this syntax.  This tag is  the supertag of all the class
@@ -289,8 +293,7 @@
 (define-syntax <procedure>
   (let ()
     (type-specs.set-identifier-object-type-spec! #'<procedure>
-      (type-specs.make-object-type-spec #'<procedure> #'procedure?
-					#f #f #f #'<top>))
+      (type-specs.make-object-type-spec #'<procedure> #'<top> #'procedure?))
     (lambda (stx)
       (case-define synner
 	((message)
@@ -476,20 +479,20 @@
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 		(let ()
-		  (define (%retrieve-accessor-id slot-id safe?)
-		    #`(THE-TAG :accessor-function #,slot-id))
-		  (define (%retrieve-mutator-id slot-id safe?)
-		    #`(THE-TAG :mutator-function #,slot-id))
-		  (define (%dispatcher input-form-stx)
-		    (syntax-case input-form-stx ()
-		      ((?tagged-expr ?arg0 ?arg (... ...))
-		       #'(THE-TAG :dispatch (?tagged-expr ?arg0 ?arg (... ...))))))
+		  (define (%retrieve-accessor-id slot-id safe? input-form-stx)
+		    (values #`(THE-TAG :accessor-function #,slot-id)
+			    #'<top>))
+		  (define (%retrieve-mutator-id slot-id safe? input-form-stx)
+		    (values #`(THE-TAG :mutator-function #,slot-id)
+			    #'<top>))
+		  (define (%dispatcher method-id input-form-stx)
+		    (values #f #f))
 		  (define object-type-spec
-		    (type-specs.make-object-type-spec #'THE-TAG #'THE-PUBLIC-PREDICATE
+		    (type-specs.make-object-type-spec #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
 						      %retrieve-accessor-id
 						      %retrieve-mutator-id
-						      %dispatcher
-						      #'THE-PARENT))
+						      #f
+						      #f))
 		  (type-specs.set-identifier-object-type-spec! #'THE-TAG object-type-spec))
 
 		(lambda (stx)
@@ -829,20 +832,20 @@
 		    (%the-maker		MAKER-TRANSFORMER))
 
 		(let ()
-		  (define (%retrieve-accessor-id slot-id safe?)
-		    #`(THE-TAG :accessor-function #,slot-id))
-		  (define (%retrieve-mutator-id slot-id safe?)
-		    #`(THE-TAG :mutator-function #,slot-id))
-		  (define (%dispatcher input-form-stx)
-		    (syntax-case input-form-stx ()
-		      ((?tagged-expr ?arg0 ?arg (... ...))
-		       #'(THE-TAG :dispatch (?tagged-expr ?arg0 ?arg (... ...))))))
+		  (define (%retrieve-accessor-id slot-id safe? input-form-stx)
+		    (values #`(THE-TAG :accessor-function #,slot-id)
+			    #'<top>))
+		  (define (%retrieve-mutator-id slot-id safe? input-form-stx)
+		    (values #`(THE-TAG :mutator-function #,slot-id)
+			    #'<top>))
+		  (define (%dispatcher method-id input-form-stx)
+		    (values #f #f))
 		  (define object-type-spec
-		    (type-specs.make-object-type-spec #'THE-TAG #'THE-PREDICATE
+		    (type-specs.make-object-type-spec #'THE-TAG #'THE-PARENT #'THE-PREDICATE
 						      %retrieve-accessor-id
 						      %retrieve-mutator-id
-						      %dispatcher
-						      #'THE-PARENT))
+						      #f
+						      #f))
 		  (type-specs.set-identifier-object-type-spec! #'THE-TAG object-type-spec))
 
 		(lambda (stx)

@@ -33,9 +33,9 @@
     (error __who__ "Vicare: internal error: invalid macro" x))
   (assert (symbol? x))
   (case x
+    ((define-struct)			define-struct-macro)
     ((define-record-type)		define-record-type-macro)
     ((record-type-and-record?)		record-type-and-record?-macro)
-    ((define-struct)			define-struct-macro)
     ((define-condition-type)		define-condition-type-macro)
     ((cond)				cond-macro)
     ((let)				let-macro)
@@ -333,6 +333,179 @@
 		     datum*))))
 
   #| end of module: CASE-IDENTIFIERS-MACRO |# )
+
+
+;;;; module non-core-macro-transformer: DEFINE-STRUCT
+
+(module (define-struct-macro)
+  ;;Transformer function  used to  expand Vicare's  DEFINE-STRUCT macros
+  ;;from the  top-level built  in environment.   Expand the  contents of
+  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;
+  (define (define-struct-macro expr-stx)
+    (syntax-match expr-stx ()
+      ((_ (?name ?maker ?predicate) (?field* ...))
+       (%build-output-form ?name ?maker ?predicate ?field*))
+      ((_ ?name (?field* ...))
+       (%build-output-form ?name #f #f ?field*))
+      ))
+
+  (define (%build-output-form type-id maker-id predicate-id field-name-id*)
+    (let* ((string->id		(lambda (str)
+				  ($datum->syntax type-id (string->symbol str))))
+	   (namestr		(symbol->string (identifier->symbol type-id)))
+	   (field-sym*		(map identifier->symbol field-name-id*))
+	   (field-str*		(map symbol->string field-sym*))
+	   (rtd			($datum->syntax type-id (make-struct-type namestr field-sym*)))
+	   (constructor-id	(or maker-id     (string->id (string-append "make-" namestr))))
+	   (predicate-id	(or predicate-id (string->id (string-append namestr "?"))))
+	   (field-idx*		(enumerate field-name-id*)))
+
+      (define accessor-id*
+	(map (lambda (x)
+	       (string->id (string-append namestr "-" x)))
+	  field-str*))
+
+      (define mutator-id*
+	(map (lambda (x)
+	       (string->id (string-append "set-" namestr "-" x "!")))
+	  field-str*))
+
+      (define unsafe-accessor-id*
+	(map (lambda (x)
+	       (string->id (string-append "$" namestr "-" x)))
+	  field-str*))
+
+      (define unsafe-mutator-id*
+	(map (lambda (x)
+	       (string->id (string-append "$set-" namestr "-" x "!")))
+	  field-str*))
+
+      (define accessor-sexp*
+	(map (lambda (accessor-id unsafe-accessor-id)
+	       `(define (,accessor-id stru)
+		  (if ($struct/rtd? stru ',rtd)
+		      (,unsafe-accessor-id stru)
+		    (assertion-violation ',accessor-id
+		      "not a struct of required type as struct accessor argument"
+		      stru ',rtd))))
+	  accessor-id* unsafe-accessor-id*))
+
+      (define mutator-sexp*
+	(map (lambda (mutator-id unsafe-mutator-id)
+	       `(define (,mutator-id stru val)
+		  (if ($struct/rtd? stru ',rtd)
+		      (,unsafe-mutator-id stru val)
+		    (assertion-violation ',mutator-id
+		      "not a struct of required type as struct mutator argument"
+		      stru ',rtd))))
+	  mutator-id* unsafe-mutator-id*))
+
+      (define unsafe-accessor-sexp*
+	(map (lambda (unsafe-accessor-id field-idx)
+	       `(define-syntax ,unsafe-accessor-id
+		  (syntax-rules ()
+		    ((_ ?stru)
+		     ($struct-ref ?stru ,field-idx)))))
+	  unsafe-accessor-id* field-idx*))
+
+      (define unsafe-mutator-sexp*
+	(map (lambda (unsafe-mutator-id field-idx)
+	       `(define-syntax ,unsafe-mutator-id
+		  (syntax-rules ()
+		    ((_ ?stru ?val)
+		     ($struct-set! ?stru ,field-idx ?val)))))
+	  unsafe-mutator-id* field-idx*))
+
+      (define object-type-spec-form
+	(%build-object-type-spec type-id predicate-id field-sym*
+				 accessor-id* unsafe-accessor-id*
+				 mutator-id*  unsafe-mutator-id*))
+
+      (bless
+       `(begin
+	  (define (,constructor-id ,@field-name-id*)
+	    (let ((S ($struct ',rtd ,@field-name-id*)))
+	      (if ($std-destructor ',rtd)
+		  ($struct-guardian S)
+		S)))
+	  (define (,predicate-id obj)
+	    ($struct/rtd? obj ',rtd))
+	  ;;By putting this  form here we are sure  that PREDICATE-ID is
+	  ;;already bound when the object-type-spec is built.
+	  (define-syntax ,type-id
+	    (let ()
+	      ,object-type-spec-form
+	      (cons '$rtd ',rtd)))
+	  ,@accessor-sexp*
+	  ,@mutator-sexp*
+	  ,@unsafe-accessor-sexp*
+	  ,@unsafe-mutator-sexp*))))
+
+  (define (%build-object-type-spec type-id predicate-id field-sym*
+				   accessor-id* unsafe-accessor-id*
+				   mutator-id*  unsafe-mutator-id*)
+    (define type-str
+      (symbol->string (syntax->datum type-id)))
+    (define %accessor-maker
+      (string->symbol (string-append type-str "-accessor-maker")))
+    (define %mutator-maker
+      (string->symbol (string-append type-str "-mutator-maker")))
+    (define %setter-maker
+      (string->symbol (string-append type-str "-setter-maker")))
+    (define %dispatcher
+      (string->symbol (string-append type-str "-dispatcher")))
+    `(let ()
+       (import (vicare)
+	 (prefix (vicare expander object-type-specs) typ.))
+
+       (define (,%accessor-maker field-id safe? input-form-stx)
+	 (case (syntax->datum field-id)
+	   ,@(map (lambda (field-sym accessor-id unsafe-accessor-id)
+		    `((,field-sym)
+		      (values (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))
+			      (typ.top-id))))
+	       field-sym* accessor-id* unsafe-accessor-id*)
+	   (else
+	    (values #f #f))))
+
+       (define (,%mutator-maker field-id safe? input-form-stx)
+	 (case (syntax->datum field-id)
+	   ,@(map (lambda (field-sym mutator-id unsafe-mutator-id)
+		    `((,field-sym)
+		      (values (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))
+			      (typ.top-id))))
+	       field-sym* mutator-id* unsafe-mutator-id*)
+	   (else
+	    (values #f #f))))
+
+       (define (,%setter-maker keys-stx input-form-stx)
+	 (syntax-case keys-stx ()
+	   (([?field-id])
+	    (identifier? #'?field-id)
+	    (,%mutator-maker #'?field-id #t))
+	   (else
+	    (syntax-violation ',type-id
+	      "invalid keys for setter"
+	      input-form-stx keys-stx))))
+
+       (define (,%dispatcher method-id input-form-stx)
+	 (values #f #f))
+
+       (define object-type-spec
+	 (typ.make-object-type-spec (syntax ,type-id) (typ.top-id) (syntax ,predicate-id)
+				    ,%accessor-maker ,%mutator-maker
+				    ,%setter-maker ,%dispatcher))
+
+       (typ.set-identifier-object-type-spec! (syntax ,type-id) object-type-spec)))
+
+  (define (enumerate ls)
+    (let recur ((i 0) (ls ls))
+      (if (null? ls)
+	  '()
+	(cons i (recur (+ i 1) (cdr ls))))))
+
+  #| end of module: DEFINE-STRUCT-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: DEFINE-RECORD-TYPE
@@ -809,46 +982,68 @@
 				       x* foo-x* unsafe-foo-x*
 				       mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				       immutable-x*)
+    (define type-str
+      (symbol->string (syntax->datum foo)))
+    (define %accessor-maker
+      (string->symbol (string-append type-str "-accessor-maker")))
+    (define %mutator-maker
+      (string->symbol (string-append type-str "-mutator-maker")))
+    (define %setter-maker
+      (string->symbol (string-append type-str "-setter-maker")))
+    (define %dispatcher
+      (string->symbol (string-append type-str "-dispatcher")))
     `(let ()
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
-       (define (%retrieve-accessor-id slot-id safe?)
-	 (case (syntax->datum slot-id)
+
+       (define (,%accessor-maker field-id safe? input-form-stx)
+	 (case (syntax->datum field-id)
 	   ,@(map (lambda (field-name accessor-id unsafe-accessor-id)
 		    `((,field-name)
-		      (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))))
+		      (values (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))
+			      (typ.top-id))))
 	       x* foo-x* unsafe-foo-x*)
-	   (else #f)))
-       (define (%retrieve-mutator-id slot-id safe?)
-	 (case (syntax->datum slot-id)
+	   (else
+	    (values #f #f))))
+
+       (define (,%mutator-maker field-id safe? input-form-stx)
+	 (case (syntax->datum field-id)
 	   ,@(map (lambda (field-name mutator-id unsafe-mutator-id)
 		    `((,field-name)
-		      (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))))
+		      (values (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))
+			      (typ.top-id))))
 	       mutable-x* foo-x-set!* unsafe-foo-x-set!*)
 	   ,@(map (lambda (field-name)
 		    `((,field-name)
 		      (syntax-violation ',foo
-			"requested mutator of immutable record field name" slot-id)))
+			"requested mutator of immutable record field name"
+			input-form-stx field-id)))
 	       immutable-x*)
-	   (else #f)))
-       (define (%dispatcher input-form-stx)
-	 (syntax-case input-form-stx ()
-	   ((?tagged-expr ?field-name)
-	    (identifier? #'?field-name)
-	    #`(#,(identifier-object-type-spec-accessor (syntax ,foo) #'?field-name #t) ?tagged-expr))
-	   (_
-	    (syntax-violation (quote ,foo)
-	      "invalid tagged dispatcher syntax for R6RS record"
-	      input-form-stx #'?field-name))))
+	   (else
+	    (values #f #f))))
+
+       (define (,%setter-maker keys-stx input-form-stx)
+	 (syntax-case keys-stx ()
+	   (([?field-id])
+	    (identifier? #'?field-id)
+	    (,%mutator-maker #'?field-id #t))
+	   (else
+	    (syntax-violation ',foo
+	      "invalid keys for setter"
+	      input-form-stx keys-stx))))
+
+       (define (,%dispatcher method-id input-form-stx)
+	 (values #f #f))
+
        (define object-type-spec
 	 (typ.make-object-type-spec (syntax ,foo)
-				    (syntax ,foo?)
-				    %retrieve-accessor-id
-				    %retrieve-mutator-id
-				    %dispatcher
 				    ,(if foo-parent
 					 `(syntax ,foo-parent)
-				       #f)))
+				       '(typ.top-id))
+				    (syntax ,foo?)
+				    ,%accessor-maker ,%mutator-maker
+				    ,%setter-maker ,%dispatcher))
+
        (typ.set-identifier-object-type-spec! (syntax ,foo) object-type-spec)))
 
 ;;; --------------------------------------------------------------------
@@ -1232,163 +1427,6 @@
     ))
 
 
-;;;; module non-core-macro-transformer: DEFINE-STRUCT
-
-(module (define-struct-macro)
-  ;;Transformer function  used to  expand Vicare's  DEFINE-STRUCT macros
-  ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (define (define-struct-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ (?name ?maker ?predicate) (?field* ...))
-       (%build-output-form ?name ?maker ?predicate ?field*))
-      ((_ ?name (?field* ...))
-       (%build-output-form ?name #f #f ?field*))
-      ))
-
-  (define (%build-output-form type-id maker-id predicate-id field-name-id*)
-    (let* ((string->id		(lambda (str)
-				  ($datum->syntax type-id (string->symbol str))))
-	   (namestr		(symbol->string (identifier->symbol type-id)))
-	   (field-sym*		(map identifier->symbol field-name-id*))
-	   (field-str*		(map symbol->string field-sym*))
-	   (rtd			($datum->syntax type-id (make-struct-type namestr field-sym*)))
-	   (constructor-id	(or maker-id     (string->id (string-append "make-" namestr))))
-	   (predicate-id	(or predicate-id (string->id (string-append namestr "?"))))
-	   (field-idx*		(enumerate field-name-id*)))
-
-      (define accessor-id*
-	(map (lambda (x)
-	       (string->id (string-append namestr "-" x)))
-	  field-str*))
-
-      (define mutator-id*
-	(map (lambda (x)
-	       (string->id (string-append "set-" namestr "-" x "!")))
-	  field-str*))
-
-      (define unsafe-accessor-id*
-	(map (lambda (x)
-	       (string->id (string-append "$" namestr "-" x)))
-	  field-str*))
-
-      (define unsafe-mutator-id*
-	(map (lambda (x)
-	       (string->id (string-append "$set-" namestr "-" x "!")))
-	  field-str*))
-
-      (define accessor-sexp*
-	(map (lambda (accessor-id unsafe-accessor-id)
-	       `(define (,accessor-id stru)
-		  (if ($struct/rtd? stru ',rtd)
-		      (,unsafe-accessor-id stru)
-		    (assertion-violation ',accessor-id
-		      "not a struct of required type as struct accessor argument"
-		      stru ',rtd))))
-	  accessor-id* unsafe-accessor-id*))
-
-      (define mutator-sexp*
-	(map (lambda (mutator-id unsafe-mutator-id)
-	       `(define (,mutator-id stru val)
-		  (if ($struct/rtd? stru ',rtd)
-		      (,unsafe-mutator-id stru val)
-		    (assertion-violation ',mutator-id
-		      "not a struct of required type as struct mutator argument"
-		      stru ',rtd))))
-	  mutator-id* unsafe-mutator-id*))
-
-      (define unsafe-accessor-sexp*
-	(map (lambda (unsafe-accessor-id field-idx)
-	       `(define-syntax ,unsafe-accessor-id
-		  (syntax-rules ()
-		    ((_ ?stru)
-		     ($struct-ref ?stru ,field-idx)))))
-	  unsafe-accessor-id* field-idx*))
-
-      (define unsafe-mutator-sexp*
-	(map (lambda (unsafe-mutator-id field-idx)
-	       `(define-syntax ,unsafe-mutator-id
-		  (syntax-rules ()
-		    ((_ ?stru ?val)
-		     ($struct-set! ?stru ,field-idx ?val)))))
-	  unsafe-mutator-id* field-idx*))
-
-      (define object-type-spec-form
-	(%build-object-type-spec type-id predicate-id field-sym*
-				 accessor-id* unsafe-accessor-id*
-				 mutator-id*  unsafe-mutator-id*))
-
-      (bless
-       `(begin
-	  (define-syntax ,type-id
-	    (let ()
-	      ,object-type-spec-form
-	      (cons '$rtd ',rtd)))
-	  (define (,constructor-id ,@field-name-id*)
-	    (let ((S ($struct ',rtd ,@field-name-id*)))
-	      (if ($std-destructor ',rtd)
-		  ($struct-guardian S)
-		S)))
-	  (define (,predicate-id obj)
-	    ($struct/rtd? obj ',rtd))
-	  ,@accessor-sexp*
-	  ,@mutator-sexp*
-	  ,@unsafe-accessor-sexp*
-	  ,@unsafe-mutator-sexp*))))
-
-  (define (%build-object-type-spec type-id predicate-id field-sym*
-				   accessor-id* unsafe-accessor-id*
-				   mutator-id*  unsafe-mutator-id*)
-    `(let ()
-       (import (vicare)
-	 (prefix (vicare expander object-type-specs) typ.))
-
-       (define (%retrieve-accessor-id slot-id safe?)
-	 (case (syntax->datum slot-id)
-	   ,@(map (lambda (field-sym accessor-id unsafe-accessor-id)
-		    `((,field-sym)
-		      (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))))
-	       field-sym* accessor-id* unsafe-accessor-id*)
-	   (else #f)))
-
-       (define (%retrieve-mutator-id slot-id safe?)
-	 (case (syntax->datum slot-id)
-	   ,@(map (lambda (field-sym mutator-id unsafe-mutator-id)
-		    `((,field-sym)
-		      (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))))
-	       field-sym* mutator-id* unsafe-mutator-id*)
-	   (else #f)))
-
-       (define (%dispatcher input-form-stx)
-	 (syntax-case input-form-stx ()
-	   ((?tagged-expr ?field-name)
-	    (identifier? #'?field-name)
-	    #`(#,(identifier-object-type-spec-accessor (syntax ,type-id) #'?field-name #t) ?tagged-expr))
-	   (_
-	    (syntax-violation (quote ,type-id)
-	      "invalid tagged dispatcher syntax for Vicare struct"
-	      input-form-stx #'?field-name))))
-
-       (define object-type-spec
-	 (typ.make-object-type-spec (syntax ,type-id)
-				    (syntax ,predicate-id)
-				    %retrieve-accessor-id
-				    %retrieve-mutator-id
-				    %dispatcher
-				    #f))
-
-       (typ.set-identifier-object-type-spec! (syntax ,type-id) object-type-spec)))
-
-  (define (enumerate ls)
-    (let recur ((i 0) (ls ls))
-      (if (null? ls)
-	  '()
-	(cons i (recur (+ i 1) (cdr ls))))))
-
-  #| end of module: DEFINE-STRUCT-MACRO |# )
-
-
 ;;;; module non-core-macro-transformer: SYNTAX-RULES, DEFINE-SYNTAX-RULE
 
 (define (syntax-rules-macro expr-stx)
@@ -1681,8 +1719,8 @@
 
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (let ((standard-lhs* (map (lambda (lhs)
-				   (receive (standard-lhs signature-tags)
-				       (parse-tagged-values-formals-syntax lhs expr-stx)
+				   (receive (standard-lhs signature)
+				       (parse-tagged-formals-syntax lhs expr-stx)
 				     standard-lhs))
 			      ?lhs*)))
 	 (bless
@@ -2416,16 +2454,18 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?who (?formal* ...) ?body ?body* ...)
-     (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals-syntax ?formal* expr-stx)
+     (begin
+       ;;We parse the formals for validation purposes.
+       (parse-tagged-applicable-spec-syntax ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda ,?formal*
 				  ,?body . ,?body*)))))
 
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
-     (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals-syntax (append ?formal* ?rest-formal) expr-stx)
+     (begin
+       ;;We parse the formals for validation purposes.
+       (parse-tagged-applicable-spec-syntax (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda (,@?formal* . ,?rest-formal)
@@ -2439,8 +2479,9 @@
   ;;
   (syntax-match expr-stx ()
     ((_ (?who ?formal* ...) ?body ?body* ...)
-     (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals-syntax ?formal* expr-stx)
+     (begin
+       ;;We parse the formals for validation purposes.
+       (parse-tagged-applicable-spec-syntax ?formal* expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -2448,8 +2489,9 @@
 				    ,?body . ,?body*))))))
 
     ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
-     (receive (standard-formals-stx signature-tags)
-	 (parse-tagged-lambda-formals-syntax (append ?formal* ?rest-formal) expr-stx)
+     (begin
+       ;;We parse the formals for validation purposes.
+       (parse-tagged-applicable-spec-syntax (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -3467,7 +3509,7 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?producer-expression ?form0 ?form* ...)
-     (tagged-values-formals-syntax? ?formals)
+     (tagged-formals-syntax? ?formals)
      (bless
       `(call-with-values
 	   (lambda () ,?producer-expression)
@@ -3481,8 +3523,8 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
-     (receive (standard-formals signature-tags)
-	 (parse-tagged-values-formals-syntax ?formals expr-stx)
+     (receive (standard-formals signature)
+	 (parse-tagged-formals-syntax ?formals expr-stx)
        (let ((rv-form (cond ((list? standard-formals)
 			     `(values . ,standard-formals))
 			    ((pair? standard-formals)
@@ -3614,11 +3656,11 @@
   (syntax-match expr-stx (brace)
     ((_ (?name ?arg* ... . (brace ?rest ?rest-tag)) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-lambda-formals-syntax? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
+	  (tagged-applicable-spec-syntax? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
      (%output ?name ?arg* (bless `(brace ,?rest ,?rest-tag)) (cons ?form0 ?form*)))
     ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-lambda-formals-syntax? (append ?arg* ?rest)))
+	  (tagged-applicable-spec-syntax? (append ?arg* ?rest)))
      (%output ?name ?arg* ?rest (cons ?form0 ?form*)))
     ))
 
