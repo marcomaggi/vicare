@@ -54,7 +54,14 @@ main (int argc, char** argv)
       ++j;
     }
   }
-  setlocale(LC_ALL, "");
+  /* FIXME  This is  commented  out  because, at  present,  there is  no
+     support for  locales whose associated  encoding is not  ASCII; such
+     missing  support causes  errors, for  example, when  handling error
+     messages  from "dlerror()".   This  must be  fixed  in the  future.
+     (Marco Maggi; Sat Mar 22, 2014) */
+  if (0) {
+    setlocale(LC_ALL, "");
+  }
   if (NULL == boot_file)
     boot_file = BOOTFILE;
   return ikarus_main(j, argv, boot_file);
