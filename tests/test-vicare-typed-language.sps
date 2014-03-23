@@ -985,80 +985,80 @@
 	a)
     => 1)
 
-  (check
-      (with-result
-       (let ()
-	 (define-values (a)
-	   (add-result 2)
-	   1)
-	 a))
-    => '(1 (2)))
+;;   (check
+;;       (with-result
+;;        (let ()
+;; 	 (define-values (a)
+;; 	   (add-result 2)
+;; 	   1)
+;; 	 a))
+;;     => '(1 (2)))
 
-  (check
-      (let ()
-  	(define-values (a b c)
-  	  #t
-  	  (values 1 2 3))
-  	(list a b c))
-    => '(1 2 3))
+;;   (check
+;;       (let ()
+;;   	(define-values (a b c)
+;;   	  #t
+;;   	  (values 1 2 3))
+;;   	(list a b c))
+;;     => '(1 2 3))
 
-  (check
-      (let ((a 2))
-  	(define-values (a)
-  	  (values 1))
-  	a)
-    => 1)
+;;   (check
+;;       (let ((a 2))
+;;   	(define-values (a)
+;;   	  (values 1))
+;;   	a)
+;;     => 1)
 
-  (check	;recursive binding
-      (with-result
-       (let ()
-	 (define-values (f)
-	   (lambda (arg)
-	     (if (positive? arg)
-		 (begin
-		   (add-result arg)
-		   (f (- arg 1)))
-	       arg)))
-	 (f 2)))
-    => '(0 (2 1)))
+;;   (check	;recursive binding
+;;       (with-result
+;;        (let ()
+;; 	 (define-values (f)
+;; 	   (lambda (arg)
+;; 	     (if (positive? arg)
+;; 		 (begin
+;; 		   (add-result arg)
+;; 		   (f (- arg 1)))
+;; 	       arg)))
+;; 	 (f 2)))
+;;     => '(0 (2 1)))
 
-;;; --------------------------------------------------------------------
-;;; tagged bindings
+;; ;;; --------------------------------------------------------------------
+;; ;;; tagged bindings
 
-  (check
-      (with-result
-       (let ()
-  	 (define-values ({a <fixnum>})
-  	   (define-syntax (inspect stx)
-  	     (tag=tagging? <fixnum> a))
-  	   (add-result (inspect))
-  	   1)
-  	 a))
-    => '(1 (#t)))
+;;   (check
+;;       (with-result
+;;        (let ()
+;;   	 (define-values ({a <fixnum>})
+;;   	   (define-syntax (inspect stx)
+;;   	     (tag=tagging? <fixnum> a))
+;;   	   (add-result (inspect))
+;;   	   1)
+;;   	 a))
+;;     => '(1 (#t)))
 
-  (check
-      (with-result
-       (let ()
-	 (define-values ({a <fixnum>} {b <flonum>} {c <ratnum>})
-	   (define-syntax (inspect stx)
-	     #`(quote #,(list (tag=tagging? <fixnum> a)
-			      (tag=tagging? <flonum> b)
-			      (tag=tagging? <ratnum> c))))
-	   (add-result (inspect))
-	   (values 1 2.2 3/4))
-	 (vector a b c)))
-    => '(#(1 2.2 3/4) ((#t #t #t))))
+;;   (check
+;;       (with-result
+;;        (let ()
+;; 	 (define-values ({a <fixnum>} {b <flonum>} {c <ratnum>})
+;; 	   (define-syntax (inspect stx)
+;; 	     #`(quote #,(list (tag=tagging? <fixnum> a)
+;; 			      (tag=tagging? <flonum> b)
+;; 			      (tag=tagging? <ratnum> c))))
+;; 	   (add-result (inspect))
+;; 	   (values 1 2.2 3/4))
+;; 	 (vector a b c)))
+;;     => '(#(1 2.2 3/4) ((#t #t #t))))
 
-  (check
-      (with-result
-       (let (({a <flonum>} 2.2))
-	 (define-values ({a <fixnum>})
-	   (define-syntax (inspect stx)
-	     (tag=tagging? <fixnum> a))
-	   (add-result (inspect))
-	   1)
-	 a))
-    => '(1 (#t)))
+;;   (check
+;;       (with-result
+;;        (let (({a <flonum>} 2.2))
+;; 	 (define-values ({a <fixnum>})
+;; 	   (define-syntax (inspect stx)
+;; 	     (tag=tagging? <fixnum> a))
+;; 	   (add-result (inspect))
+;; 	   1)
+;; 	 a))
+;;     => '(1 (#t)))
 
   #t)
 

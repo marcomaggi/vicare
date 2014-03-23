@@ -3444,26 +3444,54 @@
   ;;EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
-    ((_ (?var* ... ?var0) ?form* ... ?form0)
-     (receive (id* tag*)
-	 (parse-list-of-tagged-bindings ?var* expr-stx)
-       (let ((TMP* (generate-temporaries id*)))
-	 (bless
-	  `(begin
-	     (define (return-multiple-values)
-	       ,@?form* ,?form0)
-	     ,@(map (lambda (var)
-		      `(define ,var #f))
-		 ?var*)
-	     (define ,?var0
-	       (call-with-values
-		   return-multiple-values
-		 (lambda (,@TMP* T0)
-		   ,@(map (lambda (var TMP)
-			    `(set! ,var ,TMP))
-		       id* TMP*)
-		   T0)))
-	     )))))
+    ((_ ?formals ?form0 ?form* ...)
+     (receive (standard-formals signature)
+	 (parse-tagged-formals-syntax ?formals expr-stx)
+       (syntax-match standard-formals ()
+	 ((?id* ... ?id0)
+	  (let ((TMP* (generate-temporaries ?id*)))
+	    (receive (tag* tag0)
+		(proper-list->head-and-last (formals-signature-tags signature))
+	      (bless
+	       `(begin
+		  ,@(map (lambda (var tag)
+			   `(define (brace ,var ,tag)))
+		      ?id* tag*)
+		  (define (brace ,?id0 ,tag0)
+		    (call-with-values
+			(lambda () ,?form0 . ,?form*)
+		      (lambda (,@TMP* T0)
+			,@(map (lambda (var TMP)
+				 `(set! ,var ,TMP))
+			    ?id* TMP*)
+			T0))))))))
+
+	 (?args
+	  (identifier? ?args)
+	  (bless
+	   `(define (brace ,?args ,(formals-signature-tags signature))
+	      (call-with-values
+		  (lambda () ,?form0 . ,?form*)
+		(lambda args args)))))
+
+	 ((?id* ... . ?rest-id)
+	  (let ((TMP* (generate-temporaries ?id*)))
+	    (receive (tag* rest-tag)
+		(improper-list->list-and-rest (formals-signature-tags signature))
+	    (bless
+	     `(begin
+		,@(map (lambda (var tag)
+			 `(define (brace ,var ,tag)))
+		    ?id* tag*)
+		(define (brace ,?rest-id ,rest-tag)
+		  (call-with-values
+		      (lambda () ,?form0 . ,?form*)
+		    (lambda (,@TMP* . rest)
+		      ,@(map (lambda (var TMP)
+			       `(set! ,var ,TMP))
+			  ?id* TMP*)
+		      rest))))))))
+	 )))
     ))
 
 (define (define-constant-values-macro expr-stx)
@@ -3472,31 +3500,74 @@
   ;;of EXPR-STX; return a syntax object that must be further expanded.
   ;;
   (syntax-match expr-stx ()
-    ((_ (?var* ... ?var0) ?form* ... ?form0)
-     (let ((SHADOW* (generate-temporaries ?var*))
-	   (TMP*    (generate-temporaries ?var*)))
-       (bless
-	`(begin
-	   (define (return-multiple-values)
-	     ,@?form* ,?form0)
-	   ,@(map (lambda (SHADOW)
-		    `(define ,SHADOW #f))
-	       SHADOW*)
-	   (define SHADOW0
-	     (call-with-values
-		 return-multiple-values
-	       (lambda (,@TMP* T0)
-		 ,@(map (lambda (SHADOW TMP)
-			  `(set! ,SHADOW ,TMP))
-		     SHADOW* TMP*)
-		 T0)))
-	   ,@(map (lambda (var SHADOW)
-		    `(define-syntax ,var
-		       (identifier-syntax ,SHADOW)))
-	       ?var* SHADOW*)
-	   (define-syntax ,?var0
-	     (identifier-syntax SHADOW0))
-	   ))))
+    ((_ ?formals ?form0 ?form* ...)
+     (receive (standard-formals signature)
+	 (parse-tagged-formals-syntax ?formals expr-stx)
+       (syntax-match standard-formals ()
+	 ((?id* ... ?id0)
+	  (let ((SHADOW* (generate-temporaries ?id*))
+		(TMP*    (generate-temporaries ?id*)))
+	    (receive (tag* tag0)
+		(proper-list->head-and-last (formals-signature-tags signature))
+	      (bless
+	       `(begin
+		  ,@(map (lambda (var tag)
+			   `(define (brace ,var ,tag)))
+		      SHADOW* tag*)
+		  (define (brace SHADOW0 ,tag0)
+		    (call-with-values
+			(lambda () ,?form0 . ,?form*)
+		      (lambda (,@TMP* T0)
+			,@(map (lambda (var TMP)
+				 `(set! ,var ,TMP))
+			    SHADOW* TMP*)
+			T0)))
+		  ,@(map (lambda (var SHADOW)
+			   `(define-syntax ,var
+			      (identifier-syntax ,SHADOW)))
+		      ?id* SHADOW*)
+		  (define-syntax ,?id0
+		    (identifier-syntax SHADOW0))
+		  )))))
+
+	 (?args
+	  (identifier? ?args)
+	  (bless
+	   `(begin
+	      (define (brace shadow ,(formals-signature-tags signature))
+		(call-with-values
+		    (lambda () ,?form0 . ,?form*)
+		  (lambda args args)))
+	      (define-syntax ,?args
+		(identifier-syntax shadow))
+	      )))
+
+	 ((?id* ... . ?rest-id)
+	  (let ((SHADOW* (generate-temporaries ?id*))
+		(TMP*    (generate-temporaries ?id*)))
+	    (receive (tag* rest-tag)
+		(improper-list->list-and-rest (formals-signature-tags signature))
+	    (bless
+	     `(begin
+		,@(map (lambda (var tag)
+			 `(define (brace ,var ,tag)))
+		    SHADOW* tag*)
+		(define (brace rest-shadow ,rest-tag)
+		  (call-with-values
+		      (lambda () ,?form0 . ,?form*)
+		    (lambda (,@TMP* . rest)
+		      ,@(map (lambda (var TMP)
+			       `(set! ,var ,TMP))
+			  SHADOW* TMP*)
+		      rest)))
+		,@(map (lambda (var SHADOW)
+			 `(define-syntax ,var
+			    (identifier-syntax ,SHADOW)))
+		    ?id* SHADOW*)
+		(define-syntax ,?rest-id
+		  (identifier-syntax rest-shadow))
+		)))))
+	 )))
     ))
 
 

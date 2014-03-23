@@ -1244,6 +1244,17 @@
     ;; 	   (values (reverse item*) ell)))
     ))
 
+(define* (proper-list->head-and-last ell)
+  (let loop ((ell   ell)
+	     (item* '()))
+    (syntax-match ell ()
+      (()
+       (assertion-violation __who__ "expected non-empty list" ell))
+      ((?last)
+       (values (reverse item*) ?last))
+      ((?car . ?cdr)
+       (loop ?cdr (cons ?car item*))))))
+
 (define (syntax-unwrap stx)
   ;;Given a syntax object STX  decompose it and return the corresponding
   ;;S-expression holding datums and identifiers.  Take care of returning

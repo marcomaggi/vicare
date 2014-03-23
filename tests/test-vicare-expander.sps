@@ -425,6 +425,22 @@
   	a)
     => 1)
 
+  (check
+      (let ()
+  	(define-values (a b c . rest)
+  	  #t
+  	  (values 1 2 3 4 5 6))
+  	(list a b c rest))
+    => '(1 2 3 (4 5 6)))
+
+  (check
+      (let ()
+  	(define-values args
+  	  #t
+  	  (values 1 2 3))
+  	args)
+    => '(1 2 3))
+
   #t)
 
 
@@ -454,6 +470,21 @@
 	a)
     => 1)
 
+  (check
+      (let ()
+  	(define-constant-values (a b c . rest)
+  	  #t
+  	  (values 1 2 3 4 5 6))
+  	(list a b c rest))
+    => '(1 2 3 (4 5 6)))
+
+  (check
+      (let ()
+  	(define-constant-values args
+  	  #t
+  	  (values 1 2 3))
+  	args)
+    => '(1 2 3))
   #t)
 
 

@@ -734,9 +734,10 @@ quoted symbol @meta{who}.
 
 @c ------------------------------------------------------------
 
-@deffn Syntax define-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
+@deffn Syntax define-values @meta{formals} @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
-last one to the given @meta{var} identifiers.
+last one to the given @meta{var} identifiers.  @var{formals} has the
+same syntax of the @func{lambda} formals.
 
 @example
 (define-values (a b c)
@@ -747,10 +748,11 @@ last one to the given @meta{var} identifiers.
 @end deffn
 
 
-@deffn Syntax define-constant-values (@metao{var} @meta{var} @dots{}) @metao{form} @meta{form} @dots{}
+@deffn Syntax define-constant-values @var{formals} @metao{form} @meta{form} @dots{}
 Evaluate the given forms and bind the, possibly multiple, result of the
-last one to the given @meta{var} identifiers.  Make the @meta{var}
-identifiers immutable.
+last one to the given formals identifiers; make the formals identifiers
+immutable.  @var{formals} has the same syntax of the @func{lambda}
+formals.
 
 @example
 (define-constant-values (a b c)
