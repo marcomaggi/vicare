@@ -7943,13 +7943,13 @@
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-form-stx "cannot redefine keyword"))
 		  ;;We want order here!?!
-		  (let* ((lab          (gen-define-syntax-label id rib sd?))
-			 (expanded-rhs (with-exception-handler
-					   (lambda (E)
-					     (raise
-					      (condition E (make-macro-input-form-condition rhs-stx))))
-					 (lambda ()
-					   (%expand-macro-transformer rhs-stx lexenv.expand)))))
+		  (let ((lab          (gen-define-syntax-label id rib sd?))
+			(expanded-rhs (with-exception-handler
+					  (lambda (E)
+					    (raise
+					     (condition E (make-macro-input-form-condition rhs-stx))))
+					(lambda ()
+					  (%expand-macro-transformer rhs-stx lexenv.expand)))))
 		    ;;First map  the identifier  to the  label, creating
 		    ;;the binding; then evaluate the macro transformer.
 		    (extend-rib! rib id lab sd?)
