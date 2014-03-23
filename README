@@ -258,6 +258,9 @@ command line.
   Some  test  files need  a  usable  directory  pathname in  the  TMPDIR
 environment variable.
 
+  The  test files  acting on  networking sockets  expect "localhost"  to
+resolve to the IPv4 address "127.0.0.1", which is usually the case.
+
   The  file "test-vicare-posix-sockets.sps"  contains tests  for network
 sockets which  are normally disabled  because the firewall rules  on the
 hosting machine must allow TCP and UDP connections on 127.0.0.1:8080 and
