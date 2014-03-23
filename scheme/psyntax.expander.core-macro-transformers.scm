@@ -171,7 +171,7 @@
        ;;Check  that  the  binding  names are  identifiers  and  without
        ;;duplicates.
        (receive (lhs* tag*)
-	   (parse-tagged-bindings-syntax ?lhs* expr-stx)
+	   (parse-list-of-tagged-bindings ?lhs* expr-stx)
 	 ;;Generate  unique variable  names  and labels  for the  LETREC
 	 ;;bindings.
 	 (let ((lex* (map gensym-for-lexical-var lhs*))

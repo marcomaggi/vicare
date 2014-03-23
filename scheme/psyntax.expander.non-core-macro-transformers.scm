@@ -1634,7 +1634,7 @@
     ;;Extended tagged syntax.
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (receive (lhs* tag*)
-	 (parse-tagged-bindings-syntax ?lhs* expr-stx)
+	 (parse-list-of-tagged-bindings ?lhs* expr-stx)
        (bless
 	`((lambda ,?lhs*
 	    ,?body . ,?body*) . ,?rhs*))))
@@ -1643,7 +1643,7 @@
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
      (receive (lhs* tag*)
-	 (parse-tagged-bindings-syntax ?lhs* expr-stx)
+	 (parse-list-of-tagged-bindings ?lhs* expr-stx)
        (bless
 	`((letrec ((,?recur (lambda ,?lhs*
 			      ,?body . ,?body*)))
@@ -1658,7 +1658,7 @@
   (syntax-match expr-stx ()
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      ;;Remember that LET* allows bindings with duplicate identifiers, so
-     ;;we do *not* use TAGGED-BINDINGS-SYNTAX? here.
+     ;;we do *not* use LIST-OF-TAGGED-BINDINGS? here.
      (for-all tagged-identifier-syntax? ?lhs*)
      (bless
       (let recur ((x* (map list ?lhs* ?rhs*)))
@@ -1676,7 +1676,7 @@
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (identifier? ?recur)
      (receive (lhs* tag*)
-	 (parse-tagged-bindings-syntax ?lhs* expr-stx)
+	 (parse-list-of-tagged-bindings ?lhs* expr-stx)
        (bless
 	`((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
 					  ,?body . ,?body*)))
@@ -2837,7 +2837,7 @@
      (syntax-match (map %normalise-binding ?binding*) ()
        (((?var* ?init* ?step*) ...)
 	(receive (id* tag*)
-	    (parse-tagged-bindings-syntax ?var* expr-stx)
+	    (parse-list-of-tagged-bindings ?var* expr-stx)
 	  (bless
 	   `(letrec ((loop (lambda ,?var*
 			     (if ,?test
@@ -3446,7 +3446,7 @@
   (syntax-match expr-stx ()
     ((_ (?var* ... ?var0) ?form* ... ?form0)
      (receive (id* tag*)
-	 (parse-tagged-bindings-syntax ?var* expr-stx)
+	 (parse-list-of-tagged-bindings ?var* expr-stx)
        (let ((TMP* (generate-temporaries id*)))
 	 (bless
 	  `(begin

@@ -1142,7 +1142,7 @@
 
     ;; expand-time object type specs: parsing tagged identifiers
     tagged-identifier-syntax?			parse-tagged-identifier-syntax
-    tagged-bindings-syntax?			parse-tagged-bindings-syntax
+    list-of-tagged-bindings?			parse-list-of-tagged-bindings
     tagged-applicable-spec-syntax?		parse-tagged-applicable-spec-syntax
     tagged-formals-syntax?			parse-tagged-formals-syntax
     standard-lambda-formals-syntax?		standard-values-formals-syntax?

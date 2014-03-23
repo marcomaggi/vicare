@@ -147,72 +147,72 @@
 ;;; list of tagged identifiers
 
   (check
-      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}))
+      (typ.parse-list-of-tagged-bindings #'({a <fixnum>}))
     (=> syntax=?)
     #'(a) #'(<fixnum>))
 
   (check
-      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
-					   {b <string>}))
+      (typ.parse-list-of-tagged-bindings #'({a <fixnum>}
+					    {b <string>}))
     (=> syntax=?)
     #'(a b) #'(<fixnum> <string>))
 
   (check
-      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
-					   {b <string>}
-					   {c <vector>}))
+      (typ.parse-list-of-tagged-bindings #'({a <fixnum>}
+					    {b <string>}
+					    {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(<fixnum> <string> <vector>))
 
 ;;;
 
   (check
-      (typ.parse-tagged-bindings-syntax #'(a))
+      (typ.parse-list-of-tagged-bindings #'(a))
     (=> syntax=?)
     #'(a) #'(<top>))
 
   (check
-      (typ.parse-tagged-bindings-syntax #'(a b))
+      (typ.parse-list-of-tagged-bindings #'(a b))
     (=> syntax=?)
     #'(a b) #'(<top> <top>))
 
   (check
-      (typ.parse-tagged-bindings-syntax #'(a b c))
+      (typ.parse-list-of-tagged-bindings #'(a b c))
     (=> syntax=?)
     #'(a b c) #'(<top> <top> <top>))
 
 ;;;
 
   (check
-      (typ.parse-tagged-bindings-syntax #'(a
-					   {b <string>}))
+      (typ.parse-list-of-tagged-bindings #'(a
+					    {b <string>}))
     (=> syntax=?)
     #'(a b) #'(<top> <string>))
 
   (check
-      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
-					   b))
+      (typ.parse-list-of-tagged-bindings #'({a <fixnum>}
+					    b))
     (=> syntax=?)
     #'(a b) #'(<fixnum> <top>))
 
   (check
-      (typ.parse-tagged-bindings-syntax #'(a
-					   {b <string>}
-					   {c <vector>}))
+      (typ.parse-list-of-tagged-bindings #'(a
+					    {b <string>}
+					    {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(<top> <string> <vector>))
 
   (check
-      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
-					   b
-					   {c <vector>}))
+      (typ.parse-list-of-tagged-bindings #'({a <fixnum>}
+					    b
+					    {c <vector>}))
     (=> syntax=?)
     #'(a b c) #'(<fixnum> <top> <vector>))
 
   (check
-      (typ.parse-tagged-bindings-syntax #'({a <fixnum>}
-					   {b <string>}
-					   c))
+      (typ.parse-list-of-tagged-bindings #'({a <fixnum>}
+					    {b <string>}
+					    c))
     (=> syntax=?)
     #'(a b c) #'(<fixnum> <string> <top>))
 

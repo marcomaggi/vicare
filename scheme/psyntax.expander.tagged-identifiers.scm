@@ -22,16 +22,16 @@
 ;;;SOFTWARE.
 
 
-;;;; basic typed lanuguage concepts
+;;;; basic typed language concepts
 ;;
 ;;Tag identifiers
 ;;---------------
 ;;
-;;A "tag identifier"  is a bound identifier whose syntactic  binding label gensym has
-;;an entry with  key *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE* in its  property list; tag
-;;identifiers must be  bound (otherwise they do not have  a syntactic binding label),
-;;but it does not matter to what they are bound.  Typical examples of tag identifiers
-;;are:
+;;A "tag identifier" is a bound identifier whose syntactic binding label gensym has a
+;;specific   entry  in   its  property   list;  such   entry  has   an  instance   of
+;;"object-type-spec" as value.  Tag identifiers must  be bound (otherwise they do not
+;;have a  syntactic binding label), but  it does not  matter to what they  are bound.
+;;Typical examples of tag identifiers are:
 ;;
 ;;* Struct type identifiers defined by DEFINE-STRUCT; they are automatically made tag
 ;;  identifiers by Vicare.
@@ -63,11 +63,11 @@
 ;;Tagged binding
 ;;--------------
 ;;
-;;A "tagged binding"  is a bound identifier whose syntactic  binding label gensym has
-;;an entry  with key  *EXPAND-TIME-BINDING-TAG-COOKIE* in  its property  list; tagged
-;;identifiers must be  bound (otherwise they do not have  a syntactic binding label).
-;;Tagged bindings are  created by the built-in binding syntaxes  LAMBDA, DEFINE, LET,
-;;LETREC, LET-VALUES, etc.
+;;A "tagged binding" is a bound identifier whose syntactic binding label gensym has a
+;;specific entry  in its  property list; such  entry has a  tag identifier  as value.
+;;Tagged identifiers  must be bound (otherwise  they do not have  a syntactic binding
+;;label).   Tagged bindings  are created  by  the built-in  binding syntaxes  LAMBDA,
+;;DEFINE, LET, LETREC, LET-VALUES, etc.
 ;;
 ;;An example of tagged binding creation follows:
 #|
@@ -245,15 +245,31 @@
 
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
 
-(case-define* parse-tagged-bindings-syntax
+(case-define* parse-list-of-tagged-bindings
   ((stx)
-   (parse-tagged-bindings-syntax stx #f))
+   (parse-list-of-tagged-bindings stx #f))
   ((stx input-form-stx)
-   ;;Assume  STX  is a  syntax  object  representing  a proper  list  of
-   ;;possibly tagged  binding identifiers; parse  the list and  return 2
-   ;;values: a list of identifiers representing the binding identifiers,
-   ;;a list  of identifiers  representing the type  tags; <top>  is used
-   ;;when no tag is present.
+   ;;Assume STX  is a  syntax object  representing a proper  list of  possibly tagged
+   ;;binding identifiers; parse  the list and return 2 values:  a list of identifiers
+   ;;representing the  binding identifiers,  a list  of identifiers  representing the
+   ;;type  tags; <top>  is used  when no  tag is  present.  The  identifiers must  be
+   ;;distinct.
+   ;;
+   ;;This  parser  function is  used  to  parse bindings  from  LET,  DO and  similar
+   ;;syntaxes.  For example, when expanding the syntax:
+   ;;
+   ;;   (let (({a <fixnum>} 1)
+   ;;         ({b <string>} "b")
+   ;;         (c            #t))
+   ;;     . ?body)
+   ;;
+   ;;the argument STX is:
+   ;;
+   ;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
+   ;;
+   ;;and the return values are:
+   ;;
+   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
    ;;
    (define (%parse bind*)
      (syntax-match bind* (brace)
@@ -285,71 +301,15 @@
 	   "duplicate identifiers in bindings specification"
 	   stx))))))
 
-(define* (tagged-bindings-syntax? lhs*)
+(define* (list-of-tagged-bindings? lhs*)
   ;;Return  true if  lhs*  is  a list  of  possibly tagged  identifiers;
   ;;otherwise return false.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
     (receive (id* tag*)
-	(parse-tagged-bindings-syntax lhs*)
+	(parse-list-of-tagged-bindings lhs*)
       #t)))
-
-
-;;;; tagged binding parsing: applicable signature
-
-(case-define* parse-tagged-applicable-spec-syntax
-  ;;Given a  syntax object representing  a tagged  callable spec: split  the standard
-  ;;formals from the tags; do test for duplicate bindings.  Return 2 values:
-  ;;
-  ;;1. A proper or improper list of identifiers representing the standard formals.
-  ;;
-  ;;2. An instance of "callable-signature".
-  ;;
-  (({_ standard-lambda-formals-syntax? callable-signature?} {applicable-spec-stx syntax-object?})
-   (parse-tagged-applicable-spec-syntax applicable-spec-stx #f))
-  (({_ standard-lambda-formals-syntax? callable-signature?} {applicable-spec-stx syntax-object?} {input-form-stx syntax-object?})
-   ;;First we parse  and extract the return  values tagging, if any;  then we parse
-   ;;the rest of the formals.
-   (syntax-match applicable-spec-stx (brace _)
-     ;;With return values tagging.
-     (((brace _ ?rv-tag* ...) . ?formals)
-      (for-each assert-tag-identifier? ?rv-tag*)
-      (receive (standard-formals-stx formals-signature)
-	  (parse-tagged-formals-syntax ?formals input-form-stx)
-	(values standard-formals-stx
-		(make-callable-signature (make-return-values-signature ?rv-tag*) formals-signature))))
-     ;;Without return values tagging.
-     (?formals
-      (receive (standard-formals-stx formals-signature)
-	  (parse-tagged-formals-syntax ?formals input-form-stx)
-	(values standard-formals-stx
-		(make-callable-signature (make-return-values-signature #f) formals-signature)))))))
-
-(define* (tagged-applicable-spec-syntax? formals-stx)
-  ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals
-  ;;for a LAMBDA syntax.
-  ;;
-  (guard (E ((syntax-violation? E)
-	     #f))
-    (receive (standard-formals signature-tags)
-	(parse-tagged-applicable-spec-syntax formals-stx)
-      #t)))
-
-(define (standard-lambda-formals-syntax? stx)
-  ;;Return true if STX is a  syntax object representing R6RS standard LAMBDA formals;
-  ;;otherwise return false.  The return value is  true if STX is a proper or improper
-  ;;list of identifiers, with a standalone identifier being acceptable.
-  ;;
-  (syntax-match stx ()
-    (() #t)
-    ((?id . ?rest)
-     (identifier? ?id)
-     (standard-lambda-formals-syntax? ?rest))
-    (?rest
-     (identifier? ?rest)
-     #t)
-    (_ #f)))
 
 
 ;;;; tagged binding parsing: let-values formals
@@ -357,25 +317,6 @@
 (module (parse-tagged-formals-syntax)
   ;;Given a syntax object  representing tagged LET-VALUES formals: split
   ;;formals from tags.  Do test for duplicate bindings.
-  ;;
-  ;;We  use the  conventions: ?ID,  ?REST-ID and  ?ARGS-ID are  argument
-  ;;identifiers; ?TAG and ?RV-TAG are  a tag identifiers.  We accept the
-  ;;following standard formals formats:
-  ;;
-  ;;   ?args-id
-  ;;   (?id ...)
-  ;;   (?id0 ?id ... . ?rest-id)
-  ;;
-  ;;and in addition the following tagged formals:
-  ;;
-  ;;   (brace ?args-id ?args-tag)
-  ;;   (?arg ...)
-  ;;   (?arg0 ?arg ... . ?rest-arg)
-  ;;
-  ;;where ?ARG is a tagged argument with one of the formats:
-  ;;
-  ;;   ?arg-id
-  ;;   (brace ?arg-id ?arg-tag)
   ;;
   ;;Return 2 values:
   ;;
@@ -527,6 +468,62 @@
     ((?id . ?rest)
      (identifier? ?id)
      (standard-values-formals-syntax? ?rest))
+    (?rest
+     (identifier? ?rest)
+     #t)
+    (_ #f)))
+
+
+;;;; tagged binding parsing: applicable signature
+
+(case-define* parse-tagged-applicable-spec-syntax
+  ;;Given a  syntax object representing  a tagged  callable spec: split  the standard
+  ;;formals from the tags; do test for duplicate bindings.  Return 2 values:
+  ;;
+  ;;1. A proper or improper list of identifiers representing the standard formals.
+  ;;
+  ;;2. An instance of "callable-signature".
+  ;;
+  (({_ standard-lambda-formals-syntax? callable-signature?} {applicable-spec-stx syntax-object?})
+   (parse-tagged-applicable-spec-syntax applicable-spec-stx #f))
+  (({_ standard-lambda-formals-syntax? callable-signature?} {applicable-spec-stx syntax-object?} {input-form-stx syntax-object?})
+   ;;First we parse  and extract the return  values tagging, if any;  then we parse
+   ;;the rest of the formals.
+   (syntax-match applicable-spec-stx (brace _)
+     ;;With return values tagging.
+     (((brace _ ?rv-tag* ...) . ?formals)
+      (for-each assert-tag-identifier? ?rv-tag*)
+      (receive (standard-formals-stx formals-signature)
+	  (parse-tagged-formals-syntax ?formals input-form-stx)
+	(values standard-formals-stx
+		(make-callable-signature (make-return-values-signature ?rv-tag*) formals-signature))))
+     ;;Without return values tagging.
+     (?formals
+      (receive (standard-formals-stx formals-signature)
+	  (parse-tagged-formals-syntax ?formals input-form-stx)
+	(values standard-formals-stx
+		(make-callable-signature (make-return-values-signature #f) formals-signature)))))))
+
+(define* (tagged-applicable-spec-syntax? formals-stx)
+  ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals
+  ;;for a LAMBDA syntax.
+  ;;
+  (guard (E ((syntax-violation? E)
+	     #f))
+    (receive (standard-formals signature-tags)
+	(parse-tagged-applicable-spec-syntax formals-stx)
+      #t)))
+
+(define (standard-lambda-formals-syntax? stx)
+  ;;Return true if STX is a  syntax object representing R6RS standard LAMBDA formals;
+  ;;otherwise return false.  The return value is  true if STX is a proper or improper
+  ;;list of identifiers, with a standalone identifier being acceptable.
+  ;;
+  (syntax-match stx ()
+    (() #t)
+    ((?id . ?rest)
+     (identifier? ?id)
+     (standard-lambda-formals-syntax? ?rest))
     (?rest
      (identifier? ?rest)
      #t)

@@ -10,121 +10,94 @@ defined by @rnrs{6} that allows the definition of typed bindings;
 @end quotation
 
 @menu
-* typed object specs::          Object type specification.
+* typed concepts::              Typed language concepts.
 * typed parsers::               Parsing tagged syntaxes.
+* typed object specs::          Object type specification.
 @end menu
 
 @c page
-@node typed object specs
-@section Object type specification
+@node typed concepts
+@section Typed language concepts
 
 
-The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+@subsubheading Tag identifiers
 
-
-@deftp {Struct Type} object-type-spec
-Type of structs representing the object type to which expressions in
-syntax objects will evaluate; all the Scheme objects are meant to be
-representable with this type specification.  It has the following
-fields:
-
-@table @code
-@item type-id
-A bound identifier representing the name of this type; what matters is
-that it is bound, not what it is bound to.  This identifier has this
-very instance in its syntactic binding property list.
-
-@item pred-id
-An identifier bound to the type predicate.
-
-@item accessor-maker
-@false{} or an accessor maker procedure accepting 2 arguments and
-returning 1 value.
+A @dfn{tag identifier} is a bound identifier whose syntactic binding
+label gensym has a specific entry in its property list; such entry has
+an instance of @code{object-type-spec} as value.  Tag identifiers must
+be bound (otherwise they do not have a syntactic binding label), but it
+does not matter to what they are bound.  Typical examples of tag
+identifiers are:
 
 @itemize
 @item
-The arguments are: an identifier representing a slot name; a boolean,
-true if the requested accessor is safe, false if it is unsafe.
+Struct type identifiers defined by @func{define-struct}; they are
+automatically made tag identifiers by @value{PRJNAME}.
 
 @item
-The return value is a syntax object evaluating to a slot accessor, or
-false if this @objtype{object-type-spec} does not provide an accessor
-for the selected slot.
+@rnrs{6} record type identifiers defined by @func{define-record-type};
+they are automatically made tag identifiers by @value{PRJNAME}.
+
+@item
+A set of non--core macro identifiers (whose implementation is integrated
+in the expander) are exported by the library @library{vicare expander
+tags} to be the tags of built--in @value{PRJNAME} objects.  Some of them
+are: @class{fixnum}, @class{string}, @class{vector},
+@class{textual-input-port}.
 @end itemize
 
-If the slot name is invalid for some reason (for example the slot is
-hidden): the proceure must raise an exception.  If this
-@objtype{object-type-spec} does not implement the selected slot: the
-return value must be @false{} and the slot will be searched in the
-parent @objtype{object-type-spec}, if any.
-
-@item mutator-maker
-@false{} or a mutator maker procedure accepting 2 arguments and
-returning 1 value.
-
-@itemize
-@item
-The arguments are: an identifier representing a slot name; a boolean,
-true if the requested mutator is safe, false if it is unsafe.
-
-@item
-The return value is a syntax object evaluating to a slot mutator, or
-false if this @objtype{object-type-spec} does not provide a mutator for
-the selected slot.
-@end itemize
-
-If the slot name is invalid for some reason (for example the slot is
-immutable): the proceure must raise an exception.  If this
-@objtype{object-type-spec} does not implement the selected slot: the
-return value must be false and the slot will be searched in the parent
-@objtype{object-type-spec}, if any.
-
-@item dispatcher
-False or a dispatcher procedure accepting a single argument and
-returning a single value, and acting like a macro transformer.
-
-The argument must be a syntax object representing with the format:
+We can easily create a tag identifier as:
 
 @example
-(@meta{var} @metao{arg} @meta{arg} ...)
+(import (vicare)
+  (vicare expander tags)
+  (for (prefix (vicare expander object-type-specs) typ.)
+    expand))
+
+(define-syntax <my-tag>
+  (let ()
+    (set-identifier-tag! #'<my-tag>
+      (make-object-type-spec #'<my-tag> #'<top> ...))
+    (lambda (x) #f)))
 @end example
 
 @noindent
-where @meta{var} is an expression evaluating to a single object whose
-type is described by this structure.  The return value must be a syntax
-object representing the output form: an expression to be further
-expanded.
+where @class{my-tag} is a tag identifier and @class{top} is its parent
+tag.  Tag identifiers are organised in a tree hierarchy, with subtags
+inheriting properties of supertags; by convention, @class{top} is the
+parent of all the tag identifiers, the root of the tree.
 
-@item parent-spec
-@false{} or an instance of @objtype{object-type-spec} describing the
-parent of this type.
-@end table
-@end deftp
+@c ------------------------------------------------------------
 
+@subsubheading Tagged binding
 
-@defun make-object-type-spec @var{type-id} @var{pred-id}
-@defunx make-object-type-spec @var{type-id} @var{pred-id} @var{accessor-maker} @var{mutator-maker} @var{dispatcher} @var{parent-id}
-Build and return a new instance of @objtype{object-type-spec}.
-@end defun
+A @dfn{tagged binding} is a bound identifier whose syntactic binding
+label gensym has a specific entry in its property list; such entry has a
+tag identifier as value.  Tagged identifiers must be bound (otherwise
+they do not have a syntactic binding label).  Tagged bindings are
+created by the built--in binding syntaxes @func{lambda}, @func{define},
+@func{let}, @func{letrec}, @func{let-values}, etc.
 
+An example of tagged binding creation follows:
 
-@defun object-type-spec? @var{obj}
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
 
-@end defun
+(define @{O <fixnum>@}
+  123)
+@end example
+
+@noindent
+the identifier @code{O} is a tagged identifier with tag identifier
+@class{fixnum}; the braces are used to tag the first identifier with the
+second identifier.  At the time the tagged binding is created: the tag
+identifier must already be a tag identifier.
 
 @c page
 @node typed parsers
 @section Parsing tagged syntaxes
-
-
-@menu
-* typed parsers bindings::      Parsing tagged and untagged bindings.
-@end menu
-
-@c page
-@node typed parsers bindings
-@subsection Parsing tagged and untagged bindings
 
 
 The library @library{vicare expander object-type-specs} exports
@@ -150,15 +123,15 @@ they are represented as:
 @end quotation
 
 @menu
-* typed parsers bindings ids::      Parsing standalone bindings.
-* typed parsers bindings lists::    Parsing proper lists of bindings.
-* typed parsers bindings lambda::   Parsing @func{lambda} formals.
-* typed parsers bindings values::   Parsing values formals.
+* typed parsers ids::           Parsing standalone bindings.
+* typed parsers lists::         Parsing proper lists of bindings.
+* typed parsers let-values::    Parsing @func{let-values} formals.
+* typed parsers lambda::        Parsing @func{lambda} formals.
 @end menu
 
 @c page
-@node typed parsers bindings ids
-@subsubsection Parsing standalone identifiers
+@node typed parsers ids
+@subsection Parsing standalone identifiers
 
 
 The following bindings are exported by the library @library{vicare
@@ -212,15 +185,41 @@ identifier defaults to @class{top}.
 @end defun
 
 @c page
-@node typed parsers bindings lists
-@subsubsection Parsing proper lists of bindings
+@node typed parsers lists
+@subsection Parsing proper lists of bindings
 
+
+Lists of tagged bindings are often used in binding syntaxes like
+@func{let}, @func{do} and similar.  For example, when expanding the
+syntax:
+
+@example
+#!vicare
+(let ((@{a <fixnum>@} 1)
+      (@{b <string>@} "b")
+      (c            #t))
+  . ?body)
+@end example
+
+@noindent
+a list of tagged bindings is extracted:
+
+@example
+(#'(brace a <fixnum>) #'(brace b <string>) #'c)
+@end example
+
+@noindent
+and parsed to yield the identifiers and the tags:
+
+@example
+(#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+@end example
 
 The following bindings are exported by the library @library{vicare
 expander object-type-specs}.
 
 
-@defun tagged-bindings-syntax? @var{stx}
+@defun list-of-tagged-bindings? @var{stx}
 Return @true{} if @var{stx} is a syntax object representing a proper
 list of tagged or untagged identifier, otherwise return @false{}.
 
@@ -230,53 +229,53 @@ list of tagged or untagged identifier, otherwise return @false{}.
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.tagged-bindings-syntax? #'(@{a <fixnum>@}))
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(@{a <fixnum>@}
-                                @{b <string>@}))
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}
+                                 @{b <string>@}))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(@{a <fixnum>@}
-                                @{b <string>@}
-                                @{c <vector>@}))
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}
+                                 @{b <string>@}
+                                 @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(a))
+(typ.list-of-tagged-bindings? #'(a))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(a b))
+(typ.list-of-tagged-bindings? #'(a b))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(a b c))
+(typ.list-of-tagged-bindings? #'(a b c))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(a @{b <string>@}))
+(typ.list-of-tagged-bindings? #'(a @{b <string>@}))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(@{a <fixnum>@} b))
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@} b))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(a
-                                @{b <string>@}
-                                @{c <vector>@}))
+(typ.list-of-tagged-bindings? #'(a
+                                 @{b <string>@}
+                                 @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(@{a <fixnum>@}
-                                b
-                                @{c <vector>@}))
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}
+                                 b
+                                 @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-bindings-syntax? #'(@{a <fixnum>@}
-                                @{b <string>@}
-                                c))
+(typ.list-of-tagged-bindings? #'(@{a <fixnum>@}
+                                 @{b <string>@}
+                                 c))
 @result{} #t
 @end example
 @end defun
 
 
-@defun parse-tagged-bindings-syntax @var{stx}
-@defunx parse-tagged-bindings-syntax @var{stx} @var{input-form-stx}
+@defun parse-list-of-tagged-bindings @var{stx}
+@defunx parse-list-of-tagged-bindings @var{stx} @var{input-form-stx}
 Assume @var{stx} is a syntax object representing a proper list of
 possibly tagged binding identifiers; parse the list and return 2 values:
 a list of identifiers representing the binding identifiers, a list of
@@ -293,53 +292,286 @@ used as @code{form} field when raising a syntax violation.
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.parse-tagged-bindings-syntax #'(@{a <fixnum>@}))
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}))
 @result{} (#'a) (#'<fixnum>)
 
-(typ.parse-tagged-bindings-syntax #'(@{a <fixnum>@}
-                                     @{b <string>@}))
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}
+                                      @{b <string>@}))
 @result{} (#'a #'b) (#'<fixnum> #'<string>)
 
-(typ.parse-tagged-bindings-syntax #'(@{a <fixnum>@}
-                                     @{b <string>@}
-                                     @{c <vector>@}))
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}
+                                      @{b <string>@}
+                                      @{c <vector>@}))
 @result{} (#'a #'b #'c) (#'<fixnum> #'<string> #'<vector>)
 
-(typ.parse-tagged-bindings-syntax #'(a))
+(typ.parse-list-of-tagged-bindings #'(a))
 @result{} (#'a) (#'<top>)
 
-(typ.parse-tagged-bindings-syntax #'(a b))
+(typ.parse-list-of-tagged-bindings #'(a b))
 @result{} (#'a #'b) (#'<top> #'<top>)
 
-(typ.parse-tagged-bindings-syntax #'(a b c))
+(typ.parse-list-of-tagged-bindings #'(a b c))
 @result{} (#'a #'b #'c) (#'<top> #'<top> #'<top>)
 
-(typ.parse-tagged-bindings-syntax #'(a @{b <string>@}))
+(typ.parse-list-of-tagged-bindings #'(a @{b <string>@}))
 @result{} (#'a #'b) (#'<top> #'<string>)
 
-(typ.parse-tagged-bindings-syntax #'(@{a <fixnum>@} b))
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@} b))
 @result{} (#'a #'b) (#'<fixnum> #'<top>)
 
-(typ.parse-tagged-bindings-syntax #'(a
-                                     @{b <string>@}
-                                     @{c <vector>@}))
+(typ.parse-list-of-tagged-bindings #'(a
+                                      @{b <string>@}
+                                      @{c <vector>@}))
 @result{} (#'a #'b #'c) (#'<top> #'<string> #'<vector>)
 
-(typ.parse-tagged-bindings-syntax #'(@{a <fixnum>@}
-                                     b
-                                     @{c <vector>@}))
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}
+                                      b
+                                      @{c <vector>@}))
 @result{} (#'a #'b #'c) (#'<fixnum> #'<top> #'<vector>)
 
-(typ.parse-tagged-bindings-syntax #'(@{a <fixnum>@}
-                                     @{b <string>@}
-                                     c))
+(typ.parse-list-of-tagged-bindings #'(@{a <fixnum>@}
+                                      @{b <string>@}
+                                      c))
 @result{} (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
 @end example
 @end defun
 
 @c page
-@node typed parsers bindings lambda
-@subsubsection Parsing @func{lambda} formals
+@node typed parsers let-values
+@subsection Parsing @func{let-values} formals
+
+
+To describe the supported syntax for values formals we use the
+conventions: @meta{id}, @meta{rest-id} and @meta{args-id} are argument
+identifiers; @meta{tag} and @meta{rv-tag} are tag identifiers.  We
+accept the following standard formals formats:
+
+@example
+@meta{args-id}
+(@meta{id} ...)
+(@metao{id} @meta{id} ... . @meta{rest-id})
+@end example
+
+@noindent
+and in addition the following tagged formals:
+
+@example
+(brace @meta{args-id} @meta{args-tag})
+(@meta{arg} ...)
+(@metao{arg} @meta{arg} ... . @meta{rest-arg})
+@end example
+
+@noindent
+where @meta{arg} is a tagged argument with one of the formats:
+
+@example
+@meta{arg-id}
+(brace @meta{arg-id} @meta{arg-tag})
+@end example
+
+@noindent
+the identifier @func{brace} is the syntax binding exported by
+@library{vicare}.
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun values-tagging-signature? @var{obj}
+Return @true{} if @var{obj} represents a @func{let-values} tagging
+signature; otherwise return @false{}.  @var{obj} is a @func{let-values}
+signature if it is a proper or improper list of tag identifiers
+representing the tags of the bindings.
+@end defun
+
+
+@defun standard-values-formals-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing @rnrs{6}
+standard @func{let-values} formals; otherwise return @false{}.  The
+return value is true if @var{stx} is a proper or improper list of
+identifiers, with a standalone identifier being acceptable.
+@end defun
+
+
+@defun tagged-values-formals-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing valid tagged
+or untagged formals for a @func{let-values} syntax; otherwise return
+@false{}.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
+                                      @{b <string>@}))
+@result{} #t
+
+(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
+                                      @{b <string>@}
+                                      @{c <vector>@}))
+@result{} #t
+
+;;; untagged
+
+(typ.tagged-values-formals-syntax? #'(a))
+@result{} #t
+
+(typ.tagged-values-formals-syntax? #'(a b))
+@result{} #t
+
+(typ.tagged-values-formals-syntax? #'(a b c))
+@result{} #t
+
+;;; mixed tagged and untagged
+
+(typ.tagged-values-formals-syntax? #'(a
+                                      @{b <string>@}))
+@result{} #t
+
+(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
+                                      b))
+@result{} #t
+
+(typ.tagged-values-formals-syntax? #'(a
+                                      @{b <string>@}
+                                      @{c <vector>@}))
+@result{} #t
+
+(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
+                                      b
+                                      @{c <vector>@}))
+@result{} #t
+
+(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
+                                      @{b <string>@}
+                                      c)
+@result{} #t
+
+;;; args argument
+
+(typ.tagged-values-formals-syntax? #'@{args <fixnums>@})
+@result{} #t
+
+(typ.tagged-values-formals-syntax? #'args)
+@result{} #t
+
+;;; rest argument
+
+(typ.tagged-values-formals-syntax?
+    #'(@{a <fixnum>@} . @{rest <fixnums>@}))
+@result{} #t
+
+(typ.tagged-values-formals-syntax?
+    #'(@{a <fixnum>@} . rest))
+@result{} #t
+
+(typ.tagged-values-formals-syntax?
+    #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
+@result{} #t
+
+(typ.tagged-values-formals-syntax?
+    #'(@{a <fixnum>@} @{b <string>@} . rest))
+@result{} #t
+@end example
+@end defun
+
+
+@defun parse-tagged-values-formals-syntax @var{stx}
+@defunx parse-tagged-values-formals-syntax @var{stx} @var{input-form-stx}
+Given a syntax object @var{stx} representing tagged @func{let-values}
+formals: parse it and split formals from tags.  If successful return 2
+values: a proper or improper list of identifiers representing the
+standard formals; a syntax object representing the @func{values} tagging
+signature.
+
+The optional argument @var{input-form-stx} is meant to be a syntax
+object representing the form from which @var{stx} was extracted; it is
+used as @code{form} field when raising a syntax violation.
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags)
+  (prefix (vicare expander object-type-specs) typ.))
+
+(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
+                                           @{b <string>@}))
+@result{} (#'a #'b) (#'<fixnum> #'<string>)
+
+(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
+                                           @{b <string>@}
+                                           @{c <vector>@}))
+@result{} (a b c) (<fixnum> <string> <vector>))
+
+;;; untagged
+
+(typ.parse-tagged-values-formals-syntax #'(a))
+@result{} (#'a) (#'<top>)
+
+(typ.parse-tagged-values-formals-syntax #'(a b))
+@result{} (#'a #'b) (#'<top> #'<top>)
+
+(typ.parse-tagged-values-formals-syntax #'(a b c))
+@result{} (#'a #'b #'c) (#'<top> #'<top> #'<top>)
+
+;;; mixed tagged and untagged
+
+(typ.parse-tagged-values-formals-syntax #'(a
+                                           @{b <string>@}))
+@result{} (#'a #'b) (#'<top> #'<string>)
+
+(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
+                                           b))
+@result{} (#'a #'b) (#'<fixnum> #'<top>)
+
+(typ.parse-tagged-values-formals-syntax #'(a
+                                           @{b <string>@}
+                                           @{c <vector>@}))
+@result{} (#'a #'b #'c) (#'<top> #'<string> #'<vector>)
+
+(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
+                                           b
+                                           @{c <vector>@}))
+@result{} (#'a #'b #'c) (#'<fixnum> #'<top> #'<vector>)
+
+(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
+                                           @{b <string>@}
+                                           c)
+@result{} (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+
+;;; args argument
+
+(typ.parse-tagged-values-formals-syntax #'@{args <fixnums>@})
+@result{} #'args (. #'<fixnums>)
+
+(typ.parse-tagged-values-formals-syntax #'args)
+@result{} #'args (. #'<top>)
+
+;;; rest argument
+
+(typ.parse-tagged-values-formals-syntax
+    #'(@{a <fixnum>@} . @{rest <fixnums>@}))
+@result{} (#'a . #'rest) (#'<fixnum> . #'<fixnums>)
+
+(typ.parse-tagged-values-formals-syntax
+    #'(@{a <fixnum>@} . rest))
+@result{} (#'a . #'rest) (#'<fixnum> . #'<top>)
+
+(typ.parse-tagged-values-formals-syntax
+    #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
+@result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<fixnums>)
+
+(typ.parse-tagged-values-formals-syntax
+    #'(@{a <fixnum>@} @{b <string>@} . rest))
+@result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<top>)
+@end example
+@end defun
+
+@c page
+@node typed parsers lambda
+@subsection Parsing @func{lambda} formals
 
 
 To describe the supported syntax for @func{lambda} formals we use the
@@ -618,236 +850,103 @@ used as @code{form} field when raising a syntax violation.
 @end defun
 
 @c page
-@node typed parsers bindings values
-@subsubsection Parsing values formals
+@node typed object specs
+@section Object type specification
 
-
-To describe the supported syntax for values formals we use the
-conventions: @meta{id}, @meta{rest-id} and @meta{args-id} are argument
-identifiers; @meta{tag} and @meta{rv-tag} are tag identifiers.  We
-accept the following standard formals formats:
-
-@example
-@meta{args-id}
-(@meta{id} ...)
-(@metao{id} @meta{id} ... . @meta{rest-id})
-@end example
-
-@noindent
-and in addition the following tagged formals:
-
-@example
-(brace @meta{args-id} @meta{args-tag})
-(@meta{arg} ...)
-(@metao{arg} @meta{arg} ... . @meta{rest-arg})
-@end example
-
-@noindent
-where @meta{arg} is a tagged argument with one of the formats:
-
-@example
-@meta{arg-id}
-(brace @meta{arg-id} @meta{arg-tag})
-@end example
-
-@noindent
-the identifier @func{brace} is the syntax binding exported by
-@library{vicare}.
 
 The following bindings are exported by the library @library{vicare
 expander object-type-specs}.
 
 
-@defun values-tagging-signature? @var{obj}
-Return @true{} if @var{obj} represents a @func{let-values} tagging
-signature; otherwise return @false{}.  @var{obj} is a @func{let-values}
-signature if it is a proper or improper list of tag identifiers
-representing the tags of the bindings.
-@end defun
+@deftp {Struct Type} object-type-spec
+Type of structs representing the object type to which expressions in
+syntax objects will evaluate; all the Scheme objects are meant to be
+representable with this type specification.  It has the following
+fields:
 
+@table @code
+@item type-id
+A bound identifier representing the name of this type; what matters is
+that it is bound, not what it is bound to.  This identifier has this
+very instance in its syntactic binding property list.
 
-@defun standard-values-formals-syntax? @var{stx}
-Return @true{} if @var{stx} is a syntax object representing @rnrs{6}
-standard @func{let-values} formals; otherwise return @false{}.  The
-return value is true if @var{stx} is a proper or improper list of
-identifiers, with a standalone identifier being acceptable.
-@end defun
+@item pred-id
+An identifier bound to the type predicate.
 
+@item accessor-maker
+@false{} or an accessor maker procedure accepting 2 arguments and
+returning 1 value.
 
-@defun tagged-values-formals-syntax? @var{stx}
-Return @true{} if @var{stx} is a syntax object representing valid tagged
-or untagged formals for a @func{let-values} syntax; otherwise return
-@false{}.
+@itemize
+@item
+The arguments are: an identifier representing a slot name; a boolean,
+true if the requested accessor is safe, false if it is unsafe.
 
-@example
-#!vicare
-(import (vicare)
-  (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
+@item
+The return value is a syntax object evaluating to a slot accessor, or
+false if this @objtype{object-type-spec} does not provide an accessor
+for the selected slot.
+@end itemize
 
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}))
-@result{} #t
+If the slot name is invalid for some reason (for example the slot is
+hidden): the proceure must raise an exception.  If this
+@objtype{object-type-spec} does not implement the selected slot: the
+return value must be @false{} and the slot will be searched in the
+parent @objtype{object-type-spec}, if any.
 
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}
-                                      @{c <vector>@}))
-@result{} #t
+@item mutator-maker
+@false{} or a mutator maker procedure accepting 2 arguments and
+returning 1 value.
 
-;;; untagged
+@itemize
+@item
+The arguments are: an identifier representing a slot name; a boolean,
+true if the requested mutator is safe, false if it is unsafe.
 
-(typ.tagged-values-formals-syntax? #'(a))
-@result{} #t
+@item
+The return value is a syntax object evaluating to a slot mutator, or
+false if this @objtype{object-type-spec} does not provide a mutator for
+the selected slot.
+@end itemize
 
-(typ.tagged-values-formals-syntax? #'(a b))
-@result{} #t
+If the slot name is invalid for some reason (for example the slot is
+immutable): the proceure must raise an exception.  If this
+@objtype{object-type-spec} does not implement the selected slot: the
+return value must be false and the slot will be searched in the parent
+@objtype{object-type-spec}, if any.
 
-(typ.tagged-values-formals-syntax? #'(a b c))
-@result{} #t
+@item dispatcher
+False or a dispatcher procedure accepting a single argument and
+returning a single value, and acting like a macro transformer.
 
-;;; mixed tagged and untagged
-
-(typ.tagged-values-formals-syntax? #'(a
-                                      @{b <string>@}))
-@result{} #t
-
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      b))
-@result{} #t
-
-(typ.tagged-values-formals-syntax? #'(a
-                                      @{b <string>@}
-                                      @{c <vector>@}))
-@result{} #t
-
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      b
-                                      @{c <vector>@}))
-@result{} #t
-
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}
-                                      c)
-@result{} #t
-
-;;; args argument
-
-(typ.tagged-values-formals-syntax? #'@{args <fixnums>@})
-@result{} #t
-
-(typ.tagged-values-formals-syntax? #'args)
-@result{} #t
-
-;;; rest argument
-
-(typ.tagged-values-formals-syntax?
-    #'(@{a <fixnum>@} . @{rest <fixnums>@}))
-@result{} #t
-
-(typ.tagged-values-formals-syntax?
-    #'(@{a <fixnum>@} . rest))
-@result{} #t
-
-(typ.tagged-values-formals-syntax?
-    #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
-@result{} #t
-
-(typ.tagged-values-formals-syntax?
-    #'(@{a <fixnum>@} @{b <string>@} . rest))
-@result{} #t
-@end example
-@end defun
-
-
-@defun parse-tagged-values-formals-syntax @var{stx}
-@defunx parse-tagged-values-formals-syntax @var{stx} @var{input-form-stx}
-Given a syntax object @var{stx} representing tagged @func{let-values}
-formals: parse it and split formals from tags.  If successful return 2
-values: a proper or improper list of identifiers representing the
-standard formals; a syntax object representing the @func{values} tagging
-signature.
-
-The optional argument @var{input-form-stx} is meant to be a syntax
-object representing the form from which @var{stx} was extracted; it is
-used as @code{form} field when raising a syntax violation.
+The argument must be a syntax object representing with the format:
 
 @example
-#!vicare
-(import (vicare)
-  (vicare expander tags)
-  (prefix (vicare expander object-type-specs) typ.))
-
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}))
-@result{} (#'a #'b) (#'<fixnum> #'<string>)
-
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}
-                                           @{c <vector>@}))
-@result{} (a b c) (<fixnum> <string> <vector>))
-
-;;; untagged
-
-(typ.parse-tagged-values-formals-syntax #'(a))
-@result{} (#'a) (#'<top>)
-
-(typ.parse-tagged-values-formals-syntax #'(a b))
-@result{} (#'a #'b) (#'<top> #'<top>)
-
-(typ.parse-tagged-values-formals-syntax #'(a b c))
-@result{} (#'a #'b #'c) (#'<top> #'<top> #'<top>)
-
-;;; mixed tagged and untagged
-
-(typ.parse-tagged-values-formals-syntax #'(a
-                                           @{b <string>@}))
-@result{} (#'a #'b) (#'<top> #'<string>)
-
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           b))
-@result{} (#'a #'b) (#'<fixnum> #'<top>)
-
-(typ.parse-tagged-values-formals-syntax #'(a
-                                           @{b <string>@}
-                                           @{c <vector>@}))
-@result{} (#'a #'b #'c) (#'<top> #'<string> #'<vector>)
-
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           b
-                                           @{c <vector>@}))
-@result{} (#'a #'b #'c) (#'<fixnum> #'<top> #'<vector>)
-
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}
-                                           c)
-@result{} (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
-
-;;; args argument
-
-(typ.parse-tagged-values-formals-syntax #'@{args <fixnums>@})
-@result{} #'args (. #'<fixnums>)
-
-(typ.parse-tagged-values-formals-syntax #'args)
-@result{} #'args (. #'<top>)
-
-;;; rest argument
-
-(typ.parse-tagged-values-formals-syntax
-    #'(@{a <fixnum>@} . @{rest <fixnums>@}))
-@result{} (#'a . #'rest) (#'<fixnum> . #'<fixnums>)
-
-(typ.parse-tagged-values-formals-syntax
-    #'(@{a <fixnum>@} . rest))
-@result{} (#'a . #'rest) (#'<fixnum> . #'<top>)
-
-(typ.parse-tagged-values-formals-syntax
-    #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
-@result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<fixnums>)
-
-(typ.parse-tagged-values-formals-syntax
-    #'(@{a <fixnum>@} @{b <string>@} . rest))
-@result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<top>)
+(@meta{var} @metao{arg} @meta{arg} ...)
 @end example
+
+@noindent
+where @meta{var} is an expression evaluating to a single object whose
+type is described by this structure.  The return value must be a syntax
+object representing the output form: an expression to be further
+expanded.
+
+@item parent-spec
+@false{} or an instance of @objtype{object-type-spec} describing the
+parent of this type.
+@end table
+@end deftp
+
+
+@defun make-object-type-spec @var{type-id} @var{pred-id}
+@defunx make-object-type-spec @var{type-id} @var{pred-id} @var{accessor-maker} @var{mutator-maker} @var{dispatcher} @var{parent-id}
+Build and return a new instance of @objtype{object-type-spec}.
+@end defun
+
+
+@defun object-type-spec? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{object-type-spec}, otherwise return @false{}.
 @end defun
 
 @c end of file
