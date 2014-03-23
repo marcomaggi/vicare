@@ -2639,6 +2639,9 @@
 	      ;;We want order here!?!
 	      (let* ((init-form-core*  (chi-expr* init-form-stx* lexenv.run lexenv.expand))
 		     (rhs-form-core*   (chi-qrhs*  qrhs*  lexenv.run lexenv.expand)))
+		;;QUESTION Why do we unseal the  rib if we do not use it
+		;;anymore?  Is  it an  additional check of  its internal
+		;;integrity?  (Marco Maggi; Sun Mar 23, 2014)
 		(unseal-rib! rib)
 		(let ((loc*          (map gensym-for-storage-location lex*))
 		      (export-subst  (%make-export-subst export-name* export-id*)))
