@@ -87,7 +87,7 @@
 ;;;; callable spec, callable signature, return values signature, formals signature
 ;;
 ;;An "callable  spec" is a syntax  object representing the name,  argument and return
-;;values of an callable object: a function or macro.  A callable can be used as:
+;;values of a callable object: a function or macro.  A callable can be used as:
 ;;
 ;;   (?callable ?arg ...)
 ;;
