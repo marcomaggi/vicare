@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -206,9 +206,11 @@
 	    (for-all bytevector? (px.struct-hostent-h_aliases S))
 	    (px.struct-hostent-h_addrtype  S)
 	    (px.struct-hostent-h_length    S)
-	    (px.struct-hostent-h_addr_list S)
+	    (for-all (lambda (item)
+		       (bytevector=? item '#vu8(127 0 0 1)))
+	      (px.struct-hostent-h_addr_list S))
 	    (px.struct-hostent-h_addr      S)))
-    => `(#t "localhost" #t ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
+    => `(#t "localhost" #t ,AF_INET 4 #t #vu8(127 0 0 1)))
 
   (check
       (let ((S (px.gethostbyname2 "localhost" AF_INET)))
@@ -218,9 +220,11 @@
 	      (for-all bytevector? (px.struct-hostent-h_aliases S))
 	      (px.struct-hostent-h_addrtype  S)
 	      (px.struct-hostent-h_length    S)
-	      (px.struct-hostent-h_addr_list S)
+	      (for-all (lambda (item)
+			 (bytevector=? item '#vu8(127 0 0 1)))
+		(px.struct-hostent-h_addr_list S))
 	      (px.struct-hostent-h_addr      S)))
-    => `(#t "localhost" #t ,AF_INET 4 (#vu8(127 0 0 1)) #vu8(127 0 0 1)))
+    => `(#t "localhost" #t ,AF_INET 4 #t #vu8(127 0 0 1)))
 
   (check
       (let ((S (px.gethostbyaddr '#vu8(127 0 0 1))))
@@ -230,9 +234,11 @@
 		(for-all bytevector? (px.struct-hostent-h_aliases S))
 		(px.struct-hostent-h_addrtype  S)
 		(px.struct-hostent-h_length    S)
-		(px.struct-hostent-h_addr_list S)
+		(for-all (lambda (item)
+			   (bytevector=? item '#vu8(127 0 0 1)))
+		  (px.struct-hostent-h_addr_list S))
 		(px.struct-hostent-h_addr      S)))
-    => #t "localhost" #t AF_INET 4 '(#vu8(127 0 0 1)) '#vu8(127 0 0 1))
+    => #t "localhost" #t AF_INET 4 #t '#vu8(127 0 0 1))
 
   (check
       (for-all px.struct-hostent? (px.host-entries))
