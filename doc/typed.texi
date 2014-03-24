@@ -123,12 +123,198 @@ they are represented as:
 @end quotation
 
 @menu
+* typed parsers signatures::    Tag signatures data representations.
 * typed parsers predicates::    Syntax predicates.
 * typed parsers ids::           Parsing standalone bindings.
 * typed parsers lists::         Parsing proper lists of bindings.
 * typed parsers formals::       Parsing tagged formals.
 * typed parsers callable::      Parsing tagged callable signatures.
 @end menu
+
+@c page
+@node typed parsers signatures
+@subsection Tag signatures data representations
+
+
+A @dfn{callable specification} is a syntax object representing the name,
+arguments and return values of a callable object: a function or macro.
+A callable can be used as:
+
+@example
+(@meta{callable} @meta{arg} ...)
+@end example
+
+@noindent
+but not as:
+
+@example
+(apply ?callable ?arg ...)
+@end example
+
+A @dfn{return values signature} is an object representing the type and
+number of callable return values.  When the callable has one or more
+return values: a proper list of tag identifiers is used to represent
+them.  When the callable has no return values: null is used.  When the
+callable has an unspecified number of return values: @false{} is used.
+
+A @dfn{formals signature} is an object representing the number and tags
+of a callable formal arguments; it is a proper or improper list of tag
+identifiers, with null and a standalone tagged identifier being
+acceptable.
+
+A @dfn{callable signature} is an object representing the number and tags
+of callable arguments and return values.  @ref{typed parsers callable}
+for the callable syntax specification.
+
+@menu
+* typed parsers signatures rv::       Signatures of return values.
+* typed parsers signatures formals::  Signatures of formals.
+* typed parsers signatures callable:: Full callable signatures.
+@end menu
+
+@c page
+@node typed parsers signatures rv
+@subsubsection Signatures of return values
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@deftp {Struct Type} return-values-signature
+Struct type representing the type signature of callable's return
+values.  It has the following fields:
+
+@table @code
+@item tags
+When the callable has one or more return values: a proper list of tag
+identifiers is used to represent them.  When the callable has no return
+values: null is used.  When the callable has an unspecified number of
+return values: @false{} is used.
+@end table
+@end deftp
+
+
+@defun make-return-values-signature @var{tags}
+Build and return a new @objtype{return-values-signature} instance.
+@end defun
+
+
+@defun return-values-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{return-values-signature}.
+@end defun
+
+
+@defun return-values-signature-tags @var{rv-signature}
+Accessor for the field of @objtype{return-values-signature} instances.
+@end defun
+
+
+@defun return-values-signature=? @vari{rv-signature} @varii{rv-signature}
+The arguments must be instances of @objtype{return-values-signature}.
+Return @true{} if the arguments are equal, @false{} otherwise.
+@end defun
+
+@c page
+@node typed parsers signatures formals
+@subsubsection Signatures of formals
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@deftp {Struct Type} formals-signature
+Struct type representing the type signature of callable's formals.  It
+has the following fields:
+
+@table @code
+@item tags
+A proper or improper list of tag identifiers, with null and a standalone
+tagged identifier being acceptable.
+@end table
+@end deftp
+
+
+@defun make-formals-signature @var{tags}
+Build and return a new @objtype{formals-signature} instance.
+@end defun
+
+
+@defun formals-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{formals-signature}.
+@end defun
+
+
+@defun formals-signature-tags @var{formals-signature}
+Accessor for the field of @objtype{formals-signature} instances.
+@end defun
+
+
+@defun formals-signature=? @vari{formals-signature} @varii{formals-signature}
+The arguments must be instances of @objtype{formals-signature}.  Return
+@true{} if the arguments are equal, @false{} otherwise.
+@end defun
+
+@c page
+@node typed parsers signatures callable
+@subsubsection Full callable signatures
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+@deftp {Struct Type} callable-signature
+Struct type representing the type signature of callables.  It has the
+following fields:
+
+@table @code
+@item return-values
+An instance of @objtype{return-values-signature}.
+
+@item formals
+An instance of @objtype{formals-signature}.
+@end table
+@end deftp
+
+
+@defun make-callable-signature @var{rv-signature} @var{formals-signature}
+Build and return a new @objtype{callable-signature} instance.
+@end defun
+
+
+@defun callable-signature? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{callable-signature}.
+@end defun
+
+
+@defun callable-signature-return-values @var{signature}
+@defunx callable-signature-formals @var{signature}
+Accessor for the fields of @objtype{callable-signature} instances.
+@end defun
+
+
+@defun callable-signature-return-values-tags @var{signature}
+Return the content of the @code{tags} field in the
+@objtype{return-values-signature} instance from the @code{return-values}
+field of @var{signature}.
+@end defun
+
+
+@defun callable-signature-formals-tags @var{signature}
+Return the content of the @code{tags} field in the
+@objtype{formals-signature} instance from the @code{formals} field of
+@var{signature}.
+@end defun
+
+
+@defun callable-signature=? @vari{signature} @varii{signature}
+The arguments must be instances of @objtype{callable-signature}.  Return
+@true{} if the arguments are equal, @false{} otherwise.
+@end defun
 
 @c page
 @node typed parsers predicates
@@ -233,7 +419,7 @@ syntax:
 (let ((@{a <fixnum>@} 1)
       (@{b <string>@} "b")
       (c            #t))
-  . ?body)
+  . @meta{body})
 @end example
 
 @noindent
