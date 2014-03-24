@@ -107,8 +107,8 @@ untagged bindings.
 @quotation
 @strong{NOTE} To make the examples simpler: the return value of the
 functions is represented by syntax objects that are @func{syntax=?} to
-the returned values.  For example, when the return values are the syntax
-objects:
+the returned values and written with the reader syntax.  For example,
+when the return values are the syntax objects:
 
 @example
 #<syntax expr=X> #<syntax expr=<fixnum>>
@@ -123,11 +123,29 @@ they are represented as:
 @end quotation
 
 @menu
+* typed parsers standard::      Parsing standard bindings.
 * typed parsers ids::           Parsing standalone bindings.
 * typed parsers lists::         Parsing proper lists of bindings.
-* typed parsers let-values::    Parsing @func{let-values} formals.
-* typed parsers lambda::        Parsing @func{lambda} formals.
+* typed parsers formals::       Parsing tagged formals.
+* typed parsers callable::      Parsing tagged callable signatures.
 @end menu
+
+@c page
+@node typed parsers standard
+@subsection Parsing standard bindings
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun standard-formals-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing @rnrs{6}
+standard @func{lambda} and @func{let-values} formals; otherwise return
+@false{}.  The return value is true if @var{stx} is a proper or improper
+list of identifiers, with null and a standalone identifier being
+acceptable.
+@end defun
 
 @c page
 @node typed parsers ids
@@ -159,8 +177,9 @@ untagged identifier, otherwise return @false{}.
 @defun parse-tagged-identifier-syntax @var{stx}
 If @var{stx} is a tagged or untagged identifier, return 2 values: the
 identifier representing the binding name and the identifier representing
-the tag; otherwise raise an exception.  When no tag is present: the tag
-identifier defaults to @class{top}.
+the tag; otherwise raise an exception with condition type
+@condition{syntax}.  When no tag is present: the tag identifier defaults
+to @class{top}.
 
 @example
 #!vicare
@@ -221,7 +240,7 @@ expander object-type-specs}.
 
 @defun list-of-tagged-bindings? @var{stx}
 Return @true{} if @var{stx} is a syntax object representing a proper
-list of tagged or untagged identifier, otherwise return @false{}.
+list of tagged or untagged identifiers, otherwise return @false{}.
 
 @example
 #!vicare
@@ -277,10 +296,13 @@ list of tagged or untagged identifier, otherwise return @false{}.
 @defun parse-list-of-tagged-bindings @var{stx}
 @defunx parse-list-of-tagged-bindings @var{stx} @var{input-form-stx}
 Assume @var{stx} is a syntax object representing a proper list of
-possibly tagged binding identifiers; parse the list and return 2 values:
-a list of identifiers representing the binding identifiers, a list of
-identifiers and #f representing the type tags; @class{top} is used when
-no tag is present.
+possibly tagged binding identifiers; parse the list and, when
+successful, return 2 values: a list of identifiers representing the
+binding identifiers, a list of identifiers representing the type tags;
+@class{top} is used when no tag is present.  If an error occurs raise an
+exception with condition object type @condition{syntax}.
+
+The identifiers must be distinct according to @func{bound-identifier=?}.
 
 The optional argument @var{input-form-stx} is meant to be a syntax
 object representing the form from which @var{stx} was extracted; it is
@@ -337,14 +359,19 @@ used as @code{form} field when raising a syntax violation.
 @end defun
 
 @c page
-@node typed parsers let-values
-@subsection Parsing @func{let-values} formals
+@node typed parsers formals
+@subsection Parsing tagged formals
 
 
-To describe the supported syntax for values formals we use the
+Tagged formals syntax is used by @func{let-values}, @func{let*-values},
+@func{define-values} and similar syntaxes; it is @strong{not} used by
+@func{lambda} and related syntaxes.
+
+To describe the supported syntax for tagged formals we use the
 conventions: @meta{id}, @meta{rest-id} and @meta{args-id} are argument
-identifiers; @meta{tag} and @meta{rv-tag} are tag identifiers.  We
-accept the following standard formals formats:
+identifiers; @meta{arg-tag}, @meta{rest-tag} and @meta{args-tag} are tag
+identifiers.  The predicate and parser functions for tagged formals
+accept the following standard @rnrs{6} formals formats:
 
 @example
 @meta{args-id}
@@ -362,7 +389,7 @@ and in addition the following tagged formals:
 @end example
 
 @noindent
-where @meta{arg} is a tagged argument with one of the formats:
+where @meta{arg} is a tagged identifier with one of the formats:
 
 @example
 @meta{arg-id}
@@ -373,30 +400,19 @@ where @meta{arg} is a tagged argument with one of the formats:
 the identifier @func{brace} is the syntax binding exported by
 @library{vicare}.
 
+@noindent
+the binding identifiers must be distinct according to
+@func{bound-identifier=?}.
+
 The following bindings are exported by the library @library{vicare
 expander object-type-specs}.
 
 
-@defun values-tagging-signature? @var{obj}
-Return @true{} if @var{obj} represents a @func{let-values} tagging
-signature; otherwise return @false{}.  @var{obj} is a @func{let-values}
-signature if it is a proper or improper list of tag identifiers
-representing the tags of the bindings.
-@end defun
-
-
-@defun standard-values-formals-syntax? @var{stx}
-Return @true{} if @var{stx} is a syntax object representing @rnrs{6}
-standard @func{let-values} formals; otherwise return @false{}.  The
-return value is true if @var{stx} is a proper or improper list of
-identifiers, with a standalone identifier being acceptable.
-@end defun
-
-
-@defun tagged-values-formals-syntax? @var{stx}
-Return @true{} if @var{stx} is a syntax object representing valid tagged
-or untagged formals for a @func{let-values} syntax; otherwise return
-@false{}.
+@defun tagged-formals-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing a tagged
+formals syntax; otherwise return @false{}.  @var{stx} is a tagged
+formals syntax if it is a proper or improper list of tagged identifiers,
+wich null and a standalone tagged identifier being acceptable.
 
 @example
 #!vicare
@@ -404,87 +420,88 @@ or untagged formals for a @func{let-values} syntax; otherwise return
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}))
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               @{b <string>@}))
 @result{} #t
 
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}
-                                      @{c <vector>@}))
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               @{b <string>@}
+                               @{c <vector>@}))
 @result{} #t
 
 ;;; untagged
 
-(typ.tagged-values-formals-syntax? #'(a))
+(typ.tagged-formals-syntax? #'(a))
 @result{} #t
 
-(typ.tagged-values-formals-syntax? #'(a b))
+(typ.tagged-formals-syntax? #'(a b))
 @result{} #t
 
-(typ.tagged-values-formals-syntax? #'(a b c))
+(typ.tagged-formals-syntax? #'(a b c))
 @result{} #t
 
 ;;; mixed tagged and untagged
 
-(typ.tagged-values-formals-syntax? #'(a
-                                      @{b <string>@}))
+(typ.tagged-formals-syntax? #'(a
+                               @{b <string>@}))
 @result{} #t
 
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      b))
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               b))
 @result{} #t
 
-(typ.tagged-values-formals-syntax? #'(a
-                                      @{b <string>@}
-                                      @{c <vector>@}))
+(typ.tagged-formals-syntax? #'(a
+                               @{b <string>@}
+                               @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      b
-                                      @{c <vector>@}))
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               b
+                               @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-values-formals-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}
-                                      c)
+(typ.tagged-formals-syntax? #'(@{a <fixnum>@}
+                               @{b <string>@}
+                               c)
 @result{} #t
 
 ;;; args argument
 
-(typ.tagged-values-formals-syntax? #'@{args <fixnums>@})
+(typ.tagged-formals-syntax? #'@{args <fixnums>@})
 @result{} #t
 
-(typ.tagged-values-formals-syntax? #'args)
+(typ.tagged-formals-syntax? #'args)
 @result{} #t
 
 ;;; rest argument
 
-(typ.tagged-values-formals-syntax?
+(typ.tagged-formals-syntax?
     #'(@{a <fixnum>@} . @{rest <fixnums>@}))
 @result{} #t
 
-(typ.tagged-values-formals-syntax?
+(typ.tagged-formals-syntax?
     #'(@{a <fixnum>@} . rest))
 @result{} #t
 
-(typ.tagged-values-formals-syntax?
+(typ.tagged-formals-syntax?
     #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
 @result{} #t
 
-(typ.tagged-values-formals-syntax?
+(typ.tagged-formals-syntax?
     #'(@{a <fixnum>@} @{b <string>@} . rest))
 @result{} #t
 @end example
 @end defun
 
 
-@defun parse-tagged-values-formals-syntax @var{stx}
-@defunx parse-tagged-values-formals-syntax @var{stx} @var{input-form-stx}
-Given a syntax object @var{stx} representing tagged @func{let-values}
-formals: parse it and split formals from tags.  If successful return 2
-values: a proper or improper list of identifiers representing the
-standard formals; a syntax object representing the @func{values} tagging
-signature.
+@defun parse-tagged-formals-syntax @var{stx}
+@defunx parse-tagged-formals-syntax @var{stx} @var{input-form-stx}
+Given a syntax object @var{stx} representing tagged formals: parse it
+and split formals from tags.  If successful return 2 values: a proper or
+improper list of identifiers representing the standard formals; an
+instance of @objtype{formals-signature} holding the tag identifiers.  If
+an error occurs raise an exception with condition object type
+@condition{syntax}.
 
 The optional argument @var{input-form-stx} is meant to be a syntax
 object representing the form from which @var{stx} was extracted; it is
@@ -496,88 +513,83 @@ used as @code{form} field when raising a syntax violation.
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}))
+(define (split stx)
+  (receive (standard-formals signature)
+      (typ.parse-tagged-formals-syntax stx)
+    (values standard-formals (formals-signature-tags signature))))
+
+(split #'(@{a <fixnum>@} @{b <string>@}))
 @result{} (#'a #'b) (#'<fixnum> #'<string>)
 
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}
-                                           @{c <vector>@}))
+(split #'(@{a <fixnum>@} @{b <string>@} @{c <vector>@}))
 @result{} (a b c) (<fixnum> <string> <vector>))
 
 ;;; untagged
 
-(typ.parse-tagged-values-formals-syntax #'(a))
+(split #'(a))
 @result{} (#'a) (#'<top>)
 
-(typ.parse-tagged-values-formals-syntax #'(a b))
+(split #'(a b))
 @result{} (#'a #'b) (#'<top> #'<top>)
 
-(typ.parse-tagged-values-formals-syntax #'(a b c))
+(split #'(a b c))
 @result{} (#'a #'b #'c) (#'<top> #'<top> #'<top>)
 
 ;;; mixed tagged and untagged
 
-(typ.parse-tagged-values-formals-syntax #'(a
-                                           @{b <string>@}))
+(split #'(a @{b <string>@}))
 @result{} (#'a #'b) (#'<top> #'<string>)
 
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           b))
+(split #'(@{a <fixnum>@} b))
 @result{} (#'a #'b) (#'<fixnum> #'<top>)
 
-(typ.parse-tagged-values-formals-syntax #'(a
-                                           @{b <string>@}
-                                           @{c <vector>@}))
+(split #'(a @{b <string>@} @{c <vector>@}))
 @result{} (#'a #'b #'c) (#'<top> #'<string> #'<vector>)
 
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           b
-                                           @{c <vector>@}))
+(split #'(@{a <fixnum>@} b @{c <vector>@}))
 @result{} (#'a #'b #'c) (#'<fixnum> #'<top> #'<vector>)
 
-(typ.parse-tagged-values-formals-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}
-                                           c)
+(split #'(@{a <fixnum>@} @{b <string>@} c))
 @result{} (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
 
 ;;; args argument
 
-(typ.parse-tagged-values-formals-syntax #'@{args <fixnums>@})
+(split #'@{args <fixnums>@})
 @result{} #'args (. #'<fixnums>)
 
-(typ.parse-tagged-values-formals-syntax #'args)
+(split #'args)
 @result{} #'args (. #'<top>)
 
 ;;; rest argument
 
-(typ.parse-tagged-values-formals-syntax
-    #'(@{a <fixnum>@} . @{rest <fixnums>@}))
+(split #'(@{a <fixnum>@} . @{rest <fixnums>@}))
 @result{} (#'a . #'rest) (#'<fixnum> . #'<fixnums>)
 
-(typ.parse-tagged-values-formals-syntax
-    #'(@{a <fixnum>@} . rest))
+(split #'(@{a <fixnum>@} . rest))
 @result{} (#'a . #'rest) (#'<fixnum> . #'<top>)
 
-(typ.parse-tagged-values-formals-syntax
-    #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
+(split #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
 @result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<fixnums>)
 
-(typ.parse-tagged-values-formals-syntax
-    #'(@{a <fixnum>@} @{b <string>@} . rest))
+(split #'(@{a <fixnum>@} @{b <string>@} . rest))
 @result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<top>)
 @end example
 @end defun
 
 @c page
-@node typed parsers lambda
-@subsection Parsing @func{lambda} formals
+@node typed parsers callable
+@subsection Parsing tagged callable signatures
 
 
-To describe the supported syntax for @func{lambda} formals we use the
+Callable signatures syntax is used by @func{lambda} and similar
+syntaxes.
+
+To describe the supported syntax for callable signatures we use the
 conventions: @meta{id}, @meta{rest-id} and @meta{args-id} are argument
-identifiers; @meta{tag} and @meta{rv-tag} are tag identifiers.  We
-accept the following standard formals formats:
+identifiers; @meta{arg-tag}, @meta{rest-tag}, @meta{args-tag} and
+@meta{rv-tag} are tag identifiers.  The predicate and parser functions
+for callable signatures accept the following standard @rnrs{6} formals
+formats:
 
 @example
 @meta{args-id}
@@ -592,8 +604,8 @@ and in addition the following tagged formals:
 (brace @meta{args-id} @meta{args-tag})
 (@meta{arg} ...)
 (@metao{arg} @meta{arg} ... . @meta{rest-arg})
-((brace _ @metao{rv-tag} @meta{rv-tag} ...) @meta{arg} ...)
-((brace _ @metao{rv-tag} @meta{rv-tag} ...) @meta{arg} ... . @meta{rest-arg})
+((brace _ @meta{rv-tag} ...) @meta{arg} ...)
+((brace _ @meta{rv-tag} ...) @meta{arg} ... . @meta{rest-arg})
 @end example
 
 @noindent
@@ -607,42 +619,16 @@ where @meta{arg} is a tagged argument with one of the formats:
 @noindent
 the identifiers @func{brace} and @func{_} are the syntax bindings
 exported by @library{vicare}; the first item with identifier @func{_} is
-a special syntax that allows to specify the tags of the @func{lambda}
-return values.
+a special syntax that allows to specify the number and tags of the
+@func{lambda} return values.
 
 The following bindings are exported by the library @library{vicare
 expander object-type-specs}.
 
 
-@defun lambda-tagging-signature? @var{obj}
-Return @true{} if @var{obj} represents a @func{lambda} tagging
-signature; otherwise return @false{}.  @var{obj} is a @func{lambda}
-tagging signature if it is a pair and:
-
-@itemize
-@item
-Its car is null or a proper list of tag identifiers representing the
-return value tags.
-
-@item
-Its cdr is a proper or improper list of tag identifiers representing the
-tags of the arguments.
-@end itemize
-@end defun
-
-
-@defun standard-lambda-formals-syntax? @var{stx}
-Return @true{} if @var{stx} is a syntax object representing @rnrs{6}
-standard @func{lambda} formals; otherwise return @false{}.  The return
-value is true if @var{stx} is a proper or improper list of identifiers,
-with a standalone identifier being acceptable.
-@end defun
-
-
-@defun tagged-applicable-spec-syntax? @var{stx}
+@defun tagged-callable-spec-syntax? @var{stx}
 Return @true{} if @var{stx} is a syntax object representing valid tagged
-or untagged formals for a @func{lambda} syntax; otherwise return
-@false{}.
+callable signature syntax; otherwise return @false{}.
 
 @example
 #!vicare
@@ -650,104 +636,105 @@ or untagged formals for a @func{lambda} syntax; otherwise return
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
+(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
                                       @{b <string>@}))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
+(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
                                       @{b <string>@}
                                       @{c <vector>@}))
 @result{} #t
 
 ;;; untagged
 
-(typ.tagged-applicable-spec-syntax? #'(a))
+(typ.tagged-callable-spec-syntax? #'(a))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax? #'(a b))
+(typ.tagged-callable-spec-syntax? #'(a b))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax? #'(a b c))
+(typ.tagged-callable-spec-syntax? #'(a b c))
 @result{} #t
 
 ;;; mixed tagged and untagged
 
-(typ.tagged-applicable-spec-syntax? #'(a
+(typ.tagged-callable-spec-syntax? #'(a
                                       @{b <string>@}))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
+(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
                                       b))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax? #'(a
+(typ.tagged-callable-spec-syntax? #'(a
                                       @{b <string>@}
                                       @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
+(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
                                       b
                                       @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax? #'(@{a <fixnum>@}
+(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
                                       @{b <string>@}
                                       c)
 @result{} #t
 
 ;;; args argument
 
-(typ.tagged-applicable-spec-syntax? #'@{args <fixnums>@})
+(typ.tagged-callable-spec-syntax? #'@{args <fixnums>@})
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax? #'args)
+(typ.tagged-callable-spec-syntax? #'args)
 @result{} #t
 
 ;;; rest argument
 
-(typ.tagged-applicable-spec-syntax?
+(typ.tagged-callable-spec-syntax?
     #'(@{a <fixnum>@} . @{rest <fixnums>@}))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax?
+(typ.tagged-callable-spec-syntax?
     #'(@{a <fixnum>@} . rest))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax?
+(typ.tagged-callable-spec-syntax?
     #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax?
+(typ.tagged-callable-spec-syntax?
     #'(@{a <fixnum>@} @{b <string>@} . rest))
 @result{} #t
 
 ;;; return values tagging
 
-(typ.tagged-applicable-spec-syntax? #'(@{_ <fixnum>@} a b))
+(typ.tagged-callable-spec-syntax? #'(@{_ <fixnum>@} a b))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax?
+(typ.tagged-callable-spec-syntax?
     #'(@{_ <fixnum>@} @{a <flonum>@} @{b <string>@}))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax?
+(typ.tagged-callable-spec-syntax?
     #'(@{_ <fixnum> <flonum>@} @{a <vector>@} @{b <string>@}))
 @result{} #t
 
-(typ.tagged-applicable-spec-syntax?
+(typ.tagged-callable-spec-syntax?
     #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
 @result{} #t
 @end example
 @end defun
 
 
-@defun parse-tagged-applicable-spec-syntax @var{stx}
-@defunx parse-tagged-applicable-spec-syntax @var{stx} @var{input-form-stx}
-Given a syntax object @var{stx} representing tagged @func{lambda}
-formals: parse it and split formals from tags.  If successful return 2
+@defun parse-tagged-callable-spec-syntax @var{stx}
+@defunx parse-tagged-callable-spec-syntax @var{stx} @var{input-form-stx}
+Given a syntax object @var{stx} representing tagged callable signature
+syntax: parse it and split formals from tags.  If successful return 2
 values: a proper or improper list of identifiers representing the
-standard formals; a syntax object representing the @func{lambda} tagging
-signature.
+standard formals; an instance of @objtype{callable-signature}.  If an
+error occurs: raise an exception with condition object type
+@condition{syntax}.
 
 The optional argument @var{input-form-stx} is meant to be a syntax
 object representing the form from which @var{stx} was extracted; it is
@@ -759,93 +746,87 @@ used as @code{form} field when raising a syntax violation.
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}))
-@result{} (#'a #'b) (() #'<fixnum> #'<string>)
+(define (split input)
+  (let-values (((standard-formals-stx callable)
+                (typ.parse-tagged-callable-spec-syntax input)))
+    (define formals-tags
+      (typ.callable-signature-formals-tags callable))
+    (define rv-tags
+      (typ.callable-signature-return-values-tags callable))
+    (values standard-formals-stx rv-tags formals-tags)))
 
-(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}
-                                           @{c <vector>@}))
-@result{} (a b c) (() <fixnum> <string> <vector>))
+(split #'(@{a <fixnum>@} @{b <string>@}))
+@result{} (#'a #'b) #f (#'<fixnum> #'<string>)
+
+(split #'(@{a <fixnum>@} @{b <string>@} @{c <vector>@}))
+@result{} #'(a b c) #f (#'<fixnum> #'<string> #'<vector>)
 
 ;;; untagged
 
-(typ.parse-tagged-applicable-spec-syntax #'(a))
-@result{} (#'a) (() #'<top>)
+(split #'(a))
+@result{} (#'a) #f (#'<top>)
 
-(typ.parse-tagged-applicable-spec-syntax #'(a b))
-@result{} (#'a #'b) (() #'<top> #'<top>)
+(split #'(a b))
+@result{} (#'a #'b) #f (#'<top> #'<top>)
 
-(typ.parse-tagged-applicable-spec-syntax #'(a b c))
-@result{} (#'a #'b #'c) (() #'<top> #'<top> #'<top>)
+(split #'(a b c))
+@result{} (#'a #'b #'c) #f (#'<top> #'<top> #'<top>)
 
 ;;; mixed tagged and untagged
 
-(typ.parse-tagged-applicable-spec-syntax #'(a
-                                           @{b <string>@}))
-@result{} (#'a #'b) (() #'<top> #'<string>)
+(split #'(a @{b <string>@}))
+@result{} (#'a #'b) #f (#'<top> #'<string>)
 
-(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
-                                           b))
-@result{} (#'a #'b) (() #'<fixnum> #'<top>)
+(split #'(@{a <fixnum>@} b))
+@result{} (#'a #'b) #f (#'<fixnum> #'<top>)
 
-(typ.parse-tagged-applicable-spec-syntax #'(a
-                                           @{b <string>@}
-                                           @{c <vector>@}))
-@result{} (#'a #'b #'c) (() #'<top> #'<string> #'<vector>)
+(split #'(a @{b <string>@} @{c <vector>@}))
+@result{} (#'a #'b #'c) #f (#'<top> #'<string> #'<vector>)
 
-(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
-                                           b
-                                           @{c <vector>@}))
-@result{} (#'a #'b #'c) (() #'<fixnum> #'<top> #'<vector>)
+(split #'(@{a <fixnum>@} b @{c <vector>@}))
+@result{} (#'a #'b #'c) #f (#'<fixnum> #'<top> #'<vector>)
 
-(typ.parse-tagged-applicable-spec-syntax #'(@{a <fixnum>@}
-                                           @{b <string>@}
-                                           c)
-@result{} (#'a #'b #'c) (() #'<fixnum> #'<string> #'<top>)
+(split #'(@{a <fixnum>@} @{b <string>@} c))
+@result{} (#'a #'b #'c) #f (#'<fixnum> #'<string> #'<top>)
 
 ;;; args argument
 
-(typ.parse-tagged-applicable-spec-syntax #'@{args <fixnums>@})
-@result{} #'args (() . #'<fixnums>)
+(split #'@{args <fixnums>@})
+@result{} #'args #f #'<fixnums>
 
-(typ.parse-tagged-applicable-spec-syntax #'args)
-@result{} #'args (() . #'<top>)
+(split #'args)
+@result{} #'args #f #'<top>
 
 ;;; rest argument
 
-(typ.parse-tagged-applicable-spec-syntax
-    #'(@{a <fixnum>@} . @{rest <fixnums>@}))
-@result{} (#'a . #'rest) (() #'<fixnum> . #'<fixnums>)
+(split #'(@{a <fixnum>@} . @{rest <fixnums>@}))
+@result{} (#'a . #'rest) #f (#'<fixnum> . #'<fixnums>)
 
-(typ.parse-tagged-applicable-spec-syntax
-    #'(@{a <fixnum>@} . rest))
-@result{} (#'a . #'rest) (() #'<fixnum> . #'<top>)
+(split #'(@{a <fixnum>@} . rest))
+@result{} (#'a . #'rest) #f (#'<fixnum> . #'<top>)
 
-(typ.parse-tagged-applicable-spec-syntax
-    #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
-@result{} (#'a #'b . #'rest) (() #'<fixnum> #'<string> . #'<fixnums>)
+(split #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
+@result{} (#'a #'b . #'rest) #f (#'<fixnum> #'<string> . #'<fixnums>)
 
-(typ.parse-tagged-applicable-spec-syntax
-    #'(@{a <fixnum>@} @{b <string>@} . rest))
-@result{} (#'a #'b . #'rest) (() #'<fixnum> #'<string> . #'<top>)
+(split #'(@{a <fixnum>@} @{b <string>@} . rest))
+@result{} (#'a #'b . #'rest) #f (#'<fixnum> #'<string> . #'<top>)
 
 ;;; return values tagging
 
-(typ.parse-tagged-applicable-spec-syntax #'(@{_ <fixnum>@} a b))
-@result{} (#'a #'b) ((#'<fixnum>) #'<top> #'<top>)
+(split #'(@{_@} a b))
+@result{} (#'a #'b) () (#'<top> #'<top>)
 
-(typ.parse-tagged-applicable-spec-syntax
-    #'(@{_ <fixnum>@} @{a <flonum>@} @{b <string>@}))
-@result{} (#'a #'b) ((#'<fixnum>) #'<flonum> #'<string>)
+(split #'(@{_ <fixnum>@} a b))
+@result{} (#'a #'b) (#'<fixnum>) (#'<top> #'<top>)
 
-(typ.parse-tagged-applicable-spec-syntax
-    #'(@{_ <fixnum> <flonum>@} @{a <vector>@} @{b <string>@}))
-@result{} (#'a #'b) ((#'<fixnum> #'<flonum>) #'<vector> #'<string>)
+(split #'(@{_ <fixnum>@} @{a <flonum>@} @{b <string>@}))
+@result{} (#'a #'b) (#'<fixnum>) (#'<flonum> #'<string>)
 
-(typ.parse-tagged-applicable-spec-syntax
-    #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
-@result{} #'args ((#'<fixnum> #'<flonum>) . #'<fixnums>)
+(split #'(@{_ <fixnum> <flonum>@} @{a <vector>@} @{b <string>@}))
+@result{} (#'a #'b) (#'<fixnum> #'<flonum>) (#'<vector> #'<string>)
+
+(split #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
+@result{} #'args (#'<fixnum> #'<flonum>) #'<fixnums>
 @end example
 @end defun
 

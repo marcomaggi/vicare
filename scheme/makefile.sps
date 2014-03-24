@@ -855,13 +855,12 @@
 
     (tagged-identifier-syntax?			$type-specs)
     (list-of-tagged-bindings?			$type-specs)
-    (tagged-applicable-spec-syntax?		$type-specs)
-    (standard-lambda-formals-syntax?		$type-specs)
+    (tagged-callable-spec-syntax?		$type-specs)
     (tagged-formals-syntax?			$type-specs)
-    (standard-values-formals-syntax?		$type-specs)
+    (standard-formals-syntax?			$type-specs)
     (parse-tagged-identifier-syntax		$type-specs)
     (parse-list-of-tagged-bindings		$type-specs)
-    (parse-tagged-applicable-spec-syntax	$type-specs)
+    (parse-tagged-callable-spec-syntax		$type-specs)
     (parse-tagged-formals-syntax		$type-specs)
 
     (make-callable-signature			$type-specs)

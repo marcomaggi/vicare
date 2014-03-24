@@ -1143,9 +1143,9 @@
     ;; expand-time object type specs: parsing tagged identifiers
     tagged-identifier-syntax?			parse-tagged-identifier-syntax
     list-of-tagged-bindings?			parse-list-of-tagged-bindings
-    tagged-applicable-spec-syntax?		parse-tagged-applicable-spec-syntax
+    tagged-callable-spec-syntax?		parse-tagged-callable-spec-syntax
     tagged-formals-syntax?			parse-tagged-formals-syntax
-    standard-lambda-formals-syntax?		standard-values-formals-syntax?
+    standard-formals-syntax?
 
     make-callable-signature		callable-signature?
     callable-signature-formals		callable-signature-return-values
@@ -7561,7 +7561,7 @@
    ;;Here  we support  both the  R6RS  standard LAMBDA  formals and  the
    ;;extended tagged formals, with or without rest argument.
    (receive (standard-formals-stx signature)
-       (parse-tagged-applicable-spec-syntax formals-stx input-form-stx)
+       (parse-tagged-callable-spec-syntax formals-stx input-form-stx)
      (syntax-match standard-formals-stx ()
        ;;Without rest argument.
        ((?arg* ...)
@@ -8370,9 +8370,9 @@
       ((_ ((brace ?id ?rv-tag0 ?rv-tag* ...) . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature)
-	   (parse-tagged-applicable-spec-syntax (bless
-						 `((brace _ ,?rv-tag0 . ,?rv-tag*) . ,?fmls))
-						input-form-stx)
+	   (parse-tagged-callable-spec-syntax (bless
+					       `((brace _ ,?rv-tag0 . ,?rv-tag*) . ,?fmls))
+					      input-form-stx)
 	 (values ?id <procedure> signature (cons 'defun input-form-stx))))
 
       ;;Variable definition with tagged identifier.
@@ -8389,7 +8389,7 @@
       ((_ (?id . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature)
-	   (parse-tagged-applicable-spec-syntax ?fmls input-form-stx)
+	   (parse-tagged-callable-spec-syntax ?fmls input-form-stx)
 	 (values ?id <procedure> signature (cons 'defun input-form-stx))))
 
       ;;R6RS variable definition.

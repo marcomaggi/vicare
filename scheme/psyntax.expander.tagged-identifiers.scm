@@ -84,6 +84,25 @@
 ;;
 
 
+;;;; binding parsers: standard syntaxes
+
+(define (standard-formals-syntax? stx)
+  ;;Return  true if  STX is  a syntax  object representing  R6RS standard  LAMBDA and
+  ;;LET-VALUES formals; otherwise return false.  The return value is true if STX is a
+  ;;proper or  improper list of  identifiers, with  null and a  standalone identifier
+  ;;being acceptable.
+  ;;
+  (syntax-match stx ()
+    (() #t)
+    ((?id . ?rest)
+     (identifier? ?id)
+     (standard-formals-syntax? ?rest))
+    (?rest
+     (identifier? ?rest)
+     #t)
+    (_ #f)))
+
+
 ;;;; callable spec, callable signature, return values signature, formals signature
 ;;
 ;;An "callable  spec" is a syntax  object representing the name,  argument and return
@@ -317,23 +336,22 @@
 ;;;; tagged binding parsing: let-values formals
 
 (module (parse-tagged-formals-syntax)
-  ;;Given a syntax object  representing tagged LET-VALUES formals: split
-  ;;formals from tags.  Do test for duplicate bindings.
+  ;;Given a syntax object representing  tagged LET-VALUES formals: split formals from
+  ;;tags.  Do test for duplicate bindings.
   ;;
   ;;Return 2 values:
   ;;
-  ;;1.  A  proper  or  improper list  of  identifiers  representing  the
-  ;;   standard formals.
+  ;;1..A proper or improper list of identifiers representing the standard formals.
   ;;
-  ;;2. An object representing the LET-VALUES tagging signature.
+  ;;2..An object representing the LET-VALUES tagging signature.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'parse-tagged-formals-syntax))
 
   (case-define* parse-tagged-formals-syntax
-    (({_ standard-values-formals-syntax? formals-signature?} original-formals-stx)
+    (({_ standard-formals-syntax? formals-signature?} original-formals-stx)
      (parse-tagged-formals-syntax original-formals-stx #f))
-    (({_ standard-values-formals-syntax? formals-signature?} original-formals-stx input-form-stx)
+    (({_ standard-formals-syntax? formals-signature?} original-formals-stx input-form-stx)
      (receive (standard-formals formals-tags)
 	 (%parse-formals input-form-stx original-formals-stx original-formals-stx)
        (values standard-formals (make-formals-signature formals-tags)))))
@@ -450,35 +468,19 @@
   #| end of module |# )
 
 (define* (tagged-formals-syntax? formals-stx)
-  ;;Return true  if FORMALS-STX  is a  syntax object  representing valid
-  ;;tagged formals for a LAMBDA syntax.
+  ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals
+  ;;for a LET-VALUES syntax.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
-    (receive (standard-formals signature-tags)
+    (receive (standard-formals signature)
 	(parse-tagged-formals-syntax formals-stx)
       #t)))
 
-(define (standard-values-formals-syntax? stx)
-  ;;Return true  if STX  is a syntax  object representing  R6RS standard
-  ;;LAMBDA formals; otherwise return false.  The return value is true if
-  ;;STX is a  proper or improper list of identifiers,  with a standalone
-  ;;identifier being acceptable.
-  ;;
-  (syntax-match stx ()
-    (() #t)
-    ((?id . ?rest)
-     (identifier? ?id)
-     (standard-values-formals-syntax? ?rest))
-    (?rest
-     (identifier? ?rest)
-     #t)
-    (_ #f)))
-
 
-;;;; tagged binding parsing: applicable signature
+;;;; tagged binding parsing: callable signature
 
-(case-define* parse-tagged-applicable-spec-syntax
+(case-define* parse-tagged-callable-spec-syntax
   ;;Given a  syntax object representing  a tagged  callable spec: split  the standard
   ;;formals from the tags; do test for duplicate bindings.  Return 2 values:
   ;;
@@ -486,12 +488,12 @@
   ;;
   ;;2. An instance of "callable-signature".
   ;;
-  (({_ standard-lambda-formals-syntax? callable-signature?} {applicable-spec-stx syntax-object?})
-   (parse-tagged-applicable-spec-syntax applicable-spec-stx #f))
-  (({_ standard-lambda-formals-syntax? callable-signature?} {applicable-spec-stx syntax-object?} {input-form-stx syntax-object?})
+  (({_ standard-formals-syntax? callable-signature?} {callable-spec-stx syntax-object?})
+   (parse-tagged-callable-spec-syntax callable-spec-stx #f))
+  (({_ standard-formals-syntax? callable-signature?} {callable-spec-stx syntax-object?} {input-form-stx syntax-object?})
    ;;First we parse  and extract the return  values tagging, if any;  then we parse
    ;;the rest of the formals.
-   (syntax-match applicable-spec-stx (brace _)
+   (syntax-match callable-spec-stx (brace _)
      ;;With return values tagging.
      (((brace _ ?rv-tag* ...) . ?formals)
       (for-each assert-tag-identifier? ?rv-tag*)
@@ -506,30 +508,15 @@
 	(values standard-formals-stx
 		(make-callable-signature (make-return-values-signature #f) formals-signature)))))))
 
-(define* (tagged-applicable-spec-syntax? formals-stx)
+(define* (tagged-callable-spec-syntax? formals-stx)
   ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals
   ;;for a LAMBDA syntax.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
     (receive (standard-formals signature-tags)
-	(parse-tagged-applicable-spec-syntax formals-stx)
+	(parse-tagged-callable-spec-syntax formals-stx)
       #t)))
-
-(define (standard-lambda-formals-syntax? stx)
-  ;;Return true if STX is a  syntax object representing R6RS standard LAMBDA formals;
-  ;;otherwise return false.  The return value is  true if STX is a proper or improper
-  ;;list of identifiers, with a standalone identifier being acceptable.
-  ;;
-  (syntax-match stx ()
-    (() #t)
-    ((?id . ?rest)
-     (identifier? ?id)
-     (standard-lambda-formals-syntax? ?rest))
-    (?rest
-     (identifier? ?rest)
-     #t)
-    (_ #f)))
 
 
 ;;;; expand-time object type specification

@@ -1542,7 +1542,7 @@
 			 (convert-pattern (car pat*) '())
 		       (append idn* (recur (cdr pat*))))))))
        (let ((formals (map car idn*)))
-	 (unless (standard-lambda-formals-syntax? formals)
+	 (unless (standard-formals-syntax? formals)
 	   (%error-invalid-formals-syntax expr-stx formals)))
        (let ((t* (generate-temporaries ?expr*)))
 	 (bless
@@ -2456,7 +2456,7 @@
     ((_ ?who (?formal* ...) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-applicable-spec-syntax ?formal* expr-stx)
+       (parse-tagged-callable-spec-syntax ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda ,?formal*
@@ -2465,7 +2465,7 @@
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-applicable-spec-syntax (append ?formal* ?rest-formal) expr-stx)
+       (parse-tagged-callable-spec-syntax (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda (,@?formal* . ,?rest-formal)
@@ -2481,7 +2481,7 @@
     ((_ (?who ?formal* ...) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-applicable-spec-syntax ?formal* expr-stx)
+       (parse-tagged-callable-spec-syntax ?formal* expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -2491,7 +2491,7 @@
     ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-applicable-spec-syntax (append ?formal* ?rest-formal) expr-stx)
+       (parse-tagged-callable-spec-syntax (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -3532,15 +3532,16 @@
 
 	 (?args
 	  (identifier? ?args)
-	  (bless
-	   `(begin
-	      (define (brace shadow ,(formals-signature-tags signature))
-		(call-with-values
-		    (lambda () ,?form0 . ,?form*)
-		  (lambda args args)))
-	      (define-syntax ,?args
-		(identifier-syntax shadow))
-	      )))
+	  (let ((args-tag (formals-signature-tags signature)))
+	    (bless
+	     `(begin
+		(define (brace shadow ,args-tag)
+		  (call-with-values
+		      (lambda () ,?form0 . ,?form*)
+		    (lambda args args)))
+		(define-syntax ,?args
+		  (identifier-syntax shadow))
+		))))
 
 	 ((?id* ... . ?rest-id)
 	  (let ((SHADOW* (generate-temporaries ?id*))
@@ -3727,11 +3728,11 @@
   (syntax-match expr-stx (brace)
     ((_ (?name ?arg* ... . (brace ?rest ?rest-tag)) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-applicable-spec-syntax? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
+	  (tagged-callable-spec-syntax? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
      (%output ?name ?arg* (bless `(brace ,?rest ,?rest-tag)) (cons ?form0 ?form*)))
     ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-applicable-spec-syntax? (append ?arg* ?rest)))
+	  (tagged-callable-spec-syntax? (append ?arg* ?rest)))
      (%output ?name ?arg* ?rest (cons ?form0 ?form*)))
     ))
 
