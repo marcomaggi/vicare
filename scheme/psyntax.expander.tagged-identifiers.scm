@@ -554,7 +554,7 @@
               (<color>-green O)
               (<color>-blue  O)))
 
-    (define ({<color>-shift} {O <color>} {R <fixnum>} {G <fixnum>} {B <fixnum>})
+    (define ({<color>-shift <color>} {O <color>} {R <fixnum>} {G <fixnum>} {B <fixnum>})
       (make-<color> (fx+ (<color>-red   O) R)
                     (fx+ (<color>-green O) G)
                     (fx+ (<color>-blue  O) B)))
@@ -1145,7 +1145,7 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (set-label-tag! {label symbol?} {tag identifier?})
+(define* (set-label-tag! {label symbol?} {tag tag-identifier?})
   ;;Given a  syntactic binding LABEL:  add TAG  to its property  list as
   ;;binding type  tagging.  This  tag should  represent the  object type
   ;;referenced by the binding.

@@ -12,6 +12,7 @@ defined by @rnrs{6} that allows the definition of typed bindings;
 @menu
 * typed concepts::              Typed language concepts.
 * typed parsers::               Parsing tagged syntaxes.
+* typed bindings::              Typed language binding properties.
 * typed object specs::          Object type specification.
 @end menu
 
@@ -69,12 +70,12 @@ parent of all the tag identifiers, the root of the tree.
 
 @c ------------------------------------------------------------
 
-@subsubheading Tagged binding
+@subsubheading Tagged identifier
 
-A @dfn{tagged binding} is a bound identifier whose syntactic binding
+A @dfn{tagged identifier} is a bound identifier whose syntactic binding
 label gensym has a specific entry in its property list; such entry has a
 tag identifier as value.  Tagged identifiers must be bound (otherwise
-they do not have a syntactic binding label).  Tagged bindings are
+they do not have a syntactic binding label).  Tagged identifiers are
 created by the built--in binding syntaxes @func{lambda}, @func{define},
 @func{let}, @func{letrec}, @func{let-values}, etc.
 
@@ -92,8 +93,8 @@ An example of tagged binding creation follows:
 @noindent
 the identifier @code{O} is a tagged identifier with tag identifier
 @class{fixnum}; the braces are used to tag the first identifier with the
-second identifier.  At the time the tagged binding is created: the tag
-identifier must already be a tag identifier.
+second identifier.  At the time the tagged identifier is created: the
+tag identifier must already be a tag identifier.
 
 @c page
 @node typed parsers
@@ -1030,6 +1031,145 @@ used as @code{form} field when raising a syntax violation.
 (split #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
 @result{} #'args (#'<fixnum> #'<flonum>) #'<fixnums>
 @end example
+@end defun
+
+@c page
+@node typed bindings
+@section Typed language binding properties
+
+
+@menu
+* typed bindings tag::          Tag identifier bindings.
+* typed bindings tagged::       Tagged identifier bindings.
+@end menu
+
+@c page
+@node typed bindings tag
+@subsection Tag identifier bindings
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun set-identifier-object-type-spec! @var{type-id} @var{spec}
+Add to the property list of the syntactic binding label of @var{type-id}
+an entry representing an object type specification; return unspecified
+values.  If @var{type-id} already has an object type specification
+property: an exception is raised with condition object type
+@condition{&syntax}.
+
+@var{type-id} must be a bound identifier; when this call succeeds:
+@var{type-id} becomes a tag identifier.  @var{spec} must be an instance
+of @objtype{object-type-spec}.
+@end defun
+
+
+@defun identifier-object-type-spec @var{type-id}
+Retrieve from the property list of the syntactic binding label of
+@var{type-id} the @objtype{object-type-spec} instance representing the
+object type specification.
+
+@var{type-id} must be a bound identifier; if it also is a tag
+identifier: the return value is the @objtype{object-type-spec} instance;
+otherwise the return value is @false{}.
+@end defun
+
+
+@defun set-label-object-type-spec! @var{label} @var{spec}
+Add to the property list of the syntactic binding @var{label} an entry
+representing an object type specification; return unspecified values.
+If @var{label} already has an object type specification property: an
+exception is raised with condition object type @condition{&syntax}.
+
+@var{label} must be the symbol used as syntactic binding label for a
+bound identifier; when this call succeeds: the associated identifiers
+become a tag identifiers.  @var{spec} must be an instance of
+@objtype{object-type-spec}.
+@end defun
+
+
+@defun label-object-type-spec @var{label}
+Retrieve from the property list of @var{label} the
+@objtype{object-type-spec} instance representing the object type
+specification.
+
+@var{label} must be a symbol used as syntactic binding label for a bound
+identifier; if the latter is also a tag identifier: the return value is
+the @objtype{object-type-spec} instance; otherwise the return value is
+@false{}.
+@end defun
+
+
+@defun tag-identifier? @var{obj}
+Return @true{} if @var{obj} is a bound identifier with "object-type-spec"
+property set; otherwise return @false{}.
+@end defun
+
+
+@defun all-tag-identifiers? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing a proper or
+improper list of tag identifiers; otherwise return @false{}.
+@end defun
+
+
+@defun tag-super-and-sub? @var{super-tag} @var{sub-tag}
+Given two tag identifiers: return @true{} if @var{super-tag} is
+@func{free-identifier=?}  to @var{sub-tag} or one of its ancestors.
+@end defun
+
+@c page
+@node typed bindings tagged
+@subsection Tagged identifier bindings
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@defun set-identifier-tag! @var{binding-id} @var{tag}
+Given a syntactic binding identifier and a tag identifier: add @var{tag}
+to the property list of @var{binding-id} as binding type tagging; this
+tag should represent the object type referenced by the binding.  Return
+unspecified values.  If @var{label} already has a tag property: an
+exception is raised with condition object type @condition{syntax}.
+@end defun
+
+
+@defun identifier-tag @var{binding-id}
+Given a syntactic binding identifier: retrieve from its property list
+the tag identifier representing the binding type tagging; this tag
+identifier should represent the object type referenced by the binding.
+If the identifier has no associated type tag: return @false{}.
+@end defun
+
+
+@defun set-label-tag! @var{label} @var{tag}
+Given a syntactic binding label and a tag identifier: add @var{tag} to
+the property list of @var{label} as binding type tagging; this tag
+should represent the object type referenced by the binding.  Return
+unspecified values.
+
+If the operation succeeds: the associated binding identifiers become
+tagged identifiers.  If @var{label} already has a tag property: an
+exception is raised with condition object type @condition{syntax}.
+@end defun
+
+
+@defun label-tag @var{label}
+Given a syntactic binding label: retrieve from its property list the tag
+identifier representing the binding type tagging; this tag identifier
+should represent the object type referenced by the binding.  If the
+label has no associated type tag: return @false{}.
+@end defun
+
+
+@defun tagged-identifier? @var{id}
+Return @true{} if @var{id} is a bound identifier having a type tagging;
+otherwise return @false{}.  If the return value is true: @var{id} is a
+bound identifier created by some binding syntaxes (@func{define},
+@func{let}, @func{letrec}, @dots{}).  If @var{id} is not a bound
+identifier: an exception is raised.
 @end defun
 
 @c page
