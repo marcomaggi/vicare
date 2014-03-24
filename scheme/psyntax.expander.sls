@@ -1145,13 +1145,13 @@
     list-of-tagged-bindings?			parse-list-of-tagged-bindings
     tagged-callable-spec-syntax?		parse-tagged-callable-spec-syntax
     tagged-formals-syntax?			parse-tagged-formals-syntax
-    standard-formals-syntax?
+    standard-formals-syntax?			formal-tags-syntax?
+    return-values-tags-syntax?
 
     make-callable-signature		callable-signature?
     callable-signature-formals		callable-signature-return-values
     make-formals-signature		formals-signature?		formals-signature-tags
     make-return-values-signature	return-values-signature?	return-values-signature-tags
-    false-or-return-values-signature?
     callable-signature-formals-tags
     callable-signature-return-values-tags
     callable-signature=?		formals-signature=?		return-values-signature=?

@@ -123,7 +123,7 @@ they are represented as:
 @end quotation
 
 @menu
-* typed parsers standard::      Parsing standard bindings.
+* typed parsers predicates::    Syntax predicates.
 * typed parsers ids::           Parsing standalone bindings.
 * typed parsers lists::         Parsing proper lists of bindings.
 * typed parsers formals::       Parsing tagged formals.
@@ -131,8 +131,8 @@ they are represented as:
 @end menu
 
 @c page
-@node typed parsers standard
-@subsection Parsing standard bindings
+@node typed parsers predicates
+@subsection Syntax predicates
 
 
 The following bindings are exported by the library @library{vicare
@@ -145,6 +145,22 @@ standard @func{lambda} and @func{let-values} formals; otherwise return
 @false{}.  The return value is true if @var{stx} is a proper or improper
 list of identifiers, with null and a standalone identifier being
 acceptable.
+@end defun
+
+
+@defun formal-tags-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing the tag
+signature of a tagged formals syntax; otherwise return @false{}.  The
+return value is true if @var{stx} is a proper or improper list of tag
+identifiers, with null and a standalone tag identifier being acceptable.
+@end defun
+
+
+@defun return-values-tags-syntax? @var{stx}
+Return @true{} if @var{stx} is a syntax object representing the tag
+signature of return values from a callable signature; otherwise return
+@false{}.  The return value is @true{} if @var{stx} is @false{} or null
+or a proper list of tag identifiers.
 @end defun
 
 @c page

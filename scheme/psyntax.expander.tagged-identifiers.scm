@@ -84,7 +84,7 @@
 ;;
 
 
-;;;; binding parsers: standard syntaxes
+;;;; binding parsers: standard syntaxes, signature syntaxes
 
 (define (standard-formals-syntax? stx)
   ;;Return  true if  STX is  a syntax  object representing  R6RS standard  LAMBDA and
@@ -101,6 +101,38 @@
      (identifier? ?rest)
      #t)
     (_ #f)))
+
+(define (formal-tags-syntax? stx)
+  ;;Return true if STX is a syntax  object representing the tag signature of a tagged
+  ;;formals syntxx;  otherwise return false.   The return value is  true if STX  is a
+  ;;proper  or improper  list of  tag  identifiers, with  null and  a standalone  tag
+  ;;identifier being acceptable.
+  ;;
+  (syntax-match stx ()
+    (() #t)
+    ((?id . ?rest)
+     (tag-identifier? ?id)
+     (formal-tags-syntax? ?rest))
+    (?rest
+     (tag-identifier? ?rest)
+     #t)
+    (_ #f)))
+
+(define (return-values-tags-syntax? stx)
+  ;;Return true if  STX is a syntax  object representing the tag  signature of return
+  ;;values from  a callable signature; otherwise  return false.  The return  value is
+  ;;true if STX is false or null or a proper list of tag identifiers.
+  ;;
+  (syntax-match stx ()
+    (#f #t)
+    (_
+     (let recur ((stx stx))
+       (syntax-match stx ()
+	 (() #t)
+	 ((?id . ?rest)
+	  (tag-identifier? ?id)
+	  (recur ?rest))
+	 (_ #f))))))
 
 
 ;;;; callable spec, callable signature, return values signature, formals signature
@@ -150,7 +182,7 @@
 ;;?RV-TAG is present: the callable returns no values.
 ;;
 
-(define-record return-values-signature
+(define-record (return-values-signature %make-return-values-signature return-values-signature?)
   (tags
 		;False, null  or a  proper list of  tag identifiers  representing the
 		;object types  of a tuple of  return values.  False is  used when the
@@ -158,23 +190,27 @@
 		;the number of returned values is zero.
    ))
 
-(define-record formals-signature
+(define-record (formals-signature %make-formals-signature formals-signature?)
   (tags
 		;Null or  a proper or  improper list of tag  identifiers representing
-		;the object types of a tuple of LAMBDA or LET-VALUES formals.
+		;the object types of a tuple of LET-VALUES formals.
    ))
 
-(define-record callable-signature
+(define-record (callable-signature %make-callable-signature callable-signature?)
   (return-values
-		;If the  number and tags  of the  returned values is  unknown: false.
-		;Otherwise an instance of "return-values-signature".
+		;An instance of "return-values-signature".
    formals
 		;An instance of "formals-signature".
    ))
 
-(define (false-or-return-values-signature? obj)
-  (or (not obj)
-      (return-values-signature? obj)))
+(define* (make-formals-signature {tags formal-tags-syntax?})
+  (%make-formals-signature tags))
+
+(define* (make-return-values-signature {tags return-values-tags-syntax?})
+  (%make-return-values-signature tags))
+
+(define* (make-callable-signature {rv return-values-signature?} {formals formals-signature?})
+  (%make-callable-signature rv formals))
 
 (define* (callable-signature-formals-tags {signature callable-signature?})
   ($formals-signature-tags ($callable-signature-formals signature)))
@@ -209,26 +245,6 @@
   ;;
   (syntax=? ($return-values-signature-tags signature1)
 	    ($return-values-signature-tags signature2)))
-
-;;; --------------------------------------------------------------------
-
-#;(define (function-arguments-tags? formals-tags)
-  ;;Return true if FORMALS-TAGS represents  the tags of function arguments; otherwise
-  ;;return false.
-  ;;
-  ;;FORMALS-TAGS  represents the  tags  of function  formals  if it  is  a proper  or
-  ;;improper list of tag identifiers.
-  ;;
-  (let loop ((fmls formals-tags))
-    (syntax-match fmls ()
-      ((?tag . ?rest)
-       (tag-identifier? ?tag)
-       (loop ?rest))
-      (?rest
-       (tag-identifier? ?rest)
-       #t)
-      (() #t)
-      (_  #f))))
 
 
 ;;;; tagged binding parsing: standalone identifiers
