@@ -1255,26 +1255,6 @@
       ((?car . ?cdr)
        (loop ?cdr (cons ?car item*))))))
 
-(define (syntax-unwrap stx)
-  ;;Given a syntax object STX  decompose it and return the corresponding
-  ;;S-expression holding datums and identifiers.  Take care of returning
-  ;;a proper  list when the  input is a  syntax object holding  a proper
-  ;;list.
-  ;;
-  (syntax-match stx ()
-    (()
-     '())
-    ((?car . ?cdr)
-     (cons (syntax-unwrap ?car)
-	   (syntax-unwrap ?cdr)))
-    (#(?item* ...)
-     (list->vector (syntax-unwrap ?item*)))
-    (?atom
-     (identifier? ?atom)
-     ?atom)
-    (?atom
-     (syntax->datum ?atom))))
-
 (define-syntax-rule (trace-define (?name . ?formals) . ?body)
   (define (?name . ?formals)
     (debug-print (quote ?name) 'arguments . ?formals)
@@ -5550,91 +5530,6 @@
   #| end of module |# )
 
 
-;;;; deconstructors and predicates for syntax objects
-
-(module (syntax-pair?
-	 syntax-vector?
-	 syntax-null?)
-
-  (define (syntax-pair? x)
-    (syntax-kind? x pair?))
-
-  (define (syntax-vector? x)
-    (syntax-kind? x vector?))
-
-  (define (syntax-null? x)
-    (syntax-kind? x null?))
-
-  (define (syntax-kind? x pred?)
-    (cond ((<stx>? x)
-	   (syntax-kind? (<stx>-expr x) pred?))
-	  ((annotation? x)
-	   (syntax-kind? (annotation-expression x) pred?))
-	  (else
-	   (pred? x))))
-
-  #| end of module |# )
-
-;;; --------------------------------------------------------------------
-
-(define (syntax-list? x)
-  ;;FIXME Should terminate on cyclic input.  (Abdulaziz Ghuloum)
-  (or (syntax-null? x)
-      (and (syntax-pair? x)
-	   (syntax-list? (syntax-cdr x)))))
-
-(define (syntax-car x)
-  (cond ((<stx>? x)
-	 (mkstx (syntax-car ($<stx>-expr x))
-		($<stx>-mark* x)
-		($<stx>-rib*  x)
-		($<stx>-ae*   x)))
-	((annotation? x)
-	 (syntax-car (annotation-expression x)))
-	((pair? x)
-	 ($car x))
-	(else
-	 (assertion-violation 'syntax-car "BUG: not a pair" x))))
-
-(define (syntax-cdr x)
-  (cond ((<stx>? x)
-	 (mkstx (syntax-cdr ($<stx>-expr x))
-		($<stx>-mark* x)
-		($<stx>-rib*  x)
-		($<stx>-ae*   x)))
-	((annotation? x)
-	 (syntax-cdr (annotation-expression x)))
-	((pair? x)
-	 ($cdr x))
-	(else
-	 (assertion-violation 'syntax-cdr "BUG: not a pair" x))))
-
-(define (syntax->list x)
-  (cond ((syntax-pair? x)
-	 (cons (syntax-car x)
-	       (syntax->list (syntax-cdr x))))
-	((syntax-null? x)
-	 '())
-	(else
-	 (assertion-violation 'syntax->list "BUG: invalid argument" x))))
-
-(define (syntax-vector->list x)
-  (cond ((<stx>? x)
-	 (let ((ls     (syntax-vector->list (<stx>-expr x)))
-	       (mark*  (<stx>-mark* x))
-	       (rib*   (<stx>-rib*  x))
-	       (ae*    (<stx>-ae*   x)))
-	   (map (lambda (x)
-		  (mkstx x mark* rib* ae*))
-	     ls)))
-	((annotation? x)
-	 (syntax-vector->list (annotation-expression x)))
-	((vector? x)
-	 (vector->list x))
-	(else
-	 (assertion-violation 'syntax-vector->list "BUG: not a syntax vector" x))))
-
-
 ;;;; public interface: identifiers handling
 
 (define (identifier? x)
@@ -5651,12 +5546,53 @@
   (or (not x)
       (identifier? x)))
 
+;;; --------------------------------------------------------------------
+
+(define* (bound-identifier=? {x identifier?} {y identifier?})
+  (bound-id=? x y))
+
+(define (bound-id=? id1 id2)
+  ;;Two identifiers  are BOUND-ID=? if they  have the same name  and the
+  ;;same set of marks.
+  ;;
+  (and (eq? (identifier->symbol id1) (identifier->symbol id2))
+       (same-marks? ($<stx>-mark* id1) ($<stx>-mark* id2))))
+
+(define* (free-identifier=? {x identifier?} {y identifier?})
+  (free-id=? x y))
+
+(define (free-id=? id1 id2)
+  ;;Two identifiers are  FREE-ID=? if either both are bound  to the same
+  ;;label or if both are unbound and they have the same name.
+  ;;
+  (let ((t1 (id->label id1))
+	(t2 (id->label id2)))
+    (if (or t1 t2)
+	(eq? t1 t2)
+      (eq? (identifier->symbol id1)
+	   (identifier->symbol id2)))))
+
+;;; --------------------------------------------------------------------
+
+(define* (identifier-bound? {id identifier?})
+  ($identifier-bound? id))
+
+(define ($identifier-bound? id)
+  (and (id->label id) #t))
+
+(define (false-or-identifier-bound? id)
+  (or (not id)
+      (and (identifier? id)
+	   ($identifier-bound? id))))
+
+;;; --------------------------------------------------------------------
+
 (define* (identifier->symbol x)
   ;;Given an identifier return its symbol expression.
   ;;
   (define (%error)
     (assertion-violation __who__
-      "Vicare bug: expected identifier as argument" x))
+      "expected identifier as argument" x))
   (unless (<stx>? x)
     (%error))
   (let* ((expr ($<stx>-expr x))
@@ -5682,104 +5618,8 @@
      (assertion-violation 'generate-temporaries
        "not a list" list-stx))))
 
-(define (free-identifier=? x y)
-  (if (identifier? x)
-      (if (identifier? y)
-	  (free-id=? x y)
-	(assertion-violation 'free-identifier=? "not an identifier" y))
-    (assertion-violation 'free-identifier=? "not an identifier" x)))
-
-(define (bound-identifier=? x y)
-  (if (identifier? x)
-      (if (identifier? y)
-	  (bound-id=? x y)
-	(assertion-violation 'bound-identifier=? "not an identifier" y))
-    (assertion-violation 'bound-identifier=? "not an identifier" x)))
-
-
-;;;; various identifiers modules
-
-(include "psyntax.expander.syntactic-binding-properties.scm" #t)
-(include "psyntax.expander.tagged-identifiers.scm" #t)
-
-
-;;;; identifiers: syntax parameters
-
-(define current-run-lexenv
-  ;;This parameter holds  a function which is meant to  return the value
-  ;;of LEXENV.RUN while a macro is being expanded.
-  ;;
-  ;;The  default  value will  return  null,  which represents  an  empty
-  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING: the
-  ;;mapping   label/binding  is   performed   only   in  the   top-level
-  ;;environment.
-  ;;
-  ;;Another possibility we could think of is to use as default value the
-  ;;function:
-  ;;
-  ;;   (lambda ()
-  ;;     (syntax-violation 'current-run-lexenv
-  ;; 	   "called outside the extent of a macro expansion"
-  ;; 	   '(current-run-lexenv)))
-  ;;
-  ;;However there are  cases where we actually want  the returned LEXENV
-  ;;to be null, for example: when evaluating the visit code of a library
-  ;;just loaded in  FASL form; such visit code might  need, for example,
-  ;;to access the  syntactic binding property lists, and it  would do it
-  ;;outside any macro expansion.
-  ;;
-  (make-parameter
-      (lambda () '())))
-
-(define* (syntax-parameter-value {id identifier?})
-  (let ((label (id->label id)))
-    (if label
-	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
-	  (case (syntactic-binding-type binding)
-	    ((local-ctv)
-	     (local-compile-time-value-binding-object binding))
-
-	    ((global-ctv)
-	     (global-compile-time-value-binding-object binding))
-
-	    (else
-	     (procedure-argument-violation __who__
-	       "expected identifier bound to compile-time value"
-	       id))))
-      (procedure-argument-violation __who__
-	"unbound identifier" id))))
-
-(define* (identifier-bound? {id identifier?})
-  ($identifier-bound? id))
-
-(define ($identifier-bound? id)
-  (and (id->label id) #t))
-
-(define (false-or-identifier-bound? id)
-  (or (not id)
-      (and (identifier? id)
-	   ($identifier-bound? id))))
-
 
 ;;;; utilities for identifiers
-
-(define (bound-id=? id1 id2)
-  ;;Two identifiers  are BOUND-ID=? if they  have the same name  and the
-  ;;same set of marks.
-  ;;
-  (and (eq? (identifier->symbol id1) (identifier->symbol id2))
-       (same-marks? ($<stx>-mark* id1) ($<stx>-mark* id2))))
-
-(define (free-id=? id1 id2)
-  ;;Two identifiers are  FREE-ID=? if either both are bound  to the same
-  ;;label or if both are unbound and they have the same name.
-  ;;
-  (let ((t1 (id->label id1))
-	(t2 (id->label id2)))
-    (if (or t1 t2)
-	(eq? t1 t2)
-      (eq? (identifier->symbol id1)
-	   (identifier->symbol id2)))))
 
 (define (valid-bound-ids? id*)
   ;;Given a list return #t if it  is made of identifers none of which is
@@ -5851,6 +5691,166 @@
 				       (else
 					(assertion-violation __who__ "BUG"))))
 			    str*)))))
+
+
+;;;; identifiers: syntax parameters
+
+(define current-run-lexenv
+  ;;This parameter holds  a function which is meant to  return the value
+  ;;of LEXENV.RUN while a macro is being expanded.
+  ;;
+  ;;The  default  value will  return  null,  which represents  an  empty
+  ;;LEXENV; when  such value is used  with LABEL->SYNTACTIC-BINDING: the
+  ;;mapping   label/binding  is   performed   only   in  the   top-level
+  ;;environment.
+  ;;
+  ;;Another possibility we could think of is to use as default value the
+  ;;function:
+  ;;
+  ;;   (lambda ()
+  ;;     (syntax-violation 'current-run-lexenv
+  ;; 	   "called outside the extent of a macro expansion"
+  ;; 	   '(current-run-lexenv)))
+  ;;
+  ;;However there are  cases where we actually want  the returned LEXENV
+  ;;to be null, for example: when evaluating the visit code of a library
+  ;;just loaded in  FASL form; such visit code might  need, for example,
+  ;;to access the  syntactic binding property lists, and it  would do it
+  ;;outside any macro expansion.
+  ;;
+  (make-parameter
+      (lambda () '())
+    (lambda* ({obj procedure?})
+      obj)))
+
+(define* (syntax-parameter-value {id identifier?})
+  (let ((label (id->label id)))
+    (if label
+	(let ((binding (label->syntactic-binding label ((current-run-lexenv)))))
+	  (case (syntactic-binding-type binding)
+	    ((local-ctv)
+	     (local-compile-time-value-binding-object binding))
+
+	    ((global-ctv)
+	     (global-compile-time-value-binding-object binding))
+
+	    (else
+	     (procedure-argument-violation __who__
+	       "expected identifier bound to compile-time value"
+	       id))))
+      (procedure-argument-violation __who__
+	"unbound identifier" id))))
+
+
+;;;; deconstructors and predicates for syntax objects
+
+(module (syntax-pair?
+	 syntax-vector?
+	 syntax-null?)
+
+  (define (syntax-pair? x)
+    (syntax-kind? x pair?))
+
+  (define (syntax-vector? x)
+    (syntax-kind? x vector?))
+
+  (define (syntax-null? x)
+    (syntax-kind? x null?))
+
+  (define (syntax-kind? x pred?)
+    (cond ((<stx>? x)
+	   (syntax-kind? (<stx>-expr x) pred?))
+	  ((annotation? x)
+	   (syntax-kind? (annotation-expression x) pred?))
+	  (else
+	   (pred? x))))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(define (syntax-list? x)
+  ;;FIXME Should terminate on cyclic input.  (Abdulaziz Ghuloum)
+  (or (syntax-null? x)
+      (and (syntax-pair? x)
+	   (syntax-list? (syntax-cdr x)))))
+
+(define* (syntax-car x)
+  (cond ((<stx>? x)
+	 (mkstx (syntax-car ($<stx>-expr x))
+		($<stx>-mark* x)
+		($<stx>-rib*  x)
+		($<stx>-ae*   x)))
+	((annotation? x)
+	 (syntax-car (annotation-expression x)))
+	((pair? x)
+	 ($car x))
+	(else
+	 (assertion-violation __who__ "not a pair" x))))
+
+(define* (syntax-cdr x)
+  (cond ((<stx>? x)
+	 (mkstx (syntax-cdr ($<stx>-expr x))
+		($<stx>-mark* x)
+		($<stx>-rib*  x)
+		($<stx>-ae*   x)))
+	((annotation? x)
+	 (syntax-cdr (annotation-expression x)))
+	((pair? x)
+	 ($cdr x))
+	(else
+	 (assertion-violation __who__ "not a pair" x))))
+
+(define* (syntax->list x)
+  (cond ((syntax-pair? x)
+	 (cons (syntax-car x)
+	       (syntax->list (syntax-cdr x))))
+	((syntax-null? x)
+	 '())
+	(else
+	 (assertion-violation __who__ "invalid argument" x))))
+
+(define* (syntax-vector->list x)
+  (cond ((<stx>? x)
+	 (let ((ls     (syntax-vector->list ($<stx>-expr x)))
+	       (mark*  ($<stx>-mark* x))
+	       (rib*   ($<stx>-rib*  x))
+	       (ae*    ($<stx>-ae*   x)))
+	   (map (lambda (x)
+		  (mkstx x mark* rib* ae*))
+	     ls)))
+	((annotation? x)
+	 (syntax-vector->list (annotation-expression x)))
+	((vector? x)
+	 (vector->list x))
+	(else
+	 (assertion-violation __who__ "not a syntax vector" x))))
+
+(define (syntax-unwrap stx)
+  ;;Given a syntax object STX  decompose it and return the corresponding
+  ;;S-expression holding datums and identifiers.  Take care of returning
+  ;;a proper  list when the  input is a  syntax object holding  a proper
+  ;;list.
+  ;;
+  (syntax-match stx ()
+    (()
+     '())
+    ((?car . ?cdr)
+     (cons (syntax-unwrap ?car)
+	   (syntax-unwrap ?cdr)))
+    (#(?item* ...)
+     (list->vector (syntax-unwrap ?item*)))
+    (?atom
+     (identifier? ?atom)
+     ?atom)
+    (?atom
+     (syntax->datum ?atom))))
+
+
+;;;; various identifiers modules
+
+(include "psyntax.expander.syntactic-binding-properties.scm" #t)
+(include "psyntax.expander.tagged-identifiers.scm" #t)
 
 
 (define-syntax syntax-match
