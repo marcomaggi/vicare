@@ -244,6 +244,23 @@
 
 
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
+;;
+;;The predicate and parser functions for lists of bindings are used to parse bindings
+;;from LET, DO and similar syntaxes.  For example, when expanding the syntax:
+;;
+;;   (let (({a <fixnum>} 1)
+;;         ({b <string>} "b")
+;;         (c            #t))
+;;     . ?body)
+;;
+;;the argument STX is:
+;;
+;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
+;;
+;;and the return values are:
+;;
+;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+;;
 
 (case-define* parse-list-of-tagged-bindings
   ((stx)
@@ -255,51 +272,36 @@
    ;;type  tags; <top>  is used  when no  tag is  present.  The  identifiers must  be
    ;;distinct.
    ;;
-   ;;This  parser  function is  used  to  parse bindings  from  LET,  DO and  similar
-   ;;syntaxes.  For example, when expanding the syntax:
-   ;;
-   ;;   (let (({a <fixnum>} 1)
-   ;;         ({b <string>} "b")
-   ;;         (c            #t))
-   ;;     . ?body)
-   ;;
-   ;;the argument STX is:
-   ;;
-   ;;   (#'(brace a <fixnum>) #'(brace b <string>) #'c)
-   ;;
-   ;;and the return values are:
-   ;;
-   ;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
-   ;;
-   (define (%parse bind*)
-     (syntax-match bind* (brace)
-       (()
-	(values '() '()))
-       (((brace ?id ?tag) . ?other-id*)
-	(begin
-	  (assert-tag-identifier? ?tag)
-	  (receive (id* tag*)
-	      (%parse ?other-id*)
-	    (values (cons ?id id*) (cons ?tag tag*)))))
-       ((?id . ?other-id*)
-	(identifier? ?id)
-	(receive (id* tag*)
-	    (%parse ?other-id*)
-	  (values (cons ?id id*) (cons <top> tag*))))
-       (_
-	(if input-form-stx
-	    (syntax-violation __who__ "invalid tagged bindings syntax" input-form-stx stx)
-	  (syntax-violation __who__ "invalid tagged bindings syntax" stx)))))
+   (define (%invalid-tagged-bindings-syntax form subform)
+     (syntax-violation __who__ "invalid tagged bindings syntax" form subform))
+   (define (%duplicate-identifiers-in-bindings-specification form subform)
+     (syntax-violation __who__
+       "duplicate identifiers in bindings specification" form subform))
    (receive-and-return (id* tag*)
-       (%parse stx)
+       (let recur ((bind* stx))
+	 (syntax-match bind* (brace)
+	   (()
+	    (values '() '()))
+	   (((brace ?id ?tag) . ?other-id*)
+	    (begin
+	      (assert-tag-identifier? ?tag)
+	      (receive (id* tag*)
+		  (recur ?other-id*)
+		(values (cons ?id id*) (cons ?tag tag*)))))
+	   ((?id . ?other-id*)
+	    (identifier? ?id)
+	    (receive (id* tag*)
+		(recur ?other-id*)
+	      (values (cons ?id id*) (cons <top> tag*))))
+	   (_
+	    (if input-form-stx
+		(%invalid-tagged-bindings-syntax input-form-stx stx)
+	      (%invalid-tagged-bindings-syntax stx #f)))
+	   ))
      (unless (distinct-bound-ids? id*)
        (if input-form-stx
-	   (syntax-violation __who__
-	     "duplicate identifiers in bindings specification"
-	     input-form-stx stx)
-	 (syntax-violation __who__
-	   "duplicate identifiers in bindings specification"
-	   stx))))))
+	   (%duplicate-identifiers-in-bindings-specification input-form-stx stx)
+	 (%duplicate-identifiers-in-bindings-specification stx #f))))))
 
 (define* (list-of-tagged-bindings? lhs*)
   ;;Return  true if  lhs*  is  a list  of  possibly tagged  identifiers;
