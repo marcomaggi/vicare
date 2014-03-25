@@ -1145,16 +1145,16 @@
     list-of-tagged-bindings?			parse-list-of-tagged-bindings
     tagged-callable-spec-syntax?		parse-tagged-callable-spec-syntax
     tagged-formals-syntax?			parse-tagged-formals-syntax
-    standard-formals-syntax?			formal-tags-syntax?
-    return-values-tags-syntax?
+    standard-formals-syntax?
+    formals-signature-syntax?			retvals-signature-syntax?
 
     make-callable-signature		callable-signature?
     callable-signature-formals		callable-signature-return-values
     make-formals-signature		formals-signature?		formals-signature-tags
-    make-return-values-signature	return-values-signature?	return-values-signature-tags
+    make-retvals-signature		retvals-signature?	retvals-signature-tags
     callable-signature-formals-tags
     callable-signature-return-values-tags
-    callable-signature=?		formals-signature=?		return-values-signature=?
+    callable-signature=?		formals-signature=?		retvals-signature=?
 
     ;; expand-time object type specs: identifiers defining types
     top-id

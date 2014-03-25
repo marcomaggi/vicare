@@ -778,9 +778,9 @@
 		    (psi-core-expr body.psi))
 		  <procedure>)))
     (syntax-match input-form.stx (brace)
-      ((_ ((brace ?ctxt ?tag* ...) . ?fmls) . ?body-form*)
+      ((_ ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (%expand ?ctxt (bless
-		       `((brace _ . ,?tag*) . ,?fmls))
+		       `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls))
 		?body-form*))
       ((_ (?ctxt . ?fmls) . ?body-form*)
        (%expand ?ctxt ?fmls ?body-form*))
@@ -1613,11 +1613,11 @@
     ;;
     (syntax-match input-form-stx (brace)
       ;;Function definition with tagged return values.
-      ((_ ((brace ?id ?rv-tag0 ?rv-tag* ...) . ?fmls) ?b ?b* ...)
+      ((_ ((brace ?id ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature)
 	   (parse-tagged-callable-spec-syntax (bless
-					       `((brace _ ,?rv-tag0 . ,?rv-tag*) . ,?fmls))
+					       `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
 					      input-form-stx)
 	 (values ?id <procedure> signature (cons 'defun input-form-stx))))
 

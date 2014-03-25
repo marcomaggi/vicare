@@ -182,38 +182,38 @@ The following bindings are exported by the library @library{vicare
 expander object-type-specs}.
 
 
-@deftp {Struct Type} return-values-signature
+@deftp {Struct Type} retvals-signature
 Struct type representing the type signature of callable's return
 values.  It has the following fields:
 
 @table @code
 @item tags
-When the callable has one or more return values: a proper list of tag
-identifiers is used to represent them.  When the callable has no return
-values: null is used.  When the callable has an unspecified number of
-return values: @false{} is used.
+When the callable has one or more return values: a proper or improper
+list of tag identifiers is used to represent them.  When the callable
+has no return values: null is used.  When the callable has an
+unspecified number of return values: @false{} is used.
 @end table
 @end deftp
 
 
-@defun make-return-values-signature @var{tags}
-Build and return a new @objtype{return-values-signature} instance.
+@defun make-retvals-signature @var{tags}
+Build and return a new @objtype{retvals-signature} instance.
 @end defun
 
 
-@defun return-values-signature? @var{obj}
+@defun retvals-signature? @var{obj}
 Return @true{} if @var{obj} is an instance of
-@objtype{return-values-signature}.
+@objtype{retvals-signature}.
 @end defun
 
 
-@defun return-values-signature-tags @var{rv-signature}
-Accessor for the field of @objtype{return-values-signature} instances.
+@defun retvals-signature-tags @var{rv-signature}
+Accessor for the field of @objtype{retvals-signature} instances.
 @end defun
 
 
-@defun return-values-signature=? @vari{rv-signature} @varii{rv-signature}
-The arguments must be instances of @objtype{return-values-signature}.
+@defun retvals-signature=? @vari{rv-signature} @varii{rv-signature}
+The arguments must be instances of @objtype{retvals-signature}.
 Return @true{} if the arguments are equal, @false{} otherwise.
 @end defun
 
@@ -273,7 +273,7 @@ following fields:
 
 @table @code
 @item return-values
-An instance of @objtype{return-values-signature}.
+An instance of @objtype{retvals-signature}.
 
 @item formals
 An instance of @objtype{formals-signature}.
@@ -300,8 +300,8 @@ Accessor for the fields of @objtype{callable-signature} instances.
 
 @defun callable-signature-return-values-tags @var{signature}
 Return the content of the @code{tags} field in the
-@objtype{return-values-signature} instance from the @code{return-values}
-field of @var{signature}.
+@objtype{retvals-signature} instance from the @code{return-values} field
+of @var{signature}.
 @end defun
 
 
@@ -335,7 +335,7 @@ acceptable.
 @end defun
 
 
-@defun formal-tags-syntax? @var{stx}
+@defun formals-signature-syntax? @var{stx}
 Return @true{} if @var{stx} is a syntax object representing the tag
 signature of a tagged formals syntax; otherwise return @false{}.  The
 return value is true if @var{stx} is a proper or improper list of tag
@@ -343,11 +343,12 @@ identifiers, with null and a standalone tag identifier being acceptable.
 @end defun
 
 
-@defun return-values-tags-syntax? @var{stx}
+@defun retvals-signature-syntax? @var{stx}
 Return @true{} if @var{stx} is a syntax object representing the tag
-signature of return values from a callable signature; otherwise return
-@false{}.  The return value is @true{} if @var{stx} is @false{} or null
-or a proper list of tag identifiers.
+signature of a set of return values; otherwise return @false{}.  The
+return value is true if @var{stx} is @false{}, null or a proper or
+improper list of tag identifiers, with a standalone tag identifier being
+acceptable.
 @end defun
 
 @c page
@@ -789,10 +790,10 @@ syntaxes.
 
 To describe the supported syntax for callable signatures we use the
 conventions: @meta{id}, @meta{rest-id} and @meta{args-id} are argument
-identifiers; @meta{arg-tag}, @meta{rest-tag}, @meta{args-tag} and
-@meta{rv-tag} are tag identifiers.  The predicate and parser functions
-for callable signatures accept the following standard @rnrs{6} formals
-formats:
+identifiers; @meta{arg-tag}, @meta{rest-tag}, @meta{args-tag},
+@meta{rv-tag} and @meta{rv-rest-tag} are tag identifiers.  The predicate
+and parser functions for callable signatures accept the following
+standard @rnrs{6} formals formats:
 
 @example
 @meta{args-id}
@@ -807,8 +808,8 @@ and in addition the following tagged formals:
 (brace @meta{args-id} @meta{args-tag})
 (@meta{arg} ...)
 (@metao{arg} @meta{arg} ... . @meta{rest-arg})
-((brace _ @meta{rv-tag} ...) @meta{arg} ...)
-((brace _ @meta{rv-tag} ...) @meta{arg} ... . @meta{rest-arg})
+(@meta{retvals} @meta{arg} ...)
+(@meta{retvals} @meta{arg} ... . @meta{rest-arg})
 @end example
 
 @noindent
@@ -820,10 +821,17 @@ where @meta{arg} is a tagged argument with one of the formats:
 @end example
 
 @noindent
+@meta{retvals} is a special syntax that allows to specify the number and
+tags of the expression return values; it has one of the formats:
+
+@example
+(brace _ @meta{rv-tag} ...)
+(brace _ @meta{rv-tag} ... . @meta{rv-rest-tag})
+@end example
+
+@noindent
 the identifiers @func{brace} and @func{_} are the syntax bindings
-exported by @library{vicare}; the first item with identifier @func{_} is
-a special syntax that allows to specify the number and tags of the
-@func{lambda} return values.
+exported by @library{vicare}.
 
 The following bindings are exported by the library @library{vicare
 expander object-type-specs}.

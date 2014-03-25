@@ -102,9 +102,9 @@
      #t)
     (_ #f)))
 
-(define (formal-tags-syntax? stx)
+(define (formals-signature-syntax? stx)
   ;;Return true if STX is a syntax  object representing the tag signature of a tagged
-  ;;formals syntxx;  otherwise return false.   The return value is  true if STX  is a
+  ;;formals syntax;  otherwise return false.   The return value is  true if STX  is a
   ;;proper  or improper  list of  tag  identifiers, with  null and  a standalone  tag
   ;;identifier being acceptable.
   ;;
@@ -112,27 +112,29 @@
     (() #t)
     ((?id . ?rest)
      (tag-identifier? ?id)
-     (formal-tags-syntax? ?rest))
+     (formals-signature-syntax? ?rest))
     (?rest
      (tag-identifier? ?rest)
      #t)
     (_ #f)))
 
-(define (return-values-tags-syntax? stx)
-  ;;Return true if  STX is a syntax  object representing the tag  signature of return
-  ;;values from  a callable signature; otherwise  return false.  The return  value is
-  ;;true if STX is false or null or a proper list of tag identifiers.
+(define (retvals-signature-syntax? stx)
+  ;;Return true if  STX is a syntax  object representing the tag  signature of tagged
+  ;;return values; otherwise return false.  The return value is true if STX is false,
+  ;;null or  a proper  or improper  list of  tag identifiers,  with a  standalone tag
+  ;;identifier being acceptable.
   ;;
-  (syntax-match stx ()
-    (#f #t)
-    (_
-     (let recur ((stx stx))
-       (syntax-match stx ()
-	 (() #t)
-	 ((?id . ?rest)
-	  (tag-identifier? ?id)
-	  (recur ?rest))
-	 (_ #f))))))
+  (or (not stx)
+      (let loop ((stx stx))
+	(syntax-match stx ()
+	  (() #t)
+	  ((?id . ?rest)
+	   (tag-identifier? ?id)
+	   (loop ?rest))
+	  (?rest
+	   (tag-identifier? ?rest)
+	   #t)
+	  (_ #f)))))
 
 
 ;;;; callable spec, callable signature, return values signature, formals signature
@@ -147,12 +149,12 @@
 ;;   (apply ?callable ?arg ...)
 ;;
 ;;A "callable  signature" is an object  representing the number and  tags of callable
-;;arguments and return values.  A "return values  signature" is null or a proper list
-;;of  tag  identifiers  representing  the  number  and  tags  of  return  values;  by
-;;convention, when the number and tags of return  values is not known, #f is used.  A
-;;"formals signature"  is a proper or  improper list of tag  identifiers representing
-;;the number and tags of callable arguments; null and a standalone tag identifier are
-;;valid.
+;;arguments  and return  values.  A  "return values  signature" is  false, null  or a
+;;proper or  improper list  of tag  identifiers representing the  number and  tags of
+;;return values;  by convention,  when the number  and tags of  return values  is not
+;;known, #f is used.   A "formals signature" is null or a proper  or improper list of
+;;tag identifiers representing the number and  tags of callable arguments; null and a
+;;standalone tag identifier are valid.
 ;;
 ;;Let's  state the  format of  a  callable spec.   We use  the conventions:  ?ARG-ID,
 ;;?REST-ID  and  ?ARGS-ID are  argument  identifiers;  ?TAG  and  ?RV-TAG are  a  tag
@@ -167,27 +169,32 @@
 ;;   (brace ?args-id ?args-tag)
 ;;   (?arg ...)
 ;;   (?arg0 ?arg ... . ?rest-arg)
-;;   ((brace _ ?rv-tag ...) ?arg ...)
-;;   ((brace _ ?rv-tag ...) ?arg ... . ?rest-arg)
+;;   (?retvals ?arg ...)
+;;   (?retvals ?arg0 ?arg ... . ?rest-arg)
 ;;
 ;;where ?ARG is a tagged argument with one of the formats:
 ;;
 ;;   ?arg-id
 ;;   (brace ?arg-id ?arg-tag)
 ;;
-;;and the first item  with identifier "_" is a special syntax  that allows to specify
-;;the tags of the LAMBDA return values.
+;;RETVALS is a special syntax that allows the specification of the number and tags of
+;;expression return values; it has one of the formats:
+;;
+;;   (brace _ ?rv-tag ...)
+;;   (brace _ ?rv-tag ... . ?rv-rest-tag)
+;;
+;;where the identifier "_" is the binding exported by (vicare).
 ;;
 ;;The number  of ?RV-TAG identifiers specifies  the number of return  values; when no
 ;;?RV-TAG is present: the callable returns no values.
 ;;
 
-(define-record (return-values-signature %make-return-values-signature return-values-signature?)
+(define-record (retvals-signature %make-retvals-signature retvals-signature?)
   (tags
-		;False, null  or a  proper list of  tag identifiers  representing the
-		;object types  of a tuple of  return values.  False is  used when the
-		;number and  type of returned values  is unknown.  Null is  used when
-		;the number of returned values is zero.
+		;False,  null  or  a  proper  or improper  list  of  tag  identifiers
+		;representing the object types of a tuple of return values.  False is
+		;used when the  number and type of returned values  is unknown.  Null
+		;is used when the number of returned values is zero.
    ))
 
 (define-record (formals-signature %make-formals-signature formals-signature?)
@@ -198,25 +205,25 @@
 
 (define-record (callable-signature %make-callable-signature callable-signature?)
   (return-values
-		;An instance of "return-values-signature".
+		;An instance of "retvals-signature".
    formals
 		;An instance of "formals-signature".
    ))
 
-(define* (make-formals-signature {tags formal-tags-syntax?})
+(define* (make-formals-signature {tags formals-signature-syntax?})
   (%make-formals-signature tags))
 
-(define* (make-return-values-signature {tags return-values-tags-syntax?})
-  (%make-return-values-signature tags))
+(define* (make-retvals-signature {tags retvals-signature-syntax?})
+  (%make-retvals-signature tags))
 
-(define* (make-callable-signature {rv return-values-signature?} {formals formals-signature?})
+(define* (make-callable-signature {rv retvals-signature?} {formals formals-signature?})
   (%make-callable-signature rv formals))
 
 (define* (callable-signature-formals-tags {signature callable-signature?})
   ($formals-signature-tags ($callable-signature-formals signature)))
 
 (define* (callable-signature-return-values-tags {signature callable-signature?})
-  ($return-values-signature-tags ($callable-signature-return-values signature)))
+  ($retvals-signature-tags ($callable-signature-return-values signature)))
 
 ;;; --------------------------------------------------------------------
 
@@ -227,7 +234,7 @@
   ;;
   (and (formals-signature=? ($callable-signature-formals signature1)
 			    ($callable-signature-formals signature2))
-       (return-values-signature=? ($callable-signature-return-values signature1)
+       (retvals-signature=? ($callable-signature-return-values signature1)
 				  ($callable-signature-return-values signature2))))
 
 (define* (formals-signature=? {signature1 formals-signature?} {signature2 formals-signature?})
@@ -238,13 +245,13 @@
   (syntax=? ($formals-signature-tags signature1)
 	    ($formals-signature-tags signature2)))
 
-(define* (return-values-signature=? {signature1 return-values-signature?} {signature2 return-values-signature?})
+(define* (retvals-signature=? {signature1 retvals-signature?} {signature2 retvals-signature?})
   ;;Return true if the signatures are equal; otherwise return false.
   ;;
   ;;Remember that SYNTAX=? compares identifiers with FREE-IDENTIFIER=?.
   ;;
-  (syntax=? ($return-values-signature-tags signature1)
-	    ($return-values-signature-tags signature2)))
+  (syntax=? ($retvals-signature-tags signature1)
+	    ($retvals-signature-tags signature2)))
 
 
 ;;;; tagged binding parsing: standalone identifiers
@@ -511,18 +518,21 @@
    ;;the rest of the formals.
    (syntax-match callable-spec-stx (brace _)
      ;;With return values tagging.
-     (((brace _ ?rv-tag* ...) . ?formals)
-      (for-each assert-tag-identifier? ?rv-tag*)
-      (receive (standard-formals-stx formals-signature)
-	  (parse-tagged-formals-syntax ?formals input-form-stx)
-	(values standard-formals-stx
-		(make-callable-signature (make-return-values-signature ?rv-tag*) formals-signature))))
+     (((brace _ ?rv-tag* ... . ?rv-rest-tag) . ?formals)
+      (let ((retvals.stx (append ?rv-tag* ?rv-rest-tag)))
+	(unless (retvals-signature-syntax? retvals.stx)
+	  (syntax-violation __who__
+	    "invalid return values signature syntax" input-form-stx retvals.stx))
+	(receive (standard-formals-stx formals-signature)
+	    (parse-tagged-formals-syntax ?formals input-form-stx)
+	  (values standard-formals-stx
+		  (make-callable-signature (make-retvals-signature retvals.stx) formals-signature)))))
      ;;Without return values tagging.
      (?formals
       (receive (standard-formals-stx formals-signature)
 	  (parse-tagged-formals-syntax ?formals input-form-stx)
 	(values standard-formals-stx
-		(make-callable-signature (make-return-values-signature #f) formals-signature)))))))
+		(make-callable-signature (make-retvals-signature #f) formals-signature)))))))
 
 (define* (tagged-callable-spec-syntax? formals-stx)
   ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals
