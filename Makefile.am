@@ -367,6 +367,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.compat.sls					\
 	scheme/psyntax.config.sls					\
 	scheme/psyntax.expander.sls					\
+	scheme/psyntax.expander.chi-module.scm				\
 	scheme/psyntax.expander.syntactic-binding-properties.scm	\
 	scheme/psyntax.expander.tagged-identifiers.scm			\
 	scheme/psyntax.expander.core-macro-transformers.scm		\

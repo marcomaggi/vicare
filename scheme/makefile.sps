@@ -3967,17 +3967,17 @@
     ;;
     ;;Return 4 values: an EXPORT-SUBST alist with entries:
     ;;
-    ;;   (?func-name  . ?label)
+    ;;   (?prim-name  . ?label)
     ;;   (?macro-name . ?label)
     ;;
     ;;an EXPORT-ENV alist with entries:
     ;;
-    ;;   (?label . (core-prim . ?func-name))
+    ;;   (?label . (core-prim . ?prim-name))
     ;;   (?label . ?macro-binding)
     ;;
     ;;an EXPORT-PRIMLOCS alist with entries:
     ;;
-    ;;   (?func-name . ?loc)
+    ;;   (?prim-name . ?loc)
     ;;
     (define-constant __who__ 'make-system-data)
     (define-syntax-rule (macro-identifier? x)
@@ -4018,15 +4018,15 @@
       ;;
       ;;here we add to the subst collection an entry:
       ;;
-      ;;   (?func-name . ?label)
+      ;;   (?prim-name . ?label)
       ;;
       ;;to the env collection an entry:
       ;;
-      ;;   (?label . (core-prim . ?func-name))
+      ;;   (?label . (core-prim . ?prim-name))
       ;;
       ;;to the primlocs collection an entry:
       ;;
-      ;;   (?func-name . ?loc)
+      ;;   (?prim-name . ?loc)
       ;;
       (each-for (map car identifier->library-map)
 	(lambda (prim-name)
@@ -4075,17 +4075,17 @@
     (define (build-system-library export-subst export-env export-primlocs)
       ;;EXPORT-SUBST is an alist with entries:
       ;;
-      ;;   (?func-name  . ?label)
+      ;;   (?prim-name  . ?label)
       ;;   (?macro-name . ?label)
       ;;
       ;;EXPORT-ENV is an alist with entries:
       ;;
-      ;;   (?label . (core-prim . ?func-name))
+      ;;   (?label . (core-prim . ?prim-name))
       ;;   (?label . ?macro-binding)
       ;;
       ;;EXPORT-PRIMLOCS is an alist with entries:
       ;;
-      ;;   (?func-name . ?loc)
+      ;;   (?prim-name . ?loc)
       ;;
       ;;Build a form for the library "(ikarus primlocs)" which:
       ;;

@@ -79,70 +79,70 @@
 ;;;; module core-macro-transformer: IF
 
 (define (if-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used to  expand  R6RS  IF syntaxes  from  the
-  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
-  ;;in  the context  of the  given LEXENV;  return an  expanded language
-  ;;symbolic expression.
+  ;;Transformer function used to expand R6RS  IF syntaxes from the top-level built in
+  ;;environment.   Expand the  syntax object  EXPR-STX in  the context  of the  given
+  ;;LEXENV; return a PSI struct.
   ;;
   (syntax-match expr-stx ()
     ((_ ?test ?consequent ?alternate)
-     (build-conditional no-source
-       (chi-expr ?test       lexenv.run lexenv.expand)
-       (chi-expr ?consequent lexenv.run lexenv.expand)
-       (chi-expr ?alternate  lexenv.run lexenv.expand)))
+     (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
+	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand))
+	   (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
+       (make-psi (build-conditional no-source
+		   (psi-core-expr test.psi)
+		   (psi-core-expr consequent.psi)
+		   (psi-core-expr alternate.psi))
+		 <top>)))
     ((_ ?test ?consequent)
-     (build-conditional no-source
-       (chi-expr ?test       lexenv.run lexenv.expand)
-       (chi-expr ?consequent lexenv.run lexenv.expand)
-       (build-void)))
+     (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
+	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
+       (make-psi (build-conditional no-source
+		   (psi-core-expr test.psi)
+		   (psi-core-expr consequent.psi)
+		   (build-void))
+		 <top>)))
     ))
 
 
 ;;;; module core-macro-transformer: QUOTE
 
 (define (quote-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand R6RS  QUOTE syntaxes  from the
-  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
-  ;;in  the context  of the  given LEXENV;  return an  expanded language
-  ;;symbolic expression.
+  ;;Transformer function used to expand R6RS  QUOTE syntaxes from the top-level built
+  ;;in environment.   Expand the syntax object  EXPR-STX in the context  of the given
+  ;;LEXENV; return a PSI struct.
   ;;
   (syntax-match expr-stx ()
     ((_ ?datum)
-     (build-data no-source
-       (syntax->datum ?datum)))))
+     (let ((datum (syntax->datum ?datum)))
+       (make-psi (build-data no-source
+		   datum)
+		 <top>)))
+    ))
 
 
 ;;;; module core-macro-transformer: LAMBDA and CASE-LAMBDA
 
 (define (case-lambda-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand R6RS  CASE-LAMBDA syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer function used to expand  R6RS CASE-LAMBDA syntaxes from the top-level
+  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
+  ;;given LEXENV; return an PSI struct.
   ;;
   (syntax-match expr-stx ()
     ((_ (?formals* ?body* ?body** ...) ...)
-     (receive (formals* body*)
-	 (chi-lambda-clause* expr-stx ?formals*
-			     (map cons ?body* ?body**)
-			     lexenv.run lexenv.expand)
-       (build-case-lambda (syntax-annotation expr-stx)
-	 formals* body*)))))
+     (chi-case-lambda expr-stx ?formals*
+		      (map cons ?body* ?body**)
+		      lexenv.run lexenv.expand))
+    ))
 
 (define (lambda-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand  R6RS LAMBDA syntaxes  from the
-  ;;top-level built  in environment.  Expand the  syntax object EXPR-STX
-  ;;in  the context  of the  given LEXENV;  return an  expanded language
-  ;;symbolic expression.
+  ;;Transformer function used to expand R6RS LAMBDA syntaxes from the top-level built
+  ;;in environment.   Expand the syntax object  EXPR-STX in the context  of the given
+  ;;LEXENV; return a PSI struct.
   ;;
   (syntax-match expr-stx ()
     ((_ ?formals ?body ?body* ...)
-     (receive (formals body)
-	 (chi-lambda-clause expr-stx ?formals
-			    (cons ?body ?body*)
-			    lexenv.run lexenv.expand)
-       (build-lambda (syntax-annotation expr-stx)
-	 formals body)))))
+     (chi-lambda expr-stx ?formals (cons ?body ?body*)lexenv.run lexenv.expand))
+    ))
 
 
 ;;;; module core-macro-transformer: LETREC and LETREC*
@@ -150,55 +150,53 @@
 (module (letrec-transformer letrec*-transformer)
 
   (define (letrec-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function  used to  expand  LETREC  syntaxes from  the
-    ;;top-level built in environment.  Expand the syntax object EXPR-STX
-    ;;in the  context of the  given LEXENV; return an  expanded language
-    ;;symbolic expression.
+    ;;Transformer function used to expand LETREC syntaxes from the top-level built in
+    ;;environment.  Expand  the syntax object  EXPR-STX in  the context of  the given
+    ;;LEXENV; return a PSI struct.
     ;;
     (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec))
 
   (define (letrec*-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function used  to  expand LETREC*  syntaxes from  the
-    ;;top-level built in environment.  Expand the syntax object EXPR-STX
-    ;;in the  context of the  given LEXENV; return an  expanded language
-    ;;symbolic expression.
+    ;;Transformer function used  to expand LETREC* syntaxes from  the top-level built
+    ;;in environment.  Expand the syntax object  EXPR-STX in the context of the given
+    ;;LEXENV; return a PSI struct.
     ;;
     (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec*))
 
   (define (%letrec-helper expr-stx lexenv.run lexenv.expand core-lang-builder)
     (syntax-match expr-stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       ;;Check  that  the  binding  names are  identifiers  and  without
-       ;;duplicates.
+       ;;Check that the binding names are identifiers and without duplicates.
        (receive (lhs* tag*)
 	   (parse-list-of-tagged-bindings ?lhs* expr-stx)
-	 ;;Generate  unique variable  names  and labels  for the  LETREC
-	 ;;bindings.
+	 ;;Generate unique variable names and labels for the LETREC bindings.
 	 (let ((lex* (map gensym-for-lexical-var lhs*))
 	       (lab* (map gensym-for-label       lhs*)))
 	   (map (lambda (label tag)
 		  (and tag (set-label-tag! label tag)))
 	     lab* tag*)
-	   ;;Generate  what is  needed to  create a  lexical contour:  a
-	   ;;<RIB>  and  an extended  lexical  environment  in which  to
-	   ;;evaluate both the right-hand sides and the body.
+	   ;;Generate what  is needed  to create  a lexical contour:  a <RIB>  and an
+	   ;;extended lexical  environment in which  to evaluate both  the right-hand
+	   ;;sides and the body.
 	   ;;
-	   ;;Notice that the region of  all the LETREC bindings includes
-	   ;;all the right-hand sides.
+	   ;;Notice  that the  region of  all the  LETREC bindings  includes all  the
+	   ;;right-hand sides.
 	   (let ((rib		(make-filled-rib lhs* lab*))
 		 (lexenv.run	(add-lexical-bindings lab* lex* lexenv.run)))
-	     ;;Create  the   lexical  contour  then  process   body  and
-	     ;;right-hand sides of bindings.
-	     (let ((body (chi-internal-body (push-lexical-contour rib
-					      (cons ?body ?body*))
-					    lexenv.run lexenv.expand))
-		   (rhs* (chi-expr*         (map (lambda (rhs)
-						   (push-lexical-contour rib rhs))
-					      ?rhs*)
-					    lexenv.run lexenv.expand)))
-	       ;;Build  the LETREC  or  LETREC* expression  in the  core
-	       ;;language.
-	       (core-lang-builder no-source lex* rhs* body))))))
+	     ;;Create the lexical  contour then process body and  right-hand sides of
+	     ;;bindings.
+	     (let ((body.psi (chi-internal-body (push-lexical-contour rib
+						  (cons ?body ?body*))
+						lexenv.run lexenv.expand))
+		   (rhs*.psi (chi-expr*         (map (lambda (rhs)
+						       (push-lexical-contour rib rhs))
+						  ?rhs*)
+						lexenv.run lexenv.expand)))
+	       (let* ((rhs*.core (map psi-core-expr rhs*.psi))
+		      (body.core (psi-core-expr body.psi))
+		      ;;Build the LETREC or LETREC* expression in the core language.
+		      (expr.core (core-lang-builder no-source lex* rhs*.core body.core)))
+		 (make-psi expr.core <top>)))))))
       ))
 
   #| end of module |# )
@@ -207,30 +205,26 @@
 ;;;; module core-macro-transformer: FLUID-LET-SYNTAX
 
 (define (fluid-let-syntax-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand FLUID-LET-SYNTAX  syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer function used to expand  FLUID-LET-SYNTAX syntaxes from the top-level
+  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
+  ;;given LEXENV; return a PSI struct.
   ;;
-  ;;FLUID-LET-SYNTAX is  similar, but  not equal, to  LET-SYNTAX; rather
-  ;;than defining new ?LHS bindings, it temporarily rebinds the keywords
-  ;;to new transformers while expanding the ?BODY forms.  The given ?LHS
-  ;;must   be    already   bound   to   fluid    syntaxes   defined   by
-  ;;DEFINE-FLUID-SYNTAX.
+  ;;FLUID-LET-SYNTAX is similar,  but not equal, to LET-SYNTAX;  rather than defining
+  ;;new ?LHS bindings, it temporarily rebinds  the keywords to new transformers while
+  ;;expanding  the ?BODY  forms.   The given  ?LHS  must be  already  bound to  fluid
+  ;;syntaxes defined by DEFINE-FLUID-SYNTAX.
   ;;
-  ;;There are  two differences between FLUID-LET-SYNTAX  and LET-SYNTAX:
-  ;;FLUID-LET-SYNTAX  must  appear  in   expression  context  only;  the
-  ;;internal ?BODY forms are *not* spliced in the enclosing body.
+  ;;There   are   two   differences    between   FLUID-LET-SYNTAX   and   LET-SYNTAX:
+  ;;FLUID-LET-SYNTAX must appear in expression context only; the internal ?BODY forms
+  ;;are *not* spliced in the enclosing body.
   ;;
-  ;;NOTE  We would  truly like  to splice  the inner  body forms  in the
-  ;;surrounding body,  so that  this syntax  could act  like LET-SYNTAX,
-  ;;which is useful; but we really cannot do it with this implementation
-  ;;of the expander algorithm.  This  is because LET-SYNTAX both creates
-  ;;a  new  rib  and  adds  new  id/label  entries  to  it,  and  pushes
-  ;;label/descriptor  entries to  the  LEXENV; instead  FLUID-LET-SYNTAX
-  ;;only pushes entries to the LEXENV: there is no way to keep the fluid
-  ;;LEXENV entries  visible only to  a subsequence  of forms in  a body.
-  ;;(Marco Maggi; Tue Feb 18, 2014)
+  ;;NOTE We would truly like to splice  the inner body forms in the surrounding body,
+  ;;so that  this syntax could  act like LET-SYNTAX, which  is useful; but  we really
+  ;;cannot do it with this implementation of the expander algorithm.  This is because
+  ;;LET-SYNTAX both creates a new rib and adds new id/label entries to it, and pushes
+  ;;label/descriptor  entries to  the  LEXENV; instead  FLUID-LET-SYNTAX only  pushes
+  ;;entries to the LEXENV:  there is no way to keep the  fluid LEXENV entries visible
+  ;;only to a subsequence of forms in a body.  (Marco Maggi; Tue Feb 18, 2014)
   ;;
   (define (transformer expr-stx)
     (syntax-match expr-stx ()
@@ -257,10 +251,10 @@
 			    (append entry* lexenv.expand))))))
 
   (define (%lookup-binding-in-lexenv.run lhs)
-    ;;Search the binding of the  identifier LHS retrieving its label; if
-    ;;such  label  is  present  and  its  associated  syntactic  binding
-    ;;descriptor from LEXENV.RUN  is of type "fluid  syntax": return the
-    ;;associated fluid label that can be used to rebind the identifier.
+    ;;Search the binding of the identifier LHS retrieving its label; if such label is
+    ;;present and its  associated syntactic binding descriptor from  LEXENV.RUN is of
+    ;;type "fluid  syntax": return  the associated  fluid label that  can be  used to
+    ;;rebind the identifier.
     ;;
     (let* ((label    (or (id->label lhs)
 			 (stx-error lhs "unbound identifier")))
@@ -276,25 +270,27 @@
 ;;;; module core-macro-transformer: FOREIGN-CALL
 
 (define (foreign-call-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand Vicare's  FOREIGN-CALL syntaxes
-  ;;from the top-level  built in environment.  Expand  the syntax object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer  function used  to  expand Vicare's  FOREIGN-CALL  syntaxes from  the
+  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;of the given LEXENV; return a PSI struct.
   ;;
   (syntax-match expr-stx ()
     ((_ ?name ?arg* ...)
-     (build-foreign-call no-source
-       (chi-expr  ?name lexenv.run lexenv.expand)
-       (chi-expr* ?arg* lexenv.run lexenv.expand)))))
+     (let* ((name.psi  (chi-expr  ?name lexenv.run lexenv.expand))
+	    (arg*.psi  (chi-expr* ?arg* lexenv.run lexenv.expand))
+	    (expr.core (build-foreign-call no-source
+			 (psi-core-expr name.psi)
+			 (map psi-core-expr arg*.psi))))
+       (make-psi expr.core <top>)))
+    ))
 
 
 ;;;; module core-macro-transformer: SYNTAX
 
 (module (syntax-transformer)
-  ;;Transformer function used to expand  R6RS's SYNTAX syntaxes from the
-  ;;top-level built in environment.  Process  the contents of USE-STX in
-  ;;the   context   of   the   lexical   environments   LEXENV.RUN   and
-  ;;LEXENV.EXPAND.
+  ;;Transformer function  used to  expand R6RS's SYNTAX  syntaxes from  the top-level
+  ;;built in  environment.  Process  the contents  of USE-STX in  the context  of the
+  ;;lexical environments LEXENV.RUN and LEXENV.EXPAND.  Return a PSI struct.
   ;;
   ;;According to R6RS, the use of the SYNTAX macro must have the format:
   ;;
@@ -309,18 +305,16 @@
   ;;  (?subtemplate ... . ?template)
   ;;  #(?subtemplate ...)
   ;;
-  ;;in  which:  ?DATUM  is  a literal  datum,  ?PATTERN-VARIABLE  is  an
-  ;;identifier referencing  a pattern  variable created  by SYNTAX-CASE,
-  ;;?ID   is  an   identifier  not   referencing  a   pattern  variable,
-  ;;?SUBTEMPLATE  is  a  template  followed by  zero  or  more  ellipsis
-  ;;identifiers.
+  ;;in  which:  ?DATUM  is  a  literal  datum,  ?PATTERN-VARIABLE  is  an  identifier
+  ;;referencing a pattern  variable created by SYNTAX-CASE, ?ID is  an identifier not
+  ;;referencing a  pattern variable, ?SUBTEMPLATE is  a template followed by  zero or
+  ;;more ellipsis identifiers.
   ;;
-  ;;Return a sexp representing  code in the core language
-  ;;which, when evaluated, returns a  wrapped or unwrapped syntax object
-  ;;containing an expression in which:
+  ;;Return  a sexp  representing code  in the  core language  which, when  evaluated,
+  ;;returns a wrapped or unwrapped syntax object containing an expression in which:
   ;;
-  ;;* All the template identifiers being references to pattern variables
-  ;;  are substituted with the corresponding syntax objects.
+  ;;*  All  the  template  identifiers  being references  to  pattern  variables  are
+  ;;  substituted with the corresponding syntax objects.
   ;;
   ;;     (syntax-case #'123 (?obj (syntax ?obj)))
   ;;     => #<syntax expr=123>
@@ -328,31 +322,29 @@
   ;;     (syntax-case #'(1 2) ((?a ?b) (syntax #(?a ?b))))
   ;;     => #(#<syntax expr=1> #<syntax expr=1>)
   ;;
-  ;;* All the identifiers not  being references to pattern variables are
-  ;;  left  alone to  be captured  by the lexical  context at  the level
-  ;;  below the current,  in the context of the SYNTAX  macro use or the
-  ;;  context of the output form.
+  ;;* All the identifiers not being references to pattern variables are left alone to
+  ;;  be  captured by  the lexical  context at the  level below  the current,  in the
+  ;;  context of the SYNTAX macro use or the context of the output form.
   ;;
   ;;     (syntax-case #'(1) ((?a) (syntax (display ?b))))
   ;;     => (#<syntax expr=display>
   ;;         #<syntax expr=1> . #<syntax expr=()>)
   ;;
-  ;;* All the sub-templates followed by ellipsis are replicated to match
-  ;;  the input pattern.
+  ;;* All  the sub-templates followed by  ellipsis are replicated to  match the input
+  ;;  pattern.
   ;;
   ;;     (syntax-case #'(1 2 3) ((?a ...) (syntax #(?a ...))))
   ;;     => #(1 2 3)
   ;;
-  ;;About pattern variables:  they are present in  a lexical environment
-  ;;as entries with format:
+  ;;About pattern  variables: they are  present in  a lexical environment  as entries
+  ;;with format:
   ;;
   ;;   (?label . (syntax . (?name . ?level)))
   ;;
-  ;;where:  ?LABEL  is the  label  in  the identifier's  syntax  object,
-  ;;"syntax" is  the symbol "syntax",  ?NAME is the  symbol representing
-  ;;the  name  of the  pattern  variable,  ?LEVEL  is an  exact  integer
-  ;;representing the  nesting ellipsis level.  The  SYNTAX-CASE patterns
-  ;;below will generate the given entries:
+  ;;where: ?LABEL  is the label  in the identifier's  syntax object, "syntax"  is the
+  ;;symbol  "syntax", ?NAME  is  the  symbol representing  the  name  of the  pattern
+  ;;variable, ?LEVEL  is an  exact integer representing  the nesting  ellipsis level.
+  ;;The SYNTAX-CASE patterns below will generate the given entries:
   ;;
   ;;   ?a			->  (syntax . (?a . 0))
   ;;   (?a)			->  (syntax . (?a . 0))
@@ -363,12 +355,11 @@
   ;;   ((?a ...) ...)		->  (syntax . (?a . 2))
   ;;   (((?a ...) ...) ...)	->  (syntax . (?a . 3))
   ;;
-  ;;The  input template  is  first visited  in  post-order, building  an
-  ;;intermediate  symbolic  representation  of  it;  then  the  symbolic
-  ;;representation is visited in post-order, building core language code
-  ;;that  evaluates  to  the   resulting  syntax  object.   Examples  of
-  ;;intermediate  representation  (-->)  and  expansion  (==>)  follows,
-  ;;assuming identifiers starting with "?"  are pattern variables:
+  ;;The  input template  is first  visited  in post-order,  building an  intermediate
+  ;;symbolic representation  of it;  then the symbolic  representation is  visited in
+  ;;post-order, building  core language code  that evaluates to the  resulting syntax
+  ;;object.   Examples  of  intermediate  representation (-->)  and  expansion  (==>)
+  ;;follows, assuming identifiers starting with "?"  are pattern variables:
   #|
   (syntax display)
   --> (quote #<syntax expr=display>)
@@ -452,47 +443,44 @@
 	   (%gen-syntax use-stx ?template lexenv.run '() ellipsis? #f)
 	 (let ((code (%generate-output-code intermediate-sexp)))
 	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
-	   code)))))
+	   (make-psi code <top>))))
+      ))
 
   (define (%gen-syntax use-stx template-stx lexenv maps ellipsis? vec?)
     ;;Recursive function.  Expand the contents of a SYNTAX use.
     ;;
-    ;;USE-STX must be  the syntax object containing  the original SYNTAX
-    ;;macro use; it is used for descriptive error reporting.
+    ;;USE-STX must be the syntax object  containing the original SYNTAX macro use; it
+    ;;is used for descriptive error reporting.
     ;;
     ;;TEMPLATE-STX must be the template from the SYNTAX macro use.
     ;;
-    ;;LEXENV is  the lexical  environment in  which the  expansion takes
-    ;;place;  it must  contain  the pattern  variables  visible by  this
-    ;;SYNTAX use.
+    ;;LEXENV is the  lexical environment in which the expansion  takes place; it must
+    ;;contain the pattern variables visible by this SYNTAX use.
     ;;
-    ;;MAPS is  a list  of alists,  one alist  for each  ellipsis nesting
-    ;;level.  If the template has 3 nested ellipsis patterns:
+    ;;MAPS is a  list of alists, one  alist for each ellipsis nesting  level.  If the
+    ;;template has 3 nested ellipsis patterns:
     ;;
     ;;   (((?a ...) ...) ...)
     ;;
-    ;;while  we are  processing the  inner "(?a  ...)"  MAPS  contains 3
-    ;;alists.  The  alists are  used when processing  ellipsis templates
-    ;;that recursively reference the same pattern variable, for example:
+    ;;while we  are processing  the inner  "(?a ...)"  MAPS  contains 3  alists.  The
+    ;;alists are used  when processing ellipsis templates  that recursively reference
+    ;;the same pattern variable, for example:
     ;;
     ;;   ((?a (?a ...)) ...)
     ;;
-    ;;the inner  ?A is mapped  to a gensym which  is used to  generate a
-    ;;binding in the output code.
+    ;;the inner ?A is  mapped to a gensym which is used to  generate a binding in the
+    ;;output code.
     ;;
-    ;;ELLIPSIS? must be a predicate function returning true when applied
-    ;;to the  ellipsis identifier from  the built in  environment.  Such
-    ;;function  is made  an argument,  so that  it can  be changed  to a
-    ;;predicate  returning   always  false   when  we   are  recursively
-    ;;processing a quoted template:
+    ;;ELLIPSIS?  must be  a predicate  function returning  true when  applied to  the
+    ;;ellipsis identifier  from the built in  environment.  Such function is  made an
+    ;;argument, so that it can be changed  to a predicate returning always false when
+    ;;we are recursively processing a quoted template:
     ;;
     ;;   (... ?sub-template)
     ;;
-    ;;in which the ellipses in ?SUB-TEMPLATE are to be handled as normal
-    ;;identifiers.
+    ;;in which the ellipses in ?SUB-TEMPLATE are to be handled as normal identifiers.
     ;;
-    ;;VEC? is a boolean: true when this function is processing the items
-    ;;of a vector.
+    ;;VEC? is a boolean: true when this function is processing the items of a vector.
     ;;
     (syntax-match template-stx ()
 
@@ -502,11 +490,10 @@
        (ellipsis? ?dots)
        (stx-error use-stx "misplaced ellipsis in syntax form"))
 
-      ;;Match  a standalone  identifier.   ?ID can  be:  a reference  to
-      ;;pattern variable created by SYNTAX-CASE; an identifier that will
-      ;;be captured by  some binding; an identifier that  will result to
-      ;;be free,  in which  case an "unbound  identifier" error  will be
-      ;;raised later.
+      ;;Match a standalone  identifier.  ?ID can be: a reference  to pattern variable
+      ;;created by SYNTAX-CASE; an identifier that  will be captured by some binding;
+      ;;an  identifier  that will  result  to  be free,  in  which  case an  "unbound
+      ;;identifier" error will be raised later.
       ;;
       (?id
        (identifier? ?id)
@@ -526,15 +513,15 @@
       ;;
       ;;   #(... 1 2 3)   ==> ERROR
       ;;
-      ;;but ellipses  starting a list  template are allowed,  they quote
-      ;;the subsequent sub-template:
+      ;;but ellipses starting a list template  are allowed, they quote the subsequent
+      ;;sub-template:
       ;;
       ;;   (... ...)		==> quoted ellipsis
       ;;   (... ?sub-template)	==> quoted ?SUB-TEMPLATE
       ;;
-      ;;so that the ellipses in  the ?SUB-TEMPLATE are treated as normal
-      ;;identifiers.  We change the  ELLIPSIS? argument for recursion to
-      ;;a predicate that always returns false.
+      ;;so that the ellipses in the  ?SUB-TEMPLATE are treated as normal identifiers.
+      ;;We change  the ELLIPSIS? argument  for recursion  to a predicate  that always
+      ;;returns false.
       ;;
       ((?dots ?sub-template)
        (ellipsis? ?dots)
@@ -587,8 +574,7 @@
 	   (values (%gen-cons template-stx ?car ?cdr car.new cdr.new)
 		   maps))))
 
-      ;;Process a vector template.  We set to true the VEC? argument for
-      ;;recursion.
+      ;;Process a vector template.  We set to true the VEC? argument for recursion.
       ;;
       (#(?item* ...)
        (receive (item*.new maps)
@@ -596,8 +582,8 @@
 	 (values (%gen-vector template-stx ?item* item*.new)
 		 maps)))
 
-      ;;Everything else is just quoted in the output.  This includes all
-      ;;the literal datums.
+      ;;Everything else is just quoted in  the output.  This includes all the literal
+      ;;datums.
       ;;
       (_
        (values `(quote ,template-stx) maps))
@@ -710,55 +696,51 @@
 ;;;; module core-macro-transformer: SYNTAX-CASE
 
 (module (syntax-case-transformer)
-  ;;Transformer function used to expand R6RS's SYNTAX-CASE syntaxes from
-  ;;the top-level built in environment.  Process the contents of USE-STX
-  ;;in  the   context  of   the  lexical  environments   LEXENV.RUN  and
-  ;;LEXENV.EXPAND.
+  ;;Transformer  function  used  to  expand  R6RS's  SYNTAX-CASE  syntaxes  from  the
+  ;;top-level built in  environment.  Process the contents of USE-STX  in the context
+  ;;of the lexical environments LEXENV.RUN and LEXENV.EXPAND.  Return a PSI struct.
   ;;
-  ;;Notice  that   the  parsing   of  the   patterns  is   performed  by
-  ;;CONVERT-PATTERN at  expand time and  the actual pattern  matching is
-  ;;performed by SYNTAX-DISPATCH at run time.
+  ;;Notice that the parsing of the patterns is performed by CONVERT-PATTERN at expand
+  ;;time and the actual pattern matching is performed by SYNTAX-DISPATCH at run time.
   ;;
   (define (syntax-case-transformer use-stx lexenv.run lexenv.expand)
     (syntax-match use-stx ()
       ((_ ?expr (?literal* ...) ?clauses* ...)
        (%verify-literals ?literal* use-stx)
-       (let* ( ;;The identifier to  which the result of evaluating the
-	      ;;?EXPR is bound.
+       (let* ( ;;The identifier to which the result of evaluating the ?EXPR is bound.
 	      (expr.id    (gensym-for-lexical-var 'tmp))
-	      ;;The full SYNTAX-CASE  pattern matching code, generated
-	      ;;and transformed to core language.
+	      ;;The full SYNTAX-CASE pattern matching code, generated and transformed
+	      ;;to core language.
 	      (body.core  (%gen-syntax-case expr.id ?literal* ?clauses*
 					    lexenv.run lexenv.expand))
 	      ;;The ?EXPR transformed to core language.
-	      (expr.core  (chi-expr ?expr lexenv.run lexenv.expand)))
+	      (expr.core  (%chi-expr.core ?expr lexenv.run lexenv.expand)))
 	 ;;Return a form like:
 	 ;;
 	 ;;   ((lambda (expr.id) body.core) expr.core)
 	 ;;
-	 (build-application no-source
-	   (build-lambda no-source (list expr.id) body.core)
-	   (list expr.core))))
+	 (make-psi (build-application no-source
+		     (build-lambda no-source (list expr.id) body.core)
+		     (list expr.core))
+		   <top>)))
       ))
 
   (define (%gen-syntax-case expr.id literals clauses lexenv.run lexenv.expand)
-    ;;Recursive function.  Generate and return the full pattern matching
-    ;;code in the core language to match the given CLAUSES.
+    ;;Recursive function.  Generate and return the  full pattern matching code in the
+    ;;core language to match the given CLAUSES.
     ;;
     (syntax-match clauses ()
-      ;;No pattern matched the input  expression: return code to raise a
-      ;;syntax error.
+      ;;No pattern matched the input expression: return code to raise a syntax error.
       ;;
       (()
        (build-application no-source
 	 (build-primref no-source 'syntax-error)
 	 (list (build-lexical-reference no-source expr.id))))
 
-      ;;The pattern  is a standalone  identifier, neither a  literal nor
-      ;;the ellipsis,  and it  has no  fender.  A  standalone identifier
-      ;;with no fender matches everything,  so it is useless to generate
-      ;;the code  for the next clauses:  the code generated here  is the
-      ;;last one.
+      ;;The pattern is  a standalone identifier, neither a literal  nor the ellipsis,
+      ;;and  it has  no  fender.   A standalone  identifier  with  no fender  matches
+      ;;everything, so it is  useless to generate the code for  the next clauses: the
+      ;;code generated here is the last one.
       ;;
       (((?pattern ?output-expr) . ?unused-clauses)
        (and (identifier? ?pattern)
@@ -769,39 +751,39 @@
 	   ;;
 	   ;;   (_ ?output-expr)
 	   ;;
-	   ;;the underscore  identifier matches everything and  binds no
-	   ;;pattern variables.
-	   (chi-expr ?output-expr lexenv.run lexenv.expand)
+	   ;;the  underscore  identifier  matches  everything and  binds  no  pattern
+	   ;;variables.
+	   (%chi-expr.core ?output-expr lexenv.run lexenv.expand)
 	 ;;The clause is:
 	 ;;
 	 ;;   (?id ?output-expr)
 	 ;;
-	 ;;a standalone identifier matches everything  and binds it to a
-	 ;;pattern variable whose name is ?ID.
+	 ;;a  standalone identifier  matches everything  and  binds it  to a  pattern
+	 ;;variable whose name is ?ID.
 	 (let ((label (gensym-for-label ?pattern))
 	       (lex   (gensym-for-lexical-var ?pattern)))
-	   ;;The expression  must be  expanded in a  lexical environment
-	   ;;augmented with the pattern variable.
+	   ;;The expression must be expanded  in a lexical environment augmented with
+	   ;;the pattern variable.
 	   (define output-expr^
 	     (push-lexical-contour
 		 (make-filled-rib (list ?pattern) (list label))
 	       ?output-expr))
 	   (define lexenv.run^
-	     ;;Push a pattern variable entry to the lexical environment.
-	     ;;The ellipsis nesting level is 0.
+	     ;;Push  a  pattern  variable  entry to  the  lexical  environment.   The
+	     ;;ellipsis nesting level is 0.
 	     (cons (cons label (make-binding 'syntax (cons lex 0)))
 		   lexenv.run))
 	   (define output-expr.core
-	     (chi-expr output-expr^ lexenv.run^ lexenv.expand))
+	     (%chi-expr.core output-expr^ lexenv.run^ lexenv.expand))
 	   (build-application no-source
 	     (build-lambda no-source
 	       (list lex)
 	       output-expr.core)
 	     (list (build-lexical-reference no-source expr.id))))))
 
-      ;;The  pattern is  neither  a standalone  pattern  variable nor  a
-      ;;standalone underscore.  It has no fender, which is equivalent to
-      ;;having a "#t" as fender.
+      ;;The  pattern  is neither  a  standalone  pattern  variable nor  a  standalone
+      ;;underscore.   It has  no fender,  which  is equivalent  to having  a "#t"  as
+      ;;fender.
       ;;
       (((?pattern ?output-expr) . ?next-clauses)
        (%gen-clause expr.id literals
@@ -823,9 +805,9 @@
 		       pattern.stx fender.stx output-expr.stx
 		       lexenv.run lexenv.expand
 		       next-clauses)
-    ;;Generate  the  code needed  to  match  the clause  represented  by
-    ;;PATTERN.STX, FENDER.STX and  OUTPUT-EXPR.STX; recursively generate
-    ;;the code to match the other clauses in NEXT-CLAUSES.
+    ;;Generate  the code  needed  to  match the  clause  represented by  PATTERN.STX,
+    ;;FENDER.STX  and OUTPUT-EXPR.STX;  recursively generate  the code  to match  the
+    ;;other clauses in NEXT-CLAUSES.
     ;;
     ;;When there is a fender, we build the output form (pseudo-code):
     ;;
@@ -845,21 +827,19 @@
     ;;        (match-next-clauses))
     ;;   (syntax-dispatch expr.id pattern))
     ;;
-    ;;notice that the  return value of SYNTAX-DISPATCH is:  false if the
-    ;;pattern did not match, otherwise the list of values to be bound to
-    ;;the pattern variables.
+    ;;notice that  the return value of  SYNTAX-DISPATCH is: false if  the pattern did
+    ;;not match, otherwise the list of values to be bound to the pattern variables.
     ;;
     (receive (pattern.dispatch pvars.levels)
-	;;CONVERT-PATTERN  return 2  values: the  pattern in  the format
-	;;accepted by SYNTAX-DISPATCH, an alist representing the pattern
-	;;variables:
+	;;CONVERT-PATTERN  return 2  values: the  pattern in  the format  accepted by
+	;;SYNTAX-DISPATCH, an alist representing the pattern variables:
 	;;
-	;;* The keys of the alist are identifiers representing the names
-	;;  of the pattern variables.
+	;;*  The keys  of the  alist are  identifiers representing  the names  of the
+	;;  pattern variables.
 	;;
-	;;*  The values  of the  alist are  non-negative exact  integers
-	;;  representing the ellipsis nesting level of the corresponding
-	;;  pattern variable.  See SYNTAX-TRANSFORMER for details.
+	;;* The values of the alist  are non-negative exact integers representing the
+	;;   ellipsis  nesting level  of  the  corresponding pattern  variable.   See
+	;;  SYNTAX-TRANSFORMER for details.
 	;;
 	(convert-pattern pattern.stx literals)
       (let ((pvars (map car pvars.levels)))
@@ -888,8 +868,8 @@
 				     fender.stx output-expr.stx
 				     lexenv.run lexenv.expand
 				     next-clauses)
-    ;;Generate the  code that tests  the fender: if the  fender succeeds
-    ;;run the output expression, else try to match the next clauses.
+    ;;Generate the code that tests the fender:  if the fender succeeds run the output
+    ;;expression, else try to match the next clauses.
     ;;
     ;;When there is a fender, we build the output form (pseudo-code):
     ;;
@@ -921,9 +901,9 @@
 	test conseq altern)))
 
   (define (%build-dispatch-call pvars.levels expr.stx tmp-sym lexenv.run lexenv.expand)
-    ;;Generate  code to  evaluate EXPR.STX  in an  environment augmented
-    ;;with the pattern variables defined by PVARS.LEVELS.  Return a core
-    ;;language expression representing the following pseudo-code:
+    ;;Generate code to evaluate EXPR.STX in an environment augmented with the pattern
+    ;;variables  defined   by  PVARS.LEVELS.   Return  a   core  language  expression
+    ;;representing the following pseudo-code:
     ;;
     ;;   (apply (lambda (pattern-var ...) expr) tmp)
     ;;
@@ -931,47 +911,43 @@
       ;;For each pattern variable: the identifier representing its name.
       (map car pvars.levels))
     (define labels
-      ;;For each pattern variable: a gensym used as label in the lexical
-      ;;environment.
+      ;;For each pattern variable: a gensym used as label in the lexical environment.
       (map gensym-for-label ids))
     (define names
-      ;;For each pattern variable: a gensym used as unique variable name
-      ;;in the lexical environment.
+      ;;For  each pattern  variable: a  gensym used  as unique  variable name  in the
+      ;;lexical environment.
       (map gensym-for-lexical-var ids))
     (define levels
-      ;;For  each pattern  variable: an  exact integer  representing the
-      ;;ellipsis nesting level.  See SYNTAX-TRANSFORMER for details.
+      ;;For each pattern variable: an exact integer representing the ellipsis nesting
+      ;;level.  See SYNTAX-TRANSFORMER for details.
       (map cdr pvars.levels))
     (define bindings
-      ;;For each pattern variable: a binding to be pushed on the lexical
-      ;;environment.
+      ;;For each pattern variable: a binding to be pushed on the lexical environment.
       (map (lambda (label name level)
 	     (cons label (make-binding 'syntax (cons name level))))
 	labels names levels))
     (define expr.core
-      ;;Expand the  expression in  a lexical environment  augmented with
-      ;;the pattern variables.
+      ;;Expand the  expression in  a lexical environment  augmented with  the pattern
+      ;;variables.
       ;;
       ;;NOTE We could have created a syntax object:
       ;;
       ;;  #`(lambda (pvar ...) #,expr.stx)
       ;;
-      ;;and then  expanded it:  EXPR.STX would have  been expanded  in a
-      ;;lexical environment augmented with the PVAR bindings.
+      ;;and  then  expanded it:  EXPR.STX  would  have  been  expanded in  a  lexical
+      ;;environment augmented with the PVAR bindings.
       ;;
-      ;;Instead we have chosen to push  the PVAR bindings on the lexical
-      ;;environment "by hand", then to  expand EXPR.STX in the augmented
-      ;;environment,  finally   to  put  the  resulting   core  language
-      ;;expression in a core language LAMBDA syntax.
+      ;;Instead we have  chosen to push the PVAR bindings  on the lexical environment
+      ;;"by hand", then  to expand EXPR.STX in the augmented  environment, finally to
+      ;;put the resulting core language expression in a core language LAMBDA syntax.
       ;;
-      ;;The two methods are fully equivalent;  the one we have chosen is
-      ;;a bit faster.
+      ;;The two methods are fully equivalent; the one we have chosen is a bit faster.
       ;;
-      (chi-expr (push-lexical-contour
-		    (make-filled-rib ids labels)
-		  expr.stx)
-		(append bindings lexenv.run)
-		lexenv.expand))
+      (%chi-expr.core (push-lexical-contour
+			  (make-filled-rib ids labels)
+			expr.stx)
+		      (append bindings lexenv.run)
+		      lexenv.expand))
     (build-application no-source
       (build-primref no-source 'apply)
       (list (build-lambda no-source names expr.core)
@@ -988,34 +964,38 @@
 	      (find (cdr id*) (cons (car id*) ok*)))
 	  (syntax-error (car id*) "invalid " class)))))
 
+  (define (%chi-expr.core expr.stx lexenv.run lexenv.expand)
+    (psi-core-expr (chi-expr expr.stx lexenv.run lexenv.expand)))
+
   #| end of module: SYNTAX-CASE-TRANSFORMER |# )
 
 
 ;;;; module core-macro-transformer: SPLICE-FIRST-EXPAND
 
 (define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand  Vicare's SPLICE-FIRST-EXPAND
-  ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-  ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-  ;;an expanded language symbolic expression.
+  ;;Transformer function  used to  expand Vicare's SPLICE-FIRST-EXPAND  syntaxes from
+  ;;the top-level  built in environment.   Expand the  syntax object EXPR-STX  in the
+  ;;context  of the  given LEXENV;  return  a PSI  struct containing  an instance  of
+  ;;"splice-first-envelope".
   ;;
-  (import SPLICE-FIRST-ENVELOPE)
   (syntax-match expr-stx ()
     ((_ ?form)
-     (make-splice-first-envelope ?form))
+     (make-psi (let ()
+		 (import SPLICE-FIRST-ENVELOPE)
+		 (make-splice-first-envelope ?form))
+	       <top>))
     ))
 
 
 ;;;; module core-macro-transformer: UNSAFE
 
 (define (unsafe-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand  Vicare's UNSAFE macros from the
-  ;;top-level built in environment.  Expand  the contents of EXPR-STX in
-  ;;the  context  of  the  given LEXENV;  return  an  expanded  language
-  ;;symbolic expression.
+  ;;Transformer function  used to  expand Vicare's UNSAFE  macros from  the top-level
+  ;;built in  environment.  Expand  the contents  of EXPR-STX in  the context  of the
+  ;;given LEXENV; return a PSI struct.
   ;;
-  (define-constant __who__
-    'unsafe)
+  (define-fluid-override __who__
+    (identifier-syntax 'unsafe))
   (syntax-match expr-stx ()
     ((_ ?id)
      (identifier? ?id)
@@ -1035,14 +1015,13 @@
 ;;;; module core-macro-transformer: PREDICATE-PROCEDURE-ARGUMENT-VALIDATION, PREDICATE-RETURN-VALUE-VALIDATION
 
 (define (predicate-procedure-argument-validation-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;PREDICATE-PROCEDURE-ARGUMENT-VALIDATION  macros  from the  top-level
-  ;;built  in  environment.  Expand  the  contents  of EXPR-STX  in  the
-  ;;context of  the given LEXENV;  return an expanded  language symbolic
-  ;;expression.
+  ;;Transformer        function         used        to         expand        Vicare's
+  ;;PREDICATE-PROCEDURE-ARGUMENT-VALIDATION  macros  from   the  top-level  built  in
+  ;;environment.  Expand the contents of EXPR-STX in the context of the given LEXENV;
+  ;;return a PSI struct.
   ;;
-  (define-constant __who__
-    'predicate-procedure-argument-validation)
+  (define-fluid-override __who__
+    (identifier-syntax 'predicate-procedure-argument-validation))
   (syntax-match expr-stx ()
     ((_ ?id)
      (identifier? ?id)
@@ -1055,13 +1034,12 @@
     ))
 
 (define (predicate-return-value-validation-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer      function      used     to      expand      Vicare's
-  ;;PREDICATE-RETURN-VALUE-VALIDATION macros from the top-level built in
-  ;;environment.  Expand the contents of  EXPR-STX in the context of the
-  ;;given LEXENV; return an expanded language symbolic expression.
+  ;;Transformer  function used  to expand  Vicare's PREDICATE-RETURN-VALUE-VALIDATION
+  ;;macros from the top-level built in  environment.  Expand the contents of EXPR-STX
+  ;;in the context of the given LEXENV; return a PSI struct.
   ;;
-  (define-constant __who__
-    'predicate-return-value-validation)
+  (define-fluid-override __who__
+    (identifier-syntax 'predicate-return-value-validation))
   (syntax-match expr-stx ()
     ((_ ?id)
      (identifier? ?id)
@@ -1084,31 +1062,27 @@
 	 $struct-type-field-set!-transformer)
 
   (define (struct-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer   function  used   to  expand   STRUCT-TYPE-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
+    ;;Transformer function  used to  expand STRUCT-TYPE-DESCRIPTOR syntaxes  from the
+    ;;top-level  built in  environment.  Expand  the  syntax object  EXPR-STX in  the
+    ;;context of the given LEXENV; return a PSI struct.
     ;;
-    ;;FIXME This transformer is  currently unused because the identifier
-    ;;STRUCT-TYPE-DESCRIPTOR  is bound  to  a function.   In future  the
-    ;;function  binding  will be  removed  and  replaced by  the  syntax
-    ;;binding.  (Marco Maggi; Fri Jan 31, 2014)
-    ;;
-    (define-constant __who__ 'struct-type-descriptor)
+    (define-fluid-override __who__
+      (identifier-syntax 'struct-type-descriptor))
     (syntax-match expr-stx ()
       ((_ ?type-id)
        (identifier? ?type-id)
-       (build-data no-source
-	 (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
+       (make-psi (build-data no-source
+		   (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run))
+		 <top>))
       ))
 
   (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer  function   used  to   expand  STRUCT-TYPE-AND-STRUCT?
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
+    ;;Transformer function used to  expand STRUCT-TYPE-AND-STRUCT?  syntaxes from the
+    ;;top-level  built in  environment.  Expand  the  syntax object  EXPR-STX in  the
+    ;;context of the given LEXENV; return an PSI struct.
     ;;
-    (define-constant __who__ 'struct-type-and-struct?)
+    (define-fluid-override __who__
+      (identifier-syntax 'struct-type-and-struct?))
     (syntax-match expr-stx ()
       ((_ ?type-id ?stru)
        (identifier? ?type-id)
@@ -1124,18 +1098,16 @@
 	   $struct-type-field-ref-transformer)
 
     (define (struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function   used  to   expand  STRUCT-TYPE-FIELD-REF
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
+      ;;Transformer function  used to expand STRUCT-TYPE-FIELD-REF  syntaxes from the
+      ;;top-level built  in environment.   Expand the syntax  object EXPR-STX  in the
+      ;;context of the given LEXENV; return a PSI struct.
       ;;
       (%struct-type-field-ref-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
 
     (define ($struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used   to  expand  $STRUCT-TYPE-FIELD-REF
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
+      ;;Transformer function used to  expand $STRUCT-TYPE-FIELD-REF syntaxes from the
+      ;;top-level built  in environment.   Expand the syntax  object EXPR-STX  in the
+      ;;context of the given LEXENV; return a PSI struct.
       ;;
       (%struct-type-field-ref-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
 
@@ -1162,18 +1134,16 @@
 	   $struct-type-field-set!-transformer)
 
     (define (struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used   to  expand  STRUCT-TYPE-FIELD-SET!
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
+      ;;Transformer function used to expand STRUCT-TYPE-FIELD-SET!  syntaxes from the
+      ;;top-level built  in environment.   Expand the syntax  object EXPR-STX  in the
+      ;;context of the given LEXENV; return a PSI struct.
       ;;
       (%struct-type-field-set!-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
 
     (define ($struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
-      ;;Transformer  function  used  to  expand  $STRUCT-TYPE-FIELD-SET!
-      ;;syntaxes from  the top-level  built in environment.   Expand the
-      ;;syntax  object EXPR-STX  in  the context  of  the given  LEXENV;
-      ;;return an expanded language symbolic expression.
+      ;;Transformer function  used to  expand $STRUCT-TYPE-FIELD-SET!   syntaxes from
+      ;;the top-level built in environment.  Expand the syntax object EXPR-STX in the
+      ;;context of the given LEXENV; return a PSI struct.
       ;;
       (%struct-type-field-set!-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
 
@@ -1197,10 +1167,10 @@
 ;;; --------------------------------------------------------------------
 
   (define (%struct-type-id->rtd who expr-stx type-id lexenv.run)
-    ;;Given the identifier  of the struct type: find its  label then its
-    ;;syntactic binding  and return the  struct type descriptor.   If no
-    ;;binding captures the identifier or the binding does not describe a
-    ;;structure type descriptor: raise an exception.
+    ;;Given the  identifier of  the struct  type: find its  label then  its syntactic
+    ;;binding and  return the  struct type  descriptor.  If  no binding  captures the
+    ;;identifier or the binding does not  describe a structure type descriptor: raise
+    ;;an exception.
     ;;
     (cond ((id->label type-id)
 	   => (lambda (label)
@@ -1212,9 +1182,9 @@
 	   (%raise-unbound-error who expr-stx type-id))))
 
   (define (%field-name->field-idx who expr-stx field-names field-id)
-    ;;Given a list of symbols  FIELD-NAMES representing a struct's field
-    ;;names and an identifier FIELD-ID representing the name of a field:
-    ;;return the index of the selected field in the list.
+    ;;Given a list of symbols FIELD-NAMES  representing a struct's field names and an
+    ;;identifier FIELD-ID representing  the name of a field: return  the index of the
+    ;;selected field in the list.
     ;;
     (define field-sym (identifier->symbol field-id))
     (let loop ((i 0) (ls field-names))
@@ -1236,26 +1206,25 @@
 	 record-type-field-ref-transformer
 	 $record-type-field-set!-transformer
 	 $record-type-field-ref-transformer)
-  ;;The syntactic  binding representing the R6RS  record type descriptor
-  ;;and record constructor descriptor has one of the formats:
+  ;;The syntactic  binding representing  the R6RS record  type descriptor  and record
+  ;;constructor descriptor has one of the formats:
   ;;
   ;;   ($rtd . (?rtd-id ?rcd-id))
   ;;   ($rtd . (?rtd-id ?rcd-id . ?spec))
   ;;
-  ;;where: "$rtd"  is the  symbol "$rtd"; ?RTD-ID  is the  identifier to
-  ;;which the record type descriptor is bound; ?RCD-ID is the identifier
-  ;;to which the  default record constructor descriptor  is bound; ?SPEC
-  ;;is a record of type R6RS-RECORD-TYPE-SPEC.
+  ;;where: "$rtd" is the symbol "$rtd"; ?RTD-ID is the identifier to which the record
+  ;;type descriptor is  bound; ?RCD-ID is the identifier to  which the default record
+  ;;constructor descriptor is bound; ?SPEC is a record of type R6RS-RECORD-TYPE-SPEC.
   ;;
   (import R6RS-RECORD-TYPE-SPEC)
 
   (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer   function  used   to  expand   RECORD-TYPE-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
+    ;;Transformer function  used to  expand RECORD-TYPE-DESCRIPTOR syntaxes  from the
+    ;;top-level  built in  environment.  Expand  the  syntax object  EXPR-STX in  the
+    ;;context of the given LEXENV; return a PSI struct.
     ;;
-    (define-constant __who__ 'record-type-descriptor)
+    (define-fluid-override __who__
+      (identifier-syntax 'record-type-descriptor))
     (syntax-match expr-stx ()
       ((_ ?type-name)
        (identifier? ?type-name)
@@ -1270,7 +1239,8 @@
     ;;syntax object EXPR-STX in the  context of the given LEXENV; return
     ;;an expanded language symbolic expression.
     ;;
-    (define-constant __who__ 'record-constructor-descriptor)
+    (define-fluid-override __who__
+      (identifier-syntax 'record-constructor-descriptor))
     (syntax-match expr-stx ()
       ((_ ?type-name)
        (identifier? ?type-name)
@@ -1347,22 +1317,22 @@
 ;;;; module core-macro-transformer: TYPE-DESCRIPTOR, IS-A?
 
 (define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand TYPE-DESCRIPTOR  syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer function used  to expand TYPE-DESCRIPTOR syntaxes  from the top-level
+  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
+  ;;given LEXENV; return a PSI struct.
   ;;
   ;;The result must be an expression evaluating to:
   ;;
-  ;;* A Vicare  struct type descriptor if the  given identifier argument
-  ;;  is a struct type name.
+  ;;* A Vicare  struct type descriptor if  the given identifier argument  is a struct
+  ;;  type name.
   ;;
-  ;;* A R6RS record type descriptor  if the given identifier argument is
-  ;;  a record type name.
+  ;;* A R6RS record type descriptor if the given identifier argument is a record type
+  ;;  name.
   ;;
   ;;* An expand-time OBJECT-TYPE-SPEC instance.
   ;;
-  (define-constant __who__ 'type-descriptor)
+  (define-fluid-override __who__
+    (identifier-syntax 'type-descriptor))
   (syntax-match expr-stx ()
     ((_ ?type-id)
      (identifier? ?type-id)
@@ -1371,21 +1341,23 @@
 	(chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
 		  lexenv.run lexenv.expand))
        ((vicare-struct-type)
-	(build-data no-source
-	  (syntactic-binding-value binding)))
+	(make-psi (build-data no-source
+		    (syntactic-binding-value binding))
+		  <top>))
        ((object-type-spec)
-	(build-data no-source
-	  (identifier-object-type-spec ?type-id)))
+	(make-psi (build-data no-source
+		    (identifier-object-type-spec ?type-id))
+		  <top>))
        ))
     ))
 
 (define (is-a?-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand Vicare's IS-A?   syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer function used  to expand Vicare's IS-A?  syntaxes  from the top-level
+  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
+  ;;given LEXENV; return a PSI struct.
   ;;
-  (define-constant __who__ 'is-a?)
+  (define-fluid-override __who__
+    (identifier-syntax 'is-a?))
   (syntax-match expr-stx (<>)
     ((_ <> ?type-id)
      (identifier? ?type-id)
@@ -1429,12 +1401,12 @@
 ;;;; module core-macro-transformer: SLOT-REF, SLOT-SET!, $SLOT-REF, $SLOT-SET!
 
 (define (slot-ref-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to  expand Vicare's SLOT-REF syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer function used to expand Vicare's SLOT-REF syntaxes from the top-level
+  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
+  ;;given LEXENV; return a PSI struct.
   ;;
-  (define-constant __who__ 'slot-ref)
+  (define-fluid-override __who__
+    (identifier-syntax 'slot-ref))
   (syntax-match expr-stx (<>)
     ((_ <> ?field-name-id ?type-id)
      (and (identifier? ?type-id)
@@ -1493,12 +1465,12 @@
     ))
 
 (define (slot-set!-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand Vicare's SLOT-SET! syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer  function  used  to  expand  Vicare's  SLOT-SET!  syntaxes  from  the
+  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;of the given LEXENV; return a PSI struct.
   ;;
-  (define-constant __who__ 'slot-set!)
+  (define-fluid-override __who__
+    (identifier-syntax 'slot-set!))
   (syntax-match expr-stx (<>)
     ((_ <> ?field-name-id ?type-id <>)
      (and (identifier? ?type-id)
@@ -1557,10 +1529,9 @@
     ))
 
 (define ($slot-ref-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function used to expand Vicare's $SLOT-REF syntaxes from
-  ;;the  top-level  built  in  environment.  Expand  the  syntax  object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer  function  used  to  expand  Vicare's  $SLOT-REF  syntaxes  from  the
+  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;of the given LEXENV; return a PSI struct.
   ;;
   (define-constant __who__ '$slot-ref)
   (syntax-match expr-stx (<>)
@@ -1621,12 +1592,12 @@
     ))
 
 (define ($slot-set!-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  Vicare's $SLOT-SET!  syntaxes
-  ;;from the top-level  built in environment.  Expand  the syntax object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer  function  used to  expand  Vicare's  $SLOT-SET!  syntaxes  from  the
+  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;of the given LEXENV; return a PSI struct.
   ;;
-  (define-constant __who__ '$slot-set!)
+  (define-fluid-override __who__
+    (identifier-syntax '$slot-set!))
   (syntax-match expr-stx (<>)
     ((_ <> ?field-name-id ?type-id <>)
      (and (identifier? ?type-id)
@@ -1688,10 +1659,9 @@
 ;;;; module core-macro-transformer: TAG-ASSERT, TAG-ASSERT-AND-RETURN
 
 (define (tag-assert-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  Vicare's TAG-ASSERT  syntaxes
-  ;;from the top-level  built in environment.  Expand  the syntax object
-  ;;EXPR-STX  in the  context of  the given  LEXENV; return  an expanded
-  ;;language symbolic expression.
+  ;;Transformer  function  used  to  expand Vicare's  TAG-ASSERT  syntaxes  from  the
+  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert))
@@ -1729,10 +1699,9 @@
     ))
 
 (define (tag-assert-and-return-transformer expr-stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to expand  Vicare's TAG-ASSERT-AND-RETURN
-  ;;syntaxes from the top-level built in environment.  Expand the syntax
-  ;;object  EXPR-STX in  the  context  of the  given  LEXENV; return  an
-  ;;expanded language symbolic expression.
+  ;;Transformer function used to  expand Vicare's TAG-ASSERT-AND-RETURN syntaxes from
+  ;;the top-level  built in environment.   Expand the  syntax object EXPR-STX  in the
+  ;;context of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert-and-return))
@@ -1777,6 +1746,7 @@
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
+;;fill-column: 85
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)
