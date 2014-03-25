@@ -818,7 +818,7 @@
 		;A syntax  object (wrapped  or unwrapped) representing  an expression
 		;which will evaluate to a type predicate.
    accessor-maker
-		;False  or an accessor maker procedure.
+		;False or an accessor maker procedure.
    mutator-maker
 		;False or a mutator maker procedure.
    setter-maker
