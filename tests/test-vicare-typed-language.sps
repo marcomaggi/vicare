@@ -27,8 +27,9 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare expander object-type-specs) typ.)
-  (vicare language-extensions tags)
+  (for (prefix (vicare expander object-type-specs) typ.)
+    run expand)
+  (vicare expander tags)
   (vicare checks))
 
 (check-set-mode! 'report-failed)
@@ -62,7 +63,7 @@
   (syntax-rules ()
     ((_ ?form)
      (eval ?form (environment '(vicare)
-			      '(vicare language-extensions tags))))))
+			      '(vicare expander tags))))))
 
 (define-syntax catch-syntax-violation
   (syntax-rules ()
@@ -76,35 +77,127 @@
 	       (else E))
        . ?body))))
 
+(define-syntax catch-expand-time-signature-violation
+  (syntax-rules ()
+    ((_ ?verbose . ?body)
+     (guard (E ((typ.retvals-signature-violation? E)
+		(when ?verbose
+		  (debug-print (condition-message E)
+			       (syntax-violation-form E)))
+		(values (syntax->datum (typ.retvals-signature-violation-expected-signature E))
+			(syntax->datum (typ.retvals-signature-violation-returned-signature E))))
+	       (else E))
+       . ?body))))
+
 
-(parametrise ((check-test-name	'built-in-tags))
+(parametrise ((check-test-name	'built-in-tags/super-and-sub))
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<number> #'<complex>))
+  (define-syntax-rule (TRUE ?super ?sub)
+    (check-for-true
+     (typ.tag-super-and-sub? ?super ?sub)))
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<complex> #'<real>))
+  (define-syntax-rule (FALS ?super ?sub)
+    (check-for-false
+     (typ.tag-super-and-sub? ?super ?sub)))
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<real> #'<integer>))
+;;; --------------------------------------------------------------------
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<integer> #'<exact-integer>))
+  (TRUE #'<top>			#'<number>)
+  (TRUE #'<number>		#'<complex>)
+  (TRUE #'<complex>		#'<real>)
+  (TRUE #'<real>		#'<integer>)
+  (TRUE #'<integer>		#'<exact-integer>)
+  (TRUE #'<exact-integer>	#'<fixnum>)
+  (TRUE #'<exact-integer>	#'<bignum>)
+  (TRUE #'<real>		#'<flonum>)
+  (TRUE #'<complex>		#'<compnum>)
+  (TRUE #'<complex>		#'<cflonum>)
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<exact-integer> #'<fixnum>))
+  #t)
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<exact-integer> #'<bignum>))
+
+(parametrise ((check-test-name	'formals-signatures/super-and-sub))
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<real> #'<flonum>))
+  (define-syntax-rule (TRUE ?super ?sub)
+    (check-for-true
+     (typ.formals-signature-super-and-sub? ?super ?sub)))
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<complex> #'<compnum>))
+  (define-syntax-rule (FALS ?super ?sub)
+    (check-for-false
+     (typ.formals-signature-super-and-sub? ?super ?sub)))
 
-  (check-for-true
-   (typ.tag-super-and-sub? #'<complex> #'<cflonum>))
+;;; --------------------------------------------------------------------
+;;; standalone identifier formals signatures
+
+  (FALS #'<fixnum> #'<complex>)
+  (TRUE #'<number> #'<complex>)
+  (TRUE #'<complex> #'<real>)
+  (TRUE #'<real> #'<integer>)
+  (TRUE #'<integer> #'<exact-integer>)
+  (TRUE #'<exact-integer> #'<fixnum>)
+  (TRUE #'<exact-integer> #'<bignum>)
+  (TRUE #'<real> #'<flonum>)
+  (TRUE #'<complex> #'<compnum>)
+  (TRUE #'<complex> #'<cflonum>)
+
+;;; --------------------------------------------------------------------
+;;; proper list formals signatures
+
+  (TRUE #'(<number>) #'(<complex>))
+  (TRUE #'(<fixnum> <fixnum> <fixnum>)
+	#'(<fixnum> <fixnum> <fixnum>))
+  (TRUE #'(<number> <fixnum> <fixnum>)
+	#'(<fixnum> <fixnum> <fixnum>))
+  (TRUE #'(<fixnum> <number> <fixnum>)
+	#'(<fixnum> <fixnum> <fixnum>))
+  (TRUE #'(<fixnum> <fixnum> <number>)
+	#'(<fixnum> <fixnum> <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum>)
+	#'(<number> <fixnum> <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum>)
+	#'(<fixnum> <number> <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum>)
+	#'(<fixnum> <fixnum> <number>))
+
+;;; --------------------------------------------------------------------
+;;; improper list formals signatures
+
+  (TRUE #'(<number> . <number>) #'(<complex> . <complex>))
+  (FALS #'(<complex> . <complex>) #'(<number> . <number>))
+
+  (TRUE #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<number> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<fixnum> <number> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<fixnum> <fixnum> <number> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<fixnum> <fixnum> <fixnum> . <number>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<number> <fixnum> <fixnum> . <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <number> <fixnum> . <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <number> . <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <number>))
+
+  (TRUE #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<top>    <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<fixnum> <top>    <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<fixnum> <fixnum> <top>    . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<fixnum> <fixnum> <fixnum> . <top>)    #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<top>    <fixnum> <fixnum> . <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <top>    <fixnum> . <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <top>    . <fixnum>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <top>))
+
+;;; --------------------------------------------------------------------
+;;; special mismatchings
+
+  (TRUE #'(<number> . <top>)	#'(<complex> <fixnum> <fixnum>))
+  (TRUE #'(<number> . <list>)	#'(<complex> <fixnum> <fixnum>))
+
+  (TRUE #'(<number> <exact-integer> . <top>)	#'(<complex> <fixnum> <fixnum>))
+  (TRUE #'(<number> <exact-integer> . <list>)	#'(<complex> <fixnum> <fixnum>))
+
+  (TRUE #'(<number> <exact-integer> <fixnum> . <top>)	#'(<complex> <fixnum> <fixnum>))
+  (TRUE #'(<number> <exact-integer> <fixnum> . <list>)	#'(<complex> <fixnum> <fixnum>))
 
   #t)
 
@@ -2119,23 +2212,74 @@
 (parametrise ((check-test-name	'tag-assert))
 
   (check
+      (tag-assert (<fixnum>) 123)
+    => (void))
+
+  (check
+      (tag-assert (<top>) 123)
+    => (void))
+
+;;; --------------------------------------------------------------------
+;;; any tuple of returned values is of type <top>
+
+  (check
       (begin
-	(tag-assert <fixnum> 123)
+	(tag-assert <top> 123)
 	#t)
     => #t)
+
+  (check
+      (with-result
+       (tag-assert <top> (receive-and-return (V)
+			     (+ 1 2 3)
+			   (add-result V))))
+    => `(,(void) (6)))
+
+  (check
+      (with-result
+       (tag-assert <top> (receive-and-return (a b c)
+			     (values 1 2 3)
+			   (add-result (vector a b c)))))
+    => `(,(void) (#(1 2 3))))
+
+;;; --------------------------------------------------------------------
+;;; a proper list of returned values is of type <list>
+
+  (check
+      (with-result
+       (tag-assert <list> (receive-and-return (a b c)
+  			      (values 1 2 3)
+  			    (add-result (vector a b c)))))
+    => `(,(void) (#(1 2 3))))
+
+  (check
+      (with-result
+       (tag-assert (<fixnum> . <list>)
+  		   (receive-and-return (a b c)
+  		       (values 1 2 3)
+  		     (add-result (vector a b c)))))
+    => `(,(void) (#(1 2 3))))
+
+  (check
+      (with-result
+       (tag-assert (<fixnum> <fixnum> <exact-integer> . <list>)
+  		   (receive-and-return (a b c)
+  		       (values 1 2 3)
+  		     (add-result (vector a b c)))))
+    => `(,(void) (#(1 2 3))))
 
 ;;; --------------------------------------------------------------------
 ;;; records
 
-  (check	;the ?EXPR is not explicitly tagged
-      (let ()
-	(define-record-type alpha
-	  (fields a b c))
-	(define O
-	  (make-alpha 1 2 3))
-	(tag-assert alpha O)
-	#t)
-    => #t)
+  ;; (check	;the ?EXPR is not explicitly tagged
+  ;;     (let ()
+  ;; 	(define-record-type alpha
+  ;; 	  (fields a b c))
+  ;; 	(define O
+  ;; 	  (make-alpha 1 2 3))
+  ;; 	(tag-assert (alpha) O)
+  ;; 	#t)
+  ;;   => #t)
 
   (check	;the ?EXPR is expliticly tagged
       (let ()
@@ -2143,36 +2287,36 @@
 	  (fields a b c))
 	(define {O alpha}
 	  (make-alpha 1 2 3))
-	(tag-assert alpha O)
+	(tag-assert (alpha) O)
 	#t)
     => #t)
 
   (check
-      (catch-syntax-violation #f
-       (%eval '(let ()
-		 (define-record-type alpha
-		   (fields a b c))
-		 (define {O alpha}
-		   (make-alpha 1 2 3))
-		 (tag-assert <fixnum> O))))
-    => 'alpha)
+      (catch-expand-time-signature-violation #f
+	(%eval '(let ()
+		  (define-record-type alpha
+		    (fields a b c))
+		  (define {O alpha}
+		    (make-alpha 1 2 3))
+		  (tag-assert (<fixnum>) O))))
+    => '(<fixnum>) '(alpha))
 
 ;;; --------------------------------------------------------------------
 ;;; record with parent
 
-  (check	;the ?EXPR is not explicitly tagged
-      (let ()
-	(define-record-type alpha
-	  (fields a b c))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields d e f))
-	(define O
-	  (make-beta 1 2 3 4 5 6))
-	(tag-assert alpha O)
-	(tag-assert beta  O)
-	#t)
-    => #t)
+  ;; (check	;the ?EXPR is not explicitly tagged
+  ;;     (let ()
+  ;; 	(define-record-type alpha
+  ;; 	  (fields a b c))
+  ;; 	(define-record-type beta
+  ;; 	  (parent alpha)
+  ;; 	  (fields d e f))
+  ;; 	(define O
+  ;; 	  (make-beta 1 2 3 4 5 6))
+  ;; 	(tag-assert (alpha) O)
+  ;; 	(tag-assert (beta)  O)
+  ;; 	#t)
+  ;;   => #t)
 
   (check	;the ?EXPR is expliticly tagged
       (let ()
@@ -2183,15 +2327,15 @@
 	  (fields d e f))
 	(define {O beta}
 	  (make-beta 1 2 3 4 5 6))
-	(tag-assert alpha O)
-	(tag-assert beta  O)
+	(tag-assert (alpha) O)
+	(tag-assert (beta)  O)
 	#t)
     => #t)
 
   #t)
 
 
-(parametrise ((check-test-name	'tag-assert-and-return))
+#;(parametrise ((check-test-name	'tag-assert-and-return))
 
   (check
       (tag-assert-and-return <fixnum> 123)
@@ -2349,4 +2493,5 @@
 ;; Local Variables:
 ;; eval: (put 'typ.set-identifier-object-type-spec! 'scheme-indent-function 1)
 ;; eval: (put 'catch-syntax-violation 'scheme-indent-function 1)
+;; eval: (put 'catch-expand-time-signature-violation 'scheme-indent-function 1)
 ;; End:

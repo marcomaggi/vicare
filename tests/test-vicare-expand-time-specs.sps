@@ -29,7 +29,7 @@
 (import (vicare)
   (for (prefix (vicare expander object-type-specs) typ.)
     expand)
-  (vicare language-extensions tags)
+  (vicare expander tags)
   (vicare checks))
 
 (check-set-mode! 'report-failed)

@@ -92,7 +92,7 @@
 		   (psi-core-expr test.psi)
 		   (psi-core-expr consequent.psi)
 		   (psi-core-expr alternate.psi))
-		 <top>)))
+		 )))
     ((_ ?test ?consequent)
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
@@ -100,7 +100,7 @@
 		   (psi-core-expr test.psi)
 		   (psi-core-expr consequent.psi)
 		   (build-void))
-		 <top>)))
+		 )))
     ))
 
 
@@ -116,7 +116,7 @@
      (let ((datum (syntax->datum ?datum)))
        (make-psi (build-data no-source
 		   datum)
-		 <top>)))
+		 (retvals-signature-of-datum datum))))
     ))
 
 
@@ -196,7 +196,7 @@
 		      (body.core (psi-core-expr body.psi))
 		      ;;Build the LETREC or LETREC* expression in the core language.
 		      (expr.core (core-lang-builder no-source lex* rhs*.core body.core)))
-		 (make-psi expr.core <top>)))))))
+		 (make-psi expr.core (psi-retvals-signature body.psi))))))))
       ))
 
   #| end of module |# )
@@ -281,7 +281,7 @@
 	    (expr.core (build-foreign-call no-source
 			 (psi-core-expr name.psi)
 			 (map psi-core-expr arg*.psi))))
-       (make-psi expr.core <top>)))
+       (make-psi expr.core)))
     ))
 
 
@@ -443,7 +443,7 @@
 	   (%gen-syntax use-stx ?template lexenv.run '() ellipsis? #f)
 	 (let ((code (%generate-output-code intermediate-sexp)))
 	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
-	   (make-psi code <top>))))
+	   (make-psi code))))
       ))
 
   (define (%gen-syntax use-stx template-stx lexenv maps ellipsis? vec?)
@@ -721,8 +721,7 @@
 	 ;;
 	 (make-psi (build-application no-source
 		     (build-lambda no-source (list expr.id) body.core)
-		     (list expr.core))
-		   <top>)))
+		     (list expr.core)))))
       ))
 
   (define (%gen-syntax-case expr.id literals clauses lexenv.run lexenv.expand)
@@ -982,8 +981,7 @@
     ((_ ?form)
      (make-psi (let ()
 		 (import SPLICE-FIRST-ENVELOPE)
-		 (make-splice-first-envelope ?form))
-	       <top>))
+		 (make-splice-first-envelope ?form))))
     ))
 
 
@@ -1072,8 +1070,7 @@
       ((_ ?type-id)
        (identifier? ?type-id)
        (make-psi (build-data no-source
-		   (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run))
-		 <top>))
+		   (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run))))
       ))
 
   (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
@@ -1342,12 +1339,10 @@
 		  lexenv.run lexenv.expand))
        ((vicare-struct-type)
 	(make-psi (build-data no-source
-		    (syntactic-binding-value binding))
-		  <top>))
+		    (syntactic-binding-value binding))))
        ((object-type-spec)
 	(make-psi (build-data no-source
-		    (identifier-object-type-spec ?type-id))
-		  <top>))
+		    (identifier-object-type-spec ?type-id))))
        ))
     ))
 
@@ -1658,66 +1653,144 @@
 
 ;;;; module core-macro-transformer: TAG-ASSERT, TAG-ASSERT-AND-RETURN
 
-(define (tag-assert-transformer expr-stx lexenv.run lexenv.expand)
+(define (tag-assert-transformer expr.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand Vicare's  TAG-ASSERT  syntaxes  from  the
-  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;top-level built in environment.  Expand the syntax object EXPR.STX in the context
   ;;of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert))
-  (define (%output-expression tag-id expr-stx)
-    (chi-expr (bless
-	       `(let ((V ,expr-stx))
-		  (unless (is-a? V ,tag-id)
-		    (assertion-violation (quote ,tag-id)
-		      "expression with wrong result type" (quote ,expr-stx) V))))
-	      lexenv.run lexenv.expand))
-  (syntax-match expr-stx ()
-    ((_ ?tag ?expr)
-     (cond ((not (tag-identifier? ?tag))
-	    (syntax-violation __who__
-	      "expected tag identifier as first argument" expr-stx ?tag))
+  (define (%just-evaluate-the-expression expr.stx)
+    (let* ((expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
+	   (expr.core (psi-core-expr  expr.psi)))
+      (make-psi (build-sequence no-source
+		  (list expr.core (build-void)))
+		(list <top>))))
+  (syntax-match expr.stx ()
+    ((_ #f ?expr)
+     ;;No retvals signature specified.
+     (%just-evaluate-the-expression ?expr))
 
-	   ((free-identifier=? <top> ?tag)
-	    ;;All the objects are of type <top>.
-	    (chi-expr ?expr lexenv.run lexenv.expand))
+    ((_ ?retvals-signature ?expr)
+     (and (identifier? ?retvals-signature)
+	  (free-identifier=? <top> ?retvals-signature))
+     ;;Any tuple of returned objects is of type <top>.
+     (%just-evaluate-the-expression ?expr))
 
-	   ((and (identifier? ?expr)
-		 (tagged-identifier? ?expr))
-	    (let ((tag-id (identifier-tag ?expr)))
-	      (cond ((free-identifier=? <top> tag-id)
-		     (%output-expression ?tag ?expr))
-		    ((tag-super-and-sub? ?tag tag-id)
-		     ;;We know at expand time  that the type is correct, so
-		     ;;we do not insert the validation.
-		     (chi-expr ?expr lexenv.run lexenv.expand))
-		    (else
-		     (syntax-violation __who__
-		       "expression with wrong type tagging" expr-stx tag-id)))))
-	   (else
-	    (%output-expression ?tag ?expr))))
+    ((_ ?retvals-signature ?expr)
+     (retvals-signature-syntax? ?retvals-signature)
+     (let* ((expr.psi   (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core  (psi-core-expr  expr.psi))
+	    (expr.sign  (psi-retvals-signature expr.psi))
+	    (call.psi   (chi-expr (bless 'call-with-values) lexenv.run lexenv.expand))
+	    (call.core  (psi-core-expr call.psi)))
+       (cond ((not expr.sign)
+	      ;;The  expression  has no  type  specification;  we  have to  insert  a
+	      ;;run-time  check.  Here  we know  that ?RETVALS-SIGNATURE  is a  valid
+	      ;;formsla signature, so we can be less strict in the patterns.
+	      (syntax-match ?retvals-signature ()
+		((?rv-tag* ...)
+		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
+			(checker.psi  (chi-expr (bless
+						 `(lambda ,TMP*
+						    ,@(map (lambda (tmp tag)
+							     `(unless (is-a? ,tmp ,tag)
+								(expression-return-value-violation (quote tag)
+								  "expression with wrong result type"
+								  (quote ,expr.stx) tmp)))
+							TMP* ?rv-tag*)
+						    (void)))
+						lexenv.run lexenv.expand))
+			(checker.core (psi-core-expr checker.psi)))
+		   (make-psi (build-application no-source
+			       call.core
+			       (list (build-lambda no-source '() expr.core)
+				     checker.core))
+			     (list <top>))))
+
+		((?rv-tag* ... . ?rv-rest-tag)
+		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
+			(checker.psi  (chi-expr (bless
+						 `(lambda (,@TMP* . rest-tmp)
+						    ,@(map (lambda (tmp tag)
+							     `(unless (is-a? ,tmp ,tag)
+								(expression-return-value-violation (quote ,tag)
+								  "expression with wrong result type"
+								  (quote ,expr.stx) ,tmp)))
+							TMP* ?rv-tag*)
+						    (unless (is-a? rest-tmp ,?rv-rest-tag)
+						      (expression-return-value-violation (quote ,?rv-rest-tag)
+							"expression with wrong result type"
+							(quote ,expr.stx) rest-tmp))
+						    (void)))
+						lexenv.run lexenv.expand))
+			(checker.core (psi-core-expr checker.psi)))
+		   (make-psi (build-application no-source
+			       call.core
+			       (list (build-lambda no-source '() expr.core)
+				     checker.core))
+			     (list <top>))))
+
+		(?rv-args-tag
+		 (let* ((checker.psi  (chi-expr (bless
+						 `(lambda args
+						    (unless (is-a? args ,?rv-args-tag)
+						      (expression-return-value-violation (quote ?rv-args-tag)
+							"expression with wrong result type"
+							(quote ,expr.stx) args))
+						    (void)))
+						lexenv.run lexenv.expand))
+			(checker.core (psi-core-expr checker.psi)))
+		   (make-psi (build-application no-source
+			       call.core
+			       (list (build-lambda no-source '() expr.core)
+				     checker.core))
+			     (list <top>))))
+		))
+
+	     ;;Here we  know that both ?RETVALS-SIGNATURE  and EXPR.SIGN
+	     ;;are not false;  so they are formals  signatures, not only
+	     ;;retvals signatures.
+	     ((formals-signature-super-and-sub? ?retvals-signature expr.sign)
+	      ;;Fine,  we  have  established  at expand  time  that  the
+	      ;;returned  values are  valid; assertion  succeeded.  Just
+	      ;;evaluate the expression.
+	      (make-psi (build-sequence no-source
+			  (list expr.core (build-void)))
+			(list <top>)))
+
+	     (else
+	      ;;The horror!!!   We have established at  expand time that
+	      ;;the  returned values  are of  the wrong  type; assertion
+	      ;;failed.
+	      (retvals-signature-violation expr.stx ?retvals-signature expr.sign)))))
+
+    ((_ ?retvals-signature ?expr)
+     ;;Let's use a descriptive error message here.
+     (syntax-violation __who__
+       "invalid return values signature" expr.stx ?retvals-signature))
     ))
 
-(define (tag-assert-and-return-transformer expr-stx lexenv.run lexenv.expand)
+(define (tag-assert-and-return-transformer expr.stx lexenv.run lexenv.expand)
   ;;Transformer function used to  expand Vicare's TAG-ASSERT-AND-RETURN syntaxes from
-  ;;the top-level  built in environment.   Expand the  syntax object EXPR-STX  in the
+  ;;the top-level  built in environment.   Expand the  syntax object EXPR.STX  in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert-and-return))
-  (define (%output-expression tag-id expr-stx)
+  (define (%output-expression tag-id expr.stx)
     (chi-expr (bless
 	       `(receive-and-return (V)
-		    ,expr-stx
+		    ,expr.stx
 		  (unless (is-a? V ,tag-id)
 		    (assertion-violation (quote ,tag-id)
-		      "expression with wrong result type" (quote ,expr-stx) V))))
+		      "expression with wrong result type" (quote ,expr.stx) V))))
 	      lexenv.run lexenv.expand))
-  (syntax-match expr-stx ()
+  (syntax-match expr.stx ()
     ((_ ?tag ?expr)
      (cond ((not (tag-identifier? ?tag))
 	    (syntax-violation __who__
-	      "expected tag identifier as first argument" expr-stx ?tag))
+	      "expected tag identifier as first argument" expr.stx ?tag))
 
 	   ((free-identifier=? <top> ?tag)
 	    ;;All the objects are of type <top>.
@@ -1734,7 +1807,7 @@
 		     (chi-expr ?expr lexenv.run lexenv.expand))
 		    (else
 		     (syntax-violation __who__
-		       "expression with wrong type tagging" expr-stx tag-id)))))
+		       "expression with wrong type tagging" expr.stx tag-id)))))
 
 	   (else
 	    (%output-expression ?tag ?expr))))

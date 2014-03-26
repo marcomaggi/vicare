@@ -58,7 +58,7 @@
      (vicare language-extensions c-enumerations)
      (vicare language-extensions identifier-substitutions)
      (vicare language-extensions makers)
-     (vicare language-extensions tags)
+     #;(vicare language-extensions tags)
 
      (vicare build-tools automake)
 

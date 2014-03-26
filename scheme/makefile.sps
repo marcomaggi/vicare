@@ -722,8 +722,6 @@
     (slot-set!					v $language)
     ($slot-ref					v $language)
     ($slot-set!					v $language)
-    (tag-assert					v $language)
-    (tag-assert-and-return			v $language)
     (struct-type-descriptor			v $language)
     (struct-type-and-struct?			v $language)
     (struct-type-field-ref			v $language)
@@ -884,6 +882,7 @@
     (tag-identifier?				$type-specs)
     (all-tag-identifiers?			$type-specs)
     (tag-super-and-sub?				$type-specs)
+    (formals-signature-super-and-sub?		$type-specs)
     (set-identifier-object-type-spec!		$type-specs)
     (identifier-object-type-spec		$type-specs)
     (set-label-object-type-spec!		$type-specs)
@@ -916,6 +915,12 @@
     (identifier-callable-signature		$type-specs)
     (set-label-callable-signature!		$type-specs)
     (label-callable-signature			$type-specs)
+
+    (make-retvals-signature-violation		$type-specs)
+    (retvals-signature-violation		$type-specs)
+    (retvals-signature-violation?		$type-specs)
+    (retvals-signature-violation-expected-signature	$type-specs)
+    (retvals-signature-violation-returned-signature	$type-specs)
 
 ;;;
     (time-and-gather				v $language)
@@ -3720,6 +3725,9 @@
 
 ;;; --------------------------------------------------------------------
 ;;; expander tags
+
+    (tag-assert					$expander-tags)
+    (tag-assert-and-return			$expander-tags)
 
     (<top>					$expander-tags)
     (<boolean>					$expander-tags)

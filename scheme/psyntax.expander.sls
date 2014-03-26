@@ -1159,7 +1159,7 @@
     ;; expand-time object type specs: identifiers defining types
     top-id
     tag-identifier?				all-tag-identifiers?
-    tag-super-and-sub?
+    tag-super-and-sub?				formals-signature-super-and-sub?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
 
@@ -1181,6 +1181,12 @@
     make-callable-spec			callable-spec?
     callable-spec-name			callable-spec-min-arity
     callable-spec-max-arity		callable-spec-dispatcher
+
+    retvals-signature-violation
+    make-retvals-signature-violation
+    retvals-signature-violation?
+    retvals-signature-violation-expected-signature
+    retvals-signature-violation-returned-signature
 
     ;; expant-time type specs: stuff for built-in tags
     initialise-type-spec-for-built-in-object-types
@@ -1254,6 +1260,16 @@
        (values (reverse item*) ?last))
       ((?car . ?cdr)
        (loop ?cdr (cons ?car item*))))))
+
+(define* (proper-list->last-item ell)
+  (syntax-match ell ()
+    (()
+     (assertion-violation __who__ "expected non-empty list" ell))
+    ((?last)
+     ?last)
+    ((?car . ?cdr)
+     (proper-list->last-item ?cdr))
+    ))
 
 (define-syntax-rule (trace-define (?name . ?formals) . ?body)
   (define (?name . ?formals)
@@ -5865,6 +5881,10 @@
 
 (include "psyntax.expander.syntactic-binding-properties.scm" #t)
 (include "psyntax.expander.tagged-identifiers.scm" #t)
+(module (initialise-type-spec-for-built-in-object-types
+	 retvals-signature-of-datum
+	 top-id)
+  (include "psyntax.expander.built-in-tags.scm" #t))
 
 
 (define-syntax syntax-match
@@ -6168,10 +6188,14 @@
   ;;create a fresh identifier that maps  only the symbol to its label in
   ;;that library.  Symbols not in that library become fresh.
   ;;
-  (let ((scheme-stx-hashtable (make-eq-hashtable)))
+  (let ((scheme-stx-hashtable (make-eq-hashtable))
+	(subst                #f))
     (lambda (sym)
       (or (hashtable-ref scheme-stx-hashtable sym #f)
-	  (let* ((subst  (library-export-subst (find-library-by-name '(psyntax system $all))))
+	  (let* ((subst  (or subst
+			     (receive-and-return (S)
+				 (library-export-subst (find-library-by-name '(psyntax system $all)))
+			       (set! subst S))))
 		 (stx    (make-<stx> sym TOP-MARK* '() '()))
 		 (stx    (cond ((assq sym subst)
 				=> (lambda (subst.entry)
@@ -6909,7 +6933,7 @@
 ;;The  "chi-*"  functions  are  the ones  visiting  syntax  objects  and
 ;;performing the expansion process.
 ;;
-(module (make-psi psi? psi-core-expr psi-type-specs
+(module (make-psi psi? psi-core-expr psi-retvals-signature
 	 chi-expr
 	 chi-expr*
 	 chi-body*
@@ -6934,6 +6958,13 @@
   make-macro-expanded-input-form-condition
   macro-expanded-input-form-condition?
   (form macro-expanded-input-form-condition-object))
+
+(define-condition-type &retvals-signature-violation
+    &violation
+  make-retvals-signature-violation
+  retvals-signature-violation?
+  (expected-signature retvals-signature-violation-expected-signature)
+  (returned-signature retvals-signature-violation-returned-signature))
 
 (define (assertion-error expr source-identifier
 			 byte-offset character-offset
@@ -7089,6 +7120,12 @@
 		   (source-position-line      position)
 		   (source-position-column    position))
 		(condition)))))
+
+(define (retvals-signature-violation expr.stx expected-retvals-signature returned-retvals-signature)
+  (raise
+   (condition (make-syntax-violation expr.stx #f)
+	      (make-message-condition "expand-time returned values signature mismatch")
+	      (make-retvals-signature-violation expected-retvals-signature returned-retvals-signature))))
 
 
 ;;;; R6RS programs and libraries helpers

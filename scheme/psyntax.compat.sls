@@ -38,7 +38,7 @@
     symbol-value			set-symbol-value!
     keyword?				would-block-object?
     unbound-object?			bwp-object?
-    bignum?				gensym
+    gensym
     vector-append			vector-exists
     add1				sub1
     pretty-print			pretty-print*
@@ -46,6 +46,8 @@
     void				port-id
     console-error-port			all-identifiers?
     string-empty?			syntax=?
+    ratnum?				bignum?
+    compnum?				cflonum?
 
     ;; compiler related operations
     eval-core

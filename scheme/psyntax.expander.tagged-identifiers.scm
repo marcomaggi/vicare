@@ -124,7 +124,7 @@
   ;;null or  a proper  or improper  list of  tag identifiers,  with a  standalone tag
   ;;identifier being acceptable.
   ;;
-  (or (not stx)
+  (or (not (syntax->datum stx))
       (let loop ((stx stx))
 	(syntax-match stx ()
 	  (() #t)
@@ -135,6 +135,55 @@
 	   (tag-identifier? ?rest)
 	   #t)
 	  (_ #f)))))
+
+(define* (formals-signature-super-and-sub? {super-signature formals-signature-syntax?}
+					   {sub-signature   formals-signature-syntax?})
+  ($formals-signature-super-and-sub? super-signature sub-signature))
+
+(define ($formals-signature-super-and-sub? super-signature sub-signature)
+  (syntax-match super-signature ()
+    (()
+     (syntax-match sub-signature ()
+       (() #t)
+       (_  #f)))
+
+    ((?super-tag . ?super-rest-tags)
+     (syntax-match sub-signature ()
+       ((?sub-tag . ?sub-rest-tags)
+	($tag-super-and-sub? ?super-tag ?sub-tag)
+	($formals-signature-super-and-sub? ?super-rest-tags ?sub-rest-tags))
+       (_ #f)))
+
+    (?super-rest-tag
+     (syntax-match sub-signature ()
+       ;;We want the following signatures to match:
+       ;;
+       ;;  #'(<number> <fixnum> <fixnum> . <top>)   #'(<complex> <fixnum> <fixnum>)
+       ;;  #'(<number> <fixnum> <fixnum> . <list>)  #'(<complex> <fixnum> <fixnum>)
+       ;;
+       ;;because "<top>" and "<list>" in rest position means any number of objects of
+       ;;any type.
+       ;;
+       (()
+	(or (free-id=? ?super-rest-tag <top>)
+	    (free-id=? ?super-rest-tag (scheme-stx '<list>))))
+       ;;We want the following signatures to match:
+       ;;
+       ;;  #'(<number> . <top>)   #'(<complex> <fixnum> <fixnum>)
+       ;;  #'(<number> . <list>)  #'(<complex> <fixnum> <fixnum>)
+       ;;
+       ;;because "<top>" and "<list>" in rest position means any number of objects of
+       ;;any type.
+       ;;
+       ((?sub-tag . ?sub-rest-tags)
+	(or (free-id=? ?super-rest-tag <top>)
+	    (free-id=? ?super-rest-tag (scheme-stx '<list>))))
+       (?sub-rest-tag
+	($tag-super-and-sub? ?super-rest-tag ?sub-rest-tag))
+       (_ #f)))
+
+    (_ #f)
+    ))
 
 
 ;;;; callable spec, callable signature, return values signature, formals signature
@@ -1104,13 +1153,16 @@
   ;;Given  two tag  identifiers: return  true  if SUPER-TAG  is FREE-IDENTIFIER=?  to
   ;;SUB-TAG or one of its ancestors.
   ;;
-  (or (free-identifier=? super-tag sub-tag)
-      (let* ((spec  ($identifier-object-type-spec sub-tag))
-	     (pspec ($object-type-spec-parent-spec spec)))
+  ($tag-super-and-sub? super-tag sub-tag))
+
+(define ($tag-super-and-sub? super-tag sub-tag)
+  (or (free-id=? super-tag sub-tag)
+      (free-id=? <top> super-tag)
+      (let ((pspec ($object-type-spec-parent-spec ($identifier-object-type-spec sub-tag))))
 	(and pspec
 	     (let ((sub-ptag ($object-type-spec-type-id pspec)))
-	       (and (not (free-identifier=? <top> sub-ptag))
-		    (tag-super-and-sub? super-tag sub-ptag)))))))
+	       (and (not (free-id=? <top> sub-ptag))
+		    ($tag-super-and-sub? super-tag sub-ptag)))))))
 
 (define (all-tag-identifiers? stx)
   ;;Return true  if STX is  a proper or improper  list of tag  identifiers; otherwise
@@ -1251,76 +1303,6 @@
   ;;signature is defined.
   ;;
   ($getprop label *EXPAND-TIME-BINDING-CALLABLE-SIGNATURE-COOKIE*))
-
-
-;;;; built in tags
-
-(define (top-id)
-  <top>)
-
-(define (initialise-type-spec-for-built-in-object-types)
-  (define (%register name-sym parent-sym pred-sym)
-    (let ((tag-id    (scheme-stx name-sym))
-	  (parent-id (scheme-stx parent-sym))
-	  (pred-id   (scheme-stx pred-sym)))
-      (set-identifier-object-type-spec! tag-id
-	(make-object-type-spec tag-id parent-id pred-id))))
-
-  ;;The tag <top> is special because it is the only one having #f in the
-  ;;parent spec field.
-  (let ((tag-id  (scheme-stx '<top>))
-	(pred-id (scheme-stx 'always-true)))
-    (set-identifier-object-type-spec! tag-id
-      (%make-object-type-spec tag-id #f pred-id #f #f #f #f)))
-
-  (let ((tag-id   (scheme-stx '<procedure>))
-	(pred-id  (scheme-stx 'procedure?)))
-    (set-identifier-object-type-spec! tag-id
-      (make-object-type-spec tag-id <top> pred-id #f #f #f #f)))
-
-  ;; --------------------------------------------------------------------
-  ;; predefined condition objects
-
-  (%register '&condition		'<top>			'condition?)
-  (%register '&message			'&condition		'message-condition?)
-  (%register '&warning			'&condition		'warning?)
-  (%register '&serious			'&condition		'serious-condition?)
-  (%register '&error			'&serious		'error?)
-  (%register '&violation		'&serious		'violation?)
-  (%register '&assertion		'&violation		'assertion-violation?)
-  (%register '&irritants		'&condition		'irritants-condition?)
-  (%register '&who			'&condition		'who-condition?)
-  (%register '&non-continuable		'&violation		'non-continuable-violation?)
-  (%register '&implementation-restriction '&violation		'implementation-restriction-violation?)
-  (%register '&lexical			'&violation		'lexical-violation?)
-  (%register '&syntax			'&violation		'syntax-violation?)
-  (%register '&undefined		'&violation		'undefined-violation?)
-  (%register '&i/o			'&error			'i/o-error?)
-  (%register '&i/o-read			'&i/o			'i/o-read-error?)
-  (%register '&i/o-write		'&i/o			'i/o-write-error?)
-  (%register '&i/o-invalid-position	'&i/o			'i/o-invalid-position-error?)
-  (%register '&i/o-filename		'&i/o			'i/o-filename-error?)
-  (%register '&i/o-file-protection	'&i/o-filename		'i/o-file-protection-error?)
-  (%register '&i/o-file-is-read-only	'&i/o-file-protection	'i/o-file-is-read-only-error?)
-  (%register '&i/o-file-already-exists 	'&i/o-filename		'i/o-file-already-exists-error?)
-  (%register '&i/o-file-does-not-exist	'&i/o-filename		'i/o-file-does-not-exist-error?)
-  (%register '&i/o-port			'&i/o			'i/o-port-error?)
-  (%register '&i/o-decoding		'&i/o-port		'i/o-decoding-error?)
-  (%register '&i/o-encoding		'&i/o-port		'i/o-encoding-error?)
-  (%register '&no-infinities		'&implementation-restriction		'no-infinities-violation?)
-  (%register '&no-nans			'&implementation-restriction		'no-nans-violation?)
-  (%register '&interrupted		'&serious		'interrupted-condition?)
-  (%register '&source-position		'&condition		'source-position-condition?)
-
-  (%register '&i/o-eagain		'&i/o			'i/o-eagain-error?)
-  (%register '&errno			'&condition		'errno-condition?)
-  (%register '&h_errno			'&condition		'h_errno-condition?)
-  (%register '&out-of-memory-error	'&error			'out-of-memory-error?)
-
-  (%register '&procedure-argument-violation		'&assertion	'procedure-argument-violation?)
-  (%register '&expression-return-value-violation	'&assertion	'expression-return-value-violation?)
-
-  (void))
 
 
 ;;;; identifiers: expand-time callable object type specification

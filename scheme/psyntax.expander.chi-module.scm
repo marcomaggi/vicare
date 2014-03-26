@@ -24,7 +24,7 @@
 
 ;;;; core expressions struct
 
-(define-record psi
+(define-record (psi %make-psi psi?)
   (core-expr
 		;Either:
 		;
@@ -34,11 +34,17 @@
 		;* An  instance of  "splice-first-envelope".  This happens  only when
 		;   this  PSI   struct  is  the  return  value  of   the  core  macro
 		;  SPLICE-FIRST-EXPAND.
-   type-specs
+   retvals-signature
 		;False,  null or  a  proper or  improper  list of  "object-type-spec"
 		;instances  representing the  types  of the  values  returned by  the
 		;expression evaluation.
    ))
+
+(case-define* make-psi
+  ((core-expr)
+   (%make-psi core-expr #f))
+  ((core-expr {retvals-signature retvals-signature-syntax?})
+   (%make-psi core-expr retvals-signature)))
 
 
 ;;;; chi procedures: syntax object type inspection
@@ -345,6 +351,18 @@
 
 ;;;; chi procedures: expressions
 
+(define (chi-expr* expr*.stx lexenv.run lexenv.expand)
+  ;;Recursive function.  Expand the expressions in EXPR*.STX left to right.  Return a
+  ;;list of PSI structs.
+  ;;
+  (if (null? expr*.stx)
+      '()
+    ;;ORDER MATTERS!!!  Make sure  that first  we do  the car,  then the
+    ;;rest.
+    (let ((expr0.psi (chi-expr (car expr*.stx) lexenv.run lexenv.expand)))
+      (cons expr0.psi
+	    (chi-expr* (cdr expr*.stx) lexenv.run lexenv.expand)))))
+
 (module (chi-expr)
 
   (define (chi-expr expr-stx lexenv.run lexenv.expand)
@@ -377,7 +395,8 @@
 		 (loc (cdr bind-val)))
 	    ((inv-collector) lib)
 	    (make-psi (build-global-reference no-source loc)
-		      <top>)))
+		      (and (tagged-identifier? expr-stx)
+			   (list (identifier-tag expr-stx))))))
 
 	 ((core-prim)
 	  ;;Core primitive (it  is either a procedure or a  constant).  We expect the
@@ -391,7 +410,8 @@
 	  ;;
 	  (let ((name bind-val))
 	    (make-psi (build-primref no-source name)
-		      <top>)))
+		      (and (tagged-identifier? expr-stx)
+			   (list (identifier-tag expr-stx))))))
 
 	 ((call)
 	  ;;A function call; this means EXPR-STX has one of the formats:
@@ -399,13 +419,14 @@
 	  ;;   (?id ?form ...)
 	  ;;   ((?first-subform ?subform ...) ?form ...)
 	  ;;
-	  (chi-application expr-stx lexenv.run lexenv.expand))
+	  (%chi-application expr-stx lexenv.run lexenv.expand))
 
 	 ((lexical)
 	  ;;Reference to lexical variable; this means EXPR-STX is an identifier.
 	  (make-psi (let ((lex (lexical-var bind-val)))
 		      (build-lexical-reference no-source lex))
-		    <top>))
+		    (and (tagged-identifier? expr-stx)
+			 (list (identifier-tag expr-stx)))))
 
 	 ((tagged-dispatching)
 	  ;;Tagged identifier dispatching; this means EXPR-STX has the format:
@@ -438,16 +459,16 @@
 
 	 ((constant)
 	  ;;Constant; it means EXPR-STX is a self-evaluating datum.
-	  (make-psi (let ((datum bind-val))
-		      (build-data no-source datum))
-		    <top>))
+	  (let ((datum bind-val))
+	    (make-psi (build-data no-source datum)
+		      (retvals-signature-of-datum datum))))
 
 	 ((set!)
 	  ;;Macro use of SET!; it means EXPR-STX has the format:
 	  ;;
 	  ;;   (set! ?lhs ?rhs)
 	  ;;
-	  (chi-set! expr-stx lexenv.run lexenv.expand))
+	  (%chi-set! expr-stx lexenv.run lexenv.expand))
 
 	 ((begin)
 	  ;;R6RS BEGIN  core macro use.   First we  check with SYNTAX-MATCH  that the
@@ -459,7 +480,7 @@
 			       (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand))))
 	       (make-psi (build-sequence no-source
 			   (map psi-core-expr body*.psi))
-			 <top>)))
+			 (psi-retvals-signature (proper-list->last-item body*.psi)))))
 	    ))
 
 	 ((stale-when)
@@ -475,7 +496,7 @@
 				 (chi-expr* (cons ?body ?body*) lexenv.run lexenv.expand))))
 		 (make-psi (build-sequence no-source
 			     (map psi-core-expr body*.psi))
-			   <top>))))
+			   (psi-retvals-signature (proper-list->last-item body*.psi))))))
 	    ))
 
 	 ((let-syntax letrec-syntax)
@@ -507,7 +528,8 @@
 					    (append (map cons xlab* xb*) lexenv.expand)))))
 		 (make-psi (build-sequence no-source
 			     (map psi-core-expr body*.psi))
-			   <top>))))))
+			   (psi-retvals-signature (proper-list->last-item body*.psi))))))
+	    ))
 
 	 ((displaced-lexical)
 	  (stx-error expr-stx "identifier out of context"))
@@ -547,7 +569,8 @@
 		     (eq? lib '*interaction*)))
 	      (let ((loc (cdr bind-val)))
 		(make-psi (build-global-reference no-source loc)
-			  <top>))
+			  (and (tagged-identifier? expr-stx)
+			       (list (identifier-tag expr-stx)))))
 	    (stx-error expr-stx "attempt to reference an unexportable variable")))
 
 	 ((type-maker-reference)
@@ -569,17 +592,52 @@
 	  (stx-error expr-stx "invalid expression"))))
      lexenv.run lexenv.expand))
 
-  (define (chi-application expr.stx lexenv.run lexenv.expand)
-    ;;Expand a function application form.  This is called when EXPR.STX has the format:
-    ;;
-    ;;   (?rator ?rand ...)
-    ;;
-    ;;and ?RATOR is a pair or a  non-macro identifier.  For example it is called when
-    ;;EXPR.STX is:
-    ;;
-    ;;   (((?rator ?rand1 ...) ?rand2 ...) ?rand3 ...)
-    ;;
-    (define* (%build-core-expression {rator.psi psi?} rand*.stx)
+;;; --------------------------------------------------------------------
+
+  (module (%chi-application)
+
+    (define (%chi-application expr.stx lexenv.run lexenv.expand)
+      ;;Expand a  function application form.   This is  called when EXPR.STX  has the
+      ;;format:
+      ;;
+      ;;   (?rator ?rand ...)
+      ;;
+      ;;and ?RATOR  is a pair  or a non-macro identifier.   For example it  is called
+      ;;when EXPR.STX is:
+      ;;
+      ;;   (((?rator ?rand1 ...) ?rand2 ...) ?rand3 ...)
+      ;;
+      (syntax-match expr.stx ()
+	(((?nested-rator ?nested-rand* ...) ?rand* ...)
+	 ;;This is a function or macro application with possible splicing first expand.
+	 ;;We  expand it  considering the  case  of the  first subform  expanding to  a
+	 ;;SPLICE-FIRST-EXPAND form.
+	 (let* ((rator.stx  (cons ?nested-rator ?nested-rand*))
+		(rator.psi  (while-expanding-application-first-subform
+			     (chi-expr rator.stx lexenv.run lexenv.expand)))
+		(rator.expr (psi-core-expr rator.psi)))
+	   ;;Here RATOR.EXPR  is either an  instance of "splice-first-envelope"  or a
+	   ;;core language sexp.
+	   (import SPLICE-FIRST-ENVELOPE)
+	   (if (splice-first-envelope? rator.expr)
+	       (syntax-match (splice-first-envelope-form rator.expr) ()
+		 ((?nested-rator ?nested-rand** ...)
+		  (chi-expr (cons ?nested-rator (append ?nested-rand** ?rand*))
+			    lexenv.run lexenv.expand))
+		 (_
+		  (stx-error rator.stx
+			     "expected list as argument of splice-first-expand"
+			     'splice-first-expand)))
+	     (%build-core-expression expr.stx rator.psi ?rand* lexenv.run lexenv.expand))))
+
+	((?rator ?rand* ...)
+	 ;;This  is a  common function  application: ?RATOR  is not  a syntax  keyword.
+	 ;;Let's make sure that we expand ?RATOR first.
+	 (let ((rator.psi (chi-expr ?rator lexenv.run lexenv.expand)))
+	   (%build-core-expression expr.stx rator.psi ?rand* lexenv.run lexenv.expand)))
+	))
+
+    (define* (%build-core-expression expr.stx {rator.psi psi?} rand*.stx lexenv.run lexenv.expand)
       (let* ((rator.core (psi-core-expr rator.psi))
 	     (rand*.psi  (while-not-expanding-application-first-subform
 			  (chi-expr* rand*.stx lexenv.run lexenv.expand)))
@@ -587,38 +645,15 @@
 	(make-psi (build-application (syntax-annotation expr.stx)
 		    rator.core
 		    rand*.core)
-		  <top>)))
-    (syntax-match expr.stx ()
-      (((?nested-rator ?nested-rand* ...) ?rand* ...)
-       ;;This is a function or macro application with possible splicing first expand.
-       ;;We  expand it  considering the  case  of the  first subform  expanding to  a
-       ;;SPLICE-FIRST-EXPAND form.
-       (let* ((rator.stx  (cons ?nested-rator ?nested-rand*))
-	      (rator.psi  (while-expanding-application-first-subform
-			   (chi-expr rator.stx lexenv.run lexenv.expand)))
-	      (rator.expr (psi-core-expr rator.psi)))
-	 ;;Here RATOR.EXPR  is either an  instance of "splice-first-envelope"  or a
-	 ;;core language sexp.
-	 (import SPLICE-FIRST-ENVELOPE)
-	 (if (splice-first-envelope? rator.expr)
-	     (syntax-match (splice-first-envelope-form rator.expr) ()
-	       ((?nested-rator ?nested-rand** ...)
-		(chi-expr (cons ?nested-rator (append ?nested-rand** ?rand*))
-			  lexenv.run lexenv.expand))
-	       (_
-		(stx-error rator.stx
-			   "expected list as argument of splice-first-expand"
-			   'splice-first-expand)))
-	   (%build-core-expression rator.psi ?rand*))))
+		  ;;FIXME We should do better than  this here.  (Marco Maggi; Tue Mar
+		  ;;25, 2014)
+		  #f)))
 
-      ((?rator ?rand* ...)
-       ;;This  is a  common function  application: ?RATOR  is not  a syntax  keyword.
-       ;;Let's make sure that we expand ?RATOR first.
-       (let ((rator.psi (chi-expr ?rator lexenv.run lexenv.expand)))
-	 (%build-core-expression rator.psi ?rand*)))
-      ))
+    #| end of module: %CHI-APPLICATION |# )
 
-  (define (chi-set! expr.stx lexenv.run lexenv.expand)
+;;; --------------------------------------------------------------------
+
+  (define (%chi-set! expr.stx lexenv.run lexenv.expand)
     (syntax-match expr.stx ()
       ((_ ?lhs ?rhs)
        (identifier? ?lhs)
@@ -631,7 +666,7 @@
 	      (make-psi (build-lexical-assignment no-source
 			  (lexical-var bind-val)
 			  (psi-core-expr rhs.psi))
-			<top>)))
+			(list <top>))))
 	   ((core-prim)
 	    (stx-error expr.stx "cannot modify imported core primitive"))
 
@@ -653,12 +688,14 @@
 		  (make-psi (build-global-assignment no-source
 			      loc
 			      (psi-core-expr rhs.psi))
-			    <top>))
+			    (list <top>)))
 	      (stx-error expr.stx "attempt to modify an unexportable variable")))
 
 	   (else
 	    (stx-error expr.stx)))))
       ))
+
+;;; --------------------------------------------------------------------
 
   (define (%process-type-maker-reference expr-stx bind-val lexenv.run lexenv.expand)
     ;;BIND-VAL is the binding value of an R6RS record-type:
@@ -725,32 +762,23 @@
 	  (else
 	   (stx-error expr-stx "invalid binding for identifier"))))
 
-  #| end of module |# )
+;;; --------------------------------------------------------------------
 
-(define (chi-expr* expr* lexenv.run lexenv.expand)
-  ;;Recursive function.  Expand the expressions in EXPR* left to right.
-  ;;
-  (if (null? expr*)
-      '()
-    ;;ORDER MATTERS!!!  Make sure  that first  we do  the car,  then the
-    ;;rest.
-    (let ((expr0.psi (chi-expr (car expr*) lexenv.run lexenv.expand)))
-      (cons expr0.psi
-	    (chi-expr* (cdr expr*) lexenv.run lexenv.expand)))))
+  (define* (%drop-splice-first-envelope-maybe {expr.psi psi?} lexenv.run lexenv.expand)
+    ;;If we are expanding the first  subform of an application: just return EXPR.STX;
+    ;;otherwise if EXPR.STX  is a splice-first envelope: extract its  form, expand it
+    ;;and return the result.
+    ;;
+    (import SPLICE-FIRST-ENVELOPE)
+    (let ((expr (psi-core-expr expr.psi)))
+      (if (splice-first-envelope? expr)
+	  (if (expanding-application-first-subform?)
+	      expr.psi
+	    (%drop-splice-first-envelope-maybe (chi-expr (splice-first-envelope-form expr) lexenv.run lexenv.expand)
+					       lexenv.run lexenv.expand))
+	expr.psi)))
 
-(define* (%drop-splice-first-envelope-maybe {expr.psi psi?} lexenv.run lexenv.expand)
-  ;;If we  are expanding the first  subform of an application:  just return EXPR.STX;
-  ;;otherwise if EXPR.STX is a splice-first envelope: extract its form, expand it and
-  ;;return the result.
-  ;;
-  (import SPLICE-FIRST-ENVELOPE)
-  (let ((expr (psi-core-expr expr.psi)))
-    (if (splice-first-envelope? expr)
-	(if (expanding-application-first-subform?)
-	    expr.psi
-	  (%drop-splice-first-envelope-maybe (chi-expr (splice-first-envelope-form expr) lexenv.run lexenv.expand)
-					     lexenv.run lexenv.expand))
-      expr.psi)))
+  #| end of module: CHI-EXPR |# )
 
 
 ;;;; chi procedures: definitions and lambda clauses
@@ -776,7 +804,7 @@
 	(make-psi (build-lambda (syntax-annotation ctxt-id)
 		    formals.core
 		    (psi-core-expr body.psi))
-		  <procedure>)))
+		  (list <procedure>))))
     (syntax-match input-form.stx (brace)
       ((_ ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (%expand ?ctxt (bless
@@ -801,7 +829,7 @@
       (make-psi (build-lambda (syntax-annotation input-form.stx)
 		  formals.lex
 		  (psi-core-expr body.psi))
-		<procedure>)))
+		(list <procedure>))))
 
   (define (chi-case-lambda input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
     ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
@@ -832,7 +860,7 @@
       (make-psi (build-case-lambda (syntax-annotation input-form.stx)
 		  formals*.lex
 		  (map psi-core-expr body**.psi))
-		<procedure>)))
+		(list <procedure>))))
 
   (define (%chi-lambda-clause input-form.stx formals-stx body-form-stx* lexenv.run lexenv.expand)
     ;;Expand a  LAMBDA syntax components  or a single CASE-LAMBDA  clause components.
@@ -983,7 +1011,7 @@
 	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi)))
        (make-psi (build-sequence no-source (list expr.core (build-void)))
-		 <top>)))
+		 (list <top>))))
 
     (else
      (assertion-violation __who__ "Vicare: internal error: invalid qrhs" qrhs))))
@@ -1074,7 +1102,7 @@
 		       (reverse rhs*.core)
 		       (build-sequence no-source
 			 init*.core))
-		     <top>)))))))
+		     (psi-retvals-signature (proper-list->last-item init*.psi)))))))))
 
 
 ;;;; chi procedures: body
