@@ -54,6 +54,9 @@
   (define-syntax-rule (top-tagged? ?var)
     (tag=tagging? <top> ?var))
 
+  (define-syntax-rule (uns-tagged? ?var)
+    (tag=tagging? <unspecified> ?var))
+
   (typ.set-identifier-object-type-spec! #'<fixnums>
     (typ.make-object-type-spec #'<fixnums> #'<top> #'fixnums?))
 
@@ -230,7 +233,7 @@
   (check
       (typ.parse-tagged-identifier-syntax #'X)
     (=> syntax=?)
-    #'X #'<top>)
+    #'X #'<unspecified>)
 
   #t)
 
@@ -262,17 +265,17 @@
   (check
       (typ.parse-list-of-tagged-bindings #'(a))
     (=> syntax=?)
-    #'(a) #'(<top>))
+    #'(a) #'(<unspecified>))
 
   (check
       (typ.parse-list-of-tagged-bindings #'(a b))
     (=> syntax=?)
-    #'(a b) #'(<top> <top>))
+    #'(a b) #'(<unspecified> <unspecified>))
 
   (check
       (typ.parse-list-of-tagged-bindings #'(a b c))
     (=> syntax=?)
-    #'(a b c) #'(<top> <top> <top>))
+    #'(a b c) #'(<unspecified> <unspecified> <unspecified>))
 
 ;;;
 
@@ -280,34 +283,34 @@
       (typ.parse-list-of-tagged-bindings #'(a
 					    {b <string>}))
     (=> syntax=?)
-    #'(a b) #'(<top> <string>))
+    #'(a b) #'(<unspecified> <string>))
 
   (check
       (typ.parse-list-of-tagged-bindings #'({a <fixnum>}
 					    b))
     (=> syntax=?)
-    #'(a b) #'(<fixnum> <top>))
+    #'(a b) #'(<fixnum> <unspecified>))
 
   (check
       (typ.parse-list-of-tagged-bindings #'(a
 					    {b <string>}
 					    {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(<top> <string> <vector>))
+    #'(a b c) #'(<unspecified> <string> <vector>))
 
   (check
       (typ.parse-list-of-tagged-bindings #'({a <fixnum>}
 					    b
 					    {c <vector>}))
     (=> syntax=?)
-    #'(a b c) #'(<fixnum> <top> <vector>))
+    #'(a b c) #'(<fixnum> <unspecified> <vector>))
 
   (check
       (typ.parse-list-of-tagged-bindings #'({a <fixnum>}
 					    {b <string>}
 					    c))
     (=> syntax=?)
-    #'(a b c) #'(<fixnum> <string> <top>))
+    #'(a b c) #'(<fixnum> <string> <unspecified>))
 
   #t)
 
@@ -341,17 +344,17 @@
   (check
       (split #'(a))
     (=> syntax=?)
-    #'(a) #f #'(<top>))
+    #'(a) #f #'(<unspecified>))
 
   (check
       (split #'(a b))
     (=> syntax=?)
-    #'(a b) #f #'(<top> <top>))
+    #'(a b) #f #'(<unspecified> <unspecified>))
 
   (check
       (split #'(a b c))
     (=> syntax=?)
-    #'(a b c) #f #'(<top> <top> <top>))
+    #'(a b c) #f #'(<unspecified> <unspecified> <unspecified>))
 
 ;;; mixed tagged and untagged
 
@@ -359,34 +362,34 @@
       (split #'(a
 		{b <string>}))
     (=> syntax=?)
-    #'(a b) #f #'(<top> <string>))
+    #'(a b) #f #'(<unspecified> <string>))
 
   (check
       (split #'({a <fixnum>}
 		b))
     (=> syntax=?)
-    #'(a b) #f #'(<fixnum> <top>))
+    #'(a b) #f #'(<fixnum> <unspecified>))
 
   (check
       (split #'(a
 		{b <string>}
 		{c <vector>}))
     (=> syntax=?)
-    #'(a b c) #f #'(<top> <string> <vector>))
+    #'(a b c) #f #'(<unspecified> <string> <vector>))
 
   (check
       (split #'({a <fixnum>}
 		b
 		{c <vector>}))
     (=> syntax=?)
-    #'(a b c) #f #'(<fixnum> <top> <vector>))
+    #'(a b c) #f #'(<fixnum> <unspecified> <vector>))
 
   (check
       (split #'({a <fixnum>}
 		{b <string>}
 		c))
     (=> syntax=?)
-    #'(a b c) #f #'(<fixnum> <string> <top>))
+    #'(a b c) #f #'(<fixnum> <string> <unspecified>))
 
 ;;; args argument
 
@@ -398,7 +401,7 @@
   (check	;UNtagged args argument
       (split #'args)
     (=> syntax=?)
-    #'args #f #'<top>)
+    #'args #f #'<unspecified>)
 
 ;;; rest argument
 
@@ -410,7 +413,7 @@
   (check	;UNtagged rest
       (split #'({a <fixnum>} . rest))
     (=> syntax=?)
-    #'(a . rest) #f #'(<fixnum> . <top>))
+    #'(a . rest) #f #'(<fixnum> . <unspecified>))
 
   (check	;tagged rest
       (split #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
@@ -420,19 +423,19 @@
   (check	;UNtagged rest
       (split #'({a <fixnum>} {b <string>} . rest))
     (=> syntax=?)
-    #'(a b . rest) #f #'(<fixnum> <string> . <top>))
+    #'(a b . rest) #f #'(<fixnum> <string> . <unspecified>))
 
 ;;; return values tagging
 
   (check
       (split #'({_} a b))
     (=> syntax=?)
-    #'(a b) '() #'(<top> <top>))
+    #'(a b) '() #'(<unspecified> <unspecified>))
 
   (check
       (split #'({_ <fixnum>} a b))
     (=> syntax=?)
-    #'(a b) #'(<fixnum>) #'(<top> <top>))
+    #'(a b) #'(<fixnum>) #'(<unspecified> <unspecified>))
 
   (check
       (split #'({_ <fixnum>} {a <flonum>} {b <string>}))
@@ -466,7 +469,7 @@
   (check
       ((lambda args
 	 (define-syntax (inspect stx)
-	   (top-tagged? args))
+	   (uns-tagged? args))
 	 (values args (inspect)))
        1)
     (=> syntax=?) '(1) #t)
@@ -474,7 +477,7 @@
   (check
       ((lambda (a)
 	 (define-syntax (inspect stx)
-	   (top-tagged? a))
+	   (uns-tagged? a))
 	 (values a (inspect)))
        1)
     (=> syntax=?) 1 #t)
@@ -482,8 +485,8 @@
   (check
       ((lambda (a b)
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b))))
 	 (values a b (inspect)))
        1 2)
     (=> syntax=?) 1 2 '(#t #t))
@@ -491,9 +494,9 @@
   (check
       ((lambda (a b . rest)
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b)
-			    (top-tagged? rest))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b)
+			    (uns-tagged? rest))))
 	 (values a b rest (inspect)))
        1 2 3 4)
     (=> syntax=?) 1 2 '(3 4) '(#t #t #t))
@@ -594,9 +597,9 @@
 	(define (fun . args)
 	  (define-syntax (inspect stx)
 	    #`(quote #,(list (tag=tagging? <procedure> fun)
-			     (top-tagged? args))))
+			     (uns-tagged? args))))
 	  (define-syntax (signature stx)
-	    (syntax=? #'(#f . <top>) (callable-signature->stx #'fun)))
+	    (syntax=? #'(#f . <unspecified>) (callable-signature->stx #'fun)))
 	  (values args (inspect) (signature)))
 	(fun 1))
     => '(1) '(#t #t) #t)
@@ -617,7 +620,7 @@
 	(define (fun a)
 	  (define-syntax (inspect stx)
 	    #`(quote #,(list (tag=tagging? <procedure> fun)
-			     (top-tagged? a))))
+			     (uns-tagged? a))))
 	  (values a (inspect)))
 	(fun 1))
     => 1 '(#t #t))
@@ -626,8 +629,8 @@
       (let ()
 	(define (fun a b)
 	  (define-syntax (inspect stx)
-	    #`(quote #,(list (top-tagged? a)
-			     (top-tagged? b))))
+	    #`(quote #,(list (uns-tagged? a)
+			     (uns-tagged? b))))
 	  (values a b (inspect)))
 	(fun 1 2))
     => 1 2 '(#t #t))
@@ -636,9 +639,9 @@
       (let ()
 	(define (fun a b . rest)
 	  (define-syntax (inspect stx)
-	    #`(quote #,(list (top-tagged? a)
-			     (top-tagged? b)
-			     (top-tagged? rest))))
+	    #`(quote #,(list (uns-tagged? a)
+			     (uns-tagged? b)
+			     (uns-tagged? rest))))
 	  (values a b rest (inspect)))
 	(fun 1 2 3 4))
     => 1 2 '(3 4) '(#t #t #t))
@@ -761,7 +764,7 @@
       ((case-lambda
 	(args
 	 (define-syntax (inspect stx)
-	   (top-tagged? args))
+	   (uns-tagged? args))
 	 (values args (inspect))))
        1)
     => '(1) #t)
@@ -770,7 +773,7 @@
       ((case-lambda
 	((a)
 	 (define-syntax (inspect stx)
-	   (top-tagged? a))
+	   (uns-tagged? a))
 	 (values a (inspect))))
        1)
     => 1 #t)
@@ -779,8 +782,8 @@
       ((case-lambda
 	((a b)
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b))))
 	 (values a b (inspect))))
        1 2)
     => 1 2 '(#t #t))
@@ -789,9 +792,9 @@
       ((case-lambda
 	((a b . rest)
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b)
-			    (top-tagged? rest))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b)
+			    (uns-tagged? rest))))
 	 (values a b rest (inspect))))
        1 2 3 4)
     => 1 2 '(3 4) '(#t #t #t))
@@ -848,7 +851,7 @@
   (check
       (let ((a 1))
 	(define-syntax (inspect stx)
-	  (top-tagged? a))
+	  (uns-tagged? a))
 	(values a (inspect)))
     => 1 #t)
 
@@ -856,8 +859,8 @@
       (let ((a 1)
 	    (b 2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (top-tagged? a)
-			   (top-tagged? b))))
+	  #`(quote #,(list (uns-tagged? a)
+			   (uns-tagged? b))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -890,7 +893,7 @@
   (check
       (trace-let name ((a 1))
 	(define-syntax (inspect stx)
-	  (top-tagged? a))
+	  (uns-tagged? a))
 	(values a (inspect)))
     => 1 #t)
 
@@ -898,8 +901,8 @@
       (trace-let name ((a 1)
 		       (b 2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (top-tagged? a)
-			   (top-tagged? b))))
+	  #`(quote #,(list (uns-tagged? a)
+			   (uns-tagged? b))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -932,7 +935,7 @@
   (check
       (let* ((a 1))
 	(define-syntax (inspect stx)
-	  (top-tagged? a))
+	  (uns-tagged? a))
 	(values a (inspect)))
     => 1 #t)
 
@@ -940,8 +943,8 @@
       (let* ((a 1)
 	     (b 2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (top-tagged? a)
-			   (top-tagged? b))))
+	  #`(quote #,(list (uns-tagged? a)
+			   (uns-tagged? b))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -974,7 +977,7 @@
   (check
       (letrec ((a 1))
 	(define-syntax (inspect stx)
-	  (top-tagged? a))
+	  (uns-tagged? a))
 	(values a (inspect)))
     => 1 #t)
 
@@ -982,8 +985,8 @@
       (letrec ((a 1)
 	       (b 2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (top-tagged? a)
-			   (top-tagged? b))))
+	  #`(quote #,(list (uns-tagged? a)
+			   (uns-tagged? b))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -1024,7 +1027,7 @@
   (check
       (letrec* ((a 1))
 	(define-syntax (inspect stx)
-	  (top-tagged? a))
+	  (uns-tagged? a))
 	(values a (inspect)))
     => 1 #t)
 
@@ -1032,8 +1035,8 @@
       (letrec* ((a 1)
 		(b 2))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (top-tagged? a)
-			   (top-tagged? b))))
+	  #`(quote #,(list (uns-tagged? a)
+			   (uns-tagged? b))))
 	(values a (inspect)))
     => 1 '(#t #t))
 
@@ -1218,7 +1221,7 @@
 	    a)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     (top-tagged? a))
+	     (uns-tagged? a))
 	   (add-result (inspect)))))
     => '(2 (#t)))
 
@@ -1230,8 +1233,8 @@
 	    (vector a b))
 	 (let ()
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (top-tagged? a)
-			      (top-tagged? b))))
+	     #`(quote #,(list (uns-tagged? a)
+			      (uns-tagged? b))))
 	   (add-result (inspect)))))
     => '(#(2 9) ((#t #t))))
 
@@ -1273,7 +1276,7 @@
 	   1
 	 (let ()
 	   (define-syntax (inspect stx)
-	     (top-tagged? a))
+	     (uns-tagged? a))
 	   (add-result (inspect))
 	   a)))
     => '(1 (#t)))
@@ -1284,9 +1287,9 @@
 	   (values 1 2 3)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (top-tagged? a)
-			      (top-tagged? b)
-			      (top-tagged? c))))
+	     #`(quote #,(list (uns-tagged? a)
+			      (uns-tagged? b)
+			      (uns-tagged? c))))
 	   (add-result (inspect))
 	   (list a b c))))
     => '((1 2 3) ((#t #t #t))))
@@ -1297,7 +1300,7 @@
 	   (values 1 2 3)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     (top-tagged? args))
+	     (uns-tagged? args))
 	   (add-result (inspect))
 	   args)))
     => '((1 2 3) (#t)))
@@ -1308,10 +1311,10 @@
 	   (values 1 2 3 4 5)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (top-tagged? a)
-			      (top-tagged? b)
-			      (top-tagged? c)
-			      (top-tagged? args))))
+	     #`(quote #,(list (uns-tagged? a)
+			      (uns-tagged? b)
+			      (uns-tagged? c)
+			      (uns-tagged? args))))
 	   (add-result (inspect))
 	   (list a b c args))))
     => '((1 2 3 (4 5)) ((#t #t #t #t))))
@@ -1378,7 +1381,7 @@
 	   1
 	 (let ()
 	   (define-syntax (inspect stx)
-	     (top-tagged? a))
+	     (uns-tagged? a))
 	   (add-result (inspect)))))
     => '(1 (#t)))
 
@@ -1388,9 +1391,9 @@
 	   (values 1 2 3)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (top-tagged? a)
-			      (top-tagged? b)
-			      (top-tagged? c))))
+	     #`(quote #,(list (uns-tagged? a)
+			      (uns-tagged? b)
+			      (uns-tagged? c))))
 	   (add-result (inspect)))))
     => '(1 2 3 ((#t #t #t))))
 
@@ -1400,7 +1403,7 @@
 	   (values 1 2 3)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     (top-tagged? args))
+	     (uns-tagged? args))
 	   (add-result (inspect)))))
     => '((1 2 3) (#t)))
 
@@ -1410,10 +1413,10 @@
 	   (values 1 2 3 4 5)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (top-tagged? a)
-			      (top-tagged? b)
-			      (top-tagged? c)
-			      (top-tagged? args))))
+	     #`(quote #,(list (uns-tagged? a)
+			      (uns-tagged? b)
+			      (uns-tagged? c)
+			      (uns-tagged? args))))
 	   (add-result (inspect)))))
     => '(1 2 3 (4 5) ((#t #t #t #t))))
 
@@ -1476,8 +1479,8 @@
        (let ()
 	 (define-inline (ciao a b)
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (top-tagged? a)
-			      (top-tagged? b))))
+	     #`(quote #,(list (uns-tagged? a)
+			      (uns-tagged? b))))
 	   (add-result (inspect))
 	   (+ a b))
 	 (ciao 1 2)))
@@ -1495,7 +1498,7 @@
        (let ()
 	 (define-inline (ciao . rest)
 	   (define-syntax (inspect stx)
-	     (top-tagged? rest))
+	     (uns-tagged? rest))
 	   (add-result (inspect))
 	   (apply + rest))
 	 (ciao 1 2)))
@@ -1506,8 +1509,8 @@
        (let ()
 	 (define-inline (ciao a . rest)
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (top-tagged? a)
-			      (top-tagged? rest))))
+	     #`(quote #,(list (uns-tagged? a)
+			      (uns-tagged? rest))))
 	   (add-result (inspect))
 	   (apply + a rest))
 	 (ciao 1 2)))
@@ -1561,7 +1564,7 @@
        (let ()
 	 (define-integrable (fact n)
 	   (define-syntax (inspect stx)
-	     (top-tagged? n))
+	     (uns-tagged? n))
 	   (add-result (inspect))
 	   (if (< n 2)
 	       1
@@ -1581,12 +1584,12 @@
        (let ()
 	 (define-integrable (even? n)
 	   (define-syntax (inspect stx)
-	     (top-tagged? n))
+	     (uns-tagged? n))
 	   (add-result (inspect))
 	   (or (zero? n) (odd? (- n 1))))
 	 (define-integrable (odd? n)
 	   (define-syntax (inspect stx)
-	     (top-tagged? n))
+	     (uns-tagged? n))
 	   (add-result (inspect))
 	   (not (even? n)))
 	 (even? 5)))
@@ -1597,7 +1600,7 @@
        (let ()
 	 (define-integrable (incr x)
 	   (define-syntax (inspect stx)
-	     (top-tagged? x))
+	     (uns-tagged? x))
 	   (add-result (inspect))
 	   (+ x 1))
 	 (map incr '(10 20 30))))
@@ -1617,7 +1620,7 @@
       (with-result
        (let-values ((a (values 1 2 3)))
 	 (define-syntax (inspect stx)
-	   (top-tagged? a))
+	   (uns-tagged? a))
 	 (add-result (inspect))
 	 a))
     => '((1 2 3) (#t)))
@@ -1628,7 +1631,7 @@
       (with-result
        (let-values (((a) 1))
 	 (define-syntax (inspect stx)
-	   (top-tagged? a))
+	   (uns-tagged? a))
 	 (add-result (inspect))
 	 a))
     => '(1 (#t)))
@@ -1637,9 +1640,9 @@
       (with-result
        (let-values (((a b c) (values 1 2 3)))
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b)
-			    (top-tagged? c))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b)
+			    (uns-tagged? c))))
 	 (add-result (inspect))
 	 (list a b c)))
     => '((1 2 3) ((#t #t #t))))
@@ -1650,9 +1653,9 @@
 		    ((b) 2)
 		    ((c) 3))
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b)
-			    (top-tagged? c))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b)
+			    (uns-tagged? c))))
 	 (add-result (inspect))
 	 (list a b c)))
     => '((1 2 3) ((#t #t #t))))
@@ -1663,15 +1666,15 @@
 		    ((d e f) (values 4 5 6))
 		    ((g h i) (values 7 8 9)))
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b)
-			    (top-tagged? c)
-			    (top-tagged? d)
-			    (top-tagged? e)
-			    (top-tagged? f)
-			    (top-tagged? g)
-			    (top-tagged? h)
-			    (top-tagged? i))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b)
+			    (uns-tagged? c)
+			    (uns-tagged? d)
+			    (uns-tagged? e)
+			    (uns-tagged? f)
+			    (uns-tagged? g)
+			    (uns-tagged? h)
+			    (uns-tagged? i))))
 	 (add-result (inspect))
 	 (list a b c d e f g h i)))
     => '((1 2 3 4 5 6 7 8 9) ((#t #t #t  #t #t #t  #t #t #t))))
@@ -1682,11 +1685,11 @@
 		    ((d)	4)
 		    ((g h i)	(values 7 8 9)))
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? d)
-			    (top-tagged? g)
-			    (top-tagged? h)
-			    (top-tagged? i))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? d)
+			    (uns-tagged? g)
+			    (uns-tagged? h)
+			    (uns-tagged? i))))
 	 (add-result (inspect))
 	 (list a d g h i)))
     => '((1 4 7 8 9) ((#t #t #t #t #t))))
@@ -1697,13 +1700,13 @@
 		    ((d)	4)
 		    ((g h i)	(values 7 8 9)))
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b)
-			    (top-tagged? c)
-			    (top-tagged? d)
-			    (top-tagged? g)
-			    (top-tagged? h)
-			    (top-tagged? i))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b)
+			    (uns-tagged? c)
+			    (uns-tagged? d)
+			    (uns-tagged? g)
+			    (uns-tagged? h)
+			    (uns-tagged? i))))
 	 (add-result (inspect))
 	 (list a b c  d  g h i)))
     => '((1 2 3 4 7 8 9) ((#t #t #t  #t  #t #t #t))))
@@ -1714,11 +1717,11 @@
 		    ((d)	4)
 		    ((g)	7))
 	 (define-syntax (inspect stx)
-	   #`(quote #,(list (top-tagged? a)
-			    (top-tagged? b)
-			    (top-tagged? c)
-			    (top-tagged? d)
-			    (top-tagged? g))))
+	   #`(quote #,(list (uns-tagged? a)
+			    (uns-tagged? b)
+			    (uns-tagged? c)
+			    (uns-tagged? d)
+			    (uns-tagged? g))))
 	 (add-result (inspect))
 	 (list a b c d g)))
     => '((1 2 3 4 7) ((#t #t #t #t #t))))
@@ -1824,7 +1827,7 @@
       (with-result
        (let*-values ((a (values 1 2 3)))
 	 (define-syntax (inspect stx)
-	   (top-tagged? a))
+	   (uns-tagged? a))
 	 (add-result (inspect))
 	 a))
     => '((1 2 3) (#t)))

@@ -22,9 +22,14 @@
 
 
 (define (initialise-type-spec-for-built-in-object-types)
-  ;;The tag <top> is special because it is the only one having #f in the
-  ;;parent spec field.
+  ;;The tags "<top>"  and "<unspecified>" are special because they  are the only ones
+  ;;having  #f in  the parent  spec field.   "<unspecified>" is  the default  tag for
+  ;;untagged bindings.
   (let ((tag-id  (S <top>))
+	(pred-id (S always-true)))
+    (set-identifier-object-type-spec! tag-id
+      (%make-object-type-spec tag-id #f pred-id #f #f #f #f)))
+  (let ((tag-id  (S <unspecified>))
 	(pred-id (S always-true)))
     (set-identifier-object-type-spec! tag-id
       (%make-object-type-spec tag-id #f pred-id #f #f #f #f)))

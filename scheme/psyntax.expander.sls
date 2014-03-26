@@ -6235,6 +6235,7 @@
 					    (set! memoized-id id))))))
 				(define-syntax ?tag
 				  (identifier-syntax (retriever))))))))
+  (define-tag-retriever <unspecified>)
   (define-tag-retriever <top>)
   (define-tag-retriever <procedure>)
   #| end of let-syntax |# )

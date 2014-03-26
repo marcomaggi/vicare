@@ -1503,7 +1503,7 @@
 	(receive (mutator-stx new-value-tag)
 	    (tag-identifier-mutator ?type-id ?field-name-id #t expr-stx)
 	  (chi-expr (bless
-		     `(,mutator-stx ,?expr (tag-assert-and-return ,new-value-tag ,?new-value)))
+		     `(,mutator-stx ,?expr (tag-assert-and-return (,new-value-tag) ,?new-value)))
 		    lexenv.run lexenv.expand)))
        ))
 
@@ -1517,7 +1517,7 @@
 		 (receive (mutator-stx new-value-tag)
 		     (tag-identifier-mutator tag-id ?field-name-id #t expr-stx)
 		   (chi-expr (bless
-			      `(,mutator-stx ,?id (tag-assert-and-return ,new-value-tag ,?new-value)))
+			      `(,mutator-stx ,?id (tag-assert-and-return (,new-value-tag) ,?new-value)))
 			     lexenv.run lexenv.expand))))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
@@ -1630,7 +1630,7 @@
 	(receive (mutator-stx new-value-tag)
 	    (tag-identifier-mutator ?type-id ?field-name-id #f expr-stx)
 	  (chi-expr (bless
-		     `(,mutator-stx ,?expr (tag-assert-and-return ,new-value-tag ,?new-value)))
+		     `(,mutator-stx ,?expr (tag-assert-and-return (,new-value-tag) ,?new-value)))
 		    lexenv.run lexenv.expand)))
        ))
 
@@ -1644,7 +1644,7 @@
 		 (receive (mutator-stx new-value-tag)
 		     (tag-identifier-mutator tag-id ?field-name-id #f expr-stx)
 		   (chi-expr (bless
-			      `(,mutator-stx ,?id (tag-assert-and-return ,new-value-tag ,?new-value)))
+			      `(,mutator-stx ,?id (tag-assert-and-return (,new-value-tag) ,?new-value)))
 			     lexenv.run lexenv.expand))))
 	   (else
 	    (syntax-error expr-stx "unable to determine type tag of expression"))))
@@ -1702,10 +1702,11 @@
      (let* ((expr.psi   (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core  (psi-core-expr  expr.psi))
 	    (expr.sign  (psi-retvals-signature expr.psi)))
-       (cond ((not expr.sign)
-	      ;;The  expression  has no  type  specification;  we  have to  insert  a
-	      ;;run-time  check.  Here  we know  that ?RETVALS-SIGNATURE  is a  valid
-	      ;;formsla signature, so we can be less strict in the patterns.
+       (cond ((unspecified-retvals-signature-syntax? expr.sign)
+	      ;;The  expression  has   no  type  specification  or   a  partial  type
+	      ;;specification; we have to insert a run-time check.  Here we know that
+	      ;;?RETVALS-SIGNATURE is  a valid formsla  signature, so we can  be less
+	      ;;strict in the patterns.
 	      (syntax-match ?retvals-signature ()
 		((?rv-tag* ...)
 		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
@@ -1816,7 +1817,7 @@
      (let* ((expr.psi   (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core  (psi-core-expr  expr.psi))
 	    (expr.sign  (psi-retvals-signature expr.psi)))
-       (cond ((not expr.sign)
+       (cond ((unspecified-retvals-signature-syntax? expr.sign)
 	      ;;The  expression  has no  type  specification;  we  have to  insert  a
 	      ;;run-time  check.  Here  we know  that ?RETVALS-SIGNATURE  is a  valid
 	      ;;formsla signature, so we can be less strict in the patterns.

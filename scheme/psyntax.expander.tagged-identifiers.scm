@@ -136,6 +136,40 @@
 	   #t)
 	  (_ #f)))))
 
+;;; --------------------------------------------------------------------
+
+(define* (unspecified-formals-signature-syntax? {stx formals-signature-syntax?})
+  ;;The argument STX must be a syntax object representing a formals signature syntax:
+  ;;null or a proper  or improper list of tag identifiers.  Return true  if STX as at
+  ;;least one "<unspecified>" tag identifier; otherwise return false.
+  ;;
+  ($unspecified-formals-signature-syntax? stx))
+
+(define ($unspecified-formals-signature-syntax? stx)
+  (syntax-match stx ()
+    (() #f)
+    ((?id . ?rest)
+     (tag-identifier? ?id)
+     (or (free-id=? ?id <unspecified>)
+	 ($unspecified-formals-signature-syntax? ?rest)))
+    (?rest
+     (tag-identifier? ?rest)
+     (free-id=? ?rest <unspecified>))))
+
+(define* (unspecified-retvals-signature-syntax? {stx retvals-signature-syntax?})
+  ;;The argument STX must be a syntax object representing a retvals signature syntax:
+  ;;false, null or a proper or improper  list of tag identifiers.  Return true if STX
+  ;;is  false or  the  signature  as at  least  one  "<unspecified>" tag  identifier;
+  ;;otherwise return false.
+  ;;
+  ($unspecified-retvals-signature-syntax? stx))
+
+(define ($unspecified-retvals-signature-syntax? stx)
+  (or (not (syntax->datum stx))
+      ($unspecified-formals-signature-syntax? stx)))
+
+;;; --------------------------------------------------------------------
+
 (define* (formals-signature-super-and-sub? {super-signature formals-signature-syntax?}
 					   {sub-signature   formals-signature-syntax?})
   ($formals-signature-super-and-sub? super-signature sub-signature))
@@ -321,7 +355,7 @@
   ;;If STX  is a  tagged or  untagged identifier,  return 2  values: the
   ;;identifier  representing   the  binding  name  and   the  identifier
   ;;representing the tag; otherwise raise  an exception.  When no tag is
-  ;;present: the tag identifier defaults to <top>.
+  ;;present: the tag identifier defaults to "<unspecified>".
   ;;
   (syntax-match stx (brace)
     ((brace ?id ?tag)
@@ -330,7 +364,7 @@
        (values ?id ?tag)))
     (?id
      (identifier? ?id)
-     (values ?id <top>))
+     (values ?id <unspecified>))
     ))
 
 
@@ -350,7 +384,7 @@
 ;;
 ;;and the return values are:
 ;;
-;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
+;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<unspecified>)
 ;;
 
 (case-define* parse-list-of-tagged-bindings
@@ -360,8 +394,8 @@
    ;;Assume STX  is a  syntax object  representing a proper  list of  possibly tagged
    ;;binding identifiers; parse  the list and return 2 values:  a list of identifiers
    ;;representing the  binding identifiers,  a list  of identifiers  representing the
-   ;;type  tags; <top>  is used  when no  tag is  present.  The  identifiers must  be
-   ;;distinct.
+   ;;type tags; "<unspecified>" is used when no tag is present.  The identifiers must
+   ;;be distinct.
    ;;
    (define (%invalid-tagged-bindings-syntax form subform)
      (syntax-violation __who__ "invalid tagged bindings syntax" form subform))
@@ -383,7 +417,7 @@
 	    (identifier? ?id)
 	    (receive (id* tag*)
 		(recur ?other-id*)
-	      (values (cons ?id id*) (cons <top> tag*))))
+	      (values (cons ?id id*) (cons <unspecified> tag*))))
 	   (_
 	    (if input-form-stx
 		(%invalid-tagged-bindings-syntax input-form-stx stx)
@@ -471,7 +505,7 @@
 	   (let recur ((?arg* ?arg*))
 	     (if (pair? ?arg*)
 		 (%process-args input-form-stx original-formals-stx recur ?arg*)
-	       (values ?rest-id <top>)))
+	       (values ?rest-id <unspecified>)))
 	 (%validate-formals input-form-stx original-formals-stx standard-formals-stx)))
 
       ;;Standard formals: untagged identifiers without rest argument.
@@ -480,7 +514,7 @@
        (for-all identifier? ?id*)
        (begin
 	 (%validate-formals input-form-stx original-formals-stx ?id*)
-	 (values ?id* (map (lambda (id) <top>) ?id*))))
+	 (values ?id* (map (lambda (id) <unspecified>) ?id*))))
 
       ;;Standard formals: untagged identifiers with rest argument.
       ;;
@@ -489,13 +523,13 @@
 	    (identifier? ?rest-id))
        (begin
 	 (%validate-formals input-form-stx original-formals-stx (append ?id* ?rest-id))
-	 (values formals-stx (cons* (map (lambda (id) <top>) ?id*) <top>))))
+	 (values formals-stx (cons* (map (lambda (id) <unspecified>) ?id*) <unspecified>))))
 
       ;;Standard formals: untagged args.
       ;;
       (?args-id
        (identifier? ?args-id)
-       (values ?args-id <top>))
+       (values ?args-id <unspecified>))
 
       ;;Possibly tagged identifiers without rest argument.
       ;;
@@ -516,7 +550,7 @@
 	  ;;Untagged argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals) (cons <top> tags)))
+	   (values (cons ?id standard-formals) (cons <unspecified> tags)))
 	  ;;Tagged argument.
 	  ((brace ?id ?tag)
 	   (and (identifier? ?id)
@@ -886,9 +920,10 @@
 		;False or a dispatcher procedure.
    parent-spec
 		;False or an instance of  "object-type-spec" describing the parent of
-		;this type.   Only "<top>" has this  field set to false;  every other
-		;"object-type-spec" has a parent spec; "<top>" is the implicit parent
-		;of all the type specs.
+		;this type.  Only "<top>" and  "<unspecified>" have this field set to
+		;false; every other "object-type-spec" has  a parent spec; "<top>" is
+		;the implicit  parent of all  the type specs; "<unspecified>"  is the
+		;tag of untagged bindings.
    ))
 
 (case-define* make-object-type-spec

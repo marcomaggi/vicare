@@ -563,6 +563,7 @@
      (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
 							      &expression-return-value-violation-rcd)))
 ;;;
+     (<unspecified>				(macro . <unspecified>))
      (<top>					(macro . <top>))
      (<boolean>					(macro . <boolean>))
      (<char>					(macro . <char>))
@@ -3729,6 +3730,7 @@
     (tag-assert					$expander-tags)
     (tag-assert-and-return			$expander-tags)
 
+    (<unspecified>				$expander-tags)
     (<top>					$expander-tags)
     (<boolean>					$expander-tags)
     (<char>					$expander-tags)

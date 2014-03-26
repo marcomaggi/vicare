@@ -665,8 +665,7 @@
 	    (let ((rhs.psi (chi-expr ?rhs lexenv.run lexenv.expand)))
 	      (make-psi (build-lexical-assignment no-source
 			  (lexical-var bind-val)
-			  (psi-core-expr rhs.psi))
-			(list <top>))))
+			  (psi-core-expr rhs.psi)))))
 	   ((core-prim)
 	    (stx-error expr.stx "cannot modify imported core primitive"))
 
@@ -687,8 +686,7 @@
 		      (rhs.psi (chi-expr ?rhs lexenv.run lexenv.expand)))
 		  (make-psi (build-global-assignment no-source
 			      loc
-			      (psi-core-expr rhs.psi))
-			    (list <top>)))
+			      (psi-core-expr rhs.psi))))
 	      (stx-error expr.stx "attempt to modify an unexportable variable")))
 
 	   (else
@@ -1010,8 +1008,7 @@
      (let* ((expr.stx  (cdr qrhs))
 	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi)))
-       (make-psi (build-sequence no-source (list expr.core (build-void)))
-		 (list <top>))))
+       (make-psi (build-sequence no-source (list expr.core (build-void))))))
 
     (else
      (assertion-violation __who__ "Vicare: internal error: invalid qrhs" qrhs))))
@@ -1225,9 +1222,7 @@
 		  (receive (lab lex)
 		      (gen-define-label+lex id rib sd?)
 		    (extend-rib! rib id lab sd?)
-		    ;;If the binding has no type tag: ID-TAG is false.
-		    (when id-tag
-		      (set-label-tag! lab id-tag))
+		    (set-label-tag! lab id-tag)
 		    ;;If the binding is not a function: SIGNATURE is false.
 		    (when signature
 		      (set-label-callable-signature! lab signature))
@@ -1631,8 +1626,8 @@
     ;;
     ;;1..The identifier of the binding variable.
     ;;
-    ;;2..An identifier  representing the binding tag.   False is used when  no tag is
-    ;;   specified; "<procedure>" is used when a procedure is defined.
+    ;;2..An identifier representing the binding tag.  "<unspecified>" is used when no
+    ;;   tag is specified; "<procedure>" is used when a procedure is defined.
     ;;
     ;;3..False or an  object representing an instance  of "callable-signature"; false
     ;;   is returned when the binding is not a function.
@@ -1670,12 +1665,12 @@
       ;;R6RS variable definition.
       ((_ ?id ?val)
        (identifier? ?id)
-       (values ?id #f #f (cons 'expr ?val)))
+       (values ?id <unspecified> #f (cons 'expr ?val)))
 
       ;;R6RS variable definition, no init.
       ((_ ?id)
        (identifier? ?id)
-       (values ?id #f #f (cons 'expr (bless '(void)))))
+       (values ?id <unspecified> #f (cons 'expr (bless '(void)))))
 
       ))
 
