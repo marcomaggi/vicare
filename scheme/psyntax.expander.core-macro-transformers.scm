@@ -1651,7 +1651,7 @@
     ))
 
 
-;;;; module core-macro-transformer: TAG-ASSERT, TAG-ASSERT-AND-RETURN
+;;;; module core-macro-transformer: TAG-ASSERT
 
 (define (tag-assert-transformer expr.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand Vicare's  TAG-ASSERT  syntaxes  from  the
@@ -1669,6 +1669,14 @@
 		(list <top>))))
 
   (define (%run-time-check-output-form expr.core checker.psi)
+    ;;We build a core language expression as follows:
+    ;;
+    ;;   (call-with-values
+    ;;        (lambda () ?expr)
+    ;;     (lambda ?formals
+    ;;       ?check-form ...
+    ;;       (void)))
+    ;;
     (let* ((call.psi     (chi-expr (bless 'call-with-values) lexenv.run lexenv.expand))
 	   (call.core    (psi-core-expr call.psi))
 	   (checker.core (psi-core-expr checker.psi)))
@@ -1743,21 +1751,18 @@
 		   (%run-time-check-output-form expr.core checker.psi)))
 		))
 
-	     ;;Here we  know that both ?RETVALS-SIGNATURE  and EXPR.SIGN
-	     ;;are not false;  so they are formals  signatures, not only
-	     ;;retvals signatures.
+	     ;;Here we know that both ?RETVALS-SIGNATURE and EXPR.SIGN are not false;
+	     ;;so they are formals signatures, not only retvals signatures.
 	     ((formals-signature-super-and-sub? ?retvals-signature expr.sign)
-	      ;;Fine,  we  have  established  at expand  time  that  the
-	      ;;returned  values are  valid; assertion  succeeded.  Just
-	      ;;evaluate the expression.
+	      ;;Fine, we have established at expand time that the returned values are
+	      ;;valid; assertion succeeded.  Just evaluate the expression.
 	      (make-psi (build-sequence no-source
 			  (list expr.core (build-void)))
 			(list <top>)))
 
 	     (else
-	      ;;The horror!!!   We have established at  expand time that
-	      ;;the  returned values  are of  the wrong  type; assertion
-	      ;;failed.
+	      ;;The horror!!!  We  have established at expand-time  that the returned
+	      ;;values are of the wrong type; assertion failed.
 	      (retvals-signature-violation expr.stx ?retvals-signature expr.sign)))))
 
     ((_ ?retvals-signature ?expr)
@@ -1766,6 +1771,9 @@
        "invalid return values signature" expr.stx ?retvals-signature))
     ))
 
+
+;;;; module core-macro-transformer: TAG-ASSERT-and-return
+
 (define (tag-assert-and-return-transformer expr.stx lexenv.run lexenv.expand)
   ;;Transformer function used to  expand Vicare's TAG-ASSERT-AND-RETURN syntaxes from
   ;;the top-level  built in environment.   Expand the  syntax object EXPR.STX  in the
@@ -1773,39 +1781,106 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert-and-return))
-  (define (%output-expression tag-id expr.stx)
-    (chi-expr (bless
-	       `(receive-and-return (V)
-		    ,expr.stx
-		  (unless (is-a? V ,tag-id)
-		    (assertion-violation (quote ,tag-id)
-		      "expression with wrong result type" (quote ,expr.stx) V))))
-	      lexenv.run lexenv.expand))
+
+  (define (%run-time-check-output-form expr.core checker.psi)
+    ;;We build a core language expression as follows:
+    ;;
+    ;;   (call-with-values
+    ;;        (lambda () ?expr)
+    ;;     (lambda ?formals
+    ;;       ?check-form ...
+    ;;       (apply values ?formals)))
+    ;;
+    (let* ((call.psi     (chi-expr (bless 'call-with-values) lexenv.run lexenv.expand))
+	   (call.core    (psi-core-expr call.psi))
+	   (checker.core (psi-core-expr checker.psi)))
+      (make-psi (build-application no-source
+		  call.core
+		  (list (build-lambda no-source '() expr.core)
+			checker.core))
+		(list <top>))))
+
   (syntax-match expr.stx ()
-    ((_ ?tag ?expr)
-     (cond ((not (tag-identifier? ?tag))
-	    (syntax-violation __who__
-	      "expected tag identifier as first argument" expr.stx ?tag))
+    ((_ #f ?expr)
+     ;;No retvals signature specified.
+     (chi-expr ?expr lexenv.run lexenv.expand))
 
-	   ((free-identifier=? <top> ?tag)
-	    ;;All the objects are of type <top>.
-	    (chi-expr ?expr lexenv.run lexenv.expand))
+    ((_ ?retvals-signature ?expr)
+     (and (identifier? ?retvals-signature)
+	  (free-identifier=? <top> ?retvals-signature))
+     ;;Any tuple of returned objects is of type <top>.
+     (chi-expr ?expr lexenv.run lexenv.expand))
 
-	   ((and (identifier? ?expr)
-		 (tagged-identifier? ?expr))
-	    (let ((tag-id (identifier-tag ?expr)))
-	      (cond ((free-identifier=? <top> tag-id)
-		     (%output-expression ?tag ?expr))
-		    ((tag-super-and-sub? ?tag tag-id)
-		     ;;We know at expand time  that the type is correct, so
-		     ;;we do not insert the validation.
-		     (chi-expr ?expr lexenv.run lexenv.expand))
-		    (else
-		     (syntax-violation __who__
-		       "expression with wrong type tagging" expr.stx tag-id)))))
+    ((_ ?retvals-signature ?expr)
+     (retvals-signature-syntax? ?retvals-signature)
+     (let* ((expr.psi   (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core  (psi-core-expr  expr.psi))
+	    (expr.sign  (psi-retvals-signature expr.psi)))
+       (cond ((not expr.sign)
+	      ;;The  expression  has no  type  specification;  we  have to  insert  a
+	      ;;run-time  check.  Here  we know  that ?RETVALS-SIGNATURE  is a  valid
+	      ;;formsla signature, so we can be less strict in the patterns.
+	      (syntax-match ?retvals-signature ()
+		((?rv-tag* ...)
+		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
+			(checker.psi  (chi-expr (bless
+						 `(lambda ,TMP*
+						    ,@(map (lambda (tmp tag)
+							     `(unless (is-a? ,tmp ,tag)
+								(expression-return-value-violation (quote tag)
+								  "expression with wrong result type"
+								  (quote ,expr.stx) tmp)))
+							TMP* ?rv-tag*)
+						    (apply values . ,TMP*)))
+						lexenv.run lexenv.expand)))
+		   (%run-time-check-output-form expr.core checker.psi)))
 
-	   (else
-	    (%output-expression ?tag ?expr))))
+		((?rv-tag* ... . ?rv-rest-tag)
+		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
+			(checker.psi  (chi-expr (bless
+						 `(lambda (,@TMP* . rest-tmp)
+						    ,@(map (lambda (tmp tag)
+							     `(unless (is-a? ,tmp ,tag)
+								(expression-return-value-violation (quote ,tag)
+								  "expression with wrong result type"
+								  (quote ,expr.stx) ,tmp)))
+							TMP* ?rv-tag*)
+						    (unless (is-a? rest-tmp ,?rv-rest-tag)
+						      (expression-return-value-violation (quote ,?rv-rest-tag)
+							"expression with wrong result type"
+							(quote ,expr.stx) rest-tmp))
+						    (apply values ,@TMP* rest-tmp)))
+						lexenv.run lexenv.expand)))
+		   (%run-time-check-output-form expr.core checker.psi)))
+
+		(?rv-args-tag
+		 (let ((checker.psi  (chi-expr (bless
+						`(lambda args
+						   (unless (is-a? args ,?rv-args-tag)
+						     (expression-return-value-violation (quote ?rv-args-tag)
+						       "expression with wrong result type"
+						       (quote ,expr.stx) args))
+						   (apply values args)))
+					       lexenv.run lexenv.expand)))
+		   (%run-time-check-output-form expr.core checker.psi)))
+		))
+
+	     ;;Here we know that both ?RETVALS-SIGNATURE and EXPR.SIGN are not false;
+	     ;;so they are formals signatures, not only retvals signatures.
+	     ((formals-signature-super-and-sub? ?retvals-signature expr.sign)
+	      ;;Fine, we have established at expand time that the returned values are
+	      ;;valid; assertion succeeded.  Just evaluate the expression.
+	      expr.psi)
+
+	     (else
+	      ;;The horror!!!  We  have established at expand-time  that the returned
+	      ;;values are of the wrong type; assertion failed.
+	      (retvals-signature-violation expr.stx ?retvals-signature expr.sign)))))
+
+    ((_ ?retvals-signature ?expr)
+     ;;Let's use a descriptive error message here.
+     (syntax-violation __who__
+       "invalid return values signature" expr.stx ?retvals-signature))
     ))
 
 

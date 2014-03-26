@@ -2334,23 +2334,75 @@
   #t)
 
 
-#;(parametrise ((check-test-name	'tag-assert-and-return))
+(parametrise ((check-test-name	'tag-assert-and-return))
 
   (check
-      (tag-assert-and-return <fixnum> 123)
+      (tag-assert-and-return (<fixnum>) 123)
     => 123)
+
+  (check
+      (tag-assert-and-return (<top>) 123)
+    => 123)
+
+;;; --------------------------------------------------------------------
+;;; any tuple of returned values is of type <top>
+
+  (check
+      (tag-assert-and-return <top> 123)
+    => 123)
+
+  (check
+      (with-result
+       (tag-assert-and-return <top> (receive-and-return (V)
+					(+ 1 2 3)
+				      (add-result V))))
+    => '(6 (6)))
+
+  (check
+      (with-result
+       (tag-assert-and-return <top> (receive-and-return (a b c)
+					(values 1 2 3)
+				      (add-result (vector a b c)))))
+    => '(1 2 3 (#(1 2 3))))
+
+;;; --------------------------------------------------------------------
+;;; a proper list of returned values is of type <list>
+
+  (check
+      (with-result
+       (tag-assert-and-return <list> (receive-and-return (a b c)
+					 (values 1 2 3)
+				       (add-result (vector a b c)))))
+    => '(1 2 3 (#(1 2 3))))
+
+  (check
+      (with-result
+       (tag-assert-and-return (<fixnum> . <list>)
+			      (receive-and-return (a b c)
+				  (values 1 2 3)
+				(add-result (vector a b c)))))
+    => '(1 2 3 (#(1 2 3))))
+
+  (check
+      (with-result
+       (tag-assert-and-return (<fixnum> <fixnum> <exact-integer> . <list>)
+			      (receive-and-return (a b c)
+				  (values 1 2 3)
+				(add-result (vector a b c)))))
+    => '(1 2 3 (#(1 2 3))))
 
 ;;; --------------------------------------------------------------------
 ;;; records
 
   (check	;the ?EXPR is not explicitly tagged
-      (let ()
-	(define-record-type alpha
-	  (fields a b c))
-	(define O
-	  (make-alpha 1 2 3))
-	(alpha? (tag-assert-and-return alpha O)))
-    => #t)
+      (catch-expand-time-signature-violation #f
+	(%eval '(let ()
+		  (define-record-type alpha
+		    (fields a b c))
+		  (define O
+		    (make-alpha 1 2 3))
+		  (tag-assert-and-return (alpha) O))))
+    => '(alpha) '(<top>))
 
   (check	;the ?EXPR is expliticly tagged
       (let ()
@@ -2358,34 +2410,34 @@
 	  (fields a b c))
 	(define {O alpha}
 	  (make-alpha 1 2 3))
-	(alpha? (tag-assert-and-return alpha O)))
+	(alpha? (tag-assert-and-return (alpha) O)))
     => #t)
 
   (check
-      (catch-syntax-violation #f
-       (%eval '(let ()
-		 (define-record-type alpha
-		   (fields a b c))
-		 (define {O alpha}
-		   (make-alpha 1 2 3))
-		 (tag-assert-and-return <fixnum> O))))
-    => 'alpha)
+      (catch-expand-time-signature-violation #f
+	(%eval '(let ()
+		  (define-record-type alpha
+		    (fields a b c))
+		  (define {O alpha}
+		    (make-alpha 1 2 3))
+		  (tag-assert-and-return (<fixnum>) O))))
+    => '(<fixnum>) '(alpha))
 
 ;;; --------------------------------------------------------------------
 ;;; record with parent
 
   (check	;the ?EXPR is not explicitly tagged
-      (let ()
-	(define-record-type alpha
-	  (fields a b c))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields d e f))
-	(define O
-	  (make-beta 1 2 3 4 5 6))
-	(list (alpha? (tag-assert-and-return alpha O))
-	      (beta?  (tag-assert-and-return beta  O))))
-    => '(#t #t))
+      (catch-expand-time-signature-violation #f
+	(%eval '(let ()
+		  (define-record-type alpha
+		    (fields a b c))
+		  (define-record-type beta
+		    (parent alpha)
+		    (fields d e f))
+		  (define O
+		    (make-beta 1 2 3 4 5 6))
+		  (tag-assert-and-return (beta) O))))
+    => '(beta) '(<top>))
 
   (check	;the ?EXPR is expliticly tagged
       (let ()
@@ -2396,9 +2448,9 @@
 	  (fields d e f))
 	(define {O beta}
 	  (make-beta 1 2 3 4 5 6))
-	(list (alpha? (tag-assert-and-return alpha O))
-	      (beta?  (tag-assert-and-return beta  O))))
-    => '(#t #t))
+	(values (alpha? (tag-assert-and-return (alpha) O))
+		(beta?  (tag-assert-and-return (beta)  O))))
+    => #t #t)
 
   #t)
 
