@@ -1715,7 +1715,7 @@
 							     `(unless (is-a? ,tmp ,tag)
 								(expression-return-value-violation (quote tag)
 								  "expression with wrong result type"
-								  (quote ,expr.stx) tmp)))
+								  (quote ,expr.stx) ,tmp)))
 							TMP* ?rv-tag*)
 						    (void)))
 						lexenv.run lexenv.expand)))
@@ -1772,7 +1772,7 @@
     ))
 
 
-;;;; module core-macro-transformer: TAG-ASSERT-and-return
+;;;; module core-macro-transformer: TAG-ASSERT-AND-RETURN
 
 (define (tag-assert-and-return-transformer expr.stx lexenv.run lexenv.expand)
   ;;Transformer function used to  expand Vicare's TAG-ASSERT-AND-RETURN syntaxes from
@@ -1829,9 +1829,9 @@
 							     `(unless (is-a? ,tmp ,tag)
 								(expression-return-value-violation (quote tag)
 								  "expression with wrong result type"
-								  (quote ,expr.stx) tmp)))
+								  (quote ,expr.stx) ,tmp)))
 							TMP* ?rv-tag*)
-						    (apply values . ,TMP*)))
+						    (values . ,TMP*)))
 						lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi)))
 

@@ -1225,9 +1225,10 @@
 		  (receive (lab lex)
 		      (gen-define-label+lex id rib sd?)
 		    (extend-rib! rib id lab sd?)
-		    (set-label-tag! lab id-tag)
-		    ;;If  the binding  is not  a function:  SIGNATURE is
-		    ;;false.
+		    ;;If the binding has no type tag: ID-TAG is false.
+		    (when id-tag
+		      (set-label-tag! lab id-tag))
+		    ;;If the binding is not a function: SIGNATURE is false.
 		    (when signature
 		      (set-label-callable-signature! lab signature))
 		    (chi-body* (cdr body-form*.stx)
@@ -1630,7 +1631,7 @@
     ;;
     ;;1..The identifier of the binding variable.
     ;;
-    ;;2..An identifier representing the binding tag.   "<top>" is used when no tag is
+    ;;2..An identifier  representing the binding tag.   False is used when  no tag is
     ;;   specified; "<procedure>" is used when a procedure is defined.
     ;;
     ;;3..False or an  object representing an instance  of "callable-signature"; false
@@ -1669,12 +1670,12 @@
       ;;R6RS variable definition.
       ((_ ?id ?val)
        (identifier? ?id)
-       (values ?id <top> #f (cons 'expr ?val)))
+       (values ?id #f #f (cons 'expr ?val)))
 
       ;;R6RS variable definition, no init.
       ((_ ?id)
        (identifier? ?id)
-       (values ?id <top> #f (cons 'expr (bless '(void)))))
+       (values ?id #f #f (cons 'expr (bless '(void)))))
 
       ))
 
