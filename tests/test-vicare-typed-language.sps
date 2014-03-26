@@ -2271,15 +2271,15 @@
 ;;; --------------------------------------------------------------------
 ;;; records
 
-  ;; (check	;the ?EXPR is not explicitly tagged
-  ;;     (let ()
-  ;; 	(define-record-type alpha
-  ;; 	  (fields a b c))
-  ;; 	(define O
-  ;; 	  (make-alpha 1 2 3))
-  ;; 	(tag-assert (alpha) O)
-  ;; 	#t)
-  ;;   => #t)
+  (check	;the ?EXPR is not explicitly tagged
+      (catch-expand-time-signature-violation #f
+	(%eval '(let ()
+		  (define-record-type alpha
+		    (fields a b c))
+		  (define O
+		    (make-alpha 1 2 3))
+		  (tag-assert (alpha) O))))
+    => '(alpha) '(<top>))
 
   (check	;the ?EXPR is expliticly tagged
       (let ()
@@ -2304,19 +2304,18 @@
 ;;; --------------------------------------------------------------------
 ;;; record with parent
 
-  ;; (check	;the ?EXPR is not explicitly tagged
-  ;;     (let ()
-  ;; 	(define-record-type alpha
-  ;; 	  (fields a b c))
-  ;; 	(define-record-type beta
-  ;; 	  (parent alpha)
-  ;; 	  (fields d e f))
-  ;; 	(define O
-  ;; 	  (make-beta 1 2 3 4 5 6))
-  ;; 	(tag-assert (alpha) O)
-  ;; 	(tag-assert (beta)  O)
-  ;; 	#t)
-  ;;   => #t)
+  (check	;the ?EXPR is not explicitly tagged
+      (catch-expand-time-signature-violation #f
+	(%eval '(let ()
+		  (define-record-type alpha
+		    (fields a b c))
+		  (define-record-type beta
+		    (parent alpha)
+		    (fields d e f))
+		  (define O
+		    (make-beta 1 2 3 4 5 6))
+		  (tag-assert (beta) O))))
+    => '(beta) '(<top>))
 
   (check	;the ?EXPR is expliticly tagged
       (let ()

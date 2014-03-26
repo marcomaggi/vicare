@@ -1660,12 +1660,24 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert))
+
   (define (%just-evaluate-the-expression expr.stx)
     (let* ((expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
 	   (expr.core (psi-core-expr  expr.psi)))
       (make-psi (build-sequence no-source
 		  (list expr.core (build-void)))
 		(list <top>))))
+
+  (define (%run-time-check-output-form expr.core checker.psi)
+    (let* ((call.psi     (chi-expr (bless 'call-with-values) lexenv.run lexenv.expand))
+	   (call.core    (psi-core-expr call.psi))
+	   (checker.core (psi-core-expr checker.psi)))
+      (make-psi (build-application no-source
+		  call.core
+		  (list (build-lambda no-source '() expr.core)
+			checker.core))
+		(list <top>))))
+
   (syntax-match expr.stx ()
     ((_ #f ?expr)
      ;;No retvals signature specified.
@@ -1681,9 +1693,7 @@
      (retvals-signature-syntax? ?retvals-signature)
      (let* ((expr.psi   (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core  (psi-core-expr  expr.psi))
-	    (expr.sign  (psi-retvals-signature expr.psi))
-	    (call.psi   (chi-expr (bless 'call-with-values) lexenv.run lexenv.expand))
-	    (call.core  (psi-core-expr call.psi)))
+	    (expr.sign  (psi-retvals-signature expr.psi)))
        (cond ((not expr.sign)
 	      ;;The  expression  has no  type  specification;  we  have to  insert  a
 	      ;;run-time  check.  Here  we know  that ?RETVALS-SIGNATURE  is a  valid
@@ -1700,13 +1710,8 @@
 								  (quote ,expr.stx) tmp)))
 							TMP* ?rv-tag*)
 						    (void)))
-						lexenv.run lexenv.expand))
-			(checker.core (psi-core-expr checker.psi)))
-		   (make-psi (build-application no-source
-			       call.core
-			       (list (build-lambda no-source '() expr.core)
-				     checker.core))
-			     (list <top>))))
+						lexenv.run lexenv.expand)))
+		   (%run-time-check-output-form expr.core checker.psi)))
 
 		((?rv-tag* ... . ?rv-rest-tag)
 		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
@@ -1723,29 +1728,19 @@
 							"expression with wrong result type"
 							(quote ,expr.stx) rest-tmp))
 						    (void)))
-						lexenv.run lexenv.expand))
-			(checker.core (psi-core-expr checker.psi)))
-		   (make-psi (build-application no-source
-			       call.core
-			       (list (build-lambda no-source '() expr.core)
-				     checker.core))
-			     (list <top>))))
+						lexenv.run lexenv.expand)))
+		   (%run-time-check-output-form expr.core checker.psi)))
 
 		(?rv-args-tag
-		 (let* ((checker.psi  (chi-expr (bless
-						 `(lambda args
-						    (unless (is-a? args ,?rv-args-tag)
-						      (expression-return-value-violation (quote ?rv-args-tag)
-							"expression with wrong result type"
-							(quote ,expr.stx) args))
-						    (void)))
-						lexenv.run lexenv.expand))
-			(checker.core (psi-core-expr checker.psi)))
-		   (make-psi (build-application no-source
-			       call.core
-			       (list (build-lambda no-source '() expr.core)
-				     checker.core))
-			     (list <top>))))
+		 (let ((checker.psi  (chi-expr (bless
+						`(lambda args
+						   (unless (is-a? args ,?rv-args-tag)
+						     (expression-return-value-violation (quote ?rv-args-tag)
+						       "expression with wrong result type"
+						       (quote ,expr.stx) args))
+						   (void)))
+					       lexenv.run lexenv.expand)))
+		   (%run-time-check-output-form expr.core checker.psi)))
 		))
 
 	     ;;Here we  know that both ?RETVALS-SIGNATURE  and EXPR.SIGN

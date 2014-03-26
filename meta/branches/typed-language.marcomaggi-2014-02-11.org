@@ -8,3 +8,7 @@
 
   Update documentation for changes in psyntax.tagged-identifiers module.
 
+* Write a procedure to join alternative type specs for syntaxes like IF.
+
+* Add to the core-macro transformer IF-TRANSFORMER the joining of consequent and alternate type specifications.
+
