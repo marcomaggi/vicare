@@ -6,7 +6,16 @@
 
 * Documentation
 
-  Update documentation for changes in psyntax.tagged-identifiers module.
+** Update documentation for changes in psyntax.tagged-identifiers module.
+
+** Functions to be documented:
+
+   formals-signature-super-and-sub?
+   retvals-signature-violation
+   make-retvals-signature-violation
+   retvals-signature-violation?
+   retvals-signature-violation-expected-signature
+   retvals-signature-violation-returned-signature
 
 * Write a procedure to join alternative type specs for syntaxes like IF.
 
