@@ -1968,7 +1968,7 @@
   (define-fluid-override __who__
     (identifier-syntax 'tag-getter))
   (syntax-match input-form.stx ()
-    ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...)
+    ((_ ?expr ((?key00 ?key0* ...) (?key11* ?key1** ...) ...))
      (let* ((keys.stx  (cons (cons ?key00 ?key0*)
 			     (map cons ?key11* ?key1**)))
 	    (expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
@@ -1991,6 +1991,14 @@
 	 (_
 	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
 	 )))
+
+    ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...)
+     (let* ((keys.stx  (cons (cons ?key00 ?key0*)
+			     (map cons ?key11* ?key1**))))
+       (chi-expr (bless
+		  `(tag-getter ,?expr ,keys.stx))
+		 lexenv.run lexenv.expand)))
+
     ))
 
 (define (tag-setter-transformer input-form.stx lexenv.run lexenv.expand)
@@ -2001,7 +2009,7 @@
   (define-fluid-override __who__
     (identifier-syntax 'tag-setter))
   (syntax-match input-form.stx ()
-    ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
+    ((_ ?expr ((?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
      (let* ((keys.stx  (cons (cons ?key00 ?key0*)
 			     (map cons ?key11* ?key1**)))
 	    (expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
@@ -2026,6 +2034,13 @@
 	 (_
 	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
 	 )))
+
+    ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
+     (let* ((keys.stx  (cons (cons ?key00 ?key0*)
+			     (map cons ?key11* ?key1**))))
+       (chi-expr (bless
+		  `(tag-setter ,?expr ,keys.stx ,?new-value))
+		 lexenv.run lexenv.expand)))
     ))
 
 

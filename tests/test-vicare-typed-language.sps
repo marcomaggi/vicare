@@ -2909,6 +2909,304 @@
   #t)
 
 
+(parametrise ((check-test-name	'set-bang))
+
+;;; structs and setter, syntax 1
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(set! O [a] 11)
+	(tag-getter O [a]))
+    => 11)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(set! O [a] 11)
+	(set! O [b] 22)
+	(set! O [c] 33)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 11 22 33)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(let (({O alpha} (make-alpha 1 2 3)))
+	  (set! O [a] 11)
+	  (set! O [b] 22)
+	  (set! O [c] 33)
+	  (values (tag-getter O [a])
+		  (tag-getter O [b])
+		  (tag-getter O [c]))))
+    => 11 22 33)
+
+;;; --------------------------------------------------------------------
+;;; structs and setter, syntax 2
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(set! (O [a]) 11)
+	(tag-getter O [a]))
+    => 11)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(set! (O [a]) 11)
+	(set! (O [b]) 22)
+	(set! (O [c]) 33)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 11 22 33)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(let (({O alpha} (make-alpha 1 2 3)))
+	  (set! (O [a]) 11)
+	  (set! (O [b]) 22)
+	  (set! (O [c]) 33)
+	  (values (tag-getter O [a])
+		  (tag-getter O [b])
+		  (tag-getter O [c]))))
+    => 11 22 33)
+
+;;; --------------------------------------------------------------------
+;;; structs and mutator
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(set! (O a) 11)
+	(tag-getter O [a]))
+    => 11)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(set! (O a) 11)
+	(set! (O b) 22)
+	(set! (O c) 33)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 11 22 33)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(let (({O alpha} (make-alpha 1 2 3)))
+	  (set! (O a) 11)
+	  (set! (O b) 22)
+	  (set! (O c) 33)
+	  (values (tag-getter O [a])
+		  (tag-getter O [b])
+		  (tag-getter O [c]))))
+    => 11 22 33)
+
+;;; --------------------------------------------------------------------
+;;; records and setter, syntax 1
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+  	(set! O [a] 11)
+  	(tag-getter O [a]))
+    => 11)
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(set! O [a] 11)
+	#;(set! O [b] 22)
+	(set! O [c] 33)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 11 2 33)
+
+  (check	;record with parent
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define-record-type beta
+  	  (parent alpha)
+  	  (fields (mutable d)
+		  (mutable e)
+		  (mutable f)))
+  	(define {O beta}
+  	  (make-beta 1 2 3 4 5 6))
+	(set! O [a] 11)
+	#;(set! O [b] 22)
+	(set! O [c] 33)
+	(set! O [d] 44)
+	(set! O [e] 55)
+	(set! O [f] 66)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])
+  		(tag-getter O [d])
+  		(tag-getter O [e])
+  		(tag-getter O [f])))
+    => 11 2 33 44 55 66)
+
+;;; --------------------------------------------------------------------
+;;; records and setter, syntax 2
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+  	(set! (O [a]) 11)
+  	(tag-getter O [a]))
+    => 11)
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(set! (O [a]) 11)
+	#;(set! (O [b]) 22)
+	(set! (O [c]) 33)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 11 2 33)
+
+  (check	;record with parent
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define-record-type beta
+  	  (parent alpha)
+  	  (fields (mutable d)
+		  (mutable e)
+		  (mutable f)))
+  	(define {O beta}
+  	  (make-beta 1 2 3 4 5 6))
+	(set! (O [a]) 11)
+	#;(set! (O [b]) 22)
+	(set! (O [c]) 33)
+	(set! (O [d]) 44)
+	(set! (O [e]) 55)
+	(set! (O [f]) 66)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])
+  		(tag-getter O [d])
+  		(tag-getter O [e])
+  		(tag-getter O [f])))
+    => 11 2 33 44 55 66)
+
+;;; --------------------------------------------------------------------
+;;; records and mutator
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+  	(set! (O a) 11)
+  	(tag-getter O [a]))
+    => 11)
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(set! (O a) 11)
+	#;(set! (O b) 22)
+	(set! (O c) 33)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 11 2 33)
+
+  (check	;record with parent
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define-record-type beta
+  	  (parent alpha)
+  	  (fields (mutable d)
+		  (mutable e)
+		  (mutable f)))
+  	(define {O beta}
+  	  (make-beta 1 2 3 4 5 6))
+	(set! (O a) 11)
+	#;(set! (O b) 22)
+	(set! (O c) 33)
+	(set! (O d) 44)
+	(set! (O e) 55)
+	(set! (O f) 66)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])
+  		(tag-getter O [d])
+  		(tag-getter O [e])
+  		(tag-getter O [f])))
+    => 11 2 33 44 55 66)
+
+  #t)
+
+
 (parametrise ((check-test-name	'implicit-dispatching))
 
 ;;; structs

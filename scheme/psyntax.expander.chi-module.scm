@@ -732,6 +732,26 @@
 
   (define (%chi-set! input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
+      ((_ (?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
+       (let* ((keys.stx  (cons (cons ?key00 ?key0*)
+			       (map cons ?key11* ?key1**))))
+	 (chi-expr (bless
+		    `(tag-setter ,?expr ,keys.stx ,?new-value))
+		   lexenv.run lexenv.expand)))
+
+      ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
+       (let* ((keys.stx  (cons (cons ?key00 ?key0*)
+			       (map cons ?key11* ?key1**))))
+	 (chi-expr (bless
+		    `(tag-setter ,?expr ,keys.stx ,?new-value))
+		   lexenv.run lexenv.expand)))
+
+      ((_ (?expr ?field-name) ?new-value)
+       (identifier? ?field-name)
+       (chi-expr (bless
+		  `(tag-mutator ,?expr ,?field-name ,?new-value))
+		 lexenv.run lexenv.expand))
+
       ((_ ?lhs ?rhs)
        (identifier? ?lhs)
        (receive (type bind-val kwd)
