@@ -52,10 +52,9 @@ keyword-hash
 @end example
 
 
-@defun keyword->string @var{keyword}
-@defunx string->keyword @var{string}
-Convert a keyword object to and from a string object.  The string is the
-name of the symbol embedded in the keyword.
+@defun string->keyword @var{string}
+Convert a string to a keyword object.  The string is the name of the
+symbol embedded in the keyword.
 @end defun
 
 

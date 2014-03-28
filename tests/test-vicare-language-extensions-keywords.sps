@@ -62,6 +62,10 @@
       (keyword->symbol (symbol->keyword 'ciao))
     => 'ciao)
 
+  (check
+      (keyword->string (symbol->keyword 'ciao))
+    => "#:ciao")
+
 ;;; --------------------------------------------------------------------
 
   (check

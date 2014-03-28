@@ -169,7 +169,7 @@
 	   (bless '(quote #f))))))
 
     ;;Expander tags.
-    ((<top>
+    ((<unspecified> <top>
       <boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure>
       <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
       <rational-valued> <rational> <integer> <integer-valued>
@@ -256,7 +256,10 @@
 	     "invalid usage of auxiliary keyword => in strict R6RS mode"
 	     clause-stx)
 	 `(if (memv t ',?datum*)
-	      (,?expr t)
+	      (let ((proc ,?expr))
+		(if (procedure? proc)
+		    (proc t)
+		  (assertion-violation #f "not a procedure" (quote ,?expr))))
 	    ,k)))
       (((?datum* ...) ?expr ?expr* ...)
        `(if (memv t ',?datum*)
@@ -340,10 +343,10 @@
 (module (define-struct-macro)
   ;;Transformer function  used to  expand Vicare's  DEFINE-STRUCT macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;EXPR.STX; return a syntax object that must be further expanded.
   ;;
-  (define (define-struct-macro expr-stx)
-    (syntax-match expr-stx ()
+  (define (define-struct-macro expr.stx)
+    (syntax-match expr.stx ()
       ((_ (?name ?maker ?predicate) (?field* ...))
        (%build-output-form ?name ?maker ?predicate ?field*))
       ((_ ?name (?field* ...))
@@ -434,9 +437,13 @@
 	  ;;By putting this  form here we are sure  that PREDICATE-ID is
 	  ;;already bound when the object-type-spec is built.
 	  (define-syntax ,type-id
+	    (cons '$rtd ',rtd))
+	  ;;This definition  exists only  to make  sure that  the object
+	  ;;type spec form is evaluated in the visit code.
+	  (define-syntax dummy
 	    (let ()
 	      ,object-type-spec-form
-	      (cons '$rtd ',rtd)))
+	      (lambda (stx) #f)))
 	  ,@accessor-sexp*
 	  ,@mutator-sexp*
 	  ,@unsafe-accessor-sexp*
@@ -445,12 +452,16 @@
   (define (%build-object-type-spec type-id predicate-id field-sym*
 				   accessor-id* unsafe-accessor-id*
 				   mutator-id*  unsafe-mutator-id*)
+    (define uid
+      (gensym (syntax->datum type-id)))
     (define type-str
       (symbol->string (syntax->datum type-id)))
     (define %accessor-maker
       (string->symbol (string-append type-str "-accessor-maker")))
     (define %mutator-maker
       (string->symbol (string-append type-str "-mutator-maker")))
+    (define %getter-maker
+      (string->symbol (string-append type-str "-getter-maker")))
     (define %setter-maker
       (string->symbol (string-append type-str "-setter-maker")))
     (define %dispatcher
@@ -459,43 +470,51 @@
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
 
-       (define (,%accessor-maker field-id safe? input-form-stx)
-	 (case (syntax->datum field-id)
-	   ,@(map (lambda (field-sym accessor-id unsafe-accessor-id)
-		    `((,field-sym)
-		      (values (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))
-			      (typ.top-id))))
-	       field-sym* accessor-id* unsafe-accessor-id*)
-	   (else
-	    (values #f #f))))
+       (define (,%accessor-maker field.sym input-form.stx)
+	 (case field.sym
+	   ,@(map (lambda (field-sym accessor-id)
+		    `((,field-sym)	(syntax ,accessor-id)))
+	       field-sym* accessor-id*)
+	   (else #f)))
 
-       (define (,%mutator-maker field-id safe? input-form-stx)
-	 (case (syntax->datum field-id)
-	   ,@(map (lambda (field-sym mutator-id unsafe-mutator-id)
-		    `((,field-sym)
-		      (values (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))
-			      (typ.top-id))))
-	       field-sym* mutator-id* unsafe-mutator-id*)
-	   (else
-	    (values #f #f))))
+       (define (,%mutator-maker field.sym input-form.stx)
+	 (case field.sym
+	   ,@(map (lambda (field-sym mutator-id)
+		    `((,field-sym)	(syntax ,mutator-id)))
+	       field-sym* mutator-id*)
+	   (else #f)))
 
-       (define (,%setter-maker keys-stx input-form-stx)
-	 (syntax-case keys-stx ()
-	   (([?field-id])
-	    (identifier? #'?field-id)
-	    (,%mutator-maker #'?field-id #t))
+       (define (,%getter-maker keys.stx input-form.stx)
+	 (define (%invalid-keys)
+	   (syntax-violation (quote ,type-id) "invalid keys for getter" input-form.stx keys.stx))
+	 (syntax-case keys.stx ()
+	   (([?field.sym])
+	    (identifier? #'?field.sym)
+	    (or (,%accessor-maker (syntax->datum #'?field.sym) input-form.stx)
+		(%invalid-keys)))
 	   (else
-	    (syntax-violation ',type-id
-	      "invalid keys for setter"
-	      input-form-stx keys-stx))))
+	    (%invalid-keys))))
 
-       (define (,%dispatcher method-id input-form-stx)
-	 (values #f #f))
+       (define (,%setter-maker keys.stx input-form.stx)
+	 (define (%invalid-keys)
+	   (syntax-violation (quote ,type-id) "invalid keys for setter" input-form.stx keys.stx))
+	 (syntax-case keys.stx ()
+	   (([?field.sym])
+	    (identifier? #'?field.sym)
+	    (or (,%mutator-maker (syntax->datum #'?field.sym) input-form.stx)
+		(%invalid-keys)))
+	   (else
+	    (%invalid-keys))))
+
+       (define (,%dispatcher method-id arg*.stx input-form.stx)
+	 #f)
 
        (define object-type-spec
-	 (typ.make-object-type-spec (syntax ,type-id) (typ.top-id) (syntax ,predicate-id)
+	 (typ.make-object-type-spec (quote ,uid)
+				    (syntax ,type-id) (typ.top-id) (syntax ,predicate-id)
 				    ,%accessor-maker ,%mutator-maker
-				    ,%setter-maker ,%dispatcher))
+				    ,%getter-maker ,%setter-maker
+				    ,%dispatcher))
 
        (typ.set-identifier-object-type-spec! (syntax ,type-id) object-type-spec)))
 
@@ -573,10 +592,13 @@
     (define-values (foo-parent parent-rtd-code parent-rcd-code)
       (%make-parent-rtd+rcd-code clause* synner))
 
+    (define foo-uid
+      (%get-uid foo clause* synner))
+
     ;;Code  for  record-type   descriptor  and  record-type  constructor
     ;;descriptor.
     (define foo-rtd-code
-      (%make-rtd-code foo clause* parent-rtd-code synner))
+      (%make-rtd-code foo foo-uid clause* parent-rtd-code synner))
     (define foo-rcd-code
       (%make-rcd-code clause* foo-rtd foo-protocol parent-rcd-code))
 
@@ -592,7 +614,7 @@
     (define object-type-spec-form
       ;;The object-type-spec stuff is used to  add a tag property to the
       ;;record type identifier.
-      (%make-object-type-spec-form foo foo? foo-parent
+      (%make-object-type-spec-form foo foo? foo-parent foo-uid
 				   x* foo-x* unsafe-foo-x*
 				   mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				   immutable-x*))
@@ -620,11 +642,16 @@
 
 	;;Binding for record type name.
 	(define-syntax ,foo
+	  (cons '$rtd
+		(cons (syntax ,foo-rtd)
+		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
+
+	;;This definition exists only to  make sure that the object type
+	;;spec form is evaluated in the visit code.
+	(define-syntax dummy
 	  (let ()
 	    ,object-type-spec-form
-	    (cons '$rtd
-		  (cons (syntax ,foo-rtd)
-			(cons (syntax ,foo-rcd) (quote ,binding-spec))))))
+	    (lambda (stx) #f)))
 
 	. ,(if (option.strict-r6rs)
 	       '()
@@ -674,30 +701,35 @@
     ;;
     (syntax-match spec ()
       ((?foo ?make-foo ?foo?)
+       (and (identifier? ?foo)
+	    (identifier? ?make-foo)
+	    (identifier? ?foo?))
        (values ?foo ?make-foo ?foo?))
-      (foo
-       (identifier? foo)
-       (values foo
-	       (identifier-append  foo "make-" (syntax->datum foo))
-	       (identifier-append  foo foo "?")))
+      (?foo
+       (identifier? ?foo)
+       (values ?foo
+	       (identifier-append ?foo "make-" (syntax->datum ?foo))
+	       (identifier-append ?foo ?foo "?")))
       ))
 
-  (define (%make-rtd-code name clause* parent-rtd-code synner)
+  (define (%get-uid foo clause* synner)
+    (let ((clause (%get-clause 'nongenerative clause*)))
+      (syntax-match clause ()
+	((_)
+	 (gensym (syntax->datum foo)))
+	((_ ?uid)
+	 (identifier? ?uid)
+	 (syntax->datum ?uid))
+	;;No matching clause found.
+	(#f
+	 (gensym (syntax->datum foo)))
+	(_
+	 (synner "expected symbol or no argument in nongenerative clause" clause)))))
+
+  (define (%make-rtd-code name foo-uid clause* parent-rtd-code synner)
     ;;Return a  sexp which,  when evaluated,  will return  a record-type
     ;;descriptor.
     ;;
-    (define uid-code
-      (let ((clause (%get-clause 'nongenerative clause*)))
-	(syntax-match clause ()
-	  ((_)
-	   (quasiquote (quote (unquote (gensym)))))
-	  ((_ ?uid)
-	   (identifier? ?uid)
-	   (quasiquote (quote (unquote ?uid))))
-	  ;;No matching clause found.
-	  (#f	#f)
-	  (_
-	   (synner "expected symbol or no argument in nongenerative clause" clause)))))
     (define sealed?
       (let ((clause (%get-clause 'sealed clause*)))
 	(syntax-match clause ()
@@ -736,8 +768,8 @@
 
 	  (_
 	   (synner "invalid syntax in FIELDS clause" clause)))))
-    `(make-record-type-descriptor ',name ,parent-rtd-code
-				  ,uid-code ,sealed? ,opaque? ,fields))
+    `(make-record-type-descriptor (quote ,name) ,parent-rtd-code
+				  (quote ,foo-uid) ,sealed? ,opaque? ,fields))
 
   (define (%make-rcd-code clause* foo-rtd foo-protocol parent-rcd-code)
     ;;Return a sexp  which, when evaluated, will  return the record-type
@@ -978,7 +1010,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-object-type-spec-form foo foo? foo-parent
+  (define (%make-object-type-spec-form foo foo? foo-parent foo-uid
 				       x* foo-x* unsafe-foo-x*
 				       mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				       immutable-x*)
@@ -988,6 +1020,8 @@
       (string->symbol (string-append type-str "-accessor-maker")))
     (define %mutator-maker
       (string->symbol (string-append type-str "-mutator-maker")))
+    (define %getter-maker
+      (string->symbol (string-append type-str "-getter-maker")))
     (define %setter-maker
       (string->symbol (string-append type-str "-setter-maker")))
     (define %dispatcher
@@ -996,53 +1030,54 @@
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
 
-       (define (,%accessor-maker field-id safe? input-form-stx)
-	 (case (syntax->datum field-id)
-	   ,@(map (lambda (field-name accessor-id unsafe-accessor-id)
-		    `((,field-name)
-		      (values (if safe? (syntax ,accessor-id) (syntax ,unsafe-accessor-id))
-			      (typ.top-id))))
-	       x* foo-x* unsafe-foo-x*)
-	   (else
-	    (values #f #f))))
+       (define (,%accessor-maker field.sym input-form-stx)
+	 (case field.sym
+	   ,@(map (lambda (field-name accessor-id)
+		    `((,field-name)	(syntax ,accessor-id)))
+	       x* foo-x*)
+	   (else #f)))
 
-       (define (,%mutator-maker field-id safe? input-form-stx)
-	 (case (syntax->datum field-id)
-	   ,@(map (lambda (field-name mutator-id unsafe-mutator-id)
-		    `((,field-name)
-		      (values (if safe? (syntax ,mutator-id) (syntax ,unsafe-mutator-id))
-			      (typ.top-id))))
-	       mutable-x* foo-x-set!* unsafe-foo-x-set!*)
+       (define (,%mutator-maker field.sym input-form-stx)
+	 (case field.sym
+	   ,@(map (lambda (field-name mutator-id)
+		    `((,field-name)	(syntax ,mutator-id)))
+	       mutable-x* foo-x-set!*)
 	   ,@(map (lambda (field-name)
 		    `((,field-name)
 		      (syntax-violation ',foo
 			"requested mutator of immutable record field name"
-			input-form-stx field-id)))
+			input-form-stx field.sym)))
 	       immutable-x*)
-	   (else
-	    (values #f #f))))
+	   (else #f)))
+
+       (define (,%getter-maker keys-stx input-form-stx)
+	 (syntax-case keys-stx ()
+	   (([?field-id])
+	    (identifier? #'?field-id)
+	    (,%accessor-maker (syntax->datum #'?field-id) input-form-stx))
+	   (else #f)))
 
        (define (,%setter-maker keys-stx input-form-stx)
 	 (syntax-case keys-stx ()
 	   (([?field-id])
 	    (identifier? #'?field-id)
-	    (,%mutator-maker #'?field-id #t))
-	   (else
-	    (syntax-violation ',foo
-	      "invalid keys for setter"
-	      input-form-stx keys-stx))))
+	    (,%mutator-maker (syntax->datum #'?field-id) input-form-stx))
+	   (else #f)))
 
-       (define (,%dispatcher method-id input-form-stx)
-	 (values #f #f))
+       (define (,%dispatcher method.sym arg*.stx input-form-stx)
+	 #f)
+
+       (define parent-id
+	 ,(if foo-parent
+	      `(syntax ,foo-parent)
+	    '(typ.top-id)))
 
        (define object-type-spec
-	 (typ.make-object-type-spec (syntax ,foo)
-				    ,(if foo-parent
-					 `(syntax ,foo-parent)
-				       '(typ.top-id))
-				    (syntax ,foo?)
+	 (typ.make-object-type-spec (quote ,foo-uid)
+				    (syntax ,foo) parent-id (syntax ,foo?)
 				    ,%accessor-maker ,%mutator-maker
-				    ,%setter-maker ,%dispatcher))
+				    ,%getter-maker ,%setter-maker
+				    ,%dispatcher))
 
        (typ.set-identifier-object-type-spec! (syntax ,foo) object-type-spec)))
 

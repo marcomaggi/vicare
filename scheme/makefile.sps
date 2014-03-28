@@ -374,6 +374,12 @@
      ($slot-set!				(core-macro . $slot-set!))
      (tag-assert				(core-macro . tag-assert))
      (tag-assert-and-return			(core-macro . tag-assert-and-return))
+     (tag-validator				(core-macro . tag-validator))
+     (tag-dispatch				(core-macro . tag-dispatch))
+     (tag-accessor				(core-macro . tag-accessor))
+     (tag-mutator				(core-macro . tag-mutator))
+     (tag-getter				(core-macro . tag-getter))
+     (tag-setter				(core-macro . tag-setter))
      (splice-first-expand			(core-macro . splice-first-expand))
      (unsafe					(core-macro . unsafe))
      (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
@@ -850,80 +856,6 @@
     (environment-labels				v $language)
     (environment-binding			v $language)
 ;;;
-    (top-id					$type-specs)
-
-    (tagged-identifier-syntax?			$type-specs)
-    (list-of-tagged-bindings?			$type-specs)
-    (tagged-callable-spec-syntax?		$type-specs)
-    (tagged-formals-syntax?			$type-specs)
-    (standard-formals-syntax?			$type-specs)
-    (formals-signature-syntax?			$type-specs)
-    (retvals-signature-syntax?			$type-specs)
-    (parse-tagged-identifier-syntax		$type-specs)
-    (parse-list-of-tagged-bindings		$type-specs)
-    (parse-tagged-callable-spec-syntax		$type-specs)
-    (parse-tagged-formals-syntax		$type-specs)
-
-    (make-callable-signature			$type-specs)
-    (callable-signature?			$type-specs)
-    (callable-signature-formals			$type-specs)
-    (callable-signature-return-values		$type-specs)
-    (make-formals-signature			$type-specs)
-    (formals-signature?				$type-specs)
-    (formals-signature-tags			$type-specs)
-    (make-retvals-signature			$type-specs)
-    (retvals-signature?				$type-specs)
-    (retvals-signature-tags			$type-specs)
-    (callable-signature-formals-tags		$type-specs)
-    (callable-signature-return-values-tags	$type-specs)
-    (callable-signature=?			$type-specs)
-    (formals-signature=?			$type-specs)
-    (retvals-signature=?			$type-specs)
-
-    (tag-identifier?				$type-specs)
-    (all-tag-identifiers?			$type-specs)
-    (tag-super-and-sub?				$type-specs)
-    (formals-signature-super-and-sub?		$type-specs)
-    (set-identifier-object-type-spec!		$type-specs)
-    (identifier-object-type-spec		$type-specs)
-    (set-label-object-type-spec!		$type-specs)
-    (label-object-type-spec			$type-specs)
-    (make-object-type-spec			$type-specs)
-    (object-type-spec?				$type-specs)
-    (object-type-spec-type-id			$type-specs)
-    (object-type-spec-parent-spec		$type-specs)
-    (object-type-spec-pred-stx			$type-specs)
-    (object-type-spec-accessor-maker		$type-specs)
-    (object-type-spec-mutator-maker		$type-specs)
-    (object-type-spec-dispatcher		$type-specs)
-
-    (set-identifier-callable-spec!		$type-specs)
-    (identifier-callable-spec			$type-specs)
-    (make-callable-spec				$type-specs)
-    (callable-spec?				$type-specs)
-    (callable-spec-name				$type-specs)
-    (callable-spec-min-arity			$type-specs)
-    (callable-spec-max-arity			$type-specs)
-    (callable-spec-dispatcher			$type-specs)
-
-    (tagged-identifier?				$type-specs)
-    (set-identifier-tag!			$type-specs)
-    (identifier-tag				$type-specs)
-    (set-label-tag!				$type-specs)
-    (label-tag					$type-specs)
-
-    (set-identifier-callable-signature!		$type-specs)
-    (identifier-callable-signature		$type-specs)
-    (set-label-callable-signature!		$type-specs)
-    (label-callable-signature			$type-specs)
-
-    (make-retvals-signature-violation		$type-specs)
-    (retvals-signature-violation		$type-specs)
-    (retvals-signature-violation?		$type-specs)
-    (retvals-signature-violation-expected-signature	$type-specs)
-    (retvals-signature-violation-returned-signature	$type-specs)
-
-;;;
     (time-and-gather				v $language)
     (stats?					v $language)
     (stats-user-secs				v $language)
@@ -1282,6 +1214,7 @@
 ;;;
     ($symbol->keyword				$keywords)
     ($keyword->symbol				$keywords)
+    ($keyword->string				$keywords)
     ($keyword-hash				$keywords)
     ($keyword=?					$keywords)
 ;;;
@@ -2617,6 +2550,16 @@
     (&source-position-rcd)
 
 ;;; --------------------------------------------------------------------
+;;; keywords
+
+    (symbol->keyword				v $language)
+    (keyword->symbol				v $language)
+    (keyword->string				v $language)
+    (keyword?					v $language)
+    (keyword=?					v $language)
+    (keyword-hash				v $language)
+
+;;; --------------------------------------------------------------------
 ;;; configuration options
 
     (vicare-built-with-ffi-enabled		v $language)
@@ -2912,14 +2855,6 @@
     (ellipsis-map)
     (debug-call)
     (syntax-error				v)
-
-;;; --------------------------------------------------------------------
-
-    (symbol->keyword				v $language)
-    (keyword->symbol				v $language)
-    (keyword?					v $language)
-    (keyword=?					v $language)
-    (keyword-hash				v $language)
 
 ;;; --------------------------------------------------------------------
 ;;; syntax utilities
@@ -3729,6 +3664,12 @@
 
     (tag-assert					$expander-tags)
     (tag-assert-and-return			$expander-tags)
+    (tag-dispatch				$expander-tags)
+    (tag-accessor				$expander-tags)
+    (tag-mutator				$expander-tags)
+    (tag-getter					$expander-tags)
+    (tag-setter					$expander-tags)
+    (tag-validator				$expander-tags)
 
     (<unspecified>				$expander-tags)
     (<top>					$expander-tags)
@@ -3780,6 +3721,85 @@
     (<binary-input-port>			$expander-tags)
     (<binary-output-port>			$expander-tags)
     (<binary-input/output-port>			$expander-tags)
+
+;;; --------------------------------------------------------------------
+
+    (top-id					$type-specs)
+    (validate-with-predicate			$type-specs)
+
+    (tagged-identifier-syntax?			$type-specs)
+    (list-of-tagged-bindings?			$type-specs)
+    (tagged-callable-spec-syntax?		$type-specs)
+    (tagged-formals-syntax?			$type-specs)
+    (standard-formals-syntax?			$type-specs)
+    (formals-signature-syntax?			$type-specs)
+    (retvals-signature-syntax?			$type-specs)
+    (parse-tagged-identifier-syntax		$type-specs)
+    (parse-list-of-tagged-bindings		$type-specs)
+    (parse-tagged-callable-spec-syntax		$type-specs)
+    (parse-tagged-formals-syntax		$type-specs)
+
+    (make-callable-signature			$type-specs)
+    (callable-signature?			$type-specs)
+    (callable-signature-formals			$type-specs)
+    (callable-signature-return-values		$type-specs)
+    (make-formals-signature			$type-specs)
+    (formals-signature?				$type-specs)
+    (formals-signature-tags			$type-specs)
+    (make-retvals-signature			$type-specs)
+    (retvals-signature?				$type-specs)
+    (retvals-signature-tags			$type-specs)
+    (callable-signature-formals-tags		$type-specs)
+    (callable-signature-return-values-tags	$type-specs)
+    (callable-signature=?			$type-specs)
+    (formals-signature=?			$type-specs)
+    (retvals-signature=?			$type-specs)
+
+    (tag-identifier?				$type-specs)
+    (all-tag-identifiers?			$type-specs)
+    (tag-super-and-sub?				$type-specs)
+    (formals-signature-super-and-sub?		$type-specs)
+    (set-identifier-object-type-spec!		$type-specs)
+    (identifier-object-type-spec		$type-specs)
+    (set-label-object-type-spec!		$type-specs)
+    (label-object-type-spec			$type-specs)
+    (make-object-type-spec			$type-specs)
+    (object-type-spec?				$type-specs)
+    (object-type-spec-uids			$type-specs)
+    (object-type-spec-type-id			$type-specs)
+    (object-type-spec-parent-spec		$type-specs)
+    (object-type-spec-pred-stx			$type-specs)
+    (object-type-spec-accessor-maker		$type-specs)
+    (object-type-spec-mutator-maker		$type-specs)
+    (object-type-spec-getter-maker		$type-specs)
+    (object-type-spec-setter-maker		$type-specs)
+    (object-type-spec-dispatcher		$type-specs)
+
+    (set-identifier-callable-spec!		$type-specs)
+    (identifier-callable-spec			$type-specs)
+    (make-callable-spec				$type-specs)
+    (callable-spec?				$type-specs)
+    (callable-spec-name				$type-specs)
+    (callable-spec-min-arity			$type-specs)
+    (callable-spec-max-arity			$type-specs)
+    (callable-spec-dispatcher			$type-specs)
+
+    (tagged-identifier?				$type-specs)
+    (set-identifier-tag!			$type-specs)
+    (identifier-tag				$type-specs)
+    (set-label-tag!				$type-specs)
+    (label-tag					$type-specs)
+
+    (set-identifier-callable-signature!		$type-specs)
+    (identifier-callable-signature		$type-specs)
+    (set-label-callable-signature!		$type-specs)
+    (label-callable-signature			$type-specs)
+
+    (make-retvals-signature-violation		$type-specs)
+    (retvals-signature-violation		$type-specs)
+    (retvals-signature-violation?		$type-specs)
+    (retvals-signature-violation-expected-signature	$type-specs)
+    (retvals-signature-violation-returned-signature	$type-specs)
 
     ))
 

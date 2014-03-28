@@ -1157,7 +1157,7 @@
     callable-signature=?		formals-signature=?		retvals-signature=?
 
     ;; expand-time object type specs: identifiers defining types
-    top-id
+    top-id					validate-with-predicate
     tag-identifier?				all-tag-identifiers?
     tag-super-and-sub?				formals-signature-super-and-sub?
     identifier-object-type-spec			set-identifier-object-type-spec!
@@ -1165,9 +1165,11 @@
 
     make-object-type-spec			object-type-spec?
     object-type-spec-parent-spec
+    object-type-spec-uids
     object-type-spec-type-id			object-type-spec-pred-stx
     object-type-spec-accessor-maker		object-type-spec-mutator-maker
-    object-type-spec-setter-maker		object-type-spec-dispatcher
+    object-type-spec-getter-maker		object-type-spec-setter-maker
+    object-type-spec-dispatcher
 
     ;; expand-time object type specs: tagged binding identifiers
     tagged-identifier?
@@ -1231,6 +1233,11 @@
 (define (false-or-procedure? obj)
   (or (not obj)
       (procedure? obj)))
+
+(define (non-empty-list-of-symbols? obj)
+  (and (not (null? obj))
+       (list? obj)
+       (for-all symbol? obj)))
 
 (define (improper-list->list-and-rest ell)
   (let loop ((ell   ell)
@@ -5883,7 +5890,9 @@
 (include "psyntax.expander.tagged-identifiers.scm" #t)
 (module (initialise-type-spec-for-built-in-object-types
 	 retvals-signature-of-datum
-	 top-id)
+	 top-id
+	 validate-with-predicate)
+  (import (vicare))
   (include "psyntax.expander.built-in-tags.scm" #t))
 
 
@@ -6960,12 +6969,23 @@
   macro-expanded-input-form-condition?
   (form macro-expanded-input-form-condition-object))
 
+;;This is used whenever we were expecting a retvals signature matching a
+;;given one, but the one we got does not match.
 (define-condition-type &retvals-signature-violation
     &violation
   make-retvals-signature-violation
   retvals-signature-violation?
   (expected-signature retvals-signature-violation-expected-signature)
   (returned-signature retvals-signature-violation-returned-signature))
+
+;;This is used  to include a retvals signature  specification in generic
+;;compound objects,  for example because  we were expecting  a signature
+;;with some properties and the one we got does not have them.
+(define-condition-type &retvals-signature-condition
+    &condition
+  make-retvals-signature-condition
+  retvals-signature-condition?
+  (signature retvals-signature-condition-signature))
 
 (define (assertion-error expr source-identifier
 			 byte-offset character-offset

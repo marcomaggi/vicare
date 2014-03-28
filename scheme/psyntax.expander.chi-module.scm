@@ -75,13 +75,12 @@
 	   (let* ((binding (label->syntactic-binding label lexenv))
 		  (type    (syntactic-binding-type binding)))
 	     (case type
-	       ((core-prim core-macro!
-			   lexical global mutable
-			   local-macro local-macro!
-			   global-macro global-macro!
-			   local-ctv global-ctv
-			   macro macro! import export library $module syntax
-			   displaced-lexical)
+	       ((core-prim
+		 lexical global mutable
+		 core-macro! global-macro global-macro! macro macro! local-macro local-macro!
+		 import export library $module syntax
+		 local-ctv global-ctv
+		 displaced-lexical)
 		(values type (syntactic-binding-value binding) id))
 	       (($rtd)
 		(values 'type-maker-reference (syntactic-binding-value binding) id))
@@ -95,13 +94,7 @@
 	 ;;   (?first-form ?form ...)
 	 ;;
 	 (let ((id (syntax-car expr-stx)))
-	   (cond ((%tagged-identifier-with-dispatcher? id)
-		  ;;Here we know that EXPR-STX has the format:
-		  ;;
-		  ;;   (?tagged-id ?form ...)
-		  ;;
-		  (values 'tagged-dispatching #f id))
-		 ((identifier? id)
+	   (cond ((identifier? id)
 		  ;;Here we know that EXPR-STX has the format:
 		  ;;
 		  ;;   (?id ?form ...)
@@ -118,13 +111,14 @@
 			  let-syntax letrec-syntax begin-for-syntax
 			  begin set! stale-when
 			  local-ctv global-ctv
-			  local-macro local-macro!
-			  global-macro global-macro!
-			  macro import export library module)
+			  global-macro global-macro! local-macro local-macro! macro
+			  import export library module)
 			 (values type (syntactic-binding-value binding) id))
 			(($rtd)
 			 (values 'type-maker-application (syntactic-binding-value binding) id))
 			(else
+			 ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL,
+			 ;;MUTABLE.
 			 (values 'call #f #f))))))
 		 (else
 		  ;;Here we know that EXPR-STX has the format:
@@ -160,7 +154,7 @@
 
 (define-syntax while-expanding-application-first-subform
   ;;Evaluate a  body while the parameter  is true.  This  syntax is used in  a single
-  ;;place: the function CHI-APPLICATION applied to a syntax object:
+  ;;place: the function %CHI-APPLICATION applied to a syntax object:
   ;;
   ;;   ((?nested-rator ?nested-rand ...) ?rand ...)
   ;;
@@ -428,14 +422,6 @@
 		    (and (tagged-identifier? expr-stx)
 			 (list (identifier-tag expr-stx)))))
 
-	 ((tagged-dispatching)
-	  ;;Tagged identifier dispatching; this means EXPR-STX has the format:
-	  ;;
-	  ;;   (?tagged-id ?form ...)
-	  ;;
-	  (chi-expr (tag-identifier-dispatch (identifier-tag kwd) expr-stx)
-		    lexenv.run lexenv.expand))
-
 	 ((global-macro global-macro!)
 	  ;;Global macro use.
 	  (let ((exp-e (while-not-expanding-application-first-subform
@@ -596,18 +582,18 @@
 
   (module (%chi-application)
 
-    (define (%chi-application expr.stx lexenv.run lexenv.expand)
-      ;;Expand a  function application form.   This is  called when EXPR.STX  has the
+    (define (%chi-application input-form.stx lexenv.run lexenv.expand)
+      ;;Expand a  function application form.   This is  called when INPUT-FORM.STX  has the
       ;;format:
       ;;
       ;;   (?rator ?rand ...)
       ;;
       ;;and ?RATOR  is a pair  or a non-macro identifier.   For example it  is called
-      ;;when EXPR.STX is:
+      ;;when INPUT-FORM.STX is:
       ;;
       ;;   (((?rator ?rand1 ...) ?rand2 ...) ?rand3 ...)
       ;;
-      (syntax-match expr.stx ()
+      (syntax-match input-form.stx ()
 	(((?nested-rator ?nested-rand* ...) ?rand* ...)
 	 ;;This is a function or macro application with possible splicing first expand.
 	 ;;We  expand it  considering the  case  of the  first subform  expanding to  a
@@ -628,33 +614,124 @@
 		  (stx-error rator.stx
 			     "expected list as argument of splice-first-expand"
 			     'splice-first-expand)))
-	     (%build-core-expression expr.stx rator.psi ?rand* lexenv.run lexenv.expand))))
+	     (%build-core-expression input-form.stx rator.psi ?rand* lexenv.run lexenv.expand))))
 
 	((?rator ?rand* ...)
 	 ;;This  is a  common function  application: ?RATOR  is not  a syntax  keyword.
 	 ;;Let's make sure that we expand ?RATOR first.
 	 (let ((rator.psi (chi-expr ?rator lexenv.run lexenv.expand)))
-	   (%build-core-expression expr.stx rator.psi ?rand* lexenv.run lexenv.expand)))
+	   (%build-core-expression input-form.stx rator.psi ?rand* lexenv.run lexenv.expand)))
 	))
 
-    (define* (%build-core-expression expr.stx {rator.psi psi?} rand*.stx lexenv.run lexenv.expand)
-      (let* ((rator.core (psi-core-expr rator.psi))
-	     (rand*.psi  (while-not-expanding-application-first-subform
-			  (chi-expr* rand*.stx lexenv.run lexenv.expand)))
-	     (rand*.core (map psi-core-expr rand*.psi)))
-	(make-psi (build-application (syntax-annotation expr.stx)
-		    rator.core
-		    rand*.core)
-		  ;;FIXME We should do better than  this here.  (Marco Maggi; Tue Mar
-		  ;;25, 2014)
-		  #f)))
+    (module (%build-core-expression)
+
+      (define* (%build-core-expression input-form.stx {rator.psi psi?} rand*.stx lexenv.run lexenv.expand)
+	(define rator.core (psi-core-expr         rator.psi))
+	(define rator.sign (psi-retvals-signature rator.psi))
+	(syntax-match rator.sign ()
+	  (#f
+	   ;;The rator type  is unknown.  Return a procedure application  and we will
+	   ;;see at run-time what happens.
+	   (%process-unknown-rator-type input-form.stx rator.core rand*.stx lexenv.run lexenv.expand))
+	  ((?tag)
+	   (cond (($tag-super-and-sub? ?tag <procedure>)
+		  ;;The rator is a procedure.  Good.  Return a procedure application.
+		  (let* ((rand*.psi  (while-not-expanding-application-first-subform
+				      (chi-expr* rand*.stx lexenv.run lexenv.expand)))
+			 (rand*.core (map psi-core-expr rand*.psi)))
+		    (make-psi (build-application (syntax-annotation input-form.stx)
+				rator.core
+				rand*.core)
+			      ;;FIXME  Put   here  the   retvals  signature   of  the
+			      ;;procedure.  (Marco Maggi; Fri Mar 28, 2014)
+			      #f)))
+		 ((or (free-id=? ?tag <unspecified>)
+		      (free-id=? ?tag <top>))
+		  ;;The rator type is unknown.  Return a procedure application and we
+		  ;;will see at run-time what happens.
+		  (%process-unknown-rator-type input-form.stx rator.core rand*.stx lexenv.run lexenv.expand))
+		 (else
+		  ;;The  rator has  the correct  single-value signature  and it  is a
+		  ;;specified tag, but it is not  a procedure.  We check that this is
+		  ;;a call to an object type's dispatcher.
+		  (syntax-match rand*.stx ()
+		    (()
+		     ;;No  operands.  This  is an  error, because  the input  form is
+		     ;;something like:
+		     ;;
+		     ;;   ("ciao mamma")
+		     ;;
+		     ;;so we raise an exception.
+		     (raise
+		      (condition (make-who-condition __who__)
+				 (make-message-condition "invalid call operator with no operands")
+				 (make-syntax-violation input-form.stx #f)
+				 (make-retvals-signature-condition rator.sign))))
+		    (((?key00 ?key0* ...) (?key11* ?key1** ...) ...)
+		     ;;There are operands and they match the getter keys syntax.
+		     (let* ((getter.stx  (tag-identifier-getter ?tag rand*.stx input-form.stx))
+			    (getter.psi  (chi-expr getter.stx lexenv.run lexenv.expand))
+			    (getter.core (psi-core-expr getter.psi))
+			    (getter.sign (psi-retvals-signature getter.psi)))
+		       (make-psi (build-application (syntax-annotation input-form.stx)
+				   getter.core
+				   (list rator.core))
+				 getter.sign)))
+		    ((?member ?arg* ...)
+		     (identifier? ?member)
+		     ;;There  are  operands and  they  match  the  syntax for  a  tag
+		     ;;dispatcher call, that's great.
+		     (let* ((method.stx  (tag-identifier-dispatch ?tag ?member ?arg* input-form.stx))
+			    (method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
+			    (method.core (psi-core-expr method.psi))
+			    (method.sign (psi-retvals-signature method.psi)))
+		       (make-psi (build-application (syntax-annotation input-form.stx)
+				   method.core
+				   (list rator.core))
+				 method.sign)))
+		    (_
+		     ;;There are operands, but they do not match any of the supported
+		     ;;syntaxes; for example the input form may be:
+		     ;;
+		     ;;   ("ciao" "mamma")
+		     ;;
+		     ;;so we raise an exception.
+		     (raise
+		      (condition (make-who-condition __who__)
+				 (make-message-condition "invalid operands for non-procedure operator")
+				 (make-syntax-violation input-form.stx #f)
+				 (make-retvals-signature-condition rator.sign))))
+		    ))))
+	  (_
+	   ;;The rator is  declared to evaluate to multiple values.   This is invalid
+	   ;;in call context, so we raise an exception.
+	   (raise
+	    (condition (make-who-condition __who__)
+		       (make-message-condition "call operator declared to evaluate to multiple values")
+		       (syntax-match input-form.stx ()
+			 ((?rator . ?rands)
+			  (make-syntax-violation input-form.stx ?rator)))
+		       (make-retvals-signature-condition rator.sign))))
+	  ))
+
+      (define (%process-unknown-rator-type input-form.stx rator.core rand*.stx lexenv.run lexenv.expand)
+	(let* ((rand*.psi  (while-not-expanding-application-first-subform
+			    (chi-expr* rand*.stx lexenv.run lexenv.expand)))
+	       (rand*.core (map psi-core-expr rand*.psi)))
+	  (make-psi (build-application (syntax-annotation input-form.stx)
+		      rator.core
+		      rand*.core)
+		    ;;We do not know the retvals signature, so this is false.
+		    #f)))
+
+      #| end of module: %BUILD-CORE-EXPRESSION |# )
 
     #| end of module: %CHI-APPLICATION |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%chi-set! expr.stx lexenv.run lexenv.expand)
-    (syntax-match expr.stx ()
+  (define (%chi-set! input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
       ((_ ?lhs ?rhs)
        (identifier? ?lhs)
        (receive (type bind-val kwd)
@@ -667,16 +744,16 @@
 			  (lexical-var bind-val)
 			  (psi-core-expr rhs.psi)))))
 	   ((core-prim)
-	    (stx-error expr.stx "cannot modify imported core primitive"))
+	    (stx-error input-form.stx "cannot modify imported core primitive"))
 
 	   ((global)
-	    (stx-error expr.stx "attempt to modify an immutable binding"))
+	    (stx-error input-form.stx "attempt to modify an immutable binding"))
 
 	   ((global-macro!)
-	    (chi-expr (chi-global-macro bind-val expr.stx lexenv.run #f) lexenv.run lexenv.expand))
+	    (chi-expr (chi-global-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
 
 	   ((local-macro!)
-	    (chi-expr (chi-local-macro bind-val expr.stx lexenv.run #f) lexenv.run lexenv.expand))
+	    (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
 
 	   ((mutable)
 	    (if (and (pair? bind-val)
@@ -687,10 +764,10 @@
 		  (make-psi (build-global-assignment no-source
 			      loc
 			      (psi-core-expr rhs.psi))))
-	      (stx-error expr.stx "attempt to modify an unexportable variable")))
+	      (stx-error input-form.stx "attempt to modify an unexportable variable")))
 
 	   (else
-	    (stx-error expr.stx)))))
+	    (stx-error input-form.stx)))))
       ))
 
 ;;; --------------------------------------------------------------------
@@ -763,8 +840,8 @@
 ;;; --------------------------------------------------------------------
 
   (define* (%drop-splice-first-envelope-maybe {expr.psi psi?} lexenv.run lexenv.expand)
-    ;;If we are expanding the first  subform of an application: just return EXPR.STX;
-    ;;otherwise if EXPR.STX  is a splice-first envelope: extract its  form, expand it
+    ;;If we are expanding the first  subform of an application: just return EXPR.PSI;
+    ;;otherwise if EXPR.PSI  is a splice-first envelope: extract its  form, expand it
     ;;and return the result.
     ;;
     (import SPLICE-FIRST-ENVELOPE)
@@ -1509,12 +1586,6 @@
 		     (chi-body* (append ?expr* (cdr body-form*.stx))
 				lexenv.run lexenv.expand
 				lex* qrhs* mod** kwd* export-spec* rib mix? sd?)))))
-
-	       ((tagged-dispatching)
-		(chi-body* (cons (tag-identifier-dispatch (identifier-tag kwd) body-form.stx)
-				 (cdr body-form*.stx))
-			   lexenv.run lexenv.expand
-			   lex* qrhs* mod** kwd* export-spec* rib mix? sd?))
 
 	       ((global-macro global-macro!)
 		;;The body form  is a macro use,  where the macro is  imported from a

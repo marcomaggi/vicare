@@ -146,7 +146,8 @@
 (define-syntax <top>
   (let ()
     (type-specs.set-identifier-object-type-spec! #'<top>
-      (type-specs.make-object-type-spec #'<top> #'type-specs.<top>
+      (type-specs.make-object-type-spec 'nausicaa:builtin:<top>
+					#'<top> #'type-specs.<top>
 					#'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
@@ -293,7 +294,8 @@
 (define-syntax <procedure>
   (let ()
     (type-specs.set-identifier-object-type-spec! #'<procedure>
-      (type-specs.make-object-type-spec #'<procedure> #'<top> #'procedure?))
+      (type-specs.make-object-type-spec 'nausicaa:builtin:<procedure>
+					#'<procedure> #'<top> #'procedure?))
     (lambda (stx)
       (case-define synner
 	((message)
@@ -479,21 +481,23 @@
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 		(let ()
-		  (define (%retrieve-accessor-id slot-id safe? input-form-stx)
-		    (values #`(THE-TAG :accessor-function #,slot-id)
-			    #'<top>))
-		  (define (%retrieve-mutator-id slot-id safe? input-form-stx)
-		    (values #`(THE-TAG :mutator-function #,slot-id)
-			    #'<top>))
-		  (define (%dispatcher method-id input-form-stx)
-		    (values #f #f))
-		  (define object-type-spec
-		    (type-specs.make-object-type-spec #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
-						      %retrieve-accessor-id
-						      %retrieve-mutator-id
-						      #f
-						      #f))
-		  (type-specs.set-identifier-object-type-spec! #'THE-TAG object-type-spec))
+		  (define (%accessor-maker field.sym input-form.stx)
+		    #f)
+		  (define (%mutator-maker field.sym input-form.stx)
+		    #f)
+		  (define (%getter-maker keys.stx input-form.stx)
+		    #f)
+		  (define (%setter-maker keys.stx input-form.stx)
+		    #f)
+		  (define (%dispatcher method-sym arg*.stx input-form-stx)
+		    #f)
+		  (define type-spec
+		    (type-specs.make-object-type-spec (quote NONGENERATIVE-UID)
+						      #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
+						      %accessor-maker %mutator-maker
+						      %getter-maker %setter-maker
+						      %dispatcher))
+		  (type-specs.set-identifier-object-type-spec! #'THE-TAG type-spec))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -832,21 +836,23 @@
 		    (%the-maker		MAKER-TRANSFORMER))
 
 		(let ()
-		  (define (%retrieve-accessor-id slot-id safe? input-form-stx)
-		    (values #`(THE-TAG :accessor-function #,slot-id)
-			    #'<top>))
-		  (define (%retrieve-mutator-id slot-id safe? input-form-stx)
-		    (values #`(THE-TAG :mutator-function #,slot-id)
-			    #'<top>))
-		  (define (%dispatcher method-id input-form-stx)
-		    (values #f #f))
-		  (define object-type-spec
-		    (type-specs.make-object-type-spec #'THE-TAG #'THE-PARENT #'THE-PREDICATE
-						      %retrieve-accessor-id
-						      %retrieve-mutator-id
-						      #f
-						      #f))
-		  (type-specs.set-identifier-object-type-spec! #'THE-TAG object-type-spec))
+		  (define (%accessor-maker field.sym input-form.stx)
+		    #f)
+		  (define (%mutator-maker field.sym input-form.stx)
+		    #f)
+		  (define (%getter-maker keys.stx input-form.stx)
+		    #f)
+		  (define (%setter-maker keys.stx input-form.stx)
+		    #f)
+		  (define (%dispatcher method-sym arg*.stx input-form-stx)
+		    #f)
+		  (define type-spec
+		    (type-specs.make-object-type-spec (quote NONGENERATIVE-UID)
+						      #'THE-TAG #'THE-PARENT #'THE-PREDICATE
+						      %accessor-maker %mutator-maker
+						      %getter-maker %setter-maker
+						      %dispatcher))
+		  (type-specs.set-identifier-object-type-spec! #'THE-TAG type-spec))
 
 		(lambda (stx)
 		  (define (synner message subform)

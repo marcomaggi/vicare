@@ -48,12 +48,6 @@
 
 ;;;; string utilities
 
-(define (keyword->string key)
-  (define who 'keyword->string)
-  (with-arguments-validation (who)
-      ((keyword	key))
-    (symbol->string (keyword->symbol key))))
-
 (define (string->keyword str)
   (define who 'string->keyword)
   (with-arguments-validation (who)

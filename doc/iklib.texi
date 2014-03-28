@@ -6419,6 +6419,11 @@ Convert between a symbol and a keyword.
 @end defun
 
 
+@defun keyword->string @var{keyword}
+Return the string representation of a keyword.
+@end defun
+
+
 @defun keyword? @var{obj}
 Return @true{} if @var{obj} is a keyword object, else return @false{}.
 @end defun

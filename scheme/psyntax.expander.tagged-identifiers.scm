@@ -629,281 +629,16 @@
 
 
 ;;;; expand-time object type specification
-;;
-;;Records of  type "object-type-spec"  are used  to describe the  object type  of tag
-;;identifier;  a bound  identifier is  a tag  identiier if,  and only  if, it  has an
-;;"object-type-spec" in the property list of its syntactic binding label.
-;;
-;;Below we discuss the fields of "object-type-spec" and we assume the definitions:
-#|
-    (define-record-type <color>
-      (fields (mutable   red)
-              (immutable green)
-              (mutable   blue)))
-
-    (define ({<color>-string <string>} {O <color>})
-      (format "[~a, ~a, ~a]"
-              (<color>-red   O)
-              (<color>-green O)
-              (<color>-blue  O)))
-
-    (define ({<color>-shift <color>} {O <color>} {R <fixnum>} {G <fixnum>} {B <fixnum>})
-      (make-<color> (fx+ (<color>-red   O) R)
-                    (fx+ (<color>-green O) G)
-                    (fx+ (<color>-blue  O) B)))
-
-    (define {O <color>}
-      (make-<color> 1 2 3))
-|#
-;;and the fields are meant to hold fixnums.
-;;
-;;
-;;Predicate syntax object
-;;-----------------------
-;;
-;;It is  a syntax object PRED-STX  (wrapped or unwrapped) representing  an expression
-;;which will evaluate to  a type predicate.  It is used by  the built-in syntax IS-A?
-;;to implement the expansion:
-;;
-;;   (is-a? O <color>) ==> (<color>? O)
-;;
-;;the syntax object can just be:
-;;
-;;   #'<color>?
-;;
-;;Notice that it is perfectly fine to define this syntax object as:
-;;
-;;   #'(lambda (X) (and (fixnum? X) (fxpositive? X)))
-;;
-;;
-;;Field accessor maker
-;;--------------------
-;;
-;;When the "object-type-spec" has fields: it  is a function accepting 3 arguments and
-;;returning 2 values; otherwise it is false.  The accessor maker arguments are:
-;;
-;;1..An identifier representing a field name.
-;;
-;;2..A boolean, true if the requested accessor is safe, false if it is unsafe.
-;;
-;;3..A syntax object representing the form which originated this accessor maker call.
-;;   It must be used as "form" value in "&syntax" condition object.
-;;
-;;When successful, the returned values must be:
-;;
-;;1..A syntax object representing an expression evaluating to a field accessor.
-;;
-;;2..A tag identifier representing the object type returned by the accessor.  When no
-;;   type is defined this return value must be #'<top>.
-;;
-;;The accessor maker is used to implement the expansions:
-;;
-;;   (slot-ref O red   <color>) ==> (tag-dispatch <fixnum> (<color>-red   (tag-assert-and-return <color> O)))
-;;   (slot-ref O green <color>) ==> (tag-dispatch <fixnum> (<color>-green (tag-assert-and-return <color> O)))
-;;   (slot-ref O blue  <color>) ==> (tag-dispatch <fixnum> (<color>-blue  (tag-assert-and-return <color> O)))
-;;
-;;and its implementation can be:
-;;
-#|
-   (define (accessor-maker field-name-id safe? input-form-stx)
-     (case (syntax->datum field-name-id)
-       ((red)
-        (values (if safe? #'<color>-red   #'$<color>-red)   #'<fixnum>))
-
-       ((green)
-        (values (if safe? #'<color>-green #'$<color>-green) #'<fixnum>))
-
-       ((blue)
-        (values (if safe? #'<color>-blue  #'$<color>-blue)  #'<fixnum>))
-
-       (_
-        (values #f #f))))
-|#
-;;If the field name is not recognised the  return values must be #f: in this case the
-;;field will be searched in the parent "object-type-spec", if any.
-;;
-;;If the  field name is  invalid for  some reason: the  accessor maker must  raise an
-;;exception with condition object "&syntax".
-;;
-;;
-;;Field mutator maker
-;;-------------------
-;;
-;;When the "object-type-spec" has fields: it  is a function accepting 3 arguments and
-;;returning 2 values; otherwise it is false.  The mutator maker arguments are:
-;;
-;;1..An identifier representing a field name.
-;;
-;;2..A boolean, true if the requested mutator is safe, false if it is unsafe.
-;;
-;;3..A syntax object representing the form which originated this accessor maker call.
-;;   It must be used as "form" value in "&syntax" condition object.
-;;
-;;When successful, the returned values must be:
-;;
-;;1..A syntax object representing an expression evaluating to a field mutator.
-;;
-;;2..A tag identifier representing  the object type of the new  field value.  When no
-;;   type is defined this return value must be #'<top>.
-;;
-;;The mutator maker is used to implement the expansions:
-;;
-;;   (slot-set! O red   <color> 1) ==> (<color>-red-set!  (tag-assert-and-return <color> O) (tag-assert-and-return <fixnum> 1))
-;;   (slot-set! O green <color> 1) error--> &syntax
-;;   (slot-set! O blue  <color> 1) ==> (<color>-blue-set! (tag-assert-and-return <color> O) (tag-assert-and-return <fixnum> 1))
-;;   (set! (O red)   1)            ==> (<color>-red-set!  (tag-assert-and-return <color> O) (tag-assert-and-return <fixnum> 1))
-;;   (set! (O green) 1)            error--> &syntax
-;;   (set! (O blue)  1)            ==> (<color>-blue-set! (tag-assert-and-return <color> O) (tag-assert-and-return <fixnum> 1))
-;;
-;;and its implementation can be:
-#|
-   (define (mutator-maker field-name-id safe? input-form-stx)
-     (case (syntax->datum field-name-id)
-       ((red)
-        (values (if safe? #'<color>-red-set!   #'$<color>-red-set!)   #'<fixnum>))
-
-       ((green)
-        (syntax-violation '<color>
-          "requested mutator of immutable field" input-form-stx field-name-id))
-
-       ((blue)
-        (values (if safe? #'<color>-blue-set!  #'$<color>-blue-set!)  #'<fixnum>))
-
-       (_
-        (values #f #f))))
-|#
-;;If the field name is not recognised the  return values must be #f: in this case the
-;;field will be searched in the parent "object-type-spec", if any.
-;;
-;;If the  field name  is invalid  for some reason:  the mutator  maker must  raise an
-;;exception with condition object "&syntax".
-;;
-;;
-;;Setter maker
-;;------------
-;;
-;;When the "object-type-spec" supports the setter  syntax: it is a function accepting
-;;2  arguments and  returning 2  values;  otherwise it  is false.   The setter  maker
-;;arguments are:
-;;
-;;1..A syntax object representing the setter keys.  The syntax object's expression is
-;;   a list of lists.
-;;
-;;2..A syntax object representing the form which originated this accessor maker call.
-;;   It must be used as "form" value in "&syntax" condition object.
-;;
-;;When successful, the returned values must be:
-;;
-;;1..A syntax object  representing an expression evaluating to  an attribute mutator;
-;;   it can be a field mutator or a call to a function that mutates the object.
-;;
-;;2..A tag identifier representing the object  type of the new attribute value.  When
-;;   no type is defined this return value must be #'<top>.
-;;
-;;The SET! setter syntax is used to implement the expansions:
-;;
-;;   (set! O[red] 1)
-;;   ==> (tag-setter <color> O ([red]) 1)
-;;
-;;   (set! O[green] 1)
-;;   ==> (tag-setter <color> O ([green]) 1)
-;;
-;;   (set! O[blue] 1)
-;;   ==> (tag-setter <color> O ([blue]) 1)
-;;
-;;   (set! (O[red]) 1)
-;;   ==> (tag-setter <color> O ([red]) 1)
-;;
-;;   (set! (O[green]) 1)
-;;   ==> (tag-setter <color> O ([green]) 1)
-;;
-;;   (set! (O[blue]) 1)
-;;   ==> (tag-setter <color> O ([blue]) 1)
-;;
-;;which in turn will use the setter maker to implement the expansions:
-;;
-;;   (tag-setter <color> O ([red])   1) ==> (<color>-red-set!  (tag-assert-and-return <color> O) (tag-assert-and-return <fixnum> 1))
-;;   (tag-setter <color> O ([green]) 1) error--> &syntax
-;;   (tag-setter <color> O ([blue])  1) ==> (<color>-blue-set! (tag-assert-and-return <color> O) (tag-assert-and-return <fixnum> 1))
-;;
-;;The setter maker implementation can be:
-#|
-   (define (setter-maker keys-stx input-form-stx)
-     (syntax-case keys-stx ()
-       (([?field-name])
-        (identifier? #'?field-name)
-        (mutator-maker #'?field-name #t input-form-stx))
-       (_
-        (syntax-violation '<color>
-          "invalid setter syntax" input-form-stx keys))))
-|#
-;;If the  keys are  not recognised the  return values  must be #f:  in this  case the
-;;parent's "object-type-spec" setter will be used, if any.
-;;
-;;If the keys are  invalid for some reason: the setter maker  must raise an exception
-;;with condition object "&syntax".
-;;
-;;
-;;Method dispatcher
-;;-----------------
-;;
-;;When the "object-type-spec" has methods: it is a function accepting 2 arguments and
-;;returning 2 values; otherwise it is false.  The accessor maker arguments are:
-;;
-;;1..An identifier representing a method name.
-;;
-;;2..A syntax  object representing the  form which originated this  method dispatcher
-;;   call.  It must be used as "form" value in "&syntax" condition object.
-;;
-;;When successful, the returned values must be:
-;;
-;;1..A syntax object representing an applicable method.
-;;
-;;2..A  "return-value-signature" object  or  false  if the  number  and  type of  the
-;;   returned values is unknown.
-;;
-;;The dispatcher syntax is used to implement the expansions:
-;;
-;;   (O string) ==> (tag-dispatch <string> (<color>-string (tag-assert-and-return <color> O)))
-;;   (O red)    ==> (tag-dispatch <fixnum> (<color>-red    (tag-assert-and-return <color> O)))
-;;   (O green)  ==> (tag-dispatch <fixnum> (<color>-green  (tag-assert-and-return <color> O)))
-;;   (O blue)   ==> (tag-dispatch <fixnum> (<color>-blue   (tag-assert-and-return <color> O)))
-;;   (O shift 1 2 3) ==> (<color>-shift O 1 2 3)
-;;
-;;and its implementation can be:
-#|
-   (define (dispatcher method-id input-form-stx)
-     (case (syntax->datum method-id)
-       ((string)
-        (values #'<color>-string #'<string>))
-       ((shift)
-        (values #'<color>-shift #'<color>))
-       (else
-        (values #f #f))))
-|#
-;;If the method name is not recognised the return values must be #f; in this case:
-;;
-;;1..If there are  no additional arguments in the dispatcher  syntax: the method name
-;;   is handed to the mutator maker first (if any).
-;;
-;;2..If there are additional arguments in the dispatcher syntax, or the mutator maker
-;;   returns  #f:  the method  name  is  handed  to the  parent's  "object-type-spec"
-;;   dispatcher (if any).
-;;
-;;3..And so on recursively in the hierarchy of "object-type-spec".
-;;
-;;If the method name is invalid for  some reason: the method dispatcher must raise an
-;;exception with condition object "&syntax".
-;;
 
 (define-record (object-type-spec %make-object-type-spec object-type-spec?)
   ;;A type representing  the object type to which expressions  in syntax objects will
   ;;evaluate.  All the Scheme objects are meant to be representable with this type.
   ;;
-  ;;Instances of  this type  are meant  to be compared  with EQ?,  with #f  acting as
-  ;;wildcard: it represents any object type.
-  ;;
-  (type-id
+  (uids
+		;A non-empty proper list of  symbols uniquely identifying this object
+		;type  specification.    The  first  symbol  in   the  list  uniquely
+		;identifies this record instance.
+   type-id
 		;The  bound identifier  representing  the name  of  this type.   This
 		;identifier has this very instance  in its syntactic binding property
 		;list.
@@ -914,65 +649,72 @@
 		;False or an accessor maker procedure.
    mutator-maker
 		;False or a mutator maker procedure.
+   getter-maker
+		;False or a getter maker procedure.
    setter-maker
 		;False or a setter maker procedure.
    dispatcher
-		;False or a dispatcher procedure.
+		;False or a method dispatcher procedure.
    parent-spec
 		;False or an instance of  "object-type-spec" describing the parent of
 		;this type.  Only "<top>" and  "<unspecified>" have this field set to
-		;false; every other "object-type-spec" has  a parent spec; "<top>" is
-		;the implicit  parent of all  the type specs; "<unspecified>"  is the
+		;false; every other "object-type-spec" has a parent spec.  "<top>" is
+		;the implicit parent  of all the type specs.   "<unspecified>" is the
 		;tag of untagged bindings.
    ))
 
 (case-define* make-object-type-spec
-  (({type-id	identifier-bound?}
-    {parent-id	identifier-bound?}
+  (({uid	symbol?}
+    {type-id	identifier-bound?}
+    {parent-id	tag-identifier?}
     {pred-stx	syntax-object?})
-   (make-object-type-spec type-id parent-id pred-stx #f #f #f #f))
+   (when (free-id=? parent-id <unspecified>)
+     (procedure-argument-violation __who__
+       "<unspecified> cannot be a parent tag" uid type-id))
+   (let* ((parent-spec (identifier-object-type-spec parent-id))
+	  (uids        (list uid (object-type-spec-uids parent-spec))))
+     (%make-object-type-spec uids type-id pred-stx
+			     #f ;accessor-maker
+			     #f ;mutator-maker
+			     #f ;getter-maker
+			     #f ;setter-maker
+			     #f ;method-dispatcher
+			     parent-spec)))
 
-  (({type-id	identifier-bound?}
-    {parent-id	identifier-bound?}
+  (({uid	symbol?}
+    {type-id	identifier-bound?}
+    {parent-id	tag-identifier?}
     {pred-stx	syntax-object?}
     {accessor	false-or-procedure?}
     {mutator	false-or-procedure?}
+    {getter	false-or-procedure?}
     {setter	false-or-procedure?}
     {dispatcher	false-or-procedure?})
-   (let ((parent-spec (cond ((identifier-object-type-spec parent-id))
-			    (else
-			     ;;FIXME  When  Nausicaa  is  used and  the  record  type
-			     ;;created  by   classes  is   selected  as   parent  the
-			     ;;object-type-spec appears  to be unset.   (Marco Maggi;
-			     ;;Sun Mar 16, 2014)
-			     ;;
-			     ;; (syntax-violation 'make-object-type-spec
-			     ;;   "selected parent tag identifier has no object-type-spec"
-			     ;;   parent-id)
-			     ;; (debug-print type-id
-			     ;; 		  parent-id
-			     ;; 		  (identifier-bound? parent-id)
-			     ;; 		  (and (identifier-bound? parent-id)
-			     ;; 		       (property-list (id->label parent-id))))
-			     #f))))
-     (%make-object-type-spec type-id pred-stx accessor mutator setter dispatcher parent-spec))))
+   (when (free-id=? parent-id <unspecified>)
+     (procedure-argument-violation __who__
+       "<unspecified> cannot be a parent tag" uid type-id))
+   (let* ((parent-spec (identifier-object-type-spec parent-id))
+	  (uids        (list uid (object-type-spec-uids parent-spec))))
+     (%make-object-type-spec uids type-id pred-stx
+			     accessor mutator getter setter dispatcher parent-spec))))
 
 (define (false-or-object-type-spec? obj)
   (or (not obj)
       (object-type-spec? obj)))
 
-;;; --------------------------------------------------------------------
+
+;;;; object type specification queries
 
 (case-define* tag-identifier-accessor
-  ((tag-id field-name-id safe-accessor?)
-   (tag-identifier-accessor tag-id field-name-id safe-accessor? #f))
-  (({tag-id tag-identifier?} {field-name-id identifier?} safe-accessor? input-form-stx)
-   ;;Given  a   tag  identifier   and  a   field  name:   search  the   hierarchy  of
-   ;;object-type-spec associated to TAG-ID for an accessor of the selected field.  If
-   ;;successful:  return  a syntax  object  representing  an expression  which,  when
-   ;;evaluated, will  return the field  accessor; if no  accessor is found:  raise an
-   ;;exception.
-   ;;
+  ;;Given   a  tag   identifier  and   a  field   name:  search   the  hierarchy   of
+  ;;"object-type-spec" associated  to TAG-ID for  an accessor of the  selected field.
+  ;;If successful: return a syntax  object representing an expression which, expanded
+  ;;by itself and evaluated, will return the field accessor; if no accessor is found:
+  ;;raise an exception.
+  ;;
+  ((tag-id field-name-id)
+   (tag-identifier-accessor tag-id field-name-id #f))
+  (({tag-id tag-identifier?} {field-name-id identifier?} input-form.stx)
    (let loop ((spec ($identifier-object-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If  we   are  here:  we   have  traversed  upwards  the   hierarchy  of
@@ -980,137 +722,157 @@
 	    ;;found.  The serach for the field accessor has failed.
 	    (syntax-violation __who__
 	      "object type does not provide selected field accessor"
-	       input-form-stx field-name-id))
-	   ((object-type-spec-accessor-maker spec)
+	      input-form.stx field-name-id))
+	   (($object-type-spec-accessor-maker spec)
 	    => (lambda (accessor-maker)
-		 (receive (accessor-stx rv-tag)
-		     (accessor-maker field-name-id safe-accessor? input-form-stx)
-		   (if accessor-stx
-		       (values accessor-stx rv-tag)
+		 (or (accessor-maker (syntax->datum field-name-id) input-form.stx)
 		     ;;The field is unknown: try with the parent.
-		     (loop (object-type-spec-parent-spec spec))))))
+		     (loop ($object-type-spec-parent-spec spec)))))
 	   (else
 	    ;;The object-type-spec has no accessor maker: try with the parent.
-	    (loop (object-type-spec-parent-spec spec)))))))
+	    (loop ($object-type-spec-parent-spec spec)))))))
 
 (case-define* tag-identifier-mutator
-  ((tag-id field-name-id safe-accessor?)
-   (tag-identifier-mutator tag-id field-name-id safe-accessor? #f))
-  (({tag-id tag-identifier?} {field-name-id identifier?} safe-mutator? input-form-stx)
-   ;;Given  a   tag  identifier   and  a   field  name:   search  the   hierarchy  of
-   ;;object-type-spec associated to TAG-ID for an  mutator of the selected field.  If
-   ;;successful:  return  a syntax  object  representing  an expression  which,  when
-   ;;evaluated,  will return  the field  mutator; if  no mutator  is found:  raise an
-   ;;exception.
-   ;;
-   (let loop ((spec (identifier-object-type-spec tag-id)))
+  ;;Given   a  tag   identifier  and   a  field   name:  search   the  hierarchy   of
+  ;;"object-type-spec" associated to TAG-ID for an mutator of the selected field.  If
+  ;;successful: return a syntax object  representing an expression which, expanded by
+  ;;itself and  evaluated, will  return the  field mutator; if  no mutator  is found:
+  ;;raise an exception.
+  ;;
+  ((tag-id field-name-id)
+   (tag-identifier-mutator tag-id field-name-id #f))
+  (({tag-id tag-identifier?} {field-name-id identifier?} input-form.stx)
+   (let loop ((spec ($identifier-object-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If  we   are  here:  we   have  traversed  upwards  the   hierarchy  of
 	    ;;"object-type-specs" until an "object-type-spec" without parent has been
 	    ;;found.  The serach for the field mutator has failed.
 	    (syntax-violation __who__
 	      "object type does not provide selected field mutator"
-	      input-form-stx field-name-id))
-	   ((object-type-spec-mutator-maker spec)
+	      input-form.stx field-name-id))
+	   (($object-type-spec-mutator-maker spec)
 	    => (lambda (mutator-maker)
-		 (receive (mutator-stx new-value-tag)
-		     (mutator-maker field-name-id safe-mutator? input-form-stx)
-		   (if mutator-stx
-		       (values mutator-stx new-value-tag)
-		     ;;The field is unknown: try with the parent.
-		     (loop (object-type-spec-parent-spec spec))))))
+		 (or (mutator-maker (syntax->datum field-name-id) input-form.stx)
+		     (loop ($object-type-spec-parent-spec spec)))))
 	   (else
 	    ;;The object-type-spec has no mutator maker: try with the parent.
-	    (loop (object-type-spec-parent-spec spec)))))))
+	    (loop ($object-type-spec-parent-spec spec)))))))
+
+(case-define* tag-identifier-getter
+  ;;Given  a   tag  identifier  and   a  set  of   keys:  search  the   hierarchy  of
+  ;;"object-type-spec"  associated to  TAG-ID for  a getter  accepting the  keys.  If
+  ;;successful: return a syntax object  representing an expression which, expanded by
+  ;;itself and  evaluated, will return  the getter; if no  getter is found:  raise an
+  ;;exception.
+  ;;
+  ((tag-id keys.stx)
+   (tag-identifier-getter tag-id keys.stx #f))
+  (({tag-id tag-identifier?} {keys.stx syntax-object?} input-form.stx)
+   (let loop ((spec (identifier-object-type-spec tag-id)))
+     (cond ((not spec)
+	    ;;If  we   are  here:  we   have  traversed  upwards  the   hierarchy  of
+	    ;;"object-type-specs" until an "object-type-spec" without parent has been
+	    ;;found.  The serach for the field getter has failed.
+	    (syntax-violation __who__
+	      "object type does not provide getter syntax" input-form.stx))
+	   (($object-type-spec-getter-maker spec)
+	    => (lambda (getter-maker)
+		 (or (getter-maker keys.stx input-form.stx)
+		     ;;The keys are unknown: try with the parent.
+		     (loop ($object-type-spec-parent-spec spec)))))
+	   (else
+	    ;;The object-type-spec has no getter maker: try with the parent.
+	    (loop ($object-type-spec-parent-spec spec)))))))
 
 (case-define* tag-identifier-setter
-  ((tag-id keys-stx)
-   (tag-identifier-setter tag-id keys-stx #f))
-  (({tag-id tag-identifier?} {keys-stx syntax-object?} input-form-stx)
+  ;;Given  a   tag  identifier  and   a  set  of   keys:  search  the   hierarchy  of
+  ;;"object-type-spec"  associated to  TAG-ID for  a setter  accepting the  keys.  If
+  ;;successful: return a syntax object  representing an expression which, expanded by
+  ;;itself and  evaluated, will return  the setter; if no  setter is found:  raise an
+  ;;exception.
+  ;;
+  ((tag-id keys.stx)
+   (tag-identifier-setter tag-id keys.stx #f))
+  (({tag-id tag-identifier?} {keys.stx syntax-object?} input-form.stx)
    (let loop ((spec (identifier-object-type-spec tag-id)))
      (cond ((not spec)
 	    ;;If  we   are  here:  we   have  traversed  upwards  the   hierarchy  of
 	    ;;"object-type-specs" until an "object-type-spec" without parent has been
 	    ;;found.  The serach for the field setter has failed.
 	    (syntax-violation __who__
-	      "object type does not provide setter syntax" input-form-stx))
-	   ((object-type-spec-setter-maker spec)
+	      "object type does not provide setter syntax" input-form.stx))
+	   (($object-type-spec-setter-maker spec)
 	    => (lambda (setter-maker)
-		 (receive (setter-stx new-value-tag)
-		     (setter-maker keys-stx input-form-stx)
-		   (if setter-stx
-		       (values setter-stx new-value-tag)
+		 (or (setter-maker keys.stx input-form.stx)
 		     ;;The keys are unknown: try with the parent.
-		     (loop (object-type-spec-parent-spec spec))))))
+		     (loop ($object-type-spec-parent-spec spec)))))
 	   (else
 	    ;;The object-type-spec has no setter maker: try with the parent.
-	    (loop (object-type-spec-parent-spec spec)))))))
+	    (loop ($object-type-spec-parent-spec spec)))))))
 
 (module (tag-identifier-dispatch)
   (define-fluid-override __who__
     (identifier-syntax 'tag-identifier-dispatch))
 
-  (define* (tag-identifier-dispatch {tag tag-identifier?} {input-form-stx syntax-object?})
-    ;;Apply the dispatcher of the "object-type-spec" from the property list of TAG to
-    ;;the expression in INPUT-FORM-STX; return the fully expanded expression or raise
-    ;;an exception.  We expect INPUT-FORM-STX to have the format:
+  (define* (tag-identifier-dispatch {tag tag-identifier?} {member.id identifier?} arg*.stx {input-form.stx syntax-object?})
+    ;;Given  a   tag  identifier   and  an  identifier:   search  the   hierarchy  of
+    ;;"object-type-spec" associated to TAG-ID for a dispatcher accepting MEMBER.ID as
+    ;;method name  or, if not found,  an accessor maker accepting  MEMBER.ID as field
+    ;;name.  If successful: return a  syntax object representing an expression which,
+    ;;expanded by  itself and evaluated, will  return the method or  the accessor; if
+    ;;neither a method nor an accessor is found: raise an exception.
     ;;
-    ;;   (?expr ?arg0 ?arg ...)
+    ;;We expect INPUT-FORM.STX to have the format:
     ;;
-    ;;where ?EXPR is  an expression of type  TAG and ?ARG0 is  an identifier matching
-    ;;the name of a method or field of TAG.
+    ;;   (?expr ?member ?arg ...)
     ;;
-    (if (tag-super-and-sub? <procedure> tag)
-	input-form-stx
-      (syntax-match input-form-stx ()
-	((?expr ?arg0 ?arg* ...)
-	 (identifier? ?arg0)
-	 (%try-dispatcher (identifier-object-type-spec tag) input-form-stx))
-	(_
-	 (%error-invalid-tagged-syntax input-form-stx)))))
-
-  (define (%try-dispatcher spec input-form-stx)
-    (cond ((not spec)
-	   (%error-invalid-tagged-syntax input-form-stx))
-	  ((object-type-spec-dispatcher spec)
-	   => (lambda (dispatcher)
-		(syntax-match input-form-stx ()
-		  ((?expr ?arg0 ?arg* ...)
-		   (receive (method-stx rv-tag)
-		       (dispatcher ?arg0 input-form-stx)
-		     (if method-stx
-			 (bless
-			  `(,method-stx ,?expr ,?arg0 ,?arg*))
-		       (%try-accessor spec input-form-stx)))))))
+    ;;where: ?EXPR  is an expression of  type TAG; ?MEMBER is  an identifier matching
+    ;;the name  of a method or  field of TAG or  one of its supertags  (the MEMBER.ID
+    ;;argument); the ?ARG are additional operands (the ARG*.STX argument).
+    ;;
+    (cond (($tag-super-and-sub? <procedure> tag)
+	   input-form.stx)
+	  ((or (free-id=? tag <unspecified>)
+	       (free-id=? tag <top>))
+	   (%error-invalid-tagged-syntax input-form.stx))
 	  (else
-	   (%try-accessor spec input-form-stx))))
+	   (%try-dispatcher (identifier-object-type-spec tag) (syntax->datum member.id)
+			    arg*.stx input-form.stx))))
 
-  (define (%try-accessor spec input-form-stx)
+  (define (%try-dispatcher spec member.sym arg*.stx input-form.stx)
+    (cond ((not spec)
+	   (%error-invalid-tagged-syntax input-form.stx))
+	  (($object-type-spec-dispatcher spec)
+	   => (lambda (dispatcher)
+		(or (dispatcher member.sym arg*.stx input-form.stx)
+		    (%try-accessor spec member.sym arg*.stx input-form.stx))))
+	  (else
+	   (%try-accessor spec member.sym arg*.stx input-form.stx))))
+
+  (define (%try-accessor spec member.sym arg*.stx input-form.stx)
     (define (%try-parent-dispatcher)
-      (%try-dispatcher (object-type-spec-parent-spec spec) input-form-stx))
+      (%try-dispatcher ($object-type-spec-parent-spec spec) member.sym arg*.stx input-form.stx))
     (cond ((not spec)
 	   (syntax-violation __who__ "invalid tagged"))
-	  ((object-type-spec-accessor-maker spec)
+	  (($object-type-spec-accessor-maker spec)
 	   => (lambda (accessor-maker)
-		(syntax-match input-form-stx ()
-		  ((?expr ?field-name)
-		   (receive (accessor-stx rv-tag)
-		       (accessor-maker ?field-name #t input-form-stx)
-		     (if accessor-stx
-			 (bless
-			  `(,accessor-stx ,?expr))
-		       ;;No field matched, try the parent's dispatcher.
-		       (%try-parent-dispatcher))))
-		  (else
-		   ;;The  syntax  is  invalid  for the  accessor,  try  the  parent's
-		   ;;dispatcher.
-		   (%try-parent-dispatcher)))))
+		(cond ((accessor-maker member.sym input-form.stx)
+		       => (lambda (accessor-stx)
+			    (syntax-match arg*.stx ()
+			      (()
+			       accessor-stx)
+			      (_
+			       (syntax-violation __who__
+				 "invalid additional operands for field accessor"
+				 input-form.stx arg*.stx)))))
+		      (else
+		       (%try-parent-dispatcher)))))
 	  (else
 	   ;;There is no accessor maker, try the parent's dispatcher.
 	   (%try-parent-dispatcher))))
 
-  (define (%error-invalid-tagged-syntax input-form-stx)
-    (syntax-violation __who__ "invalid tagged syntax" input-form-stx))
+  (define (%error-invalid-tagged-syntax input-form.stx)
+    (syntax-violation __who__ "invalid tagged syntax" input-form.stx))
 
   #| end of module: TAG-DISPATCH |# )
 

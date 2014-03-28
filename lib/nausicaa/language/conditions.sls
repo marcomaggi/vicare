@@ -27,6 +27,7 @@
 
 #!vicare
 (library (nausicaa language conditions (0 4))
+  (options visit-upon-loading)
   (export
 
     define-condition-type

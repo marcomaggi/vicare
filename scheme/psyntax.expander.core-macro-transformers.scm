@@ -68,8 +68,14 @@
     (($slot-ref)				$slot-ref-transformer)
     (($slot-set!)				$slot-set!-transformer)
 
+    ((tag-validator)				tag-validator-transformer)
     ((tag-assert)				tag-assert-transformer)
     ((tag-assert-and-return)			tag-assert-and-return-transformer)
+    ((tag-accessor)				tag-accessor-transformer)
+    ((tag-mutator)				tag-mutator-transformer)
+    ((tag-getter)				tag-getter-transformer)
+    ((tag-setter)				tag-setter-transformer)
+    ((tag-dispatch)				tag-dispatch-transformer)
 
     (else
      (assertion-violation __who__
@@ -1395,18 +1401,18 @@
 
 ;;;; module core-macro-transformer: SLOT-REF, SLOT-SET!, $SLOT-REF, $SLOT-SET!
 
-(define (slot-ref-transformer expr-stx lexenv.run lexenv.expand)
+(define (slot-ref-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand Vicare's SLOT-REF syntaxes from the top-level
-  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
-  ;;given LEXENV; return a PSI struct.
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'slot-ref))
-  (syntax-match expr-stx (<>)
+  (syntax-match input-form.stx (<>)
     ((_ <> ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
 		   `(lambda (obj)
@@ -1418,15 +1424,14 @@
 		      (struct-type-field-ref ,?type-id ,?field-name-id obj)))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(receive (accessor-stx rv-tag)
-	    (tag-identifier-accessor ?type-id ?field-name-id #t expr-stx)
-	  (chi-expr accessor-stx lexenv.run lexenv.expand)))
+	(chi-expr (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)
+		  lexenv.run lexenv.expand))
        ))
 
     ((_ ?expr ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
 		   `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
@@ -1436,8 +1441,7 @@
 		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(receive (accessor-stx rv-tag)
-	    (tag-identifier-accessor ?type-id ?field-name-id #t expr-stx)
+	(let ((accessor-stx (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)))
 	  (chi-expr (bless
 		     `(,accessor-stx ,?expr))
 		    lexenv.run lexenv.expand)))
@@ -1450,27 +1454,26 @@
 	  (identifier? ?field-name-id))
      (cond ((identifier-tag ?id)
 	    => (lambda (tag-id)
-		 (receive (accessor-stx rv-tag)
-		     (tag-identifier-accessor tag-id ?field-name-id #t expr-stx)
+		 (let ((accessor-stx (tag-identifier-accessor tag-id ?field-name-id input-form.stx)))
 		   (chi-expr (bless
 			      `(,accessor-stx ,?id))
 			     lexenv.run lexenv.expand))))
 	   (else
-	    (syntax-error expr-stx "unable to determine type tag of expression"))))
+	    (stx-error input-form.stx "unable to determine type tag of expression"))))
     ))
 
-(define (slot-set!-transformer expr-stx lexenv.run lexenv.expand)
+(define (slot-set!-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand  Vicare's  SLOT-SET!  syntaxes  from  the
-  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the context
   ;;of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'slot-set!))
-  (syntax-match expr-stx (<>)
+  (syntax-match input-form.stx (<>)
     ((_ <> ?field-name-id ?type-id <>)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
 		   `(lambda (obj new-value)
@@ -1482,15 +1485,14 @@
 		      (struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(receive (mutator-stx new-value-tag)
-	    (tag-identifier-mutator ?type-id ?field-name-id #t expr-stx)
-	  (chi-expr mutator-stx lexenv.run lexenv.expand)))
+	(chi-expr (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)
+		  lexenv.run lexenv.expand))
        ))
 
     ((_ ?expr ?field-name-id ?type-id ?new-value)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
 		   `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
@@ -1500,10 +1502,9 @@
 		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(receive (mutator-stx new-value-tag)
-	    (tag-identifier-mutator ?type-id ?field-name-id #t expr-stx)
+	(let ((mutator-stx (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)))
 	  (chi-expr (bless
-		     `(,mutator-stx ,?expr (tag-assert-and-return (,new-value-tag) ,?new-value)))
+		     `(,mutator-stx ,?expr ,?new-value))
 		    lexenv.run lexenv.expand)))
        ))
 
@@ -1514,26 +1515,25 @@
 	  (identifier? ?field-name-id))
      (cond ((identifier-tag ?id)
 	    => (lambda (tag-id)
-		 (receive (mutator-stx new-value-tag)
-		     (tag-identifier-mutator tag-id ?field-name-id #t expr-stx)
+		 (let ((mutator-stx (tag-identifier-mutator tag-id ?field-name-id input-form.stx)))
 		   (chi-expr (bless
-			      `(,mutator-stx ,?id (tag-assert-and-return (,new-value-tag) ,?new-value)))
+			      `(,mutator-stx ,?id ,?new-value))
 			     lexenv.run lexenv.expand))))
 	   (else
-	    (syntax-error expr-stx "unable to determine type tag of expression"))))
+	    (stx-error input-form.stx "unable to determine type tag of expression"))))
     ))
 
-(define ($slot-ref-transformer expr-stx lexenv.run lexenv.expand)
+(define ($slot-ref-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand  Vicare's  $SLOT-REF  syntaxes  from  the
-  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the context
   ;;of the given LEXENV; return a PSI struct.
   ;;
   (define-constant __who__ '$slot-ref)
-  (syntax-match expr-stx (<>)
+  (syntax-match input-form.stx (<>)
     ((_ <> ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
 		   `(lambda (obj)
@@ -1545,15 +1545,14 @@
 		      ($struct-type-field-ref ,?type-id ,?field-name-id obj)))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(receive (accessor-stx rv-tag)
-	    (tag-identifier-accessor ?type-id ?field-name-id #f expr-stx)
-	  (chi-expr accessor-stx lexenv.run lexenv.expand)))
+	(chi-expr (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)
+		  lexenv.run lexenv.expand))
        ))
 
     ((_ ?expr ?field-name-id ?type-id)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
 		   `($record-type-field-ref ,?type-id ,?field-name-id ,?expr))
@@ -1563,8 +1562,7 @@
 		   `($struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(receive (accessor-stx rv-tag)
-	    (tag-identifier-accessor ?type-id ?field-name-id #f expr-stx)
+	(let ((accessor-stx (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)))
 	  (chi-expr (bless
 		     `(,accessor-stx ,?expr))
 		    lexenv.run lexenv.expand)))
@@ -1577,27 +1575,26 @@
 	  (identifier? ?field-name-id))
      (cond ((identifier-tag ?id)
 	    => (lambda (tag-id)
-		 (receive (accessor-stx rv-tag)
-		     (tag-identifier-accessor tag-id ?field-name-id #t expr-stx)
+		 (let ((accessor-stx (tag-identifier-accessor tag-id ?field-name-id input-form.stx)))
 		   (chi-expr (bless
 			      `(,accessor-stx ,?id))
 			     lexenv.run lexenv.expand))))
 	   (else
-	    (syntax-error expr-stx "unable to determine type tag of expression"))))
+	    (stx-error input-form.stx "unable to determine type tag of expression"))))
     ))
 
-(define ($slot-set!-transformer expr-stx lexenv.run lexenv.expand)
+(define ($slot-set!-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used to  expand  Vicare's  $SLOT-SET!  syntaxes  from  the
-  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
+  ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the context
   ;;of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax '$slot-set!))
-  (syntax-match expr-stx (<>)
+  (syntax-match input-form.stx (<>)
     ((_ <> ?field-name-id ?type-id <>)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
 		   `(lambda (obj new-value)
@@ -1609,15 +1606,14 @@
 		      ($struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(receive (mutator-stx new-value-tag)
-	    (tag-identifier-mutator ?type-id ?field-name-id #f expr-stx)
+	(let ((mutator-stx (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)))
 	  (chi-expr mutator-stx lexenv.run lexenv.expand)))
        ))
 
     ((_ ?expr ?field-name-id ?type-id ?new-value)
      (and (identifier? ?type-id)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
 		   `($record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
@@ -1627,10 +1623,9 @@
 		   `($struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
 		  lexenv.run lexenv.expand))
        ((object-type-spec)
-	(receive (mutator-stx new-value-tag)
-	    (tag-identifier-mutator ?type-id ?field-name-id #f expr-stx)
+	(let ((mutator-stx (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)))
 	  (chi-expr (bless
-		     `(,mutator-stx ,?expr (tag-assert-and-return (,new-value-tag) ,?new-value)))
+		     `(,mutator-stx ,?expr ,?new-value))
 		    lexenv.run lexenv.expand)))
        ))
 
@@ -1641,28 +1636,61 @@
 	  (identifier? ?field-name-id))
      (cond ((identifier-tag ?id)
 	    => (lambda (tag-id)
-		 (receive (mutator-stx new-value-tag)
-		     (tag-identifier-mutator tag-id ?field-name-id #f expr-stx)
+		 (let ((mutator-stx (tag-identifier-mutator tag-id ?field-name-id input-form.stx)))
 		   (chi-expr (bless
-			      `(,mutator-stx ,?id (tag-assert-and-return (,new-value-tag) ,?new-value)))
+			      `(,mutator-stx ,?id ,?new-value))
 			     lexenv.run lexenv.expand))))
 	   (else
-	    (syntax-error expr-stx "unable to determine type tag of expression"))))
+	    (stx-error input-form.stx "unable to determine type tag of expression"))))
+    ))
+
+
+;;;; module core-macro-transformer: TAG-VALIDATOR
+
+(define (tag-validator-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's TAG-VALIDATOR  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-validator))
+  (syntax-match input-form.stx ()
+    ((_ ?tag ?expr)
+     (tag-identifier? ?tag)
+     (chi-expr (bless
+		`(tag-validator ,?tag ,?expr #f))
+	       lexenv.run lexenv.expand))
+    ((_ ?tag ?expr ?input-form)
+     (tag-identifier? ?tag)
+     (cond ((identifier-object-type-spec ?tag)
+	    => (lambda (spec)
+		 (cond ((object-type-spec-pred-stx spec)
+			=> (lambda (predicate-stx)
+			     (chi-expr (bless
+					`(validate-with-predicate (quote ?tag) ,predicate-stx ,?expr (quote ,?input-form)))
+				       lexenv.run lexenv.expand)))
+		       (else
+			;;This should never happen.
+			(stx-error input-form.stx "undefined tag predicate function")))))
+	   (else
+	    ;;This should  never happen because  we have validated the  identifier in
+	    ;;the fender.
+	    (stx-error input-form.stx "tag identifier without object-type-spec"))))
     ))
 
 
 ;;;; module core-macro-transformer: TAG-ASSERT
 
-(define (tag-assert-transformer expr.stx lexenv.run lexenv.expand)
+(define (tag-assert-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand Vicare's  TAG-ASSERT  syntaxes  from  the
-  ;;top-level built in environment.  Expand the syntax object EXPR.STX in the context
-  ;;of the given LEXENV; return a PSI struct.
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert))
 
-  (define (%just-evaluate-the-expression expr.stx)
-    (let* ((expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
+  (define (%just-evaluate-the-expression input-form.stx)
+    (let* ((expr.psi  (chi-expr input-form.stx lexenv.run lexenv.expand))
 	   (expr.core (psi-core-expr  expr.psi)))
       (make-psi (build-sequence no-source
 		  (list expr.core (build-void)))
@@ -1686,7 +1714,7 @@
 			checker.core))
 		(list <top>))))
 
-  (syntax-match expr.stx ()
+  (syntax-match input-form.stx ()
     ((_ #f ?expr)
      ;;No retvals signature specified.
      (%just-evaluate-the-expression ?expr))
@@ -1713,10 +1741,7 @@
 			(checker.psi  (chi-expr (bless
 						 `(lambda ,TMP*
 						    ,@(map (lambda (tmp tag)
-							     `(unless (is-a? ,tmp ,tag)
-								(expression-return-value-violation (quote tag)
-								  "expression with wrong result type"
-								  (quote ,expr.stx) ,tmp)))
+							     `(tag-validator ,tag ,tmp ,input-form.stx))
 							TMP* ?rv-tag*)
 						    (void)))
 						lexenv.run lexenv.expand)))
@@ -1727,15 +1752,9 @@
 			(checker.psi  (chi-expr (bless
 						 `(lambda (,@TMP* . rest-tmp)
 						    ,@(map (lambda (tmp tag)
-							     `(unless (is-a? ,tmp ,tag)
-								(expression-return-value-violation (quote ,tag)
-								  "expression with wrong result type"
-								  (quote ,expr.stx) ,tmp)))
+							     `(tag-validator ,tag ,tmp ,input-form.stx))
 							TMP* ?rv-tag*)
-						    (unless (is-a? rest-tmp ,?rv-rest-tag)
-						      (expression-return-value-violation (quote ,?rv-rest-tag)
-							"expression with wrong result type"
-							(quote ,expr.stx) rest-tmp))
+						    (tag-validator ,?rv-rest-tag rest-tmp ,input-form.stx)
 						    (void)))
 						lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi)))
@@ -1743,10 +1762,7 @@
 		(?rv-args-tag
 		 (let ((checker.psi  (chi-expr (bless
 						`(lambda args
-						   (unless (is-a? args ,?rv-args-tag)
-						     (expression-return-value-violation (quote ?rv-args-tag)
-						       "expression with wrong result type"
-						       (quote ,expr.stx) args))
+						   (tag-validator ,?rv-args-tag args ,input-form.stx)
 						   (void)))
 					       lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi)))
@@ -1764,21 +1780,21 @@
 	     (else
 	      ;;The horror!!!  We  have established at expand-time  that the returned
 	      ;;values are of the wrong type; assertion failed.
-	      (retvals-signature-violation expr.stx ?retvals-signature expr.sign)))))
+	      (retvals-signature-violation input-form.stx ?retvals-signature expr.sign)))))
 
     ((_ ?retvals-signature ?expr)
      ;;Let's use a descriptive error message here.
      (syntax-violation __who__
-       "invalid return values signature" expr.stx ?retvals-signature))
+       "invalid return values signature" input-form.stx ?retvals-signature))
     ))
 
 
 ;;;; module core-macro-transformer: TAG-ASSERT-AND-RETURN
 
-(define (tag-assert-and-return-transformer expr.stx lexenv.run lexenv.expand)
+(define (tag-assert-and-return-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to  expand Vicare's TAG-ASSERT-AND-RETURN syntaxes from
-  ;;the top-level  built in environment.   Expand the  syntax object EXPR.STX  in the
-  ;;context of the given LEXENV; return a PSI struct.
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert-and-return))
@@ -1801,7 +1817,7 @@
 			checker.core))
 		(list <top>))))
 
-  (syntax-match expr.stx ()
+  (syntax-match input-form.stx ()
     ((_ #f ?expr)
      ;;No retvals signature specified.
      (chi-expr ?expr lexenv.run lexenv.expand))
@@ -1827,10 +1843,7 @@
 			(checker.psi  (chi-expr (bless
 						 `(lambda ,TMP*
 						    ,@(map (lambda (tmp tag)
-							     `(unless (is-a? ,tmp ,tag)
-								(expression-return-value-violation (quote tag)
-								  "expression with wrong result type"
-								  (quote ,expr.stx) ,tmp)))
+							     `(tag-validator ,tag ,tmp ,input-form.stx))
 							TMP* ?rv-tag*)
 						    (values . ,TMP*)))
 						lexenv.run lexenv.expand)))
@@ -1841,15 +1854,9 @@
 			(checker.psi  (chi-expr (bless
 						 `(lambda (,@TMP* . rest-tmp)
 						    ,@(map (lambda (tmp tag)
-							     `(unless (is-a? ,tmp ,tag)
-								(expression-return-value-violation (quote ,tag)
-								  "expression with wrong result type"
-								  (quote ,expr.stx) ,tmp)))
+							     `(tag-validator ,tag ,tmp ,input-form.stx))
 							TMP* ?rv-tag*)
-						    (unless (is-a? rest-tmp ,?rv-rest-tag)
-						      (expression-return-value-violation (quote ,?rv-rest-tag)
-							"expression with wrong result type"
-							(quote ,expr.stx) rest-tmp))
+						    (tag-validator ,?rv-rest-tag rest-tmp ,input-form.stx)
 						    (apply values ,@TMP* rest-tmp)))
 						lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi)))
@@ -1857,10 +1864,7 @@
 		(?rv-args-tag
 		 (let ((checker.psi  (chi-expr (bless
 						`(lambda args
-						   (unless (is-a? args ,?rv-args-tag)
-						     (expression-return-value-violation (quote ?rv-args-tag)
-						       "expression with wrong result type"
-						       (quote ,expr.stx) args))
+						   (tag-validator ,?rv-args-tag args ,input-form.stx)
 						   (apply values args)))
 					       lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi)))
@@ -1876,12 +1880,187 @@
 	     (else
 	      ;;The horror!!!  We  have established at expand-time  that the returned
 	      ;;values are of the wrong type; assertion failed.
-	      (retvals-signature-violation expr.stx ?retvals-signature expr.sign)))))
+	      (retvals-signature-violation input-form.stx ?retvals-signature expr.sign)))))
 
     ((_ ?retvals-signature ?expr)
      ;;Let's use a descriptive error message here.
      (syntax-violation __who__
-       "invalid return values signature" expr.stx ?retvals-signature))
+       "invalid return values signature" input-form.stx ?retvals-signature))
+    ))
+
+
+;;;; module core-macro-transformer: TAG-ACCESSOR, TAG-MUTATOR
+
+(define (tag-accessor-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to  expand Vicare's  TAG-ACCESSOR  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-accessor))
+  (syntax-match input-form.stx ()
+    ((_ ?expr ?field-name-id)
+     (identifier? ?field-name-id)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sign (psi-retvals-signature expr.psi)))
+       (syntax-match expr.sign ()
+	 (#f
+	  (stx-error input-form.stx "unable to determine tag of expression"))
+
+	 ((?tag)
+	  (let* ((accessor.stx  (tag-identifier-accessor ?tag ?field-name-id input-form.stx))
+		 (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+		 (accessor.core (psi-core-expr accessor.psi))
+		 (accessor.sign (psi-retvals-signature accessor.psi)))
+	    (make-psi (build-application (syntax-annotation input-form.stx)
+			accessor.core
+			(list expr.core))
+		      accessor.sign)))
+
+	 (_
+	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	 )))
+    ))
+
+(define (tag-mutator-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used to  expand  Vicare's  TAG-MUTATOR syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-mutator))
+  (syntax-match input-form.stx ()
+    ((_ ?expr ?field-name-id ?new-value)
+     (identifier? ?field-name-id)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sign (psi-retvals-signature expr.psi))
+	    (nval.psi  (chi-expr ?new-value lexenv.run lexenv.expand))
+	    (nval.core (psi-core-expr nval.psi)))
+       (syntax-match expr.sign ()
+	 (#f
+	  (stx-error input-form.stx "unable to determine tag of expression"))
+
+	 ((?tag)
+	  (let* ((mutator.stx  (tag-identifier-mutator ?tag ?field-name-id input-form.stx))
+		 (mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
+		 (mutator.core (psi-core-expr mutator.psi))
+		 (mutator.sign (psi-retvals-signature mutator.psi)))
+	    (make-psi (build-application (syntax-annotation input-form.stx)
+			mutator.core
+			(list expr.core nval.core))
+		      mutator.sign)))
+
+	 (_
+	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	 )))
+    ))
+
+
+;;;; module core-macro-transformer: TAG-GETTER, TAG-SETTER
+
+(define (tag-getter-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand Vicare's  TAG-GETTER  syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-getter))
+  (syntax-match input-form.stx ()
+    ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...)
+     (let* ((keys.stx  (cons (cons ?key00 ?key0*)
+			     (map cons ?key11* ?key1**)))
+	    (expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sign (psi-retvals-signature expr.psi)))
+       (syntax-match expr.sign ()
+	 (#f
+	  (stx-error input-form.stx "unable to determine tag of expression"))
+
+	 ((?tag)
+	  (let* ((getter.stx  (tag-identifier-getter ?tag keys.stx input-form.stx))
+		 (getter.psi  (chi-expr getter.stx lexenv.run lexenv.expand))
+		 (getter.core (psi-core-expr getter.psi))
+		 (getter.sign (psi-retvals-signature getter.psi)))
+	    (make-psi (build-application (syntax-annotation input-form.stx)
+			getter.core
+			(list expr.core))
+		      getter.sign)))
+
+	 (_
+	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	 )))
+    ))
+
+(define (tag-setter-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function  used  to  expand Vicare's  TAG-SETTER  syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-setter))
+  (syntax-match input-form.stx ()
+    ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
+     (let* ((keys.stx  (cons (cons ?key00 ?key0*)
+			     (map cons ?key11* ?key1**)))
+	    (expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sign (psi-retvals-signature expr.psi))
+	    (nval.psi  (chi-expr ?new-value lexenv.run lexenv.expand))
+	    (nval.core (psi-core-expr nval.psi)))
+       (syntax-match expr.sign ()
+	 (#f
+	  (stx-error input-form.stx "unable to determine tag of expression"))
+
+	 ((?tag)
+	  (let* ((setter.stx  (tag-identifier-setter ?tag keys.stx input-form.stx))
+		 (setter.psi  (chi-expr setter.stx lexenv.run lexenv.expand))
+		 (setter.core (psi-core-expr setter.psi))
+		 (setter.sign (psi-retvals-signature setter.psi)))
+	    (make-psi (build-application (syntax-annotation input-form.stx)
+			setter.core
+			(list expr.core nval.core))
+		      setter.sign)))
+
+	 (_
+	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	 )))
+    ))
+
+
+;;;; module core-macro-transformer: TAG-DISPATCH
+
+(define (tag-dispatch-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to  expand Vicare's  TAG-DISPATCH  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-dispatch))
+  (syntax-match input-form.stx ()
+    ((_ ?expr ?member ?arg* ...)
+     (identifier? ?member)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sign (psi-retvals-signature expr.psi)))
+       (syntax-match expr.sign ()
+	 (#f
+	  (stx-error input-form.stx "unable to determine tag of expression"))
+
+	 ((?tag)
+	  (let* ((method.stx  (tag-identifier-dispatch ?tag ?member ?arg* input-form.stx))
+		 (method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
+		 (method.core (psi-core-expr method.psi))
+		 (method.sign (psi-retvals-signature method.psi)))
+	    (make-psi (build-application (syntax-annotation input-form.stx)
+			method.core
+			(list expr.core))
+		      method.sign)))
+
+	 (_
+	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	 )))
     ))
 
 

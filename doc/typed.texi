@@ -503,7 +503,7 @@ list of tagged or untagged identifiers, otherwise return @false{}.
 
 
 @defun parse-list-of-tagged-bindings @var{stx}
-@defunx parse-list-of-tagged-bindings @var{stx} @var{input-form-stx}
+@defunx parse-list-of-tagged-bindings @var{stx} @var{input-form.stx}
 Assume @var{stx} is a syntax object representing a proper list of
 possibly tagged binding identifiers; parse the list and, when
 successful, return 2 values: a list of identifiers representing the
@@ -513,7 +513,7 @@ raise an exception with condition object type @condition{syntax}.
 
 The identifiers must be distinct according to @func{bound-identifier=?}.
 
-The optional argument @var{input-form-stx} is meant to be a syntax
+The optional argument @var{input-form.stx} is meant to be a syntax
 object representing the form from which @var{stx} was extracted; it is
 used as @code{form} field when raising a syntax violation.
 
@@ -704,7 +704,7 @@ wich null and a standalone tagged identifier being acceptable.
 
 
 @defun parse-tagged-formals-syntax @var{stx}
-@defunx parse-tagged-formals-syntax @var{stx} @var{input-form-stx}
+@defunx parse-tagged-formals-syntax @var{stx} @var{input-form.stx}
 Given a syntax object @var{stx} representing tagged formals: parse it
 and split formals from tags.  If successful return 2 values: a proper or
 improper list of identifiers representing the standard formals; an
@@ -712,7 +712,7 @@ instance of @objtype{formals-signature} holding the tag identifiers.  If
 an error occurs raise an exception with condition object type
 @condition{syntax}.
 
-The optional argument @var{input-form-stx} is meant to be a syntax
+The optional argument @var{input-form.stx} is meant to be a syntax
 object representing the form from which @var{stx} was extracted; it is
 used as @code{form} field when raising a syntax violation.
 
@@ -944,7 +944,7 @@ callable signature syntax; otherwise return @false{}.
 
 
 @defun parse-tagged-callable-spec-syntax @var{stx}
-@defunx parse-tagged-callable-spec-syntax @var{stx} @var{input-form-stx}
+@defunx parse-tagged-callable-spec-syntax @var{stx} @var{input-form.stx}
 Given a syntax object @var{stx} representing tagged callable signature
 syntax: parse it and split formals from tags.  If successful return 2
 values: a proper or improper list of identifiers representing the
@@ -952,7 +952,7 @@ standard formals; an instance of @objtype{callable-signature}.  If an
 error occurs: raise an exception with condition object type
 @condition{syntax}.
 
-The optional argument @var{input-form-stx} is meant to be a syntax
+The optional argument @var{input-form.stx} is meant to be a syntax
 object representing the form from which @var{stx} was extracted; it is
 used as @code{form} field when raising a syntax violation.
 
@@ -1188,6 +1188,442 @@ identifier: an exception is raised.
 @c page
 @node typed object specs
 @section Object type specification
+
+
+@menu
+* typed object specs intro::   Introduction to object types specification.
+* typed object specs descr::   Object type descriptor.
+@end menu
+
+@c page
+@node typed object specs intro
+@subsection Introduction to object types specification
+
+
+Records of type @objtype{object-type-spec} are used to describe the
+object type of tag identifiers; a bound identifier is a tag identiier
+if, and only if, it has an @objtype{object-type-spec} in the property
+list of its syntactic binding label.
+
+Below we discuss the fields of @objtype{object-type-spec} and we assume
+the definitions:
+
+@example
+#!vicare
+(import (vicare))
+
+(define-record-type <color>
+  (fields (mutable   red)
+          (immutable green)
+          (mutable   blue)))
+
+(define (@{<color>-string <string>@} @{O <color>@})
+  (format "[~a, ~a, ~a]"
+          (<color>-red   O)
+          (<color>-green O)
+          (<color>-blue  O)))
+
+(define (@{<color>-shift <color>@} @{O <color>@}
+           @{R <fixnum>@} @{G <fixnum>@} @{B <fixnum>@})
+  (make-<color> (fx+ (<color>-red   O) R)
+                (fx+ (<color>-green O) G)
+                (fx+ (<color>-blue  O) B)))
+
+(define @{O <color>@}
+  (make-<color> 1 2 3))
+@end example
+
+@noindent
+and the fields are meant to hold fixnums.
+
+@menu
+* typed object specs intro predicate::  Predicate syntax object.
+* typed object specs intro accessor::   Field accessor maker.
+* typed object specs intro mutator::    Field mutator maker.
+* typed object specs intro getter::     Property getter maker.
+* typed object specs intro setter::     Property setter maker.
+* typed object specs intro dispatcher:: Method dispatcher.
+@end menu
+
+@c page
+@node typed object specs intro predicate
+@subsubsection Predicate syntax object
+
+
+It is a syntax object (wrapped or unwrapped) representing an expression;
+expanded by itself and evaluated it must return a type predicate: a
+function accepting a single argument and returning a boolean; @true{} if
+the argument is of the specified type, @false{} otherwise.  It is used
+by the syntax @func{is-a?} to implement the expansion:
+
+@example
+(is-a? O <color>) @expansion{} (<color>? O)
+@end example
+
+@noindent
+the syntax object can just be:
+
+@example
+#'<color>?
+@end example
+
+Notice that it is perfectly fine to define this syntax object as:
+
+@example
+#'(lambda (X)
+    (and (fixnum? X)
+         (fxpositive? X)))
+@end example
+
+@c page
+@node typed object specs intro accessor
+@subsubsection Field accessor maker
+
+
+When the specified object type has accessible fields: the field accessor
+maker is a function accepting 2 arguments and returning a single value;
+otherwise it is @false{}.  The accessor maker arguments are:
+
+@enumerate
+@item
+A symbol representing a field name.
+
+@item
+A syntax object representing the form which originated this accessor
+maker call.  If the accessor maker raises a syntax violation exception:
+this value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end enumerate
+
+When the field is recognised and valid: the accessor maker must return a
+syntax object representing an expression evaluating to a field accessor.
+It is a syntax object (wrapped or unwrapped) representing an expression;
+expanded by itself and evaluated it must return a field accessor: a
+function accepting as single argument an object instance and returning
+as single argument the current field's value.
+
+When the field is unknown: the accessor maker must return @false{}; in
+this case the field will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+When the field is recognised but invalid (for example: inaccessible):
+the accessor maker must raise a syntax violation.
+
+The accessor maker is used to implement the expansions:
+
+@example
+(slot-ref O red   <color>) @expansion{} (<color>-red   O)
+(slot-ref O green <color>) @expansion{} (<color>-green O)
+(slot-ref O blue  <color>) @expansion{} (<color>-blue  O)
+@end example
+
+@noindent
+and its implementation can be:
+
+@example
+(define (accessor-maker field-name input-form.stx)
+  (case field-name
+    ((red)      #'<color>-red)
+    ((green)    #'<color>-green)
+    ((blue)     #'<color>-blue)
+    (_          #f)))
+@end example
+
+Notice that it is perfectly fine to define a field accessor syntax
+object as:
+
+@example
+#'(lambda (obj new-value)
+    (object-field-ref obj new-value))
+@end example
+
+@c page
+@node typed object specs intro mutator
+@subsubsection Field mutator maker
+
+
+When the specified object type has mutable fields: the field mutator
+maker is a function accepting 2 arguments and returning a single value;
+otherwise it is @false{}.  The mutator maker arguments are:
+
+@itemize
+@item
+A symbol representing a field name.
+
+@item
+A syntax object representing the form which originated this mutator
+maker call.  If the mutator maker raises a syntax violation exception:
+this value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end itemize
+
+When the field is recognised and valid: the mutator maker must return a
+syntax object representing an expression evaluating to a field mutator.
+It is a syntax object (wrapped or unwrapped) representing an expression;
+expanded by itself and evaluated it must return a field mutator: a
+function accepting as arguments an object instance and a new field's
+value and returning unspecified values.
+
+When the field is unknown: the mutator maker must return @false{}; in
+this case the field will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+When the field is recognised but invalid (for example: immutable): the
+mutator maker must raise a syntax violation.
+
+The mutator maker is used to implement the expansions:
+
+@example
+(slot-set! O red   <color> 1) @expansion{} (<color>-red-set!  O 1)
+(slot-set! O green <color> 1) @error{} &syntax
+(slot-set! O blue  <color> 1) @expansion{} (<color>-blue-set! O 3)
+(set! (O red)   1)            @expansion{} (<color>-red-set!  O 1)
+(set! (O green) 1)            @error{} &syntax
+(set! (O blue)  1)            @expansion{} (<color>-blue-set! O 3)
+@end example
+
+@noindent
+and its implementation can be:
+
+@example
+(define (mutator-maker field-name input-form.stx)
+  (case field-name
+    ((red)      #'<color>-red-set!)
+    ((green)
+     (syntax-violation '<color>
+       "requested mutator of immutable field" input-form.stx field-name))
+    ((blue)     #'<color>-blue-set!)
+    (_          #f)))
+@end example
+
+Notice that it is perfectly fine to define a field mutator syntax object
+as:
+
+@example
+#'(lambda (obj new-value)
+    (object-field-set! obj new-value))
+@end example
+
+@c page
+@node typed object specs intro getter
+@subsubsection Property getter maker
+
+
+When the specified object type supports the getter syntax: it is a
+function accepting 2 arguments and returning a single value; otherwise
+it is @false{}.  The getter maker arguments are:
+
+@itemize
+@item
+A syntax object representing the getter keys.  The syntax object's
+expression is a list of lists:
+
+@example
+#'((?key00 ?key0 ...) (?key11 ?key1 ...) ...)
+@end example
+
+@item
+A syntax object representing the form which originated this getter maker
+call.  If the getter maker raises a syntax violation exception: this
+value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end itemize
+
+When the keys are recognised and valid: the getter maker must return a
+syntax object representing an expression evaluating to a property
+getter.  It is a syntax object (wrapped or unwrapped) representing an
+expression; expanded by itself and evaluated it must return a property
+accessor: a function accepting as single argument an object instance and
+returning a tuple of values.
+
+When the keys are unknown: the getter maker must return @false{}; in
+this case another getter will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+When the keys are recognised but invalid: the getter maker must raise a
+syntax violation.
+
+The getter syntax is used to implement the expansions:
+
+@example
+(O[red])        @expansion{} (tag-getter <color> O ([red]))
+(O[green])      @expansion{} (tag-getter <color> O ([green]))
+(O[blue])       @expansion{} (tag-getter <color> O ([blue]))
+@end example
+
+@noindent
+which in turn will use the getter maker to implement the expansions:
+
+@example
+(tag-getter <color> O ([red]))          @expansion{} (<color>-red O)
+(tag-getter <color> O ([green]))        @error{} &syntax
+(tag-getter <color> O ([blue]))         @expansion{} (<color>-blue O)
+@end example
+
+The getter maker implementation can be:
+
+@example
+(define (getter-maker keys-stx input-form.stx)
+  (syntax-case keys-stx ()
+    (([?field-name])
+     (identifier? #'?field-name)
+     (accessor-maker #'?field-name input-form.stx))
+    (_
+     (syntax-violation '<color>
+       "invalid getter syntax" input-form.stx keys))))
+@end example
+
+@c page
+@node typed object specs intro setter
+@subsubsection Property setter maker
+
+
+When the specified object type supports the setter syntax: it is a
+function accepting 2 arguments and returning a single value; otherwise
+it is @false{}.  The setter maker arguments are:
+
+@itemize
+@item
+A syntax object representing the setter keys.  The syntax object's
+expression is a list of lists:
+
+@example
+#'((?key00 ?key0 ...) (?key11 ?key1 ...) ...)
+@end example
+
+@item
+A syntax object representing the form which originated this setter maker
+call.  If the setter maker raises a syntax violation exception: this
+value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end itemize
+
+When the keys are recognised and valid: the setter maker must return a
+syntax object representing an expression evaluating to a property
+setter.  It is a syntax object (wrapped or unwrapped) representing an
+expression; expanded by itself and evaluated it must return a property
+mutator: a function accepting as arguments an object instance and a new
+property's value and returning unspecified values.
+
+When the keys are unknown: the setter maker must return @false{}; in
+this case another setter will be searched in the parent
+@objtype{object-type-spec}, if any.
+
+When the keys are recognised but invalid: the setter maker must raise a
+syntax violation.
+
+The @func{set!} syntax is used to implement the expansions:
+
+@example
+(set! O[red]     1) @expansion{} (tag-setter <color> O ([red])   1)
+(set! O[green]   2) @expansion{} (tag-setter <color> O ([green]) 2)
+(set! O[blue]    3) @expansion{} (tag-setter <color> O ([blue])  3)
+(set! (O[red])   1) @expansion{} (tag-setter <color> O ([red])   1)
+(set! (O[green]) 2) @expansion{} (tag-setter <color> O ([green]) 2)
+(set! (O[blue])  3) @expansion{} (tag-setter <color> O ([blue])  3)
+@end example
+
+@noindent
+which in turn will use the setter maker to implement the expansions:
+
+@example
+(tag-setter <color> O ([red])   1) @expansion{} (<color>-red-set!  O 1)
+(tag-setter <color> O ([green]) 2) @error{} &syntax
+(tag-setter <color> O ([blue])  3) @expansion{} (<color>-blue-set! O 3)
+@end example
+
+The setter maker implementation can be:
+
+@example
+(define (setter-maker keys-stx input-form.stx)
+  (syntax-case keys-stx ()
+    (([?field-name])
+     (identifier? #'?field-name)
+     (mutator-maker #'?field-name input-form.stx))
+    (_
+     (syntax-violation '<color>
+       "invalid setter syntax" input-form.stx keys))))
+@end example
+
+@c page
+@node typed object specs intro dispatcher
+@subsubsection Method dispatcher
+
+
+When the specified object type has methods: the methods dispatcher is a
+function accepting 2 arguments and returning a single value; otherwise
+it is @false{}.  The accessor maker arguments are:
+
+@enumerate
+@item
+A symbol representing a method name.
+
+@item
+A syntax object representing a, possibly empty, proper list of
+additional arguments.
+
+@item
+A syntax object representing the form which originated this dispatcher
+call.  If the dispatcher raises a syntax violation exception: this value
+must be used as @code{form} field in the @condition{syntax} condition
+object.
+@end enumerate
+
+When the method name is recognised and valid: the dispatcher must return
+a syntax object representing an expression evaluating to a method
+procedure embedding the additional arguments.  It is a syntax object
+(wrapped or unwrapped) representing an expression; expanded by itself
+and evaluated it must return a callable object: a function accepting as
+single argument the object instance and returning any tuple of values.
+
+When the method name is unknown: the dispatcher must return @false{}; in
+this case:
+
+@enumerate
+@item
+The expander first tries the accessor maker (if any) to match the symbol
+name against field names.
+
+@item
+If the accessor maker returns @false{}, the expander tries the parent's
+method dispatcher (if any).
+
+@item
+And so on recursively upwards in the hierarchy of object type
+specifications.  If neither methods nor fields match: a syntax violation
+is raised.
+@end enumerate
+
+When the method name is recognised but invalid: the dispatcher must
+raise a syntax violation.
+
+The method dispatcher is used to implement the expansions:
+
+@example
+(O string) @expansion{} (<color>-string O)
+(O shift 1 2 3)
+@expansion{} ((lambda (self)
+       (<color>-shift self 1 2 3))
+     O)
+@end example
+
+@noindent
+and its implementation can be:
+
+@example
+(define (dispatcher method-name arg*.stx input-form.stx)
+  (case method-name
+    ((string)
+     #'<color>-string)
+    ((shift)
+     #`(lambda (@{_ <fixnum>@} @{self <color>@})
+         (<color>-shift self . #,arg*.stx)))
+    (else #f)))
+@end example
+
+@c page
+@node typed object specs descr
+@subsection Object type descriptor
 
 
 The following bindings are exported by the library @library{vicare

@@ -58,7 +58,7 @@
     (tag=tagging? <unspecified> ?var))
 
   (typ.set-identifier-object-type-spec! #'<fixnums>
-    (typ.make-object-type-spec #'<fixnums> #'<top> #'fixnums?))
+    (typ.make-object-type-spec '<fixnums> #'<fixnums> #'<top> #'fixnums?))
 
   #| end of begin-for-syntax |# )
 
@@ -2452,7 +2452,386 @@
   #t)
 
 
-(parametrise ((check-test-name	'dispatching-structs))
+(parametrise ((check-test-name	'tag-accessor))
+
+;;; built-ins
+
+  (check-for-false (tag-accessor +123 even?))
+  (check-for-true  (tag-accessor +123 odd?))
+  (check-for-true  (tag-accessor +123 positive?))
+  (check-for-false (tag-accessor +123 negative?))
+  (check-for-false (tag-accessor +123 non-positive?))
+  (check-for-true  (tag-accessor +123 non-negative?))
+
+  (check-for-false (tag-accessor -123 even?))
+  (check-for-true  (tag-accessor -123 odd?))
+  (check-for-false (tag-accessor -123 positive?))
+  (check-for-true  (tag-accessor -123 negative?))
+  (check-for-true  (tag-accessor -123 non-positive?))
+  (check-for-false (tag-accessor -123 non-negative?))
+
+  (check-for-false (tag-accessor +123 zero?))
+  (check-for-false (tag-accessor -123 zero?))
+  (check-for-true  (tag-accessor 0 zero?))
+
+;;; --------------------------------------------------------------------
+;;; structs
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(tag-accessor O a))
+    => 1)
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(values (tag-accessor O a)
+		(tag-accessor O b)
+		(tag-accessor O c)))
+    => 1 2 3)
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(let (({O alpha} (make-alpha 1 2 3)))
+	  (values (tag-accessor O a)
+		  (tag-accessor O b)
+		  (tag-accessor O c))))
+    => 1 2 3)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(tag-accessor O a))
+    => 1)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(values (tag-accessor O a)
+		(tag-accessor O b)
+		(tag-accessor O c)))
+    => 1 2 3)
+
+  (check	;record with parent
+      (let ()
+	(define-record-type alpha
+	  (fields a b c))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields d e f))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(values (tag-accessor O a)
+		(tag-accessor O b)
+		(tag-accessor O c)
+		(tag-accessor O d)
+		(tag-accessor O e)
+		(tag-accessor O f)))
+    => 1 2 3 4 5 6)
+
+  #t)
+
+
+(parametrise ((check-test-name	'tag-mutator))
+
+;;; structs
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(tag-mutator O a 11)
+	(tag-accessor O a))
+    => 11)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(tag-mutator O a 11)
+	(tag-mutator O b 22)
+	(tag-mutator O c 33)
+  	(values (tag-accessor O a)
+  		(tag-accessor O b)
+  		(tag-accessor O c)))
+    => 11 22 33)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(let (({O alpha} (make-alpha 1 2 3)))
+	  (tag-mutator O a 11)
+	  (tag-mutator O b 22)
+	  (tag-mutator O c 33)
+	  (values (tag-accessor O a)
+		  (tag-accessor O b)
+		  (tag-accessor O c))))
+    => 11 22 33)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+  	(tag-mutator O a 11)
+  	(tag-accessor O a))
+    => 11)
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(tag-mutator O a 11)
+	#;(tag-mutator O b 22)
+	(tag-mutator O c 33)
+  	(values (tag-accessor O a)
+  		(tag-accessor O b)
+  		(tag-accessor O c)))
+    => 11 2 33)
+
+  (check	;record with parent
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define-record-type beta
+  	  (parent alpha)
+  	  (fields (mutable d)
+		  (mutable e)
+		  (mutable f)))
+  	(define {O beta}
+  	  (make-beta 1 2 3 4 5 6))
+	(tag-mutator O a 11)
+	#;(tag-mutator O b 22)
+	(tag-mutator O c 33)
+	(tag-mutator O d 44)
+	(tag-mutator O e 55)
+	(tag-mutator O f 66)
+  	(values (tag-accessor O a)
+  		(tag-accessor O b)
+  		(tag-accessor O c)
+  		(tag-accessor O d)
+  		(tag-accessor O e)
+  		(tag-accessor O f)))
+    => 11 2 33 44 55 66)
+
+  #t)
+
+
+(parametrise ((check-test-name	'tag-getter))
+
+;;; structs
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(tag-getter O [a]))
+    => 1)
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(values (tag-getter O [a])
+		(tag-getter O [b])
+		(tag-getter O [c])))
+    => 1 2 3)
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(let (({O alpha} (make-alpha 1 2 3)))
+	  (values (tag-getter O [a])
+		  (tag-getter O [b])
+		  (tag-getter O [c]))))
+    => 1 2 3)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields a b c))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+  	(tag-getter O [a]))
+    => 1)
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields a b c))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 1 2 3)
+
+  (check	;record with parent
+      (let ()
+  	(define-record-type alpha
+  	  (fields a b c))
+  	(define-record-type beta
+  	  (parent alpha)
+  	  (fields d e f))
+  	(define {O beta}
+  	  (make-beta 1 2 3 4 5 6))
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])
+  		(tag-getter O [d])
+  		(tag-getter O [e])
+  		(tag-getter O [f])))
+    => 1 2 3 4 5 6)
+
+  #t)
+
+
+(parametrise ((check-test-name	'tag-setter))
+
+;;; structs
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(tag-setter O [a] 11)
+	(tag-getter O [a]))
+    => 11)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(tag-setter O [a] 11)
+	(tag-setter O [b] 22)
+	(tag-setter O [c] 33)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 11 22 33)
+
+  (check
+      (let ()
+  	(define-struct alpha
+  	  (a b c))
+  	(let (({O alpha} (make-alpha 1 2 3)))
+	  (tag-setter O [a] 11)
+	  (tag-setter O [b] 22)
+	  (tag-setter O [c] 33)
+	  (values (tag-getter O [a])
+		  (tag-getter O [b])
+		  (tag-getter O [c]))))
+    => 11 22 33)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+  	(tag-setter O [a] 11)
+  	(tag-getter O [a]))
+    => 11)
+
+  (check
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable   a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+	(tag-setter O [a] 11)
+	#;(tag-setter O [b] 22)
+	(tag-setter O [c] 33)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])))
+    => 11 2 33)
+
+  (check	;record with parent
+      (let ()
+  	(define-record-type alpha
+  	  (fields (mutable a)
+		  (immutable b)
+		  (mutable   c)))
+  	(define-record-type beta
+  	  (parent alpha)
+  	  (fields (mutable d)
+		  (mutable e)
+		  (mutable f)))
+  	(define {O beta}
+  	  (make-beta 1 2 3 4 5 6))
+	(tag-setter O [a] 11)
+	#;(tag-setter O [b] 22)
+	(tag-setter O [c] 33)
+	(tag-setter O [d] 44)
+	(tag-setter O [e] 55)
+	(tag-setter O [f] 66)
+  	(values (tag-getter O [a])
+  		(tag-getter O [b])
+  		(tag-getter O [c])
+  		(tag-getter O [d])
+  		(tag-getter O [e])
+  		(tag-getter O [f])))
+    => 11 2 33 44 55 66)
+
+  #t)
+
+
+(parametrise ((check-test-name	'tag-dispatch/structs))
 
   (check
       (let ()
@@ -2478,7 +2857,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'dispatching-records))
+(parametrise ((check-test-name	'tag-dispatch/records))
 
   (check
       (let ()
@@ -2495,7 +2874,86 @@
 	  (fields (mutable a) (mutable b) (mutable c)))
 	(define {O alpha}
 	  (make-alpha 1 2 3))
+	(tag-dispatch O a))
+    => 1)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(values (tag-dispatch O a) (tag-dispatch O b) (tag-dispatch O c)))
+    => 1 2 3)
+
+;;; --------------------------------------------------------------------
+;;; record types with parents
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable   a1)
+		  (immutable a2)
+		  (mutable   a3)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable   b1)
+		  (immutable b2)
+		  (mutable   b3)))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(values (tag-dispatch O a1) (tag-dispatch O a2) (tag-dispatch O a3)
+		(tag-dispatch O b1) (tag-dispatch O b2) (tag-dispatch O b3)))
+    => 1 2 3 4 5 6)
+
+  #t)
+
+
+(parametrise ((check-test-name	'implicit-dispatching))
+
+;;; structs
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
 	;;In this syntax the dispatching form is evaluated by CHI-BODY.
+	(O a))
+    => 1)
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
+	;;CHI-EXPR.
+	(values (O a) (O b) (O c)))
+    => 1 2 3)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(alpha? O))
+    => #t)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In this syntax  the dispatching form is  evaluated by CHI-EXPR
+	;;after being processed by CHI-BODY*.
 	(O a))
     => 1)
 
@@ -2506,7 +2964,7 @@
 	(define {O alpha}
 	  (make-alpha 1 2 3))
 	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
-	;;CHI-EXPR.
+	;;CHI-EXPR*.
 	(values (O a) (O b) (O c)))
     => 1 2 3)
 

@@ -3620,7 +3620,7 @@
     => "incorrect usage of auxiliary keyword")
 
   (check	;receiver form does not evaluate to function
-      (guard (E ((error? E)
+      (guard (E ((assertion-violation? E)
 		 (vector (condition-message E)
 			 (condition-irritants E)))
 		(else E))
@@ -3633,7 +3633,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'case-identifiers))
+#;(parametrise ((check-test-name	'case-identifiers))
 
   (check	;no arrow
       (case-identifiers #'two
@@ -3711,7 +3711,7 @@
     => "incorrect usage of auxiliary keyword")
 
   (check	;receiver form does not evaluate to function
-      (guard (E ((error? E)
+      (guard (E ((assertion-violation? E)
   		 (vector (condition-message E)
   			 (condition-irritants E)))
   		(else E))

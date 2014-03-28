@@ -337,6 +337,11 @@ Convert between a symbol and a keyword.
 @end deffn
 
 
+@deffn {Unsafe Operation} $keyword->string @var{key}
+Return the string representation of a keyword.
+@end deffn
+
+
 @deffn {Unsafe Operation} $keyword=? @vari{key} @varii{key}
 Return @true{} if the arguments are equal.  A keyword object is equal to
 itself; two distinct keyword objects are equal if they have the same

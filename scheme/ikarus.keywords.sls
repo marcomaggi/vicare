@@ -30,20 +30,25 @@
   (export
     symbol->keyword
     keyword->symbol
+    keyword->string
     keyword?
     keyword=?
     keyword-hash
 
     (rename (make-keyword	$symbol->keyword))
     $keyword->symbol
+    $keyword->string
     $keyword-hash
     $keyword=?)
   (import (except (vicare)
 		  symbol->keyword
 		  keyword->symbol
+		  keyword->string
 		  keyword?
 		  keyword=?
 		  keyword-hash)
+    (only (vicare system $symbols)
+	  $symbol->string)
     (only (vicare system $hashtables)
 	  $symbol-hash))
 
@@ -60,6 +65,12 @@
 (define ($keyword->symbol K)
   ;;Remember that the unsafe operation $KEYWORD-SYMBOL is a syntax!!!
   ($keyword-symbol K))
+
+(define* (keyword->string {K keyword?})
+  ($keyword->string K))
+
+(define ($keyword->string K)
+  (string-append "#:" ($symbol->string ($keyword-symbol K))))
 
 (define* (keyword=? {K1 keyword?} {K2 keyword?})
   ($keyword=? K1 K2))
