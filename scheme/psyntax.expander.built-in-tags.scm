@@ -347,6 +347,7 @@
       ((list)			(M string->list))
       ((for-each)		(M string-for-each))
       ((copy)			(M string-copy))
+      ((=)			(M string=?))
       (else			#f)))
 
   (define type-spec

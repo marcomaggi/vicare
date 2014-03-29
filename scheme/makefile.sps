@@ -372,9 +372,10 @@
      (slot-set!					(core-macro . slot-set!))
      ($slot-ref					(core-macro . $slot-ref))
      ($slot-set!				(core-macro . $slot-set!))
+     (tag-predicate				(core-macro . tag-predicate))
+     (tag-validator				(core-macro . tag-validator))
      (tag-assert				(core-macro . tag-assert))
      (tag-assert-and-return			(core-macro . tag-assert-and-return))
-     (tag-validator				(core-macro . tag-validator))
      (tag-dispatch				(core-macro . tag-dispatch))
      (tag-accessor				(core-macro . tag-accessor))
      (tag-mutator				(core-macro . tag-mutator))
@@ -3662,6 +3663,8 @@
 ;;; --------------------------------------------------------------------
 ;;; expander tags
 
+    (tag-predicate				$expander-tags)
+    (tag-validator				$expander-tags)
     (tag-assert					$expander-tags)
     (tag-assert-and-return			$expander-tags)
     (tag-dispatch				$expander-tags)
@@ -3669,7 +3672,6 @@
     (tag-mutator				$expander-tags)
     (tag-getter					$expander-tags)
     (tag-setter					$expander-tags)
-    (tag-validator				$expander-tags)
 
     (<unspecified>				$expander-tags)
     (<top>					$expander-tags)

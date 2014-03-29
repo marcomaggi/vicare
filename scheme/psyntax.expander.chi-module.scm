@@ -24,8 +24,14 @@
 
 ;;;; core expressions struct
 
-(define-record (psi %make-psi psi?)
-  (core-expr
+(module (psi
+	 make-psi psi?
+	 psi-core-expr
+	 psi-retvals-signature
+	 psi-callable-spec)
+
+  (define-record (psi %make-psi psi?)
+    (core-expr
 		;Either:
 		;
 		;* A symbolic expression in the core language representing the result
@@ -34,17 +40,36 @@
 		;* An  instance of  "splice-first-envelope".  This happens  only when
 		;   this  PSI   struct  is  the  return  value  of   the  core  macro
 		;  SPLICE-FIRST-EXPAND.
-   retvals-signature
-		;False,  null or  a  proper or  improper  list of  "object-type-spec"
-		;instances  representing the  types  of the  values  returned by  the
-		;expression evaluation.
-   ))
+     retvals-signature
+		;False,  null  or  a  proper  or improper  list  of  tag  identifiers
+		;representing  the types  of the  values returned  by the  expression
+		;evaluation.
+     callable-spec
+		;False, or a proper list of "callable-signature" instances.
+		;
+		;When  the expression  represented  by  this PSI  is  not a  callable
+		;object: this field is false.
+		;
+		;When the expression represented by this PSI is a callable object: it
+		;is, in  general, a CASE-LAMBDA expression.   This field is set  to a
+		;list  of   callable  signatures   representing  the  tags   of  each
+		;CASE-LAMBDA clause.
+     ))
 
-(case-define* make-psi
-  ((core-expr)
-   (%make-psi core-expr #f))
-  ((core-expr {retvals-signature retvals-signature-syntax?})
-   (%make-psi core-expr retvals-signature)))
+  (case-define* make-psi
+    ((core-expr)
+     (%make-psi core-expr #f #f))
+    ((core-expr {retvals-signature retvals-signature-syntax?})
+     (%make-psi core-expr retvals-signature #f))
+    ((core-expr {retvals-signature retvals-signature-syntax?} {callable-spec %psi-callable-spec?})
+     (%make-psi core-expr retvals-signature callable-spec)))
+
+  (define (%psi-callable-spec? obj)
+    (or (not obj)
+	(and (list? obj)
+	     (for-all callable-spec? obj))))
+
+  #| end of module |# )
 
 
 ;;;; chi procedures: syntax object type inspection

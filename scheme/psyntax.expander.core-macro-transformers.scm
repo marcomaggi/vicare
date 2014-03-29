@@ -68,6 +68,7 @@
     (($slot-ref)				$slot-ref-transformer)
     (($slot-set!)				$slot-set!-transformer)
 
+    ((tag-predicate)				tag-predicate-transformer)
     ((tag-validator)				tag-validator-transformer)
     ((tag-assert)				tag-assert-transformer)
     ((tag-assert-and-return)			tag-assert-and-return-transformer)
@@ -1645,7 +1646,32 @@
     ))
 
 
-;;;; module core-macro-transformer: TAG-VALIDATOR
+;;;; module core-macro-transformer: TAG-PREDICATE, TAG-VALIDATOR
+
+(define (tag-predicate-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's TAG-PREDICATE  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-predicate))
+  (syntax-match input-form.stx ()
+    ((_ ?tag)
+     (tag-identifier? ?tag)
+     (cond ((identifier-object-type-spec ?tag)
+	    => (lambda (spec)
+		 (cond ((object-type-spec-pred-stx spec)
+			=> (lambda (predicate.stx)
+			     (chi-expr predicate.stx lexenv.run lexenv.expand)))
+		       (else
+			;;This   should  never   happen   because   an  instance   of
+			;;"object-type-spec" always has a defined predicate.
+			(stx-internal-error input-form.stx "undefined tag predicate function")))))
+	   (else
+	    ;;This should  never happen because  we have validated the  identifier in
+	    ;;the fender.
+	    (stx-internal-error input-form.stx "tag identifier without object-type-spec"))))
+    ))
 
 (define (tag-validator-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's TAG-VALIDATOR  syntaxes from  the
@@ -1658,24 +1684,13 @@
     ((_ ?tag ?expr)
      (tag-identifier? ?tag)
      (chi-expr (bless
-		`(tag-validator ,?tag ,?expr #f))
+		`(validate-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr #f))
 	       lexenv.run lexenv.expand))
     ((_ ?tag ?expr ?input-form)
      (tag-identifier? ?tag)
-     (cond ((identifier-object-type-spec ?tag)
-	    => (lambda (spec)
-		 (cond ((object-type-spec-pred-stx spec)
-			=> (lambda (predicate-stx)
-			     (chi-expr (bless
-					`(validate-with-predicate (quote ?tag) ,predicate-stx ,?expr (quote ,?input-form)))
-				       lexenv.run lexenv.expand)))
-		       (else
-			;;This should never happen.
-			(stx-error input-form.stx "undefined tag predicate function")))))
-	   (else
-	    ;;This should  never happen because  we have validated the  identifier in
-	    ;;the fender.
-	    (stx-error input-form.stx "tag identifier without object-type-spec"))))
+     (chi-expr (bless
+		`(validate-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr (quote ,?input-form)))
+	       lexenv.run lexenv.expand))
     ))
 
 

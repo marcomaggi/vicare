@@ -2654,6 +2654,17 @@
 
 (parametrise ((check-test-name	'tag-getter))
 
+;;; built-in tags
+
+  (check
+      (tag-getter "ciao" [1])
+    => #\i)
+
+  (check
+      (tag-getter "ciao" [3])
+    => #\o)
+
+;;; --------------------------------------------------------------------
 ;;; structs
 
   (check
@@ -2731,6 +2742,27 @@
 
 (parametrise ((check-test-name	'tag-setter))
 
+;;; built-in tags
+
+  (check
+      (let (({S <string>} (string-copy "ciao")))
+	(tag-setter S [1] #\I)
+	(tag-getter S [1]))
+    => #\I)
+
+  (check
+      (let (({S <string>} (string-copy "ciao")))
+	(tag-setter S [3] #\O)
+	S)
+    => "ciaO")
+
+  (check
+      (receive-and-return ({S <string>})
+	  (string-copy "ciao")
+	(tag-setter S [3] #\O))
+    => "ciaO")
+
+;;; --------------------------------------------------------------------
 ;;; structs
 
   (check
@@ -2831,6 +2863,29 @@
   #t)
 
 
+(parametrise ((check-test-name	'tag-dispatch/builtins))
+
+;;; strings
+
+  (check
+      (tag-dispatch "ciao" = "hello")
+    => #f)
+
+  (check
+      (tag-dispatch "ciao" = "ciao")
+    => #t)
+
+  (check
+      (tag-dispatch "ciao" substring 1 3)
+    => "ia")
+
+  (check
+      (tag-dispatch "ciao" list)
+    => '(#\c #\i #\a #\o))
+
+  #t)
+
+
 (parametrise ((check-test-name	'tag-dispatch/structs))
 
   (check
@@ -2839,8 +2894,7 @@
 	  (a b c))
 	(define {O alpha}
 	  (make-alpha 1 2 3))
-	;;In this syntax the dispatching form is evaluated by CHI-BODY.
-	(O a))
+	(tag-dispatch O a))
     => 1)
 
   (check
@@ -2849,9 +2903,9 @@
 	  (a b c))
 	(define {O alpha}
 	  (make-alpha 1 2 3))
-	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
-	;;CHI-EXPR.
-	(values (O a) (O b) (O c)))
+	(values (tag-dispatch O a)
+		(tag-dispatch O b)
+		(tag-dispatch O c)))
     => 1 2 3)
 
   #t)
@@ -2905,6 +2959,88 @@
 	(values (tag-dispatch O a1) (tag-dispatch O a2) (tag-dispatch O a3)
 		(tag-dispatch O b1) (tag-dispatch O b2) (tag-dispatch O b3)))
     => 1 2 3 4 5 6)
+
+  #t)
+
+
+(parametrise ((check-test-name	'implicit-dispatching))
+
+;;; structs
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In this syntax the dispatching form is evaluated by CHI-BODY.
+	(O a))
+    => 1)
+
+  (check
+      (let ()
+	(define-struct alpha
+	  (a b c))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
+	;;CHI-EXPR.
+	(values (O a) (O b) (O c)))
+    => 1 2 3)
+
+;;; --------------------------------------------------------------------
+;;; records
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	(alpha? O))
+    => #t)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In this syntax  the dispatching form is  evaluated by CHI-EXPR
+	;;after being processed by CHI-BODY*.
+	(O a))
+    => 1)
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable a) (mutable b) (mutable c)))
+	(define {O alpha}
+	  (make-alpha 1 2 3))
+	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
+	;;CHI-EXPR*.
+	(values (O a) (O b) (O c)))
+    => 1 2 3)
+
+;;; --------------------------------------------------------------------
+;;; record types with parents
+
+  (check
+      (let ()
+	(define-record-type alpha
+	  (fields (mutable   a1)
+		  (immutable a2)
+		  (mutable   a3)))
+	(define-record-type beta
+	  (parent alpha)
+	  (fields (mutable   b1)
+		  (immutable b2)
+		  (mutable   b3)))
+	(define {O beta}
+	  (make-beta 1 2 3 4 5 6))
+	(list (O a1) (O a2) (O a3)
+	      (O b1) (O b2) (O b3)))
+    => '(1 2 3 4 5 6))
 
   #t)
 
@@ -3203,88 +3339,6 @@
   		(tag-getter O [e])
   		(tag-getter O [f])))
     => 11 2 33 44 55 66)
-
-  #t)
-
-
-(parametrise ((check-test-name	'implicit-dispatching))
-
-;;; structs
-
-  (check
-      (let ()
-	(define-struct alpha
-	  (a b c))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	;;In this syntax the dispatching form is evaluated by CHI-BODY.
-	(O a))
-    => 1)
-
-  (check
-      (let ()
-	(define-struct alpha
-	  (a b c))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
-	;;CHI-EXPR.
-	(values (O a) (O b) (O c)))
-    => 1 2 3)
-
-;;; --------------------------------------------------------------------
-;;; records
-
-  (check
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b) (mutable c)))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	(alpha? O))
-    => #t)
-
-  (check
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b) (mutable c)))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	;;In this syntax  the dispatching form is  evaluated by CHI-EXPR
-	;;after being processed by CHI-BODY*.
-	(O a))
-    => 1)
-
-  (check
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b) (mutable c)))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
-	;;CHI-EXPR*.
-	(values (O a) (O b) (O c)))
-    => 1 2 3)
-
-;;; --------------------------------------------------------------------
-;;; record types with parents
-
-  (check
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable   a1)
-		  (immutable a2)
-		  (mutable   a3)))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields (mutable   b1)
-		  (immutable b2)
-		  (mutable   b3)))
-	(define {O beta}
-	  (make-beta 1 2 3 4 5 6))
-	(list (O a1) (O a2) (O a3)
-	      (O b1) (O b2) (O b3)))
-    => '(1 2 3 4 5 6))
 
   #t)
 

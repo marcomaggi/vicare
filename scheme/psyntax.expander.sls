@@ -7014,6 +7014,18 @@
      (syntax-violation ?who ?msg ?expr-stx))
     ))
 
+(define-syntax stx-internal-error
+  ;;Convenience wrapper for raising syntax violations.
+  ;;
+  (syntax-rules (quote)
+    ((_ ?expr-stx)
+     (syntax-violation #f "Vicare: internal error: invalid syntax" ?expr-stx))
+    ((_ ?expr-stx ?msg)
+     (syntax-violation #f (string-append "Vicare: internal error: " ?msg) ?expr-stx))
+    ((_ ?expr-stx ?msg ?who)
+     (syntax-violation ?who (string-append "Vicare: internal error: " ?msg) ?expr-stx))
+    ))
+
 (module (syntax-error
 	 syntax-violation
 	 %raise-unbound-error)
