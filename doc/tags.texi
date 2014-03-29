@@ -137,7 +137,14 @@ of additional values.  Example:
 
 (tag-assert (<fixnum> <fixnum> . <list>) (nums))
 @end example
+
+Notice that a standalone tag identifier is a valid improper list retvals
+signature.
 @end itemize
+
+If a tag identifier in @meta{retvals-signature} is @class{unspecified}:
+no expand--time check is performed and run--time check forms are
+inserted.
 @end defun
 
 @c page
