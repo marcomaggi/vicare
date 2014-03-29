@@ -1243,6 +1243,7 @@ and the fields are meant to hold fixnums.
 * typed object specs intro getter::     Property getter maker.
 * typed object specs intro setter::     Property setter maker.
 * typed object specs intro dispatcher:: Method dispatcher.
+* typed object specs intro caster::     Object type caster.
 @end menu
 
 @c page
@@ -1619,6 +1620,72 @@ and its implementation can be:
      #`(lambda (@{_ <fixnum>@} @{self <color>@})
          (<color>-shift self . #,arg*.stx)))
     (else #f)))
+@end example
+
+@c page
+@node typed object specs intro caster
+@subsubsection Object type caster
+
+
+If the object type supports casting from objects of other type: the
+caster maker is a function accepting 2 arguments and returning a single
+value, otherwise it is @false{}.  The caster maker arguments are:
+
+@enumerate
+@item
+@false{} or a tag identifier representing the type of the source object;
+@false{} is used when the type of the source object is unknown at
+expand--time.
+
+@item
+A syntax object representing the form which originated this dispatcher
+call.  If the caster maker raises a syntax violation exception: this
+value must be used as @code{form} field in the @condition{syntax}
+condition object.
+@end enumerate
+
+When the source tag is recognised and valid: the caster maker must
+return a syntax object representing an expression evaluating to an
+object conversion function.  It is a syntax object (wrapped or
+unwrapped) representing an expression; expanded by itself and evaluated
+it must return a callable object: a function accepting as single
+argument the source object and returning an object of the type
+represented by the target tag.
+
+When the source tag is invalid: the caster maker must raise a syntax
+violation exception.
+
+When the source tag is unknown and @false{} is used as argument: the
+caster maker must return a syntax object representing an expression;
+evaluating to an object conversion function.  It is a syntax object
+(wrapped or unwrapped) representing an expression; expanded by itself
+and evaluated it must return a callable object: a function accepting as
+single argument the source object and returning an object of the type
+represented by the target tag; this conversion function must determine
+at run--time the type of the source object.
+
+The caster maker is used to implement the expansions:
+
+@example
+((<string>) 123)        @expansion{} (string->number 123)
+((<string>) 'ciao)      @expansion{} (string->symbol 'ciao)
+@end example
+
+@noindent
+and its implementation can be:
+
+@example
+(define (caster-maker source-tag input-form.stx)
+  (if source-tag
+      (cond ((free-identifier=? source-tag #'<symbol>)
+             #'symbol->string)
+            ((free-identifier=? source-tag #'<number>)
+             #'number->string)
+            (else
+             (syntax-violation '<string>
+               "invalid cast source object type"
+               input-form.stx source-tag)))
+    #'any->string))
 @end example
 
 @c page
