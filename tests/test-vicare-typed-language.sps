@@ -2557,6 +2557,30 @@
   	(tag-cast <string> O))
     => "123")
 
+;;; --------------------------------------------------------------------
+
+  (check	;tag of expr known
+      ((<string>) 123)
+    => "123")
+
+  (check	;tag of expr known
+      ((<string>) 'ciao)
+    => "ciao")
+
+  (check	;tag of expr known
+      (((<string>) 'ciao) length)
+    => 4)
+
+  (check	;tag of expr is <unspecified>
+      (let ((O 123))
+  	((<string>) O))
+    => "123")
+
+  (check	;tag of expr is <unspecified>
+      (let ((O 123))
+  	(((<string>) O) length))
+    => 3)
+
   #t)
 
 

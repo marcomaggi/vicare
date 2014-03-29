@@ -74,8 +74,8 @@
 
 ;;;; chi procedures: syntax object type inspection
 
-(define (expr-syntax-type expr-stx lexenv)
-  ;;Determine the  syntax type of  an expression.  EXPR-STX  must be a  syntax object
+(define (expr-syntax-type expr.stx lexenv)
+  ;;Determine the  syntax type of  an expression.  EXPR.STX  must be a  syntax object
   ;;representing an expression.  Return 3 values:
   ;;
   ;;1..A symbol representing the syntax type.
@@ -92,80 +92,81 @@
   ;;
   ;;* The binding of the identifier or the type of car of the pair.
   ;;
-  (cond ((identifier? expr-stx)
-	 (let* ((id    expr-stx)
-		(label (id->label/intern id)))
-	   (unless label
-	     (%raise-unbound-error #f id id))
-	   (let* ((binding (label->syntactic-binding label lexenv))
-		  (type    (syntactic-binding-type binding)))
-	     (case type
-	       ((core-prim
-		 lexical global mutable
-		 core-macro! global-macro global-macro! macro macro! local-macro local-macro!
-		 import export library $module syntax
-		 local-ctv global-ctv
-		 displaced-lexical)
-		(values type (syntactic-binding-value binding) id))
-	       (($rtd)
-		(values 'type-maker-reference (syntactic-binding-value binding) id))
-	       (else
-		;;This will cause an error to be raised later.
-		(values 'other #f #f))))))
+  (syntax-match expr.stx ()
+    (?id
+     (identifier? expr.stx)
+     (let ((label (id->label/intern ?id)))
+       (unless label
+	 (%raise-unbound-error #f ?id ?id))
+       (let* ((binding (label->syntactic-binding label lexenv))
+	      (type    (syntactic-binding-type binding)))
+	 (case type
+	   ((core-prim
+	     lexical global mutable
+	     core-macro! global-macro global-macro! macro macro! local-macro local-macro!
+	     import export library $module syntax
+	     local-ctv global-ctv
+	     displaced-lexical)
+	    (values type (syntactic-binding-value binding) ?id))
+	   (($rtd)
+	    (values 'type-maker-reference (syntactic-binding-value binding) ?id))
+	   (else
+	    ;;This will cause an error to be raised later.
+	    (values 'other #f #f))))))
 
-	((syntax-pair? expr-stx)
-	 ;;Here we know that EXPR-STX has the format:
-	 ;;
-	 ;;   (?first-form ?form ...)
-	 ;;
-	 (let ((id (syntax-car expr-stx)))
-	   (cond ((identifier? id)
-		  ;;Here we know that EXPR-STX has the format:
-		  ;;
-		  ;;   (?id ?form ...)
-		  ;;
-		  (let ((label (id->label/intern id)))
-		    (unless label
-		      (%raise-unbound-error #f id id))
-		    (let* ((binding (label->syntactic-binding label lexenv))
-			   (type    (syntactic-binding-type binding)))
-		      (case type
-			((core-macro
-			  define define-syntax define-alias
-			  define-fluid-syntax define-fluid-override
-			  let-syntax letrec-syntax begin-for-syntax
-			  begin set! stale-when
-			  local-ctv global-ctv
-			  global-macro global-macro! local-macro local-macro! macro
-			  import export library module)
-			 (values type (syntactic-binding-value binding) id))
-			(($rtd)
-			 (values 'type-maker-application (syntactic-binding-value binding) id))
-			(else
-			 ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL,
-			 ;;MUTABLE.
-			 (values 'call #f #f))))))
-		 (else
-		  ;;Here we know that EXPR-STX has the format:
-		  ;;
-		  ;;   (?non-id ?form ...)
-		  ;;
-		  ;;where ?NON-ID can be anything but not an identifier.  In practice
-		  ;;the only valid syntax for this case is:
-		  ;;
-		  ;;   ((?first-subform ?subform ...) ?form ...)
-		  ;;
-		  ;;because ?NON-ID  must be  an expression  evaluating to  a closure
-		  ;;object.
-		  ;;
-		  (values 'call #f #f)))))
+    ((?tag)
+     (tag-identifier? ?tag)
+     (values 'tag-cast-operator #f ?tag))
 
-	(else
-	 (let ((datum (syntax->datum expr-stx)))
-	   (if (self-evaluating? datum)
-	       (values 'constant datum #f)
-	     ;;This will cause an error to be raised later.
-	     (values 'other #f #f))))))
+    ((?car . ?cdr)
+     (identifier? ?car)
+     ;;Here we know that EXPR.STX has the format:
+     ;;
+     ;;   (?car ?form ...)
+     ;;
+     (let ((label (id->label/intern ?car)))
+       (unless label
+	 (%raise-unbound-error #f ?car ?car))
+       (let* ((binding (label->syntactic-binding label lexenv))
+	      (type    (syntactic-binding-type binding)))
+	 (case type
+	   ((core-macro
+	     define define-syntax define-alias
+	     define-fluid-syntax define-fluid-override
+	     let-syntax letrec-syntax begin-for-syntax
+	     begin set! stale-when
+	     local-ctv global-ctv
+	     global-macro global-macro! local-macro local-macro! macro
+	     import export library module)
+	    (values type (syntactic-binding-value binding) ?car))
+	   (($rtd)
+	    (values 'type-maker-application (syntactic-binding-value binding) ?car))
+	   (else
+	    ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL,
+	    ;;MUTABLE.
+	    (values 'call #f #f))))))
+
+    ((?car . ?cdr)
+     ;;Here we know that EXPR.STX has the format:
+     ;;
+     ;;   (?non-id ?form ...)
+     ;;
+     ;;where ?NON-ID  can be anything  but not an  identifier.  In practice  the only
+     ;;valid syntax for this case is:
+     ;;
+     ;;   ((?first-subform ?subform ...) ?form ...)
+     ;;
+     ;;because ?NON-ID must be an expression evaluating to a closure object.
+     ;;
+     (values 'call #f #f))
+
+    (_
+     (let ((datum (syntax->datum expr.stx)))
+       (if (self-evaluating? datum)
+	   (values 'constant datum #f)
+	 ;;This will cause an error to be raised later.
+	 (values 'other #f #f))))
+    ))
 
 
 ;;;; chi procedures: helpers for SPLICE-FIRST-EXPAND
@@ -597,6 +598,11 @@
 	  ;;to the application of the struct or record maker.
 	  ;;
 	  (%process-type-maker-application expr-stx bind-val lexenv.run lexenv.expand))
+
+	 ((tag-cast-operator)
+	  (chi-expr (bless
+		     `(splice-first-expand (tag-cast ,kwd)))
+		    lexenv.run lexenv.expand))
 
 	 (else
 	  ;;(assertion-violation 'chi-expr "invalid type " type (strip expr-stx '()))
