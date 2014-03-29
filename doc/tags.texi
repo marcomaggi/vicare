@@ -375,6 +375,15 @@ expand--time, and @meta{tag} has a caster maker: the macro use expands
 into a form that evaluates @meta{expr} and validates that its return
 value is of type @meta{tag}; then it returns such value.
 @end itemize
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+
+(tag-cast <string> 123)         @result{} "123"
+(tag-cast <string> 'ciao)       @result{} "ciao"
+@end example
 @end deffn
 
 @c end of file

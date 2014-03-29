@@ -2122,48 +2122,49 @@
   (define (%retrieve-caster-maker target-tag)
     (cond ((identifier-object-type-spec target-tag)
 	   => (lambda (spec)
-		(or ($object-type-spec-caster-maker spec)
-		    ;;No cast operator is defined for ?TARGET-TAG.
-		    (stx-error input-form.stx "invalid object type for tag identifier without cast operator"))))
+		($object-type-spec-caster-maker spec)))
 	  (else
 	   (stx-internal-error input-form.stx "tag identifier without object type spec"))))
 
   (define (%cast-at-run-time target-tag expr.psi)
-    (let* ((caster-maker (%retrieve-caster-maker target-tag))
-	   (caster.stx   (caster-maker #f input-form.stx))
-	   (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
-	   (caster.core  (psi-core-expr caster.psi))
-	   (expr.core    (psi-core-expr expr.psi))
-	   (expr.sign    (psi-retvals-signature expr.psi)))
+    (cond ((%retrieve-caster-maker target-tag)
+	   => (lambda (caster-maker)
+		(let* ((caster.stx   (caster-maker #f input-form.stx))
+		       (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
+		       (caster.core  (psi-core-expr caster.psi))
+		       (expr.core    (psi-core-expr expr.psi))
+		       (expr.sign    (psi-retvals-signature expr.psi)))
+		  ;;This form  will either succeed or  raise an exception, so  we can
+		  ;;tag this PSI with the target tag.
+		  (make-psi (build-application no-source
+			      caster.core
+			      (list expr.core))
+			    (list target-tag)))))
+	  (else
+	   (%validate-and-return target-tag expr.psi))))
+
+  (define (%validate-and-return target-tag expr.psi)
+    (let* ((expr.core        (psi-core-expr expr.psi))
+  	   (expr.sign        (psi-retvals-signature expr.psi))
+  	   (validate.psi     (chi-expr (scheme-stx 'validate-with-predicate) lexenv.run lexenv.expand))
+  	   (validate.core    (psi-core-expr validate.psi))
+  	   (type-name.core   (build-data no-source
+  			       (syntax->datum target-tag)))
+  	   (predicate.psi    (chi-expr (bless
+  					`(tag-predicate ,target-tag))
+  				       lexenv.run lexenv.expand))
+  	   (predicate.core   (psi-core-expr predicate.psi))
+  	   (input-form.core  (build-data no-source
+  			       (syntax->datum input-form.stx))))
       ;;This form will either  succeed or raise an exception, so we  can tag this PSI
       ;;with the target tag.
       (make-psi (build-application no-source
-  		  caster.core
-  		  (list expr.core))
+  		  validate.core
+  		  (list type-name.core
+  			predicate.core
+  			expr.core
+  			input-form.core))
   		(list target-tag))))
-
-  ;; (define (%validate-and-return target-tag expr.psi)
-  ;;   (let* ((expr.core        (psi-core-expr expr.psi))
-  ;; 	   (expr.sign        (psi-retvals-signature expr.psi))
-  ;; 	   (validate.psi     (chi-expr (scheme-stx 'validate-with-predicate) lexenv.run lexenv.expand))
-  ;; 	   (validate.core    (psi-core-expr validate.psi))
-  ;; 	   (type-name.core   (build-data no-source
-  ;; 			       (syntax->datum target-tag)))
-  ;; 	   (predicate.psi    (chi-expr (bless
-  ;; 					`(tag-predicate ,target-tag))
-  ;; 				       lexenv.run lexenv.expand))
-  ;; 	   (predicate.core   (psi-core-expr predicate.psi))
-  ;; 	   (input-form.core  (build-data no-source
-  ;; 			       (syntax->datum input-form.stx))))
-  ;;     ;;This form will either  succeed or raise an exception, so we  can tag this PSI
-  ;;     ;;with the target tag.
-  ;;     (make-psi (build-application no-source
-  ;; 		  validate.core
-  ;; 		  (list type-name.core
-  ;; 			predicate.core
-  ;; 			expr.core
-  ;; 			input-form.core))
-  ;; 		(list target-tag))))
 
   (syntax-match input-form.stx ()
     ((_ ?target-tag ?expr)
@@ -2185,14 +2186,17 @@
 		(else
 		 ;;The tag of expression is incompatible with the requested tag.  Try
 		 ;;to select an appropriate caster operator.
-		 (let* ((caster-maker (%retrieve-caster-maker ?target-tag))
-			(caster.stx   (caster-maker ?source-tag input-form.stx))
-			(caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
-			(caster.core  (psi-core-expr caster.psi)))
-		   (make-psi (build-application (syntax-annotation input-form.stx)
-			       caster.core
-			       (list expr.core))
-			     (list ?target-tag))))))
+		 (cond ((%retrieve-caster-maker ?target-tag)
+			=> (lambda (caster-maker)
+			     (let* ((caster.stx   (caster-maker ?source-tag input-form.stx))
+				    (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
+				    (caster.core  (psi-core-expr caster.psi)))
+			       (make-psi (build-application (syntax-annotation input-form.stx)
+					   caster.core
+					   (list expr.core))
+					 (list ?target-tag)))))
+		       (else
+			(%validate-and-return ?target-tag expr.psi))))))
 
 	 (_
 	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
