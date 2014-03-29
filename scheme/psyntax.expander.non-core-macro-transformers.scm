@@ -506,6 +506,8 @@
 	   (else
 	    (%invalid-keys))))
 
+       (define %caster-maker #f)
+
        (define (,%dispatcher method-id arg*.stx input-form.stx)
 	 #f)
 
@@ -514,7 +516,7 @@
 				    (syntax ,type-id) (typ.top-id) (syntax ,predicate-id)
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker ,%setter-maker
-				    ,%dispatcher))
+				    %caster-maker ,%dispatcher))
 
        (typ.set-identifier-object-type-spec! (syntax ,type-id) object-type-spec)))
 
@@ -1064,6 +1066,8 @@
 	    (,%mutator-maker (syntax->datum #'?field-id) input-form-stx))
 	   (else #f)))
 
+       (define %caster-maker #f)
+
        (define (,%dispatcher method.sym arg*.stx input-form-stx)
 	 #f)
 
@@ -1077,7 +1081,7 @@
 				    (syntax ,foo) parent-id (syntax ,foo?)
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker ,%setter-maker
-				    ,%dispatcher))
+				    %caster-maker ,%dispatcher))
 
        (typ.set-identifier-object-type-spec! (syntax ,foo) object-type-spec)))
 

@@ -31,8 +31,7 @@
     boolean=?		symbol=?
     immediate?		code?
     transcoder?		weak-pair?
-    not			bwp-object
-    always-true		always-false)
+    not			bwp-object)
   (import
     (except (vicare)
 	    fixnum?		flonum?		bignum?
@@ -390,15 +389,6 @@
 
 (define-pred symbol=?  sys:symbol?  "expected symbol as argument")
 (define-pred boolean=? sys:boolean? "expected boolean as argument")
-
-
-;;;; miscellaneous predicate
-
-(define (always-true . args)
-  #t)
-
-(define (always-false . args)
-  #f)
 
 
 ;;;; done

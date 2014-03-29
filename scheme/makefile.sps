@@ -315,6 +315,7 @@
     "ikarus.debugger.sls"
     "ikarus.syntax-utilities.sls"
     "ikarus.environment-inquiry.sls"
+    "ikarus.object-utilities.sls"
     "ikarus.main.sls"
     ))
 
@@ -376,11 +377,12 @@
      (tag-validator				(core-macro . tag-validator))
      (tag-assert				(core-macro . tag-assert))
      (tag-assert-and-return			(core-macro . tag-assert-and-return))
-     (tag-dispatch				(core-macro . tag-dispatch))
      (tag-accessor				(core-macro . tag-accessor))
      (tag-mutator				(core-macro . tag-mutator))
      (tag-getter				(core-macro . tag-getter))
      (tag-setter				(core-macro . tag-setter))
+     (tag-dispatch				(core-macro . tag-dispatch))
+     (tag-cast					(core-macro . tag-cast))
      (splice-first-expand			(core-macro . splice-first-expand))
      (unsafe					(core-macro . unsafe))
      (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
@@ -3667,11 +3669,12 @@
     (tag-validator				$expander-tags)
     (tag-assert					$expander-tags)
     (tag-assert-and-return			$expander-tags)
-    (tag-dispatch				$expander-tags)
     (tag-accessor				$expander-tags)
     (tag-mutator				$expander-tags)
     (tag-getter					$expander-tags)
     (tag-setter					$expander-tags)
+    (tag-dispatch				$expander-tags)
+    (tag-cast					$expander-tags)
 
     (<unspecified>				$expander-tags)
     (<top>					$expander-tags)
@@ -3802,6 +3805,14 @@
     (retvals-signature-violation?		$type-specs)
     (retvals-signature-violation-expected-signature	$type-specs)
     (retvals-signature-violation-returned-signature	$type-specs)
+
+;;;; built-in object types utilities
+
+    ;;Remember that bindings that have  no library listed here are still
+    ;;exported by (psyntax system $all).
+
+    (any->symbol)
+    (any->string)
 
     ))
 

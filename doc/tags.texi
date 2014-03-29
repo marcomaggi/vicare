@@ -19,6 +19,7 @@ in the typed Scheme language, @ref{typed, Experimental typed language}.
 * tags syntaxes fields::        Accessing and mutating fields.
 * tags syntaxes keys::          Special setter and getter syntaxes.
 * tags syntaxes dispatch::      Dispatching methods.
+* tags syntaxes casting::       Converting objects.
 @end menu
 
 @c page
@@ -45,7 +46,10 @@ In practice, this syntax is equivalent to:
 
 
 @deffn Syntax tag-validator @meta{tag} @meta{expr}
+@deffnx Syntax tag-validator @meta{tag} <>
 @deffnx Syntax tag-validator @meta{tag} @meta{expr} @meta{input-form}
+@deffnx Syntax tag-validator @meta{tag} <> @meta{input-form}
+@deffnx {Auxiliary Syntax} <>
 Expand into an expression that applies the predicate of @meta{tag} to
 the result of evaluating @meta{expr}:
 
@@ -58,6 +62,10 @@ returns unspecified values.
 If the predicate returns @false{}: an exception is raised with compound
 condition object of type @condition{expression-return-value-violation}.
 @end itemize
+
+If @meta{expr} is not present and @code{<>} is used instead: the macro
+use expands into a function to be later applied to an arbitrary object
+to perform the validation.
 
 The optional @meta{input-form} must be a symbolic expression
 representing the form which originally generated this macro expansion;
@@ -319,5 +327,54 @@ name of a method or a field of @meta{expr}.
 (tag-dispatch O c)                      @result{} 3
 @end example
 @end defun
+
+@c page
+@node tags syntaxes casting
+@subsection Converting objects
+
+
+The following bindings are exported by the library @library{vicare
+expander tags}.
+
+
+@deffn Syntax tag-cast @meta{tag} @meta{expr}
+Expand to an expression that guarantees to return an object of type
+@meta{tag}.
+
+@meta{expr} must be an expression evaluating to a single value.
+
+@itemize
+@item
+If it is possible to determine the type of @meta{expr} at expand--time:
+
+@itemize -
+@item
+If the type of @meta{expr} is equal to or a subtag of @meta{tag}:
+the macro use expands to @meta{expr} itself.
+
+@item
+If the type of @meta{expr} is recognised by the caster maker of
+@meta{tag}: the macro use expands to a form that evaluates @meta{expr}
+and converts it to a @meta{tag} object as specified by the caster maker.
+
+@item
+If the type of @meta{expr} is incompatible with @meta{tag} or @meta{tag}
+has no caster maker: an exception is raised at expand--time.
+@end itemize
+
+@item
+If it is @strong{not} possible to determine the type of @meta{expr} at
+expand--time, but @meta{tag} has a caster maker: the macro use expands
+into a form that evaluates @meta{expr}, determines its type at
+run--time, and converts it to an object of type @meta{tag} as specified
+by the caster maker.
+
+@item
+If it is @strong{not} possible to determine the type of @meta{expr} at
+expand--time, and @meta{tag} has a caster maker: the macro use expands
+into a form that evaluates @meta{expr} and validates that its return
+value is of type @meta{tag}; then it returns such value.
+@end itemize
+@end deffn
 
 @c end of file

@@ -52,14 +52,15 @@
 
 (define* (validate-with-predicate {type-name symbol?} {pred procedure?} obj input-form)
   ;;The  tag validator  is used  to validate  an object  type as  belonging to  a tag
-  ;;specification; it must raise an exception  or just return void.  In practice this
-  ;;function is useful only for the TAG-ASSERT syntax and similar.
+  ;;specification; it must  raise an exception or just return  the object itself.  In
+  ;;practice this function is useful only for the TAG-ASSERT syntax and similar.
   ;;
   ;;TYPE-NAME is  typically the symbol name  of a tag identifier.   PRED is typically
   ;;the  predicate  function  from  the   "object-type-spec"  of  a  tag  identifier.
   ;;INPUT-FORM is a sexp representing the expression that evaluated to OBJ.
   ;;
-  (unless (pred obj)
+  (if (pred obj)
+      obj
     (expression-return-value-violation type-name "invalid object type" input-form obj)))
 
 
@@ -70,14 +71,14 @@
   (let ((tag-id   (S <top>))
 	(pred-id  (S always-true)))
     (set-identifier-object-type-spec! tag-id
-      (%make-object-type-spec '(vicare:expander:tags:<top>)
-			      tag-id #f pred-id  #f #f  #f #f  #f)))
+      (%make-object-type-spec '(vicare:expander:tags:<top>) tag-id pred-id
+			      #f #f  #f #f  #f #f #f)))
 
   (let ((tag-id  (S <unspecified>))
 	(pred-id (S always-true)))
     (set-identifier-object-type-spec! tag-id
-      (%make-object-type-spec '(vicare:expander:tags:<unspecified>)
-			      tag-id #f pred-id  #f #f  #f #f  #f)))
+      (%make-object-type-spec '(vicare:expander:tags:<unspecified>) tag-id pred-id
+			      #f #f  #f #f  #f #f #f)))
 
   (%basic '<procedure>		'<top>		'procedure?)
   (%basic '<boolean>		'<top>		'boolean?)
@@ -118,6 +119,13 @@
       (else
        (syntax-violation '<symbol> "unknown field name" input-form.stx field.sym))))
 
+  (define (%caster-maker source-tag input-form.stx)
+    (if source-tag
+	(cond ((free-id=? source-tag (S <string>))		(S string->symbol))
+	      (else
+	       (syntax-violation '<symbol> "invalid cast source object type" input-form.stx source-tag)))
+      (S any->symbol)))
+
   (define (%dispatcher method.sym arg*.stx input-form.stx)
     (case method.sym
       ((putprop)	(M putprop))
@@ -130,7 +138,8 @@
     (make-object-type-spec 'vicare:expander:tags:<symbol>
 			   (S <symbol>) (S <top>) (S symbol?)
 			   %accessor-maker %mutator-maker
-			   #f #f %dispatcher))
+			   #f #f
+			   %caster-maker %dispatcher))
 
   (set-identifier-object-type-spec! (S <symbol>) type-spec))
 
@@ -149,7 +158,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<keyword>
 			   (S <keyword>) (S <top>) (S keyword?)
-			   %accessor-maker #f  #f #f  #f))
+			   %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <keyword>) type-spec))
 
@@ -187,7 +196,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<symbol>
 			   (S <pointer>) (S <top>) (S pointer?)
-			   %accessor-maker %mutator-maker  #f #f  #f))
+			   %accessor-maker %mutator-maker  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <pointer>) type-spec))
 
@@ -217,7 +226,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<char>
 			   (S <char>) (S <top>) (S char?)
-			   %accessor-maker #f  #f #f  #f))
+			   %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <char>) type-spec))
 
@@ -236,7 +245,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<transcoder>
 			   (S <transcoder>) (S <top>) (S transcoder?)
-			   %accessor-maker #f  #f #f  #f))
+			   %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <transcoder>) type-spec))
 
@@ -284,7 +293,7 @@
 			   (S <pair>) (S <top>) (S pair?)
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
-			   %dispatcher))
+			   #f %dispatcher))
 
   (set-identifier-object-type-spec! (S <pair>) type-spec))
 
@@ -350,11 +359,36 @@
       ((=)			(M string=?))
       (else			#f)))
 
+  (define (%caster-maker source-tag input-form.stx)
+    (if source-tag
+	(cond ((free-id=? source-tag (S <symbol>))
+	       (S symbol->string))
+	      ((or (free-id=? source-tag (S <fixnum>))
+		   (free-id=? source-tag (S <flonum>))
+		   (free-id=? source-tag (S <ratnum>))
+		   (free-id=? source-tag (S <bignum>))
+		   (free-id=? source-tag (S <compnum>))
+		   (free-id=? source-tag (S <cflonum>))
+		   (free-id=? source-tag (S <exact-integer>))
+		   (free-id=? source-tag (S <integer-valued>))
+		   (free-id=? source-tag (S <integer>))
+		   (free-id=? source-tag (S <rational-valued>))
+		   (free-id=? source-tag (S <rational>))
+		   (free-id=? source-tag (S <real-valued>))
+		   (free-id=? source-tag (S <real>))
+		   (free-id=? source-tag (S <complex>))
+		   (free-id=? source-tag (S <number>)))
+	       (S number->string))
+	      (else
+	       (syntax-violation '<string> "invalid cast source object type" input-form.stx source-tag)))
+      (S any->string)))
+
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<string>
 			   (S <string>) (S <top>) (S string?)
 			   %accessor-maker %mutator-maker
-			   %getter-maker %setter-maker %dispatcher))
+			   %getter-maker %setter-maker
+			   %caster-maker %dispatcher))
 
   (set-identifier-object-type-spec! (S <string>) type-spec))
 
@@ -458,7 +492,7 @@
       (make-object-type-spec 'vicare:expander:tags:<fixnum>
 			     (S <fixnum>) (S <exact-integer>) (S fixnum?)
 			     %accessor-maker #f  #f #f
-			     %dispatcher))
+			     #f %dispatcher))
 
     (set-identifier-object-type-spec! (S <fixnum>) type-spec))
 

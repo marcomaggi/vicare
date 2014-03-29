@@ -653,6 +653,8 @@
 		;False or a getter maker procedure.
    setter-maker
 		;False or a setter maker procedure.
+   caster-maker
+		;False or a caster maker procedure.
    dispatcher
 		;False or a method dispatcher procedure.
    parent-spec
@@ -678,6 +680,7 @@
 			     #f ;mutator-maker
 			     #f ;getter-maker
 			     #f ;setter-maker
+			     #f ;cast-maker
 			     #f ;method-dispatcher
 			     parent-spec)))
 
@@ -689,6 +692,7 @@
     {mutator	false-or-procedure?}
     {getter	false-or-procedure?}
     {setter	false-or-procedure?}
+    {caster	false-or-procedure?}
     {dispatcher	false-or-procedure?})
    (when (free-id=? parent-id <unspecified>)
      (procedure-argument-violation __who__
@@ -696,7 +700,7 @@
    (let* ((parent-spec (identifier-object-type-spec parent-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
-			     accessor mutator getter setter dispatcher parent-spec))))
+			     accessor mutator getter setter caster dispatcher parent-spec))))
 
 (define (false-or-object-type-spec? obj)
   (or (not obj)

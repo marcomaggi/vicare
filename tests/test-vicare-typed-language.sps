@@ -80,6 +80,16 @@
 	       (else E))
        . ?body))))
 
+(define-syntax catch-expression-return-value-violation
+  (syntax-rules ()
+    ((_ ?verbose . ?body)
+     (guard (E ((expression-return-value-violation? E)
+		(when ?verbose
+		  (debug-print (condition-message E)))
+		(condition-irritants E))
+	       (else E))
+       . ?body))))
+
 (define-syntax catch-expand-time-signature-violation
   (syntax-rules ()
     ((_ ?verbose . ?body)
@@ -2212,6 +2222,45 @@
   #t)
 
 
+(parametrise ((check-test-name	'tag-predicate))
+
+  (check
+      ((tag-predicate <fixnum>) 123)
+    => #t)
+
+  (check
+      ((tag-predicate <fixnum>) "123")
+    => #f)
+
+  (check
+      (is-a? 123 <top>)
+    => #t)
+
+  (check
+      ((tag-predicate <top>) 123)
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'tag-validator))
+
+  (check
+      (tag-validator <fixnum> 123)
+    => 123)
+
+  (check
+      (catch-expression-return-value-violation #f
+	(tag-validator <fixnum> "123"))
+    => '((tag-validator <fixnum> "123") "123"))
+
+  (check
+      (tag-validator <top> 123)
+    => 123)
+
+  #t)
+
+
 (parametrise ((check-test-name	'tag-assert))
 
   (check
@@ -2448,6 +2497,65 @@
 	(values (alpha? (tag-assert-and-return (alpha) O))
 		(beta?  (tag-assert-and-return (beta)  O))))
     => #t #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'tag-cast))
+
+  (check	;demo
+      (let ((O "ciao"))
+	(tag-assert-and-return (<string>) O))
+    => "ciao")
+
+  (check	;demo
+      (let ((O "ciao"))
+	((splice-first-expand (tag-assert-and-return (<string>))) O))
+    => "ciao")
+
+  (check	;demo
+      (catch-expand-time-signature-violation #f
+	(%eval '(let (({O <fixnum>} 123))
+		  ((splice-first-expand (tag-assert-and-return (<string>))) O))))
+    => '(<string>) '(<fixnum>))
+
+  (check	;demo
+      (let ((O "ciao"))
+	(((splice-first-expand (tag-assert-and-return (<string>))) O) [1]))
+    => #\i)
+
+  (check	;demo
+      (let ((O "ciao"))
+	(let-syntax ((type (syntax-rules ()
+			     ((_)
+			      (splice-first-expand (tag-assert-and-return (<string>)))))))
+	  (((type)O) [1])))
+    => #\i)
+
+  ;; (check	;demo
+  ;;     (catch-expand-time-signature-violation #t
+  ;; 	(%eval '(let ((O 123))
+  ;; 		  (((splice-first-expand (tag-assert-and-return (<string>))) O) [1]))))
+  ;;   => #\i)
+
+;;; --------------------------------------------------------------------
+
+  (check	;tag of expr known
+      (tag-cast <string> 123)
+    => "123")
+
+  (check	;tag of expr known
+      (tag-cast <string> 'ciao)
+    => "ciao")
+
+  (check	;tag of expr known
+      ((tag-cast <string> 'ciao) length)
+    => 4)
+
+  (check	;tag of expr is <unspecified>
+      (let ((O 123))
+  	(tag-cast <string> O))
+    => "123")
 
   #t)
 

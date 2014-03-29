@@ -335,6 +335,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.numerics.flonums.div-and-mod.sls		\
 	scheme/ikarus.numerics.bitwise.misc.sls			\
 	scheme/ikarus.numerics.complex-numbers.sls		\
+	scheme/ikarus.object-utilities.sls			\
 	scheme/ikarus.options.sls				\
 	scheme/ikarus.pairs.sls					\
 	scheme/ikarus.pointers.sls				\

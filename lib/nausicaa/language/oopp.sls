@@ -489,6 +489,7 @@
 		    #f)
 		  (define (%setter-maker keys.stx input-form.stx)
 		    #f)
+		  (define %caster-maker #f)
 		  (define (%dispatcher method-sym arg*.stx input-form-stx)
 		    #f)
 		  (define type-spec
@@ -496,7 +497,7 @@
 						      #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
 						      %accessor-maker %mutator-maker
 						      %getter-maker %setter-maker
-						      %dispatcher))
+						      %caster-maker %dispatcher))
 		  (type-specs.set-identifier-object-type-spec! #'THE-TAG type-spec))
 
 		(lambda (stx)
@@ -844,6 +845,7 @@
 		    #f)
 		  (define (%setter-maker keys.stx input-form.stx)
 		    #f)
+		  (define %caster-maker #f)
 		  (define (%dispatcher method-sym arg*.stx input-form-stx)
 		    #f)
 		  (define type-spec
@@ -851,7 +853,7 @@
 						      #'THE-TAG #'THE-PARENT #'THE-PREDICATE
 						      %accessor-maker %mutator-maker
 						      %getter-maker %setter-maker
-						      %dispatcher))
+						      %caster-maker %dispatcher))
 		  (type-specs.set-identifier-object-type-spec! #'THE-TAG type-spec))
 
 		(lambda (stx)

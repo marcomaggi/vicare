@@ -7156,9 +7156,10 @@
 
 (define (retvals-signature-violation expr.stx expected-retvals-signature returned-retvals-signature)
   (raise
-   (condition (make-syntax-violation expr.stx #f)
+   (condition (make-retvals-signature-violation (syntax-unwrap expected-retvals-signature)
+						(syntax-unwrap returned-retvals-signature))
 	      (make-message-condition "expand-time returned values signature mismatch")
-	      (make-retvals-signature-violation expected-retvals-signature returned-retvals-signature))))
+	      (make-syntax-violation expr.stx #f))))
 
 
 ;;;; R6RS programs and libraries helpers
