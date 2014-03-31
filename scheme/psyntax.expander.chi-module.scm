@@ -1073,8 +1073,7 @@
 		   (body-form^*.stx (push-lexical-contour
 					(make-filled-rib ?arg* lab*)
 				      (append validation*.stx
-					      (%build-retvals-validation-form (and (null? validation*.stx)
-										   (option.enable-arguments-validation?))
+					      (%build-retvals-validation-form (not (null? validation*.stx))
 									      retvals-signature.tags body-form*.stx)))))
 	      ;;Here  we know  that the  formals signature  is a  proper list  of tag
 	      ;;identifiers with the same structure of FORMALS.STX.
@@ -1095,8 +1094,7 @@
 					  (make-filled-rib (cons ?rest-arg ?arg*)
 							   (cons rest-lab  lab*))
 					(append validation*.stx
-						(%build-retvals-validation-form (and (null? validation*.stx)
-										     (option.enable-arguments-validation?))
+						(%build-retvals-validation-form (not (null? validation*.stx))
 										retvals-signature.tags body-form*.stx)))))
 		;;Here we  know that the formals  signature is an improper  list with
 		;;the same structure of FORMALS.STX.
@@ -1140,46 +1138,44 @@
     ;;
     (define-syntax-rule (%recur)
       (%build-formals-validation-form* ($cdr arg*) ($cdr tag*) rest-arg rest-tag))
-    (if (option.enable-arguments-validation?)
-	(cond ((pair? arg*)
-	       (if (or (free-id=? ($car tag*) (untagged-tag-id))
-		       (free-id=? ($car tag*) (top-tag-id)))
-		   (%recur)
-		 (cons (bless
-			`(tag-procedure-argument-validator ,($car tag*) ,($car arg*)))
-		       (%recur))))
-	      ((or (not rest-tag)
-		   (free-id=? rest-tag (untagged-tag-id))
-		   (free-id=? rest-tag (top-tag-id)))
-	       '())
-	      (else
-	       (list (bless
-		      `(tag-procedure-argument-validator ,rest-tag ,rest-arg)))))
-      '()))
-
-  (define (%build-retvals-validation-form has-no-validations? retvals-signature.tags body-form*.stx)
-    (cond (has-no-validations?
-	   ;;No need to wrap the body in a LET syntax.
-	   (if (and retvals-signature.tags
-		    (option.enable-arguments-validation?))
-	       (receive (head*.stx last.stx)
-		   (proper-list->head-and-last body-form*.stx)
-		 (append head*.stx
-			 (bless
-			  `((tag-assert-and-return ,retvals-signature.tags ,last.stx)))))
-	     body-form*.stx))
+    (cond ((pair? arg*)
+	   (if (or (free-id=? ($car tag*) (untagged-tag-id))
+		   (free-id=? ($car tag*) (top-tag-id)))
+	       (%recur)
+	     (cons (bless
+		    `(tag-procedure-argument-validator ,($car tag*) ,($car arg*)))
+		   (%recur))))
+	  ((or (not rest-tag)
+	       (free-id=? rest-tag (untagged-tag-id))
+	       (free-id=? rest-tag (top-tag-id)))
+	   '())
 	  (else
-	   ;;Wrap the body.
-	   ;;
-	   ;;NOTE I have tried different solutions to avoid this LET wrapping without
-	   ;;success.   Notice  that wrapping  the  TAG-PROCEDURE-ARGUMENT-VALIDATION
-	   ;;forms into  DEFINE syntaxes followed  by the  body forms has  not worked
-	   ;;because  it  can  generate  binding  conflicts  with  the  body  defines
-	   ;;capturing variable  references in  the validation forms.   (Marco Maggi;
-	   ;;Mon Mar 31, 2014)
-	   ;;
-	   (if (and retvals-signature.tags
-		    (option.enable-arguments-validation?))
+	   (list (bless
+		  `(tag-procedure-argument-validator ,rest-tag ,rest-arg))))))
+
+  (define (%build-retvals-validation-form has-arguments-validators? retvals-signature.tags body-form*.stx)
+    ;;Add the return values validation to the last form in the body; return a list of
+    ;;body forms.
+    ;;
+    ;;When there are arguments validators: the body forms are wrapped in a LET syntax
+    ;;with no bindings to create an internal lexical scope.
+    ;;
+    ;;The  argument  HAS-ARGUMENTS-VALIDATORS?   is  really  required  to  avoid  LET
+    ;;wrapping when  not needed;  without it:  expanding a  LAMBDA clause  causes the
+    ;;generation of infinite nested LET syntaxes.
+    ;;
+    ;;NOTE I have tried different solutions to avoid this LET wrapping either without
+    ;;success or  introducing unwanted (by  me) complications.  Notice  that wrapping
+    ;;the TAG-PROCEDURE-ARGUMENT-VALIDATION  forms into  DEFINE syntaxes  followed by
+    ;;the body  forms has not worked  because it can generate  binding conflicts with
+    ;;the body defines capturing variable references in the validation forms.  Notice
+    ;;that, whatever solution we use, we have to take into accound that when the code
+    ;;is expanded  with arguments  validation turned off:  the validation  forms will
+    ;;expand  to  empty run-time  code,  but  we  still want  expand-time  signatures
+    ;;validation.  (Marco Maggi; Mon Mar 31, 2014)
+    ;;
+    (cond (has-arguments-validators?
+	   (if retvals-signature.tags
 	       (receive (head*.stx last.stx)
 		   (proper-list->head-and-last body-form*.stx)
 		 (bless
@@ -1187,7 +1183,15 @@
 		      ,@head*.stx
 		      (tag-assert-and-return ,retvals-signature.tags ,last.stx)))))
 	     (bless
-	      `((let () . ,body-form*.stx)))))))
+	      `((let () . ,body-form*.stx)))))
+	  (else
+	   (if retvals-signature.tags
+	       (receive (head*.stx last.stx)
+		   (proper-list->head-and-last body-form*.stx)
+		 (append head*.stx
+			 (bless
+			  `((tag-assert-and-return ,retvals-signature.tags ,last.stx)))))
+	     body-form*.stx))))
 
   #| end of module |# )
 
