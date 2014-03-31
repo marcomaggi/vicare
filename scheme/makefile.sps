@@ -374,7 +374,8 @@
      ($slot-ref					(core-macro . $slot-ref))
      ($slot-set!				(core-macro . $slot-set!))
      (tag-predicate				(core-macro . tag-predicate))
-     (tag-validator				(core-macro . tag-validator))
+     (tag-procedure-argument-validator		(core-macro . tag-procedure-argument-validator))
+     (tag-return-value-validator		(core-macro . tag-return-value-validator))
      (tag-assert				(core-macro . tag-assert))
      (tag-assert-and-return			(core-macro . tag-assert-and-return))
      (tag-accessor				(core-macro . tag-accessor))
@@ -572,7 +573,7 @@
      (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
 							      &expression-return-value-violation-rcd)))
 ;;;
-     (<unspecified>				(macro . <unspecified>))
+     (<untagged>				(macro . <untagged>))
      (<top>					(macro . <top>))
      (<boolean>					(macro . <boolean>))
      (<char>					(macro . <char>))
@@ -3666,7 +3667,8 @@
 ;;; expander tags
 
     (tag-predicate				$expander-tags)
-    (tag-validator				$expander-tags)
+    (tag-procedure-argument-validator		$expander-tags)
+    (tag-return-value-validator			$expander-tags)
     (tag-assert					$expander-tags)
     (tag-assert-and-return			$expander-tags)
     (tag-accessor				$expander-tags)
@@ -3676,7 +3678,7 @@
     (tag-dispatch				$expander-tags)
     (tag-cast					$expander-tags)
 
-    (<unspecified>				$expander-tags)
+    (<untagged>					$expander-tags)
     (<top>					$expander-tags)
     (<boolean>					$expander-tags)
     (<char>					$expander-tags)
@@ -3729,8 +3731,10 @@
 
 ;;; --------------------------------------------------------------------
 
-    (top-id					$type-specs)
-    (validate-with-predicate			$type-specs)
+    (top-tag-id					$type-specs)
+    (procedure-tag-id				$type-specs)
+    (untagged-tag-id				$type-specs)
+    (list-tag-id				$type-specs)
 
     (tagged-identifier-syntax?			$type-specs)
     (list-of-tagged-bindings?			$type-specs)
@@ -3809,8 +3813,10 @@
 ;;;; built-in object types utilities
 
     ;;Remember that bindings that have  no library listed here are still
-    ;;exported by (psyntax system $all).
+    ;;exported by the library "(psyntax system $all)".
 
+    (procedure-argument-validation-with-predicate)
+    (return-value-validation-with-predicate)
     (any->symbol)
     (any->string)
 

@@ -67,7 +67,7 @@ where @class{my-tag} is a tag identifier and @class{top} is its parent
 tag.  Tag identifiers are organised in a tree hierarchy, with subtags
 inheriting properties of supertags; by convention, @class{top} is the
 parent of all the tag identifiers, the root of the tree, with the
-exception of @class{unspecified}.  @class{top} and @class{unspecified}
+exception of @class{untagged}.  @class{top} and @class{untagged}
 have no parent.
 
 @c ------------------------------------------------------------
@@ -194,7 +194,7 @@ When the callable has one or more return values: a proper or improper
 list of tag identifiers is used to represent them.  When the callable
 has no return values: null is used.  When the callable has an
 unspecified number of return values: @false{} is used.
-@class{unspecified} is used when a value has unspecified type.
+@class{untagged} is used when a value has unspecified type.
 @end table
 @end deftp
 
@@ -236,7 +236,7 @@ has the following fields:
 @table @code
 @item tags
 A proper or improper list of tag identifiers, with null and a standalone
-tagged identifier being acceptable.  @class{unspecified} is used when a
+tagged identifier being acceptable.  @class{untagged} is used when a
 value has unspecified type.
 @end table
 @end deftp
@@ -388,7 +388,7 @@ If @var{stx} is a tagged or untagged identifier, return 2 values: the
 identifier representing the binding name and the identifier representing
 the tag; otherwise raise an exception with condition type
 @condition{syntax}.  When no tag is present: the tag identifier defaults
-to @class{unspecified}.
+to @class{untagged}.
 
 @example
 #!vicare
@@ -508,7 +508,7 @@ Assume @var{stx} is a syntax object representing a proper list of
 possibly tagged binding identifiers; parse the list and, when
 successful, return 2 values: a list of identifiers representing the
 binding identifiers, a list of identifiers representing the type tags;
-@class{unspecified} is used when no tag is present.  If an error occurs
+@class{untagged} is used when no tag is present.  If an error occurs
 raise an exception with condition object type @condition{syntax}.
 
 The identifiers must be distinct according to @func{bound-identifier=?}.

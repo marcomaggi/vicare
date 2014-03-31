@@ -45,10 +45,8 @@ In practice, this syntax is equivalent to:
 @end deffn
 
 
-@deffn Syntax tag-validator @meta{tag} @meta{expr}
-@deffnx Syntax tag-validator @meta{tag} <>
-@deffnx Syntax tag-validator @meta{tag} @meta{expr} @meta{input-form}
-@deffnx Syntax tag-validator @meta{tag} <> @meta{input-form}
+@deffn Syntax tag-procedure-argument-validator @meta{tag} @meta{expr}
+@deffnx Syntax tag-procedure-argument-validator @meta{tag} <>
 @deffnx {Auxiliary Syntax} <>
 Expand into an expression that applies the predicate of @meta{tag} to
 the result of evaluating @meta{expr}:
@@ -56,7 +54,29 @@ the result of evaluating @meta{expr}:
 @itemize
 @item
 If the predicate returns @true{}: nothing happens and the expression
-returns unspecified values.
+returns the result of evaluating @meta{expr}.
+
+@item
+If the predicate returns @false{}: an exception is raised with compound
+condition object of type @condition{procedure-argument-violation}.
+@end itemize
+
+If @meta{expr} is not present and @code{<>} is used instead: the macro
+use expands into a function to be later applied to an arbitrary object
+to perform the validation.
+@end deffn
+
+
+@deffn Syntax tag-return-value-validator @meta{tag} @meta{expr}
+@deffnx Syntax tag-return-value-validator @meta{tag} <>
+@deffnx {Auxiliary Syntax} <>
+Expand into an expression that applies the predicate of @meta{tag} to
+the result of evaluating @meta{expr}:
+
+@itemize
+@item
+If the predicate returns @true{}: nothing happens and the expression
+returns the result of evaluating @meta{expr}.
 
 @item
 If the predicate returns @false{}: an exception is raised with compound
@@ -66,10 +86,6 @@ condition object of type @condition{expression-return-value-violation}.
 If @meta{expr} is not present and @code{<>} is used instead: the macro
 use expands into a function to be later applied to an arbitrary object
 to perform the validation.
-
-The optional @meta{input-form} must be a symbolic expression
-representing the form which originally generated this macro expansion;
-it is used for descriptive error messages.
 @end deffn
 
 

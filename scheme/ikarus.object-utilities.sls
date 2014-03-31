@@ -25,15 +25,23 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (library (ikarus.object-utilities)
   (export
-    any->symbol		any->string
+    ;; conversion
+    any->symbol			any->string
 
-    always-true		always-false)
+    ;; predicates
+    always-true			always-false
+
+    ;; validation
+    procedure-argument-validation-with-predicate
+    return-value-validation-with-predicate)
   (import (except (vicare)
 		  any->symbol		any->string
-		  always-true		always-false))
+		  always-true		always-false
+		  procedure-argument-validation-with-predicate
+		  return-value-validation-with-predicate))
 
 
 ;;;; conversion
@@ -62,6 +70,39 @@
 
 (define (always-false . args)
   #f)
+
+
+;;;; object type validation
+
+(define* (procedure-argument-validation-with-predicate {type-name symbol?} {pred procedure?} obj)
+  ;;Validate  OBJ as  Scheme object  satisfying  the predicate  PRED.  If  successful
+  ;;return OBJ  itself, otherwise raise  an exception with compound  condition object
+  ;;type "&procedure-argument-violation".
+  ;;
+  ;;This function is used  as tag validator by the tagged  language.  It validates an
+  ;;object type as  belonging to a tag  specification; it must raise  an exception or
+  ;;just return the object  itself.  TYPE-NAME is typically the symbol  name of a tag
+  ;;identifier.  PRED is typically the predicate function from the "object-type-spec"
+  ;;of a tag identifier.
+  ;;
+  (if (pred obj)
+      obj
+    (procedure-argument-violation type-name "invalid object type" obj)))
+
+(define* (return-value-validation-with-predicate {type-name symbol?} {pred procedure?} obj)
+  ;;Validate  OBJ as  Scheme object  satisfying  the predicate  PRED.  If  successful
+  ;;return OBJ  itself, otherwise raise  an exception with compound  condition object
+  ;;type "&expression-return-value-violation".
+  ;;
+  ;;This function is used  as tag validator by the tagged  language.  It validates an
+  ;;object type as  belonging to a tag  specification; it must raise  an exception or
+  ;;just return the object  itself.  TYPE-NAME is typically the symbol  name of a tag
+  ;;identifier.  PRED is typically the predicate function from the "object-type-spec"
+  ;;of a tag identifier.
+  ;;
+  (if (pred obj)
+      obj
+    (expression-return-value-violation type-name "invalid object type" obj)))
 
 
 ;;;; done

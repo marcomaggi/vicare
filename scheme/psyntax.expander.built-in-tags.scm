@@ -48,36 +48,20 @@
       (make-object-type-spec uid tag-id parent-id pred-id))))
 
 
-;;;; tag validator helper function
-
-(define* (validate-with-predicate {type-name symbol?} {pred procedure?} obj input-form)
-  ;;The  tag validator  is used  to validate  an object  type as  belonging to  a tag
-  ;;specification; it must  raise an exception or just return  the object itself.  In
-  ;;practice this function is useful only for the TAG-ASSERT syntax and similar.
-  ;;
-  ;;TYPE-NAME is  typically the symbol name  of a tag identifier.   PRED is typically
-  ;;the  predicate  function  from  the   "object-type-spec"  of  a  tag  identifier.
-  ;;INPUT-FORM is a sexp representing the expression that evaluated to OBJ.
-  ;;
-  (if (pred obj)
-      obj
-    (expression-return-value-violation type-name "invalid object type" input-form obj)))
-
-
 (define (initialise-type-spec-for-built-in-object-types)
-  ;;The tags "<top>"  and "<unspecified>" are special because they  are the only ones
-  ;;having  #f in  the parent  spec field.   "<unspecified>" is  the default  tag for
-  ;;untagged bindings.
-  (let ((tag-id   (S <top>))
+  ;;The tags  "<top>" and  "<untagged>" are  special because they  are the  only ones
+  ;;having #f in the parent spec field.  "<untagged>" is the default tag for untagged
+  ;;bindings.
+  (let ((tag-id   (top-tag-id))
 	(pred-id  (S always-true)))
     (set-identifier-object-type-spec! tag-id
       (%make-object-type-spec '(vicare:expander:tags:<top>) tag-id pred-id
 			      #f #f  #f #f  #f #f #f)))
 
-  (let ((tag-id  (S <unspecified>))
+  (let ((tag-id  (untagged-tag-id))
 	(pred-id (S always-true)))
     (set-identifier-object-type-spec! tag-id
-      (%make-object-type-spec '(vicare:expander:tags:<unspecified>) tag-id pred-id
+      (%make-object-type-spec '(vicare:expander:tags:<untagged>) tag-id pred-id
 			      #f #f  #f #f  #f #f #f)))
 
   (%basic '<procedure>		'<top>		'procedure?)
@@ -136,7 +120,7 @@
 
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<symbol>
-			   (S <symbol>) (S <top>) (S symbol?)
+			   (S <symbol>) (top-tag-id) (S symbol?)
 			   %accessor-maker %mutator-maker
 			   #f #f
 			   %caster-maker %dispatcher))
@@ -157,7 +141,7 @@
 
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<keyword>
-			   (S <keyword>) (S <top>) (S keyword?)
+			   (S <keyword>) (top-tag-id) (S keyword?)
 			   %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <keyword>) type-spec))
@@ -195,7 +179,7 @@
 
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<symbol>
-			   (S <pointer>) (S <top>) (S pointer?)
+			   (S <pointer>) (top-tag-id) (S pointer?)
 			   %accessor-maker %mutator-maker  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <pointer>) type-spec))
@@ -225,7 +209,7 @@
 
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<char>
-			   (S <char>) (S <top>) (S char?)
+			   (S <char>) (top-tag-id) (S char?)
 			   %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <char>) type-spec))
@@ -244,7 +228,7 @@
 
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<transcoder>
-			   (S <transcoder>) (S <top>) (S transcoder?)
+			   (S <transcoder>) (top-tag-id) (S transcoder?)
 			   %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <transcoder>) type-spec))
@@ -290,7 +274,7 @@
 
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<pair>
-			   (S <pair>) (S <top>) (S pair?)
+			   (S <pair>) (top-tag-id) (S pair?)
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
 			   #f %dispatcher))
@@ -385,7 +369,7 @@
 
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<string>
-			   (S <string>) (S <top>) (S string?)
+			   (S <string>) (top-tag-id) (S string?)
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
 			   %caster-maker %dispatcher))
@@ -397,7 +381,7 @@
 
   (set-identifier-object-type-spec! (S <vector>)
     (make-object-type-spec 'vicare:expander:tags:<vector>
-			   (S <vector>) (S <top>) (S vector?)))
+			   (S <vector>) (top-tag-id) (S vector?)))
 
 ;;; --------------------------------------------------------------------
 
@@ -407,15 +391,15 @@
 
   (set-identifier-object-type-spec! (S <bytevector>)
     (make-object-type-spec 'vicare:expander:tags:<bytevector>
-			   (S <bytevector>) (S <top>) (S bytevector?)))
+			   (S <bytevector>) (top-tag-id) (S bytevector?)))
 
   (set-identifier-object-type-spec! (S <hashtable>)
     (make-object-type-spec 'vicare:expander:tags:<hashtable>
-			   (S <hashtable>) (S <top>) (S hashtable?)))
+			   (S <hashtable>) (top-tag-id) (S hashtable?)))
 
   (set-identifier-object-type-spec! (S <struct>)
     (make-object-type-spec 'vicare:expander:tags:<struct>
-			   (S <struct>) (S <top>) (S struct?)))
+			   (S <struct>) (top-tag-id) (S struct?)))
 
   (set-identifier-object-type-spec! (S <struct-type-descriptor>)
     (make-object-type-spec 'vicare:expander:tags:<struct-type-descriptor>
@@ -435,7 +419,7 @@
 (define (%initialise-numeric-object-types)
   (set-identifier-object-type-spec! (S <number>)
     (make-object-type-spec 'vicare:expander:tags:<number>
-			   (S <number>) (S <top>) (S number?)))
+			   (S <number>) (top-tag-id) (S number?)))
 
   (set-identifier-object-type-spec! (S <complex>)
     (make-object-type-spec 'vicare:expander:tags:<complex>
@@ -524,7 +508,7 @@
 (define (%initialise-input/output-port-object-types)
   (set-identifier-object-type-spec! (S <port>)
     (make-object-type-spec 'vicare:expander:tags:<port>
-			   (S <port>) (S <top>) (S port?)))
+			   (S <port>) (top-tag-id) (S port?)))
 
   (set-identifier-object-type-spec! (S <input-port>)
     (make-object-type-spec 'vicare:expander:tags:<input-port>
@@ -620,8 +604,21 @@
 
 ;;;; helpers and utilities
 
-(define (top-id)
-  <top>)
+(let-syntax
+    ((define-tag-retriever (syntax-rules ()
+			     ((_ ?who ?tag)
+			      (define ?who
+				(let ((memoized-id #f))
+				  (lambda ()
+				    (or memoized-id
+					(receive-and-return (id)
+					    (scheme-stx '?tag)
+					  (set! memoized-id id))))))))))
+  (define-tag-retriever untagged-tag-id		<untagged>)
+  (define-tag-retriever top-tag-id		<top>)
+  (define-tag-retriever procedure-tag-id	<procedure>)
+  (define-tag-retriever list-tag-id		<list>)
+  #| end of let-syntax |# )
 
 (define (retvals-signature-of-datum datum)
   (cond ((boolean? datum)	(list (S <boolean>)))

@@ -1157,11 +1157,13 @@
     callable-signature=?		formals-signature=?		retvals-signature=?
 
     ;; expand-time object type specs: identifiers defining types
-    top-id					validate-with-predicate
     tag-identifier?				all-tag-identifiers?
     tag-super-and-sub?				formals-signature-super-and-sub?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
+
+    top-tag-id					procedure-tag-id
+    untagged-tag-id				list-tag-id
 
     make-object-type-spec			object-type-spec?
     object-type-spec-parent-spec
@@ -5890,8 +5892,10 @@
 (include "psyntax.expander.tagged-identifiers.scm" #t)
 (module (initialise-type-spec-for-built-in-object-types
 	 retvals-signature-of-datum
-	 top-id
-	 validate-with-predicate)
+	 untagged-tag-id
+	 top-tag-id
+	 procedure-tag-id
+	 list-tag-id)
   (import (vicare))
   (include "psyntax.expander.built-in-tags.scm" #t))
 
@@ -6154,34 +6158,32 @@
   ;;return a syntax object representing the input, possibly X itself.
   ;;
   ;;When  X is  a sexp  or a  (partially) unwrapped  syntax object:  raw
-  ;;symbols  in X  are considered  references  to bindings  in the  core
-  ;;language:  they are  converted to  identifiers having  empty lexical
-  ;;contexts.
+  ;;symbols in X are converted to:
   ;;
-  (receive-and-return (output-stx)
-      (mkstx (let recur ((input-stx input-stx))
-	       (cond ((<stx>? input-stx)
-		      input-stx)
-		     ((pair? input-stx)
-		      (cons (recur (car input-stx)) (recur (cdr input-stx))))
-		     ((symbol? input-stx)
-		      (scheme-stx input-stx))
-		     ((vector? input-stx)
-		      (list->vector (map recur (vector->list input-stx))))
-		     (else
-		      ;;If we are here INPUT-STX is a non-compound datum
-		      ;;(boolean, number,  string, ...,  struct, record,
-		      ;;null).
-		      (assert (non-compound-sexp? input-stx))
-		      input-stx)))
-	     '()  ;mark*
-	     '()  ;rib*
-	     '()) ;ae*
-    ;; (debug-print 'bless-input  (syntax->datum input-stx)
-    ;; 		 'bless-output (syntax->datum output-stx))
-    ;; (debug-print 'bless-input  input-stx
-    ;; 		 'bless-output output-stx)
-    (void)))
+  ;;* Identifiers  that will  be captured by  a core-primitive  from the
+  ;;  boot image.
+  ;;
+  ;;* Free identifiers that will not  be captured by any binding.  These
+  ;;  can be safely used for local bindings.
+  ;;
+  (mkstx (let recur ((input-stx input-stx))
+	   (cond ((<stx>? input-stx)
+		  input-stx)
+		 ((pair? input-stx)
+		  (cons (recur (car input-stx)) (recur (cdr input-stx))))
+		 ((symbol? input-stx)
+		  (scheme-stx input-stx))
+		 ((vector? input-stx)
+		  (list->vector (map recur (vector->list input-stx))))
+		 (else
+		  ;;If we are here INPUT-STX is a non-compound datum
+		  ;;(boolean, number,  string, ...,  struct, record,
+		  ;;null).
+		  (assert (non-compound-sexp? input-stx))
+		  input-stx)))
+	 '()	  ;mark*
+	 '()	  ;rib*
+	 '()))	  ;ae*
 
 (define (trace-bless input-stx)
   (receive-and-return (output-stx)
@@ -6219,35 +6221,6 @@
 			       (else stx))))
 	    (hashtable-set! scheme-stx-hashtable sym stx)
 	    stx)))))
-
-;;Here  we define  identifier syntaxes  expanding to  the identifier  of
-;;built-in tags.  We need to do all this mess rather than the simpler:
-;;
-;;   (define-constant <top>
-;;     (scheme-stx '<top>))
-;;
-;;because  to use  SCHEME-STX successfully  we  need the  boot image  to
-;;finish its initialisation; SCHEME-STX uses the library (psyntax system
-;;$all), and this library is initialised last.
-;;
-(let-syntax
-    ((define-tag-retriever (syntax-rules ()
-			     ((_ ?tag)
-			      (begin
-				(define retriever
-				  (let ((memoized-id #f))
-				    (lambda ()
-				      (or memoized-id
-					  (receive-and-return (id)
-					      (scheme-stx '?tag)
-					    #;(assert-tag-identifier? id)
-					    (set! memoized-id id))))))
-				(define-syntax ?tag
-				  (identifier-syntax (retriever))))))))
-  (define-tag-retriever <unspecified>)
-  (define-tag-retriever <top>)
-  (define-tag-retriever <procedure>)
-  #| end of let-syntax |# )
 
 
 ;;;; macro transformer modules
@@ -7028,6 +7001,7 @@
 
 (module (syntax-error
 	 syntax-violation
+	 retvals-signature-violation
 	 %raise-unbound-error)
 
   (define (syntax-error x . args)
@@ -7081,6 +7055,13 @@
      (syntax-violation who msg form #f))
     ((who msg form subform)
      (%syntax-violation who msg form (make-syntax-violation form subform))))
+
+  (define (retvals-signature-violation source-who form expected-retvals-signature returned-retvals-signature)
+    (%syntax-violation source-who "expand-time return values signature mismatch" form
+		       (condition
+			(make-retvals-signature-violation (syntax-unwrap expected-retvals-signature)
+							  (syntax-unwrap returned-retvals-signature))
+			(make-syntax-violation form #f))))
 
   (define (%syntax-violation source-who msg form condition-object)
     (define-constant __who__ 'syntax-violation)
@@ -7153,13 +7134,6 @@
 		   (source-position-line      position)
 		   (source-position-column    position))
 		(condition)))))
-
-(define (retvals-signature-violation expr.stx expected-retvals-signature returned-retvals-signature)
-  (raise
-   (condition (make-retvals-signature-violation (syntax-unwrap expected-retvals-signature)
-						(syntax-unwrap returned-retvals-signature))
-	      (make-message-condition "expand-time returned values signature mismatch")
-	      (make-syntax-violation expr.stx #f))))
 
 
 ;;;; R6RS programs and libraries helpers

@@ -624,7 +624,7 @@
       ;;
       ;;   (((?rator ?rand1 ...) ?rand2 ...) ?rand3 ...)
       ;;
-      (syntax-match input-form.stx ()
+      (syntax-match input-form.stx (values)
 	(((?nested-rator ?nested-rand* ...) ?rand* ...)
 	 ;;This is a function or macro application with possible splicing first expand.
 	 ;;We  expand it  considering the  case  of the  first subform  expanding to  a
@@ -647,6 +647,46 @@
 			     'splice-first-expand)))
 	     (%build-core-expression input-form.stx rator.psi ?rand* lexenv.run lexenv.expand))))
 
+	((values ?rand* ...)
+	 ;;A call  to VALUES  is special  because VALUES does  not have  a predefined
+	 ;;retvals  signature,  but  the   retvals  signature  equals  the  arguments
+	 ;;signature.
+	 (let* ((rand*.psi  (while-not-expanding-application-first-subform
+			     (chi-expr* ?rand* lexenv.run lexenv.expand)))
+		(rand*.core (map psi-core-expr rand*.psi))
+		(rand*.sign (map psi-retvals-signature rand*.psi))
+		(rator.core (build-primref no-source 'values)))
+	   ;;To be a valid VALUES argument an expression must have as signature:
+	   ;;
+	   ;;   (?tag)
+	   ;;
+	   ;;which means a  single return value.  Here we allow  #f, too, which means
+	   ;;we accept an argument having unknown retval signature.
+	   ;;
+	   ;;NOTE We could  reject #f as argument signature and  demand the caller of
+	   ;;VALUES to  cast the arguments, but  it would be to  much.  (Marco Maggi;
+	   ;;Mon Mar 31, 2014)
+	   (unless (and (list rand*.sign)
+			(for-all (lambda (sign)
+				   (or (not sign)
+				       (and (pair? sign)
+					    (null? (cdr sign)))))
+			  rand*.sign))
+	     (retvals-signature-violation 'values input-form.stx
+					  ;;expected signature
+					  (map (lambda (obj)
+						 (list (top-tag-id)))
+					    rand*.sign)
+					  rand*.sign))
+	   (make-psi (build-application (syntax-annotation input-form.stx)
+		       rator.core
+		       rand*.core)
+		     (map (lambda (sign)
+			    (if sign
+				(car sign)
+			      (untagged-tag-id)))
+		       rand*.sign))))
+
 	((?rator ?rand* ...)
 	 ;;This  is a  common function  application: ?RATOR  is not  a syntax  keyword.
 	 ;;Let's make sure that we expand ?RATOR first.
@@ -665,7 +705,7 @@
 	   ;;see at run-time what happens.
 	   (%process-unknown-rator-type input-form.stx rator.core rand*.stx lexenv.run lexenv.expand))
 	  ((?tag)
-	   (cond (($tag-super-and-sub? ?tag <procedure>)
+	   (cond (($tag-super-and-sub? ?tag (procedure-tag-id))
 		  ;;The rator is a procedure.  Good.  Return a procedure application.
 		  (let* ((rand*.psi  (while-not-expanding-application-first-subform
 				      (chi-expr* rand*.stx lexenv.run lexenv.expand)))
@@ -676,8 +716,8 @@
 			      ;;FIXME  Put   here  the   retvals  signature   of  the
 			      ;;procedure.  (Marco Maggi; Fri Mar 28, 2014)
 			      #f)))
-		 ((or (free-id=? ?tag <unspecified>)
-		      (free-id=? ?tag <top>))
+		 ((or (free-id=? ?tag (untagged-tag-id))
+		      (free-id=? ?tag (top-tag-id)))
 		  ;;The rator type is unknown.  Return a procedure application and we
 		  ;;will see at run-time what happens.
 		  (%process-unknown-rator-type input-form.stx rator.core rand*.stx lexenv.run lexenv.expand))
@@ -930,7 +970,7 @@
 	(make-psi (build-lambda (syntax-annotation ctxt-id)
 		    formals.core
 		    (psi-core-expr body.psi))
-		  (list <procedure>))))
+		  (list (procedure-tag-id)))))
     (syntax-match input-form.stx (brace)
       ((_ ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (%expand ?ctxt (bless
@@ -955,7 +995,7 @@
       (make-psi (build-lambda (syntax-annotation input-form.stx)
 		  formals.lex
 		  (psi-core-expr body.psi))
-		(list <procedure>))))
+		(list (procedure-tag-id)))))
 
   (define (chi-case-lambda input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
     ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
@@ -986,10 +1026,10 @@
       (make-psi (build-case-lambda (syntax-annotation input-form.stx)
 		  formals*.lex
 		  (map psi-core-expr body**.psi))
-		(list <procedure>))))
+		(list (procedure-tag-id)))))
 
-  (define (%chi-lambda-clause input-form.stx formals-stx body-form-stx* lexenv.run lexenv.expand)
-    ;;Expand a  LAMBDA syntax components  or a single CASE-LAMBDA  clause components.
+  (define (%chi-lambda-clause input-form.stx formals.stx body-form*.stx lexenv.run lexenv.expand)
+    ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
     ;;Return 2  values: a  proper or  improper list of  lex gensyms  representing the
     ;;formals; an PSI struct containint the language expression representing the body
     ;;of the clause.
@@ -1001,55 +1041,75 @@
     ;;NOTE The expander for the internal body will create yet another lexical contour
     ;;to hold the body's internal definitions.
     ;;
+    ;;When the formals are tagged, we want to transform:
+    ;;
+    ;;   (lambda ({_ <symbol>} {a <fixnum>} {b <string>})
+    ;;     ?body ... ?last-body)
+    ;;
+    ;;into:
+    ;;
+    ;;   (lambda (a b)
+    ;;     (tag-procedure-argument-validator <fixnum> a)
+    ;;     (tag-procedure-argument-validator <string> b)
+    ;;     (let ()
+    ;;       ?body ...
+    ;;       (tag-assert-and-return (<symbol>) ?last-body)))
+    ;;
     (while-not-expanding-application-first-subform
      ;;Here we support both the R6RS  standard LAMBDA formals and the extended tagged
      ;;formals, with or without rest argument.
-     (receive (standard-formals-stx signature)
-	 (parse-tagged-callable-spec-syntax formals-stx input-form.stx)
-       (syntax-match standard-formals-stx ()
+     (receive (standard-formals.stx formals-signature.tags retvals-signature.tags)
+	 (receive (standard-formals.stx callable-signature)
+	     (parse-tagged-callable-spec-syntax formals.stx input-form.stx)
+	   (values standard-formals.stx
+		   (callable-signature-formals-tags       callable-signature)
+		   (callable-signature-return-values-tags callable-signature)))
+       (syntax-match standard-formals.stx ()
 	 ;;Without rest argument.
 	 ((?arg* ...)
-	  (let ((lex* (map gensym-for-lexical-var ?arg*))
-		(lab* (map gensym-for-label       ?arg*)))
-	    (define body-form-stx*^
-	      (push-lexical-contour
-		  (make-filled-rib ?arg* lab*)
-		body-form-stx*))
-	    (define lexenv.run^
-	      (add-lexical-bindings lab* lex* lexenv.run))
-	    ;;Here  we know  that  the formals  signature  is a  proper  list of  tag
-	    ;;identifiers with the same structure of FORMALS-STX.
-	    (map set-label-tag!
-	      lab* (callable-signature-formals-tags signature))
-	    (values lex* (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
+	  (let* ((lex*        (map gensym-for-lexical-var ?arg*))
+		 (lab*        (map gensym-for-label       ?arg*)))
+	    (let* ((validation*.stx (%build-formals-validation-form* ?arg* formals-signature.tags #f #f))
+		   (body-form^*.stx (push-lexical-contour
+					(make-filled-rib ?arg* lab*)
+				      (append validation*.stx
+					      (%build-retvals-validation-form (and (null? validation*.stx)
+										   (option.enable-arguments-validation?))
+									      retvals-signature.tags body-form*.stx)))))
+	      ;;Here  we know  that the  formals signature  is a  proper list  of tag
+	      ;;identifiers with the same structure of FORMALS.STX.
+	      (map set-label-tag! lab* formals-signature.tags)
+	      (let ((lexenv.run^ (add-lexical-bindings lab* lex* lexenv.run)))
+		(values lex* (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand))))))
+
 	 ;;With rest argument.
 	 ((?arg* ... . ?rest-arg)
 	  (let ((lex*		(map gensym-for-lexical-var ?arg*))
 		(lab*		(map gensym-for-label       ?arg*))
 		(rest-lex	(gensym-for-lexical-var ?rest-arg))
 		(rest-lab	(gensym-for-label       ?rest-arg)))
-	    (define body-form-stx*^
-	      (push-lexical-contour
-		  (make-filled-rib (cons ?rest-arg ?arg*)
-				   (cons rest-lab  lab*))
-		body-form-stx*))
-	    (define lexenv.run^
-	      (add-lexical-bindings (cons rest-lab lab*)
-				    (cons rest-lex lex*)
-				    lexenv.run))
-	    ;;Here we know that the  formals signature is an improper list
-	    ;;with the same structure of FORMALS-STX.
-	    (let loop ((lab* lab*)
-		       (tags (callable-signature-formals-tags signature)))
-	      (if (pair? tags)
-		  (begin
-		    (set-label-tag! (car lab*) (car tags))
-		    (loop (cdr lab*) (cdr tags)))
-		(set-label-tag! rest-lab tags)))
-	    (values (append lex* rest-lex) ;yes, this builds an improper list
-		    (chi-internal-body body-form-stx*^ lexenv.run^ lexenv.expand))))
+	    (receive (arg-tag* rest-tag)
+		(improper-list->list-and-rest formals-signature.tags)
+	      (let* ((validation*.stx (%build-formals-validation-form* ?arg* arg-tag* ?rest-arg rest-tag))
+		     (body-form^*.stx (push-lexical-contour
+					  (make-filled-rib (cons ?rest-arg ?arg*)
+							   (cons rest-lab  lab*))
+					(append validation*.stx
+						(%build-retvals-validation-form (and (null? validation*.stx)
+										     (option.enable-arguments-validation?))
+										retvals-signature.tags body-form*.stx)))))
+		;;Here we  know that the formals  signature is an improper  list with
+		;;the same structure of FORMALS.STX.
+		(map set-label-tag! lab* arg-tag*)
+		(set-label-tag! rest-lab rest-tag)
+		(let ((lexenv.run^     (add-lexical-bindings (cons rest-lab lab*)
+							     (cons rest-lex lex*)
+							     lexenv.run)))
+		  (values (append lex* rest-lex) ;yes, this builds an improper list
+			  (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))))))
+
 	 (_
-	  (stx-error formals-stx "invalid syntax"))))))
+	  (stx-error formals.stx "invalid syntax"))))))
 
   (define (%chi-lambda-clause* input-form.stx formals*.stx body-form**.stx lexenv.run lexenv.expand)
     ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
@@ -1068,6 +1128,66 @@
 	    (%chi-lambda-clause* input-form.stx (cdr formals*.stx) (cdr body-form**.stx) lexenv.run lexenv.expand)
 	  (values (cons formals-lex formals-lex*)
 		  (cons body.psi    body*.psi))))))
+
+  (define (%build-formals-validation-form* arg* tag* rest-arg rest-tag)
+    ;;Build and return a list of syntax objects representing expressions like:
+    ;;
+    ;;   (tag-procedure-argument-validator ?tag ?arg)
+    ;;
+    ;;excluding  the formals  in  which the  tag is  "<top>"  or "<untagged>",  whose
+    ;;argument  are always  valid.   When there  is no  rest  argument: REST-ARG  and
+    ;;REST-TAG must be #f.
+    ;;
+    (define-syntax-rule (%recur)
+      (%build-formals-validation-form* ($cdr arg*) ($cdr tag*) rest-arg rest-tag))
+    (if (option.enable-arguments-validation?)
+	(cond ((pair? arg*)
+	       (if (or (free-id=? ($car tag*) (untagged-tag-id))
+		       (free-id=? ($car tag*) (top-tag-id)))
+		   (%recur)
+		 (cons (bless
+			`(tag-procedure-argument-validator ,($car tag*) ,($car arg*)))
+		       (%recur))))
+	      ((or (not rest-tag)
+		   (free-id=? rest-tag (untagged-tag-id))
+		   (free-id=? rest-tag (top-tag-id)))
+	       '())
+	      (else
+	       (list (bless
+		      `(tag-procedure-argument-validator ,rest-tag ,rest-arg)))))
+      '()))
+
+  (define (%build-retvals-validation-form has-no-validations? retvals-signature.tags body-form*.stx)
+    (cond (has-no-validations?
+	   ;;No need to wrap the body in a LET syntax.
+	   (if (and retvals-signature.tags
+		    (option.enable-arguments-validation?))
+	       (receive (head*.stx last.stx)
+		   (proper-list->head-and-last body-form*.stx)
+		 (append head*.stx
+			 (bless
+			  `((tag-assert-and-return ,retvals-signature.tags ,last.stx)))))
+	     body-form*.stx))
+	  (else
+	   ;;Wrap the body.
+	   ;;
+	   ;;NOTE I have tried different solutions to avoid this LET wrapping without
+	   ;;success.   Notice  that wrapping  the  TAG-PROCEDURE-ARGUMENT-VALIDATION
+	   ;;forms into  DEFINE syntaxes followed  by the  body forms has  not worked
+	   ;;because  it  can  generate  binding  conflicts  with  the  body  defines
+	   ;;capturing variable  references in  the validation forms.   (Marco Maggi;
+	   ;;Mon Mar 31, 2014)
+	   ;;
+	   (if (and retvals-signature.tags
+		    (option.enable-arguments-validation?))
+	       (receive (head*.stx last.stx)
+		   (proper-list->head-and-last body-form*.stx)
+		 (bless
+		  `((let ()
+		      ,@head*.stx
+		      (tag-assert-and-return ,retvals-signature.tags ,last.stx)))))
+	     (bless
+	      `((let () . ,body-form*.stx)))))))
 
   #| end of module |# )
 
@@ -1742,13 +1862,13 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%parse-define input-form-stx)
+  (define (%parse-define input-form.stx)
     ;;Syntax parser for R6RS's DEFINE and  extended tagged bindings syntax.  Return 4
     ;;values:
     ;;
     ;;1..The identifier of the binding variable.
     ;;
-    ;;2..An identifier representing the binding tag.  "<unspecified>" is used when no
+    ;;2..An identifier  representing the binding  tag.  "<untagged>" is used  when no
     ;;   tag is specified; "<procedure>" is used when a procedure is defined.
     ;;
     ;;3..False or an  object representing an instance  of "callable-signature"; false
@@ -1757,15 +1877,15 @@
     ;;4..A qualified  right-hand side expression  (QRHS) representing the  binding to
     ;;   create.
     ;;
-    (syntax-match input-form-stx (brace)
+    (syntax-match input-form.stx (brace)
       ;;Function definition with tagged return values.
       ((_ ((brace ?id ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature)
 	   (parse-tagged-callable-spec-syntax (bless
 					       `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
-					      input-form-stx)
-	 (values ?id <procedure> signature (cons 'defun input-form-stx))))
+					      input-form.stx)
+	 (values ?id (procedure-tag-id) signature (cons 'defun input-form.stx))))
 
       ;;Variable definition with tagged identifier.
       ((_ (brace ?id ?tag) ?val)
@@ -1781,18 +1901,18 @@
       ((_ (?id . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature)
-	   (parse-tagged-callable-spec-syntax ?fmls input-form-stx)
-	 (values ?id <procedure> signature (cons 'defun input-form-stx))))
+	   (parse-tagged-callable-spec-syntax ?fmls input-form.stx)
+	 (values ?id (procedure-tag-id) signature (cons 'defun input-form.stx))))
 
       ;;R6RS variable definition.
       ((_ ?id ?val)
        (identifier? ?id)
-       (values ?id <unspecified> #f (cons 'expr ?val)))
+       (values ?id (untagged-tag-id) #f (cons 'expr ?val)))
 
       ;;R6RS variable definition, no init.
       ((_ ?id)
        (identifier? ?id)
-       (values ?id <unspecified> #f (cons 'expr (bless '(void)))))
+       (values ?id (untagged-tag-id) #f (cons 'expr (bless '(void)))))
 
       ))
 

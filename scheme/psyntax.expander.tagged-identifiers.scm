@@ -141,7 +141,7 @@
 (define* (unspecified-formals-signature-syntax? {stx formals-signature-syntax?})
   ;;The argument STX must be a syntax object representing a formals signature syntax:
   ;;null or a proper  or improper list of tag identifiers.  Return true  if STX as at
-  ;;least one "<unspecified>" tag identifier; otherwise return false.
+  ;;least one "<untagged>" tag identifier; otherwise return false.
   ;;
   ($unspecified-formals-signature-syntax? stx))
 
@@ -150,17 +150,17 @@
     (() #f)
     ((?id . ?rest)
      (tag-identifier? ?id)
-     (or (free-id=? ?id <unspecified>)
+     (or (free-id=? ?id (untagged-tag-id))
 	 ($unspecified-formals-signature-syntax? ?rest)))
     (?rest
      (tag-identifier? ?rest)
-     (free-id=? ?rest <unspecified>))))
+     (free-id=? ?rest (untagged-tag-id)))))
 
 (define* (unspecified-retvals-signature-syntax? {stx retvals-signature-syntax?})
   ;;The argument STX must be a syntax object representing a retvals signature syntax:
   ;;false, null or a proper or improper  list of tag identifiers.  Return true if STX
-  ;;is  false or  the  signature  as at  least  one  "<unspecified>" tag  identifier;
-  ;;otherwise return false.
+  ;;is false or the signature as  at least one "<untagged>" tag identifier; otherwise
+  ;;return false.
   ;;
   ($unspecified-retvals-signature-syntax? stx))
 
@@ -184,8 +184,9 @@
     ((?super-tag . ?super-rest-tags)
      (syntax-match sub-signature ()
        ((?sub-tag . ?sub-rest-tags)
-	($tag-super-and-sub? ?super-tag ?sub-tag)
-	($formals-signature-super-and-sub? ?super-rest-tags ?sub-rest-tags))
+	(and (or (free-id=? ?super-tag (untagged-tag-id))
+		 ($tag-super-and-sub? ?super-tag ?sub-tag))
+	     ($formals-signature-super-and-sub? ?super-rest-tags ?sub-rest-tags)))
        (_ #f)))
 
     (?super-rest-tag
@@ -199,8 +200,9 @@
        ;;any type.
        ;;
        (()
-	(or (free-id=? ?super-rest-tag <top>)
-	    (free-id=? ?super-rest-tag (scheme-stx '<list>))))
+	(or (free-id=? ?super-rest-tag (top-tag-id))
+	    (free-id=? ?super-rest-tag (untagged-tag-id))
+	    (free-id=? ?super-rest-tag (list-tag-id))))
        ;;We want the following signatures to match:
        ;;
        ;;  #'(<number> . <top>)   #'(<complex> <fixnum> <fixnum>)
@@ -210,8 +212,9 @@
        ;;any type.
        ;;
        ((?sub-tag . ?sub-rest-tags)
-	(or (free-id=? ?super-rest-tag <top>)
-	    (free-id=? ?super-rest-tag (scheme-stx '<list>))))
+	(or (free-id=? ?super-rest-tag (top-tag-id))
+	    (free-id=? ?super-rest-tag (untagged-tag-id))
+	    (free-id=? ?super-rest-tag (list-tag-id))))
        (?sub-rest-tag
 	($tag-super-and-sub? ?super-rest-tag ?sub-rest-tag))
        (_ #f)))
@@ -352,10 +355,10 @@
     ))
 
 (define (parse-tagged-identifier-syntax stx)
-  ;;If STX  is a  tagged or  untagged identifier,  return 2  values: the
-  ;;identifier  representing   the  binding  name  and   the  identifier
-  ;;representing the tag; otherwise raise  an exception.  When no tag is
-  ;;present: the tag identifier defaults to "<unspecified>".
+  ;;If  STX is  a tagged  or  untagged identifier,  return 2  values: the  identifier
+  ;;representing the binding name and  the identifier representing the tag; otherwise
+  ;;raise  an exception.   When no  tag is  present: the  tag identifier  defaults to
+  ;;"<untagged>".
   ;;
   (syntax-match stx (brace)
     ((brace ?id ?tag)
@@ -364,7 +367,7 @@
        (values ?id ?tag)))
     (?id
      (identifier? ?id)
-     (values ?id <unspecified>))
+     (values ?id (untagged-tag-id)))
     ))
 
 
@@ -384,7 +387,7 @@
 ;;
 ;;and the return values are:
 ;;
-;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<unspecified>)
+;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<untagged>)
 ;;
 
 (case-define* parse-list-of-tagged-bindings
@@ -394,8 +397,8 @@
    ;;Assume STX  is a  syntax object  representing a proper  list of  possibly tagged
    ;;binding identifiers; parse  the list and return 2 values:  a list of identifiers
    ;;representing the  binding identifiers,  a list  of identifiers  representing the
-   ;;type tags; "<unspecified>" is used when no tag is present.  The identifiers must
-   ;;be distinct.
+   ;;type tags; "<untagged>" is used when no tag is present.  The identifiers must be
+   ;;distinct.
    ;;
    (define (%invalid-tagged-bindings-syntax form subform)
      (syntax-violation __who__ "invalid tagged bindings syntax" form subform))
@@ -417,7 +420,7 @@
 	    (identifier? ?id)
 	    (receive (id* tag*)
 		(recur ?other-id*)
-	      (values (cons ?id id*) (cons <unspecified> tag*))))
+	      (values (cons ?id id*) (cons (untagged-tag-id) tag*))))
 	   (_
 	    (if input-form-stx
 		(%invalid-tagged-bindings-syntax input-form-stx stx)
@@ -505,7 +508,7 @@
 	   (let recur ((?arg* ?arg*))
 	     (if (pair? ?arg*)
 		 (%process-args input-form-stx original-formals-stx recur ?arg*)
-	       (values ?rest-id <unspecified>)))
+	       (values ?rest-id (untagged-tag-id))))
 	 (%validate-formals input-form-stx original-formals-stx standard-formals-stx)))
 
       ;;Standard formals: untagged identifiers without rest argument.
@@ -514,7 +517,7 @@
        (for-all identifier? ?id*)
        (begin
 	 (%validate-formals input-form-stx original-formals-stx ?id*)
-	 (values ?id* (map (lambda (id) <unspecified>) ?id*))))
+	 (values ?id* (map (lambda (id) (untagged-tag-id)) ?id*))))
 
       ;;Standard formals: untagged identifiers with rest argument.
       ;;
@@ -523,13 +526,13 @@
 	    (identifier? ?rest-id))
        (begin
 	 (%validate-formals input-form-stx original-formals-stx (append ?id* ?rest-id))
-	 (values formals-stx (cons* (map (lambda (id) <unspecified>) ?id*) <unspecified>))))
+	 (values formals-stx (cons* (map (lambda (id) (untagged-tag-id)) ?id*) (untagged-tag-id)))))
 
       ;;Standard formals: untagged args.
       ;;
       (?args-id
        (identifier? ?args-id)
-       (values ?args-id <unspecified>))
+       (values ?args-id (untagged-tag-id)))
 
       ;;Possibly tagged identifiers without rest argument.
       ;;
@@ -550,7 +553,7 @@
 	  ;;Untagged argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals) (cons <unspecified> tags)))
+	   (values (cons ?id standard-formals) (cons (untagged-tag-id) tags)))
 	  ;;Tagged argument.
 	  ((brace ?id ?tag)
 	   (and (identifier? ?id)
@@ -659,10 +662,10 @@
 		;False or a method dispatcher procedure.
    parent-spec
 		;False or an instance of  "object-type-spec" describing the parent of
-		;this type.  Only "<top>" and  "<unspecified>" have this field set to
+		;this type.   Only "<top>"  and "<untagged>" have  this field  set to
 		;false; every other "object-type-spec" has a parent spec.  "<top>" is
-		;the implicit parent  of all the type specs.   "<unspecified>" is the
-		;tag of untagged bindings.
+		;the implicit parent of all the  type specs.  "<untagged>" is the tag
+		;of untagged bindings.
    ))
 
 (case-define* make-object-type-spec
@@ -670,9 +673,9 @@
     {type-id	identifier-bound?}
     {parent-id	tag-identifier?}
     {pred-stx	syntax-object?})
-   (when (free-id=? parent-id <unspecified>)
+   (when (free-id=? parent-id (untagged-tag-id))
      (procedure-argument-violation __who__
-       "<unspecified> cannot be a parent tag" uid type-id))
+       "<untagged> cannot be a parent tag" uid type-id))
    (let* ((parent-spec (identifier-object-type-spec parent-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
@@ -694,9 +697,9 @@
     {setter	false-or-procedure?}
     {caster	false-or-procedure?}
     {dispatcher	false-or-procedure?})
-   (when (free-id=? parent-id <unspecified>)
+   (when (free-id=? parent-id (untagged-tag-id))
      (procedure-argument-violation __who__
-       "<unspecified> cannot be a parent tag" uid type-id))
+       "<untagged> cannot be a parent tag" uid type-id))
    (let* ((parent-spec (identifier-object-type-spec parent-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
@@ -834,10 +837,10 @@
     ;;the name  of a method or  field of TAG or  one of its supertags  (the MEMBER.ID
     ;;argument); the ?ARG are additional operands (the ARG*.STX argument).
     ;;
-    (cond (($tag-super-and-sub? <procedure> tag)
+    (cond (($tag-super-and-sub? (procedure-tag-id) tag)
 	   input-form.stx)
-	  ((or (free-id=? tag <unspecified>)
-	       (free-id=? tag <top>))
+	  ((or (free-id=? tag (untagged-tag-id))
+	       (free-id=? tag (top-tag-id)))
 	   (%error-invalid-tagged-syntax input-form.stx))
 	  (else
 	   (%try-dispatcher (identifier-object-type-spec tag) (syntax->datum member.id)
@@ -958,11 +961,11 @@
 
 (define ($tag-super-and-sub? super-tag sub-tag)
   (or (free-id=? super-tag sub-tag)
-      (free-id=? <top> super-tag)
+      (free-id=? (top-tag-id) super-tag)
       (let ((pspec ($object-type-spec-parent-spec ($identifier-object-type-spec sub-tag))))
 	(and pspec
 	     (let ((sub-ptag ($object-type-spec-type-id pspec)))
-	       (and (not (free-id=? <top> sub-ptag))
+	       (and (not (free-id=? (top-tag-id) sub-ptag))
 		    ($tag-super-and-sub? super-tag sub-ptag)))))))
 
 (define (all-tag-identifiers? stx)

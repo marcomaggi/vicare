@@ -69,7 +69,8 @@
     (($slot-set!)				$slot-set!-transformer)
 
     ((tag-predicate)				tag-predicate-transformer)
-    ((tag-validator)				tag-validator-transformer)
+    ((tag-procedure-argument-validator)		tag-procedure-argument-validator-transformer)
+    ((tag-return-value-validator)		tag-return-value-validator-transformer)
     ((tag-assert)				tag-assert-transformer)
     ((tag-assert-and-return)			tag-assert-and-return-transformer)
     ((tag-accessor)				tag-accessor-transformer)
@@ -130,26 +131,24 @@
 
 ;;;; module core-macro-transformer: LAMBDA and CASE-LAMBDA
 
-(define (case-lambda-transformer expr-stx lexenv.run lexenv.expand)
+(define (case-lambda-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand  R6RS CASE-LAMBDA syntaxes from the top-level
-  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
-  ;;given LEXENV; return an PSI struct.
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return an PSI struct.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ (?formals* ?body* ?body** ...) ...)
-     (chi-case-lambda expr-stx ?formals*
-		      (map cons ?body* ?body**)
-		      lexenv.run lexenv.expand))
+     (chi-case-lambda input-form.stx ?formals* (map cons ?body* ?body**) lexenv.run lexenv.expand))
     ))
 
-(define (lambda-transformer expr-stx lexenv.run lexenv.expand)
+(define (lambda-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand R6RS LAMBDA syntaxes from the top-level built
-  ;;in environment.   Expand the syntax object  EXPR-STX in the context  of the given
-  ;;LEXENV; return a PSI struct.
+  ;;in environment.   Expand the syntax object  INPUT-FORM.STX in the context  of the
+  ;;given LEXENV; return a PSI struct.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?formals ?body ?body* ...)
-     (chi-lambda expr-stx ?formals (cons ?body ?body*)lexenv.run lexenv.expand))
+     (chi-lambda input-form.stx ?formals (cons ?body ?body*) lexenv.run lexenv.expand))
     ))
 
 
@@ -157,29 +156,35 @@
 
 (module (letrec-transformer letrec*-transformer)
 
-  (define (letrec-transformer expr-stx lexenv.run lexenv.expand)
+  (define (letrec-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand LETREC syntaxes from the top-level built in
-    ;;environment.  Expand  the syntax object  EXPR-STX in  the context of  the given
+    ;;environment.  Expand  the syntax object  INPUT-FORM.STX in  the context of  the given
     ;;LEXENV; return a PSI struct.
     ;;
-    (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec))
+    (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec))
 
-  (define (letrec*-transformer expr-stx lexenv.run lexenv.expand)
+  (define (letrec*-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand LETREC* syntaxes from  the top-level built
-    ;;in environment.  Expand the syntax object  EXPR-STX in the context of the given
+    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the given
     ;;LEXENV; return a PSI struct.
     ;;
-    (%letrec-helper expr-stx lexenv.run lexenv.expand build-letrec*))
+    (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec*))
 
-  (define (%letrec-helper expr-stx lexenv.run lexenv.expand core-lang-builder)
-    (syntax-match expr-stx ()
+  (define (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
+    (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the binding names are identifiers and without duplicates.
        (receive (lhs* tag*)
-	   (parse-list-of-tagged-bindings ?lhs* expr-stx)
+	   (parse-list-of-tagged-bindings ?lhs* input-form.stx)
 	 ;;Generate unique variable names and labels for the LETREC bindings.
-	 (let ((lex* (map gensym-for-lexical-var lhs*))
-	       (lab* (map gensym-for-label       lhs*)))
+	 (let ((lex*     (map gensym-for-lexical-var lhs*))
+	       (lab*     (map gensym-for-label       lhs*))
+	       (rhs*.stx (map (lambda (rhs.stx tag)
+				(if (free-id=? tag (untagged-tag-id))
+				    rhs.stx
+				  (bless
+				   `(tag-assert-and-return (,tag) ,rhs.stx))))
+			   ?rhs* tag*)))
 	   (map (lambda (label tag)
 		  (and tag (set-label-tag! label tag)))
 	     lab* tag*)
@@ -196,9 +201,9 @@
 	     (let ((body.psi (chi-internal-body (push-lexical-contour rib
 						  (cons ?body ?body*))
 						lexenv.run lexenv.expand))
-		   (rhs*.psi (chi-expr*         (map (lambda (rhs)
-						       (push-lexical-contour rib rhs))
-						  ?rhs*)
+		   (rhs*.psi (chi-expr*         (map (lambda (rhs.stx)
+						       (push-lexical-contour rib rhs.stx))
+						  rhs*.stx)
 						lexenv.run lexenv.expand)))
 	       (let* ((rhs*.core (map psi-core-expr rhs*.psi))
 		      (body.core (psi-core-expr body.psi))
@@ -1647,7 +1652,7 @@
     ))
 
 
-;;;; module core-macro-transformer: TAG-PREDICATE, TAG-VALIDATOR
+;;;; module core-macro-transformer: TAG-PREDICATE
 
 (define (tag-predicate-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's TAG-PREDICATE  syntaxes from  the
@@ -1674,35 +1679,48 @@
 	    (stx-internal-error input-form.stx "tag identifier without object-type-spec"))))
     ))
 
-(define (tag-validator-transformer input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function used  to expand  Vicare's TAG-VALIDATOR  syntaxes from  the
-  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
-  ;;context of the given LEXENV; return a PSI struct.
+
+;;;; module core-macro-transformer: TAG-PROCEDURE-ARGUMENT-VALIDATOR, TAG-RETURN-VALUE-VALIDATOR
+
+(define (tag-procedure-argument-validator-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to  expand Vicare's  TAG-PROCEDURE-ARGUMENT-VALIDATOR
+  ;;syntaxes  from the  top-level built  in  environment.  Expand  the syntax  object
+  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
-    (identifier-syntax 'tag-validator))
+    (identifier-syntax 'tag-procedure-argument-validator))
   (syntax-match input-form.stx (<>)
-    ((_ ?tag ?expr)
-     (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(validate-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr (quote ,input-form.stx)))
-	       lexenv.run lexenv.expand))
-    ((_ ?tag ?expr ?input-form)
-     (tag-identifier? ?tag)
-     (chi-expr (bless
-		`(validate-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr (quote ,?input-form)))
-	       lexenv.run lexenv.expand))
     ((_ ?tag <>)
      (tag-identifier? ?tag)
      (chi-expr (bless
 		`(lambda (obj)
-		   (validate-with-predicate (quote ,?tag) (tag-predicate ,?tag) obj (quote ,input-form.stx))))
+		   (procedure-argument-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) obj)))
 	       lexenv.run lexenv.expand))
-    ((_ ?tag <> ?input-form)
+    ((_ ?tag ?expr)
+     (tag-identifier? ?tag)
+     (chi-expr (bless
+		`(procedure-argument-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr))
+	       lexenv.run lexenv.expand))
+    ))
+
+(define (tag-return-value-validator-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to  expand Vicare's TAG-RETURN-VALUE-VALIDATOR syntaxes
+  ;;from the top-level built in environment.  Expand the syntax object INPUT-FORM.STX
+  ;;in the context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-return-value-validator))
+  (syntax-match input-form.stx (<>)
+    ((_ ?tag <>)
      (tag-identifier? ?tag)
      (chi-expr (bless
 		`(lambda (obj)
-		   (validate-with-predicate (quote ,?tag) (tag-predicate ,?tag) obj (quote ,?input-form))))
+		   (return-value-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) obj)))
+	       lexenv.run lexenv.expand))
+    ((_ ?tag ?expr)
+     (tag-identifier? ?tag)
+     (chi-expr (bless
+		`(return-value-validation-with-predicate (quote ,?tag) (tag-predicate ,?tag) ,?expr))
 	       lexenv.run lexenv.expand))
     ))
 
@@ -1722,7 +1740,7 @@
 	   (expr.core (psi-core-expr  expr.psi)))
       (make-psi (build-sequence no-source
 		  (list expr.core (build-void)))
-		(list <top>))))
+		(list (top-tag-id)))))
 
   (define (%run-time-check-output-form expr.core checker.psi)
     ;;We build a core language expression as follows:
@@ -1740,7 +1758,7 @@
 		  call.core
 		  (list (build-lambda no-source '() expr.core)
 			checker.core))
-		(list <top>))))
+		(list (top-tag-id)))))
 
   (syntax-match input-form.stx ()
     ((_ #f ?expr)
@@ -1749,8 +1767,8 @@
 
     ((_ ?retvals-signature ?expr)
      (and (identifier? ?retvals-signature)
-	  (free-identifier=? <top> ?retvals-signature))
-     ;;Any tuple of returned objects is of type <top>.
+	  (free-identifier=? (top-tag-id) ?retvals-signature))
+     ;;Any tuple of returned objects is of type "<top>".
      (%just-evaluate-the-expression ?expr))
 
     ((_ ?retvals-signature ?expr)
@@ -1769,7 +1787,7 @@
 			(checker.psi  (chi-expr (bless
 						 `(lambda ,TMP*
 						    ,@(map (lambda (tmp tag)
-							     `(tag-validator ,tag ,tmp ,input-form.stx))
+							     `(tag-return-value-validator ,tag ,tmp))
 							TMP* ?rv-tag*)
 						    (void)))
 						lexenv.run lexenv.expand)))
@@ -1780,9 +1798,9 @@
 			(checker.psi  (chi-expr (bless
 						 `(lambda (,@TMP* . rest-tmp)
 						    ,@(map (lambda (tmp tag)
-							     `(tag-validator ,tag ,tmp ,input-form.stx))
+							     `(tag-return-value-validator ,tag ,tmp))
 							TMP* ?rv-tag*)
-						    (tag-validator ,?rv-rest-tag rest-tmp ,input-form.stx)
+						    (tag-return-value-validator ,?rv-rest-tag rest-tmp)
 						    (void)))
 						lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi)))
@@ -1790,7 +1808,7 @@
 		(?rv-args-tag
 		 (let ((checker.psi  (chi-expr (bless
 						`(lambda args
-						   (tag-validator ,?rv-args-tag args ,input-form.stx)
+						   (tag-return-value-validator ,?rv-args-tag args)
 						   (void)))
 					       lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi)))
@@ -1803,12 +1821,12 @@
 	      ;;valid; assertion succeeded.  Just evaluate the expression.
 	      (make-psi (build-sequence no-source
 			  (list expr.core (build-void)))
-			(list <top>)))
+			(list (top-tag-id))))
 
 	     (else
 	      ;;The horror!!!  We  have established at expand-time  that the returned
 	      ;;values are of the wrong type; assertion failed.
-	      (retvals-signature-violation input-form.stx ?retvals-signature expr.sign)))))
+	      (retvals-signature-violation __who__ ?expr ?retvals-signature expr.sign)))))
 
     ((_ ?retvals-signature ?expr)
      ;;Let's use a descriptive error message here.
@@ -1854,8 +1872,8 @@
 
     ((_ ?retvals-signature ?expr)
      (and (identifier? ?retvals-signature)
-	  (free-identifier=? <top> ?retvals-signature))
-     ;;Any tuple of returned objects is of type <top>.
+	  (free-id=? (top-tag-id) ?retvals-signature))
+     ;;Any tuple of returned objects is of type "<top>".
      (chi-expr ?expr lexenv.run lexenv.expand))
 
     ((_ ?retvals-signature ?expr)
@@ -1873,7 +1891,7 @@
 			(checker.psi  (chi-expr (bless
 						 `(lambda ,TMP*
 						    ,@(map (lambda (tmp tag)
-							     `(tag-validator ,tag ,tmp ,input-form.stx))
+							     `(tag-return-value-validator ,tag ,tmp))
 							TMP* ?rv-tag*)
 						    (values . ,TMP*)))
 						lexenv.run lexenv.expand)))
@@ -1884,9 +1902,9 @@
 			(checker.psi  (chi-expr (bless
 						 `(lambda (,@TMP* . rest-tmp)
 						    ,@(map (lambda (tmp tag)
-							     `(tag-validator ,tag ,tmp ,input-form.stx))
+							     `(tag-return-value-validator ,tag ,tmp))
 							TMP* ?rv-tag*)
-						    (tag-validator ,?rv-rest-tag rest-tmp ,input-form.stx)
+						    (tag-return-value-validator ,?rv-rest-tag rest-tmp)
 						    (apply values ,@TMP* rest-tmp)))
 						lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi ?retvals-signature)))
@@ -1894,7 +1912,7 @@
 		(?rv-args-tag
 		 (let ((checker.psi  (chi-expr (bless
 						`(lambda args
-						   (tag-validator ,?rv-args-tag args ,input-form.stx)
+						   (tag-return-value-validator ,?rv-args-tag args)
 						   (apply values args)))
 					       lexenv.run lexenv.expand)))
 		   (%run-time-check-output-form expr.core checker.psi ?retvals-signature)))
@@ -1910,7 +1928,7 @@
 	     (else
 	      ;;The horror!!!  We  have established at expand-time  that the returned
 	      ;;values are of the wrong type; assertion failed.
-	      (retvals-signature-violation input-form.stx ?retvals-signature expr.sign)))))
+	      (retvals-signature-violation __who__ ?expr ?retvals-signature expr.sign)))))
 
     ((_ ?retvals-signature ?expr)
      ;;Let's use a descriptive error message here.
@@ -2177,7 +2195,7 @@
 	  (%cast-at-run-time ?target-tag expr.psi))
 
 	 ((?source-tag)
-	  (cond ((free-id=? ?source-tag <unspecified>)
+	  (cond ((free-id=? ?source-tag (untagged-tag-id))
 		 (%cast-at-run-time ?target-tag expr.psi))
 		((tag-super-and-sub? ?target-tag ?source-tag)
 		 ;;The expression  already has  the right type:  nothing to  do, just

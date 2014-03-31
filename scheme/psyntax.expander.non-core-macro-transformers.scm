@@ -169,7 +169,7 @@
 	   (bless '(quote #f))))))
 
     ;;Expander tags.
-    ((<unspecified> <top>
+    ((<untagged> <top>
       <boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure>
       <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
       <rational-valued> <rational> <integer> <integer-valued>
@@ -513,7 +513,7 @@
 
        (define object-type-spec
 	 (typ.make-object-type-spec (quote ,uid)
-				    (syntax ,type-id) (typ.top-id) (syntax ,predicate-id)
+				    (syntax ,type-id) (typ.top-tag-id) (syntax ,predicate-id)
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker ,%setter-maker
 				    %caster-maker ,%dispatcher))
@@ -1074,7 +1074,7 @@
        (define parent-id
 	 ,(if foo-parent
 	      `(syntax ,foo-parent)
-	    '(typ.top-id)))
+	    '(typ.top-tag-id)))
 
        (define object-type-spec
 	 (typ.make-object-type-spec (quote ,foo-uid)
@@ -1676,7 +1676,10 @@
 	 (parse-list-of-tagged-bindings ?lhs* expr-stx)
        (bless
 	`((lambda ,?lhs*
-	    ,?body . ,?body*) . ,?rhs*))))
+	    ,?body . ,?body*)
+	  . ,(map (lambda (rhs tag)
+		    `(tag-assert-and-return (,tag) ,rhs))
+	       ?rhs* tag*)))))
 
     ;;Extended tagged named syntax.
     ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
@@ -1686,7 +1689,10 @@
        (bless
 	`((letrec ((,?recur (lambda ,?lhs*
 			      ,?body . ,?body*)))
-	    ,?recur) . ,?rhs*))))
+	    ,?recur)
+	  . ,(map (lambda (rhs tag)
+		    `(tag-assert-and-return (,tag) ,rhs))
+	       ?rhs* tag*)))))
     ))
 
 (define (let*-macro expr-stx)
@@ -1719,16 +1725,19 @@
        (bless
 	`((letrec ((,?recur (trace-lambda ,?recur ,?lhs*
 					  ,?body . ,?body*)))
-	    ,?recur) . ,?rhs*))))
+	    ,?recur)
+	  . ,(map (lambda (rhs tag)
+		    `(tag-assert-and-return (,tag) ,rhs))
+	       ?rhs* tag*)))))
     ))
 
 
 ;;;; module non-core-macro-transformer: LET-VALUES
 
 (module (let-values-macro)
-  ;;Transformer function used to expand  R6RS LET-VALUES macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function  used to  expand R6RS LET-VALUES  macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
   ;;A LET-VALUES syntax like:
   ;;
@@ -1751,66 +1760,77 @@
   (define-fluid-override __who__
     (identifier-syntax 'let-values))
 
-  (define (let-values-macro expr-stx)
-    (syntax-match expr-stx ()
+  (define (let-values-macro input-form.stx)
+    (syntax-match input-form.stx ()
       ((_ () ?body ?body* ...)
        (cons* (bless 'let) '() ?body ?body*))
 
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (let ((standard-lhs* (map (lambda (lhs)
-				   (receive (standard-lhs signature)
-				       (parse-tagged-formals-syntax lhs expr-stx)
-				     standard-lhs))
-			      ?lhs*)))
+       (receive (lhs*.standard lhs*.signature)
+	   (let loop ((lhs*           ?lhs*)
+		      (lhs*.standard  '())
+		      (lhs*.signature '()))
+	     (if (null? lhs*)
+		 (values (reverse lhs*.standard)
+			 (reverse lhs*.signature))
+	       (receive (lhs.standard lhs.signature)
+		   (parse-tagged-formals-syntax (car lhs*) input-form.stx)
+		 (loop (cdr lhs*)
+		       (cons lhs.standard                           lhs*.standard)
+		       (cons (formals-signature-tags lhs.signature) lhs*.signature)))))
 	 (bless
-	  (let recur ((standard-lhs*  standard-lhs*)
-		      (tagged-lhs*    (syntax-unwrap ?lhs*))
+	  (let recur ((lhs*.standard  lhs*.standard)
+		      (lhs*.signature lhs*.signature)
+		      (lhs*.tagged    (syntax-unwrap ?lhs*))
 		      (rhs*           ?rhs*)
 		      (standard-old*  '())
 		      (tagged-old*    '())
 		      (new*           '()))
-	    (if (null? standard-lhs*)
+	    (if (null? lhs*.standard)
 		`(let ,(map list tagged-old* new*)
 		   ,?body . ,?body*)
-	      (syntax-match (car standard-lhs*) ()
+	      (syntax-match (car lhs*.standard) ()
 		((?standard-formal* ...)
 		 (receive (y* standard-old* tagged-old* new*)
-		     (%rename* ?standard-formal* (car tagged-lhs*) standard-old* tagged-old* new* expr-stx)
+		     (%rename* ?standard-formal* (car lhs*.tagged) standard-old* tagged-old* new* input-form.stx)
 		   `(call-with-values
-			(lambda () ,(car rhs*))
+			(lambda ()
+			  (tag-assert-and-return ,(car lhs*.signature) ,(car rhs*)))
 		      (lambda ,y*
-			,(recur (cdr standard-lhs*) (cdr tagged-lhs*) (cdr rhs*) standard-old* tagged-old* new*)))))
+			,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
+				(cdr rhs*) standard-old* tagged-old* new*)))))
 
 		((?standard-formal* ... . ?standard-rest-formal)
 		 (receive (tagged-formal* tagged-rest-formal)
-		     (improper-list->list-and-rest (car tagged-lhs*))
+		     (improper-list->list-and-rest (car lhs*.tagged))
 		   (let*-values
 		       (((y  standard-old* tagged-old* new*)
-			 (%rename  ?standard-rest-formal tagged-rest-formal standard-old* tagged-old* new* expr-stx))
+			 (%rename  ?standard-rest-formal tagged-rest-formal standard-old* tagged-old* new* input-form.stx))
 			((y* standard-old* tagged-old* new*)
-			 (%rename* ?standard-formal*     tagged-formal*     standard-old* tagged-old* new* expr-stx)))
+			 (%rename* ?standard-formal*     tagged-formal*     standard-old* tagged-old* new* input-form.stx)))
 		     `(call-with-values
 			  (lambda () ,(car rhs*))
 			(lambda ,(append y* y)
-			  ,(recur (cdr standard-lhs*) (cdr tagged-lhs*) (cdr rhs*) standard-old* tagged-old* new*))))))
+			  ,(recur (cdr lhs*.standard) (cdr lhs*.signature) (cdr lhs*.tagged)
+				  (cdr rhs*) standard-old* tagged-old* new*))))))
 		(?others
-		 (syntax-violation __who__ "malformed bindings" expr-stx ?others))))))))
+		 (syntax-violation __who__ "malformed bindings" input-form.stx ?others))))))))
       ))
 
-  (define (%rename standard-formal tagged-formal standard-old* tagged-old* new* expr-stx)
+  (define (%rename standard-formal tagged-formal standard-old* tagged-old* new* input-form.stx)
     (when (bound-id-member? standard-formal standard-old*)
-      (syntax-violation __who__ "duplicate binding" expr-stx standard-formal))
+      (syntax-violation __who__ "duplicate binding" input-form.stx standard-formal))
     (let ((y (gensym (syntax->datum standard-formal))))
       (values y (cons standard-formal standard-old*) (cons tagged-formal tagged-old*) (cons y new*))))
 
-  (define (%rename* standard-formal* tagged-formal* standard-old* tagged-old* new* expr-stx)
+  (define (%rename* standard-formal* tagged-formal* standard-old* tagged-old* new* input-form.stx)
     (if (null? standard-formal*)
 	(values '() standard-old* tagged-old* new*)
       (let*-values
 	  (((y  standard-old* tagged-old* new*)
-	    (%rename  (car standard-formal*) (car tagged-formal*) standard-old* tagged-old* new* expr-stx))
+	    (%rename  (car standard-formal*) (car tagged-formal*) standard-old* tagged-old* new* input-form.stx))
 	   ((y* standard-old* tagged-old* new*)
-	    (%rename* (cdr standard-formal*) (cdr tagged-formal*) standard-old* tagged-old* new* expr-stx)))
+	    (%rename* (cdr standard-formal*) (cdr tagged-formal*) standard-old* tagged-old* new* input-form.stx)))
 	(values (cons y y*) standard-old* tagged-old* new*))))
 
   #| end of module: LET-VALUES-MACRO |# )
