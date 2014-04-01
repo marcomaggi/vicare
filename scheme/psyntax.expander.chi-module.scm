@@ -955,13 +955,16 @@
     ;;binding for ?CTXT has already been added to LEXENV by the caller.
     ;;
     (define (%expand ctxt-id formals.stx body*.stx)
-      (receive (formals.core body.psi)
+      ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT-ID in the
+      ;;core language LAMBDA sexp's annotation.
+      (receive (formals.core lambda-signature body.psi)
 	  (%chi-lambda-clause input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
 	;;FORMALS.CORE is composed of lex gensyms.
 	(make-psi (build-lambda (syntax-annotation ctxt-id)
 		    formals.core
 		    (psi-core-expr body.psi))
-		  (make-retvals-signature (list (procedure-tag-id))))))
+		  (make-procedure-retval-signature)
+		  lambda-signature)))
     (syntax-match input-form.stx (brace)
       ((_ ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (%expand ?ctxt (bless
@@ -981,12 +984,13 @@
     ;;BODY*.STX is a list of syntax  objects representing the body expressions in the
     ;;LAMBDA syntax.
     ;;
-    (receive (formals.lex body.psi)
+    (receive (formals.lex lambda-signature body.psi)
 	(%chi-lambda-clause input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
       (make-psi (build-lambda (syntax-annotation input-form.stx)
 		  formals.lex
 		  (psi-core-expr body.psi))
-		(make-retvals-signature (list (procedure-tag-id))))))
+		(make-procedure-retval-signature)
+		lambda-signature)))
 
   (define (chi-case-lambda input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
     ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
@@ -1012,18 +1016,22 @@
     ;;    (list #'(body1) #'(body2))
     ;;    lexenv.run lexenv.expand)
     ;;
-    (receive (formals*.lex body**.psi)
+    (receive (formals*.lex lambda-signature* body**.psi)
 	(%chi-lambda-clause* input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
       (make-psi (build-case-lambda (syntax-annotation input-form.stx)
 		  formals*.lex
 		  (map psi-core-expr body**.psi))
-		(make-retvals-signature (list (procedure-tag-id))))))
+		(make-procedure-retval-signature)
+		(make-clambda-compound lambda-signature*))))
+
+;;; --------------------------------------------------------------------
 
   (define* (%chi-lambda-clause input-form.stx formals.stx body-form*.stx lexenv.run lexenv.expand)
     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
-    ;;Return 2  values: a  proper or  improper list of  lex gensyms  representing the
-    ;;formals; an PSI struct containint the language expression representing the body
-    ;;of the clause.
+    ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
+    ;;formals; an instance  of "lambda-signature" representing the  tag signature for
+    ;;this  LAMBDA   clause;  a  PSI   struct  containint  the   language  expression
+    ;;representing the body of the clause.
     ;;
     ;;A LAMBDA or CASE-LAMBDA clause defines a lexical contour; so we build a new rib
     ;;for it, initialised with the id/label  associations of the formals; we push new
@@ -1057,7 +1065,8 @@
 	 ;;Without rest argument.
 	 ((?arg* ...)
 	  (let* ((lex*        (map gensym-for-lexical-var ?arg*))
-		 (lab*        (map gensym-for-label       ?arg*)))
+		 (lab*        (map gensym-for-label       ?arg*))
+		 (lexenv.run^ (add-lexical-bindings lab* lex* lexenv.run)))
 	    (let* ((validation*.stx (%build-formals-validation-form* ?arg* formals-signature.tags #f #f))
 		   (body-form^*.stx (push-lexical-contour
 					(make-filled-rib ?arg* lab*)
@@ -1068,15 +1077,19 @@
 	      ;;Here  we know  that the  formals signature  is a  proper list  of tag
 	      ;;identifiers with the same structure of FORMALS.STX.
 	      (map set-label-tag! lab* formals-signature.tags)
-	      (let ((lexenv.run^ (add-lexical-bindings lab* lex* lexenv.run)))
-		(values lex* (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand))))))
+	      (values lex*
+		      lambda-signature
+		      (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))))
 
 	 ;;With rest argument.
 	 ((?arg* ... . ?rest-arg)
-	  (let ((lex*		(map gensym-for-lexical-var ?arg*))
-		(lab*		(map gensym-for-label       ?arg*))
-		(rest-lex	(gensym-for-lexical-var ?rest-arg))
-		(rest-lab	(gensym-for-label       ?rest-arg)))
+	  (let* ((lex*         (map gensym-for-lexical-var ?arg*))
+		 (lab*         (map gensym-for-label       ?arg*))
+		 (rest-lex     (gensym-for-lexical-var ?rest-arg))
+		 (rest-lab     (gensym-for-label       ?rest-arg))
+		 (lexenv.run^  (add-lexical-bindings (cons rest-lab lab*)
+						     (cons rest-lex lex*)
+						     lexenv.run)))
 	    (receive (arg-tag* rest-tag)
 		(improper-list->list-and-rest formals-signature.tags)
 	      (let* ((validation*.stx (%build-formals-validation-form* ?arg* arg-tag* ?rest-arg rest-tag))
@@ -1091,11 +1104,9 @@
 		;;the same structure of FORMALS.STX.
 		(map set-label-tag! lab* arg-tag*)
 		(set-label-tag! rest-lab rest-tag)
-		(let ((lexenv.run^     (add-lexical-bindings (cons rest-lab lab*)
-							     (cons rest-lex lex*)
-							     lexenv.run)))
-		  (values (append lex* rest-lex) ;yes, this builds an improper list
-			  (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))))))
+		(values (append lex* rest-lex) ;yes, this builds an improper list
+			lambda-signature
+			(chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand))))))
 
 	 (_
 	  (syntax-violation __who__
@@ -1107,17 +1118,23 @@
     ;;1..A list  of subslist,  each sublist being  a proper or  improper list  of lex
     ;;   gensyms representing the formals.
     ;;
-    ;;2..A  list  of   PSI  structs  each  containing  a   core  language  expression
+    ;;2..A list of  "lambda-signature" instances representing the  signatures of each
+    ;;   clause.
+    ;;
+    ;;3..A  list  of   PSI  structs  each  containing  a   core  language  expression
     ;;   representing the body of a clause.
     ;;
     (if (null? formals*.stx)
-	(values '() '())
-      (receive (formals-lex body.psi)
+	(values '() '() '())
+      (receive (formals-lex lambda-signature body.psi)
 	  (%chi-lambda-clause input-form.stx (car formals*.stx) (car body-form**.stx) lexenv.run lexenv.expand)
-	(receive (formals-lex* body*.psi)
+	(receive (formals-lex* lambda-signature* body*.psi)
 	    (%chi-lambda-clause* input-form.stx (cdr formals*.stx) (cdr body-form**.stx) lexenv.run lexenv.expand)
-	  (values (cons formals-lex formals-lex*)
-		  (cons body.psi    body*.psi))))))
+	  (values (cons formals-lex       formals-lex*)
+		  (cons lambda-signature  lambda-signature*)
+		  (cons body.psi          body*.psi))))))
+
+;;; --------------------------------------------------------------------
 
   (define (%build-formals-validation-form* arg* tag* rest-arg rest-tag)
     ;;Build and return a list of syntax objects representing expressions like:
