@@ -6191,39 +6191,6 @@
 	 #;(assert (non-compound-sexp? input-form.stx))
 	 input-form.stx)))
 
-;; (define (bless input-form.stx)
-;;   ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
-;;   ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
-;;   ;;return a syntax object representing the input, possibly X itself.
-;;   ;;
-;;   ;;When  X is  a sexp  or a  (partially) unwrapped  syntax object:  raw
-;;   ;;symbols in X are converted to:
-;;   ;;
-;;   ;;* Identifiers  that will  be captured by  a core-primitive  from the
-;;   ;;  boot image.
-;;   ;;
-;;   ;;* Free identifiers that will not  be captured by any binding.  These
-;;   ;;  can be safely used for local bindings.
-;;   ;;
-;;   (mkstx (let recur ((input-form.stx input-form.stx))
-;; 	   (cond ((<stx>? input-form.stx)
-;; 		  input-form.stx)
-;; 		 ((pair? input-form.stx)
-;; 		  (cons (recur (car input-form.stx)) (recur (cdr input-form.stx))))
-;; 		 ((symbol? input-form.stx)
-;; 		  (scheme-stx input-form.stx))
-;; 		 ((vector? input-form.stx)
-;; 		  (list->vector (map recur (vector->list input-form.stx))))
-;; 		 (else
-;; 		  ;;If we are here INPUT-FORM.STX is a non-compound datum
-;; 		  ;;(boolean, number,  string, ...,  struct, record,
-;; 		  ;;null).
-;; 		  (assert (non-compound-sexp? input-form.stx))
-;; 		  input-form.stx)))
-;; 	 '()	  ;mark*
-;; 	 '()	  ;rib*
-;; 	 '()))	  ;ae*
-
 (define (trace-bless input-form.stx)
   (receive-and-return (output-stx)
       (bless input-form.stx)
@@ -6266,37 +6233,6 @@
 		     ;;in binding position.
 		     (make-<stx> sym TOP-MARK* '() '())))
 	    (hashtable-set! scheme-stx-hashtable sym stx))))))
-
-;; (define scheme-stx
-;;   ;;Take a symbol  and if it's in the library:
-;;   ;;
-;;   ;;   (psyntax system $all)
-;;   ;;
-;;   ;;create a fresh identifier that maps  only the symbol to its label in
-;;   ;;that library.  Symbols not in that library become fresh.
-;;   ;;
-;;   (let ((scheme-stx-hashtable (make-eq-hashtable))
-;; 	(subst                #f))
-;;     (lambda (sym)
-;;       (or (hashtable-ref scheme-stx-hashtable sym #f)
-;; 	  (let* ((subst  (or subst
-;; 			     (receive-and-return (S)
-;; 				 (library-export-subst (find-library-by-name '(psyntax system $all)))
-;; 			       (set! subst S))))
-;; 		 (stx    (make-<stx> sym TOP-MARK* '() '()))
-;; 		 (stx    (cond ((assq sym subst)
-;; 				=> (lambda (subst.entry)
-;; 				     (let ((name  (car subst.entry))
-;; 					   (label (cdr subst.entry)))
-;; 				       (push-lexical-contour
-;; 					   (make-<rib> (list name)
-;; 						       (list TOP-MARK*)
-;; 						       (list label)
-;; 						       #f)
-;; 					 stx))))
-;; 			       (else stx))))
-;; 	    (hashtable-set! scheme-stx-hashtable sym stx)
-;; 	    stx)))))
 
 (define underscore-id?
   (let ((underscore-id #f))
