@@ -6162,43 +6162,72 @@
 
 ;;;; identifiers from the built-in environment
 
-(define (bless input-stx)
-  ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
-  ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
-  ;;return a syntax object representing the input, possibly X itself.
+(define (bless input-form.stx)
+  ;;Given a raw sexp,  a single syntax object, a wrapped  syntax object, an unwrapped
+  ;;syntax  object or  a partly  unwrapped syntax  object X:  return a  syntax object
+  ;;representing the input, possibly X itself.
   ;;
-  ;;When  X is  a sexp  or a  (partially) unwrapped  syntax object:  raw
-  ;;symbols in X are converted to:
+  ;;When  INPUT-FORM.STX is  a sexp  or a  (partially) unwrapped  syntax object:  raw
+  ;;symbols in INPUT-FORM.STX are converted to:
   ;;
-  ;;* Identifiers  that will  be captured by  a core-primitive  from the
-  ;;  boot image.
+  ;;* Bound identifiers  that will be captured  by a core primitive  binding from the
+  ;;  top-level image.
   ;;
-  ;;* Free identifiers that will not  be captured by any binding.  These
-  ;;  can be safely used for local bindings.
+  ;;* Free identifiers that will not be captured by any binding.  These can be safely
+  ;;  used for local bindings.
   ;;
-  (mkstx (let recur ((input-stx input-stx))
-	   (cond ((<stx>? input-stx)
-		  input-stx)
-		 ((pair? input-stx)
-		  (cons (recur (car input-stx)) (recur (cdr input-stx))))
-		 ((symbol? input-stx)
-		  (scheme-stx input-stx))
-		 ((vector? input-stx)
-		  (list->vector (map recur (vector->list input-stx))))
-		 (else
-		  ;;If we are here INPUT-STX is a non-compound datum
-		  ;;(boolean, number,  string, ...,  struct, record,
-		  ;;null).
-		  (assert (non-compound-sexp? input-stx))
-		  input-stx)))
-	 '()	  ;mark*
-	 '()	  ;rib*
-	 '()))	  ;ae*
+  (cond ((<stx>? input-form.stx)
+	 input-form.stx)
+	((pair? input-form.stx)
+	 (cons (bless ($car input-form.stx))
+	       (bless ($cdr input-form.stx))))
+	((symbol? input-form.stx)
+	 (scheme-stx input-form.stx))
+	((vector? input-form.stx)
+	 (vector-map bless input-form.stx))
+	(else
+	 ;;If we  are here INPUT-FORM.STX  is a non-compound datum  (boolean, number,
+	 ;;string, ..., struct, record, null).
+	 #;(assert (non-compound-sexp? input-form.stx))
+	 input-form.stx)))
 
-(define (trace-bless input-stx)
+;; (define (bless input-form.stx)
+;;   ;;Given a raw  sexp, a single syntax object, a  wrapped syntax object,
+;;   ;;an unwrapped  syntax object or  a partly unwrapped syntax  object X:
+;;   ;;return a syntax object representing the input, possibly X itself.
+;;   ;;
+;;   ;;When  X is  a sexp  or a  (partially) unwrapped  syntax object:  raw
+;;   ;;symbols in X are converted to:
+;;   ;;
+;;   ;;* Identifiers  that will  be captured by  a core-primitive  from the
+;;   ;;  boot image.
+;;   ;;
+;;   ;;* Free identifiers that will not  be captured by any binding.  These
+;;   ;;  can be safely used for local bindings.
+;;   ;;
+;;   (mkstx (let recur ((input-form.stx input-form.stx))
+;; 	   (cond ((<stx>? input-form.stx)
+;; 		  input-form.stx)
+;; 		 ((pair? input-form.stx)
+;; 		  (cons (recur (car input-form.stx)) (recur (cdr input-form.stx))))
+;; 		 ((symbol? input-form.stx)
+;; 		  (scheme-stx input-form.stx))
+;; 		 ((vector? input-form.stx)
+;; 		  (list->vector (map recur (vector->list input-form.stx))))
+;; 		 (else
+;; 		  ;;If we are here INPUT-FORM.STX is a non-compound datum
+;; 		  ;;(boolean, number,  string, ...,  struct, record,
+;; 		  ;;null).
+;; 		  (assert (non-compound-sexp? input-form.stx))
+;; 		  input-form.stx)))
+;; 	 '()	  ;mark*
+;; 	 '()	  ;rib*
+;; 	 '()))	  ;ae*
+
+(define (trace-bless input-form.stx)
   (receive-and-return (output-stx)
-      (bless input-stx)
-    (debug-print 'bless-input  (syntax->datum input-stx)
+      (bless input-form.stx)
+    (debug-print 'bless-input  (syntax->datum input-form.stx)
 		 'bless-output (syntax->datum output-stx))))
 
 (define scheme-stx
