@@ -4178,6 +4178,8 @@
 ;;marks...
 (define-constant TOP-MARK*
   '(top))
+(define-constant TOP-MARK**
+  '((top)))
 
 (define (list-of-marks? obj)
   (and (list? obj)
@@ -6211,24 +6213,61 @@
 	(subst                #f))
     (lambda (sym)
       (or (hashtable-ref scheme-stx-hashtable sym #f)
-	  (let* ((subst  (or subst
-			     (receive-and-return (S)
-				 (library-export-subst (find-library-by-name '(psyntax system $all)))
-			       (set! subst S))))
-		 (stx    (make-<stx> sym TOP-MARK* '() '()))
-		 (stx    (cond ((assq sym subst)
-				=> (lambda (subst.entry)
-				     (let ((name  (car subst.entry))
-					   (label (cdr subst.entry)))
-				       (push-lexical-contour
-					   (make-<rib> (list name)
-						       (list TOP-MARK*)
-						       (list label)
-						       #f)
-					 stx))))
-			       (else stx))))
-	    (hashtable-set! scheme-stx-hashtable sym stx)
-	    stx)))))
+	  (receive-and-return (stx)
+	      (cond ((assq sym (or subst
+				   (receive-and-return (S)
+				       (library-export-subst (find-library-by-name '(psyntax system $all)))
+				     (set! subst S))))
+		     ;;SYM is  the name of  a core primitive,  so we build  a bound
+		     ;;identifier with  a proper  "<rib>" and the  binding's label.
+		     ;;Such bound identifier  will be captured by the  entry in the
+		     ;;top-level environment.
+		     => (lambda (subst.entry)
+			  (let ((name  (car subst.entry))
+				(label (cdr subst.entry)))
+			    (make-<stx> sym TOP-MARK*
+					(list (make-<rib> (list name)
+							  TOP-MARK**
+							  (list label)
+							  #f))
+					'()))))
+		    (else
+		     ;;SYM is not the name of a  core primitive, so we just build a
+		     ;;free identifier.   Such free identifier will  work just fine
+		     ;;in binding position.
+		     (make-<stx> sym TOP-MARK* '() '())))
+	    (hashtable-set! scheme-stx-hashtable sym stx))))))
+
+;; (define scheme-stx
+;;   ;;Take a symbol  and if it's in the library:
+;;   ;;
+;;   ;;   (psyntax system $all)
+;;   ;;
+;;   ;;create a fresh identifier that maps  only the symbol to its label in
+;;   ;;that library.  Symbols not in that library become fresh.
+;;   ;;
+;;   (let ((scheme-stx-hashtable (make-eq-hashtable))
+;; 	(subst                #f))
+;;     (lambda (sym)
+;;       (or (hashtable-ref scheme-stx-hashtable sym #f)
+;; 	  (let* ((subst  (or subst
+;; 			     (receive-and-return (S)
+;; 				 (library-export-subst (find-library-by-name '(psyntax system $all)))
+;; 			       (set! subst S))))
+;; 		 (stx    (make-<stx> sym TOP-MARK* '() '()))
+;; 		 (stx    (cond ((assq sym subst)
+;; 				=> (lambda (subst.entry)
+;; 				     (let ((name  (car subst.entry))
+;; 					   (label (cdr subst.entry)))
+;; 				       (push-lexical-contour
+;; 					   (make-<rib> (list name)
+;; 						       (list TOP-MARK*)
+;; 						       (list label)
+;; 						       #f)
+;; 					 stx))))
+;; 			       (else stx))))
+;; 	    (hashtable-set! scheme-stx-hashtable sym stx)
+;; 	    stx)))))
 
 (define underscore-id?
   (let ((underscore-id #f))
