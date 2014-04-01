@@ -3,7 +3,7 @@
 
 
 @value{PRJNAME}'s expander implements an extension to the language
-defined by @rnrs{6} that allows the definition of typed bindings;
+defined by @rnrs{6} that allows the definition of tagged bindings.
 
 @quotation
 @strong{NOTE} Typed language support is currently experimental.

@@ -5897,6 +5897,7 @@
 
 (include "psyntax.expander.syntactic-binding-properties.scm" #t)
 (include "psyntax.expander.tagged-identifiers.scm" #t)
+(include "psyntax.expander.signatures.scm" #t)
 (module (initialise-type-spec-for-built-in-object-types
 	 retvals-signature-of-datum
 	 untagged-tag-id		$untagged-tag-id?	untagged-tag-id?
