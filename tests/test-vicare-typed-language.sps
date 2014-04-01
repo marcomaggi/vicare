@@ -97,8 +97,8 @@
 		(when ?verbose
 		  (debug-print (condition-message E)
 			       (syntax-violation-form E)))
-		(values (syntax->datum (typ.retvals-signature-violation-expected-signature E))
-			(syntax->datum (typ.retvals-signature-violation-returned-signature E))))
+		(values (syntax->datum (typ.retvals-signature-tags (typ.retvals-signature-violation-expected-signature E)))
+			(syntax->datum (typ.retvals-signature-tags (typ.retvals-signature-violation-returned-signature E)))))
 	       (else E))
        . ?body))))
 
@@ -133,11 +133,11 @@
 
   (define-syntax-rule (TRUE ?super ?sub)
     (check-for-true
-     (typ.formals-signature-super-and-sub? ?super ?sub)))
+     (typ.formals-signature-super-and-sub-syntax? ?super ?sub)))
 
   (define-syntax-rule (FALS ?super ?sub)
     (check-for-false
-     (typ.formals-signature-super-and-sub? ?super ?sub)))
+     (typ.formals-signature-super-and-sub-syntax? ?super ?sub)))
 
 ;;; --------------------------------------------------------------------
 ;;; standalone identifier formals signatures
@@ -329,9 +329,9 @@
 
   (define-syntax-rule (split ?input)
     (receive (standard-formals-stx callable)
-	(typ.parse-tagged-callable-spec-syntax ?input)
-      (let ((formals-tags (typ.callable-signature-formals-tags callable))
-	    (rv-tags      (typ.callable-signature-return-values-tags callable)))
+	(typ.parse-tagged-lambda-proto-syntax ?input)
+      (let ((formals-tags (typ.lambda-signature-formals-tags callable))
+	    (rv-tags      (typ.lambda-signature-retvals-tags callable)))
 	(values standard-formals-stx rv-tags formals-tags))))
 
 ;;; tagged
@@ -340,31 +340,31 @@
       (split #'({a <fixnum>}
 		{b <string>}))
     (=> syntax=?)
-    #'(a b) #f #'(<fixnum> <string>))
+    #'(a b) #'<untagged> #'(<fixnum> <string>))
 
   (check
       (split #'({a <fixnum>}
 		{b <string>}
 		{c <vector>}))
     (=> syntax=?)
-    #'(a b c) #f #'(<fixnum> <string> <vector>))
+    #'(a b c) #'<untagged> #'(<fixnum> <string> <vector>))
 
 ;;; untagged
 
   (check
       (split #'(a))
     (=> syntax=?)
-    #'(a) #f #'(<untagged>))
+    #'(a) #'<untagged> #'(<untagged>))
 
   (check
       (split #'(a b))
     (=> syntax=?)
-    #'(a b) #f #'(<untagged> <untagged>))
+    #'(a b) #'<untagged> #'(<untagged> <untagged>))
 
   (check
       (split #'(a b c))
     (=> syntax=?)
-    #'(a b c) #f #'(<untagged> <untagged> <untagged>))
+    #'(a b c) #'<untagged> #'(<untagged> <untagged> <untagged>))
 
 ;;; mixed tagged and untagged
 
@@ -372,68 +372,68 @@
       (split #'(a
 		{b <string>}))
     (=> syntax=?)
-    #'(a b) #f #'(<untagged> <string>))
+    #'(a b) #'<untagged> #'(<untagged> <string>))
 
   (check
       (split #'({a <fixnum>}
 		b))
     (=> syntax=?)
-    #'(a b) #f #'(<fixnum> <untagged>))
+    #'(a b) #'<untagged> #'(<fixnum> <untagged>))
 
   (check
       (split #'(a
 		{b <string>}
 		{c <vector>}))
     (=> syntax=?)
-    #'(a b c) #f #'(<untagged> <string> <vector>))
+    #'(a b c) #'<untagged> #'(<untagged> <string> <vector>))
 
   (check
       (split #'({a <fixnum>}
 		b
 		{c <vector>}))
     (=> syntax=?)
-    #'(a b c) #f #'(<fixnum> <untagged> <vector>))
+    #'(a b c) #'<untagged> #'(<fixnum> <untagged> <vector>))
 
   (check
       (split #'({a <fixnum>}
 		{b <string>}
 		c))
     (=> syntax=?)
-    #'(a b c) #f #'(<fixnum> <string> <untagged>))
+    #'(a b c) #'<untagged> #'(<fixnum> <string> <untagged>))
 
 ;;; args argument
 
   (check	;tagged args argument
       (split #'{args <fixnums>})
     (=> syntax=?)
-    #'args #f #'<fixnums>)
+    #'args #'<untagged> #'<fixnums>)
 
   (check	;UNtagged args argument
       (split #'args)
     (=> syntax=?)
-    #'args #f #'<untagged>)
+    #'args #'<untagged> #'<untagged>)
 
 ;;; rest argument
 
   (check	;tagged rest
       (split #'({a <fixnum>} . {rest <fixnums>}))
     (=> syntax=?)
-    #'(a . rest) #f #'(<fixnum> . <fixnums>))
+    #'(a . rest) #'<untagged> #'(<fixnum> . <fixnums>))
 
   (check	;UNtagged rest
       (split #'({a <fixnum>} . rest))
     (=> syntax=?)
-    #'(a . rest) #f #'(<fixnum> . <untagged>))
+    #'(a . rest) #'<untagged> #'(<fixnum> . <untagged>))
 
   (check	;tagged rest
       (split #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
     (=> syntax=?)
-    #'(a b . rest) #f #'(<fixnum> <string> . <fixnums>))
+    #'(a b . rest) #'<untagged> #'(<fixnum> <string> . <fixnums>))
 
   (check	;UNtagged rest
       (split #'({a <fixnum>} {b <string>} . rest))
     (=> syntax=?)
-    #'(a b . rest) #f #'(<fixnum> <string> . <untagged>))
+    #'(a b . rest) #'<untagged> #'(<fixnum> <string> . <untagged>))
 
 ;;; return values tagging
 
@@ -467,7 +467,7 @@
 ;;; tagged formals predicate
 
   (check-for-true
-   (typ.tagged-callable-spec-syntax? #'({a <fixnum>} {b <string>})))
+   (typ.tagged-lambda-proto-syntax? #'({a <fixnum>} {b <string>})))
 
   #t)
 
@@ -608,11 +608,11 @@
 (parametrise ((check-test-name	'tagged-bindings-define))
 
   (begin-for-syntax
-    (define* (callable-signature->stx {fun-id identifier?})
+    (define* (lambda-signature->stx {fun-id identifier?})
       (let* ((signature    (typ.identifier-callable-signature fun-id))
-	     (formals-tags (typ.callable-signature-formals-tags signature))
-	     (rv-tags      (typ.callable-signature-return-values-tags signature)))
-	(cons rv-tags formals-tags))))
+	     (formals.tags (typ.lambda-signature-formals-tags signature))
+	     (retvals.tags (typ.lambda-signature-retvals-tags signature)))
+	(cons retvals.tags formals.tags))))
 
 ;;; --------------------------------------------------------------------
 ;;;untagged bindings
@@ -624,7 +624,7 @@
 	    #`(quote #,(list (tag=tagging? <procedure> fun)
 			     (un-tagged? args))))
 	  (define-syntax (signature stx)
-	    (syntax=? #'(#f . <untagged>) (callable-signature->stx #'fun)))
+	    (syntax=? #'(<untagged> . <untagged>) (lambda-signature->stx #'fun)))
 	  (values args (inspect) (signature)))
 	(fun 1))
     => '(1) '(#t #t) #t)
@@ -635,7 +635,7 @@
 	  (define-syntax (inspect stx)
 	    (tag=tagging? <procedure> fun))
 	  (define-syntax (signature stx)
-	    (syntax=? #'(#f . ()) (callable-signature->stx #'fun)))
+	    (syntax=? #'(<untagged> . ()) (lambda-signature->stx #'fun)))
 	  (values (inspect) (signature)))
 	(fun))
     => #t #t)
@@ -722,8 +722,8 @@
 	  (define-syntax (inspect stx)
 	    (tag=tagging? <fixnums> args))
 	  (define-syntax (signature stx)
-	    (syntax=? (callable-signature->stx #'fun)
-		      #'(#f . <fixnums>)))
+	    (syntax=? (lambda-signature->stx #'fun)
+		      #'(<untagged> . <fixnums>)))
 	  (values args (inspect) (signature)))
 	(fun 1 2 3))
     => '(1 2 3) #t #t)
@@ -736,7 +736,7 @@
 	     #`(quote #,(list (tag=tagging? <procedure> fun)
 			      (tag=tagging? <fixnums> args))))
 	   (define-syntax (signature stx)
-	     (syntax=? (callable-signature->stx #'fun)
+	     (syntax=? (lambda-signature->stx #'fun)
 		       #'((<fixnum>) . <fixnums>)))
 	   (add-result (inspect))
 	   (add-result (signature))
@@ -752,7 +752,7 @@
 	     #`(quote #,(list (tag=tagging? <procedure> fun)
 			      (tag=tagging? <fixnums> args))))
 	   (define-syntax (signature stx)
-	     (syntax=? (callable-signature->stx #'fun)
+	     (syntax=? (lambda-signature->stx #'fun)
 		       #'((<fixnum> <flonum>) . <fixnums>)))
 	   (add-result (inspect))
 	   (add-result (signature))
@@ -770,7 +770,7 @@
 			      (tag=tagging? <fixnum> b)
 			      (tag=tagging? <fixnum> c))))
 	   (define-syntax (signature stx)
-	     (syntax=? (callable-signature->stx #'fun)
+	     (syntax=? (lambda-signature->stx #'fun)
 		       #'((<fixnum>) . (<fixnum> <fixnum> <fixnum>))))
 	   (add-result (inspect))
 	   (add-result (signature))
@@ -2616,12 +2616,6 @@
 			      (splice-first-expand (tag-assert-and-return (<string>)))))))
 	  (((type)O) [1])))
     => #\i)
-
-  ;; (check	;demo
-  ;;     (catch-expand-time-signature-violation #t
-  ;; 	(%eval '(let ((O 123))
-  ;; 		  (((splice-first-expand (tag-assert-and-return (<string>))) O) [1]))))
-  ;;   => #\i)
 
 ;;; --------------------------------------------------------------------
 

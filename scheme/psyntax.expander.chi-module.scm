@@ -41,33 +41,22 @@
 		;   this  PSI   struct  is  the  return  value  of   the  core  macro
 		;  SPLICE-FIRST-EXPAND.
      retvals-signature
-		;False,  null  or  a  proper  or improper  list  of  tag  identifiers
-		;representing  the types  of the  values returned  by the  expression
-		;evaluation.
+		;An instance of "retvals-signature".
      callable-spec
-		;False, or a proper list of "callable-signature" instances.
-		;
-		;When  the expression  represented  by  this PSI  is  not a  callable
-		;object: this field is false.
-		;
-		;When the expression represented by this PSI is a callable object: it
-		;is, in  general, a CASE-LAMBDA expression.   This field is set  to a
-		;list  of   callable  signatures   representing  the  tags   of  each
-		;CASE-LAMBDA clause.
+		;An instance of "clambda-compound" or "lambda-signature".
      ))
 
   (case-define* make-psi
     ((core-expr)
-     (%make-psi core-expr #f #f))
-    ((core-expr {retvals-signature retvals-signature-syntax?})
-     (%make-psi core-expr retvals-signature #f))
-    ((core-expr {retvals-signature retvals-signature-syntax?} {callable-spec %psi-callable-spec?})
+     (make-psi core-expr (make-fully-unspecified-retvals-signature) (make-clambda-compound '())))
+    ((core-expr retvals-signature)
+     (make-psi core-expr retvals-signature                          (make-clambda-compound '())))
+    ((core-expr {retvals-signature retvals-signature?} {callable-spec %callable-spec?})
      (%make-psi core-expr retvals-signature callable-spec)))
 
-  (define (%psi-callable-spec? obj)
-    (or (not obj)
-	(and (list? obj)
-	     (for-all callable-spec? obj))))
+  (define (%callable-spec? obj)
+    (or (lambda-signature? obj)
+	(clambda-compound? obj)))
 
   #| end of module |# )
 
@@ -415,8 +404,9 @@
 		 (loc (cdr bind-val)))
 	    ((inv-collector) lib)
 	    (make-psi (build-global-reference no-source loc)
-		      (and (tagged-identifier? expr-stx)
-			   (list (identifier-tag expr-stx))))))
+		      (make-retvals-signature (list (if (tagged-identifier? expr-stx)
+							(identifier-tag expr-stx)
+						      (untagged-tag-id)))))))
 
 	 ((core-prim)
 	  ;;Core primitive (it  is either a procedure or a  constant).  We expect the
@@ -430,8 +420,9 @@
 	  ;;
 	  (let ((name bind-val))
 	    (make-psi (build-primref no-source name)
-		      (and (tagged-identifier? expr-stx)
-			   (list (identifier-tag expr-stx))))))
+		      (if (tagged-identifier? expr-stx)
+			  (make-retvals-signature (list (identifier-tag expr-stx)))
+			(make-fully-unspecified-retvals-signature)))))
 
 	 ((call)
 	  ;;A function call; this means EXPR-STX has one of the formats:
@@ -445,8 +436,9 @@
 	  ;;Reference to lexical variable; this means EXPR-STX is an identifier.
 	  (make-psi (let ((lex (lexical-var bind-val)))
 		      (build-lexical-reference no-source lex))
-		    (and (tagged-identifier? expr-stx)
-			 (list (identifier-tag expr-stx)))))
+		    (make-retvals-signature (list (if (tagged-identifier? expr-stx)
+						      (identifier-tag expr-stx)
+						    (untagged-tag-id))))))
 
 	 ((global-macro global-macro!)
 	  ;;Global macro use.
@@ -581,8 +573,9 @@
 		     (eq? lib '*interaction*)))
 	      (let ((loc (cdr bind-val)))
 		(make-psi (build-global-reference no-source loc)
-			  (and (tagged-identifier? expr-stx)
-			       (list (identifier-tag expr-stx)))))
+			  (make-retvals-signature (list (if (tagged-identifier? expr-stx)
+							    (identifier-tag expr-stx)
+							  (untagged-tag-id))))))
 	    (stx-error expr-stx "attempt to reference an unexportable variable")))
 
 	 ((type-maker-reference)
@@ -660,18 +653,14 @@
 	   ;;
 	   ;;   (?tag)
 	   ;;
-	   ;;which means a  single return value.  Here we allow  #f, too, which means
-	   ;;we accept an argument having unknown retval signature.
+	   ;;which means a single return  value.  Here we allow "<unspecified>", too,
+	   ;;which means we accept an argument having unknown retval signature.
 	   ;;
-	   ;;NOTE We could  reject #f as argument signature and  demand the caller of
-	   ;;VALUES to  cast the arguments, but  it would be to  much.  (Marco Maggi;
-	   ;;Mon Mar 31, 2014)
+	   ;;NOTE We  could reject "<unspecified>"  as argument signature  and demand
+	   ;;the caller  of VALUES to  cast the arguments, but  it would be  to much.
+	   ;;(Marco Maggi; Mon Mar 31, 2014)
 	   (unless (and (list rand*.sign)
-			(for-all (lambda (sign)
-				   (or (not sign)
-				       (and (pair? sign)
-					    (null? (cdr sign)))))
-			  rand*.sign))
+			(for-all retvals-signature-single-tag-or-fully-unspecified? rand*.sign))
 	     (retvals-signature-violation 'values input-form.stx
 					  ;;expected signature
 					  (map (lambda (obj)
@@ -681,11 +670,11 @@
 	   (make-psi (build-application (syntax-annotation input-form.stx)
 		       rator.core
 		       rand*.core)
-		     (map (lambda (sign)
-			    (if sign
-				(car sign)
-			      (untagged-tag-id)))
-		       rand*.sign))))
+		     (make-retvals-signature (map (lambda (sign)
+						    (if (retvals-signature-fully-unspecified? sign)
+							(untagged-tag-id)
+						      (car (retvals-signature-tags sign))))
+					       rand*.sign)))))
 
 	((?rator ?rand* ...)
 	 ;;This  is a  common function  application: ?RATOR  is not  a syntax  keyword.
@@ -699,13 +688,15 @@
       (define* (%build-core-expression input-form.stx {rator.psi psi?} rand*.stx lexenv.run lexenv.expand)
 	(define rator.core (psi-core-expr         rator.psi))
 	(define rator.sign (psi-retvals-signature rator.psi))
-	(syntax-match rator.sign ()
-	  (#f
+	(syntax-match (retvals-signature-tags rator.sign) ()
+	  (?tag
+	   (untagged-tag-id? ?tag)
 	   ;;The rator type  is unknown.  Return a procedure application  and we will
 	   ;;see at run-time what happens.
 	   (%process-unknown-rator-type input-form.stx rator.core rand*.stx lexenv.run lexenv.expand))
 	  ((?tag)
-	   (cond (($tag-super-and-sub? ?tag (procedure-tag-id))
+	   ;;The rator type is a single value.
+	   (cond (($tag-super-and-sub? (procedure-tag-id) ?tag)
 		  ;;The rator is a procedure.  Good.  Return a procedure application.
 		  (let* ((rand*.psi  (while-not-expanding-application-first-subform
 				      (chi-expr* rand*.stx lexenv.run lexenv.expand)))
@@ -715,14 +706,14 @@
 				rand*.core)
 			      ;;FIXME  Put   here  the   retvals  signature   of  the
 			      ;;procedure.  (Marco Maggi; Fri Mar 28, 2014)
-			      #f)))
-		 ((or (free-id=? ?tag (untagged-tag-id))
-		      (free-id=? ?tag (top-tag-id)))
+			      (make-fully-unspecified-retvals-signature))))
+		 ((or ($untagged-tag-id? ?tag)
+		      ($top-tag-id?      ?tag))
 		  ;;The rator type is unknown.  Return a procedure application and we
 		  ;;will see at run-time what happens.
 		  (%process-unknown-rator-type input-form.stx rator.core rand*.stx lexenv.run lexenv.expand))
 		 (else
-		  ;;The  rator has  the correct  single-value signature  and it  is a
+		  ;;The  rator has  a  correct  single-value signature  and  it is  a
 		  ;;specified tag, but it is not  a procedure.  We check that this is
 		  ;;a call to an object type's dispatcher.
 		  (syntax-match rand*.stx ()
@@ -792,8 +783,8 @@
 	  (make-psi (build-application (syntax-annotation input-form.stx)
 		      rator.core
 		      rand*.core)
-		    ;;We do not know the retvals signature, so this is false.
-		    #f)))
+		    ;;We do not know the retvals signature.
+		    (make-fully-unspecified-retvals-signature))))
 
       #| end of module: %BUILD-CORE-EXPRESSION |# )
 
@@ -970,7 +961,7 @@
 	(make-psi (build-lambda (syntax-annotation ctxt-id)
 		    formals.core
 		    (psi-core-expr body.psi))
-		  (list (procedure-tag-id)))))
+		  (make-retvals-signature (list (procedure-tag-id))))))
     (syntax-match input-form.stx (brace)
       ((_ ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (%expand ?ctxt (bless
@@ -995,7 +986,7 @@
       (make-psi (build-lambda (syntax-annotation input-form.stx)
 		  formals.lex
 		  (psi-core-expr body.psi))
-		(list (procedure-tag-id)))))
+		(make-retvals-signature (list (procedure-tag-id))))))
 
   (define (chi-case-lambda input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
     ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
@@ -1026,9 +1017,9 @@
       (make-psi (build-case-lambda (syntax-annotation input-form.stx)
 		  formals*.lex
 		  (map psi-core-expr body**.psi))
-		(list (procedure-tag-id)))))
+		(make-retvals-signature (list (procedure-tag-id))))))
 
-  (define (%chi-lambda-clause input-form.stx formals.stx body-form*.stx lexenv.run lexenv.expand)
+  (define* (%chi-lambda-clause input-form.stx formals.stx body-form*.stx lexenv.run lexenv.expand)
     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
     ;;Return 2  values: a  proper or  improper list of  lex gensyms  representing the
     ;;formals; an PSI struct containint the language expression representing the body
@@ -1058,12 +1049,10 @@
     (while-not-expanding-application-first-subform
      ;;Here we support both the R6RS  standard LAMBDA formals and the extended tagged
      ;;formals, with or without rest argument.
-     (receive (standard-formals.stx formals-signature.tags retvals-signature.tags)
-	 (receive (standard-formals.stx callable-signature)
-	     (parse-tagged-callable-spec-syntax formals.stx input-form.stx)
-	   (values standard-formals.stx
-		   (callable-signature-formals-tags       callable-signature)
-		   (callable-signature-return-values-tags callable-signature)))
+     (receive (standard-formals.stx lambda-signature)
+	 (parse-tagged-lambda-proto-syntax formals.stx input-form.stx)
+       (define formals-signature.tags
+	 (lambda-signature-formals-tags lambda-signature))
        (syntax-match standard-formals.stx ()
 	 ;;Without rest argument.
 	 ((?arg* ...)
@@ -1074,7 +1063,8 @@
 					(make-filled-rib ?arg* lab*)
 				      (append validation*.stx
 					      (%build-retvals-validation-form (not (null? validation*.stx))
-									      retvals-signature.tags body-form*.stx)))))
+									      (lambda-signature-retvals lambda-signature)
+									      body-form*.stx)))))
 	      ;;Here  we know  that the  formals signature  is a  proper list  of tag
 	      ;;identifiers with the same structure of FORMALS.STX.
 	      (map set-label-tag! lab* formals-signature.tags)
@@ -1095,7 +1085,8 @@
 							   (cons rest-lab  lab*))
 					(append validation*.stx
 						(%build-retvals-validation-form (not (null? validation*.stx))
-										retvals-signature.tags body-form*.stx)))))
+										(lambda-signature-retvals lambda-signature)
+										body-form*.stx)))))
 		;;Here we  know that the formals  signature is an improper  list with
 		;;the same structure of FORMALS.STX.
 		(map set-label-tag! lab* arg-tag*)
@@ -1107,7 +1098,8 @@
 			  (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))))))
 
 	 (_
-	  (stx-error formals.stx "invalid syntax"))))))
+	  (syntax-violation __who__
+	    "invalid lambda formals syntax" input-form.stx formals.stx))))))
 
   (define (%chi-lambda-clause* input-form.stx formals*.stx body-form**.stx lexenv.run lexenv.expand)
     ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
@@ -1153,7 +1145,7 @@
 	   (list (bless
 		  `(tag-procedure-argument-validator ,rest-tag ,rest-arg))))))
 
-  (define (%build-retvals-validation-form has-arguments-validators? retvals-signature.tags body-form*.stx)
+  (define (%build-retvals-validation-form has-arguments-validators? retvals-signature body-form*.stx)
     ;;Add the return values validation to the last form in the body; return a list of
     ;;body forms.
     ;;
@@ -1175,23 +1167,25 @@
     ;;validation.  (Marco Maggi; Mon Mar 31, 2014)
     ;;
     (cond (has-arguments-validators?
-	   (if retvals-signature.tags
-	       (receive (head*.stx last.stx)
-		   (proper-list->head-and-last body-form*.stx)
-		 (bless
-		  `((let ()
-		      ,@head*.stx
-		      (tag-assert-and-return ,retvals-signature.tags ,last.stx)))))
-	     (bless
-	      `((let () . ,body-form*.stx)))))
+           (if (retvals-signature-fully-unspecified? retvals-signature)
+	       ;;The number and type of return values is unknown.
+	       (bless
+		`((let () . ,body-form*.stx)))
+	     (receive (head*.stx last.stx)
+		 (proper-list->head-and-last body-form*.stx)
+	       (bless
+		`((let ()
+		    ,@head*.stx
+		    (tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))
 	  (else
-	   (if retvals-signature.tags
-	       (receive (head*.stx last.stx)
-		   (proper-list->head-and-last body-form*.stx)
-		 (append head*.stx
-			 (bless
-			  `((tag-assert-and-return ,retvals-signature.tags ,last.stx)))))
-	     body-form*.stx))))
+	   (if (retvals-signature-fully-unspecified? retvals-signature)
+	       ;;The number and type of return values is unknown.
+	       body-form*.stx
+	     (receive (head*.stx last.stx)
+		 (proper-list->head-and-last body-form*.stx)
+	       (append head*.stx
+		       (bless
+			`((tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))))
 
   #| end of module |# )
 
@@ -1260,7 +1254,9 @@
      (let* ((expr.stx  (cdr qrhs))
 	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi)))
-       (make-psi (build-sequence no-source (list expr.core (build-void))))))
+       (make-psi (build-sequence no-source
+		   (list expr.core
+			 (build-void))))))
 
     (else
      (assertion-violation __who__ "Vicare: internal error: invalid qrhs" qrhs))))
@@ -1443,6 +1439,7 @@
 		;;
 		;;   (define ?id ?rhs)
 		;;
+		;;we parse the form and generate  a QRHS that will be expanded later.
 		;;We create a new lexical binding:
 		;;
 		;;* We generate a label gensym uniquely associated to the binding and
@@ -1455,26 +1452,29 @@
 		;;
 		;;* Finally we recurse on the rest of the body.
 		;;
-		;;Notice that:
-		;;
-		;;* The ?RHS will be expanded later.
-		;;
-		;;* If the binding  is at the top-level of a program  body: we need a
-		;;  loc gensym to store the result of evaluating ?RHS.  This loc will
-		;;  be generated later.
-		;;
-		;;* If the binding is at the  top-level of a REPL expression: we need
-		;;  a  loc gensym to  store the result  of evaluating ?RHS.   In this
-		;;  case the loc is generated here by GEN-DEFINE-LABEL+LEX.
-		;;
-		(receive (id id-tag signature qrhs.stx)
+		;;We  receive  the  following  values:   ID  is  the  tagged  binding
+		;;identifier;   TAG  is   the   tag  identifier   for  ID   (possibly
+		;;"<untagged>");   SIGNATURE    is   false   or   an    instance   of
+		;;"lambda-signature" or  "clambda-compound"; QRHS.STX the QRHS  to be
+		;;expanded later.
+		(receive (id tag signature qrhs.stx)
 		    (%parse-define body-form.stx)
 		  (when (bound-id-member? id kwd*)
 		    (stx-error body-form.stx "cannot redefine keyword"))
 		  (receive (lab lex)
+		      ;;About this call to GEN-DEFINE-LABEL+LEX notice that:
+		      ;;
+		      ;;* If  the binding is at  the top-level of a  program body: we
+		      ;;  need a loc gensym to store the result of evaluating the RHS
+		      ;;  in QRHS; this loc will be generated later.
+		      ;;
+		      ;;* If the binding is at the top-level of a REPL expression: we
+		      ;;  need a loc gensym to store the result of evaluating the RHS
+		      ;;  in QRHS; in this case the loc is generated here.
+		      ;;
 		      (gen-define-label+lex id rib sd?)
 		    (extend-rib! rib id lab sd?)
-		    (set-label-tag! lab id-tag)
+		    (set-label-tag! lab tag)
 		    ;;If the binding is not a function: SIGNATURE is false.
 		    (when signature
 		      (set-label-callable-signature! lab signature))
@@ -1875,8 +1875,8 @@
     ;;2..An identifier  representing the binding  tag.  "<untagged>" is used  when no
     ;;   tag is specified; "<procedure>" is used when a procedure is defined.
     ;;
-    ;;3..False or an  object representing an instance  of "callable-signature"; false
-    ;;   is returned when the binding is not a function.
+    ;;3..False or an object representing  an instance of "lambda-signature"; false is
+    ;;   returned when the binding is not a function.
     ;;
     ;;4..A qualified  right-hand side expression  (QRHS) representing the  binding to
     ;;   create.
@@ -1886,9 +1886,9 @@
       ((_ ((brace ?id ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature)
-	   (parse-tagged-callable-spec-syntax (bless
-					       `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
-					      input-form.stx)
+	   (parse-tagged-lambda-proto-syntax (bless
+					      `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
+					     input-form.stx)
 	 (values ?id (procedure-tag-id) signature (cons 'defun input-form.stx))))
 
       ;;Variable definition with tagged identifier.
@@ -1905,7 +1905,7 @@
       ((_ (?id . ?fmls) ?b ?b* ...)
        (identifier? ?id)
        (receive (standard-formals-stx signature)
-	   (parse-tagged-callable-spec-syntax ?fmls input-form.stx)
+	   (parse-tagged-lambda-proto-syntax ?fmls input-form.stx)
 	 (values ?id (procedure-tag-id) signature (cons 'defun input-form.stx))))
 
       ;;R6RS variable definition.

@@ -170,13 +170,14 @@ of callable arguments and return values.  @ref{typed parsers callable}
 for the callable syntax specification.
 
 @menu
-* typed parsers signatures rv::       Signatures of return values.
+* typed parsers signatures retvals::  Signatures of return values.
 * typed parsers signatures formals::  Signatures of formals.
-* typed parsers signatures callable:: Full callable signatures.
+* typed parsers signatures lambda::   @func{lambda} signatures.
+* typed parsers signatures clambda::  @func{case-lambda} compounds.
 @end menu
 
 @c page
-@node typed parsers signatures rv
+@node typed parsers signatures retvals
 @subsubsection Signatures of return values
 
 
@@ -185,16 +186,27 @@ expander object-type-specs}.
 
 
 @deftp {Struct Type} retvals-signature
-Struct type representing the type signature of callable's return
-values.  It has the following fields:
+Struct type representing the type signature of callable's return values.
+It has the following fields:
 
 @table @code
 @item tags
+It is a compound of tag identifiers:
+
+@itemize
+@item
 When the callable has one or more return values: a proper or improper
-list of tag identifiers is used to represent them.  When the callable
-has no return values: null is used.  When the callable has an
-unspecified number of return values: @false{} is used.
-@class{untagged} is used when a value has unspecified type.
+list of tag identifiers is used to represent them; a standalone tag
+identifier is valid.  Whenever an item in the list is if unspecified
+type: the tag @class{untagged} is used.
+
+@item
+When the callable has no return values: null is used.
+
+@item
+When the callable has an unspecified number of return values of
+unspecified type: the standalone @class{untagged} tag is used.
+@end itemize
 @end table
 @end deftp
 
@@ -264,20 +276,20 @@ The arguments must be instances of @objtype{formals-signature}.  Return
 @end defun
 
 @c page
-@node typed parsers signatures callable
-@subsubsection Full callable signatures
+@node typed parsers signatures lambda
+@subsubsection @func{lambda} signatures
 
 
 The following bindings are exported by the library @library{vicare
 expander object-type-specs}.
 
 
-@deftp {Struct Type} callable-signature
-Struct type representing the type signature of callables.  It has the
-following fields:
+@deftp {Struct Type} lambda-signature
+Struct type representing the type signature of a @func{lambda} clause.
+It has the following fields:
 
 @table @code
-@item return-values
+@item retvals
 An instance of @objtype{retvals-signature}.
 
 @item formals
@@ -286,40 +298,103 @@ An instance of @objtype{formals-signature}.
 @end deftp
 
 
-@defun make-callable-signature @var{rv-signature} @var{formals-signature}
-Build and return a new @objtype{callable-signature} instance.
+@defun make-lambda-signature @var{rv-signature} @var{formals-signature}
+Build and return a new @objtype{lambda-signature} instance.
 @end defun
 
 
-@defun callable-signature? @var{obj}
+@defun lambda-signature? @var{obj}
 Return @true{} if @var{obj} is an instance of
-@objtype{callable-signature}.
+@objtype{lambda-signature}.
 @end defun
 
 
-@defun callable-signature-return-values @var{signature}
-@defunx callable-signature-formals @var{signature}
-Accessor for the fields of @objtype{callable-signature} instances.
+@defun lambda-signature-retvals @var{signature}
+@defunx lambda-signature-formals @var{signature}
+Accessor for the fields of @objtype{lambda-signature} instances.
 @end defun
 
 
-@defun callable-signature-return-values-tags @var{signature}
+@defun lambda-signature-retvals-tags @var{signature}
 Return the content of the @code{tags} field in the
 @objtype{retvals-signature} instance from the @code{return-values} field
 of @var{signature}.
 @end defun
 
 
-@defun callable-signature-formals-tags @var{signature}
+@defun lambda-signature-formals-tags @var{signature}
 Return the content of the @code{tags} field in the
 @objtype{formals-signature} instance from the @code{formals} field of
 @var{signature}.
 @end defun
 
 
-@defun callable-signature=? @vari{signature} @varii{signature}
-The arguments must be instances of @objtype{callable-signature}.  Return
+@defun lambda-signature=? @vari{signature} @varii{signature}
+The arguments must be instances of @objtype{lambda-signature}.  Return
 @true{} if the arguments are equal, @false{} otherwise.
+@end defun
+
+@c page
+@node typed parsers signatures clambda
+@subsubsection @func{case-lambda} compounds
+
+
+The following bindings are exported by the library @library{vicare
+expander object-type-specs}.
+
+
+@deftp {Struct Type} clambda-compound
+Struct type representing the type signature of @func{case-lambda}
+clauses.  It has the following fields:
+
+@table @code
+@item common-retvals-signature
+An instance of @objtype{retvals-signature}.  It represents the signature
+of the common retvals from all the @func{case-lambda} clauses
+represented by this struct.  For example:
+
+@example
+(case-lambda
+ ((@{_ <fixnum>@}) . ?body)
+  (@{_ <fixnum>@}) . ?body)))
+@end example
+
+@noindent
+has common retvals signature @code{(<fixnum>)}, while:
+
+@example
+(case-lambda
+ ((@{_ <fixnum>@}) . ?body)
+  (@{_ <bignum>@}) . ?body)))
+@end example
+
+@noindent
+has common retvals signature @code{(<exact-integer>)}.  When it is not
+possible to determine a common retvals signature: the default value is
+the standalone identifier @code{<untagged>}, which means any number of
+objects of any type.
+
+@item lambda-signatures
+A proper list of @objtype{lambda-signature} instances representing the
+signatures of the @func{case-lambda} clauses.
+@end table
+@end deftp
+
+
+@defun make-clambda-compound @var{signatures}
+Build and return a new @objtype{clambda-compound} instance.
+@end defun
+
+
+@defun clambda-compound? @var{obj}
+Return @true{} if @var{obj} is an instance of
+@objtype{clambda-compound}.
+@end defun
+
+
+@defun clambda-compound-common-retvals-signature @var{signature}
+@defunx clambda-compound-lambda-signatures @var{signature}
+Accessor for the fields of @objtype{clambda-compound} instances.
 @end defun
 
 @c page
@@ -842,7 +917,7 @@ The following bindings are exported by the library @library{vicare
 expander object-type-specs}.
 
 
-@defun tagged-callable-spec-syntax? @var{stx}
+@defun tagged-lambda-proto-syntax? @var{stx}
 Return @true{} if @var{stx} is a syntax object representing valid tagged
 callable signature syntax; otherwise return @false{}.
 
@@ -852,103 +927,103 @@ callable signature syntax; otherwise return @false{}.
   (vicare expander tags)
   (prefix (vicare expander object-type-specs) typ.))
 
-(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}))
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    @{b <string>@}))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}
-                                      @{c <vector>@}))
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    @{b <string>@}
+                                    @{c <vector>@}))
 @result{} #t
 
 ;;; untagged
 
-(typ.tagged-callable-spec-syntax? #'(a))
+(typ.tagged-lambda-proto-syntax? #'(a))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax? #'(a b))
+(typ.tagged-lambda-proto-syntax? #'(a b))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax? #'(a b c))
+(typ.tagged-lambda-proto-syntax? #'(a b c))
 @result{} #t
 
 ;;; mixed tagged and untagged
 
-(typ.tagged-callable-spec-syntax? #'(a
-                                      @{b <string>@}))
+(typ.tagged-lambda-proto-syntax? #'(a
+                                    @{b <string>@}))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
-                                      b))
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    b))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax? #'(a
-                                      @{b <string>@}
-                                      @{c <vector>@}))
+(typ.tagged-lambda-proto-syntax? #'(a
+                                    @{b <string>@}
+                                    @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
-                                      b
-                                      @{c <vector>@}))
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    b
+                                    @{c <vector>@}))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax? #'(@{a <fixnum>@}
-                                      @{b <string>@}
-                                      c)
+(typ.tagged-lambda-proto-syntax? #'(@{a <fixnum>@}
+                                    @{b <string>@}
+                                    c)
 @result{} #t
 
 ;;; args argument
 
-(typ.tagged-callable-spec-syntax? #'@{args <fixnums>@})
+(typ.tagged-lambda-proto-syntax? #'@{args <fixnums>@})
 @result{} #t
 
-(typ.tagged-callable-spec-syntax? #'args)
+(typ.tagged-lambda-proto-syntax? #'args)
 @result{} #t
 
 ;;; rest argument
 
-(typ.tagged-callable-spec-syntax?
+(typ.tagged-lambda-proto-syntax?
     #'(@{a <fixnum>@} . @{rest <fixnums>@}))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax?
+(typ.tagged-lambda-proto-syntax?
     #'(@{a <fixnum>@} . rest))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax?
+(typ.tagged-lambda-proto-syntax?
     #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax?
+(typ.tagged-lambda-proto-syntax?
     #'(@{a <fixnum>@} @{b <string>@} . rest))
 @result{} #t
 
 ;;; return values tagging
 
-(typ.tagged-callable-spec-syntax? #'(@{_ <fixnum>@} a b))
+(typ.tagged-lambda-proto-syntax? #'(@{_ <fixnum>@} a b))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax?
+(typ.tagged-lambda-proto-syntax?
     #'(@{_ <fixnum>@} @{a <flonum>@} @{b <string>@}))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax?
+(typ.tagged-lambda-proto-syntax?
     #'(@{_ <fixnum> <flonum>@} @{a <vector>@} @{b <string>@}))
 @result{} #t
 
-(typ.tagged-callable-spec-syntax?
+(typ.tagged-lambda-proto-syntax?
     #'(@{_ <fixnum> <flonum>@} . @{args <fixnums>@}))
 @result{} #t
 @end example
 @end defun
 
 
-@defun parse-tagged-callable-spec-syntax @var{stx}
-@defunx parse-tagged-callable-spec-syntax @var{stx} @var{input-form.stx}
+@defun parse-tagged-lambda-proto-syntax @var{stx}
+@defunx parse-tagged-lambda-proto-syntax @var{stx} @var{input-form.stx}
 Given a syntax object @var{stx} representing tagged callable signature
 syntax: parse it and split formals from tags.  If successful return 2
 values: a proper or improper list of identifiers representing the
-standard formals; an instance of @objtype{callable-signature}.  If an
+standard formals; an instance of @objtype{lambda-signature}.  If an
 error occurs: raise an exception with condition object type
 @condition{syntax}.
 
@@ -963,13 +1038,13 @@ used as @code{form} field when raising a syntax violation.
   (prefix (vicare expander object-type-specs) typ.))
 
 (define (split input)
-  (let-values (((standard-formals-stx callable)
-                (typ.parse-tagged-callable-spec-syntax input)))
-    (define formals-tags
-      (typ.callable-signature-formals-tags callable))
-    (define rv-tags
-      (typ.callable-signature-return-values-tags callable))
-    (values standard-formals-stx rv-tags formals-tags)))
+  (receive (standard-formals-stx signature)
+      (typ.parse-tagged-lambda-proto-syntax input)
+    (define formals.tags
+      (typ.callable-signature-formals-tags signature))
+    (define retvals.tags
+      (typ.callable-signature-retvals-tags signature))
+    (values standard-formals-stx retvals.tags formals.tags)))
 
 (split #'(@{a <fixnum>@} @{b <string>@}))
 @result{} (#'a #'b) #f (#'<fixnum> #'<string>)

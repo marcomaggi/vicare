@@ -1664,19 +1664,7 @@
   (syntax-match input-form.stx ()
     ((_ ?tag)
      (tag-identifier? ?tag)
-     (cond ((identifier-object-type-spec ?tag)
-	    => (lambda (spec)
-		 (cond ((object-type-spec-pred-stx spec)
-			=> (lambda (predicate.stx)
-			     (chi-expr predicate.stx lexenv.run lexenv.expand)))
-		       (else
-			;;This   should  never   happen   because   an  instance   of
-			;;"object-type-spec" always has a defined predicate.
-			(stx-internal-error input-form.stx "undefined tag predicate function")))))
-	   (else
-	    ;;This should  never happen because  we have validated the  identifier in
-	    ;;the fender.
-	    (stx-internal-error input-form.stx "tag identifier without object-type-spec"))))
+     (chi-expr (tag-identifier-predicate ?tag input-form.stx) lexenv.run lexenv.expand))
     ))
 
 
@@ -1735,12 +1723,13 @@
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert))
 
-  (define (%just-evaluate-the-expression input-form.stx)
-    (let* ((expr.psi  (chi-expr input-form.stx lexenv.run lexenv.expand))
-	   (expr.core (psi-core-expr  expr.psi)))
+  (define (%just-evaluate-the-expression expr.psi)
+    (let ((expr.core (psi-core-expr expr.psi)))
       (make-psi (build-sequence no-source
-		  (list expr.core (build-void)))
-		(list (top-tag-id)))))
+		  (list expr.core
+			(build-void)))
+		;;We know that we are returning a single void argument.
+		(make-retvals-signature (list (top-tag-id))))))
 
   (define (%run-time-check-output-form expr.core checker.psi)
     ;;We build a core language expression as follows:
@@ -1758,28 +1747,26 @@
 		  call.core
 		  (list (build-lambda no-source '() expr.core)
 			checker.core))
-		(list (top-tag-id)))))
+		;;We know that we are returning a single void argument.
+		(make-retvals-signature (list (top-tag-id))))))
 
   (syntax-match input-form.stx ()
-    ((_ #f ?expr)
-     ;;No retvals signature specified.
-     (%just-evaluate-the-expression ?expr))
-
-    ((_ ?retvals-signature ?expr)
-     (and (identifier? ?retvals-signature)
-	  (free-identifier=? (top-tag-id) ?retvals-signature))
-     ;;Any tuple of returned objects is of type "<top>".
-     (%just-evaluate-the-expression ?expr))
-
     ((_ ?retvals-signature ?expr)
      (retvals-signature-syntax? ?retvals-signature)
-     (let* ((expr.psi   (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core  (psi-core-expr  expr.psi))
-	    (expr.sign  (psi-retvals-signature expr.psi)))
-       (cond ((unspecified-retvals-signature-syntax? expr.sign)
+     (let* ((asserted.sign (make-retvals-signature ?retvals-signature))
+	    (expr.psi      (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core     (psi-core-expr         expr.psi))
+	    (expr.sign     (psi-retvals-signature expr.psi)))
+       (cond ((and (identifier?       ?retvals-signature)
+		   ($untagged-tag-id? ?retvals-signature)
+		   ($top-tag-id?      ?retvals-signature))
+	      ;;Any tuple of returned objects is of type "<top>" or "<untagged>".
+	      (%just-evaluate-the-expression expr.psi))
+
+	     ((retvals-signature-partially-unspecified? expr.sign)
 	      ;;The  expression  has   no  type  specification  or   a  partial  type
 	      ;;specification; we have to insert a run-time check.  Here we know that
-	      ;;?RETVALS-SIGNATURE is  a valid formsla  signature, so we can  be less
+	      ;;?RETVALS-SIGNATURE is  a valid formals  signature, so we can  be less
 	      ;;strict in the patterns.
 	      (syntax-match ?retvals-signature ()
 		((?rv-tag* ...)
@@ -1814,19 +1801,19 @@
 		   (%run-time-check-output-form expr.core checker.psi)))
 		))
 
-	     ;;Here we know that both ?RETVALS-SIGNATURE and EXPR.SIGN are not false;
-	     ;;so they are formals signatures, not only retvals signatures.
-	     ((formals-signature-super-and-sub? ?retvals-signature expr.sign)
+	     ((retvals-signature-super-and-sub? asserted.sign expr.sign)
 	      ;;Fine, we have established at expand time that the returned values are
 	      ;;valid; assertion succeeded.  Just evaluate the expression.
 	      (make-psi (build-sequence no-source
-			  (list expr.core (build-void)))
-			(list (top-tag-id))))
+			  (list expr.core
+				(build-void)))
+			;;We know that we are returning a single void value.
+			(make-retvals-signature (list (top-tag-id)))))
 
 	     (else
 	      ;;The horror!!!  We  have established at expand-time  that the returned
 	      ;;values are of the wrong type; assertion failed.
-	      (retvals-signature-violation __who__ ?expr ?retvals-signature expr.sign)))))
+	      (retvals-signature-violation __who__ ?expr asserted.sign expr.sign)))))
 
     ((_ ?retvals-signature ?expr)
      ;;Let's use a descriptive error message here.
@@ -1845,7 +1832,7 @@
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert-and-return))
 
-  (define (%run-time-check-output-form expr.core checker.psi retvals-signature)
+  (define* (%run-time-check-output-form expr.core checker.psi asserted.sign)
     ;;We build a core language expression as follows:
     ;;
     ;;   (call-with-values
@@ -1856,35 +1843,35 @@
     ;;
     ;;The returned PSI struct has the given retvals signature.
     ;;
-    (let* ((call.psi     (chi-expr (scheme-stx 'call-with-values) lexenv.run lexenv.expand))
-	   (call.core    (psi-core-expr call.psi))
+    (let* ((cwv.psi      (chi-expr (scheme-stx 'call-with-values) lexenv.run lexenv.expand))
+	   (cwv.core     (psi-core-expr cwv.psi))
 	   (checker.core (psi-core-expr checker.psi)))
       (make-psi (build-application no-source
-		  call.core
-		  (list (build-lambda no-source '() expr.core)
+		  cwv.core
+		  (list (build-lambda no-source
+			  '()
+			  expr.core)
 			checker.core))
-		retvals-signature)))
+		asserted.sign)))
 
   (syntax-match input-form.stx ()
-    ((_ #f ?expr)
-     ;;No retvals signature specified.
-     (chi-expr ?expr lexenv.run lexenv.expand))
-
-    ((_ ?retvals-signature ?expr)
-     (and (identifier? ?retvals-signature)
-	  (free-id=? (top-tag-id) ?retvals-signature))
-     ;;Any tuple of returned objects is of type "<top>".
-     (chi-expr ?expr lexenv.run lexenv.expand))
-
     ((_ ?retvals-signature ?expr)
      (retvals-signature-syntax? ?retvals-signature)
-     (let* ((expr.psi   (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core  (psi-core-expr  expr.psi))
-	    (expr.sign  (psi-retvals-signature expr.psi)))
-       (cond ((unspecified-retvals-signature-syntax? expr.sign)
+     (let* ((asserted.sign (make-retvals-signature ?retvals-signature))
+	    (expr.psi      (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core     (psi-core-expr  expr.psi))
+	    (expr.sign     (psi-retvals-signature expr.psi)))
+       (cond ((and (identifier?       ?retvals-signature)
+		   ($untagged-tag-id? ?retvals-signature)
+		   ($top-tag-id?      ?retvals-signature))
+	      ;;Any tuple  of returned  objects is of  type "<top>"  or "<untagged>".
+	      ;;Just return the expression.
+	      expr.psi)
+
+	     ((retvals-signature-partially-unspecified? expr.sign)
 	      ;;The  expression  has no  type  specification;  we  have to  insert  a
-	      ;;run-time  check.  Here  we know  that ?RETVALS-SIGNATURE  is a  valid
-	      ;;formsla signature, so we can be less strict in the patterns.
+	      ;;run-time  check.  Here  we know  that ASSERTED.SIGN  is a  valid
+	      ;;formals signature, so we can be less strict in the patterns.
 	      (syntax-match ?retvals-signature ()
 		((?rv-tag* ...)
 		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
@@ -1895,7 +1882,7 @@
 							TMP* ?rv-tag*)
 						    (values . ,TMP*)))
 						lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi ?retvals-signature)))
+		   (%run-time-check-output-form expr.core checker.psi asserted.sign)))
 
 		((?rv-tag* ... . ?rv-rest-tag)
 		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
@@ -1907,7 +1894,7 @@
 						    (tag-return-value-validator ,?rv-rest-tag rest-tmp)
 						    (apply values ,@TMP* rest-tmp)))
 						lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi ?retvals-signature)))
+		   (%run-time-check-output-form expr.core checker.psi asserted.sign)))
 
 		(?rv-args-tag
 		 (let ((checker.psi  (chi-expr (bless
@@ -1915,12 +1902,10 @@
 						   (tag-return-value-validator ,?rv-args-tag args)
 						   (apply values args)))
 					       lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi ?retvals-signature)))
+		   (%run-time-check-output-form expr.core checker.psi asserted.sign)))
 		))
 
-	     ;;Here we know that both ?RETVALS-SIGNATURE and EXPR.SIGN are not false;
-	     ;;so they are formals signatures, not only retvals signatures.
-	     ((formals-signature-super-and-sub? ?retvals-signature expr.sign)
+	     ((retvals-signature-super-and-sub? asserted.sign expr.sign)
 	      ;;Fine, we have established at expand time that the returned values are
 	      ;;valid; assertion succeeded.  Just evaluate the expression.
 	      expr.psi)
@@ -1928,7 +1913,7 @@
 	     (else
 	      ;;The horror!!!  We  have established at expand-time  that the returned
 	      ;;values are of the wrong type; assertion failed.
-	      (retvals-signature-violation __who__ ?expr ?retvals-signature expr.sign)))))
+	      (retvals-signature-violation __who__ ?expr asserted.sign expr.sign)))))
 
     ((_ ?retvals-signature ?expr)
      ;;Let's use a descriptive error message here.
@@ -1952,23 +1937,21 @@
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sign (psi-retvals-signature expr.psi)))
-       (syntax-match expr.sign ()
-	 (#f
-	  (stx-error input-form.stx "unable to determine tag of expression"))
+       (if (retvals-signature-fully-unspecified? expr.sign)
+	   (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
+	 (syntax-match (retvals-signature-tags expr.sign) ()
+	   ((?tag)
+	    (let* ((accessor.stx  (tag-identifier-accessor ?tag ?field-name-id input-form.stx))
+		   (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+		   (accessor.core (psi-core-expr accessor.psi)))
+	      (make-psi (build-application (syntax-annotation input-form.stx)
+			  accessor.core
+			  (list expr.core))
+			(psi-retvals-signature accessor.psi))))
 
-	 ((?tag)
-	  (let* ((accessor.stx  (tag-identifier-accessor ?tag ?field-name-id input-form.stx))
-		 (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
-		 (accessor.core (psi-core-expr accessor.psi))
-		 (accessor.sign (psi-retvals-signature accessor.psi)))
-	    (make-psi (build-application (syntax-annotation input-form.stx)
-			accessor.core
-			(list expr.core))
-		      accessor.sign)))
-
-	 (_
-	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
-	 )))
+	   (_
+	    (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	   ))))
     ))
 
 (define (tag-mutator-transformer input-form.stx lexenv.run lexenv.expand)
@@ -1982,27 +1965,25 @@
     ((_ ?expr ?field-name-id ?new-value)
      (identifier? ?field-name-id)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sign (psi-retvals-signature expr.psi))
-	    (nval.psi  (chi-expr ?new-value lexenv.run lexenv.expand))
-	    (nval.core (psi-core-expr nval.psi)))
-       (syntax-match expr.sign ()
-	 (#f
-	  (stx-error input-form.stx "unable to determine tag of expression"))
+	    (nval.psi  (chi-expr ?new-value lexenv.run lexenv.expand)))
+       (if (retvals-signature-fully-unspecified? expr.sign)
+	   (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
+	 (syntax-match (retvals-signature-tags expr.sign) ()
+	   ((?tag)
+	    (let* ((mutator.stx  (tag-identifier-mutator ?tag ?field-name-id input-form.stx))
+		   (mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
+		   (mutator.core (psi-core-expr mutator.psi))
+		   (expr.core    (psi-core-expr expr.psi))
+		   (nval.core    (psi-core-expr nval.psi)))
+	      (make-psi (build-application (syntax-annotation input-form.stx)
+			  mutator.core
+			  (list expr.core nval.core))
+			(psi-retvals-signature mutator.psi))))
 
-	 ((?tag)
-	  (let* ((mutator.stx  (tag-identifier-mutator ?tag ?field-name-id input-form.stx))
-		 (mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
-		 (mutator.core (psi-core-expr mutator.psi))
-		 (mutator.sign (psi-retvals-signature mutator.psi)))
-	    (make-psi (build-application (syntax-annotation input-form.stx)
-			mutator.core
-			(list expr.core nval.core))
-		      mutator.sign)))
-
-	 (_
-	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
-	 )))
+	   (_
+	    (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	   ))))
     ))
 
 
@@ -2015,38 +1996,30 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-getter))
+  (define (%generate-output-form expr.stx keys.stx)
+    (let* ((expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
+	   (expr.sign (psi-retvals-signature expr.psi)))
+      (if (retvals-signature-fully-unspecified? expr.sign)
+	  (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
+	(syntax-match (retvals-signature-tags expr.sign) ()
+	  ((?tag)
+	   (let* ((getter.stx  (tag-identifier-getter ?tag keys.stx input-form.stx))
+		  (getter.psi  (chi-expr getter.stx lexenv.run lexenv.expand))
+		  (getter.core (psi-core-expr getter.psi))
+		  (expr.core   (psi-core-expr expr.psi)))
+	     (make-psi (build-application (syntax-annotation input-form.stx)
+			 getter.core
+			 (list expr.core))
+		       (psi-retvals-signature getter.psi))))
+
+	  (_
+	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	  ))))
   (syntax-match input-form.stx ()
     ((_ ?expr ((?key00 ?key0* ...) (?key11* ?key1** ...) ...))
-     (let* ((keys.stx  (cons (cons ?key00 ?key0*)
-			     (map cons ?key11* ?key1**)))
-	    (expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
-	    (expr.sign (psi-retvals-signature expr.psi)))
-       (syntax-match expr.sign ()
-	 (#f
-	  (stx-error input-form.stx "unable to determine tag of expression"))
-
-	 ((?tag)
-	  (let* ((getter.stx  (tag-identifier-getter ?tag keys.stx input-form.stx))
-		 (getter.psi  (chi-expr getter.stx lexenv.run lexenv.expand))
-		 (getter.core (psi-core-expr getter.psi))
-		 (getter.sign (psi-retvals-signature getter.psi)))
-	    (make-psi (build-application (syntax-annotation input-form.stx)
-			getter.core
-			(list expr.core))
-		      getter.sign)))
-
-	 (_
-	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
-	 )))
-
+     (%generate-output-form ?expr (cons (cons ?key00 ?key0*) (map cons ?key11* ?key1**))))
     ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...)
-     (let* ((keys.stx  (cons (cons ?key00 ?key0*)
-			     (map cons ?key11* ?key1**))))
-       (chi-expr (bless
-		  `(tag-getter ,?expr ,keys.stx))
-		 lexenv.run lexenv.expand)))
-
+     (%generate-output-form ?expr (cons (cons ?key00 ?key0*) (map cons ?key11* ?key1**))))
     ))
 
 (define (tag-setter-transformer input-form.stx lexenv.run lexenv.expand)
@@ -2056,39 +2029,32 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'tag-setter))
+  (define (%generate-output-form expr.stx keys.stx new-value.stx)
+    (let* ((expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
+	   (expr.sign (psi-retvals-signature expr.psi)))
+      (if (retvals-signature-fully-unspecified? expr.sign)
+	  (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
+	(syntax-match (retvals-signature-tags expr.sign) ()
+	  ((?tag)
+	   (let* ((setter.stx  (tag-identifier-setter ?tag keys.stx input-form.stx))
+		  (setter.psi  (chi-expr setter.stx lexenv.run lexenv.expand))
+		  (setter.core (psi-core-expr setter.psi))
+		  (expr.core   (psi-core-expr expr.psi))
+		  (nval.psi    (chi-expr new-value.stx lexenv.run lexenv.expand))
+		  (nval.core   (psi-core-expr nval.psi)))
+	     (make-psi (build-application (syntax-annotation input-form.stx)
+			 setter.core
+			 (list expr.core nval.core))
+		       (psi-retvals-signature setter.psi))))
+
+	  (_
+	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	  ))))
   (syntax-match input-form.stx ()
     ((_ ?expr ((?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
-     (let* ((keys.stx  (cons (cons ?key00 ?key0*)
-			     (map cons ?key11* ?key1**)))
-	    (expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
-	    (expr.sign (psi-retvals-signature expr.psi))
-	    (nval.psi  (chi-expr ?new-value lexenv.run lexenv.expand))
-	    (nval.core (psi-core-expr nval.psi)))
-       (syntax-match expr.sign ()
-	 (#f
-	  (stx-error input-form.stx "unable to determine tag of expression"))
-
-	 ((?tag)
-	  (let* ((setter.stx  (tag-identifier-setter ?tag keys.stx input-form.stx))
-		 (setter.psi  (chi-expr setter.stx lexenv.run lexenv.expand))
-		 (setter.core (psi-core-expr setter.psi))
-		 (setter.sign (psi-retvals-signature setter.psi)))
-	    (make-psi (build-application (syntax-annotation input-form.stx)
-			setter.core
-			(list expr.core nval.core))
-		      setter.sign)))
-
-	 (_
-	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
-	 )))
-
+     (%generate-output-form ?expr (cons (cons ?key00 ?key0*) (map cons ?key11* ?key1**)) ?new-value))
     ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
-     (let* ((keys.stx  (cons (cons ?key00 ?key0*)
-			     (map cons ?key11* ?key1**))))
-       (chi-expr (bless
-		  `(tag-setter ,?expr ,keys.stx ,?new-value))
-		 lexenv.run lexenv.expand)))
+     (%generate-output-form ?expr (cons (cons ?key00 ?key0*) (map cons ?key11* ?key1**)) ?new-value))
     ))
 
 
@@ -2105,25 +2071,23 @@
     ((_ ?expr ?member ?arg* ...)
      (identifier? ?member)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sign (psi-retvals-signature expr.psi)))
-       (syntax-match expr.sign ()
-	 (#f
-	  (stx-error input-form.stx "unable to determine tag of expression"))
+      (if (retvals-signature-fully-unspecified? expr.sign)
+	  (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
+	(syntax-match (retvals-signature-tags expr.sign) ()
+	  ((?tag)
+	   (let* ((method.stx  (tag-identifier-dispatch ?tag ?member ?arg* input-form.stx))
+		  (method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
+		  (method.core (psi-core-expr method.psi))
+		  (expr.core   (psi-core-expr expr.psi)))
+	     (make-psi (build-application (syntax-annotation input-form.stx)
+			 method.core
+			 (list expr.core))
+		       (psi-retvals-signature method.psi))))
 
-	 ((?tag)
-	  (let* ((method.stx  (tag-identifier-dispatch ?tag ?member ?arg* input-form.stx))
-		 (method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
-		 (method.core (psi-core-expr method.psi))
-		 (method.sign (psi-retvals-signature method.psi)))
-	    (make-psi (build-application (syntax-annotation input-form.stx)
-			method.core
-			(list expr.core))
-		      method.sign)))
-
-	 (_
-	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
-	 )))
+	  (_
+	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	  ))))
     ))
 
 
@@ -2144,45 +2108,43 @@
 	  (else
 	   (stx-internal-error input-form.stx "tag identifier without object type spec"))))
 
-  (define (%cast-at-run-time target-tag expr.psi)
+  (define (%cast-at-run-time-with-generic-transformer target-tag expr.psi)
+    ;;When the  type of the expression  is unknown at expand-time:  insert a run-time
+    ;;expression that will  try to convert whatever source value  into a target value
+    ;;of the requested type.
+    ;;
     (cond ((%retrieve-caster-maker target-tag)
-	   => (lambda (caster-maker)
-		(let* ((caster.stx   (caster-maker #f input-form.stx))
+	   => (lambda (target-caster-maker)
+		(let* ((caster.stx   (target-caster-maker #f input-form.stx))
 		       (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
 		       (caster.core  (psi-core-expr caster.psi))
-		       (expr.core    (psi-core-expr expr.psi))
-		       (expr.sign    (psi-retvals-signature expr.psi)))
+		       (expr.core    (psi-core-expr expr.psi)))
 		  ;;This form  will either succeed or  raise an exception, so  we can
 		  ;;tag this PSI with the target tag.
 		  (make-psi (build-application no-source
 			      caster.core
 			      (list expr.core))
-			    (list target-tag)))))
+			    (make-retvals-signature (list target-tag))))))
 	  (else
 	   (%validate-and-return target-tag expr.psi))))
 
   (define (%validate-and-return target-tag expr.psi)
-    (let* ((expr.core        (psi-core-expr expr.psi))
-  	   (expr.sign        (psi-retvals-signature expr.psi))
-  	   (validate.psi     (chi-expr (scheme-stx 'validate-with-predicate) lexenv.run lexenv.expand))
-  	   (validate.core    (psi-core-expr validate.psi))
-  	   (type-name.core   (build-data no-source
-  			       (syntax->datum target-tag)))
-  	   (predicate.psi    (chi-expr (bless
-  					`(tag-predicate ,target-tag))
-  				       lexenv.run lexenv.expand))
-  	   (predicate.core   (psi-core-expr predicate.psi))
-  	   (input-form.core  (build-data no-source
-  			       (syntax->datum input-form.stx))))
+    ;;When the  source tag  is unknown  or incompatible  with the  target tag  and no
+    ;;transformer  function was  found  for  the target  tag:  we  insert a  run-time
+    ;;expression that validates and returns the value.
+    ;;
+    (let* ((expr.core       (psi-core-expr expr.psi))
+  	   (type-name.core  (build-data no-source
+			      (syntax->datum target-tag)))
+  	   (predicate.psi   (chi-expr (tag-identifier-predicate target-tag input-form.stx)
+				      lexenv.run lexenv.expand))
+  	   (predicate.core  (psi-core-expr predicate.psi)))
       ;;This form will either  succeed or raise an exception, so we  can tag this PSI
       ;;with the target tag.
       (make-psi (build-application no-source
-  		  validate.core
-  		  (list type-name.core
-  			predicate.core
-  			expr.core
-  			input-form.core))
-  		(list target-tag))))
+		  (build-primref no-source 'return-value-validation-with-predicate)
+  		  (list type-name.core predicate.core expr.core))
+  		(make-retvals-signature (list target-tag)))))
 
   (syntax-match input-form.stx ()
     ((_ ?target-tag ?expr)
@@ -2190,35 +2152,34 @@
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sign (psi-retvals-signature expr.psi)))
-       (syntax-match expr.sign ()
-	 (#f
-	  (%cast-at-run-time ?target-tag expr.psi))
+      (if (retvals-signature-fully-unspecified? expr.sign)
+	  (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi)
+	(syntax-match (retvals-signature-tags expr.sign) ()
+	  ((?source-tag)
+	   (cond (($untagged-tag-id? ?source-tag)
+		  (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi))
+		 ((tag-super-and-sub? ?target-tag ?source-tag)
+		  ;;The expression  already has the  right type: nothing to  do, just
+		  ;;return it.
+		  expr.psi)
+		 (else
+		  ;;The tag  of expression  is incompatible  with the  requested tag.
+		  ;;Try to select an appropriate caster operator.
+		  (cond ((%retrieve-caster-maker ?target-tag)
+			 => (lambda (target-caster-maker)
+			      (let* ((caster.stx   (target-caster-maker ?source-tag input-form.stx))
+				     (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
+				     (caster.core  (psi-core-expr caster.psi)))
+				(make-psi (build-application (syntax-annotation input-form.stx)
+					    caster.core
+					    (list expr.core))
+					  (make-retvals-signature (list ?target-tag))))))
+			(else
+			 (%validate-and-return ?target-tag expr.psi))))))
 
-	 ((?source-tag)
-	  (cond ((free-id=? ?source-tag (untagged-tag-id))
-		 (%cast-at-run-time ?target-tag expr.psi))
-		((tag-super-and-sub? ?target-tag ?source-tag)
-		 ;;The expression  already has  the right type:  nothing to  do, just
-		 ;;return it.
-		 expr.psi)
-		(else
-		 ;;The tag of expression is incompatible with the requested tag.  Try
-		 ;;to select an appropriate caster operator.
-		 (cond ((%retrieve-caster-maker ?target-tag)
-			=> (lambda (caster-maker)
-			     (let* ((caster.stx   (caster-maker ?source-tag input-form.stx))
-				    (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
-				    (caster.core  (psi-core-expr caster.psi)))
-			       (make-psi (build-application (syntax-annotation input-form.stx)
-					   caster.core
-					   (list expr.core))
-					 (list ?target-tag)))))
-		       (else
-			(%validate-and-return ?target-tag expr.psi))))))
-
-	 (_
-	  (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
-	 )))
+	  (_
+	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	  ))))
     ))
 
 

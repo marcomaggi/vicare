@@ -1143,22 +1143,29 @@
     ;; expand-time object type specs: parsing tagged identifiers
     tagged-identifier-syntax?			parse-tagged-identifier-syntax
     list-of-tagged-bindings?			parse-list-of-tagged-bindings
-    tagged-callable-spec-syntax?		parse-tagged-callable-spec-syntax
+    tagged-lambda-proto-syntax?			parse-tagged-lambda-proto-syntax
     tagged-formals-syntax?			parse-tagged-formals-syntax
     standard-formals-syntax?
     formals-signature-syntax?			retvals-signature-syntax?
 
-    make-callable-signature		callable-signature?
-    callable-signature-formals		callable-signature-return-values
-    make-formals-signature		formals-signature?		formals-signature-tags
-    make-retvals-signature		retvals-signature?	retvals-signature-tags
-    callable-signature-formals-tags
-    callable-signature-return-values-tags
-    callable-signature=?		formals-signature=?		retvals-signature=?
+    make-clambda-compound			clambda-compound?
+    clambda-compound-common-retvals-signature	clambda-compound-lambda-signatures
+
+    make-lambda-signature			lambda-signature?
+    lambda-signature-formals			lambda-signature-retvals
+    lambda-signature-formals-tags		lambda-signature-retvals-tags
+    lambda-signature=?
+
+    make-formals-signature			formals-signature?
+    formals-signature-tags			formals-signature=?
+
+    make-retvals-signature			retvals-signature?
+    retvals-signature-tags			retvals-signature=?
+    make-fully-unspecified-retvals-signature
 
     ;; expand-time object type specs: identifiers defining types
     tag-identifier?				all-tag-identifiers?
-    tag-super-and-sub?				formals-signature-super-and-sub?
+    tag-super-and-sub?				formals-signature-super-and-sub-syntax?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
 
@@ -5892,10 +5899,10 @@
 (include "psyntax.expander.tagged-identifiers.scm" #t)
 (module (initialise-type-spec-for-built-in-object-types
 	 retvals-signature-of-datum
-	 untagged-tag-id
-	 top-tag-id
-	 procedure-tag-id
-	 list-tag-id)
+	 untagged-tag-id		$untagged-tag-id?	untagged-tag-id?
+	 procedure-tag-id		$procedure-tag-id?
+	 list-tag-id			$list-tag-id?
+	 top-tag-id			$top-tag-id?)
   (import (vicare))
   (include "psyntax.expander.built-in-tags.scm" #t))
 
@@ -5930,7 +5937,7 @@
 	;;in the expanded code.
 	((_ ?expr (?literals ...))
 	 (for-all sys.identifier? (syntax (?literals ...)))
-	 (syntax (syntax-violation #f "invalid syntax" ?expr)))
+	 (syntax (syntax-violation 'syntax-match "invalid syntax, no clauses" ?expr)))
 
 	;;The next clause has a fender.
 	((_ ?expr (?literals ...) (?pattern ?fender ?body) ?clause* ...)
@@ -5981,7 +5988,7 @@
 	;;SYNTAX-MATCH's transformer.
 	;;
 	(?stuff
-	 (syntax (syntax-violation #f "invalid syntax" stx)))
+	 (syntax (syntax-violation 'syntax-match "invalid syntax in macro use" stx)))
 	))
 
     (module (%convert-single-pattern)
@@ -6221,6 +6228,15 @@
 			       (else stx))))
 	    (hashtable-set! scheme-stx-hashtable sym stx)
 	    stx)))))
+
+(define underscore-id?
+  (let ((underscore-id #f))
+    (lambda (id)
+      (and (identifier? id)
+	   (free-id=? id (or underscore-id
+			     (receive-and-return (id)
+				 (scheme-stx '_)
+			       (set! underscore-id id))))))))
 
 
 ;;;; macro transformer modules
@@ -6980,7 +6996,7 @@
   ;;
   (syntax-rules (quote)
     ((_ ?expr-stx)
-     (syntax-violation #f "invalid syntax" ?expr-stx))
+     (syntax-violation #f "syntax error" ?expr-stx))
     ((_ ?expr-stx ?msg)
      (syntax-violation #f ?msg ?expr-stx))
     ((_ ?expr-stx ?msg ?who)
@@ -7009,7 +7025,7 @@
       (assertion-violation 'syntax-error "invalid argument" args))
     (raise
      (condition (make-message-condition (if (null? args)
-					    "invalid syntax"
+					    "syntax error"
 					  (apply string-append args)))
 		(make-syntax-violation (syntax->datum x) #f)
 		(%expression->source-position-condition x)

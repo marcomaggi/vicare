@@ -2515,7 +2515,7 @@
     ((_ ?who (?formal* ...) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-callable-spec-syntax ?formal* expr-stx)
+       (parse-tagged-lambda-proto-syntax ?formal* expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda ,?formal*
@@ -2524,7 +2524,7 @@
     ((_ ?who (?formal* ... . ?rest-formal) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-callable-spec-syntax (append ?formal* ?rest-formal) expr-stx)
+       (parse-tagged-lambda-proto-syntax (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(make-traced-procedure ',?who
 				(lambda (,@?formal* . ,?rest-formal)
@@ -2540,7 +2540,7 @@
     ((_ (?who ?formal* ...) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-callable-spec-syntax ?formal* expr-stx)
+       (parse-tagged-lambda-proto-syntax ?formal* expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -2550,7 +2550,7 @@
     ((_ (?who ?formal* ... . ?rest-formal) ?body ?body* ...)
      (begin
        ;;We parse the formals for validation purposes.
-       (parse-tagged-callable-spec-syntax (append ?formal* ?rest-formal) expr-stx)
+       (parse-tagged-lambda-proto-syntax (append ?formal* ?rest-formal) expr-stx)
        (bless
 	`(define ,?who
 	   (make-traced-procedure ',?who
@@ -3787,11 +3787,11 @@
   (syntax-match expr-stx (brace)
     ((_ (?name ?arg* ... . (brace ?rest ?rest-tag)) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-callable-spec-syntax? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
+	  (tagged-lambda-proto-syntax? (append ?arg* (bless `(brace ,?rest ,?rest-tag)))))
      (%output ?name ?arg* (bless `(brace ,?rest ,?rest-tag)) (cons ?form0 ?form*)))
     ((_ (?name ?arg* ... . ?rest) ?form0 ?form* ...)
      (and (identifier? ?name)
-	  (tagged-callable-spec-syntax? (append ?arg* ?rest)))
+	  (tagged-lambda-proto-syntax? (append ?arg* ?rest)))
      (%output ?name ?arg* ?rest (cons ?form0 ?form*)))
     ))
 

@@ -74,11 +74,11 @@
 	      aux.))
   (import (vicare (0 4))
     (for (prefix (vicare expander object-type-specs)
-		 type-specs.)
+		 typ.)
       expand)
     (prefix (only (vicare expander tags)
 		  <top>)
-	    type-specs.)
+	    typ.)
     (nausicaa language oopp auxiliary-syntaxes (0 4))
     (nausicaa language oopp conditions (0 4))
     (for (prefix (nausicaa language oopp oopp-syntax-helpers (0 4))
@@ -145,9 +145,9 @@
 
 (define-syntax <top>
   (let ()
-    (type-specs.set-identifier-object-type-spec! #'<top>
-      (type-specs.make-object-type-spec 'nausicaa:builtin:<top>
-					#'<top> #'type-specs.<top>
+    (typ.set-identifier-object-type-spec! #'<top>
+      (typ.make-object-type-spec 'nausicaa:builtin:<top>
+					#'<top> #'typ.<top>
 					#'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
@@ -293,8 +293,8 @@
 
 (define-syntax <procedure>
   (let ()
-    (type-specs.set-identifier-object-type-spec! #'<procedure>
-      (type-specs.make-object-type-spec 'nausicaa:builtin:<procedure>
+    (typ.set-identifier-object-type-spec! #'<procedure>
+      (typ.make-object-type-spec 'nausicaa:builtin:<procedure>
 					#'<procedure> #'<top> #'procedure?))
     (lambda (stx)
       (case-define synner
@@ -493,12 +493,12 @@
 		  (define (%dispatcher method-sym arg*.stx input-form-stx)
 		    #f)
 		  (define type-spec
-		    (type-specs.make-object-type-spec (quote NONGENERATIVE-UID)
+		    (typ.make-object-type-spec (quote NONGENERATIVE-UID)
 						      #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
 						      %accessor-maker %mutator-maker
 						      %getter-maker %setter-maker
 						      %caster-maker %dispatcher))
-		  (type-specs.set-identifier-object-type-spec! #'THE-TAG type-spec))
+		  (typ.set-identifier-object-type-spec! #'THE-TAG type-spec))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -849,12 +849,12 @@
 		  (define (%dispatcher method-sym arg*.stx input-form-stx)
 		    #f)
 		  (define type-spec
-		    (type-specs.make-object-type-spec (quote NONGENERATIVE-UID)
+		    (typ.make-object-type-spec (quote NONGENERATIVE-UID)
 						      #'THE-TAG #'THE-PARENT #'THE-PREDICATE
 						      %accessor-maker %mutator-maker
 						      %getter-maker %setter-maker
 						      %caster-maker %dispatcher))
-		  (type-specs.set-identifier-object-type-spec! #'THE-TAG type-spec))
+		  (typ.set-identifier-object-type-spec! #'THE-TAG type-spec))
 
 		(lambda (stx)
 		  (define (synner message subform)
@@ -1725,5 +1725,5 @@
 ;; eval: (put 'aux.method 'scheme-indent-function 1)
 ;; eval: (put 'THE-PARENT 'scheme-indent-function 1)
 ;; eval: (put 'receive-and-return/tags 'scheme-indent-function 2)
-;; eval: (put 'type-specs.set-identifier-object-type-spec! 'scheme-indent-function 1)
+;; eval: (put 'typ.set-identifier-object-type-spec! 'scheme-indent-function 1)
 ;; End:

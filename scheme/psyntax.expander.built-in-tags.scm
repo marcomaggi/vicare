@@ -620,29 +620,48 @@
   (define-tag-retriever list-tag-id		<list>)
   #| end of let-syntax |# )
 
+(define (untagged-tag-id? id)
+  (and (identifier? id)
+       (free-id=? id (untagged-tag-id))))
+
+(define ($untagged-tag-id? id)
+  (free-id=? id (untagged-tag-id)))
+
+(define ($procedure-tag-id? id)
+  (free-id=? id (procedure-tag-id)))
+
+(define ($list-tag-id? id)
+  (free-id=? id (list-tag-id)))
+
+(define ($top-tag-id? id)
+  (free-id=? id (top-tag-id)))
+
+;;; --------------------------------------------------------------------
+
 (define (retvals-signature-of-datum datum)
-  (cond ((boolean? datum)	(list (S <boolean>)))
-	((char?    datum)	(list (S <char>)))
-	((symbol?  datum)	(list (S <symbol>)))
-	((keyword? datum)	(list (S <keyword>)))
+  (make-retvals-signature
+   (list (cond ((boolean? datum)	(S <boolean>))
+	       ((char?    datum)	(S <char>))
+	       ((symbol?  datum)	(S <symbol>))
+	       ((keyword? datum)	(S <keyword>))
 
-	((fixnum?  datum)	(list (S <fixnum>)))
-	((flonum?  datum)	(list (S <flonum>)))
-	((ratnum?  datum)	(list (S <ratnum>)))
-	((bignum?  datum)	(list (S <bignum>)))
-	((compnum? datum)	(list (S <compnum>)))
-	((cflonum? datum)	(list (S <cflonum>)))
-	((real?    datum)	(list (S <real>)))
-	((complex? datum)	(list (S <complex>)))
-	((number?  datum)	(list (S <number>)))
+	       ((fixnum?  datum)	(S <fixnum>))
+	       ((flonum?  datum)	(S <flonum>))
+	       ((ratnum?  datum)	(S <ratnum>))
+	       ((bignum?  datum)	(S <bignum>))
+	       ((compnum? datum)	(S <compnum>))
+	       ((cflonum? datum)	(S <cflonum>))
+	       ((real?    datum)	(S <real>))
+	       ((complex? datum)	(S <complex>))
+	       ((number?  datum)	(S <number>))
 
-	((string?  datum)	(list (S <string>)))
-	((vector?  datum)	(list (S <vector>)))
-	((list?    datum)	(list (S <list>)))
-	((pair?    datum)	(list (S <pair>)))
-	((bytevector? datum)	(list (S <bytevector>)))
+	       ((string?  datum)	(S <string>))
+	       ((vector?  datum)	(S <vector>))
+	       ((list?    datum)	(S <list>))
+	       ((pair?    datum)	(S <pair>))
+	       ((bytevector? datum)	(S <bytevector>))
 
-	(else			#f)))
+	       (else			(untagged-tag-id))))))
 
 ;;; end of file
 ;; Local Variables:
