@@ -28,7 +28,8 @@
 	 make-psi psi?
 	 psi-core-expr
 	 psi-retvals-signature
-	 psi-callable-spec)
+	 psi-callable-spec
+	 psi-application-retvals-signature)
 
   (define-record (psi %make-psi psi?)
     (core-expr
@@ -57,6 +58,21 @@
   (define (%callable-spec? obj)
     (or (lambda-signature? obj)
 	(clambda-compound? obj)))
+
+  (define* (psi-application-retvals-signature {rator psi?})
+    ;;RATOR is a PSI representing the first form in a callable application:
+    ;;
+    ;;   (?rator ?rand ...)
+    ;;
+    ;;we need to establish its retvals signature and return it.
+    ;;
+    (let ((spec ($psi-callable-spec psi)))
+      (cond ((lambda-signature? spec)
+	     ($lambda-signature-retvals spec))
+	    ((clambda-compound? spec)
+	     ($clambda-compound-common-retvals-signature spec))
+	    (else
+	     (make-fully-unspecified-retvals-signature)))))
 
   #| end of module |# )
 
@@ -695,18 +711,17 @@
 	   ;;see at run-time what happens.
 	   (%process-unknown-rator-type input-form.stx rator.core rand*.stx lexenv.run lexenv.expand))
 	  ((?tag)
-	   ;;The rator type is a single value.
+	   ;;The rator type is a single value.  Good, this is what it is meant to be.
 	   (cond (($tag-super-and-sub? (procedure-tag-id) ?tag)
-		  ;;The rator is a procedure.  Good.  Return a procedure application.
+		  ;;The  rator  is  a  procedure.  Very  good.   Return  a  procedure
+		  ;;application.
 		  (let* ((rand*.psi  (while-not-expanding-application-first-subform
 				      (chi-expr* rand*.stx lexenv.run lexenv.expand)))
 			 (rand*.core (map psi-core-expr rand*.psi)))
 		    (make-psi (build-application (syntax-annotation input-form.stx)
 				rator.core
 				rand*.core)
-			      ;;FIXME  Put   here  the   retvals  signature   of  the
-			      ;;procedure.  (Marco Maggi; Fri Mar 28, 2014)
-			      (make-fully-unspecified-retvals-signature))))
+			      (psi-application-retvals-signature rator.psi))))
 		 ((or ($untagged-tag-id? ?tag)
 		      ($top-tag-id?      ?tag))
 		  ;;The rator type is unknown.  Return a procedure application and we
@@ -738,7 +753,7 @@
 		       (make-psi (build-application (syntax-annotation input-form.stx)
 				   getter.core
 				   (list rator.core))
-				 getter.sign)))
+				 (psi-application-retvals-signature getter.psi))))
 		    ((?member ?arg* ...)
 		     (identifier? ?member)
 		     ;;There  are  operands and  they  match  the  syntax for  a  tag
@@ -750,7 +765,7 @@
 		       (make-psi (build-application (syntax-annotation input-form.stx)
 				   method.core
 				   (list rator.core))
-				 method.sign)))
+				 (psi-application-retvals-signature method.psi))))
 		    (_
 		     ;;There are operands, but they do not match any of the supported
 		     ;;syntaxes; for example the input form may be:
@@ -782,9 +797,7 @@
 	       (rand*.core (map psi-core-expr rand*.psi)))
 	  (make-psi (build-application (syntax-annotation input-form.stx)
 		      rator.core
-		      rand*.core)
-		    ;;We do not know the retvals signature.
-		    (make-fully-unspecified-retvals-signature))))
+		      rand*.core))))
 
       #| end of module: %BUILD-CORE-EXPRESSION |# )
 

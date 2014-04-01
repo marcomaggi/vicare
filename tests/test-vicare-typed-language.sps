@@ -3554,6 +3554,21 @@
   #t)
 
 
+(parametrise ((check-test-name	'lambda-retvals))
+
+  (check
+      (3 positive?)
+    => #t)
+
+  ;; (check
+  ;;     (((lambda ({_ <fixnum>} {a <fixnum>} {b <fixnum>})
+  ;; 	  (+ a b))
+  ;; 	1 2) positive?)
+  ;;   => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
