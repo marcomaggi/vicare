@@ -1235,32 +1235,22 @@
     ;;Add the return values validation to the last form in the body; return a list of
     ;;body forms.
     ;;
-    ;;When there are arguments validators: the body forms are wrapped in a LET syntax
-    ;;with no bindings to create an internal lexical scope.
+    ;;When  there  are  arguments  validators:  the body  forms  are  wrapped  in  an
+    ;;INTERNAL-BODY to  create an internal  lexical scope.   This is far  better than
+    ;;wrapping into a LET, which would expand into a nested LAMBDA.
     ;;
-    ;;The  argument  HAS-ARGUMENTS-VALIDATORS?   is  really  required  to  avoid  LET
-    ;;wrapping when  not needed;  without it:  expanding a  LAMBDA clause  causes the
-    ;;generation of infinite nested LET syntaxes.
-    ;;
-    ;;NOTE I have tried different solutions to avoid this LET wrapping either without
-    ;;success or  introducing unwanted (by  me) complications.  Notice  that wrapping
-    ;;the TAG-PROCEDURE-ARGUMENT-VALIDATION  forms into  DEFINE syntaxes  followed by
-    ;;the body  forms has not worked  because it can generate  binding conflicts with
-    ;;the body defines capturing variable references in the validation forms.  Notice
-    ;;that, whatever solution we use, we have to take into accound that when the code
-    ;;is expanded  with arguments  validation turned off:  the validation  forms will
-    ;;expand  to  empty run-time  code,  but  we  still want  expand-time  signatures
-    ;;validation.  (Marco Maggi; Mon Mar 31, 2014)
+    ;;The  argument HAS-ARGUMENTS-VALIDATORS?   is  required  to avoid  INTERNAL-BODY
+    ;;wrapping when not needed; this gains a bit of speed when expanding the body.
     ;;
     (cond (has-arguments-validators?
            (if (retvals-signature-fully-unspecified? retvals-signature)
 	       ;;The number and type of return values is unknown.
 	       (bless
-		`((let () . ,body-form*.stx)))
+		`((internal-body . ,body-form*.stx)))
 	     (receive (head*.stx last.stx)
 		 (proper-list->head-and-last body-form*.stx)
 	       (bless
-		`((let ()
+		`((internal-body
 		    ,@head*.stx
 		    (tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))
 	  (else
