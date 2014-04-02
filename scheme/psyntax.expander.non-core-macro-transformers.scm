@@ -263,14 +263,14 @@
 	    ,k)))
       (((?datum* ...) ?expr ?expr* ...)
        `(if (memv t ',?datum*)
-	    (begin ,?expr . ,?expr*)
+	    (internal-body ,?expr . ,?expr*)
 	  ,k))
       ))
 
   (define (%build-last clause)
     (syntax-match clause (else)
       ((else ?expr ?expr* ...)
-       `(let () #f ,?expr . ,?expr*))
+       `(internal-body ,?expr . ,?expr*))
       (_
        (%build-one clause '(if #f #f)))))
 
@@ -315,14 +315,14 @@
 
       (((?datum* ...) ?expr ?expr* ...)
        `(if ,(%build-test expr-stx ?datum*)
-	    (begin ,?expr . ,?expr*)
+	    (internal-body ,?expr . ,?expr*)
 	  ,kont))
       ))
 
   (define (%build-last expr-stx clause)
     (syntax-match clause (else)
       ((else ?expr ?expr* ...)
-       `(let () #f ,?expr . ,?expr*))
+       `(internal-body ,?expr . ,?expr*))
       (_
        (%build-one expr-stx clause '(if #f #f)))))
 
@@ -441,7 +441,7 @@
 	  ;;This definition  exists only  to make  sure that  the object
 	  ;;type spec form is evaluated in the visit code.
 	  (define-syntax dummy
-	    (let ()
+	    (internal-body
 	      ,object-type-spec-form
 	      (lambda (stx) #f)))
 	  ,@accessor-sexp*
@@ -466,7 +466,7 @@
       (string->symbol (string-append type-str "-setter-maker")))
     (define %dispatcher
       (string->symbol (string-append type-str "-dispatcher")))
-    `(let ()
+    `(internal-body
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
 
@@ -651,7 +651,7 @@
 	;;This definition exists only to  make sure that the object type
 	;;spec form is evaluated in the visit code.
 	(define-syntax dummy
-	  (let ()
+	  (internal-body
 	    ,object-type-spec-form
 	    (lambda (stx) #f)))
 
@@ -1028,7 +1028,7 @@
       (string->symbol (string-append type-str "-setter-maker")))
     (define %dispatcher
       (string->symbol (string-append type-str "-dispatcher")))
-    `(let ()
+    `(internal-body
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
 
@@ -1231,7 +1231,7 @@
   (syntax-match expr-stx ()
     ((_ () ?body ?body* ...)
      (bless
-      `(let () ,?body . ,?body*)))
+      `(internal-body ,?body . ,?body*)))
 
     ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
      (let ((lhs* (generate-temporaries ?lhs*))
@@ -1566,7 +1566,7 @@
   ;;     (?pat0
   ;;      (syntax-case ?expr1 ()
   ;;       (?pat1
-  ;;        (let () ?body0 ?body ...))
+  ;;        (internal-body ?body0 ?body ...))
   ;;       (_
   ;;        (assertion-violation ---))))
   ;;     (_
@@ -1589,7 +1589,7 @@
 	     ,(let recur ((pat* ?pat*)
 			  (t*   t*))
 		(if (null? pat*)
-		    `(let () ,?body . ,?body*)
+		    `(internal-body ,?body . ,?body*)
 		  `(syntax-case ,(car t*) ()
 		     (,(car pat*)
 		      ,(recur (cdr pat*) (cdr t*)))
@@ -1708,7 +1708,7 @@
      (bless
       (let recur ((x* (map list ?lhs* ?rhs*)))
 	(if (null? x*)
-	    `(let () ,?body . ,?body*)
+	    `(internal-body ,?body . ,?body*)
 	  `(let (,(car x*)) ,(recur (cdr x*)))))))
     ))
 
@@ -1927,7 +1927,7 @@
     ;;No bindings.
     ((_ () ?body ?body* ...)
      (bless
-      `(let () ,?body . ,?body*)))
+      `(internal-body ,?body . ,?body*)))
     ;;Multiple bindings
     ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
      (let ((SHADOW* (generate-temporaries (cons ?lhs ?lhs*))))
@@ -1948,7 +1948,7 @@
     ;;No bindings.
     ((_ () ?body ?body* ...)
      (bless
-      `(let () ,?body . ,?body*)))
+      `(internal-body ,?body . ,?body*)))
     ;;Multiple bindings
     ((_ ((?lhs ?rhs) (?lhs* ?rhs*) ...) ?body ?body* ...)
      (bless
@@ -1965,7 +1965,7 @@
   (syntax-match expr-stx ()
     ((_ () ?body0 ?body* ...)
      (bless
-      `(let () ,?body0 . ,?body*)))
+      `(internal-body ,?body0 . ,?body*)))
 
     ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
      (let ((TMP* (generate-temporaries ?lhs*))
@@ -1982,7 +1982,7 @@
 	       ,@(map (lambda (var tmp)
 			`(set! ,var ,tmp))
 		   VAR* TMP*)
-	       (let () ,?body0 . ,?body*)))))))
+	       (internal-body ,?body0 . ,?body*)))))))
     ))
 
 (define (letrec*-constants-macro expr-stx)
@@ -1993,7 +1993,7 @@
   (syntax-match expr-stx ()
     ((_ () ?body0 ?body* ...)
      (bless
-      `(let () ,?body0 . ,?body*)))
+      `(internal-body ,?body0 . ,?body*)))
 
     ((_ ((?lhs* ?rhs*) ...) ?body0 ?body* ...)
      (let ((TMP* (generate-temporaries ?lhs*))
@@ -2010,7 +2010,7 @@
 	       ,@(map (lambda (var tmp)
 			`(set! ,var ,tmp))
 		   VAR* TMP*)
-	       (let () ,?body0 . ,?body*)))))))
+	       (internal-body ,?body0 . ,?body*)))))))
     ))
 
 
@@ -2071,7 +2071,7 @@
     ;;  ==> (define (?who . ?common-formals)
     ;;        (fluid-let-syntax
     ;;            ((__who__ (identifier-syntax (quote ?who))))
-    ;;          (let () . ?body)))
+    ;;          (internal-body . ?body)))
     ;;
     ;;  (define* (?who (brace ?var ?pred)) . ?body)
     ;;  ==> (define (?who ?var)
@@ -2080,14 +2080,14 @@
     ;;          (unless (?pred ?var)
     ;; 	          (procedure-argument-violation __who__
     ;; 	            "failed argument validation" '(?pred ?var) ?var))
-    ;;          (let () . ?body)))
+    ;;          (internal-body . ?body)))
     ;;
     ;;  (define* ((brace ?who ?pred) ?var) . ?body)
     ;;  ==> (define (?who ?var)
     ;;        (fluid-let-syntax
     ;;            ((__who__ (identifier-syntax (quote ?who))))
     ;;          (receive-and-return (rv)
-    ;;              (let () . ?body)
+    ;;              (internal-body . ?body)
     ;;            (unless (?pred rv)
     ;;              (expression-return-value-violation __who__
     ;; 	              "failed return value validation" (list '?pred rv))))))
@@ -2129,7 +2129,7 @@
 	      (fluid-let-syntax
 		  ((__who__ (identifier-syntax (quote ,?who))))
 		,@ARG-VALIDATION*
-		(let () . ,?body*)))))))
+		(internal-body . ,?body*)))))))
 
     (define (%generate-define-output-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body* synner)
       (receive (?standard-formals arg-validation-spec*)
@@ -2144,7 +2144,7 @@
 		  ((__who__ (identifier-syntax (quote ,?who))))
 		,@ARG-VALIDATION*
 		(receive-and-return (,@RET*)
-		    (let () . ,?body*)
+		    (internal-body . ,?body*)
 		  ,RET-VALIDATION)))))))
 
     #| end of module |# )
@@ -2193,7 +2193,7 @@
 	    (fluid-let-syntax
 		((__who__ (identifier-syntax (quote ,?who))))
 	      ,@ARG-VALIDATION*
-	      (let () ,?body0 ,@?body*))))))
+	      (internal-body ,?body0 ,@?body*))))))
 
     (define (%generate-case-define-clause-form/with-ret-pred ?who ?ret-pred* ?predicate-formals ?body0 ?body* synner)
       (receive (?standard-formals arg-validation-spec*)
@@ -2207,7 +2207,7 @@
 		((__who__ (identifier-syntax (quote ,?who))))
 	      ,@ARG-VALIDATION*
 	      (receive-and-return (,@RET*)
-		  (let () ,?body0 ,@?body*)
+		  (internal-body ,?body0 ,@?body*)
 		,RET-VALIDATION))))))
 
     #| end of module |# )
@@ -2246,7 +2246,7 @@
 	      (fluid-let-syntax
 		  ((__who__ (identifier-syntax (quote _))))
 		,@ARG-VALIDATION*
-		(let () ,?body0 ,@?body*)))))))
+		(internal-body ,?body0 ,@?body*)))))))
 
     (define (%generate-lambda-output-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
       (receive (?standard-formals arg-validation-spec*)
@@ -2261,7 +2261,7 @@
 		  ((__who__ (identifier-syntax (quote _))))
 		,@ARG-VALIDATION*
 		(receive-and-return (,@RET*)
-		    (let () ,?body0 ,@?body*)
+		    (internal-body ,?body0 ,@?body*)
 		  ,RET-VALIDATION)))))))
 
     #| end of module |# )
@@ -2308,7 +2308,7 @@
 	    (fluid-let-syntax
 		((__who__ (identifier-syntax (quote _))))
 	      ,@ARG-VALIDATION*
-	      (let () ,?body0 ,@?body*))))))
+	      (internal-body ,?body0 ,@?body*))))))
 
     (define (%generate-case-lambda-clause-form/with-ret-pred ?ctx ?ret-pred* ?predicate-formals ?body0 ?body* synner)
       (receive (?standard-formals arg-validation-spec*)
@@ -2322,7 +2322,7 @@
 		((__who__ (identifier-syntax (quote _))))
 	      ,@ARG-VALIDATION*
 	      (receive-and-return (,@RET*)
-		  (let () ,?body0 ,@?body*)
+		  (internal-body ,?body0 ,@?body*)
 		,RET-VALIDATION))))))
 
     #| end of module |# )
@@ -3145,7 +3145,7 @@
 	(if (null? cls*)
 	    (syntax-match cls (else =>)
 	      ((else ?expr ?expr* ...)
-	       `(let () #f ,?expr . ,?expr*))
+	       `(internal-body ,?expr . ,?expr*))
 
 	      ((?test => ?proc)
 	       `(let ((t ,?test))
@@ -3156,7 +3156,7 @@
 
 	      ((?test ?expr* ...)
 	       `(if ,?test
-		    (begin . ,?expr*)))
+		    (internal-body . ,?expr*)))
 
 	      (_
 	       (stx-error expr-stx "invalid last clause")))
@@ -3177,7 +3177,7 @@
 
 	    ((?test ?expr* ...)
 	     `(if ,?test
-		  (begin . ,?expr*)
+		  (internal-body . ,?expr*)
 		,(recur (car cls*) (cdr cls*))))
 
 	    (_
@@ -3825,7 +3825,7 @@
 	  filename.str verbose? synner)
       ;;We expect CONTENTS to be null or a list of annotated datums.
       (bless
-       `(stale-when (let ()
+       `(stale-when (internal-body
 		      (import (only (vicare language-extensions posix)
 				    file-modification-time))
 		      (or (not (file-exists? ,pathname))
