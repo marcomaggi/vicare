@@ -360,15 +360,33 @@
 					    ($retvals-signature-tags sub-signature)))
 
 (define* (retvals-signature-single-tag? {signature retvals-signature?})
-  (let ((tags ($retvals-signature-tags signature)))
-    (and (pair? tags)
-	 (null? ($cdr tags)))))
+  ;;Return  true if  SIGNATURE represents  a  single return  value, otherwise  return
+  ;;false.  We have to remember that a signature syntax can be:
+  ;;
+  ;;   (#'?tag . #'())
+  ;;
+  ;;with the last element being a syntax  object representing null; so we really need
+  ;;to use SYNTAX-MATCH here to inspect the tags.
+  ;;
+  (syntax-match ($retvals-signature-tags signature) ()
+    ((?tag)	#t)
+    (_		#f)))
 
 (define* (retvals-signature-single-tag-or-fully-unspecified? {signature retvals-signature?})
+  ;;Return true if SIGNATURE represents a single return value or it is the standalone
+  ;;"<untagged>"  identifier, otherwise  return false.   We have  to remember  that a
+  ;;signature syntax can be:
+  ;;
+  ;;   (#'?tag . #'())
+  ;;
+  ;;with the last element being a syntax  object representing null; so we really need
+  ;;to use SYNTAX-MATCH here to inspect the tags.
+  ;;
   (let ((tags ($retvals-signature-tags signature)))
     (or (untagged-tag-id? tags)
-	(and (pair? tags)
-	     (null? ($cdr tags))))))
+	(syntax-match tags ()
+	  ((?tag)	#t)
+	  (_		#f)))))
 
 ;;; --------------------------------------------------------------------
 

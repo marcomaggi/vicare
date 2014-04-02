@@ -209,7 +209,9 @@
 		      (body.core (psi-core-expr body.psi))
 		      ;;Build the LETREC or LETREC* expression in the core language.
 		      (expr.core (core-lang-builder no-source lex* rhs*.core body.core)))
-		 (make-psi expr.core (psi-retvals-signature body.psi))))))))
+		 (make-psi expr.core
+			   (psi-retvals-signature body.psi)
+			   (psi-callable-spec     body.psi))))))))
       ))
 
   #| end of module |# )
@@ -1083,7 +1085,8 @@
       ((_ ?type-id)
        (identifier? ?type-id)
        (make-psi (build-data no-source
-		   (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run))))
+		   (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run))
+		 (make-retvals-signature (list (scheme-stx '<struct-type-descriptor>)))))
       ))
 
   (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
@@ -1352,10 +1355,12 @@
 		  lexenv.run lexenv.expand))
        ((vicare-struct-type)
 	(make-psi (build-data no-source
-		    (syntactic-binding-value binding))))
+		    (syntactic-binding-value binding))
+		  (make-retvals-signature (list (scheme-stx '<struct-type-descriptor>)))))
        ((object-type-spec)
 	(make-psi (build-data no-source
-		    (identifier-object-type-spec ?type-id))))
+		    (identifier-object-type-spec ?type-id))
+		  (make-retvals-signature (list (top-tag-id)))))
        ))
     ))
 
@@ -1832,7 +1837,7 @@
   (define-fluid-override __who__
     (identifier-syntax 'tag-assert-and-return))
 
-  (define* (%run-time-check-output-form expr.core checker.psi asserted.sign)
+  (define* (%run-time-check-output-form {expr.psi psi?} {checker.psi psi?} asserted.sign)
     ;;We build a core language expression as follows:
     ;;
     ;;   (call-with-values
@@ -1845,6 +1850,7 @@
     ;;
     (let* ((cwv.psi      (chi-expr (scheme-stx 'call-with-values) lexenv.run lexenv.expand))
 	   (cwv.core     (psi-core-expr cwv.psi))
+	   (expr.core    (psi-core-expr expr.psi))
 	   (checker.core (psi-core-expr checker.psi)))
       (make-psi (build-application no-source
 		  cwv.core
@@ -1852,7 +1858,8 @@
 			  '()
 			  expr.core)
 			checker.core))
-		asserted.sign)))
+		asserted.sign
+		(psi-callable-spec expr.psi))))
 
   (syntax-match input-form.stx ()
     ((_ ?retvals-signature ?expr)
@@ -1882,7 +1889,7 @@
 							TMP* ?rv-tag*)
 						    (values . ,TMP*)))
 						lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi asserted.sign)))
+		   (%run-time-check-output-form expr.psi checker.psi asserted.sign)))
 
 		((?rv-tag* ... . ?rv-rest-tag)
 		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
@@ -1894,7 +1901,7 @@
 						    (tag-return-value-validator ,?rv-rest-tag rest-tmp)
 						    (apply values ,@TMP* rest-tmp)))
 						lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi asserted.sign)))
+		   (%run-time-check-output-form expr.psi checker.psi asserted.sign)))
 
 		(?rv-args-tag
 		 (let ((checker.psi  (chi-expr (bless
@@ -1902,7 +1909,7 @@
 						   (tag-return-value-validator ,?rv-args-tag args)
 						   (apply values args)))
 					       lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi asserted.sign)))
+		   (%run-time-check-output-form expr.psi checker.psi asserted.sign)))
 		))
 
 	     ((retvals-signature-super-and-sub? asserted.sign expr.sign)

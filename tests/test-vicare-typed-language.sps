@@ -3556,15 +3556,28 @@
 
 (parametrise ((check-test-name	'lambda-retvals))
 
-  (check
+  (check	;demo
       (3 positive?)
     => #t)
 
-  ;; (check
-  ;;     (((lambda ({_ <fixnum>} {a <fixnum>} {b <fixnum>})
-  ;; 	  (+ a b))
-  ;; 	1 2) positive?)
-  ;;   => #t)
+  (check	;demo
+      (((<fixnum>)(+ 1 2)) positive?)
+    => #t)
+
+;;; --------------------------------------------------------------------
+;;; nested lambda calls
+
+  (check	;nested field accessor
+      (((lambda ({_ <fixnum>} {a <fixnum>} {b <fixnum>})
+  	  (+ a b))
+  	1 2) positive?)
+    => #t)
+
+  (check	;nested getter accessor
+      (((lambda ({_ <string>} {a <fixnum>})
+  	  (number->string a))
+  	123) [1])
+    => #\2)
 
   #t)
 

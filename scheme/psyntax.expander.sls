@@ -6937,15 +6937,14 @@
 ;;The  "chi-*"  functions  are  the ones  visiting  syntax  objects  and
 ;;performing the expansion process.
 ;;
-(module (make-psi psi? psi-core-expr psi-retvals-signature
-	 chi-expr
-	 chi-expr*
-	 chi-body*
-	 chi-internal-body
-	 chi-qrhs*
-	 chi-defun
-	 chi-lambda
-	 chi-case-lambda)
+(module (make-psi
+	 psi?
+	 psi-core-expr		psi-retvals-signature
+	 psi-callable-spec
+	 chi-expr		chi-expr*
+	 chi-body*		chi-internal-body
+	 chi-qrhs*		chi-defun
+	 chi-lambda		chi-case-lambda)
   (include "psyntax.expander.chi-module.scm" #t))
 
 
