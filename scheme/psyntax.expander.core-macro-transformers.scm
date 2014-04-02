@@ -43,6 +43,7 @@
     ((syntax)					syntax-transformer)
     ((fluid-let-syntax)				fluid-let-syntax-transformer)
     ((splice-first-expand)			splice-first-expand-transformer)
+    ((internal-body)				internal-body-transformer)
     ((unsafe)					unsafe-transformer)
     ((predicate-procedure-argument-validation)	predicate-procedure-argument-validation-transformer)
     ((predicate-return-value-validation)	predicate-return-value-validation-transformer)
@@ -997,6 +998,20 @@
      (make-psi (let ()
 		 (import SPLICE-FIRST-ENVELOPE)
 		 (make-splice-first-envelope ?form))))
+    ))
+
+
+;;;; module core-macro-transformer: INTERNAL-BODY
+
+(define (internal-body-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's INTERNAL-BODY  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context  of the  given LEXENV;  return  a PSI  struct containing  an instance  of
+  ;;"splice-first-envelope".
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?body ?body* ...)
+     (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
     ))
 
 

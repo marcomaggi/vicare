@@ -4881,6 +4881,35 @@
   #t)
 
 
+(parametrise ((check-test-name	'non-hygienic-identifier-syntaxes))
+
+  (check
+      (with-result
+       (let ()
+	 (define a 2)
+	 (add-result 1)
+	 (add-result a)
+	 (internal-body
+	  (define b 4)
+	  (define c 5)
+	  (add-result b)
+	  (add-result c)
+	  (+ a b c))))
+    => `(,(+ 2 4 5) (1 2 4 5)))
+
+  (check
+      (with-result
+       (internal-body
+	(define a 1)
+	(define b 2)
+	(add-result a)
+	(add-result b)
+	(+ a b)))
+    => `(,(+ 1 2) (1 2)))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

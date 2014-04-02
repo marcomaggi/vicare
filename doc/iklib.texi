@@ -281,6 +281,7 @@ Example:
 * iklib syntaxes stale::        Declaring compiled library in
                                 stale state.
 * iklib syntaxes include::      Including source files at expand time.
+* iklib syntaxes body::         Internal body.
 * iklib syntaxes types::        Type syntaxes.
 * iklib syntaxes predicates::   Predicate syntaxes.
 * iklib syntaxes slots::        Slot getter and setter syntaxes.
@@ -1377,6 +1378,31 @@ the pathname @meta{filename}, which must be a string.  Everything
 happens as if the code was present in place of the @func{include} form.
 When the optional @true{} argument is given: print a message on the
 current error port describing the include operation.
+@end deffn
+
+@c page
+@node iklib syntaxes body
+@subsection Internal body
+
+
+@deffn Syntax internal-body @meta{definition} @dots{} @metao{expr} @meta{expr} @dots{}
+Delimits an internal body, evaluating the definitions and then the
+expression.  This syntax must be used in expression context.
+
+@example
+(import (vicare))
+
+(let ()
+  (define a 1)
+  (display a)
+  (internal-body
+    (define b 2)
+    (define c 3)
+    (display a)
+    (display b)
+    (display c)))
+@print{} 1123
+@end example
 @end deffn
 
 @c page
