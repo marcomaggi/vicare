@@ -28,6 +28,7 @@
 (library (vicare options)
   (export
     verbose?
+    debug-mode-enabled?
     verbose-about-libraries?
     print-loaded-libraries
     cache-compiled-libraries
@@ -68,6 +69,7 @@
 
 (define-boolean-option verbose?			#f)
 (define-boolean-option verbose-about-libraries?	#f)
+(define-boolean-option debug-mode-enabled?	#f)
 (define-boolean-option print-loaded-libraries   #f)
 (define-boolean-option cache-compiled-libraries	#f)
 (define-boolean-option report-errors-at-runtime #f)

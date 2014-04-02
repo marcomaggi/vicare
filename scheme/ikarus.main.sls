@@ -56,6 +56,7 @@
 	    config.)
     (prefix (only (vicare options)
 		  verbose?
+		  debug-mode-enabled?
 		  print-loaded-libraries
 		  cache-compiled-libraries
 		  report-errors-at-runtime
@@ -516,9 +517,11 @@
 ;;; Vicare options without argument
 
 	  ((%option= "-d" "-g" "--debug")
+	   (option.debug-mode-enabled? #t)
 	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #t))))
 
 	  ((%option= "-nd" "--no-debug")
+	   (option.debug-mode-enabled? #f)
 	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #f))))
 
 	  ((%option= "--gc-integrity-checks")

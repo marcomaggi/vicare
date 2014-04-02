@@ -54,6 +54,7 @@
 
     ;; runtime options
     option.verbose-about-libraries?
+    option.debug-mode-enabled?
     option.strict-r6rs
     option.enable-arguments-validation?
     option.descriptive-labels
@@ -120,6 +121,7 @@
     (prefix (rename (only (vicare options)
 			  verbose?
 			  verbose-about-libraries?
+			  debug-mode-enabled?
 			  strict-r6rs
 			  descriptive-labels
 			  print-loaded-libraries

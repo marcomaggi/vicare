@@ -170,6 +170,11 @@
 ($strip-source-info #t)
 ($current-letrec-pass 'scc)
 
+;;NOTE This turns of some debug mode features that cannot be used in the
+;;boot image because it would become  too big.  (Marco Maggi; Wed Apr 2,
+;;2014)
+($generate-debug-calls #f)
+
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 
