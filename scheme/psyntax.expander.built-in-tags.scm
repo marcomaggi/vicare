@@ -316,7 +316,7 @@
     (syntax-match keys-stx ()
       (([?char-index])
        (bless
-	`(lambda (str)
+	`(lambda ({_ <char>} {str <string>})
 	   (string-ref str ,?char-index))))
       (else
        (syntax-violation '<string>

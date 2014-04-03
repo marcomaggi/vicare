@@ -3588,6 +3588,33 @@
   #t)
 
 
+(parametrise ((check-test-name	'define-retvals))
+
+  (check	;nested field accessor
+      (let ()
+	(define ({fun <fixnum>} {a <fixnum>} {b <fixnum>})
+  	  (+ a b))
+	((fun 1 2) positive?))
+    => #t)
+
+  (check	;nested getter
+      (let ()
+	(define ({fun <string>} {a <fixnum>})
+  	  (number->string a))
+	((fun 123) [1]))
+    => #\2)
+
+  (check
+      ;;Function application nested in getter nested in field accessor.
+      (let ()
+	(define ({fun <string>} {a <fixnum>})
+  	  (number->string a))
+	(((fun 123) [1]) numeric?))
+    => #t)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
