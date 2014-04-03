@@ -320,16 +320,19 @@
 (define (make-fully-unspecified-retvals-signature)
   (%make-retvals-signature (untagged-tag-id)))
 
-(define make-procedure-retval-signature
-  ;;Return an instance of "retvals-signature" representing a single value tagged with
-  ;;"<procedure>".
-  ;;
-  (let ((sign #f))
-    (lambda ()
-      (or sign
-	  (receive-and-return (rv)
-	      (make-retvals-signature (list (procedure-tag-id)))
-	    (set! sign rv))))))
+(let-syntax
+    ((define-single-tag-retvals-maker (syntax-rules ()
+					((_ ?who ?tag-maker)
+					 (define ?who
+					   (let ((sign #f))
+					     (lambda ()
+					       (or sign
+						   (receive-and-return (S)
+						       (make-retvals-signature (list (?tag-maker)))
+						     (set! sign S))))))))))
+  (define-single-tag-retvals-maker make-single-top-retvals-signature		top-tag-id)
+  (define-single-tag-retvals-maker make-single-procedure-retvals-signature	procedure-tag-id)
+  #| end of let-syntax |# )
 
 ;;; --------------------------------------------------------------------
 ;;; special accessors

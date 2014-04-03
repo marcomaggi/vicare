@@ -3780,8 +3780,10 @@
 
     (tag-identifier?				$type-specs)
     (all-tag-identifiers?			$type-specs)
+    (tag-identifier-callable-spec		$type-specs)
     (tag-super-and-sub?				$type-specs)
     (formals-signature-super-and-sub-syntax?	$type-specs)
+
     (set-identifier-object-type-spec!		$type-specs)
     (identifier-object-type-spec		$type-specs)
     (set-label-object-type-spec!		$type-specs)
@@ -3798,25 +3800,11 @@
     (object-type-spec-setter-maker		$type-specs)
     (object-type-spec-dispatcher		$type-specs)
 
-    (set-identifier-callable-spec!		$type-specs)
-    (identifier-callable-spec			$type-specs)
-    (make-callable-spec				$type-specs)
-    (callable-spec?				$type-specs)
-    (callable-spec-name				$type-specs)
-    (callable-spec-min-arity			$type-specs)
-    (callable-spec-max-arity			$type-specs)
-    (callable-spec-dispatcher			$type-specs)
-
     (tagged-identifier?				$type-specs)
     (set-identifier-tag!			$type-specs)
     (identifier-tag				$type-specs)
     (set-label-tag!				$type-specs)
     (label-tag					$type-specs)
-
-    (set-identifier-callable-signature!		$type-specs)
-    (identifier-callable-signature		$type-specs)
-    (set-label-callable-signature!		$type-specs)
-    (label-callable-signature			$type-specs)
 
     (make-retvals-signature-violation		$type-specs)
     (retvals-signature-violation		$type-specs)
@@ -3833,6 +3821,7 @@
     (return-value-validation-with-predicate)
     (any->symbol)
     (any->string)
+    (procedure-and-error)
 
     ))
 

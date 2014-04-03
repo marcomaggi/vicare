@@ -146,61 +146,6 @@
   #t)
 
 
-(parametrise ((check-test-name	'callable-custom))
-
-  (define (func a b c)
-    #;(debug-print 'func a b c)
-    (* a (+ b c)))
-
-  (define (fxfunc a b c)
-    #;(debug-print 'fxfunc a b c)
-    (fx* a (fx+ b c)))
-
-  (eval-for-expand
-
-    (define fixnum-spec
-      (typ.identifier-object-type-spec #'<fixnum>))
-
-    (define exact-integer-spec
-      (typ.identifier-object-type-spec #'<exact-integer>))
-
-    (typ.set-identifier-callable-spec! #'func
-      (typ.make-callable-spec 'func 3 3
-			  (lambda (type-a type-b type-c)
-			    (cond ((and (eq? type-a fixnum-spec)
-					(eq? type-b fixnum-spec)
-					(eq? type-c fixnum-spec))
-				   (values #'fxfunc exact-integer-spec))
-				  (else
-				   (values #'func #f))))))
-
-    #| end of eval-for-expand |# )
-
-  (check
-      (func 2 3 4)
-    => (* 2 (+ 3 4)))
-
-  (check
-      (fxfunc 2 3 4)
-    => (* 2 (+ 3 4)))
-
-  (check
-      (let ()
-	(define-syntax (doit stx)
-	  (syntax-case stx ()
-	    ((_ ?who . ?args)
-	     (let ((dispatcher (typ.callable-spec-dispatcher (typ.identifier-callable-spec #'?who)))
-		   (fx-spec    (typ.identifier-object-type-spec #'<fixnum>)))
-	       (receive (id rv-spec)
-		   (dispatcher fx-spec fx-spec fx-spec)
-		 #`(#,id . ?args))))
-	    ))
-	(doit func 2 3 4))
-    => (* 2 (+ 3 4)))
-
-  #t)
-
-
 ;;;; done
 
 (check-report)

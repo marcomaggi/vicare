@@ -1165,6 +1165,7 @@
 
     ;; expand-time object type specs: identifiers defining types
     tag-identifier?				all-tag-identifiers?
+    tag-identifier-callable-spec
     tag-super-and-sub?				formals-signature-super-and-sub-syntax?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
@@ -1184,14 +1185,6 @@
     tagged-identifier?
     set-identifier-tag!				identifier-tag
     set-label-tag!				label-tag
-    set-identifier-callable-signature!		identifier-callable-signature
-    set-label-callable-signature!		label-callable-signature
-
-    ;; expand-time type specs: callable specs
-    identifier-callable-spec		set-identifier-callable-spec!
-    make-callable-spec			callable-spec?
-    callable-spec-name			callable-spec-min-arity
-    callable-spec-max-arity		callable-spec-dispatcher
 
     retvals-signature-violation
     make-retvals-signature-violation
@@ -2535,8 +2528,8 @@
 
 (module CORE-BODY-EXPANDER
   (core-body-expander)
-  ;;Both the R6RS  programs expander and the R6RS  library expander make
-  ;;use of this module to expand the body forms.
+  ;;Both the R6RS  programs expander and the  R6RS library expander make  use of this
+  ;;module to expand the body forms.
   ;;
   ;;Let's take this library as example:
   ;;
@@ -2549,70 +2542,64 @@
   ;;     (define var2 2)
   ;;     (define-syntax (mac stx) 3))
   ;;
-  ;;When expanding the body of a library: the argument EXPORT-SPEC* is a
-  ;;SYNTAX-MATCH  input argument  representing a  set of  library export
-  ;;specifications; when  expanding the body of  a program: EXPORT-SPEC*
-  ;;is the symbol "all".
+  ;;When expanding the body of a library: the argument EXPORT-SPEC* is a SYNTAX-MATCH
+  ;;input  argument  representing  a  set  of  library  export  specifications;  when
+  ;;expanding the body of a program: EXPORT-SPEC* is the symbol "all".
   ;;
-  ;;IMPORT-SPEC* is a SYNTAX-MATCH input  argument representing a set of
-  ;;library import specifications.
+  ;;IMPORT-SPEC*  is a  SYNTAX-MATCH input  argument  representing a  set of  library
+  ;;import specifications.
   ;;
-  ;;BODY-SEXP* is  a SYNTAX-MATCH  input argument representing  the body
-  ;;forms.
+  ;;BODY-SEXP* is a SYNTAX-MATCH input argument representing the body forms.
   ;;
-  ;;MIXED-DEFINITIONS-AND-EXPRESSIONS? is true  when expanding a program
-  ;;and  false when  expanding  a library;  when  true mixing  top-level
-  ;;definitions and expressions is fine.
+  ;;MIXED-DEFINITIONS-AND-EXPRESSIONS?  is true  when expanding  a program  and false
+  ;;when expanding a library; when  true mixing top-level definitions and expressions
+  ;;is fine.
   ;;
   ;;Return multiple values:
   ;;
-  ;;1. A list of LIBRARY records representing the collection accumulated
-  ;;    by  the  IMP-COLLECTOR.   The records  represent  the  libraries
-  ;;   imported by the IMPORT syntaxes.
+  ;;1..A  list of  LIBRARY records  representing  the collection  accumulated by  the
+  ;;   IMP-COLLECTOR.   The records  represent the libraries  imported by  the IMPORT
+  ;;   syntaxes.
   ;;
-  ;;2. A list of LIBRARY records representing the collection accumulated
-  ;;    by  the  INV-COLLECTOR.   The records  represent  the  libraries
-  ;;   exporting the global variable bindings referenced in the run-time
-  ;;   code.
+  ;;2..A  list of  LIBRARY records  representing  the collection  accumulated by  the
+  ;;    INV-COLLECTOR.  The  records  represent the  libraries  exporting the  global
+  ;;   variable bindings referenced in the run-time code.
   ;;
-  ;;3. A list of LIBRARY records representing the collection accumulated
-  ;;    by  the  VIS-COLLECTOR.   The records  represent  the  libraries
-  ;;    exporting  the  global   variable  bindings  referenced  in  the
-  ;;   right-hand sides of syntax definitions.
+  ;;3..A  list of  LIBRARY records  representing  the collection  accumulated by  the
+  ;;    VIS-COLLECTOR.  The  records  represent the  libraries  exporting the  global
+  ;;   variable bindings referenced in the right-hand sides of syntax definitions.
   ;;
-  ;;4.  INVOKE-CODE  is  a   core  language  LIBRARY-LETREC*  expression
-  ;;   representing the  result of expanding the input  source.  For the
-  ;;   library in the example INVOKE-CODE is:
+  ;;4..INVOKE-CODE  is a  core language  LIBRARY-LETREC* expression  representing the
+  ;;    result  of expanding  the  input  source.  For  the  library  in the  example
+  ;;   INVOKE-CODE is:
   ;;
   ;;      (library-letrec*
   ;;          ((lex.var1 loc.lex.var1 '1)
   ;;           (lex.var2 loc.lec.var2 '2))
   ;;        ((primitive void)))
   ;;
-  ;;5. MACRO* is  a list of bindings representing the  macros defined in
-  ;;   the code.  For the example library MACRO* is:
+  ;;5..MACRO* is a list of bindings representing the macros defined in the code.  For
+  ;;   the example library MACRO* is:
   ;;
   ;;      ((lab.mac #<procedure> .
   ;;         (annotated-case-lambda (#'lambda (#'stx) #'3)
   ;;           ((#'stx) '3)))
   ;;
-  ;;6. EXPORT-SUBST is an alist with entries having the format:
+  ;;6..EXPORT-SUBST is an alist with entries having the format:
   ;;
   ;;      (?name . ?label)
   ;;
-  ;;   where:  ?NAME is a  symbol representing  the external name  of an
-  ;;    exported   syntactic  binding;  ?LABEL  is   a  gensym  uniquely
-  ;;    identifying such  syntactic  binding.  For  the  library in  the
-  ;;   example, EXPORT-SUBST is:
+  ;;    where: ?NAME  is  a symbol  representing  the external  name  of an  exported
+  ;;    syntactic binding;  ?LABEL is  a gensym  uniquely identifying  such syntactic
+  ;;   binding.  For the library in the example, EXPORT-SUBST is:
   ;;
   ;;      ((mac      . lab.mac)
   ;;       (the-var2 . lab.var2)
   ;;       (var1     . lab.var1))
   ;;
-  ;;7. EXPORT-ENV is the lexical environment of bindings exported by the
-  ;;   library.   Its format is different  from the one of  the LEXENV.*
-  ;;   values used throughout the expansion process.  For the library in
-  ;;   the example, EXPORT-ENV is:
+  ;;7..EXPORT-ENV is  the lexical  environment of bindings  exported by  the library.
+  ;;   Its format  is different from the  one of the LEXENV.*  values used throughout
+  ;;   the expansion process.  For the library in the example, EXPORT-ENV is:
   ;;
   ;;      ((lab.var1 global       . loc.lex.var1)
   ;;       (lab.var2 global       . loc.lex.var2)
@@ -2623,14 +2610,7 @@
     (parametrise ((imp-collector      itc)
 		  (top-level-context  #f))
       (define rib
-	;;NAME-VEC  is a  vector  of symbols  representing the  external
-	;;names  of the  imported bindings.   LABEL-VEC is  a vector  of
-	;;label gensyms uniquely associated to the imported bindings.
-	(receive (name-vec label-vec)
-	    (let ()
-	      (import PARSE-IMPORT-SPEC)
-	      (parse-import-spec* import-spec*))
-	  (make-top-rib name-vec label-vec)))
+	(%process-import-specs-build-top-level-rib import-spec*))
       (define (wrap x)
 	(make-<stx> x TOP-MARK* (list rib) '()))
       (let ((body-stx*	(map wrap body-sexp*))
@@ -2638,42 +2618,37 @@
 	    (vtc	(make-collector)))
 	(parametrise ((inv-collector  rtc)
 		      (vis-collector  vtc))
-	  ;;INIT-FORM*.STX is a list  of syntax objects representing the
-	  ;;trailing non-definition  forms from the body  of the library
-	  ;;and the body of the internal modules.
+	  ;;INIT-FORM*.STX  is a  list of  syntax objects  representing the  trailing
+	  ;;non-definition forms  from the body  of the library  and the body  of the
+	  ;;internal modules.
 	  ;;
-	  ;;LEX* is a list of gensyms  to be used in binding definitions
-	  ;;when  building core  language symbolic  expressions for  the
-	  ;;glocal DEFINE forms  in the library.  There is  a gensym for
-	  ;;every item in RHS*.
+	  ;;LEX* is a list of gensyms to be used in binding definitions when building
+	  ;;core language  symbolic expressions  for the glocal  DEFINE forms  in the
+	  ;;library.  There is a gensym for every item in RHS*.
 	  ;;
-	  ;;QRHS* is  a list of qualified  right-hand sides representing
-	  ;;the right-hand side expressions in the DEFINE forms from the
-	  ;;body of the library.
+	  ;;QRHS* is a list of qualified right-hand sides representing the right-hand
+	  ;;side expressions in the DEFINE forms from the body of the library.
 	  ;;
-	  ;;INTERNAL-EXPORT* is  a list of identifiers  exported through
-	  ;;internal EXPORT syntaxes rather than  the export spec at the
-	  ;;beginning of the library.
+	  ;;INTERNAL-EXPORT*  is  a list  of  identifiers  exported through  internal
+	  ;;EXPORT  syntaxes rather  than the  export spec  at the  beginning of  the
+	  ;;library.
 	  ;;
 	  (receive (init-form*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
-	      (%chi-library-internal body-stx* rib mixed-definitions-and-expressions?)
+	      (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
 	    (receive (export-name* export-id*)
-		(let ()
-		  (import PARSE-EXPORT-SPEC)
-		  (parse-export-spec* (if (%expanding-program? export-spec*)
-					  (map wrap (top-marked-symbols rib))
-					(append (map wrap export-spec*)
-						internal-export*))))
+		(%parse-all-export-specs export-spec* internal-export* wrap rib)
 	      (seal-rib! rib)
-	      ;;INIT-FORM*.PSI is  a list of  "psi" structs containing  core language
-	      ;;symbolic expressions representing the trailing init forms.
-	      ;;
 	      ;;RHS-FORM*.PSI is  a list  of "psi"  structs containing  core language
 	      ;;symbolic expressions representing the DEFINE right-hand sides.
 	      ;;
-	      ;;We want order here!?!
-	      (let* ((init-form*.psi (chi-expr* init-form*.stx lexenv.run lexenv.expand))
-		     (rhs-form*.psi  (chi-qrhs* qrhs*          lexenv.run lexenv.expand)))
+	      ;;INIT-FORM*.PSI is  a list of  "psi" structs containing  core language
+	      ;;symbolic expressions representing the trailing init forms.
+	      ;;
+	      ;;We want order here?   It is better to expand the  init forms when the
+	      ;;defininitions have  been handled, so  that tag identifiers  have been
+	      ;;put where they are needed.
+	      (let* ((rhs-form*.psi  (chi-qrhs* qrhs*          lexenv.run lexenv.expand))
+		     (init-form*.psi (chi-expr* init-form*.stx lexenv.run lexenv.expand)))
 		;;QUESTION Why do we unseal the rib  if we do not use it anymore?  Is
 		;;it an  additional check of  its internal integrity?   (Marco Maggi;
 		;;Sun Mar 23, 2014)
@@ -2696,10 +2671,23 @@
   (define-syntax-rule (%expanding-program? ?export-spec*)
     (eq? 'all ?export-spec*))
 
-  (define-inline (%chi-library-internal body-stx* rib mixed-definitions-and-expressions?)
-    ;;Perform  the expansion  of the  top-level forms  in the  body; the
-    ;;right-hand sides  of DEFINE  syntaxes are  not expanded  here; the
-    ;;trailing init forms are not expanded here.
+  (define (%process-import-specs-build-top-level-rib import-spec*)
+    ;;Parse the import  specifications from a library's IMPORT clause  or a program's
+    ;;standalone  IMPORT  syntax;  build  and return  the  top-level  "<rib>"  struct
+    ;;defining the top-level environment.
+    ;;
+    (import PARSE-IMPORT-SPEC)
+    ;;NAME-VEC is a vector of symbols representing the external names of the imported
+    ;;bindings.  LABEL-VEC  is a vector of  label gensyms uniquely associated  to the
+    ;;imported bindings.
+    (receive (name-vec label-vec)
+	(parse-import-spec* import-spec*)
+      (make-top-rib name-vec label-vec)))
+
+  (define (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
+    ;;Perform  the preliminary  expansion of  the top-level  forms in  the body;  the
+    ;;right-hand  sides of  DEFINE syntaxes  are *not*  expanded here;  the body  and
+    ;;module trailing init forms are *not* expanded here.
     ;;
     (receive (trailing-init-form*.stx
 	      lexenv.run lexenv.expand
@@ -2709,38 +2697,49 @@
 	  (chi-body* body-stx* '() '() '() '() '() '() '() rib
 		     mixed-definitions-and-expressions?
 		     shadowing-definitions?))
-      ;;We build  a list of  init form  putting first the  trailing init
-      ;;forms from the internal MODULE  syntaxes, then the trailing init
-      ;;forms from the library body.
+      ;;We build a list  of init form putting first the trailing  init forms from the
+      ;;internal   MODULE  syntaxes,   then  the   trailing  init   forms  from   the
+      ;;library/program body.
       (let ((init-form*.stx (append (reverse-and-append module-init-form**.stx)
 				    trailing-init-form*.stx)))
 	(values init-form*.stx
 		lexenv.run lexenv.expand
-		;;This  is a  list  of  gensyms to  be  used in  binding
-		;;definitions  when  building   core  language  symbolic
-		;;expressions  for  the  DEFINE forms  in  the  library.
-		;;There is a gensym for every item in QRHS*.
+		;;This is  a list of gensyms  to be used in  binding definitions when
+		;;building core language symbolic expressions for the DEFINE forms in
+		;;the library.  There is a gensym for every item in QRHS*.
 		(reverse lex*)
-		;;This  is   a  list   of  qualified   right-hand  sides
-		;;representing  the right-hand  side expressions  in the
-		;;DEFINE forms from the body of the library.
+		;;This  is a  list  of qualified  right-hand  sides representing  the
+		;;right-hand side  expressions in the  DEFINE forms from the  body of
+		;;the library.
 		(reverse qrhs*)
-		;;This  is  a  list   of  identifiers  exported  through
-		;;internal EXPORT  syntaxes rather than the  export spec
-		;;at the beginning of the library.
+		;;This   is   a  list   of   identifiers   representing  the   export
+		;;specifications declared using the EXPORT syntax in the body.
 		internal-export*))))
 
+  (define (%parse-all-export-specs export-spec* internal-export* wrap top-level-rib)
+    ;;Parse all the export specifications.
+    ;;
+    ;;EXPORT-SPEC*  must   be  a   list  of   identifiers  representing   the  export
+    ;;specifications declared in the EXPORT clause of a LIBRARY form.
+    ;;
+    ;;INTERNAL-EXPORT*  must  be  a  list  of  identifiers  representing  the  export
+    ;;specifications declared using the EXPORT syntax in the body.
+    ;;
+    (import PARSE-EXPORT-SPEC)
+    (parse-export-spec* (if (%expanding-program? export-spec*)
+			    (map wrap (top-marked-symbols top-level-rib))
+			  (append (map wrap export-spec*)
+				  internal-export*))))
+
   (define (%make-export-subst export-name* export-id*)
-    ;;For every  identifier in  ID: get  the rib of  ID and  extract the
-    ;;lexical environment from it; search  the environment for a binding
-    ;;associated  to ID  and acquire  its label  (a gensym).   Return an
-    ;;alist with entries having the format:
+    ;;For  every  identifier in  ID:  get  the rib  of  ID  and extract  the  lexical
+    ;;environment from it; search the environment  for a binding associated to ID and
+    ;;acquire its label (a gensym).  Return an alist with entries having the format:
     ;;
     ;;   (?export-name . ?label)
     ;;
-    ;;where ?EXPORT-NAME is  a symbol representing the  external name of
-    ;;an exported  binding, ?LABEL is the  corresponding gensym uniquely
-    ;;identifying the binding.
+    ;;where ?EXPORT-NAME  is a symbol representing  the external name of  an exported
+    ;;binding, ?LABEL is the corresponding gensym uniquely identifying the binding.
     ;;
     (map (lambda (export-name export-id)
 	   (let ((label (id->label export-id)))
@@ -2750,21 +2749,19 @@
       export-name* export-id*))
 
   (module (%make-export-env/macro*)
-    ;;For  each entry  in LEXENV.RUN:  convert  the LEXENV  entry to  an
-    ;;EXPORT-ENV  entry,  accumulating   EXPORT-ENV;  if  the  syntactic
-    ;;binding is  a macro or  compile-time value: accumulate  the MACRO*
-    ;;alist.
+    ;;For each entry in LEXENV.RUN: convert  the LEXENV entry to an EXPORT-ENV entry,
+    ;;accumulating EXPORT-ENV;  if the syntactic  binding is a macro  or compile-time
+    ;;value: accumulate the MACRO* alist.
     ;;
-    ;;Notice that EXPORT-ENV contains an  entry for every global lexical
-    ;;variable, both the exported ones and the non-exported ones.  It is
-    ;;responsibility  of   the  EXPORT-SUBST   to  select   the  entries
-    ;;representing the exported bindings.
+    ;;Notice that  EXPORT-ENV contains  an entry for  every global  lexical variable,
+    ;;both the exported ones and the  non-exported ones.  It is responsibility of the
+    ;;EXPORT-SUBST to select the entries representing the exported bindings.
     ;;
-    ;;LEX* must  be a  list of gensyms  representing the  global lexical
-    ;;variables bindings.
+    ;;LEX*  must be  a  list of  gensyms representing  the  global lexical  variables
+    ;;bindings.
     ;;
-    ;;LOC* must  be a list  of storage  location gensyms for  the global
-    ;;lexical variables: there must be a loc for every lex in LEX*.
+    ;;LOC*  must  be a  list  of  storage location  gensyms  for  the global  lexical
+    ;;variables: there must be a loc for every lex in LEX*.
     ;;
     (define (%make-export-env/macro* lex* loc* lexenv.run)
       (let loop ((lexenv.run		lexenv.run)
@@ -2777,9 +2774,8 @@
 		 (binding  (lexenv-entry-binding-descriptor entry)))
 	    (case (syntactic-binding-type binding)
 	      ((lexical)
-	       ;;This binding is  a lexical variable.  When  we import a
-	       ;;lexical binding from another  library, we must see such
-	       ;;entry as "global".
+	       ;;This  binding is  a  lexical  variable.  When  we  import a  lexical
+	       ;;binding from another library, we must see such entry as "global".
 	       ;;
 	       ;;The entry from the LEXENV looks like this:
 	       ;;
@@ -2789,9 +2785,8 @@
 	       ;;
 	       ;;   (?label ?type . ?loc)
 	       ;;
-	       ;;where  ?TYPE  is the  symbol  "mutable"  or the  symbol
-	       ;;"global"; notice that the entries of type "mutable" are
-	       ;;forbidden to be exported.
+	       ;;where ?TYPE is  the symbol "mutable" or the  symbol "global"; notice
+	       ;;that the entries of type "mutable" are forbidden to be exported.
 	       ;;
 	       (let* ((bind-val  (syntactic-binding-value binding))
 		      (loc       (%lookup (lexical-var bind-val) lex* loc*))
@@ -2803,10 +2798,9 @@
 		       macro*)))
 
 	      ((local-macro)
-	       ;;When we  define a binding for  a non-identifier syntax:
-	       ;;the local code sees it  as "local-macro".  If we export
-	       ;;such   binding:  the   importer  must   see  it   as  a
-	       ;;"global-macro".
+	       ;;When we define a binding for a non-identifier syntax: the local code
+	       ;;sees it as  "local-macro".  If we export such  binding: the importer
+	       ;;must see it as a "global-macro".
 	       ;;
 	       ;;The entry from the LEXENV looks like this:
 	       ;;
@@ -2826,10 +2820,9 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-macro!)
-	       ;;When we define a binding  for an identifier syntax: the
-	       ;;local  code sees  it as  "local-macro!".  If  we export
-	       ;;such   binding:  the   importer  must   see  it   as  a
-	       ;;"global-macro!".
+	       ;;When we  define a binding for  an identifier syntax: the  local code
+	       ;;sees it as "local-macro!".  If  we export such binding: the importer
+	       ;;must see it as a "global-macro!".
 	       ;;
 	       ;;The entry from the LEXENV looks like this:
 	       ;;
@@ -2849,10 +2842,9 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      ((local-ctv)
-	       ;;When  we  define a  binding  for  a compile-time  value
-	       ;;(CTV): the  local code sees  it as "local-ctv".   If we
-	       ;;export  such binding:  the importer  must see  it as  a
-	       ;;"global-ctv".
+	       ;;When we define  a binding for a compile-time value  (CTV): the local
+	       ;;code  sees  it as  "local-ctv".   If  we  export such  binding:  the
+	       ;;importer must see it as a "global-ctv".
 	       ;;
 	       ;;The entry from the LEXENV looks like this:
 	       ;;
@@ -2872,8 +2864,8 @@
 		       (cons (cons loc (syntactic-binding-value binding)) macro*))))
 
 	      (($rtd $module $fluid $synonym)
-	       ;;Just add the entry "as is" from the lexical environment
-	       ;;to the EXPORT-ENV.
+	       ;;Just  add the  entry "as  is" from  the lexical  environment to  the
+	       ;;EXPORT-ENV.
 	       ;;
 	       (loop (cdr lexenv.run)
 		     (cons entry export-env)
@@ -2886,9 +2878,8 @@
 		 (syntactic-binding-value binding))))))))
 
     (define (%lookup lexical-gensym lex* loc*)
-      ;;Search for  LEXICAL-GENSYM in the  list LEX*: when  found return
-      ;;the corresponding  gensym from LOC*.  LEXICAL-GENSYM  must be an
-      ;;item in LEX*.
+      ;;Search  for  LEXICAL-GENSYM   in  the  list  LEX*:  when   found  return  the
+      ;;corresponding gensym from LOC*.  LEXICAL-GENSYM must be an item in LEX*.
       ;;
       (if (pair? lex*)
 	  (if (eq? lexical-gensym (car lex*))
@@ -6221,7 +6212,7 @@
 		     => (lambda (subst.entry)
 			  (let ((name  (car subst.entry))
 				(label (cdr subst.entry)))
-			    (make-<stx> sym TOP-MARK*
+			    (make-<stx> name TOP-MARK*
 					(list (make-<rib> (list name)
 							  TOP-MARK**
 							  (list label)
@@ -6242,6 +6233,14 @@
 			     (receive-and-return (id)
 				 (scheme-stx '_)
 			       (set! underscore-id id))))))))
+
+(define procedure-and-error-core-primitive-id
+  (let ((prim-id #f))
+    (lambda ()
+      (or prim-id
+	  (receive-and-return (id)
+	      (scheme-stx 'procedure-and-error)
+	    (set! prim-id id))))))
 
 
 ;;;; macro transformer modules
@@ -6940,7 +6939,7 @@
 (module (make-psi
 	 psi?
 	 psi-core-expr		psi-retvals-signature
-	 psi-callable-spec
+	 psi-application-retvals-signature
 	 chi-expr		chi-expr*
 	 chi-body*		chi-internal-body
 	 chi-qrhs*		chi-defun
@@ -7175,6 +7174,7 @@
 
 ;;; end of file
 ;;Local Variables:
+;;fill-column: 85
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)

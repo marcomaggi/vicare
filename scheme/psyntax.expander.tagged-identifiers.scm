@@ -533,96 +533,69 @@
 	     (else #f))))
 
 
-;;;; tagged identifiers: callable signature
+;;;; fabricated tag identifiers
 
-(define-constant *EXPAND-TIME-BINDING-CALLABLE-SIGNATURE-COOKIE*
-  'vicare:expander:binding-callable-signature)
+(define (callable-spec? obj)
+  (or (lambda-signature? obj)
+      (clambda-compound? obj)))
 
-;;; --------------------------------------------------------------------
+(module (make-procedure-tag-retvals-signature
+	 fabricate-single-procedure-retvals-signature
+	 fabricate-procedure-tag-identifier
+	 tag-identifier-callable-spec)
 
-(define* (set-identifier-callable-signature! {binding-id identifier?} {signature lambda-signature?})
-  ;;Given a syntactic binding identifier for a function binding: add SIGNATURE to its
-  ;;property list as type tagging for the function.
-  ;;
-  (cond (($syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-CALLABLE-SIGNATURE-COOKIE*)
-	 => (lambda (old-signature)
-	      (syntax-violation __who__
-		"identifier binding function tagging signature already defined"
-		binding-id old-signature signature)))
-	(else
-	 ($syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-CALLABLE-SIGNATURE-COOKIE* signature))))
+  (define* (make-procedure-tag-retvals-signature {id identifier?}  {callable-spec callable-spec?})
+    (make-retvals-signature (list ($fabricate-procedure-tag-identifier (syntax->datum id) callable-spec))))
 
-(define* (identifier-callable-signature {binding-id identifier?})
-  ;;Given a  syntactic binding identifier for  a function binding: retrieve  from its
-  ;;property  list  the tagging  signature  of  the  function.   Return false  if  no
-  ;;signature is defined.
-  ;;
-  ($syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-CALLABLE-SIGNATURE-COOKIE*))
+  (define* (fabricate-single-procedure-retvals-signature {sym symbol?} {callable-spec callable-spec?})
+    (make-retvals-signature (list ($fabricate-procedure-tag-identifier sym callable-spec))))
 
-;;; --------------------------------------------------------------------
+  (define* ({fabricate-procedure-tag-identifier tag-identifier?} {sym symbol?} {callable-spec callable-spec?})
+    ($fabricate-procedure-tag-identifier sym callable-spec))
 
-(define* (set-label-callable-signature! {label symbol?} {signature lambda-signature?})
-  ;;Given a  syntactic binding  LABEL for  a function binding:  add SIGNATURE  to its
-  ;;property list as type tagging for the function.
-  ;;
-  (cond (($getprop label *EXPAND-TIME-BINDING-CALLABLE-SIGNATURE-COOKIE*)
-	 => (lambda (old-signature)
-	      (syntax-violation __who__
-		"label binding function tagging signature already defined"
-		label signature signature)))
-	(else
-	 ($putprop label *EXPAND-TIME-BINDING-CALLABLE-SIGNATURE-COOKIE* signature))))
+  (define ($fabricate-procedure-tag-identifier sym callable-spec)
+    (receive (tag lab)
+	(%fabricate-bound-identifier sym)
+      (let* ((uid   (gensym sym))
+	     (spec  (make-object-type-spec uid tag (procedure-tag-id) (procedure-and-error-core-primitive-id))))
+	(set-identifier-object-type-spec! tag spec)
+	($putprop lab *EXPAND-TIME-TAG-CALLABLE-SPEC-COOKIE* callable-spec))
+      tag))
 
-(define* (label-callable-signature {label symbol?})
-  ;;Given  a syntactic  binding  LABEL  for a  function  binding:  retrieve from  its
-  ;;property  list  the tagging  signature  of  the  function.   Return false  if  no
-  ;;signature is defined.
-  ;;
-  ($getprop label *EXPAND-TIME-BINDING-CALLABLE-SIGNATURE-COOKIE*))
+  (define* (%fabricate-bound-identifier {sym symbol?})
+    ;;Build an  identifier having SYM as  name.  Return 2 values:  the identifier and
+    ;;its label gensym.
+    ;;
+    ;;The returned  identifier is bound  in the sense  that applying ID->LABEL  to it
+    ;;will return a label gensym; but applying LABEL->SYNTACTIC-BINDING to such label
+    ;;will return:
+    ;;
+    ;;   (displaced-lexical . #f)
+    ;;
+    ;;as syntactic  binding descriptor.  The  returned identifier if perfectly  fine as
+    ;;tag identifier because, having a label, it can hold all the required properties.
+    ;;
+    (let ((lab (gensym sym)))
+      (values (make-<stx> sym TOP-MARK*
+			  (list (make-<rib> (list sym) TOP-MARK** (list lab) #f))
+			  '())
+	      lab)))
+
+  (define-constant *EXPAND-TIME-TAG-CALLABLE-SPEC-COOKIE*
+    'vicare:expander:tag-callable-spec)
+
+  (define* (tag-identifier-callable-spec {tag-id tag-identifier?})
+    ;;Given a  tag identifier representing  a subtag of "<procedure>":  retrieve from
+    ;;its property  list the callable  specification of the function.   If successful
+    ;;return  an instance  of "lambda-signature"  or "clambda-compound";  if no  such
+    ;;property is defined return false.
+    ;;
+    ($syntactic-binding-getprop tag-id *EXPAND-TIME-TAG-CALLABLE-SPEC-COOKIE*))
+
+  #| end of module |# )
 
 
-;;;; identifiers: expand-time callable object type specification
-
-(define-constant *EXPAND-TIME-CALLABLE-SPEC-COOKIE*
-  'vicare:expander:callable-spec)
-
-(define-record callable-spec
-  ;;A struct type representing a callable form binding, either procedure
-  ;;or macro.
-  ;;
-  (name
-		;A symbol  representing this callable name.   To be used
-		;for meaningful error reporting.
-   min-arity
-		;A fixnum  representing the minimum number  of arguments
-		;this callable must be applied to.
-   max-arity
-		;A fixnum or positive  infinity representing the maximum
-		;number of arguments this callable must be applied to.
-   dispatcher
-		;False  or  a  procedure  to be  called  with  the  type
-		;signature of a specific callable application.  The type
-		;signature  of  a tuple  of  arguments  is the  list  of
-		;instances   of  type   object-type-spec  matching   the
-		;arguments.
-		;
-		;It is meant  to return two values: the  identifier of a
-		;specialised  version  of  this callable  that  is  more
-		;suited to be  applied to a tuple of  arguments with the
-		;given type  signature; an instance  of object-type-spec
-		;representing the type of the return value.
-   ))
-
-;;; --------------------------------------------------------------------
-
-(define* (set-identifier-callable-spec! {type-id identifier?} {spec callable-spec?})
-  (if ($syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*)
-      (syntax-violation __who__
-	"callable specification already defined" type-id spec)
-    ($syntactic-binding-putprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE* spec)))
-
-(define* (identifier-callable-spec {type-id identifier?})
-  ($syntactic-binding-getprop type-id *EXPAND-TIME-CALLABLE-SPEC-COOKIE*))
+;;;; done
 
 ;;; end of file
 ;; Local Variables:

@@ -33,6 +33,7 @@
 
     ;; predicates
     always-true			always-false
+    procedure-and-error
 
     ;; validation
     procedure-argument-validation-with-predicate
@@ -40,6 +41,7 @@
   (import (except (vicare)
 		  any->symbol		any->string
 		  always-true		always-false
+		  procedure-and-error
 		  procedure-argument-validation-with-predicate
 		  return-value-validation-with-predicate))
 
@@ -70,6 +72,17 @@
 
 (define (always-false . args)
   #f)
+
+(define (procedure-and-error obj)
+  ;;This is a special "predicate"  that tests for procedure objects, but
+  ;;always raises an exception when OBJ  is a procedure.  It can be used
+  ;;when it is impossible to determine at run-time if a procedure object
+  ;;has the desired arguments signature (this happens in the expander).
+  ;;
+  (and (procedure? obj)
+       (assertion-violation #f
+	 "cannot determine at run-time if a procedure is of the correct type"
+	 obj)))
 
 
 ;;;; object type validation

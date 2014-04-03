@@ -211,8 +211,7 @@
 		      ;;Build the LETREC or LETREC* expression in the core language.
 		      (expr.core (core-lang-builder no-source lex* rhs*.core body.core)))
 		 (make-psi expr.core
-			   (psi-retvals-signature body.psi)
-			   (psi-callable-spec     body.psi))))))))
+			   (psi-retvals-signature body.psi))))))))
       ))
 
   #| end of module |# )
@@ -1375,7 +1374,7 @@
        ((object-type-spec)
 	(make-psi (build-data no-source
 		    (identifier-object-type-spec ?type-id))
-		  (make-retvals-signature (list (top-tag-id)))))
+		  (make-single-top-retvals-signature)))
        ))
     ))
 
@@ -1749,7 +1748,7 @@
 		  (list expr.core
 			(build-void)))
 		;;We know that we are returning a single void argument.
-		(make-retvals-signature (list (top-tag-id))))))
+		(make-single-top-retvals-signature))))
 
   (define (%run-time-check-output-form expr.core checker.psi)
     ;;We build a core language expression as follows:
@@ -1768,7 +1767,7 @@
 		  (list (build-lambda no-source '() expr.core)
 			checker.core))
 		;;We know that we are returning a single void argument.
-		(make-retvals-signature (list (top-tag-id))))))
+		(make-single-top-retvals-signature))))
 
   (syntax-match input-form.stx ()
     ((_ ?retvals-signature ?expr)
@@ -1828,7 +1827,7 @@
 			  (list expr.core
 				(build-void)))
 			;;We know that we are returning a single void value.
-			(make-retvals-signature (list (top-tag-id)))))
+			(make-single-top-retvals-signature)))
 
 	     (else
 	      ;;The horror!!!  We  have established at expand-time  that the returned
@@ -1873,8 +1872,10 @@
 			  '()
 			  expr.core)
 			checker.core))
-		asserted.sign
-		(psi-callable-spec expr.psi))))
+		;;The type  of values  returned by ?EXPR  was unspecified,  but after
+		;;asserting  the type  at  run-time: we  know that  the  type is  the
+		;;asserted one.
+		asserted.sign)))
 
   (syntax-match input-form.stx ()
     ((_ ?retvals-signature ?expr)
@@ -1892,8 +1893,8 @@
 
 	     ((retvals-signature-partially-unspecified? expr.sign)
 	      ;;The  expression  has no  type  specification;  we  have to  insert  a
-	      ;;run-time  check.  Here  we know  that ASSERTED.SIGN  is a  valid
-	      ;;formals signature, so we can be less strict in the patterns.
+	      ;;run-time check.  Here  we know that ASSERTED.SIGN is  a valid formals
+	      ;;signature, so we can be less strict in the patterns.
 	      (syntax-match ?retvals-signature ()
 		((?rv-tag* ...)
 		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
@@ -1969,7 +1970,7 @@
 	      (make-psi (build-application (syntax-annotation input-form.stx)
 			  accessor.core
 			  (list expr.core))
-			(psi-retvals-signature accessor.psi))))
+			(psi-application-retvals-signature accessor.psi))))
 
 	   (_
 	    (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
@@ -2001,7 +2002,7 @@
 	      (make-psi (build-application (syntax-annotation input-form.stx)
 			  mutator.core
 			  (list expr.core nval.core))
-			(psi-retvals-signature mutator.psi))))
+			(psi-application-retvals-signature mutator.psi))))
 
 	   (_
 	    (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
@@ -2032,7 +2033,7 @@
 	     (make-psi (build-application (syntax-annotation input-form.stx)
 			 getter.core
 			 (list expr.core))
-		       (psi-retvals-signature getter.psi))))
+		       (psi-application-retvals-signature getter.psi))))
 
 	  (_
 	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
@@ -2067,7 +2068,7 @@
 	     (make-psi (build-application (syntax-annotation input-form.stx)
 			 setter.core
 			 (list expr.core nval.core))
-		       (psi-retvals-signature setter.psi))))
+		       (psi-application-retvals-signature setter.psi))))
 
 	  (_
 	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
@@ -2105,7 +2106,7 @@
 	     (make-psi (build-application (syntax-annotation input-form.stx)
 			 method.core
 			 (list expr.core))
-		       (psi-retvals-signature method.psi))))
+		       (psi-application-retvals-signature method.psi))))
 
 	  (_
 	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
