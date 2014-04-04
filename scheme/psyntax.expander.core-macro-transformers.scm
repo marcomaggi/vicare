@@ -89,15 +89,12 @@
 
 (module PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS
   (%expand-rhs*
-   %compose-lhs-specification
-   %maybe-override-lhs-tagging)
+   %compose-lhs-specification)
   ;;In  this  module  we  assume  the  argument  INPUT-FORM.STX  can  be  matched  by
   ;;SYNTAX-MATCH patterns like:
   ;;
   ;;  (let            ((?lhs* ?rhs*) ...) . ?body*)
   ;;  (let     ?recur ((?lhs* ?rhs*) ...) . ?body*)
-  ;;  (letrec         ((?lhs* ?rhs*) ...) . ?body*)
-  ;;  (letrec*        ((?lhs* ?rhs*) ...) . ?body*)
   ;;
   ;;where the ?LHS identifiers can be tagged or not; we have to remember that LET* is
   ;;just expanded in  a set of nested  LET syntaxes.  We assume that  the ?LHS syntax
@@ -181,7 +178,10 @@
     (define rhs*.psi
       (map (lambda (rhs.stx lhs.tag)
 	     ;;If LHS.TAG is "<untagged>", we still want to use the assert and return
-	     ;;form to make sure that a single value is returned.
+	     ;;form to make  sure that a single value is  returned.  If the signature
+	     ;;validation succeeds at expand-time: the  returned PSI has the original
+	     ;;RHS signature,  not "(<untagged>)".  This  allows us to  propagate the
+	     ;;tag from RHS to LHS.
 	     (chi-expr (bless
 			`(tag-assert-and-return (,lhs.tag) ,rhs.stx))
 		       lexenv.run lexenv.expand))
@@ -225,18 +225,6 @@
 	     (bless
 	      `(brace ,lhs.id ,lhs.tag)))
 	lhs*.id lhs*.tag)))
-
-  (define (%maybe-override-lhs-tagging lhs*.id lhs*.tag rhs*.inferred-tag)
-    ;;For  every LHS  identifier: if  RHS  tag propagation  is  on and  LHS's tag  is
-    ;;"<untagged>", override the LHS tag with  the tag inferred from the RHS.  Return
-    ;;unspecified values.
-    ;;
-    (when (option.tagged-language.rhs-tag-propagation?)
-      (map (lambda (lhs.id lhs.tag rhs.tag)
-	     (if (untagged-tag-id? lhs.tag)
-		 (override-identifier-tag! lhs.id rhs.tag)
-	       lhs.id))
-	lhs*.id lhs*.tag rhs*.inferred-tag)))
 
   #| end of module: PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS |# )
 
@@ -433,46 +421,73 @@
     (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec*))
 
   (define (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
+    (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the binding names are identifiers and without duplicates.
-       (receive (lhs* tag*)
+       (receive (lhs*.id lhs*.tag)
 	   (parse-list-of-tagged-bindings ?lhs* input-form.stx)
 	 ;;Generate unique variable names and labels for the LETREC bindings.
-	 (let ((lex*     (map gensym-for-lexical-var lhs*))
-	       (lab*     (map gensym-for-label       lhs*))
-	       (rhs*.stx (map (lambda (rhs.stx tag)
-				(if (free-id=? tag (untagged-tag-id))
-				    rhs.stx
-				  (bless
-				   `(tag-assert-and-return (,tag) ,rhs.stx))))
-			   ?rhs* tag*)))
-	   (map (lambda (label tag)
-		  (and tag (set-label-tag! label tag)))
-	     lab* tag*)
+	 (let ((lhs*.lex (map gensym-for-lexical-var lhs*.id))
+	       (lhs*.lab (map gensym-for-label       lhs*.id)))
+	   (map set-label-tag! lhs*.lab lhs*.tag)
 	   ;;Generate what  is needed  to create  a lexical contour:  a <RIB>  and an
 	   ;;extended lexical  environment in which  to evaluate both  the right-hand
 	   ;;sides and the body.
 	   ;;
 	   ;;Notice  that the  region of  all the  LETREC bindings  includes all  the
 	   ;;right-hand sides.
-	   (let ((rib		(make-filled-rib lhs* lab*))
-		 (lexenv.run	(add-lexical-bindings lab* lex* lexenv.run)))
-	     ;;Create the lexical  contour then process body and  right-hand sides of
-	     ;;bindings.
-	     (let ((body.psi (chi-internal-body (push-lexical-contour rib
-						  (cons ?body ?body*))
-						lexenv.run lexenv.expand))
-		   (rhs*.psi (chi-expr*         (map (lambda (rhs.stx)
-						       (push-lexical-contour rib rhs.stx))
-						  rhs*.stx)
-						lexenv.run lexenv.expand)))
-	       (let* ((rhs*.core (map psi-core-expr rhs*.psi))
-		      (body.core (psi-core-expr body.psi))
-		      ;;Build the LETREC or LETREC* expression in the core language.
-		      (expr.core (core-lang-builder no-source lex* rhs*.core body.core)))
-		 (make-psi expr.core
-			   (psi-retvals-signature body.psi))))))))
+	   (let* ((rib        (make-filled-rib lhs*.id lhs*.lab))
+		  (lexenv.run (add-lexical-bindings lhs*.lab lhs*.lex lexenv.run))
+		  (rhs*.psi   ($map-in-order
+			       (lambda (rhs.stx lhs.lab lhs.tag)
+				 (receive-and-return (rhs.psi)
+				     ;;The LHS*.ID  and LHS*.LAB  have been  added to
+				     ;;the rib, and the rib is pushed on the RHS.STX.
+				     ;;So, while the specific identifiers LHS*.ID are
+				     ;;unbound (because they do not contain the rib),
+				     ;;any  occurrence  of  such identifiers  in  the
+				     ;;RHS.STX is captured by the binding in the rib.
+				     ;;
+				     ;;If LHS.TAG  is "<untagged>", we still  want to
+				     ;;use the  assert and  return form to  make sure
+				     ;;that  a  single  value is  returned.   If  the
+				     ;;signature validation  succeeds at expand-time:
+				     ;;the   returned  PSI   has  the   original  RHS
+				     ;;signature, not "(<untagged>)".  This allows us
+				     ;;to propagate the tag from RHS to LHS.
+				     (chi-expr (push-lexical-contour rib
+						 (bless
+						  `(tag-assert-and-return (,lhs.tag) ,rhs.stx)))
+					       lexenv.run lexenv.expand)
+				   ;;If the LHS is  untagged: perform tag propatation
+				   ;;from the RHS to the LHS.
+				   (when (and (option.tagged-language.rhs-tag-propagation?)
+					      (untagged-tag-id? lhs.tag))
+				     (syntax-match (retvals-signature-tags (psi-retvals-signature rhs.psi)) ()
+				       ((?tag)
+					;;Single return value: good.
+					(override-label-tag! lhs.lab ?tag))
+				       (_
+					;;If   we  are   here   it   means  that   the
+					;;TAG-ASSERT-AND-RETURN above has misbehaved.
+					(assertion-violation __who__
+					  "Vicare: internal error: invalid retvals signature"
+					  (syntax->datum input-form.stx)
+					  (psi-retvals-signature rhs.psi)))))))
+			       ?rhs* lhs*.lab lhs*.tag))
+		  (body.psi (chi-internal-body (push-lexical-contour rib
+						 (cons ?body ?body*))
+					       lexenv.run lexenv.expand)))
+	     (let* ((rhs*.core (map psi-core-expr rhs*.psi))
+		    (body.core (psi-core-expr body.psi))
+		    ;;Build the LETREC or LETREC* expression in the core language.
+		    (expr.core (core-lang-builder no-source
+				 lhs*.lex
+				 rhs*.core
+				 body.core)))
+	       (make-psi expr.core
+			 (psi-retvals-signature body.psi)))))))
       ))
 
   #| end of module |# )
@@ -2149,6 +2164,10 @@
 		     ($top-tag-id?      ?retvals-signature))
 		;;Any tuple of  returned objects is of type  "<top>" or "<untagged>".
 		;;Just return the expression.
+		;;
+		;;NOTE  The signature  validation has  succeeded at  expand-time: the
+		;;returned PSI has the  original ?EXPR signature, not "(<untagged>)".
+		;;This just looks nicer.
 		expr.psi)
 
 	       ((retvals-signature-single-untagged-tag? asserted.sig)
@@ -2157,7 +2176,12 @@
 		(syntax-match (retvals-signature-tags expr.sig) ()
 		  ((?tag)
 		   ;;Success!!!   We   have  determined   at  expand-time   that  the
-		   ;;expression returns a single value.
+		   ;;expression returns a single  value.
+		   ;;
+		   ;;IMPORTANT  NOTE  The  signature   validation  has  succeeded  at
+		   ;;expand-time:  the returned  PSI *must*  have the  original ?EXPR
+		   ;;signature, not "(<untagged>)".  This property is used in binding
+		   ;;syntaxes when propagating a tag from the RHS to the LHS.
 		   expr.psi)
 		  (_
 		   ;;Damn it!!! We need to insert a run-time check.
@@ -2541,6 +2565,7 @@
 ;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-letrec*			'scheme-indent-function 1)
 ;;eval: (put 'build-data			'scheme-indent-function 1)
+;;eval: (put 'core-lang-builder			'scheme-indent-function 1)
 ;;eval: (put 'case-object-type-binding		'scheme-indent-function 1)
 ;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)

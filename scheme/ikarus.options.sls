@@ -37,7 +37,8 @@
     descriptive-labels
     ;; tagged language parameter options
     tagged-language.rhs-tag-propagation?
-    tagged-language.implicit-dispatching?
+    tagged-language.datums-as-operators?
+    tagged-language.setter-forms?
     tagged-language?
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
@@ -82,6 +83,9 @@
 (define-boolean-option strict-r6rs)
 (define-boolean-option descriptive-labels)
 
+
+;;;; some parameter boolean options
+
 (define-syntax define-parameter-boolean-option
   (syntax-rules ()
     ((_ ?who)
@@ -115,15 +119,53 @@
 ;;
 (define-parameter-boolean-option tagged-language.rhs-tag-propagation?)
 
-(define-parameter-boolean-option tagged-language.implicit-dispatching?)
+;;The option "datums as operators" allows us to use a non-closure object
+;;as operator  in call  forms.  When  this option  is on,  the following
+;;example evaluations are possible:
+;;
+;;(123 positive?)	=> #t
+;;
+;;   The operator is the fixnum 123 and the expander determines that its
+;;   tag is  "<fixnum>"; this  form matches  the syntax  of a  method or
+;;   accessor application.
+;;
+;;("ciao" [1])		=> #\i
+;;
+;;   The operator is the string  "ciao" and the expander determines that
+;;   its tag  is "<string>"; this  form matches  the syntax of  a getter
+;;   application.
+;;
+(define-parameter-boolean-option tagged-language.datums-as-operators?)
+
+;;The option "setter forms" allows us to use a non-identifier expression
+;;as  left-hand side  in a  SET! syntax.   When this  option is  on, the
+;;following evaluations are possible:
+;;
+;;(set! (?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
+;;(set!  ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...  ?new-value)
+;;
+;;   This is the  setter syntax.  ?EXPR can be any  expression for which
+;;   the  expander can  determine  the retvals  signature.  This  syntax
+;;   mutates  a property  of  the  result of  ?EXPR  to ?NEW-VALUE;  the
+;;   property is selected by the set of specified keys.  Example:
+;;
+;;      (define V (vector 1 2 3))
+;;      (set! V [1] 9)
+;;      V => #(1 9 3)
+;;
+;;(set! (?expr ?field-name) ?new-value)
+;;
+;;   This is the mutator syntax.  ?EXPR  can be any expression for which
+;;   the  expander can  determine  the retvals  signature.  This  syntax
+;;   mutates the (concrete or virtual)  field selected by ?FIELD-NAME to
+;;   ?NEW-VALUE.
+;;
+(define-parameter-boolean-option tagged-language.setter-forms?)
 
 ;;Turn on  tagged language  extensions.  When this  parameter is  set to
 ;;true: we must also set to true all the tagged language sub-parameters.
 ;;
-(define tagged-language?
-  (make-parameter #f
-    (lambda (value)
-      (and value #t))))
+(define-parameter-boolean-option tagged-language?)
 
 
 ;;;; vicare build configuration options

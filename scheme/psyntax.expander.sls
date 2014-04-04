@@ -1306,6 +1306,32 @@
       ;;Notice that struct instances are not self evaluating.
       (struct? obj)))
 
+(module ($map-in-order
+	 $map-in-order1)
+
+  (case-define $map-in-order
+    ((func ell)
+     ($map-in-order1 func ell))
+    ((func . ells)
+     (if (null? ells)
+	 '()
+       (let recur ((ells ells))
+	 (if (pair? ($car ells))
+	     (let* ((cars ($map-in-order1 $car ells))
+		    (cdrs ($map-in-order1 $cdr ells))
+		    (head (apply func cars)))
+	       (cons head (recur cdrs)))
+	   '())))))
+
+  (define-syntax-rule ($map-in-order1 ?func ?ell)
+    (let recur ((ell ?ell))
+      (if (pair? ell)
+	  (let ((head (?func ($car ell))))
+	    (cons head (recur ($cdr ell))))
+	ell)))
+
+  #| end of module |# )
+
 
 ;;;; library records collectors
 
@@ -2040,8 +2066,9 @@
       (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	  (let ((option* (%parse-program-options option*)))
 	    (parametrise ((option.tagged-language? (memq 'tagged-language option*)))
-	      (parametrise ((option.tagged-language.rhs-tag-propagation?  (option.tagged-language?))
-			    (option.tagged-language.implicit-dispatching? (option.tagged-language?)))
+	      (parametrise ((option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
+			    (option.tagged-language.datums-as-operators? (option.tagged-language?))
+			    (option.tagged-language.setter-forms?        (option.tagged-language?)))
 		(let ()
 		  (import CORE-BODY-EXPANDER)
 		  (core-body-expander 'all import-spec* body* #t)))))
@@ -2417,8 +2444,9 @@
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	    (parametrise ((stale-when-collector    stale-clt)
 			  (option.tagged-language? (memq 'tagged-language option*)))
-	      (parametrise ((option.tagged-language.rhs-tag-propagation?  (option.tagged-language?))
-			    (option.tagged-language.implicit-dispatching? (option.tagged-language?)))
+	      (parametrise ((option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
+			    (option.tagged-language.datums-as-operators? (option.tagged-language?))
+			    (option.tagged-language.setter-forms?        (option.tagged-language?)))
 		(let ((mixed-definitions-and-expressions? #f))
 		  (import CORE-BODY-EXPANDER)
 		  (core-body-expander export-spec* import-spec* body*

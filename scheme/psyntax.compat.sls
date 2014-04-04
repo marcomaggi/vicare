@@ -61,7 +61,8 @@
     option.print-loaded-libraries
     option.cache-compiled-libraries
     option.tagged-language.rhs-tag-propagation?
-    option.tagged-language.implicit-dispatching?
+    option.tagged-language.datums-as-operators?
+    option.tagged-language.setter-forms?
     option.tagged-language?
 
     ;; interpreting the result of reading annotated sources
@@ -130,7 +131,8 @@
 			  print-loaded-libraries
 			  cache-compiled-libraries
 			  tagged-language.rhs-tag-propagation?
-			  tagged-language.implicit-dispatching?
+			  tagged-language.datums-as-operators?
+			  tagged-language.setter-forms?
 			  tagged-language?
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled

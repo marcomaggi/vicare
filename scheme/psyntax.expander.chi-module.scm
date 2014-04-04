@@ -817,16 +817,16 @@
 	      (else
 	       ;;The  rator  has  a  correct  single-value signature  and  it  has  a
 	       ;;specified tag, but it is not a procedure.
-	       (if (option.tagged-language.implicit-dispatching?)
-		   (%process-implicit-dispatching input-form.stx lexenv.run lexenv.expand
-						  rator.psi rator.tag rand*.stx)
+	       (if (option.tagged-language.datums-as-operators?)
+		   (%process-datum-operator input-form.stx lexenv.run lexenv.expand
+					    rator.psi rator.tag rand*.stx)
 		 (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
 						  rator.psi rand*.stx)))))
 
-      (define* (%process-implicit-dispatching input-form.stx lexenv.run lexenv.expand
-					      {rator.psi psi?} {rator.tag tag-identifier?} rand*.stx)
-	;;When implicit dispatching  is on, there are multiple cases  covered by this
-	;;procedure; examples:
+      (define* (%process-datum-operator input-form.stx lexenv.run lexenv.expand
+					{rator.psi psi?} {rator.tag tag-identifier?} rand*.stx)
+	;;When  the "datums  as operators"  option is  on, there  are multiple  cases
+	;;covered by this procedure; examples:
 	;;
 	;;(123 positive?)	=> #t
 	;;
@@ -914,6 +914,7 @@
   (define (%chi-set! input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_ (?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
+       (option.tagged-language.setter-forms?)
        (let* ((keys.stx  (cons (cons ?key00 ?key0*)
 			       (map cons ?key11* ?key1**))))
 	 (chi-expr (bless
@@ -921,6 +922,7 @@
 		   lexenv.run lexenv.expand)))
 
       ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
+       (option.tagged-language.setter-forms?)
        (let* ((keys.stx  (cons (cons ?key00 ?key0*)
 			       (map cons ?key11* ?key1**))))
 	 (chi-expr (bless
@@ -928,7 +930,8 @@
 		   lexenv.run lexenv.expand)))
 
       ((_ (?expr ?field-name) ?new-value)
-       (identifier? ?field-name)
+       (and (option.tagged-language.setter-forms?)
+	    (identifier? ?field-name))
        (chi-expr (bless
 		  `(tag-mutator ,?expr ,?field-name ,?new-value))
 		 lexenv.run lexenv.expand))
@@ -939,16 +942,31 @@
 	   (expr-syntax-type ?lhs lexenv.run)
 	 (case type
 	   ((lexical)
+	    ;;A lexical  binding used as LHS  of SET! is mutable  and so unexportable
+	    ;;according to R6RS.  Example:
+	    ;;
+	    ;;   (library (demo)
+	    ;;     (export var)		;error!!!
+	    ;;     (import (rnrs))
+	    ;;     (define var 1)
+	    ;;     (set! var 2))
+	    ;;
 	    (set-lexical-mutable! bind-val)
-	    (let ((rhs.psi (chi-expr ?rhs lexenv.run lexenv.expand)))
+	    (let* ((lhs.tag (or (identifier-tag ?lhs)
+				(untagged-tag-id)))
+		   (rhs.psi (chi-expr (bless
+				       `(tag-assert-and-return (,lhs.tag) ,?rhs))
+				      lexenv.run lexenv.expand)))
 	      (make-psi (build-lexical-assignment no-source
 			  (lexical-var bind-val)
-			  (psi-core-expr rhs.psi)))))
+			  (psi-core-expr rhs.psi))
+			(make-single-top-retvals-signature))))
+
 	   ((core-prim)
-	    (stx-error input-form.stx "cannot modify imported core primitive"))
+	    (syntax-violation 'set! "cannot modify imported core primitive" input-form.stx ?lhs))
 
 	   ((global)
-	    (stx-error input-form.stx "attempt to modify an immutable binding"))
+	    (syntax-violation 'set! "attempt to modify an immutable binding" input-form.stx ?lhs))
 
 	   ((global-macro!)
 	    (chi-expr (chi-global-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
@@ -957,19 +975,49 @@
 	    (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
 
 	   ((mutable)
+	    ;;Let's consider this library:
+	    ;;
+            ;;   (library (demo)
+	    ;;     (export macro)
+	    ;;     (import (vicare))
+            ;;     (define-syntax macro
+            ;;       (syntax-rules ()
+            ;;         ((_)
+            ;;          (set! var 5))))
+            ;;     (define var 123)
+            ;;     (set! var 8))
+	    ;;
+	    ;;in which  VAR is mutable  and not exportable  according to R6RS;  if we
+	    ;;import the library in a program and use MACRO:
+	    ;;
+	    ;;   (import (vicare) (demo))
+	    ;;   (macro)
+	    ;;
+	    ;;we are attempting to mutate  an unexportable binding in another lexical
+	    ;;context.  This is forbidden by R6RS.
+	    ;;
 	    (if (and (pair? bind-val)
 		     (let ((lib (car bind-val)))
 		       (eq? lib '*interaction*)))
-		(let ((loc     (cdr bind-val))
-		      (rhs.psi (chi-expr ?rhs lexenv.run lexenv.expand)))
+		(let* ((loc     (cdr bind-val))
+		       (lhs.tag (or (identifier-tag ?lhs)
+				    (untagged-tag-id)))
+		       (rhs.psi (chi-expr (bless
+					   `(tag-assert-and-return (,lhs.tag) ,?rhs))
+					  lexenv.run lexenv.expand)))
 		  (make-psi (build-global-assignment no-source
 			      loc
-			      (psi-core-expr rhs.psi))))
-	      (stx-error input-form.stx "attempt to modify an unexportable variable")))
+			      (psi-core-expr rhs.psi))
+			    (make-single-top-retvals-signature)))
+	      (syntax-violation 'set!
+		"attempt to modify a variable imported from another lexical context"
+		input-form.stx ?lhs)))
 
 	   (else
 	    (stx-error input-form.stx)))))
-      ))
+
+      (_
+       (syntax-violation 'set! "invalid setter syntax" input-form.stx))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1400,11 +1448,12 @@
 	   (syntax-match (retvals-signature-tags expr.sign) ()
 	     ((?tag)
 	      ;;A single return value: good.
-	      (if ($untagged-tag-id? tag.id)
-		  (override-identifier-tag! var.id ?tag)
-		(assertion-violation __who__
-		  "Vicare: internal error: expected variable definition with untagged identifier"
-		  expr.stx tag.id)))
+	      (when (option.tagged-language.rhs-tag-propagation?)
+		(if ($untagged-tag-id? tag.id)
+		    (override-identifier-tag! var.id ?tag)
+		  (assertion-violation __who__
+		    "Vicare: internal error: expected variable definition with untagged identifier"
+		    expr.stx tag.id))))
 
 	     (?tag
 	      ($untagged-tag-id? ?tag)

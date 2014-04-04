@@ -502,6 +502,12 @@
 	(else
 	 ($putprop label *EXPAND-TIME-BINDING-TAG-COOKIE* tag))))
 
+(define* (override-label-tag! {label symbol?} {tag tag-identifier?})
+  ;;Given a  syntactic binding LABEL:  add TAG to its  property list as  binding type
+  ;;tagging.  This tag should represent the object type referenced by the binding.
+  ;;
+  ($putprop label *EXPAND-TIME-BINDING-TAG-COOKIE* tag))
+
 (define* (label-tag {label identifier?})
   ;;Given a syntactic binding LABEL: retrieve from its property list the
   ;;identifier  representing   the  binding  type  tagging.    This  tag

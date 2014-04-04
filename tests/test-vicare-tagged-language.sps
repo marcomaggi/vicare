@@ -1015,21 +1015,21 @@
 
 ;;; untagged bindings
 
-  (check
+  (check	;the tag of LHS is inferred from the RHS
       (letrec ((a 1))
 	(define-syntax (inspect stx)
-	  (un-tagged? a))
+	  (tag=tagging? <fixnum> a))
 	(values a (inspect)))
     => 1 #t)
 
-  (check
+  (check	;the tag of LHS is inferred from the RHS
       (letrec ((a 1)
-	       (b 2))
+	       (b "2"))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (un-tagged? a)
-			   (un-tagged? b))))
-	(values a (inspect)))
-    => 1 '(#t #t))
+	  #`(quote #,(list (tag=tagging? <fixnum> a)
+			   (tag=tagging? <string> b))))
+	(values a b (inspect)))
+    => 1 "2" '(#t #t))
 
 ;;; --------------------------------------------------------------------
 ;;; tagged bindings
@@ -1065,21 +1065,30 @@
 
 ;;; untagged bindings
 
-  (check
+  (check	;the tag of LHS is inferred from the RHS
       (letrec* ((a 1))
 	(define-syntax (inspect stx)
-	  (un-tagged? a))
+	  (tag=tagging? <fixnum> a))
 	(values a (inspect)))
     => 1 #t)
 
-  (check
+  (check	;the tag of LHS is inferred from the RHS
       (letrec* ((a 1)
-		(b 2))
+		(b "2"))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (un-tagged? a)
-			   (un-tagged? b))))
-	(values a (inspect)))
-    => 1 '(#t #t))
+	  #`(quote #,(list (tag=tagging? <fixnum> a)
+			   (tag=tagging? <string> b))))
+	(values a b (inspect)))
+    => 1 "2" '(#t #t))
+
+  (check	;the tag of LHS is inferred from the RHS
+      (letrec* ((a 1)
+		(b a))
+	(define-syntax (inspect stx)
+	  #`(quote #,(list (tag=tagging? <fixnum> a)
+			   (tag=tagging? <fixnum> b))))
+	(values a b (inspect)))
+    => 1 1 '(#t #t))
 
 ;;; --------------------------------------------------------------------
 ;;; tagged bindings
@@ -1099,6 +1108,16 @@
 			   (tag=tagging? <flonum> b))))
 	(values a (inspect)))
     => 1 '(#t #t))
+
+  (check	;B gets its value from evaluating an expression in which
+		;A is tagged.
+      (letrec* (({a <fixnum>}  1)
+		({b <boolean>} (a positive?)))
+	(define-syntax (inspect stx)
+	  #`(quote #,(list (tag=tagging? <fixnum>  a)
+			   (tag=tagging? <boolean> b))))
+	(values a b (inspect)))
+    => 1 #t '(#t #t))
 
   (check
       (letrec* (({a <procedure>} (lambda (x)
