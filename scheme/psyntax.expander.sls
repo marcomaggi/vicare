@@ -1975,6 +1975,10 @@
 	     (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
 	       (%recurse-and-cons (build-global-assignment no-source
 				    lhs (psi-core-expr psi)))))
+	    ((def-expr)
+	     (let ((psi (chi-expr  (cddr qrhs) lexenv.run lexenv.expand)))
+	       (%recurse-and-cons (build-global-assignment no-source
+				    lhs (psi-core-expr psi)))))
 	    ((top-expr)
 	     (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
 	       (%recurse-and-cons (psi-core-expr psi))))
@@ -2031,26 +2035,39 @@
     ;;Given a list of  SYNTAX-MATCH expression arguments representing an
     ;;R6RS top level program, expand it.
     ;;
-    (receive (import-spec* body*)
+    (receive (import-spec* option* body*)
 	(%parse-top-level-program program-form*)
       (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
-	  (let ()
-	    (import CORE-BODY-EXPANDER)
-	    (core-body-expander 'all import-spec* body* #t))
+	  (let ((option* (%parse-program-options option*)))
+	    (parametrise ((option.tagged-language? (memq 'tagged-language option*)))
+	      (parametrise ((option.tagged-language.rhs-tag-propagation?  (option.tagged-language?))
+			    (option.tagged-language.implicit-dispatching? (option.tagged-language?)))
+		(let ()
+		  (import CORE-BODY-EXPANDER)
+		  (core-body-expander 'all import-spec* body* #t)))))
 	(values invoke-lib* invoke-code macro* export-subst export-env))))
 
   (define (%parse-top-level-program program-form*)
-    ;;Given a list of  SYNTAX-MATCH expression arguments representing an
-    ;;R6RS top level program, parse it and return 2 values:
+    ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
+    ;;level program, possibly with Vicare extensions, parse it and return 3 values:
     ;;
     ;;1. A list of import specifications.
     ;;
-    ;;2. A list of body forms.
+    ;;2. A list of options specifications.
+    ;;
+    ;;3. A list of body forms.
     ;;
     (syntax-match program-form* ()
-      (((?import ?import-spec* ...) body* ...)
+      (((?import  ?import-spec* ...)
+	(?options ?option-spec* ...)
+	?body* ...)
+       (and (eq? (syntax->datum ?import)  'import)
+	    (eq? (syntax->datum ?options) 'options))
+       (values ?import-spec* ?option-spec* ?body*))
+
+      (((?import ?import-spec* ...) ?body* ...)
        (eq? (syntax->datum ?import) 'import)
-       (values ?import-spec* body*))
+       (values ?import-spec* '() ?body*))
 
       (((?import . x) . y)
        (eq? (syntax->datum ?import) 'import)
@@ -2060,6 +2077,20 @@
       (_
        (assertion-violation 'expander
 	 "top-level program is missing an (import ---) clause"))))
+
+  (define (%parse-program-options option*)
+    (syntax-match option* ()
+      (() '())
+      ((?opt . ?other*)
+       (symbol? (syntax->datum ?opt))
+       (let ((sym (syntax->datum ?opt)))
+	 (case sym
+	   ((tagged-language)
+	    (cons sym (%parse-program-options ?other*)))
+	   (else
+	    (syntax-violation __who__
+	      "invalid program option" ?opt)))))
+      ))
 
   #| end of module: EXPAND-TOP-LEVEL |# )
 
@@ -2384,11 +2415,14 @@
       (let* ((option*    (%parse-library-options libopt*))
 	     (stale-clt  (%make-stale-collector)))
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
-	    (parametrise ((stale-when-collector stale-clt))
-	      (let ((mixed-definitions-and-expressions? #f))
-		(import CORE-BODY-EXPANDER)
-		(core-body-expander export-spec* import-spec* body*
-				    mixed-definitions-and-expressions?)))
+	    (parametrise ((stale-when-collector    stale-clt)
+			  (option.tagged-language? (memq 'tagged-language option*)))
+	      (parametrise ((option.tagged-language.rhs-tag-propagation?  (option.tagged-language?))
+			    (option.tagged-language.implicit-dispatching? (option.tagged-language?)))
+		(let ((mixed-definitions-and-expressions? #f))
+		  (import CORE-BODY-EXPANDER)
+		  (core-body-expander export-spec* import-spec* body*
+				      mixed-definitions-and-expressions?))))
 	  (receive (guard-code guard-lib*)
 	      (stale-clt)
 	    (values (syntax->datum libname)
@@ -2471,10 +2505,14 @@
       ((?opt . ?other*)
        (symbol? (syntax->datum ?opt))
        (let ((sym (syntax->datum ?opt)))
-	 (if (eq? sym 'visit-upon-loading)
-	     (cons sym (%parse-library-options ?other*))
-	   (syntax-violation __who__
-	     "invalid library option" ?opt))))
+	 (case sym
+	   ((visit-upon-loading)
+	    (cons sym (%parse-library-options ?other*)))
+	   ((tagged-language)
+	    (cons sym (%parse-library-options ?other*)))
+	   (else
+	    (syntax-violation __who__
+	      "invalid library option" ?opt)))))
       ))
 
   (module (%make-stale-collector)
@@ -5904,37 +5942,53 @@
 (define-syntax syntax-match
   ;;The SYNTAX-MATCH macro is almost like SYNTAX-CASE macro.  Except that:
   ;;
-  ;;*  The syntax  objects matched  are OUR  stx objects,  not the  host
-  ;;  systems syntax objects (whatever they may be we don't care).
+  ;;* The  syntax objects matched  are OUR stx objects,  not the host  systems syntax
+  ;;  objects (whatever they may be we don't care).
   ;;
-  ;;*  The literals  are matched  against  those in  the system  library
-  ;;  (psyntax system $all).  -- see scheme-stx
+  ;;* The  literals are matched against  those in the system  library (psyntax system
+  ;;  $all).  See the function SCHEME-STX for how those identifier are created.
   ;;
-  ;;* The variables  in the patters are bound to  ordinary variables not
-  ;;  to special pattern variables.
+  ;;* The variables  in the patterns are  bound to ordinary variables  not to special
+  ;;  pattern variables.
   ;;
-  ;;The actual matching between the input expression and the patterns is
-  ;;performed  by   the  function   SYNTAX-DISPATCH;  the   patterns  in
-  ;;SYNTAX-MATCH are converted to a  sexps and handed to SYNTAX-DISPATCH
-  ;;along with the input expression.
+  ;;The actual matching between the input expression and the patterns is performed by
+  ;;the function  SYNTAX-DISPATCH; the  patterns in SYNTAX-MATCH  are converted  to a
+  ;;sexps and handed to SYNTAX-DISPATCH along with the input expression.
   ;;
   (let ()
     (define (transformer stx)
       (syntax-case stx ()
 
-	;;No  clauses.  Some  of  the  SYNTAX-MATCH clauses  recursively
-	;;expand  to uses  of  SYNTAX-MATCH; when  no  more clauses  are
-	;;available in the input  form, this SYNTAX-CASE clause matches.
-	;;When this happens: we want to raise a syntax error.
+	;;No more clauses.  This clause matches STX when:
 	;;
-	;;Notice that we  do not want to raise a  syntax error here, but
-	;;in the expanded code.
-	((_ ?expr (?literals ...))
+	;;* The SYNTAX-MATCH use input form does not match any of the patterns, so we
+	;;  want to raise a syntax violation in the expanded code.  Example:
+	;;
+	;;     (syntax-match #'(1 2) ()
+	;;      ((?a ?b ?c)
+	;;       (do-something-with ?a ?b ?c)))
+	;;
+	;;  the input form #'(1 2) does not match the pattern "(?a ?b ?c)".
+	;;
+	;;* The SYNTAX-MATCH use has the format:
+	;;
+	;;     (syntax-match ?input-form ?literals)
+	;;
+	;;  that is: no clauses were specified.  In this case we still want to expand
+	;;  into a syntax violation raising form.
+	;;
+	;;Notice, again, that we do not want to raise a syntax error here, but in the
+	;;expanded code.
+	;;
+	((_ ?input-form (?literals ...))
 	 (for-all sys.identifier? (syntax (?literals ...)))
-	 (syntax (syntax-violation 'syntax-match "invalid syntax, no clauses" ?expr)))
+	 (syntax
+	  (syntax-violation 'syntax-match
+	    "invalid syntax, no clause matches the input form" ?input-form)))
 
 	;;The next clause has a fender.
-	((_ ?expr (?literals ...) (?pattern ?fender ?body) ?clause* ...)
+	;;
+	((_ ?input-form (?literals ...) (?pattern ?fender ?body) ?clause* ...)
 	 (for-all sys.identifier? (syntax (?literals ...)))
 	 (receive (pattern ptnvars/levels)
 	     (%convert-single-pattern (syntax ?pattern) (syntax (?literals ...)))
@@ -5942,22 +5996,20 @@
 	       ((PATTERN                   (sys.datum->syntax (syntax here) pattern))
 		(((PTNVARS . LEVELS) ...)  ptnvars/levels))
 	     (syntax
-	      (let ((T ?expr))
-		;;If   the  input   expression   matches  the   symbolic
-		;;expression PATTERN...
+	      (let ((T ?input-form))
+		;;If the input expression matches the symbolic expression PATTERN...
 		(let ((ls/false (syntax-dispatch T 'PATTERN)))
 		  (if (and ls/false
-			   ;;...and  the pattern  variables satisfy  the
-			   ;;fender...
+			   ;;...and the pattern variables satisfy the fender...
 			   (apply (lambda (PTNVARS ...) ?fender) ls/false))
-		      ;;...evaluate the body  with the pattern variables
-		      ;;assigned.
+		      ;;...evaluate the body with the pattern variables assigned.
 		      (apply (lambda (PTNVARS ...) ?body) ls/false)
 		    ;;...else try to match the next clause.
 		    (syntax-match T (?literals ...) ?clause* ...))))))))
 
 	;;The next clause has NO fender.
-	((_ ?expr (?literals ...) (?pattern ?body) clause* ...)
+	;;
+	((_ ?input-form (?literals ...) (?pattern ?body) clause* ...)
 	 (for-all sys.identifier? (syntax (?literals ...)))
 	 (receive (pattern ptnvars/levels)
 	     (%convert-single-pattern (syntax ?pattern) (syntax (?literals ...)))
@@ -5965,21 +6017,18 @@
 	       ((PATTERN                   (sys.datum->syntax (syntax here) pattern))
 		(((PTNVARS . LEVELS) ...)  ptnvars/levels))
 	     (syntax
-	      (let ((T ?expr))
-		;;If   the  input   expression   matches  the   symbolic
-		;;expression PATTERN...
+	      (let ((T ?input-form))
+		;;If the input expression matches the symbolic expression PATTERN...
 		(let ((ls/false (syntax-dispatch T 'PATTERN)))
 		  (if ls/false
-		      ;;...evaluate the body  with the pattern variables
-		      ;;assigned.
+		      ;;...evaluate the body with the pattern variables assigned.
 		      (apply (lambda (PTNVARS ...) ?body) ls/false)
 		    ;;...else try to match the next clause.
 		    (syntax-match T (?literals ...) clause* ...))))))))
 
-	;;This is a true error in he use of SYNTAX-MATCH.  We still want
-	;;the  expanded  code  to  raise  the  violation.   Notice  that
-	;;SYNTAX-VIOLATION  is not  bound in  the expand  environment of
-	;;SYNTAX-MATCH's transformer.
+	;;This is a true error in he use of SYNTAX-MATCH.  We still want the expanded
+	;;code to raise the violation.  Notice  that SYNTAX-VIOLATION is not bound in
+	;;the expand environment of SYNTAX-MATCH's transformer.
 	;;
 	(?stuff
 	 (syntax (syntax-violation 'syntax-match "invalid syntax in macro use" stx)))
@@ -5988,22 +6037,20 @@
     (module (%convert-single-pattern)
 
       (case-define %convert-single-pattern
-	;;Recursive function.  Transform the PATTERN-STX into a symbolic
-	;;expression to be handed  to SYNTAX-DISPATCH.  PATTERN-STX must
-	;;be  a  syntax  object  holding  the  SYNTAX-MATCH  pattern  to
-	;;convert.  LITERALS must  be a syntax object holding  a list of
-	;;identifiers being the literals in the PATTERN-STX.
+	;;Recursive function.   Transform the PATTERN-STX into  a symbolic expression
+	;;to  be handed  to SYNTAX-DISPATCH.   PATTERN-STX  must be  a syntax  object
+	;;holding the  SYNTAX-MATCH pattern  to convert.  LITERALS  must be  a syntax
+	;;object holding a list of identifiers being the literals in the PATTERN-STX.
 	;;
 	;;Return 2 values:
 	;;
 	;;1. The pattern as sexp.
 	;;
-	;;2.   An ordered  list of  pairs, each  representing a  pattern
-	;;   variable that must be bound whenever the body associated to
-	;;   the  pattern is  evaluated.  The  car of  each pair  is the
-	;;   symbol  being the pattern  variable name.  The cdr  of each
-	;;   pair is an exact  integer representing the nesting level of
-	;;   the pattern variable.
+	;;2. An ordered list of pairs, each representing a pattern variable that must
+	;;   be bound whenever the body  associated to the pattern is evaluated.  The
+	;;   car of each pair is the symbol being the pattern variable name.  The cdr
+	;;   of each pair  is an exact integer representing the  nesting level of the
+	;;   pattern variable.
 	;;
 	((pattern-stx literals)
 	 (%convert-single-pattern pattern-stx literals 0 '()))
@@ -6019,8 +6066,7 @@
 	   ;;
 	   ;;   _
 	   ;;
-	   ;;any other identifier will bind a variable and it is encoded
-	   ;;as:
+	   ;;any other identifier will bind a variable and it is encoded as:
 	   ;;
 	   ;;   any
 	   ;;
@@ -6034,13 +6080,12 @@
 		   (values 'any (cons (cons pattern-stx nesting-level)
 				      pattern-vars)))))
 
-	   ;;A  tail  pattern  with  ellipsis which  does  not  bind  a
-	   ;;variable is encoded as:
+	   ;;A tail pattern  with ellipsis which does not bind  a variable is encoded
+	   ;;as:
 	   ;;
 	   ;;   #(each ?pattern)
 	   ;;
-	   ;;a tail pattern with ellipsis which does bind a variable is
-	   ;;encoded as:
+	   ;;a tail pattern with ellipsis which does bind a variable is encoded as:
 	   ;;
 	   ;;   each-any
 	   ;;
@@ -6124,8 +6169,8 @@
 	    (values (cons x y) pattern-vars^^))))
 
       (define (%bound-identifier-member? id list-of-ids)
-	;;Return #t if  the identifier ID is  BOUND-IDENTIFIER=?  to one
-	;;of the identifiers in LIST-OF-IDS.
+	;;Return  #t if  the  identifier  ID is  BOUND-IDENTIFIER=?   to  one of  the
+	;;identifiers in LIST-OF-IDS.
 	;;
 	(and (pair? list-of-ids)
 	     (or (sys.bound-identifier=? id (car list-of-ids))
@@ -6134,17 +6179,6 @@
       (define (%ellipsis? x)
 	(and (sys.identifier? x)
 	     (sys.free-identifier=? x (syntax (... ...)))))
-
-      ;;Commented out because unused.  (Marco Maggi; Thu Apr 25, 2013)
-      ;;
-      ;; (define (%free-identifier-member? id1 list-of-ids)
-      ;;   ;;Return #t if  the identifier ID1 is  FREE-IDENTIFIER=?  to one
-      ;;   ;;of the identifiers in LIST-OF-IDS.
-      ;;   ;;
-      ;;   (and (exists (lambda (id2)
-      ;; 		     (sys.free-identifier=? id1 id2))
-      ;; 	     list-of-ids)
-      ;; 	   #t))
 
       #| end of module: %CONVERT-SINGLE-PATTERN |# )
 
@@ -6225,22 +6259,23 @@
 		     (make-<stx> sym TOP-MARK* '() '())))
 	    (hashtable-set! scheme-stx-hashtable sym stx))))))
 
-(define underscore-id?
-  (let ((underscore-id #f))
-    (lambda (id)
-      (and (identifier? id)
-	   (free-id=? id (or underscore-id
-			     (receive-and-return (id)
-				 (scheme-stx '_)
-			       (set! underscore-id id))))))))
+(let-syntax
+    ((define-core-prim-id-retriever (syntax-rules ()
+				      ((_ ?who ?core-prim)
+				       (define ?who
+					 (let ((memoized-id #f))
+					   (lambda ()
+					     (or memoized-id
+						 (receive-and-return (id)
+						     (scheme-stx '?core-prim)
+						   (set! memoized-id id))))))))))
+  (define-core-prim-id-retriever underscore-id		_)
+  (define-core-prim-id-retriever procedure-pred-id	procedure?)
+  #| end of let-syntax |# )
 
-(define procedure-and-error-core-primitive-id
-  (let ((prim-id #f))
-    (lambda ()
-      (or prim-id
-	  (receive-and-return (id)
-	      (scheme-stx 'procedure-and-error)
-	    (set! prim-id id))))))
+(define (underscore-id? id)
+  (and (identifier? id)
+       (free-id=? id (underscore-id))))
 
 
 ;;;; macro transformer modules

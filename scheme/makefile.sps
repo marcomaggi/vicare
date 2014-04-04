@@ -354,6 +354,7 @@
      (quote					(core-macro . quote))
      (syntax-case				(core-macro . syntax-case))
      (syntax					(core-macro . syntax))
+     (let					(core-macro . let))
      (letrec					(core-macro . letrec))
      (letrec*					(core-macro . letrec*))
      (if					(core-macro . if))
@@ -416,7 +417,6 @@
      (syntax-parameterize			(macro . syntax-parametrise))
      (when					(macro . when))
      (unless					(macro . unless))
-     (let					(macro . let))
      (let*					(macro . let*))
      (cond					(macro . cond))
      (do					(macro . do))
@@ -3821,7 +3821,6 @@
     (return-value-validation-with-predicate)
     (any->symbol)
     (any->string)
-    (procedure-and-error)
 
     ))
 

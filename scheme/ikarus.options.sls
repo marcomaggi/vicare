@@ -35,6 +35,10 @@
     report-errors-at-runtime
     strict-r6rs
     descriptive-labels
+    ;; tagged language parameter options
+    tagged-language.rhs-tag-propagation?
+    tagged-language.implicit-dispatching?
+    tagged-language?
     ;; vicare configuration options
     vicare-built-with-arguments-validation-enabled
     vicare-built-with-srfi-enabled
@@ -57,6 +61,8 @@
 
 (define-syntax define-boolean-option
   (syntax-rules ()
+    ((_ ?who)
+     (define-boolean-option ?who #f))
     ((_ ?who ?default)
      (define ?who
        (let ((bool ?default))
@@ -67,14 +73,57 @@
 	   (set! bool (and value #t)))))))
     ))
 
-(define-boolean-option verbose?			#f)
-(define-boolean-option verbose-about-libraries?	#f)
-(define-boolean-option debug-mode-enabled?	#f)
-(define-boolean-option print-loaded-libraries   #f)
-(define-boolean-option cache-compiled-libraries	#f)
-(define-boolean-option report-errors-at-runtime #f)
-(define-boolean-option strict-r6rs              #f)
-(define-boolean-option descriptive-labels       #f)
+(define-boolean-option verbose?)
+(define-boolean-option verbose-about-libraries?)
+(define-boolean-option debug-mode-enabled?)
+(define-boolean-option print-loaded-libraries)
+(define-boolean-option cache-compiled-libraries)
+(define-boolean-option report-errors-at-runtime)
+(define-boolean-option strict-r6rs)
+(define-boolean-option descriptive-labels)
+
+(define-syntax define-parameter-boolean-option
+  (syntax-rules ()
+    ((_ ?who)
+     (define-parameter-boolean-option ?who #f))
+    ((_ ?who ?default)
+     (define ?who
+       (make-parameter ?default
+	 (lambda (value)
+	   (and value #t)))))
+    ))
+
+;;This option is about the tagged language.  When we write:
+;;
+;;   (let ((a 1)) . ?body)
+;;
+;;the  identifier  A is  the  left-hand  side  of  the binding  and  the
+;;expression 1  is the right-hand side  of the binding; since  A is left
+;;untagged in  the source code,  the expander  will tag it,  by default,
+;;with "<untagged>".
+;;
+;;* If this option  is turned OFF: the identifier A  is left tagged with
+;;  "<untagged>".  We are  free to assign any object to  A, mutating the
+;;  bound value  multiple times with  objects of different tag;  this is
+;;  standard Scheme behaviour.
+;;
+;;* When this option is turned ON:  the expander infers that the RHS has
+;;  signature "(<fixnum>)", so it propagates the tag from the RHS to the
+;;  LHS  overriding "<untagged>"  with "<fixnum>".   This will  cause an
+;;  error to be raised if we mutate the binding assigning to A an object
+;;  whose tag is not "<fixnum>".
+;;
+(define-parameter-boolean-option tagged-language.rhs-tag-propagation?)
+
+(define-parameter-boolean-option tagged-language.implicit-dispatching?)
+
+;;Turn on  tagged language  extensions.  When this  parameter is  set to
+;;true: we must also set to true all the tagged language sub-parameters.
+;;
+(define tagged-language?
+  (make-parameter #f
+    (lambda (value)
+      (and value #t))))
 
 
 ;;;; vicare build configuration options

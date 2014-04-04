@@ -271,6 +271,7 @@ Example:
 
 @menu
 * iklib syntaxes libraries::    Extended @code{library} syntax.
+* iklib syntaxes programs::     Extended program syntax.
 * iklib syntaxes lambdas::      @func{lambda}-like additional syntaxes.
 * iklib syntaxes defines::      @func{define}-like additional syntaxes.
 * iklib syntaxes defstxs::      @func{define-syntax}-like additional syntaxes.
@@ -344,6 +345,37 @@ when the library is loaded; visiting a library implies invoking it.
 This option is especially useful when the library assigns properties to
 syntactic bindings (@pxref{iklib syntaxes properties}) and when adding
 methods to Nausicaa's multimethods.
+@end defvr
+
+
+@defvr {Library Option} tagged-language
+Turn on the tagged language extensions; @ref{tagged} for details.
+@end defvr
+
+@c page
+@node iklib syntaxes programs
+@subsection Extended program syntax
+
+
+@cindex @clause{options}, program clause
+@cindex Program clause @clause{options}
+
+
+@value{PRJNAME} extends the format of programs by allowing an optional
+@clause{options} clause after the @clause{import} one:
+
+@example
+(import  @meta{import-spec} ...)
+(options @meta{option} ...)
+@meta{program-body}
+@end example
+
+@noindent
+where each @meta{option} is a symbolic expression.
+
+
+@defvr {Library Option} tagged-language
+Turn on the tagged language extensions; @ref{tagged} for details.
 @end defvr
 
 @c page

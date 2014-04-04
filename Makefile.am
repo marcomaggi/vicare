@@ -56,7 +56,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/libutils.texi				\
 	doc/ffi.texi					\
 	doc/syslib.texi					\
-	doc/typed.texi					\
+	doc/tagged.texi					\
 	doc/tags.texi					\
 	doc/capi.texi					\
 	doc/objects.texi				\
@@ -732,7 +732,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-syntactic-extensions.sps			\
 	tests/test-vicare-syntax-utilities.sps				\
 	tests/test-vicare-system.sps					\
-	tests/test-vicare-typed-language.sps				\
+	tests/test-vicare-tagged-language.sps				\
 	tests/test-vicare-vectors.sps					\
 	\
 	tests/test-issue-001-equal-hash.sps				\

@@ -77,7 +77,7 @@
 
   (check-syntax-violation ;invalid list of symbols
    (define-enumeration enum-woppa 123 woppa)
-   => '("invalid syntax, no clauses" #f))
+   => '("invalid syntax, no clause matches the input form" #f))
 ;;;   => '("expected list of symbols as enumeration elements" 123))
 
   (check-syntax-violation ;invalid list of symbols

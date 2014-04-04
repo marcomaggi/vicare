@@ -253,7 +253,7 @@
 	    ;;"object-type-specs" until an "object-type-spec" without parent has been
 	    ;;found.  The serach for the field getter has failed.
 	    (syntax-violation __who__
-	      "object type does not provide getter syntax" input-form.stx))
+	      "object type does not provide getter syntax" input-form.stx tag-id))
 	   (($object-type-spec-getter-maker spec)
 	    => (lambda (getter-maker)
 		 (or (getter-maker keys.stx input-form.stx)
@@ -474,6 +474,13 @@
 	(else
 	 ($syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-TAG-COOKIE* tag))))
 
+(define* (override-identifier-tag! {binding-id identifier-bound?} {tag tag-identifier?})
+  ;;Given a  syntactic binding identifier:  add TAG to  its property list  as binding
+  ;;type  tagging,  silently  overriding  the previous  property.   This  tag  should
+  ;;represent the object type referenced by the binding.
+  ;;
+  ($syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-TAG-COOKIE* tag))
+
 (define* (identifier-tag {binding-id identifier-bound?})
   ;;Given  a  syntactic binding  identifier:  retrieve  from  its property  list  the
   ;;identifier representing  the binding  type tagging.   This tag  identifier should
@@ -556,8 +563,13 @@
   (define ($fabricate-procedure-tag-identifier sym callable-spec)
     (receive (tag lab)
 	(%fabricate-bound-identifier sym)
+      ;;FIXME? We  create an instance  of "object-type-spec" with a  plain PROCEDURE?
+      ;;as predicate.  This  is because there is  no way at run-time  to identify the
+      ;;signature of a  closure object, so it is impossible  to properly validate it;
+      ;;this is bad because  we pass on a value that is  not fully validated.  (Marco
+      ;;Maggi; Fri Apr 4, 2014)
       (let* ((uid   (gensym sym))
-	     (spec  (make-object-type-spec uid tag (procedure-tag-id) (procedure-and-error-core-primitive-id))))
+	     (spec  (make-object-type-spec uid tag (procedure-tag-id) (procedure-pred-id))))
 	(set-identifier-object-type-spec! tag spec)
 	($putprop lab *EXPAND-TIME-TAG-CALLABLE-SPEC-COOKIE* callable-spec))
       tag))

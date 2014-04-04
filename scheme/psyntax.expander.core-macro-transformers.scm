@@ -35,6 +35,7 @@
     ((quote)					quote-transformer)
     ((lambda)					lambda-transformer)
     ((case-lambda)				case-lambda-transformer)
+    ((let)					let-transformer)
     ((letrec)					letrec-transformer)
     ((letrec*)					letrec*-transformer)
     ((if)					if-transformer)
@@ -84,6 +85,160 @@
     (else
      (assertion-violation __who__
        "Vicare: internal error: cannot find transformer" name))))
+
+
+(module PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS
+  (%expand-rhs*
+   %compose-lhs-specification
+   %maybe-override-lhs-tagging)
+  ;;In  this  module  we  assume  the  argument  INPUT-FORM.STX  can  be  matched  by
+  ;;SYNTAX-MATCH patterns like:
+  ;;
+  ;;  (let            ((?lhs* ?rhs*) ...) . ?body*)
+  ;;  (let     ?recur ((?lhs* ?rhs*) ...) . ?body*)
+  ;;  (letrec         ((?lhs* ?rhs*) ...) . ?body*)
+  ;;  (letrec*        ((?lhs* ?rhs*) ...) . ?body*)
+  ;;
+  ;;where the ?LHS identifiers can be tagged or not; we have to remember that LET* is
+  ;;just expanded in  a set of nested  LET syntaxes.  We assume that  the ?LHS syntax
+  ;;objects have been processed with:
+  ;;
+  ;;   (receive (lhs*.id lhs*.tag)
+  ;;       (parse-list-of-tagged-bindings ?lhs* input-form.stx)
+  ;;     ...)
+  ;;
+  ;;We want to provide helper functions to handle the following situations.
+  ;;
+  ;;
+  ;;RHS tag propagation
+  ;;-------------------
+  ;;
+  ;;When we write:
+  ;;
+  ;;   (let ((a 1)) . ?body)
+  ;;
+  ;;the identifier A is the left-hand side of the binding and the expression 1 is the
+  ;;right-hand side  of the  binding; since  A is  untagged in  the source  code, the
+  ;;expander will tag it, by default, with "<untagged>".
+  ;;
+  ;;* If  the option  RHS-TAG-PROPAGATION? is  turned OFF: the  identifier A  is left
+  ;;  tagged with "<untagged>".  We are free  to assign any object to A, mutating the
+  ;;  bound  value multiple  times with  objects of different  tag; this  is standard
+  ;;  Scheme behaviour.
+  ;;
+  ;;* When the option RHS-TAG-PROPAGATION? is turned ON: the expander infers that the
+  ;;  RHS has  signature "(<fixnum>)", so it  propagates the tag from the  RHS to the
+  ;;  LHS  overriding "<untagged>" with "<fixnum>".   This will cause an  error to be
+  ;;  raised  if we  mutate the binding  assigning to  A an object  whose tag  is not
+  ;;  "<fixnum>".
+  ;;
+  ;;
+  ;;RHS signature validation
+  ;;------------------------
+  ;;
+  ;;When we write:
+  ;;
+  ;;   (let (({a <fixnum>} 1)) . ?body)
+  ;;
+  ;;the identifier A is the left-hand side of the binding and the expression 1 is the
+  ;;right-hand side of the binding; A is explicitly tagged with "<fixnum>".
+  ;;
+  ;;We want to make  sure that the RHS expression returns a  single return value with
+  ;;signature "<fixnum>"; so  the RHS's retvals signature must  be "(<fixnum>)".  All
+  ;;the work  is done  by the  macro TAG-ASSERT-AND-RETURN, so  we transform  the RHS
+  ;;expression as if the input form is:
+  ;;
+  ;;   (let (({a <fixnum>} (tag-assert-and-return (<fixnum>) 1))) . ?body)
+  ;;
+  ;;and expand the new RHS:
+  ;;
+  ;;   (tag-assert-and-return (<fixnum>) 1)
+  ;;
+  ;;if the expander  determines that the signature  of 1 is "(<fixnum>)",  the RHS is
+  ;;transformed at expand-time into just "1";  otherwise a run-time object type check
+  ;;is inserted.  In any case we can be sure at bot expand-time and run-time that the
+  ;;signature of the  identifier A is correct, otherwise an  exception will be raised
+  ;;before expanding or running the ?BODY.
+  ;;
+
+  (define (%expand-rhs* input-form.stx lexenv.run lexenv.expand
+			lhs*.tag rhs*.stx)
+    ;;Expand  a  list  of  right-hand  sides  from  bindings  in  the  syntax  object
+    ;;INPUT-FORM.STX; the context  of the expansion is described by  the given LEXENV
+    ;;arguments.
+    ;;
+    ;;LHS*.TAG  must be  a list  of tag  identifiers representing  the tags  from the
+    ;;left-hand sides.
+    ;;
+    ;;RHS*.STX must be a list of syntax objects representing the expressions from the
+    ;;right-hand sides.
+    ;;
+    ;;Return 2 values: a list of  PSI structures representing the expanded right-hand
+    ;;sides; a list of tag identifiers  representing the signatures of the right-hand
+    ;;sides.  If  the RHS  are found,  at expand-time,  to return  zero, two  or more
+    ;;values: a synatx violation is raised.
+    ;;
+    (define rhs*.psi
+      (map (lambda (rhs.stx lhs.tag)
+	     ;;If LHS.TAG is "<untagged>", we still want to use the assert and return
+	     ;;form to make sure that a single value is returned.
+	     (chi-expr (bless
+			`(tag-assert-and-return (,lhs.tag) ,rhs.stx))
+		       lexenv.run lexenv.expand))
+	rhs*.stx lhs*.tag))
+    (define rhs*.sig
+      (map psi-retvals-signature rhs*.psi))
+    (define rhs*.tag
+      (map (lambda (sig)
+	     (syntax-match (retvals-signature-tags sig) ()
+	       ((?tag)
+		;;Single return value: good.
+		?tag)
+	       (_
+		;;If we  are here it  means that the TAG-ASSERT-AND-RETURN  above has
+		;;misbehaved.
+		(assertion-violation __who__
+		  "Vicare: internal error: invalid retvals signature"
+		  (syntax->datum input-form.stx) sig))))
+	rhs*.sig))
+    (values rhs*.psi rhs*.tag))
+
+  (define (%compose-lhs-specification lhs*.id lhs*.tag rhs*.inferred-tag)
+    ;;For every LHS identifier build a tagged identifier syntax:
+    ;;
+    ;;   (brace ?lhs.id ?tag)
+    ;;
+    ;;in which ?TAG is either the original one specified in the LET syntax or the one
+    ;;inferred by expanding the RHS.  If there  is no tag explicitly specified in the
+    ;;LET syntax we put in the inferred one.
+    ;;
+    (if (option.tagged-language.rhs-tag-propagation?)
+	(map (lambda (lhs.id lhs.tag rhs.tag)
+	       (bless
+		`(brace ,lhs.id ,(if (untagged-tag-id? lhs.tag)
+				     (if (untagged-tag-id? rhs.tag)
+					 lhs.tag
+				       rhs.tag)
+				   lhs.tag))))
+	  lhs*.id lhs*.tag rhs*.inferred-tag)
+      (map (lambda (lhs.id lhs.tag)
+	     (bless
+	      `(brace ,lhs.id ,lhs.tag)))
+	lhs*.id lhs*.tag)))
+
+  (define (%maybe-override-lhs-tagging lhs*.id lhs*.tag rhs*.inferred-tag)
+    ;;For  every LHS  identifier: if  RHS  tag propagation  is  on and  LHS's tag  is
+    ;;"<untagged>", override the LHS tag with  the tag inferred from the RHS.  Return
+    ;;unspecified values.
+    ;;
+    (when (option.tagged-language.rhs-tag-propagation?)
+      (map (lambda (lhs.id lhs.tag rhs.tag)
+	     (if (untagged-tag-id? lhs.tag)
+		 (override-identifier-tag! lhs.id rhs.tag)
+	       lhs.id))
+	lhs*.id lhs*.tag rhs*.inferred-tag)))
+
+  #| end of module: PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS |# )
 
 
 ;;;; module core-macro-transformer: IF
@@ -151,6 +306,112 @@
     ((_ ?formals ?body ?body* ...)
      (chi-lambda input-form.stx ?formals (cons ?body ?body*) lexenv.run lexenv.expand))
     ))
+
+
+;;;; module core-macro-transformer: LET
+
+(module (let-transformer)
+  ;;Transformer function used  to expand R6RS LET macros from  the top-level built in
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
+  ;;LEXENV; return an PSI struct.
+  ;;
+  ;;In practice, below we convert the UNnamed syntax:
+  ;;
+  ;;   (let ((?lhs ?rhs) ...) . ?body)
+  ;;
+  ;;into:
+  ;;
+  ;;   ((lambda (?lhs ...) . ?body) ?rhs ...)
+  ;;
+  ;;and the named syntax:
+  ;;
+  ;;   (let ?recur ((?lhs ?rhs) ...) . ?body)
+  ;;
+  ;;into:
+  ;;
+  ;;   ((letrec ((?recur (lambda (?lhs ...) . ?body)))
+  ;;      ?recur)
+  ;;    ?rhs ...)
+  ;;
+  ;;First we expand the  ?RHS to acquire their retvals signature,  then we expand the
+  ;;LAMBDA with the formals correctly tagged.  This way if we write:
+  ;;
+  ;;   (let ((a 1)) . ?body)
+  ;;
+  ;;this is what happens:
+  ;;
+  ;;1..The identifier A is first tagged with "<untagged>".
+  ;;
+  ;;2..The expander figures out that the RHS's signature is "(<fixnum>)".
+  ;;
+  ;;3..The expander overrides the tag of A to be "<fixnum>".
+  ;;
+  ;;4..In the ?BODY the identifier A is  tagged as "<fixnum>", so the extended syntax
+  ;;   is available.
+  ;;
+  ;;On the other hand if we write:
+  ;;
+  ;;   (let (({a <exact-integer>} 1)) . ?body)
+  ;;
+  ;;we get an expansion that is equivalent to:
+  ;;
+  ;;   (let (({a <exact-integer>} (tag-assert-and-return (<exact-integer>) 1))) . ?body)
+  ;;
+  ;;so  the type  of the  RHS expression  is validated  either at  expand-time or  at
+  ;;run-time.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'let))
+
+  (define* (let-transformer input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (%expander input-form.stx lexenv.run lexenv.expand
+		     ?lhs* ?rhs* (cons ?body ?body*) %build-and-expand-common-lambda))
+
+
+      ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (identifier? ?recur)
+       (%expander input-form.stx lexenv.run lexenv.expand
+		     ?lhs* ?rhs* (cons ?body ?body*) (%make-named-lambda-builder-and-expander ?recur)))
+
+      (_
+       (syntax-violation __who__ "invalid syntax" input-form.stx))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-and-expand-common-lambda input-form.stx lexenv.run lexenv.expand
+					   lhs*.stx body*.stx)
+    (chi-expr (bless
+	       `(lambda ,lhs*.stx . ,body*.stx))
+	      lexenv.run lexenv.expand))
+
+  (define (%make-named-lambda-builder-and-expander recur.id)
+    (lambda (input-form.stx lexenv.run lexenv.expand lhs*.stx body*.stx)
+      (chi-expr (bless
+		 `(letrec ((,recur.id (lambda ,lhs*.stx . ,body*.stx)))
+		    ,recur.id))
+		lexenv.run lexenv.expand)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%expander input-form.stx lexenv.run lexenv.expand
+		     lhs*.stx rhs*.stx body*.stx rator-expander)
+    (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
+    (receive (lhs*.id lhs*.tag)
+	(parse-list-of-tagged-bindings lhs*.stx input-form.stx)
+      (receive (rhs*.psi rhs*.tag)
+	  (%expand-rhs* input-form.stx lexenv.run lexenv.expand lhs*.tag rhs*.stx)
+	(let* ((lhs*.stx    (%compose-lhs-specification lhs*.id lhs*.tag rhs*.tag))
+	       (rator.psi   (rator-expander input-form.stx lexenv.run lexenv.expand lhs*.stx body*.stx))
+	       (rator.core  (psi-core-expr rator.psi))
+	       (rhs*.core   (map psi-core-expr rhs*.psi)))
+	  (make-psi (build-application (syntax-annotation input-form.stx)
+		      rator.core
+		      rhs*.core)
+		    (psi-application-retvals-signature rator.psi))))))
+
+  #| end of module: LET-TRANSFORMER |# )
 
 
 ;;;; module core-macro-transformer: LETREC and LETREC*
@@ -1734,23 +1995,117 @@
 
 ;;;; module core-macro-transformer: TAG-ASSERT
 
-(define (tag-assert-transformer input-form.stx lexenv.run lexenv.expand)
+(module (tag-assert-transformer)
   ;;Transformer  function  used  to  expand Vicare's  TAG-ASSERT  syntaxes  from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
-    (identifier-syntax 'tag-assert))
+  (define (tag-assert-transformer input-form.stx lexenv.run lexenv.expand)
+    (define-fluid-override __who__
+      (identifier-syntax 'tag-assert))
+    (syntax-match input-form.stx ()
+      ((_ ?retvals-signature ?expr)
+       (retvals-signature-syntax? ?retvals-signature)
+       (let* ((asserted.sig (make-retvals-signature ?retvals-signature))
+	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
+	      (expr.sig     (psi-retvals-signature expr.psi)))
+	 (cond ((and (identifier?       ?retvals-signature)
+		     ($untagged-tag-id? ?retvals-signature)
+		     ($top-tag-id?      ?retvals-signature))
+		;;Any tuple of returned objects is of type "<top>" or "<untagged>".
+		(%just-evaluate-the-expression expr.psi))
+
+	       ((retvals-signature-single-untagged-tag? asserted.sig)
+		;;Here we want to make sure that the expression returns a single value,
+		;;whatever its type.
+		(syntax-match (retvals-signature-tags expr.sig) ()
+		  ((?tag)
+		   ;;Success!!!  We have determined  at expand-time that the expression
+		   ;;returns a single value.
+		   expr.psi)
+		  (_
+		   ;;Damn it!!! We need to insert a run-time check.
+		   (%run-time-validation input-form.stx lexenv.run lexenv.expand
+					 asserted.sig expr.psi))
+		  ))
+
+	       ((retvals-signature-partially-unspecified? expr.sig)
+		;;The  expression  has  no  type  specification  or  a  partial  type
+		;;specification; we  have to insert  a run-time check.
+		;;
+		;;FIXME We can  do better here by inserting the  run-time checks only
+		;;for the "<untagged>" return values, rather than for all the values.
+		;;(Marco Maggi; Fri Apr 4, 2014)
+		(%run-time-validation input-form.stx lexenv.run lexenv.expand
+				      asserted.sig expr.psi))
+
+	       ((retvals-signature-super-and-sub? asserted.sig expr.sig)
+		;;Fine, we have  established at expand time that  the returned values
+		;;are valid; assertion succeeded.
+		(%just-evaluate-the-expression expr.psi))
+
+	       (else
+		;;The horror!!!  We  have established at expand-time  that the returned
+		;;values are of the wrong type; assertion failed.
+		(retvals-signature-violation __who__ ?expr asserted.sig expr.sig)))))
+
+      ((_ ?retvals-signature ?expr)
+       ;;Let's use a descriptive error message here.
+       (syntax-violation __who__
+	 "invalid return values signature" input-form.stx ?retvals-signature))
+      ))
+
+  (define* (%run-time-validation input-form.stx lexenv.run lexenv.expand
+				 {asserted.sig retvals-signature?} {expr.psi psi?})
+    (define expr.core (psi-core-expr         expr.psi))
+    (define expr.sig  (psi-retvals-signature expr.psi))
+    ;;Here we know that ASSERTED.SIG is a  valid retvals signature, so we can be less
+    ;;strict in the patterns.
+    (syntax-match (retvals-signature-tags asserted.sig) ()
+      ((?rv-tag* ...)
+       (let* ((TMP*         (generate-temporaries ?rv-tag*))
+	      (checker.psi  (chi-expr (bless
+				       `(lambda ,TMP*
+					  ,@(map (lambda (tmp tag)
+						   `(tag-return-value-validator ,tag ,tmp))
+					      TMP* ?rv-tag*)
+					  (void)))
+				      lexenv.run lexenv.expand)))
+	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
+				      expr.core checker.psi)))
+
+      ((?rv-tag* ... . ?rv-rest-tag)
+       (let* ((TMP*         (generate-temporaries ?rv-tag*))
+	      (checker.psi  (chi-expr (bless
+				       `(lambda (,@TMP* . rest-tmp)
+					  ,@(map (lambda (tmp tag)
+						   `(tag-return-value-validator ,tag ,tmp))
+					      TMP* ?rv-tag*)
+					  (tag-return-value-validator ,?rv-rest-tag rest-tmp)
+					  (void)))
+				      lexenv.run lexenv.expand)))
+	 (%run-time-check-output-form  input-form.stx lexenv.run lexenv.expand
+				       expr.core checker.psi)))
+
+      (?rv-args-tag
+       (let ((checker.psi  (chi-expr (bless
+				      `(lambda args
+					 (tag-return-value-validator ,?rv-args-tag args)
+					 (void)))
+				     lexenv.run lexenv.expand)))
+	 (%run-time-check-output-form  input-form.stx lexenv.run lexenv.expand
+				       expr.core checker.psi)))
+      ))
 
   (define (%just-evaluate-the-expression expr.psi)
-    (let ((expr.core (psi-core-expr expr.psi)))
-      (make-psi (build-sequence no-source
-		  (list expr.core
-			(build-void)))
-		;;We know that we are returning a single void argument.
-		(make-single-top-retvals-signature))))
+    (make-psi (build-sequence no-source
+		(list (psi-core-expr expr.psi)
+		      (build-void)))
+	      ;;We know that we are returning a single void argument.
+	      (make-single-top-retvals-signature)))
 
-  (define (%run-time-check-output-form expr.core checker.psi)
+  (define (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
+				       expr.core checker.psi)
     ;;We build a core language expression as follows:
     ;;
     ;;   (call-with-values
@@ -1769,89 +2124,117 @@
 		;;We know that we are returning a single void argument.
 		(make-single-top-retvals-signature))))
 
-  (syntax-match input-form.stx ()
-    ((_ ?retvals-signature ?expr)
-     (retvals-signature-syntax? ?retvals-signature)
-     (let* ((asserted.sign (make-retvals-signature ?retvals-signature))
-	    (expr.psi      (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core     (psi-core-expr         expr.psi))
-	    (expr.sign     (psi-retvals-signature expr.psi)))
-       (cond ((and (identifier?       ?retvals-signature)
-		   ($untagged-tag-id? ?retvals-signature)
-		   ($top-tag-id?      ?retvals-signature))
-	      ;;Any tuple of returned objects is of type "<top>" or "<untagged>".
-	      (%just-evaluate-the-expression expr.psi))
 
-	     ((retvals-signature-partially-unspecified? expr.sign)
-	      ;;The  expression  has   no  type  specification  or   a  partial  type
-	      ;;specification; we have to insert a run-time check.  Here we know that
-	      ;;?RETVALS-SIGNATURE is  a valid formals  signature, so we can  be less
-	      ;;strict in the patterns.
-	      (syntax-match ?retvals-signature ()
-		((?rv-tag* ...)
-		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
-			(checker.psi  (chi-expr (bless
-						 `(lambda ,TMP*
-						    ,@(map (lambda (tmp tag)
-							     `(tag-return-value-validator ,tag ,tmp))
-							TMP* ?rv-tag*)
-						    (void)))
-						lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi)))
-
-		((?rv-tag* ... . ?rv-rest-tag)
-		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
-			(checker.psi  (chi-expr (bless
-						 `(lambda (,@TMP* . rest-tmp)
-						    ,@(map (lambda (tmp tag)
-							     `(tag-return-value-validator ,tag ,tmp))
-							TMP* ?rv-tag*)
-						    (tag-return-value-validator ,?rv-rest-tag rest-tmp)
-						    (void)))
-						lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi)))
-
-		(?rv-args-tag
-		 (let ((checker.psi  (chi-expr (bless
-						`(lambda args
-						   (tag-return-value-validator ,?rv-args-tag args)
-						   (void)))
-					       lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.core checker.psi)))
-		))
-
-	     ((retvals-signature-super-and-sub? asserted.sign expr.sign)
-	      ;;Fine, we have established at expand time that the returned values are
-	      ;;valid; assertion succeeded.  Just evaluate the expression.
-	      (make-psi (build-sequence no-source
-			  (list expr.core
-				(build-void)))
-			;;We know that we are returning a single void value.
-			(make-single-top-retvals-signature)))
-
-	     (else
-	      ;;The horror!!!  We  have established at expand-time  that the returned
-	      ;;values are of the wrong type; assertion failed.
-	      (retvals-signature-violation __who__ ?expr asserted.sign expr.sign)))))
-
-    ((_ ?retvals-signature ?expr)
-     ;;Let's use a descriptive error message here.
-     (syntax-violation __who__
-       "invalid return values signature" input-form.stx ?retvals-signature))
-    ))
+  #| end of module: TAG-ASSERT-TRANSFORMER |# )
 
 
 ;;;; module core-macro-transformer: TAG-ASSERT-AND-RETURN
 
-(define (tag-assert-and-return-transformer input-form.stx lexenv.run lexenv.expand)
+(module (tag-assert-and-return-transformer)
   ;;Transformer function used to  expand Vicare's TAG-ASSERT-AND-RETURN syntaxes from
   ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
   ;;the context of the given LEXENV; return a PSI struct.
   ;;
-  (define-fluid-override __who__
-    (identifier-syntax 'tag-assert-and-return))
+  (define (tag-assert-and-return-transformer input-form.stx lexenv.run lexenv.expand)
+    (define-fluid-override __who__
+      (identifier-syntax 'tag-assert-and-return))
+    (syntax-match input-form.stx ()
+      ((_ ?retvals-signature ?expr)
+       (retvals-signature-syntax? ?retvals-signature)
+       (let* ((asserted.sig (make-retvals-signature ?retvals-signature))
+	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
+	      (expr.sig     (psi-retvals-signature expr.psi)))
+	 (cond ((and (identifier?       ?retvals-signature)
+		     ($untagged-tag-id? ?retvals-signature)
+		     ($top-tag-id?      ?retvals-signature))
+		;;Any tuple of  returned objects is of type  "<top>" or "<untagged>".
+		;;Just return the expression.
+		expr.psi)
 
-  (define* (%run-time-check-output-form {expr.psi psi?} {checker.psi psi?} asserted.sign)
+	       ((retvals-signature-single-untagged-tag? asserted.sig)
+		;;Here we  want to  make sure  that the  expression returns  a single
+		;;value, whatever its type.
+		(syntax-match (retvals-signature-tags expr.sig) ()
+		  ((?tag)
+		   ;;Success!!!   We   have  determined   at  expand-time   that  the
+		   ;;expression returns a single value.
+		   expr.psi)
+		  (_
+		   ;;Damn it!!! We need to insert a run-time check.
+		   (%run-time-validation input-form.stx lexenv.run lexenv.expand
+					 asserted.sig expr.psi))
+		  ))
+
+	       ((retvals-signature-partially-unspecified? expr.sig)
+		;;The  expression has  no type  specification;  we have  to insert  a
+		;;run-time check.
+		;;
+		;;FIXME We can  do better here by inserting the  run-time checks only
+		;;for the "<untagged>" return values, rather than for all the values.
+		;;(Marco Maggi; Fri Apr 4, 2014)
+		(%run-time-validation input-form.stx lexenv.run lexenv.expand
+				      asserted.sig expr.psi))
+
+	       ((retvals-signature-super-and-sub? asserted.sig expr.sig)
+		;;Fine, we have  established at expand time that  the returned values
+		;;are valid; assertion succeeded.  Just evaluate the expression.
+		expr.psi)
+
+	       (else
+		;;The horror!!!  We have established at expand-time that the returned
+		;;values are of the wrong type; assertion failed.
+		(retvals-signature-violation __who__ ?expr asserted.sig expr.sig)))))
+
+      ((_ ?retvals-signature ?expr)
+       ;;Let's use a descriptive error message here.
+       (syntax-violation __who__
+	 "invalid return values signature" input-form.stx ?retvals-signature))
+      ))
+
+  (define* (%run-time-validation input-form.stx lexenv.run lexenv.expand
+				 {asserted.sig retvals-signature?} {expr.psi psi?})
+    (define expr.core (psi-core-expr         expr.psi))
+    (define expr.sig  (psi-retvals-signature expr.psi))
+    ;;Here we know that ASSERTED.SIG is a  valid formals signature, so we can be less
+    ;;strict in the patterns.
+    (syntax-match (retvals-signature-tags asserted.sig) ()
+      ((?rv-tag* ...)
+       (let* ((TMP*         (generate-temporaries ?rv-tag*))
+	      (checker.psi  (chi-expr (bless
+				       `(lambda ,TMP*
+					  ,@(map (lambda (tmp tag)
+						   `(tag-return-value-validator ,tag ,tmp))
+					      TMP* ?rv-tag*)
+					  (values . ,TMP*)))
+				      lexenv.run lexenv.expand)))
+	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
+				      expr.psi checker.psi asserted.sig)))
+
+      ((?rv-tag* ... . ?rv-rest-tag)
+       (let* ((TMP*         (generate-temporaries ?rv-tag*))
+	      (checker.psi  (chi-expr (bless
+				       `(lambda (,@TMP* . rest-tmp)
+					  ,@(map (lambda (tmp tag)
+						   `(tag-return-value-validator ,tag ,tmp))
+					      TMP* ?rv-tag*)
+					  (tag-return-value-validator ,?rv-rest-tag rest-tmp)
+					  (apply values ,@TMP* rest-tmp)))
+				      lexenv.run lexenv.expand)))
+	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
+				      expr.psi checker.psi asserted.sig)))
+
+      (?rv-args-tag
+       (let ((checker.psi  (chi-expr (bless
+				      `(lambda args
+					 (tag-return-value-validator ,?rv-args-tag args)
+					 (apply values args)))
+				     lexenv.run lexenv.expand)))
+	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
+				      expr.psi checker.psi asserted.sig)))
+      ))
+
+  (define* (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
+					{expr.psi psi?} {checker.psi psi?} asserted.sig)
     ;;We build a core language expression as follows:
     ;;
     ;;   (call-with-values
@@ -1875,74 +2258,9 @@
 		;;The type  of values  returned by ?EXPR  was unspecified,  but after
 		;;asserting  the type  at  run-time: we  know that  the  type is  the
 		;;asserted one.
-		asserted.sign)))
+		asserted.sig)))
 
-  (syntax-match input-form.stx ()
-    ((_ ?retvals-signature ?expr)
-     (retvals-signature-syntax? ?retvals-signature)
-     (let* ((asserted.sign (make-retvals-signature ?retvals-signature))
-	    (expr.psi      (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core     (psi-core-expr  expr.psi))
-	    (expr.sign     (psi-retvals-signature expr.psi)))
-       (cond ((and (identifier?       ?retvals-signature)
-		   ($untagged-tag-id? ?retvals-signature)
-		   ($top-tag-id?      ?retvals-signature))
-	      ;;Any tuple  of returned  objects is of  type "<top>"  or "<untagged>".
-	      ;;Just return the expression.
-	      expr.psi)
-
-	     ((retvals-signature-partially-unspecified? expr.sign)
-	      ;;The  expression  has no  type  specification;  we  have to  insert  a
-	      ;;run-time check.  Here  we know that ASSERTED.SIGN is  a valid formals
-	      ;;signature, so we can be less strict in the patterns.
-	      (syntax-match ?retvals-signature ()
-		((?rv-tag* ...)
-		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
-			(checker.psi  (chi-expr (bless
-						 `(lambda ,TMP*
-						    ,@(map (lambda (tmp tag)
-							     `(tag-return-value-validator ,tag ,tmp))
-							TMP* ?rv-tag*)
-						    (values . ,TMP*)))
-						lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.psi checker.psi asserted.sign)))
-
-		((?rv-tag* ... . ?rv-rest-tag)
-		 (let* ((TMP*         (generate-temporaries ?rv-tag*))
-			(checker.psi  (chi-expr (bless
-						 `(lambda (,@TMP* . rest-tmp)
-						    ,@(map (lambda (tmp tag)
-							     `(tag-return-value-validator ,tag ,tmp))
-							TMP* ?rv-tag*)
-						    (tag-return-value-validator ,?rv-rest-tag rest-tmp)
-						    (apply values ,@TMP* rest-tmp)))
-						lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.psi checker.psi asserted.sign)))
-
-		(?rv-args-tag
-		 (let ((checker.psi  (chi-expr (bless
-						`(lambda args
-						   (tag-return-value-validator ,?rv-args-tag args)
-						   (apply values args)))
-					       lexenv.run lexenv.expand)))
-		   (%run-time-check-output-form expr.psi checker.psi asserted.sign)))
-		))
-
-	     ((retvals-signature-super-and-sub? asserted.sign expr.sign)
-	      ;;Fine, we have established at expand time that the returned values are
-	      ;;valid; assertion succeeded.  Just evaluate the expression.
-	      expr.psi)
-
-	     (else
-	      ;;The horror!!!  We  have established at expand-time  that the returned
-	      ;;values are of the wrong type; assertion failed.
-	      (retvals-signature-violation __who__ ?expr asserted.sign expr.sign)))))
-
-    ((_ ?retvals-signature ?expr)
-     ;;Let's use a descriptive error message here.
-     (syntax-violation __who__
-       "invalid return values signature" input-form.stx ?retvals-signature))
-    ))
+  #| end of module: TAG-ASSERT-AND-RETURN-TRANSFORMER |# )
 
 
 ;;;; module core-macro-transformer: TAG-ACCESSOR, TAG-MUTATOR

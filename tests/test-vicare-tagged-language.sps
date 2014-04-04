@@ -1,7 +1,7 @@
 ;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
-;;;Contents: tests for typed language extensions
+;;;Contents: tests for tagged language extensions
 ;;;Date: Wed Mar 12, 2014
 ;;;
 ;;;Abstract
@@ -31,6 +31,7 @@
     run expand)
   (vicare expander tags)
   (vicare checks))
+(options tagged-language)
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare libraries: expand-time types\n")
@@ -879,21 +880,21 @@
 
 ;;; untagged bindings
 
-  (check
+  (check	;the tag of LHS is inferred from the RHS
       (let ((a 1))
 	(define-syntax (inspect stx)
-	  (un-tagged? a))
+	  (tag=tagging? <fixnum> a))
 	(values a (inspect)))
     => 1 #t)
 
-  (check
+  (check	;the tag of LHS is inferred from the RHS
       (let ((a 1)
-	    (b 2))
+	    (b "2"))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (un-tagged? a)
-			   (un-tagged? b))))
-	(values a (inspect)))
-    => 1 '(#t #t))
+	  #`(quote #,(list (tag=tagging? <fixnum> a)
+			   (tag=tagging? <string> b))))
+	(values a b (inspect)))
+    => 1 "2" '(#t #t))
 
 ;;; --------------------------------------------------------------------
 ;;; tagged bindings
@@ -963,21 +964,30 @@
 
 ;;; untagged bindings
 
-  (check
+  (check	;the tag of LHS is inferred from the RHS
       (let* ((a 1))
 	(define-syntax (inspect stx)
-	  (un-tagged? a))
+	  (tag=tagging? <fixnum> a))
 	(values a (inspect)))
     => 1 #t)
 
-  (check
+  (check	;the tag of LHS is inferred from the RHS
       (let* ((a 1)
-	     (b 2))
+	     (b "2"))
 	(define-syntax (inspect stx)
-	  #`(quote #,(list (un-tagged? a)
-			   (un-tagged? b))))
-	(values a (inspect)))
-    => 1 '(#t #t))
+	  #`(quote #,(list (tag=tagging? <fixnum> a)
+			   (tag=tagging? <string> b))))
+	(values a b (inspect)))
+    => 1 "2" '(#t #t))
+
+  (check	;the tag of LHS is inferred from the RHS
+      (let* ((a 1)
+	     (b a))
+	(define-syntax (inspect stx)
+	  #`(quote #,(list (tag=tagging? <fixnum> a)
+			   (tag=tagging? <fixnum> b))))
+	(values a b (inspect)))
+    => 1 1 '(#t #t))
 
 ;;; --------------------------------------------------------------------
 ;;; tagged bindings
@@ -1522,8 +1532,8 @@
        (let ()
 	 (define-inline (ciao a b)
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (un-tagged? a)
-			      (un-tagged? b))))
+	     #`(quote #,(list (tag=tagging? <fixnum> a)
+			      (tag=tagging? <fixnum> b))))
 	   (add-result (inspect))
 	   (+ a b))
 	 (ciao 1 2)))
@@ -1552,7 +1562,7 @@
        (let ()
 	 (define-inline (ciao a . rest)
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (un-tagged? a)
+	     #`(quote #,(list (tag=tagging? <fixnum> a)
 			      (un-tagged? rest))))
 	   (add-result (inspect))
 	   (apply + a rest))
@@ -2325,6 +2335,26 @@
       (tag-assert (<top>) 123)
     => (void))
 
+  (check	;check  at expand-time  that  the  expression returns  a
+		;single value
+      (tag-assert (<untagged>) 123)
+    => 123)
+
+  (check	;check  at expand-time  that  the  expression returns  a
+		;single value
+      (tag-assert (<untagged>) ((<untagged>)123))
+    => 123)
+
+  (check	;check at run-time that  the expression returns a single
+		;value
+      (let ()
+	;;The signature  of this function  has an unspecified  number of
+	;;return values.
+	(define ({doit . <untagged>})
+	  123)
+	(tag-assert (<untagged>) (doit)))
+    => (void))
+
 ;;; --------------------------------------------------------------------
 ;;; any tuple of returned values is of type <top>
 
@@ -2444,6 +2474,16 @@
 
   (check
       (tag-assert-and-return (<top>) 123)
+    => 123)
+
+  (check	;check  at expand-time  that  the  expression returns  a
+		;single value
+      (tag-assert-and-return (<untagged>) 123)
+    => 123)
+
+  (check	;check at run-time that  the expression returns a single
+		;value
+      (tag-assert-and-return (<untagged>) ((<untagged>)123))
     => 123)
 
 ;;; --------------------------------------------------------------------
@@ -3205,6 +3245,22 @@
 	(values (O a) (O b) (O c)))
     => 1 2 3)
 
+  (check
+      (let ()
+	;;The expander  will automatically assign the  tag "<fixnum>" to
+	;;the identifier O.
+	(define O 123)
+	(O positive?))
+    => #t)
+
+  (check
+      (let ()
+	;;The expander  will automatically assign the  tag "<string>" to
+	;;the identifier O.
+	(define O "ciao")
+	(O [1]))
+    => #\i)
+
 ;;; --------------------------------------------------------------------
 ;;; records
 
@@ -3609,6 +3665,37 @@
       (let ()
 	(define ({fun <string>} {a <fixnum>})
   	  (number->string a))
+	(((fun 123) [1]) numeric?))
+    => #t)
+
+  #t)
+
+
+(parametrise ((check-test-name	'let-retvals))
+
+  (check
+      (let ((O 123))
+	(O positive?))
+    => #t)
+
+;;; --------------------------------------------------------------------
+
+  (check	;nested field accessor
+      (let ((fun (lambda ({_ <fixnum>} {a <fixnum>} {b <fixnum>})
+		   (+ a b))))
+	((fun 1 2) positive?))
+    => #t)
+
+  (check	;nested getter
+      (let ((fun (lambda ({_ <string>} {a <fixnum>})
+		   (number->string a))))
+	((fun 123) [1]))
+    => #\2)
+
+  (check
+      ;;Function application nested in getter nested in field accessor.
+      (let ((fun (lambda ({_ <string>} {a <fixnum>})
+		   (number->string a))))
 	(((fun 123) [1]) numeric?))
     => #t)
 

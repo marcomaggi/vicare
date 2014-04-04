@@ -60,6 +60,9 @@
     option.descriptive-labels
     option.print-loaded-libraries
     option.cache-compiled-libraries
+    option.tagged-language.rhs-tag-propagation?
+    option.tagged-language.implicit-dispatching?
+    option.tagged-language?
 
     ;; interpreting the result of reading annotated sources
     annotation?				annotation-expression
@@ -126,6 +129,9 @@
 			  descriptive-labels
 			  print-loaded-libraries
 			  cache-compiled-libraries
+			  tagged-language.rhs-tag-propagation?
+			  tagged-language.implicit-dispatching?
+			  tagged-language?
 			  vicare-built-with-arguments-validation-enabled)
 		    (vicare-built-with-arguments-validation-enabled
 		     enable-arguments-validation?))

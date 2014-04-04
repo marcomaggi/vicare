@@ -1,24 +1,24 @@
-@node typed
-@chapter Experimental typed language
+@node tagged
+@chapter Experimental tagged language
 
 
 @value{PRJNAME}'s expander implements an extension to the language
 defined by @rnrs{6} that allows the definition of tagged bindings.
 
 @quotation
-@strong{NOTE} Typed language support is currently experimental.
+@strong{NOTE} Tagged language support is currently experimental.
 @end quotation
 
 @menu
-* typed concepts::              Typed language concepts.
-* typed parsers::               Parsing tagged syntaxes.
-* typed bindings::              Typed language binding properties.
-* typed object specs::          Object type specification.
+* tagged concepts::             Tagged language concepts.
+* tagged parsers::              Parsing tagged syntaxes.
+* tagged bindings::             Tagged language binding properties.
+* tagged object specs::         Object type specification.
 @end menu
 
 @c page
-@node typed concepts
-@section Typed language concepts
+@node tagged concepts
+@section Tagged language concepts
 
 
 @subsubheading Tag identifiers
@@ -99,7 +99,7 @@ second identifier.  At the time the tagged identifier is created: the
 tag identifier must already be a tag identifier.
 
 @c page
-@node typed parsers
+@node tagged parsers
 @section Parsing tagged syntaxes
 
 
@@ -126,16 +126,16 @@ they are represented as:
 @end quotation
 
 @menu
-* typed parsers signatures::    Tag signatures data representations.
-* typed parsers predicates::    Syntax predicates.
-* typed parsers ids::           Parsing standalone bindings.
-* typed parsers lists::         Parsing proper lists of bindings.
-* typed parsers formals::       Parsing tagged formals.
-* typed parsers callable::      Parsing tagged callable signatures.
+* tagged parsers signatures::   Tag signatures data representations.
+* tagged parsers predicates::   Syntax predicates.
+* tagged parsers ids::          Parsing standalone bindings.
+* tagged parsers lists::        Parsing proper lists of bindings.
+* tagged parsers formals::      Parsing tagged formals.
+* tagged parsers callable::     Parsing tagged callable signatures.
 @end menu
 
 @c page
-@node typed parsers signatures
+@node tagged parsers signatures
 @subsection Tag signatures data representations
 
 
@@ -166,18 +166,18 @@ identifiers, with null and a standalone tagged identifier being
 acceptable.
 
 A @dfn{callable signature} is an object representing the number and tags
-of callable arguments and return values.  @ref{typed parsers callable}
+of callable arguments and return values.  @ref{tagged parsers callable}
 for the callable syntax specification.
 
 @menu
-* typed parsers signatures retvals::  Signatures of return values.
-* typed parsers signatures formals::  Signatures of formals.
-* typed parsers signatures lambda::   @func{lambda} signatures.
-* typed parsers signatures clambda::  @func{case-lambda} compounds.
+* tagged parsers signatures retvals::  Signatures of return values.
+* tagged parsers signatures formals::  Signatures of formals.
+* tagged parsers signatures lambda::   @func{lambda} signatures.
+* tagged parsers signatures clambda::  @func{case-lambda} compounds.
 @end menu
 
 @c page
-@node typed parsers signatures retvals
+@node tagged parsers signatures retvals
 @subsubsection Signatures of return values
 
 
@@ -233,7 +233,7 @@ Return @true{} if the arguments are equal, @false{} otherwise.
 @end defun
 
 @c page
-@node typed parsers signatures formals
+@node tagged parsers signatures formals
 @subsubsection Signatures of formals
 
 
@@ -276,7 +276,7 @@ The arguments must be instances of @objtype{formals-signature}.  Return
 @end defun
 
 @c page
-@node typed parsers signatures lambda
+@node tagged parsers signatures lambda
 @subsubsection @func{lambda} signatures
 
 
@@ -335,7 +335,7 @@ The arguments must be instances of @objtype{lambda-signature}.  Return
 @end defun
 
 @c page
-@node typed parsers signatures clambda
+@node tagged parsers signatures clambda
 @subsubsection @func{case-lambda} compounds
 
 
@@ -398,7 +398,7 @@ Accessor for the fields of @objtype{clambda-compound} instances.
 @end defun
 
 @c page
-@node typed parsers predicates
+@node tagged parsers predicates
 @subsection Syntax predicates
 
 
@@ -432,7 +432,7 @@ acceptable.
 @end defun
 
 @c page
-@node typed parsers ids
+@node tagged parsers ids
 @subsection Parsing standalone identifiers
 
 
@@ -488,7 +488,7 @@ to @class{untagged}.
 @end defun
 
 @c page
-@node typed parsers lists
+@node tagged parsers lists
 @subsection Parsing proper lists of bindings
 
 
@@ -643,7 +643,7 @@ used as @code{form} field when raising a syntax violation.
 @end defun
 
 @c page
-@node typed parsers formals
+@node tagged parsers formals
 @subsection Parsing tagged formals
 
 
@@ -861,7 +861,7 @@ used as @code{form} field when raising a syntax violation.
 @end defun
 
 @c page
-@node typed parsers callable
+@node tagged parsers callable
 @subsection Parsing tagged callable signatures
 
 
@@ -1122,17 +1122,17 @@ used as @code{form} field when raising a syntax violation.
 @end defun
 
 @c page
-@node typed bindings
-@section Typed language binding properties
+@node tagged bindings
+@section Tagged language binding properties
 
 
 @menu
-* typed bindings tag::          Tag identifier bindings.
-* typed bindings tagged::       Tagged identifier bindings.
+* tagged bindings tag::         Tag identifier bindings.
+* tagged bindings tagged::      Tagged identifier bindings.
 @end menu
 
 @c page
-@node typed bindings tag
+@node tagged bindings tag
 @subsection Tag identifier bindings
 
 
@@ -1207,7 +1207,7 @@ Given two tag identifiers: return @true{} if @var{super-tag} is
 @end defun
 
 @c page
-@node typed bindings tagged
+@node tagged bindings tagged
 @subsection Tagged identifier bindings
 
 
@@ -1261,17 +1261,17 @@ identifier: an exception is raised.
 @end defun
 
 @c page
-@node typed object specs
+@node tagged object specs
 @section Object type specification
 
 
 @menu
-* typed object specs intro::   Introduction to object types specification.
-* typed object specs descr::   Object type descriptor.
+* tagged object specs intro::   Introduction to object types specification.
+* tagged object specs descr::   Object type descriptor.
 @end menu
 
 @c page
-@node typed object specs intro
+@node tagged object specs intro
 @subsection Introduction to object types specification
 
 
@@ -1312,17 +1312,17 @@ the definitions:
 and the fields are meant to hold fixnums.
 
 @menu
-* typed object specs intro predicate::  Predicate syntax object.
-* typed object specs intro accessor::   Field accessor maker.
-* typed object specs intro mutator::    Field mutator maker.
-* typed object specs intro getter::     Property getter maker.
-* typed object specs intro setter::     Property setter maker.
-* typed object specs intro dispatcher:: Method dispatcher.
-* typed object specs intro caster::     Object type caster.
+* tagged object specs intro predicate::  Predicate syntax object.
+* tagged object specs intro accessor::   Field accessor maker.
+* tagged object specs intro mutator::    Field mutator maker.
+* tagged object specs intro getter::     Property getter maker.
+* tagged object specs intro setter::     Property setter maker.
+* tagged object specs intro dispatcher:: Method dispatcher.
+* tagged object specs intro caster::     Object type caster.
 @end menu
 
 @c page
-@node typed object specs intro predicate
+@node tagged object specs intro predicate
 @subsubsection Predicate syntax object
 
 
@@ -1352,7 +1352,7 @@ Notice that it is perfectly fine to define this syntax object as:
 @end example
 
 @c page
-@node typed object specs intro accessor
+@node tagged object specs intro accessor
 @subsubsection Field accessor maker
 
 
@@ -1414,7 +1414,7 @@ object as:
 @end example
 
 @c page
-@node typed object specs intro mutator
+@node tagged object specs intro mutator
 @subsubsection Field mutator maker
 
 
@@ -1481,7 +1481,7 @@ as:
 @end example
 
 @c page
-@node typed object specs intro getter
+@node tagged object specs intro getter
 @subsubsection Property getter maker
 
 
@@ -1550,7 +1550,7 @@ The getter maker implementation can be:
 @end example
 
 @c page
-@node typed object specs intro setter
+@node tagged object specs intro setter
 @subsubsection Property setter maker
 
 
@@ -1622,7 +1622,7 @@ The setter maker implementation can be:
 @end example
 
 @c page
-@node typed object specs intro dispatcher
+@node tagged object specs intro dispatcher
 @subsubsection Method dispatcher
 
 
@@ -1698,7 +1698,7 @@ and its implementation can be:
 @end example
 
 @c page
-@node typed object specs intro caster
+@node tagged object specs intro caster
 @subsubsection Object type caster
 
 
@@ -1764,7 +1764,7 @@ and its implementation can be:
 @end example
 
 @c page
-@node typed object specs descr
+@node tagged object specs descr
 @subsection Object type descriptor
 
 

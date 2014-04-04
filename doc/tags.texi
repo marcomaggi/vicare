@@ -3,7 +3,7 @@
 
 
 The library @library{vicare expander tags} exports bindings to be used
-in the typed Scheme language, @ref{typed, Experimental typed language}.
+in the tagged Scheme language, @ref{tagged, Experimental tagged language}.
 
 @menu
 * tags syntaxes::               Convenience syntaxes.

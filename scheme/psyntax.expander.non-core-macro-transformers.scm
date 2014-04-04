@@ -38,7 +38,6 @@
     ((record-type-and-record?)		record-type-and-record?-macro)
     ((define-condition-type)		define-condition-type-macro)
     ((cond)				cond-macro)
-    ((let)				let-macro)
     ((do)				do-macro)
     ((or)				or-macro)
     ((and)				and-macro)
@@ -1642,58 +1641,7 @@
     ))
 
 
-;;;; module non-core-macro-transformer: LET, LET*, TRACE-LET
-
-(define (let-macro expr-stx)
-  ;;Transformer  function  used  to  expand R6RS  LET  macros  from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
-    ;;R6RS standard syntax.
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (all-identifiers? ?lhs*)
-     (if (valid-bound-ids? ?lhs*)
-	 (bless
-	  `((lambda ,?lhs*
-	      ,?body . ,?body*) . ,?rhs*))
-       (%error-invalid-formals-syntax expr-stx ?lhs*)))
-
-    ;;R6RS standard named syntax.
-    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (and (identifier? ?recur)
-	  (all-identifiers? ?lhs*))
-     (if (valid-bound-ids? ?lhs*)
-	 (bless
-	  `((letrec ((,?recur (lambda ,?lhs*
-				,?body . ,?body*)))
-	      ,?recur) . ,?rhs*))
-       (%error-invalid-formals-syntax expr-stx ?lhs*)))
-
-    ;;Extended tagged syntax.
-    ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (receive (lhs* tag*)
-	 (parse-list-of-tagged-bindings ?lhs* expr-stx)
-       (bless
-	`((lambda ,?lhs*
-	    ,?body . ,?body*)
-	  . ,(map (lambda (rhs tag)
-		    `(tag-assert-and-return (,tag) ,rhs))
-	       ?rhs* tag*)))))
-
-    ;;Extended tagged named syntax.
-    ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
-     (identifier? ?recur)
-     (receive (lhs* tag*)
-	 (parse-list-of-tagged-bindings ?lhs* expr-stx)
-       (bless
-	`((letrec ((,?recur (lambda ,?lhs*
-			      ,?body . ,?body*)))
-	    ,?recur)
-	  . ,(map (lambda (rhs tag)
-		    `(tag-assert-and-return (,tag) ,rhs))
-	       ?rhs* tag*)))))
-    ))
+;;;; module non-core-macro-transformer: LET*, TRACE-LET
 
 (define (let*-macro expr-stx)
   ;;Transformer  function  used to  expand  R6RS  LET* macros  from  the
