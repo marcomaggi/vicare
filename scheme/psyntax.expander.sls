@@ -1140,6 +1140,16 @@
     set-predicate-procedure-argument-validation!
     set-predicate-return-value-validation!
 
+    ;; expand-time object type specs: type specification
+    make-object-type-spec			object-type-spec?
+    object-type-spec-parent-spec
+    object-type-spec-uids
+    object-type-spec-type-id			object-type-spec-pred-stx
+    object-type-spec-accessor-maker		object-type-spec-mutator-maker
+    object-type-spec-getter-maker		object-type-spec-setter-maker
+    object-type-spec-dispatcher
+    object-type-spec-ancestry
+
     ;; expand-time object type specs: parsing tagged identifiers
     tagged-identifier-syntax?			parse-tagged-identifier-syntax
     list-of-tagged-bindings?			parse-list-of-tagged-bindings
@@ -1161,6 +1171,7 @@
 
     make-retvals-signature			retvals-signature?
     retvals-signature-tags			retvals-signature=?
+    retvals-signature-common-ancestor
     make-fully-unspecified-retvals-signature
 
     ;; expand-time object type specs: identifiers defining types
@@ -1169,17 +1180,10 @@
     tag-super-and-sub?				formals-signature-super-and-sub-syntax?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
+    tag-identifier-ancestry			tag-common-ancestor
 
     top-tag-id					procedure-tag-id
     untagged-tag-id				list-tag-id
-
-    make-object-type-spec			object-type-spec?
-    object-type-spec-parent-spec
-    object-type-spec-uids
-    object-type-spec-type-id			object-type-spec-pred-stx
-    object-type-spec-accessor-maker		object-type-spec-mutator-maker
-    object-type-spec-getter-maker		object-type-spec-setter-maker
-    object-type-spec-dispatcher
 
     ;; expand-time object type specs: tagged binding identifiers
     tagged-identifier?

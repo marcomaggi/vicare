@@ -3782,6 +3782,8 @@
     (all-tag-identifiers?			$type-specs)
     (tag-identifier-callable-spec		$type-specs)
     (tag-super-and-sub?				$type-specs)
+    (tag-identifier-ancestry			$type-specs)
+    (tag-common-ancestor			$type-specs)
     (formals-signature-super-and-sub-syntax?	$type-specs)
 
     (set-identifier-object-type-spec!		$type-specs)
@@ -3799,6 +3801,7 @@
     (object-type-spec-getter-maker		$type-specs)
     (object-type-spec-setter-maker		$type-specs)
     (object-type-spec-dispatcher		$type-specs)
+    (object-type-spec-ancestry			$type-specs)
 
     (tagged-identifier?				$type-specs)
     (set-identifier-tag!			$type-specs)
@@ -3811,6 +3814,7 @@
     (retvals-signature-violation?		$type-specs)
     (retvals-signature-violation-expected-signature	$type-specs)
     (retvals-signature-violation-returned-signature	$type-specs)
+    (retvals-signature-common-ancestor		$type-specs)
 
 ;;;; built-in object types utilities
 

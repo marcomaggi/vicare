@@ -702,7 +702,7 @@
 	     (retvals-signature-violation 'values input-form.stx
 					  ;;expected signature
 					  (map (lambda (obj)
-						 (list (top-tag-id)))
+						 (make-single-top-retvals-signature))
 					    rand*.sign)
 					  rand*.sign))
 	   (make-psi (build-application (syntax-annotation input-form.stx)

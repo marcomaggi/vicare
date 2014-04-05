@@ -241,19 +241,29 @@
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand))
 	   (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
+#;(debug-print 'if
+	     (psi-retvals-signature consequent.psi)
+	     (psi-retvals-signature alternate.psi)
+	     (retvals-signature-common-ancestor (psi-retvals-signature consequent.psi)
+						(psi-retvals-signature alternate.psi)))
        (make-psi (build-conditional no-source
 		   (psi-core-expr test.psi)
 		   (psi-core-expr consequent.psi)
 		   (psi-core-expr alternate.psi))
-		 )))
+		 (retvals-signature-common-ancestor (psi-retvals-signature consequent.psi)
+						    (psi-retvals-signature alternate.psi)))))
     ((_ ?test ?consequent)
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
+       ;;We build code to make the  one-armed IF always return void, since, according
+       ;;to R6RS, this syntax has unspecified return values.
        (make-psi (build-conditional no-source
 		   (psi-core-expr test.psi)
-		   (psi-core-expr consequent.psi)
+		   (build-sequence no-source
+		     (list (psi-core-expr consequent.psi)
+			   (build-void)))
 		   (build-void))
-		 )))
+		 (make-single-top-retvals-signature))))
     ))
 
 

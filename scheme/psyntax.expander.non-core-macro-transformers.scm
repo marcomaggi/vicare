@@ -3097,14 +3097,17 @@
 
 	      ((?test => ?proc)
 	       `(let ((t ,?test))
-		  (if t (,?proc t))))
+		  (if t
+		      (,?proc t)
+		    (void))))
 
 	      ((?expr)
-	       `(or ,?expr (if #f #f)))
+	       `(or ,?expr (void)))
 
 	      ((?test ?expr* ...)
 	       `(if ,?test
-		    (internal-body . ,?expr*)))
+		    (internal-body . ,?expr*)
+		  (void)))
 
 	      (_
 	       (stx-error expr-stx "invalid last clause")))
@@ -3728,9 +3731,15 @@
 				"cannot recursively expand inline expression"
 				stx))))
 	       (let ,(append (map list arg-stx* TMP*)
-			     (if (null? (syntax->datum rest-stx))
-				 '()
-			       `((,rest-stx (list . REST)))))
+			     (let ((rest.datum (syntax->datum rest-stx)))
+			       (cond ((null? rest.datum)
+				      '())
+				     ((symbol? rest.datum)
+				      ;;If the  rest argument is untagged,  we tag it
+				      ;;by default with "<list>".
+				      `(((brace ,rest-stx <list>) (list . REST))))
+				     (else
+				      `((,rest-stx (list . REST)))))))
 		 . ,body-stx))))))))
   (syntax-match expr-stx (brace)
     ((_ (?name ?arg* ... . (brace ?rest ?rest-tag)) ?form0 ?form* ...)

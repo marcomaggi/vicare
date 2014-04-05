@@ -159,6 +159,18 @@
   (or (not obj)
       (object-type-spec? obj)))
 
+;;; --------------------------------------------------------------------
+
+(define* (object-type-spec-ancestry {spec object-type-spec?})
+  ($object-type-spec-ancestry spec))
+
+(define ($object-type-spec-ancestry spec)
+  (cons ($object-type-spec-type-id spec)
+	(cond (($object-type-spec-parent-spec spec)
+	       => (lambda (pspec)
+		    ($object-type-spec-ancestry pspec)))
+	      (else '()))))
+
 
 ;;;; object type specification queries
 
@@ -416,6 +428,16 @@
        (and ($identifier-object-type-spec obj)
 	    #t)))
 
+(define (tag-identifier-and-list-sub-tag? obj)
+  ;;Return true if OBJ is a bound identifier with "object-type-spec" property set and
+  ;;it is a sub-tag of "<list>"; otherwise return false.
+  ;;
+  (and (identifier? obj)
+       ($identifier-bound? obj)
+       (and ($identifier-object-type-spec obj)
+	    #t)
+       ($tag-super-and-sub? (list-tag-id) obj)))
+
 (define (false-or-tag-identifier? obj)
   (or (not obj)
       (tag-identifier? obj)))
@@ -424,6 +446,12 @@
   (unless (tag-identifier? obj)
     (syntax-violation #f
       "expected tag identifier, identifier with object-type-spec set" obj)))
+
+(define (assert-list-sub-tag-identifier? obj)
+  (unless (and (tag-identifier? obj)
+	       (tag-super-and-sub? (list-tag-id) obj))
+    (syntax-violation #f
+      "expected sub-tag of <list> identifier" obj)))
 
 (define* (tag-super-and-sub? {super-tag tag-identifier?} {sub-tag tag-identifier?})
   ;;Given  two tag  identifiers: return  true  if SUPER-TAG  is FREE-IDENTIFIER=?  to
@@ -452,6 +480,45 @@
     (?rest
      (tag-identifier? ?rest))
     (_ #f)))
+
+;;; --------------------------------------------------------------------
+
+(define* (tag-identifier-ancestry {tag tag-identifier?})
+  ($tag-identifier-ancestry tag))
+
+(define ($tag-identifier-ancestry tag)
+  ($object-type-spec-ancestry ($identifier-object-type-spec tag)))
+
+;;; --------------------------------------------------------------------
+
+(define* (tag-common-ancestor {tag1 tag-identifier?} {tag2 tag-identifier?})
+  ($tag-common-ancestor tag1 tag2))
+
+(define ($tag-common-ancestor tag1 tag2)
+  ;;
+  ;;FIXME Once the object type spec representation has been stabilised: this function
+  ;;must be rewritten  in a more efficient manner, comparing  symbols with EQ? rather
+  ;;than comparing identifiers with FREE-ID=?.  (Marco Maggi; Sat Apr 5, 2014)
+  ;;
+  (if (or (free-id=? tag1 tag2)
+	  ($untagged-tag-id? tag1)
+	  ($untagged-tag-id? tag2)
+	  ($top-tag-id?      tag1)
+	  ($top-tag-id?      tag2))
+      tag1
+    (let ((anc2 ($tag-identifier-ancestry tag2)))
+      (let outer ((anc1 ($tag-identifier-ancestry tag1)))
+	(cond ((null? anc1)
+	       (top-tag-id))
+	      ((let inner ((anc2 anc2))
+		 (cond ((null? anc2)
+			#f)
+		       ((free-id=? ($car anc1) ($car anc2))
+			($car anc1))
+		       (else
+			(inner ($cdr anc2))))))
+	      (else
+	       (outer ($cdr anc1))))))))
 
 
 ;;;; tagged identifiers: expand-time binding type tagging

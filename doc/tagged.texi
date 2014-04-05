@@ -839,10 +839,10 @@ used as @code{form} field when raising a syntax violation.
 ;;; args argument
 
 (split #'@{args <fixnums>@})
-@result{} #'args (. #'<fixnums>)
+@result{} #'args #'<fixnums>
 
 (split #'args)
-@result{} #'args (. #'<top>)
+@result{} #'args #'<list>
 
 ;;; rest argument
 
@@ -850,13 +850,13 @@ used as @code{form} field when raising a syntax violation.
 @result{} (#'a . #'rest) (#'<fixnum> . #'<fixnums>)
 
 (split #'(@{a <fixnum>@} . rest))
-@result{} (#'a . #'rest) (#'<fixnum> . #'<top>)
+@result{} (#'a . #'rest) (#'<fixnum> . #'<list>)
 
 (split #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
 @result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<fixnums>)
 
 (split #'(@{a <fixnum>@} @{b <string>@} . rest))
-@result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<top>)
+@result{} (#'a #'b . #'rest) (#'<fixnum> #'<string> . #'<list>)
 @end example
 @end defun
 
@@ -1086,7 +1086,7 @@ used as @code{form} field when raising a syntax violation.
 @result{} #'args #f #'<fixnums>
 
 (split #'args)
-@result{} #'args #f #'<top>
+@result{} #'args #f #'<list>
 
 ;;; rest argument
 
@@ -1094,13 +1094,13 @@ used as @code{form} field when raising a syntax violation.
 @result{} (#'a . #'rest) #f (#'<fixnum> . #'<fixnums>)
 
 (split #'(@{a <fixnum>@} . rest))
-@result{} (#'a . #'rest) #f (#'<fixnum> . #'<top>)
+@result{} (#'a . #'rest) #f (#'<fixnum> . #'<list>)
 
 (split #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
 @result{} (#'a #'b . #'rest) #f (#'<fixnum> #'<string> . #'<fixnums>)
 
 (split #'(@{a <fixnum>@} @{b <string>@} . rest))
-@result{} (#'a #'b . #'rest) #f (#'<fixnum> #'<string> . #'<top>)
+@result{} (#'a #'b . #'rest) #f (#'<fixnum> #'<string> . #'<list>)
 
 ;;; return values tagging
 

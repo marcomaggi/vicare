@@ -39,11 +39,19 @@
 
 ;;;; helpers
 
-(define-auxiliary-syntaxes <fixnums>)
+(define-auxiliary-syntaxes <fixnums> <numbers> <complexes>)
 
 (define (fixnums? obj)
   (and (list? obj)
        (for-all fixnum? obj)))
+
+(define (numbers? obj)
+  (and (list? obj)
+       (for-all number? obj)))
+
+(define (complexes? obj)
+  (and (list? obj)
+       (for-all complex? obj)))
 
 (begin-for-syntax
   (define-syntax-rule (tag=tagging? ?tag ?var)
@@ -64,8 +72,14 @@
   (define-syntax-rule (un-tagged? ?var)
     (tag=tagging? <untagged> ?var))
 
+  (typ.set-identifier-object-type-spec! #'<numbers>
+    (typ.make-object-type-spec '<numbers> #'<numbers> #'<list> #'numbers?))
+
+  (typ.set-identifier-object-type-spec! #'<complexes>
+    (typ.make-object-type-spec '<complexes> #'<complexes> #'<numbers> #'complexes?))
+
   (typ.set-identifier-object-type-spec! #'<fixnums>
-    (typ.make-object-type-spec '<fixnums> #'<fixnums> #'<top> #'fixnums?))
+    (typ.make-object-type-spec '<fixnums> #'<fixnums> #'<complexes> #'fixnums?))
 
   #| end of begin-for-syntax |# )
 
@@ -149,16 +163,8 @@
 ;;; --------------------------------------------------------------------
 ;;; standalone identifier formals signatures
 
-  (FALS #'<fixnum> #'<complex>)
-  (TRUE #'<number> #'<complex>)
-  (TRUE #'<complex> #'<real>)
-  (TRUE #'<real> #'<integer>)
-  (TRUE #'<integer> #'<exact-integer>)
-  (TRUE #'<exact-integer> #'<fixnum>)
-  (TRUE #'<exact-integer> #'<bignum>)
-  (TRUE #'<real> #'<flonum>)
-  (TRUE #'<complex> #'<compnum>)
-  (TRUE #'<complex> #'<cflonum>)
+  (FALS #'<fixnums> #'<list>)
+  (TRUE #'<list> #'<fixnums>)
 
 ;;; --------------------------------------------------------------------
 ;;; proper list formals signatures
@@ -182,42 +188,149 @@
 ;;; --------------------------------------------------------------------
 ;;; improper list formals signatures
 
-  (TRUE #'(<number> . <number>) #'(<complex> . <complex>))
-  (FALS #'(<complex> . <complex>) #'(<number> . <number>))
+  (TRUE #'(<number> . <numbers>) #'(<complex> . <complexes>))
+  (FALS #'(<complex> . <complexes>) #'(<number> . <numbers>))
 
-  (TRUE #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
-  (TRUE #'(<number> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
-  (TRUE #'(<fixnum> <number> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
-  (TRUE #'(<fixnum> <fixnum> <number> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
-  (TRUE #'(<fixnum> <fixnum> <fixnum> . <number>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
+  (TRUE #'(<number> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
+  (TRUE #'(<fixnum> <number> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
+  (TRUE #'(<fixnum> <fixnum> <number> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
+  (TRUE #'(<fixnum> <fixnum> <fixnum> . <numbers>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
 
-  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<number> <fixnum> <fixnum> . <fixnum>))
-  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <number> <fixnum> . <fixnum>))
-  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <number> . <fixnum>))
-  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <number>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<number> <fixnum> <fixnum> . <fixnums>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <number> <fixnum> . <fixnums>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <number> . <fixnums>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <numbers>))
 
-  (TRUE #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
-  (TRUE #'(<top>    <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
-  (TRUE #'(<fixnum> <top>    <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
-  (TRUE #'(<fixnum> <fixnum> <top>    . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
-  (TRUE #'(<fixnum> <fixnum> <fixnum> . <top>)    #'(<fixnum> <fixnum> <fixnum> . <fixnum>))
+  (TRUE #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
+  (TRUE #'(<top>    <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
+  (TRUE #'(<fixnum> <top>    <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
+  (TRUE #'(<fixnum> <fixnum> <top>    . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
+  (TRUE #'(<fixnum> <fixnum> <fixnum> . <list>)    #'(<fixnum> <fixnum> <fixnum> . <fixnums>))
 
-  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<top>    <fixnum> <fixnum> . <fixnum>))
-  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <top>    <fixnum> . <fixnum>))
-  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <top>    . <fixnum>))
-  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnum>) #'(<fixnum> <fixnum> <fixnum> . <top>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<top>    <fixnum> <fixnum> . <fixnums>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <top>    <fixnum> . <fixnums>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <top>    . <fixnums>))
+  (FALS #'(<fixnum> <fixnum> <fixnum> . <fixnums>) #'(<fixnum> <fixnum> <fixnum> . <list>))
 
 ;;; --------------------------------------------------------------------
 ;;; special mismatchings
 
-  (TRUE #'(<number> . <top>)	#'(<complex> <fixnum> <fixnum>))
+  (TRUE #'(<number> . <list>)	#'(<complex> <fixnum> <fixnum>))
   (TRUE #'(<number> . <list>)	#'(<complex> <fixnum> <fixnum>))
 
-  (TRUE #'(<number> <exact-integer> . <top>)	#'(<complex> <fixnum> <fixnum>))
+  (TRUE #'(<number> <exact-integer> . <list>)	#'(<complex> <fixnum> <fixnum>))
   (TRUE #'(<number> <exact-integer> . <list>)	#'(<complex> <fixnum> <fixnum>))
 
-  (TRUE #'(<number> <exact-integer> <fixnum> . <top>)	#'(<complex> <fixnum> <fixnum>))
   (TRUE #'(<number> <exact-integer> <fixnum> . <list>)	#'(<complex> <fixnum> <fixnum>))
+  (TRUE #'(<number> <exact-integer> <fixnum> . <list>)	#'(<complex> <fixnum> <fixnum>))
+
+  #t)
+
+
+(parametrise ((check-test-name	'tag-ancestry))
+
+  (check
+      (typ.tag-identifier-ancestry #'<untagged>)
+    (=> syntax=?)
+    #'(<untagged>))
+
+  (check
+      (typ.tag-identifier-ancestry #'<top>)
+    (=> syntax=?)
+    #'(<top>))
+
+  (check
+      (typ.tag-identifier-ancestry #'<string>)
+    (=> syntax=?)
+    #'(<string> <top>))
+
+  (check
+      (typ.tag-identifier-ancestry #'<fixnum>)
+    (=> syntax=?)
+    #'(<fixnum> <exact-integer> <integer> <rational-valued>
+		<real> <real-valued> <complex> <number> <top>))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (typ.tag-common-ancestor #'<fixnum> #'<real>)
+    (=> syntax=?)
+    #'<real>)
+
+  (check
+      (typ.tag-common-ancestor #'<fixnum> #'<bignum>)
+    (=> syntax=?)
+    #'<exact-integer>)
+
+  (check
+      (typ.tag-common-ancestor #'<fixnum> #'<ratnum>)
+    (=> syntax=?)
+    #'<rational-valued>)
+
+  #t)
+
+
+(parametrise ((check-test-name	'retvals-ancestry))
+
+  (define-syntax-rule (compare ?sig1 ?sig2 => ?result)
+    (check
+	(typ.retvals-signature-tags
+	 (typ.retvals-signature-common-ancestor (typ.make-retvals-signature ?sig1)
+						(typ.make-retvals-signature ?sig2)))
+      (=> syntax=?)
+      ?result))
+
+;;; --------------------------------------------------------------------
+;;; signatures, standalone identifiers
+
+  (compare #'<fixnums> #'<list>			=> #'<list>)
+  (compare #'<fixnums> #'<numbers>		=> #'<numbers>)
+
+;;; --------------------------------------------------------------------
+;;; signatures, proper lists
+
+  (compare #'(<fixnum>) #'()			=> #'<list>)
+  (compare #'() #'(<fixnum>)			=> #'<list>)
+
+  (compare #'(<fixnum>) #'(<real>)		=> #'(<real>))
+  (compare #'(<real>) #'(<fixnum>)		=> #'(<real>))
+
+  (compare #'(<fixnum> <ratnum> <bignum>)
+	   #'(<real> <complex> <exact-integer>)
+	   => #'(<real> <complex> <exact-integer>))
+  (compare #'(<real> <complex> <exact-integer>)
+	   #'(<fixnum> <ratnum> <bignum>)
+	   => #'(<real> <complex> <exact-integer>))
+
+  (compare #'(<fixnum> <ratnum> <bignum>)
+	   #'(<real> <complex>)
+	   => #'(<real> <complex> . <list>))
+
+  (compare #'(<real> <complex>)
+	   #'(<fixnum> <ratnum> <bignum>)
+	   => #'(<real> <complex> . <list>))
+
+;;; --------------------------------------------------------------------
+;;; signatures, improper lists
+
+  (compare #'(<fixnum> <ratnum> . <list>)
+	   #'(<real> <complex> <exact-integer>)
+	   => #'(<real> <complex> . <list>))
+  (compare #'(<real> <complex> <exact-integer>)
+	   #'(<fixnum> <ratnum> . <list>)
+	   => #'(<real> <complex> . <list>))
+
+  (compare #'(<fixnum> <ratnum> . <list>)
+	   #'(<real> <complex> . <list>)
+	   => #'(<real> <complex> . <list>))
+
+  (compare #'()
+	   #'(<real> <complex> . <list>)
+	   => #'<list>)
+  (compare #'(<real> <complex> . <list>)
+	   #'()
+	   => #'<list>)
 
   #t)
 
@@ -418,7 +531,7 @@
   (check	;UNtagged args argument
       (split #'args)
     (=> syntax=?)
-    #'args #'<untagged> #'<untagged>)
+    #'args #'<untagged> #'<list>)
 
 ;;; rest argument
 
@@ -430,7 +543,7 @@
   (check	;UNtagged rest
       (split #'({a <fixnum>} . rest))
     (=> syntax=?)
-    #'(a . rest) #'<untagged> #'(<fixnum> . <untagged>))
+    #'(a . rest) #'<untagged> #'(<fixnum> . <list>))
 
   (check	;tagged rest
       (split #'({a <fixnum>} {b <string>} . {rest <fixnums>}))
@@ -440,7 +553,7 @@
   (check	;UNtagged rest
       (split #'({a <fixnum>} {b <string>} . rest))
     (=> syntax=?)
-    #'(a b . rest) #'<untagged> #'(<fixnum> <string> . <untagged>))
+    #'(a b . rest) #'<untagged> #'(<fixnum> <string> . <list>))
 
 ;;; return values tagging
 
@@ -486,7 +599,7 @@
   (check
       ((lambda args
 	 (define-syntax (inspect stx)
-	   (un-tagged? args))
+	   (tag=tagging? <list> args))
 	 (values args (inspect)))
        1)
     (=> syntax=?) '(1) #t)
@@ -513,7 +626,7 @@
 	 (define-syntax (inspect stx)
 	   #`(quote #,(list (un-tagged? a)
 			    (un-tagged? b)
-			    (un-tagged? rest))))
+			    (tag=tagging? <list> rest))))
 	 (values a b rest (inspect)))
        1 2 3 4)
     (=> syntax=?) 1 2 '(3 4) '(#t #t #t))
@@ -629,9 +742,9 @@
 	(define (fun . args)
 	  (define-syntax (inspect stx)
 	    #`(quote #,(list (procedure-subtag? fun)
-			     (un-tagged? args))))
+			     (tag=tagging? <list> args))))
 	  (define-syntax (signature stx)
-	    (syntax=? #'(<untagged> . <untagged>) (lambda-signature->stx #'fun)))
+	    (syntax=? #'(<untagged> . <list>) (lambda-signature->stx #'fun)))
 	  (values args (inspect) (signature)))
 	(fun 1))
     => '(1) '(#t #t) #t)
@@ -673,7 +786,7 @@
 	  (define-syntax (inspect stx)
 	    #`(quote #,(list (un-tagged? a)
 			     (un-tagged? b)
-			     (un-tagged? rest))))
+			     (tag=tagging? <list> rest))))
 	  (values a b rest (inspect)))
 	(fun 1 2 3 4))
     => 1 2 '(3 4) '(#t #t #t))
@@ -796,7 +909,7 @@
       ((case-lambda
 	(args
 	 (define-syntax (inspect stx)
-	   (un-tagged? args))
+	   (tag=tagging? <list> args))
 	 (values args (inspect))))
        1)
     => '(1) #t)
@@ -826,7 +939,7 @@
 	 (define-syntax (inspect stx)
 	   #`(quote #,(list (un-tagged? a)
 			    (un-tagged? b)
-			    (un-tagged? rest))))
+			    (tag=tagging? <list> rest))))
 	 (values a b rest (inspect))))
        1 2 3 4)
     => 1 2 '(3 4) '(#t #t #t))
@@ -1372,23 +1485,23 @@
 	   (values 1 2 3)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     (un-tagged? args))
+	     (tag=tagging? <list> args))
 	   (add-result (inspect))
 	   args)))
     => '((1 2 3) (#t)))
 
   (check
       (with-result
-       (receive (a b c . args)
+       (receive (a b c . rest)
 	   (values 1 2 3 4 5)
 	 (let ()
 	   (define-syntax (inspect stx)
 	     #`(quote #,(list (un-tagged? a)
 			      (un-tagged? b)
 			      (un-tagged? c)
-			      (un-tagged? args))))
+			      (tag=tagging? <list> rest))))
 	   (add-result (inspect))
-	   (list a b c args))))
+	   (list a b c rest))))
     => '((1 2 3 (4 5)) ((#t #t #t #t))))
 
 ;;; --------------------------------------------------------------------
@@ -1475,20 +1588,20 @@
 	   (values 1 2 3)
 	 (let ()
 	   (define-syntax (inspect stx)
-	     (un-tagged? args))
+	     (tag=tagging? <list> args))
 	   (add-result (inspect)))))
     => '((1 2 3) (#t)))
 
   (check
       (with-result
-       (receive-and-return (a b c . args)
+       (receive-and-return (a b c . rest)
 	   (values 1 2 3 4 5)
 	 (let ()
 	   (define-syntax (inspect stx)
 	     #`(quote #,(list (un-tagged? a)
 			      (un-tagged? b)
 			      (un-tagged? c)
-			      (un-tagged? args))))
+			      (tag=tagging? <list> rest))))
 	   (add-result (inspect)))))
     => '(1 2 3 (4 5) ((#t #t #t #t))))
 
@@ -1549,12 +1662,12 @@
   (check
       (with-result
        (let ()
-	 (define-inline (ciao a b)
+	 (define-inline (ciao ?a ?b)
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (tag=tagging? <fixnum> a)
-			      (tag=tagging? <fixnum> b))))
+	     #`(quote #,(list (tag=tagging? <fixnum> ?a)
+			      (tag=tagging? <fixnum> ?b))))
 	   (add-result (inspect))
-	   (+ a b))
+	   (+ ?a ?b))
 	 (ciao 1 2)))
     => '(3 ((#t #t))))
 
@@ -1568,23 +1681,23 @@
   (check
       (with-result
        (let ()
-	 (define-inline (ciao . rest)
+	 (define-inline (ciao . ?args)
 	   (define-syntax (inspect stx)
-	     (un-tagged? rest))
+	     (tag=tagging? <list> ?args))
 	   (add-result (inspect))
-	   (apply + rest))
+	   (apply + ?args))
 	 (ciao 1 2)))
     => '(3 (#t)))
 
   (check
       (with-result
        (let ()
-	 (define-inline (ciao a . rest)
+	 (define-inline (ciao ?a . ?rest)
 	   (define-syntax (inspect stx)
-	     #`(quote #,(list (tag=tagging? <fixnum> a)
-			      (un-tagged? rest))))
+	     #`(quote #,(list (tag=tagging? <fixnum> ?a)
+			      (tag=tagging? <list> ?rest))))
 	   (add-result (inspect))
-	   (apply + a rest))
+	   (apply + ?a ?rest))
 	 (ciao 1 2)))
     => '(3 ((#t #t))))
 
@@ -1692,10 +1805,19 @@
       (with-result
        (let-values ((a (values 1 2 3)))
 	 (define-syntax (inspect stx)
-	   (un-tagged? a))
+	   (tag=tagging? <list> a))
 	 (add-result (inspect))
 	 a))
     => '((1 2 3) (#t)))
+
+  (check
+      (with-result
+       (let-values (((a . rest) (values 1 2 3)))
+	 (define-syntax (inspect stx)
+	   (tag=tagging? <list> rest))
+	 (add-result (inspect))
+	 (values a rest)))
+    => '(1 (2 3) (#t)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1899,10 +2021,19 @@
       (with-result
        (let*-values ((a (values 1 2 3)))
 	 (define-syntax (inspect stx)
-	   (un-tagged? a))
+	   (tag=tagging? <list> a))
 	 (add-result (inspect))
 	 a))
     => '((1 2 3) (#t)))
+
+  (check
+      (with-result
+       (let*-values (((a . rest) (values 1 2 3)))
+	 (define-syntax (inspect stx)
+	   (tag=tagging? <list> rest))
+	 (add-result (inspect))
+	 (values a rest)))
+    => '(1 (2 3) (#t)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2379,22 +2510,22 @@
 
   (check
       (begin
-	(tag-assert <top> 123)
+	(tag-assert <list> 123)
 	#t)
     => #t)
 
   (check
       (with-result
-       (tag-assert <top> (receive-and-return (V)
-			     (+ 1 2 3)
-			   (add-result V))))
+       (tag-assert <list> (receive-and-return (V)
+			      (+ 1 2 3)
+			    (add-result V))))
     => `(,(void) (6)))
 
   (check
       (with-result
-       (tag-assert <top> (receive-and-return (a b c)
-			     (values 1 2 3)
-			   (add-result (vector a b c)))))
+       (tag-assert <list> (receive-and-return (a b c)
+			      (values 1 2 3)
+			    (add-result (vector a b c)))))
     => `(,(void) (#(1 2 3))))
 
 ;;; --------------------------------------------------------------------
@@ -2509,21 +2640,21 @@
 ;;; any tuple of returned values is of type <top>
 
   (check
-      (tag-assert-and-return <top> 123)
+      (tag-assert-and-return <list> 123)
     => 123)
 
   (check
       (with-result
-       (tag-assert-and-return <top> (receive-and-return (V)
-					(+ 1 2 3)
-				      (add-result V))))
+       (tag-assert-and-return <list> (receive-and-return (V)
+					 (+ 1 2 3)
+				       (add-result V))))
     => '(6 (6)))
 
   (check
       (with-result
-       (tag-assert-and-return <top> (receive-and-return (a b c)
-					(values 1 2 3)
-				      (add-result (vector a b c)))))
+       (tag-assert-and-return <list> (receive-and-return (a b c)
+					 (values 1 2 3)
+				       (add-result (vector a b c)))))
     => '(1 2 3 (#(1 2 3))))
 
 ;;; --------------------------------------------------------------------

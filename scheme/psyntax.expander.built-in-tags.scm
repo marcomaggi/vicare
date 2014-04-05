@@ -40,7 +40,7 @@
 (define (%basic name-sym parent-sym pred-sym)
   ;;Initialise a built-in tag with a basic "object-type-spec".
   ;;
-  (let ((uid       (string->symbol (string-append "'vicare:expander:tags:" (symbol->string name-sym))))
+  (let ((uid       (string->symbol (string-append "vicare:expander:tags:" (symbol->string name-sym))))
 	(tag-id    (scheme-stx name-sym))
 	(parent-id (scheme-stx parent-sym))
 	(pred-id   (scheme-stx pred-sym)))
