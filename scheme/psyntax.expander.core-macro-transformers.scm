@@ -116,18 +116,17 @@
   ;;
   ;;the identifier A is the left-hand side of the binding and the expression 1 is the
   ;;right-hand side  of the  binding; since  A is  untagged in  the source  code, the
-  ;;expander will tag it, by default, with "<untagged>".
+  ;;expander will tag it, by default, with "<top>".
   ;;
   ;;* If  the option  RHS-TAG-PROPAGATION? is  turned OFF: the  identifier A  is left
-  ;;  tagged with "<untagged>".  We are free  to assign any object to A, mutating the
-  ;;  bound  value multiple  times with  objects of different  tag; this  is standard
-  ;;  Scheme behaviour.
+  ;;  tagged with "<top>".  We are free to assign any object to A, mutating the bound
+  ;;  value  multiple times with  objects of different  tag; this is  standard Scheme
+  ;;  behaviour.
   ;;
   ;;* When the option RHS-TAG-PROPAGATION? is turned ON: the expander infers that the
   ;;  RHS has  signature "(<fixnum>)", so it  propagates the tag from the  RHS to the
-  ;;  LHS  overriding "<untagged>" with "<fixnum>".   This will cause an  error to be
-  ;;  raised  if we  mutate the binding  assigning to  A an object  whose tag  is not
-  ;;  "<fixnum>".
+  ;;  LHS overriding "<top>" with "<fixnum>".  This  will cause an error to be raised
+  ;;  if we mutate the binding assigning to A an object whose tag is not "<fixnum>".
   ;;
   ;;
   ;;RHS signature validation
@@ -177,11 +176,11 @@
     ;;
     (define rhs*.psi
       (map (lambda (rhs.stx lhs.tag)
-	     ;;If LHS.TAG is "<untagged>", we still want to use the assert and return
-	     ;;form to make  sure that a single value is  returned.  If the signature
+	     ;;If LHS.TAG is "<top>", we still want to use the assert and return form
+	     ;;to  make sure  that  a single  value is  returned.   If the  signature
 	     ;;validation succeeds at expand-time: the  returned PSI has the original
-	     ;;RHS signature,  not "(<untagged>)".  This  allows us to  propagate the
-	     ;;tag from RHS to LHS.
+	     ;;RHS signature,  not "(<top>)".   This allows us  to propagate  the tag
+	     ;;from RHS to LHS.
 	     (chi-expr (bless
 			`(tag-assert-and-return (,lhs.tag) ,rhs.stx))
 		       lexenv.run lexenv.expand))
@@ -215,8 +214,8 @@
     (if (option.tagged-language.rhs-tag-propagation?)
 	(map (lambda (lhs.id lhs.tag rhs.tag)
 	       (bless
-		`(brace ,lhs.id ,(if (untagged-tag-id? lhs.tag)
-				     (if (untagged-tag-id? rhs.tag)
+		`(brace ,lhs.id ,(if (top-tag-id? lhs.tag)
+				     (if (top-tag-id? rhs.tag)
 					 lhs.tag
 				       rhs.tag)
 				   lhs.tag))))
@@ -241,11 +240,6 @@
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand))
 	   (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
-#;(debug-print 'if
-	     (psi-retvals-signature consequent.psi)
-	     (psi-retvals-signature alternate.psi)
-	     (retvals-signature-common-ancestor (psi-retvals-signature consequent.psi)
-						(psi-retvals-signature alternate.psi)))
        (make-psi (build-conditional no-source
 		   (psi-core-expr test.psi)
 		   (psi-core-expr consequent.psi)
@@ -263,7 +257,7 @@
 		     (list (psi-core-expr consequent.psi)
 			   (build-void)))
 		   (build-void))
-		 (make-single-top-retvals-signature))))
+		 (make-retvals-signature-single-top))))
     ))
 
 
@@ -338,7 +332,7 @@
   ;;
   ;;this is what happens:
   ;;
-  ;;1..The identifier A is first tagged with "<untagged>".
+  ;;1..The identifier A is first tagged with "<top>".
   ;;
   ;;2..The expander figures out that the RHS's signature is "(<fixnum>)".
   ;;
@@ -459,13 +453,13 @@
 				     ;;any  occurrence  of  such identifiers  in  the
 				     ;;RHS.STX is captured by the binding in the rib.
 				     ;;
-				     ;;If LHS.TAG  is "<untagged>", we still  want to
-				     ;;use the  assert and  return form to  make sure
-				     ;;that  a  single  value is  returned.   If  the
-				     ;;signature validation  succeeds at expand-time:
-				     ;;the   returned  PSI   has  the   original  RHS
-				     ;;signature, not "(<untagged>)".  This allows us
-				     ;;to propagate the tag from RHS to LHS.
+				     ;;If LHS.TAG  is "<top>",  we still want  to use
+				     ;;the assert and return form to make sure that a
+				     ;;single  value is  returned.  If  the signature
+				     ;;validation   succeeds   at  expand-time:   the
+				     ;;returned PSI  has the original  RHS signature,
+				     ;;not  "(<top>)".  This  allows us  to propagate
+				     ;;the tag from RHS to LHS.
 				     (chi-expr (push-lexical-contour rib
 						 (bless
 						  `(tag-assert-and-return (,lhs.tag) ,rhs.stx)))
@@ -473,7 +467,7 @@
 				   ;;If the LHS is  untagged: perform tag propatation
 				   ;;from the RHS to the LHS.
 				   (when (and (option.tagged-language.rhs-tag-propagation?)
-					      (untagged-tag-id? lhs.tag))
+					      (top-tag-id? lhs.tag))
 				     (syntax-match (retvals-signature-tags (psi-retvals-signature rhs.psi)) ()
 				       ((?tag)
 					;;Single return value: good.
@@ -1660,7 +1654,7 @@
        ((object-type-spec)
 	(make-psi (build-data no-source
 		    (identifier-object-type-spec ?type-id))
-		  (make-single-top-retvals-signature)))
+		  (make-retvals-signature-single-top)))
        ))
     ))
 
@@ -2034,13 +2028,11 @@
        (let* ((asserted.sig (make-retvals-signature ?retvals-signature))
 	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig     (psi-retvals-signature expr.psi)))
-	 (cond ((and (identifier?       ?retvals-signature)
-		     ($untagged-tag-id? ?retvals-signature)
-		     ($top-tag-id?      ?retvals-signature))
-		;;Any tuple of returned objects is of type "<top>" or "<untagged>".
+	 (cond ((list-tag-id? ?retvals-signature)
+		;;Any tuple of returned objects is of type "<list>".
 		(%just-evaluate-the-expression expr.psi))
 
-	       ((retvals-signature-single-untagged-tag? asserted.sig)
+	       ((retvals-signature-single-top-tag? asserted.sig)
 		;;Here we want to make sure that the expression returns a single value,
 		;;whatever its type.
 		(syntax-match (retvals-signature-tags expr.sig) ()
@@ -2059,7 +2051,7 @@
 		;;specification; we  have to insert  a run-time check.
 		;;
 		;;FIXME We can  do better here by inserting the  run-time checks only
-		;;for the "<untagged>" return values, rather than for all the values.
+		;;for  the "<top>"  return values,  rather than  for all  the values.
 		;;(Marco Maggi; Fri Apr 4, 2014)
 		(%run-time-validation input-form.stx lexenv.run lexenv.expand
 				      asserted.sig expr.psi))
@@ -2127,7 +2119,7 @@
 		(list (psi-core-expr expr.psi)
 		      (build-void)))
 	      ;;We know that we are returning a single void argument.
-	      (make-single-top-retvals-signature)))
+	      (make-retvals-signature-single-top)))
 
   (define (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
 				       expr.core checker.psi)
@@ -2147,7 +2139,7 @@
 		  (list (build-lambda no-source '() expr.core)
 			checker.core))
 		;;We know that we are returning a single void argument.
-		(make-single-top-retvals-signature))))
+		(make-retvals-signature-single-top))))
 
 
   #| end of module: TAG-ASSERT-TRANSFORMER |# )
@@ -2169,18 +2161,16 @@
        (let* ((asserted.sig (make-retvals-signature ?retvals-signature))
 	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig     (psi-retvals-signature expr.psi)))
-	 (cond ((and (identifier?       ?retvals-signature)
-		     ($untagged-tag-id? ?retvals-signature)
-		     ($top-tag-id?      ?retvals-signature))
-		;;Any tuple of  returned objects is of type  "<top>" or "<untagged>".
-		;;Just return the expression.
+	 (cond ((list-tag-id? ?retvals-signature)
+		;;Any tuple of returned objects is of type "<list>".  Just return the
+		;;expression.
 		;;
 		;;NOTE  The signature  validation has  succeeded at  expand-time: the
-		;;returned PSI has the  original ?EXPR signature, not "(<untagged>)".
-		;;This just looks nicer.
+		;;returned PSI has the original  ?EXPR signature, not "<list>".  This
+		;;just looks nicer.
 		expr.psi)
 
-	       ((retvals-signature-single-untagged-tag? asserted.sig)
+	       ((retvals-signature-single-top-tag? asserted.sig)
 		;;Here we  want to  make sure  that the  expression returns  a single
 		;;value, whatever its type.
 		(syntax-match (retvals-signature-tags expr.sig) ()
@@ -2190,8 +2180,9 @@
 		   ;;
 		   ;;IMPORTANT  NOTE  The  signature   validation  has  succeeded  at
 		   ;;expand-time:  the returned  PSI *must*  have the  original ?EXPR
-		   ;;signature, not "(<untagged>)".  This property is used in binding
-		   ;;syntaxes when propagating a tag from the RHS to the LHS.
+		   ;;signature,  not ASSERTED.SIG;  this  even  when ASSERTED.SIG  is
+		   ;;"(<top>)".   This  property is  used  in  binding syntaxes  when
+		   ;;propagating a tag from the RHS to the LHS.
 		   expr.psi)
 		  (_
 		   ;;Damn it!!! We need to insert a run-time check.
@@ -2204,7 +2195,7 @@
 		;;run-time check.
 		;;
 		;;FIXME We can  do better here by inserting the  run-time checks only
-		;;for the "<untagged>" return values, rather than for all the values.
+		;;for  the "<top>"  return values,  rather than  for all  the values.
 		;;(Marco Maggi; Fri Apr 4, 2014)
 		(%run-time-validation input-form.stx lexenv.run lexenv.expand
 				      asserted.sig expr.psi))
@@ -2268,7 +2259,7 @@
       ))
 
   (define* (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
-					{expr.psi psi?} {checker.psi psi?} asserted.sig)
+					{expr.psi psi?} {checker.psi psi?} {asserted.sig retvals-signature?})
     ;;We build a core language expression as follows:
     ;;
     ;;   (call-with-values
@@ -2478,8 +2469,7 @@
 
   (define (%retrieve-caster-maker target-tag)
     (cond ((identifier-object-type-spec target-tag)
-	   => (lambda (spec)
-		($object-type-spec-caster-maker spec)))
+	   => object-type-spec-caster-maker)
 	  (else
 	   (stx-internal-error input-form.stx "tag identifier without object type spec"))))
 
@@ -2531,7 +2521,7 @@
 	  (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi)
 	(syntax-match (retvals-signature-tags expr.sign) ()
 	  ((?source-tag)
-	   (cond (($untagged-tag-id? ?source-tag)
+	   (cond ((top-tag-id? ?source-tag)
 		  (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi))
 		 ((tag-super-and-sub? ?target-tag ?source-tag)
 		  ;;The expression  already has the  right type: nothing to  do, just

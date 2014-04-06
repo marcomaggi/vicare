@@ -579,7 +579,6 @@
      (&expression-return-value-violation	($core-rtd . (&expression-return-value-violation-rtd
 							      &expression-return-value-violation-rcd)))
 ;;;
-     (<untagged>				(macro . <untagged>))
      (<top>					(macro . <top>))
      (<boolean>					(macro . <boolean>))
      (<char>					(macro . <char>))
@@ -3685,7 +3684,6 @@
     (tag-dispatch				$expander-tags)
     (tag-cast					$expander-tags)
 
-    (<untagged>					$expander-tags)
     (<top>					$expander-tags)
     (<boolean>					$expander-tags)
     (<char>					$expander-tags)
@@ -3739,9 +3737,8 @@
 ;;; --------------------------------------------------------------------
 
     (top-tag-id					$type-specs)
-    (procedure-tag-id				$type-specs)
-    (untagged-tag-id				$type-specs)
     (list-tag-id				$type-specs)
+    (procedure-tag-id				$type-specs)
 
     (tagged-identifier-syntax?			$type-specs)
     (list-of-tagged-bindings?			$type-specs)

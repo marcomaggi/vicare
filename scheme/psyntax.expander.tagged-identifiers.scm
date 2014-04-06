@@ -112,10 +112,10 @@
 		;False or a method dispatcher procedure.
    parent-spec
 		;False or an instance of  "object-type-spec" describing the parent of
-		;this type.   Only "<top>"  and "<untagged>" have  this field  set to
-		;false; every other "object-type-spec" has a parent spec.  "<top>" is
-		;the implicit parent of all the  type specs.  "<untagged>" is the tag
-		;of untagged bindings.
+		;this type.   Only "<top>" has this  field set to false;  every other
+		;"object-type-spec"  has  a parent  spec.   "<top>"  is the  implicit
+		;parent of  all the type  specs; "<top>"  is the tag  of single-value
+		;untagged bindings.
    ))
 
 (case-define* make-object-type-spec
@@ -123,9 +123,6 @@
     {type-id	identifier-bound?}
     {parent-id	tag-identifier?}
     {pred-stx	syntax-object?})
-   (when (free-id=? parent-id (untagged-tag-id))
-     (procedure-argument-violation __who__
-       "<untagged> cannot be a parent tag" uid type-id))
    (let* ((parent-spec (identifier-object-type-spec parent-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
@@ -147,9 +144,6 @@
     {setter	false-or-procedure?}
     {caster	false-or-procedure?}
     {dispatcher	false-or-procedure?})
-   (when (free-id=? parent-id (untagged-tag-id))
-     (procedure-argument-violation __who__
-       "<untagged> cannot be a parent tag" uid type-id))
    (let* ((parent-spec (identifier-object-type-spec parent-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
@@ -161,15 +155,19 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (object-type-spec-ancestry {spec object-type-spec?})
-  ($object-type-spec-ancestry spec))
+(module (object-type-spec-ancestry)
 
-(define ($object-type-spec-ancestry spec)
-  (cons ($object-type-spec-type-id spec)
-	(cond (($object-type-spec-parent-spec spec)
-	       => (lambda (pspec)
-		    ($object-type-spec-ancestry pspec)))
-	      (else '()))))
+  (define* (object-type-spec-ancestry {spec object-type-spec?})
+    ($object-type-spec-ancestry spec))
+
+  (define ($object-type-spec-ancestry spec)
+    (cons ($object-type-spec-type-id spec)
+	  (cond (($object-type-spec-parent-spec spec)
+		 => (lambda (pspec)
+		      ($object-type-spec-ancestry pspec)))
+		(else '()))))
+
+  #| end of module |# )
 
 
 ;;;; object type specification queries
@@ -321,13 +319,12 @@
     ;;the name  of a method or  field of TAG or  one of its supertags  (the MEMBER.ID
     ;;argument); the ?ARG are additional operands (the ARG*.STX argument).
     ;;
-    (cond (($tag-super-and-sub? (procedure-tag-id) tag)
+    (cond ((tag-super-and-sub? (procedure-tag-id) tag)
 	   input-form.stx)
-	  ((or (free-id=? tag (untagged-tag-id))
-	       (free-id=? tag (top-tag-id)))
+	  ((top-tag-id? tag)
 	   (%error-invalid-tagged-syntax input-form.stx))
 	  (else
-	   (%try-dispatcher (identifier-object-type-spec tag) (syntax->datum member.id)
+	   (%try-dispatcher ($identifier-object-type-spec tag) (syntax->datum member.id)
 			    arg*.stx input-form.stx))))
 
   (define (%try-dispatcher spec member.sym arg*.stx input-form.stx)
@@ -434,9 +431,9 @@
   ;;
   (and (identifier? obj)
        ($identifier-bound? obj)
-       (and ($identifier-object-type-spec obj)
-	    #t)
-       ($tag-super-and-sub? (list-tag-id) obj)))
+       ($identifier-object-type-spec obj)
+       (tag-super-and-sub? (list-tag-id) obj)
+       #t))
 
 (define (false-or-tag-identifier? obj)
   (or (not obj)
@@ -453,20 +450,24 @@
     (syntax-violation #f
       "expected sub-tag of <list> identifier" obj)))
 
-(define* (tag-super-and-sub? {super-tag tag-identifier?} {sub-tag tag-identifier?})
-  ;;Given  two tag  identifiers: return  true  if SUPER-TAG  is FREE-IDENTIFIER=?  to
-  ;;SUB-TAG or one of its ancestors.
-  ;;
-  ($tag-super-and-sub? super-tag sub-tag))
+(module (tag-super-and-sub?)
 
-(define ($tag-super-and-sub? super-tag sub-tag)
-  (or (free-id=? super-tag sub-tag)
-      (free-id=? (top-tag-id) super-tag)
-      (let ((pspec ($object-type-spec-parent-spec ($identifier-object-type-spec sub-tag))))
-	(and pspec
-	     (let ((sub-ptag ($object-type-spec-type-id pspec)))
-	       (and (not (free-id=? (top-tag-id) sub-ptag))
-		    ($tag-super-and-sub? super-tag sub-ptag)))))))
+  (define* (tag-super-and-sub? {super-tag tag-identifier?} {sub-tag tag-identifier?})
+    ;;Given two  tag identifiers: return  true if SUPER-TAG is  FREE-IDENTIFIER=?  to
+    ;;SUB-TAG or one of its ancestors.
+    ;;
+    ($tag-super-and-sub? super-tag sub-tag))
+
+  (define ($tag-super-and-sub? super-tag sub-tag)
+    (or (free-id=? super-tag sub-tag)
+	(free-id=? (top-tag-id) super-tag)
+	(let ((pspec ($object-type-spec-parent-spec ($identifier-object-type-spec sub-tag))))
+	  (and pspec
+	       (let ((sub-ptag ($object-type-spec-type-id pspec)))
+		 (and (not (free-id=? (top-tag-id) sub-ptag))
+		      ($tag-super-and-sub? super-tag sub-ptag)))))))
+
+  #| end of module |# )
 
 (define (all-tag-identifiers? stx)
   ;;Return true  if STX is  a proper or improper  list of tag  identifiers; otherwise
@@ -484,30 +485,24 @@
 ;;; --------------------------------------------------------------------
 
 (define* (tag-identifier-ancestry {tag tag-identifier?})
-  ($tag-identifier-ancestry tag))
-
-(define ($tag-identifier-ancestry tag)
-  ($object-type-spec-ancestry ($identifier-object-type-spec tag)))
+  (object-type-spec-ancestry ($identifier-object-type-spec tag)))
 
 ;;; --------------------------------------------------------------------
 
 (define* (tag-common-ancestor {tag1 tag-identifier?} {tag2 tag-identifier?})
-  ($tag-common-ancestor tag1 tag2))
-
-(define ($tag-common-ancestor tag1 tag2)
+  ;;Visit the hierarchy of parents of  the given tag identifiers, determine the first
+  ;;common ancestor and return its tag identifier.
   ;;
   ;;FIXME Once the object type spec representation has been stabilised: this function
   ;;must be rewritten  in a more efficient manner, comparing  symbols with EQ? rather
   ;;than comparing identifiers with FREE-ID=?.  (Marco Maggi; Sat Apr 5, 2014)
   ;;
   (if (or (free-id=? tag1 tag2)
-	  ($untagged-tag-id? tag1)
-	  ($untagged-tag-id? tag2)
-	  ($top-tag-id?      tag1)
-	  ($top-tag-id?      tag2))
+	  ($top-tag-id? tag1)
+	  ($top-tag-id? tag2))
       tag1
-    (let ((anc2 ($tag-identifier-ancestry tag2)))
-      (let outer ((anc1 ($tag-identifier-ancestry tag1)))
+    (let ((anc2 (tag-identifier-ancestry tag2)))
+      (let outer ((anc1 (tag-identifier-ancestry tag1)))
 	(cond ((null? anc1)
 	       (top-tag-id))
 	      ((let inner ((anc2 anc2))
@@ -619,12 +614,12 @@
   (or (lambda-signature? obj)
       (clambda-compound? obj)))
 
-(module (make-procedure-tag-retvals-signature
+(module (make-retvals-signature-procedure-tag
 	 fabricate-single-procedure-retvals-signature
 	 fabricate-procedure-tag-identifier
 	 tag-identifier-callable-spec)
 
-  (define* (make-procedure-tag-retvals-signature {id identifier?}  {callable-spec callable-spec?})
+  (define* (make-retvals-signature-procedure-tag {id identifier?}  {callable-spec callable-spec?})
     (make-retvals-signature (list ($fabricate-procedure-tag-identifier (syntax->datum id) callable-spec))))
 
   (define* (fabricate-single-procedure-retvals-signature {sym symbol?} {callable-spec callable-spec?})

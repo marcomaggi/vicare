@@ -1172,7 +1172,7 @@
     make-retvals-signature			retvals-signature?
     retvals-signature-tags			retvals-signature=?
     retvals-signature-common-ancestor
-    make-fully-unspecified-retvals-signature
+    make-retvals-signature-fully-unspecified
 
     ;; expand-time object type specs: identifiers defining types
     tag-identifier?				all-tag-identifiers?
@@ -1183,7 +1183,7 @@
     tag-identifier-ancestry			tag-common-ancestor
 
     top-tag-id					procedure-tag-id
-    untagged-tag-id				list-tag-id
+    list-tag-id
 
     ;; expand-time object type specs: tagged binding identifiers
     tagged-identifier?
@@ -4918,7 +4918,7 @@
 
 (module (id->label)
 
-  (define (id->label id)
+  (define* (id->label {id identifier?})
     ;;Given the  identifier ID  search its ribs  for a  label associated
     ;;with the  same sym  and marks.   If found  return the  label, else
     ;;return false.
@@ -5963,10 +5963,9 @@
 (include "psyntax.expander.signatures.scm" #t)
 (module (initialise-type-spec-for-built-in-object-types
 	 retvals-signature-of-datum
-	 untagged-tag-id		$untagged-tag-id?	untagged-tag-id?
-	 procedure-tag-id		$procedure-tag-id?
-	 list-tag-id			$list-tag-id?
-	 top-tag-id			$top-tag-id?)
+	 procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
+	 list-tag-id			$list-tag-id?		list-tag-id?
+	 top-tag-id			$top-tag-id?		top-tag-id?)
   (import (vicare))
   (include "psyntax.expander.built-in-tags.scm" #t))
 
@@ -7018,7 +7017,7 @@
 
 (define-condition-type &macro-input-form
     &condition
-  make-macro-input-form-condition
+  %make-macro-input-form-condition
   macro-input-form-condition?
   (form macro-input-form-condition-object))
 
@@ -7088,7 +7087,8 @@
 (module (syntax-error
 	 syntax-violation
 	 retvals-signature-violation
-	 %raise-unbound-error)
+	 %raise-unbound-error
+	 make-macro-input-form-condition)
 
   (define (syntax-error x . args)
     (unless (for-all string? args)
@@ -7142,11 +7142,13 @@
     ((who msg form subform)
      (%syntax-violation who msg form (make-syntax-violation form subform))))
 
-  (define (retvals-signature-violation source-who form expected-retvals-signature returned-retvals-signature)
+  (define* (retvals-signature-violation source-who form
+					{expected-retvals-signature retvals-signature?}
+					{returned-retvals-signature retvals-signature?})
     (%syntax-violation source-who "expand-time return values signature mismatch" form
 		       (condition
-			(make-retvals-signature-violation (syntax-unwrap expected-retvals-signature)
-							  (syntax-unwrap returned-retvals-signature))
+			(make-retvals-signature-violation expected-retvals-signature
+							  returned-retvals-signature)
 			(make-syntax-violation form #f))))
 
   (define (%syntax-violation source-who msg form condition-object)
@@ -7186,6 +7188,11 @@
 		(make-syntax-violation form id)
 		(%expression->source-position-condition id)
 		(%extract-trace id))))
+
+  (define* (make-macro-input-form-condition stx)
+    (condition
+     (%make-macro-input-form-condition stx)
+     (%extract-trace stx)))
 
   (define (%extract-trace x)
     (define-condition-type &trace &condition

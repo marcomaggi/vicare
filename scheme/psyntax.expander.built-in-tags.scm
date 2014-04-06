@@ -49,19 +49,12 @@
 
 
 (define (initialise-type-spec-for-built-in-object-types)
-  ;;The tags  "<top>" and  "<untagged>" are  special because they  are the  only ones
-  ;;having #f in the parent spec field.  "<untagged>" is the default tag for untagged
-  ;;bindings.
+  ;;The tag  "<top>" is special because  it is the only  one having #f in  the parent
+  ;;spec field.  "<top>" is the default tag for single-value untagged bindings.
   (let ((tag-id   (top-tag-id))
 	(pred-id  (S always-true)))
     (set-identifier-object-type-spec! tag-id
       (%make-object-type-spec '(vicare:expander:tags:<top>) tag-id pred-id
-			      #f #f  #f #f  #f #f #f)))
-
-  (let ((tag-id  (untagged-tag-id))
-	(pred-id (S always-true)))
-    (set-identifier-object-type-spec! tag-id
-      (%make-object-type-spec '(vicare:expander:tags:<untagged>) tag-id pred-id
 			      #f #f  #f #f  #f #f #f)))
 
   (%basic '<procedure>		'<top>		'procedure?)
@@ -614,18 +607,12 @@
 					(receive-and-return (id)
 					    (scheme-stx '?tag)
 					  (set! memoized-id id))))))))))
-  (define-tag-retriever untagged-tag-id		<untagged>)
   (define-tag-retriever top-tag-id		<top>)
   (define-tag-retriever procedure-tag-id	<procedure>)
   (define-tag-retriever list-tag-id		<list>)
   #| end of let-syntax |# )
 
-(define (untagged-tag-id? id)
-  (and (identifier? id)
-       (free-id=? id (untagged-tag-id))))
-
-(define ($untagged-tag-id? id)
-  (free-id=? id (untagged-tag-id)))
+;;; --------------------------------------------------------------------
 
 (define ($procedure-tag-id? id)
   (free-id=? id (procedure-tag-id)))
@@ -635,6 +622,20 @@
 
 (define ($top-tag-id? id)
   (free-id=? id (top-tag-id)))
+
+;;; --------------------------------------------------------------------
+
+(define (procedure-tag-id? id)
+  (and (identifier? id)
+       ($procedure-tag-id? id)))
+
+(define (list-tag-id? id)
+  (and (identifier? id)
+       ($list-tag-id? id)))
+
+(define (top-tag-id? id)
+  (and (identifier? id)
+       ($top-tag-id? id)))
 
 ;;; --------------------------------------------------------------------
 
@@ -661,7 +662,7 @@
 	       ((pair?    datum)	(S <pair>))
 	       ((bytevector? datum)	(S <bytevector>))
 
-	       (else			(untagged-tag-id))))))
+	       (else			(top-tag-id))))))
 
 ;;; end of file
 ;; Local Variables:

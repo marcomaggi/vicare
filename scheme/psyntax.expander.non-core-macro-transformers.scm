@@ -168,7 +168,7 @@
 	   (bless '(quote #f))))))
 
     ;;Expander tags.
-    ((<untagged> <top>
+    ((<top>
       <boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure>
       <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
       <rational-valued> <rational> <integer> <integer-valued>

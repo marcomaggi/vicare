@@ -54,7 +54,7 @@
 
   (case-define* make-psi
     ((core-expr)
-     (%make-psi core-expr (make-fully-unspecified-retvals-signature)))
+     (%make-psi core-expr (make-retvals-signature-fully-unspecified)))
     ((core-expr {retvals-signature retvals-signature?})
      (%make-psi core-expr retvals-signature)))
 
@@ -71,13 +71,11 @@
 	 (cond ((lambda-signature? spec)
 		(lambda-signature-retvals spec))
 	       ((clambda-compound? spec)
-		#;(clambda-compound-common-retvals-signature spec)
-		(make-fully-unspecified-retvals-signature))
+		(clambda-compound-common-retvals-signature spec))
 	       (else
-		(make-fully-unspecified-retvals-signature)))))
+		(make-retvals-signature-fully-unspecified)))))
       (_
-       (make-fully-unspecified-retvals-signature))
-      ))
+       (make-retvals-signature-fully-unspecified))))
 
   #| end of module |# )
 
@@ -152,8 +150,7 @@
 	   (($rtd)
 	    (values 'type-maker-application (syntactic-binding-value binding) ?car))
 	   (else
-	    ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL,
-	    ;;MUTABLE.
+	    ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
 	    (values 'call #f #f))))))
 
     ((?car . ?cdr)
@@ -161,12 +158,11 @@
      ;;
      ;;   (?non-id ?form ...)
      ;;
-     ;;where ?NON-ID  can be anything  but not an  identifier.  In practice  the only
-     ;;valid syntax for this case is:
+     ;;where ?NON-ID  can be anything but  not an identifier.  In  practice the valid
+     ;;syntaxes for this case are:
      ;;
      ;;   ((?first-subform ?subform ...) ?form ...)
-     ;;
-     ;;because ?NON-ID must be an expression evaluating to a closure object.
+     ;;   (?datum ?form ...)
      ;;
      (values 'call #f #f))
 
@@ -190,7 +186,7 @@
 
 (define-syntax while-expanding-application-first-subform
   ;;Evaluate a  body while the parameter  is true.  This  syntax is used in  a single
-  ;;place: the function %CHI-APPLICATION applied to a syntax object:
+  ;;place: the function CHI-APPLICATION applied to a syntax object:
   ;;
   ;;   ((?nested-rator ?nested-rand ...) ?rand ...)
   ;;
@@ -441,9 +437,9 @@
 		 (loc (cdr bind-val)))
 	    ((inv-collector) lib)
 	    (make-psi (build-global-reference no-source loc)
-		      (make-retvals-signature (list (if (tagged-identifier? expr.stx)
-							(identifier-tag expr.stx)
-						      (untagged-tag-id)))))))
+		      (if (tagged-identifier? expr.stx)
+			  (make-retvals-signature-single-value (identifier-tag expr.stx))
+			(make-retvals-signature-single-top)))))
 
 	 ((core-prim)
 	  ;;Core primitive (it  is either a procedure or a  constant).  We expect the
@@ -458,8 +454,8 @@
 	  (let ((name bind-val))
 	    (make-psi (build-primref no-source name)
 		      (if (tagged-identifier? expr.stx)
-			  (make-retvals-signature (list (identifier-tag expr.stx)))
-			(make-fully-unspecified-retvals-signature)))))
+			  (make-retvals-signature-single-value (identifier-tag expr.stx))
+			(make-retvals-signature-fully-unspecified)))))
 
 	 ((call)
 	  ;;A function call; this means EXPR.STX has one of the formats:
@@ -467,15 +463,17 @@
 	  ;;   (?id ?form ...)
 	  ;;   ((?first-subform ?subform ...) ?form ...)
 	  ;;
-	  (%chi-application expr.stx lexenv.run lexenv.expand))
+	  (let ()
+	    (import CHI-APPLICATION)
+	    (chi-application expr.stx lexenv.run lexenv.expand)))
 
 	 ((lexical)
 	  ;;Reference to lexical variable; this means EXPR.STX is an identifier.
 	  (make-psi (let ((lex (lexical-var bind-val)))
 		      (build-lexical-reference no-source lex))
-		    (make-retvals-signature (list (if (tagged-identifier? expr.stx)
-						      (identifier-tag expr.stx)
-						    (untagged-tag-id))))))
+		    (if (tagged-identifier? expr.stx)
+			(make-retvals-signature-single-value (identifier-tag expr.stx))
+		      (make-retvals-signature-single-top))))
 
 	 ((global-macro global-macro!)
 	  ;;Global macro use.
@@ -509,7 +507,9 @@
 	  ;;
 	  ;;   (set! ?lhs ?rhs)
 	  ;;
-	  (%chi-set! expr.stx lexenv.run lexenv.expand))
+	  (let ()
+	    (import CHI-SET)
+	    (chi-set! expr.stx lexenv.run lexenv.expand)))
 
 	 ((begin)
 	  ;;R6RS BEGIN  core macro use.   First we  check with SYNTAX-MATCH  that the
@@ -610,9 +610,9 @@
 		     (eq? lib '*interaction*)))
 	      (let ((loc (cdr bind-val)))
 		(make-psi (build-global-reference no-source loc)
-			  (make-retvals-signature (list (if (tagged-identifier? expr.stx)
-							    (identifier-tag expr.stx)
-							  (untagged-tag-id))))))
+			  (if (tagged-identifier? expr.stx)
+			      (make-retvals-signature-single-value (identifier-tag expr.stx))
+			    (make-retvals-signature-single-top))))
 	    (stx-error expr.stx "attempt to reference an unexportable variable")))
 
 	 ((type-maker-reference)
@@ -638,386 +638,6 @@
 	  ;;(assertion-violation 'chi-expr "invalid type " type (strip expr.stx '()))
 	  (stx-error expr.stx "invalid expression"))))
      lexenv.run lexenv.expand))
-
-;;; --------------------------------------------------------------------
-
-  (module (%chi-application)
-
-    (define* (%chi-application input-form.stx lexenv.run lexenv.expand)
-      ;;Expand a  function application form.   This is  called when INPUT-FORM.STX  has the
-      ;;format:
-      ;;
-      ;;   (?rator ?rand ...)
-      ;;
-      ;;and ?RATOR  is a pair  or a non-macro identifier.   For example it  is called
-      ;;when INPUT-FORM.STX is:
-      ;;
-      ;;   (((?rator ?rand1 ...) ?rand2 ...) ?rand3 ...)
-      ;;
-      (syntax-match input-form.stx (values)
-	(((?nested-rator ?nested-rand* ...) ?rand* ...)
-	 ;;This is a function or macro application with possible splicing first expand.
-	 ;;We  expand it  considering the  case  of the  first subform  expanding to  a
-	 ;;SPLICE-FIRST-EXPAND form.
-	 (let* ((rator.stx  (cons ?nested-rator ?nested-rand*))
-		(rator.psi  (while-expanding-application-first-subform
-			     (chi-expr rator.stx lexenv.run lexenv.expand)))
-		(rator.expr (psi-core-expr rator.psi)))
-	   ;;Here RATOR.EXPR  is either an  instance of "splice-first-envelope"  or a
-	   ;;core language sexp.
-	   (import SPLICE-FIRST-ENVELOPE)
-	   (if (splice-first-envelope? rator.expr)
-	       (syntax-match (splice-first-envelope-form rator.expr) ()
-		 ((?nested-rator ?nested-rand** ...)
-		  (chi-expr (cons ?nested-rator (append ?nested-rand** ?rand*))
-			    lexenv.run lexenv.expand))
-		 (_
-		  (stx-error rator.stx
-			     "expected list as argument of splice-first-expand"
-			     'splice-first-expand)))
-	     (%build-core-expression input-form.stx lexenv.run lexenv.expand
-				     rator.psi ?rand*))))
-
-	((values ?rand* ...)
-	 ;;A call  to VALUES  is special  because VALUES does  not have  a predefined
-	 ;;retvals  signature,  but  the   retvals  signature  equals  the  arguments
-	 ;;signature.
-	 (let* ((rand*.psi  (while-not-expanding-application-first-subform
-			     (chi-expr* ?rand* lexenv.run lexenv.expand)))
-		(rand*.core (map psi-core-expr rand*.psi))
-		(rand*.sign (map psi-retvals-signature rand*.psi))
-		(rator.core (build-primref no-source 'values)))
-	   ;;To be a valid VALUES argument an expression must have as signature:
-	   ;;
-	   ;;   (?tag)
-	   ;;
-	   ;;which means a single return  value.  Here we allow "<unspecified>", too,
-	   ;;which means we accept an argument having unknown retval signature.
-	   ;;
-	   ;;NOTE We  could reject "<unspecified>"  as argument signature  and demand
-	   ;;the caller  of VALUES to  cast the arguments, but  it would be  to much.
-	   ;;(Marco Maggi; Mon Mar 31, 2014)
-	   (unless (and (list rand*.sign)
-			(for-all retvals-signature-single-tag-or-fully-unspecified? rand*.sign))
-	     (retvals-signature-violation 'values input-form.stx
-					  ;;expected signature
-					  (map (lambda (obj)
-						 (make-single-top-retvals-signature))
-					    rand*.sign)
-					  rand*.sign))
-	   (make-psi (build-application (syntax-annotation input-form.stx)
-		       rator.core
-		       rand*.core)
-		     (make-retvals-signature (map (lambda (sign)
-						    (if (retvals-signature-fully-unspecified? sign)
-							(untagged-tag-id)
-						      (car (retvals-signature-tags sign))))
-					       rand*.sign)))))
-
-	((?rator ?rand* ...)
-	 ;;?RATOR is  not a syntax's keyword,  this is a common  function application
-	 ;;like:
-	 ;;
-	 ;;   (list 1 2 3)
-	 ;;
-	 (let ((rator.psi (chi-expr ?rator lexenv.run lexenv.expand)))
-	   (%build-core-expression input-form.stx lexenv.run lexenv.expand
-				   rator.psi ?rand*)))
-
-	(_
-	 (syntax-violation __who__
-	   "Vicare: internal error: invalid application syntax" input-form.stx))))
-
-    (module (%build-core-expression)
-
-      (define* (%build-core-expression input-form.stx lexenv.run lexenv.expand
-				       {rator.psi psi?} rand*.stx)
-	(define rator.sign (psi-retvals-signature rator.psi))
-	(syntax-match (retvals-signature-tags rator.sign) ()
-	  (?tag
-	   (untagged-tag-id? ?tag)
-	   ;;The rator  type is unknown.   Return a  normal rator application  and we
-	   ;;will see at run-time what happens; this is standard Scheme behaviour.
-	   (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-					    rator.psi rand*.stx))
-
-	  ((?tag)
-	   ;;The rator type is a single value.  Good, this is what it is meant to be.
-	   (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-					     rator.psi ?tag rand*.stx))
-
-	  (_
-	   ;;The rator is declared to evaluate to multiple values; this is invalid in
-	   ;;call context,  so we  raise an exception.   This is  non-standard Scheme
-	   ;;behaviour: according  to the  standard we should  insert a  normal rator
-	   ;;application and raise an exception at run-tim.
-	   (raise
-	    (condition (make-who-condition __who__)
-		       (make-message-condition "call operator declared to evaluate to multiple values")
-		       (syntax-match input-form.stx ()
-			 ((?rator . ?rands)
-			  (make-syntax-violation input-form.stx ?rator)))
-		       (make-retvals-signature-condition rator.sign))))
-	  ))
-
-      (define* (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-						{rator.psi psi?} rand*.stx)
-	;;Build a core language expression to apply  the rator to the rands; return a
-	;;PSI  struct.  This  is an  application form  in standard  (untagged) Scheme
-	;;language.  We do not know what the retvals signature of the application is;
-	;;the returned PSI struct will have "<untagged>" as retvals signature.
-	;;
-	(let* ((rator.core (psi-core-expr rator.psi))
-	       (rand*.psi  (while-not-expanding-application-first-subform
-			    (chi-expr* rand*.stx lexenv.run lexenv.expand)))
-	       (rand*.core (map psi-core-expr rand*.psi)))
-	  (make-psi (build-application (syntax-annotation input-form.stx)
-		      rator.core
-		      rand*.core))))
-
-      (define* (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
-						 {rator.psi psi?} {rator.tag tag-identifier?} rand*.stx)
-	;;Build a core language expression to apply the rator to the rands when it is
-	;;known that  the rator will return  a single value with  specified tag; this
-	;;function implements implicit dispatching.  Do the following:
-	;;
-	;;* If the  rator is a procedure  return a PSI struct as  per standard Scheme
-	;;  behaviour  and, when possible,  select the appropriate  retvals signature
-	;;  for the returned PSI.
-	;;
-	;;* If the rator  is not a procedure and implicit  dispatching is ON: attempt
-	;;  to match the input form with the getter syntax, tag method application or
-	;;  tag field accessor application.
-	;;
-	;;* If the rator is not a procedure and implicit dispatching is OFF: return a
-	;;  common Scheme application ad we will se at run-time what happens.
-	;;
-	;;* Otherwise raise a syntax violation.
-	;;
-	(cond (($tag-super-and-sub? (procedure-tag-id) rator.tag)
-	       ;;The  rator   is  a  procedure:   very  good.   Return   a  procedure
-	       ;;application.
-	       (let* ((rator.core (psi-core-expr rator.psi))
-		      (rand*.psi  (while-not-expanding-application-first-subform
-				   (chi-expr* rand*.stx lexenv.run lexenv.expand)))
-		      (rand*.core (map psi-core-expr rand*.psi)))
-		 (make-psi (build-application (syntax-annotation input-form.stx)
-			     rator.core
-			     rand*.core)
-			   (psi-application-retvals-signature rator.psi))))
-
-	      ((or ($untagged-tag-id? rator.tag)
-		   ($top-tag-id?      rator.tag))
-	       ;;The rator type is  unknown, we only know that it  is a single value.
-	       ;;Return  a procedure  application and  we will  see at  run-time what
-	       ;;happens.
-	       (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-						rator.psi rand*.stx))
-
-	      (else
-	       ;;The  rator  has  a  correct  single-value signature  and  it  has  a
-	       ;;specified tag, but it is not a procedure.
-	       (if (option.tagged-language.datums-as-operators?)
-		   (%process-datum-operator input-form.stx lexenv.run lexenv.expand
-					    rator.psi rator.tag rand*.stx)
-		 (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
-						  rator.psi rand*.stx)))))
-
-      (define* (%process-datum-operator input-form.stx lexenv.run lexenv.expand
-					{rator.psi psi?} {rator.tag tag-identifier?} rand*.stx)
-	;;When  the "datums  as operators"  option is  on, there  are multiple  cases
-	;;covered by this procedure; examples:
-	;;
-	;;(123 positive?)	=> #t
-	;;
-	;;   The rator is the fixnum 123  and the expander determines that its tag is
-	;;    "<fixnum>"; this  form  matches  the syntax  of  a  method or  accessor
-	;;   application.  Here  we retrieve the method dispatcher  of "<fixnum>" and
-	;;   apply it to the symbol "positive?".
-	;;
-	;;("ciao" [1])		=> #\i
-	;;
-	;;   The rator is the string "ciao"  and the expander determines that its tag
-	;;   is  "<string>"; this form  matches the  syntax of a  getter application.
-	;;   Here we retrieve the getter maker of "<string>" and apply it to the keys
-	;;   syntax object "[1]".
-	;;
-	;;((lambda ({_ <fixnum>} {arg <fixnum>})
-	;;   arg)
-	;; 123)
-	;;
-	;;   The  rator is  an expression  evaluating to a  closure and  the expander
-	;;   determines  that its tag  is a subtag  of "<procedure>" and  the retvals
-	;;   signature of the closure  application is "(<fixnum>)"; this form matches
-	;;   a procedure application.  Here we  build a core language expression that
-	;;    applies  the  closure  to  the   argument  and  returns  a  PSI  having
-	;;   "(<fixnum>)" as retvals signature.
-	;;
-	(syntax-match rand*.stx ()
-	  (()
-	   ;;No operands.   This is  an error,  because the  input form  is something
-	   ;;like:
-	   ;;
-	   ;;   ("ciao mamma")
-	   ;;
-	   ;;so we raise an exception.
-	   (raise
-	    (condition (make-who-condition __who__)
-		       (make-message-condition "invalid call operator with no operands")
-		       (make-syntax-violation input-form.stx #f)
-		       (make-retvals-signature-condition (psi-retvals-signature rator.psi)))))
-
-	  (((?key00 ?key0* ...) (?key11* ?key1** ...) ...)
-	   ;;There are operands and they match the getter keys syntax.
-	   (let* ((getter.stx  (tag-identifier-getter rator.tag rand*.stx input-form.stx))
-		  (getter.psi  (chi-expr getter.stx lexenv.run lexenv.expand))
-		  (getter.core (psi-core-expr getter.psi))
-		  (rator.core  (psi-core-expr rator.psi)))
-	     (make-psi (build-application (syntax-annotation input-form.stx)
-			 getter.core
-			 (list rator.core))
-		       (psi-application-retvals-signature getter.psi))))
-
-	  ((?member ?arg* ...)
-	   (identifier? ?member)
-	   ;;There are operands and they match  the syntax for a tag dispatcher call,
-	   ;;that's great.
-	   (let* ((method.stx  (tag-identifier-dispatch rator.tag ?member ?arg* input-form.stx))
-		  (method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
-		  (method.core (psi-core-expr method.psi))
-		  (rator.core  (psi-core-expr rator.psi)))
-	     (make-psi (build-application (syntax-annotation input-form.stx)
-			 method.core
-			 (list rator.core))
-		       (psi-application-retvals-signature method.psi))))
-
-	  (_
-	   ;;There are operands, but they do not match any of the supported syntaxes;
-	   ;;for example the input form may be:
-	   ;;
-	   ;;   ("ciao" "mamma")
-	   ;;
-	   ;;so we raise an exception.
-	   (raise
-	    (condition (make-who-condition __who__)
-		       (make-message-condition "invalid operands for non-procedure operator")
-		       (make-syntax-violation input-form.stx #f)
-		       (make-retvals-signature-condition (psi-retvals-signature rator.psi)))))
-	  ))
-
-      #| end of module: %BUILD-CORE-EXPRESSION |# )
-
-    #| end of module: %CHI-APPLICATION |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (%chi-set! input-form.stx lexenv.run lexenv.expand)
-    (syntax-match input-form.stx ()
-      ((_ (?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
-       (option.tagged-language.setter-forms?)
-       (let* ((keys.stx  (cons (cons ?key00 ?key0*)
-			       (map cons ?key11* ?key1**))))
-	 (chi-expr (bless
-		    `(tag-setter ,?expr ,keys.stx ,?new-value))
-		   lexenv.run lexenv.expand)))
-
-      ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
-       (option.tagged-language.setter-forms?)
-       (let* ((keys.stx  (cons (cons ?key00 ?key0*)
-			       (map cons ?key11* ?key1**))))
-	 (chi-expr (bless
-		    `(tag-setter ,?expr ,keys.stx ,?new-value))
-		   lexenv.run lexenv.expand)))
-
-      ((_ (?expr ?field-name) ?new-value)
-       (and (option.tagged-language.setter-forms?)
-	    (identifier? ?field-name))
-       (chi-expr (bless
-		  `(tag-mutator ,?expr ,?field-name ,?new-value))
-		 lexenv.run lexenv.expand))
-
-      ((_ ?lhs ?rhs)
-       (identifier? ?lhs)
-       (receive (type bind-val kwd)
-	   (expr-syntax-type ?lhs lexenv.run)
-	 (case type
-	   ((lexical)
-	    ;;A lexical  binding used as LHS  of SET! is mutable  and so unexportable
-	    ;;according to R6RS.  Example:
-	    ;;
-	    ;;   (library (demo)
-	    ;;     (export var)		;error!!!
-	    ;;     (import (rnrs))
-	    ;;     (define var 1)
-	    ;;     (set! var 2))
-	    ;;
-	    (set-lexical-mutable! bind-val)
-	    (let* ((lhs.tag (or (identifier-tag ?lhs)
-				(untagged-tag-id)))
-		   (rhs.psi (chi-expr (bless
-				       `(tag-assert-and-return (,lhs.tag) ,?rhs))
-				      lexenv.run lexenv.expand)))
-	      (make-psi (build-lexical-assignment no-source
-			  (lexical-var bind-val)
-			  (psi-core-expr rhs.psi))
-			(make-single-top-retvals-signature))))
-
-	   ((core-prim)
-	    (syntax-violation 'set! "cannot modify imported core primitive" input-form.stx ?lhs))
-
-	   ((global)
-	    (syntax-violation 'set! "attempt to modify an immutable binding" input-form.stx ?lhs))
-
-	   ((global-macro!)
-	    (chi-expr (chi-global-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
-
-	   ((local-macro!)
-	    (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
-
-	   ((mutable)
-	    ;;Let's consider this library:
-	    ;;
-            ;;   (library (demo)
-	    ;;     (export macro)
-	    ;;     (import (vicare))
-            ;;     (define-syntax macro
-            ;;       (syntax-rules ()
-            ;;         ((_)
-            ;;          (set! var 5))))
-            ;;     (define var 123)
-            ;;     (set! var 8))
-	    ;;
-	    ;;in which  VAR is mutable  and not exportable  according to R6RS;  if we
-	    ;;import the library in a program and use MACRO:
-	    ;;
-	    ;;   (import (vicare) (demo))
-	    ;;   (macro)
-	    ;;
-	    ;;we are attempting to mutate  an unexportable binding in another lexical
-	    ;;context.  This is forbidden by R6RS.
-	    ;;
-	    (if (and (pair? bind-val)
-		     (let ((lib (car bind-val)))
-		       (eq? lib '*interaction*)))
-		(let* ((loc     (cdr bind-val))
-		       (lhs.tag (or (identifier-tag ?lhs)
-				    (untagged-tag-id)))
-		       (rhs.psi (chi-expr (bless
-					   `(tag-assert-and-return (,lhs.tag) ,?rhs))
-					  lexenv.run lexenv.expand)))
-		  (make-psi (build-global-assignment no-source
-			      loc
-			      (psi-core-expr rhs.psi))
-			    (make-single-top-retvals-signature)))
-	      (syntax-violation 'set!
-		"attempt to modify a variable imported from another lexical context"
-		input-form.stx ?lhs)))
-
-	   (else
-	    (stx-error input-form.stx)))))
-
-      (_
-       (syntax-violation 'set! "invalid setter syntax" input-form.stx))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1105,6 +725,422 @@
   #| end of module: CHI-EXPR |# )
 
 
+;;;; chi procedures: operator application
+
+(module CHI-APPLICATION
+  (chi-application)
+
+  (define* (chi-application input-form.stx lexenv.run lexenv.expand)
+    ;;Expand an operator  application form; it is called when  INPUT-FORM.STX has the
+    ;;format:
+    ;;
+    ;;   (?rator ?rand ...)
+    ;;
+    ;;and ?RATOR is a pair or a  non-macro identifier.  For example it is called when
+    ;;INPUT-FORM.STX is:
+    ;;
+    ;;   (((?rator ?rand1 ...) ?rand2 ...) ?rand3 ...)
+    ;;
+    (syntax-match input-form.stx (values)
+      (((?nested-rator ?nested-rand* ...) ?rand* ...)
+       (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
+				      (cons ?nested-rator ?nested-rand*) ?rand*))
+
+      ((values ?rand* ...)
+       ;;A  call to  VALUES is  special  because VALUES  does not  have a  predefined
+       ;;retvals signature, but the retvals signature equals the arguments signature.
+       (%chi-values-application input-form.stx lexenv.run lexenv.expand
+				?rand*))
+
+      ((?rator ?rand* ...)
+       ;;The input form is either a common function application like:
+       ;;
+       ;;   (list 1 2 3)
+       ;;
+       ;;or a datum operator application like:
+       ;;
+       ;;   ("ciao" length)
+       ;;
+       (let ((rator.psi (chi-expr ?rator lexenv.run lexenv.expand)))
+	 (%build-core-expression input-form.stx lexenv.run lexenv.expand
+				 rator.psi ?rand*)))
+
+      (_
+       (syntax-violation __who__
+	 "Vicare: internal error: invalid application syntax" input-form.stx))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
+					 rator.stx rand*.stx)
+    ;;This is  a function or macro  application with possible splicing  first expand.
+    ;;We  expand  it  considering the  case  of  the  first  subform expanding  to  a
+    ;;SPLICE-FIRST-EXPAND form.
+    (let* ((rator.psi  (while-expanding-application-first-subform
+			(chi-expr rator.stx lexenv.run lexenv.expand)))
+	   (rator.expr (psi-core-expr rator.psi)))
+      ;;Here RATOR.EXPR  is either an  instance of "splice-first-envelope" or  a core
+      ;;language sexp.
+      (import SPLICE-FIRST-ENVELOPE)
+      (if (splice-first-envelope? rator.expr)
+	  (syntax-match (splice-first-envelope-form rator.expr) ()
+	    ((?nested-rator ?nested-rand** ...)
+	     (chi-expr (cons ?nested-rator (append ?nested-rand** rand*.stx))
+		       lexenv.run lexenv.expand))
+	    (_
+	     (stx-error rator.stx
+			"expected list as argument of splice-first-expand"
+			'splice-first-expand)))
+	(%build-core-expression input-form.stx lexenv.run lexenv.expand
+				rator.psi rand*.stx))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%chi-values-application input-form.stx lexenv.run lexenv.expand
+				   rand*.stx)
+    (let* ((rand*.psi  (while-not-expanding-application-first-subform
+			(chi-expr* rand*.stx lexenv.run lexenv.expand)))
+	   (rand*.core (map psi-core-expr rand*.psi))
+	   (rand*.sig  (map psi-retvals-signature rand*.psi))
+	   (rator.core (build-primref no-source 'values)))
+      (define application.sig
+	(let loop ((rand*.sig rand*.sig)
+		   (rand*.stx rand*.stx)
+		   (rand*.tag '()))
+	  (if (pair? rand*.sig)
+	      ;;To be a valid VALUES argument an expression must have as signature:
+	      ;;
+	      ;;   (?tag)
+	      ;;
+	      ;;which  means a  single return  value.  Here  we allow  "<list>", too,
+	      ;;which means  we accept an  argument having unknown  retval signature,
+	      ;;and we will see what happens at run-time; we accept only "<list>", we
+	      ;;reject a signature if it is a standalone sub-tag of "<list>".
+	      ;;
+	      ;;NOTE We  could reject "<list>"  as argument signature and  demand the
+	      ;;caller of  VALUES to cast  the arguments, but  it would be  too much.
+	      ;;Remember that we still do  some signature validation even when tagged
+	      ;;language support is off.  (Marco Maggi; Mon Mar 31, 2014)
+	      (syntax-match (retvals-signature-tags (car rand*.sig)) ()
+		((?tag)
+		 (loop (cdr rand*.sig) (cdr rand*.stx)
+		       (cons ?tag rand*.tag)))
+		(?tag
+		 (list-tag-id? ?tag)
+		 (loop (cdr rand*.sig) (cdr rand*.stx)
+		       (cons (top-tag-id) rand*.tag)))
+		(_
+		 (retvals-signature-violation 'values (car rand*.stx)
+					      (make-retvals-signature-single-top)
+					      (car rand*.sig))))
+	    (make-retvals-signature (reverse rand*.tag)))))
+      (make-psi (build-application (syntax-annotation input-form.stx)
+		  rator.core
+		  rand*.core)
+		application.sig)))
+
+;;; --------------------------------------------------------------------
+
+  (module (%build-core-expression)
+
+    (define* (%build-core-expression input-form.stx lexenv.run lexenv.expand
+				     {rator.psi psi?} rand*.stx)
+      (define rator.sig (psi-retvals-signature rator.psi))
+      (syntax-match (retvals-signature-tags rator.sig) ()
+	(?tag
+	 (list-tag-id? ?tag)
+	 ;;The rator type is unknown: evaluating the rator might return any number of
+	 ;;values of any type.  Return a normal  rator application and we will see at
+	 ;;run-time what happens; this is standard Scheme behaviour.
+	 (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
+					  rator.psi rand*.stx))
+
+	((?tag)
+	 ;;The rator type is a single value.  Good, this is what it is meant to be.
+	 (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
+					   rator.psi ?tag rand*.stx))
+
+	(_
+	 ;;The rator is  declared to evaluate to multiple values;  this is invalid in
+	 ;;call  context, so  we raise  an  exception.  This  is non-standard  Scheme
+	 ;;behaviour:  according to  the standard  we  should insert  a normal  rator
+	 ;;application and raise an exception at run-time.
+	 (raise
+	  (condition (make-who-condition __who__)
+		     (make-message-condition "call operator declared to evaluate to multiple values")
+		     (syntax-match input-form.stx ()
+		       ((?rator . ?rands)
+			(make-syntax-violation input-form.stx ?rator)))
+		     (make-retvals-signature-condition rator.sig))))
+	))
+
+    (define* (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
+					      {rator.psi psi?} rand*.stx)
+      ;;Build a core  language expression to apply  the rator to the  rands; return a
+      ;;PSI  struct.  This  is  an  application form  in  standard (untagged)  Scheme
+      ;;language.  We do  not know what the retvals signature  of the application is;
+      ;;the returned PSI struct will have "<untagged>" as retvals signature.
+      ;;
+      (let* ((rator.core (psi-core-expr rator.psi))
+	     (rand*.psi  (while-not-expanding-application-first-subform
+			  (chi-expr* rand*.stx lexenv.run lexenv.expand)))
+	     (rand*.core (map psi-core-expr rand*.psi)))
+	(make-psi (build-application (syntax-annotation input-form.stx)
+		    rator.core
+		    rand*.core))))
+
+    (define* (%process-single-value-rator-type input-form.stx lexenv.run lexenv.expand
+					       {rator.psi psi?} {rator.tag tag-identifier?} rand*.stx)
+      ;;Build a core language  expression to apply the rator to the  rands when it is
+      ;;known that  the rator  will return  a single value  with specified  tag; this
+      ;;function implements implicit dispatching.  Do the following:
+      ;;
+      ;;* If  the rator is  a procedure  return a PSI  struct as per  standard Scheme
+      ;;  behaviour and, when possible,  select the appropriate retvals signature for
+      ;;  the returned PSI.
+      ;;
+      ;;* If the rator is not a  procedure and implicit dispatching is ON: attempt to
+      ;;  match the input form with the  getter syntax, tag method application or tag
+      ;;  field accessor application.
+      ;;
+      ;;* If the rator  is not a procedure and implicit dispatching  is OFF: return a
+      ;;  common Scheme application ad we will se at run-time what happens.
+      ;;
+      ;;* Otherwise raise a syntax violation.
+      ;;
+      (cond ((tag-super-and-sub? (procedure-tag-id) rator.tag)
+	     ;;The rator is  a procedure: very good; return  a procedure application.
+	     ;;
+	     ;;Example: the  rator is an expression  evaluating to a closure  and the
+	     ;;expander determines that its tag is  a subtag of "<procedure>":
+	     ;;
+	     ;;   ((lambda ({_ <fixnum>} {arg <fixnum>}) arg) 123)
+	     ;;
+	     ;;the expander also determines that the retvals signature of the closure
+	     ;;application is "(<fixnum>)".  Here we build a core language expression
+	     ;;that applies  the closure  to the  argument and  returns a  PSI having
+	     ;;"(<fixnum>)" as retvals signature.
+	     ;;
+	     (let* ((rator.core (psi-core-expr rator.psi))
+		    (rand*.psi  (while-not-expanding-application-first-subform
+				 (chi-expr* rand*.stx lexenv.run lexenv.expand)))
+		    (rand*.core (map psi-core-expr rand*.psi)))
+	       (make-psi (build-application (syntax-annotation input-form.stx)
+			   rator.core
+			   rand*.core)
+			 (psi-application-retvals-signature rator.psi))))
+
+	    ((top-tag-id? rator.tag)
+	     ;;The rator  type is unknown,  we only know that  it is a  single value.
+	     ;;Return  a procedure  application  and  we will  see  at run-time  what
+	     ;;happens.
+	     (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
+					      rator.psi rand*.stx))
+
+	    (else
+	     ;;The rator has a correct single-value  signature and it has a specified
+	     ;;tag, but it is not a procedure.
+	     (if (option.tagged-language.datums-as-operators?)
+		 (%process-datum-operator input-form.stx lexenv.run lexenv.expand
+					  rator.psi rator.tag rand*.stx)
+	       (%build-common-rator-application input-form.stx lexenv.run lexenv.expand
+						rator.psi rand*.stx)))))
+
+    (define* (%process-datum-operator input-form.stx lexenv.run lexenv.expand
+				      {rator.psi psi?} {rator.tag tag-identifier?} rand*.stx)
+      ;;When the "datums as operators" option is on, there are multiple cases covered
+      ;;by this procedure; examples:
+      ;;
+      ;;(123 positive?)	=> #t
+      ;;
+      ;;   The rator  is the fixnum 123  and the expander determines that  its tag is
+      ;;    "<fixnum>";  this  form  matches  the syntax  of  a  method  or  accessor
+      ;;   application.   Here we  retrieve the method  dispatcher of  "<fixnum>" and
+      ;;   apply it to the symbol "positive?".
+      ;;
+      ;;("ciao" [1])		=> #\i
+      ;;
+      ;;   The rator is the string "ciao" and the expander determines that its tag is
+      ;;   "<string>"; this form matches the syntax of a getter application.  Here we
+      ;;   retrieve the  getter maker of "<string>"  and apply it to  the keys syntax
+      ;;   object "[1]".
+      ;;
+      (syntax-match rand*.stx ()
+	(()
+	 ;;No operands.  This is an error, because the input form is something like:
+	 ;;
+	 ;;   ("ciao mamma")
+	 ;;
+	 ;;so we raise an exception.
+	 (raise
+	  (condition (make-who-condition __who__)
+		     (make-message-condition "invalid call operator with no operands")
+		     (make-syntax-violation input-form.stx #f)
+		     (make-retvals-signature-condition (psi-retvals-signature rator.psi)))))
+
+	(((?key00 ?key0* ...) (?key11* ?key1** ...) ...)
+	 ;;There are operands and they match the getter keys syntax.
+	 (let* ((getter.stx  (tag-identifier-getter rator.tag rand*.stx input-form.stx))
+		(getter.psi  (chi-expr getter.stx lexenv.run lexenv.expand))
+		(getter.core (psi-core-expr getter.psi))
+		(rator.core  (psi-core-expr rator.psi)))
+	   (make-psi (build-application (syntax-annotation input-form.stx)
+		       getter.core
+		       (list rator.core))
+		     (psi-application-retvals-signature getter.psi))))
+
+	((?member ?arg* ...)
+	 (identifier? ?member)
+	 ;;There are  operands and they match  the syntax for a  tag dispatcher call,
+	 ;;that's great.
+	 (let* ((method.stx  (tag-identifier-dispatch rator.tag ?member ?arg* input-form.stx))
+		(method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
+		(method.core (psi-core-expr method.psi))
+		(rator.core  (psi-core-expr rator.psi)))
+	   (make-psi (build-application (syntax-annotation input-form.stx)
+		       method.core
+		       (list rator.core))
+		     (psi-application-retvals-signature method.psi))))
+
+	(_
+	 ;;There are operands,  but they do not match any  of the supported syntaxes;
+	 ;;for example the input form may be:
+	 ;;
+	 ;;   ("ciao" "mamma")
+	 ;;
+	 ;;so we raise an exception.
+	 (raise
+	  (condition (make-who-condition __who__)
+		     (make-message-condition "invalid operands for non-procedure operator")
+		     (make-syntax-violation input-form.stx #f)
+		     (make-retvals-signature-condition (psi-retvals-signature rator.psi)))))
+	))
+
+    #| end of module: %BUILD-CORE-EXPRESSION |# )
+
+  #| end of module: CHI-APPLICATION |# )
+
+
+;;;; chi procedures: SET! syntax
+
+(module CHI-SET
+  (chi-set!)
+
+  (define (chi-set! input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
+      ((_ (?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
+       (option.tagged-language.setter-forms?)
+       (let* ((keys.stx  (cons (cons ?key00 ?key0*)
+			       (map cons ?key11* ?key1**))))
+	 (chi-expr (bless
+		    `(tag-setter ,?expr ,keys.stx ,?new-value))
+		   lexenv.run lexenv.expand)))
+
+      ((_ ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ... ?new-value)
+       (option.tagged-language.setter-forms?)
+       (let* ((keys.stx  (cons (cons ?key00 ?key0*)
+			       (map cons ?key11* ?key1**))))
+	 (chi-expr (bless
+		    `(tag-setter ,?expr ,keys.stx ,?new-value))
+		   lexenv.run lexenv.expand)))
+
+      ((_ (?expr ?field-name) ?new-value)
+       (and (option.tagged-language.setter-forms?)
+	    (identifier? ?field-name))
+       (chi-expr (bless
+		  `(tag-mutator ,?expr ,?field-name ,?new-value))
+		 lexenv.run lexenv.expand))
+
+      ((_ ?lhs ?rhs)
+       (identifier? ?lhs)
+       (%chi-set-identifier input-form.stx lexenv.run lexenv.expand
+			    ?lhs ?rhs))
+
+      (_
+       (syntax-violation 'set! "invalid setter syntax" input-form.stx))))
+
+  (define (%chi-set-identifier input-form.stx lexenv.run lexenv.expand lhs.id rhs.stx)
+    (receive (type bind-val kwd)
+	(expr-syntax-type lhs.id lexenv.run)
+      (case type
+	((lexical)
+	 ;;A  lexical binding  used as  LHS of  SET! is  mutable and  so unexportable
+	 ;;according to R6RS.  Example:
+	 ;;
+	 ;;   (library (demo)
+	 ;;     (export var)		;error!!!
+	 ;;     (import (rnrs))
+	 ;;     (define var 1)
+	 ;;     (set! var 2))
+	 ;;
+	 (set-lexical-mutable! bind-val)
+	 (let* ((lhs.tag (or (identifier-tag lhs.id)
+			     (top-tag-id)))
+		(rhs.psi (chi-expr (bless
+				    `(tag-assert-and-return (,lhs.tag) ,rhs.stx))
+				   lexenv.run lexenv.expand)))
+	   (make-psi (build-lexical-assignment no-source
+		       (lexical-var bind-val)
+		       (psi-core-expr rhs.psi))
+		     (make-retvals-signature-single-top))))
+
+	((core-prim)
+	 (syntax-violation 'set! "cannot modify imported core primitive" input-form.stx lhs.id))
+
+	((global)
+	 (syntax-violation 'set! "attempt to modify an immutable binding" input-form.stx lhs.id))
+
+	((global-macro!)
+	 (chi-expr (chi-global-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
+
+	((local-macro!)
+	 (chi-expr (chi-local-macro bind-val input-form.stx lexenv.run #f) lexenv.run lexenv.expand))
+
+	((mutable)
+	 ;;Let's consider this library:
+	 ;;
+	 ;;   (library (demo)
+	 ;;     (export macro)
+	 ;;     (import (vicare))
+	 ;;     (define-syntax macro
+	 ;;       (syntax-rules ()
+	 ;;         ((_)
+	 ;;          (set! var 5))))
+	 ;;     (define var 123)
+	 ;;     (set! var 8))
+	 ;;
+	 ;;in which VAR is mutable and not exportable according to R6RS; if we import
+	 ;;the library in a program and use MACRO:
+	 ;;
+	 ;;   (import (vicare) (demo))
+	 ;;   (macro)
+	 ;;
+	 ;;we are  attempting to  mutate an unexportable  binding in  another lexical
+	 ;;context.  This is forbidden by R6RS.
+	 ;;
+	 (if (and (pair? bind-val)
+		  (let ((lib (car bind-val)))
+		    (eq? lib '*interaction*)))
+	     (let* ((loc     (cdr bind-val))
+		    (lhs.tag (or (identifier-tag lhs.id)
+				 (top-tag-id)))
+		    (rhs.psi (chi-expr (bless
+					`(tag-assert-and-return (,lhs.tag) ,rhs.stx))
+				       lexenv.run lexenv.expand)))
+	       (make-psi (build-global-assignment no-source
+			   loc
+			   (psi-core-expr rhs.psi))
+			 (make-retvals-signature-single-top)))
+	   (syntax-violation 'set!
+	     "attempt to modify a variable imported from another lexical context"
+	     input-form.stx lhs.id)))
+
+	(else
+	 (stx-error input-form.stx)))))
+
+  #| end of module: CHI-SET |# )
+
+
 ;;;; chi procedures: definitions and lambda clauses
 
 (module (chi-lambda chi-case-lambda chi-defun)
@@ -1130,7 +1166,7 @@
 	(make-psi (build-lambda (syntax-annotation ctxt-id)
 		    formals.core
 		    (psi-core-expr body.psi))
-		  (make-procedure-tag-retvals-signature ctxt-id lambda-signature))))
+		  (make-retvals-signature-procedure-tag ctxt-id lambda-signature))))
     (syntax-match input-form.stx (brace)
       ((_ ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (%expand ?ctxt (bless
@@ -1312,22 +1348,19 @@
     ;;
     ;;   (tag-procedure-argument-validator ?tag ?arg)
     ;;
-    ;;excluding  the formals  in  which the  tag is  "<top>"  or "<untagged>",  whose
-    ;;argument  are always  valid.   When there  is no  rest  argument: REST-ARG  and
-    ;;REST-TAG must be #f.
+    ;;excluding the  formals in which the  tag is "<top>", whose  argument are always
+    ;;valid.  When there is no rest argument: REST-ARG and REST-TAG must be #f.
     ;;
     (define-syntax-rule (%recur)
       (%build-formals-validation-form* ($cdr arg*) ($cdr tag*) rest-arg rest-tag))
     (cond ((pair? arg*)
-	   (if (or (free-id=? ($car tag*) (untagged-tag-id))
-		   (free-id=? ($car tag*) (top-tag-id)))
+	   (if (top-tag-id? ($car tag*))
 	       (%recur)
 	     (cons (bless
 		    `(tag-procedure-argument-validator ,($car tag*) ,($car arg*)))
 		   (%recur))))
 	  ((or (not rest-tag)
-	       (free-id=? rest-tag (untagged-tag-id))
-	       (free-id=? rest-tag (top-tag-id)))
+	       (top-tag-id? rest-tag))
 	   '())
 	  (else
 	   (list (bless
@@ -1443,20 +1476,20 @@
 	   (expr.stx (cddr qrhs)))
        (receive-and-return (expr.psi)
 	   (chi-expr expr.stx lexenv.run lexenv.expand)
-	 (let ((expr.sign (psi-retvals-signature expr.psi))
-	       (tag.id    (identifier-tag var.id)))
-	   (syntax-match (retvals-signature-tags expr.sign) ()
+	 (let ((expr.sig (psi-retvals-signature expr.psi))
+	       (tag.id   (identifier-tag var.id)))
+	   (syntax-match (retvals-signature-tags expr.sig) ()
 	     ((?tag)
 	      ;;A single return value: good.
 	      (when (option.tagged-language.rhs-tag-propagation?)
-		(if ($untagged-tag-id? tag.id)
+		(if (top-tag-id? tag.id)
 		    (override-identifier-tag! var.id ?tag)
 		  (assertion-violation __who__
 		    "Vicare: internal error: expected variable definition with untagged identifier"
 		    expr.stx tag.id))))
 
 	     (?tag
-	      ($untagged-tag-id? ?tag)
+	      (list-tag-id? ?tag)
 	      ;;Fully  unspecified return  values: we  accept it  here and  delegate
 	      ;;further checks at run-time.
 	      (void))
@@ -1464,8 +1497,8 @@
 	     (_
 	      ;;Multiple return values: syntax violation.
 	      (retvals-signature-violation __who__ expr.stx
-					   (make-retvals-signature (list (untagged-tag-id)))
-					   expr.sign))
+					   (make-retvals-signature-single-top)
+					   expr.sig))
 	     )))))
 
     ((top-expr)
@@ -1674,8 +1707,8 @@
 		;;* Finally we recurse on the rest of the body.
 		;;
 		;;We  receive  the  following  values:   ID  is  the  tagged  binding
-		;;identifier;   TAG  is   the   tag  identifier   for  ID   (possibly
-		;;"<untagged>"); QRHS.STX the QRHS to be expanded later.
+		;;identifier; TAG  is the tag  identifier for ID  (possibly "<top>");
+		;;QRHS.STX the QRHS to be expanded later.
 		(receive (id tag qrhs.stx)
 		    (%parse-define body-form.stx)
 		  (when (bound-id-member? id kwd*)
@@ -2088,9 +2121,8 @@
     ;;
     ;;1..The identifier of the binding variable.
     ;;
-    ;;2..An identifier  representing the binding  tag.  "<untagged>" is used  when no
-    ;;   tag  is specified;  a subtag of  "<procedure>" is used  when a  procedure is
-    ;;   defined.
+    ;;2..An identifier representing the binding tag.   "<top>" is used when no tag is
+    ;;   specified; a subtag of "<procedure>" is used when a procedure is defined.
     ;;
     ;;3..A qualified  right-hand side expression  (QRHS) representing the  binding to
     ;;   create.
@@ -2134,14 +2166,14 @@
       ((_ ?id ?expr)
        (identifier? ?id)
        (let ((qrhs (cons* 'def-expr ?id ?expr)))
-	 (values ?id (untagged-tag-id) qrhs)))
+	 (values ?id (top-tag-id) qrhs)))
 
       ;;R6RS variable definition, no init.
       ((_ ?id)
        (identifier? ?id)
        (let* ((rhs.stx (bless '(void)))
 	      (qrhs    (cons 'expr rhs.stx)))
-	 (values ?id (untagged-tag-id) qrhs)))
+	 (values ?id (top-tag-id) qrhs)))
 
       ))
 

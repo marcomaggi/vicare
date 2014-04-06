@@ -53,6 +53,8 @@
   ;;   (formals-signature-syntax #'(<fixnum> <string>))			=> #t
   ;;   (formals-signature-syntax #'(<fixnum> <string> . <list>))	=> #t
   ;;
+  ;;A standalone "<list>" identifier means: any number of values of any type.
+  ;;
   (syntax-match stx ()
     (() #t)
     ((?id . ?rest)
@@ -74,40 +76,39 @@
   ;;   (retvals-signature-syntax #'(<fixnum> <string>))			=> #t
   ;;   (retvals-signature-syntax #'(<fixnum> <string> . <list>))	=> #t
   ;;
-  (or (untagged-tag-id? stx)
-      (syntax-match stx ()
-	(() #t)
-	((?id . ?rest)
-	 (tag-identifier? ?id)
-	 (retvals-signature-syntax? ?rest))
-	(?rest
-	 (tag-identifier-and-list-sub-tag? ?rest))
-	)))
+  ;;A standalone "<list>" identifier means: any number of values of any type.
+  ;;
+  (syntax-match stx ()
+    (() #t)
+    ((?id . ?rest)
+     (tag-identifier? ?id)
+     (retvals-signature-syntax? ?rest))
+    (?rest
+     (tag-identifier-and-list-sub-tag? ?rest))
+    ))
 
 ;;; --------------------------------------------------------------------
 
 (define* (formals-signature-partially-untagged-syntax? {stx formals-signature-syntax?})
-  ;;The argument STX must be a syntax object representing a formals signature syntax:
-  ;;null or a proper  or improper list of tag identifiers.  Return true  if STX as at
-  ;;least one "<untagged>" tag identifier; otherwise return false.
+  ;;The argument STX must be a  syntax object representing a formals signature syntax
+  ;;according  to FORMALS-SIGNATURE-SYNTAX?.   Return true  if STX  has at  least one
+  ;;"<top>" tag identifier; otherwise return false.
   ;;
   ($formals-signature-partially-untagged-syntax? stx))
 
 (define ($formals-signature-partially-untagged-syntax? stx)
   (syntax-match stx ()
     (() #f)
-    ((?id . ?rest)
-     (tag-identifier? ?id)
-     (or ($untagged-tag-id? ?id)
-	 ($formals-signature-partially-untagged-syntax? ?rest)))
+    ((?tag . ?rest-tags)
+     (or (top-tag-id? ?tag)
+	 ($formals-signature-partially-untagged-syntax? ?rest-tags)))
     (?rest
-     (tag-identifier? ?rest)
-     ($untagged-tag-id? ?rest))))
+     #t)))
 
 (define* (retvals-signature-partially-unspecified-syntax? {stx retvals-signature-syntax?})
-  ;;The argument STX must be a syntax object representing a retvals signature syntax:
-  ;;null or a proper or improper list of  tag identifiers.  Return true if STX if the
-  ;;signature as at least one "<untagged>" tag identifier; otherwise return false.
+  ;;The argument STX must be a  syntax object representing a retvals signature syntax
+  ;;according to RETVALS-SIGNATURE-SYNTAX?.  Return true  if STX if the signature has
+  ;;at least one "<top>" tag identifier; otherwise return false.
   ;;
   ($retvals-signature-partially-unspecified-syntax? stx))
 
@@ -118,12 +119,12 @@
 
 (define* (formals-signature-super-and-sub-syntax? {super-signature formals-signature-syntax?}
 						  {sub-signature   formals-signature-syntax?})
-  ;;Return  true  if the  super  signature  and  the  sub signature  have  compatible
-  ;;structure and the  tags from the super  signature are supertags of  the tags from
-  ;;the sub signature; otherwise return false.
+  ;;Return  true if  the super  signature syntax  and the  sub signature  syntax have
+  ;;compatible structure and  the tags from the super signature  are supertags of the
+  ;;tags from the sub signature; otherwise return false.
   ;;
   ;;This function can be used to determine:  if a tuple of arguments matches a lambda
-  ;;formals's signaure; if a tuple or return values matches the receiver signature.
+  ;;formals's signature; if a tuple or return values matches the receiver signature.
   ;;
   ($formals-signature-super-and-sub-syntax? super-signature sub-signature))
 
@@ -140,52 +141,38 @@
     ((?super-tag . ?super-rest-tags)
      (syntax-match sub-signature ()
        ((?sub-tag . ?sub-rest-tags)
-	(and (or ($untagged-tag-id? ?super-tag)
-		 ($tag-super-and-sub? ?super-tag ?sub-tag))
+	(and (or (top-tag-id? ?super-tag)
+		 (tag-super-and-sub? ?super-tag ?sub-tag))
 	     ($formals-signature-super-and-sub-syntax? ?super-rest-tags ?sub-rest-tags)))
        (_ #f)))
 
     (?super-rest-tag
      (syntax-match sub-signature ()
        ;;The super signature is an improper list with rest item and the sub signature
-       ;;is finished.  We want the following signatures to match:
+       ;;is finished.  We want the following signature to match:
        ;;
-       ;;  #'(<number> <fixnum> . <top>)      #'(<complex> <fixnum>)
        ;;  #'(<number> <fixnum> . <list>)     #'(<complex> <fixnum>)
-       ;;  #'(<number> <fixnum> . <untagged>) #'(<complex> <fixnum>)
        ;;
-       ;;because "<top>", "<list>" and "<untagged>"  in rest position mean any number
-       ;;of objects of any type.
-       (()
-	(or ($untagged-tag-id? ?super-rest-tag)
-            ($top-tag-id?      ?super-rest-tag)
-	    ($tag-super-and-sub? (list-tag-id) ?super-rest-tag)))
+       ;;because "<list>" in rest position means any number of objects of any type.
+       (() #t)
 
        ;;The super signature is an improper  list shorter than the sub signature.  We
-       ;;want the following signatures to match:
+       ;;want the following signature to match:
        ;;
-       ;;  #'(<number> . <top>)   #'(<complex> <fixnum> <fixnum>)
        ;;  #'(<number> . <list>)  #'(<complex> <fixnum> <fixnum>)
        ;;
-       ;;because "<top>", "<list>" and "<untagged>"  in rest position mean any number
-       ;;of objects of any type.
+       ;;because "<list>" in  rest position means any number of  objects of any type.
+       ;;If ?SUPER-REST-TAG is a sub-tag of "<list>": we do not want it to match.
        ((?sub-tag . ?sub-rest-tags)
-	(or ($untagged-tag-id? ?super-rest-tag)
-            ($top-tag-id?      ?super-rest-tag)
-	    ($tag-super-and-sub? (list-tag-id) ?super-rest-tag)))
+	(list-tag-id?      ?super-rest-tag))
 
        ;;Both the  signatures are improper lists  with the same number  of items, and
        ;;all the items are  correct super and sub; if the rest  tags are proper super
        ;;and subs: success!
        (?sub-rest-tag
-	(identifier? ?sub-rest-tag)
-	($tag-super-and-sub? ?super-rest-tag ?sub-rest-tag))
-
-       ;;Everything else is wrong.
-       (_ #f)))
-
-    ;;Everything else is wrong.
-    (_ #f)))
+	(tag-super-and-sub? ?super-rest-tag ?sub-rest-tag))
+       ))
+    ))
 
 (define* (retvals-signature-super-and-sub-syntax? {super-signature retvals-signature-syntax?}
 						  {sub-signature   retvals-signature-syntax?})
@@ -203,108 +190,64 @@
 
 ;;; --------------------------------------------------------------------
 
-(define ($retvals-signature-syntax-common-ancestor signature1 signature2)
-  ;;
-  ;;We assume that both SIGNATURE1 and SIGNATURE2 are proper or improper lists of tag
-  ;;identifiers, with null and a standalone identifier being valid.
-  ;;
-  (if (or (untagged-tag-id? signature1)
-	  (untagged-tag-id? signature2))
-      (untagged-tag-id)
-    (syntax-match signature1 ()
-      (()
-       (syntax-match signature2 ()
-	 (() '())
-	 ((?tag2 . ?rest-tags2)
-	  (list-tag-id))
-	 (_
-	  (list-tag-id))))
+(module (retvals-signature-syntax-common-ancestor)
 
-      ((?tag1 . ?rest-tags1)
-       (syntax-match signature2 ()
-	 (()
-	  (list-tag-id))
-	 ((?tag2 . ?rest-tags2)
-	  (cons ($tag-common-ancestor ?tag1 ?tag2)
-		($retvals-signature-syntax-common-ancestor ?rest-tags1 ?rest-tags2)))
-	 (?rest-tag2
-	  (list-tag-id))))
+  (define* (retvals-signature-syntax-common-ancestor {sig1 retvals-signature-syntax?}
+						     {sig2 retvals-signature-syntax?})
+    ($retvals-signature-syntax-common-ancestor sig1 sig2))
 
-      (?rest-tag1
-       (syntax-match signature2 ()
-	 (()
-	  (list-tag-id))
-	 ((?tag2 . ?rest-tags2)
-	  (list-tag-id))
-	 (?rest-tag2
-	  ($tag-common-ancestor ?rest-tag1 ?rest-tag2))))
-      )))
+  (define ($retvals-signature-syntax-common-ancestor sig1 sig2)
+    ;;
+    ;;We assume that  both SIG1 and SIG2 are retvals  signature syntaxes according to
+    ;;RETVALS-SIGNATURE-SYNTAX?.
+    ;;
+    (if (or (list-tag-id? sig1)
+	    (list-tag-id? sig2))
+	(list-tag-id)
+      (syntax-match sig1 ()
+	(()
+	 (syntax-match sig2 ()
+	   (() '())
+	   ((?tag2 . ?rest-tags2)
+	    (list-tag-id))
+	   (_
+	    (list-tag-id))))
+
+	((?tag1 . ?rest-tags1)
+	 (syntax-match sig2 ()
+	   (()
+	    (list-tag-id))
+	   ((?tag2 . ?rest-tags2)
+	    (cons (tag-common-ancestor ?tag1 ?tag2)
+		  ($retvals-signature-syntax-common-ancestor ?rest-tags1 ?rest-tags2)))
+	   (?rest-tag2
+	    (list-tag-id))))
+
+	(?rest-tag1
+	 (syntax-match sig2 ()
+	   (()
+	    (list-tag-id))
+	   ((?tag2 . ?rest-tags2)
+	    (list-tag-id))
+	   (?rest-tag2
+	    (tag-common-ancestor ?rest-tag1 ?rest-tag2))))
+	)))
+
+  #| end of module |# )
 
 
 ;;;; callable syntax, callable signature, return values signature, formals signature
-;;
-;;A "callable  spec" is a syntax  object representing the name,  arguments and return
-;;values of a callable object: a function or macro.  A callable can be used as:
-;;
-;;   (?callable ?arg ...)
-;;
-;;but not as:
-;;
-;;   (apply ?callable ?arg ...)
-;;
-;;A "callable  signature" is an object  representing the number and  tags of callable
-;;arguments  and return  values.  A  "return values  signature" is  false, null  or a
-;;proper or  improper list  of tag  identifiers representing the  number and  tags of
-;;return values;  by convention,  when the number  and tags of  return values  is not
-;;known, #f is used.   A "formals signature" is null or a proper  or improper list of
-;;tag identifiers representing the number and  tags of callable arguments; null and a
-;;standalone tag identifier are valid.
-;;
-;;Let's  state the  format of  a  callable spec.   We use  the conventions:  ?ARG-ID,
-;;?REST-ID  and  ?ARGS-ID are  argument  identifiers;  ?TAG  and  ?RV-TAG are  a  tag
-;;identifiers.  We accept the following standard R6RS formals:
-;;
-;;   ?args-id
-;;   (?arg-id ...)
-;;   (?arg-id0 ?arg-id ... . ?rest-id)
-;;
-;;and in addition the following tagged specs:
-;;
-;;   (brace ?args-id ?args-tag)
-;;   (?arg ...)
-;;   (?arg0 ?arg ... . ?rest-arg)
-;;   (?retvals ?arg ...)
-;;   (?retvals ?arg0 ?arg ... . ?rest-arg)
-;;
-;;where ?ARG is a tagged argument with one of the formats:
-;;
-;;   ?arg-id
-;;   (brace ?arg-id ?arg-tag)
-;;
-;;RETVALS is a special syntax that allows the specification of the number and tags of
-;;expression return values; it has one of the formats:
-;;
-;;   (brace _ ?rv-tag ...)
-;;   (brace _ ?rv-tag ... . ?rv-rest-tag)
-;;
-;;where the identifier "_" is the binding exported by (vicare).
-;;
-;;The number  of ?RV-TAG identifiers specifies  the number of return  values; when no
-;;?RV-TAG is present: the callable returns no values.
-;;
 
 (define-record (retvals-signature %make-retvals-signature retvals-signature?)
   (tags
-		;False,  null  or  a  proper  or improper  list  of  tag  identifiers
-		;representing the object types of a tuple of return values.  False is
-		;used when the  number and type of returned values  is unknown.  Null
-		;is used when the number of returned values is zero.
+		;A syntax object representing a retvals signature syntax according to
+		;RETVALS-SIGNATURE-SYNTAX?.
    ))
 
 (define-record (formals-signature %make-formals-signature formals-signature?)
   (tags
-		;Null or  a proper or  improper list of tag  identifiers representing
-		;the object types of a tuple of LET-VALUES formals.
+		;A syntax object representing a formals signature syntax according to
+		;FORMALS-SIGNATURE-SYNTAX?.
    ))
 
 (define-record (lambda-signature %make-lambda-signature lambda-signature?)
@@ -331,8 +274,8 @@
 		;     ({_ <bignum>}) . ?body)))
 		;
 		;has common retvals "(<exact-integer>)".  When  it is not possible to
-		;determine  a   common  retvals  signature:  the   default  value  is
-		;"<untagged>", which means any number of objects of any type.
+		;determine a common retvals signature: the default value is "<list>",
+		;which means any number of objects of any type.
 		;
    lambda-signatures
 		;A  proper  list  of "lambda-signature"  instances  representing  the
@@ -349,13 +292,15 @@
   (%make-lambda-signature rv formals))
 
 (define* (make-clambda-compound {signatures list-of-lambda-signatures?})
-  (%make-clambda-compound (make-fully-unspecified-retvals-signature) signatures))
+  (%make-clambda-compound (if (null? signatures) ;this is REDUCE
+			      (make-retvals-signature-standalone-list)
+			    (fold-left retvals-signature-common-ancestor
+			      (lambda-signature-retvals ($car signatures))
+			      (map lambda-signature-retvals ($cdr signatures))))
+			  signatures))
 
 ;;; --------------------------------------------------------------------
 ;;; special constructors
-
-(define (make-fully-unspecified-retvals-signature)
-  (%make-retvals-signature (untagged-tag-id)))
 
 (let-syntax
     ((define-single-tag-retvals-maker (syntax-rules ()
@@ -365,11 +310,25 @@
 					     (lambda ()
 					       (or sign
 						   (receive-and-return (S)
-						       (make-retvals-signature (list (?tag-maker)))
+						       (make-retvals-signature-single-value (?tag-maker))
 						     (set! sign S))))))))))
-  (define-single-tag-retvals-maker make-single-top-retvals-signature		top-tag-id)
-  (define-single-tag-retvals-maker make-single-procedure-retvals-signature	procedure-tag-id)
+  (define-single-tag-retvals-maker make-retvals-signature-single-top		top-tag-id)
+  (define-single-tag-retvals-maker make-retvals-signature-single-procedure	procedure-tag-id)
   #| end of let-syntax |# )
+
+(define make-retvals-signature-standalone-list
+  (let ((sign #f))
+    (lambda ()
+      (or sign
+	  (receive-and-return (S)
+	      (make-retvals-signature (list-tag-id))
+	    (set! sign S))))))
+
+(define-syntax-rule (make-retvals-signature-fully-unspecified)
+  (make-retvals-signature-standalone-list))
+
+(define* (make-retvals-signature-single-value {tag tag-identifier?})
+  (make-retvals-signature (list tag)))
 
 ;;; --------------------------------------------------------------------
 ;;; special accessors
@@ -389,7 +348,7 @@
 ;;; --------------------------------------------------------------------
 
 (define* (retvals-signature-fully-unspecified? {signature retvals-signature?})
-  (untagged-tag-id? ($retvals-signature-tags signature)))
+  (list-tag-id? ($retvals-signature-tags signature)))
 
 (define* (retvals-signature-partially-unspecified? {signature retvals-signature?})
   ($retvals-signature-partially-unspecified-syntax? ($retvals-signature-tags signature)))
@@ -412,9 +371,10 @@
     ((?tag)	#t)
     (_		#f)))
 
-(define* (retvals-signature-single-untagged-tag? {signature retvals-signature?})
-  ;;Return true if SIGNATURE represents a  single return value with tag "<untagged>",
-  ;;otherwise return false.  We have to remember that a signature syntax can be:
+(define* (retvals-signature-single-top-tag? {signature retvals-signature?})
+  ;;Return  true if  SIGNATURE represents  a single  return value  with tag  "<top>",
+  ;;otherwise return false.   We have to remember that, after  parsing syntax objects
+  ;;with SYNTAX-MATCH, a signature syntax can result to be:
   ;;
   ;;   (#'?tag . #'())
   ;;
@@ -423,14 +383,13 @@
   ;;
   (syntax-match ($retvals-signature-tags signature) ()
     ((?tag)
-     ($untagged-tag-id? ?tag)
-     #t)
+     (top-tag-id? ?tag))
     (_ #f)))
 
 (define* (retvals-signature-single-tag-or-fully-unspecified? {signature retvals-signature?})
   ;;Return true if SIGNATURE represents a single return value or it is the standalone
-  ;;"<untagged>"  identifier, otherwise  return false.   We have  to remember  that a
-  ;;signature syntax can be:
+  ;;"<list>" identifier,  otherwise return  false.  We have  to remember  that, after
+  ;;parsing syntax objects with SYNTAX-MATCH, a signature syntax can result to be:
   ;;
   ;;   (#'?tag . #'())
   ;;
@@ -438,7 +397,7 @@
   ;;to use SYNTAX-MATCH here to inspect the tags.
   ;;
   (let ((tags ($retvals-signature-tags signature)))
-    (or (untagged-tag-id? tags)
+    (or (list-tag-id? tags)
 	(syntax-match tags ()
 	  ((?tag)	#t)
 	  (_		#f)))))
@@ -473,31 +432,31 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (retvals-signature-common-ancestor {sig1 retvals-signature?} {sig2 retvals-signature?})
+(define* (retvals-signature-common-ancestor {sig1 retvals-signature?}
+					    {sig2 retvals-signature?})
   (make-retvals-signature
-   ($retvals-signature-syntax-common-ancestor ($retvals-signature-tags sig1)
-					      ($retvals-signature-tags sig2))))
+   (retvals-signature-syntax-common-ancestor ($retvals-signature-tags sig1)
+					     ($retvals-signature-tags sig2))))
 
 
 ;;;; tagged binding parsing: standalone identifiers
 
 (define (tagged-identifier-syntax? stx)
-  ;;Return  true if  STX is  a syntax  object representing  a tagged  or
-  ;;untagged identifier, otherwise return false.
+  ;;Return  true  if  STX is  a  syntax  object  representing  a tagged  or  untagged
+  ;;identifier, otherwise return false.
   ;;
   (syntax-match stx (brace)
     ((brace ?id ?tag)
      (and (identifier? ?id)
 	  (tag-identifier? ?tag)))
     (?id
-     (identifier? ?id))
-    ))
+     (identifier? ?id))))
 
 (define (parse-tagged-identifier-syntax stx)
   ;;If  STX is  a tagged  or  untagged identifier,  return 2  values: the  identifier
   ;;representing the binding name and  the identifier representing the tag; otherwise
   ;;raise  an exception.   When no  tag is  present: the  tag identifier  defaults to
-  ;;"<untagged>".
+  ;;"<top>".
   ;;
   (syntax-match stx (brace)
     ((brace ?id ?tag)
@@ -506,8 +465,7 @@
        (values ?id ?tag)))
     (?id
      (identifier? ?id)
-     (values ?id (untagged-tag-id)))
-    ))
+     (values ?id (top-tag-id)))))
 
 
 ;;;; tagged binding parsing: proper lists of bindings left-hand sides
@@ -526,7 +484,7 @@
 ;;
 ;;and the return values are:
 ;;
-;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<untagged>)
+;;   (#'a #'b #'c) (#'<fixnum> #'<string> #'<top>)
 ;;
 
 (case-define* parse-list-of-tagged-bindings
@@ -536,7 +494,7 @@
    ;;Assume STX  is a  syntax object  representing a proper  list of  possibly tagged
    ;;binding identifiers; parse  the list and return 2 values:  a list of identifiers
    ;;representing the  binding identifiers,  a list  of identifiers  representing the
-   ;;type tags; "<untagged>" is used when no tag is present.  The identifiers must be
+   ;;type tags;  "<top>" is  used when no  tag is present.   The identifiers  must be
    ;;distinct.
    ;;
    (define (%invalid-tagged-bindings-syntax form subform)
@@ -559,7 +517,7 @@
 	    (identifier? ?id)
 	    (receive (id* tag*)
 		(recur ?other-id*)
-	      (values (cons ?id id*) (cons (untagged-tag-id) tag*))))
+	      (values (cons ?id id*) (cons (top-tag-id) tag*))))
 	   (_
 	    (if input-form.stx
 		(%invalid-tagged-bindings-syntax input-form.stx stx)
@@ -571,8 +529,8 @@
 	 (%duplicate-identifiers-in-bindings-specification stx #f))))))
 
 (define* (list-of-tagged-bindings? lhs*)
-  ;;Return  true if  lhs*  is  a list  of  possibly tagged  identifiers;
-  ;;otherwise return false.
+  ;;Return true  if LHS* is a  list of possibly tagged  identifiers; otherwise return
+  ;;false.
   ;;
   (guard (E ((syntax-violation? E)
 	     #f))
@@ -627,6 +585,7 @@
       ((?arg* ... . (brace ?rest-id ?rest-tag))
        (begin
 	 (unless (and (identifier? ?rest-id)
+		      (identifier? ?rest-tag)
 		      (tag-super-and-sub? (list-tag-id) ?rest-tag))
 	   (syntax-violation __who__
 	     "invalid rest argument specification" original-formals.stx (cons 'brace ?rest-id ?rest-tag)))
@@ -658,7 +617,7 @@
        (for-all identifier? ?id*)
        (begin
 	 (%validate-formals input-form.stx original-formals.stx ?id*)
-	 (values ?id* (map (lambda (id) (untagged-tag-id)) ?id*))))
+	 (values ?id* (map (lambda (id) (top-tag-id)) ?id*))))
 
       ;;Standard formals: untagged identifiers with rest argument.
       ;;
@@ -667,7 +626,7 @@
 	    (identifier? ?rest-id))
        (begin
 	 (%validate-formals input-form.stx original-formals.stx (append ?id* ?rest-id))
-	 (values formals.stx (cons* (map (lambda (id) (untagged-tag-id)) ?id*) (list-tag-id)))))
+	 (values formals.stx (cons* (map (lambda (id) (top-tag-id)) ?id*) (list-tag-id)))))
 
       ;;Standard formals: untagged args.
       ;;
@@ -694,7 +653,7 @@
 	  ;;Untagged argument.
 	  (?id
 	   (identifier? ?id)
-	   (values (cons ?id standard-formals) (cons (untagged-tag-id) tags)))
+	   (values (cons ?id standard-formals) (cons (top-tag-id) tags)))
 	  ;;Tagged argument.
 	  ((brace ?id ?tag)
 	   (and (identifier? ?id)
@@ -760,7 +719,7 @@
       (receive (standard-formals.stx formals-signature)
 	  (parse-tagged-formals-syntax ?formals input-form.stx)
 	(values standard-formals.stx
-		(make-lambda-signature (make-retvals-signature (untagged-tag-id)) formals-signature)))))))
+		(make-lambda-signature (make-retvals-signature-standalone-list) formals-signature)))))))
 
 (define* (tagged-lambda-proto-syntax? formals-stx)
   ;;Return true if  FORMALS-STX is a syntax object representing  valid tagged formals

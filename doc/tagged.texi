@@ -66,9 +66,8 @@ We can easily create a tag identifier as:
 where @class{my-tag} is a tag identifier and @class{top} is its parent
 tag.  Tag identifiers are organised in a tree hierarchy, with subtags
 inheriting properties of supertags; by convention, @class{top} is the
-parent of all the tag identifiers, the root of the tree, with the
-exception of @class{untagged}.  @class{top} and @class{untagged}
-have no parent.
+parent of all the tag identifiers, the root of the tree; @class{top} has
+no parent.
 
 @c ------------------------------------------------------------
 
@@ -197,15 +196,15 @@ It is a compound of tag identifiers:
 @item
 When the callable has one or more return values: a proper or improper
 list of tag identifiers is used to represent them; a standalone tag
-identifier is valid.  Whenever an item in the list is if unspecified
-type: the tag @class{untagged} is used.
+identifier is valid.  Whenever an item in the list is of unspecified
+type: the tag @class{top} is used.
 
 @item
 When the callable has no return values: null is used.
 
 @item
 When the callable has an unspecified number of return values of
-unspecified type: the standalone @class{untagged} tag is used.
+unspecified type: the standalone @class{list} tag is used.
 @end itemize
 @end table
 @end deftp
@@ -248,8 +247,8 @@ has the following fields:
 @table @code
 @item tags
 A proper or improper list of tag identifiers, with null and a standalone
-tagged identifier being acceptable.  @class{untagged} is used when a
-value has unspecified type.
+tagged identifier being acceptable.  @class{top} is used when a value
+has unspecified type.
 @end table
 @end deftp
 
@@ -371,7 +370,7 @@ has common retvals signature @code{(<fixnum>)}, while:
 @noindent
 has common retvals signature @code{(<exact-integer>)}.  When it is not
 possible to determine a common retvals signature: the default value is
-the standalone identifier @code{<untagged>}, which means any number of
+the standalone identifier @class{list}, which means any number of
 objects of any type.
 
 @item lambda-signatures
@@ -463,7 +462,7 @@ If @var{stx} is a tagged or untagged identifier, return 2 values: the
 identifier representing the binding name and the identifier representing
 the tag; otherwise raise an exception with condition type
 @condition{syntax}.  When no tag is present: the tag identifier defaults
-to @class{untagged}.
+to @class{top}.
 
 @example
 #!vicare
@@ -583,8 +582,8 @@ Assume @var{stx} is a syntax object representing a proper list of
 possibly tagged binding identifiers; parse the list and, when
 successful, return 2 values: a list of identifiers representing the
 binding identifiers, a list of identifiers representing the type tags;
-@class{untagged} is used when no tag is present.  If an error occurs
-raise an exception with condition object type @condition{syntax}.
+@class{top} is used when no tag is present.  If an error occurs raise an
+exception with condition object type @condition{syntax}.
 
 The identifiers must be distinct according to @func{bound-identifier=?}.
 
@@ -1047,60 +1046,60 @@ used as @code{form} field when raising a syntax violation.
     (values standard-formals-stx retvals.tags formals.tags)))
 
 (split #'(@{a <fixnum>@} @{b <string>@}))
-@result{} (#'a #'b) #f (#'<fixnum> #'<string>)
+@result{} (#'a #'b) #'<list> (#'<fixnum> #'<string>)
 
 (split #'(@{a <fixnum>@} @{b <string>@} @{c <vector>@}))
-@result{} #'(a b c) #f (#'<fixnum> #'<string> #'<vector>)
+@result{} #'(a b c) #'<list> (#'<fixnum> #'<string> #'<vector>)
 
 ;;; untagged
 
 (split #'(a))
-@result{} (#'a) #f (#'<top>)
+@result{} (#'a) #'<list> (#'<top>)
 
 (split #'(a b))
-@result{} (#'a #'b) #f (#'<top> #'<top>)
+@result{} (#'a #'b) #'<list> (#'<top> #'<top>)
 
 (split #'(a b c))
-@result{} (#'a #'b #'c) #f (#'<top> #'<top> #'<top>)
+@result{} (#'a #'b #'c) #'<list> (#'<top> #'<top> #'<top>)
 
 ;;; mixed tagged and untagged
 
 (split #'(a @{b <string>@}))
-@result{} (#'a #'b) #f (#'<top> #'<string>)
+@result{} (#'a #'b) #'<list> (#'<top> #'<string>)
 
 (split #'(@{a <fixnum>@} b))
-@result{} (#'a #'b) #f (#'<fixnum> #'<top>)
+@result{} (#'a #'b) #'<list> (#'<fixnum> #'<top>)
 
 (split #'(a @{b <string>@} @{c <vector>@}))
-@result{} (#'a #'b #'c) #f (#'<top> #'<string> #'<vector>)
+@result{} (#'a #'b #'c) #'<list> (#'<top> #'<string> #'<vector>)
 
 (split #'(@{a <fixnum>@} b @{c <vector>@}))
-@result{} (#'a #'b #'c) #f (#'<fixnum> #'<top> #'<vector>)
+@result{} (#'a #'b #'c) #'<list> (#'<fixnum> #'<top> #'<vector>)
 
 (split #'(@{a <fixnum>@} @{b <string>@} c))
-@result{} (#'a #'b #'c) #f (#'<fixnum> #'<string> #'<top>)
+@result{} (#'a #'b #'c) #'<list> (#'<fixnum> #'<string> #'<top>)
 
 ;;; args argument
 
 (split #'@{args <fixnums>@})
-@result{} #'args #f #'<fixnums>
+@result{} #'args #'<list> #'<fixnums>
 
 (split #'args)
-@result{} #'args #f #'<list>
+@result{} #'args #'<list> #'<list>
 
 ;;; rest argument
 
 (split #'(@{a <fixnum>@} . @{rest <fixnums>@}))
-@result{} (#'a . #'rest) #f (#'<fixnum> . #'<fixnums>)
+@result{} (#'a . #'rest) #'<list> (#'<fixnum> . #'<fixnums>)
 
 (split #'(@{a <fixnum>@} . rest))
-@result{} (#'a . #'rest) #f (#'<fixnum> . #'<list>)
+@result{} (#'a . #'rest) #'<list> (#'<fixnum> . #'<list>)
 
 (split #'(@{a <fixnum>@} @{b <string>@} . @{rest <fixnums>@}))
-@result{} (#'a #'b . #'rest) #f (#'<fixnum> #'<string> . #'<fixnums>)
+@result{} (#'a #'b . #'rest) #'<list> (#'<fixnum> #'<string> . #'<fixnums>)
 
 (split #'(@{a <fixnum>@} @{b <string>@} . rest))
-@result{} (#'a #'b . #'rest) #f (#'<fixnum> #'<string> . #'<list>)
+@result{} (#'a #'b . #'rest) #'<list> (#'<fixnum> #'<string> . #'<list>)
 
 ;;; return values tagging
 
