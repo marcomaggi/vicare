@@ -81,6 +81,7 @@
     ((tag-setter)				tag-setter-transformer)
     ((tag-dispatch)				tag-dispatch-transformer)
     ((tag-cast)					tag-cast-transformer)
+    ((type-of)					type-of-transformer)
 
     (else
      (assertion-violation __who__
@@ -2552,6 +2553,26 @@
 	  (_
 	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
 	  ))))
+    ))
+
+
+;;;; module core-macro-transformer: TYPE-OF
+
+(define (type-of-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function used to expand  Vicare's TYPE-OF syntaxes from the top-level
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'type-of))
+
+  (syntax-match input-form.stx ()
+    ((_ ?expr)
+     (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.sig (psi-retvals-signature expr.psi)))
+       (make-psi (build-data no-source
+		   expr.sig)
+		 (make-retvals-signature-single-top))))
     ))
 
 

@@ -20,6 +20,7 @@ in the tagged Scheme language, @ref{tagged, Experimental tagged language}.
 * tags syntaxes keys::          Special setter and getter syntaxes.
 * tags syntaxes dispatch::      Dispatching methods.
 * tags syntaxes casting::       Converting objects.
+* tags syntaxes type-of::       Determining the type of expressions.
 @end menu
 
 @c page
@@ -401,5 +402,41 @@ value is of type @meta{tag}; then it returns such value.
 (tag-cast <string> 'ciao)       @result{} "ciao"
 @end example
 @end deffn
+
+@c page
+@node tags syntaxes type-of
+@subsection Determining the type of expressions
+
+
+The following bindings are exported by the library @library{vicare
+expander tags}.
+
+
+@deffn Syntax type-of @meta{expr}
+This syntax is for interactive use only.  Fully expand the given
+expression in the current lexical environment and return a structure of
+type @objtype{retvals-signature} representing the types of the tuple of
+returned values.  The expression is @strong{not} evaluated, only
+expanded; this means that the expansion side effects are performed.
+
+Example session at the @repl{}:
+
+@example
+vicare> (import (vicare expander tags))
+
+vicare> (type-of (values))
+#["retvals-signature" ()]
+
+vicare> (type-of (values 1 2))
+#["retvals-signature" (#'<fixnum> #'<fixnum>)]
+
+vicare> (type-of 123)
+#["retvals-signature" (#'<fixnum>)]
+
+vicare> (type-of ((lambda (@{_ symbol@}) 'ciao)))
+#["retvals-signature" (#'<symbol>)]
+@end example
+@end deffn
+
 
 @c end of file

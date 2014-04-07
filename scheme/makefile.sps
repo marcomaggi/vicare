@@ -391,6 +391,7 @@
      (tag-setter				(core-macro . tag-setter))
      (tag-dispatch				(core-macro . tag-dispatch))
      (tag-cast					(core-macro . tag-cast))
+     (type-of					(core-macro . type-of))
      (splice-first-expand			(core-macro . splice-first-expand))
      (unsafe					(core-macro . unsafe))
      (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
@@ -3684,6 +3685,7 @@
     (tag-setter					$expander-tags)
     (tag-dispatch				$expander-tags)
     (tag-cast					$expander-tags)
+    (type-of					$expander-tags)
 
     (<top>					$expander-tags)
     (<void>					$expander-tags)
