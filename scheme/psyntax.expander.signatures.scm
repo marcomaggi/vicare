@@ -706,7 +706,12 @@
      ;;With return values tagging.
      (((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?formals)
       (underscore-id? ?who)
-      (let ((retvals.stx (append ?rv-tag* ?rv-rest-tag)))
+      (let ((retvals.stx (append ?rv-tag*
+				 ;;We  want  a  proper  list when  possible,  not  an
+				 ;;improper list with the syntax object #'() as tail.
+				 (if (null? (syntax->datum ?rv-rest-tag))
+				     '()
+				   ?rv-rest-tag))))
 	(unless (retvals-signature-syntax? retvals.stx)
 	  (syntax-violation __who__
 	    "invalid return values signature syntax" input-form.stx retvals.stx))
