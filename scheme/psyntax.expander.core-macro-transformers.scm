@@ -1622,7 +1622,7 @@
   #| end of module |# )
 
 
-;;;; module core-macro-transformer: TYPE-DESCRIPTOR, IS-A?
+;;;; module core-macro-transformer: TYPE-DESCRIPTOR
 
 (define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand TYPE-DESCRIPTOR syntaxes  from the top-level
@@ -1659,51 +1659,30 @@
        ))
     ))
 
-(define (is-a?-transformer expr-stx lexenv.run lexenv.expand)
+
+;;;; module core-macro-transformer: IS-A?
+
+(define (is-a?-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand Vicare's IS-A?  syntaxes  from the top-level
-  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
-  ;;given LEXENV; return a PSI struct.
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'is-a?))
-  (syntax-match expr-stx ()
-    ((_ ?jolly ?type-id)
-     (and (identifier? ?type-id)
+  (syntax-match input-form.stx ()
+    ((_ ?jolly ?tag)
+     (and (tag-identifier? ?tag)
 	  (jolly-id? ?jolly))
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      (record-type-and-record? ,?type-id obj)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      (struct-type-and-struct? ,?type-id obj)))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(let ((spec (identifier-object-type-spec ?type-id)))
-	  (chi-expr (object-type-spec-pred-stx spec)
-		    lexenv.run lexenv.expand)))
-       ))
+     (let ((spec (identifier-object-type-spec ?tag)))
+       (chi-expr (object-type-spec-pred-stx spec)
+		 lexenv.run lexenv.expand)))
 
-    ((_ ?expr ?type-id)
-     (identifier? ?type-id)
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(record-type-and-record? ,?type-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(struct-type-and-struct? ,?type-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(let ((spec (identifier-object-type-spec ?type-id)))
-	  (chi-expr (bless
-		     `(,(object-type-spec-pred-stx spec) ,?expr))
-		    lexenv.run lexenv.expand)))
-       ))
+    ((_ ?expr ?tag)
+     (tag-identifier? ?tag)
+     (let ((spec (identifier-object-type-spec ?tag)))
+       (chi-expr (bless
+		  `(,(object-type-spec-pred-stx spec) ,?expr))
+		 lexenv.run lexenv.expand)))
     ))
 
 

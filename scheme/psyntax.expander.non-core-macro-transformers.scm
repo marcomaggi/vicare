@@ -4090,7 +4090,6 @@
 ;;eval: (put 'build-lexical-assignment		'scheme-indent-function 1)
 ;;eval: (put 'build-letrec*			'scheme-indent-function 1)
 ;;eval: (put 'build-data			'scheme-indent-function 1)
-;;eval: (put 'case-object-type-binding		'scheme-indent-function 1)
 ;;eval: (put 'if-wants-descriptive-gensyms	'scheme-indent-function 1)
 ;;eval: (put 'push-lexical-contour		'scheme-indent-function 1)
 ;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
