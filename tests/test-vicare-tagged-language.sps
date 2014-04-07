@@ -2210,33 +2210,6 @@
 	      (slot-ref O c)))
     => '(11 22 33))
 
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ()
-	(define-struct alpha
-	  (a b c))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	(list ($slot-ref O a)
-	      ($slot-ref O b)
-	      ($slot-ref O c)))
-    => '(1 2 3))
-
-  (check
-      (let ()
-	(define-struct alpha
-	  (a b c))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	($slot-set! O a 11)
-	($slot-set! O b 22)
-	($slot-set! O c 33)
-	(list ($slot-ref O a)
-	      ($slot-ref O b)
-	      ($slot-ref O c)))
-    => '(11 22 33))
-
   #t)
 
 
@@ -2265,33 +2238,6 @@
 	(list (slot-ref O a)
 	      (slot-ref O b)
 	      (slot-ref O c)))
-    => '(11 22 33))
-
-;;; --------------------------------------------------------------------
-
-  (check
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b) (mutable c)))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	(list ($slot-ref O a)
-	      ($slot-ref O b)
-	      ($slot-ref O c)))
-    => '(1 2 3))
-
-  (check
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable a) (mutable b) (mutable c)))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	($slot-set! O a 11)
-	($slot-set! O b 22)
-	($slot-set! O c 33)
-	(list ($slot-ref O a)
-	      ($slot-ref O b)
-	      ($slot-ref O c)))
     => '(11 22 33))
 
 ;;; --------------------------------------------------------------------
@@ -2367,46 +2313,6 @@
 	(slot-set! O b3 66)
 	(list (slot-ref O a1) (slot-ref O a2) (slot-ref O a3)
 	      (slot-ref O b1) (slot-ref O b2) (slot-ref O b3)))
-    => '(11 2 33 44 5 66))
-
-  (check
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable   a1)
-		  (immutable a2)
-		  (mutable   a3)))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields (mutable   b1)
-		  (immutable b2)
-		  (mutable   b3)))
-	(define {O beta}
-	  (make-beta 1 2 3 4 5 6))
-	(list ($slot-ref O a1) ($slot-ref O a2) ($slot-ref O a3)
-	      ($slot-ref O b1) ($slot-ref O b2) ($slot-ref O b3)))
-    => '(1 2 3 4 5 6))
-
-  (check
-      (let ()
-	(define-record-type alpha
-	  (fields (mutable   a1)
-		  (immutable a2)
-		  (mutable   a3)))
-	(define-record-type beta
-	  (parent alpha)
-	  (fields (mutable   b1)
-		  (immutable b2)
-		  (mutable   b3)))
-	(define {O beta}
-	  (make-beta 1 2 3 4 5 6))
-	($slot-set! O a1 11)
-	#;($slot-set! O a2 22)
-	($slot-set! O a3 33)
-	($slot-set! O b1 44)
-	#;($slot-set! O b2 55)
-	($slot-set! O b3 66)
-	(list ($slot-ref O a1) ($slot-ref O a2) ($slot-ref O a3)
-	      ($slot-ref O b1) ($slot-ref O b2) ($slot-ref O b3)))
     => '(11 2 33 44 5 66))
 
   #t)

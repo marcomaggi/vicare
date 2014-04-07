@@ -67,8 +67,6 @@
     ((is-a?)					is-a?-transformer)
     ((slot-ref)					slot-ref-transformer)
     ((slot-set!)				slot-set!-transformer)
-    (($slot-ref)				$slot-ref-transformer)
-    (($slot-set!)				$slot-set!-transformer)
 
     ((tag-predicate)				tag-predicate-transformer)
     ((tag-procedure-argument-validator)		tag-procedure-argument-validator-transformer)
@@ -1686,7 +1684,7 @@
     ))
 
 
-;;;; module core-macro-transformer: SLOT-REF, SLOT-SET!, $SLOT-REF, $SLOT-SET!
+;;;; module core-macro-transformer: SLOT-REF, SLOT-SET!
 
 (define (slot-ref-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand Vicare's SLOT-REF syntaxes from the top-level
@@ -1696,245 +1694,87 @@
   (define-fluid-override __who__
     (identifier-syntax 'slot-ref))
   (syntax-match input-form.stx ()
-    ((_ ?jolly ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
+    ((_ ?jolly ?field-name-id ?tag)
+     (and (tag-identifier? ?tag)
 	  (identifier? ?field-name-id)
 	  (jolly-id? ?jolly))
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      (record-type-field-ref ,?type-id ,?field-name-id obj)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      (struct-type-field-ref ,?type-id ,?field-name-id obj)))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(chi-expr (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)
-		  lexenv.run lexenv.expand))
-       ))
+     (chi-expr (tag-identifier-accessor ?tag ?field-name-id input-form.stx)
+	       lexenv.run lexenv.expand))
 
-    ((_ ?expr ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
+    ((_ ?expr ?field-name-id ?tag)
+     (and (tag-identifier? ?tag)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(record-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(let ((accessor-stx (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)))
-	  (chi-expr (bless
-		     `(,accessor-stx ,?expr))
-		    lexenv.run lexenv.expand)))
-       ))
+     (let ((accessor-stx (tag-identifier-accessor ?tag ?field-name-id input-form.stx)))
+       (chi-expr (bless
+		  `(,accessor-stx ,?expr))
+		 lexenv.run lexenv.expand)))
 
-    ;;Missing type identifier.  Try to retrieve the type from the tag of
-    ;;the subject.
-    ((_ ?id ?field-name-id)
-     (and (identifier? ?id)
-	  (identifier? ?field-name-id))
-     (cond ((identifier-tag ?id)
-	    => (lambda (tag-id)
-		 (let ((accessor-stx (tag-identifier-accessor tag-id ?field-name-id input-form.stx)))
-		   (chi-expr (bless
-			      `(,accessor-stx ,?id))
-			     lexenv.run lexenv.expand))))
-	   (else
-	    (stx-error input-form.stx "unable to determine type tag of expression"))))
+    ;;Missing type identifier.  Try to retrieve the type from the tag of the subject.
+    ((_ ?expr ?field-name-id)
+     (identifier? ?field-name-id)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr         expr.psi))
+	    (expr.sig  (psi-retvals-signature expr.psi)))
+       (syntax-match (retvals-signature-tags expr.sig) ()
+	 ((?tag)
+	  (let* ((accessor.stx  (tag-identifier-accessor ?tag ?field-name-id input-form.stx))
+		 (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
+		 (accessor.core (psi-core-expr accessor.psi)))
+	    (make-psi (build-application input-form.stx
+			accessor.core
+			(list expr.core))
+		      (psi-application-retvals-signature accessor.psi))))
+	 (_
+	  (syntax-violation __who__
+	    "unable to determine type tag of expression, or invalid expression signature" input-form.stx))
+	 )))
     ))
 
 (define (slot-set!-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function  used  to  expand  Vicare's  SLOT-SET!  syntaxes  from  the
-  ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the context
-  ;;of the given LEXENV; return a PSI struct.
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'slot-set!))
   (syntax-match input-form.stx ()
-    ((_ ?jolly1 ?field-name-id ?type-id ?jolly2)
-     (and (identifier? ?type-id)
+    ((_ ?jolly1 ?field-name-id ?tag ?jolly2)
+     (and (tag-identifier? ?tag)
 	  (identifier? ?field-name-id)
 	  (jolly-id? ?jolly1)
 	  (jolly-id? ?jolly2))
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj new-value)
-		      (record-type-field-set! ,?type-id ,?field-name-id obj new-value)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj new-value)
-		      (struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(chi-expr (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)
-		  lexenv.run lexenv.expand))
-       ))
+     (chi-expr (tag-identifier-mutator ?tag ?field-name-id input-form.stx)
+	       lexenv.run lexenv.expand))
 
-    ((_ ?expr ?field-name-id ?type-id ?new-value)
-     (and (identifier? ?type-id)
+    ((_ ?expr ?field-name-id ?tag ?new-value)
+     (and (tag-identifier? ?tag)
 	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(let ((mutator-stx (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)))
-	  (chi-expr (bless
-		     `(,mutator-stx ,?expr ,?new-value))
-		    lexenv.run lexenv.expand)))
-       ))
+     (let ((mutator-stx (tag-identifier-mutator ?tag ?field-name-id input-form.stx)))
+       (chi-expr (bless
+		  `(,mutator-stx ,?expr ,?new-value))
+		 lexenv.run lexenv.expand)))
 
-    ;;Missing type identifier.  Try to retrieve the type from the tag of
-    ;;the subject.
-    ((_ ?id ?field-name-id ?new-value)
-     (and (identifier? ?id)
-	  (identifier? ?field-name-id))
-     (cond ((identifier-tag ?id)
-	    => (lambda (tag-id)
-		 (let ((mutator-stx (tag-identifier-mutator tag-id ?field-name-id input-form.stx)))
-		   (chi-expr (bless
-			      `(,mutator-stx ,?id ,?new-value))
-			     lexenv.run lexenv.expand))))
-	   (else
-	    (stx-error input-form.stx "unable to determine type tag of expression"))))
-    ))
-
-(define ($slot-ref-transformer input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used  to  expand  Vicare's  $SLOT-REF  syntaxes  from  the
-  ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the context
-  ;;of the given LEXENV; return a PSI struct.
-  ;;
-  (define-constant __who__ '$slot-ref)
-  (syntax-match input-form.stx ()
-    ((_ ?jolly ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id)
-	  (jolly-id? ?jolly))
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      ($record-type-field-ref ,?type-id ,?field-name-id obj)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj)
-		      ($struct-type-field-ref ,?type-id ,?field-name-id obj)))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(chi-expr (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)
-		  lexenv.run lexenv.expand))
-       ))
-
-    ((_ ?expr ?field-name-id ?type-id)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `($record-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `($struct-type-field-ref ,?type-id ,?field-name-id ,?expr))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(let ((accessor-stx (tag-identifier-accessor ?type-id ?field-name-id input-form.stx)))
-	  (chi-expr (bless
-		     `(,accessor-stx ,?expr))
-		    lexenv.run lexenv.expand)))
-       ))
-
-    ;;Missing type identifier.  Try to retrieve the type from the tag of
-    ;;the subject.
-    ((_ ?id ?field-name-id)
-     (and (identifier? ?id)
-	  (identifier? ?field-name-id))
-     (cond ((identifier-tag ?id)
-	    => (lambda (tag-id)
-		 (let ((accessor-stx (tag-identifier-accessor tag-id ?field-name-id input-form.stx)))
-		   (chi-expr (bless
-			      `(,accessor-stx ,?id))
-			     lexenv.run lexenv.expand))))
-	   (else
-	    (stx-error input-form.stx "unable to determine type tag of expression"))))
-    ))
-
-(define ($slot-set!-transformer input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer  function  used to  expand  Vicare's  $SLOT-SET!  syntaxes  from  the
-  ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the context
-  ;;of the given LEXENV; return a PSI struct.
-  ;;
-  (define-fluid-override __who__
-    (identifier-syntax '$slot-set!))
-  (syntax-match input-form.stx ()
-    ((_ ?jolly1 ?field-name-id ?type-id ?jolly2)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id)
-	  (jolly-id? ?jolly1)
-	  (jolly-id? ?jolly2))
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `(lambda (obj new-value)
-		      ($record-type-field-set! ,?type-id ,?field-name-id obj new-value)))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `(lambda (obj new-value)
-		      ($struct-type-field-set! ,?type-id ,?field-name-id obj new-value)))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(let ((mutator-stx (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)))
-	  (chi-expr mutator-stx lexenv.run lexenv.expand)))
-       ))
-
-    ((_ ?expr ?field-name-id ?type-id ?new-value)
-     (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
-     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
-       ((r6rs-record-type)
-	(chi-expr (bless
-		   `($record-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-       ((vicare-struct-type)
-	(chi-expr (bless
-		   `($struct-type-field-set! ,?type-id ,?field-name-id ,?expr ,?new-value))
-		  lexenv.run lexenv.expand))
-       ((object-type-spec)
-	(let ((mutator-stx (tag-identifier-mutator ?type-id ?field-name-id input-form.stx)))
-	  (chi-expr (bless
-		     `(,mutator-stx ,?expr ,?new-value))
-		    lexenv.run lexenv.expand)))
-       ))
-
-    ;;Missing type identifier.  Try to retrieve the type from the tag of
-    ;;the subject.
-    ((_ ?id ?field-name-id ?new-value)
-     (and (identifier? ?id)
-	  (identifier? ?field-name-id))
-     (cond ((identifier-tag ?id)
-	    => (lambda (tag-id)
-		 (let ((mutator-stx (tag-identifier-mutator tag-id ?field-name-id input-form.stx)))
-		   (chi-expr (bless
-			      `(,mutator-stx ,?id ,?new-value))
-			     lexenv.run lexenv.expand))))
-	   (else
-	    (stx-error input-form.stx "unable to determine type tag of expression"))))
+    ;;Missing type identifier.  Try to retrieve the type from the tag of the subject.
+    ((_ ?expr ?field-name-id ?new-value)
+     (identifier? ?field-name-id)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr         expr.psi))
+	    (expr.sig  (psi-retvals-signature expr.psi)))
+       (syntax-match (retvals-signature-tags expr.sig) ()
+	 ((?tag)
+	  (let* ((mutator.stx    (tag-identifier-mutator ?tag ?field-name-id input-form.stx))
+		 (mutator.psi    (chi-expr mutator.stx lexenv.run lexenv.expand))
+		 (mutator.core   (psi-core-expr mutator.psi))
+		 (new-value.psi  (chi-expr ?new-value lexenv.run lexenv.expand))
+		 (new-value.core (psi-core-expr new-value.psi)))
+	    (make-psi (build-application input-form.stx
+			mutator.core
+			(list expr.core new-value.core))
+		      (psi-application-retvals-signature mutator.psi))))
+	 (_
+	  (syntax-violation __who__
+	    "unable to determine type tag of expression, or invalid expression signature" input-form.stx))
+	 )))
     ))
 
 

@@ -1041,72 +1041,6 @@
 
     (void))
 
-;;; --------------------------------------------------------------------
-
-  (let ()
-    (define-record-type alpha
-      (fields (mutable a)
-	      (mutable b)
-	      (mutable c)))
-
-    (define-record-type beta
-      (fields (mutable a)
-	      (mutable b)
-	      (mutable c)))
-
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (list ($slot-ref stru a alpha)
-		($slot-ref stru b alpha)
-		($slot-ref stru c alpha)))
-      => '(1 2 3))
-
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  ($slot-set! stru a alpha 19)
-	  ($slot-set! stru b alpha 29)
-	  ($slot-set! stru c alpha 39)
-	  (list ($slot-ref stru a alpha)
-		($slot-ref stru b alpha)
-		($slot-ref stru c alpha)))
-      => '(19 29 39))
-
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (list (($slot-ref <> a alpha) stru)
-		(($slot-ref <> b alpha) stru)
-		(($slot-ref <> c alpha) stru)))
-      => '(1 2 3))
-
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (($slot-set! <> a alpha <>) stru 19)
-	  (($slot-set! <> b alpha <>) stru 29)
-	  (($slot-set! <> c alpha <>) stru 39)
-	  (list (($slot-ref <> a alpha) stru)
-		(($slot-ref <> b alpha) stru)
-		(($slot-ref <> c alpha) stru)))
-      => '(19 29 39))
-
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (list (($slot-ref _ a alpha) stru)
-		(($slot-ref _ b alpha) stru)
-		(($slot-ref _ c alpha) stru)))
-      => '(1 2 3))
-
-    (check
-	(let ((stru (alpha (1 2 3))))
-	  (($slot-set! _ a alpha _) stru 19)
-	  (($slot-set! _ b alpha _) stru 29)
-	  (($slot-set! _ c alpha _) stru 39)
-	  (list (($slot-ref _ a alpha) stru)
-		(($slot-ref _ b alpha) stru)
-		(($slot-ref _ c alpha) stru)))
-      => '(19 29 39))
-
-    (void))
-
   #t)
 
 

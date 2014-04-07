@@ -1640,62 +1640,6 @@ When @code{<>} or @code{_} is used in place of both @meta{expr} and
 @meta{new-val}: the syntax evaluates to a slot mutator function.
 @end deffn
 
-@c ------------------------------------------------------------
-
-@deffn Syntax $slot-ref @meta{expr} @meta{field-name} @meta{type}
-@deffnx Syntax $slot-ref <> @meta{field-name} @meta{type}
-@deffnx Syntax $slot-ref _ @meta{field-name} @meta{type}
-@deffnx {Auxiliary Syntax} <>
-@deffnx {Auxiliary Syntax} _
-Expand to the unsafe slot accessor of @meta{field-name} applied to
-@meta{expr}.
-
-@meta{expr} can be any expression evaluating to an instance of
-@meta{type}; @meta{type} must be an identifier bound to a Vicare
-struct--type descriptor or a @rnrs{6} record--type descriptor;
-@meta{field-name} must be an identifier representing the name of a
-field.
-
-When @meta{type} is bound to a struct--type descriptor: this syntax
-expands to a use of @func{$struct-type-field-ref}; @ref{iklib structs
-fields, $struct-type-field-ref}.
-
-When @meta{type} is bound to a record--type descriptor: this syntax
-expands to a use of @func{$record-type-field-ref}; @ref{iklib records
-fields, $record-type-field-ref}.
-
-When @code{<>} or @code{_} is used in place of @meta{expr}: the syntax
-evaluates to a slot accessor function.
-@end deffn
-
-@c ------------------------------------------------------------
-
-@deffn Syntax $slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
-@deffnx Syntax $slot-set! <> @meta{field-name} @meta{type} <>
-@deffnx Syntax $slot-set! _ @meta{field-name} @meta{type} _
-@deffnx {Auxiliary Syntax} <>
-@deffnx {Auxiliary Syntax} _
-Expand to the unsafe slot mutator of @meta{field-name} applied to
-@meta{expr} and @meta{new-val}.
-
-@meta{expr} can be any expression evaluating to an instance of
-@meta{type}; @meta{type} must be an identifier bound to a Vicare
-struct--type descriptor or a @rnrs{6} record--type descriptor;
-@meta{field-name} must be an identifier representing the name of a
-field.
-
-When @meta{type} is bound to a struct--type descriptor: this syntax
-expands to a use of @func{$struct-type-field-set!}; @ref{iklib structs
-fields, $struct-type-field-set!}.
-
-When @meta{type} is bound to a record--type descriptor: this syntax
-expands to a use of @func{$record-type-field-set!}; @ref{iklib records
-fields, $record-type-field-set!}.
-
-When @code{<>} or @code{_} is used in place of both @meta{expr} and
-@meta{new-val}: the syntax evaluates to a slot mutator function.
-@end deffn
-
 @c page
 @node iklib syntaxes try
 @subsection The @func{try}, @func{catch}, @func{finally} syntaxes

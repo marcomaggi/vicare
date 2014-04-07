@@ -95,24 +95,11 @@
     => 1 2)
 
   (check
-      (values ($slot-ref '(1 . 2) car <pair>)
-	      ($slot-ref '(1 . 2) cdr <pair>))
-    => 1 2)
-
-  (check
       (let ((P (cons 1 2)))
   	(slot-set! P car <pair> 10)
   	(slot-set! P cdr <pair> 20)
   	(values (slot-ref P car <pair>)
   		(slot-ref P cdr <pair>)))
-    => 10 20)
-
-  (check
-      (let ((P (cons 1 2)))
-  	($slot-set! P car <pair> 10)
-  	($slot-set! P cdr <pair> 20)
-  	(values ($slot-ref P car <pair>)
-  		($slot-ref P cdr <pair>)))
     => 10 20)
 
 ;;; --------------------------------------------------------------------
@@ -122,25 +109,12 @@
 	      ((slot-ref <> cdr <pair>) '(1 . 2)))
     => 1 2)
 
-   (check
-      (values (($slot-ref <> car <pair>) '(1 . 2))
-	      (($slot-ref <> cdr <pair>) '(1 . 2)))
-    => 1 2)
-
   (check
       (let ((P (cons 1 2)))
 	((slot-set! <> car <pair> <>) P 10)
 	((slot-set! <> cdr <pair> <>) P 20)
 	(values ((slot-ref <> car <pair>) P)
 		((slot-ref <> cdr <pair>) P)))
-    => 10 20)
-
-  (check
-      (let ((P (cons 1 2)))
-	(($slot-set! <> car <pair> <>) P 10)
-	(($slot-set! <> cdr <pair> <>) P 20)
-	(values (($slot-ref <> car <pair>) P)
-		(($slot-ref <> cdr <pair>) P)))
     => 10 20)
 
   #t)
