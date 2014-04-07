@@ -6301,12 +6301,17 @@
 						     (scheme-stx '?core-prim)
 						   (set! memoized-id id))))))))))
   (define-core-prim-id-retriever underscore-id		_)
+  (define-core-prim-id-retriever ellipsis-id		...)
   (define-core-prim-id-retriever procedure-pred-id	procedure?)
   #| end of let-syntax |# )
 
 (define (underscore-id? id)
   (and (identifier? id)
        (free-id=? id (underscore-id))))
+
+(define (ellipsis-id? id)
+  (and (identifier? id)
+       (free-id=? id (ellipsis-id))))
 
 
 ;;;; macro transformer modules

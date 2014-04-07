@@ -1442,6 +1442,48 @@ expression.  This syntax must be used in expression context.
 @subsection Type syntaxes
 
 
+The syntactic bindings of Vicare struct types and @rnrs{6} record types
+allow the identifier name to act as reference to the maker function with
+the special syntax:
+
+@example
+(?type (?arg ...))
+@end example
+
+@noindent
+that is, for struct types:
+
+@example
+(import (vicare))
+
+(define-struct color
+  (red green blue))
+
+(color (1 2 3))                    @result{} #["color" 1 2 3]
+(apply (color (...)) 1 '(2 3))     @result{} #["color" 1 2 3]
+@end example
+
+@noindent
+and for @rnrs{6} record types:
+
+@example
+(import (vicare))
+
+(define-record-type color
+  (fields red green blue))
+
+(color (1 2 3))
+@result{} #[r6rs-record: color red=1 green=2 blue=3]
+
+(apply (color (...)) 1 '(2 3))
+@result{}  #[r6rs-record: color red=1 green=2 blue=3]
+@end example
+
+@noindent
+where @code{...} is the ellipsis binding exported by @rsixlibrary{base}
+and @library{vicare}.
+
+
 @deffn Syntax type-descriptor @meta{name}
 Expand to an expression which, when evaluated, results in:
 

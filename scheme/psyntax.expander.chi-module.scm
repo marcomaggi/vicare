@@ -116,8 +116,6 @@
 	     local-ctv global-ctv
 	     displaced-lexical)
 	    (values type (syntactic-binding-value binding) ?id))
-	   (($rtd)
-	    (values 'type-maker-reference (syntactic-binding-value binding) ?id))
 	   (else
 	    ;;This will cause an error to be raised later.
 	    (values 'other #f #f))))))
@@ -132,26 +130,27 @@
      ;;
      ;;   (?car ?form ...)
      ;;
-     (let ((label (id->label/intern ?car)))
-       (unless label
-	 (%raise-unbound-error #f ?car ?car))
-       (let* ((binding (label->syntactic-binding label lexenv))
-	      (type    (syntactic-binding-type binding)))
-	 (case type
-	   ((core-macro
-	     define define-syntax define-alias
-	     define-fluid-syntax define-fluid-override
-	     let-syntax letrec-syntax begin-for-syntax
-	     begin set! stale-when
-	     local-ctv global-ctv
-	     global-macro global-macro! local-macro local-macro! macro
-	     import export library module)
-	    (values type (syntactic-binding-value binding) ?car))
-	   (($rtd)
-	    (values 'type-maker-application (syntactic-binding-value binding) ?car))
+     (cond ((id->label/intern ?car)
+	    => (lambda (label)
+		 (let* ((binding (label->syntactic-binding label lexenv))
+			(type    (syntactic-binding-type binding)))
+		   (case type
+		     ((core-macro
+		       define define-syntax define-alias
+		       define-fluid-syntax define-fluid-override
+		       let-syntax letrec-syntax begin-for-syntax
+		       begin set! stale-when
+		       local-ctv global-ctv
+		       global-macro global-macro! local-macro local-macro! macro
+		       import export library module)
+		      (values type (syntactic-binding-value binding) ?car))
+		     (($rtd)
+		      (values 'type-maker-application (syntactic-binding-value binding) ?car))
+		     (else
+		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
+		      (values 'call #f #f))))))
 	   (else
-	    ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
-	    (values 'call #f #f))))))
+	    (%raise-unbound-error #f ?car ?car))))
 
     ((?car . ?cdr)
      ;;Here we know that EXPR.STX has the format:
@@ -615,21 +614,29 @@
 			    (make-retvals-signature-single-top))))
 	    (stx-error expr.stx "attempt to reference an unexportable variable")))
 
-	 ((type-maker-reference)
-	  ;;Here we  expand an identifier in  reference position, whose binding  is a
-	  ;;struct or record  type name.  The result is an  expression that evaluates
-	  ;;to the struct or record maker.
-	  ;;
-	  (%process-type-maker-reference expr.stx bind-val lexenv.run lexenv.expand))
-
 	 ((type-maker-application)
 	  ;;Here we  expand a  form whose  car is  an identifier  whose binding  is a
 	  ;;struct or record  type name.  The result is an  expression that evaluates
 	  ;;to the application of the struct or record maker.
 	  ;;
-	  (%process-type-maker-application expr.stx bind-val lexenv.run lexenv.expand))
+	  (%chi-type-maker-application expr.stx bind-val lexenv.run lexenv.expand))
 
 	 ((tag-cast-operator)
+	  ;;The input form is:
+	  ;;
+	  ;;   (?tag)
+	  ;;
+	  ;;and we imagine it is the first form in:
+	  ;;
+	  ;;   ((?tag) ?object)
+	  ;;
+	  ;;this is the  syntax of casting a  value from a type to  another.  We want
+	  ;;the following chain of expansions:
+	  ;;
+	  ;;   ((?tag) ?object)
+	  ;;   ==> ((splice-first-expand (tag-cast ?tag)) ?object)
+	  ;;   ==> (tag-cast ?tag ?object)
+	  ;;
 	  (chi-expr (bless
 		     `(splice-first-expand (tag-cast ,kwd)))
 		    lexenv.run lexenv.expand))
@@ -641,7 +648,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%process-type-maker-reference expr.stx bind-val lexenv.run lexenv.expand)
+  (define (%chi-type-maker-application expr.stx bind-val lexenv.run lexenv.expand)
+    ;;Type maker application to a tuple of arguments.
+    ;;
     ;;BIND-VAL is the binding value of an R6RS record-type:
     ;;
     ;;   (?rtd-id ?rcd-id)
@@ -651,49 +660,39 @@
     ;;
     ;;   #<struct-type-descriptor>
     ;;
-    (cond ((r6rs-record-type-descriptor-bindval? bind-val)
-	   ;;The binding is for an R6RS record type.
-	   (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
-	     (chi-expr (bless
-			`(record-constructor ,rcd-id))
-		       lexenv.run lexenv.expand)))
+    (syntax-match expr.stx ()
+      ((?tag (?ellipsis))
+       (ellipsis-id? ?ellipsis)
+       (cond ((r6rs-record-type-descriptor-bindval? bind-val)
+	      ;;The binding is for an R6RS record type.
+	      (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
+		(chi-expr (bless
+			   `(record-constructor ,rcd-id))
+			  lexenv.run lexenv.expand)))
 
-	  ((struct-type-descriptor-bindval? bind-val)
-	   ;;The binding is for a Vicare struct type.
-	   (let ((field-name* (struct-type-field-names
-			       (struct-type-descriptor-bindval-std bind-val))))
-	     (chi-expr (bless
-			`(lambda ,field-name*
-			   ($struct (quote ,bind-val) . ,field-name*)))
-		       lexenv.run lexenv.expand)))
+	     ((struct-type-descriptor-bindval? bind-val)
+	      ;;The binding is for a Vicare struct type.
+	      (let ((field-name* (struct-type-field-names
+				  (struct-type-descriptor-bindval-std bind-val))))
+		(chi-expr (bless
+			   `(lambda ,field-name*
+			      ($struct (quote ,bind-val) . ,field-name*)))
+			  lexenv.run lexenv.expand)))
 
-	  (else
-	   (stx-error expr.stx "invalid binding for identifier"))))
+	     (else
+	      (syntax-violation (syntax->datum ?tag)
+		"invalid binding for identifier" expr.stx))))
 
-  (define (%process-type-maker-application expr.stx bind-val lexenv.run lexenv.expand)
-    ;;BIND-VAL is the binding value of an R6RS record-type:
-    ;;
-    ;;   (?rtd-id ?rcd-id)
-    ;;   (?rtd-id ?rcd-id . ?r6rs-record-type-spec)
-    ;;
-    ;;or the binding value of a Vicare struct type:
-    ;;
-    ;;   #<struct-type-descriptor>
-    ;;
-    (cond ((r6rs-record-type-descriptor-bindval? bind-val)
-	   ;;The binding is for an R6RS record type.
-	   (syntax-match expr.stx ()
-	     ((?rtd ?arg* ...)
+      ((?tag (?arg* ...))
+       (cond ((r6rs-record-type-descriptor-bindval? bind-val)
+	      ;;The binding is for an R6RS record type.
 	      (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
 		(chi-expr (bless
 			   `((record-constructor ,rcd-id) . ,?arg*))
 			  lexenv.run lexenv.expand)))
-	     ))
 
-	  ((struct-type-descriptor-bindval? bind-val)
-	   ;;The binding is for a Vicare struct type.
-	   (syntax-match expr.stx ()
-	     ((?rtd ?arg* ...)
+	     ((struct-type-descriptor-bindval? bind-val)
+	      ;;The binding is for a Vicare struct type.
 	      (let ((field-name* (struct-type-field-names
 				  (struct-type-descriptor-bindval-std bind-val))))
 		(chi-expr (bless
@@ -701,10 +700,11 @@
 			       ($struct (quote ,bind-val) . ,field-name*))
 			     . ,?arg*))
 			  lexenv.run lexenv.expand)))
-	     ))
 
-	  (else
-	   (stx-error expr.stx "invalid binding for identifier"))))
+	     (else
+	      (syntax-violation (syntax->datum ?tag)
+		"invalid binding for identifier" expr.stx))))
+      ))
 
 ;;; --------------------------------------------------------------------
 

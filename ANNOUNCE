@@ -317,23 +317,23 @@ Lots of backwards incompatibilities... life is hard!
 
 * Modified syntactic  bindings of  Vicare struct  types and  R6RS record
   types to  allow the identifier name  to act as reference  to the maker
-  function; that is, for struct types:
+  function with a special syntax; that is, for struct types:
 
      (define-struct color
        (red green blue))
 
-     (color 1 2 3)		=> #["color" 1 2 3]
-     (apply color 1 '(2 3))	=> #["color" 1 2 3]
+     (color (1 2 3))			=> #["color" 1 2 3]
+     (apply (color (...)) 1 '(2 3))	=> #["color" 1 2 3]
 
   and for R6RS record types:
 
      (define-record-type color
        (fields red green blue))
 
-     (color 1 2 3)
+     (color (1 2 3))
      => #[r6rs-record: color red=1 green=2 blue=3]
 
-     (apply color 1 '(2 3))
+     (apply (color (...)) 1 '(2 3))
      =>  #[r6rs-record: color red=1 green=2 blue=3]
 
 * Added some experimental functions to (vicare):

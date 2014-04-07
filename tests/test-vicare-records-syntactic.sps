@@ -905,12 +905,12 @@
       (fields a b))
 
     (check
-	(let ((reco (alpha 1 2 3)))
+	(let ((reco (alpha (1 2 3))))
 	  (alpha? reco))
       => #t)
 
     (check
-	(let ((reco (beta 1 2)))
+	(let ((reco (beta (1 2))))
 	  (beta? reco))
       => #t)
 
@@ -924,12 +924,12 @@
       (fields a b))
 
     (check
-	(let ((reco (apply alpha 1 '(2 3))))
+	(let ((reco (apply (alpha (...)) 1 '(2 3))))
 	  (alpha? reco))
       => #t)
 
     (check
-	(let ((reco (apply beta '(1 2))))
+	(let ((reco (apply (beta (...)) '(1 2))))
 	  (beta? reco))
       => #t)
 
@@ -984,14 +984,14 @@
 	      (mutable c)))
 
     (check
-	(let ((stru (alpha 1 2 3)))
+	(let ((stru (alpha (1 2 3))))
 	  (list (slot-ref stru a alpha)
 		(slot-ref stru b alpha)
 		(slot-ref stru c alpha)))
       => '(1 2 3))
 
     (check
-	(let ((stru (alpha 1 2 3)))
+	(let ((stru (alpha (1 2 3))))
 	  (slot-set! stru a alpha 19)
 	  (slot-set! stru b alpha 29)
 	  (slot-set! stru c alpha 39)
@@ -1001,14 +1001,14 @@
       => '(19 29 39))
 
     (check
-	(let ((stru (alpha 1 2 3)))
+	(let ((stru (alpha (1 2 3))))
 	  (list ((slot-ref <> a alpha) stru)
 		((slot-ref <> b alpha) stru)
 		((slot-ref <> c alpha) stru)))
       => '(1 2 3))
 
     (check
-	(let ((stru (alpha 1 2 3)))
+	(let ((stru (alpha (1 2 3))))
 	  ((slot-set! <> a alpha <>) stru 19)
 	  ((slot-set! <> b alpha <>) stru 29)
 	  ((slot-set! <> c alpha <>) stru 39)
@@ -1033,14 +1033,14 @@
 	      (mutable c)))
 
     (check
-	(let ((stru (alpha 1 2 3)))
+	(let ((stru (alpha (1 2 3))))
 	  (list ($slot-ref stru a alpha)
 		($slot-ref stru b alpha)
 		($slot-ref stru c alpha)))
       => '(1 2 3))
 
     (check
-	(let ((stru (alpha 1 2 3)))
+	(let ((stru (alpha (1 2 3))))
 	  ($slot-set! stru a alpha 19)
 	  ($slot-set! stru b alpha 29)
 	  ($slot-set! stru c alpha 39)
@@ -1050,14 +1050,14 @@
       => '(19 29 39))
 
     (check
-	(let ((stru (alpha 1 2 3)))
+	(let ((stru (alpha (1 2 3))))
 	  (list (($slot-ref <> a alpha) stru)
 		(($slot-ref <> b alpha) stru)
 		(($slot-ref <> c alpha) stru)))
       => '(1 2 3))
 
     (check
-	(let ((stru (alpha 1 2 3)))
+	(let ((stru (alpha (1 2 3))))
 	  (($slot-set! <> a alpha <>) stru 19)
 	  (($slot-set! <> b alpha <>) stru 29)
 	  (($slot-set! <> c alpha <>) stru 39)

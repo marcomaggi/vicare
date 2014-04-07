@@ -539,22 +539,22 @@
 ;;; generic maker syntax
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(alpha? stru))
     => #t)
 
   (check
-      (let ((stru (beta 1 2 3)))
+      (let ((stru (beta (1 2 3))))
 	(beta? stru))
     => #t)
 
   (check
-      (let ((stru (apply alpha 1 '(2 3))))
+      (let ((stru (apply (alpha (...)) 1 '(2 3))))
 	(alpha? stru))
     => #t)
 
   (check
-      (let ((stru (apply beta '(1 2 3))))
+      (let ((stru (apply (beta (...)) '(1 2 3))))
 	(beta? stru))
     => #t)
 
@@ -583,14 +583,14 @@
 ;;; generic safe slot getter and setter
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(list (slot-ref stru a alpha)
 	      (slot-ref stru b alpha)
 	      (slot-ref stru c alpha)))
     => '(1 2 3))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(slot-set! stru a alpha 19)
 	(slot-set! stru b alpha 29)
 	(slot-set! stru c alpha 39)
@@ -600,14 +600,14 @@
     => '(19 29 39))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(list ((slot-ref <> a alpha) stru)
 	      ((slot-ref <> b alpha) stru)
 	      ((slot-ref <> c alpha) stru)))
     => '(1 2 3))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	((slot-set! <> a alpha <>) stru 19)
 	((slot-set! <> b alpha <>) stru 29)
 	((slot-set! <> c alpha <>) stru 39)
@@ -620,14 +620,14 @@
 ;;; generic unsafe slot getter and setter
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(list ($slot-ref stru a alpha)
 	      ($slot-ref stru b alpha)
 	      ($slot-ref stru c alpha)))
     => '(1 2 3))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	($slot-set! stru a alpha 19)
 	($slot-set! stru b alpha 29)
 	($slot-set! stru c alpha 39)
@@ -637,14 +637,14 @@
     => '(19 29 39))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(list (($slot-ref <> a alpha) stru)
 	      (($slot-ref <> b alpha) stru)
 	      (($slot-ref <> c alpha) stru)))
     => '(1 2 3))
 
   (check
-      (let ((stru (alpha 1 2 3)))
+      (let ((stru (alpha (1 2 3))))
 	(($slot-set! <> a alpha <>) stru 19)
 	(($slot-set! <> b alpha <>) stru 29)
 	(($slot-set! <> c alpha <>) stru 39)
