@@ -145,7 +145,7 @@
 		       import export library module)
 		      (values type (syntactic-binding-value binding) ?car))
 		     (($rtd)
-		      (values 'type-maker-application (syntactic-binding-value binding) ?car))
+		      (values 'tag-maker-application (syntactic-binding-value binding) ?car))
 		     (else
 		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
 		      (values 'call #f #f))))))
@@ -614,12 +614,21 @@
 			    (make-retvals-signature-single-top))))
 	    (stx-error expr.stx "attempt to reference an unexportable variable")))
 
-	 ((type-maker-application)
-	  ;;Here we  expand a  form whose  car is  an identifier  whose binding  is a
-	  ;;struct or record  type name.  The result is an  expression that evaluates
-	  ;;to the application of the struct or record maker.
-	  ;;
-	  (%chi-type-maker-application expr.stx bind-val lexenv.run lexenv.expand))
+	 ((tag-maker-application)
+	  ;;Here we expand  a form whose car  is a tag identifier.  The  result is an
+	  ;;expression  that evaluates  to the  application of  the struct  or record
+	  ;;maker.
+	  (syntax-match expr.stx ()
+	    ((?tag (?ellipsis))
+	     (ellipsis-id? ?ellipsis)
+	     (let ((constructor.stx (tag-identifier-constructor-maker ?tag expr.stx)))
+	       (chi-expr constructor.stx lexenv.run lexenv.expand)))
+	    ((?tag (?arg* ...))
+	     (let ((constructor.stx (tag-identifier-constructor-maker ?tag expr.stx)))
+	       (chi-expr (bless
+			  `(,constructor.stx . ,?arg*))
+			 lexenv.run lexenv.expand)))
+	    ))
 
 	 ((tag-cast-operator)
 	  ;;The input form is:
@@ -645,66 +654,6 @@
 	  ;;(assertion-violation 'chi-expr "invalid type " type (strip expr.stx '()))
 	  (stx-error expr.stx "invalid expression"))))
      lexenv.run lexenv.expand))
-
-;;; --------------------------------------------------------------------
-
-  (define (%chi-type-maker-application expr.stx bind-val lexenv.run lexenv.expand)
-    ;;Type maker application to a tuple of arguments.
-    ;;
-    ;;BIND-VAL is the binding value of an R6RS record-type:
-    ;;
-    ;;   (?rtd-id ?rcd-id)
-    ;;   (?rtd-id ?rcd-id . ?r6rs-record-type-spec)
-    ;;
-    ;;or the binding value of a Vicare struct type:
-    ;;
-    ;;   #<struct-type-descriptor>
-    ;;
-    (syntax-match expr.stx ()
-      ((?tag (?ellipsis))
-       (ellipsis-id? ?ellipsis)
-       (cond ((r6rs-record-type-descriptor-bindval? bind-val)
-	      ;;The binding is for an R6RS record type.
-	      (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
-		(chi-expr (bless
-			   `(record-constructor ,rcd-id))
-			  lexenv.run lexenv.expand)))
-
-	     ((struct-type-descriptor-bindval? bind-val)
-	      ;;The binding is for a Vicare struct type.
-	      (let ((field-name* (struct-type-field-names
-				  (struct-type-descriptor-bindval-std bind-val))))
-		(chi-expr (bless
-			   `(lambda ,field-name*
-			      ($struct (quote ,bind-val) . ,field-name*)))
-			  lexenv.run lexenv.expand)))
-
-	     (else
-	      (syntax-violation (syntax->datum ?tag)
-		"invalid binding for identifier" expr.stx))))
-
-      ((?tag (?arg* ...))
-       (cond ((r6rs-record-type-descriptor-bindval? bind-val)
-	      ;;The binding is for an R6RS record type.
-	      (let ((rcd-id (r6rs-record-type-descriptor-bindval-rcd bind-val)))
-		(chi-expr (bless
-			   `((record-constructor ,rcd-id) . ,?arg*))
-			  lexenv.run lexenv.expand)))
-
-	     ((struct-type-descriptor-bindval? bind-val)
-	      ;;The binding is for a Vicare struct type.
-	      (let ((field-name* (struct-type-field-names
-				  (struct-type-descriptor-bindval-std bind-val))))
-		(chi-expr (bless
-			   `((lambda ,field-name*
-			       ($struct (quote ,bind-val) . ,field-name*))
-			     . ,?arg*))
-			  lexenv.run lexenv.expand)))
-
-	     (else
-	      (syntax-violation (syntax->datum ?tag)
-		"invalid binding for identifier" expr.stx))))
-      ))
 
 ;;; --------------------------------------------------------------------
 

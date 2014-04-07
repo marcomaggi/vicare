@@ -3740,10 +3740,6 @@
 
 ;;; --------------------------------------------------------------------
 
-    (top-tag-id					$type-specs)
-    (list-tag-id				$type-specs)
-    (procedure-tag-id				$type-specs)
-
     (tagged-identifier-syntax?			$type-specs)
     (list-of-tagged-bindings?			$type-specs)
     (tagged-lambda-proto-syntax?		$type-specs)
@@ -3797,6 +3793,7 @@
     (object-type-spec-type-id			$type-specs)
     (object-type-spec-parent-spec		$type-specs)
     (object-type-spec-pred-stx			$type-specs)
+    (object-type-spec-constructor-maker		$type-specs)
     (object-type-spec-accessor-maker		$type-specs)
     (object-type-spec-mutator-maker		$type-specs)
     (object-type-spec-getter-maker		$type-specs)
@@ -3816,6 +3813,12 @@
     (retvals-signature-violation-expected-signature	$type-specs)
     (retvals-signature-violation-returned-signature	$type-specs)
     (retvals-signature-common-ancestor		$type-specs)
+
+    (top-tag-id					$type-specs)
+    (void-tag-id				$type-specs)
+    (procedure-tag-id				$type-specs)
+    (list-tag-id				$type-specs)
+    (boolean-tag-id				$type-specs)
 
 ;;;; built-in object types utilities
 

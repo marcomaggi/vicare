@@ -1145,6 +1145,7 @@
     object-type-spec-parent-spec
     object-type-spec-uids
     object-type-spec-type-id			object-type-spec-pred-stx
+    object-type-spec-constructor-maker
     object-type-spec-accessor-maker		object-type-spec-mutator-maker
     object-type-spec-getter-maker		object-type-spec-setter-maker
     object-type-spec-dispatcher
@@ -1182,8 +1183,11 @@
     label-object-type-spec			set-label-object-type-spec!
     tag-identifier-ancestry			tag-common-ancestor
 
-    top-tag-id					procedure-tag-id
+    top-tag-id
+    void-tag-id
+    procedure-tag-id
     list-tag-id
+    boolean-tag-id
 
     ;; expand-time object type specs: tagged binding identifiers
     tagged-identifier?

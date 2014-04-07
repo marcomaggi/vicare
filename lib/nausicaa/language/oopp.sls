@@ -147,8 +147,8 @@
   (let ()
     (typ.set-identifier-object-type-spec! #'<top>
       (typ.make-object-type-spec 'nausicaa:builtin:<top>
-					#'<top> #'typ.<top>
-					#'<top>-predicate))
+				 #'<top> #'typ.<top>
+				 #'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
       ;;through this syntax.  This tag is  the supertag of all the class
@@ -295,7 +295,7 @@
   (let ()
     (typ.set-identifier-object-type-spec! #'<procedure>
       (typ.make-object-type-spec 'nausicaa:builtin:<procedure>
-					#'<procedure> #'<top> #'procedure?))
+				 #'<procedure> #'<top> #'procedure?))
     (lambda (stx)
       (case-define synner
 	((message)
@@ -481,6 +481,8 @@
 		    (%the-mutator	MUTATOR-TRANSFORMER)
 		    (%the-maker		MAKER-TRANSFORMER))
 		(let ()
+		  (define (%constructor-maker input-form.stx)
+		    #f)
 		  (define (%accessor-maker field.sym input-form.stx)
 		    #f)
 		  (define (%mutator-maker field.sym input-form.stx)
@@ -494,10 +496,11 @@
 		    #f)
 		  (define type-spec
 		    (typ.make-object-type-spec (quote NONGENERATIVE-UID)
-						      #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
-						      %accessor-maker %mutator-maker
-						      %getter-maker %setter-maker
-						      %caster-maker %dispatcher))
+					       #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
+					       %constructor-maker
+					       %accessor-maker %mutator-maker
+					       %getter-maker %setter-maker
+					       %caster-maker %dispatcher))
 		  (typ.set-identifier-object-type-spec! #'THE-TAG type-spec))
 
 		(lambda (stx)
@@ -837,6 +840,8 @@
 		    (%the-maker		MAKER-TRANSFORMER))
 
 		(let ()
+		  (define (%constructor-maker input-form.stx)
+		    #f)
 		  (define (%accessor-maker field.sym input-form.stx)
 		    #f)
 		  (define (%mutator-maker field.sym input-form.stx)
@@ -850,10 +855,11 @@
 		    #f)
 		  (define type-spec
 		    (typ.make-object-type-spec (quote NONGENERATIVE-UID)
-						      #'THE-TAG #'THE-PARENT #'THE-PREDICATE
-						      %accessor-maker %mutator-maker
-						      %getter-maker %setter-maker
-						      %caster-maker %dispatcher))
+					       #'THE-TAG #'THE-PARENT #'THE-PREDICATE
+					       %constructor-maker
+					       %accessor-maker %mutator-maker
+					       %getter-maker %setter-maker
+					       %caster-maker %dispatcher))
 		  (typ.set-identifier-object-type-spec! #'THE-TAG type-spec))
 
 		(lambda (stx)

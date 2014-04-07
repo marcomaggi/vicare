@@ -55,7 +55,7 @@
 	(pred-id  (S always-true)))
     (set-identifier-object-type-spec! tag-id
       (%make-object-type-spec '(vicare:expander:tags:<top>) tag-id pred-id
-			      #f #f  #f #f  #f #f #f)))
+			      #f #f #f  #f #f  #f #f #f)))
 
   (%basic '<void>		'<top>		'void?)
   (%basic '<procedure>		'<top>		'procedure?)
@@ -82,6 +82,9 @@
 ;;;; non-compound built-in tags: <symbol>
 
 (define (%initialise-<symbol>)
+  (define %constructor-maker
+    #f)
+
   (define (%accessor-maker field.sym input-form.stx)
     (case field.sym
       ((string)		(S symbol->string))
@@ -115,6 +118,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<symbol>
 			   (S <symbol>) (top-tag-id) (S symbol?)
+			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   #f #f
 			   %caster-maker %dispatcher))
@@ -136,7 +140,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<keyword>
 			   (S <keyword>) (top-tag-id) (S keyword?)
-			   %accessor-maker #f  #f #f  #f #f))
+			   #f %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <keyword>) type-spec))
 
@@ -174,7 +178,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<symbol>
 			   (S <pointer>) (top-tag-id) (S pointer?)
-			   %accessor-maker %mutator-maker  #f #f  #f #f))
+			   #f %accessor-maker %mutator-maker  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <pointer>) type-spec))
 
@@ -204,7 +208,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<char>
 			   (S <char>) (top-tag-id) (S char?)
-			   %accessor-maker #f  #f #f  #f #f))
+			   #f %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <char>) type-spec))
 
@@ -223,7 +227,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<transcoder>
 			   (S <transcoder>) (top-tag-id) (S transcoder?)
-			   %accessor-maker #f  #f #f  #f #f))
+			   #f %accessor-maker #f  #f #f  #f #f))
 
   (set-identifier-object-type-spec! (S <transcoder>) type-spec))
 
@@ -231,6 +235,9 @@
 ;;;; compound built-in tags: <pair>
 
 (define (%initialise-<pair>)
+  (define (%constructor-maker input-form.stx)
+    (S cons))
+
   (define (%accessor-maker field.sym input-form.stx)
     (case field.sym
       ((car)		(S car))
@@ -269,6 +276,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<pair>
 			   (S <pair>) (top-tag-id) (S pair?)
+			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
 			   #f %dispatcher))
@@ -279,6 +287,9 @@
 ;;;; compound built-in tags: <string>
 
 (define (%initialise-<string>)
+  (define (%constructor-maker input-form.stx)
+    (S string))
+
   (define (%accessor-maker field.sym input-form.stx)
     (case field.sym
       ((length)			(S string-length))
@@ -364,6 +375,7 @@
   (define type-spec
     (make-object-type-spec 'vicare:expander:tags:<string>
 			   (S <string>) (top-tag-id) (S string?)
+			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
 			   %caster-maker %dispatcher))
@@ -469,7 +481,7 @@
     (define type-spec
       (make-object-type-spec 'vicare:expander:tags:<fixnum>
 			     (S <fixnum>) (S <exact-integer>) (S fixnum?)
-			     %accessor-maker #f  #f #f
+			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
     (set-identifier-object-type-spec! (S <fixnum>) type-spec))
@@ -564,7 +576,7 @@
     (define type-spec
       (make-object-type-spec 'vicare:expander:tags:<flonum>
 			     (S <flonum>) (S <real>) (S flonum?)
-			     %accessor-maker #f  #f #f
+			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
     (set-identifier-object-type-spec! (S <flonum>) type-spec))
@@ -585,7 +597,7 @@
     (define type-spec
       (make-object-type-spec 'vicare:expander:tags:<ratnum>
 			     (S <ratnum>) (S <rational>) (S ratnum?)
-			     %accessor-maker #f  #f #f
+			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
     (set-identifier-object-type-spec! (S <ratnum>) type-spec))

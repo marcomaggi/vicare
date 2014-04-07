@@ -372,6 +372,9 @@
 	     (predicate.id   (or predicate.id (string->id (string-append type.str "?"))))
 	     (field*.idx     (enumerate field*.stx)))
 
+	(define the-constructor.id
+	  (string->id "the-constructor"))
+
 	(define accessor*.id
 	  (map (lambda (x)
 		 (string->id (string-append type.str "-" x)))
@@ -431,12 +434,16 @@
 
 	(define object-type-spec-form
 	  (%build-object-type-spec type.id type.sym type.str
+				   constructor.id
 				   predicate.id field*.sym field*.tag
 				   accessor*.id unsafe-accessor*.id
 				   mutator*.id  unsafe-mutator*.id))
 
 	(bless
-	 `(begin
+	 `(module (,type.id
+		   ,constructor.id ,predicate.id
+		   ,@accessor*.id ,@unsafe-accessor*.id
+		   ,@mutator*.id  ,@unsafe-mutator*.id)
 	    (define ((brace ,predicate.id ,(boolean-tag-id)) obj)
 	      ($struct/rtd? obj ',rtd))
 	    ;;By putting  this form  here we  are sure  that PREDICATE.ID  is already
@@ -487,11 +494,14 @@
       (values '() '())))
 
   (define (%build-object-type-spec type.id type.sym type.str
+				   constructor.id
 				   predicate.id field*.sym field*.tag
 				   accessor*.id unsafe-accessor*.id
 				   mutator*.id  unsafe-mutator*.id)
     (define uid
       (gensym type.sym))
+    (define %constructor-maker
+      (string->symbol (string-append type.str "-constructor-maker")))
     (define %accessor-maker
       (string->symbol (string-append type.str "-accessor-maker")))
     (define %mutator-maker
@@ -505,6 +515,9 @@
     `(internal-body
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
+
+       (define (,%constructor-maker input-form.stx)
+	 (syntax ,constructor.id))
 
        (define (,%accessor-maker field.sym input-form.stx)
 	 (case field.sym
@@ -550,6 +563,7 @@
        (define object-type-spec
 	 (typ.make-object-type-spec (quote ,uid)
 				    (syntax ,type.id) (typ.top-tag-id) (syntax ,predicate.id)
+				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker ,%setter-maker
 				    %caster-maker ,%dispatcher))
@@ -658,7 +672,7 @@
     (define object-type-spec-form
       ;;The object-type-spec stuff is used to  add a tag property to the
       ;;record type identifier.
-      (%make-object-type-spec-form foo foo? foo-parent foo-uid
+      (%make-object-type-spec-form foo make-foo foo? foo-parent foo-uid
 				   x* foo-x* unsafe-foo-x*
 				   mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				   immutable-x*))
@@ -1102,25 +1116,30 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-object-type-spec-form foo foo? foo-parent foo-uid
+  (define (%make-object-type-spec-form foo make-foo foo? foo-parent foo-uid
 				       x* foo-x* unsafe-foo-x*
 				       mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				       immutable-x*)
-    (define type-str
+    (define type.str
       (symbol->string (syntax->datum foo)))
+    (define %constructor-maker
+      (string->symbol (string-append type.str "-constructor-maker")))
     (define %accessor-maker
-      (string->symbol (string-append type-str "-accessor-maker")))
+      (string->symbol (string-append type.str "-accessor-maker")))
     (define %mutator-maker
-      (string->symbol (string-append type-str "-mutator-maker")))
+      (string->symbol (string-append type.str "-mutator-maker")))
     (define %getter-maker
-      (string->symbol (string-append type-str "-getter-maker")))
+      (string->symbol (string-append type.str "-getter-maker")))
     (define %setter-maker
-      (string->symbol (string-append type-str "-setter-maker")))
+      (string->symbol (string-append type.str "-setter-maker")))
     (define %dispatcher
-      (string->symbol (string-append type-str "-dispatcher")))
+      (string->symbol (string-append type.str "-dispatcher")))
     `(internal-body
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
+
+       (define (,%constructor-maker input-form.stx)
+	 (syntax ,make-foo))
 
        (define (,%accessor-maker field.sym input-form-stx)
 	 (case field.sym
@@ -1169,6 +1188,7 @@
        (define object-type-spec
 	 (typ.make-object-type-spec (quote ,foo-uid)
 				    (syntax ,foo) parent-id (syntax ,foo?)
+				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker ,%setter-maker
 				    %caster-maker ,%dispatcher))

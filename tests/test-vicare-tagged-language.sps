@@ -3409,6 +3409,17 @@
 		((O c) square)))
     => #t 2 (square 4.5))
 
+  (check	;maker syntax causes rhs tag propagation
+      (internal-body
+  	(define-struct alpha
+  	  ({a <fixnum>} {b <ratnum>} {c <flonum>}))
+  	(define O
+  	  (alpha (1 2/3 4.5)))
+  	(values ((O a) positive?)
+  		((O b) numerator)
+  		((O c) square)))
+    => #t 2 (square 4.5))
+
   #t)
 
 
@@ -3483,6 +3494,17 @@
 	  (fields {a <fixnum>} {b <ratnum>} {c <flonum>}))
 	(define O
 	  (make-alpha 1 2/3 4.5))
+	(values ((O a) positive?)
+		((O b) numerator)
+		((O c) square)))
+    => #t 2 (square 4.5))
+
+  (check	;maker syntax causes rhs tag propagation
+      (internal-body
+	(define-record-type alpha
+	  (fields {a <fixnum>} {b <ratnum>} {c <flonum>}))
+	(define O
+	  (alpha (1 2/3 4.5)))
 	(values ((O a) positive?)
 		((O b) numerator)
 		((O c) square)))

@@ -98,6 +98,8 @@
    pred-stx
 		;A syntax  object (wrapped  or unwrapped) representing  an expression
 		;which will evaluate to a type predicate.
+   constructor-maker
+		;False or a constructor maker procedure.
    accessor-maker
 		;False or an accessor maker procedure.
    mutator-maker
@@ -126,6 +128,7 @@
    (let* ((parent-spec (identifier-object-type-spec parent-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
+			     #f ;constructor-maker
 			     #f ;accessor-maker
 			     #f ;mutator-maker
 			     #f ;getter-maker
@@ -138,6 +141,7 @@
     {type-id	identifier-bound?}
     {parent-id	tag-identifier?}
     {pred-stx	syntax-object?}
+    {construct	false-or-procedure?}
     {accessor	false-or-procedure?}
     {mutator	false-or-procedure?}
     {getter	false-or-procedure?}
@@ -147,7 +151,7 @@
    (let* ((parent-spec (identifier-object-type-spec parent-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
-			     accessor mutator getter setter caster dispatcher parent-spec))))
+			     construct accessor mutator getter setter caster dispatcher parent-spec))))
 
 (define (false-or-object-type-spec? obj)
   (or (not obj)
@@ -171,6 +175,24 @@
 
 
 ;;;; object type specification queries
+
+(case-define* tag-identifier-constructor-maker
+  ((tag-id)
+   (tag-identifier-constructor-maker tag-id #f))
+  (({tag-id tag-identifier?} input-form.stx)
+   (cond ((identifier-object-type-spec tag-id)
+	  => (lambda (spec)
+	       (cond ((object-type-spec-constructor-maker spec)
+		      => (lambda (constructor-maker)
+			   (constructor-maker input-form.stx)))
+		     (else
+		      (syntax-violation __who__
+			"undefined tag constructor maker" input-form.stx tag-id)))))
+	 (else
+	  ;;This should never happen because we  have validated the identifier in the
+	  ;;fender.
+	  (syntax-violation __who__
+	    "internal error: tag identifier without object-type-spec" input-form.stx tag-id)))))
 
 (case-define* tag-identifier-predicate
   ;;Given  a tag  identifier:  retrieve from  the  associated "object-type-spec"  the
