@@ -3465,6 +3465,29 @@
 	      (O b1) (O b2) (O b3)))
     => '(1 2 3 4 5 6))
 
+;;; --------------------------------------------------------------------
+;;; typed fields
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields {a <fixnum>} {b <ratnum>} {c <flonum>}))
+	(define O
+	  (make-alpha 1 2/3 4.5))
+	(values (O a) (O b) (O c)))
+    => 1 2/3 4.5)
+
+  (check
+      (internal-body
+	(define-record-type alpha
+	  (fields {a <fixnum>} {b <ratnum>} {c <flonum>}))
+	(define O
+	  (make-alpha 1 2/3 4.5))
+	(values ((O a) positive?)
+		((O b) numerator)
+		((O c) square)))
+    => #t 2 (square 4.5))
+
   #t)
 
 

@@ -570,26 +570,26 @@
 (module (define-record-type-macro)
   ;;Transformer function used to expand R6RS's DEFINE-RECORD-TYPE macros
   ;;from the  top-level built  in environment.   Expand the  contents of
-  ;;EXPR-STX; return a syntax object that must be further expanded.
+  ;;INPUT-FORM.STX; return a syntax object that must be further expanded.
   ;;
   (define-constant __who__ 'define-record-type)
 
-  (define (define-record-type-macro expr-stx)
-    (syntax-match expr-stx ()
+  (define (define-record-type-macro input-form.stx)
+    (syntax-match input-form.stx ()
       ((_ ?namespec ?clause* ...)
        (begin
-	 (%verify-clauses expr-stx ?clause*)
-	 (%do-define-record expr-stx ?namespec ?clause*)))
+	 (%verify-clauses input-form.stx ?clause*)
+	 (%do-define-record input-form.stx ?namespec ?clause*)))
       ))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%do-define-record expr-stx namespec clause*)
+  (define (%do-define-record input-form.stx namespec clause*)
     (case-define synner
       ((message)
        (synner message #f))
       ((message subform)
-       (syntax-violation __who__ message expr-stx subform)))
+       (syntax-violation __who__ message input-form.stx subform)))
 
     (define-values (foo make-foo foo?)
       (%parse-full-name-spec namespec))
@@ -622,6 +622,12 @@
        immutable-x*
 		;A list of identifiers  representing the immutable field
 		;names.
+       tag*
+		;A list of tag identifiers representing the field tags.
+       mutable-tag*
+		;A list of tag identifiers representing the mutable field tags.
+       immutable-tag*
+		;A list of tag identifiers representing the immutable field tags.
        )
       (%parse-field-specs foo (%get-fields clause*) synner))
 
@@ -665,43 +671,59 @@
 	(define ,foo-protocol ,protocol-code)
 	;;Record constructor descriptor.
 	(define ,foo-rcd ,foo-rcd-code)
-	;;Record instance predicate.
-	(define ,foo? (record-predicate ,foo-rtd))
-	;;Record instance constructor.
-	(define ,make-foo (record-constructor ,foo-rcd))
-	;;Safe record fields accessors.
-	,@(map (lambda (foo-x idx)
-		 `(define ,foo-x (record-accessor ,foo-rtd ,idx (quote ,foo-x))))
-	    foo-x* idx*)
-	;;Safe record fields mutators (if any).
-	,@(map (lambda (foo-x-set! idx)
-		 `(define ,foo-x-set! (record-mutator ,foo-rtd ,idx (quote ,foo-x-set!))))
-	    foo-x-set!* set-foo-idx*)
-
 	;;Binding for record type name.
 	(define-syntax ,foo
 	  (cons '$rtd
 		(cons (syntax ,foo-rtd)
 		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
-
-	;;This definition exists only to  make sure that the object type
-	;;spec form is evaluated in the visit code.
+	;;This definition exists only to make sure  that the object type spec form is
+	;;evaluated in the visit code.
 	(define-syntax dummy
 	  (internal-body
 	    ,object-type-spec-form
 	    (lambda (stx) #f)))
 
+	;;Record instance predicate.
+	(define the-predicate
+	  (record-predicate ,foo-rtd))
+	(define ((brace ,foo? ,(boolean-tag-id)) obj)
+	  (the-predicate obj))
+	;;Record instance constructor.
+	(define the-constructor
+	  (record-constructor ,foo-rcd))
+	(define ((brace ,make-foo ,foo) . args)
+	  (apply the-constructor args))
+	;;Safe record fields accessors.
+	,@(map (lambda (foo-x idx tag)
+		 (let ((the-accessor (gensym (syntax->datum foo-x))))
+		   `(begin
+		      (define ,the-accessor
+			(record-accessor ,foo-rtd ,idx (quote ,foo-x)))
+		      (define ((brace ,foo-x ,tag) (brace record ,foo))
+			(,the-accessor record)))))
+	    foo-x* idx* tag*)
+	;;Safe record fields mutators (if any).
+	,@(map (lambda (foo-x-set! idx tag)
+		 (let ((the-mutator (gensym (syntax->datum foo-x-set!))))
+		   `(begin
+		      (define ,the-mutator (record-mutator ,foo-rtd ,idx (quote ,foo-x-set!)))
+		      (define ((brace ,foo-x-set! ,(top-tag-id)) (brace record ,foo) (brace new-value ,tag))
+			(,the-mutator record new-value)))))
+	    foo-x-set!* set-foo-idx* mutable-tag*)
+
 	. ,(if (option.strict-r6rs)
 	       '()
 	     (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
 						unsafe-foo-x*      idx*
-						unsafe-foo-x-set!* set-foo-idx*)))))
+						unsafe-foo-x-set!* set-foo-idx*
+						tag* mutable-tag*)))))
 
 ;;; --------------------------------------------------------------------
 
   (define (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
 					     unsafe-foo-x*      idx*
-					     unsafe-foo-x-set!* set-foo-idx*)
+					     unsafe-foo-x-set!* set-foo-idx*
+					     tag* mutable-tag*)
     (define foo-first-field-offset
       (gensym))
     `((define ,foo-first-field-offset
@@ -711,14 +733,14 @@
 	($struct-ref ,foo-rtd 3))
 
       ;; Unsafe record fields accessors.
-      ,@(map (lambda (unsafe-foo-x idx)
+      ,@(map (lambda (unsafe-foo-x idx tag)
 	       (let ((t (gensym)))
 		 `(begin
 		    (define ,t
 		      (fx+ ,idx ,foo-first-field-offset))
 		    (define-syntax-rule (,unsafe-foo-x x)
-		      ($struct-ref x ,t)))))
-	  unsafe-foo-x* idx*)
+		      ((,tag)($struct-ref x ,t))))))
+	  unsafe-foo-x* idx* tag*)
 
       ;; Unsafe record fields mutators.
       ,@(map (lambda (unsafe-foo-x-set! idx)
@@ -792,10 +814,16 @@
 	  ((_ field-spec* ...)
 	   `(quote ,(list->vector
 		     (map (lambda (field-spec)
-			    (syntax-match field-spec (mutable immutable)
+			    (syntax-match field-spec (mutable immutable brace)
 			      ((mutable ?name . ?rest)
 			       `(mutable ,?name))
+			      ((mutable (brace ?name ?tag) . ?rest)
+			       `(mutable ,?name))
 			      ((immutable ?name . ?rest)
+			       `(immutable ,?name))
+			      ((immutable (brace ?name ?tag) . ?rest)
+			       `(immutable ,?name))
+			      ((brace ?name ?tag)
 			       `(immutable ,?name))
 			      (?name
 			       `(immutable ,?name))))
@@ -910,6 +938,12 @@
     ;;
     ;;9..The list of identifiers representing the immutable field names.
     ;;
+    ;;10.The list of identifiers representing the field tags.
+    ;;
+    ;;11.The list of identifiers representing the mutable field tags.
+    ;;
+    ;;12.The list of identifiers representing the immutable field tags.
+    ;;
     ;;Here we assume that FIELD-CLAUSE* is null or a proper list.
     ;;
     (define (gen-safe-accessor-name x)
@@ -930,64 +964,84 @@
 	       (mutable-idx*		'())
 	       (mutator*		'())
 	       (unsafe-mutator*		'())
-	       (immutable-field*	'()))
+	       (immutable-field*	'())
+	       (tag*			'())
+	       (mutable-tag*		'())
+	       (immutable-tag*		'()))
       (syntax-match field-clause* (mutable immutable)
 	(()
 	 (values (reverse field*) (reverse idx*) (reverse accessor*) (reverse unsafe-accessor*)
 		 (reverse mutable-field*) (reverse mutable-idx*) (reverse mutator*) (reverse unsafe-mutator*)
-		 (reverse immutable-field*)))
+		 (reverse immutable-field*)
+		 (reverse tag*)
+		 (reverse mutable-tag*) (reverse immutable-tag*)))
 
 	(((mutable   ?name ?accessor ?mutator) . ?rest)
-	 (and (identifier? ?name)
-	      (identifier? ?accessor)
+	 (and (identifier? ?accessor)
 	      (identifier? ?mutator))
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       (cons ?name mutable-field*)	(cons i mutable-idx*)
-	       (cons ?mutator mutator*)		(cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)
-	       immutable-field*))
+	 (receive (field.id field.tag)
+	     (parse-tagged-identifier-syntax ?name)
+	   (loop ?rest (+ 1 i)
+		 (cons field.id field*)		(cons i idx*)
+		 (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name field.id) unsafe-accessor*)
+		 (cons field.id mutable-field*)	(cons i mutable-idx*)
+		 (cons ?mutator mutator*)	(cons (gen-unsafe-mutator-name  field.id) unsafe-mutator*)
+		 immutable-field*
+		 (cons field.tag tag*)
+		 (cons field.tag mutable-tag*)	immutable-tag*)))
 
 	(((immutable ?name ?accessor) . ?rest)
-	 (and (identifier? ?name)
-	      (identifier? ?accessor))
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*
-	       (cons ?name immutable-field*)))
+	 (identifier? ?accessor)
+	 (receive (field.id field.tag)
+	     (parse-tagged-identifier-syntax ?name)
+	   (loop ?rest (+ 1 i)
+		 (cons ?name field*)		(cons i idx*)
+		 (cons ?accessor accessor*)	(cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
+		 mutable-field*			mutable-idx*
+		 mutator*			unsafe-mutator*
+		 (cons ?name immutable-field*)
+		 (cons field.tag tag*)
+		 mutable-tag*			(cons field.tag immutable-tag*))))
 
 	(((mutable   ?name) . ?rest)
-	 (identifier? ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons (gen-safe-accessor-name   ?name) accessor*)
-	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       (cons ?name mutable-field*)	(cons i mutable-idx*)
-	       (cons (gen-safe-mutator-name    ?name) mutator*)
-	       (cons (gen-unsafe-mutator-name  ?name) unsafe-mutator*)
-	       immutable-field*))
+	 (receive (field.id field.tag)
+	     (parse-tagged-identifier-syntax ?name)
+	   (loop ?rest (+ 1 i)
+		 (cons field.id field*)				(cons i idx*)
+		 (cons (gen-safe-accessor-name   field.id)	accessor*)
+		 (cons (gen-unsafe-accessor-name field.id)	unsafe-accessor*)
+		 (cons field.id mutable-field*)			(cons i mutable-idx*)
+		 (cons (gen-safe-mutator-name    field.id)	mutator*)
+		 (cons (gen-unsafe-mutator-name  field.id)	unsafe-mutator*)
+		 immutable-field*
+		 (cons field.tag tag*)
+		 (cons field.tag mutable-tag*)			immutable-tag*)))
 
 	(((immutable ?name) . ?rest)
-	 (identifier? ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons (gen-safe-accessor-name   ?name) accessor*)
-	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*
-	       (cons ?name immutable-field*)))
+	 (receive (field.id field.tag)
+	     (parse-tagged-identifier-syntax ?name)
+	   (loop ?rest (+ 1 i)
+		 (cons field.id field*)				(cons i idx*)
+		 (cons (gen-safe-accessor-name   field.id)	accessor*)
+		 (cons (gen-unsafe-accessor-name field.id)	unsafe-accessor*)
+		 mutable-field*					mutable-idx*
+		 mutator*					unsafe-mutator*
+		 (cons field.id immutable-field*)
+		 (cons field.tag tag*)
+		 mutable-tag*					(cons field.tag immutable-tag*))))
 
 	((?name . ?rest)
-	 (identifier? ?name)
-	 (loop ?rest (+ 1 i)
-	       (cons ?name field*)		(cons i idx*)
-	       (cons (gen-safe-accessor-name   ?name) accessor*)
-	       (cons (gen-unsafe-accessor-name ?name) unsafe-accessor*)
-	       mutable-field*			mutable-idx*
-	       mutator*				unsafe-mutator*
-	       (cons ?name immutable-field*)))
+	 (receive (field.id field.tag)
+	     (parse-tagged-identifier-syntax ?name)
+	   (loop ?rest (+ 1 i)
+		 (cons field.id field*)				(cons i idx*)
+		 (cons (gen-safe-accessor-name   field.id)	 accessor*)
+		 (cons (gen-unsafe-accessor-name field.id)	unsafe-accessor*)
+		 mutable-field*					mutable-idx*
+		 mutator*					unsafe-mutator*
+		 (cons field.id immutable-field*)
+		 (cons field.tag tag*)
+		 mutable-tag*					(cons field.tag immutable-tag*))))
 
 	((?spec . ?rest)
 	 (synner "invalid field specification in DEFINE-RECORD-TYPE syntax"
@@ -1125,7 +1179,7 @@
 
   (module (%verify-clauses)
 
-    (define (%verify-clauses expr-stx cls*)
+    (define (%verify-clauses input-form.stx cls*)
       (define VALID-KEYWORDS
 	(map bless
 	  '(fields parent parent-rtd protocol sealed opaque nongenerative)))
@@ -1140,7 +1194,7 @@
 		   ((bound-id-member? ?kwd seen*)
 		    (syntax-violation __who__
 		      "invalid duplicate clause in DEFINE-RECORD-TYPE"
-		      expr-stx ?kwd))
+		      input-form.stx ?kwd))
 		   (else
 		    (loop (cdr cls*) (cons ?kwd seen*)))))
 	    (?cls
