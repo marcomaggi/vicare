@@ -2419,6 +2419,11 @@
       ))
 
   (define (core->sexp core)
+    ;;Recursively  convert an  expression  in core  language  (which contains  syntax
+    ;;objects as annotations) into a readable symbolic expression.
+    ;;
+    ;;FIXME This should be improved.  (Marco Maggi; Mon Apr 7, 2014)
+    ;;
     (if (pair? core)
 	(case (car core)
 	  ((annotated-call)
