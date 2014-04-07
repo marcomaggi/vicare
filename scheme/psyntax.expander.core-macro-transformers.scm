@@ -79,7 +79,9 @@
     ((tag-setter)				tag-setter-transformer)
     ((tag-dispatch)				tag-dispatch-transformer)
     ((tag-cast)					tag-cast-transformer)
+
     ((type-of)					type-of-transformer)
+    ((expansion-of)				expansion-of-transformer)
 
     (else
      (assertion-violation __who__
@@ -2393,6 +2395,48 @@
 		   expr.sig)
 		 (make-retvals-signature-single-top))))
     ))
+
+
+;;;; module core-macro-transformer: EXPANSION-OF
+
+(module (expansion-of-transformer)
+  ;;Transformer  function used  to  expand Vicare's  EXPANSION-OF  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'expansion-of))
+
+  (define (expansion-of-transformer input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
+      ((_ ?expr)
+       (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	      (expr.core (psi-core-expr expr.psi))
+	      (expr.sexp (core->sexp expr.core)))
+	 (make-psi (build-data no-source
+		     expr.sexp)
+		   (make-retvals-signature-single-top))))
+      ))
+
+  (define (core->sexp core)
+    (if (pair? core)
+	(case (car core)
+	  ((annotated-call)
+	   (map core->sexp (cddr core)))
+
+	  ((annotated-case-lambda)
+	   (let ((meat (cddr core)))
+	     #;(debug-print meat)
+	     (let ((args*  (map car meat))
+		   (body** (map cdr meat)))
+	       `(case-lambda ,@(map cons args* (map (lambda (body*)
+						      (map core->sexp body*))
+						 body**))))))
+
+	  (else core))
+      core))
+
+  #| end of module: EXPANSION-OF-TRANSFORMER |# )
 
 
 ;;;; done

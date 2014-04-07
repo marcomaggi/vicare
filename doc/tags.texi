@@ -21,6 +21,7 @@ in the tagged Scheme language, @ref{tagged, Experimental tagged language}.
 * tags syntaxes dispatch::      Dispatching methods.
 * tags syntaxes casting::       Converting objects.
 * tags syntaxes type-of::       Determining the type of expressions.
+* tags syntaxes expansion-of::  Determining expansion result.
 @end menu
 
 @c page
@@ -438,5 +439,52 @@ vicare> (type-of ((lambda (@{_ symbol@}) 'ciao)))
 @end example
 @end deffn
 
+@c page
+@node tags syntaxes expansion-of
+@subsection Determining expansion result
+
+
+The following bindings are exported by the library @library{vicare
+expander tags}.
+
+
+@deffn Syntax expansion-of @meta{expr}
+This syntax is mostly for interactive use.  Fully expand the given
+expression in the current lexical environment and return a symbolic
+expression representing the result.  The expression is @strong{not}
+evaluated, only expanded; this means that the expansion side effects are
+performed.
+
+Example session at the @repl{}:
+
+@example
+vicare> (import (vicare expander tags))
+vicare> (print-gensym #f)
+
+vicare> (expansion-of (+ 1 2))
+((primitive +) (quote 1) (quote 2))
+
+vicare> (expansion-of (lambda (a b) (+ a b)))
+(case-lambda
+  ((a b)
+   ((primitive +) a b)))
+
+vicare> (internal-body
+          (define-syntax (doit stx)
+            (syntax-case stx ()
+              ((_ ?a ?b)
+               #'(vector ?a ?b))))
+          (expansion-of (doit 1 2)))
+((primitive vector) (quote 1) (quote 2))
+
+vicare> (internal-body
+          (define-struct alpha
+            (a b c))
+          (define O
+            (alpha (1 2 3)))
+          (expansion-of (slot-ref O a)))
+(alpha-a O)
+@end example
+@end deffn
 
 @c end of file

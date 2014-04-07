@@ -3825,6 +3825,49 @@
   #t)
 
 
+(parametrise ((check-test-name	'expansion-of))
+
+  (print-gensym #f)
+
+  (check
+      (expansion-of 123)
+    => '(quote 123))
+
+  (check
+      (expansion-of (+ 1 2))
+    => '((primitive +) (quote 1) (quote 2)))
+
+  ;;These are not  executed because the output  of EXPANSION-OF contains
+  ;;gensyms which do not match the sexp we write here.
+  (when #f
+    (check
+	(expansion-of (lambda (a b) (+ a b)))
+      => '(case-lambda
+	   ((a b)
+	    ((primitive +) a b))))
+
+    (check
+	(internal-body
+	  (define-syntax (doit stx)
+	    (syntax-case stx ()
+	      ((_ ?a ?b)
+	       #'(vector ?a ?b))))
+	  (expansion-of (doit 1 2)))
+      => '((primitive vector) (quote 1) (quote 2)))
+
+    (check
+	(internal-body
+	  (define-struct alpha
+	    (a b c))
+	  (define O
+	    (alpha (1 2 3)))
+	  (expansion-of (slot-ref O a)))
+      => '(alpha-a O))
+    (void))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
