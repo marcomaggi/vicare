@@ -479,13 +479,117 @@
     (make-object-type-spec 'vicare:expander:tags:<bignum>
 			   (S <bignum>) (S <exact-integer>) (S bignum?)))
 
-  (set-identifier-object-type-spec! (S <flonum>)
-    (make-object-type-spec 'vicare:expander:tags:<flonumx>
-			   (S <flonum>) (S <real>) (S flonum?)))
+;;; --------------------------------------------------------------------
 
-  (set-identifier-object-type-spec! (S <ratnum>)
-    (make-object-type-spec 'vicare:expander:tags:<ratnum>
-			   (S <ratnum>) (S <rational>) (S ratnum?)))
+  (let ()
+    (define (%accessor-maker field.sym input-form.stx)
+      (case field.sym
+	((integer?)			(S flinteger?))
+	((finite?)			(S flfinite?))
+	((infinite?)			(S flinfinite?))
+	((nan?)				(S flnan?))
+	((negative?)			(S flnegative?))
+	((positive?)			(S flpositive?))
+	((nonnegative?)			(S flnonnegative?))
+	((nonpositive?)			(S flnonpositive?))
+	((zero?)			(S flzero?))
+	((zero?/positive)		(S flzero?/positive))
+	((zero?/negative)		(S flzero?/negative))
+	((even?)			(S fleven?))
+	((odd?)				(S flodd?))
+	(else
+	 (syntax-violation '<flonum> "unknown field name" input-form.stx field.sym))))
+
+    (define (%dispatcher method.sym arg*.stx input-form.stx)
+      (case method.sym
+	((string)				(M flonum->string))
+	;; methods: arithmetic functions
+	((abs)					(M flabs))
+	((*)					(M fl*))
+	((+)					(M fl+))
+	((-)					(M fl-))
+	((/)					(M fl/))
+	((div)					(M fldiv))
+	((mod)					(M flmod))
+	((div-and-mod)				(M fldiv-and-mod))
+	((div0)					(M fldiv0))
+	((mod0)					(M flmod0))
+	((div0-and-mod0)			(M fldiv0-and-mod0))
+	;; methods: power functions
+	((expt)					(M flexpt))
+	((square)				(M flsquare))
+	((cube)					(M flcube))
+	((sqrt)					(M flsqrt))
+	((cbrt)					(M flcbrt))
+	;; methods: comparison functions
+	((=)					(M fl=?))
+	((<)					(M fl<?))
+	((>)					(M fl>?))
+	((<=)					(M fl<=?))
+	((>=)					(M fl>=?))
+	;; methods: trigonometric functions
+	((sin)					(M flsin))
+	((cos)					(M flcos))
+	((tan)					(M fltan))
+	((acos)					(M flacos))
+	((asin)					(M flasin))
+	((atan)					(M flatan))
+	;; methods: hyperbolic functions
+	((sinh)					(M flsinh))
+	((cosh)					(M flcosh))
+	((tanh)					(M fltanh))
+	((acosh)				(M flacosh))
+	((asinh)				(M flasinh))
+	((atanh)				(M flatanh))
+	;; methods: rounding functions
+	((ceiling)				(M flceiling))
+	((floor)				(M flfloor))
+	((round)				(M flround))
+	((truncate)				(M fltruncate))
+	;; methods: rationals operations
+	((numerator)				(M flnumerator))
+	((denominator)				(M fldenominator))
+	;; methods: exponentiation and logarithms
+	((exp)					(M flexp))
+	((log)					(M fllog))
+	((log1p)				(M fllog1p))
+	((expm1)				(M flexpm1))
+	((hypot)				(M flhypot))
+	;; methods: min and max
+	((max)					(M flmax))
+	((min)					(M flmin))
+	(else #f)))
+
+    (define type-spec
+      (make-object-type-spec 'vicare:expander:tags:<flonum>
+			     (S <flonum>) (S <real>) (S flonum?)
+			     %accessor-maker #f  #f #f
+			     #f %dispatcher))
+
+    (set-identifier-object-type-spec! (S <flonum>) type-spec))
+
+;;; --------------------------------------------------------------------
+
+  (let ()
+    (define (%accessor-maker field.sym input-form.stx)
+      (case field.sym
+	((numerator)		(S numerator))
+	((denominator)		(S denominator))
+	(else
+	 (syntax-violation '<ratnum> "unknown field name" input-form.stx field.sym))))
+
+    (define (%dispatcher method.sym arg*.stx input-form.stx)
+      #f)
+
+    (define type-spec
+      (make-object-type-spec 'vicare:expander:tags:<ratnum>
+			     (S <ratnum>) (S <rational>) (S ratnum?)
+			     %accessor-maker #f  #f #f
+			     #f %dispatcher))
+
+    (set-identifier-object-type-spec! (S <ratnum>) type-spec))
+
+;;; --------------------------------------------------------------------
 
   (set-identifier-object-type-spec! (S <compnum>)
     (make-object-type-spec 'vicare:expander:tags:<compnum>
@@ -610,6 +714,7 @@
   (define-tag-retriever top-tag-id		<top>)
   (define-tag-retriever procedure-tag-id	<procedure>)
   (define-tag-retriever list-tag-id		<list>)
+  (define-tag-retriever boolean-tag-id		<boolean>)
   #| end of let-syntax |# )
 
 ;;; --------------------------------------------------------------------

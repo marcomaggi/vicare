@@ -5965,7 +5965,8 @@
 	 retvals-signature-of-datum
 	 procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
 	 list-tag-id			$list-tag-id?		list-tag-id?
-	 top-tag-id			$top-tag-id?		top-tag-id?)
+	 top-tag-id			$top-tag-id?		top-tag-id?
+	 boolean-tag-id)
   (import (vicare))
   (include "psyntax.expander.built-in-tags.scm" #t))
 

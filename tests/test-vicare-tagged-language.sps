@@ -3363,49 +3363,56 @@
   #t)
 
 
-(parametrise ((check-test-name	'implicit-dispatching))
-
-;;; structs
+(parametrise ((check-test-name	'implicit-dispatching/structs))
 
   (check
-      (let ()
+      (internal-body
 	(define-struct alpha
 	  (a b c))
-	(define {O alpha}
+	(define {O alpha} ;explicit tagging
 	  (make-alpha 1 2 3))
 	;;In this syntax the dispatching form is evaluated by CHI-BODY.
 	(O a))
     => 1)
 
   (check
-      (let ()
+      (internal-body
 	(define-struct alpha
 	  (a b c))
-	(define {O alpha}
+	(define O	;implicit tagging
 	  (make-alpha 1 2 3))
 	;;In  this  syntax  the   dispatching  forms  are  evaluated  by
 	;;CHI-EXPR.
 	(values (O a) (O b) (O c)))
     => 1 2 3)
 
-  (check
-      (let ()
-	;;The expander  will automatically assign the  tag "<fixnum>" to
-	;;the identifier O.
-	(define O 123)
-	(O positive?))
-    => #t)
-
-  (check
-      (let ()
-	;;The expander  will automatically assign the  tag "<string>" to
-	;;the identifier O.
-	(define O "ciao")
-	(O [1]))
-    => #\i)
-
 ;;; --------------------------------------------------------------------
-;;; records
+;;; typed fields
+
+  (check
+      (internal-body
+	(define-struct alpha
+	  ({a <fixnum>} {b <ratnum>} {c <flonum>}))
+	(define O
+	  (make-alpha 1 2/3 4.5))
+	(values (O a) (O b) (O c)))
+    => 1 2/3 4.5)
+
+  (check
+      (internal-body
+	(define-struct alpha
+	  ({a <fixnum>} {b <ratnum>} {c <flonum>}))
+	(define O
+	  (make-alpha 1 2/3 4.5))
+	(values ((O a) positive?)
+		((O b) numerator)
+		((O c) square)))
+    => #t 2 (square 4.5))
+
+  #t)
+
+
+(parametrise ((check-test-name	'implicit-dispatching/records))
 
   (check
       (let ()
@@ -3457,6 +3464,28 @@
 	(list (O a1) (O a2) (O a3)
 	      (O b1) (O b2) (O b3)))
     => '(1 2 3 4 5 6))
+
+  #t)
+
+
+(parametrise ((check-test-name	'implicit-dispatching/datums))
+
+  (check
+      (let ()
+	;;The expander  will automatically assign the  tag "<fixnum>" to
+	;;the identifier O.
+	(define O 123)
+	(O positive?))
+    => #t)
+
+  (check
+      (let ()
+	;;The expander  will automatically assign the  tag "<string>" to
+	;;the identifier O.
+	(define O "ciao")
+	(O [1]))
+    => #\i)
+
 
   #t)
 
