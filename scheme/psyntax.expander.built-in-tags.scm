@@ -769,6 +769,7 @@
 	       ((pair?    datum)	(S <pair>))
 	       ((bytevector? datum)	(S <bytevector>))
 
+	       ((eq? datum (void))	(S <void>))
 	       (else			(top-tag-id))))))
 
 ;;; end of file
