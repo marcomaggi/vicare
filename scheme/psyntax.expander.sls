@@ -6302,6 +6302,7 @@
 						   (set! memoized-id id))))))))))
   (define-core-prim-id-retriever underscore-id		_)
   (define-core-prim-id-retriever ellipsis-id		...)
+  (define-core-prim-id-retriever place-holder-id	<>)
   (define-core-prim-id-retriever procedure-pred-id	procedure?)
   #| end of let-syntax |# )
 
@@ -6312,6 +6313,15 @@
 (define (ellipsis-id? id)
   (and (identifier? id)
        (free-id=? id (ellipsis-id))))
+
+(define (place-holder-id? id)
+  (and (identifier? id)
+       (free-id=? id (place-holder-id))))
+
+(define (jolly-id? id)
+  (and (identifier? id)
+       (or (free-id=? id (underscore-id))
+	   (free-id=? id (place-holder-id)))))
 
 
 ;;;; macro transformer modules

@@ -1505,7 +1505,9 @@ A @rnrs{6} record type descriptor if the given identifier argument
 
 @deffn Syntax is-a? @meta{expr} @meta{type-id}
 @deffnx Syntax is-a? <> @meta{type-id}
+@deffnx Syntax is-a? _ @meta{type-id}
 @deffnx {Auxiliary Syntax} <>
+@deffnx {Auxiliary Syntax} _
 Expand to an expression which, when evaluated, returns @true{} if
 @meta{expr} evaluates to a struct or record of type @meta{type-id}.
 
@@ -1587,7 +1589,9 @@ and access to fields of @rnrs{6} records:
 
 @deffn Syntax slot-ref @meta{expr} @meta{field-name} @meta{type}
 @deffnx Syntax slot-ref <> @meta{field-name} @meta{type}
+@deffnx Syntax slot-ref _ @meta{field-name} @meta{type}
 @deffnx {Auxiliary Syntax} <>
+@deffnx {Auxiliary Syntax} _
 Expand to the slot accessor of @meta{field-name} applied to @meta{expr}.
 
 @meta{expr} can be any expression evaluating to an instance of
@@ -1604,15 +1608,17 @@ When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{record-type-field-ref}; @ref{iklib records
 fields, record-type-field-ref}.
 
-When @code{<>} is used in place of @meta{expr}: the syntax evaluates to
-a slot accessor function.
+When @code{<>} or @code{_} is used in place of @meta{expr}: the syntax
+evaluates to a slot accessor function.
 @end deffn
 
 @c ------------------------------------------------------------
 
 @deffn Syntax slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
 @deffnx Syntax slot-set! <> @meta{field-name} @meta{type} <>
+@deffnx Syntax slot-set! _ @meta{field-name} @meta{type} _
 @deffnx {Auxiliary Syntax} <>
+@deffnx {Auxiliary Syntax} _
 Expand to the slot mutator of @meta{field-name} applied to @meta{expr}
 and @meta{new-val}.
 
@@ -1630,15 +1636,17 @@ When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{record-type-field-set!}; @ref{iklib records
 fields, record-type-field-set!}.
 
-When @code{<>} is used in place of both @meta{expr} and @meta{new-val}:
-the syntax evaluates to a slot mutator function.
+When @code{<>} or @code{_} is used in place of both @meta{expr} and
+@meta{new-val}: the syntax evaluates to a slot mutator function.
 @end deffn
 
 @c ------------------------------------------------------------
 
 @deffn Syntax $slot-ref @meta{expr} @meta{field-name} @meta{type}
 @deffnx Syntax $slot-ref <> @meta{field-name} @meta{type}
+@deffnx Syntax $slot-ref _ @meta{field-name} @meta{type}
 @deffnx {Auxiliary Syntax} <>
+@deffnx {Auxiliary Syntax} _
 Expand to the unsafe slot accessor of @meta{field-name} applied to
 @meta{expr}.
 
@@ -1656,15 +1664,17 @@ When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{$record-type-field-ref}; @ref{iklib records
 fields, $record-type-field-ref}.
 
-When @code{<>} is used in place of @meta{expr}: the syntax evaluates to
-a slot accessor function.
+When @code{<>} or @code{_} is used in place of @meta{expr}: the syntax
+evaluates to a slot accessor function.
 @end deffn
 
 @c ------------------------------------------------------------
 
 @deffn Syntax $slot-set! @meta{expr} @meta{field-name} @meta{type} @meta{new-val}
 @deffnx Syntax $slot-set! <> @meta{field-name} @meta{type} <>
+@deffnx Syntax $slot-set! _ @meta{field-name} @meta{type} _
 @deffnx {Auxiliary Syntax} <>
+@deffnx {Auxiliary Syntax} _
 Expand to the unsafe slot mutator of @meta{field-name} applied to
 @meta{expr} and @meta{new-val}.
 
@@ -1682,8 +1692,8 @@ When @meta{type} is bound to a record--type descriptor: this syntax
 expands to a use of @func{$record-type-field-set!}; @ref{iklib records
 fields, $record-type-field-set!}.
 
-When @code{<>} is used in place of both @meta{expr} and @meta{new-val}:
-the syntax evaluates to a slot mutator function.
+When @code{<>} or @code{_} is used in place of both @meta{expr} and
+@meta{new-val}: the syntax evaluates to a slot mutator function.
 @end deffn
 
 @c page

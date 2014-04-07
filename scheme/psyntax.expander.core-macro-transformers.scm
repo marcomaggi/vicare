@@ -1665,9 +1665,10 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'is-a?))
-  (syntax-match expr-stx (<>)
-    ((_ <> ?type-id)
-     (identifier? ?type-id)
+  (syntax-match expr-stx ()
+    ((_ ?jolly ?type-id)
+     (and (identifier? ?type-id)
+	  (jolly-id? ?jolly))
      (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
@@ -1714,10 +1715,11 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'slot-ref))
-  (syntax-match input-form.stx (<>)
-    ((_ <> ?field-name-id ?type-id)
+  (syntax-match input-form.stx ()
+    ((_ ?jolly ?field-name-id ?type-id)
      (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
+	  (identifier? ?field-name-id)
+	  (jolly-id? ?jolly))
      (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
@@ -1775,10 +1777,12 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'slot-set!))
-  (syntax-match input-form.stx (<>)
-    ((_ <> ?field-name-id ?type-id <>)
+  (syntax-match input-form.stx ()
+    ((_ ?jolly1 ?field-name-id ?type-id ?jolly2)
      (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
+	  (identifier? ?field-name-id)
+	  (jolly-id? ?jolly1)
+	  (jolly-id? ?jolly2))
      (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
@@ -1835,10 +1839,11 @@
   ;;of the given LEXENV; return a PSI struct.
   ;;
   (define-constant __who__ '$slot-ref)
-  (syntax-match input-form.stx (<>)
-    ((_ <> ?field-name-id ?type-id)
+  (syntax-match input-form.stx ()
+    ((_ ?jolly ?field-name-id ?type-id)
      (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
+	  (identifier? ?field-name-id)
+	  (jolly-id? ?jolly))
      (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless
@@ -1896,10 +1901,12 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax '$slot-set!))
-  (syntax-match input-form.stx (<>)
-    ((_ <> ?field-name-id ?type-id <>)
+  (syntax-match input-form.stx ()
+    ((_ ?jolly1 ?field-name-id ?type-id ?jolly2)
      (and (identifier? ?type-id)
-	  (identifier? ?field-name-id))
+	  (identifier? ?field-name-id)
+	  (jolly-id? ?jolly1)
+	  (jolly-id? ?jolly2))
      (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run)
        ((r6rs-record-type)
 	(chi-expr (bless

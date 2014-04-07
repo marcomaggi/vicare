@@ -958,6 +958,11 @@
       => #f)
 
     (check
+	(let ((stru (make-alpha 1 2 3)))
+	  ((is-a? _ alpha) stru))
+      => #t)
+
+    (check
 	(is-a? 123 alpha)
       => #f)
 
@@ -1017,6 +1022,23 @@
 		((slot-ref <> c alpha) stru)))
       => '(19 29 39))
 
+    (check
+	(let ((stru (alpha (1 2 3))))
+	  (list ((slot-ref _ a alpha) stru)
+		((slot-ref _ b alpha) stru)
+		((slot-ref _ c alpha) stru)))
+      => '(1 2 3))
+
+    (check
+	(let ((stru (alpha (1 2 3))))
+	  ((slot-set! _ a alpha _) stru 19)
+	  ((slot-set! _ b alpha _) stru 29)
+	  ((slot-set! _ c alpha _) stru 39)
+	  (list ((slot-ref _ a alpha) stru)
+		((slot-ref _ b alpha) stru)
+		((slot-ref _ c alpha) stru)))
+      => '(19 29 39))
+
     (void))
 
 ;;; --------------------------------------------------------------------
@@ -1064,6 +1086,23 @@
 	  (list (($slot-ref <> a alpha) stru)
 		(($slot-ref <> b alpha) stru)
 		(($slot-ref <> c alpha) stru)))
+      => '(19 29 39))
+
+    (check
+	(let ((stru (alpha (1 2 3))))
+	  (list (($slot-ref _ a alpha) stru)
+		(($slot-ref _ b alpha) stru)
+		(($slot-ref _ c alpha) stru)))
+      => '(1 2 3))
+
+    (check
+	(let ((stru (alpha (1 2 3))))
+	  (($slot-set! _ a alpha _) stru 19)
+	  (($slot-set! _ b alpha _) stru 29)
+	  (($slot-set! _ c alpha _) stru 39)
+	  (list (($slot-ref _ a alpha) stru)
+		(($slot-ref _ b alpha) stru)
+		(($slot-ref _ c alpha) stru)))
       => '(19 29 39))
 
     (void))
