@@ -57,6 +57,7 @@
       (%make-object-type-spec '(vicare:expander:tags:<top>) tag-id pred-id
 			      #f #f  #f #f  #f #f #f)))
 
+  (%basic '<void>		'<top>		'void?)
   (%basic '<procedure>		'<top>		'procedure?)
   (%basic '<boolean>		'<top>		'boolean?)
 
@@ -712,6 +713,7 @@
 					    (scheme-stx '?tag)
 					  (set! memoized-id id))))))))))
   (define-tag-retriever top-tag-id		<top>)
+  (define-tag-retriever void-tag-id		<void>)
   (define-tag-retriever procedure-tag-id	<procedure>)
   (define-tag-retriever list-tag-id		<list>)
   (define-tag-retriever boolean-tag-id		<boolean>)

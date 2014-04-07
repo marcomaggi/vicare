@@ -168,7 +168,7 @@
 	   (bless '(quote #f))))))
 
     ;;Expander tags.
-    ((<top>
+    ((<top> <void>
       <boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure>
       <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
       <rational-valued> <rational> <integer> <integer-valued>
@@ -404,7 +404,7 @@
 
 	(define mutator-sexp*
 	  (map (lambda (mutator.id unsafe-mutator.id field.tag)
-		 `(define ((brace ,mutator.id ,(top-tag-id)) (brace stru ,type.id) (brace val ,field.tag))
+		 `(define ((brace ,mutator.id ,(void-tag-id)) (brace stru ,type.id) (brace val ,field.tag))
 		    (if ($struct/rtd? stru ',rtd)
 			(,unsafe-mutator.id stru val)
 		      (assertion-violation ',mutator.id
@@ -426,7 +426,7 @@
 		 `(define-syntax ,unsafe-mutator.id
 		    (syntax-rules ()
 		      ((_ ?stru ?val)
-		       ((,(top-tag-id))($struct-set! ?stru ,field-idx ?val))))))
+		       ((,(void-tag-id))($struct-set! ?stru ,field-idx ?val))))))
 	    unsafe-mutator*.id field*.idx))
 
 	(define object-type-spec-form
@@ -707,7 +707,7 @@
 		 (let ((the-mutator (gensym (syntax->datum foo-x-set!))))
 		   `(begin
 		      (define ,the-mutator (record-mutator ,foo-rtd ,idx (quote ,foo-x-set!)))
-		      (define ((brace ,foo-x-set! ,(top-tag-id)) (brace record ,foo) (brace new-value ,tag))
+		      (define ((brace ,foo-x-set! ,(void-tag-id)) (brace record ,foo) (brace new-value ,tag))
 			(,the-mutator record new-value)))))
 	    foo-x-set!* set-foo-idx* mutable-tag*)
 
@@ -749,7 +749,7 @@
 		    (define ,t
 		      (fx+ ,idx ,foo-first-field-offset))
 		    (define-syntax-rule (,unsafe-foo-x-set! x v)
-		      ($struct-set! x ,t v)))))
+		      ((,(void-tag-id))($struct-set! x ,t v))))))
 	  unsafe-foo-x-set!* set-foo-idx*)
       ))
 

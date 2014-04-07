@@ -33,6 +33,7 @@
 
     ;; predicates
     always-true			always-false
+    void?
 
     ;; validation
     procedure-argument-validation-with-predicate
@@ -71,6 +72,9 @@
 
 (define (always-false . args)
   #f)
+
+(define (void? obj)
+  (eq? obj (void)))
 
 
 ;;;; object type validation

@@ -580,6 +580,7 @@
 							      &expression-return-value-violation-rcd)))
 ;;;
      (<top>					(macro . <top>))
+     (<void>					(macro . <void>))
      (<boolean>					(macro . <boolean>))
      (<char>					(macro . <char>))
      (<symbol>					(macro . <symbol>))
@@ -3685,6 +3686,7 @@
     (tag-cast					$expander-tags)
 
     (<top>					$expander-tags)
+    (<void>					$expander-tags)
     (<boolean>					$expander-tags)
     (<char>					$expander-tags)
     (<symbol>					$expander-tags)
@@ -3822,6 +3824,7 @@
     (return-value-validation-with-predicate)
     (any->symbol)
     (any->string)
+    (void?)
 
     ))
 
