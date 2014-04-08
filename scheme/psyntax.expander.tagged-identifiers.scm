@@ -720,8 +720,11 @@
     ;;
     ;;   (displaced-lexical . #f)
     ;;
-    ;;as syntactic  binding descriptor.  The  returned identifier if perfectly  fine as
-    ;;tag identifier because, having a label, it can hold all the required properties.
+    ;;as syntactic binding descriptor.  The  returned identifier if perfectly fine as
+    ;;tag  identifier  because,  having  a  label,  it  can  hold  all  the  required
+    ;;properties.  The only limit  is that it is not "truly  bound": the "value" slot
+    ;;of the label does not reference a  syntactic binding descriptor and there is no
+    ;;LEXENV in which its label is associated to a syntactic binding descriptor.
     ;;
     (let ((lab (gensym sym)))
       (values (make-<stx> sym TOP-MARK*
