@@ -37,15 +37,121 @@
 		       (?method O . (unquote ARGS))))))))
     ))
 
-(define (%basic name-sym parent-sym pred-sym)
+(define-syntax-rule (make-uid ?tag)
+  (%make-uid (quote ?tag)))
+
+(define (%make-uid sym)
+  (string->symbol (string-append "vicare:expander:tags:" (symbol->string sym))))
+
+(define (%basic name.sym parent.sym pred.sym)
   ;;Initialise a built-in tag with a basic "object-type-spec".
   ;;
-  (let ((uid       (string->symbol (string-append "vicare:expander:tags:" (symbol->string name-sym))))
-	(tag-id    (scheme-stx name-sym))
-	(parent-id (scheme-stx parent-sym))
-	(pred-id   (scheme-stx pred-sym)))
+  (let ((uid       (make-uid   name.sym))
+	(tag-id    (scheme-stx name.sym))
+	(parent-id (scheme-stx parent.sym))
+	(pred-id   (scheme-stx pred.sym)))
     (set-identifier-object-type-spec! tag-id
       (make-object-type-spec uid tag-id parent-id pred-id))))
+
+
+;;;; filled built-in tag template
+;;
+;; (let ()
+;;   (define-fluid-override __who__
+;;     (identifier-syntax (quote <keyword>)))
+;;
+;;   (define-constant THE-TAG
+;;     (S <tag>))
+;;
+;;   (define (%constructor-maker input-form.stx)
+;;     (S make-object))
+;;
+;;   (define (%accessor-maker field.sym input-form.stx)
+;;     (case field.sym
+;;       ((string)		(S object->string))
+;;       (else
+;;        (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
+;;
+;;   (define (%mutator-maker field.sym input-form.stx)
+;;     (case field.sym
+;;       ((value)		(S set-object-value!))
+;;       (else
+;;        (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
+;;
+;;   (define (%getter-maker keys.stx input-form.stx)
+;;     (define (%invalid-keys)
+;;       (syntax-violation __who__ "invalid keys for getter" input-form.stx keys.stx))
+;;     (syntax-match keys.stx ()
+;;       (([?field])
+;;        (identifier? ?field)
+;;        (or (%accessor-maker (syntax->datum ?field) input-form.stx)
+;; 	   (%invalid-keys)))
+;;       (else
+;;        (%invalid-keys))))
+;;
+;;   (define (%setter-maker keys.stx input-form.stx)
+;;     (define (%invalid-keys)
+;;       (syntax-violation __who__ "invalid keys for setter" input-form.stx keys.stx))
+;;     (syntax-match keys.stx ()
+;;       (([?field])
+;;        (identifier? ?field)
+;;        (or (%mutator-maker (syntax->datum ?field) input-form.stx)
+;; 	   (%invalid-keys)))
+;;       (else
+;;        (%invalid-keys))))
+;;
+;;   (define (%caster-maker source.tag input-form.stx)
+;;     (if source.tag
+;; 	(cond ((free-id=? source.tag (S <string>))		(S string->object))
+;; 	      (else
+;; 	       (syntax-violation __who__
+;; 		 "invalid cast source object type" input-form.stx source.tag)))
+;;       (S any->object)))
+;;
+;;   (define (%dispatcher method-sym arg*.stx input-form.stx)
+;;     (case method.sym
+;;       ((putprop)		(M putprop))
+;;       (else #f)))
+;;
+;;   (define type-spec
+;;     (make-object-type-spec (make-uid <tag>)
+;; 			   THE-TAG (S THE-PARENT) (S THE-PREDICATE)
+;; 			   %constructor-maker
+;; 			   %accessor-maker %mutator-maker
+;; 			   %getter-maker %setter-maker
+;; 			   %caster-maker %dispatcher))
+;;
+;;   (typ.set-identifier-object-type-spec! THE-TAG type-spec))
+;;
+
+
+;;;; empty built-in tag template
+;;
+;; (let ()
+;;   (define-fluid-override __who__
+;;     (identifier-syntax (quote <keyword>)))
+;;
+;;   (define-constant THE-TAG
+;;     (S <tag>))
+;;
+;;   (define %constructor-maker	#f)
+;;   (define %accessor-maker	#f)
+;;   (define %mutator-maker	#f)
+;;   (define %getter-maker	#f)
+;;   (define %setter-maker	#f)
+;;   (define %caster-maker	#f)
+;;   (define %dispatcher	#f)
+;;
+;;   (define type-spec
+;;     (make-object-type-spec (make-uid <tag>)
+;; 			   THE-TAG #'THE-PARENT #'THE-PREDICATE
+;; 			   %constructor-maker
+;; 			   %accessor-maker %mutator-maker
+;; 			   %getter-maker %setter-maker
+;; 			   %caster-maker %dispatcher))
+;;
+;;   (typ.set-identifier-object-type-spec! THE-TAG type-spec))
+;;
 
 
 (define (initialise-type-spec-for-built-in-object-types)
@@ -82,8 +188,13 @@
 ;;;; non-compound built-in tags: <symbol>
 
 (define (%initialise-<symbol>)
-  (define %constructor-maker
-    #f)
+  (define-fluid-override __who__
+    (identifier-syntax (quote <symbol>)))
+
+  (define-constant THE-TAG
+    (S <symbol>))
+
+  (define %constructor-maker	#f)
 
   (define (%accessor-maker field.sym input-form.stx)
     (case field.sym
@@ -92,19 +203,22 @@
       ((bound?)		(S symbol-bound?))
       ((value)		(S symbol-value))
       (else
-       (syntax-violation '<symbol> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
 
   (define (%mutator-maker field.sym input-form.stx)
     (case field.sym
       ((value)		(S set-symbol-value!))
       (else
-       (syntax-violation '<symbol> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
 
-  (define (%caster-maker source-tag input-form.stx)
-    (if source-tag
-	(cond ((free-id=? source-tag (S <string>))		(S string->symbol))
+  (define %getter-maker		#f)
+  (define %setter-maker		#f)
+
+  (define (%caster-maker source.tag input-form.stx)
+    (if source.tag
+	(cond ((free-id=? source.tag (S <string>))		(S string->symbol))
 	      (else
-	       (syntax-violation '<symbol> "invalid cast source object type" input-form.stx source-tag)))
+	       (syntax-violation __who__ "invalid cast source object type" input-form.stx source.tag)))
       (S any->symbol)))
 
   (define (%dispatcher method.sym arg*.stx input-form.stx)
@@ -116,51 +230,80 @@
       (else #f)))
 
   (define type-spec
-    (make-object-type-spec 'vicare:expander:tags:<symbol>
-			   (S <symbol>) (top-tag-id) (S symbol?)
+    (make-object-type-spec (make-uid <symbol>)
+			   THE-TAG (top-tag-id) (S symbol?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
-			   #f #f
+			   %getter-maker %setter-maker
 			   %caster-maker %dispatcher))
 
-  (set-identifier-object-type-spec! (S <symbol>) type-spec))
+  (set-identifier-object-type-spec! THE-TAG type-spec))
 
 
 ;;;; non-compound built-in tags: <keyword>
 
 (define (%initialise-<keyword>)
+  (define-fluid-override __who__
+    (identifier-syntax (quote <keyword>)))
+
+  (define-constant THE-TAG
+    (S <keyword>))
+
+  (define %constructor-maker	#f)
+
   (define (%accessor-maker field.sym input-form.stx)
     (case field.sym
       ((symbol)			(S keyword->symbol))
       ((string)			(S keyword->string))
       ((hash)			(S keyword-hash))
       (else
-       (syntax-violation '<keyword> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
+
+  (define %mutator-maker	#f)
+  (define %getter-maker		#f)
+  (define %setter-maker		#f)
+  (define %caster-maker		#f)
+  (define %dispatcher		#f)
 
   (define type-spec
-    (make-object-type-spec 'vicare:expander:tags:<keyword>
-			   (S <keyword>) (top-tag-id) (S keyword?)
-			   #f %accessor-maker #f  #f #f  #f #f))
+    (make-object-type-spec (make-uid <keyword>)
+			   THE-TAG (top-tag-id) (S keyword?)
+			   %constructor-maker
+			   %mutator-maker %accessor-maker
+			   %getter-maker %setter-maker
+			   %caster-maker %dispatcher))
 
-  (set-identifier-object-type-spec! (S <keyword>) type-spec))
+  (set-identifier-object-type-spec! THE-TAG type-spec))
 
 
 ;;;; non-compound built-in tags: <pointer>
 
 (define (%initialise-<pointer>)
+  (define-fluid-override __who__
+    (identifier-syntax (quote <pointer>)))
+
+  (define-constant THE-TAG
+    (S <pointer>))
+
+  (define %constructor-maker	#f)
+
   (define (%accessor-maker field.sym input-form.stx)
     (case field.sym
       ((null?)			(S pointer-null?))
       ((integer)		(S pointer->integer))
       ((hash)			(S pointer-hash))
       (else
-       (syntax-violation '<pointer> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
 
   (define (%mutator-maker field.sym input-form.stx)
     (case field.sym
       ((set-null!)	(S set-pointer-null!))
       (else
-       (syntax-violation '<pointer> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
+
+  (define %getter-maker		#f)
+  (define %setter-maker		#f)
+  (define %caster-maker		#f)
 
   (define (%dispatcher method.sym arg*.stx input-form.stx)
     (case method.sym
@@ -176,16 +319,27 @@
       (else		#f)))
 
   (define type-spec
-    (make-object-type-spec 'vicare:expander:tags:<symbol>
-			   (S <pointer>) (top-tag-id) (S pointer?)
-			   #f %accessor-maker %mutator-maker  #f #f  #f #f))
+    (make-object-type-spec (make-uid <symbol>)
+			   THE-TAG (top-tag-id) (S pointer?)
+			   %constructor-maker
+			   %accessor-maker %mutator-maker
+			   %getter-maker %setter-maker
+			   %caster-maker %dispatcher))
 
-  (set-identifier-object-type-spec! (S <pointer>) type-spec))
+  (set-identifier-object-type-spec! THE-TAG type-spec))
 
 
 ;;;; non-compound built-in tags: <char>
 
 (define (%initialise-<char>)
+  (define-fluid-override __who__
+    (identifier-syntax (quote <char>)))
+
+  (define-constant THE-TAG
+    (S <char>))
+
+  (define %constructor-maker	#f)
+
   (define (%accessor-maker field.sym input-form.stx)
     (case field.sym
       ((upcase)			(S char-upcase))
@@ -203,38 +357,70 @@
       ((general-category)	(S char-general-category))
 
       (else
-       (syntax-violation '<char> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
+
+  (define %mutator-maker	#f)
+  (define %getter-maker		#f)
+  (define %setter-maker		#f)
+  (define %caster-maker		#f)
+  (define %dispatcher		#f)
 
   (define type-spec
-    (make-object-type-spec 'vicare:expander:tags:<char>
-			   (S <char>) (top-tag-id) (S char?)
-			   #f %accessor-maker #f  #f #f  #f #f))
+    (make-object-type-spec (make-uid <char>)
+			   THE-TAG (top-tag-id) (S char?)
+			   %constructor-maker
+			   %accessor-maker %mutator-maker
+			   %getter-maker %setter-maker
+			   %caster-maker %dispatcher))
 
-  (set-identifier-object-type-spec! (S <char>) type-spec))
+  (set-identifier-object-type-spec! THE-TAG type-spec))
 
 
 ;;;; non-compound built-in tags: <transcoder>
 
 (define (%initialise-<transcoder>)
+  (define-fluid-override __who__
+    (identifier-syntax (quote <transcoder>)))
+
+  (define-constant THE-TAG
+    (S <transcoder>))
+
+  (define %constructor-maker	#f)
+
   (define (%accessor-maker field.sym input-form.stx)
     (case field.sym
       ((codec)			(S transcoder-codec))
       ((eol-style)		(S transcoder-eol-style))
       ((error-handling-mode)	(S transcoder-error-handling-mode))
       (else
-       (syntax-violation '<transcoder> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
+
+  (define %mutator-maker	#f)
+  (define %getter-maker		#f)
+  (define %setter-maker		#f)
+  (define %caster-maker		#f)
+  (define %dispatcher		#f)
 
   (define type-spec
-    (make-object-type-spec 'vicare:expander:tags:<transcoder>
-			   (S <transcoder>) (top-tag-id) (S transcoder?)
-			   #f %accessor-maker #f  #f #f  #f #f))
+    (make-object-type-spec (make-uid <transcoder>)
+			   THE-TAG (top-tag-id) (S transcoder?)
+			   %constructor-maker
+			   %accessor-maker %mutator-maker
+			   %getter-maker %setter-maker
+			   %caster-maker %dispatcher))
 
-  (set-identifier-object-type-spec! (S <transcoder>) type-spec))
+  (set-identifier-object-type-spec! THE-TAG type-spec))
 
 
 ;;;; compound built-in tags: <pair>
 
 (define (%initialise-<pair>)
+  (define-fluid-override __who__
+    (identifier-syntax (quote <pair>)))
+
+  (define-constant THE-TAG
+    (S <pair>))
+
   (define (%constructor-maker input-form.stx)
     (S cons))
 
@@ -243,50 +429,60 @@
       ((car)		(S car))
       ((cdr)		(S cdr))
       (else
-       (syntax-violation '<pair> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
 
   (define (%mutator-maker field.sym input-form.stx)
     (case field.sym
       ((car)		(S set-car!))
       ((cdr)		(S set-cdr!) )
       (else
-       (syntax-violation '<pair> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
 
-  (define (%getter-maker keys-stx input-form.stx)
-    (syntax-case keys-stx ()
-      (([?field.sym])
-       (identifier? #'?field.sym)
-       (%accessor-maker #'?field.sym input-form.stx))
+  (define (%getter-maker keys.stx input-form.stx)
+    (define (%invalid-keys)
+      (syntax-violation __who__ "invalid keys for getter" input-form.stx keys.stx))
+    (syntax-match keys.stx ()
+      (([?field])
+       (identifier? ?field)
+       (or (%accessor-maker (syntax->datum ?field) input-form.stx)
+  	   (%invalid-keys)))
       (else
-       (syntax-violation '<pair>
-	 "invalid setter keys syntax" input-form.stx keys-stx))))
+       (%invalid-keys))))
 
-  (define (%setter-maker keys-stx input-form.stx)
-    (syntax-case keys-stx ()
-      (([?field.sym])
-       (identifier? #'?field.sym)
-       (%mutator-maker #'?field.sym input-form.stx))
+  (define (%setter-maker keys.stx input-form.stx)
+    (define (%invalid-keys)
+      (syntax-violation __who__ "invalid keys for setter" input-form.stx keys.stx))
+    (syntax-match keys.stx ()
+      (([?field])
+       (identifier? ?field)
+       (or (%mutator-maker (syntax->datum ?field) input-form.stx)
+  	   (%invalid-keys)))
       (else
-       (syntax-violation '<pair>
-	 "invalid setter keys syntax" input-form.stx keys-stx))))
+       (%invalid-keys))))
 
-  (define (%dispatcher method.sym arg*.stx input-form.stx)
-    #f)
+  (define %caster-maker		#f)
+  (define %dispatcher		#f)
 
   (define type-spec
-    (make-object-type-spec 'vicare:expander:tags:<pair>
-			   (S <pair>) (top-tag-id) (S pair?)
+    (make-object-type-spec (make-uid <pair>)
+			   THE-TAG (top-tag-id) (S pair?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
-			   #f %dispatcher))
+			   %caster-maker %dispatcher))
 
-  (set-identifier-object-type-spec! (S <pair>) type-spec))
+  (set-identifier-object-type-spec! THE-TAG type-spec))
 
 
 ;;;; compound built-in tags: <string>
 
 (define (%initialise-<string>)
+  (define-fluid-override __who__
+    (identifier-syntax (quote <string>)))
+
+  (define-constant THE-TAG
+    (S <string>))
+
   (define (%constructor-maker input-form.stx)
     (S string))
 
@@ -309,44 +505,31 @@
       ((percent-encoding)	(S string->uri-encoding))
 
       (else
-       (syntax-violation '<string> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
 
   (define (%mutator-maker field.sym input-form.stx)
     (case field.sym
 
       (else
-       (syntax-violation '<string> "unknown field name" input-form.stx field.sym))))
+       (syntax-violation __who__ "unknown field name" input-form.stx field.sym))))
 
-  (define (%getter-maker keys-stx input-form.stx)
-    (syntax-match keys-stx ()
+  (define (%getter-maker keys.stx input-form.stx)
+    (syntax-match keys.stx ()
       (([?char-index])
        (bless
-	`(lambda ({_ <char>} {str <string>})
-	   (string-ref str ,?char-index))))
+  	`(lambda ({_ <char>} {str <string>})
+  	   (string-ref str (tag-assert-and-return (<fixnum>) ,?char-index)))))
       (else
-       (syntax-violation '<string>
-	 "invalid getter keys syntax" input-form.stx keys-stx))))
+       (syntax-violation __who__ "invalid getter keys syntax" input-form.stx keys.stx))))
 
-  (define (%setter-maker keys-stx input-form.stx)
-    (syntax-match keys-stx ()
+  (define (%setter-maker keys.stx input-form.stx)
+    (syntax-match keys.stx ()
       (([?char-index])
        (bless
-	`(lambda (str new-value)
-	   (string-set! str ,?char-index new-value))))
+  	`(lambda ({_ <void>} {str <string>} {new-value <char>})
+  	   (string-set! str (tag-assert-and-return (<fixnum>) ,?char-index) new-value))))
       (else
-       (syntax-violation '<string>
-	 "invalid setter keys syntax" input-form.stx keys-stx))))
-
-  (define (%dispatcher method.sym arg*.stx input-form.stx)
-    (case method.sym
-      ((hash)			(M string-hash))
-      ((substring)		(M substring))
-      ((append)			(M string-append))
-      ((list)			(M string->list))
-      ((for-each)		(M string-for-each))
-      ((copy)			(M string-copy))
-      ((=)			(M string=?))
-      (else			#f)))
+       (syntax-violation __who__ "invalid setter keys syntax" input-form.stx keys.stx))))
 
   (define (%caster-maker source-tag input-form.stx)
     (if source-tag
@@ -369,18 +552,29 @@
 		   (free-id=? source-tag (S <number>)))
 	       (S number->string))
 	      (else
-	       (syntax-violation '<string> "invalid cast source object type" input-form.stx source-tag)))
+	       (syntax-violation __who__ "invalid cast source object type" input-form.stx source-tag)))
       (S any->string)))
 
+  (define (%dispatcher method.sym arg*.stx input-form.stx)
+    (case method.sym
+      ((hash)			(M string-hash))
+      ((substring)		(M substring))
+      ((append)			(M string-append))
+      ((list)			(M string->list))
+      ((for-each)		(M string-for-each))
+      ((copy)			(M string-copy))
+      ((=)			(M string=?))
+      (else			#f)))
+
   (define type-spec
-    (make-object-type-spec 'vicare:expander:tags:<string>
-			   (S <string>) (top-tag-id) (S string?)
+    (make-object-type-spec (make-uid <string>)
+			   THE-TAG (top-tag-id) (S string?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
 			   %caster-maker %dispatcher))
 
-  (set-identifier-object-type-spec! (S <string>) type-spec))
+  (set-identifier-object-type-spec! THE-TAG type-spec))
 
 
 (define (%initialise-some-compound-object-types)
