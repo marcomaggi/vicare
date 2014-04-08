@@ -1238,99 +1238,13 @@
   #| end of module: CHI-SET |# )
 
 
-;;;; chi procedures: definitions and lambda clauses
+;;;; chi procedures: lambda clauses
 
-(module (chi-lambda chi-case-lambda chi-defun)
+(module CHI-LAMBDA-CLAUSES
+  (%chi-lambda-clause
+   %chi-lambda-clause*)
 
-  (define (chi-defun input-form.stx lexenv.run lexenv.expand)
-    ;;Expand a  syntax object representing a  DEFINE syntax for the  case of function
-    ;;definition.  Return  an expanded language expression  representing the expanded
-    ;;definition.
-    ;;
-    ;;The  returned expression  will  be  coupled (by  the  caller)  with an  already
-    ;;generated  lex gensym  serving as  lexical variable  name; for  this reason  we
-    ;;return a lambda core form rather than a define core form.
-    ;;
-    ;;NOTE This function assumes the INPUT-FORM.STX  has already been parsed, and the
-    ;;binding for ?CTXT has already been added to LEXENV by the caller.
-    ;;
-    (define (%expand ctxt-id formals.stx body*.stx)
-      ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT-ID in the
-      ;;core language LAMBDA sexp's annotation.
-      (receive (formals.core lambda-signature body.psi)
-	  (%chi-lambda-clause input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
-	;;FORMALS.CORE is composed of lex gensyms.
-	(make-psi (build-lambda (syntax-annotation ctxt-id)
-		    formals.core
-		    (psi-core-expr body.psi))
-		  (make-retvals-signature-with-fabricated-procedure-tag (syntax->datum ctxt-id) lambda-signature))))
-    (syntax-match input-form.stx (brace)
-      ((_ ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
-       (%expand ?ctxt (bless
-		       `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls))
-		(cons (bless
-		       `(define-fluid-override __who__
-			  (identifier-syntax (quote ,?ctxt))))
-		      ?body-form*)))
-      ((_ (?ctxt . ?fmls) . ?body-form*)
-       (%expand ?ctxt ?fmls
-		(cons (bless
-		       `(define-fluid-override __who__
-			  (identifier-syntax (quote ,?ctxt))))
-		      ?body-form*)))
-      ))
-
-  (define* (chi-lambda input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
-    ;;Expand the contents of CASE syntax and return a "psi" struct.
-    ;;
-    ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
-    ;;
-    ;;FORMALS.STX is a syntax object representing the formals of the LAMBDA syntax.
-    ;;
-    ;;BODY*.STX is a list of syntax  objects representing the body expressions in the
-    ;;LAMBDA syntax.
-    ;;
-    (receive (formals.lex lambda-signature body.psi)
-	(%chi-lambda-clause input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
-      (make-psi (build-lambda (syntax-annotation input-form.stx)
-		  formals.lex
-		  (psi-core-expr body.psi))
-		(make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
-
-  (define* (chi-case-lambda input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
-    ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
-    ;;
-    ;;INPUT-FORM.STX  is  a  syntax  object  representing  the  original  CASE-LAMBDA
-    ;;expression.
-    ;;
-    ;;FORMALS*.STX is  a list of  syntax objects whose items  are the formals  of the
-    ;;CASE-LAMBDA clauses.
-    ;;
-    ;;BODY**.STX  is a  list of  syntax objects  whose items  are the  bodies of  the
-    ;;CASE-LAMBDA clauses.
-    ;;
-    ;;Example, for the input form:
-    ;;
-    ;;   (case-lambda ((a b c) body1) ((d e f) body2))
-    ;;
-    ;;this function is invoked as:
-    ;;
-    ;;   (chi-case-lambda
-    ;;    #'(case-lambda ((a b c) body1) ((d e f) body2))
-    ;;    (list #'(a b c) #'(d e f))
-    ;;    (list #'(body1) #'(body2))
-    ;;    lexenv.run lexenv.expand)
-    ;;
-    (receive (formals*.lex lambda-signature* body**.psi)
-	(%chi-lambda-clause* input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
-      (make-psi (build-case-lambda (syntax-annotation input-form.stx)
-		  formals*.lex
-		  (map psi-core-expr body**.psi))
-		(make-retvals-signature-with-fabricated-procedure-tag (gensym) (make-clambda-compound lambda-signature*)))))
-
-;;; --------------------------------------------------------------------
-
-  (define* (%chi-lambda-clause input-form.stx formals.stx body-form*.stx lexenv.run lexenv.expand)
+  (define* (%chi-lambda-clause safe? input-form.stx formals.stx body-form*.stx lexenv.run lexenv.expand)
     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
     ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
     ;;formals; an instance  of "lambda-signature" representing the  tag signature for
@@ -1354,7 +1268,7 @@
     ;;   (lambda (a b)
     ;;     (tag-procedure-argument-validator <fixnum> a)
     ;;     (tag-procedure-argument-validator <string> b)
-    ;;     (let ()
+    ;;     (internal-body
     ;;       ?body ...
     ;;       (tag-assert-and-return (<symbol>) ?last-body)))
     ;;
@@ -1368,13 +1282,17 @@
 	 (let* ((lex*        (map gensym-for-lexical-var ?arg*))
 		(lab*        (map gensym-for-label       ?arg*))
 		(lexenv.run^ (add-lexical-bindings lab* lex* lexenv.run)))
-	   (let* ((validation*.stx (%build-formals-validation-form* ?arg* formals-signature.tags #f #f))
+	   (let* ((validation*.stx (if safe?
+				       (%build-formals-validation-form* ?arg* formals-signature.tags #f #f)
+				     '()))
 		  (body-form^*.stx (push-lexical-contour
 				       (make-filled-rib ?arg* lab*)
 				     (append validation*.stx
-					     (%build-retvals-validation-form (not (null? validation*.stx))
-									     (lambda-signature-retvals lambda-signature)
-									     body-form*.stx)))))
+					     (if safe?
+						 (%build-retvals-validation-form (not (null? validation*.stx))
+										 (lambda-signature-retvals lambda-signature)
+										 body-form*.stx)
+					       body-form*.stx)))))
 	     ;;Here  we know  that the  formals signature  is a  proper list  of tag
 	     ;;identifiers with the same structure of FORMALS.STX.
 	     (map set-label-tag! lab* formals-signature.tags)
@@ -1393,14 +1311,18 @@
 						    lexenv.run)))
 	   (receive (arg-tag* rest-tag)
 	       (improper-list->list-and-rest formals-signature.tags)
-	     (let* ((validation*.stx (%build-formals-validation-form* ?arg* arg-tag* ?rest-arg rest-tag))
+	     (let* ((validation*.stx (if safe?
+					 (%build-formals-validation-form* ?arg* arg-tag* ?rest-arg rest-tag)
+				       '()))
 		    (body-form^*.stx (push-lexical-contour
 					 (make-filled-rib (cons ?rest-arg ?arg*)
 							  (cons rest-lab  lab*))
 				       (append validation*.stx
-					       (%build-retvals-validation-form (not (null? validation*.stx))
-									       (lambda-signature-retvals lambda-signature)
-									       body-form*.stx)))))
+					       (if safe?
+						   (%build-retvals-validation-form (not (null? validation*.stx))
+										   (lambda-signature-retvals lambda-signature)
+										   body-form*.stx)
+						 body-form*.stx)))))
 	       ;;Here we  know that the formals  signature is an improper  list with
 	       ;;the same structure of FORMALS.STX.
 	       (map set-label-tag! lab* arg-tag*)
@@ -1412,6 +1334,8 @@
 	(_
 	 (syntax-violation __who__
 	   "invalid lambda formals syntax" input-form.stx formals.stx)))))
+
+;;; --------------------------------------------------------------------
 
   (define* (%chi-lambda-clause* input-form.stx formals*.stx body-form**.stx lexenv.run lexenv.expand)
     ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
@@ -1428,7 +1352,7 @@
     (if (null? formals*.stx)
 	(values '() '() '())
       (receive (formals-lex lambda-signature body.psi)
-	  (%chi-lambda-clause input-form.stx (car formals*.stx) (car body-form**.stx) lexenv.run lexenv.expand)
+	  (%chi-lambda-clause #t input-form.stx (car formals*.stx) (car body-form**.stx) lexenv.run lexenv.expand)
 	(receive (formals-lex* lambda-signature* body*.psi)
 	    (%chi-lambda-clause* input-form.stx (cdr formals*.stx) (cdr body-form**.stx) lexenv.run lexenv.expand)
 	  (values (cons formals-lex       formals-lex*)
@@ -1492,7 +1416,114 @@
 		       (bless
 			`((tag-assert-and-return ,(retvals-signature-tags retvals-signature) ,last.stx)))))))))
 
-  #| end of module |# )
+  #| end of module: CHI-LAMBDA-CLAUSES |# )
+
+
+;;;; chi procedures: function definitions and lambda syntaxes
+
+(module (chi-defun)
+  (import CHI-LAMBDA-CLAUSES)
+
+  (define (chi-defun input-form.stx lexenv.run lexenv.expand)
+    ;;Expand a  syntax object representing a  INTERNAL-DEFINE syntax for the  case of
+    ;;function definition.   Return an expanded language  expression representing the
+    ;;expanded definition.
+    ;;
+    ;;The  returned expression  will  be  coupled (by  the  caller)  with an  already
+    ;;generated  lex gensym  serving as  lexical variable  name; for  this reason  we
+    ;;return a lambda core form rather than a define core form.
+    ;;
+    ;;NOTE This function assumes the INPUT-FORM.STX  has already been parsed, and the
+    ;;binding for ?CTXT has already been added to LEXENV by the caller.
+    ;;
+    (syntax-match input-form.stx (brace)
+      ((_ ?attributes ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
+       (let* ((formals.stx (bless
+			    `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
+	      (body*.stx   (cons (bless
+				  `(define-fluid-override __who__
+				     (identifier-syntax (quote ,?ctxt))))
+				 ?body-form*))
+	      (safe?       (memq 'safe (syntax->datum ?attributes))))
+	 (%expand safe? input-form.stx lexenv.run lexenv.expand
+		  ?ctxt formals.stx body*.stx)))
+
+      ((_ ?attributes (?ctxt . ?fmls) . ?body-form*)
+       (let ((formals.stx ?fmls)
+	     (body*.stx   (cons (bless
+				 `(define-fluid-override __who__
+				    (identifier-syntax (quote ,?ctxt))))
+				?body-form*))
+	      (safe?       (memq 'safe (syntax->datum ?attributes))))
+	 (%expand safe? input-form.stx lexenv.run lexenv.expand
+		  ?ctxt formals.stx body*.stx)))
+      ))
+
+  (define (%expand safe? input-form.stx lexenv.run lexenv.expand
+		   ctxt.id formals.stx body*.stx)
+    ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT.ID in the
+    ;;core language LAMBDA sexp's annotation.
+    (receive (formals.core lambda-signature body.psi)
+	(%chi-lambda-clause safe? input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
+      ;;FORMALS.CORE is composed of lex gensyms.
+      (make-psi (build-lambda (syntax-annotation ctxt.id)
+		  formals.core
+		  (psi-core-expr body.psi))
+		(make-retvals-signature-with-fabricated-procedure-tag (syntax->datum ctxt.id) lambda-signature))))
+
+  #| end of module: CHI-DEFUN |# )
+
+;;; --------------------------------------------------------------------
+
+(define* (chi-lambda input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
+  ;;Expand the contents of CASE syntax and return a "psi" struct.
+  ;;
+  ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
+  ;;
+  ;;FORMALS.STX is a syntax object representing the formals of the LAMBDA syntax.
+  ;;
+  ;;BODY*.STX is  a list of syntax  objects representing the body  expressions in the
+  ;;LAMBDA syntax.
+  ;;
+  (import CHI-LAMBDA-CLAUSES)
+  (receive (formals.lex lambda-signature body.psi)
+      (%chi-lambda-clause #t input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
+    (make-psi (build-lambda (syntax-annotation input-form.stx)
+		formals.lex
+		(psi-core-expr body.psi))
+	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
+
+(define* (chi-case-lambda input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
+  ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
+  ;;
+  ;;INPUT-FORM.STX  is   a  syntax  object  representing   the  original  CASE-LAMBDA
+  ;;expression.
+  ;;
+  ;;FORMALS*.STX is  a list  of syntax  objects whose  items are  the formals  of the
+  ;;CASE-LAMBDA clauses.
+  ;;
+  ;;BODY**.STX  is a  list  of syntax  objects  whose  items are  the  bodies of  the
+  ;;CASE-LAMBDA clauses.
+  ;;
+  ;;Example, for the input form:
+  ;;
+  ;;   (case-lambda ((a b c) body1) ((d e f) body2))
+  ;;
+  ;;this function is invoked as:
+  ;;
+  ;;   (chi-case-lambda
+  ;;    #'(case-lambda ((a b c) body1) ((d e f) body2))
+  ;;    (list #'(a b c) #'(d e f))
+  ;;    (list #'(body1) #'(body2))
+  ;;    lexenv.run lexenv.expand)
+  ;;
+  (import CHI-LAMBDA-CLAUSES)
+  (receive (formals*.lex lambda-signature* body**.psi)
+      (%chi-lambda-clause* input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
+    (make-psi (build-case-lambda (syntax-annotation input-form.stx)
+		formals*.lex
+		(map psi-core-expr body**.psi))
+	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) (make-clambda-compound lambda-signature*)))))
 
 
 ;;;; chi procedures: lexical bindings qualified right-hand sides
@@ -1513,7 +1544,7 @@
 ;;
 ;;all the forms are parsed and the following QRHS compounds are created:
 ;;
-;;   (defun    . #'(define (fun) 1))
+;;   (defun    . #'(internal-define ?attributes (fun) 1))
 ;;   (expr     . #'(void))
 ;;   (expr     . #'(+ 3 4))
 ;;   (untagged-define-expr . (#'var1 . #'(+ 3 4)))
@@ -1524,18 +1555,22 @@
 ;;DEFUN -
 ;;   For a function variable definition.  A syntax like:
 ;;
-;;      (define (?id . ?formals) ?body ...)
+;;      (internal-define ?attributes (?id . ?formals) ?body ...)
+;;
+;;UNSAFE-DEFUN -
+;;   Like  DEFUN,  but do  not  automatically  include  validation forms  for  tagged
+;;   operands and return values.
 ;;
 ;;EXPR -
 ;;  For an non-function variable definition.  A syntax like:
 ;;
-;;      (define ?id)
-;;      (define {?id ?tag} ?val)
+;;      (internal-define ?attributes ?id)
+;;      (internal-define ?attributes {?id ?tag} ?val)
 ;;
 ;;UNTAGGED-DEFINE-EXPR -
 ;;  For an non-function variable definition.  A syntax like:
 ;;
-;;      (define ?id ?val)
+;;      (internal-define ?attributes ?id ?val)
 ;;
 ;;TOP-EXPR -
 ;;  For an expression that is not a  definition; this QRHS is created only when mixed
@@ -1545,7 +1580,7 @@
 ;;
 ;;  in this case the caller implicitly handles such expression as:
 ;;
-;;     (define dummy ?expr)
+;;     (internal-define ?attributes dummy ?expr)
 ;;
 ;;It is  responsibility of the  caller to create  the appropriate lexical  binding to
 ;;represent the DEFINE syntax; when CHI-QRHS and CHI-QRHS* are called the binding has
@@ -2209,8 +2244,9 @@
 ;;; --------------------------------------------------------------------
 
   (define (%parse-define input-form.stx)
-    ;;Syntax parser for R6RS's DEFINE and  extended tagged bindings syntax.  Return 4
-    ;;values:
+    ;;Syntax  parser for  Vicare's INTERNAL-DEFINE;  this  is like  R6RS DEFINE,  but
+    ;;supports extended tagged bindings syntax and an additional first argument being
+    ;;a list of attributes.  Return 4 values:
     ;;
     ;;1..The identifier of the binding variable.
     ;;
@@ -2225,24 +2261,24 @@
       ;;
       ;;NOTE The following special case matches fine:
       ;;
-      ;;   (define ({ciao})
+      ;;   (internal-define ?attributes ({ciao})
       ;;     (values))
       ;;
       ;;NOTE We explicitly decide not to rely  on RHS tag propagation to properly tag
       ;;the defined identifier ?WHO.  We could have considered:
       ;;
-      ;;   (define (?who . ?formals) . ?body)
+      ;;   (internal-define ?attributes (?who . ?formals) . ?body)
       ;;
       ;;as equivalent to:
       ;;
-      ;;   (define ?who (lambda ?formals . ?body))
+      ;;   (internal-define ?attributes ?who (lambda ?formals . ?body))
       ;;
       ;;expand the LAMBDA  form, take its single-tag retvals signature  and use it to
       ;;tag the identifier  ?WHO.  But to do  it that way: we would  first expand the
       ;;LAMBDA and after  tag ?WHO; so while  the LAMBDA is expanded ?WHO  is not yet
       ;;tagged.  Instead by tagging  ?WHO here we are sure that  it is already tagged
       ;;when LAMBDA is expanded.
-      ((_ ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?body0 ?body* ...)
+      ((_ ?attributes ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?body0 ?body* ...)
        (identifier? ?who)
        (let* ((qrhs   (cons 'defun input-form.stx))
       	      (tag.id (receive (standard-formals-stx signature)
@@ -2253,14 +2289,14 @@
       	 (values ?who tag.id qrhs)))
 
       ;;Variable definition with tagged identifier.
-      ((_ (brace ?id ?tag) ?expr)
+      ((_ ?attributes (brace ?id ?tag) ?expr)
        (identifier? ?id)
        (let* ((rhs.stx (bless `(tag-assert-and-return (,?tag) ,?expr)))
 	      (qrhs    (cons 'expr rhs.stx)))
 	 (values ?id ?tag qrhs)))
 
       ;;Variable definition with tagged identifier, no init.
-      ((_ (brace ?id ?tag))
+      ((_ ?attributes (brace ?id ?tag))
        (identifier? ?id)
        (let* ((rhs.stx (bless '(void)))
 	      (qrhs    (cons 'expr rhs.stx)))
@@ -2270,22 +2306,22 @@
       ;;
       ;;NOTE We  explicitly decide *not* to  rely on RHS tag  propagation to properly
       ;;tag the defined identifier ?WHO; see above for an explanation.
-      ((_ (?who . ?fmls) ?body0 ?body ...)
+      ((_ ?attributes (?who . ?fmls) ?body0 ?body ...)
        (identifier? ?who)
-       (let ((qrhs   (cons 'defun input-form.stx))
-	     (tag.id (receive (standard-formals-stx signature)
-			 (parse-tagged-lambda-proto-syntax ?fmls input-form.stx)
-		       (fabricate-procedure-tag-identifier (syntax->datum ?who) signature))))
+       (let* ((qrhs   (cons 'defun input-form.stx))
+	      (tag.id (receive (standard-formals-stx signature)
+			  (parse-tagged-lambda-proto-syntax ?fmls input-form.stx)
+			(fabricate-procedure-tag-identifier (syntax->datum ?who) signature))))
 	 (values ?who tag.id qrhs)))
 
       ;;R6RS variable definition.
-      ((_ ?id ?expr)
+      ((_ ?attributes ?id ?expr)
        (identifier? ?id)
        (let ((qrhs (cons* 'untagged-define-expr ?id ?expr)))
 	 (values ?id (top-tag-id) qrhs)))
 
       ;;R6RS variable definition, no init.
-      ((_ ?id)
+      ((_ ?attributes ?id)
        (identifier? ?id)
        (let* ((rhs.stx (bless '(void)))
 	      (qrhs    (cons 'expr rhs.stx)))

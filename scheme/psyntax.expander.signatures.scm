@@ -345,6 +345,27 @@
   (and (list? obj)
        (for-all lambda-signature? obj)))
 
+(define* (lambda-signature-fully-unspecified? {signature lambda-signature?})
+  ;;A LAMBDA  signature has fully unspecified  types if its retvals  tag signature is
+  ;;the standalone "<list>" tag and its formals signature is a proper list of "<top>"
+  ;;tags:
+  ;;
+  ;;   (<top> ...)
+  ;;
+  ;;or an improper list like:
+  ;;
+  ;;   (<top> ... . <list>)
+  ;;
+  (let ((retvals.stx ($retvals-signature-tags ($lambda-signature-retvals signature)))
+	(formals.stx ($formals-signature-tags ($lambda-signature-formals signature))))
+    (and (list-tag-id? retvals.stx)
+	 (if (list? formals.stx)
+	     (for-all top-tag-id? formals.stx)
+	   (receive (head tail)
+	       (improper-list->list-and-rest formals.stx)
+	     (and (for-all top-tag-id? head)
+		  (list-tag-id? tail)))))))
+
 ;;; --------------------------------------------------------------------
 
 (define* (retvals-signature-fully-unspecified? {signature retvals-signature?})

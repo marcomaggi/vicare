@@ -33,6 +33,7 @@
     (error __who__ "Vicare: internal error: invalid macro" x))
   (assert (symbol? x))
   (case x
+    ((exported-define)			exported-define-macro)
     ((define-struct)			define-struct-macro)
     ((define-record-type)		define-record-type-macro)
     ((record-type-and-record?)		record-type-and-record?-macro)
@@ -183,6 +184,91 @@
 
     (else
      (%error-invalid-macro))))
+
+
+;;;; module non-core-macro-transformer: DEFINE
+
+(module (exported-define-macro)
+
+  (define (exported-define-macro input-form.stx)
+    ;;Transformer function used  to expand Vicare's DEFINE macros  from the top-level
+    ;;built in environment.   Expand the contents of INPUT-FORM.STX;  return a syntax
+    ;;object that must be further expanded.
+    ;;
+    (syntax-match input-form.stx (brace)
+      ;;Tagged return values and possibly tagged formals.
+      ((_ ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) . ?body)
+       (%process-function-definition input-form.stx
+				     (lambda (who)
+				       `((brace ,who ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
+				     ?who `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls) ?body))
+
+      ((_ (brace ?id ?tag) ?expr)
+       (bless
+	`(internal-define () (brace ,?id ,?tag) ,?expr)))
+
+      ((_ (brace ?id ?tag))
+       (bless
+	`(internal-define () (brace ,?id ,?tag))))
+
+      ;;Untagged return values and possibly tagged formals.
+      ((_ (?who . ?fmls) . ?body)
+       (%process-function-definition input-form.stx
+				     (lambda (who)
+				       (cons who ?fmls))
+				     ?who ?fmls ?body))
+
+      ((_ ?id ?expr)
+       (bless
+	`(internal-define () ,?id ,?expr)))
+
+      ((_ ?id)
+       (bless
+	`(internal-define () ,?id)))
+      ))
+
+  (define (%process-function-definition input-form.stx make-define-formals who.id prototype.stx body.stx)
+    ;;When the function definition is fully untagged:
+    ;;
+    ;;   (define (add a b) (+ a b))
+    ;;
+    ;;we just want to  return the transformed version in which  DEFINE is replaced by
+    ;;INTERNAL-DEFINE:
+    ;;
+    ;;   (internal-define (unsafe) (add a b) (+ a b))
+    ;;
+    ;;When there are tags:
+    ;;
+    ;;   (define ({add <real>} {a <real>} {b <real>})
+    ;;     (+ a b))
+    ;;
+    ;;we want the full transformation:
+    ;;
+    ;;   (begin
+    ;;     (internal-define (safe)   ({add <real>} {a <real>} {b <real>})
+    ;;       ($add a b))
+    ;;     (internal-define (unsafe) ({~add <real>} {a <real>} {b <real>})
+    ;;       (+ a b)))
+    ;;
+    (receive (standard-formals.stx signature)
+	(parse-tagged-lambda-proto-syntax (bless prototype.stx)
+					  input-form.stx)
+      (if (lambda-signature-fully-unspecified? signature)
+	  (bless
+	   `(internal-define (unsafe) ,(cons who.id standard-formals.stx) . ,body.stx))
+	(let ((UNSAFE-WHO (identifier-append who.id "~" who.id)))
+	  (bless
+	   `(begin
+	      (internal-define (safe) ,(make-define-formals who.id)
+		,(if (list? standard-formals.stx)
+		     (cons UNSAFE-WHO standard-formals.stx)
+		   (receive (arg*.id rest.id)
+		       (improper-list->list-and-rest standard-formals.stx)
+		     `(apply ,UNSAFE-WHO ,@arg*.id ,rest.id))))
+	      (internal-define (unsafe) ,(make-define-formals UNSAFE-WHO) . ,body.stx))
+	   )))))
+
+  #| end of module |# )
 
 
 ;;;; module non-core-macro-transformer: DEFINE-AUXILIARY-SYNTAXES
