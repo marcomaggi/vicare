@@ -7029,7 +7029,8 @@
 	 chi-expr		chi-expr*
 	 chi-body*		chi-internal-body
 	 chi-qrhs*		chi-defun
-	 chi-lambda		chi-case-lambda)
+	 chi-lambda		chi-case-lambda
+	 chi-application/psi-first-operand)
   (include "psyntax.expander.chi-module.scm" #t))
 
 
