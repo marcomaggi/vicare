@@ -726,7 +726,7 @@
 
   (begin-for-syntax
     (define* (lambda-signature->stx {fun-id identifier?})
-      (let* ((signature    (typ.tag-identifier-callable-spec (typ.identifier-tag fun-id)))
+      (let* ((signature    (typ.tag-identifier-callable-signature (typ.identifier-tag fun-id)))
 	     (formals.tags (typ.lambda-signature-formals-tags signature))
 	     (retvals.tags (typ.lambda-signature-retvals-tags signature)))
 	(cons retvals.tags formals.tags))))

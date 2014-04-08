@@ -1177,7 +1177,7 @@
 
     ;; expand-time object type specs: identifiers defining types
     tag-identifier?				all-tag-identifiers?
-    tag-identifier-callable-spec
+    tag-identifier-callable-signature
     tag-super-and-sub?				formals-signature-super-and-sub-syntax?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
@@ -2009,7 +2009,7 @@
 	     (let ((psi (chi-expr  (cdr qrhs) lexenv.run lexenv.expand)))
 	       (%recurse-and-cons (build-global-assignment no-source
 				    lhs (psi-core-expr psi)))))
-	    ((def-expr)
+	    ((untagged-define-expr)
 	     (let ((psi (chi-expr  (cddr qrhs) lexenv.run lexenv.expand)))
 	       (%recurse-and-cons (build-global-assignment no-source
 				    lhs (psi-core-expr psi)))))

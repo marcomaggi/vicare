@@ -631,26 +631,72 @@
 
 
 ;;;; fabricated tag identifiers
-
-(define (callable-spec? obj)
-  (or (lambda-signature? obj)
-      (clambda-compound? obj)))
-
-(module (make-retvals-signature-procedure-tag
-	 fabricate-single-procedure-retvals-signature
+;;
+;;Whenever a  LAMBDA or CASE-LAMBDA form  is expanded: a signature  for the resulting
+;;closure  object is  built; it  is either  an instance  of "lambda-signature"  or an
+;;instance of "clambda-compound".   For example, when the following  LAMBDA syntax is
+;;expanded:
+;;
+;;   (lambda ({_ <exact-integer>} {a <fixnum>} {b <fixnum>})
+;;     (+ 1 a b))
+;;
+;;the LAMBDA proto parser builds the following "lambda-signature" struct:
+;;
+;;   #["lambda-signature"
+;;       retvals=#["retvals-signature" tags=(#'<exact-integer>)]
+;;       formals=#["formals-signature" tags=(#'<fixnum> #'<fixnum>)]]
+;;
+;;A new tag  identifier (not coming from  the source code) is built  and the callable
+;;signature is stored in its properties  list; such tag identifier becomes the single
+;;tag in the retvals signature of the closure object:
+;;
+;;   #["retvals-signature" tags=(#'?fresh-tag-identifier)]
+;;
+;;where ?FRESH-TAG-IDENTIFIER is built by the functions below.
+;;
+(module (make-retvals-signature-with-fabricated-procedure-tag
 	 fabricate-procedure-tag-identifier
-	 tag-identifier-callable-spec)
+	 tag-identifier-callable-signature)
 
-  (define* (make-retvals-signature-procedure-tag {id identifier?}  {callable-spec callable-spec?})
-    (make-retvals-signature (list ($fabricate-procedure-tag-identifier (syntax->datum id) callable-spec))))
+  (define* (make-retvals-signature-with-fabricated-procedure-tag {sym symbol?} {callable-signature callable-signature?})
+    ;;Whenever a LAMBDA or CASE-LAMBDA syntax is  expanded, we need to create a fresh
+    ;;tag identifier  to represent the  signature of  its closure object.   We assume
+    ;;this function is called as:
+    ;;
+    ;;   (make-retvals-signature-with-fabricated-procedure-tag
+    ;;      (gensym) ?lambda-signature)
+    ;;
+    ;;When a DEFINE syntax:
+    ;;
+    ;;   (define (?who . ?formals) . ?body)
+    ;;
+    ;;is expanded: a QRHS is created, then  the identifier ?WHO is bound, finally the
+    ;;QRHS is  expanded.  When the QRHS  is expanded: we  need to create a  fresh tag
+    ;;identifier to  represent the signature of  its closure object.  We  assume this
+    ;;function is called as:
+    ;;
+    ;;   (make-retvals-signature-with-fabricated-procedure-tag
+    ;;      (syntax->datum ?who) ?lambda-signature)
+    ;;
+    (make-retvals-signature-single-value
+     ($fabricate-procedure-tag-identifier sym callable-signature)))
 
-  (define* (fabricate-single-procedure-retvals-signature {sym symbol?} {callable-spec callable-spec?})
-    (make-retvals-signature (list ($fabricate-procedure-tag-identifier sym callable-spec))))
+  (define* ({fabricate-procedure-tag-identifier tag-identifier?} {sym symbol?} {callable-signature callable-signature?})
+    ;;When a DEFINE syntax:
+    ;;
+    ;;   (define (?who . ?formals) . ?body)
+    ;;
+    ;;is expanded: a QRHS is created, then  the identifier ?WHO is bound, finally the
+    ;;QRHS is expanded.   When the binding for  ?WHO is created: we need  to create a
+    ;;fresh tag identifier to represent the signature of its closure object; such tag
+    ;;must be  created before  the LAMBDA is  expanded so that,  while the  LAMBDA is
+    ;;expanded, ?WHO is already tagged.  We assume this function is called as:
+    ;;
+    ;;   (fabricate-procedure-tag-identifier (syntax->datum ?who) lambda-signature)
+    ;;
+    ($fabricate-procedure-tag-identifier sym callable-signature))
 
-  (define* ({fabricate-procedure-tag-identifier tag-identifier?} {sym symbol?} {callable-spec callable-spec?})
-    ($fabricate-procedure-tag-identifier sym callable-spec))
-
-  (define ($fabricate-procedure-tag-identifier sym callable-spec)
+  (define ($fabricate-procedure-tag-identifier sym callable-signature)
     (receive (tag lab)
 	(%fabricate-bound-identifier sym)
       ;;FIXME? We  create an instance  of "object-type-spec" with a  plain PROCEDURE?
@@ -661,7 +707,7 @@
       (let* ((uid   (gensym sym))
 	     (spec  (make-object-type-spec uid tag (procedure-tag-id) (procedure-pred-id))))
 	(set-identifier-object-type-spec! tag spec)
-	($putprop lab *EXPAND-TIME-TAG-CALLABLE-SPEC-COOKIE* callable-spec))
+	($putprop lab *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE* callable-signature))
       tag))
 
   (define* (%fabricate-bound-identifier {sym symbol?})
@@ -683,16 +729,20 @@
 			  '())
 	      lab)))
 
-  (define-constant *EXPAND-TIME-TAG-CALLABLE-SPEC-COOKIE*
-    'vicare:expander:tag-callable-spec)
+  (define-constant *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE*
+    'vicare:expander:tag-callable-signature)
 
-  (define* (tag-identifier-callable-spec {tag-id tag-identifier?})
+  (define* (tag-identifier-callable-signature {tag-id tag-identifier?})
     ;;Given a  tag identifier representing  a subtag of "<procedure>":  retrieve from
     ;;its property  list the callable  specification of the function.   If successful
     ;;return  an instance  of "lambda-signature"  or "clambda-compound";  if no  such
     ;;property is defined return false.
     ;;
-    ($syntactic-binding-getprop tag-id *EXPAND-TIME-TAG-CALLABLE-SPEC-COOKIE*))
+    ($syntactic-binding-getprop tag-id *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE*))
+
+  (define (callable-signature? obj)
+    (or (lambda-signature? obj)
+	(clambda-compound? obj)))
 
   #| end of module |# )
 

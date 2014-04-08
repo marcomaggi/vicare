@@ -3775,7 +3775,7 @@
 
     (tag-identifier?				$type-specs)
     (all-tag-identifiers?			$type-specs)
-    (tag-identifier-callable-spec		$type-specs)
+    (tag-identifier-callable-signature		$type-specs)
     (tag-super-and-sub?				$type-specs)
     (tag-identifier-ancestry			$type-specs)
     (tag-common-ancestor			$type-specs)

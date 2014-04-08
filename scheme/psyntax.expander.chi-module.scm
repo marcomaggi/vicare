@@ -67,7 +67,7 @@
     ;;
     (syntax-match (retvals-signature-tags (psi-retvals-signature rator.psi)) ()
       ((?tag)
-       (let ((spec (tag-identifier-callable-spec ?tag)))
+       (let ((spec (tag-identifier-callable-signature ?tag)))
 	 (cond ((lambda-signature? spec)
 		(lambda-signature-retvals spec))
 	       ((clambda-compound? spec)
@@ -723,12 +723,12 @@
 	 ;;   ("ciao" length)
 	 ;;
 	 (let ((rator.psi (chi-expr ?rator lexenv.run lexenv.expand)))
-	 (chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
-				    rator.psi ?rand*)))
+	   (chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
+				      rator.psi ?rand*)))
 
-      (_
-       (syntax-violation __who__
-	 "Vicare: internal error: invalid application syntax" input-form.stx))))
+	(_
+	 (syntax-violation __who__
+	   "Vicare: internal error: invalid application syntax" input-form.stx))))
 
     (define (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
 					   rator.stx rand*.stx)
@@ -908,8 +908,8 @@
       (cond ((tag-super-and-sub? (procedure-tag-id) rator.tag)
 	     ;;The rator is  a procedure: very good; return  a procedure application.
 	     (let ((rand*.psi (chi-expr* rand*.stx lexenv.run lexenv.expand)))
-	       (%process-procedure-application input-form.stx lexenv.run lexenv.expand
-					       rator.tag rator.psi rand*.psi)))
+	       (%process-closure-application input-form.stx lexenv.run lexenv.expand
+					     rator.tag rator.psi rand*.psi)))
 
 	    ((top-tag-id? rator.tag)
 	     ;;The rator  type is unknown,  we only know that  it is a  single value.
@@ -1077,8 +1077,8 @@
 	     ;;The rator is a procedure: very good; return a procedure application.
 	     (let* ((other-rand*.psi (chi-expr* other-rand*.stx lexenv.run lexenv.expand))
 		    (rand*.psi       (cons first-rand.psi other-rand*.psi)))
-	       (%process-procedure-application input-form.stx lexenv.run lexenv.expand
-					       rator.tag rator.psi rand*.psi)))
+	       (%process-closure-application input-form.stx lexenv.run lexenv.expand
+					     rator.tag rator.psi rand*.psi)))
 
 	    ((top-tag-id? rator.tag)
 	     ;;The rator  type is unknown,  we only know that  it is a  single value.
@@ -1098,8 +1098,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%process-procedure-application input-form.stx lexenv.run lexenv.expand
-					  rator.tag rator.psi rand*.psi)
+  (define (%process-closure-application input-form.stx lexenv.run lexenv.expand
+					rator.tag rator.psi rand*.psi)
     ;;Process a  closure object application.   Here we  know that the  application to
     ;;process is:
     ;;
@@ -1263,7 +1263,7 @@
 	(make-psi (build-lambda (syntax-annotation ctxt-id)
 		    formals.core
 		    (psi-core-expr body.psi))
-		  (make-retvals-signature-procedure-tag ctxt-id lambda-signature))))
+		  (make-retvals-signature-with-fabricated-procedure-tag (syntax->datum ctxt-id) lambda-signature))))
     (syntax-match input-form.stx (brace)
       ((_ ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
        (%expand ?ctxt (bless
@@ -1295,7 +1295,7 @@
       (make-psi (build-lambda (syntax-annotation input-form.stx)
 		  formals.lex
 		  (psi-core-expr body.psi))
-		(fabricate-single-procedure-retvals-signature (gensym) lambda-signature))))
+		(make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
 
   (define* (chi-case-lambda input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
     ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
@@ -1326,7 +1326,7 @@
       (make-psi (build-case-lambda (syntax-annotation input-form.stx)
 		  formals*.lex
 		  (map psi-core-expr body**.psi))
-		(fabricate-single-procedure-retvals-signature (gensym) (make-clambda-compound lambda-signature*)))))
+		(make-retvals-signature-with-fabricated-procedure-tag (gensym) (make-clambda-compound lambda-signature*)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1516,7 +1516,7 @@
 ;;   (defun    . #'(define (fun) 1))
 ;;   (expr     . #'(void))
 ;;   (expr     . #'(+ 3 4))
-;;   (def-expr . (#'var1 . #'(+ 3 4)))
+;;   (untagged-define-expr . (#'var1 . #'(+ 3 4)))
 ;;   (top-expr . #'(display 5))
 ;;
 ;;The possible types are:
@@ -1532,7 +1532,7 @@
 ;;      (define ?id)
 ;;      (define {?id ?tag} ?val)
 ;;
-;;DEF-EXPR -
+;;UNTAGGED-DEFINE-EXPR -
 ;;  For an non-function variable definition.  A syntax like:
 ;;
 ;;      (define ?id ?val)
@@ -1565,7 +1565,7 @@
       (let ((expr.stx (cdr qrhs)))
 	(chi-expr expr.stx lexenv.run lexenv.expand)))
 
-     ((def-expr)
+     ((untagged-define-expr)
       ;;We know that here the definition is for an untagged identifier.
       (let ((var.id   (cadr qrhs))
 	    (expr.stx (cddr qrhs)))
@@ -2221,16 +2221,36 @@
     ;;   create.
     ;;
     (syntax-match input-form.stx (brace)
-      ;;Function definition with tagged return values.
-      ((_ ((brace ?id ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?body0 ?body ...)
-       (identifier? ?id)
+      ;;Function definition with tagged return values and possibly tagged formals.
+      ;;
+      ;;NOTE The following special case matches fine:
+      ;;
+      ;;   (define ({ciao})
+      ;;     (values))
+      ;;
+      ;;NOTE We explicitly decide not to rely  on RHS tag propagation to properly tag
+      ;;the defined identifier ?WHO.  We could have considered:
+      ;;
+      ;;   (define (?who . ?formals) . ?body)
+      ;;
+      ;;as equivalent to:
+      ;;
+      ;;   (define ?who (lambda ?formals . ?body))
+      ;;
+      ;;expand the LAMBDA  form, take its single-tag retvals signature  and use it to
+      ;;tag the identifier  ?WHO.  But to do  it that way: we would  first expand the
+      ;;LAMBDA and after  tag ?WHO; so while  the LAMBDA is expanded ?WHO  is not yet
+      ;;tagged.  Instead by tagging  ?WHO here we are sure that  it is already tagged
+      ;;when LAMBDA is expanded.
+      ((_ ((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?fmls) ?body0 ?body* ...)
+       (identifier? ?who)
        (let* ((qrhs   (cons 'defun input-form.stx))
-	      (tag.id (receive (standard-formals-stx signature)
-			  (parse-tagged-lambda-proto-syntax (bless
-							     `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
-							    input-form.stx)
-			(fabricate-procedure-tag-identifier (syntax->datum ?id) signature))))
-	 (values ?id tag.id qrhs)))
+      	      (tag.id (receive (standard-formals-stx signature)
+      			  (parse-tagged-lambda-proto-syntax (bless
+      							     `((brace _ ,@?rv-tag* . ,?rv-rest-tag) . ,?fmls))
+      							    input-form.stx)
+      			(fabricate-procedure-tag-identifier (syntax->datum ?who) signature))))
+      	 (values ?who tag.id qrhs)))
 
       ;;Variable definition with tagged identifier.
       ((_ (brace ?id ?tag) ?expr)
@@ -2246,19 +2266,22 @@
 	      (qrhs    (cons 'expr rhs.stx)))
 	 (values ?id ?tag qrhs)))
 
-      ;;Function definition with possible tagged arguments.
-      ((_ (?id . ?fmls) ?body0 ?body ...)
-       (identifier? ?id)
+      ;;Function definition with possibly tagged formals.
+      ;;
+      ;;NOTE We  explicitly decide *not* to  rely on RHS tag  propagation to properly
+      ;;tag the defined identifier ?WHO; see above for an explanation.
+      ((_ (?who . ?fmls) ?body0 ?body ...)
+       (identifier? ?who)
        (let ((qrhs   (cons 'defun input-form.stx))
 	     (tag.id (receive (standard-formals-stx signature)
 			 (parse-tagged-lambda-proto-syntax ?fmls input-form.stx)
-		       (fabricate-procedure-tag-identifier (syntax->datum ?id) signature))))
-	 (values ?id tag.id qrhs)))
+		       (fabricate-procedure-tag-identifier (syntax->datum ?who) signature))))
+	 (values ?who tag.id qrhs)))
 
       ;;R6RS variable definition.
       ((_ ?id ?expr)
        (identifier? ?id)
-       (let ((qrhs (cons* 'def-expr ?id ?expr)))
+       (let ((qrhs (cons* 'untagged-define-expr ?id ?expr)))
 	 (values ?id (top-tag-id) qrhs)))
 
       ;;R6RS variable definition, no init.

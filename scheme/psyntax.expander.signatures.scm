@@ -697,12 +697,12 @@
   ;;
   ;;2. An instance of "lambda-signature".
   ;;
-  (({_ standard-formals-syntax? lambda-signature?} {callable-spec.stx syntax-object?})
-   (parse-tagged-lambda-proto-syntax callable-spec.stx #f))
-  (({_ standard-formals-syntax? lambda-signature?} {callable-spec.stx syntax-object?} {input-form.stx syntax-object?})
+  (({_ standard-formals-syntax? lambda-signature?} {callable-signature.stx syntax-object?})
+   (parse-tagged-lambda-proto-syntax callable-signature.stx #f))
+  (({_ standard-formals-syntax? lambda-signature?} {callable-signature.stx syntax-object?} {input-form.stx syntax-object?})
    ;;First we parse  and extract the return  values tagging, if any;  then we parse
    ;;the rest of the formals.
-   (syntax-match callable-spec.stx (brace)
+   (syntax-match callable-signature.stx (brace)
      ;;With return values tagging.
      (((brace ?who ?rv-tag* ... . ?rv-rest-tag) . ?formals)
       (underscore-id? ?who)
