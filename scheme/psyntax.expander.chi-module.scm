@@ -1681,7 +1681,7 @@
       ;;     (define-syntax ?lhs ?rhs))
       ;;
       ;;because the expansion of a DEFINE-SYNTAX use is nothing.
-      (define code-for-syntax.core
+      (define visit-code.core
 	(let ((rhs*.out  (if (null? rhs*.core)
 			     #f
 			   (build-sequence no-source
@@ -1699,17 +1699,17 @@
 		(rhs*.out)
 		(init*.out)
 		(else #f))))
-      (when code-for-syntax.core
+      (when visit-code.core
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	  (eval-core (expanded->core code-for-syntax.core))))
+	  (eval-core (expanded->core visit-code.core))))
       ;;Done!  Push on the LEXENV an entry like:
       ;;
       ;;   (?unused-label . (begin-for-syntax . ?core-code))
       ;;
       ;;then go on with the next body forms.
-      (let ((lexenv.run^ (if code-for-syntax.core
+      (let ((lexenv.run^ (if visit-code.core
 			     (let ((entry (cons (gensym "begin-for-syntax-label")
-						(cons 'begin-for-syntax code-for-syntax.core))))
+						(cons 'begin-for-syntax visit-code.core))))
 			       (cons entry lexenv.run))
 			   lexenv.run)))
 	(chi-body* (cdr body-form*.stx)
