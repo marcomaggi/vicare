@@ -2692,13 +2692,14 @@
 	    (vtc	(make-collector)))
 	(parametrise ((inv-collector  rtc)
 		      (vis-collector  vtc))
-	  ;;INIT-FORM*.STX  is a  list of  syntax objects  representing the  trailing
+	  ;;INIT*.STX  is  a  list  of   syntax  objects  representing  the  trailing
 	  ;;non-definition forms  from the body  of the library  and the body  of the
 	  ;;internal modules.
 	  ;;
-	  ;;LEX* is a list of gensyms to be used in binding definitions when building
-	  ;;core language  symbolic expressions  for the glocal  DEFINE forms  in the
-	  ;;library.  There is a gensym for every item in RHS*.
+	  ;;LEX*  is a  list of  left-hand-side  lex gensyms  to be  used in  binding
+	  ;;definitions  when building  core  language symbolic  expressions for  the
+	  ;;glocal DEFINE forms in the library.  There is a lex gensym for every item
+	  ;;in QRHS*.
 	  ;;
 	  ;;QRHS* is a list of qualified right-hand sides representing the right-hand
 	  ;;side expressions in the DEFINE forms from the body of the library.
@@ -2707,22 +2708,22 @@
 	  ;;EXPORT  syntaxes rather  than the  export spec  at the  beginning of  the
 	  ;;library.
 	  ;;
-	  (receive (init-form*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
+	  (receive (init*.stx lexenv.run lexenv.expand lex* qrhs* internal-export*)
 	      (%process-internal-body body-stx* rib mixed-definitions-and-expressions?)
 	    (receive (export-name* export-id*)
 		(%parse-all-export-specs export-spec* internal-export* wrap rib)
 	      (seal-rib! rib)
-	      ;;RHS-FORM*.PSI is  a list  of "psi"  structs containing  core language
-	      ;;symbolic expressions representing the DEFINE right-hand sides.
+	      ;;RHS*.PSI is a  list of PSI structs containing  core language symbolic
+	      ;;expressions representing the DEFINE right-hand sides.
 	      ;;
-	      ;;INIT-FORM*.PSI is  a list of  "psi" structs containing  core language
-	      ;;symbolic expressions representing the trailing init forms.
+	      ;;INIT*.PSI is a list of  PSI structs containing core language symbolic
+	      ;;expressions representing the trailing init forms.
 	      ;;
-	      ;;We want order here?   It is better to expand the  init forms when the
-	      ;;defininitions have  been handled, so  that tag identifiers  have been
-	      ;;put where they are needed.
-	      (let* ((rhs-form*.psi  (chi-qrhs* qrhs*          lexenv.run lexenv.expand))
-		     (init-form*.psi (chi-expr* init-form*.stx lexenv.run lexenv.expand)))
+	      ;;We want order here?  Yes.  We  expand first the definitions, then the
+	      ;;init forms;  so that  tag identifiers  have been  put where  they are
+	      ;;needed.
+	      (let* ((rhs*.psi  (chi-qrhs* qrhs*     lexenv.run lexenv.expand))
+		     (init*.psi (chi-expr* init*.stx lexenv.run lexenv.expand)))
 		;;QUESTION Why do we unseal the rib  if we do not use it anymore?  Is
 		;;it an  additional check of  its internal integrity?   (Marco Maggi;
 		;;Sun Mar 23, 2014)
@@ -2734,11 +2735,11 @@
 		    (%validate-exports export-spec* export-subst export-env)
 		    (let ((invoke-code (build-library-letrec* no-source
 					 mixed-definitions-and-expressions?
-					 lex* loc* (map psi-core-expr rhs-form*.psi)
-					 (if (null? init-form*.psi)
+					 lex* loc* (map psi-core-expr rhs*.psi)
+					 (if (null? init*.psi)
 					     (build-void)
 					   (build-sequence no-source
-					     (map psi-core-expr init-form*.psi))))))
+					     (map psi-core-expr init*.psi))))))
 		      (values (itc) (rtc) (vtc)
 			      invoke-code macro* export-subst export-env)))))))))))
 
