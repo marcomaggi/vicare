@@ -536,12 +536,7 @@
 	    ;;bound when the "object-type-spec" is built.
 	    (define-syntax ,type.id
 	      (cons '$rtd ',rtd))
-	    ;;This definition exists only to make sure that the object type spec form
-	    ;;is evaluated in the visit code.
-	    (define-syntax dummy
-	      (internal-body
-		,object-type-spec-form
-		(lambda (stx) #f)))
+	    (begin-for-syntax ,object-type-spec-form)
 	    (define ((brace ,constructor.id ,type.id) . ,field*.arg)
 	      (let ((S ($struct ',rtd ,@field*.sym)))
 		(if ($std-destructor ',rtd)
@@ -776,13 +771,7 @@
 	  (cons '$rtd
 		(cons (syntax ,foo-rtd)
 		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
-	;;This definition exists only to make sure  that the object type spec form is
-	;;evaluated in the visit code.
-	(define-syntax dummy
-	  (internal-body
-	    ,object-type-spec-form
-	    (lambda (stx) #f)))
-
+	(begin-for-syntax ,object-type-spec-form)
 	;;Record instance predicate.
 	(define the-predicate
 	  (record-predicate ,foo-rtd))

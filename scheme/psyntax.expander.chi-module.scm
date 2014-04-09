@@ -1672,27 +1672,50 @@
 				lex* qrhs* mod** kwd* export-spec* rib mix? sd?)
     (receive (lhs*.lex init*.core rhs*.core lexenv.expand^)
 	(%expand input-form.stx lexenv.expand rib)
-      ;;Build an expanded code expression and evaluate it.
+      ;;Build an expanded  code expression and evaluate it.
+      ;;
+      ;;NOTE This variable is set to #f (which is invalid core code) when there is no
+      ;;code after the expansion.  This can happen, for example, when doing:
+      ;;
+      ;;   (begin-for-syntax
+      ;;     (define-syntax ?lhs ?rhs))
+      ;;
+      ;;because the expansion of a DEFINE-SYNTAX use is nothing.
       (define code-for-syntax.core
-	(build-sequence no-source
-	  (list (if (null? rhs*.core)
-		    (build-void)
-		  (build-sequence no-source
-		    (map (lambda (lhs.lex rhs.core)
-			   (build-global-assignment no-source
-			     lhs.lex rhs.core))
-		      lhs*.lex rhs*.core)))
-		(if (null? init*.core)
-		    (build-void)
-		  (build-sequence no-source
-		    init*.core)))))
-      (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	(eval-core (expanded->core code-for-syntax.core)))
-      ;;Done!  Now go on with the next body forms.
-      (chi-body* (cdr body-form*.stx)
-		 lexenv.run lexenv.expand^
-		 lex* qrhs* mod** kwd* export-spec* rib
-		 mix? sd?)))
+	(let ((rhs*.out  (if (null? rhs*.core)
+			     #f
+			   (build-sequence no-source
+			     (map (lambda (lhs.lex rhs.core)
+				    (build-global-assignment no-source
+				      lhs.lex rhs.core))
+			       lhs*.lex rhs*.core))))
+	      (init*.out (if (null? init*.core)
+			     #f
+			   (build-sequence no-source
+			     init*.core))))
+	  (cond ((and rhs*.out init*.out)
+		 (build-sequence no-source
+		   (list rhs*.out init*.out)))
+		(rhs*.out)
+		(init*.out)
+		(else #f))))
+      (when code-for-syntax.core
+	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
+	  (eval-core (expanded->core code-for-syntax.core))))
+      ;;Done!  Push on the LEXENV an entry like:
+      ;;
+      ;;   (?unused-label . (begin-for-syntax . ?core-code))
+      ;;
+      ;;then go on with the next body forms.
+      (let ((lexenv.run^ (if code-for-syntax.core
+			     (let ((entry (cons (gensym "begin-for-syntax-label")
+						(cons 'begin-for-syntax code-for-syntax.core))))
+			       (cons entry lexenv.run))
+			   lexenv.run)))
+	(chi-body* (cdr body-form*.stx)
+		   lexenv.run^ lexenv.expand^
+		   lex* qrhs* mod** kwd* export-spec* rib
+		   mix? sd?))))
 
   (define (%expand input-form.stx lexenv.expand rib)
     (define rtc
@@ -1713,8 +1736,8 @@
 		(mix-definitions-and-expressions? #t)
 		(shadowing-definitions?           #t))
 	    (syntax-match input-form.stx ()
-	      ((_ ?expr* ...)
-	       (chi-body* ?expr*
+	      ((_ ?expr ?expr* ...)
+	       (chi-body* (cons ?expr ?expr*)
 			  lexenv.expand lexenv.super
 			  lex* qrhs* mod** kwd* export-spec* rib
 			  mix-definitions-and-expressions?

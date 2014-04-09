@@ -45,7 +45,9 @@
     build-data				build-sequence
     build-void				build-letrec
     build-letrec*			#;build-global-define
-    build-library-letrec*)
+    build-library-letrec*
+
+    core-language->sexp)
   (import (rnrs)
     (psyntax compat)
     (psyntax config))
@@ -216,6 +218,63 @@
 					  (map (lambda (var loc)
 						 (build-global-assignment ae loc var))
 					    vars locs)))))))
+
+
+(define (core-language->sexp core)
+  ;;Recursively convert  an expression in core  language (which contains
+  ;;syntax objects as annotations) into a readable symbolic expression.
+  ;;
+  ;;FIXME This should be improved.  (Marco Maggi; Mon Apr 7, 2014)
+  ;;
+  (if (pair? core)
+      (case (car core)
+	((annotated-call)
+	 (map core-language->sexp (cddr core)))
+
+	((annotated-case-lambda)
+	 (let ((meat (cddr core)))
+	   #;(debug-print meat)
+	   (let ((args*  (map car meat))
+		 (body** (map cdr meat)))
+	     `(case-lambda ,@(map cons args* (map (lambda (body*)
+						    (map core-language->sexp body*))
+					       body**))))))
+
+	((begin)
+	 `(begin ,@(map core-language->sexp (cdr core))))
+
+	((if)
+	 `(if ,(core-language->sexp (cadr core))
+	      ,(core-language->sexp (caddr core))
+	    ,(core-language->sexp (cadddr core))))
+
+	((set!)
+	 `(set! ,(cadr core) ,(core-language->sexp (caddr core))))
+
+	((define)
+	`(define ,(cadr core) ,(core-language->sexp (caddr core))))
+
+	((lerec letrec*)
+	 ;;We expect CORE to have the format:
+	 ;;
+	 ;;   (letrec  ((?id ?expr) ...) ?body)
+	 ;;   (letrec* ((?id ?expr) ...) ?body)
+	 ;;
+	 (let ((bind*.core (cadr  core))
+	       (body.core  (caddr core)))
+	   (let ((bind*.sexp (map (lambda (bind)
+				    (let ((lex  (car  bind))
+					  (expr (cadr bind)))
+				      (list lex (core-language->sexp expr))))
+			       bind*.core))
+		 (body.sexp  (core-language->sexp body.core)))
+	     (if (eq? 'letrec (car core))
+		 `(letrec ,bind*.sexp ,body.sexp)
+	       `(letrec* ,bind*.sexp ,body.sexp)))))
+
+	(else
+	 (map core-language->sexp core)))
+    core))
 
 
 ;;;; done

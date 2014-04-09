@@ -4309,71 +4309,71 @@
 
   (check	;multiple define functions then reference
       (let ()
-	(begin-for-syntax
-	  (define (a) 1))
-	(begin-for-syntax
-	  (define (b) 2))
-	(begin-for-syntax
-	  (define c (+ (a) (b))))
-	(define-syntax (doit stx)
-	  #`(quote (#,(a) #,(b) #,c)))
-	(doit))
+  	(begin-for-syntax
+  	  (define (a) 1))
+  	(begin-for-syntax
+  	  (define (b) 2))
+  	(begin-for-syntax
+  	  (define c (+ (a) (b))))
+  	(define-syntax (doit stx)
+  	  #`(quote (#,(a) #,(b) #,c)))
+  	(doit))
     => '(1 2 3))
 
   (check	;define-syntax, then reference
       (let ()
-	;;A  DEFINE-SYNTAX  alone in  the  body  of BEGIN-FOR-SYNTAX  is
-	;;special because it expands to nothing, so we have to test it.
-	(begin-for-syntax
-	  (define-syntax (a stx)
-	    1))
-	(define-syntax (doit stx)
-	  #`(quote #,(a)))
-	(doit))
+  	;;A  DEFINE-SYNTAX  alone in  the  body  of BEGIN-FOR-SYNTAX  is
+  	;;special because it expands to nothing, so we have to test it.
+  	(begin-for-syntax
+  	  (define-syntax (a stx)
+  	    1))
+  	(define-syntax (doit stx)
+  	  #`(quote #,(a)))
+  	(doit))
     => 1)
 
   (check	;define, define-syntax, then reference
       (let ()
-	(begin-for-syntax
-	  (define-syntax (a stx)
-	    1)
-	  (define b 2))
-	(define-syntax (doit stx)
-	  #`(quote (#,(a) #,b)))
-	(doit))
+  	(begin-for-syntax
+  	  (define-syntax (a stx)
+  	    1)
+  	  (define b 2))
+  	(define-syntax (doit stx)
+  	  #`(quote (#,(a) #,b)))
+  	(doit))
     => '(1 2))
 
   (check	;mix defininitions and expressions, then reference
       (let ()
-	(begin-for-syntax
-	  (define a 1)
-	  (set! a 11)
-	  (define b 2))
-	(define-syntax (doit stx)
-	  #`(quote (#,a #,b)))
-	(doit))
+  	(begin-for-syntax
+  	  (define a 1)
+  	  (set! a 11)
+  	  (define b 2))
+  	(define-syntax (doit stx)
+  	  #`(quote (#,a #,b)))
+  	(doit))
     => '(11 2))
 
   (check	;mix defininitions and expressions, then reference
       (let ()
-	(begin-for-syntax
-	  (define a 1)
-	  (set! a (lambda () 11))
-	  (define b 2))
-	(define-syntax (doit stx)
-	  #`(quote (#,(a) #,b)))
-	(doit))
+  	(begin-for-syntax
+  	  (define a 1)
+  	  (set! a (lambda () 11))
+  	  (define b 2))
+  	(define-syntax (doit stx)
+  	  #`(quote (#,(a) #,b)))
+  	(doit))
     => '(11 2))
 
   (check	;define, mutate, then reference
       (let ()
-	(begin-for-syntax
-	  (define a 1))
-	(begin-for-syntax
-	  (set! a 11))
-	(define-syntax (doit stx)
-	  #`(quote (#,a)))
-	(doit))
+  	(begin-for-syntax
+  	  (define a 1))
+  	(begin-for-syntax
+  	  (set! a 11))
+  	(define-syntax (doit stx)
+  	  #`(quote (#,a)))
+  	(doit))
     => '(11))
 
 ;;; --------------------------------------------------------------------

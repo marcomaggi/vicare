@@ -43,6 +43,7 @@
     add1				sub1
     pretty-print			pretty-print*
     fprintf				debug-print
+    print-gensym			pretty-width
     void				port-id
     console-error-port			all-identifiers?
     string-empty?			syntax=?

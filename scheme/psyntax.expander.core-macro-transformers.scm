@@ -2399,49 +2399,22 @@
 
 ;;;; module core-macro-transformer: EXPANSION-OF
 
-(module (expansion-of-transformer)
+(define (expansion-of-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to  expand Vicare's  EXPANSION-OF  syntaxes from  the
   ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
   ;;context of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'expansion-of))
-
-  (define (expansion-of-transformer input-form.stx lexenv.run lexenv.expand)
-    (syntax-match input-form.stx ()
-      ((_ ?expr)
-       (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	      (expr.core (psi-core-expr expr.psi))
-	      (expr.sexp (core->sexp expr.core)))
-	 (make-psi (build-data no-source
-		     expr.sexp)
-		   (make-retvals-signature-single-top))))
-      ))
-
-  (define (core->sexp core)
-    ;;Recursively  convert an  expression  in core  language  (which contains  syntax
-    ;;objects as annotations) into a readable symbolic expression.
-    ;;
-    ;;FIXME This should be improved.  (Marco Maggi; Mon Apr 7, 2014)
-    ;;
-    (if (pair? core)
-	(case (car core)
-	  ((annotated-call)
-	   (map core->sexp (cddr core)))
-
-	  ((annotated-case-lambda)
-	   (let ((meat (cddr core)))
-	     #;(debug-print meat)
-	     (let ((args*  (map car meat))
-		   (body** (map cdr meat)))
-	       `(case-lambda ,@(map cons args* (map (lambda (body*)
-						      (map core->sexp body*))
-						 body**))))))
-
-	  (else core))
-      core))
-
-  #| end of module: EXPANSION-OF-TRANSFORMER |# )
+  (syntax-match input-form.stx ()
+    ((_ ?expr)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sexp (core-language->sexp expr.core)))
+       (make-psi (build-data no-source
+		   expr.sexp)
+		 (make-retvals-signature-single-top))))
+    ))
 
 
 ;;;; done

@@ -2132,11 +2132,11 @@
 (define (expand-top-level->sexp sexp)
   (receive (invoke-lib* invoke-code macro* export-subst export-env)
       (expand-top-level sexp)
-    `((invoke-lib* . ,invoke-lib*)
-      (invoke-code . ,invoke-code)
-      (macro* . ,macro*)
-      (export-subst . ,export-subst)
-      (export-env . ,export-env))))
+    `((invoke-lib*	. ,invoke-lib*)
+      (invoke-code	. ,invoke-code)
+      (macro*		. ,macro*)
+      (export-subst	. ,export-subst)
+      (export-env	. ,export-env))))
 
 
 ;;;; R6RS library expander
@@ -2347,10 +2347,15 @@
 	     (guard-libdesc*	(map library-descriptor guard-lib*))
 	     ;;Thunk to eval to visit the library.
 	     (visit-proc	(lambda ()
+				  ;;This initial visit is performed whenever a source
+				  ;;library is visited.
 				  (initial-visit! macro*)))
 	     ;;Thunk to eval to invoke the library.
 	     (invoke-proc	(lambda ()
 				  (eval-core (expanded->core invoke-code))))
+	     ;;This visit  code is compiled and  stored in FASL files;  the resulting
+	     ;;code objects  are the  ones evaluated whenever  a compiled  library is
+	     ;;loaded and visited.
 	     (visit-code	(%build-visit-code macro*))
 	     (visible?		#t))
 	 (install-library uid libname
@@ -2368,13 +2373,22 @@
 		 option*)))))
 
   (define (%build-visit-code macro*)
-    ;;Return a sexp  representing code that initialises  the bindings of
-    ;;macro  definitions in  the  core language:  the  visit code;  code
-    ;;evaluated whenever the library is visited; each library is visited
-    ;;only once the first time an exported binding is used.  MACRO* is a
-    ;;list of sublists, each having the format:
+    ;;Return  a  sexp  representing  code  that initialises  the  bindings  of  macro
+    ;;definitions in the  core language: the visit code; code  evaluated whenever the
+    ;;library  is visited;  each  library is  visited  only once  the  first time  an
+    ;;exported binding is used.
     ;;
-    ;;   (?loc . (?obj . ?src-code))
+    ;;MACRO* is a list of sublists.  The entries with format:
+    ;;
+    ;;   (?loc . (?obj . ?core-code))
+    ;;
+    ;;represent  macros  defined by  DEFINE-SYNTAX;  here  we  build code  to  assign
+    ;;?CORE-CODE to ?LOC.  The entries with format:
+    ;;
+    ;;   (#f   . ?core-code)
+    ;;
+    ;;are  the result  of  expanding  BEGIN-FOR-SYNTAX macro  uses;  here we  include
+    ;;?CORE-CODE as is in the output.
     ;;
     ;;The returned sexp looks like this (one SET! for every macro):
     ;;
@@ -2395,10 +2409,14 @@
     (if (null? macro*)
 	(build-void)
       (build-sequence no-source
-	(map (lambda (x)
-	       (let ((loc (car x))
-		     (src (cddr x)))
-		 (build-global-assignment no-source loc src)))
+	(map (lambda (entry)
+	       (let ((loc (car entry)))
+		 (if loc
+		     (let ((rhs.core (cddr entry)))
+		       (build-global-assignment no-source
+			 loc rhs.core))
+		   (let ((expr.core (cdr entry)))
+		     expr.core))))
 	  macro*))))
 
   #| end of module: EXPAND-LIBRARY |# )
@@ -2833,10 +2851,10 @@
     ;;EXPORT-SUBST to select the entries representing the exported bindings.
     ;;
     ;;LEX*  must be  a  list of  gensyms representing  the  global lexical  variables
-    ;;bindings.
+    ;;binding names.
     ;;
     ;;LOC*  must  be a  list  of  storage location  gensyms  for  the global  lexical
-    ;;variables: there must be a loc for every lex in LEX*.
+    ;;variables: there must be a loc in LOC* for every lex in LEX*.
     ;;
     (define (%make-export-env/macro* lex* loc* lexenv.run)
       (let loop ((lexenv.run		lexenv.run)
@@ -2945,6 +2963,22 @@
 	       (loop (cdr lexenv.run)
 		     (cons entry export-env)
 		     macro*))
+
+	      ((begin-for-syntax)
+	       ;;This entry is the result of expanding BEGIN-FOR-SYNTAX macro use; we
+	       ;;want this code to be part of the visit code.
+	       ;;
+	       ;;The entry from the LEXENV looks like this:
+	       ;;
+	       ;;   (?label . (begin-for-syntax . ?expanded-expr))
+	       ;;
+	       ;;add to the MACRO* an entry like:
+	       ;;
+	       ;;   (#f . ?expanded-expr)
+	       ;;
+	       (loop (cdr lexenv.run)
+		     export-env
+		     (cons (cons #f (syntactic-binding-value binding)) macro*)))
 
 	      (else
 	       (assertion-violation 'core-body-expander
@@ -7254,10 +7288,27 @@
 ;;;; R6RS programs and libraries helpers
 
 (define (initial-visit! macro*)
+  ;;Whenever a source  library is loaded and expanded: all  its macro definitions and
+  ;;BEGIN-FOR-SYNTAX macro uses are expanded and evaluated.   All it is left to do to
+  ;;visit such  library is to  store in  the loc gensyms  of macros the  compiled RHS
+  ;;code; this is done by this function.
+  ;;
+  ;;MACRO* is a list of sublists.  The entries with format:
+  ;;
+  ;;   (?loc . (?obj . ?core-code))
+  ;;
+  ;;represent macros defined by DEFINE-SYNTAX; here we store ?OBJ in the "value" slot
+  ;;of ?LOC.  The entries with format:
+  ;;
+  ;;   (#f   . ?core-code)
+  ;;
+  ;;are the result of expanding BEGIN-FOR-SYNTAX macro uses; here we ignore these.
+  ;;
   (for-each (lambda (x)
 	      (let ((loc  (car  x))
 		    (proc (cadr x)))
-		(set-symbol-value! loc proc)))
+		(when loc
+		  (set-symbol-value! loc proc))))
     macro*))
 
 
