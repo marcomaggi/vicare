@@ -292,6 +292,8 @@ Example:
 * iklib syntaxes properties::   Syntactic binding properties.
 * iklib syntaxes unsafe::       Unsafe binding variants.
 * iklib syntaxes predaux::      Predicate auxiliary functions.
+* iklib syntaxes type-of::      Determining the type of expressions.
+* iklib syntaxes expansion-of:: Determining expansion result.
 @end menu
 
 @c page
@@ -2342,6 +2344,99 @@ evaluated at each use of the validation function.
 Expand into an expression representing the return value validation
 function associated to the predicate @meta{pred-id}.  If no validation
 function is available: raise a syntax violation.
+@end deffn
+
+@c page
+@node iklib syntaxes type-of
+@subsection Determining the type of expressions
+
+
+@deffn Syntax type-of @meta{expr}
+This syntax is for interactive use only.  Fully expand the given
+expression in the current lexical environment and return a structure of
+type @objtype{retvals-signature} representing the types of the tuple of
+returned values.  The expression is @strong{not} evaluated, only
+expanded; this means that the expansion side effects are performed.
+
+Example session at the @repl{}:
+
+@example
+vicare> (type-of (values))
+#["retvals-signature" ()]
+
+vicare> (type-of (values 1 2))
+#["retvals-signature" (#'<fixnum> #'<fixnum>)]
+
+vicare> (type-of 123)
+#["retvals-signature" (#'<fixnum>)]
+
+vicare> (type-of ((lambda (@{_ symbol@}) 'ciao)))
+#["retvals-signature" (#'<symbol>)]
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes expansion-of
+@subsection Determining expansion result
+
+
+@deffn Syntax expansion-of @meta{expr}
+This syntax is mostly for interactive use.  Fully expand the given
+expression in the current lexical environment and return a symbolic
+expression representing the result.  The expression is @strong{not}
+evaluated, only expanded; this means that the expansion side effects are
+performed.
+
+As a special case if @meta{expr} is recognised as a @func{define} or
+@func{define*} syntax use:
+
+@example
+(define  . @meta{stuff})
+(define* . @meta{stuff})
+@end example
+
+@noindent
+the expansion will be performed as if @meta{expr} is:
+
+@example
+(internal-body (define  . @meta{stuff}) (void))
+(internal-body (define* . @meta{stuff}) (void))
+@end example
+
+@noindent
+and the definition extracted from the result and reformatted.
+
+Example session at the @repl{}:
+
+@example
+vicare> (import (vicare expander tags))
+vicare> (print-gensym #f)
+
+vicare> (expansion-of (+ 1 2))
+((primitive +) (quote 1) (quote 2))
+
+vicare> (expansion-of (lambda (a b) (+ a b)))
+(lambda (a b) ((primitive +) a b))
+
+vicare> (internal-body
+          (define-syntax (doit stx)
+            (syntax-case stx ()
+              ((_ ?a ?b)
+               #'(vector ?a ?b))))
+          (expansion-of (doit 1 2)))
+((primitive vector) (quote 1) (quote 2))
+
+vicare> (internal-body
+          (define-struct alpha
+            (a b c))
+          (define O
+            (alpha (1 2 3)))
+          (expansion-of (slot-ref O a)))
+(alpha-a O)
+
+vicare> (expansion-of (define (fun a) (+ 1 a)))
+(define fun (lambda (a) ((primitive +) (quote 1) a)))
+@end example
 @end deffn
 
 @c page

@@ -1308,7 +1308,7 @@
     ((_ ?id)
      (identifier? ?id)
      (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(syntactic-binding-getprop ?id *UNSAFE-VARIANT-COOKIE*)))
+			(identifier-unsafe-variant ?id)))
 		     (else
 		      ;;This warning will not abort the process.
 		      (%raise-warning __who__ "requested unavailable unsafe variant"
@@ -2407,6 +2407,48 @@
   (define-fluid-override __who__
     (identifier-syntax 'expansion-of))
   (syntax-match input-form.stx ()
+    ;;Special case to allow easy inspection of definitions.  We transform:
+    ;;
+    ;;   (define . ?stuff)
+    ;;
+    ;;into:
+    ;;
+    ;;   (internal-body (define . ?stuff) (void))
+    ;;
+    ((_ (?define . ?stuff))
+     (and (identifier? ?define)
+	  (or (free-id=? ?define (scheme-stx 'define))
+	      (free-id=? ?define (scheme-stx 'define*))))
+     (let* ((expr.stx `(,(scheme-stx 'internal-body)
+			(,?define . ,?stuff)
+			(,(scheme-stx 'void))))
+	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sexp (core-language->sexp expr.core)))
+       (let* ((out.sexp (map (lambda (bind*)
+			       (list 'define (car bind*) (cadr bind*)))
+			  (cadr expr.sexp)))
+	      (out.sexp (if (= 1 (length out.sexp))
+			    (car out.sexp)
+			  (cons 'begin out.sexp))))
+	 (make-psi (build-data no-source
+		     out.sexp)
+		   (make-retvals-signature-single-top)))))
+
+    ;; ((_ (?define . ?stuff))
+    ;;  (and (identifier? ?define)
+    ;; 	  (or (free-id=? ?define (scheme-stx 'define))
+    ;; 	      (free-id=? ?define (scheme-stx 'define*))))
+    ;;  (let* ((expr.stx `(,(scheme-stx 'internal-body)
+    ;; 			(,?define . ,?stuff)
+    ;; 			(,(scheme-stx 'void))))
+    ;; 	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
+    ;; 	    (expr.core (psi-core-expr expr.psi))
+    ;; 	    (expr.sexp (core-language->sexp expr.core)))
+    ;;    (make-psi (build-data no-source
+    ;; 		   expr.sexp)
+    ;; 		 (make-retvals-signature-single-top))))
+
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi))

@@ -119,6 +119,9 @@
 	"unsafe variant already defined" safe-id unsafe-expr-stx)
     (syntactic-binding-putprop safe-id *UNSAFE-VARIANT-COOKIE* unsafe-expr-stx)))
 
+(define* (identifier-unsafe-variant {safe-id identifier?})
+  (syntactic-binding-getprop safe-id *UNSAFE-VARIANT-COOKIE*))
+
 
 ;;;; identifiers: predicates axiliary functions API
 ;;

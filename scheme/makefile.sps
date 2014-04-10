@@ -3684,8 +3684,8 @@
     (tag-setter					$expander-tags)
     (tag-dispatch				$expander-tags)
     (tag-cast					$expander-tags)
-    (type-of					$expander-tags)
-    (expansion-of				$expander-tags)
+    (type-of					$expander-tags v $language)
+    (expansion-of				$expander-tags v $language)
 
     (<top>					$expander-tags)
     (<void>					$expander-tags)

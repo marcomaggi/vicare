@@ -227,7 +227,7 @@
 	`(internal-define () ,?id)))
       ))
 
-  (define (%process-function-definition input-form.stx make-define-formals who.id prototype.stx body.stx)
+  (define (%process-function-definition input-form.stx make-define-formals who.id prototype.stx unsafe-body*.stx)
     ;;When the function definition is fully untagged:
     ;;
     ;;   (define (add a b) (+ a b))
@@ -247,26 +247,32 @@
     ;;   (begin
     ;;     (internal-define (safe)   ({add <real>} {a <real>} {b <real>})
     ;;       ($add a b))
-    ;;     (internal-define (unsafe) ({~add <real>} {a <real>} {b <real>})
-    ;;       (+ a b)))
+    ;;     (internal-define (safe-retvals unsafe-formals) ({~add <real>} {a <real>} {b <real>})
+    ;;       (+ a b))
+    ;;     (begin-for-syntax
+    ;;       (set-identifier-unsafe-variant! #'add #'~add)))
     ;;
     (receive (standard-formals.stx signature)
 	(parse-tagged-lambda-proto-syntax (bless prototype.stx)
 					  input-form.stx)
       (if (lambda-signature-fully-unspecified? signature)
 	  (bless
-	   `(internal-define (unsafe) ,(cons who.id standard-formals.stx) . ,body.stx))
-	(let ((UNSAFE-WHO (identifier-append who.id "~" who.id)))
+	   `(internal-define (unsafe) ,(cons who.id standard-formals.stx) . ,unsafe-body*.stx))
+	(let* ((UNSAFE-WHO    (identifier-append who.id "~" who.id))
+	       (safe-body.stx (if (list? standard-formals.stx)
+				  (cons UNSAFE-WHO standard-formals.stx)
+				(receive (arg*.id rest.id)
+				    (improper-list->list-and-rest standard-formals.stx)
+				  `(apply ,UNSAFE-WHO ,@arg*.id ,rest.id)))))
 	  (bless
 	   `(begin
 	      (internal-define (safe) ,(make-define-formals who.id)
-		,(if (list? standard-formals.stx)
-		     (cons UNSAFE-WHO standard-formals.stx)
-		   (receive (arg*.id rest.id)
-		       (improper-list->list-and-rest standard-formals.stx)
-		     `(apply ,UNSAFE-WHO ,@arg*.id ,rest.id))))
-	      (internal-define (unsafe) ,(make-define-formals UNSAFE-WHO) . ,body.stx))
-	   )))))
+		,safe-body.stx)
+	      (internal-define (safe-retvals unsafe-formals) ,(make-define-formals UNSAFE-WHO)
+		. ,unsafe-body*.stx)
+	      (begin-for-syntax
+		(set-identifier-unsafe-variant! (syntax ,who.id) (syntax ,UNSAFE-WHO)))))
+	  ))))
 
   #| end of module |# )
 

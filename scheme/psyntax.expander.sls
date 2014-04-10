@@ -5761,11 +5761,17 @@
   (syntax-match list-stx ()
     ((?item* ...)
      (map (lambda (x)
-	    (make-<stx> (let ((x (syntax->datum x)))
-			  (if (or (symbol? x)
-				  (string? x))
-			      (gensym x)
-			    (gensym 't)))
+	    (make-<stx> (if (identifier? x)
+			    ;;If it is an identifier we do *not* want to use its name
+			    ;;as temporary name, because  it looks ugly and confusing
+			    ;;when  looking  at  the  result of  the  expansion  with
+			    ;;PRINT-GENSYM set to #f.
+			    (gensym 't)
+			  (let ((x (syntax->datum x)))
+			    (if (or (symbol? x)
+				    (string? x))
+				(gensym x)
+			      (gensym 't))))
 			TOP-MARK* '() '()))
        ?item*))
     (_

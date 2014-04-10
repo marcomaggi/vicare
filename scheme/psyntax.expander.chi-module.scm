@@ -80,6 +80,17 @@
   #| end of module |# )
 
 
+;;;; lambda clause attributes
+
+(define (lambda-clause-attributes:safe-formals? attributes.sexp)
+  (or (memq 'safe         attributes.sexp)
+      (memq 'safe-formals attributes.sexp)))
+
+(define (lambda-clause-attributes:safe-retvals? attributes.sexp)
+  (or (memq 'safe         attributes.sexp)
+      (memq 'safe-retvals attributes.sexp)))
+
+
 ;;;; chi procedures: syntax object type inspection
 
 (define (expr-syntax-type expr.stx lexenv)
@@ -1244,7 +1255,8 @@
   (%chi-lambda-clause
    %chi-lambda-clause*)
 
-  (define* (%chi-lambda-clause safe? input-form.stx formals.stx body-form*.stx lexenv.run lexenv.expand)
+  (define* (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
+			       attributes.sexp formals.stx body-form*.stx)
     ;;Expand  the components  of  a LAMBDA  syntax or  a  single CASE-LAMBDA  clause.
     ;;Return 3  values: a  proper or  improper list of  lex gensyms  representing the
     ;;formals; an instance  of "lambda-signature" representing the  tag signature for
@@ -1282,23 +1294,27 @@
 	 (let* ((lex*        (map gensym-for-lexical-var ?arg*))
 		(lab*        (map gensym-for-label       ?arg*))
 		(lexenv.run^ (add-lexical-bindings lab* lex* lexenv.run)))
-	   (let* ((validation*.stx (if safe?
-				       (%build-formals-validation-form* ?arg* formals-signature.tags #f #f)
-				     '()))
-		  (body-form^*.stx (push-lexical-contour
-				       (make-filled-rib ?arg* lab*)
-				     (append validation*.stx
-					     (if safe?
-						 (%build-retvals-validation-form (not (null? validation*.stx))
-										 (lambda-signature-retvals lambda-signature)
-										 body-form*.stx)
-					       body-form*.stx)))))
-	     ;;Here  we know  that the  formals signature  is a  proper list  of tag
-	     ;;identifiers with the same structure of FORMALS.STX.
-	     (map set-label-tag! lab* formals-signature.tags)
-	     (values lex*
-		     lambda-signature
-		     (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))))
+	   (define validation*.stx
+	     (if (lambda-clause-attributes:safe-formals? attributes.sexp)
+		 (%build-formals-validation-form* ?arg* formals-signature.tags #f #f)
+	       '()))
+	   (define has-arguments-validators?
+	     (not (null? validation*.stx)))
+	   (define body-form^*.stx
+	     (push-lexical-contour
+		 (make-filled-rib ?arg* lab*)
+	       (append validation*.stx
+		       (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
+			   (%build-retvals-validation-form has-arguments-validators?
+							   (lambda-signature-retvals lambda-signature)
+							   body-form*.stx)
+			 body-form*.stx))))
+	   ;;Here  we  know that  the  formals  signature is  a  proper  list of  tag
+	   ;;identifiers with the same structure of FORMALS.STX.
+	   (map set-label-tag! lab* formals-signature.tags)
+	   (values lex*
+		   lambda-signature
+		   (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand))))
 
 	;;With rest argument.
 	((?arg* ... . ?rest-arg)
@@ -1311,25 +1327,29 @@
 						    lexenv.run)))
 	   (receive (arg-tag* rest-tag)
 	       (improper-list->list-and-rest formals-signature.tags)
-	     (let* ((validation*.stx (if safe?
-					 (%build-formals-validation-form* ?arg* arg-tag* ?rest-arg rest-tag)
-				       '()))
-		    (body-form^*.stx (push-lexical-contour
-					 (make-filled-rib (cons ?rest-arg ?arg*)
-							  (cons rest-lab  lab*))
-				       (append validation*.stx
-					       (if safe?
-						   (%build-retvals-validation-form (not (null? validation*.stx))
-										   (lambda-signature-retvals lambda-signature)
-										   body-form*.stx)
-						 body-form*.stx)))))
-	       ;;Here we  know that the formals  signature is an improper  list with
-	       ;;the same structure of FORMALS.STX.
-	       (map set-label-tag! lab* arg-tag*)
-	       (set-label-tag! rest-lab rest-tag)
-	       (values (append lex* rest-lex) ;yes, this builds an improper list
-		       lambda-signature
-		       (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand))))))
+	     (define validation*.stx
+	       (if (lambda-clause-attributes:safe-formals? attributes.sexp)
+		   (%build-formals-validation-form* ?arg* arg-tag* ?rest-arg rest-tag)
+		 '()))
+	     (define has-arguments-validators?
+	       (not (null? validation*.stx)))
+	     (define body-form^*.stx
+	       (push-lexical-contour
+		   (make-filled-rib (cons ?rest-arg ?arg*)
+				    (cons rest-lab  lab*))
+		 (append validation*.stx
+			 (if (lambda-clause-attributes:safe-retvals? attributes.sexp)
+			     (%build-retvals-validation-form has-arguments-validators?
+							     (lambda-signature-retvals lambda-signature)
+							     body-form*.stx)
+			   body-form*.stx))))
+	     ;;Here we know  that the formals signature is an  improper list with the
+	     ;;same structure of FORMALS.STX.
+	     (map set-label-tag! lab* arg-tag*)
+	     (set-label-tag! rest-lab rest-tag)
+	     (values (append lex* rest-lex) ;yes, this builds an improper list
+		     lambda-signature
+		     (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))))
 
 	(_
 	 (syntax-violation __who__
@@ -1337,7 +1357,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%chi-lambda-clause* input-form.stx formals*.stx body-form**.stx lexenv.run lexenv.expand)
+  (define* (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand formals*.stx body-form**.stx)
     ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
     ;;
     ;;1..A list  of subslist,  each sublist being  a proper or  improper list  of lex
@@ -1349,12 +1369,16 @@
     ;;3..A  list  of   PSI  structs  each  containing  a   core  language  expression
     ;;   representing the body of a clause.
     ;;
+    (define attributes.sexp
+      '(safe))
     (if (null? formals*.stx)
 	(values '() '() '())
       (receive (formals-lex lambda-signature body.psi)
-	  (%chi-lambda-clause #t input-form.stx (car formals*.stx) (car body-form**.stx) lexenv.run lexenv.expand)
+	  (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
+			      attributes.sexp (car formals*.stx) (car body-form**.stx))
 	(receive (formals-lex* lambda-signature* body*.psi)
-	    (%chi-lambda-clause* input-form.stx (cdr formals*.stx) (cdr body-form**.stx) lexenv.run lexenv.expand)
+	    (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
+				 (cdr formals*.stx) (cdr body-form**.stx))
 	  (values (cons formals-lex       formals-lex*)
 		  (cons lambda-signature  lambda-signature*)
 		  (cons body.psi          body*.psi))))))
@@ -1396,7 +1420,7 @@
     ;;wrapping when not needed; this gains a bit of speed when expanding the body.
     ;;
     (cond (has-arguments-validators?
-           (if (retvals-signature-fully-unspecified? retvals-signature)
+	   (if (retvals-signature-fully-unspecified? retvals-signature)
 	       ;;The number and type of return values is unknown.
 	       (bless
 		`((internal-body . ,body-form*.stx)))
@@ -1438,33 +1462,32 @@
     ;;
     (syntax-match input-form.stx (brace)
       ((_ ?attributes ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
-       (let* ((formals.stx (bless
-			    `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
-	      (body*.stx   (cons (bless
-				  `(define-fluid-override __who__
-				     (identifier-syntax (quote ,?ctxt))))
-				 ?body-form*))
-	      (safe?       (memq 'safe (syntax->datum ?attributes))))
-	 (%expand safe? input-form.stx lexenv.run lexenv.expand
-		  ?ctxt formals.stx body*.stx)))
+       (let ((formals.stx (bless
+			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
+	     (body*.stx   (cons (bless
+				 `(define-fluid-override __who__
+				    (identifier-syntax (quote ,?ctxt))))
+				?body-form*)))
+	 (%expand input-form.stx lexenv.run lexenv.expand
+		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
 
       ((_ ?attributes (?ctxt . ?fmls) . ?body-form*)
        (let ((formals.stx ?fmls)
 	     (body*.stx   (cons (bless
 				 `(define-fluid-override __who__
 				    (identifier-syntax (quote ,?ctxt))))
-				?body-form*))
-	      (safe?       (memq 'safe (syntax->datum ?attributes))))
-	 (%expand safe? input-form.stx lexenv.run lexenv.expand
-		  ?ctxt formals.stx body*.stx)))
+				?body-form*)))
+	 (%expand input-form.stx lexenv.run lexenv.expand
+		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
       ))
 
-  (define (%expand safe? input-form.stx lexenv.run lexenv.expand
-		   ctxt.id formals.stx body*.stx)
+  (define (%expand input-form.stx lexenv.run lexenv.expand
+		   attributes.sexp ctxt.id formals.stx body*.stx)
     ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT.ID in the
     ;;core language LAMBDA sexp's annotation.
     (receive (formals.core lambda-signature body.psi)
-	(%chi-lambda-clause safe? input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
+	(%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
+			    attributes.sexp formals.stx body*.stx)
       ;;FORMALS.CORE is composed of lex gensyms.
       (make-psi (build-lambda (syntax-annotation ctxt.id)
 		  formals.core
@@ -1486,8 +1509,10 @@
   ;;LAMBDA syntax.
   ;;
   (import CHI-LAMBDA-CLAUSES)
+  (define attributes.sexp '(safe))
   (receive (formals.lex lambda-signature body.psi)
-      (%chi-lambda-clause #t input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
+      (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
+			  attributes.sexp formals.stx body*.stx)
     (make-psi (build-lambda (syntax-annotation input-form.stx)
 		formals.lex
 		(psi-core-expr body.psi))
@@ -1519,7 +1544,7 @@
   ;;
   (import CHI-LAMBDA-CLAUSES)
   (receive (formals*.lex lambda-signature* body**.psi)
-      (%chi-lambda-clause* input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
+      (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand formals*.stx body**.stx)
     (make-psi (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex
 		(map psi-core-expr body**.psi))
