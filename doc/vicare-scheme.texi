@@ -235,7 +235,7 @@ Trademarks used herein are the property of their respective owners.
 * libutils::                    Scheme libraries utility functions.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
-* tagged::                      Experimental tagged language.
+* tagged::                      Tagged language.
 * tags::                        Built--in objects type tags.
 * capi::                        C language programming interface.
 

@@ -1,5 +1,5 @@
 @node tagged
-@chapter Experimental tagged language
+@chapter Tagged language
 
 
 @value{PRJNAME}'s expander implements an extension to the language
