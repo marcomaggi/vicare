@@ -2362,16 +2362,16 @@ Example session at the @repl{}:
 
 @example
 vicare> (type-of (values))
-#["retvals-signature" ()]
+$1 = #["retvals-signature" ()]
 
 vicare> (type-of (values 1 2))
-#["retvals-signature" (#'<fixnum> #'<fixnum>)]
+$1 = #["retvals-signature" (#'<fixnum> #'<fixnum>)]
 
 vicare> (type-of 123)
-#["retvals-signature" (#'<fixnum>)]
+$1 = #["retvals-signature" (#'<fixnum>)]
 
 vicare> (type-of ((lambda (@{_ symbol@}) 'ciao)))
-#["retvals-signature" (#'<symbol>)]
+$1 = #["retvals-signature" (#'<symbol>)]
 @end example
 @end deffn
 
@@ -2413,10 +2413,10 @@ vicare> (import (vicare expander tags))
 vicare> (print-gensym #f)
 
 vicare> (expansion-of (+ 1 2))
-((primitive +) (quote 1) (quote 2))
+$1 = ((primitive +) (quote 1) (quote 2))
 
 vicare> (expansion-of (lambda (a b) (+ a b)))
-(lambda (a b) ((primitive +) a b))
+$1 = (lambda (a b) ((primitive +) a b))
 
 vicare> (internal-body
           (define-syntax (doit stx)
@@ -2424,7 +2424,7 @@ vicare> (internal-body
               ((_ ?a ?b)
                #'(vector ?a ?b))))
           (expansion-of (doit 1 2)))
-((primitive vector) (quote 1) (quote 2))
+$1 = ((primitive vector) (quote 1) (quote 2))
 
 vicare> (internal-body
           (define-struct alpha
@@ -2432,10 +2432,26 @@ vicare> (internal-body
           (define O
             (alpha (1 2 3)))
           (expansion-of (slot-ref O a)))
-(alpha-a O)
+$1 = (alpha-a O)
 
 vicare> (expansion-of (define (fun a) (+ 1 a)))
-(define fun (lambda (a) ((primitive +) (quote 1) a)))
+$1 = (define fun (lambda (a) ((primitive +) (quote 1) a)))
+@end example
+@end deffn
+
+
+@deffn Syntax visit-code-of @meta{macro-id}
+This syntax is mostly for interactive use.  Given the identifier of a
+locally defined macro keyword: expand into a quoted symbolic expression
+representing the expanded macro transformer.
+
+Example session at the @repl{}:
+
+@example
+vicare> (print-gensym #f)
+vicare> (define-syntax syn (lambda (stx) #'(void)))
+vicare> (visit-code-of syn)
+$1 = (lambda (stx) #<syntax expr=(void))
 @end example
 @end deffn
 

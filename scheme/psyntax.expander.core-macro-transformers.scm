@@ -82,6 +82,7 @@
 
     ((type-of)					type-of-transformer)
     ((expansion-of)				expansion-of-transformer)
+    ((visit-code-of)				visit-code-of-transformer)
 
     (else
      (assertion-violation __who__
@@ -2465,6 +2466,33 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   expr.sexp)
+		 (make-retvals-signature-single-top))))
+    ))
+
+
+;;;; module core-macro-transformer: VISIT-CODE-OF
+
+(define (visit-code-of-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer  function used  to expand  Vicare's VISIT-CODE-OF  syntaxes from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'visit-code-of))
+  (syntax-match input-form.stx ()
+    ((_ ?id)
+     (identifier? ?id)
+     (let* ((label               (id->label/or-error __who__ input-form.stx ?id))
+	    (binding-descriptor  (label->syntactic-binding label lexenv.run))
+	    (binding-value       (case (syntactic-binding-type binding-descriptor)
+				   ((local-macro local-macro!)
+				    (syntactic-binding-value binding-descriptor))
+				   (else
+				    (syntax-violation __who__
+				      "expected identifier of local macro" input-form.stx ?id)))))
+       (make-psi input-form.stx
+		 (build-data no-source
+		   (core-language->sexp (cdr binding-value)))
 		 (make-retvals-signature-single-top))))
     ))
 

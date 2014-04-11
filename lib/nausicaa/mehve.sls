@@ -1572,6 +1572,9 @@
     __file__
     __line__
     brace
+    type-of
+    expansion-of
+    visit-code-of
 
 
 ;;;; bindings from (nausicaa language oopp)
