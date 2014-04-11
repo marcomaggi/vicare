@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (c) 2009, 2010, 2011 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2011, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -516,7 +516,7 @@
 ;;; --------------------------------------------------------------------
 
 (define (%sequence-dictionary-compare-ci a b)
-  (%true-sequence-dictionary-compare a b %integer-char-ci=? %integer-char-ci<?))
+  (%true-sequence-dictionary-compare a b %integer-char-ci=? %integer-char-ci<? -1 0 +1))
 
 (define (%sequence-dictionary-ci=? a b)
   (%true-sequence-dictionary-compare a b %integer-char-ci=? %integer-char-ci<? #f #t #f))
@@ -584,7 +584,7 @@
 		 (%accumulate-number-part))))))
 
 (define (%true-sequence/numbers-compare a b sequence->parts
-					     bytevector=? bytevector<? $lesser $equal $greater)
+					bytevector=? bytevector<? $lesser $equal $greater)
   (let loop ((a (sequence->parts a))
              (b (sequence->parts b)))
     (cond ((null? a)
@@ -655,7 +655,7 @@
 
 (define (%sequence/numbers-compare-ci a b)
   (%true-sequence/numbers-compare a b %sequence/numbers->parts
-				       %full-sequence-ci= %full-sequence-ci<))
+				       %full-sequence-ci= %full-sequence-ci< -1 0 +1))
 
 (define (%sequence/numbers-ci=? a b)
   (%true-sequence/numbers-compare a b %sequence/numbers->parts
@@ -762,7 +762,7 @@
 
 (define (%sequence/numbers-dictionary-compare-ci a b)
   (%true-sequence/numbers-compare a b %sequence/numbers-dictionary->parts
-				       %full-sequence-ci= %full-sequence-ci<))
+				       %full-sequence-ci= %full-sequence-ci< -1 0 +1))
 
 (define (%sequence/numbers-dictionary-ci=? a b)
   (%true-sequence/numbers-compare a b %sequence/numbers-dictionary->parts

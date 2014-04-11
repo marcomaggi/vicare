@@ -49,6 +49,7 @@
     string-empty?			syntax=?
     ratnum?				bignum?
     compnum?				cflonum?
+    fxadd1
 
     ;; compiler related operations
     eval-core

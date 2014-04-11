@@ -1,6 +1,6 @@
 ;;;Lightweight testing (reference implementation)
 ;;;
-;;;Copyright (c) 2009-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (c) 2009-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;Copyright (c) 2005-2006 Sebastian Egner <Sebastian.Egner@philips.com>
 ;;;Modified by Derick Eddington for R6RS Scheme.
 ;;;
@@ -93,14 +93,17 @@
    ((datum output-port)
     (unless check-quiet-tests?
       (let* ((os	(call-with-string-output-port
-			    (lambda (sop) (check-pretty-print datum sop))))
+			    (lambda (sop)
+			      (parametrise ((current-error-port sop))
+				(check-pretty-print datum)))))
 	     (len	(string-length os))
 	     (os	(if (and (positive? len)
 				 (char=? #\newline
 					 (string-ref os (- len 1))))
 			    (substring os 0 (- len 1))
 			  os)))
-	(check-display os output-port))))
+	(parametrise ((current-error-port output-port))
+	  (check-display os)))))
    ((datum)
     (check-pretty-print/no-trailing-newline datum (current-error-port)))))
 

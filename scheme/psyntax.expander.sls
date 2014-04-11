@@ -7070,7 +7070,7 @@
 ;;performing the expansion process.
 ;;
 (module (make-psi
-	 psi?
+	 psi?			psi-stx
 	 psi-core-expr		psi-retvals-signature
 	 psi-application-retvals-signature
 	 chi-expr		chi-expr*

@@ -231,17 +231,18 @@
 
 ;;;; module core-macro-transformer: IF
 
-(define (if-transformer expr-stx lexenv.run lexenv.expand)
+(define (if-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand R6RS  IF syntaxes from the top-level built in
-  ;;environment.   Expand the  syntax object  EXPR-STX in  the context  of the  given
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
   ;;LEXENV; return a PSI struct.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?test ?consequent ?alternate)
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand))
 	   (alternate.psi  (chi-expr ?alternate  lexenv.run lexenv.expand)))
-       (make-psi (build-conditional no-source
+       (make-psi input-form.stx
+		 (build-conditional no-source
 		   (psi-core-expr test.psi)
 		   (psi-core-expr consequent.psi)
 		   (psi-core-expr alternate.psi))
@@ -252,7 +253,8 @@
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
        ;;We build code to make the  one-armed IF always return void, since, according
        ;;to R6RS, this syntax has unspecified return values.
-       (make-psi (build-conditional no-source
+       (make-psi input-form.stx
+		 (build-conditional no-source
 		   (psi-core-expr test.psi)
 		   (build-sequence no-source
 		     (list (psi-core-expr consequent.psi)
@@ -264,15 +266,16 @@
 
 ;;;; module core-macro-transformer: QUOTE
 
-(define (quote-transformer expr-stx lexenv.run lexenv.expand)
+(define (quote-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand R6RS  QUOTE syntaxes from the top-level built
-  ;;in environment.   Expand the syntax object  EXPR-STX in the context  of the given
-  ;;LEXENV; return a PSI struct.
+  ;;in environment.   Expand the syntax object  INPUT-FORM.STX in the context  of the
+  ;;given LEXENV; return a PSI struct.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?datum)
      (let ((datum (syntax->datum ?datum)))
-       (make-psi (build-data no-source
+       (make-psi input-form.stx
+		 (build-data no-source
 		   datum)
 		 (retvals-signature-of-datum datum))))
     ))
@@ -399,7 +402,8 @@
 	       (rator.psi   (rator-expander input-form.stx lexenv.run lexenv.expand lhs*.stx body*.stx))
 	       (rator.core  (psi-core-expr rator.psi))
 	       (rhs*.core   (map psi-core-expr rhs*.psi)))
-	  (make-psi (build-application (syntax-annotation input-form.stx)
+	  (make-psi input-form.stx
+		    (build-application (syntax-annotation input-form.stx)
 		      rator.core
 		      rhs*.core)
 		    (psi-application-retvals-signature rator.psi))))))
@@ -491,7 +495,7 @@
 				 lhs*.lex
 				 rhs*.core
 				 body.core)))
-	       (make-psi expr.core
+	       (make-psi input-form.stx expr.core
 			 (psi-retvals-signature body.psi)))))))
       ))
 
@@ -500,10 +504,10 @@
 
 ;;;; module core-macro-transformer: FLUID-LET-SYNTAX
 
-(define (fluid-let-syntax-transformer expr-stx lexenv.run lexenv.expand)
+(define (fluid-let-syntax-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used to expand  FLUID-LET-SYNTAX syntaxes from the top-level
-  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
-  ;;given LEXENV; return a PSI struct.
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI struct.
   ;;
   ;;FLUID-LET-SYNTAX is similar,  but not equal, to LET-SYNTAX;  rather than defining
   ;;new ?LHS bindings, it temporarily rebinds  the keywords to new transformers while
@@ -522,12 +526,12 @@
   ;;entries to the LEXENV:  there is no way to keep the  fluid LEXENV entries visible
   ;;only to a subsequence of forms in a body.  (Marco Maggi; Tue Feb 18, 2014)
   ;;
-  (define (transformer expr-stx)
-    (syntax-match expr-stx ()
+  (define (transformer input-form.stx)
+    (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the ?LHS* are all identifiers with no duplicates.
        (unless (valid-bound-ids? ?lhs*)
-	 (%error-invalid-formals-syntax expr-stx ?lhs*))
+	 (%error-invalid-formals-syntax input-form.stx ?lhs*))
        (let* ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
 	      (binding*     (map (lambda (rhs)
 				   (with-exception-handler
@@ -560,24 +564,24 @@
 	    (else
 	     (stx-error lhs "not a fluid identifier")))))
 
-  (transformer expr-stx))
+  (transformer input-form.stx))
 
 
 ;;;; module core-macro-transformer: FOREIGN-CALL
 
-(define (foreign-call-transformer expr-stx lexenv.run lexenv.expand)
+(define (foreign-call-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to  expand Vicare's  FOREIGN-CALL  syntaxes from  the
-  ;;top-level built in environment.  Expand the syntax object EXPR-STX in the context
-  ;;of the given LEXENV; return a PSI struct.
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?name ?arg* ...)
      (let* ((name.psi  (chi-expr  ?name lexenv.run lexenv.expand))
 	    (arg*.psi  (chi-expr* ?arg* lexenv.run lexenv.expand))
 	    (expr.core (build-foreign-call no-source
 			 (psi-core-expr name.psi)
 			 (map psi-core-expr arg*.psi))))
-       (make-psi expr.core)))
+       (make-psi input-form.stx expr.core)))
     ))
 
 
@@ -739,7 +743,7 @@
 	   (%gen-syntax use-stx ?template lexenv.run '() ellipsis? #f)
 	 (let ((code (%generate-output-code intermediate-sexp)))
 	   #;(debug-print 'syntax (syntax->datum ?template) intermediate-sexp code)
-	   (make-psi code))))
+	   (make-psi use-stx code))))
       ))
 
   (define (%gen-syntax use-stx template-stx lexenv maps ellipsis? vec?)
@@ -1015,7 +1019,8 @@
 	 ;;
 	 ;;   ((lambda (expr.id) body.core) expr.core)
 	 ;;
-	 (make-psi (build-application no-source
+	 (make-psi use-stx
+		   (build-application no-source
 		     (build-lambda no-source (list expr.id) body.core)
 		     (list expr.core)))))
       ))
@@ -1267,15 +1272,16 @@
 
 ;;;; module core-macro-transformer: SPLICE-FIRST-EXPAND
 
-(define (splice-first-expand-transformer expr-stx lexenv.run lexenv.expand)
+(define (splice-first-expand-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to  expand Vicare's SPLICE-FIRST-EXPAND  syntaxes from
-  ;;the top-level  built in environment.   Expand the  syntax object EXPR-STX  in the
-  ;;context  of the  given LEXENV;  return  a PSI  struct containing  an instance  of
+  ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
+  ;;the context of  the given LEXENV; return  a PSI struct containing  an instance of
   ;;"splice-first-envelope".
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?form)
-     (make-psi (let ()
+     (make-psi input-form.stx
+	       (let ()
 		 (import SPLICE-FIRST-ENVELOPE)
 		 (make-splice-first-envelope ?form))))
     ))
@@ -1297,14 +1303,14 @@
 
 ;;;; module core-macro-transformer: UNSAFE
 
-(define (unsafe-transformer expr-stx lexenv.run lexenv.expand)
+(define (unsafe-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function  used to  expand Vicare's UNSAFE  macros from  the top-level
-  ;;built in  environment.  Expand  the contents  of EXPR-STX in  the context  of the
-  ;;given LEXENV; return a PSI struct.
+  ;;built in  environment.  Expand the contents  of INPUT-FORM.STX in the  context of
+  ;;the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'unsafe))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?id)
      (identifier? ?id)
      (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
@@ -1312,7 +1318,7 @@
 		     (else
 		      ;;This warning will not abort the process.
 		      (%raise-warning __who__ "requested unavailable unsafe variant"
-				      (or (expression-position expr-stx)
+				      (or (expression-position input-form.stx)
 					  (expression-position ?id))
 				      ?id)
 		      ?id))
@@ -1322,40 +1328,40 @@
 
 ;;;; module core-macro-transformer: PREDICATE-PROCEDURE-ARGUMENT-VALIDATION, PREDICATE-RETURN-VALUE-VALIDATION
 
-(define (predicate-procedure-argument-validation-transformer expr-stx lexenv.run lexenv.expand)
+(define (predicate-procedure-argument-validation-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer        function         used        to         expand        Vicare's
   ;;PREDICATE-PROCEDURE-ARGUMENT-VALIDATION  macros  from   the  top-level  built  in
-  ;;environment.  Expand the contents of EXPR-STX in the context of the given LEXENV;
-  ;;return a PSI struct.
+  ;;environment.  Expand the  contents of INPUT-FORM.STX in the context  of the given
+  ;;LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'predicate-procedure-argument-validation))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?id)
      (identifier? ?id)
      (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
 			(syntactic-binding-getprop ?id
 			  *PREDICATE-PROCEDURE-ARGUMENT-VALIDATION-COOKIE*)))
 		     (else
-		      (stx-error expr-stx "undefined procedure argument validation")))
+		      (stx-error input-form.stx "undefined procedure argument validation")))
 	       lexenv.run lexenv.expand))
     ))
 
-(define (predicate-return-value-validation-transformer expr-stx lexenv.run lexenv.expand)
+(define (predicate-return-value-validation-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer  function used  to expand  Vicare's PREDICATE-RETURN-VALUE-VALIDATION
-  ;;macros from the top-level built in  environment.  Expand the contents of EXPR-STX
-  ;;in the context of the given LEXENV; return a PSI struct.
+  ;;macros  from  the  top-level  built  in  environment.   Expand  the  contents  of
+  ;;INPUT-FORM.STX in the context of the given LEXENV; return a PSI struct.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'predicate-return-value-validation))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?id)
      (identifier? ?id)
      (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
 			(syntactic-binding-getprop ?id
 			  *PREDICATE-RETURN-VALUE-VALIDATION-COOKIE*)))
 		     (else
-		      (stx-error expr-stx "undefined return value validation")))
+		      (stx-error input-form.stx "undefined return value validation")))
 	       lexenv.run lexenv.expand))
     ))
 
@@ -1369,32 +1375,33 @@
 	 $struct-type-field-ref-transformer
 	 $struct-type-field-set!-transformer)
 
-  (define (struct-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  (define (struct-type-descriptor-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function  used to  expand STRUCT-TYPE-DESCRIPTOR syntaxes  from the
-    ;;top-level  built in  environment.  Expand  the  syntax object  EXPR-STX in  the
+    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
     ;;context of the given LEXENV; return a PSI struct.
     ;;
     (define-fluid-override __who__
       (identifier-syntax 'struct-type-descriptor))
-    (syntax-match expr-stx ()
+    (syntax-match input-form.stx ()
       ((_ ?type-id)
        (identifier? ?type-id)
-       (make-psi (build-data no-source
-		   (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run))
+       (make-psi input-form.stx
+		 (build-data no-source
+		   (%struct-type-id->rtd __who__ input-form.stx ?type-id lexenv.run))
 		 (make-retvals-signature (list (scheme-stx '<struct-type-descriptor>)))))
       ))
 
-  (define (struct-type-and-struct?-transformer expr-stx lexenv.run lexenv.expand)
+  (define (struct-type-and-struct?-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to  expand STRUCT-TYPE-AND-STRUCT?  syntaxes from the
-    ;;top-level  built in  environment.  Expand  the  syntax object  EXPR-STX in  the
+    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
     ;;context of the given LEXENV; return an PSI struct.
     ;;
     (define-fluid-override __who__
       (identifier-syntax 'struct-type-and-struct?))
-    (syntax-match expr-stx ()
+    (syntax-match input-form.stx ()
       ((_ ?type-id ?stru)
        (identifier? ?type-id)
-       (let ((rtd (%struct-type-id->rtd __who__ expr-stx ?type-id lexenv.run)))
+       (let ((rtd (%struct-type-id->rtd __who__ input-form.stx ?type-id lexenv.run)))
 	 (chi-expr (bless
 		    `($struct/rtd? ,?stru (quote ,rtd)))
 		   lexenv.run lexenv.expand)))
@@ -1405,28 +1412,28 @@
   (module (struct-type-field-ref-transformer
 	   $struct-type-field-ref-transformer)
 
-    (define (struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
+    (define (struct-type-field-ref-transformer input-form.stx lexenv.run lexenv.expand)
       ;;Transformer function  used to expand STRUCT-TYPE-FIELD-REF  syntaxes from the
-      ;;top-level built  in environment.   Expand the syntax  object EXPR-STX  in the
-      ;;context of the given LEXENV; return a PSI struct.
+      ;;top-level built in  environment.  Expand the syntax  object INPUT-FORM.STX in
+      ;;the context of the given LEXENV; return a PSI struct.
       ;;
-      (%struct-type-field-ref-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
+      (%struct-type-field-ref-transformer 'struct-type-field-ref #t input-form.stx lexenv.run lexenv.expand))
 
-    (define ($struct-type-field-ref-transformer expr-stx lexenv.run lexenv.expand)
+    (define ($struct-type-field-ref-transformer input-form.stx lexenv.run lexenv.expand)
       ;;Transformer function used to  expand $STRUCT-TYPE-FIELD-REF syntaxes from the
-      ;;top-level built  in environment.   Expand the syntax  object EXPR-STX  in the
-      ;;context of the given LEXENV; return a PSI struct.
+      ;;top-level built in  environment.  Expand the syntax  object INPUT-FORM.STX in
+      ;;the context of the given LEXENV; return a PSI struct.
       ;;
-      (%struct-type-field-ref-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
+      (%struct-type-field-ref-transformer '$struct-type-field-ref #f input-form.stx lexenv.run lexenv.expand))
 
-    (define (%struct-type-field-ref-transformer who safe? expr-stx lexenv.run lexenv.expand)
-      (syntax-match expr-stx ()
+    (define (%struct-type-field-ref-transformer who safe? input-form.stx lexenv.run lexenv.expand)
+      (syntax-match input-form.stx ()
 	((_ ?type-id ?field-id ?stru)
 	 (and (identifier? ?type-id)
 	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
+	 (let* ((rtd         (%struct-type-id->rtd who input-form.stx ?type-id lexenv.run))
 		(field-names (struct-type-field-names rtd))
-		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
+		(field-idx   (%field-name->field-idx who input-form.stx field-names ?field-id)))
 	   (chi-expr (bless
 		      (if safe?
 			  `(struct-ref ,?stru ,field-idx)
@@ -1441,28 +1448,28 @@
   (module (struct-type-field-set!-transformer
 	   $struct-type-field-set!-transformer)
 
-    (define (struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+    (define (struct-type-field-set!-transformer input-form.stx lexenv.run lexenv.expand)
       ;;Transformer function used to expand STRUCT-TYPE-FIELD-SET!  syntaxes from the
-      ;;top-level built  in environment.   Expand the syntax  object EXPR-STX  in the
-      ;;context of the given LEXENV; return a PSI struct.
+      ;;top-level built in  environment.  Expand the syntax  object INPUT-FORM.STX in
+      ;;the context of the given LEXENV; return a PSI struct.
       ;;
-      (%struct-type-field-set!-transformer 'struct-type-field-ref #t expr-stx lexenv.run lexenv.expand))
+      (%struct-type-field-set!-transformer 'struct-type-field-ref #t input-form.stx lexenv.run lexenv.expand))
 
-    (define ($struct-type-field-set!-transformer expr-stx lexenv.run lexenv.expand)
+    (define ($struct-type-field-set!-transformer input-form.stx lexenv.run lexenv.expand)
       ;;Transformer function  used to  expand $STRUCT-TYPE-FIELD-SET!   syntaxes from
-      ;;the top-level built in environment.  Expand the syntax object EXPR-STX in the
-      ;;context of the given LEXENV; return a PSI struct.
+      ;;the top-level built in environment.   Expand the syntax object INPUT-FORM.STX
+      ;;in the context of the given LEXENV; return a PSI struct.
       ;;
-      (%struct-type-field-set!-transformer '$struct-type-field-ref #f expr-stx lexenv.run lexenv.expand))
+      (%struct-type-field-set!-transformer '$struct-type-field-ref #f input-form.stx lexenv.run lexenv.expand))
 
-    (define (%struct-type-field-set!-transformer who safe? expr-stx lexenv.run lexenv.expand)
-      (syntax-match expr-stx ()
+    (define (%struct-type-field-set!-transformer who safe? input-form.stx lexenv.run lexenv.expand)
+      (syntax-match input-form.stx ()
 	((_ ?type-id ?field-id ?stru ?new-value)
 	 (and (identifier? ?type-id)
 	      (identifier? ?field-id))
-	 (let* ((rtd         (%struct-type-id->rtd who expr-stx ?type-id lexenv.run))
+	 (let* ((rtd         (%struct-type-id->rtd who input-form.stx ?type-id lexenv.run))
 		(field-names (struct-type-field-names rtd))
-		(field-idx   (%field-name->field-idx who expr-stx field-names ?field-id)))
+		(field-idx   (%field-name->field-idx who input-form.stx field-names ?field-id)))
 	   (chi-expr (bless
 		      (if safe?
 			  `(struct-set! ,?stru ,field-idx ,?new-value)
@@ -1474,7 +1481,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%struct-type-id->rtd who expr-stx type-id lexenv.run)
+  (define (%struct-type-id->rtd who input-form.stx type-id lexenv.run)
     ;;Given the  identifier of  the struct  type: find its  label then  its syntactic
     ;;binding and  return the  struct type  descriptor.  If  no binding  captures the
     ;;identifier or the binding does not  describe a structure type descriptor: raise
@@ -1485,11 +1492,11 @@
 		(let ((binding (label->syntactic-binding label lexenv.run)))
 		  (if (struct-type-descriptor-binding? binding)
 		      (syntactic-binding-value binding)
-		    (syntax-violation who "not a struct type" expr-stx type-id)))))
+		    (syntax-violation who "not a struct type" input-form.stx type-id)))))
 	  (else
-	   (%raise-unbound-error who expr-stx type-id))))
+	   (%raise-unbound-error who input-form.stx type-id))))
 
-  (define (%field-name->field-idx who expr-stx field-names field-id)
+  (define (%field-name->field-idx who input-form.stx field-names field-id)
     ;;Given a list of symbols FIELD-NAMES  representing a struct's field names and an
     ;;identifier FIELD-ID representing  the name of a field: return  the index of the
     ;;selected field in the list.
@@ -1501,7 +1508,7 @@
 	      i
 	    (loop ($fxadd1 i) ($cdr ls)))
 	(syntax-violation who
-	  "invalid struct type field name" expr-stx field-id))))
+	  "invalid struct type field name" input-form.stx field-id))))
 
   #| end of module |# )
 
@@ -1526,34 +1533,34 @@
   ;;
   (import R6RS-RECORD-TYPE-SPEC)
 
-  (define (record-type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+  (define (record-type-descriptor-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function  used to  expand RECORD-TYPE-DESCRIPTOR syntaxes  from the
-    ;;top-level  built in  environment.  Expand  the  syntax object  EXPR-STX in  the
+    ;;top-level built in environment.  Expand the syntax object INPUT-FORM.STX in the
     ;;context of the given LEXENV; return a PSI struct.
     ;;
     (define-fluid-override __who__
       (identifier-syntax 'record-type-descriptor))
-    (syntax-match expr-stx ()
+    (syntax-match input-form.stx ()
       ((_ ?type-name)
        (identifier? ?type-name)
        (chi-expr (r6rs-record-type-descriptor-binding-rtd
-		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+		  (id->r6rs-record-type-descriptor-binding __who__ input-form.stx ?type-name lexenv.run))
 		 lexenv.run lexenv.expand))
       ))
 
-  (define (record-constructor-descriptor-transformer expr-stx lexenv.run lexenv.expand)
-    ;;Transformer function used  to expand RECORD-CONSTRUCTOR-DESCRIPTOR
-    ;;syntaxes  from the  top-level  built in  environment.  Expand  the
-    ;;syntax object EXPR-STX in the  context of the given LEXENV; return
-    ;;an expanded language symbolic expression.
+  (define (record-constructor-descriptor-transformer input-form.stx lexenv.run lexenv.expand)
+    ;;Transformer function used to expand RECORD-CONSTRUCTOR-DESCRIPTOR syntaxes from
+    ;;the top-level built in environment.  Expand the syntax object INPUT-FORM.STX in
+    ;;the  context  of  the  given  LEXENV;  return  an  expanded  language  symbolic
+    ;;expression.
     ;;
     (define-fluid-override __who__
       (identifier-syntax 'record-constructor-descriptor))
-    (syntax-match expr-stx ()
+    (syntax-match input-form.stx ()
       ((_ ?type-name)
        (identifier? ?type-name)
        (chi-expr (r6rs-record-type-descriptor-binding-rcd
-		  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+		  (id->r6rs-record-type-descriptor-binding __who__ input-form.stx ?type-name lexenv.run))
 		 lexenv.run lexenv.expand))
       ))
 
@@ -1563,20 +1570,20 @@
       ((define-getter-transformer
 	 (syntax-rules ()
 	   ((_ ?who ?transformer ?actor-getter)
-	    (define (?transformer expr-stx lexenv.run lexenv.expand)
-	      ;;Transformer function  used to expand ?who  syntaxes from
-	      ;;the top-level  built in environment.  Expand  the syntax
-	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
-	      ;;return an expanded language symbolic expression.
+	    (define (?transformer input-form.stx lexenv.run lexenv.expand)
+	      ;;Transformer function used to expand  ?who syntaxes from the top-level
+	      ;;built in environment.  Expand the syntax object INPUT-FORM.STX in the
+	      ;;context of  the given  LEXENV; return  an expanded  language symbolic
+	      ;;expression.
 	      ;;
 	      (define-constant __who__ '?who)
-	      (syntax-match expr-stx ()
+	      (syntax-match input-form.stx ()
 		((_ ?type-name ?field-name ?record)
 		 (and (identifier? ?type-name)
 		      (identifier? ?field-name))
 		 (let* ((synner   (lambda (message)
-				    (syntax-violation __who__ message expr-stx ?type-name)))
-			(binding  (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+				    (syntax-violation __who__ message input-form.stx ?type-name)))
+			(binding  (id->r6rs-record-type-descriptor-binding __who__ input-form.stx ?type-name lexenv.run))
 			(accessor (?actor-getter binding ?field-name synner)))
 		   (chi-expr (bless
 			      (list accessor ?record))
@@ -1594,20 +1601,20 @@
       ((define-setter-transformer
 	 (syntax-rules ()
 	   ((_ ?who ?transformer ?actor-getter)
-	    (define (?transformer expr-stx lexenv.run lexenv.expand)
-	      ;;Transformer function  used to expand ?WHO  syntaxes from
-	      ;;the top-level  built in environment.  Expand  the syntax
-	      ;;object  EXPR-STX in  the  context of  the given  LEXENV;
-	      ;;return an expanded language symbolic expression.
+	    (define (?transformer input-form.stx lexenv.run lexenv.expand)
+	      ;;Transformer function used to expand  ?WHO syntaxes from the top-level
+	      ;;built in environment.  Expand the syntax object INPUT-FORM.STX in the
+	      ;;context of  the given  LEXENV; return  an expanded  language symbolic
+	      ;;expression.
 	      ;;
 	      (define-constant __who__ '?who)
-	      (syntax-match expr-stx ()
+	      (syntax-match input-form.stx ()
 		((_ ?type-name ?field-name ?record ?new-value)
 		 (and (identifier? ?type-name)
 		      (identifier? ?field-name))
 		 (let* ((synner  (lambda (message)
-				   (syntax-violation __who__ message expr-stx ?type-name)))
-			(binding (id->r6rs-record-type-descriptor-binding __who__ expr-stx ?type-name lexenv.run))
+				   (syntax-violation __who__ message input-form.stx ?type-name)))
+			(binding (id->r6rs-record-type-descriptor-binding __who__ input-form.stx ?type-name lexenv.run))
 			(mutator (?actor-getter binding ?field-name synner)))
 		   (chi-expr (bless
 			      (list mutator ?record ?new-value))
@@ -1624,10 +1631,10 @@
 
 ;;;; module core-macro-transformer: TYPE-DESCRIPTOR
 
-(define (type-descriptor-transformer expr-stx lexenv.run lexenv.expand)
+(define (type-descriptor-transformer input-form.stx lexenv.run lexenv.expand)
   ;;Transformer function used  to expand TYPE-DESCRIPTOR syntaxes  from the top-level
-  ;;built in  environment.  Expand the syntax  object EXPR-STX in the  context of the
-  ;;given LEXENV; return a PSI struct.
+  ;;built in environment.  Expand the syntax  object INPUT-FORM.STX in the context of
+  ;;the given LEXENV; return a PSI struct.
   ;;
   ;;The result must be an expression evaluating to:
   ;;
@@ -1641,19 +1648,21 @@
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'type-descriptor))
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?type-id)
      (identifier? ?type-id)
-     (case-object-type-binding (__who__ expr-stx ?type-id lexenv.run binding)
+     (case-object-type-binding (__who__ input-form.stx ?type-id lexenv.run binding)
        ((r6rs-record-type)
 	(chi-expr (r6rs-record-type-descriptor-binding-rtd binding)
 		  lexenv.run lexenv.expand))
        ((vicare-struct-type)
-	(make-psi (build-data no-source
+	(make-psi input-form.stx
+		  (build-data no-source
 		    (syntactic-binding-value binding))
 		  (make-retvals-signature (list (scheme-stx '<struct-type-descriptor>)))))
        ((object-type-spec)
-	(make-psi (build-data no-source
+	(make-psi input-form.stx
+		  (build-data no-source
 		    (identifier-object-type-spec ?type-id))
 		  (make-retvals-signature-single-top)))
        ))
@@ -1722,7 +1731,8 @@
 	  (let* ((accessor.stx  (tag-identifier-accessor ?tag ?field-name-id input-form.stx))
 		 (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
 		 (accessor.core (psi-core-expr accessor.psi)))
-	    (make-psi (build-application input-form.stx
+	    (make-psi input-form.stx
+		      (build-application input-form.stx
 			accessor.core
 			(list expr.core))
 		      (psi-application-retvals-signature accessor.psi))))
@@ -1769,7 +1779,8 @@
 		 (mutator.core   (psi-core-expr mutator.psi))
 		 (new-value.psi  (chi-expr ?new-value lexenv.run lexenv.expand))
 		 (new-value.core (psi-core-expr new-value.psi)))
-	    (make-psi (build-application input-form.stx
+	    (make-psi input-form.stx
+		      (build-application input-form.stx
 			mutator.core
 			(list expr.core new-value.core))
 		      (psi-application-retvals-signature mutator.psi))))
@@ -1944,7 +1955,8 @@
       ))
 
   (define (%just-evaluate-the-expression expr.psi)
-    (make-psi (build-sequence no-source
+    (make-psi (psi-stx expr.psi)
+	      (build-sequence no-source
 		(list (psi-core-expr expr.psi)
 		      (build-void)))
 	      ;;We know that we are returning a single void argument.
@@ -1963,13 +1975,13 @@
     (let* ((call.psi     (chi-expr (bless 'call-with-values) lexenv.run lexenv.expand))
 	   (call.core    (psi-core-expr call.psi))
 	   (checker.core (psi-core-expr checker.psi)))
-      (make-psi (build-application no-source
+      (make-psi input-form.stx
+		(build-application no-source
 		  call.core
 		  (list (build-lambda no-source '() expr.core)
 			checker.core))
 		;;We know that we are returning a single void argument.
 		(make-retvals-signature-single-top))))
-
 
   #| end of module: TAG-ASSERT-TRANSFORMER |# )
 
@@ -2103,7 +2115,8 @@
 	   (cwv.core     (psi-core-expr cwv.psi))
 	   (expr.core    (psi-core-expr expr.psi))
 	   (checker.core (psi-core-expr checker.psi)))
-      (make-psi (build-application no-source
+      (make-psi input-form.stx
+		(build-application no-source
 		  cwv.core
 		  (list (build-lambda no-source
 			  '()
@@ -2139,7 +2152,8 @@
 	    (let* ((accessor.stx  (tag-identifier-accessor ?tag ?field-name-id input-form.stx))
 		   (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
 		   (accessor.core (psi-core-expr accessor.psi)))
-	      (make-psi (build-application (syntax-annotation input-form.stx)
+	      (make-psi input-form.stx
+			(build-application (syntax-annotation input-form.stx)
 			  accessor.core
 			  (list expr.core))
 			(psi-application-retvals-signature accessor.psi))))
@@ -2171,7 +2185,8 @@
 		   (mutator.core (psi-core-expr mutator.psi))
 		   (expr.core    (psi-core-expr expr.psi))
 		   (nval.core    (psi-core-expr nval.psi)))
-	      (make-psi (build-application (syntax-annotation input-form.stx)
+	      (make-psi input-form.stx
+			(build-application (syntax-annotation input-form.stx)
 			  mutator.core
 			  (list expr.core nval.core))
 			(psi-application-retvals-signature mutator.psi))))
@@ -2202,7 +2217,8 @@
 		  (getter.psi  (chi-expr getter.stx lexenv.run lexenv.expand))
 		  (getter.core (psi-core-expr getter.psi))
 		  (expr.core   (psi-core-expr expr.psi)))
-	     (make-psi (build-application (syntax-annotation input-form.stx)
+	     (make-psi input-form.stx
+		       (build-application (syntax-annotation input-form.stx)
 			 getter.core
 			 (list expr.core))
 		       (psi-application-retvals-signature getter.psi))))
@@ -2237,7 +2253,8 @@
 		  (expr.core   (psi-core-expr expr.psi))
 		  (nval.psi    (chi-expr new-value.stx lexenv.run lexenv.expand))
 		  (nval.core   (psi-core-expr nval.psi)))
-	     (make-psi (build-application (syntax-annotation input-form.stx)
+	     (make-psi input-form.stx
+		       (build-application (syntax-annotation input-form.stx)
 			 setter.core
 			 (list expr.core nval.core))
 		       (psi-application-retvals-signature setter.psi))))
@@ -2275,7 +2292,8 @@
 		  (method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
 		  (method.core (psi-core-expr method.psi))
 		  (expr.core   (psi-core-expr expr.psi)))
-	     (make-psi (build-application (syntax-annotation input-form.stx)
+	     (make-psi input-form.stx
+		       (build-application (syntax-annotation input-form.stx)
 			 method.core
 			 (list expr.core))
 		       (psi-application-retvals-signature method.psi))))
@@ -2315,7 +2333,8 @@
 		       (expr.core    (psi-core-expr expr.psi)))
 		  ;;This form  will either succeed or  raise an exception, so  we can
 		  ;;tag this PSI with the target tag.
-		  (make-psi (build-application no-source
+		  (make-psi (psi-stx expr.psi)
+			    (build-application no-source
 			      caster.core
 			      (list expr.core))
 			    (make-retvals-signature (list target-tag))))))
@@ -2335,7 +2354,8 @@
   	   (predicate.core  (psi-core-expr predicate.psi)))
       ;;This form will either  succeed or raise an exception, so we  can tag this PSI
       ;;with the target tag.
-      (make-psi (build-application no-source
+      (make-psi (psi-stx expr.psi)
+		(build-application no-source
 		  (build-primref no-source 'return-value-validation-with-predicate)
   		  (list type-name.core predicate.core expr.core))
   		(make-retvals-signature (list target-tag)))))
@@ -2364,7 +2384,8 @@
 			      (let* ((caster.stx   (target-caster-maker ?source-tag input-form.stx))
 				     (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
 				     (caster.core  (psi-core-expr caster.psi)))
-				(make-psi (build-application (syntax-annotation input-form.stx)
+				(make-psi input-form.stx
+					  (build-application (syntax-annotation input-form.stx)
 					    caster.core
 					    (list expr.core))
 					  (make-retvals-signature (list ?target-tag))))))
@@ -2391,7 +2412,8 @@
     ((_ ?expr)
      (let* ((expr.psi (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.sig (psi-retvals-signature expr.psi)))
-       (make-psi (build-data no-source
+       (make-psi input-form.stx
+		 (build-data no-source
 		   expr.sig)
 		 (make-retvals-signature-single-top))))
     ))
@@ -2431,29 +2453,17 @@
 	      (out.sexp (if (= 1 (length out.sexp))
 			    (car out.sexp)
 			  (cons 'begin out.sexp))))
-	 (make-psi (build-data no-source
+	 (make-psi input-form.stx
+		   (build-data no-source
 		     out.sexp)
 		   (make-retvals-signature-single-top)))))
-
-    ;; ((_ (?define . ?stuff))
-    ;;  (and (identifier? ?define)
-    ;; 	  (or (free-id=? ?define (scheme-stx 'define))
-    ;; 	      (free-id=? ?define (scheme-stx 'define*))))
-    ;;  (let* ((expr.stx `(,(scheme-stx 'internal-body)
-    ;; 			(,?define . ,?stuff)
-    ;; 			(,(scheme-stx 'void))))
-    ;; 	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
-    ;; 	    (expr.core (psi-core-expr expr.psi))
-    ;; 	    (expr.sexp (core-language->sexp expr.core)))
-    ;;    (make-psi (build-data no-source
-    ;; 		   expr.sexp)
-    ;; 		 (make-retvals-signature-single-top))))
 
     ((_ ?expr)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sexp (core-language->sexp expr.core)))
-       (make-psi (build-data no-source
+       (make-psi input-form.stx
+		 (build-data no-source
 		   expr.sexp)
 		 (make-retvals-signature-single-top))))
     ))

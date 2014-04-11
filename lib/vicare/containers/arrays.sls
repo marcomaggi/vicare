@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -163,7 +163,7 @@
   (define who 'vector->position)
   (with-arguments-validation (who)
       ((vector-of-coordinates	vec))
-    ($vector->position)))
+    ($vector->position vec)))
 
 (define ($vector->position vec)
   (make-:position vec))
@@ -172,7 +172,7 @@
   (define who 'list->position)
   (with-arguments-validation (who)
       ((list-of-coordinates	ell))
-    ($vector->position)))
+    ($list->position ell)))
 
 (define ($list->position ell)
   (make-:position (list->vector ell)))

@@ -330,8 +330,20 @@
 (define* (make-retvals-signature-single-value {tag tag-identifier?})
   (make-retvals-signature (list tag)))
 
+
+;;;; lambda-signature stuff
+
+(define* (lambda-signature=? {signature1 lambda-signature?} {signature2 lambda-signature?})
+  ;;Return true if the signatures are equal; otherwise return false.
+  ;;
+  ;;Remember that SYNTAX=? compares identifiers with FREE-IDENTIFIER=?.
+  ;;
+  (and (syntax=? ($formals-signature-tags ($lambda-signature-formals signature1))
+		 ($formals-signature-tags ($lambda-signature-formals signature2)))
+       (syntax=? ($retvals-signature-tags ($lambda-signature-retvals signature1))
+		 ($retvals-signature-tags ($lambda-signature-retvals signature2)))))
+
 ;;; --------------------------------------------------------------------
-;;; special accessors
 
 (define* (lambda-signature-formals-tags {signature lambda-signature?})
   ($formals-signature-tags ($lambda-signature-formals signature)))
@@ -366,7 +378,26 @@
 	     (and (for-all top-tag-id? head)
 		  (list-tag-id? tail)))))))
 
+
+;;;; formals-signature stuff
+
+(define* (formals-signature=? {signature1 formals-signature?} {signature2 formals-signature?})
+  ;;Return true if the signatures are equal; otherwise return false.
+  ;;
+  ;;Remember that SYNTAX=? compares identifiers with FREE-IDENTIFIER=?.
+  ;;
+  (syntax=? ($formals-signature-tags signature1)
+	    ($formals-signature-tags signature2)))
+
 ;;; --------------------------------------------------------------------
+
+(define* (formals-signature-super-and-sub? {super-signature formals-signature?}
+					   {sub-signature   formals-signature?})
+  ($formals-signature-super-and-sub-syntax? ($formals-signature-tags super-signature)
+					    ($formals-signature-tags sub-signature)))
+
+
+;;;; retvals-signature stuff
 
 (define* (retvals-signature-fully-unspecified? {signature retvals-signature?})
   (list-tag-id? ($retvals-signature-tags signature)))
@@ -424,24 +455,6 @@
 	  (_		#f)))))
 
 ;;; --------------------------------------------------------------------
-
-(define* (lambda-signature=? {signature1 lambda-signature?} {signature2 lambda-signature?})
-  ;;Return true if the signatures are equal; otherwise return false.
-  ;;
-  ;;Remember that SYNTAX=? compares identifiers with FREE-IDENTIFIER=?.
-  ;;
-  (and (syntax=? ($formals-signature-tags ($lambda-signature-formals signature1))
-		 ($formals-signature-tags ($lambda-signature-formals signature2)))
-       (syntax=? ($retvals-signature-tags ($lambda-signature-retvals signature1))
-		 ($retvals-signature-tags ($lambda-signature-retvals signature2)))))
-
-(define* (formals-signature=? {signature1 formals-signature?} {signature2 formals-signature?})
-  ;;Return true if the signatures are equal; otherwise return false.
-  ;;
-  ;;Remember that SYNTAX=? compares identifiers with FREE-IDENTIFIER=?.
-  ;;
-  (syntax=? ($formals-signature-tags signature1)
-	    ($formals-signature-tags signature2)))
 
 (define* (retvals-signature=? {signature1 retvals-signature?} {signature2 retvals-signature?})
   ;;Return true if the signatures are equal; otherwise return false.
