@@ -717,17 +717,28 @@
     (define rator.callable
       (tag-identifier-callable-signature rator.tag))
     (cond ((lambda-signature? rator.callable)
-	   (%process-lambda-application input-form.stx rator.callable rator.psi rand*.psi))
+	   (%process-lambda-application input-form.stx lexenv.run lexenv.expand
+					rator.callable rator.psi rand*.psi))
 	  ((clambda-compound? rator.callable)
 	   (%process-clambda-application input-form.stx rator.callable rator.psi rand*.psi))
 	  (else
 	   (%build-core-expression input-form.stx rator.psi rand*.psi))))
 
-  (define (%process-lambda-application input-form.stx rator.lambda-signature rator.psi rand*.psi)
+  (define (%process-lambda-application input-form.stx lexenv.run lexenv.expand
+				       rator.lambda-signature rator.psi rand*.psi)
     (if (%match-rator-signature-against-rand-signatures input-form.stx rator.lambda-signature
 							rator.psi rand*.psi)
 	;;The signatures do match.
-	(%build-core-expression input-form.stx rator.psi rand*.psi)
+	(let ((rator.stx (psi-stx rator.psi)))
+	  (cond ((identifier? rator.stx)
+		 (cond ((identifier-unsafe-variant rator.stx)
+			=> (lambda (unsafe-rator.stx)
+			     (let ((unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
+			       (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi))))
+		       (else
+			(%build-core-expression input-form.stx rator.psi rand*.psi))))
+	      (else
+	       (%build-core-expression input-form.stx rator.psi rand*.psi))))
       ;;The signatures do not match, but we rely on run-time checking.
       (%build-core-expression input-form.stx rator.psi rand*.psi)))
 
