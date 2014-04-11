@@ -2375,6 +2375,12 @@ $1 = #["retvals-signature" (#'<symbol>)]
 @end example
 @end deffn
 
+
+@defun print-identifier-info @var{id}
+Given an identifier object: print on the current error port a report on
+its properties as identifier; return unspecified values.
+@end defun
+
 @c page
 @node iklib syntaxes expansion-of
 @subsection Determining expansion result

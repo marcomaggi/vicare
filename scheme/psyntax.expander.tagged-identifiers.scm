@@ -398,10 +398,18 @@
   ;;Add to  the syntactic binding  label property list  an entry representing  a type
   ;;specification.  When this call succeeds: TYPE-ID becomes a tag identifier.
   ;;
-  (if ($syntactic-binding-getprop type-id *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
-      (syntax-violation __who__
-	"object specification already defined" type-id spec)
-    ($syntactic-binding-putprop type-id *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE* spec)))
+  (let ((label (id->label/or-error __who__ type-id type-id)))
+    (cond (($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
+	   => (lambda (old-spec)
+		(assertion-violation __who__
+		  "identifier is already a tag, will not overwrite object-type-spec"
+		  type-id old-spec spec)))
+	  (($getprop label *EXPAND-TIME-BINDING-TAG-COOKIE*)
+	   => (lambda (bind-tag)
+		(assertion-violation __who__
+		  "tagged identifier cannot become a tag identifier" type-id bind-tag spec)))
+	  (else
+	   ($putprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE* spec)))))
 
 (define* ({identifier-object-type-spec false-or-object-type-spec?} {tag identifier-bound?})
   ;;Retrieve from  the syntactic binding  label property list  the "object-type-spec"
@@ -424,8 +432,12 @@
   ;;
   (cond (($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
 	 => (lambda (old-spec)
-	      (syntax-violation __who__
-		"object specification already defined" label old-spec spec)))
+	      (assertion-violation __who__
+		"object specification already defined for label" label old-spec spec)))
+	(($getprop label *EXPAND-TIME-BINDING-TAG-COOKIE*)
+	 => (lambda (bind-tag)
+	      (assertion-violation __who__
+		"tagged identifier's label cannot become a tag identifier" label bind-tag spec)))
 	(else
 	 ($putprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE* spec))))
 
@@ -548,15 +560,21 @@
 (define* (set-identifier-tag! {binding-id identifier-bound?} {tag tag-identifier?})
   ;;Given a  syntactic binding identifier:  add TAG to  its property list  as binding
   ;;type  tagging.  This  tag  should represent  the object  type  referenced by  the
-  ;;binding.
+  ;;binding.  When this call succeeds: BINDING-ID becomes a tagged identifier.
   ;;
-  (cond (($syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TAG-COOKIE*)
-	 => (lambda (old-tag)
-	      (syntax-violation __who__
-		"identifier binding tag already defined"
-		binding-id old-tag tag)))
-	(else
-	 ($syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-TAG-COOKIE* tag))))
+  (let ((label (id->label/or-error __who__ binding-id binding-id)))
+    (cond (($getprop label *EXPAND-TIME-BINDING-TAG-COOKIE*)
+	   => (lambda (old-tag)
+		(assertion-violation __who__
+		  "identifier is already tagged, will not overwrite old tag"
+		  binding-id old-tag tag)))
+	  (($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
+	   => (lambda (spec)
+		(assertion-violation __who__
+		  "tag identifier cannot become a tagged identifier"
+		  binding-id spec tag)))
+	  (else
+	   ($putprop label *EXPAND-TIME-BINDING-TAG-COOKIE* tag)))))
 
 (define* (override-identifier-tag! {binding-id identifier-bound?} {tag tag-identifier?})
   ;;Given a  syntactic binding identifier:  add TAG to  its property list  as binding
@@ -583,6 +601,11 @@
 	 => (lambda (old-tag)
 	      (syntax-violation __who__
 		"label binding tag already defined" label old-tag tag)))
+	(($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
+	 => (lambda (spec)
+	      (assertion-violation __who__
+		"tag identifier cannot become a tagged identifier"
+		label spec tag)))
 	(else
 	 ($putprop label *EXPAND-TIME-BINDING-TAG-COOKIE* tag))))
 
@@ -748,6 +771,52 @@
 	(clambda-compound? obj)))
 
   #| end of module |# )
+
+
+;;;; debugging helpers
+
+(define* (print-identifier-info {id identifier?})
+  ;;Given an  identifier object:  print on  the current  error port  a report  on its
+  ;;properties as identifier; return unspecified values.
+  ;;
+  ;;FIXME We can do better in this function.  (Marco Maggi; Fri Apr 11, 2014)
+  ;;
+  (define (%print message . args)
+    (apply fprintf (current-error-port) message args))
+  (cond ((id->label id)
+	 => (lambda (label)
+	      (%print "identifier: ~a\nlabel: ~a\n" (syntax->datum id) label)
+	      (cond ((identifier-object-type-spec id)
+		     => (lambda (spec)
+			  (%print "tag identifier: yes\n")))
+		    (else
+		     (%print "tag identifier: no\n")))
+	      (cond ((identifier-tag id)
+		     => (lambda (tag)
+			  (%print "tagged identifier: yes\ntype tag identifier: ~a\n"
+				  tag)
+			  (if (tag-super-and-sub? (procedure-tag-id) tag)
+			      (begin
+				(%print "type tag has <procedure> as parent: yes\n")
+				(cond ((identifier-unsafe-variant id)
+				       => (lambda (unsafe-stx)
+					    (%print "identifier has unsafe variant: yes\n")
+					    (%print "unsafe identifier variant: ~a\n" unsafe-stx)))
+				      (else
+				       (%print "identifier has unsafe variant: no\n")))
+				(cond ((tag-identifier-callable-signature tag)
+				       => (lambda (callable)
+					    (%print "callable signature: ~a\n" callable)))
+				      (else
+				       (%print "callable signature: unspecified\n"))))
+			    (%print "type tag has <procedure> as parent: no\n"))))
+		    (else
+		     (%print "tagged identifier: no\n")))
+	      ))
+
+	(else
+	 (fprintf (current-error-port) "identifier: ~a not bound\n"
+		  (syntax->datum id)))))
 
 
 ;;;; done

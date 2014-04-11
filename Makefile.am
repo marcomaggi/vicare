@@ -374,6 +374,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.expander.tagged-identifiers.scm			\
 	scheme/psyntax.expander.signatures.scm				\
 	scheme/psyntax.expander.built-in-tags.scm			\
+	scheme/psyntax.expander.core-prims-init.scm			\
 	scheme/psyntax.expander.core-macro-transformers.scm		\
 	scheme/psyntax.expander.non-core-macro-transformers.scm		\
 	scheme/psyntax.internal.sls					\

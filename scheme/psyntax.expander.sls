@@ -1206,8 +1206,11 @@
     retvals-signature-violation-expected-signature
     retvals-signature-violation-returned-signature
 
-    ;; expant-time type specs: stuff for built-in tags
+    print-identifier-info
+
+    ;; expand-time type specs: stuff for built-in tags and core primitives
     initialise-type-spec-for-built-in-object-types
+    initialise-core-prims-tagging
 
     ;;The following are inspection functions for debugging purposes.
     (rename (<stx>?		syntax-object?)
@@ -6020,6 +6023,8 @@
 	 boolean-tag-id			void-tag-id)
   (import (vicare))
   (include "psyntax.expander.built-in-tags.scm" #t))
+(module (initialise-core-prims-tagging)
+  (include "psyntax.expander.core-prims-init.scm" #t))
 
 
 (define-syntax syntax-match
@@ -6310,37 +6315,39 @@
   ;;
   ;;   (psyntax system $all)
   ;;
-  ;;create a fresh identifier that maps  only the symbol to its label in
-  ;;that library.  Symbols not in that library become fresh.
+  ;;create a fresh identifier that maps only the symbol to its label in that library.
+  ;;Symbols not in that library become fresh.
   ;;
-  (let ((scheme-stx-hashtable (make-eq-hashtable))
-	(subst                #f))
+  (let ((subst #f)
+	(scheme-stx-hashtable (make-eq-hashtable)))
     (lambda (sym)
       (or (hashtable-ref scheme-stx-hashtable sym #f)
-	  (receive-and-return (stx)
-	      (cond ((assq sym (or subst
-				   (receive-and-return (S)
-				       (library-export-subst (find-library-by-name '(psyntax system $all)))
-				     (set! subst S))))
-		     ;;SYM is  the name of  a core primitive,  so we build  a bound
-		     ;;identifier with  a proper  "<rib>" and the  binding's label.
-		     ;;Such bound identifier  will be captured by the  entry in the
-		     ;;top-level environment.
-		     => (lambda (subst.entry)
-			  (let ((name  (car subst.entry))
-				(label (cdr subst.entry)))
+	  (cond ((assq sym (or subst
+			       (receive-and-return (S)
+				   (library-export-subst (find-library-by-name '(psyntax system $all)))
+				 (set! subst S))))
+		 ;;SYM  is the  name  of a  core  primitive, so  we  build a  bound
+		 ;;identifier with a proper "<rib>"  and the binding's label.  Such
+		 ;;bound identifier will be captured  by the entry in the top-level
+		 ;;environment.
+		 => (lambda (subst.entry)
+		      (let ((name  (car subst.entry))
+			    (label (cdr subst.entry)))
+			(receive-and-return (stx)
 			    (make-<stx> name TOP-MARK*
 					(list (make-<rib> (list name)
 							  TOP-MARK**
 							  (list label)
 							  #f))
-					'()))))
-		    (else
-		     ;;SYM is not the name of a  core primitive, so we just build a
-		     ;;free identifier.   Such free identifier will  work just fine
-		     ;;in binding position.
-		     (make-<stx> sym TOP-MARK* '() '())))
-	    (hashtable-set! scheme-stx-hashtable sym stx))))))
+					'())
+			  (hashtable-set! scheme-stx-hashtable sym stx)))))
+		(else
+		 ;;SYM is not the name of a core primitive, so we just build a free
+		 ;;identifier.  Such free identifier will work just fine in binding
+		 ;;position.
+		 (receive-and-return (stx)
+		     (make-<stx> sym TOP-MARK* '() '())
+		   (hashtable-set! scheme-stx-hashtable sym stx))))))))
 
 (let-syntax
     ((define-core-prim-id-retriever (syntax-rules ()

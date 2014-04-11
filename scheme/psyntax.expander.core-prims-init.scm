@@ -242,7 +242,11 @@
   ;; $string
   ;; $string-ref
   ;; $string-set!
-  ;; $string-length
+
+  (let ((P (C $string-length)))
+    (register-lambda-signature P (S (list (C <fixnum>))
+				    (list (C <string>)))))
+
   ;; $string-empty?
   ;; $string=
   ;; $string-total-length

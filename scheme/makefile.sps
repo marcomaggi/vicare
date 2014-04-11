@@ -3746,6 +3746,8 @@
 
 ;;; --------------------------------------------------------------------
 
+    (print-identifier-info			v $language)
+
     (tagged-identifier-syntax?			$type-specs)
     (list-of-tagged-bindings?			$type-specs)
     (tagged-lambda-proto-syntax?		$type-specs)
