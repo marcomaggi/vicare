@@ -1576,7 +1576,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand formals*.stx body-form**.stx)
+  (define* (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
+				attributes.sexp formals*.stx body-form**.stx)
     ;;Expand all the clauses of a CASE-LAMBDA syntax, return 2 values:
     ;;
     ;;1..A list  of subslist,  each sublist being  a proper or  improper list  of lex
@@ -1588,8 +1589,6 @@
     ;;3..A  list  of   PSI  structs  each  containing  a   core  language  expression
     ;;   representing the body of a clause.
     ;;
-    (define attributes.sexp
-      '(safe))
     (if (null? formals*.stx)
 	(values '() '() '())
       (receive (formals-lex lambda-signature body.psi)
@@ -1597,7 +1596,7 @@
 			      attributes.sexp (car formals*.stx) (car body-form**.stx))
 	(receive (formals-lex* lambda-signature* body*.psi)
 	    (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-				 (cdr formals*.stx) (cdr body-form**.stx))
+				 attributes.sexp (cdr formals*.stx) (cdr body-form**.stx))
 	  (values (cons formals-lex       formals-lex*)
 		  (cons lambda-signature  lambda-signature*)
 		  (cons body.psi          body*.psi))))))
@@ -1718,7 +1717,8 @@
 
 ;;; --------------------------------------------------------------------
 
-(define* (chi-lambda input-form.stx formals.stx body*.stx lexenv.run lexenv.expand)
+(define* (chi-lambda input-form.stx lexenv.run lexenv.expand
+		     attributes.stx formals.stx body*.stx)
   ;;Expand the contents of CASE syntax and return a "psi" struct.
   ;;
   ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
@@ -1729,7 +1729,7 @@
   ;;LAMBDA syntax.
   ;;
   (import CHI-LAMBDA-CLAUSES)
-  (define attributes.sexp '(safe))
+  (define attributes.sexp (syntax->datum attributes.stx))
   (receive (formals.lex lambda-signature body.psi)
       (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
 			  attributes.sexp formals.stx body*.stx)
@@ -1739,7 +1739,8 @@
 		(psi-core-expr body.psi))
 	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
 
-(define* (chi-case-lambda input-form.stx formals*.stx body**.stx lexenv.run lexenv.expand)
+(define* (chi-case-lambda input-form.stx lexenv.run lexenv.expand
+			  attributes.stx formals*.stx body**.stx)
   ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
   ;;
   ;;INPUT-FORM.STX  is   a  syntax  object  representing   the  original  CASE-LAMBDA
@@ -1764,8 +1765,10 @@
   ;;    lexenv.run lexenv.expand)
   ;;
   (import CHI-LAMBDA-CLAUSES)
+  (define attributes.sexp (syntax->datum attributes.stx))
   (receive (formals*.lex lambda-signature* body**.psi)
-      (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand formals*.stx body**.stx)
+      (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
+			   attributes.sexp formals*.stx body**.stx)
     (make-psi input-form.stx
 	      (build-case-lambda (syntax-annotation input-form.stx)
 		formals*.lex
