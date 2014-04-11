@@ -7156,7 +7156,8 @@
 	 syntax-violation
 	 retvals-signature-violation
 	 %raise-unbound-error
-	 make-macro-input-form-condition)
+	 make-macro-input-form-condition
+	 %extract-macro-expansion-trace)
 
   (define (syntax-error x . args)
     (unless (for-all string? args)
@@ -7167,7 +7168,7 @@
 					  (apply string-append args)))
 		(make-syntax-violation (syntax->datum x) #f)
 		(%expression->source-position-condition x)
-		(%extract-trace x))))
+		(%extract-macro-expansion-trace x))))
 
   (case-define syntax-violation
     ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
@@ -7244,7 +7245,7 @@
 		  (make-message-condition msg)
 		  condition-object
 		  (%expression->source-position-condition form)
-		  (%extract-trace form)))))
+		  (%extract-macro-expansion-trace form)))))
 
   (define (%raise-unbound-error source-who form id)
     (raise
@@ -7255,24 +7256,25 @@
 		(make-undefined-violation)
 		(make-syntax-violation form id)
 		(%expression->source-position-condition id)
-		(%extract-trace id))))
+		(%extract-macro-expansion-trace id))))
 
   (define* (make-macro-input-form-condition stx)
     (condition
      (%make-macro-input-form-condition stx)
-     (%extract-trace stx)))
+     (%extract-macro-expansion-trace stx)))
 
-  (define (%extract-trace x)
-    (define-condition-type &trace &condition
-      make-trace trace?
-      (form trace-form))
+  (define (%extract-macro-expansion-trace x)
+    (define-condition-type &macro-expansion-trace
+	&condition
+      make-macro-expansion-trace macro-expansion-trace?
+      (form macro-expansion-trace-form))
     (let f ((x x))
       (cond ((<stx>? x)
 	     (apply condition
-		    (make-trace x)
+		    (make-macro-expansion-trace x)
 		    (map f (<stx>-ae* x))))
 	    ((annotation? x)
-	     (make-trace (make-<stx> x '() '() '())))
+	     (make-macro-expansion-trace (make-<stx> x '() '() '())))
 	    (else
 	     (condition)))))
 

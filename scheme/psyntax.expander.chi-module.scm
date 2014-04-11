@@ -764,11 +764,12 @@
       given-operands-count-condition?
       (count given-operands-count))
 
-    (define-condition-type &argument-tag
+    (define-condition-type &argument-description
 	&condition
-      make-argument-tag-condition
-      argument-tag-condition?
-      (tag argument-tag))
+      make-argument-description-condition
+      argument-description-condition?
+      (zero-based-argument-index argument-description-index)
+      (expected-argument-tag     argument-description-expected-tag))
 
     (define-condition-type &operand-retvals-signature
 	&condition
@@ -783,7 +784,8 @@
 	(make-message-condition "more given operands than expected arguments")
 	(make-syntax-violation input-form.stx #f)
 	(make-expected-arguments-count-condition expected-arguments-count)
-	(make-given-operands-count-condition given-operands-count))))
+	(make-given-operands-count-condition given-operands-count)
+	(%extract-macro-expansion-trace input-form.stx))))
 
     (define (%error-more-arguments-than-operands input-form.stx expected-arguments-count given-operands-count)
       (raise
@@ -792,17 +794,19 @@
 	(make-message-condition "more expected arguments than given operands")
 	(make-syntax-violation input-form.stx #f)
 	(make-expected-arguments-count-condition expected-arguments-count)
-	(make-given-operands-count-condition given-operands-count))))
+	(make-given-operands-count-condition given-operands-count)
+	(%extract-macro-expansion-trace input-form.stx))))
 
     (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx rand.stx
-										arg.tag rand.retvals-signature)
+										arg.idx arg.tag rand.retvals-signature)
       (raise
        (condition
 	(make-who-condition __who__)
-	(make-message-condition "expand-time mismatch between argument tag and operand retvals signature")
+	(make-message-condition "expand-time mismatch between expected argument tag and operand retvals signature")
 	(make-syntax-violation input-form.stx rand.stx)
-	(make-argument-tag-condition arg.tag)
-	(make-operand-retvals-signature-condition rand.retvals-signature))))
+	(make-argument-description-condition arg.idx arg.tag)
+	(make-operand-retvals-signature-condition rand.retvals-signature)
+	(%extract-macro-expansion-trace input-form.stx))))
 
     #| end of module: CLOSURE-APPLICATION-ERRORS |# )
 
@@ -860,7 +864,8 @@
 		       ;;Argument and operand do *not* match at expand-time.
 		       (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
 											   (psi-stx rand.psi)
-											   ?arg.tag rand.retvals-signature))))
+											   count ?arg.tag
+											   rand.retvals-signature))))
 	       (?rand.tag
 		(if (list-tag-id? ?rand.tag)
 		    ;;The operand expression returns an unspecified number of objects
@@ -876,12 +881,14 @@
 		  ;;Maggi; Fri Apr 11, 2014)
 		  (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
 										      (psi-stx rand.psi)
-										      ?arg.tag rand.retvals-signature)))
+										      count ?arg.tag
+										      rand.retvals-signature)))
 	       (_
 		;;The operand returns multiple values for sure.
 		(%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx
 										    (psi-stx rand.psi)
-										    ?arg.tag rand.retvals-signature))
+										    count ?arg.tag
+										    rand.retvals-signature))
 	       ))))
 
 	(?arg.tag
