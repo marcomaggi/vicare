@@ -1195,7 +1195,7 @@
   #| end of module: CHI-APPLICATION/PSI-FIRST-OPERAND |# )
 
 
-;;;; chi procedures: general operator application
+;;;; chi procedures: general operator application, nothing already expanded
 
 (module (chi-application)
   (define-fluid-override __who__
@@ -1623,8 +1623,17 @@
 	     (cons (bless
 		    `(tag-procedure-argument-validator ,($car tag*) ,($car arg*)))
 		   (%recur))))
+	  ;;If there  is no rest  or args  argument or the  rest or args  argument is
+	  ;;tagged as "<list>":  there is no need to include  an argument validation.
+	  ;;It is obvious that in LAMBDAs like:
+	  ;;
+	  ;;   (lambda args       123)
+	  ;;   (lambda (a . rest) 123)
+	  ;;
+	  ;;the formals ARGS and REST are tagged  as "<list>" and they will always be
+	  ;;lists; so there is no need to validate them.
 	  ((or (not rest-tag)
-	       (top-tag-id? rest-tag))
+	       (list-tag-id? rest-tag))
 	   '())
 	  (else
 	   (list (bless
