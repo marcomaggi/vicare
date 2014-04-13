@@ -4527,7 +4527,7 @@
   ;;
   ;;when  creating  the  lexical  contour  for  a  top-level  expression
   ;;evaluated by  EVAL in the  context of a  non-interactive environment
-  ;;record we, cando:
+  ;;record we, can do:
   ;;
   ;;   (define env
   ;;     (environment '(vicare)))
