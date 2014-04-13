@@ -283,13 +283,13 @@
    ))
 
 (define* (make-formals-signature {tags formals-signature-syntax?})
-  (%make-formals-signature tags))
+  (%make-formals-signature (syntax-unwrap tags)))
 
 (define* (make-retvals-signature {tags retvals-signature-syntax?})
-  (%make-retvals-signature tags))
+  (%make-retvals-signature (syntax-unwrap tags)))
 
-(define* (make-lambda-signature {rv retvals-signature?} {formals formals-signature?})
-  (%make-lambda-signature rv formals))
+(define* (make-lambda-signature {retvals retvals-signature?} {formals formals-signature?})
+  (%make-lambda-signature retvals formals))
 
 (define* (make-clambda-compound {signatures list-of-lambda-signatures?})
   (%make-clambda-compound (if (null? signatures) ;this is REDUCE

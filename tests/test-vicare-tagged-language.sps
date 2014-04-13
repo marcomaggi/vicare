@@ -111,12 +111,12 @@
 (define-syntax catch-expand-time-signature-violation
   (syntax-rules ()
     ((_ ?verbose . ?body)
-     (guard (E ((typ.retvals-signature-violation? E)
+     (guard (E ((typ.expand-time-retvals-signature-violation? E)
 		(when ?verbose
 		  (debug-print (condition-message E)
 			       (syntax-violation-form E)))
-		(values (syntax->datum (typ.retvals-signature-tags (typ.retvals-signature-violation-expected-signature E)))
-			(syntax->datum (typ.retvals-signature-tags (typ.retvals-signature-violation-returned-signature E)))))
+		(values (syntax->datum (typ.retvals-signature-tags (typ.expand-time-retvals-signature-violation-expected-signature E)))
+			(syntax->datum (typ.retvals-signature-tags (typ.expand-time-retvals-signature-violation-returned-signature E)))))
 	       (else E))
        . ?body))))
 
@@ -2387,12 +2387,12 @@
   (check	;check  at expand-time  that  the  expression returns  a
 		;single value
       (tag-assert (<top>) 123)
-    => 123)
+    => (void))
 
   (check	;check  at expand-time  that  the  expression returns  a
 		;single value
       (tag-assert (<top>) ((<top>)123))
-    => 123)
+    => (void))
 
   (check	;check at run-time that  the expression returns a single
 		;value
@@ -2408,10 +2408,8 @@
 ;;; any tuple of returned values is of type <top>
 
   (check
-      (begin
-	(tag-assert <list> 123)
-	#t)
-    => #t)
+      (tag-assert <list> 123)
+    => (void))
 
   (check
       (with-result
@@ -2467,21 +2465,21 @@
 
   (check	;the ?EXPR is expliticly tagged, expand-time test
       (let ()
-	(define-record-type alpha
-	  (fields a b c))
-	(define {O alpha}
-	  (make-alpha 1 2 3))
-	(tag-assert (alpha) O))
+  	(define-record-type alpha
+  	  (fields a b c))
+  	(define {O alpha}
+  	  (make-alpha 1 2 3))
+  	(tag-assert (alpha) O))
     => (void))
 
   (check
       (catch-expand-time-signature-violation #f
-	(%eval '(let ()
-		  (define-record-type alpha
-		    (fields a b c))
-		  (define {O alpha}
-		    (make-alpha 1 2 3))
-		  (tag-assert (<fixnum>) O))))
+  	(%eval '(let ()
+  		  (define-record-type alpha
+  		    (fields a b c))
+  		  (define {O alpha}
+  		    (make-alpha 1 2 3))
+  		  (tag-assert (<fixnum>) O))))
     => '(<fixnum>) '(alpha))
 
 ;;; --------------------------------------------------------------------
@@ -2605,12 +2603,12 @@
 
   (check
       (catch-expand-time-signature-violation #f
-	(%eval '(let ()
-		  (define-record-type alpha
-		    (fields a b c))
-		  (define {O alpha}
-		    (make-alpha 1 2 3))
-		  (tag-assert-and-return (<fixnum>) O))))
+  	(%eval '(let ()
+  		  (define-record-type alpha
+  		    (fields a b c))
+  		  (define {O alpha}
+  		    (make-alpha 1 2 3))
+  		  (tag-assert-and-return (<fixnum>) O))))
     => '(<fixnum>) '(alpha))
 
 ;;; --------------------------------------------------------------------

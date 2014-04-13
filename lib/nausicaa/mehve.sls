@@ -1306,7 +1306,6 @@
     syntax-object-marks
     syntax-object-source-objects
     syntax-object-ribs
-    syntax-transpose
     tanh
     time
     time<=?

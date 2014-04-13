@@ -191,8 +191,8 @@
 	 (else
 	  ;;This should never happen because we  have validated the identifier in the
 	  ;;fender.
-	  (syntax-violation __who__
-	    "internal error: tag identifier without object-type-spec" input-form.stx tag-id)))))
+	  (syntax-violation/internal-error __who__
+	    "tag identifier without object-type-spec" input-form.stx tag-id)))))
 
 (case-define* tag-identifier-predicate
   ;;Given  a tag  identifier:  retrieve from  the  associated "object-type-spec"  the
@@ -208,13 +208,13 @@
 	       (or (object-type-spec-pred-stx spec)
 		   ;;This   should    never   happen    because   an    instance   of
 		   ;;"object-type-spec" always has a defined predicate.
-		   (syntax-violation __who__
-		     "internal error: undefined tag predicate" input-form.stx tag-id))))
+		   (syntax-violation/internal-error __who__
+		     "undefined tag predicate" input-form.stx tag-id))))
 	 (else
 	  ;;This should never happen because we  have validated the identifier in the
 	  ;;fender.
-	  (syntax-violation __who__
-	    "internal error: tag identifier without object-type-spec" input-form.stx tag-id)))))
+	  (syntax-violation/internal-error __who__
+	    "tag identifier without object-type-spec" input-form.stx tag-id)))))
 
 (case-define* tag-identifier-accessor
   ;;Given   a  tag   identifier  and   a  field   name:  search   the  hierarchy   of

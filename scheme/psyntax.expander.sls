@@ -1124,17 +1124,17 @@
 
     generate-temporaries		identifier?
     free-identifier=?			bound-identifier=?
-    identifier-bound?
+    identifier-bound?			print-identifier-info
     datum->syntax			syntax->datum
 
+    ;; exception raisers
     syntax-violation			assertion-error
-
-    ;;This must  be exported and that's  it.  I am unable  to remove it.
-    ;;Sue me.  (Marco Maggi; Sun Nov 17, 2013)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Sat Apr 12,
+    ;;2014)
     syntax-error
 
-    syntax-dispatch			syntax-transpose
-    ellipsis-map
+    ;;SYNTAX-CASE subroutines
+    syntax-dispatch			ellipsis-map
 
     ;;syntactic binding properties
     syntactic-binding-putprop
@@ -1200,13 +1200,11 @@
     set-identifier-tag!				identifier-tag
     set-label-tag!				label-tag
 
-    retvals-signature-violation
-    make-retvals-signature-violation
-    retvals-signature-violation?
-    retvals-signature-violation-expected-signature
-    retvals-signature-violation-returned-signature
-
-    print-identifier-info
+    ;; expand-time type checking exception stuff
+    expand-time-type-signature-violation?
+    expand-time-retvals-signature-violation?
+    expand-time-retvals-signature-violation-expected-signature
+    expand-time-retvals-signature-violation-returned-signature
 
     ;; expand-time type specs: stuff for built-in tags and core primitives
     initialise-type-spec-for-built-in-object-types
@@ -1226,8 +1224,7 @@
 		  bound-identifier=?	free-identifier=?
 		  generate-temporaries
 		  datum->syntax		syntax->datum
-		  syntax-violation	make-variable-transformer
-		  syntax-error)
+		  syntax-violation	make-variable-transformer)
     (prefix (rnrs syntax-case) sys.)
     (rnrs mutable-pairs)
     (psyntax library-manager)
@@ -1239,9 +1236,13 @@
 
 ;;; helpers
 
-;;This syntax can be used as standalone identifier and it expands to #f.
-;;It is used  as "annotated expression" argument in calls  to the BUILD-
-;;functions when there is no annotated expression to be given.
+;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Sat  Apr 12,
+;;2014)
+(define syntax-error)
+
+;;This syntax can be used as standalone identifier  and it expands to #f.  It is used
+;;as "annotated expression"  argument in calls to the BUILD-  functions when there is
+;;no annotated expression to be given.
 ;;
 (define-syntax no-source
   (lambda (x) #f))
@@ -1268,12 +1269,6 @@
        (values (reverse item*) '()))
       (_
        (values (reverse item*) ell)))
-    ;; (cond ((pair? ell)
-    ;; 	   (loop (cdr ell) (cons (car ell) item*)))
-    ;; 	  ((null? ell)
-    ;; 	   (values (reverse item*) '()))
-    ;; 	  (else
-    ;; 	   (values (reverse item*) ell)))
     ))
 
 (define* (proper-list->head-and-last ell)
@@ -4638,8 +4633,8 @@
   ;;
   (define* (extend-rib! {rib rib?} {id identifier?} label shadowing-definitions?)
     (when ($<rib>-sealed/freq rib)
-      (assertion-violation __who__
-	"Vicare: internal error: attempt to extend sealed RIB" rib))
+      (assertion-violation/internal-error __who__
+	"attempt to extend sealed RIB" rib))
     (let ((id.sym      (identifier->symbol id))
 	  (id.mark*    ($<stx>-mark*  id))
 	  (rib.name*   ($<rib>-name*  rib))
@@ -5106,9 +5101,9 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (id->label/or-error who form id)
+(define (id->label/or-error who input-form.stx id)
   (or (id->label id)
-      (%raise-unbound-error who form id)))
+      (%raise-unbound-error who input-form.stx id)))
 
 (define (id->r6rs-record-type-descriptor-binding who form type-name-id lexenv)
   ;;TYPE-NAME-ID is  meant to be an  identifier bound to an  R6RS record
@@ -6114,12 +6109,10 @@
 		    ;;...else try to match the next clause.
 		    (syntax-match T (?literals ...) clause* ...))))))))
 
-	;;This is a true error in he use of SYNTAX-MATCH.  We still want the expanded
-	;;code to raise the violation.  Notice  that SYNTAX-VIOLATION is not bound in
-	;;the expand environment of SYNTAX-MATCH's transformer.
+	;;This is a true error in he use of SYNTAX-MATCH.
 	;;
 	(?stuff
-	 (syntax (syntax-violation 'syntax-match "invalid syntax in macro use" stx)))
+	 (sys.syntax-violation 'syntax-match "invalid syntax in macro use" stx))
 	))
 
     (module (%convert-single-pattern)
@@ -6407,13 +6400,11 @@
 ;;;; macro transformers helpers
 
 (define (%expand-macro-transformer rhs-expr.stx lexenv.expand)
-  ;;Given a  syntax object representing  the right-hand  side of a  syntax definition
-  ;;(DEFINE-SYNTAX,       LET-SYNTAX,       LETREC-SYNTAX,       DEFINE-FLUID-SYNTAX,
+  ;;Given  a  syntax object  representing  the  right-hand  side  (RHS) of  a  syntax
+  ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
   ;;FLUID-LET-SYNTAX): expand it,  invoking libraries as needed, and  return the core
-  ;;language sexp representing transformer expression.
-  ;;
-  ;;Usually   the  return   value  of   this  function   is  handed   to
-  ;;%EVAL-MACRO-TRANSFORMER.
+  ;;language  sexp representing  the expression.   Usually the  return value  of this
+  ;;function is handed to %EVAL-MACRO-TRANSFORMER.
   ;;
   ;;For:
   ;;
@@ -6447,28 +6438,29 @@
       (rtc))
     (psi-core-expr rhs-expr.psi)))
 
-(define (%eval-macro-transformer expr.core lexenv.run)
-  ;;Given a  core language sexp representing  the expression of a  macro transformer:
-  ;;evaluate it and return a proper syntactic binding for the resulting object.
-  ;;
-  ;;Usually    this    function    is    applied   to    the    return    value    of
+(define (%eval-macro-transformer rhs-expr.core lexenv.run)
+  ;;Given a  core language sexp  representing the right-hand  side (RHS) of  a syntax
+  ;;definition   (DEFINE-SYNTAX,   LET-SYNTAX,  LETREC-SYNTAX,   DEFINE-FLUID-SYNTAX,
+  ;;FLUID-LET-SYNTAX):  evaluate it  and return  a proper  syntactic binding  for the
+  ;;resulting  object.  Usually  this  function is  applied to  the  return value  of
   ;;%EXPAND-MACRO-TRANSFORMER.
   ;;
   ;;When the RHS of  a syntax definition is evaluated, the  returned object should be
-  ;;either  a  procedure, an  identifier-syntax  transformer,  a Vicare  struct  type
-  ;;descriptor or an R6RS record type descriptor.  If the return value is not of such
-  ;;type: we raise an assertion violation.
+  ;;either:  a  syntax transformer  procedure;  an  identifier-syntax transformer;  a
+  ;;Vicare struct type  descriptor or an R6RS record type  descriptor; a compile-time
+  ;;value; a synonim transformer.  If the return  value is not of such type: we raise
+  ;;an assertion violation.
   ;;
   (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	      (eval-core (expanded->core expr.core)))))
+	      (eval-core (expanded->core rhs-expr.core)))))
     (cond ((procedure? rv)
-	   (make-local-macro-binding rv expr.core))
+	   (make-local-macro-binding rv rhs-expr.core))
 	  ((variable-transformer? rv)
-	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) expr.core))
+	   (make-local-identifier-macro-binding (variable-transformer-procedure rv) rhs-expr.core))
 	  ((struct-or-record-type-descriptor-binding? rv)
 	   rv)
 	  ((compile-time-value? rv)
-	   (make-local-compile-time-value-binding (compile-time-value-object rv) expr.core))
+	   (make-local-compile-time-value-binding (compile-time-value-object rv) rhs-expr.core))
 	  ((synonym-transformer? rv)
 	   (let ((id (synonym-transformer-identifier rv)))
 	     (make-synonym-syntax-binding (id->label/or-error 'expander id id))))
@@ -6477,9 +6469,9 @@
 	    (condition
 	     (make-assertion-violation)
 	     (make-who-condition 'expand)
-	     (make-message-condition "invalid return value from syntax transformer expression")
-	     (make-macro-expanded-input-form-condition expr.core)
-	     (make-irritants-condition (list rv))))))))
+	     (make-message-condition "invalid return value from syntax definition right-hand side")
+	     (make-syntax-definition-expanded-rhs-condition rhs-expr.core)
+	     (make-syntax-definition-expression-return-value-condition rv)))))))
 
 
 ;;;; formals syntax validation
@@ -6703,76 +6695,6 @@
               (assertion-violation __who__ "length mismatch" ls x)))
 	ls*)))
   (apply map proc ls ls*))
-
-(module (syntax-transpose)
-  ;;Mh... what  does this do?   Take BASE-ID  and NEW-ID, which  must be
-  ;;FREE-IDENTIFIER=?, compute the difference  between their marks, push
-  ;;such difference  on top of the  marks of OBJECT, return  the result.
-  ;;What for?  (Marco Maggi; Sun May 5, 2013)
-  ;;
-  (define-constant __who__ 'syntax-transpose)
-
-  (define (syntax-transpose object base-id new-id)
-    (unless (identifier? base-id)
-      (%synner "not an identifier" base-id))
-    (unless (identifier? new-id)
-      (%synner "not an identifier" new-id))
-    (unless (free-identifier=? base-id new-id)
-      (%synner "not the same identifier" base-id new-id))
-    (receive (mark* rib* annotated-expr*)
-	(diff (car ($<stx>-mark* base-id))
-	      ($<stx>-mark* new-id)
-	      ($<stx>-rib*  new-id)
-	      ($<stx>-ae*   new-id)
-	      (lambda ()
-		(%synner "unmatched identifiers" base-id new-id)))
-      (if (and (null? mark*)
-	       (null? rib*))
-	  object
-	(mkstx object mark* rib* annotated-expr*))))
-
-  (define (diff base.mark new.mark* new.rib* new.annotated-expr* error)
-    (if (null? new.mark*)
-	(error)
-      (let ((new.mark1 (car new.mark*)))
-	(if (eq? base.mark new.mark1)
-	    (values '() (final new.rib*) '())
-	  (receive (subst1* subst2*)
-	      (split new.rib*)
-	    (receive (nm* ns* nae*)
-		(diff base.mark (cdr new.mark*) subst2* (cdr new.annotated-expr*) error)
-	      (values (cons new.mark1 nm*)
-		      (append subst1* ns*)
-		      (cons (car new.annotated-expr*) nae*))))))))
-
-  (define (split rib*)
-    ;;Non-tail recursive function.  Split RIB*  and return 2 values: the
-    ;;prefix of RIB* up to and  including the first shift, the suffix of
-    ;;RIB* from the first shift excluded to the end.
-    ;;
-    (if (eq? (car rib*) 'shift)
-	(values (list 'shift)
-		(cdr rib*))
-      (receive (rib1* rib2*)
-	  (split (cdr rib*))
-	(values (cons (car rib*) rib1*)
-		rib2*))))
-
-  (define (final rib*)
-    ;;Non-tail recursive function.  Return the  prefix of RIB* up to and
-    ;;not including the first shift.  The  returned prefix is a new list
-    ;;spine sharing the cars with RIB*.
-    ;;
-    (if (or (null? rib*)
-	    (eq? (car rib*) 'shift))
-	'()
-      (cons (car rib*)
-	    (final (cdr rib*)))))
-
-  (define-syntax-rule (%synner ?message ?irritant ...)
-    (assertion-violation __who__ ?message ?irritant ...))
-
-  #| end of module: SYNTAX-TRANSPOSE |# )
 
 
 ;;;; pattern matching
@@ -7088,43 +7010,113 @@
   (include "psyntax.expander.chi-module.scm" #t))
 
 
-;;;; errors
+;;;; condition object types: descriptive objects
 
-(define-condition-type &macro-input-form
+;;This  is  used  to describe  exceptions  in  which  the  expanded expression  of  a
+;;right-hand side (RHS) syntax  definition (DEFINE-SYNTAX, LET-SYNTAX, LETREC-SYNTAX,
+;;DEFINE-FLUID-SYNTAX,  FLUID-LET-SYNTAX,  etc.)   has  a role.   The  value  in  the
+;;CORE-EXPR slot must be a symbolic expression representing the a core expression.
+(define-condition-type &syntax-definition-expanded-rhs-condition
     &condition
-  %make-macro-input-form-condition
-  macro-input-form-condition?
-  (form macro-input-form-condition-object))
+  make-syntax-definition-expanded-rhs-condition
+  syntax-definition-expanded-rhs-condition?
+  (core-expr condition-syntax-definition-expanded-rhs))
 
-(define-condition-type &macro-expanded-input-form
+;;This is used to describe exceptions in  which the return value of the evaluation of
+;;a   right-hand   side   (RHS)   syntax   definition   (DEFINE-SYNTAX,   LET-SYNTAX,
+;;LETREC-SYNTAX, DEFINE-FLUID-SYNTAX, FLUID-LET-SYNTAX, etc.)  has a role.  The value
+;;in the  RETVAL slot  must be  the value returned  by the  evaluation of  the syntax
+;;definition RHS expression.
+(define-condition-type &syntax-definition-expression-return-value
     &condition
-  make-macro-expanded-input-form-condition
-  macro-expanded-input-form-condition?
-  (form macro-expanded-input-form-condition-object))
+  make-syntax-definition-expression-return-value-condition
+  syntax-definition-expression-return-value-condition?
+  (retval condition-syntax-definition-expression-return-value))
 
-;;This is used whenever we were expecting a retvals signature matching a
-;;given one, but the one we got does not match.
-(define-condition-type &retvals-signature-violation
-    &violation
-  make-retvals-signature-violation
-  retvals-signature-violation?
-  (expected-signature retvals-signature-violation-expected-signature)
-  (returned-signature retvals-signature-violation-returned-signature))
-
-;;This is used  to include a retvals signature  specification in generic
-;;compound objects,  for example because  we were expecting  a signature
-;;with some properties and the one we got does not have them.
+;;This  is used  to include  a retvals  signature specification  in generic  compound
+;;objects, for example because we were expecting a signature with some properties and
+;;the one we got does not have them.
 (define-condition-type &retvals-signature-condition
     &condition
-  make-retvals-signature-condition
+  %make-retvals-signature-condition
   retvals-signature-condition?
   (signature retvals-signature-condition-signature))
+
+(define* (make-retvals-signature-condition {sig retvals-signature?})
+  (%make-retvals-signature-condition sig))
+
+;;This is used  to describe exceptions in which  the input form of a macro  use has a
+;;role.  The value  in the FORM slot  must be a syntax object  representing the macro
+;;use input form.
+;;
+;;See MAKE-MACRO-USE-INPUT-FORM-CONDITION for details.
+(define-condition-type &macro-use-input-form-condition
+    &condition
+  %make-macro-use-input-form-condition
+  macro-use-input-form-condition?
+  (form condition-macro-use-input-form))
+
+;;This is used to represent the succession  of transformations a macro use input form
+;;undergoes while  expanded; there is  an instance of  this condition type  for every
+;;transformation.
+;;
+;;See MAKE-MACRO-USE-INPUT-FORM-CONDITION for details.
+(define-condition-type &macro-expansion-trace
+    &condition
+  make-macro-expansion-trace macro-expansion-trace?
+  (form macro-expansion-trace-form))
+
+
+;;;; condition object types: error objects
+
+;;This  is used  to  describe exceptions  in  which  there is  a  mismatch between  a
+;;resulting expression type signature and an expected one; this condition type should
+;;be the root of all the condition types in this category.
+(define-condition-type &expand-time-type-signature-violation
+    &violation
+  make-expand-time-type-signature-violation
+  expand-time-type-signature-violation?)
+
+;;This is  used to describe  exceptions in which:  after expanding an  expression, we
+;;were expecting it to  have a "retvals-signature" matching a given  one, but the one
+;;we got does not match.
+;;
+;;See the function EXPAND-TIME-RETVALS-SIGNATURE-VIOLATION for details.
+(define-condition-type &expand-time-retvals-signature-violation
+    &expand-time-type-signature-violation
+  %make-expand-time-retvals-signature-violation
+  expand-time-retvals-signature-violation?
+  (expected-signature expand-time-retvals-signature-violation-expected-signature)
+  (returned-signature expand-time-retvals-signature-violation-returned-signature))
+
+(define* (make-expand-time-retvals-signature-violation {expected-signature retvals-signature?}
+					   {returned-signature retvals-signature?})
+  (%make-expand-time-retvals-signature-violation expected-signature returned-signature))
+
+
+;;;; exception raising functions
+
+(define-syntax with-exception-handler/input-form
+  ;;This macro is typically used as follows:
+  ;;
+  ;;   (with-exception-handler/input-form
+  ;;       input-form.stx
+  ;;     (%eval-macro-transformer
+  ;;        (%expand-macro-transformer input-form.stx lexenv.expand)
+  ;;        lexenv.run))
+  ;;
+  (syntax-rules ()
+    ((_ ?input-form . ?body)
+     (with-exception-handler
+	 (lambda (E)
+	   (raise (condition E (make-macro-use-input-form-condition ?input-form))))
+       (lambda () . ?body)))
+    ))
 
 (define (assertion-error expr source-identifier
 			 byte-offset character-offset
 			 line-number column-number)
-  ;;Invoked by the  expansion of the ASSERT macro to  raise an assertion
-  ;;violation.
+  ;;Invoked by the expansion of the ASSERT macro to raise an assertion violation.
   ;;
   (raise
    (condition (make-assertion-violation)
@@ -7134,6 +7126,26 @@
 	      (make-source-position-condition source-identifier
 					      byte-offset character-offset
 					      line-number column-number))))
+
+(module (syntax-violation/internal-error
+	    assertion-violation/internal-error)
+
+  (case-define* syntax-violation/internal-error
+    ((who {msg string?} form)
+     (syntax-violation who (string-append PREFIX msg) form #f))
+    ((who {msg string?} form subform)
+     (syntax-violation who (string-append PREFIX msg) form subform)))
+
+  (case-define* assertion-violation/internal-error
+    ((who {msg string?} . irritants)
+     (apply assertion-violation who (string-append PREFIX msg) irritants))
+    ((who {msg string?} . irritants)
+     (apply assertion-violation who (string-append PREFIX msg) irritants)))
+
+  (define-constant PREFIX
+    "Vicare Scheme: internal error: ")
+
+  #| end of module |# )
 
 (define-syntax stx-error
   ;;Convenience wrapper for raising syntax violations.
@@ -7147,95 +7159,96 @@
      (syntax-violation ?who ?msg ?expr-stx))
     ))
 
-(define-syntax stx-internal-error
-  ;;Convenience wrapper for raising syntax violations.
-  ;;
-  (syntax-rules (quote)
-    ((_ ?expr-stx)
-     (syntax-violation #f "Vicare: internal error: invalid syntax" ?expr-stx))
-    ((_ ?expr-stx ?msg)
-     (syntax-violation #f (string-append "Vicare: internal error: " ?msg) ?expr-stx))
-    ((_ ?expr-stx ?msg ?who)
-     (syntax-violation ?who (string-append "Vicare: internal error: " ?msg) ?expr-stx))
-    ))
-
-(module (syntax-error
-	 syntax-violation
-	 retvals-signature-violation
+(module (syntax-violation
+	 expand-time-retvals-signature-violation
 	 %raise-unbound-error
-	 make-macro-input-form-condition
-	 %extract-macro-expansion-trace)
-
-  (define (syntax-error x . args)
-    (unless (for-all string? args)
-      (assertion-violation 'syntax-error "invalid argument" args))
-    (raise
-     (condition (make-message-condition (if (null? args)
-					    "syntax error"
-					  (apply string-append args)))
-		(make-syntax-violation (syntax->datum x) #f)
-		(%expression->source-position-condition x)
-		(%extract-macro-expansion-trace x))))
+	 make-macro-use-input-form-condition
+	 %raise-compound-condition-object)
 
   (case-define syntax-violation
-    ;;Defined  by R6RS.   WHO must  be false  or a  string or  a symbol.
-    ;;MESSAGE must be a string.  FORM must be a syntax object or a datum
-    ;;value.  SUBFORM must be a syntax object or a datum value.
+    ;;Defined by R6RS.  WHO must be false or a string or a symbol.  MESSAGE must be a
+    ;;string.  FORM  must be a  syntax object  or a datum  value.  SUBFORM must  be a
+    ;;syntax object or a datum value.
     ;;
-    ;;The SYNTAX-VIOLATION  procedure raises  an exception,  reporting a
-    ;;syntax violation.  WHO should  describe the macro transformer that
-    ;;detected the exception.  The  MESSAGE argument should describe the
-    ;;violation.  FORM should be the erroneous source syntax object or a
-    ;;datum value  representing a  form.  The optional  SUBFORM argument
-    ;;should be a syntax object or  datum value representing a form that
-    ;;more precisely locates the violation.
+    ;;The  SYNTAX-VIOLATION  procedure  raises   an  exception,  reporting  a  syntax
+    ;;violation.   WHO  should  describe  the macro  transformer  that  detected  the
+    ;;exception.  The MESSAGE argument should describe the violation.  FORM should be
+    ;;the erroneous source  syntax object or a datum value  representing a form.  The
+    ;;optional SUBFORM argument should be a syntax object or datum value representing
+    ;;a form that more precisely locates the violation.
     ;;
-    ;;If WHO is false, SYNTAX-VIOLATION attempts to infer an appropriate
-    ;;value for the  condition object (see below) as  follows: when FORM
-    ;;is  either  an  identifier  or  a  list-structured  syntax  object
-    ;;containing an identifier  as its first element,  then the inferred
-    ;;value is the identifier's symbol.   Otherwise, no value for WHO is
-    ;;provided as part of the condition object.
+    ;;If WHO  is false, SYNTAX-VIOLATION attempts  to infer an appropriate  value for
+    ;;the condition object (see below) as  follows: when FORM is either an identifier
+    ;;or  a list-structured  syntax  object  containing an  identifier  as its  first
+    ;;element, then  the inferred  value is the  identifier's symbol.   Otherwise, no
+    ;;value for WHO is provided as part of the condition object.
     ;;
-    ;;The condition object provided with the exception has the following
-    ;;condition types:
+    ;;The condition  object provided with  the exception has the  following condition
+    ;;types:
     ;;
-    ;;*  If WHO  is not  false  or can  be inferred,  the condition  has
-    ;;condition type  "&who", with WHO  as the  value of its  field.  In
-    ;;that  case,  WHO should  identify  the  procedure or  entity  that
-    ;;detected the  exception.  If it  is false, the condition  does not
-    ;;have condition type "&who".
+    ;;* If  WHO is not  false or  can be inferred,  the condition has  condition type
+    ;;   "&who", with  WHO as  the value  of  its field.   In that  case, WHO  should
+    ;;   identify the  procedure or  entity that  detected the  exception.  If  it is
+    ;;  false, the condition does not have condition type "&who".
     ;;
-    ;;* The condition has condition type "&message", with MESSAGE as the
-    ;;value of its field.
+    ;;* The condition has condition type "&message", with MESSAGE as the value of its
+    ;;  field.
     ;;
-    ;;* The condition has condition type "&syntax" with FORM and SUBFORM
-    ;;as the value of its fields.  If SUBFORM is not provided, the value
-    ;;of the subform field is false.
+    ;;* The condition has condition type "&syntax" with FORM and SUBFORM as the value
+    ;;  of its fields.  If SUBFORM is not provided, the value of the subform field is
+    ;;  false.
     ;;
     ((who msg form)
      (syntax-violation who msg form #f))
     ((who msg form subform)
-     (%syntax-violation who msg form (make-syntax-violation form subform))))
+     (%raise-compound-condition-object who msg form (make-syntax-violation form subform))))
 
-  (define* (retvals-signature-violation source-who form
-					{expected-retvals-signature retvals-signature?}
-					{returned-retvals-signature retvals-signature?})
-    (%syntax-violation source-who "expand-time return values signature mismatch" form
-		       (condition
-			(make-retvals-signature-violation expected-retvals-signature
-							  returned-retvals-signature)
-			(make-syntax-violation form #f))))
+  (define* (expand-time-retvals-signature-violation source-who form subform
+						    {expected-retvals-signature retvals-signature?}
+						    {returned-retvals-signature retvals-signature?})
+    ;;To be used at  expand-time when we were expecting a  signature from an expanded
+    ;;expression  and we  received  an incompatible  one, for  example  in the  macro
+    ;;transformers of TAG-ASSERT and TAG-ASSERT-AND-RETURN.
+    ;;
+    (%raise-compound-condition-object source-who "expand-time return values signature mismatch" form
+				      (condition
+				       (%make-expand-time-retvals-signature-violation expected-retvals-signature
+										      returned-retvals-signature)
+				       (make-syntax-violation form subform))))
 
-  (define (%syntax-violation source-who msg form condition-object)
-    (define-constant __who__ 'syntax-violation)
-    (unless (string? msg)
-      (assertion-violation __who__ "message is not a string" msg))
+  (define (%raise-unbound-error source-who input-form.stx id)
+    ;;Raise an  "unbound identifier"  exception.  This  is to  be used  when applying
+    ;;ID->LABEL  to the  identifier  ID returns  false, and  such  result is  invalid
+    ;;because we were expecting ID to be bound.
+    ;;
+    ;;Often INPUT-FORM.STX is ID itself, and we can do nothing about it.
+    ;;
+    (%raise-compound-condition-object source-who "unbound identifier" input-form.stx
+				      (condition
+				       (make-undefined-violation)
+				       (make-syntax-violation input-form.stx id))))
+
+  (define* (%raise-compound-condition-object source-who {msg string?} input-form.stx condition-object)
+    ;;Raise a compound condition object.
+    ;;
+    ;;SOURCE-WHO can be  a string, symbol or  false; it is used as  value for "&who".
+    ;;When  false: INPUT-FORM.STX  is inspected  to  determine a  possible value  for
+    ;;"&who".
+    ;;
+    ;;MSG must be a string; it is used as value for "&message".
+    ;;
+    ;;INPUT-FORM.STX must be a (wrapped  or unwrapped) syntax object representing the
+    ;;subject of  the raised exception.   It is used for  both inferring a  value for
+    ;;"&who" and retrieving source location informations.
+    ;;
+    ;;CONDITION-OBJECT is  an already  built condition  object that  is added  to the
+    ;;raised compound.
+    ;;
     (let ((source-who (cond ((or (string? source-who)
 				 (symbol? source-who))
 			     source-who)
 			    ((not source-who)
-			     (syntax-match form ()
+			     (syntax-match input-form.stx ()
 			       (id
 				(identifier? id)
 				(syntax->datum id))
@@ -7251,37 +7264,89 @@
 		    (condition))
 		  (make-message-condition msg)
 		  condition-object
-		  (%expression->source-position-condition form)
-		  (%extract-macro-expansion-trace form)))))
+		  (%expression->source-position-condition input-form.stx)
+		  (%extract-macro-expansion-trace input-form.stx)))))
 
-  (define (%raise-unbound-error source-who form id)
-    (raise
-     (condition (if source-who
-		    (make-who-condition source-who)
-		  (condition))
-		(make-message-condition "unbound identifier")
-		(make-undefined-violation)
-		(make-syntax-violation form id)
-		(%expression->source-position-condition id)
-		(%extract-macro-expansion-trace id))))
-
-  (define* (make-macro-input-form-condition stx)
+  (define* (make-macro-use-input-form-condition stx)
     (condition
-     (%make-macro-input-form-condition stx)
+     (%make-macro-use-input-form-condition stx)
      (%extract-macro-expansion-trace stx)))
 
-  (define (%extract-macro-expansion-trace x)
-    (define-condition-type &macro-expansion-trace
-	&condition
-      make-macro-expansion-trace macro-expansion-trace?
-      (form macro-expansion-trace-form))
-    (let f ((x x))
-      (cond ((<stx>? x)
+  (define (%extract-macro-expansion-trace stx)
+    ;;Extraxt from the (wrapped or unwrapped) syntax object STX the sequence of macro
+    ;;expansion traces  from the AE* field  of "<stx>" records and  return a compound
+    ;;condition object representing them, as instances of "&macro-expansion-trace".
+    ;;
+    ;;NOTE Unfortunately it  does not always go  as we would like.   For example, the
+    ;;program:
+    ;;
+    ;;   (import (vicare))
+    ;;   (define-syntax (one stx)
+    ;;     (syntax-case stx ()
+    ;;       ((_)
+    ;;        (syntax-violation 'one "demo" stx #f))))
+    ;;   (define-syntax (two stx)
+    ;;     (syntax-case stx ()
+    ;;       ((_)
+    ;;        #'(one))))
+    ;;   (two)
+    ;;
+    ;;raises the error:
+    ;;
+    ;;*** Vicare: unhandled exception:
+    ;;  Condition components:
+    ;;    1. &who: one
+    ;;    2. &message: "demo"
+    ;;    3. &syntax:
+    ;;        form: #<syntax expr=(one) mark*=(#f "" top) ...>
+    ;;        subform: #f
+    ;;    4. &source-position:
+    ;;        port-id: "../tests/test-demo.sps"
+    ;;        byte: 516
+    ;;        character: 514
+    ;;        line: 31
+    ;;        column: 8
+    ;;    5. &macro-expansion-trace: #<syntax expr=(one) mark*=(#f "" top) ...>
+    ;;    6. &macro-expansion-trace: #<syntax expr=(two) mark*=(top) ...>
+    ;;
+    ;;and we can see  the expansion's trace.  But if we compose  the output form with
+    ;;pieces of different origin:
+    ;;
+    ;;   (import (vicare))
+    ;;   (define-syntax (one stx)
+    ;;     (syntax-case stx ()
+    ;;       ((_ . ?stuff)
+    ;;        (syntax-violation 'one "demo" stx #f))))
+    ;;   (define-syntax (two stx)
+    ;;     (syntax-case stx ()
+    ;;       ((_ ?id)
+    ;;        #`(one ?id))))
+    ;;   (two display)
+    ;;
+    ;;the error is:
+    ;;
+    ;;   *** Vicare: unhandled exception:
+    ;;    Condition components:
+    ;;      1. &who: one
+    ;;      2. &message: "demo"
+    ;;      3. &syntax:
+    ;;          form: (#<syntax expr=one mark*=(#f "" top) ...>
+    ;;                 #<syntax expr=display mark*=(#f top) ...>
+    ;;                 . #<syntax expr=() mark*=(#f "" top)>)
+    ;;          subform: #f
+    ;;
+    ;;and there is no trace.  This is  because the syntax object used as "form" value
+    ;;in "&syntax" is  not wrapped, and SYNTAX-VIOLATION cannot decide  from which of
+    ;;its components it makes sense to extract  the trace.  (Marco Maggi; Sat Apr 12,
+    ;;2014)
+    ;;
+    (let loop ((X stx))
+      (cond ((<stx>? X)
 	     (apply condition
-		    (make-macro-expansion-trace x)
-		    (map f (<stx>-ae* x))))
-	    ((annotation? x)
-	     (make-macro-expansion-trace (make-<stx> x '() '() '())))
+		    (make-macro-expansion-trace X)
+		    (map loop (<stx>-ae* X))))
+	    ((annotation? X)
+	     (make-macro-expansion-trace (make-<stx> X '() '() '())))
 	    (else
 	     (condition)))))
 

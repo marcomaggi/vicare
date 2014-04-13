@@ -28,10 +28,7 @@
 ;;NOTE This  module is very  long, so it  is split into  multiple code
 ;;pages.  (Marco Maggi; Sat Apr 27, 2013)
 ;;
-(define* (non-core-macro-transformer x)
-  (define (%error-invalid-macro)
-    (error __who__ "Vicare: internal error: invalid macro" x))
-  (assert (symbol? x))
+(define* (non-core-macro-transformer {x symbol?})
   (case x
     ((exported-define)			exported-define-macro)
     ((define-struct)			define-struct-macro)
@@ -183,7 +180,7 @@
        (syntax-violation #f "incorrect usage of built-in tag keyword" expr-stx)))
 
     (else
-     (%error-invalid-macro))))
+     (assertion-violation/internal-error __who__ "unknown non-core macro name" x))))
 
 
 ;;;; module non-core-macro-transformer: DEFINE

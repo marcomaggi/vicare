@@ -1558,7 +1558,6 @@
   ;; syntactic-binding-getprop
   ;; syntactic-binding-remprop
   ;; syntactic-binding-property-list
-  ;; syntax-transpose
   ;; syntax-object?
   ;; syntax-object-expression
   ;; syntax-object-marks
@@ -2803,6 +2802,7 @@
   ;; retvals-signature?
   ;; retvals-signature-tags
   ;; retvals-signature=?
+  ;; retvals-signature-common-ancestor
 
   ;; tag-identifier?
   ;; all-tag-identifiers?
@@ -2836,12 +2836,9 @@
   ;; set-label-tag!
   ;; label-tag
 
-  ;; make-retvals-signature-violation
-  ;; retvals-signature-violation
-  ;; retvals-signature-violation?
-  ;; retvals-signature-violation-expected-signature
-  ;; retvals-signature-violation-returned-signature
-  ;; retvals-signature-common-ancestor
+  ;; expand-time-retvals-signature-violation?
+  ;; expand-time-retvals-signature-violation-expected-signature
+  ;; expand-time-retvals-signature-violation-returned-signature
 
   ;; top-tag-id
   ;; void-tag-id

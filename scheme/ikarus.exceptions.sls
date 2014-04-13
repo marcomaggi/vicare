@@ -28,7 +28,7 @@
 		  assertion-violation	die))
 
 
-(define handlers
+(define current-handlers
   (make-parameter
       (list (lambda (x)
 	      (let ((port (console-error-port)))
@@ -40,22 +40,22 @@
 	      (exit -1)))))
 
 (define* (with-exception-handler {handler procedure?} {proc2 procedure?})
-  (parameterize ((handlers (cons handler (handlers))))
+  (parameterize ((current-handlers (cons handler (current-handlers))))
     (proc2)))
 
 (define (raise-continuable x)
-  (let* ((h* (handlers))
-	 (h  (car h*))
-	 (h* (cdr h*)))
-    (parameterize ((handlers h*))
-      (h x))))
+  (let* ((handlers* (current-handlers))
+	 (handler   (car handlers*))
+	 (handlers* (cdr handlers*)))
+    (parameterize ((current-handlers handlers*))
+      (handler x))))
 
 (define (raise x)
-  (let* ((h* (handlers))
-	 (h  (car h*))
-	 (h* (cdr h*)))
-    (parameterize ((handlers h*))
-      (h x)
+  (let* ((handlers* (current-handlers))
+	 (handler   (car handlers*))
+	 (tail*     (cdr handlers*)))
+    (parameterize ((current-handlers tail*))
+      (handler x)
       (raise (condition
 	      (make-non-continuable-violation)
 	      (make-message-condition "handler returned from non-continuable exception"))))))

@@ -720,7 +720,7 @@
 
 		  (else
 		   (assertion-violation __who__
-		     "internal error: invalid return values from library locator"
+		     "invalid return values from library locator"
 		     port further-locator-search)))))))
 
     ;;Keep the library names aligned!!!                                     VV

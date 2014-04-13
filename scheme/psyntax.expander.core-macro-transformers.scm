@@ -87,8 +87,8 @@
     ((visit-code-of)				visit-code-of-transformer)
 
     (else
-     (assertion-violation __who__
-       "Vicare: internal error: cannot find transformer" name))))
+     (assertion-violation/internal-error __who__
+       "cannot find transformer" name))))
 
 
 (module PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS
@@ -200,9 +200,8 @@
 	       (_
 		;;If we  are here it  means that the TAG-ASSERT-AND-RETURN  above has
 		;;misbehaved.
-		(assertion-violation __who__
-		  "Vicare: internal error: invalid retvals signature"
-		  (syntax->datum input-form.stx) sig))))
+		(assertion-violation/internal-error __who__
+		  "invalid retvals signature" (syntax->datum input-form.stx) sig))))
 	rhs*.sig))
     (values rhs*.psi rhs*.tag))
 
@@ -507,8 +506,8 @@
 				       (_
 					;;If   we  are   here   it   means  that   the
 					;;TAG-ASSERT-AND-RETURN above has misbehaved.
-					(assertion-violation __who__
-					  "Vicare: internal error: invalid retvals signature"
+					(assertion-violation/internal-error __who__
+					  "invalid retvals signature"
 					  (syntax->datum input-form.stx)
 					  (psi-retvals-signature rhs.psi)))))))
 			       ?rhs* lhs*.lab lhs*.tag))
@@ -560,17 +559,12 @@
        (unless (valid-bound-ids? ?lhs*)
 	 (%error-invalid-formals-syntax input-form.stx ?lhs*))
        (let* ((fluid-label* (map %lookup-binding-in-lexenv.run ?lhs*))
-	      (binding*     (map (lambda (rhs)
-				   (with-exception-handler
-				       (lambda (E)
-					 (raise
-					  (condition
-					   (make-macro-input-form-condition rhs)
-					   E)))
-				     (lambda ()
-				       (%eval-macro-transformer
-					(%expand-macro-transformer rhs lexenv.expand)
-					lexenv.run))))
+	      (binding*     (map (lambda (rhs.stx)
+				   (with-exception-handler/input-form
+				       rhs.stx
+				     (%eval-macro-transformer
+				      (%expand-macro-transformer rhs.stx lexenv.expand)
+				      lexenv.run)))
 			      ?rhs*))
 	      (entry*       (map cons fluid-label* binding*)))
 	 (chi-internal-body (cons ?body ?body*)
@@ -1024,35 +1018,43 @@
 
 (module (syntax-case-transformer)
   ;;Transformer  function  used  to  expand  R6RS's  SYNTAX-CASE  syntaxes  from  the
-  ;;top-level built in  environment.  Process the contents of USE-STX  in the context
-  ;;of the lexical environments LEXENV.RUN and LEXENV.EXPAND.  Return a PSI struct.
+  ;;top-level built  in environment.  Process  the contents of INPUT-FORM.STX  in the
+  ;;context of the  lexical environments LEXENV.RUN and LEXENV.EXPAND.   Return a PSI
+  ;;struct.
   ;;
   ;;Notice that the parsing of the patterns is performed by CONVERT-PATTERN at expand
   ;;time and the actual pattern matching is performed by SYNTAX-DISPATCH at run time.
   ;;
-  (define (syntax-case-transformer use-stx lexenv.run lexenv.expand)
-    (syntax-match use-stx ()
+  (define-fluid-override __who__
+    (identifier-syntax 'syntax-case))
+
+  (define (syntax-case-transformer input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
       ((_ ?expr (?literal* ...) ?clauses* ...)
-       (%verify-literals ?literal* use-stx)
-       (let* ( ;;The identifier to which the result of evaluating the ?EXPR is bound.
-	      (expr.id    (gensym-for-lexical-var 'tmp))
+       (%verify-literals ?literal* input-form.stx)
+       (let* ( ;;The lexical variable to which  the result of evaluating the ?EXPR is
+	      ;;bound.
+	      (expr.sym   (gensym-for-lexical-var 'tmp))
 	      ;;The full SYNTAX-CASE pattern matching code, generated and transformed
 	      ;;to core language.
-	      (body.core  (%gen-syntax-case expr.id ?literal* ?clauses*
+	      (body.core  (%gen-syntax-case expr.sym ?literal* ?clauses*
 					    lexenv.run lexenv.expand))
 	      ;;The ?EXPR transformed to core language.
 	      (expr.core  (%chi-expr.core ?expr lexenv.run lexenv.expand)))
 	 ;;Return a form like:
 	 ;;
-	 ;;   ((lambda (expr.id) body.core) expr.core)
+	 ;;   ((lambda (expr.sym) body.core) expr.core)
 	 ;;
-	 (make-psi use-stx
+	 ;;where BODY.CORE is the SYNTAX-CASE matching code.
+	 (make-psi input-form.stx
 		   (build-application no-source
-		     (build-lambda no-source (list expr.id) body.core)
+		     (build-lambda no-source
+		       (list expr.sym)
+		       body.core)
 		     (list expr.core)))))
       ))
 
-  (define (%gen-syntax-case expr.id literals clauses lexenv.run lexenv.expand)
+  (define (%gen-syntax-case expr.sym literals clauses lexenv.run lexenv.expand)
     ;;Recursive function.  Generate and return the  full pattern matching code in the
     ;;core language to match the given CLAUSES.
     ;;
@@ -1061,8 +1063,10 @@
       ;;
       (()
        (build-application no-source
-	 (build-primref no-source 'syntax-error)
-	 (list (build-lexical-reference no-source expr.id))))
+	 (build-primref no-source 'syntax-violation)
+	 (list (build-data no-source 'syntax-case)
+	       (build-data no-source "no pattern matched the input expression")
+	       (build-lexical-reference no-source expr.sym))))
 
       ;;The pattern is  a standalone identifier, neither a literal  nor the ellipsis,
       ;;and  it has  no  fender.   A standalone  identifier  with  no fender  matches
@@ -1106,14 +1110,14 @@
 	     (build-lambda no-source
 	       (list lex)
 	       output-expr.core)
-	     (list (build-lexical-reference no-source expr.id))))))
+	     (list (build-lexical-reference no-source expr.sym))))))
 
       ;;The  pattern  is neither  a  standalone  pattern  variable nor  a  standalone
       ;;underscore.   It has  no fender,  which  is equivalent  to having  a "#t"  as
       ;;fender.
       ;;
       (((?pattern ?output-expr) . ?next-clauses)
-       (%gen-clause expr.id literals
+       (%gen-clause expr.sym literals
 		    ?pattern #t #;fender
 		    ?output-expr
 		    lexenv.run lexenv.expand
@@ -1122,13 +1126,13 @@
       ;;The pattern has a fender.
       ;;
       (((?pattern ?fender ?output-expr) . ?next-clauses)
-       (%gen-clause expr.id literals
+       (%gen-clause expr.sym literals
 		    ?pattern ?fender ?output-expr
 		    lexenv.run lexenv.expand
 		    ?next-clauses))
       ))
 
-  (define (%gen-clause expr.id literals
+  (define (%gen-clause expr.sym literals
 		       pattern.stx fender.stx output-expr.stx
 		       lexenv.run lexenv.expand
 		       next-clauses)
@@ -1144,7 +1148,7 @@
     ;;            #f)
     ;;          (output-expr)
     ;;        (match-next-clauses))
-    ;;   (syntax-dispatch expr.id pattern))
+    ;;   (syntax-dispatch expr.sym pattern))
     ;;
     ;;when there is no fender, build the output form (pseudo-code):
     ;;
@@ -1152,7 +1156,7 @@
     ;;      (if tmp
     ;;          (output-expr)
     ;;        (match-next-clauses))
-    ;;   (syntax-dispatch expr.id pattern))
+    ;;   (syntax-dispatch expr.sym pattern))
     ;;
     ;;notice that  the return value of  SYNTAX-DISPATCH is: false if  the pattern did
     ;;not match, otherwise the list of values to be bound to the pattern variables.
@@ -1177,7 +1181,7 @@
 		pvars.levels)
 	(stx-error pattern.stx "misplaced ellipsis in syntax-case pattern"))
       (let* ((tmp-sym      (gensym-for-lexical-var 'tmp))
-	     (fender-cond  (%build-fender-conditional expr.id literals tmp-sym pvars.levels
+	     (fender-cond  (%build-fender-conditional expr.sym literals tmp-sym pvars.levels
 						      fender.stx output-expr.stx
 						      lexenv.run lexenv.expand
 						      next-clauses)))
@@ -1188,10 +1192,10 @@
 	  (list
 	   (build-application no-source
 	     (build-primref no-source 'syntax-dispatch)
-	     (list (build-lexical-reference no-source expr.id)
+	     (list (build-lexical-reference no-source expr.sym)
 		   (build-data no-source pattern.dispatch))))))))
 
-  (define (%build-fender-conditional expr.id literals tmp-sym pvars.levels
+  (define (%build-fender-conditional expr.sym literals tmp-sym pvars.levels
 				     fender.stx output-expr.stx
 				     lexenv.run lexenv.expand
 				     next-clauses)
@@ -1223,7 +1227,7 @@
 			(%build-call fender.stx)
 			(build-data no-source #f))))
 	  (conseq    (%build-call output-expr.stx))
-	  (altern    (%gen-syntax-case expr.id literals next-clauses lexenv.run lexenv.expand)))
+	  (altern    (%gen-syntax-case expr.sym literals next-clauses lexenv.run lexenv.expand)))
       (build-conditional no-source
 	test conseq altern)))
 
@@ -1280,16 +1284,18 @@
       (list (build-lambda no-source names expr.core)
 	    (build-lexical-reference no-source tmp-sym))))
 
-  (define (%invalid-ids-error id* e class)
+  (define (%invalid-ids-error id* e description.str)
     (let find ((id* id*)
 	       (ok* '()))
       (if (null? id*)
 	  (stx-error e) ; shouldn't happen
 	(if (identifier? (car id*))
 	    (if (bound-id-member? (car id*) ok*)
-		(syntax-error (car id*) "duplicate " class)
+		(syntax-violation __who__
+		  (string-append "duplicate " description.str) (car id*))
 	      (find (cdr id*) (cons (car id*) ok*)))
-	  (syntax-error (car id*) "invalid " class)))))
+	  (syntax-violation __who__
+	    (string-append "invalid " description.str) (car id*))))))
 
   (define (%chi-expr.core expr.stx lexenv.run lexenv.expand)
     (psi-core-expr (chi-expr expr.stx lexenv.run lexenv.expand)))
@@ -1896,26 +1902,41 @@
 	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig     (psi-retvals-signature expr.psi)))
 	 (cond ((list-tag-id? ?retvals-signature)
-		;;Any tuple of returned objects is of type "<list>".
+		;;If we are here the input form is:
+		;;
+		;;   (tag-assert <list> ?expr)
+		;;
+		;;and  any tuple  of returned  values returned  by ?EXPR  is of  type
+		;;"<list>".
 		(%just-evaluate-the-expression expr.psi))
 
 	       ((retvals-signature-single-top-tag? asserted.sig)
-		;;Here we want to make sure that the expression returns a single value,
-		;;whatever its type.
+		;;If we are here the input form is:
+		;;
+		;;   (tag-assert (<top>) ?expr)
+		;;
+		;;so it is  enough to make sure that the  expression returns a single
+		;;value, whatever its type.
 		(syntax-match (retvals-signature-tags expr.sig) ()
 		  ((?tag)
-		   ;;Success!!!  We have determined  at expand-time that the expression
-		   ;;returns a single value.
-		   expr.psi)
-		  (_
-		   ;;Damn it!!! We need to insert a run-time check.
+		   ;;Success!!!   We   have  determined   at  expand-time   that  the
+		   ;;expression returns a single value.
+		   (%just-evaluate-the-expression expr.psi))
+		  (?tag
+		   (list-tag-id? ?tag)
+		   ;;Damn   it!!!   The   expression's  return   values  have   fully
+		   ;;unspecified signature; we need to insert a run-time check.
 		   (%run-time-validation input-form.stx lexenv.run lexenv.expand
 					 asserted.sig expr.psi))
+		  (_
+		   ;;The  horror!!!   We have  established  at  expand-time that  the
+		   ;;expression returns multiple values; assertion failed.
+		   (expand-time-retvals-signature-violation __who__ input-form.stx ?expr asserted.sig expr.sig))
 		  ))
 
 	       ((retvals-signature-partially-unspecified? expr.sig)
-		;;The  expression  has  no  type  specification  or  a  partial  type
-		;;specification; we  have to insert  a run-time check.
+		;;Damn it!!!  The expression has  no type specification or  a partial
+		;;type specification; we have to insert a run-time check.
 		;;
 		;;FIXME We can  do better here by inserting the  run-time checks only
 		;;for  the "<top>"  return values,  rather than  for all  the values.
@@ -1924,20 +1945,20 @@
 				      asserted.sig expr.psi))
 
 	       ((retvals-signature-super-and-sub? asserted.sig expr.sig)
-		;;Fine, we have  established at expand time that  the returned values
-		;;are valid; assertion succeeded.
+		;;Success!!!  We  have established  at expand-time that  the returned
+		;;values are valid; assertion succeeded.
 		(%just-evaluate-the-expression expr.psi))
 
 	       (else
 		;;The horror!!!  We  have established at expand-time  that the returned
 		;;values are of the wrong type; assertion failed.
-		(retvals-signature-violation __who__ ?expr asserted.sig expr.sig)))))
+		(expand-time-retvals-signature-violation __who__ input-form.stx ?expr asserted.sig expr.sig)))))
 
-      ((_ ?retvals-signature ?expr)
-       ;;Let's use a descriptive error message here.
-       (syntax-violation __who__
-	 "invalid return values signature" input-form.stx ?retvals-signature))
-      ))
+       ((_ ?retvals-signature ?expr)
+	;;Let's use a descriptive error message here.
+	(syntax-violation __who__
+	  "invalid return values signature" input-form.stx ?retvals-signature))
+       ))
 
   (define* (%run-time-validation input-form.stx lexenv.run lexenv.expand
 				 {asserted.sig retvals-signature?} {expr.psi psi?})
@@ -2030,8 +2051,12 @@
 	      (expr.psi     (chi-expr ?expr lexenv.run lexenv.expand))
 	      (expr.sig     (psi-retvals-signature expr.psi)))
 	 (cond ((list-tag-id? ?retvals-signature)
-		;;Any tuple of returned objects is of type "<list>".  Just return the
-		;;expression.
+		;;If we are here the input form is:
+		;;
+		;;   (tag-assert-and-return <list> ?expr)
+		;;
+		;;and  any tuple  of returned  values returned  by ?EXPR  is of  type
+		;;"<list>".  Just evaluate the expression.
 		;;
 		;;NOTE  The signature  validation has  succeeded at  expand-time: the
 		;;returned PSI has the original  ?EXPR signature, not "<list>".  This
@@ -2039,7 +2064,11 @@
 		expr.psi)
 
 	       ((retvals-signature-single-top-tag? asserted.sig)
-		;;Here we  want to  make sure  that the  expression returns  a single
+		;;If we are here the input form is:
+		;;
+		;;   (tag-assert-and-return (<top>) ?expr)
+		;;
+		;;so it is  enough to make sure that the  expression returns a single
 		;;value, whatever its type.
 		(syntax-match (retvals-signature-tags expr.sig) ()
 		  ((?tag)
@@ -2052,10 +2081,16 @@
 		   ;;"(<top>)".   This  property is  used  in  binding syntaxes  when
 		   ;;propagating a tag from the RHS to the LHS.
 		   expr.psi)
-		  (_
-		   ;;Damn it!!! We need to insert a run-time check.
+		  (?tag
+		   (list-tag-id? ?tag)
+		   ;;Damn   it!!!   The   expression's  return   values  have   fully
+		   ;;unspecified signature; we need to insert a run-time check.
 		   (%run-time-validation input-form.stx lexenv.run lexenv.expand
 					 asserted.sig expr.psi))
+		  (_
+		   ;;The  horror!!!   We have  established  at  expand-time that  the
+		   ;;expression returns multiple values; assertion failed.
+		   (expand-time-retvals-signature-violation __who__ input-form.stx ?expr asserted.sig expr.sig))
 		  ))
 
 	       ((retvals-signature-partially-unspecified? expr.sig)
@@ -2069,14 +2104,14 @@
 				      asserted.sig expr.psi))
 
 	       ((retvals-signature-super-and-sub? asserted.sig expr.sig)
-		;;Fine, we have  established at expand time that  the returned values
+		;;Fine, we have  established at expand-time that  the returned values
 		;;are valid; assertion succeeded.  Just evaluate the expression.
 		expr.psi)
 
 	       (else
 		;;The horror!!!  We have established at expand-time that the returned
 		;;values are of the wrong type; assertion failed.
-		(retvals-signature-violation __who__ ?expr asserted.sig expr.sig)))))
+		(expand-time-retvals-signature-violation __who__ input-form.stx ?expr asserted.sig expr.sig)))))
 
       ((_ ?retvals-signature ?expr)
        ;;Let's use a descriptive error message here.
@@ -2345,7 +2380,7 @@
     (cond ((identifier-object-type-spec target-tag)
 	   => object-type-spec-caster-maker)
 	  (else
-	   (stx-internal-error input-form.stx "tag identifier without object type spec"))))
+	   (syntax-violation/internal-error __who__ "tag identifier without object type spec" input-form.stx))))
 
   (define (%cast-at-run-time-with-generic-transformer target-tag expr.psi)
     ;;When the  type of the expression  is unknown at expand-time:  insert a run-time
@@ -2547,4 +2582,5 @@
 ;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
+;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
 ;;End:

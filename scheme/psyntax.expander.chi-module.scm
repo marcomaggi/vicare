@@ -123,7 +123,7 @@
      (identifier? expr.stx)
      (let ((label (id->label/intern ?id)))
        (unless label
-	 (%raise-unbound-error #f ?id ?id))
+	 (%raise-unbound-error #f expr.stx ?id))
        (let* ((binding (label->syntactic-binding label lexenv))
 	      (type    (syntactic-binding-type binding)))
 	 (case type
@@ -168,7 +168,7 @@
 		      ;;This case includes TYPE being: CORE-PRIM, LEXICAL, GLOBAL, MUTABLE.
 		      (values 'call #f #f))))))
 	   (else
-	    (%raise-unbound-error #f ?car ?car))))
+	    (%raise-unbound-error #f expr.stx ?car))))
 
     ((?car . ?cdr)
      ;;Here we know that EXPR.STX has the format:
@@ -318,8 +318,8 @@
 				((variable-transformer? x)
 				 (variable-transformer-procedure x))
 				(else
-				 (assertion-violation __who__
-				   "Vicare: internal error: not a procedure" x)))))
+				 (assertion-violation/internal-error __who__
+				   "not a procedure" x)))))
 	(%do-macro-call transformer input-form-stx lexenv.run rib))))
 
 ;;; --------------------------------------------------------------------
@@ -572,14 +572,11 @@
 				  (let ((in-form (if (eq? type 'let-syntax)
 						     x
 						   (push-lexical-contour xrib x))))
-				    (with-exception-handler
-					(lambda (E)
-					  (raise
-					   (condition E (make-macro-input-form-condition in-form))))
-				      (lambda ()
-					(%eval-macro-transformer
-					 (%expand-macro-transformer in-form lexenv.expand)
-					 lexenv.run)))))
+				    (with-exception-handler/input-form
+					in-form
+				      (%eval-macro-transformer
+				       (%expand-macro-transformer in-form lexenv.expand)
+				       lexenv.run))))
 			     ?xrhs*)))
 	       (let ((body*.psi (chi-expr* (map (lambda (x)
 						  (push-lexical-contour xrib x))
@@ -789,35 +786,31 @@
       (signature operand-retvals-signature))
 
     (define (%error-more-operands-than-arguments input-form.stx expected-arguments-count given-operands-count)
-      (raise
-       (condition
-	(make-who-condition __who__)
-	(make-message-condition "more given operands than expected arguments")
-	(make-syntax-violation input-form.stx #f)
-	(make-expected-arguments-count-condition expected-arguments-count)
-	(make-given-operands-count-condition given-operands-count)
-	(%extract-macro-expansion-trace input-form.stx))))
+      (%raise-compound-condition-object __who__
+	"more given operands than expected arguments"
+	(condition
+	 (make-syntax-violation input-form.stx #f)
+	 (make-expected-arguments-count-condition expected-arguments-count)
+	 (make-given-operands-count-condition given-operands-count))))
 
     (define (%error-more-arguments-than-operands input-form.stx expected-arguments-count given-operands-count)
-      (raise
-       (condition
-	(make-who-condition __who__)
-	(make-message-condition "more expected arguments than given operands")
-	(make-syntax-violation input-form.stx #f)
-	(make-expected-arguments-count-condition expected-arguments-count)
-	(make-given-operands-count-condition given-operands-count)
-	(%extract-macro-expansion-trace input-form.stx))))
+      (%raise-compound-condition-object __who__
+	"more expected arguments than given operands"
+	(condition
+	 (make-syntax-violation input-form.stx #f)
+	 (make-expected-arguments-count-condition expected-arguments-count)
+	 (make-given-operands-count-condition given-operands-count))))
 
     (define (%error-mismatch-between-argument-tag-and-operand-retvals-signature input-form.stx rand.stx
 										arg.idx arg.tag rand.retvals-signature)
-      (raise
-       (condition
-	(make-who-condition __who__)
-	(make-message-condition "expand-time mismatch between expected argument tag and operand retvals signature")
-	(make-syntax-violation input-form.stx rand.stx)
-	(make-argument-description-condition arg.idx arg.tag)
-	(make-operand-retvals-signature-condition rand.retvals-signature)
-	(%extract-macro-expansion-trace input-form.stx))))
+      (%raise-compound-condition-object __who__
+	"expand-time mismatch between expected argument tag and operand retvals signature"
+	input-form.stx
+	(condition
+	 (make-expand-time-type-signature-violation)
+	 (make-syntax-violation input-form.stx rand.stx)
+	 (make-argument-description-condition arg.idx arg.tag)
+	 (make-operand-retvals-signature-condition rand.retvals-signature))))
 
     #| end of module: CLOSURE-APPLICATION-ERRORS |# )
 
@@ -913,8 +906,8 @@
 
 	(_
 	 ;;This should never happen.
-	 (assertion-violation __who__
-	   "Vicare: internal error: invalid closure object operator formals"
+	 (assertion-violation/internal-error __who__
+	   "invalid closure object operator formals"
 	   input-form.stx rator.formals-signature))
 	)))
 
@@ -1260,8 +1253,8 @@
 				    rator.psi ?rand*)))
 
       (_
-       (syntax-violation __who__
-	 "Vicare: internal error: invalid application syntax" input-form.stx))))
+       (syntax-violation/internal-error __who__
+	 "invalid application syntax" input-form.stx))))
 
   (define (%chi-nested-rator-application input-form.stx lexenv.run lexenv.expand
 					 rator.stx rand*.stx)
@@ -1343,9 +1336,9 @@
 		 (loop (cdr rand*.sig) (cdr rand*.stx)
 		       (cons (top-tag-id) rand*.tag)))
 		(_
-		 (retvals-signature-violation 'values (car rand*.stx)
-					      (make-retvals-signature-single-top)
-					      (car rand*.sig))))
+		 (expand-time-retvals-signature-violation 'values (car rand*.stx)
+							  (make-retvals-signature-single-top)
+							  (car rand*.sig))))
 	    (make-retvals-signature (reverse rand*.tag)))))
       (make-psi input-form.stx
 		(build-application (syntax-annotation input-form.stx)
@@ -1875,8 +1868,8 @@
 	       (when (option.tagged-language.rhs-tag-propagation?)
 		 (if (top-tag-id? tag.id)
 		     (override-identifier-tag! var.id ?tag)
-		   (assertion-violation __who__
-		     "Vicare: internal error: expected variable definition with untagged identifier"
+		   (assertion-violation/internal-error __who__
+		     "expected variable definition with untagged identifier"
 		     expr.stx tag.id))))
 
 	      (?tag
@@ -1887,9 +1880,9 @@
 
 	      (_
 	       ;;Multiple return values: syntax violation.
-	       (retvals-signature-violation __who__ expr.stx
-					    (make-retvals-signature-single-top)
-					    expr.sig))
+	       (expand-time-retvals-signature-violation __who__ expr.stx
+							(make-retvals-signature-single-top)
+							expr.sig))
 	      )))))
 
      ((top-expr)
@@ -1903,7 +1896,8 @@
 		  (psi-retvals-signature expr.psi))))
 
      (else
-      (assertion-violation __who__ "Vicare: internal error: invalid qrhs" qrhs)))))
+      (assertion-violation/internal-error __who__
+	"invalid qualified right-hand side (QRHS) format" qrhs)))))
 
 (define (chi-qrhs* qrhs* lexenv.run lexenv.expand)
   ;;Expand the qualified right-hand side expressions in QRHS*, left-to-right.  Return
@@ -2239,27 +2233,21 @@
 	       ;;binding for it, register the label  in the rib.  Finally we recurse
 	       ;;on the rest of the body.
 	       ;;
-	       (receive (id rhs-stx)
+	       (receive (id rhs.stx)
 		   (%parse-define-syntax body-form.stx)
 		 (when (bound-id-member? id kwd*)
 		   (stx-error body-form.stx "cannot redefine keyword"))
 		 ;;We want order here!?!
 		 (let ((lab      (gen-define-syntax-label id rib sd?))
-		       (rhs.core (with-exception-handler
-				     (lambda (E)
-				       (raise
-					(condition E (make-macro-input-form-condition rhs-stx))))
-				   (lambda ()
-				     (%expand-macro-transformer rhs-stx lexenv.expand)))))
+		       (rhs.core (with-exception-handler/input-form
+				     rhs.stx
+				   (%expand-macro-transformer rhs.stx lexenv.expand))))
 		   ;;First map  the identifier to  the label, creating  the binding;
 		   ;;then evaluate the macro transformer.
 		   (extend-rib! rib id lab sd?)
-		   (let ((entry (cons lab (with-exception-handler
-					      (lambda (E)
-						(raise
-						 (condition E (make-macro-input-form-condition rhs-stx))))
-					    (lambda ()
-					      (%eval-macro-transformer rhs.core lexenv.run))))))
+		   (let ((entry (cons lab (with-exception-handler/input-form
+					      rhs.stx
+					    (%eval-macro-transformer rhs.core lexenv.run)))))
 		     (chi-body* (cdr body-form*.stx)
 				(cons entry lexenv.run)
 				(cons entry lexenv.expand)
@@ -2279,21 +2267,15 @@
 		 ;;We want order here!?!
 		 (let* ((lab      (gen-define-syntax-label id rib sd?))
 			(flab     (gen-define-syntax-label id rib sd?))
-			(rhs.core (with-exception-handler
-				      (lambda (E)
-					(raise
-					 (condition E (make-macro-input-form-condition rhs.stx))))
-				    (lambda ()
-				      (%expand-macro-transformer rhs.stx lexenv.expand)))))
+			(rhs.core (with-exception-handler/input-form
+				      rhs.stx
+				    (%expand-macro-transformer rhs.stx lexenv.expand))))
 		   ;;First map  the identifier to  the label,  so that it  is bound;
 		   ;;then evaluate the macro transformer.
 		   (extend-rib! rib id lab sd?)
-		   (let* ((binding  (with-exception-handler
-					(lambda (E)
-					  (raise
-					   (condition E (make-macro-input-form-condition rhs.stx))))
-				      (lambda ()
-					(%eval-macro-transformer rhs.core lexenv.run))))
+		   (let* ((binding  (with-exception-handler/input-form
+					rhs.stx
+				      (%eval-macro-transformer rhs.core lexenv.run)))
 			  ;;This LEXENV entry represents the definition of the fluid
 			  ;;syntax.
 			  (entry1   (cons lab (make-fluid-syntax-binding flab)))
@@ -2327,14 +2309,11 @@
 					      (fluid-syntax-binding-fluid-label binding))
 					     (else
 					      (stx-error id "not a fluid identifier")))))
-			(binding     (with-exception-handler
-					 (lambda (E)
-					   (raise
-					    (condition E (make-macro-input-form-condition rhs.stx))))
-				       (lambda ()
-					 (%eval-macro-transformer
-					  (%expand-macro-transformer rhs.stx lexenv.expand)
-					  lexenv.run))))
+			(binding      (with-exception-handler/input-form
+					  rhs.stx
+					(%eval-macro-transformer
+					 (%expand-macro-transformer rhs.stx lexenv.expand)
+					 lexenv.run)))
 			(entry       (cons fluid-label binding)))
 		   (chi-body* (cdr body-form*.stx)
 			      (cons entry lexenv.run)
@@ -2386,14 +2365,11 @@
 					(let ((in-form (if (eq? type 'let-syntax)
 							   x
 							 (push-lexical-contour xrib x))))
-					  (with-exception-handler
-					      (lambda (E)
-						(raise
-						 (condition E (make-macro-input-form-condition in-form))))
-					    (lambda ()
-					      (%eval-macro-transformer
-					       (%expand-macro-transformer in-form lexenv.expand)
-					       lexenv.run)))))
+					  (with-exception-handler/input-form
+					      in-form
+					    (%eval-macro-transformer
+					     (%expand-macro-transformer in-form lexenv.expand)
+					     lexenv.run))))
 				   ?xrhs*)))
 		    (chi-body*
 		     ;;Splice the internal  body forms but add a  lexical contour to
@@ -2887,4 +2863,6 @@
 ;;Local Variables:
 ;;mode: vicare
 ;;fill-column: 85
+;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
+;;eval: (put '%raise-compound-condition-object	'scheme-indent-function 1)
 ;;End:

@@ -2350,7 +2350,6 @@
     (syntactic-binding-getprop			v $language)
     (syntactic-binding-remprop			v $language)
     (syntactic-binding-property-list		v $language)
-    (syntax-transpose				v $language)
     (syntax-object?				v $language)
     (syntax-object-expression			v $language)
     (syntax-object-marks			v $language)
@@ -2873,7 +2872,10 @@
 
     (ellipsis-map)
     (debug-call)
-    (syntax-error				v)
+
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Sat Apr 12, 2014)
+    (syntax-error)
 
 ;;; --------------------------------------------------------------------
 ;;; syntax utilities
@@ -3782,6 +3784,7 @@
     (retvals-signature?				$type-specs)
     (retvals-signature-tags			$type-specs)
     (retvals-signature=?			$type-specs)
+    (retvals-signature-common-ancestor		$type-specs)
 
     (tag-identifier?				$type-specs)
     (all-tag-identifiers?			$type-specs)
@@ -3815,12 +3818,10 @@
     (set-label-tag!				$type-specs)
     (label-tag					$type-specs)
 
-    (make-retvals-signature-violation		$type-specs)
-    (retvals-signature-violation		$type-specs)
-    (retvals-signature-violation?		$type-specs)
-    (retvals-signature-violation-expected-signature	$type-specs)
-    (retvals-signature-violation-returned-signature	$type-specs)
-    (retvals-signature-common-ancestor		$type-specs)
+    (expand-time-type-signature-violation?			$type-specs)
+    (expand-time-retvals-signature-violation?			$type-specs)
+    (expand-time-retvals-signature-violation-expected-signature	$type-specs)
+    (expand-time-retvals-signature-violation-returned-signature	$type-specs)
 
     (top-tag-id					$type-specs)
     (void-tag-id				$type-specs)
