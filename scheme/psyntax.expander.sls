@@ -4548,19 +4548,24 @@
       name-vec label-vec)))
 
 (define (export-subst->rib export-subst)
-  ;;Build and return a new  <RIB> structure initialised with the entries
-  ;;of EXPORT-SUBST.
+  ;;Build  and  return  a  new  <RIB>  structure  initialised  with  the  entries  of
+  ;;EXPORT-SUBST.
   ;;
-  ;;An EXPORT-SUBST  selects the  exported bindings among  the syntactic
-  ;;bindings defined at the top-level of a library; it is an alist whose
-  ;;keys are external symbol names of  the bindings and whose values are
-  ;;the associated label gensyms.
+  ;;An  EXPORT-SUBST  selects the  exported  bindings  among the  syntactic  bindings
+  ;;defined at  the top-level of a  library; it is  an alist whose keys  are external
+  ;;symbol names of the bindings and whose values are the associated label gensyms.
   ;;
-  (let ((name*        (map car export-subst)) ;exported binding names
-	(mark**       (map (lambda (x) TOP-MARK*) export-subst))
-	(label*       (map cdr export-subst))
-	(sealed/freq  #f))
-    (make-<rib> name* mark** label* sealed/freq)))
+  (let loop ((export-subst export-subst)
+	     (name*        '()) ;exported binding names
+	     (mark**       '())
+	     (label*       '()))
+    (if (pair? export-subst)
+	(loop ($cdr export-subst)
+	      (cons ($car ($car export-subst)) name*)
+	      (cons TOP-MARK*                  mark**)
+	      (cons ($cdr ($car export-subst)) label*))
+      (let ((sealed/freq #f))
+	(make-<rib> name* mark** label* sealed/freq)))))
 
 (module (extend-rib!)
   ;;A <RIB> can be extensible, or sealed.  Adding an identifier-to-label
