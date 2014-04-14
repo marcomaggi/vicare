@@ -68,16 +68,19 @@
 
 		  ;; internal functions
 		  $unintern-gensym)
+    ;;NOTE  Let's try  not to  load "(vicare  unsafe operations)"  here.
+    ;;(Marco Maggi; Mon Apr 14, 2014)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $strings)
     (only (vicare system $numerics)
 	  $add1-integer)
-    (except (vicare unsafe operations)
-	    $symbol->string
-	    $getprop $putprop $remprop $property-list)
     (except (vicare system $symbols)
 	    $symbol->string
 	    $getprop $putprop $remprop $property-list
 	    $unintern-gensym
-	    system-value-gensym))
+	    system-value system-value-gensym
+	    system-label system-label-gensym))
 
 
 ;;;; helpers
@@ -226,7 +229,7 @@
   (let ((str (if (string? obj)
 		 obj
 	       ($symbol->string obj))))
-    ($substring str 0 ($string-length str))))
+    (substring str 0 ($string-length str))))
 
 (define* (string-or-symbol->symbol {obj string-or-symbol?})
   ;;Defined by Vicare.  If OBJ is a  symbol return it; if it is a string

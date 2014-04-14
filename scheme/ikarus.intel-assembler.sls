@@ -29,8 +29,7 @@
     (vicare unsafe operations)
     (vicare arguments validation)
     (prefix (vicare platform words)
-	    words.)
-    (vicare language-extensions syntaxes))
+	    words.))
 
   (include "ikarus.wordsize.scm")
 
@@ -545,7 +544,7 @@
 		    (if ($fx= (length args) ?nargs)
 			?body-form
 		      (%error-incorrect-args assembly-sexp n)))
-		  (case-fixnums n
+		  (case n
 		    ((2)
 		     (%with-checked-args 2
 		       (proc assembly-sexp accum ($car args) ($cadr args))))
@@ -620,7 +619,7 @@
 	names
       (let ((entry ($car accum)))
 	(if (pair? entry)
-	    (case-symbols ($car entry)
+	    (case ($car entry)
 	      ((label)
 	       (%next (cons (label-name entry) names)))
 	      ((seq pad)
@@ -1429,7 +1428,7 @@
   (fold (lambda (x size)
 	  (if (fixnum? x)
 	      ($fxadd1 size)
-	    (case-symbols ($car x)
+	    (case ($car x)
 	      ((byte)
 	       ($fxadd1 size))
 	      ((relative local-relative)
@@ -1572,7 +1571,7 @@
 		(else v))))
       (define-syntax key
 	(identifier-syntax ($cadr r)))
-      (case-symbols key
+      (case key
 	((reloc-word)
 	 ;;Add a record of type "vanilla object".
 	 (let ((off ($car r))) ;Offset into the data area of the code object.
@@ -1763,7 +1762,7 @@
 	  (G      (gensym)))
       (define (%mark-labels-with-property x)
 	(when (pair? x)
-	  (case-symbols ($car x)
+	  (case ($car x)
 	    ((label)
 	     (putprop ($cdr x) G 'local)
 	     (set! locals (cons ($cdr x) locals)))
@@ -1771,7 +1770,7 @@
 	     (for-each %mark-labels-with-property ($cdr x))))))
       (define (%relative->local-relative x)
 	(when (pair? x)
-	  (case-symbols ($car x)
+	  (case ($car x)
 	    ((relative)
 	     (when (eq? (getprop ($cdr x) G) 'local)
 	       ($set-car! x 'local-relative)))
@@ -1793,7 +1792,7 @@
     (fold (lambda (x ac)
 	    (if (fixnum? x)
 		ac
-	      (case-symbols ($car x)
+	      (case ($car x)
 		((word byte label current-frame-offset local-relative)
 		 ac)
 		((reloc-word foreign-label)

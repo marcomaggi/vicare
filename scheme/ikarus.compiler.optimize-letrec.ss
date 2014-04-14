@@ -220,7 +220,7 @@
     (define who 'optimize-letrec)
     (when (check-for-illegal-letrec)
       (check-for-illegal-letrec-references x))
-    (case-symbols (current-letrec-pass)
+    (case (current-letrec-pass)
       ((scc)     (optimize-letrec/scc     x))
       ((waddell) (optimize-letrec/waddell x))
       ((basic)   (optimize-letrec/basic   x))

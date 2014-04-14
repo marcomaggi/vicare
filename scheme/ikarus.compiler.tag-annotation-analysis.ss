@@ -202,7 +202,7 @@
       (syntax-rules ()
 	((_ . ?args)
 	 (inject* op rand* env . ?args))))
-    (case-symbols op
+    (case op
       ((cons)
        (return T:pair))
 

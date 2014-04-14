@@ -199,7 +199,7 @@
 		      (k))))
 	  (if (not interrupted?)
 	      body
-	    (case-symbols ctxt
+	    (case ctxt
 	      ((V)
 	       (let ((h (make-interrupt-call x args)))
 		 (if (%interrupt-primcall? body)
@@ -435,7 +435,7 @@
 	(make-funcall (V pref) args)))
 
     (define (%primop-interrupt-handler x)
-      (case-symbols x
+      (case x
 	((fx+)				'error@fx+)
 	((fx-)				'error@fx-)
 	((fx*)				'error@fx*)
@@ -960,7 +960,7 @@
        (make-seq (E e0) (V e1)))
 
       ((primcall op arg*)
-       (case-symbols op
+       (case op
 	 ((debug-call)
 	  (cogen-debug-call op 'V arg* V))
 	 (else
@@ -1026,7 +1026,7 @@
      (handle-fix lhs* rhs* (P body)))
 
     ((primcall op arg*)
-     (case-symbols op
+     (case op
        ((debug-call)
 	(cogen-debug-call op 'P arg* P))
        (else
@@ -1090,7 +1090,7 @@
      (handle-fix lhs* rhs* (E body)))
 
     ((primcall op arg*)
-     (case-symbols op
+     (case op
        ((debug-call)
 	(cogen-debug-call op 'E arg* E))
        (else

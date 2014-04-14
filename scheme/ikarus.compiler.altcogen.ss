@@ -945,7 +945,7 @@
 	   (VT x))
 
 	  ((primcall op rands)
-	   (case-symbols op
+	   (case op
 	     (($call-with-underflow-handler)
 	      ;;This  primitive  is  used  by  the  primitive  operation
 	      ;;$SEAL-FRAME-AND-CALL to  implement the heart  of CALL/CC
@@ -1318,7 +1318,7 @@
        (make-conditional (P e0) (V d e1) (V d e2)))
 
       ((primcall op rands)
-       (case-symbols op
+       (case op
 
          ((alloc)
 	  ;;Allocate a Scheme object on  the heap.  First check if there
@@ -1463,7 +1463,7 @@
        (%do-bind lhs* rhs* (E e)))
 
       ((primcall op rands)
-       (case-symbols op
+       (case op
          ((mset bset mset32)
           (S* rands (lambda (s*)
 		      (make-asm-instr op (make-disp ($car s*) ($cadr s*))
@@ -2384,7 +2384,7 @@
             (union-nfvs ns1 ns2))))
 
       ((asm-instr op d s)
-       (case-symbols op
+       (case op
          ((move load8 load32)
           (cond ((reg? d)
 		 (cond ((not (mem-reg? d rs))
@@ -2581,7 +2581,7 @@
        (E body vs rs fs ns))
 
       ((primcall op args)
-       (case-symbols op
+       (case op
          ((nop fl:double->single fl:single->double)
 	  (values vs rs fs ns))
          ((interrupt incr/zero?)
@@ -2678,7 +2678,7 @@
             (union-nfvs ns1 ns2))))
 
       ((primcall op arg*)
-       (case-symbols op
+       (case op
          ((return indirect-jump direct-jump)
           (R* arg*
 	      (empty-var-set)
@@ -2835,7 +2835,7 @@
 	   (E-nframe vars live body))
 
 	  ((primcall op args)
-	   (case-symbols op
+	   (case op
 	     ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	      x)
 	     (else
@@ -2848,7 +2848,7 @@
 	   (error who "invalid effect" (unparse-recordized-code x)))))
 
       (define (E-asm-instr op d s)
-	(case-symbols op
+	(case op
 	  ((move load8 load32)
 	   ;;If  the   destination  equals  the  source:   convert  this
 	   ;;instruction into a NOP.
@@ -3181,7 +3181,7 @@
 	   (set-union (R* args) s))
 
 	  ((primcall op arg*)
-	   (case-symbols op
+	   (case op
 	     ((nop fl:single->double fl:double->single)
 	      s)
 	     ((interrupt incr/zero?)
@@ -3199,7 +3199,7 @@
 	   (error who "invalid effect" (unparse-recordized-code x)))))
 
       (define (E-asm-instr op d v s)
-	(case-symbols op
+	(case op
 	  ((move load32)
 	   (let ((s (set-rem d s)))
 	     (set-for-each (lambda (y)
@@ -3587,7 +3587,7 @@
 	     (E-asm-instr op a b x))
 
 	    ((primcall op rands)
-	     (case-symbols op
+	     (case op
 	       ((nop interrupt incr/zero? fl:single->double fl:double->single)
 		x)
 	       (else
@@ -3605,7 +3605,7 @@
 	     (error who "invalid effect" (unparse-recordized-code x)))))
 
 	(define (E-asm-instr op a b x)
-	  (case-symbols op
+	  (case op
 	    ((load8 load32)
 	     (%fix-address b (lambda (b)
 			       (if (or (register? a) (var? a))
@@ -4594,7 +4594,7 @@
 		     (T x.altern accum))))))
 
       ((primcall op rands)
-       (case-symbols op
+       (case op
 	 ((return)
 	  (cons '(ret) accum))
 
@@ -4747,7 +4747,7 @@
 		   accum))))
 
     (define (E-asm-instr op d s x accum)
-      (case-symbols op
+      (case op
 	((logand)
 	 (cons `(andl ,(R s) ,(R d)) accum))
 
@@ -4872,7 +4872,7 @@
 	 (error who "invalid instr" (unparse-recordized-code x)))))
 
     (define (E-primcall op rands x accum)
-      (case-symbols op
+      (case op
 	((nop)
 	 accum)
 

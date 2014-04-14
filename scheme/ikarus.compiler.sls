@@ -79,6 +79,13 @@
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import
       (rnrs hashtables)
+    ;;FIXME To be included at the next boot image rotation; SYSTEM-VALUE
+    ;;is no more  exporte by "(vicare)".  Notice that we  really need to
+    ;;import  the SYSTEM-VALUE  from the  prebuilt boot  image!!! (Marco
+    ;;Maggi; Mon Apr 14, 2014)
+    ;;
+    ;; (only (vicare system $symbols)
+    ;; 	  system-value)
     (only (vicare system $codes)
 	  $code->closure)
     (only (vicare system $structs)
@@ -108,7 +115,6 @@
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.intel-assembler)
-    (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
   (include "ikarus.wordsize.scm")
@@ -1331,7 +1337,7 @@
 	   (error 'recordize "invalid core language expression" X))))
 
   (define-inline (%recordize-pair-sexp X ctxt)
-    (case-symbols ($car X)
+    (case ($car X)
 
       ;;Synopsis: (quote ?datum)
       ;;
@@ -1734,7 +1740,7 @@
 	  (mk-call op rand*))))
 
     (define (E-make-parameter mk-call args ctxt)
-      (case-fixnums (length args)
+      (case (length args)
 	((1)	;MAKE-PARAMETER called with one argument.
 	 (let ((val-expr	(car args))
 	       (t		(gensym 't))
@@ -1818,7 +1824,7 @@
 	;;Given a  sexp representing a  CASE-LAMBDA, return its  list of
 	;;clauses.  Return null if X is not a CASE-LAMBDA sexp.
 	(if (pair? x)
-	    (case-symbols ($car x)
+	    (case ($car x)
 	      ((case-lambda)
 	       ($cdr x))
 	      ((annotated-case-lambda)
@@ -1998,7 +2004,7 @@
 	 (try-inline clause* rand* (mk rator rand*)))
 
 	((primref op)
-	 (case-symbols op
+	 (case op
 	   ;;FIXME Here.  (Abdulaziz Ghuloum)
 	   ((call-with-values)
 	    (cond ((and (open-mvcalls)

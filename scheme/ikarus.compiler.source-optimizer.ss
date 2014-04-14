@@ -236,7 +236,7 @@
       ((primref name)
        (case-context ctxt
 	 ((app)
-	  (case-symbols name
+	  (case name
 	    ((debug-call)
 	     (E-debug-call ctxt ec sc))
 	    (else

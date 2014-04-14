@@ -415,6 +415,7 @@ VICARE_BOOT_ENV		= \
 	VICARE_SRC_DIR=$(srcdir)/scheme; export VICARE_SRC_DIR; \
 	VICARE_BUILD_DIR=$(builddir)/scheme; export VICARE_BUILD_DIR; \
 	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH); export VICARE_LIBRARY_PATH;
+VICARE_BOOT_FLAGS	= --print-loaded-libraries --no-rcfile --library-locator source --r6rs-script
 
 CLEANFILES		+= ikarus.config.ss $(VICARE_NEW_BOOT)
 
@@ -454,7 +455,7 @@ ikarus.config.ss:
 #
 $(VICARE_NEW_BOOT): $(VICARE_BOOT_SRCS) vicare ikarus.config.ss scheme/makefile.sps
 	$(VICARE_BOOT_ENV) $(GDB) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
-		--r6rs-script $(srcdir)/scheme/makefile.sps
+		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
 ## --------------------------------------------------------------------
 
@@ -477,8 +478,8 @@ boot-image-32-bit: vicare
 	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.ss
-	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT)	\
-		--r6rs-script $(srcdir)/scheme/makefile.sps
+	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
+		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.4.prebuilt
 
 boot-image-64-bit: vicare
@@ -498,8 +499,8 @@ boot-image-64-bit: vicare
 	echo '(define VICARE_BUILT_WITH_POSIX_ENABLED    #$(VICARE_BUILT_WITH_POSIX_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_GLIBC_ENABLED    #$(VICARE_BUILT_WITH_GLIBC_ENABLED))' >>ikarus.config.ss
 	echo '(define VICARE_BUILT_WITH_LINUX_ENABLED    #$(VICARE_BUILT_WITH_LINUX_ENABLED))' >>ikarus.config.ss
-	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT)	\
-		--r6rs-script $(srcdir)/scheme/makefile.sps
+	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(VICARE_PREBUILT_BOOT) \
+		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 	mv $(builddir)/vicare.boot $(builddir)/vicare.boot.8.prebuilt
 
 ## --------------------------------------------------------------------
@@ -521,8 +522,8 @@ boot-image-64-bit: vicare
 # but keep backups of the original one!!!
 #
 try-vicare-boot: $(VICARE_BOOT_SRCS) vicare ikarus.config.ss
-	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(builddir)/vicare.boot.try	\
-		--r6rs-script $(srcdir)/scheme/makefile.sps
+	$(VICARE_BOOT_ENV) $(builddir)/vicare -b $(builddir)/vicare.boot.try \
+		$(VICARE_BOOT_FLAGS) $(srcdir)/scheme/makefile.sps
 
 #page
 #### compiling bundled libraries: build rules

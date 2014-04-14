@@ -788,6 +788,7 @@
     (define (%error-more-operands-than-arguments input-form.stx expected-arguments-count given-operands-count)
       (%raise-compound-condition-object __who__
 	"more given operands than expected arguments"
+	input-form.stx
 	(condition
 	 (make-syntax-violation input-form.stx #f)
 	 (make-expected-arguments-count-condition expected-arguments-count)
@@ -796,6 +797,7 @@
     (define (%error-more-arguments-than-operands input-form.stx expected-arguments-count given-operands-count)
       (%raise-compound-condition-object __who__
 	"more expected arguments than given operands"
+	input-form.stx
 	(condition
 	 (make-syntax-violation input-form.stx #f)
 	 (make-expected-arguments-count-condition expected-arguments-count)
