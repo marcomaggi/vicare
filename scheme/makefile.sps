@@ -720,6 +720,8 @@
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#t)
 ;;;
+    ;;FIXME At the next boot  image rotation these libraries must become
+    ;;required.  (Marco Maggi; Mon Apr 14, 2014)
     ($type-specs	(vicare expander object-type-specs)	#t	#f)
     ($expander-tags	(vicare expander tags)			#t	#f)
     ))

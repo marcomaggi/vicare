@@ -2013,10 +2013,10 @@
 		   ;;
 		   ;;   (call-with-values ?producer ?consumer)
 		   ;;
-		   (let ((producer (inline ($car rand*) '()))
+		   (let ((producer (inline mk ($car rand*) '()))
 			 (consumer ($cadr rand*)))
 		     (cond ((single-value-consumer? consumer)
-			    (inline consumer (list producer)))
+			    (inline mk consumer (list producer)))
 			   ((and (valid-mv-consumer? consumer)
 				 (valid-mv-producer? producer))
 			    (make-mvcall producer consumer))
