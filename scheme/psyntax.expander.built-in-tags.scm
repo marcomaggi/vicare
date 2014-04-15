@@ -40,18 +40,14 @@
 (define-syntax-rule (make-uid ?tag)
   (%make-uid (quote ?tag)))
 
-(define (%make-uid sym)
-  (string->symbol (string-append "vicare:expander:tags:" (symbol->string sym))))
-
 (define (%basic name.sym parent.sym pred.sym)
   ;;Initialise a built-in tag with a basic "object-type-spec".
   ;;
-  (let ((uid       (make-uid   name.sym))
-	(tag-id    (core-prim-id name.sym))
+  (let ((tag-id    (core-prim-id name.sym))
 	(parent-id (core-prim-id parent.sym))
 	(pred-id   (core-prim-id pred.sym)))
     (set-identifier-object-type-spec! tag-id
-      (make-object-type-spec uid tag-id parent-id pred-id))))
+      (make-object-type-spec tag-id parent-id pred-id))))
 
 
 ;;;; filled built-in tag template
@@ -114,8 +110,7 @@
 ;;       (else #f)))
 ;;
 ;;   (define type-spec
-;;     (make-object-type-spec (make-uid <tag>)
-;; 			   THE-TAG (S THE-PARENT) (S THE-PREDICATE)
+;;     (make-object-type-spec THE-TAG (S THE-PARENT) (S THE-PREDICATE)
 ;; 			   %constructor-maker
 ;; 			   %accessor-maker %mutator-maker
 ;; 			   %getter-maker %setter-maker
@@ -143,8 +138,7 @@
 ;;   (define %dispatcher	#f)
 ;;
 ;;   (define type-spec
-;;     (make-object-type-spec (make-uid <tag>)
-;; 			   THE-TAG #'THE-PARENT #'THE-PREDICATE
+;;     (make-object-type-spec THE-TAG #'THE-PARENT #'THE-PREDICATE
 ;; 			   %constructor-maker
 ;; 			   %accessor-maker %mutator-maker
 ;; 			   %getter-maker %setter-maker
@@ -160,7 +154,7 @@
   (let ((tag-id   (top-tag-id))
 	(pred-id  (S always-true)))
     (set-identifier-object-type-spec! tag-id
-      (%make-object-type-spec '(vicare:expander:tags:<top>) tag-id pred-id
+      (%make-object-type-spec (list (id->label tag-id)) tag-id pred-id
 			      #f #f #f  #f #f  #f #f #f)))
 
   (%basic '<void>		'<top>		'void?)
@@ -230,8 +224,7 @@
       (else #f)))
 
   (define type-spec
-    (make-object-type-spec (make-uid <symbol>)
-			   THE-TAG (top-tag-id) (S symbol?)
+    (make-object-type-spec THE-TAG (top-tag-id) (S symbol?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
@@ -266,8 +259,7 @@
   (define %dispatcher		#f)
 
   (define type-spec
-    (make-object-type-spec (make-uid <keyword>)
-			   THE-TAG (top-tag-id) (S keyword?)
+    (make-object-type-spec THE-TAG (top-tag-id) (S keyword?)
 			   %constructor-maker
 			   %mutator-maker %accessor-maker
 			   %getter-maker %setter-maker
@@ -319,8 +311,7 @@
       (else		#f)))
 
   (define type-spec
-    (make-object-type-spec (make-uid <symbol>)
-			   THE-TAG (top-tag-id) (S pointer?)
+    (make-object-type-spec THE-TAG (top-tag-id) (S pointer?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
@@ -366,8 +357,7 @@
   (define %dispatcher		#f)
 
   (define type-spec
-    (make-object-type-spec (make-uid <char>)
-			   THE-TAG (top-tag-id) (S char?)
+    (make-object-type-spec THE-TAG (top-tag-id) (S char?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
@@ -402,8 +392,7 @@
   (define %dispatcher		#f)
 
   (define type-spec
-    (make-object-type-spec (make-uid <transcoder>)
-			   THE-TAG (top-tag-id) (S transcoder?)
+    (make-object-type-spec THE-TAG (top-tag-id) (S transcoder?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
@@ -464,8 +453,7 @@
   (define %dispatcher		#f)
 
   (define type-spec
-    (make-object-type-spec (make-uid <pair>)
-			   THE-TAG (top-tag-id) (S pair?)
+    (make-object-type-spec THE-TAG (top-tag-id) (S pair?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
@@ -567,8 +555,7 @@
       (else			#f)))
 
   (define type-spec
-    (make-object-type-spec (make-uid <string>)
-			   THE-TAG (top-tag-id) (S string?)
+    (make-object-type-spec THE-TAG (top-tag-id) (S string?)
 			   %constructor-maker
 			   %accessor-maker %mutator-maker
 			   %getter-maker %setter-maker
@@ -580,78 +567,61 @@
 (define (%initialise-some-compound-object-types)
 
   (set-identifier-object-type-spec! (S <vector>)
-    (make-object-type-spec 'vicare:expander:tags:<vector>
-			   (S <vector>) (top-tag-id) (S vector?)))
+    (make-object-type-spec (S <vector>) (top-tag-id) (S vector?)))
 
 ;;; --------------------------------------------------------------------
 
   (set-identifier-object-type-spec! (S <list>)
-    (make-object-type-spec 'vicare:expander:tags:<list>
-			   (S <list>) (S <pair>) (S list?)))
+    (make-object-type-spec (S <list>) (S <pair>) (S list?)))
 
   (set-identifier-object-type-spec! (S <bytevector>)
-    (make-object-type-spec 'vicare:expander:tags:<bytevector>
-			   (S <bytevector>) (top-tag-id) (S bytevector?)))
+    (make-object-type-spec (S <bytevector>) (top-tag-id) (S bytevector?)))
 
   (set-identifier-object-type-spec! (S <hashtable>)
-    (make-object-type-spec 'vicare:expander:tags:<hashtable>
-			   (S <hashtable>) (top-tag-id) (S hashtable?)))
+    (make-object-type-spec (S <hashtable>) (top-tag-id) (S hashtable?)))
 
   (set-identifier-object-type-spec! (S <struct>)
-    (make-object-type-spec 'vicare:expander:tags:<struct>
-			   (S <struct>) (top-tag-id) (S struct?)))
+    (make-object-type-spec (S <struct>) (top-tag-id) (S struct?)))
 
   (set-identifier-object-type-spec! (S <struct-type-descriptor>)
-    (make-object-type-spec 'vicare:expander:tags:<struct-type-descriptor>
-			   (S <struct-type-descriptor>) (S <struct>) (S struct-type-descriptor?)))
+    (make-object-type-spec (S <struct-type-descriptor>) (S <struct>) (S struct-type-descriptor?)))
 
   (set-identifier-object-type-spec! (S <record>)
-    (make-object-type-spec 'vicare:expander:tags:<record>
-			   (S <record>) (S <struct>) (S record?)))
+    (make-object-type-spec (S <record>) (S <struct>) (S record?)))
 
   (set-identifier-object-type-spec! (S <record-type-descriptor>)
-    (make-object-type-spec 'vicare:expander:tags:<record-type-descriptor>
-			   (S <record-type-descriptor>) (S <struct>) (S record-type-descriptor?)))
+    (make-object-type-spec (S <record-type-descriptor>) (S <struct>) (S record-type-descriptor?)))
 
   (void))
 
 
 (define (%initialise-numeric-object-types)
   (set-identifier-object-type-spec! (S <number>)
-    (make-object-type-spec 'vicare:expander:tags:<number>
-			   (S <number>) (top-tag-id) (S number?)))
+    (make-object-type-spec (S <number>) (top-tag-id) (S number?)))
 
   (set-identifier-object-type-spec! (S <complex>)
-    (make-object-type-spec 'vicare:expander:tags:<complex>
-			   (S <complex>) (S <number>) (S complex?)))
+    (make-object-type-spec (S <complex>) (S <number>) (S complex?)))
 
   (set-identifier-object-type-spec! (S <real-valued>)
-    (make-object-type-spec 'vicare:expander:tags:<real-valued>
-			   (S <real-valued>) (S <complex>) (S real-valued?)))
+    (make-object-type-spec (S <real-valued>) (S <complex>) (S real-valued?)))
 
   (set-identifier-object-type-spec! (S <real>)
-    (make-object-type-spec 'vicare:expander:tags:<real>
-			   (S <real>) (S <real-valued>) (S real?)))
+    (make-object-type-spec (S <real>) (S <real-valued>) (S real?)))
 
   (set-identifier-object-type-spec! (S <rational-valued>)
-    (make-object-type-spec 'vicare:expander:tags:<rational-valued>
-			   (S <rational-valued>) (S <real>) (S rational-valued?)))
+    (make-object-type-spec (S <rational-valued>) (S <real>) (S rational-valued?)))
 
   (set-identifier-object-type-spec! (S <rational>)
-    (make-object-type-spec 'vicare:expander:tags:<rational>
-			   (S <rational>) (S <rational-valued>) (S rational?)))
+    (make-object-type-spec (S <rational>) (S <rational-valued>) (S rational?)))
 
   (set-identifier-object-type-spec! (S <integer-valued>)
-    (make-object-type-spec 'vicare:expander:tags:<integer-valued>
-			   (S <integer-valued>) (S <rational-valued>) (S integer-valued?)))
+    (make-object-type-spec (S <integer-valued>) (S <rational-valued>) (S integer-valued?)))
 
   (set-identifier-object-type-spec! (S <integer>)
-    (make-object-type-spec 'vicare:expander:tags:<integer>
-			   (S <integer>) (S <rational-valued>) (S integer?)))
+    (make-object-type-spec (S <integer>) (S <rational-valued>) (S integer?)))
 
   (set-identifier-object-type-spec! (S <exact-integer>)
-    (make-object-type-spec 'vicare:expander:tags:<exact-integer>
-			   (S <exact-integer>) (S <integer>) (S exact-integer?)))
+    (make-object-type-spec (S <exact-integer>) (S <integer>) (S exact-integer?)))
 
 ;;; --------------------------------------------------------------------
 
@@ -673,8 +643,7 @@
       #f)
 
     (define type-spec
-      (make-object-type-spec 'vicare:expander:tags:<fixnum>
-			     (S <fixnum>) (S <exact-integer>) (S fixnum?)
+      (make-object-type-spec (S <fixnum>) (S <exact-integer>) (S fixnum?)
 			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
@@ -683,8 +652,7 @@
 ;;; --------------------------------------------------------------------
 
   (set-identifier-object-type-spec! (S <bignum>)
-    (make-object-type-spec 'vicare:expander:tags:<bignum>
-			   (S <bignum>) (S <exact-integer>) (S bignum?)))
+    (make-object-type-spec (S <bignum>) (S <exact-integer>) (S bignum?)))
 
 ;;; --------------------------------------------------------------------
 
@@ -768,8 +736,7 @@
 	(else #f)))
 
     (define type-spec
-      (make-object-type-spec 'vicare:expander:tags:<flonum>
-			     (S <flonum>) (S <real>) (S flonum?)
+      (make-object-type-spec (S <flonum>) (S <real>) (S flonum?)
 			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
@@ -789,8 +756,7 @@
       #f)
 
     (define type-spec
-      (make-object-type-spec 'vicare:expander:tags:<ratnum>
-			     (S <ratnum>) (S <rational>) (S ratnum?)
+      (make-object-type-spec (S <ratnum>) (S <rational>) (S ratnum?)
 			     #f %accessor-maker #f  #f #f
 			     #f %dispatcher))
 
@@ -799,64 +765,50 @@
 ;;; --------------------------------------------------------------------
 
   (set-identifier-object-type-spec! (S <compnum>)
-    (make-object-type-spec 'vicare:expander:tags:<compnum>
-			   (S <compnum>) (S <complex>) (S compnum?)))
+    (make-object-type-spec (S <compnum>) (S <complex>) (S compnum?)))
 
   (set-identifier-object-type-spec! (S <cflonum>)
-    (make-object-type-spec 'vicare:expander:tags:<cflonum>
-			   (S <cflonum>) (S <complex>) (S cflonum?)))
+    (make-object-type-spec (S <cflonum>) (S <complex>) (S cflonum?)))
 
   (void))
 
 
 (define (%initialise-input/output-port-object-types)
   (set-identifier-object-type-spec! (S <port>)
-    (make-object-type-spec 'vicare:expander:tags:<port>
-			   (S <port>) (top-tag-id) (S port?)))
+    (make-object-type-spec (S <port>) (top-tag-id) (S port?)))
 
   (set-identifier-object-type-spec! (S <input-port>)
-    (make-object-type-spec 'vicare:expander:tags:<input-port>
-			   (S <input-port>) (S <port>) (S input-port?)))
+    (make-object-type-spec (S <input-port>) (S <port>) (S input-port?)))
 
   (set-identifier-object-type-spec! (S <output-port>)
-    (make-object-type-spec 'vicare:expander:tags:<output-port>
-			   (S <output-port>) (S <port>) (S output-port?)))
+    (make-object-type-spec (S <output-port>) (S <port>) (S output-port?)))
 
   (set-identifier-object-type-spec! (S <input/output-port>)
-    (make-object-type-spec 'vicare:expander:tags:<input/output-port>
-			   (S <input/output-port>) (S <port>) (S input/output-port?)))
+    (make-object-type-spec (S <input/output-port>) (S <port>) (S input/output-port?)))
 
   (set-identifier-object-type-spec! (S <textual-port>)
-    (make-object-type-spec 'vicare:expander:tags:<textual-port>
-			   (S <textual-port>) (S <port>) (S textual-port?)))
+    (make-object-type-spec (S <textual-port>) (S <port>) (S textual-port?)))
 
   (set-identifier-object-type-spec! (S <binary-port>)
-    (make-object-type-spec 'vicare:expander:tags:<binary-port>
-			   (S <binary-port>) (S <port>) (S binary-port?)))
+    (make-object-type-spec (S <binary-port>) (S <port>) (S binary-port?)))
 
   (set-identifier-object-type-spec! (S <textual-input-port>)
-    (make-object-type-spec 'vicare:expander:tags:<textual-input-port>
-			   (S <textual-input-port>) (S <input-port>) (S textual-input-port?)))
+    (make-object-type-spec (S <textual-input-port>) (S <input-port>) (S textual-input-port?)))
 
   (set-identifier-object-type-spec! (S <textual-output-port>)
-    (make-object-type-spec 'vicare:expander:tags:<textual-output-port>
-			   (S <textual-output-port>) (S <output-port>) (S textual-output-port?)))
+    (make-object-type-spec (S <textual-output-port>) (S <output-port>) (S textual-output-port?)))
 
   (set-identifier-object-type-spec! (S <textual-input/output-port>)
-    (make-object-type-spec 'vicare:expander:tags:<textual-input/output-port>
-			   (S <textual-input/output-port>) (S <input/output-port>) (S textual-input/output-port?)))
+    (make-object-type-spec (S <textual-input/output-port>) (S <input/output-port>) (S textual-input/output-port?)))
 
   (set-identifier-object-type-spec! (S <binary-input-port>)
-    (make-object-type-spec 'vicare:expander:tags:<binary-input-port>
-			   (S <binary-input-port>) (S <input-port>) (S binary-input-port?)))
+    (make-object-type-spec (S <binary-input-port>) (S <input-port>) (S binary-input-port?)))
 
   (set-identifier-object-type-spec! (S <binary-output-port>)
-    (make-object-type-spec 'vicare:expander:tags:<binary-output-port>
-			   (S <binary-output-port>) (S <output-port>) (S binary-output-port?)))
+    (make-object-type-spec (S <binary-output-port>) (S <output-port>) (S binary-output-port?)))
 
   (set-identifier-object-type-spec! (S <binary-input/output-port>)
-    (make-object-type-spec 'vicare:expander:tags:<binary-input/output-port>
-			   (S <binary-input/output-port>) (S <input/output-port>) (S binary-input/output-port?)))
+    (make-object-type-spec (S <binary-input/output-port>) (S <input/output-port>) (S binary-input/output-port?)))
 
   (void))
 

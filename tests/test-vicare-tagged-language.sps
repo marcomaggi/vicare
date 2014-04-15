@@ -70,13 +70,13 @@
     (tag=tagging? <top> ?var))
 
   (typ.set-identifier-object-type-spec! #'<numbers>
-    (typ.make-object-type-spec '<numbers> #'<numbers> #'<list> #'numbers?))
+    (typ.make-object-type-spec #'<numbers> #'<list> #'numbers?))
 
   (typ.set-identifier-object-type-spec! #'<complexes>
-    (typ.make-object-type-spec '<complexes> #'<complexes> #'<numbers> #'complexes?))
+    (typ.make-object-type-spec #'<complexes> #'<numbers> #'complexes?))
 
   (typ.set-identifier-object-type-spec! #'<fixnums>
-    (typ.make-object-type-spec '<fixnums> #'<fixnums> #'<complexes> #'fixnums?))
+    (typ.make-object-type-spec #'<fixnums> #'<complexes> #'fixnums?))
 
   #| end of begin-for-syntax |# )
 

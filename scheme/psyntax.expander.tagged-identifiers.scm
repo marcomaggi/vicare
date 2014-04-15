@@ -121,11 +121,11 @@
    ))
 
 (case-define* make-object-type-spec
-  (({uid	symbol?}
-    {type-id	identifier-bound?}
+  (({type-id	identifier-bound?}
     {parent-id	tag-identifier?}
     {pred-stx	syntax-object?})
    (let* ((parent-spec (identifier-object-type-spec parent-id))
+	  (uid         (id->label type-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
 			     #f ;constructor-maker
@@ -137,8 +137,7 @@
 			     #f ;method-dispatcher
 			     parent-spec)))
 
-  (({uid	symbol?}
-    {type-id	identifier-bound?}
+  (({type-id	identifier-bound?}
     {parent-id	tag-identifier?}
     {pred-stx	syntax-object?}
     {construct	false-or-procedure?}
@@ -149,6 +148,7 @@
     {caster	false-or-procedure?}
     {dispatcher	false-or-procedure?})
    (let* ((parent-spec (identifier-object-type-spec parent-id))
+	  (uid         (id->label type-id))
 	  (uids        (list uid (object-type-spec-uids parent-spec))))
      (%make-object-type-spec uids type-id pred-stx
 			     construct accessor mutator getter setter caster dispatcher parent-spec))))
@@ -727,8 +727,7 @@
       ;;signature of a  closure object, so it is impossible  to properly validate it;
       ;;this is bad because  we pass on a value that is  not fully validated.  (Marco
       ;;Maggi; Fri Apr 4, 2014)
-      (let* ((uid   (gensym sym))
-	     (spec  (make-object-type-spec uid tag (procedure-tag-id) (procedure-pred-id))))
+      (let ((spec  (make-object-type-spec tag (procedure-tag-id) (procedure-pred-id))))
 	(set-identifier-object-type-spec! tag spec)
 	($putprop lab *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE* callable-signature))
       tag))

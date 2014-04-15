@@ -146,9 +146,7 @@
 (define-syntax <top>
   (let ()
     (typ.set-identifier-object-type-spec! #'<top>
-      (typ.make-object-type-spec 'nausicaa:builtin:<top>
-				 #'<top> #'typ.<top>
-				 #'<top>-predicate))
+      (typ.make-object-type-spec #'<top> #'typ.<top> #'<top>-predicate))
     (lambda (stx)
       ;;Tag syntax for "<top>", all the operations involving this tag go
       ;;through this syntax.  This tag is  the supertag of all the class
@@ -294,8 +292,7 @@
 (define-syntax <procedure>
   (let ()
     (typ.set-identifier-object-type-spec! #'<procedure>
-      (typ.make-object-type-spec 'nausicaa:builtin:<procedure>
-				 #'<procedure> #'<top> #'procedure?))
+      (typ.make-object-type-spec #'<procedure> #'<top> #'procedure?))
     (lambda (stx)
       (case-define synner
 	((message)
@@ -495,8 +492,7 @@
 		  (define (%dispatcher method-sym arg*.stx input-form-stx)
 		    #f)
 		  (define type-spec
-		    (typ.make-object-type-spec (quote NONGENERATIVE-UID)
-					       #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
+		    (typ.make-object-type-spec #'THE-TAG #'THE-PARENT #'THE-PUBLIC-PREDICATE
 					       %constructor-maker
 					       %accessor-maker %mutator-maker
 					       %getter-maker %setter-maker
@@ -854,8 +850,7 @@
 		  (define (%dispatcher method-sym arg*.stx input-form-stx)
 		    #f)
 		  (define type-spec
-		    (typ.make-object-type-spec (quote NONGENERATIVE-UID)
-					       #'THE-TAG #'THE-PARENT #'THE-PREDICATE
+		    (typ.make-object-type-spec #'THE-TAG #'THE-PARENT #'THE-PREDICATE
 					       %constructor-maker
 					       %accessor-maker %mutator-maker
 					       %getter-maker %setter-maker

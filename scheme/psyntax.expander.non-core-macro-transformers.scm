@@ -645,8 +645,7 @@
 	 #f)
 
        (define object-type-spec
-	 (typ.make-object-type-spec (quote ,uid)
-				    (syntax ,type.id) (typ.top-tag-id) (syntax ,predicate.id)
+	 (typ.make-object-type-spec (syntax ,type.id) (typ.top-tag-id) (syntax ,predicate.id)
 				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker ,%setter-maker
@@ -759,7 +758,7 @@
     (define object-type-spec-form
       ;;The object-type-spec stuff is used to  add a tag property to the
       ;;record type identifier.
-      (%make-object-type-spec-form foo make-foo foo? foo-parent foo-uid
+      (%make-object-type-spec-form foo make-foo foo? foo-parent
 				   x* foo-x* unsafe-foo-x*
 				   mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				   immutable-x*))
@@ -1197,7 +1196,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-object-type-spec-form foo make-foo foo? foo-parent foo-uid
+  (define (%make-object-type-spec-form foo make-foo foo? foo-parent
 				       x* foo-x* unsafe-foo-x*
 				       mutable-x* foo-x-set!* unsafe-foo-x-set!*
 				       immutable-x*)
@@ -1267,8 +1266,7 @@
 	    '(typ.top-tag-id)))
 
        (define object-type-spec
-	 (typ.make-object-type-spec (quote ,(or foo-uid (gensym)))
-				    (syntax ,foo) parent-id (syntax ,foo?)
+	 (typ.make-object-type-spec (syntax ,foo) parent-id (syntax ,foo?)
 				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker ,%setter-maker
