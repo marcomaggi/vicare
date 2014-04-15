@@ -6319,33 +6319,102 @@
   (let ((subst #f)
 	(scheme-stx-hashtable (make-eq-hashtable)))
     (lambda (sym)
-      (or (hashtable-ref scheme-stx-hashtable sym #f)
+      (or (getprop sym system-id-gensym)
+	  (hashtable-ref scheme-stx-hashtable sym #f)
 	  (cond ((assq sym (or subst
 			       (receive-and-return (S)
 				   (library-export-subst (find-library-by-name '(psyntax system $all)))
 				 (set! subst S))))
-		 ;;SYM  is the  name  of a  core  primitive, so  we  build a  bound
-		 ;;identifier with a proper "<rib>"  and the binding's label.  Such
-		 ;;bound identifier will be captured  by the entry in the top-level
+		 ;;SYM  is  the  name of  a  core  primitive,  so  we build  a  bound
+		 ;;identifier with  a proper "<rib>"  and the binding's  label.  Such
+		 ;;bound identifier  will be captured  by the entry in  the top-level
 		 ;;environment.
-		 => (lambda (subst.entry)
-		      (let ((name  (car subst.entry))
-			    (label (cdr subst.entry)))
-			(receive-and-return (stx)
-			    (make-<stx> name TOP-MARK*
-					(list (make-<rib> (list name)
-							  TOP-MARK**
-							  (list label)
-							  #f))
-					'())
-			  (hashtable-set! scheme-stx-hashtable sym stx)))))
+		 => (lambda (name.label)
+		      (receive-and-return (id)
+			  (make-<stx> (car name.label) TOP-MARK*
+				      (list (make-<rib> (list (car name.label))
+							TOP-MARK**
+							(list (cdr name.label))
+							#f))
+				      '())
+			(putprop sym system-id-gensym id))))
 		(else
-		 ;;SYM is not the name of a core primitive, so we just build a free
-		 ;;identifier.  Such free identifier will work just fine in binding
+		 ;;SYM is not the  name of a core primitive, so we  just build a free
+		 ;;identifier.  Such free  identifier will work just  fine in binding
 		 ;;position.
 		 (receive-and-return (stx)
 		     (make-<stx> sym TOP-MARK* '() '())
 		   (hashtable-set! scheme-stx-hashtable sym stx))))))))
+
+;; (define scheme-stx
+;;   ;;Take a symbol  and if it's in the library:
+;;   ;;
+;;   ;;   (psyntax system $all)
+;;   ;;
+;;   ;;create a fresh identifier that maps only the symbol to its label in that library.
+;;   ;;Symbols not in that library become fresh.
+;;   ;;
+;;   (let ((subst #f)
+;; 	(scheme-stx-hashtable (make-eq-hashtable)))
+;;     (lambda (sym)
+;;       (or (hashtable-ref scheme-stx-hashtable sym #f)
+;; 	  (cond ((assq sym (or subst
+;; 			       (receive-and-return (S)
+;; 				   (library-export-subst (find-library-by-name '(psyntax system $all)))
+;; 				 (set! subst S))))
+;; 		 ;;SYM  is  the  name of  a  core  primitive,  so  we build  a  bound
+;; 		 ;;identifier with  a proper "<rib>"  and the binding's  label.  Such
+;; 		 ;;bound identifier  will be captured  by the entry in  the top-level
+;; 		 ;;environment.
+;; 		 => (lambda (subst.entry)
+;; 		      (let ((name  (car subst.entry))
+;; 			    (label (cdr subst.entry)))
+;; 			(receive-and-return (stx)
+;; 			    (make-<stx> name TOP-MARK*
+;; 					(list (make-<rib> (list name)
+;; 							  TOP-MARK**
+;; 							  (list label)
+;; 							  #f))
+;; 					'())
+;; 			  (hashtable-set! scheme-stx-hashtable sym stx)))))
+;; 		(else
+;; 		 ;;SYM is not the  name of a core primitive, so we  just build a free
+;; 		 ;;identifier.  Such free  identifier will work just  fine in binding
+;; 		 ;;position.
+;; 		 (receive-and-return (stx)
+;; 		     (make-<stx> sym TOP-MARK* '() '())
+;; 		   (hashtable-set! scheme-stx-hashtable sym stx))))))))
+
+(define core-prim-id
+  ;;Take a symbol  and if it's in the library:
+  ;;
+  ;;   (psyntax system $all)
+  ;;
+  ;;create a fresh identifier that maps only the symbol to its label in that library.
+  ;;
+  (let ((subst #f))
+    (lambda (sym)
+      (or (getprop sym system-id-gensym)
+	  (cond ((assq sym (or subst
+			       (receive-and-return (S)
+				   (library-export-subst (find-library-by-name '(psyntax system $all)))
+				 (set! subst S))))
+		 ;;SYM  is  the  name of  a  core  primitive,  so  we build  a  bound
+		 ;;identifier with  a proper "<rib>"  and the binding's  label.  Such
+		 ;;bound identifier  will be captured  by the entry in  the top-level
+		 ;;environment.
+		 => (lambda (name.label)
+		      (receive-and-return (id)
+			  (make-<stx> (car name.label) TOP-MARK*
+				      (list (make-<rib> (list (car name.label))
+							TOP-MARK**
+							(list (cdr name.label))
+							#f))
+				      '())
+			(putprop sym system-id-gensym id))))
+		(else
+		 (assertion-violation 'core-prim-id
+		   "invalid core primitive symbol name" sym)))))))
 
 (let-syntax
     ((define-core-prim-id-retriever (syntax-rules ()
@@ -6355,7 +6424,7 @@
 					   (lambda ()
 					     (or memoized-id
 						 (receive-and-return (id)
-						     (scheme-stx '?core-prim)
+						     (core-prim-id '?core-prim)
 						   (set! memoized-id id))))))))))
   (define-core-prim-id-retriever underscore-id		_)
   (define-core-prim-id-retriever ellipsis-id		...)

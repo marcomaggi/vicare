@@ -39,12 +39,17 @@
     $symbol->string
     $getprop $putprop $remprop $property-list
 
-    ;; ???
-    unbound-object unbound-object?
-    top-level-value top-level-bound? set-top-level-value!
-    symbol-value symbol-bound? set-symbol-value! reset-symbol-proc!
-    system-value system-value-gensym
-    system-label system-label-gensym)
+
+    ;; internals handling of symbols and special symbols
+    unbound-object	unbound-object?
+    top-level-value	top-level-bound?	set-top-level-value!
+    symbol-value	symbol-bound?		set-symbol-value!
+    reset-symbol-proc!
+
+    ;; these will be exported by (vicare system $symbols)
+    system-value	system-value-gensym
+    system-label	system-label-gensym
+    system-id		system-id-gensym)
   (import (except (vicare)
 		  ;; R6RS functions
 		  symbol->string
@@ -60,11 +65,18 @@
 		  string-or-symbol->string
 		  string-or-symbol->symbol
 
-		  ;; ???
-		  top-level-value top-level-bound? set-top-level-value!
-		  unbound-object unbound-object?
-		  symbol-value symbol-bound? set-symbol-value!
-		  reset-symbol-proc! system-value
+		  ;; internals handling of symbols and special symbols
+		  unbound-object	unbound-object?
+		  symbol-value		symbol-bound?		set-symbol-value!
+
+		  ;;FIXME To be removed at the next boot image rotation,
+		  ;;because  these will  be exported  by (vicare  system
+		  ;;$symbols).  (Marco Maggi; Tue Apr 15, 2014)
+		  top-level-value	top-level-bound?	set-top-level-value!
+		  reset-symbol-proc!
+		  system-value		system-value-gensym
+		  system-label		system-label-gensym
+		  system-id		system-id-gensym
 
 		  ;; internal functions
 		  $unintern-gensym)
@@ -80,7 +92,8 @@
 	    $getprop $putprop $remprop $property-list
 	    $unintern-gensym
 	    system-value system-value-gensym
-	    system-label system-label-gensym))
+	    system-label system-label-gensym
+	    system-id    system-id-gensym))
 
 
 ;;;; helpers
@@ -314,6 +327,9 @@
 (define system-label-gensym
   (gensym "system-label-gensym"))
 
+(define system-id-gensym
+  (gensym "system-id-gensym"))
+
 (define* (system-value {x symbol?})
   ;;When  the boot  image is  loaded, it  initialises itself;  for every
   ;;primitive function (CONS, CAR, ...)  one of the operations is to put
@@ -342,18 +358,21 @@
 	      (receive-and-return (v)
 		  ($symbol-value g)
 		(when ($unbound-object? v)
-		  (procedure-argument-violation __who__
-		    "not a system symbol" x)))))
+		  (procedure-argument-violation __who__ "not a system symbol" x)))))
 	(else
 	 (procedure-argument-violation __who__ "not a system symbol" x))))
 
 (define* (system-label {x symbol?})
   ;;If  X is  the  symbol  name of  a  primitive  procedure: return  its
-  ;;syntactic binding label gensym.
+  ;;syntactic binding label gensym, otherwise return false.
   ;;
-  (cond ((getprop x system-label-gensym))
-	(else
-	 (procedure-argument-violation __who__ "not a system symbol" x))))
+  (getprop x system-label-gensym))
+
+(define* (system-id {x symbol?})
+  ;;If  X is  the  symbol  name of  a  primitive  procedure: return  its
+  ;;syntactic binding identifier, otherwise return false.
+  ;;
+  (getprop x system-id-gensym))
 
 
 ;;;; done

@@ -1190,7 +1190,6 @@
     replace-to-avoid-collecting
     reset-input-port!
     reset-output-port!
-    reset-symbol-proc!
     retrieve-to-avoid-collecting
     return
     run-compensations
@@ -1322,7 +1321,6 @@
     time-it
     time-nanosecond
     time-second
-    top-level-value
     let*-syntax
     let-constants
     let*-constants

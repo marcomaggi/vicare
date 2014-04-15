@@ -93,6 +93,7 @@
 
     ;; system stuff
     file-modification-time
+    system-id-gensym
 
     ;; library names and version numbers
     library-name?
@@ -150,8 +151,15 @@
     ;;libraries, when possible, rather  that using external libraries of
     ;;macros.
     (only (vicare system $symbols)
+	  ;;FIXME To  be uncommented  at the  next boot  image rotation.
+	  ;;(Marco Maggi; Tue Apr 15, 2014)
+	  #;system-id-gensym
 	  $unintern-gensym
 	  $putprop $getprop $remprop $property-list)
+    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
+    ;;Maggi; Tue Apr 15, 2014)
+    (only (ikarus.symbols)
+	  system-id-gensym)
     (only (vicare system $fx)
 	  $fx= $fx< $fx> $fx<= $fx>= $fxadd1
 	  $fxzero? $fxpositive? $fxnonnegative?)

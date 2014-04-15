@@ -24,7 +24,7 @@
 ;;;; helpers
 
 (define-syntax-rule (S ?sym)
-  (scheme-stx (quote ?sym)))
+  (core-prim-id (quote ?sym)))
 
 (define-syntax (M stx)
   (sys.syntax-case stx ()
@@ -47,9 +47,9 @@
   ;;Initialise a built-in tag with a basic "object-type-spec".
   ;;
   (let ((uid       (make-uid   name.sym))
-	(tag-id    (scheme-stx name.sym))
-	(parent-id (scheme-stx parent.sym))
-	(pred-id   (scheme-stx pred.sym)))
+	(tag-id    (core-prim-id name.sym))
+	(parent-id (core-prim-id parent.sym))
+	(pred-id   (core-prim-id pred.sym)))
     (set-identifier-object-type-spec! tag-id
       (make-object-type-spec uid tag-id parent-id pred-id))))
 
@@ -916,7 +916,7 @@
 				  (lambda ()
 				    (or memoized-id
 					(receive-and-return (id)
-					    (scheme-stx '?tag)
+					    (core-prim-id '?tag)
 					  (set! memoized-id id))))))))))
   (define-tag-retriever top-tag-id		<top>)
   (define-tag-retriever void-tag-id		<void>)
