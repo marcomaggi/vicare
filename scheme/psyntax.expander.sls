@@ -6337,6 +6337,20 @@
 							#f))
 				      '())
 			(putprop sym system-id-gensym id))))
+		#;((system-label sym)
+		 ;;SYM  is  the  name of  a  core  primitive,  so  we build  a  bound
+		 ;;identifier with  a proper "<rib>"  and the binding's  label.  Such
+		 ;;bound identifier  will be captured  by the entry in  the top-level
+		 ;;environment.
+		 => (lambda (label)
+		      (receive-and-return (id)
+			  (make-<stx> sym TOP-MARK*
+				      (list (make-<rib> (list sym)
+							TOP-MARK**
+							(list label)
+							#f))
+				      '())
+			(putprop sym system-id-gensym id))))
 		(else
 		 ;;SYM is not the  name of a core primitive, so we  just build a free
 		 ;;identifier.  Such free  identifier will work just  fine in binding

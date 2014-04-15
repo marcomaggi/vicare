@@ -212,9 +212,6 @@
   (cond ((null? check:failed)
 	 ;;Success for GNU Automake.
 	 (exit 0))
-	((null? check:failed)
-	 ;;Success for GNU Automake.
-	 (exit 0))
 	((not (null? check:failed))
 	 ;;Test failure for GNU Automake.
 	 (exit 1))

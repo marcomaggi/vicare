@@ -734,6 +734,9 @@
     (define-values (foo-parent parent-rtd-code parent-rcd-code)
       (%make-parent-rtd+rcd-code clause* synner))
 
+    ;;This can be  a symbol or false.  When  a symbol: the symbol is  the record type
+    ;;UID, which will make this record  type non-generative.  When false: this record
+    ;;type is generative.
     (define foo-uid
       (%get-uid foo clause* synner))
 
@@ -872,9 +875,9 @@
 	((_ ?uid)
 	 (identifier? ?uid)
 	 (syntax->datum ?uid))
-	;;No matching clause found.
+	;;No matching clause found.  This record type will be non-generative.
 	(#f
-	 (gensym (syntax->datum foo)))
+	 #f)
 	(_
 	 (synner "expected symbol or no argument in nongenerative clause" clause)))))
 
@@ -1264,7 +1267,7 @@
 	    '(typ.top-tag-id)))
 
        (define object-type-spec
-	 (typ.make-object-type-spec (quote ,foo-uid)
+	 (typ.make-object-type-spec (quote ,(or foo-uid (gensym)))
 				    (syntax ,foo) parent-id (syntax ,foo?)
 				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
