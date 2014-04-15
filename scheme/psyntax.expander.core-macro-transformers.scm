@@ -253,14 +253,25 @@
     ((_ ?test ?consequent)
      (let ((test.psi       (chi-expr ?test       lexenv.run lexenv.expand))
 	   (consequent.psi (chi-expr ?consequent lexenv.run lexenv.expand)))
-       ;;We build code to make the  one-armed IF always return void, since, according
-       ;;to R6RS, this syntax has unspecified return values.
+       ;;We build  code to  make the  one-armed IF  return void  if the  alternate is
+       ;;unspecified; according  to R6RS:
+       ;;
+       ;;* If  the test succeeds: the  return value must  be the return value  of the
+       ;;  consequent.
+       ;;
+       ;;* If the  test fails and there  *is* an alternate: the return  value must be
+       ;;  the return value of the alternate.
+       ;;
+       ;;* If the test fails and there is *no* alternate: this syntax has unspecified
+       ;;  return values.
+       ;;
+       ;;Notice that one-armed IF  is also used in the expansion  of WHEN and UNLESS;
+       ;;R6RS states that, for those syntaxes, when the body *is* executed the return
+       ;;value must be the return value of the last expression in the body.
        (make-psi input-form.stx
 		 (build-conditional no-source
 		   (psi-core-expr test.psi)
-		   (build-sequence no-source
-		     (list (psi-core-expr consequent.psi)
-			   (build-void)))
+		   (psi-core-expr consequent.psi)
 		   (build-void))
 		 (make-retvals-signature-single-top))))
     ))
