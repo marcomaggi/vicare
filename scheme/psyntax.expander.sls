@@ -6308,7 +6308,7 @@
     (debug-print 'bless-input  (syntax->datum input-form.stx)
 		 'bless-output (syntax->datum output-stx))))
 
-(define scheme-stx
+(define* (scheme-stx {sym symbol?})
   ;;Take a symbol  and if it's in the library:
   ;;
   ;;   (psyntax system $all)
@@ -6316,79 +6316,76 @@
   ;;create a fresh identifier that maps only the symbol to its label in that library.
   ;;Symbols not in that library become fresh.
   ;;
-  (let ((subst #f))
-    (lambda (sym)
-      (or (getprop sym system-id-gensym)
-	  (getprop sym '*vicare-scheme-temporary-variable-id*)
-	  (cond ((assq sym (or subst
-			       (receive-and-return (S)
-				   (library-export-subst (find-library-by-name '(psyntax system $all)))
-				 (set! subst S))))
-		 ;;SYM  is  the  name of  a  core  primitive,  so  we build  a  bound
-		 ;;identifier with  a proper "<rib>"  and the binding's  label.  Such
-		 ;;bound identifier  will be captured  by the entry in  the top-level
-		 ;;environment.
-		 => (lambda (name.label)
-		      (receive-and-return (id)
-			  (make-<stx> (car name.label) TOP-MARK*
-				      (list (make-<rib> (list (car name.label))
-							TOP-MARK**
-							(list (cdr name.label))
-							#f))
-				      '())
-			(putprop sym system-id-gensym id))))
-		#;((system-label sym)
-		 ;;SYM  is  the  name of  a  core  primitive,  so  we build  a  bound
-		 ;;identifier with  a proper "<rib>"  and the binding's  label.  Such
-		 ;;bound identifier  will be captured  by the entry in  the top-level
-		 ;;environment.
-		 => (lambda (label)
-		      (receive-and-return (id)
-			  (make-<stx> sym TOP-MARK*
-				      (list (make-<rib> (list sym)
-							TOP-MARK**
-							(list label)
-							#f))
-				      '())
-			(putprop sym system-id-gensym id))))
-		(else
-		 ;;SYM is not the  name of a core primitive, so we  just build a free
-		 ;;identifier.  Such free  identifier will work just  fine in binding
-		 ;;position.
-		 (receive-and-return (stx)
-		     (make-<stx> sym TOP-MARK* '() '())
-		   (putprop sym '*vicare-scheme-temporary-variable-id* stx))))))))
+  ;;NOTE  In the  original code,  the labels  of the  core primitives  were extracted
+  ;;directly from the export subst of the library (psyntax system $all); there was no
+  ;;SYSTEM-LABEL function back then.  There was a COND clause as follows:
+  ;;
+  ;;   ((assq sym (or subst
+  ;;                  (receive-and-return (S)
+  ;;                      (library-export-subst
+  ;;                       (find-library-by-name '(psyntax system $all)))
+  ;;                    (set! subst S))))
+  ;;    => (lambda (name.label)
+  ;;         (receive-and-return (id)
+  ;;             (make-<stx> (car name.label) TOP-MARK*
+  ;;                         (list (make-<rib> (list (car name.label))
+  ;;                                           TOP-MARK**
+  ;;                                           (list (cdr name.label))
+  ;;                                           #f))
+  ;;                         '())
+  ;;           (putprop sym system-id-gensym id))))
+  ;;
+  ;;where SUBST  is a variable  SCHEME-STX was closed upon.   I am keeping  this code
+  ;;here as reference (sue me!).  (Marco Maggi; Tue Apr 15, 2014)
+  ;;
+  (or (getprop sym system-id-gensym)
+      (getprop sym '*vicare-scheme-temporary-variable-id*)
+      (cond ((system-label sym)
+	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
+	     ;;with a proper "<rib>" and  the binding's label.  Such bound identifier
+	     ;;will be captured by the entry in the top-level environment.
+	     => (lambda (label)
+		  (receive-and-return (id)
+		      (make-<stx> sym TOP-MARK*
+				  (list (make-<rib> (list sym)
+						    TOP-MARK**
+						    (list label)
+						    #f))
+				  '())
+		    (putprop sym system-id-gensym id))))
+	    (else
+	     ;;SYM is  not the  name of  a core primitive,  so we  just build  a free
+	     ;;identifier.   Such free  identifier  will work  just  fine in  binding
+	     ;;position.
+	     (receive-and-return (stx)
+		 (make-<stx> sym TOP-MARK* '() '())
+	       (putprop sym '*vicare-scheme-temporary-variable-id* stx))))))
 
-(define core-prim-id
+(define* (core-prim-id {sym symbol?})
   ;;Take a symbol  and if it's in the library:
   ;;
   ;;   (psyntax system $all)
   ;;
   ;;create a fresh identifier that maps only the symbol to its label in that library.
+  ;;This function is  similar to SCHEME-STX, but it does  no create fresh identifiers
+  ;;for non-core-primitive symbols.
   ;;
-  (let ((subst #f))
-    (lambda (sym)
-      (or (getprop sym system-id-gensym)
-	  (cond ((assq sym (or subst
-			       (receive-and-return (S)
-				   (library-export-subst (find-library-by-name '(psyntax system $all)))
-				 (set! subst S))))
-		 ;;SYM  is  the  name of  a  core  primitive,  so  we build  a  bound
-		 ;;identifier with  a proper "<rib>"  and the binding's  label.  Such
-		 ;;bound identifier  will be captured  by the entry in  the top-level
-		 ;;environment.
-		 => (lambda (name.label)
-		      (receive-and-return (id)
-			  (make-<stx> (car name.label) TOP-MARK*
-				      (list (make-<rib> (list (car name.label))
-							TOP-MARK**
-							(list (cdr name.label))
-							#f))
-				      '())
-			(putprop sym system-id-gensym id))))
-		(else
-		 (assertion-violation 'core-prim-id
-		   "invalid core primitive symbol name" sym)))))))
+  (or (getprop sym system-id-gensym)
+      (cond ((system-label sym)
+	     ;;SYM is the  name of a core  primitive, so we build  a bound identifier
+	     ;;with a proper "<rib>" and  the binding's label.  Such bound identifier
+	     ;;will be captured by the entry in the top-level environment.
+	     => (lambda (label)
+		  (receive-and-return (id)
+		      (make-<stx> sym TOP-MARK*
+				  (list (make-<rib> (list sym)
+						    TOP-MARK**
+						    (list label)
+						    #f))
+				  '())
+		    (putprop sym system-id-gensym id))))
+	    (else
+	     (assertion-violation __who__ "invalid core primitive symbol name" sym)))))
 
 (let-syntax
     ((define-core-prim-id-retriever (syntax-rules ()
