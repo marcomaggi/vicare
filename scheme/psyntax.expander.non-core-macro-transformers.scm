@@ -2315,7 +2315,7 @@
       (syntax-match ?clause (brace)
 	;;Return value predicates.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
+	 (and (underscore-id? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
 	 (%generate-case-define-clause-form/with-ret-pred ?who (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
@@ -2366,7 +2366,7 @@
       (syntax-match stx (brace)
 	;;Ret-pred with list spec.
 	((?kwd ((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
+	 (and (underscore-id? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
 	 (%generate-lambda-output-form/with-ret-pred ?kwd (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* %synner))
@@ -2430,7 +2430,7 @@
       (syntax-match ?clause (brace)
 	;;Ret-pred with list spec.
 	((((brace ?underscore ?ret-pred0 ?ret-pred* ...) . ?formals) ?body0 ?body* ...)
-	 (and (%underscore? ?underscore)
+	 (and (underscore-id? ?underscore)
 	      (identifier? ?ret-pred0)
 	      (for-all identifier? ?ret-pred*))
 	 (%generate-case-lambda-clause-form/with-ret-pred ?ctx (cons ?ret-pred0 ?ret-pred*) ?formals ?body0 ?body* synner))
@@ -2636,10 +2636,6 @@
 			   (list (quote ,?pred) ,?ret)))))
 	       retval-validation-spec*))
       '(void)))
-
-  (define (%underscore? stx)
-    (and (identifier? stx)
-	 (free-identifier=? stx (scheme-stx '_))))
 
   #| end of module |# )
 
@@ -3435,7 +3431,7 @@
     ;;
     ;;where KEY is one of: quasiquote, unquote, unquote-splicing.
     ;;
-    (list (scheme-stx 'quote) (mkstx key TOP-MARK* '() '())))
+    (list (core-prim-id 'quote) (mkstx key TOP-MARK* '() '())))
 
   (define-syntax %application
     ;;Expand to an expression which, when evaluated, results in a syntax

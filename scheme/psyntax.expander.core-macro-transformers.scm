@@ -1088,7 +1088,7 @@
        (and (identifier? ?pattern)
 	    (not (bound-id-member? ?pattern literals))
 	    (not (ellipsis? ?pattern)))
-       (if (free-id=? ?pattern (scheme-stx '_))
+       (if (underscore-id? ?pattern)
 	   ;;The clause is:
 	   ;;
 	   ;;   (_ ?output-expr)
@@ -1432,7 +1432,7 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   (%struct-type-id->rtd __who__ input-form.stx ?type-id lexenv.run))
-		 (make-retvals-signature (list (scheme-stx '<struct-type-descriptor>)))))
+		 (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
       ))
 
   (define (struct-type-and-struct?-transformer input-form.stx lexenv.run lexenv.expand)
@@ -1703,7 +1703,7 @@
 	(make-psi input-form.stx
 		  (build-data no-source
 		    (syntactic-binding-value binding))
-		  (make-retvals-signature (list (scheme-stx '<struct-type-descriptor>)))))
+		  (make-retvals-signature-single-value (core-prim-id '<struct-type-descriptor>))))
        ((object-type-spec)
 	(make-psi input-form.stx
 		  (build-data no-source
@@ -2031,12 +2031,11 @@
     ;;       ?check-form ...
     ;;       (void)))
     ;;
-    (let* ((call.psi     (chi-expr (bless 'call-with-values) lexenv.run lexenv.expand))
-	   (call.core    (psi-core-expr call.psi))
+    (let* ((cwv.core     (build-primref no-source 'call-with-values))
 	   (checker.core (psi-core-expr checker.psi)))
       (make-psi input-form.stx
 		(build-application no-source
-		  call.core
+		  cwv.core
 		  (list (build-lambda no-source '() expr.core)
 			checker.core))
 		;;We know that we are returning a single void argument.
@@ -2184,8 +2183,7 @@
     ;;
     ;;The returned PSI struct has the given retvals signature.
     ;;
-    (let* ((cwv.psi      (chi-expr (scheme-stx 'call-with-values) lexenv.run lexenv.expand))
-	   (cwv.core     (psi-core-expr cwv.psi))
+    (let* ((cwv.core     (build-primref no-source 'call-with-values))
 	   (expr.core    (psi-core-expr expr.psi))
 	   (checker.core (psi-core-expr checker.psi)))
       (make-psi input-form.stx
@@ -2512,11 +2510,11 @@
     ;;
     ((_ (?define . ?stuff))
      (and (identifier? ?define)
-	  (or (free-id=? ?define (scheme-stx 'define))
-	      (free-id=? ?define (scheme-stx 'define*))))
-     (let* ((expr.stx `(,(scheme-stx 'internal-body)
+	  (or (free-id=? ?define (core-prim-id 'define))
+	      (free-id=? ?define (core-prim-id 'define*))))
+     (let* ((expr.stx `(,(core-prim-id 'internal-body)
 			(,?define . ,?stuff)
-			(,(scheme-stx 'void))))
+			(,(core-prim-id 'void))))
 	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sexp (core-language->sexp expr.core)))
