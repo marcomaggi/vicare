@@ -10,11 +10,65 @@ defined by @rnrs{6} that allows the definition of tagged bindings.
 @end quotation
 
 @menu
+* tagged intro::                Introduction to the tagged language.
 * tagged concepts::             Tagged language concepts.
 * tagged parsers::              Parsing tagged syntaxes.
 * tagged bindings::             Tagged language binding properties.
 * tagged object specs::         Object type specification.
 @end menu
+
+@c page
+@node tagged intro
+@section Introduction to the tagged language
+
+
+@value{PRJNAME}'s tagged language adds some expand--time binding type
+checking and extended syntax @oop{} syntax to the language specified by
+@rnrs{6}; the result is a Scheme language dialect in which the code
+writer must explicitly write the type identifiers, there is, in
+practice, @strong{no} type inference.
+
+Tagged language extensions are @strong{off} by default.  To enable the
+extensions in libraries we have to use the @code{tagged-language} and
+@code{visit-upon-loading} options as follows (@pxref{iklib syntaxes
+libraries, Extended @code{library} syntax}):
+
+@example
+(library (demo)
+  (options tagged-language visit-upon-loading)
+  (export)
+  (import (vicare))
+  ---)
+@end example
+
+To enable the extensions in programs we have to use the
+@code{tagged-language} option as follows (@pxref{iklib syntaxes
+programs, Extended program syntax}):
+
+@example
+(import (vicare))
+(options tagged-language)
+---
+@end example
+
+The declaration of types makes use of the @func{brace} syntax
+(@pxref{iklib syntaxes misc, brace}) as follows:
+
+@example
+(define (brace O <fixnum>)
+  123)
+@end example
+
+@noindent
+to use the extensions in a friendly manner we need to put the reader in
+@samp{#!vicare} mode; this way @func{brace} can be inserted using actual
+brace characters, as follows:
+
+@example
+#!vicare
+(define @{O <fixnum>@}
+  123)
+@end example
 
 @c page
 @node tagged concepts
