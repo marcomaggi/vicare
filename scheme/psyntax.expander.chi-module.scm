@@ -1072,16 +1072,9 @@
        (identifier? ?member)
        ;;There are  operands and  they match  the syntax for  a tag  dispatcher call,
        ;;that's great.
-       (let* ((method.stx  (tag-identifier-dispatch rator.tag ?member ?arg* input-form.stx))
-	      (method.psi  (while-not-expanding-application-first-subform
-			    (chi-expr method.stx lexenv.run lexenv.expand)))
-	      (method.core (psi-core-expr method.psi))
-	      (rator.core  (psi-core-expr rator.psi)))
-	 (make-psi input-form.stx
-		   (build-application (syntax-annotation input-form.stx)
-		     method.core
-		     (list rator.core))
-		   (psi-application-retvals-signature method.psi))))
+       (let ((method.stx (tag-identifier-dispatch rator.tag ?member input-form.stx)))
+	 (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+					    method.stx rator.psi ?arg*)))
 
       (_
        ;;There are operands, but they do not match any of the supported syntaxes; for

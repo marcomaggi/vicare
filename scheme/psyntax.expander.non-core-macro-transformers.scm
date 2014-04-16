@@ -594,8 +594,6 @@
       (string->symbol (string-append type.str "-getter-maker")))
     (define %setter-maker
       (string->symbol (string-append type.str "-setter-maker")))
-    (define %dispatcher
-      (string->symbol (string-append type.str "-dispatcher")))
     `(internal-body
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
@@ -640,16 +638,14 @@
 	    (%invalid-keys))))
 
        (define %caster-maker #f)
-
-       (define (,%dispatcher method-id arg*.stx input-form.stx)
-	 #f)
+       (define %dispatcher   #f)
 
        (define object-type-spec
 	 (typ.make-object-type-spec (syntax ,type.id) (typ.top-tag-id) (syntax ,predicate.id)
 				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
-				    ,%getter-maker ,%setter-maker
-				    %caster-maker ,%dispatcher))
+				    ,%getter-maker   ,%setter-maker
+				    %caster-maker    %dispatcher))
 
        (typ.set-identifier-object-type-spec! (syntax ,type.id) object-type-spec)))
 
@@ -1212,8 +1208,6 @@
       (string->symbol (string-append type.str "-getter-maker")))
     (define %setter-maker
       (string->symbol (string-append type.str "-setter-maker")))
-    (define %dispatcher
-      (string->symbol (string-append type.str "-dispatcher")))
     `(internal-body
        (import (vicare)
 	 (prefix (vicare expander object-type-specs) typ.))
@@ -1256,9 +1250,7 @@
 	   (else #f)))
 
        (define %caster-maker #f)
-
-       (define (,%dispatcher method.sym arg*.stx input-form-stx)
-	 #f)
+       (define %dispatcher   #f)
 
        (define parent-id
 	 ,(if foo-parent
@@ -1269,8 +1261,8 @@
 	 (typ.make-object-type-spec (syntax ,foo) parent-id (syntax ,foo?)
 				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
-				    ,%getter-maker ,%setter-maker
-				    %caster-maker ,%dispatcher))
+				    ,%getter-maker   ,%setter-maker
+				    %caster-maker    %dispatcher))
 
        (typ.set-identifier-object-type-spec! (syntax ,foo) object-type-spec)))
 

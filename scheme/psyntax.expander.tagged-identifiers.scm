@@ -325,9 +325,9 @@
   (define-fluid-override __who__
     (identifier-syntax 'tag-identifier-dispatch))
 
-  (define* (tag-identifier-dispatch {tag tag-identifier?} {member.id identifier?} arg*.stx {input-form.stx syntax-object?})
-    ;;Given  a   tag  identifier   and  an  identifier:   search  the   hierarchy  of
-    ;;"object-type-spec" associated to TAG-ID for a dispatcher accepting MEMBER.ID as
+  (define* (tag-identifier-dispatch {tag tag-identifier?} {member.id identifier?} {input-form.stx syntax-object?})
+    ;;Given  a tag  identifier  and  a member  identifier:  search  the hierarchy  of
+    ;;"object-type-spec" associated  to TAG for  a dispatcher accepting  MEMBER.ID as
     ;;method name  or, if not found,  an accessor maker accepting  MEMBER.ID as field
     ;;name.  If successful: return a  syntax object representing an expression which,
     ;;expanded by  itself and evaluated, will  return the method or  the accessor; if
@@ -339,7 +339,7 @@
     ;;
     ;;where: ?EXPR  is an expression of  type TAG; ?MEMBER is  an identifier matching
     ;;the name  of a method or  field of TAG or  one of its supertags  (the MEMBER.ID
-    ;;argument); the ?ARG are additional operands (the ARG*.STX argument).
+    ;;argument); the ?ARG are additional operands.
     ;;
     (cond ((tag-super-and-sub? (procedure-tag-id) tag)
 	   input-form.stx)
@@ -347,36 +347,28 @@
 	   (%error-invalid-tagged-syntax input-form.stx))
 	  (else
 	   (%try-dispatcher ($identifier-object-type-spec tag) (syntax->datum member.id)
-			    arg*.stx input-form.stx))))
+			    input-form.stx))))
 
-  (define (%try-dispatcher spec member.sym arg*.stx input-form.stx)
+  (define (%try-dispatcher spec member.sym input-form.stx)
     (cond ((not spec)
+	   ;;If   we  wre   here:  we   have   climbed  upwards   the  hierarchy   of
+	   ;;"object-type-spec" until "<top>" was found;  "<top>" has no parent.  The
+	   ;;expression in the tagged syntax has no matching methor nor field.
 	   (%error-invalid-tagged-syntax input-form.stx))
 	  (($object-type-spec-dispatcher spec)
 	   => (lambda (dispatcher)
-		(or (dispatcher member.sym arg*.stx input-form.stx)
-		    (%try-accessor spec member.sym arg*.stx input-form.stx))))
+		(or (dispatcher member.sym input-form.stx)
+		    (%try-accessor spec member.sym input-form.stx))))
 	  (else
-	   (%try-accessor spec member.sym arg*.stx input-form.stx))))
+	   (%try-accessor spec member.sym input-form.stx))))
 
-  (define (%try-accessor spec member.sym arg*.stx input-form.stx)
+  (define (%try-accessor spec member.sym input-form.stx)
     (define (%try-parent-dispatcher)
-      (%try-dispatcher ($object-type-spec-parent-spec spec) member.sym arg*.stx input-form.stx))
-    (cond ((not spec)
-	   (syntax-violation __who__ "invalid tagged"))
-	  (($object-type-spec-accessor-maker spec)
+      (%try-dispatcher ($object-type-spec-parent-spec spec) member.sym input-form.stx))
+    (cond (($object-type-spec-accessor-maker spec)
 	   => (lambda (accessor-maker)
-		(cond ((accessor-maker member.sym input-form.stx)
-		       => (lambda (accessor-stx)
-			    (syntax-match arg*.stx ()
-			      (()
-			       accessor-stx)
-			      (_
-			       (syntax-violation __who__
-				 "invalid additional operands for field accessor"
-				 input-form.stx arg*.stx)))))
-		      (else
-		       (%try-parent-dispatcher)))))
+		(or (accessor-maker member.sym input-form.stx)
+		    (%try-parent-dispatcher))))
 	  (else
 	   ;;There is no accessor maker, try the parent's dispatcher.
 	   (%try-parent-dispatcher))))

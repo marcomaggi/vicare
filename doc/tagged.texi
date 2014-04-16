@@ -1627,15 +1627,11 @@ The setter maker implementation can be:
 
 When the specified object type has methods: the methods dispatcher is a
 function accepting 2 arguments and returning a single value; otherwise
-it is @false{}.  The accessor maker arguments are:
+it is @false{}.  The dispatcher arguments are:
 
 @enumerate
 @item
 A symbol representing a method name.
-
-@item
-A syntax object representing a, possibly empty, proper list of
-additional arguments.
 
 @item
 A syntax object representing the form which originated this dispatcher
@@ -1645,11 +1641,11 @@ object.
 @end enumerate
 
 When the method name is recognised and valid: the dispatcher must return
-a syntax object representing an expression evaluating to a method
-procedure embedding the additional arguments.  It is a syntax object
-(wrapped or unwrapped) representing an expression; expanded by itself
-and evaluated it must return a callable object: a function accepting as
-single argument the object instance and returning any tuple of values.
+a syntax object representing the method.  It is a syntax object (wrapped
+or unwrapped) representing an expression; expanded by itself and
+evaluated it must return a callable object: a function accepting as
+first argument the object instance, optional additional arguments, and
+returning any tuple of values.
 
 When the method name is unknown: the dispatcher must return @false{}; in
 this case:
@@ -1677,23 +1673,18 @@ The method dispatcher is used to implement the expansions:
 @example
 (O string) @expansion{} (<color>-string O)
 (O shift 1 2 3)
-@expansion{} ((lambda (self)
-       (<color>-shift self 1 2 3))
-     O)
+@expansion{} (<color>-shift O 1 2 3)
 @end example
 
 @noindent
 and its implementation can be:
 
 @example
-(define (dispatcher method-name arg*.stx input-form.stx)
-  (case method-name
-    ((string)
-     #'<color>-string)
-    ((shift)
-     #`(lambda (@{_ <fixnum>@} @{self <color>@})
-         (<color>-shift self . #,arg*.stx)))
-    (else #f)))
+(define (dispatcher method-name.sym input-form.stx)
+  (case method-name.sym
+    ((string)   #'<color>-string)
+    ((shift)    #'<color>-shift)
+    (else       #f)))
 @end example
 
 @c page

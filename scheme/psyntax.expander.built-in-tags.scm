@@ -26,19 +26,8 @@
 (define-syntax-rule (S ?sym)
   (core-prim-id (quote ?sym)))
 
-(define-syntax (M stx)
-  (sys.syntax-case stx ()
-    ((_ ?method)
-     (sys.with-syntax
-	 ((ARGS (datum->syntax (sys.syntax ?method) 'arg*.stx)))
-       (sys.syntax (bless
-		    (quasiquote
-		     (lambda (O)
-		       (?method O . (unquote ARGS))))))))
-    ))
-
-(define-syntax-rule (make-uid ?tag)
-  (%make-uid (quote ?tag)))
+(define-syntax-rule (M ?sym)
+  (core-prim-id (quote ?sym)))
 
 (define (%basic name.sym parent.sym pred.sym)
   ;;Initialise a built-in tag with a basic "object-type-spec".
@@ -104,7 +93,7 @@
 ;; 		 "invalid cast source object type" input-form.stx source.tag)))
 ;;       (S any->object)))
 ;;
-;;   (define (%dispatcher method-sym arg*.stx input-form.stx)
+;;   (define (%dispatcher method-sym input-form.stx)
 ;;     (case method.sym
 ;;       ((putprop)		(M putprop))
 ;;       (else #f)))
@@ -215,7 +204,7 @@
 	       (syntax-violation __who__ "invalid cast source object type" input-form.stx source.tag)))
       (S any->symbol)))
 
-  (define (%dispatcher method.sym arg*.stx input-form.stx)
+  (define (%dispatcher method.sym input-form.stx)
     (case method.sym
       ((putprop)	(M putprop))
       ((getprop)	(M getprop))
@@ -297,7 +286,7 @@
   (define %setter-maker		#f)
   (define %caster-maker		#f)
 
-  (define (%dispatcher method.sym arg*.stx input-form.stx)
+  (define (%dispatcher method.sym input-form.stx)
     (case method.sym
       ((=)		(M pointer=?))
       ((!=)		(M pointer!=?))
@@ -543,7 +532,7 @@
 	       (syntax-violation __who__ "invalid cast source object type" input-form.stx source-tag)))
       (S any->string)))
 
-  (define (%dispatcher method.sym arg*.stx input-form.stx)
+  (define (%dispatcher method.sym input-form.stx)
     (case method.sym
       ((hash)			(M string-hash))
       ((substring)		(M substring))
@@ -639,7 +628,7 @@
 	(else
 	 (syntax-violation '<fixnum> "unknown field name" input-form.stx field.sym))))
 
-    (define (%dispatcher method.sym arg*.stx input-form.stx)
+    (define (%dispatcher method.sym input-form.stx)
       #f)
 
     (define type-spec
@@ -675,7 +664,7 @@
 	(else
 	 (syntax-violation '<flonum> "unknown field name" input-form.stx field.sym))))
 
-    (define (%dispatcher method.sym arg*.stx input-form.stx)
+    (define (%dispatcher method.sym input-form.stx)
       (case method.sym
 	((string)				(M flonum->string))
 	;; methods: arithmetic functions
@@ -752,7 +741,7 @@
 	(else
 	 (syntax-violation '<ratnum> "unknown field name" input-form.stx field.sym))))
 
-    (define (%dispatcher method.sym arg*.stx input-form.stx)
+    (define (%dispatcher method.sym input-form.stx)
       #f)
 
     (define type-spec

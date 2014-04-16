@@ -2359,16 +2359,9 @@
 	  (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
 	(syntax-match (retvals-signature-tags expr.sign) ()
 	  ((?tag)
-	   (let* ((method.stx  (tag-identifier-dispatch ?tag ?member ?arg* input-form.stx))
-		  (method.psi  (chi-expr method.stx lexenv.run lexenv.expand))
-		  (method.core (psi-core-expr method.psi))
-		  (expr.core   (psi-core-expr expr.psi)))
-	     (make-psi input-form.stx
-		       (build-application (syntax-annotation input-form.stx)
-			 method.core
-			 (list expr.core))
-		       (psi-application-retvals-signature method.psi))))
-
+	   (let ((method.stx (tag-identifier-dispatch ?tag ?member input-form.stx)))
+	     (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						method.stx expr.psi ?arg*)))
 	  (_
 	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
 	  ))))
