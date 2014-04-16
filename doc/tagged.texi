@@ -11,7 +11,6 @@ defined by @rnrs{6} that allows the definition of tagged bindings.
 
 @menu
 * tagged intro::                Introduction to the tagged language.
-* tagged concepts::             Tagged language concepts.
 * tagged parsers::              Parsing tagged syntaxes.
 * tagged bindings::             Tagged language binding properties.
 * tagged object specs::         Object type specification.
@@ -27,6 +26,17 @@ checking and extended syntax @oop{} syntax to the language specified by
 @rnrs{6}; the result is a Scheme language dialect in which the code
 writer must explicitly write the type identifiers, there is, in
 practice, @strong{no} type inference.
+
+@menu
+* tagged intro enabling::       Enabling tagged language extensions.
+* tagged intro tag id::         Tag identifiers.
+* tagged intro tagged id::      Tagged identifiers.
+@end menu
+
+@c page
+@node tagged intro enabling
+@subsection Enabling tagged language extensions
+
 
 Tagged language extensions are @strong{off} by default.  To enable the
 extensions in libraries we have to use the @code{tagged-language} and
@@ -71,18 +81,18 @@ brace characters, as follows:
 @end example
 
 @c page
-@node tagged concepts
-@section Tagged language concepts
+@node tagged intro tag id
+@subsection Tag identifiers
 
 
-@subsubheading Tag identifiers
+Technically, a @dfn{tag identifier} is a bound identifier whose
+syntactic binding label gensym has a specific entry in its property
+list, such entry has an instance of @objtype{object-type-spec} as value;
+tag identifiers must be bound (otherwise they do not have a syntactic
+binding label), but it does not matter to what they are bound.  Tag
+identifiers represent data types.
 
-A @dfn{tag identifier} is a bound identifier whose syntactic binding
-label gensym has a specific entry in its property list; such entry has
-an instance of @code{object-type-spec} as value.  Tag identifiers must
-be bound (otherwise they do not have a syntactic binding label), but it
-does not matter to what they are bound.  Typical examples of tag
-identifiers are:
+Typical examples of tag identifiers are:
 
 @itemize
 @item
@@ -95,44 +105,32 @@ they are automatically made tag identifiers by @value{PRJNAME}.
 
 @item
 A set of non--core macro identifiers (whose implementation is integrated
-in the expander) are exported by the library @library{vicare expander
-tags} to be the tags of built--in @value{PRJNAME} objects.  Some of them
-are: @class{fixnum}, @class{string}, @class{vector},
+in @value{PRJNAME}'s expander) are exported by the library
+@library{vicare expander tags} to be the tags of built--in objects.
+Some of them are: @class{fixnum}, @class{string}, @class{vector},
 @class{textual-input-port}.
 @end itemize
 
-We can easily create a tag identifier as:
+Other tag identifiers can be created using the @api{} exported by the
+library @library{vicare expander object-type-specs}.
 
-@example
-(import (vicare)
-  (vicare expander tags)
-  (for (prefix (vicare expander object-type-specs) typ.)
-    expand))
-
-(define-syntax <my-tag>
-  (let ()
-    (set-identifier-tag! #'<my-tag>
-      (make-object-type-spec #'<my-tag> #'<top> ...))
-    (lambda (x) #f)))
-@end example
-
-@noindent
-where @class{my-tag} is a tag identifier and @class{top} is its parent
-tag.  Tag identifiers are organised in a tree hierarchy, with subtags
+Tag identifiers are organised in a tree hierarchy, with subtags
 inheriting properties of supertags; by convention, @class{top} is the
 parent of all the tag identifiers, the root of the tree; @class{top} has
 no parent.
 
-@c ------------------------------------------------------------
+@c page
+@node tagged intro tagged id
+@subsection Tagged identifiers
 
-@subsubheading Tagged identifier
 
-A @dfn{tagged identifier} is a bound identifier whose syntactic binding
-label gensym has a specific entry in its property list; such entry has a
-tag identifier as value.  Tagged identifiers must be bound (otherwise
-they do not have a syntactic binding label).  Tagged identifiers are
-created by the built--in binding syntaxes @func{lambda}, @func{define},
-@func{let}, @func{letrec}, @func{let-values}, etc.
+Technically, a @dfn{tagged identifier} is a bound identifier whose
+syntactic binding label gensym has a specific entry in its property
+list, such entry has a tag identifier as value; tagged identifiers must
+be bound (otherwise they do not have a syntactic binding label) and they
+must be bound to lexical variables.  Tagged identifiers are created by
+the built--in binding syntaxes @func{lambda}, @func{define}, @func{let},
+@func{letrec}, @func{let-values}, etc.
 
 An example of tagged binding creation follows:
 
@@ -140,6 +138,7 @@ An example of tagged binding creation follows:
 #!vicare
 (import (vicare)
   (vicare expander tags))
+(options tagged-language)
 
 (define @{O <fixnum>@}
   123)
