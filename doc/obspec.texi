@@ -2,10 +2,14 @@
 @chapter Internals of tagged language
 
 
+The library @library{vicare expander object-type-specs} defines the
+low--level @api{} used to define and inspect new data types and tag
+identifiers.
+
 @menu
 * obspec parsers::              Parsing tagged syntaxes.
 * obspec bindings::             Tagged language binding properties.
-* obspec object specs::         Object type specification.
+* obspec definition::           Object type specification.
 @end menu
 
 @c page
@@ -1171,17 +1175,17 @@ identifier: an exception is raised.
 @end defun
 
 @c page
-@node obspec object specs
+@node obspec definition
 @section Object type specification
 
 
 @menu
-* obspec object specs intro::   Introduction to object types specification.
-* obspec object specs descr::   Object type descriptor.
+* obspec definition intro::   Introduction to object types specification.
+* obspec definition descr::   Object type descriptor.
 @end menu
 
 @c page
-@node obspec object specs intro
+@node obspec definition intro
 @subsection Introduction to object types specification
 
 
@@ -1222,17 +1226,17 @@ the definitions:
 and the fields are meant to hold fixnums.
 
 @menu
-* obspec object specs intro predicate::  Predicate syntax object.
-* obspec object specs intro accessor::   Field accessor maker.
-* obspec object specs intro mutator::    Field mutator maker.
-* obspec object specs intro getter::     Property getter maker.
-* obspec object specs intro setter::     Property setter maker.
-* obspec object specs intro dispatcher:: Method dispatcher.
-* obspec object specs intro caster::     Object type caster.
+* obspec definition intro predicate::  Predicate syntax object.
+* obspec definition intro accessor::   Field accessor maker.
+* obspec definition intro mutator::    Field mutator maker.
+* obspec definition intro getter::     Property getter maker.
+* obspec definition intro setter::     Property setter maker.
+* obspec definition intro dispatcher:: Method dispatcher.
+* obspec definition intro caster::     Object type caster.
 @end menu
 
 @c page
-@node obspec object specs intro predicate
+@node obspec definition intro predicate
 @subsubsection Predicate syntax object
 
 
@@ -1262,7 +1266,7 @@ Notice that it is perfectly fine to define this syntax object as:
 @end example
 
 @c page
-@node obspec object specs intro accessor
+@node obspec definition intro accessor
 @subsubsection Field accessor maker
 
 
@@ -1324,7 +1328,7 @@ object as:
 @end example
 
 @c page
-@node obspec object specs intro mutator
+@node obspec definition intro mutator
 @subsubsection Field mutator maker
 
 
@@ -1391,7 +1395,7 @@ as:
 @end example
 
 @c page
-@node obspec object specs intro getter
+@node obspec definition intro getter
 @subsubsection Property getter maker
 
 
@@ -1460,7 +1464,7 @@ The getter maker implementation can be:
 @end example
 
 @c page
-@node obspec object specs intro setter
+@node obspec definition intro setter
 @subsubsection Property setter maker
 
 
@@ -1532,7 +1536,7 @@ The setter maker implementation can be:
 @end example
 
 @c page
-@node obspec object specs intro dispatcher
+@node obspec definition intro dispatcher
 @subsubsection Method dispatcher
 
 
@@ -1599,7 +1603,7 @@ and its implementation can be:
 @end example
 
 @c page
-@node obspec object specs intro caster
+@node obspec definition intro caster
 @subsubsection Object type caster
 
 
@@ -1665,7 +1669,7 @@ and its implementation can be:
 @end example
 
 @c page
-@node obspec object specs descr
+@node obspec definition descr
 @subsection Object type descriptor
 
 

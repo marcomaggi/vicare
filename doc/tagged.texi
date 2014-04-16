@@ -99,6 +99,8 @@ automatically made tag identifiers by @value{PRJNAME}.
 @item
 @rnrs{6} record type identifiers defined by @func{define-record-type};
 they are automatically made tag identifiers by @value{PRJNAME}.
+Condition object types (like @condition{&i/o}) are special cases of
+these.
 
 @item
 A set of non--core macro identifiers (whose implementation is integrated
@@ -115,6 +117,9 @@ Tag identifiers are organised in a tree hierarchy, with subtags
 inheriting properties of supertags; by convention, @class{top} is the
 parent of all the tag identifiers, the root of the tree; @class{top} has
 no parent.
+
+Many of the type identifiers have names enclosed in ``angular
+parentheses'', but this is just a convention.
 
 @c page
 @node tagged intro tagged id
