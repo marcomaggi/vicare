@@ -237,6 +237,7 @@ Trademarks used herein are the property of their respective owners.
 * syslib::                      Low level, fast, unsafe operations.
 * tagged::                      Tagged language.
 * tags::                        Built--in objects type tags.
+* obspec::                      Internals of tagged language.
 * capi::                        C language programming interface.
 
 Internals
@@ -288,6 +289,7 @@ External documents
 @include ffi.texi
 @include syslib.texi
 @include tagged.texi
+@include obspec.texi
 @include tags.texi
 @include capi.texi
 

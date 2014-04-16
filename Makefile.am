@@ -57,6 +57,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/ffi.texi					\
 	doc/syslib.texi					\
 	doc/tagged.texi					\
+	doc/obspec.texi					\
 	doc/tags.texi					\
 	doc/capi.texi					\
 	doc/objects.texi				\
