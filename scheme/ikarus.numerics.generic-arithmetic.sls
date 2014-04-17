@@ -5601,7 +5601,7 @@
 		  (make-message-condition "precision argument is not supported"))))
 
     (define-argument-validation (radix who obj)
-      (case-fixnums obj
+      (case obj
 	((2 8 10 16)	#t)
 	(else		#f))
       (procedure-argument-violation who "invalid radix" obj))
@@ -5702,7 +5702,7 @@
   (module (bignum->string)
 
     (define (bignum->string x r)
-      (case-fixnums r
+      (case r
 	((10) (bignum->decimal-string x))
 	((2)  (bignum->power-string x  1 1))
 	((8)  (bignum->power-string x  7 3))
@@ -8578,7 +8578,7 @@
 	   (unless (or (fixnum? n) (bignum? n))
 	     (procedure-argument-violation who "not an exact integer" n))
 	   (if ($bignum-positive? idx)
-	       (case-fixnums bit
+	       (case bit
 		 ((0)
 		  (if (>= n 0)
 		      n
@@ -8594,7 +8594,7 @@
 	   (procedure-argument-violation who "index is not an exact integer" idx))))
 
   (define (do-copy-bit n idx bit)
-    (case-fixnums bit
+    (case bit
       ((0)
        (if (bitwise-bit-set? n idx)
 	   (bitwise-and n (bitwise-not (sll 1 idx)))

@@ -636,7 +636,7 @@
      ((x r)
       (with-arguments-validation (who)
 	  ((fixnum	x))
-	(case-fixnums r
+	(case r
 	  ((2)  ($fixnum->string x 2))
 	  ((8)  ($fixnum->string x 8))
 	  ((10) ($fixnum->string x 10))

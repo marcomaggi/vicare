@@ -144,7 +144,7 @@
   (import (vicare system $fx))
   (if (and (fixnum? n)
 	   (fixnum? m))
-      (case-fixnums m
+      (case m
 	((0)
 	 (assertion-violation who "division by 0"))
 	((-1)
@@ -171,7 +171,7 @@
   (import (vicare system $fx))
   (if (and (fixnum? n)
 	   (fixnum? m))
-      (case-fixnums m
+      (case m
 	((0)
 	 (assertion-violation who "division by 0"))
 	((-1)

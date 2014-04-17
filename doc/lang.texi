@@ -2702,7 +2702,6 @@ bindings to macros that extend the Scheme language implemented by
 * syntaxes bindings::           Special local bindings.
 * syntaxes sequencing::         Sequencing execution.
 * syntaxes conversion::         Converting common arguments.
-* syntaxes cases::              Special cases.
 * syntaxes args::               Arguments validation.
 * syntaxes misc::               Miscellaneous syntaxes.
 @end menu
@@ -2725,7 +2724,7 @@ symbolic name.  Expand to:
   (define who '@meta{who})
   (with-arguments-validation (who)
       ((exact-integer      code))
-    (case-integers code
+    (case code
       ((@meta{code})     '@meta{code})
       ...
       (else #f))))
@@ -2843,75 +2842,6 @@ that the arguments have already been validated.  Expand to:
   . ?body)
 @end example
 @end defmac
-
-@c page
-@node syntaxes cases
-@subsection Special cases
-
-
-The following bindings are exported by the library @library{vicare
-language-extensions syntaxes}.
-
-
-@deffn Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ...
-@deffnx Macro case-fixnums @meta{expr} ((@metao{fixnum} @meta{fixnum} ...) @metao{fx-body} @meta{fx-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only fixnums as datums;
-for maximum speed, it makes use of unsafe operations on fixnums.
-@func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a fixnum, else the
-behaviour is undefined (and you do not want it).
-@end deffn
-
-
-@deffn Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ...
-@deffnx Macro case-integers @meta{expr} ((@metao{int} @meta{int} ...) @metao{int-body} @meta{int-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only exact integers as
-datums.  @func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to an exact integer, else
-the behaviour is undefined (and you do not want it).
-@end deffn
-
-
-@deffn Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ...
-@deffnx Macro case-symbols @meta{expr} ((@metao{symbol} @meta{symbol} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only symbols as datums.
-@func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a symbol, else the
-behaviour is undefined.
-@end deffn
-
-
-@deffn Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ...
-@deffnx Macro case-strings @meta{expr} ((@metao{string} @meta{string} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only strings as datums.
-@func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a string, else the
-behaviour is undefined.
-@end deffn
-
-
-@deffn Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ...
-@deffnx Macro case-chars @meta{expr} ((@metao{char} @meta{char} ...) @metao{sym-body} @meta{sym-body} ...) ... (else @metao{else-body} @meta{else-body} ...)
-@deffnx {Auxiliary Syntax} else
-Special implementation of @func{case} expecting only characters as
-datums.  @func{else} must be the binding exported by @library{rnrs} and
-@library{vicare}.
-
-@meta{expr} must be an expression evaluating to a char, else the
-behaviour is undefined.
-@end deffn
 
 @c page
 @node syntaxes args

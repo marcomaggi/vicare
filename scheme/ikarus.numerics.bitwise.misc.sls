@@ -275,7 +275,7 @@
       ($fxcopy-bit x i b)))
 
   (define ($fxcopy-bit x i b)
-    (case-fixnums b
+    (case b
       ((0)
        ($fxlogand x ($fxlognot ($fxsll 1 i))))
       ((1)
@@ -379,7 +379,7 @@
 	 ($bit-index		start)
 	 ($bit-index		end)
 	 ($bit-index-order	start end))
-      (case-fixnums (fixnum-width)
+      (case (fixnum-width)
 	((61)
 	 (fxior (fxarithmetic-shift-right (%fxreverse-bit-field61 (fxbit-field v start end))
 					  (fx- 60 end))

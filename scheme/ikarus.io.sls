@@ -1032,7 +1032,7 @@
       (define (%unsupported-by-latin-1)
 	(assertion-violation who
 	  "EOL style conversion unsupported by Latin-1 codec" style))
-      (case-symbols style
+      (case style
 	((none)		0)
 	((lf)		EOL-LINEFEED-TAG)
 	((cr)		EOL-CARRIAGE-RETURN-TAG)
@@ -1527,6 +1527,16 @@
 	     ...
 	     (else
 	      (assertion-violation #f "unknown errno code" errno)))))
+    ))
+
+(define-syntax ($case-fixnums stx)
+  (syntax-case stx (else)
+    ((_ ?id ((?fx) . ?body) ...)
+     (identifier? #'?id)
+     #'(cond (($fx= ?fx ?id) . ?body) ...))
+    ((_ ?id ((?fx) . ?body) ... (else . ?else-body))
+     (identifier? #'?id)
+     #'(cond (($fx= ?fx ?id) . ?body) ...  (else . ?else-body)))
     ))
 
 
