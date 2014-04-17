@@ -379,9 +379,8 @@
   ;;    University.   Proceedings  of  the 2006  Scheme  and  Functional  Programming
   ;;   Workshop.  University of Chicago Technical Report TR-2006-06.
   ;;
-  ;;FIXME There is room for further improvement;  for example when all the datums are
-  ;;fixnums or  some other  number object,  but there are  many other  cases.  (Marco
-  ;;Maggi; Thu Apr 17, 2014)
+  ;;FIXME  There is  room for  improvement.  (Marco  Maggi; Thu  Apr 17,
+  ;;2014)
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'case))
@@ -479,7 +478,7 @@
 		 (mk-datum-clause boolean?	boolean=?	boolean-entry*)
 		 (mk-datum-clause char?		$char=		char-entry*)
 		 (mk-datum-clause symbol?	eq?		symbol-entry*)
-		 (mk-datum-clause number?	=		number-entry*)
+		 (%make-numbers-clause input-form.stx expr.id else.id number-entry*)
 		 (mk-datum-clause string?	$string=	string-entry*)
 		 (mk-datum-clause bytevector?	$bytevector=	bytevector-entry*)
 		 (mk-datum-clause pair?		equal?		pair-entry*)
@@ -550,6 +549,21 @@
 		 (else
 		  (,else.id)))))
       '()))
+
+  (define (%make-numbers-clause input-form.stx expr.id else.id entry*)
+    ;;For generic  number objects we  use = as comparison  predicate and
+    ;;NUMBER?  as type  predicate; but  if  all the  datums are  fixnums
+    ;;(which is a common case): we use $FX= as comparison and FIXNUM? as
+    ;;type predicate.
+    ;;
+    (define all-fixnums?
+      (for-all (lambda (entry)
+		 (let ((datum (car entry)))
+		   (fixnum? (syntax->datum datum))))
+	entry*))
+    (if all-fixnums?
+	(%make-datum-clause input-form.stx expr.id else.id (core-prim-id 'fixnum?) (core-prim-id '$fx=) entry*)
+      (%make-datum-clause input-form.stx expr.id else.id (core-prim-id 'number?) (core-prim-id '=) entry*)))
 
   (define-syntax set-cons!
     (syntax-rules ()
