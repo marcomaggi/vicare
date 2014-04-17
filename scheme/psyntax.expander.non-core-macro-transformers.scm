@@ -379,8 +379,7 @@
   ;;    University.   Proceedings  of  the 2006  Scheme  and  Functional  Programming
   ;;   Workshop.  University of Chicago Technical Report TR-2006-06.
   ;;
-  ;;FIXME  There is  room for  improvement.  (Marco  Maggi; Thu  Apr 17,
-  ;;2014)
+  ;;FIXME There is  room for  improvement.  (Marco  Maggi; Thu  Apr 17, 2014)
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'case))
@@ -4353,6 +4352,7 @@
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
+;;fill-column: 85
 ;;eval: (put 'build-library-letrec*		'scheme-indent-function 1)
 ;;eval: (put 'build-application			'scheme-indent-function 1)
 ;;eval: (put 'build-conditional			'scheme-indent-function 1)
