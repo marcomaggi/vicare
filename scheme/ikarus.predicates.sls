@@ -61,8 +61,6 @@
     (only (vicare system $pointers)
 	  $pointer=)
     (vicare system $foreign)
-    (only (vicare language-extensions syntaxes)
-	  cond-numeric-operand)
     ;;These are the ones implemented as primitive operations.
     (rename (only (vicare)
 		  fixnum? flonum? bignum? ratnum? compnum? cflonum?
