@@ -327,11 +327,61 @@
   ;;   using  STRING=?, BYTEVECTOR=?,  EQUAL? and  EQUAL? rather  than using  EQV? as
   ;;   specified by R6RS.
   ;;
+  ;;An example expansion:
+  ;;
+  ;;   (case ?expr
+  ;;     ((1 "a" c)
+  ;;      (stuff1))
+  ;;     ((2 #t #(1 2))
+  ;;      (stuff2))
+  ;;     (else
+  ;;      (else-stuff)))
+  ;;
+  ;;is expanded to:
+  ;;
+  ;;   (letrec ((expr.id ?expr)
+  ;;            (g1      (lambda () (stuff1)))
+  ;;            (g2      (lambda () (stuff2)))
+  ;;            (else.id (lambda () (else-stuff))))
+  ;;     (cond ((number? expr.id)
+  ;;            (cond ((= expr.id 1)
+  ;;                   (g1))
+  ;;                  ((= expr.id 2)
+  ;;                   (g2))
+  ;;                  (else
+  ;;                   (else.id)))
+  ;;           ((string? expr.id)
+  ;;            (cond ((string=? expr.id "a")
+  ;;                   (g1))
+  ;;                  (else
+  ;;                   (else.id)))
+  ;;           ((symbol? expr.id)
+  ;;            (cond ((eq? expr.id 'c)
+  ;;                   (g1))
+  ;;                  (else
+  ;;                   (else.id)))
+  ;;           ((boolean? expr.id)
+  ;;            (cond ((boolean=? expr.id #t)
+  ;;                   (g2))
+  ;;                  (else
+  ;;                   (else.id)))
+  ;;           ((vector? expr.id)
+  ;;            (cond ((equal? expr.id '#(1 2))
+  ;;                   (g2))
+  ;;                  (else
+  ;;                   (else.id)))
+  ;;           (else
+  ;;            (else.id)))
+  ;;
   ;;NOTE This implementation contains ideas from:
   ;;
   ;;    William  D.   Clinger.   "Rapid   case  dispatch  in  Scheme".   Northeastern
   ;;    University.   Proceedings  of  the 2006  Scheme  and  Functional  Programming
   ;;   Workshop.  University of Chicago Technical Report TR-2006-06.
+  ;;
+  ;;FIXME There is room for further improvement;  for example when all the datums are
+  ;;fixnums or  some other  number object,  but there are  many other  cases.  (Marco
+  ;;Maggi; Thu Apr 17, 2014)
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'case))
