@@ -27,6 +27,7 @@
     current-primitive-locations
     eval-core				current-core-eval
     compile-core-expr-to-port		compile-core-expr
+    core-expr->optimized-code
 
     ;; these go in (vicare system $compiler)
     (rename
@@ -514,7 +515,8 @@
 
 (module (compile-core-expr-to-port
 	 compile-core-expr
-	 compile-core-expr->code)
+	 compile-core-expr->code
+	 core-expr->optimized-code)
   ;;The list of compiler passes is:
   ;;
   ;;   recordize
@@ -544,6 +546,17 @@
       ($code->closure code)))
 
   (define who 'compile-core-expr->code)
+
+  (define (core-expr->optimized-code p)
+    ;;This  is a  utility  function used  for  debugging and  inspection
+    ;;purposes; it is to be used to inspect the result of optimisation.
+    ;;
+    (let* ((p (recordize p))
+	   (p (parameterize ((open-mvcalls #f))
+		(optimize-direct-calls p)))
+	   (p (optimize-letrec p))
+	   (p (source-optimize p)))
+      (unparse-recordized-code/pretty p)))
 
   (define (compile-core-expr->code p)
     (let* ((p (recordize p))

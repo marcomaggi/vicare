@@ -294,6 +294,7 @@ Example:
 * iklib syntaxes predaux::      Predicate auxiliary functions.
 * iklib syntaxes type-of::      Determining the type of expressions.
 * iklib syntaxes expansion-of:: Determining expansion result.
+* iklib syntaxes optim-of::     Determining optimisation result.
 @end menu
 
 @c page
@@ -2458,6 +2459,46 @@ vicare> (print-gensym #f)
 vicare> (define-syntax syn (lambda (stx) #'(void)))
 vicare> (visit-code-of syn)
 $1 = (lambda (stx) #<syntax expr=(void))
+@end example
+@end deffn
+
+@c page
+@node iklib syntaxes optim-of
+@subsection Determining optimisation result
+
+
+@deffn Syntax optimisation-of @meta{expr}
+This syntax is mostly for interactive use.  Fully expand the given
+expression in the current lexical environment and apply the compiler's
+optimisator to the resulting core language expression; return a symbolic
+expression representing the resulting invoke code.  The expression is
+@strong{not} evaluated, only expanded and optimised; this means that the
+expansion side effects are performed.
+
+As a special case if @meta{expr} is recognised as a @func{define} or
+@func{define*} syntax use:
+
+@example
+(define  . @meta{stuff})
+(define* . @meta{stuff})
+@end example
+
+@noindent
+the expansion and optimisation will be performed as if @meta{expr} is:
+
+@example
+(internal-body (define  . @meta{stuff}) (void))
+(internal-body (define* . @meta{stuff}) (void))
+@end example
+
+Example session at the @repl{}:
+
+@example
+vicare> (import (vicare expander tags))
+vicare> (print-gensym #f)
+
+vicare> (optimisation-of (+ 1 2))
+$1 = 3
 @end example
 @end deffn
 

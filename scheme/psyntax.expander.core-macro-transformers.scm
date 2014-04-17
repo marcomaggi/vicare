@@ -85,6 +85,7 @@
     ((type-of)					type-of-transformer)
     ((expansion-of)				expansion-of-transformer)
     ((visit-code-of)				visit-code-of-transformer)
+    ((optimisation-of)				optimisation-of-transformer)
 
     (else
      (assertion-violation/internal-error __who__
@@ -2556,6 +2557,50 @@
        (make-psi input-form.stx
 		 (build-data no-source
 		   (core-language->sexp (cdr binding-value)))
+		 (make-retvals-signature-single-top))))
+    ))
+
+
+;;;; module core-macro-transformer: OPTIMISATION-OF
+
+(define (optimisation-of-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand  Vicare's OPTIMISATION-OF syntaxes  from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'optimisation-of))
+  (syntax-match input-form.stx ()
+    ;;Special case to allow easy inspection of definitions.  We transform:
+    ;;
+    ;;   (define . ?stuff)
+    ;;
+    ;;into:
+    ;;
+    ;;   (internal-body (define . ?stuff) (void))
+    ;;
+    ((_ (?define . ?stuff))
+     (and (identifier? ?define)
+	  (or (free-id=? ?define (core-prim-id 'define))
+	      (free-id=? ?define (core-prim-id 'define*))))
+     (let* ((expr.stx `(,(core-prim-id 'internal-body)
+			(,?define . ,?stuff)
+			(,(core-prim-id 'void))))
+	    (expr.psi  (chi-expr expr.stx lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sexp (core-expr->optimized-code expr.core)))
+	 (make-psi input-form.stx
+		   (build-data no-source
+		     expr.sexp)
+		   (make-retvals-signature-single-top))))
+
+    ((_ ?expr)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sexp (core-expr->optimized-code expr.core)))
+       (make-psi input-form.stx
+		 (build-data no-source
+		   expr.sexp)
 		 (make-retvals-signature-single-top))))
     ))
 
