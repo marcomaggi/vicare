@@ -308,61 +308,208 @@
      (bless `(if (not ,?test) (begin ,?expr . ,?expr*))))))
 
 
-;;;; module non-core-macro-transformer: CASE, CASE-IDENTIFIERS
+;;;; module non-core-macro-transformer: CASE
 
 (module (case-macro)
-  ;;Transformer  function used  to expand  R6RS's CASE  macros from  the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand R6RS's CASE macros (with extensions) from the
+  ;;top-level built in environment.  Expand the contents of EXPR-STX; return a syntax
+  ;;object that must be further expanded.
   ;;
-  ;;FIXME This should be rewritten to support the model proposed in:
+  ;;This implementation  supports 2 extensions with  respect to the one  specified by
+  ;;R6RS:
   ;;
-  ;;    William   D.   Clinger.    "Rapid  case  dispatch   in  Scheme".
-  ;;    Northeastern University.   Proceedings  of the  2006 Scheme  and
-  ;;   Functional Programming Workshop.  University of Chicago Technical
-  ;;   Report TR-2006-06.
+  ;;1. It supports arrow clauses like COND does.  Example:
   ;;
-  (define (case-macro expr-stx)
-    (syntax-match expr-stx ()
-      ((_ ?expr)
-       (bless `(let ((t ,?expr))
-		 (if #f #f))))
-      ((_ ?expr ?clause ?clause* ...)
-       (bless
-	`(let ((t ,?expr))
-	   ,(let recur ((clause  ?clause)
-			(clause* ?clause*))
-	      (if (null? clause*)
-		  (%build-last clause)
-		(%build-one clause (recur (car clause*) (cdr clause*))))))))))
+  ;;      (case 123
+  ;;       ((123) => (lambda (num) ...)))
+  ;;
+  ;;2. When the  datums are strings, bytevectors, pairs or  vectors: it compares them
+  ;;   using  STRING=?, BYTEVECTOR=?,  EQUAL? and  EQUAL? rather  than using  EQV? as
+  ;;   specified by R6RS.
+  ;;
+  ;;NOTE This implementation contains ideas from:
+  ;;
+  ;;    William  D.   Clinger.   "Rapid   case  dispatch  in  Scheme".   Northeastern
+  ;;    University.   Proceedings  of  the 2006  Scheme  and  Functional  Programming
+  ;;   Workshop.  University of Chicago Technical Report TR-2006-06.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'case))
 
-  (define (%build-one clause-stx k)
-    (syntax-match clause-stx (=>)
-      (((?datum* ...) => ?expr)
-       (if (option.strict-r6rs)
-	   (syntax-violation 'case
-	     "invalid usage of auxiliary keyword => in strict R6RS mode"
-	     clause-stx)
-	 `(if (memv t ',?datum*)
-	      (let ((proc ,?expr))
-		(if (procedure? proc)
-		    (proc t)
-		  (assertion-violation #f "not a procedure" (quote ,?expr))))
-	    ,k)))
-      (((?datum* ...) ?expr ?expr* ...)
-       `(if (memv t ',?datum*)
-	    (internal-body ,?expr . ,?expr*)
-	  ,k))
-      ))
+  (define (case-macro input-form.stx)
+    (syntax-match input-form.stx (else)
+      ;;Without ELSE clause.
+      ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ...)
+       (%build-output-form input-form.stx ?expr
+			   (map cons
+			     (map cons ?datum0* ?datum**)
+			     (map cons ?body0*  ?body**))
+			   (bless '((void)))))
 
-  (define (%build-last clause)
-    (syntax-match clause (else)
-      ((else ?expr ?expr* ...)
-       `(internal-body ,?expr . ,?expr*))
+      ;;With else clause.
+      ((_ ?expr ((?datum0* ?datum** ...) ?body0* ?body** ...) ... (else ?else-body0 ?else-body* ...))
+       (%build-output-form input-form.stx ?expr
+			   (map cons
+			     (map cons ?datum0* ?datum**)
+			     (map cons ?body0*  ?body**))
+			   (cons ?else-body0 ?else-body*)))
+
       (_
-       (%build-one clause '(if #f #f)))))
+       (syntax-violation __who__ "invalid syntax" input-form.stx))))
 
-  #| end of module: CASE-MACRO |# )
+  (define (%build-output-form input-form.stx expr.stx datum-clause*.stx else-body*.stx)
+    (let ((expr.id (gensym "expr.id"))
+	  (else.id (gensym "else.id")))
+      (receive (branch-binding* cond-clause*)
+	  (%process-clauses input-form.stx expr.id else.id datum-clause*.stx)
+	(bless
+	 `(letrec ((,expr.id ,expr.stx)
+		   ,@branch-binding*
+		   (,else.id (lambda () . ,else-body*.stx)))
+	    (cond ,@cond-clause* (else (,else.id))))))))
+
+  (define (%process-clauses input-form.stx expr.id else.id clause*.stx)
+    (receive (closure*.stx closure*.id entry**)
+	(%clauses->entries input-form.stx clause*.stx)
+      (define boolean-entry*		'())
+      (define char-entry*		'())
+      (define symbol-entry*		'())
+      (define number-entry*		'())
+      (define string-entry*		'())
+      (define bytevector-entry*		'())
+      (define pair-entry*		'())
+      (define vector-entry*		'())
+      (define-syntax-rule (mk-datum-clause ?pred.sym ?compar.sym ?entry*)
+	(%make-datum-clause input-form.stx expr.id else.id (core-prim-id '?pred.sym) (core-prim-id '?compar.sym) ?entry*))
+      (let loop ((entry* (apply append entry**)))
+	(when (pair? entry*)
+	  (let ((datum (syntax->datum (caar entry*))))
+	    (cond ((boolean? datum)
+		   (set-cons! boolean-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  ((char? datum)
+		   (set-cons! char-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  ((symbol? datum)
+		   (set-cons! symbol-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  ((number? datum)
+		   (set-cons! number-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  ((string? datum)
+		   (set-cons! string-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  ((bytevector? datum)
+		   (set-cons! bytevector-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  ((or (null? datum)
+		       (pair? datum))
+		   (set-cons! pair-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  ((vector? datum)
+		   (set-cons! vector-entry* (car entry*))
+		   (loop (cdr entry*)))
+
+		  (else
+		   (syntax-violation __who__ "invalid datum type" input-form.stx datum))))))
+      (values (map list closure*.id closure*.stx)
+	      (fold-left (lambda (knil clause)
+			   (if (null? clause)
+			       knil
+			     (cons clause knil)))
+		'()
+		(list
+		 (mk-datum-clause boolean?	boolean=?	boolean-entry*)
+		 (mk-datum-clause char?		$char=		char-entry*)
+		 (mk-datum-clause symbol?	eq?		symbol-entry*)
+		 (mk-datum-clause number?	=		number-entry*)
+		 (mk-datum-clause string?	$string=	string-entry*)
+		 (mk-datum-clause bytevector?	$bytevector=	bytevector-entry*)
+		 (mk-datum-clause pair?		equal?		pair-entry*)
+		 (mk-datum-clause vector?	equal?		vector-entry*)
+		 )))))
+
+  (define (%clauses->entries input-form.stx clause*.stx)
+    (syntax-match clause*.stx ()
+      (()
+       (values '() '() '()))
+      ((?clause . ?other-clause*)
+       (let-values
+	   (((closure.stx closure.id entry*)
+	     (%process-single-clause input-form.stx ?clause))
+	    ((closure*.stx closure*.id entry**)
+	     (%clauses->entries input-form.stx ?other-clause*)))
+	 (values (cons closure.stx closure*.stx)
+		 (cons closure.id  closure*.id)
+		 (cons entry*      entry**))))
+      (_
+       (syntax-violation __who__ "invalid syntax" input-form.stx))))
+
+  (define (%process-single-clause input-form.stx clause.stx)
+    (syntax-match clause.stx (=>)
+      ((?datum* => ?closure)
+       (let ((closure.id (gensym)))
+	 (values (bless
+		  `(tag-assert-and-return (<procedure>) ,?closure))
+		 closure.id
+		 (let next-datum ((datums  ?datum*)
+				  (entries '()))
+		   (syntax-match datums ()
+		     (()
+		      entries)
+		     ((?datum . ?datum*)
+		      (next-datum ?datum*
+				  (cons (cons* ?datum closure.id #t) entries)))
+		     )))))
+      ((?datum* . ?body)
+       (let ((closure.id (gensym)))
+	 (values (bless `(lambda () . ,?body))
+		 closure.id
+		 (let next-datum ((datums  ?datum*)
+				  (entries '()))
+		   (syntax-match datums ()
+		     (()
+		      entries)
+		     ((?datum . ?datum*)
+		      (next-datum ?datum*
+				  (cons (cons* ?datum closure.id #f) entries)))
+		     )))))
+      (_
+       (syntax-violation __who__ "invalid clause syntax" input-form.stx clause.stx))))
+
+  (define (%make-datum-clause input-form.stx expr.id else.id pred.id compar.id entry*)
+    (if (pair? entry*)
+	(bless
+	 `((,pred.id ,expr.id)
+	   (cond ,@(map (lambda (entry)
+			  (let ((datum      (car entry))
+				(closure.id (cadr entry))
+				(arrow?     (cddr entry)))
+			    `((,compar.id ,expr.id (quote ,datum))
+			      ,(if arrow?
+				   `(,closure.id ,expr.id)
+				 `(,closure.id)))))
+		     entry*)
+		 (else
+		  (,else.id)))))
+      '()))
+
+  (define-syntax set-cons!
+    (syntax-rules ()
+      ((_ ?var ?expr)
+       (set! ?var (cons ?expr ?var)))))
+
+  #| end of module |# )
+
+
+;;;; module non-core-macro-transformer: CASE-IDENTIFIERS
 
 (module (case-identifiers-macro)
   (define-constant __who__
@@ -393,13 +540,9 @@
   (define (%build-one expr-stx clause-stx kont)
     (syntax-match clause-stx (=>)
       (((?datum* ...) => ?proc)
-       (if (option.strict-r6rs)
-	   (syntax-violation __who__
-	     "invalid usage of auxiliary keyword => in strict R6RS mode"
-	     clause-stx)
-	 `(if ,(%build-test expr-stx ?datum*)
-	      (,?proc t)
-	    ,kont)))
+       `(if ,(%build-test expr-stx ?datum*)
+	    ((tag-assert-and-return (<procedure>) ,?proc) t)
+	  ,kont))
 
       (((?datum* ...) ?expr ?expr* ...)
        `(if ,(%build-test expr-stx ?datum*)
