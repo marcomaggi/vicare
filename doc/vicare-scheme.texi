@@ -235,8 +235,7 @@ Trademarks used herein are the property of their respective owners.
 * libutils::                    Scheme libraries utility functions.
 * ffi::                         Foreign functions interface.
 * syslib::                      Low level, fast, unsafe operations.
-* tagged::                      Tagged language.
-* tags::                        Built--in objects type tags.
+* tags::                        Tagged language.
 * obspec::                      Internals of tagged language.
 * capi::                        C language programming interface.
 
@@ -288,9 +287,8 @@ External documents
 @include libutils.texi
 @include ffi.texi
 @include syslib.texi
-@include tagged.texi
-@include obspec.texi
 @include tags.texi
+@include obspec.texi
 @include capi.texi
 
 @include objects.texi

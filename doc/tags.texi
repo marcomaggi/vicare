@@ -1,13 +1,157 @@
 @node tags
-@chapter Built--in objects type tags
+@chapter Tagged language
 
 
-The library @library{vicare expander tags} exports bindings to be used
-in the tagged Scheme language, @ref{tagged, Experimental tagged language}.
+@value{PRJNAME}'s expander implements an extension to the language
+defined by @rnrs{6} that allows the definition of tagged bindings.
+
+@quotation
+@strong{NOTE} Tagged language support is currently experimental.
+@end quotation
 
 @menu
+* tags intro::                  Introduction to the tagged language.
 * tags syntaxes::               Convenience syntaxes.
 @end menu
+
+@c page
+@node tags intro
+@section Introduction to the tagged language
+
+
+@value{PRJNAME}'s tagged language adds some expand--time binding type
+checking and extended syntax @oop{} syntax to the language specified by
+@rnrs{6}; the result is a Scheme language dialect in which the code
+writer must explicitly write the type identifiers, there is, in
+practice, @strong{no} type inference.
+
+@menu
+* tags intro enabling::         Enabling tagged language extensions.
+* tags intro tag id::           Tag identifiers.
+* tags intro tagged id::        Tagged identifiers.
+@end menu
+
+@c page
+@node tags intro enabling
+@subsection Enabling tagged language extensions
+
+
+Tagged language extensions are @strong{off} by default.  To enable the
+extensions in libraries we have to use the @code{tagged-language} and
+@code{visit-upon-loading} options as follows (@pxref{iklib syntaxes
+libraries, Extended @code{library} syntax}):
+
+@example
+(library (demo)
+  (options tagged-language visit-upon-loading)
+  (export)
+  (import (vicare))
+  ---)
+@end example
+
+To enable the extensions in programs we have to use the
+@code{tagged-language} option as follows (@pxref{iklib syntaxes
+programs, Extended program syntax}):
+
+@example
+(import (vicare))
+(options tagged-language)
+---
+@end example
+
+The declaration of types makes use of the @func{brace} syntax
+(@pxref{iklib syntaxes misc, brace}) as follows:
+
+@example
+(define (brace O <fixnum>)
+  123)
+@end example
+
+@noindent
+to use the extensions in a friendly manner we need to put the reader in
+@samp{#!vicare} mode; this way @func{brace} can be inserted using actual
+brace characters, as follows:
+
+@example
+#!vicare
+(define @{O <fixnum>@}
+  123)
+@end example
+
+@c page
+@node tags intro tag id
+@subsection Tag identifiers
+
+
+Technically, a @dfn{tag identifier} is a bound identifier whose
+syntactic binding label gensym has a specific entry in its property
+list, such entry has an instance of @objtype{object-type-spec} as value;
+tag identifiers must be bound (otherwise they do not have a syntactic
+binding label), but it does not matter to what they are bound.  Tag
+identifiers represent data types.
+
+Typical examples of tag identifiers are:
+
+@itemize
+@item
+Struct type identifiers defined by @func{define-struct}; they are
+automatically made tag identifiers by @value{PRJNAME}.
+
+@item
+@rnrs{6} record type identifiers defined by @func{define-record-type};
+they are automatically made tag identifiers by @value{PRJNAME}.
+Condition object types (like @condition{&i/o}) are special cases of
+these.
+
+@item
+A set of non--core macro identifiers (whose implementation is integrated
+in @value{PRJNAME}'s expander) are exported by the library
+@library{vicare expander tags} to be the tags of built--in objects.
+Some of them are: @class{fixnum}, @class{string}, @class{vector},
+@class{textual-input-port}.
+@end itemize
+
+Other tag identifiers can be created using the @api{} exported by the
+library @library{vicare expander object-type-specs}.
+
+Tag identifiers are organised in a tree hierarchy, with subtags
+inheriting properties of supertags; by convention, @class{top} is the
+parent of all the tag identifiers, the root of the tree; @class{top} has
+no parent.
+
+Many of the type identifiers have names enclosed in ``angular
+parentheses'', but this is just a convention.
+
+@c page
+@node tags intro tagged id
+@subsection Tagged identifiers
+
+
+Technically, a @dfn{tagged identifier} is a bound identifier whose
+syntactic binding label gensym has a specific entry in its property
+list, such entry has a tag identifier as value; tagged identifiers must
+be bound (otherwise they do not have a syntactic binding label) and they
+must be bound to lexical variables.  Tagged identifiers are created by
+the built--in binding syntaxes @func{lambda}, @func{define}, @func{let},
+@func{letrec}, @func{let-values}, etc.
+
+An example of tagged binding creation follows:
+
+@example
+#!vicare
+(import (vicare)
+  (vicare expander tags))
+(options tagged-language)
+
+(define @{O <fixnum>@}
+  123)
+@end example
+
+@noindent
+the identifier @code{O} is a tagged identifier with tag identifier
+@class{fixnum}; the braces are used to tag the first identifier with the
+second identifier.  At the time the tagged identifier is created: the
+tag identifier must already be a tag identifier.
 
 @c page
 @node tags syntaxes

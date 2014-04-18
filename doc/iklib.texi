@@ -352,7 +352,7 @@ methods to Nausicaa's multimethods.
 
 
 @defvr {Library Option} tagged-language
-Turn on the tagged language extensions; @ref{tagged} for details.
+Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end defvr
 
 @c page
@@ -378,7 +378,7 @@ where each @meta{option} is a symbolic expression.
 
 
 @defvr {Library Option} tagged-language
-Turn on the tagged language extensions; @ref{tagged} for details.
+Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end defvr
 
 @c page
