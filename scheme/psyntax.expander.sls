@@ -1104,6 +1104,8 @@
     null-environment			scheme-report-environment
     interaction-environment		new-interaction-environment
 
+    enable-tagged-language		disable-tagged-language
+
     ;; inspection of non-interaction environment objects
     environment-symbols			environment-libraries
     environment-labels			environment-binding
@@ -1343,6 +1345,13 @@
 	ell)))
 
   #| end of module |# )
+
+(define-syntax-rule (with-tagged-language ?enabled? . ?body)
+  (parametrise ((option.tagged-language? ?enabled?))
+    (parametrise ((option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
+		  (option.tagged-language.datums-as-operators? (option.tagged-language?))
+		  (option.tagged-language.setter-forms?        (option.tagged-language?)))
+      . ?body)))
 
 
 ;;;; library records collectors
@@ -1908,6 +1917,31 @@
   cdr)
 
 
+;;;; public interface: tagged language support
+
+(module (enable-tagged-language
+	 disable-tagged-language)
+
+  (define (enable-tagged-language)
+    ;;This is meant to be used at the  REPL to turn on tagged language support, which
+    ;;is off by default.
+    ;;
+    (tagged-language-support #t))
+
+  (define (disable-tagged-language)
+    ;;This is meant to be used at the REPL to turn off tagged language support.
+    ;;
+    (tagged-language-support #f))
+
+  (define (tagged-language-support enable?)
+    (option.tagged-language? enable?)
+    (option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
+    (option.tagged-language.datums-as-operators? (option.tagged-language?))
+    (option.tagged-language.setter-forms?        (option.tagged-language?)))
+
+  #| end of module |# )
+
+
 (define* (eval x env)
   ;;This  is R6RS's  eval.   Take an  expression  and an  environment:
   ;;expand the  expression, invoke  its invoke-required  libraries and
@@ -2077,13 +2111,10 @@
 	(%parse-top-level-program program-form*)
       (receive (import-spec* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
 	  (let ((option* (%parse-program-options option*)))
-	    (parametrise ((option.tagged-language? (memq 'tagged-language option*)))
-	      (parametrise ((option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
-			    (option.tagged-language.datums-as-operators? (option.tagged-language?))
-			    (option.tagged-language.setter-forms?        (option.tagged-language?)))
-		(let ()
-		  (import CORE-BODY-EXPANDER)
-		  (core-body-expander 'all import-spec* body* #t)))))
+	    (with-tagged-language (memq 'tagged-language option*)
+	      (let ()
+		(import CORE-BODY-EXPANDER)
+		(core-body-expander 'all import-spec* body* #t))))
 	(values invoke-lib* invoke-code macro* export-subst export-env))))
 
   (define (%parse-top-level-program program-form*)
@@ -2472,11 +2503,8 @@
       (let* ((option*    (%parse-library-options libopt*))
 	     (stale-clt  (%make-stale-collector)))
 	(receive (import-lib* invoke-lib* visit-lib* invoke-code macro* export-subst export-env)
-	    (parametrise ((stale-when-collector    stale-clt)
-			  (option.tagged-language? (memq 'tagged-language option*)))
-	      (parametrise ((option.tagged-language.rhs-tag-propagation? (option.tagged-language?))
-			    (option.tagged-language.datums-as-operators? (option.tagged-language?))
-			    (option.tagged-language.setter-forms?        (option.tagged-language?)))
+	    (parametrise ((stale-when-collector    stale-clt))
+	      (with-tagged-language (memq 'tagged-language option*)
 		(let ((mixed-definitions-and-expressions? #f))
 		  (import CORE-BODY-EXPANDER)
 		  (core-body-expander export-spec* import-spec* body*
@@ -7470,4 +7498,5 @@
 ;;eval: (put 'set-interaction-env-lab.loc/lex*!	'scheme-indent-function 1)
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
+;;eval: (put 'with-tagged-language		'scheme-indent-function 1)
 ;;End:

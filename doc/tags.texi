@@ -20,9 +20,9 @@ defined by @rnrs{6} that allows the definition of tagged bindings.
 
 
 @value{PRJNAME}'s tagged language adds some expand--time binding type
-checking and extended syntax @oop{} syntax to the language specified by
-@rnrs{6}; the result is a Scheme language dialect in which the code
-writer must explicitly write the type identifiers, there is, in
+checking and extended @oop{} syntax to the language specified by
+@rnrs{6}.  The result is a Scheme language dialect in which the code
+writer must explicitly write the type identifiers; there is, in
 practice, @strong{no} type inference.
 
 @menu
@@ -78,6 +78,55 @@ brace characters, as follows:
   123)
 @end example
 
+@quotation
+@strong{NOTE} Why is the tagged language off by default?  Mostly because
+of right--hand side type propagation.  Under tagged language, when the
+expander processes the definition:
+
+@example
+(define O 123)
+@end example
+
+@noindent
+it recognises the right--hand side as a fixnum, so it tags the lexical
+variable @code{O} as @class{fixnum}; the definition is equivalent to:
+
+@example
+(define @{O <fixnum>@} 123)
+@end example
+
+It is a common Scheme language pattern to use @false{} as wild card to
+mean: this lexical variable has not been initialised to a valid value,
+so we know that such--and--such state is ``off''.  Under tagged language
+this pattern will fail; the following code:
+
+@example
+(define O #f)
+(set! O 123)    @error{} &expand-time-type-signature-violation
+@end example
+
+@noindent
+will raise an expand--time type violation, because it is considered
+equivalent to:
+
+@example
+(define @{O <boolean>@} #f)
+(set! O 123)    @error{} &expand-time-type-signature-violation
+@end example
+
+@noindent
+and we cannot assign a fixnum to a lexical variable tagged as
+@class{boolean}.
+@end quotation
+
+
+@defun enable-tagged-language
+@defunx disable-tagged-language
+Enable or disable tagged language support.  These functions are meant to
+be used at the @repl{}; they do @strong{not} modify support for tagged
+language for programs and libraries.
+@end defun
+
 @c page
 @node tags intro tag id
 @subsection Tag identifiers
@@ -100,7 +149,7 @@ automatically made tag identifiers by @value{PRJNAME}.
 @item
 @rnrs{6} record type identifiers defined by @func{define-record-type};
 they are automatically made tag identifiers by @value{PRJNAME}.
-Condition object types (like @condition{&i/o}) are special cases of
+Condition object types (like @condition{i/o}) are special cases of
 these.
 
 @item

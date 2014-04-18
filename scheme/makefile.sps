@@ -766,6 +766,8 @@
     (expansion-of				v $language)
     (visit-code-of				v $language)
     (optimisation-of				v $language)
+    (enable-tagged-language			v $language)
+    (disable-tagged-language			v $language)
     (trace-lambda				v $language)
     (trace-let					v $language)
     (trace-define				v $language)
