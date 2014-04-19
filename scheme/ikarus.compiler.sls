@@ -27,7 +27,7 @@
     current-primitive-locations
     eval-core				current-core-eval
     compile-core-expr-to-port		compile-core-expr
-    core-expr->optimized-code
+    core-expr->optimized-code		core-expr->assembly-code
 
     ;; these go in (vicare system $compiler)
     (rename
@@ -516,7 +516,8 @@
 (module (compile-core-expr-to-port
 	 compile-core-expr
 	 compile-core-expr->code
-	 core-expr->optimized-code)
+	 core-expr->optimized-code
+	 core-expr->assembly-code)
   ;;The list of compiler passes is:
   ;;
   ;;   recordize
@@ -545,21 +546,11 @@
     (let ((code (compile-core-expr->code x)))
       ($code->closure code)))
 
-  (define who 'compile-core-expr->code)
-
-  (define (core-expr->optimized-code p)
-    ;;This  is a  utility  function used  for  debugging and  inspection
-    ;;purposes; it is to be used to inspect the result of optimisation.
+  (define (compile-core-expr->code core-language-sexp)
+    ;;This is *the*  commpiler function.  It transforms  a core language
+    ;;symbolic expression into a code object.
     ;;
-    (let* ((p (recordize p))
-	   (p (parameterize ((open-mvcalls #f))
-		(optimize-direct-calls p)))
-	   (p (optimize-letrec p))
-	   (p (source-optimize p)))
-      (unparse-recordized-code/pretty p)))
-
-  (define (compile-core-expr->code p)
-    (let* ((p (recordize p))
+    (let* ((p (recordize core-language-sexp))
 	   (p (parameterize ((open-mvcalls #f))
 		(optimize-direct-calls p)))
 	   (p (optimize-letrec p))
@@ -588,12 +579,47 @@
 	(let ((code* (assemble-sources thunk?-label ls*)))
 	  (car code*)))))
 
+  (define (core-expr->optimized-code core-language-sexp)
+    ;;This  is a  utility  function used  for  debugging and  inspection
+    ;;purposes; it is to be used to inspect the result of optimisation.
+    ;;
+    (let* ((p (recordize core-language-sexp))
+	   (p (parameterize ((open-mvcalls #f))
+		(optimize-direct-calls p)))
+	   (p (optimize-letrec p))
+	   (p (source-optimize p)))
+      (unparse-recordized-code/pretty p)))
+
+  (define (core-expr->assembly-code core-language-sexp)
+    ;;This  is a  utility  function used  for  debugging and  inspection
+    ;;purposes.  It  transforms a symbolic expression  representing core
+    ;;language  into  a  list  of sublists,  each  sublist  representing
+    ;;assembly language instructions for a code object.
+    ;;
+    (let* ((p (recordize core-language-sexp))
+	   (p (parameterize ((open-mvcalls #f))
+		(optimize-direct-calls p)))
+	   (p (optimize-letrec p))
+	   (p (source-optimize p)))
+      (let* ((p (rewrite-references-and-assignments p))
+	     (p (if (perform-tag-analysis)
+		    (introduce-tags p)
+		  p))
+	     (p (introduce-vars p))
+	     (p (sanitize-bindings p))
+	     (p (optimize-for-direct-jumps p))
+	     (p (insert-global-assignments p))
+	     (p (convert-closures p))
+	     (p (optimize-closures/lift-codes p))
+	     (ls* (alt-cogen p)))
+	#;(gensym-prefix "L")
+	ls*)))
+
   (define (thunk?-label x)
-    (if (closure? x)
-	(if (null? (closure-free* x))
-	    (code-loc-label (closure-code x))
-	  (error who "BUG: non-thunk escaped" x))
-      #f))
+    (and (closure? x)
+	 (if (null? (closure-free* x))
+	     (code-loc-label (closure-code x))
+	   (error #f "Vicare Scheme: internal error: non-thunk escaped" x))))
 
   (define (print-instr x)
     ;;Print  to   the  current   error  port  the   symbolic  expression

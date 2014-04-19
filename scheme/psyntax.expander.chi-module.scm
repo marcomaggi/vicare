@@ -1961,7 +1961,7 @@
 		(else #f))))
       (when visit-code.core
 	(parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	  (eval-core (expanded->core visit-code.core))))
+	  (compiler.eval-core (expanded->core visit-code.core))))
       ;;Done!  Push on the LEXENV an entry like:
       ;;
       ;;   (?unused-label . (begin-for-syntax . ?core-code))

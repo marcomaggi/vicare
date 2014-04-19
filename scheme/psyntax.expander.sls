@@ -1953,7 +1953,7 @@
   (receive (x invoke-req*)
       (expand-form-to-core-language x env)
     (for-each invoke-library invoke-req*)
-    (eval-core (expanded->core x))))
+    (compiler.eval-core (expanded->core x))))
 
 
 (module (expand-form-to-core-language)
@@ -2082,7 +2082,7 @@
 	(initial-visit! macro*)
 	;;Convert  the expanded  language  code to  core language  code,
 	;;compile it and evaluate it.
-	(eval-core (expanded->core invoke-code))
+	(compiler.eval-core (expanded->core invoke-code))
 	(make-interaction-env (export-subst->rib export-subst)
 			      (map %export-env-entry->lexenv-entry export-env)
 			      '()))))
@@ -2387,7 +2387,7 @@
 				  (initial-visit! macro*)))
 	     ;;Thunk to eval to invoke the library.
 	     (invoke-proc	(lambda ()
-				  (eval-core (expanded->core invoke-code))))
+				  (compiler.eval-core (expanded->core invoke-code))))
 	     ;;This visit  code is compiled and  stored in FASL files;  the resulting
 	     ;;code objects  are the  ones evaluated whenever  a compiled  library is
 	     ;;loaded and visited.
@@ -6525,7 +6525,7 @@
   ;;an assertion violation.
   ;;
   (let ((rv (parametrise ((current-run-lexenv (lambda () lexenv.run)))
-	      (eval-core (expanded->core rhs-expr.core)))))
+	      (compiler.eval-core (expanded->core rhs-expr.core)))))
     (cond ((procedure? rv)
 	   (make-local-macro-binding rv rhs-expr.core))
 	  ((variable-transformer? rv)

@@ -55,7 +55,8 @@
     system-label			system-id-gensym
 
     ;; compiler related operations
-    eval-core				core-expr->optimized-code
+    compiler.eval-core			compiler.core-expr->optimized-code
+    compiler.core-expr->assembly-code
 
     ;; runtime options
     option.verbose-about-libraries?
@@ -125,9 +126,11 @@
     $vector-length $vector-empty? $vector-ref $vector-set!
     $putprop $getprop $remprop $property-list)
   (import (vicare)
-    (only (ikarus.compiler)
-	  eval-core
-	  core-expr->optimized-code)
+    (prefix (only (ikarus.compiler)
+		  eval-core
+		  core-expr->optimized-code
+		  core-expr->assembly-code)
+	    compiler.)
     (prefix (rename (only (vicare options)
 			  verbose?
 			  verbose-about-libraries?

@@ -5213,6 +5213,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; mode: vicare
 ;; eval: (put 'make-primcall 'scheme-indent-function 1)
 ;; eval: (put 'assemble-sources 'scheme-indent-function 1)
 ;; eval: (put 'define-structure 'scheme-indent-function 1)
