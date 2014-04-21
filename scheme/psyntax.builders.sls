@@ -233,7 +233,17 @@
 	   (map core-language->sexp (cddr core)))
 
 	  ((annotated-case-lambda)
-	   (let* ((meat (cddr core))
+	   (let* ((meat   (cddr core))
+		  (args*  (map car meat))
+		  (body** (map cdr meat)))
+	     (if (= 1 (length args*))
+		 `(lambda ,(car args*)
+		    . ,(%process-lambda-body (car body**)))
+	       `(case-lambda
+		 ,@(map cons args* (map %process-lambda-body body**))))))
+
+	  ((case-lambda)
+	   (let* ((meat   (cdr core))
 		  (args*  (map car meat))
 		  (body** (map cdr meat)))
 	     (if (= 1 (length args*))
