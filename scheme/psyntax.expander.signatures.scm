@@ -368,15 +368,8 @@
   ;;
   ;;   (<top> ... . <list>)
   ;;
-  (let ((retvals.stx ($retvals-signature-tags ($lambda-signature-retvals signature)))
-	(formals.stx ($formals-signature-tags ($lambda-signature-formals signature))))
-    (and (list-tag-id? retvals.stx)
-	 (if (list? formals.stx)
-	     (for-all top-tag-id? formals.stx)
-	   (receive (head tail)
-	       (improper-list->list-and-rest formals.stx)
-	     (and (for-all top-tag-id? head)
-		  (list-tag-id? tail)))))))
+  (and (formals-signature-fully-unspecified? ($lambda-signature-formals signature))
+       (retvals-signature-fully-unspecified? ($lambda-signature-retvals signature))))
 
 
 ;;;; formals-signature stuff
@@ -395,6 +388,22 @@
 					   {sub-signature   formals-signature?})
   ($formals-signature-super-and-sub-syntax? ($formals-signature-tags super-signature)
 					    ($formals-signature-tags sub-signature)))
+
+(define* (formals-signature-fully-unspecified? {signature formals-signature?})
+  ;;Return  true  if the  formals  signature  does  not  specify any  argument  type,
+  ;;otherwise  return false;  in other  words, return  true if  the signature  is one
+  ;;among:
+  ;;
+  ;;   (<top> ...)
+  ;;   (<top> ... . <list>)
+  ;;
+  (let ((formals.stx ($formals-signature-tags signature)))
+    (if (list? formals.stx)
+	(for-all top-tag-id? formals.stx)
+      (receive (head tail)
+	  (improper-list->list-and-rest formals.stx)
+	(and (for-all top-tag-id? head)
+	     (list-tag-id? tail))))))
 
 
 ;;;; retvals-signature stuff

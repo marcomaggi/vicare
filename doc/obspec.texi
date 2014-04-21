@@ -95,8 +95,22 @@ for the callable syntax specification.
 @subsubsection Signatures of return values
 
 
-The following bindings are exported by the library @library{vicare
-expander object-type-specs}.
+Every expression @meta{expr} in the Scheme language can return zero or
+more values of any type; we can imagine any expression as evaluated in
+the following context:
+
+@example
+(call-with-values
+    (lambda ()
+      @meta{expr})
+  (lambda @meta{formals}
+    . @meta{continuation-body}))
+@end example
+
+@noindent
+the signature of the return values is the signature of the consumer's
+@meta{formals}.  The following bindings are exported by the library
+@library{vicare expander object-type-specs}.
 
 
 @deftp {Struct Type} retvals-signature

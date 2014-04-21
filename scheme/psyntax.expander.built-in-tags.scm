@@ -864,6 +864,7 @@
   (define-tag-retriever procedure-tag-id	<procedure>)
   (define-tag-retriever list-tag-id		<list>)
   (define-tag-retriever boolean-tag-id		<boolean>)
+  (define-tag-retriever struct-tag-id		<struct>)
   #| end of let-syntax |# )
 
 ;;; --------------------------------------------------------------------

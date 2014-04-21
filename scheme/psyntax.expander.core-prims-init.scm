@@ -507,16 +507,45 @@
   ;; $keyword->string
   ;; $keyword-hash
   ;; $keyword=?
-;;;
-  ;; base-rtd
-  ;; $struct-set!
-  ;; $struct-ref
-  ;; $struct-rtd
-  ;; $struct
-  ;; $make-struct
-  ;; $struct?
-  ;; $struct/rtd?
-  ;; $struct-guardian
+
+;;; --------------------------------------------------------------------
+
+  (let ((P (C base-rtd)))
+    (register-lambda-signature P (S (list (C <struct-type-descriptor>))
+				    '())))
+
+  (let ((P (C $struct)))
+    (register-lambda-signature P (S (list (C <struct>))
+				    (cons (C <struct-type-descriptor>) (C <list>)))))
+
+  (let ((P (C $make-struct)))
+    (register-lambda-signature P (S (list (C <struct>))
+				    (list (C <struct-type-descriptor>) (C <fixnum>)))))
+
+  (let ((P (C $struct?)))
+    (register-lambda-signature P (S (list (C <boolean>))
+				    (list (C <top>)))))
+
+  (let ((P (C $struct/rtd?)))
+    (register-lambda-signature P (S (list (C <boolean>))
+				    (list (C <top>) (C <struct-type-descriptor>)))))
+
+  (let ((P (C $struct-guardian)))
+    (register-lambda-signature P (S (list (C <top>))
+				    (list (C <struct>)))))
+
+  (let ((P (C $struct-rtd)))
+    (register-lambda-signature P (S (list (C <struct-type-descriptor>))
+				    (list (C <struct>)))))
+
+  (let ((P (C $struct-set!)))
+    (register-lambda-signature P (S (list (C <void>))
+				    (list (C <struct>) (C <fixnum>) (C <top>)))))
+
+  (let ((P (C $struct-ref)))
+    (register-lambda-signature P (S (list (C <top>))
+				    (list (C <struct>) (C <fixnum>)))))
+
   ;; $record-guardian
 
   ;; $std-std

@@ -2138,6 +2138,24 @@
     ;;Here we know that ASSERTED.SIG is a  valid formals signature, so we can be less
     ;;strict in the patterns.
     (syntax-match (retvals-signature-tags asserted.sig) ()
+      ;;Special handling for single value.
+      ((?rv-tag)
+       (let* ((checker.psi (chi-expr (bless
+				      `(lambda (t)
+					 (tag-return-value-validator ,?rv-tag t)
+					 t))
+				     lexenv.run lexenv.expand))
+	      (checker.core (psi-core-expr checker.psi))
+	      (expr.core    (psi-core-expr expr.psi)))
+	 (make-psi input-form.stx
+		   (build-application no-source
+		     checker.core
+		     (list expr.core))
+		   ;;The type  of the  value returned by  ?EXPR was  unspecified, but
+		   ;;after asserting the  type at run-time: we know that  the type is
+		   ;;the asserted one.
+		   asserted.sig)))
+
       ((?rv-tag* ...)
        (let* ((TMP*         (generate-temporaries ?rv-tag*))
 	      (checker.psi  (chi-expr (bless
@@ -2147,8 +2165,8 @@
 					      TMP* ?rv-tag*)
 					  (values . ,TMP*)))
 				      lexenv.run lexenv.expand)))
-	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
-				      expr.psi checker.psi asserted.sig)))
+	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
+						      expr.psi checker.psi asserted.sig)))
 
       ((?rv-tag* ... . ?rv-rest-tag)
        (let* ((TMP*         (generate-temporaries ?rv-tag*))
@@ -2160,8 +2178,8 @@
 					  (tag-return-value-validator ,?rv-rest-tag rest-tmp)
 					  (apply values ,@TMP* rest-tmp)))
 				      lexenv.run lexenv.expand)))
-	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
-				      expr.psi checker.psi asserted.sig)))
+	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
+						      expr.psi checker.psi asserted.sig)))
 
       (?rv-args-tag
        (let ((checker.psi  (chi-expr (bless
@@ -2169,12 +2187,12 @@
 					 (tag-return-value-validator ,?rv-args-tag args)
 					 (apply values args)))
 				     lexenv.run lexenv.expand)))
-	 (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
-				      expr.psi checker.psi asserted.sig)))
+	 (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
+						      expr.psi checker.psi asserted.sig)))
       ))
 
-  (define* (%run-time-check-output-form input-form.stx lexenv.run lexenv.expand
-					{expr.psi psi?} {checker.psi psi?} {asserted.sig retvals-signature?})
+  (define* (%run-time-check-multiple-values-output-form input-form.stx lexenv.run lexenv.expand
+							{expr.psi psi?} {checker.psi psi?} {asserted.sig retvals-signature?})
     ;;We build a core language expression as follows:
     ;;
     ;;   (call-with-values
@@ -2436,7 +2454,11 @@
 	  (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi)
 	(syntax-match (retvals-signature-tags expr.sign) ()
 	  ((?source-tag)
-	   (cond ((top-tag-id? ?source-tag)
+	   (cond ((top-tag-id? ?target-tag)
+		  ;;The expression  already has the  right type: nothing to  do, just
+		  ;;return it.
+		  expr.psi)
+		 ((top-tag-id? ?source-tag)
 		  (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi))
 		 ((tag-super-and-sub? ?target-tag ?source-tag)
 		  ;;The expression  already has the  right type: nothing to  do, just

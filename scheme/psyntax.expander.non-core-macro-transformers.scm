@@ -252,24 +252,41 @@
     (receive (standard-formals.stx signature)
 	(parse-tagged-lambda-proto-syntax (bless prototype.stx)
 					  input-form.stx)
-      (if (lambda-signature-fully-unspecified? signature)
-	  (bless
-	   `(internal-define (unsafe) ,(cons who.id standard-formals.stx) . ,unsafe-body*.stx))
-	(let* ((UNSAFE-WHO    (identifier-append who.id "~" who.id))
-	       (safe-body.stx (if (list? standard-formals.stx)
-				  (cons UNSAFE-WHO standard-formals.stx)
-				(receive (arg*.id rest.id)
-				    (improper-list->list-and-rest standard-formals.stx)
-				  `(apply ,UNSAFE-WHO ,@arg*.id ,rest.id)))))
-	  (bless
-	   `(begin
-	      (internal-define (safe) ,(make-define-formals who.id)
-		,safe-body.stx)
-	      (internal-define (safe-retvals unsafe-formals) ,(make-define-formals UNSAFE-WHO)
-		. ,unsafe-body*.stx)
-	      (begin-for-syntax
-		(set-identifier-unsafe-variant! (syntax ,who.id) (syntax ,UNSAFE-WHO)))))
-	  ))))
+      (cond ((lambda-signature-fully-unspecified? signature)
+	     ;;If  no type  is specified:  just generate  a standard  Scheme function
+	     ;;definition.
+	     (bless
+	      `(internal-define (unsafe) ,(cons who.id standard-formals.stx) . ,unsafe-body*.stx)))
+
+	    ((retvals-signature-fully-unspecified? (lambda-signature-retvals signature))
+	     ;;If only  the return values  have specified type signature:  generate a
+	     ;;single function definition with type checking for the return values.
+	     ;;
+	     ;;This is the  case, for example, of predicate functions:  we known that
+	     ;;there is a single argument of any  type and a single return value with
+	     ;;type "<boolean>".
+	     (bless
+	      `(internal-define (safe-retvals unsafe-formals) ,(make-define-formals who.id)
+		 . ,unsafe-body*.stx)))
+
+	    (else
+	     ;;Both  the  arguments  and  the return  values  have  type  signatures:
+	     ;;generate 2 function definitions, the safe and the unsafe one.
+	     (let* ((UNSAFE-WHO    (identifier-append who.id "~" who.id))
+		    (safe-body.stx (if (list? standard-formals.stx)
+				       (cons UNSAFE-WHO standard-formals.stx)
+				     (receive (arg*.id rest.id)
+					 (improper-list->list-and-rest standard-formals.stx)
+				       `(apply ,UNSAFE-WHO ,@arg*.id ,rest.id)))))
+	       (bless
+		`(begin
+		   (internal-define (safe) ,(make-define-formals who.id)
+		     ,safe-body.stx)
+		   (internal-define (safe-retvals unsafe-formals) ,(make-define-formals UNSAFE-WHO)
+		     . ,unsafe-body*.stx)
+		   (begin-for-syntax
+		     (set-identifier-unsafe-variant! (syntax ,who.id) (syntax ,UNSAFE-WHO)))))
+	       )))))
 
   #| end of module |# )
 
@@ -693,38 +710,29 @@
 	(define accessor-sexp*
 	  (map (lambda (accessor.id unsafe-accessor.id field.tag)
 		 `(define ((brace ,accessor.id ,field.tag) (brace stru ,type.id))
-		    (if ($struct/rtd? stru ',rtd)
-			(,unsafe-accessor.id stru)
-		      (assertion-violation ',accessor.id
-			"not a struct of required type as struct accessor argument"
-			stru ',rtd))))
+		    (,unsafe-accessor.id stru)))
 	    accessor*.id unsafe-accessor*.id field*.tag))
 
 	(define mutator-sexp*
 	  (map (lambda (mutator.id unsafe-mutator.id field.tag)
 		 `(define ((brace ,mutator.id ,(void-tag-id)) (brace stru ,type.id) (brace val ,field.tag))
-		    (if ($struct/rtd? stru ',rtd)
-			(,unsafe-mutator.id stru val)
-		      (assertion-violation ',mutator.id
-			"not a struct of required type as struct mutator argument"
-			stru ',rtd))))
+		    (,unsafe-mutator.id stru val)))
 	    mutator*.id unsafe-mutator*.id field*.tag))
 
 	(define unsafe-accessor-sexp*
-	  (map (lambda (unsafe-accessor.id field-idx field.tag)
+	  (map (lambda (unsafe-accessor.id field.idx field.tag)
 		 `(define-syntax ,unsafe-accessor.id
 		    (syntax-rules ()
 		      ((_ ?stru)
-		       ;;We cast the return value to the field tag.
-		       ((,field.tag)($struct-ref ?stru ,field-idx))))))
+		       (tag-assert-and-return (,field.tag) ($struct-ref ?stru ,field.idx))))))
 	    unsafe-accessor*.id field*.idx field*.tag))
 
 	(define unsafe-mutator-sexp*
-	  (map (lambda (unsafe-mutator.id field-idx)
+	  (map (lambda (unsafe-mutator.id field.idx)
 		 `(define-syntax ,unsafe-mutator.id
 		    (syntax-rules ()
 		      ((_ ?stru ?val)
-		       ((,(void-tag-id))($struct-set! ?stru ,field-idx ?val))))))
+		       ($struct-set! ?stru ,field.idx ?val)))))
 	    unsafe-mutator*.id field*.idx))
 
 	(define object-type-spec-form
@@ -747,10 +755,10 @@
 	      (cons '$rtd ',rtd))
 	    (begin-for-syntax ,object-type-spec-form)
 	    (define ((brace ,constructor.id ,type.id) . ,field*.arg)
-	      (let ((S ($struct ',rtd ,@field*.sym)))
-		(if ($std-destructor ',rtd)
-		    ($struct-guardian S)
-		  S)))
+	      (receive-and-return (S)
+		  ($struct ',rtd ,@field*.sym)
+		(when ($std-destructor ',rtd)
+		  ($struct-guardian S))))
 	    ,@accessor-sexp*
 	    ,@mutator-sexp*
 	    ,@unsafe-accessor-sexp*
@@ -847,7 +855,7 @@
        (define %dispatcher   #f)
 
        (define object-type-spec
-	 (typ.make-object-type-spec (syntax ,type.id) (typ.top-tag-id) (syntax ,predicate.id)
+	 (typ.make-object-type-spec (syntax ,type.id) (typ.struct-tag-id) (syntax ,predicate.id)
 				    ,%constructor-maker
 				    ,%accessor-maker ,%mutator-maker
 				    ,%getter-maker   ,%setter-maker
@@ -3968,52 +3976,62 @@
 
 ;;;; module non-core-macro-transformer: RECEIVE, RECEIVE-AND-RETURN, BEGIN0, XOR
 
-(define (receive-macro expr-stx)
-  ;;Transformer function used to expand Vicare's RECEIVE macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define (receive-macro input-form.stx)
+  ;;Transformer function  used to expand  Vicare's RECEIVE macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
-    ((_ ?formals ?producer-expression ?form0 ?form* ...)
-     (tagged-formals-syntax? ?formals)
-     (bless
-      `(call-with-values
-	   (lambda () ,?producer-expression)
-	 (lambda ,?formals ,?form0 ,@?form*))))
-    ))
-
-(define (receive-and-return-macro expr-stx)
-  ;;Transformer  function  used  to expand  Vicare's  RECEIVE-AND-RETURN
-  ;;macros from the top-level built in environment.  Expand the contents
-  ;;of EXPR-STX; return a syntax object that must be further expanded.
-  ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
     ((_ ?formals ?producer-expression ?body0 ?body* ...)
      (receive (standard-formals signature)
-	 (parse-tagged-formals-syntax ?formals expr-stx)
-       (let ((rv-form (cond ((list? standard-formals)
-			     `(values . ,standard-formals))
-			    ((pair? standard-formals)
-			     (receive (rv* rv-rest)
-				 (improper-list->list-and-rest standard-formals)
-			       `(values ,@rv* ,rv-rest)))
-			    (else
-			     ;;It's a standalone identifier.
-			     standard-formals))))
-	 (bless
-	  `(call-with-values
-	       (lambda () ,?producer-expression)
-	     (lambda ,?formals
-	       ,?body0 ,@?body*
-	       ,rv-form))))))
+	 (parse-tagged-formals-syntax ?formals input-form.stx)
+       (let ((single-return-value? (and (list? standard-formals)
+					(= 1 (length standard-formals)))))
+	 (if single-return-value?
+	     (bless
+	      `((lambda ,?formals ,?body0 ,@?body*) ,?producer-expression))
+	   (bless
+	    `(call-with-values
+		 (lambda () ,?producer-expression)
+	       (lambda ,?formals ,?body0 ,@?body*)))))))
     ))
 
-(define (begin0-macro expr-stx)
-  ;;Transformer function used to expand  Vicare's BEGIN0 macros from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+(define (receive-and-return-macro input-form.stx)
+  ;;Transformer function used  to expand Vicare's RECEIVE-AND-RETURN  macros from the
+  ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
+  ;;syntax object that must be further expanded.
   ;;
-  (syntax-match expr-stx ()
+  (syntax-match input-form.stx ()
+    ((_ ?formals ?producer-expression ?body0 ?body* ...)
+     (receive (standard-formals signature)
+	 (parse-tagged-formals-syntax ?formals input-form.stx)
+       (receive (rv-form single-return-value?)
+	   (cond ((list? standard-formals)
+		  (if (= 1 (length standard-formals))
+		      (values (car standard-formals) #t)
+		    (values `(values . ,standard-formals) #f)))
+		 ((pair? standard-formals)
+		  (receive (rv* rv-rest)
+		      (improper-list->list-and-rest standard-formals)
+		    (values `(values ,@rv* ,rv-rest) #f)))
+		 (else
+		  ;;It's a standalone identifier.
+		  (values standard-formals #f)))
+	 (if single-return-value?
+	     (bless
+	      `((lambda ,?formals ,?body0 ,@?body* ,rv-form) ,?producer-expression))
+	   (bless
+	    `(call-with-values
+		 (lambda () ,?producer-expression)
+	       (lambda ,?formals ,?body0 ,@?body* ,rv-form)))))))
+    ))
+
+(define (begin0-macro input-form.stx)
+  ;;Transformer function  used to  expand Vicare's BEGIN0  macros from  the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
     ((_ ?form0 ?form* ...)
      (bless
       `(call-with-values
@@ -4024,12 +4042,12 @@
     ))
 
 (module (xor-macro)
-  ;;Transformer function  used to  expand Vicare's  XOR macros  from the
-  ;;top-level built  in environment.   Expand the contents  of EXPR-STX;
-  ;;return a syntax object that must be further expanded.
+  ;;Transformer function used to expand Vicare's  XOR macros from the top-level built
+  ;;in environment.   Expand the contents  of INPUT-FORM.STX; return a  syntax object
+  ;;that must be further expanded.
   ;;
-  (define (xor-macro expr-stx)
-    (syntax-match expr-stx ()
+  (define (xor-macro input-form.stx)
+    (syntax-match input-form.stx ()
       ((_ ?expr* ...)
        (bless (%xor-aux #f ?expr*)))
       ))

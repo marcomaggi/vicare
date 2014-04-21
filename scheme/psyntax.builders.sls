@@ -233,24 +233,10 @@
 	   (map core-language->sexp (cddr core)))
 
 	  ((annotated-case-lambda)
-	   (let* ((meat   (cddr core))
-		  (args*  (map car meat))
-		  (body** (map cdr meat)))
-	     (if (= 1 (length args*))
-		 `(lambda ,(car args*)
-		    . ,(%process-lambda-body (car body**)))
-	       `(case-lambda
-		 ,@(map cons args* (map %process-lambda-body body**))))))
+	   (%process-case-lambda (cddr core)))
 
 	  ((case-lambda)
-	   (let* ((meat   (cdr core))
-		  (args*  (map car meat))
-		  (body** (map cdr meat)))
-	     (if (= 1 (length args*))
-		 `(lambda ,(car args*)
-		    . ,(%process-lambda-body (car body**)))
-	       `(case-lambda
-		 ,@(map cons args* (map %process-lambda-body body**))))))
+	   (%process-case-lambda (cdr core)))
 
 	  ((begin)
 	   `(begin
@@ -289,6 +275,15 @@
 	   (map core-language->sexp core)))
       core))
 
+  (define (%process-case-lambda meat)
+    (let ((args*  (map car meat))
+	  (body** (map cdr meat)))
+      (if (= 1 (length args*))
+	  `(lambda ,(car args*)
+	     . ,(%process-lambda-body (car body**)))
+	`(case-lambda
+	  ,@(map cons args* (map %process-lambda-body body**))))))
+
   (define (%process-lambda-body body*)
     ;;If a LAMBDA body consists of a single BEGIN syntax:
     ;;
@@ -299,10 +294,14 @@
     ;;   (lambda ?formals . ?body)
     ;;
     (let ((body* (map core-language->sexp body*)))
-      (if (and (= 1 (length body*))
-	       (eq? 'begin (car body*)))
-	  (cdr body*)
-	body*)))
+      (cond ((and (= 1 (length body*))
+		  (eq? 'begin (car body*)))
+	     (cdr body*))
+	    ((and (= 1 (length body*))
+		  (pair? (car body*))
+		  (eq? 'begin (caar body*)))
+	     (cdar body*))
+	    (else body*))))
 
   #| end of module: CORE-LANGUAGE->SEXP |# )
 

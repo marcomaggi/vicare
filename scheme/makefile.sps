@@ -3840,6 +3840,7 @@
     (procedure-tag-id				$type-specs)
     (list-tag-id				$type-specs)
     (boolean-tag-id				$type-specs)
+    (struct-tag-id				$type-specs)
 
 ;;;; built-in object types utilities
 

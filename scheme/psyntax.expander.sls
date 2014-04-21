@@ -1191,11 +1191,9 @@
     label-object-type-spec			set-label-object-type-spec!
     tag-identifier-ancestry			tag-common-ancestor
 
-    top-tag-id
-    void-tag-id
-    procedure-tag-id
-    list-tag-id
-    boolean-tag-id
+    top-tag-id					void-tag-id
+    procedure-tag-id				list-tag-id
+    boolean-tag-id				struct-tag-id
 
     ;; expand-time object type specs: tagged binding identifiers
     tagged-identifier?
@@ -6048,7 +6046,7 @@
 	 procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
 	 list-tag-id			$list-tag-id?		list-tag-id?
 	 top-tag-id			$top-tag-id?		top-tag-id?
-	 boolean-tag-id			void-tag-id)
+	 boolean-tag-id			void-tag-id		struct-tag-id)
   (import (vicare))
   (include "psyntax.expander.built-in-tags.scm" #t))
 (module (initialise-core-prims-tagging)
