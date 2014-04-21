@@ -1227,14 +1227,18 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
        (flush-output-port port)))))
 
 
-;;;; some utility modules
+;;;; some basic initialisation
 
 (module ()
   ;;See "ikarus.symbol-table.sls"  for an explanation of  this.  Nothing
   ;;must be executed before the initialisation of the symbol table.
   ($initialize-symbol-table!)
   ;;See "ikarus.strings.table.sls".
-  ($initialize-interned-strings-table!))
+  ($initialize-interned-strings-table!)
+
+  (psyntax.initialise-type-spec-for-built-in-object-types)
+  (psyntax.initialise-core-prims-tagging)
+  #| end of module |# )
 
 
 ;;;; automatic struct finalisation
@@ -1467,8 +1471,6 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
       (option.cache-compiled-libraries #f))
     (load-rc-files-as-r6rs-scripts cfg)
     (execution-state-initialisation-according-to-command-line-options)
-    (psyntax.initialise-type-spec-for-built-in-object-types)
-    (psyntax.initialise-core-prims-tagging)
 
     (when (and (readline.readline-enabled?) (not cfg.raw-repl))
       (cafe-input-port (readline.make-readline-input-port)))
