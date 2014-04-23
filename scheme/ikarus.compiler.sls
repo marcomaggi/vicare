@@ -2062,11 +2062,6 @@
 			   (else
 			    (make-funcall rator rand*)))))
 		  (else
-		   ;;Here we do not know what the source code is, it could
-		   ;;be something like:
-		   ;;
-		   ;;   (apply call-with-values ?form)
-		   ;;
 		   (mk rator rand*))))
 	   ((debug-call)
 	    (inline (lambda (op^ rand*^)
