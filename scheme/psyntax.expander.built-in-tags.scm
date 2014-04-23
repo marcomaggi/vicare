@@ -150,6 +150,12 @@
   (%basic '<procedure>		'<top>		'procedure?)
   (%basic '<boolean>		'<top>		'boolean?)
 
+  (%basic '<predicate>		'<procedure>	'procedure?)
+  (set-tag-identifier-callable-signature! (predicate-tag-id)
+					  (make-lambda-signature
+					   (make-retvals-signature-single-value (boolean-tag-id))
+					   (make-formals-signature (list (top-tag-id)))))
+
 ;;; --------------------------------------------------------------------
 
   (%initialise-<symbol>)
@@ -862,9 +868,11 @@
   (define-tag-retriever top-tag-id		<top>)
   (define-tag-retriever void-tag-id		<void>)
   (define-tag-retriever procedure-tag-id	<procedure>)
+  (define-tag-retriever predicate-tag-id	<predicate>)
   (define-tag-retriever list-tag-id		<list>)
   (define-tag-retriever boolean-tag-id		<boolean>)
   (define-tag-retriever struct-tag-id		<struct>)
+  (define-tag-retriever record-tag-id		<record>)
   #| end of let-syntax |# )
 
 ;;; --------------------------------------------------------------------

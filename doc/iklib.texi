@@ -5912,9 +5912,18 @@ optionally applied to the field values to print them.
 
 
 @defun default-struct-printer @var{stru}
-The default struct printer function.  It can be used as @var{printer}
-argument in calls to @func{set-rtd-printer!}.
+The default struct printer function; the string produced by this printer
+is configured with the parameter @func{default-struct-printer-details}.
+It can be used as @var{printer} argument in calls to
+@func{set-rtd-printer!}.
 @end defun
+
+
+@deffn Parameter default-struct-printer-details
+When set to true: @func{default-struct-printer} will produce a detailed
+description of the structure; otherwise only minimum informations are
+included.  This parameter is inisialised to @false{}.
+@end deffn
 
 @c ------------------------------------------------------------
 

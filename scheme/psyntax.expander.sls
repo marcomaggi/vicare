@@ -1178,27 +1178,31 @@
     make-formals-signature			formals-signature?
     formals-signature-tags			formals-signature=?
 
-    make-retvals-signature			retvals-signature?
+    make-retvals-signature			make-retvals-signature-single-value
+    make-retvals-signature-fully-unspecified
+    retvals-signature?
     retvals-signature-tags			retvals-signature=?
     retvals-signature-common-ancestor
-    make-retvals-signature-fully-unspecified
 
     ;; expand-time object type specs: identifiers defining types
     tag-identifier?				all-tag-identifiers?
-    tag-identifier-callable-signature
     tag-super-and-sub?				formals-signature-super-and-sub-syntax?
     identifier-object-type-spec			set-identifier-object-type-spec!
     label-object-type-spec			set-label-object-type-spec!
     tag-identifier-ancestry			tag-common-ancestor
 
+    set-tag-identifier-callable-signature!	tag-identifier-callable-signature
+    fabricate-procedure-tag-identifier
+
     top-tag-id					void-tag-id
-    procedure-tag-id				list-tag-id
-    boolean-tag-id				struct-tag-id
+    procedure-tag-id				predicate-tag-id
+    list-tag-id					boolean-tag-id
+    struct-tag-id				record-tag-id
 
     ;; expand-time object type specs: tagged binding identifiers
     tagged-identifier?
-    set-identifier-tag!				identifier-tag
-    set-label-tag!				label-tag
+    set-identifier-tag!		identifier-tag		override-identifier-tag!
+    set-label-tag!		label-tag		override-label-tag!
 
     ;; expand-time type checking exception stuff
     expand-time-type-signature-violation?
@@ -6046,7 +6050,8 @@
 	 procedure-tag-id		$procedure-tag-id?	procedure-tag-id?
 	 list-tag-id			$list-tag-id?		list-tag-id?
 	 top-tag-id			$top-tag-id?		top-tag-id?
-	 boolean-tag-id			void-tag-id		struct-tag-id)
+	 boolean-tag-id			void-tag-id
+	 struct-tag-id			record-tag-id		predicate-tag-id)
   (import (vicare))
   (include "psyntax.expander.built-in-tags.scm" #t))
 (module (initialise-core-prims-tagging)

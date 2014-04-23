@@ -594,6 +594,7 @@
      (<pointer>					(macro . <pointer>))
      (<transcoder>				(macro . <transcoder>))
      (<procedure>				(macro . <procedure>))
+     (<predicate>				(macro . <predicate>))
 
      (<fixnum>					(macro . <fixnum>))
      (<flonum>					(macro . <ratnum>))
@@ -925,6 +926,7 @@
     (struct-type-field-names			v $language)
     (struct-type-destructor			v $language)
     (default-struct-printer			v $language)
+    (default-struct-printer-details		v $language)
     (struct-constructor				v $language)
     (struct-predicate				v $language)
     (struct-field-accessor			v $language)
@@ -3716,6 +3718,7 @@
     (<pointer>					$expander-tags)
     (<transcoder>				$expander-tags)
     (<procedure>				$expander-tags)
+    (<predicate>				$expander-tags)
 
     (<fixnum>					$expander-tags)
     (<flonum>					$expander-tags)
@@ -3793,6 +3796,7 @@
     (formals-signature=?			$type-specs)
 
     (make-retvals-signature			$type-specs)
+    (make-retvals-signature-single-value	$type-specs)
     (retvals-signature?				$type-specs)
     (retvals-signature-tags			$type-specs)
     (retvals-signature=?			$type-specs)
@@ -3800,11 +3804,14 @@
 
     (tag-identifier?				$type-specs)
     (all-tag-identifiers?			$type-specs)
-    (tag-identifier-callable-signature		$type-specs)
     (tag-super-and-sub?				$type-specs)
     (tag-identifier-ancestry			$type-specs)
     (tag-common-ancestor			$type-specs)
     (formals-signature-super-and-sub-syntax?	$type-specs)
+
+    (set-tag-identifier-callable-signature!	$type-specs)
+    (tag-identifier-callable-signature		$type-specs)
+    (fabricate-procedure-tag-identifier		$type-specs)
 
     (set-identifier-object-type-spec!		$type-specs)
     (identifier-object-type-spec		$type-specs)
@@ -3826,8 +3833,10 @@
 
     (tagged-identifier?				$type-specs)
     (set-identifier-tag!			$type-specs)
+    (override-identifier-tag!			$type-specs)
     (identifier-tag				$type-specs)
     (set-label-tag!				$type-specs)
+    (override-label-tag!			$type-specs)
     (label-tag					$type-specs)
 
     (expand-time-type-signature-violation?			$type-specs)
@@ -3841,6 +3850,7 @@
     (list-tag-id				$type-specs)
     (boolean-tag-id				$type-specs)
     (struct-tag-id				$type-specs)
+    (record-tag-id				$type-specs)
 
 ;;;; built-in object types utilities
 

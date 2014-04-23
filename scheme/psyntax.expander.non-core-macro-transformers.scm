@@ -167,7 +167,8 @@
 
     ;;Expander tags.
     ((<top> <void>
-      <boolean> <char> <symbol> <keyword> <pointer> <transcoder> <procedure>
+      <boolean> <char> <symbol> <keyword> <pointer> <transcoder>
+      <procedure> <predicate>
       <fixnum> <flonum> <ratnum> <bignum> <compnum> <cflonum>
       <rational-valued> <rational> <integer> <integer-valued>
       <exact-integer> <real> <real-valued> <complex> <number>
@@ -708,31 +709,67 @@
 	    field*.str))
 
 	(define accessor-sexp*
+	  ;;Safe struct fields accessors.
+	  ;;
+	  ;;NOTE The  unsafe variant of  the field accessor  must be a  syntax object
+	  ;;which, expanded  by itself and  evaluated, returns an  accessor function.
+	  ;;We know that: when the compiler finds a form like:
+	  ;;
+	  ;;   ((lambda (stru)
+	  ;;      (unsafe-accessor stru))
+	  ;;    the-struct)
+	  ;;
+	  ;;it integrates the LAMBDA into:
+	  ;;
+	  ;;   (unsafe-accessor the-struct)
+	  ;;
+	  ;;(Marco Maggi; Wed Apr 23, 2014)
 	  (map (lambda (accessor.id unsafe-accessor.id field.tag)
-		 `(define ((brace ,accessor.id ,field.tag) (brace stru ,type.id))
-		    (,unsafe-accessor.id stru)))
+		 `(begin
+		    (internal-define (safe) ((brace ,accessor.id ,field.tag) (brace stru ,type.id))
+		      (,unsafe-accessor.id stru))
+		    (begin-for-syntax
+		      (set-identifier-unsafe-variant! (syntax ,accessor.id)
+			(syntax (lambda (stru)
+				  (,unsafe-accessor.id stru)))))))
 	    accessor*.id unsafe-accessor*.id field*.tag))
 
 	(define mutator-sexp*
+	  ;;Safe record fields mutators.
+	  ;;
+	  ;;NOTE The  unsafe variant  of the  field mutator must  be a  syntax object
+	  ;;which, expanded by itself and  evaluated, returns a mutator function.  We
+	  ;;know that: when the compiler finds a form like:
+	  ;;
+	  ;;   ((lambda (stru new-value)
+	  ;;      (unsafe-mutator stru new-value))
+	  ;;    the-stru the-new-value)
+	  ;;
+	  ;;it integrates the LAMBDA into:
+	  ;;
+	  ;;   (unsafe-mutator the-stru the-new-value)
+	  ;;
+	  ;;(Marco Maggi; Wed Apr 23, 2014)
 	  (map (lambda (mutator.id unsafe-mutator.id field.tag)
-		 `(define ((brace ,mutator.id ,(void-tag-id)) (brace stru ,type.id) (brace val ,field.tag))
-		    (,unsafe-mutator.id stru val)))
+		 `(begin
+		    (internal-define (safe) ((brace ,mutator.id <void>) (brace stru ,type.id) (brace val ,field.tag))
+		      (,unsafe-mutator.id stru val))
+		    (begin-for-syntax
+		      (set-identifier-unsafe-variant! (syntax ,mutator.id)
+			(syntax (lambda (stru val)
+				  (,unsafe-mutator.id stru val)))))))
 	    mutator*.id unsafe-mutator*.id field*.tag))
 
 	(define unsafe-accessor-sexp*
-	  (map (lambda (unsafe-accessor.id field.idx field.tag)
-		 `(define-syntax ,unsafe-accessor.id
-		    (syntax-rules ()
-		      ((_ ?stru)
-		       (tag-assert-and-return (,field.tag) ($struct-ref ?stru ,field.idx))))))
-	    unsafe-accessor*.id field*.idx field*.tag))
+	  (map (lambda (unsafe-accessor.id field.idx)
+		 `(define-syntax-rule (,unsafe-accessor.id ?stru)
+		    ($struct-ref ?stru ,field.idx)))
+	    unsafe-accessor*.id field*.idx))
 
 	(define unsafe-mutator-sexp*
 	  (map (lambda (unsafe-mutator.id field.idx)
-		 `(define-syntax ,unsafe-mutator.id
-		    (syntax-rules ()
-		      ((_ ?stru ?val)
-		       ($struct-set! ?stru ,field.idx ?val)))))
+		 `(define-syntax-rule (,unsafe-mutator.id ?stru ?val)
+		    ($struct-set! ?stru ,field.idx ?val)))
 	    unsafe-mutator*.id field*.idx))
 
 	(define object-type-spec-form
@@ -759,10 +796,10 @@
 		  ($struct ',rtd ,@field*.sym)
 		(when ($std-destructor ',rtd)
 		  ($struct-guardian S))))
-	    ,@accessor-sexp*
-	    ,@mutator-sexp*
 	    ,@unsafe-accessor-sexp*
-	    ,@unsafe-mutator-sexp*)))))
+	    ,@unsafe-mutator-sexp*
+	    ,@accessor-sexp*
+	    ,@mutator-sexp*)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -902,7 +939,7 @@
       (%parse-full-name-spec namespec))
     (define foo-rtd		(%named-gensym foo "-rtd"))
     (define foo-rcd		(%named-gensym foo "-rcd"))
-    (define foo-protocol	(gensym))
+    (define foo-protocol	(%named-gensym foo "-protocol"))
     (define-values
       (x*
 		;A list of identifiers representing all the field names.
@@ -988,74 +1025,123 @@
 		      (cons (syntax ,foo-rcd) (quote ,binding-spec)))))
 	(begin-for-syntax ,object-type-spec-form)
 	;;Record instance predicate.
-	(define the-predicate
+	(define (brace ,foo? <predicate>)
 	  (record-predicate ,foo-rtd))
-	(define ((brace ,foo? ,(boolean-tag-id)) obj)
-	  (the-predicate obj))
 	;;Record instance constructor.
-	(define the-constructor
+	(define ,make-foo
 	  (record-constructor ,foo-rcd))
-	(define ((brace ,make-foo ,foo) . args)
-	  (apply the-constructor args))
-	;;Safe record fields accessors.
-	,@(map (lambda (foo-x idx tag)
-		 (let ((the-accessor (gensym (syntax->datum foo-x))))
-		   `(begin
-		      (define ,the-accessor
-			(record-accessor ,foo-rtd ,idx (quote ,foo-x)))
-		      (define ((brace ,foo-x ,tag) (brace record ,foo))
-			(,the-accessor record)))))
-	    foo-x* idx* tag*)
-	;;Safe record fields mutators (if any).
-	,@(map (lambda (foo-x-set! idx tag)
-		 (let ((the-mutator (gensym (syntax->datum foo-x-set!))))
-		   `(begin
-		      (define ,the-mutator (record-mutator ,foo-rtd ,idx (quote ,foo-x-set!)))
-		      (define ((brace ,foo-x-set! ,(void-tag-id)) (brace record ,foo) (brace new-value ,tag))
-			(,the-mutator record new-value)))))
-	    foo-x-set!* set-foo-idx* mutable-tag*)
+	(begin-for-syntax
+	  (internal-body
+	    (import (prefix (vicare expander object-type-specs) typ.))
+	    (define %constructor-signature
+	      (typ.make-lambda-signature
+	       (typ.make-retvals-signature-single-value (syntax ,foo))
+	       (typ.make-formals-signature (syntax <list>))))
+	    (define %constructor-tag-id
+	      (typ.fabricate-procedure-tag-identifier (quote ,make-foo)
+						      %constructor-signature))
+	    (typ.override-identifier-tag! (syntax ,make-foo) %constructor-tag-id)))
+	(module (,@foo-x*
+		 ,@foo-x-set!*
+		 ,@(if (option.strict-r6rs)
+		       '()
+		     (append unsafe-foo-x* unsafe-foo-x-set!*)))
+	  ,(%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
+					      unsafe-foo-x*      x*         idx*
+					      unsafe-foo-x-set!* mutable-x* set-foo-idx*)
 
-	. ,(if (option.strict-r6rs)
-	       '()
-	     (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
-						unsafe-foo-x*      idx*
-						unsafe-foo-x-set!* set-foo-idx*
-						tag* mutable-tag*)))))
+	  ;;Safe record fields accessors.
+	  ;;
+	  ;;NOTE The  unsafe variant of  the field accessor  must be a  syntax object
+	  ;;which, expanded  by itself and  evaluated, returns an  accessor function.
+	  ;;We know that: when the compiler finds a form like:
+	  ;;
+	  ;;   ((lambda (record)
+	  ;;      (unsafe-foo-x record))
+	  ;;    the-record)
+	  ;;
+	  ;;it integrates the LAMBDA into:
+	  ;;
+	  ;;   (unsafe-foo-x the-record)
+	  ;;
+	  ;;(Marco Maggi; Wed Apr 23, 2014)
+	  ,@(map (lambda (foo-x unsafe-foo-x field-tag)
+		   `(begin
+		      (internal-define (safe) ((brace ,foo-x ,field-tag) (brace record ,foo))
+			(,unsafe-foo-x record))
+		      (begin-for-syntax
+			(set-identifier-unsafe-variant! (syntax ,foo-x)
+			  (syntax (lambda (record)
+				    (,unsafe-foo-x record)))))))
+	      foo-x* unsafe-foo-x* tag*)
+
+	  ;;Safe record fields mutators (if any).
+	  ;;
+	  ;;NOTE The  unsafe variant  of the  field mutator must  be a  syntax object
+	  ;;which, expanded by itself and  evaluated, returns a mutator function.  We
+	  ;;know that: when the compiler finds a form like:
+	  ;;
+	  ;;   ((lambda (record new-value)
+	  ;;      (unsafe-foo-x-set! record new-value))
+	  ;;    the-record the-new-value)
+	  ;;
+	  ;;it integrates the LAMBDA into:
+	  ;;
+	  ;;   (unsafe-foo-x-set! the-record the-new-value)
+	  ;;
+	  ;;(Marco Maggi; Wed Apr 23, 2014)
+	  ,@(map (lambda (foo-x-set! unsafe-foo-x-set! field-tag)
+	  	   `(begin
+		      (internal-define (safe) ((brace ,foo-x-set! <void>) (brace record ,foo) (brace new-value ,field-tag))
+			(,unsafe-foo-x-set! record new-value))
+		      (begin-for-syntax
+			(set-identifier-unsafe-variant! (syntax ,foo-x-set!)
+			  (syntax (lambda (record new-value)
+				    (,unsafe-foo-x-set! record new-value)))))))
+	      foo-x-set!* unsafe-foo-x-set!* mutable-tag*)
+
+	  #| end of module: safe and unsafe accessors and mutators |# )
+	)))
 
 ;;; --------------------------------------------------------------------
 
   (define (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
-					     unsafe-foo-x*      idx*
-					     unsafe-foo-x-set!* set-foo-idx*
-					     tag* mutable-tag*)
+					     unsafe-foo-x*      x*         idx*
+					     unsafe-foo-x-set!* mutable-x* set-foo-idx*)
+    (define (%make-field-index-varname x.id)
+      (string->symbol (string-append foo.str "-" (symbol->string (syntax->datum x.id)) "-index")))
+    (define foo.str
+      (symbol->string (syntax->datum foo)))
     (define foo-first-field-offset
-      (gensym))
-    `((define ,foo-first-field-offset
-	;;The field  at index 3  in the RTD is:  the index of  the first
-	;;field of  this subtype in the  layout of instances; it  is the
-	;;total number of fields of the parent type.
-	($struct-ref ,foo-rtd 3))
+      (%named-gensym foo "-first-field-offset"))
+    `(module (,@unsafe-foo-x* ,@unsafe-foo-x-set!*)
+       (define ,foo-first-field-offset
+	 ;;The field at index  3 in the RTD is: the index of  the first field of this
+	 ;;subtype in the  layout of instances; it  is the total number  of fields of
+	 ;;the parent type.
+	 ($struct-ref ,foo-rtd 3))
 
-      ;; Unsafe record fields accessors.
-      ,@(map (lambda (unsafe-foo-x idx tag)
-	       (let ((t (gensym)))
-		 `(begin
-		    (define ,t
-		      (fx+ ,idx ,foo-first-field-offset))
-		    (define-syntax-rule (,unsafe-foo-x x)
-		      ((,tag)($struct-ref x ,t))))))
-	  unsafe-foo-x* idx* tag*)
+       ;;all fields indexes
+       ,@(map (lambda (x idx)
+		(let ((the-index (%make-field-index-varname x)))
+		  `(define (brace ,the-index <fixnum>)
+		     (fx+ ,idx ,foo-first-field-offset))))
+	   x* idx*)
 
-      ;; Unsafe record fields mutators.
-      ,@(map (lambda (unsafe-foo-x-set! idx)
-	       (let ((t (gensym)))
-		 `(begin
-		    (define ,t
-		      (fx+ ,idx ,foo-first-field-offset))
-		    (define-syntax-rule (,unsafe-foo-x-set! x v)
-		      ((,(void-tag-id))($struct-set! x ,t v))))))
-	  unsafe-foo-x-set!* set-foo-idx*)
-      ))
+       ;;unsafe record fields accessors
+       ,@(map (lambda (unsafe-foo-x x)
+		(let ((the-index (%make-field-index-varname x)))
+		  `(define-syntax-rule (,unsafe-foo-x ?x)
+		     ($struct-ref ?x ,the-index))))
+	   unsafe-foo-x* x*)
+
+       ;;unsafe record fields mutators
+       ,@(map (lambda (unsafe-foo-x-set! x)
+		(let ((the-index (%make-field-index-varname x)))
+		  `(define-syntax-rule (,unsafe-foo-x-set! ?x ?v)
+		     ($struct-set! ?x ,the-index ?v))))
+	   unsafe-foo-x-set!* mutable-x*)
+       #| end of module: unsafe accessors and mutators |# ))
 
 ;;; --------------------------------------------------------------------
 
@@ -1119,13 +1205,13 @@
 	   `(quote ,(list->vector
 		     (map (lambda (field-spec)
 			    (syntax-match field-spec (mutable immutable brace)
-			      ((mutable ?name . ?rest)
-			       `(mutable ,?name))
 			      ((mutable (brace ?name ?tag) . ?rest)
 			       `(mutable ,?name))
-			      ((immutable ?name . ?rest)
-			       `(immutable ,?name))
+			      ((mutable ?name . ?rest)
+			       `(mutable ,?name))
 			      ((immutable (brace ?name ?tag) . ?rest)
+			       `(immutable ,?name))
+			      ((immutable ?name . ?rest)
 			       `(immutable ,?name))
 			      ((brace ?name ?tag)
 			       `(immutable ,?name))
@@ -1469,7 +1555,7 @@
        (define parent-id
 	 ,(if foo-parent
 	      `(syntax ,foo-parent)
-	    '(typ.top-tag-id)))
+	    '(typ.record-tag-id)))
 
        (define object-type-spec
 	 (typ.make-object-type-spec (syntax ,foo) parent-id (syntax ,foo?)

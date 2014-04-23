@@ -2234,21 +2234,14 @@
     ((_ ?expr ?field-name-id)
      (identifier? ?field-name-id)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sign (psi-retvals-signature expr.psi)))
        (if (retvals-signature-fully-unspecified? expr.sign)
 	   (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
 	 (syntax-match (retvals-signature-tags expr.sign) ()
 	   ((?tag)
-	    (let* ((accessor.stx  (tag-identifier-accessor ?tag ?field-name-id input-form.stx))
-		   (accessor.psi  (chi-expr accessor.stx lexenv.run lexenv.expand))
-		   (accessor.core (psi-core-expr accessor.psi)))
-	      (make-psi input-form.stx
-			(build-application (syntax-annotation input-form.stx)
-			  accessor.core
-			  (list expr.core))
-			(psi-application-retvals-signature accessor.psi))))
-
+	    (let ((accessor.stx (tag-identifier-accessor ?tag ?field-name-id input-form.stx)))
+	      (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						 accessor.stx expr.psi '())))
 	   (_
 	    (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
 	   ))))
@@ -2265,23 +2258,14 @@
     ((_ ?expr ?field-name-id ?new-value)
      (identifier? ?field-name-id)
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
-	    (expr.sign (psi-retvals-signature expr.psi))
-	    (nval.psi  (chi-expr ?new-value lexenv.run lexenv.expand)))
+	    (expr.sign (psi-retvals-signature expr.psi)))
        (if (retvals-signature-fully-unspecified? expr.sign)
 	   (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
 	 (syntax-match (retvals-signature-tags expr.sign) ()
 	   ((?tag)
-	    (let* ((mutator.stx  (tag-identifier-mutator ?tag ?field-name-id input-form.stx))
-		   (mutator.psi  (chi-expr mutator.stx lexenv.run lexenv.expand))
-		   (mutator.core (psi-core-expr mutator.psi))
-		   (expr.core    (psi-core-expr expr.psi))
-		   (nval.core    (psi-core-expr nval.psi)))
-	      (make-psi input-form.stx
-			(build-application (syntax-annotation input-form.stx)
-			  mutator.core
-			  (list expr.core nval.core))
-			(psi-application-retvals-signature mutator.psi))))
-
+	    (let ((mutator.stx (tag-identifier-mutator ?tag ?field-name-id input-form.stx)))
+	      (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						 mutator.stx expr.psi (list ?new-value))))
 	   (_
 	    (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
 	   ))))
@@ -2304,16 +2288,9 @@
 	  (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
 	(syntax-match (retvals-signature-tags expr.sign) ()
 	  ((?tag)
-	   (let* ((getter.stx  (tag-identifier-getter ?tag keys.stx input-form.stx))
-		  (getter.psi  (chi-expr getter.stx lexenv.run lexenv.expand))
-		  (getter.core (psi-core-expr getter.psi))
-		  (expr.core   (psi-core-expr expr.psi)))
-	     (make-psi input-form.stx
-		       (build-application (syntax-annotation input-form.stx)
-			 getter.core
-			 (list expr.core))
-		       (psi-application-retvals-signature getter.psi))))
-
+	   (let ((getter.stx (tag-identifier-getter ?tag keys.stx input-form.stx)))
+	     (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						getter.stx expr.psi '())))
 	  (_
 	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
 	  ))))
@@ -2338,18 +2315,9 @@
 	  (syntax-violation __who__ "unable to determine tag of expression" input-form.stx)
 	(syntax-match (retvals-signature-tags expr.sign) ()
 	  ((?tag)
-	   (let* ((setter.stx  (tag-identifier-setter ?tag keys.stx input-form.stx))
-		  (setter.psi  (chi-expr setter.stx lexenv.run lexenv.expand))
-		  (setter.core (psi-core-expr setter.psi))
-		  (expr.core   (psi-core-expr expr.psi))
-		  (nval.psi    (chi-expr new-value.stx lexenv.run lexenv.expand))
-		  (nval.core   (psi-core-expr nval.psi)))
-	     (make-psi input-form.stx
-		       (build-application (syntax-annotation input-form.stx)
-			 setter.core
-			 (list expr.core nval.core))
-		       (psi-application-retvals-signature setter.psi))))
-
+	   (let ((setter.stx  (tag-identifier-setter ?tag keys.stx input-form.stx)))
+	     (chi-application/psi-first-operand input-form.stx lexenv.run lexenv.expand
+						setter.stx expr.psi (list new-value.stx))))
 	  (_
 	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
 	  ))))

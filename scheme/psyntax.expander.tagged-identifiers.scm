@@ -671,6 +671,7 @@
 ;;
 (module (make-retvals-signature-with-fabricated-procedure-tag
 	 fabricate-procedure-tag-identifier
+	 set-tag-identifier-callable-signature!
 	 tag-identifier-callable-signature)
 
   (define* (make-retvals-signature-with-fabricated-procedure-tag {sym symbol?} {callable-signature callable-signature?})
@@ -748,6 +749,16 @@
 
   (define-constant *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE*
     'vicare:expander:tag-callable-signature)
+
+  (define* (set-tag-identifier-callable-signature! {tag-id tag-identifier?} {callable-signature callable-signature?})
+    (let ((label (id->label/or-error __who__ tag-id tag-id)))
+      (cond (($getprop label *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE*)
+	     => (lambda (old-callable-signature)
+		  (assertion-violation __who__
+		    "identifier has an already assigned callable signature, will not overwrite old one"
+		    tag-id old-callable-signature callable-signature)))
+	    (else
+	     ($putprop label *EXPAND-TIME-TAG-CALLABLE-SIGNATURE-COOKIE* callable-signature)))))
 
   (define* (tag-identifier-callable-signature {tag-id tag-identifier?})
     ;;Given a  tag identifier representing  a subtag of "<procedure>":  retrieve from

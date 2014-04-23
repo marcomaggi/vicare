@@ -927,7 +927,11 @@
   ;; greatest-fixnum
   ;; fx*
   ;; fx*/carry
-  ;; fx+
+
+  (let ((P (C fx+)))
+    (register-lambda-signature P (S (list (C <fixnum>))
+				    (list (C <fixnum>) (C <fixnum>)))))
+
   ;; fx+/carry
   ;; fx-
   ;; fx-/carry
@@ -1541,6 +1545,9 @@
   ;; file-exists?
   ;; directory-exists?
   ;; delete-file
+
+;;; --------------------------------------------------------------------
+
   ;; record-field-mutable?
   ;; record-rtd
   ;; record-type-field-names
@@ -1554,7 +1561,11 @@
   ;; make-record-constructor-descriptor
   ;; make-record-type-descriptor
   ;; record-constructor
-  ;; record-predicate
+
+  (let ((P (C record-predicate)))
+    (register-lambda-signature P (S (list (C <predicate>))
+				    (list (C <record-type-descriptor>)))))
+
   ;; record-type-descriptor?
   ;; record-destructor-set!
   ;; record-destructor
@@ -1566,6 +1577,9 @@
   ;; record-mutator
   ;; unsafe-record-accessor
   ;; unsafe-record-mutator
+
+;;; --------------------------------------------------------------------
+
   ;; syntax-violation
   ;; bound-identifier=?
   ;; datum->syntax

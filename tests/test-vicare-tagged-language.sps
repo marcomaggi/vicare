@@ -2841,7 +2841,7 @@
 	(define-record-type beta
 	  (parent alpha)
 	  (fields d e f))
-	(define {O beta}
+	(define O
 	  (make-beta 1 2 3 4 5 6))
 	(values (tag-accessor O a)
 		(tag-accessor O b)
