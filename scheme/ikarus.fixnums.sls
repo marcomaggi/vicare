@@ -387,7 +387,35 @@
 	 error@fx*
 	 error@fxadd1
 	 error@fxsub1)
-
+  ;;Some core primitives are implemented both as:
+  ;;
+  ;;* Proper procedures.   There exists a loc gensym whose  "value" slot references a
+  ;;  closure  object, which in turn  references a code object  implementing the core
+  ;;  primitive as machine code.
+  ;;
+  ;;*  Primitive  operations.  There  exist  functions  that  the compiler  calls  to
+  ;;  integrate assembly instructions implemented the core primitive.
+  ;;
+  ;;When the core primitive is used as argument as in:
+  ;;
+  ;;   (map fx+ a* b*)
+  ;;
+  ;;the closure  object implementation is  used; when the  core primitive is  used as
+  ;;first subform of an application form as in:
+  ;;
+  ;;   (fx+ 1 2)
+  ;;
+  ;;the primitive operation is used.
+  ;;
+  ;;Let's  consider FX+.   When the  code object  implementation detects  overflow or
+  ;;underflow: it raises an exception.  When the primitive operation detects overflow
+  ;;or  underflow what  should  it do?   The answer  is:  every integrated  primitive
+  ;;operation  assembly code  will  jump to  the  same routine  which  will raise  an
+  ;;exception.
+  ;;
+  ;;Such exception-raising routines are the  ones below; they are called ERROR@?PRIM,
+  ;;where ?PRIM is the name of the core primitive.
+  ;;
   (define (make-fx-error who)
     (case-lambda
      ((x y)

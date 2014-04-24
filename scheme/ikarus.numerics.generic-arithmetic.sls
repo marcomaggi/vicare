@@ -6609,7 +6609,9 @@
 
 (define (error@add1 x)
   ;;This is the error handler  function called when an interrupt happens
-  ;;while executing ADD1.
+  ;;while  executing the  primitive operation  ADD1.  For  details about
+  ;;this  error  procedure: scan  the  compiler's  code for  the  string
+  ;;"error@add1".
   ;;
   ;;By importing  the library here  we shadow the bindings,  causing the
   ;;forms  below to  be expanded  by  the optimizer  with the  primitive
@@ -6623,14 +6625,17 @@
 (define (add1 x)
   ;;By importing  the library here  we shadow the binding  ADD1, causing
   ;;the form  below to be expanded  by the optimizer with  the primitive
-  ;;operation ADD1.
-  (import (only (vicare)
-		add1))
+  ;;operation  ADD1 (the  assembly code  of the  primitive operation  is
+  ;;integrated in the body of this function).
+  ;;
+  (import (only (vicare) add1))
   (add1 x))
 
 (define (error@sub1 x)
   ;;This is the error handler  function called when an interrupt happens
-  ;;while executing ADD1.
+  ;;while  executing the  primitive operation  SUB1.  For  details about
+  ;;this  error  procedure: scan  the  compiler's  code for  the  string
+  ;;"error@sub1".
   ;;
   ;;By importing  the library here  we shadow the bindings,  causing the
   ;;forms  below to  be expanded  by  the optimizer  with the  primitive
@@ -6644,8 +6649,10 @@
 (define (sub1 x)
   ;;By importing  the library here  we shadow the binding  SUB1, causing
   ;;the form  below to be expanded  by the optimizer with  the primitive
-  ;;operation SUB1.
-  (import (vicare))
+  ;;operation  SUB1 (the  assembly code  of the  primitive operation  is
+  ;;integrated in the body of this function).
+  ;;
+  (import (only (vicare) sub1))
   (sub1 x))
 
 
