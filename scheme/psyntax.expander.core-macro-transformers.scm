@@ -81,6 +81,7 @@
     ((tag-setter)				tag-setter-transformer)
     ((tag-dispatch)				tag-dispatch-transformer)
     ((tag-cast)					tag-cast-transformer)
+    ((tag-unsafe-cast)				tag-unsafe-cast-transformer)
 
     ((type-of)					type-of-transformer)
     ((expansion-of)				expansion-of-transformer)
@@ -2418,39 +2419,86 @@
      (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
 	    (expr.core (psi-core-expr expr.psi))
 	    (expr.sign (psi-retvals-signature expr.psi)))
-      (if (retvals-signature-fully-unspecified? expr.sign)
-	  (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi)
-	(syntax-match (retvals-signature-tags expr.sign) ()
-	  ((?source-tag)
-	   (cond ((top-tag-id? ?target-tag)
-		  ;;The expression  already has the  right type: nothing to  do, just
-		  ;;return it.
-		  expr.psi)
-		 ((top-tag-id? ?source-tag)
-		  (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi))
-		 ((tag-super-and-sub? ?target-tag ?source-tag)
-		  ;;The expression  already has the  right type: nothing to  do, just
-		  ;;return it.
-		  expr.psi)
-		 (else
-		  ;;The tag  of expression  is incompatible  with the  requested tag.
-		  ;;Try to select an appropriate caster operator.
-		  (cond ((%retrieve-caster-maker ?target-tag)
-			 => (lambda (target-caster-maker)
-			      (let* ((caster.stx   (target-caster-maker ?source-tag input-form.stx))
-				     (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
-				     (caster.core  (psi-core-expr caster.psi)))
-				(make-psi input-form.stx
-					  (build-application (syntax-annotation input-form.stx)
-					    caster.core
-					    (list expr.core))
-					  (make-retvals-signature (list ?target-tag))))))
-			(else
-			 (%validate-and-return ?target-tag expr.psi))))))
+       (if (retvals-signature-fully-unspecified? expr.sign)
+	   (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi)
+	 (syntax-match (retvals-signature-tags expr.sign) ()
+	   ((?source-tag)
+	    (cond ((top-tag-id? ?target-tag)
+		   ;;The expression  already has the  right type: nothing to  do, just
+		   ;;return it.
+		   expr.psi)
+		  ((top-tag-id? ?source-tag)
+		   (%cast-at-run-time-with-generic-transformer ?target-tag expr.psi))
+		  ((tag-super-and-sub? ?target-tag ?source-tag)
+		   ;;The expression  already has the  right type: nothing to  do, just
+		   ;;return it.
+		   expr.psi)
+		  (else
+		   ;;The tag  of expression  is incompatible  with the  requested tag.
+		   ;;Try to select an appropriate caster operator.
+		   (cond ((%retrieve-caster-maker ?target-tag)
+			  => (lambda (target-caster-maker)
+			       (let* ((caster.stx   (target-caster-maker ?source-tag input-form.stx))
+				      (caster.psi   (chi-expr caster.stx lexenv.run lexenv.expand))
+				      (caster.core  (psi-core-expr caster.psi)))
+				 (make-psi input-form.stx
+					   (build-application (syntax-annotation input-form.stx)
+					     caster.core
+					     (list expr.core))
+					   (make-retvals-signature (list ?target-tag))))))
+			 (else
+			  (%validate-and-return ?target-tag expr.psi))))))
 
-	  (_
-	   (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
-	  ))))
+	   (_
+	    (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	   ))))
+    ))
+
+
+;;;; module core-macro-transformer: TAG-UNSAFE-CAST
+
+(define (tag-unsafe-cast-transformer input-form.stx lexenv.run lexenv.expand)
+  ;;Transformer function  used to expand  Vicare's TAG-UNSAFE-CAST syntaxes  from the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'tag-unsafe-cast))
+  (syntax-match input-form.stx ()
+    ((_ ?target-tag ?expr)
+     (tag-identifier? ?target-tag)
+     (let* ((expr.psi  (chi-expr ?expr lexenv.run lexenv.expand))
+	    (expr.core (psi-core-expr expr.psi))
+	    (expr.sign (psi-retvals-signature expr.psi)))
+       (if (retvals-signature-fully-unspecified? expr.sign)
+	   ;;The  expression has  non-specified values  type:  cast the  type to  the
+	   ;;target one.  Hey!  It is UNSAFE cast!
+	   (make-psi input-form.stx
+		     expr.core
+		     (make-retvals-signature-single-value ?target-tag))
+	 (syntax-match (retvals-signature-tags expr.sign) ()
+	   ((?source-tag)
+	    (cond ((top-tag-id? ?target-tag)
+		   ;;The expression already  has the right type: nothing  to do, just
+		   ;;return it.
+		   expr.psi)
+		  ((top-tag-id? ?source-tag)
+		   ;;The  expression has  non-specified single-value  type: cast  the
+		   ;;type to the target one.
+		   (make-psi input-form.stx
+			     expr.core
+			     (make-retvals-signature-single-value ?target-tag)))
+		  ((tag-super-and-sub? ?target-tag ?source-tag)
+		   ;;The expression already  has the right type: nothing  to do, just
+		   ;;return it.
+		   expr.psi)
+		  (else
+		   (syntax-violation __who__
+		     "the tag of expression is incompatible with the requested tag"
+		     input-form.stx expr.sign))))
+	   (_
+	    (syntax-violation __who__ "invalid expression retvals signature" input-form.stx expr.sign))
+	   ))))
     ))
 
 

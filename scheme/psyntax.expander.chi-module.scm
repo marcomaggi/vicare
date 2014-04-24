@@ -1530,9 +1530,15 @@
 	   ;;Here  we  know that  the  formals  signature is  a  proper  list of  tag
 	   ;;identifiers with the same structure of FORMALS.STX.
 	   (map set-label-tag! lab* formals-signature.tags)
-	   (values lex*
-		   lambda-signature
-		   (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand))))
+	   (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))
+	     (values lex*
+		     ;;If unspecified:  override the retvals signature  of the lambda
+		     ;;with the retvals signature of the body.
+		     (if (retvals-signature-fully-unspecified? (lambda-signature-retvals lambda-signature))
+			 (make-lambda-signature (psi-retvals-signature body.psi)
+						(lambda-signature-formals lambda-signature))
+		       lambda-signature)
+		     body.psi))))
 
 	;;With rest argument.
 	((?arg* ... . ?rest-arg)
@@ -1565,9 +1571,15 @@
 	     ;;same structure of FORMALS.STX.
 	     (map set-label-tag! lab* arg-tag*)
 	     (set-label-tag! rest-lab rest-tag)
-	     (values (append lex* rest-lex) ;yes, this builds an improper list
-		     lambda-signature
-		     (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))))
+	     (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))
+	       (values (append lex* rest-lex) ;yes, this builds an improper list
+		       ;;If unspecified: override the retvals signature of the lambda
+		       ;;with the retvals signature of the body.
+		       (if (retvals-signature-fully-unspecified? (lambda-signature-retvals lambda-signature))
+			   (make-lambda-signature (psi-retvals-signature body.psi)
+						  (lambda-signature-formals lambda-signature))
+			 lambda-signature)
+		       body.psi)))))
 
 	(_
 	 (syntax-violation __who__

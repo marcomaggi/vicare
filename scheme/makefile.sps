@@ -391,6 +391,7 @@
      (tag-setter				(core-macro . tag-setter))
      (tag-dispatch				(core-macro . tag-dispatch))
      (tag-cast					(core-macro . tag-cast))
+     (tag-unsafe-cast				(core-macro . tag-unsafe-cast))
      (type-of					(core-macro . type-of))
      (expansion-of				(core-macro . expansion-of))
      (visit-code-of				(core-macro . visit-code-of))
@@ -3708,6 +3709,7 @@
     (tag-setter					$expander-tags)
     (tag-dispatch				$expander-tags)
     (tag-cast					$expander-tags)
+    (tag-unsafe-cast)
 
     (<top>					$expander-tags)
     (<void>					$expander-tags)

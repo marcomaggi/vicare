@@ -761,10 +761,10 @@
 	    mutator*.id unsafe-mutator*.id field*.tag))
 
 	(define unsafe-accessor-sexp*
-	  (map (lambda (unsafe-accessor.id field.idx)
+	  (map (lambda (unsafe-accessor.id field.idx field.tag)
 		 `(define-syntax-rule (,unsafe-accessor.id ?stru)
-		    ($struct-ref ?stru ,field.idx)))
-	    unsafe-accessor*.id field*.idx))
+		    (tag-unsafe-cast ,field.tag ($struct-ref ?stru ,field.idx))))
+	    unsafe-accessor*.id field*.idx field*.tag))
 
 	(define unsafe-mutator-sexp*
 	  (map (lambda (unsafe-mutator.id field.idx)
@@ -1048,7 +1048,8 @@
 		     (append unsafe-foo-x* unsafe-foo-x-set!*)))
 	  ,(%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
 					      unsafe-foo-x*      x*         idx*
-					      unsafe-foo-x-set!* mutable-x* set-foo-idx*)
+					      unsafe-foo-x-set!* mutable-x* set-foo-idx*
+					      tag*)
 
 	  ;;Safe record fields accessors.
 	  ;;
@@ -1107,7 +1108,8 @@
 
   (define (%gen-unsafe-accessor+mutator-code foo foo-rtd foo-rcd
 					     unsafe-foo-x*      x*         idx*
-					     unsafe-foo-x-set!* mutable-x* set-foo-idx*)
+					     unsafe-foo-x-set!* mutable-x* set-foo-idx*
+					     tag*)
     (define (%make-field-index-varname x.id)
       (string->symbol (string-append foo.str "-" (symbol->string (syntax->datum x.id)) "-index")))
     (define foo.str
@@ -1129,11 +1131,11 @@
 	   x* idx*)
 
        ;;unsafe record fields accessors
-       ,@(map (lambda (unsafe-foo-x x)
+       ,@(map (lambda (unsafe-foo-x x field.tag)
 		(let ((the-index (%make-field-index-varname x)))
 		  `(define-syntax-rule (,unsafe-foo-x ?x)
-		     ($struct-ref ?x ,the-index))))
-	   unsafe-foo-x* x*)
+		     (tag-unsafe-cast ,field.tag ($struct-ref ?x ,the-index)))))
+	   unsafe-foo-x* x* tag*)
 
        ;;unsafe record fields mutators
        ,@(map (lambda (unsafe-foo-x-set! x)

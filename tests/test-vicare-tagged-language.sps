@@ -2796,20 +2796,20 @@
 	  (a b c))
 	(define {O alpha}
 	  (make-alpha 1 2 3))
-	(values (tag-accessor O a)
-		(tag-accessor O b)
-		(tag-accessor O c)))
-    => 1 2 3)
+	(list (tag-accessor O a)
+	      (tag-accessor O b)
+	      (tag-accessor O c)))
+    => '(1 2 3))
 
   (check
       (let ()
 	(define-struct alpha
 	  (a b c))
 	(let (({O alpha} (make-alpha 1 2 3)))
-	  (values (tag-accessor O a)
-		  (tag-accessor O b)
-		  (tag-accessor O c))))
-    => 1 2 3)
+	  (list (tag-accessor O a)
+		(tag-accessor O b)
+		(tag-accessor O c))))
+    => '(1 2 3))
 
 ;;; --------------------------------------------------------------------
 ;;; records
@@ -2829,10 +2829,10 @@
 	  (fields a b c))
 	(define {O alpha}
 	  (make-alpha 1 2 3))
-	(values (tag-accessor O a)
-		(tag-accessor O b)
-		(tag-accessor O c)))
-    => 1 2 3)
+	(list (tag-accessor O a)
+	      (tag-accessor O b)
+	      (tag-accessor O c)))
+    => '(1 2 3))
 
   (check	;record with parent
       (let ()
@@ -2843,13 +2843,13 @@
 	  (fields d e f))
 	(define O
 	  (make-beta 1 2 3 4 5 6))
-	(values (tag-accessor O a)
-		(tag-accessor O b)
-		(tag-accessor O c)
-		(tag-accessor O d)
-		(tag-accessor O e)
-		(tag-accessor O f)))
-    => 1 2 3 4 5 6)
+	(list (tag-accessor O a)
+	      (tag-accessor O b)
+	      (tag-accessor O c)
+	      (tag-accessor O d)
+	      (tag-accessor O e)
+	      (tag-accessor O f)))
+    => '(1 2 3 4 5 6))
 
   #t)
 
@@ -2945,13 +2945,13 @@
 	(tag-mutator O d 44)
 	(tag-mutator O e 55)
 	(tag-mutator O f 66)
-  	(values (tag-accessor O a)
-  		(tag-accessor O b)
-  		(tag-accessor O c)
-  		(tag-accessor O d)
-  		(tag-accessor O e)
-  		(tag-accessor O f)))
-    => 11 2 33 44 55 66)
+  	(list (tag-accessor O a)
+	      (tag-accessor O b)
+	      (tag-accessor O c)
+	      (tag-accessor O d)
+	      (tag-accessor O e)
+	      (tag-accessor O f)))
+    => '(11 2 33 44 55 66))
 
   #t)
 
@@ -3033,13 +3033,13 @@
   	  (fields d e f))
   	(define {O beta}
   	  (make-beta 1 2 3 4 5 6))
-  	(values (tag-getter O [a])
-  		(tag-getter O [b])
-  		(tag-getter O [c])
-  		(tag-getter O [d])
-  		(tag-getter O [e])
-  		(tag-getter O [f])))
-    => 1 2 3 4 5 6)
+  	(list (tag-getter O [a])
+	      (tag-getter O [b])
+	      (tag-getter O [c])
+	      (tag-getter O [d])
+	      (tag-getter O [e])
+	      (tag-getter O [f])))
+    => '(1 2 3 4 5 6))
 
   #t)
 
@@ -3156,13 +3156,13 @@
 	(tag-setter O [d] 44)
 	(tag-setter O [e] 55)
 	(tag-setter O [f] 66)
-  	(values (tag-getter O [a])
-  		(tag-getter O [b])
-  		(tag-getter O [c])
-  		(tag-getter O [d])
-  		(tag-getter O [e])
-  		(tag-getter O [f])))
-    => 11 2 33 44 55 66)
+  	(list (tag-getter O [a])
+	      (tag-getter O [b])
+	      (tag-getter O [c])
+	      (tag-getter O [d])
+	      (tag-getter O [e])
+	      (tag-getter O [f])))
+    => '(11 2 33 44 55 66))
 
   #t)
 
@@ -3260,9 +3260,9 @@
 		  (mutable   b3)))
 	(define {O beta}
 	  (make-beta 1 2 3 4 5 6))
-	(values (tag-dispatch O a1) (tag-dispatch O a2) (tag-dispatch O a3)
-		(tag-dispatch O b1) (tag-dispatch O b2) (tag-dispatch O b3)))
-    => 1 2 3 4 5 6)
+	(list (tag-dispatch O a1) (tag-dispatch O a2) (tag-dispatch O a3)
+	      (tag-dispatch O b1) (tag-dispatch O b2) (tag-dispatch O b3)))
+    => '(1 2 3 4 5 6))
 
   #t)
 
@@ -3610,13 +3610,13 @@
 	(set! O [d] 44)
 	(set! O [e] 55)
 	(set! O [f] 66)
-  	(values (tag-getter O [a])
-  		(tag-getter O [b])
-  		(tag-getter O [c])
-  		(tag-getter O [d])
-  		(tag-getter O [e])
-  		(tag-getter O [f])))
-    => 11 2 33 44 55 66)
+  	(list (tag-getter O [a])
+	      (tag-getter O [b])
+	      (tag-getter O [c])
+	      (tag-getter O [d])
+	      (tag-getter O [e])
+	      (tag-getter O [f])))
+    => '(11 2 33 44 55 66))
 
 ;;; --------------------------------------------------------------------
 ;;; records and setter, syntax 2
@@ -3668,13 +3668,13 @@
 	(set! (O [d]) 44)
 	(set! (O [e]) 55)
 	(set! (O [f]) 66)
-  	(values (tag-getter O [a])
-  		(tag-getter O [b])
-  		(tag-getter O [c])
-  		(tag-getter O [d])
-  		(tag-getter O [e])
-  		(tag-getter O [f])))
-    => 11 2 33 44 55 66)
+  	(list (tag-getter O [a])
+	      (tag-getter O [b])
+	      (tag-getter O [c])
+	      (tag-getter O [d])
+	      (tag-getter O [e])
+	      (tag-getter O [f])))
+    => '(11 2 33 44 55 66))
 
 ;;; --------------------------------------------------------------------
 ;;; records and mutator
@@ -3726,13 +3726,13 @@
 	(set! (O d) 44)
 	(set! (O e) 55)
 	(set! (O f) 66)
-  	(values (tag-getter O [a])
-  		(tag-getter O [b])
-  		(tag-getter O [c])
-  		(tag-getter O [d])
-  		(tag-getter O [e])
-  		(tag-getter O [f])))
-    => 11 2 33 44 55 66)
+  	(list (tag-getter O [a])
+	      (tag-getter O [b])
+	      (tag-getter O [c])
+	      (tag-getter O [d])
+	      (tag-getter O [e])
+	      (tag-getter O [f])))
+    => '(11 2 33 44 55 66))
 
   #t)
 
