@@ -53,61 +53,7 @@
 
 ;;;; identifiers: unsafe variants API
 ;;
-;;With the function SET-IDENTIFIER-UNSAFE-VARIANT! and the syntax UNSAFE
-;;we allow the  user to select an  unsafe variant of a  function or (why
-;;not?)  macro.
-;;
-;;The unsafe  variant of  a function  is a  function that  (not strictly
-;;speaking) neither  validates its arguments  nor its return  value.  As
-;;example, the function:
-;;
-;;   (define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
-;;     ($char->fixnum ($string-ref str idx)))
-;;
-;;can be split into:
-;;
-;;   (define* ((string-ref-fx fixnum?) (str string?) (idx fixnum?))
-;;     ($string-ref-fx str idx))
-;;
-;;   (define ($string-ref-fx str idx)
-;;     ($char->fixnum ($string-ref str idx)))
-;;
-;;where  $STRING-REF-FX  is the  unsafe  variant  of STRING-REF-FX;  the
-;;unsafe variants  API allows us to  register this fact, for  use by the
-;;expander, as follows:
-;;
-;;   (begin-for-syntax
-;;     (set-identifier-unsafe-variant! #'string-ref-fx
-;;       #'$string-ref-fx))
-;;
-;;so, having imported  the binding STRING-REF-FX, we can  use its unsafe
-;;variant as follows:
-;;
-;;   ((unsafe string-ref-fx) "ciao" 2)
-;;
-;;without actually importing the binding $STRING-REF-FX.
-;;
-;;We  use  syntactic  binding  properties  to  implement  this  feature:
-;;SET-IDENTIFIER-UNSAFE-VARIANT!   puts  a  property  in  the  syntactic
-;;binding, which is later retrieved  by the UNSAFE syntax.  The property
-;;value  must  be a  syntax  object  representing an  expression  which,
-;;expanded and evaluated, returns the unsafe variant.
-;;
-;;When specifying  the unsafe variant  of a  function we should  build a
-;;syntax  object   representing  an   expression  which,   expanded  and
-;;evaluated, returns a  proper function; so that it can  be used in both
-;;the expressions:
-;;
-;;  ((unsafe fx+) 1 2)
-;;  (map (unsafe fx+) '(1 2) '(3 4))
-;;
-;;so for FX+ we should do:
-;;
-;;  (begin-for-syntax
-;;    (set-identifier-unsafe-variant! #'fx+
-;;      #'(lambda (a b) ($fx+ a b))))
-;;
-;;because $FX+ is not a function, rather it is a primitive operation.
+;;See the Texinfo documentation for explanations on the unsafe variants.
 ;;
 
 (define-constant *UNSAFE-VARIANT-COOKIE*

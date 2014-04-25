@@ -383,9 +383,6 @@ Lots of backwards incompatibilities... life is hard!
 
   this behaviour was not present in the previous EVAL-FOR-EXPAND.
 
-* Added unsafe variants API.  See the documentation node "iklib syntaxes
-  unsafe".
-
 * Added synonym syntax transformers.
 
 * Extended LIBRARY form with OPTIONS clause.  Implemented library option

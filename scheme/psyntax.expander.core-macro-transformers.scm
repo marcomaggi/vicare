@@ -47,7 +47,6 @@
     ((fluid-let-syntax)				fluid-let-syntax-transformer)
     ((splice-first-expand)			splice-first-expand-transformer)
     ((internal-body)				internal-body-transformer)
-    ((unsafe)					unsafe-transformer)
     ((predicate-procedure-argument-validation)	predicate-procedure-argument-validation-transformer)
     ((predicate-return-value-validation)	predicate-return-value-validation-transformer)
 
@@ -1345,31 +1344,6 @@
   (syntax-match input-form.stx ()
     ((_ ?body ?body* ...)
      (chi-internal-body (cons ?body ?body*) lexenv.run lexenv.expand))
-    ))
-
-
-;;;; module core-macro-transformer: UNSAFE
-
-(define (unsafe-transformer input-form.stx lexenv.run lexenv.expand)
-  ;;Transformer function  used to  expand Vicare's UNSAFE  macros from  the top-level
-  ;;built in  environment.  Expand the contents  of INPUT-FORM.STX in the  context of
-  ;;the given LEXENV; return a PSI struct.
-  ;;
-  (define-fluid-override __who__
-    (identifier-syntax 'unsafe))
-  (syntax-match input-form.stx ()
-    ((_ ?id)
-     (identifier? ?id)
-     (chi-expr (cond ((parametrise ((current-run-lexenv (lambda () lexenv.run)))
-			(identifier-unsafe-variant ?id)))
-		     (else
-		      ;;This warning will not abort the process.
-		      (%raise-warning __who__ "requested unavailable unsafe variant"
-				      (or (expression-position input-form.stx)
-					  (expression-position ?id))
-				      ?id)
-		      ?id))
-	       lexenv.run lexenv.expand))
     ))
 
 

@@ -398,7 +398,6 @@
      (optimisation-of				(core-macro . optimisation-of))
      (assembly-of				(core-macro . assembly-of))
      (splice-first-expand			(core-macro . splice-first-expand))
-     (unsafe					(core-macro . unsafe))
      (predicate-procedure-argument-validation	(core-macro . predicate-procedure-argument-validation))
      (predicate-return-value-validation		(core-macro . predicate-return-value-validation))
      (__file__					(macro! . __file__))
@@ -2444,9 +2443,6 @@
     (include					v $language)
     (set-cons!					v $language)
 ;;;
-    (unsafe					v $language)
-    (set-identifier-unsafe-variant!		v $language)
-;;;
     (set-predicate-procedure-argument-validation! v $language)
     (set-predicate-return-value-validation!	v $language)
     (predicate-procedure-argument-validation	v $language)
@@ -3846,6 +3842,8 @@
     (set-label-tag!				$type-specs)
     (override-label-tag!			$type-specs)
     (label-tag					$type-specs)
+
+    (set-identifier-unsafe-variant!		$type-specs)
 
     (expand-time-type-signature-violation?			$type-specs)
     (expand-time-retvals-signature-violation?			$type-specs)
