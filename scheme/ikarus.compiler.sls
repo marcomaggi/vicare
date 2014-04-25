@@ -30,12 +30,12 @@
     core-expr->optimized-code		core-expr->assembly-code
 
     ;; these go in (vicare system $compiler)
+    optimize-level
     (rename
      ;; configuration parameters
      (current-letrec-pass			$current-letrec-pass)
      (check-for-illegal-letrec			$check-for-illegal-letrec)
      (optimize-cp				$optimize-cp)
-     (optimize-level				$optimize-level)
      (source-optimizer-passes-count		$source-optimizer-passes-count)
      (perform-tag-analysis			$perform-tag-analysis)
      (cp0-effort-limit				$cp0-effort-limit)

@@ -64,7 +64,7 @@
 		  descriptive-labels)
 	    option.)
     (prefix (only (ikarus.compiler)
-		  $optimize-level
+		  optimize-level
 		  $generate-debug-calls
 		  $assembler-output
 		  $optimizer-output
@@ -707,16 +707,16 @@
 ;;; compiler options without argument
 
 	  ((%option= "-O3")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 3))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 3))))
 
 	  ((%option= "-O2")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 2))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 2))))
 
 	  ((%option= "-O1")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 1))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 1))))
 
 	  ((%option= "-O0")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimize-level 0))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimize-level 0))))
 
 	  ((%option= "--enable-open-mvcalls")
 	   (next-option (cdr args) (lambda () (k) (compiler.$open-mvcalls #t))))

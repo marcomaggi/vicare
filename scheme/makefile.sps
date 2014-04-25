@@ -162,7 +162,7 @@
                 compile-core-expr-to-port))
 (import (ikarus.compiler)) ; just for fun
 
-($optimize-level 2)
+(optimize-level 2)
 ($perform-tag-analysis #t)
 (pretty-width 160)
 ((pretty-format 'fix)
@@ -3038,7 +3038,7 @@
     ($current-letrec-pass			$compiler)
     ($check-for-illegal-letrec			$compiler)
     ($optimize-cp				$compiler)
-    ($optimize-level				$compiler)
+    (optimize-level				$compiler)
     ($source-optimizer-passes-count		$compiler)
     ($perform-tag-analysis			$compiler)
     ($cp0-size-limit				$compiler)

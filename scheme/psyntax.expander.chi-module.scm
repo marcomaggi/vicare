@@ -1230,9 +1230,13 @@
       ;;  (%chi-apply-application input-form.stx lexenv.run lexenv.expand
       ;; 			       ?rator ?rand*))
 
-      #;((map1 ?func ?list)
+      ((map1 ?func ?list)
+       (expander-option.integrate-special-list-functions?)
+       ;;This is to be considered experimental.  The purpose of this code integration
+       ;;it  not  to  integrate  the  list  iteration  function,  but  to  allow  the
+       ;;integration of ?FUNC.
        (chi-expr (bless
-		  `(let loop ((L ,?list)
+		  `(let map1 ((L ,?list)
 			      (H #f)  ;head
 			      (T #f)) ;last pair
 		     (cond ((pair? L)
@@ -1244,11 +1248,53 @@
 					    P)
 					P))
 				   (H (or H P)))
-			      (loop ($cdr L) H T)))
+			      (map1 ($cdr L) H T)))
 			   ((null? L)
-			    H)
+			    (or H '()))
 			   (else
 			    (procedure-argument-violation 'map1 "expected proper list as argument" L)))))
+		 lexenv.run lexenv.expand))
+
+      ((for-each1 ?func ?list)
+       (expander-option.integrate-special-list-functions?)
+       ;;This is to be considered experimental.  The purpose of this code integration
+       ;;it  not  to  integrate  the  list  iteration  function,  but  to  allow  the
+       ;;integration of ?FUNC.
+       (chi-expr (bless
+		  `(let for-each1 ((L ,?list))
+		     (cond ((pair? L)
+			    (,?func ($car L))
+			    (for-each1 ($cdr L)))
+			   ((null? L)
+			    (void))
+			   (else
+			    (procedure-argument-violation 'for-each1 "expected proper list as argument" L)))))
+		 lexenv.run lexenv.expand))
+
+      ((for-all1 ?func ?list)
+       (expander-option.integrate-special-list-functions?)
+       ;;This is to be considered experimental.  The purpose of this code integration
+       ;;it  not  to  integrate  the  list  iteration  function,  but  to  allow  the
+       ;;integration of ?FUNC.
+       (chi-expr (bless
+		  `(let for-all1 ((L ,?list)
+				  (R #t))
+		     (if (pair? L)
+			 (let ((R (,?func ($car L))))
+			   (and R (for-all1 ($cdr L) R)))
+		       R)))
+		 lexenv.run lexenv.expand))
+
+      ((exists1 ?func ?list)
+       (expander-option.integrate-special-list-functions?)
+       ;;This is to be considered experimental.  The purpose of this code integration
+       ;;it  not  to  integrate  the  list  iteration  function,  but  to  allow  the
+       ;;integration of ?FUNC.
+       (chi-expr (bless
+		  `(let exists1 ((L ,?list))
+		     (and (pair? L)
+			  (or (,?func ($car L))
+			      (exists1 ($cdr L))))))
 		 lexenv.run lexenv.expand))
 
       ((?rator ?rand* ...)

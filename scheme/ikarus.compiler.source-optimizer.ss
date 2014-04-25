@@ -54,9 +54,11 @@
   (define optimize-level
     (make-parameter 0
       (lambda (x)
-	(if (memv x '(0 1 2 3))
-	    x
-	  (error 'optimize-level "valid optimization levels are 0, 1, 2, and 3")))))
+	(case x
+	  ((0 1 2 3)
+	   x)
+	  (else
+	   (error 'optimize-level "valid optimization levels are 0, 1, 2, and 3"))))))
 
   (define source-optimizer-passes-count
     (make-parameter 1

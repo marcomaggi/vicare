@@ -71,6 +71,8 @@
     option.tagged-language.setter-forms?
     option.tagged-language?
 
+    expander-option.integrate-special-list-functions?
+
     ;; interpreting the result of reading annotated sources
     annotation?				annotation-expression
     annotation-stripped			annotation-source
@@ -129,7 +131,8 @@
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  core-expr->optimized-code
-		  core-expr->assembly-code)
+		  core-expr->assembly-code
+		  optimize-level)
 	    compiler.)
     (prefix (rename (only (vicare options)
 			  verbose?
@@ -218,6 +221,9 @@
 
 (define (remove-location x)
   ($unintern-gensym x))
+
+(define (expander-option.integrate-special-list-functions?)
+  (fx>=? 3 (compiler.optimize-level)))
 
 
 ;;;; done

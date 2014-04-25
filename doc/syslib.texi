@@ -6366,7 +6366,7 @@ more passes can do significant improvement.
 The following bindings are exported by the library @library{vicare}.
 
 
-@deffn Parameter $optimize-level
+@deffn Parameter optimize-level
 The optimization level; accepted values are the fixnums @code{0},
 @code{1}, @code{2}.  Defaults to @code{0}.
 
