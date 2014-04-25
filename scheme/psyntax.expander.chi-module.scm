@@ -1211,7 +1211,7 @@
     ;;
     ;;and the sub-application form can be a SPLICE-FIRST-EXPAND syntax.
     ;;
-    (syntax-match input-form.stx (values apply)
+    (syntax-match input-form.stx (values apply map1 for-each1 for-all1 exists1)
       (((?nested-rator ?nested-rand* ...) ?rand* ...)
        ;;Nested application.  We process this specially because the nested rator form
        ;;might be a SPLICE-FIRST-EXPAND syntax.
@@ -1229,6 +1229,27 @@
       ;; ((apply ?rator ?rand* ...)
       ;;  (%chi-apply-application input-form.stx lexenv.run lexenv.expand
       ;; 			       ?rator ?rand*))
+
+      #;((map1 ?func ?list)
+       (chi-expr (bless
+		  `(let loop ((L ,?list)
+			      (H #f)  ;head
+			      (T #f)) ;last pair
+		     (cond ((pair? L)
+			    (let* ((V (,?func ($car L))) ;value
+				   (P (cons V '()))	 ;new last pair
+				   (T (if T
+					  (begin
+					    ($set-cdr! T P)
+					    P)
+					P))
+				   (H (or H P)))
+			      (loop ($cdr L) H T)))
+			   ((null? L)
+			    H)
+			   (else
+			    (procedure-argument-violation 'map1 "expected proper list as argument" L)))))
+		 lexenv.run lexenv.expand))
 
       ((?rator ?rand* ...)
        ;;The input form is either a common function application like:

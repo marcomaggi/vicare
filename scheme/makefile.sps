@@ -961,10 +961,6 @@
     ($set-cdr!					$pairs)
     ;;
     ($length					$lists)
-    ($map1					$lists)
-    ($for-each1					$lists)
-    ($for-all1					$lists)
-    ($exists1					$lists)
     ($memq					$lists)
     ($memv					$lists)
 ;;;
@@ -2417,10 +2413,19 @@
     (pretty-width				v $language)
     (module					v $language)
     (library					v $language)
-    (syntax-dispatch				)
     ($transcoder->data				$transc)
     ($data->transcoder				$transc)
     (make-file-options				v $language)
+
+;;; --------------------------------------------------------------------
+;;; special list functions
+
+    (map1					v $language)
+    (for-each1					v $language)
+    (for-all1					v $language)
+    (exists1					v $language)
+
+;;; --------------------------------------------------------------------
 ;;;
     (define-auxiliary-syntaxes			v $language)
     (define-integrable				v $language)
@@ -2885,6 +2890,7 @@
 
 ;;; --------------------------------------------------------------------
 
+    (syntax-dispatch)
     (ellipsis-map)
     (debug-call)
 

@@ -6837,6 +6837,34 @@ Like @func{for-each} from @rsixlibrary{base} but guarantees that
 @var{proc} is applied starting from the head of the lists.
 @end defun
 
+
+@defun map1 @var{proc} @var{ell}
+Like @func{map} from @rsixlibrary{lists} for a single list argument, but
+it is meant to be faster.  It does not check for circular list; it
+processes the input list from head to tail (in order).
+@end defun
+
+
+@defun for-each1 @var{proc} @var{ell}
+Like @func{for-each} from @rsixlibrary{lists} for a single list
+argument, but it is meant to be faster.  It does not check for circular
+list; it processes the input list from head to tail (in order).
+@end defun
+
+
+@defun for-all1 @var{proc} @var{ell}
+Like @func{for-all} from @rsixlibrary{lists} for a single list argument,
+but it is meant to be faster.  It does not check for circular list; it
+processes the input list from head to tail (in order).
+@end defun
+
+
+@defun exists1 @var{proc} @var{ell}
+Like @func{exists} from @rsixlibrary{lists} for a single list argument,
+but it is meant to be faster.  It does not check for circular list; it
+processes the input list from head to tail (in order).
+@end defun
+
 @c page
 @node iklib bytevectors
 @section Additional bytevector functions
