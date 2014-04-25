@@ -1632,6 +1632,13 @@
 	(parse-tagged-lambda-proto-syntax formals.stx input-form.stx)
       (define formals-signature.tags
 	(lambda-signature-formals-tags lambda-signature))
+      (define (%override-retvals-singature lambda-signature body.psi)
+	;;If  unspecified: override  the retvals  signature  of the  lambda with  the
+	;;retvals signature of the body.
+	(if (retvals-signature-fully-unspecified? (lambda-signature-retvals lambda-signature))
+	    (make-lambda-signature (psi-retvals-signature body.psi)
+				   (lambda-signature-formals lambda-signature))
+	  lambda-signature))
       (syntax-match standard-formals.stx ()
 	;;Without rest argument.
 	((?arg* ...)
@@ -1657,14 +1664,7 @@
 	   ;;identifiers with the same structure of FORMALS.STX.
 	   (map set-label-tag! lab* formals-signature.tags)
 	   (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))
-	     (values lex*
-		     ;;If unspecified:  override the retvals signature  of the lambda
-		     ;;with the retvals signature of the body.
-		     (if (retvals-signature-fully-unspecified? (lambda-signature-retvals lambda-signature))
-			 (make-lambda-signature (psi-retvals-signature body.psi)
-						(lambda-signature-formals lambda-signature))
-		       lambda-signature)
-		     body.psi))))
+	     (values lex* (%override-retvals-singature lambda-signature body.psi) body.psi))))
 
 	;;With rest argument.
 	((?arg* ... . ?rest-arg)
@@ -1699,12 +1699,7 @@
 	     (set-label-tag! rest-lab rest-tag)
 	     (let ((body.psi (chi-internal-body body-form^*.stx lexenv.run^ lexenv.expand)))
 	       (values (append lex* rest-lex) ;yes, this builds an improper list
-		       ;;If unspecified: override the retvals signature of the lambda
-		       ;;with the retvals signature of the body.
-		       (if (retvals-signature-fully-unspecified? (lambda-signature-retvals lambda-signature))
-			   (make-lambda-signature (psi-retvals-signature body.psi)
-						  (lambda-signature-formals lambda-signature))
-			 lambda-signature)
+		       (%override-retvals-singature lambda-signature body.psi)
 		       body.psi)))))
 
 	(_

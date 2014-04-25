@@ -168,8 +168,8 @@ inheriting properties of supertags; by convention, @class{top} is the
 parent of all the tag identifiers, the root of the tree; @class{top} has
 no parent.
 
-Many of the type identifiers have names enclosed in ``angular
-parentheses'', but this is just a convention.
+Many predefined type identifiers have names enclosed in ``angular
+parentheses'' @samp{<...>}, but this is just a convention.
 
 @c page
 @node tags intro tagged id
