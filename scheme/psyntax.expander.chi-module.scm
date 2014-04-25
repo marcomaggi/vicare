@@ -1224,11 +1224,9 @@
        (%chi-values-application input-form.stx lexenv.run lexenv.expand
 				?rand*))
 
-      ;;FIXME To be written.  (Marco Maggi; Fri Apr 11, 2014)
-      ;;
-      ;; ((apply ?rator ?rand* ...)
-      ;;  (%chi-apply-application input-form.stx lexenv.run lexenv.expand
-      ;; 			       ?rator ?rand*))
+      ((apply ?rator ?rand* ...)
+       (%chi-apply-application input-form.stx lexenv.run lexenv.expand
+       			       ?rator ?rand*))
 
       ((map1 ?func ?list)
        (expander-option.integrate-special-list-functions?)
@@ -1354,6 +1352,8 @@
 	(chi-application/psi-rator input-form.stx lexenv.run lexenv.expand
 				   rator.psi rand*.stx))))
 
+;;; --------------------------------------------------------------------
+
   (define (%chi-values-application input-form.stx lexenv.run lexenv.expand
 				   rand*.stx)
     ;;The input form has the syntax:
@@ -1407,6 +1407,65 @@
 		  rator.core
 		  rand*.core)
 		application.sig)))
+
+;;; --------------------------------------------------------------------
+
+  (module (%chi-apply-application)
+
+    (define (%chi-apply-application input-form.stx lexenv.run lexenv.expand
+				    rator.stx rand*.stx)
+      (let* ((rator.psi (chi-expr rator.stx lexenv.run lexenv.expand))
+	     (rator.sig (psi-retvals-signature rator.psi)))
+	(define (%error-wrong-rator-sig)
+	  (expand-time-retvals-signature-violation 'apply input-form.stx rator.stx
+						   (make-retvals-signature-single-value (procedure-tag-id))
+						   rator.sig))
+	(syntax-match (retvals-signature-tags rator.sig) ()
+	  ((?rator.tag)
+	   (cond ((tag-super-and-sub? (procedure-tag-id) ?rator.tag)
+		  ;;Procedure application: good.
+		  (let* ((apply.core (build-primref no-source 'apply))
+			 (rator.core (psi-core-expr rator.psi))
+			 (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
+			 (rand*.core (map psi-core-expr rand*.psi)))
+		    (make-psi input-form.stx
+			      (build-application (syntax-annotation input-form.stx)
+				apply.core
+				(cons rator.core rand*.core))
+			      (psi-application-retvals-signature rator.psi))))
+		 ((top-tag-id? ?rator.tag)
+		  ;;Let's do it and we will see at run-time what happens.  Notice that,
+		  ;;in this case: we do not know the signature of the return values.
+		  (%build-application-no-signature input-form.stx lexenv.run lexenv.expand
+						   rator.psi rand*.stx))
+		 (else
+		  ;;Non-procedure: bad.
+		  (%error-wrong-rator-sig))))
+
+	  (?rator.tag
+	   (list-tag-id? ?rator.tag)
+	   ;;Fully  unspecified return  values.   Let's  do it  and  we  will see  at
+	   ;;run-time what  happens.  Notice that, in  this case: we do  not know the
+	   ;;signature of the return values.
+	   (%build-application-no-signature input-form.stx lexenv.run lexenv.expand
+					    rator.psi rand*.stx))
+
+	  (_
+	   ;;Everything else is wrong.
+	   (%error-wrong-rator-sig)))))
+
+    (define (%build-application-no-signature input-form.stx lexenv.run lexenv.expand
+					     rator.psi rand*.stx)
+      (let* ((apply.core (build-primref no-source 'apply))
+	     (rator.core (psi-core-expr rator.psi))
+	     (rand*.psi  (chi-expr* rand*.stx lexenv.run lexenv.expand))
+	     (rand*.core (map psi-core-expr rand*.psi)))
+	(make-psi input-form.stx
+		  (build-application (syntax-annotation input-form.stx)
+		    apply.core
+		    (cons rator.core rand*.core)))))
+
+    #| end of module: %CHI-APPLY-APPLICATION |# )
 
   #| end of module: CHI-APPLICATION |# )
 
