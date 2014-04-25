@@ -754,6 +754,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-issue-023.sps					\
 	tests/test-issue-024.sps					\
 	tests/test-issue-025-sign-in-exact-rationals.sps		\
+	tests/test-issue-070.sps					\
 	\
 	tests/test-vicare-unsafe-operations.sps				\
 	\
@@ -1044,7 +1045,7 @@ EXTRA_DIST	+= \
 #### running the test suite: selecting tests for "make check"
 
 TESTS		= $(VICARE_SCHEME_CORE_TESTS)
-XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps
+XFAIL_TESTS	= tests/test-issue-058-lalr-unary-prec.sps tests/test-issue-070.sps
 
 if WANT_SRFI
 TESTS		+= $(VICARE_SCHEME_SRFI_TESTS)
