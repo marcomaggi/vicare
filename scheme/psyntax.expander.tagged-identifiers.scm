@@ -575,12 +575,35 @@
   ;;
   ($syntactic-binding-putprop binding-id *EXPAND-TIME-BINDING-TAG-COOKIE* tag))
 
-(define* (identifier-tag {binding-id identifier-bound?})
-  ;;Given  a  syntactic binding  identifier:  retrieve  from  its property  list  the
-  ;;identifier representing  the binding  type tagging.   This tag  identifier should
-  ;;represent the object type referenced by the binding.
-  ;;
-  ($syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TAG-COOKIE*))
+(module (identifier-tag
+	 tagged-identifier?)
+
+  (define* (identifier-tag {binding-id identifier-bound?})
+    ;;Given  a  syntactic binding  identifier:  retrieve  from  its property  list  the
+    ;;identifier representing  the binding  type tagging.   This tag  identifier should
+    ;;represent the object type referenced by the binding.
+    ;;
+    ($identifier-tag binding-id))
+
+  (define* (tagged-identifier? {id identifier-bound?})
+    ;;Return #t  if ID is an  identifier having a type  tagging; otherwise
+    ;;return false.  If the return value is true: ID is a bound identifier
+    ;;created by some binding syntaxes (define, let, letrec, ...).
+    ;;
+    (and ($identifier-tag id)
+	 #t))
+
+  (define ($identifier-tag binding-id)
+    ($syntactic-binding-getprop binding-id *EXPAND-TIME-BINDING-TAG-COOKIE*))
+
+  #| end of module |# )
+
+(define* (identifier-tag-retvals-signature {id identifier-bound?})
+  (cond ((identifier-tag id)
+	 => (lambda (tag)
+	      (make-retvals-signature-single-value tag)))
+	(else
+	 (make-retvals-signature-single-top))))
 
 ;;; --------------------------------------------------------------------
 
@@ -614,35 +637,6 @@
   ;;binding.
   ;;
   ($getprop label *EXPAND-TIME-BINDING-TAG-COOKIE*))
-
-;;; --------------------------------------------------------------------
-
-(define* (tagged-identifier? {id identifier-bound?})
-  ;;Return #t  if ID is an  identifier having a type  tagging; otherwise
-  ;;return false.  If the return value is true: ID is a bound identifier
-  ;;created by some binding syntaxes (define, let, letrec, ...).
-  ;;
-  (and (identifier-tag id)
-       #t))
-
-(define* (%tagged-identifier-with-dispatcher? id)
-  ;;Return #t  if ID is an  identifier, it is bound  identifier, it has a  tag in its
-  ;;property  list,  and  the  tag  identifier has  a  dispatcher  procedure  in  its
-  ;;"object-type-spec"; otherwise return false.  If the return value is true: ID is a
-  ;;bound identifier created by some binding syntaxes (define, let, letrec, ...)  and
-  ;;it can be used in forms like:
-  ;;
-  ;;   (?id ?arg ...)
-  ;;
-  (and (identifier? id)
-       ($identifier-bound? id)
-       (cond ((identifier-tag id)
-	      => (lambda (tag-id)
-		   (let ((spec (identifier-object-type-spec tag-id)))
-		     (and spec
-			  (object-type-spec-dispatcher spec)
-			  #t))))
-	     (else #f))))
 
 
 ;;;; fabricated tag identifiers

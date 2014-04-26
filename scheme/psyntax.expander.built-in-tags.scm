@@ -567,6 +567,11 @@
 ;;; --------------------------------------------------------------------
 
   (set-identifier-object-type-spec! (S <list>)
+    ;;NOTE The truth is that "<pair>" is *not* a parent of "<list>" because nulls are
+    ;;"<list>" but  not "<pair>".  We set  "<pair>" as parent the  same assuming that
+    ;;the primitives acting on lists-as-pairs (like  CAR and CDR) will recognise null
+    ;;and react appropriately.  This is actually the case with CAR, CDR, SET-CAR! and
+    ;;SET-CDR!.  (Marco Maggi; Sat Apr 26, 2014)
     (make-object-type-spec (S <list>) (S <pair>) (S list?)))
 
   (set-identifier-object-type-spec! (S <bytevector>)

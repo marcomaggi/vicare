@@ -456,9 +456,7 @@
 	    ((inv-collector) lib)
 	    (make-psi expr.stx
 		      (build-global-reference no-source loc)
-		      (if (tagged-identifier? expr.stx)
-			  (make-retvals-signature-single-value (identifier-tag expr.stx))
-			(make-retvals-signature-single-top)))))
+		      (identifier-tag-retvals-signature expr.stx))))
 
 	 ((core-prim)
 	  ;;Core primitive (it  is either a procedure or a  constant).  We expect the
@@ -473,9 +471,7 @@
 	  (let ((name bind-val))
 	    (make-psi expr.stx
 		      (build-primref no-source name)
-		      (if (tagged-identifier? expr.stx)
-			  (make-retvals-signature-single-value (identifier-tag expr.stx))
-			(make-retvals-signature-fully-unspecified)))))
+		      (identifier-tag-retvals-signature expr.stx))))
 
 	 ((call)
 	  ;;A function call; this means EXPR.STX has one of the formats:
@@ -490,9 +486,7 @@
 	  (make-psi expr.stx
 		    (let ((lex (lexical-var bind-val)))
 		      (build-lexical-reference no-source lex))
-		    (if (tagged-identifier? expr.stx)
-			(make-retvals-signature-single-value (identifier-tag expr.stx))
-		      (make-retvals-signature-single-top))))
+		    (identifier-tag-retvals-signature expr.stx)))
 
 	 ((global-macro global-macro!)
 	  ;;Global macro use.
@@ -628,9 +622,7 @@
 	      (let ((loc (cdr bind-val)))
 		(make-psi expr.stx
 			  (build-global-reference no-source loc)
-			  (if (tagged-identifier? expr.stx)
-			      (make-retvals-signature-single-value (identifier-tag expr.stx))
-			    (make-retvals-signature-single-top))))
+			  (identifier-tag-retvals-signature expr.stx)))
 	    (stx-error expr.stx "attempt to reference an unexportable variable")))
 
 	 ((tag-maker-application)

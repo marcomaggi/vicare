@@ -345,6 +345,123 @@
 
 ;;;; module core-macro-transformer: LET
 
+#;(module (let-transformer)
+  ;;Transformer function used  to expand R6RS LET macros from  the top-level built in
+  ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
+  ;;LEXENV; return an PSI struct.
+  ;;
+  ;;In practice, below we convert the UNnamed syntax:
+  ;;
+  ;;   (let ((?lhs ?rhs) ...) . ?body)
+  ;;
+  ;;into:
+  ;;
+  ;;   ((lambda (?lhs ...) . ?body) ?rhs ...)
+  ;;
+  ;;and the named syntax:
+  ;;
+  ;;   (let ?recur ((?lhs ?rhs) ...) . ?body)
+  ;;
+  ;;into:
+  ;;
+  ;;   ((letrec ((?recur (lambda (?lhs ...) . ?body)))
+  ;;      ?recur)
+  ;;    ?rhs ...)
+  ;;
+  ;;First we expand the  ?RHS to acquire their retvals signature,  then we expand the
+  ;;LAMBDA with the formals correctly tagged.  This way if we write:
+  ;;
+  ;;   (let ((a 1)) . ?body)
+  ;;
+  ;;this is what happens:
+  ;;
+  ;;1..The identifier A is first tagged with "<top>".
+  ;;
+  ;;2..The expander figures out that the RHS's signature is "(<fixnum>)".
+  ;;
+  ;;3..The expander overrides the tag of A to be "<fixnum>".
+  ;;
+  ;;4..In the ?BODY the identifier A is  tagged as "<fixnum>", so the extended syntax
+  ;;   is available.
+  ;;
+  ;;On the other hand if we write:
+  ;;
+  ;;   (let (({a <exact-integer>} 1)) . ?body)
+  ;;
+  ;;we get an expansion that is equivalent to:
+  ;;
+  ;;   (let (({a <exact-integer>} (tag-assert-and-return (<exact-integer>) 1))) . ?body)
+  ;;
+  ;;so  the type  of the  RHS expression  is validated  either at  expand-time or  at
+  ;;run-time.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'let))
+
+  (define* (let-transformer input-form.stx lexenv.run lexenv.expand)
+    (syntax-match input-form.stx ()
+      ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (%expander input-form.stx lexenv.run lexenv.expand
+		  ?lhs* ?rhs* (cons ?body ?body*) %build-and-expand-common-lambda))
+
+
+      ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+       (receive (recur.id recur.tag)
+	   (parse-tagged-identifier-syntax ?recur)
+	 (chi-expr (bless
+		    `(internal-body
+		       (define (,?recur . ,?lhs*) ,?body . ,?body*)
+		       (,recur.id . ,?rhs*)))
+		   lexenv.run lexenv.expand)))
+
+      ;; ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
+      ;;  (identifier? ?recur)
+      ;;  (%expander input-form.stx lexenv.run lexenv.expand
+      ;; 		  ?lhs* ?rhs* (cons ?body ?body*) (%make-named-lambda-builder-and-expander ?recur)))
+
+      (_
+       (syntax-violation __who__ "invalid syntax" input-form.stx))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%build-and-expand-common-lambda input-form.stx lexenv.run lexenv.expand
+					   lhs*.stx body*.stx)
+    (chi-expr (bless
+	       `(lambda ,lhs*.stx . ,body*.stx))
+	      lexenv.run lexenv.expand))
+
+  (define (%make-named-lambda-builder-and-expander recur.id)
+    (lambda (input-form.stx lexenv.run lexenv.expand lhs*.stx body*.stx)
+      (chi-expr (bless
+		 `(internal-body
+		    (define (,recur.id . ,lhs*.stx) . ,body*.stx)
+		    ,recur.id)
+		 ;; `(letrec ((,recur.id (lambda ,lhs*.stx . ,body*.stx)))
+		 ;;    ,recur.id)
+		 )
+		lexenv.run lexenv.expand)))
+
+;;; --------------------------------------------------------------------
+
+  (define (%expander input-form.stx lexenv.run lexenv.expand
+		     lhs*.stx rhs*.stx body*.stx rator-expander)
+    (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
+    (receive (lhs*.id lhs*.tag)
+	(parse-list-of-tagged-bindings lhs*.stx input-form.stx)
+      (receive (rhs*.psi rhs*.tag)
+	  (%expand-rhs* input-form.stx lexenv.run lexenv.expand lhs*.tag rhs*.stx)
+	(let* ((lhs*.stx    (%compose-lhs-specification lhs*.id lhs*.tag rhs*.tag))
+	       (rator.psi   (rator-expander input-form.stx lexenv.run lexenv.expand lhs*.stx body*.stx))
+	       (rator.core  (psi-core-expr rator.psi))
+	       (rhs*.core   (map psi-core-expr rhs*.psi)))
+	  (make-psi input-form.stx
+		    (build-application (syntax-annotation input-form.stx)
+		      rator.core
+		      rhs*.core)
+		    (psi-application-retvals-signature rator.psi))))))
+
+  #| end of module: LET-TRANSFORMER |# )
+
 (module (let-transformer)
   ;;Transformer function used  to expand R6RS LET macros from  the top-level built in
   ;;environment.  Expand the syntax object INPUT-FORM.STX in the context of the given
@@ -402,13 +519,13 @@
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (%expander input-form.stx lexenv.run lexenv.expand
-		     ?lhs* ?rhs* (cons ?body ?body*) %build-and-expand-common-lambda))
+		  ?lhs* ?rhs* (cons ?body ?body*) %build-and-expand-common-lambda))
 
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (identifier? ?recur)
        (%expander input-form.stx lexenv.run lexenv.expand
-		     ?lhs* ?rhs* (cons ?body ?body*) (%make-named-lambda-builder-and-expander ?recur)))
+		  ?lhs* ?rhs* (cons ?body ?body*) (%make-named-lambda-builder-and-expander ?recur)))
 
       (_
        (syntax-violation __who__ "invalid syntax" input-form.stx))))

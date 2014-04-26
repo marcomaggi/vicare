@@ -688,8 +688,19 @@
   ;; assertion-violation
   ;; boolean=?
   ;; boolean?
-  ;; car
-  ;; cdr
+
+  ;;CAR is  both a  core primitive  and a primitive  operation, so  it has  no unsafe
+  ;;variant.
+  (let ((P (C car)))
+    (register-lambda-signature P (S (list (C <top>))
+				    (list (C <pair>)))))
+
+  ;;CDR is  both a  core primitive  and a primitive  operation, so  it has  no unsafe
+  ;;variant.
+  (let ((P (C cdr)))
+    (register-lambda-signature P (S (list (C <top>))
+				    (list (C <pair>)))))
+
   ;; caar
   ;; cadr
   ;; cdar
@@ -928,6 +939,8 @@
   ;; fx*
   ;; fx*/carry
 
+  ;;FX+ is  both a  core primitive  and a primitive  operation, so  it has  no unsafe
+  ;;variant.
   (let ((P (C fx+)))
     (register-lambda-signature P (S (list (C <fixnum>))
 				    (list (C <fixnum>) (C <fixnum>)))))
@@ -1309,8 +1322,19 @@
   ;; remv
   ;; remove
   ;; make-queue-procs
-  ;; set-car!
-  ;; set-cdr!
+
+  ;;SET-CAR! is both a core primitive and  a primitive operation, so it has no unsafe
+  ;;variant.
+  (let ((P (C set-car!)))
+    (register-lambda-signature P (S (list (C <void>))
+				    (list (C <pair>) (C <top>)))))
+
+  ;;SET-CDR! is both a core primitive and  a primitive operation, so it has no unsafe
+  ;;variant.
+  (let ((P (C set-cdr!)))
+    (register-lambda-signature P (S (list (C <void>))
+				    (list (C <pair>) (C <top>)))))
+
   ;; string-set!
   ;; string-fill!
   ;; command-line
