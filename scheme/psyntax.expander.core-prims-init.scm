@@ -689,14 +689,24 @@
   ;; boolean=?
   ;; boolean?
 
-  ;;CAR is  both a  core primitive  and a primitive  operation, so  it has  no unsafe
-  ;;variant.
+  ;;CAR is  both a core primitive  and a primitive  operation.  At present it  has no
+  ;;unsafe variant.
+  ;;
+  ;;FIXME  The right  way  here is  to  have  a multimethod:  one  method for  <pair>
+  ;;argument, which can have an unsafe variant; one method for <list> argument, which
+  ;;must not have an unsafe variant because  a <list> can be null.  (Marco Maggi; Sat
+  ;;Apr 26, 2014)
   (let ((P (C car)))
     (register-lambda-signature P (S (list (C <top>))
 				    (list (C <pair>)))))
 
-  ;;CDR is  both a  core primitive  and a primitive  operation, so  it has  no unsafe
-  ;;variant.
+  ;;CDR is  both a core primitive  and a primitive  operation.  At present it  has no
+  ;;unsafe variant.
+  ;;
+  ;;FIXME  The right  way  here is  to  have  a multimethod:  one  method for  <pair>
+  ;;argument, which can have an unsafe variant; one method for <list> argument, which
+  ;;must not have an unsafe variant because  a <list> can be null.  (Marco Maggi; Sat
+  ;;Apr 26, 2014)
   (let ((P (C cdr)))
     (register-lambda-signature P (S (list (C <top>))
 				    (list (C <pair>)))))
