@@ -109,30 +109,39 @@ or automatically defined safe and unsafe variants of the same function:
   (values ($flsin x) ($flcos x) ($fltan x)))
 @end example
 
+@noindent
+so that the unsafe @func{$flsomething} can be used later in place of
+@func{flsomething} if we know that the argument is a flonum.
+
 @item
 The Scheme language is defined to have two steps: expansion and
 compilation or interpretation.  Standard Scheme is a ``high--level
 language'' which is transformed into a ``core language'' by the process
-of expansion; the expander allows the implementation of customised
-high--level transformations with the use of macros.  The core language
-is handed to the compiler or the interpreter.
+of expansion; the expander allows macros to implement customised
+high--level transformations.  The core language is handed to the
+compiler or the interpreter.
 
 @item
-At the time of this writing: type inference does not blend well with
-standard Scheme macro expansion; it is, in general, impossible to infer
-the types of a macro use before fully expanding it, or, in special
-cases, at least partially expanding it.  True type inference can be
-performed on the core language that is the result of fully expanding the
-standard language.  This means we cannot integrate the powerful features
-of the expander in the code resulting from transformations made possible
-by type inference.
+Type inference does not blend well with standard Scheme macro expansion;
+it is, in general, impossible to infer the types of a macro use before
+fully expanding it, or, in special cases, at least partially expanding
+it.  True type inference can be performed on the core language that is
+the result of fully expanding the standard language.  This means we
+cannot integrate the powerful features of the expander in the code
+resulting from transformations made possible by type inference.
 
 @item
-@value{PRJNAME} is a Scheme language dialect whose purpose is to be a
-standard Scheme language with extensions; it allows mixed use of
-standard language and extended language.  The language extensions are
-mostly implemented in the expander, to allow user code to customise the
-generation of core language.
+@value{PRJNAME} is a language dialect whose purpose is to be a standard
+Scheme language with extensions; it allows mixed use of standard
+language syntax and extended language syntax.  The language extensions
+are mostly implemented in the expander, to allow user code to customise
+the generation of core language.
+
+@item
+By explicitly specifying the types of lexical bindings,
+@value{PRJNAME}'s dialect allows some of the expand--time validations
+and transformations that would be possible in a language with full type
+inference.
 @end itemize
 
 @c page
