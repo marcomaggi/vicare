@@ -515,8 +515,9 @@
 				     ;;the rib, and the rib is pushed on the RHS.STX.
 				     ;;So, while the specific identifiers LHS*.ID are
 				     ;;unbound (because they do not contain the rib),
-				     ;;any  occurrence  of  such identifiers  in  the
-				     ;;RHS.STX is captured by the binding in the rib.
+				     ;;any occurrence  of the binding  identifiers in
+				     ;;the RHS.STX is captured  by the binding in the
+				     ;;rib.
 				     ;;
 				     ;;If LHS.TAG  is "<top>",  we still want  to use
 				     ;;the assert and return form to make sure that a
