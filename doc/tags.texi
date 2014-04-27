@@ -49,15 +49,16 @@ we have to consider that:
 
 @itemize
 @item
-The standard Scheme language is dynamically typed: application
-signatures validation may happen at run--time every time a function is
-called, considering that the return values of a function application are
-discarded or become the arguments of another function application.  For
-example the function @func{flsin} can be implemented as:
+Standard Scheme is dynamically typed: language implementations might
+perform application signatures validation at run--time every time a
+function is called, considering that the return values of a function
+application are discarded or become the arguments of another function
+application.  For example the function @func{flsin} can be implemented
+as:
 
 @example
 #!r6rs
-(import (rnrs)
+(import (rnrs (6))
   (vicare system $flonums))
 
 (define (flsin x)
@@ -74,18 +75,18 @@ example:
 
 @example
 #!r6rs
-(import (vicare))
+(import (rnrs (6)))
 
 (define (flsomething x)
   (values (flsin x) (flcos x) (fltan x)))
 @end example
 
 @noindent
-can be transformed into:
+can be transformed into (pseudo--code):
 
 @example
 #!r6rs
-(import (rnrs)
+(import (rnrs (6))
   (vicare system $flonums))
 
 (define (flsomething x)
@@ -98,7 +99,7 @@ or automatically defined safe and unsafe variants of the same function:
 
 @example
 #!r6rs
-(import (rnrs)
+(import (rnrs (6))
   (vicare system $flonums))
 
 (define (flsomething x)
@@ -110,8 +111,8 @@ or automatically defined safe and unsafe variants of the same function:
 @end example
 
 @noindent
-so that the unsafe @func{$flsomething} can be used later in place of
-@func{flsomething} if we know that the argument is a flonum.
+so that the unsafe @func{$flsomething} can be used later in place of the
+safe @func{flsomething} if we know that the argument is a flonum.
 
 @item
 The Scheme language is defined to have two steps: expansion and
@@ -138,7 +139,7 @@ are mostly implemented in the expander, to allow user code to customise
 the generation of core language.
 
 @item
-By explicitly specifying the types of lexical bindings,
+By explicitly specifying the types of lexical bindings:
 @value{PRJNAME}'s dialect allows some of the expand--time validations
 and transformations that would be possible in a language with full type
 inference.
