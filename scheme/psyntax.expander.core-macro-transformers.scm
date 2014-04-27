@@ -399,6 +399,26 @@
   ;;so  the type  of the  RHS expression  is validated  either at  expand-time or  at
   ;;run-time.
   ;;
+  ;;HISTORICAL NOTE In the original Ikarus code, the UNnamed LET syntax:
+  ;;
+  ;;   (let ((?lhs ?rhs) ...) . ?body)
+  ;;
+  ;;was transformed into:
+  ;;
+  ;;   ((lambda (?lhs ...) . ?body) ?rhs ...)
+  ;;
+  ;;and the named syntax:
+  ;;
+  ;;   (let ?recur ((?lhs ?rhs) ...) . ?body)
+  ;;
+  ;;into:
+  ;;
+  ;;   ((letrec ((?recur (lambda (?lhs ...) . ?body))) ?recur) ?rhs ...)
+  ;;
+  ;;such transformations are fine for an  UNtagged language.  In a tagged language we
+  ;;want to use types  whenever possible, and this means to use  the DEFINE syntax to
+  ;;define both a safe and an unsafe function.  (Marco Maggi; Sun Apr 27, 2014)
+  ;;
   (define-fluid-override __who__
     (identifier-syntax 'let))
 
