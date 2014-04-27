@@ -22,14 +22,118 @@ defined by @rnrs{6} that allows the definition of tagged bindings.
 @value{PRJNAME}'s tagged language adds some expand--time binding type
 checking and extended @oop{} syntax to the language specified by
 @rnrs{6}.  The result is a Scheme language dialect in which the code
-writer must explicitly write the type identifiers; there is, in
+writer is invited to explicitly write the type identifiers; there is, in
 practice, @strong{no} type inference.
 
 @menu
+* tags intro philosophy::       Tagged language philosophy.
 * tags intro enabling::         Enabling tagged language extensions.
 * tags intro tag id::           Tag identifiers.
 * tags intro tagged id::        Tagged identifiers.
 @end menu
+
+@c page
+@node tags intro philosophy
+@subsection Tagged language philosophy
+
+
+In the following discussion we refer to @rnrs{6} specifications as
+``standard Scheme language''.  We refer to a function's operands and
+return values as its @dfn{signature}.  When a function is applied to a
+tuple of arguments and a tuple of return values is expected: the number
+and types of arguments and return values must be validated; we refer to
+such validation as @dfn{application signature validation}.
+
+To understand the role of @value{PRJNAME}'s tagged language extensions,
+we have to consider that:
+
+@itemize
+@item
+The standard Scheme language is dynamically typed: application
+signatures validation may happen at run--time every time a function is
+called, considering that the return values of a function application are
+discarded or become the arguments of another function application.  For
+example the function @func{flsin} can be implemented as:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare system $flonums))
+
+(define (flsin x)
+  (assert (flonum? x))
+  ($flsin x))
+@end example
+
+@item
+It is possible to build a standard Scheme language implementation that
+performs compile--time type inference; with such implementation:
+occasionally the compiler can determine the type of arguments and return
+values and collapse multiple validations into a single one.  For
+example:
+
+@example
+#!r6rs
+(import (vicare))
+
+(define (flsomething x)
+  (values (flsin x) (flcos x) (fltan x)))
+@end example
+
+@noindent
+can be transformed into:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare system $flonums))
+
+(define (flsomething x)
+  (assert (flonum? x))
+  (values ($flsin x) ($flcos x) ($fltan x)))
+@end example
+
+@noindent
+or automatically defined safe and unsafe variants of the same function:
+
+@example
+#!r6rs
+(import (rnrs)
+  (vicare system $flonums))
+
+(define (flsomething x)
+  (assert (flonum? x))
+  ($flsomething x))
+
+(define ($flsomething x)
+  (values ($flsin x) ($flcos x) ($fltan x)))
+@end example
+
+@item
+The Scheme language is defined to have two steps: expansion and
+compilation or interpretation.  Standard Scheme is a ``high--level
+language'' which is transformed into a ``core language'' by the process
+of expansion; the expander allows the implementation of customised
+high--level transformations with the use of macros.  The core language
+is handed to the compiler or the interpreter.
+
+@item
+At the time of this writing: type inference does not blend well with
+standard Scheme macro expansion; it is, in general, impossible to infer
+the types of a macro use before fully expanding it, or, in special
+cases, at least partially expanding it.  True type inference can be
+performed on the core language that is the result of fully expanding the
+standard language.  This means we cannot integrate the powerful features
+of the expander in the code resulting from transformations made possible
+by type inference.
+
+@item
+@value{PRJNAME} is a Scheme language dialect whose purpose is to be a
+standard Scheme language with extensions; it allows mixed use of
+standard language and extended language.  The language extensions are
+mostly implemented in the expander, to allow user code to customise the
+generation of core language.
+@end itemize
 
 @c page
 @node tags intro enabling
