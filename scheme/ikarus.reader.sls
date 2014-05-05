@@ -416,7 +416,11 @@
       ($char= ch #\;)
       ($char= ch #\{)
       ($char= ch #\})
-      ($char= ch #\|)))
+      ($char= ch #\|)
+      ;;NOTE R6RS does  *not* list the comma as a  delimiter, this is an
+      ;;extension of Vicare.  (Marco Maggi; Mon Apr 28, 2014)
+      ($char= ch #\,)
+      ))
 
 (define-inline (dec-digit? ch)
   (and ($char<= #\0 ch) ($char<= ch #\9)))
