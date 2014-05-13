@@ -395,8 +395,8 @@ D. On boot images
 
 Vicare comes with 2 prebuilt boot images:
 
-    $(top_srcdir)/scheme/vicare.boot.4.prebuilt
-    $(top_srcdir)/scheme/vicare.boot.8.prebuilt
+    $(top_srcdir)/boot/vicare.boot.4.prebuilt
+    $(top_srcdir)/boot/vicare.boot.8.prebuilt
 
 one for 32-bit systems (4) and one for 64-bit systems (8).  The prebuilt
 images do not contain the latest version of the code.
@@ -411,7 +411,7 @@ new boot image is the one containing the latest version of the code.
   On a 32-bit system, when the maintainer feels it is time to rotate the
 boot images, he just replaces by hand:
 
-    $(top_srcdir)/scheme/vicare.boot.4.prebuilt
+    $(top_srcdir)/boot/vicare.boot.4.prebuilt
 
 with:
 
@@ -427,7 +427,7 @@ to (blindly) generate:
 
 and make it become the new:
 
-    $(top_srcdir)/scheme/vicare.boot.8.prebuilt
+    $(top_srcdir)/boot/vicare.boot.8.prebuilt
 
   When building the 64-bit image, the file:
 

@@ -382,9 +382,9 @@ VICARE_BOOT_SRCS = \
 
 EXTRA_DIST += \
 	$(VICARE_BOOT_SRCS)					\
+	boot/vicare.boot.4.prebuilt				\
+	boot/vicare.boot.8.prebuilt				\
 	scheme/makefile.sps					\
-	scheme/vicare.boot.4.prebuilt				\
-	scheme/vicare.boot.8.prebuilt				\
 	scheme/unicode-data.sls					\
 	scheme/unicode/unicode-char-cases.ss			\
 	scheme/unicode/unicode-charinfo.ss			\
@@ -409,7 +409,7 @@ bootexecdir		= $(pkglibdir)
 bootexec_DATA		= $(VICARE_NEW_BOOT)
 
 BOOT_SEARCH_PATH	= $(srcdir)/scheme:$(builddir)/scheme:$(slsdir):$(fasldir):$(builddir)
-VICARE_PREBUILT_BOOT	= $(srcdir)/scheme/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
+VICARE_PREBUILT_BOOT	= $(srcdir)/boot/vicare.boot.$(VICARE_SIZE_OF_VOIDP).prebuilt
 
 VICARE_BOOT_ENV		= \
 	VICARE_SRC_DIR=$(srcdir)/scheme; export VICARE_SRC_DIR; \
@@ -508,16 +508,20 @@ boot-image-64-bit: vicare
 # We can  try to build  Vicare itself with  a newly built  boot image;
 # do this from the build directory:
 #
-#   $ cp scheme/vicare.boot scheme/vicare.boot.try
+#   $ cp vicare.boot vicare.boot.try
 #
 # then:
 #
 #   $ make try-vicare-boot
 #
 # when we  are sure that  the newly built  boot image is fine,  we can
-# adopt it as boot image to be distributed:
+# adopt it as boot image to be distributed; on a 32-bit platform:
 #
-#   $ cp scheme/vicare.boot.try $(top_srcdir)/scheme/vicare.boot.4.prebuilt
+#   $ cp vicare.boot.try $(top_srcdir)/boot/vicare.boot.4.prebuilt
+#
+# on a 64-bit platform:
+#
+#   $ cp vicare.boot.try $(top_srcdir)/boot/vicare.boot.8.prebuilt
 #
 # but keep backups of the original one!!!
 #
@@ -543,9 +547,6 @@ VICARE_COMPILE_FLAGS	= -b $(VICARE_NEW_BOOT) --fasl-directory $(fasldir) $(AX_VF
 VICARE_COMPILE_RUN	= $(VICARE_COMPILE_ENV) $(builddir)/vicare $(VICARE_COMPILE_FLAGS)
 
 FASL_PREREQUISITES	= $(VICARE_NEW_BOOT)
-
-# %.fasl: %.sls $(VICARE_NEW_BOOT)
-# 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
 ## --------------------------------------------------------------------
 
