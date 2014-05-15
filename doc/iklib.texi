@@ -2899,6 +2899,9 @@ Shared structures graph notation: @code{#nn=}, @code{#nn#}.
 Special symbols: @code{++}, @code{--}.
 
 @item
+Special symbol @code{|}, which is a standalone vertical bar.
+
+@item
 Special symbols beginning with @code{+g} and @code{-g}, to allow reading
 symbols starting with @code{+greek-pi} and @code{-greek-pi}.
 

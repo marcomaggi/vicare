@@ -1018,7 +1018,18 @@
 	(($char= #\| ch)
 	 (when (port-in-r6rs-mode? port)
 	   (%error "|symbol| syntax is invalid in #!r6rs mode"))
-	 (finish-tokenisation-of-identifier/bar '() port #t))
+	 ;;Here  we want  to  make the  standalone  #\| character  valid
+	 ;;symbol,  because it  is  very spiffy  as  logic inclusive  OR
+	 ;;operator in infix notation.
+	 (let ((ch1 (peek-char port)))
+	   (cond ((or (eof-object? ch1)
+		      ;;We must  exclude #\|  as next  character because
+		      ;;#\| is a delimiter.
+		      (and (not ($char= #\| ch1))
+			   (delimiter? ch1)))
+		  `(datum . \x7C;))
+		 (else
+		  (finish-tokenisation-of-identifier/bar '() port #t)))))
 
 	;;symbol whose first char is a backslash sequence, "\x41;-ciao"
 	(($char= #\\ ch)
@@ -1856,9 +1867,6 @@
      (if (pair? accumulated-chars)
 	 accumulated-chars
        (die/p port 'tokenize "invalid empty symbol in bars notation \"||\"" port)))
-    ;; ((and (delimiter? ch)
-    ;; 	  (null? accumulated-chars))
-    ;;  )
     (else
      (recurse (cons ch accumulated-chars)))))
 
