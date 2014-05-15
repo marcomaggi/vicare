@@ -1853,7 +1853,12 @@
     (($char= #\\ ch)
      (%accumulate-identifier-chars/backslash accumulated-chars port #t))
     (($char= #\| ch) ;end of symbol, whatever comes after
-     accumulated-chars)
+     (if (pair? accumulated-chars)
+	 accumulated-chars
+       (die/p port 'tokenize "invalid empty symbol in bars notation \"||\"" port)))
+    ;; ((and (delimiter? ch)
+    ;; 	  (null? accumulated-chars))
+    ;;  )
     (else
      (recurse (cons ch accumulated-chars)))))
 
