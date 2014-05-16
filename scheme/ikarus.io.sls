@@ -5936,7 +5936,9 @@
 	   ;;object, else return the number of characters read.
 	   ((would-block-object? ch)
 	    (if (strict-r6rs)
-		(read-next-char)
+		;;In R6RS  mode we ignore the  would-block condition and
+		;;just insist reading with the same destination index.
+		(read-next-char dst.index)
 	      (if ($fx= dst.index dst.start)
 		  ;;Return the would-block object.
 		  ch
@@ -5973,7 +5975,10 @@
 	       ;;another character will be available.
 	       ((would-block-object? ch2)
 		(if (strict-r6rs)
-		    (read-next-char)
+		    ;;In R6RS  mode we ignore the  would-block condition
+		    ;;and just insist reading  with the same destination
+		    ;;index.
+		    (read-next-char dst.index)
 		  (if ($fx= dst.index dst.start)
 		      ;;Return the would-block object.
 		      ch
@@ -6965,7 +6970,7 @@
 		    (case mode
 		      ((ignore)
 		       ;;To ignore means jump to the next.
-		       (recurse))
+		       (recurse port.buffer.index))
 		      ((replace)
 		       #\xFFFD)
 		      ((raise)

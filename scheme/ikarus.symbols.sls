@@ -88,12 +88,14 @@
     (only (vicare system $numerics)
 	  $add1-integer)
     (except (vicare system $symbols)
-	    $symbol->string
-	    $getprop $putprop $remprop $property-list
-	    $unintern-gensym
-	    system-value system-value-gensym
-	    system-label system-label-gensym
-	    system-id    system-id-gensym))
+	    $symbol->string	$unintern-gensym
+	    $getprop		$putprop		$remprop
+	    $property-list
+	    system-value	system-value-gensym
+	    system-label	system-label-gensym
+	    system-id		system-id-gensym
+	    reset-symbol-proc!
+	    top-level-value	top-level-bound?	set-top-level-value!))
 
 
 ;;;; helpers

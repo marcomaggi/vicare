@@ -251,6 +251,8 @@
 	       ;;Generate new struct instances of type VAR.
 	       (let ((VAR (unique-var '?lhs))
 		     ...)
+#;(debug-print 'here '(copy-tag ?lhs VAR) ...)
+#;(debug-print 'here1 (copy-tag ?lhs VAR) ...)
 		 ;;Make the binding struct.
 		 (make-bind (list VAR ...) (list ?lhs ...)
 			    ;;The ?BODY forms  expect Scheme bindings to
@@ -258,6 +260,7 @@
 			    ;;structures.
 			    (let ((?lhs (copy-tag ?lhs VAR))
 				  ...)
+#;(debug-print 'there)
 			      ;;Evaluate the  body forms, each  of which
 			      ;;must return recordized code.
 			      (multiple-forms-sequence ?body0 ?body ...))))))))))
@@ -297,10 +300,14 @@
 			      (multiple-forms-sequence ?body0 ?body ...))))))))))
 
   (define (copy-tag orig new)
+#;(debug-print 'enter-copy-tag orig new)
     (struct-case orig
       ((known _ type)
+#;(debug-print 'copy-tag/known new type)
        (make-known new type))
-      (else new)))
+      (else
+#;(debug-print 'copy-tag/not-known new)
+       new)))
 
   #| end of module: with-tmp |# )
 
@@ -436,7 +443,7 @@
     ;;  primitive as machine code.
     ;;
     ;;*  Primitive operations.   There exist  functions  that the  compiler calls  to
-    ;;  integrate assembly instructions implemented the core primitive.
+    ;;  integrate assembly instructions implementing the core primitive.
     ;;
     ;;When the core primitive is used as argument as in:
     ;;
@@ -452,7 +459,7 @@
     ;;Let's consider  FX+.  When the  code object implementation detects  overflow or
     ;;underflow:  it  raises an  exception.   When  the primitive  operation  detects
     ;;overflow  or underflow  what should  it do?   The answer  is: every  integrated
-    ;;primitive operation  assembly code  will jump  to the  same routine  which will
+    ;;primitive-operation  assembly-code will  jump to  the same  routine which  will
     ;;raise an exception.
     ;;
     ;;Such exception-raising routines are called ERROR@?PRIM, where ?PRIM is the name
@@ -481,9 +488,6 @@
     (make-cogen-handler %make-interrupt-call %make-no-interrupt-call))
 
   (define (cogen-debug-primop op src/loc ctxt args)
-    (define-inline (main)
-      ((make-cogen-handler %make-call %make-call) op ctxt args))
-
     (define (%make-call op args)
       ;;This function clauses upon the argument SRC/LOC.
       ;;
@@ -491,8 +495,7 @@
 		    (cons* (V src/loc)
 			   (V (make-primref op))
 			   args)))
-
-    (main))
+    ((make-cogen-handler %make-call %make-call) op ctxt args))
 
   #| end of module: cogen-primop cogen-debug-primop |# )
 

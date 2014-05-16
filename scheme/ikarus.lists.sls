@@ -34,7 +34,9 @@
 		  assq assp assv assoc remq remv remove remp filter
 		  map for-each for-each-in-order andmap ormap list-tail partition
 		  for-all exists fold-left fold-right
-		  make-queue-procs)
+		  make-queue-procs
+		  map1		for-each1
+		  for-all1	exists1)
     (vicare language-extensions syntaxes)
     (vicare arguments validation)
     (except (vicare unsafe operations)

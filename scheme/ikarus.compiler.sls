@@ -80,13 +80,9 @@
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import
       (rnrs hashtables)
-    ;;FIXME To be included at the next boot image rotation; SYSTEM-VALUE
-    ;;is no more  exporte by "(vicare)".  Notice that we  really need to
-    ;;import  the SYSTEM-VALUE  from the  prebuilt boot  image!!! (Marco
-    ;;Maggi; Mon Apr 14, 2014)
-    ;;
     ;; (only (vicare system $symbols)
-    ;; 	  system-value)
+    ;; 	  system-value
+    ;; 	  reset-symbol-proc!)
     (only (vicare system $codes)
 	  $code->closure)
     (only (vicare system $structs)
@@ -211,16 +207,6 @@
 
 ;;;; helper syntaxes
 
-(define-inline (%debug-print ?obj)
-  (pretty-print ?obj (current-error-port)))
-
-(define-inline (%debug-write ?obj)
-  (begin
-    (write ?obj (current-error-port))
-    (newline (current-error-port))))
-
-;;; --------------------------------------------------------------------
-
 (define-inline ($caar x)	($car ($car x)))
 (define-inline ($cadr x)	($car ($cdr x)))
 (define-inline ($cdar x)	($cdr ($car x)))
@@ -317,11 +303,11 @@
     (define (main stx)
       (syntax-case stx ()
 	((_ ?expr ?clause ...)
-	 (with-syntax ((BODY (%generate-body #'_ #'(?clause ...))))
+	 (with-syntax ((BODY (%generate-body #'(?clause ...))))
 	   #'(let ((v ?expr))
 	       BODY)))))
 
-    (define (%generate-body ctxt clauses-stx)
+    (define (%generate-body clauses-stx)
       (syntax-case clauses-stx (else)
         (()
 	 (with-syntax ((INPUT-FORM stx))
@@ -332,30 +318,49 @@
 
         ((((?struct-name ?field-name ...) ?body0 ?body ...) . ?other-clauses)
 	 (identifier? #'?struct-name)
-         (with-syntax ((RTD		#'(type-descriptor ?struct-name))
-                       ((FIELD-IDX ...)	(%enumerate #'(?field-name ...) 0))
-		       (ALTERN		(%generate-body ctxt #'?other-clauses)))
+         (with-syntax
+	     ((RTD		#'(type-descriptor ?struct-name))
+	      ((FIELD-NAM ...)  (%filter-field-names #'(?field-name ...)))
+	      ((FIELD-IDX ...)	(%enumerate #'(?field-name ...) 0))
+	      (ALTERN		(%generate-body #'?other-clauses)))
 	   #'(if ($struct/rtd? v RTD)
-		 (let ((?field-name ($struct-ref v FIELD-IDX))
+		 (let ((FIELD-NAM ($struct-ref v FIELD-IDX))
 		       ...)
 		   ?body0 ?body ...)
 	       ALTERN)))))
 
-    (define (%enumerate fields-stx next-field-idx)
-      ;;FIELDS-STX must be a syntax object holding a list of identifiers
-      ;;being  struct field  names.   NEXT-FIELD-IDX must  be a  fixnums
-      ;;representing the index of the first field in FIELDS-STX.
+    (define (%filter-field-names field*.stx)
+      ;;FIELD*.STX must be a syntax object holding a list of identifiers
+      ;;being  underscores  or  struct  field  names.   Filter  out  the
+      ;;underscores and  return a  list of identifiers  representing the
+      ;;true field names.
       ;;
-      ;;Return  a syntax  object holding  a  list of  fixnums being  the
-      ;;indexes of the fields in FIELDS-STX.
-      ;;
-      (syntax-case fields-stx ()
-        (() #'())
+      (syntax-case field*.stx ()
+        (() '())
         ((?field-name . ?other-names)
-         (with-syntax
-	     ((FIELD-IDX        next-field-idx)
-	      (OTHER-FIELD-IDXS (%enumerate #'?other-names (fxadd1 next-field-idx))))
-           #'(FIELD-IDX . OTHER-FIELD-IDXS)))))
+	 (eq? '_ (syntax->datum #'?field-name))
+	 (%filter-field-names #'?other-names))
+        ((?field-name . ?other-names)
+	 (cons #'?field-name (%filter-field-names #'?other-names)))
+	))
+
+    (define (%enumerate field*.stx next-field-idx)
+      ;;FIELD*.STX must be a syntax object holding a list of identifiers
+      ;;being underscores or struct field names.  NEXT-FIELD-IDX must be
+      ;;a  fixnum  representing   the  index  of  the   first  field  in
+      ;;FIELD*.STX.
+      ;;
+      ;;Return a list of fixnums  representing the indexes of the fields
+      ;;in FIELD*.STX, discarding the fixnums matching underscores.
+      ;;
+      (syntax-case field*.stx ()
+        (() '())
+        ((?field-name . ?other-names)
+	 (eq? '_ (syntax->datum #'?field-name))
+	 (%enumerate #'?other-names (fxadd1 next-field-idx)))
+        ((?field-name . ?other-names)
+	 (cons next-field-idx (%enumerate #'?other-names (fxadd1 next-field-idx))))
+	))
 
     (main stx)))
 
@@ -431,9 +436,6 @@
 
 
 ;;;; helper functions
-
-#;(define (dummy)
-  (display "here\n"))
 
 (define (remq1 x ls)
   ;;Scan the  list LS and  remove only the  first instance of  object X,

@@ -932,7 +932,7 @@
       ((cons* _ . _)				 effect-free result-true)
       ((list)				foldable effect-free result-true)
       ((list . _)				 effect-free result-true)
-      ((reverse ())			foldable effect-free result-true)
+      ((reverse _)			foldable effect-free result-true)
 
       ;;According to  R6RS: STRING and	MAKE-STRING must return	 a newly
       ;;allocated string at every invocation; if we want the same string
