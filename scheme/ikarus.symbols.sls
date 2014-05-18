@@ -206,7 +206,9 @@
 			    v
 			  (lambda args
 			    (procedure-argument-violation 'apply
-			      "not a procedure" ($symbol-value x))))))
+			      "not a procedure"
+			      `(top-level-value-of-symbol ,x)
+			      ($symbol-value x) args)))))
 
 (define* (reset-symbol-proc! {x symbol?})
   (let ((v ($symbol-value x)))
@@ -214,7 +216,9 @@
 			     v
 			   (lambda args
 			     (procedure-argument-violation 'apply
-			       "not a procedure" (top-level-value x)))))))
+			       "not a procedure"
+			       `(top-level-value-of-symbol ,x)
+			       (top-level-value x) args))))))
 
 ;; (define* (string->symbol (x symbol?))
 ;;   (foreign-call "ikrt_string_to_symbol" x))

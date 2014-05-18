@@ -1227,10 +1227,10 @@
     (top-level-value				$symbols)
     (top-level-bound?				$symbols)
     (set-top-level-value!			$symbols)
-    (reset-symbol-proc!				$symbols)
+    (reset-symbol-proc!				$symbols v)
     (system-value-gensym			$symbols)
     (system-label-gensym			$symbols)
-    (system-value				$symbols)
+    (system-value				$symbols v)
     (system-label				$symbols)
     (system-id					$symbols)
     (system-id-gensym				$symbols)
@@ -3979,46 +3979,42 @@
 		  export-primlocs)))))
 
   (define (make-init-code)
-    ;;Return values  representing a fake library  "(ikarus.init)", as if
-    ;;we have  processed a  file "ikarus.init.sls"  as first  library to
-    ;;include in the boot image.  The returned values are:
+    ;;Return  values representing  a  fake  library "(ikarus.init)",  as  if we  have
+    ;;processed a  file "ikarus.init.sls"  as first  library to  include in  the boot
+    ;;image.  The returned values are:
     ;;
     ;;NAME* -
     ;;   A list of symbols representing the library name.
     ;;
     ;;INVOKE-CODE* -
-    ;;   A list  of symbolic expressions, each evaluating  to the object
-    ;;   to  bind to a global  library binding; there must  be an object
-    ;;   for each entry in the return value EXPORT-ENV.
+    ;;   A list of  symbolic expressions, each evaluating to the object  to bind to a
+    ;;   global library binding; there must be an object for each entry in the return
+    ;;   value EXPORT-ENV.
     ;;
     ;;EXPORT-SUBST -
-    ;;   A subst selecting the bindings  to be exported from the ones in
-    ;;   EXPORT-ENV.
+    ;;   A subst selecting the bindings to be exported from the ones in EXPORT-ENV.
     ;;
     ;;EXPORT-ENV -
     ;;   Represents the global bindings defined by the library body.
     ;;
-    ;;The first  code to run on  the system is one  that initializes the
-    ;;value  and proc  fields  of the  location of  $INIT-SYMBOL-VALUE!,
-    ;;otherwise  all  subsequent  inits  to  any  global  variable  will
-    ;;segfault.  We fake a library as if we have processed the following
-    ;;form:
+    ;;The first code to run on the system  is one that initializes the value and proc
+    ;;fields of the  location of $INIT-SYMBOL-VALUE!, otherwise  all subsequent inits
+    ;;to  any global  variable  will segfault.   We  fake  a library  as  if we  have
+    ;;processed the following form:
     ;;
     ;;   (library (ikarus.init)
     ;;     (export $init-symbol-value!)
     ;;     (import (vicare))
     ;;     (define ($init-symbol-value! sym val)
-    ;; 	   ($set-symbol-value! sym val)
-    ;; 	   (if (procedure? val)
-    ;; 	       ($set-symbol-proc! sym val)
-    ;; 	     ($set-symbol-proc! sym
-    ;; 	       (lambda args
-    ;; 	         (error 'apply "not a procedure"
-    ;; 	           ($symbol-value sym)))))))
+    ;; 	     ($set-symbol-value! sym val)
+    ;; 	     (if (procedure? val)
+    ;; 	         ($set-symbol-proc! sym val)
+    ;; 	       ($set-symbol-proc! sym
+    ;; 	         (lambda args
+    ;; 	           (error 'apply "not a procedure" ($symbol-value sym)))))))
     ;;
-    ;;but we cannot do it  this way because $INIT-SYMBOL-VALUE!  must be
-    ;;itself initialised, by storing the function in the appropriate loc
-    ;;gensym.
+    ;;but  we cannot  do  it this  way because  $INIT-SYMBOL-VALUE!   must be  itself
+    ;;initialised, by storing the function in the appropriate loc gensym.
     ;;
     (let ((proc		(gensym))
 	  (loc		(gensym))
@@ -4028,7 +4024,7 @@
 	  (args		(gensym)))
       (values (list '(ikarus.init))
 	      (list `((case-lambda
-		       ;;Apply $SET-SYMBOL-VALUE! to itself.
+		       ;;Apply $INIT-SYMBOL-VALUE! to itself.
 		       ((,proc)
 			(,proc ',loc ,proc)))
 		      (case-lambda
