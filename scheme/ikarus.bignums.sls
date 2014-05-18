@@ -95,6 +95,10 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.bignums")))
+
+#| end of file |# )
 
 ;;; end of file

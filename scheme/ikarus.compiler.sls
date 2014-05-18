@@ -80,6 +80,8 @@
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import
       (rnrs hashtables)
+    ;;FIXME To be uncommented at the next boot image rotation.
+    ;;
     ;; (only (vicare system $symbols)
     ;; 	  system-value
     ;; 	  reset-symbol-proc!)

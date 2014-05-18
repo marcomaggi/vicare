@@ -8660,7 +8660,11 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.generic-arithmetic")))
+
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

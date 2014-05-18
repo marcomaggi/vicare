@@ -379,7 +379,11 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.symbols")))
+
+#| end of library |# )
 
 ;;; end of file
 ;;Local Variables:

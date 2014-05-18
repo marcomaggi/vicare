@@ -86,7 +86,7 @@
 
     (define invlog2of
       (let ((table (make-vector 37))
-	    (log2 (log 2)))
+	    (log2  (log 2)))
 	(do ((B 2 (+ B 1)))
 	    ((= B 37))
 	  (vector-set! table B (/ log2 (log B))))
@@ -97,7 +97,8 @@
 
     (define exptt
       (let ((table (make-vector 326)))
-	(do ((k 0 (+ k 1)) (v 1 (* v 10)))
+	(do ((k 0 (+ k 1))
+	     (v 1 (* v 10)))
 	    ((= k 326))
 	  (vector-set! table k v))
 	(lambda (B k)
@@ -192,6 +193,10 @@
 
 ;;;; done
 
-)
+;; #!vicare
+;; (define dummy
+;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.numerics.flonum-conversion")))
+
+#| end of library |# )
 
 ;;; end of file
