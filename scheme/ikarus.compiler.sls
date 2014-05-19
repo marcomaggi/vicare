@@ -82,7 +82,7 @@
       (rnrs hashtables)
     ;;FIXME To be uncommented at the next boot image rotation.
     ;;
-    ;; (only (vicare system $symbols)
+    ;; (only (ikarus.symbols) #;(vicare system $symbols)
     ;; 	  system-value
     ;; 	  reset-symbol-proc!)
     (only (vicare system $codes)
@@ -93,6 +93,8 @@
 	    fixnum-width
 	    greatest-fixnum
 	    least-fixnum
+
+;;;	    system-value		reset-symbol-proc!
 
 	    return
 	    current-primitive-locations
@@ -2951,9 +2953,14 @@
 	  => (lambda (c)
 	       (%optimize c rator ($map/stx E-known rand*))))
 
-	 ;;Is RATOR the  low level APPLY operation?  In  this case: the
-	 ;;first  RAND*  should  be   a  struct  instance  representing
+	 ;;Is RATOR  the low level  APPLY operation?  In this  case: the
+	 ;;first  RAND*   should  be  a  struct   instance  representing
 	 ;;recordized code which will evaluate to a closure.
+	 ;;
+	 ;;$$APPLY  is used  only in  the body  of the  procedure APPLY,
+	 ;;after  having  validated the  first  arguments  as a  closure
+	 ;;objectt.   So  here we  are  sure  that "($car  rand*)"  will
+	 ;;evaluate to a closure object.
 	 ((and (primref? rator)
 	       (eq? (primref-name rator) '$$apply))
 	  (make-jmpcall (sl-apply-label)
