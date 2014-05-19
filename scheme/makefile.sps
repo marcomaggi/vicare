@@ -148,8 +148,6 @@
 
 ;;;; prelude
 
-#;(import (only (vicare) import))
-
 ;;NOTE  Libraries imported  here are  installed  in the  internal library  collection
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are installed in a separate library collection, BOOTSTRAP-COLLECTION.
@@ -174,18 +172,17 @@
 ($strip-source-info #t)
 ($current-letrec-pass 'scc)
 
-;;NOTE This  turns off some debug  mode features that cannot  be used in
-;;the boot image because it would become too big.  (Marco Maggi; Wed Apr
-;;2, 2014)
+;;NOTE This turns off some debug mode features  that cannot be used in the boot image
+;;because it would become too big.  (Marco Maggi; Wed Apr 2, 2014)
 ($generate-debug-calls #f)
 
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
-(define BOOT-IMAGE-MAJOR-VERSION 0)
-(define BOOT-IMAGE-MINOR-VERSION 4)
-
 
 ;;;; helpers
+
+(define BOOT-IMAGE-MAJOR-VERSION 0)
+(define BOOT-IMAGE-MINOR-VERSION 4)
 
 (define boot-file-name
   "vicare.boot")
@@ -201,15 +198,15 @@
      (for-each ?lambda ?list))))
 
 (define (make-collection)
-  ;;Return a  closure to handle lists of  elements called "collections".
-  ;;When  the closure  is  invoked  with no  arguments:  it returns  the
-  ;;collection.   When  the closure  is  invoked  with  an argument:  it
-  ;;prepends  the  argument  to  the  collection  without  checking  for
-  ;;duplicates.
+  ;;Return a  closure to  handle lists  of elements  called "collections".   When the
+  ;;closure  is invoked  with  no arguments:  it returns  the  collection.  When  the
+  ;;closure is invoked  with an argument: it prepends the  argument to the collection
+  ;;without checking for duplicates.
   ;;
   (let ((set '()))
     (case-lambda
-     (()  set)
+     (()
+      set)
      ((x)
       (set! set (cons x set))))))
 
@@ -229,27 +226,21 @@
 	(fprintf port ".")
 	(flush-output-port port))))))
 
-(define (pretty-print/stderr thing)
-  (let ((port (console-error-port)))
-    (pretty-print thing port)
-    (flush-output-port port)))
-
 
 (define scheme-library-files
   ;;Listed in the order in which they're loaded.
   ;;
-  ;;Loading of the boot file may  segfault if a library is loaded before
-  ;;its dependencies are loaded first.
+  ;;Loading  of  the boot  file  may  segfault if  a  library  is loaded  before  its
+  ;;dependencies are loaded first.
   ;;
-  ;;The  reason  is that  the  base libraries  are  not  a hierarchy  of
-  ;;dependencies but rather an eco system in which every part depends on
-  ;;the other.
+  ;;The reason  is that the  base libraries are not  a hierarchy of  dependencies but
+  ;;rather an eco system in which every part depends on the other.
   ;;
-  ;;For  example,  the printer  may  call error  if  it  finds an  error
-  ;;(e.g. "not an output port"),  while the error procedure may call the
-  ;;printer to  display the message.  This  works fine as  long as error
-  ;;does  not itself  cause an  error (which  may lead  to  the infamous
-  ;;Error: Error: Error: Error: Error: Error: Error: Error: Error: ...).
+  ;;For example, the printer may call error if it finds an error (e.g. "not an output
+  ;;port"), while  the error procedure may  call the printer to  display the message.
+  ;;This works fine as  long as error does not itself cause an  error (which may lead
+  ;;to the  infamous Error: Error: Error:  Error: Error: Error: Error:  Error: Error:
+  ;;...).
   ;;
   '("ikarus.emergency.sls"
     "ikarus.options.sls"
@@ -2936,7 +2927,7 @@
     (syntax-unwrap				v $language)
     (syntax=?					v $language)
     (identifier=symbol?				v $language)
-    #;(quoted-syntax-object?			v $language)
+;;; (quoted-syntax-object?			v $language)
 
     (syntax-clauses-unwrap			v $language)
     (syntax-clauses-filter			v $language)
@@ -4366,8 +4357,8 @@
 
 ;;;; Go!
 
-;;Internal consistency check: verify that all the library nicknames used
-;;in IDENTIFIER->LIBRARY-MAP are defined by LIBRARY-LEGEND.
+;;Internal  consistency  check:  verify  that  all  the  library  nicknames  used  in
+;;IDENTIFIER->LIBRARY-MAP are defined by LIBRARY-LEGEND.
 ;;
 (for-each (lambda (x)
 	    (for-each (lambda (x)
@@ -4375,8 +4366,6 @@
 			  (error 'identifier->library-map "not in the libraries list" x)))
 	      (cdr x)))
   identifier->library-map)
-
-;;;(pretty-print/stderr (bootstrap-collection))
 
 ;;Perform the bootstrap process generating the boot image.
 ;;
@@ -4395,7 +4384,6 @@
       ;;whose values are the primitive's location gensyms.
       (current-primitive-locations
        (lambda (primitive-name.sym)
-	 ;;(pretty-print/stderr (list primitive-name.sym (assq primitive-name.sym export-primlocs)))
 	 (cond ((assq primitive-name.sym export-primlocs)
 		=> cdr)
 	       (else
