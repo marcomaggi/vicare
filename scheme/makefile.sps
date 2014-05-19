@@ -146,7 +146,13 @@
 ;;
 
 
-(import (only (vicare) import))
+;;;; prelude
+
+#;(import (only (vicare) import))
+
+;;NOTE  Libraries imported  here are  installed  in the  internal library  collection
+;;defined by the old  boot image.  Source libraries expanded later to  be part of the
+;;boot image are installed in a separate library collection, BOOTSTRAP-COLLECTION.
 (import (except (vicare)
 		current-letrec-pass
 		current-core-eval
@@ -642,19 +648,17 @@
 
 
 (define library-legend
-  ;;Map full library specifications to nicknames: for example "v" is the
-  ;;nickname  of  "(vicare)".   Additionlly  tag  each  library  with  a
-  ;;VISIBLE? and a REQUIRED? boolean.
+  ;;Map full library specifications to nicknames:  for example "v" is the nickname of
+  ;;"(vicare)".   Additionlly  tag each  library  with  a  VISIBLE? and  a  REQUIRED?
+  ;;boolean.
   ;;
-  ;;For each library  marked as REQUIRED?: an associated  record of type
-  ;;LIBRARY   is  created   and  included   in  the   starting   set  of
-  ;;BOOTSTRAP-COLLECTION.
+  ;;For each  library marked as  REQUIRED?: an associated  record of type  LIBRARY is
+  ;;created and included in the starting set of BOOTSTRAP-COLLECTION.
   ;;
-  ;;The  libraries marked  as  VISIBLE?  are listed  by  default by  the
-  ;;function INSTALLED-LIBRARIES.
+  ;;The  libraries  marked  as  VISIBLE?   are listed  by  default  by  the  function
+  ;;INSTALLED-LIBRARIES.
   ;;
-  ;;See BOOTSTRAP-COLLECTION for details on how to add a library to this
-  ;;list.
+  ;;See BOOTSTRAP-COLLECTION for details on how to add a library to this list.
   ;;
   ;; abbr.              name			                visible? required?
   '((v			(vicare)				#t	#t)
@@ -1230,7 +1234,11 @@
     (set-top-level-value!			$symbols)
     (system-value-gensym			$symbols)
     (system-label-gensym			$symbols)
+
+    ;;NOTE We *really* need  this binding to be in the boot image,  so that it can be
+    ;;loaded by "ikarus.compiler".  See the comments in that file for details.
     (system-value				$symbols v)
+
     (system-label				$symbols)
     (system-id					$symbols)
     (system-id-gensym				$symbols)
@@ -3874,30 +3882,28 @@
 
 
 (define bootstrap-collection
-  ;;A collection of LIBRARY  structures accessed through a closure.  The
-  ;;LIBRARY structure type is defined in the psyntax modules.
+  ;;A  collection of  LIBRARY structures  accessed  through a  closure.  The  LIBRARY
+  ;;structure type is defined in the psyntax modules.
   ;;
-  ;;This  function works  somewhat like  a parameter  function; it  is a
-  ;;closure   with  the  same   interface  of   the  ones   returned  by
-  ;;MAKE-COLLECTION,  but it  has an  initial  value and  it checks  for
-  ;;duplicates to avoid them.
+  ;;This function works somewhat like a parameter  function; it is a closure with the
+  ;;same interface  of the  ones returned  by MAKE-PARAMETER, but  it has  an initial
+  ;;value and it checks for duplicates to avoid them.
   ;;
-  ;;If the  function is called with  no arguments: it  returns the whole
-  ;;collection, which is a list  of LIBRARY structures.  If the function
-  ;;is  called  with one  argument:  such  argument  must be  a  LIBRARY
-  ;;structure and it is added to the collection if not already there.
+  ;;If the  function is called  with no arguments:  it returns the  whole collection,
+  ;;which  is a  list of  LIBRARY structures.   If the  function is  called with  one
+  ;;argument:  such argument  must be  a LIBRARY  structure and  it is  added to  the
+  ;;collection if not already there.
   ;;
-  ;;The initial  value is a list  of LIBRARY structures  built by adding
-  ;;all the  libraries in LIBRARY-LEGEND which are  marked as REQUIRED?.
-  ;;Notice that such structures are built by FIND-LIBRARY-BY-NAME, which
-  ;;means  that  the  libraries  marked  as REQUIRED?  must  be  already
-  ;;installed in the boot image running this program.
+  ;;The  initial value  is a  list  of LIBRARY  structures  built by  adding all  the
+  ;;libraries  in LIBRARY-LEGEND  which are  marked as  REQUIRED?.  Notice  that such
+  ;;structures  are built  by FIND-LIBRARY-BY-NAME,  which means  that the  libraries
+  ;;marked as  REQUIRED?  must be  already installed in  the boot image  running this
+  ;;program.
   ;;
-  ;;To add a REQUIRED? library to a  boot image: first we have to add an
-  ;;entry  to  LIBRARY-LEGEND  marked  as  non-REQUIRED?   and  build  a
-  ;;temporary boot image, then mark the entry as REQUIRED? and using the
-  ;;temporary boot  image build another  boot image which will  have the
-  ;;new library as REQUIRED?.
+  ;;To add  a REQUIRED? library  to a boot  image: first we have  to add an  entry to
+  ;;LIBRARY-LEGEND marked  as non-REQUIRED?  and  build a temporary boot  image, then
+  ;;mark the entry as REQUIRED? and using the temporary boot image build another boot
+  ;;image which will have the new library as REQUIRED?.
   ;;
   (let ((list-of-library-records
 	 (let next-library-entry ((entries library-legend))
@@ -4248,7 +4254,8 @@
 		   install-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
-	     ;;These gensyms are fresh ones in the new boot image.
+	     ;;These gensyms  are fresh ones  generated by  the new boot  image every
+	     ;;time it is loaded.
 	     (only (ikarus.symbols)
 		   system-value-gensym
 		   system-label-gensym))

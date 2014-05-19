@@ -260,65 +260,88 @@
 
 
 ;;;; collection of already installed libraries
-;;
-;;When a library  is installed: it is added to  this collection.  When a
-;;library is uninstalled: it is removed from this collection.
-;;
-;;When reasoning about loading libraries, remember that:
-;;
-;;* A R6RS library name is a perfectly valid R6RS library reference.
-;;
-;;* In a running process there can be only one library loaded with a
-;;  specific  list of library  name identifiers; it is  forbidden to
-;;  load two libraries having the same library name identifiers.
-;;
-(define current-library-collection
-  ;;Hold a collection of installed LIBRARY structs.  A "collection" is a
-  ;;lambda closed upon a list.  Interface:
+
+(module (current-library-collection)
+  ;;A  "library  collection"  is  a  closure object  closed  upon  a  list.   Library
+  ;;collections are handled as  stacks: new items are pushed to the  top of the list,
+  ;;items  are searched  from top  to bottom  stopping at  the first  match.  Closure
+  ;;object interface:
   ;;
-  ;;* When called with no arguments: return the list.
+  ;;*  When  called  with no  arguments:  return  the  full  list of  LIBRARY  struct
+  ;;  instances.
   ;;
-  ;;* When called with one argument: add  the argument to the list if it
-  ;;  is not already there according to EQ?.
+  ;;* When called with one LIBRARY struct  argument: push the argument on the list as
+  ;;  first head item, if it is not already there according to EQ?.
   ;;
   ;;* When called with two arguments:
   ;;
-  ;;  - If  the second argument is true: remove  the first argument from
-  ;;    the list, if present according to EQ?.
+  ;;  - If the  second argument is true: remove the first argument  from the list, if
+  ;;    present according to EQ?.
   ;;
-  ;;  - If the  second argument is false: add the  first argument to the
-  ;;    list, if not already there according to EQ?.
+  ;;  - If the  second argument is false: add the first argument  to the list, if not
+  ;;    already there according to EQ?.
   ;;
-  (make-parameter (let ((set '()))
-		    (case-lambda*
-		      (()
-		       set)
-		      (({lib library?})
-		       (unless (memq lib set)
-			 (%log-library-debug-message "installed library: ~a" (library-name lib))
-			 (set! set (cons lib set))))
-		      (({lib library?} del?)
-		       (if del?
-			   (set! set (remq lib set))
-			 (unless (memq lib set)
-			   (%log-library-debug-message "installed library: ~a" (library-name lib))
-			   (set! set (cons lib set)))))))
-    (lambda* ({obj procedure?})
-      obj)))
+  ;;When a library is installed: it is added to the current library collection.  When
+  ;;a library is uninstalled: it is removed from the current library collection.
+  ;;
+  ;;When reasoning about loading libraries, remember that:
+  ;;
+  ;;* A R6RS library name is a perfectly valid R6RS library reference.
+  ;;
+  ;;* A specific LIBRARY struct instance can be added to the collection only once.
+  ;;
+  ;;* Multiple LIBRARY struct instances having the  same library name might be added to
+  ;;  the collection;  when searching a  LIBRARY in  the collection matching  a library
+  ;;  name: the search is performed from top  to bottom stopping at the first match, so
+  ;;  the last collected instance is  returned.  However adding such multiple instances
+  ;;  should be avoided.
+  ;;
+  ;;The parameter CURRENT-LIBRARY-COLLECTION is initialised with the closure bound to
+  ;;DEFAULT-LIBRARY-COLLECTION;  such  default  collection holds  all  the  libraries
+  ;;installed in a common running "vicare" process.
+  ;;
+  ;;As special case, when building a new boot image: a separate collection defined in
+  ;;the  boot-image  build-script  (BOOTSTRAP-COLLECTION)  is  used  to  collect  the
+  ;;libraries that will  end in the boot  image.  So, while building  the boot image:
+  ;;DEFAULT-LIBRARY-COLLECTION contains the libraries used  to expand and compile the
+  ;;boot  image source  code; BOOTSTRAP-COLLECTION  contains the  libraries that  are
+  ;;components of the boot image.
+  ;;
+  (define default-library-collection
+    (let ((set '()))
+      (case-lambda*
+	(()
+	 set)
+	(({lib library?})
+	 (unless (memq lib set)
+	   (%log-library-debug-message "installed library: ~a" (library-name lib))
+	   (set! set (cons lib set))))
+	(({lib library?} del?)
+	 (if del?
+	     (set! set (remq lib set))
+	   (unless (memq lib set)
+	     (%log-library-debug-message "installed library: ~a" (library-name lib))
+	     (set! set (cons lib set))))))))
+
+  (define current-library-collection
+    (make-parameter default-library-collection
+      (lambda* ({obj procedure?})
+	obj)))
+
+  #| end of module: CURRENT-LIBRARY-COLLECTION |# )
 
 (define (library-exists? libref)
-  ;;Given  a R6RS  library  reference search  the corresponding  LIBRARY
-  ;;record  in  the  collection   of  already  installed  libraries:  if
-  ;;successful return true, otherwise return false.
+  ;;Given a  R6RS library reference  search the  corresponding LIBRARY record  in the
+  ;;collection of already  installed libraries: if successful  return true, otherwise
+  ;;return false.
   ;;
   (and (find-library-in-collection-by-reference libref)
        #t))
 
 (define* ({find-library-in-collection-by-predicate false-or-library?} {pred procedure?})
-  ;;Visit  the current  installed  libraries collection  and return  the
-  ;;first for  which PRED returns true.   If PRED returns false  for all
-  ;;the entries in the collection: return false.
-  ;;
+  ;;Visit the current  installed libraries collection and return the  first for which
+  ;;PRED returns true.  If PRED returns false  for all the entries in the collection:
+  ;;return false.
   (let next-library-struct ((ls ((current-library-collection))))
     (cond ((null? ls)
 	   #f)
@@ -328,9 +351,9 @@
 	   (next-library-struct ($cdr ls))))))
 
 (define* (find-library-in-collection-by-descriptor libdesc)
-  ;;Given   a  library   descriptor,  as   generated  by   the  function
-  ;;LIBRARY-DESCRIPTOR: return the corresponding LIBRARY record from the
-  ;;collection of installed libraries or raise an assertion.
+  ;;Given  a library  descriptor, as  generated by  the function  LIBRARY-DESCRIPTOR:
+  ;;return  the  corresponding  LIBRARY  record  from  the  collection  of  installed
+  ;;libraries or raise an assertion.
   ;;
   (let ((uid (library-descriptor-uid libdesc)))
     (or (find-library-in-collection-by-predicate
@@ -344,14 +367,13 @@
 	 %external-pending-libraries)
 
   (define (find-library-by-name libref)
-    ;;Given  a R6RS  library reference:  try to  search and  install the
-    ;;corresponding  library,  if  it  is not  already  installed;  when
-    ;;successful  return  the  corresponding LIBRARY  record,  otherwise
-    ;;raise an exception.
+    ;;Given a  R6RS library reference:  try to  search and install  the corresponding
+    ;;library,  if  it   is  not  already  installed;  when   successful  return  the
+    ;;corresponding LIBRARY record, otherwise raise an exception.
     ;;
-    ;;Search  for the  library in  the  internal collection  or, if  not
-    ;;found, in the external source  (for example the file system) using
-    ;;the current CURRENT-LIBRARY-LOADER.
+    ;;Search for  the library  in the internal  collection or, if  not found,  in the
+    ;;external   source   (for  example   the   file   system)  using   the   current
+    ;;CURRENT-LIBRARY-LOADER.
     ;;
     (or (find-library-in-collection-by-reference libref)
 	(%find-and-install-external-library libref)))
@@ -365,8 +387,8 @@
 	    (library-name-identifiers lib)))
 
   (define* (%find-and-install-external-library libref)
-    ;;Given a  R6RS library reference  try to load a  conforming library
-    ;;using the current library loader.
+    ;;Given  a R6RS  library reference  try to  load a  conforming library  using the
+    ;;current library loader.
     ;;
     (with-pending-library-request (__who__ libref)
       ;;Load the library, either source or precompiled, and install it.
@@ -380,10 +402,9 @@
   (module (with-pending-library-request %external-pending-libraries)
 
     (define %external-pending-libraries
-      ;;Hold  a   list  of   items  representing  the   libraries  whose
-      ;;installation is  currently pending.   Each item  is the  list of
-      ;;R6RS  library   name  identifiers.   Used  to   detect  circular
-      ;;dependencies between libraries.
+      ;;Hold  a  list of  items  representing  the  libraries whose  installation  is
+      ;;currently pending.  Each  item is the list of R6RS  library name identifiers.
+      ;;Used to detect circular dependencies between libraries.
       ;;
       (make-parameter '()))
 
@@ -1028,29 +1049,28 @@
   ;;   A list of sexps representing library options.
   ;;
   (define-constant __who__ 'install-library)
-  (case-define* install-library
-    (({uid symbol?} {libname library-name?}
-      import-libdesc* visit-libdesc* invoke-libdesc*
-      export-subst export-env
-      visit-proc invoke-proc
-      visit-code invoke-code
-      guard-code guard-libdesc*
-      visible? source-file-name library-option*)
-     (let ((import-lib*	(map find-library-in-collection-by-descriptor import-libdesc*))
-	   (visit-lib*	(map find-library-in-collection-by-descriptor visit-libdesc*))
-	   (invoke-lib*	(map find-library-in-collection-by-descriptor invoke-libdesc*))
-	   (guard-lib*	(map find-library-in-collection-by-descriptor guard-libdesc*)))
-       (when (library-exists? libname)
-	 (assertion-violation __who__ "library is already installed" libname))
-       (let ((lib (make-library uid libname import-lib* visit-lib* invoke-lib*
-				export-subst export-env visit-proc invoke-proc
-				visit-code invoke-code guard-code guard-lib*
-				visible? source-file-name library-option*)))
-	 (%install-library-record lib)
-	 (when (memq 'visit-upon-loading library-option*)
-	   (%log-loaded-library "visiting: ~a" libname)
-	   (visit-library lib))))
-     (void)))
+  (define* (install-library {uid symbol?} {libname library-name?}
+			    import-libdesc* visit-libdesc* invoke-libdesc*
+			    export-subst export-env
+			    visit-proc invoke-proc
+			    visit-code invoke-code
+			    guard-code guard-libdesc*
+			    visible? source-file-name library-option*)
+    (let ((import-lib*	(map find-library-in-collection-by-descriptor import-libdesc*))
+	  (visit-lib*	(map find-library-in-collection-by-descriptor visit-libdesc*))
+	  (invoke-lib*	(map find-library-in-collection-by-descriptor invoke-libdesc*))
+	  (guard-lib*	(map find-library-in-collection-by-descriptor guard-libdesc*)))
+      (when (library-exists? libname)
+	(assertion-violation __who__ "library is already installed" libname))
+      (let ((lib (make-library uid libname import-lib* visit-lib* invoke-lib*
+			       export-subst export-env visit-proc invoke-proc
+			       visit-code invoke-code guard-code guard-lib*
+			       visible? source-file-name library-option*)))
+	(%install-library-record lib)
+	(when (memq 'visit-upon-loading library-option*)
+	  (%log-loaded-library "visiting: ~a" libname)
+	  (visit-library lib))))
+    (void))
 
   (define (%install-library-record lib)
     (for-each

@@ -83,8 +83,9 @@
 		  greatest-fixnum
 		  least-fixnum
 
-		  ;;FIXME To be uncommented at the next boot image rotation.
-		  ;;system-value
+		  ;;We need a SYSTEM-VALUE procedure, but the correct one.  See below
+		  ;;the appropriately commented import spec.
+		  #;system-value
 
 		  return
 		  current-primitive-locations
@@ -101,10 +102,6 @@
 		  perform-tag-analysis		strip-source-info
 		  fasl-write)
     (rnrs hashtables)
-    ;;FIXME To be uncommented at the next boot image rotation.
-    ;;
-    ;; (only (vicare system $symbols)
-    ;; 	  system-value)
     (only (vicare system $codes)
 	  $code->closure)
     (only (vicare system $structs)
@@ -115,7 +112,16 @@
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.intel-assembler)
-    (vicare arguments validation))
+    (vicare arguments validation)
+    ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
+    ;;
+    ;;* During normal execution: this binding is the one from the boot image.
+    ;;
+    ;;* While building  a new boot image: this  binding is the one from  the old boot
+    ;;  image, *not* the one from loading "(ikarus.symbols)" in source form.
+    ;;
+    ;;We really need it this way for the use we do of such procedure.
+    (only (vicare) system-value))
 
   (include "ikarus.wordsize.scm")
 
