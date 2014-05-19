@@ -44,7 +44,6 @@
     unbound-object	unbound-object?
     top-level-value	top-level-bound?	set-top-level-value!
     symbol-value	symbol-bound?		set-symbol-value!
-    reset-symbol-proc!
 
     ;; these will be exported by (vicare system $symbols)
     system-value	system-value-gensym
@@ -73,7 +72,6 @@
 		  ;;because  these will  be exported  by (vicare  system
 		  ;;$symbols).  (Marco Maggi; Tue Apr 15, 2014)
 		  top-level-value	top-level-bound?	set-top-level-value!
-		  reset-symbol-proc!
 		  system-value		system-value-gensym
 		  system-label		system-label-gensym
 		  system-id		system-id-gensym
@@ -94,7 +92,6 @@
 	    system-value	system-value-gensym
 	    system-label	system-label-gensym
 	    system-id		system-id-gensym
-	    reset-symbol-proc!
 	    top-level-value	top-level-bound?	set-top-level-value!))
 
 
@@ -210,34 +207,6 @@
 			      `(top-level-value-of-symbol ,x)
 			      ($symbol-value x) args)))))
 
-(define* (reset-symbol-proc! {x symbol?})
-  ;;X is meant to  be a location gensym.  If the  value currently in the
-  ;;field "value" of X is a closure object: store such value also in the
-  ;;field "proc" of X.
-  ;;
-  ;;NOTE  Whenever binary  code  performs  a call  to  a global  closure
-  ;;object, it does the following:
-  ;;
-  ;;* From  the relocation vector  of the current code  object: retrieve
-  ;;  the loc gensym of the procedure to call.
-  ;;
-  ;;* From the  loc gensym: extract the value of  the "proc" slot, which
-  ;;  is meant to be a closure object.
-  ;;
-  ;;* Actually call the closure object.
-  ;;
-  (let ((v ($symbol-value x)))
-    ($set-symbol-proc! x (if (procedure? v)
-			     v
-			   (lambda args
-			     (procedure-argument-violation 'apply
-			       "not a procedure"
-			       `(top-level-value-of-symbol ,x)
-			       (top-level-value x) args))))))
-
-;; (define* (string->symbol (x symbol?))
-;;   (foreign-call "ikrt_string_to_symbol" x))
-
 
 (define* (symbol->string {x symbol?})
   ;;Defined by  R6RS.  Return the name  of the symbol X  as an immutable
@@ -343,6 +312,10 @@
 
 
 (define system-value-gensym
+  ;;Notice  that   this  gensym  might   be  generated  at   boot  image
+  ;;compile-time by  the source  optimizer; in this  case the  gensym is
+  ;;hard-coded in the boot image and it  is the same every time the boot
+  ;;image is loaded.
   (gensym "system-value-gensym"))
 
 (define system-label-gensym

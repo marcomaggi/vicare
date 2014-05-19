@@ -1,4 +1,3 @@
-#!../src/vicare -b vicare.boot --r6rs-script
 ;;;Ikarus Scheme -- A compiler for R6RS Scheme.
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
@@ -154,13 +153,12 @@
 		assembler-output optimize-cp optimize-level
 		cp0-size-limit cp0-effort-limit
 		expand
-		optimizer-output tag-analysis-output perform-tag-analysis))
-(import (ikarus.compiler))
-(import (except (psyntax system $bootstrap)
-                eval-core
-                current-primitive-locations
-                compile-core-expr-to-port))
-(import (ikarus.compiler)) ; just for fun
+		optimizer-output tag-analysis-output perform-tag-analysis)
+  (ikarus.compiler)
+  (except (psyntax system $bootstrap)
+	  eval-core
+	  current-primitive-locations
+	  compile-core-expr-to-port))
 
 (optimize-level 2)
 ($perform-tag-analysis #t)
@@ -176,6 +174,9 @@
 ($generate-debug-calls #f)
 
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
+
+(define BOOT-IMAGE-MAJOR-VERSION 0)
+(define BOOT-IMAGE-MINOR-VERSION 4)
 
 
 ;;;; helpers
@@ -1227,7 +1228,6 @@
     (top-level-value				$symbols)
     (top-level-bound?				$symbols)
     (set-top-level-value!			$symbols)
-    (reset-symbol-proc!				$symbols v)
     (system-value-gensym			$symbols)
     (system-label-gensym			$symbols)
     (system-value				$symbols v)
@@ -3919,48 +3919,60 @@
 
 
 (module (expand-all)
-
+  ;;For  the  meaning  of  "location  gensym",  "label  gensym"  and  the  format  of
+  ;;INVOKE-CODE,  EXPORT-SUBST   and  EXPORT-ENV  see   the  comments  in   the  file
+  ;;"psyntax.expander.sls".
+  ;;
   (define (expand-all files)
-    ;;Expand all the libraries in FILES, which must be a list of strings
-    ;;representing file pathnames under SRC-DIR.
+    ;;Expand all the libraries in FILES, which must be a list of strings representing
+    ;;file pathnames under the directory referenced by SRC-DIR.  Return 3 values:
     ;;
-    ;;Return  3  values: the  list  of  library specifications,  a  list
-    ;;representing  all  the code  forms  from  all the  libraries,  the
-    ;;EXPORT-LOCS.
+    ;;1. The list of library specifications.
     ;;
-    ;;Notice that the last code to be executed is the one of the (ikarus
-    ;;main)  library, and  the  one before  it is  the  one returned  by
-    ;;BUILD-SYSTEM-LIBRARY.
+    ;;2. A list representing all the invoke codes from all the libraries.
     ;;
-
-    ;;Every  time we  expand a  library we  expect the  following return
-    ;;values from BOOT-LIBRARY-EXPAND:
+    ;;3. The EXPORT-PRIMLOCS: an alist whose keys are the exported primitive's symbol
+    ;;   names and whose values are the exported primitive's location gensyms.
     ;;
-    ;;NAME* -
+    ;;Whenever the boot  image is loaded: the libraries' invoke  code is evaluated in
+    ;;the same order the files appear in FILES;  the last code to be executed must be
+    ;;the one of the library (ikarus main), so the file "ikarus.main.sls" must be the
+    ;;last one.  In addition:
+    ;;
+    ;;* In this  module the procedure MAKE-INIT-CODE creates a  library; such library
+    ;;  is inserted as first one.
+    ;;
+    ;;* In  this module  the procedure BUILD-SYSTEM-LIBRARY  creates a  library; such
+    ;;  library is inserted as penultimate one, before (ikarus main).
+    ;;
+    ;;Every time  we expand a  component library with BOOT-LIBRARY-EXPAND,  we expect
+    ;;the following return values:
+    ;;
+    ;;NAME -
     ;;   A list of symbols representing the library name.
     ;;
-    ;;INVOKE-CODE* -
-    ;;   A list of symbolic expressions, each representing the body of a
-    ;;   library.
+    ;;INVOKE-CODE -
+    ;;   A  core language  symbolic expression  representing the  body of  a library;
+    ;;   usually this symbolic expression is a LIBRARY-LETREC* form.
     ;;
     ;;EXPORT-SUBST -
-    ;;   A subst selecting the bindings  to be exported from the ones in
-    ;;   EXPORT-ENV.
+    ;;   An export  subst selecting the lexical  bindings to be exported  by the boot
+    ;;   image between the ones in defined in EXPORT-ENV.
     ;;
     ;;EXPORT-ENV -
-    ;;   Represents the global bindings defined by the library body.
+    ;;    An export  env  representing the  global lexical  bindings  defined by  the
+    ;;   library body.
     ;;
-    ;;and we accumulate them in lists.  Notice that, from the results of
-    ;;library expansion, we  discard all the macros and  all the library
-    ;;descriptors representing the library dependencies.
+    ;;Notice that, from  the results of library expansion, we  discard all the macros
+    ;;and all the library descriptors representing the library dependencies.
     ;;
     (receive (name* invoke-code* subst env)
 	(make-init-code)
       (debug-printf "Expanding:\n")
       (for-each (lambda (file)
 		  (debug-printf " ~s\n" file)
-		  ;;For each library in the  file apply the function for
-		  ;;its side effects.
+		  ;;For  each library  in the  file apply  the closure  for its  side
+		  ;;effects.
 		  (load (string-append src-dir "/" file)
 			(lambda (library-sexp)
 			  (receive (name code export-subst export-env)
@@ -3979,71 +3991,108 @@
 		  export-primlocs)))))
 
   (define (make-init-code)
-    ;;Return  values representing  a  fake  library "(ikarus.init)",  as  if we  have
+    ;;Return  4 values  representing  a fake  library (ikarus.init),  as  if we  have
     ;;processed a  file "ikarus.init.sls"  as first  library to  include in  the boot
     ;;image.  The returned values are:
     ;;
     ;;NAME* -
-    ;;   A list of symbols representing the library name.
+    ;;   A list holding a single item; the item is the library name.
     ;;
     ;;INVOKE-CODE* -
-    ;;   A list of  symbolic expressions, each evaluating to the object  to bind to a
-    ;;   global library binding; there must be an object for each entry in the return
-    ;;   value EXPORT-ENV.
+    ;;   A list holding a single item; the  item is a symbolic expression in the core
+    ;;   language representing the invoke code of the library (ikarus.init).
     ;;
     ;;EXPORT-SUBST -
-    ;;   A subst selecting the bindings to be exported from the ones in EXPORT-ENV.
+    ;;   A subst selecting  the bindings to be exported from  the ones in EXPORT-ENV.
+    ;;   For (ikarus.init) there is only one: $INIT-SYMBOL-VALUE!.
     ;;
     ;;EXPORT-ENV -
-    ;;   Represents the global bindings defined by the library body.
+    ;;    Represents  the   global  bindings  defined  by  the   library  body.   For
+    ;;   (ikarus.init) there is only one: $INIT-SYMBOL-VALUE!
     ;;
-    ;;The first code to run on the system  is one that initializes the value and proc
-    ;;fields of the  location of $INIT-SYMBOL-VALUE!, otherwise  all subsequent inits
-    ;;to  any global  variable  will segfault.   We  fake  a library  as  if we  have
-    ;;processed the following form:
+    ;;The procedure $INIT-SYMBOL-VALUE! has the following signature:
+    ;;
+    ;;   ($init-symbol-value! primloc val)
+    ;;
+    ;;where: PRIMLOC is  the loc gensym of  a lexical primitive exported  by the boot
+    ;;image; VAL  is the  value of  the primitive,  either a  closure object  or some
+    ;;datum.   $INIT-SYMBOL-VALUE!  stores  VAL in  the field  "value" of  the symbol
+    ;;PRIMLOC; if VAL is a closure object: VAL  is also stored in the field "proc" of
+    ;;the symbol  PRIMLOC.  Whenever  the boot  image is  loaded: $INIT-SYMBOL-VALUE!
+    ;;must be applied  to all the loc  gensyms of the lexical  primitives exported by
+    ;;the boot image.
+    ;;
+    ;;The first  code to  run when  initialising the boot  image must  initialise the
+    ;;fields  "value"  and "proc"  of  the  location gensym  for  $INIT-SYMBOL-VALUE!
+    ;;itself.  We fake a library as if we have processed the following form:
     ;;
     ;;   (library (ikarus.init)
     ;;     (export $init-symbol-value!)
     ;;     (import (vicare))
-    ;;     (define ($init-symbol-value! sym val)
-    ;; 	     ($set-symbol-value! sym val)
+    ;;     (define ($init-symbol-value! primloc val)
+    ;; 	     ($set-symbol-value! primloc val)
     ;; 	     (if (procedure? val)
-    ;; 	         ($set-symbol-proc! sym val)
-    ;; 	       ($set-symbol-proc! sym
+    ;; 	         ($set-symbol-proc! primloc val)
+    ;; 	       ($set-symbol-proc! primloc
     ;; 	         (lambda args
-    ;; 	           (error 'apply "not a procedure" ($symbol-value sym)))))))
+    ;; 	           (error 'apply "not a procedure" ($symbol-value primloc)))))))
     ;;
     ;;but  we cannot  do  it this  way because  $INIT-SYMBOL-VALUE!   must be  itself
-    ;;initialised, by storing the function in the appropriate loc gensym.
+    ;;initialised, by storing the closure object  in the appropriate loc gensym.  So,
+    ;;rather  than generating  a LIBRARY-LETREC*  form,  we generate  an invoke  code
+    ;;expression  that directly  implements  the  procedure $INIT-SYMBOL-VALUE!   and
+    ;;initialises its loc gensym.
     ;;
-    (let ((proc		(gensym))
-	  (loc		(gensym))
-	  (label	(gensym))
-	  (sym		(gensym))
-	  (val		(gensym))
+    ;;NOTE Whenever binary code  performs a call to a global  closure object, it does
+    ;;the following:
+    ;;
+    ;;*  From the  relocation vector  of the  current code  object: retrieve  the loc
+    ;;  gensym of the procedure to call.
+    ;;
+    ;;* From the loc gensym: extract the value  of the "proc" slot, which is meant to
+    ;;  be a closure object.
+    ;;
+    ;;* Actually call the closure object.
+    ;;
+    ;;so  the initialisation  code must  check if  a lexical  primitive's value  is a
+    ;;closure object, and store it in the "proc" slot.
+    ;;
+    (define loc   (gensym)) ;this is the loc   gensym of $INIT-SYMBOL-VALUE!
+    (define label (gensym)) ;this is the label gensym of $INIT-SYMBOL-VALUE!
+    ;;Just to be  safe we use gensyms  for the formal arguments of  procedures in the
+    ;;core language.
+    (let ((proc.arg	(gensym))
+	  (primloc.arg	(gensym))
+	  (val.arg	(gensym))
 	  (args		(gensym)))
       (values (list '(ikarus.init))
 	      (list `((case-lambda
-		       ;;Apply $INIT-SYMBOL-VALUE! to itself.
-		       ((,proc)
-			(,proc ',loc ,proc)))
+		       ;;This  CASE-LAMBDA  receives  $INIT-SYMBOL-VALUE!   as  ,PROC
+		       ;;argument and applies  it to its own loc  gensym.  The return
+		       ;;value is unspecified and discarded.
+		       ((,proc.arg)
+			(,proc.arg ',loc ,proc.arg)))
+		      ;;This CASE-LAMBDA implements $INIT-SYMBOL-VALUE!.
 		      (case-lambda
-		       ((,sym ,val)
+		       ((,primloc.arg ,val.arg)
 			(begin
-			  ((primitive $set-symbol-value!) ,sym ,val)
-			  (if ((primitive procedure?) ,val)
-			      ((primitive $set-symbol-proc!) ,sym ,val)
-			    ((primitive $set-symbol-proc!) ,sym
+			  ((primitive $set-symbol-value!) ,primloc.arg ,val.arg)
+			  (if ((primitive procedure?) ,val.arg)
+			      ((primitive $set-symbol-proc!) ,primloc.arg ,val.arg)
+			    ((primitive $set-symbol-proc!) ,primloc.arg
 			     (case-lambda
+			      ;;Raise an  error if  this lexical  primitive is  not a
+			      ;;procedure and someone attempts to apply it.
 			      (,args
 			       ((primitive error) 'apply
 				(quote "not a procedure")
-				((primitive $symbol-value) ,sym)))))))))))
+				((primitive $symbol-value) ,primloc.arg))))))
+			  )))))
 	      `(($init-symbol-value! . ,label))
 	      `((,label . (global . ,loc))))))
 
   (define (prune-subst export-subst export-env)
-    ;;Remove  all   re-exported  identifiers   (those  with   labels  in
+    ;;Remove  from EXPORT-SUBST  all re-exported  identifiers (those  with labels  in
     ;;EXPORT-SUBST but no binding in EXPORT-ENV).
     ;;
     (cond ((null? export-subst)
@@ -4055,10 +4104,9 @@
 		 (prune-subst (cdr export-subst) export-env)))))
 
   (define (make-system-data export-subst export-env)
-    ;;EXPORT-SUBST has an entry for each  binding to export from all the
-    ;;source libraries in  the boot image.  EXPORT-ENV has  an entry for
-    ;;each  global binding  from all  the source  libraries in  the boot
-    ;;image.
+    ;;EXPORT-SUBST has  an entry for  each primitive binding  to export from  all the
+    ;;source libraries  in the boot image.   EXPORT-ENV has an entry  for each global
+    ;;binding from all the source libraries in the boot image.
     ;;
     ;;Return 4 values: an EXPORT-SUBST alist with entries:
     ;;
@@ -4082,9 +4130,8 @@
     (let ((export-subst-clt    (make-collection))
 	  (export-env-clt      (make-collection))
 	  (export-primlocs-clt (make-collection)))
-      ;;Build bindings for the macros  exported by the boot image.  Here
-      ;;we  create  the binding  labels.   The  expected format  of  the
-      ;;entries is:
+      ;;Build bindings for the macros exported by the boot image.  Here we create the
+      ;;binding labels.  The expected format of the entries is:
       ;;
       ;;   (?macro-name ?binding)
       ;;
@@ -4096,8 +4143,8 @@
       ;;   (?fluid-macro-name		($fluid		. $fluid-macro-name))
       ;;   (?condition-type-name	($core-rtd	. (?condition-rtd ?condition-rcd)))
       ;;
-      ;;We accumulate in the subst  and env collections the associations
-      ;;name/label and label/binding
+      ;;We accumulate  in the subst  and env collections the  associations name/label
+      ;;and label/binding
       ;;
       (each-for ikarus-system-macros
 	(lambda (entry)
@@ -4106,8 +4153,8 @@
 		 (label		(gensym (string-append "prim-label." (symbol->string name)))))
 	    (export-subst-clt (cons name label))
 	    (export-env-clt   (cons label binding)))))
-      ;;For every exported  primitive function we expect an  entry to be
-      ;;present in EXPORT-ENV with the format:
+      ;;For every  exported primitive function  we expect an  entry to be  present in
+      ;;EXPORT-ENV with the format:
       ;;
       ;;   (?label ?type . ?loc)
       ;;
@@ -4130,8 +4177,7 @@
 		   (error __who__ "identifier exported twice?" prim-name))
 
 		  ((assq prim-name export-subst)
-		   ;;Primitive  defined  (exported)  within  the  compiled
-		   ;;libraries.
+		   ;;Primitive defined (exported) within the compiled libraries.
 		   => (lambda (name.label)
 			(unless (pair? name.label)
 			  (error __who__ "invalid exports" name.label prim-name))
@@ -4154,9 +4200,8 @@
 				   prim-name label))))))
 
 		  (else
-		   ;;Core primitive with no  backing definition from the
-		   ;;expanded  libraries; we  assume  it  is defined  in
-		   ;;other strata of the system
+		   ;;Core  primitive with  no  backing definition  from the  expanded
+		   ;;libraries; we assume it is defined in other strata of the system
 		   ;;
 		   #;(fprintf (console-error-port) "undefined primitive ~s\n" prim-name)
 		   (let ((label (gensym (string-append "prim-label." (symbol->string prim-name)))))
@@ -4184,13 +4229,12 @@
       ;;
       ;;Build a form for the library "(ikarus primlocs)" which:
       ;;
-      ;;*  Iterates the  symbol names  representing primitive  functions
-      ;;  exported by the boot  image, storing the associated loc gensym
-      ;;  in their "value" slot.
+      ;;* Iterates the symbol names  representing primitive functions exported by the
+      ;;  boot image, storing the associated loc gensym in their "value" slot.
       ;;
-      ;;* Initialises the compiler parameter CURRENT-PRIMITIVE-LOCATIONS
-      ;;  to an appropriate function.  This way the compile can retrieve
-      ;;  the loc gensym from the primitive function symbol name.
+      ;;*  Initialises  the  compiler  parameter  CURRENT-PRIMITIVE-LOCATIONS  to  an
+      ;;  appropriate  function.  This way  the compile  can retrieve the  loc gensym
+      ;;  from the primitive function symbol name.
       ;;
       ;;* Installs all the libraries composing the boot image.
       ;;
@@ -4199,52 +4243,50 @@
       (define library-sexp
 	`(library (ikarus primlocs)
 	   (export) ;;; must be empty
-	   (import (only (ikarus.symbols)
-			 system-value-gensym
-			 system-label-gensym)
+	   (import (vicare)
 	     (only (psyntax library-manager)
 		   install-library)
 	     (only (ikarus.compiler)
 		   current-primitive-locations)
-	     (vicare))
-	   (let ((g system-value-gensym))
-	     ;;Store in the property  list of each primitive procedure's
-	     ;;symbol name its loc gensym.
-	     (for-each (lambda (func-name.loc)
-			 (putprop (car func-name.loc) g (cdr func-name.loc)))
-	       ',export-primlocs)
-	     ;;Initialise         the         internal         parameter
-	     ;;CURRENT-PRIMITIVE-LOCATIONS  with a  function capable  of
-	     ;;retrieving a  primitive procedure's loc gensym  given its
-	     ;;symbol name.
-	     (let ((proc (lambda (func-name)
-			   (getprop func-name g))))
-	       (current-primitive-locations proc)))
-	   ;;Store in  the property  list of each  primitive procedure's
-	   ;;symbol name its label gensym.
-	   (for-each (lambda (func-name.lab)
-		       (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
+	     ;;These gensyms are fresh ones in the new boot image.
+	     (only (ikarus.symbols)
+		   system-value-gensym
+		   system-label-gensym))
+	   ;;Store in the property list of each primitive procedure's symbol name its
+	   ;;loc gensym.
+	   (for-each
+	       (lambda (func-name.loc)
+		 (putprop (car func-name.loc) system-value-gensym (cdr func-name.loc)))
+	     ',export-primlocs)
+	   ;;Initialise  the internal  parameter  CURRENT-PRIMITIVE-LOCATIONS with  a
+	   ;;function capable of retrieving a  primitive procedure's loc gensym given
+	   ;;its symbol name.
+	   (current-primitive-locations (lambda (func-name)
+					  (getprop func-name system-value-gensym)))
+	   ;;Store in the property list of each primitive procedure's symbol name its
+	   ;;label gensym.
+	   (for-each
+	       (lambda (func-name.lab)
+		 (putprop (car func-name.lab) system-label-gensym (cdr func-name.lab)))
 	     ',export-subst)
 	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
 		    (build-install-library-form legend-entry export-subst export-env))
 	       library-legend)))
 
-      ;;Logging this  symbolic expression gives some  insight about what
-      ;;happens at boot image initialisation time.
+      ;;Logging this  symbolic expression  gives some insight  about what  happens at
+      ;;boot image initialisation time.
       #;(debug-print library-sexp)
 
-      ;;Expand the  library in  CODE; we  know that  the EXPORT  form is
-      ;;empty,  so  we  know  that  the  last  two  values  returned  by
-      ;;BOOT-LIBRARY-EXPAND are empty.
+      ;;Expand the library in CODE; we know that the EXPORT form is empty, so we know
+      ;;that the last two values returned by BOOT-LIBRARY-EXPAND are empty.
       ;;
       (receive (name invoke-code empty-subst empty-env)
 	  (boot-library-expand library-sexp)
 	(values name invoke-code)))
 
     (define (build-install-library-form legend-entry export-subst export-env)
-      ;;Return   a   sexp   representing   a  call   to   the   function
-      ;;INSTALL-LIBRARY.
+      ;;Return a sexp representing a call to the function INSTALL-LIBRARY.
       ;;
       ;;Each entry from the LIBRARY-LEGEND has the format:
       ;;
@@ -4272,9 +4314,8 @@
 				  (get-export-subset nickname export-subst)))
 	     (source-file-name	#f)
 	     (option*		'()))
-	;;Datums  embedded in  this  symbolic expression  are quoted  to
-	;;allow the sexp to be handed to EVAL (I guess; Marco Maggi, Aug
-	;;26, 2011).
+	;;Datums embedded in this symbolic expression are quoted to allow the sexp to
+	;;be handed to EVAL (I guess; Marco Maggi, Aug 26, 2011).
 	`(install-library ',id
 			  (quote ,(append fullname (list version)))
 			  '() ;; import-libs
@@ -4284,9 +4325,9 @@
 			  (quote ,source-file-name) (quote ,option*))))
 
     (define (get-export-subset nickname export-subst)
-      ;;Given the alist of  substitutions EXPORT-SUBST, build and return
-      ;;the subset of substitutions  corresponding to identifiers in the
-      ;;library selected by NICKNAME.
+      ;;Given the alist of substitutions EXPORT-SUBST, build and return the subset of
+      ;;substitutions  corresponding  to  identifiers  in  the  library  selected  by
+      ;;NICKNAME.
       ;;
       (let loop ((ls export-subst))
 	(if (null? ls)
@@ -4301,12 +4342,15 @@
 		    (else ;not going to any library?
 		     (loop (cdr ls)))))))))
 
-    (define (%vicare-version-numbers)
-      ;;Here  we build  a version  list with  fixnums representing:  the
-      ;;major version number, the minor  version number, the build year,
-      ;;the build month, the build day.
+    (define %vicare-version-numbers
+      ;;Here we  build a version  list with  fixnums representing: the  major version
+      ;;number, the minor version number, the  build year, the build month, the build
+      ;;day.
       ;;
-      (append '(0 4) (vector->list (foreign-call "ikrt_current_time_fixnums"))))
+      (let ((V (append (list BOOT-IMAGE-MAJOR-VERSION
+			     BOOT-IMAGE-MINOR-VERSION)
+		       (vector->list (foreign-call "ikrt_current_time_fixnums")))))
+	(lambda () V)))
 
     #| end of module: BUILD-SYSTEM-LIBRARY |# )
 
@@ -4336,15 +4380,21 @@
 	  (lambda ()
 	    (parameterize ((current-library-collection bootstrap-collection))
 	      (expand-all scheme-library-files))))
+      ;;Before applying COMPILE-CORE-EXPR-TO-PORT to the invoke code of each library:
+      ;;we must register  in the state of  the compiler a closure  capable of mapping
+      ;;lexical-primitive symbol-names to their location gensyms.
+      ;;
+      ;;EXPORT-PRIMLOCS is an  alist whose keys are the primitive's  symbol names and
+      ;;whose values are the primitive's location gensyms.
       (current-primitive-locations
-       (lambda (func-name)
-	 ;;(pretty-print/stderr (list func-name (assq func-name export-primlocs)))
-	 (cond ((assq func-name export-primlocs)
+       (lambda (primitive-name.sym)
+	 ;;(pretty-print/stderr (list primitive-name.sym (assq primitive-name.sym export-primlocs)))
+	 (cond ((assq primitive-name.sym export-primlocs)
 		=> cdr)
 	       (else
 		(error 'bootstrap
-		  "no location for primitive function"
-		  func-name)))))
+		  "no location gensym found for boot image lexical primitive"
+		  primitive-name.sym)))))
       (let ((port (open-file-output-port boot-file-name (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()

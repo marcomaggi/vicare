@@ -1285,6 +1285,32 @@
 			    (list (K 'apply) (K "not a procedure") x)))))
       (V x)))
 
+  (define* (reset-symbol-proc! {x symbol?})
+    ;;X is meant to be a location gensym.  If the value currently in the
+    ;;field "value" of  X is a closure object: store  such value also in
+    ;;the field "proc" of X.
+    ;;
+    ;;NOTE  Whenever binary  code  performs  a call  to  a global  closure
+    ;;object, it does the following:
+    ;;
+    ;;* From  the relocation vector  of the current code  object: retrieve
+    ;;  the loc gensym of the procedure to call.
+    ;;
+    ;;* From the  loc gensym: extract the value of  the "proc" slot, which
+    ;;  is meant to be a closure object.
+    ;;
+    ;;* Actually call the closure object.
+    ;;
+    (import (vicare system $symbols))
+    (let ((v ($symbol-value x)))
+      ($set-symbol-proc! x (if (procedure? v)
+			       v
+			     (lambda args
+			       (procedure-argument-violation 'apply
+				 "not a procedure"
+				 `(top-level-value-of-symbol ,x)
+				 (top-level-value x) args))))))
+
   #| end of module: Function |# )
 
 

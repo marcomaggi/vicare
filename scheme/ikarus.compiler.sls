@@ -83,8 +83,7 @@
     ;;FIXME To be uncommented at the next boot image rotation.
     ;;
     ;; (only (ikarus.symbols) #;(vicare system $symbols)
-    ;; 	  system-value
-    ;; 	  reset-symbol-proc!)
+    ;; 	  system-value)
     (only (vicare system $codes)
 	  $code->closure)
     (only (vicare system $structs)
@@ -94,7 +93,7 @@
 	    greatest-fixnum
 	    least-fixnum
 
-;;;	    system-value		reset-symbol-proc!
+	    ;;system-value
 
 	    return
 	    current-primitive-locations
