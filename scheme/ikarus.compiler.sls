@@ -78,37 +78,37 @@
 
      (unparse-recordized-code			$unparse-recordized-code)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
-  (import
-      (rnrs hashtables)
+  (import (except (vicare)
+		  fixnum-width
+		  greatest-fixnum
+		  least-fixnum
+
+		  ;;FIXME To be uncommented at the next boot image rotation.
+		  ;;system-value
+
+		  return
+		  current-primitive-locations
+		  eval-core			current-core-eval
+		  compile-core-expr-to-port	compile-core-expr
+
+		  assembler-output
+		  optimizer-output
+		  tag-analysis-output
+
+		  cp0-effort-limit		cp0-size-limit
+		  current-letrec-pass		generate-debug-calls
+		  optimize-cp			optimize-level
+		  perform-tag-analysis		strip-source-info
+		  fasl-write)
+    (rnrs hashtables)
     ;;FIXME To be uncommented at the next boot image rotation.
     ;;
-    ;; (only (ikarus.symbols) #;(vicare system $symbols)
+    ;; (only (vicare system $symbols)
     ;; 	  system-value)
     (only (vicare system $codes)
 	  $code->closure)
     (only (vicare system $structs)
 	  $struct-ref $struct/rtd?)
-    (except (vicare)
-	    fixnum-width
-	    greatest-fixnum
-	    least-fixnum
-
-	    ;;system-value
-
-	    return
-	    current-primitive-locations
-	    eval-core			current-core-eval
-	    compile-core-expr-to-port	compile-core-expr
-
-	    assembler-output
-	    optimizer-output
-	    tag-analysis-output
-
-	    cp0-effort-limit		cp0-size-limit
-	    current-letrec-pass		generate-debug-calls
-	    optimize-cp			optimize-level
-	    perform-tag-analysis	strip-source-info
-	    fasl-write)
     ;;This needs to be loaded here so that it evaluates with the freshly
     ;;loaded  "ikarus.config.ss",   including  the  correct   value  for
     ;;WORDSIZE.
@@ -1709,35 +1709,46 @@
 		 make-funcall)
 	       func args ctxt)))
 
-    (define (%make-funcall-maker anno)
-      (let ((src/expr (make-constant (if (annotation? anno)
-					 (cons (annotation-source   anno)
-					       (annotation-stripped anno))
-				       (cons #f (syntax->datum anno))))))
-	(lambda (op rands)
-	  ;;Only non-operators get special  handling when debugging mode
-	  ;;is active.
-	  ;;
-	  (if (%core-primitive-reference? op)
-	      (make-funcall op rands)
-	    (make-funcall (make-primref 'debug-call) (cons* src/expr op rands))))))
+    (module (%make-funcall-maker)
 
-    (define (%core-primitive-reference? op)
-      ;;Evaluate  to true  if  OP references  a  lexical core  primitive
-      ;;exported by the boot image.
-      ;;
-      ;;The  SYSTEM-VALUE  call  below   will  fail  with  an  assertion
-      ;;violation if NAME  is not a symbol associated to  a lexical core
-      ;;primitive exported by the boot  image.  See the documentation of
-      ;;SYSTEM-VALUE for more details.
-      ;;
-      (struct-case op
-	((primref name)
-	 (guard (C ((assertion-violation? C)
-		    #t))
-	   (system-value name)
-	   #f))
-	(else #f)))
+      (define (%make-funcall-maker anno)
+	(let ((src/expr (make-constant (if (annotation? anno)
+					   (cons (annotation-source   anno)
+						 (annotation-stripped anno))
+					 (cons #f (syntax->datum anno))))))
+	  (lambda (op rands)
+	    ;;Only  non-core   primitives  get  special   handling  when
+	    ;;debugging mode is active.
+	    ;;
+	    (if (%core-primitive-reference? op)
+		(make-funcall op rands)
+	      (make-funcall (make-primref 'debug-call) (cons* src/expr op rands))))))
+
+      (define (%core-primitive-reference? op)
+	;;Evaluate to  true if  OP references  a lexical  core primitive
+	;;exported by the boot image.
+	;;
+	;;The  SYSTEM-VALUE  call  below  will fail  with  an  assertion
+	;;violation if NAME is not a symbol associated to a lexical core
+	;;primitive exported  by the boot image.   See the documentation
+	;;of SYSTEM-VALUE for more details.
+	;;
+	;;NOTE When  compiling a library: SYSTEM-VALUE  will return with
+	;;no exception  if OP is a  core primitive exported by  the boot
+	;;image.   When compiling  a new  boot image:  SYSTEM-VALUE will
+	;;return with no exception if OP is a core primitive exported by
+	;;the *old* boot image; so SYSTEM-VALUE must be the one exported
+	;;by the old boot image.
+	;;
+	(struct-case op
+	  ((primref name)
+	   (guard (C ((assertion-violation? C)
+		      #t))
+	     (system-value name)
+	     #f))
+	  (else #f)))
+
+      #| end of module: %MAKE-FUNCALL-MAKER |# )
 
     #| end of module: E-annotated-call |# )
 
