@@ -215,6 +215,17 @@
   ;;field "value" of X is a closure object: store such value also in the
   ;;field "proc" of X.
   ;;
+  ;;NOTE  Whenever binary  code  performs  a call  to  a global  closure
+  ;;object, it does the following:
+  ;;
+  ;;* From  the relocation vector  of the current code  object: retrieve
+  ;;  the loc gensym of the procedure to call.
+  ;;
+  ;;* From the  loc gensym: extract the value of  the "proc" slot, which
+  ;;  is meant to be a closure object.
+  ;;
+  ;;* Actually call the closure object.
+  ;;
   (let ((v ($symbol-value x)))
     ($set-symbol-proc! x (if (procedure? v)
 			     v

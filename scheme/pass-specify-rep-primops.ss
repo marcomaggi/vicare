@@ -1218,6 +1218,17 @@
 
 ;;; --------------------------------------------------------------------
 
+ ;;NOTE Whenever binary code performs a call to a global closure object,
+ ;;it does the following:
+ ;;
+ ;;* From the relocation vector of the current code object: retrieve the
+ ;;  loc gensym of the procedure to call.
+ ;;
+ ;;* From the loc gensym: extract the value of the "proc" slot, which is
+ ;;  meant to be a closure object.
+ ;;
+ ;;* Actually call the closure object.
+ ;;
  (define-primop $symbol-proc unsafe
    ((V x)
     (prm 'mref (T x) (K off-symbol-record-proc)))

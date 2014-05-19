@@ -4258,11 +4258,18 @@
 
   #| end od module |# )
 
-(define (primref->symbol op)
+(define (primref->location-gensym op)
   ;;Given the  symbol, which must  be the  name of a  primitive function
-  ;;exported by the boot image,
+  ;;exported by the boot image, return its associated location gensym.
   ;;
-  (define who 'primref->symbol)
+  ;;If the primitive is a procedure: the location gensym has in both its
+  ;;"value"  and  "proc"  slots  a   reference  to  the  closure  object
+  ;;implementing the primitive.
+  ;;
+  ;;If the  primitive is a  non-procedure variable: the  location gensym
+  ;;has in its "value" slot a reference to the actual Scheme object.
+  ;;
+  (define who 'primref->location-gensym)
   (with-arguments-validation (who)
       ((symbol	op))
     (cond (((current-primitive-locations) op)
@@ -4272,9 +4279,6 @@
 		  x)))
 	  (else
 	   (error who "*** Vicare error: primitive missing from makefile.sps" op)))))
-
-;;(define (primref-loc op)
-;;  (mem off-symbol-record-proc (obj (primref->symbol op))))
 
 
 ;;;; more assembly code helpers
@@ -4987,10 +4991,13 @@
       ;;Store on the  stack the incorrect number of  arguments as second
       ;;argument to the call to $INCORRECT-ARGS-ERROR-HANDLER.
       (movl eax (mem (fx- (fx* 2 wordsize)) fpr))
-      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
-      ;;symbol  object  containing a  reference  to  the closure  object
-      ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
-      (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
+      ;;From the  relocation vector  of this  code object:  retrieve the
+      ;;location gensym associated  to $INCORRECT-ARGS-ERROR-HANDLER and
+      ;;load it in the Closure Pointer Register (CPR).
+      ;;
+      ;;The "proc" slot  of such loc gensym contains a  reference to the
+      ;;closure object implementing $INCORRECT-ARGS-ERROR-HANDLER.
+      (movl (obj (primref->location-gensym '$incorrect-args-error-handler)) cpr)
       ;;Load in the Closure Pointer  Register a reference to the closure
       ;;object implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
       (movl (mem off-symbol-record-proc cpr) cpr)
@@ -5048,10 +5055,12 @@
      (definitions)
      (local-labels)
      (assembly
-      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
-      ;;symbol  object  containing a  reference  to  the closure  object
-      ;;implementing the function $MULTIPLE-VALUES-ERROR.
-      (movl (obj (primref->symbol '$multiple-values-error)) cpr)
+      ;;From the  relocation vector  of this  code object:  retrieve the
+      ;;location gensym associated to $MULTIPLE-VALUES-ERROR and load it
+      ;;in the Closure Pointer Register  (CPR).  The "proc" slot of such
+      ;;loc  gensym   contains  a   reference  to  the   closure  object
+      ;;implementing $MULTIPLE-VALUES-ERROR.
+      (movl (obj (primref->location-gensym '$multiple-values-error)) cpr)
       ;;Load in the Closure Pointer  Register a reference to the closure
       ;;object implementing the function $MULTIPLE-VALUES-ERROR.
       (movl (mem off-symbol-record-proc cpr) cpr)
@@ -5416,9 +5425,14 @@
       (label SL_nonprocedure)
       ;;Put on the stack the offending object.
       (movl cpr (mem (fx- wordsize) fpr))
-      ;;Retrieve the reference  of the error handler closure  and put it
-      ;;into CPR.
-      (movl (obj (primref->symbol '$apply-nonprocedure-error-handler)) cpr)
+      ;;From the  relocation vector  of this  code object:  retrieve the
+      ;;location gensym  associated to $APPLY-NONPROCEDURE-ERROR-HANDLER
+      ;;and load it  in the Closure Pointer Register  (CPR).  The "proc"
+      ;;slot  of such  loc gensym  contains a  reference to  the closure
+      ;;object implementing $APPLY-NONPROCEDURE-ERROR-HANDLER.
+      (movl (obj (primref->location-gensym '$apply-nonprocedure-error-handler)) cpr)
+      ;;Load in the Closure Pointer  Register a reference to the closure
+      ;;object implementing $APPLY-NONPROCEDURE-ERROR-HANDLER.
       (movl (mem off-symbol-record-proc cpr) cpr)
       ;;Put in EAX the encoded number of arguments, which is 1.
       (movl (int (argc-convention 1)) eax)
@@ -5473,12 +5487,14 @@
       ;;Put on the stack the incorrect number of arguments as fixnum, as
       ;;second argument to $INCORRECT-ARGS-ERROR-HANDLER.
       (movl eax (mem (fx- 0 (fx* 2 wordsize)) fpr))
-      ;;Load in  the Closure Pointer  Register (CPR) a reference  to the
-      ;;symbol  object  containing a  reference  to  the closure  object
-      ;;implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
-      (movl (obj (primref->symbol '$incorrect-args-error-handler)) cpr)
+      ;;From the  relocation vector  of this  code object:  retrieve the
+      ;;location gensym associated  to $INCORRECT-ARGS-ERROR-HANDLER and
+      ;;load it in the Closure  Pointer Register (CPR).  The "proc" slot
+      ;;of such  loc gensym contains  a reference to the  closure object
+      ;;implementing $INCORRECT-ARGS-ERROR-HANDLER.
+      (movl (obj (primref->location-gensym '$incorrect-args-error-handler)) cpr)
       ;;Load in the Closure Pointer  Register a reference to the closure
-      ;;object implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
+      ;;object implementing $INCORRECT-ARGS-ERROR-HANDLER.
       (movl (mem off-symbol-record-proc cpr) cpr)
       ;;Load in  EAX the  encoded number  of arguments  for the  call to
       ;;$INCORRECT-ARGS-ERROR-HANDLER.

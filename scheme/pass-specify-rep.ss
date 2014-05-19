@@ -968,8 +968,13 @@
        x)
 
       ((primref name)
+       ;;Generate  code to  retrieve the  "slot" field  from a  location
+       ;;gensym; the value of such slot  must contain a reference to the
+       ;;closure object  implementing a  global lexical  procedure.  The
+       ;;location gensym  is stored in the  relocation vector associated
+       ;;the code object we are building.
        (prm 'mref
-	    (K (make-object (primref->symbol name)))
+	    (K (make-object (primref->location-gensym name)))
 	    (K off-symbol-record-value)))
 
       ((code-loc)
@@ -1205,21 +1210,34 @@
       ((primcall op args)
        (cond ((and (eq? op 'top-level-value)
 		   (null? ($cdr args)) ;only one argument
-		   (%recordized-symbol? ($car args)))
+		   (%recordized-symbol ($car args)))
 	      ;;The recordized code:
 	      ;;
-	      ;;   #[primcall #[primref top-level-value] (?name)]
+	      ;;   #[primcall #[primref top-level-value] (?loc)]
 	      ;;
-	      ;;represents a reference  to a top level  value; given the
-	      ;;?NAME (a symbol) of a  top level binding: the closure is
-	      ;;stored in the field "proc"  of ?NAME.
+	      ;;represents a  reference to a top  level value.  Whenever
+	      ;;binary code performs a call  to a global closure object,
+	      ;;it does the following:
+	      ;;
+	      ;;* From the relocation vector of the current code object:
+	      ;;  retrieve the loc gensym of the procedure to call.
+	      ;;
+	      ;;* From the  loc gensym: extract the value  of the "proc"
+	      ;;  slot, which is meant to be a closure object.
+	      ;;
+	      ;;* Actually call the closure object.
 	      ;;
 	      ;;Here we generate  the code needed to  retrieve the value
-	      ;;of the field "proc" from the symbol ?NAME.
+	      ;;of the field "proc" from the symbol ?LOC.
 	      ;;
-	      => (lambda (sym)
-		   (reset-symbol-proc! sym)
-		   (prm 'mref (T (K sym)) (K off-symbol-record-proc))))
+	      ;;FIXME It is  clear that: at the time  the closure object
+	      ;;call is performed, the loc gensym must have been already
+	      ;;initialised by storing the  closure object in the "proc"
+	      ;;slot.   Good.  But  why  do  we call  RESET-SYMBOL-PROC!
+	      ;;here, at compile-time?  (Marco Maggi; Mon May 19, 2014)
+	      => (lambda (loc)
+		   (reset-symbol-proc! loc)
+		   (prm 'mref (T (K loc)) (K off-symbol-record-proc))))
 	     (else
 	      (nonproc x check?))))
 
@@ -1236,17 +1254,18 @@
       (else
        (nonproc x check?))))
 
-  (define (%recordized-symbol? arg)
+  (define (%recordized-symbol arg)
     ;;ARG must be a struct instance representing recordized code.
     ;;
     ;;If ARG is  an intance of CONSTANT (possibly wrapped  into a KNOWN)
-    ;;whose value is a symbol: return that symbol; else return #f.
+    ;;whose value is a symbol: return that symbol; else return #f.  Such
+    ;;symbol is meant to be the location gensym of a procedure.
     ;;
     (struct-case arg
       ((constant arg.val)
        (and (symbol? arg.val) arg.val))
       ((known arg.expr)
-       (%recordized-symbol? arg.expr))
+       (%recordized-symbol arg.expr))
       (else
        #f)))
 

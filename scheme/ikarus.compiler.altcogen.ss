@@ -1261,10 +1261,16 @@
 	  (make-conditional (%test size)
 	      (make-primcall 'nop '())
 	    (make-primcall 'interrupt '()))
-	  (make-funcall (make-primcall 'mref
-			  (list (make-constant (make-object (primref->symbol 'do-overflow)))
-				(make-constant off-symbol-record-proc)))
-			(list size)))))
+	  (make-funcall
+	   ;;From the  relocation vector  of this code  object: retrieve
+	   ;;the  location   gensym  associated  to   DO-OVERFLOW,  then
+	   ;;retrieve the value of its  "proc" slot.  The "proc" slot of
+	   ;;such loc gensym contains a  reference to the closure object
+	   ;;implementing DO-OVERFLOW.
+	   (make-primcall 'mref
+	     (list (make-constant (make-object (primref->location-gensym 'do-overflow)))
+		   (make-constant off-symbol-record-proc)))
+	   (list size)))))
 
     (define (alloc-check/no-hooks size)
       (E (make-shortcut
@@ -4485,9 +4491,14 @@
        (movl ARGC-REGISTER (mem (fx* -2 wordsize) fpr))
        ;;DO-VARARG-OVERFLOW is called with one argument.
        (movl (int (argc-convention 1)) ARGC-REGISTER)
-       ;;Load into  CPR a reference  to the closure  object implementing
-       ;;DO-VARARG-OVERFLOW.
-       (movl (obj (primref->symbol 'do-vararg-overflow)) cpr)
+       ;;From the  relocation vector of  this code object:  retrieve the
+       ;;location gensym associated to DO-VARARG-OVERFLOW and load it in
+       ;;the Closure  Pointer Register (CPR).   The "proc" slot  of such
+       ;;loc  gensym   contains  a  reference  to   the  closure  object
+       ;;implementing DO-VARARG-OVERFLOW.
+       (movl (obj (primref->location-gensym 'do-vararg-overflow)) cpr)
+       ;;Load in the Closure Pointer Register a reference to the closure
+       ;;object implementing DO-VARARG-OVERFLOW.
        (movl (mem off-symbol-record-proc cpr) cpr)
        ;;When arriving here the Scheme stack is as follows:
        ;;
