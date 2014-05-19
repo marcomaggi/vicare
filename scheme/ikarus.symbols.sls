@@ -312,16 +312,21 @@
 
 
 (define system-value-gensym
-  ;;Notice  that   this  gensym  might   be  generated  at   boot  image
-  ;;compile-time by  the source  optimizer; in this  case the  gensym is
-  ;;hard-coded in the boot image and it  is the same every time the boot
-  ;;image is loaded.
+  ;;Notice that this gensym is generated a-new every time the boot image
+  ;;is initialised.   We must avoid  the source optimizer  to precompute
+  ;;and hard-code a value.
   (gensym "system-value-gensym"))
 
 (define system-label-gensym
+  ;;Notice that this gensym is generated a-new every time the boot image
+  ;;is initialised.   We must avoid  the source optimizer  to precompute
+  ;;and hard-code a value.
   (gensym "system-label-gensym"))
 
 (define system-id-gensym
+  ;;Notice that this gensym is generated a-new every time the boot image
+  ;;is initialised.   We must avoid  the source optimizer  to precompute
+  ;;and hard-code a value.
   (gensym "system-id-gensym"))
 
 (define* (system-value {x symbol?})

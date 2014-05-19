@@ -1304,7 +1304,8 @@
       ((make-i/o-file-does-not-exist-error . _))
       ((make-undefined-violation . _))
       ((die . _))
-      ((gensym . _))
+      ;;This must return a new gensym every time.
+      ((gensym . _)				effect-free result-true)
       ((values . _))
       ((error . _))
       ((assertion-violation . _))

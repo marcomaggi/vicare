@@ -2179,11 +2179,13 @@
 ;;;; R6RS library expander
 
 (define (boot-library-expand library-sexp)
-  ;;This function  is used  to expand the  libraries composing  the boot
-  ;;image; see "makefile.sps" for details on how it is used.
+  ;;This  function is  used to  expand the  libraries composing  the boot  image; see
+  ;;"makefile.sps" for  details on  how it is  used.  The LIBRARY  form in  the given
+  ;;symbolic  expression is  fully  expanded  and the  library  is  installed in  the
+  ;;internal collection.
   ;;
-  ;;When bootstrapping  the system,  visit-code is  not (and  cannot be)
-  ;;used in the "next" system.  So, we drop it.
+  ;;When bootstrapping  the system,  visit-code is  not (and cannot  be) used  in the
+  ;;"next" system.  So, we drop it.
   ;;
   ;;The returned values are:
   ;;
@@ -2195,8 +2197,7 @@
   ;;   library.
   ;;
   ;;EXPORT-SUBST -
-  ;;   A  subst selecting the bindings  to be exported from  the ones in
-  ;;   EXPORT-ENV.
+  ;;   A subst selecting the bindings to be exported from the ones in EXPORT-ENV.
   ;;
   ;;EXPORT-ENV -
   ;;   Represents the global bindings defined by the library body.

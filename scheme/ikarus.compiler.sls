@@ -1718,19 +1718,18 @@
 	  ;;Only non-operators get special  handling when debugging mode
 	  ;;is active.
 	  ;;
-	  (if (%operator? op)
+	  (if (%core-primitive-reference? op)
 	      (make-funcall op rands)
 	    (make-funcall (make-primref 'debug-call) (cons* src/expr op rands))))))
 
-    (define (%operator? op)
-      ;;Evaluate to true if OP references a primitive operation exported
-      ;;by the boot image.
-      ;;
-      ;;The  SYSTEM-VALUE  call  below   will  fail  with  an  assertion
-      ;;violation  if NAME  is not  a  symbol associated  to a  function
+    (define (%core-primitive-reference? op)
+      ;;Evaluate  to true  if  OP references  a  lexical core  primitive
       ;;exported by the boot image.
       ;;
-      ;;See the documentation of SYSTEM-VALUE for more details.
+      ;;The  SYSTEM-VALUE  call  below   will  fail  with  an  assertion
+      ;;violation if NAME  is not a symbol associated to  a lexical core
+      ;;primitive exported by the boot  image.  See the documentation of
+      ;;SYSTEM-VALUE for more details.
       ;;
       (struct-case op
 	((primref name)
