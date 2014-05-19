@@ -1204,15 +1204,18 @@
     (struct-case x
       ((primcall op args)
        (cond ((and (eq? op 'top-level-value)
-		   (null? ($cdr args))
-		   (%recordized-symbol ($car args)))
+		   (null? ($cdr args)) ;only one argument
+		   (%recordized-symbol? ($car args)))
 	      ;;The recordized code:
 	      ;;
-	      ;;   #[funcall #[primref top-level-value] (?name)]
+	      ;;   #[primcall #[primref top-level-value] (?name)]
 	      ;;
 	      ;;represents a reference  to a top level  value; given the
 	      ;;?NAME (a symbol) of a  top level binding: the closure is
 	      ;;stored in the field "proc"  of ?NAME.
+	      ;;
+	      ;;Here we generate  the code needed to  retrieve the value
+	      ;;of the field "proc" from the symbol ?NAME.
 	      ;;
 	      => (lambda (sym)
 		   (reset-symbol-proc! sym)
@@ -1233,7 +1236,7 @@
       (else
        (nonproc x check?))))
 
-  (define (%recordized-symbol arg)
+  (define (%recordized-symbol? arg)
     ;;ARG must be a struct instance representing recordized code.
     ;;
     ;;If ARG is  an intance of CONSTANT (possibly wrapped  into a KNOWN)
@@ -1243,11 +1246,15 @@
       ((constant arg.val)
        (and (symbol? arg.val) arg.val))
       ((known arg.expr)
-       (%recordized-symbol arg.expr))
+       (%recordized-symbol? arg.expr))
       (else
        #f)))
 
   (define (nonproc x check?)
+    ;;When CHECK? is true: generate the  code needed to test at run-time
+    ;;if evaluating X yields a closure object; if it does: X is returned
+    ;;at run-time, otherwise an error is raised at run-time.
+    ;;
     (if check?
 	(with-tmp ((x (V x)))
 	  (make-shortcut
