@@ -211,6 +211,10 @@
 			      ($symbol-value x) args)))))
 
 (define* (reset-symbol-proc! {x symbol?})
+  ;;X is meant to  be a location gensym.  If the  value currently in the
+  ;;field "value" of X is a closure object: store such value also in the
+  ;;field "proc" of X.
+  ;;
   (let ((v ($symbol-value x)))
     ($set-symbol-proc! x (if (procedure? v)
 			     v
