@@ -449,6 +449,20 @@ Lots of backwards incompatibilities... life is hard!
   brace  syntax  to  tag  argument and  return  values  with  validation
   predicates.
 
+* The following libraries do not exist anymore:
+
+     (vicare language-extensions infix)
+     (vicare language-extensions increments)
+
+* The INFIX syntax  is now exported by (vicare).   See the documentation
+  for the syntax and supported operators.
+
+* New fluid syntax bindings are exported by (vicare):
+
+    ? : ! % & ^ ~ << >> ¦
+
+  they are recognised as operators by the INFIX syntax.
+
 
 Notes for revision 0.3d7
 ------------------------
@@ -2245,6 +2259,7 @@ Notes for revision 0.2d1
 
 ### end of file
 # Local Variables:
+# coding: utf-8-unix
 # mode: text
 # fill-column: 72
 # paragraph-start: "*"

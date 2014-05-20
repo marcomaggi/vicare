@@ -148,6 +148,7 @@
 
 ;;;; prelude
 
+#!vicare
 ;;NOTE  Libraries imported  here are  installed  in the  internal library  collection
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are installed in a separate library collection, BOOTSTRAP-COLLECTION.
@@ -331,7 +332,18 @@
      (break					($fluid . ,(gensym "fluid-label.break")))
      (with					($fluid . ,(gensym "fluid-label.with")))
      (brace					($fluid . ,(gensym "fluid-label.brace")))
-     (<>					($fluid . ,(gensym "fluid-label.<>"))))
+     (<>					($fluid . ,(gensym "fluid-label.<>")))
+     (?						($fluid . ,(gensym "fluid-label.?")))
+     (:						($fluid . ,(gensym "fluid-label.:")))
+     (!						($fluid . ,(gensym "fluid-label.!")))
+     (%						($fluid . ,(gensym "fluid-label.%")))
+     (&						($fluid . ,(gensym "fluid-label.&")))
+     ;;The symbol "\xA6;" is the Unicode vertical broken bar.
+     (\xA6;					($fluid . ,(gensym "fluid-label.broken-bar")))
+     (^						($fluid . ,(gensym "fluid-label.^")))
+     (~						($fluid . ,(gensym "fluid-label.~")))
+     (<<					($fluid . ,(gensym "fluid-label.<<")))
+     (>>					($fluid . ,(gensym "fluid-label.>>"))))
    '((internal-define				(define))
      (define-syntax				(define-syntax))
      (define-alias				(define-alias))
@@ -497,6 +509,14 @@
      (define-returnable				(macro . define-returnable))
      (lambda-returnable				(macro . lambda-returnable))
      (begin-returnable				(macro . begin-returnable))
+;;;
+     (infix					(macro . infix))
+     (++					(macro . pre-incr))
+     (--					(macro . pre-decr))
+     (pre-incr!					(macro . pre-incr))
+     (pre-decr!					(macro . pre-decr))
+     (post-incr!				(macro . post-incr))
+     (post-decr!				(macro . post-decr))
 ;;;
      (try					(macro . try))
      (catch					(macro . catch))
@@ -1505,6 +1525,7 @@
     (exact?					v r ba se)
     (exp					v r ba se)
     (expt					v r ba se)
+    (factorial					v $language)
     (finite?					v r ba)
     (floor					v r ba se)
     (for-each					v r ba se)
@@ -2455,6 +2476,17 @@
     (__file__					v $language)
     (__line__					v $language)
     (<>						v $language)
+    (?						v $language)
+    (:						v $language)
+    (!						v $language)
+    (%						v $language)
+    (&						v $language)
+    ;;The symbol "\xA6;" is the Unicode vertical broken bar.
+    (\xA6;					v $language)
+    (^						v $language)
+    (~						v $language)
+    (<<						v $language)
+    (>>						v $language)
     (brace					v $language)
     (return					v $language)
     (continue					v $language)
@@ -2468,6 +2500,13 @@
     (try					v $language)
     (catch					v $language)
     (finally					v $language)
+    (infix					v $language)
+    (++						v $language)
+    (--						v $language)
+    (pre-incr!					v $language)
+    (pre-decr!					v $language)
+    (post-incr!					v $language)
+    (post-decr!					v $language)
 ;;;
     (with-compensations				v $language)
     (with-compensations/on-error		v $language)

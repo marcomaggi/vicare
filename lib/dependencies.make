@@ -351,113 +351,6 @@ endif
 EXTRA_DIST += lib/vicare/language-extensions/coroutines.sls
 CLEANFILES += lib/vicare/language-extensions/coroutines.fasl
 
-lib/vicare/language-extensions/increments.fasl: \
-		lib/vicare/language-extensions/increments.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_increments_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_increments_slsdir  = $(bundledlibsdir)/vicare/language-extensions
-nodist_lib_vicare_language_extensions_increments_fasl_DATA = lib/vicare/language-extensions/increments.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_increments_sls_DATA = lib/vicare/language-extensions/increments.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/increments.sls
-CLEANFILES += lib/vicare/language-extensions/increments.fasl
-
-lib/vicare/language-extensions/infix.fasl: \
-		lib/vicare/language-extensions/infix.sls \
-		lib/vicare/language-extensions/infix/parser-utils.fasl \
-		lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl \
-		lib/vicare/language-extensions/increments.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_infix_fasldir = $(bundledlibsdir)/vicare/language-extensions
-lib_vicare_language_extensions_infix_slsdir  = $(bundledlibsdir)/vicare/language-extensions
-nodist_lib_vicare_language_extensions_infix_fasl_DATA = lib/vicare/language-extensions/infix.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_infix_sls_DATA = lib/vicare/language-extensions/infix.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/infix.sls
-CLEANFILES += lib/vicare/language-extensions/infix.fasl
-
-lib/vicare/language-extensions/infix/parser-utils.fasl: \
-		lib/vicare/language-extensions/infix/parser-utils.sls \
-		lib/vicare/language-extensions/increments.fasl \
-		lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl \
-		lib/vicare/language-extensions/infix/tokens.fasl \
-		lib/vicare/language-extensions/infix/parser-table.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_infix_parser_utils_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
-lib_vicare_language_extensions_infix_parser_utils_slsdir  = $(bundledlibsdir)/vicare/language-extensions/infix
-nodist_lib_vicare_language_extensions_infix_parser_utils_fasl_DATA = lib/vicare/language-extensions/infix/parser-utils.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_infix_parser_utils_sls_DATA = lib/vicare/language-extensions/infix/parser-utils.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/infix/parser-utils.sls
-CLEANFILES += lib/vicare/language-extensions/infix/parser-utils.fasl
-
-lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl: \
-		lib/vicare/language-extensions/infix/auxiliary-syntaxes.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_infix_auxiliary_syntaxes_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
-lib_vicare_language_extensions_infix_auxiliary_syntaxes_slsdir  = $(bundledlibsdir)/vicare/language-extensions/infix
-nodist_lib_vicare_language_extensions_infix_auxiliary_syntaxes_fasl_DATA = lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_infix_auxiliary_syntaxes_sls_DATA = lib/vicare/language-extensions/infix/auxiliary-syntaxes.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/infix/auxiliary-syntaxes.sls
-CLEANFILES += lib/vicare/language-extensions/infix/auxiliary-syntaxes.fasl
-
-lib/vicare/language-extensions/infix/tokens.fasl: \
-		lib/vicare/language-extensions/infix/tokens.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_infix_tokens_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
-lib_vicare_language_extensions_infix_tokens_slsdir  = $(bundledlibsdir)/vicare/language-extensions/infix
-nodist_lib_vicare_language_extensions_infix_tokens_fasl_DATA = lib/vicare/language-extensions/infix/tokens.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_infix_tokens_sls_DATA = lib/vicare/language-extensions/infix/tokens.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/infix/tokens.sls
-CLEANFILES += lib/vicare/language-extensions/infix/tokens.fasl
-
-lib/vicare/language-extensions/infix/parser-table.fasl: \
-		lib/vicare/language-extensions/infix/parser-table.sls \
-		lib/vicare/language-extensions/infix/lr-driver.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_infix_parser_table_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
-lib_vicare_language_extensions_infix_parser_table_slsdir  = $(bundledlibsdir)/vicare/language-extensions/infix
-nodist_lib_vicare_language_extensions_infix_parser_table_fasl_DATA = lib/vicare/language-extensions/infix/parser-table.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_infix_parser_table_sls_DATA = lib/vicare/language-extensions/infix/parser-table.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/infix/parser-table.sls
-CLEANFILES += lib/vicare/language-extensions/infix/parser-table.fasl
-
-lib/vicare/language-extensions/infix/lr-driver.fasl: \
-		lib/vicare/language-extensions/infix/lr-driver.sls \
-		lib/vicare/language-extensions/infix/tokens.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_language_extensions_infix_lr_driver_fasldir = $(bundledlibsdir)/vicare/language-extensions/infix
-lib_vicare_language_extensions_infix_lr_driver_slsdir  = $(bundledlibsdir)/vicare/language-extensions/infix
-nodist_lib_vicare_language_extensions_infix_lr_driver_fasl_DATA = lib/vicare/language-extensions/infix/lr-driver.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_language_extensions_infix_lr_driver_sls_DATA = lib/vicare/language-extensions/infix/lr-driver.sls
-endif
-EXTRA_DIST += lib/vicare/language-extensions/infix/lr-driver.sls
-CLEANFILES += lib/vicare/language-extensions/infix/lr-driver.fasl
-
 lib/vicare/language-extensions/keywords.fasl: \
 		lib/vicare/language-extensions/keywords.sls \
 		lib/vicare/language-extensions/syntaxes.fasl \
@@ -1202,7 +1095,6 @@ lib/vicare/containers/strings/rabin-karp.fasl: \
 		lib/vicare/containers/strings/rabin-karp.sls \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
-		lib/vicare/language-extensions/infix.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
 
@@ -2065,7 +1957,6 @@ CLEANFILES += lib/vicare/getopts.fasl
 
 lib/vicare/formations.fasl: \
 		lib/vicare/formations.sls \
-		lib/vicare/language-extensions/infix.fasl \
 		lib/vicare/unsafe/operations.fasl \
 		lib/vicare/arguments/validation.fasl \
 		$(FASL_PREREQUISITES)
@@ -3768,53 +3659,13 @@ EXTRA_DIST += lib/nausicaa/language/simple-match.sls
 CLEANFILES += lib/nausicaa/language/simple-match.fasl
 endif
 
-lib/nausicaa/language/infix.fasl: \
-		lib/nausicaa/language/infix.sls \
-		lib/vicare/language-extensions/infix.fasl \
-		lib/vicare/language-extensions/infix/parser-utils.fasl \
-		lib/vicare/language-extensions/infix/tokens.fasl \
-		lib/nausicaa/language/increments.fasl \
-		lib/nausicaa/language/oopp.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-if WANT_NAUSICAA
-lib_nausicaa_language_infix_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_infix_slsdir  = $(bundledlibsdir)/nausicaa/language
-nodist_lib_nausicaa_language_infix_fasl_DATA = lib/nausicaa/language/infix.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_infix_sls_DATA = lib/nausicaa/language/infix.sls
-endif
-EXTRA_DIST += lib/nausicaa/language/infix.sls
-CLEANFILES += lib/nausicaa/language/infix.fasl
-endif
-
-lib/nausicaa/language/increments.fasl: \
-		lib/nausicaa/language/increments.sls \
-		lib/nausicaa/language/oopp.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-if WANT_NAUSICAA
-lib_nausicaa_language_increments_fasldir = $(bundledlibsdir)/nausicaa/language
-lib_nausicaa_language_increments_slsdir  = $(bundledlibsdir)/nausicaa/language
-nodist_lib_nausicaa_language_increments_fasl_DATA = lib/nausicaa/language/increments.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_language_increments_sls_DATA = lib/nausicaa/language/increments.sls
-endif
-EXTRA_DIST += lib/nausicaa/language/increments.sls
-CLEANFILES += lib/nausicaa/language/increments.fasl
-endif
-
 lib/nausicaa.fasl: \
 		lib/nausicaa.sls \
 		lib/nausicaa/language/oopp.fasl \
 		lib/nausicaa/language/multimethods.fasl \
 		lib/nausicaa/language/builtins.fasl \
 		lib/nausicaa/language/conditions.fasl \
-		lib/nausicaa/language/increments.fasl \
 		lib/nausicaa/language/simple-match.fasl \
-		lib/nausicaa/language/infix.fasl \
 		lib/vicare/language-extensions/namespaces.fasl \
 		lib/vicare/language-extensions/sentinels.fasl \
 		$(FASL_PREREQUISITES)
@@ -4375,7 +4226,6 @@ lib/nausicaa/mehve.fasl: \
 		lib/nausicaa/mehve/language/numerics/arithmetics.fasl \
 		lib/nausicaa/mehve/language/numerics/parts.fasl \
 		lib/nausicaa/mehve/language/numerics/transcendental.fasl \
-		lib/nausicaa/mehve/language/infix.fasl \
 		lib/nausicaa/mehve/language/input-output.fasl \
 		$(FASL_PREREQUISITES)
 	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
@@ -4461,29 +4311,6 @@ dist_lib_nausicaa_mehve_language_numerics_transcendental_sls_DATA = lib/nausicaa
 endif
 EXTRA_DIST += lib/nausicaa/mehve/language/numerics/transcendental.sls
 CLEANFILES += lib/nausicaa/mehve/language/numerics/transcendental.fasl
-endif
-
-lib/nausicaa/mehve/language/infix.fasl: \
-		lib/nausicaa/mehve/language/infix.sls \
-		lib/nausicaa.fasl \
-		lib/vicare/language-extensions/infix/parser-utils.fasl \
-		lib/vicare/language-extensions/infix/tokens.fasl \
-		lib/nausicaa/mehve/language/numerics/predicates.fasl \
-		lib/nausicaa/mehve/language/numerics/arithmetics.fasl \
-		lib/nausicaa/mehve/language/numerics/parts.fasl \
-		lib/nausicaa/mehve/language/numerics/transcendental.fasl \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-if WANT_NAUSICAA
-lib_nausicaa_mehve_language_infix_fasldir = $(bundledlibsdir)/nausicaa/mehve/language
-lib_nausicaa_mehve_language_infix_slsdir  = $(bundledlibsdir)/nausicaa/mehve/language
-nodist_lib_nausicaa_mehve_language_infix_fasl_DATA = lib/nausicaa/mehve/language/infix.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_nausicaa_mehve_language_infix_sls_DATA = lib/nausicaa/mehve/language/infix.sls
-endif
-EXTRA_DIST += lib/nausicaa/mehve/language/infix.sls
-CLEANFILES += lib/nausicaa/mehve/language/infix.fasl
 endif
 
 lib/nausicaa/mehve/language/input-output.fasl: \

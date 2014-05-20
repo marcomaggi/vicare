@@ -377,6 +377,7 @@ VICARE_BOOT_SRCS = \
 	scheme/psyntax.expander.core-prims-init.scm			\
 	scheme/psyntax.expander.core-macro-transformers.scm		\
 	scheme/psyntax.expander.non-core-macro-transformers.scm		\
+	scheme/psyntax.expander.infix-macro.scm				\
 	scheme/psyntax.internal.sls					\
 	scheme/psyntax.library-manager.sls
 
@@ -671,6 +672,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-flonum-base.sps				\
 	tests/test-vicare-flonum-formatter.sps				\
 	tests/test-vicare-flonum-parser.sps				\
+	tests/test-vicare-infix.sps					\
 	tests/test-vicare-io.sps					\
 	tests/test-vicare-letrec-syntax.sps				\
 	tests/test-vicare-library-utils.sps				\
@@ -776,7 +778,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-language-extensions-custom-ports.sps		\
 	tests/test-vicare-language-extensions-hooks.sps			\
 	tests/test-vicare-language-extensions-identifier-substitutions.sps	\
-	tests/test-vicare-language-extensions-infix.sps			\
 	tests/test-vicare-language-extensions-keywords.sps		\
 	tests/test-vicare-language-extensions-loops.sps			\
 	tests/test-vicare-language-extensions-makers.sps		\

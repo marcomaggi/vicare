@@ -41,8 +41,6 @@
      (vicare language-extensions amb)
      (vicare language-extensions simple-match)
      (vicare language-extensions coroutines)
-     (vicare language-extensions increments)
-     (vicare language-extensions infix)
      (vicare language-extensions keywords)
      (vicare language-extensions sentinels)
      (vicare language-extensions namespaces)
@@ -212,7 +210,6 @@
      (nausicaa language builtins)
      (nausicaa language conditions)
      (nausicaa language simple-match)
-     (nausicaa language infix)
      (nausicaa)
 
      (nausicaa containers lists)

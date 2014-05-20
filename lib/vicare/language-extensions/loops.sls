@@ -785,7 +785,7 @@
 (define (:-dispatch-set! dispatch)
   (:-dispatch dispatch))
 
-(define-syntax :
+(define-fluid-override :
   (syntax-rules (index)
     ((: cc var (index i) arg1 arg ...)
      (:dispatched cc var (index i) (:-dispatch) arg1 arg ...) )

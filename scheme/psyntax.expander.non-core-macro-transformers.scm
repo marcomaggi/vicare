@@ -114,6 +114,12 @@
     ((compensate)			compensate-macro)
     ((push-compensation)		push-compensation-macro)
 
+    ((pre-incr)				pre-incr-macro)
+    ((pre-decr)				pre-decr-macro)
+    ((post-incr)			post-incr-macro)
+    ((post-decr)			post-decr-macro)
+    ((infix)				infix-macro)
+
     ((eol-style)
      (lambda (x)
        (%allowed-symbol-macro x '(none lf cr crlf nel crnel ls))))
@@ -4355,6 +4361,130 @@
 			    ?lhs* ?rhs*)
 	 ,?body0 . ,?body*)))
     ))
+
+
+;;;; module non-core-macro-transformer: PRE-INCR!, PRE-DECR!, POST-INCR!, POST-DECR!
+
+(define (pre-incr-macro input-form.stx)
+  ;;Transformer function used to expand  Vicare's PRE-INCR! macros from the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?id)
+     (identifier? ?id)
+     (bless
+      `(begin
+	 (set! ,?id (add1 ,?id))
+	 ,?id)))
+    ((_ ?id ?step)
+     (identifier? ?id)
+     (bless
+      `(begin
+	 (set! ,?id (+ ,?id ,?step))
+	 ,?id)))
+    ((_ ?expr)
+     (bless
+      `(add1 ,?expr)))
+    ((_ ?expr ?step)
+     (bless
+      `(+ ,?expr ,?step)))
+    (_
+     (syntax-violation 'pre-incr! "invalid pre-increment operation" input-form.stx))
+    ))
+
+(define (pre-decr-macro input-form.stx)
+  ;;Transformer function used to expand  Vicare's PRE-DECR! macros from the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?id)
+     (identifier? ?id)
+     (bless
+      `(begin
+	 (set! ,?id (sub1 ,?id))
+	 ,?id)))
+    ((_ ?id ?step)
+     (identifier? ?id)
+     (bless
+      `(begin
+	 (set! ,?id (- ,?id ,?step))
+	 ,?id)))
+    ((_ ?expr)
+     (bless
+      `(sub1 ,?expr)))
+    ((_ ?expr ?step)
+     (bless
+      `(- ,?expr ,?step)))
+    (_
+     (syntax-violation 'pre-decr! "invalid pre-decrement operation" input-form.stx))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define (post-incr-macro input-form.stx)
+  ;;Transformer function used to expand Vicare's POST-INCR! macros from the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?id)
+     (identifier? ?id)
+     (bless
+      `(receive-and-return (V)
+	   ,?id
+	 (set! ,?id (add1 ,?id)))))
+    ((_ ?id ?step)
+     (identifier? ?id)
+     (bless
+      `(receive-and-return (V)
+	   ,?id
+	 (set! ,?id (+ ,?id ,?step)))))
+    ((_ ?expr)
+     (bless
+      `(add1 ,?expr)))
+    ((_ ?expr ?step)
+     (bless
+      `(+ ,?expr ,?step)))
+    (_
+     (syntax-violation 'post-incr! "invalid post-increment operation" input-form.stx))
+    ))
+
+(define (post-decr-macro input-form.stx)
+  ;;Transformer function used to expand Vicare's POST-DECR! macros from the top-level
+  ;;built in  environment.  Expand  the contents of  INPUT-FORM.STX; return  a syntax
+  ;;object that must be further expanded.
+  ;;
+  (syntax-match input-form.stx ()
+    ((_ ?id)
+     (identifier? ?id)
+     (bless
+      `(receive-and-return (V)
+	   ,?id
+	 (set! ,?id (sub1 ,?id)))))
+    ((_ ?id ?step)
+     (identifier? ?id)
+     (bless
+      `(receive-and-return (V)
+	   ,?id
+	 (set! ,?id (- ,?id ,?step)))))
+    ((_ ?expr)
+     (bless
+      `(sub1 ,?expr)))
+    ((_ ?expr ?step)
+     (bless
+      `(- ,?expr ,?step)))
+    (_
+     (syntax-violation 'post-decr! "invalid post-decrement operation" input-form.stx))
+    ))
+
+
+;;;; module non-core-macro-transformer: INFIX
+
+(module (infix-macro)
+  (include "psyntax.expander.infix-macro.scm" #t)
+  #| end of module: INFIX-MACRO |# )
 
 
 ;;;; module non-core-macro-transformer: miscellanea

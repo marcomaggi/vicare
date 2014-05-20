@@ -288,6 +288,8 @@ Example:
 * iklib syntaxes slots::        Slot getter and setter syntaxes.
 * iklib syntaxes try::          The @func{try}, @func{catch}, @func{finally} syntaxes.
 * iklib syntaxes splice1st::    Splice first form syntax.
+* iklib syntaxes increments::   Incrementing and decrementing.
+* iklib syntaxes infix::        Infix to prefix transformer.
 * iklib syntaxes misc::         Miscellaneous syntaxes.
 * iklib syntaxes properties::   Syntactic binding properties.
 * iklib syntaxes predaux::      Predicate auxiliary functions.
@@ -1846,6 +1848,370 @@ Usage examples:
 @end example
 
 @c page
+@node iklib syntaxes infix
+@subsection Infix to prefix transformer
+
+
+@value{PRJNAME} provides the @func{infix} macro which converts the
+traditional infix notation for expressions to the equivalent Scheme's
+prefix notation.  @func{infix} expands to a prefix expression to be
+evaluated at runtime, in the lexical context of the macro use; as a
+special case @code{(infix)} is equivalent to @code{(values)}.
+
+The macro allows us to evaluate forms like:
+
+@example
+(let ((a 1) (b 2) (c 3))
+
+  (infix cos (a) * tan (b) / c)
+  @expansion{} (/ (* (cos a) (tan b)) c)
+
+  (infix (cos (a) * tan (b) / c))
+  @expansion{} (/ (* (cos a) (tan b)) c)
+
+  (infix a ? b : c)
+  @expansion{} (if a b c)
+
+ #f)
+@end example
+
+Some interpretation rules:
+
+@itemize
+@item
+Any Scheme value can be element of the input form.
+
+@item
+The following infix operators are supported; in order of descending
+precedence from top to bottom, operators on the same line have equal
+precedence:
+
+@example
+bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
+bitwise-not
+bitwise-and bitwise-ior bitwise-xor
+++ --
+(unary +) (unary -)
+expt
+mod mod0
+* / div div0
++ -
+< > <= >= = != eq? eqv? equal?
+not
+and or xor
+@end example
+
+@noindent
+remember that the Scheme comparison operators are meant to return a
+boolean value, rather than a number object.  @func{xor} is the binding
+exported by @library{vicare}.  @func{++} and @func{--} are the
+bindings exported by @library{vicare language-extensions increments}.
+
+@item
+All the operators are left--associative with the exception of
+@func{expt} which is right--associative and of the unary @func{+},
+@func{-}, @func{++}, @func{--}, @func{not} and @func{bitwise-not}
+which are non--associative:
+
+@example
+;; left-associative
+(infix 10 - 5 - 3) @expansion{} (- (- 10 5) 3)
+(infix 10 - 5 - 3) @expansion{} (- 10 5 3)
+(infix 10 / 5 / 3) @expansion{} (/ (/ 10 5) 3)
+(infix 10 / 5 / 3) @expansion{} (/ 10 5 3)
+
+;; right-associative
+(infix 10 expt 5 expt 3) @expansion{} (expt 10 (expt 5 3))
+@end example
+
+@item
+The following operators for fixnums are supported with the same
+precedence of the corresponding generic operators:
+
+@example
+fx+               fx-
+fx*
+fxdiv             fxdiv0
+fxmod             fxmod0
+fx<?              fx>?
+fx<=?             fx>=?
+fx=?
+
+fxand             fxior
+fxxor             fxnot
+fxarithmetic-shift-left
+fxarithmetic-shift-right
+@end example
+
+All the operators are left--associative with the exception of
+@func{fxnot} which is non--associative:
+
+@example
+(infix 10 fx- 5 fx- 3)     @expansion{} (fx- (fx- 10 5) 3)
+(infix 10 fxdiv 5 fxdiv 3) @expansion{} (fxdiv (fxdiv 10 5) 3)
+@end example
+
+@item
+The following operators for flonums are supported with the same
+precedence of the corresponding generic operators:
+
+@example
+fl+               fl-
+fl*               fl/
+flexpt
+fl<?              fl>?
+fl<=?             fl>=?
+fl=?
+@end example
+
+All the operators are left--associative with the exception of
+@func{flexpt} which is right--associative:
+
+@example
+;; left-associative
+(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- (fl- 10. 5.) 3.))
+(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- 10. 5. 3.))
+(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ (fl/ 10. 5.) 3.))
+(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ 10. 5. 3.))
+
+;; right-associative
+(infix 10 expt 5 expt 3)          @expansion{} (expt 10 (expt 5 3))
+(infix 10. flexpt 5. flexpt 3.)   @expansion{} (flexpt 10. (flexpt 5. 3.))
+@end example
+
+@item
+@func{++} and @func{--} are unary operators that can be applied to
+expressions both in prefix and suffix positions.  @library{vicare
+language-extensions infix} exports the identifiers @func{++} and
+@func{--} as aliases for @func{++} and @func{--}; such aliases are
+invalid in @code{#!r6rs} mode, but are allowed by the reader when in
+@code{#!vicare} mode.
+
+When applied in prefix position to an identifier, @func{++} expands
+to:
+
+@example
+(infix ++ @meta{id})
+@expansion{} (begin (set! @meta{id} (+ @meta{id} 1)) @meta{id})
+@end example
+
+@noindent
+and @func{--} expands to:
+
+@example
+(infix -- @meta{id})
+@expansion{} (begin (set! @meta{id} (- @meta{id} 1)) @meta{id})
+@end example
+
+When applied in suffix position to an identifier, @func{++} expands
+to:
+
+@example
+(infix @meta{id} ++)
+@expansion{} (let ((v @meta{id})) (set! @meta{id} (+ @meta{id} 1)) v)
+@end example
+
+@noindent
+and @func{--} expands to:
+
+@example
+(infix @meta{id} --)
+@expansion{} (let ((v @meta{id})) (set! @meta{id} (- @meta{id} 1)) v)
+@end example
+
+When applied to a non--identifier expression, both in prefix and suffix
+position, @func{++} expands to:
+
+@example
+(infix ++ @meta{expr}) @expansion{} (+ @meta{expr} 1)
+(infix @meta{expr} ++) @expansion{} (+ @meta{expr} 1)
+@end example
+
+@noindent
+and @func{--} expands to:
+
+@example
+(infix -- @meta{expr}) @expansion{} (- @meta{expr} 1)
+(infix @meta{expr} --) @expansion{} (- @meta{expr} 1)
+@end example
+
+@item
+The if-then-else statement involves the identifiers @func{?}  and
+@func{:}.  This statement has the least precedence of all.
+
+@item
+Identifiers which are not operators are interpreted as variable
+references; if an identifier is followed by a list, it is a function
+call.
+
+@item
+Function calls with one or more arguments require the arguments to be
+grouped in a list; there is no special separator in the list of
+arguments.
+
+@example
+(define (fun a b c)
+  (+ a b c))
+
+(infix fun (1 2 3)) @expansion{} (fun 1 2 3)
+@end example
+
+Notice that grouping the function arguments in a list is a requirement
+of the infix expression grammar.
+
+@item
+Numbers and all the other values are just put there as operands.
+
+@item
+The identifiers @func{quote}, @func{quasiquote}, @func{syntax} and
+@func{quasisyntax} are not subject to infix to prefix conversion; the
+use of such syntaxes just expands to the prefix object:
+
+@example
+(infix (quote       ciao))  @expansion{} (quote ciao)
+(infix (quasiquote  ciao))  @expansion{} (quasiquote ciao)
+(infix (syntax      ciao))  @expansion{} (syntax ciao)
+(infix (quasisyntax ciao))  @expansion{} (quasisyntax ciao)
+@end example
+
+@item
+The following binding aliases are exported by the library:
+@findex &&
+@findex !!
+@findex ^^
+@findex ~~
+@findex %
+@findex &
+@findex !
+@findex ^
+@findex ~
+@findex <<
+@findex >>
+@findex fx&
+@findex fx!
+@findex fx^
+@findex fx~
+@findex fx<<
+@findex fx>>
+
+@example
+and                               -> &&
+or                                -> !!
+xor                               -> ^^
+not                               -> ~~
+mod                               -> %
+bitwise-and                       -> &
+bitwise-ior                       -> !
+bitwise-xor                       -> ^
+bitwise-not                       -> ~
+bitwise-arithmetic-shift-left     -> <<
+bitwise-arithmetic-shift-right    -> >>
+fxand                             -> fx&
+fxior                             -> fx!
+fxxor                             -> fx^
+fxnot                             -> fx~
+fxarithmetic-shift-left           -> fx<<
+fxarithmetic-shift-right          -> fx>>
+@end example
+@end itemize
+
+
+
+@c page
+@node iklib syntaxes increments
+@subsection Incrementing and decrementing
+
+
+@deffn Syntax {++} @meta{expr}
+@deffnx Syntax {++} @meta{expr} @meta{step}
+Increment @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+#!vicare
+(++ @meta{id} @meta{step})
+@expansion{} (begin
+      (set! @meta{id} (+ @meta{id} @meta{step}))
+      @meta{id})
+@end example
+@end deffn
+
+
+@deffn Syntax pre-incr! @meta{expr}
+@deffnx Syntax pre-incr! @meta{expr} @meta{step}
+Alias for @func{++}.
+@end deffn
+
+
+@deffn Syntax post-incr! @meta{expr}
+@deffnx Syntax post-incr! @meta{expr} @meta{step}
+Increment @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+(post-incr! @meta{id} @meta{step})
+@expansion{} (receive-and-return (v)
+        @meta{id}
+      (set! @meta{id} (+ @meta{id} @meta{step})))
+@end example
+@end deffn
+
+
+@deffn Syntax @code{--} @meta{expr}
+@deffnx Syntax @code{--} @meta{expr} @meta{step}
+Decrement @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+#!vicare
+(-- @meta{id} @meta{step})
+@expansion{} (begin
+      (set! @meta{id} (- @meta{id} @meta{step}))
+      @meta{id})
+@end example
+@end deffn
+
+
+@deffn Syntax pre-decr! @meta{expr}
+@deffnx Syntax pre-decr! @meta{expr} @meta{step}
+Alias for @func{--}.
+@end deffn
+
+
+@deffn Syntax post-decr! @meta{expr}
+@deffnx Syntax post-decr! @meta{expr} @meta{step}
+Decrement @meta{expr} by @meta{step} and return the result.  Both
+@meta{expr} and @meta{step} must be expressions evaluating to a number
+object; when @meta{step} is not given: it defaults to the fixnum
+@code{1}.
+
+As special case, when @meta{expr} is an identifier: the syntax expands
+as follows:
+
+@example
+(post-decr! @meta{id} @meta{step})
+@expansion{} (receive-and-return (v)
+        @meta{id}
+      (set! @meta{id} (- @meta{id} @meta{step})))
+@end example
+@end deffn
+
+@c page
 @node iklib syntaxes misc
 @subsection Miscellaneous syntaxes
 
@@ -1902,6 +2268,22 @@ A fluid syntax which is free to be bound to whatever user code needs.
 It is meant to be a placeholder for some expression defined by the local
 context; for example: it is used by the syntaxes @func{is-a?},
 @func{slot-ref} and @func{slot-set!}.
+@end deffn
+
+
+@deffn {Fluid Syntax} {?}
+@deffnx {Fluid Syntax} {:}
+@deffnx {Fluid Syntax} {!}
+@deffnx {Fluid Syntax} {%}
+@deffnx {Fluid Syntax} {&}
+@deffnx {Fluid Syntax} {^}
+@deffnx {Fluid Syntax} {~}
+@deffnx {Fluid Syntax} {<<}
+@deffnx {Fluid Syntax} {>>}
+@deffnx {Fluid Syntax} {\xA6;}
+Fluid syntaxes which are free to be bound to whatever user code needs.
+They are used as operators by the @func{infix} syntax.  The symbol
+@samp{\xA6;} is the Unicode vertical broken bar.
 @end deffn
 
 
@@ -8024,6 +8406,12 @@ not--a--number.
 Return a fixnum representing the sign of the numerator of @var{rn}:
 @code{+1} for positive, @code{-1} for negative, @code{0} for zero.
 @end table
+@end defun
+
+
+@defun factorial @var{I}
+Return the factorial of the non--negative integer @var{I} (which can be
+exact or inexact).
 @end defun
 
 @c ------------------------------------------------------------

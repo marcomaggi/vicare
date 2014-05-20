@@ -1,4 +1,4 @@
-;;; -*- coding: utf-8 -*-
+;;; -*- coding: utf-8-unix -*-
 ;;;
 ;;;Part of: Vicare Scheme
 ;;;Contents: augmented Scheme language around (nausicaa)
@@ -1573,6 +1573,12 @@
     expansion-of
     visit-code-of
 
+    pre-incr!		post-incr!
+    pre-decr!		post-decr!
+    ;;The symbol "\xA6;" is the Unicode vertical broken bar.
+    infix % ? : & ! ^ ~ ++ -- << >> \xA6;
+    factorial
+
 
 ;;;; bindings from (nausicaa language oopp)
 
@@ -1747,24 +1753,6 @@
     <common-conditions>
 
 
-;;;; bindings from (nausicaa language increments)
-
-    incr!		decr!
-    pre-incr!		post-incr!
-    pre-decr!		post-decr!
-    $incr!		$decr!
-    $pre-incr!		$post-incr!
-    $pre-decr!		$post-decr!
-
-;;;; bindings from (nausicaa language infix)
-    infix
-    % ? :
-    && !! ^^ ~~
-    ++ --
-    & ! ^ ~
-    << >>
-    fx& fx! fx^ fx~ fx<< fx>>
-
 ;;;; bindings from (nausicaa language simple-match)
     match
 
@@ -1808,16 +1796,12 @@
 		       make-rectangular make-polar complex-conjugate
 
 		       ;; redefined by input/output
-		       display write
-
-		       ;; redefined by infix
-		       infix)
+		       display write)
 	    expand run)
     (for (nausicaa mehve language numerics predicates (0 4))		expand run)
     (for (nausicaa mehve language numerics arithmetics (0 4))		expand run)
     (for (nausicaa mehve language numerics parts (0 4))			expand run)
     (for (nausicaa mehve language numerics transcendental (0 4))	expand run)
-    (for (nausicaa mehve language infix (0 4))				expand run)
     (for (nausicaa mehve language input-output (0 4))			expand run))
 
 

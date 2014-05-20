@@ -66,6 +66,8 @@
     dispatch-union :generator-proc)
   (import (rnrs)
     (rnrs r5rs)
+    (only (vicare)
+	  : define-fluid-override)
     (srfi :39 parameters))
 
 
@@ -829,7 +831,7 @@
       (error ':-dispatch-set! "not a procedure" dispatch))
   (set! :-dispatch dispatch))
 
-(define-syntax :
+(define-fluid-override :
   (syntax-rules (index)
     ((: cc var (index i) arg1 arg ...)
      (:dispatched cc var (index i) :-dispatch arg1 arg ...) )

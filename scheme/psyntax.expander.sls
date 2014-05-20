@@ -6399,7 +6399,7 @@
   ;;   (psyntax system $all)
   ;;
   ;;create a fresh identifier that maps only the symbol to its label in that library.
-  ;;This function is  similar to SCHEME-STX, but it does  no create fresh identifiers
+  ;;This function is similar to SCHEME-STX,  but it does not create fresh identifiers
   ;;for non-core-primitive symbols.
   ;;
   (or (getprop sym system-id-gensym)
