@@ -267,6 +267,13 @@
 
   #f)
 
+(let ()
+  (define (noargs)
+    1)
+  (check (infix noargs())		=> 1)
+  (check (infix 2 + noargs() + 3)	=> 6)
+  (values))
+
 (check (infix sin (1.1))		=> (sin 1.1))
 
 (check (infix cos (sin (1.1)))		=> (cos (sin 1.1)))
@@ -294,6 +301,14 @@
 
 
 ;;;; if-then-else
+
+(check
+    (infix 1 > 2 ? 3 + 4 : 5 * 6)
+  => (if (> 1 2) (+ 3 4) (* 5 6)))
+
+(check
+    (infix 1 > 2 ? 3 + 4 : 5 * 6)
+  => (if (> 1 2) (+ 3 4) (* 5 6)))
 
 (let ((a 1) (b 2) (c 3))
 

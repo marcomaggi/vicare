@@ -1852,30 +1852,45 @@ Usage examples:
 @subsection Infix to prefix transformer
 
 
-@value{PRJNAME} provides the @func{infix} macro which converts the
-traditional infix notation for expressions to the equivalent Scheme's
-prefix notation.  @func{infix} expands to a prefix expression to be
-evaluated at runtime, in the lexical context of the macro use; as a
-special case @code{(infix)} is equivalent to @code{(values)}.
-
-The macro allows us to evaluate forms like:
+The @func{infix} macro which converts the traditional infix notation for
+mathematical expressions to the equivalent Scheme's prefix notation.
+@func{infix} expands to a prefix expression to be evaluated at
+run--time, in the lexical context of the macro use; as a special case
+@code{(infix)} is equivalent to @code{(values)}.  The macro allows us to
+evaluate forms like:
 
 @example
-(let ((a 1) (b 2) (c 3))
+(infix atan(1, 2))      @expansion{} (atan 1 2)
+(infix 1 + 2 + 3)       @expansion{} (+ (+ 1 2) 3)
+(infix 1 + 2 * 3)       @expansion{} (+ 1 (* 2 3))
+(infix (1 + 2) * 3)     @expansion{} (* (+ 1 2) 3)
 
-  (infix cos (a) * tan (b) / c)
-  @expansion{} (/ (* (cos a) (tan b)) c)
+(infix 2 expt 3 expt 4) @expansion{} (expt 2 (expt 3 4))
 
-  (infix (cos (a) * tan (b) / c))
-  @expansion{} (/ (* (cos a) (tan b)) c)
+(infix - 5)             @expansion{} (- 5)
+(infix + 5)             @expansion{} (+ 5)
+(infix 5 !)             @expansion{} (factorial 5)
 
-  (infix a ? b : c)
-  @expansion{} (if a b c)
+(infix 1 > 2 ? 3 + 4 : 5 * 6)
+@expansion{} (if (> 1 2) (+ 3 4) (* 5 6))
 
- #f)
+(define a 1)
+(define b 2)
+(define c 3)
+(infix cos(a) * tan(b) / c)
+@expansion{} (/ (* (cos a) (tan b)) c)
 @end example
 
-Some interpretation rules:
+@menu
+* iklib syntaxes infix syntax:: Notes on the supported syntax.
+@end menu
+
+@c page
+@node iklib syntaxes infix syntax
+@subsubsection Notes on the supported syntax
+
+
+Some expression syntax interpretation rules:
 
 @itemize
 @item
@@ -2045,19 +2060,49 @@ references; if an identifier is followed by a list, it is a function
 call.
 
 @item
-Function calls with one or more arguments require the arguments to be
-grouped in a list; there is no special separator in the list of
-arguments.
+Procedure application requires the arguments to be grouped in a list,
+using the comma as separator.
 
 @example
 (define (fun a b c)
   (+ a b c))
 
-(infix fun (1 2 3)) @expansion{} (fun 1 2 3)
+(infix fun (1, 2, 3)) @expansion{} (fun 1 2 3)
 @end example
 
-Notice that grouping the function arguments in a list is a requirement
-of the infix expression grammar.
+@quotation
+@strong{NOTE} The Scheme reader transforms the sequence:
+
+@example
+, @meta{form}
+@end example
+
+@noindent
+into:
+
+@example
+(unsyntax @meta{form})
+@end example
+
+@noindent
+so the list of arguments is:
+
+@example
+( @metai{arg} (unsyntax @meta{arg}) ... )
+@end example
+
+@rnrs{6} does not define the comma to be a delimiter, so writing:
+
+@example
+func (@metai{arg}, @meta{arg}, ...)
+@end example
+
+@noindent
+with no space between the @meta{arg} and the comma is a syntax error in
+strict @rnrs{6} implementations.  @value{PRJNAME} extends the reader to
+handle the comma as a delimiter, so the above expression is valid in the
+@func{infix} syntax.
+@end quotation
 
 @item
 Numbers and all the other values are just put there as operands.

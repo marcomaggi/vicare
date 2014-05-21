@@ -12,7 +12,8 @@
 ;;;	parser as exposed in:
 ;;;
 ;;;        Pratt, Vaughan.  "Top Down  Operator Precedence".  Massachussets Institute
-;;;        of Technology.
+;;;        of Technology.  Proceedings of the 1st Annual ACM SIGACT-SIGPLAN Symposium
+;;;        on Principles of Programming Languages (1973).
 ;;;
 ;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -107,9 +108,9 @@
 
 (define (flatten stx synner)
   ;;Given a syntax  object STX representing an input expression:  decompose it into a
-  ;;flat list  of raw tokens  and return  the list.  We  expect the list  to contain:
-  ;;atoms  as  defined  by  the  function ATOM?;  identifiers;  the  characters  open
-  ;;parenthesis, close parenthesis and comma.
+  ;;flat list  of raw tokens and  return the list  holding the raw tokens  in reverse
+  ;;order.  We expect  the list to contain:  atoms as defined by  the function ATOM?;
+  ;;identifiers; the characters open parenthesis, close parenthesis and comma.
   ;;
   (syntax-match stx (_ quote unquote)
     (()	'())
@@ -120,11 +121,23 @@
 	     (list #\,)))
     ((?item* ...)
      (cons #\)
-	   (fold-left (lambda (knil item)
-			(let ((R (flatten item synner)))
-			  (if (list? R)
-			      (append R knil)
-			    (cons R knil))))
+	   (fold-left
+	       (lambda (knil item)
+		 (syntax-match item ()
+		   ;;This clause is needed to  correctly handle the case of procedure
+		   ;;application with no arguments.  Examples:
+		   ;;
+		   ;;   (infix noargs())
+		   ;;   (infix 2 + noargs() + 3)
+		   ;;
+		   ;;in which the "()" must be lexed as the two tokens #\( and #\).
+		   (()
+		    (append '(#\) #\() knil))
+		   (_
+		    (let ((R (flatten item synner)))
+		      (if (list? R)
+			  (append R knil)
+			(cons R knil))))))
 	     (list #\()
 	     (syntax->list ?item*))))
     (?id
@@ -869,6 +882,10 @@
 	     (end-of-input-handler))
 	    (else
 	     (synner "internal error: invalid object from lexer" token)))))
+
+  (unless (identifier? left-semantic-value)
+    (synner "expected identifier as left operand in procedure application"
+	    left-semantic-value))
 
   ;;First we expect a closed parenthesis or an argument.
   (let ((token (lexer 'lookahead)))
