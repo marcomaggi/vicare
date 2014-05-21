@@ -1883,6 +1883,7 @@ evaluate forms like:
 
 @menu
 * iklib syntaxes infix syntax:: Notes on the supported syntax.
+* iklib syntaxes infix prec::   Operators precedence.
 @end menu
 
 @c page
@@ -1894,8 +1895,189 @@ Some expression syntax interpretation rules:
 
 @itemize
 @item
-Any Scheme value can be element of the input form.
+Any Scheme value can be element of the input form; numbers and all the
+other values are just put there as operands.
 
+@example
+#!vicare
+(infix list("ciao", 'hello, '#ve(ascii "salut")))
+@result{} ("ciao" hello #ve(ascii "salut"))
+@end example
+
+@item
+The following bound identifiers exported by @library{vicare} are
+interpreted as binary infix operators:
+
+@example
++ - * / div div0 mod mod0 expt
+fl+ fl- fl* fl/ flexpt
+fx+ fx- fx* fxdiv fxdiv0 fxmod fxmod0
+< > <= >= = !=
+fx<? fx>? fx<=? fx>=? fx=?
+fl<? fl>? fl<=? fl>=? fl=?
+eq? eqv? equal?
+and or xor
+bitwise-and bitwise-ior bitwise-xor
+bitwise-arithmetic-shift-left
+bitwise-arithmetic-shift-right
+fxand fxior fxxor
+fxarithmetic-shift-left
+fxarithmetic-shift-right
+@end example
+
+@noindent
+in addition the following bound identifiers exported by @library{vicare}
+are interpreted as aliases of binary infix operators:
+
+@example
+%       @expansion{} mod
+&       @expansion{} bitwise-and
+\xA6;   @expansion{} bitwise-ior
+^       @expansion{} bitwise-xor
+<<      @expansion{} bitwise-arithmetic-shift-left
+>>      @expansion{} bitwise-arithmetic-shift-right
+@end example
+
+@noindent
+the symbol @samp{\xA6;} is the Unicode vertical broken bar.
+
+@item
+The following bound identifiers exported by @library{vicare} are
+interpreted as unary prefix operators:
+
+@example
++ - ++ --
+fx+ fx- fl+ fl-
+not bitwise-not fxnot
+@end example
+
+@noindent
+in addition the following bound identifiers exported by @library{vicare}
+are interpreted as aliases of unary prefix operators:
+
+@example
+~       @expansion{} bitwise-not
+@end example
+
+@item
+The following bound identifiers exported by @library{vicare} are
+interpreted as unary postfix operators:
+
+@example
+++ -- !
+@end example
+
+@item
+Almost all the binary infix operators are left--associative with the
+exception of @func{expt} and @func{flexpt} which are right--associative:
+
+@example
+;; left-associative
+(infix 10 - 5 - 3)              @expansion{} (- (- 10 5) 3)
+(infix 10 - 5 - 3)              @expansion{} (- 10 5 3)
+(infix 10 / 5 / 3)              @expansion{} (/ (/ 10 5) 3)
+(infix 10 / 5 / 3)              @expansion{} (/ 10 5 3)
+
+;; right-associative
+(infix 10 expt 5 expt 3)        @expansion{} (expt 10 (expt 5 3))
+@end example
+
+@item
+The identifiers @func{++} and @func{--} are unary operators that can be
+applied to expressions both in prefix and postfix positions.  They
+expand as follows:
+
+@example
+#!vicare
+(infix ++ X)            @expansion{} (pre-incr! X)
+(infix -- X)            @expansion{} (pre-decr! X)
+(infix X ++)            @expansion{} (post-incr! X)
+(infix X --)            @expansion{} (post-decr! X)
+@end example
+
+@noindent
+where @func{pre-incr!}, @func{pre-decr!}, @func{post-incr!} and
+@func{post-decr!} are the bindings exported by @library{vicare}.
+
+@item
+The ternary conditional operator involves the identifiers @func{?}  and
+@func{:}.
+
+@example
+(infix 1 > 2 ? 3 + 4 : 5 * 6)
+@expansion{} (if (> 1 2) (+ 3 4) (* 5 6))
+@end example
+
+@item
+Identifiers which are not operators are interpreted as variable
+references.
+
+@item
+If an identifier is followed by a left parenthesis: it is interpreted as
+the binding of a procedure in a procedure application.  Procedure
+application requires the arguments to be grouped in a list, using the
+comma as separator.
+
+@example
+(define (fun a b c)
+  (+ a b c))
+
+(infix fun (1, 2, 3))   @expansion{} (fun 1 2 3)
+@end example
+
+@quotation
+@strong{NOTE} The Scheme reader transforms the sequence:
+
+@example
+, @meta{form}
+@end example
+
+@noindent
+into:
+
+@example
+(unsyntax @meta{form})
+@end example
+
+@noindent
+so the list of arguments is:
+
+@example
+( @metai{arg} (unsyntax @meta{arg}) ... )
+@end example
+
+@rnrs{6} does not define the comma to be a delimiter, so writing:
+
+@example
+func (@metai{arg}, @meta{arg}, ...)
+@end example
+
+@noindent
+with no space between the @meta{arg} and the comma is a syntax error in
+strict @rnrs{6} implementations.  @value{PRJNAME} extends the reader to
+handle the comma as a delimiter, so the above expression is valid in the
+@func{infix} syntax.
+@end quotation
+
+@item
+The identifiers @func{quote}, @func{quasiquote}, @func{syntax} and
+@func{quasisyntax} are not subject to infix to prefix conversion; the
+use of such syntaxes just expands to the prefix object:
+
+@example
+(infix (quote       ciao))  @expansion{} (quote ciao)
+(infix (quasiquote  ciao))  @expansion{} (quasiquote ciao)
+(infix (syntax      ciao))  @expansion{} (syntax ciao)
+(infix (quasisyntax ciao))  @expansion{} (quasisyntax ciao)
+@end example
+@end itemize
+
+@c page
+@node iklib syntaxes infix prec
+@subsubsection Operators precedence
+
+
+@itemize
 @item
 The following infix operators are supported; in order of descending
 precedence from top to bottom, operators on the same line have equal
@@ -1921,23 +2103,6 @@ remember that the Scheme comparison operators are meant to return a
 boolean value, rather than a number object.  @func{xor} is the binding
 exported by @library{vicare}.  @func{++} and @func{--} are the
 bindings exported by @library{vicare language-extensions increments}.
-
-@item
-All the operators are left--associative with the exception of
-@func{expt} which is right--associative and of the unary @func{+},
-@func{-}, @func{++}, @func{--}, @func{not} and @func{bitwise-not}
-which are non--associative:
-
-@example
-;; left-associative
-(infix 10 - 5 - 3) @expansion{} (- (- 10 5) 3)
-(infix 10 - 5 - 3) @expansion{} (- 10 5 3)
-(infix 10 / 5 / 3) @expansion{} (/ (/ 10 5) 3)
-(infix 10 / 5 / 3) @expansion{} (/ 10 5 3)
-
-;; right-associative
-(infix 10 expt 5 expt 3) @expansion{} (expt 10 (expt 5 3))
-@end example
 
 @item
 The following operators for fixnums are supported with the same
@@ -1993,174 +2158,7 @@ All the operators are left--associative with the exception of
 (infix 10 expt 5 expt 3)          @expansion{} (expt 10 (expt 5 3))
 (infix 10. flexpt 5. flexpt 3.)   @expansion{} (flexpt 10. (flexpt 5. 3.))
 @end example
-
-@item
-@func{++} and @func{--} are unary operators that can be applied to
-expressions both in prefix and suffix positions.  @library{vicare
-language-extensions infix} exports the identifiers @func{++} and
-@func{--} as aliases for @func{++} and @func{--}; such aliases are
-invalid in @code{#!r6rs} mode, but are allowed by the reader when in
-@code{#!vicare} mode.
-
-When applied in prefix position to an identifier, @func{++} expands
-to:
-
-@example
-(infix ++ @meta{id})
-@expansion{} (begin (set! @meta{id} (+ @meta{id} 1)) @meta{id})
-@end example
-
-@noindent
-and @func{--} expands to:
-
-@example
-(infix -- @meta{id})
-@expansion{} (begin (set! @meta{id} (- @meta{id} 1)) @meta{id})
-@end example
-
-When applied in suffix position to an identifier, @func{++} expands
-to:
-
-@example
-(infix @meta{id} ++)
-@expansion{} (let ((v @meta{id})) (set! @meta{id} (+ @meta{id} 1)) v)
-@end example
-
-@noindent
-and @func{--} expands to:
-
-@example
-(infix @meta{id} --)
-@expansion{} (let ((v @meta{id})) (set! @meta{id} (- @meta{id} 1)) v)
-@end example
-
-When applied to a non--identifier expression, both in prefix and suffix
-position, @func{++} expands to:
-
-@example
-(infix ++ @meta{expr}) @expansion{} (+ @meta{expr} 1)
-(infix @meta{expr} ++) @expansion{} (+ @meta{expr} 1)
-@end example
-
-@noindent
-and @func{--} expands to:
-
-@example
-(infix -- @meta{expr}) @expansion{} (- @meta{expr} 1)
-(infix @meta{expr} --) @expansion{} (- @meta{expr} 1)
-@end example
-
-@item
-The if-then-else statement involves the identifiers @func{?}  and
-@func{:}.  This statement has the least precedence of all.
-
-@item
-Identifiers which are not operators are interpreted as variable
-references; if an identifier is followed by a list, it is a function
-call.
-
-@item
-Procedure application requires the arguments to be grouped in a list,
-using the comma as separator.
-
-@example
-(define (fun a b c)
-  (+ a b c))
-
-(infix fun (1, 2, 3)) @expansion{} (fun 1 2 3)
-@end example
-
-@quotation
-@strong{NOTE} The Scheme reader transforms the sequence:
-
-@example
-, @meta{form}
-@end example
-
-@noindent
-into:
-
-@example
-(unsyntax @meta{form})
-@end example
-
-@noindent
-so the list of arguments is:
-
-@example
-( @metai{arg} (unsyntax @meta{arg}) ... )
-@end example
-
-@rnrs{6} does not define the comma to be a delimiter, so writing:
-
-@example
-func (@metai{arg}, @meta{arg}, ...)
-@end example
-
-@noindent
-with no space between the @meta{arg} and the comma is a syntax error in
-strict @rnrs{6} implementations.  @value{PRJNAME} extends the reader to
-handle the comma as a delimiter, so the above expression is valid in the
-@func{infix} syntax.
-@end quotation
-
-@item
-Numbers and all the other values are just put there as operands.
-
-@item
-The identifiers @func{quote}, @func{quasiquote}, @func{syntax} and
-@func{quasisyntax} are not subject to infix to prefix conversion; the
-use of such syntaxes just expands to the prefix object:
-
-@example
-(infix (quote       ciao))  @expansion{} (quote ciao)
-(infix (quasiquote  ciao))  @expansion{} (quasiquote ciao)
-(infix (syntax      ciao))  @expansion{} (syntax ciao)
-(infix (quasisyntax ciao))  @expansion{} (quasisyntax ciao)
-@end example
-
-@item
-The following binding aliases are exported by the library:
-@findex &&
-@findex !!
-@findex ^^
-@findex ~~
-@findex %
-@findex &
-@findex !
-@findex ^
-@findex ~
-@findex <<
-@findex >>
-@findex fx&
-@findex fx!
-@findex fx^
-@findex fx~
-@findex fx<<
-@findex fx>>
-
-@example
-and                               -> &&
-or                                -> !!
-xor                               -> ^^
-not                               -> ~~
-mod                               -> %
-bitwise-and                       -> &
-bitwise-ior                       -> !
-bitwise-xor                       -> ^
-bitwise-not                       -> ~
-bitwise-arithmetic-shift-left     -> <<
-bitwise-arithmetic-shift-right    -> >>
-fxand                             -> fx&
-fxior                             -> fx!
-fxxor                             -> fx^
-fxnot                             -> fx~
-fxarithmetic-shift-left           -> fx<<
-fxarithmetic-shift-right          -> fx>>
-@end example
 @end itemize
-
-
 
 @c page
 @node iklib syntaxes increments

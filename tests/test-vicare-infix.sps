@@ -283,6 +283,14 @@
     (infix 1 + 23e-45 + 0.006789e2 * (4.113 + +23i) / sin (0.5) + atan (0.1, 0.2))
   => (+ (+ (+ 1 23e-45) (/ (* 0.006789e2 (+ 4.113 +23i)) (sin 0.5))) (atan 0.1 0.2)))
 
+(let ()
+  (define a 1.1)
+  (define b 2.2)
+  (define c 3.3)
+  (check
+      (infix cos(a) * tan(b) / c)
+    => (/ (* (cos a) (tan b)) c)))
+
 
 ;;;; variables
 
@@ -590,6 +598,14 @@
 (check (infix 1 ¦ 2 << 3)	=> (bitwise-ior 1 (bitwise-arithmetic-shift-left 2 3)))
 (check (infix 2 << 3 & 1)	=> (bitwise-and (bitwise-arithmetic-shift-left 2 3) 1))
 (check (infix 2 << 3 ¦ 1)	=> (bitwise-ior (bitwise-arithmetic-shift-left 2 3) 1))
+
+
+;;;; misc
+
+(check
+    (infix list("ciao", 'hello, '#ve(ascii "salut")))
+  => '("ciao" hello #ve(ascii "salut")))
+
 
 
 ;;;; done

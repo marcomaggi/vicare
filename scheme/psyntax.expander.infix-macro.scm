@@ -112,9 +112,15 @@
   ;;order.  We expect  the list to contain:  atoms as defined by  the function ATOM?;
   ;;identifiers; the characters open parenthesis, close parenthesis and comma.
   ;;
-  (syntax-match stx (_ quote unquote)
+  (syntax-match stx (_ unquote quote quasiquote syntax quasisyntax)
     (()	'())
     ((quote . ?stuff)
+     stx)
+    ((quasiquote . ?stuff)
+     stx)
+    ((syntax . ?stuff)
+     stx)
+    ((quasisyntax . ?stuff)
      stx)
     ((unquote . ?stuff)
      (append (flatten ?stuff synner)
