@@ -28,8 +28,11 @@
 
 
 #!r6rs
-(import (except (vicare)
+(import (except (rnrs (6))
 		read-line)
+  (rnrs mutable-strings (6))
+  (only (vicare)
+	unwind-protect)
   (srfi :42)
   (vicare checks))
 
