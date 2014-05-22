@@ -953,7 +953,6 @@
 ;;;
     (apropos					v $language)
     (current-primitive-locations		$boot)
-    (boot-library-expand			$boot)
     (current-library-collection			$boot)
     (library-name				$boot $libraries)
     (find-library-by-name			$boot $libraries)
@@ -3980,7 +3979,7 @@
     ;;Notice that, from  the results of library expansion, we  discard all the macros
     ;;and all the library descriptors representing the library dependencies.
     ;;
-    (receive (name* invoke-code* subst env)
+    (receive (name* invoke-code* export-subst export-env)
 	(make-init-code)
       (debug-printf "Expanding:\n")
       (for-each (lambda (file)
@@ -3989,15 +3988,19 @@
 		  ;;effects.
 		  (load (string-append src-dir "/" file)
 			(lambda (library-sexp)
-			  (receive (name code export-subst export-env)
+			  (receive (name code subst env)
 			      (boot-library-expand library-sexp)
+			    ;; (when (equal? name '(ikarus flonum-conversion))
+			    ;;   (debug-print 'invoke-code  code)
+			    ;;   (debug-print 'export-subst subst)
+			    ;;   (debug-print 'export-env   env))
 			    (set! name*        (cons name name*))
 			    (set! invoke-code* (cons code invoke-code*))
-			    (set! subst        (append export-subst subst))
-			    (set! env          (append export-env   env))))))
+			    (set! export-subst (append subst export-subst))
+			    (set! export-env   (append env   export-env))))))
 	files)
       (receive (export-subst export-env export-primlocs)
-	  (make-system-data (prune-subst subst env) env)
+	  (make-system-data (prune-subst export-subst export-env) export-env)
 	(receive (primlocs-lib-name primlocs-lib-code)
 	    (build-system-library export-subst export-env export-primlocs)
 	  (values (reverse (cons* (car name*)        primlocs-lib-name (cdr name*)))
@@ -4299,6 +4302,38 @@
       (receive (name invoke-code empty-subst empty-env)
 	  (boot-library-expand library-sexp)
 	(values name invoke-code)))
+
+    (define (boot-library-expand library-sexp)
+      ;;This function is used to expand the libraries composing the boot image.  The
+      ;;LIBRARY form in the given symbolic expression is fully expanded and the
+      ;;library is installed in the internal collection.
+      ;;
+      ;;When bootstrapping the system: the visit-code is not (and cannot be) used in
+      ;;the "next" system, so we drop it.
+      ;;
+      ;;The returned values are:
+      ;;
+      ;;LIBNAME -
+      ;;   A R6RS library name.
+      ;;
+      ;;INVOKE-CODE -
+      ;;    A list  of symbolic  expressions  representing the  body of  the
+      ;;   library.
+      ;;
+      ;;EXPORT-SUBST -
+      ;;   A subst selecting the bindings to be exported from the ones in EXPORT-ENV.
+      ;;
+      ;;EXPORT-ENV -
+      ;;   Represents the global bindings defined by the library body.
+      ;;
+      (receive (uid libname
+		    imp-libdesc* vis-libdesc* inv-libdesc*
+		    invoke-code visit-code
+		    export-subst export-env
+		    guard-code guard-libdesc*
+		    option*)
+	  (expand-library library-sexp)
+	(values libname invoke-code export-subst export-env)))
 
     (define (build-install-library-form legend-entry export-subst export-env)
       ;;Return a sexp representing a call to the function INSTALL-LIBRARY.

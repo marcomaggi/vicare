@@ -1113,7 +1113,7 @@
     expand-form-to-core-language
     expand-top-level			expand-top-level->sexp
     expand-library			expand-library->sexp
-    expand-r6rs-top-level-make-evaluator boot-library-expand
+    expand-r6rs-top-level-make-evaluator
 
     make-variable-transformer		variable-transformer?
     variable-transformer-procedure
@@ -2177,39 +2177,6 @@
 
 
 ;;;; R6RS library expander
-
-(define (boot-library-expand library-sexp)
-  ;;This  function is  used to  expand the  libraries composing  the boot  image; see
-  ;;"makefile.sps" for  details on  how it is  used.  The LIBRARY  form in  the given
-  ;;symbolic  expression is  fully  expanded  and the  library  is  installed in  the
-  ;;internal collection.
-  ;;
-  ;;When bootstrapping  the system,  visit-code is  not (and cannot  be) used  in the
-  ;;"next" system.  So, we drop it.
-  ;;
-  ;;The returned values are:
-  ;;
-  ;;LIBNAME -
-  ;;   A R6RS library name.
-  ;;
-  ;;INVOKE-CODE -
-  ;;    A list  of symbolic  expressions  representing the  body of  the
-  ;;   library.
-  ;;
-  ;;EXPORT-SUBST -
-  ;;   A subst selecting the bindings to be exported from the ones in EXPORT-ENV.
-  ;;
-  ;;EXPORT-ENV -
-  ;;   Represents the global bindings defined by the library body.
-  ;;
-  (receive (uid libname
-		imp-libdesc* vis-libdesc* inv-libdesc*
-		invoke-code visit-code
-		export-subst export-env
-		guard-code guard-libdesc*
-		option*)
-      (expand-library library-sexp)
-    (values libname invoke-code export-subst export-env)))
 
 (module (expand-library)
   ;;EXPAND-LIBRARY  is  the  default  library  expander;  it  expands  a
