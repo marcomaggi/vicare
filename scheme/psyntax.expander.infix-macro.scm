@@ -161,92 +161,117 @@
   ;;"<token>" describing it.
   ;;
   (cond ((identifier? obj)
-	 (cond
-	  ((free-id=? obj ID:+)			PLUS-TOKEN)
-	  ((free-id=? obj ID:-)			MINUS-TOKEN)
-	  ((free-id=? obj ID:*)			MUL-TOKEN)
-	  ((free-id=? obj ID:/)			DIV-TOKEN)
-	  ((free-id=? obj ID:++)		INCR-TOKEN)
-	  ((free-id=? obj ID:--)		DECR-TOKEN)
-	  ((free-id=? obj ID:div)		IDIV-TOKEN)
-	  ((free-id=? obj ID:mod)		IMOD-TOKEN)
-	  ((free-id=? obj ID:%)			IMOD-TOKEN)
-	  ((free-id=? obj ID:div0)		IDIV0-TOKEN)
-	  ((free-id=? obj ID:mod0)		IMOD0-TOKEN)
-	  ((free-id=? obj ID:expt)		EXPT-TOKEN)
-	  ((free-id=? obj ID:!)			FACTORIAL-TOKEN)
+	 (case (syntax->datum obj)
+	   ((==)	EQUAL-TO-TOKEN)
+	   ((<>)	NOT-EQUAL-TO-TOKEN)
+	   ((≠)		NOT-EQUAL-TO-TOKEN)
+					;Unicode symbol "\x2260;".
+	   ((!)		BANG-TOKEN)
+	   ((**)	EXPT-TOKEN)
+	   ((%)		IMOD-TOKEN)
+	   ((×)		MUL-TOKEN)
+					;Unicode symbol "\xD7;".
+	   ((⋅)		MUL-TOKEN)
+					;Unicode symbol "\x22C5;".
 
-	  ((free-id=? obj ID:fx+)		FXPLUS-TOKEN)
-	  ((free-id=? obj ID:fx-)		FXMINUS-TOKEN)
-	  ((free-id=? obj ID:fx*)		FXMUL-TOKEN)
-	  ((free-id=? obj ID:fxdiv)		FXDIV-TOKEN)
-	  ((free-id=? obj ID:fxmod)		FXMOD-TOKEN)
-	  ((free-id=? obj ID:fxdiv0)		FXDIV0-TOKEN)
-	  ((free-id=? obj ID:fxmod0)		FXMOD0-TOKEN)
+	   ((&&)	AND-TOKEN)
+	   ((⏐⏐)	OR-TOKEN)
+					;Symbol "\x23D0;\x23D0;".
+	   ((∧)	AND-TOKEN)
+					;Unicode symbol "\x2227;".
+	   ((∨)	OR-TOKEN)
+					;Unicode symbol "\x2228;".
+	   ((⊻)	XOR-TOKEN)
+					;Unicode symbol "\x22BB;".
+	   ((¬)		NOT-TOKEN)
+					;Unicode symbol "\xAC;".
 
-	  ((free-id=? obj ID:fl+)		FLPLUS-TOKEN)
-	  ((free-id=? obj ID:fl-)		FLMINUS-TOKEN)
-	  ((free-id=? obj ID:fl*)		FLMUL-TOKEN)
-	  ((free-id=? obj ID:fl/)		FLDIV-TOKEN)
-	  ((free-id=? obj ID:flexpt)		FLEXPT-TOKEN)
+	   ((⏐)		BITWISE-IOR-TOKEN)
+					;Unicode symbol "\x23D0;".
 
-	  ((free-id=? obj ID:and)		AND-TOKEN)
-	  ((free-id=? obj ID:or)		OR-TOKEN)
-	  ((free-id=? obj ID:xor)		XOR-TOKEN)
-	  ((free-id=? obj ID:not)		NOT-TOKEN)
+	   ((&)		BITWISE-AND-TOKEN)
+	   ((^)		BITWISE-XOR-TOKEN)
+	   ((~)		BITWISE-NOT-TOKEN)
+	   ((<<)	BITWISE-SHIFT-LEFT-TOKEN)
+	   ((>>)	BITWISE-SHIFT-RIGHT-TOKEN)
 
-	  ((free-id=? obj ID:<)			LESS-THAN-TOKEN)
-	  ((free-id=? obj ID:>)			GREATER-THAN-TOKEN)
-	  ((free-id=? obj ID:<=)		LESS-THAN-EQUAL-TO-TOKEN)
-	  ((free-id=? obj ID:>=)		GREATER-THAN-EQUAL-TO-TOKEN)
-	  ((free-id=? obj ID:=)			EQUAL-TO-TOKEN)
-	  ((free-id=? obj ID:!=)		NOT-EQUAL-TO-TOKEN)
+	   ((?)		QUESTION-MARK-TOKEN)
+	   ((:)		COLON-TOKEN)
+	   (else
+	    (cond
+	     ((free-id=? obj ID:+)			PLUS-TOKEN)
+	     ((free-id=? obj ID:-)			MINUS-TOKEN)
+	     ((free-id=? obj ID:*)			MUL-TOKEN)
+	     ((free-id=? obj ID:/)			DIV-TOKEN)
+	     ((free-id=? obj ID:++)			INCR-TOKEN)
+	     ((free-id=? obj ID:--)			DECR-TOKEN)
+	     ((free-id=? obj ID:div)			IDIV-TOKEN)
+	     ((free-id=? obj ID:mod)			IMOD-TOKEN)
+	     ((free-id=? obj ID:div0)			IDIV0-TOKEN)
+	     ((free-id=? obj ID:mod0)			IMOD0-TOKEN)
+	     ((free-id=? obj ID:expt)			EXPT-TOKEN)
 
-	  ((free-id=? obj ID:fx<?)		FXLESS-THAN-TOKEN)
-	  ((free-id=? obj ID:fx>?)		FXGREATER-THAN-TOKEN)
-	  ((free-id=? obj ID:fx<=?)		FXLESS-THAN-EQUAL-TO-TOKEN)
-	  ((free-id=? obj ID:fx>=?)		FXGREATER-THAN-EQUAL-TO-TOKEN)
-	  ((free-id=? obj ID:fx=?)		FXEQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:fx+)			FXPLUS-TOKEN)
+	     ((free-id=? obj ID:fx-)			FXMINUS-TOKEN)
+	     ((free-id=? obj ID:fx*)			FXMUL-TOKEN)
+	     ((free-id=? obj ID:fxdiv)			FXDIV-TOKEN)
+	     ((free-id=? obj ID:fxmod)			FXMOD-TOKEN)
+	     ((free-id=? obj ID:fxdiv0)			FXDIV0-TOKEN)
+	     ((free-id=? obj ID:fxmod0)			FXMOD0-TOKEN)
 
-	  ((free-id=? obj ID:fl<?)		FLLESS-THAN-TOKEN)
-	  ((free-id=? obj ID:fl>?)		FLGREATER-THAN-TOKEN)
-	  ((free-id=? obj ID:fl<=?)		FLLESS-THAN-EQUAL-TO-TOKEN)
-	  ((free-id=? obj ID:fl>=?)		FLGREATER-THAN-EQUAL-TO-TOKEN)
-	  ((free-id=? obj ID:fl=?)		FLEQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:fl+)			FLPLUS-TOKEN)
+	     ((free-id=? obj ID:fl-)			FLMINUS-TOKEN)
+	     ((free-id=? obj ID:fl*)			FLMUL-TOKEN)
+	     ((free-id=? obj ID:fl/)			FLDIV-TOKEN)
+	     ((free-id=? obj ID:flexpt)			FLEXPT-TOKEN)
 
-	  ((free-id=? obj ID:eq?)		EQ-PRED-TOKEN)
-	  ((free-id=? obj ID:eqv?)		EQV-PRED-TOKEN)
-	  ((free-id=? obj ID:equal?)		EQUAL-PRED-TOKEN)
+	     ((free-id=? obj ID:and)			AND-TOKEN)
+	     ((free-id=? obj ID:or)			OR-TOKEN)
+	     ((free-id=? obj ID:xor)			XOR-TOKEN)
+	     ((free-id=? obj ID:not)			NOT-TOKEN)
 
-	  ((free-id=? obj ID:?)			QUESTION-MARK-TOKEN)
-	  ((free-id=? obj ID::)			COLON-TOKEN)
+	     ((free-id=? obj ID:<)			LESS-THAN-TOKEN)
+	     ((free-id=? obj ID:>)			GREATER-THAN-TOKEN)
+	     ((free-id=? obj ID:<=)			LESS-THAN-EQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:>=)			GREATER-THAN-EQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:=)			EQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:!=)			NOT-EQUAL-TO-TOKEN)
 
-	  ;; bitwise operators
-	  ((free-id=? obj ID:bitwise-and)	BITWISE-AND-TOKEN)
-	  ((free-id=? obj ID:&)			BITWISE-AND-TOKEN)
-	  ((free-id=? obj ID:bitwise-ior)	BITWISE-IOR-TOKEN)
-	  ;;The symbol "\xA6;" is the Unicode vertical broken bar.
-	  ((free-id=? obj ID:\xA6;)		BITWISE-IOR-TOKEN)
-	  ((free-id=? obj ID:bitwise-xor)	BITWISE-XOR-TOKEN)
-	  ((free-id=? obj ID:^)			BITWISE-XOR-TOKEN)
-	  ((free-id=? obj ID:bitwise-not)	BITWISE-NOT-TOKEN)
-	  ((free-id=? obj ID:~)			BITWISE-NOT-TOKEN)
-	  ((free-id=? obj ID:bitwise-arithmetic-shift-left)	BITWISE-SHIFT-LEFT-TOKEN)
-	  ((free-id=? obj ID:bitwise-arithmetic-shift-right)	BITWISE-SHIFT-RIGHT-TOKEN)
-	  ((free-id=? obj ID:<<)		BITWISE-SHIFT-LEFT-TOKEN)
-	  ((free-id=? obj ID:>>)		BITWISE-SHIFT-RIGHT-TOKEN)
+	     ((free-id=? obj ID:fx<?)			FXLESS-THAN-TOKEN)
+	     ((free-id=? obj ID:fx>?)			FXGREATER-THAN-TOKEN)
+	     ((free-id=? obj ID:fx<=?)			FXLESS-THAN-EQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:fx>=?)			FXGREATER-THAN-EQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:fx=?)			FXEQUAL-TO-TOKEN)
 
-	  ;; bitwise operators
-	  ((free-id=? obj ID:fxand)		FXAND-TOKEN)
-	  ((free-id=? obj ID:fxior)		FXIOR-TOKEN)
-	  ((free-id=? obj ID:fxxor)		FXXOR-TOKEN)
-	  ((free-id=? obj ID:fxnot)		FXNOT-TOKEN)
-	  ((free-id=? obj ID:fxarithmetic-shift-left)		FXSHIFT-LEFT-TOKEN)
-	  ((free-id=? obj ID:fxarithmetic-shift-right)		FXSHIFT-RIGHT-TOKEN)
+	     ((free-id=? obj ID:fl<?)			FLLESS-THAN-TOKEN)
+	     ((free-id=? obj ID:fl>?)			FLGREATER-THAN-TOKEN)
+	     ((free-id=? obj ID:fl<=?)			FLLESS-THAN-EQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:fl>=?)			FLGREATER-THAN-EQUAL-TO-TOKEN)
+	     ((free-id=? obj ID:fl=?)			FLEQUAL-TO-TOKEN)
 
-	  (else
-	   ;;It is a variable.
-	   (make-<operand> obj))))
+	     ((free-id=? obj ID:eq?)			EQ-PRED-TOKEN)
+	     ((free-id=? obj ID:eqv?)			EQV-PRED-TOKEN)
+	     ((free-id=? obj ID:equal?)			EQUAL-PRED-TOKEN)
+
+	     ;; bitwise operators
+	     ((free-id=? obj ID:bitwise-and)		BITWISE-AND-TOKEN)
+	     ((free-id=? obj ID:bitwise-ior)		BITWISE-IOR-TOKEN)
+	     ((free-id=? obj ID:bitwise-xor)		BITWISE-XOR-TOKEN)
+	     ((free-id=? obj ID:bitwise-not)		BITWISE-NOT-TOKEN)
+	     ((free-id=? obj ID:bitwise-arithmetic-shift-left)	BITWISE-SHIFT-LEFT-TOKEN)
+	     ((free-id=? obj ID:bitwise-arithmetic-shift-right)	BITWISE-SHIFT-RIGHT-TOKEN)
+
+	     ;; bitwise operators
+	     ((free-id=? obj ID:fxand)			FXAND-TOKEN)
+	     ((free-id=? obj ID:fxior)			FXIOR-TOKEN)
+	     ((free-id=? obj ID:fxxor)			FXXOR-TOKEN)
+	     ((free-id=? obj ID:fxnot)			FXNOT-TOKEN)
+	     ((free-id=? obj ID:fxarithmetic-shift-left)	FXSHIFT-LEFT-TOKEN)
+	     ((free-id=? obj ID:fxarithmetic-shift-right)	FXSHIFT-RIGHT-TOKEN)
+
+	     (else
+	      ;;It is a variable.
+	      (make-<operand> obj))))))
 	((char? obj)
 	 (cond ((char=? obj #\()		LEFT-PAREN-TOKEN)
 	       ((char=? obj #\))		RIGHT-PAREN-TOKEN)
@@ -1002,13 +1027,14 @@
 (define-constant MINIMUM-BINDING-POWER			0)
 (define-constant INFIX-LOGIC-BINDING-POWER		300)
 (define-constant PREFIX-LOGIC-BINDING-POWER		350)
+(define-constant BANG-RIGHT-BINDING-POWER		PREFIX-LOGIC-BINDING-POWER)
 (define-constant COMPARISON-BINDING-POWER		400)
 (define-constant PLUS/MINUS-BINDING-POWER		500)
 (define-constant MUL/DIV-BINDING-POWER			600)
 (define-constant MOD-BINDING-POWER			650)
 (define-constant EXPT-RIGHT-BINDING-POWER		700)
 (define-constant EXPT-LEFT-BINDING-POWER		800)
-(define-constant FACTORIAL-RIGHT-BINDING-POWER		900)
+(define-constant FACTORIAL-LEFT-BINDING-POWER		900)
 (define-constant INCR/DECR-BINDING-POWER		1000)
 (define-constant INFIX-BITWISE-BINDING-POWER		1300)
 (define-constant PREFIX-BITWISE-BINDING-POWER		1350)
@@ -1091,18 +1117,6 @@
 (define-memoized ID:fxarithmetic-shift-left	(core-prim-id 'fxarithmetic-shift-left))
 (define-memoized ID:fxarithmetic-shift-right	(core-prim-id 'fxarithmetic-shift-right))
 
-(define-memoized ID:?				(core-prim-id '?))
-(define-memoized ID::				(core-prim-id ':))
-(define-memoized ID:!				(core-prim-id '!))
-(define-memoized ID:%				(core-prim-id '%))
-(define-memoized ID:&				(core-prim-id '&))
-;;The symbol "\xA6;" is the Unicode vertical broken bar.
-(define-memoized ID:\xA6;			(core-prim-id '\xA6;))
-(define-memoized ID:^				(core-prim-id '^))
-(define-memoized ID:~				(core-prim-id '~))
-(define-memoized ID:<<				(core-prim-id '<<))
-(define-memoized ID:>>				(core-prim-id '>>))
-
 
 ;;;; tokens
 
@@ -1130,11 +1144,11 @@
 (define-memoized IMOD0-TOKEN
   (make-<symmetric-left-assoc-infix-operator> ID:mod0 MOD-BINDING-POWER))
 
-(define-memoized FACTORIAL-TOKEN
-  (make-<postfix-operator> ID:factorial FACTORIAL-RIGHT-BINDING-POWER))
-
 (define-memoized EXPT-TOKEN
   (make-<right-assoc-infix-operator> ID:expt EXPT-LEFT-BINDING-POWER EXPT-RIGHT-BINDING-POWER))
+
+(define-memoized BANG-TOKEN
+  (make-<prefix/postfix-operator> ID:not ID:factorial FACTORIAL-LEFT-BINDING-POWER PREFIX-LOGIC-BINDING-POWER))
 
 (define-memoized INCR-TOKEN
   (make-<symmetric-prefix/postfix-operator> ID:pre-incr! ID:post-incr! INCR/DECR-BINDING-POWER))

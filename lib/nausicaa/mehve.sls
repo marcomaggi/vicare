@@ -1573,11 +1573,10 @@
     expansion-of
     visit-code-of
 
+    ++ --
     pre-incr!		post-incr!
     pre-decr!		post-decr!
-    ;;The symbol "\xA6;" is the Unicode vertical broken bar.
-    infix % ? : & ! ^ ~ ++ -- << >> \xA6;
-    factorial
+    infix factorial
 
 
 ;;;; bindings from (nausicaa language oopp)

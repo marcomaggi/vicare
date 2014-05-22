@@ -338,11 +338,6 @@
       (infix a & b)
     => (bitwise-and a b)))
 
-(let ((a #b0101) (b #b1101))
-  (check
-      (infix a ¦ b)
-    => (bitwise-ior a b)))
-
 (let ((a #b0111) (b #b1101))
   (check
       (infix a ^ b)
@@ -561,20 +556,10 @@
 (check (infix 22 & 33 + 11)	=> (+ (bitwise-and 22 33) 11))
 (check (infix 22 & 33 - 11)	=> (- (bitwise-and 22 33) 11))
 
-(check (infix 11 + 22 ¦ 33)	=> (+ 11 (bitwise-ior 22 33)))
-(check (infix 11 - 22 ¦ 33)	=> (- 11 (bitwise-ior 22 33)))
-(check (infix 22 ¦ 33 + 11)	=> (+ (bitwise-ior 22 33) 11))
-(check (infix 22 ¦ 33 - 11)	=> (- (bitwise-ior 22 33) 11))
-
 (check (infix 11 + 22 ^ 33)	=> (+ 11 (bitwise-xor 22 33)))
 (check (infix 11 - 22 ^ 33)	=> (- 11 (bitwise-xor 22 33)))
 (check (infix 22 ^ 33 + 11)	=> (+ (bitwise-xor 22 33) 11))
 (check (infix 22 ^ 33 - 11)	=> (- (bitwise-xor 22 33) 11))
-
-(check (infix 1 & 2 << 3)	=> (bitwise-and 1 (bitwise-arithmetic-shift-left 2 3)))
-(check (infix 1 ¦ 2 << 3)	=> (bitwise-ior 1 (bitwise-arithmetic-shift-left 2 3)))
-(check (infix 2 << 3 & 1)	=> (bitwise-and (bitwise-arithmetic-shift-left 2 3) 1))
-(check (infix 2 << 3 ¦ 1)	=> (bitwise-ior (bitwise-arithmetic-shift-left 2 3) 1))
 
 
 ;;;; done

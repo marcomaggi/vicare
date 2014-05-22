@@ -92,6 +92,14 @@
 (check (infix 1 * (2 * 3))	=> (* 1 (* 2 3)))
 (check (infix 1 * (2 / 3))	=> (* 1 (/ 2 3)))
 
+(check (infix 1 × 1)		=> (* 1 1))
+(check (infix 1 × 2 × 3)	=> (* (* 1 2) 3))
+(check (infix 1 × 2 / 3)	=> (/ (* 1 2) 3))
+(check (infix 1 × (2 × 3))	=> (* 1 (* 2 3)))
+(check (infix 1 × (2 / 3))	=> (* 1 (/ 2 3)))
+
+(check (infix 2 ⋅ 3)		=> (* 2 3))
+
 (check (infix 1 + 2 * 3)	=> (+ 1 (* 2 3)))
 (check (infix 1 - 2 * 3)	=> (- 1 (* 2 3)))
 (check (infix 1 + 2 / 3)	=> (+ 1 (/ 2 3)))
@@ -115,9 +123,12 @@
 (check (infix 1 div 3)		=> (div 1 3))
 (check (infix 1 expt 3)		=> (expt 1 3))
 (check (infix 10 expt 3)	=> (expt 10 3))
+(check (infix 1 ** 3)		=> (expt 1 3))
+(check (infix 10 ** 3)		=> (expt 10 3))
 
 ;; EXPT is right-associative
 (check (infix 10 expt 5 expt 3)	=> (expt 10 (expt 5 3)))
+(check (infix 10 ** 5 ** 3)	=> (expt 10 (expt 5 3)))
 
 (check (infix factorial(5))	=> 120)
 (check (infix 0 !)		=> 1)
@@ -228,8 +239,12 @@
 (check (infix 1 >= 3)		=> (>= 1 3))
 (check (infix 1 = 3)		=> (=  1 3))
 (check (infix 1 = 1)		=> (=  1 1))
+(check (infix 1 == 3)		=> (=  1 3))
+(check (infix 1 == 1)		=> (=  1 1))
 (check (infix 1 != 3)		=> (!= 1 3))
 (check (infix 1 != 1)		=> (!= 1 1))
+(check (infix 1 <> 3)		=> (!= 1 3))
+(check (infix 1 <> 1)		=> (!= 1 1))
 
 (check
     (infix 'a eq? 'a)
@@ -353,6 +368,30 @@
 (check (infix not 3)		=> #f)
 (check (infix not #f)		=> #t)
 
+;;logic symbols
+(check (infix 1 ∧ 3)		=> 3)
+(check (infix #f ∧ 3)		=> #f)
+(check (infix 1 ∧ #f)		=> #f)
+(check (infix 1 ∨ 3)		=> 1)
+(check (infix 1 ∨ #f)		=> 1)
+(check (infix #f ∨ 1)		=> 1)
+(check (infix 1 ⊻ 3)		=> #f)
+(check (infix 1 ⊻ #f)		=> 1)
+(check (infix #f ⊻ 1)		=> 1)
+(check (infix ¬ 3)		=> #f)
+(check (infix ¬ #f)		=> #t)
+
+;;C style symbols
+(check (infix 1 && 3)		=> 3)
+(check (infix #f && 3)		=> #f)
+(check (infix 1 && #f)		=> #f)
+(check (infix 1 ⏐⏐ 3)		=> 1)
+(check (infix 1 ⏐⏐ #f)		=> 1)
+(check (infix #f ⏐⏐ 1)		=> 1)
+(check (infix ! 3)		=> #f)
+(check (infix ! #t)		=> #f)
+(check (infix ! #f)		=> #t)
+
 
 ;;;; bitwise operators
 
@@ -363,7 +402,7 @@
 
 (let ((a #b0101) (b #b1101))
   (check
-      (infix a ¦ b)
+      (infix a ⏐ b)
     => (bitwise-ior a b)))
 
 (let ((a #b0111) (b #b1101))
@@ -584,10 +623,10 @@
 (check (infix 22 & 33 + 11)	=> (+ (bitwise-and 22 33) 11))
 (check (infix 22 & 33 - 11)	=> (- (bitwise-and 22 33) 11))
 
-(check (infix 11 + 22 ¦ 33)	=> (+ 11 (bitwise-ior 22 33)))
-(check (infix 11 - 22 ¦ 33)	=> (- 11 (bitwise-ior 22 33)))
-(check (infix 22 ¦ 33 + 11)	=> (+ (bitwise-ior 22 33) 11))
-(check (infix 22 ¦ 33 - 11)	=> (- (bitwise-ior 22 33) 11))
+(check (infix 11 + 22 ⏐ 33)	=> (+ 11 (bitwise-ior 22 33)))
+(check (infix 11 - 22 ⏐ 33)	=> (- 11 (bitwise-ior 22 33)))
+(check (infix 22 ⏐ 33 + 11)	=> (+ (bitwise-ior 22 33) 11))
+(check (infix 22 ⏐ 33 - 11)	=> (- (bitwise-ior 22 33) 11))
 
 (check (infix 11 + 22 ^ 33)	=> (+ 11 (bitwise-xor 22 33)))
 (check (infix 11 - 22 ^ 33)	=> (- 11 (bitwise-xor 22 33)))
@@ -595,9 +634,9 @@
 (check (infix 22 ^ 33 - 11)	=> (- (bitwise-xor 22 33) 11))
 
 (check (infix 1 & 2 << 3)	=> (bitwise-and 1 (bitwise-arithmetic-shift-left 2 3)))
-(check (infix 1 ¦ 2 << 3)	=> (bitwise-ior 1 (bitwise-arithmetic-shift-left 2 3)))
+(check (infix 1 ⏐ 2 << 3)	=> (bitwise-ior 1 (bitwise-arithmetic-shift-left 2 3)))
 (check (infix 2 << 3 & 1)	=> (bitwise-and (bitwise-arithmetic-shift-left 2 3) 1))
-(check (infix 2 << 3 ¦ 1)	=> (bitwise-ior (bitwise-arithmetic-shift-left 2 3) 1))
+(check (infix 2 << 3 ⏐ 1)	=> (bitwise-ior (bitwise-arithmetic-shift-left 2 3) 1))
 
 
 ;;;; misc

@@ -1926,20 +1926,54 @@ fxarithmetic-shift-right
 @end example
 
 @noindent
-in addition the following bound identifiers exported by @library{vicare}
-are interpreted as aliases of binary infix operators:
+in addition the following identifiers are recognised by their symbol
+name and interpreted as aliases of binary infix operators:
 
 @example
-%       @expansion{} mod
-&       @expansion{} bitwise-and
-\xA6;   @expansion{} bitwise-ior
-^       @expansion{} bitwise-xor
-<<      @expansion{} bitwise-arithmetic-shift-left
->>      @expansion{} bitwise-arithmetic-shift-right
+&&              @expansion{} and
+\x23D0;\x23D0;  @expansion{} or
+\x00AC;         @expansion{} not
+\x2227;         @expansion{} and
+\x2228;         @expansion{} or
+\x22BB;         @expansion{} xor
+==              @expansion{} =
+<>              @expansion{} !=
+\x00D7;         @expansion{} *
+\x22C5;         @expansion{} *
+**              @expansion{} expt
+%               @expansion{} mod
+&               @expansion{} bitwise-and
+\x23D0;         @expansion{} bitwise-ior
+^               @expansion{} bitwise-xor
+<<              @expansion{} bitwise-arithmetic-shift-left
+>>              @expansion{} bitwise-arithmetic-shift-right
 @end example
 
 @noindent
-the symbol @samp{\xA6;} is the Unicode vertical broken bar.
+where the symbols with escape sequences are:
+
+@table @samp
+@item \x00AC;
+Unicode character not sign.
+
+@item \x00D7;
+Unicode character times.
+
+@item \x2227;
+Unicode character logical and.
+
+@item \x2228;
+Unicode character logical or.
+
+@item \x22BB;
+Unicode character xor.
+
+@item \x22C5;
+Unicode character dot operator.
+
+@item \x23D0;
+Unicode character vertical bar extension.
+@end table
 
 @item
 The following bound identifiers exported by @library{vicare} are
@@ -1952,10 +1986,11 @@ not bitwise-not fxnot
 @end example
 
 @noindent
-in addition the following bound identifiers exported by @library{vicare}
-are interpreted as aliases of unary prefix operators:
+in addition the following identifiers are recognised by their symbol
+name and interpreted as aliases of unary prefix operators:
 
 @example
+!       @expansion{} not
 ~       @expansion{} bitwise-not
 @end example
 
@@ -1964,7 +1999,15 @@ The following bound identifiers exported by @library{vicare} are
 interpreted as unary postfix operators:
 
 @example
-++ -- !
+++ --
+@end example
+
+@noindent
+in addition the following identifiers are recognised by their symbol
+name and interpreted as aliases of unary postfix operators:
+
+@example
+!       @expansion{} factorial
 @end example
 
 @item
@@ -2001,7 +2044,7 @@ where @func{pre-incr!}, @func{pre-decr!}, @func{post-incr!} and
 
 @item
 The ternary conditional operator involves the identifiers @func{?}  and
-@func{:}.
+@func{:}, which are recognised by their symbol name.
 
 @example
 (infix 1 > 2 ? 3 + 4 : 5 * 6)
@@ -2311,22 +2354,6 @@ A fluid syntax which is free to be bound to whatever user code needs.
 It is meant to be a placeholder for some expression defined by the local
 context; for example: it is used by the syntaxes @func{is-a?},
 @func{slot-ref} and @func{slot-set!}.
-@end deffn
-
-
-@deffn {Fluid Syntax} {?}
-@deffnx {Fluid Syntax} {:}
-@deffnx {Fluid Syntax} {!}
-@deffnx {Fluid Syntax} {%}
-@deffnx {Fluid Syntax} {&}
-@deffnx {Fluid Syntax} {^}
-@deffnx {Fluid Syntax} {~}
-@deffnx {Fluid Syntax} {<<}
-@deffnx {Fluid Syntax} {>>}
-@deffnx {Fluid Syntax} {\xA6;}
-Fluid syntaxes which are free to be bound to whatever user code needs.
-They are used as operators by the @func{infix} syntax.  The symbol
-@samp{\xA6;} is the Unicode vertical broken bar.
 @end deffn
 
 
