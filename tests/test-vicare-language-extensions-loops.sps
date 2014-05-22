@@ -32,7 +32,8 @@
 
 #!r6rs
 (import (except (vicare)
-		read-line)
+		read-line
+		:)
   (vicare language-extensions loops)
   (vicare checks))
 

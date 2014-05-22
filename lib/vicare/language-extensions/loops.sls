@@ -40,7 +40,8 @@
     :-dispatch-ref :-dispatch-set! make-initial-:-dispatch
     dispatch-union :generator-proc
     nested)
-  (import (vicare))
+  (import (except (vicare)
+		  :))
 
 
 (define-auxiliary-syntaxes
@@ -785,7 +786,7 @@
 (define (:-dispatch-set! dispatch)
   (:-dispatch dispatch))
 
-(define-fluid-override :
+(define-syntax :
   (syntax-rules (index)
     ((: cc var (index i) arg1 arg ...)
      (:dispatched cc var (index i) (:-dispatch) arg1 arg ...) )
