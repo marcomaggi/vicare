@@ -1852,7 +1852,7 @@ Usage examples:
 @subsection Infix to prefix transformer
 
 
-The @func{infix} macro which converts the traditional infix notation for
+The @func{infix} macro converts the traditional infix notation for
 mathematical expressions to the equivalent Scheme's prefix notation.
 @func{infix} expands to a prefix expression to be evaluated at
 run--time, in the lexical context of the macro use; as a special case
@@ -1866,6 +1866,7 @@ evaluate forms like:
 (infix (1 + 2) * 3)     @expansion{} (* (+ 1 2) 3)
 
 (infix 2 expt 3 expt 4) @expansion{} (expt 2 (expt 3 4))
+(infix 2 ** 3 ** 4)     @expansion{} (expt 2 (expt 3 4))
 
 (infix - 5)             @expansion{} (- 5)
 (infix + 5)             @expansion{} (+ 5)
@@ -1884,6 +1885,7 @@ evaluate forms like:
 @menu
 * iklib syntaxes infix syntax:: Notes on the supported syntax.
 * iklib syntaxes infix prec::   Operators precedence.
+* iklib syntaxes infix notes::  Random notes on the features.
 @end menu
 
 @c page
@@ -2113,6 +2115,10 @@ use of such syntaxes just expands to the prefix object:
 (infix (syntax      ciao))  @expansion{} (syntax ciao)
 (infix (quasisyntax ciao))  @expansion{} (quasisyntax ciao)
 @end example
+
+@item
+Matched left and right round parentheses are used to group
+subexpressions, overriding operators precedence rules.
 @end itemize
 
 @c page
@@ -2120,88 +2126,194 @@ use of such syntaxes just expands to the prefix object:
 @subsubsection Operators precedence
 
 
+To determine sensible precedences for operators, we make the following
+observations:
+
 @itemize
 @item
-The following infix operators are supported; in order of descending
-precedence from top to bottom, operators on the same line have equal
-precedence:
-
-@example
-bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-bitwise-not
-bitwise-and bitwise-ior bitwise-xor
-++ --
-(unary +) (unary -)
-expt
-mod mod0
-* / div div0
-+ -
-< > <= >= = != eq? eqv? equal?
-not
-and or xor
-@end example
-
-@noindent
-remember that the Scheme comparison operators are meant to return a
-boolean value, rather than a number object.  @func{xor} is the binding
-exported by @library{vicare}.  @func{++} and @func{--} are the
-bindings exported by @library{vicare language-extensions increments}.
+Logical operators (@func{and}, @func{or}, @func{not}, @dots{}) are meant
+to be applied to predicate operand expressions and they return a boolean
+value.
 
 @item
-The following operators for fixnums are supported with the same
-precedence of the corresponding generic operators:
+Numeric comparison operators (@func{=}, @func{<}, @func{>}, @dots{}) are
+meant to be applied to numeric operand expressions and they return a
+boolean value.
+
+@item
+Arithmetic operators (@func{+}, @func{-}, @func{*}, @func{/}, @dots{})
+are meant to be applied to numeric operand expressions and they return a
+numeric value.
+
+@item
+The C language has established a tradition of writing expressions
+containing bitwise operators @code{1 & 2 + ~ 3} meaning @code{(1 & 2) +
+(~ 3)}, in which bitwise operators take precedence over every other
+operator.
+
+@item
+It makes sense to write expressions like @code{1 < i and i < 4} meaning
+@code{(1 < i) and (i < 4)}, because it makes no sense to interpret it as
+@code{1 < (i and i) < 4}.
+
+@item
+It makes sense to write expressions like @code{1 + 2 < 3 + 4} meaning
+@code{(1 + 2) < (3 + 4)}, because it makes no sense to interpret it as
+@code{1 + (2 < 3) + 4}.
+@end itemize
+
+So @value{PRJNAME} defines operators precedence as follows, from high
+precedence to low precedence:
+
+@enumerate
+@item
+Procedure application: the left parenthesis preceeded by an identifier
+starts a procedure application.
+
+@item
+Binary infix bitwise shift operators:
 
 @example
-fx+               fx-
-fx*
-fxdiv             fxdiv0
-fxmod             fxmod0
-fx<?              fx>?
-fx<=?             fx>=?
-fx=?
-
-fxand             fxior
-fxxor             fxnot
+bitwise-arithmetic-shift-left
+bitwise-arithmetic-shift-right
 fxarithmetic-shift-left
 fxarithmetic-shift-right
 @end example
 
-All the operators are left--associative with the exception of
-@func{fxnot} which is non--associative:
+@item
+Unary prefix bitwise operators:
 
 @example
-(infix 10 fx- 5 fx- 3)     @expansion{} (fx- (fx- 10 5) 3)
-(infix 10 fxdiv 5 fxdiv 3) @expansion{} (fxdiv (fxdiv 10 5) 3)
+bitwise-not fxnot
 @end example
 
 @item
-The following operators for flonums are supported with the same
-precedence of the corresponding generic operators:
+Binary infix bitwise operators:
 
 @example
-fl+               fl-
-fl*               fl/
-flexpt
-fl<?              fl>?
-fl<=?             fl>=?
-fl=?
+bitwise-and bitwise-ior bitwise-xor
+fxand fxior fxxor
 @end example
 
-All the operators are left--associative with the exception of
-@func{flexpt} which is right--associative:
+@item
+Unary prefix arithmetic operators:
 
 @example
-;; left-associative
-(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- (fl- 10. 5.) 3.))
-(infix 10. fl- 5. fl- 3.)         @expansion{} (fl- 10. 5. 3.))
-(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ (fl/ 10. 5.) 3.))
-(infix 10. fl/ 5. fl/ 3.)         @expansion{} (fl/ 10. 5. 3.))
-
-;; right-associative
-(infix 10 expt 5 expt 3)          @expansion{} (expt 10 (expt 5 3))
-(infix 10. flexpt 5. flexpt 3.)   @expansion{} (flexpt 10. (flexpt 5. 3.))
++ - ++ -- fx+ fx- fl+ fl-
 @end example
-@end itemize
+
+@item
+Unary postfix arithmetic operators:
+
+@example
+++ -- !
+@end example
+
+@item
+Binary infix arithmetic exponentiation operators:
+
+@example
+expt flexpt
+@end example
+
+@item
+Binary infix arithmetic modulo operators:
+
+@example
+mod mod0 fxmod fxmod0
+@end example
+
+@item
+Binary infix multiplication and division arithmetic operators:
+
+@example
+* / div div0 fl* fl/ fx* fxdiv fxdiv0
+@end example
+
+@item
+Binary infix addition and subtraction arithmetic operators:
+
+@example
++ - * / fl+ fl- fl* fl/ fx+ fx-
+@end example
+
+@item
+Comparison operators:
+
+@example
+< > <= >= = !=
+fx<? fx>? fx<=? fx>=? fx=?
+fl<? fl>? fl<=? fl>=? fl=?
+eq? eqv? equal?
+@end example
+
+@item
+Unary prefix logical operators:
+
+@example
+not
+@end example
+
+@item
+Binary infix logical operators:
+
+@example
+and or xor
+@end example
+
+@item
+Ternary conditional operator @code{@dots{} ? @dots{} : @dots{}}.
+
+@item
+Procedure application arguments separator, which is the comma.
+@end enumerate
+
+Here some expansion examples:
+
+@example
+(infix ! 2 + 3)         @expansion{} (not (2 + 3))
+(infix (! 2) + 3)       @error{} expected numeric argument
+
+(infix fxnot 3)         @result{} -3
+(infix fxnot 3 + 10)    @result{} 7
+
+(infix ! cos(3))        @expansion{} (not (cos 3))
+@end example
+
+@c page
+@node iklib syntaxes infix notes
+@subsubsection Random notes on the features
+
+
+@subsubheading About the exponentiation and bitwise xor operators
+
+The @func{infix} macro uses @samp{**} as exponentiation operator and
+@samp{^} as bitwise xor operator; this is controversial because a lot of
+people, especially LaTeX users, is used to think of @samp{^} as
+exponentiation operator.  The C language has established a tradition to
+interpret @samp{^} as bitwise exclusive OR operator, and the Python
+language has adopted it; @value{PRJNAME} sticks to it, too.
+
+@subsubheading About the vertical bar
+
+The C language has established a tradition of interpreting the single
+vertical bar @samp{|} as bitwise inclusive OR operator and the double
+vertical bar as @samp{||} as logical inclusive OR operator.
+
+In the @rnrs{6} Scheme language the vertical bar is used in the block
+comments delimiters @samp{#| @dots{} |#}.  @value{PRJNAME}'s source code
+reader uses the vertical bar to specify symbols whose name does not
+comply with @rnrs{6}, @ref{iklib reader stx, Miscellaneous additional
+syntaxes}.  Some text editors for software programmers handle the
+vertical bar specially in Scheme mode, in particular for syntax
+highlighting.
+
+It would be possible to extend @value{PRJNAME}'s reader to allow
+@samp{|} and @samp{||} to be symbols, but, at present, this confuses
+some text editors in a way that is not easy to fix.  So, for now, rather
+than the vertical bar, @func{infix} recognises the Unicode character
+vertical bar extension (@samp{\x23D0;}) as bitwise inclusive OR and the
+double vertical bar extension as logical inclusive OR.
 
 @c page
 @node iklib syntaxes increments
@@ -3603,7 +3715,7 @@ set to @code{vicare}.
 
 
 @deffn {Reader Syntax} {|@var{symbol}|}
-The vertical bars can be used to specify symbols whose name do not
+The vertical bars can be used to specify symbols whose name does not
 comply with the @rnrs{6} specifications; this syntax is available only
 when the port mode is @code{#!vicare}.  Examples:
 
