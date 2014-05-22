@@ -1852,12 +1852,15 @@ Usage examples:
 @subsection Infix to prefix transformer
 
 
+@deffn Syntax infix @meta{obj} @dots{}
 The @func{infix} macro converts the traditional infix notation for
 mathematical expressions to the equivalent Scheme's prefix notation.
 @func{infix} expands to a prefix expression to be evaluated at
 run--time, in the lexical context of the macro use; as a special case
-@code{(infix)} is equivalent to @code{(values)}.  The macro allows us to
-evaluate forms like:
+@code{(infix)} is equivalent to @code{(values)}.
+@end deffn
+
+The macro allows us to evaluate forms like:
 
 @example
 (infix atan(1, 2))      @expansion{} (atan 1 2)
