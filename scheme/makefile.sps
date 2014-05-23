@@ -834,7 +834,6 @@
     (remprop					v $language)
     (property-list				v $language)
     (gensym->unique-string			v $language)
-    (symbol-bound?				v $language)
     (make-guardian				v $language)
     (port-mode					v $language)
     (set-port-mode!				v $language)
@@ -956,6 +955,25 @@
     (current-library-collection			$boot)
     (library-name				$boot $libraries)
     (find-library-by-name			$boot $libraries)
+
+;;; ------------------------------------------------------------
+;;; symbols stuff
+
+;;NOTE These bindings  are also needed to  compile the boot image.  Let's  not make a
+;;mess with them and just export them from  the library (vicare), so that they can be
+;;loaded by "ikarus.compiler".  See the comments in that file for details.
+
+    (symbol-bound?				v $language)
+    (top-level-value				v)
+    (top-level-bound?				v)
+    (set-top-level-value!			v)
+    (system-value-gensym			v)
+    (system-label-gensym			v)
+    (system-value				v)
+    (reset-symbol-proc!				v)
+    (system-label				v)
+    (system-id					v)
+    (system-id-gensym				v)
 
 ;;; --------------------------------------------------------------------
 
@@ -1228,19 +1246,6 @@
     ($unbound-object?				$symbols)
     ($symbol-table-size				$symbols)
     ($log-symbol-table-status			$symbols)
-    (top-level-value				$symbols)
-    (top-level-bound?				$symbols)
-    (set-top-level-value!			$symbols)
-    (system-value-gensym			$symbols)
-    (system-label-gensym			$symbols)
-
-    ;;NOTE We *really* need  this binding to be in the boot image,  so that it can be
-    ;;loaded by "ikarus.compiler".  See the comments in that file for details.
-    (system-value				$symbols v)
-
-    (system-label				$symbols)
-    (system-id					$symbols)
-    (system-id-gensym				$symbols)
     ($getprop					$symbols)
     ($putprop					$symbols)
     ($remprop					$symbols)

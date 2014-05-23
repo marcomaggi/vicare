@@ -198,23 +198,14 @@
       (lambda (obj)
 	(and obj #t))))
 
-  (module (current-letrec-pass)
-
-    (define current-letrec-pass
-      (make-parameter 'scc
-	(lambda (x)
-	  (define who 'current-letrec-pass)
-	  (with-arguments-validation (who)
-	      ((letrec-pass x))
-	    x))))
-
-    (define-argument-validation (letrec-pass who obj)
-      (memq obj '(scc waddell basic))
-      (procedure-argument-violation who
-	"invalid letrec optimization mode, expected a symbol among: scc, waddell, basic"
-	obj))
-
-    #| end of module |# )
+  (define current-letrec-pass
+    (make-parameter 'scc
+      (lambda (obj)
+	(if (memq obj '(scc waddell basic))
+	    obj
+	  (procedure-argument-violation 'current-letrec-pass
+	    "invalid letrec optimization mode, expected a symbol among: scc, waddell, basic"
+	    obj)))))
 
   (define (optimize-letrec x)
     (define who 'optimize-letrec)

@@ -14,7 +14,7 @@
 ;;;You should  have received a  copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#!r6rs
+#!vicare
 (library (ikarus.intel-assembler)
   (export
     assemble-sources
@@ -24,10 +24,16 @@
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum)
+    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
+    ;;everything here using the system  libraries and not loading external libraries.
+    ;;(Marco Maggi; Fri May 23, 2014)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (vicare unsafe operations)
-    (vicare arguments validation)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $vectors)
+    (except (vicare system $codes)
+	    assembler-property-key)
     (prefix (vicare platform words)
 	    words.))
 
@@ -104,6 +110,47 @@
 
 
 ;;;; helpers
+
+(define-syntax-rule ($cadr ?x)
+  ($car ($cdr ?x)))
+
+(define-syntax-rule ($cddr ?x)
+  ($cdr ($cdr ?x)))
+
+(define-syntax-rule ($caddr ?x)
+  ($car ($cdr ($cdr ?x))))
+
+;; ------------------------------------------------------------
+
+(define-syntax-rule ($fxadd2 ?op)
+  ($fx+ ?op 2))
+
+(define-syntax-rule ($fxadd3 ?op)
+  ($fx+ ?op 3))
+
+(define-syntax-rule ($fxadd4 ?op)
+  ($fx+ ?op 4))
+
+(define-syntax $fxincr!
+  (syntax-rules ()
+    ((_ ?op)
+     ($fxincr! ?op 1))
+    ((_ ?op 0)
+     ?op)
+    ((_ ?op 1)
+     (set! ?op ($fxadd1 ?op)))
+    ((_ ?op 2)
+     (set! ?op ($fxadd2 ?op)))
+    ((_ ?op 3)
+     (set! ?op ($fxadd3 ?op)))
+    ((_ ?op 4)
+     (set! ?op ($fxadd4 ?op)))
+    ((_ ?op ?N)
+     (set! ?op ($fx+ ?op ?N)))
+    ))
+
+
+;; ------------------------------------------------------------
 
 (define (fold func init ls)
   (if (null? ls)
@@ -244,11 +291,6 @@
    CODErri		CODErr
    RegReg		IMM*2
    SIB			imm32?)
-
-  (define-argument-validation (immediate-int who obj)
-    (immediate-int? obj)
-    (procedure-argument-violation who "expected immediate integer as argument" obj))
-
 
   (define (register-index x)
     (cond ((assq x register-mapping)
@@ -404,14 +446,11 @@
 	  (else
 	   (die 'IMM "invalid" n))))
 
-  (define (IMM8 n ac)
+  (define* (IMM8 {n immediate-int?} ac)
     ;;Prepend  to the  accumulator AC  a fixnum  representing the  byte N,
     ;;which is an immediate 8-bit value.
     ;;
-    (define who 'IMM8)
-    (with-arguments-validation (who)
-	((immediate-int	n))
-      (cons (byte n) ac)))
+    (cons (byte n) ac))
 
   (define (imm? x)
     (or (immediate-int?	x)
@@ -1512,28 +1551,25 @@
 		    (die 'store-binary-code-in-code-objects "unknown instr" a))))))))
     (loop ls 0 '() '()))
 
-  (define (%set-code-word! code idx x)
+  (define* (%set-code-word! code idx {x fixnum?})
     ;;Store a machine  word, whose value is  X, in the data  area of the
     ;;code object CODE at index IDX.
     ;;
-    (define who '%set-code-word!)
-    (with-arguments-validation (who)
-	((fixnum	x))
-      (if ($fx= wordsize 4)
-	  (begin
-	    ($code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x3F) 2))
-	    ($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 6) #xFF))
-	    ($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 14) #xFF))
-	    ($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 22) #xFF)))
+    (if ($fx= wordsize 4)
 	(begin
-	  ($code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x1F) 3))
-	  ($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 5) #xFF))
-	  ($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 13) #xFF))
-	  ($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 21) #xFF))
-	  ($code-set! code ($fx+ idx 4) ($fxlogand ($fxsra x 29) #xFF))
-	  ($code-set! code ($fx+ idx 5) ($fxlogand ($fxsra x 37) #xFF))
-	  ($code-set! code ($fx+ idx 6) ($fxlogand ($fxsra x 45) #xFF))
-	  ($code-set! code ($fx+ idx 7) ($fxlogand ($fxsra x 53) #xFF))))))
+	  ($code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x3F) 2))
+	  ($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 6) #xFF))
+	  ($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 14) #xFF))
+	  ($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 22) #xFF)))
+      (begin
+	($code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x1F) 3))
+	($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 5) #xFF))
+	($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 13) #xFF))
+	($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 21) #xFF))
+	($code-set! code ($fx+ idx 4) ($fxlogand ($fxsra x 29) #xFF))
+	($code-set! code ($fx+ idx 5) ($fxlogand ($fxsra x 37) #xFF))
+	($code-set! code ($fx+ idx 6) ($fxlogand ($fxsra x 45) #xFF))
+	($code-set! code ($fx+ idx 7) ($fxlogand ($fxsra x 53) #xFF)))))
 
   (define (%set-label-loc! x loc)
     (if (getprop x '*label-loc*)
@@ -1667,16 +1703,14 @@
     ;;list.
     ;;
     (let ((memoized (make-hashtable string-hash string=?)))
-      (lambda (str)
-	(with-arguments-validation (who)
-	    ((string	str))
-	  (or (hashtable-ref memoized str #f)
-	      (let ((bv (string->utf8 str)))
-		(hashtable-set! memoized str bv)
-		bv))))))
+      (lambda* ({str string?})
+	(or (hashtable-ref memoized str #f)
+	    (receive-and-return (bv)
+		(string->utf8 str)
+	      (hashtable-set! memoized str bv))))))
 
-  (define-inline (%error message . irritants)
-    (apply error who message irritants))
+  (define-syntax-rule (%error ?message . ?irritants)
+    (error who ?message . ?irritants))
 
   (define-syntax %store-first-word!
     (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)

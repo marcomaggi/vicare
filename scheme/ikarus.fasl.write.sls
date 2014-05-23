@@ -24,15 +24,26 @@
 		  fixnum-width
 		  greatest-fixnum
 		  least-fixnum
-		  fasl-write)
+		  fasl-write
+		  fasl-write-header
+		  fasl-write-object)
+    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
+    ;;everything here using the system  libraries and not loading external libraries.
+    ;;(Marco Maggi; Fri May 23, 2014)
+    (vicare system $fx)
+    (vicare system $pairs)
+    (vicare system $chars)
+    (vicare system $flonums)
+    (vicare system $bignums)
+    (vicare system $vectors)
+    (vicare system $strings)
+    (vicare system $bytevectors)
     (vicare system $codes)
     (only (vicare system $structs)
 	  base-rtd
 	  $struct-rtd)
-    (except (ikarus.code-objects)
-	    procedure-annotation)
-    (vicare unsafe operations)
-    (vicare arguments validation))
+    (prefix (ikarus.code-objects)
+    	    code.))
 
   (include "ikarus.wordsize.scm")
 
@@ -64,6 +75,11 @@
     (lambda (x)
       (and (or (fixnum? x) (bignum? x))
 	   (<= DN x UP)))))
+
+(define-syntax $fxneg
+  (syntax-rules ()
+    ((_ ?op)
+     ($fx- 0 ?op))))
 
 (define-syntax write-byte
   (syntax-rules ()
@@ -126,28 +142,19 @@
     (write-bytevector bv ($fxadd1 i) bv.len port)))
 
 
-(define fasl-write
-  (case-lambda
-   ((obj port)
-    (fasl-write obj port #f))
-   ((obj port foreign-libraries)
-    ;;Serialise  OBJ to  PORT prefixing  it  with the  FASL file  header.
-    ;;FOREIGN-LIBRARIES must be  false or a list  of strings representing
-    ;;foreign library  identifiers associated  to the FASL  file.  Return
-    ;;unspecified values.
-    ;;
-    (with-arguments-validation (who)
-	((output-port	port)
-	 (binary-port	port))
-      ($fasl-write-header port)
-      ($fasl-write-object obj port foreign-libraries)))))
+(case-define* fasl-write
+  ((obj port)
+   (fasl-write obj port #f))
+  ((obj {port binary-output-port?} foreign-libraries)
+   ;;Serialise OBJ to PORT prefixing it with the FASL file header.  FOREIGN-LIBRARIES
+   ;;must be false or a list of strings representing foreign library identifiers
+   ;;associated to the FASL file.  Return unspecified values.
+   ;;
+   ($fasl-write-header port)
+   ($fasl-write-object obj port foreign-libraries)))
 
-(define (fasl-write-header port)
-  (define who 'fasl-write-header)
-  (with-arguments-validation (who)
-      ((output-port	port)
-       (binary-port	port))
-    ($fasl-write-header port)))
+(define* (fasl-write-header {port binary-output-port?})
+  ($fasl-write-header port))
 
 (define ($fasl-write-header port)
   (put-tag #\# port)
@@ -160,20 +167,11 @@
 	    ((64)	#\2))
 	   port))
 
-(define fasl-write-object
-  (case-lambda
-   ((obj port)
-    (define who 'fasl-write-object)
-    (with-arguments-validation (who)
-	((output-port	port)
-	 (binary-port	port))
-      ($fasl-write-object obj port #f)))
-   ((obj port foreign-libraries)
-    (define who 'fasl-write-object)
-    (with-arguments-validation (who)
-	((output-port	port)
-	 (binary-port	port))
-      ($fasl-write-object obj port foreign-libraries)))))
+(case-define* fasl-write-object
+  ((obj {port binary-output-port?})
+   ($fasl-write-object obj port #f))
+  ((obj {port binary-output-port?} foreign-libraries)
+   ($fasl-write-object obj port foreign-libraries)))
 
 (define ($fasl-write-object obj port foreign-libraries)
   (let ((refcount-table (make-eq-hashtable)))
@@ -240,7 +238,7 @@
 		  (void))
 		 ((code? x)
 		  (make-graph ($code-annotation x) h)
-		  (make-graph (code-reloc-vector x) h))
+		  (make-graph (code.code-reloc-vector x) h))
 		 ((hashtable? x)
 		  (when (hashtable-hash-function x)
 		    (assertion-violation who "not fasl-writable" x))
@@ -275,10 +273,10 @@
 				      (f (+ i 1) n)))))))))
 		 ((procedure? x)
 		  (let ((code ($closure-code x)))
-		    (unless (fxzero? (code-freevars code))
+		    (unless (fxzero? (code.code-freevars code))
 		      (assertion-violation who
 			"cannot fasl-write a non-thunk procedure; the one given has free vars"
-			(code-freevars code)))
+			(code.code-freevars code)))
 		    (make-graph code h)))
 		 ((bytevector? x)
 		  (void))
@@ -534,9 +532,9 @@
 	 ;;Write a Scheme object representing the code annotation.
 	 (let ((next-mark (%write-single-object ($code-annotation x) next-mark)))
 	   ;;Write an array of bytes being the binary code.
-	   (let next-byte ((i 0) (x.len (code-size x)))
+	   (let next-byte ((i 0) (x.len (code.code-size x)))
 	     (unless ($fx= i x.len)
-	       (write-byte (code-ref x i) port)
+	       (write-byte (code.code-ref x i) port)
 	       (next-byte ($fxadd1 i) x.len)))
 	   ;;Write the relocation vector as Scheme vector.
 	   (%write-single-object ($code-reloc-vector x) next-mark)))

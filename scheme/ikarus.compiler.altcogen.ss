@@ -1638,10 +1638,6 @@
 		;The list of elements in the set.
      ))
 
-  (define-argument-validation (set who obj)
-    (set? obj)
-    (procedure-argument-violation who "expected set as argument" obj))
-
 ;;; --------------------------------------------------------------------
 
   (define-inline (make-empty-set)
@@ -1650,34 +1646,22 @@
   (define (singleton x)
     (make-set (list x)))
 
-  (define (set-member? x S)
-    (define who 'set-member?)
-    (with-arguments-validation (who)
-	((set	S))
-      (memq x ($set-v S))))
+  (define* (set-member? x {S set?})
+    (memq x ($set-v S)))
 
-  (define (empty-set? S)
-    (define who 'empty-set?)
-    (with-arguments-validation (who)
-	((set	S))
-      (null? ($set-v S))))
+  (define* (empty-set? {S set?})
+    (null? ($set-v S)))
 
-  (define (set->list S)
-    (define who 'set->list)
-    (with-arguments-validation (who)
-	((set	S))
-      ($set-v S)))
+  (define* (set->list {S set?})
+    ($set-v S))
 
   (define (list->set ls)
     (make-set ls))
 
-  (define (set-add x S)
-    (define who 'set-add)
-    (with-arguments-validation (who)
-	((set	S))
-      (if (memq x ($set-v S))
-	  S
-	(make-set (cons x ($set-v S))))))
+  (define* (set-add x {S set?})
+    (if (memq x ($set-v S))
+	S
+      (make-set (cons x ($set-v S)))))
 
   (define ($remq x ell)
     ;;Remove X from the list ELL.
@@ -1689,20 +1673,13 @@
 	  (else
 	   (cons ($car ell) ($remq x ($cdr ell))))))
 
-  (define (set-rem x S)
-    (define who 'set-rem)
-    (with-arguments-validation (who)
-	((set	S))
-      (make-set ($remq x ($set-v S)))))
+  (define* (set-rem x {S set?})
+    (make-set ($remq x ($set-v S))))
 
   (module (set-difference)
 
-    (define (set-difference S1 S2)
-      (define who 'set-difference)
-      (with-arguments-validation (who)
-	  ((set		S1)
-	   (set		S2))
-	(make-set ($difference ($set-v S1) ($set-v S2)))))
+    (define* (set-difference {S1 set?} {S2 set?})
+      (make-set ($difference ($set-v S1) ($set-v S2))))
 
     (define ($difference ell1 ell2)
       ;;Remove from the list ELL1 all  the elements of the list ELL2.  Use
@@ -1717,12 +1694,8 @@
 
   (module (set-union)
 
-    (define (set-union S1 S2)
-      (define who 'set-union)
-      (with-arguments-validation (who)
-	  ((set		S1)
-	   (set		S2))
-	(make-set ($union ($set-v S1) ($set-v S2)))))
+    (define* (set-union {S1 set?} {S2 set?})
+      (make-set ($union ($set-v S1) ($set-v S2))))
 
     (define ($union S1 S2)
       (cond ((null? S1)
@@ -1800,47 +1773,41 @@
   (define (empty-set? S)
     (eqv? S 0))
 
-  (define (set-member? N SET)
-    (define who 'set-member?)
-    (with-arguments-validation (who)
-	((fixnum	N))
-      (let loop ((SET SET)
-		 (idx ($index-of N))
-		 (msk ($mask-of  N))) ;this never changes in the loop
-	(cond ((pair? SET)
-	       (if (fxeven? idx)
-		   (loop (car SET) (fxsra idx 1) msk)
-		 (loop (cdr SET) (fxsra idx 1) msk)))
-	      ((fxzero? idx)
-	       (fx= msk (fxlogand SET msk)))
-	      (else
-	       #f)))))
+  (define* (set-member? {N fixnum?} SET)
+    (let loop ((SET SET)
+	       (idx ($index-of N))
+	       (msk ($mask-of  N)))	;this never changes in the loop
+      (cond ((pair? SET)
+	     (if (fxeven? idx)
+		 (loop (car SET) (fxsra idx 1) msk)
+	       (loop (cdr SET) (fxsra idx 1) msk)))
+	    ((fxzero? idx)
+	     (fx= msk (fxlogand SET msk)))
+	    (else
+	     #f))))
 
-  (define (set-add N SET)
-    (define who 'set-add)
-    (with-arguments-validation (who)
-	((fixnum	N))
-      (let recur ((SET SET)
-		  (idx ($index-of N))
-		  (msk ($mask-of  N))) ;this never changes in the loop
-	(cond ((pair? SET)
-	       (if (fxeven? idx)
-		   (let* ((a0 (car SET))
-			  (a1 (recur a0 (fxsra idx 1) msk)))
-		     (if (eq? a0 a1)
-			 SET
-		       (cons a1 (cdr SET))))
-		 (let* ((d0 (cdr SET))
-			(d1 (recur d0 (fxsra idx 1) msk)))
-		   (if (eq? d0 d1)
+  (define* (set-add {N fixnum?} SET)
+    (let recur ((SET SET)
+		(idx ($index-of N))
+		(msk ($mask-of  N)))	;this never changes in the loop
+      (cond ((pair? SET)
+	     (if (fxeven? idx)
+		 (let* ((a0 (car SET))
+			(a1 (recur a0 (fxsra idx 1) msk)))
+		   (if (eq? a0 a1)
 		       SET
-		     (cons (car SET) d1)))))
-	      ((fxzero? idx)
-	       (fxlogor SET msk))
-	      (else
-	       (if (fxeven? idx)
-		   (cons (recur SET (fxsra idx 1) msk) 0)
-		 (cons SET (recur 0 (fxsra idx 1) msk))))))))
+		     (cons a1 (cdr SET))))
+	       (let* ((d0 (cdr SET))
+		      (d1 (recur d0 (fxsra idx 1) msk)))
+		 (if (eq? d0 d1)
+		     SET
+		   (cons (car SET) d1)))))
+	    ((fxzero? idx)
+	     (fxlogor SET msk))
+	    (else
+	     (if (fxeven? idx)
+		 (cons (recur SET (fxsra idx 1) msk) 0)
+	       (cons SET (recur 0 (fxsra idx 1) msk)))))))
 
   (define (cons^ A D)
     (if (and (eq? D 0)
@@ -1848,29 +1815,26 @@
         A
       (cons A D)))
 
-  (define (set-rem N SET)
-    (define who 'set-rem)
-    (with-arguments-validation (who)
-	((fixnum	N))
-      (let recur ((SET SET)
-		  (idx ($index-of N))
-		  (msk ($mask-of  N))) ;this never changes in the loop
-	(cond ((pair? SET)
-	       (if (fxeven? idx)
-		   (let* ((a0 (car SET))
-			  (a1 (recur a0 (fxsra idx 1) msk)))
-		     (if (eq? a0 a1)
-			 SET
-		       (cons^ a1 (cdr SET))))
-		 (let* ((d0 (cdr SET))
-			(d1 (recur d0 (fxsra idx 1) msk)))
-		   (if (eq? d0 d1)
+  (define* (set-rem {N fixnum?} SET)
+    (let recur ((SET SET)
+		(idx ($index-of N))
+		(msk ($mask-of  N)))	;this never changes in the loop
+      (cond ((pair? SET)
+	     (if (fxeven? idx)
+		 (let* ((a0 (car SET))
+			(a1 (recur a0 (fxsra idx 1) msk)))
+		   (if (eq? a0 a1)
 		       SET
-		     (cons^ (car SET) d1)))))
-	      ((fxzero? idx)
-	       (fxlogand SET (fxlognot msk)))
-	      (else
-	       SET)))))
+		     (cons^ a1 (cdr SET))))
+	       (let* ((d0 (cdr SET))
+		      (d1 (recur d0 (fxsra idx 1) msk)))
+		 (if (eq? d0 d1)
+		     SET
+		   (cons^ (car SET) d1)))))
+	    ((fxzero? idx)
+	     (fxlogand SET (fxlognot msk)))
+	    (else
+	     SET))))
 
   (module (set-union)
 
@@ -1938,20 +1902,16 @@
 
   (module (list->set)
 
-    (define (list->set ls)
-      (define who 'list->set)
-      (with-arguments-validation (who)
-	  ((list-of-fixnums	ls))
-	(let recur ((ls ls)
-		    (S  0))
-	  (if (null? ls)
-	      S
-	    (recur (cdr ls) (set-add (car ls) S))))))
+    (define* (list->set {ls list-of-fixnums?})
+      (let recur ((ls ls)
+		  (S  0))
+	(if (null? ls)
+	    S
+	  (recur (cdr ls) (set-add (car ls) S)))))
 
-    (define-argument-validation (list-of-fixnums who obj)
+    (define (list-of-fixnums? obj)
       (and (list? obj)
-	   (for-all fixnum? obj))
-      (procedure-argument-violation who "expected list of fixnums as argument" obj))
+	   (for-all fixnum? obj)))
 
     #| end of module: list->set |# )
 

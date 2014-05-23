@@ -63,10 +63,12 @@
   (define source-optimizer-passes-count
     (make-parameter 1
       (lambda (obj)
-	(define who 'source-optimizer-passes-count)
-	(with-arguments-validation (who)
-	    ((positive-fixnum	obj))
-	  obj))))
+	(if (and (fixnum?     obj)
+		 (fxpositive? obj))
+	    obj
+	  (procedure-argument-violation 'source-optimizer-passes-count
+	    "expected positive fixnum as parameter value"
+	    obj)))))
 
   (define source-optimizer-input
     ;;This  is used  in  case of  internal error  to  show better  error

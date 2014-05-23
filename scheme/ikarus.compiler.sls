@@ -101,18 +101,10 @@
 		  optimize-cp			optimize-level
 		  perform-tag-analysis		strip-source-info
 		  fasl-write)
-    (rnrs hashtables)
-    (only (vicare system $codes)
-	  $code->closure)
-    (only (vicare system $structs)
-	  $struct-ref $struct/rtd?)
-    ;;This needs to be loaded here so that it evaluates with the freshly
-    ;;loaded  "ikarus.config.ss",   including  the  correct   value  for
-    ;;WORDSIZE.
-    (only (ikarus.fasl.write)
-	  fasl-write)
-    (ikarus.intel-assembler)
-    (vicare arguments validation)
+    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
+    ;;everything here using the system  libraries and not loading external libraries.
+    ;;(Marco Maggi; Fri May 23, 2014)
+    ;;
     ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
     ;;
     ;;* During normal execution: this binding is the one from the boot image.
@@ -121,7 +113,20 @@
     ;;  image, *not* the one from loading "(ikarus.symbols)" in source form.
     ;;
     ;;We really need it this way for the use we do of such procedure.
-    (only (vicare) system-value))
+    (only (vicare) system-value)
+    ;;When building a new boot image: the hashtables libray this is loaded from the
+    ;;old boot image.
+    (rnrs hashtables)
+    (only (vicare system $codes)
+	  $code->closure)
+    (only (vicare system $structs)
+	  $struct-ref $struct/rtd?)
+    ;;When building a new boot image: the FASL write library is loaded from source.
+    ;;This needs to be loaded here so that it evaluates with the freshly loaded
+    ;;"ikarus.config.ss", including the correct value for WORDSIZE.
+    (only (ikarus.fasl.write)
+	  fasl-write)
+    (ikarus.intel-assembler))
 
   (include "ikarus.wordsize.scm")
 
@@ -498,11 +503,11 @@
 (define current-core-eval
   (make-parameter (lambda (x)
 		    ((compile-core-expr x)))
-    (lambda (x)
-      (define who 'current-core-eval)
-      (with-arguments-validation (who)
-	  ((procedure	x))
-	x))))
+    (lambda (obj)
+      (if (procedure? obj)
+	  obj
+	(procedure-argument-violation 'current-core-eval
+	  "expected procedure as parameter value" obj)))))
 
 (define (eval-core x)
   ;;This  function is  used  to compile  fully  expanded R6RS  programs,
@@ -511,17 +516,42 @@
   ;;
   ((current-core-eval) x))
 
+
+;;;; mapping primitive symbol names to location gensyms
+
 (define current-primitive-locations
+  ;;Closure upon a function capable of  retrieving a core primitive's location gensym
+  ;;given its symbol name.   Notice that this is not a  parameter because: whenever a
+  ;;new procedure is set some initialisation must be performed.
+  ;;
   (let ((plocs (lambda (x) #f)))
-    (case-lambda
-     (()
-      plocs)
-     ((p)
-      (define who 'current-primitive-locations)
-      (with-arguments-validation (who)
-	  ((procedure	p))
-	(set! plocs p)
-	(refresh-cached-labels!))))))
+    (case-lambda*
+      (()
+       plocs)
+      (({p procedure?})
+       (set! plocs p)
+       (refresh-cached-labels!)))))
+
+(define* (primref->location-gensym {op symbol?})
+  ;;Given the symbol, which must be the  name of a primitive function exported by the
+  ;;boot image, return its associated location gensym.
+  ;;
+  ;;If the primitive is a procedure: the  location gensym has in both its "value" and
+  ;;"proc" slots a reference to the closure object implementing the primitive.
+  ;;
+  ;;If the  primitive is  a non-procedure  variable: the location  gensym has  in its
+  ;;"value" slot a reference to the actual Scheme object.
+  ;;
+  (cond (((current-primitive-locations) op)
+	 => (lambda (obj)
+	      (if (symbol? obj)
+		  obj
+		(expression-return-value-violation 'current-primitive-locations
+		  "expected symbol as return value from CURRENT-PRIMITIVE-LOCATIONS procedure"
+		  obj))))
+	(else
+	 (error __who__
+	   "*** Vicare error: primitive missing from makefile.sps" op))))
 
 
 (module (compile-core-expr-to-port
@@ -1256,28 +1286,28 @@
 
 ;;;; special struct makers
 
-(define mkfvar
-  ;;Maker function for structs of type FVAR.  It caches structures based
-  ;;on the values  of the argument, so that calling:
-  ;;
-  ;;   (mkfvar 123)
-  ;;
-  ;;always returns the same FVAR instance holding 123.
-  ;;
-  ;;FIXME Should  a hashtable be used  as cache?  (Marco Maggi;  Oct 10,
-  ;;2012)
-  ;;
-  (let ((cache '()))
-    (lambda (i)
-      (define who 'mkfvar)
-      (with-arguments-validation (who)
-	  ((fixnum	i))
-	(cond ((assv i cache)
-	       => cdr)
-	      (else
-	       (let ((fv (make-fvar i)))
-		 (set! cache (cons (cons i fv) cache))
-		 fv)))))))
+(module (mkfvar)
+
+  (define CACHE '())
+
+  (define* (mkfvar {i fixnum?})
+    ;;Maker function for structs of type FVAR.  It caches structures based on the
+    ;;values of the argument, so that calling:
+    ;;
+    ;;   (mkfvar 123)
+    ;;
+    ;;always returns the same FVAR instance holding 123.
+    ;;
+    ;;FIXME Should a hashtable be used as cache?  (Marco Maggi; Oct 10, 2012)
+    ;;
+    (cond ((assv i CACHE)
+	   => cdr)
+	  (else
+	   (receive-and-return (fv)
+	       (make-fvar i)
+	     (set! CACHE (cons (cons i fv) CACHE))))))
+
+  #| end of module: MKFVAR |# )
 
 (define (unique-var name)
   (make-var name #f #f #f #f #f #f #f #f #f #f))
@@ -1585,30 +1615,26 @@
 
   (module (quoted-sym)
 
-    (define-argument-validation (quoted-sym who obj)
+    (define (quoted-sym? obj)
       (and (list? obj)
 	   ($fx= (length obj) 2)
 	   (eq? 'quote ($car obj))
-	   (symbol? ($cadr obj)))
-      (procedure-argument-violation who "expected quoted symbol sexp as argument" obj))
+	   (symbol? ($cadr obj))))
 
-    (define (quoted-sym x)
+    (define* (quoted-sym {x quoted-sym?})
       ;;Check that X has the format:
       ;;
       ;;  (quote ?symbol)
       ;;
       ;;and return ?SYMBOL.
       ;;
-      (define who 'quoted-sym)
-      (with-arguments-validation (who)
-	  ((quoted-sym	x))
-	($cadr x)))
+      ($cadr x))
 
     #| end of module: quoted-sym |# )
 
   (module (quoted-string)
 
-    (define-argument-validation (quoted-string who obj)
+    (define (quoted-string? obj)
       ;;Check that X has the format:
       ;;
       ;;  (quote ?string)
@@ -1616,20 +1642,16 @@
       (and (list? obj)
 	   ($fx= (length obj) 2)
 	   (eq? 'quote ($car obj))
-	   (string? ($cadr obj)))
-      (error who "expected quoted string sexp as argument" obj))
+	   (string? ($cadr obj))))
 
-    (define (quoted-string x)
+    (define* (quoted-string {x quoted-string?})
       ;;Check that X has the format:
       ;;
       ;;  (quote ?string)
       ;;
       ;;and return ?string.
       ;;
-      (define who 'quoted-string)
-      (with-arguments-validation (who)
-	  ((quoted-string	x))
-	($cadr x)))
+      ($cadr x))
 
     #| end of module: quoted-string |# )
 
@@ -4273,28 +4295,6 @@
 
   #| end od module |# )
 
-(define (primref->location-gensym op)
-  ;;Given the  symbol, which must  be the  name of a  primitive function
-  ;;exported by the boot image, return its associated location gensym.
-  ;;
-  ;;If the primitive is a procedure: the location gensym has in both its
-  ;;"value"  and  "proc"  slots  a   reference  to  the  closure  object
-  ;;implementing the primitive.
-  ;;
-  ;;If the  primitive is a  non-procedure variable: the  location gensym
-  ;;has in its "value" slot a reference to the actual Scheme object.
-  ;;
-  (define who 'primref->location-gensym)
-  (with-arguments-validation (who)
-      ((symbol	op))
-    (cond (((current-primitive-locations) op)
-	   => (lambda (x)
-		(with-arguments-validation (who)
-		    ((symbol	x))
-		  x)))
-	  (else
-	   (error who "*** Vicare error: primitive missing from makefile.sps" op)))))
-
 
 ;;;; more assembly code helpers
 
@@ -5742,8 +5742,8 @@
   ;;other values are not processed and are returned as they are.
   ;;
   (define who 'unparse-recordized-code/pretty)
-  (import (only (vicare system $symbols)
-		$symbol-string))
+  ;; (import (only (vicare system $symbols)
+  ;; 		$symbol-string))
 
   (define (unparse-recordized-code/pretty x)
     ;;
@@ -5875,7 +5875,7 @@
 	       #;(error who "expected struct of type PRELEX or VAR" x)))))
 
       (define (%build-name x.name)
-	(let* ((name ($symbol-string x.name))
+	(let* ((name (symbol->string x.name))
 	       (N    (hashtable-ref T name 0)))
 	  (hashtable-set! T name (+ N 1))
 	  (let ((sym (string->symbol (string-append name "_" (number->string N)))))
