@@ -2056,6 +2056,9 @@
 			    (%precompute-effect-free-primitive info appctxt))
 		       (and (%info-foldable? info)
 			    (%precompute-foldable-primitive primsym rand* ec)))))
+      ;; (debug-print 'fold-prim/examining primsym
+      ;; 		   'foldable? (%info-effect-free? info)
+      ;; 		   'effect-free? (%info-effect-free? info))
       (if result
 	  (begin
 	    (decrement ec 1)
