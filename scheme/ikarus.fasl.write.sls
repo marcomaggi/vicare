@@ -45,7 +45,7 @@
     (prefix (ikarus.code-objects)
     	    code.))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; helpers

@@ -24,7 +24,7 @@
     host-info)
   (import (except (vicare)
 		  host-info))
-  (include "ikarus.config.ss"))
+  (include "ikarus.config.ss" #t))
 
 
 (library (ikarus main)
@@ -120,7 +120,7 @@
 ;; (define dummy
 ;;   (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.main")))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; helpers

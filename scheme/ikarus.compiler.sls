@@ -128,7 +128,7 @@
 	  fasl-write)
     (ikarus.intel-assembler))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
   (module UNSAFE
     ;;Remember that this file defines the primitive operations.

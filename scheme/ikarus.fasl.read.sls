@@ -38,7 +38,7 @@
     (vicare language-extensions syntaxes)
     (vicare arguments validation))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; main functions

@@ -14,6 +14,7 @@
 ;;;You should  have received a  copy of  the GNU General  Public License
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 #!vicare
 (library (ikarus.intel-assembler)
   (export
@@ -37,7 +38,7 @@
     (prefix (vicare platform words)
 	    words.))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; Introduction
@@ -1457,13 +1458,12 @@
   #| end of module |# )
 
 
-(define (compute-code-size octets-and-labels)
+(define* (compute-code-size octets-and-labels)
   ;;Given a list holding octets-as-fixnums  and label sexps: compute and
   ;;return the number  of bytes needed to hold  the corresponding binary
   ;;code.  Such  number of bytes  will be the  minimum size of  the data
   ;;area in a code object.
   ;;
-  (define who 'compute-code-size)
   (fold (lambda (x size)
 	  (if (fixnum? x)
 	      ($fxadd1 size)
@@ -1480,7 +1480,7 @@
 	      ((bottom-code)
 	       ($fx+ size (compute-code-size ($cdr x))))
 	      (else
-	       (error who "unknown instr" x)))))
+	       (error __who__ "unknown instruction" x)))))
 	0
 	octets-and-labels))
 

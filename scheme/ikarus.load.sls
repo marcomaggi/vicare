@@ -99,7 +99,7 @@
     (vicare arguments validation)
     (vicare unsafe operations))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 ;;;; arguments validation

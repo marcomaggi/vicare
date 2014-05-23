@@ -1333,7 +1333,7 @@
 
 ;;;; some external code
 
-(include "pass-specify-rep-primops.ss")
+(include "pass-specify-rep-primops.ss" #t)
 
 
 ;;;; done

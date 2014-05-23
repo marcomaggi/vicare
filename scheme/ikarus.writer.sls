@@ -46,7 +46,7 @@
     (only (ikarus records procedural)
 	  print-r6rs-record-instance))
 
-  (include "ikarus.wordsize.scm")
+  (include "ikarus.wordsize.scm" #t)
 
 
 (define print-unicode
