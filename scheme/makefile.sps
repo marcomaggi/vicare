@@ -174,30 +174,24 @@
 ;;NOTE  Libraries imported  here are  installed  in the  internal library  collection
 ;;defined by the old  boot image.  Source libraries expanded later to  be part of the
 ;;boot image are installed in a separate library collection, BOOTSTRAP-COLLECTION.
-(import (except (vicare)
-		current-letrec-pass
-		current-core-eval
-		assembler-output optimize-cp optimize-level
-		cp0-size-limit cp0-effort-limit
-		expand
-		optimizer-output tag-analysis-output perform-tag-analysis)
-  (ikarus.compiler)
-  (except (psyntax system $bootstrap)
-	  eval-core
-	  current-primitive-locations
-	  compile-core-expr-to-port))
+(import (vicare)
+  (prefix (ikarus.compiler) compiler.)
+  (prefix (only (psyntax system $bootstrap)
+		current-library-collection
+		find-library-by-name)
+	  bootstrap.))
 
-(optimize-level 2)
-($perform-tag-analysis #t)
+(compiler.optimize-level 2)
+(compiler.$perform-tag-analysis #t)
 (pretty-width 160)
 ((pretty-format 'fix)
  ((pretty-format 'letrec)))
-($strip-source-info #t)
-($current-letrec-pass 'scc)
+(compiler.$strip-source-info #t)
+(compiler.$current-letrec-pass 'scc)
 
 ;;NOTE This turns off some debug mode features  that cannot be used in the boot image
 ;;because it would become too big.  (Marco Maggi; Wed Apr 2, 2014)
-($generate-debug-calls #f)
+(compiler.$generate-debug-calls #f)
 
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
@@ -3952,7 +3946,7 @@
 	   (cond ((null? entries)
 		  '())
 		 ((required? (car entries))
-		  (cons (find-library-by-name (library-name (car entries)))
+		  (cons (bootstrap.find-library-by-name (library-name (car entries)))
 			(next-library-entry (cdr entries))))
 		 (else
 		  (next-library-entry (cdr entries)))))))
@@ -4463,7 +4457,7 @@
     (receive (name* invoke-code* export-primlocs)
 	(time-it "macro expansion"
 	  (lambda ()
-	    (parameterize ((current-library-collection bootstrap-collection))
+	    (parameterize ((bootstrap.current-library-collection bootstrap-collection))
 	      (expand-all scheme-library-files))))
       ;;Before applying COMPILE-CORE-EXPR-TO-PORT to the invoke code of each library:
       ;;we must register  in the state of  the compiler a closure  capable of mapping
@@ -4471,7 +4465,7 @@
       ;;
       ;;EXPORT-PRIMLOCS is an  alist whose keys are the primitive's  symbol names and
       ;;whose values are the primitive's location gensyms.
-      (current-primitive-locations
+      (compiler.current-primitive-locations
        (lambda (primitive-name.sym)
 	 (cond ((assq primitive-name.sym export-primlocs)
 		=> cdr)
@@ -4485,7 +4479,7 @@
 	    (debug-printf "Compiling and writing to fasl (one code object for each library form): ")
 	    (for-each (lambda (name core)
 	    		(debug-printf " ~s" name)
-	    		(compile-core-expr-to-port core port))
+	    		(compiler.compile-core-expr-to-port core port))
 	      name*
 	      invoke-code*)
 	    (debug-printf "\n")))
