@@ -4,74 +4,98 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;	This  file  is  an  R6RS-compliant Scheme  program,  using  some
-;;;	Vicare's  extension.   When  run  in the  appropriate  operating
-;;;	system   environment:    it   rebuilds   Vicare's    boot   file
-;;;	"vicare.boot".
+;;;	This file  is a proper Scheme  program, using some Vicare's  extension.  When
+;;;	run in  the appropriate  operating system  environment: it  rebuilds Vicare's
+;;;	boot file "vicare.boot".
 ;;;
-;;;	This  program works hand-in-hand  with the  expander, especially
-;;;	the    library   (psyntax    library-manager)   in    the   file
-;;;	"psyntax.library-manager.sls".
+;;;	  This program works  hand-in-hand with the expander,  especially the library
+;;;	(psyntax library-manager) in the file "psyntax.library-manager.sls".
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
 ;;;; adding a primitive operation to an existing system library
 ;;
-;;*NOTE* This  description is a work  in progress (Marco  Maggi; Nov 30,
-;;2011).
+;;Primitive operations are  defined by the macro DEFINE-PRIMOPS;  examples are: $CAR,
+;;$CDR, $FX+ and  $VECTOR-LENGTH but also FIXNUM? and STRING?.   Some core primitives
+;;are implemented both as:
 ;;
-;;Primitive operations are defined by the macro DEFINE-PRIMOPS; examples
-;;are: $CAR, $CDR, $FX+ and $VECTOR-LENGTH but also FIXNUM? and STRING?.
+;;* Proper  procedures.  There exists  a loc gensym  whose "value" slot  references a
+;;  closure object,  which in  turn references  a code  object implementing  the core
+;;  primitive as machine code.
 ;;
-;;Here we want to examine the process of adding a primitive operation to
-;;an  existing system library;  we will  not discuss  how to  define the
-;;operation using the macro DEFINE-PRIMOPS.
+;;* Primitive operations.  There exist functions that the compiler calls to integrate
+;;  assembly instructions implementing the core primitive.
 ;;
-;;What is a primitive operation?  We can think of it as a macro embedded
-;;in  the compiler,  which,  when used,  expands  inline the  elementary
-;;instructions  to be  converted  to machine  language.  The  elementary
-;;instructions are  expressed in Vicare's  high-level assembly language.
-;;When building a new boot image we can use in Vicare's source code only
-;;the primitive operations compiled in an existing boot image.
+;;Let's consider FX+ as example.  When the core primitive is used as argument as in:
 ;;
-;;Let's say  we want to generate  a new boot image  having the operation
-;;$SWIRL-PAIR embedded in it and exported by the system library:
+;;   (map fx+ a* b*)
 ;;
-;;   (ikarus system $pairs)
+;;the closure object implementation is used; when the core primitive is used as first
+;;subform of an application form as in:
 ;;
-;;which  already exists,  and making  use of  the operation  in Vicare's
-;;source code; this is the scenario:
+;;   (fx+ 1 2)
+;;
+;;the primitive  operation is  used.  So  we can  understand why  some core-primitive
+;;procedure implementation is written as:
+;;
+;;   (import (except (vicare) fx+)
+;;      (prefix (only (vicare) fx+) sys:)
+;;
+;;   (define (fx+ x y)
+;;    (sys:fx+ x y))
+;;
+;;this code creates a  closure object bound to FX+; in the body  of the procedure the
+;;application of SYS:FX+  is recognised as primitive operation  and the corresponding
+;;assembly code is integrated.
+;;
+;;Here we want to examine the process  of adding a primitive operation to an existing
+;;system library;  we will not  discuss how to define  the operation using  the macro
+;;DEFINE-PRIMOPS.
+;;
+;;What is  a primitive  operation?  We can  think of  it as a  macro embedded  in the
+;;compiler,  which, when  used,  expands  inline the  elementary  instructions to  be
+;;converted  to  machine language.   The  elementary  instructions are  expressed  in
+;;Vicare's high-level assembly  language.  When building a new boot  image we can use
+;;in Vicare's  source code  only the  primitive operations compiled  in the  old boot
+;;image.
+;;
+;;Let's say  we want to  generate a new boot  image having the  operation $SWIRL-PAIR
+;;embedded in it and exported by the system library:
+;;
+;;   (vicare system $pairs)
+;;
+;;which already exists, and making use of the operation in Vicare's source code; this
+;;is the scenario:
 ;;
 ;;1. The image BOOT-0 already exists.
 ;;
-;;2. We  generate a  new temporary image,  BOOT-1, having  the operation
-;;$SWIRL-PAIR embedded in it, but not using it anywhere.
+;;2. We  generate a  new temporary  image, BOOT-1,  having the  operation $SWIRL-PAIR
+;;   embedded in it, but not using it anywhere.
 ;;
-;;3.  We  generate another new  image, BOOT-2, which  offers $SWIRL-PAIR
-;;and also uses it in the source code.
+;;3.  We generate a further image, BOOT-2,  which offers $SWIRL-PAIR and also uses it
+;;   in the source code.
 ;;
 ;;Let's go.
 ;;
-;;First  we define  the  $SWIRL-PAIR operation  adding  to the  compiler
-;;library (in the appropriate place) a form like:
+;;First we  define the $SWIRL-PAIR operation  adding to the compiler  library (in the
+;;appropriate place) a form like:
 ;;
 ;;  (define-primop $swirl-pair unsafe ---)
 ;;
-;;this form alone is enough to  make the compiler aware of the existence
-;;of the  operation.  Then,  in this  makefile, we add  an entry  to the
-;;table IDENTIFIER->LIBRARY-MAP as follows:
+;;this  form alone  is enough  to make  the compiler  aware of  the existence  of the
+;;operation.    Then,  in   this   makefile,   we  add   an   entry   to  the   table
+;;IDENTIFIER->LIBRARY-MAP as follows:
 ;;
 ;;   (define identifier->library-map
 ;;     '(($swirl-pair		$pairs)
@@ -79,55 +103,53 @@
 ;;
 ;;the order in which the entries appear in this table is not important.
 ;;
-;;With no other changes we use  the image BOOT-0 to build an image which
-;;will be BOOT-1.   Now we can use $SWIRL-PAIR  in Vicare's source code,
-;;then we use BOOT-1 to compile a new image which will be BOOT-2.
+;;With no  other changes  we use the  image BOOT-0  to build an  image which  will be
+;;BOOT-1.  Now we can use $SWIRL-PAIR in  Vicare's source code, then we use BOOT-1 to
+;;compile a further image which will be BOOT-2.
 ;;
 
 
 ;;;; adding a new system library
 ;;
-;;*NOTE* This  description is a work  in progress (Marco  Maggi; Nov 30,
-;;2011).
-;;
 ;;By convention system libraries have names like:
 ;;
-;;   (ikarus system <ID>)
+;;   (vicare system ?nickname)
 ;;
-;;where  <ID> is prefixed  with a  $ character;  for good  style, system
-;;libraries should export only primitive operations.
+;;where ?NICKNAME  is prefixed with a  $ character; for good  style, system libraries
+;;should export  only primitive operations, but  they are abused to  export also very
+;;low level procedures.
 ;;
 ;;Let's say we want to add to a boot image the library:
 ;;
-;;  (ikarus system $spiffy)
+;;  (vicare system $spiffy)
 ;;
 ;;exporting the single primitive operation $SWIRL, this is the scenario:
 ;;
 ;;1. The image BOOT-0 already exists.
 ;;
-;;2. We  generate a temporary new  image, BOOT-1, having  the new system
-;;library in it but not in a correctly usable state.
+;;2. We generate a  temporary new image, BOOT-1, having the new  system library in it
+;;   but not in a correctly usable state.
 ;;
-;;3. We  generate the another new  image, BOOT-2, having  the new system
-;;library in a correct state.
+;;3.  We generate a further image, BOOT-2, having the new system library in a correct
+;;   state.
 ;;
 ;;Let's go.
 ;;
-;;First we  define the $SWIRL  operation adding to the  compiler library
-;;(in the appropriate place) a form like:
+;;First  we define  the  $SWIRL operation  adding  to the  compiler  library (in  the
+;;appropriate place) a form like:
 ;;
 ;;  (define-primop $swirl unsafe ---)
 ;;
-;;this form alone is enough to  make the compiler aware of the existence
-;;of the operation.  Then, in this  makefile, we add an entry at the end
-;;of the table LIBRARY-LEGEND as follows:
+;;this  form alone  is enough  to make  the compiler  aware of  the existence  of the
+;;operation.   Then, in  this makefile,  we add  an  entry at  the end  of the  table
+;;LIBRARY-LEGEND as follows:
 ;;
 ;;   (define library-legend
 ;;     '(---
 ;;       ($spiffy  (ikarus system $spiffy)  #t	#f))
 ;;
-;;marking the library as visible but not required.  Then we add an entry
-;;to the table IDENTIFIER->LIBRARY-MAP as follows:
+;;marking the library as visible but not required.  Then we add an entry to the table
+;;IDENTIFIER->LIBRARY-MAP as follows:
 ;;
 ;;   (define identifier->library-map
 ;;     '(($swirl $spiffy)
@@ -135,14 +157,14 @@
 ;;
 ;;the order in which the entries appear in this table is not important.
 ;;
-;;Now we use the image BOOT-0  to build a new boot image, BOOT-1, having
-;;the new library in it.  Then  we change the library entry in the table
-;;LIBRARY-LEGEND as follows:
+;;Now we  use the  image BOOT-0 to  build a  new boot image,  BOOT-1, having  the new
+;;library in  it.  Then we  change the library entry  in the table  LIBRARY-LEGEND as
+;;follows:
 ;;
 ;;       ($spiffy  (ikarus system $spiffy)  #t	#t)
 ;;
-;;making it both visible and required.   Then we use the image BOOT-1 to
-;;generate a new boot image which will be BOOT-2.
+;;making it required to  build further boot images.  Then we use  the image BOOT-1 to
+;;generate a further boot image which will be BOOT-2.
 ;;
 
 
