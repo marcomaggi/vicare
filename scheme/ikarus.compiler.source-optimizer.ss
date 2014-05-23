@@ -865,14 +865,22 @@
   (define (primprop p)
     (or (getprop p UNIQUE-PROPERTY-KEY) '()))
 
+  (define-syntax (expand-time-gensym stx)
+    (syntax-case stx ()
+      ((_ ?template)
+       (let* ((tmp (syntax->datum #'?template))
+	      (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	      (str (apply string-append tmp (map (lambda (N)
+						   (string-append "." (number->string N)))
+					      fxs)))
+	      (sym (gensym str)))
+	 (with-syntax
+	     ((SYM (datum->syntax #'here sym)))
+	   (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	   #'(quote SYM))))))
+
   (define-constant UNIQUE-PROPERTY-KEY
-    (let-syntax
-	((expand-time-gensym (lambda (x)
-			       (with-syntax
-				   ((SYM (datum->syntax #'here
-							(gensym "primitive-operation-property"))))
-				 #'(quote SYM)))))
-      (expand-time-gensym)))
+    (expand-time-gensym "primitive-operation-property"))
 
   (module (%initialise-primitive-properties)
     ;;For each  symbol being the  name of  a primitive function:  add an
@@ -2186,17 +2194,17 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-inline (%info-foldable? info)
-    (memq 'foldable info))
+  (define-syntax-rule (%info-foldable? ?info)
+    (memq 'foldable ?info))
 
-  (define-inline (%info-effect-free? info)
-    (memq 'effect-free info))
+  (define-syntax-rule (%info-effect-free? ?info)
+    (memq 'effect-free ?info))
 
-  (define-inline (%info-result-true? info)
-    (memq 'result-true info))
+  (define-syntax-rule (%info-result-true? ?info)
+    (memq 'result-true ?info))
 
-  (define-inline (%info-result-false? info)
-    (memq 'result-false info))
+  (define-syntax-rule (%info-result-false? ?info)
+    (memq 'result-false ?info))
 
   #| end of module: fold-prim |# )
 
@@ -2207,6 +2215,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; mode: vicare
 ;; eval: (put 'case-context 'scheme-indent-function 1)
 ;; eval: (put 'with-extended-env 'scheme-indent-function 1)
 ;; End:

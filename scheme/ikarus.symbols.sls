@@ -90,7 +90,9 @@
 	    $property-list
 	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri
 	    ;;May 23, 2014)
-	    system-value-gensym))
+	    system-value-gensym)
+    (for (prefix (vicare) sys.)
+      expand))
 
 
 ;;;; helpers
@@ -333,23 +335,37 @@
 		    accum))))))
 
 
+(define-syntax (expand-time-gensym stx)
+  (syntax-case stx ()
+    ((_ ?template)
+     (let* ((tmp (syntax->datum #'?template))
+	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	    (str (apply string-append tmp (map (lambda (N)
+						 (string-append "." (number->string N)))
+					    fxs)))
+	    (sym (sys.gensym str)))
+       (with-syntax
+	   ((SYM (datum->syntax #'here sym)))
+	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	 #'(quote SYM))))))
+
 (define system-value-gensym
   ;;Notice that this gensym is generated a-new every time the boot image
   ;;is initialised.   We must avoid  the source optimizer  to precompute
   ;;and hard-code a value.
-  (gensym "system-value-gensym"))
+  (expand-time-gensym "system-value-gensym"))
 
 (define system-label-gensym
   ;;Notice that this gensym is generated a-new every time the boot image
   ;;is initialised.   We must avoid  the source optimizer  to precompute
   ;;and hard-code a value.
-  (gensym "system-label-gensym"))
+  (expand-time-gensym "system-label-gensym"))
 
 (define system-id-gensym
   ;;Notice that this gensym is generated a-new every time the boot image
   ;;is initialised.   We must avoid  the source optimizer  to precompute
   ;;and hard-code a value.
-  (gensym "system-id-gensym"))
+  (expand-time-gensym "system-id-gensym"))
 
 (define* (system-value {x symbol?})
   ;;When  the boot  image is  loaded, it  initialises itself;  for every

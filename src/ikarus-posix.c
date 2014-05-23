@@ -4785,6 +4785,29 @@ ikrt_current_time_fixnums (ikpcb * pcb)
   feature_failure(__func__);
 #endif
 }
+ikptr
+ikrt_current_time_fixnums_2 (ikpcb * pcb)
+{
+#if ((defined HAVE_TIME) && (defined HAVE_GMTIME_R))
+  time_t	T;
+  struct tm	D;
+  ikptr		s_vec;
+  T     = time(NULL);
+  errno = 0;
+  localtime_r(&T, &D);
+  errno = 0;
+  s_vec = ika_vector_alloc_and_init(pcb, 6);
+  IK_ITEM(s_vec, 0) = IK_FIX(D.tm_year + 1900);
+  IK_ITEM(s_vec, 1) = IK_FIX(D.tm_mon  + 1);
+  IK_ITEM(s_vec, 2) = IK_FIX(D.tm_mday);
+  IK_ITEM(s_vec, 3) = IK_FIX(D.tm_hour);
+  IK_ITEM(s_vec, 4) = IK_FIX(D.tm_min);
+  IK_ITEM(s_vec, 5) = IK_FIX(D.tm_sec);
+  return s_vec;
+#else
+  feature_failure(__func__);
+#endif
+}
 
 /* ------------------------------------------------------------------ */
 
