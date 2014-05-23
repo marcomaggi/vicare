@@ -648,15 +648,21 @@
 
 
 (define library-legend
-  ;;Map full library specifications to nicknames:  for example "v" is the nickname of
-  ;;"(vicare)".   Additionlly  tag each  library  with  a  VISIBLE? and  a  REQUIRED?
-  ;;boolean.
+  ;;The library legend  lists all the library  that will be implemented  by the newly
+  ;;built boot image.  If a library is  listed here: after building and loading a new
+  ;;boot image, it is possible to IMPORT such library.
   ;;
-  ;;For each  library marked as  REQUIRED?: an associated  record of type  LIBRARY is
-  ;;created and included in the starting set of BOOTSTRAP-COLLECTION.
+  ;;The legend mapp full library specifications  to nicknames: for example "v" is the
+  ;;nickname  of "(vicare)".   Additionlly tag  each library  with a  VISIBLE? and  a
+  ;;REQUIRED?  boolean.
   ;;
   ;;The  libraries  marked  as  VISIBLE?   are listed  by  default  by  the  function
   ;;INSTALLED-LIBRARIES.
+  ;;
+  ;;The libraries  marked as REQUIRED?   are required to build  a new boot  image, so
+  ;;they must be already  implemented by the old boot image;  for each library marked
+  ;;as REQUIRED?: a record of type LIBRARY, referencing the library from the old boot
+  ;;image, is created and included in the starting set of BOOTSTRAP-COLLECTION.
   ;;
   ;;See BOOTSTRAP-COLLECTION for details on how to add a library to this list.
   ;;
@@ -719,7 +725,7 @@
     ($all		(psyntax system $all)			#f	#t)
     ($boot		(psyntax system $bootstrap)		#f	#t)
 ;;;
-;; These libraries are  used by the R6RS  functions NULL-ENVIRONMENT and
+;; These   libraries  are   used   by  the   R6RS   functions  NULL-ENVIRONMENT   and
 ;; SCHEME-REPORT-ENVIRONMENT.
     (ne			(psyntax null-environment-5)		#f	#f)
     (se			(psyntax scheme-report-environment-5)	#f	#f)
@@ -728,8 +734,8 @@
     ($language		(vicare language-extensions)		#t	#f)
     ($posix		(vicare language-extensions posix)	#t	#t)
 ;;;
-    ;;FIXME At the next boot  image rotation these libraries must become
-    ;;required.  (Marco Maggi; Mon Apr 14, 2014)
+    ;;FIXME At  the next boot  image rotation  these libraries must  become required.
+    ;;(Marco Maggi; Mon Apr 14, 2014)
     ($type-specs	(vicare expander object-type-specs)	#t	#f)
     ($expander-tags	(vicare expander tags)			#t	#f)
     ))
@@ -4308,38 +4314,6 @@
 	  (boot-library-expand library-sexp)
 	(values name invoke-code)))
 
-    (define (boot-library-expand library-sexp)
-      ;;This function is used to expand the libraries composing the boot image.  The
-      ;;LIBRARY form in the given symbolic expression is fully expanded and the
-      ;;library is installed in the internal collection.
-      ;;
-      ;;When bootstrapping the system: the visit-code is not (and cannot be) used in
-      ;;the "next" system, so we drop it.
-      ;;
-      ;;The returned values are:
-      ;;
-      ;;LIBNAME -
-      ;;   A R6RS library name.
-      ;;
-      ;;INVOKE-CODE -
-      ;;    A list  of symbolic  expressions  representing the  body of  the
-      ;;   library.
-      ;;
-      ;;EXPORT-SUBST -
-      ;;   A subst selecting the bindings to be exported from the ones in EXPORT-ENV.
-      ;;
-      ;;EXPORT-ENV -
-      ;;   Represents the global bindings defined by the library body.
-      ;;
-      (receive (uid libname
-		    imp-libdesc* vis-libdesc* inv-libdesc*
-		    invoke-code visit-code
-		    export-subst export-env
-		    guard-code guard-libdesc*
-		    option*)
-	  (expand-library library-sexp)
-	(values libname invoke-code export-subst export-env)))
-
     (define (build-install-library-form legend-entry export-subst export-env)
       ;;Return a sexp representing a call to the function INSTALL-LIBRARY.
       ;;
@@ -4408,6 +4382,37 @@
 	(lambda () V)))
 
     #| end of module: BUILD-SYSTEM-LIBRARY |# )
+
+  (define (boot-library-expand library-sexp)
+    ;;This function  is used to expand  the libraries composing the  boot image.  The
+    ;;LIBRARY form in the given symbolic expression is fully expanded and the library
+    ;;is installed in the internal collection.
+    ;;
+    ;;When bootstrapping  the system: the visit-code  is not (and cannot  be) used in
+    ;;the "next" system, so we drop it.
+    ;;
+    ;;The returned values are:
+    ;;
+    ;;LIBNAME -
+    ;;   A R6RS library name.
+    ;;
+    ;;INVOKE-CODE -
+    ;;   A list of symbolic expressions representing the body of the library.
+    ;;
+    ;;EXPORT-SUBST -
+    ;;   A subst selecting the bindings to be exported from the ones in EXPORT-ENV.
+    ;;
+    ;;EXPORT-ENV -
+    ;;   Represents the global bindings defined by the library body.
+    ;;
+    (receive (uid libname
+		  imp-libdesc* vis-libdesc* inv-libdesc*
+		  invoke-code visit-code
+		  export-subst export-env
+		  guard-code guard-libdesc*
+		  option*)
+	(expand-library library-sexp)
+      (values libname invoke-code export-subst export-env)))
 
   #| end of module: EXPAND-ALL |# )
 

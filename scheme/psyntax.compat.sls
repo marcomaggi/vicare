@@ -127,7 +127,11 @@
     $fxzero? $fxpositive? $fxnonnegative?
     $vector-length $vector-empty? $vector-ref $vector-set!
     $putprop $getprop $remprop $property-list)
-  (import (vicare)
+  (import (except (vicare)
+		  ;;FIXME  To be  removed at  the next  boot image  rotation.  (Marco
+		  ;;Maggi; Fri May 23, 2014)
+		  system-id-gensym
+		  system-label)
     (prefix (only (ikarus.compiler)
 		  eval-core
 		  core-expr->optimized-code
@@ -152,22 +156,16 @@
 	    option.)
     (ikarus library-utils)
     (only (ikarus.posix)
-	  ;;This is used by INCLUDE to register the modification time of
-	  ;;the files included  at expand-time.  Such time is  used in a
-	  ;;STALE-WHEN test.
+	  ;;This is  used by INCLUDE to  register the modification time  of the files
+	  ;;included at expand-time.  Such time is used in a STALE-WHEN test.
 	  file-modification-time)
-    ;;NOTE Let's try  to import the unsafe operations  from the built-in
-    ;;libraries, when possible, rather  that using external libraries of
-    ;;macros.
+    ;;NOTE Let's  try to import  the unsafe  operations from the  built-in libraries,
+    ;;when possible, rather that using external libraries of macros.
     (only (vicare system $symbols)
-	  ;;FIXME To  be uncommented  at the  next boot  image rotation.
-	  ;;(Marco Maggi; Tue Apr 15, 2014)
-	  #;system-id-gensym
-	  #;system-label
 	  $unintern-gensym
 	  $putprop $getprop $remprop $property-list)
-    ;;FIXME  To be  removed at  the  next boot  image rotation.   (Marco
-    ;;Maggi; Tue Apr 15, 2014)
+    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Tue Apr 15,
+    ;;2014)
     (only (ikarus.symbols)
 	  system-id-gensym
 	  system-label)
