@@ -1063,6 +1063,7 @@
       ((asin _)			   foldable effect-free result-true)
       ((acos _)			   foldable effect-free result-true)
       ((atan _)			   foldable effect-free result-true)
+      ((atan _ _)		   foldable effect-free result-true)
       ((make-eq-hashtable)		    effect-free result-true)
       ((string->number _)	   foldable effect-free		   )
       ((string->number _ _)	   foldable effect-free		   )
@@ -2131,6 +2132,7 @@
 		(decrement ec 10)
 		(k #f))
 	    (lambda ()
+;;;(debug-print 'apply-at-compile-time primsym args)
 	      (make-constant (apply (system-value primsym) args)))))))
 
 ;;; --------------------------------------------------------------------
