@@ -88,6 +88,8 @@
 	    $symbol->string	$unintern-gensym
 	    $getprop		$putprop		$remprop
 	    $property-list
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri
+	    ;;May 23, 2014)
 	    system-value-gensym))
 
 

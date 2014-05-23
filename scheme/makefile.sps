@@ -4271,7 +4271,12 @@
       (define library-sexp
 	`(library (ikarus primlocs)
 	   (export) ;;; must be empty
-	   (import (vicare)
+	   (import
+	       ;;Notice that the  library (vicare) imported here is the  one from the
+	       ;;OLD boot image!!!
+	       (except (vicare)
+		       system-value-gensym
+		       system-label-gensym)
 	     (only (psyntax library-manager)
 		   install-library)
 	     (only (ikarus.compiler)
