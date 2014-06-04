@@ -2237,7 +2237,7 @@ Binary infix multiplication and division arithmetic operators:
 Binary infix addition and subtraction arithmetic operators:
 
 @example
-+ - * / fl+ fl- fl* fl/ fx+ fx-
++ - fl+ fl- fx+ fx-
 @end example
 
 @item
@@ -2288,10 +2288,10 @@ Here some expansion examples:
 @subsubsection Random notes on the features
 
 
-@subsubheading About the exponentiation and bitwise xor operators
+@subsubheading About the exponentiation and bitwise XOR operators
 
 The @func{infix} macro uses @samp{**} as exponentiation operator and
-@samp{^} as bitwise xor operator; this is controversial because a lot of
+@samp{^} as bitwise XOR operator; this is controversial because a lot of
 people, especially LaTeX users, is used to think of @samp{^} as
 exponentiation operator.  The C language has established a tradition to
 interpret @samp{^} as bitwise exclusive OR operator, and the Python
