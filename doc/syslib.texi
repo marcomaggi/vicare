@@ -6213,16 +6213,20 @@ The optimization level; accepted values are the fixnums @code{0},
 
 
 @deffn Parameter $cp0-effort-limit
-An effort counter that is decremented every time an optimization is
-performed by the source optimizer.  It is set every time the optimizer
-enters specific subexpressions of the input.
+The initial value of an "effort counter" that is decremented every time
+an optimisation is performed by the source optimiser; when the counter
+reaches zero: the current optimisation effort is abandoned and the
+original input expression kept as is.  It is set every time the
+optimiser enters specific subexpressions of the input.
 @end deffn
 
 
 @deffn Parameter $cp0-size-limit
-A code size counter (estimated) that is decremented every time an
-optimization is performed by the source optimizer.  It is set every time
-the optimizer enters specific subexpressions of the input.
+The initial value of a (estimated) code size counter that is decremented
+every time an optimisation is performed by the source optimiser; when
+the counter reaches zero: the current optimisation effort is abandoned
+and the original input expression kept as is.  It is set every time the
+optimiser enters specific subexpressions of the input.
 @end deffn
 
 @c page
