@@ -720,6 +720,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-numerics-sqrt.sps				\
 	tests/test-vicare-numerics-cbrt.sps				\
 	tests/test-vicare-numerics-bitwise.sps				\
+	tests/test-vicare-source-optimiser.sps				\
 	tests/test-vicare-parameters.sps				\
 	tests/test-vicare-parser-logic.sps				\
 	tests/test-vicare-pointers.sps					\
