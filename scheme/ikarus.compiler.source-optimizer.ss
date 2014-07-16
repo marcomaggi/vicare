@@ -2214,7 +2214,7 @@
 
 ;;;; done
 
-)
+#| end of source optimiser module |# )
 
 ;;; end of file
 ;; Local Variables:
