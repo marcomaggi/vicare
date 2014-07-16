@@ -47,8 +47,28 @@
 (parametrise ((check-test-name	'fixnums))
 
   (check
+      (optimisation-of (greatest-fixnum))
+    => `(quote ,(greatest-fixnum)))
+
+  (check
+      (optimisation-of (least-fixnum))
+    => `(quote ,(least-fixnum)))
+
+;;; --------------------------------------------------------------------
+
+  (check
       (optimisation-of (fx+ 1 2))
     => '(quote 3))
+
+  (check
+      (optimisation-of (fx+ 1 (greatest-fixnum)))
+    => `(fx+ '1 ',(greatest-fixnum)))
+
+  (check
+      (optimisation-of (fx+ -1 (least-fixnum)))
+    => `(fx+ '-1 ',(least-fixnum)))
+
+;;; --------------------------------------------------------------------
 
   (check
       (optimisation-of ($fx+ 1 2))
@@ -59,6 +79,19 @@
   (check
       (optimisation-of (fx- 1 2))
     => '(quote -1))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (optimisation-of ($fx- 1 2))
+    => '(quote -1))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (optimisation-of (fx* 11 22))
+    => `(quote ,(fx* 11 22)))
+
 
   #t)
 
