@@ -1,11 +1,11 @@
 ## Process this file with automake to produce Makefile.in
 
-ACLOCAL_AMFLAGS		= -I autotools
+ACLOCAL_AMFLAGS		= -I meta/autotools
 EXTRA_DIST		= configure.sh configure32.sh configure64.sh	\
 			  bare-configure.sh cygwin-configure.sh		\
 			  scripts/make-last-revision			\
 			  scripts/vie					\
-			  autotools/config.rpath
+			  meta/autotools/config.rpath
 
 slsdir			= $(srcdir)/lib
 fasldir			= $(builddir)/lib
