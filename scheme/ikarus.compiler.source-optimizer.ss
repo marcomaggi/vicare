@@ -70,7 +70,7 @@
 	    obj)))))
 
   (define optimize-level
-    (make-parameter 0
+    (make-parameter 2
       (lambda (obj)
 	(case obj
 	  ((0 1 2 3)

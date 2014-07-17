@@ -370,7 +370,8 @@ Turn off use of the source optimizer.
 @itemx -O3
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
-Turn on various levels of compile optimisations.
+Turn on various levels of compile optimisations.  The default
+optimisation level is equivalent to @code{-O2}.
 
 @item --optimizer-passes-count @var{COUNT}
 @cindex Command line option @option{--optimizer-passes-count}
