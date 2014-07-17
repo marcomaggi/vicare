@@ -1,0 +1,11 @@
+* Branch purpose
+
+  Development of the source optimiser.
+
+* Files affected
+
+  The source optimiser code is in "ikarus.compiler.source-optimiser.ss"; the optimiser is
+  configured with command line options defined in "ikarus.main.sls".
+
+* For every library defined by the boot image classify the relevant primitives
+
