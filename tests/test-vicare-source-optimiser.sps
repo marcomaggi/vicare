@@ -34,10 +34,10 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare optimiser\n")
 
-(compiler.$source-optimizer-passes-count 2)
 (compiler.optimize-level 2)
-(compiler.$cp0-effort-limit 200)
-(compiler.$cp0-size-limit   32)
+;;(compiler.$source-optimizer-passes-count 2)
+;;(compiler.$cp0-effort-limit 50)
+;;(compiler.$cp0-size-limit   8)
 
 
 ;;;; syntax helpers

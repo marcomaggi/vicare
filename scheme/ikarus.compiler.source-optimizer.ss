@@ -44,21 +44,41 @@
 	 cp0-size-limit)
   (define who 'source-optimize)
 
-  (define DEFAULT-CP0-EFFORT-LIMIT	50)
-  (define DEFAULT-CP0-SIZE-LIMIT	8)
-  (define O3-CP0-EFFORT-LIMIT		(* 4 DEFAULT-CP0-EFFORT-LIMIT))
-  (define O3-CP0-SIZE-LIMIT		(* 4 DEFAULT-CP0-SIZE-LIMIT))
-  (define cp0-effort-limit		(make-parameter DEFAULT-CP0-EFFORT-LIMIT))
-  (define cp0-size-limit		(make-parameter DEFAULT-CP0-SIZE-LIMIT))
+  (define-constant DEFAULT-CP0-EFFORT-LIMIT	50)
+  (define-constant DEFAULT-CP0-SIZE-LIMIT	8)
+  (define-constant O3-CP0-EFFORT-LIMIT		(* 4 DEFAULT-CP0-EFFORT-LIMIT))
+  (define-constant O3-CP0-SIZE-LIMIT		(* 4 DEFAULT-CP0-SIZE-LIMIT))
+
+  (define cp0-effort-limit
+    (make-parameter DEFAULT-CP0-EFFORT-LIMIT
+      (lambda (obj)
+	(if (and (fixnum? obj)
+		 (fxnonnegative? obj))
+	    obj
+	  (procedure-argument-violation 'cp0-effort-limit
+	    "expected positive fixnum as optimisation effort limit"
+	    obj)))))
+
+  (define cp0-size-limit
+    (make-parameter DEFAULT-CP0-SIZE-LIMIT
+      (lambda (obj)
+	(if (and (fixnum? obj)
+		 (fxnonnegative? obj))
+	    obj
+	  (procedure-argument-violation 'cp0-size-limit
+	    "expected positive fixnum as optimisation size limit"
+	    obj)))))
 
   (define optimize-level
     (make-parameter 0
-      (lambda (x)
-	(case x
+      (lambda (obj)
+	(case obj
 	  ((0 1 2 3)
-	   x)
+	   obj)
 	  (else
-	   (error 'optimize-level "valid optimization levels are 0, 1, 2, and 3"))))))
+	   (procedure-argument-violation 'optimize-level
+	     "valid optimization levels are 0, 1, 2, and 3"
+	     obj))))))
 
   (define source-optimizer-passes-count
     (make-parameter 1
@@ -67,12 +87,11 @@
 		 (fxpositive? obj))
 	    obj
 	  (procedure-argument-violation 'source-optimizer-passes-count
-	    "expected positive fixnum as parameter value"
+	    "expected positive fixnum as source optimiser passes count"
 	    obj)))))
 
   (define source-optimizer-input
-    ;;This  is used  in  case of  internal error  to  show better  error
-    ;;context.
+    ;;This is used in case of internal error to show better error context.
     ;;
     (make-parameter #f))
 
