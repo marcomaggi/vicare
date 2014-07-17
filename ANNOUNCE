@@ -463,6 +463,23 @@ Lots of backwards incompatibilities... life is hard!
 
   they are recognised as operators by the INFIX syntax.
 
+* BACKWARDS INCOMPATIBILITY In the library (vicare posix), the structure
+  "struct-stat"  has   now  fields  for  file   times  with  nanoseconds
+  resolution; they  are used  whenever the underlying  platform supports
+  them.  The field names are now:
+
+     st_atime_nsec
+     st_mtime_nsec
+     st_ctime_nsec
+
+  and the fields with microseconds resolution:
+
+     st_atime_usec
+     st_mtime_usec
+     st_ctime_usec
+
+  do not exist anymore.
+
 
 Notes for revision 0.3d7
 ------------------------

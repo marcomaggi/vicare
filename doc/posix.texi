@@ -855,7 +855,7 @@ Data structure type representing at the Scheme level the C structure
 @end deftp
 
 
-@defun make-struct-stat @var{mode} @var{ino} @var{dev} @var{nlink} @var{uid} @var{gid} @var{size} @var{atime} @var{atime_usec} @var{mtime} @var{mtime_usec} @var{ctime} @var{ctime_usec} @var{blocks} @var{blksize}
+@defun make-struct-stat @var{mode} @var{ino} @var{dev} @var{nlink} @var{uid} @var{gid} @var{size} @var{atime} @var{atime_nsec} @var{mtime} @var{mtime_nsec} @var{ctime} @var{ctime_nsec} @var{blocks} @var{blksize}
 Build and return a new @code{struct-stat} instance.
 @end defun
 
@@ -874,11 +874,11 @@ Return true if @var{obj} is an instance of @code{struct-stat}.
 @defunx struct-stat-st_gid @var{stat}
 @defunx struct-stat-st_size @var{stat}
 @defunx struct-stat-st_atime @var{stat}
-@defunx struct-stat-st_atime_usec @var{stat}
+@defunx struct-stat-st_atime_nsec @var{stat}
 @defunx struct-stat-st_mtime @var{stat}
-@defunx struct-stat-st_mtime_usec @var{stat}
+@defunx struct-stat-st_mtime_nsec @var{stat}
 @defunx struct-stat-st_ctime @var{stat}
-@defunx struct-stat-st_ctime_usec @var{stat}
+@defunx struct-stat-st_ctime_nsec @var{stat}
 @defunx struct-stat-st_blocks @var{stat}
 @defunx struct-stat-st_blksize @var{stat}
 Accessors for the field of @code{struct-stat} instances.
