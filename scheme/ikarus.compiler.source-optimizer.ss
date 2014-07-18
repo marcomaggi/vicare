@@ -200,16 +200,16 @@
 
 
 (module (E)
-  ;;Iterate   over  recordized   code  performing   source  optimization
-  ;;transformations; this module is the actual source optimizer.
+  ;;Iterate over recordized code performing source optimization transformations; this
+  ;;module is the actual source optimizer.
   ;;
-  ;;This module accepts  as input recordized code  containing the struct
-  ;;instances of the following types:
+  ;;This module accepts  as input recordized code containing the  struct instances of
+  ;;the following types:
   ;;
-  ;;assign		bind		clambda
-  ;;conditional		constant	fix
-  ;;forcall		funcall		prelex
-  ;;primref		seq
+  ;;	assign		bind		clambda
+  ;;	conditional	constant	fix
+  ;;	forcall		funcall		prelex
+  ;;	primref		seq
   ;;
   ;;and returns recordized code composed of the same struct types.
   ;;
@@ -228,32 +228,43 @@
     (decrement ec 1)
     (struct-case x
       ((constant)
+       ;;X is a datum.
        (decrement sc 1)
        x)
 
       ((prelex)
+       ;;X is a lexical variable reference.
        (E-var x ctxt env ec sc))
 
       ((seq e0 e1)
-       (mkseq (E e0 'e env ec sc)
-	      (E e1 ctxt env ec sc)))
+       ;;The sub-expression E0 is evaluated  for its side effects; the sub-expression
+       ;;E1 is evaluated in the context CTXT.
+       (make-seq-discarding-useless (E e0 'e   env ec sc)
+				    (E e1 ctxt env ec sc)))
 
       ((conditional x.test x.conseq x.altern)
        (E-conditional x.test x.conseq x.altern ctxt env ec sc))
 
       ((assign lhs rhs)
+       ;;X is a lexical variable assignment: it mutates the binding.
        (E-assign lhs rhs env ec sc))
 
       ((funcall rator rand*)
+       ;;X is a function application.  The operator is in RATOR, the list of operands
+       ;;is in RAND*.
        (E-funcall rator (map (lambda (x)
 			       (make-operand x env ec))
 			  rand*)
 		  env ctxt ec sc))
 
       ((forcall name rand*)
+       ;;X is a  foreign function call performed by the  built in macro FOREIGN-CALL.
+       ;;The name of the  C language function is in NAME, the list  of operands is in
+       ;;RAND*.
        (decrement sc 1)
-       (make-forcall name (map (lambda (x)
-				 (E x 'v env ec sc))
+       (make-forcall name (map (lambda (operand)
+				 ;;The operands are evaluated for their return value.
+				 (E operand 'v env ec sc))
 			    rand*)))
 
       ((primref name)
@@ -305,8 +316,8 @@
 	  ((constant test.result.val)
 	   ;;We could  precompute the result  of the TEST, so  we output
 	   ;;only the CONSEQ or the ALTERN.
-	   (mkseq test (E (if test.result.val x.conseq x.altern)
-			  ctxt env ec sc)))
+	   (make-seq-discarding-useless test (E (if test.result.val x.conseq x.altern)
+						ctxt env ec sc)))
 	  (else
 	   ;;The last expression in TEST could not be precomputed.
 	   (let ((ctxt (case-context ctxt
@@ -318,7 +329,7 @@
 		   ;;If the results of CONSEQ and ALTERN are known to be
 		   ;;equal: we  just include TEST for  its side effects,
 		   ;;followed by CONSEQ.
-		   (mkseq test optimized-conseq)
+		   (make-seq-discarding-useless test optimized-conseq)
 		 (begin
 		   (decrement sc 1)
 		   (%build-conditional test optimized-conseq optimized-altern)))))))))
@@ -409,14 +420,14 @@
     ;;     ?rhs
     ;;     #t)
     ;;
-    (mkseq (let ((lhs.copy (%lookup lhs env)))
-	     (if (not (prelex-source-referenced? lhs))
-		 (E rhs 'e env ec sc)
-	       (begin
-		 (decrement sc 1)
-		 (set-prelex-residual-assigned?! lhs.copy (prelex-source-assigned? lhs.copy))
-		 (make-assign lhs.copy (E rhs 'v env ec sc)))))
-	   (make-constant (void))))
+    (make-seq-discarding-useless (let ((lhs.copy (%lookup lhs env)))
+				   (if (not (prelex-source-referenced? lhs))
+				       (E rhs 'e env ec sc)
+				     (begin
+				       (decrement sc 1)
+				       (set-prelex-residual-assigned?! lhs.copy (prelex-source-assigned? lhs.copy))
+				       (make-assign lhs.copy (E rhs 'v env ec sc)))))
+				 (make-constant (void))))
 
   (define (E-funcall rator rand* env ctxt ec sc)
     ;;Process a  struct instance of  type FUNCALL, *not*  representing a
@@ -512,7 +523,7 @@
 	)))
 
   (define (E-var x ctxt env ec sc)
-    ;;Process a variable reference.
+    ;;Process a lexical variable reference.
     ;;
     ;;X is a struct instance of type PRELEX.
     ;;
@@ -1495,33 +1506,60 @@
       )))
 
 
-(define (mkseq e0 e1)
-  ;;Return  a (seq  e0 e1)  with a  seq-less e1  if both  e0 and  e1 are
+(define (make-seq-discarding-useless expr0 expr1)
+  ;;Given a sequence of expressions EXPR0 and EXPR1: discard those that are evaluated
+  ;;for  their  side  effects,  but  have   no  side  effects.   Return  a  structure
+  ;;representing recordised code, not necessarily a SEQ struct.
+  ;;
+  ;;EXPR0 and EXPR1  are meant to be fields  from a SEQ struct; both  EXPR0 and EXPR1
+  ;;are meant to have been already processed by the function E.
+  ;;
+  ;;Specifically, recognising that a struct SEQ in recordised code represents a BEGIN
+  ;;syntax:
+  ;;
+  ;;* Given:
+  ;;
+  ;;     (begin expr0 expr1)
+  ;;
+  ;;  check if EXPR0 is without side-effects, and in this case discard it and return:
+  ;;
+  ;;     expr1
+  ;;
+  ;;* Given:
+  ;;
+  ;;     (begin (begin expr0.expr0 expr0.expr1) expr1)
+  ;;
+  ;;  check if EXPR0.EXPR1  is without side-effects, and in this  case discard it and
+  ;;  return:
+  ;;
+  ;;     (begin expr0.expr0 expr1)
+  ;;
+  ;;* Given:
+  ;;
+  ;;     (begin expr0 (begin expr1.expr0 expr1.expr1))
+  ;;
+  ;;  check if EXPR1.EXPR0  is without side-effects, and in this  case discard it and
+  ;;  return:
+  ;;
+  ;;     (begin expr0 expr1.expr1)
+  ;;
+  ;;Return a  (seq expr0 expr1)  with a  seq-less expr1 if  both expr0 and  expr1 are
   ;;constructed properly.
   ;;
-  ;;In other words, given:
-  ;;
-  ;;   (begin e0a e0b e1)
-  ;;
-  ;;the  purpose  of  this  function  is to  check  if  E0B  is  without
-  ;;side-effects, and in this case discard it and return:
-  ;;
-  ;;   (begin e0a e1)
-  ;;
-  (if (simple-expression-without-side-effects? e0)
-      e1
-    (let ((e0 (struct-case e0
-		((seq e0a e0b)
-		 (if (simple-expression-without-side-effects? e0b)
-		     e0a
-		   e0))
-		(else
-		 e0))))
-      (struct-case e1
-	((seq e1a e1b)
-	 (make-seq (make-seq e0 e1a) e1b))
+  (if (simple-expression-without-side-effects? expr0)
+      expr1
+    (let ((expr0 (struct-case expr0
+		   ((seq expr0.expr0 expr0.expr1)
+		    (if (simple-expression-without-side-effects? expr0.expr1)
+			expr0.expr0
+		      expr0))
+		   (else
+		    expr0))))
+      (struct-case expr1
+	((seq expr1.expr0 expr1.expr1)
+	 (make-seq (make-seq expr0 expr1.expr0) expr1.expr1))
 	(else
-	 (make-seq e0 e1))))))
+	 (make-seq expr0 expr1))))))
 
 (define (simple-expression-without-side-effects? x)
   ;;Check quickly whether something is effect-free.
@@ -1622,8 +1660,8 @@
 	       (residualize-operands tail-expr (cdr rand*) sc)
 	     (begin
 	       (decrement sc (operand-size opnd))
-	       (mkseq pre-expr
-		      (residualize-operands tail-expr (cdr rand*) sc))))))))
+	       (make-seq-discarding-useless pre-expr
+					    (residualize-operands tail-expr (cdr rand*) sc))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1759,7 +1797,7 @@
 	 ;;Give up.  No optimizations possible.
 	 (residualize-ref x sc)))))
 
-  #| end of module: copy |# )
+  #| end of module: INLINE-REFERENCED-OPERAND |# )
 
 
 (module (inline-function-application)
@@ -1847,7 +1885,7 @@
     (with-extended-env ((env formals) <== (env formals rand*))
       (let ((optimized-body (E body (app-ctxt ctxt) env ec sc)))
 	(begin0
-	    (make-let-binding formals rand* optimized-body sc)
+	  (make-let-binding formals rand* optimized-body sc)
 	  (set-app-inlined! ctxt #t)))))
 
 ;;; --------------------------------------------------------------------
@@ -1885,7 +1923,7 @@
       (let-values (((lhs* tmp* rest-formal) (%partition formals rand*)))
 	(with-extended-env ((env a*) <== (env (append lhs* tmp*) rand*))
 	  (let ((rest-rand (make-operand (make-funcall (make-primref 'list) tmp*)
-					env ec)))
+					 env ec)))
 	    (with-extended-env ((env b*) <== (env (list rest-formal) (list rest-rand)))
 	      (let* ((optim-body (E body (app-ctxt ctxt) env ec sc))
 		     (sublet     (make-let-binding b* (list rest-rand) optim-body sc))
@@ -1918,9 +1956,9 @@
 			(%partition (cdr formals) (cdr rand*))))
 	    (values (cons lhs lhs*) tmp-formal* rest-formal)))))
 
-    #| end of module: %application-with-var-formals |# )
+    #| end of module: %APPLICATION-WITH-VAR-FORMALS |# )
 
-  #| end of module: inline |# )
+  #| end of module: INLINE-FUNCTION-APPLICATION |# )
 
 
 (module (make-let-binding)
@@ -2238,7 +2276,8 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'case-context 'scheme-indent-function 1)
-;; eval: (put 'with-extended-env 'scheme-indent-function 1)
+;; eval: (put 'struct-case		'scheme-indent-function 1)
+;; eval: (put 'case-context		'scheme-indent-function 1)
+;; eval: (put 'with-extended-env	'scheme-indent-function 1)
 ;; End:
 
