@@ -5721,14 +5721,12 @@
 
 
 (module (unparse-recordized-code/pretty)
-  ;;Unparse the struct  instance X (representing recordized  code in the
-  ;;core  language  already processed  by  the  compiler) into  a  human
-  ;;readable symbolic expression  to be used when printing  to some port
-  ;;for miscellaneous debugging purposes.
+  ;;Unparse the struct instance X (representing  recordized code in the core language
+  ;;already processed by  the compiler) into a human readable  symbolic expression to
+  ;;be used when printing to some port for miscellaneous debugging purposes.
   ;;
-  ;;This module  attempts to unparse  recordized code and  reconstruct a
-  ;;Scheme-like  symbolic  expression;  the  returned  sexp  does  *not*
-  ;;exactly represent the input.
+  ;;This module  attempts to  unparse recordized code  and reconstruct  a Scheme-like
+  ;;symbolic expression; the returned sexp does *not* exactly represent the input.
   ;;
   ;;This function recognises only structures of the following type:
   ;;
@@ -5742,16 +5740,14 @@
   ;;other values are not processed and are returned as they are.
   ;;
   (define who 'unparse-recordized-code/pretty)
-  ;; (import (only (vicare system $symbols)
-  ;; 		$symbol-string))
 
-  (define (unparse-recordized-code/pretty x)
+  (define (unparse-recordized-code/pretty input-expr)
     ;;
-    ;;A lot  of functions are nested  here because they make  use of the
-    ;;closure "Var", which has internal state.
+    ;;A lot of functions are nested here  because they make use of the closure "Var",
+    ;;which has internal state.
     ;;
-    ;;*NOTE* Being  that this function  is used only when  debugging: it
-    ;;makes no sense to use unsafe operations: LET'S KEEP IT SAFE!!!
+    ;;*NOTE* Being that this function is used  only when debugging: it makes no sense
+    ;;to use unsafe operations: LET'S KEEP IT SAFE!!!
     ;;
     (define (E x)
       (struct-case x
@@ -5839,10 +5835,9 @@
 	(else x)))
 
     (module (Var)
-      ;;Given a struct instance X of type PRELEX or VAR, identifying the
-      ;;location of  a binding:  return a  symbol representing  a unique
-      ;;name for the binding.  The map between structures and symbols is
-      ;;cached in a hash table.
+      ;;Given a struct instance X of type  PRELEX or VAR, identifying the location of
+      ;;a binding: return  a symbol representing a unique name  for the binding.  The
+      ;;map between structures and symbols is cached in a hash table.
       ;;
       ;;This function acts in such a way that the input:
       ;;
@@ -5857,37 +5852,34 @@
       ;;       a_1))
       ;;
       (define H
-	;;Map PRELEX  and VAR structures  to already built  binding name
-	;;symbols.
+	;;Map PRELEX and VAR structures to already built binding name symbols.
 	(make-eq-hashtable))
       (define T
-	;;Map binding pretty string names to indexes.
+	;;Map binding  pretty string names  to number of  times this string  name has
+	;;already been used.
 	(make-hashtable string-hash string=?))
       (define (Var x)
 	(or (hashtable-ref H x #f)
 	    (struct-case x
 	      ((prelex x.name)
-	       (%build-name x.name))
+	       (%build-name x x.name))
 	      ((var x.name)
-	       (%build-name x.name))
-	      (else
-	       x
-	       #;(error who "expected struct of type PRELEX or VAR" x)))))
+	       (%build-name x x.name))
+	      (else x))))
 
-      (define (%build-name x.name)
+      (define (%build-name x x.name)
 	(let* ((name (symbol->string x.name))
 	       (N    (hashtable-ref T name 0)))
 	  (hashtable-set! T name (+ N 1))
-	  (let ((sym (string->symbol (string-append name "_" (number->string N)))))
-	    (hashtable-set! H x sym)
-	    sym)))
+	  (receive-and-return (sym)
+	      (string->symbol (string-append name "_" (number->string N)))
+	    (hashtable-set! H x sym))))
 
       #| end of module: Var |# )
 
-    (define(%do-seq e0 e1)
+    (define (%do-seq e0 e1)
       (cons 'begin
-	    ;;Here we flatten nested SEQ  instances into a unique output
-	    ;;SEQ form.
+	    ;;Here we flatten nested SEQ instances into a unique output SEQ form.
 	    (let recur ((expr  e0)
 			(expr* (list e1)))
 	      (struct-case expr
@@ -5918,8 +5910,8 @@
       (define (E-args proper x)
 	(if proper
 	    (%map-in-order Var x)
-	  ;;The loop below  is like MAP but for improper  lists: it maps Var
-	  ;;over the improper list X.
+	  ;;The loop below is  like MAP but for improper lists: it  maps Var over the
+	  ;;improper list X.
 	  (let recur ((A (car x))
 		      (D (cdr x)))
 	    (if (null? D)
@@ -5929,13 +5921,13 @@
 
       #| end of module: E-clambda |# )
 
-    (E x))
+    (E input-expr))
 
 ;;; --------------------------------------------------------------------
 
   (define (%map-in-order f ls)
-    ;;This version  of MAP imposes an  order to the application  of F to
-    ;;the items in LS.
+    ;;This version of  MAP imposes an order to  the application of F to  the items in
+    ;;LS.
     ;;
     (if (null? ls)
 	'()
