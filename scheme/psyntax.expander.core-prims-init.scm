@@ -1545,7 +1545,12 @@
   ;; open-input-file
   ;; open-output-file
   ;; peek-char
-  ;; read
+
+  (let ((P (C read)))
+    (register-lambda-signature P (make-clambda-compound (list (S (list (C <top>)) '())
+							      (S (list (C <top>))
+								 (list (C <textual-input-port>)))))))
+
   ;; read-char
   ;; write
   ;; write-char
