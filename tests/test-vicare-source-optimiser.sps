@@ -44,6 +44,20 @@
 
 
 
+(parametrise ((check-test-name	'variable-references))
+
+  (check
+      (optimisation-of
+       (let ((x (read)))
+	 ;;A variable reference evaluated for side effects only is removed.
+	 x
+	 (write x)))
+    => '(let ((x_0 (read)))
+	  (write x_0)))
+
+  #t)
+
+
 (parametrise ((check-test-name	'fixnums))
 
   (check

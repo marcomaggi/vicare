@@ -145,7 +145,7 @@
 		;environment that encloses this one.
    ))
 
-(define-inline (make-empty-env)
+(define-syntax-rule (make-empty-env)
   #f)
 
 ;;Represent the context  in which a primitive function  (CONS, CAR, ...)
@@ -283,7 +283,7 @@
 
       ((clambda label.unused clause* cp free name)
        (parametrise ((source-optimizer-input x))
-	 (%E-clambda clause* cp free name   x ctxt env ec sc)))
+	 (E-clambda clause* cp free name   x ctxt env ec sc)))
 
       ((bind lhs* rhs* body)
        (E-bind lhs* rhs* body ctxt env ec sc))
@@ -652,7 +652,7 @@
 					referenced-lhs*)
 	      optimized-body))))))
 
-  (define (%E-clambda clause* cp free name   x ctxt env ec sc)
+  (define (E-clambda clause* cp free name   x ctxt env ec sc)
     ;;Process a struct intance of type CLAMBDA.
     ;;
     ;;X is the  original struct instance of type CLAMBDA;  we need it if
@@ -826,15 +826,13 @@
 		 (let () ?body0 ?body ...)
 	       (%copy-assigned-fields-to-source-fields! ?new-lhs-id)))))))
 
-  (define-syntax <==
-    (syntax-rules ()))
+  (define-auxiliary-syntaxes <==)
 
-  (define (make-prelex-replacement x)
-    ;;Given a  struct instance X of  type PRELEX build and  return a new
-    ;;PRELEX struct  containing the same  values in the  fields: "name",
-    ;;"source-reference?", "global-location", and optionally more.
+  (define* (make-prelex-replacement {x prelex?})
+    ;;Given a struct instance  X of type PRELEX build and return  a new PRELEX struct
+    ;;containing  the  same  values   in  the  fields:  "name",  "source-reference?",
+    ;;"global-location", and optionally more.
     ;;
-    (assert (prelex? x))
     (let ((y (make-prelex ($prelex-name x) #f)))
       ($set-prelex-source-referenced?! y ($prelex-source-referenced? x))
       ($set-prelex-source-assigned?!   y ($prelex-source-assigned?   x))
@@ -1767,17 +1765,16 @@
 			 (lambda ()
 			   (call/cc
 			       (lambda (abort)
-				 (inline-function-application
-				  rhs ctxt (make-empty-env)
-				  ;;effort counter
-				  (if (active-counter? ec)
-				      ec
-				    (make-counter (cp0-effort-limit) ctxt abort))
-				  ;;size counter
-				  (make-counter (if (active-counter? sc)
-						    (counter-value sc)
-						  (cp0-size-limit))
-						ctxt abort)))))
+				 (inline-function-application rhs ctxt (make-empty-env)
+							      ;;effort counter
+							      (if (active-counter? ec)
+								  ec
+								(make-counter (cp0-effort-limit) ctxt abort))
+							      ;;size counter
+							      (make-counter (if (active-counter? sc)
+										(counter-value sc)
+									      (cp0-size-limit))
+									    ctxt abort)))))
 			 (lambda () (set-operand-outer-pending! opnd #f))))
 		(residualize-ref x sc)))))
 
