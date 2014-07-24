@@ -1396,8 +1396,8 @@
       ))
 
   (define (%E X ctxt)
-    ;;Convert the  symbolic expression X  representing code in  the core
-    ;;language into a nested hierarchy of struct instances.
+    ;;Convert the symbolic expression X representing code in the core language into a
+    ;;nested hierarchy of struct instances.
     ;;
     (cond ((pair? X)
 	   (%recordize-pair-sexp X ctxt))
@@ -1470,6 +1470,9 @@
 
       ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
+      ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
+      ;;is unique for this binding in the whole history of the Universe.
+      ;;
       ;;Return a struct instance of type RECBIND.
       ;;
       ((letrec)
@@ -1486,6 +1489,9 @@
 	       (ungen-fml* lhs*))))))
 
       ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;
+      ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
+      ;;is unique for this binding in the whole history of the Universe.
       ;;
       ;;Return a struct instance of type REC*BIND.
       ;;
@@ -1504,7 +1510,7 @@
 
       ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
       ;;
-      ;;Notice that a LIBRARY form like:
+      ;;A LIBRARY form like:
       ;;
       ;;   (library (the-lib)
       ;;     (export ---)
@@ -1519,13 +1525,14 @@
       ;;
       ;;where:
       ;;
-      ;;* ?LHS is a gensym representing the name of the binding;
+      ;;* ?LHS is the lex gensym representing the name of the binding; this gensym is
+      ;;  unique for this binding in the whole history of the Universe;
       ;;
-      ;;* ?LOC is a gensym used to hold the value of the binding (in the
-      ;;  VALUE field of the sybmol memory block);
+      ;;* ?LOC is the loc gensym used to  hold the value of the binding (in the VALUE
+      ;;  field of the  sybmol memory block); this gensym is  unique for this binding
+      ;;  in the whole history of the Universe;
       ;;
-      ;;* ?RHS is a symbolic expression which evaluates to the binding's
-      ;;  value.
+      ;;* ?RHS is a symbolic expression which evaluates to the binding's value.
       ;;
       ;;Return a struct instance of type REC*BIND.
       ;;
@@ -1536,9 +1543,9 @@
 	       (loc* ($map/stx $cadr  bind*)) ;list of unique gensyms
 	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LHS* is processed first!!!
-	   (let* ((lhs*^ (let ((lhs*^ (gen-fml* lhs*)))
-			   ($for-each/stx set-prelex-global-location! lhs*^ loc*)
-			   lhs*^))
+	   (let* ((lhs*^ (receive-and-return (lhs*^)
+			     (gen-fml* lhs*)
+			   ($for-each/stx set-prelex-global-location! lhs*^ loc*)))
 		  (rhs*^ ($map/stx E rhs* lhs*))
 		  (body^ (E body ctxt)))
 	     (begin0
@@ -1669,45 +1676,56 @@
       ;;
       ;;   (case-lambda (?formals ?body0 ?body ...) ...)
       ;;
-      ;;and knowing that a LAMBDA sexp is converted to CASE-LAMBDA, this
-      ;;function is called with CLAUSE* set to the list of clauses:
+      ;;and knowing that a LAMBDA sexp  is converted to CASE-LAMBDA, this function is
+      ;;called with CLAUSE* set to the list of clauses:
       ;;
       ;;   ((?formals ?body0 ?body ...) ...)
       ;;
-      ;;Return a list holding new struct instances of type CLAMBDA-CASE,
-      ;;one for each clause.
+      ;;Return a list holding new struct instances of type CLAMBDA-CASE, one for each
+      ;;clause.
       ;;
       (map (let ((ctxt (and (pair? ctxt) ($car ctxt))))
 	     (lambda (clause)
 	       (let ((fml* ($car  clause))  ;the formals
 		     (body ($cadr clause))) ;the body sequence
 		 ;;Make sure that FML* is processed first!!!
-		 (let* ((fml*^ (gen-fml* fml*))
-			(body^ (E body ctxt))
-			;;True if FML* is a  proper list; false if it is
-			;;a symbol or improper list.
-			(proper? (list? fml*)))
+		 (let* ((fml*^		(%properize-clambda-formals (gen-fml* fml*)))
+			(body^		(E body ctxt))
+			;;True if FML* is  a proper list; false if it  is a symbol or
+			;;improper list.
+			(proper?	(list? fml*))
+			(info		(make-case-info (gensym "clambda-case") fml*^ proper?)))
 		   (ungen-fml* fml*)
-		   (make-clambda-case (make-case-info (gensym "clambda-case") (properize fml*^) proper?)
-				      body^)))))
+		   (make-clambda-case info body^)))))
 	clause*))
 
-    (define (properize fml*)
-      ;;If FML*  is a proper  list: return a  new list holding  the same
-      ;;values.
+    (define (%properize-clambda-formals fml*)
+      ;;Convert the  formals FML*  of a  CASE-LAMBDA clause into  a proper  list.  We
+      ;;expect FML to be a valid CASE-LAMBDA formals specification, one among:
       ;;
-      ;;If FML*  is an improper list:  return a new proper  list holding
-      ;;the same values:
+      ;;   (?arg-symbol ...)
+      ;;   (?arg-symbol ... . ?rest-symbol)
+      ;;   ?args-symbol
       ;;
-      ;;   (properize '(1 2 . 3)) => (1 2 3)
+      ;;here we do not check for the items to be symbols.  If FML* is:
       ;;
-      ;;If FML* is not a list: return a list wrapping it:
+      ;;* null or a proper list: return a new list holding the same values:
       ;;
-      ;;   (properize 123) => (123)
+      ;;     (%properize-clambda-formals '())			=> ()
+      ;;     (%properize-clambda-formals '(arg1 arg2 arg3))	=> (arg1 arg2 arg3)
+      ;;
+      ;;* an improper list: return a new proper list holding the same values:
+      ;;
+      ;;     (%properize-clambda-formals '(arg1 arg2 . rest-arg))
+      ;;     => (arg1 arg2 rest-arg)
+      ;;
+      ;;* not a list: return a list wrapping it:
+      ;;
+      ;;     (%properize-clambda-formals args) => (args)
       ;;
       (cond ((pair? fml*)
 	     (cons ($car fml*)
-		   (properize ($cdr fml*))))
+		   (%properize-clambda-formals ($cdr fml*))))
 	    ((null? fml*)
 	     '())
 	    (else
@@ -1923,11 +1941,11 @@
     ;;FIXME  Do we  need a  new  cookie at  each call  to the  RECORDIZE
     ;;function?  Maybe  not, because  we always  call GEN-FML*  and then
     ;;clean up with UNGEN-FML*.  (Marco Maggi; Oct 10, 2012)
-    (define *cookie*
+    (define-constant *COOKIE*
       (gensym))
 
-    (define-inline (lexical x)
-      (getprop x *cookie*))
+    (define-syntax-rule (lexical ?X)
+      (getprop ?X *COOKIE*))
 
     (define (gen-fml* fml*)
       ;;Expect FML* to be a symbol  or a list of symbols.  This function
@@ -1946,11 +1964,11 @@
       ;;
       (cond ((pair? fml*)
 	     (let ((v (make-prelex ($car fml*) #f)))
-	       (putprop ($car fml*) *cookie* v)
+	       (putprop ($car fml*) *COOKIE* v)
 	       (cons v (gen-fml* ($cdr fml*)))))
 	    ((symbol? fml*)
 	     (let ((v (make-prelex fml* #f)))
-	       (putprop fml* *cookie* v)
+	       (putprop fml* *COOKIE* v)
 	       v))
 	    (else '())))
 
@@ -1968,10 +1986,10 @@
       ;;The property list keyword is the gensym bound to *COOKIE*.
       ;;
       (cond ((pair? fml*)
-	     (remprop ($car fml*) *cookie*)
+	     (remprop ($car fml*) *COOKIE*)
 	     (ungen-fml* ($cdr fml*)))
 	    ((symbol? fml*)
-	     (remprop fml* *cookie*))
+	     (remprop fml* *COOKIE*))
 	    ;;When FML* is null: do nothing.
 	    ))
 
