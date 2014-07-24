@@ -1310,22 +1310,26 @@
   (make-var name #f #f #f #f #f #f #f #f #f #f))
 
 
-(define (recordize x)
-  ;;Given  a symbolic  expression  X  representing a  form  in the  core
-  ;;language, convert  it into a  nested hierarchy of  struct instances;
-  ;;return the outer struct instance.
+(define (recordize input-expr)
+  ;;Given a symbolic expression INPUT-EXPR representing  a form in the core language,
+  ;;convert it into  a nested hierarchy of struct instances;  return the outer struct
+  ;;instance.
   ;;
-  ;;An expression in  the core language is code fully  expanded in which
-  ;;all  the bindings  have a  unique variable  name; the  core language
-  ;;would be evaluated  in an environment composed by  all the functions
-  ;;exported by the boot image and the loaded libraries.
+  ;;Notice that this  function is called to process: full  LIBRARY forms the expander
+  ;;has transformed into LIBRARY-LETREC* core  language forms; full R6RS programs the
+  ;;expander  has transformed  into  LIBRARY-LETREC core  language forms;  standalone
+  ;;expressions from invocations of R6RS's EVAL, for example read by the REPL.
   ;;
-  ;;This function expects a symbolic  expression with perfect syntax: no
-  ;;syntax errors are  checked.  We expect this function  to be executed
-  ;;without errors,  no exceptions should  be raised unless  an internal
-  ;;bug makes it happen.
+  ;;An  expression in  the core  language is  code fully  expanded in  which all  the
+  ;;bindings have a unique variable name; the  core language would be evaluated in an
+  ;;environment composed  by all  the functions  exported by the  boot image  and the
+  ;;loaded libraries.
   ;;
-  ;;Recognise the following core language:
+  ;;This function expects a symbolic expression with perfect syntax: no syntax errors
+  ;;are  checked.   We  expect  this  function to  be  executed  without  errors,  no
+  ;;exceptions should be raised unless an internal bug makes it happen.
+  ;;
+  ;;Recognise the following core language forms:
   ;;
   ;;   (quote ?datum)
   ;;   (if ?test ?consequent ?alternate)
@@ -1343,13 +1347,14 @@
   ;;   ?symbol
   ;;   (?func ?arg ...)
   ;;
-  ;;where: ?SYMBOL is interpreted as  reference to variable; ?LHS stands
-  ;;for "left-hand side"; ?RHS stands for "right-hand side".
+  ;;where:  ?SYMBOL  is  interpreted  as  reference  to  variable;  ?LHS  stands  for
+  ;;"left-hand side" and it is a lex  gensym; ?RHS stands for "right-hand side"; ?LOC
+  ;;is a loc gensym.
   ;;
   ;;The bulk of the work is performed by the recursive function E.
   ;;
-  ;;Whenever possible we  want closures to be annotated  with their name
-  ;;in the original source code; example:
+  ;;NOTE Whenever possible  we want closures to  be annotated with their  name in the
+  ;;original source code; example:
   ;;
   ;;   (define a
   ;;     (lambda () ;annotated: a
@@ -1378,33 +1383,46 @@
   ;;   ((lambda (x) x) (lambda (y) ;annotated: x
   ;;                y))
   ;;
-  ;;this is what  the CLOSURE-NAME argument in the  subfunctions is for;
-  ;;it is carefully handed to the  functions that process forms that may
-  ;;evaluate to a closure and  finally used to annotate struct instances
-  ;;of type CLAMBDA.
+  ;;this  is  what the  CLOSURE-NAME  argument  in the  subfunctions  is  for; it  is
+  ;;carefully  handed to  the functions  that process  forms that  may evaluate  to a
+  ;;closure and finally used to annotate struct instances of type CLAMBDA.
   ;;
 
   (case-define E
+    ;;Convert the symbolic expression X representing code in the core language into a
+    ;;nested hierarchy of struct instances.
+    ;;
+    ;;When  X is  recordised  code  representing the  right-hand  side  of a  binding
+    ;;definition: CTXT is the corresponding lex gensym.
+    ;;
     ((X)
      (E X #f))
     ((X ctxt)
-     ;;Convert the symbolic expression X representing  code in the core language into
-     ;;a nested hierarchy of struct instances.
-     ;;
-     ;;When  X is  recordised  code representing  the right-hand  side  of a  binding
-     ;;definition: CTXT is the corresponding lex gensym.
-     ;;
      (cond ((pair? X)
 	    (%recordize-pair-sexp X ctxt))
 
 	   ((symbol? X)
 	    (cond ((lexical X)
-		   ;;It is a reference to local variable.
-		   => (lambda (var)
-			(set-prelex-source-referenced?! var #t)
-			var))
+		   ;;X  is a  lex gensym  referencing a  binding defined  inside this
+		   ;;INPUT-EXPR.  For  now, the recordised reference  to such binding
+		   ;;is  simply its  PRELEX  struct;  we will  decide  later if  this
+		   ;;reference  must extract  a value  from  a loc  gensym or  simply
+		   ;;reference a memory location on the Scheme stack.
+		   => (lambda (prel)
+			(set-prelex-source-referenced?! prel #t)
+			prel))
 		  (else
-		   ;;It is a reference to top level variable.
+		   ;;X  is a  lex gensym  referencing  a top  level lexical  variable
+		   ;;defined by a previously  processed input expression; for example
+		   ;;a  previous expression  read at  the  REPL and  expanded in  the
+		   ;;interaction environment.
+		   ;;
+		   ;;To reference  such binding we  have to generate  recordised code
+		   ;;that extracts the  value from the binding's loc  gensym; this is
+		   ;;what  the primitive  TOP-LEVEL-VALUE  does.  For  this case:  we
+		   ;;expect the expander  to have generated a single  gensym to serve
+		   ;;both as lex gensym  and loc gensym; so, here, X  is both the lex
+		   ;;gensym and the loc gensym.
 		   (make-funcall (make-primref 'top-level-value)
 				 (list (make-constant X))))))
 
@@ -1428,26 +1446,24 @@
       ((if)
        (make-conditional
 	   (E ($cadr X))
-	 (E ($caddr  X) ctxt)
+	   (E ($caddr  X) ctxt)
 	 (E ($cadddr X) ctxt)))
 
       ;;Synopsis: (set! ?lhs ?rhs)
       ;;
-      ;;If the  left-hand side  references a  lexical binding:  return a
-      ;;struct  instance   of  type  ASSIGN.   If   the  left-hand  side
-      ;;references a top level binding: return a struct instance of type
-      ;;FUNCALL.
+      ;;If the left-hand side references a  lexical binding: return a struct instance
+      ;;of type ASSIGN.  If the left-hand side references a top level binding: return
+      ;;a struct instance of type FUNCALL.
       ;;
       ((set!)
        (let ((lhs ($cadr  X))  ;left-hand side
 	     (rhs ($caddr X))) ;right-hand side
 	 (cond ((lexical lhs)
-		=> (lambda (var)
-		     (set-prelex-source-assigned?! var #t)
-		     (make-assign var (E rhs lhs))))
+		=> (lambda (prel)
+		     (set-prelex-source-assigned?! prel #t)
+		     (make-assign prel (E rhs lhs))))
 	       (else
-		;;We recordize the right-hand size in the context
-		;;of LHS.
+		;;We recordize the right-hand size in the context of LHS.
 		(make-global-set! lhs (E rhs lhs))))))
 
       ;;Synopsis: (begin ?body0 ?body ...)
@@ -1471,17 +1487,17 @@
       ;;Return a struct instance of type RECBIND.
       ;;
       ((letrec)
-       (let ((bind* ($cadr  X))		     ;list of bindings
-	     (body  ($caddr X)))	     ;list of body forms
-	 (let ((lhs* ($map/stx $car  bind*)) ;list of bindings left-hand sides
+       (let ((bind* ($cadr  X))		      ;list of bindings
+	     (body  ($caddr X)))	      ;list of body forms
+	 (let ((lex* ($map/stx $car  bind*))  ;list of bindings left-hand sides
 	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LHS* is processed first!!!
-	   (let* ((lhs*^ (gen-fml* lhs*))
-		  (rhs*^ ($map/stx E rhs* lhs*))
+	   ;;Make sure that LEX* is processed first!!!
+	   (let* ((prel* (lex*->prelex* lex*))
+		  (rhs*^ ($map/stx E rhs* lex*))
 		  (body^ (E body ctxt)))
 	     (begin0
-		 (make-recbind lhs*^ rhs*^ body^)
-	       (ungen-fml* lhs*))))))
+	       (make-recbind prel* rhs*^ body^)
+	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
       ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
@@ -1491,19 +1507,19 @@
       ;;Return a struct instance of type REC*BIND.
       ;;
       ((letrec*)
-       (let ((bind* ($cadr X))		     ;list of bindings
-	     (body  ($caddr X)))	     ;list of body forms
-	 (let ((lhs* ($map/stx $car  bind*)) ;list of bindings left-hand sides
+       (let ((bind* ($cadr X))		      ;list of bindings
+	     (body  ($caddr X)))	      ;list of body forms
+	 (let ((lex* ($map/stx $car  bind*))  ;list of bindings left-hand sides
 	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LHS* is processed first!!!
-	   (let* ((lhs*^ (gen-fml* lhs*))
-		  (rhs*^ ($map/stx E rhs* lhs*))
+	   ;;Make sure that LEX* is processed first!!!
+	   (let* ((prel* (lex*->prelex* lex*))
+		  (rhs*^ ($map/stx E rhs* lex*))
 		  (body^ (E body ctxt)))
 	     (begin0
-		 (make-rec*bind lhs*^ rhs*^ body^)
-	       (ungen-fml* lhs*))))))
+	       (make-rec*bind prel* rhs*^ body^)
+	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
-      ;;Synopsis: (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
+      ;;Synopsis: (library-letrec* ((?lex ?loc ?rhs) ...) ?body0 ?body ..)
       ;;
       ;;A LIBRARY form like:
       ;;
@@ -1516,11 +1532,11 @@
       ;;
       ;;is converted by the expander into:
       ;;
-      ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?expr ...)
+      ;;   (library-letrec* ((?lex ?loc ?rhs) ...) ?expr ...)
       ;;
       ;;where:
       ;;
-      ;;* ?LHS is the lex gensym representing the name of the binding; this gensym is
+      ;;* ?LEX is the lex gensym representing the name of the binding; this gensym is
       ;;  unique for this binding in the whole history of the Universe;
       ;;
       ;;* ?LOC is the loc gensym used to  hold the value of the binding (in the VALUE
@@ -1538,14 +1554,14 @@
 	       (loc* ($map/stx $cadr  bind*))  ;list of loc gensyms
 	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
 	   ;;Make sure that LEX* is processed first!!!
-	   (let* ((lhs*^ (receive-and-return (lhs*^)
-			     (gen-fml* lex*)
-			   ($for-each/stx set-prelex-global-location! lhs*^ loc*)))
+	   (let* ((prel* (receive-and-return (prel*)
+			     (lex*->prelex* lex*)
+			   ($for-each/stx set-prelex-global-location! prel* loc*)))
 		  (rhs*^ ($map/stx E rhs* lex*))
 		  (body^ (E body ctxt)))
 	     (begin0
-	       (make-rec*bind lhs*^ rhs*^ body^)
-	       (ungen-fml* lex*))))))
+	       (make-rec*bind prel* rhs*^ body^)
+	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
       ;;Synopsis: (case-lambda (?formals ?body0 ?body ...) ...)
       ;;
@@ -1684,19 +1700,20 @@
 	       (let ((fml* ($car  clause))  ;the formals
 		     (body ($cadr clause))) ;the body sequence
 		 ;;Make sure that FML* is processed first!!!
-		 (let* ((fml*^		(%properize-clambda-formals (gen-fml* fml*)))
+		 (let* ((lex*		(%properize-clambda-formals fml*))
+			(prel*		(lex*->prelex* lex*))
 			(body^		(E body ctxt))
 			;;True if FML* is  a proper list; false if it  is a symbol or
 			;;improper list.
 			(proper?	(list? fml*))
-			(info		(make-case-info (gensym "clambda-case") fml*^ proper?)))
-		   (ungen-fml* fml*)
+			(info		(make-case-info (gensym "clambda-case") prel* proper?)))
+		   (%remove-prelex-from-proplist-of-lex lex*)
 		   (make-clambda-case info body^)))))
 	clause*))
 
     (define (%properize-clambda-formals fml*)
       ;;Convert the  formals FML*  of a  CASE-LAMBDA clause into  a proper  list.  We
-      ;;expect FML to be a valid CASE-LAMBDA formals specification, one among:
+      ;;expect FML* to be a valid CASE-LAMBDA formals specification, one among:
       ;;
       ;;   (?arg-symbol ...)
       ;;   (?arg-symbol ... . ?rest-symbol)
@@ -1931,65 +1948,101 @@
 
     #| end of module: E-app |# )
 
-  (module (lexical gen-fml* ungen-fml*)
+  (module (lexical lex*->prelex* %remove-prelex-from-proplist-of-lex)
+    ;;This module  takes care of  generating a PRELEX  structure for each  lex gensym
+    ;;associated to a binding.
+    ;;
+    ;;Remember that the  function RECORDIZE is called to process:  full LIBRARY forms
+    ;;the expander  has transformed  into LIBRARY-LETREC*  core language  forms; full
+    ;;R6RS programs  the expander has  transformed into LIBRARY-LETREC  core language
+    ;;forms; standalone expressions from invocations of R6RS's EVAL, for example read
+    ;;by the REPL.
+    ;;
+    ;;This is how bindings are handled:
+    ;;
+    ;;* When  RECORDIZE enters a LAMBDA,  ANNOTATED-CASE-LAMBDA, CASE-LAMBDA, LETREC,
+    ;;   LETREC*, LIBRARY-LETREC*  core language  form:  for each  defined binding  a
+    ;;  PRELEX struct is  built and stored in the property list  of the binding's lex
+    ;;  gensym.
+    ;;
+    ;;* While  RECORDIZE processes the body  of the binding core  language form: each
+    ;;  lex gensym  associated to a local  binding contains a PRELEX  in its property
+    ;;  list.
+    ;;
+    ;;* When RECORDIZE  exits the binding core language form:  all the PRELEX structs
+    ;;  are removed from the lex gensyms property lists.
+    ;;
+    ;;So:
+    ;;
+    ;;* While  processing a LIBRARY-LETREC* form:  all the lex gensyms  associated to
+    ;;  level bindings defined inside the form  have a PRELEX in their property list.
+    ;;
+    ;;* While  processing a standalone expression:  the lex gensyms associated  to an
+    ;;  internally defined binding  do have a PRELEX in their  property list; the lex
+    ;;  gensyms associated  to a previously defined  binding do not have  a PRELEX in
+    ;;  their property list.
+    ;;
+    ;;For example, let's  say we are evaluating expression at  the REPL; new bindings
+    ;;created  by  DEFINE  are  added  to the  interaction  environment  returned  by
+    ;;INTERACTION-ENVIRONMENT.  So if we do:
+    ;;
+    ;;   vicare> (define a 1)
+    ;;
+    ;;the expander converts this  DEFINE form into a SET! form and  adds a binding to
+    ;;the interaction environment;  while recordizing this expression  the lex gensym
+    ;;*does* have a PRELEX in its property list.  If later we do:
+    ;;
+    ;;   vicare> a
+    ;;
+    ;;the expander finds the binding in the interaction environment and converts this
+    ;;variable  reference  into  a  standalone lex  gensym;  while  recordizing  this
+    ;;expression the lex gensym *does not* have a PRELEX in its property list.
+    ;;
 
     ;;FIXME Do we  need a new cookie  at each call to the  RECORDIZE function?  Maybe
-    ;;not, because we always call GEN-FML* and then clean up with UNGEN-FML*.  (Marco
-    ;;Maggi; Oct 10, 2012)
+    ;;not,   because  we   always  call   LEX*->PRELEX*  and   then  clean   up  with
+    ;;%REMOVE-PRELEX-FROM-PROPLIST-OF-LEX.  (Marco Maggi; Oct 10, 2012)
     (define-constant *COOKIE*
-      (gensym))
+      (gensym "prelex-for-lex"))
 
     (define-syntax-rule (lexical ?X)
+      ;;If  the lex  gensym ?X  has been  defined in  the expression  currently being
+      ;;recordised: return  the associated PRELEX struct.   If the lex gensym  ?X has
+      ;;been defined in a previously processed expression: return false.
+      ;;
       (getprop ?X *COOKIE*))
 
-    (define (gen-fml* fml*)
-      ;;Expect FML* to  be a symbol or a  list of symbols.  This function  is used to
-      ;;process the formals of LAMBDA, CASE-LAMBDA, LETREC, LETREC*, LIBRARY-LETREC.
-      ;;
-      ;;When FML*  is a symbol: build  a struct instance of  type PRELEX
-      ;;and  store it  in the  property list  of FML*,  then return  the
-      ;;PRELEX instance.
-      ;;
-      ;;When FML* is  a list of symbols: for each  symbol build a struct
-      ;;instance of type PRELEX and store it in the property list of the
-      ;;symbol; return the list of PRELEX instances.
+    (define (lex*->prelex* lex*)
+      ;;Process  the  formals  and  left-hand   sides  of  the  core  language  forms
+      ;;ANNOTATED-CASE-LAMBDA, CASE-LAMBDA, LETREC,  LETREC*, LIBRARY-LETREC.  Expect
+      ;;LEX* to be  a list of lex  gensyms; for each LEX generate  a PRELEX structure
+      ;;and store  it in the  property list  of the LEX.   Return the list  of PRELEX
+      ;;structures.
       ;;
       ;;The property list keyword is the gensym bound to *COOKIE*.
       ;;
-      (cond ((pair? fml*)
-	     (let ((v (make-prelex ($car fml*) #f)))
-	       (putprop ($car fml*) *COOKIE* v)
-	       (cons v (gen-fml* ($cdr fml*)))))
-	    ((symbol? fml*)
-	     (let ((v (make-prelex fml* #f)))
-	       (putprop fml* *COOKIE* v)
-	       v))
-	    (else '())))
+      (map (lambda (lex)
+	     (receive-and-return (prel)
+		 (make-prelex lex #f)
+	       (putprop lex *COOKIE* prel)))
+	lex*))
 
-    (define (ungen-fml* fml*)
-      ;;Clean up  function associated to the  function GEN-FML*.  Expect
-      ;;FML* to be a symbol or a list of symbols.
-      ;;
-      ;;When FML* is  a symbol: remove the instance of  type PRELEX from
-      ;;the property list of the symbol; return unspecified values.
-      ;;
-      ;;When  FML* is  a list  of symbols:  for each  symbol remove  the
-      ;;struct instance  of type  PRELEX from the  property list  of the
-      ;;symbol; return unspecified values.
+    (define (%remove-prelex-from-proplist-of-lex lex*)
+      ;;Process  the  formals  and  left-hand   sides  of  the  core  language  forms
+      ;;ANNOTATED-CASE-LAMBDA, CASE-LAMBDA, LETREC,  LETREC*, LIBRARY-LETREC.  Expect
+      ;;LEX* to  be a list of  lex gensyms previsously processed  with LEX*->PRELEX*;
+      ;;for each  LEX remove  the PRELEX  structure from  its property  list.  Return
+      ;;unspecified values.
       ;;
       ;;The property list keyword is the gensym bound to *COOKIE*.
       ;;
-      (cond ((pair? fml*)
-	     (remprop ($car fml*) *COOKIE*)
-	     (ungen-fml* ($cdr fml*)))
-	    ((symbol? fml*)
-	     (remprop fml* *COOKIE*))
-	    ;;When FML* is null: do nothing.
-	    ))
+      (for-each (lambda (lex)
+		  (remprop lex *COOKIE*))
+	lex*))
 
     #| end of module |# )
 
-  (E x))
+  (E input-expr))
 
 
 (module (optimize-direct-calls)

@@ -1254,6 +1254,13 @@
 ;;; --------------------------------------------------------------------
 
  (define-primop top-level-value safe
+   ;;Expect the single argument  to be a loc gensym associated  to a binding; extract
+   ;;the value  from the slot  "value" of  the symbol object  and return it.   If the
+   ;;value is the unbound object: raise an exception.
+   ;;
+   ;;For a full  explanation of this operation: see the  description of the primitive
+   ;;function TOP-LEVEL-VALUE.
+   ;;
    ((V sym)
     (struct-case sym
       ((constant sym.val)
@@ -1276,9 +1283,9 @@
 	    (cogen-pred-$unbound-object? val))
 	   val)))))
    ((E sym)
-    ;;The difference between the V execution context and the E execution
-    ;;context  is that:  here  we  do *not*  return  the  object in  the
-    ;;symbol's field "value".
+    ;;The difference between  the V execution context and the  E execution context is
+    ;;that: here we do *not* return the  object in the symbol's field "value", rather
+    ;;we raise an error if the "value" field is set to the unbound object.
     ;;
     (struct-case sym
       ((constant sym.val)

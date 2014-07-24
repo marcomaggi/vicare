@@ -135,18 +135,86 @@ Set both the fields @code{value} and @code{proc} of @var{sym} to
 @end deffn
 
 
-@deffn {Low-level Operation} top-level-value @var{sym}
-Still to be documented.
+@deffn {Low-level Operation} top-level-value @var{loc}
+Expect the argument to be a loc gensym associated to a binding; extract
+the value from the slot @code{value} of the symbol object and return it.
+If the value is the unbound object: raise an exception.
+
+This primitive function is also implemented as primitive operation.
+
+This function has a specific purpose: to retrieve the value of a binding
+defined in a previously evaluated expression in the context of an
+interaction environment; we have to know the internals of the expander
+to understand it.  Let's say we are evaluating expressions at the
+@repl{}; first we do:
+
+@example
+vicare> (define a 1)
+@end example
+
+@noindent
+the expander creates a new top level binding in the interaction
+environment; such interaction environment bindings are special in that
+they have a single gensym to serve both as lex gensym and loc gensym;
+the expander transforms the input form into the core language form:
+
+@example
+(set! lex.a 1)
+@end example
+
+@noindent
+where @code{lex.a} is both the lex gensym and the loc gensym associated
+to the binding; the compiler transforms the core language expression
+into:
+
+@example
+($init-symbol-value! lex.a 1)
+@end example
+
+@noindent
+which, compiled and evaluated, will store the value in the @code{value}
+field of the gensym @code{lex.a}.
+
+Later we do:
+
+@example
+vicare> a
+@end example
+
+@noindent
+the expander finds the binding in the interaction environment and
+transforms the variable reference into the core language expression:
+
+@example
+lex.a
+@end example
+
+@noindent
+the compiler then transforms the core language variable reference into:
+
+@example
+(top-level-value 'lex.a)
+@end example
+
+@noindent
+which, compiled and evaluated, will return the binding's value.
+
+The same processing happens when we evaluate multiple expressions with
+EVAL in the context of the same interaction environment.
 @end deffn
 
 
-@deffn {Low--level Operation} top-level-bound? @var{sym}
-Still to be documented.
+@deffn {Low--level Operation} top-level-bound? @var{loc}
+Return @true{} if the symbol object @var{loc} has a proper value in its
+@code{value} field; return @false{} if the field @code{value} is set to
+the unbound object.
 @end deffn
 
 
-@deffn {Low--level Operation} set-top-level-value! @var{sym} @var{value}
-Still to be documented.
+@deffn {Low--level Operation} set-top-level-value! @var{loc} @var{value}
+This function can be used to set a new object in a @var{loc} gensym, so
+that it can be later retrieved by @func{top-level-value}.  This function
+exists for completeness, but it is not really used by the compiler.
 @end deffn
 
 
