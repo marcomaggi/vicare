@@ -680,58 +680,56 @@
 
 ;;;; struct types used to represent code in the core language
 ;;
-;;The struct  types defined in this  code page are used  by the function
-;;RECORDIZE to  represent code in  the core language  in a way  which is
-;;better inspectable and optimizable.
+;;The struct types  defined in this code  page are used by the  function RECORDIZE to
+;;represent  code in  the core  language in  a way  which is  better inspectable  and
+;;optimizable.
 ;;
 
-;;Instances of  this type are  stored in  the property lists  of symbols
-;;representing  binding names;  this way  we  can just  send around  the
-;;binding name symbol to represent some lexical context informations.
+;;Instances of  this type are  stored in the  property lists of  symbols representing
+;;binding  names; this  way  we can  just  send  around the  binding  name symbol  to
+;;represent some lexical context informations.
 ;;
 (define-structure
     (prelex
      name
-		;A  symbol representing  the binding  name; in  practice
-		;useful only for humans when debugging.
+		;A symbol representing the binding  name; in practice useful only for
+		;humans when debugging.
      operand
-		;Multipurpose field.  One use: false or a struct of type
-		;VAR associated to this instance.
+		;Multipurpose  field.   One  use:  false  or a  struct  of  type  VAR
+		;associated to this instance.
      )
   ((source-referenced?   #f)
-		;Boolean, true when the region  in which this binding is
-		;defined  in   the  source  code  (before   source  code
-		;optimization) has at least one reference to it.
+		;Boolean, true  when the region in  which this binding is  defined in
+		;the source code  (before source code optimization) has  at least one
+		;reference to it.
 		;
 		;See also the field RESIDUAL-REFERENCED?.
    (source-assigned?     #f)
 		;Boolean or symbol.
 		;
-		;When a boolean: true when  the binding has been used as
-		;left-hand side in a SET! form.
+		;When a  boolean: true when  the binding  has been used  as left-hand
+		;side in a SET! form.
 		;
 		;When a symbol: who knows?  (Marco Maggi; Oct 12, 2012)
    (residual-referenced? #f)
-		;Boolean,  this  field  is   used  only  by  the  source
-		;optimizer.   When optimizing  source  code, an  attempt
-		;will  be  made to  substitute  every  reference to  the
-		;binding this struct represents with an expansion of the
-		;referenced value.
+		;Boolean,  this field  is used  only by  the source  optimizer.  When
+		;optimizing source code, an attempt  will be made to substitute every
+		;reference to the binding this struct represents with an expansion of
+		;the referenced value.
 		;
 		;For example, an attempt will be made to simplify:
 		;
 		;   (let ((x 1) (y 2)) (list x y))
 		;   ==> (let ((x 1) (y 2)) (list 1 2))
 		;
-		;When such optimization attempts  fail, the reference to
-		;variable is just left in place and this field is set to
-		;true.   So   the  meaning  of  this   field  is:  still
-		;referenced after optimization attempt.
+		;When such optimization  attempts fail, the reference  to variable is
+		;just left in place and this field is set to true.  So the meaning of
+		;this field is: still referenced after optimization attempt.
    (residual-assigned?   #f)
-		;Boolean,  this  field  is   used  only  by  the  source
-		;optimizer.   When optimizing  source  code, an  attempt
-		;will be made to remove  every assignment to the binding
-		;this struct represents if the new value is never used.
+		;Boolean,  this field  is used  only by  the source  optimizer.  When
+		;optimizing  source code,  an attempt  will be  made to  remove every
+		;assignment to the binding this struct represents if the new value is
+		;never used.
 		;
 		;For example, an attempt will be made to simplify:
 		;
@@ -744,19 +742,18 @@
 		;
 		;because X is never referenced.
 		;
-		;When such optimization attempts fail, the assignment to
-		;variable is just left in place and this field is set to
-		;true.  So the meaning of  this field is: still assigned
-		;after optimization attempt.
+		;When such optimization attempts fail,  the assignment to variable is
+		;just left in place and this field is set to true.  So the meaning of
+		;this field is: still assigned after optimization attempt.
    (global-location      #f)
-		;When this  binding describes a top  level binding, this
-		;field  is set  to  a unique  gensym  associated to  the
-		;binding; else this field is #f.
+		;When the  binding described by  this struct  is a top  level binding
+		;(defined by  the form  LIBRARY-LETREC* in  the core  language): this
+		;field is set to the loc  gensym associated to the binding.  When the
+		;binding described by this struct is a local one: this field is #f.
 		;
-		;The value of a top level binding is stored in the VALUE
-		;field of a gensym memory block.  Such field is accessed
-		;with the  operation $SYMBOL-VALUE and mutated  with the
-		;operation $SET-SYMBOL-VALUE!.
+		;The value of a top level binding is stored in the VALUE field of its
+		;loc gensym.  Such field is accessed with the operation $SYMBOL-VALUE
+		;and mutated with the operation $SET-SYMBOL-VALUE!.
    ))
 
 ;;; --------------------------------------------------------------------
@@ -1387,34 +1384,32 @@
   ;;of type CLAMBDA.
   ;;
 
-  (define-syntax E
-    (syntax-rules ()
-      ((_ ?x)
-       (%E ?x #f))
-      ((_ ?x ?ctxt)
-       (%E ?x ?ctxt))
-      ))
+  (case-define E
+    ((X)
+     (E X #f))
+    ((X ctxt)
+     ;;Convert the symbolic expression X representing  code in the core language into
+     ;;a nested hierarchy of struct instances.
+     ;;
+     ;;When  X is  recordised  code representing  the right-hand  side  of a  binding
+     ;;definition: CTXT is the corresponding lex gensym.
+     ;;
+     (cond ((pair? X)
+	    (%recordize-pair-sexp X ctxt))
 
-  (define (%E X ctxt)
-    ;;Convert the symbolic expression X representing code in the core language into a
-    ;;nested hierarchy of struct instances.
-    ;;
-    (cond ((pair? X)
-	   (%recordize-pair-sexp X ctxt))
+	   ((symbol? X)
+	    (cond ((lexical X)
+		   ;;It is a reference to local variable.
+		   => (lambda (var)
+			(set-prelex-source-referenced?! var #t)
+			var))
+		  (else
+		   ;;It is a reference to top level variable.
+		   (make-funcall (make-primref 'top-level-value)
+				 (list (make-constant X))))))
 
-	  ((symbol? X)
-	   (cond ((lexical X)
-		  ;;It is a reference to local variable.
-		  => (lambda (var)
-		       (set-prelex-source-referenced?! var #t)
-		       var))
-		 (else
-		  ;;It is a reference to top level variable.
-		  (make-funcall (make-primref 'top-level-value)
-				(list (make-constant X))))))
-
-	  (else
-	   (error 'recordize "invalid core language expression" X))))
+	   (else
+	    (error 'recordize "invalid core language expression" X)))))
 
   (define-inline (%recordize-pair-sexp X ctxt)
     (case ($car X)
@@ -1537,20 +1532,20 @@
       ;;Return a struct instance of type REC*BIND.
       ;;
       ((library-letrec*)
-       (let ((bind* ($cadr  X))		      ;list of bindings
-	     (body  ($caddr X)))	      ;list of body forms
-	 (let ((lhs* ($map/stx $car   bind*)) ;list of bindings left-hand sides
-	       (loc* ($map/stx $cadr  bind*)) ;list of unique gensyms
+       (let ((bind* ($cadr  X))		       ;list of bindings
+	     (body  ($caddr X)))	       ;list of body forms
+	 (let ((lex* ($map/stx $car   bind*))  ;list of lex gensyms
+	       (loc* ($map/stx $cadr  bind*))  ;list of loc gensyms
 	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LHS* is processed first!!!
+	   ;;Make sure that LEX* is processed first!!!
 	   (let* ((lhs*^ (receive-and-return (lhs*^)
-			     (gen-fml* lhs*)
+			     (gen-fml* lex*)
 			   ($for-each/stx set-prelex-global-location! lhs*^ loc*)))
-		  (rhs*^ ($map/stx E rhs* lhs*))
+		  (rhs*^ ($map/stx E rhs* lex*))
 		  (body^ (E body ctxt)))
 	     (begin0
-		 (make-rec*bind lhs*^ rhs*^ body^)
-	       (ungen-fml* lhs*))))))
+	       (make-rec*bind lhs*^ rhs*^ body^)
+	       (ungen-fml* lex*))))))
 
       ;;Synopsis: (case-lambda (?formals ?body0 ?body ...) ...)
       ;;
@@ -1938,9 +1933,9 @@
 
   (module (lexical gen-fml* ungen-fml*)
 
-    ;;FIXME  Do we  need a  new  cookie at  each call  to the  RECORDIZE
-    ;;function?  Maybe  not, because  we always  call GEN-FML*  and then
-    ;;clean up with UNGEN-FML*.  (Marco Maggi; Oct 10, 2012)
+    ;;FIXME Do we  need a new cookie  at each call to the  RECORDIZE function?  Maybe
+    ;;not, because we always call GEN-FML* and then clean up with UNGEN-FML*.  (Marco
+    ;;Maggi; Oct 10, 2012)
     (define-constant *COOKIE*
       (gensym))
 
@@ -1948,9 +1943,8 @@
       (getprop ?X *COOKIE*))
 
     (define (gen-fml* fml*)
-      ;;Expect FML* to be a symbol  or a list of symbols.  This function
-      ;;is used to  process the formals of  LAMBDA, CASE-LAMBDA, LETREC,
-      ;;LETREC*, LIBRARY-LETREC.
+      ;;Expect FML* to  be a symbol or a  list of symbols.  This function  is used to
+      ;;process the formals of LAMBDA, CASE-LAMBDA, LETREC, LETREC*, LIBRARY-LETREC.
       ;;
       ;;When FML*  is a symbol: build  a struct instance of  type PRELEX
       ;;and  store it  in the  property list  of FML*,  then return  the
