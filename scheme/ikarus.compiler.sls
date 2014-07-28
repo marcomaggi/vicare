@@ -698,10 +698,9 @@
 		;Multipurpose  field.   One  use:  false  or a  struct  of  type  VAR
 		;associated to this instance.
      )
-  ((source-referenced?   #f)
-		;Boolean, true  when the region in  which this binding is  defined in
-		;the source code  (before source code optimization) has  at least one
-		;reference to it.
+  ((source-reference-count 0)
+		;Fixnum,  represents  the  number  of times  a  lexical  variable  is
+		;referenced in the source code.
 		;
 		;See also the field RESIDUAL-REFERENCED?.
    (source-assigned?     #f)
@@ -755,6 +754,24 @@
 		;loc gensym.  Such field is accessed with the operation $SYMBOL-VALUE
 		;and mutated with the operation $SET-SYMBOL-VALUE!.
    ))
+
+(define* (prelex-incr-source-reference-count! {prel prelex?})
+  ($set-prelex-source-reference-count! prel (fxadd1 ($prelex-source-reference-count prel))))
+
+(define* (prelex-decr-source-reference-count! {prel prelex?})
+  ($set-prelex-source-reference-count! prel (fxsub1 ($prelex-source-reference-count prel))))
+
+(define (prelex-source-referenced? prel)
+  (fxpositive? (prelex-source-reference-count prel)))
+
+(define ($prelex-source-referenced? prel)
+  (fxpositive? ($prelex-source-reference-count prel)))
+
+(define (set-prelex-source-referenced?! prel bool)
+  (set-prelex-source-reference-count! prel (if bool 1 0)))
+
+(define ($set-prelex-source-referenced?! prel bool)
+  ($set-prelex-source-reference-count! prel (if bool 1 0)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1409,7 +1426,7 @@
 		   ;;reference  must extract  a value  from  a loc  gensym or  simply
 		   ;;reference a memory location on the Scheme stack.
 		   => (lambda (prel)
-			(set-prelex-source-referenced?! prel #t)
+			(prelex-incr-source-reference-count! prel)
 			prel))
 		  (else
 		   ;;X  is a  lex gensym  referencing  a top  level lexical  variable
@@ -1451,20 +1468,25 @@
 
       ;;Synopsis: (set! ?lhs ?rhs)
       ;;
-      ;;If the left-hand side references a  lexical binding: return a struct instance
-      ;;of type ASSIGN.  If the left-hand side references a top level binding: return
-      ;;a struct instance of type FUNCALL.
+      ;;If the  left-hand side  references a lexical  binding defined  by INPUT-EXPR:
+      ;;return a struct instance of type  ASSIGN.  If the left-hand side references a
+      ;;binding defined  in a  previously processed expression:  return a  new struct
+      ;;instance of type  FUNCALL representing a SET! operation for  a variable whose
+      ;;value is stored in the "value" field  of a loc gensym.  For more details: see
+      ;;the documentation of the primitive TOP-LEVEL-VALUE.
       ;;
       ((set!)
-       (let ((lhs ($cadr  X))  ;left-hand side
-	     (rhs ($caddr X))) ;right-hand side
-	 (cond ((lexical lhs)
+       (let* ((lhs.sexp ($cadr  X)) ;left-hand side
+	      (rhs.sexp ($caddr X)) ;right-hand side
+	      ;;We recordize the right-hand size in the context of LHS.
+	      (rhs.reco (E rhs.sexp lhs.sexp)))
+	 (cond ((lexical lhs.sexp)
 		=> (lambda (prel)
 		     (set-prelex-source-assigned?! prel #t)
-		     (make-assign prel (E rhs lhs))))
+		     (make-assign prel rhs.reco)))
 	       (else
-		;;We recordize the right-hand size in the context of LHS.
-		(make-global-set! lhs (E rhs lhs))))))
+		(make-funcall (make-primref '$init-symbol-value!)
+			      (list (make-constant lhs.sexp) rhs.reco))))))
 
       ;;Synopsis: (begin ?body0 ?body ...)
       ;;
@@ -1672,13 +1694,6 @@
       ($cadr x))
 
     #| end of module: quoted-string |# )
-
-  (define (make-global-set! lhs recordised-rhs)
-    ;;Return a new  struct instance of type FUNCALL  representing a SET!
-    ;;for a variable at the top level. (?)
-    ;;
-    (make-funcall (make-primref '$init-symbol-value!)
-		  (list (make-constant lhs) recordised-rhs)))
 
   (module (E-clambda-clause*)
 

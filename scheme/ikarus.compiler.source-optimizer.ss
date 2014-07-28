@@ -214,6 +214,14 @@
   ;;and returns recordized code composed of the same struct types.
   ;;
   (define (E x ctxt env ec sc)
+    (debug-print* 'enter
+		  (unparse-recordized-code/pretty x))
+    (receive-and-return (rv)
+	(%E x ctxt env ec sc)
+      (debug-print* 'leave
+		    (unparse-recordized-code/pretty rv))))
+
+  (define (%E x ctxt env ec sc)
     ;;Recursive function performing source optimizations.
     ;;
     ;;X must be a struct instance representing recordized code.
@@ -548,6 +556,7 @@
        ;;       (void)
        ;;       2))
        ;;
+       (prelex-decr-source-reference-count! x)
        (make-constant (void)))
       (else
        (let* ((x.copy (%lookup x env))
@@ -834,15 +843,15 @@
     ;;"global-location", and optionally more.
     ;;
     (let ((y (make-prelex ($prelex-name x) #f)))
-      ($set-prelex-source-referenced?! y ($prelex-source-referenced? x))
-      ($set-prelex-source-assigned?!   y ($prelex-source-assigned?   x))
+      ($set-prelex-source-reference-count! y ($prelex-source-reference-count x))
+      ($set-prelex-source-assigned?!       y ($prelex-source-assigned?       x))
       (let ((loc ($prelex-global-location x)))
-	;;Top level  bindings are  never removed, even  if they  are not
-	;;referenced in this compilation unit.
+	;;LOC is the loc gensym.  Top level  bindings are never removed, even if they
+	;;are not referenced in this compilation unit.
 	(when loc
-	  ($set-prelex-global-location!      y loc)
-	  ($set-prelex-source-referenced?!   y #t)
-	  ($set-prelex-residual-referenced?! y #t)))
+	  ($set-prelex-global-location!        y loc)
+	  (prelex-incr-source-reference-count! y)
+	  ($set-prelex-residual-referenced?!   y #t)))
       y))
 
 ;;; --------------------------------------------------------------------
@@ -869,8 +878,9 @@
 
   (define (%copy-assigned-fields-to-source-fields! ls)
     (for-each (lambda (x)
-		($set-prelex-source-assigned?!   x ($prelex-residual-assigned?   x))
-		($set-prelex-source-referenced?! x ($prelex-residual-referenced? x)))
+		($set-prelex-source-assigned?!      x ($prelex-residual-assigned?   x))
+		(when ($prelex-residual-referenced? x)
+		  (prelex-incr-source-reference-count! x)))
       ls))
 
   #| end of module: with-extended-env |# )

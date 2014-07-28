@@ -35,7 +35,7 @@
 (check-display "*** testing Vicare optimiser\n")
 
 (compiler.optimize-level 2)
-;;(compiler.$source-optimizer-passes-count 2)
+(compiler.$source-optimizer-passes-count 2)
 ;;(compiler.$cp0-effort-limit 50)
 ;;(compiler.$cp0-size-limit   8)
 
@@ -54,6 +54,90 @@
 	 (write x)))
     => '(let ((x_0 (read)))
 	  (write x_0)))
+
+  (check
+      (optimisation-of
+       (let ((x (read)))
+	 ;;A variable reference evaluated for side effects only is removed.
+	 x x x x
+	 (write x)))
+    => '(let ((x_0 (read)))
+	  (write x_0)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (optimisation-of
+       (let ((x (read)))
+	 ;;An assigment to a variable that is never referenced is useless.
+	 (set! x 1)
+	 123))
+    => '(begin
+	  (read)
+	  (quote 123)))
+
+  (check
+      (optimisation-of
+       (let ((x (read)))
+	 ;;An assigment to a variable that is never referenced is useless.
+	 (set! x 1)
+	 (set! x 1)
+	 (set! x 1)
+	 (set! x 1)
+	 123))
+    => '(begin
+	  (read)
+	  (quote 123)))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (optimisation-of
+       (let ((x (read)))
+	 ;;A variable reference evaluated for side effects only is removed.
+	 x
+	 ;;An assigment to a variable that is never referenced is useless.
+	 (set! x 1)
+	 123))
+    => '(begin
+	  (read)
+	  (quote 123)))
+
+  (check
+      (optimisation-of
+       (let ((x (read)))
+	 ;;A variable reference evaluated for side effects only is removed.
+	 x x x x
+	 ;;An assigment to a variable that is never referenced is useless.
+	 (set! x 1)
+	 123))
+    => '(begin
+	  (read)
+	  (quote 123)))
+
+  (check
+      (optimisation-of
+       (let ((x (read)))
+	 ;;An assigment to a variable that is never referenced is useless.
+	 (set! x 1)
+	 ;;A variable reference evaluated for side effects only is removed.
+	 x
+	 123))
+    => '(begin
+	  (read)
+	  (quote 123)))
+
+  (check
+      (optimisation-of
+       (let ((x (read)))
+	 ;;An assigment to a variable that is never referenced is useless.
+	 (set! x 1)
+	 ;;A variable reference evaluated for side effects only is removed.
+	 x x x x
+	 123))
+    => '(begin
+	  (read)
+	  (quote 123)))
 
   #t)
 

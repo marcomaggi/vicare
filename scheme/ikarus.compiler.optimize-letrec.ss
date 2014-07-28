@@ -222,11 +222,11 @@
 
 ;;;; helpers
 
-(define (unique-prelex x)
-  (let ((x (make-prelex (prelex-name    x)
-			(prelex-operand x))))
-    ($set-prelex-source-referenced?! x #t)
-    x))
+(define* (unique-prelex {x prelex?})
+  (receive-and-return (x)
+      (make-prelex (prelex-name    x)
+		   (prelex-operand x))
+    (set-prelex-source-referenced?! x #t)))
 
 (module (build-assign*)
 
