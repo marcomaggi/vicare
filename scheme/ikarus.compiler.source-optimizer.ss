@@ -842,17 +842,21 @@
     ;;containing  the  same  values   in  the  fields:  "name",  "source-reference?",
     ;;"global-location", and optionally more.
     ;;
-    (let ((y (make-prelex ($prelex-name x) #f)))
+    (receive-and-return (y)
+	(make-prelex ($prelex-name x) #f)
       ($set-prelex-source-reference-count! y ($prelex-source-reference-count x))
       ($set-prelex-source-assigned?!       y ($prelex-source-assigned?       x))
       (let ((loc ($prelex-global-location x)))
-	;;LOC is the loc gensym.  Top level  bindings are never removed, even if they
-	;;are not referenced in this compilation unit.
+	;;If the  PRELEX struct X represents  a binding defined by  the core language
+	;;form LIBRARY-LETREC*:  LOC is the loc  gensym and X represents  a top level
+	;;binding.  If X represents a lexical binding: LOC is #f.
 	(when loc
 	  ($set-prelex-global-location!        y loc)
+	  ;;Top level bindings  must not be removed, even if  they are not referenced
+	  ;;in this compilation unit.  So we increment the reference count here: even
+	  ;;if actual references are removed the reference count will never be zero.
 	  (prelex-incr-source-reference-count! y)
-	  ($set-prelex-residual-referenced?!   y #t)))
-      y))
+	  ($set-prelex-residual-referenced?!   y #t)))))
 
 ;;; --------------------------------------------------------------------
 

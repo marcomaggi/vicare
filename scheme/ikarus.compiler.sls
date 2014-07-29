@@ -692,8 +692,8 @@
 (define-structure
     (prelex
      name
-		;A symbol representing the binding  name; in practice useful only for
-		;humans when debugging.
+		;The lex gensym  representing the binding name in  the core language;
+		;in practice useful only for humans when debugging.
      operand
 		;Multipurpose  field.   One  use:  false  or a  struct  of  type  VAR
 		;associated to this instance.
@@ -707,7 +707,11 @@
 		;Boolean or symbol.
 		;
 		;When a  boolean: true when  the binding  has been used  as left-hand
-		;side in a SET! form.
+		;side in a SET! form.  For example:
+		;
+		;   (let ((x 1))
+		;     (set! x (do-something))
+		;     x)
 		;
 		;When a symbol: who knows?  (Marco Maggi; Oct 12, 2012)
    (residual-referenced? #f)
@@ -750,9 +754,13 @@
 		;field is set to the loc  gensym associated to the binding.  When the
 		;binding described by this struct is a local one: this field is #f.
 		;
-		;The value of a top level binding is stored in the VALUE field of its
-		;loc gensym.  Such field is accessed with the operation $SYMBOL-VALUE
-		;and mutated with the operation $SET-SYMBOL-VALUE!.
+		;At run-time: the value of a top level binding is stored in the VALUE
+		;field of its loc gensym.  Such  field is accessed with the operation
+		;$SYMBOL-VALUE and mutated with the operation $SET-SYMBOL-VALUE!.
+		;
+		;NOTE Bindings defined by a  previously evaluated REPL expression are
+		;not described by  a PRELEX struct, so this field  has no relation to
+		;them.
    ))
 
 (define* (prelex-incr-source-reference-count! {prel prelex?})
@@ -2435,9 +2443,9 @@
 
 
 (module (rewrite-references-and-assignments)
-  ;;We distinguish between bindings that are only referenced (read-only)
-  ;;and bindings that are also mutated (read-write).  Example of code in
-  ;;which the binding X is only referenced:
+  ;;We distinguish between bindings that are only referenced (read-only) and bindings
+  ;;that are also  mutated (read-write).  Example of  code in which the  binding X is
+  ;;only referenced:
   ;;
   ;;  (let ((x 123)) (display x))
   ;;
@@ -2445,22 +2453,47 @@
   ;;
   ;;  (let ((x 123)) (set! x 456) (display x))
   ;;
-  ;;A binding in  reference position or in the left-hand  side of a SET!
-  ;;syntax, is  represented by  a struct instance  of type  PRELEX; this
-  ;;module must be used only on  recordized code in which referenced and
-  ;;mutated  bindings  have already  been  marked  appropriately in  the
-  ;;PRELEX structures.
+  ;;A binding in  reference position or in  the left-hand side of a  SET!  syntax, is
+  ;;represented by a struct instance of type PRELEX; this module must be used only on
+  ;;recordized code in which referenced and mutated bindings have already been marked
+  ;;appropriately in the PRELEX structures.
   ;;
-  ;;* Top level bindings are  implemented with gensyms holding the value
-  ;;  in an internal field.  References and assignments to such bindings
-  ;;  must be substituted with appropriate function calls.
+  ;;* Top  level bindings  (defined by  the core  language form  LIBRARY-LETREC*) are
+  ;;implemented with loc gensyms holding the  value in an internal field.  References
+  ;;and assignments to  such bindings must be substituted  with appropriate primitive
+  ;;function calls.
   ;;
-  ;;*  Read-write local  bindings  are implemented  with Scheme  vectors
-  ;;  providing mutable  memory locations: one vector  for each binding.
-  ;;  References  and assignments to  such bindings must  be substituted
-  ;;  with appropriate vector operations.
+  ;;* Read-write lexical local bindings are implemented with Scheme vectors providing
+  ;;mutable  memory  locations:   one  vector  for  each   binding.   References  and
+  ;;assignments  to  such  bindings  must  be  substituted  with  appropriate  vector
+  ;;operations.
   ;;
-  ;;Code representing usage of a read-write binding like:
+  ;;* Read-only  lexical local bindings are  implemented with words allocated  on the
+  ;;Scheme stack.
+  ;;
+  ;;Examples
+  ;;--------
+  ;;
+  ;;Code representing usage of a top level binding like:
+  ;;
+  ;;   (library (the-lib)
+  ;;     (export a)
+  ;;     (import (rnrs))
+  ;;     (define a 1)
+  ;;     (display a))
+  ;;
+  ;;is converted by the expander into:
+  ;;
+  ;;   (library-letrec*
+  ;;       ((a.lex a.loc 1))
+  ;;     (display a.lex))
+  ;;
+  ;;and subsequently transformed into:
+  ;;
+  ;;   ($init-symbol-value! a.loc 1)
+  ;;   (display ($symbol-value a.loc))
+  ;;
+  ;;Code representing usage of a lexical read-write binding like:
   ;;
   ;;   (let ((x 123))
   ;;     (set! x 456)
@@ -2473,7 +2506,7 @@
   ;;       ($vector-set! x 0 456)
   ;;       ($vector-ref x 0)))
   ;;
-  ;;Code representing usage of multiple bindings like:
+  ;;Code representing usage of multiple lexical bindings like:
   ;;
   ;;   (let ((x 1)
   ;;         (y 2))
@@ -2506,13 +2539,14 @@
        (if (prelex-source-assigned? x)
 	   ;;Reference to a read-write binding.
 	   (cond ((prelex-global-location x)
-		  ;;Reference to a top level binding.  LOC is the symbol
-		  ;;used to hold the value.
+		  ;;Reference to  a top  level binding defined  by the  core language
+		  ;;form LIBRARY-LETREC*.   LOC is  the loc gensym  used to  hold the
+		  ;;value at run-time.
 		  => (lambda (loc)
 		       (make-funcall (make-primref '$symbol-value)
 				     (list (make-constant loc)))))
 		 (else
-		  ;;Reference to local  mutable binding: substitute with
+		  ;;Reference  to  lexical  local mutable  binding:  substitute  with
 		  ;;appropriate reference to the vector location.
 		  (make-funcall (make-primref '$vector-ref)
 				(list x (make-constant 0)))))
@@ -2560,19 +2594,18 @@
        (cond ((prelex-source-assigned? lhs)
 	      => (lambda (where)
 		   (cond ((symbol? where)
-			  ;;FIXME What is this  case?  (Marco Maggi; Oct
-			  ;;12, 2012)
+			  ;;FIXME What is this case?  (Marco Maggi; Oct 12, 2012)
 			  (make-funcall (make-primref '$init-symbol-value!)
 					(list (make-constant where) (E rhs))))
 			 ((prelex-global-location lhs)
-			  ;;Mutation of  top level binding.  LOC  is the
-			  ;;symbol used to hold the value.
+			  ;;Mutation of  top level  binding.  LOC  is the  loc gensym
+			  ;;used to hold the value.
 			  => (lambda (loc)
 			       (make-funcall (make-primref '$set-symbol-value!)
 					     (list (make-constant loc) (E rhs)))))
 			 (else
-			  ;;Mutation of local  binding.  Substitute with
-			  ;;the appropriate vector operation.
+			  ;;Mutation   of  local   binding.    Substitute  with   the
+			  ;;appropriate vector operation.
 			  (make-funcall (make-primref '$vector-set!)
 					(list lhs (make-constant 0) (E rhs)))))))
 	     (else
