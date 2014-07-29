@@ -24,7 +24,7 @@
 ;;;
 
 
-#!r6rs
+#!vicare
 (import (vicare)
   (vicare checks)
   (prefix (vicare system $compiler)
@@ -71,7 +71,7 @@
   (doit (letrec ((a (quote 1)))
 	  a)
 	(let ()
-	  (let ((a_0 (quote ,(void))))
+	  (let ((a_0 (quote #!void)))
 	    (fix ()
 	      (let ((a_1 (quote 1)))
 		(begin
@@ -106,8 +106,8 @@
 		  (b '2))
 	   (list a b))
 	 (let ()
-	   (let ((a_0 ',(void))
-		 (b_0 ',(void)))
+	   (let ((a_0 '#!void)
+		 (b_0 '#!void))
 	     (fix ()
 	       (let ((a_1 '1)
 		     (b_1 '2))
@@ -126,9 +126,9 @@
 			'9)))
 	   a)
 	 (let ()
-	   (let ((b_0 ',(void))
-		 (c_0 ',(void))
-		 (d_0 ',(void)))
+	   (let ((b_0 '#!void)
+		 (c_0 '#!void)
+		 (d_0 '#!void))
 	     (fix ((a_0 (lambda (x_0)
 			  (if x_0
 			      (a_0 '#f)
@@ -147,9 +147,9 @@
 		   (d (lambda () '123)))
 	   b)
 	 (let ()
-	   (let ((a_0 ',(void))
-		 (b_0 ',(void))
-		 (c_0 ',(void)))
+	   (let ((a_0 '#!void)
+		 (b_0 '#!void)
+		 (c_0 '#!void))
 	     (fix ((d_0 (lambda () '123)))
 	       (begin
 		 (set! a_0 '123)
@@ -164,10 +164,10 @@
 	   (set! d '123)
 	   b)
 	 (let ()
-	   (let ((a_0 ',(void))
-		 (b_0 ',(void))
-		 (c_0 ',(void))
-		 (d_0 ',(void)))
+	   (let ((a_0 '#!void)
+		 (b_0 '#!void)
+		 (c_0 '#!void)
+		 (d_0 '#!void))
 	     (fix ()
 	       (begin
 		 (set! a_0 '123)

@@ -1152,6 +1152,10 @@
 		  (if (port-in-r6rs-mode? port)
 		      (%error-1 "invalid syntax" "#!bwp")
 		    `(datum . ,(bwp-object))))
+		 ((void)
+		  (if (port-in-r6rs-mode? port)
+		      (%error-1 "invalid syntax" "#!void")
+		    `(datum . ,(void))))
 		 (else
 		  ;;If not  recognised, just handle it as  a comment and
 		  ;;read the next datum.
