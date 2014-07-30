@@ -70,6 +70,14 @@
 
   (doit (letrec ((a (quote 1)))
 	  a)
+	(let ((a_0 (quote 1))) ;simple
+	  (let () ;complex
+	    (fix () ;lambda
+	      (let () ;tmp
+		a_0)))))
+
+  #;(doit (letrec ((a (quote 1)))
+	  a)
 	(let ()
 	  (let ((a_0 (quote #!void)))
 	    (fix ()
@@ -176,6 +184,21 @@
 		 (set! d_0 (lambda () '123))
 		 (set! d_0 '123)
 		 b_0)))))
+
+;;; --------------------------------------------------------------------
+;;; special cases
+
+  (doit (letrec* ((a (quote 1))
+		  (b (display a)))
+	  a)
+	(let ()
+	  (let ((a_0 (quote #!void))
+		(b_0 (quote #!void)))
+	    (fix ()
+	      (begin
+		(set! a_0 (quote 1))
+		(set! b_0 ((top-level-value 'display) a_0))
+		a_0)))))
 
   #t)
 
