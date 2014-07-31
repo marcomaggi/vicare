@@ -1552,7 +1552,11 @@
 								 (list (C <textual-input-port>)))))))
 
   ;; read-char
-  ;; write
+
+  (let ((P (C write)))
+    (register-lambda-signature P (make-clambda-compound (list (S (list (C <top>)) (list (C <top>)))
+							      (S (list (C <top>)) (list (C <top>) (C <textual-input-port>)))))))
+
   ;; write-char
   ;; call-with-input-file
   ;; call-with-output-file
