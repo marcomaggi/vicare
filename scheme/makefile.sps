@@ -3118,6 +3118,7 @@
 
     ($unparse-recordized-code			$compiler)
     ($unparse-recordized-code/pretty		$compiler)
+    ($unparse-recordized-code/sexp		$compiler)
 
 ;;; --------------------------------------------------------------------
 

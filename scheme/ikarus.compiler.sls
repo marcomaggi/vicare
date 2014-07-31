@@ -77,6 +77,7 @@
      (alt-cogen.flatten-codes			$flatten-codes)
 
      (unparse-recordized-code			$unparse-recordized-code)
+     (unparse-recordized-code/sexp		$unparse-recordized-code/sexp)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   (import (except (vicare)
 		  fixnum-width
@@ -1064,46 +1065,44 @@
 
 ;;;; struct types
 
-;;Instances of this  struct type represent bindings at  the lowest level
-;;in recordized code.
-;;
-;;A BIND is  a set of bindings  in which the order of  evaluation of the
-;;right-hand sides can be freely changed; it is like a LET syntax.
+;;Instances of this struct type represent  bindings at the lowest level in recordized
+;;code.  We can  think of BIND forms as LET  core language forms: a BIND is  a set of
+;;bindings in  which the order  of evaluation of the  right-hand sides can  be freely
+;;changed.
 ;;
 (define-struct bind
   (lhs*
-		;When code is first recordized  and optimized: a list of
-		;struct  instances  of   type  PRELEX  representing  the
-		;binding names.   Later: a  list of struct  instances of
-		;type VAR representing some kind of memory location.
+		;When  code is  first  recordized  and optimized:  a  list of  struct
+		;instances  of type  PRELEX representing  the binding  lexical names.
+		;Later: a list of struct instances of type VAR representing some kind
+		;of memory location.
    rhs*
-		;A list of struct instances representing recordized code
-		;which,  when  evaluated,   will  return  the  binding's
-		;values.
+		;A list of struct instances  representing recordized code which, when
+		;evaluated, will return the binding's initial values.
    body
-		;A struct  instance representing  recordized code  to be
-		;evaluated in the region of the bindings.
+		;A struct  instance representing recordized  code to be  evaluated in
+		;the region of the bindings.
    ))
 
-;;Like BIND, but  the RHS* field holds struct instances  of type CLAMBDA
-;;and the  LHS* field  holds locations  that are  never assigned  by the
-;;BODY.
+;;Like BIND, but the  RHS* field holds struct instances of type  CLAMBDA and the LHS*
+;;field holds PRELEX structures representing  bindings that are never assigned either
+;;by the BODY  nor by the RHS* themselves.  We  can think of a FIX form  as a LETREC*
+;;form in which the right-hand sides are functions.
 ;;
-;;For details  on the meaning  of FIX, see  the paper (available  on the
-;;Net):
+;;For details on the meaning of FIX, see the paper (available on the Net):
 ;;
-;;   Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  "Fixing Letrec: A
-;;   Faithful Yet Efficient Implementation of Scheme's Recursive Binding
-;;   Construct"
+;;   Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  "Fixing Letrec: A Faithful Yet
+;;   Efficient Implementation of Scheme's Recursive Binding Construct"
 ;;
 (define-struct fix
   (lhs*
-		;A list of locations in which references to CLAMBDA must
-		;be stored.
+		;A list  of PRELEX  structs representing  bindings with  CLAMBDA init
+		;expressions.
    rhs*
 		;A list of CLAMBDA structures.
    body
-		;A struct instance representing recordized code.
+		;A struct  instance representing recordized  code to be  evaluated in
+		;the region of the bindings.
    ))
 
 ;;Instances of this struct type represent variables in recordized code.
@@ -1122,36 +1121,55 @@
     global-loc
     ))
 
-;;Instances of this  struct type are substitute instances  of FUNCALL in
-;;recordized code  when it  is possible  to perform a  direct jump  to a
-;;CASE-LAMBDA clause, rather than call the whole closure.
+;;; --------------------------------------------------------------------
+
+;;Instances of  this struct type  are substitute  instances of FUNCALL  in recordized
+;;code when it is  possible to perform a direct jump to  a CASE-LAMBDA clause, rather
+;;than call the whole closure.
+;;
+;;Example, given the definition:
+;;
+;;   (define func
+;;     (case-lambda
+;;      ((a)
+;;       (do-this a))
+;;      ((a b)
+;;       (do-that a b))))
+;;
+;;the closure application:
+;;
+;;   (func 1)
+;;
+;;can be implemented as a direct jump to the first branch of the CASE-LAMBDA, because
+;;we know at compile-time that there is only one operand.
 ;;
 (define-struct jmpcall
   (label
-		;A gensym, it is the gensym stored in the LABEL field of
-		;the target CASE-INFO struct.
+		;A gensym.  It is the gensym stored  in the LABEL field of the target
+		;CASE-INFO struct.
    op
-		;A  struct instance  representing  the  operator of  the
-		;closure application.
+		;A  struct   instance  representing  the  operator   of  the  closure
+		;application.
    rand*
-		;A list  of struct instances representing  the arguments
-		;of the closure application.
+		;A list of struct instances  representing the operands of the closure
+		;application.
    ))
+
+;;; --------------------------------------------------------------------
 
 ;;Instances of this type represent closures.
 ;;
-;;NOTE We  must not confuse  struct instances  of type CLOSURE,  used to
-;;represent recordized code,  with instances of Scheme  built in objects
-;;of type closure, which represent closures at run time.
+;;NOTE  We must  not confuse  struct  instances of  type CLOSURE,  used to  represent
+;;recordized code, with  instances of Scheme built in objects  of type closure, which
+;;represent closures at run time.
 ;;
 (define-struct closure
   (code
-		;A  struct instance  of  type  CLAMBDA representing  the
-		;closure's implementation, or a  struct instance of type
-		;CODE-LOC.
+		;A  struct  instance  of  type  CLAMBDA  representing  the  closure's
+		;implementation, or a struct instance of type CODE-LOC.
    free*
-		;A list of struct instances of type VAR representing the
-		;free variables referenced by this CLOSURE.
+		;A  list  of struct  instances  of  type  VAR representing  the  free
+		;variables referenced by this CLOSURE.
    well-known?
    ))
 
@@ -1161,9 +1179,9 @@
   (op
 		;A symbol being the name of the primitive.
    arg*
-		;A  list  of  struct instances  representing  recordized
-		;expressions  which,  when  evaluated, will  return  the
-		;arguments of this primitive call.
+		;A  list  of  struct instances  representing  recordized  expressions
+		;which, when evaluated,  will return the arguments  of this primitive
+		;call.
    ))
 
 (define-struct codes
@@ -5833,10 +5851,231 @@
     (else x)))
 
 
+(module (unparse-recordized-code/sexp)
+  ;;Unparse the struct instance INPUT-EXPR  (representing recordized code in the core
+  ;;language  already processed  by  the  compiler) into  a  human readable  symbolic
+  ;;expression to  be used  when printing  to some  port for  miscellaneous debugging
+  ;;purposes.
+  ;;
+  ;;This  module  attempts  to  unparse  recordized code  and  construct  a  symbolic
+  ;;expression that still represents the struct types in the recordized code.
+  ;;
+  ;;This function recognises only structures of the following type:
+  ;;
+  ;;   assign		bind		clambda
+  ;;   conditional	constant	fix
+  ;;   forcall		foreign-label	funcall
+  ;;   known		prelex		primcall
+  ;;   primref		rec*bind	recbind
+  ;;   seq		var
+  ;;
+  ;;other values are not processed and are returned as they are.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'unparse-recordized-code/sexp))
+
+  (define (unparse-recordized-code/sexp input-expr)
+    ;;
+    ;;A lot of functions are nested here  because they make use of the closure "Var",
+    ;;which has internal state.
+    ;;
+    ;;*NOTE* Being that this function is used  only when debugging: it makes no sense
+    ;;to use unsafe operations: LET'S KEEP IT SAFE!!!
+    ;;
+    (define (E x)
+      (struct-case x
+	((constant c)
+	 `(quote ,c))
+
+	((prelex)
+	 (Var x))
+
+	((var)
+	 (Var x))
+
+	((assign lhs rhs)
+	 `(set! ,(E lhs) ,(E rhs)))
+
+	((primref x)
+	 x)
+
+	((known expr type)
+	 `(known ,(E expr) ,(T:description type)))
+
+	((clambda)
+	 (E-clambda x))
+
+	((closure code free* well-known?)
+	 `(closure ,(E code)
+		   ,(map E free*)
+		   ,well-known?))
+
+	((primcall op arg*)
+	 (cons* 'primcall op (%map-in-order E arg*)))
+
+	((funcall rator rand*)
+	 (let ((rator (E rator)))
+	   (cons* 'funcall rator (%map-in-order E rand*))))
+
+	((forcall rator rand*)
+	 `(foreign-call ,rator . ,(%map-in-order E rand*)))
+
+	((jmpcall label op rand*)
+	 `(jmpcall ,label
+		   ,(E op)
+		   ,(map E rand*)))
+
+	((foreign-label x)
+	 `(foreign-label ,x))
+
+	((seq e0 e1)
+	 (%do-seq e0 e1))
+
+	((conditional test conseq altern)
+	 (let ((test^   (E test))
+	       (conseq^ (E conseq))
+	       (altern^ (E altern)))
+	   (list 'conditional test^ conseq^ altern^)))
+
+	((bind lhs* rhs* body)
+	 (let* ((lhs* (%map-in-order Var lhs*))
+		(rhs* (%map-in-order E   rhs*))
+		(body (E body)))
+	   (list 'bind (map list lhs* rhs*) body)))
+
+	((fix lhs* rhs* body)
+	 (let* ((lhs* (%map-in-order Var lhs*))
+		(rhs* (%map-in-order E   rhs*))
+		(body (E body)))
+	   (list 'fix (map list lhs* rhs*) body)))
+
+	((recbind lhs* rhs* body)
+	 (let* ((lhs* (%map-in-order Var lhs*))
+		(rhs* (%map-in-order E   rhs*))
+		(body (E body)))
+	   (list 'recbind (map list lhs* rhs*) body)))
+
+	((rec*bind lhs* rhs* body)
+	 (let* ((lhs* (%map-in-order Var lhs*))
+		(rhs* (%map-in-order E   rhs*))
+		(body (E body)))
+	   (list 'rec*bind (map list lhs* rhs*) body)))
+
+	((codes clambdas body)
+	 `(codes ,(map E clambdas)
+		 ,(E body)))
+
+	(else x)))
+
+
+    (module (Var)
+      ;;Given a struct instance X of type  PRELEX or VAR, identifying the location of
+      ;;a binding: return  a symbol representing a unique name  for the binding.  The
+      ;;map between structures and symbols is cached in a hash table.
+      ;;
+      ;;This function acts in such a way that the input:
+      ;;
+      ;;   (let ((a 1))
+      ;;     (let ((a a))
+      ;;       a))
+      ;;
+      ;;is transformed into:
+      ;;
+      ;;   (let ((a_0 1))
+      ;;     (let ((a_1 a_0))
+      ;;       a_1))
+      ;;
+      (define H
+	;;Map PRELEX and VAR structures to already built binding name symbols.
+	(make-eq-hashtable))
+      (define T
+	;;Map binding  pretty string names  to number of  times this string  name has
+	;;already been used.
+	(make-hashtable string-hash string=?))
+      (define (Var x)
+	(or (hashtable-ref H x #f)
+	    (struct-case x
+	      ((prelex x.name)
+	       (%build-name x x.name))
+	      ((var x.name)
+	       (%build-name x x.name))
+	      (else x))))
+
+      (define (%build-name x x.name)
+	(let* ((name (symbol->string x.name))
+	       (N    (hashtable-ref T name 0)))
+	  (hashtable-set! T name (+ N 1))
+	  (receive-and-return (sym)
+	      (string->symbol (string-append name "_" (number->string N)))
+	    (hashtable-set! H x sym))))
+
+      #| end of module: Var |# )
+
+    (define (%do-seq e0 e1)
+      (cons 'seq
+	    ;;Here we flatten nested SEQ instances into a unique output SEQ form.
+	    (let recur ((expr  e0)
+			(expr* (list e1)))
+	      (struct-case expr
+		((seq expr.e0 expr.e1)
+		 (recur expr.e0 (cons expr.e1 expr*)))
+		(else
+		 (let ((expr^ (E expr)))
+		   (if (null? expr*)
+		       (list expr^)
+		     (cons expr^ (recur (car expr*) (cdr expr*))))))))))
+
+    (module (E-clambda)
+
+      (define (E-clambda x)
+	(struct-case x
+	  ((clambda label.unused cls*)
+	   (let ((cls* (%map-in-order E-clambda-clause cls*)))
+	     (if (= (length cls*) 1)
+		 (cons 'lambda (car cls*))
+	       (cons 'case-lambda cls*))))))
+
+      (define (E-clambda-clause x)
+	(struct-case x
+	  ((clambda-case info body)
+	   (let ((args (E-args (case-info-proper info) (case-info-args info))))
+	     (list args (E body))))))
+
+      (define (E-args proper x)
+	(if proper
+	    (%map-in-order Var x)
+	  ;;The loop below is  like MAP but for improper lists: it  maps Var over the
+	  ;;improper list X.
+	  (let recur ((A (car x))
+		      (D (cdr x)))
+	    (if (null? D)
+		(Var A)
+	      (let ((A (Var A)))
+		(cons A (recur (car D) (cdr D))))))))
+
+      #| end of module: E-clambda |# )
+
+    (E input-expr))
+
+;;; --------------------------------------------------------------------
+
+  (define (%map-in-order f ls)
+    ;;This version of  MAP imposes an order to  the application of F to  the items in
+    ;;LS.
+    ;;
+    (if (null? ls)
+	'()
+      (let ((a (f (car ls))))
+	(cons a (%map-in-order f (cdr ls))))))
+
+  #| end of module: unparse-recordized-code/sexp |# )
+
+
 (module (unparse-recordized-code/pretty)
-  ;;Unparse the struct instance X (representing  recordized code in the core language
-  ;;already processed by  the compiler) into a human readable  symbolic expression to
-  ;;be used when printing to some port for miscellaneous debugging purposes.
+  ;;Unparse the struct instance INPUT-EXPR  (representing recordized code in the core
+  ;;language  already processed  by  the  compiler) into  a  human readable  symbolic
+  ;;expression to  be used  when printing  to some  port for  miscellaneous debugging
+  ;;purposes.
   ;;
   ;;This module  attempts to  unparse recordized code  and reconstruct  a Scheme-like
   ;;symbolic expression; the returned sexp does *not* exactly represent the input.
