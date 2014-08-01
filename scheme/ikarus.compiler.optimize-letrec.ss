@@ -460,8 +460,7 @@
   ;;expanding: libraries,  programs, standalone  expressions given  to EVAL  (both in
   ;;stateless environments and stateful interactive environments).
   ;;
-  ;;The transformations performed  by this module are  equivalent to the
-  ;;following:
+  ;;The transformations performed by this module are equivalent to the following:
   ;;
   ;;   (letrec* ((?var ?init) ...) . ?body)
   ;;   ==> (let ((?var (void)) ...) (set! ?var ?init) ... . ?body)
@@ -473,21 +472,20 @@
   ;;   ==> (let ((?var (void)) ...)
   ;;         (let ((?tmp ?init) ...) (set! ?var ?tmp) ... . ?body))
   ;;
-  ;;Notice that the  transformation for LETREC is described  also in the
-  ;;R5RS document.
+  ;;Notice that the transformation for LETREC is described also in the R5RS document.
   ;;
-  ;;This  module  accepts  as   input  a  struct  instance  representing
-  ;;recordized code with the following struct types:
+  ;;This module accepts as input a  struct instance representing recordized code with
+  ;;the following struct types:
   ;;
-  ;;assign		bind		clambda
-  ;;conditional		constant	forcall
-  ;;funcall		mvcall		prelex
-  ;;primref		rec*bind	recbind
-  ;;seq
+  ;;	assign		bind		clambda
+  ;;	conditional	constant	forcall
+  ;;	funcall		mvcall		prelex
+  ;;	primref		rec*bind	recbind
+  ;;	seq
   ;;
-  ;;and returns a new struct  instance representing recordized code with
-  ;;the same types  except RECBIND and REC*BIND which are  replaced by a
-  ;;composition of BIND and ASSIGN structures.
+  ;;and returns  a new  struct instance  representing recordized  code with  the same
+  ;;types except RECBIND and REC*BIND which are replaced by a composition of BIND and
+  ;;ASSIGN structures.
   ;;
   (define who 'optimize-letrec/basic)
 
@@ -564,8 +562,7 @@
     ;;
     ;;   (letrec* ((?var ?init) ...) ?body0 ?body ...)
     ;;
-    ;;the transformation  we do here  is equivalent to  constructing the
-    ;;following form:
+    ;;the transformation we do here is equivalent to constructing the following form:
     ;;
     ;;   (let ((?var (void)) ...)
     ;;     (set! ?var ?init) ...
@@ -581,8 +578,7 @@
     ;;
     ;;   (letrec ((?var ?init) ...) ?body0 ?body ...)
     ;;
-    ;;the transformation  we do here  is equivalent to  constructing the
-    ;;following form:
+    ;;the transformation we do here is equivalent to constructing the following form:
     ;;
     ;;   (let ((?var (void)) ...)
     ;;     (let ((?tmp ?init) ...)
@@ -659,6 +655,10 @@
   ;;
   ;;in which  the ?COMPLEX.RHS expressions are  evaluated in the same  order in which
   ;;they appear in the core language form.
+  ;;
+  ;;NOTE Upon entering this compiler pass, the PRELEX structures representing defined
+  ;;bindings already have  the field SOURCE-ASSIGNED? correctly set;  a previous pass
+  ;;has determined if a binding is assigned or not.
   ;;
   ;;Examples
   ;;--------
@@ -764,24 +764,12 @@
        ;;This is the outer implementation of the function REGISTER-LHS-USAGE!.
        (%make-top-lhs-usage-register-func)
        ;;This is the outer implementation of the thunk MAKE-THE-ENCLOSING-RHS-COMPLEX!.
-       void))
+       (%make-top-rhs-complexity-register-func)))
 
   (module (E)
 
     (define (E x register-lhs-usage! make-the-enclosing-rhs-complex!)
       ;;Recursively visit the recordized code X.
-      ;;
-      ;;REGISTER-LHS-USAGE! is a function of single  argument to be applied to a
-      ;;struct instance of  type PRELEX, if such instance represents  a variable that
-      ;;is  referenced in  X and/or  assigned  in X.   While processing  a LETREC  or
-      ;;LETREC* form:  the purpose of  REGISTER-LHS-USAGE!  is to register  in a
-      ;;hashtable the  fact that the binding  represented by the PRELEX  struct X has
-      ;;been used at least once in the source code.
-      ;;
-      ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!  is  a thunk to be  called if X is  a "complex"
-      ;;subexpression of an  enclosing expression, which becomes  itself complex.  An
-      ;;expression is  complex if we cannot  establish for sure which  bindings of an
-      ;;enclosing LETREC or LETREC* are referenced and/or assigned.
       ;;
       (struct-case x
 	((constant)
@@ -872,12 +860,13 @@
 	  ((clambda-case info body)
 	   (make-clambda-case info
 			      (E body
-				 ;;Inside a binding form build  a new function to act
-				 ;;as REGISTER-LHS-USAGE!.
-				 (%make-middle-lhs-usage-register-func (case-info-args info) register-lhs-usage!)
-				 ;;This    is   an    internal   implementation    of
-				 ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.
-				 void)))))
+				 (%make-middle-lhs-usage-register-func (case-info-args info)
+								       register-lhs-usage!
+								       #;(%make-top-lhs-usage-register-func)
+								       ;; (lambda (prel)
+								       ;; 	 (register-lhs-usage! prel #f))
+								       )
+				 (%make-top-rhs-complexity-register-func))))))
 
       #| end of module: E-clambda |# )
 
@@ -890,20 +879,12 @@
 		 (rand*^ (E* rand* register-lhs-usage! make-the-enclosing-rhs-complex!)))
 	     ;;This form  is a function  call.  In general,  we must assume  it might
 	     ;;mutate any of the bindings whose region includes it: so we should call
-	     ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.  For example:
-	     ;;
-	     ;;But if the function call is a primitive function call:
-	     ;;
-	     ;;   ((top-level-value '?primitive-loc) ?arg ...)
-	     ;;
-	     ;;
-	     ;;
+	     ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.
 	     (struct-case rator^
 	       ((primref op)
 		(if (eq? op 'top-level-value)
 		    (struct-case (car rand*^)
 		      ((constant name)
-		       (debug-print op name (memq name SIMPLE-PRIMITIVES))
 		       (unless (memq name SIMPLE-PRIMITIVES)
 			 (make-the-enclosing-rhs-complex!)))
 		      (else
@@ -1069,6 +1050,29 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define-syntax-rule (%make-top-rhs-complexity-register-func)
+    ;;Return a top thunk to be used as expression complexity registrar.  The returned
+    ;;thunk is  to be used  as outer thunk when  entering whole input  expressions or
+    ;;CLAMBDA bodies.
+    ;;
+    void)
+
+  (define (%make-recbind-rhs-complexity-register-func cplx-rhs-flags rhs-index make-the-enclosing-rhs-complex!)
+    ;;Build and  return a new  thunk to be  used as expression  complexity registrar,
+    ;;wrapping the  one given as  argument.  Called  to register that  the right-hand
+    ;;side init expression with index RHS-INDEX in the container CPLX-RHS-FLAGS might
+    ;;mutate a binding  among the ones in  the same lexical contour;  this means that
+    ;;the outer expression enclosing this RHS is also complex.
+    ;;
+    ;;We really need one of these thunks for each RHS in a recbind lexical contour.
+    ;;
+    (lambda ()
+      (import RHS-COMPLEXITY-FLAGS)
+      (%rhs-complexity-flags-set! cplx-rhs-flags rhs-index)
+      (make-the-enclosing-rhs-complex!)))
+
+;;; --------------------------------------------------------------------
+
   (module (%do-recbind %do-rec*bind)
 
     (define-syntax-rule (%do-recbind ?lhs* ?rhs* ?body ?register-lhs-usage! ?make-the-enclosing-rhs-complex!)
@@ -1089,11 +1093,12 @@
 	;;The lists  of bindings LHS*  and RHS* are  interpreted as tuples,  in which
 	;;every item has an index: from 0 to "(sub1 (length lhs*))".
 	;;
-	(let* ((register-lhs	(%make-middle-lhs-usage-register-func lhs* register-lhs-usage!))
-               (body^		(E body register-lhs make-the-enclosing-rhs-complex!))
-	       (rhs*^		(%do-rhs* 0 lhs* rhs*
-					  register-lhs make-the-enclosing-rhs-complex!
-					  used-lhs-flags cplx-rhs-flags)))
+	(let ((rhs*^ (%do-rhs* 0 lhs* rhs*
+			       register-lhs-usage! make-the-enclosing-rhs-complex!
+			       used-lhs-flags cplx-rhs-flags))
+	      (body^ (E body
+			(%make-middle-lhs-usage-register-func lhs* register-lhs-usage!)
+			make-the-enclosing-rhs-complex!)))
 	  (receive (simple.lhs* simple.rhs* lambda.lhs* lambda.rhs* complex.lhs* complex.rhs*)
 	      (%partition-rhs* 0 lhs* rhs*^ used-lhs-flags cplx-rhs-flags)
 	    (make-bind simple.lhs* simple.rhs*
@@ -1140,16 +1145,9 @@
 	(let ((rest (%do-rhs* (fxadd1 i) lhs* ($cdr rhs*)
 			      register-lhs-usage! make-the-enclosing-rhs-complex!
 			      used-lhs-flags cplx-rhs-flags)))
-	  (define (make-this-rhs-complex!)
-	    ;;Called to signal that a form in RHS might mutate a binding among LHS*.
-	    ;;
-	    (import RHS-COMPLEXITY-FLAGS)
-	    (%rhs-complexity-flags-set! cplx-rhs-flags i)
-	    (make-the-enclosing-rhs-complex!))
 	  (cons (E ($car rhs*)
-		   (%make-recbind-lhs-usage-register-func lhs* i used-lhs-flags
-							  register-lhs-usage!)
-		   make-this-rhs-complex!)
+		   (%make-recbind-lhs-usage-register-func lhs* i used-lhs-flags register-lhs-usage!)
+		   (%make-recbind-rhs-complexity-register-func cplx-rhs-flags i make-the-enclosing-rhs-complex!))
 		rest))))
 
     (define (%partition-rhs* i lhs* rhs* used-lhs-flags cplx-rhs-flags)
@@ -1181,9 +1179,12 @@
 	     ((lhs rhs)
 	      (values ($car lhs*) ($car rhs*))))
 	  (cond ((prelex-source-assigned? lhs)
-		 ;;This binding is the target of  a "complex" RHS, so it is "complex"
-		 ;;itself.  This classification has precedence over the binding being
-		 ;;a "lambda".
+		 ;;This binding is "complex".  Notice that: even if the corresponding
+		 ;;RHS is  a CLAMBDA, this  binding cannot be classified  as "lambda"
+		 ;;and cannot  be defined by  a FIX struct.  Only  unassigned CLAMBDA
+		 ;;bindings can  be classified as  "lambda"; it does *not*  matter if
+		 ;;the assignment happens inside the body of a CLAMBDA or in the body
+		 ;;of a LETREC or LETREC* form.
 		 (values simple.lhs* simple.rhs*
 			 lambda.lhs* lambda.rhs*
 			 (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
@@ -1193,7 +1194,7 @@
 		 (values simple.lhs* simple.rhs*
 			 (cons lhs lambda.lhs*) (cons rhs lambda.rhs*)
 			 complex.lhs* complex.rhs*))
-		((or (%lhs-usage-flags-ref      used-lhs-flags i)
+                ((or (%lhs-usage-flags-ref      used-lhs-flags i)
 		     (%rhs-complexity-flags-ref cplx-rhs-flags i))
 		 ;;This binding is "complex".
 		 (values simple.lhs* simple.rhs*
@@ -1303,7 +1304,8 @@
   ;; 	  (set! d_0 '123)
   ;; 	  b_0))
   ;;
-  (define who 'optimize-letrec/scc)
+  (define-fluid-override __who__
+    (identifier-syntax 'optimize-letrec/scc))
 
   (define-struct binding
     (serial
@@ -1383,7 +1385,7 @@
 	 (make-forcall rator (E* rand* bc)))
 
 	(else
-	 (error who "invalid expression" (unparse-recordized-code x)))))
+	 (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
     (define (E* x* bc)
       (map (lambda (x)
@@ -1588,7 +1590,7 @@
 	(for-each (lambda (v e*)
 		    (set-node-link*! v (map (lambda (f)
 					      (or (hashtable-ref h f #f)
-						  (error who "invalid node" f)))
+						  (error __who__ "invalid node" f)))
 					 e*)))
 	  v* e**)
 	v*))
