@@ -6023,9 +6023,9 @@ Given a closure object @var{clo} being an annotated procedure created by
 
 @value{PRJNAME} is a compiler for the Scheme language; internally it
 implements a multitude of passes, each of which performing a
-transformation from Scheme code to executable binary code.  The library
-@library{vicare system $compiler} export one binding for each compiler
-pass, allowing inspection of the performed transformations.
+transformation step from Scheme code to executable binary code.  The
+library @library{vicare system $compiler} exports one binding for each
+compiler pass, allowing inspection of the performed transformations.
 
 The sequence in which the passes are performed @strong{cannot} be
 changed; they must be performed in the specified order.  The passes
