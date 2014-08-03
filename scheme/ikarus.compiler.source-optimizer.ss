@@ -1319,7 +1319,7 @@
 ;;; vectors
 
       (($vector-length _)	   foldable effect-free result-true)
-      (($vector-ref _ _)	   foldable effect-free result-true)
+      (($vector-ref _ _)	   foldable effect-free)
 
 ;;; --------------------------------------------------------------------
 ;;; bytevectors
