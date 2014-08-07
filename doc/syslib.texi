@@ -6046,7 +6046,8 @@ Compiler passes
 * syslib compiler full::          The full transformation.
 * syslib compiler recordize::     Scheme code to nested structs.
 * syslib compiler direct calls::  Optimisation for direct calls.
-* syslib compiler letrec::        Optimisation of @code{letrec} forms.
+* syslib compiler letrec::        Optimisation of @func{letrec} and
+                                  @func{letrec*} forms.
 * syslib compiler optimisation::  Source optimisation.
 * syslib compiler assignments::   Rewriting references and assignments.
 * syslib compiler tags::          Tagging known properties.
@@ -6147,7 +6148,7 @@ When set to true: an attempt is made to expand inline calls to
 
 @c page
 @node syslib compiler letrec
-@subsection Optimisation of @code{letrec} forms
+@subsection Optimisation of @func{letrec} and @func{letrec*} forms
 
 
 For an introduction to processing @func{letrec} and @func{letrec*}
@@ -6155,9 +6156,9 @@ syntaxes, and specifically to understand the code, we @strong{must} read
 the following paper:
 
 @quotation
-Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  ``Fixing Letrec: A
-Faithful Yet Efficient Implementation of Scheme's Recursive Binding
-Construct''.
+[@acronym{WSD}] Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.
+``Fixing Letrec: A Faithful Yet Efficient Implementation of Scheme's
+Recursive Binding Construct''.
 @end quotation
 
 @noindent
@@ -6165,19 +6166,66 @@ then we can move to the following paper, which describes the SCC
 transformation used by default:
 
 @quotation
-Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec (reloaded)''.
-Workshop on Scheme and Functional Programming '09.
+[@acronym{SCC}] Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec
+(reloaded)''.  Workshop on Scheme and Functional Programming '09.
 @end quotation
+
+@value{PRJNAME}'s compiler makes use of such algorithms in the library
+@library{vicare system $compiler} to optimise the core language forms
+@func{letrec}, @func{letrec*} and @func{library-letrec*}, whose syntax
+is:
+
+@example
+(letrec ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+
+(letrec* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+
+(library-letrec* ((@meta{lhs} @meta{loc} @meta{rhs}) ...) @meta{body})
+@end example
+
+@noindent
+notice that the @meta{body} is a single form.  The transformations for
+@func{letrec*} and @func{library-letrec*} are equal; the difference
+between the two lies in the implementation of allocations, references
+and assignments to the @meta{lhs}.
+
+When this compiler pass is applied to the recordised code, the forms
+have already been transformed into:
+
+@example
+(recbind ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+
+(rec*bind* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@end example
+
+@noindent
+where instances of the structure @objtype{recbind} represent
+@func{letrec} forms and instances of the structure @objtype{rec*bind}
+represent @func{letrec} and @func{library-letrec*} forms.
+
+@menu
+* syslib compiler letrec api::    Transformations programming interface.
+* syslib compiler letrec intro::  General notes on the context of
+                                  @func{letrec} optimisations.
+* syslib compiler letrec basic::  The basic transformation algorithm.
+* syslib compiler letrec wsd::    The @acronym{WSD} transformation algorithm.
+* syslib compiler letrec scc::    The @acronym{SCC} transformation algorithm.
+@end menu
+
+@c page
+@node syslib compiler letrec api
+@subsubsection Transformations programming interface
+
 
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
 @defun $optimize-letrec @var{input}
-Perform transformations to convert the recordized representation of
-@func{libary-letrec*}, @func{LETREC} and @func{letrec*} forms into low
-level binding constructs and assignments.  The result is such that the
-order of bindings in a single binding construct can be changed at will.
+Perform transformations and optimisations to convert the recordised
+representation of @func{letrec}, @func{letrec*} and
+@func{libary-letrec*} core language forms into a composition of low
+level binding constructs and assignments.
 @end defun
 
 
@@ -6199,31 +6247,500 @@ Select the transformations performed by
 
 @table @code
 @item basic
-The transformations are equivalent to:
-
-@example
-(letrec* ((?var ?init) ...) . ?body)
-@expansion{} (let ((?var (void)) ...)
-      (set! ?var ?init) ... . ?body)
-
-(library-letrec* ((?var ?loc ?init) ...) . ?body)
-@expansion{} (let ((?var (void)) ...)
-      (set! ?var ?init) ... . ?body)
-
-(letrec ((?var ?init) ...) . ?body)
-@expansion{} (let ((?var (void)) ...)
-      (let ((?tmp ?init) ...)
-        (set! ?var ?tmp) ... . ?body))
-@end example
+Perform the basic transformation.
 
 @item waddell
 Perform a transformation similar (but no equal) to the one described in
-the ``Fixing Letrec'' paper by Waddell et al.
+the [@acronym{WSD}] paper.
 
 @item scc
-This is the default.
+Perform a transformation similar (but no equal) to the one described in
+the [@acronym{SCC}] paper.  This is the default.
 @end table
 @end deffn
+
+@c page
+@node syslib compiler letrec intro
+@subsubsection General notes on the context of @func{letrec} optimisations
+
+
+@subsubheading On @func{let} and @func{let*} bindings
+
+Let's consider the following program:
+
+@example
+(import (rnrs))
+(let ((A B))
+  #t)
+@end example
+
+@noindent
+it will fail with ``unbound identifier B''; we are @strong{not}
+concerned with unbound identifiers in this compiler pass.  So let's move
+on to the following program:
+
+@example
+(import (rnrs))
+(let ((A 123))
+  (let ((A A))
+    #t))
+@end example
+
+@noindent
+no errors here: the identifier @code{A} in reference position is
+captured by the outer @func{let} binding for @code{A}.  Now this
+program:
+
+@example
+(import (rnrs))
+(let* ((A 123)
+       (B A))
+  #t)
+@end example
+
+@noindent
+everything is all right; now this program:
+
+@example
+(import (rnrs))
+(let* ((A 123)
+       (A A))
+  #t)
+@end example
+
+@noindent
+again no error: the identifier @code{A} in reference position is
+captured by the first @func{let*} binding for @code{A}; @func{let*}
+allows us to create bindings with the same name.
+
+@c ------------------------------------------------------------
+
+@subsubheading @func{letrec} bindings
+
+Let's move to the @func{letrec} syntax.  This program is legal:
+
+@example
+(import (rnrs))
+(letrec ((A (lambda () A)))
+  #t)
+@end example
+
+@noindent
+because @func{letrec} defines recursive bindings, so we are allowed to
+reference @code{A} in the right--hand side of the binding for @code{A}
+itself, as long as we put such reference in the body of a @func{lambda}.
+
+This program is also legal:
+
+@example
+(import (rnrs))
+(letrec ((A (lambda () B))
+         (B (lambda () A)))
+  #t)
+@end example
+
+@noindent
+because the cross references to @code{A} and @code{B} are in the body of
+@func{lambda} syntaxes.
+
+This program is illegal:
+
+@example
+(import (rnrs))
+(letrec ((A (list A)))
+  #t)
+@end example
+
+@noindent
+because the identifier @code{A} in reference position is not in the body
+of a @func{lambda} syntax: to evaluate the right--hand side of the
+binding we need the value of the binding itself.  Notice that @code{A}
+in reference position is @strong{not} an unbound identifier: it is
+captured by the @code{A} in binding position; it is just ``illegal'' and
+we must detect this situation, according to @rnrs{6}.
+
+This program is illegal:
+
+@example
+(import (rnrs))
+(letrec ((A 123)
+         (B (list A)))
+  #t)
+@end example
+
+@noindent
+because the identifier @code{A} in reference position is not in the body
+of a @func{lambda} syntax: @func{letrec} does not impose an order to the
+evaluation of the init expressions, so to evaluate the right--hand side
+of the binding we need the value of the binding itself.
+
+@c ------------------------------------------------------------
+
+@subsubheading On @func{letrec*} bindings
+
+Let's move to the @func{LETREC*} syntax; it is similar, but not equal,
+to @func{letrec}.  This program is legal:
+
+@example
+(import (rnrs))
+(letrec* ((A (lambda () A)))
+  #t)
+@end example
+
+@noindent
+because @func{letrec*} defines recursive bindings, so we are allowed to
+reference @code{A} in the right--hand side of the binding for @code{A}
+itself, as long as we put such reference in the body of a @func{lambda}.
+
+This program is also legal:
+
+@example
+(import (rnrs))
+(letrec* ((A (lambda () B))
+          (B (lambda () A)))
+  #t)
+@end example
+
+@noindent
+because the cross references to @code{A} and @code{B} are in the body of
+@func{lambda} syntaxes.
+
+This program is illegal:
+
+@example
+(import (rnrs))
+(letrec* ((A (list A)))
+  #t)
+@end example
+
+@noindent
+because the identifier @code{A} in reference position is not in the body
+of a @func{lambda} syntax: to evaluate the right--hand side of the
+binding we need the value of the binding itself.  Again, notice that
+@code{A} in reference position is @strong{not} an unbound identifier: it
+is captured by the @code{A} in binding position; it is just ``illegal''
+and we must detect this situation, according to @rnrs{6}.
+
+This program is legal:
+
+@example
+(import (rnrs))
+(letrec* ((A 123)
+          (B (list A)))
+  #t)
+@end example
+
+@noindent
+because @func{letrec*} imposes a left--to--right order to the evaluation
+of the init expressions.
+
+@c ------------------------------------------------------------
+
+@subsubheading On illegal bindings
+
+@rnrs{6} mandates that illegal references to bindings established by
+@func{letrec} and @func{letrec*} are detected at run--time and cause an
+assertion violation to be raised.  @value{PRJNAME} detects them at
+compile--time, so some fully @rnrs{6}-compliant code will not work under
+@value{PRJNAME}.
+
+The following code is illegal under both @rnrs{6} and @value{PRJNAME}:
+
+@example
+(import (rnrs))
+(letrec ((x y)
+         (y x))
+  'should-not-get-here)
+@end example
+
+The following program will run under a @rnrs{6}-compliant
+implementation:
+
+@example
+(import (rnrs))
+(letrec ((x (if (eq? (cons 1 2)
+                     (cons 1 2))
+                x
+              1)))
+  x)
+@end example
+
+@noindent
+because the form @code{x} in reference position in the right--hand side
+of the binding is never evaluated; under @value{PRJNAME} this code will
+rather raise a syntax violation at compile--time.
+
+@c page
+@node syslib compiler letrec basic
+@subsubsection The basic transformation algorithm
+
+
+The basic transformations are equivalent to:
+
+@example
+(letrec ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@expansion{} (let ((@meta{lhs} #!void) ...)
+      (let ((@meta{tmp} @meta{rhs}) ...)
+        (set! @meta{lhs} @meta{tmp}) ...
+        @meta{body}))
+
+(letrec* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@expansion{} (let ((@meta{lhs} #!void) ...)
+      (set! @meta{lhs} @meta{rhs}) ...
+      @meta{body})
+@end example
+
+@noindent
+and in recordised code are represented as:
+
+@example
+(recbind ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@expansion{} (bind ((@meta{lhs} #!void) ...)
+      (bind ((@meta{tmp} @meta{rhs}) ...)
+        (assign @meta{lhs} @meta{tmp}) ...
+        @meta{body}))
+
+(rec*bind ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@expansion{} (bind ((@meta{lhs} #!void) ...)
+      (assign @meta{lhs} @meta{rhs}) ...
+      @meta{body})
+@end example
+
+@noindent
+as example, with these transformations the library:
+
+@example
+(library (optimize-letrec-basic-demo)
+  (export a b c)
+  (import (rnrs))
+  (define (a) 1)
+  (define (b) (a) 2)
+  (define (c) (b) 3))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(bind ((a_0 '#!void)
+       (b_0 '#!void)
+       (c_0 '#!void))
+ (seq
+   (set! a_0 (lambda () '1))
+   (set! b_0 (lambda () (seq (funcall a_0) '2)))
+   (set! c_0 (lambda () (seq (funcall b_0) '3)))
+   (funcall void)))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Further notes
+
+In the @objtype{recbind} forms the right--hand side expressions
+@meta{rhs} have no imposed order of evaluation; the following two forms,
+in which the order of the bindings is reversed, must be completely
+equivalent:
+
+@example
+(recbind ((@metai{lhs} @metai{rhs})
+          (@metaii{lhs} @metaii{rhs}))
+  @meta{body})
+
+(recbind ((@metaii{lhs} @metaii{rhs})
+          (@metai{lhs} @metai{rhs}))
+  @meta{body})
+@end example
+
+In the @func{rec*bind} forms the right-hand side expressions @meta{rhs}
+must be evaluated in the same order in which they appear.
+
+In a lower--level compiler pass: instances of struct @objtype{bind} will
+be converted to code that evaluates the @meta{rhs} expressions and store
+their return value into appropriately allocated Scheme stack machine
+words; a machine word for every @meta{lhs} will be allocated, each
+@meta{lhs} will represent an actual ``local variable''.
+
+If we think about the Scheme stack, it is clear why @objtype{bind}
+structures cannot represent recursive bindings; given the core language
+expression:
+
+@example
+(letrec ((f (lambda () f)))
+  @meta{body})
+@end example
+
+@noindent
+the internal representation must be:
+
+@example
+(bind ((f_0 '#!void))
+  (seq
+    (assign f_0 (lambda () f_0))
+    @meta{body}))
+@end example
+
+@noindent
+so that: first @objtype{bind} reserves a Scheme stack machine word for
+the local variable, initialised to @code{#<void>}; then a closure object
+is created, referencing the local variable @code{f_0}; finally a
+reference to the closure object is stored in @code{f_0}.  To create the
+closure object, we must first know the address of the allocated machine
+word.
+
+When processing @objtype{recbind} and @objtype{rec*bind} structures: we
+must make sure that a machine word is allocated on the Scheme stack
+before the address of such word is needed by the @meta{rhs} expressions.
+We do this by transforming @objtype{recbind} and @objtype{rec*bind}
+instances into a composition of @objtype{bind} and @objtype{assign}
+instances.
+
+@c page
+@node syslib compiler letrec wsd
+@subsubsection The @acronym{WSD} transformation algorithm
+
+
+Everything discussed for the basic transformation algorithm is still
+valid for the @acronym{WSD} algorithm, @ref{syslib compiler letrec
+basic, The basic transformation algorithm}.  The @acronym{WSD} algorithm
+recognises some properties of the bindings to allow: less assignment
+operations, more efficient generation of unassigned function bindings in
+the same lexical contour.
+
+When processing a @func{letrec} or @func{letrec*} core language form
+@acronym{WSD} classifies each binding into: @code{unreferenced},
+@code{simple}, @code{complex} or @code{fixable}.  @value{PRJNAME}'s
+implementation of @acronym{WSD} leaves unreferenced bindings alone, in
+this compiler pass, to be processed later by the source optimiser; an
+unreferenced binding is classified as @code{simple}.  It also renames
+the category @code{lambda} into @code{fixable}.
+
+@c ------------------------------------------------------------
+
+@subsubheading The @func{letrec} transformation
+
+If the form is a @func{letrec}: we do @strong{not} care about the order
+of evaluation of the right--hand sides, so given the core language form:
+
+@example
+(letrec ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@end example
+
+@noindent
+we transform it into:
+
+@example
+(let ((@meta{simple.lhs} @meta{simple.rhs}) ...)
+  (let ((@meta{complex.lhs} '#!void) ...)
+    (let ((@meta{fixable.lhs} @meta{fixable.rhs}) ...)
+      (let ((@meta{tmp} @meta{complex.rhs}) ...)
+        (set! @meta{complex.lhs} @meta{tmp}) ...
+        @meta{body}))))
+@end example
+
+@noindent
+in which the @meta{complex.rhs} expressions are evaluated in unspecified
+order.  In recordised code, the input expression:
+
+@example
+(recbind ((@meta{lhs} @meta{rhs}) ...) ?body)
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(bind ((@meta{simple.lhs} @meta{simple.rhs}) ...)
+  (bind ((@meta{complex.lhs} '#!void) ...)
+    (fix ((@meta{fixable.lhs} @meta{fixable.rhs}) ...)
+      (bind ((@meta{tmp} @meta{complex.rhs}) ...)
+        (assign @meta{complex.lhs} @meta{tmp}) ...
+        @meta{body}))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading The @func{letrec*} transformation
+
+If the form is a @func{letrec*}: we @strong{do care} about the order of
+evaluation of the right--hand sides, so given the core language form:
+
+@example
+(letrec* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@end example
+
+@noindent
+we transform it into:
+
+@example
+(let ((@meta{simple.lhs} @meta{simple.rhs}) ...)
+  (let ((@meta{complex.lhs} '#!void) ...)
+    (let ((@meta{fixable.lhs} @meta{fixable.rhs}) ...)
+      (set! @meta{complex.lhs} @meta{complex.rhs}) ...
+      @meta{body})))
+@end example
+
+@noindent
+in which the @meta{complex.rhs} expressions are evaluated in the same
+order in which they appear in the core language form.  In recordised
+code, the input expression:
+
+@example
+(rec*bind ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(bind ((@meta{simple.lhs} @meta{simple.rhs}) ...)
+  (bind ((@meta{complex.lhs} '#!void) ...)
+    (fix ((@meta{fixable.lhs} @meta{fixable.rhs}) ...)
+      (assign @meta{complex.lhs} @meta{complex.rhs}) ...
+      @meta{body})))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Notes
+
+The really important thing about the @acronym{WSD} transformations is to
+generate reliable @code{fix} bindings definitions: the classification of
+``fixable'' bindings must be reliable.  This covers the very common case
+of @func{library} forms whose top level function definitions are
+unassigned; for example, the library:
+
+@example
+(library (optimize-letrec-waddell-demo)
+  (export a b c)
+  (import (rnrs))
+  (define (a) 1)
+  (define (b) (a) 2)
+  (define (c) (b) 3))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(bind ()        ;simple
+  (bind ()      ;complex
+    (fix ((a_0 (lambda () '1))
+          (b_0 (lambda () (seq (funcall a_0) '2)))
+          (c_0 (lambda () (seq (funcall b_0) '3))))
+      (funcall void))))
+@end example
+
+The algorithm's implementation can be conservative and suboptimal in
+classifying bindings as @code{complex}, even though they could be
+@code{simple} or @code{fixable}, whenever the classification as
+@code{simple} or @code{fixable} requires too much work or is unreliable;
+in other words: when in doubt, just call it @code{complex}.  One of the
+purposes of the @acronym{SCC} algorithm is exactly to improve such
+classification.
+
+@c page
+@node syslib compiler letrec scc
+@subsubsection The @acronym{SCC} transformation algorithm
 
 
 @c page

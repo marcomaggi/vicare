@@ -68,4 +68,39 @@
 
 ** (vicare expander object-type-specs)
 ** (vicare expander tags)
+* letrec optimiser
+
+** Reorganise the test suite with tests like:
+
+     (doit ?core-language-form
+       (basic
+         ?basic-recordised-code)
+       (waddell
+         ?waddell-recordised-code)
+       (scc
+         ?scc-recordised-code))
+
+** Review the waddell optimiser.
+
+** Add to the waddell optimiser the code to integrate nested rhs let:
+
+     (letrec* (bi ...
+               [x (let ([lhs* rhs*] ...) body)]
+               bj ...)
+       body)
+     ===>
+     (letrec* (bi ...
+               [tmp* rhs*] ...
+               [lhs* tmp*] ...
+               [x body]
+               bj ...)
+       body)
+
+** Review the use of SEQ structures.  They should be built as:
+
+      (begin a b c d) ==> (seq (seq (seq a b) c) d)
+
+   not as:
+
+      (begin a b c d) ==> (seq a (seq b (seq c d)))
 

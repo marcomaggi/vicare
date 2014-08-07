@@ -87,12 +87,10 @@
   ;;
   ;;   (?operator ?arg ...)
   ;;
-  ;;which, in  recordized code, are  represented by struct  instances of
-  ;;type FUNCALL; everything else is left untouched.
-  ;;
-  ;;If the ?OPERATOR is a struct instance of type PRIMREF representing a
-  ;;primitive  operation:  such struct  is  replaced  by an  appropriate
-  ;;struct instance of type PRIMCALL; recordized code like:
+  ;;which, in recordized  code, are represented by struct instances  of type FUNCALL;
+  ;;everything else is left untouched.  If the ?OPERATOR is a struct instance of type
+  ;;PRIMREF  representing  a primitive  operation:  such  struct  is replaced  by  an
+  ;;appropriate struct instance of type PRIMCALL; recordized code like:
   ;;
   ;;   #[funcall  #[primref ?name] (?arg ...)]
   ;;
@@ -100,25 +98,28 @@
   ;;
   ;;   #[primcall #[primref ?name] (?arg ...)]
   ;;
-  ;;Notice that not all the struct instances of type PRIMREF reference a
-  ;;primitive operation: the struct type  PRIMREF is used to represent a
-  ;;reference to all  the function bindings exported by  the boot image.
-  ;;Only  those for  which ?NAME  is a  symbol satisfying  the predicate
-  ;;PRIMOP?   are  primitive  operations;   in  other  words,  only  the
-  ;;operations  defined  by  the   syntax  DEFINE-PRIMOP  are  primitive
-  ;;operations.  Examples: $CAR, $CDR, FIXNUM? are primitive operations;
-  ;;LIST, NUMBER?, STRING-LENGTH are *not* primitive operations.
-  ;;
-  ;;This module accepts as input a  struct instance of type CODES, whose
-  ;;internal recordized code must be composed by struct instances of the
-  ;;following types:
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
   ;;
   ;;   bind		closure		conditional
   ;;   constant		fix		forcall
   ;;   funcall		jmpcall		known
   ;;   primref		seq		var
   ;;
-  (define who 'alt-cogen.introduce-primcalls)
+  ;;NOTE  Not  all  the  struct  instances of  type  PRIMREF  reference  a  primitive
+  ;;operation: the struct  type PRIMREF is used  to represent a reference  to all the
+  ;;function bindings exported  by the boot image.   Only those for which  ?NAME is a
+  ;;symbol  satisfying the  predicate  PRIMOP?  are  primitive  operations; in  other
+  ;;words,  only the  operations defined  by the  syntax DEFINE-PRIMOP  are primitive
+  ;;operations.   Examples:  $CAR,  $CDR,  FIXNUM? are  primitive  operations;  LIST,
+  ;;NUMBER?, STRING-LENGTH are *not* primitive operations.
+  ;;
+  ;;NOTE Not  all the instances  of struct PRIMCALL  are generated from  instances of
+  ;;FUNCALL; so  not all the instances  of PRIMCALL are generated  here.  PRIMCALL is
+  ;;also used to represent high-level assembly instructions such as "mref".
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'alt-cogen.introduce-primcalls))
 
   (define (alt-cogen.introduce-primcalls Program)
     (struct-case Program
@@ -126,21 +127,19 @@
        (make-codes ($map/stx Clambda code*)
 		   (E body)))
       (else
-       (error who "invalid program" Program))))
+       (error __who__ "invalid program" Program))))
 
 ;;; --------------------------------------------------------------------
 
   (module (E)
 
     (define (E x)
-      ;;Perform code transformation traversing the whole hierarchy in X,
-      ;;which must be  a struct instance representing  recordized code ,
-      ;;and building  a new  hierarchy of transformed,  recordized code;
-      ;;return the new hierarchy.
+      ;;Perform code transformation  traversing the whole hierarchy in  X, which must
+      ;;be a struct instance representing recordized  code, and build a new hierarchy
+      ;;of transformed, recordized code; return the new hierarchy.
       ;;
-      ;;The  purpose of  this recordized  code traversal  is to  process
-      ;;struct  instances of  type  FUNCALL with  the module  MKFUNCALL;
-      ;;everything else is left untouched.
+      ;;The purpose of this recordized code  traversal is to process struct instances
+      ;;of type FUNCALL with the module MKFUNCALL; everything else is left untouched.
       ;;
       (struct-case x
 	((constant)
@@ -177,7 +176,7 @@
 	 (make-jmpcall label (E rator) ($map/stx E arg*)))
 
 	(else
-	 (error who "invalid expr" x))))
+	 (error __who__ "invalid expr" x))))
 
     (define (E-known x)
       (struct-case x
@@ -191,22 +190,22 @@
 ;;; --------------------------------------------------------------------
 
   (module (Clambda)
-    ;;The purpose  of this  module is to  apply E to  the body  of every
-    ;;CASE-LAMBDA clause.
+    ;;The purpose  of this  module is  to apply E  to the  body of  every CASE-LAMBDA
+    ;;clause.
     ;;
     (define (Clambda x)
       (struct-case x
 	((clambda label case* cp free* name)
 	 (make-clambda label ($map/stx ClambdaCase case*) cp free* name))
 	(else
-	 (error who "invalid clambda" x))))
+	 (error __who__ "invalid clambda" x))))
 
     (define (ClambdaCase x)
       (struct-case x
 	((clambda-case info body)
 	 (make-clambda-case info (E body)))
 	(else
-	 (error who "invalid clambda-case" x))))
+	 (error __who__ "invalid clambda-case" x))))
 
     #| end of module: Clambda |# )
 
@@ -215,15 +214,14 @@
   (module (mkfuncall)
 
     (define (mkfuncall op arg*)
-      ;;OP is a struct instance  representing the operator in a function
+      ;;OP is a struct instance representing the operator in a function application.
+      ;;
+      ;;ARG* is a  list of struct instances representing the  arguments of a function
       ;;application.
       ;;
-      ;;ARG* is a list of struct instances representing the arguments of
-      ;;a function application.
-      ;;
-      ;;If  the   operator  is  a   struct  instance  of   type  PRIMREF
-      ;;representing a  primitive operation: such struct  is replaced by
-      ;;an appropriate struct instance of type PRIMCALL.
+      ;;If the operator is a struct instance of type PRIMREF representing a primitive
+      ;;operation: such struct is replaced by  an appropriate struct instance of type
+      ;;PRIMCALL.
       ;;
       (struct-case op
 	((known expr)
@@ -238,8 +236,8 @@
 	 (make-funcall op arg*))))
 
     (define (%primitive-operation? x)
-      ;;Import PRIMOP?  from a module defined  in "pass-specify-rep.ss".
-      ;;(Marco Maggi; Oct 14, 2012)
+      ;;Import    the    function   "primop?"     from    a    module   defined    in
+      ;;"pass-specify-rep.ss".  (Marco Maggi; Oct 14, 2012)
       (import primops)
       (or (eq? x 'debug-call)
 	  (primop? x)))
@@ -252,21 +250,21 @@
   ;;
   ;; (define (check-gensym x)
   ;;   (unless (gensym? x)
-  ;;     (error who "invalid gensym" x)))
+  ;;     (error __who__ "invalid gensym" x)))
   ;;
   ;; (define (check-label x)
   ;;   (struct-case x
   ;;     ((code-loc label)
   ;;      (check-gensym label))
   ;;     (else
-  ;;      (error who "invalid label" x))))
+  ;;      (error __who__ "invalid label" x))))
   ;;
   ;; (define (check-var x)
   ;;   (struct-case x
   ;;     ((var)
   ;;      (void))
   ;;     (else
-  ;;      (error who "invalid var" x))))
+  ;;      (error __who__ "invalid var" x))))
   ;;
   ;; (define (check-closure x)
   ;;   (struct-case x
@@ -274,7 +272,7 @@
   ;;      (check-label label)
   ;;      (for-each check-var free*))
   ;;     (else
-  ;;      (error who "invalid closure" x))))
+  ;;      (error __who__ "invalid closure" x))))
 
   #| end of module: alt-cogen.introduce-primcalls |# )
 
@@ -826,7 +824,13 @@
 
 
 (module (alt-cogen.impose-calling-convention/evaluation-order)
-
+  ;;This module does stuff:
+  ;;
+  ;;*  All the  BIND  struct instances  in  the input  expression  are processed  and
+  ;;   substituted with  code that  evaluates the  RHS expressions  and stores  their
+  ;;  single  return value into  appropriately allocated Scheme stack  machine words.
+  ;;  Here it is decided in which order the RHS expressions are computed.
+  ;;
   (define who 'alt-cogen.impose-calling-convention/evaluation-order)
 
   (define (alt-cogen.impose-calling-convention/evaluation-order x)
@@ -1268,7 +1272,7 @@
 	   ;;such loc gensym contains a  reference to the closure object
 	   ;;implementing DO-OVERFLOW.
 	   (make-primcall 'mref
-	     (list (make-constant (make-object (primref->location-gensym 'do-overflow)))
+	     (list (make-constant (make-object (primitive-public-function-name->location-gensym 'do-overflow)))
 		   (make-constant off-symbol-record-proc)))
 	   (list size)))))
 
@@ -1301,8 +1305,11 @@
 ;;; --------------------------------------------------------------------
 
   (define (V d x)
-    ;;Generate assembly  instructions to compute  a value from  struct X
-    ;;and store the result in destination D.
+    ;;Generate assembly instructions  to compute a value from struct  X and store the
+    ;;result in destination D.
+    ;;
+    ;;We can think of D as an allocated  machine word on the stack which will receive
+    ;;the result of a subexpression computation.
     ;;
     (struct-case x
       ((constant)
@@ -4456,7 +4463,7 @@
        ;;the Closure  Pointer Register (CPR).   The "proc" slot  of such
        ;;loc  gensym   contains  a  reference  to   the  closure  object
        ;;implementing DO-VARARG-OVERFLOW.
-       (movl (obj (primref->location-gensym 'do-vararg-overflow)) cpr)
+       (movl (obj (primitive-public-function-name->location-gensym 'do-vararg-overflow)) cpr)
        ;;Load in the Closure Pointer Register a reference to the closure
        ;;object implementing DO-VARARG-OVERFLOW.
        (movl (mem off-symbol-record-proc cpr) cpr)

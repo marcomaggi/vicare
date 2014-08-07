@@ -968,13 +968,16 @@
        x)
 
       ((primref name)
-       ;;Generate  code to  retrieve the  "slot" field  from a  location
-       ;;gensym; the value of such slot  must contain a reference to the
-       ;;closure object  implementing a  global lexical  procedure.  The
-       ;;location gensym  is stored in the  relocation vector associated
-       ;;the code object we are building.
+       ;;Generate code  to retrieve  the "value"  field from  a location  gensym; the
+       ;;value  of  such  slot  must  contain  a  reference  to  the  closure  object
+       ;;implementing a global lexical procedure.
+       ;;
+       ;;NOTE Once we reference the loc gensym in the assembly code: we need a way to
+       ;;associate such gensym to the generated binary code; the location gensym will
+       ;;be stored  in the  relocation vector  associated to the  code object  we are
+       ;;building.  This is what the OBJECT struct generated below is for.
        (prm 'mref
-	    (K (make-object (primref->location-gensym name)))
+	    (K (make-object (primitive-public-function-name->location-gensym name)))
 	    (K off-symbol-record-value)))
 
       ((code-loc)

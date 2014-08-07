@@ -2,24 +2,23 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
+;;;
 
 
 ;;;; introduction
 ;;
-;;Here  we  give only  a  short  context introduction;  for  a  real introduction  to
-;;processing LETREC  and LETREC*  syntaxes, and specifically  to understand  the code
-;;below, we *must* read the following paper:
+;;For an  introduction to processing LETREC  and LETREC* syntaxes, and  to understand
+;;the code below, we *must* read the following paper:
 ;;
 ;;   [WSD]  Oscar Waddell,  Dipanwita  Sarkar,  R. Kent  Dybvig.   "Fixing Letrec:  A
 ;;   Faithful Yet Efficient Implementation of Scheme's Recursive Binding Construct"
@@ -30,155 +29,52 @@
 ;;   [GD]  Abdulaziz  Ghuloum,  R.    Kent  Dybvig.   ``Fixing  Letrec  (reloaded)''.
 ;;   Workshop on Scheme and Functional Programming '09
 ;;
-;; ----------------------------------------------------------------------------------
+;;and finally the documentation of the pass functions in Texinfo format.
 ;;
-;;Let's consider the following program:
 ;;
-;;   (import (rnrs))
-;;   (let ((A B))
-;;     #t)
+;;Input and output of all the LETREC optimisation alternatives
+;;============================================================
 ;;
-;;it  will fail  with "unbound  identifier B";  we are  *not* concerned  with unbound
-;;identifiers here.  So let's move on to the following program:
+;;The input of  all the alternative pass functions is  a struct instance representing
+;;an expression  as recordized  code; the  input is a  tree-like nested  hierarchy of
+;;structures with the following struct types:
 ;;
-;;   (import (rnrs))
-;;   (let ((A 123))
-;;     (let ((A A))
-;;       #t))
+;;	assign		bind		clambda
+;;	conditional	constant	forcall
+;;	funcall		mvcall		prelex
+;;	primref		rec*bind	recbind
+;;	seq
 ;;
-;;no errors here: the identifier A in reference position is captured by the outer LET
-;;binding for A.  Now this program:
+;;in such  hierarchy: instances of the  struct type BIND represent  LET core language
+;;forms; instances  of the  struct types  RECBIND and  REC*BIND represent  LETREC and
+;;LETREC* core  language forms;  instances of  the struct  type PRELEX,  in reference
+;;position, represent references to bindings defined by BIND, RECBIND or REC*BIND.
 ;;
-;;   (import (rnrs))
-;;   (let* ((A 123)
-;;          (B A))
-;;     #t)
+;;The  output  of  all the  alternative  pass  functions  is  a new  struct  instance
+;;representing  an  expression  as  recordized  code; the  hierarchy  of  the  output
+;;expression is  the same as  that of the input  expression, except for  instances of
+;;RECBIND and REC*BIND which are replaced by a composition of BIND, FIX and ASSIGN.
 ;;
-;;everything is all right; now this program:
 ;;
-;;   (import (rnrs))
-;;   (let* ((A 123)
-;;          (A A))
-;;     #t)
+;;Notes for all the LETREC optimisation alternatives
+;;==================================================
 ;;
-;;again no  error: the identifier  A in reference position  is captured by  the first
-;;LET* binding for A; LET* allows us to create bindings with the same name.
+;;NOTE We assume that the input expression  is correct.  All the PRELEX structures in
+;;reference position are captured by a  binding defined by BIND, RECBIND or REC*BIND;
+;;there are no references to free variables.
 ;;
-;; ----------------------------------------------------------------------------------
+;;NOTE We need to  remember that the LETREC-optimisation pass is  used to process the
+;;result of fully expanding: libraries,  programs and standalone expressions given to
+;;EVAL (either in stateless environments or stateful interactive environments).  This
+;;means some  bindings are defined  in the input  expression, while others  have been
+;;defined in  a previously processed  expression; assignments and references  to such
+;;previously defined bindings have been  already processed and transformed into calls
+;;to  the  primitive  functions:  they  are not  represented  by  ASSIGN  and  PRELEX
+;;structures.
 ;;
-;;Finally, let's move to the LETREC syntax.  This program is legal:
-;;
-;;   (import (rnrs))
-;;   (letrec ((A (lambda () A)))
-;;     #t)
-;;
-;;because LETREC defines recursive bindings, so we  are allowed to reference A in the
-;;right-hand side of  the binding for A itself,  as long as we put  such reference in
-;;the body of a LAMBDA.
-;;
-;;This program is also legal:
-;;
-;;   (import (rnrs))
-;;   (letrec ((A (lambda () B))
-;;            (B (lambda () A)))
-;;     #t)
-;;
-;;because the cross references to A and B are in the body of LAMBDA syntaxes.
-;;
-;;This program is illegal:
-;;
-;;   (import (rnrs))
-;;   (letrec ((A (list A)))
-;;     #t)
-;;
-;;because the  identifier A  in reference  position is not  in the  body of  a LAMBDA
-;;syntax: to  evaluate the right-hand side  of the binding  we need the value  of the
-;;binding  itself.   Notice  that  A  in  reference  position  is  *not*  an  unbound
-;;identifier: it is captured  by the A in binding position; it  is just "illegal" and
-;;we must detect this situation, according to R6RS.
-;;
-;;This program is illegal:
-;;
-;;   (import (rnrs))
-;;   (letrec ((A 123)
-;;            (B (list A)))
-;;     #t)
-;;
-;;because the  identifier A  in reference  position is not  in the  body of  a LAMBDA
-;;syntax: LETREC does not impose an order  to the evaluation of the init expressions,
-;;so to evaluate the right-hand side of the  binding we need the value of the binding
-;;itself.
-;;
-;; ----------------------------------------------------------------------------------
-;;
-;;Let's move  to the LETREC*  syntax; it  is similar but  not equal to  LETREC.  This
-;;program is legal:
-;;
-;;   (import (rnrs))
-;;   (letrec* ((A (lambda () A)))
-;;     #t)
-;;
-;;because LETREC* defines recursive bindings, so we are allowed to reference A in the
-;;right-hand side of  the binding for A itself,  as long as we put  such reference in
-;;the body of a LAMBDA.
-;;
-;;This program is also legal:
-;;
-;;   (import (rnrs))
-;;   (letrec* ((A (lambda () B))
-;;             (B (lambda () A)))
-;;     #t)
-;;
-;;because the cross references to A and B are in the body of LAMBDA syntaxes.
-;;
-;;This program is illegal:
-;;
-;;   (import (rnrs))
-;;   (letrec* ((A (list A)))
-;;     #t)
-;;
-;;because the  identifier A  in reference  position is not  in the  body of  a LAMBDA
-;;syntax: to  evaluate the right-hand side  of the binding  we need the value  of the
-;;binding itself.   Again, notice that  A in reference  position is *not*  an unbound
-;;identifier: it is captured  by the A in binding position; it  is just "illegal" and
-;;we must detect this situation, according to R6RS.
-;;
-;;This program is legal:
-;;
-;;   (import (rnrs))
-;;   (letrec* ((A 123)
-;;             (B (list A)))
-;;     #t)
-;;
-;;because  LETREC* imposes  a  left-to-right  order to  the  evaluation  of the  init
-;;expressions.
-;;
-;; ----------------------------------------------------------------------------------
-;;
-;;R6RS mandates that illegal references to bindings established by LETREC and LETREC*
-;;are detected  at run time  and cause an assertion  violation to be  raised.  Vicare
-;;detects them at compile time, so some fully R6RS-compliant code will not work under
-;;Vicare.
-;;
-;;The following code is illegal under both R6RS and Vicare:
-;;
-;;   (import (rnrs))
-;;   (letrec ((x y)
-;;            (y x))
-;;     'should-not-get-here)
-;;
-;;The following program will run under a R6RS-compliant implementation:
-;;
-;;   (import (rnrs))
-;;   (letrec ((x (if (eq? (cons 1 2)
-;;                        (cons 1 2))
-;;                   x
-;;                 1)))
-;;     x)
-;;
-;;because the form X  in reference position in the right-hand side  of the binding is
-;;never evaluated;  under Vicare this  code will rather  raise a syntax  violation at
-;;compile time.
+;;NOTE Upon entering  this compiler pass, the PRELEX  structures representing defined
+;;bindings already  have the  fields SOURCE-REFERENCED?,  SOURCE-ASSIGNED?  correctly
+;;set; a previous pass has determined if a binding is assigned or not.
 ;;
 
 
@@ -220,13 +116,27 @@
 		   (prelex-operand x))
     (set-prelex-source-referenced?! x #t)))
 
-(define (%make-void-constants lhs*)
+(module (%make-void-constants)
   ;;Build and  return a  list of  CONSTANT structs  representing #<void>  values, one
-  ;;struct for each item in LHS*.
+  ;;struct  for each  item in  LHS*.  They  are used,  for example,  to generate  the
+  ;;undefined RHS expressions in the transformation from:
   ;;
-  (map (lambda (x)
-	 (make-constant (void)))
-    lhs*))
+  ;;   (letrec* ((?var ?init) ...)
+  ;;     ?body0 ?body ...)
+  ;;
+  ;;to:
+  ;;
+  ;;   (let ((?var (void)) ...)
+  ;;     (set! ?var ?init) ...
+  ;;     ?body0 ?body ...)
+  ;;
+  (define (%make-void-constants lhs*)
+    (map (lambda (x) THE-VOID) lhs*))
+
+  (define-constant THE-VOID
+    (make-constant (void)))
+
+  #| end of module |# )
 
 (module (build-assign*)
 
@@ -456,41 +366,31 @@
   ;;Perform basic transformations to convert  the recordized representation of LETREC
   ;;and LETREC* forms into LET-like forms and assignments.
   ;;
-  ;;We  need  to remember  that  this  function is  used  to  process the  result  of
-  ;;expanding: libraries,  programs, standalone  expressions given  to EVAL  (both in
-  ;;stateless environments and stateful interactive environments).
-  ;;
   ;;The transformations performed by this module are equivalent to the following:
-  ;;
-  ;;   (letrec* ((?var ?init) ...) . ?body)
-  ;;   ==> (let ((?var (void)) ...) (set! ?var ?init) ... . ?body)
-  ;;
-  ;;   (library-letrec* ((?var ?loc ?init) ...) . ?body)
-  ;;   ==> (let ((?var (void)) ...) (set! ?var ?init) ... . ?body)
   ;;
   ;;   (letrec ((?var ?init) ...) . ?body)
   ;;   ==> (let ((?var (void)) ...)
-  ;;         (let ((?tmp ?init) ...) (set! ?var ?tmp) ... . ?body))
+  ;;         (let ((?tmp ?init) ...)
+  ;;           (set! ?var ?tmp) ...
+  ;;           . ?body))
+  ;;
+  ;;   (letrec* ((?var ?init) ...) . ?body)
+  ;;   ==> (let ((?var (void)) ...)
+  ;;         (set! ?var ?init) ...
+  ;;         . ?body)
+  ;;
+  ;;   (library-letrec* ((?var ?loc ?init) ...) . ?body)
+  ;;   ==> (let ((?var (void)) ...)
+  ;;         (set! ?var ?init) ...
+  ;;         . ?body)
   ;;
   ;;Notice that the transformation for LETREC is described also in the R5RS document.
   ;;
-  ;;This module accepts as input a  struct instance representing recordized code with
-  ;;the following struct types:
-  ;;
-  ;;	assign		bind		clambda
-  ;;	conditional	constant	forcall
-  ;;	funcall		mvcall		prelex
-  ;;	primref		rec*bind	recbind
-  ;;	seq
-  ;;
-  ;;and returns  a new  struct instance  representing recordized  code with  the same
-  ;;types except RECBIND and REC*BIND which are replaced by a composition of BIND and
-  ;;ASSIGN structures.
-  ;;
-  (define who 'optimize-letrec/basic)
+  (define-fluid-override __who__
+    (identifier-syntax 'optimize-letrec/basic))
 
   ;;Make the code more readable.
-  (define-inline (optimize-letrec/basic x)
+  (define-syntax-rule (optimize-letrec/basic x)
     (E x))
 
   (define (E x)
@@ -543,7 +443,7 @@
        (make-forcall rator (map E rand*)))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
   (define (E-clambda x)
     (struct-case x
@@ -568,10 +468,8 @@
     ;;     (set! ?var ?init) ...
     ;;     ?body0 ?body ...)
     ;;
-    (make-bind lhs* (map (lambda (x)
-			   (make-constant (void)))
-		      lhs*)
-	       (build-assign* lhs* rhs* body)))
+    (make-bind lhs* (%make-void-constants lhs*)
+      (build-assign* lhs* rhs* body)))
 
   (define (%do-recbind lhs* rhs* body)
     ;;A struct instance of type REC*BIND represents a form like:
@@ -586,10 +484,8 @@
     ;;       ?body0 ?body ...))
     ;;
     (let ((tmp* (map unique-prelex lhs*)))
-      (make-bind lhs* (map (lambda (x)
-			     (make-constant (void)))
-			lhs*)
-		 (make-bind tmp* rhs* (build-assign* lhs* tmp* body)))))
+      (make-bind lhs* (%make-void-constants lhs*)
+	(make-bind tmp* rhs* (build-assign* lhs* tmp* body)))))
 
   #| end of module: optimize-letrec/basic |# )
 
@@ -599,176 +495,17 @@
   ;;LETREC*  forms into  LET-like forms  and assignments.   This function  performs a
   ;;transformation similar (but not equal to) the one described in the [WSD] paper.
   ;;
-  ;;We  need  to remember  that  this  function is  used  to  process the  result  of
-  ;;expanding: libraries,  programs, standalone  expressions given  to EVAL  (both in
-  ;;stateless environments and stateful interactive environments).
-  ;;
-  ;;This module accepts as input a  struct instance representing recordized code with
-  ;;the following struct types:
-  ;;
-  ;;	assign		bind		clambda
-  ;;	conditional	constant	forcall
-  ;;	funcall		mvcall		prelex
-  ;;	primref		rec*bind	recbind
-  ;;	seq
-  ;;
-  ;;and returns  a new  struct instance  representing recordized  code with  the same
-  ;;types except  RECBIND and REC*BIND which  are replaced by a  composition of BIND,
-  ;;FIX and ASSIGN structures.
-  ;;
-  ;;How we process LETREC and LETREC*
-  ;;---------------------------------
-  ;;
-  ;;When  processing   a  LETREC  or   LETREC*  core  language   forms  (represented,
-  ;;respectively, by  a RECBIND and  a REC*BIND  structure) we classify  each binding
-  ;;into: simple, complex, lambda.
-  ;;
-  ;;If the form  is a LETREC: we do  *not* care about the order of  evaluation of the
-  ;;right-hand sides, so we produce recordized code like this:
-  ;;
-  ;;   (let ((?simple.lhs ?simple.rhs)
-  ;;         ...)
-  ;;     (let ((?complex.lhs (void))
-  ;;           ...)
-  ;;       (fix ((?lambda.lhs ?lambda.rhs)
-  ;;             ...)
-  ;;         (let ((?tmp ?complex.rhs)
-  ;;               ...)
-  ;;           (set! ?complex.lhs ?tmp)
-  ;;           ...
-  ;;           ?body))))
-  ;;
-  ;;in which the ?COMPLEX.RHS expressions are evaluated in unspecified order.
-  ;;
-  ;;If the  form is  a LETREC*: we  *do care*  about the order  of evaluation  of the
-  ;;right-hand sides, so we produce recordized code like this:
-  ;;
-  ;;   (let ((?simple.lhs ?simple.rhs)
-  ;;         ...)
-  ;;     (let ((?complex.lhs (void))
-  ;;           ...)
-  ;;       (fix ((?lambda.lhs ?lambda.rhs)
-  ;;             ...)
-  ;;         (set! ?complex.lhs ?complex.rhs)
-  ;;         ...
-  ;;         ?body)))
-  ;;
-  ;;in which  the ?COMPLEX.RHS expressions are  evaluated in the same  order in which
-  ;;they appear in the core language form.
-  ;;
-  ;;NOTE Upon entering this compiler pass, the PRELEX structures representing defined
-  ;;bindings already have  the field SOURCE-ASSIGNED? correctly set;  a previous pass
-  ;;has determined if a binding is assigned or not.
-  ;;
-  ;;Examples
-  ;;--------
-  ;;
-  ;;Let's look at some examples:
-  ;;
-  ;; (let ((a 1))
-  ;;   (let ((a a))
-  ;;     a))
-  ;; ==> (let* ((a_0 '1)
-  ;;            (a_1 a_0))
-  ;;       a_1)
-  ;;
-  ;; (let ((a 1))
-  ;;   (let ((a 2))
-  ;;     (let ((a 3))
-  ;;       a)))
-  ;; ==> (let* ((a_0 '1)
-  ;;            (a_1 '2)
-  ;;            (a_2 '3))
-  ;;       a_2)
-  ;;
-  ;; (letrec ((a 1)
-  ;;          (b 2))
-  ;;   (list a b))
-  ;; ==> (let ()
-  ;;       (let ((a_0 '#<void>)
-  ;;             (b_0 '#<void>))
-  ;;         (fix ()
-  ;;              (let ((a_1 '1)
-  ;;                    (b_1 '2))
-  ;;                (begin
-  ;;                  (set! a_0 a_1)
-  ;;                  (set! b_0 b_1)
-  ;;                  (list a_0 b_0))))))
-  ;;
-  ;; (letrec* ((a (lambda (x)
-  ;;                (when x
-  ;;                  (a #f))))
-  ;;           (b 123)
-  ;;           (c 456)
-  ;;           (d (begin
-  ;;                (set! c 789)
-  ;;                9)))
-  ;;   a)
-  ;; ==> (let ()
-  ;;       (let ((b_0 '#<void>)
-  ;;             (c_0 '#<void>)
-  ;;             (d_0 '#<void>))
-  ;;         (fix ((a_0 (lambda (x_0)
-  ;;                      (if x_0
-  ;;                          (a_0 '#f)
-  ;;                        (void)))))
-  ;;              (begin
-  ;;                (set! b_0 '123)
-  ;;                (set! c_0 '456)
-  ;;                (set! d_0 (begin
-  ;;                            (set! c_0 '789)
-  ;;                            '9))
-  ;;                a_0))))
-  ;;
-  ;; (letrec* ((a 123)
-  ;;           (b 2)
-  ;;           (c b)
-  ;;           (d (lambda () 123)))
-  ;;   b)
-  ;; ==> (let ()
-  ;;       (let ((a_0 '#<void>)
-  ;;             (b_0 '#<void>)
-  ;;             (c_0 '#<void>))
-  ;;         (fix ((d_0 (lambda () '123)))
-  ;;              (begin
-  ;;                (set! a_0 '123)
-  ;;                (set! b_0 '2)
-  ;;                (set! c_0 b_0)
-  ;;                b_0))))
-  ;;
-  ;; (letrec* ((a 123)
-  ;;           (b 2)
-  ;;           (c b)
-  ;;           (d (lambda () 123)))
-  ;;   (set! d 123)
-  ;;   b)
-  ;; ==> (let ()
-  ;;       (let ((a_0 '#<void>)
-  ;;             (b_0 '#<void>)
-  ;;             (c_0 '#<void>)
-  ;;             (d_0 '#<void>))
-  ;;         (fix ()
-  ;;              (begin
-  ;;                (set! a_0 '123)
-  ;;                (set! b_0 '2)
-  ;;                (set! c_0 b_0)
-  ;;                (set! d_0 (lambda () '123))
-  ;;                (set! d_0 '123)
-  ;;                b_0))))
-  ;;
   (define-fluid-override __who__
     (identifier-syntax 'optimize-letrec/waddell))
 
   (define (optimize-letrec/waddell x)
-    (E x
-       ;;This is the outer implementation of the function REGISTER-LHS-USAGE!.
-       (%make-top-lhs-usage-register-func)
-       ;;This is the outer implementation of the thunk MAKE-THE-ENCLOSING-RHS-COMPLEX!.
-       (%make-top-rhs-complexity-register-func)))
+    (parametrise ((lhs-used-func  (%make-top-lhs-used-register-func))
+		  (rhs-cplx-func  (%make-top-rhs-complexity-register-func)))
+      (E x)))
 
   (module (E)
 
-    (define (E x register-lhs-usage! make-the-enclosing-rhs-complex!)
+    (define (E x)
       ;;Recursively visit the recordized code X.
       ;;
       (struct-case x
@@ -785,7 +522,7 @@
 	 ;;LHS and also it makes X a "complex" expression.
 	 (register-lhs-usage! lhs)
 	 (make-the-enclosing-rhs-complex!)
-	 (make-assign lhs (E rhs register-lhs-usage! make-the-enclosing-rhs-complex!)))
+	 (make-assign lhs (E rhs)))
 
 	((primref)
 	 ;;X is a primitive function reference; for example as + appears in:
@@ -795,91 +532,195 @@
 
 	((bind lhs* rhs* body)
 	 ;;X is a binding creation form like LET.  Do RHS* first, then BODY.
-	 (let* ((rhs*^ (E* rhs* register-lhs-usage! make-the-enclosing-rhs-complex!))
-		(body^ (E body
-			  ;;Inside  a  binding  build  a   new  function  to  act  as
-			  ;;REGISTER-LHS-USAGE!.
-			  (%make-middle-lhs-usage-register-func lhs* register-lhs-usage!)
-			  make-the-enclosing-rhs-complex!)))
+	 (let* ((rhs*^ (E* rhs*))
+		(body^ (parametrise ((lhs-used-func (%make-middle-lhs-used-register-func lhs* (lhs-used-func))))
+			 (E body))))
 	   (make-bind lhs* rhs*^ body^)))
 
 	((recbind lhs* rhs* body)
 	 (if (null? lhs*)
-	     (E body register-lhs-usage! make-the-enclosing-rhs-complex!)
-	   (%do-recbind lhs* rhs* body register-lhs-usage! make-the-enclosing-rhs-complex!)))
+	     (E body)
+	   (%do-recbind lhs* rhs* body)))
 
 	((rec*bind lhs* rhs* body)
 	 (if (null? lhs*)
-	     (E body register-lhs-usage! make-the-enclosing-rhs-complex!)
-	   (%do-rec*bind lhs* rhs* body register-lhs-usage! make-the-enclosing-rhs-complex!)))
+	     (E body)
+	   (%do-rec*bind lhs* rhs* body)))
 
 	((conditional test conseq altern)
-	 (make-conditional (E test register-lhs-usage! make-the-enclosing-rhs-complex!)
-	     (E conseq register-lhs-usage! make-the-enclosing-rhs-complex!)
-	   (E altern register-lhs-usage! make-the-enclosing-rhs-complex!)))
+	 (make-conditional (E test)
+	     (E conseq)
+	   (E altern)))
 
 	((seq e0 e1)
 	 (make-seq
-	  (E e0 register-lhs-usage! make-the-enclosing-rhs-complex!)
-	  (E e1 register-lhs-usage! make-the-enclosing-rhs-complex!)))
+	  (E e0)
+	  (E e1)))
 
 	((clambda)
-	 (E-clambda x register-lhs-usage! make-the-enclosing-rhs-complex!))
+	 (E-clambda x))
 
 	((funcall)
-	 (E-funcall x register-lhs-usage! make-the-enclosing-rhs-complex!))
+	 (E-funcall x))
 
 	((mvcall)
-	 (E-mvcall x register-lhs-usage! make-the-enclosing-rhs-complex!))
+	 (E-mvcall x))
 
 	((forcall rator rand*)
 	 ;;This is a foreign function call.
-	 (make-forcall rator (E* rand* register-lhs-usage! make-the-enclosing-rhs-complex!)))
+	 (make-forcall rator (E* rand*)))
 
 	(else
 	 (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
-    (define (E* x* register-lhs-usage! make-the-enclosing-rhs-complex!)
+    (define (E* x*)
       (if (null? x*)
 	  '()
-	(cons (E  ($car x*) register-lhs-usage! make-the-enclosing-rhs-complex!)
-	      (E* ($cdr x*) register-lhs-usage! make-the-enclosing-rhs-complex!))))
+	(cons (E  ($car x*))
+	      (E* ($cdr x*)))))
 
     (module (E-clambda)
-
-      (define (E-clambda x register-lhs-usage! make-the-enclosing-rhs-complex!)
+      ;;Process  a CLAMBDA  structure.  In  general  we just  process the  body of  a
+      ;;CLAMBDA like all the  other forms, but we have to take  care of the following
+      ;;cases.
+      ;;
+      ;;We have to  remember that, upon entering this optimisation  function: all the
+      ;;PRELEX structures have already been  marked as referenced and/or assigned; so
+      ;;we already know if  a LETREC or LETREC* binding has  been referenced at least
+      ;;once and assigned at  least once, we must do nothing  here to ascertain these
+      ;;properties.
+      ;;
+      ;;CLAMBDA arguments
+      ;;-----------------
+      ;;
+      ;;The arguments of a CLAMBDA structure  are simple bindings, not different from
+      ;;the ones defined by  a BIND structure.  So, upon entering  a CLAMBDA body, we
+      ;;create  a  new  LHS-usage  registrar  function  that  avoids  inspecting  the
+      ;;references to bindings defined by the arguments.
+      ;;
+      ;;PRELEX references in CLAMBDA bodies
+      ;;-----------------------------------
+      ;;
+      ;;Let's consider LETREC  (RECBIND) and LETREC* (REC*BIND)  bindings whose LHS's
+      ;;PRELEX appears in a CLAMBDA body; examples:
+      ;;
+      ;;   (letrec ((a '1)
+      ;;            (b (lambda () a)))
+      ;;     '#f)
+      ;;
+      ;;   (letrec ((a '1)
+      ;;            (b (lambda () (set! a '2))))
+      ;;     '#f)
+      ;;
+      ;;   (letrec ((a '1))
+      ;;     (bind ((b (lambda () a)))
+      ;;       '#f))
+      ;;
+      ;;   (letrec ((a '1))
+      ;;     (bind ((b (lambda () (set! a '2))))
+      ;;       '#f))
+      ;;
+      ;;the  references  and the  assignments  to  A do  *not*  make  the A  bindings
+      ;;"complex"; for  example, we  would want  the first  example to  be tranformed
+      ;;into:
+      ;;
+      ;;   (bind ((a_0 '1))
+      ;;     (bind ()
+      ;;       (fix ((b_0 (lambda () a_0)))
+      ;;         (bind ()
+      ;;           '#f))))
+      ;;
+      ;;Let's consider also this example:
+      ;;
+      ;;   (letrec* ((a '1)
+      ;;             (b (lambda () a))
+      ;;             (c (b)))
+      ;;     '#f)
+      ;;
+      ;;by keeping A as "simple" it is transformed into:
+      ;;
+      ;;   (bind ((a_0 '1))
+      ;;     (bind ((c_0 '#!void))
+      ;;       (fix ((b_0 (lambda () a_0)))
+      ;;         (set! c_0 (b_0))
+      ;;         '#f)))
+      ;;
+      ;;So,  upon entering  a  CLAMBDA  body, we  create  a  new LHS-usage  registrar
+      ;;function that avoids marking as "used"  the bindings defined in the enclosing
+      ;;code, but still recognises them as non-free.
+      ;;
+      ;;Fixable bindings
+      ;;----------------
+      ;;
+      ;;Let's consider LETREC (RECBIND) and  LETREC* (REC*BIND) bindings whose RHS is
+      ;;a CLAMBDA structure: non-assigned (constant,  immuted) ones are classified as
+      ;;"fixable" and  will end in a  FIX structure; assigned ones  are classified as
+      ;;"complex" and will end in a BIND structure.
+      ;;
+      ;;It does *not*  matter if the assignment  happens: in the body of  a LETREC or
+      ;;LETREC* form;  in the RHS expression  of a LETREC or  LETREC* binding; inside
+      ;;the body of  a CLAMBDA.  It matters  only whether the binding  is assigned or
+      ;;non-assigned.  In the following examples the  binding A must be classified as
+      ;;"complex":
+      ;;
+      ;;   (letrec ((a (lambda () #f)))
+      ;;     (set! a 1)
+      ;;     #f)
+      ;;
+      ;;   (letrec ((a (lambda () (set! a 1))))
+      ;;     #f)
+      ;;
+      ;;   (letrec ((a (lambda () #f))
+      ;;            (b (lambda () (set! a 1))))
+      ;;     #f)
+      ;;
+      ;;   (letrec* ((a (lambda () #f))
+      ;;             (b (begin
+      ;;                  (set! a 1)
+      ;;                  2)))
+      ;;     #f)
+      ;;
+      ;;Upon  entering this  optimisation function:  all the  PRELEX structures  have
+      ;;already been  marked as assigned or  non-assigned; this means we  can already
+      ;;distinguish "fixable" bindings from "complex" ones  and we need to do nothing
+      ;;about it here.
+      ;;
+      (define (E-clambda x)
 	(struct-case x
 	  ((clambda label clause* cp free name)
-	   (make-clambda label (map (lambda (cls)
-				      (E-clambda-case cls register-lhs-usage!))
-				 clause*)
-			 cp free name))))
+	   (make-clambda label (map E-clambda-case clause*) cp free name))))
 
-      (define (E-clambda-case clause register-lhs-usage!)
+      (define (E-clambda-case clause)
 	(struct-case clause
 	  ((clambda-case info body)
 	   (make-clambda-case info
-			      (E body
-				 (%make-middle-lhs-usage-register-func (case-info-args info)
-								       register-lhs-usage!
-								       #;(%make-top-lhs-usage-register-func)
-								       ;; (lambda (prel)
-								       ;; 	 (register-lhs-usage! prel #f))
-								       )
-				 (%make-top-rhs-complexity-register-func))))))
+			      (parametrise
+				  ((lhs-used-func  (%make-middle-lhs-used-register-func (case-info-args info)
+											(lhs-used-func)))
+				   (rhs-cplx-func  (%make-top-rhs-complexity-register-func)))
+				(E body))))))
 
       #| end of module: E-clambda |# )
 
     (module (E-funcall)
 
-      (define (E-funcall x register-lhs-usage! make-the-enclosing-rhs-complex!)
+      (define (E-funcall x)
 	(struct-case x
 	  ((funcall rator rand*)
-	   (let ((rator^ (E  rator register-lhs-usage! make-the-enclosing-rhs-complex!))
-		 (rand*^ (E* rand* register-lhs-usage! make-the-enclosing-rhs-complex!)))
+	   (let ((rator^ (E  rator))
+		 (rand*^ (E* rand*)))
 	     ;;This form  is a function  call.  In general,  we must assume  it might
 	     ;;mutate any of the bindings whose region includes it: so we should call
-	     ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.
+	     ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.  For example:
+	     ;;
+	     ;;   (letrec* ((a (lambda () c))
+	     ;;             (b (a))
+	     ;;             (c 1))
+	     ;;     #f)
+	     ;;
+	     ;;the  call to  A in  the RHS  of B  must cause  B to  be classified  as
+	     ;;"complex".  Notice that with LETREC these bindings are illegal.
+	     ;;
 	     (struct-case rator^
 	       ((primref op)
 		(if (eq? op 'top-level-value)
@@ -898,21 +739,20 @@
 
       #| end of module: E-funcall |# )
 
-    (define (E-mvcall x register-lhs-usage! make-the-enclosing-rhs-complex!)
+    (define (E-mvcall x)
       (struct-case x
 	((mvcall producer consumer)
 	 ;;This  form is  a function  call.  We  assume it  might mutate  any of  the
 	 ;;bindings     whose     region     includes      it:     so     we     call
 	 ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.
 	 (make-the-enclosing-rhs-complex!)
-	 (make-mvcall (E producer register-lhs-usage! make-the-enclosing-rhs-complex!)
-		      (E consumer register-lhs-usage! make-the-enclosing-rhs-complex!)))))
+	 (make-mvcall (E producer) (E consumer)))))
 
     #| end of module: E |# )
 
 ;;; --------------------------------------------------------------------
 
-  (module USAGE-LHS-FLAGS
+  (module LHS-USAGE-FLAGS
     (%make-lhs-usage-flags
      %lhs-usage-flags-set!
      %lhs-usage-flags-ref)
@@ -936,7 +776,7 @@
     (define-syntax-rule (%lhs-usage-flags-ref ?flags ?lhs-index)
       ($vector-ref ?flags ?lhs-index))
 
-    #| end of module: USAGE-LHS-FLAGS |# )
+    #| end of module: LHS-USAGE-FLAGS |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -969,11 +809,11 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%make-top-lhs-usage-register-func
-	   %make-middle-lhs-usage-register-func
-	   %make-recbind-lhs-usage-register-func)
+  (module (%make-top-lhs-used-register-func
+	   %make-middle-lhs-used-register-func
+	   %make-recbind-lhs-used-register-func)
 
-    (define (%make-top-lhs-usage-register-func)
+    (define (%make-top-lhs-used-register-func)
       ;;Build  and  return a  top  variable-usage  register function.   Top  register
       ;;functions  are  generated  only  when  starting  to  process  a  whole  input
       ;;expression, not when  entering a nested subexpression  representing a binding
@@ -986,7 +826,7 @@
       (lambda (prel)
 	(error __who__ "found free variable reference" prel)))
 
-    (define (%make-middle-lhs-usage-register-func prel* outer-register-lhs-usage!)
+    (define (%make-middle-lhs-used-register-func prel* outer-register-lhs-usage!)
       ;;Build and return a new middle-level variable-usage register function wrapping
       ;;the  one  given as  argument.   The  returned  register function  will  avoid
       ;;attempting to mark as "used" the PRELEX structures in the list PREL*.
@@ -1007,27 +847,44 @@
 	(with-unseen-prel (prel TABLE)
 	  (outer-register-lhs-usage! prel))))
 
-    (define (%make-recbind-lhs-usage-register-func prel* lhs-index used-lhs-flags
-						   outer-register-lhs-usage!)
+    (define (%make-recbind-lhs-used-register-func prel* lhs-index used-lhs-flags
+						  outer-register-lhs-usage!)
       ;;Build  and return  a new  recursive-binding variable-usage  register function
       ;;wrapping  the one  given as  argument.  The  returned register  function will
       ;;avoid attempting to mark as "used" the PRELEX structures in the list PREL*.
       ;;
       (define-constant TABLE (make-eq-hashtable))
+      ;;Photograph the current value of the parameter.
       (lambda (prel)
-	(import USAGE-LHS-FLAGS)
+	(import LHS-USAGE-FLAGS)
 	(with-unseen-prel (prel TABLE)
 	  (cond ((%find-index 0 prel prel*)
 		 => (lambda (lhs-index)
-		      (%lhs-usage-flags-set! used-lhs-flags lhs-index)))
+		      (%lhs-usage-flags-set! used-lhs-flags lhs-index)
+		      ;;If we are here the  PRELEX struct PREL represents a reference
+		      ;;to LETREC or LETREC* binding.  If  we are processing a RHS of
+		      ;;the same  lexical contour: we want  this RHS to be  marked as
+		      ;;"complex".
+		      ;;
+		      ;;Example:
+		      ;;
+		      ;;  (letrec ((a 1)
+		      ;;           (b a))
+		      ;;    #f)
+		      ;;
+		      ;;must be transformed into:
+		      ;;
+		      ;;  (bind ((a_0 '1))
+		      ;;    (bind ((b_0 a_0))
+		      ;;      (fix ()
+		      ;;        (bind ()
+		      ;;          '#f))))
+		      ;;
+		      ;;in which the binding for B  is complex.  Notice that this set
+		      ;;of bindings would be invalid for LETREC*.
+		      (make-the-enclosing-rhs-complex!)))
 		(else
-		 (outer-register-lhs-usage! prel)))
-	  ;; (if (memq prel prel*)
-	  ;;     (begin
-	  ;; 	(debug-print (%find-index 0 prel prel*) lhs-index)
-	  ;; 	(%lhs-usage-flags-set! used-lhs-flags lhs-index))
-	  ;;   (outer-register-lhs-usage! prel))
-	  )))
+		 (outer-register-lhs-usage! prel))))))
 
     (define-syntax (with-unseen-prel stx)
       (syntax-case stx ()
@@ -1047,6 +904,12 @@
 	     (%find-index ($fxadd1 base) item ($cdr ell)))))
 
     #| end of module |# )
+
+  (define-constant lhs-used-func
+    (make-parameter (%make-top-lhs-used-register-func)))
+
+  (define-syntax-rule (register-lhs-usage! ?prel)
+    ((lhs-used-func) ?prel))
 
 ;;; --------------------------------------------------------------------
 
@@ -1071,52 +934,53 @@
       (%rhs-complexity-flags-set! cplx-rhs-flags rhs-index)
       (make-the-enclosing-rhs-complex!)))
 
+  (define-constant rhs-cplx-func
+    (make-parameter (%make-top-lhs-used-register-func)))
+
+  (define-syntax-rule (make-the-enclosing-rhs-complex!)
+    ((rhs-cplx-func)))
+
 ;;; --------------------------------------------------------------------
 
   (module (%do-recbind %do-rec*bind)
 
-    (define-syntax-rule (%do-recbind ?lhs* ?rhs* ?body ?register-lhs-usage! ?make-the-enclosing-rhs-complex!)
-      (%true-do-recbind ?lhs* ?rhs* ?body ?register-lhs-usage! ?make-the-enclosing-rhs-complex! #t))
+    (define-syntax-rule (%do-recbind ?lhs* ?rhs* ?body)
+      (%true-do-recbind ?lhs* ?rhs* ?body #t))
 
-    (define-syntax-rule (%do-rec*bind ?lhs* ?rhs* ?body ?register-lhs-usage! ?make-the-enclosing-rhs-complex!)
-      (%true-do-recbind ?lhs* ?rhs* ?body ?register-lhs-usage! ?make-the-enclosing-rhs-complex! #f))
+    (define-syntax-rule (%do-rec*bind ?lhs* ?rhs* ?body)
+      (%true-do-recbind ?lhs* ?rhs* ?body #f))
 
-    (define (%true-do-recbind lhs* rhs* body register-lhs-usage! make-the-enclosing-rhs-complex! letrec?)
+    (define (%true-do-recbind lhs* rhs* body letrec?)
       ;;If  the core  language form  we are  processing is  a RECBIND  representing a
       ;;LETREC: the  argument LETREC?   is true.   If the core  language form  we are
       ;;processing is  a REC*BIND  representing a LETREC*:  the argument  LETREC?  is
       ;;false.
       ;;
-      (import USAGE-LHS-FLAGS RHS-COMPLEXITY-FLAGS)
+      (import LHS-USAGE-FLAGS RHS-COMPLEXITY-FLAGS)
       (let ((used-lhs-flags	(%make-lhs-usage-flags      lhs*))
 	    (cplx-rhs-flags	(%make-rhs-complexity-flags rhs*)))
 	;;The lists  of bindings LHS*  and RHS* are  interpreted as tuples,  in which
 	;;every item has an index: from 0 to "(sub1 (length lhs*))".
-	;;
-	(let ((rhs*^ (%do-rhs* 0 lhs* rhs*
-			       register-lhs-usage! make-the-enclosing-rhs-complex!
-			       used-lhs-flags cplx-rhs-flags))
-	      (body^ (E body
-			(%make-middle-lhs-usage-register-func lhs* register-lhs-usage!)
-			make-the-enclosing-rhs-complex!)))
-	  (receive (simple.lhs* simple.rhs* lambda.lhs* lambda.rhs* complex.lhs* complex.rhs*)
+	(let ((rhs*^ (%do-rhs* 0 lhs* rhs* used-lhs-flags cplx-rhs-flags))
+	      (body^ (parametrise
+			 ((lhs-used-func (%make-middle-lhs-used-register-func lhs* (lhs-used-func))))
+		       (E body))))
+	  (receive (simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
 	      (%partition-rhs* 0 lhs* rhs*^ used-lhs-flags cplx-rhs-flags)
-	    (make-bind simple.lhs* simple.rhs*
-	      (make-bind complex.lhs* (%make-void-constants complex.lhs*)
-		(make-fix lambda.lhs* lambda.rhs*
+	    (%make-bind simple.lhs* simple.rhs*
+	      (%make-bind complex.lhs* (%make-void-constants complex.lhs*)
+		(%make-fix fixable.lhs* fixable.rhs*
 		  (if letrec?
 		      ;;It is a RECBIND and LETREC: no order enforced when evaluating
 		      ;;COMPLEX.RHS*.
 		      (let ((tmp* (map unique-prelex complex.lhs*)))
-			(make-bind tmp* complex.rhs*
+			(%make-bind tmp* complex.rhs*
 			  (build-assign* complex.lhs* tmp* body^)))
 		    ;;It is  a REC*BIND and  LETREC*: order enforced  when evaluating
 		    ;;COMPLEX.RHS*.
 		    (build-assign* complex.lhs* complex.rhs* body^)))))))))
 
-    (define (%do-rhs* i lhs* rhs*
-		      register-lhs-usage! make-the-enclosing-rhs-complex!
-		      used-lhs-flags cplx-rhs-flags)
+    (define (%do-rhs* i lhs* rhs* used-lhs-flags cplx-rhs-flags)
       ;;Recursively process RHS* and return a list of struct instances which is meant
       ;;to replace the original RHS*.
       ;;
@@ -1142,18 +1006,17 @@
       ;;
       (if (null? rhs*)
 	  '()
-	(let ((rest (%do-rhs* (fxadd1 i) lhs* ($cdr rhs*)
-			      register-lhs-usage! make-the-enclosing-rhs-complex!
-			      used-lhs-flags cplx-rhs-flags)))
-	  (cons (E ($car rhs*)
-		   (%make-recbind-lhs-usage-register-func lhs* i used-lhs-flags register-lhs-usage!)
-		   (%make-recbind-rhs-complexity-register-func cplx-rhs-flags i make-the-enclosing-rhs-complex!))
+	(let ((rest (%do-rhs* (fxadd1 i) lhs* ($cdr rhs*) used-lhs-flags cplx-rhs-flags)))
+	  (cons (parametrise
+		    ((lhs-used-func (%make-recbind-lhs-used-register-func lhs* i used-lhs-flags (lhs-used-func)))
+		     (rhs-cplx-func (%make-recbind-rhs-complexity-register-func cplx-rhs-flags i (rhs-cplx-func))))
+		  (E ($car rhs*)))
 		rest))))
 
     (define (%partition-rhs* i lhs* rhs* used-lhs-flags cplx-rhs-flags)
       ;;Non-tail  recursive  function.   Make  use  of the  data  in  the  containers
       ;;USED-LHS-FLAGS  and CPLX-RHS-FLAGS  to partition  the bindings  into: simple,
-      ;;lambda, complex.  (RHS* is not visited here.)
+      ;;complex, fixable.  (RHS* is not visited here.)
       ;;
       ;;Return 6 values:
       ;;
@@ -1162,52 +1025,60 @@
       ;;    associated SIMPLE.RHS  is a  simple  expression: it  never references  an
       ;;   SIMPLE.LHS* and it does not call any function.
       ;;
-      ;;LAMBDA.LHS*, LAMBDA.RHS*
-      ;;   Lambda bindings.   Lists of LHS and  RHS whose RHS is a  CLAMBDA and whose
-      ;;   LHS is never assigned in the RHS*.
-      ;;
       ;;COMPLEX.LHS*, COMPLEX.RHS*
       ;;   Complex bindings.  Lists of LHS and  RHS for which either we know that the
       ;;   LHS has been assigned, or we know that the RHS may have assigned an LHS.
       ;;
-      (import USAGE-LHS-FLAGS RHS-COMPLEXITY-FLAGS)
+      ;;FIXABLE.LHS*, FIXABLE.RHS*
+      ;;   Fixable bindings.  Lists of LHS and RHS representing non-assigned bindings
+      ;;   whose RHS is a CLAMBDA.
+      ;;
+      (import LHS-USAGE-FLAGS RHS-COMPLEXITY-FLAGS)
       (if (null? lhs*)
 	  (values '() '() '() '() '() '())
 	(let-values
-	    (((simple.lhs* simple.rhs* lambda.lhs* lambda.rhs* complex.lhs* complex.rhs*)
+	    (((simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
 	      (%partition-rhs* (fxadd1 i) ($cdr lhs*) ($cdr rhs*) used-lhs-flags cplx-rhs-flags))
 	     ((lhs rhs)
 	      (values ($car lhs*) ($car rhs*))))
 	  (cond ((prelex-source-assigned? lhs)
-		 ;;This binding is "complex".  Notice that: even if the corresponding
-		 ;;RHS is  a CLAMBDA, this  binding cannot be classified  as "lambda"
-		 ;;and cannot  be defined by  a FIX struct.  Only  unassigned CLAMBDA
-		 ;;bindings can  be classified as  "lambda"; it does *not*  matter if
-		 ;;the assignment happens inside the body of a CLAMBDA or in the body
-		 ;;of a LETREC or LETREC* form.
+		 ;;This binding  is "complex".  It  does not matter  if the RHS  is a
+		 ;;CLAMBDA structure: the  fact that it is  assigned takes precedence
+		 ;;when deciding how to classify it.
 		 (values simple.lhs* simple.rhs*
-			 lambda.lhs* lambda.rhs*
+			 fixable.lhs* fixable.rhs*
 			 (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
 		((clambda? rhs)
-		 ;;This binding is "lambda".  This classification has precedence over
-		 ;;the binding being "complex".
+		 ;;This binding is "fixable".
 		 (values simple.lhs* simple.rhs*
-			 (cons lhs lambda.lhs*) (cons rhs lambda.rhs*)
+			 (cons lhs fixable.lhs*) (cons rhs fixable.rhs*)
 			 complex.lhs* complex.rhs*))
                 ((or (%lhs-usage-flags-ref      used-lhs-flags i)
 		     (%rhs-complexity-flags-ref cplx-rhs-flags i))
 		 ;;This binding is "complex".
 		 (values simple.lhs* simple.rhs*
-			 lambda.lhs* lambda.rhs*
+			 fixable.lhs* fixable.rhs*
 			 (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
 		(else
 		 ;;This binding is "simple".
 		 (values (cons lhs simple.lhs*) (cons rhs simple.rhs*)
-			 lambda.lhs* lambda.rhs*
+			 fixable.lhs* fixable.rhs*
 			 complex.lhs* complex.rhs*))
 		))))
 
     #| end of module: %DO-RECBIND %DO-REC*BIND |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-bind lhs* rhs* body)
+    (if (null? lhs*)
+	body
+      (make-bind lhs* rhs* body)))
+
+  (define (%make-fix lhs* rhs* body)
+    (if (null? lhs*)
+	body
+      (make-fix lhs* rhs* body)))
 
   #| end of module: OPTIMIZE-LETREC/WADDELL |# )
 
@@ -1216,23 +1087,6 @@
   ;;Perform transformations  to convert the  recordized representation of  LETREC and
   ;;LETREC*  forms into  LET  forms  and assignments.   This  function  does what  is
   ;;described in the [GD] paper.
-  ;;
-  ;;We  need  to remember  that  this  function is  used  to  process the  result  of
-  ;;expanding: libraries,  programs, standalone  expressions given  to EVAL  (both in
-  ;;stateless environments and stateful interactive environments).
-  ;;
-  ;;This  module  accepts  as   input  a  struct  instance  representing
-  ;;recordized code with the following struct types:
-  ;;
-  ;;assign		bind		clambda
-  ;;conditional		constant	forcall
-  ;;funcall		mvcall		prelex
-  ;;primref		rec*bind	recbind
-  ;;seq
-  ;;
-  ;;and returns a new struct  instance representing recordized code with
-  ;;the same types  except RECBIND and REC*BIND which are  replaced by a
-  ;;composition of BIND, FIX and ASSIGN structures.
   ;;
   ;;Let's see some examples:
   ;;
@@ -1313,14 +1167,14 @@
      rhs
      complex
      prev
-		;False or  a struct instance  of type BINDING  being the
-		;previous value.
+		;False or a struct instance of type BINDING being the previous value.
      free*))
 
   (define (optimize-letrec/scc x)
-    (let ((x (E x (make-binding #f #f #f #t #t '()))))
-      ;;(pretty-print (unparse-recordized-code x))
-      x))
+    (receive-and-return (x)
+	(E x (make-binding #f #f #f #t #t '()))
+      ;;(debug-print (unparse-recordized-code x))
+      (void)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1515,10 +1369,11 @@
 					   (mkfix fix* body))))
 		       (else
 			(values '() (mklet (list ($binding-lhs b))
-					   (list (make-funcall (make-primref 'void) '()))
+					   (%make-void-constants '(#f))
 					   (mkset!s scc (mkfix fix* body))))))))
 	      (else
-	       (let-values (((lambda* complex*) (partition lambda-binding? scc)))
+	       (receive (lambda* complex*)
+		   (partition lambda-binding? scc)
 		 (if (null? complex*)
 		     (values (append lambda* fix*) body)
 		   (let ((complex* (if ordered?
@@ -1526,9 +1381,7 @@
 				     complex*)))
 		     (values '()
 			     (mklet (map binding-lhs complex*)
-				    (map (lambda (x)
-					   (make-funcall (make-primref 'void) '()))
-				      complex*)
+				    (%make-void-constants complex*)
 				    (mkfix (append lambda* fix*)
 					   (mkset!s complex* body))))))))))
 
@@ -1641,5 +1494,7 @@
 ;; Local Variables:
 ;; eval: (put 'make-bind 'scheme-indent-function 2)
 ;; eval: (put 'make-fix 'scheme-indent-function 2)
+;; eval: (put '%make-bind 'scheme-indent-function 2)
+;; eval: (put '$make-fix 'scheme-indent-function 2)
 ;; eval: (put 'with-unseen-prel 'scheme-indent-function 1)
 ;; End:
