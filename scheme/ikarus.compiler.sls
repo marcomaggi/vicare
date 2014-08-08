@@ -6001,7 +6001,7 @@
 	 (Var x))
 
 	((assign lhs rhs)
-	 `(set! ,(E lhs) ,(E rhs)))
+	 `(assign ,(E lhs) ,(E rhs)))
 
 	((primref x)
 	 `(primref ,x))
