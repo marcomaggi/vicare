@@ -27,6 +27,8 @@
 #!vicare
 (import (vicare)
   (vicare checks)
+  (only (vicare libraries)
+	uninstall-library)
   (prefix (vicare system $compiler)
 	  compiler.))
 
@@ -298,18 +300,6 @@
        ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
        ;;test fails.
        (doit ,(%expand (quasiquote ?standard-language-form))
-	     (waddell		?expected-result/waddell)
-	     (scc		?expected-result/scc)))
-      ))
-
-  (define-syntax libdoit*
-    (syntax-rules (basic waddell scc)
-      ((_ ?standard-library-form
-	  (waddell	?expected-result/waddell)
-	  (scc		?expected-result/scc))
-       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
-       ;;test fails.
-       (doit ,(%expand-library (quasiquote ?standard-library-form))
 	     (waddell		?expected-result/waddell)
 	     (scc		?expected-result/scc)))
       ))
@@ -700,14 +690,14 @@
 		 (b (lambda () (set! a '123))))
 	  '#f)
 	(waddell
-	 (bind ((a_0 (constant #!void)))		  ;complex
+	 (bind ((a_0 (constant #!void)))			;complex
 	   (fix ((b_0 (lambda () (assign a_0 (constant 123))))) ;lambda
-	     (bind ((a_1 (lambda () (funcall b_0))))		   ;tmp
+	     (bind ((a_1 (lambda () (funcall b_0))))		;tmp
 	       (seq
 		 (assign a_0 a_1)
 		 (constant #f))))))
 	(scc
-	 (bind ((a_0 (constant #!void)))		   ;complex
+	 (bind ((a_0 (constant #!void)))			;complex
 	   (fix ((b_0 (lambda () (assign a_0 (constant 123))))) ;lambda
 	     (seq
 	       (assign a_0 (lambda () (funcall b_0)))
@@ -755,264 +745,235 @@
 			      (constant 9))))
 		  a_0))))))
 
-#|
-  ;;The binding A is referenced in a RHS, so it cannot be "simple".
+
+  ;;The binding  A is  referenced in  a RHS, so  it cannot  be "simple"  according to
+  ;;waddell.
   ;;
   (doit* (letrec* ((a '1)
 		   (b a))
 	   b)
-	 (bind ((a_0 (constant #!void))
-		(b_0 (constant #!void)))
-	   (seq
-	     (assign a_0 (constant 1))
-	     (assign b_0 a_0)
-	     b_0)))
+	 (waddell
+	  (bind ((a_0 (constant #!void))
+		 (b_0 (constant #!void)))
+	    (seq
+	      (assign a_0 (constant 1))
+	      (assign b_0 a_0)
+	      b_0)))
+	 (scc
+	  (bind ((a_0 (constant 1)))
+	    (bind ((b_0 a_0))
+	      b_0))))
 
-  ;;Here  the binding  D is  initialised  by a  LAMBDA  expression, but  later it  is
-  ;;assigned; for this reason  D cannot end into a FIX form,  rather it is classified
-  ;;as "complex".
+  ;;waddell: here the binding D is initialised  by a LAMBDA RHS expression, but later
+  ;;it is  assigned; for  this reason  D cannot  end into  a FIX  form, rather  it is
+  ;;classified as "complex".
   ;;
   (doit* (letrec ((a '123)
 		  (d (lambda () '123)))
 	   (set! d '123)
 	   a)
-	 (bind ((a_0 (constant 123)))
-	   (bind ((d_0 (constant #!void)))
-	     (bind ((d_1 (lambda () (constant 123))))
-	       (seq
-		 (set! d_0 d_1)
-		 (set! d_0 (constant 123))
-		 a_0)))))
+	 (waddell
+	  (bind ((a_0 (constant 123)))
+	    (bind ((d_0 (constant #!void)))
+	      (bind ((d_1 (lambda () (constant 123))))
+		(seq
+		  (assign d_0 d_1)
+		  (assign d_0 (constant 123))
+		  a_0)))))
+	 (scc
+	  (bind ((a_0 (constant 123)))
+	    (bind ((d_0 (lambda () (constant 123))))
+	      (seq
+		(assign d_0 (constant 123))
+		a_0)))))
   (doit* (letrec* ((a '123)
 		   (d (lambda () '123)))
 	   (set! d '123)
 	   a)
-	 (bind ((a_0 (constant 123)))
-	   (bind ((d_0 (constant #!void)))
-	     (seq
-	       (set! d_0 (lambda () (constant 123)))
-	       (set! d_0 (constant 123))
-	       a_0))))
+	 (waddell
+	  (bind ((a_0 (constant 123)))
+	    (bind ((d_0 (constant #!void)))
+	      (seq
+		(assign d_0 (lambda () (constant 123)))
+		(assign d_0 (constant 123))
+		a_0))))
+	 (scc
+	  (bind ((a_0 (constant 123)))
+	    (bind ((d_0 (lambda () (constant 123))))
+	      (seq
+		(assign d_0 (constant 123))
+		a_0)))))
 
 ;;; --------------------------------------------------------------------
 ;;; special cases
 
   ;;References and assignments of LETREC and LETREC* bindings in LAMBDA bodies do not
-  ;;make the binding "complex"
+  ;;make the binding "complex".
 
-  ;;This example shows the difference between waddell and scc.
+  ;;Binding referenced in lambda RHS.
   (doit (letrec ((a '1)
                  (b (lambda () a)))
           '#f)
-	(bind ((a_0 (constant #!void)))
-	  (fix ((b_0 (lambda () a_0)))
-	    (bind ((a_1 (constant 1)))
-	      (seq
-		(assign a_0 a_1)
-		(constant #f))))))
+	(waddell
+	 (bind ((a_0 (constant #!void)))
+	   (fix ((b_0 (lambda () a_0)))
+	     (bind ((a_1 (constant 1)))
+	       (seq
+		 (assign a_0 a_1)
+		 (constant #f))))))
+	(scc
+	 (bind ((a_0 (constant 1)))
+	   (fix ((b_0 (lambda () a_0)))
+	     (constant #f)))))
+  (doit (letrec* ((a '1)
+		  (b (lambda () a)))
+          '#f)
+	(waddell
+	 (bind ((a_0 (constant #!void)))
+	   (fix ((b_0 (lambda () a_0)))
+	     (seq
+	       (assign a_0 (constant 1))
+	       (constant #f)))))
+	(scc
+	 (bind ((a_0 (constant 1)))
+	   (fix ((b_0 (lambda () a_0)))
+	     (constant #f)))))
 
-  ;;This example shows the difference between waddell and scc.
+  ;;Binding assigned in lambda RHS.
   (doit (letrec ((a '1)
                  (b (lambda () (set! a '2))))
           '#f)
-	(bind ((a_0 (constant #!void)))
-	  (fix ((b_0 (lambda () (assign a_0 (constant 2)))))
-	    (bind ((a_1 (constant 1)))
-	      (seq
-		(assign a_0 a_1)
-		(constant #f))))))
+	(waddell
+	 (bind ((a_0 (constant #!void)))
+	   (fix ((b_0 (lambda () (assign a_0 (constant 2)))))
+	     (bind ((a_1 (constant 1)))
+	       (seq
+		 (assign a_0 a_1)
+		 (constant #f))))))
+	(scc
+	 (bind ((a_0 (constant 1)))
+	   (fix ((b_0 (lambda () (assign a_0 (constant 2)))))
+	     (constant #f)))))
 
   (doit* (letrec ((a '1))
 	   (let ((b (lambda () a)))
 	     '#f))
-	 (bind ((a_0 (constant 1)))
-	   (bind ((b_0 (lambda () a_0)))
-	     (constant #f))))
+	 (waddell
+	  (bind ((a_0 (constant 1)))
+	    (bind ((b_0 (lambda () a_0)))
+	      (constant #f))))
+	 (scc
+	  (bind ((a_0 (constant 1)))
+	    (bind ((b_0 (lambda () a_0)))
+	      (constant #f)))))
 
-  ;;This example shows the difference between  WDC and SCC.  WDC does not distinguish
-  ;;between an assignment in the RHS and an assignment in the body.
+
+  ;;waddell does not  distinguish between an assignment in the  RHS and an assignment
+  ;;in the body.
   (doit* (letrec ((a '1))
 	   (let ((b (lambda () (set! a '2))))
 	     '#f))
-	 (bind ((a_0 (constant #!void)))
-	   (bind ((a_1 (constant 1)))
-	     (seq
-	       (assign a_0 a_1)
-	       (bind ((b_0 (lambda () (assign a_0 (constant 2)))))
-		 (constant #f))))))
+	 (waddell
+	  (bind ((a_0 (constant #!void)))
+	    (bind ((a_1 (constant 1)))
+	      (seq
+		(assign a_0 a_1)
+		(bind ((b_0 (lambda () (assign a_0 (constant 2)))))
+		  (constant #f))))))
+	 (scc
+	  (bind ((a_0 (constant 1)))
+	    (bind ((b_0 (lambda () (assign a_0 (constant 2)))))
+	      (constant #f)))))
 
   (doit (letrec* ((a '1)
                   (b (lambda () a))
                   (c (b)))
           '#f)
-        (bind ((a_0 (constant #!void))	;complex
-	       (c_0 (constant #!void)))	;complex
-	  (fix ((b_0 (lambda () a_0)))
-	    (seq
-	      (assign a_0 (constant 1))
-	      (assign c_0 (funcall b_0))
-	      (constant #f)))))
+        (waddell
+	 (bind ((a_0 (constant #!void))	 ;complex
+		(c_0 (constant #!void))) ;complex
+	   (fix ((b_0 (lambda () a_0)))
+	     (seq
+	       (assign a_0 (constant 1))
+	       (assign c_0 (funcall b_0))
+	       (constant #f)))))
+        (scc
+	 (bind ((a_0 (constant 1)))
+	   (fix ((b_0 (lambda () a_0)))
+	     (bind ((c_0 (funcall b_0)))
+	       (constant #f))))))
 
 ;;; --------------------------------------------------------------------
 ;;; special cases
 
+  ;;RHS with side effects.
   (doit* (letrec* ((a '1)
 		   (b (write a)))
 	   a)
-	 (bind ((a_0 (constant #!void))
-		(b_0 (constant #!void)))
-	   (seq
-	     (assign a_0 (constant 1))
-	     (assign b_0 (funcall (primref write) a_0))
-	     a_0)))
+	 (waddell
+	  (bind ((a_0 (constant #!void))
+		 (b_0 (constant #!void)))
+	    (seq
+	      (assign a_0 (constant 1))
+	      (assign b_0 (funcall (primref write) a_0))
+	      a_0)))
+	 (scc
+	  (bind ((a_0 (constant 1)))
+	    (bind ((b_0 (funcall (primref write) a_0)))
+	      a_0))))
 
-  (libdoit* (library (optimize-letrec-waddell-demo)
-	      (export a b c)
-	      (import (rnrs))
-	      (define (a) 1)
-	      (define (b) (a) 2)
-	      (define (c) (b) 3))
-	    (fix ((a_0 (lambda () (constant 1)))
-		  (b_0 (lambda () (seq (funcall a_0) (constant 2))))
-		  (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
-	      (funcall (primref void))))
-
-  ;; (doit (letrec ((a '1)
-  ;; 		 (b (letrec ((d (lambda () '4)))
-  ;; 		      (d)))
-  ;; 		 (c '2))
-  ;; 	  b)
-  ;; 	(bind ((a (constant 1))
-  ;; 	       (c (constant 2)))
-  ;; 	  (fix ((d (lambda () (constant 4))))
-  ;; 	    (bind ((b (funcall d)))
-  ;; 	      b))))
-|#
-  #t)
-
-
-#;(parametrise ((check-test-name			'optimize-letrec-scc)
-	      (compiler.$current-letrec-pass	'scc))
-
-  (define-syntax-rule (doit ?core-language-form ?expected-result)
-    (check
-	(%optimize-letrec (quasiquote ?core-language-form))
-      => (quasiquote ?expected-result)))
-
-  (define-syntax-rule (doit* ?standard-language-form ?expected-result)
-    (doit ,(%expand-and-optimize-letrec (quasiquote ?standard-language-form))
-	  ?expected-result))
-
-  (define-syntax-rule (libdoit* ?standard-language-form ?expected-result)
-    (doit ,(%expand-library-and-optimize-letrec (quasiquote ?standard-language-form))
-	  ?expected-result))
+  ;;Nested RHS LETREC.
+  #;(doit (letrec ((a '1)
+  		 (b (letrec ((d (lambda () '4)))
+  		      (d)))
+  		 (c '2))
+  	  b)
+  	(waddell
+	 (bind ((a (constant 1))
+		(c (constant 2)))
+	   (fix ((d (lambda () (constant 4))))
+	     (bind ((b (funcall d)))
+	       b))))
+  	(scc
+	 (bind ((a (constant 1))
+		(c (constant 2)))
+	   (fix ((d (lambda () (constant 4))))
+	     (bind ((b (funcall d)))
+	       b)))))
 
 ;;; --------------------------------------------------------------------
 
-  (doit (letrec ((a (quote 1)))
-	  a)
-(bind ((a_0 (constant 1)))
-	  a_0))
+  ;;This test will install the library!!!
+  (check
+      (parametrise ((compiler.$current-letrec-pass 'waddell))
+	(let* ((form1 '(library (optimize-letrec-waddell-demo-1)
+			 (export a b c)
+			 (import (rnrs))
+			 (define (a) 1)
+			 (define (b) (a) 2)
+			 (define (c) (b) 3)))
+	       (form2 (%expand-library form1)))
+	  (%optimize-letrec form2)))
+    => '(fix ((a_0 (lambda () (constant 1)))
+	      (b_0 (lambda () (seq (funcall a_0) (constant 2))))
+	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
+	  (funcall (primref void))))
 
-  (doit (letrec ((a (lambda () (quote 1))))
-	  a)
-	(fix ((a_0 (lambda () (constant 1))))
-	  a_0))
-
-  (doit (letrec ((a (lambda () a)))
-	  a)
-	(fix ((a_0 (lambda () a_0)))
-	  a_0))
-
-  (doit (letrec ((a (lambda () (set! a '1))))
-	  a)
-	(bind ((a_0 (constant #!void)))
-	  (seq
-	    (set! a_0 (lambda () (set! a_0 (constant 1))))
-	    a_0)))
-
-  (doit* (letrec* ((a '123)
-		   (b '2)
-		   (c b)
-		   (d (lambda () '123)))
-	   (set! d '123)
-	   b)
-	 (bind ((a_0 (constant 123)))
-	   (bind ((b_0 (constant 2)))
-	     (bind ((c_0 b_0))
-	       (bind ((d_0 (lambda () (constant 123))))
-		 (seq
-		   (set! d_0 (constant 123))
-		   b_0))))))
-
-  ;;The binding A  is referenced in a  RHS.  This tests shows the  superiority of the
-  ;;SCC transformation with respect to the Waddell one.
-  ;;
-  (doit* (letrec* ((a '1)
-		   (b a))
-	   b)
-	 (bind ((a_0 (constant 1)))
-	   (bind ((b_0 a_0))
-	     b_0)))
-
-;;; --------------------------------------------------------------------
-;;; special cases
-
-  ;;References and assignments of LETREC and LETREC* bindings in LAMBDA bodies do not
-  ;;make the binding "complex"
-
-  (doit (letrec ((a '1)
-                 (b (lambda () a)))
-          '#f)
-	(bind ((a_0 (constant 1)))
-	  (fix ((b_0 (lambda () a_0)))
-	    (constant #f))))
-
-  (doit (letrec ((a '1)
-                 (b (lambda () (set! a '2))))
-          '#f)
-	(bind ((a_0 (constant 1)))
-	  (fix ((b_0 (lambda () (set! a_0 (constant 2)))))
-	    (constant #f))))
-
-  (doit* (letrec ((a '1))
-	   (let ((b (lambda () a)))
-	     '#f))
-	 (bind ((a_0 (constant 1)))
-	   (bind ((b_0 (lambda () a_0)))
-	     (constant #f))))
-
-  (doit* (letrec ((a '1))
-	   (let ((b (lambda () (set! a '2))))
-	     '#f))
-	 (bind ((a_0 (constant 1)))
-	   (bind ((b_0 (lambda () (set! a_0 (constant 2)))))
-	     (constant #f))))
-
-  (doit (letrec* ((a '1)
-                  (b (lambda () a))
-                  (c (b)))
-          '#f)
-        (bind ((a_0 (constant 1)))
-          (bind ((c_0 (constant #!void)))
-            (fix ((b_0 (lambda () a_0)))
-              (seq
-		(set! c_0 (funcall b_0))
-		(constant #f))))))
-
-;;; --------------------------------------------------------------------
-;;; specials
-
-  (libdoit* (library (optimize-letrec-scc-demo)
-	      (export a b c)
-	      (import (rnrs))
-	      (define (a) 1)
-	      (define (b) (a) 2)
-	      (define (c) (b) 3))
-	    (fix ((a_0 (lambda () (constant 1)))
-		  (b_0 (lambda () (seq (funcall a_0) (constant 2))))
-		  (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
-	      (funcall (primref void))))
+  ;;This test will install the library!!!
+  (check
+      (parametrise ((compiler.$current-letrec-pass 'scc))
+	(let* ((form1 '(library (optimize-letrec-scc-demo-1)
+			 (export a b c)
+			 (import (rnrs))
+			 (define (a) 1)
+			 (define (b) (a) 2)
+			 (define (c) (b) 3)))
+	       (form2 (%expand-library form1)))
+	  (%optimize-letrec form2)))
+    => '(fix ((a_0 (lambda () (constant 1)))
+	      (b_0 (lambda () (seq (funcall a_0) (constant 2))))
+	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
+	  (funcall (primref void))))
 
   #t)
 
