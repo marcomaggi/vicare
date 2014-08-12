@@ -1053,78 +1053,8 @@
 
 (module (optimize-letrec/scc)
   ;;Perform transformations  to convert the  recordized representation of  LETREC and
-  ;;LETREC*  forms into  LET  forms  and assignments.   This  function  does what  is
-  ;;described in the [GD] paper.
-  ;;
-  ;;Let's see some examples:
-  ;;
-  ;;   (let ((a 1))
-  ;;     (let ((a a))
-  ;;       a))
-  ;;   ==> (let* ((a_0 '1)
-  ;;              (a_1 a_0))
-  ;;         a_1)
-  ;;
-  ;; (let ((a 1))
-  ;;   (let ((a 2))
-  ;;     (let ((a 3))
-  ;; 	a)))
-  ;; ==> (let* ((a_0 '1)
-  ;; 	     (a_1 '2)
-  ;; 	     (a_2 '3))
-  ;; 	a_2)
-  ;;
-  ;; (letrec ((a 1)
-  ;; 	   (b 2))
-  ;;   (list a b))
-  ;; ==> (let* ((a_0 '1)
-  ;; 	     (b_0 '2))
-  ;; 	(list a_0 b_0))
-  ;;
-  ;; (letrec* ((a (lambda (x)
-  ;; 		 (when x
-  ;; 		   (a #f))))
-  ;;           (b 123)
-  ;;           (c 456)
-  ;;           (d (begin
-  ;; 		 (set! c 789)
-  ;; 		 9)))
-  ;;   a)
-  ;; ==> (fix ((a_0 (lambda (x_0)
-  ;; 		   (if x_0
-  ;; 		       (a_0 '#f)
-  ;; 		     (void)))))
-  ;; 	 (let* ((b_0 '123)
-  ;; 		(c_0 '456)
-  ;; 		(d_0 (begin
-  ;; 		       (set! c_0 '789)
-  ;; 		       '9)))
-  ;; 	   a_0))
-  ;;
-  ;; (letrec* ((a 123)
-  ;; 	    (b 2)
-  ;; 	    (c b)
-  ;; 	    (d (lambda () 123)))
-  ;;   b)
-  ;; ==> (let* ((a_0 '123)
-  ;; 	     (b_0 '2)
-  ;; 	     (c_0 b_0))
-  ;; 	(fix ((d_0 (lambda () '123)))
-  ;; 	  b_0))
-  ;;
-  ;; (letrec* ((a 123)
-  ;; 	    (b 2)
-  ;; 	    (c b)
-  ;; 	    (d (lambda () 123)))
-  ;;   (set! d 123)
-  ;;   b)
-  ;; ==> (let* ((a_0 '123)
-  ;; 	     (b_0 '2)
-  ;; 	     (c_0 b_0)
-  ;; 	     (d_0 (lambda () '123)))
-  ;; 	(begin
-  ;; 	  (set! d_0 '123)
-  ;; 	  b_0))
+  ;;LETREC*  forms into  LET-like forms  and assignments.   This function  performs a
+  ;;transformation similar (but not equal to) the one described in the [GD] paper.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'optimize-letrec/scc))
@@ -1149,22 +1079,26 @@
   (module (E)
 
     (define (E x bc)
+      ;;X is the recordised code to traverse.
+      ;;
+      ;;BC is an instance of struct BINDING.
+      ;;
       (struct-case x
 	((constant)
 	 x)
 
 	((prelex)
 	 (assert (prelex-source-referenced? x))
-	 (mark-free x bc)
+	 (%mark-free x bc)
 	 (when (prelex-source-assigned? x)
-	   (mark-complex! bc))
+	   (%mark-complex! bc))
 	 x)
 
 	((assign lhs rhs)
 	 (assert (prelex-source-assigned? lhs))
 	 ;;(set-prelex-source-assigned?! lhs #t)
-	 (mark-free lhs bc)
-	 (mark-complex! bc)
+	 (%mark-free lhs bc)
+	 (%mark-complex! bc)
 	 (make-assign lhs (E rhs bc)))
 
 	((primref)
@@ -1195,15 +1129,15 @@
 	 (E-clambda x bc))
 
 	((funcall rator rand*)
-	 (mark-complex! bc)
+	 (%mark-complex! bc)
 	 (make-funcall (E rator bc) (E* rand* bc)))
 
 	((mvcall producer consumer)
-	 (mark-complex! bc)
+	 (%mark-complex! bc)
 	 (make-mvcall (E producer bc) (E consumer bc)))
 
 	((forcall rator rand*)
-	 (mark-complex! bc)
+	 (%mark-complex! bc)
 	 (make-forcall rator (E* rand* bc)))
 
 	(else
@@ -1227,17 +1161,17 @@
 				 cls*)
 			 cp free name)))))
 
-    (define (mark-complex! bc)
-      ;;BC must be  a struct instance of type BINDING.   Mark as complex
-      ;;BC and, recursively, its previous value in the field PREV.
+    (define (%mark-complex! bc)
+      ;;BC  must be  a struct  instance of  type BINDING.   Mark as  complex BC  and,
+      ;;recursively, its previous value in the field PREV.
       ;;
       (unless ($binding-complex bc)
 	($set-binding-complex! bc #t)
-	(mark-complex! ($binding-prev bc))))
+	(%mark-complex! ($binding-prev bc))))
 
-    (define (mark-free var bc)
-      ;;VAR must  be a  struct instance  of type PRELEX.   BC must  be a
-      ;;struct instance of type BINDING.
+    (define (%mark-free var bc)
+      ;;VAR must be a  struct instance of type PRELEX.  BC must  be a struct instance
+      ;;of type BINDING.
       ;;
       (let ((rb (prelex-operand var)))
 	(when rb
