@@ -843,7 +843,7 @@
     ;;"global-location", and optionally more.
     ;;
     (receive-and-return (y)
-	(make-prelex ($prelex-name x) #f)
+	(make-prelex ($prelex-name x))
       ($set-prelex-source-reference-count! y ($prelex-source-reference-count x))
       ($set-prelex-source-assigned?!       y ($prelex-source-assigned?       x))
       (let ((loc ($prelex-global-location x)))

@@ -704,16 +704,17 @@
      name
 		;The lex gensym  representing the binding name in  the core language;
 		;in practice useful only for humans when debugging.
-     operand
-		;Multipurpose  field.   One  use:  false  or a  struct  of  type  VAR
-		;associated to this instance.
      )
-  ((source-reference-count 0)
+  ((operand		#f)
+		;Multipurpose field.  When unused it is  set to false.
+		;
+		;One use: a struct of type VAR associated to this instance.
+   (source-reference-count 0)
 		;Fixnum,  represents  the  number  of times  a  lexical  variable  is
 		;referenced in the source code.
 		;
 		;See also the field RESIDUAL-REFERENCED?.
-   (source-assigned?     #f)
+   (source-assigned?	#f)
 		;Boolean or symbol.
 		;
 		;When a  boolean: true when  the binding  has been used  as left-hand
@@ -2184,7 +2185,7 @@
       ;;
       (map (lambda (lex)
 	     (receive-and-return (prel)
-		 (make-prelex lex #f)
+		 (make-prelex lex)
 	       (putprop lex *COOKIE* prel)))
 	lex*))
 
@@ -2425,7 +2426,7 @@
 	     ;;FIXME Did we do the analysis yet?  (Abdulaziz Ghuloum)
 	     (mk x rand*))
 	    (else
-	     (let ((t (make-prelex 'tmp #f)))
+	     (let ((t (make-prelex 'tmp)))
 	       (set-prelex-source-referenced?! t #t)
 	       (make-bind (list t) (list x) (mk t rand*))))))
 
@@ -2786,7 +2787,7 @@
 	      ;;Here we  always use the same  PRELEX lexical name because  it is used
 	      ;;only for debugging purposes; what matters  is that it is a new PRELEX
 	      ;;struct every time.
-	      (let ((t (make-prelex 'assignment-tmp #f)))
+	      (let ((t (make-prelex 'assignment-tmp)))
 		(set-prelex-source-referenced?! t #t)
 		(values (cons t lhs*)
 			(cons x a-lhs*)

@@ -110,11 +110,19 @@
 
 ;;;; helpers
 
-(define* (unique-prelex {x prelex?})
-  (receive-and-return (x)
-      (make-prelex (prelex-name    x)
-		   (prelex-operand x))
-    (set-prelex-source-referenced?! x #t)))
+(define* (make-prelex-for-tmp-binding {prel prelex?})
+  ;;Build and return a unique PRELEX struct meant to be used for a compiler-generated
+  ;;binding, which will be referenced but not assigned.
+  ;;
+  ;;Since we  know the binding will  be referenced (otherwise the  compiler would not
+  ;;generate it): we mark the PRELEX as source referenced.
+  ;;
+  ;;The  init value  of the  binding will  be,  in some  way, related  to the  PRELEX
+  ;;argument PREL; so we reuse the name of PREL as name of the returned PRELEX.
+  ;;
+  (receive-and-return (tmp)
+      (make-prelex (prelex-name prel))
+    (set-prelex-source-referenced?! tmp #t)))
 
 (module (%make-void-constants)
   ;;Build and  return a  list of  CONSTANT structs  representing #<void>  values, one
@@ -483,7 +491,7 @@
     ;;       (set! ?var ?tmp) ...
     ;;       ?body0 ?body ...))
     ;;
-    (let ((tmp* (map unique-prelex lhs*)))
+    (let ((tmp* (map make-prelex-for-tmp-binding lhs*)))
       (make-bind lhs* (%make-void-constants lhs*)
 	(make-bind tmp* rhs* (build-assign* lhs* tmp* body)))))
 
@@ -933,7 +941,7 @@
 			 (if letrec?
 			     ;;It is  a RECBIND  and LETREC:  no order  enforced when
 			     ;;evaluating COMPLEX.RHS*.
-			     (let ((tmp* (map unique-prelex complex.lhs*)))
+			     (let ((tmp* (map make-prelex-for-tmp-binding complex.lhs*)))
 			       (%make-bind tmp* complex.rhs*
 				 (build-assign* complex.lhs* tmp* body^)))
 			   ;;It  is  a  REC*BIND  and LETREC*:  order  enforced  when
