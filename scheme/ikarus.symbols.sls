@@ -268,7 +268,8 @@
   ;;  of the procedure to call.
   ;;
   ;;* From the loc gensym: extract the value of the "proc" slot, which is meant to be
-  ;;  a closure object.
+  ;;  a closure object.  This is done by accessing the gensym object with a low-level
+  ;;  assembly instruction, *not* by using the primitive operation $SYMBOL-PROC.
   ;;
   ;;* Actually call the closure object.
   ;;
