@@ -499,8 +499,8 @@
     (identifier-syntax 'optimize-letrec/waddell))
 
   (define (optimize-letrec/waddell x)
-    (parametrise ((lhs-used-func  (%make-top-lhs-used-register-func))
-		  (rhs-cplx-func  (%make-top-rhs-complexity-register-func)))
+    (parametrise ((lhs-used-func  (%make-top-lhs-used-registrar-func))
+		  (rhs-cplx-func  (%make-top-rhs-cplx-registrar-func)))
       (E x)))
 
   (module (E)
@@ -525,17 +525,16 @@
 	 (make-assign lhs (E rhs)))
 
 	((primref)
-	 ;;X is a primitive function reference; for example as + appears in:
-	 ;;
-	 ;;   (map + '(1 2 3))
 	 x)
 
 	((bind lhs* rhs* body)
 	 ;;X is a binding creation form like LET.  Do RHS* first, then BODY.
-	 (let* ((rhs*^ (E* rhs*))
-		(body^ (parametrise ((lhs-used-func (%make-middle-lhs-used-register-func lhs* (lhs-used-func))))
-			 (E body))))
-	   (make-bind lhs* rhs*^ body^)))
+	 (if (null? lhs*)
+	     (E body)
+	   (let* ((rhs*^ (E* rhs*))
+		  (body^ (parametrise ((lhs-used-func (%make-nonrec-lhs-used-registrar-func (lhs-used-func) lhs*)))
+			   (E body))))
+	     (make-bind lhs* rhs*^ body^))))
 
 	((recbind lhs* rhs* body)
 	 (if (null? lhs*)
@@ -553,9 +552,7 @@
 	   (E altern)))
 
 	((seq e0 e1)
-	 (make-seq
-	  (E e0)
-	  (E e1)))
+	 (make-seq (E e0) (E e1)))
 
 	((clambda)
 	 (E-clambda x))
@@ -584,12 +581,6 @@
       ;;CLAMBDA like all the  other forms, but we have to take  care of the following
       ;;cases.
       ;;
-      ;;We have to  remember that, upon entering this optimisation  function: all the
-      ;;PRELEX structures have already been  marked as referenced and/or assigned; so
-      ;;we already know if  a LETREC or LETREC* binding has  been referenced at least
-      ;;once and assigned at  least once, we must do nothing  here to ascertain these
-      ;;properties.
-      ;;
       ;;CLAMBDA arguments
       ;;-----------------
       ;;
@@ -598,92 +589,30 @@
       ;;create  a  new  LHS-usage  registrar  function  that  avoids  inspecting  the
       ;;references to bindings defined by the arguments.
       ;;
-      ;;PRELEX references in CLAMBDA bodies
-      ;;-----------------------------------
+      ;;Complexity of the enclosing expression
+      ;;--------------------------------------
       ;;
-      ;;Let's consider LETREC  (RECBIND) and LETREC* (REC*BIND)  bindings whose LHS's
-      ;;PRELEX appears in a CLAMBDA body; examples:
+      ;;We decide that nothing  that happens in the body of the  CLAMBDA can make the
+      ;;enclosing RHS  expression complex; this  allows lambda RHS expressions  to be
+      ;;classified as "fixable", even if they  reference or assign a binding in their
+      ;;lexical contour.
       ;;
-      ;;   (letrec ((a '1)
-      ;;            (b (lambda () a)))
-      ;;     '#f)
+      ;;Noticing that "complex"  RHS expressions are evaluated  *after* "fixable" RHS
+      ;;expressions, we can understand the following examples.
       ;;
-      ;;   (letrec ((a '1)
-      ;;            (b (lambda () (set! a '2))))
-      ;;     '#f)
+      ;;* Here the  binding A is assigned, so  it is "complex"; but the  binding B is
+      ;;  "fixable", it does not become itself complex.
       ;;
-      ;;   (letrec ((a '1))
-      ;;     (bind ((b (lambda () a)))
-      ;;       '#f))
-      ;;
-      ;;   (letrec ((a '1))
-      ;;     (bind ((b (lambda () (set! a '2))))
-      ;;       '#f))
-      ;;
-      ;;the  references  and the  assignments  to  A do  *not*  make  the A  bindings
-      ;;"complex"; for  example, we  would want  the first  example to  be tranformed
-      ;;into:
-      ;;
-      ;;   (bind ((a_0 '1))
-      ;;     (bind ()
-      ;;       (fix ((b_0 (lambda () a_0)))
-      ;;         (bind ()
-      ;;           '#f))))
-      ;;
-      ;;Let's consider also this example:
-      ;;
-      ;;   (letrec* ((a '1)
-      ;;             (b (lambda () a))
-      ;;             (c (b)))
-      ;;     '#f)
-      ;;
-      ;;by keeping A as "simple" it is transformed into:
-      ;;
-      ;;   (bind ((a_0 '1))
-      ;;     (bind ((c_0 '#!void))
-      ;;       (fix ((b_0 (lambda () a_0)))
-      ;;         (set! c_0 (b_0))
-      ;;         '#f)))
-      ;;
-      ;;So,  upon entering  a  CLAMBDA  body, we  create  a  new LHS-usage  registrar
-      ;;function that avoids marking as "used"  the bindings defined in the enclosing
-      ;;code, but still recognises them as non-free.
-      ;;
-      ;;Fixable bindings
-      ;;----------------
-      ;;
-      ;;Let's consider LETREC (RECBIND) and  LETREC* (REC*BIND) bindings whose RHS is
-      ;;a CLAMBDA structure: non-assigned (constant,  immuted) ones are classified as
-      ;;"fixable" and  will end in a  FIX structure; assigned ones  are classified as
-      ;;"complex" and will end in a BIND structure.
-      ;;
-      ;;It does *not*  matter if the assignment  happens: in the body of  a LETREC or
-      ;;LETREC* form;  in the RHS expression  of a LETREC or  LETREC* binding; inside
-      ;;the body of  a CLAMBDA.  It matters  only whether the binding  is assigned or
-      ;;non-assigned.  In the following examples the  binding A must be classified as
-      ;;"complex":
-      ;;
-      ;;   (letrec ((a (lambda () #f)))
-      ;;     (set! a 1)
-      ;;     #f)
-      ;;
-      ;;   (letrec ((a (lambda () (set! a 1))))
-      ;;     #f)
-      ;;
-      ;;   (letrec ((a (lambda () #f))
-      ;;            (b (lambda () (set! a 1))))
-      ;;     #f)
-      ;;
-      ;;   (letrec* ((a (lambda () #f))
-      ;;             (b (begin
-      ;;                  (set! a 1)
-      ;;                  2)))
-      ;;     #f)
-      ;;
-      ;;Upon  entering this  optimisation function:  all the  PRELEX structures  have
-      ;;already been  marked as assigned or  non-assigned; this means we  can already
-      ;;distinguish "fixable" bindings from "complex" ones  and we need to do nothing
-      ;;about it here.
+      ;;    (letrec ((a 1)
+      ;;             (b (lambda () (set! a 1))))
+      ;;      (b))
+      ;;    ==> (bind ()
+      ;;          (bind ((a_0 !#void))
+      ;;            (fix ((b (lambda () (assign a_0 '1))))
+      ;;              (bind ((a_1 '1))
+      ;;                (seq
+      ;;                  (assign a_0 a_1)
+      ;;                  (funcall b))))))
       ;;
       (define (E-clambda x)
 	(struct-case x
@@ -695,9 +624,8 @@
 	  ((clambda-case info body)
 	   (make-clambda-case info
 			      (parametrise
-				  ((lhs-used-func  (%make-middle-lhs-used-register-func (case-info-args info)
-											(lhs-used-func)))
-				   (rhs-cplx-func  (%make-top-rhs-complexity-register-func)))
+				  ((lhs-used-func (%make-nonrec-lhs-used-registrar-func (lhs-used-func) (case-info-args info)))
+				   (rhs-cplx-func (%make-top-rhs-cplx-registrar-func)))
 				(E body))))))
 
       #| end of module: E-clambda |# )
@@ -709,9 +637,16 @@
 	  ((funcall rator rand*)
 	   (let ((rator^ (E  rator))
 		 (rand*^ (E* rand*)))
-	     ;;This form  is a function  call.  In general,  we must assume  it might
-	     ;;mutate any of the bindings whose region includes it: so we should call
-	     ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.  For example:
+	     ;;This form  is a function  call.  In general:
+	     ;;
+	     ;;* We  must assume  it might  reference or assign  any of  the bindings
+	     ;;whose region includes it.
+	     ;;
+	     ;;* We  must assume that it  causes side effects whose  evaluation order
+	     ;;must  not  be changed.   To  avoid  changing  the order  (for  LETREC*
+	     ;;bindings): we make all such RHS expressions complex.
+	     ;;
+	     ;;so we should call MAKE-THE-ENCLOSING-RHS-COMPLEX!.  For example:
 	     ;;
 	     ;;   (letrec* ((a (lambda () c))
 	     ;;             (b (a))
@@ -721,30 +656,29 @@
 	     ;;the  call to  A in  the RHS  of B  must cause  B to  be classified  as
 	     ;;"complex".  Notice that with LETREC these bindings are illegal.
 	     ;;
+	     ;;As  special case:  if we  recognise  the function  call as  a call  to
+	     ;;primitive function  with *no*  side effects, we  can avoid  making the
+	     ;;enclosing expression complex.
 	     (struct-case rator^
-	       ((primref op)
-		(if (eq? op 'top-level-value)
-		    (struct-case (car rand*^)
-		      ((constant name)
-		       (unless (memq name SIMPLE-PRIMITIVES)
-			 (make-the-enclosing-rhs-complex!)))
-		      (else
-		       (make-the-enclosing-rhs-complex!)))
+	       ((primref primitive-function-public-name)
+		(unless (memq primitive-function-public-name SIMPLE-PRIMITIVES)
 		  (make-the-enclosing-rhs-complex!)))
 	       (else
 		(make-the-enclosing-rhs-complex!)))
 	     (make-funcall rator^ rand*^)))))
 
-      (define-constant SIMPLE-PRIMITIVES '(display))
+      (define-constant SIMPLE-PRIMITIVES
+	;;NOTE There are  many, many simple primitives.  Maybe, one  day, I will list
+	;;them here.  (Marco Maggi; Mon Aug 11, 2014)
+	;;
+	'(fx+ fx- fx* fxdiv))
 
       #| end of module: E-funcall |# )
 
     (define (E-mvcall x)
       (struct-case x
 	((mvcall producer consumer)
-	 ;;This  form is  a function  call.  We  assume it  might mutate  any of  the
-	 ;;bindings     whose     region     includes      it:     so     we     call
-	 ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.
+	 ;;This form is a function call.
 	 (make-the-enclosing-rhs-complex!)
 	 (make-mvcall (E producer) (E consumer)))))
 
@@ -788,9 +722,9 @@
     ;;associative containers representing  a property of the RHS  of bindings defined
     ;;by  RECBIND  (LETREC) and  REC*BIND  (LETREC*).   Each container  maps  binding
     ;;indexes to flags  representing right-hand side init  expression complexity: the
-    ;;flag is true if  the RHS expression is "complex", that is it  may assign one of
+    ;;flag is true if the RHS expression is  "complex", that is: it may assign one of
     ;;the LHS in the same lexical contour (we  cannot be sure if it actually does it,
-    ;;nor of which bindings are mutated).
+    ;;nor of which bindings are mutated), or it performs a complex function call.
     ;;
     (import (only (vicare system $vectors)
 		  $vector-set!
@@ -809,64 +743,74 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%make-top-lhs-used-register-func
-	   %make-middle-lhs-used-register-func
-	   %make-recbind-lhs-used-register-func)
+  (define (%make-top-lhs-used-registrar-func)
+    ;;Build  and  return a  top  variable-usage  registrar function.   Top  registrar
+    ;;functions are generated only when starting to process a whole input expression,
+    ;;not when entering a nested subexpression representing a binding form.
+    ;;
+    ;;Given the  way the  registrar functions  are implemented:  if this  function is
+    ;;actually applied to a PRELEX structure,  it means such PRELEX represents a free
+    ;;variable in the whole expression; this is an error.  If this error is found: it
+    ;;means  that the  original  input  expression is  incorrect;  this should  never
+    ;;happen.
+    ;;
+    (lambda (prel)
+      (assertion-violation __who__ "found free variable reference" prel)))
 
-    (define (%make-top-lhs-used-register-func)
-      ;;Build  and  return a  top  variable-usage  register function.   Top  register
-      ;;functions  are  generated  only  when  starting  to  process  a  whole  input
-      ;;expression, not when  entering a nested subexpression  representing a binding
-      ;;form.
-      ;;
-      ;;Given the  way the register  functions are  implemented: if this  function is
-      ;;actually applied  to a PRELEX  structure, it  means such PRELEX  represents a
-      ;;free variable in the whole expression; this is an error.
-      ;;
-      (lambda (prel)
-	(error __who__ "found free variable reference" prel)))
+  (module (%make-nonrec-lhs-used-registrar-func
+	   %make-recbind-lhs-used-registrar-func)
 
-    (define (%make-middle-lhs-used-register-func prel* outer-register-lhs-usage!)
-      ;;Build and return a new middle-level variable-usage register function wrapping
-      ;;the  one  given as  argument.   The  returned  register function  will  avoid
-      ;;attempting to mark as "used" the PRELEX structures in the list PREL*.
+    (define (%make-nonrec-lhs-used-registrar-func outer-lhs-usage-registrar! prel*)
+      ;;Build and return a new nonrecursive-binding variable-usage registrar function
+      ;;wrapping the  one given  as argument.  The  returned registrar  function will
+      ;;avoid attempting to mark as "used" the PRELEX structures in the list PREL*.
       ;;
-      ;;The  middle-level  register  functions  are used  to  avoid  marking  binding
-      ;;references created by non-RECBIND (non-LETREC) and non-REC*BIND (non-LETREC*)
-      ;;binding  forms;  so  it  must  be  used when  entering  a  BIND  and  CLAMBDA
-      ;;subexpression.
+      ;;The  nonrecursive-binding  registrar  functions  are used  to  avoid  marking
+      ;;binding  references  created  by non-RECBIND  (non-LETREC)  and  non-REC*BIND
+      ;;(non-LETREC*) binding forms; so it must be used when entering: a BIND form; a
+      ;;CLAMBDA subexpression body; a RECBIND or REC*BIND body.
+      ;;
+      ;;For efficiency reasons: a  nonrecursive-binding variable-usage function marks
+      ;;a PRELEX  structure as  "used" only  once; we  do this  by avoiding  to apply
+      ;;OUTER-LHS-USAGE-REGISTRAR!  to PREL when PREL is already in the TABLE.
       ;;
       (define-constant TABLE (make-eq-hashtable))
       (for-each (lambda (prel)
 		  (hashtable-set! TABLE prel #t))
 	prel*)
       (lambda (prel)
-	;;A middle-level variable-usage function attempts  to mark a PRELEX structure
-	;;as "used"  only once.  So  avoid to  apply REGISTER-LHS-USAGE!  to  PREL if
-	;;PREL is already in the TABLE.
 	(with-unseen-prel (prel TABLE)
-	  (outer-register-lhs-usage! prel))))
+	  (outer-lhs-usage-registrar! prel))))
 
-    (define (%make-recbind-lhs-used-register-func prel* lhs-index used-lhs-flags
-						  outer-register-lhs-usage!)
-      ;;Build  and return  a new  recursive-binding variable-usage  register function
-      ;;wrapping  the one  given as  argument.  The  returned register  function will
-      ;;avoid attempting to mark as "used" the PRELEX structures in the list PREL*.
+    (define (%make-recbind-lhs-used-registrar-func outer-lhs-usage-registrar! prel* used-lhs-flags)
+      ;;Build and  return a  new recursive-binding variable-usage  registrar function
+      ;;wrapping the one given as argument.
+      ;;
+      ;;For efficiency reasons: a  recursive-binding variable-usage registrar marks a
+      ;;PRELEX  structure as  "used"  only once;  we  do this  by  avoiding to  apply
+      ;;OUTER-LHS-USAGE-REGISTRAR!  to PREL when PREL is already in the TABLE.
+      ;;
+      ;;We need  a registrar  function for  each recursive-binding  lexical countour;
+      ;;*not* one for each binding.
       ;;
       (define-constant TABLE (make-eq-hashtable))
-      ;;Photograph the current value of the parameter.
       (lambda (prel)
-	(import LHS-USAGE-FLAGS)
 	(with-unseen-prel (prel TABLE)
-	  (cond ((%find-index 0 prel prel*)
+	  ;;EFFICIENCY NOTE  Searching the PRELEX struct  PREL in the list  of PRELEX
+	  ;;structs  PREL* is  not  very  efficient.  The  list  can  be "long";  for
+	  ;;example, PREL*  can be the  list of top  level function definitions  in a
+	  ;;LIBRARY form.  Can we make it better with a cheap data structure?  (Marco
+	  ;;Maggi; Tue Aug 12, 2014)
+	  (cond ((%find-index prel prel*)
 		 => (lambda (lhs-index)
+		      (import LHS-USAGE-FLAGS)
 		      (%lhs-usage-flags-set! used-lhs-flags lhs-index)
 		      ;;If we are here the  PRELEX struct PREL represents a reference
 		      ;;to LETREC or LETREC* binding.  If  we are processing a RHS of
 		      ;;the same  lexical contour: we want  this RHS to be  marked as
 		      ;;"complex".
 		      ;;
-		      ;;Example:
+		      ;;Example (invalid for LETREC*):
 		      ;;
 		      ;;  (letrec ((a 1)
 		      ;;           (b a))
@@ -880,14 +824,14 @@
 		      ;;        (bind ()
 		      ;;          '#f))))
 		      ;;
-		      ;;in which the binding for B  is complex.  Notice that this set
-		      ;;of bindings would be invalid for LETREC*.
+		      ;;in which  the binding for  B is "complex".
 		      (make-the-enclosing-rhs-complex!)))
 		(else
-		 (outer-register-lhs-usage! prel))))))
+		 (outer-lhs-usage-registrar! prel))))))
 
     (define-syntax (with-unseen-prel stx)
       (syntax-case stx ()
+	;;Evaluate ?BODY if ?PREL is *not* already in ?TABLE.
 	((_ (?prel ?table) . ?body)
 	 (and (identifier? #'?prel)
 	      (identifier? #'?table))
@@ -895,47 +839,52 @@
 	     (hashtable-set! ?table ?prel #t)
 	     . ?body))))
 
-    (define (%find-index base item ell)
-      (cond ((null? ell)
-	     #f)
-	    ((eq? item ($car ell))
-	     base)
-	    (else
-	     (%find-index ($fxadd1 base) item ($cdr ell)))))
+    (case-define %find-index
+      ;;Search ITEM  in the proper list  ELL; when found return  its index, otherwise
+      ;;return false.
+      ;;
+      ((item ell)
+       (%find-index item ell 0))
+      ((item ell counter)
+       (cond ((null? ell)
+	      #f)
+	     ((eq? item ($car ell))
+	      counter)
+	     (else
+	      (%find-index item ($cdr ell) ($fxadd1 counter))))))
 
     #| end of module |# )
 
   (define-constant lhs-used-func
-    (make-parameter (%make-top-lhs-used-register-func)))
+    (make-parameter (%make-top-lhs-used-registrar-func)))
 
   (define-syntax-rule (register-lhs-usage! ?prel)
     ((lhs-used-func) ?prel))
 
 ;;; --------------------------------------------------------------------
 
-  (define-syntax-rule (%make-top-rhs-complexity-register-func)
+  (define-syntax-rule (%make-top-rhs-cplx-registrar-func)
     ;;Return a top thunk to be used as expression complexity registrar.  The returned
     ;;thunk is  to be used  as outer thunk when  entering whole input  expressions or
     ;;CLAMBDA bodies.
     ;;
     void)
 
-  (define (%make-recbind-rhs-complexity-register-func cplx-rhs-flags rhs-index make-the-enclosing-rhs-complex!)
+  (define (%make-recbind-rhs-cplx-registrar-func outer-rhs-cplx-registrar-func cplx-rhs-flags rhs-index)
     ;;Build and  return a new  thunk to be  used as expression  complexity registrar,
     ;;wrapping the  one given as  argument.  Called  to register that  the right-hand
-    ;;side init expression with index RHS-INDEX in the container CPLX-RHS-FLAGS might
-    ;;mutate a binding  among the ones in  the same lexical contour;  this means that
-    ;;the outer expression enclosing this RHS is also complex.
+    ;;side init expression with index RHS-INDEX in the container CPLX-RHS-FLAGS is to
+    ;;be classified "complex"; also make the outer expression complex.
     ;;
     ;;We really need one of these thunks for each RHS in a recbind lexical contour.
     ;;
     (lambda ()
       (import RHS-COMPLEXITY-FLAGS)
       (%rhs-complexity-flags-set! cplx-rhs-flags rhs-index)
-      (make-the-enclosing-rhs-complex!)))
+      (outer-rhs-cplx-registrar-func)))
 
   (define-constant rhs-cplx-func
-    (make-parameter (%make-top-lhs-used-register-func)))
+    (make-parameter (%make-top-lhs-used-registrar-func)))
 
   (define-syntax-rule (make-the-enclosing-rhs-complex!)
     ((rhs-cplx-func)))
@@ -957,114 +906,117 @@
       ;;false.
       ;;
       (import LHS-USAGE-FLAGS RHS-COMPLEXITY-FLAGS)
-      (let ((used-lhs-flags	(%make-lhs-usage-flags      lhs*))
-	    (cplx-rhs-flags	(%make-rhs-complexity-flags rhs*)))
-	;;The lists  of bindings LHS*  and RHS* are  interpreted as tuples,  in which
-	;;every item has an index: from 0 to "(sub1 (length lhs*))".
-	(let ((rhs*^ (%do-rhs* 0 lhs* rhs* used-lhs-flags cplx-rhs-flags))
-	      (body^ (parametrise
-			 ((lhs-used-func (%make-middle-lhs-used-register-func lhs* (lhs-used-func))))
-		       (E body))))
-	  (receive (simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
-	      (%partition-rhs* 0 lhs* rhs*^ used-lhs-flags cplx-rhs-flags)
-	    (%make-bind simple.lhs* simple.rhs*
-	      (%make-bind complex.lhs* (%make-void-constants complex.lhs*)
-		(%make-fix fixable.lhs* fixable.rhs*
-		  (if letrec?
-		      ;;It is a RECBIND and LETREC: no order enforced when evaluating
-		      ;;COMPLEX.RHS*.
-		      (let ((tmp* (map unique-prelex complex.lhs*)))
-			(%make-bind tmp* complex.rhs*
-			  (build-assign* complex.lhs* tmp* body^)))
-		    ;;It is  a REC*BIND and  LETREC*: order enforced  when evaluating
-		    ;;COMPLEX.RHS*.
-		    (build-assign* complex.lhs* complex.rhs* body^)))))))))
+      (let* ((used-lhs-flags (%make-lhs-usage-flags      lhs*))
+	     (cplx-rhs-flags (%make-rhs-complexity-flags rhs*))
+	     (rhs*^          (parametrise
+				 ((lhs-used-func (%make-recbind-lhs-used-registrar-func (lhs-used-func) lhs* used-lhs-flags)))
+			       (E-rhs* rhs* cplx-rhs-flags)))
+	     (body^          (parametrise
+				 ((lhs-used-func (%make-nonrec-lhs-used-registrar-func  (lhs-used-func) lhs*)))
+			       (E body))))
+	(receive (simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
+	    (%partition-rhs* lhs* rhs*^ used-lhs-flags cplx-rhs-flags)
+	  (%make-bind simple.lhs* simple.rhs*
+	    (%make-bind complex.lhs* (%make-void-constants complex.lhs*)
+	      (%make-fix fixable.lhs* fixable.rhs*
+			 (if letrec?
+			     ;;It is  a RECBIND  and LETREC:  no order  enforced when
+			     ;;evaluating COMPLEX.RHS*.
+			     (let ((tmp* (map unique-prelex complex.lhs*)))
+			       (%make-bind tmp* complex.rhs*
+				 (build-assign* complex.lhs* tmp* body^)))
+			   ;;It  is  a  REC*BIND  and LETREC*:  order  enforced  when
+			   ;;evaluating COMPLEX.RHS*.
+			   (build-assign* complex.lhs* complex.rhs* body^))))))))
 
-    (define (%do-rhs* i lhs* rhs* used-lhs-flags cplx-rhs-flags)
-      ;;Recursively process RHS* and return a list of struct instances which is meant
-      ;;to replace the original RHS*.
-      ;;
-      ;;This function has two purposes:
-      ;;
-      ;;1. Apply E to each struct in RHS*.
-      ;;
-      ;;2. Fill appropriately the vectors USED-LHS-FLAGS and CPLX-RHS-FLAGS.
-      ;;
-      ;;Given recordized code representing:
-      ;;
-      ;;   (letrec ((?lhs-0 ?rhs-0)
-      ;;            (?lhs-1 ?rhs-1)
-      ;;            (?lhs-2 ?rhs-2))
-      ;;     . ?body)
-      ;;
-      ;;this function is recursively called with:
-      ;;
-      ;;   (%do-rhs* 0 '(?lhs-0 ?lhs-1 ?lhs-2) '(?rhs-0 ?rhs-1 ?rhs-2) ---)
-      ;;   (%do-rhs* 1 '(?lhs-0 ?lhs-1 ?lhs-2)        '(?rhs-1 ?rhs-2) ---)
-      ;;   (%do-rhs* 2 '(?lhs-0 ?lhs-1 ?lhs-2)               '(?rhs-2) ---)
-      ;;   (%do-rhs* 3 '(?lhs-0 ?lhs-1 ?lhs-2)                     '() ---)
-      ;;
-      (if (null? rhs*)
-	  '()
-	(let ((rest (%do-rhs* (fxadd1 i) lhs* ($cdr rhs*) used-lhs-flags cplx-rhs-flags)))
-	  (cons (parametrise
-		    ((lhs-used-func (%make-recbind-lhs-used-register-func lhs* i used-lhs-flags (lhs-used-func)))
-		     (rhs-cplx-func (%make-recbind-rhs-complexity-register-func cplx-rhs-flags i (rhs-cplx-func))))
-		  (E ($car rhs*)))
-		rest))))
+    (case-define E-rhs*
+      ((rhs* cplx-rhs-flags)
+       (E-rhs* rhs* cplx-rhs-flags 0))
+      ((rhs* cplx-rhs-flags binding-index)
+       ;;Recursively process  RHS* and  return a  list of  struct instances  which is
+       ;;meant  to replace  the  original RHS*.   This function  has  the purpose  of
+       ;;applying E to  each struct in RHS*;  in so doing it  will fill appropriately
+       ;;the containers USED-LHS-FLAGS and CPLX-RHS-FLAGS.
+       ;;
+       ;;Given recordized code representing:
+       ;;
+       ;;   (letrec ((?lhs-0 ?rhs-0)
+       ;;            (?lhs-1 ?rhs-1)
+       ;;            (?lhs-2 ?rhs-2))
+       ;;     . ?body)
+       ;;
+       ;;this function is recursively called with:
+       ;;
+       ;;   (E-rhs* '(?rhs-0 ?rhs-1 ?rhs-2) --- 0)
+       ;;   (E-rhs* '(?rhs-1 ?rhs-2)        --- 1)
+       ;;   (E-rhs* '(?rhs-2)               --- 2)
+       ;;   (E-rhs* '()                     --- 3)
+       ;;
+       ;;NOTE The  reason we do not  simply map the function  E over RHS* is  that we
+       ;;need to count the bindings and increment the index BINDING-INDEX.
+       ;;
+       (if (null? rhs*)
+	   '()
+	 (let ((rest (E-rhs* ($cdr rhs*) cplx-rhs-flags (fxadd1 binding-index))))
+	   (cons (parametrise
+		     ((rhs-cplx-func (%make-recbind-rhs-cplx-registrar-func (rhs-cplx-func) cplx-rhs-flags binding-index)))
+		   (E ($car rhs*)))
+		 rest)))))
 
-    (define (%partition-rhs* i lhs* rhs* used-lhs-flags cplx-rhs-flags)
-      ;;Non-tail  recursive  function.   Make  use  of the  data  in  the  containers
-      ;;USED-LHS-FLAGS  and CPLX-RHS-FLAGS  to partition  the bindings  into: simple,
-      ;;complex, fixable.  (RHS* is not visited here.)
-      ;;
-      ;;Return 6 values:
-      ;;
-      ;;SIMPLE.LHS*, SIMPLE.RHS*
-      ;;   Simple  bindings.  SIMPLE.LHS is  never assigned in  all the RHS*  and the
-      ;;    associated SIMPLE.RHS  is a  simple  expression: it  never references  an
-      ;;   SIMPLE.LHS* and it does not call any function.
-      ;;
-      ;;COMPLEX.LHS*, COMPLEX.RHS*
-      ;;   Complex bindings.  Lists of LHS and  RHS for which either we know that the
-      ;;   LHS has been assigned, or we know that the RHS may have assigned an LHS.
-      ;;
-      ;;FIXABLE.LHS*, FIXABLE.RHS*
-      ;;   Fixable bindings.  Lists of LHS and RHS representing non-assigned bindings
-      ;;   whose RHS is a CLAMBDA.
-      ;;
-      (import LHS-USAGE-FLAGS RHS-COMPLEXITY-FLAGS)
-      (if (null? lhs*)
-	  (values '() '() '() '() '() '())
-	(let-values
-	    (((simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
-	      (%partition-rhs* (fxadd1 i) ($cdr lhs*) ($cdr rhs*) used-lhs-flags cplx-rhs-flags))
-	     ((lhs rhs)
-	      (values ($car lhs*) ($car rhs*))))
-	  (cond ((prelex-source-assigned? lhs)
-		 ;;This binding  is "complex".  It  does not matter  if the RHS  is a
-		 ;;CLAMBDA structure: the  fact that it is  assigned takes precedence
-		 ;;when deciding how to classify it.
-		 (values simple.lhs* simple.rhs*
-			 fixable.lhs* fixable.rhs*
-			 (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
-		((clambda? rhs)
-		 ;;This binding is "fixable".
-		 (values simple.lhs* simple.rhs*
-			 (cons lhs fixable.lhs*) (cons rhs fixable.rhs*)
-			 complex.lhs* complex.rhs*))
-                ((or (%lhs-usage-flags-ref      used-lhs-flags i)
-		     (%rhs-complexity-flags-ref cplx-rhs-flags i))
-		 ;;This binding is "complex".
-		 (values simple.lhs* simple.rhs*
-			 fixable.lhs* fixable.rhs*
-			 (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
-		(else
-		 ;;This binding is "simple".
-		 (values (cons lhs simple.lhs*) (cons rhs simple.rhs*)
-			 fixable.lhs* fixable.rhs*
-			 complex.lhs* complex.rhs*))
-		))))
+    (case-define %partition-rhs*
+      ((lhs* rhs* used-lhs-flags cplx-rhs-flags)
+       (%partition-rhs* lhs* rhs* used-lhs-flags cplx-rhs-flags 0))
+      ((lhs* rhs* used-lhs-flags cplx-rhs-flags binding-index)
+       ;;Non-tail  recursive  function.  Make  use  of  the  data in  the  containers
+       ;;USED-LHS-FLAGS and  CPLX-RHS-FLAGS to  partition the bindings  into: simple,
+       ;;complex, fixable.  (RHS* is not visited here.)
+       ;;
+       ;;Return 6 values:
+       ;;
+       ;;SIMPLE.LHS*, SIMPLE.RHS*
+       ;;   Simple  bindings.  SIMPLE.LHS is never  assigned in all the  RHS* and the
+       ;;    associated SIMPLE.RHS  is a  simple expression:  it never  references an
+       ;;   SIMPLE.LHS* and it does not call any function.
+       ;;
+       ;;COMPLEX.LHS*, COMPLEX.RHS*
+       ;;   Complex bindings.  Lists of LHS and RHS for which either we know that the
+       ;;   LHS has been assigned, or we know that the RHS may have assigned an LHS.
+       ;;
+       ;;FIXABLE.LHS*, FIXABLE.RHS*
+       ;;    Fixable  bindings.   Lists  of LHS  and  RHS  representing  non-assigned
+       ;;   bindings whose RHS is a CLAMBDA.
+       ;;
+       (import LHS-USAGE-FLAGS RHS-COMPLEXITY-FLAGS)
+       (if (null? lhs*)
+	   (values '() '() '() '() '() '())
+	 (receive (simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
+	     (%partition-rhs* ($cdr lhs*) ($cdr rhs*) used-lhs-flags cplx-rhs-flags ($fxadd1 binding-index))
+	   (let ((lhs ($car lhs*))
+		 (rhs ($car rhs*)))
+	     (cond ((prelex-source-assigned? lhs)
+		    ;;This binding is "complex".  It does  not matter if the RHS is a
+		    ;;CLAMBDA  structure:   the  fact  that  it   is  assigned  takes
+		    ;;precedence when deciding how to classify it.
+		    (values simple.lhs* simple.rhs*
+			    fixable.lhs* fixable.rhs*
+			    (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
+		   ((clambda? rhs)
+		    ;;This binding is "fixable".
+		    (values simple.lhs* simple.rhs*
+			    (cons lhs fixable.lhs*) (cons rhs fixable.rhs*)
+			    complex.lhs* complex.rhs*))
+		   ((or (%lhs-usage-flags-ref      used-lhs-flags binding-index)
+			(%rhs-complexity-flags-ref cplx-rhs-flags binding-index))
+		    ;;This binding is "complex".
+		    (values simple.lhs* simple.rhs*
+			    fixable.lhs* fixable.rhs*
+			    (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
+		   (else
+		    ;;This binding is "simple".
+		    (values (cons lhs simple.lhs*) (cons rhs simple.rhs*)
+			    fixable.lhs* fixable.rhs*
+			    complex.lhs* complex.rhs*))
+		   ))))))
 
     #| end of module: %DO-RECBIND %DO-REC*BIND |# )
 

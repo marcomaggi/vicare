@@ -681,8 +681,6 @@
 		(a_0 (lambda () (funcall b_0))))
 	    (funcall (primref list) a_0 b_0))))
 
-
-
   ;;Here the  binding B is assigned,  even though in the  body of a LAMBDA;  for this
   ;;reason it cannot be classified as "fixable", rather it is classified as "complex".
   ;;
@@ -690,14 +688,14 @@
 		 (b (lambda () (set! a '123))))
 	  '#f)
 	(waddell
-	 (bind ((a_0 (constant #!void)))			;complex
+	 (bind ((a_0 (constant #!void)))		   ;complex
 	   (fix ((b_0 (lambda () (assign a_0 (constant 123))))) ;lambda
-	     (bind ((a_1 (lambda () (funcall b_0))))		;tmp
+	     (bind ((a_1 (lambda () (funcall b_0))))		   ;tmp
 	       (seq
 		 (assign a_0 a_1)
 		 (constant #f))))))
 	(scc
-	 (bind ((a_0 (constant #!void)))			;complex
+	 (bind ((a_0 (constant #!void)))		   ;complex
 	   (fix ((b_0 (lambda () (assign a_0 (constant 123))))) ;lambda
 	     (seq
 	       (assign a_0 (lambda () (funcall b_0)))
@@ -922,6 +920,20 @@
 	    (bind ((b_0 (funcall (primref write) a_0)))
 	      a_0))))
 
+  ;;Function  call in  RHS expression  that does  not make  the enclosing  expression
+  ;;"complex".
+  (doit* (letrec* ((a '1)
+		   (b (fx+ '1 '2)))
+	   a)
+	 (waddell
+	  (bind ((a_0 (constant 1))
+		 (b_0 (funcall (primref fx+) (constant 1) (constant 2))))
+	    a_0))
+	 (scc
+	  (bind ((a_0 (constant 1)))
+	    (bind ((b_0 (funcall (primref fx+) (constant 1) (constant 2))))
+	      a_0))))
+
   ;;Nested RHS LETREC.
   #;(doit (letrec ((a '1)
   		 (b (letrec ((d (lambda () '4)))
@@ -942,6 +954,7 @@
 	       b)))))
 
 ;;; --------------------------------------------------------------------
+;;; libraries
 
   ;;This test will install the library!!!
   (check
