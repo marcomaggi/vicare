@@ -774,6 +774,9 @@
       ;;a PRELEX  structure as  "used" only  once; we  do this  by avoiding  to apply
       ;;OUTER-LHS-USAGE-REGISTRAR!  to PREL when PREL is already in the TABLE.
       ;;
+      ;;NOTE At the call site of the  registrar function: we do know for which PRELEX
+      ;;struct we call it.
+      ;;
       (define-constant TABLE (make-eq-hashtable))
       (for-each (lambda (prel)
 		  (hashtable-set! TABLE prel #t))
@@ -792,6 +795,10 @@
       ;;
       ;;We need  a registrar  function for  each recursive-binding  lexical countour;
       ;;*not* one for each binding.
+      ;;
+      ;;NOTE At the call site of the  registrar function: we do know for which PRELEX
+      ;;struct  we  call it;  for  this  reason we  can  compute  at the  moment  the
+      ;;LHS-INDEX.
       ;;
       (define-constant TABLE (make-eq-hashtable))
       (lambda (prel)
@@ -878,6 +885,10 @@
     ;;
     ;;We really need one of these thunks for each RHS in a recbind lexical contour.
     ;;
+    ;;NOTE At the call site of the registrar function: we do *not* know for which RHS
+    ;;expression struct we call  it; for this reason we need  to generate a registrar
+    ;;function closed upon RHS-INDEX.
+    ;;
     (lambda ()
       (import RHS-COMPLEXITY-FLAGS)
       (%rhs-complexity-flags-set! cplx-rhs-flags rhs-index)
@@ -957,11 +968,10 @@
        ;;
        (if (null? rhs*)
 	   '()
-	 (let ((rest (E-rhs* ($cdr rhs*) cplx-rhs-flags (fxadd1 binding-index))))
-	   (cons (parametrise
-		     ((rhs-cplx-func (%make-recbind-rhs-cplx-registrar-func (rhs-cplx-func) cplx-rhs-flags binding-index)))
-		   (E ($car rhs*)))
-		 rest)))))
+	 (cons (parametrise
+		   ((rhs-cplx-func (%make-recbind-rhs-cplx-registrar-func (rhs-cplx-func) cplx-rhs-flags binding-index)))
+		 (E ($car rhs*)))
+	       (E-rhs* ($cdr rhs*) cplx-rhs-flags ($fxadd1 binding-index))))))
 
     (case-define %partition-rhs*
       ((lhs* rhs* used-lhs-flags cplx-rhs-flags)
