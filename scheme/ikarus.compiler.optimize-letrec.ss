@@ -181,24 +181,24 @@
 
 
 (module (check-for-illegal-letrec-references)
-  ;;This module is  used to check for illegal references  to bindings in
-  ;;the right-hand sides of LETREC and LETREC* syntaxes.
+  ;;This module is used to check for illegal references to bindings in the right-hand
+  ;;sides of LETREC and LETREC* syntaxes.
   ;;
-  (define who 'check-for-illegal-letrec-references)
+  (define-fluid-override __who__
+    (identifier-syntax 'check-for-illegal-letrec-references))
 
   (define (check-for-illegal-letrec-references x)
     (cond ((C x (%make-empty-illegal-set))
 	   => (lambda (illegal)
 		(%error illegal x)))))
 
-  ;;In this  commented out  version we  use a  list to  hold the  set of
-  ;;PRELEX structures that  is illegal to reference  in right-hand sides
-  ;;of LETREC, LETREC* and LIBRARY-LETREC* syntaxes.
+  ;;In this commented out version we use a  list to hold the set of PRELEX structures
+  ;;that  is  illegal  to  reference  in right-hand  sides  of  LETREC,  LETREC*  and
+  ;;LIBRARY-LETREC* syntaxes.
   ;;
-  ;;Doing  a  linear search  is  usually  fine  for LETREC  and  LETREC*
-  ;;syntaxes, because  the list of  bindings is most likely  small.  But
-  ;;LIBRARY-LETREC*  syntaxes will  have "many"  bindings, one  for each
-  ;;defined function.
+  ;;Doing a  linear search is usually  fine for LETREC and  LETREC* syntaxes, because
+  ;;the list  of bindings is  most likely  small.  But LIBRARY-LETREC*  syntaxes will
+  ;;have "many" bindings, one for each defined function.
   ;;
   ;; (begin
   ;;   (define-inline (%make-empty-illegal-set)
@@ -210,36 +210,35 @@
   ;;   (define-inline (%illegal-augment more illegals)
   ;;     (append more illegals)))
   ;;
-  ;;In this version we  use a closure on a hashtable to  hold the set of
-  ;;PRELEX structures that  is illegal to reference  in right-hand sides
-  ;;of LETREC, LETREC* and LIBRARY-LETREC* syntaxes.
+  ;;In  this version  we use  a closure  on a  hashtable to  hold the  set of  PRELEX
+  ;;structures that  is illegal to reference  in right-hand sides of  LETREC, LETREC*
+  ;;and LIBRARY-LETREC* syntaxes.
   ;;
   (begin
-    (define-inline (%make-empty-illegal-set)
+    (define-syntax-rule (%make-empty-illegal-set)
       (lambda (x) #f))
-    (define-inline (%illegal-reference-to? x illegals)
-      ;;Must return #f if X is legal, and X itself if X is illegal.
+    (define-syntax-rule (%illegal-reference-to? prel illegals)
+      ;;Must return #f if PREL is legal, and PREL itself if PREL is illegal.
       ;;
-      (illegals x))
-    (define (%illegal-augment more illegals)
-      ;;MORE must be a list of  PRELEX structures to add to the illegals
-      ;;set.
+      (illegals prel))
+    (define (%illegal-augment prel* illegals)
+      ;;PREL* must be a list of PRELEX structures to add to the illegals set.
       ;;
-      (if (null? more)
+      (if (null? prel*)
 	  illegals
 	(let ((H (make-eq-hashtable)))
-	  (for-each (lambda (x)
-		      ;;Yes, we want X as both key and value.
-		      (hashtable-set! H x x))
-	    more)
-	  (lambda (x)
-	    (or (hashtable-ref H x #f)
-		(%illegal-reference-to? x illegals)))))))
+	  (for-each (lambda (prel)
+		      ;;Yes, we want PREL as both key and value.
+		      (hashtable-set! H prel prel))
+	    prel*)
+	  (lambda (prel)
+	    (or (hashtable-ref H prel #f)
+		(%illegal-reference-to? prel illegals)))))))
 
   (define (C x illegals)
-    ;;Recursively  visit the  recordized  code X  looking  for a  struct
-    ;;instance of type  PRELEX which is EQ? to one  in the set ILLEGALS.
-    ;;When found return such struct, else return #f.
+    ;;Recursively visit the  recordized code X looking for a  struct instance of type
+    ;;PRELEX which is EQ? to one in the set ILLEGALS.  When found return such struct,
+    ;;else return #f.
     ;;
     (struct-case x
       ((constant)
@@ -270,9 +269,8 @@
       ((rec*bind lhs* rhs* body)
        (or (if (null? lhs*)
 	       #f
-	     ;;Notice the difference between  LETREC and LETREC*: in the
-	     ;;latter it  is fine for  a RHS to  reference the LHS  of a
-	     ;;previous local binding.
+	     ;;Notice the difference between LETREC and  LETREC*: in the latter it is
+	     ;;fine for a RHS to reference the LHS of a previous local binding.
 	     (let loop ((lhs* lhs*)
 			(rhs* rhs*))
 	       (if (null? rhs*)
@@ -306,11 +304,11 @@
        (C* rand* illegals))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
   (define (C/error x illegals)
-    ;;Like C, but  in case of error  make use of X as  enclosing form in
-    ;;the raised exception.
+    ;;Like C,  but in case  of error make  use of X as  enclosing form in  the raised
+    ;;exception.
     ;;
     (cond ((C x illegals)
 	   => (lambda (illegal)
@@ -325,8 +323,8 @@
       x*))
 
   (define (C*/error x* illegals)
-    ;;Like C*, but in  case of error make use of the  culprit item of X*
-    ;;as enclosing form in the raised exception.
+    ;;Like C*, but in  case of error make use of the culprit  item of X* as enclosing
+    ;;form in the raised exception.
     ;;
     (let loop ((x* x*))
       (cond ((null? x*)
@@ -340,8 +338,8 @@
 ;;; --------------------------------------------------------------------
 
   (module (C-clambda)
-    ;;The purpose of this module is to apply C to every CASE-LAMBDA body
-    ;;with an empty set of illegals.
+    ;;The purpose  of this module  is to  apply C to  every CASE-LAMBDA body  with an
+    ;;empty set of illegals.
     ;;
     (define (C-clambda x)
       (struct-case x
@@ -359,10 +357,10 @@
 ;;; --------------------------------------------------------------------
 
   (define (%error illegal-prelex enclosing-code)
-    ;;R6RS  requests  that  this  error is  of  type  "&assertion",  but
-    ;;"&syntax" is not bad either.
+    ;;R6RS requests that this error is of type "&assertion", but "&syntax" is not bad
+    ;;either.
     ;;
-    (syntax-violation who
+    (syntax-violation __who__
       "illegal binding reference in right-hand side of LETREC, LETREC* or LIBRARY syntax"
       (unparse-recordized-code/pretty enclosing-code)
       (unparse-recordized-code/pretty illegal-prelex)))
@@ -1462,9 +1460,9 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'make-bind 'scheme-indent-function 2)
-;; eval: (put 'make-fix 'scheme-indent-function 2)
-;; eval: (put '%make-bind 'scheme-indent-function 2)
-;; eval: (put '$make-fix 'scheme-indent-function 2)
-;; eval: (put 'with-unseen-prel 'scheme-indent-function 1)
+;; eval: (put 'make-bind	'scheme-indent-function 2)
+;; eval: (put 'make-fix		'scheme-indent-function 2)
+;; eval: (put '%make-bind	'scheme-indent-function 2)
+;; eval: (put '$make-fix	'scheme-indent-function 2)
+;; eval: (put 'with-unseen-prel	'scheme-indent-function 1)
 ;; End:
