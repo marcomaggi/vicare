@@ -126,27 +126,6 @@ otherwise return @false{}.
 @deffn {Unsafe Operation} $symbol-proc @var{sym}
 @deffnx {Unsafe Operation} $set-symbol-proc! @var{sym} @var{proc}
 Accessor and mutator for the field @code{proc}.
-
-@quotation
-@strong{NOTE} This is the use of the @code{proc} field: whenever binary
-code in a code object performs a call to a global closure object, it
-does the following:
-
-@enumerate
-@item
-From the relocation vector of the current code object: retrieve the loc
-gensym of the closure to call.
-
-@item
-From the loc gensym: extract the value of the @code{proc} slot, which is
-meant to be a reference to the closure object.  This is done by
-accessing the gensym object with a low--level assembly instruction,
-@strong{not} by using the primitive operation @func{$symbol-proc}.
-
-@item
-Actually call the closure object.
-@end enumerate
-@end quotation
 @end deffn
 
 
