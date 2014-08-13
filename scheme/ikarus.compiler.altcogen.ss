@@ -514,15 +514,20 @@
 
 
 (module (alt-cogen.insert-engine-checks)
-  ;;This  module traverses  all the  function  bodies and,  if the  body
-  ;;contains at least one JMPCALL struct or one FUNCALL struct (in which
-  ;;the operator is *not* a PRIMREF), it transforms the ?BODY into:
+  ;;This module traverses all the function bodies  and, if the body contains at least
+  ;;one  JMPCALL struct  or one  FUNCALL struct  (in which  the operator  is *not*  a
+  ;;PRIMREF), it transforms the ?BODY into:
   ;;
   ;;   (begin
   ;;     (primcall '$do-event '())
   ;;     ?body)
   ;;
-  (define who 'alt-cogen.insert-engine-checks)
+  ;;the call  to the primitive operation  $DO-EVENT suspends the execution  of Scheme
+  ;;code  for the  current process  and enters  a subprocess  which can  take actions
+  ;;asynchronously.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'alt-cogen.insert-engine-checks))
 
   (module (alt-cogen.insert-engine-checks)
 
@@ -555,14 +560,12 @@
   (module (E)
 
     (define (E x)
-      ;;The purpose of this recordized  code traversal is to return true
-      ;;if:
+      ;;The purpose of this recordized code traversal is to return true if:
       ;;
       ;;* At least one of the nested structs is an instance of JMPCALL.
       ;;
-      ;;* At least  one of the nested structs is  an instance of FUNCALL
-      ;;   in which  the operator  is *not*  a struct  instance of  type
-      ;;  PRIMREF.
+      ;;* At least one  of the nested structs is an instance of  FUNCALL in which the
+      ;;operator is *not* a struct instance of type PRIMREF.
       ;;
       ;;else the return value is false.
       ;;
@@ -603,7 +606,7 @@
 	 (ormap E arg*))
 
 	(else
-	 (error who "invalid expr" x))))
+	 (error __who__ "invalid expr" x))))
 
     (define (E-known x)
       (struct-case x
@@ -613,8 +616,8 @@
 	 (E x))))
 
     (define (%known-primref? x)
-      ;;Return true if X is a  struct instance of type PRIMREF, possibly
-      ;;wrapped into a struct instance of type KNOWN.
+      ;;Return true if X is a struct  instance of type PRIMREF, possibly wrapped into
+      ;;a struct instance of type KNOWN.
       ;;
       (struct-case x
 	((known expr)
@@ -630,19 +633,20 @@
 
 
 (module (alt-cogen.insert-stack-overflow-check)
-  ;;This  module traverses  all  the  function bodies  and:  if a  ?BODY
-  ;;contains  code  that  will  cause  further  use  of  the  stack,  it
-  ;;transforms it as follows:
+  ;;This module traverses all the function bodies  and: if a ?BODY contains code that
+  ;;will cause further use of the stack, it transforms it as follows:
   ;;
   ;;   (begin
   ;;     (primcall '$stack-overflow-check '())
   ;;     ?body)
   ;;
-  ;;so that, right  after entering the execution of a  function, a stack
-  ;;overflow check is  performed.  If a ?BODY does not  make further use
-  ;;of the stack: its function execution is a "stack tail".
+  ;;so  that, right  after entering  the execution  of a  function, the  call to  the
+  ;;primitive operation $STACK-OVERFLOW-CHECK  checks if the current  Scheme stack is
+  ;;about to be  exhausted.  If a ?BODY does  not make further use of  the stack: its
+  ;;function execution is a "stack tail".
   ;;
-  (define who 'alt-cogen.insert-stack-overflow-check)
+  (define-fluid-override __who__
+    (identifier-syntax 'alt-cogen.insert-stack-overflow-check))
 
   (module (alt-cogen.insert-stack-overflow-check)
 
@@ -724,7 +728,7 @@
 	 #t)
 
 	(else
-	 (error who "invalid expr" body))))
+	 (error __who__ "invalid expr" body))))
 
     (module (%non-tail?)
 
@@ -768,7 +772,7 @@
 	   (%non-tail? expr))
 
 	  (else
-	   (error who "invalid expr" x))))
+	   (error __who__ "invalid expr" x))))
 
       (define (%non-tail?-known x)
 	(struct-case x
@@ -795,7 +799,7 @@
 
 (define-constant RETURN-VALUE-REGISTER '%eax)
 
-;;Continuation pointer register?
+;;Closure Pointer Register (CPR).
 ;;
 (define-constant CP-REGISTER '%edi)
 
@@ -830,11 +834,38 @@
   ;;This module does stuff:
   ;;
   ;;*  All the  BIND  struct instances  in  the input  expression  are processed  and
-  ;;   substituted with  code that  evaluates the  RHS expressions  and stores  their
-  ;;  single  return value into  appropriately allocated Scheme stack  machine words.
-  ;;  Here it is decided in which order the RHS expressions are computed.
+  ;;substituted with code that evaluates the  RHS expressions and stores their single
+  ;;return value into appropriately allocated Scheme stack machine words.  Here it is
+  ;;decided in which order the RHS expressions are computed.
   ;;
-  (define who 'alt-cogen.impose-calling-convention/evaluation-order)
+  ;;*  All the  FUNCALL  struct  instances in  the  input  expression representing  a
+  ;;function call:
+  ;;
+  ;;   (?operator ?arg-expr ...)
+  ;;
+  ;;are converted to the equivalent of:
+  ;;
+  ;;   (let* ((arg ?arg-expr)
+  ;;          ...)
+  ;;     (?operator arg ...))
+  ;;
+  ;;so that the order of evaluation of the argument's expressions is decided.
+  ;;
+  ;;*  All the  PRIMCALL  struct instances  in the  input  expression representing  a
+  ;;primitive operation call:
+  ;;
+  ;;   (?operator ?arg-expr ...)
+  ;;
+  ;;are converted to the equivalent of:
+  ;;
+  ;;   (let* ((arg ?arg-expr)
+  ;;          ...)
+  ;;     (?operator arg ...))
+  ;;
+  ;;so that the order of evaluation of the argument's expressions is decided.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'alt-cogen.impose-calling-convention/evaluation-order))
 
   (define (alt-cogen.impose-calling-convention/evaluation-order x)
     (Program x))
@@ -954,30 +985,27 @@
 	  ((primcall op rands)
 	   (case op
 	     (($call-with-underflow-handler)
-	      ;;This  primitive  is  used  by  the  primitive  operation
-	      ;;$SEAL-FRAME-AND-CALL to  implement the heart  of CALL/CC
-	      ;;(call with current continuation)  and CALL/CF (call with
-	      ;;current frame), file  "ikarus.control.sls".  Let's super
-	      ;;simplify and comment the code  starting with the call to
-	      ;;%PRIMITIVE-CALL/CF which  is the  heart of  both CALL/CC
-	      ;;and CALL/CF.
+	      ;;This    primitive    is    used   by    the    primitive    operation
+	      ;;$SEAL-FRAME-AND-CALL  to implement  the heart  of CALL/CC  (call with
+	      ;;current  continuation) and  CALL/CF (call  with current  frame), file
+	      ;;"ikarus.control.sls".   Let's super  simplify  and  comment the  code
+	      ;;starting with  the call to  %PRIMITIVE-CALL/CF which is the  heart of
+	      ;;both CALL/CC and CALL/CF.
 	      ;;
 	      ;;Remember that:
 	      ;;
 	      ;;* FPR stands for Frame Pointer Register;
 	      ;;
-	      ;;*  PCR  stands  for  Process  Control  Register  and  it
-	      ;;  references the structure PCB defined at the C language
-	      ;;  level;
+	      ;;*  PCR stands  for Process  Control  Register and  it references  the
+	      ;;structure PCB defined at the C language level;
 	      ;;
-	      ;;* CPR  stands for Closure  Pointer Register and  it must
-	      ;;   contain  a  reference  to the  closure  object  being
-	      ;;  executed.
+	      ;;*  CPR stands  for Closure  Pointer Register  and it  must contain  a
+	      ;;reference to the closure object being executed.
 	      ;;
 	      ;;* ARGC-REGISTER stands for Argument Count Register.
 	      ;;
-	      ;;When arriving here  the scenario of the  Scheme stack is
-	      ;;the one left by $SEAL-FRAME-AND-CALL:
+	      ;;When arriving here  the scenario of the Scheme stack  is the one left
+	      ;;by $SEAL-FRAME-AND-CALL:
 	      ;;
 	      ;;         high memory
 	      ;;   |                      |
@@ -1001,26 +1029,23 @@
 	      ;;   |                      |
 	      ;;          low memory
 	      ;;
-	      ;;ARGC-REGISTER contains the  encoded number of arguments,
-	      ;;counting the single argument FUNC to %PRIMITIVE-CALL/CF.
-	      ;;The reference to the just created continuation object is
-	      ;;in   some  CPU   register.   The   raw  memory   pointer
-	      ;;UNDERFLOW-HANDLER is in some CPU register.
+	      ;;ARGC-REGISTER contains the encoded  number of arguments, counting the
+	      ;;single  argument FUNC  to %PRIMITIVE-CALL/CF.   The reference  to the
+	      ;;just created  continuation object is  in some CPU register.   The raw
+	      ;;memory pointer UNDERFLOW-HANDLER is in some CPU register.
 	      ;;
 	      ;;There are 3 operands in RANDS:
 	      ;;
-	      ;;**A representation  of the  CPU register  containing the
-	      ;;  underflow handler:  a raw memory address  equal to the
-	      ;;  assembly label "ik_underflow_handler".
+	      ;;*  A representation  of  the CPU  register  containing the  underflow
+	      ;;handler:  a   raw  memory  address   equal  to  the   assembly  label
+	      ;;"ik_underflow_handler".
 	      ;;
-	      ;;**A  representation  of  the stack  location  containing
-	      ;;  FUNC.
+	      ;;* A representation of the stack location containing FUNC.
 	      ;;
-	      ;;**A  representation of  the  CPU  register containing  a
-	      ;;  reference  to the continuation object  referencing the
-	      ;;  freezed frames.  Such  continuation object is also the
-	      ;;  "next process continuation" in the PCB, that is: it is
-	      ;;  the value of the field "pcb->next_k".
+	      ;;* A representation of the CPU  register containing a reference to the
+	      ;;continuation   object   referencing   the   freezed   frames.    Such
+	      ;;continuation object  is also the  "next process continuation"  in the
+	      ;;PCB, that is: it is the value of the field "pcb->next_k".
 	      ;;
 	      (let ((t0			(unique-var 't))
 		    (t1			(unique-var 't))
@@ -1034,15 +1059,13 @@
 		 (V t0 underflow-handler)
 		 (V t1 kont-object)
 		 (V t2 func)
-		 ;;Move IK_UNDERFLOW_HANDLER in its reserved slot the on
-		 ;;the Scheme stack.
+		 ;;Move IK_UNDERFLOW_HANDLER in  its reserved slot the  on the Scheme
+		 ;;stack.
 		 (%move-dst<-src (mkfvar 1) t0)
-		 ;;Move the the reference  to continuation object in its
-		 ;;reserved  slog on  the Scheme  stack, as  argument to
-		 ;;THE-FUNC.
+		 ;;Move the the reference to continuation object in its reserved slog
+		 ;;on the Scheme stack, as argument to THE-FUNC.
 		 (%move-dst<-src (mkfvar 2) t1)
-		 ;;When we arrive here the situation on the Scheme stack
-		 ;;is:
+		 ;;When we arrive here the situation on the Scheme stack is:
 		 ;;
 		 ;;         high memory
 		 ;;   |                      |
@@ -1070,14 +1093,12 @@
 		 ;;
 		 ;;Load the reference to closure object FUNC in the CPR.
 		 (%move-dst<-src cpr t2)
-		 ;;Load   in  ARGC-REGISTER   the   encoded  number   of
-		 ;;arguments, counting the continuation object.
+		 ;;Load in  ARGC-REGISTER the  encoded number of  arguments, counting
+		 ;;the continuation object.
 		 (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention 1)))
-		 ;;Decrement the FPR so that  it points to the underflow
-		 ;;handler.
+		 ;;Decrement the FPR so that it points to the underflow handler.
 		 (make-asm-instr 'int- fpr (make-constant wordsize))
-		 ;;When we arrive here the situation on the Scheme stack
-		 ;;is:
+		 ;;When we arrive here the situation on the Scheme stack is:
 		 ;;
 		 ;;         high memory
 		 ;;   |                      |
@@ -1103,21 +1124,19 @@
 		 ;;   |                      |
 		 ;;          low memory
 		 ;;
-		 ;;The  following  INDIRECT-JUMP  compiles to  a  single
-		 ;;"jmp"  instruction that  jumps  to  the machine  code
-		 ;;entry  point in  the closure  referenced by  the CPR,
-		 ;;which  is FUNC.   By  doing a  "jmp",  rather than  a
-		 ;;"call",  we avoid  pushing  a return  address on  the
-		 ;;Scheme stack.
+		 ;;The following INDIRECT-JUMP compiles to a single "jmp" instruction
+		 ;;that  jumps  to  the  machine  code entry  point  in  the  closure
+		 ;;referenced by  the CPR, which is  FUNC.  By doing a  "jmp", rather
+		 ;;than a  "call", we avoid  pushing a  return address on  the Scheme
+		 ;;stack.
 		 ;;
-		 ;;Notice that the  stack frame of FUNC  starts with the
-		 ;;argument KONT.  The  IK_UNDERFLOW_HANDLER we have put
-		 ;;on the stack does *not* belong to any stack frame.
+		 ;;Notice that the stack frame of FUNC starts with the argument KONT.
+		 ;;The  IK_UNDERFLOW_HANDLER we  have  put on  the  stack does  *not*
+		 ;;belong to any stack frame.
 		 ;;
-		 ;;If  the  closure  FUNC   returns  without  calling  a
-		 ;;continuation escape  function: it will return  to the
-		 ;;underflow  handler; such  underflow handler  must pop
-		 ;;the  continuation   object  from   "pcb->next_k"  and
+		 ;;If the closure FUNC returns  without calling a continuation escape
+		 ;;function: it will return to  the underflow handler; such underflow
+		 ;;handler must  pop the  continuation object from  "pcb->next_k" and
 		 ;;process it as explained in the documentation.
 		 ;;
 		 (make-primcall 'indirect-jump
@@ -1150,9 +1169,11 @@
 	   (Tail expr))
 
 	  (else
-	   (error who "invalid tail" x))))
+	   (error __who__ "invalid tail" x))))
 
       (define (VT x)
+	;;X is a struct of type: CONSTANT, VAR, PRIMCALL, FORCALL.
+	;;
 	(S x (lambda (x)
 	       (make-seq (%move-dst<-src RETURN-VALUE-REGISTER x)
 			 (make-primcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
@@ -1193,7 +1214,7 @@
 	      (let ((t (unique-var 'tmp)))
 		(%do-bind (list t) (list x) (kont t))))
 	     (else
-	      (error who "invalid S" x))))))
+	      (error __who__ "invalid S" x))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1269,11 +1290,10 @@
 	      (make-primcall 'nop '())
 	    (make-primcall 'interrupt '()))
 	  (make-funcall
-	   ;;From the  relocation vector  of this code  object: retrieve
-	   ;;the  location   gensym  associated  to   DO-OVERFLOW,  then
-	   ;;retrieve the value of its  "proc" slot.  The "proc" slot of
-	   ;;such loc gensym contains a  reference to the closure object
-	   ;;implementing DO-OVERFLOW.
+	   ;;From the  relocation vector of  this code object: retrieve  the location
+	   ;;gensym associated to DO-OVERFLOW, then  retrieve the value of its "proc"
+	   ;;slot.  The  "proc" slot of such  loc gensym contains a  reference to the
+	   ;;closure object implementing DO-OVERFLOW.
 	   (make-primcall 'mref
 	     (list (make-constant (make-object (primitive-public-function-name->location-gensym 'do-overflow)))
 		   (make-constant off-symbol-record-proc)))
@@ -1424,7 +1444,7 @@
 		      (make-asm-instr op d ecx)))))))
 
          (else
-	  (error who "invalid value op" op rands))))
+	  (error __who__ "invalid value op" op rands))))
 
       ((funcall rator rands)
        (handle-nontail-call rator rands d #f))
@@ -1446,7 +1466,7 @@
       (else
        (if (symbol? x)
            (%move-dst<-src d x)
-	 (error who "invalid value" (unparse-recordized-code x))))))
+	 (error __who__ "invalid value" (unparse-recordized-code x))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1492,7 +1512,7 @@
          ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	  x)
          (else
-	  (error who "invalid instr" x))))
+	  (error __who__ "invalid instr" x))))
 
       ((funcall rator rands)
        (handle-nontail-call rator rands #f #f))
@@ -1507,7 +1527,7 @@
        (make-shortcut (E body) (E handler)))
 
       (else
-       (error who "invalid effect" x))))
+       (error __who__ "invalid effect" x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1542,7 +1562,7 @@
 	 (make-shortcut (P body) (P handler)))
 
 	(else
-	 (error who "invalid pred" x))))
+	 (error __who__ "invalid pred" x))))
 
     (define (Mem x kont)
       (struct-case x
@@ -1563,13 +1583,12 @@
     (define (%handle-tail-call target rator rands)
       ;;Handle FUNCALL and JMPCALL structures in tail position.
       ;;
-      ;;If  TARGET is  true:  the call  is  a JMPCALL  and  TARGET is  a
-      ;;CODE-LOC.
+      ;;If TARGET is true: the call is a JMPCALL and TARGET is a CODE-LOC.
       ;;
       ;;We build and return a struct instance to represent:
       ;;
-      ;;1.  For the operator and the operands: a sequence of assignments
-      ;;   to store the values in registers or memory locations.
+      ;;1.  For the operator and the operands: a sequence of assignments to store the
+      ;;values in registers or memory locations.
       ;;
       ;;2. Loading the number of  arguments in the appropriate register.
       ;;
