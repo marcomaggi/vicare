@@ -98,6 +98,9 @@
   ;;
   ;;   #[primcall #[primref ?name] (?arg ...)]
   ;;
+  ;;If  the FUNCALL  struct represents  a call  to a  proper primitive  function (not
+  ;;operation): it is left untouched as FUNCALL struct.
+  ;;
   ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
   ;;recordized code must be composed by struct instances of the following types:
   ;;
@@ -124,7 +127,7 @@
   (define (alt-cogen.introduce-primcalls Program)
     (struct-case Program
       ((codes code* body)
-       (make-codes ($map/stx Clambda code*)
+       (make-codes ($map/stx E-clambda code*)
 		   (E body)))
       (else
        (error __who__ "invalid program" Program))))
@@ -189,25 +192,25 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (Clambda)
+  (module (E-clambda)
     ;;The purpose  of this  module is  to apply E  to the  body of  every CASE-LAMBDA
     ;;clause.
     ;;
-    (define (Clambda x)
+    (define (E-clambda x)
       (struct-case x
 	((clambda label case* cp free* name)
-	 (make-clambda label ($map/stx ClambdaCase case*) cp free* name))
+	 (make-clambda label ($map/stx E-clambda-case case*) cp free* name))
 	(else
 	 (error __who__ "invalid clambda" x))))
 
-    (define (ClambdaCase x)
+    (define (E-clambda-case x)
       (struct-case x
 	((clambda-case info body)
 	 (make-clambda-case info (E body)))
 	(else
 	 (error __who__ "invalid clambda-case" x))))
 
-    #| end of module: Clambda |# )
+    #| end of module: E-clambda |# )
 
 ;;; --------------------------------------------------------------------
 
