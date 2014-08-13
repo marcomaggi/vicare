@@ -1167,6 +1167,9 @@
 
 ;;;; done
 
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.load before"))
+
 (current-source-library-file-locator	default-source-library-file-locator)
 (current-source-library-loader		default-source-library-loader)
 
@@ -1178,7 +1181,11 @@
 (current-include-file-locator		locate-include-file)
 (current-include-file-loader		read-include-file)
 
-)
+;; #!vicare
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "ikarus.load after"))
+;; (void)
+
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

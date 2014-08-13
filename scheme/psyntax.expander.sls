@@ -7444,8 +7444,15 @@
 
 ;;;; done
 
+;; #!vicare
+;; (import (only (vicare) foreign-call))
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander before"))
+
 ;;Register the expander with the library manager.
 (current-library-expander expand-library)
+
+;; (foreign-call "ikrt_print_emergency" #ve(ascii "psyntax.expander after"))
+;; (void)
 
 #| end of library |# )
 
