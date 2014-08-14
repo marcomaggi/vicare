@@ -158,39 +158,32 @@
 
   #| end of module |# )
 
-(module (build-assign*
-	 %mark-single-init-assign!)
+(define (build-assign* lhs* rhs* body)
+  ;;Build a sequence of assignments followed by a body.
+  ;;
+  ;;LHS* must  be a list  of struct instances  of type PRELEX  representing left-hand
+  ;;sides in LET-like bindings.
+  ;;
+  ;;RHS* must be a list of struct instances representing right-hand sides in LET-like
+  ;;bindings, as recordized code.
+  ;;
+  ;;BODY must  be a  struct instance  representing the  body of  a LET-like  body, as
+  ;;recordized code.
+  ;;
+  ;;Return a new struct instance representing the sequence:
+  ;;
+  ;;  (begin (set! ?lhs ?rhs) ... . ?body)
+  ;;
+  (fold-right (lambda (lhs rhs tail)
+		(%mark-single-init-assign! lhs)
+		(make-seq (make-assign lhs rhs)
+			  tail))
+    body lhs* rhs*))
 
-  (define (build-assign* lhs* rhs* body)
-    ;;Build a sequence of assignments followed by a body.
-    ;;
-    ;;LHS*  must  be   a  list  of  struct  instances   of  type  PRELEX
-    ;;representing left-hand sides in LET-like bindings.
-    ;;
-    ;;RHS* must  be a list  of struct instances  representing right-hand
-    ;;sides in LET-like bindings, as recordized code.
-    ;;
-    ;;BODY must be a struct instance representing the body of a LET-like
-    ;;body, as recordized code.
-    ;;
-    ;;Return a new struct instance representing the sequence:
-    ;;
-    ;;  (begin (set! ?lhs ?rhs) ... . ?body)
-    ;;
-    (for-each %mark-single-init-assign! lhs*)
-    (let recur ((lhs* lhs*)
-		(rhs* rhs*))
-      (if (null? lhs*)
-	  body
-	(make-seq (make-assign ($car lhs*) ($car rhs*))
-		  (recur ($cdr lhs*) ($cdr rhs*))))))
-
-  (define (%mark-single-init-assign! lhs)
-    ;;FIXME This is very fragile.  (Abdulaziz Ghuloum)
-    (unless ($prelex-source-assigned? lhs)
-      ($set-prelex-source-assigned?! lhs (or ($prelex-global-location lhs) #t))))
-
-  #| end of module: build-assign* |# )
+(define (%mark-single-init-assign! lhs)
+  ;;FIXME This is very fragile.  (Abdulaziz Ghuloum)
+  (unless ($prelex-source-assigned? lhs)
+    ($set-prelex-source-assigned?! lhs (or ($prelex-global-location lhs) #t))))
 
 
 (module (check-for-illegal-letrec-references)
