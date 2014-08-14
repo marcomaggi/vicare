@@ -1336,7 +1336,7 @@
       (define (gen-single-letrec scc fix* body ordered?)
 	(cond ((null? ($cdr scc))
 	       (let ((b ($car scc)))
-		 (cond ((lambda-binding? b)
+		 (cond ((fixable-binding? b)
 			(values (cons b fix*) body))
 		       ((not (memq b ($binding-free* b)))
 			(values '() (mklet (list ($binding-lhs b))
@@ -1345,22 +1345,22 @@
 		       (else
 			(values '() (mklet (list ($binding-lhs b))
 					   (%make-void-constants '(#f))
-					   (mkset!s scc (mkfix fix* body))))))))
+					   (mk-assign-seq scc (mkfix fix* body))))))))
 	      (else
-	       (receive (lambda* complex*)
-		   (partition lambda-binding? scc)
+	       (receive (fixable* complex*)
+		   (partition fixable-binding? scc)
 		 (if (null? complex*)
-		     (values (append lambda* fix*) body)
+		     (values (append fixable* fix*) body)
 		   (let ((complex* (if ordered?
-				       (sort-bindings complex*)
+				       (%sort-bindings complex*)
 				     complex*)))
 		     (values '()
 			     (mklet (map binding-lhs complex*)
 				    (%make-void-constants complex*)
-				    (mkfix (append lambda* fix*)
-					   (mkset!s complex* body))))))))))
+				    (mkfix (append fixable* fix*)
+					   (mk-assign-seq complex* body))))))))))
 
-      (define (lambda-binding? x)
+      (define (fixable-binding? x)
 	(and (not (prelex-source-assigned? ($binding-lhs x)))
 	     (clambda? ($binding-rhs x))))
 
@@ -1369,18 +1369,17 @@
 	    body
 	  (make-bind lhs* rhs* body)))
 
-      (define (mkset!s b* body)
+      (define (mk-assign-seq binding-prop* body)
 	;;Recursive function.
 	;;
-	(if (null? b*)
-	    body
-	  (let* ((b   ($car b*))
-		 (lhs ($binding-lhs b)))
-	    (%mark-single-init-assign! lhs)
-	    (make-seq (make-assign lhs ($binding-rhs b))
-		      (mkset!s ($cdr b*) body)))))
+	(fold-right (lambda (binding-prop tail)
+		      (let ((lhs ($binding-lhs binding-prop))
+			    (rhs ($binding-rhs binding-prop)))
+			(%mark-single-init-assign! lhs)
+			(make-seq (make-assign lhs rhs) tail)))
+	  body binding-prop*))
 
-      (define (sort-bindings ls)
+      (define (%sort-bindings ls)
 	(list-sort (lambda (x y)
 		     (fx<? ($binding-serial x)
 			   ($binding-serial y)))
