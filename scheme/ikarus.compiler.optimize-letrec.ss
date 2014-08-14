@@ -1063,6 +1063,14 @@
   (define-fluid-override __who__
     (identifier-syntax 'optimize-letrec/scc))
 
+  (define (optimize-letrec/scc x)
+    (receive-and-return (x)
+	(E x (%make-top-binding #t))
+      ;;(debug-print (unparse-recordized-code x))
+      (void)))
+
+;;; --------------------------------------------------------------------
+
   (define-struct binding
     ;;A structure of  this type is created  for every binding in  a recursive binding
     ;;form:
@@ -1107,11 +1115,9 @@
 		;When outside a recursive binding RHS: set to null.  Otherwise:
      ))
 
-  (define (optimize-letrec/scc x)
-    (receive-and-return (x)
-	(E x (make-binding #f #f #f #t #t '()))
-      ;;(debug-print (unparse-recordized-code x))
-      (void)))
+  (define (%make-top-binding enclosing-binding)
+    (let ((complex #t))
+      (make-binding #f #f #f complex enclosing-binding '())))
 
 ;;; --------------------------------------------------------------------
 
@@ -1186,12 +1192,12 @@
 	     (E x bc))
 	x*))
 
-    (define (E-clambda x enclosing-bc)
+    (define (E-clambda x enclosing-binding)
       ;;Apply E to each clause's body.
       ;;
       (struct-case x
 	((clambda label cls* cp free name)
-	 (let ((bc (make-binding #f #f #f #t enclosing-bc '())))
+	 (let ((bc (%make-top-binding enclosing-binding)))
 	   (make-clambda label (map (lambda (x)
 				      (struct-case x
 					((clambda-case info body)
