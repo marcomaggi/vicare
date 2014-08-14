@@ -110,6 +110,18 @@
 
 ;;;; helpers
 
+(case-define %map-in-order-with-index
+  ((func serial-idx ell1)
+   (if (null? ell1)
+       '()
+     (cons (func                          serial-idx          ($car ell1))
+	   (%map-in-order-with-index func (fxadd1 serial-idx) ($cdr ell1)))))
+  ((func serial-idx ell1 ell2)
+   (if (null? ell1)
+       '()
+     (cons (func                          serial-idx          ($car ell1) ($car ell2))
+	   (%map-in-order-with-index func (fxadd1 serial-idx) ($cdr ell1) ($cdr ell2))))))
+
 (define* (make-prelex-for-tmp-binding {prel prelex?})
   ;;Build and return a unique PRELEX struct meant to be used for a compiler-generated
   ;;binding, which will be referenced but not assigned.
@@ -946,38 +958,18 @@
 			   ;;evaluating COMPLEX.RHS*.
 			   (build-assign* complex.lhs* complex.rhs* body^))))))))
 
-    (case-define E-rhs*
-      ((rhs* cplx-rhs-flags)
-       (E-rhs* rhs* cplx-rhs-flags 0))
-      ((rhs* cplx-rhs-flags binding-index)
-       ;;Recursively process  RHS* and  return a  list of  struct instances  which is
-       ;;meant  to replace  the  original RHS*.   This function  has  the purpose  of
-       ;;applying E to  each struct in RHS*;  in so doing it  will fill appropriately
-       ;;the containers USED-LHS-FLAGS and CPLX-RHS-FLAGS.
-       ;;
-       ;;Given recordized code representing:
-       ;;
-       ;;   (letrec ((?lhs-0 ?rhs-0)
-       ;;            (?lhs-1 ?rhs-1)
-       ;;            (?lhs-2 ?rhs-2))
-       ;;     . ?body)
-       ;;
-       ;;this function is recursively called with:
-       ;;
-       ;;   (E-rhs* '(?rhs-0 ?rhs-1 ?rhs-2) --- 0)
-       ;;   (E-rhs* '(?rhs-1 ?rhs-2)        --- 1)
-       ;;   (E-rhs* '(?rhs-2)               --- 2)
-       ;;   (E-rhs* '()                     --- 3)
-       ;;
-       ;;NOTE The  reason we do not  simply map the function  E over RHS* is  that we
-       ;;need to count the bindings and increment the index BINDING-INDEX.
-       ;;
-       (if (null? rhs*)
-	   '()
-	 (cons (parametrise
-		   ((rhs-cplx-func (%make-recbind-rhs-cplx-registrar-func (rhs-cplx-func) cplx-rhs-flags binding-index)))
-		 (E ($car rhs*)))
-	       (E-rhs* ($cdr rhs*) cplx-rhs-flags ($fxadd1 binding-index))))))
+    (define (E-rhs* rhs* cplx-rhs-flags)
+      ;;Process RHS* and return a list of  struct instances which is meant to replace
+      ;;the  original RHS*.   This function  has the  purpose of  applying E  to each
+      ;;struct  in RHS*;  in  so  doing it  will  fill  appropriately the  containers
+      ;;USED-LHS-FLAGS and CPLX-RHS-FLAGS.
+      ;;
+      (%map-in-order-with-index
+	  (lambda (binding-index rhs)
+	    (parametrise
+		((rhs-cplx-func (%make-recbind-rhs-cplx-registrar-func (rhs-cplx-func) cplx-rhs-flags binding-index)))
+	      (E rhs)))
+	0 rhs*))
 
     (case-define %partition-rhs*
       ((lhs* rhs* used-lhs-flags cplx-rhs-flags)
@@ -1276,38 +1268,28 @@
 	  (let ((scc* (get-sccs-in-order binding-prop* (map binding-free* binding-prop*) binding-prop*)))
 	    (gen-letrecs scc* ordered? body^)))))
 
-    (module (%make-bindings)
-
-      (define (%make-bindings lhs* rhs* enclosing-binding)
-	;;Return a  list of BINDING  struct instances representing the  properties of
-	;;the bindings in the lists LHS* and RHS*.
-	;;
-	;;LHS* is  a list  of PRELEX  structures representing  the left-hand  side of
-	;;recursive binding  forms.  RHS*  is a list  of structures  representing the
-	;;right-hand side expressions of recursive binding forms.
-	;;
-	;;ENCLOSING-BINDING  is an  instance  of BINDING  structure representing  the
-	;;properties of the enclosing expression.
-	;;
-	;;For every  PRELEX struct in  LHS*: store in  its OPERAND field  the BINDING
-	;;struct representing its properties.
-	;;
-	(%map-in-order-with-index
-	    (lambda (serial-idx lhs rhs)
-	      (receive-and-return (binding-prop)
-		  (let ((complex #f)
-			(free*   '()))
-		    (make-binding serial-idx lhs rhs complex enclosing-binding free*))
-		(set-prelex-operand! lhs binding-prop)))
-	  0 lhs* rhs*))
-
-      (define (%map-in-order-with-index func serial-idx ell1 ell2)
-	(if (null? ell1)
-	    '()
-	  (cons (func                          serial-idx          ($car ell1) ($car ell2))
-		(%map-in-order-with-index func (fxadd1 serial-idx) ($cdr ell1) ($cdr ell2)))))
-
-      #| end of module: %MAKE-BINDINGS |# )
+    (define (%make-bindings lhs* rhs* enclosing-binding)
+      ;;Return a list of BINDING struct  instances representing the properties of the
+      ;;bindings in the lists LHS* and RHS*.
+      ;;
+      ;;LHS*  is a  list  of PRELEX  structures representing  the  left-hand side  of
+      ;;recursive  binding forms.   RHS* is  a  list of  structures representing  the
+      ;;right-hand side expressions of recursive binding forms.
+      ;;
+      ;;ENCLOSING-BINDING  is  an  instance  of BINDING  structure  representing  the
+      ;;properties of the enclosing expression.
+      ;;
+      ;;For  every PRELEX  struct in  LHS*: store  in its  OPERAND field  the BINDING
+      ;;struct representing its properties.
+      ;;
+      (%map-in-order-with-index
+	  (lambda (serial-idx lhs rhs)
+	    (receive-and-return (binding-prop)
+		(let ((complex #f)
+		      (free*   '()))
+		  (make-binding serial-idx lhs rhs complex enclosing-binding free*))
+	      (set-prelex-operand! lhs binding-prop)))
+	0 lhs* rhs*))
 
     (module (insert-order-edges)
 
