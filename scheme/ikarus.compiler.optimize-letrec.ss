@@ -175,15 +175,25 @@
   ;;  (begin (set! ?lhs ?rhs) ... . ?body)
   ;;
   (fold-right (lambda (lhs rhs tail)
-		(%mark-single-init-assign! lhs)
-		(make-seq (make-assign lhs rhs)
-			  tail))
+		(make-seq (%make-single-init-assign lhs rhs) tail))
     body lhs* rhs*))
 
-(define (%mark-single-init-assign! lhs)
-  ;;FIXME This is very fragile.  (Abdulaziz Ghuloum)
+(define (%make-single-init-assign lhs rhs)
+  ;;Build and return an ASSIGN struct for the given LHS and RHS.
+  ;;
+  ;;LHS must be a PRELEX structure representing the left-hand side of the assignment.
+  ;;RHS  must  be  a  struct  representing the  right-hand  side  expression  of  the
+  ;;assignment.
+  ;;
+  ;;The LHS  is marked  as having  a single  initialisation assignment:  the returned
+  ;;assignment is the only one of  an otherwise unassigned binding.  This function is
+  ;;to be  used when the LHS  is never referenced before  the RHS is assigned  to the
+  ;;storage location.
+  ;;
   (unless ($prelex-source-assigned? lhs)
-    ($set-prelex-source-assigned?! lhs (or ($prelex-global-location lhs) #t))))
+    ;;FIXME This is very fragile.  (Abdulaziz Ghuloum)
+    ($set-prelex-source-assigned?! lhs (or ($prelex-global-location lhs) #t)))
+  (make-assign lhs rhs))
 
 
 (module (check-for-illegal-letrec-references)
@@ -1370,13 +1380,25 @@
 	  (make-bind lhs* rhs* body)))
 
       (define (mk-assign-seq binding-prop* body)
-	;;Recursive function.
+	;;Build and return a struct representing recordised code equivalent to:
+	;;
+	;;   (begin
+	;;     (set! ?lhs ?rhs)
+	;;     ...
+	;;     ?body)
+	;;
+	;;where the LHS and RHS are extracted from BINDING-PROP*.
+	;;
+	;;BINDING-PROP*  must be  a  list  of BINDING  structures.   BODY  must be  a
+	;;structure representing recordised code.
+	;;
+	;;NOTE Each PRELEX  structure representing an LHS is marked  as having single
+	;;initialisation assignment.
 	;;
 	(fold-right (lambda (binding-prop tail)
-		      (let ((lhs ($binding-lhs binding-prop))
-			    (rhs ($binding-rhs binding-prop)))
-			(%mark-single-init-assign! lhs)
-			(make-seq (make-assign lhs rhs) tail)))
+		      (make-seq (%make-single-init-assign ($binding-lhs binding-prop)
+							  ($binding-rhs binding-prop))
+				tail))
 	  body binding-prop*))
 
       (define (%sort-bindings ls)
