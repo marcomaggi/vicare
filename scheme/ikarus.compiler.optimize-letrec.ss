@@ -1276,53 +1276,61 @@
 	  (let ((scc* (get-sccs-in-order binding-prop* (map binding-free* binding-prop*) binding-prop*)))
 	    (gen-letrecs scc* ordered? body^)))))
 
-    (define (%make-bindings lhs* rhs* enclosing-binding)
-      ;;Return a list of BINDING struct  instances representing the properties of the
-      ;;bindings in the lists LHS* and RHS*.
-      ;;
-      ;;LHS*  is a  list  of PRELEX  structures representing  the  left-hand side  of
-      ;;recursive  binding forms.   RHS* is  a  list of  structures representing  the
-      ;;right-hand side expressions of recursive binding forms.
-      ;;
-      ;;ENCLOSING-BINDING  is  an  instance  of BINDING  structure  representing  the
-      ;;properties of the enclosing expression.
-      ;;
-      ;;For  every PRELEX  struct in  LHS*: store  in its  OPERAND field  the BINDING
-      ;;struct representing its properties.
-      ;;
-      (let recur ((rest-lhs*	lhs*)
-		  (rest-rhs*	rhs*)
-		  (serial-idx	0))
-	(if (null? rest-lhs*)
-	    '()
-	  (let ((b (let ((complex #f)
-			 (free*   '()))
-		     (make-binding serial-idx ($car rest-lhs*) ($car rest-rhs*) complex enclosing-binding free*))))
-	    (set-prelex-operand! ($car rest-lhs*) b)
-	    (cons b (recur ($cdr rest-lhs*) ($cdr rest-rhs*) (fxadd1 serial-idx)))))))
+    (module (%make-bindings)
 
-    (define (complex? x)
-      (or ($binding-complex x)
-	  (prelex-source-assigned? ($binding-lhs x))))
+      (define (%make-bindings lhs* rhs* enclosing-binding)
+	;;Return a  list of BINDING  struct instances representing the  properties of
+	;;the bindings in the lists LHS* and RHS*.
+	;;
+	;;LHS* is  a list  of PRELEX  structures representing  the left-hand  side of
+	;;recursive binding  forms.  RHS*  is a list  of structures  representing the
+	;;right-hand side expressions of recursive binding forms.
+	;;
+	;;ENCLOSING-BINDING  is an  instance  of BINDING  structure representing  the
+	;;properties of the enclosing expression.
+	;;
+	;;For every  PRELEX struct in  LHS*: store in  its OPERAND field  the BINDING
+	;;struct representing its properties.
+	;;
+	(%map-in-order-with-index
+	    (lambda (serial-idx lhs rhs)
+	      (receive-and-return (binding-prop)
+		  (let ((complex #f)
+			(free*   '()))
+		    (make-binding serial-idx lhs rhs complex enclosing-binding free*))
+		(set-prelex-operand! lhs binding-prop)))
+	  0 lhs* rhs*))
+
+      (define (%map-in-order-with-index func serial-idx ell1 ell2)
+	(if (null? ell1)
+	    '()
+	  (cons (func                          serial-idx          ($car ell1) ($car ell2))
+		(%map-in-order-with-index func (fxadd1 serial-idx) ($cdr ell1) ($cdr ell2)))))
+
+      #| end of module: %MAKE-BINDINGS |# )
 
     (module (insert-order-edges)
 
       (define (insert-order-edges b*)
 	(unless (null? b*)
 	  (let ((b ($car b*)))
-	    (if (complex? b)
+	    (if (complex-binding? b)
 		(mark b ($cdr b*))
 	      (insert-order-edges ($cdr b*))))))
 
       (define (mark pb b*)
 	(unless (null? b*)
 	  (let ((b ($car b*)))
-	    (if (complex? b)
+	    (if (complex-binding? b)
 		(let ((free* ($binding-free* b)))
 		  (unless (memq pb free*)
 		    ($set-binding-free*! b (cons pb free*)))
 		  (mark b ($cdr b*)))
 	      (mark pb ($cdr b*))))))
+
+      (define (complex-binding? x)
+	(or ($binding-complex x)
+	    (prelex-source-assigned? ($binding-lhs x))))
 
       #| end of module: insert-order-edges |# )
 
@@ -1488,4 +1496,5 @@
 ;; eval: (put '%make-bind	'scheme-indent-function 2)
 ;; eval: (put '$make-fix	'scheme-indent-function 2)
 ;; eval: (put 'with-unseen-prel	'scheme-indent-function 1)
+;; eval: (put '%map-in-order-with-index	'scheme-indent-function 1)
 ;; End:
