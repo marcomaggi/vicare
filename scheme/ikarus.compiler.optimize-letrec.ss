@@ -1056,17 +1056,56 @@
   ;;LETREC*  forms into  LET-like forms  and assignments.   This function  performs a
   ;;transformation similar (but not equal to) the one described in the [GD] paper.
   ;;
+  ;;NOTE  Internally this  compiler pass  makes use  of the  field OPERAND  of PRELEX
+  ;;structures representing recursive bindings; however,  such fields are reset to #f
+  ;;before this compiler pass returns to the caller.
+  ;;
   (define-fluid-override __who__
     (identifier-syntax 'optimize-letrec/scc))
 
   (define-struct binding
+    ;;A structure of  this type is created  for every binding in  a recursive binding
+    ;;form:
+    ;;
+    ;;   (letrec ((?lhs0 ?rhs0)    ; -> binding, serial index 0
+    ;;            (?lhs1 ?rhs1)    ; -> binding, serial index 1
+    ;;            (?lhs2 ?rhs2))   ; -> binding, serial index 2
+    ;;     ?body)
+    ;;
+    ;;and considered  the "current  BINDING" while we  process the  corresponding RHS
+    ;;expression.   In  general,  we  consider every  expression  processed  by  this
+    ;;compiler pass as having a BINDING structure representing its properties.
+    ;;
     (serial
+		;When outside  a recursive binding  RHS: set to false.   Otherwise: a
+		;zero-based fixnum representing  the serial index of  the current RHS
+		;expression in the list of bindings.
      lhs
+		;When outside  a recursive binding  RHS: set to false.   Otherwise: a
+		;PRELEX structure representing the LHS of the binding.
      rhs
+		;When outside  a recursive binding  RHS: set to false.   Otherwise: a
+		;structure representing the RHS expression of the binding.
      complex
+		;Boolean.   When  outside  a  recursive binding  RHS:  set  to  true.
+		;Otherwise:  true  if  this   binding  is  classified  as  "complex",
+		;otherwise false.  A binding is "complex" if:
+		;
+		;* Its RHS expression references a binding that is assigned somewhere
+		;(no matter if the assignment happens  in the RHS itself or somewhere
+		;else).
+		;
+		;* Its RHS expression assigns a binding.
+		;
+		;* Its RHS expression contains a function call and/or a foreign call.
+		;
      prev
-		;False or a struct instance of type BINDING being the previous value.
-     free*))
+		;When outside  a recursive  binding RHS: set  to true.   Otherwise: a
+		;struct instance  of type BINDING representing  the enclosing binding
+		;properties.
+     free*
+		;When outside a recursive binding RHS: set to null.  Otherwise:
+     ))
 
   (define (optimize-letrec/scc x)
     (receive-and-return (x)
@@ -1096,7 +1135,6 @@
 
 	((assign lhs rhs)
 	 (assert (prelex-source-assigned? lhs))
-	 ;;(set-prelex-source-assigned?! lhs #t)
 	 (%mark-free lhs bc)
 	 (%mark-complex! bc)
 	 (make-assign lhs (E rhs bc)))
@@ -1112,12 +1150,12 @@
 	((recbind lhs* rhs* body)
 	 (if (null? lhs*)
 	     (E body bc)
-	   (%do-recbind lhs* rhs* body bc #f)))
+	   (E-recbind lhs* rhs* body bc)))
 
 	((rec*bind lhs* rhs* body)
 	 (if (null? lhs*)
 	     (E body bc)
-	   (%do-recbind lhs* rhs* body bc #t)))
+	   (E-rec*bind lhs* rhs* body bc)))
 
 	((conditional test conseq altern)
 	 (make-conditional (E test bc) (E conseq bc) (E altern bc)))
@@ -1148,12 +1186,12 @@
 	     (E x bc))
 	x*))
 
-    (define (E-clambda x bc)
+    (define (E-clambda x enclosing-bc)
       ;;Apply E to each clause's body.
       ;;
       (struct-case x
 	((clambda label cls* cp free name)
-	 (let ((bc (make-binding #f #f #f #t bc '())))
+	 (let ((bc (make-binding #f #f #f #t enclosing-bc '())))
 	   (make-clambda label (map (lambda (x)
 				      (struct-case x
 					((clambda-case info body)
@@ -1162,55 +1200,100 @@
 			 cp free name)))))
 
     (define (%mark-complex! bc)
-      ;;BC  must be  a struct  instance of  type BINDING.   Mark as  complex BC  and,
-      ;;recursively, its previous value in the field PREV.
+      ;;BC must be a struct instance of type BINDING.  Mark as complex BC itself and,
+      ;;recursively, its enclosing binding in the field PREV.
       ;;
       (unless ($binding-complex bc)
 	($set-binding-complex! bc #t)
 	(%mark-complex! ($binding-prev bc))))
 
-    (define (%mark-free var bc)
-      ;;VAR must be a  struct instance of type PRELEX.  BC must  be a struct instance
-      ;;of type BINDING.
+    (define (%mark-free prel enclosing-bprop)
+      ;;PREL is a  struct instance of type PRELEX appearing  in reference position or
+      ;;assignment position.
       ;;
-      (let ((rb (prelex-operand var)))
-	(when rb
-	  (let* ((lb    (let ((pr ($binding-prev rb)))
-			  (let loop ((bc bc))
+      ;;ENCLOSING-BPROP must  be a struct  instance of type BINDING  representing the
+      ;;properties of the enclosing recursive binding.
+      ;;
+      ;;If PREL is a PRELEX structure representing a recursive binding: PREL.BPROP is
+      ;;the BINDING struct representing the properties of the binding.
+      (let ((prel.bprop (prelex-operand prel)))
+	(when prel.bprop
+	  (let* ((lb    (let-constants ((pr ($binding-prev prel.bprop)))
+			  (let loop ((bc enclosing-bprop))
 			    (let ((bcp ($binding-prev bc)))
 			      (if (eq? bcp pr)
 				  bc
 				(loop bcp))))))
 		 (free* ($binding-free* lb)))
-	    (unless (memq rb free*)
-	      ($set-binding-free*! lb (cons rb free*)))))))
+	    ;;Make sure that PREL.BPROP is added to the FREE* list only once.
+	    (unless (memq prel.bprop free*)
+	      ($set-binding-free*! lb (cons prel.bprop free*)))))))
 
     #| end of module: E |# )
 
 ;;; --------------------------------------------------------------------
 
-  (module (%do-recbind)
+  (module (E-recbind E-rec*bind)
 
-    (define (%do-recbind lhs* rhs* body bc ordered?)
-      (let ((b* (%make-bindings lhs* rhs* bc 0)))
+    (define (E-recbind lhs* rhs* body bc)
+      (%do-recbind lhs* rhs* body bc #f))
+
+    (define (E-rec*bind lhs* rhs* body bc)
+      (%do-recbind lhs* rhs* body bc #t))
+
+    (define (%do-recbind lhs* rhs* body enclosing-binding ordered?)
+      ;;LHS*  is a  list  of PRELEX  structures representing  the  left-hand side  of
+      ;;recursive  binding forms.   RHS* is  a  list of  structures representing  the
+      ;;right-hand side expressions of recursive  binding forms.  BODY is a structure
+      ;;representing the body of the recursive binding form.
+      ;;
+      ;;ENCLOSING-BINDING  is   an  instance  of  struct   BINDING  representing  the
+      ;;properties of the enclosing expression.
+      ;;
+      ;;ORDERED?  is true if this binding form is a LETREC* or LIBRARY-LETREC*, it is
+      ;;false if the binding form is a LETREC.
+      ;;
+      (let ((binding-prop* (%make-bindings lhs* rhs* enclosing-binding)))
+	;;Process each right-hand side expression using the associated BINDING struct
+	;;as "enclosing binding properties descriptor".
 	(for-each (lambda (b)
 		    ($set-binding-rhs! b (E ($binding-rhs b) b)))
-	  b*)
+	  binding-prop*)
+	;;Reset to false  the field OPERAND in the LHS*  PRELEX structures that where
+	;;used by %MAKE-BINDINGS and %MARK-FREE.
 	(for-each (lambda (x)
 		    (set-prelex-operand! x #f))
 	  lhs*)
-	(let ((body (E body bc)))
+	(let ((body^ (E body enclosing-binding)))
 	  (when ordered?
-	    (insert-order-edges b*))
-	  (let ((scc* (get-sccs-in-order b* (map binding-free* b*) b*)))
-	    (gen-letrecs scc* ordered? body)))))
+	    (insert-order-edges binding-prop*))
+	  (let ((scc* (get-sccs-in-order binding-prop* (map binding-free* binding-prop*) binding-prop*)))
+	    (gen-letrecs scc* ordered? body^)))))
 
-    (define (%make-bindings lhs* rhs* bc i)
-      (if (null? lhs*)
-	  '()
-	(let ((b (make-binding i ($car lhs*) ($car rhs*) #f bc '())))
-	  (set-prelex-operand! ($car lhs*) b)
-	  (cons b (%make-bindings ($cdr lhs*) ($cdr rhs*) bc (+ i 1))))))
+    (define (%make-bindings lhs* rhs* enclosing-binding)
+      ;;Return a list of BINDING struct  instances representing the properties of the
+      ;;bindings in the lists LHS* and RHS*.
+      ;;
+      ;;LHS*  is a  list  of PRELEX  structures representing  the  left-hand side  of
+      ;;recursive  binding forms.   RHS* is  a  list of  structures representing  the
+      ;;right-hand side expressions of recursive binding forms.
+      ;;
+      ;;ENCLOSING-BINDING  is  an  instance  of BINDING  structure  representing  the
+      ;;properties of the enclosing expression.
+      ;;
+      ;;For  every PRELEX  struct in  LHS*: store  in its  OPERAND field  the BINDING
+      ;;struct representing its properties.
+      ;;
+      (let recur ((rest-lhs*	lhs*)
+		  (rest-rhs*	rhs*)
+		  (serial-idx	0))
+	(if (null? rest-lhs*)
+	    '()
+	  (let ((b (let ((complex #f)
+			 (free*   '()))
+		     (make-binding serial-idx ($car rest-lhs*) ($car rest-rhs*) complex enclosing-binding free*))))
+	    (set-prelex-operand! ($car rest-lhs*) b)
+	    (cons b (recur ($cdr rest-lhs*) ($cdr rest-rhs*) (fxadd1 serial-idx)))))))
 
     (define (complex? x)
       (or ($binding-complex x)
