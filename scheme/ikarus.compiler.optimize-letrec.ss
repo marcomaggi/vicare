@@ -158,7 +158,8 @@
 
   #| end of module |# )
 
-(module (build-assign*)
+(module (build-assign*
+	 %mark-single-init-assign!)
 
   (define (build-assign* lhs* rhs* body)
     ;;Build a sequence of assignments followed by a body.
@@ -176,7 +177,7 @@
     ;;
     ;;  (begin (set! ?lhs ?rhs) ... . ?body)
     ;;
-    (for-each mark-assigned! lhs*)
+    (for-each %mark-single-init-assign! lhs*)
     (let recur ((lhs* lhs*)
 		(rhs* rhs*))
       (if (null? lhs*)
@@ -184,7 +185,7 @@
 	(make-seq (make-assign ($car lhs*) ($car rhs*))
 		  (recur ($cdr lhs*) ($cdr rhs*))))))
 
-  (define (mark-assigned! lhs)
+  (define (%mark-single-init-assign! lhs)
     ;;FIXME This is very fragile.  (Abdulaziz Ghuloum)
     (unless ($prelex-source-assigned? lhs)
       ($set-prelex-source-assigned?! lhs (or ($prelex-global-location lhs) #t))))
@@ -1382,15 +1383,14 @@
 	    body
 	  (let* ((b   ($car b*))
 		 (lhs ($binding-lhs b)))
-	    (unless (prelex-source-assigned? lhs)
-	      (set-prelex-source-assigned?! lhs (or (prelex-global-location lhs) #t)))
+	    (%mark-single-init-assign! lhs)
 	    (make-seq (make-assign lhs ($binding-rhs b))
 		      (mkset!s ($cdr b*) body)))))
 
       (define (sort-bindings ls)
 	(list-sort (lambda (x y)
-		     (< ($binding-serial x)
-			($binding-serial y)))
+		     (fx<? ($binding-serial x)
+			   ($binding-serial y)))
 		   ls))
 
       #| end of module: gen-single-letrec |# )
