@@ -706,9 +706,9 @@
 		;in practice useful only for humans when debugging.
      )
   ((operand		#f)
-		;Multipurpose field.  When unused it is  set to false.
-		;
-		;One use: a struct of type VAR associated to this instance.
+		;Multipurpose  field.   When   unused  it  is  set   to  false.   The
+		;documentation of  uses is long:  see the individual  compiler passes
+		;for details.
    (source-reference-count 0)
 		;Fixnum,  represents  the  number  of times  a  lexical  variable  is
 		;referenced in the source code.
@@ -2721,12 +2721,14 @@
 	      => (lambda (where)
 		   (cond ((symbol? where)
 			  ;;FIXME What is this case?  (Marco Maggi; Oct 12, 2012)
+			  ;;(fprintf (current-error-port) "assign init ~s\n" (prelex-name lhs))
 			  (make-funcall (make-primref '$init-symbol-value!)
 					(list (make-constant where) (E rhs))))
 			 ((prelex-global-location lhs)
 			  ;;Mutation of  top level  binding.  LOC  is the  loc gensym
 			  ;;used to hold the value.
 			  => (lambda (loc)
+			       ;;(fprintf (current-error-port) "assign set ~s\n" (prelex-name lhs))
 			       (make-funcall (make-primref '$set-symbol-value!)
 					     (list (make-constant loc) (E rhs)))))
 			 (else
