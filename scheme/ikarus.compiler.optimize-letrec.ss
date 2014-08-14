@@ -175,10 +175,10 @@
   ;;  (begin (set! ?lhs ?rhs) ... . ?body)
   ;;
   (fold-right (lambda (lhs rhs tail)
-		(make-seq (%make-single-init-assign lhs rhs) tail))
+		(make-seq (%make-init-single-assign lhs rhs) tail))
     body lhs* rhs*))
 
-(define (%make-single-init-assign lhs rhs)
+(define (%make-init-single-assign lhs rhs)
   ;;Build and return an ASSIGN struct for the given LHS and RHS.
   ;;
   ;;LHS must be a PRELEX structure representing the left-hand side of the assignment.
@@ -1335,42 +1335,69 @@
 			  (gen-single-letrec ($car scc*) fix* body ordered?))))))
 	(mkfix fix* body)))
 
-    (define (mkfix b* body)
-      (if (null? b*)
+    (define (mkfix binding-prop* body)
+      (if (null? binding-prop*)
 	  body
-	(make-fix (map binding-lhs b*) (map binding-rhs b*)
+	(make-fix (map binding-lhs binding-prop*)
+	    (map binding-rhs binding-prop*)
 	  body)))
 
     (module (gen-single-letrec)
 
       (define (gen-single-letrec scc fix* body ordered?)
+	;;SCC is a list of BINDING structures.   FIX* is a list of BINDING structures
+	;;representing fixable bindings.   BODY is a structure  representing the body
+	;;of a recursive binding form.
+	;;
+	;;ORDERED?  is true if the RHS  expressions of the binding form classified as
+	;;"complex" must be evaluated in the given order.
+	;;
 	(cond ((null? ($cdr scc))
 	       (let ((b ($car scc)))
-		 (cond ((fixable-binding? b)
+		 (cond ((%fixable-binding? b)
 			(values (cons b fix*) body))
 		       ((not (memq b ($binding-free* b)))
-			(values '() (mklet (list ($binding-lhs b))
-					   (list ($binding-rhs b))
-					   (mkfix fix* body))))
+			;;Return as second value:
+			;;
+			;;   (bind ((?simple.lhs ?simple.rhs))
+			;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
+			;;       ?body))
+			;;
+			(values '() (make-bind (list ($binding-lhs b))
+					(list ($binding-rhs b))
+				      (mkfix fix* body))))
 		       (else
-			(values '() (mklet (list ($binding-lhs b))
-					   (%make-void-constants '(#f))
-					   (mk-assign-seq scc (mkfix fix* body))))))))
+			;;Return as second value:
+			;;
+			;;   (bind ((?complex.lhs '#!void))
+			;;     (assign ?complex.lhs ?complex.rhs)
+			;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
+			;;       ?body))
+			;;
+			(values '() (make-bind (list ($binding-lhs b))
+					(%make-void-constants '(#f))
+				      (mk-assign-seq scc (mkfix fix* body))))))))
 	      (else
 	       (receive (fixable* complex*)
-		   (partition fixable-binding? scc)
+		   (partition %fixable-binding? scc)
 		 (if (null? complex*)
 		     (values (append fixable* fix*) body)
 		   (let ((complex* (if ordered?
 				       (%sort-bindings complex*)
 				     complex*)))
-		     (values '()
-			     (mklet (map binding-lhs complex*)
-				    (%make-void-constants complex*)
-				    (mkfix (append fixable* fix*)
-					   (mk-assign-seq complex* body))))))))))
+		     ;;Return as second value:
+		     ;;
+		     ;;   (bind ((?complex.lhs '#!void) ...)
+		     ;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
+		     ;;       (assign ?complex.lhs ?complex.rhs) ...
+		     ;;       ?body))
+		     ;;
+		     (values '() (mklet (map binding-lhs complex*)
+					(%make-void-constants complex*)
+					(mkfix (append fixable* fix*)
+					       (mk-assign-seq complex* body))))))))))
 
-      (define (fixable-binding? x)
+      (define (%fixable-binding? x)
 	(and (not (prelex-source-assigned? ($binding-lhs x)))
 	     (clambda? ($binding-rhs x))))
 
@@ -1396,7 +1423,7 @@
 	;;initialisation assignment.
 	;;
 	(fold-right (lambda (binding-prop tail)
-		      (make-seq (%make-single-init-assign ($binding-lhs binding-prop)
+		      (make-seq (%make-init-single-assign ($binding-lhs binding-prop)
 							  ($binding-rhs binding-prop))
 				tail))
 	  body binding-prop*))
