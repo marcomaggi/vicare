@@ -1218,18 +1218,18 @@
       ;;
       ;;If PREL is a PRELEX structure representing a recursive binding: PREL.BPROP is
       ;;the BINDING struct representing the properties of the binding.
-      (let ((prel.bprop (prelex-operand prel)))
-	(when prel.bprop
-	  (let* ((lb    (let-constants ((pr ($binding-prev prel.bprop)))
-			  (let loop ((bc enclosing-bprop))
-			    (let ((bcp ($binding-prev bc)))
-			      (if (eq? bcp pr)
-				  bc
-				(loop bcp))))))
-		 (free* ($binding-free* lb)))
-	    ;;Make sure that PREL.BPROP is added to the FREE* list only once.
-	    (unless (memq prel.bprop free*)
-	      ($set-binding-free*! lb (cons prel.bprop free*)))))))
+      (cond ((prelex-operand prel)
+	     => (lambda (prel.bprop)
+		  (let* ((lb    (let-constants ((pr ($binding-prev prel.bprop)))
+				  (let loop ((bc enclosing-bprop))
+				    (let ((bcp ($binding-prev bc)))
+				      (if (eq? bcp pr)
+					  bc
+					(loop bcp))))))
+			 (free* ($binding-free* lb)))
+		    ;;Make sure that PREL.BPROP is added to the FREE* list only once.
+		    (unless (memq prel.bprop free*)
+		      ($set-binding-free*! lb (cons prel.bprop free*))))))))
 
     #| end of module: E |# )
 
