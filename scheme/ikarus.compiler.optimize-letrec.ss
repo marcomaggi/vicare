@@ -1108,12 +1108,15 @@
 		;struct instance  of type BINDING representing  the enclosing binding
 		;properties.
      free*
-		;When outside a recursive binding RHS: set to null.  Otherwise:
+		;When outside  a recursive  binding RHS: set  to null.   Otherwise: a
+		;list of BINDING structs that,  subordinate of this one, representing
+		;bindings that are assigned or referenced in this RHS.
      ))
 
   (define (%make-top-binding enclosing-binding)
-    (let ((complex #t))
-      (make-binding #f #f #f complex enclosing-binding '())))
+    (let ((complex #t)
+	  (free*   '()))
+      (make-binding #f #f #f complex enclosing-binding free*)))
 
 ;;; --------------------------------------------------------------------
 
