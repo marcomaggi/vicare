@@ -6151,29 +6151,9 @@ When set to true: an attempt is made to expand inline calls to
 @subsection Optimisation of @func{letrec} and @func{letrec*} forms
 
 
-For an introduction to processing @func{letrec} and @func{letrec*}
-syntaxes, and specifically to understand the code, we @strong{must} read
-the following paper:
-
-@quotation
-[@acronym{WSD}] Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.
-``Fixing Letrec: A Faithful Yet Efficient Implementation of Scheme's
-Recursive Binding Construct''.
-@end quotation
-
-@noindent
-then we can move to the following paper, which describes the SCC
-transformation used by default:
-
-@quotation
-[@acronym{SCC}] Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec
-(reloaded)''.  Workshop on Scheme and Functional Programming '09.
-@end quotation
-
-@value{PRJNAME}'s compiler makes use of such algorithms in the library
-@library{vicare system $compiler} to optimise the core language forms
-@func{letrec}, @func{letrec*} and @func{library-letrec*}, whose syntax
-is:
+@value{PRJNAME}'s compiler offers multiple algorithms to implement and
+optimise the core language forms @func{letrec}, @func{letrec*} and
+@func{library-letrec*}, whose syntax is:
 
 @example
 (letrec ((@meta{lhs} @meta{rhs}) ...) @meta{body})
@@ -6193,24 +6173,58 @@ When this compiler pass is applied to the recordised code, the forms
 have already been transformed into:
 
 @example
-(recbind ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(recbind  ((@meta{lhs} @meta{rhs}) ...) @meta{body})
 
-(rec*bind* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(rec*bind ((@meta{lhs} @meta{rhs}) ...) @meta{body})
 @end example
 
 @noindent
 where instances of the structure @objtype{recbind} represent
 @func{letrec} forms and instances of the structure @objtype{rec*bind}
-represent @func{letrec} and @func{library-letrec*} forms.
+represent @func{letrec*} and @func{library-letrec*} forms.
 
 @menu
+* syslib compiler letrec algo::   Introduction to the algorithms.
 * syslib compiler letrec api::    Transformations programming interface.
-* syslib compiler letrec intro::  General notes on the context of
+* syslib compiler letrec notes::  General notes on the context of
                                   @func{letrec} optimisations.
 * syslib compiler letrec basic::  The basic transformation algorithm.
 * syslib compiler letrec wsd::    The @acronym{WSD} transformation algorithm.
 * syslib compiler letrec scc::    The @acronym{SCC} transformation algorithm.
 @end menu
+
+@c page
+@node syslib compiler letrec algo
+@subsubsection Introduction to the algorithms
+
+
+The compiler implements three algorithms: @code{basic}, @code{waddell},
+@code{scc}.  The default and more advanced is @code{scc}; there is
+little reason to use the other algorithms when processing real code.
+
+The @code{basic} transformation is the one that defines the
+@func{letrec} syntax from the @rnrs{5} standard document.
+
+The @code{waddell} transformation focuses on generating @code{fix}
+structures representing recursive binding forms for unassigned
+@func{lambda} expressions.  To understand this algorithm, and the code,
+we @strong{must} read the following paper:
+
+@quotation
+[@acronym{WSD}] Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.
+``Fixing Letrec: A Faithful Yet Efficient Implementation of Scheme's
+Recursive Binding Construct''.
+@end quotation
+
+The @code{scc} algorithm is an evolution of the @code{waddell}
+transformation that better processes bindings, taking into account their
+actual dependency graph.  To understand this algorithm, and the code, we
+@strong{must} read the following paper:
+
+@quotation
+[@acronym{SCC}] Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec
+(reloaded)''.  Workshop on Scheme and Functional Programming '09.
+@end quotation
 
 @c page
 @node syslib compiler letrec api
@@ -6221,7 +6235,7 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $optimize-letrec @var{input}
+@defun $optimize-letrec @var{input-expr}
 Perform transformations and optimisations to convert the recordised
 representation of @func{letrec}, @func{letrec*} and
 @func{libary-letrec*} core language forms into a composition of low
@@ -6260,7 +6274,7 @@ the [@acronym{SCC}] paper.  This is the default.
 @end deffn
 
 @c page
-@node syslib compiler letrec intro
+@node syslib compiler letrec notes
 @subsubsection General notes on the context of @func{letrec} optimisations
 
 
@@ -6378,7 +6392,7 @@ of the binding we need the value of the binding itself.
 
 @subsubheading On @func{letrec*} bindings
 
-Let's move to the @func{LETREC*} syntax; it is similar, but not equal,
+Let's move to the @func{letrec*} syntax; it is similar, but not equal,
 to @func{letrec}.  This program is legal:
 
 @example
