@@ -1331,13 +1331,30 @@
 
     (define (gen-letrecs scc* ordered? binding-form-body)
       (receive (outer-fix* outer-body)
-	  (let recur ((scc* scc*))
-	    (if (null? scc*)
-		(values '() binding-form-body)
-	      (receive (inner-fix* inner-body)
-		  (recur ($cdr scc*))
-		(gen-single-letrec ($car scc*) inner-fix* inner-body ordered?))))
+	  (%fold-right/1-list/2-retvals
+	      (lambda (scc fix* body)
+		(gen-single-letrec scc fix* body ordered?))
+	    '() ;fix*
+	    binding-form-body
+	    scc*)
 	(mkfix outer-fix* outer-body)))
+
+    (define (%fold-right/1-list/2-retvals combine nil1 nil2 ell)
+      (if (null? ell)
+	  (values nil1 nil2)
+	(receive (nil1^ nil2^)
+	    (%fold-right/1-list/2-retvals combine nil1 nil2 ($cdr ell))
+	  (combine ($car ell) nil1^ nil2^))))
+
+    ;; (define (gen-letrecs scc* ordered? binding-form-body)
+    ;;   (receive (outer-fix* outer-body)
+    ;; 	  (let recur ((scc* scc*))
+    ;; 	    (if (null? scc*)
+    ;; 		(values '() binding-form-body)
+    ;; 	      (receive (inner-fix* inner-body)
+    ;; 		  (recur ($cdr scc*))
+    ;; 		(gen-single-letrec ($car scc*) inner-fix* inner-body ordered?))))
+    ;; 	(mkfix outer-fix* outer-body)))
 
     (define (mkfix binding-prop* body)
       (if (null? binding-prop*)
@@ -1517,10 +1534,11 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'make-bind	'scheme-indent-function 2)
-;; eval: (put 'make-fix		'scheme-indent-function 2)
-;; eval: (put '%make-bind	'scheme-indent-function 2)
-;; eval: (put '$make-fix	'scheme-indent-function 2)
-;; eval: (put 'with-unseen-prel	'scheme-indent-function 1)
-;; eval: (put '%map-in-order-with-index	'scheme-indent-function 1)
+;; eval: (put 'make-bind			'scheme-indent-function 2)
+;; eval: (put 'make-fix				'scheme-indent-function 2)
+;; eval: (put '%make-bind			'scheme-indent-function 2)
+;; eval: (put '$make-fix			'scheme-indent-function 2)
+;; eval: (put 'with-unseen-prel			'scheme-indent-function 1)
+;; eval: (put '%map-in-order-with-index		'scheme-indent-function 1)
+;; eval: (put '%fold-right/1-list/2-retvals	'scheme-indent-function 1)
 ;; End:
