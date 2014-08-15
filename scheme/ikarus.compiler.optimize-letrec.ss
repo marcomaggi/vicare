@@ -122,6 +122,62 @@
      (cons (func                          serial-idx          ($car ell1) ($car ell2))
 	   (%map-in-order-with-index func (fxadd1 serial-idx) ($cdr ell1) ($cdr ell2))))))
 
+(define-syntax* (define-fold-right stx)
+  ;;Define  a  new FOLD-RIGHT  function  with  a  fixed number  of  list
+  ;;arguments and a fixed number of return values.  For example, we want
+  ;;the definition:
+  ;;
+  ;;   (define-fold-right %fold-right/1-list/2-retvals
+  ;;     (number-of-lists       1)
+  ;;     (number-of-retvals     2))
+  ;;
+  ;;to expand into:
+  ;;
+  ;;   (define (%fold-right/1-list/2-retvals combine nil1 nil2 ell)
+  ;;     (if (null? ell)
+  ;;         (values nil1 nil2)
+  ;;       (receive (nil1^ nil2^)
+  ;;           (%fold-right/1-list/2-retvals combine nil1 nil2 ($cdr ell))
+  ;;         (combine ($car ell) nil1^ nil2^))))
+  ;;
+  ;;we blindly assume that the  list arguments are correct: proper lists
+  ;;with equal length.
+  ;;
+  (define (%positive-fixnum? obj)
+    (and (fixnum?     obj)
+	 (fxpositive? obj)))
+  (syntax-case stx (number-of-lists number-of-retvals)
+    ((_ ?who
+	(number-of-lists	?num-of-lists)
+	(number-of-retvals	?num-of-retvals))
+     (let ((num-of-lists   (syntax->datum #'?num-of-lists))
+	   (num-of-retvals (syntax->datum #'?num-of-retvals)))
+       (unless (identifier? #'?who)
+	 (synner "expected identifier as function name" #'?who))
+       (unless (%positive-fixnum? num-of-lists)
+	 (synner "expected positive fixnum as number of list arguments" #'?num-of-lists))
+       (unless (%positive-fixnum? num-of-retvals)
+	 (synner "expected positive fixnum as number of return values"  #'?num-of-retvals))
+       (with-syntax
+	   (((ELL0 ELL ...) (generate-temporaries (make-list (syntax->datum #'?num-of-lists))))
+	    ((NIL0 NIL ...) (generate-temporaries (make-list (syntax->datum #'?num-of-retvals)))))
+	 #'(define (?who combine NIL0 NIL ... ELL0 ELL ...)
+	     (import (vicare system $pairs))
+	     (if (null? ELL0)
+		 (values NIL0 NIL ...)
+	       (receive (NIL0 NIL ...)
+		   (?who combine NIL0 NIL ... ($cdr ELL0) ($cdr ELL) ...)
+		 (combine ($car ELL0) ($car ELL) ... NIL0 NIL ...)))))))
+    ))
+
+(define-auxiliary-syntaxes number-of-lists number-of-retvals)
+
+(define-fold-right %fold-right/1-list/2-retvals
+  (number-of-lists	1)
+  (number-of-retvals	2))
+
+;;; --------------------------------------------------------------------
+
 (define* (make-prelex-for-tmp-binding {prel prelex?})
   ;;Build and return a unique PRELEX struct meant to be used for a compiler-generated
   ;;binding, which will be referenced but not assigned.
@@ -1330,31 +1386,14 @@
   (module (gen-letrecs)
 
     (define (gen-letrecs scc* ordered? binding-form-body)
-      (receive (outer-fix* outer-body)
+      (receive (outer-fixable* outer-body)
 	  (%fold-right/1-list/2-retvals
-	      (lambda (scc fix* body)
-		(gen-single-letrec scc fix* body ordered?))
-	    '() ;fix*
+	      (lambda (scc fixable* body)
+		(gen-single-letrec scc fixable* body ordered?))
+	    '() ;fixable*
 	    binding-form-body
 	    scc*)
-	(mkfix outer-fix* outer-body)))
-
-    (define (%fold-right/1-list/2-retvals combine nil1 nil2 ell)
-      (if (null? ell)
-	  (values nil1 nil2)
-	(receive (nil1^ nil2^)
-	    (%fold-right/1-list/2-retvals combine nil1 nil2 ($cdr ell))
-	  (combine ($car ell) nil1^ nil2^))))
-
-    ;; (define (gen-letrecs scc* ordered? binding-form-body)
-    ;;   (receive (outer-fix* outer-body)
-    ;; 	  (let recur ((scc* scc*))
-    ;; 	    (if (null? scc*)
-    ;; 		(values '() binding-form-body)
-    ;; 	      (receive (inner-fix* inner-body)
-    ;; 		  (recur ($cdr scc*))
-    ;; 		(gen-single-letrec ($car scc*) inner-fix* inner-body ordered?))))
-    ;; 	(mkfix outer-fix* outer-body)))
+	(mkfix outer-fixable* outer-body)))
 
     (define (mkfix binding-prop* body)
       (if (null? binding-prop*)
@@ -1365,10 +1404,10 @@
 
     (module (gen-single-letrec)
 
-      (define (gen-single-letrec scc fix* body ordered?)
-	;;SCC is a list of BINDING structures.   FIX* is a list of BINDING structures
-	;;representing fixable bindings.   BODY is a structure  representing the body
-	;;of a recursive binding form.
+      (define (gen-single-letrec scc fixable* body ordered?)
+	;;SCC  is a  list  of BINDING  structures.   FIXABLE* is  a  list of  BINDING
+	;;structures representing fixable bindings.  BODY is a structure representing
+	;;the body of a recursive binding form.
 	;;
 	;;ORDERED?  is true if the RHS  expressions of the binding form classified as
 	;;"complex" must be evaluated in the given order.
@@ -1376,7 +1415,7 @@
 	(cond ((null? ($cdr scc))
 	       (let ((b ($car scc)))
 		 (cond ((%fixable-binding? b)
-			(values (cons b fix*) body))
+			(values (cons b fixable*) body))
 		       ((not (memq b ($binding-free* b)))
 			;;Return as second value:
 			;;
@@ -1386,7 +1425,7 @@
 			;;
 			(values '() (make-bind (list ($binding-lhs b))
 					(list ($binding-rhs b))
-				      (mkfix fix* body))))
+				      (mkfix fixable* body))))
 		       (else
 			;;Return as second value:
 			;;
@@ -1397,13 +1436,13 @@
 			;;
 			(values '() (make-bind (list ($binding-lhs b))
 					(%make-void-constants '(#f))
-				      (mk-assign-seq scc (mkfix fix* body))))))))
+				      (mk-assign-seq scc (mkfix fixable* body))))))))
 	      (else
-	       (receive (fixable* complex*)
+	       (receive (inner-fixable* complex*)
 		   (partition %fixable-binding? scc)
-		 (let ((fix*^ (append fixable* fix*)))
+		 (let ((fixable*^ (append inner-fixable* fixable*)))
 		   (if (null? complex*)
-		       (values fix*^ body)
+		       (values fixable*^ body)
 		     ;;Return as second value:
 		     ;;
 		     ;;   (bind ((?complex.lhs '#!void) ...)
@@ -1414,7 +1453,7 @@
 		     (values '() (let ((complex*^ (if ordered? (%sort-bindings complex*) complex*)))
 				   (mkbind (map binding-lhs complex*^)
 					   (%make-void-constants complex*^)
-					   (mkfix fix*^
+					   (mkfix fixable*^
 						  (mk-assign-seq complex*^ body)))))))))))
 
       (define (%fixable-binding? x)
