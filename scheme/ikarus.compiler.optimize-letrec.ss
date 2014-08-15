@@ -1119,7 +1119,7 @@
 
   (module (E)
 
-    (define (E x bc)
+    (define (E x enclosing-binding)
       ;;X is the recordised code to traverse.
       ;;
       ;;BC is an instance of struct BINDING.
@@ -1130,75 +1130,75 @@
 
 	((prelex)
 	 (assert (prelex-source-referenced? x))
-	 (%mark-free x bc)
+	 (%mark-free x enclosing-binding)
 	 (when (prelex-source-assigned? x)
-	   (%mark-complex! bc))
+	   (%mark-complex! enclosing-binding))
 	 x)
 
 	((assign lhs rhs)
 	 (assert (prelex-source-assigned? lhs))
-	 (%mark-free lhs bc)
-	 (%mark-complex! bc)
-	 (make-assign lhs (E rhs bc)))
+	 (%mark-free lhs enclosing-binding)
+	 (%mark-complex! enclosing-binding)
+	 (make-assign lhs (E rhs enclosing-binding)))
 
 	((primref)
 	 x)
 
 	((bind lhs* rhs* body)
 	 (if (null? lhs*)
-	     (E body bc)
-	   (make-bind lhs* (E* rhs* bc) (E body bc))))
+	     (E body enclosing-binding)
+	   (make-bind lhs* (E* rhs* enclosing-binding) (E body enclosing-binding))))
 
 	((recbind lhs* rhs* body)
 	 (if (null? lhs*)
-	     (E body bc)
-	   (E-recbind lhs* rhs* body bc)))
+	     (E body enclosing-binding)
+	   (E-recbind lhs* rhs* body enclosing-binding)))
 
 	((rec*bind lhs* rhs* body)
 	 (if (null? lhs*)
-	     (E body bc)
-	   (E-rec*bind lhs* rhs* body bc)))
+	     (E body enclosing-binding)
+	   (E-rec*bind lhs* rhs* body enclosing-binding)))
 
 	((conditional test conseq altern)
-	 (make-conditional (E test bc) (E conseq bc) (E altern bc)))
+	 (make-conditional (E test enclosing-binding) (E conseq enclosing-binding) (E altern enclosing-binding)))
 
 	((seq e0 e1)
-	 (make-seq (E e0 bc) (E e1 bc)))
+	 (make-seq (E e0 enclosing-binding) (E e1 enclosing-binding)))
 
 	((clambda)
-	 (E-clambda x bc))
+	 (E-clambda x enclosing-binding))
 
 	((funcall rator rand*)
-	 (%mark-complex! bc)
-	 (make-funcall (E rator bc) (E* rand* bc)))
+	 (%mark-complex! enclosing-binding)
+	 (make-funcall (E rator enclosing-binding) (E* rand* enclosing-binding)))
 
 	((mvcall producer consumer)
-	 (%mark-complex! bc)
-	 (make-mvcall (E producer bc) (E consumer bc)))
+	 (%mark-complex! enclosing-binding)
+	 (make-mvcall (E producer enclosing-binding) (E consumer enclosing-binding)))
 
 	((forcall rator rand*)
-	 (%mark-complex! bc)
-	 (make-forcall rator (E* rand* bc)))
+	 (%mark-complex! enclosing-binding)
+	 (make-forcall rator (E* rand* enclosing-binding)))
 
 	(else
 	 (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
-    (define (E* x* bc)
+    (define (E* x* enclosing-binding)
       (map (lambda (x)
-	     (E x bc))
+	     (E x enclosing-binding))
 	x*))
 
     (define (E-clambda x enclosing-binding)
       ;;Apply E to each clause's body.
       ;;
       (struct-case x
-	((clambda label cls* cp free name)
-	 (let ((bc (%make-top-binding enclosing-binding)))
-	   (make-clambda label (map (lambda (x)
-				      (struct-case x
+	((clambda label clause* cp free name)
+	 (let ((top-binding (%make-top-binding enclosing-binding)))
+	   (make-clambda label (map (lambda (clause)
+				      (struct-case clause
 					((clambda-case info body)
-					 (make-clambda-case info (E body bc)))))
-				 cls*)
+					 (make-clambda-case info (E body top-binding)))))
+				 clause*)
 			 cp free name)))))
 
     (define (%mark-complex! bc)
