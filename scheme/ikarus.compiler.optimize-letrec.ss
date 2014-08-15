@@ -1329,15 +1329,15 @@
 
   (module (gen-letrecs)
 
-    (define (gen-letrecs scc* ordered? body)
-      (receive (fix* body)
+    (define (gen-letrecs scc* ordered? binding-form-body)
+      (receive (outer-fix* outer-body)
 	  (let recur ((scc* scc*))
 	    (if (null? scc*)
-		(values '() body)
-	      (receive (fix* body)
+		(values '() binding-form-body)
+	      (receive (inner-fix* inner-body)
 		  (recur ($cdr scc*))
-		(gen-single-letrec ($car scc*) fix* body ordered?))))
-	(mkfix fix* body)))
+		(gen-single-letrec ($car scc*) inner-fix* inner-body ordered?))))
+	(mkfix outer-fix* outer-body)))
 
     (define (mkfix binding-prop* body)
       (if (null? binding-prop*)
