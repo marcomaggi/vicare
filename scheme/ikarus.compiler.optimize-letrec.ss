@@ -1384,11 +1384,9 @@
 	      (else
 	       (receive (fixable* complex*)
 		   (partition %fixable-binding? scc)
-		 (if (null? complex*)
-		     (values (append fixable* fix*) body)
-		   (let ((complex* (if ordered?
-				       (%sort-bindings complex*)
-				     complex*)))
+		 (let ((fix*^ (append fixable* fix*)))
+		   (if (null? complex*)
+		       (values fix*^ body)
 		     ;;Return as second value:
 		     ;;
 		     ;;   (bind ((?complex.lhs '#!void) ...)
@@ -1396,16 +1394,17 @@
 		     ;;       (assign ?complex.lhs ?complex.rhs) ...
 		     ;;       ?body))
 		     ;;
-		     (values '() (mklet (map binding-lhs complex*)
-					(%make-void-constants complex*)
-					(mkfix (append fixable* fix*)
-					       (mk-assign-seq complex* body))))))))))
+		     (values '() (let ((complex*^ (if ordered? (%sort-bindings complex*) complex*)))
+				   (mkbind (map binding-lhs complex*^)
+					   (%make-void-constants complex*^)
+					   (mkfix fix*^
+						  (mk-assign-seq complex*^ body)))))))))))
 
       (define (%fixable-binding? x)
 	(and (not (prelex-source-assigned? ($binding-lhs x)))
 	     (clambda? ($binding-rhs x))))
 
-      (define (mklet lhs* rhs* body)
+      (define (mkbind lhs* rhs* body)
 	(if (null? lhs*)
 	    body
 	  (make-bind lhs* rhs* body)))
