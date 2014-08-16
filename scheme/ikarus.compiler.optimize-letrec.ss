@@ -1328,8 +1328,7 @@
 	(let ((body^ (E body enclosing-binding)))
 	  (when ordered?
 	    (insert-order-edges binding-prop*))
-	  (let ((scc* (get-sccs-in-order binding-prop* (map binding-free* binding-prop*) binding-prop*)))
-	    (gen-letrecs scc* ordered? body^)))))
+	  (gen-letrecs (get-sccs-in-order binding-prop*) ordered? body^))))
 
     (define (%make-bindings lhs* rhs* enclosing-binding)
       ;;Return a list of BINDING struct  instances representing the properties of the
@@ -1502,32 +1501,47 @@
   (module (get-sccs-in-order)
 
     (define-struct node
-      (data link* lowlink root done collection))
+      (data
+		;Instance of BINDING structure associated to this NODE.
+       link*
+		;A list of BINDING structs.
+       root
+		;False or a non-negative fixnum.
+       done
+		;Boolean.
+       ))
 
-    (define (get-sccs-in-order n* e** data*)
-      (let* ((G    (create-graph n* e** data*))
+    (define (get-sccs-in-order binding-prop*)
+      ;;Return a list of sublists, each sublists being a list of BINDING structures.
+      ;;
+      ;;BINDING-PROP* is a list of BINDING  structures representing the bindings of a
+      ;;RECBIND or REC*BIND form.
+      ;;
+      (let* ((G    (%create-graph binding-prop* (map binding-free* binding-prop*) binding-prop*))
 	     (sccs (compute-sccs G)))
 	(map (lambda (scc)
 	       (map node-data scc))
 	  sccs)))
 
-    (define (create-graph v* e** data*)
-      (define h
+    (define (%create-graph v* free** data*)
+      (define-constant BINDING/NODE
+	;;The  keys  are BINDING  structs,  the  values  are the  corresponding  NODE
+	;;structs.
 	(make-eq-hashtable))
-      (let ((v* (let f ((v*    v*)
-			(data* data*))
-		  (if (null? v*)
-		      '()
-		    (let ((node (make-node ($car data*) '() #f #f #f #f)))
-		      (hashtable-set! h ($car v*) node)
-		      (cons node (f ($cdr v*) ($cdr data*))))))))
-	(for-each (lambda (v e*)
-		    (set-node-link*! v (map (lambda (f)
-					      (or (hashtable-ref h f #f)
-						  (error __who__ "invalid node" f)))
-					 e*)))
-	  v* e**)
-	v*))
+      (receive-and-return (v*)
+	  (let f ((v*    v*)
+		  (data* data*))
+	    (if (null? v*)
+		'()
+	      (let ((node (make-node ($car data*) '() #f #f)))
+		(hashtable-set! BINDING/NODE ($car v*) node)
+		(cons node (f ($cdr v*) ($cdr data*))))))
+	(for-each (lambda (v free*)
+		    (set-node-link*! v (map (lambda (binding-prop)
+					      (or (hashtable-ref BINDING/NODE binding-prop #f)
+						  (error __who__ "invalid node" binding-prop)))
+					 free*)))
+	  v* free**)))
 
     (define (compute-sccs v*)
       ;;Tarjan's algorithm.
