@@ -1394,6 +1394,14 @@
   (module (gen-letrecs)
 
     (define (gen-letrecs scc* ordered? binding-form-body)
+      ;;SCC* is a list of sublists, each  sublists being a list of <BINDING> structs;
+      ;;SCC* is a partition  of the bindings from a single  RECBIND or REC*BIND form,
+      ;;in which each  sublist represents a cluster of  Strongly Connected Components
+      ;;(SCCs).
+      ;;
+      ;;ORDERED? is true if the original binding form is REC*BIND, it is false if the
+      ;;binding form is RECBIND.
+      ;;
       (receive (outer-fixable* outer-body)
 	  (%fold-right/1-list/2-retvals
 	      (lambda (scc fixable* body)
@@ -1413,9 +1421,10 @@
     (module (gen-single-letrec)
 
       (define (gen-single-letrec scc fixable* body ordered?)
-	;;SCC is  a list of  <BINDING> structures.  FIXABLE*  is a list  of <BINDING>
-	;;structures representing fixable bindings.  BODY is a structure representing
-	;;the body of a recursive binding form.
+	;;SCC is  a list of <BINDING>  structures representing a cluster  of Strongly
+	;;Connected  Components.    FIXABLE*  is  a  list   of  <BINDING>  structures
+	;;representing fixable bindings.   BODY is a structure  representing the body
+	;;of a recursive binding form.
 	;;
 	;;ORDERED?  is true if the RHS  expressions of the binding form classified as
 	;;"complex" must be evaluated in the given order.
@@ -1510,37 +1519,45 @@
   (module (get-sccs-in-order)
 
     (define (get-sccs-in-order vertex*)
-      ;;Tarjan's algorithm.  Return a list of  sublists, each sublist being a list of
-      ;;<BINDING> structures.
+      ;;Tarjan's algorithm.
       ;;
       ;;VERTEX* is the list of <BINDING> structs representing the vertices of a graph
       ;;and also the bindings of a single RECBIND or REC*BIND form; of these structs:
       ;;in this function we use only the fields FREE*, ROOT, DONE.
       ;;
+      ;;Return a list of sublists, each sublist being a list of <BINDING> structures;
+      ;;each sublist represents a set of Strongly Connected Components (SCCs).
+      ;;
       (define scc* '())
       (define (%compute-sccs v)
 	(define index 0)
 	(define stack '())
-	(define (tarjan v)
-	  (let ((v-index index))
-	    ($set-<binding>-root! v v-index)
-	    (set! stack (cons v stack))
-	    (set! index (fxadd1 index))
-	    (for-each (lambda (v^)
-			(unless ($<binding>-done v^)
-			  (unless ($<binding>-root v^)
-			    (tarjan v^))
-			  ($set-<binding>-root! v (fxmin ($<binding>-root v)
-							 ($<binding>-root v^)))))
-	      ($<binding>-free* v))
-	    (when (fx= ($<binding>-root v) v-index)
-	      (set! scc* (cons (let recur ((ls stack))
-				 (let ((v^ ($car ls)))
-				   ($set-<binding>-done! v^ #t)
-				   (cons v^ (if (eq? v^ v)
-						(begin (set! stack ($cdr ls)) '())
-					      (recur ($cdr ls))))))
-			       scc*)))))
+
+	(define (tarjan vertex)
+	  (define vertex-index index)
+	  ($set-<binding>-root! vertex vertex-index)
+	  (set! stack (cons vertex stack))
+	  (set! index (fxadd1 index))
+	  ;;For each edge outgoing from VERTEX...
+	  (for-each (lambda (vertex^)
+		      (unless ($<binding>-done vertex^)
+			(unless ($<binding>-root vertex^)
+			  (tarjan vertex^))
+			($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
+							    ($<binding>-root vertex^)))))
+	    ($<binding>-free* vertex))
+	  (when (fx= ($<binding>-root vertex)
+		     vertex-index)
+	    (set! scc* (cons (let recur ((ls stack))
+			       (let ((vertex^ ($car ls)))
+				 ($set-<binding>-done! vertex^ #t)
+				 (cons vertex^ (if (eq? vertex^ vertex)
+						   (begin
+						     (set! stack ($cdr ls))
+						     '())
+						 (recur ($cdr ls))))))
+			     scc*))))
+
 	(tarjan v))
       (for-each (lambda (vertex)
 		  (unless ($<binding>-done vertex)
