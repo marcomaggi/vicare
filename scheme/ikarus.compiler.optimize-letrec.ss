@@ -1168,12 +1168,19 @@
 		;list of <BINDING>  structs that, subordinate of  this one, represent
 		;bindings that are assigned or referenced  in this RHS.  In the graph
 		;of binding dependencies: this list represents the outgoing links.
+		;
+		;This field is used in Tarjan's algorithm.
+     root
+		;False  or a  non-negative fixnum.   This field  is used  in Tarjan's
+		;algorithm.
+     done
+		;Boolean.  This field is used in Tarjan's algorithm.
      ))
 
   (define (%make-top-<binding> enclosing-binding)
     (let ((complex #t)
 	  (free*   '()))
-      (make-<binding> #f #f #f complex enclosing-binding free*)))
+      (make-<binding> #f #f #f complex enclosing-binding free* #f #f)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1347,9 +1354,11 @@
       (%map-in-order-with-index
 	  (lambda (serial-idx lhs rhs)
 	    (receive-and-return (binding)
-		(let ((complex #f)
-		      (free*   '()))
-		  (make-<binding> serial-idx lhs rhs complex enclosing-binding free*))
+		(let ((complex	#f)
+		      (free*	'())
+		      (root	#f)
+		      (done	#f))
+		  (make-<binding> serial-idx lhs rhs complex enclosing-binding free* root done))
 	      (set-prelex-operand! lhs binding)))
 	0 lhs* rhs*))
 
@@ -1500,22 +1509,6 @@
 
   (module (get-sccs-in-order)
 
-    (define-struct node
-      ;;This structure type wraps the  <BINDING> structure.  This type exists because
-      ;;we need the properties ROOT and DONE to process the graph of bindings.
-      ;;
-      (binding
-		;Instance of <BINDING> structure associated to this NODE.
-       link*
-		;A list of  NODE structs representing outgoing links.   This field is
-		;equivalent to the field FREE*  in <BINDING> structs, but it contains
-		;NODE structures rather than <BINDING> structures.
-       root
-		;False or a non-negative fixnum.
-       done
-		;Boolean.
-       ))
-
     (define (get-sccs-in-order binding*)
       ;;Return  a  list  of  sublists,  each  sublists  being  a  list  of  <BINDING>
       ;;structures.
@@ -1523,64 +1516,42 @@
       ;;BINDING* is  a list of  <BINDING> structures  representing the bindings  of a
       ;;RECBIND or REC*BIND form.
       ;;
-      (let* ((G    (%create-graph binding*))
-	     (sccs (compute-sccs G)))
-	(map (lambda (scc)
-	       (map node-binding scc))
-	  sccs)))
+      (compute-sccs binding*))
 
-    (define (%create-graph binding*)
-      (define-constant BINDING/NODE
-	;;The  keys are  <BINDING> structs,  the  values are  the corresponding  NODE
-	;;structs.
-	(make-eq-hashtable))
-      (receive-and-return (node*)
-	  ;;Make a NODE struct for every <BINDING> struct.
-	  (map (lambda (binding)
-		 (receive-and-return (node)
-		     (make-node binding '() #f #f)
-		   (hashtable-set! BINDING/NODE binding node)))
-	    binding*)
-	(for-each (lambda (node)
-		    (set-node-link*! node (map (lambda (free-binding)
-						 (or (hashtable-ref BINDING/NODE free-binding #f)
-						     (error __who__
-						       "internal error: invalid <BINDING> in FREE* list"
-						       free-binding)))
-					    (<binding>-free* (node-binding node)))))
-	  node*)))
-
-    (define (compute-sccs v*)
-      ;;Tarjan's algorithm.
+    (define (compute-sccs vertex*)
+      ;;Tarjan's algorithm.   VERTEX* is the  list of <BINDING>  structs representing
+      ;;the vertices of the graph; of these structs: in this function we use only the
+      ;;fields FREE*, ROOT, DONE.
+      ;;
       (define scc* '())
       (define (%compute-sccs v)
 	(define index 0)
 	(define stack '())
 	(define (tarjan v)
 	  (let ((v-index index))
-	    (set-node-root! v v-index)
+	    (set-<binding>-root! v v-index)
 	    (set! stack (cons v stack))
 	    (set! index (fx+ index 1))
 	    (for-each (lambda (v^)
-			(unless (node-done v^)
-			  (unless (node-root v^)
+			(unless (<binding>-done v^)
+			  (unless (<binding>-root v^)
 			    (tarjan v^))
-			  (set-node-root! v (fxmin (node-root v)
-						   (node-root v^)))))
-	      (node-link* v))
-	    (when (fx= (node-root v) v-index)
+			  (set-<binding>-root! v (fxmin (<binding>-root v)
+						   (<binding>-root v^)))))
+	      (<binding>-free* v))
+	    (when (fx= (<binding>-root v) v-index)
 	      (set! scc* (cons (let recur ((ls stack))
 				 (let ((v^ ($car ls)))
-				   (set-node-done! v^ #t)
+				   (set-<binding>-done! v^ #t)
 				   (cons v^ (if (eq? v^ v)
 						(begin (set! stack ($cdr ls)) '())
 					      (recur ($cdr ls))))))
 			       scc*)))))
 	(tarjan v))
       (for-each (lambda (v)
-		  (unless (node-done v)
+		  (unless (<binding>-done v)
 		    (%compute-sccs v)))
-	v*)
+	vertex*)
       (reverse scc*))
 
     #| end of module: get-sccs-in-order |# )
