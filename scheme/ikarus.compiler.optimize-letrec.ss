@@ -1501,10 +1501,15 @@
   (module (get-sccs-in-order)
 
     (define-struct node
-      (data
+      ;;This structure type wraps the BINDING structure.  This type exists because we
+      ;;need the properties ROOT and DONE to process the graph of bindings.
+      ;;
+      (binding
 		;Instance of BINDING structure associated to this NODE.
        link*
-		;A list of BINDING structs.
+		;A list of  NODE structs representing outgoing links.   This field is
+		;equivalent to  the field FREE*  in BINDING structs, but  it contains
+		;NODE structures rather than BINDING structures.
        root
 		;False or a non-negative fixnum.
        done
@@ -1517,31 +1522,39 @@
       ;;BINDING-PROP* is a list of BINDING  structures representing the bindings of a
       ;;RECBIND or REC*BIND form.
       ;;
-      (let* ((G    (%create-graph binding-prop* (map binding-free* binding-prop*) binding-prop*))
+      (let* ((G    (%create-graph binding-prop*))
 	     (sccs (compute-sccs G)))
 	(map (lambda (scc)
-	       (map node-data scc))
+	       (map node-binding scc))
 	  sccs)))
 
-    (define (%create-graph v* free** data*)
+    (define (%create-graph binding-prop*)
       (define-constant BINDING/NODE
 	;;The  keys  are BINDING  structs,  the  values  are the  corresponding  NODE
 	;;structs.
 	(make-eq-hashtable))
-      (receive-and-return (v*)
-	  (let f ((v*    v*)
-		  (data* data*))
-	    (if (null? v*)
-		'()
-	      (let ((node (make-node ($car data*) '() #f #f)))
-		(hashtable-set! BINDING/NODE ($car v*) node)
-		(cons node (f ($cdr v*) ($cdr data*))))))
-	(for-each (lambda (v free*)
-		    (set-node-link*! v (map (lambda (binding-prop)
-					      (or (hashtable-ref BINDING/NODE binding-prop #f)
-						  (error __who__ "invalid node" binding-prop)))
-					 free*)))
-	  v* free**)))
+      (receive-and-return (node*)
+	  ;;Make a NODE struct for every BINDING struct.
+	  (map (lambda (binding-prop)
+		 (receive-and-return (node)
+		     (make-node binding-prop '() #f #f)
+		   (hashtable-set! BINDING/NODE binding-prop node)))
+	    binding-prop*)
+	  ;; (let f ((bprop* binding-prop*)
+	  ;; 	  (data* binding-prop*))
+	  ;;   (if (null? bprop*)
+	  ;; 	'()
+	  ;;     (let ((node (make-node ($car data*) '() #f #f)))
+	  ;; 	(hashtable-set! BINDING/NODE ($car bprop*) node)
+	  ;; 	(cons node (f ($cdr bprop*) ($cdr data*))))))
+	(for-each (lambda (node)
+		    (set-node-link*! node (map (lambda (free-binding-prop)
+						 (or (hashtable-ref BINDING/NODE free-binding-prop #f)
+						     (error __who__
+						       "internal error: invalid BINDING in FREE* list"
+						       free-binding-prop)))
+					    (binding-free* (node-binding node)))))
+	  node*)))
 
     (define (compute-sccs v*)
       ;;Tarjan's algorithm.
