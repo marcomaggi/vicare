@@ -1117,13 +1117,13 @@
 
   (define (optimize-letrec/scc x)
     (receive-and-return (x)
-	(E x (%make-top-binding #t))
+	(E x (%make-top-<binding> #t))
       ;;(debug-print (unparse-recordized-code x))
       (void)))
 
 ;;; --------------------------------------------------------------------
 
-  (define-struct binding
+  (define-struct <binding>
     ;;A structure of  this type is created  for every binding in  a recursive binding
     ;;form:
     ;;
@@ -1132,9 +1132,9 @@
     ;;            (?lhs2 ?rhs2))   ; -> binding, serial index 2
     ;;     ?body)
     ;;
-    ;;and considered  the "current  BINDING" while we  process the  corresponding RHS
+    ;;and considered the  "current <BINDING>" while we process  the corresponding RHS
     ;;expression.   In  general,  we  consider every  expression  processed  by  this
-    ;;compiler pass as having a BINDING structure representing its properties.
+    ;;compiler pass as having a <BINDING> structure representing its properties.
     ;;
     (serial
 		;When outside  a recursive binding  RHS: set to false.   Otherwise: a
@@ -1161,27 +1161,27 @@
 		;
      prev
 		;When outside  a recursive  binding RHS: set  to true.   Otherwise: a
-		;struct instance  of type BINDING representing  the enclosing binding
+		;struct instance of type <BINDING> representing the enclosing binding
 		;properties.
      free*
 		;When outside  a recursive  binding RHS: set  to null.   Otherwise: a
-		;list of BINDING structs that,  subordinate of this one, representing
-		;bindings that are assigned or referenced in this RHS.
+		;list of <BINDING>  structs that, subordinate of  this one, represent
+		;bindings that are assigned or referenced  in this RHS.  In the graph
+		;of binding dependencies: this list represents the outgoing links.
      ))
 
-  (define (%make-top-binding enclosing-binding)
+  (define (%make-top-<binding> enclosing-binding)
     (let ((complex #t)
 	  (free*   '()))
-      (make-binding #f #f #f complex enclosing-binding free*)))
+      (make-<binding> #f #f #f complex enclosing-binding free*)))
 
 ;;; --------------------------------------------------------------------
 
   (module (E)
 
     (define (E x enclosing-binding)
-      ;;X is the recordised code to traverse.
-      ;;
-      ;;BC is an instance of struct BINDING.
+      ;;X is the recordised code to  traverse.  ENCLOSING-BINDING is a struct of type
+      ;;<BINDING>.
       ;;
       (struct-case x
 	((constant)
@@ -1252,7 +1252,7 @@
       ;;
       (struct-case x
 	((clambda label clause* cp free name)
-	 (let ((top-binding (%make-top-binding enclosing-binding)))
+	 (let ((top-binding (%make-top-<binding> enclosing-binding)))
 	   (make-clambda label (map (lambda (clause)
 				      (struct-case clause
 					((clambda-case info body)
@@ -1261,34 +1261,34 @@
 			 cp free name)))))
 
     (define (%mark-complex! bc)
-      ;;BC must be a struct instance of type BINDING.  Mark as complex BC itself and,
-      ;;recursively, its enclosing binding in the field PREV.
+      ;;BC must be  a struct instance of  type <BINDING>.  Mark as  complex BC itself
+      ;;and, recursively, its enclosing binding in the field PREV.
       ;;
-      (unless ($binding-complex bc)
-	($set-binding-complex! bc #t)
-	(%mark-complex! ($binding-prev bc))))
+      (unless ($<binding>-complex bc)
+	($set-<binding>-complex! bc #t)
+	(%mark-complex! ($<binding>-prev bc))))
 
-    (define (%mark-free prel enclosing-bprop)
+    (define (%mark-free prel enclosing-binding)
       ;;PREL is a  struct instance of type PRELEX appearing  in reference position or
       ;;assignment position.
       ;;
-      ;;ENCLOSING-BPROP must  be a struct  instance of type BINDING  representing the
-      ;;properties of the enclosing recursive binding.
+      ;;ENCLOSING-BINDING must  be a struct  instance of type  <BINDING> representing
+      ;;the properties of the enclosing recursive binding.
       ;;
-      ;;If PREL is a PRELEX structure representing a recursive binding: PREL.BPROP is
-      ;;the BINDING struct representing the properties of the binding.
+      ;;If PREL is a PRELEX structure representing a recursive binding: PREL.BINDING is
+      ;;the <BINDING> struct representing the properties of the binding.
       (cond ((prelex-operand prel)
-	     => (lambda (prel.bprop)
-		  (let* ((lb    (let-constants ((pr ($binding-prev prel.bprop)))
-				  (let loop ((bc enclosing-bprop))
-				    (let ((bcp ($binding-prev bc)))
+	     => (lambda (prel.binding)
+		  (let* ((lb    (let-constants ((pr ($<binding>-prev prel.binding)))
+				  (let loop ((bc enclosing-binding))
+				    (let ((bcp ($<binding>-prev bc)))
 				      (if (eq? bcp pr)
 					  bc
 					(loop bcp))))))
-			 (free* ($binding-free* lb)))
-		    ;;Make sure that PREL.BPROP is added to the FREE* list only once.
-		    (unless (memq prel.bprop free*)
-		      ($set-binding-free*! lb (cons prel.bprop free*))))))))
+			 (free* ($<binding>-free* lb)))
+		    ;;Make sure that PREL.BINDING is added to the FREE* list only once.
+		    (unless (memq prel.binding free*)
+		      ($set-<binding>-free*! lb (cons prel.binding free*))))))))
 
     #| end of module: E |# )
 
@@ -1308,18 +1308,18 @@
       ;;right-hand side expressions of recursive  binding forms.  BODY is a structure
       ;;representing the body of the recursive binding form.
       ;;
-      ;;ENCLOSING-BINDING  is   an  instance  of  struct   BINDING  representing  the
+      ;;ENCLOSING-BINDING  is  an  instance  of  struct  <BINDING>  representing  the
       ;;properties of the enclosing expression.
       ;;
       ;;ORDERED?  is true if this binding form is a LETREC* or LIBRARY-LETREC*, it is
       ;;false if the binding form is a LETREC.
       ;;
-      (let ((binding-prop* (%make-bindings lhs* rhs* enclosing-binding)))
-	;;Process each right-hand side expression using the associated BINDING struct
-	;;as "enclosing binding properties descriptor".
+      (let ((binding* (%make-bindings lhs* rhs* enclosing-binding)))
+	;;Process  each right-hand  side  expression using  the associated  <BINDING>
+	;;struct as "enclosing binding properties descriptor".
 	(for-each (lambda (b)
-		    ($set-binding-rhs! b (E ($binding-rhs b) b)))
-	  binding-prop*)
+		    ($set-<binding>-rhs! b (E ($<binding>-rhs b) b)))
+	  binding*)
 	;;Reset to false  the field OPERAND in the LHS*  PRELEX structures that where
 	;;used by %MAKE-BINDINGS and %MARK-FREE.
 	(for-each (lambda (x)
@@ -1327,30 +1327,30 @@
 	  lhs*)
 	(let ((body^ (E body enclosing-binding)))
 	  (when ordered?
-	    (insert-order-edges binding-prop*))
-	  (gen-letrecs (get-sccs-in-order binding-prop*) ordered? body^))))
+	    (insert-order-edges binding*))
+	  (gen-letrecs (get-sccs-in-order binding*) ordered? body^))))
 
     (define (%make-bindings lhs* rhs* enclosing-binding)
-      ;;Return a list of BINDING struct  instances representing the properties of the
-      ;;bindings in the lists LHS* and RHS*.
+      ;;Return a  list of <BINDING>  struct instances representing the  properties of
+      ;;the bindings in the lists LHS* and RHS*.
       ;;
       ;;LHS*  is a  list  of PRELEX  structures representing  the  left-hand side  of
       ;;recursive  binding forms.   RHS* is  a  list of  structures representing  the
       ;;right-hand side expressions of recursive binding forms.
       ;;
-      ;;ENCLOSING-BINDING  is  an  instance  of BINDING  structure  representing  the
+      ;;ENCLOSING-BINDING  is an  instance  of <BINDING>  structure representing  the
       ;;properties of the enclosing expression.
       ;;
-      ;;For  every PRELEX  struct in  LHS*: store  in its  OPERAND field  the BINDING
+      ;;For every  PRELEX struct in  LHS*: store in  its OPERAND field  the <BINDING>
       ;;struct representing its properties.
       ;;
       (%map-in-order-with-index
 	  (lambda (serial-idx lhs rhs)
-	    (receive-and-return (binding-prop)
+	    (receive-and-return (binding)
 		(let ((complex #f)
 		      (free*   '()))
-		  (make-binding serial-idx lhs rhs complex enclosing-binding free*))
-	      (set-prelex-operand! lhs binding-prop)))
+		  (make-<binding> serial-idx lhs rhs complex enclosing-binding free*))
+	      (set-prelex-operand! lhs binding)))
 	0 lhs* rhs*))
 
     (module (insert-order-edges)
@@ -1358,23 +1358,23 @@
       (define (insert-order-edges b*)
 	(unless (null? b*)
 	  (let ((b ($car b*)))
-	    (if (complex-binding? b)
-		(mark b ($cdr b*))
+	    (if (%complex-binding? b)
+		(%mark b ($cdr b*))
 	      (insert-order-edges ($cdr b*))))))
 
-      (define (mark pb b*)
+      (define (%mark pb b*)
 	(unless (null? b*)
 	  (let ((b ($car b*)))
-	    (if (complex-binding? b)
-		(let ((free* ($binding-free* b)))
+	    (if (%complex-binding? b)
+		(let ((free* ($<binding>-free* b)))
 		  (unless (memq pb free*)
-		    ($set-binding-free*! b (cons pb free*)))
-		  (mark b ($cdr b*)))
-	      (mark pb ($cdr b*))))))
+		    ($set-<binding>-free*! b (cons pb free*)))
+		  (%mark b ($cdr b*)))
+	      (%mark pb ($cdr b*))))))
 
-      (define (complex-binding? x)
-	(or ($binding-complex x)
-	    (prelex-source-assigned? ($binding-lhs x))))
+      (define (%complex-binding? x)
+	(or ($<binding>-complex x)
+	    ($prelex-source-assigned? ($<binding>-lhs x))))
 
       #| end of module: insert-order-edges |# )
 
@@ -1394,17 +1394,17 @@
 	    scc*)
 	(mkfix outer-fixable* outer-body)))
 
-    (define (mkfix binding-prop* body)
-      (if (null? binding-prop*)
+    (define (mkfix binding* body)
+      (if (null? binding*)
 	  body
-	(make-fix (map binding-lhs binding-prop*)
-	    (map binding-rhs binding-prop*)
+	(make-fix (map <binding>-lhs binding*)
+	    (map <binding>-rhs binding*)
 	  body)))
 
     (module (gen-single-letrec)
 
       (define (gen-single-letrec scc fixable* body ordered?)
-	;;SCC  is a  list  of BINDING  structures.   FIXABLE* is  a  list of  BINDING
+	;;SCC is  a list of  <BINDING> structures.  FIXABLE*  is a list  of <BINDING>
 	;;structures representing fixable bindings.  BODY is a structure representing
 	;;the body of a recursive binding form.
 	;;
@@ -1415,15 +1415,15 @@
 	       (let ((b ($car scc)))
 		 (cond ((%fixable-binding? b)
 			(values (cons b fixable*) body))
-		       ((not (memq b ($binding-free* b)))
+		       ((not (memq b ($<binding>-free* b)))
 			;;Return as second value:
 			;;
 			;;   (bind ((?simple.lhs ?simple.rhs))
 			;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
 			;;       ?body))
 			;;
-			(values '() (make-bind (list ($binding-lhs b))
-					(list ($binding-rhs b))
+			(values '() (make-bind (list ($<binding>-lhs b))
+					(list ($<binding>-rhs b))
 				      (mkfix fixable* body))))
 		       (else
 			;;Return as second value:
@@ -1433,7 +1433,7 @@
 			;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
 			;;       ?body))
 			;;
-			(values '() (make-bind (list ($binding-lhs b))
+			(values '() (make-bind (list ($<binding>-lhs b))
 					(%make-void-constants '(#f))
 				      (mk-assign-seq scc (mkfix fixable* body))))))))
 	      (else
@@ -1450,21 +1450,21 @@
 		     ;;       ?body))
 		     ;;
 		     (values '() (let ((complex*^ (if ordered? (%sort-bindings complex*) complex*)))
-				   (mkbind (map binding-lhs complex*^)
+				   (mkbind (map <binding>-lhs complex*^)
 					   (%make-void-constants complex*^)
 					   (mkfix fixable*^
 						  (mk-assign-seq complex*^ body)))))))))))
 
       (define (%fixable-binding? x)
-	(and (not (prelex-source-assigned? ($binding-lhs x)))
-	     (clambda? ($binding-rhs x))))
+	(and (not (prelex-source-assigned? ($<binding>-lhs x)))
+	     (clambda? ($<binding>-rhs x))))
 
       (define (mkbind lhs* rhs* body)
 	(if (null? lhs*)
 	    body
 	  (make-bind lhs* rhs* body)))
 
-      (define (mk-assign-seq binding-prop* body)
+      (define (mk-assign-seq binding* body)
 	;;Build and return a struct representing recordised code equivalent to:
 	;;
 	;;   (begin
@@ -1472,25 +1472,25 @@
 	;;     ...
 	;;     ?body)
 	;;
-	;;where the LHS and RHS are extracted from BINDING-PROP*.
+	;;where the LHS and RHS are extracted from BINDING*.
 	;;
-	;;BINDING-PROP*  must be  a  list  of BINDING  structures.   BODY  must be  a
-	;;structure representing recordised code.
+	;;BINDING* must be a list of  <BINDING> structures.  BODY must be a structure
+	;;representing recordised code.
 	;;
 	;;NOTE Each PRELEX  structure representing an LHS is marked  as having single
 	;;initialisation assignment.
 	;;
-	(fold-right (lambda (binding-prop tail)
-		      (make-seq (%make-init-single-assign ($binding-lhs binding-prop)
-							  ($binding-rhs binding-prop))
+	(fold-right (lambda (binding tail)
+		      (make-seq (%make-init-single-assign ($<binding>-lhs binding)
+							  ($<binding>-rhs binding))
 				tail))
-	  body binding-prop*))
+	  body binding*))
 
-      (define (%sort-bindings ls)
-	(list-sort (lambda (x y)
-		     (fx<? ($binding-serial x)
-			   ($binding-serial y)))
-		   ls))
+      (define (%sort-bindings binding*)
+	(list-sort (lambda (binding1 binding2)
+		     (fx<? ($<binding>-serial binding1)
+			   ($<binding>-serial binding2)))
+		   binding*))
 
       #| end of module: gen-single-letrec |# )
 
@@ -1501,59 +1501,53 @@
   (module (get-sccs-in-order)
 
     (define-struct node
-      ;;This structure type wraps the BINDING structure.  This type exists because we
-      ;;need the properties ROOT and DONE to process the graph of bindings.
+      ;;This structure type wraps the  <BINDING> structure.  This type exists because
+      ;;we need the properties ROOT and DONE to process the graph of bindings.
       ;;
       (binding
-		;Instance of BINDING structure associated to this NODE.
+		;Instance of <BINDING> structure associated to this NODE.
        link*
 		;A list of  NODE structs representing outgoing links.   This field is
-		;equivalent to  the field FREE*  in BINDING structs, but  it contains
-		;NODE structures rather than BINDING structures.
+		;equivalent to the field FREE*  in <BINDING> structs, but it contains
+		;NODE structures rather than <BINDING> structures.
        root
 		;False or a non-negative fixnum.
        done
 		;Boolean.
        ))
 
-    (define (get-sccs-in-order binding-prop*)
-      ;;Return a list of sublists, each sublists being a list of BINDING structures.
+    (define (get-sccs-in-order binding*)
+      ;;Return  a  list  of  sublists,  each  sublists  being  a  list  of  <BINDING>
+      ;;structures.
       ;;
-      ;;BINDING-PROP* is a list of BINDING  structures representing the bindings of a
+      ;;BINDING* is  a list of  <BINDING> structures  representing the bindings  of a
       ;;RECBIND or REC*BIND form.
       ;;
-      (let* ((G    (%create-graph binding-prop*))
+      (let* ((G    (%create-graph binding*))
 	     (sccs (compute-sccs G)))
 	(map (lambda (scc)
 	       (map node-binding scc))
 	  sccs)))
 
-    (define (%create-graph binding-prop*)
+    (define (%create-graph binding*)
       (define-constant BINDING/NODE
-	;;The  keys  are BINDING  structs,  the  values  are the  corresponding  NODE
+	;;The  keys are  <BINDING> structs,  the  values are  the corresponding  NODE
 	;;structs.
 	(make-eq-hashtable))
       (receive-and-return (node*)
-	  ;;Make a NODE struct for every BINDING struct.
-	  (map (lambda (binding-prop)
+	  ;;Make a NODE struct for every <BINDING> struct.
+	  (map (lambda (binding)
 		 (receive-and-return (node)
-		     (make-node binding-prop '() #f #f)
-		   (hashtable-set! BINDING/NODE binding-prop node)))
-	    binding-prop*)
-	  ;; (let f ((bprop* binding-prop*)
-	  ;; 	  (data* binding-prop*))
-	  ;;   (if (null? bprop*)
-	  ;; 	'()
-	  ;;     (let ((node (make-node ($car data*) '() #f #f)))
-	  ;; 	(hashtable-set! BINDING/NODE ($car bprop*) node)
-	  ;; 	(cons node (f ($cdr bprop*) ($cdr data*))))))
+		     (make-node binding '() #f #f)
+		   (hashtable-set! BINDING/NODE binding node)))
+	    binding*)
 	(for-each (lambda (node)
-		    (set-node-link*! node (map (lambda (free-binding-prop)
-						 (or (hashtable-ref BINDING/NODE free-binding-prop #f)
+		    (set-node-link*! node (map (lambda (free-binding)
+						 (or (hashtable-ref BINDING/NODE free-binding #f)
 						     (error __who__
-						       "internal error: invalid BINDING in FREE* list"
-						       free-binding-prop)))
-					    (binding-free* (node-binding node)))))
+						       "internal error: invalid <BINDING> in FREE* list"
+						       free-binding)))
+					    (<binding>-free* (node-binding node)))))
 	  node*)))
 
     (define (compute-sccs v*)
