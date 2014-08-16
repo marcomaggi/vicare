@@ -1509,19 +1509,13 @@
 
   (module (get-sccs-in-order)
 
-    (define (get-sccs-in-order binding*)
-      ;;Return  a  list  of  sublists,  each  sublists  being  a  list  of  <BINDING>
-      ;;structures.
+    (define (get-sccs-in-order vertex*)
+      ;;Tarjan's algorithm.  Return a list of  sublists, each sublist being a list of
+      ;;<BINDING> structures.
       ;;
-      ;;BINDING* is  a list of  <BINDING> structures  representing the bindings  of a
-      ;;RECBIND or REC*BIND form.
-      ;;
-      (compute-sccs binding*))
-
-    (define (compute-sccs vertex*)
-      ;;Tarjan's algorithm.   VERTEX* is the  list of <BINDING>  structs representing
-      ;;the vertices of the graph; of these structs: in this function we use only the
-      ;;fields FREE*, ROOT, DONE.
+      ;;VERTEX* is the list of <BINDING> structs representing the vertices of a graph
+      ;;and also the bindings of a single RECBIND or REC*BIND form; of these structs:
+      ;;in this function we use only the fields FREE*, ROOT, DONE.
       ;;
       (define scc* '())
       (define (%compute-sccs v)
@@ -1529,28 +1523,28 @@
 	(define stack '())
 	(define (tarjan v)
 	  (let ((v-index index))
-	    (set-<binding>-root! v v-index)
+	    ($set-<binding>-root! v v-index)
 	    (set! stack (cons v stack))
-	    (set! index (fx+ index 1))
+	    (set! index (fxadd1 index))
 	    (for-each (lambda (v^)
-			(unless (<binding>-done v^)
-			  (unless (<binding>-root v^)
+			(unless ($<binding>-done v^)
+			  (unless ($<binding>-root v^)
 			    (tarjan v^))
-			  (set-<binding>-root! v (fxmin (<binding>-root v)
-						   (<binding>-root v^)))))
-	      (<binding>-free* v))
-	    (when (fx= (<binding>-root v) v-index)
+			  ($set-<binding>-root! v (fxmin ($<binding>-root v)
+							 ($<binding>-root v^)))))
+	      ($<binding>-free* v))
+	    (when (fx= ($<binding>-root v) v-index)
 	      (set! scc* (cons (let recur ((ls stack))
 				 (let ((v^ ($car ls)))
-				   (set-<binding>-done! v^ #t)
+				   ($set-<binding>-done! v^ #t)
 				   (cons v^ (if (eq? v^ v)
 						(begin (set! stack ($cdr ls)) '())
 					      (recur ($cdr ls))))))
 			       scc*)))))
 	(tarjan v))
-      (for-each (lambda (v)
-		  (unless (<binding>-done v)
-		    (%compute-sccs v)))
+      (for-each (lambda (vertex)
+		  (unless ($<binding>-done vertex)
+		    (%compute-sccs vertex)))
 	vertex*)
       (reverse scc*))
 
