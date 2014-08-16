@@ -110,6 +110,9 @@
 
 ;;;; helpers
 
+(define-syntax-rule (fxincr! ?id)
+  (set! ?id (fxadd1 ?id)))
+
 (case-define %map-in-order-with-index
   ((func serial-idx ell1)
    (if (null? ell1)
@@ -1534,17 +1537,19 @@
       (define (%compute-sccs v)
 	(define index 0)
 	(define stack-of-traversed-vertexes '())
-
 	(define (tarjan vertex scc*)
 	  ;;Let's call  "adjacent" the  vertexes at  the end  of edges  outgoing from
-	  ;;VERTEX.   This  recursive  function   performs  a  depth-first  iteration
-	  ;;starting from VERTEX and visiting its adjacent vertexes.
+	  ;;VERTEX.  This  recursive function  performs a depth-first  visit starting
+	  ;;from VERTEX and visiting its adjacent vertexes.
 	  ;;
 	  ;;The  graph has  cycles, but  we avoid  infinite recursion  by setting  to
 	  ;;non-false the ROOT field of VERTEX.
 	  ;;
 	  (define-constant vertex.index-upon-entering index)
-	  (set! index (fxadd1 index))
+	  (define (%index-UNchanged-since-entering?)
+	    (fx= ($<binding>-root vertex)
+		 vertex.index-upon-entering))
+	  (fxincr! index)
 	  ($set-<binding>-root! vertex vertex.index-upon-entering)
 	  (set! stack-of-traversed-vertexes (cons vertex stack-of-traversed-vertexes))
 	  (let ((scc*^ (fold-left (lambda (scc* adjacent-vertex)
@@ -1558,29 +1563,44 @@
 									    ($<binding>-root adjacent-vertex))))))
 			 scc*
 			 ($<binding>-free* vertex))))
-	    (if (fx= ($<binding>-root vertex)
-		     vertex.index-upon-entering)
-		(let ((scc (%gather-scc vertex stack-of-traversed-vertexes)))
-		  (cons scc scc*^))
+	    ;;Back  from the  depth-first visit,  the accumulated  Strongly Connected
+	    ;;Components are now in SCC*^.
+	    (if (%index-UNchanged-since-entering?)
+		(cons (%make-scc-cluster-from-visited-vertexes vertex stack-of-traversed-vertexes)
+		      scc*^)
 	      scc*^)))
-
-	(define (%gather-scc vertex stk)
-	  ;;Recursive function.  STK must be the current stack of traversed vertexes;
-	  ;;process the stack and build and return  a SCC list from it.  This is what
-	  ;;we do:
+	(define (%make-scc-cluster-from-visited-vertexes limit-vertex stk)
+	  ;;Recursive function.  STK must be the current stack of traversed vertexes,
+	  ;;containing LIMIT-VERTEX  and possibly  other vertexes  after it;  the STK
+	  ;;looks like this:
 	  ;;
-	  ;;* Mark as "done" all the vertexes on stack up to VERTEX.
+	  ;;   STK == vertex0 -> vertex1 -> LIMIT-VERTEX -> vertex3 -> vertex4
+	  ;;                                                              ^
+	  ;;                                                          top of STK
 	  ;;
-	  ;;* Trim the stack  in STACK-OF-TRAVERSED-VERTEXES dropping everything from
-	  ;;VERTEX onwards, VERTEX included.
+	  ;;If this function is  called: all the vertexes from the top  of STK up to,
+	  ;;and  including, LIMIT-VERTEX  must  be popped  and used  to  form an  SCC
+	  ;;cluster.   This  function  does  so   and  returns  a  list  of  vertexes
+	  ;;representing the SCC cluster.
+	  ;;
+	  ;;In addition:
+	  ;;
+	  ;;* Side  effects: mark  as "done"  all the  vertexes on  stack up  to, and
+	  ;;including, LIMIT-VERTEX.
+	  ;;
+	  ;;*  Side effect:  trim the  stack in  STACK-OF-TRAVERSED-VERTEXES dropping
+	  ;;everything from LIMIT-VERTEX downwards, VERTEX included.
 	  ;;
 	  (let ((vertex-on-stack ($car stk)))
 	    ($set-<binding>-done! vertex-on-stack #t)
-	    (cons vertex-on-stack (if (eq? vertex-on-stack vertex)
+	    (cons vertex-on-stack (if (eq? vertex-on-stack limit-vertex)
+				      ;;We have found the limit...
 				      (begin
+					;;... trim the stack ...
 					(set! stack-of-traversed-vertexes ($cdr stk))
+					;;... end the cluster.
 					'())
-				    (%gather-scc vertex ($cdr stk))))))
+				    (%make-scc-cluster-from-visited-vertexes limit-vertex ($cdr stk))))))
 
 	(set! scc* (tarjan v scc*)))
       (for-each (lambda (vertex)
