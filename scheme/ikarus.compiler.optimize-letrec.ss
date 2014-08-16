@@ -1525,7 +1525,7 @@
       ;;<BINDING> structures;  each sublist  represents a  set of  Strongly Connected
       ;;Components (SCCs).
       ;;
-      ;;VERTEX* is the list of <BINDING> structs representing the vertices of a graph
+      ;;VERTEX* is the list of <BINDING> structs representing the vertexes of a graph
       ;;and also the bindings of a single RECBIND or REC*BIND form; of these structs:
       ;;in this function we use only the fields FREE*, ROOT, DONE.
       ;;
@@ -1533,34 +1533,56 @@
       (define scc* '())
       (define (%compute-sccs v)
 	(define index 0)
-	(define stack '())
+	(define stack-of-traversed-vertexes '())
 
-	(define (tarjan vertex)
-	  (define-constant vertex-index index)
-	  ($set-<binding>-root! vertex vertex-index)
-	  (set! stack (cons vertex stack))
+	(define (tarjan vertex scc*)
+	  ;;Let's call  "adjacent" the  vertexes at  the end  of edges  outgoing from
+	  ;;VERTEX.   This  recursive  function   performs  a  depth-first  iteration
+	  ;;starting from VERTEX and visiting its adjacent vertexes.
+	  ;;
+	  ;;The  graph has  cycles, but  we avoid  infinite recursion  by setting  to
+	  ;;non-false the ROOT field of VERTEX.
+	  ;;
+	  (define-constant vertex.index-upon-entering index)
 	  (set! index (fxadd1 index))
-	  ;;For each edge outgoing from VERTEX...
-	  (for-each (lambda (vertex^)
-		      (unless ($<binding>-done vertex^)
-			(unless ($<binding>-root vertex^)
-			  (tarjan vertex^))
-			($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
-							    ($<binding>-root vertex^)))))
-	    ($<binding>-free* vertex))
-	  (when (fx= ($<binding>-root vertex)
-		     vertex-index)
-	    (let ((scc (let recur ((ls stack))
-			 (let ((vertex^ ($car ls)))
-			   ($set-<binding>-done! vertex^ #t)
-			   (cons vertex^ (if (eq? vertex^ vertex)
-					     (begin
-					       (set! stack ($cdr ls))
-					       '())
-					   (recur ($cdr ls))))))))
-	      (set! scc* (cons scc scc*)))))
+	  ($set-<binding>-root! vertex vertex.index-upon-entering)
+	  (set! stack-of-traversed-vertexes (cons vertex stack-of-traversed-vertexes))
+	  (let ((scc*^ (fold-left (lambda (scc* adjacent-vertex)
+				    (if ($<binding>-done adjacent-vertex)
+					scc*
+				      (begin0
+					(if ($<binding>-root adjacent-vertex)
+					    scc*
+					  (tarjan adjacent-vertex scc*))
+					($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
+									    ($<binding>-root adjacent-vertex))))))
+			 scc*
+			 ($<binding>-free* vertex))))
+	    (if (fx= ($<binding>-root vertex)
+		     vertex.index-upon-entering)
+		(let ((scc (%gather-scc vertex stack-of-traversed-vertexes)))
+		  (cons scc scc*^))
+	      scc*^)))
 
-	(tarjan v))
+	(define (%gather-scc vertex stk)
+	  ;;Recursive function.  STK must be the current stack of traversed vertexes;
+	  ;;process the stack and build and return  a SCC list from it.  This is what
+	  ;;we do:
+	  ;;
+	  ;;* Mark as "done" all the vertexes on stack up to VERTEX.
+	  ;;
+	  ;;* Trim the stack  in STACK-OF-TRAVERSED-VERTEXES dropping everything from
+	  ;;VERTEX onwards, VERTEX included.
+	  ;;
+	  (let ((vertex-on-stack ($car stk)))
+	    ($set-<binding>-done! vertex-on-stack #t)
+	    (cons vertex-on-stack (if (eq? vertex-on-stack vertex)
+				      (begin
+					(set! stack-of-traversed-vertexes ($cdr stk))
+					'())
+				    (%gather-scc vertex ($cdr stk))))))
+
+	(set! scc* (tarjan v scc*)))
       (for-each (lambda (vertex)
 		  (unless ($<binding>-done vertex)
 		    (%compute-sccs vertex)))
