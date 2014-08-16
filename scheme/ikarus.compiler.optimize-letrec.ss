@@ -1169,12 +1169,14 @@
 		;bindings that are assigned or referenced  in this RHS.  In the graph
 		;of binding dependencies: this list represents the outgoing links.
 		;
-		;This field is used in Tarjan's algorithm.
+		;The value of  this field is produced while  classifying the bindings
+		;from  a single  RECBIND  or  REC*BIND form  and  it  is consumed  in
+		;Tarjan's algorithm.
      root
-		;False  or a  non-negative fixnum.   This field  is used  in Tarjan's
+		;False or a non-negative fixnum.  This field is used only in Tarjan's
 		;algorithm.
      done
-		;Boolean.  This field is used in Tarjan's algorithm.
+		;Boolean.  This field is used only in Tarjan's algorithm.
      ))
 
   (define (%make-top-<binding> enclosing-binding)
@@ -1519,22 +1521,22 @@
   (module (get-sccs-in-order)
 
     (define (get-sccs-in-order vertex*)
-      ;;Tarjan's algorithm.
+      ;;Tarjan's algorithm.  Return a list of  sublists, each sublist being a list of
+      ;;<BINDING> structures;  each sublist  represents a  set of  Strongly Connected
+      ;;Components (SCCs).
       ;;
       ;;VERTEX* is the list of <BINDING> structs representing the vertices of a graph
       ;;and also the bindings of a single RECBIND or REC*BIND form; of these structs:
       ;;in this function we use only the fields FREE*, ROOT, DONE.
       ;;
-      ;;Return a list of sublists, each sublist being a list of <BINDING> structures;
-      ;;each sublist represents a set of Strongly Connected Components (SCCs).
-      ;;
+      ;;This variable SCC*, reversed, will be the return value.
       (define scc* '())
       (define (%compute-sccs v)
 	(define index 0)
 	(define stack '())
 
 	(define (tarjan vertex)
-	  (define vertex-index index)
+	  (define-constant vertex-index index)
 	  ($set-<binding>-root! vertex vertex-index)
 	  (set! stack (cons vertex stack))
 	  (set! index (fxadd1 index))
@@ -1548,15 +1550,15 @@
 	    ($<binding>-free* vertex))
 	  (when (fx= ($<binding>-root vertex)
 		     vertex-index)
-	    (set! scc* (cons (let recur ((ls stack))
-			       (let ((vertex^ ($car ls)))
-				 ($set-<binding>-done! vertex^ #t)
-				 (cons vertex^ (if (eq? vertex^ vertex)
-						   (begin
-						     (set! stack ($cdr ls))
-						     '())
-						 (recur ($cdr ls))))))
-			     scc*))))
+	    (let ((scc (let recur ((ls stack))
+			 (let ((vertex^ ($car ls)))
+			   ($set-<binding>-done! vertex^ #t)
+			   (cons vertex^ (if (eq? vertex^ vertex)
+					     (begin
+					       (set! stack ($cdr ls))
+					       '())
+					   (recur ($cdr ls))))))))
+	      (set! scc* (cons scc scc*)))))
 
 	(tarjan v))
       (for-each (lambda (vertex)
