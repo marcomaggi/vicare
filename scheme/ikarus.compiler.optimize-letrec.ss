@@ -1546,12 +1546,15 @@
 	  ;;non-false the ROOT field of VERTEX.
 	  ;;
 	  (define-constant vertex.index-upon-entering index)
-	  (define (%index-UNchanged-since-entering?)
+	  (define (%vertex-index-UNchanged-since-entering?)
 	    (fx= ($<binding>-root vertex)
 		 vertex.index-upon-entering))
 	  (fxincr! index)
 	  ($set-<binding>-root! vertex vertex.index-upon-entering)
-	  (set! stack-of-traversed-vertexes (cons vertex stack-of-traversed-vertexes))
+	  ;;Push VERTEX on the stack.
+	  (set-cons! stack-of-traversed-vertexes vertex)
+	  ;;Perform the  depth-first visit.  This  FOLD-LEFT is like entering  a maze
+	  ;;and always turning right at cross roads.
 	  (let ((scc*^ (fold-left (lambda (scc* adjacent-vertex)
 				    (if ($<binding>-done adjacent-vertex)
 					scc*
@@ -1565,7 +1568,7 @@
 			 ($<binding>-free* vertex))))
 	    ;;Back  from the  depth-first visit,  the accumulated  Strongly Connected
 	    ;;Components are now in SCC*^.
-	    (if (%index-UNchanged-since-entering?)
+	    (if (%vertex-index-UNchanged-since-entering?)
 		(cons (%make-scc-cluster-from-visited-vertexes vertex stack-of-traversed-vertexes)
 		      scc*^)
 	      scc*^)))
