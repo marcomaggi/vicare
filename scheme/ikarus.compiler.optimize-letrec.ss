@@ -1175,7 +1175,7 @@
 		;The value of  this field is produced while  classifying the bindings
 		;from  a single  RECBIND  or  REC*BIND form  and  it  is consumed  in
 		;Tarjan's algorithm.
-     root
+     index
 		;False or a non-negative fixnum.  This field is used only in Tarjan's
 		;algorithm.
      done
@@ -1618,10 +1618,10 @@
 	;;
 	(define-constant vertex.index-upon-entering index)
 	(define (%vertex-index-UNchanged-since-entering?)
-	  (fx= ($<binding>-root vertex)
+	  (fx= ($<binding>-index vertex)
 	       vertex.index-upon-entering))
 	(fxincr! index)
-	($set-<binding>-root! vertex vertex.index-upon-entering)
+	($set-<binding>-index! vertex vertex.index-upon-entering)
 	;;Push VERTEX on the stack.
 	(set-cons! stack-of-traversed vertex)
 	(let ((reverse-scc*^ (%inspect/visit-successor-vertexes vertex reverse-scc*)))
@@ -1634,8 +1634,8 @@
 
       (define (%inspect/visit-successor-vertexes vertex reverse-scc*)
 	(define-syntax-rule (%update-vertex-index ?successor-vertex)
-	  ($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
-					      ($<binding>-root ?successor-vertex))))
+	  ($set-<binding>-index! vertex (fxmin ($<binding>-index vertex)
+					       ($<binding>-index ?successor-vertex))))
 	(fold-left
 	    (lambda (reverse-scc* successor-vertex)
 	      ;;Inspect SUCCESSOR-VISIT and decide if we must visit it or skip it.
@@ -1643,7 +1643,7 @@
 		     ;;SUCCESSOR-VERTEX has already been  visited and included into a
 		     ;;cluster; skip it.
 		     reverse-scc*)
-		    (($<binding>-root successor-vertex)
+		    (($<binding>-index successor-vertex)
 		     ;;SUCCESSOR-VERTEX is  not already  into a  cluster, but  it has
 		     ;;already been visited; so skip it.
 		     (%update-vertex-index successor-vertex)
