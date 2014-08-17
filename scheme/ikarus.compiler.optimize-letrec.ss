@@ -1562,9 +1562,10 @@
     ;;             .          |
     ;;           D[1] <-------
     ;;
-    ;;and step back  to C; notice that  we leave the stack  unchanged.  Upon stepping
-    ;;back to  C: we recognise that  the index of  C is 2,  less than the index  of D
-    ;;which is 1; so we mutate the index of C to be 1:
+    ;;there are no more adjacent vertexes from D so we step back to C; notice that we
+    ;;leave the  stack unchanged.   Upon stepping  back to C:  we recognise  that the
+    ;;index of C is 2, less than the index of D which is 1; so we mutate the index of
+    ;;C to be 1:
     ;;
     ;;   A[0] -> B[1] ----> C[1]     STK == A, B, C, D
     ;;             ^          .
@@ -1572,12 +1573,13 @@
     ;;             .          .
     ;;           D[1] <.......
     ;;
-    ;;and step back  to B; notice that  we leave the stack  unchanged.  Upon stepping
-    ;;back to B: we recognise that the index of  B is 1, greater than or equal to the
-    ;;index of  C which is 1;  we leave the index  of B unchanged.  Now  we recognise
-    ;;that:  after visiting  all  the vertexes  adjacent  to  B, the  index  of B  is
-    ;;unchanged; we conclude  that all the nodes  on the stack up to  and including B
-    ;;are part of a Strongly Connected Component:
+    ;;there are no more adjacent vertexes from C so we step back to B; notice that we
+    ;;leave the  stack unchanged.   Upon stepping  back to B:  we recognise  that the
+    ;;index of B is 1,  greater than or equal to the index of C  which is 1; we leave
+    ;;the  index of  B unchanged.   Now  we recognise  that: after  visiting all  the
+    ;;vertexes adjacent to B,  the index of B is unchanged; we  conclude that all the
+    ;;nodes on  the stack  up to  and including B  are part  of a  Strongly Connected
+    ;;Component:
     ;;
     ;;   STK == A, B, C, D
     ;;            |-------| SCC
@@ -1585,6 +1587,9 @@
     ;;so we pop them from the stack and  form a cluster with them.  The vertexes in a
     ;;cluster are marked as "done" and will be skipped in further steps of the visit,
     ;;as if they are not there.
+    ;;
+    ;;Clusters  of SCCs  are  formed and  accumulated while  stepping  back from  the
+    ;;depth-first visit; so the accumulated clusters are in reverse order.
     ;;
 
     (define (get-sccs-in-order vertex*)
