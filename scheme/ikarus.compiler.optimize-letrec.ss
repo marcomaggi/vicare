@@ -1179,7 +1179,10 @@
 		;False or a non-negative fixnum.  This field is used only in Tarjan's
 		;algorithm.
      done
-		;Boolean.  This field is used only in Tarjan's algorithm.
+		;Boolean.    This  field   is  used   only  in   Tarjan's  algorithm.
+		;Initialised  to false;  it  is  set to  true  when  this binding  is
+		;included into a  cluster of SCCs, and so it  cannot be included into
+		;another cluster.
      ))
 
   (define (%make-top-<binding> enclosing-binding)
@@ -1522,22 +1525,79 @@
 ;;; --------------------------------------------------------------------
 
   (module (get-sccs-in-order)
+    ;;In this module we perform a depth-first visit of the directed graph of bindings
+    ;;from a single  RECBIND or REC*BIND struct; in the  graph: each <BINDING> struct
+    ;;is a vertex  (also called node); of  these structs: in this module  we use only
+    ;;the fields FREE*, ROOT, DONE.  Let's call "adjacent" the vertexes at the end of
+    ;;edges outgoing from a vertex: during the  visit we step from the current vertex
+    ;;to an adjacent one, if it has  not already been visited; a depth-first visit is
+    ;;like entering a maze and always turn right at cross roads.
+    ;;
+    ;;The graph  of bindings has  cycles, but we avoid  infinite loops by  setting to
+    ;;non-false the  DONE and  ROOT fields of  a <BINDING> struct  when we  visit and
+    ;;process it.
+    ;;
+    ;;The purpose of the  visit is to partition the bindings  in clusters of Strongly
+    ;;Connected Components; each  cluster can be processed later to  compose a set of
+    ;;nested binding forms in recordised code.
+    ;;
+    ;;Here is the gist of the Tarjan algorithm.  While visiting the vertexes: we push
+    ;;each  visited  <BINDING> on  a  stack;  we tag  each  <BINDING>  struct with  a
+    ;;zero-based visit index.  The following example shows a visit with path A, B, C,
+    ;;D on a graph with a cycle and the associated stack of visited vertexes:
+    ;;
+    ;;   A[0] -> B[1] ----> C[2]     STK == A, B, C, D
+    ;;             ^          |
+    ;;             .          |
+    ;;             .          |
+    ;;           D[3] <-------
+    ;;
+    ;;Let's say we are visiting D and considering the adjacent vertex B as next step:
+    ;;B has been  already visited, so we do not  enter it; the index of B  is 1, less
+    ;;than the index of D which is 3, so we mutate the index of D to be 1:
+    ;;
+    ;;   A[0] -> B[1] ----> C[2]     STK == A, B, C, D
+    ;;             ^          |
+    ;;             .          |
+    ;;             .          |
+    ;;           D[1] <-------
+    ;;
+    ;;and step back  to C; notice that  we leave the stack  unchanged.  Upon stepping
+    ;;back to  C: we recognise that  the index of  C is 2,  less than the index  of D
+    ;;which is 1; so we mutate the index of C to be 1:
+    ;;
+    ;;   A[0] -> B[1] ----> C[1]     STK == A, B, C, D
+    ;;             ^          .
+    ;;             .          .
+    ;;             .          .
+    ;;           D[1] <.......
+    ;;
+    ;;and step back  to B; notice that  we leave the stack  unchanged.  Upon stepping
+    ;;back to B: we recognise that the index of  B is 1, greater than or equal to the
+    ;;index of  C which is 1;  we leave the index  of B unchanged.  Now  we recognise
+    ;;that:  after visiting  all  the vertexes  adjacent  to  B, the  index  of B  is
+    ;;unchanged; we conclude  that all the nodes  on the stack up to  and including B
+    ;;are part of a Strongly Connected Component:
+    ;;
+    ;;   STK == A, B, C, D
+    ;;            |-------| SCC
+    ;;
+    ;;so we pop them from the stack and  form a cluster with them.  The vertexes in a
+    ;;cluster are marked as "done" and will be skipped in further steps of the visit,
+    ;;as if they are not there.
+    ;;
 
     (define (get-sccs-in-order vertex*)
-      ;;Tarjan's algorithm.  Return a list of  sublists, each sublist being a list of
-      ;;<BINDING> structures;  each sublist  represents a  set of  Strongly Connected
-      ;;Components (SCCs).
+      ;;For every vertex  in the list VERTEX*: start a  depth-first visit and perform
+      ;;Tarjan's algorithm  to group clusters  of SCCs.   Return a list  of sublists,
+      ;;each sublist being a list of  <BINDING> structures; each sublist represents a
+      ;;cluster of Strongly Connected Components (SCCs).
       ;;
-      ;;VERTEX* is the list of <BINDING> structs representing the vertexes of a graph
-      ;;and also the bindings of a single RECBIND or REC*BIND form; of these structs:
-      ;;in this function we use only the fields FREE*, ROOT, DONE.
-      ;;
-      ;;This variable SCC*, reversed, will be the return value.
       (reverse (fold-left (lambda (scc* vertex)
 			    (if ($<binding>-done vertex)
 				scc*
 			      (%compute-sccs vertex scc*)))
-		 '()
+		 '() ;starting value of SCC*
 		 vertex*)))
 
     (define (%compute-sccs v scc*)
@@ -1545,35 +1605,42 @@
       (define stack-of-traversed-vertexes '())
 
       (define (tarjan vertex scc*)
-	;;Recursive function.  Let's call "adjacent" the vertexes at the end of edges
-	;;outgoing from VERTEX;  this function performs a  depth-first visit starting
+	;;Recursive function.   This function  performs a depth-first  visit starting
 	;;from VERTEX and visiting its adjacent vertexes.  Return the updated list of
 	;;SCC clusters.
 	;;
 	;;SCC* must be the list of clusters accumulated so far.
 	;;
-	;;NOTE The graph  of bindings has cycles, but we  avoid infinite recursion by
-	;;setting to non-false the ROOT field of VERTEX.
-	;;
 	(define-constant vertex.index-upon-entering index)
 	(define (%vertex-index-UNchanged-since-entering?)
 	  (fx= ($<binding>-root vertex)
 	       vertex.index-upon-entering))
+	(define (%update-vertex-index adjacent-vertex)
+	  ($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
+					      ($<binding>-root adjacent-vertex))))
 	(fxincr! index)
 	($set-<binding>-root! vertex vertex.index-upon-entering)
 	;;Push VERTEX on the stack.
 	(set-cons! stack-of-traversed-vertexes vertex)
-	;;Perform the depth-first visit.  This FOLD-LEFT  is like entering a maze and
-	;;always turning right at cross roads.
 	(let ((scc*^ (fold-left (lambda (scc* adjacent-vertex)
-				  (if ($<binding>-done adjacent-vertex)
-				      scc*
-				    (begin0
-				      (if ($<binding>-root adjacent-vertex)
-					  scc*
-					(tarjan adjacent-vertex scc*))
-				      ($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
-									  ($<binding>-root adjacent-vertex))))))
+				  ;;Inspect  ADJACENT-VISIT  and  decide if  we  must
+				  ;;visit it or skip it.
+				  (cond (($<binding>-done adjacent-vertex)
+					 ;;ADJACENT-VERTEX  has already  been visited
+					 ;;and included into a cluster; skip it.
+					 scc*)
+					(($<binding>-root adjacent-vertex)
+					 ;;ADJACENT-VERTEX  is  not  already  into  a
+					 ;;cluster, but it  has already been visited;
+					 ;;so skip it.
+					 (%update-vertex-index adjacent-vertex)
+					 scc*)
+					(else
+					 ;;ADJACENT-VERTEX  has   not  been  visited;
+					 ;;visit it.
+					 (receive-and-return (scc*)
+					     (tarjan adjacent-vertex scc*)
+					   (%update-vertex-index adjacent-vertex)))))
 		       scc*
 		       ($<binding>-free* vertex))))
 	  ;;Back  from  the depth-first  visit,  the  accumulated Strongly  Connected
