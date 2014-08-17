@@ -1528,10 +1528,10 @@
     ;;In this module we perform a depth-first visit of the directed graph of bindings
     ;;from a single  RECBIND or REC*BIND struct; in the  graph: each <BINDING> struct
     ;;is a vertex  (also called node); of  these structs: in this module  we use only
-    ;;the fields FREE*, ROOT, DONE.  Let's call "adjacent" the vertexes at the end of
-    ;;edges outgoing from a vertex: during the  visit we step from the current vertex
-    ;;to an adjacent one, if it has  not already been visited; a depth-first visit is
-    ;;like entering a maze and always turn right at cross roads.
+    ;;the fields FREE*,  ROOT, DONE.  Let's call "successor" the  vertexes at the end
+    ;;of edges  outgoing from  a vertex: during  the visit we  step from  the current
+    ;;vertex to an successor  one, if it has not already  been visited; a depth-first
+    ;;visit is like entering a maze and always turn right at cross roads.
     ;;
     ;;The graph  of bindings has  cycles, but we avoid  infinite loops by  setting to
     ;;non-false the  DONE and  ROOT fields of  a <BINDING> struct  when we  visit and
@@ -1552,9 +1552,9 @@
     ;;             .          |
     ;;           D[3] <-------
     ;;
-    ;;Let's say we are visiting D and considering the adjacent vertex B as next step:
-    ;;B has been  already visited, so we do not  enter it; the index of B  is 1, less
-    ;;than the index of D which is 3, so we mutate the index of D to be 1:
+    ;;Let's say  we are  visiting D and  considering the successor  vertex B  as next
+    ;;step: B has been already  visited, so we do not enter it; the  index of B is 1,
+    ;;less than the index of D which is 3, so we mutate the index of D to be 1:
     ;;
     ;;   A[0] -> B[1] ----> C[2]     STK == A, B, C, D
     ;;             ^          |
@@ -1562,8 +1562,8 @@
     ;;             .          |
     ;;           D[1] <-------
     ;;
-    ;;there are no more adjacent vertexes from D so we step back to C; notice that we
-    ;;leave the  stack unchanged.   Upon stepping  back to C:  we recognise  that the
+    ;;there are no more  successor vertexes from D so we step back  to C; notice that
+    ;;we leave the stack  unchanged.  Upon stepping back to C:  we recognise that the
     ;;index of C is 2, less than the index of D which is 1; so we mutate the index of
     ;;C to be 1:
     ;;
@@ -1573,11 +1573,11 @@
     ;;             .          .
     ;;           D[1] <.......
     ;;
-    ;;there are no more adjacent vertexes from C so we step back to B; notice that we
-    ;;leave the  stack unchanged.   Upon stepping  back to B:  we recognise  that the
+    ;;there are no more  successor vertexes from C so we step back  to B; notice that
+    ;;we leave the stack  unchanged.  Upon stepping back to B:  we recognise that the
     ;;index of B is 1,  greater than or equal to the index of C  which is 1; we leave
     ;;the  index of  B unchanged.   Now  we recognise  that: after  visiting all  the
-    ;;vertexes adjacent to B,  the index of B is unchanged; we  conclude that all the
+    ;;vertexes successor to B, the index of  B is unchanged; we conclude that all the
     ;;nodes on  the stack  up to  and including B  are part  of a  Strongly Connected
     ;;Component:
     ;;
@@ -1611,8 +1611,8 @@
 
       (define (tarjan vertex reverse-scc*)
 	;;Recursive function.   This function  performs a depth-first  visit starting
-	;;from VERTEX and visiting its adjacent vertexes.  Return the updated list of
-	;;SCC clusters.
+	;;from VERTEX and  visiting its successor vertexes.  Return  the updated list
+	;;of SCC clusters.
 	;;
 	;;REVERSE-SCC* must be the list of clusters accumulated so far.
 	;;
@@ -1624,7 +1624,7 @@
 	($set-<binding>-root! vertex vertex.index-upon-entering)
 	;;Push VERTEX on the stack.
 	(set-cons! stack-of-traversed vertex)
-	(let ((reverse-scc*^ (%inspect/visit-adjacent-vertexes vertex reverse-scc*)))
+	(let ((reverse-scc*^ (%inspect/visit-successor-vertexes vertex reverse-scc*)))
 	  ;;Back  from  the depth-first  visit,  the  accumulated Strongly  Connected
 	  ;;Components are now in REVERSE-SCC*^.
 	  (if (%vertex-index-UNchanged-since-entering?)
@@ -1632,27 +1632,27 @@
 		    reverse-scc*^)
 	    reverse-scc*^)))
 
-      (define (%inspect/visit-adjacent-vertexes vertex reverse-scc*)
-	(define-syntax-rule (%update-vertex-index ?adjacent-vertex)
+      (define (%inspect/visit-successor-vertexes vertex reverse-scc*)
+	(define-syntax-rule (%update-vertex-index ?successor-vertex)
 	  ($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
-					      ($<binding>-root ?adjacent-vertex))))
+					      ($<binding>-root ?successor-vertex))))
 	(fold-left
-	    (lambda (reverse-scc* adjacent-vertex)
-	      ;;Inspect ADJACENT-VISIT and decide if we must visit it or skip it.
-	      (cond (($<binding>-done adjacent-vertex)
-		     ;;ADJACENT-VERTEX has  already been visited and  included into a
+	    (lambda (reverse-scc* successor-vertex)
+	      ;;Inspect SUCCESSOR-VISIT and decide if we must visit it or skip it.
+	      (cond (($<binding>-done successor-vertex)
+		     ;;SUCCESSOR-VERTEX has already been  visited and included into a
 		     ;;cluster; skip it.
 		     reverse-scc*)
-		    (($<binding>-root adjacent-vertex)
-		     ;;ADJACENT-VERTEX  is not  already into  a cluster,  but it  has
+		    (($<binding>-root successor-vertex)
+		     ;;SUCCESSOR-VERTEX is  not already  into a  cluster, but  it has
 		     ;;already been visited; so skip it.
-		     (%update-vertex-index adjacent-vertex)
+		     (%update-vertex-index successor-vertex)
 		     reverse-scc*)
 		    (else
-		     ;;ADJACENT-VERTEX has not been visited; visit it.
+		     ;;SUCCESSOR-VERTEX has not been visited; visit it.
 		     (begin0
-		       (tarjan adjacent-vertex reverse-scc*)
-		       (%update-vertex-index adjacent-vertex)))))
+		       (tarjan successor-vertex reverse-scc*)
+		       (%update-vertex-index successor-vertex)))))
 	  reverse-scc*
 	  ($<binding>-free* vertex)))
 

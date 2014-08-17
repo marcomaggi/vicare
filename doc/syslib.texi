@@ -6757,6 +6757,9 @@ classification.
 @subsubsection The @acronym{SCC} transformation algorithm
 
 
+For details on the graph algorithm, we can refer to the Wikipedia
+article ``Tarjan's strongly connected components algorithm''@footnote{@url{https:@//@//en.wikipedia.org@//wiki@//Tarjan%27s_strongly_connected_components_algorithm}}.
+
 @c page
 @node syslib compiler optimisation
 @subsection Source optimisation
