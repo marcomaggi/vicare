@@ -1598,23 +1598,23 @@
       ;;each sublist being a list of  <BINDING> structures; each sublist represents a
       ;;cluster of Strongly Connected Components (SCCs).
       ;;
-      (reverse (fold-left (lambda (scc* vertex)
+      (reverse (fold-left (lambda (reverse-scc* vertex)
 			    (if ($<binding>-done vertex)
-				scc*
-			      (%compute-sccs vertex scc*)))
-		 '() ;starting value of SCC*
+				reverse-scc*
+			      (%compute-sccs vertex reverse-scc*)))
+		 '() ;starting value of REVERSE-SCC*
 		 vertex*)))
 
-    (define (%compute-sccs v scc*)
+    (define (%compute-sccs v previous-reverse-scc*)
       (define index 0)
       (define stack-of-traversed-vertexes '())
 
-      (define (tarjan vertex scc*)
+      (define (tarjan vertex reverse-scc*)
 	;;Recursive function.   This function  performs a depth-first  visit starting
 	;;from VERTEX and visiting its adjacent vertexes.  Return the updated list of
 	;;SCC clusters.
 	;;
-	;;SCC* must be the list of clusters accumulated so far.
+	;;REVERSE-SCC* must be the list of clusters accumulated so far.
 	;;
 	(define-constant vertex.index-upon-entering index)
 	(define (%vertex-index-UNchanged-since-entering?)
@@ -1627,33 +1627,34 @@
 	($set-<binding>-root! vertex vertex.index-upon-entering)
 	;;Push VERTEX on the stack.
 	(set-cons! stack-of-traversed-vertexes vertex)
-	(let ((scc*^ (fold-left (lambda (scc* adjacent-vertex)
-				  ;;Inspect  ADJACENT-VISIT  and  decide if  we  must
-				  ;;visit it or skip it.
-				  (cond (($<binding>-done adjacent-vertex)
-					 ;;ADJACENT-VERTEX  has already  been visited
-					 ;;and included into a cluster; skip it.
-					 scc*)
-					(($<binding>-root adjacent-vertex)
-					 ;;ADJACENT-VERTEX  is  not  already  into  a
-					 ;;cluster, but it  has already been visited;
-					 ;;so skip it.
-					 (%update-vertex-index adjacent-vertex)
-					 scc*)
-					(else
-					 ;;ADJACENT-VERTEX  has   not  been  visited;
-					 ;;visit it.
-					 (receive-and-return (scc*)
-					     (tarjan adjacent-vertex scc*)
-					   (%update-vertex-index adjacent-vertex)))))
-		       scc*
-		       ($<binding>-free* vertex))))
+	(let ((reverse-scc*^ (fold-left
+				 (lambda (reverse-scc* adjacent-vertex)
+				   ;;Inspect  ADJACENT-VISIT  and  decide if  we  must
+				   ;;visit it or skip it.
+				   (cond (($<binding>-done adjacent-vertex)
+					  ;;ADJACENT-VERTEX  has already  been visited
+					  ;;and included into a cluster; skip it.
+					  reverse-scc*)
+					 (($<binding>-root adjacent-vertex)
+					  ;;ADJACENT-VERTEX  is  not  already  into  a
+					  ;;cluster, but it  has already been visited;
+					  ;;so skip it.
+					  (%update-vertex-index adjacent-vertex)
+					  reverse-scc*)
+					 (else
+					  ;;ADJACENT-VERTEX  has   not  been  visited;
+					  ;;visit it.
+					  (receive-and-return (reverse-scc*)
+					      (tarjan adjacent-vertex reverse-scc*)
+					    (%update-vertex-index adjacent-vertex)))))
+			       reverse-scc*
+			       ($<binding>-free* vertex))))
 	  ;;Back  from  the depth-first  visit,  the  accumulated Strongly  Connected
-	  ;;Components are now in SCC*^.
+	  ;;Components are now in REVERSE-SCC*^.
 	  (if (%vertex-index-UNchanged-since-entering?)
 	      (cons (%make-scc-cluster-from-visited-vertexes vertex stack-of-traversed-vertexes)
-		    scc*^)
-	    scc*^)))
+		    reverse-scc*^)
+	    reverse-scc*^)))
 
       (define (%make-scc-cluster-from-visited-vertexes limit-vertex stk)
 	;;Recursive function.  STK  must be the current stack  of traversed vertexes,
@@ -1688,7 +1689,7 @@
 				      '())
 				  (%make-scc-cluster-from-visited-vertexes limit-vertex ($cdr stk))))))
 
-      (tarjan v scc*))
+      (tarjan v previous-reverse-scc*))
 
     #| end of module: get-sccs-in-order |# )
 
