@@ -1533,84 +1533,90 @@
       ;;in this function we use only the fields FREE*, ROOT, DONE.
       ;;
       ;;This variable SCC*, reversed, will be the return value.
-      (define scc* '())
-      (define (%compute-sccs v)
-	(define index 0)
-	(define stack-of-traversed-vertexes '())
-	(define (tarjan vertex scc*)
-	  ;;Let's call  "adjacent" the  vertexes at  the end  of edges  outgoing from
-	  ;;VERTEX.  This  recursive function  performs a depth-first  visit starting
-	  ;;from VERTEX and visiting its adjacent vertexes.
-	  ;;
-	  ;;The  graph has  cycles, but  we avoid  infinite recursion  by setting  to
-	  ;;non-false the ROOT field of VERTEX.
-	  ;;
-	  (define-constant vertex.index-upon-entering index)
-	  (define (%vertex-index-UNchanged-since-entering?)
-	    (fx= ($<binding>-root vertex)
-		 vertex.index-upon-entering))
-	  (fxincr! index)
-	  ($set-<binding>-root! vertex vertex.index-upon-entering)
-	  ;;Push VERTEX on the stack.
-	  (set-cons! stack-of-traversed-vertexes vertex)
-	  ;;Perform the  depth-first visit.  This  FOLD-LEFT is like entering  a maze
-	  ;;and always turning right at cross roads.
-	  (let ((scc*^ (fold-left (lambda (scc* adjacent-vertex)
-				    (if ($<binding>-done adjacent-vertex)
-					scc*
-				      (begin0
-					(if ($<binding>-root adjacent-vertex)
-					    scc*
-					  (tarjan adjacent-vertex scc*))
-					($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
-									    ($<binding>-root adjacent-vertex))))))
-			 scc*
-			 ($<binding>-free* vertex))))
-	    ;;Back  from the  depth-first visit,  the accumulated  Strongly Connected
-	    ;;Components are now in SCC*^.
-	    (if (%vertex-index-UNchanged-since-entering?)
-		(cons (%make-scc-cluster-from-visited-vertexes vertex stack-of-traversed-vertexes)
-		      scc*^)
-	      scc*^)))
-	(define (%make-scc-cluster-from-visited-vertexes limit-vertex stk)
-	  ;;Recursive function.  STK must be the current stack of traversed vertexes,
-	  ;;containing LIMIT-VERTEX  and possibly  other vertexes  after it;  the STK
-	  ;;looks like this:
-	  ;;
-	  ;;   STK == vertex0 -> vertex1 -> LIMIT-VERTEX -> vertex3 -> vertex4
-	  ;;                                                              ^
-	  ;;                                                          top of STK
-	  ;;
-	  ;;If this function is  called: all the vertexes from the top  of STK up to,
-	  ;;and  including, LIMIT-VERTEX  must  be popped  and used  to  form an  SCC
-	  ;;cluster.   This  function  does  so   and  returns  a  list  of  vertexes
-	  ;;representing the SCC cluster.
-	  ;;
-	  ;;In addition:
-	  ;;
-	  ;;* Side  effects: mark  as "done"  all the  vertexes on  stack up  to, and
-	  ;;including, LIMIT-VERTEX.
-	  ;;
-	  ;;*  Side effect:  trim the  stack in  STACK-OF-TRAVERSED-VERTEXES dropping
-	  ;;everything from LIMIT-VERTEX downwards, VERTEX included.
-	  ;;
-	  (let ((vertex-on-stack ($car stk)))
-	    ($set-<binding>-done! vertex-on-stack #t)
-	    (cons vertex-on-stack (if (eq? vertex-on-stack limit-vertex)
-				      ;;We have found the limit...
-				      (begin
-					;;... trim the stack ...
-					(set! stack-of-traversed-vertexes ($cdr stk))
-					;;... end the cluster.
-					'())
-				    (%make-scc-cluster-from-visited-vertexes limit-vertex ($cdr stk))))))
+      (reverse (fold-left (lambda (scc* vertex)
+			    (if ($<binding>-done vertex)
+				scc*
+			      (%compute-sccs vertex scc*)))
+		 '()
+		 vertex*)))
 
-	(set! scc* (tarjan v scc*)))
-      (for-each (lambda (vertex)
-		  (unless ($<binding>-done vertex)
-		    (%compute-sccs vertex)))
-	vertex*)
-      (reverse scc*))
+    (define (%compute-sccs v scc*)
+      (define index 0)
+      (define stack-of-traversed-vertexes '())
+
+      (define (tarjan vertex scc*)
+	;;Recursive function.  Let's call "adjacent" the vertexes at the end of edges
+	;;outgoing from VERTEX;  this function performs a  depth-first visit starting
+	;;from VERTEX and visiting its adjacent vertexes.  Return the updated list of
+	;;SCC clusters.
+	;;
+	;;SCC* must be the list of clusters accumulated so far.
+	;;
+	;;NOTE The graph  of bindings has cycles, but we  avoid infinite recursion by
+	;;setting to non-false the ROOT field of VERTEX.
+	;;
+	(define-constant vertex.index-upon-entering index)
+	(define (%vertex-index-UNchanged-since-entering?)
+	  (fx= ($<binding>-root vertex)
+	       vertex.index-upon-entering))
+	(fxincr! index)
+	($set-<binding>-root! vertex vertex.index-upon-entering)
+	;;Push VERTEX on the stack.
+	(set-cons! stack-of-traversed-vertexes vertex)
+	;;Perform the depth-first visit.  This FOLD-LEFT  is like entering a maze and
+	;;always turning right at cross roads.
+	(let ((scc*^ (fold-left (lambda (scc* adjacent-vertex)
+				  (if ($<binding>-done adjacent-vertex)
+				      scc*
+				    (begin0
+				      (if ($<binding>-root adjacent-vertex)
+					  scc*
+					(tarjan adjacent-vertex scc*))
+				      ($set-<binding>-root! vertex (fxmin ($<binding>-root vertex)
+									  ($<binding>-root adjacent-vertex))))))
+		       scc*
+		       ($<binding>-free* vertex))))
+	  ;;Back  from  the depth-first  visit,  the  accumulated Strongly  Connected
+	  ;;Components are now in SCC*^.
+	  (if (%vertex-index-UNchanged-since-entering?)
+	      (cons (%make-scc-cluster-from-visited-vertexes vertex stack-of-traversed-vertexes)
+		    scc*^)
+	    scc*^)))
+
+      (define (%make-scc-cluster-from-visited-vertexes limit-vertex stk)
+	;;Recursive function.  STK  must be the current stack  of traversed vertexes,
+	;;containing LIMIT-VERTEX and possibly other vertexes after it; the STK looks
+	;;like this:
+	;;
+	;;   STK == vertex0 -> vertex1 -> LIMIT-VERTEX -> vertex3 -> vertex4
+	;;                                                              ^
+	;;                                                          top of STK
+	;;
+	;;If this function is called: all the vertexes from the top of STK up to, and
+	;;including, LIMIT-VERTEX  must be popped  and used  to form an  SCC cluster.
+	;;This function does  so and returns a list of  vertexes representing the SCC
+	;;cluster.
+	;;
+	;;In addition:
+	;;
+	;;*  Side effects:  mark as  "done"  all the  vertexes  on stack  up to,  and
+	;;including, LIMIT-VERTEX.
+	;;
+	;;*  Side  effect: trim  the  stack  in STACK-OF-TRAVERSED-VERTEXES  dropping
+	;;everything from LIMIT-VERTEX downwards, VERTEX included.
+	;;
+	(let ((vertex-on-stack ($car stk)))
+	  ($set-<binding>-done! vertex-on-stack #t)
+	  (cons vertex-on-stack (if (eq? vertex-on-stack limit-vertex)
+				    ;;We have found the limit...
+				    (begin
+				      ;;... trim the stack ...
+				      (set! stack-of-traversed-vertexes ($cdr stk))
+				      ;;... end the cluster.
+				      '())
+				  (%make-scc-cluster-from-visited-vertexes limit-vertex ($cdr stk))))))
+
+      (tarjan v scc*))
 
     #| end of module: get-sccs-in-order |# )
 
