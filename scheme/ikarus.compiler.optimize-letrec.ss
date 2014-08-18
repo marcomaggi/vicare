@@ -1343,7 +1343,7 @@
 	(let ((body^ (E body enclosing-binding)))
 	  (when ordered?
 	    (insert-order-edges binding*))
-	  (gen-letrecs (get-sccs-in-order binding*) ordered? body^))))
+	  (gen-letrecs (tarjan-algorithm binding*) ordered? body^))))
 
     (define (%make-bindings lhs* rhs* enclosing-binding)
       ;;Return a  list of <BINDING>  struct instances representing the  properties of
@@ -1524,14 +1524,15 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (get-sccs-in-order)
+  (module (tarjan-algorithm)
     ;;In this module we perform a depth-first visit of the directed graph of bindings
-    ;;from a single  RECBIND or REC*BIND struct; in the  graph: each <BINDING> struct
-    ;;is a vertex  (also called node); of  these structs: in this module  we use only
-    ;;the fields FREE*,  ROOT, DONE.  Let's call "successor" the  vertexes at the end
-    ;;of edges  outgoing from  a vertex: during  the visit we  step from  the current
-    ;;vertex to an successor  one, if it has not already  been visited; a depth-first
-    ;;visit is like entering a maze and always turn right at cross roads.
+    ;;from a single  RECBIND or REC*BIND struct, using a  recursive function.  In the
+    ;;graph: each <BINDING> struct is a  vertex (also called node); of these structs:
+    ;;in  this  module  we  use  only  the fields  FREE*,  ROOT,  DONE.   Let's  call
+    ;;"successor" the vertexes at the end of edges outgoing from a vertex: during the
+    ;;visit  we step  from the  current vertex  to an  successor one,  if it  has not
+    ;;already been  visited; a depth-first visit  is like entering a  maze and always
+    ;;turn right at cross roads.
     ;;
     ;;The graph  of bindings has  cycles, but we avoid  infinite loops by  setting to
     ;;non-false the  DONE and  ROOT fields of  a <BINDING> struct  when we  visit and
@@ -1589,10 +1590,35 @@
     ;;as if they are not there.
     ;;
     ;;Clusters  of SCCs  are  formed and  accumulated while  stepping  back from  the
-    ;;depth-first visit; so the accumulated clusters are in reverse order.
+    ;;depth-first visit, the accumulated clusters are in reverse order; so at the end
+    ;;of  the  recursion  we  reverse   the  accumulated  list.   Tarjan's  algorithm
+    ;;guarantees that the  returned of clusters returned is in  the correct order for
+    ;;RHS evaluation in RECBIND or REC*BIND structs:
+    ;;
+    ;;* The  RHS of bindings in  the first cluster  from the list, must  be evaluated
+    ;;before the RHS of bindings in the second cluster.
+    ;;
+    ;;* The RHS  of bindings in the  second cluster from the list,  must be evaluated
+    ;;before the RHS of bindings in the third cluster.
+    ;;
+    ;;* And so on.
+    ;;
+    ;;So we can arrange the evaluation as if each cluster comes from a nested binding
+    ;;form; if the returned list is:
+    ;;
+    ;;   ((?cluster-binding-1 ...)
+    ;;    (?cluster-binding-2 ...)
+    ;;    (?cluster-binding-3 ...))
+    ;;
+    ;;the equivalent nested binding forms are:
+    ;;
+    ;;   (recbind (?cluster-binding-3 ...)
+    ;;     (recbind (?cluster-binding-2 ...)
+    ;;       (recbind (?cluster-binding-1 ...)
+    ;;         ?body)))
     ;;
 
-    (define (get-sccs-in-order vertex*)
+    (define (tarjan-algorithm vertex*)
       ;;For every vertex  in the list VERTEX*: start a  depth-first visit and perform
       ;;Tarjan's algorithm  to group clusters  of SCCs.   Return a list  of sublists,
       ;;each sublist being a list of  <BINDING> structures; each sublist represents a
@@ -1609,7 +1635,7 @@
       (define index 0)
       (define stack-of-traversed '())
 
-      (define (tarjan vertex reverse-scc*)
+      (define (visit-vertex vertex reverse-scc*)
 	;;Recursive function.   This function  performs a depth-first  visit starting
 	;;from VERTEX and  visiting its successor vertexes.  Return  the updated list
 	;;of SCC clusters.
@@ -1651,7 +1677,7 @@
 		    (else
 		     ;;SUCCESSOR-VERTEX has not been visited; visit it.
 		     (begin0
-		       (tarjan successor-vertex reverse-scc*)
+		       (visit-vertex successor-vertex reverse-scc*)
 		       (%update-vertex-index successor-vertex)))))
 	  reverse-scc*
 	  ($<binding>-free* vertex)))
@@ -1692,11 +1718,11 @@
 		      '())
 		  (%make-scc-cluster-from-visited-vertexes limit-vertex ($cdr stk))))))
 
-      (tarjan start-vertex accum-reverse-scc*))
+      (visit-vertex start-vertex accum-reverse-scc*))
 
-    #| end of module: get-sccs-in-order |# )
+    #| end of module: TARJAN-ALGORITHM |# )
 
-  #| end of module: optimize-letrec/scc |# )
+  #| end of module: OPTIMIZE-LETREC/SCC |# )
 
 
 ;;;; done
