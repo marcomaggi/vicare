@@ -53,6 +53,7 @@
 
 (define-constant THE-ENVIRONMENT
   (environment '(rnrs)
+	       '(vicare system $fx)
 	       ;;We  import this  library for  $SYMBOL-STRING, which  is a  primitive
 	       ;;operation bot not a primitive function.
 	       '(vicare system $symbols)))
@@ -923,35 +924,35 @@
   ;;Function  call in  RHS expression  that does  not make  the enclosing  expression
   ;;"complex".
   (doit* (letrec* ((a '1)
-		   (b (fx+ '1 '2)))
+		   (b ($fx+ '1 '2)))
 	   a)
 	 (waddell
 	  (bind ((a_0 (constant 1))
-		 (b_0 (funcall (primref fx+) (constant 1) (constant 2))))
+		 (b_0 (funcall (primref $fx+) (constant 1) (constant 2))))
 	    a_0))
 	 (scc
 	  (bind ((a_0 (constant 1)))
-	    (bind ((b_0 (funcall (primref fx+) (constant 1) (constant 2))))
+	    (bind ((b_0 (funcall (primref $fx+) (constant 1) (constant 2))))
 	      a_0))))
 
   ;;Nested RHS LETREC.
-  #;(doit (letrec ((a '1)
-  		 (b (letrec ((d (lambda () '4)))
-  		      (d)))
-  		 (c '2))
-  	  b)
-  	(waddell
-	 (bind ((a (constant 1))
-		(c (constant 2)))
-	   (fix ((d (lambda () (constant 4))))
-	     (bind ((b (funcall d)))
-	       b))))
-  	(scc
-	 (bind ((a (constant 1))
-		(c (constant 2)))
-	   (fix ((d (lambda () (constant 4))))
-	     (bind ((b (funcall d)))
-	       b)))))
+  ;; (doit (letrec ((a '1)
+  ;; 		 (b (letrec ((d (lambda () '4)))
+  ;; 		      (d)))
+  ;; 		 (c '2))
+  ;; 	  b)
+  ;; 	(waddell
+  ;; 	 (bind ((a (constant 1))
+  ;; 		(c (constant 2)))
+  ;; 	   (fix ((d (lambda () (constant 4))))
+  ;; 	     (bind ((b (funcall d)))
+  ;; 	       b))))
+  ;; 	(scc
+  ;; 	 (bind ((a (constant 1))
+  ;; 		(c (constant 2)))
+  ;; 	   (fix ((d (lambda () (constant 4))))
+  ;; 	     (bind ((b (funcall d)))
+  ;; 	       b)))))
 
 ;;; --------------------------------------------------------------------
 ;;; libraries

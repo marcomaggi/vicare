@@ -458,7 +458,11 @@
   ;; $fxlogor
   ;; $fxlognot
   ;; $fxlogand
-  ;; $fx+
+
+  (let ((P (C $fx+)))
+    (register-lambda-signature P (S (list (C <fixnum>))
+				    (list (C <fixnum>) (C <fixnum>)))))
+
   ;; $fx*
   ;; $fx-
   ;; $fxinthash

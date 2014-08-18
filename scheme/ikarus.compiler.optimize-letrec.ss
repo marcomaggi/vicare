@@ -750,9 +750,16 @@
 
       (define-constant SIMPLE-PRIMITIVES
 	;;NOTE There are  many, many simple primitives.  Maybe, one  day, I will list
-	;;them here.  (Marco Maggi; Mon Aug 11, 2014)
+	;;them here.  However, notice that a primitive function is *not* simple if:
 	;;
-	'(fx+ fx- fx* fxdiv))
+	;;* I performs side effects.
+	;;
+	;;*  It raises  an  exception  for whatever  reason,  including invalid  call
+	;;arguments.
+	;;
+	;;(Marco Maggi; Mon Aug 11, 2014)
+	;;
+	'($fx+ $fx- $fx* $fxdiv))
 
       #| end of module: E-funcall |# )
 
@@ -1135,9 +1142,10 @@
     ;;            (?lhs2 ?rhs2))   ; -> binding, serial index 2
     ;;     ?body)
     ;;
-    ;;and considered the  "current <BINDING>" while we process  the corresponding RHS
-    ;;expression.   In  general,  we  consider every  expression  processed  by  this
-    ;;compiler pass as having a <BINDING> structure representing its properties.
+    ;;and such structure  is considered the "current <BINDING>" while  we process the
+    ;;corresponding  RHS  expression.   In  general,  we  consider  every  expression
+    ;;processed by  this compiler pass  as having a <BINDING>  structure representing
+    ;;its properties.
     ;;
     (serial
 		;When outside  a recursive binding  RHS: set to false.   Otherwise: a
@@ -1402,7 +1410,7 @@
   (module (gen-letrecs)
 
     (define (gen-letrecs scc* ordered? binding-form-body)
-      ;;SCC* is a list of sublists, each  sublists being a list of <BINDING> structs;
+      ;;SCC* is a list  of sublists, each sublist being a  list of <BINDING> structs;
       ;;SCC* is a partition  of the bindings from a single  RECBIND or REC*BIND form,
       ;;in which each  sublist represents a cluster of  Strongly Connected Components
       ;;(SCCs).
