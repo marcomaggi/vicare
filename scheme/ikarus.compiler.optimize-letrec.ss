@@ -1521,18 +1521,19 @@
       ;;In general,  we might just assign  an edge between each  successive bindings;
       ;;for example, given:
       ;;
-      ;;   (rec*bind ((A ?rhs-A) (B ?rhs-B) (C ?rhs-C)) ?body)
+      ;;   (rec*bind ((A ?rhs-A) (B ?rhs-B) (C ?rhs-C) (D ?rhs-D)) ?body)
       ;;
       ;;we may insert the edges:
       ;;
-      ;;   A <-- B <-- C
+      ;;   A <-- B <-- C <-- D
       ;;
       ;;meaning that the RHS  of A must be evaluated before the RHS  of B, which must
-      ;;be evaluated before  the RHS of C; but this  would add unrequired constraints
-      ;;if some of the RHS expressions do not depend on any side effect and bindings;
-      ;;for example if ?RHS-B above is non-complex, we can just add the edge:
+      ;;be evaluated before the  RHS of C, which must be evaluated  before the RHS of
+      ;;D; but this  would add unrequired constraints if some  of the RHS expressions
+      ;;do not depend on any side effect and bindings; for example if ?RHS-B above is
+      ;;non-complex, we can just add the edges:
       ;;
-      ;;   A <-- C
+      ;;   A <-- C <-- D
       ;;
       ;;So we add an edge between  successive bindings only between bindings having a
       ;;"complex"  dependency, that  is:  only  if both  the  source and  destination
