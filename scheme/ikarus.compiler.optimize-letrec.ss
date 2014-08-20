@@ -1148,19 +1148,33 @@
     ;;its properties.
     ;;
     (serial
-		;When outside  a recursive binding  RHS: set to false.   Otherwise: a
-		;zero-based fixnum representing  the serial index of  the current RHS
-		;expression in the list of bindings.
+		;When this struct  instance does not represent  a recursive binding's
+		;RHS  expression:  set  to  false.  Otherwise:  a  zero-based  fixnum
+		;representing the serial  index of the current RHS  expression in the
+		;list of bindings.
      lhs
-		;When outside  a recursive binding  RHS: set to false.   Otherwise: a
-		;PRELEX structure representing the LHS of the binding.
+		;When this struct  instance does not represent  a recursive binding's
+		;RHS  expression:  set  to  false.   Otherwise:  a  PRELEX  structure
+		;representing the LHS of the binding.
      rhs
-		;When outside  a recursive binding  RHS: set to false.   Otherwise: a
-		;structure representing the RHS expression of the binding.
+		;When this struct  instance does not represent  a recursive binding's
+		;RHS expression:  set to false.  Otherwise:  a structure representing
+		;the RHS expression of the binding.
      complex
-		;Boolean.   When  outside  a  recursive binding  RHS:  set  to  true.
-		;Otherwise:  true  if  this   binding  is  classified  as  "complex",
-		;otherwise false.  A binding is "complex" if:
+		;Boolean.  When this  struct instance does not  represent a recursive
+		;binding's  RHS expression:  set to  true.  Otherwise:  true if  this
+		;binding is classified as "complex", otherwise false.
+		;
+		;A value for  this field is always produced, but  it is consumed only
+		;when inserting  graph edges representing the  constraints of ordered
+		;evaluation for  RHSs in  REC*BIND bindings; if  the binding  form is
+		;RECBIND: the value of this field is not consumed.
+		;
+		;Specifically a binding is "complex" if:
+		;
+		;* It call a function, which, in general, might perform a side effect
+		;or  return a  result that  depends  on a  previously performed  side
+		;effect.
 		;
 		;* Its RHS expression references a binding that is assigned somewhere
 		;(no matter if the assignment happens  in the RHS itself or somewhere
@@ -1170,22 +1184,66 @@
 		;
 		;* Its RHS expression contains a function call and/or a foreign call.
 		;
+		;so a binding is *not* "complex" if:
+		;
+		;* It  does *not* reference any  binding, so the order  in which this
+		;RHS expression is evaluated does not matter.
+		;
+		;* It  references only  UNassigned bindings, so  the only  thing that
+		;matters  is that  this  RHS is  evaluated  after the  initialisation
+		;expression of the referenced bindings.
+		;
+		;For example, in the following form A, B and C are all non-complex:
+		;
+		;   (rec*bind ((A 1)
+		;              (B 2)
+		;              (C A))
+		;     ?body)
+		;
+		;the RHS of C  must be evaluated after the RHS of A,  but there is no
+		;need to evaluate it before the RHS of B.
      prev
-		;When outside  a recursive  binding RHS: set  to true.   Otherwise: a
-		;struct instance of type <BINDING> representing the enclosing binding
-		;properties.
+		;When this struct  instance does not represent  a recursive binding's
+		;RHS expression: set  to true.  Otherwise: a struct  instance of type
+		;<BINDING> representing the enclosing binding properties.
+		;
+		;The  value of  this  field  references a  <binding>  in the  closest
+		;uplevel recursive binding form; for example:
+		;
+		;   (recbind ((A (recbind ((B ?rhs))
+		;                  ?body1)))
+		;     ?body2)
+		;
+		;the <binding> of B has the <binding> of A in its PREV field; another
+		;example:
+		;
+		;   (recbind ((A (bind ((B (recbind ((C ?rhs))
+		;                            ?body1)))
+		;                  ?body2)))
+		;     ?body3)
+		;
+		;the <binding>  of C has  the <binding> of A  in its PREV  field, the
+		;binding B does  not matter because it is defined  by a non-recursive
+		;binding form.
+		;
+		;Two <binding> structures  defined at the same  lexical contour, will
+		;have the same <binding> struct in their PREV field.
      free*
-		;When outside  a recursive  binding RHS: set  to null.   Otherwise: a
-		;list of <BINDING>  structs that, subordinate of  this one, represent
-		;bindings that are assigned or referenced  in this RHS.  In the graph
-		;of binding dependencies: this list represents the outgoing links.
+		;When this struct  instance does not represent  a recursive binding's
+		;RHS expression: set to null.  Otherwise: a list of <BINDING> structs
+		;that, subordinate of this one,  represent bindings that are assigned
+		;or referenced  in this RHS.   In the graph of  binding dependencies:
+		;this list represents the outgoing links.
 		;
 		;The value of  this field is produced while  classifying the bindings
 		;from  a single  RECBIND  or  REC*BIND form  and  it  is consumed  in
 		;Tarjan's algorithm.
      index
 		;False or a non-negative fixnum.  This field is used only in Tarjan's
-		;algorithm.
+		;algorithm.  Upon entering the visit to this vertex: it is the serial
+		;index of  this binding in  the depth-first visit.  Upon  exiting the
+		;visit to this vertex: it is the minimum between serial index of this
+		;binding and the serial indices of the successor vertexes.
      done
 		;Boolean.    This  field   is  used   only  in   Tarjan's  algorithm.
 		;Initialised  to false;  it  is  set to  true  when  this binding  is
@@ -1197,6 +1255,14 @@
     (let ((complex #t)
 	  (free*   '()))
       (make-<binding> #f #f #f complex enclosing-binding free* #f #f)))
+
+  (define (<binding>-add-edge-from/to! binding.src binding.dst)
+    ;;Insert a  graph edge from  BINDING.SRC to BINDING.DST,  if it does  not already
+    ;;exists.
+    ;;
+    (let ((free* ($<binding>-free* binding.src)))
+      (unless (memq binding.dst free*)
+	($set-<binding>-free*! binding.src (cons binding.dst free*)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1213,13 +1279,16 @@
 	((prelex)
 	 (assert (prelex-source-referenced? x))
 	 (%mark-free x enclosing-binding)
+	 ;;If the enclosing binding references an assigned binding...
 	 (when (prelex-source-assigned? x)
+	   ;;... it is "complex".
 	   (%mark-complex! enclosing-binding))
 	 x)
 
 	((assign lhs rhs)
 	 (assert (prelex-source-assigned? lhs))
 	 (%mark-free lhs enclosing-binding)
+	 ;;The enclosing binding assignes a binding, so it is "complex".
 	 (%mark-complex! enclosing-binding)
 	 (make-assign lhs (E rhs enclosing-binding)))
 
@@ -1251,14 +1320,20 @@
 	 (E-clambda x enclosing-binding))
 
 	((funcall rator rand*)
+	 ;;This function call might: assign a binding, reference an assigned binding,
+	 ;;perform a side effect; so it is "complex".
 	 (%mark-complex! enclosing-binding)
 	 (make-funcall (E rator enclosing-binding) (E* rand* enclosing-binding)))
 
 	((mvcall producer consumer)
+	 ;;This function call might: assign a binding, reference an assigned binding,
+	 ;;perform a side effect; so it is "complex".
 	 (%mark-complex! enclosing-binding)
 	 (make-mvcall (E producer enclosing-binding) (E consumer enclosing-binding)))
 
 	((forcall rator rand*)
+	 ;;This function call might: assign a binding, reference an assigned binding,
+	 ;;perform a side effect; so it is "complex".
 	 (%mark-complex! enclosing-binding)
 	 (make-forcall rator (E* rand* enclosing-binding)))
 
@@ -1275,6 +1350,18 @@
       ;;
       (struct-case x
 	((clambda label clause* cp free name)
+	 ;;FIXME Why do we introduce a <binding> in the hierarchy here?  Example:
+	 ;;
+	 ;;   (recbind ((A 1)
+	 ;;             (B (lambda ()
+	 ;;                  (recbind ((C ?rhs-C)
+	 ;;                            (D ?rhs-D))
+	 ;;                    A))))
+	 ;;     ?body)
+	 ;;
+	 ;;the <binding> structs  of C and D  have a "top" <binding>  as PREV, rather
+	 ;;than the <binding> of B.  So what?  (Marco Maggi; Wed Aug 20, 2014)
+	 ;;
 	 (let ((top-binding (%make-top-<binding> enclosing-binding)))
 	   (make-clambda label (map (lambda (clause)
 				      (struct-case clause
@@ -1298,20 +1385,66 @@
       ;;ENCLOSING-BINDING must  be a struct  instance of type  <BINDING> representing
       ;;the properties of the enclosing recursive binding.
       ;;
-      ;;If PREL is a PRELEX structure representing a recursive binding: PREL.BINDING is
-      ;;the <BINDING> struct representing the properties of the binding.
+      ;;If PREL is a PRELEX  structure representing a recursive binding: PREL.BINDING
+      ;;is the <BINDING>  struct representing the properties of  the binding.  Search
+      ;;the hierarchy of  nested "enclosing <binding>" structures  until an enclosing
+      ;;binding is  found which is  at the same lexical  contour of the  one defining
+      ;;PREL; add a  dependency edge from such enclosing binding  to the one defining
+      ;;PREL.  Return unspecified values.
+      ;;
+      ;;For example, given:
+      ;;
+      ;;   (recbind ((A 1)
+      ;;             (B A))
+      ;;     ?body)
+      ;;
+      ;;when this  function is  called for  the PRELEX A  in reference  position: the
+      ;;<binding> of  B is the "enclosing  <binding>" at the same  lexical contour of
+      ;;the one defining A, so we add the graph edge:
+      ;;
+      ;;   B --> A
+      ;;
+      ;;Another example, given:
+      ;;
+      ;;   (recbind ((A 1)
+      ;;             (B (recbind ((C 2)
+      ;;                          (D A))
+      ;;                  ?body)))
+      ;;     ?body)
+      ;;
+      ;;when this  function is  called for  the PRELEX A  in reference  position: the
+      ;;<binding> of  B is the "enclosing  <binding>" at the same  lexical contour of
+      ;;the one defining A, so we add the graph edge:
+      ;;
+      ;;   B --> A
+      ;;
+      ;;Yet another example, given:
+      ;;
+      ;;   (recbind ((A (lambda () A)))
+      ;;     ?body)
+      ;;
+      ;;when this  function is  called for  the PRELEX A  in reference  position: the
+      ;;<binding> of  A is the "enclosing  <binding>" at the same  lexical contour of
+      ;;the one defining A, so we add the graph edge:
+      ;;
+      ;;   A --> A
+      ;;
+      ;;NOTE How do we recognise two <binding> structures defined at the same lexical
+      ;;contour?  They have the same <binding> struct in their PREV field.
+      ;;
       (cond ((prelex-operand prel)
 	     => (lambda (prel.binding)
-		  (let* ((lb    (let-constants ((pr ($<binding>-prev prel.binding)))
-				  (let loop ((bc enclosing-binding))
-				    (let ((bcp ($<binding>-prev bc)))
-				      (if (eq? bcp pr)
-					  bc
-					(loop bcp))))))
-			 (free* ($<binding>-free* lb)))
-		    ;;Make sure that PREL.BINDING is added to the FREE* list only once.
-		    (unless (memq prel.binding free*)
-		      ($set-<binding>-free*! lb (cons prel.binding free*))))))))
+		  (let ((lb (let-constants ((prel.binding.prev ($<binding>-prev prel.binding)))
+			      ;;In   the  hierarchy   of  ENCLOSING-BINDING   find  a
+			      ;;<binding> having the same PREV of PREL.BINDING.
+			      (let loop ((EC enclosing-binding))
+				(let ((EC.prev ($<binding>-prev EC)))
+				  (if (eq? EC.prev prel.binding.prev)
+				      ;;Fine:  EC  is  defined at  the  same  lexical
+				      ;;contour of PREL.BINDING.
+				      EC
+				    (loop EC.prev)))))))
+		    (<binding>-add-edge-from/to! lb prel.binding))))))
 
     #| end of module: E |# )
 
@@ -1379,27 +1512,55 @@
 	0 lhs* rhs*))
 
     (module (insert-order-edges)
+      ;;If the recursive binding  form is a REC*BIND: the order  of evaluation of the
+      ;;RHS expressions must be preserved if it  depends on some side effect; in this
+      ;;module we represent such constraints by inserting graph edges.
+      ;;
+      ;;In general,  we might just assign  an edge between each  successive bindings;
+      ;;for example, given:
+      ;;
+      ;;   (rec*bind ((A ?rhs-A) (B ?rhs-B) (C ?rhs-C)) ?body)
+      ;;
+      ;;we may insert the edges:
+      ;;
+      ;;   A <-- B <-- C
+      ;;
+      ;;meaning that the RHS  of A must be evaluated before the RHS  of B, which must
+      ;;be evaluated before  the RHS of C; but this  would add unrequired constraints
+      ;;if some of the RHS expressions do not depend on any side effect and bindings;
+      ;;for example if ?RHS-B above is non-complex, we can just add the edge:
+      ;;
+      ;;   A <-- C
+      ;;
+      ;;So we add an edge between  successive bindings only between bindings having a
+      ;;"complex"  dependency, that  is:  only  if both  the  source and  destination
+      ;;bindings of the edge are classified as "complex".
+      ;;
+      (define (insert-order-edges binding*)
+	;;Add  edges  between  "complex"  <binding>  structures.   If  there  are  no
+	;;"complex" bindings: do nothing.  Return unspecified values.
+	;;
+	(unless (null? binding*)
+	  (let ((B ($car binding*)))
+	    (if (%complex-binding? B)
+		(%mark B ($cdr binding*))
+	      (insert-order-edges ($cdr binding*))))))
 
-      (define (insert-order-edges b*)
-	(unless (null? b*)
-	  (let ((b ($car b*)))
-	    (if (%complex-binding? b)
-		(%mark b ($cdr b*))
-	      (insert-order-edges ($cdr b*))))))
+      (define (%mark previous-B binding*)
+	(unless (null? binding*)
+	  (let ((B ($car binding*)))
+	    (if (%complex-binding? B)
+		(begin
+		  ;;Set "previous-B" as dependency for B, if it is not already.
+		  #;(assert (%complex-binding? previous-B))
+		  (<binding>-add-edge-from/to! B previous-B)
+		  (%mark B ($cdr binding*)))
+	      ;;Skip B and inspect the next.
+	      (%mark previous-B ($cdr binding*))))))
 
-      (define (%mark pb b*)
-	(unless (null? b*)
-	  (let ((b ($car b*)))
-	    (if (%complex-binding? b)
-		(let ((free* ($<binding>-free* b)))
-		  (unless (memq pb free*)
-		    ($set-<binding>-free*! b (cons pb free*)))
-		  (%mark b ($cdr b*)))
-	      (%mark pb ($cdr b*))))))
-
-      (define (%complex-binding? x)
-	(or ($<binding>-complex x)
-	    ($prelex-source-assigned? ($<binding>-lhs x))))
+      (define (%complex-binding? B)
+	(or ($<binding>-complex B)
+	    ($prelex-source-assigned? ($<binding>-lhs B))))
 
       #| end of module: insert-order-edges |# )
 
