@@ -718,16 +718,18 @@
 	  ((funcall rator rand*)
 	   (let ((rator^ (E  rator))
 		 (rand*^ (E* rand*)))
-	     ;;This form  is a function  call.  In general:
+	     ;;This form is a function call.  In general:
 	     ;;
-	     ;;* We  must assume  it might  reference or assign  any of  the bindings
-	     ;;whose region includes it.
+	     ;;* We must assume it might reference assigned bindings or assign itself
+	     ;;some bindings.
 	     ;;
-	     ;;* We  must assume that it  causes side effects whose  evaluation order
-	     ;;must  not  be changed.   To  avoid  changing  the order  (for  LETREC*
-	     ;;bindings): we make all such RHS expressions complex.
+	     ;;* We  must assume that  it might  cause side effects  whose evaluation
+	     ;;order must not be changed or it  might return a value which depends on
+	     ;;a previously executed side effect.
 	     ;;
-	     ;;so we should call MAKE-THE-ENCLOSING-RHS-COMPLEX!.  For example:
+	     ;;To avoid changing  the order (for LETREC* bindings): we  make all such
+	     ;;RHS      expressions     "complex";      so      we     must      call
+	     ;;MAKE-THE-ENCLOSING-RHS-COMPLEX!.  For example:
 	     ;;
 	     ;;   (letrec* ((a (lambda () c))
 	     ;;             (b (a))
