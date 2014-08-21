@@ -1230,12 +1230,13 @@
 		;
 		;Two <binding> structures  defined at the same  lexical contour, will
 		;have the same <binding> struct in their PREV field.
-     free*
+     successor*
 		;When this struct  instance does not represent  a recursive binding's
 		;RHS expression: set to null.  Otherwise: a list of <BINDING> structs
-		;that, subordinate of this one,  represent bindings that are assigned
-		;or referenced  in this RHS.   In the graph of  binding dependencies:
-		;this list represents the outgoing links.
+		;whose RHS expression must be  evaluated before the RHS expression of
+		;this instance.  In the directed  graph of binding dependencies: this
+		;list  represents  the  destination   of  edges  outgoing  from  this
+		;instance.
 		;
 		;The value of  this field is produced while  classifying the bindings
 		;from  a single  RECBIND  or  REC*BIND form  and  it  is consumed  in
@@ -1254,17 +1255,17 @@
      ))
 
   (define (%make-top-<binding> enclosing-binding)
-    (let ((complex #t)
-	  (free*   '()))
-      (make-<binding> #f #f #f complex enclosing-binding free* #f #f)))
+    (let ((complex	#t)
+	  (successor*   '()))
+      (make-<binding> #f #f #f complex enclosing-binding successor* #f #f)))
 
   (define (<binding>-add-edge-from/to! binding.src binding.dst)
     ;;Insert a  graph edge from  BINDING.SRC to BINDING.DST,  if it does  not already
     ;;exists.
     ;;
-    (let ((free* ($<binding>-free* binding.src)))
-      (unless (memq binding.dst free*)
-	($set-<binding>-free*! binding.src (cons binding.dst free*)))))
+    (let ((successor* ($<binding>-successor* binding.src)))
+      (unless (memq binding.dst successor*)
+	($set-<binding>-successor*! binding.src (cons binding.dst successor*)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1505,11 +1506,11 @@
       (%map-in-order-with-index
 	  (lambda (serial-idx lhs rhs)
 	    (receive-and-return (binding)
-		(let ((complex	#f)
-		      (free*	'())
-		      (root	#f)
-		      (done	#f))
-		  (make-<binding> serial-idx lhs rhs complex enclosing-binding free* root done))
+		(let ((complex		#f)
+		      (successor*	'())
+		      (index		#f)
+		      (done		#f))
+		  (make-<binding> serial-idx lhs rhs complex enclosing-binding successor* index done))
 	      (set-prelex-operand! lhs binding)))
 	0 lhs* rhs*))
 
@@ -1601,57 +1602,89 @@
     (module (gen-single-letrec)
 
       (define (gen-single-letrec scc fixable* body ordered?)
-	;;SCC is  a list of <BINDING>  structures representing a cluster  of Strongly
-	;;Connected  Components.    FIXABLE*  is  a  list   of  <BINDING>  structures
-	;;representing fixable bindings.   BODY is a structure  representing the body
-	;;of a recursive binding form.
+	;;Generate binding forms for a single SCC.
+	;;
+	;;SCC is  a list  of <BINDING>  structures representing  a single  cluster of
+	;;Strongly Connected  Components.
+	;;
+	;;FIXABLE* is  null or  a list of  <BINDING> structures  representing fixable
+	;;bindings, leftovers  from the  previously processed  SCC.  Notice  that the
+	;;order of  <BINDINGS> in  the FIXABLE*  list does not  matter: they  are all
+	;;lambda RHS and will end in the same FIX structure.
+	;;
+	;;BODY is a structure representing the body of a recursive binding form.
 	;;
 	;;ORDERED?  is true if the RHS  expressions of the binding form classified as
 	;;"complex" must be evaluated in the given order.
 	;;
-	(cond ((null? ($cdr scc))
-	       (let ((b ($car scc)))
-		 (cond ((%fixable-binding? b)
-			(values (cons b fixable*) body))
-		       ((not (memq b ($<binding>-free* b)))
-			;;Return as second value:
-			;;
-			;;   (bind ((?simple.lhs ?simple.rhs))
-			;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
-			;;       ?body))
-			;;
-			(values '() (make-bind (list ($<binding>-lhs b))
-					(list ($<binding>-rhs b))
-				      (mkfix fixable* body))))
-		       (else
-			;;Return as second value:
-			;;
-			;;   (bind ((?complex.lhs '#!void))
-			;;     (assign ?complex.lhs ?complex.rhs)
-			;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
-			;;       ?body))
-			;;
-			(values '() (make-bind (list ($<binding>-lhs b))
-					(%make-void-constants '(#f))
-				      (mk-assign-seq scc (mkfix fixable* body))))))))
-	      (else
-	       (receive (inner-fixable* complex*)
-		   (partition %fixable-binding? scc)
-		 (let ((fixable*^ (append inner-fixable* fixable*)))
-		   (if (null? complex*)
-		       (values fixable*^ body)
+	;;Return 2 values:  null or a list  of "fixable" bindings to  be processed by
+	;;along  with the  outer  SCC;  recordised code  representing  the result  of
+	;;processing this SCC.
+	;;
+	;;The reason we collect "fixable" bindings is that we want forms like:
+	;;
+	;;   (fix ((?lhs0 ?rhs0))
+	;;     (fix ((?lhs1 ?rhs1))
+	;;       (fix ((?lhs2 ?rhs2))
+	;;         ?body)))
+	;;
+	;;to be collapsed into:
+	;;
+	;;   (fix ((?lhs0 ?rhs0)
+	;;         (?lhs1 ?rhs1)
+	;;         (?lhs2 ?rhs2))
+	;;     ?body)
+	;;
+	(if (null? ($cdr scc))
+	    ;;In this cluster there is a single binding.
+	    (let ((B ($car scc)))
+	      (cond ((%fixable-binding? B)
+		     ;;We will process this <BINDING> along with the outer SCC.
+		     (values (cons B fixable*) body))
+		    ((not (memq B ($<binding>-successor* B)))
 		     ;;Return as second value:
 		     ;;
-		     ;;   (bind ((?complex.lhs '#!void) ...)
+		     ;;   (bind ((B.lhs B.rhs))
 		     ;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
-		     ;;       (assign ?complex.lhs ?complex.rhs) ...
 		     ;;       ?body))
 		     ;;
-		     (values '() (let ((complex*^ (if ordered? (%sort-bindings complex*) complex*)))
-				   (mkbind (map <binding>-lhs complex*^)
-					   (%make-void-constants complex*^)
-					   (mkfix fixable*^
-						  (mk-assign-seq complex*^ body)))))))))))
+		     ;;where  the   "fixable"  bindings   are  the   ones  previously
+		     ;;collected.
+		     (values '() (make-bind (list ($<binding>-lhs B))
+				     (list ($<binding>-rhs B))
+				   (mkfix fixable* body))))
+		    (else
+		     ;;Return as second value:
+		     ;;
+		     ;;   (bind ((B.lhs '#!void))
+		     ;;     (assign B.lhs B.rhs)
+		     ;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
+		     ;;       ?body))
+		     ;;
+		     ;;where  the   "fixable"  bindings   are  the   ones  previously
+		     ;;collected.
+		     (values '() (make-bind (list ($<binding>-lhs B))
+				     (%make-void-constants '(#f))
+				   (mk-assign-seq scc (mkfix fixable* body)))))))
+	  ;;In this cluster there are multiple bindings.
+	  (receive (inner-fixable* complex*)
+	      (partition %fixable-binding? scc)
+	    (let ((fixable*^ (append inner-fixable* fixable*)))
+	      (if (null? complex*)
+		  ;;All the bindings in this SCC are "fixable".
+		  (values fixable*^ body)
+		;;Return as second value:
+		;;
+		;;   (bind ((?complex.lhs '#!void) ...)
+		;;     (fix ((?fixable.lhs ?fixable.rhs) ...)
+		;;       (assign ?complex.lhs ?complex.rhs) ...
+		;;       ?body))
+		;;
+		(values '() (let ((complex*^ (if ordered? (%sort-bindings complex*) complex*)))
+			      (mkbind (map <binding>-lhs complex*^)
+				      (%make-void-constants complex*^)
+				      (mkfix fixable*^
+					     (mk-assign-seq complex*^ body))))))))))
 
       (define (%fixable-binding? x)
 	(and (not (prelex-source-assigned? ($<binding>-lhs x)))
@@ -1697,60 +1730,68 @@
 ;;; --------------------------------------------------------------------
 
   (module (tarjan-algorithm)
-    ;;In this module we perform a depth-first visit of the directed graph of bindings
-    ;;from a single  RECBIND or REC*BIND struct, using a  recursive function.  In the
-    ;;graph: each <BINDING> struct is a  vertex (also called node); of these structs:
-    ;;in  this  module  we  use  only  the fields  FREE*,  ROOT,  DONE.   Let's  call
-    ;;"successor" the vertexes at the end of edges outgoing from a vertex: during the
-    ;;visit  we step  from the  current vertex  to an  successor one,  if it  has not
-    ;;already been  visited; a depth-first visit  is like entering a  maze and always
-    ;;turn right at cross roads.
+    ;;This  module performs  the actual  Tarjan's algorithm.   The input  data is  an
+    ;;already built directed  graph description of the  dependencies between bindings
+    ;;from a single  RECBIND or REC*BIND form.   The output data is a  list of items;
+    ;;each item represents a cluster of Strongly Connected Components (SCCs).
     ;;
-    ;;The graph  of bindings has  cycles, but we avoid  infinite loops by  setting to
-    ;;non-false the  DONE and  ROOT fields of  a <BINDING> struct  when we  visit and
-    ;;process it.
+    ;;In the graph:  each <BINDING> struct is  a vertex (also called  node); of these
+    ;;structs: in this module we use  only the fields SUCCESSOR*, INDEX, DONE.  Let's
+    ;;call "successors" the vertexes at the end  of edges outgoing from a vertex; the
+    ;;successors of a vertex are listed in the field SUCCESSOR*.
+    ;;
+    ;;We perform a depth-first visit of the  directed graph of bindings from a single
+    ;;RECBIND or  REC*BIND struct, using a  recursive function.  During the  visit we
+    ;;step from  the current vertex to  a successor one,  if it has not  already been
+    ;;visited; a depth-first visit  is like entering a maze and  always turn right at
+    ;;cross roads.
+    ;;
+    ;;The  directed graph  of bindings  has cycles,  but we  avoid infinite  loops by
+    ;;setting to non-false  the DONE and INDEX  fields of a <BINDING>  struct when we
+    ;;visit and process it.
     ;;
     ;;The purpose of the  visit is to partition the bindings  in clusters of Strongly
     ;;Connected Components; each  cluster can be processed later to  compose a set of
     ;;nested binding forms in recordised code.
     ;;
     ;;Here is the gist of the Tarjan algorithm.  While visiting the vertexes: we push
-    ;;each  visited  <BINDING> on  a  stack;  we tag  each  <BINDING>  struct with  a
-    ;;zero-based visit index.  The following example shows a visit with path A, B, C,
-    ;;D on a graph with a cycle and the associated stack of visited vertexes:
+    ;;each  visited <BINDING>  on  a stack;  we  rank each  <BINDING>  struct with  a
+    ;;zero-based serial index.   The following example shows a visit  with path A, B,
+    ;;C, D on a graph with a cycle  and the associated stack of visited vertexes; the
+    ;;serial index of each vertex is in square brackets:
     ;;
-    ;;   A[0] -> B[1] ----> C[2]     STK == A, B, C, D
-    ;;             ^          |
-    ;;             .          |
-    ;;             .          |
-    ;;           D[3] <-------
+    ;;   A[0] --> B[1] --> C[2]     STK == A, B, C, D
+    ;;              ^       |
+    ;;              .       |
+    ;;              .       |
+    ;;            D[3] <----
     ;;
     ;;Let's say  we are  visiting D and  considering the successor  vertex B  as next
     ;;step: B has been already  visited, so we do not enter it; the  index of B is 1,
     ;;less than the index of D which is 3, so we mutate the index of D to be 1:
     ;;
-    ;;   A[0] -> B[1] ----> C[2]     STK == A, B, C, D
-    ;;             ^          |
-    ;;             .          |
-    ;;             .          |
-    ;;           D[1] <-------
+    ;;   A[0] --> B[1] --> C[2]     STK == A, B, C, D
+    ;;              ^        |
+    ;;              .        |
+    ;;              .        |
+    ;;            D[1] <-----
     ;;
     ;;there are no more  successor vertexes from D so we step back  to C; notice that
     ;;we leave the stack  unchanged.  Upon stepping back to C:  we recognise that the
     ;;index of C is 2, less than the index of D which is 1; so we mutate the index of
     ;;C to be 1:
     ;;
-    ;;   A[0] -> B[1] ----> C[1]     STK == A, B, C, D
-    ;;             ^          .
-    ;;             .          .
-    ;;             .          .
-    ;;           D[1] <.......
+    ;;   A[0] --> B[1] --> C[1]     STK == A, B, C, D
+    ;;              ^        .
+    ;;              .        .
+    ;;              .        .
+    ;;            D[1] <.....
     ;;
     ;;there are no more  successor vertexes from C so we step back  to B; notice that
     ;;we leave the stack  unchanged.  Upon stepping back to B:  we recognise that the
     ;;index of B is 1,  greater than or equal to the index of C  which is 1; we leave
     ;;the  index of  B unchanged.   Now  we recognise  that: after  visiting all  the
-    ;;vertexes successor to B, the index of  B is unchanged; we conclude that all the
+    ;;vertexes successors to B, the index of B is unchanged; we conclude that all the
     ;;nodes on  the stack  up to  and including B  are part  of a  Strongly Connected
     ;;Component:
     ;;
@@ -1763,9 +1804,9 @@
     ;;
     ;;Clusters  of SCCs  are  formed and  accumulated while  stepping  back from  the
     ;;depth-first visit, the accumulated clusters are in reverse order; so at the end
-    ;;of  the  recursion  we  reverse   the  accumulated  list.   Tarjan's  algorithm
-    ;;guarantees that the  returned of clusters returned is in  the correct order for
-    ;;RHS evaluation in RECBIND or REC*BIND structs:
+    ;;of  the recursion  we reverse  the  accumulated list.   This implementation  of
+    ;;Tarjan's algorithm  guarantees that  the returned  list of  clusters is  in the
+    ;;correct order for RHS evaluation in RECBIND or REC*BIND structs:
     ;;
     ;;* The  RHS of bindings in  the first cluster  from the list, must  be evaluated
     ;;before the RHS of bindings in the second cluster.
@@ -1852,7 +1893,7 @@
 		       (visit-vertex successor-vertex reverse-scc*)
 		       (%update-vertex-index successor-vertex)))))
 	  reverse-scc*
-	  ($<binding>-free* vertex)))
+	  ($<binding>-successor* vertex)))
 
       (define (%make-scc-cluster-from-visited-vertexes limit-vertex stk)
 	;;Recursive  function.  This  function is  closed upon  (and mutates  as side

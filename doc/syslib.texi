@@ -6189,8 +6189,8 @@ represent @func{letrec*} and @func{library-letrec*} forms.
 * syslib compiler letrec notes::  General notes on the context of
                                   @func{letrec} optimisations.
 * syslib compiler letrec basic::  The basic transformation algorithm.
-* syslib compiler letrec wsd::    The @acronym{WSD} transformation algorithm.
-* syslib compiler letrec scc::    The @acronym{SCC} transformation algorithm.
+* syslib compiler letrec wsd::    The @wsd{} transformation algorithm.
+* syslib compiler letrec scc::    The @scc{} transformation algorithm.
 @end menu
 
 @c page
@@ -6211,7 +6211,7 @@ structures representing recursive binding forms for unassigned
 we @strong{must} read the following paper:
 
 @quotation
-[@acronym{WSD}] Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.
+[@wsd{}] Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.
 ``Fixing Letrec: A Faithful Yet Efficient Implementation of Scheme's
 Recursive Binding Construct''.
 @end quotation
@@ -6222,9 +6222,23 @@ actual dependency graph.  To understand this algorithm, and the code, we
 @strong{must} read the following paper:
 
 @quotation
-[@acronym{SCC}] Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec
+[@scc{}] Abdulaziz Ghuloum, R. Kent Dybvig.  ``Fixing Letrec
 (reloaded)''.  Workshop on Scheme and Functional Programming '09.
 @end quotation
+
+@noindent
+the described algorithm makes use of Tarjan's algorithms to partition
+the nodes of a graph into Strongly Connected Components (@scc{}):
+
+@quotation
+Tarjan, Robert Endre.  ``Depth--first search and linear graph
+algorithms''.  SIAM Journal on Computing 1 (2): 146-160, 1972.
+@end quotation
+
+@noindent
+for details on the @scc{} algorithm, we can also refer to the
+Wikipedia article ``Tarjan's strongly connected components
+algorithm''@footnote{@url{https:@//@//en.wikipedia.org@//wiki@//Tarjan%27s_strongly_connected_components_algorithm}}.
 
 @c page
 @node syslib compiler letrec api
@@ -6265,11 +6279,11 @@ Perform the basic transformation.
 
 @item waddell
 Perform a transformation similar (but no equal) to the one described in
-the [@acronym{WSD}] paper.
+the [@wsd{}] paper.
 
 @item scc
 Perform a transformation similar (but no equal) to the one described in
-the [@acronym{SCC}] paper.  This is the default.
+the [@scc{}] paper.  This is the default.
 @end table
 @end deffn
 
@@ -6484,6 +6498,68 @@ because the form @code{x} in reference position in the right--hand side
 of the binding is never evaluated; under @value{PRJNAME} this code will
 rather raise a syntax violation at compile--time.
 
+@c ------------------------------------------------------------
+
+@subsubheading Bindings on the Scheme stack
+
+In the @objtype{recbind} forms the right--hand side expressions
+@meta{rhs} have no imposed order of evaluation; the following two forms,
+in which the order of the bindings is reversed, must be completely
+equivalent:
+
+@example
+(recbind ((@metai{lhs} @metai{rhs})
+          (@metaii{lhs} @metaii{rhs}))
+  @meta{body})
+
+(recbind ((@metaii{lhs} @metaii{rhs})
+          (@metai{lhs} @metai{rhs}))
+  @meta{body})
+@end example
+
+In the @func{rec*bind} forms the right-hand side expressions @meta{rhs}
+must be evaluated in the same order in which they appear.
+
+In a lower--level compiler pass: instances of struct @objtype{bind} will
+be converted to code that evaluates the @meta{rhs} expressions and store
+their return value into appropriately allocated Scheme stack machine
+words; a machine word for every @meta{lhs} will be allocated, each
+@meta{lhs} will represent an actual ``local variable''.
+
+If we think about the Scheme stack, it is clear why @objtype{bind}
+structures cannot represent recursive bindings; given the core language
+expression:
+
+@example
+(letrec ((f (lambda () f)))
+  @meta{body})
+@end example
+
+@noindent
+the internal representation must be:
+
+@example
+(bind ((f_0 '#!void))
+  (seq
+    (assign f_0 (lambda () f_0))
+    @meta{body}))
+@end example
+
+@noindent
+so that: first @objtype{bind} reserves a Scheme stack machine word for
+the local variable, initialised to @code{#<void>}; then a closure object
+is created, referencing the local variable @code{f_0}; finally a
+reference to the closure object is stored in @code{f_0}.  To create the
+closure object, we must first know the address of the allocated machine
+word.
+
+When processing @objtype{recbind} and @objtype{rec*bind} structures: we
+must make sure that a machine word is allocated on the Scheme stack
+before the address of such word is needed by the @meta{rhs} expressions.
+We do this by transforming @objtype{recbind} and @objtype{rec*bind}
+instances into a composition of @objtype{bind} and @objtype{assign}
+instances.
+
 @c page
 @node syslib compiler letrec basic
 @subsubsection The basic transformation algorithm
@@ -6546,84 +6622,19 @@ is transformed into:
    (funcall void)))
 @end example
 
-@c ------------------------------------------------------------
-
-@subsubheading Further notes
-
-In the @objtype{recbind} forms the right--hand side expressions
-@meta{rhs} have no imposed order of evaluation; the following two forms,
-in which the order of the bindings is reversed, must be completely
-equivalent:
-
-@example
-(recbind ((@metai{lhs} @metai{rhs})
-          (@metaii{lhs} @metaii{rhs}))
-  @meta{body})
-
-(recbind ((@metaii{lhs} @metaii{rhs})
-          (@metai{lhs} @metai{rhs}))
-  @meta{body})
-@end example
-
-In the @func{rec*bind} forms the right-hand side expressions @meta{rhs}
-must be evaluated in the same order in which they appear.
-
-In a lower--level compiler pass: instances of struct @objtype{bind} will
-be converted to code that evaluates the @meta{rhs} expressions and store
-their return value into appropriately allocated Scheme stack machine
-words; a machine word for every @meta{lhs} will be allocated, each
-@meta{lhs} will represent an actual ``local variable''.
-
-If we think about the Scheme stack, it is clear why @objtype{bind}
-structures cannot represent recursive bindings; given the core language
-expression:
-
-@example
-(letrec ((f (lambda () f)))
-  @meta{body})
-@end example
-
-@noindent
-the internal representation must be:
-
-@example
-(bind ((f_0 '#!void))
-  (seq
-    (assign f_0 (lambda () f_0))
-    @meta{body}))
-@end example
-
-@noindent
-so that: first @objtype{bind} reserves a Scheme stack machine word for
-the local variable, initialised to @code{#<void>}; then a closure object
-is created, referencing the local variable @code{f_0}; finally a
-reference to the closure object is stored in @code{f_0}.  To create the
-closure object, we must first know the address of the allocated machine
-word.
-
-When processing @objtype{recbind} and @objtype{rec*bind} structures: we
-must make sure that a machine word is allocated on the Scheme stack
-before the address of such word is needed by the @meta{rhs} expressions.
-We do this by transforming @objtype{recbind} and @objtype{rec*bind}
-instances into a composition of @objtype{bind} and @objtype{assign}
-instances.
-
 @c page
 @node syslib compiler letrec wsd
-@subsubsection The @acronym{WSD} transformation algorithm
+@subsubsection The @wsd{} transformation algorithm
 
 
-Everything discussed for the basic transformation algorithm is still
-valid for the @acronym{WSD} algorithm, @ref{syslib compiler letrec
-basic, The basic transformation algorithm}.  The @acronym{WSD} algorithm
-recognises some properties of the bindings to allow: less assignment
-operations, more efficient generation of unassigned function bindings in
-the same lexical contour.
+The @wsd{} algorithm recognises some properties of the bindings
+to allow: less assignment operations, more efficient generation of
+unassigned function bindings in the same lexical contour.
 
 When processing a @func{letrec} or @func{letrec*} core language form
-@acronym{WSD} classifies each binding into: @code{unreferenced},
+@wsd{} classifies each binding into: @code{unreferenced},
 @code{simple}, @code{complex} or @code{fixable}.  @value{PRJNAME}'s
-implementation of @acronym{WSD} leaves unreferenced bindings alone, in
+implementation of @wsd{} leaves unreferenced bindings alone, in
 this compiler pass, to be processed later by the source optimiser; an
 unreferenced binding is classified as @code{simple}.  It also renames
 the category @code{lambda} into @code{fixable}.
@@ -6717,7 +6728,7 @@ is transformed into:
 
 @subsubheading Notes
 
-The really important thing about the @acronym{WSD} transformations is to
+The really important thing about the @wsd{} transformations is to
 generate reliable @code{fix} bindings definitions: the classification of
 ``fixable'' bindings must be reliable.  This covers the very common case
 of @func{library} forms whose top level function definitions are
@@ -6749,16 +6760,175 @@ classifying bindings as @code{complex}, even though they could be
 @code{simple} or @code{fixable}, whenever the classification as
 @code{simple} or @code{fixable} requires too much work or is unreliable;
 in other words: when in doubt, just call it @code{complex}.  One of the
-purposes of the @acronym{SCC} algorithm is exactly to improve such
+purposes of the @scc{} algorithm is exactly to improve such
 classification.
 
 @c page
 @node syslib compiler letrec scc
-@subsubsection The @acronym{SCC} transformation algorithm
+@subsubsection The @scc{} transformation algorithm
 
 
-For details on the graph algorithm, we can refer to the Wikipedia
-article ``Tarjan's strongly connected components algorithm''@footnote{@url{https:@//@//en.wikipedia.org@//wiki@//Tarjan%27s_strongly_connected_components_algorithm}}.
+The @scc{} algorithm builds a directed graph representation of the
+bindings in a single @objtype{recbind} or @objtype{rec*bind} structure,
+outlining the dependencies among right--hand side expressions; in the
+graph each binding is a vertex (also called node).  It then applies
+Tarjan's algorithm to the graph and partitions the bindings into
+clusters of Strongly Connected Components (@scc{}).
+
+Here is the gist of the algorithm:
+
+@enumerate
+@item
+Given the core language @func{letrec} form:
+
+@example
+(letrec ((D (lambda () B))
+         (C D)
+         (B C)
+         (A B))
+  @meta{body})
+@end example
+
+@noindent
+we build a directed graph of dependencies between the bindings; the
+graph of dependencies for the given form is:
+
+@example
+A --> B --> C
+      ^     |
+      |     |
+      D <---
+@end example
+
+@item
+We perform a depth--first visit of the directed graph; during the visit
+we step from the current vertex to a successor one, following an
+outgoing edge, if it has not already been visited; a depth--first visit
+is like entering a maze and always turn right at cross roads.  While
+visiting the vertexes: we push each visited vertex on a stack; we rank
+each vertex with a zero--based serial index.
+
+The following picture shows an ongoing visit with path @samp{A},
+@samp{B}, @samp{C}, @samp{D}; the serial index of each vertex is in
+square brackets:
+
+@example
+A[0] --> B[1] --> C[2]     STK == A, B, C, D
+           ^       |
+           .       |
+           .       |
+         D[3] <----
+@end example
+
+@noindent
+let's say we are visiting @samp{D} and considering the successor vertex
+@samp{B} as next step.
+
+@enumerate a
+@item
+@samp{B} has already been visited, so we do not enter it; the index of
+@samp{B} is @samp{1}, less than the index of @samp{D} which is @samp{3},
+so we mutate the index of @samp{D} to be @samp{1}:
+
+@example
+A[0] --> B[1] --> C[2]     STK == A, B, C, D
+           ^        |
+           .        |
+           .        |
+         D[1] <-----
+@end example
+
+@noindent
+there are no more successor vertexes from @samp{D} so we step back to
+@samp{C}; notice that we leave the stack unchanged.
+
+@item
+Upon stepping back to @samp{C}: we recognise that the index of @samp{C}
+is @samp{2}, less than the index of @samp{D} which is @samp{1}; so we
+mutate the index of @samp{C} to be @samp{1}:
+
+@example
+A[0] --> B[1] --> C[1]     STK == A, B, C, D
+           ^        .
+           .        .
+           .        .
+         D[1] <.....
+@end example
+
+@noindent
+there are no more successor vertexes from @samp{C} so we step back to
+@samp{B}; notice that we leave the stack unchanged.
+
+@item
+Upon stepping back to @samp{B}: we recognise that the index of @samp{B}
+is @samp{1}, greater than or equal to the index of @samp{C} which is
+@samp{1}; we leave the index of @samp{B} unchanged.  Now we recognise
+that: after visiting all the vertexes successors to @samp{B}, the index
+of @samp{B} is unchanged; we conclude that all the nodes on the stack up
+to and including @samp{B} are part of a Strongly Connected Component:
+
+@example
+STK == A, B, C, D
+         |-------| SCC
+@end example
+
+@noindent
+so we pop them from the stack and form a cluster with them.  The
+vertexes in a cluster are marked as ``done'' and will be skipped in
+further steps of the visit, as if they are not there.
+@end enumerate
+
+@item
+Clusters of @scc{}s are formed and accumulated while stepping back from
+the depth--first visit, the accumulated clusters are in reverse order.
+This implementation of Tarjan's algorithm guarantees that the returned
+list of clusters is in the correct order for RHS evaluation in
+@objtype{recbind} or @objtype{rec*bind} structs:
+
+@itemize
+@item
+The RHS of bindings in the first cluster from the list, must be
+evaluated before the RHS of bindings in the second cluster.
+
+@item
+The RHS of bindings in the second cluster from the list, must be
+evaluated before the RHS of bindings in the third cluster.
+
+@item
+And so on.
+@end itemize
+
+So we can arrange the evaluation as if each cluster comes from a nested
+binding form; if the returned list is:
+
+@example
+((@meta{cluster-binding-1} ...)
+ (@meta{cluster-binding-2} ...)
+ (@meta{cluster-binding-3} ...))
+@end example
+
+@noindent
+the equivalent nested binding forms are:
+
+@example
+(recbind (@meta{cluster-binding-3} ...)
+  (recbind (@meta{cluster-binding-2} ...)
+    (recbind (@meta{cluster-binding-1} ...)
+      @meta{body})))
+@end example
+
+@item
+Each cluster of @scc{}s generates a nested hierarchy of bindings; first
+the bindings are partitioned into fixable and non--fixable, the a form
+like the following is generated:
+
+@example
+(bind ((@meta{complex.lhs} '#!void) ...)
+  (fix ((@meta{fixable.lhs} @meta{fixable.rhs}) ...)
+    (assign @meta{complex.lhs} @meta{complex.rhs}) ...
+    @meta{body}))
+@end example
+@end enumerate
 
 @c page
 @node syslib compiler optimisation
