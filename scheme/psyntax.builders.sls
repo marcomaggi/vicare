@@ -151,17 +151,17 @@
 (define (build-let ae lhs* rhs* body)
   ;;Transform a standard LET syntax into a core language LET syntax.
   ;;
+  ;;HISTORICAL NOTE In the original Ikarus  code, the implementation of this function
+  ;;was:
+  ;;
+  ;;  (build-application ae (build-lambda ae lhs* body) rhs*)
+  ;;
+  ;;I discarded  it because generating  a function application looks  suboptimal; the
+  ;;source code optimiser is perfectly capable of processing LET core language forms.
+  ;;With the old  implementation: the function application was converted  back into a
+  ;;LET-like form.  (Marco Maggi; Fri Aug 22, 2014)
+  ;;
   `(let ,(map list lhs* rhs*) ,body))
-
-#;(define (build-let ae lhs* rhs* body)
-  ;;Transform a LET syntax into the appliction of a LAMBDA function:
-  ;;
-  ;;  (let ((?lhs ?rhs) ...) . ?body)
-  ;;  --> ((lambda (?lhs ...) . ?body) ?rhs ...)
-  ;;
-  ;;This is used only when building LETREC* and CASE-LAMBDA.
-  ;;
-  (build-application ae (build-lambda ae lhs* body) rhs*))
 
 (define-syntax build-primref
   (syntax-rules ()

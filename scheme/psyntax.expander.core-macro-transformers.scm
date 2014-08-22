@@ -158,9 +158,9 @@
   ;;
   ;;if the expander  determines that the signature  of 1 is "(<fixnum>)",  the RHS is
   ;;transformed at expand-time into just "1";  otherwise a run-time object type check
-  ;;is inserted.  In any case we can be sure at bot expand-time and run-time that the
-  ;;signature of the  identifier A is correct, otherwise an  exception will be raised
-  ;;before expanding or running the ?BODY.
+  ;;is inserted.  In  any case we can  be sure at both expand-time  and run-time that
+  ;;the signature  of the  identifier A  is correct, otherwise  an exception  will be
+  ;;raised before expanding or running the ?BODY.
   ;;
 
   (define (%expand-rhs* input-form.stx lexenv.run lexenv.expand
@@ -169,8 +169,8 @@
     ;;INPUT-FORM.STX; the context  of the expansion is described by  the given LEXENV
     ;;arguments.
     ;;
-    ;;LHS*.TAG  must be  a list  of tag  identifiers representing  the tags  from the
-    ;;left-hand sides.
+    ;;LHS*.TAG must be a list of tag identifiers representing the tags resulting from
+    ;;parsing the left-hand sides in the source code.
     ;;
     ;;RHS*.STX must be a list of syntax objects representing the expressions from the
     ;;right-hand sides.
@@ -180,13 +180,16 @@
     ;;sides.  If  the RHS  are found,  at expand-time,  to return  zero, two  or more
     ;;values: a synatx violation is raised.
     ;;
+    ;;The tag identifiers  in the second returned  value can be used  to override the
+    ;;ones in LHS*.TAG.
+    ;;
     (define rhs*.psi
       (map (lambda (rhs.stx lhs.tag)
 	     ;;If LHS.TAG is "<top>", we still want to use the assert and return form
 	     ;;to  make sure  that  a single  value is  returned.   If the  signature
-	     ;;validation succeeds at expand-time: the  returned PSI has the original
-	     ;;RHS signature,  not "(<top>)".   This allows us  to propagate  the tag
-	     ;;from RHS to LHS.
+	     ;;validation  succeeds at  expand-time:  the returned  PSI  has the  RHS
+	     ;;signature  inferred from  the original  RHS.STX, not  "(<top>)".  This
+	     ;;allows us to propagate the tag from RHS to LHS.
 	     (chi-expr (bless
 			`(tag-assert-and-return (,lhs.tag) ,rhs.stx))
 		       lexenv.run lexenv.expand))
