@@ -388,7 +388,8 @@
   ;;
   ;;Synopsis:
   ;;
-  ;;  (define-structure (?name ?field-without ...)
+  ;;  (define-structure ?name
+  ;;    (?field-without ...)
   ;;    ((?field-with ?default)
   ;;	 ...))
   ;;
@@ -407,46 +408,47 @@
       (datum->syntax ctxt (string->symbol
 			   (apply format template-str (map syntax->datum args)))))
     (syntax-case stx ()
-      ((_ (?name ?field ...))
-       #'(define-struct ?name (?field ...)))
-
-      ((_ (?name ?field-without-default ...)
-	  ((?field-with-default ?default)
-	   ...))
-       (with-syntax
-	   ((PRED		(%format-id #'?name "~s?" #'?name))
-	    (MAKER		(%format-id #'?name "make-~s" #'?name))
-	    ((GETTER ...)	(map (lambda (x)
-				       (%format-id #'?name "~s-~s" #'?name x))
-				  #'(?field-without-default ... ?field-with-default ...)))
-	    ((UNSAFE-GETTER ...)(map (lambda (x)
-				       (%format-id #'?name "$~s-~s" #'?name x))
-				  #'(?field-without-default ... ?field-with-default ...)))
-	    ((SETTER ...)	(map (lambda (x)
-				       (%format-id #'?name "set-~s-~s!" #'?name x))
-				  #'(?field-without-default ... ?field-with-default ...)))
-	    ((UNSAFE-SETTER ...)(map (lambda (x)
-				       (%format-id #'?name "$set-~s-~s!" #'?name x))
-				  #'(?field-without-default ... ?field-with-default ...))))
-         #'(module (?name PRED
-			  GETTER ... UNSAFE-GETTER ...
-			  SETTER ... UNSAFE-SETTER ...
-			  MAKER)
-             (module private
-	       (?name PRED
-		      GETTER ... UNSAFE-GETTER ...
-		      SETTER ... UNSAFE-SETTER ...
-		      MAKER)
-	       (define-struct ?name
-		 (?field-without-default ... ?field-with-default ...)))
-             (module (MAKER)
-               (define (MAKER ?field-without-default ...)
-                 (import private)
-                 (MAKER ?field-without-default ... ?default ...)))
-             (module (?name PRED
+      ((_ ?name (?field-without-default ...) ((?field-with-default ?default) ...))
+       (identifier? #'?name)
+       (let ((name.id #'?name))
+	 (with-syntax
+	     ((PRED			(%format-id name.id "~s?" name.id))
+	      (MAKER			(%format-id name.id "make-~s" name.id))
+	      ((GETTER ...)		(map (lambda (x)
+					       (%format-id name.id "~s-~s" name.id x))
+					  #'(?field-without-default ... ?field-with-default ...)))
+	      ((UNSAFE-GETTER ...)	(map (lambda (x)
+					       (%format-id name.id "$~s-~s" name.id x))
+					  #'(?field-without-default ... ?field-with-default ...)))
+	      ((SETTER ...)		(map (lambda (x)
+					       (%format-id name.id "set-~s-~s!" name.id x))
+					  #'(?field-without-default ... ?field-with-default ...)))
+	      ((UNSAFE-SETTER ...)	(map (lambda (x)
+					       (%format-id name.id "$set-~s-~s!" name.id x))
+					  #'(?field-without-default ... ?field-with-default ...))))
+	   #'(module (?name PRED
 			    GETTER ... UNSAFE-GETTER ...
-			    SETTER ... UNSAFE-SETTER ...)
-               (import private)))))
+			    SETTER ... UNSAFE-SETTER ...
+			    MAKER)
+	       (module private
+		 (?name PRED
+			GETTER ... UNSAFE-GETTER ...
+			SETTER ... UNSAFE-SETTER ...
+			MAKER)
+		 (define-struct ?name
+		   (?field-without-default ... ?field-with-default ...)))
+	       (module (MAKER)
+		 (define (MAKER ?field-without-default ...)
+		   (import private)
+		   (MAKER ?field-without-default ... ?default ...)))
+	       (module (?name PRED
+			      GETTER ... UNSAFE-GETTER ...
+			      SETTER ... UNSAFE-SETTER ...)
+		 (import private))))))
+
+      ((_ ?name (?field ...))
+       (identifier? #'?name)
+       #'(define-struct ?name (?field ...)))
       )))
 
 
@@ -524,6 +526,11 @@
   ;;Closure upon a function capable of  retrieving a core primitive's location gensym
   ;;given its symbol name.   Notice that this is not a  parameter because: whenever a
   ;;new procedure is set some initialisation must be performed.
+  ;;
+  ;;The referenced function will allow this computation:
+  ;;
+  ;;   ((current-primitive-locations) 'display)
+  ;;   => ?display-loc-gensym
   ;;
   (let ((plocs (lambda (x) #f)))
     (case-lambda*
@@ -699,12 +706,11 @@
 ;;binding  names; this  way  we can  just  send  around the  binding  name symbol  to
 ;;represent some lexical context informations.
 ;;
-(define-structure
-    (prelex
-     name
+(define-structure prelex
+  (name
 		;The lex gensym  representing the binding name in  the core language;
 		;in practice useful only for humans when debugging.
-     )
+   )
   ((operand		#f)
 		;Multipurpose  field.   When   unused  it  is  set   to  false.   The
 		;documentation of  uses is long:  see the individual  compiler passes

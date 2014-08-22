@@ -5216,7 +5216,6 @@
 ;; mode: vicare
 ;; eval: (put 'make-primcall 'scheme-indent-function 1)
 ;; eval: (put 'assemble-sources 'scheme-indent-function 1)
-;; eval: (put 'define-structure 'scheme-indent-function 1)
 ;; eval: (put 'make-conditional 'scheme-indent-function 2)
 ;; eval: (put 'struct-case 'scheme-indent-function 1)
 ;; End:

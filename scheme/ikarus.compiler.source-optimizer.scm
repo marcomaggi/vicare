@@ -164,12 +164,14 @@
 ;;this struct instance has been expanded inline (taking advantage of the
 ;;known primitive function attributes).
 ;;
-(define-structure (app rand* ctxt)
+(define-structure app
+  (rand* ctxt)
   ((inlined			#f)))
 
 ;;Represent an expression being the operand to a function call.
 ;;
-(define-structure (operand expr env ec)
+(define-structure operand
+  (expr env ec)
   ((value			#f)
 		;If it is  possible to precompute the  value: such value
 		;is saved here.
