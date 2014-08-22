@@ -504,23 +504,49 @@
 ;;;; module core-macro-transformer: LETREC and LETREC*
 
 (module (letrec-transformer letrec*-transformer)
+  ;;Transformer  functions  used to  expand  LETREC  and  LETREC* syntaxes  from  the
+  ;;top-level built in  environment.  Expand the syntax object  INPUT-FORM.STX in the
+  ;;context of the given LEXENV; return a PSI struct.
+  ;;
+  ;;In practice, below we convert the standard syntaxes:
+  ;;
+  ;;   (letrec  ((?lhs ?rhs) ...) . ?body)
+  ;;   (letrec* ((?lhs ?rhs) ...) . ?body)
+  ;;
+  ;;into the core language syntaxes:
+  ;;
+  ;;   (letrec  ((?lhs ?rhs) ...) . ?body)
+  ;;   (letrec* ((?lhs ?rhs) ...) . ?body)
+  ;;
+  ;;NOTE Unfortunately, with recursive bindings we cannot implement coherent RHS type
+  ;;propagation.  Let's think of:
+  ;;
+  ;;   (letrec ((a (some-stuff ... a ...)))
+  ;;     ?body)
+  ;;
+  ;;we could infer  the returned type of the  RHS and use it while  expand the ?BODY,
+  ;;but what about the RHS?  While expanding the RHS the identifier A would be tagged
+  ;;as "<top>" and while expanding the ?BODY it would be tagged as "<whatever>"; this
+  ;;is incoherent.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'letrec-transformer))
 
   (define (letrec-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used to expand LETREC syntaxes from the top-level built in
-    ;;environment.  Expand  the syntax object  INPUT-FORM.STX in  the context of  the given
-    ;;LEXENV; return a PSI struct.
+    ;;environment.  Expand  the syntax  object INPUT-FORM.STX in  the context  of the
+    ;;given LEXENV; return a PSI struct.
     ;;
     (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec))
 
   (define (letrec*-transformer input-form.stx lexenv.run lexenv.expand)
     ;;Transformer function used  to expand LETREC* syntaxes from  the top-level built
-    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the given
-    ;;LEXENV; return a PSI struct.
+    ;;in environment.  Expand the syntax object  INPUT-FORM.STX in the context of the
+    ;;given LEXENV; return a PSI struct.
     ;;
     (%letrec-helper input-form.stx lexenv.run lexenv.expand build-letrec*))
 
   (define (%letrec-helper input-form.stx lexenv.run lexenv.expand core-lang-builder)
-    (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
        ;;Check that the binding names are identifiers and without duplicates.
@@ -534,52 +560,15 @@
 	   ;;extended lexical  environment in which  to evaluate both  the right-hand
 	   ;;sides and the body.
 	   ;;
-	   ;;Notice  that the  region of  all the  LETREC bindings  includes all  the
+	   ;;NOTE The region of all the  LETREC and LETREC* bindings includes all the
 	   ;;right-hand sides.
 	   (let* ((rib         (make-filled-rib lhs*.id lhs*.lab))
 		  (lexenv.run^ (add-lexical-bindings lhs*.lab lhs*.lex lexenv.run))
-		  (rhs*.psi    ($map-in-order
-				(lambda (rhs.stx lhs.lab lhs.tag)
-				  (receive-and-return (rhs.psi)
-				      ;;The LHS*.ID  and LHS*.LAB have been  added to
-				      ;;the  rib,  and  the  rib  is  pushed  on  the
-				      ;;RHS.STX.  So, while  the specific identifiers
-				      ;;LHS*.ID  are  unbound  (because they  do  not
-				      ;;contain  the  rib),  any  occurrence  of  the
-				      ;;binding   identifiers  in   the  RHS.STX   is
-				      ;;captured by the binding in the rib.
-				      ;;
-				      ;;If LHS.TAG  is "<top>", we still  want to use
-				      ;;the assert and return  form to make sure that
-				      ;;a single value is returned.  If the signature
-				      ;;validation   succeeds  at   expand-time:  the
-				      ;;returned PSI has  the original RHS signature,
-				      ;;not "(<top>)".   This allows us  to propagate
-				      ;;the tag from RHS to LHS.
-				      (chi-expr (push-lexical-contour rib
-						  (bless
-						   `(tag-assert-and-return (,lhs.tag) ,rhs.stx)))
-						lexenv.run^ lexenv.expand)
-				    ;;If the LHS is untagged: perform tag propatation
-				    ;;from the RHS to the LHS.
-				    (when (and (option.tagged-language.rhs-tag-propagation?)
-					       (top-tag-id? lhs.tag))
-				      (syntax-match (retvals-signature-tags (psi-retvals-signature rhs.psi)) ()
-					((?tag)
-					 ;;Single return value: good.
-					 (override-label-tag! lhs.lab ?tag))
-					(_
-					 ;;If  we   are  here   it  means   that  the
-					 ;;TAG-ASSERT-AND-RETURN       above      has
-					 ;;misbehaved.
-					 (assertion-violation/internal-error __who__
-					   "invalid retvals signature"
-					   (syntax->datum input-form.stx)
-					   (psi-retvals-signature rhs.psi)))))))
-				?rhs* lhs*.lab lhs*.tag))
-		  (body.psi (chi-internal-body (push-lexical-contour rib
-						 (cons ?body ?body*))
-					       lexenv.run^ lexenv.expand)))
+		  (rhs*.psi    (%expand-rhs input-form.stx lexenv.run^ lexenv.expand
+					    lhs*.lab lhs*.tag ?rhs* rib))
+		  (body.psi    (chi-internal-body (push-lexical-contour rib
+						    (cons ?body ?body*))
+						  lexenv.run^ lexenv.expand)))
 	     (let* ((rhs*.core (map psi-core-expr rhs*.psi))
 		    (body.core (psi-core-expr body.psi))
 		    ;;Build the LETREC or LETREC* expression in the core language.
@@ -590,6 +579,46 @@
 	       (make-psi input-form.stx expr.core
 			 (psi-retvals-signature body.psi)))))))
       ))
+
+  (define (%expand-rhs input-form.stx lexenv.run lexenv.expand
+		       lhs*.lab lhs*.tag rhs*.stx rib)
+    ;;Expand  the  right  hand sides  in  RHS*.STX  and  return  a list  holding  the
+    ;;corresponding PSI structures.
+    ;;
+    ($map-in-order
+	(lambda (rhs.stx lhs.lab lhs.tag)
+	  (receive-and-return (rhs.psi)
+	      ;;The LHS*.ID and LHS*.LAB  have been added to the rib,  and the rib is
+	      ;;pushed on  the RHS.STX.  So,  while the specific  identifiers LHS*.ID
+	      ;;are unbound (because they do not  contain the rib), any occurrence of
+	      ;;the binding identifiers in the RHS.STX  is captured by the binding in
+	      ;;the rib.
+	      ;;
+	      ;;If LHS.TAG  is "<top>", we  still want to  use the assert  and return
+	      ;;form to make sure that a  single value is returned.  If the signature
+	      ;;validation succeeds at expand-time: the returned PSI has the original
+	      ;;RHS signature,  not "(<top>)".  This  allows us to propagate  the tag
+	      ;;from RHS to LHS.
+	      (chi-expr (push-lexical-contour rib
+			  (bless
+			   `(tag-assert-and-return (,lhs.tag) ,rhs.stx)))
+			lexenv.run lexenv.expand)
+	    ;;If the  LHS is untagged:  perform tag propatation  from the RHS  to the
+	    ;;LHS.
+	    (when (and (option.tagged-language.rhs-tag-propagation?)
+		       (top-tag-id? lhs.tag))
+	      (syntax-match (retvals-signature-tags (psi-retvals-signature rhs.psi)) ()
+		((?tag)
+		 ;;Single return value: good.
+		 (override-label-tag! lhs.lab ?tag))
+		(_
+		 ;;If we are  here it means that the  TAG-ASSERT-AND-RETURN above has
+		 ;;misbehaved.
+		 (assertion-violation/internal-error __who__
+		   "invalid retvals signature"
+		   (syntax->datum input-form.stx)
+		   (psi-retvals-signature rhs.psi)))))))
+      rhs*.stx lhs*.lab lhs*.tag))
 
   #| end of module |# )
 
@@ -2692,4 +2721,5 @@
 ;;eval: (put 'syntactic-binding-getprop		'scheme-indent-function 1)
 ;;eval: (put 'sys.syntax-case			'scheme-indent-function 2)
 ;;eval: (put 'with-exception-handler/input-form	'scheme-indent-function 1)
+;;eval: (put '$map-in-order			'scheme-indent-function 1)
 ;;End:
