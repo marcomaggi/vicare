@@ -816,7 +816,7 @@
 ;;the first  field and  the last  expression in  the second  field; this  allows easy
 ;;extraction of the last form, which is useful, for example, in the source optimizer.
 ;;
-;;We can think of the form:
+;;We can think of the core language form:
 ;;
 ;;   (begin ?b0 ?b1 ?last)
 ;;
