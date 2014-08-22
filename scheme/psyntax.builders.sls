@@ -40,7 +40,7 @@
     build-application			build-conditional
     build-lexical-reference		build-global-assignment
     build-global-definition		build-lambda
-    build-case-lambda			#;build-let
+    build-case-lambda			build-let
     build-primref			build-foreign-call
     build-data				build-sequence
     build-void				build-letrec
@@ -149,6 +149,11 @@
 
 
 (define (build-let ae lhs* rhs* body)
+  ;;Transform a standard LET syntax into a core language LET syntax.
+  ;;
+  `(let ,(map list lhs* rhs*) ,body))
+
+#;(define (build-let ae lhs* rhs* body)
   ;;Transform a LET syntax into the appliction of a LAMBDA function:
   ;;
   ;;  (let ((?lhs ?rhs) ...) . ?body)

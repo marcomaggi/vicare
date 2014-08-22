@@ -1482,6 +1482,7 @@
   ;;   (if ?test ?consequent ?alternate)
   ;;   (set! ?lhs ?rhs)
   ;;   (begin ?body0 ?body ...)
+  ;;   (let     ((?lhs ?rhs) ...) ?body0 ?body ..)
   ;;   (letrec  ((?lhs ?rhs) ...) ?body0 ?body ..)
   ;;   (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
   ;;   (case-lambda (?formals ?body0 ?body ...) ...)
@@ -1636,6 +1637,26 @@
 	 (if (null? D)
 	     (E A ctxt)
 	   (make-seq (E A) (recur ($car D) ($cdr D))))))
+
+      ;;Synopsis: (let ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;
+      ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
+      ;;is unique for this binding in the whole history of the Universe.
+      ;;
+      ;;Return a struct instance of type BIND.
+      ;;
+      ((let)
+       (let ((bind* ($cadr  X))		      ;list of bindings
+	     (body  ($caddr X)))	      ;list of body forms
+	 (let ((lex* ($map/stx $car  bind*))  ;list of bindings left-hand sides
+	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
+	   ;;Make sure that LEX* is processed first!!!
+	   (let* ((prel* (lex*->prelex* lex*))
+		  (rhs*^ ($map/stx E rhs* lex*))
+		  (body^ (E body ctxt)))
+	     (begin0
+	       (make-bind prel* rhs*^ body^)
+	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
       ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
       ;;
@@ -2122,9 +2143,9 @@
     ;;
     ;;This is how bindings are handled:
     ;;
-    ;;* When  RECORDIZE enters a LAMBDA,  ANNOTATED-CASE-LAMBDA, CASE-LAMBDA, LETREC,
-    ;;   LETREC*, LIBRARY-LETREC*  core language  form:  for each  defined binding  a
-    ;;  PRELEX struct is  built and stored in the property list  of the binding's lex
+    ;;*  When RECORDIZE  enters  a LAMBDA,  ANNOTATED-CASE-LAMBDA, CASE-LAMBDA,  LET,
+    ;;  LETREC, LETREC*, LIBRARY-LETREC* core language form: for each defined binding
+    ;;  a PRELEX struct is built and stored in the property list of the binding's lex
     ;;  gensym.
     ;;
     ;;* While  RECORDIZE processes the body  of the binding core  language form: each
@@ -2137,7 +2158,8 @@
     ;;So:
     ;;
     ;;* While  processing a LIBRARY-LETREC* form:  all the lex gensyms  associated to
-    ;;  level bindings defined inside the form  have a PRELEX in their property list.
+    ;;  top level  bindings defined inside the  form have a PRELEX  in their property
+    ;;  list.
     ;;
     ;;* While  processing a standalone expression:  the lex gensyms associated  to an
     ;;  internally defined binding  do have a PRELEX in their  property list; the lex
