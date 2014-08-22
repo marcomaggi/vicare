@@ -702,11 +702,11 @@
 ;;optimizable.
 ;;
 
-;;Instances of  this type are  stored in the  property lists of  symbols representing
-;;binding  names; this  way  we can  just  send  around the  binding  name symbol  to
-;;represent some lexical context informations.
-;;
 (define-structure prelex
+  ;;Whenever in  core language  forms a  lex gensym appears  to define,  reference or
+  ;;assign a variable  binding: an instance of this type  appears in recordised code.
+  ;;This is to allow properties to be attached to bindings.
+  ;;
   (name
 		;The lex gensym  representing the binding name in  the core language;
 		;in practice useful only for humans when debugging.
@@ -721,16 +721,36 @@
 		;
 		;See also the field RESIDUAL-REFERENCED?.
    (source-assigned?	#f)
-		;Boolean or symbol.
+		;Boolean or loc gensym.
 		;
 		;When a  boolean: true when  the binding  has been used  as left-hand
-		;side in a SET! form.  For example:
+		;side in a SET!  form; false when the binding is UNassigned.
+		;
+		;When  a loc  gensym: this  PRELEX structure  represents a  top level
+		;binding defined  by a BIND struct,  whose value is contained  in the
+		;VALUE slot of the loc gensym itself.
+		;
+		;In  the following  example  of standard  language  form, the  PRELEX
+		;replacing X will have this field set to #f:
+		;
+		;   (let ((x 1))
+		;     (display x))
+		;
+		;In  the following  example  of standard  language  form, the  PRELEX
+		;replacing X will have this field set to #t:
 		;
 		;   (let ((x 1))
 		;     (set! x (do-something))
 		;     x)
 		;
-		;When a symbol: who knows?  (Marco Maggi; Oct 12, 2012)
+		;In  the following  example  of standard  language  form, the  PRELEX
+		;replacing X will have this field set to the loc gensym:
+		;
+		;   (library (demo)
+		;     (export x)
+		;     (import (rnrs))
+		;     (define x 1))
+		;
 
    (residual-referenced? #f)
 		;Boolean,  this field  is used  only by  the source  optimizer.  When
@@ -2748,20 +2768,35 @@
        (cond ((prelex-source-assigned? lhs)
 	      => (lambda (where)
 		   (cond ((symbol? where)
-			  ;;FIXME What is this case?  (Marco Maggi; Oct 12, 2012)
-			  ;;(fprintf (current-error-port) "assign init ~s\n" (prelex-name lhs))
+			  ;;Single  initialisation assignment  of top  level binding.
+			  ;;This binding has no other assignment, and this assignment
+			  ;;is the operation that initialises it.  For example:
+			  ;;
+			  ;;   (bind ((a (constant '#!void)))
+			  ;;     (assign a ?rhs)
+			  ;;     a)
+			  ;;
+			  ;;must become:
+			  ;;
+			  ;;   (bind ((a (constant '#!void)))
+			  ;;     (funcall (primref $init-symbol-value!)
+			  ;;              (constant a.loc)
+			  ;;              ?rhs)
+			  ;;     (funcall (primref $symbol-value) (constant a.loc)))
+			  ;;
+			  #;(fprintf (current-error-port) "assign init ~s\n" (prelex-name lhs))
 			  (make-funcall (make-primref '$init-symbol-value!)
 					(list (make-constant where) (E rhs))))
 			 ((prelex-global-location lhs)
-			  ;;Mutation of  top level  binding.  LOC  is the  loc gensym
-			  ;;used to hold the value.
+			  ;;Common assignment of  top level binding.  LOC  is the loc
+			  ;;gensym used to hold the value.
 			  => (lambda (loc)
 			       ;;(fprintf (current-error-port) "assign set ~s\n" (prelex-name lhs))
 			       (make-funcall (make-primref '$set-symbol-value!)
 					     (list (make-constant loc) (E rhs)))))
 			 (else
-			  ;;Mutation   of  local   binding.    Substitute  with   the
-			  ;;appropriate vector operation.
+			  ;;Assignment of  local binding stored on  the Scheme stack.
+			  ;;Substitute with the appropriate vector operation.
 			  (make-funcall (make-primref '$vector-set!)
 					(list lhs (make-constant 0) (E rhs)))))))
 	     (else

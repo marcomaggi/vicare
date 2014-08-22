@@ -998,6 +998,75 @@
   #t)
 
 
+(parametrise ((check-test-name	'rewrite-references-and-assignments))
+
+  (define (%rewrite-references-and-assignments core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   (D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%rewrite-references-and-assignments (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result/waddell))
+      ))
+
+;;; --------------------------------------------------------------------
+
+;;; --------------------------------------------------------------------
+;;; libraries
+
+;;;These tests will install the libraries!!!
+
+  ;;All the bindings end in a FIX structure.
+  (check
+      (let* ((form1 '(library (rewrite-references-and-assignments-demo-1)
+		       (export a b c)
+		       (import (rnrs))
+		       (define (a) 1)
+		       (define (b) (read))
+		       (define (c) (b))))
+	     (form2 (%expand-library form1)))
+	(%rewrite-references-and-assignments form2))
+    => `(fix ((a_0 (lambda () (constant 1)))
+	      (b_0 (lambda () (funcall (primref read))))
+	      (c_0 (lambda () (funcall (primref read)))))
+	  (constant ,(void))))
+
+  #;(check
+      (let* ((form1 '(library (rewrite-references-and-assignments-demo-2)
+		       (export a)
+		       (import (rnrs)
+			 (vicare containers stacks))
+		       (define a
+			 (make-stack 1))
+		       (define (b)
+			 a)))
+	     (form2 (%expand-library form1)))
+	(%rewrite-references-and-assignments form2))
+    => `(fix ((a_0 (lambda () (constant 1)))
+	      (b_0 (lambda () (seq (funcall a_0) (constant 2))))
+	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
+	  (constant ,(void))))
+
+  #f)
+
+
 ;;;; done
 
 (check-report)
