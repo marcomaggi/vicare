@@ -95,6 +95,7 @@
 
 (module PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS
   (%expand-rhs*
+   %select-lhs-declared-tag-or-rhs-inferred-tag
    %compose-lhs-specification)
   ;;In  this  module  we  assume  the  argument  INPUT-FORM.STX  can  be  matched  by
   ;;SYNTAX-MATCH patterns like:
@@ -209,6 +210,21 @@
 		  "invalid retvals signature" (syntax->datum input-form.stx) sig))))
 	rhs*.sig))
     (values rhs*.psi rhs*.tag))
+
+  (define (%select-lhs-declared-tag-or-rhs-inferred-tag lhs*.tag rhs*.inferred-tag)
+    ;;Given  a list  of  LHS tags  LHS*.tag  from the  source code  and  the list  of
+    ;;corresponding RHS inferred tags RHS*.INFERRED-TAG: return a list of LHS tags to
+    ;;replace LHS*.TAG.
+    ;;
+    (if (option.tagged-language.rhs-tag-propagation?)
+	(map (lambda (lhs.tag rhs.inferred-tag)
+	       (if (top-tag-id? lhs.tag)
+		   (if (top-tag-id? rhs.inferred-tag)
+		       lhs.tag
+		     rhs.inferred-tag)
+		 lhs.tag))
+	  lhs*.tag rhs*.inferred-tag)
+      lhs*.tag))
 
   (define (%compose-lhs-specification lhs*.id lhs*.tag rhs*.inferred-tag)
     ;;For every LHS identifier build a tagged identifier syntax:
@@ -353,29 +369,38 @@
   ;;the top-level built  in environment.  Expand the syntax  object INPUT-FORM.STX in
   ;;the context of the given LEXENV; return an PSI struct.
   ;;
-  ;;In practice, below we convert the UNnamed syntax:
+  ;;In practice, below we convert the UNnamed standard syntax:
   ;;
   ;;   (let ((?lhs ?rhs) ...) . ?body)
   ;;
-  ;;into:
+  ;;into the core language syntax:
   ;;
-  ;;   ((lambda (?lhs ...) . ?body) ?rhs ...)
+  ;;   (let ((?lhs ?rhs) ...) . ?body)
   ;;
-  ;;and the named syntax:
+  ;;and the named standard syntax:
   ;;
   ;;   (let ?recur ((?lhs ?rhs) ...) . ?body)
   ;;
-  ;;into:
+  ;;into the standard syntax:
   ;;
   ;;   (internal-body
   ;;     (define (?recur ?lhs ...) . ?body)
   ;;     (?recur ?rhs ...))
   ;;
-  ;;notice that  this allows ?RECUR to  be tagged with  the return values of  the LET
-  ;;form.
+  ;;for further expansion, notice that the latter allows ?RECUR to be tagged with the
+  ;;return values of the LET form.
   ;;
-  ;;When expanding  UNnamed LET syntaxes: first  we expand the ?RHS  to acquire their
-  ;;retvals signature, then  we expand the LAMBDA with the  formals correctly tagged.
+  ;;When expanding UNnamed LET syntaxes:
+  ;;
+  ;;1. We parse the LHS tagged identifiers to acquire the declared tags.
+  ;;
+  ;;2. We expand the ?RHS expression to acquire their retvals signature.
+  ;;
+  ;;3. We  select the  more specific  LHS tag between  the declared  LHS one  and the
+  ;;   inferred RHS one.
+  ;;
+  ;;3. We expand the body with the LHS identifiers correctly tagged.
+  ;;
   ;;This way if we write:
   ;;
   ;;   (let ((a 1)) . ?body)
@@ -397,7 +422,8 @@
   ;;
   ;;we get an expansion that is equivalent to:
   ;;
-  ;;   (let (({a <exact-integer>} (tag-assert-and-return (<exact-integer>) 1))) . ?body)
+  ;;   (let (({a <exact-integer>} (tag-assert-and-return (<exact-integer>) 1)))
+  ;;     . ?body)
   ;;
   ;;so  the type  of the  RHS expression  is validated  either at  expand-time or  at
   ;;run-time.
@@ -425,12 +451,29 @@
   (define-fluid-override __who__
     (identifier-syntax 'let))
 
+  (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
+
   (define* (let-transformer input-form.stx lexenv.run lexenv.expand)
     (syntax-match input-form.stx ()
       ((_ ((?lhs* ?rhs*) ...) ?body ?body* ...)
-       (%expander input-form.stx lexenv.run lexenv.expand
-		  ?lhs* ?rhs* (cons ?body ?body*) %build-and-expand-common-lambda))
-
+       (receive (lhs*.id lhs*.declared-tag)
+	   (parse-list-of-tagged-bindings ?lhs* input-form.stx)
+	 (receive (rhs*.psi rhs*.inferred-tag)
+	     (%expand-rhs* input-form.stx lexenv.run lexenv.expand lhs*.declared-tag ?rhs*)
+	   (let ((lhs*.lex  (map gensym-for-lexical-var lhs*.id))
+		 (lhs*.lab  (map gensym-for-label       lhs*.id)))
+	     (let ((lhs*.inferred-tag (%select-lhs-declared-tag-or-rhs-inferred-tag lhs*.declared-tag rhs*.inferred-tag)))
+	       (map set-label-tag! lhs*.lab lhs*.inferred-tag))
+	     (let* ((body.stx   (cons ?body ?body*))
+		    (body.psi   (%expand-unnamed-let-body body.stx lexenv.run lexenv.expand
+							  lhs*.id lhs*.lab lhs*.lex))
+		    (body.core  (psi-core-expr body.psi))
+		    (rhs*.core  (map psi-core-expr rhs*.psi)))
+	       (make-psi input-form.stx
+			 (build-let (syntax-annotation input-form.stx)
+				    lhs*.lex rhs*.core
+				    body.core)
+			 (psi-retvals-signature body.psi)))))))
 
       ((_ ?recur ((?lhs* ?rhs*) ...) ?body ?body* ...)
        (receive (recur.id recur.tag)
@@ -444,32 +487,16 @@
       (_
        (syntax-violation __who__ "invalid syntax" input-form.stx))))
 
-;;; --------------------------------------------------------------------
-
-  (define (%build-and-expand-common-lambda input-form.stx lexenv.run lexenv.expand
-					   lhs*.stx body*.stx)
-    (chi-expr (bless
-	       `(lambda ,lhs*.stx . ,body*.stx))
-	      lexenv.run lexenv.expand))
-
-;;; --------------------------------------------------------------------
-
-  (define (%expander input-form.stx lexenv.run lexenv.expand
-		     lhs*.stx rhs*.stx body*.stx rator-expander)
-    (import PROCESSING-UTILITIES-FOR-LISTS-OF-BINDINGS)
-    (receive (lhs*.id lhs*.tag)
-	(parse-list-of-tagged-bindings lhs*.stx input-form.stx)
-      (receive (rhs*.psi rhs*.tag)
-	  (%expand-rhs* input-form.stx lexenv.run lexenv.expand lhs*.tag rhs*.stx)
-	(let* ((lhs*.stx    (%compose-lhs-specification lhs*.id lhs*.tag rhs*.tag))
-	       (rator.psi   (rator-expander input-form.stx lexenv.run lexenv.expand lhs*.stx body*.stx))
-	       (rator.core  (psi-core-expr rator.psi))
-	       (rhs*.core   (map psi-core-expr rhs*.psi)))
-	  (make-psi input-form.stx
-		    (build-application (syntax-annotation input-form.stx)
-		      rator.core
-		      rhs*.core)
-		    (psi-application-retvals-signature rator.psi))))))
+  (define (%expand-unnamed-let-body body.stx lexenv.run lexenv.expand
+				    lhs*.id lhs*.lab lhs*.lex)
+    ;;Generate what is  needed to create a  lexical contour: a <RIB>  and an extended
+    ;;lexical environment in which to evaluate  the body.  Expand the body and return
+    ;;the corresponding PSI struct.
+    (let ((body.stx^    (push-lexical-contour
+			    (make-filled-rib lhs*.id lhs*.lab)
+			  body.stx))
+	  (lexenv.run^  (add-lexical-bindings lhs*.lab lhs*.lex lexenv.run)))
+      (chi-internal-body body.stx^ lexenv.run^ lexenv.expand)))
 
   #| end of module: LET-TRANSFORMER |# )
 
@@ -509,49 +536,50 @@
 	   ;;
 	   ;;Notice  that the  region of  all the  LETREC bindings  includes all  the
 	   ;;right-hand sides.
-	   (let* ((rib        (make-filled-rib lhs*.id lhs*.lab))
-		  (lexenv.run (add-lexical-bindings lhs*.lab lhs*.lex lexenv.run))
-		  (rhs*.psi   ($map-in-order
-			       (lambda (rhs.stx lhs.lab lhs.tag)
-				 (receive-and-return (rhs.psi)
-				     ;;The LHS*.ID  and LHS*.LAB  have been  added to
-				     ;;the rib, and the rib is pushed on the RHS.STX.
-				     ;;So, while the specific identifiers LHS*.ID are
-				     ;;unbound (because they do not contain the rib),
-				     ;;any occurrence  of the binding  identifiers in
-				     ;;the RHS.STX is captured  by the binding in the
-				     ;;rib.
-				     ;;
-				     ;;If LHS.TAG  is "<top>",  we still want  to use
-				     ;;the assert and return form to make sure that a
-				     ;;single  value is  returned.  If  the signature
-				     ;;validation   succeeds   at  expand-time:   the
-				     ;;returned PSI  has the original  RHS signature,
-				     ;;not  "(<top>)".  This  allows us  to propagate
-				     ;;the tag from RHS to LHS.
-				     (chi-expr (push-lexical-contour rib
-						 (bless
-						  `(tag-assert-and-return (,lhs.tag) ,rhs.stx)))
-					       lexenv.run lexenv.expand)
-				   ;;If the LHS is  untagged: perform tag propatation
-				   ;;from the RHS to the LHS.
-				   (when (and (option.tagged-language.rhs-tag-propagation?)
-					      (top-tag-id? lhs.tag))
-				     (syntax-match (retvals-signature-tags (psi-retvals-signature rhs.psi)) ()
-				       ((?tag)
-					;;Single return value: good.
-					(override-label-tag! lhs.lab ?tag))
-				       (_
-					;;If   we  are   here   it   means  that   the
-					;;TAG-ASSERT-AND-RETURN above has misbehaved.
-					(assertion-violation/internal-error __who__
-					  "invalid retvals signature"
-					  (syntax->datum input-form.stx)
-					  (psi-retvals-signature rhs.psi)))))))
-			       ?rhs* lhs*.lab lhs*.tag))
+	   (let* ((rib         (make-filled-rib lhs*.id lhs*.lab))
+		  (lexenv.run^ (add-lexical-bindings lhs*.lab lhs*.lex lexenv.run))
+		  (rhs*.psi    ($map-in-order
+				(lambda (rhs.stx lhs.lab lhs.tag)
+				  (receive-and-return (rhs.psi)
+				      ;;The LHS*.ID  and LHS*.LAB have been  added to
+				      ;;the  rib,  and  the  rib  is  pushed  on  the
+				      ;;RHS.STX.  So, while  the specific identifiers
+				      ;;LHS*.ID  are  unbound  (because they  do  not
+				      ;;contain  the  rib),  any  occurrence  of  the
+				      ;;binding   identifiers  in   the  RHS.STX   is
+				      ;;captured by the binding in the rib.
+				      ;;
+				      ;;If LHS.TAG  is "<top>", we still  want to use
+				      ;;the assert and return  form to make sure that
+				      ;;a single value is returned.  If the signature
+				      ;;validation   succeeds  at   expand-time:  the
+				      ;;returned PSI has  the original RHS signature,
+				      ;;not "(<top>)".   This allows us  to propagate
+				      ;;the tag from RHS to LHS.
+				      (chi-expr (push-lexical-contour rib
+						  (bless
+						   `(tag-assert-and-return (,lhs.tag) ,rhs.stx)))
+						lexenv.run^ lexenv.expand)
+				    ;;If the LHS is untagged: perform tag propatation
+				    ;;from the RHS to the LHS.
+				    (when (and (option.tagged-language.rhs-tag-propagation?)
+					       (top-tag-id? lhs.tag))
+				      (syntax-match (retvals-signature-tags (psi-retvals-signature rhs.psi)) ()
+					((?tag)
+					 ;;Single return value: good.
+					 (override-label-tag! lhs.lab ?tag))
+					(_
+					 ;;If  we   are  here   it  means   that  the
+					 ;;TAG-ASSERT-AND-RETURN       above      has
+					 ;;misbehaved.
+					 (assertion-violation/internal-error __who__
+					   "invalid retvals signature"
+					   (syntax->datum input-form.stx)
+					   (psi-retvals-signature rhs.psi)))))))
+				?rhs* lhs*.lab lhs*.tag))
 		  (body.psi (chi-internal-body (push-lexical-contour rib
 						 (cons ?body ?body*))
-					       lexenv.run lexenv.expand)))
+					       lexenv.run^ lexenv.expand)))
 	     (let* ((rhs*.core (map psi-core-expr rhs*.psi))
 		    (body.core (psi-core-expr body.psi))
 		    ;;Build the LETREC or LETREC* expression in the core language.
