@@ -2585,8 +2585,8 @@
 
 ;;;; let's include some external code
 
-(include "ikarus.compiler.optimize-letrec.ss"  #t)
-(include "ikarus.compiler.source-optimizer.ss" #t)
+(include "ikarus.compiler.letrec-optimizer.scm" #t)
+(include "ikarus.compiler.source-optimizer.scm" #t)
 
 
 (module (rewrite-references-and-assignments)

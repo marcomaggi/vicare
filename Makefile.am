@@ -288,8 +288,8 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.sls				\
 	scheme/ikarus.compiler.altcogen.ss			\
 	scheme/ikarus.compiler.ontology.ss			\
-	scheme/ikarus.compiler.optimize-letrec.ss		\
-	scheme/ikarus.compiler.source-optimizer.ss		\
+	scheme/ikarus.compiler.letrec-optimizer.scm		\
+	scheme/ikarus.compiler.source-optimizer.scm		\
 	scheme/ikarus.compiler.tag-annotation-analysis.ss	\
 	scheme/pass-specify-rep-primops.ss			\
 	scheme/pass-specify-rep.ss				\
