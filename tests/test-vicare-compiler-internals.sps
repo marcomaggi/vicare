@@ -264,6 +264,168 @@
 		(assign c_0 (lambda () (seq (funcall b_0) (constant 3))))
 		(funcall (primref void)))))
 
+;;; --------------------------------------------------------------------
+;;; nested binding forms: nested RHS
+
+  ;;nested LET RHS
+  (doit (letrec* ((a (lambda () '1))
+		  (c (let ((b '2))
+		       ((primitive +) a b)))
+		  (d (lambda () '4)))
+	  ((primitive list) a c d))
+	(bind ((a_0 (constant #!void))
+	       (b_0 (constant #!void))
+	       (b_1 (constant #!void))
+	       (c_0 (constant #!void))
+	       (d_0 (constant #!void)))
+	  (seq
+	    (assign a_0 (lambda () (constant 1)))
+	    (assign b_0 (constant 2))
+	    (assign b_1 b_0)
+	    (assign c_0 (funcall (primref +) a_0 b_1))
+	    (assign d_0 (lambda () (constant 4)))
+	    (funcall (primref list) a_0 c_0 d_0))))
+
+  ;;nested LETREC RHS
+  (doit (letrec* ((a (lambda () '1))
+		  (c (letrec ((b '2))
+		       ((primitive +) a b)))
+		  (d (lambda () '4)))
+	  ((primitive list) a c d))
+	(bind ((a_0 (constant #!void))
+	       (b_0 (constant #!void))
+	       (b_1 (constant #!void))
+	       (c_0 (constant #!void))
+	       (d_0 (constant #!void)))
+	  (seq
+	    (assign a_0 (lambda () (constant 1)))
+	    (assign b_0 (constant 2))
+	    (assign b_1 b_0)
+	    (assign c_0 (funcall (primref +) a_0 b_1))
+	    (assign d_0 (lambda () (constant 4)))
+	    (funcall (primref list) a_0 c_0 d_0))))
+
+  ;;nested LETREC* RHS
+  (doit (letrec* ((a (lambda () '1))
+		  (c (letrec* ((b '2))
+		       ((primitive +) a b)))
+		  (d (lambda () '4)))
+	  ((primitive list) a c d))
+	(bind ((a_0 (constant #!void))
+	       (b_0 (constant #!void))
+	       (b_1 (constant #!void))
+	       (c_0 (constant #!void))
+	       (d_0 (constant #!void)))
+	  (seq
+	    (assign a_0 (lambda () (constant 1)))
+	    (assign b_0 (constant 2))
+	    (assign b_1 b_0)
+	    (assign c_0 (funcall (primref +) a_0 b_1))
+	    (assign d_0 (lambda () (constant 4)))
+	    (funcall (primref list) a_0 c_0 d_0))))
+
+  ;;preparatory exapmle for the double nested LETREC* and LET RHS below
+  (doit (letrec* ((d '3)
+		  (e (let ((g '5))
+		       ((primitive list) d g)))
+		  (f '4))
+	  ((primitive list) d e f))
+	(bind ((d_0 (constant #!void))
+	       (g_0 (constant #!void))
+	       (g_1 (constant #!void))
+	       (e_0 (constant #!void))
+	       (f_0 (constant #!void)))
+	  (seq
+	    (assign d_0 (constant 3))
+	    (assign g_0 (constant 5))
+	    (assign g_1 g_0)
+	    (assign e_0 (funcall (primref list) d_0 g_1))
+	    (assign f_0 (constant 4))
+	    (funcall (primref list) d_0 e_0 f_0))))
+
+  ;;double nested LETREC* and LET RHS
+  (doit (letrec* ((a (lambda () '1))
+		  (b (letrec* ((d '3)
+			       (e (let ((g '5))
+				    ((primitive list) d g)))
+			       (f '4))
+		       ((primitive list) d e f)))
+		  (c (lambda () '2)))
+	  ((primitive list) a b c))
+	(bind ((a_0 (constant #!void))
+	         (d_0 (constant #!void))
+	         (g_0 (constant #!void))
+	         (g_1 (constant #!void))
+	         (e_0 (constant #!void))
+	         (f_0 (constant #!void))
+	       (d_1 (constant #!void))
+	       (g_2 (constant #!void))
+	       (g_3 (constant #!void))
+	       (e_1 (constant #!void))
+	       (f_1 (constant #!void))
+	       (b_0 (constant #!void))
+	       (c_0 (constant #!void)))
+	  (seq (assign a_0 (lambda () (constant 1)))
+	       (assign d_0 (constant 3)) (assign g_0 (constant 5))
+	       (assign g_1 g_2)
+	       (assign e_0 (funcall (primref list) d_1 g_3))
+	       (assign f_0 (constant 4)) (assign d_1 d_0)
+	       (assign g_2 g_0) (assign g_3 g_1) (assign e_1 e_0)
+	       (assign f_1 f_0)
+	       (assign b_0 (funcall (primref list) d_1 e_1 f_1))
+	       (assign c_0 (lambda () (constant 2)))
+	       (funcall (primref list) a_0 b_0 c_0))))
+
+;;; --------------------------------------------------------------------
+;;; nested binding forms: nested body
+
+  ;;nested LET body
+  (doit (letrec* ((a (lambda () '1)))
+	  (let ((b (lambda () '2)))
+	    ((primitive list) a b)))
+	(bind ((a_0 (constant #!void))
+	       (b_0 (constant #!void)))
+	  (seq
+	    (assign a_0 (lambda () (constant 1)))
+	    (assign b_0 (lambda () (constant 2)))
+	    (funcall (primref list) a_0 b_0))))
+
+  ;;nested LETREC body
+  (doit (letrec* ((a (lambda () '1)))
+	  (letrec ((b (lambda () '2)))
+	    ((primitive list) a b)))
+	(bind ((a_0 (constant #!void))
+	       (b_0 (constant #!void)))
+	  (seq
+	    (assign a_0 (lambda () (constant 1)))
+	    (assign b_0 (lambda () (constant 2)))
+	    (funcall (primref list) a_0 b_0))))
+
+  ;;nested LETREC* body
+  (doit (letrec* ((a (lambda () '1)))
+	  (letrec* ((b (lambda () '2)))
+	    ((primitive list) a b)))
+	(bind ((a_0 (constant #!void))
+	       (b_0 (constant #!void)))
+	  (seq
+	    (assign a_0 (lambda () (constant 1)))
+	    (assign b_0 (lambda () (constant 2)))
+	    (funcall (primref list) a_0 b_0))))
+
+  ;;double nested LETREC* body
+  (doit (letrec* ((a (lambda () '1)))
+	  (letrec* ((b (lambda () '2)))
+	    (letrec* ((c (lambda () '3)))
+	      ((primitive list) a b c))))
+	(bind ((a_0 (constant #!void))
+	       (b_0 (constant #!void))
+	       (c_0 (constant #!void)))
+	  (seq
+	    (assign a_0 (lambda () (constant 1)))
+	    (assign b_0 (lambda () (constant 2)))
+	    (assign c_0 (lambda () (constant 3)))
+	    (funcall (primref list) a_0 b_0 c_0))))
+
   #t)
 
 
@@ -370,8 +532,11 @@
 	   (let ((a a))
 	     a))
 	 (waddell
-	  (bind ((a_0 (constant 1)))
-	    (bind ((a_1 a_0))
+	  (bind ((a_0 (constant #!void))
+		 (a_1 (constant #!void)))
+	    (seq
+	      (assign a_0 (constant 1))
+	      (assign a_1 a_0)
 	      a_1)))
 	 (scc
 	  (bind ((a_0 (constant 1)))
@@ -942,23 +1107,28 @@
 	      a_0))))
 
   ;;Nested RHS LETREC.
-  ;; (doit (letrec ((a '1)
-  ;; 		 (b (letrec ((d (lambda () '4)))
-  ;; 		      (d)))
-  ;; 		 (c '2))
-  ;; 	  b)
-  ;; 	(waddell
-  ;; 	 (bind ((a (constant 1))
-  ;; 		(c (constant 2)))
-  ;; 	   (fix ((d (lambda () (constant 4))))
-  ;; 	     (bind ((b (funcall d)))
-  ;; 	       b))))
-  ;; 	(scc
-  ;; 	 (bind ((a (constant 1))
-  ;; 		(c (constant 2)))
-  ;; 	   (fix ((d (lambda () (constant 4))))
-  ;; 	     (bind ((b (funcall d)))
-  ;; 	       b)))))
+  (doit (letrec* ((a '1)
+		  (b (letrec* ((d (lambda () '4)))
+		       (d)))
+		  (c '2))
+  	  b)
+  	(waddell
+  	 (bind ((a_0 (constant 1))
+  		(c_0 (constant 2)))
+	   (bind ((d_0 (constant #!void))
+		  (b_0 (constant #!void)))
+	     (fix ((d_1 (lambda () (constant 4))))
+	       (seq
+		 (assign d_0 d_1)
+		 (assign b_0 (funcall d_0))
+		 b_0)))))
+  	(scc
+  	 (bind ((a_0 (constant 1)))
+  	   (fix ((d_0 (lambda () (constant 4))))
+	     (bind ((d_1 d_0))
+	       (bind ((b_0 (funcall d_1)))
+		 (bind ((c_0 (constant 2)))
+		   b_0)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; libraries
@@ -1048,7 +1218,7 @@
 	      (c_0 (lambda () (funcall (primref read)))))
 	  (constant ,(void))))
 
-  (check
+  #;(check
       (let* ((form1 '(library (rewrite-references-and-assignments-demo-2)
 		       (export b)
 		       (import (rnrs)

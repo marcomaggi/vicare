@@ -99,7 +99,7 @@
   (define* (optimize-letrec X)
     (when (check-for-illegal-letrec)
       (check-for-illegal-letrec-references X))
-    (let ((Y (integrate-nested-binding-form X)))
+    (let ((Y (integrate-nested-binding-forms X)))
       (case (current-letrec-pass)
 	((scc)     (optimize-letrec/scc     Y))
 	((waddell) (optimize-letrec/waddell Y))
@@ -180,21 +180,28 @@
   (number-of-lists	1)
   (number-of-retvals	2))
 
+(define-fold-right %fold-right/2-lists/2-retvals
+  (number-of-lists	2)
+  (number-of-retvals	2))
+
 ;;; --------------------------------------------------------------------
 
-(define* (make-prelex-for-tmp-binding {prel prelex?})
+(case-define* make-prelex-for-tmp-binding
   ;;Build and return a unique PRELEX struct meant to be used for a compiler-generated
-  ;;binding, which will be referenced but not assigned.
+  ;;binding, which  will be referenced but  not assigned.  Since we  know the binding
+  ;;will be  referenced (otherwise the compiler  would not generate it):  we mark the
+  ;;PRELEX as source referenced.
   ;;
-  ;;Since we  know the binding will  be referenced (otherwise the  compiler would not
-  ;;generate it): we mark the PRELEX as source referenced.
-  ;;
-  ;;The  init value  of the  binding will  be,  in some  way, related  to the  PRELEX
-  ;;argument PREL; so we reuse the name of PREL as name of the returned PRELEX.
-  ;;
-  (receive-and-return (tmp)
-      (make-prelex (prelex-name prel))
-    (set-prelex-source-referenced?! tmp #t)))
+  (()
+   (receive-and-return (tmp)
+       (make-prelex (gensym "tmp"))
+     (set-prelex-source-referenced?! tmp #t)))
+  (({prel prelex?})
+   ;;The  init value  of the  binding will  be, in  some way,  related to  the PRELEX
+   ;;argument PREL; so we reuse the name of PREL as name of the returned PRELEX.
+   (receive-and-return (tmp)
+       (make-prelex (prelex-name prel))
+     (set-prelex-source-referenced?! tmp #t))))
 
 (module (%make-void-constants)
   ;;Build and  return a  list of  CONSTANT structs  representing #<void>  values, one
@@ -444,54 +451,18 @@
   #| end of module: check-for-illegal-letrec-references |# )
 
 
-(module (integrate-nested-binding-form)
+(module (integrate-nested-binding-forms)
   ;;In this  compiler sub-pass we merge  nested LET-like forms before  optimising the
   ;;RECBIND  and  REC*BIND forms;  the  more  we stuff  bindings  in  the RECBIND  or
-  ;;REC*BIND, the better.  The following transformations are implemented:
+  ;;REC*BIND, the better.
   ;;
-  ;;   (letrec* ((lhs0 rhs0)
-  ;;             (lhs1 (letrec* ((lhs3 rhs3)
-  ;;                             (lhs4 rhs4))
-  ;;                     body2))
-  ;;             (lhs2 rhs2))
-  ;;     body1)
-  ;;   ===> (letrec* ((lhs0 rhs0)
-  ;;                  (lhs3 rhs3)
-  ;;                  (lhs4 rhs4)
-  ;;                  (tmp0 body2)
-  ;;                  (lhs2 rhs2))
-  ;;          body1)
-  ;;
-  ;;   (letrec* ((lhs0 rhs0)
-  ;;             (lhs1 rhs1)
-  ;;             (lhs2 rhs2))
-  ;;     (letrec* ((lhs3 rhs3)
-  ;;               (lhs4 rhs4))
-  ;;       body))
-  ;;   ===> (letrec* ((lhs0 rhs0)
-  ;;                  (lhs1 rhs1)
-  ;;                  (lhs2 rhs2)
-  ;;                  (lhs3 rhs3)
-  ;;                  (lhs4 rhs4))
-  ;;          body)
-  ;;
-  ;;   (letrec* ((lhs0 rhs0)
-  ;;             (lhs1 (let ((lhs3 rhs3)
-  ;;                         (lhs4 rhs4))
-  ;;                     body2))
-  ;;             (lhs2 rhs2))
-  ;;     body1)
-  ;;   ===> (letrec* ((lhs0 rhs0)
-  ;;                  (lhs3 rhs3)
-  ;;                  (lhs4 rhs4)
-  ;;                  (tmp0 body2)
-  ;;                  (lhs2 rhs2))
-  ;;          body1)
+  ;;See below the functions "E-recbind" and  "E-rec*bind" for the list of implemented
+  ;;transformations.
   ;;
   (define-fluid-override __who__
-    (identifier-syntax 'integrate-nested-binding-form))
+    (identifier-syntax 'integrate-nested-binding-forms))
 
-  (define-syntax-rule (integrate-nested-binding-form X)
+  (define-syntax-rule (integrate-nested-binding-forms X)
     (E X))
 
   (define (E X)
@@ -517,14 +488,10 @@
 	 (make-bind lhs* (E* rhs*) (E body))))
 
       ((recbind lhs* rhs* body)
-       (if (null? lhs*)
-	   (E body)
-	 (make-recbind lhs* (E* rhs*) (E body))))
+       (E-recbind lhs* rhs* body))
 
       ((rec*bind lhs* rhs* body)
-       (if (null? lhs*)
-	   (E body)
-	 (make-rec*bind lhs* (E* rhs*) (E body))))
+       (E-rec*bind lhs* rhs* body))
 
       ((conditional test conseq altern)
        (make-conditional (E test)
@@ -555,6 +522,8 @@
     ;;
     (map E X*))
 
+;;; --------------------------------------------------------------------
+
   (module (E-clambda)
     ;;The purpose of this module is to apply E to every CASE-LAMBDA body.
     ;;
@@ -570,7 +539,148 @@
 
     #| end of module: E-lambda |# )
 
-  #| end of module: INTEGRATE-NESTED-BINDING-FORM |# )
+;;; --------------------------------------------------------------------
+
+  (define (E-recbind lhs* rhs* body)
+    (if (null? lhs*)
+	(E body)
+      (make-recbind lhs* (E* rhs*) (E body))))
+
+;;; --------------------------------------------------------------------
+
+  (module (E-rec*bind)
+
+    (define (E-rec*bind lhs* rhs* body)
+      (if (null? lhs*)
+	  (E body)
+	(receive (lhs*^ rhs*^)
+	    (%fold-right/2-lists/2-retvals %E-rhs '() '() lhs* rhs*)
+	  (receive (lhs*^^ rhs*^^ body^)
+	      (%E-body lhs*^ rhs*^ body)
+	    (make-rec*bind lhs*^^ rhs*^^ body^)))))
+
+    (define (%E-rhs lhs rhs tail-lhs* tail-rhs*)
+      (struct-case (E rhs)
+	((bind nested-lhs* nested-rhs* nested-body)
+	 ;;   (letrec* ((lhs0 rhs0)
+	 ;;             (lhs1 (let ((lhs3 rhs3)
+	 ;;                         (lhs4 rhs4))
+	 ;;                     body2))
+	 ;;             (lhs2 rhs2))
+	 ;;     body1)
+	 ;;   ===> (letrec* ((lhs0 rhs0)
+	 ;;                  (tmp0 rhs3)
+	 ;;                  (tmp1 rhs4)
+	 ;;                  (lhs3 tmp0)
+	 ;;                  (lhs4 tmp1)
+	 ;;                  (lhs1 body2)
+	 ;;                  (lhs2 rhs2))
+	 ;;          body1)
+	 (let ((tmp* (map make-prelex-for-tmp-binding nested-lhs*)))
+	   (values (append tmp*        nested-lhs* (list lhs)         tail-lhs*)
+		   (append nested-rhs* tmp*        (list nested-body) tail-rhs*))))
+
+	((recbind nested-lhs* nested-rhs* nested-body)
+	 ;;   (letrec* ((lhs0 rhs0)
+	 ;;             (lhs1 (letrec ((lhs3 rhs3)
+	 ;;                            (lhs4 rhs4))
+	 ;;                     body2))
+	 ;;             (lhs2 rhs2))
+	 ;;     body1)
+	 ;;   ===> (letrec* ((lhs0 rhs0)
+	 ;;                  (tmp0 rhs3)
+	 ;;                  (tmp1 rhs4)
+	 ;;                  (lhs3 tmp0)
+	 ;;                  (lhs4 tmp1)
+	 ;;                  (lhs1 body2)
+	 ;;                  (lhs2 rhs2))
+	 ;;          body1)
+	 (let ((tmp* (map make-prelex-for-tmp-binding nested-lhs*)))
+	   (values (append tmp*        nested-lhs* (list lhs)         tail-lhs*)
+		   (append nested-rhs* tmp*        (list nested-body) tail-rhs*))))
+
+	((rec*bind nested-lhs* nested-rhs* nested-body)
+	 ;;   (letrec* ((lhs0 rhs0)
+	 ;;             (lhs1 (letrec* ((lhs3 rhs3)
+	 ;;                             (lhs4 rhs4))
+	 ;;                     body2))
+	 ;;             (lhs2 rhs2))
+	 ;;     body1)
+	 ;;   ===> (letrec* ((lhs0 rhs0)
+	 ;;                  (tmp0 rhs3)
+	 ;;                  (tmp1 rhs4)
+	 ;;                  (lhs3 tmp0)
+	 ;;                  (lhs4 tmp1)
+	 ;;                  (lhs1 body2)
+	 ;;                  (lhs2 rhs2))
+	 ;;          body1)
+	 (let ((tmp* (map make-prelex-for-tmp-binding nested-lhs*)))
+	   (values (append tmp*        nested-lhs* (list lhs)         tail-lhs*)
+		   (append nested-rhs* tmp*        (list nested-body) tail-rhs*))))
+
+	(else
+	 (values (cons lhs tail-lhs*)
+		 (cons rhs tail-rhs*)))))
+
+    (define (%E-body lhs*^ rhs*^ body)
+      (struct-case (E body)
+	((bind nested-lhs* nested-rhs* nested-body)
+	 ;;   (letrec* ((lhs0 rhs0)
+	 ;;             (lhs1 rhs1)
+	 ;;             (lhs2 rhs2))
+	 ;;     (let ((lhs3 rhs3)
+	 ;;           (lhs4 rhs4))
+	 ;;       body))
+	 ;;   ===> (letrec* ((lhs0 rhs0)
+	 ;;                  (lhs1 rhs1)
+	 ;;                  (lhs2 rhs2)
+	 ;;                  (lhs3 rhs3)
+	 ;;                  (lhs4 rhs4))
+	 ;;          body)
+	 (values (append lhs*^ nested-lhs*)
+		 (append rhs*^ nested-rhs*)
+		 nested-body))
+
+	((recbind nested-lhs* nested-rhs* nested-body)
+	 ;;   (letrec* ((lhs0 rhs0)
+	 ;;             (lhs1 rhs1)
+	 ;;             (lhs2 rhs2))
+	 ;;     (letrec ((lhs3 rhs3)
+	 ;;              (lhs4 rhs4))
+	 ;;       body))
+	 ;;   ===> (letrec* ((lhs0 rhs0)
+	 ;;                  (lhs1 rhs1)
+	 ;;                  (lhs2 rhs2)
+	 ;;                  (lhs3 rhs3)
+	 ;;                  (lhs4 rhs4))
+	 ;;          body)
+	 (values (append lhs*^ nested-lhs*)
+		 (append rhs*^ nested-rhs*)
+		 nested-body))
+
+	((rec*bind nested-lhs* nested-rhs* nested-body)
+	 ;;   (letrec* ((lhs0 rhs0)
+	 ;;             (lhs1 rhs1)
+	 ;;             (lhs2 rhs2))
+	 ;;     (letrec* ((lhs3 rhs3)
+	 ;;               (lhs4 rhs4))
+	 ;;       body))
+	 ;;   ===> (letrec* ((lhs0 rhs0)
+	 ;;                  (lhs1 rhs1)
+	 ;;                  (lhs2 rhs2)
+	 ;;                  (lhs3 rhs3)
+	 ;;                  (lhs4 rhs4))
+	 ;;          body)
+	 (values (append lhs*^ nested-lhs*)
+		 (append rhs*^ nested-rhs*)
+		 nested-body))
+
+	(else
+	 (values lhs*^ rhs*^ body))))
+
+    #| end of module: E-REC*BIND |# )
+
+  #| end of module: INTEGRATE-NESTED-BINDING-FORMS |# )
 
 
 (module (optimize-letrec/basic)
@@ -2085,4 +2195,5 @@
 ;; eval: (put 'with-unseen-prel			'scheme-indent-function 1)
 ;; eval: (put '%map-in-order-with-index		'scheme-indent-function 1)
 ;; eval: (put '%fold-right/1-list/2-retvals	'scheme-indent-function 1)
+;; eval: (put '%fold-right/2-lists/2-retvals	'scheme-indent-function 1)
 ;; End:
