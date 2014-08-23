@@ -1439,7 +1439,8 @@
 
 (module (mkfvar)
 
-  (define CACHE '())
+  (define-constant CACHE
+    (make-eq-hashtable))
 
   (define* (mkfvar {i fixnum?})
     ;;Maker function  for structs of  type FVAR.  It  caches structures based  on the
@@ -1449,14 +1450,26 @@
     ;;
     ;;always returns the same FVAR instance holding 123.
     ;;
-    ;;FIXME Should a hashtable be used as cache?  (Marco Maggi; Oct 10, 2012)
+    ;;NOTE When compiling the boot image this index can go above 30, even though most
+    ;;uses are below 10.  (Marco Maggi; Sat Aug 23, 2014)
     ;;
-    (cond ((assv i CACHE)
-	   => cdr)
+    (cond ((hashtable-ref CACHE i #f))
 	  (else
 	   (receive-and-return (fv)
 	       (make-fvar i)
-	     (set! CACHE (cons (cons i fv) CACHE))))))
+	     (hashtable-set! CACHE i fv)))))
+
+  ;;The old implementation below was using an alist as cache.
+  ;;
+  ;; (define CACHE '())
+  ;;
+  ;; (define* (mkfvar {i fixnum?})
+  ;;   (cond ((assv i CACHE)
+  ;; 	   => cdr)
+  ;; 	  (else
+  ;; 	   (receive-and-return (fv)
+  ;; 	       (make-fvar i)
+  ;; 	     (set! CACHE (cons (cons i fv) CACHE))))))
 
   #| end of module: MKFVAR |# )
 
