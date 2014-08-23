@@ -96,16 +96,17 @@
 	    "invalid letrec optimization mode, expected a symbol among: scc, waddell, basic"
 	    obj)))))
 
-  (define* (optimize-letrec x)
+  (define* (optimize-letrec X)
     (when (check-for-illegal-letrec)
-      (check-for-illegal-letrec-references x))
-    (case (current-letrec-pass)
-      ((scc)     (optimize-letrec/scc     x))
-      ((waddell) (optimize-letrec/waddell x))
-      ((basic)   (optimize-letrec/basic   x))
-      (else
-       (assertion-violation __who__
-	 "invalid letrec optimization mode" (current-letrec-pass)))))
+      (check-for-illegal-letrec-references X))
+    (let ((Y (integrate-nested-binding-form X)))
+      (case (current-letrec-pass)
+	((scc)     (optimize-letrec/scc     Y))
+	((waddell) (optimize-letrec/waddell Y))
+	((basic)   (optimize-letrec/basic   Y))
+	(else
+	 (assertion-violation __who__
+	   "invalid letrec optimization mode" (current-letrec-pass))))))
 
 
 ;;;; helpers
@@ -441,6 +442,135 @@
       (unparse-recordized-code/pretty illegal-prelex)))
 
   #| end of module: check-for-illegal-letrec-references |# )
+
+
+(module (integrate-nested-binding-form)
+  ;;In this  compiler sub-pass we merge  nested LET-like forms before  optimising the
+  ;;RECBIND  and  REC*BIND forms;  the  more  we stuff  bindings  in  the RECBIND  or
+  ;;REC*BIND, the better.  The following transformations are implemented:
+  ;;
+  ;;   (letrec* ((lhs0 rhs0)
+  ;;             (lhs1 (letrec* ((lhs3 rhs3)
+  ;;                             (lhs4 rhs4))
+  ;;                     body2))
+  ;;             (lhs2 rhs2))
+  ;;     body1)
+  ;;   ===> (letrec* ((lhs0 rhs0)
+  ;;                  (lhs3 rhs3)
+  ;;                  (lhs4 rhs4)
+  ;;                  (tmp0 body2)
+  ;;                  (lhs2 rhs2))
+  ;;          body1)
+  ;;
+  ;;   (letrec* ((lhs0 rhs0)
+  ;;             (lhs1 rhs1)
+  ;;             (lhs2 rhs2))
+  ;;     (letrec* ((lhs3 rhs3)
+  ;;               (lhs4 rhs4))
+  ;;       body))
+  ;;   ===> (letrec* ((lhs0 rhs0)
+  ;;                  (lhs1 rhs1)
+  ;;                  (lhs2 rhs2)
+  ;;                  (lhs3 rhs3)
+  ;;                  (lhs4 rhs4))
+  ;;          body)
+  ;;
+  ;;   (letrec* ((lhs0 rhs0)
+  ;;             (lhs1 (let ((lhs3 rhs3)
+  ;;                         (lhs4 rhs4))
+  ;;                     body2))
+  ;;             (lhs2 rhs2))
+  ;;     body1)
+  ;;   ===> (letrec* ((lhs0 rhs0)
+  ;;                  (lhs3 rhs3)
+  ;;                  (lhs4 rhs4)
+  ;;                  (tmp0 body2)
+  ;;                  (lhs2 rhs2))
+  ;;          body1)
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'integrate-nested-binding-form))
+
+  (define-syntax-rule (integrate-nested-binding-form X)
+    (E X))
+
+  (define (E X)
+    ;;Recursively  visit the  recordized code  X merging  nested LET-like  forms when
+    ;;possible.
+    ;;
+    (struct-case X
+      ((constant)
+       X)
+
+      ((prelex)
+       X)
+
+      ((assign lhs rhs)
+       (make-assign lhs (E rhs)))
+
+      ((primref)
+       X)
+
+      ((bind lhs* rhs* body)
+       (if (null? lhs*)
+	   (E body)
+	 (make-bind lhs* (E* rhs*) (E body))))
+
+      ((recbind lhs* rhs* body)
+       (if (null? lhs*)
+	   (E body)
+	 (make-recbind lhs* (E* rhs*) (E body))))
+
+      ((rec*bind lhs* rhs* body)
+       (if (null? lhs*)
+	   (E body)
+	 (make-rec*bind lhs* (E* rhs*) (E body))))
+
+      ((conditional test conseq altern)
+       (make-conditional (E test)
+	   (E conseq)
+	 (E altern)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
+      ((clambda)
+       (E-clambda X))
+
+      ((funcall rator rand*)
+       (make-funcall (E rator) (E* rand*)))
+
+      ((mvcall producer consumer)
+       (make-mvcall (E producer) (E consumer)))
+
+      ((forcall rator rand*)
+       ;;Remember that RATOR is a string here.
+       (make-forcall rator (E* rand*)))
+
+      (else
+       (error __who__ "invalid expression" (unparse-recordized-code X)))))
+
+  (define (E* X*)
+    ;;Apply E to every item in the list X*.
+    ;;
+    (map E X*))
+
+  (module (E-clambda)
+    ;;The purpose of this module is to apply E to every CASE-LAMBDA body.
+    ;;
+    (define (E-clambda x)
+      (struct-case x
+	((clambda label cls* cp free name)
+	 (make-clambda label (map E-clambda-case cls*) cp free name))))
+
+    (define (E-clambda-case x)
+      (struct-case x
+	((clambda-case info body)
+	 (make-clambda-case info (E body)))))
+
+    #| end of module: E-lambda |# )
+
+  #| end of module: INTEGRATE-NESTED-BINDING-FORM |# )
 
 
 (module (optimize-letrec/basic)
@@ -1947,6 +2077,7 @@
 
 ;;; end of file
 ;; Local Variables:
+;; mode: vicare
 ;; eval: (put 'make-bind			'scheme-indent-function 2)
 ;; eval: (put 'make-fix				'scheme-indent-function 2)
 ;; eval: (put '%make-bind			'scheme-indent-function 2)

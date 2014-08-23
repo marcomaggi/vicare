@@ -1048,15 +1048,14 @@
 	      (c_0 (lambda () (funcall (primref read)))))
 	  (constant ,(void))))
 
-  #;(check
+  (check
       (let* ((form1 '(library (rewrite-references-and-assignments-demo-2)
-		       (export a)
+		       (export b)
 		       (import (rnrs)
 			 (vicare containers stacks))
-		       (define a
-			 (make-stack 1))
+		       (define a 1)
 		       (define (b)
-			 a)))
+			 1)))
 	     (form2 (%expand-library form1)))
 	(%rewrite-references-and-assignments form2))
     => `(fix ((a_0 (lambda () (constant 1)))
