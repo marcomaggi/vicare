@@ -761,7 +761,7 @@ Accessing the function name:
 Convenience syntax that expands to something similar to:
 
 @example
-(case-define* @meta{whoe} @metao{pred-cl-clause} @meta{pred-cl-clause} @dots{})
+(case-define* @meta{who} @metao{pred-cl-clause} @meta{pred-cl-clause} @dots{})
 @expansion{} (define @meta{who}
       (case-lambda* @metao{pred-cl-clause} @meta{pred-cl-clause} @dots{}))
 @end example
