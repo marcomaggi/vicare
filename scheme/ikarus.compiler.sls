@@ -825,15 +825,18 @@
   (define ($set-prelex-source-referenced?! prel bool)
     ($set-prelex-source-reference-count! prel (if bool 1 0))))
 
-;;; --------------------------------------------------------------------
-
-;;Instances of this type represent datums in the core language.
+;;An  instance of  this type  represents a  SET!  form  in which  the left-hand  side
+;;references a lexical binding represented by a struct instance of type PRELEX.
 ;;
-(define-struct constant
-  (value
-		;The datum from  the source, for example:  numbers, vectors, strings,
-		;quoted lists...
+(define-struct assign
+  (lhs
+		;A struct instance of type PRELEX representing the binding.
+   rhs
+		;A struct instance  representing an expression evaluating  to the new
+		;variable's value.
    ))
+
+;;; --------------------------------------------------------------------
 
 ;;An instance  of this type represents  a form in a  sequence of forms inside  a core
 ;;language BEGIN.
@@ -873,17 +876,6 @@
 		;A struct instance representing the consequent form.
    altern
 		;A struct instance representing the alternate form.
-   ))
-
-;;An  instance of  this type  represents  a SET!  form  in which  the left-hand  side
-;;references a lexical binding represented by a struct instance of type PRELEX.
-;;
-(define-struct assign
-  (lhs
-		;A struct instance of type PRELEX representing the binding.
-   rhs
-		;A struct instance  representing an expression evaluating  to the new
-		;variable's value.
    ))
 
 ;;An instance of this type represents a function call; there are special
@@ -930,6 +922,76 @@
 ;;
 (define-struct funcall
   (op rand*))
+
+;;Represent a function call returning multiple values.  The core language form:
+;;
+;;   (call-with-values ?producer ?consumer)
+;;
+;;is recordised as:
+;;
+;;   (mvcall ?producer ?consumer)
+;;
+(define-struct mvcall
+  (producer
+   consumer
+   ))
+
+;;An instance  of this  type represents  a call to  a foreign  function, usually  a C
+;;language function.
+;;
+(define-struct forcall
+  (op
+		;A string representing the name of the foreign function.
+   rand*
+		;A list of struct instances representing the arguments.
+   ))
+
+;;; --------------------------------------------------------------------
+
+;;Instances of this struct type represent  bindings at the lowest level in recordized
+;;code.  We can  think of BIND forms as LET  core language forms: a BIND is  a set of
+;;non-recursive bindings in which the order of evaluation of the right-hand sides can
+;;be freely changed.
+;;
+;;Down below, a compiler pass will process the BIND struct instances and convert them
+;;to  code that  evaluates the  RHS  expressions and  store their  return value  into
+;;appropriately allocated  Scheme stack machine words;  a machine word for  every LHS
+;;will be allocated, each LHS will represent an actual "local variable".
+;;
+(define-struct bind
+  (lhs*
+		;When  code is  first  recordized  and optimized:  a  list of  struct
+		;instances  of type  PRELEX representing  the binding  lexical names.
+		;Later: a list of struct instances of type VAR representing some kind
+		;of memory location.
+   rhs*
+		;A list of struct instances  representing recordized code which, when
+		;evaluated, will return the binding's initial values.
+   body
+		;A struct  instance representing recordized  code to be  evaluated in
+		;the region of the bindings.
+   ))
+
+;;Like BIND, but the  RHS* field holds struct instances of type  CLAMBDA and the LHS*
+;;field holds PRELEX structures representing  bindings that are never assigned either
+;;by the BODY  nor by the RHS* themselves.  We  can think of a FIX form  as a LETREC*
+;;form in which the right-hand sides are functions.
+;;
+;;For details on the meaning of FIX, see the paper (available on the Net):
+;;
+;;   Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  "Fixing Letrec: A Faithful Yet
+;;   Efficient Implementation of Scheme's Recursive Binding Construct"
+;;
+(define-struct fix
+  (lhs*
+		;A list  of PRELEX  structs representing  bindings with  CLAMBDA init
+		;expressions.
+   rhs*
+		;A list of CLAMBDA structures.
+   body
+		;A struct  instance representing recordized  code to be  evaluated in
+		;the region of the bindings.
+   ))
 
 ;;An instance of this type represents a LETREC form.
 ;;
@@ -985,16 +1047,6 @@
 (define-struct primref
   (name
 		;A symbol being the public name of the primitive function.
-   ))
-
-;;An instance  of this  type represents  a call to  a foreign  function, usually  a C
-;;language function.
-;;
-(define-struct forcall
-  (op
-		;A string representing the name of the foreign function.
-   rand*
-		;A list of struct instances representing the arguments.
    ))
 
 ;;An instance of this type represents a  LAMBDA or CASE-LAMBDA form.  Such forms have
@@ -1116,53 +1168,16 @@
 		;symbol or improper list.
    ))
 
+;;Instances of this type represent datums in the core language.
+;;
+(define-struct constant
+  (value
+		;The datum from  the source, for example:  numbers, vectors, strings,
+		;quoted lists...
+   ))
+
 
-;;;; struct types
-
-;;Instances of this struct type represent  bindings at the lowest level in recordized
-;;code.  We can  think of BIND forms as LET  core language forms: a BIND is  a set of
-;;non-recursive bindings in which the order of evaluation of the right-hand sides can
-;;be freely changed.
-;;
-;;Down below, a compiler pass will process the BIND struct instances and convert them
-;;to  code that  evaluates the  RHS  expressions and  store their  return value  into
-;;appropriately allocated  Scheme stack machine words;  a machine word for  every LHS
-;;will be allocated, each LHS will represent an actual "local variable".
-;;
-(define-struct bind
-  (lhs*
-		;When  code is  first  recordized  and optimized:  a  list of  struct
-		;instances  of type  PRELEX representing  the binding  lexical names.
-		;Later: a list of struct instances of type VAR representing some kind
-		;of memory location.
-   rhs*
-		;A list of struct instances  representing recordized code which, when
-		;evaluated, will return the binding's initial values.
-   body
-		;A struct  instance representing recordized  code to be  evaluated in
-		;the region of the bindings.
-   ))
-
-;;Like BIND, but the  RHS* field holds struct instances of type  CLAMBDA and the LHS*
-;;field holds PRELEX structures representing  bindings that are never assigned either
-;;by the BODY  nor by the RHS* themselves.  We  can think of a FIX form  as a LETREC*
-;;form in which the right-hand sides are functions.
-;;
-;;For details on the meaning of FIX, see the paper (available on the Net):
-;;
-;;   Oscar Waddell, Dipanwita Sarkar, R. Kent Dybvig.  "Fixing Letrec: A Faithful Yet
-;;   Efficient Implementation of Scheme's Recursive Binding Construct"
-;;
-(define-struct fix
-  (lhs*
-		;A list  of PRELEX  structs representing  bindings with  CLAMBDA init
-		;expressions.
-   rhs*
-		;A list of CLAMBDA structures.
-   body
-		;A struct  instance representing recordized  code to be  evaluated in
-		;the region of the bindings.
-   ))
+;;;; struct types used in middle-level code representation
 
 ;;Instances of this struct type represent variables in recordized code.
 ;;
@@ -1179,6 +1194,9 @@
     referenced
     global-loc
     ))
+
+(define (unique-var name)
+  (make-var name #f #f #f #f #f #f #f #f #f #f))
 
 ;;; --------------------------------------------------------------------
 
@@ -1354,11 +1372,6 @@
 (define-struct interrupt-call
   (test handler))
 
-(define-struct mvcall
-  (producer
-   consumer
-   ))
-
 (define-struct known
   (expr
    type
@@ -1369,9 +1382,10 @@
    handler
    ))
 
-;;Represent  a machine  word  on  the Scheme  stack,  below the  address
-;;referenced  by  the  Frame  Pointer  Register  (FPR).   The  index  is
-;;interpreted as follows:
+;;; --------------------------------------------------------------------
+
+;;Represent a machine word  on the Scheme stack, below the  address referenced by the
+;;Frame Pointer Register (FPR).  The index is interpreted as follows:
 ;;
 ;;       high memory
 ;;   |                |
@@ -1387,14 +1401,56 @@
 ;;   |                |
 ;;       low memory
 ;;
-;;It is  used to represent memory  locations used as local  variables in
-;;the execution of a Scheme function.
+;;It is used to  represent memory locations used as local  variables in the execution
+;;of a Scheme function.
 ;;
 (define-struct fvar
   (idx
-		;A fixnum  representing the index  of a machine  word on
-		;the Scheme stack.
+		;A fixnum  representing the  index of  a machine  word on  the Scheme
+		;stack.
    ))
+
+(module (mkfvar)
+  ;;Maker  function for  structs of  type FVAR.   It caches  structures based  on the
+  ;;values of the argument, so that calling:
+  ;;
+  ;;   (mkfvar 123)
+  ;;
+  ;;multiple times always returns the same FVAR instance holding 123.
+  ;;
+  ;;NOTE When compiling the  boot image this index can go above  30, even though most
+  ;;uses are below 10.  (Marco Maggi; Sat Aug 23, 2014)
+  ;;
+  ;;NOTE I have changed the implementation from  alist to hashtable, but, in truth, I
+  ;;have done  no profiling  whatsoever to  verify that the  table version  is faster
+  ;;(shame on me!).  (Marco Maggi; Sun Aug 24, 2014)
+  ;;
+  (define* (mkfvar {i fixnum?})
+    (or (%cache-ref i)
+	(receive-and-return (fv)
+	    (make-fvar i)
+	  (%cache-set! i fv))))
+
+  (begin
+    (define-constant CACHE
+      (make-eq-hashtable))
+    (define-syntax-rule (%cache-ref key)
+      (hashtable-ref CACHE key #f))
+    (define-syntax-rule (%cache-set! key val)
+      (hashtable-set! CACHE key val)))
+
+  ;; (begin
+  ;;   (define CACHE '())
+  ;;   (define-syntax-rule (%cache-ref key)
+  ;;     (cond ((assv key CACHE)
+  ;; 	     => cdr)
+  ;; 	    (else #f)))
+  ;;   (define-syntax-rule (%cache-set! key val)
+  ;;     (set! CACHE (cons (cons key val) CACHE))))
+
+  #| end of module: MKFVAR |# )
+
+;;; --------------------------------------------------------------------
 
 (define-struct locals
   (vars
@@ -1433,48 +1489,6 @@
   (s0
    s1
    ))
-
-
-;;;; special struct makers
-
-(module (mkfvar)
-
-  (define-constant CACHE
-    (make-eq-hashtable))
-
-  (define* (mkfvar {i fixnum?})
-    ;;Maker function  for structs of  type FVAR.  It  caches structures based  on the
-    ;;values of the argument, so that calling:
-    ;;
-    ;;   (mkfvar 123)
-    ;;
-    ;;always returns the same FVAR instance holding 123.
-    ;;
-    ;;NOTE When compiling the boot image this index can go above 30, even though most
-    ;;uses are below 10.  (Marco Maggi; Sat Aug 23, 2014)
-    ;;
-    (cond ((hashtable-ref CACHE i #f))
-	  (else
-	   (receive-and-return (fv)
-	       (make-fvar i)
-	     (hashtable-set! CACHE i fv)))))
-
-  ;;The old implementation below was using an alist as cache.
-  ;;
-  ;; (define CACHE '())
-  ;;
-  ;; (define* (mkfvar {i fixnum?})
-  ;;   (cond ((assv i CACHE)
-  ;; 	   => cdr)
-  ;; 	  (else
-  ;; 	   (receive-and-return (fv)
-  ;; 	       (make-fvar i)
-  ;; 	     (set! CACHE (cons (cons i fv) CACHE))))))
-
-  #| end of module: MKFVAR |# )
-
-(define (unique-var name)
-  (make-var name #f #f #f #f #f #f #f #f #f #f))
 
 
 (define (recordize input-expr)
