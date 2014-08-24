@@ -244,7 +244,6 @@ Internals
 * objects::                     Built in Scheme objects.
 * debug int::                   Debug mode.
 * machinery::                   Introduction to execution machinery.
-* compiler::                    Wild notes on the compiler internals.
 
 Appendices
 
@@ -294,7 +293,6 @@ External documents
 @include objects.texi
 @include debug.texi
 @include machinery.texi
-@include compiler.texi
 
 @include missing.texi
 @include building.texi

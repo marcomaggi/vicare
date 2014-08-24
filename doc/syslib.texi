@@ -6038,6 +6038,8 @@ the source code, where additional documentation is present in the form
 of comments.
 
 @menu
+* syslib compiler conv::          Compiler coding conventions.
+* syslib compiler topics::        By topic inspection of behaviour.
 * syslib compiler unparse::       Unparsing intermediate
                                   representations.
 
@@ -6074,6 +6076,94 @@ Code generation passes
 * syslib compiler color::         Colorising by Chaitin.
 * syslib compiler flatten::       Flattening codes.
 @end menu
+
+@c page
+@node syslib compiler conv
+@subsection Compiler coding conventions
+
+
+Throughout the compiler code variables with the following names appear:
+
+@table @var
+@item op
+Scheme symbol representing an @strong{operation} to be directly
+translated into assembly.  Examples: @samp{alloc}, @samp{mref},
+@samp{mref32}, @samp{bref}, @samp{logand}, @samp{logxor}, @samp{logor},
+@samp{int+}, @samp{int-}, @samp{int*}, @samp{int-quotient},
+@samp{int-remainder}, @samp{sll}, @samp{sra}.
+
+@item rator
+Represents a reference to an @strong{operator}: a function coded in
+assembly or C language.
+
+@item rands
+Scheme list holding the @strong{operands} to which an operation must be
+applied.  These operands are in such a format that can be directly used
+in the assembly S--expression like:
+
+@example
+(make-set eax (car rands))
+@end example
+
+@noindent
+which generates an assignment operation to store the first element of
+@var{rands} into the @code{eax} processor register.
+@end table
+
+@c page
+@node syslib compiler topics
+@subsection By topic inspection of behaviour
+
+
+It is useful to inspect how the compiler handles specific code elements
+throughout different passes.
+
+@menu
+* syslib compiler topics topbind::  Handling of library top level
+                                    bindings.
+@end menu
+
+@c page
+@node syslib compiler topics topbind
+@subsubsection Handling of library top level bindings
+
+
+Bindings defined by the core language form @func{library-letrec*} are
+named @dfn{top level bindings}.  Three operations are possible on top
+level bindings:
+
+@table @strong
+@item initialisation
+It is performed with the core language form:
+
+@example
+($init-symbol-value! ?loc ?init-rhs)
+@end example
+
+@item reference
+It is performed with the core language form:
+
+@example
+($symbol-value ?loc)
+@end example
+
+@item assignment
+It is performed with the core language form:
+
+@example
+($set-symbol-value! ?loc ?new-rhs)
+@end example
+@end table
+
+@c So we can think of a library:
+
+@c @example
+@c (library (the-lib)
+@c   (export a)
+@c   (import (rnrs))
+@c   (define a 1)
+@c   (display a))
+@c @end example
 
 @c page
 @node syslib compiler unparse

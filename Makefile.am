@@ -62,7 +62,6 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/objects.texi				\
 	doc/debug.texi					\
 	doc/machinery.texi				\
-	doc/compiler.texi				\
 	\
 	doc/missing.texi				\
 	doc/building.texi				\
