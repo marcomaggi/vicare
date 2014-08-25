@@ -54,7 +54,9 @@
 
 
 (define (build-void)
-  '((primitive void)))
+  (build-data #f (void)))
+;; (define (build-void)
+;;   '((primitive void)))
 
 (define (build-global-define x)
   (if-wants-global-defines

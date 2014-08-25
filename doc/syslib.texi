@@ -6337,7 +6337,7 @@ it is recordised as follows:
            (a-thunk_0 (lambda ()
                         (constant "ciao")))
            (a-const_0 (constant 123)))
-  (funcall (primref void)))
+  (constant #<void>))
 @end example
 
 @noindent

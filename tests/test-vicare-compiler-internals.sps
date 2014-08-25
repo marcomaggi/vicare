@@ -163,7 +163,7 @@
 	    (rec*bind ((a-func_0  (lambda (a_0 b_0) (funcall (primref +) a_0 b_0)))
 		       (a-thunk_0 (lambda () (constant "ciao")))
 		       (a-const_0 (constant 123)))
-	      (funcall (primref void))))
+	      (constant #!void)))
 
   ;;How reference imported bindings are recordised.
   (libdoit* (library (recordize-demo-1)
@@ -297,7 +297,7 @@
 		(assign a_0 (lambda () (constant 1)))
 		(assign b_0 (lambda () (seq (funcall a_0) (constant 2))))
 		(assign c_0 (lambda () (seq (funcall b_0) (constant 3))))
-		(funcall (primref void)))))
+		(constant #!void))))
 
 ;;; --------------------------------------------------------------------
 ;;; nested binding forms: nested RHS
@@ -931,7 +931,7 @@
 	      (fix ((a_0 (lambda (x_0)
 			   (conditional x_0
 			       (funcall a_0 (constant #f))
-			     (funcall (primref void))))))
+			     (constant #!void)))))
 		(seq
 		  (assign c_0 (constant 456))
 		  (assign d_0 (seq
@@ -942,7 +942,7 @@
 	  (fix ((a_0 (lambda (x_0)
 		       (conditional x_0
 			   (funcall a_0 (constant #f))
-			 (funcall (primref void))))))
+			 (constant #!void)))))
 	    (bind ((b_0 (constant 123)))
 	      (bind ((c_0 (constant 456)))
 		(bind ((d_0 (seq
@@ -1182,7 +1182,7 @@
     => '(fix ((a_0 (lambda () (constant 1)))
 	      (b_0 (lambda () (seq (funcall a_0) (constant 2))))
 	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
-	  (funcall (primref void))))
+	  (constant #!void)))
 
   ;;This test will install the library!!!
   (check
@@ -1198,7 +1198,7 @@
     => '(fix ((a_0 (lambda () (constant 1)))
 	      (b_0 (lambda () (seq (funcall a_0) (constant 2))))
 	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
-	  (funcall (primref void))))
+	  (constant #!void)))
 
   #t)
 
