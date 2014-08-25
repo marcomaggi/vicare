@@ -6355,15 +6355,15 @@ the resulting recordised code is:
 
 @example
 (rec*bind ()
-(funcall (primref list)
-         (funcall (primref top-level-value)
-                  (constant a-const))
-         (funcall (funcall (primref top-level-value)
-                           (constant a-thunk)))
-         (funcall (funcall (primref top-level-value)
-                           (constant a-func))
-                           (constant 1)
-                           (constant 2))))
+  (funcall (primref list)
+           (funcall (primref top-level-value)
+                    (constant a-const))
+           (funcall (funcall (primref top-level-value)
+                             (constant a-thunk)))
+           (funcall (funcall (primref top-level-value)
+                             (constant a-func))
+                             (constant 1)
+                             (constant 2))))
 @end example
 
 @noindent
