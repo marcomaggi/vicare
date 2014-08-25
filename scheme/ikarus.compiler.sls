@@ -1577,17 +1577,24 @@
 			prel))
 		  (else
 		   ;;X is  *not* a  lex gensym referencing  a binding  defined inside
-		   ;;this INPUT-EXPR.  We  default to interpreting X as  a lex gensym
-		   ;;referencing a top level lexical variable defined by a previously
-		   ;;processed input  expression; for  example a  previous expression
-		   ;;read at the REPL and expanded in the interaction environment.
+		   ;;this INPUT-EXPR.  We  default to interpreting X as  a loc gensym
+		   ;;referencing a top level lexical variable defined by:
+		   ;;
+		   ;;*  A  previously  processed  input  expression;  for  example  a
+		   ;;previous  expression  read  at  the REPL  and  expanded  in  the
+		   ;;interaction environment.
+		   ;;
+		   ;;* A library that was imported in the environment.
 		   ;;
 		   ;;To reference  such binding we  have to generate  recordised code
 		   ;;that extracts the  value from the binding's loc  gensym; this is
-		   ;;what  the primitive  TOP-LEVEL-VALUE  does.  For  this case:  we
-		   ;;expect the expander  to have generated a single  gensym to serve
-		   ;;both as lex gensym  and loc gensym; so, here, X  is both the lex
-		   ;;gensym and the loc gensym.
+		   ;;what the primitive TOP-LEVEL-VALUE does.
+		   ;;
+		   ;;NOTE When the binding was added to an interaction environment by
+		   ;;a  previously evaluated  expression: we  expect the  expander to
+		   ;;have generated a  single gensym to serve both as  lex gensym and
+		   ;;loc  gensym; so,  here, X  is both  the lex  gensym and  the loc
+		   ;;gensym.
 		   ;;
 		   ;;If instead X is an unbound variable: the call to TOP-LEVEL-VALUE
 		   ;;will fail at run-time.
