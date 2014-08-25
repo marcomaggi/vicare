@@ -6046,7 +6046,10 @@
     (define (E x)
       (struct-case x
 	((constant c)
-	 `(constant ,c))
+	 (if (symbol? c)
+	     ;;Extract the pretty name; this is useful when C is a loc gensym.
+	     `(constant ,(string->symbol (symbol->string c)))
+	   `(constant ,c)))
 
 	((prelex)
 	 (Var x))
@@ -6265,7 +6268,10 @@
     (define (E x)
       (struct-case x
 	((constant c)
-	 `(quote ,c))
+	 (if (symbol? c)
+	     ;;Extract the pretty name.
+	     `(quote ,(string->symbol (symbol->string c)))
+	   `(quote ,c)))
 
 	((prelex)
 	 (Var x))

@@ -56,7 +56,10 @@
 	       '(vicare system $fx)
 	       ;;We  import this  library for  $SYMBOL-STRING, which  is a  primitive
 	       ;;operation bot not a primitive function.
-	       '(vicare system $symbols)))
+	       '(vicare system $symbols)
+	       ;;We import this library to  inspect how imported bindings are handled
+	       ;;by the compiler.
+	       '(libtest compiler-internals)))
 
 (define (%expand standard-language-form)
   (receive (code libs)
@@ -122,7 +125,7 @@
   (doit* ($symbol-string 'ciao)
 	 (funcall (primref $symbol-string) (constant ciao)))
   (doit ((primitive $symbol-string) 'ciao)
-	 (funcall (primref $symbol-string) (constant ciao)))
+	(funcall (primref $symbol-string) (constant ciao)))
 
 ;;; --------------------------------------------------------------------
 ;;; let bindings
@@ -144,6 +147,38 @@
 	   (bind ((a_1 a_0))
 	     (bind ((a_2 a_1))
 	       a_2))))
+
+;;; --------------------------------------------------------------------
+;;; libraries
+
+  ;;This is the (libtest compiler-internals) library.
+  (libdoit* (library (recordize-demo-0)
+	      (export a-func a-thunk a-const)
+	      (import (rnrs (6)))
+	      (define (a-func a b)
+		(+ a b))
+	      (define (a-thunk)
+		"ciao")
+	      (define a-const 123))
+	    (rec*bind ((a-func_0  (lambda (a_0 b_0) (funcall (primref +) a_0 b_0)))
+		       (a-thunk_0 (lambda () (constant "ciao")))
+		       (a-const_0 (constant 123)))
+	      (funcall (primref void))))
+
+  ;;How reference imported bindings are recordised.
+  (libdoit* (library (recordize-demo-1)
+	      (export)
+	      (import (rnrs)
+		(libtest compiler-internals))
+	      (list a-const
+		    (a-thunk)
+		    (a-func 1 2)))
+	    (rec*bind ()
+	      (funcall (primref list)
+		(funcall (primref top-level-value) (constant a-const))
+		(funcall (funcall (primref top-level-value) (constant a-thunk)))
+		(funcall (funcall (primref top-level-value) (constant a-func))
+		  (constant 1) (constant 2)))))
 
   #t)
 
@@ -1242,8 +1277,11 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'seq 'scheme-indent-function 0)
-;; eval: (put 'fix 'scheme-indent-function 1)
-;; eval: (put 'bind 'scheme-indent-function 1)
-;; eval: (put 'conditional 'scheme-indent-function 2)
+;; eval: (put 'bind			'scheme-indent-function 1)
+;; eval: (put 'fix			'scheme-indent-function 1)
+;; eval: (put 'recbind			'scheme-indent-function 1)
+;; eval: (put 'rec*bind			'scheme-indent-function 1)
+;; eval: (put 'seq			'scheme-indent-function 0)
+;; eval: (put 'conditional		'scheme-indent-function 2)
+;; eval: (put 'funcall			'scheme-indent-function 1)
 ;; End:

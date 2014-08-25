@@ -6311,6 +6311,65 @@ is a lex gensym; @meta{rhs} stands for ``right--hand side''; @meta{loc}
 is a loc gensym; @meta{prim} is a symbol representing the public name of
 a primitive function or primitive operation.
 
+@c ------------------------------------------------------------
+
+@subsubheading Example: handling of imported bindings
+
+Let's imagine the following library:
+
+@example
+(library (libtest compiler-internals)
+  (export a-func a-thunk a-const)
+  (import (rnrs (6)))
+  (define (a-func a b)
+    (+ a b))
+  (define (a-thunk)
+    "ciao")
+  (define a-const 123))
+@end example
+
+@noindent
+it is recordised as follows:
+
+@example
+(rec*bind ((a-func_0  (lambda (a_0 b_0)
+                        (funcall (primref +) a_0 b_0)))
+           (a-thunk_0 (lambda ()
+                        (constant "ciao")))
+           (a-const_0 (constant 123)))
+  (funcall (primref void)))
+@end example
+
+@noindent
+if this library is imported as in:
+
+@example
+(library (recordize-demo-1)
+  (export)
+  (import (rnrs) (libtest compiler-internals))
+  (list a-const (a-thunk) (a-func 1 2)))
+@end example
+
+@noindent
+the resulting recordised code is:
+
+@example
+(rec*bind ()
+(funcall (primref list)
+         (funcall (primref top-level-value)
+                  (constant a-const))
+         (funcall (funcall (primref top-level-value)
+                           (constant a-thunk)))
+         (funcall (funcall (primref top-level-value)
+                           (constant a-func))
+                           (constant 1)
+                           (constant 2))))
+@end example
+
+@noindent
+where the symbols @code{a-const}, @code{a-thunk}, @code{a-func} are the
+location gensyms of the imported bindings.
+
 @c page
 @node syslib compiler direct calls
 @subsection Optimisation for direct calls

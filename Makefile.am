@@ -979,6 +979,7 @@ EXTRA_DIST	+= \
 	tests/libtest/calc-portable-lexer.sls		\
 	tests/libtest/calc-tree-lexer.sls		\
 	tests/libtest/classes-lib.sls			\
+	tests/libtest/compiler-internals.sls		\
 	tests/libtest/makers-lib.sls			\
 	tests/libtest/records-lib.sls			\
 	tests/libtest/silex-test.sls			\
