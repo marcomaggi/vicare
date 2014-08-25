@@ -826,30 +826,13 @@
 ;;An instance  of this type represents  a form in a  sequence of forms inside  a core
 ;;language BEGIN.
 ;;
-;;*NOTE* We want the  SEQ structure to be built everywhere  with nested structures in
-;;the first  field and  the last  expression in  the second  field; this  allows easy
-;;extraction of the last form, which is useful, for example, in the source optimizer.
-;;
-;;We can think of the core language form:
-;;
-;;   (begin ?b0 ?b1 ?last)
-;;
-;;as:
-;;
-;;   (begin (begin ?b0 ?b1) ?last)
-;;
-;;and it becomes the nested hierarchy:
-;;
-;;   (make-seq (make-seq (recordize ?b0) (recordize ?b1))
-;;             (recordize ?last))
-;;
 (define-struct seq
   (e0
-		;A struct  instance representing  the first form  in the
-		;sequence.  It can be a nested SEQ struct.
+		;A struct instance  representing the first form in  the sequence.  It
+		;can be a nested SEQ struct.
    e1
-		;A  struct instance  representing the  last form  in the
-		;sequence.  It *should not* be a SEQ struct.
+		;A struct  instance representing the  last form in the  sequence.  It
+		;can be a nested SEQ struct.
    ))
 
 ;;An instance of this type represents an IF form.
@@ -1646,11 +1629,11 @@
       ;;Synopsis: (set! ?lhs ?rhs)
       ;;
       ;;If the  left-hand side  references a lexical  binding defined  by INPUT-EXPR:
-      ;;return a struct instance of type  ASSIGN.  If the left-hand side references a
-      ;;binding defined  in a  previously processed expression:  return a  new struct
-      ;;instance of type  FUNCALL representing a SET! operation for  a variable whose
-      ;;value is stored in the "value" field  of a loc gensym.  For more details: see
-      ;;the documentation of the primitive TOP-LEVEL-VALUE.
+      ;;return a struct instance of type ASSIGN.  If the left-hand side references an
+      ;;imported binding or  a binding defined in a  previously processed expression:
+      ;;return a  new struct instance of  type FUNCALL representing a  SET! operation
+      ;;for a variable  whose value is stored  in the "value" field of  a loc gensym.
+      ;;For more details: see the documentation of the primitive TOP-LEVEL-VALUE.
       ;;
       ((set!)
        (let* ((lhs.sexp ($cadr  X)) ;left-hand side
@@ -1662,6 +1645,7 @@
 		     (set-prelex-source-assigned?! prel #t)
 		     (make-assign prel rhs.reco)))
 	       (else
+		;;Here we assume LHS.SEXP is a loc gensym.
 		(make-funcall (mk-primref '$init-symbol-value!)
 			      (list (make-constant lhs.sexp) rhs.reco))))))
 
@@ -1673,10 +1657,10 @@
       ;;
       ((begin)
        (let recur ((A ($cadr X))
-		   (D ($cddr X)))
-	 (if (null? D)
-	     (E A ctxt)
-	   (make-seq (E A) (recur ($car D) ($cdr D))))))
+      		   (D ($cddr X)))
+      	 (if (null? D)
+      	     (E A ctxt)
+      	   (make-seq (E A) (recur ($car D) ($cdr D))))))
 
       ;;Synopsis: (let ((?lhs ?rhs) ...) ?body)
       ;;
@@ -6201,7 +6185,7 @@
 
       #| end of module: Var |# )
 
-    (define (%do-seq e0 e1)
+   (define (%do-seq e0 e1)
       (cons 'seq
 	    ;;Here we flatten nested SEQ instances into a unique output SEQ form.
 	    (let recur ((expr  e0)

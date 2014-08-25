@@ -1588,10 +1588,6 @@
 (define (result-expr x)
   ;;Return the "last"  value of an expression.
   ;;
-  ;;Notice  that for  this  to  work the  SEQ  structure  must be  built
-  ;;everywhere with  nested structures in  the first field and  the last
-  ;;expression in the second field
-  ;;
   (struct-case x
     ((seq e0 e1)
      (result-expr e1))

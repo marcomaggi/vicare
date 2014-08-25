@@ -149,6 +149,12 @@
 	       a_2))))
 
 ;;; --------------------------------------------------------------------
+;;; sequences
+
+  (doit* (begin '1 '2 '3)
+	 (seq (constant 1) (constant 2) (constant 3)))
+
+;;; --------------------------------------------------------------------
 ;;; libraries
 
   ;;This is the (libtest compiler-internals) library.

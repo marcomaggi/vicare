@@ -185,11 +185,13 @@
   ;;Given a list of expressions to be evaluated in sequence wrap it in a
   ;;BEGIN syntax.  Discard useless void expressions.
   ;;
-  (let ((the-void (build-void)))
+  (let ((the-void1 (build-void))
+	(the-void2 '(funcall (primitive void))))
     (let loop ((exps exps))
       (cond ((null? (cdr exps))
 	     (car exps))
-	    ((equal? (car exps) the-void)
+	    ((or (equal? (car exps) the-void1)
+		 (equal? (car exps) the-void2))
 	     (loop (cdr exps)))
 	    (else
 	     `(begin ,@exps))))))
