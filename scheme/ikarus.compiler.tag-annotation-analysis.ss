@@ -193,7 +193,7 @@
 
   (define (apply-primcall op rand* env)
     (define (return t)
-      (values (make-funcall (make-primref op) rand*) env t))
+      (values (make-funcall (mk-primref op) rand*) env t))
     (define-syntax %inject
       (syntax-rules ()
 	((_ . ?args)
@@ -311,7 +311,7 @@
   (module (inject)
 
     (define (inject op rand* env ret-t . rand-t*)
-      (values (make-funcall (make-primref op) rand*)
+      (values (make-funcall (mk-primref op) rand*)
 	      (if (= (length rand-t*)
 		     (length rand*))
 		  (%extend* rand* rand-t* env)
@@ -341,7 +341,7 @@
   (module (inject*)
 
     (define (inject* op rand* env ret-t arg-t)
-      (values (make-funcall (make-primref op) rand*)
+      (values (make-funcall (mk-primref op) rand*)
 	      (%extend* rand* env arg-t)
 	      ret-t))
 

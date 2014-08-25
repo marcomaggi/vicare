@@ -495,9 +495,9 @@
 	  ;;It is a standalone reference to DEBUG-CALL, or maybe not.
 	  (begin
 	    (decrement sc 1)
-	    (make-primref 'debug-call))
+	    (mk-primref 'debug-call))
 	;;It is the operand of a FUNCALL to DEBUG-CALL.
-	(make-primref 'debug-call)
+	(mk-primref 'debug-call)
 	;;FIXME Commenting out  this chunk fixes issue  #3, which caused
 	;;the following program:
 	;;
@@ -529,7 +529,7 @@
 	;; 	    (residualize-operands rator (cons src/expr rands) sc))
 	;; 	(begin
 	;; 	  (decrement sc 1)
-	;; 	  (make-primref 'debug-call))))))
+	;; 	  (mk-primref 'debug-call))))))
 	)))
 
   (define (E-var x ctxt env ec sc)
@@ -1935,7 +1935,7 @@
     (define (%application-with-var-formals formals rand* body ctxt env ec sc)
       (let-values (((lhs* tmp* rest-formal) (%partition formals rand*)))
 	(with-extended-env ((env a*) <== (env (append lhs* tmp*) rand*))
-	  (let ((rest-rand (make-operand (make-funcall (make-primref 'list) tmp*)
+	  (let ((rest-rand (make-operand (make-funcall (mk-primref 'list) tmp*)
 					 env ec)))
 	    (with-extended-env ((env b*) <== (env (list rest-formal) (list rest-rand)))
 	      (let* ((optim-body (E body (app-ctxt ctxt) env ec sc))
@@ -2153,7 +2153,7 @@
 	    result)
 	(begin
 	  (decrement sc 1)
-	  (make-primref primsym)))))
+	  (mk-primref primsym)))))
 
   (define (%precompute-effect-free-primitive info appctxt)
     ;;The function  call is effect  free.  If the evaluation  context is

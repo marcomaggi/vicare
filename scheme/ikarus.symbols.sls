@@ -39,7 +39,6 @@
     $symbol->string
     $getprop $putprop $remprop $property-list
 
-
     ;; internals handling of symbols and special symbols
     unbound-object	unbound-object?
     top-level-value	top-level-bound?	set-top-level-value!
@@ -174,7 +173,7 @@
   ;;from the slot  "value" of the symbol object  and return it.  If the  value is the
   ;;unbound object: raise an exception.
   ;;
-  ;;This primitive function is also implemented as primitive operation.
+  ;;NOTE This primitive function is also implemented as primitive operation!!!
   ;;
   ;;This function has a specific purpose: to  retrieve the value of a binding defined
   ;;in  a  previously   evaluated  expression  in  the  context   of  an  interaction
@@ -221,7 +220,7 @@
     (when ($unbound-object? v)
       (raise
        (condition (make-undefined-violation)
-		  (make-who-condition 'eval)
+		  (make-who-condition 'top-level-value)
 		  (make-message-condition "unbound variable")
 		  (make-irritants-condition (list (string->symbol (symbol->string loc)))))))))
 

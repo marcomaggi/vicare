@@ -1032,6 +1032,22 @@
 		;A symbol being the public name of the primitive function.
    ))
 
+(module (mk-primref)
+  ;;NOTE We might cache the PRIMREF structs in an attempt to allocate less memory and
+  ;;cause less garbage  collections.  I have tried this and,  while building the boot
+  ;;image,  the result  is that  there  are 10  more garbage  collections, not  less.
+  ;;(Marco Maggi; Mon Aug 25, 2014)
+  ;;
+  (define mk-primref make-primref)
+  ;; (define-constant CACHE
+  ;;   (make-eq-hashtable))
+  ;; (define (mk-primref name)
+  ;;   (or (hashtable-ref CACHE name #f)
+  ;; 	(receive-and-return (ref)
+  ;; 	    (make-primref name)
+  ;; 	  (hashtable-set! CACHE name ref))))
+  #| end of module |# )
+
 ;;An instance of this type represents a  LAMBDA or CASE-LAMBDA form.  Such forms have
 ;;the syntax:
 ;;
@@ -1598,7 +1614,10 @@
 		   ;;
 		   ;;If instead X is an unbound variable: the call to TOP-LEVEL-VALUE
 		   ;;will fail at run-time.
-		   (make-funcall (make-primref 'top-level-value)
+		   ;;
+		   ;;NOTE  TOP-LEVEL-VALUE  is  both   a  primitive  function  and  a
+		   ;;primitive operation.
+		   (make-funcall (mk-primref 'top-level-value)
 				 (list (make-constant X))))))
 
 	   (else
@@ -1643,7 +1662,7 @@
 		     (set-prelex-source-assigned?! prel #t)
 		     (make-assign prel rhs.reco)))
 	       (else
-		(make-funcall (make-primref '$init-symbol-value!)
+		(make-funcall (mk-primref '$init-symbol-value!)
 			      (list (make-constant lhs.sexp) rhs.reco))))))
 
       ;;Synopsis: (begin ?body0 ?body ...)
@@ -1827,7 +1846,7 @@
       ;;
       ((primitive)
        (let ((var ($cadr X)))
-	 (make-primref var)))
+	 (mk-primref var)))
 
       ;;Synopsis: (annotated-call ?annotation ?fun ?arg ...)
       ;;
@@ -1986,7 +2005,7 @@
 	    ;;
 	    (if (%core-primitive-reference? op)
 		(make-funcall op rands)
-	      (make-funcall (make-primref 'debug-call)
+	      (make-funcall (mk-primref 'debug-call)
 			    (cons* src/expr op rands))))))
 
       (define (%core-primitive-reference? op)
@@ -2109,7 +2128,7 @@
 		,guard-expr)
 	      ctxt)))
 	(else	;Error, incorrect number of arguments.
-	 (mk-call (make-primref 'make-parameter) ($map/stx E args)))))
+	 (mk-call (mk-primref 'make-parameter) ($map/stx E args)))))
 
     (module (get-fmls)
 
@@ -2596,7 +2615,7 @@
     (define (%make-conses ls)
       (if (null? ls)
 	  (make-constant '())
-	(make-funcall (make-primref 'cons)
+	(make-funcall (mk-primref 'cons)
 		      (list ($car ls) (%make-conses ($cdr ls))))))
 
     #| end of module: try-inline |# )
@@ -2712,12 +2731,12 @@
 		  ;;form LIBRARY-LETREC*.   LOC is  the loc gensym  used to  hold the
 		  ;;value at run-time.
 		  => (lambda (loc)
-		       (make-funcall (make-primref '$symbol-value)
+		       (make-funcall (mk-primref '$symbol-value)
 				     (list (make-constant loc)))))
 		 (else
 		  ;;Reference  to  lexical  local mutable  binding:  substitute  with
 		  ;;appropriate reference to the vector location.
-		  (make-funcall (make-primref '$vector-ref)
+		  (make-funcall (mk-primref '$vector-ref)
 				(list x (make-constant 0)))))
 	 ;;Reference to a read-only binding.
 	 x))
@@ -2780,19 +2799,19 @@
 			  ;;     (funcall (primref $symbol-value) (constant a.loc)))
 			  ;;
 			  #;(fprintf (current-error-port) "assign init ~s\n" (prelex-name lhs))
-			  (make-funcall (make-primref '$init-symbol-value!)
+			  (make-funcall (mk-primref '$init-symbol-value!)
 					(list (make-constant where) (E rhs))))
 			 ((prelex-global-location lhs)
 			  ;;Common assignment of  top level binding.  LOC  is the loc
 			  ;;gensym used to hold the value.
 			  => (lambda (loc)
 			       ;;(fprintf (current-error-port) "assign set ~s\n" (prelex-name lhs))
-			       (make-funcall (make-primref '$set-symbol-value!)
+			       (make-funcall (mk-primref '$set-symbol-value!)
 					     (list (make-constant loc) (E rhs)))))
 			 (else
 			  ;;Assignment of  local binding stored on  the Scheme stack.
 			  ;;Substitute with the appropriate vector operation.
-			  (make-funcall (make-primref '$vector-set!)
+			  (make-funcall (mk-primref '$vector-set!)
 					(list lhs (make-constant 0) (E rhs)))))))
 	     (else
 	      (error who "not assigned" lhs x))))
@@ -2889,7 +2908,7 @@
 	body
       (make-bind lhs*
 		 (map (lambda (rhs)
-			(make-funcall (make-primref 'vector) (list rhs)))
+			(make-funcall (mk-primref 'vector) (list rhs)))
 		   rhs*)
 		 body)))
 
@@ -3381,7 +3400,7 @@
       ;;
       (if (null? fml*)
 	  ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
-	  (list (make-funcall (make-primref 'list) rand*))
+	  (list (make-funcall (mk-primref 'list) rand*))
 	(cons (strip ($car rand*))
 	      (%prepare-rand* ($cdr fml*) ($cdr rand*)))))
 
@@ -3514,7 +3533,7 @@
       ((var)
        (cond ((var-global-loc x)
 	      => (lambda (loc)
-		   (make-funcall (make-primref '$symbol-value)
+		   (make-funcall (mk-primref '$symbol-value)
 				 (list (make-constant loc)))))
 	     (else x)))
 
@@ -3565,7 +3584,7 @@
 	   body.already-processed)
 	  ((var-global-loc ($car lhs*))
 	   => (lambda (loc)
-		(make-seq (make-funcall (make-primref '$init-symbol-value!)
+		(make-seq (make-funcall (mk-primref '$init-symbol-value!)
 					(list (make-constant loc) ($car lhs*)))
 			  (%global-assign ($cdr lhs*) body.already-processed))))
 	  (else
@@ -3582,7 +3601,7 @@
 	   body.already-processed)
 	  ((var-global-loc ($car lhs*))
 	   => (lambda (loc)
-		(make-seq (make-funcall (make-primref '$set-symbol-value/proc!)
+		(make-seq (make-funcall (mk-primref '$set-symbol-value/proc!)
 					(list (make-constant loc) ($car lhs*)))
 			  (%global-assign ($cdr lhs*) body.already-processed))))
 	  (else

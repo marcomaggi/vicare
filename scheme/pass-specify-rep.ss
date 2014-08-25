@@ -432,7 +432,7 @@
   (import cogen-handler-maker)
 
   (define (%make-no-interrupt-call op args)
-    (let ((pref (make-primref op)))
+    (let ((pref (mk-primref op)))
       (make-funcall (V pref) args)))
 
   (module (%make-interrupt-call)
@@ -466,7 +466,7 @@
     ;;of the core primitive.
     ;;
     (define (%make-interrupt-call op args)
-      (let ((pref (make-primref (%primop-interrupt-handler op))))
+      (let ((pref (mk-primref (%primop-interrupt-handler op))))
 	(make-funcall (V pref) args)))
 
     (define (%primop-interrupt-handler x)
@@ -491,9 +491,9 @@
     (define (%make-call op args)
       ;;This function clauses upon the argument SRC/LOC.
       ;;
-      (make-funcall (V (make-primref 'debug-call))
+      (make-funcall (V (mk-primref 'debug-call))
 		    (cons* (V src/loc)
-			   (V (make-primref op))
+			   (V (mk-primref op))
 			   args)))
     ((make-cogen-handler %make-call %make-call) op ctxt args))
 
@@ -908,7 +908,7 @@
 	 (%fail kont arg*)))))
 
   (define (%fail kont arg*)
-    (kont (make-funcall (make-primref 'debug-call) arg*)))
+    (kont (make-funcall (mk-primref 'debug-call) arg*)))
 
   (define (%remove-tag x)
     (struct-case x
@@ -1284,7 +1284,7 @@
 			 (prm 'nop)
 		       (prm 'interrupt))
 		     x)
-	   (V (make-funcall (make-primref 'error)
+	   (V (make-funcall (mk-primref 'error)
 			    (list (K 'apply) (K "not a procedure") x)))))
       (V x)))
 
