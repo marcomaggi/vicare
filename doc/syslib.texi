@@ -6228,9 +6228,88 @@ behaviour is undefined.
 @subsection Scheme code to nested structs
 
 
-@defun $recordize @var{input}
+The core language forms produced by the expander are converted to
+``recordised code''.  The struct types used for this recordisation are
+used to represent code in the core language in a way which is better
+inspectable and optimisable.
+
+
+@defun $recordize @var{core-language-form}
+Given a symbolic expression representing a form in the core language,
+convert it into a nested hierarchy of struct instances; return the outer
+struct instance.
+
+This function expects a symbolic expression with perfect syntax: no
+syntax errors are checked.  We expect this function to be executed
+without errors, no exceptions should be raised unless an internal bug
+makes it happen.
+
+Additionally determine some properties of the code and store relative
+informations in the struct instances; it is possible that some of the
+properties determined here are not used in the subsequent compiler
+passes, but we discover them anyway.  In this function we try to
+discover properties to save computation time in later passes, even if
+here we do not perform any code transformation related to such
+properties.
 @end defun
 
+
+An expression in the core language is code fully expanded in which all
+the bindings have a unique variable name represented by a lex gensym.
+This function is called to process:
+
+@itemize
+@item
+Full @func{library} forms the expander has transformed into
+@func{library-letrec*} core language forms.  Such symbolic expressions
+are to be compiled in an environment composed by: all the functions
+exported by the boot image, all the functions exported by the imported
+libraries.
+
+@item
+Full @rnrs{6} programs the expander has transformed into
+@func{library-letrec*} core language forms.  Such symbolic expressions
+are to be compiled in an environment composed by: all the functions
+exported by the boot image, all the functions exported by the imported
+libraries.
+
+@item
+Standalone expressions from invocations of @rnrs{6}'s @func{eval}, for
+example read by the @repl{}, either in the context of a stateless
+environment or in the context of a stateful interactive environment.
+Such symbolic expressions are to be compiled in an environment composed
+by: all the functions exported by the boot image; all the functions
+exported by the imported libraries; all the bindings previously defined
+in the stateful interactive environment, if such is used.
+@end itemize
+
+Recognise the following core language forms:
+
+@example
+(library-letrec* ((@meta{lhs} @meta{loc} @meta{rhs}) ...) @meta{body})
+(quote @meta{datum})
+(if @meta{test} @meta{consequent} @meta{alternate})
+(set! @meta{lhs} @meta{rhs})
+(begin @metao{body} @meta{body} ...)
+(let     ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(letrec  ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(letrec* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(case-lambda (@meta{formals} @metao{body} @meta{body} ...) ...)
+(annotated-case-lambda @meta{annotation} (@meta{formals} @metao{body} @meta{body} ...) ...)
+(lambda @meta{formals} @metao{body} @meta{body} ...)
+(foreign-call "@meta{function-name}" @meta{arg} ...)
+(primitive @meta{prim})
+(annotated-call @meta{annotation} @meta{fun} @meta{arg} ...)
+@meta{lex}
+(@meta{func} @meta{arg} ...)
+@end example
+
+@noindent
+where: a standalone @meta{lex} atom is a lex gensym, interpreted as
+reference to binding; @meta{lhs} stands for ``left--hand side'' and it
+is a lex gensym; @meta{rhs} stands for ``right--hand side''; @meta{loc}
+is a loc gensym; @meta{prim} is a symbol representing the public name of
+a primitive function or primitive operation.
 
 @c page
 @node syslib compiler direct calls

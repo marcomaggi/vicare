@@ -1485,48 +1485,20 @@
   ;;convert it into  a nested hierarchy of struct instances;  return the outer struct
   ;;instance.
   ;;
-  ;;Additionally  determine   some  properties  of   the  code  and   store  relative
-  ;;informations in the struct instances; it  is possible that some of the properties
-  ;;determined here are  not used in the subsequent compiler  passes, but we discover
-  ;;them anyway.  In this function we  try to discover properties to save computation
-  ;;time in  later passes,  even if here  we do not  perform any  code transformation
-  ;;related to such properties.
-  ;;
-  ;;An  expression in  the core  language is  code fully  expanded in  which all  the
-  ;;bindings have a unique variable name  represented by a lex gensym.  This function
-  ;;is called to process:
-  ;;
-  ;;*  Full LIBRARY  forms the  expander  has transformed  into LIBRARY-LETREC*  core
-  ;;    language  forms.   Such  symbolic  expressions  are  to  be  compiled  in  an
-  ;;   environment composed by: all the functions exported by the boot image, all the
-  ;;   functions exported by the imported.
-  ;;
-  ;;*  Full R6RS  programs the  expander  has transformed  into LIBRARY-LETREC*  core
-  ;;  language forms.  Such symbolic expressions are to be compiled in an environment
-  ;;  composed by:  all the functions exported  by the boot image,  all the functions
-  ;;  exported by the imported libraries.
-  ;;
-  ;;* Standalone expressions from invocations of R6RS's EVAL, for example read by the
-  ;;  REPL, either in  the context of a stateless environment or in  the context of a
-  ;;  stateful interactive environment.  Such symbolic expressions are to be compiled
-  ;;  in an  environment composed by: all  the functions exported by  the boot image;
-  ;;   all  the functions  exported  by  the  imported  libraries; all  the  bindings
-  ;;  previously defined in the stateful interactive environment, if such is used.
-  ;;
   ;;This function expects a symbolic expression with perfect syntax: no syntax errors
   ;;are  checked.   We  expect  this  function to  be  executed  without  errors,  no
   ;;exceptions should be raised unless an internal bug makes it happen.
   ;;
   ;;Recognise the following core language forms:
   ;;
-  ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?body0 ?body ..)
+  ;;   (library-letrec* ((?lhs ?loc ?rhs) ...) ?body)
   ;;   (quote ?datum)
   ;;   (if ?test ?consequent ?alternate)
   ;;   (set! ?lhs ?rhs)
   ;;   (begin ?body0 ?body ...)
-  ;;   (let     ((?lhs ?rhs) ...) ?body0 ?body ..)
-  ;;   (letrec  ((?lhs ?rhs) ...) ?body0 ?body ..)
-  ;;   (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
+  ;;   (let     ((?lhs ?rhs) ...) ?body)
+  ;;   (letrec  ((?lhs ?rhs) ...) ?body)
+  ;;   (letrec* ((?lhs ?rhs) ...) ?body)
   ;;   (case-lambda (?formals ?body0 ?body ...) ...)
   ;;   (annotated-case-lambda ?annotation (?formals ?body0 ?body ...) ...)
   ;;   (lambda ?formals ?body0 ?body ...)
@@ -1680,7 +1652,7 @@
 	     (E A ctxt)
 	   (make-seq (E A) (recur ($car D) ($cdr D))))))
 
-      ;;Synopsis: (let ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;Synopsis: (let ((?lhs ?rhs) ...) ?body)
       ;;
       ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
       ;;is unique for this binding in the whole history of the Universe.
@@ -1700,7 +1672,7 @@
 	       (make-bind prel* rhs*^ body^)
 	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
-      ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body)
       ;;
       ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
       ;;is unique for this binding in the whole history of the Universe.
@@ -1720,7 +1692,7 @@
 	       (make-recbind prel* rhs*^ body^)
 	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
-      ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body0 ?body ..)
+      ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body)
       ;;
       ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
       ;;is unique for this binding in the whole history of the Universe.
@@ -1740,7 +1712,7 @@
 	       (make-rec*bind prel* rhs*^ body^)
 	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
-      ;;Synopsis: (library-letrec* ((?lex ?loc ?rhs) ...) ?body0 ?body ..)
+      ;;Synopsis: (library-letrec* ((?lex ?loc ?rhs) ...) ?body)
       ;;
       ;;A LIBRARY form like:
       ;;
