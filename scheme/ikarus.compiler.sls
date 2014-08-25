@@ -573,21 +573,6 @@
 	 compile-core-expr->code
 	 core-expr->optimized-code
 	 core-expr->assembly-code)
-  ;;The list of compiler passes is:
-  ;;
-  ;;   recordize
-  ;;   optimize-direct-calls
-  ;;   optimize-letrec
-  ;;   source-optimize
-  ;;   rewrite-references-and-assignments
-  ;;   introduce-tags (optional)
-  ;;   introduce-vars
-  ;;   sanitize-bindings
-  ;;   optimize-for-direct-jumps
-  ;;   insert-global-assignments
-  ;;   convert-closures
-  ;;   optimize-closures/lift-codes
-  ;;
 
   (define (compile-core-expr-to-port expr port)
     ;;This function is used to write binary code into the boot image.
@@ -881,44 +866,40 @@
 ;;An instance of this type represents a function call; there are special
 ;;cases of this:
 ;;
-;;**When this FUNCALL represents a plain function application:
+;;* When this FUNCALL represents a plain function application:
 ;;
-;;  - the field OP is set to  a struct instance representing a form that
-;;    supposedly evaluates to a closure;
+;;     (funcall ?op ?rand*)
 ;;
-;;  - the field RAND* is set  to a list of struct instances representing
-;;    forms that evaluate to the arguments.
+;;  the field OP is a struct  representing an expression that supposedly evaluates to
+;;  a closure object; the field RAND* is  set to a list of structs representing forms
+;;  that evaluate to the arguments.
 ;;
-;;**When this  FUNCALL represents an annotated  function application and
-;;  debugging mode is active:
+;;* When this FUNCALL represents an annotated function application and debugging mode
+;;  is active:
 ;;
-;;  - the field OP is a  struct instance of type PRIMREF referencing the
-;;    primitive DEBUG-CALL;
+;;     (funcall (primref debug-call) (?src/expr ?rator ?rand ...))
 ;;
-;;  - the field RAND* is a list in which:
+;;  the  field OP  is a  struct instance  of type  PRIMREF referencing  the primitive
+;;  DEBUG-CALL; the field RAND* is a list in which:
 ;;
-;;    + the 1st  item is a struct instance of  type CONSTANT whose field
-;;      holds a pair: its car is #f or the source input port identifier;
-;;      its cdr is the source epxression;
+;;  - the  1st item is a struct  instance of type CONSTANT whose field  holds a pair:
+;;    its  car is  #f or  the source  input port  identifier; its  cdr is  the source
+;;    expression;
 ;;
-;;    + the  2nd  item  a  struct  instance  representing  a  form  that
-;;      supposedly evaluates to a closure;
+;;  - the 2nd item a struct instance representing a form that supposedly evaluates to
+;;    a closure;
 ;;
-;;    + the tail is  a list of  of struct  instances  representing forms
-;;      that evaluate to the arguments.
+;;  - the tail is a list of  struct instances representing forms that evaluate to the
+;;    arguments.
 ;;
-;;  Notice that a call to DEBUG-CALL looks like this:
+;;* When the FUNCALL represents a SET! on a top level binding:
 ;;
-;;     (debug-call ?src/expr ?rator ?arg ...)
+;;     (funcall (primref $init-symbol-value!) ?rand*)
 ;;
-;;**When the FUNCALL represents a SET!  on a top level binding:
-;;
-;;  -  the field  OP is a  struct instance of  type PRIMREF  holding the
-;;    symbol "$init-symbol-value!".
-;;
-;;  - the field RAND* is a list of 2 elements: a struct instance of type
-;;    CONSTANT holding the symbol name of the binding; a struct instance
-;;    representing the new value.
+;;  the   field   OP   is   a   struct   of   type   PRIMREF   holding   the   symbol
+;;  "$init-symbol-value!"; the field RAND* is a list of 2 elements: a struct instance
+;;  of  type CONSTANT  holding  the loc  gensym  of the  binding;  a struct  instance
+;;  representing an expression evaluating to the new value.
 ;;
 (define-struct funcall
   (op rand*))
@@ -973,9 +954,9 @@
    ))
 
 ;;Like BIND, but the  RHS* field holds struct instances of type  CLAMBDA and the LHS*
-;;field holds PRELEX structures representing  bindings that are never assigned either
-;;by the BODY  nor by the RHS* themselves.  We  can think of a FIX form  as a LETREC*
-;;form in which the right-hand sides are functions.
+;;field  holds  PRELEX structures  representing  bindings  that are  never  assigned,
+;;neither by the  BODY nor by the RHS* themselves.   We can think of a FIX  form as a
+;;LETREC form in which the right-hand sides are functions.
 ;;
 ;;For details on the meaning of FIX, see the paper (available on the Net):
 ;;
@@ -1022,9 +1003,11 @@
 		;A struct instance representing the sequence of body forms.
    ))
 
-;;An  instance  of this  type  represents  a reference  to  a  primitive function;  a
-;;"primitive function"  is a  function exported  by the  boot image.   Given standard
-;;language form representing a primitive function application:
+;;An  instance  of this  type  represents  a reference  to  a  primitive function  or
+;;primitive operation.   A "primitive function"  is a  function exported by  the boot
+;;image.  A  "primitive operation" is like  a macro for high-level  assembly language
+;;and  it  is  implemented  by  the  boot image.   Given  a  standard  language  form
+;;representing a primitive function application:
 ;;
 ;;   (list 1 2 3)
 ;;
@@ -1071,7 +1054,8 @@
 		;clauses.
    cp
 		;Initialised to #f, it  is set to the struct instance  of type VAR to
-		;which the CLOSURE wrapping this CLAMBDA is bound.
+		;which the  CLOSURE wrapping  this CLAMBDA is  bound.  CP  stands for
+		;"Closure Pointer".
    free
 		;Initialised to #f, it  is set to a list of  struct instances of type
 		;VAR representing the free variables referenced by this CLAMBDA.
@@ -1132,7 +1116,7 @@
 ;;* If ?FORMALS is  a symbol: ARGS is a proper list holding  a single item, PROPER is
 ;;#f.
 ;;
-;;* If ?FORMALS is an improper list: ARGS is a proper list holding multiple elements,
+;;* If ?FORMALS is an IMproper list: ARGS is a proper list holding multiple elements,
 ;;PROPER is #f.
 ;;
 (define-struct case-info
@@ -1157,7 +1141,7 @@
 		;   => (prelex-args)
 		;
 		;In the  middle compiler passes: a  list of struct instances  of type
-		;VAR representing the formals.
+		;VAR representing the formals with the same format.
 		;
 		;In  the  latest compiler  passes:  a  pair  whose  car is  a  symbol
 		;representing the  CPU register  holding the  pointer to  the current
@@ -1479,10 +1463,15 @@
    size
    ))
 
+;;Represent an assembly instruction.
+;;
 (define-struct asm-instr
   (op
+		;Operand.
    dst
+		;Destination machine word.
    src
+		;Source machine word.
    ))
 
 (define-struct disp

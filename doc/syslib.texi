@@ -6027,11 +6027,6 @@ transformation step from Scheme code to executable binary code.  The
 library @library{vicare system $compiler} exports one binding for each
 compiler pass, allowing inspection of the performed transformations.
 
-The sequence in which the passes are performed @strong{cannot} be
-changed; they must be performed in the specified order.  The passes
-functions are to be considered unsafe: if the input is invalid, the
-behaviour is undefined.
-
 This section contains some documentation for each pass; however, it is
 almost impossible to truly understand what a pass does without reading
 the source code, where additional documentation is present in the form
@@ -6200,11 +6195,31 @@ exactly represent the input.
 @subsection The full transformation
 
 
-The following bindings are exported by the library @library{vicare
-system $compiler}.
+The sequence of compiler passes is:
+
+@example
+recordize
+optimize-direct-calls
+optimize-letrec
+source-optimize
+rewrite-references-and-assignments
+introduce-tags (optional)
+introduce-vars
+sanitize-bindings
+optimize-for-direct-jumps
+insert-global-assignments
+convert-closures
+optimize-closures/lift-codes
+@end example
+
+@noindent
+the sequence in which the passes are performed @strong{cannot} be
+changed; they must be performed in the specified order.  The passes
+functions are to be considered unsafe: if the input is invalid, the
+behaviour is undefined.
 
 
-@defun $compile-core-expr->code @var{input}
+@defun $compile-core-expr->code @var{core-language-sexp}
 @end defun
 
 
