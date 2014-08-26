@@ -1788,8 +1788,8 @@
       ;;public name of the primitive function or primitive operation.
       ;;
       ;;NOTE Every time  the expander recognises an identifier  in reference position
-      ;;captured by  a non-syntax binding  exported by  the boot image:  it generates
-      ;;this symbolic expression as core language form.  For example:
+      ;;captured by a lexical  binding (not a syntax) exported by  the boot image: it
+      ;;generates this symbolic expression as core language form.  For example:
       ;;
       ;;   (fx+ 1 2)
       ;;
@@ -1818,21 +1818,27 @@
        ;;Return a struct instance of type FUNCALL.
        ;;
        (let ((func ($car X))
-	     (args ($cdr X)))
-	 (E-app make-funcall func args ctxt)))))
+	     (arg* ($cdr X)))
+	 (E-app make-funcall func arg* ctxt)))))
+
+;;; --------------------------------------------------------------------
 
   (module (quoted-sym)
 
     (define (quoted-sym? obj)
+      ;;Return true if OBJ is a sexp with the format:
+      ;;
+      ;;   (quote ?symbol)
+      ;;
       (and (list? obj)
-	   ($fx= (length obj) 2)
+	   (null? ($cddr obj))
 	   (eq? 'quote ($car obj))
 	   (symbol? ($cadr obj))))
 
     (define* (quoted-sym {x quoted-sym?})
       ;;Check that X has the format:
       ;;
-      ;;  (quote ?symbol)
+      ;;   (quote ?symbol)
       ;;
       ;;and return ?SYMBOL.
       ;;
@@ -1845,10 +1851,10 @@
     (define (quoted-string? obj)
       ;;Check that X has the format:
       ;;
-      ;;  (quote ?string)
+      ;;   (quote ?string)
       ;;
       (and (list? obj)
-	   ($fx= (length obj) 2)
+	   (null? ($cddr obj))
 	   (eq? 'quote ($car obj))
 	   (string? ($cadr obj))))
 
@@ -1862,6 +1868,8 @@
       ($cadr x))
 
     #| end of module: quoted-string |# )
+
+;;; --------------------------------------------------------------------
 
   (module (E-clambda-clause*)
 
@@ -1935,26 +1943,30 @@
 
     #| end of module: E-clambda-clause* |# )
 
+;;; --------------------------------------------------------------------
+
   (module (E-annotated-call)
 
     (define (E-annotated-call X ctxt)
-      ;;We expect X to be the symbolic expression:
+      ;;This  function is  a wrapper  for "E-app",  with the  purpose of  building an
+      ;;appropriate  MK-CALL  argument for  it.   We  expect  X  to be  the  symbolic
+      ;;expression:
       ;;
       ;;   (annotated-call ?annotation ?fun ?arg ...)
       ;;
-      ;;where ?ANNOTATION  is a struct  instance of  type ANNOTATION, defined  by the
-      ;;reader.
+      ;;where ?ANNOTATION is either a struct  instance of type ANNOTATION, defined by
+      ;;the reader, or a syntax object constructed by the expander.
       ;;
-      ;;At present (Oct  11, 2012), this function  is the only place  in the compiler
-      ;;that makes use of the parameter GENERATE-DEBUG-CALLS.
+      ;;NOTE At present, this  function is the only place in  the compiler that makes
+      ;;use of the parameter GENERATE-DEBUG-CALLS.  (Marco Maggi; Oct 11, 2012)
       ;;
       (let ((anno ($cadr  X))  ;annotation
 	    (func ($caddr X))  ;expression evaluating to the function
 	    (args ($cdddr X))) ;arguments
-	(E-app (if (generate-debug-calls)
-		   (%make-funcall-maker anno)
-		 make-funcall)
-	       func args ctxt)))
+	(let ((mk-call (if (generate-debug-calls)
+			   (%make-funcall-maker anno)
+			 make-funcall)))
+	  (E-app mk-call func args ctxt))))
 
     (module (%make-funcall-maker)
 
@@ -1964,11 +1976,12 @@
 						 (annotation-stripped anno))
 					 (cons #f (syntax->datum anno))))))
 	  (lambda (op rands)
-	    ;;Only  non-core   primitives  get  special   handling  when
-	    ;;debugging mode is active.
-	    ;;
 	    (if (%core-primitive-reference? op)
+		;;This is an annotated call to a core primitive function or primitive
+		;;operation: ignore debugging mode, handle it as a normal call.
 		(make-funcall op rands)
+	      ;;This is an annotated call to a user-defined function: honor debugging
+	      ;;mode and generate a DEBUG-CALL.
 	      (make-funcall (mk-primref 'debug-call)
 			    (cons* src/expr op rands))))))
 
@@ -1998,51 +2011,50 @@
 
     #| end of module: E-annotated-call |# )
 
+;;; --------------------------------------------------------------------
+
   (module (E-app)
 
-    (define (E-app mk-call rator args ctxt)
-      ;;Process a  form representing a  function call.  Return  a struct
-      ;;instance of type FUNCALL.
-      ;;
-      ;;MK-CALL is either MAKE-FUNCALL or a wrapper for it.
+    (define (E-app mk-call rator arg* ctxt)
+      ;;Process a  form representing a  function call.   Return a struct  instance of
+      ;;type FUNCALL.  MK-CALL is either MAKE-FUNCALL or a wrapper for it.
       ;;
       ;;When the function call form is:
       ;;
       ;;   (?func ?arg ...)
       ;;
-      ;;the argument RATOR is ?FUNC and the argument ARGS is (?ARG ...).
+      ;;the argument RATOR is ?FUNC and the argument ARG* is (?ARG ...).
       ;;
       ;;In case RATOR is itself a LAMBDA or CASE-LAMBDA form as in:
       ;;
       ;;   ((lambda (x) x) 123)
       ;;
-      ;;and one of the ARGS evaluates to a closure as in:
+      ;;and one of the ARG* evaluates to a closure as in:
       ;;
       ;;   ((lambda (x) x) (lambda (y) ;annotated: x
       ;;                y))
       ;;
-      ;;we  want   the  argument  LAMBDA   to  be  annotated   with  the
-      ;;corresponding  formal name;  most of  the times  the list  NAMES
-      ;;below will be null.
+      ;;we want  the argument LAMBDA  to be  annotated with the  corresponding formal
+      ;;name; most of the times the list NAMES below will be null.
       ;;
       (if (equal? rator '(primitive make-parameter))
-	  (E-make-parameter mk-call args ctxt)
+	  (E-make-parameter mk-call arg* ctxt)
 	(let ((op    (E rator (list ctxt)))
-	      (rand* (let ((names (get-fmls rator args)))
+	      (rand* (let ((names (get-fmls rator arg*)))
 		       (if (null? names)
-			   ($map/stx E args)
-			 (let recur ((args  args)
+			   ($map/stx E arg*)
+			 (let recur ((arg*  arg*)
 				     (names names))
 			   (if (pair? names)
-			       (cons (E     ($car args) ($car names))
-				     (recur ($cdr args) ($cdr names)))
-			     ($map/stx E args)))))))
+			       (cons (E     ($car arg*) ($car names))
+				     (recur ($cdr arg*) ($cdr names)))
+			     ($map/stx E arg*)))))))
 	  (mk-call op rand*))))
 
-    (define (E-make-parameter mk-call args ctxt)
-      (case (length args)
+    (define (E-make-parameter mk-call arg* ctxt)
+      (case (length arg*)
 	((1)	;MAKE-PARAMETER called with one argument.
-	 (let ((val-expr	(car args))
+	 (let ((val-expr	(car arg*))
 	       (t		(gensym 't))
 	       (x		(gensym 'x))
 	       (bool		(gensym 'bool)))
@@ -2055,8 +2067,8 @@
 		,val-expr)
 	      ctxt)))
 	((2)	;MAKE-PARAMETER called with two arguments.
-	 (let ((val-expr	(car args))
-	       (guard-expr	(cadr args))
+	 (let ((val-expr	(car arg*))
+	       (guard-expr	(cadr arg*))
 	       (f		(gensym 'f))
 	       (t		(gensym 't))
 	       (t0		(gensym 't))
@@ -2092,31 +2104,31 @@
 		,guard-expr)
 	      ctxt)))
 	(else	;Error, incorrect number of arguments.
-	 (mk-call (mk-primref 'make-parameter) ($map/stx E args)))))
+	 (mk-call (mk-primref 'make-parameter) ($map/stx E arg*)))))
 
     (module (get-fmls)
 
-      (define (get-fmls x args)
-	;;Expect X to be  a sexp representing a CASE-LAMBDA and ARGS to  be a list of
+      (define (get-fmls x arg*)
+	;;Expect X to be  a sexp representing a CASE-LAMBDA and ARG* to  be a list of
 	;;arguments for such  function.  Scan the clauses  in X looking for  a set of
-	;;formals that matches ARGS: when found, return the list of formals; when not
+	;;formals that matches ARG*: when found, return the list of formals; when not
 	;;found, return null.
 	;;
 	(let loop ((clause* (get-clause* x)))
 	  (cond ((null? clause*)
 		 '())
-		((matching? ($caar clause*) args)
+		((matching? ($caar clause*) arg*)
 		 ($caar clause*))
 		(else
 		 (loop ($cdr clause*))))))
 
-      (define (matching? fmls args)
-	;;Return true if FMLS and ARGS are lists with the same number of items.
+      (define (matching? fmls arg*)
+	;;Return true if FMLS and ARG* are lists with the same number of items.
 	(cond ((null? fmls)
-	       (null? args))
+	       (null? arg*))
 	      ((pair? fmls)
-	       (and (pair? args)
-		    (matching? ($cdr fmls) ($cdr args))))
+	       (and (pair? arg*)
+		    (matching? ($cdr fmls) ($cdr arg*))))
 	      (else #t)))
 
       (define (get-clause* x)
@@ -2134,6 +2146,8 @@
       #| end of module: get-fmls |# )
 
     #| end of module: E-app |# )
+
+;;; --------------------------------------------------------------------
 
   (module (lexical lex*->prelex* %remove-prelex-from-proplist-of-lex)
     ;;This module  takes care of  generating a PRELEX  structure for each  lex gensym
