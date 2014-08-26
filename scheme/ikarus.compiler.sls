@@ -452,9 +452,8 @@
 ;;;; helper functions
 
 (define (remq1 x ls)
-  ;;Scan the  list LS and  remove only the  first instance of  object X,
-  ;;using EQ?  as  comparison function; return the  resulting list which
-  ;;may share its tail with LS.
+  ;;Scan the list  LS and remove only the  first instance of object X,  using EQ?  as
+  ;;comparison function; return the resulting list which may share its tail with LS.
   ;;
   (cond ((null? ls)
 	 '())
@@ -468,8 +467,8 @@
 		  (cons ($car ls) t)))))))
 
 (define (union s1 s2)
-  ;;Return a list which  is the union between the lists  S1 and S2, with
-  ;;all the duplicates removed.
+  ;;Return a  list which  is the  union between  the lists  S1 and  S2, with  all the
+  ;;duplicates removed.
   ;;
   (define (add* s1 s2)
     (if (null? s1)
@@ -486,8 +485,8 @@
 	 (add* s1 s2))))
 
 (define (difference s1 s2)
-  ;;Return a list holding all the  elements from the list S1 not present
-  ;;in the list S2.
+  ;;Return a list holding  all the elements from the list S1 not  present in the list
+  ;;S2.
   ;;
   (define (rem* s2 s1)
     (if (null? s2)
@@ -510,9 +509,8 @@
 	  "expected procedure as parameter value" obj)))))
 
 (define (eval-core x)
-  ;;This  function is  used  to compile  fully  expanded R6RS  programs,
-  ;;invoke libraries, implement R6RS's eval function, compile right-hand
-  ;;sides of syntax definitions.
+  ;;This function is used to compile  fully expanded R6RS programs, invoke libraries,
+  ;;implement R6RS's eval function, compile right-hand sides of syntax definitions.
   ;;
   ((current-core-eval) x))
 
