@@ -54,7 +54,7 @@
 		  expand-top-level)
     (prefix (ikarus startup)
 	    config.)
-    (prefix (only (vicare options)
+    (prefix (only (ikarus.options)
 		  verbose?
 		  debug-mode-enabled?
 		  print-loaded-libraries

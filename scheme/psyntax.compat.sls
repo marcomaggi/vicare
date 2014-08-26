@@ -138,7 +138,7 @@
 		  core-expr->assembly-code
 		  optimize-level)
 	    compiler.)
-    (prefix (rename (only (vicare options)
+    (prefix (rename (only (ikarus.options)
 			  verbose?
 			  verbose-about-libraries?
 			  debug-mode-enabled?

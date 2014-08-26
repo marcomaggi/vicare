@@ -91,7 +91,7 @@
     (only (ikarus.fasl.write)
 	  fasl-write-header
 	  fasl-write-object)
-    (prefix (only (vicare options)
+    (prefix (only (ikarus.options)
 		  verbose-about-libraries?
 		  print-loaded-libraries
 		  verbose?)

@@ -126,7 +126,10 @@
     ;;"ikarus.config.ss", including the correct value for WORDSIZE.
     (only (ikarus.fasl.write)
 	  fasl-write)
-    (ikarus.intel-assembler))
+    (ikarus.intel-assembler)
+    (prefix (only (ikarus.options)
+		  strict-r6rs)
+	    options.))
 
 
 ;;;; helper modules
@@ -2185,6 +2188,25 @@
       #| end of module: E-function-application |# )
 
     (define (E-make-parameter mk-call rand* ctxt)
+      ;;If the  number of  operands is  correct for  MAKE-PARAMETER, generate  a core
+      ;;language expression to be integrated in place of the function application:
+      ;;
+      ;;   ((primitive make-parameter) ?rand ...)
+      ;;
+      ;;otherwise we raise an assertion violation:  at run-time if "strict R6RS" mode
+      ;;is enabled, otherwise at compile-time.
+      ;;
+      ;;NOTE The one below is the original Ikarus implementation; it was applying the
+      ;;guard function  every time and also  applying the guard function  to the init
+      ;;value (Marco Maggi; Feb 3, 2012).
+      ;;
+      ;;   ((case-lambda
+      ;;     ((,t0)
+      ;;      (case-lambda
+      ;;       (() ,t0)
+      ;;       ((,x) (set! ,t0 (,f ,x))))
+      ;;      (,f ,t))))
+      ;;
       (case (length rand*)
 	((1)	;MAKE-PARAMETER called with one argument.
 	 (let ((val-expr	(car rand*))
@@ -2220,24 +2242,17 @@
 			       (set! ,t0 (,f ,x))
 			     (set! ,t0 ,x))))))
 		       ,t)
-		    ;;The one  below is  the original  Ikarus implementation;  it was
-		    ;;applying the  guard function every  time and also  applying the
-		    ;;guard function to the init value (Marco Maggi; Feb 3, 2012).
-		    ;;
-		    ;; ((case-lambda
-		    ;;   ((,t0)
-		    ;;    (case-lambda
-		    ;;     (() ,t0)
-		    ;;     ((,x) (set! ,t0 (,f ,x))))
-		    ;;    (,f ,t))))
-		    ;;
 		    ((primitive procedure-argument-violation) 'make-parameter
 		     '"expected procedure as guard function argument" ,f))))
 		,val-expr
 		,guard-expr)
 	      ctxt)))
-	(else	;Error, incorrect number of arguments.
-	 (mk-call (mk-primref 'make-parameter) ($map/stx E rand*)))))
+	(else
+	 (if (options.strict-r6rs)
+	     (mk-call (make-primref 'make-parameter) ($map/stx E rand*))
+	   (assertion-violation 'make-parameter
+	     "invalid number of operands to core language function integration"
+	     rand*)))))
 
     #| end of module: E-app |# )
 
