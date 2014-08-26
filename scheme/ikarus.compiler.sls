@@ -1657,64 +1657,33 @@
       	     (E A ctxt)
       	   (make-seq (E A) (recur ($car D) ($cdr D))))))
 
-      ;;Synopsis: (let ((?lhs ?rhs) ...) ?body)
-      ;;
-      ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
-      ;;is unique for this binding in the whole history of the Universe.
-      ;;
-      ;;Return a struct instance of type BIND.
-      ;;
-      ((let)
-       (let ((bind* ($cadr  X))		      ;list of bindings
-	     (body  ($caddr X)))	      ;list of body forms
-	 (let ((lex* ($map/stx $car  bind*))  ;list of bindings left-hand sides
-	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LEX* is processed first!!!
-	   (let* ((prel* (lex*->prelex* lex*))
-		  (rhs*^ ($map/stx E rhs* lex*))
-		  (body^ (E body ctxt)))
-	     (begin0
-	       (make-bind prel* rhs*^ body^)
-	       (%remove-prelex-from-proplist-of-lex lex*))))))
-
-      ;;Synopsis: (letrec ((?lhs ?rhs) ...) ?body)
-      ;;
-      ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
-      ;;is unique for this binding in the whole history of the Universe.
-      ;;
-      ;;Return a struct instance of type RECBIND.
-      ;;
-      ((letrec)
-       (let ((bind* ($cadr  X))		      ;list of bindings
-	     (body  ($caddr X)))	      ;list of body forms
-	 (let ((lex* ($map/stx $car  bind*))  ;list of bindings left-hand sides
-	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LEX* is processed first!!!
-	   (let* ((prel* (lex*->prelex* lex*))
-		  (rhs*^ ($map/stx E rhs* lex*))
-		  (body^ (E body ctxt)))
-	     (begin0
-	       (make-recbind prel* rhs*^ body^)
-	       (%remove-prelex-from-proplist-of-lex lex*))))))
-
+      ;;Synopsis: (let     ((?lhs ?rhs) ...) ?body)
+      ;;Synopsis: (letrec  ((?lhs ?rhs) ...) ?body)
       ;;Synopsis: (letrec* ((?lhs ?rhs) ...) ?body)
       ;;
       ;;Each ?LHS is a  lex gensym representing the name of  the binding; this gensym
       ;;is unique for this binding in the whole history of the Universe.
       ;;
-      ;;Return a struct instance of type REC*BIND.
+      ;;Return, respectively, a struct instance of type: BIND, RECBIND, REC*BIND.
       ;;
-      ((letrec*)
-       (let ((bind* ($cadr X))		      ;list of bindings
+      ((let letrec letrec*)
+       (let ((bind* ($cadr  X))		      ;list of bindings
 	     (body  ($caddr X)))	      ;list of body forms
 	 (let ((lex* ($map/stx $car  bind*))  ;list of bindings left-hand sides
 	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LEX* is processed first!!!
+	   ;;Make sure that LEX* is processed first to generate the associated PRELEX
+	   ;;structs!!!
 	   (let* ((prel* (lex*->prelex* lex*))
 		  (rhs*^ ($map/stx E rhs* lex*))
 		  (body^ (E body ctxt)))
 	     (begin0
-	       (make-rec*bind prel* rhs*^ body^)
+	       (case ($car X)
+		 ((let)
+		  (make-bind     prel* rhs*^ body^))
+		 ((letrec)
+		  (make-recbind  prel* rhs*^ body^))
+		 ((letrec*)
+		  (make-rec*bind prel* rhs*^ body^)))
 	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
       ;;Synopsis: (library-letrec* ((?lex ?loc ?rhs) ...) ?body)
@@ -1735,15 +1704,17 @@
       ;;where:
       ;;
       ;;* ?LEX is the lex gensym representing the name of the binding; this gensym is
-      ;;  unique for this binding in the whole history of the Universe;
+      ;;  unique for this binding in the whole history of the Universe.
       ;;
       ;;* ?LOC is the loc gensym used to  hold the value of the binding (in the VALUE
-      ;;  field of the  sybmol memory block); this gensym is  unique for this binding
-      ;;  in the whole history of the Universe;
+      ;;  field of the symbol's memory block); this gensym is unique for this binding
+      ;;  in the whole history of the Universe.
       ;;
       ;;* ?RHS is a symbolic expression which evaluates to the binding's value.
       ;;
-      ;;Return a struct instance of type REC*BIND.
+      ;;Return a struct instance of type REC*BIND.  The difference between a REC*BIND
+      ;;representing a  LETREC* and a  REC*BIND representing a LIBRARY-LETREC*  is in
+      ;;the PRELEX structs.
       ;;
       ((library-letrec*)
        (let ((bind* ($cadr  X))		       ;list of bindings
@@ -1751,7 +1722,8 @@
 	 (let ((lex* ($map/stx $car   bind*))  ;list of lex gensyms
 	       (loc* ($map/stx $cadr  bind*))  ;list of loc gensyms
 	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LEX* is processed first!!!
+	   ;;Make sure that LEX* is processed first to generate the associated PRELEX
+	   ;;structs!!!
 	   (let* ((prel* (receive-and-return (prel*)
 			     (lex*->prelex* lex*)
 			   ($for-each/stx set-prelex-global-location! prel* loc*)))
