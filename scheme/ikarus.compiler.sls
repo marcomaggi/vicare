@@ -1738,24 +1738,30 @@
       ;;Return a struct instance of type CLAMBDA.
       ;;
       ((case-lambda)
-       (let ((clause* (E-clambda-clause* ($cdr X) ctxt)))
-	 (make-clambda (gensym "clambda") clause* #f #f
-		       (and (symbol? ctxt) ctxt))))
+       (let ((label   (gensym "clambda"))
+	     (cases   (E-clambda-clause* ($cdr X) ctxt))
+	     (cp      #f)
+	     (free    #f)
+	     (name    (and (symbol? ctxt) ctxt)))
+	 (make-clambda label cases cp free name)))
 
       ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
       ;;
       ;;Return a struct instance of type CLAMBDA.
       ;;
       ((annotated-case-lambda)
-       (let ((annotated-expr ($cadr X))
-	     (clause*        (E-clambda-clause* ($cddr X) ctxt)))
-	 (make-clambda (gensym "clambda") clause* #f #f
-		       (cons (and (symbol? ctxt) ctxt)
-			     ;;This  annotation is  excluded only  when building  the
-			     ;;boot image.
-			     (and (not (strip-source-info))
-				  (annotation? annotated-expr)
-				  (annotation-source annotated-expr))))))
+       (let ((label          (gensym "clambda"))
+	     (cases          (E-clambda-clause* ($cddr X) ctxt))
+	     (cp             #f)
+	     (free           #f)
+	     (name           (cons (and (symbol? ctxt) ctxt)
+				   ;;This annotation  is excluded only  when building
+				   ;;the boot image.
+				   (and (not (strip-source-info))
+					(let ((annotated-expr ($cadr X)))
+					  (and (annotation?       annotated-expr)
+					       (annotation-source annotated-expr)))))))
+	 (make-clambda label cases cp free name)))
 
       ;;Synopsis: (lambda ?formals ?body0 ?body ...)
       ;;
