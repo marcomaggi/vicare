@@ -79,6 +79,9 @@
      (unparse-recordized-code			$unparse-recordized-code)
      (unparse-recordized-code/sexp		$unparse-recordized-code/sexp)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
+  ;;NOTE  This library  is  needed  to build  a  new boot  image.   Let's  try to  do
+  ;;everything here  using the system  libraries and not loading  external libraries.
+  ;;(Marco Maggi; Fri May 23, 2014)
   (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
@@ -102,10 +105,6 @@
 		  optimize-cp			optimize-level
 		  perform-tag-analysis		strip-source-info
 		  fasl-write)
-    ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
-    ;;everything here using the system  libraries and not loading external libraries.
-    ;;(Marco Maggi; Fri May 23, 2014)
-    ;;
     ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
     ;;
     ;;* During normal execution: this binding is the one from the boot image.
@@ -115,8 +114,8 @@
     ;;
     ;;We really need it this way for the use we do of such procedure.
     (only (vicare) system-value)
-    ;;When building a new boot image: the hashtables libray this is loaded from the
-    ;;old boot image.
+    ;;When building a new  boot image: the hashtables library is  loaded from the old
+    ;;boot image.
     (rnrs hashtables)
     (only (vicare system $codes)
 	  $code->closure)
@@ -129,70 +128,73 @@
 	  fasl-write)
     (ikarus.intel-assembler))
 
-  (include "ikarus.wordsize.scm" #t)
+
+;;;; helper modules
 
-  (module UNSAFE
-    ;;Remember that this file defines the primitive operations.
-    ($car $cdr $set-car! $set-cdr!
-	  $fx= $fx< $fx> $fx<= $fx>=
-	  $fxadd1 $fxsub1 $fx+ $fx- $fx* $fxdiv
-	  $fxlogand $fxlogor $fxlognot $fxsra $fxsll
-	  $fxzero?)
+(include "ikarus.wordsize.scm" #t)
 
-    #;(vicare system $pairs)
-    (begin
-      (define $car car)
-      (define $cdr cdr)
-      (define-syntax $set-car!
-	(syntax-rules ()
-	  ((_ ?var ?val)
-	   (set-car! ?var ?val))))
-      (define-syntax $set-cdr!
-	(syntax-rules ()
-	  ((_ ?var ?val)
-	   (set-cdr! ?var ?val))))
-      #| end of begin |# )
+(module UNSAFE
+  ;;Remember that this file defines the primitive operations.
+  ($car $cdr $set-car! $set-cdr!
+	$fx= $fx< $fx> $fx<= $fx>=
+	$fxadd1 $fxsub1 $fx+ $fx- $fx* $fxdiv
+	$fxlogand $fxlogor $fxlognot $fxsra $fxsll
+	$fxzero?)
 
-    #;(vicare system $fx)
-    (begin
-      (define $fxzero?	 fxzero?)
-      (define $fx=	fx=?)
-      (define $fx<	fx<?)
-      (define $fx>	fx>?)
-      (define $fx<=	fx<=?)
-      (define $fx>=	fx>=?)
-      (define $fx+	fx+)
-      (define $fx-	fx-)
-      (define $fx*	fx*)
-      (define $fxdiv	fxdiv)
-      (define $fxlogand	fxand)
-      (define $fxlogor	fxior)
-      (define $fxlognot	fxnot)
-      (define ($fxadd1 x)
-	(fx+ x 1))
-      (define ($fxsub1 x)
-	(fx- x 1))
-      (define ($fxsra x count)
-	(import (prefix (vicare system $fx) unsafe.))
-	(assert (fixnum? x))
-	(assert (fixnum? count))
-	(unsafe.$fxsra x count))
-      (define ($fxsll x count)
-	(import (prefix (vicare system $fx) unsafe.))
-	(assert (fixnum? x))
-	(assert (fixnum? count))
-	(unsafe.$fxsll x count))
-      #| end of begin |# )
-    #| end of module |# )
+  #;(vicare system $pairs)
+  (begin
+    (define $car car)
+    (define $cdr cdr)
+    (define-syntax $set-car!
+      (syntax-rules ()
+	((_ ?var ?val)
+	 (set-car! ?var ?val))))
+    (define-syntax $set-cdr!
+      (syntax-rules ()
+	((_ ?var ?val)
+	 (set-cdr! ?var ?val))))
+    #| end of begin |# )
 
-  (import UNSAFE)
+  #;(vicare system $fx)
+  (begin
+    (define $fxzero?	 fxzero?)
+    (define $fx=	fx=?)
+    (define $fx<	fx<?)
+    (define $fx>	fx>?)
+    (define $fx<=	fx<=?)
+    (define $fx>=	fx>=?)
+    (define $fx+	fx+)
+    (define $fx-	fx-)
+    (define $fx*	fx*)
+    (define $fxdiv	fxdiv)
+    (define $fxlogand	fxand)
+    (define $fxlogor	fxior)
+    (define $fxlognot	fxnot)
+    (define ($fxadd1 x)
+      (fx+ x 1))
+    (define ($fxsub1 x)
+      (fx- x 1))
+    (define ($fxsra x count)
+      (import (prefix (vicare system $fx) unsafe.))
+      (assert (fixnum? x))
+      (assert (fixnum? count))
+      (unsafe.$fxsra x count))
+    (define ($fxsll x count)
+      (import (prefix (vicare system $fx) unsafe.))
+      (assert (fixnum? x))
+      (assert (fixnum? count))
+      (unsafe.$fxsll x count))
+    #| end of begin |# )
+  #| end of module |# )
+
+(import UNSAFE)
 
 
 ;;;; configuration parameters
 
 (define generate-debug-calls
-  ;;Set to true when the option "--debug" is used on the command line of
-  ;;the executable "vicare"; else set to #f.
+  ;;Set  to true  when  the option  "--debug"  is used  on the  command  line of  the
+  ;;executable "vicare"; else set to #f.
   ;;
   (make-parameter #f))
 
@@ -200,8 +202,8 @@
   (make-parameter #f))
 
 (define open-mvcalls
-  ;;When  set to  true: an  attempt is  made to  expand inline  calls to
-  ;;CALL-WITH-VALUES by inserting local bindings.
+  ;;When set to true:  an attempt is made to expand  inline calls to CALL-WITH-VALUES
+  ;;by inserting local bindings.
   ;;
   (make-parameter #f))
 
@@ -241,8 +243,8 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax $map/stx
-  ;;Like MAP, but  expand the loop inline.  The "function"  to be mapped
-  ;;must be specified by an identifier.
+  ;;Like  MAP, but  expand the  loop inline.   The "function"  to be  mapped must  be
+  ;;specified by an identifier.
   ;;
   (lambda (stx)
     (syntax-case stx ()
@@ -252,15 +254,15 @@
 	 #'(let recur ((t ?ell0) (T ?ell) ...)
 	     (if (null? t)
 		 '()
-	       ;;MAP does  not specify the  order in which the  ?FUNC is
-	       ;;applied to the items.
+	       ;;MAP does not specify the order in  which the ?FUNC is applied to the
+	       ;;items.
 	       (cons (?func ($car t) ($car T) ...)
 		     (recur ($cdr t) ($cdr T) ...))))))
       )))
 
 (define-syntax $for-each/stx
-  ;;Like FOR-HEACH,  but expand the  loop inline.  The "function"  to be
-  ;;mapped must be specified by an identifier.
+  ;;Like FOR-HEACH, but expand the loop inline.   The "function" to be mapped must be
+  ;;specified by an identifier.
   ;;
   (lambda (stx)
     (syntax-case stx ()
@@ -276,9 +278,9 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax struct-case
-  ;;Specialised CASE syntax  for data structures.  Notice  that we could
-  ;;use this  syntax for any  set of struct  types, not only  the struct
-  ;;types defined in this library.
+  ;;Specialised  CASE syntax  for data  structures.  Notice  that we  could use  this
+  ;;syntax for  any set of struct  types, not only  the struct types defined  in this
+  ;;library.
   ;;
   ;;Given:
   ;;
@@ -310,9 +312,8 @@
   ;;        (begin
   ;;          (do-other)))))
   ;;
-  ;;notice that: in the clauses the  pattern "(alpha a b)" must list the
-  ;;fields A and B in the same  order in which they appear in the struct
-  ;;type definition.
+  ;;notice that: in the clauses the pattern "(alpha  a b)" must list the fields A and
+  ;;B in the same order in which they appear in the struct type definition.
   ;;
   (lambda (stx)
     (define (main stx)
@@ -345,10 +346,9 @@
 	       ALTERN)))))
 
     (define (%filter-field-names field*.stx)
-      ;;FIELD*.STX must be a syntax object holding a list of identifiers
-      ;;being  underscores  or  struct  field  names.   Filter  out  the
-      ;;underscores and  return a  list of identifiers  representing the
-      ;;true field names.
+      ;;FIELD*.STX  must be  a  syntax object  holding a  list  of identifiers  being
+      ;;underscores or struct  field names.  Filter out the underscores  and return a
+      ;;list of identifiers representing the true field names.
       ;;
       (syntax-case field*.stx ()
         (() '())
@@ -360,13 +360,12 @@
 	))
 
     (define (%enumerate field*.stx next-field-idx)
-      ;;FIELD*.STX must be a syntax object holding a list of identifiers
-      ;;being underscores or struct field names.  NEXT-FIELD-IDX must be
-      ;;a  fixnum  representing   the  index  of  the   first  field  in
-      ;;FIELD*.STX.
+      ;;FIELD*.STX  must be  a  syntax object  holding a  list  of identifiers  being
+      ;;underscores  or  struct  field  names.    NEXT-FIELD-IDX  must  be  a  fixnum
+      ;;representing the index of the first field in FIELD*.STX.
       ;;
-      ;;Return a list of fixnums  representing the indexes of the fields
-      ;;in FIELD*.STX, discarding the fixnums matching underscores.
+      ;;Return  a  list  of  fixnums  representing  the  indexes  of  the  fields  in
+      ;;FIELD*.STX, discarding the fixnums matching underscores.
       ;;
       (syntax-case field*.stx ()
         (() '())
@@ -380,11 +379,10 @@
     (main stx)))
 
 (define-syntax define-structure
-  ;;A syntax to define struct  types for compatibility with the notation
-  ;;used in Oscar  Waddell's thesis; it allows the  definition of struct
-  ;;types in which some of the  fields are initialised by the maker with
-  ;;default values,  while other  fields are initialised  with arguments
-  ;;handed to the maker.
+  ;;A syntax to define struct types for compatibility with the notation used in Oscar
+  ;;Waddell's thesis; it allows  the definition of struct types in  which some of the
+  ;;fields are initialised  by the maker with default values,  while other fields are
+  ;;initialised with arguments handed to the maker.
   ;;
   ;;Synopsis:
   ;;
@@ -393,13 +391,12 @@
   ;;    ((?field-with ?default)
   ;;	 ...))
   ;;
-  ;;where: ?NAME is the struct  type name, ?FIELD-WITHOUT are identifier
-  ;;names  for the  fields without  default, ?FIELD-WITH  are identifier
-  ;;names for the fields with default, ?DEFAULT are the default values.
+  ;;where: ?NAME is the struct type name, ?FIELD-WITHOUT are identifier names for the
+  ;;fields  without default,  ?FIELD-WITH are  identifier names  for the  fields with
+  ;;default, ?DEFAULT are the default values.
   ;;
-  ;;The  maker accepts  a number  of arguments  equal to  the number  of
-  ;;?FIELD-WITHOUT, in the same order in which they appear in the struct
-  ;;definition.
+  ;;The maker accepts a number of arguments equal to the number of ?FIELD-WITHOUT, in
+  ;;the same order in which they appear in the struct definition.
   ;;
   ;;(It is a bit ugly...  Marco Maggi; Oct 10, 2012)
   ;;
