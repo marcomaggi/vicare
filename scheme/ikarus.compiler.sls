@@ -2016,44 +2016,76 @@
   (module (E-app)
 
     (define (E-app mk-call rator rand* ctxt)
-      ;;Process a  form representing a  function call.   Return a struct  instance of
-      ;;type FUNCALL.
+      ;;Process a form representing a function call; return a struct instance of type
+      ;;FUNCALL.   The final  purpose of  this function  is to  apply MK-CALL  to the
+      ;;recordised version of RATOR and RAND*.
       ;;
-      ;;MK-CALL is either MAKE-FUNCALL or a wrapper for it.  RATOR is recordised code
-      ;;representing expression evaluating  to the operator of the call.   RAND* is a
-      ;;list of struct  representing recordised code which will evaluate  to the call
-      ;;operands.
-      ;;
-      ;;When the function call form is:
+      ;;MK-CALL is either MAKE-FUNCALL or a wrapper for it.  RATOR is a core language
+      ;;expression evaluating to the  operator of the call.  RAND* is  a list of core
+      ;;language expressions evaluating to the call operands.  When the function call
+      ;;form is:
       ;;
       ;;   (?func ?arg ...)
       ;;
       ;;the argument RATOR is ?FUNC and the argument RAND* is (?ARG ...).
       ;;
-      ;;In case RATOR is itself a LAMBDA or CASE-LAMBDA form as in:
+      ;;We handle specially the cases in which RATOR is one of the sexps:
+      ;;
+      ;;   (primitive make-parameter)
+      ;;   (primitive map)
+      ;;   (primitive for-each)
+      ;;   (primitive fold-left)
+      ;;   (primitive fold-right)
+      ;;
+      ;;by generating  a core language  expression to  be integrated in  the original
+      ;;source.
+      ;;
+      (define-syntax-rule (%common-function-application)
+	(E-function-application mk-call rator rand* ctxt))
+      (if (and (pair? rator)
+	       (eq? 'primitive ($car rator)))
+	  (case ($cadr rator)
+	    ((make-parameter)
+	     (E-make-parameter       mk-call rand* ctxt))
+	    (else
+	     (%common-function-application)))
+	(%common-function-application)))
+
+    (module (E-function-application)
+      ;;NOTE In case RATOR is lambda sexp with one of the formats:
+      ;;
+      ;;   (case-lambda                       (?formals ?body) ...)
+      ;;   (annotated-case-lambda ?annotation (?formals ?body) ...)
+      ;;
+      ;;the function application looks like:
       ;;
       ;;   ((lambda (x) x) 123)
       ;;
-      ;;and one of the RAND* evaluates to a closure as in:
+      ;;In this case, if one of the RAND* evaluates to a closure as in:
       ;;
       ;;   ((lambda (x) x) (lambda (y) y))
       ;;
-      ;;we  want the  argument "(lambda  (y) y)"  to be  annotated with  the corresponding
-      ;;formal name "x"; most of the times the list NAMES below will be null.
+      ;;we  want the  operand "(lambda  (y)  y)" to  be annotated  with the  corresponding
+      ;;operator's formal name "x".
       ;;
-      (if (equal? rator '(primitive make-parameter))
-	  (E-make-parameter mk-call rand* ctxt)
+      (define (E-function-application mk-call rator rand* ctxt)
 	(let ((op    (E rator (list ctxt)))
-	      (rand* (let ((names (get-fmls rator rand*)))
-		       (if (null? names)
+	      (rand* (let ((fmls (%get-matching-formals rator rand*)))
+		       (if (null? fmls)
 			   ($map/stx E rand*)
-			 ;;Here  we apply  E  to the  RAND*.   Example, the  function
-			 ;;application:
+			 ;;FMLS  is  a  proper  or   improper  list  of  lex  gensyms
+			 ;;representing the formals  of a lambda sexp  case.  Here we
+			 ;;want  to apply  E  to  the RAND*  in  the  context of  the
+			 ;;corresponding formal.  Example, the function application:
 			 ;;
 			 ;;   ((lambda (lex.a lex.b lex.c) ?body)
 			 ;;      ?rand0 ?rand1 ?rand2)
 			 ;;
-			 ;;will cause the following applications:
+			 ;;has matching FMLS:
+			 ;;
+			 ;;   (lex.a lex.b lex.c)
+			 ;;
+			 ;;and will cause the following applications:
 			 ;;
 			 ;;   (E ?rand0 lex.a)
 			 ;;   (E ?rand1 lex.b)
@@ -2061,22 +2093,96 @@
 			 ;;
 			 ;;Example, the function application:
 			 ;;
-			 ;;   ((lambda (lex.a . lex.args) ?body)
+			 ;;   ((lambda (lex.a . lex.rest) ?body)
 			 ;;      ?rand0 ?rand1 ?rand2)
 			 ;;
-			 ;;will cause the following applications:
+			 ;;has matching FMLS:
+			 ;;
+			 ;;   (lex.a . lex.rest)
+			 ;;
+			 ;;and will cause the following applications:
 			 ;;
 			 ;;   (E ?rand0 lex.a)
 			 ;;   (E ?rand1)
 			 ;;   (E ?rand2)
 			 ;;
 			 (let recur ((rand* rand*)
-				     (names names))
-			   (if (pair? names)
-			       (cons (E     ($car rand*) ($car names))
-				     (recur ($cdr rand*) ($cdr names)))
+				     (fmls  fmls))
+			   (if (pair? fmls)
+			       (cons (E     ($car rand*) ($car fmls))
+				     (recur ($cdr rand*) ($cdr fmls)))
 			     ($map/stx E rand*)))))))
-	  (mk-call op rand*))))
+	  (mk-call op rand*)))
+
+      (module (%get-matching-formals)
+
+	(define (%get-matching-formals rator rand*)
+	  ;;RATOR  must be  a  core  language expression  representing  code that  will
+	  ;;evaluate to  a function call operator.   RAND* must be a  list of arguments
+	  ;;for such function.
+	  ;;
+	  ;;If RATOR is a lambda sexp, with one of the formats:
+	  ;;
+	  ;;   (case-lambda (?formals ?body) ...)
+	  ;;   (annotated-case-lambda ?annotation (?formals ?body) ...)
+	  ;;
+	  ;;scan the cases  in RATOR looking for  a set of formals  that matches RAND*:
+	  ;;when found, return the list of formals ?FORMALS.
+	  ;;
+	  ;;When no  matching formals  are found  or the  RATOR is  not a  lambda sexp:
+	  ;;return null.
+	  ;;
+	  (let loop ((case* (%extract-lambda-cases rator)))
+	    (cond ((null? case*)
+		   ;;The RATOR is not a lambda sexp, or it is but no case matched.
+		   '())
+		  ((let ((fmls ($caar case*)))
+		     (%matching? fmls rand*))
+		   ;;The RATOR is a lambda sexp and the first case in CASE* matches the
+		   ;;RAND*: return the formals.
+		   ($caar case*))
+		  (else
+		   ;;The RATOR is  a lambda sexp and  the first case in  CASE* does not
+		   ;;match: try the next.
+		   (loop ($cdr case*))))))
+
+	(define (%matching? fmls rand*)
+	  ;;FMLS is a  proper or improper list of lex  gensyms representing the formals
+	  ;;of  a lambda  case;  RAND* is  a  proper list  of  recordised code  structs
+	  ;;representing funcation application operands.  Return true if FMLS and RAND*
+	  ;;match each other, otherwise return false.
+	  ;;
+	  (cond ((null? fmls)
+		 (null? rand*))
+		((pair? fmls)
+		 (and (pair? rand*)
+		      (%matching? ($cdr fmls) ($cdr rand*))))
+		(else #t)))
+
+	(define (%extract-lambda-cases rator)
+	  ;;Given the sexp RATOR with one of the formats:
+	  ;;
+	  ;;   (case-lambda                       (?formals ?body) ...)
+	  ;;   (annotated-case-lambda ?annotation (?formals ?body) ...)
+	  ;;
+	  ;;return the list of cases:
+	  ;;
+	  ;;   ((?formals ?body) ...)
+	  ;;
+	  ;;return null if RATOR is not a lambda sexp.
+	  ;;
+	  (if (pair? rator)
+	      (case ($car rator)
+		((case-lambda)
+		 ($cdr rator))
+		((annotated-case-lambda)
+		 ($cddr rator))
+		(else '()))
+	    '()))
+
+	#| end of module: GET-MATCHING-FORMALS |# )
+
+      #| end of module: E-function-application |# )
 
     (define (E-make-parameter mk-call rand* ctxt)
       (case (length rand*)
@@ -2132,74 +2238,6 @@
 	      ctxt)))
 	(else	;Error, incorrect number of arguments.
 	 (mk-call (mk-primref 'make-parameter) ($map/stx E rand*)))))
-
-    (module (get-fmls)
-
-      (define (get-fmls rator rand*)
-	;;RATOR  must be  a  core  language expression  representing  code that  will
-	;;evaluate to  a function call operator.   RAND* must be a  list of arguments
-	;;for such function.
-	;;
-	;;If RATOR is a lambda sexp, with one of the formats:
-	;;
-	;;   (case-lambda (?formals ?body) ...)
-	;;   (annotated-case-lambda ?annotation (?formals ?body) ...)
-	;;
-	;;scan the cases  in RATOR looking for  a set of formals  that matches RAND*:
-	;;when found, return the list of formals ?FORMALS.
-	;;
-	;;When no  matching formals  are found  or the  RATOR is  not a  lambda sexp:
-	;;return null.
-	;;
-	(let loop ((case* (%extract-lambda-cases rator)))
-	  (cond ((null? case*)
-		 ;;The RATOR is not a lambda sexp, or it is but no case matched.
-		 '())
-		((let ((fmls ($caar case*)))
-		   (%matching? fmls rand*))
-		 ;;The RATOR is a lambda sexp and the first case in CASE* matches the
-		 ;;RAND*: return the formals.
-		 ($caar case*))
-		(else
-		 ;;The RATOR is  a lambda sexp and  the first case in  CASE* does not
-		 ;;match: try the next.
-		 (loop ($cdr case*))))))
-
-      (define (%matching? fmls rand*)
-	;;FMLS is a  proper or improper list of lex  gensyms representing the formals
-	;;of  a lambda  case;  RAND* is  a  proper list  of  recordised code  structs
-	;;representing funcation application operands.  Return true if FMLS and RAND*
-	;;match each other, otherwise return false.
-	;;
-	(cond ((null? fmls)
-	       (null? rand*))
-	      ((pair? fmls)
-	       (and (pair? rand*)
-		    (%matching? ($cdr fmls) ($cdr rand*))))
-	      (else #t)))
-
-      (define (%extract-lambda-cases rator)
-	;;Given the sexp RATOR with one of the formats:
-	;;
-	;;   (case-lambda                       (?formals ?body) ...)
-	;;   (annotated-case-lambda ?annotation (?formals ?body) ...)
-	;;
-	;;return the list of cases:
-	;;
-	;;   ((?formals ?body) ...)
-	;;
-	;;return null if RATOR is not a lambda sexp.
-	;;
-	(if (pair? rator)
-	    (case ($car rator)
-	      ((case-lambda)
-	       ($cdr rator))
-	      ((annotated-case-lambda)
-	       ($cddr rator))
-	      (else '()))
-	  '()))
-
-      #| end of module: get-fmls |# )
 
     #| end of module: E-app |# )
 
