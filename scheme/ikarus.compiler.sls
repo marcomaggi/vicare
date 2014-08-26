@@ -1493,9 +1493,9 @@
   ;;   (let     ((?lhs ?rhs) ...) ?body)
   ;;   (letrec  ((?lhs ?rhs) ...) ?body)
   ;;   (letrec* ((?lhs ?rhs) ...) ?body)
-  ;;   (case-lambda (?formals ?body0 ?body ...) ...)
-  ;;   (annotated-case-lambda ?annotation (?formals ?body0 ?body ...) ...)
-  ;;   (lambda ?formals ?body0 ?body ...)
+  ;;   (case-lambda (?formals ?body) ...)
+  ;;   (annotated-case-lambda ?annotation (?formals ?body) ...)
+  ;;   (lambda ?formals ?body)
   ;;   (foreign-call "?function-name" ?arg ...)
   ;;   (primitive ?prim)
   ;;   (annotated-call ?annotation ?fun ?arg ...)
@@ -1733,7 +1733,7 @@
 	       (make-rec*bind prel* rhs*^ body^)
 	       (%remove-prelex-from-proplist-of-lex lex*))))))
 
-      ;;Synopsis: (case-lambda (?formals ?body0 ?body ...) ...)
+      ;;Synopsis: (case-lambda (?formals ?body) ...)
       ;;
       ;;Return a struct instance of type CLAMBDA.
       ;;
@@ -1745,7 +1745,7 @@
 	     (name    (and (symbol? ctxt) ctxt)))
 	 (make-clambda label cases cp free name)))
 
-      ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body0 ?body ...))
+      ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body))
       ;;
       ;;Return a struct instance of type CLAMBDA.
       ;;
@@ -1763,12 +1763,12 @@
 					       (annotation-source annotated-expr)))))))
 	 (make-clambda label cases cp free name)))
 
-      ;;Synopsis: (lambda ?formals ?body0 ?body ...)
+      ;;Synopsis: (lambda ?formals ?body)
       ;;
       ;;LAMBDA functions are handled as special cases of CASE-LAMBDA functions.
       ;;
-      ;;   (lambda ?formals ?body0 ?body ...)
-      ;;   ===> (case-lambda (?formals ?body0 ?body ...))
+      ;;   (lambda ?formals ?body)
+      ;;   ===> (case-lambda (?formals ?body))
       ;;
       ((lambda)
        (E `(case-lambda ,($cdr X)) ctxt))
@@ -1785,11 +1785,11 @@
       ;;Synopsis: (primitive ?prim)
       ;;
       ;;Return a struct instance of type PRIMREF.  ?PRIM is a symbol representing the
-      ;;public name of the primitive function.
+      ;;public name of the primitive function or primitive operation.
       ;;
-      ;;Every time the expander recognises  an identifier in reference position bound
-      ;;to  a primitive  function:  it  generates this  symbolic  expression as  core
-      ;;language form.  For example:
+      ;;NOTE Every time  the expander recognises an identifier  in reference position
+      ;;captured by  a non-syntax binding  exported by  the boot image:  it generates
+      ;;this symbolic expression as core language form.  For example:
       ;;
       ;;   (fx+ 1 2)
       ;;
@@ -1802,8 +1802,8 @@
       ;;   (funcall (primref fx+) (constant 1) (constant 2))
       ;;
       ((primitive)
-       (let ((var ($cadr X)))
-	 (mk-primref var)))
+       (let ((name ($cadr X)))
+	 (mk-primref name)))
 
       ;;Synopsis: (annotated-call ?annotation ?fun ?arg ...)
       ;;
@@ -1866,28 +1866,34 @@
   (module (E-clambda-clause*)
 
     (define (E-clambda-clause* clause* ctxt)
-      ;;Given a symbolic expression representing a CASE-LAMBDA:
+      ;;Given a symbolic expression representing a lambda:
       ;;
-      ;;   (case-lambda (?formals ?body0 ?body ...) ...)
+      ;;   (lambda ?formals ?body)
+      ;;   (case-lambda (?formals ?body) ...)
+      ;;   (annotated-case-lambda ?annotation (?formals ?body))
       ;;
-      ;;and knowing that a LAMBDA sexp  is converted to CASE-LAMBDA, this function is
-      ;;called with CLAUSE* set to the list of clauses:
+      ;;this function is called with CLAUSE* set to the list of clauses:
       ;;
-      ;;   ((?formals ?body0 ?body ...) ...)
+      ;;   ((?formals ?body) ...)
       ;;
       ;;Return a list holding new struct instances of type CLAMBDA-CASE, one for each
       ;;clause.
       ;;
       (map (let ((ctxt (and (pair? ctxt) ($car ctxt))))
 	     (lambda (clause)
+	       ;;We expect clause to have the format:
+	       ;;
+	       ;;   (?formals ?body)
+	       ;;
 	       (let ((fml* ($car  clause))  ;the formals
 		     (body ($cadr clause))) ;the body sequence
-		 ;;Make sure that FML* is processed first!!!
+		 ;;Make sure that FML* is  processed first to generate the associated
+		 ;;PRELEX structs!!!
 		 (let* ((lex*		(%properize-clambda-formals fml*))
 			(prel*		(lex*->prelex* lex*))
 			(body^		(E body ctxt))
-			;;True if FML* is  a proper list; false if it  is a symbol or
-			;;improper list.
+			;;PROPER? is: true  if FML* is a proper list;  false if it is
+			;;an improper list, including a standalone lex gensym.
 			(proper?	(list? fml*))
 			(info		(make-case-info (gensym "clambda-case") prel* proper?)))
 		   (%remove-prelex-from-proplist-of-lex lex*)
@@ -1902,7 +1908,8 @@
       ;;   (?arg-symbol ... . ?rest-symbol)
       ;;   ?args-symbol
       ;;
-      ;;here we do not check for the items to be symbols.  If FML* is:
+      ;;where the symbols are lex gensyms; here we do *not* validate the items in the
+      ;;list as symbols.  If FML* is:
       ;;
       ;;* null or a proper list: return a new list holding the same values:
       ;;
