@@ -18,11 +18,20 @@
   (export make-parameter)
   (import (except (vicare) make-parameter))
   (define make-parameter
+    ;;The  actual  implementation of  MAKE-PARAMETER  is  weirdly integrated  in  the
+    ;;compiler.  The forms below with format:
+    ;;
+    ;;   (make-parameter ?arg ...)
+    ;;
+    ;;are expanded by the compiler with the actual implementation.
+    ;;
     (let ()
       (import (vicare))
       (case-lambda
-        ((x guard) (make-parameter x guard))
-        ((x) (make-parameter x))))))
+        ((x guard)
+	 (make-parameter x guard))
+        ((x)
+	 (make-parameter x))))))
 
 (library (ikarus.pointer-value)
   (export pointer-value)
