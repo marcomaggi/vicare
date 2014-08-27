@@ -2728,11 +2728,26 @@
 	  (let ((producer (%attempt-integration mk (car rand*) '()))
 		(consumer (cadr rand*)))
 	    (cond ((%single-value-consumer? consumer)
+		   ;;The consumer expects a single argument, so we can transform:
+		   ;;
+		   ;;   (call-with-values
+		   ;;         (lambda () ?body1)
+		   ;;     (lambda (x) ?body2))
+		   ;;
+		   ;;into:
+		   ;;
+		   ;;   (bind ((x_0 (bind ()
+		   ;;                 ?body1)))
+		   ;;     ?body2)
+		   ;;
 		   (%attempt-integration mk consumer (list producer)))
-		  ;; ((and (%valid-mv-consumer? consumer)
-		  ;; 	(%valid-mv-producer? producer))
-		  ;;  (make-mvcall producer consumer))
+		  ;;NOTE Are there other special  cases of producer and consumer that
+		  ;;allow  the removal  of  the CALL-WITH-VALUES  call?  Most  likely
+		  ;;there  are, but  none  are  implemented right  now.   If some  is
+		  ;;implemented it has to be placed  here.  (Marco Maggi; Wed Aug 27,
+		  ;;2014)
 		  (else
+		   ;;Just perform the call to CALL-WITH-VALUES.
 		   (mk rator rand*))))
 	;;Wrong number of arguments to CALL-WITH-VALUES!!!
 	(mk rator rand*)))
@@ -2755,42 +2770,6 @@
 		 (struct-case info
 		   ((case-info label.unused args proper?)
 		    (and proper? (%list-of-one-item? args))))))))
-	(else #f)))
-
-    (define (%valid-mv-consumer? x)
-      ;;Return true if X is a struct instance of type CLAMBDA, having a single clause
-      ;;which accepts a  fixed number of arguments,  one or more it  does not matter;
-      ;;else return false.
-      ;;
-      ;;In other words, return true if X represents a LAMBDA or CASE-LAMBDA like:
-      ;;
-      ;;   (lambda (a) ?body0 ?body ...)
-      ;;   (lambda (a b c) ?body0 ?body ...)
-      ;;   (case-lambda ((a) ?body0 ?body ...))
-      ;;   (case-lambda ((a b c) ?body0 ?body ...))
-      ;;
-      (struct-case x
-	((clambda label.unused clause*)
-	 (and (%list-of-one-item? clause*)
-	      (struct-case ($car clause*)
-		((clambda-case info)
-		 (struct-case info
-		   ((case-info label.unused args.unused proper?)
-		    ;;PROPER? is true if this clause has a fixed number of arguments.
-		    proper?))))))
-	(else #f)))
-
-    (define (%valid-mv-producer? x)
-      (struct-case x
-	((funcall)
-	 #t)
-	((conditional)
-	 #f)
-	((bind lhs* rhs* body)
-	 (%valid-mv-producer? body))
-	;;FIXME Bug.  (Abdulaziz Ghuloum)
-	;;
-	;;FIXME Why is it a bug?  (Marco Maggi; Oct 12, 2012)
 	(else #f)))
 
     #| end of module: %ATTEMPT-INTEGRATION/CALL-WITH-VALUES |# )
