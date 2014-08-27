@@ -1689,20 +1689,16 @@
 	     (body  ($caddr X)))	      ;list of body forms
 	 (let ((lex* ($map/stx $car  bind*))  ;list of bindings left-hand sides
 	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LEX* is processed first to generate the associated PRELEX
-	   ;;structs!!!
-	   (let* ((prel* (lex*->prelex* lex*))
-		  (rhs*^ ($map/stx E rhs* lex*))
-		  (body^ (E body ctxt)))
-	     (begin0
+	   (with-prelex-structs-in-plists (prel* lex*)
+	     (let* ((rhs*^ ($map/stx E rhs* lex*))
+		    (body^ (E body ctxt)))
 	       (case ($car X)
 		 ((let)
 		  (make-bind     prel* rhs*^ body^))
 		 ((letrec)
 		  (make-recbind  prel* rhs*^ body^))
 		 ((letrec*)
-		  (make-rec*bind prel* rhs*^ body^)))
-	       (%remove-prelex-from-proplist-of-lex lex*))))))
+		  (make-rec*bind prel* rhs*^ body^))))))))
 
       ;;Synopsis: (library-letrec* ((?lex ?loc ?rhs) ...) ?body)
       ;;
@@ -1740,16 +1736,11 @@
 	 (let ((lex* ($map/stx $car   bind*))  ;list of lex gensyms
 	       (loc* ($map/stx $cadr  bind*))  ;list of loc gensyms
 	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
-	   ;;Make sure that LEX* is processed first to generate the associated PRELEX
-	   ;;structs!!!
-	   (let* ((prel* (receive-and-return (prel*)
-			     (lex*->prelex* lex*)
-			   ($for-each/stx set-prelex-global-location! prel* loc*)))
-		  (rhs*^ ($map/stx E rhs* lex*))
-		  (body^ (E body ctxt)))
-	     (begin0
-	       (make-rec*bind prel* rhs*^ body^)
-	       (%remove-prelex-from-proplist-of-lex lex*))))))
+	   (with-prelex-structs-in-plists (prel* lex*)
+	     ($for-each/stx set-prelex-global-location! prel* loc*)
+	     (let* ((rhs*^ ($map/stx E rhs* lex*))
+		    (body^ (E body ctxt)))
+	       (make-rec*bind prel* rhs*^ body^))))))
 
       ;;Synopsis: (case-lambda (?formals ?body) ...)
       ;;
@@ -1757,7 +1748,7 @@
       ;;
       ((case-lambda)
        (let ((label   (gensym "clambda"))
-	     (cases   (E-clambda-clause* ($cdr X) ctxt))
+	     (cases   (E-clambda-case* ($cdr X) ctxt))
 	     (cp      #f)
 	     (free    #f)
 	     (name    (and (symbol? ctxt) ctxt)))
@@ -1769,7 +1760,7 @@
       ;;
       ((annotated-case-lambda)
        (let ((label          (gensym "clambda"))
-	     (cases          (E-clambda-clause* ($cddr X) ctxt))
+	     (cases          (E-clambda-case* ($cddr X) ctxt))
 	     (cp             #f)
 	     (free           #f)
 	     (name           (cons (and (symbol? ctxt) ctxt)
@@ -1889,42 +1880,40 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (E-clambda-clause*)
+  (module (E-clambda-case*)
 
-    (define (E-clambda-clause* clause* ctxt)
+    (define (E-clambda-case* case* ctxt)
       ;;Given a symbolic expression representing a lambda:
       ;;
       ;;   (lambda ?formals ?body)
       ;;   (case-lambda (?formals ?body) ...)
       ;;   (annotated-case-lambda ?annotation (?formals ?body))
       ;;
-      ;;this function is called with CLAUSE* set to the list of clauses:
+      ;;this function is called with CASE* set to the list of clauses:
       ;;
       ;;   ((?formals ?body) ...)
       ;;
       ;;Return a list holding new struct instances of type CLAMBDA-CASE, one for each
       ;;clause.
       ;;
-      (map (let ((ctxt (and (pair? ctxt) ($car ctxt))))
-	     (lambda (clause)
-	       ;;We expect clause to have the format:
-	       ;;
-	       ;;   (?formals ?body)
-	       ;;
-	       (let ((fml* ($car  clause))  ;the formals
-		     (body ($cadr clause))) ;the body sequence
-		 ;;Make sure that FML* is  processed first to generate the associated
-		 ;;PRELEX structs!!!
-		 (let* ((lex*		(%properize-clambda-formals fml*))
-			(prel*		(lex*->prelex* lex*))
-			(body^		(E body ctxt))
-			;;PROPER? is: true  if FML* is a proper list;  false if it is
-			;;an improper list, including a standalone lex gensym.
-			(proper?	(list? fml*))
-			(info		(make-case-info (gensym "clambda-case") prel* proper?)))
-		   (%remove-prelex-from-proplist-of-lex lex*)
-		   (make-clambda-case info body^)))))
-	clause*))
+      (let ((ctxt (and (pair? ctxt) ($car ctxt))))
+	($map/stx (lambda (clause)
+		    ;;We expect clause to have the format:
+		    ;;
+		    ;;   (?formals ?body)
+		    ;;
+		    (let ((fml* ($car  clause))	 ;the formals
+			  (body ($cadr clause))) ;the body sequence
+		      (let ((lex* (%properize-clambda-formals fml*)))
+			(with-prelex-structs-in-plists (prel* lex*)
+			  (let* ((body^ (E body ctxt))
+				 ;;PROPER? is: true  if FML* is a  proper list; false
+				 ;;if it is an  improper list, including a standalone
+				 ;;lex gensym.
+				 (info  (let ((proper? (list? fml*)))
+					  (make-case-info (gensym "clambda-case") prel* proper?))))
+			    (make-clambda-case info body^))))))
+	  case*)))
 
     (define (%properize-clambda-formals fml*)
       ;;Convert the  formals FML*  of a  CASE-LAMBDA clause into  a proper  list.  We
@@ -1959,7 +1948,7 @@
 	    (else
 	     (list fml*))))
 
-    #| end of module: E-clambda-clause* |# )
+    #| end of module: E-clambda-case* |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -2279,7 +2268,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (lexical lex*->prelex* %remove-prelex-from-proplist-of-lex)
+  (module (with-prelex-structs-in-plists
+	   lexical lex*->prelex* %remove-prelex-from-proplist-of-lex)
     ;;This module  takes care of  generating a PRELEX  structure for each  lex gensym
     ;;associated to a lexical binding.
     ;;
@@ -2333,6 +2323,17 @@
     ;;expression the lex gensym *does not* have a PRELEX in its property list.
     ;;
     (import (vicare system $symbols))
+
+    (define-syntax (with-prelex-structs-in-plists stx)
+      (syntax-case stx ()
+	((_ (?prel* ?lex*) ?body0 ?body ...)
+	 (and (identifier? #'?prel*)
+	      (identifier? #'?lex*))
+	 #'(let ((?prel* (lex*->prelex* ?lex*)))
+	     (begin0
+	       (begin ?body0 ?body ...)
+	       (%remove-prelex-from-proplist-of-lex ?lex*))))
+	))
 
     ;;FIXME Do we  need a new cookie  at each call to the  RECORDIZE function?  Maybe
     ;;not,   because  we   always  call   LEX*->PRELEX*  and   then  clean   up  with
@@ -6705,10 +6706,11 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'assemble-sources 'scheme-indent-function 1)
-;; eval: (put 'define-structure 'scheme-indent-function 1)
-;; eval: (put 'make-conditional 'scheme-indent-function 2)
-;; eval: (put 'struct-case	'scheme-indent-function 1)
-;; eval: (put '$map/stx		'scheme-indent-function 1)
-;; eval: (put '$for-each/stx	'scheme-indent-function 1)
+;; eval: (put 'assemble-sources			'scheme-indent-function 1)
+;; eval: (put 'define-structure			'scheme-indent-function 1)
+;; eval: (put 'make-conditional			'scheme-indent-function 2)
+;; eval: (put 'struct-case			'scheme-indent-function 1)
+;; eval: (put '$map/stx				'scheme-indent-function 1)
+;; eval: (put '$for-each/stx			'scheme-indent-function 1)
+;; eval: (put 'with-prelex-structs-in-plists	'scheme-indent-function 1)
 ;; End:
