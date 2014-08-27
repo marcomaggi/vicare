@@ -6033,6 +6033,8 @@ the source code, where additional documentation is present in the form
 of comments.
 
 @menu
+* syslib compiler intro::         Introduction to the compilation
+                                  process.
 * syslib compiler conv::          Compiler coding conventions.
 * syslib compiler topics::        By topic inspection of behaviour.
 * syslib compiler unparse::       Unparsing intermediate
@@ -6071,6 +6073,76 @@ Code generation passes
 * syslib compiler color::         Colorising by Chaitin.
 * syslib compiler flatten::       Flattening codes.
 @end menu
+
+@c page
+@node syslib compiler intro
+@subsection Introduction to the compilation process
+
+
+@cindex Core language
+
+
+An expression in the core language is Scheme code fully expanded in
+which: no syntactic bindings are present; all the lexical bindings have
+a unique name represented by a lex gensym; all the top level lexical
+bindings are associated to a loc gensym used to hold the binding's
+current value.  The compiler is used to process:
+
+@itemize
+@item
+Full @func{library} forms and full @rnrs{6} programs the expander has
+transformed into @func{library-letrec*} core language forms.
+
+@item
+Standalone expressions from invocations of @rnrs{6}'s @func{eval}, for
+example read by the @repl{}, either in the context of a stateless
+environment or in the context of a stateful interactive environment.
+@end itemize
+
+@noindent
+these symbolic expressions must be compiled after correct initialisation
+of location gensyms for:
+
+@itemize
+@item
+All the lexical bindings defined by the boot image.
+
+@item
+All the lexical bindings defined by the imported libraries.
+
+@item
+All the bindings previously defined in the stateful interactive
+environment, if such was used for the expansion process.
+@end itemize
+
+The compiler recognises the following core language forms, whose
+semantics is similar to the corresponding standard language syntax:
+
+@example
+(library-letrec* ((@meta{lhs} @meta{loc} @meta{rhs}) ...) @meta{body})
+(quote @meta{datum})
+(if @meta{test} @meta{consequent} @meta{alternate})
+(set! @meta{lhs} @meta{rhs})
+(begin @metao{body} @meta{body} ...)
+(let     ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(letrec  ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(letrec* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(case-lambda (@meta{formals} @meta{body}) ...)
+(annotated-case-lambda @meta{annotation} (@meta{formals} @meta{body}) ...)
+(lambda @meta{formals} @meta{body})
+(foreign-call "@meta{function-name}" @meta{arg} ...)
+(primitive @meta{prim})
+(annotated-call @meta{annotation} @meta{fun} @meta{arg} ...)
+@meta{lex}
+(@meta{func} @meta{arg} ...)
+@end example
+
+@noindent
+where: a standalone @meta{lex} atom is a lex gensym, interpreted as
+reference to binding; @meta{lhs} stands for ``left--hand side'' and it
+is a lex gensym; @meta{rhs} stands for ``right--hand side''; @meta{loc}
+is a loc gensym; @meta{prim} is a symbol representing the public name of
+a core lexical primitive.
 
 @c page
 @node syslib compiler conv
@@ -6229,9 +6301,10 @@ behaviour is undefined.
 
 
 The core language forms produced by the expander are converted to
-``recordised code''.  The struct types used for this recordisation are
-used to represent code in the core language in a way which is better
-inspectable and optimisable.
+``recordised code'' by the compiler before actually generating machine
+code; recordised code is a nested hierarchy of struct instances.  The
+struct types used for this recordisation are used to represent code in
+the core language in a way which is better inspectable and optimisable.
 
 
 @defun $recordize @var{core-language-form}
@@ -6241,79 +6314,55 @@ struct instance.
 
 This function expects a symbolic expression with perfect syntax: no
 syntax errors are checked.  We expect this function to be executed
-without errors, no exceptions should be raised unless an internal bug
+without errors, no exceptions should be raised unless an internal error
 makes it happen.
 
-Additionally determine some properties of the code and store relative
-informations in the struct instances; it is possible that some of the
-properties determined here are not used in the subsequent compiler
-passes, but we discover them anyway.  In this function we try to
-discover properties to save computation time in later passes, even if
-here we do not perform any code transformation related to such
-properties.
-@end defun
-
-
-An expression in the core language is code fully expanded in which all
-the bindings have a unique variable name represented by a lex gensym.
-This function is called to process:
+In addition the following operations are performed:
 
 @itemize
 @item
-Full @func{library} forms the expander has transformed into
-@func{library-letrec*} core language forms.  Such symbolic expressions
-are to be compiled in an environment composed by: all the functions
-exported by the boot image, all the functions exported by the imported
-libraries.
+Determine some properties of the code and store relative informations in
+the struct instances.  For example: is a lexical binding ever referenced
+or assigned?
 
 @item
-Full @rnrs{6} programs the expander has transformed into
-@func{library-letrec*} core language forms.  Such symbolic expressions
-are to be compiled in an environment composed by: all the functions
-exported by the boot image, all the functions exported by the imported
-libraries.
-
-@item
-Standalone expressions from invocations of @rnrs{6}'s @func{eval}, for
-example read by the @repl{}, either in the context of a stateless
-environment or in the context of a stateful interactive environment.
-Such symbolic expressions are to be compiled in an environment composed
-by: all the functions exported by the boot image; all the functions
-exported by the imported libraries; all the bindings previously defined
-in the stateful interactive environment, if such is used.
+The application of some special lexical primitives is transformed into a
+core language expression integrated in the original source code, then
+recordised.  See below for details.
 @end itemize
+@end defun
 
-Recognise the following core language forms:
+@menu
+* syslib compiler recordize specials::  Special lexical primitives.
+* syslib compiler recordize examples::  Recordisation examples.
+@end menu
 
-@example
-(library-letrec* ((@meta{lhs} @meta{loc} @meta{rhs}) ...) @meta{body})
-(quote @meta{datum})
-(if @meta{test} @meta{consequent} @meta{alternate})
-(set! @meta{lhs} @meta{rhs})
-(begin @metao{body} @meta{body} ...)
-(let     ((@meta{lhs} @meta{rhs}) ...) @meta{body})
-(letrec  ((@meta{lhs} @meta{rhs}) ...) @meta{body})
-(letrec* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
-(case-lambda (@meta{formals} @meta{body}) ...)
-(annotated-case-lambda @meta{annotation} (@meta{formals} @meta{body}) ...)
-(lambda @meta{formals} @meta{body})
-(foreign-call "@meta{function-name}" @meta{arg} ...)
-(primitive @meta{prim})
-(annotated-call @meta{annotation} @meta{fun} @meta{arg} ...)
-@meta{lex}
-(@meta{func} @meta{arg} ...)
-@end example
+@c page
+@node syslib compiler recordize specials
+@subsubsection Special lexical primitives
 
-@noindent
-where: a standalone @meta{lex} atom is a lex gensym, interpreted as
-reference to binding; @meta{lhs} stands for ``left--hand side'' and it
-is a lex gensym; @meta{rhs} stands for ``right--hand side''; @meta{loc}
-is a loc gensym; @meta{prim} is a symbol representing the public name of
-a primitive function or primitive operation.
 
-@c ------------------------------------------------------------
+Whenever, in the recordisation process, the compiler recognises the
+application of some special lexical core primitives: it transforms such
+application into an equivalent core language expression integrated in
+the original source code.  This transformation is equivalent to the
+source integration performed by the compiler's source optimiser when
+compiling user defined code, but it acts upon primitives defined by the
+boot image.
 
-@subsubheading Example: handling of imported bindings
+
+@deffn {Integrated Primitive} make-parameter @var{init}
+@deffnx {Integrated Primitive} make-parameter @var{init} @var{guard}
+Integration of the primitive function @func{make-parameter}, @ref{iklib
+parameters, make-parameter}.
+@end deffn
+
+@c page
+@node syslib compiler recordize examples
+@subsubsection Recordisation examples
+
+
+@subsubheading Handling of imported bindings
 
 Let's imagine the following library:
 

@@ -245,38 +245,53 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax $map/stx
-  ;;Like  MAP, but  expand the  loop inline.   The "function"  to be  mapped must  be
-  ;;specified by an identifier.
-  ;;
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?func ?ell0 ?ell ...)
-       (identifier? #'?func)
-       (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
-	 #'(let recur ((t ?ell0) (T ?ell) ...)
-	     (if (null? t)
-		 '()
-	       ;;MAP does not specify the order in  which the ?FUNC is applied to the
-	       ;;items.
-	       (cons (?func ($car t) ($car T) ...)
-		     (recur ($cdr t) ($cdr T) ...))))))
-      )))
+(define-syntax ($map/stx stx)
+  ;;Like MAP, but expand the loop inline.
+  (syntax-case stx ()
+    ((_ ?proc ?ell0 ?ell ...)
+     ;;This implementation  is: tail recursive,  loops in order, assumes  proper list
+     ;;arguments of equal length.
+     (with-syntax
+	 (((ELL0 ELL ...) (generate-temporaries #'(?ell0 ?ell ...))))
+       #'(letrec ((loop (lambda (result.head result.last-pair ELL0 ELL ...)
+			  (if (pair? ELL0)
+			      (let* ((result.last-pair^ (let ((new-last-pair (cons (?proc ($car ELL0)
+											  ($car ELL)
+											  ...)
+										   '())))
+							  (if result.last-pair
+							      (begin
+								($set-cdr! result.last-pair new-last-pair)
+								new-last-pair)
+							    new-last-pair)))
+				     (result.head^       (or result.head result.last-pair^)))
+				(loop result.head^ result.last-pair^ ($cdr ELL0) ($cdr ELL) ...))
+			    (or result.head '())))))
+	   (loop #f #f ?ell0 ?ell ...)))
+     ;;This alternative  implementation: is non-tail recursive,  loops in unspecified
+     ;;order, assumes proper list arguments of equal length.
+     ;;
+     ;; (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
+     ;;   #'(let recur ((t ?ell0) (T ?ell) ...)
+     ;; 	   (if (null? t)
+     ;; 	       '()
+     ;; 	     (cons (?proc ($car t) ($car T) ...)
+     ;; 		   (recur ($cdr t) ($cdr T) ...))))))
+     )))
 
-(define-syntax $for-each/stx
+(define-syntax ($for-each/stx stx)
   ;;Like FOR-HEACH, but expand the loop inline.   The "function" to be mapped must be
   ;;specified by an identifier.
   ;;
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ ?func ?ell0 ?ell ...)
-       (identifier? #'?func)
-       (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
-	 #'(let loop ((t ?ell0) (T ?ell) ...)
-	     (unless (null? t)
-	       (?func ($car t) ($car T) ...)
-	       (loop  ($cdr t) ($cdr T) ...)))))
-      )))
+  (syntax-case stx ()
+    ((_ ?func ?ell0 ?ell ...)
+     (identifier? #'?func)
+     (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
+       #'(let loop ((t ?ell0) (T ?ell) ...)
+	   (unless (null? t)
+	     (?func ($car t) ($car T) ...)
+	     (loop  ($cdr t) ($cdr T) ...)))))
+    ))
 
 ;;; --------------------------------------------------------------------
 
@@ -2035,10 +2050,6 @@
       ;;We handle specially the cases in which RATOR is one of the sexps:
       ;;
       ;;   (primitive make-parameter)
-      ;;   (primitive map)
-      ;;   (primitive for-each)
-      ;;   (primitive fold-left)
-      ;;   (primitive fold-right)
       ;;
       ;;by generating  a core language  expression to  be integrated in  the original
       ;;source.
@@ -2049,7 +2060,17 @@
 	       (eq? 'primitive ($car rator)))
 	  (case ($cadr rator)
 	    ((make-parameter)
-	     (E-make-parameter       mk-call rand* ctxt))
+	     (E-integration-make-parameter mk-call rand* ctxt))
+	    ;;NOTE  With this  function  written as  it is,  everything  is ready  to
+	    ;;introduce the integration of further lexical core primitives as in:
+	    ;;
+	    ;;((map)
+	    ;; (E-integration-map mk-call rand* ctxt))
+	    ;;
+	    ;;But  we  should  consider  this with  care,  because  introducing  such
+	    ;;integrations  here  does  no  allow   us  to  take  advantage  of  type
+	    ;;informations;  it is  most  likely better  to do  it  in the  expander.
+	    ;;(Marco Maggi; Wed Aug 27, 2014)
 	    (else
 	     (%common-function-application)))
 	(%common-function-application)))
@@ -2187,7 +2208,7 @@
 
       #| end of module: E-function-application |# )
 
-    (define (E-make-parameter mk-call rand* ctxt)
+    (define (E-integration-make-parameter mk-call rand* ctxt)
       ;;If the  number of  operands is  correct for  MAKE-PARAMETER, generate  a core
       ;;language expression to be integrated in place of the function application:
       ;;
