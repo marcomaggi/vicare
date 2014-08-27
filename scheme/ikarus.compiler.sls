@@ -2513,52 +2513,92 @@
 
 
 (module (optimize-direct-calls)
+  ;;This module inspects application forms:
+  ;;
+  ;;   (?rator ?rand ...)
+  ;;
+  ;;and attempts to integrate the operator ?RATOR when possible.
+  ;;
   ;;By definition, a "direct closure application" like:
   ;;
   ;;   ((lambda (x) x) 123)
   ;;
-  ;;can be expanded to:
+  ;;can be integrated to:
   ;;
   ;;   (let ((x 123)) x)
   ;;
-  ;;and  so it  can  be  converted to  low  level  operations that  more
-  ;;efficiently implement  the binding; this module  attempts to perform
-  ;;such inlining.
+  ;;and  so  it can  be  converted  to low  level  operations  that more  efficiently
+  ;;implement the binding; this module  attempts to perform such integration.  Notice
+  ;;that in the case:
   ;;
-  ;;Examples:
+  ;;   ((case-lambda
+  ;;     ((x) x)
+  ;;     ((x y) y))
+  ;;    123)
   ;;
-  ;;* Notice that COND syntaxes are expanded as follows:
+  ;;the integration yields:
   ;;
-  ;;    (cond ((this X)
-  ;;           => (lambda (Y)
-  ;;                (that Y)))
-  ;;          (else
-  ;;           (that)))
+  ;;   (let ((x 123)) x)
   ;;
-  ;;  becomes:
+  ;;and the clause with two arguments is just discarded and never compiled.
   ;;
-  ;;    (let ((t (this X)))
-  ;;      (if t
-  ;;          ((lambda (Y) (that Y)) t)
-  ;;        (that)))
+  ;;There are  other integration  possibilities when the  operator of  an application
+  ;;form is a complex expression:
   ;;
-  ;;  which contains a direct call, which will be optimised to:
+  ;;  ((let ((?lhs ?rhs) ...) ?body) ?rand ...)
+  ;;  ===> (let ((?lhs ?rhs) ...)
+  ;;         (?body ?rand ...))
   ;;
-  ;;    (let ((t (this X)))
-  ;;      (if t
-  ;;          (let ((Y t)) (that Y))
-  ;;        (that)))
+  ;;  ((letrec ((?lhs ?rhs) ...) ?body) ?rand ...)
+  ;;  ===> (letrec ((?lhs ?rhs) ...)
+  ;;         (?body ?rand ...))
   ;;
-  (define who 'optimize-direct-calls)
+  ;;  ((letrec ((?lhs ?rhs) ...) ?body) ?rand ...)
+  ;;  ===> (letrec* ((?lhs ?rhs) ...)
+  ;;         (?body ?rand ...))
+  ;;
+  ;;Accept as input a nested hierarchy of the following structures:
+  ;;
+  ;;   constant		prelex		primref
+  ;;   bind		recbind		rec*bind
+  ;;   conditional	seq		clambda
+  ;;   funcall		forcall		assign
+  ;;
+  ;;Example: COND syntaxes
+  ;;----------------------
+  ;;
+  ;;COND syntaxes are expanded as follows:
+  ;;
+  ;;   (cond ((this X)
+  ;;          => (lambda (Y)
+  ;;               (that Y)))
+  ;;         (else
+  ;;          (those)))
+  ;;
+  ;;becomes:
+  ;;
+  ;;   (let ((t (this X)))
+  ;;     (if t
+  ;;         ((lambda (Y) (that Y)) t)
+  ;;       (those)))
+  ;;
+  ;;which contains a direct call, which will be optimised to:
+  ;;
+  ;;   (let ((t (this X)))
+  ;;     (if t
+  ;;         (let ((Y t)) (that Y))
+  ;;       (those)))
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'optimize-direct-calls))
 
   (define (optimize-direct-calls x)
-    ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
-    ;;which must  be a struct  instance representing recordized  code in
-    ;;the  core language,  and building  a new  hierarchy of  optimised,
-    ;;recordized code; return the new hierarchy.
+    ;;Perform code optimisation traversing the whole  hierarchy in X, which must be a
+    ;;struct instance representing recordized code in the core language, and building
+    ;;a new hierarchy of optimised, recordized code; return the new hierarchy.
     ;;
-    ;;The  only   recordized  code  that  may   actually  need  inlining
-    ;;transformation are FUNCALL instances.
+    ;;The only  recordized code  that may actually  need inlining  transformation are
+    ;;FUNCALL instances.
     ;;
     (define-syntax E ;make the code more readable
       (identifier-syntax optimize-direct-calls))
@@ -2567,7 +2607,7 @@
        x)
 
       ((prelex)
-       (assert (prelex-source-referenced? x))
+       #;(assert (prelex-source-referenced? x))
        x)
 
       ((primref)
@@ -2590,10 +2630,11 @@
 
       ((clambda label clause* cp free name)
        (make-clambda label
-		     (map (lambda (clause)
-			    (struct-case clause
-			      ((clambda-case info body)
-			       (make-clambda-case info (E body)))))
+		     ;;Apply E to the body of each clause.
+		     ($map/stx (lambda (clause)
+				 (struct-case clause
+				   ((clambda-case info body)
+				    (make-clambda-case info (E body)))))
 		       clause*)
 		     cp free name))
 
@@ -2604,74 +2645,114 @@
        (make-forcall rator ($map/stx E rand*)))
 
       ((assign lhs rhs)
-       (assert (prelex-source-assigned? lhs))
+       #;(assert (prelex-source-assigned? lhs))
        (make-assign lhs (E rhs)))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
   (module (inline)
 
     (define (inline mk rator rand*)
+      ;;Attempt to integrate the operator of an application form.
+      ;;
+      ;;MK  is MAKE-FUNCALL  or a  wrapper for  it.  RATOR  is the  already processed
+      ;;operator of  the application form.   RAND* is  the list of  already processed
+      ;;operand of the application form.
+      ;;
       (struct-case rator
 	((clambda label.unused clause*)
-	 (try-inline clause* rand* (mk rator rand*)))
+	 (%attempt-integration/clambda clause* rand* (mk rator rand*)))
 
 	((primref op)
 	 (case op
-	   ;;FIXME Here.  (Abdulaziz Ghuloum)
 	   ((call-with-values)
-	    (cond ((and (open-mvcalls)
-			($fx= (length rand*) 2))
-		   ;;Here we know that the source code is:
-		   ;;
-		   ;;   (call-with-values ?producer ?consumer)
-		   ;;
-		   (let ((producer (inline mk ($car rand*) '()))
-			 (consumer ($cadr rand*)))
-		     (cond ((single-value-consumer? consumer)
-			    (inline mk consumer (list producer)))
-			   ((and (valid-mv-consumer? consumer)
-				 (valid-mv-producer? producer))
-			    (make-mvcall producer consumer))
-			   (else
-			    (make-funcall rator rand*)))))
-		  (else
-		   (mk rator rand*))))
+	    (%attempt-integration/call-with-values mk rator rand*))
 	   ((debug-call)
-	    (inline (lambda (op^ rand*^)
-		      (mk rator (cons* ($car rand*) op^ rand*^)))
-		    ($cadr rand*)
-		    ($cddr rand*)))
+	    (%attemp-integration/debug-call mk rator rand*))
 	   (else
 	    ;;Other primitive operations need no special handling.
 	    (mk rator rand*))))
 
 	((bind lhs* rhs* body)
+	 ;;  ((bind ((?lhs ?rhs) ...) ?body) ?rand ...)
+	 ;;  ===> (bind ((?lhs ?rhs) ...) (?body ?rand ...))
 	 (if (null? lhs*)
 	     (inline mk body rand*)
 	   (make-bind lhs* rhs* (call-expr mk body rand*))))
 
 	((recbind lhs* rhs* body)
+	 ;;  ((recbind ((?lhs ?rhs) ...) ?body) ?rand ...)
+	 ;;  ===> (recbind ((?lhs ?rhs) ...) (?body ?rand ...))
 	 (if (null? lhs*)
 	     (inline mk body rand*)
 	   (make-recbind lhs* rhs* (call-expr mk body rand*))))
 
 	((rec*bind lhs* rhs* body)
+	 ;;  ((rec*bind ((?lhs ?rhs) ...) ?body) ?rand ...)
+	 ;;  ===> (rec*bind ((?lhs ?rhs) ...) (?body ?rand ...))
 	 (if (null? lhs*)
 	     (inline mk body rand*)
 	   (make-rec*bind lhs* rhs* (call-expr mk body rand*))))
 
 	(else
+	 ;;Nothing to be inlined.
 	 (mk rator rand*))))
 
-    (define (valid-mv-consumer? x)
-      ;;Return true if X is a  struct instance of type CLAMBDA, having a
-      ;;single clause which accepts a  fixed number of arguments, one or
-      ;;more it does not matter; else return false.
+    (define (call-expr mk x rand*)
+      (cond ((clambda? x)
+	     (inline mk x rand*))
+	    ((and (prelex? x)
+		  (not (prelex-source-assigned? x)))
+	     ;;FIXME Did we do the analysis yet?  (Abdulaziz Ghuloum)
+	     (mk x rand*))
+	    (else
+	     (let ((t (make-prelex 'tmp)))
+	       (set-prelex-source-referenced?! t #t)
+	       (make-bind (list t) (list x) (mk t rand*))))))
+
+    (define (%attemp-integration/debug-call mk rator rand*)
+      (inline (lambda (op^ rand*^)
+		(mk rator (cons* ($car rand*) op^ rand*^)))
+	      ($cadr rand*)
+	      ($cddr rand*)))
+
+    #| end of module: inline |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%attempt-integration/call-with-values)
+
+    (define (%attempt-integration/call-with-values mk rator rand*)
+      ;;FIXME Here.  (Abdulaziz Ghuloum)
+      (if (open-mvcalls)
+	  ;;Let's attempt to integrate CALL-WITH-VALUES.
+	  (if (null? (cddr rand*))
+	      ;;Here we know that the source code is:
+	      ;;
+	      ;;   (call-with-values ?producer ?consumer)
+	      ;;
+	      ;;with a correct number of arguments.
+	      (let ((producer (inline mk (car rand*) '()))
+		    (consumer (cadr rand*)))
+		(cond ((%single-value-consumer? consumer)
+		       (inline mk consumer (list producer)))
+		      ((and (%valid-mv-consumer? consumer)
+			    (%valid-mv-producer? producer))
+		       (make-mvcall producer consumer))
+		      (else
+		       (make-funcall rator rand*))))
+	    ;;Wrong number of arguments to CALL-WITH-VALUES!!!
+	    (mk rator rand*))
+	;;Leave CALL-WITH-VALUES alone.
+	(mk rator rand*)))
+
+    (define (%valid-mv-consumer? x)
+      ;;Return true if X is a struct instance of type CLAMBDA, having a single clause
+      ;;which accepts a  fixed number of arguments,  one or more it  does not matter;
+      ;;else return false.
       ;;
-      ;;In  other  words,  return  true  if X  represents  a  LAMBDA  or
-      ;;CASE-LAMBDA like:
+      ;;In other words, return true if X represents a LAMBDA or CASE-LAMBDA like:
       ;;
       ;;   (lambda (a) ?body0 ?body ...)
       ;;   (lambda (a b c) ?body0 ?body ...)
@@ -2688,13 +2769,11 @@
 		    proper?))))))
 	(else #f)))
 
-    (define (single-value-consumer? x)
-      ;;Return true if X is a  struct instance of type CLAMBDA, having a
-      ;;single  clause  which accepts  a  single  argument; else  return
-      ;;false.
+    (define (%single-value-consumer? x)
+      ;;Return true if X is a struct instance of type CLAMBDA, having a single clause
+      ;;which accepts a single argument; else return false.
       ;;
-      ;;In  other  words,  return  true  if X  represents  a  LAMBDA  or
-      ;;CASE-LAMBDA like:
+      ;;In other words, return true if X represents a LAMBDA or CASE-LAMBDA like:
       ;;
       ;;   (lambda (a) ?body0 ?body ...)
       ;;   (case-lambda ((a) ?body0 ?body ...))
@@ -2710,60 +2789,49 @@
 			 ($fx= (length args) 1))))))))
 	(else #f)))
 
-    (define (valid-mv-producer? x)
+    (define (%valid-mv-producer? x)
       (struct-case x
 	((funcall)
 	 #t)
 	((conditional)
 	 #f)
 	((bind lhs* rhs* body)
-	 (valid-mv-producer? body))
+	 (%valid-mv-producer? body))
 	;;FIXME Bug.  (Abdulaziz Ghuloum)
 	;;
 	;;FIXME Why is it a bug?  (Marco Maggi; Oct 12, 2012)
 	(else #f)))
 
-    (define (call-expr mk x rand*)
-      (cond ((clambda? x)
-	     (inline mk x rand*))
-	    ((and (prelex? x)
-		  (not (prelex-source-assigned? x)))
-	     ;;FIXME Did we do the analysis yet?  (Abdulaziz Ghuloum)
-	     (mk x rand*))
-	    (else
-	     (let ((t (make-prelex 'tmp)))
-	       (set-prelex-source-referenced?! t #t)
-	       (make-bind (list t) (list x) (mk t rand*))))))
+    #| end of module: %ATTEMPT-INTEGRATION/CALL-WITH-VALUES |# )
 
-    #| end of module: inline |# )
+;;; --------------------------------------------------------------------
 
-  (module (try-inline)
+  (module (%attempt-integration/clambda)
 
-    (define (try-inline clause* rand* default)
-      ;;Iterate  the CASE-LAMBDA  clauses in  CLAUSE* searching  for one
-      ;;whose  formals  match the  RAND*  arguments;  if found  generate
-      ;;appropriate local bindings that  inline the closure application.
-      ;;If successful return a struct instance of type BIND, else return
-      ;;DEFAULT.
+    (define (%attempt-integration/clambda clause* rand* default)
+      ;;Iterate the CLAMBDA clauses in CLAUSE*  searching for one whose formals match
+      ;;the RAND* operands; if found  generate appropriate local bindings that inline
+      ;;the  closure application.   If successful  return a  struct instance  of type
+      ;;BIND, else return DEFAULT.
       ;;
       (cond ((null? clause*)
 	     default)
-	    ((inline-case ($car clause*) rand*))
+	    ((%attempt-integration/clambda-clause ($car clause*) rand*))
 	    (else
-	     (try-inline ($cdr clause*) rand* default))))
+	     (%attempt-integration/clambda ($cdr clause*) rand* default))))
 
-    (define (inline-case clause rand*)
-      ;;Try to  convert the CASE-LAMBDA clause  in CLAUSE into a  set of
-      ;;local bindings for the arguments  in RAND*; if successful return
-      ;;a struct instance of type BIND, else return #f.
+    (define (%attempt-integration/clambda-clause clause rand*)
+      ;;Try to convert the CLAMBDA clause in  CLAUSE into a set of local bindings for
+      ;;the operands in  RAND*; if successful return a struct  instance of type BIND,
+      ;;else return #f.
       ;;
       (struct-case clause
 	((clambda-case info body)
 	 (struct-case info
 	   ((case-info label fml* proper?)
 	    (if proper?
-		;;If the formals  of the CASE-LAMBDA clause  is a proper
-		;;list, make an appropriate local binding; convert:
+		;;The  formals of  the  CLAMBDA  clause is  a  proper  list, make  an
+		;;appropriate local binding; convert:
 		;;
 		;;   ((case-lambda ((a b c) ?body)) 1 2 3)
 		;;
@@ -2774,8 +2842,8 @@
 		(and ($fx= (length fml*)
 			   (length rand*))
 		     (make-bind fml* rand* body))
-	      ;;If the formals of the  CASE-LAMBDA clause is a symbol or
-	      ;;a  proper  list,  make  an  appropriate  local  binding;
+	      ;;The formals of the CLAMBDA clause  is an improper list (including the
+	      ;;case  of  standalone  symbol),  make an  appropriate  local  binding;
 	      ;;convert:
 	      ;;
 	      ;;   ((case-lambda (args ?body)) 1 2 3)
@@ -2792,22 +2860,18 @@
 	      ;;
 	      ;;   (let ((a 1) (b 2) (args (list 3 4))) ?body)
 	      ;;
-	      ;;
 	      (and ($fx<= (length fml*)
 			  (length rand*))
-		   (make-bind fml* (%properize fml* rand*) body))))))))
+		   (make-bind fml* (%properize-operands fml* rand*) body))))))))
 
-    (define (%properize lhs* rhs*)
-      ;;LHS*  must  be a  list  of  PRELEX structures  representing  the
-      ;;binding names of a CASE-LAMBDA  clause, for the cases of formals
-      ;;being  a symbol  or an  improper list;  RHS* must  be a  list of
-      ;;struct instances representing the values to be bound.
+    (define (%properize-operands lhs* rhs*)
+      ;;LHS* must be a list of PRELEX  structures representing the binding names of a
+      ;;CLAMBDA clause, for the cases of formals  being a symbol or an improper list;
+      ;;RHS* must be a list of struct instances representing the values to be bound.
       ;;
-      ;;Build and return a new list out of RHS* that matches the list in
-      ;;LHS*.
+      ;;Build and return a new list out of RHS* that matches the list in LHS*.
       ;;
-      ;;If  LHS* holds  a single  item:  it means  that the  CASE-LAMBDA
-      ;;application is like:
+      ;;If LHS* holds a single item: it means the CLAMBDA application is like:
       ;;
       ;;   ((case-lambda (args ?body0 ?body ...)) 1 2 3)
       ;;
@@ -2826,8 +2890,8 @@
       ;;                                    (#[constant 3]
       ;;                                     #[constant ()])])])])
       ;;
-      ;;If LHS*  holds a multiple  items: it means that  the CASE-LAMBDA
-      ;;application is like:
+      ;;If LHS*  holds multiple items: it  means that the CASE-LAMBDA  application is
+      ;;like:
       ;;
       ;;   ((case-lambda ((a b . args) ?body0 ?body ...)) 1 2 3 4)
       ;;
@@ -2847,13 +2911,13 @@
       ;;                          #[constant ()])])])
       ;;
       (cond ((null? lhs*)
-	     (error who "improper improper"))
+	     (error __who__ "improper improper"))
 	    ((null? ($cdr lhs*))
 	     (list (%make-conses rhs*)))
 	    (else
 	     (cons ($car rhs*)
-		   (%properize ($cdr lhs*)
-			       ($cdr rhs*))))))
+		   (%properize-operands ($cdr lhs*)
+					($cdr rhs*))))))
 
     (define (%make-conses ls)
       (if (null? ls)
@@ -2861,9 +2925,9 @@
 	(make-funcall (mk-primref 'cons)
 		      (list ($car ls) (%make-conses ($cdr ls))))))
 
-    #| end of module: try-inline |# )
+    #| end of module: %ATTEMPT-INTEGRATION/CLAMBDA |# )
 
-  #| end of module: optimize-direct-calls |# )
+  #| end of module: OPTIMIZE-DIRECT-CALLS |# )
 
 
 ;;;; let's include some external code
@@ -3227,6 +3291,9 @@
 
       ((forcall rator rand*)
        (make-forcall rator (map E rand*)))
+
+      ((mvcall producer consumer)
+       (make-mvcall (E producer) (E consumer)))
 
       ((assign lhs rhs)
        (make-assign (lookup lhs) (E rhs)))
