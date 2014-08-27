@@ -243,6 +243,11 @@
 
 (define-inline ($cadddr x)	($car ($cdddr x)))
 
+(define-syntax-rule (%list-of-one-item? ?ell)
+  (let ((ell ?ell))
+    (and (pair? ell)
+	 (null? ($cdr ell)))))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax ($map/stx stx)
@@ -2639,7 +2644,7 @@
 		     cp free name))
 
       ((funcall rator rand*)
-       (inline make-funcall (E rator) ($map/stx E rand*)))
+       (%attempt-integration make-funcall (E rator) ($map/stx E rand*)))
 
       ((forcall rator rand*)
        (make-forcall rator ($map/stx E rand*)))
@@ -2651,14 +2656,14 @@
       (else
        (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
-  (module (inline)
+  (module (%attempt-integration)
 
-    (define (inline mk rator rand*)
+    (define (%attempt-integration mk rator rand*)
       ;;Attempt to integrate the operator of an application form.
       ;;
       ;;MK  is MAKE-FUNCALL  or a  wrapper for  it.  RATOR  is the  already processed
       ;;operator of  the application form.   RAND* is  the list of  already processed
-      ;;operand of the application form.
+      ;;operands of the application form.
       ;;
       (struct-case rator
 	((clambda label.unused clause*)
@@ -2669,7 +2674,7 @@
 	   ((call-with-values)
 	    (%attempt-integration/call-with-values mk rator rand*))
 	   ((debug-call)
-	    (%attemp-integration/debug-call mk rator rand*))
+	    (%attempt-integration/debug-call mk rator rand*))
 	   (else
 	    ;;Other primitive operations need no special handling.
 	    (mk rator rand*))))
@@ -2678,52 +2683,65 @@
 	 ;;  ((bind ((?lhs ?rhs) ...) ?body) ?rand ...)
 	 ;;  ===> (bind ((?lhs ?rhs) ...) (?body ?rand ...))
 	 (if (null? lhs*)
-	     (inline mk body rand*)
-	   (make-bind lhs* rhs* (call-expr mk body rand*))))
+	     (%attempt-integration mk body rand*)
+	   (make-bind lhs* rhs* (%attempt-integration/binding-form-body mk body rand*))))
 
 	((recbind lhs* rhs* body)
 	 ;;  ((recbind ((?lhs ?rhs) ...) ?body) ?rand ...)
 	 ;;  ===> (recbind ((?lhs ?rhs) ...) (?body ?rand ...))
 	 (if (null? lhs*)
-	     (inline mk body rand*)
-	   (make-recbind lhs* rhs* (call-expr mk body rand*))))
+	     (%attempt-integration mk body rand*)
+	   (make-recbind lhs* rhs* (%attempt-integration/binding-form-body mk body rand*))))
 
 	((rec*bind lhs* rhs* body)
 	 ;;  ((rec*bind ((?lhs ?rhs) ...) ?body) ?rand ...)
 	 ;;  ===> (rec*bind ((?lhs ?rhs) ...) (?body ?rand ...))
 	 (if (null? lhs*)
-	     (inline mk body rand*)
-	   (make-rec*bind lhs* rhs* (call-expr mk body rand*))))
+	     (%attempt-integration mk body rand*)
+	   (make-rec*bind lhs* rhs* (%attempt-integration/binding-form-body mk body rand*))))
 
 	(else
 	 ;;Nothing to be inlined.
 	 (mk rator rand*))))
 
-    (define (call-expr mk x rand*)
-      (cond ((clambda? x)
-	     (inline mk x rand*))
-	    ((and (prelex? x)
-		  (not (prelex-source-assigned? x)))
-	     ;;FIXME Did we do the analysis yet?  (Abdulaziz Ghuloum)
-	     (mk x rand*))
+    (define (%attempt-integration/binding-form-body mk body rand*)
+      (cond ((clambda? body)
+	     (%attempt-integration mk body rand*))
+	    ((and (prelex? body)
+		  (not (prelex-source-assigned? body)))
+	     ;;The body is an UNassigned reference to lexical binding.  Build:
+	     ;;
+	     ;;   (funcall body rand*)
+	     ;;
+	     (mk body rand*))
 	    (else
+	     ;;The body is a generic expression.  Build:
+	     ;;
+	     ;;   (bind ((tmp body))
+	     ;;     (funcall tmp rand*))
+	     ;;
 	     (let ((t (make-prelex 'tmp)))
 	       (set-prelex-source-referenced?! t #t)
-	       (make-bind (list t) (list x) (mk t rand*))))))
+	       (make-bind (list t) (list body) (mk t rand*))))))
 
-    (define (%attemp-integration/debug-call mk rator rand*)
-      (inline (lambda (op^ rand*^)
-		(mk rator (cons* ($car rand*) op^ rand*^)))
-	      ($cadr rand*)
-	      ($cddr rand*)))
+    (define (%attempt-integration/debug-call mk rator rand*)
+      (%attempt-integration (lambda (op^ rand*^)
+			      (mk rator (cons* ($car rand*) op^ rand*^)))
+			    ($cadr rand*)
+			    ($cddr rand*)))
 
-    #| end of module: inline |# )
+    #| end of module: %attempt-integration |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (%attempt-integration/call-with-values)
 
     (define (%attempt-integration/call-with-values mk rator rand*)
+      ;;MK  is MAKE-FUNCALL  or a  wrapper for  it.  RATOR  is the  already processed
+      ;;operator   of   the   application   form,   representing   a   reference   to
+      ;;CALL-WITH-VALUES.  RAND*  is the  list of already  processed operands  of the
+      ;;application form.
+      ;;
       ;;FIXME Here.  (Abdulaziz Ghuloum)
       (if (open-mvcalls)
 	  ;;Let's attempt to integrate CALL-WITH-VALUES.
@@ -2733,10 +2751,10 @@
 	      ;;   (call-with-values ?producer ?consumer)
 	      ;;
 	      ;;with a correct number of arguments.
-	      (let ((producer (inline mk (car rand*) '()))
+	      (let ((producer (%attempt-integration mk (car rand*) '()))
 		    (consumer (cadr rand*)))
 		(cond ((%single-value-consumer? consumer)
-		       (inline mk consumer (list producer)))
+		       (%attempt-integration mk consumer (list producer)))
 		      ((and (%valid-mv-consumer? consumer)
 			    (%valid-mv-producer? producer))
 		       (make-mvcall producer consumer))
@@ -2746,6 +2764,26 @@
 	    (mk rator rand*))
 	;;Leave CALL-WITH-VALUES alone.
 	(mk rator rand*)))
+
+    (define (%single-value-consumer? consumer)
+      ;;Return true if CONSUMER is a struct instance of type CLAMBDA, having a single
+      ;;clause which accepts a single argument; else return false.
+      ;;
+      ;;In other words, return true if CONSUMER represents a lambda sexp like:
+      ;;
+      ;;   (lambda (a) ?body)
+      ;;   (case-lambda ((a) ?body))
+      ;;   (annotated-case-lambda ?annotation (?formals ?body))
+      ;;
+      (struct-case consumer
+	((clambda label.unused clause*)
+	 (and (%list-of-one-item? clause*)
+	      (struct-case ($car clause*)
+		((clambda-case info)
+		 (struct-case info
+		   ((case-info label.unused args proper?)
+		    (and proper? (%list-of-one-item? args))))))))
+	(else #f)))
 
     (define (%valid-mv-consumer? x)
       ;;Return true if X is a struct instance of type CLAMBDA, having a single clause
@@ -2761,32 +2799,13 @@
       ;;
       (struct-case x
 	((clambda label.unused clause*)
-	 (and ($fx= (length clause*) 1) ;single clause?
+	 (and (%list-of-one-item? clause*)
 	      (struct-case ($car clause*)
 		((clambda-case info)
 		 (struct-case info
 		   ((case-info label.unused args.unused proper?)
+		    ;;PROPER? is true if this clause has a fixed number of arguments.
 		    proper?))))))
-	(else #f)))
-
-    (define (%single-value-consumer? x)
-      ;;Return true if X is a struct instance of type CLAMBDA, having a single clause
-      ;;which accepts a single argument; else return false.
-      ;;
-      ;;In other words, return true if X represents a LAMBDA or CASE-LAMBDA like:
-      ;;
-      ;;   (lambda (a) ?body0 ?body ...)
-      ;;   (case-lambda ((a) ?body0 ?body ...))
-      ;;
-      (struct-case x
-	((clambda label.unused clause*)
-	 (and ($fx= (length clause*) 1) ;single clause?
-	      (struct-case ($car clause*)
-		((clambda-case info)
-		 (struct-case info
-		   ((case-info label.unused args proper?)
-		    (and proper?
-			 ($fx= (length args) 1))))))))
 	(else #f)))
 
     (define (%valid-mv-producer? x)
