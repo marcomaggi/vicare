@@ -1527,8 +1527,12 @@
   ;;
   ;;The bulk of the work is performed by the recursive function E.
   ;;
-  ;;NOTE Whenever possible  we want closures to  be annotated with their  name in the
-  ;;original source code; example:
+  ;;About the argument CTXT
+  ;;-----------------------
+  ;;
+  ;;Whenever possible we want closure objects to  be annotated with their name in the
+  ;;original source  code; the name  of a closure  is the lex  gensym to which  it is
+  ;;bound.  Examples:
   ;;
   ;;   (define a
   ;;     (lambda () ;annotated: a
@@ -1554,12 +1558,69 @@
   ;;             (lambda () ;annotated: a
   ;;               ---))
   ;;
-  ;;   ((lambda (x) x) (lambda (y) ;annotated: x
-  ;;                y))
+  ;;   ((lambda (x) x)
+  ;;      (lambda (y) y)) ;annotated: x
   ;;
-  ;;this is what the CTXT argument in the subfunctions is for; it is carefully handed
-  ;;to the functions  that process forms that  may evaluate to a  closure and finally
+  ;;This is what the CTXT argument in the subfunctions is for; it is carefully handed
+  ;;to the functions that process forms that  might evaluate to a closure and finally
   ;;used to annotate struct instances of type CLAMBDA.
+  ;;
+  ;;The CTXT argument is handled as follows:
+  ;;
+  ;;* Upon entering the input expression, no name is defined in the code: CTXT is set
+  ;;to #f.
+  ;;
+  ;;* Upon entering the right-hand side expression of a lexical binding definition or
+  ;;assignment: CTXT is  set to ?LEX-GENSYM, where ?LEX-GENSYM is  the left-hand side
+  ;;of the definition or assignment.
+  ;;
+  ;;* When processing ?RATOR in an application form:
+  ;;
+  ;;   (?rator ?rand ...)
+  ;;
+  ;;the current value  of CTXT is wrapped in  a list of a single  item.  For example,
+  ;;while processing:
+  ;;
+  ;;   (let ((x ((lambda (y) y) 1)))
+  ;;     ?body)
+  ;;
+  ;;upon entering the  operator "(lambda (y) y)",  CTXT is set to "(x)".   Notice that the
+  ;;operator "(lambda (y) y)" itself has no name.
+  ;;
+  ;;* When processing a ?RAND in an application form:
+  ;;
+  ;;   (?rator ?rand ...)
+  ;;
+  ;;the old value of CTXT is discarded and a new value is selected if the ?RATOR is a
+  ;;lambda sexp.  For example, while processing:
+  ;;
+  ;;   ((lambda (x) x)
+  ;;      (lambda (y) y)) ;annotated: x
+  ;;
+  ;;upon entering the operand "(lambda (y) y)", CTXT is set to "x".
+  ;;
+  ;;* When calling MAKE-CLAMBDA  the value of CTXT is consumed: if  CTXT is a symbol,
+  ;;it becomes the value of the field NAME of the CLAMBDA struct.
+  ;;
+  ;;* Upon entering the  body of a CLAMBDA-CASE: if CTXT is a  list of a single item,
+  ;;the item is unwrapped  and becomes the current value of CTXT.   This is to handle
+  ;;the case in which  the last form of a CLAMBDA-CASE body  returns a CLAMBDA, which
+  ;;in turn is bound to a lex gensym.  Example:
+  ;;
+  ;;   (let ((x ((lambda (y) (lambda () y))
+  ;;             1)))
+  ;;     x)
+  ;;
+  ;;here we have an application form:
+  ;;
+  ;;   ((lambda (y) (lambda () y)) 1)
+  ;;
+  ;;in which the operator is:
+  ;;
+  ;;   (lambda (y) (lambda () y))
+  ;;
+  ;;and its  return value is the  result of "(lambda ()  y)" which ends up  being bound to
+  ;;"x"; so we want "(lambda () y)" to be annotated as "x".
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'recordize))
@@ -2065,7 +2126,7 @@
 	(%common-function-application)))
 
     (module (E-function-application)
-      ;;NOTE In case RATOR is lambda sexp with one of the formats:
+      ;;NOTE In case RATOR is a lambda sexp with one of the formats:
       ;;
       ;;   (case-lambda                       (?formals ?body) ...)
       ;;   (annotated-case-lambda ?annotation (?formals ?body) ...)
@@ -2083,49 +2144,53 @@
       ;;
       (define (E-function-application mk-call rator rand* ctxt)
 	(let ((op    (E rator (list ctxt)))
-	      (rand* (let ((fmls (%get-matching-formals rator rand*)))
-		       (if (null? fmls)
-			   ($map/stx E rand*)
-			 ;;FMLS  is  a  proper  or   improper  list  of  lex  gensyms
-			 ;;representing the formals  of a lambda sexp  case.  Here we
-			 ;;want  to apply  E  to  the RAND*  in  the  context of  the
-			 ;;corresponding formal.  Example, the function application:
-			 ;;
-			 ;;   ((lambda (lex.a lex.b lex.c) ?body)
-			 ;;      ?rand0 ?rand1 ?rand2)
-			 ;;
-			 ;;has matching FMLS:
-			 ;;
-			 ;;   (lex.a lex.b lex.c)
-			 ;;
-			 ;;and will cause the following applications:
-			 ;;
-			 ;;   (E ?rand0 lex.a)
-			 ;;   (E ?rand1 lex.b)
-			 ;;   (E ?rand2 lex.c)
-			 ;;
-			 ;;Example, the function application:
-			 ;;
-			 ;;   ((lambda (lex.a . lex.rest) ?body)
-			 ;;      ?rand0 ?rand1 ?rand2)
-			 ;;
-			 ;;has matching FMLS:
-			 ;;
-			 ;;   (lex.a . lex.rest)
-			 ;;
-			 ;;and will cause the following applications:
-			 ;;
-			 ;;   (E ?rand0 lex.a)
-			 ;;   (E ?rand1)
-			 ;;   (E ?rand2)
-			 ;;
-			 (let recur ((rand* rand*)
-				     (fmls  fmls))
-			   (if (pair? fmls)
-			       (cons (E     ($car rand*) ($car fmls))
-				     (recur ($cdr rand*) ($cdr fmls)))
-			     ($map/stx E rand*)))))))
+	      (rand* (E-rand* rator rand*)))
 	  (mk-call op rand*)))
+
+      (define (E-rand* rator rand*)
+	(let ((fmls (%get-matching-formals rator rand*)))
+	  (if (null? fmls)
+	      ($map/stx E rand*)
+	    ;;FMLS  is a  proper or  improper list  of lex  gensyms representing  the
+	    ;;formals of a lambda sexp case.  Here we want to apply E to the RAND* in
+	    ;;the  context  of  the  corresponding  formal.   Example,  the  function
+	    ;;application:
+	    ;;
+	    ;;   ((lambda (lex.a lex.b lex.c) ?body)
+	    ;;      ?rand0 ?rand1 ?rand2)
+	    ;;
+	    ;;has matching FMLS:
+	    ;;
+	    ;;   (lex.a lex.b lex.c)
+	    ;;
+	    ;;and will cause the following applications:
+	    ;;
+	    ;;   (E ?rand0 lex.a)
+	    ;;   (E ?rand1 lex.b)
+	    ;;   (E ?rand2 lex.c)
+	    ;;
+	    ;;Example, the function application:
+	    ;;
+	    ;;   ((lambda (lex.a . lex.rest) ?body)
+	    ;;      ?rand0 ?rand1 ?rand2)
+	    ;;
+	    ;;has matching FMLS:
+	    ;;
+	    ;;   (lex.a . lex.rest)
+	    ;;
+	    ;;and will cause the following applications:
+	    ;;
+	    ;;   (E ?rand0 lex.a)
+	    ;;   (E ?rand1)
+	    ;;   (E ?rand2)
+	    ;;
+	    (let recur ((rand* rand*)
+			(fmls  fmls))
+	      (if (pair? fmls)
+		  (cons (let ((ctxt ($car fmls)))
+			  (E ($car rand*) ctxt))
+			(recur ($cdr rand*) ($cdr fmls)))
+		($map/stx E rand*))))))
 
       (module (%get-matching-formals)
 
