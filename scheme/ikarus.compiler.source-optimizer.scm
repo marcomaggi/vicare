@@ -102,8 +102,7 @@
 	((3)
 	 ;;This optimisation level is meant to do the most possible.
 	 (parameterize ((cp0-effort-limit	O3-CP0-EFFORT-LIMIT)
-			(cp0-size-limit		O3-CP0-SIZE-LIMIT)
-			(open-mvcalls		#t))
+			(cp0-size-limit		O3-CP0-SIZE-LIMIT))
 	   (%do-one-pass expr (source-optimizer-passes-count))))
 	((2)
 	 (%do-one-pass expr (source-optimizer-passes-count)))

@@ -2200,7 +2200,6 @@
   ;; $cp0-effort-limit
   ;; $strip-source-info
   ;; $generate-debug-calls
-  ;; $open-mvcalls
 
   ;; $tag-analysis-output
   ;; $assembler-output

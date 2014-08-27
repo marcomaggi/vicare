@@ -3084,7 +3084,6 @@
     ($cp0-effort-limit				$compiler)
     ($strip-source-info				$compiler)
     ($generate-debug-calls			$compiler)
-    ($open-mvcalls				$compiler)
 
     ($tag-analysis-output			$compiler)
     ($assembler-output				$compiler)

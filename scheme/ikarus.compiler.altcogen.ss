@@ -30,7 +30,6 @@
 ;;           | (forcall "name" <Expr>*)
 ;;           | (funcall <Expr> <Expr>*)
 ;;           | (jmpcall <label> <Expr> <Expr>*)
-;;           | (mvcall <Expr> <clambda>)
 ;;  <codeloc> ::= (code-loc <label>)
 ;;  <clambda> ::= (clambda <label> <case>* <cp> <free var>*)
 ;;  <case>    ::= (clambda-case <info> <body>)
@@ -723,10 +722,6 @@
 	 (or (%non-tail? rator)
 	     (ormap %non-tail? arg*)))
 
-	;;Punt.  (Abdulaziz Ghuloum)
-	((mvcall rator k)
-	 #t)
-
 	(else
 	 (error __who__ "invalid expr" body))))
 
@@ -743,7 +738,6 @@
 
 	  ((funcall rator arg*)		#t)
 	  ((jmpcall label rator arg*)	#t)
-	  ((mvcall rator k)		#t)
 
 	  ;;FIXME!  (Abdulaziz Ghuloum)
 	  ((primcall op arg*)

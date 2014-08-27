@@ -41,7 +41,7 @@
 ;;
 ;;	assign		bind		clambda
 ;;	conditional	constant	forcall
-;;	funcall		mvcall		prelex
+;;	funcall				prelex
 ;;	primref		rec*bind	recbind
 ;;	seq
 ;;
@@ -378,10 +378,6 @@
        (or (C  rator illegals)
 	   (C* rand* illegals)))
 
-      ((mvcall p c)
-       (or (C p illegals)
-	   (C c illegals)))
-
       ((forcall rator rand*)
        ;;Remember that RATOR is a string here.
        (C* rand* illegals))
@@ -506,9 +502,6 @@
 
       ((funcall rator rand*)
        (make-funcall (E rator) (E* rand*)))
-
-      ((mvcall producer consumer)
-       (make-mvcall (E producer) (E consumer)))
 
       ((forcall rator rand*)
        ;;Remember that RATOR is a string here.
@@ -757,9 +750,6 @@
       ((funcall rator rand*)
        (make-funcall (E rator) (map E rand*)))
 
-      ((mvcall p c)
-       (make-mvcall (E p) (E c)))
-
       ((forcall rator rand*)
        (make-forcall rator (map E rand*)))
 
@@ -881,9 +871,6 @@
 	((funcall)
 	 (E-funcall x))
 
-	((mvcall)
-	 (E-mvcall x))
-
 	((forcall rator rand*)
 	 ;;This is a foreign function call.
 	 (make-forcall rator (E* rand*)))
@@ -1004,13 +991,6 @@
 	'($fx+ $fx- $fx* $fxdiv))
 
       #| end of module: E-funcall |# )
-
-    (define (E-mvcall x)
-      (struct-case x
-	((mvcall producer consumer)
-	 ;;This form is a function call.
-	 (make-the-enclosing-rhs-complex!)
-	 (make-mvcall (E producer) (E consumer)))))
 
     #| end of module: E |# )
 
@@ -1567,13 +1547,6 @@
 	 ;;performed side effect; so it is "complex".
 	 (%mark-complex! enclosing-binding)
 	 (make-funcall (E rator enclosing-binding) (E* rand* enclosing-binding)))
-
-	((mvcall producer consumer)
-	 ;;This multiple-value  function call might:  assign a binding,  reference an
-	 ;;assigned binding, perform a side effect, return a value which depends on a
-	 ;;previously performed side effect; so it is "complex".
-	 (%mark-complex! enclosing-binding)
-	 (make-mvcall (E producer enclosing-binding) (E consumer enclosing-binding)))
 
 	((forcall rator rand*)
 	 ;;This foreign function call might:  assign a binding, reference an assigned

@@ -480,6 +480,9 @@ Lots of backwards incompatibilities... life is hard!
 
   do not exist anymore.
 
+* BACKWARDS  INCOMPATIBILITY The  command  line  options regarding  open
+  mvcalls have been removed.
+
 
 Notes for revision 0.3d7
 ------------------------

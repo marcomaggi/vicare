@@ -6431,13 +6431,6 @@ system $compiler}.
 @defun $optimize-direct-calls @var{input}
 @end defun
 
-
-@deffn Parameter open-mvcalls
-When set to true: an attempt is made to expand inline calls to
-@func{call-with-values} by inserting local bindings.  Defaults to
-@false{}.
-@end deffn
-
 @c page
 @node syslib compiler letrec
 @subsection Optimisation of @func{letrec} and @func{letrec*} forms

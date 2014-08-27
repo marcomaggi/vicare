@@ -42,7 +42,6 @@
      (cp0-size-limit				$cp0-size-limit)
      (strip-source-info				$strip-source-info)
      (generate-debug-calls			$generate-debug-calls)
-     (open-mvcalls				$open-mvcalls)
 
      ;; middle pass inspection
      (assembler-output				$assembler-output)
@@ -202,12 +201,6 @@
   (make-parameter #f))
 
 (define strip-source-info
-  (make-parameter #f))
-
-(define open-mvcalls
-  ;;When set to true:  an attempt is made to expand  inline calls to CALL-WITH-VALUES
-  ;;by inserting local bindings.
-  ;;
   (make-parameter #f))
 
 (define optimize-cp
@@ -609,8 +602,7 @@
     ;;symbolic expression into a code object.
     ;;
     (let* ((p (recordize core-language-sexp))
-	   (p (parameterize ((open-mvcalls #f))
-		(optimize-direct-calls p)))
+	   (p (optimize-direct-calls p))
 	   (p (optimize-letrec p))
 	   (p (source-optimize p)))
       (when (optimizer-output)
@@ -642,8 +634,7 @@
     ;;purposes; it is to be used to inspect the result of optimisation.
     ;;
     (let* ((p (recordize core-language-sexp))
-	   (p (parameterize ((open-mvcalls #f))
-		(optimize-direct-calls p)))
+	   (p (optimize-direct-calls p))
 	   (p (optimize-letrec p))
 	   (p (source-optimize p)))
       (unparse-recordized-code/pretty p)))
@@ -655,8 +646,7 @@
     ;;assembly language instructions for a code object.
     ;;
     (let* ((p (recordize core-language-sexp))
-	   (p (parameterize ((open-mvcalls #f))
-		(optimize-direct-calls p)))
+	   (p (optimize-direct-calls p))
 	   (p (optimize-letrec p))
 	   (p (source-optimize p)))
       (let* ((p (rewrite-references-and-assignments p))
@@ -904,19 +894,6 @@
 ;;
 (define-struct funcall
   (op rand*))
-
-;;Represent a function call returning multiple values.  The core language form:
-;;
-;;   (call-with-values ?producer ?consumer)
-;;
-;;is recordised as:
-;;
-;;   (mvcall ?producer ?consumer)
-;;
-(define-struct mvcall
-  (producer
-   consumer
-   ))
 
 ;;An instance  of this  type represents  a call to  a foreign  function, usually  a C
 ;;language function.
@@ -2742,27 +2719,22 @@
       ;;CALL-WITH-VALUES.  RAND*  is the  list of already  processed operands  of the
       ;;application form.
       ;;
-      ;;FIXME Here.  (Abdulaziz Ghuloum)
-      (if (open-mvcalls)
-	  ;;Let's attempt to integrate CALL-WITH-VALUES.
-	  (if (null? (cddr rand*))
-	      ;;Here we know that the source code is:
-	      ;;
-	      ;;   (call-with-values ?producer ?consumer)
-	      ;;
-	      ;;with a correct number of arguments.
-	      (let ((producer (%attempt-integration mk (car rand*) '()))
-		    (consumer (cadr rand*)))
-		(cond ((%single-value-consumer? consumer)
-		       (%attempt-integration mk consumer (list producer)))
-		      ((and (%valid-mv-consumer? consumer)
-			    (%valid-mv-producer? producer))
-		       (make-mvcall producer consumer))
-		      (else
-		       (make-funcall rator rand*))))
-	    ;;Wrong number of arguments to CALL-WITH-VALUES!!!
-	    (mk rator rand*))
-	;;Leave CALL-WITH-VALUES alone.
+      (if (null? (cddr rand*))
+	  ;;Here we know that the source code is:
+	  ;;
+	  ;;   (call-with-values ?producer ?consumer)
+	  ;;
+	  ;;with a correct number of arguments.
+	  (let ((producer (%attempt-integration mk (car rand*) '()))
+		(consumer (cadr rand*)))
+	    (cond ((%single-value-consumer? consumer)
+		   (%attempt-integration mk consumer (list producer)))
+		  ;; ((and (%valid-mv-consumer? consumer)
+		  ;; 	(%valid-mv-producer? producer))
+		  ;;  (make-mvcall producer consumer))
+		  (else
+		   (mk rator rand*))))
+	;;Wrong number of arguments to CALL-WITH-VALUES!!!
 	(mk rator rand*)))
 
     (define (%single-value-consumer? consumer)
@@ -3142,9 +3114,6 @@
 	     (else
 	      (error who "not assigned" lhs x))))
 
-      ((mvcall p c)
-       (make-mvcall (E p) (E c)))
-
       (else
        (error who "invalid expression" (unparse-recordized-code x)))))
 
@@ -3311,9 +3280,6 @@
       ((forcall rator rand*)
        (make-forcall rator (map E rand*)))
 
-      ((mvcall producer consumer)
-       (make-mvcall (E producer) (E consumer)))
-
       ((assign lhs rhs)
        (make-assign (lookup lhs) (E rhs)))
 
@@ -3467,9 +3433,6 @@
 
       ((funcall rator rand*)
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
-
-      ((mvcall p c)
-       (make-mvcall (E p) (E c)))
 
       (else
        (error who "invalid expression" (unparse-recordized-code x)))))
@@ -6333,9 +6296,6 @@
 
     ((foreign-label x)
      `(foreign-label ,x))
-
-    ((mvcall prod cons)
-     `(mvcall ,(unparse-recordized-code prod) ,(unparse-recordized-code cons)))
 
     ((fvar idx)
      (string->symbol (format "fv.~a" idx)))

@@ -379,15 +379,6 @@ optimisation level is equivalent to @code{-O2}.
 Specify how many passes to perform with the source optimizer.  Must be a
 positive fixnum.  Defaults to 1.
 
-@item --enable-open-mvcalls
-@itemx --disable-open-mvcalls
-@cindex Command line option @option{--enable-open-mvcalls}
-@cindex @option{--enable-open-mvcalls}, command line option
-@cindex Command line option @option{--disable-open-mvcalls}
-@cindex @option{--disable-open-mvcalls}, command line option
-Enable or disable inlining of calls to @func{call-with-values}.
-Defaults to disable.
-
 @item --print-assembly
 @cindex Command line option @option{--print-assembly}
 @cindex @option{--print-assembly}, command line option
