@@ -298,6 +298,31 @@
 	    (funcall tmp_0 (constant 2)))))
 
 ;;; --------------------------------------------------------------------
+;;; call-with-values
+
+  ;;No possible integration.
+  (doit* (call-with-values
+	     (lambda ()
+	       (values (read) (read)))
+	   (lambda (x y)
+	     (list x y)))
+	 (funcall (primref call-with-values)
+	   (lambda ()
+	     (funcall (primref values) (funcall (primref read)) (funcall (primref read))))
+	   (lambda (x_0 y_0)
+	     (funcall (primref list) x_0 y_0))))
+
+  ;;Consumer is a CLAMBDA with single argument.
+  (doit* (call-with-values
+	     (lambda ()
+	       (read))
+	   (lambda (x)
+	     (list x)))
+	 (bind ((x_0 (bind ()
+		       (funcall (primref read)))))
+	   (funcall (primref list) x_0)))
+
+;;; --------------------------------------------------------------------
 ;;; special cases
 
   (doit* (cond ((read)
