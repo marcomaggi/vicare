@@ -6424,12 +6424,104 @@ location gensyms of the imported bindings.
 @subsection Optimisation for direct calls
 
 
-The following bindings are exported by the library @library{vicare
-system $compiler}.
+@defun $optimize-direct-calls @var{core-language-expression}
+Inspect application forms:
 
+@example
+(@meta{operator} @meta{operand} ...)
+@end example
 
-@defun $optimize-direct-calls @var{input}
+@noindent
+and attempts to integrate the @meta{operator} when possible.
 @end defun
+
+
+By definition, a ``direct closure application'' like:
+
+@example
+((lambda (x) x) 123)
+@end example
+
+@noindent
+can be transformed to:
+
+@example
+   (let ((x 123)) x)
+@end example
+
+@noindent
+in which the operator @func{lambda} form is integrated; so it can be
+converted to low level operations that more efficiently implement the
+binding; direct calls optimisation attempts to perform such integration.
+Notice that in the case:
+
+@example
+((case-lambda
+   ((x) x)
+   ((x y) y))
+ 123)
+@end example
+
+@noindent
+the integration yields:
+
+@example
+(let ((x 123)) x)
+@end example
+
+@noindent
+and the clause with two arguments is just discarded and never compiled.
+
+There are other integration possibilities when the operator of an
+application form is a complex expression:
+
+@example
+((let ((?lhs ?rhs) ...) ?body) ?rand ...)
+===> (let ((?lhs ?rhs) ...)
+       (?body ?rand ...))
+
+((letrec ((?lhs ?rhs) ...) ?body) ?rand ...)
+===> (letrec ((?lhs ?rhs) ...)
+       (?body ?rand ...))
+
+((letrec ((?lhs ?rhs) ...) ?body) ?rand ...)
+===> (letrec* ((?lhs ?rhs) ...)
+       (?body ?rand ...))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Example: @func{cond} syntaxes
+
+@func{cond} syntaxes are expanded as follows:
+
+@example
+(cond ((this X)
+       => (lambda (Y)
+            (that Y)))
+      (else
+       (those)))
+@end example
+
+@noindent
+becomes:
+
+@example
+(let ((t (this X)))
+  (if t
+      ((lambda (Y) (that Y)) t)
+    (those)))
+@end example
+
+@noindent
+which contains a direct call, which will be optimised to:
+
+@example
+(let ((t (this X)))
+  (if t
+      (let ((Y t)) (that Y))
+    (those)))
+@end example
 
 @c page
 @node syslib compiler letrec

@@ -189,6 +189,131 @@
   #t)
 
 
+(parametrise ((check-test-name		'recordisation))
+
+  (define (%optimize-direct-calls core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax-rule (doit ?core-language-form ?expected-result)
+    (check
+	(%optimize-direct-calls (quasiquote ?core-language-form))
+      => (quasiquote ?expected-result)))
+
+  (define-syntax-rule (doit* ?standard-language-form ?expected-result)
+    (doit ,(%expand (quasiquote ?standard-language-form)) ?expected-result))
+
+  (define-syntax-rule (libdoit* ?standard-language-form ?expected-result)
+    (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result))
+
+;;; --------------------------------------------------------------------
+;;; simple demos
+
+  (doit* (fx+ 1 2)
+	 (funcall (primref fx+) (constant 1) (constant 2)))
+
+;;; --------------------------------------------------------------------
+;;; CLAMBDA integration
+
+  (doit* ((lambda (x) x) '1)
+	 (bind ((x_0 (constant 1)))
+	   x_0))
+
+  (doit* ((case-lambda
+	   ((x y) y)
+	   ((x) x)
+	   (args args))
+	  '1)
+	 (bind ((x_0 (constant 1)))
+	   x_0))
+
+;;; --------------------------------------------------------------------
+;;; binding forms integration
+
+  (doit* ((let ((x '1))
+	    (lambda (y) (list x y)))
+	  '2)
+	 (bind ((x_0 (constant 1)))
+	   (bind ((y_0 (constant 2)))
+	     (funcall (primref list) x_0 y_0))))
+
+  ;;CLAMBDA body
+  (doit ((let ((x '1))
+	   (lambda (y) ((primitive list) x y)))
+	 '2)
+	(bind ((x_0 (constant 1)))
+	  (bind ((y_0 (constant 2)))
+	    (funcall (primref list) x_0 y_0))))
+
+  ;;CLAMBDA body
+  (doit ((letrec ((x '1))
+	   (lambda (y) ((primitive list) x y)))
+	 '2)
+	(recbind ((x_0 (constant 1)))
+	  (bind ((y_0 (constant 2)))
+	    (funcall (primref list) x_0 y_0))))
+
+  ;;CLAMBDA body
+  (doit ((letrec* ((x '1))
+	   (lambda (y) ((primitive list) x y)))
+	 '2)
+	(rec*bind ((x_0 (constant 1)))
+	  (bind ((y_0 (constant 2)))
+	    (funcall (primref list) x_0 y_0))))
+
+  ;;prelex body
+  (doit ((let ((f (lambda (y) y)))
+	   f)
+	 '1)
+	(bind ((f_0 (lambda (y_0) y_0)))
+	  (funcall f_0 (constant 1))))
+
+  ;;prelex body
+  (doit ((letrec ((f (lambda (y) y)))
+	   f)
+	 '1)
+	(recbind ((f_0 (lambda (y_0) y_0)))
+	  (funcall f_0 (constant 1))))
+
+  ;;prelex body
+  (doit ((letrec* ((f (lambda (y) y)))
+	   f)
+	 '1)
+	(rec*bind ((f_0 (lambda (y_0) y_0)))
+	  (funcall f_0 (constant 1))))
+
+  ;;multiple expressions body
+  (doit ((let ((x '1))
+	   (begin
+	     ((primitive display) '1)
+	     (lambda (y) ((primitive list) x y))))
+	 '2)
+	(bind ((x_0 (constant 1)))
+	  (bind ((tmp_0 (seq
+			  (funcall (primref display) (constant 1))
+			  (lambda (y_0)
+			    (funcall (primref list) x_0 y_0)))))
+	    (funcall tmp_0 (constant 2)))))
+
+;;; --------------------------------------------------------------------
+;;; special cases
+
+  (doit* (cond ((read)
+		=> (lambda (Y)
+		     (write Y)))
+	       (else
+		(read)))
+	 (bind ((t_0 (funcall (primref read))))
+	   (conditional t_0
+	       (bind ((Y_0 t_0))
+		 (funcall (primref write) Y_0))
+	     (funcall (primref read)))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'basic-optimize-letrec))
 
 ;;;We test the "basic"  here because it is very simple and does  not need many tests.
