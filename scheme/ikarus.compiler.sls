@@ -246,7 +246,8 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax ($map/stx stx)
-  ;;Like MAP, but expand the loop inline.
+  ;;Like  MAP, but  expand the  loop inline.   The "function"  to be  mapped must  be
+  ;;specified by an identifier or lambda form because it is evaluated multiple times.
   (syntax-case stx ()
     ((_ ?proc ?ell0 ?ell ...)
      ;;This implementation  is: tail recursive,  loops in order, assumes  proper list
@@ -281,11 +282,10 @@
 
 (define-syntax ($for-each/stx stx)
   ;;Like FOR-HEACH, but expand the loop inline.   The "function" to be mapped must be
-  ;;specified by an identifier.
+  ;;specified by an identifier or lambda form because it is evaluated multiple times.
   ;;
   (syntax-case stx ()
     ((_ ?func ?ell0 ?ell ...)
-     (identifier? #'?func)
      (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
        #'(let loop ((t ?ell0) (T ?ell) ...)
 	   (unless (null? t)
@@ -2332,6 +2332,7 @@
     ;;variable  reference  into  a  standalone lex  gensym;  while  recordizing  this
     ;;expression the lex gensym *does not* have a PRELEX in its property list.
     ;;
+    (import (vicare system $symbols))
 
     ;;FIXME Do we  need a new cookie  at each call to the  RECORDIZE function?  Maybe
     ;;not,   because  we   always  call   LEX*->PRELEX*  and   then  clean   up  with
@@ -2349,7 +2350,6 @@
 	($getprop ?X *COOKIE*))
 
       (define ($getprop x k)
-	(import (vicare system $symbols))
 	($assq+cdr k ($symbol-plist x)))
 
       (define-syntax ($assq+cdr stx)
@@ -2386,7 +2386,7 @@
 		    (receive-and-return (prel)
 			(make-prelex lex)
 		      ($putprop lex *COOKIE* prel)))
-		  lex*))
+	  lex*))
 
       (define-syntax ($putprop stx)
 	;;The expansion of this syntax is equivalent to:
@@ -2398,7 +2398,6 @@
 	   #'(let ((symbol  ?symbol)
 		   (key     ?key)
 		   (value   ?value))
-	       (import (vicare system $symbols))
 	       (let loop ((plist ($symbol-plist symbol)))
 		 (if (pair? plist)
 		     (if (eq? key ($caar plist))
@@ -2409,18 +2408,38 @@
 
       #| end of module: LEX*->PRELEX* |# )
 
-    (define (%remove-prelex-from-proplist-of-lex lex*)
-      ;;Process  the  formals  and  left-hand   sides  of  the  core  language  forms
-      ;;ANNOTATED-CASE-LAMBDA, CASE-LAMBDA, LETREC,  LETREC*, LIBRARY-LETREC.  Expect
-      ;;LEX* to  be a list of  lex gensyms previsously processed  with LEX*->PRELEX*;
-      ;;for each  LEX remove  the PRELEX  structure from  its property  list.  Return
-      ;;unspecified values.
-      ;;
-      ;;The property list keyword is the gensym bound to *COOKIE*.
-      ;;
-      (for-each (lambda (lex)
-		  (remprop lex *COOKIE*))
-	lex*))
+    (module (%remove-prelex-from-proplist-of-lex)
+
+      (define (%remove-prelex-from-proplist-of-lex lex*)
+	;;Process the formals and left-hand sides  of the core language forms LAMBDA,
+	;;CASE-LAMBDA, ANNOTATED-CASE-LAMBDA, LET,  LETREC, LETREC*, LIBRARY-LETREC*.
+	;;Expect  LEX*  to be  a  list  of  lex  gensyms previsously  processed  with
+	;;LEX*->PRELEX*; for each  LEX remove the PRELEX structure  from its property
+	;;list.  Return unspecified values.
+	;;
+	;;The property list keyword is the gensym bound to *COOKIE*.
+	;;
+	($for-each/stx (lambda (lex)
+			 ($remprop lex *COOKIE*))
+	  lex*))
+
+      (define-syntax-rule ($remprop ?symbol ?key)
+	(let* ((symbol ?symbol)
+	       (key    ?key)
+	       (plist  ($symbol-plist symbol)))
+	  (unless (null? plist)
+	    (let ((a ($car plist)))
+	      (if (eq? ($car a) key)
+		  ($set-symbol-plist! symbol ($cdr plist))
+		(let loop ((q     plist)
+			   (plist ($cdr plist)))
+		  (unless (null? plist)
+		    (let ((a ($car plist)))
+		      (if (eq? ($car a) key)
+			  ($set-cdr! q ($cdr plist))
+			(loop plist ($cdr plist)))))))))))
+
+      #| end of module: %REMOVE-PRELEX-FROM-PROPLIST-OF-LEX |# )
 
     #| end of module |# )
 
@@ -6689,5 +6708,7 @@
 ;; eval: (put 'assemble-sources 'scheme-indent-function 1)
 ;; eval: (put 'define-structure 'scheme-indent-function 1)
 ;; eval: (put 'make-conditional 'scheme-indent-function 2)
-;; eval: (put 'struct-case 'scheme-indent-function 1)
+;; eval: (put 'struct-case	'scheme-indent-function 1)
+;; eval: (put '$map/stx		'scheme-indent-function 1)
+;; eval: (put '$for-each/stx	'scheme-indent-function 1)
 ;; End:
