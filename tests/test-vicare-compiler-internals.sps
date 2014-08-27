@@ -59,7 +59,10 @@
 	       '(vicare system $symbols)
 	       ;;We import this library to  inspect how imported bindings are handled
 	       ;;by the compiler.
-	       '(libtest compiler-internals)))
+	       '(libtest compiler-internals)
+	       ;;This is to build annotated forms and test debug-calls.
+	       '(only (vicare)
+		      get-annotated-datum)))
 
 (define (%expand standard-language-form)
   (receive (code libs)
@@ -68,6 +71,19 @@
 
 (define (%expand-library standard-language-form)
   (cdr (assq 'invoke-code (expand-library->sexp standard-language-form))))
+
+(define (%make-annotated-form form)
+  (let* ((form.str (receive (port extract)
+		       (open-string-output-port)
+		     (unwind-protect
+			 (begin
+			   (display form port)
+			   (extract))
+		       (close-port port))))
+	 (port     (open-string-input-port form.str)))
+    (unwind-protect
+	(get-annotated-datum port)
+      (close-port port))))
 
 
 (parametrise ((check-test-name		'expansion))
@@ -185,6 +201,66 @@
 		(funcall (funcall (primref top-level-value) (constant a-thunk)))
 		(funcall (funcall (primref top-level-value) (constant a-func))
 		  (constant 1) (constant 2)))))
+
+;;; --------------------------------------------------------------------
+;;; debug calls, no annotation
+
+  (parametrise ((compiler.$generate-debug-calls #t))
+
+    (doit* (list '1 '2)
+	   (funcall (primref debug-call) (constant (#f . (list '1 '2)))
+		    (primref list) (constant 1) (constant 2)))
+
+    (doit* (let ((x '1)
+		 (y '2))
+	     (list x y))
+	   (bind ((x_0 (constant 1))
+		  (y_0 (constant 2)))
+	     (funcall (primref debug-call) (constant (#f . (list x y)))
+		      (primref list) x_0 y_0)))
+
+    (doit* (let ((f (lambda (x) x)))
+	     (f '1))
+	   (bind ((f_0 (lambda (x_0) x_0)))
+	     (funcall (primref debug-call) (constant (#f . (f '1)))
+		      f_0 (constant 1))))
+
+    #f)
+
+;;; --------------------------------------------------------------------
+;;; debug calls, annotation
+
+;;;The format of the annotation is:
+;;;
+;;;   (constant (?annotation-source . ?source-form))
+;;;
+;;;where ?ANNOTATION-SOURCE has one of the formats:
+;;;
+;;;   #f
+;;;   (?port-identifier . ?first-character-offset)
+;;;
+
+  (parametrise ((compiler.$generate-debug-calls #t))
+
+    (doit* ,(%make-annotated-form '(list 1 2))
+	   (funcall (primref debug-call) (constant (("*string-input-port*" . 0) . (list 1 2)))
+		    (primref list) (constant 1) (constant 2)))
+
+    (doit* ,(%make-annotated-form '(let ((x '1)
+                           		 (y '2))
+                           	     (list x y)))
+	   (bind ((x_0 (constant 1))
+		  (y_0 (constant 2)))
+	     (funcall (primref debug-call) (constant (("*string-input-port*" . 21) . (list x y)))
+		      (primref list) x_0 y_0)))
+
+    (doit* ,(%make-annotated-form '(let ((f (lambda (x) x)))
+				     (f '1)))
+	   (bind ((f_0 (lambda (x_0) x_0)))
+	     (funcall (primref debug-call) (constant (("*string-input-port*". 26) . (f '1)))
+		      f_0 (constant 1))))
+
+    #f)
 
   #t)
 
