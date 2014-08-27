@@ -2281,7 +2281,7 @@
 
   (module (lexical lex*->prelex* %remove-prelex-from-proplist-of-lex)
     ;;This module  takes care of  generating a PRELEX  structure for each  lex gensym
-    ;;associated to a binding.
+    ;;associated to a lexical binding.
     ;;
     ;;Remember that the  function RECORDIZE is called to process:  full LIBRARY forms
     ;;the expander  has transformed  into LIBRARY-LETREC*  core language  forms; full
@@ -2311,10 +2311,10 @@
     ;;
     ;;* While  processing a standalone expression:  the lex gensyms associated  to an
     ;;  internally defined binding  do have a PRELEX in their  property list; the lex
-    ;;  gensyms associated  to a previously defined  binding do not have  a PRELEX in
+    ;;  gensyms associated to a previously defined  binding do *not* have a PRELEX in
     ;;  their property list.
     ;;
-    ;;For example, let's  say we are evaluating expression at  the REPL; new bindings
+    ;;For example, let's say we are  evaluating expressions at the REPL; new bindings
     ;;created  by  DEFINE  are  added  to the  interaction  environment  returned  by
     ;;INTERACTION-ENVIRONMENT.  So if we do:
     ;;
@@ -2322,7 +2322,9 @@
     ;;
     ;;the expander converts this  DEFINE form into a SET! form and  adds a binding to
     ;;the interaction environment;  while recordizing this expression  the lex gensym
-    ;;*does* have a PRELEX in its property list.  If later we do:
+    ;;*does*  have a  PRELEX  in its  property  list; lexical  bindings  added to  an
+    ;;interaction environment have a single gensym to  be used as both lex gensym and
+    ;;loc gensym.  If later we do:
     ;;
     ;;   vicare> a
     ;;
@@ -2337,27 +2339,75 @@
     (define-constant *COOKIE*
       (gensym "prelex-for-lex"))
 
-    (define-syntax-rule (lexical ?X)
-      ;;If  the lex  gensym ?X  has been  defined in  the expression  currently being
-      ;;recordised: return  the associated PRELEX struct.   If the lex gensym  ?X has
-      ;;been defined in a previously processed expression: return false.
-      ;;
-      (getprop ?X *COOKIE*))
+    (module (lexical)
 
-    (define (lex*->prelex* lex*)
-      ;;Process  the  formals  and  left-hand   sides  of  the  core  language  forms
-      ;;ANNOTATED-CASE-LAMBDA, CASE-LAMBDA, LETREC,  LETREC*, LIBRARY-LETREC.  Expect
-      ;;LEX* to be  a list of lex  gensyms; for each LEX generate  a PRELEX structure
-      ;;and store  it in the  property list  of the LEX.   Return the list  of PRELEX
-      ;;structures.
-      ;;
-      ;;The property list keyword is the gensym bound to *COOKIE*.
-      ;;
-      (map (lambda (lex)
-	     (receive-and-return (prel)
-		 (make-prelex lex)
-	       (putprop lex *COOKIE* prel)))
-	lex*))
+      (define-syntax-rule (lexical ?X)
+	;;If the  lex gensym ?X  has been defined  in the expression  currently being
+	;;recordised: return the associated PRELEX struct.   If the lex gensym ?X has
+	;;been defined in a previously processed expression: return false.
+	;;
+	($getprop ?X *COOKIE*))
+
+      (define ($getprop x k)
+	(import (vicare system $symbols))
+	($assq+cdr k ($symbol-plist x)))
+
+      (define-syntax ($assq+cdr stx)
+	;;The expansion of this macro is equivalent to:
+	;;
+	;;   (cond ((assq key ell)
+	;;          => cdr)
+	;;         (else #f))
+	;;
+	(syntax-case stx ()
+	  ((_ ?key ?ell)
+	   #'(let loop ((key ?key)
+			(ell ?ell))
+	       (and (pair? ell)
+		    (if (eq? key ($caar ell))
+			($cdar ell)
+		      (loop key ($cdr ell))))))
+	  ))
+
+      #| end of module: LEXICAL |# )
+
+    (module (lex*->prelex*)
+
+      (define (lex*->prelex* lex*)
+	;;Process the formals and left-hand sides  of the core language forms LAMBDA,
+	;;CASE-LAMBDA, ANNOTATED-CASE-LAMBDA, LET,  LETREC, LETREC*, LIBRARY-LETREC*.
+	;;Expect LEX*  to be a list  of lex gensyms;  for each LEX generate  a PRELEX
+	;;structure and store it in the property list of the LEX.  Return the list of
+	;;PRELEX structures.
+	;;
+	;;The property list keyword is the gensym bound to *COOKIE*.
+	;;
+	($map/stx (lambda (lex)
+		    (receive-and-return (prel)
+			(make-prelex lex)
+		      ($putprop lex *COOKIE* prel)))
+		  lex*))
+
+      (define-syntax ($putprop stx)
+	;;The expansion of this syntax is equivalent to:
+	;;
+	;;   (putprop symbol key value)
+	;;
+	(syntax-case stx ()
+	  ((_ ?symbol ?key ?value)
+	   #'(let ((symbol  ?symbol)
+		   (key     ?key)
+		   (value   ?value))
+	       (import (vicare system $symbols))
+	       (let loop ((plist ($symbol-plist symbol)))
+		 (if (pair? plist)
+		     (if (eq? key ($caar plist))
+			 ($set-cdr! ($car plist) value)
+		       (loop ($cdr plist)))
+		   ($set-symbol-plist! symbol (cons (cons key value) plist))))))
+	  ))
+
+      #| end of module: LEX*->PRELEX* |# )
 
     (define (%remove-prelex-from-proplist-of-lex lex*)
       ;;Process  the  formals  and  left-hand   sides  of  the  core  language  forms
