@@ -94,7 +94,9 @@
       => (quasiquote ?expected-result)))
 
   (define-syntax-rule (libdoit* ?standard-language-form ?expected-result)
-    (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result))
+    (check
+	(gensyms->symbols (%expand-library (quasiquote ?standard-language-form)))
+      => (quasiquote ?expected-result)))
 
 ;;; --------------------------------------------------------------------
 
@@ -105,6 +107,20 @@
   (doit* ($symbol-string 'ciao)
 	 (annotated-call ($symbol-string 'ciao)
 			 (primitive $symbol-string) 'ciao))
+
+;;; --------------------------------------------------------------------
+
+  (libdoit* (library (expansion-demo-1)
+	      (export a b)
+	      (import (rnrs)
+		(libtest compiler-internals))
+	      (define a
+		(a-func 1 2))
+	      (define (b)
+		1))
+	    (library-letrec* ((a a (annotated-call (a-func 1 2) a-func (quote 1) (quote 2)))
+			      (b b (annotated-case-lambda b (() (quote 1)))))
+	      (quote #!void)))
 
   #t)
 
@@ -201,6 +217,23 @@
 		(funcall (funcall (primref top-level-value) (constant a-thunk)))
 		(funcall (funcall (primref top-level-value) (constant a-func))
 		  (constant 1) (constant 2)))))
+
+  ;;Record type definition.
+  (libdoit* (library (recordize-demo-2)
+	      (export make-a a?)
+	      (import (rnrs))
+	      (define-record-type a))
+	    (rec*bind ((a-rtd_0      (funcall (primref make-record-type-descriptor)
+				       (constant a) (constant #f) (constant #f)
+				       (constant #f) (constant #f) (constant #())))
+		       (a-protocol_0 (constant #f))
+		       (a-rcd_0      (funcall (primref make-record-constructor-descriptor)
+				       a-rtd_0 (constant #f) a-protocol_0))
+		       (a?_0         (funcall (primref record-predicate) a-rtd_0))
+		       (make-a_0     (funcall (primref record-constructor) a-rcd_0))
+		       (a-first-field-offset_0
+			(funcall (primref $struct-ref) a-rtd_0 (constant 3))))
+	      (constant #!void)))
 
 ;;; --------------------------------------------------------------------
 ;;; debug calls, no annotation
@@ -581,9 +614,9 @@
 		   (b_0 (constant #!void))
 		   (c_0 (constant #!void)))
 	      (seq
-		(assign a_0 (lambda () (constant 1)))
-		(assign b_0 (lambda () (seq (funcall a_0) (constant 2))))
-		(assign c_0 (lambda () (seq (funcall b_0) (constant 3))))
+		(assign-init a_0 (lambda () (constant 1)))
+		(assign-init b_0 (lambda () (seq (funcall a_0) (constant 2))))
+		(assign-init c_0 (lambda () (seq (funcall b_0) (constant 3))))
 		(constant #!void))))
 
 ;;; --------------------------------------------------------------------
@@ -1487,6 +1520,26 @@
 	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
 	  (constant #!void)))
 
+  ;;Record type definition.
+  (check
+      (parametrise ((compiler.$current-letrec-pass 'scc))
+	(let* ((form1 '(library (optimize-letrec-scc-demo-2)
+			 (export make-a a?)
+			 (import (rnrs))
+			 (define-record-type a)))
+	       (form2 (%expand-library form1)))
+	  (%optimize-letrec form2)))
+    => '(bind ((a-rtd_0 (funcall (primref make-record-type-descriptor)
+			  (constant a) (constant #f) (constant #f)
+			  (constant #f) (constant #f) (constant #()))))
+	  (bind ((a-protocol_0 (constant #f)))
+	    (bind ((a-rcd_0 (funcall (primref make-record-constructor-descriptor)
+			      a-rtd_0 (constant #f) a-protocol_0)))
+	      (bind ((a?_0 (funcall (primref record-predicate) a-rtd_0)))
+		(bind ((make-a_0 (funcall (primref record-constructor) a-rcd_0)))
+		  (bind ((a-first-field-offset_0 (funcall (primref $struct-ref) a-rtd_0 (constant 3))))
+		    (constant #!void))))))))
+
   #t)
 
 
@@ -1571,16 +1624,39 @@
 		       (export a b)
 		       (import (rnrs)
 			 (libtest compiler-internals))
-		       (define a 1)
+		       (define a
+			 (a-func 1 2))
 		       (define (b)
-			 (a-func 2 a))))
+			 1)))
 	     (form2 (%expand-library form1)))
 	(%rewrite-references-and-assignments form2))
-    => '(bind ((a_0 (constant 1)))
-	  (fix ((b_0 (lambda () (funcall (funcall (primref top-level-value)
-				      (constant a-func))
-			     (constant 2) (constant 1)))))
+    => '(bind ((a_0 (funcall (funcall (primref top-level-value) (constant a-func))
+		      (constant 1)
+		      (constant 2))))
+	  (fix ((b_0 (lambda () (constant 1))))
 	    (constant #!void))))
+
+  ;;Record type definition.
+  (check
+      (let* ((form1 '(library (rewrite-references-and-assignments-demo-3)
+		       (export make-a a?)
+		       (import (rnrs))
+		       (define-record-type a)))
+	     (form2 (%expand-library form1)))
+	(%rewrite-references-and-assignments form2))
+    => '(bind ((a-rtd_0 (funcall (primref make-record-type-descriptor)
+			  (constant a) (constant #f) (constant #f)
+			  (constant #f) (constant #f) (constant #()))))
+	  (bind ((a-protocol_0 (constant #f)))
+	    (bind ((a-rcd_0 (funcall (primref make-record-constructor-descriptor)
+			      a-rtd_0 (constant #f) (constant #f))))
+	      (bind ((a?_0 (funcall (primref record-predicate)
+			     a-rtd_0)))
+		(bind ((make-a_0 (funcall (primref record-constructor)
+				   a-rcd_0)))
+		  (bind ((a-first-field-offset_0 (funcall (primref $struct-ref)
+						   a-rtd_0 (constant 3))))
+		    (constant #!void))))))))
 
   #f)
 
@@ -1598,4 +1674,5 @@
 ;; eval: (put 'seq			'scheme-indent-function 0)
 ;; eval: (put 'conditional		'scheme-indent-function 2)
 ;; eval: (put 'funcall			'scheme-indent-function 1)
+;; eval: (put 'library-letrec*		'scheme-indent-function 1)
 ;; End:

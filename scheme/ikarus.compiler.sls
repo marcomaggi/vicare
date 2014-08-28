@@ -3107,9 +3107,9 @@
        (if (prelex-source-assigned? x)
 	   ;;Reference to a read-write binding.
 	   (cond ((prelex-global-location x)
-		  ;;Reference to  a top  level binding defined  by the  core language
-		  ;;form LIBRARY-LETREC*.   LOC is  the loc gensym  used to  hold the
-		  ;;value at run-time.
+		  ;;Reference  to a  lexical top  level binding  defined by  the core
+		  ;;language form  LIBRARY-LETREC*.  LOC  is the  loc gensym  used to
+		  ;;hold the value at run-time.
 		  => (lambda (loc)
 		       (make-funcall (mk-primref '$symbol-value)
 				     (list (make-constant loc)))))
@@ -3118,7 +3118,8 @@
 		  ;;appropriate reference to the vector location.
 		  (make-funcall (mk-primref '$vector-ref)
 				(list x (make-constant 0)))))
-	 ;;Reference to a read-only binding.
+	 ;;Reference to  a lexical read-only  binding.  This too  can be a  top level
+	 ;;binding whose value is stored in a loc gensym, but it is hadled later.
 	 x))
 
       ((primref)
@@ -3165,13 +3166,15 @@
 		   (cond ((symbol? where)
 			  ;;Single  initialisation assignment  of top  level binding.
 			  ;;This binding has no other assignment, and this assignment
-			  ;;is the operation that initialises it.  For example:
+			  ;;is the  operation that initialises it.   For example, the
+			  ;;letrec optimiser can generate  code like this for binding
+			  ;;defined by a LIBRARY-LETREC* form:
 			  ;;
 			  ;;   (bind ((a (constant '#!void)))
 			  ;;     (assign a ?rhs)
 			  ;;     a)
 			  ;;
-			  ;;must become:
+			  ;;and it must become:
 			  ;;
 			  ;;   (bind ((a (constant '#!void)))
 			  ;;     (funcall (primref $init-symbol-value!)
@@ -3179,19 +3182,21 @@
 			  ;;              ?rhs)
 			  ;;     (funcall (primref $symbol-value) (constant a.loc)))
 			  ;;
+			  ;;where A.LOC is  the loc gensym.  Notice that  not all the
+			  ;;LIBRARY-LETREC* bindings are handled this way.
 			  #;(fprintf (current-error-port) "assign init ~s\n" (prelex-name lhs))
 			  (make-funcall (mk-primref '$init-symbol-value!)
 					(list (make-constant where) (E rhs))))
 			 ((prelex-global-location lhs)
-			  ;;Common assignment of  top level binding.  LOC  is the loc
-			  ;;gensym used to hold the value.
+			  ;;Common assignment  of lexical top level  binding.  LOC is
+			  ;;the loc gensym used to hold the value.
 			  => (lambda (loc)
-			       ;;(fprintf (current-error-port) "assign set ~s\n" (prelex-name lhs))
+			       #;(fprintf (current-error-port) "assign set ~s\n" (prelex-name lhs))
 			       (make-funcall (mk-primref '$set-symbol-value!)
 					     (list (make-constant loc) (E rhs)))))
 			 (else
-			  ;;Assignment of  local binding stored on  the Scheme stack.
-			  ;;Substitute with the appropriate vector operation.
+			  ;;Assignment of lexical local  binding stored on the Scheme
+			  ;;stack.  Substitute with the appropriate vector operation.
 			  (make-funcall (mk-primref '$vector-set!)
 					(list lhs (make-constant 0) (E rhs)))))))
 	     (else
@@ -6452,7 +6457,9 @@
 	 (Var x))
 
 	((assign lhs rhs)
-	 `(assign ,(E lhs) ,(E rhs)))
+	 (if (symbol? (prelex-source-assigned? lhs))
+	     `(assign-init ,(E lhs) ,(E rhs))
+	   `(assign ,(E lhs) ,(E rhs))))
 
 	((primref x)
 	 `(primref ,x))
