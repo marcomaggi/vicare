@@ -3027,7 +3027,30 @@
   ;;* Top  level bindings  (defined by  the core  language form  LIBRARY-LETREC*) are
   ;;implemented with loc gensyms holding the  value in an internal field.  References
   ;;and assignments to  such bindings must be substituted  with appropriate primitive
-  ;;function calls.
+  ;;function calls.  For example, the letrec  optimiser might generate code like this
+  ;;for binding defined by a LIBRARY-LETREC* form:
+  ;;
+  ;;   (bind ((a (constant '#!void)))
+  ;;     (assign a ?rhs)
+  ;;     a)
+  ;;
+  ;;and it must become:
+  ;;
+  ;;   (bind ((a (constant '#!void)))
+  ;;     (funcall (primref $init-symbol-value!)
+  ;;              (constant a.loc)
+  ;;              ?rhs)
+  ;;     (funcall (primref $symbol-value) (constant a.loc)))
+  ;;
+  ;;where A.LOC is the loc gensym.   Notice that not all the LIBRARY-LETREC* bindings
+  ;;are  handled  this way,  some  of  them are  defined  as  follows by  the  letrec
+  ;;optimiser:
+  ;;
+  ;;   (bind ((a ?rhs))
+  ;;     ?body)
+  ;;
+  ;;and correct  handling of  references and  assignments through  the loc  gensym is
+  ;;introduced in a later compiler pass.
   ;;
   ;;* Read-only  lexical local bindings are  implemented with words allocated  on the
   ;;Scheme stack.
@@ -3129,7 +3152,7 @@
        (receive (lhs* a-lhs* a-rhs*)
 	   (%fix-lhs* lhs*)
          (make-bind lhs* ($map/stx E rhs*)
-		    (%bind-assigned a-lhs* a-rhs* (E body)))))
+	   (%bind-assigned a-lhs* a-rhs* (E body)))))
 
       ((fix lhs* rhs* body)
        (make-fix lhs* ($map/stx E rhs*) (E body)))
@@ -3166,24 +3189,7 @@
 		   (cond ((symbol? where)
 			  ;;Single  initialisation assignment  of top  level binding.
 			  ;;This binding has no other assignment, and this assignment
-			  ;;is the  operation that initialises it.   For example, the
-			  ;;letrec optimiser can generate  code like this for binding
-			  ;;defined by a LIBRARY-LETREC* form:
-			  ;;
-			  ;;   (bind ((a (constant '#!void)))
-			  ;;     (assign a ?rhs)
-			  ;;     a)
-			  ;;
-			  ;;and it must become:
-			  ;;
-			  ;;   (bind ((a (constant '#!void)))
-			  ;;     (funcall (primref $init-symbol-value!)
-			  ;;              (constant a.loc)
-			  ;;              ?rhs)
-			  ;;     (funcall (primref $symbol-value) (constant a.loc)))
-			  ;;
-			  ;;where A.LOC is  the loc gensym.  Notice that  not all the
-			  ;;LIBRARY-LETREC* bindings are handled this way.
+			  ;;is the operation that initialises it.
 			  #;(fprintf (current-error-port) "assign init ~s\n" (prelex-name lhs))
 			  (make-funcall (mk-primref '$init-symbol-value!)
 					(list (make-constant where) (E rhs))))
@@ -3286,10 +3292,10 @@
     (if (null? lhs*)
 	body
       (make-bind lhs*
-		 (map (lambda (rhs)
-			(make-funcall (mk-primref 'vector) (list rhs)))
-		   rhs*)
-		 body)))
+	  (map (lambda (rhs)
+		 (make-funcall (mk-primref 'vector) (list rhs)))
+	    rhs*)
+	body)))
 
   #| end of module: rewrite-references-and-assignments |# )
 
