@@ -211,6 +211,22 @@
 	   (funcall (primref debug-call) (constant (#f . (list '1 '2)))
 		    (primref list) (constant 1) (constant 2)))
 
+    (doit* ((lambda (x y) (list x y)) '1 '2)
+	   (funcall (primref debug-call)
+	     (constant (#f . ((lambda (x y) (list x y)) '1 '2)))
+	     (lambda (x_0 y_0)
+	       (funcall (primref debug-call)
+		 (constant (#f . (list x y)))
+		 (primref list)
+		 x_0 y_0))
+	     (constant 1) (constant 2)))
+
+    (doit* ((lambda (x) x) '1)
+	   (funcall (primref debug-call)
+	     (constant (#f . ((lambda (x) x) '1)))
+	     (lambda (x_0) x_0)
+	     (constant 1)))
+
     (doit* (let ((x '1)
 		 (y '2))
 	     (list x y))
@@ -243,29 +259,49 @@
   (parametrise ((compiler.$generate-debug-calls #t))
 
     (doit* ,(%make-annotated-form '(list 1 2))
-	   (funcall (primref debug-call) (constant (("*string-input-port*" . 0) . (list 1 2)))
-		    (primref list) (constant 1) (constant 2)))
+	   (funcall (primref debug-call)
+	     (constant (("*string-input-port*" . 0) . (list 1 2)))
+	     (primref list)
+	     (constant 1) (constant 2)))
+
+    (doit* ,(%make-annotated-form '((lambda (x) x) 1))
+	   (funcall (primref debug-call)
+	     (constant (("*string-input-port*" . 0) . ((lambda (x) x) 1)))
+	     (lambda (x_0) x_0)
+	     (constant 1)))
 
     (doit* ,(%make-annotated-form '(let ((x '1)
                            		 (y '2))
                            	     (list x y)))
 	   (bind ((x_0 (constant 1))
 		  (y_0 (constant 2)))
-	     (funcall (primref debug-call) (constant (("*string-input-port*" . 21) . (list x y)))
-		      (primref list) x_0 y_0)))
+	     (funcall (primref debug-call)
+	       (constant (("*string-input-port*" . 21) . (list x y)))
+	       (primref list)
+	       x_0 y_0)))
 
     (doit* ,(%make-annotated-form '(let ((f (lambda (x) x)))
 				     (f '1)))
 	   (bind ((f_0 (lambda (x_0) x_0)))
-	     (funcall (primref debug-call) (constant (("*string-input-port*". 26) . (f '1)))
-		      f_0 (constant 1))))
+	     (funcall (primref debug-call)
+	       (constant (("*string-input-port*". 26) . (f '1)))
+	       f_0
+	       (constant 1))))
+
+    (doit* ,(%make-annotated-form '((let ((f (lambda (x) x)))
+				      f)
+				    1))
+	   (funcall (primref debug-call)
+	     (constant (("*string-input-port*" . 0) . ((let ((f (lambda (x) x))) f) 1)))
+	     (bind ((f_0 (lambda (x_0) x_0))) f_0)
+	     (constant 1)))
 
     #f)
 
   #t)
 
 
-(parametrise ((check-test-name		'recordisation))
+(parametrise ((check-test-name		'direct-calls-optimisation))
 
   (define (%optimize-direct-calls core-language-form)
     (let* ((D (compiler.$recordize core-language-form))
@@ -411,6 +447,25 @@
 	       (bind ((Y_0 t_0))
 		 (funcall (primref write) Y_0))
 	     (funcall (primref read)))))
+
+;;; --------------------------------------------------------------------
+;;; debugging calls
+
+  (parametrise ((compiler.$generate-debug-calls #t))
+
+    (doit* ,(%make-annotated-form '((lambda (x) x) '1))
+	   (bind ((x_0 (constant 1)))
+	     x_0))
+
+    (doit* ,(%make-annotated-form '((let ((f (lambda (y) y)))
+				      f)
+				    1))
+	   (bind ((f_0 (lambda (y_0) y_0)))
+	     (funcall (primref debug-call)
+	       (constant (("*string-input-port*" . 0) . ((let ((f (lambda (y) y))) f) 1)))
+	       f_0 (constant 1))))
+
+    #f)
 
   #t)
 

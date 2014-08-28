@@ -2701,11 +2701,94 @@
 	       (set-prelex-source-referenced?! t #t)
 	       (make-bind (list t) (list body) (mk t rand*))))))
 
-    (define (%attempt-integration/debug-call mk rator rand*)
-      (%attempt-integration (lambda (op^ rand*^)
-			      (mk rator (cons* ($car rand*) op^ rand*^)))
-			    ($cadr rand*)
-			    ($cddr rand*)))
+    (define (%attempt-integration/debug-call mk debug-call-rator rand*)
+      ;;Given the original application form in standard language:
+      ;;
+      ;;   (?func ?arg ...)
+      ;;
+      ;;if debugging mode is enabled, its recordisation is:
+      ;;
+      ;;   (funcall (primref debug-call)
+      ;;            ?annotation
+      ;;            ?rator ?rand ...)
+      ;;
+      ;;where: ?RATOR  is the recordised  version of  ?FUNC; ?RAND is  the recordised
+      ;;version of ?ARG; ?ANNOTATION is a debugging annotation:
+      ;;
+      ;;   (constant (?annotation-source . (?func ?arg ...)))
+      ;;
+      ;;in which ?ANNOTATION-SOURCE has one of the formats:
+      ;;
+      ;;   #f
+      ;;   (?port-identifier . ?first-character-offset)
+      ;;
+      ;;The introducion  of DEBUG-CALL is  performed no matter what  expression ?FUNC
+      ;;is.
+      ;;
+      ;;In this function call:  the argument MK is MAKE-FUNCALL or  a wrapper for it;
+      ;;DEBUG-CALL-RATOR is the operator of the debugging application form:
+      ;;
+      ;;   (primref debug-call)
+      ;;
+      ;;RAND* is the list of already  processed operands of the application form: the
+      ;;first operand is the annotation; the  second operand is the original operator
+      ;;expression; the other operands are the arguments for the original operator.
+      ;;
+      ;;As example of integration, the standard language form:
+      ;;
+      ;;   ((lambda (x) x) 1)
+      ;;
+      ;;is expanded into the core language form:
+      ;;
+      ;;   (annotated-call ?annotation-struct
+      ;;                   (annotated-case-lambda #'(lambda (x) x) ((x x)))
+      ;;                   (quote 1))
+      ;;
+      ;;which is recordised as:
+      ;;
+      ;;   (funcall (primref debug-call)
+      ;;            (constant (?annotation-source . ((lambda (x) x) '1)))
+      ;;            (lambda (x_0) x_0)
+      ;;            (constant 1))
+      ;;
+      ;;and integrated here as:
+      ;;
+      ;;   (bind ((x_0 (constant 1)))
+      ;;     x_0)
+      ;;
+      ;;where we can see  there is no more a function application.   In this case the
+      ;;argument MK is never used.
+      ;;
+      ;;Another example, the standard language form:
+      ;;
+      ;;   ((let ((f (lambda (y) y)))
+      ;;      f)
+      ;;    '1)
+      ;;
+      ;;is expanded and recordised into:
+      ;;
+      ;;   (funcall (primref debug-call)
+      ;;            (constant (?annotation-source . ((let ((f (lambda (x) x))) f) 1)))
+      ;;            (bind ((f_0 (lambda (x_0) x_0))) f_0)
+      ;;            (constant 1))
+      ;;
+      ;;and integrated as:
+      ;;
+      ;;   (bind ((f_0 (lambda (y_0) y_0)))
+      ;;     (funcall (primref debug-call)
+      ;;              (constant (?annotation-source . ((let ((f (lambda (y) y))) f) 1)))
+      ;;              f_0 (constant 1)))
+      ;;
+      ;;where we can  understand how the MK  wrapper we generate here is  used in the
+      ;;internal function call.
+      ;;
+      (let ((annotation ($car rand*))
+	    (orig-rator ($cadr rand*))
+	    (orig-rand* ($cddr rand*)))
+	(%attempt-integration (lambda (op^ rand*^)
+				(mk debug-call-rator (cons* annotation op^ rand*^)))
+			      orig-rator
+			      orig-rand*)))
 
     #| end of module: %attempt-integration |# )
 

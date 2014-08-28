@@ -6044,7 +6044,7 @@ Compiler passes
 
 * syslib compiler full::          The full transformation.
 * syslib compiler recordize::     Scheme code to nested structs.
-* syslib compiler direct calls::  Optimisation for direct calls.
+* syslib compiler dircalls::      Optimisation for direct calls.
 * syslib compiler letrec::        Optimisation of @func{letrec} and
                                   @func{letrec*} forms.
 * syslib compiler optimisation::  Source optimisation.
@@ -6335,6 +6335,7 @@ recordised.  See below for details.
 @menu
 * syslib compiler recordize specials::  Special lexical primitives.
 * syslib compiler recordize examples::  Recordisation examples.
+* syslib compiler recordize debug::     Introduction of debug calls.
 @end menu
 
 @c page
@@ -6420,7 +6421,101 @@ where the symbols @code{a-const}, @code{a-thunk}, @code{a-func} are the
 location gensyms of the imported bindings.
 
 @c page
-@node syslib compiler direct calls
+@node syslib compiler recordize debug
+@subsubsection Introduction of debug calls
+
+
+Whenever debugging mode is enabled, application forms like:
+
+@example
+(@meta{func} @meta{arg} ...)
+@end example
+
+@noindent
+are expanded and recordised into:
+
+@example
+(funcall (primref debug-call)
+         @meta{annotation}
+         @meta{rator} @meta{rand} ...)
+@end example
+
+@noindent
+where: @meta{rator} is the recordised version of @meta{func};
+@meta{rand} is the recordised version of @meta{arg}; @meta{annotation}
+is a debugging annotation:
+
+@example
+(constant (@meta{annotation-source} . (@meta{func} @meta{arg} ...)))
+@end example
+
+@noindent
+in which @meta{annotation-source} has one of the formats:
+
+@example
+#f
+(@meta{port-identifier} . @meta{first-character-offset})
+@end example
+
+@noindent
+the introducion of @func{debug-call} is performed no matter what
+expression @meta{func} is.
+
+@c ------------------------------------------------------------
+
+@subsubheading Example: @func{lambda} application
+
+The standard language form:
+
+@example
+((lambda (x) x) 1)
+@end example
+
+@noindent
+is expanded into the core language form:
+
+@example
+(annotated-call @meta{annotation-struct}
+                (annotated-case-lambda #'(lambda (x) x)
+                                       ((x x)))
+                (quote 1))
+@end example
+
+@noindent
+which is recordised as:
+
+@example
+(funcall (primref debug-call)
+         (constant (@meta{annotation-source} . ((lambda (x) x) '1)))
+         (lambda (x_0) x_0)
+         (constant 1))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Example: @func{let} application
+
+The standard language form:
+
+@example
+((let ((f (lambda (y) y)))
+   f)
+  1)
+@end example
+
+@noindent
+is expanded and recordised into:
+
+@example
+(funcall (primref debug-call)
+         (constant (@meta{annotation-source}
+                    . ((let ((f (lambda (x) x))) f) 1)))
+         (bind ((f_0 (lambda (x_0) x_0))) f_0)
+         (constant 1))
+@end example
+
+@c page
+@node syslib compiler dircalls
 @subsection Optimisation for direct calls
 
 
@@ -6432,8 +6527,19 @@ Inspect application forms:
 @end example
 
 @noindent
-and attempts to integrate the @meta{operator} when possible.
+and attempt to integrate the @meta{operator} when possible.
 @end defun
+
+@menu
+* syslib compiler dircalls lambda::  Examples of @code{clambda} integration.
+* syslib compiler dircalls let::     Examples of bindings integration.
+* syslib compiler dircalls cond::    Example: @func{cond} syntaxes.
+* syslib compiler dircalls debug::   Examples of @func{debug-call} integration.
+@end menu
+
+@c page
+@node syslib compiler dircalls lambda
+@subsubsection Examples of @code{clambda} integration
 
 
 By definition, a ``direct closure application'' like:
@@ -6472,6 +6578,11 @@ the integration yields:
 @noindent
 and the clause with two arguments is just discarded and never compiled.
 
+@c page
+@node syslib compiler dircalls let
+@subsubsection Examples of bindings integration
+
+
 There are other integration possibilities when the operator of an
 application form is a complex expression:
 
@@ -6489,9 +6600,10 @@ application form is a complex expression:
        (?body ?rand ...))
 @end example
 
-@c ------------------------------------------------------------
+@c page
+@node syslib compiler dircalls cond
+@subsubsection Example: @func{cond} syntaxes
 
-@subsubheading Example: @func{cond} syntaxes
 
 @func{cond} syntaxes are expanded as follows:
 
@@ -6522,6 +6634,82 @@ which contains a direct call, which will be optimised to:
       (let ((Y t)) (that Y))
     (those)))
 @end example
+
+@c page
+@node syslib compiler dircalls debug
+@subsubsection Examples of @func{debug-call} integration
+
+
+As example of integration, the standard language form:
+
+@example
+((lambda (x) x) 1)
+@end example
+
+@noindent
+is expanded into the core language form:
+
+@example
+(annotated-call ?annotation-struct
+                (annotated-case-lambda #'(lambda (x) x)
+                                       ((x x)))
+                (quote 1))
+@end example
+
+@noindent
+which is recordised as:
+
+@example
+(funcall (primref debug-call)
+         (constant (@meta{annotation-source} . ((lambda (x) x) '1)))
+         (lambda (x_0) x_0)
+         (constant 1))
+@end example
+
+@noindent
+and integrated as:
+
+@example
+(bind ((x_0 (constant 1)))
+  x_0)
+@end example
+
+@noindent
+where we can see there is no more a function application.
+
+Another example, the standard language form:
+
+@example
+((let ((f (lambda (y) y)))
+   f)
+ '1)
+@end example
+
+@noindent
+is expanded and recordised into:
+
+@example
+(funcall (primref debug-call)
+         (constant (@meta{annotation-source}
+                    . ((let ((f (lambda (x) x))) f) 1)))
+         (bind ((f_0 (lambda (x_0) x_0))) f_0)
+         (constant 1))
+@end example
+
+@noindent
+and integrated as:
+
+@example
+(bind ((f_0 (lambda (y_0) y_0)))
+  (funcall (primref debug-call)
+           (constant (@meta{annotation-source}
+                      . ((let ((f (lambda (y) y))) f) 1)))
+           f_0
+           (constant 1)))
+@end example
+
+@noindent
+where we can see the @func{debug-call} moved into the body.
 
 @c page
 @node syslib compiler letrec
