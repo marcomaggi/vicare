@@ -186,23 +186,6 @@
 
 ;;; --------------------------------------------------------------------
 
-(case-define* make-prelex-for-tmp-binding
-  ;;Build and return a unique PRELEX struct meant to be used for a compiler-generated
-  ;;binding, which  will be referenced but  not assigned.  Since we  know the binding
-  ;;will be  referenced (otherwise the compiler  would not generate it):  we mark the
-  ;;PRELEX as source referenced.
-  ;;
-  (()
-   (receive-and-return (tmp)
-       (make-prelex (gensym "tmp"))
-     (set-prelex-source-referenced?! tmp #t)))
-  (({prel prelex?})
-   ;;The  init value  of the  binding will  be, in  some way,  related to  the PRELEX
-   ;;argument PREL; so we reuse the name of PREL as name of the returned PRELEX.
-   (receive-and-return (tmp)
-       (make-prelex (prelex-name prel))
-     (set-prelex-source-referenced?! tmp #t))))
-
 (module (%make-void-constants)
   ;;Build and  return a  list of  CONSTANT structs  representing #<void>  values, one
   ;;struct  for each  item in  LHS*.  They  are used,  for example,  to generate  the

@@ -818,6 +818,25 @@
   (define ($set-prelex-source-referenced?! prel bool)
     ($set-prelex-source-reference-count! prel (if bool 1 0))))
 
+(case-define* make-prelex-for-tmp-binding
+  ;;Build and return a unique PRELEX struct meant to be used for a compiler-generated
+  ;;binding, which  will be referenced but  not assigned.  Since we  know the binding
+  ;;will be  referenced (otherwise the compiler  would not generate it):  we mark the
+  ;;PRELEX as source referenced.
+  ;;
+  (()
+   (receive-and-return (tmp)
+       (make-prelex (gensym "tmp"))
+     (set-prelex-source-referenced?! tmp #t)))
+  (({prel prelex?})
+   ;;The  init value  of the  binding will  be, in  some way,  related to  the PRELEX
+   ;;argument PREL; so we reuse the name of PREL as name of the returned PRELEX.
+   (receive-and-return (tmp)
+       (make-prelex (prelex-name prel))
+     (set-prelex-source-referenced?! tmp #t))))
+
+;;; --------------------------------------------------------------------
+
 ;;An  instance of  this type  represents a  SET!  form  in which  the left-hand  side
 ;;references a lexical binding represented by a struct instance of type PRELEX.
 ;;
@@ -3069,7 +3088,8 @@
   ;;       ($vector-set! x 0 3)
   ;;       (list ($vector-ref x 0) y)))
   ;;
-  (define who 'rewrite-references-and-assignments)
+  (define-fluid-override __who__
+    (identifier-syntax 'rewrite-references-and-assignments))
 
   (define (rewrite-references-and-assignments x)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
@@ -3105,7 +3125,8 @@
        x)
 
       ((bind lhs* rhs* body)
-       (let-values (((lhs* a-lhs* a-rhs*) (%fix-lhs* lhs*)))
+       (receive (lhs* a-lhs* a-rhs*)
+	   (%fix-lhs* lhs*)
          (make-bind lhs* ($map/stx E rhs*)
 		    (%bind-assigned a-lhs* a-rhs* (E body)))))
 
@@ -3119,18 +3140,18 @@
        (make-seq (E e0) (E e1)))
 
       ((clambda label clause* cp free name)
-       (make-clambda label
-		     (map (lambda (cls)
-			    (struct-case cls
-			      ((clambda-case info body)
-			       (struct-case info
-				 ((case-info label fml* proper)
-				  (let-values (((fml* a-lhs* a-rhs*) (%fix-lhs* fml*)))
-				    (make-clambda-case
-				     (make-case-info label fml* proper)
-				     (%bind-assigned a-lhs* a-rhs* (E body)))))))))
-		       clause*)
-		     cp free name))
+       (let ((clause*^ ($map/stx (lambda (cls)
+				   (struct-case cls
+				     ((clambda-case info body)
+				      (struct-case info
+					((case-info label fml* proper)
+					 (receive (fml* a-lhs* a-rhs*)
+					     (%fix-lhs* fml*)
+					   (make-clambda-case
+					    (make-case-info label fml* proper)
+					    (%bind-assigned a-lhs* a-rhs* (E body)))))))))
+			 clause*)))
+	 (make-clambda label clause*^ cp free name)))
 
       ((forcall op rand*)
        (make-forcall op ($map/stx E rand*)))
@@ -3174,14 +3195,14 @@
 			  (make-funcall (mk-primref '$vector-set!)
 					(list lhs (make-constant 0) (E rhs)))))))
 	     (else
-	      (error who "not assigned" lhs x))))
+	      (error __who__ "not assigned" lhs x))))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
   (define (%fix-lhs* lhs*)
-    ;;LHS*  is a  list  of struct  instances of  type  PRELEX representing  bindings.
-    ;;Return 3 values:
+    ;;Recursive  function.   LHS* is  a  list  of  struct  instances of  type  PRELEX
+    ;;representing bindings.  Return 3 values:
     ;;
     ;;1. A list  of struct instances of  type PRELEX representing the  bindings to be
     ;;created to hold the right-hand side values.
@@ -3215,20 +3236,16 @@
     ;;
     (if (null? lhs*)
 	(values '() '() '())
-      (let ((x ($car lhs*)))
+      (let ((prel ($car lhs*)))
 	(receive (lhs* a-lhs* a-rhs*)
 	    (%fix-lhs* ($cdr lhs*))
-	  (if (and (prelex-source-assigned? x)
-		   (not (prelex-global-location x)))
-	      ;;Here we  always use the same  PRELEX lexical name because  it is used
-	      ;;only for debugging purposes; what matters  is that it is a new PRELEX
-	      ;;struct every time.
-	      (let ((t (make-prelex 'assignment-tmp)))
-		(set-prelex-source-referenced?! t #t)
-		(values (cons t lhs*)
-			(cons x a-lhs*)
-			(cons t a-rhs*)))
-	    (values (cons x lhs*) a-lhs* a-rhs*))))))
+	  (if (and (prelex-source-assigned? prel)
+		   (not (prelex-global-location prel)))
+	      (let ((tmp (make-prelex-for-tmp-binding prel)))
+		(values (cons tmp  lhs*)
+			(cons prel a-lhs*)
+			(cons tmp  a-rhs*)))
+	    (values (cons prel lhs*) a-lhs* a-rhs*))))))
 
   (define (%bind-assigned lhs* rhs* body)
     ;;LHS* must be a list of  struct instances of type PRELEX representing read-write

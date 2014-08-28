@@ -1515,10 +1515,36 @@
        ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
        ;;test fails.
        (doit ,(%expand (quasiquote ?standard-language-form))
-	     ?expected-result/waddell))
+	     ?expected-result))
       ))
 
 ;;; --------------------------------------------------------------------
+;;; read-write bindings
+
+  (doit* (let ((a '1))
+	   (set! a '2)
+	   a)
+	 (bind ((a_0 (constant 1)))
+	   (bind ((a_1 (funcall (primref vector) a_0)))
+	     (seq
+	       (funcall (primref $vector-set!) a_1 (constant 0) (constant 2))
+	       (funcall (primref $vector-ref) a_1  (constant 0))))))
+
+  (doit* (let ((a '1)
+	       (b '2))
+	   (set! a '3)
+	   (set! b '4)
+	   (list a b))
+	 (bind ((a_0 (constant 1))
+		(b_0 (constant 2)))
+	   (bind ((a_1 (funcall (primref vector) a_0))
+		  (b_1 (funcall (primref vector) b_0)))
+	     (seq
+	       (funcall (primref $vector-set!) a_1 (constant 0) (constant 3))
+	       (funcall (primref $vector-set!) b_1 (constant 0) (constant 4))
+	       (funcall (primref list)
+		 (funcall (primref $vector-ref) a_1 (constant 0))
+		 (funcall (primref $vector-ref) b_1 (constant 0)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; libraries
@@ -1540,20 +1566,21 @@
 	      (c_0 (lambda () (funcall (primref read)))))
 	  (constant ,(void))))
 
-  #;(check
+  (check
       (let* ((form1 '(library (rewrite-references-and-assignments-demo-2)
-		       (export b)
+		       (export a b)
 		       (import (rnrs)
-			 (vicare containers stacks))
+			 (libtest compiler-internals))
 		       (define a 1)
 		       (define (b)
-			 1)))
+			 (a-func 2 a))))
 	     (form2 (%expand-library form1)))
 	(%rewrite-references-and-assignments form2))
-    => `(fix ((a_0 (lambda () (constant 1)))
-	      (b_0 (lambda () (seq (funcall a_0) (constant 2))))
-	      (c_0 (lambda () (seq (funcall b_0) (constant 3)))))
-	  (constant ,(void))))
+    => '(bind ((a_0 (constant 1)))
+	  (fix ((b_0 (lambda () (funcall (funcall (primref top-level-value)
+				      (constant a-func))
+			     (constant 2) (constant 1)))))
+	    (constant #!void))))
 
   #f)
 
