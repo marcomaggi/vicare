@@ -1108,7 +1108,6 @@
 	    (bind ((b_0 (constant 2)))
 	      (funcall (primref list) a_0 b_0)))))
 
-
 ;;; --------------------------------------------------------------------
 ;;; multiple lambda RHS expressions
 
@@ -1232,6 +1231,40 @@
 ;;; --------------------------------------------------------------------
 ;;; misc RHS expressions
 
+  ;;Weird case number 1.
+  (doit (letrec* ((b (lambda () a))
+		  (a (b)))
+	  '#!void)
+	(waddell
+	 (bind ((a_0 (constant #!void)))
+	   (fix ((b_0 (lambda () a_0)))
+	     (seq
+	       (assign a_0 (funcall b_0))
+	       (constant #!void)))))
+	(scc
+	 (bind ((a_0 (constant #!void)))
+	   (fix ((b_0 (lambda () a_0)))
+	     (seq
+	       (assign a_0 (funcall b_0))
+	       (constant #!void))))))
+
+  ;;Weird case number 2.
+  (doit (letrec* ((b (lambda () ((primitive list) a)))
+		  (a (b)))
+	  '#!void)
+	(waddell
+	 (bind ((a_0 (constant #!void)))
+	   (fix ((b_0 (lambda () (funcall (primref list) a_0))))
+	     (seq
+	       (assign a_0 (funcall b_0))
+	       (constant #!void)))))
+	(scc
+	 (bind ((a_0 (constant #!void)))
+	   (fix ((b_0 (lambda () (funcall (primref list) a_0))))
+	     (seq
+	       (assign a_0 (funcall b_0))
+	       (constant #!void))))))
+
   ;;With waddell: the binding C is not "simple"  because it is assigned in the RHS of
   ;;D.
   ;;
@@ -1269,7 +1302,6 @@
 			      (assign c_0 (constant 789))
 			      (constant 9))))
 		  a_0))))))
-
 
   ;;The binding  A is  referenced in  a RHS, so  it cannot  be "simple"  according to
   ;;waddell.
@@ -1572,6 +1604,18 @@
       ))
 
 ;;; --------------------------------------------------------------------
+;;; read-only bindings
+
+  ;;Originally read-only  bindings that are  transformed into read-write  bindings by
+  ;;the SCC  letrec optimiser, but  then retransformed  into read-only by  the source
+  ;;optimiser.
+  (doit (letrec* ((b (lambda () a))
+		  (a (b)))
+	  '#!void)
+	(bind ((a_0 (constant #!void)))
+	  (constant #!void)))
+
+;;; --------------------------------------------------------------------
 ;;; read-write bindings
 
   (doit* (let ((a '1))
@@ -1581,7 +1625,7 @@
 	   (bind ((a_1 (funcall (primref vector) a_0)))
 	     (seq
 	       (funcall (primref $vector-set!) a_1 (constant 0) (constant 2))
-	       (funcall (primref $vector-ref) a_1  (constant 0))))))
+	       (funcall (primref $vector-ref)  a_1 (constant 0))))))
 
   (doit* (let ((a '1)
 	       (b '2))
@@ -1598,6 +1642,75 @@
 	       (funcall (primref list)
 		 (funcall (primref $vector-ref) a_1 (constant 0))
 		 (funcall (primref $vector-ref) b_1 (constant 0)))))))
+
+;;; --------------------------------------------------------------------
+;;; LIBRARY-LETREC* forms
+
+  ;;Simple unassigned bindings.
+  (doit (library-letrec* ((a.lex a.loc '1)
+			  (b.lex b.loc '2))
+	  ((primitive display) a.lex b.lex))
+	(bind ((a.lex_0 (constant 1)))
+	  (bind ((b.lex_0 (constant 2)))
+	    (funcall (primref display) (constant 1) (constant 2)))))
+
+  ;;Simple assigned bindings.
+  (doit (library-letrec* ((a.lex a.loc '1)
+			  (b.lex b.loc '2))
+	  (begin
+	    (set! a.lex '11)
+	    (set! b.lex '22)
+	    ((primitive display) a.lex b.lex)))
+	(bind ((a.lex_0 (constant 1)))
+	  (bind ((b.lex_0 (constant 2)))
+	    (seq
+	      (funcall (primref $set-symbol-value!)
+		(constant a.loc)
+		(constant 11))
+	      (funcall (primref $set-symbol-value!)
+		(constant b.loc)
+		(constant 22))
+	      (funcall (primref display)
+		(funcall (primref $symbol-value) (constant a.loc))
+		(funcall (primref $symbol-value) (constant b.loc)))))))
+
+  ;;Recursive top level binding with single init assignment.
+  (doit (library-letrec* ((b.lex b.loc (lambda () a.lex))
+			  (a.lex a.loc (b.lex)))
+	  '#!void)
+	(bind ((a.lex_0 (constant #!void)))
+	  (fix ((b.lex_0 (lambda ()
+			   (funcall (primref $symbol-value)
+			     (constant a.loc)))))
+	    (constant #!void))))
+
+  ;;Recursive top level binding with assignment.
+  (doit (library-letrec* ((a.lex a.loc (lambda () a.lex))
+			  (b.lex b.loc (lambda () (set! a.lex '123))))
+	  '#!void)
+	(bind ((a.lex_0 (constant #!void)))
+	  (seq
+	    (funcall (primref $set-symbol-value!)
+	      (constant a.loc)
+	      (lambda ()
+		(funcall (primref $symbol-value)
+		  (constant a.loc))))
+	    (fix ((b.lex_0 (lambda ()
+			     (seq
+			       (funcall (primref $set-symbol-value!)
+				 (constant a.loc)
+				 (constant 123))
+			       (constant #!void)))))
+	      (constant #!void)))))
+
+  ;;All bindings in FIX.
+  (doit (library-letrec*
+	    ((a.lex a.loc (lambda () '1))
+	     (b.lex a.loc (lambda () '2)))
+	  ((primitive display) (a.lex)))
+	(fix ((a.lex_0 (lambda () (constant 1)))
+	      (b.lex_0 (lambda () (constant 2))))
+	  (funcall (primref display) (constant 1))))
 
 ;;; --------------------------------------------------------------------
 ;;; libraries

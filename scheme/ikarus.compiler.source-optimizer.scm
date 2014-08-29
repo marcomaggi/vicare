@@ -410,14 +410,13 @@
     #| end of module: E-conditional |# )
 
   (define (E-assign lhs rhs env ec sc)
-    ;;Process  a  struct  instance  of type  ASSIGN.   Return  a  struct
-    ;;instance  representing  recordized  code;   due  to  the  possible
-    ;;optimizations: the type of the returned instance is not known.
+    ;;Process  a  struct   instance  of  type  ASSIGN.   Return   a  struct  instance
+    ;;representing recordized  code; due to  the possible optimizations: the  type of
+    ;;the returned instance is not known.
     ;;
-    ;;If the binding represented by LHS has been created but it is never
-    ;;referenced in its region: assigning it is useless, because the new
-    ;;value  is never  used; so  we just  include the  RHS for  its side
-    ;;effects.  For example:
+    ;;If the binding represented  by LHS has been created but  it is never referenced
+    ;;in its region: assigning it is useless, because the new value is never used; so
+    ;;we just include the RHS for its side effects.  For example:
     ;;
     ;;   (let ((?lhs (some-value)))
     ;;     (set! ?lhs ?rhs)
@@ -429,14 +428,47 @@
     ;;     ?rhs
     ;;     #t)
     ;;
+    ;;NOTE Beware the following weird case; let's take this core language form:
+    ;;
+    ;;   (letrec* ((b (lambda () a))
+    ;;             (a (b)))
+    ;;     '#!void)
+    ;;
+    ;;both the  bindings are unassigned  in this form,  but the SCC  letrec optimiser
+    ;;transforms them as follows:
+    ;;
+    ;;   (bind ((a_0 (constant #!void)))
+    ;;     (fix ((b_0 (lambda () a_0)))
+    ;;       (seq
+    ;;         (assign a_0 (funcall b_0))
+    ;;         (constant #!void))))
+    ;;
+    ;;note the  ASSIGN struct; in  this very function the  call to B_0  is integrated
+    ;;resulting into:
+    ;;
+    ;;   (bind ((a_0 (constant #!void)))
+    ;;     (fix ((b_0 (lambda () a_0)))
+    ;;       (seq
+    ;;         (assign a_0 a_0)
+    ;;         (constant #!void))))
+    ;;
+    ;;which means that the LHS and RHS of  such assign are EQ?  to each other.  We do
+    ;;not want to generate such code, so below we detect it and substitute the ASSIGN
+    ;;with a void constant.
+    ;;
     (make-seq-discarding-useless (let ((lhs.copy (%lookup lhs env)))
 				   (if (not (prelex-source-referenced? lhs))
 				       (E rhs 'e env ec sc)
 				     (begin
 				       (decrement sc 1)
-				       (set-prelex-residual-assigned?! lhs.copy (prelex-source-assigned? lhs.copy))
-				       (make-assign lhs.copy (E rhs 'v env ec sc)))))
-				 (make-constant (void))))
+				       (let ((rhs^ (E rhs 'v env ec sc)))
+					 (if (eq? lhs.copy rhs^)
+					     ;;Weird case discussed above.
+					     VOID-CONSTANT
+					   (begin
+					     (set-prelex-residual-assigned?! lhs.copy (prelex-source-assigned? lhs.copy))
+					     (make-assign lhs.copy rhs^)))))))
+				 VOID-CONSTANT))
 
   (define (E-funcall rator rand* env ctxt ec sc)
     ;;Process a  struct instance of  type FUNCALL, *not*  representing a
@@ -558,7 +590,7 @@
        ;;       2))
        ;;
        (prelex-decr-source-reference-count! x)
-       (make-constant (void)))
+       VOID-CONSTANT)
       (else
        (let* ((x.copy (%lookup x env))
 	      (opnd   (prelex-operand x.copy)))
@@ -1759,7 +1791,7 @@
 	   ((p)
 	    (make-constant #t))
 	   ((e)
-	    (make-constant (void)))
+	    VOID-CONSTANT)
 	   ((app)
 	    ;;This is the case:
 	    ;;
@@ -1798,7 +1830,7 @@
 	 (case-context ctxt
 	   ((v)		rhs)
 	   ((p)		(make-constant #t))
-	   ((e)		(make-constant (void)))
+	   ((e)		VOID-CONSTANT)
 	   ((app)	(fold-prim primsym ctxt ec sc))))
 
 	(else
@@ -2087,7 +2119,7 @@
 	   ;;assigned; so we include it in the output.
 	   (set-operand-residualize-for-effect! rand #t)
 	   (values (cons var lhs*)
-		   (cons (make-constant (void))
+		   (cons VOID-CONSTANT
 			 rhs*)))
 	  (else
 	   ;;After optimization, this variable is neither referenced not
@@ -2158,7 +2190,7 @@
     ;;
     (case-context (app-ctxt appctxt)
       ((e)
-       (make-constant (void)))
+       VOID-CONSTANT)
       ((p)
        (cond ((%info-result-true?  info)	(make-constant #t))
 	     ((%info-result-false? info)	(make-constant #f))

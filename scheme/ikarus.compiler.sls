@@ -1186,6 +1186,9 @@
 		;quoted lists...
    ))
 
+(define-constant VOID-CONSTANT
+  (make-constant (void)))
+
 
 ;;;; struct types used in middle-level code representation
 
@@ -3037,34 +3040,6 @@
   ;;recordized  code in  which referenced  and  assigned bindings  have already  been
   ;;marked appropriately in the PRELEX structures.
   ;;
-  ;;* Top  level bindings  (defined by  the core  language form  LIBRARY-LETREC*) are
-  ;;implemented with loc gensyms holding the  value in an internal field.  References
-  ;;and assignments to  such bindings must be substituted  with appropriate primitive
-  ;;function calls.  For example, the letrec  optimiser might generate code like this
-  ;;for binding defined by a LIBRARY-LETREC* form:
-  ;;
-  ;;   (bind ((a (constant '#!void)))
-  ;;     (assign a ?rhs)
-  ;;     a)
-  ;;
-  ;;and it must become:
-  ;;
-  ;;   (bind ((a (constant '#!void)))
-  ;;     (funcall (primref $init-symbol-value!)
-  ;;              (constant a.loc)
-  ;;              ?rhs)
-  ;;     (funcall (primref $symbol-value) (constant a.loc)))
-  ;;
-  ;;where A.LOC is the loc gensym.   Notice that not all the LIBRARY-LETREC* bindings
-  ;;are  handled  this way,  some  of  them are  defined  as  follows by  the  letrec
-  ;;optimiser:
-  ;;
-  ;;   (bind ((a ?rhs))
-  ;;     ?body)
-  ;;
-  ;;and correct  handling of  references and  assignments through  the loc  gensym is
-  ;;introduced in a later compiler pass.
-  ;;
   ;;* Read-only  lexical local bindings are  implemented with words allocated  on the
   ;;Scheme stack.
   ;;
@@ -3213,10 +3188,13 @@
 			 (else
 			  (%assigned-local-binding-assignment lhs (E rhs))))))
 	     (else
-	      (error __who__ "not assigned" lhs x))))
+	      (compile-time-error __who__
+		"internal error: assigned PRELEX has non-assigned state"
+		lhs x))))
 
       (else
-       (error __who__ "invalid expression" (unparse-recordized-code x)))))
+       (compile-time-error __who__
+	 "invalid recordised expression" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -6954,4 +6932,5 @@
 ;; eval: (put '$map/stx				'scheme-indent-function 1)
 ;; eval: (put '$for-each/stx			'scheme-indent-function 1)
 ;; eval: (put 'with-prelex-structs-in-plists	'scheme-indent-function 1)
+;; eval: (put 'compile-time-error		'scheme-indent-function 1)
 ;; End:
