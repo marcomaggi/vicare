@@ -6261,7 +6261,7 @@ References to top level bindings must be transformed into:
 @end example
 
 @noindent
-which extract the value from slot @code{value} of @meta{loc}.
+which extracts the value from slot @code{value} of @meta{loc}.
 
 @item
 Common assignments to top level bindings must be transformed into:
@@ -8041,6 +8041,96 @@ system $compiler}.
 Transform references and assignments for top level lexical bindings and
 unassigned local lexical bindings according to the implementation of
 such operations.
+
+Remembering that the actual value of a top level binding is stored in
+the @code{value} field of a loc gensym, this function performs the
+following transformations:
+
+@itemize
+@item
+References to top level bindings are transformed into:
+
+@example
+(funcall (primref $symbol-value) (constant @meta{loc}))
+@end example
+
+@noindent
+which extracts the value from slot @code{value} of the loc gensym
+@meta{loc}.
+
+@item
+Common assignments to top level bindings are transformed into:
+
+@example
+(funcall (primref $set-symbol-value!)
+         (constant @meta{loc})
+         @meta{rhs})
+@end example
+
+@noindent
+which stores a new value in the slot @code{value} of the log gensym
+@meta{loc}.
+
+@item
+Single assignments to top level bindings which also serve as binding
+initialisations are transformed into:
+
+@example
+(funcall (primref $init-symbol-value!)
+         (constant @meta{loc})
+         @meta{rhs})
+@end example
+
+@noindent
+which stores a new value in the slot @code{value} of @meta{loc} and,
+only if the value is recognised at run--time as being closure object,
+also stores value in the slot @code{proc}.
+
+@item
+Single assignments to top level bindings which also serve as binding
+initialisations must be transformed into:
+
+@example
+(funcall (primref $init-symbol-value!)
+         (constant @meta{loc})
+         @meta{rhs})
+@end example
+
+@noindent
+which stores a new value in the slot @code{value} of @meta{loc} and,
+only if the value is recognised at run--time as being closure object,
+also stores value in the slot @code{proc}.
+
+@item
+Definitions of assigned local bindings are transformed as follows:
+
+@example
+(bind ((@meta{prel} @meta{init})) @meta{body})
+===> (bind ((@meta{tmp-prel} @meta{init}))
+       (bind ((@meta{prel} (funcall (primref vector)
+                              @meta{tmp-prel})))
+         @meta{body}))
+@end example
+
+@item
+References to assigned local bindings are transformed from standalone
+@objtype{prelex} structs to:
+
+@example
+(funcall (primref $vector-ref) @meta{prel} (constant 0))
+@end example
+
+@item
+Assignments to assigned local bindings are transformed as follows:
+
+@example
+(assign @meta{prel} @meta{rhs})
+=== (funcall (primref $vector-set!)
+             @meta{prel}
+             (constant 0)
+             @meta{rhs})
+@end example
+@end itemize
 @end defun
 
 @c page
