@@ -181,7 +181,13 @@
 		find-library-by-name)
 	  bootstrap.))
 
-(compiler.optimize-level 2)
+;;The optimisation level should already default to  2.  By commenting out this we let
+;;the user set it to 3, if he wants, at package configuration time with:
+;;
+;;   $ configure VFLAGS='-O3'
+;;
+;;(compiler.optimize-level 2)
+
 (compiler.$perform-tag-analysis #t)
 (pretty-width 160)
 ((pretty-format 'fix)
