@@ -1254,31 +1254,46 @@
 ;;; --------------------------------------------------------------------
 
  (define-primop top-level-value safe
-   ;;Expect the single argument  to be a loc gensym associated  to a binding; extract
-   ;;the value  from the slot  "value" of  the symbol object  and return it.   If the
-   ;;value is the unbound object: raise an exception.
+   ;;Expect the single argument to be a  loc gensym associated to a top level lexical
+   ;;binding; extract the value from the slot "value" of the symbol object and return
+   ;;it.  If the value is the unbound object: raise an exception.
    ;;
    ;;For a full  explanation of this operation: see the  description of the primitive
    ;;function TOP-LEVEL-VALUE.
    ;;
+   ;;NOTE For the common case in which  the argument is known, at compile-time, to be
+   ;;a symbol: this  primitive operation will *not* generate code  that validates the
+   ;;argument at run-time.
+   ;;
    ((V sym)
     (struct-case sym
       ((constant sym.val)
-       (if (symbol? sym.val)
-	   (with-tmp ((val (cogen-value-$symbol-value sym)))
-	     (interrupt-when
-	      (cogen-pred-$unbound-object? val))
-	     val)
-	 (interrupt)))
+       (cond ((symbol? sym.val)
+	      (with-tmp ((val (cogen-value-$symbol-value sym)))
+		;;Raise an exception if the slot "value" is set to the unbound object.
+		(interrupt-when
+		 (cogen-pred-$unbound-object? val))
+		val))
+	     ((option.strict-r6rs)
+	      ;;Report error at run-time.
+	      (interrupt))
+	     (else
+	      ;;Report error at compile-time.
+	      (compile-time-error 'top-level-value
+		"expected symbol as loc gensym argument" sym.val))))
       ((known sym.expr)
+       ;;The argument is an  expression whose return value type is  known.  Act as if
+       ;;sym is a CONSTANT.
        (cogen-value-top-level-value sym.expr))
       (else
-       ;;Here  SYM  is recordized  code  which,  when evaluated,  should
-       ;;return a symbol.
+       ;;Here SYM is  recordized code which, when evaluated, should  return a symbol;
+       ;;but here we do not know which value will be returned.
        (with-tmp ((sym^ (T sym)))
+	 ;;Test at run-time if it is a symbol.
 	 (interrupt-unless
 	  (cogen-pred-symbol? sym^))
 	 (with-tmp ((val (cogen-value-$symbol-value sym^)))
+	   ;;Raise an exception if the slot "value" is set to the unbound object.
 	   (interrupt-when
 	    (cogen-pred-$unbound-object? val))
 	   val)))))
@@ -1289,27 +1304,41 @@
     ;;
     (struct-case sym
       ((constant sym.val)
-       (if (symbol? sym.val)
-	   (with-tmp ((val (cogen-value-$symbol-value sym)))
-	     (interrupt-when
-	      (cogen-pred-$unbound-object? val)))
-	 (interrupt)))
+       (cond ((symbol? sym.val)
+	      (with-tmp ((val (cogen-value-$symbol-value sym)))
+		(interrupt-when
+		 (cogen-pred-$unbound-object? val))))
+	     ((option.strict-r6rs)
+	      ;;Report error at run-time.
+	      (interrupt))
+	     (else
+	      ;;Report error at compile-time.
+	      (compile-time-error 'top-level-value
+		"expected symbol as loc gensym argument" sym.val))))
       ((known sym.expr)
+       ;;The argument is an  expression whose return value type is  known.  Act as if
+       ;;sym is a CONSTANT.
        (cogen-effect-top-level-value sym.expr))
       (else
+       ;;Here SYM is  recordized code which, when evaluated, should  return a symbol;
+       ;;but here we do not know which value will be returned.
        (with-tmp ((sym^ (T sym)))
+	 ;;Test at run-time if it is a symbol.
 	 (interrupt-unless
 	  (cogen-pred-symbol? sym^))
 	 (with-tmp ((val (cogen-value-$symbol-value sym^)))
+	   ;;Raise an exception if the slot "value" is set to the unbound object.
 	   (interrupt-when
 	    (cogen-pred-$unbound-object? val))))))))
 
- (define-primop $init-symbol-function! unsafe
-   ((E sym v)
-    (with-tmp ((sym^ (T sym))
-	       (v^   (T v)))
-      (prm 'mset sym^ (K off-symbol-record-proc) v^)
-      (dirty-vector-set sym^))))
+ ;;Commented out because unused.
+ ;;
+ ;; (define-primop $init-symbol-function! unsafe
+ ;;   ((E sym v)
+ ;;    (with-tmp ((sym^ (T sym))
+ ;; 	       (v^   (T v)))
+ ;;      (prm 'mset sym^ (K off-symbol-record-proc) v^)
+ ;;      (dirty-vector-set sym^))))
 
  /section)
 

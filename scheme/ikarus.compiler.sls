@@ -128,7 +128,7 @@
     (ikarus.intel-assembler)
     (prefix (only (ikarus.options)
 		  strict-r6rs)
-	    options.))
+	    option.))
 
 
 ;;;; helper modules
@@ -513,6 +513,19 @@
 	((null? s2) s1)
 	(else
 	 (rem* s2 s1))))
+
+
+;;;; condition objects
+
+(define-condition-type &compile-time-error &assertion
+  make-compile-time-error compile-time-error?)
+
+(define (compile-time-error who message . irritants)
+  (raise
+   (condition (make-compile-time-error)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants))))
 
 
 (define current-core-eval
@@ -2324,7 +2337,7 @@
 		,guard-expr)
 	      ctxt)))
 	(else
-	 (if (options.strict-r6rs)
+	 (if (option.strict-r6rs)
 	     (mk-call (make-primref 'make-parameter) ($map/stx E rand*))
 	   (assertion-violation 'make-parameter
 	     "invalid number of operands to core language function integration"
