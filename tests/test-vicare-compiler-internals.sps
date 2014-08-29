@@ -35,6 +35,11 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler internals\n")
 
+(compiler.optimize-level 2)
+(compiler.$source-optimizer-passes-count 2)
+;;(compiler.$cp0-effort-limit 50)
+;;(compiler.$cp0-size-limit   8)
+
 
 ;;;; helpers
 
@@ -1606,14 +1611,13 @@
 ;;; --------------------------------------------------------------------
 ;;; read-only bindings
 
-  ;;Originally read-only  bindings that are  transformed into read-write  bindings by
-  ;;the SCC  letrec optimiser, but  then retransformed  into read-only by  the source
-  ;;optimiser.
+  ;;Weird case  number 1.   Originally read-only bindings  that are  transformed into
+  ;;read-write  bindings by  the SCC  letrec optimiser,  but then  retransformed into
+  ;;read-only by the source optimiser.
   (doit (letrec* ((b (lambda () a))
 		  (a (b)))
 	  '#!void)
-	(bind ((a_0 (constant #!void)))
-	  (constant #!void)))
+	(constant #!void))
 
 ;;; --------------------------------------------------------------------
 ;;; read-write bindings

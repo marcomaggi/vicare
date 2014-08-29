@@ -6186,51 +6186,473 @@ It is useful to inspect how the compiler handles specific code elements
 throughout different passes.
 
 @menu
-* syslib compiler topics topbind::  Handling of library top level
+* syslib compiler topics topbind::  Handling of lexical top level
                                     bindings.
+* syslib compiler topics locbind::  Handling of lexical local bindings.
 @end menu
 
 @c page
 @node syslib compiler topics topbind
-@subsubsection Handling of library top level bindings
+@subsubsection Handling of lexical top level bindings
 
+
+@subsubheading Core language representation
 
 Bindings defined by the core language form @func{library-letrec*} are
-named @dfn{top level bindings}.  Three operations are possible on top
-level bindings:
-
-@table @strong
-@item initialisation
-It is performed with the core language form:
+named @dfn{top level bindings}; they are akin to the C language ``global
+variables''.  The form @func{library-letrec*} has the format:
 
 @example
-($init-symbol-value! ?loc ?init-rhs)
+(library-letrec* ((@meta{lex} @meta{loc} @meta{init}) ...) @meta{body})
 @end example
 
-@item reference
-It is performed with the core language form:
+@noindent
+in which: @meta{lex} is a lexical gensym that uniquely identifies the
+binding in the core language form; @meta{loc} is a location gensym which
+will be used at run--time to hold the current value of the binding in
+its @code{value} slot; @meta{init} is the initialisation expression.
+
+References to top level bindings are represented by standalone
+@meta{lex} gensyms; assignments to top level bindings are represented by
+@func{set!} forms:
 
 @example
-($symbol-value ?loc)
+(set! @meta{lex} @meta{rhs})
 @end example
 
-@item assignment
-It is performed with the core language form:
+@noindent
+where the right--hand side expression @meta{rhs} will, at run--time,
+evaluate to the new binding's value.
+
+@c ------------------------------------------------------------
+
+@subsubheading Recordised language representation
+
+The @func{library-letrec*} form is recordised into a @objtype{rec*bind}
+form:
 
 @example
-($set-symbol-value! ?loc ?new-rhs)
+(rec*bind ((@meta{prel} @meta{init}) ...) @meta{body})
 @end example
-@end table
 
-@c So we can think of a library:
+@noindent
+in which @meta{prel} is a @objtype{prelex} struct holding both the
+@meta{lex} and @meta{loc} gensyms.  References to top level bindings are
+represented by standalone @objtype{prelex} structs; assignments to top
+level bindings are represented by @objtype{assign} structs:
 
-@c @example
-@c (library (the-lib)
-@c   (export a)
-@c   (import (rnrs))
-@c   (define a 1)
-@c   (display a))
-@c @end example
+@example
+(assign @meta{prel} @meta{rhs})
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Implementation of references and assignments
+
+Since the actual value of a top level binding is stored in the
+@code{value} field of a loc gensym:
+
+@itemize
+@item
+References to top level bindings must be transformed into:
+
+@example
+(funcall (primref $symbol-value) (constant @meta{loc}))
+@end example
+
+@noindent
+which extract the value from slot @code{value} of @meta{loc}.
+
+@item
+Common assignments to top level bindings must be transformed into:
+
+@example
+(funcall (primref $set-symbol-value!)
+         (constant @meta{loc})
+         @meta{rhs})
+@end example
+
+@noindent
+which stores a new value in the slot @code{value} of @meta{loc}.
+
+@item
+Single assignments to top level bindings which also serve as binding
+initialisations must be transformed into:
+
+@example
+(funcall (primref $init-symbol-value!)
+         (constant @meta{loc})
+         @meta{rhs})
+@end example
+
+@noindent
+which stores a new value in the slot @code{value} of @meta{loc} and,
+only if the value is recognised at run--time as being closure object,
+also stores value in the slot @code{proc}.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Results of optimising @objtype{rec*bind} forms
+
+A compiler pass takes care of performing ``@func{letrec} optimisation'':
+structs of type @objtype{rec*bind} are transformed into a nested
+hierarchy of @objtype{bind}, @objtype{fix} and @objtype{assign} forms.
+Different cases must be handled in different ways.
+
+@itemize
+@item
+Some non--recursive ``simple'' and unassigned bindings end up defined as
+follows:
+
+@example
+(bind ((@meta{prel} @meta{init}))
+  @meta{body})
+@end example
+
+@noindent
+the transformation of references is straightforward.  As example, let's
+consider:
+
+@example
+(library-letrec*
+    ((a.lex a.loc '1)
+     (b.lex b.loc '2))
+  ((primitive display) a.lex b.lex))
+@end example
+
+@noindent
+which is recordised and transformed into:
+
+@example
+(bind ((a.lex_0 (constant 1)))
+  (bind ((b.lex_0 (constant 2)))
+    (funcall (primref display) (constant 1) (constant 2))))
+@end example
+
+@noindent
+in which the references to bindings are integrated by the source
+optimiser.
+
+@item
+Some non--recursive ``simple'' and assigned bindings end up defined as
+follows:
+
+@example
+(bind ((@meta{prel} @meta{init}))
+  @meta{body})
+@end example
+
+@noindent
+the transformation of references and assignments is straightforward.  As
+example, let's consider:
+
+@example
+(library-letrec*
+    ((a.lex a.loc '1)
+     (b.lex b.loc '2))
+  (begin
+    (set! a.lex '11)
+    (set! b.lex '22)
+    ((primitive display) a.lex b.lex)))
+@end example
+
+@noindent
+which is recordised and transformed into:
+
+@example
+(bind ((a.lex_0 (constant 1)))
+  (bind ((b.lex_0 (constant 2)))
+    (seq
+      (funcall (primref $set-symbol-value!)
+               (constant a.loc)
+               (constant 11))
+      (funcall (primref $set-symbol-value!)
+               (constant b.loc)
+               (constant 22))
+      (funcall (primref display)
+               (funcall (primref $symbol-value)
+                        (constant a.loc))
+               (funcall (primref $symbol-value)
+                        (constant b.loc))))))
+@end example
+
+@item
+Some @strong{unassigned} top level bindings end up defined (roughly) as
+follows:
+
+@example
+(bind ((@meta{prel} (constant #<void>)))
+  (assign @meta{prel} @meta{init})
+  @meta{body})
+@end example
+
+@noindent
+this might happen when the initialisation expressions in the original
+@objtype{rec*bind} need to access the machine words in which the
+bindings' values are stored; so, at run--time, first we need to allocate
+the loc gensyms and then we can evaluate the initialisation expressions
+and store the resulting value in the gensym itself.
+
+In this special case, since the binding is unassigned in the original
+code, the @objtype{assign} struct is introduced by the compiler and it
+is the only assignment for the binding.  The compiler recognises this
+case and transforms:
+
+@example
+(assign @meta{prel} @meta{init})
+@end example
+
+@noindent
+into:
+
+@example
+(funcall (primref $init-symbol-value!)
+         (constant @meta{loc})
+         @meta{init})
+@end example
+
+@noindent
+in which @meta{loc} is the loc gensym of the binding.
+
+@item
+When top level bindings are unassigned and have initialisation
+expression being a @objtype{clambda} form: they end up being defined by
+a @objtype{fix} struct; the @func{letrec} optimiser takes care of
+recognising and handling such case.  As example:
+
+@example
+(library-letrec*
+    ((a.lex a.loc (lambda () '1))
+     (b.lex a.loc (lambda () '2)))
+  ((primitive display) (a.lex)))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(fix ((a.lex_0 (lambda () (constant 1)))
+      (b.lex_0 (lambda () (constant 2))))
+  (funcall (primref display) (constant 1)))
+@end example
+
+@noindent
+in which the call to @func{a.lex} is integrated by the source optimiser.
+@end itemize
+
+@c page
+@node syslib compiler topics locbind
+@subsubsection Handling of lexical local bindings
+
+
+Lexical local bindings are defined in the core language by the forms:
+@func{let}, @func{letrec}, @func{letrec*}, @func{lambda},
+@func{case-lambda}, @func{annotated-case-lambda}.  These forms have
+syntax:
+
+@example
+(let     ((@meta{lex} @meta{rhs}) ...) @meta{body})
+(letrec  ((@meta{lex} @meta{rhs}) ...) @meta{body})
+(letrec* ((@meta{lex} @meta{rhs}) ...) @meta{body})
+(case-lambda (@meta{formals} @meta{body}) ...)
+(annotated-case-lambda @meta{annotation} (@meta{formals} @meta{body}) ...)
+(lambda @meta{formals} @meta{body})
+@end example
+
+@noindent
+in which: @meta{lex} is a lexical gensym that uniquely identifies the
+binding in the core language form; @meta{rhs} is the initialisation
+expression; @meta{formals} is a proper or improper list of lex gensyms
+uniquely identifying arguments to function.
+
+References to local bindings are represented by standalone @meta{lex}
+gensyms; assignments to local bindings are represented by @func{set!}
+forms:
+
+@example
+(set! @meta{lex} @meta{rhs})
+@end example
+
+@noindent
+where the right--hand side expression @meta{rhs} will, at run--time,
+evaluate to the new binding's value.
+
+@c ------------------------------------------------------------
+
+@subsubheading Recordised language representation
+
+The @func{let}, @func{letrec} and @func{letrec*} forms are recordised
+into nested hierarchies of @objtype{bind}, @objtype{recbind} and
+@objtype{rec*bind} structs:
+
+@example
+(bind     ((@meta{prel} @meta{rhs}) ...) @meta{body})
+(recbind  ((@meta{prel} @meta{rhs}) ...) @meta{body})
+(rec*bind ((@meta{prel} @meta{rhs}) ...) @meta{body})
+@end example
+
+@noindent
+in which @meta{prel} is a @objtype{prelex} struct holding the @meta{lex}
+gensym.
+
+The @func{lambda}, @func{case-lambda} and @func{annotated-case-lambda}
+forms are recordised as @objtype{clambda} structs:
+
+@example
+(clambda (@meta{prel-formals} @meta{body}) ...)
+@end example
+
+@noindent
+in which @meta{prel-formals} is a a proper or improper list of
+@objtype{prel} structs representing arguments to each @objtype{clambda}
+clause.
+
+References to local bindings are represented by standalone
+@objtype{prelex} structs; assignments to local bindings are represented
+by @objtype{assign} structs:
+
+@example
+(assign @meta{prel} @meta{rhs})
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Implementation of references and assignments
+
+We distinguish between bindings that are only referenced (unassigned,
+read--only) and bindings that are also assigned (assigned, read--write).
+Example of code in which the binding @code{X} is only referenced:
+
+@example
+(let ((X 123)) (display X))
+@end example
+
+@noindent
+example of code in which the binding @code{X} is assigned and
+referenced:
+
+@example
+(let ((X 123)) (set! X 456) (display X))
+@end example
+
+The implementation technique for continuations used by @value{PRJNAME}
+mandates that: once an immediate Scheme object or reference to
+non--immediate Scheme object is stored in a machine word on the Scheme
+stack, such machine word @strong{must not be mutated}; this allows the
+run--time system to copy stack frames at will.  As a consequence the
+following implementation techniques for local bindings are adopted:
+
+@itemize
+@item
+The value of unassigned lexical local bindings is stored in words
+allocated on the Scheme stack, with no further troubles.
+
+@item
+The value of assigned lexical local bindings is stored in single--slot
+vectors providing mutable memory locations: a vector of one slot for
+each binding; a word allocated on the Scheme stack contains a reference
+to the single--slot vector.
+@end itemize
+
+References to unassigned bindings must be implemented as Scheme stack
+operations; references and assignments to assigned bindings must be
+substituted with appropriate vector operations.
+
+@c ------------------------------------------------------------
+
+@subsubheading Recordisation and transformation of unassigned bindings
+
+After the @func{letrec} optimiser has processed @objtype{recbind} and
+@objtype{rec*bind} forms, unassigned local bindings always end up
+defined as:
+
+@example
+(bind ((@meta{prel} @meta{rhs})) @meta{body})
+@end example
+
+@noindent
+and references are represented by standalone @objtype{prelex} structs.
+Whenever a @meta{rhs} expression is recognised to be of type
+@objtype{clambda}, the corresponding @objtype{bind} is transformed into:
+
+@example
+(fix ((@meta{prel} @meta{rhs})) @meta{body})
+@end example
+
+@noindent
+No further transformations are needed for recordised code.
+
+@c ------------------------------------------------------------
+
+@subsubheading Recordisation and transformation of assigned bindings
+
+After the @func{letrec} optimiser has processed @objtype{recbind} and
+@objtype{rec*bind} forms, assigned local bindings always end up defined
+as:
+
+@example
+(bind ((@meta{prel} @meta{rhs})) @meta{body})
+@end example
+
+@noindent
+references are represented by standalone @objtype{prelex} structs and
+assignments are represented by @objtype{assign} structs.
+
+@quotation
+@strong{NOTE} No matter if a @meta{rhs} expression is of type
+@objtype{clambda}: its associated @objtype{bind} struct is @strong{not}
+transformed into a @objtype{fix} struct; only unassigned
+@objtype{clambda} bindings can be defined by a @objtype{fix} struct.
+@end quotation
+
+Definitions, references and assignments are transformed by introducing
+the appropriate vector operations; such operation are equivalent to the
+following:
+
+@example
+(let ((x 123))
+  (set! x 456)
+  x)
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(let ((t 123))
+  (let ((x (vector t)))
+    ($vector-set! x 0 456)
+    ($vector-ref  x 0)))
+@end example
+
+@noindent
+where the temporary binding @code{t} is generated by the compiler; the
+code always only access the first and single slot of the vector.  Using
+recordised code:
+
+@example
+(bind ((x_0 123))
+  (seq
+    (assign x_0 456)
+    x))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(bind ((x_0 123))
+  (bind ((x_1 (funcall (primref vector) x_0)))
+    (seq
+      (funcall (primref $vector-set!)
+               x_1
+               (constant 0)
+               (constant 456))
+      (funcall (primref $vector-ref)
+               x_1
+               (constant 0)))))
+@end example
 
 @c page
 @node syslib compiler unparse
@@ -6290,10 +6712,12 @@ changed; they must be performed in the specified order.  The passes
 functions are to be considered unsafe: if the input is invalid, the
 behaviour is undefined.
 
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
 
 @defun $compile-core-expr->code @var{core-language-sexp}
 @end defun
-
 
 @c page
 @node syslib compiler recordize
@@ -6305,6 +6729,9 @@ The core language forms produced by the expander are converted to
 code; recordised code is a nested hierarchy of struct instances.  The
 struct types used for this recordisation are used to represent code in
 the core language in a way which is better inspectable and optimisable.
+
+The following bindings are exported by the library @library{vicare
+system $compiler}.
 
 
 @defun $recordize @var{core-language-form}
@@ -6519,7 +6946,11 @@ is expanded and recordised into:
 @subsection Optimisation for direct calls
 
 
-@defun $optimize-direct-calls @var{core-language-expression}
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@defun $optimize-direct-calls @var{recordised-code}
 Inspect application forms:
 
 @example
@@ -6814,7 +7245,7 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $optimize-letrec @var{input-expr}
+@defun $optimize-letrec @var{recordised-code}
 Perform transformations and optimisations to convert the recordised
 representation of @func{letrec}, @func{letrec*} and
 @func{libary-letrec*} core language forms into a composition of low
@@ -7520,7 +7951,7 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $source-optimize @var{input}
+@defun $source-optimize @var{recordised-code-expr}
 Perform source code optimizations on the recordized @var{input} code and
 return the resulting recordized code.
 @end defun
@@ -7528,7 +7959,8 @@ return the resulting recordized code.
 
 @deffn Parameter $source-optimizer-passes-count
 Specify how many passes to perform with the source optimizer; it must be
-a positive fixnum.  Defaults to 1.
+a positive fixnum.  Defaults to @code{1}; it is set to 2 when the
+optimisation level is @code{3}.
 
 It makes sense to perform zero, one or two passes; it is unlikely that
 more passes can do significant improvement.
@@ -7540,12 +7972,7 @@ The following bindings are exported by the library @library{vicare}.
 
 @deffn Parameter optimize-level
 The optimization level; accepted values are the fixnums @code{0},
-@code{1}, @code{2}.  Defaults to @code{0}.
-
-@quotation
-@strong{NOTE} When building the boot image this parameter is set to
-@code{2}.
-@end quotation
+@code{1}, @code{2}, @code{3}.  Defaults to @code{2}.
 @end deffn
 
 
@@ -7571,13 +7998,50 @@ optimiser enters specific subexpressions of the input.
 @subsection Rewriting references and assignments
 
 
+References to bindings in recordised code are represented as standalone
+@objtype{prelex} structures; assignments to bindings in recordised code
+are represented as @objtype{assign} structs:
+
+@example
+(assign @meta{prel} @meta{rhs})
+@end example
+
+@noindent
+in which @meta{prel} is a @objtype{prelex} structure and the right--hand
+side @meta{rhs} is recordised code which, evaluated at run--time, will
+return the new binding's value.
+
+With respect to how references and assignments are actually implemented,
+there are three kinds of lexical bindings:
+
+@itemize
+@item
+Top level bindings, defined by @func{library-letrec*} core language
+forms; @ref{syslib compiler topics topbind, Handling of lexical top
+level bindings}.
+
+@item
+Unassigned (read--only) local bindings, defined by @func{let},
+@func{letrec} and @func{letrec*} core language forms and never subjected
+to a @func{set!} core language form; @ref{syslib compiler topics
+locbind, Handling of lexical local bindings}.
+
+@item
+Assigned (read--write) local bindings, defined by @func{let},
+@func{letrec} and @func{letrec*} core language forms and subjected to
+one or more @func{set!} core language forms; @ref{syslib compiler topics
+locbind, Handling of lexical local bindings}.
+@end itemize
+
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $rewrite-references-and-assignments @var{input}
+@defun $rewrite-references-and-assignments @var{recordised-code-expr}
+Transform references and assignments for top level lexical bindings and
+unassigned local lexical bindings according to the implementation of
+such operations.
 @end defun
-
 
 @c page
 @node syslib compiler tags

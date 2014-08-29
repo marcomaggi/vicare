@@ -102,7 +102,8 @@
 	((3)
 	 ;;This optimisation level is meant to do the most possible.
 	 (parameterize ((cp0-effort-limit	O3-CP0-EFFORT-LIMIT)
-			(cp0-size-limit		O3-CP0-SIZE-LIMIT))
+			(cp0-size-limit		O3-CP0-SIZE-LIMIT)
+			(source-optimizer-passes-count 2))
 	   (%do-one-pass expr (source-optimizer-passes-count))))
 	((2)
 	 (%do-one-pass expr (source-optimizer-passes-count)))
@@ -456,19 +457,22 @@
     ;;not want to generate such code, so below we detect it and substitute the ASSIGN
     ;;with a void constant.
     ;;
-    (make-seq-discarding-useless (let ((lhs.copy (%lookup lhs env)))
-				   (if (not (prelex-source-referenced? lhs))
-				       (E rhs 'e env ec sc)
-				     (begin
-				       (decrement sc 1)
-				       (let ((rhs^ (E rhs 'v env ec sc)))
-					 (if (eq? lhs.copy rhs^)
-					     ;;Weird case discussed above.
-					     VOID-CONSTANT
-					   (begin
-					     (set-prelex-residual-assigned?! lhs.copy (prelex-source-assigned? lhs.copy))
-					     (make-assign lhs.copy rhs^)))))))
-				 VOID-CONSTANT))
+    (make-seq-discarding-useless
+     (if (not (prelex-source-referenced? lhs))
+	 (E rhs 'e env ec sc)
+       (let ((lhs.copy (%lookup lhs env)))
+	 (decrement sc 1)
+	 ;;FIXME If  the original binding was  assigned and it still  is after source
+	 ;;optimisation: fine, we  register this state in the PRELEX  struct.  But is
+	 ;;this correct also when we do  *not* return an ASSIGN struct below?  (Marco
+	 ;;Maggi; Fri Aug 29, 2014)
+	 (set-prelex-residual-assigned?! lhs.copy (prelex-source-assigned? lhs.copy))
+	 (let ((rhs^ (E rhs 'v env ec sc)))
+	   (if (eq? lhs.copy rhs^)
+	       ;;Weird case discussed above.
+	       VOID-CONSTANT
+	     (make-assign lhs.copy rhs^)))))
+     VOID-CONSTANT))
 
   (define (E-funcall rator rand* env ctxt ec sc)
     ;;Process a  struct instance of  type FUNCALL, *not*  representing a
@@ -2119,8 +2123,7 @@
 	   ;;assigned; so we include it in the output.
 	   (set-operand-residualize-for-effect! rand #t)
 	   (values (cons var lhs*)
-		   (cons VOID-CONSTANT
-			 rhs*)))
+		   (cons VOID-CONSTANT rhs*)))
 	  (else
 	   ;;After optimization, this variable is neither referenced not
 	   ;;assigned; so we exclude the binding and mark the operand to
