@@ -3141,22 +3141,24 @@
 
       ((prelex)
        (if (prelex-source-assigned? x)
-	   ;;Reference to a read-write binding.
+	   ;;Reference to a lexical read-write binding.
 	   (cond ((prelex-global-location x)
-		  ;;Reference  to a  lexical top  level binding  defined by  the core
-		  ;;language form  LIBRARY-LETREC*.  LOC  is the  loc gensym  used to
-		  ;;hold the value at run-time.
+		  ;;Reference to a  lexical top level binding; LOC is  the loc gensym
+		  ;;used to hold the value at run-time.
 		  => (lambda (loc)
-		       (make-funcall (mk-primref '$symbol-value)
-				     (list (make-constant loc)))))
+		       (%top-level-binding-reference loc)))
 		 (else
-		  ;;Reference  to  lexical  local mutable  binding:  substitute  with
-		  ;;appropriate reference to the vector location.
-		  (make-funcall (mk-primref '$vector-ref)
-				(list x (make-constant 0)))))
-	 ;;Reference to  a lexical read-only  binding.  This too  can be a  top level
-	 ;;binding whose value is stored in a loc gensym, but it is hadled later.
-	 x))
+		  ;;Reference to a lexical local binding.
+		  (%assigned-local-binding-reference x)))
+	 ;;Reference to a lexical read-only binding.
+	 (cond ((prelex-global-location x)
+		=> (lambda (loc)
+		     ;;Reference  to a  lexical top  level  binding; LOC  is the  loc
+		     ;;gensym used to hold the value at run-time.
+		     (%top-level-binding-reference loc)))
+	       (else
+		;;Reference to a lexical local binding.
+		x))))
 
       ((primref)
        x)
@@ -3200,29 +3202,56 @@
        (cond ((prelex-source-assigned? lhs)
 	      => (lambda (where)
 		   (cond ((symbol? where)
-			  ;;Single  initialisation assignment  of top  level binding.
-			  ;;This binding has no other assignment, and this assignment
-			  ;;is the operation that initialises it.
-			  #;(fprintf (current-error-port) "assign init ~s\n" (prelex-name lhs))
-			  (make-funcall (mk-primref '$init-symbol-value!)
-					(list (make-constant where) (E rhs))))
+			  ;;Single  initialisation assignment  of top  level binding;
+			  ;;WHERE is the loc gensym used to hold the value.
+			  (%top-level-binding-init where (E rhs)))
 			 ((prelex-global-location lhs)
-			  ;;Common assignment  of lexical top level  binding.  LOC is
+			  ;;Common assignment  of lexical  top level binding;  LOC is
 			  ;;the loc gensym used to hold the value.
 			  => (lambda (loc)
-			       #;(fprintf (current-error-port) "assign set ~s\n" (prelex-name lhs))
-			       (make-funcall (mk-primref '$set-symbol-value!)
-					     (list (make-constant loc) (E rhs)))))
+			       (%top-level-binding-assignment loc (E rhs))))
 			 (else
-			  ;;Assignment of lexical local  binding stored on the Scheme
-			  ;;stack.  Substitute with the appropriate vector operation.
-			  (make-funcall (mk-primref '$vector-set!)
-					(list lhs (make-constant 0) (E rhs)))))))
+			  (%assigned-local-binding-assignment lhs (E rhs))))))
 	     (else
 	      (error __who__ "not assigned" lhs x))))
 
       (else
        (error __who__ "invalid expression" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define-syntax-rule (%top-level-binding-init ?loc ?init)
+    ;;Single initialisation assignment of recursive  lexical top level binding.  This
+    ;;binding is defined with:
+    ;;
+    ;;   (bind ((?prel (constant #!void)))
+    ;;     (assign ?prel ?init) ;<-- this assignment
+    ;;     ?body)
+    ;;
+    ;;to allow  the initialisation  expression ?INIT  to access  the machine  word in
+    ;;which the  value is  stored; this  binding has no  other assignments,  and this
+    ;;assignment is the operation that initialises it.
+    (make-funcall (mk-primref '$init-symbol-value!) (list (make-constant ?loc) ?init)))
+
+  (define-syntax-rule (%top-level-binding-assignment ?loc ?rhs)
+    ;;Assignment of lexical top level binding.
+    (make-funcall (mk-primref '$set-symbol-value!)  (list (make-constant ?loc) ?rhs)))
+
+  (define-syntax-rule (%top-level-binding-reference ?loc)
+    ;;Reference to lexical top level binding.
+    (make-funcall (mk-primref '$symbol-value)       (list (make-constant ?loc))))
+
+;;; --------------------------------------------------------------------
+
+  (define-syntax-rule (%assigned-local-binding-reference ?prel)
+    ;;Reference to lexical local mutable binding.
+    (make-funcall (mk-primref '$vector-ref)  (list ?prel (make-constant 0))))
+
+  (define-syntax-rule (%assigned-local-binding-assignment ?prel ?rhs)
+    ;;Assignment of lexical local binding stored on the Scheme stack.
+    (make-funcall (mk-primref '$vector-set!) (list ?prel (make-constant 0) ?rhs)))
+
+;;; --------------------------------------------------------------------
 
   (define (%fix-lhs* lhs*)
     ;;Recursive  function.   LHS* is  a  list  of  struct  instances of  type  PRELEX
@@ -3926,11 +3955,7 @@
        x)
 
       ((var)
-       (cond ((var-global-loc x)
-	      => (lambda (loc)
-		   (make-funcall (mk-primref '$symbol-value)
-				 (list (make-constant loc)))))
-	     (else x)))
+       x)
 
       ((primref)
        x)
