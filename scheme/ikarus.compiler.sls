@@ -3465,43 +3465,75 @@
 
 
 (module (sanitize-bindings)
-  ;;Separates bindings having  a CLAMBDA struct as  right-hand side into
-  ;;struct instances of type FIX.
+    (define-fluid-override __who__
+      (identifier-syntax 'sanitize-bindings))
+  ;;In this module  we want to make  sure that every CLAMBA struct  appears as direct
+  ;;RHS expression for a FIX struct:
   ;;
-  ;;Code like:
+  ;;   (fix ((?lhs ?clambda)) ?body)
   ;;
-  ;;   (let ((a 123)
-  ;;         (b (lambda (x) (this))))
+  ;;so:
+  ;;
+  ;;* CLAMBDA structs that already appear as RHS of FIX structs are left alone.
+  ;;
+  ;;* CLAMBDA structs appearing as RHS in  single binding BIND structs cause the BIND
+  ;;  struct to be replaced by a FIX struct:
+  ;;
+  ;;     (bind ((?lhs ?clambda)) ?body) ==> (fix ((?lhs ?clambda)) ?body)
+  ;;
+  ;;* CLAMBDA  structs appearing as  RHS in multiple  binding BIND structs  cause the
+  ;;  BIND  struct to  be split  into a  BIND struct and  a FIX  struct in  which the
+  ;;  bindings are partitioned:
+  ;;
+  ;;     (bind ((?lhs0 ?clambda)
+  ;;            (?lhs1 ?rhs))
+  ;;       ?body)
+  ;;     ==> (bind ((?lhs1 ?rhs))
+  ;;           (fix ((?lhs0 ?clambda))
+  ;;             ?body))
+  ;;
+  ;;* CLAMBDA structs  appearing as standalone expressions (that is:  not directly as
+  ;;  RHS of a BIND or FIX struct) are "lifted" as follows:
+  ;;
+  ;;     (clambda (?formals ?body) ...)
+  ;;     ==> (fix ((tmp (clambda (?formals ?body) ...)))
+  ;;           tmp)
+  ;;
+  ;;After  this  pass is  complete,  all  the BIND  structs  have  a non-CLAMBDA  RHS
+  ;;expression.
+  ;;
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		var		primref
+  ;;   bind		fix		conditional
+  ;;   seq		clambda		forcall
+  ;;   funcall
+  ;;
+  ;;Examples
+  ;;--------
+  ;;
+  ;;The form:
+  ;;
+  ;;   (bind ((a 123)
+  ;;          (b (lambda (x) (this))))
   ;;     (that))
   ;;
   ;;is transformed into:
   ;;
-  ;;   (let ((a 123))
-  ;;     (let ((b (lambda (x) (this))))
+  ;;   (bind ((a 123))
+  ;;     (fix ((b (lambda (x) (this))))
   ;;       (that)))
   ;;
-  ;;Code like:
-  ;;
-  ;;   (case-lambda (?formal ?body0 ?body ...))
-  ;;
-  ;;is transformed into:
-  ;;
-  ;;   (let ((t (case-lambda (?formal ?body0 ?body ...))))
-  ;;     t)
-  ;;
-  ;;this is useful for later transformations.
-  ;;
-  (define who 'sanitize-bindings)
 
   ;;Make the code more readable.
   (define-syntax E
     (identifier-syntax sanitize-bindings))
 
   (define (sanitize-bindings x)
-    ;;Perform code  transformation traversing the whole  hierarchy in X,
-    ;;which must  be a struct  instance representing recordized  code in
-    ;;the core  language, and building  a new hierarchy  of transformed,
-    ;;recordized code; return the new hierarchy.
+    ;;Perform code transformation traversing the whole  hierarchy in X, which must be
+    ;;a  struct instance  representing  recordized  code in  the  core language,  and
+    ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new
+    ;;hierarchy.
     ;;
     (struct-case x
       ((constant)
@@ -3514,37 +3546,23 @@
        x)
 
       ((bind lhs* rhs* body)
-       ;;Here we want to transform:
-       ;;
-       ;;   (let ((a 123)
-       ;;         (b (lambda (x) (this))))
-       ;;     (that))
-       ;;
-       ;;into:
-       ;;
-       ;;   (let ((a 123))
-       ;;     (let ((b (lambda (x) (this))))
-       ;;       (that)))
-       ;;
-       ;;in which the  inner LET is represented by a  struct instance of
-       ;;type FIX.
-       (let-values (((lambda* other*) (partition (lambda (x)
-						   (clambda? ($cdr x)))
-					($map/stx cons lhs* rhs*))))
-	 ;;LAMBDA* is  a list  of pairs (LHS  . RHS) in  which RHS  is a
-	 ;;CLAMBDA struct.
-	 ;;
-	 ;;OTHER* is a list of pairs (LHS . RHS) in which RHS is *not* a
-	 ;;CLAMBDA struct.
-	 ;;
-         (make-bind ($map/stx $car other*)
-                    ($map/stx E ($map/stx $cdr other*))
-		    (%do-fix ($map/stx $car lambda*)
-			     ($map/stx $cdr lambda*)
-			     body))))
+       (receive (fixable* bindable*)
+	   (partition (lambda (x)
+			(clambda? ($cdr x)))
+	     ($map/stx cons lhs* rhs*))
+	 ;;FIXABLE* is  a list  of pairs  (?LHS . ?RHS)  in which  ?RHS is  a CLAMBDA
+	 ;;struct.  BINDABLE*  is a  list of pairs  (?LHS .  ?RHS)  in which  ?RHS is
+	 ;;*not* a CLAMBDA struct.
+	 (%mk-bind ($map/stx $car bindable*)
+		   ($map/stx (lambda (bindable)
+			       (E ($cdr bindable)))
+		     bindable*)
+		   (E-fix ($map/stx $car fixable*)
+			    ($map/stx $cdr fixable*)
+			    body))))
 
       ((fix lhs* rhs* body)
-       (%do-fix lhs* rhs* body))
+       (E-fix lhs* rhs* body))
 
       ((conditional test conseq altern)
        (make-conditional (E test) (E conseq) (E altern)))
@@ -3553,19 +3571,9 @@
        (make-seq (E e0) (E e1)))
 
       ((clambda)
-       ;;Here we want to transform:
-       ;;
-       ;;   (case-lambda (?formal ?body0 ?body ...))
-       ;;
-       ;;into:
-       ;;
-       ;;   (let ((t (case-lambda (?formal ?body0 ?body ...))))
-       ;;     t)
-       ;;
-       ;;in which  the LET is represented  by a struct instance  of type
-       ;;FIX.
-       (let ((t (make-unique-var 'anon)))
-         (make-fix (list t) (list (CLambda x)) t)))
+       ;;This is a standalone CLAMBDA struct.
+       (let ((tmp (make-unique-var 'clambda-lift)))
+         (make-fix (list tmp) (list (E-clambda-rhs x)) tmp)))
 
       ((forcall op rand*)
        (make-forcall op ($map/stx E rand*)))
@@ -3574,30 +3582,36 @@
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (compile-time-error __who__
+	 "invalid expression" (unparse-recordized-code x)))))
 
-  (define (CLambda x)
-    ;;The argument  X must be  a struct  instance of type  CLAMBDA.  The
-    ;;purpose of  this function  is to  apply E to  every body  of every
-    ;;CASE-LAMBDA clause.
+  (define (%mk-bind lhs* rhs* body)
+    (if (null? lhs*)
+	body
+      (make-bind lhs* rhs* body)))
+
+  (define (E-fix lhs* rhs* body)
+    (if (null? lhs*)
+        (E body)
+      (make-fix lhs* ($map/stx E-clambda-rhs rhs*) (E body))))
+
+  (define (E-clambda-rhs x)
+    ;;The argument X  must be a struct  instance of type CLAMBDA  appearing as direct
+    ;;RHS of a FIX struct.  The purpose of this function is to apply E to the body of
+    ;;each CLAMBDA clause.
     ;;
     (struct-case x
       ((clambda label clause* cp free name)
-       (make-clambda label
-		     (map (lambda (cls)
-			    (struct-case cls
-			      ((clambda-case info body)
-			       (struct-case info
-				 ((case-info label fml* proper)
-				  (make-clambda-case (make-case-info label fml* proper)
-						     (E body)))))))
-		       clause*)
-		     cp free name))))
-
-  (define (%do-fix lhs* rhs* body)
-    (if (null? lhs*)
-        (E body)
-      (make-fix lhs* ($map/stx CLambda rhs*) (E body))))
+       (let ((clause*^ ($map/stx
+			   (lambda (cls)
+			     (struct-case cls
+			       ((clambda-case info body)
+				(struct-case info
+				  ((case-info label fml* proper)
+				   (let ((info^ (make-case-info label fml* proper)))
+				     (make-clambda-case info^ (E body))))))))
+			 clause*)))
+	 (make-clambda label clause*^ cp free name)))))
 
   (define (E-known x)
     (struct-case x

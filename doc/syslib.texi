@@ -8182,13 +8182,62 @@ different set of properties to handle variable bindings.
 @subsection Sanitizing bindings
 
 
+This compiler pass makes sure that every @objtype{clamba} struct appears
+as direct right--hand side expression in a @objtype{fix} struct:
+
+@example
+(fix ((@meta{lhs} @meta{clambda})) @meta{body})
+@end example
+
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
 @defun $sanitize-bindings @var{input}
-@end defun
+Perform the following transformations:
 
+@itemize
+@item
+@objtype{clambda} structs that already appear as RHS of @objtype{fix}
+structs are left alone.
+
+@item
+@objtype{clambda} structs appearing as RHS in single--binding
+@objtype{bind} structs cause the @objtype{bind} struct to be replaced by
+a @objtype{fix} struct:
+
+@example
+(bind ((@meta{lhs} @meta{clambda})) @meta{body})
+@expansion{} (fix ((@meta{lhs} @meta{clambda})) @meta{body})
+@end example
+
+@item
+@objtype{clambda} structs appearing as RHS in multiple--binding
+@objtype{bind} structs cause the @objtype{bind} struct to be split into
+a @objtype{bind} struct and a @objtype{fix} struct in which the bindings
+are partitioned:
+
+@example
+(bind ((@metao{lhs} @meta{clambda})
+       (@metai{lhs} @meta{rhs}))
+  @meta{body})
+@expansion{} (bind ((@metai{lhs} @meta{rhs}))
+      (fix ((@metao{lhs} @meta{clambda}))
+        @meta{body}))
+@end example
+
+@item
+@objtype{clambda} structs appearing as standalone expressions (that is:
+not directly as RHS of a @objtype{bind} or @objtype{fix} struct) are
+``lifted'' as follows:
+
+@example
+(clambda (@meta{formals} @meta{body}) ...)
+@expansion{} (fix ((tmp (clambda (@meta{formals} @meta{body}) ...)))
+      tmp)
+@end example
+@end itemize
+@end defun
 
 @c page
 @node syslib compiler direct jumps
