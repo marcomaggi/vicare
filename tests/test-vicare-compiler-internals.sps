@@ -1793,6 +1793,57 @@
   #f)
 
 
+(parametrise ((check-test-name	'sanitise-bindings))
+
+  (define (%sanitize-bindings core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   (D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (D (compiler.$introduce-vars D))
+	   (D (compiler.$sanitize-bindings D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%sanitize-bindings (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (lambda () '1)
+	(fix ((clambda-lift_0 (lambda () (constant 1))))
+	  clambda-lift_0))
+
+  (doit (let ((a (lambda () '1)))
+	  a)
+	(fix ((a_0 (lambda () (constant 1))))
+	  a_0))
+
+  (doit (let ((a (lambda () '1))
+	      (b ((primitive read))))
+	  ((primitive list) a b))
+	(bind ((b_0 (funcall (primref read))))
+	  (fix ((a_0 (lambda () (constant 1))))
+	    (funcall (primref list) a_0 b_0))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
