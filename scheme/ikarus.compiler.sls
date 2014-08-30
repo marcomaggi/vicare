@@ -3357,7 +3357,9 @@
   ;;   forcall		assign		known
   ;;
   ;;NOTE  This module  stores  generated VAR  structs  in the  field  OPERAND of  the
-  ;;associated PRELEX structs.
+  ;;associated PRELEX structs.   We do not care about resetting  such field of PRELEX
+  ;;structs, because in subsequent compiler passes the PRELEX structs will be no more
+  ;;used: they will be garbage collected.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'introduce-vars))
