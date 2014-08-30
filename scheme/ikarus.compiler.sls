@@ -1229,9 +1229,20 @@
 		;False or
     index
 		;False or
-    referenced
-		;Boolean.  True if  this VAR represent a binding  that is referenced;
-		;false if this binding is never referenced.
+    referenced-clambda
+		;False  of a  CLAMBDA struct.   False if  this variable  represents a
+		;binding  referencing  a   non-CLAMBDA  right-hand  side  expression.
+		;Otherwise this  variable represents a binding  whose right-hand side
+		;is  a  CLAMBDA expression,  and  the  value  of  this field  is  the
+		;referenced CLAMBDA.
+		;
+		;After the compiler pass "sanitise  bindings" has been performed: all
+		;the  VAR structs  defined in  BIND  structs have  a non-CLAMBDA  RHS
+		;expression;  all the  VAR  structs  defined in  FIX  structs have  a
+		;CLAMBDA RHS expression.
+		;
+		;This field  is used only in  the compiler pass "optimise  for direct
+		;jumps".
     global-location
 		;False  or loc  gensym.   When  false: this  VAR  represents a  local
 		;lexical binding.  When a loc gensym: this VAR represents a top level
@@ -3094,6 +3105,10 @@
   ;;            (bind ((?prel (funcall (primref vector) ?tmp-prel)))
   ;;              ?body))
   ;;
+  ;;  NOTE Assigned local bindings whose RHS  expression is a CLAMBDA struct are also
+  ;;  transformed this way.  After this compiler  pass: there are no more BIND struct
+  ;;  whose RHS is a CLAMBDA struct.
+  ;;
   ;;* References  to assigned local  bindings are transformed from  standalone PRELEX
   ;;  structs to:
   ;;
@@ -3688,10 +3703,10 @@
 
       ((fix lhs* rhs* body)
        ;;Here we  know that  RHS* is  a list of  CLAMBDA structs,  because it  is the
-       ;;result of previous compiler passes.  Marking each VAR in LHS* as referencing
+       ;;result of previous compiler passes.  We mark each VAR in LHS* as referencing
        ;;a CLAMBDA struct, so that later  they can be used for jump-call optimisation
        ;;if they appear in operator position.
-       ($for-each/stx $set-var-referenced! lhs* rhs*)
+       ($for-each/stx $set-var-referenced-clambda! lhs* rhs*)
        (make-fix lhs* ($map/stx E-clambda rhs*) (E body)))
 
       ((conditional test conseq altern)
@@ -3713,51 +3728,48 @@
 ;;; --------------------------------------------------------------------
 
   (define (E-bind lhs* rhs* body)
+    ;;Process  LHS* marking,  when  appropriate,  the VAR  structs  as referencing  a
+    ;;CLAMBDA  struct, so  that later  the  VAR in  LHS*  can be  used for  jump-call
+    ;;optimisation if they appear in operator position.
+    ;;
     ;;Here we know  that RHS* is *not* a  list of CLAMBDA structs, because  it is the
-    ;;result of  previous compiler passes.  Process  LHS* marking each VAR  as either
-    ;;referencing a CLAMBDA struct or not, so that  later the VAR in LHS* can be used
-    ;;for jump-call optimisation if they appear in operator position.
+    ;;result of  previous compiler passes.   So here we try  to determine if  the RHS
+    ;;expressions will return a CLAMBDA struct.
+    ;;
+    ;;By  default the  VAR  structs  are marked  as  non-referencing  a CLAMBDA  upon
+    ;;creation, so if a VAR does not reference a CLAMBDA here we need to do nothing.
     ;;
     (let ((rhs*^ ($map/stx E rhs*)))
       ($for-each/stx
 	  (lambda (lhs rhs)
 	    (struct-case rhs
 	      ((var)
-	       (cond (($var-referenced rhs)
+	       (cond (($var-referenced-clambda rhs)
 		      ;;RHS is a VAR struct  referencing a CLAMBDA struct; this means
 		      ;;LHS  references  the  same   CLAMBDA  struct.   CLAM  is  the
 		      ;;referenced CLAMBDA struct.
 		      => (lambda (clam)
-			   ($set-var-referenced! lhs clam)))
-		     (else
-		      ;;LHS does not reference a CLAMBDA struct.
-		      (%mark-var-as-non-referenced lhs))))
+			   ($set-var-referenced-clambda! lhs clam)))))
 	      (else
 	       ;;LHS does not reference a CLAMBDA struct.
-	       (%mark-var-as-non-referenced lhs))))
+	       (void))))
 	lhs* rhs*^)
       (make-bind lhs* rhs*^ (E body))))
 
   (define (E-clambda x)
     ;;The argument X must be a struct  instance of type CLAMBDA.  The purpose of this
-    ;;function is to apply E to the  body of each CLAMBDA clause, after having marked
-    ;;as non-referenced the corresponding formals.
+    ;;function is to apply E to the body of each CLAMBDA clause.
     ;;
     (struct-case x
       ((clambda label clause* cp free name)
        (let ((clause*^ ($map/stx (lambda (clause)
 				   (struct-case clause
 				     ((clambda-case info body)
-				      ($for-each/stx %mark-var-as-non-referenced
-					(case-info-args info))
 				      (make-clambda-case info (E body)))))
 			 clause*)))
 	 (make-clambda label clause*^ cp free name)))))
 
 ;;; --------------------------------------------------------------------
-
-  (define-syntax-rule (%mark-var-as-non-referenced ?var)
-    ($set-var-referenced! ?var #f))
 
   (module (E-funcall)
 
@@ -3768,7 +3780,7 @@
 	 ;;Is RATOR  a variable known  to reference a closure?   In this case  we can
 	 ;;attempt an optimization.
 	 ((and (var? rator)
-	       ($var-referenced rator))
+	       ($var-referenced-clambda rator))
 	  => (lambda (clam)
 	       (%optimize-funcall clam rator ($map/stx E-known rand*))))
 
@@ -3895,7 +3907,6 @@
 	 (values expr type))
 	(else
 	 (values x #f))))
-
 
     #| end of module: E-funcall |# )
 

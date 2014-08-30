@@ -1841,6 +1841,16 @@
 	  (fix ((a_0 (lambda () (constant 1))))
 	    (funcall (primref list) a_0 b_0))))
 
+  (doit (let ((a (lambda () '1)))
+	  (begin
+	    (set! a '2)
+	    a))
+	(fix ((a_0 (lambda () (constant 1))))
+	  (bind ((a_1 (funcall (primref vector) a_0)))
+	    (seq
+	      (funcall (primref $vector-set!) a_1 (constant 0) (constant 2))
+	      (funcall (primref $vector-ref)  a_1 (constant 0))))))
+
   #t)
 
 

@@ -6051,7 +6051,7 @@ Compiler passes
 * syslib compiler refassig::      Rewriting references and assignments.
 * syslib compiler tags::          Tagging known properties.
 * syslib compiler vars::          Introducing storage locations.
-* syslib compiler bindings::      Sanitizing bindings.
+* syslib compiler sanitbind::     Sanitizing bindings.
 * syslib compiler direct jumps::  Optimisation for direct jumps.
 * syslib compiler global::        Inserting global assignments.
 * syslib compiler closures::      Closures conversion.
@@ -6189,6 +6189,7 @@ throughout different passes.
 * syslib compiler topics topbind::  Handling of lexical top level
                                     bindings.
 * syslib compiler topics locbind::  Handling of lexical local bindings.
+* syslib compiler topics clambda::  Handling of lambda expressions.
 @end menu
 
 @c page
@@ -6679,6 +6680,61 @@ is transformed into:
       (funcall (primref $vector-ref)
                a_1 (constant 0)))))
 @end example
+
+@quotation
+@strong{NOTE} Assigned local bindings whose RHS expression is a
+@objtype{clambda} struct are also transformed by introducing a vector.
+After this transformation: there are no more @objtype{bind} struct whose
+RHS is a @objtype{clambda} struct.
+@end quotation
+
+@c page
+@node syslib compiler topics clambda
+@subsubsection Handling of lambda expressions
+
+
+@c ------------------------------------------------------------
+
+@subsubheading Handling of assigned @objtype{clambda} bindigns
+
+If a binding is assigned, it is defined by a @objtype{bind} struct:
+
+@example
+(bind ((@meta{lhs} @meta{init}))
+  (seq
+    (assign @meta{lhs} @meta{rhs})
+    @meta{rest}))
+@end example
+
+@noindent
+and so it is transformed by introducing a vector to hold the read--write
+machine word:
+
+@example
+(bind ((@meta{tmp} @meta{init}))
+  (bind ((@meta{lhs} (funcall (primref vector) @meta{tmp})))
+    (seq
+      (funcall (primref $vector-set!)
+               @meta{lhs} (constant 0) @meta{rhs})
+      @meta{rest})))
+@end example
+
+@noindent
+if its @meta{init} expression is a @objtype{clambda} struct, it is
+further transformed as follows:
+
+@example
+(fix ((@meta{tmp} @meta{clambda}))
+  (bind ((@meta{lhs} (funcall (primref vector) @meta{tmp})))
+    (seq
+      (funcall (primref $vector-set!)
+               @meta{lhs} (constant 0) @meta{rhs})
+      @meta{rest})))
+@end example
+
+@noindent
+so, in the end, @objtype{clambda} expressions originally bound to
+assigned bindings end up defined by @objtype{fix} forms.
 
 @c page
 @node syslib compiler unparse
@@ -8178,7 +8234,7 @@ different set of properties to handle variable bindings.
 @end defun
 
 @c page
-@node syslib compiler bindings
+@node syslib compiler sanitbind
 @subsection Sanitizing bindings
 
 
