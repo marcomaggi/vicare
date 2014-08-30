@@ -1203,23 +1203,42 @@
 
 ;;;; struct types used in middle-level code representation
 
-;;Instances of this struct type represent variables in recordized code.
+;;Instances of this struct type represent  variables in recordized code.  An instance
+;;of this struct  is created for each  lexical binding that has  survived the various
+;;optimisation passes.
 ;;
 (define-struct var
    (name
+		;Lex gensym uniquely identifying this lexical binding in the original
+		;core language expression.  For  bindings introduced by the compiler:
+		;this is just a symbol.
     reg-conf
+		;False or
     frm-conf
+		;False or
     var-conf
+		;False or
     reg-move
+		;False or
     frm-move
+		;False or
     var-move
+		;False or
     loc
+		;False or
     index
+		;False or
     referenced
-    global-loc
+		;Boolean.  True if  this VAR represent a binding  that is referenced;
+		;false if this binding is never referenced.
+    global-location
+		;False  or loc  gensym.   When  false: this  VAR  represents a  local
+		;lexical binding.  When a loc gensym: this VAR represents a top level
+		;lexical binding  and the loc  gensym is the one  to use to  hold its
+		;current value in the "value" slot.
     ))
 
-(define (unique-var name)
+(define (make-unique-var name)
   (make-var name #f #f #f #f #f #f #f #f #f #f))
 
 ;;; --------------------------------------------------------------------
@@ -3084,6 +3103,13 @@
   ;;     (assign ?prel ?rhs)
   ;;     ===> (funcall (primref $vector-set!) ?prel (constant 0) ?rhs)
   ;;
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		prelex		primref
+  ;;   bind		fix		conditional
+  ;;   seq		clambda		forcall
+  ;;   funcall		assign
+  ;;
   (define-fluid-override __who__
     (identifier-syntax 'rewrite-references-and-assignments))
 
@@ -3318,39 +3344,52 @@
 
 
 (module (introduce-vars)
-  ;;This module  operates on  recordized code  representing code  in the
-  ;;core  language; it  substitutes  all the  struct  instances of  type
-  ;;PRELEX with struct instances of type VAR.
+  ;;This module operates  on recordized code representing code in  the core language;
+  ;;it substitutes all  the struct instances of type PRELEX  with struct instances of
+  ;;type VAR.
   ;;
-  (define who 'introduce-vars)
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		prelex		primref
+  ;;   bind		fix		conditional
+  ;;   seq		clambda		funcall
+  ;;   forcall		assign		known
+  ;;
+  ;;NOTE  This module  stores  generated VAR  structs  in the  field  OPERAND of  the
+  ;;associated PRELEX structs.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'introduce-vars))
 
   ;;Make the code more readable.
   (define-syntax E
     (identifier-syntax introduce-vars))
 
   (define (introduce-vars x)
-    ;;Perform code  transformation traversing the whole  hierarchy in X,
-    ;;which must  be a struct  instance representing recordized  code in
-    ;;the core  language, and building  a new hierarchy  of transformed,
-    ;;recordized code; return the new hierarchy.
+    ;;Perform code transformation traversing the whole  hierarchy in X, which must be
+    ;;a  struct instance  representing  recordized  code in  the  core language,  and
+    ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new
+    ;;hierarchy.
     ;;
     (struct-case x
       ((constant)
        x)
 
       ((prelex)
-       (lookup x))
+       (%lookup-already-processed-prelex x))
 
       ((primref)
        x)
 
       ((bind lhs* rhs* body)
-       (let ((lhs* (map %convert-prelex lhs*)))
-         (make-bind lhs* (map E rhs*) (E body))))
+       ;;Process the LHS* before everything else!
+       (let ((lhs* ($map/stx %prelex->var lhs*)))
+         (make-bind lhs* ($map/stx E rhs*) (E body))))
 
       ((fix lhs* rhs* body)
-       (let ((lhs* (map %convert-prelex lhs*)))
-         (make-fix lhs* (map E rhs*) (E body))))
+       ;;Process the LHS* before everything else!
+       (let ((lhs* ($map/stx %prelex->var lhs*)))
+         (make-fix lhs* ($map/stx E rhs*) (E body))))
 
       ((conditional e0 e1 e2)
        (make-conditional (E e0) (E e1) (E e2)))
@@ -3359,60 +3398,61 @@
        (make-seq (E e0) (E e1)))
 
       ((clambda label clause* cp free name)
-       ;;The purpose of this form is to apply %CONVERT-PRELEX to all the
-       ;;items in the ARGS field of all the CASE-INFO structs.
+       ;;The purpose of this form is to apply %PRELEX->VAR to all the items in the
+       ;;ARGS field of all the CASE-INFO structs.  Also we apply E to each body.
        (make-clambda label
-		     (map (lambda (cls)
-			    (struct-case cls
-			      ((clambda-case info body)
-			       (struct-case info
-				 ((case-info label args proper)
-				  (let ((args (map %convert-prelex args)))
-				    (make-clambda-case (make-case-info label args proper)
-						       (E body))))))))
+		     ($map/stx
+			 (lambda (cls)
+			   (struct-case cls
+			     ((clambda-case info body)
+			      (struct-case info
+				((case-info label args proper)
+				 ;;Process the LHS* before everything else!
+				 (let ((info (make-case-info label
+							     ($map/stx %prelex->var args)
+							     proper)))
+				   (make-clambda-case info (E body))))))))
 		       clause*)
 		     cp free name))
 
-      ((primcall rator rand*)
-       (make-primcall rator (map E-known rand*)))
+      ;; ((primcall rator rand*)
+      ;;  (make-primcall rator (map E-known rand*)))
 
       ((funcall rator rand*)
-       (make-funcall (E-known rator) (map E-known rand*)))
+       (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
       ((forcall rator rand*)
-       (make-forcall rator (map E rand*)))
+       (make-forcall rator ($map/stx E rand*)))
 
       ((assign lhs rhs)
-       (make-assign (lookup lhs) (E rhs)))
+       (make-assign (%lookup-already-processed-prelex lhs) (E rhs)))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (compile-time-error __who__
+	 "invalid expression" (unparse-recordized-code x)))))
 
-  (define (lookup prel)
-    ;;Given  a struct  instance of  type PRELEX  in reference  position,
-    ;;return the associated struct instance of type VAR.
+  (define (%lookup-already-processed-prelex prel)
+    ;;Given a  struct instance of  type PRELEX  in reference or  assignment position,
+    ;;return the associated struct  instance of type VAR.  It is a  very bad error if
+    ;;this function finds a PRELEX not yet processed by %PRELEX->VAR.
     ;;
-    ;;It  is  a very  bad  error  if this  function  finds  a PRELEX  in
-    ;;reference position not yet processed by %CONVERT-PRELEX.
-    ;;
-    (let ((v ($prelex-operand prel)))
-      (assert (var? v))
-      v))
+    (receive-and-return (V)
+	($prelex-operand prel)
+      (assert (var? V))))
 
-  (define (%convert-prelex prel)
-    ;;Convert the PRELEX  struct PREL into a VAR struct;  return the VAR
-    ;;struct.
+  (define (%prelex->var prel)
+    ;;Convert the PRELEX struct PREL into a VAR struct; return the VAR struct.
     ;;
-    ;;The generated  VAR struct is  stored in  the field OPERAND  of the
-    ;;PRELEX, so that, later, references to the PRELEX in the recordized
-    ;;code can be substituted with the VAR.
+    ;;The generated VAR struct is stored in the field OPERAND of the PRELEX, so that,
+    ;;later, references to the PRELEX in  the recordized code can be substituted with
+    ;;the VAR.
     ;;
     (assert (not (var? ($prelex-operand prel))))
-    (let ((v (unique-var ($prelex-name prel))))
-      ($set-var-referenced! v ($prelex-source-referenced? prel))
-      ($set-var-global-loc! v ($prelex-global-location prel))
-      ($set-prelex-operand! prel v)
-      v))
+    (receive-and-return (V)
+	(make-unique-var ($prelex-name prel))
+      ($set-var-referenced!      V ($prelex-source-referenced? prel))
+      ($set-var-global-location! V ($prelex-global-location    prel))
+      ($set-prelex-operand! prel V)))
 
   (define (E-known x)
     (struct-case x
@@ -3527,7 +3567,7 @@
        ;;
        ;;in which  the LET is represented  by a struct instance  of type
        ;;FIX.
-       (let ((t (unique-var 'anon)))
+       (let ((t (make-unique-var 'anon)))
          (make-fix (list t) (list (CLambda x)) t)))
 
       ((forcall op rand*)
@@ -3972,7 +4012,7 @@
     ;;
     (cond ((null? lhs*)
 	   body.already-processed)
-	  ((var-global-loc ($car lhs*))
+	  ((var-global-location ($car lhs*))
 	   => (lambda (loc)
 		(make-seq (make-funcall (mk-primref '$init-symbol-value!)
 					(list (make-constant loc) ($car lhs*)))
@@ -3989,7 +4029,7 @@
     ;;
     (cond ((null? lhs*)
 	   body.already-processed)
-	  ((var-global-loc ($car lhs*))
+	  ((var-global-location ($car lhs*))
 	   => (lambda (loc)
 		(make-seq (make-funcall (mk-primref '$set-symbol-value/proc!)
 					(list (make-constant loc) ($car lhs*)))

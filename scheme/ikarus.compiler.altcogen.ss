@@ -365,7 +365,7 @@
 	  ((clambda-case info body)
 	   (struct-case info
 	     ((case-info label args proper?)
-	      (let* ((cpvar (unique-var 'cp))
+	      (let* ((cpvar (make-unique-var 'cp))
 		     ;;Prepend  to the  properized list  of formals  the
 		     ;;symbol representing the  CPU register holding the
 		     ;;current closure pointer.
@@ -429,7 +429,7 @@
 	;;not already in a FIX?  (Marco Maggi; Oct 15, 2012)
 	;;
 	((closure)
-	 (let ((t (unique-var 'tmp)))
+	 (let ((t (make-unique-var 'tmp)))
 	   (E (make-fix (list t) (list x) t))))
 
 	((primcall op arg*)
@@ -1041,9 +1041,9 @@
 	      ;;continuation object  is also the  "next process continuation"  in the
 	      ;;PCB, that is: it is the value of the field "pcb->next_k".
 	      ;;
-	      (let ((t0			(unique-var 't))
-		    (t1			(unique-var 't))
-		    (t2			(unique-var 't))
+	      (let ((t0			(make-unique-var 't))
+		    (t1			(make-unique-var 't))
+		    (t2			(make-unique-var 't))
 		    (underflow-handler	($car rands))
 		    (func		($cadr rands))
 		    (kont-object	($caddr rands)))
@@ -1205,7 +1205,7 @@
 		     (kont x))))
 	     ((or (funcall? x) (primcall? x) (jmpcall? x)
 		  (forcall? x) (shortcut? x) (conditional? x))
-	      (let ((t (unique-var 'tmp)))
+	      (let ((t (make-unique-var 'tmp)))
 		(%do-bind (list t) (list x) (kont t))))
 	     (else
 	      (error __who__ "invalid S" x))))))
@@ -1235,7 +1235,7 @@
       (let-values (((reg-locs reg-args frm-args)
 		    (%nontail-locations PARAMETER-REGISTERS (cons rator rands))))
 	(let ((regt* (map (lambda (x)
-			    (unique-var 'rt))
+			    (make-unique-var 'rt))
 		       reg-args))
 	      (frmt* (map (lambda (x)
 			    (make-nfv 'unset-conflicts #f #f #f #f))
@@ -1545,7 +1545,7 @@
 	 (let ((a ($car rands)) (b ($cadr rands)))
 	   (if (and (constant? a)
 		    (constant? b))
-	       (let ((t (unique-var 'tmp)))
+	       (let ((t (make-unique-var 'tmp)))
 		 (P (make-bind (list t) (list a)
 			       (make-primcall op (list t b)))))
 	     (Mem a (lambda (a)
@@ -1617,7 +1617,7 @@
 			targs
 			tlocs))
 		(else
-		 (let ((t (unique-var 'tmp)))
+		 (let ((t (make-unique-var 'tmp)))
 		   (%locals-cons t)
 		   (make-seq (V t ($car args))
 			     (recur ($cdr args)
@@ -3557,7 +3557,7 @@
       (define who 'add-unspillables)
 
       (define (mku)
-	(let ((u (unique-var 'u)))
+	(let ((u (make-unique-var 'u)))
 	  (set! un* (set-add u un*))
 	  u))
 

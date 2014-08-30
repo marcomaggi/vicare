@@ -249,7 +249,7 @@
 	   #'(let ((?lhs ?rhs)
 		   ...)
 	       ;;Generate new struct instances of type VAR.
-	       (let ((VAR (unique-var '?lhs))
+	       (let ((VAR (make-unique-var '?lhs))
 		     ...)
 #;(debug-print 'here '(copy-tag ?lhs VAR) ...)
 #;(debug-print 'here1 (copy-tag ?lhs VAR) ...)
@@ -286,7 +286,7 @@
 	   #'(let* ((?lhs ?rhs)
 		    ...)
 	       ;;Generate new struct instances of type VAR.
-	       (let ((VAR (unique-var '?lhs))
+	       (let ((VAR (make-unique-var '?lhs))
 		     ...)
 		 ;;Make the binding struct.
 		 (make-bind (list VAR ...) (list ?lhs ...)
@@ -410,14 +410,14 @@
 		  (values lhs* rhs* (cons expr arg*)))
 		 (else
 		;(printf "known ~s ~s\n" type expr)
-		  (let ((tmp (unique-var 'tmp)))
+		  (let ((tmp (make-unique-var 'tmp)))
 		    (values (cons tmp lhs*)
 			    (cons (V expr) rhs*)
 			    (cons (make-known tmp type) arg*))))))
 	      ((constant i)
 	       (values lhs* rhs* (cons a arg*)))
 	      (else
-	       (let ((t (unique-var 'tmp)))
+	       (let ((t (make-unique-var 'tmp)))
 		 (values (cons t lhs*) (cons (V a) rhs*) (cons t arg*)))))))))
     (let-values (((lhs* rhs* args) (S* args)))
       (if (null? lhs*)
