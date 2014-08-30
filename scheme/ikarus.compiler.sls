@@ -3450,7 +3450,6 @@
     (assert (not (var? ($prelex-operand prel))))
     (receive-and-return (V)
 	(make-unique-var ($prelex-name prel))
-      #;($set-var-referenced!      V ($prelex-source-referenced? prel))
       ($set-var-global-location! V ($prelex-global-location    prel))
       ($set-prelex-operand! prel V)))
 
@@ -3685,14 +3684,14 @@
        x)
 
       ((bind lhs* rhs* body)
-       ($for-each/stx %mark-var-as-non-referenced lhs*)
-       (let ((rhs* ($map/stx E rhs*)))
-	 ($for-each/stx %maybe-mark-var-as-referencing-clambda lhs* rhs*)
-	 (make-bind lhs* rhs* (E body))))
+       (E-bind lhs* rhs* body))
 
       ((fix lhs* rhs* body)
-       ($map/stx $set-var-referenced! lhs* rhs*)
-       #;($for-each/stx %maybe-mark-var-as-referencing-clambda lhs* rhs*)
+       ;;Here we  know that  RHS* is  a list of  CLAMBDA structs,  because it  is the
+       ;;result of previous compiler passes.  Marking each VAR in LHS* as referencing
+       ;;a CLAMBDA struct, so that later  they can be used for jump-call optimisation
+       ;;if they appear in operator position.
+       ($for-each/stx $set-var-referenced! lhs* rhs*)
        (make-fix lhs* ($map/stx E-clambda rhs*) (E body)))
 
       ((conditional test conseq altern)
@@ -3712,6 +3711,32 @@
 	 "invalid expression" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
+
+  (define (E-bind lhs* rhs* body)
+    ;;Here we know  that RHS* is *not* a  list of CLAMBDA structs, because  it is the
+    ;;result of  previous compiler passes.  Process  LHS* marking each VAR  as either
+    ;;referencing a CLAMBDA struct or not, so that  later the VAR in LHS* can be used
+    ;;for jump-call optimisation if they appear in operator position.
+    ;;
+    (let ((rhs*^ ($map/stx E rhs*)))
+      ($for-each/stx
+	  (lambda (lhs rhs)
+	    (struct-case rhs
+	      ((var)
+	       (cond (($var-referenced rhs)
+		      ;;RHS is a VAR struct  referencing a CLAMBDA struct; this means
+		      ;;LHS  references  the  same   CLAMBDA  struct.   CLAM  is  the
+		      ;;referenced CLAMBDA struct.
+		      => (lambda (clam)
+			   ($set-var-referenced! lhs clam)))
+		     (else
+		      ;;LHS does not reference a CLAMBDA struct.
+		      (%mark-var-as-non-referenced lhs))))
+	      (else
+	       ;;LHS does not reference a CLAMBDA struct.
+	       (%mark-var-as-non-referenced lhs))))
+	lhs* rhs*^)
+      (make-bind lhs* rhs*^ (E body))))
 
   (define (E-clambda x)
     ;;The argument X must be a struct  instance of type CLAMBDA.  The purpose of this
@@ -3733,23 +3758,6 @@
 
   (define-syntax-rule (%mark-var-as-non-referenced ?var)
     ($set-var-referenced! ?var #f))
-
-  (define (%maybe-mark-var-as-referencing-clambda lhs rhs)
-    (struct-case rhs
-      ((clambda)
-       ($set-var-referenced! lhs rhs))
-      ((var)
-       (cond (($var-referenced rhs)
-	      ;;RHS is  a VAR  struct referencing  a CLAMBDA  struct; this  means LHS
-	      ;;references the same  CLAMBDA struct.  CLAM is  the referenced CLAMBDA
-	      ;;struct.
-	      => (lambda (clam)
-		   ($set-var-referenced! lhs clam)))
-	     (else
-	      (void))))
-      (else
-       ;;LHS does not reference a CLAMBDA struct.
-       (void))))
 
   (module (E-funcall)
 
