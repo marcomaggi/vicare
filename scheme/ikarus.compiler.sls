@@ -1177,8 +1177,9 @@
 		;   (args ?body0 ?body ...)
 		;   => (prelex-args)
 		;
-		;In the  middle compiler passes: a  list of struct instances  of type
-		;VAR representing the formals with the same format.
+		;After  the compiler  pass  INTRODUCE-VARS is  performed:  a list  of
+		;struct instances of type VAR  representing the formals with the same
+		;format.
 		;
 		;In  the  latest compiler  passes:  a  pair  whose  car is  a  symbol
 		;representing the  CPU register  holding the  pointer to  the current
@@ -3344,9 +3345,9 @@
 
 
 (module (introduce-vars)
-  ;;This module operates  on recordized code representing code in  the core language;
-  ;;it substitutes all  the struct instances of type PRELEX  with struct instances of
-  ;;type VAR.
+  ;;This module replaces all the PRELEX  structs in recordised code with VAR structs;
+  ;;this is  because from  now on  we need a  different set  of properties  to handle
+  ;;variable bindings.
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
@@ -3467,9 +3468,6 @@
 (module (sanitize-bindings)
   ;;Separates bindings having  a CLAMBDA struct as  right-hand side into
   ;;struct instances of type FIX.
-  ;;
-  ;;This module  must be used with  recordized code in which  the PRELEX
-  ;;instances have been already substituted by VAR instances.
   ;;
   ;;Code like:
   ;;
@@ -3661,10 +3659,6 @@
   ;;evaluates to  a CASE-LAMBDA,  that is to  a closure  definition with
   ;;known clauses.
   ;;
-  ;;This module  must be used with  recordized code in which  the PRELEX
-  ;;instances have been already substituted  by VAR instances.  It is to
-  ;;be used after using SANITIZE-BINDINGS.
-  ;;
   (define who 'optimize-for-direct-jumps)
 
   ;;Make the code more readable.
@@ -3810,7 +3804,7 @@
 		    (%recur-to-next-clause))))))))))
 
     (define (%prepare-rand* fml* rand*)
-      ;;FML* is a  list of struct instances of  type PRELEX representing
+      ;;FML* is a  list of struct instances of  type VAR representing
       ;;the formal arguments of the CASE-LAMBDA clause.
       ;;
       ;;RAND* is a  list os struct instances  representing the arguments

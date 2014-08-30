@@ -8172,8 +8172,10 @@ system $compiler}.
 
 
 @defun $introduce-vars @var{input}
+This module replaces all the @objtype{prelex} structs in recordised code
+with @objtype{var} structs; this is because from now on we need a
+different set of properties to handle variable bindings.
 @end defun
-
 
 @c page
 @node syslib compiler bindings
