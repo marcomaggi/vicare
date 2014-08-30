@@ -6048,7 +6048,7 @@ Compiler passes
 * syslib compiler letrec::        Optimisation of @func{letrec} and
                                   @func{letrec*} forms.
 * syslib compiler optimisation::  Source optimisation.
-* syslib compiler assignments::   Rewriting references and assignments.
+* syslib compiler refassig::      Rewriting references and assignments.
 * syslib compiler tags::          Tagging known properties.
 * syslib compiler vars::          Introducing storage locations.
 * syslib compiler bindings::      Sanitizing bindings.
@@ -7994,7 +7994,7 @@ optimiser enters specific subexpressions of the input.
 @end deffn
 
 @c page
-@node syslib compiler assignments
+@node syslib compiler refassig
 @subsection Rewriting references and assignments
 
 
@@ -8087,29 +8087,14 @@ only if the value is recognised at run--time as being closure object,
 also stores value in the slot @code{proc}.
 
 @item
-Single assignments to top level bindings which also serve as binding
-initialisations must be transformed into:
-
-@example
-(funcall (primref $init-symbol-value!)
-         (constant @meta{loc})
-         @meta{rhs})
-@end example
-
-@noindent
-which stores a new value in the slot @code{value} of @meta{loc} and,
-only if the value is recognised at run--time as being closure object,
-also stores value in the slot @code{proc}.
-
-@item
 Definitions of assigned local bindings are transformed as follows:
 
 @example
 (bind ((@meta{prel} @meta{init})) @meta{body})
-===> (bind ((@meta{tmp-prel} @meta{init}))
-       (bind ((@meta{prel} (funcall (primref vector)
-                              @meta{tmp-prel})))
-         @meta{body}))
+@expansion{} (bind ((@meta{tmp-prel} @meta{init}))
+      (bind ((@meta{prel} (funcall (primref vector)
+                             @meta{tmp-prel})))
+        @meta{body}))
 @end example
 
 @item
@@ -8125,10 +8110,10 @@ Assignments to assigned local bindings are transformed as follows:
 
 @example
 (assign @meta{prel} @meta{rhs})
-=== (funcall (primref $vector-set!)
-             @meta{prel}
-             (constant 0)
-             @meta{rhs})
+@expansion{} (funcall (primref $vector-set!)
+            @meta{prel}
+            (constant 0)
+            @meta{rhs})
 @end example
 @end itemize
 @end defun

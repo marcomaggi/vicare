@@ -3025,79 +3025,53 @@
 
 
 (module (rewrite-references-and-assignments)
-  ;;We distinguish between bindings that are only referenced (read-only) and bindings
-  ;;that are also assigned  (read-write).  Example of code in which  the binding X is
-  ;;only referenced:
+  ;;We distinguish between bindings that  are only referenced (unassigned, read-only,
+  ;;constant) and  bindings that  are also assigned  (read-write, mutated).   We also
+  ;;distinguish between  lexical top  level bindings originally  defined by  the core
+  ;;language form  LIBRARY-LETREC* and lexical  local bindings originally  defined by
+  ;;the   core   language   forms   LET,  LETREC,   LETREC*,   LAMBDA,   CASE-LAMBDA,
+  ;;ANNOTATED-CASE-LAMBDA.
   ;;
-  ;;  (let ((x 123)) (display x))
+  ;;Remembering that the actual value of a top level binding is stored in the "value"
+  ;;field of a loc gensym, this function performs the following transformations:
   ;;
-  ;;example of code in which the binding X is assigned and referenced:
+  ;;* References to top level bindings are transformed into:
   ;;
-  ;;  (let ((x 123)) (set! x 456) (display x))
+  ;;     (funcall (primref $symbol-value) (constant ?loc))
   ;;
-  ;;A binding in  reference position or in  the left-hand side of a  SET!  syntax, is
-  ;;represented by a struct instance of type PRELEX; this module must be used only on
-  ;;recordized  code in  which referenced  and  assigned bindings  have already  been
-  ;;marked appropriately in the PRELEX structures.
+  ;;  which extracts the value from slot "value" of the loc gensym ?LOC.
   ;;
-  ;;* Read-only  lexical local bindings are  implemented with words allocated  on the
-  ;;Scheme stack.
+  ;;* Common assignments to top level bindings are transformed into:
   ;;
-  ;;* Read-write lexical local bindings are implemented with Scheme vectors providing
-  ;;mutable memory locations: a vector of one slot for each binding; a word allocated
-  ;;on the Scheme  stack contains a reference to the  single-slot vector.  References
-  ;;and  assignments to  such bindings  must be  substituted with  appropriate vector
-  ;;operations.
+  ;;     (funcall (primref $set-symbol-value!) (constant ?loc) ?rhs)
   ;;
-  ;;Examples
-  ;;--------
+  ;;  which stores a new value in the slot @code{value} of the log gensym ?LOC.
   ;;
-  ;;Code representing usage of a top level binding like:
+  ;;*  Single  assignments  to  top  level  bindings  which  also  serve  as  binding
+  ;;  initialisations are transformed into:
   ;;
-  ;;   (library (the-lib)
-  ;;     (export a)
-  ;;     (import (rnrs))
-  ;;     (define a 1)
-  ;;     (display a))
+  ;;     (funcall (primref $init-symbol-value!) (constant ?loc) ?rhs)
   ;;
-  ;;is converted by the expander into:
+  ;;  which stores a new value in the slot  "value" of ?LOC and, only if the value is
+  ;;  recognised at run-time  as being closure object, also stores  value in the slot
+  ;;  "proc".
   ;;
-  ;;   (library-letrec*
-  ;;       ((a.lex a.loc 1))
-  ;;     (display a.lex))
+  ;;* Definitions of assigned local bindings are transformed as follows:
   ;;
-  ;;and subsequently transformed into:
+  ;;     (bind ((?prel ?init)) ?body)
+  ;;     ===> (bind ((?tmp-prel ?init))
+  ;;            (bind ((?prel (funcall (primref vector) ?tmp-prel)))
+  ;;              ?body))
   ;;
-  ;;   ($init-symbol-value! a.loc 1)
-  ;;   (display ($symbol-value a.loc))
+  ;;* References  to assigned local  bindings are transformed from  standalone PRELEX
+  ;;  structs to:
   ;;
-  ;;Code representing usage of a lexical read-write binding like:
+  ;;     (funcall (primref $vector-ref) ?prel (constant 0))
   ;;
-  ;;   (let ((x 123))
-  ;;     (set! x 456)
-  ;;     x)
+  ;;* Assignments to assigned local bindings are transformed as follows:
   ;;
-  ;;is transformed into:
-  ;;
-  ;;   (let ((t 123))
-  ;;     (let ((x (vector t)))
-  ;;       ($vector-set! x 0 456)
-  ;;       ($vector-ref x 0)))
-  ;;
-  ;;Code representing usage of multiple lexical bindings like:
-  ;;
-  ;;   (let ((x 1)
-  ;;         (y 2))
-  ;;     (set! x 3)
-  ;;     (list x y))
-  ;;
-  ;;is transformed into:
-  ;;
-  ;;   (let ((t 1)
-  ;;         (y 2))
-  ;;     (let ((x (vector t)))
-  ;;       ($vector-set! x 0 3)
-  ;;       (list ($vector-ref x 0) y)))
+  ;;     (assign ?prel ?rhs)
+  ;;     ===> (funcall (primref $vector-set!) ?prel (constant 0) ?rhs)
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'rewrite-references-and-assignments))
@@ -3142,7 +3116,7 @@
        (receive (lhs* a-lhs* a-rhs*)
 	   (%fix-lhs* lhs*)
          (make-bind lhs* ($map/stx E rhs*)
-	   (%bind-assigned a-lhs* a-rhs* (E body)))))
+		    (%bind-assigned a-lhs* a-rhs* (E body)))))
 
       ((fix lhs* rhs* body)
        (make-fix lhs* ($map/stx E rhs*) (E body)))
@@ -3312,10 +3286,10 @@
     (if (null? lhs*)
 	body
       (make-bind lhs*
-	  (map (lambda (rhs)
-		 (make-funcall (mk-primref 'vector) (list rhs)))
-	    rhs*)
-	body)))
+		 (map (lambda (rhs)
+			(make-funcall (mk-primref 'vector) (list rhs)))
+		   rhs*)
+		 body)))
 
   #| end of module: rewrite-references-and-assignments |# )
 
