@@ -3418,9 +3418,6 @@
 		       clause*)
 		     cp free name))
 
-      ;; ((primcall rator rand*)
-      ;;  (make-primcall rator (map E-known rand*)))
-
       ((funcall rator rand*)
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
