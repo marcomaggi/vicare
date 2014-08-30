@@ -3624,7 +3624,9 @@
 
 
 (module (optimize-for-direct-jumps)
-  ;;We known that direct function applications like:
+    (define-fluid-override __who__
+      (identifier-syntax 'optimize-for-direct-jumps))
+  ;;We know that direct function applications like:
   ;;
   ;;   ((lambda (x) x) 123)
   ;;
@@ -3648,41 +3650,44 @@
   ;;
   ;;this is what the module OPTIMIZE-DIRECT-CALLS does.  Fine.
   ;;
-  ;;This  module   is,  in  a   way,  a  generalisation  of   the  above
-  ;;optimisation; let's consider the following code:
+  ;;This  module is,  in a  way, a  generalisation of  the above  optimisation; let's
+  ;;consider the following code:
   ;;
   ;;   (let ((f (lambda (x) x)))
   ;;     (f 123))
   ;;
-  ;;while we  cannot, in general,  replace the LAMBDA definition  with a
-  ;;low level binding, there is a way to jump directly from the function
-  ;;application to the function  implementation without executing a full
-  ;;closure call.  When the closure definition has multiple clauses:
+  ;;while  we cannot,  in general,  replace the  LAMBDA definition  with a  low level
+  ;;binding, there  is a way  to jump directly from  the function application  to the
+  ;;function implementation without executing a  full closure call.  When the closure
+  ;;definition has multiple clauses:
   ;;
   ;;   (let ((f (case-lambda
   ;;              ((x)		x)
   ;;              ((x y)	(list x y)))))
   ;;     (f 1 2))
   ;;
-  ;;there is a way to jump directly from the function application to the
-  ;;clause that matches the number of arguments.
+  ;;there is a way to jump directly  from the function application to the clause that
+  ;;matches the number of arguments.
   ;;
-  ;;This optimisation is possible only  when: a preliminary iteration of
-  ;;the  recordized code  let  us find  bindings  whose right-hand  size
-  ;;evaluates to  a CASE-LAMBDA,  that is to  a closure  definition with
-  ;;known clauses.
+  ;;This  optimisation  is  possible  only  when:  a  preliminary  iteration  of  the
+  ;;recordized  code let  us  find  bindings whose  right-hand  size  evaluates to  a
+  ;;CASE-LAMBDA, that is to a closure definition with known clauses.
   ;;
-  (define who 'optimize-for-direct-jumps)
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		var		primref
+  ;;   bind		fix		conditional
+  ;;   seq		forcall		funcall
+  ;;
 
   ;;Make the code more readable.
   (define-syntax E
     (identifier-syntax optimize-for-direct-jumps))
 
   (define (optimize-for-direct-jumps x)
-    ;;Perform  code optimisation  traversing the  whole hierarchy  in X,
-    ;;which must  be a struct  instance representing recordized  code in
-    ;;the  core language,  and building  a new  hierarchy of  optimised,
-    ;;recordized code; return the new hierarchy.
+    ;;Perform code optimisation traversing the whole  hierarchy in X, which must be a
+    ;;struct instance representing recordized code in the core language, and building
+    ;;a new hierarchy of optimised, recordized code; return the new hierarchy.
     ;;
     (struct-case x
       ((constant)
@@ -3702,7 +3707,7 @@
 
       ((fix lhs* rhs* body)
        ($for-each/stx %maybe-mark-var-as-referencing-clambda lhs* rhs*)
-       (make-fix lhs* ($map/stx CLambda rhs*) (E body)))
+       (make-fix lhs* ($map/stx E-clambda rhs*) (E body)))
 
       ((conditional test conseq altern)
        (make-conditional (E test) (E conseq) (E altern)))
@@ -3717,10 +3722,11 @@
        (%optimize-funcall rator rand*))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (compile-time-error __who__
+	 "invalid expression" (unparse-recordized-code x)))))
 
-  (define-inline (%mark-var-as-non-referenced x)
-    ($set-var-referenced! x #f))
+  (define-syntax-rule (%mark-var-as-non-referenced ?var)
+    ($set-var-referenced! ?var #f))
 
   (define (%maybe-mark-var-as-referencing-clambda lhs rhs)
     (struct-case rhs
@@ -3728,45 +3734,43 @@
        ($set-var-referenced! lhs rhs))
       ((var)
        (cond ((%bound-var rhs)
-	      => (lambda (v)
-		   ($set-var-referenced! lhs v)))
+	      => (lambda (V)
+		   ($set-var-referenced! lhs V)))
 	     (else
 	      (void))))
       (else
        (void))))
 
-  (define-inline (%bound-var x)
-    ($var-referenced x))
+  (define-syntax-rule (%bound-var ?var)
+    ($var-referenced ?var))
 
   (module (%optimize-funcall)
 
     (define (%optimize-funcall rator rand*)
       (let-values (((rator type) (untag (E-known rator))))
 	(cond
-	 ;;Is RATOR a  variable known to reference a  closure?  In this
-	 ;;case we can attempt an optimization.
+	 ;;Is RATOR  a variable known  to reference a closure?   In this case  we can
+	 ;;attempt an optimization.
 	 ((and (var? rator)
 	       (%bound-var rator))
 	  => (lambda (c)
 	       (%optimize c rator ($map/stx E-known rand*))))
 
-	 ;;Is RATOR  the low level  APPLY operation?  In this  case: the
-	 ;;first  RAND*   should  be  a  struct   instance  representing
-	 ;;recordized code which will evaluate to a closure.
+	 ;;Is RATOR  the low level  APPLY operation?  In  this case: the  first RAND*
+	 ;;should  be  a struct  instance  representing  recordized code  which  will
+	 ;;evaluate to a closure.
 	 ;;
-	 ;;$$APPLY  is used  only in  the body  of the  procedure APPLY,
-	 ;;after  having  validated the  first  arguments  as a  closure
-	 ;;objectt.   So  here we  are  sure  that "($car  rand*)"  will
-	 ;;evaluate to a closure object.
+	 ;;$$APPLY is  used only  in the  body of the  procedure APPLY,  after having
+	 ;;validated the first  arguments as a closure objectt.  So  here we are sure
+	 ;;that "($car rand*)" will evaluate to a closure object.
 	 ((and (primref? rator)
 	       (eq? (primref-name rator) '$$apply))
 	  (make-jmpcall (sl-apply-label)
 			(E-unpack-known ($car rand*))
 			($map/stx E-unpack-known ($cdr rand*))))
 
-	 ;;If we are  here: RATOR is just some  unknown struct instance
-	 ;;representing  recordized code  which,  when evaluated,  will
-	 ;;return a closure.
+	 ;;If we  are here: RATOR is  just some unknown struct  instance representing
+	 ;;recordized code which, when evaluated, will return a closure.
 	 (else
 	  (make-funcall (tag rator type) ($map/stx E-known rand*))))))
 
@@ -3777,21 +3781,20 @@
       ;;
       ;;CLAM is a struct instance of type CLAMBDA.
       ;;
-      ;;RATOR  is a  struct  instance  of type  VAR  which  is known  to
-      ;;reference the CLAMBDA in CLAM.
+      ;;RATOR  is a  struct instance  of type  VAR which  is known  to reference  the
+      ;;CLAMBDA in CLAM.
       ;;
-      ;;RAND* is a list of struct instances representing recordized code
-      ;;which,  when  evaluated,  will  return  the  arguments  for  the
-      ;;function application.
+      ;;RAND* is a list of struct  instances representing recordized code which, when
+      ;;evaluated, will return the arguments for the function application.
       ;;
-      ;;This function  searches for a  clause in CLAM which  matches the
-      ;;arguments given in RAND*:
+      ;;This function searches for a clause in CLAM which matches the arguments given
+      ;;in RAND*:
       ;;
-      ;;*  If   found:  return  a   struct  instance  of   type  JMPCALL
-      ;;  representing a jump call to the matching clause.
+      ;;* If found: return a struct instance of type JMPCALL representing a jump call
+      ;;  to the matching clause.
       ;;
-      ;;* If  not found: just return  a struct instance of  type FUNCALL
-      ;;  representing a normal function call.
+      ;;* If not found: just return a  struct instance of type FUNCALL representing a
+      ;;  normal function call.
       ;;
       (struct-case clam
 	((clambda label.unused clause*)
@@ -3801,31 +3804,29 @@
 	   (define-inline (%recur-to-next-clause)
 	     (recur ($cdr clause*)))
 	   (if (null? clause*)
-	       ;;No  matching clause  found.  Just  call the  closure as
-	       ;;always.
+	       ;;No matching clause found.  Just call the closure as always.
 	       (make-funcall rator rand*)
 	     (struct-case ($clambda-case-info ($car clause*))
 	       ((case-info label fml* proper?)
 		(if proper?
 		    ;;This clause has a fixed number of arguments.
 		    (if ($fx= num-of-rand* (length fml*))
-			(make-jmpcall label (strip rator) ($map/stx strip rand*))
+			(make-jmpcall label (%unwrap-known rator) ($map/stx %unwrap-known rand*))
 		      (%recur-to-next-clause))
 		  ;;This clause has a variable number of arguments.
 		  (if ($fx<= (length ($cdr fml*)) num-of-rand*)
-		      (make-jmpcall label (strip rator) (%prepare-rand* ($cdr fml*) rand*))
+		      (make-jmpcall label (%unwrap-known rator) (%prepare-rand* ($cdr fml*) rand*))
 		    (%recur-to-next-clause))))))))))
 
     (define (%prepare-rand* fml* rand*)
-      ;;FML* is a  list of struct instances of  type VAR representing
-      ;;the formal arguments of the CASE-LAMBDA clause.
+      ;;FML*  is a  list of  struct  instances of  type VAR  representing the  formal
+      ;;arguments of the CASE-LAMBDA clause.
       ;;
-      ;;RAND* is a  list os struct instances  representing the arguments
-      ;;to the closure application.
+      ;;RAND* is a list os struct instances representing the arguments to the closure
+      ;;application.
       ;;
-      ;;This function processes RAND* and builds a new list representing
-      ;;arguments that can be assigned to the formals of the clause.  If
-      ;;the clause is:
+      ;;This function  processes RAND* and  builds a new list  representing arguments
+      ;;that can be assigned to the formals of the clause.  If the clause is:
       ;;
       ;;   ((a b . args) ?body0 ?body ...)
       ;;
@@ -3842,10 +3843,10 @@
       (if (null? fml*)
 	  ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
 	  (list (make-funcall (mk-primref 'list) rand*))
-	(cons (strip ($car rand*))
+	(cons (%unwrap-known ($car rand*))
 	      (%prepare-rand* ($cdr fml*) ($cdr rand*)))))
 
-    (define (strip x)
+    (define (%unwrap-known x)
       (struct-case x
 	((known expr)
 	 expr)
@@ -3853,23 +3854,21 @@
 
     #| end of module: %optimize-funcall |# )
 
-  (define (CLambda x)
-    ;;The argument  X must be  a struct  instance of type  CLAMBDA.  The
-    ;;purpose  of this  function  is to  apply  E to  the  body of  each
-    ;;CASE-LAMBDA  clause, after  having  marked  as non-referenced  the
-    ;;corresponding formals.
+  (define (E-clambda x)
+    ;;The argument X must be a struct  instance of type CLAMBDA.  The purpose of this
+    ;;function is to apply E to the  body of each CLAMBDA clause, after having marked
+    ;;as non-referenced the corresponding formals.
     ;;
     (struct-case x
       ((clambda label clause* cp free name)
-       (make-clambda label
-		     (map (lambda (cls)
-			    (struct-case cls
-			      ((clambda-case info body)
-			       ($for-each/stx %mark-var-as-non-referenced
-					      (case-info-args info))
-			       (make-clambda-case info (E body)))))
-		       clause*)
-		     cp free name))))
+       (let ((clause*^ ($map/stx (lambda (clause)
+				   (struct-case clause
+				     ((clambda-case info body)
+				      ($for-each/stx %mark-var-as-non-referenced
+					(case-info-args info))
+				      (make-clambda-case info (E body)))))
+			 clause*)))
+	 (make-clambda label clause*^ cp free name)))))
 
   (define (E-known x)
     (struct-case x
