@@ -3450,7 +3450,7 @@
     (assert (not (var? ($prelex-operand prel))))
     (receive-and-return (V)
 	(make-unique-var ($prelex-name prel))
-      ($set-var-referenced!      V ($prelex-source-referenced? prel))
+      #;($set-var-referenced!      V ($prelex-source-referenced? prel))
       ($set-var-global-location! V ($prelex-global-location    prel))
       ($set-prelex-operand! prel V)))
 
@@ -3465,8 +3465,6 @@
 
 
 (module (sanitize-bindings)
-    (define-fluid-override __who__
-      (identifier-syntax 'sanitize-bindings))
   ;;In this module  we want to make  sure that every CLAMBA struct  appears as direct
   ;;RHS expression for a FIX struct:
   ;;
@@ -3524,6 +3522,8 @@
   ;;     (fix ((b (lambda (x) (this))))
   ;;       (that)))
   ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'sanitize-bindings))
 
   ;;Make the code more readable.
   (define-syntax E
@@ -3558,8 +3558,8 @@
 			       (E ($cdr bindable)))
 		     bindable*)
 		   (E-fix ($map/stx $car fixable*)
-			    ($map/stx $cdr fixable*)
-			    body))))
+			  ($map/stx $cdr fixable*)
+			  body))))
 
       ((fix lhs* rhs* body)
        (E-fix lhs* rhs* body))
@@ -3624,34 +3624,17 @@
 
 
 (module (optimize-for-direct-jumps)
-    (define-fluid-override __who__
-      (identifier-syntax 'optimize-for-direct-jumps))
-  ;;We know that direct function applications like:
+  ;;In a  previous compiler pass we  have optimised direct function  applications; as
+  ;;example:
   ;;
   ;;   ((lambda (x) x) 123)
   ;;
-  ;;can be optimized to:
+  ;;was transformed into:
   ;;
   ;;   (let ((x 123)) x)
   ;;
-  ;;and also:
-  ;;
-  ;;   ((case-lambda ((x) x)
-  ;;                 ((x y) (list x y)))
-  ;;    1 2)
-  ;;
-  ;;can be optimized to:
-  ;;
-  ;;   ((case-lambda ((x y) (list x y))) 1 2)
-  ;;
-  ;;and so to:
-  ;;
-  ;;   (let ((x 1) (y 2)) (list x y))
-  ;;
-  ;;this is what the module OPTIMIZE-DIRECT-CALLS does.  Fine.
-  ;;
-  ;;This  module is,  in a  way, a  generalisation of  the above  optimisation; let's
-  ;;consider the following code:
+  ;;Fine.  This  module is,  in a  way, a generalisation  of the  above optimisation;
+  ;;let's consider the following code:
   ;;
   ;;   (let ((f (lambda (x) x)))
   ;;     (f 123))
@@ -3679,6 +3662,8 @@
   ;;   bind		fix		conditional
   ;;   seq		forcall		funcall
   ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'optimize-for-direct-jumps))
 
   ;;Make the code more readable.
   (define-syntax E
@@ -3706,7 +3691,8 @@
 	 (make-bind lhs* rhs* (E body))))
 
       ((fix lhs* rhs* body)
-       ($for-each/stx %maybe-mark-var-as-referencing-clambda lhs* rhs*)
+       ($map/stx $set-var-referenced! lhs* rhs*)
+       #;($for-each/stx %maybe-mark-var-as-referencing-clambda lhs* rhs*)
        (make-fix lhs* ($map/stx E-clambda rhs*) (E body)))
 
       ((conditional test conseq altern)
@@ -3719,11 +3705,31 @@
        (make-forcall op ($map/stx E rand*)))
 
       ((funcall rator rand*)
-       (%optimize-funcall rator rand*))
+       (E-funcall rator rand*))
 
       (else
        (compile-time-error __who__
 	 "invalid expression" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (E-clambda x)
+    ;;The argument X must be a struct  instance of type CLAMBDA.  The purpose of this
+    ;;function is to apply E to the  body of each CLAMBDA clause, after having marked
+    ;;as non-referenced the corresponding formals.
+    ;;
+    (struct-case x
+      ((clambda label clause* cp free name)
+       (let ((clause*^ ($map/stx (lambda (clause)
+				   (struct-case clause
+				     ((clambda-case info body)
+				      ($for-each/stx %mark-var-as-non-referenced
+					(case-info-args info))
+				      (make-clambda-case info (E body)))))
+			 clause*)))
+	 (make-clambda label clause*^ cp free name)))))
+
+;;; --------------------------------------------------------------------
 
   (define-syntax-rule (%mark-var-as-non-referenced ?var)
     ($set-var-referenced! ?var #f))
@@ -3733,28 +3739,30 @@
       ((clambda)
        ($set-var-referenced! lhs rhs))
       ((var)
-       (cond ((%bound-var rhs)
-	      => (lambda (V)
-		   ($set-var-referenced! lhs V)))
+       (cond (($var-referenced rhs)
+	      ;;RHS is  a VAR  struct referencing  a CLAMBDA  struct; this  means LHS
+	      ;;references the same  CLAMBDA struct.  CLAM is  the referenced CLAMBDA
+	      ;;struct.
+	      => (lambda (clam)
+		   ($set-var-referenced! lhs clam)))
 	     (else
 	      (void))))
       (else
+       ;;LHS does not reference a CLAMBDA struct.
        (void))))
 
-  (define-syntax-rule (%bound-var ?var)
-    ($var-referenced ?var))
+  (module (E-funcall)
 
-  (module (%optimize-funcall)
-
-    (define (%optimize-funcall rator rand*)
-      (let-values (((rator type) (untag (E-known rator))))
+    (define (E-funcall rator rand*)
+      (receive (rator type)
+	  (untag (E-known rator))
 	(cond
 	 ;;Is RATOR  a variable known  to reference a closure?   In this case  we can
 	 ;;attempt an optimization.
 	 ((and (var? rator)
-	       (%bound-var rator))
-	  => (lambda (c)
-	       (%optimize c rator ($map/stx E-known rand*))))
+	       ($var-referenced rator))
+	  => (lambda (clam)
+	       (%optimize-funcall clam rator ($map/stx E-known rand*))))
 
 	 ;;Is RATOR  the low level  APPLY operation?  In  this case: the  first RAND*
 	 ;;should  be  a struct  instance  representing  recordized code  which  will
@@ -3774,7 +3782,7 @@
 	 (else
 	  (make-funcall (tag rator type) ($map/stx E-known rand*))))))
 
-    (define (%optimize clam rator rand*)
+    (define (%optimize-funcall clam rator rand*)
       ;;Attempt to optimize the function application:
       ;;
       ;;   (RATOR . RAND*)
@@ -3785,7 +3793,7 @@
       ;;CLAMBDA in CLAM.
       ;;
       ;;RAND* is a list of struct  instances representing recordized code which, when
-      ;;evaluated, will return the arguments for the function application.
+      ;;evaluated, will return the operands for the function application.
       ;;
       ;;This function searches for a clause in CLAM which matches the arguments given
       ;;in RAND*:
@@ -3819,6 +3827,8 @@
 		    (%recur-to-next-clause))))))))))
 
     (define (%prepare-rand* fml* rand*)
+      ;;Recursive function.
+      ;;
       ;;FML*  is a  list of  struct  instances of  type VAR  representing the  formal
       ;;arguments of the CASE-LAMBDA clause.
       ;;
@@ -3852,51 +3862,36 @@
 	 expr)
 	(else x)))
 
-    #| end of module: %optimize-funcall |# )
+    (define (E-known x)
+      (struct-case x
+	((known expr type)
+	 (make-known (E expr) type))
+	(else
+	 (E x))))
 
-  (define (E-clambda x)
-    ;;The argument X must be a struct  instance of type CLAMBDA.  The purpose of this
-    ;;function is to apply E to the  body of each CLAMBDA clause, after having marked
-    ;;as non-referenced the corresponding formals.
-    ;;
-    (struct-case x
-      ((clambda label clause* cp free name)
-       (let ((clause*^ ($map/stx (lambda (clause)
-				   (struct-case clause
-				     ((clambda-case info body)
-				      ($for-each/stx %mark-var-as-non-referenced
-					(case-info-args info))
-				      (make-clambda-case info (E body)))))
-			 clause*)))
-	 (make-clambda label clause*^ cp free name)))))
+    (define (E-unpack-known x)
+      (struct-case x
+	((known expr)
+	 (E expr))
+	(else
+	 (E x))))
 
-  (define (E-known x)
-    (struct-case x
-      ((known expr type)
-       (make-known (E expr) type))
-      (else
-       (E x))))
+    (define (tag expr type)
+      (if type
+	  (make-known expr type)
+	expr))
 
-  (define (E-unpack-known x)
-    (struct-case x
-      ((known expr)
-       (E expr))
-      (else
-       (E x))))
+    (define (untag x)
+      (struct-case x
+	((known expr type)
+	 (values expr type))
+	(else
+	 (values x #f))))
 
-  (define (tag expr type)
-    (if type
-	(make-known expr type)
-      expr))
 
-  (define (untag x)
-    (struct-case x
-      ((known expr type)
-       (values expr type))
-      (else
-       (values x #f))))
+    #| end of module: E-funcall |# )
 
-  #| end of module: optimize-for-direct-jumps |# )
+  #| end of module: OPTIMIZE-FOR-DIRECT-JUMPS |# )
 
 
 (module (insert-global-assignments)
