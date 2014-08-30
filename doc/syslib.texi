@@ -6654,6 +6654,32 @@ is transformed into:
                (constant 0)))))
 @end example
 
+Formal bindings in @objtype{clambda} structs are also processed this
+way; for example:
+
+@example
+(lambda (a)
+  (display a)
+  (set! a 1)
+  a)
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(lambda (a_0)
+  (bind ((a_1 (funcall (primref vector) a_0)))
+    (seq
+      (funcall (primref display)
+               (funcall (primref $vector-ref)
+                        a_1 (constant 0)))
+      (funcall (primref $vector-set!)
+               a_1 (constant 0) (constant 1))
+      (funcall (primref $vector-ref)
+               a_1 (constant 0)))))
+@end example
+
 @c page
 @node syslib compiler unparse
 @subsection Unparsing intermediate representations

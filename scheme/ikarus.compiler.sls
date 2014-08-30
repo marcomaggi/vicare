@@ -520,9 +520,19 @@
 (define-condition-type &compile-time-error &assertion
   make-compile-time-error compile-time-error?)
 
+(define-condition-type &compiler-internal-error &compile-time-error
+  make-compiler-internal-error compiler-internal-error?)
+
 (define (compile-time-error who message . irritants)
   (raise
    (condition (make-compile-time-error)
+	      (make-who-condition who)
+	      (make-message-condition message)
+	      (make-irritants-condition irritants))))
+
+(define (compiler-internal-error who message . irritants)
+  (raise
+   (condition (make-compiler-internal-error)
 	      (make-who-condition who)
 	      (make-message-condition message)
 	      (make-irritants-condition irritants))))
@@ -683,7 +693,8 @@
     (and (closure? x)
 	 (if (null? (closure-free* x))
 	     (code-loc-label (closure-code x))
-	   (error #f "Vicare Scheme: internal error: non-thunk escaped" x))))
+	   (compiler-internal-error #f
+	     "non-thunk escaped" x))))
 
   (define (print-instr x)
     ;;Print  to   the  current   error  port  the   symbolic  expression
@@ -1695,7 +1706,7 @@
 				 (list (make-constant X))))))
 
 	   (else
-	    (error __who__ "invalid core language expression" X)))))
+	    (compile-time-error __who__ "invalid core language expression" X)))))
 
   (define-syntax-rule (%recordize-pair-sexp X ctxt)
     (case ($car X)
@@ -2666,7 +2677,7 @@
        (make-assign lhs (E rhs)))
 
       (else
-       (error __who__ "invalid expression" (unparse-recordized-code x)))))
+       (compile-time-error __who__ "invalid expression" (unparse-recordized-code x)))))
 
   (module (%attempt-integration)
 
@@ -2999,7 +3010,7 @@
       ;;                          #[constant ()])])])
       ;;
       (cond ((null? lhs*)
-	     (error __who__ "improper improper"))
+	     (compile-time-error __who__ "improper improper"))
 	    ((null? ($cdr lhs*))
 	     (list (%make-conses rhs*)))
 	    (else
@@ -3090,7 +3101,7 @@
 
       ((prelex)
        (if (prelex-source-assigned? x)
-	   ;;Reference to a lexical read-write binding.
+	   ;;X is a reference to a lexical read-write binding.
 	   (cond ((prelex-global-location x)
 		  ;;Reference to a  lexical top level binding; LOC is  the loc gensym
 		  ;;used to hold the value at run-time.
@@ -3099,7 +3110,7 @@
 		 (else
 		  ;;Reference to a lexical local binding.
 		  (%assigned-local-binding-reference x)))
-	 ;;Reference to a lexical read-only binding.
+	 ;;X is a reference to a lexical read-only binding.
 	 (cond ((prelex-global-location x)
 		=> (lambda (loc)
 		     ;;Reference  to a  lexical top  level  binding; LOC  is the  loc
@@ -3113,10 +3124,10 @@
        x)
 
       ((bind lhs* rhs* body)
-       (receive (lhs* a-lhs* a-rhs*)
-	   (%fix-lhs* lhs*)
-         (make-bind lhs* ($map/stx E rhs*)
-		    (%bind-assigned a-lhs* a-rhs* (E body)))))
+       (receive (outer-lhs* assigned-lhs* vector-prel*)
+	   (%process-assigned-lhs* lhs*)
+         (make-bind outer-lhs* ($map/stx E rhs*)
+		    (%bind-assigned assigned-lhs* vector-prel* (E body)))))
 
       ((fix lhs* rhs* body)
        (make-fix lhs* ($map/stx E rhs*) (E body)))
@@ -3128,16 +3139,19 @@
        (make-seq (E e0) (E e1)))
 
       ((clambda label clause* cp free name)
-       (let ((clause*^ ($map/stx (lambda (cls)
-				   (struct-case cls
+       (let ((clause*^ ($map/stx (lambda (clause)
+				   ;;Process the formals of every clause to introduce
+				   ;;transformations  for  assigned formal  bindings.
+				   ;;Also apply E to each body.
+				   (struct-case clause
 				     ((clambda-case info body)
 				      (struct-case info
 					((case-info label fml* proper)
-					 (receive (fml* a-lhs* a-rhs*)
-					     (%fix-lhs* fml*)
+					 (receive (fml* assigned-lhs* vector-prel*)
+					     (%process-assigned-lhs* fml*)
 					   (make-clambda-case
 					    (make-case-info label fml* proper)
-					    (%bind-assigned a-lhs* a-rhs* (E body)))))))))
+					    (%bind-assigned assigned-lhs* vector-prel* (E body)))))))))
 			 clause*)))
 	 (make-clambda label clause*^ cp free name)))
 
@@ -3151,8 +3165,8 @@
        (cond ((prelex-source-assigned? lhs)
 	      => (lambda (where)
 		   (cond ((symbol? where)
-			  ;;Single  initialisation assignment  of top  level binding;
-			  ;;WHERE is the loc gensym used to hold the value.
+			  ;;Initialisation  single-assignment  of lexical  top  level
+			  ;;binding; WHERE is the loc gensym used to hold the value.
 			  (%top-level-binding-init where (E rhs)))
 			 ((prelex-global-location lhs)
 			  ;;Common assignment  of lexical  top level binding;  LOC is
@@ -3162,9 +3176,8 @@
 			 (else
 			  (%assigned-local-binding-assignment lhs (E rhs))))))
 	     (else
-	      (compile-time-error __who__
-		"internal error: assigned PRELEX has non-assigned state"
-		lhs x))))
+	      (compiler-internal-error __who__
+		"assigned PRELEX has non-assigned state" lhs x))))
 
       (else
        (compile-time-error __who__
@@ -3205,59 +3218,64 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%fix-lhs* lhs*)
+  (define (%process-assigned-lhs* lhs*)
     ;;Recursive  function.   LHS* is  a  list  of  struct  instances of  type  PRELEX
     ;;representing bindings.  Return 3 values:
     ;;
-    ;;1. A list  of struct instances of  type PRELEX representing the  bindings to be
-    ;;created to hold the right-hand side values.
+    ;;1. The  list of PRELEX  structs to which the  original RHS expressions  must be
+    ;;bound.
     ;;
-    ;;2.   A list  of struct  instances of  type PRELEX  representing the  read-write
-    ;;bindings referencing the mutable vectors.
+    ;;2. A list of PRELEX structs to which the vector expressions must be bound.
     ;;
-    ;;3.  A list  of  struct  instances of  type  PRELEX  representing the  temporary
-    ;;bindings used to hold the right-hand side values.
+    ;;3. A list of PRELEX structs used in the vector creation RHS expressions.
     ;;
     ;;In a trasformation from:
     ;;
-    ;;   (let ((X 123))
-    ;;     (set! X 456)
-    ;;     x)
+    ;;   (let ((X 1)
+    ;;         (Y 2))
+    ;;     (set! X 3)
+    ;;     (list X Y))
     ;;
     ;;to:
     ;;
-    ;;   (let ((T 123))
+    ;;   (let ((T 1)
+    ;;         (Y 2))
     ;;     (let ((X (vector T)))
     ;;       ($vector-set! X 0 456)
-    ;;       ($vector-ref X 0)))
+    ;;       (list ($vector-ref X 0) Y)))
     ;;
-    ;;the argument LHS* is a list holding the PRELEX for X; the return values are:
+    ;;the argument LHS* is a list of PRELEX structs: "(X Y)", the return values are:
     ;;
-    ;;1. A list holding the PRELEX for T.
+    ;;1. A list holding the PRELEX structs  "(T Y)" for the outer binding definitions
+    ;;evaluating the original RHS expressions.
     ;;
-    ;;2. A list holding the PRELEX for X.
+    ;;2.  A  list holding  the PRELEX  for X  for the  inner, true,  assigned binding
+    ;;definition.
     ;;
-    ;;3. A list holding the PRELEX for T.
+    ;;3. A list holding the PRELEX for T for the RHS vector creation expression.
     ;;
     (if (null? lhs*)
 	(values '() '() '())
       (let ((prel ($car lhs*)))
-	(receive (lhs* a-lhs* a-rhs*)
-	    (%fix-lhs* ($cdr lhs*))
+	(receive (tmp* assigned-lhs* vector-prel*)
+	    (%process-assigned-lhs* ($cdr lhs*))
 	  (if (and (prelex-source-assigned? prel)
 		   (not (prelex-global-location prel)))
+	      ;;PREL is an assigned lexical local binding.  We process it.
 	      (let ((tmp (make-prelex-for-tmp-binding prel)))
-		(values (cons tmp  lhs*)
-			(cons prel a-lhs*)
-			(cons tmp  a-rhs*)))
-	    (values (cons prel lhs*) a-lhs* a-rhs*))))))
+		(values (cons tmp  tmp*)
+			(cons prel assigned-lhs*)
+			(cons tmp  vector-prel*)))
+	    ;;PREL is  an unassigned  lexical local  binding or  a lexical  top level
+	    ;;binding.  We skip it.
+	    (values (cons prel tmp*) assigned-lhs* vector-prel*))))))
 
-  (define (%bind-assigned lhs* rhs* body)
-    ;;LHS* must be a list of  struct instances of type PRELEX representing read-write
+  (define (%bind-assigned assigned-lhs* vector-prel* body)
+    ;;ASSIGNED-LHS* must be a list of PRELEX structs representing the true read-write
     ;;bindings.
     ;;
-    ;;RHS* must  be a list  of struct  instance representing references  to temporary
-    ;;bindings holding the binding's values.
+    ;;VECTOR-PREL*  must be  a  list  of PRELEX  structs  representing references  to
+    ;;temporary bindings holding the binding's values.
     ;;
     ;;BODY must be a struct instance representing  code to be evaluated in the region
     ;;of the bindings.
@@ -3280,15 +3298,15 @@
     ;;   (let ((X (vector T)))
     ;;     ?body)
     ;;
-    ;;in this case LHS* is a list holding the PRELEX for X and RHS* is a list holding
-    ;;the PRELEX for T.
+    ;;in  this case  ASSIGNED-LHS* is  the list  "(X)" and  VECTOR-PREL* is  the list
+    ;;"(T)".
     ;;
-    (if (null? lhs*)
+    (if (null? assigned-lhs*)
 	body
-      (make-bind lhs*
-		 (map (lambda (rhs)
-			(make-funcall (mk-primref 'vector) (list rhs)))
-		   rhs*)
+      (make-bind assigned-lhs*
+		 ($map/stx (lambda (rhs)
+			     (make-funcall (mk-primref 'vector) (list rhs)))
+		   vector-prel*)
 		 body)))
 
   #| end of module: rewrite-references-and-assignments |# )
@@ -6907,4 +6925,5 @@
 ;; eval: (put '$for-each/stx			'scheme-indent-function 1)
 ;; eval: (put 'with-prelex-structs-in-plists	'scheme-indent-function 1)
 ;; eval: (put 'compile-time-error		'scheme-indent-function 1)
+;; eval: (put 'compiler-internal-error		'scheme-indent-function 1)
 ;; End:

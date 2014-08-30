@@ -1647,6 +1647,19 @@
 		 (funcall (primref $vector-ref) a_1 (constant 0))
 		 (funcall (primref $vector-ref) b_1 (constant 0)))))))
 
+  ;;Lambda form
+  (doit* (lambda (a)
+	   (display a)
+	   (set! a 1)
+	   a)
+	 (lambda (a_0)
+	   (bind ((a_1 (funcall (primref vector) a_0)))
+	     (seq
+	       (funcall (primref display)
+		 (funcall (primref $vector-ref) a_1 (constant 0)))
+	       (funcall (primref $vector-set!) a_1 (constant 0) (constant 1))
+	       (funcall (primref $vector-ref)  a_1 (constant 0))))))
+
 ;;; --------------------------------------------------------------------
 ;;; LIBRARY-LETREC* forms
 
