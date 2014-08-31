@@ -3790,71 +3790,17 @@
 
 
 (module (insert-global-assignments)
-
-  (define who 'insert-global-assignments)
+  (define-fluid-override __who__
+    (identifier-syntax 'insert-global-assignments))
 
   ;;Make the code more readable.
-  (define-syntax M
+  (define-syntax E
     (identifier-syntax insert-global-assignments))
 
   (define (insert-global-assignments x)
-    ;;Perform code  transformation traversing the whole  hierarchy in X,
-    ;;which must  be a struct  instance representing recordized  code in
-    ;;the core  language, and building  a new hierarchy  of transformed,
-    ;;recordized code; return the new hierarchy.
-    ;;
-    ;;This  function  traverses  top  level  forms  only;  forms  inside
-    ;;CASE-LAMBDA are traversed by the function E.
-    ;;
-    (struct-case x
-      ((constant)
-       x)
-
-      ((var)
-       x)
-
-      ((primref)
-       x)
-
-      ((bind lhs* rhs* body)
-       (make-bind lhs* ($map/stx M rhs*)
-		  (%global-assign lhs* (M body))))
-
-      ((fix lhs* rhs* body)
-       (make-fix lhs* ($map/stx M rhs*)
-		 (%global-fix lhs* (M body))))
-
-      ((conditional test conseq altern)
-       (make-conditional (M test) (M conseq) (M altern)))
-
-      ((seq e0 e1)
-       (make-seq (M e0) (M e1)))
-
-      ((clambda label clause* cp free name)
-       ;;Apply E to every body of every CASE-LAMBDA clause.
-       (make-clambda label
-		     (map (lambda (clause)
-			    (struct-case clause
-			      ((clambda-case info body)
-			       (make-clambda-case info (E body)))))
-		       clause*)
-		     cp free name))
-
-      ((forcall op rand*)
-       (make-forcall op ($map/stx M rand*)))
-
-      ((funcall rator rand*)
-       (make-funcall (M-known rator) ($map/stx M-known rand*)))
-
-      ((jmpcall label rator rand*)
-       (make-jmpcall label (M rator) ($map/stx M rand*)))
-
-      (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
-
-  (define (E x)
-    ;;Traverses  the  recordized code  inside  the  body of  CASE-LAMBDA
-    ;;forms.
+    ;;Perform code transformations traversing the whole hierarchy in X, which must be
+    ;;a struct instance representing recordized code, and building a new hierarchy of
+    ;;transformed, recordized code; return the new hierarchy.
     ;;
     (struct-case x
       ((constant)
@@ -3882,13 +3828,12 @@
 
       ((clambda label clause* cp free name)
        ;;Apply E to every body of every CASE-LAMBDA clause.
-       (make-clambda label
-		     (map (lambda (clause)
-			    (struct-case clause
-			      ((clambda-case info body)
-			       (make-clambda-case info (E body)))))
-		       clause*)
-		     cp free name))
+       (let ((clause*^ ($map/stx (lambda (clause)
+				   (struct-case clause
+				     ((clambda-case info body)
+				      (make-clambda-case info (E body)))))
+			 clause*)))
+	 (make-clambda label clause*^ cp free name)))
 
       ((forcall op rand*)
        (make-forcall op ($map/stx E rand*)))
@@ -3897,14 +3842,30 @@
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
       ((jmpcall label rator rand*)
+       ;;JMPCALL  rator  and rand*  are  not,  by  construction, wrapped  into  KNOWN
+       ;;structs.
        (make-jmpcall label (E rator) ($map/stx E rand*)))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (compiler-internal-error __who__
+	 "invalid expression" (unparse-recordized-code x)))))
+
+  (define (E-known x)
+    (struct-case x
+      ((known expr type)
+       (make-known (E expr) type))
+      (else
+       (E x))))
+
+;;; --------------------------------------------------------------------
 
   (define (%global-assign lhs* body.already-processed)
-    ;;Prepend to the body of a BIND struct a call to $INIT-SYMBOL-VALUE!
-    ;;for each of the VAR structs in LHS*.
+    ;;Prepend to the body of a BIND struct a call to $INIT-SYMBOL-VALUE!  for each of
+    ;;the VAR structs in LHS* representing top level bindings.
+    ;;
+    ;;$INIT-SYMBOL-VALUE! stores  in the "value" field  of the loc gensym  the actual
+    ;;binding value; if,  at run-time, such binding value is  recognised as a closure
+    ;;object: it is also stored in the "proc" field.
     ;;
     (cond ((null? lhs*)
 	   body.already-processed)
@@ -3917,11 +3878,12 @@
 	   (%global-assign ($cdr lhs*) body.already-processed))))
 
   (define (%global-fix lhs* body.already-processed)
-    ;;Prepend   to   the   body   of    a   FIX   struct   a   call   to
-    ;;$SET-SYMBOL-VALUE/PROC! for the first VAR struct in LHS*; the rest
-    ;;of the VAR structs are handed to %GLOBAL-ASSIGN.
+    ;;Prepend to the body of a FIX  struct a call to $SET-SYMBOL-VALUE/PROC! for each
+    ;;VAR struct in LHS* representing top level bindings.
     ;;
-    ;;FIXME Why is this?  (Marco Maggi; Oct 13, 2012)
+    ;;$SET-SYMBOL-VALUE/PROC!  stores  in both the  "value" and "proc" fields  of the
+    ;;loc gensym  the actual  binding value;  it is known  at compile-time  that such
+    ;;value is a closure object resulting from the evaluation of a CLAMBDA struct.
     ;;
     (cond ((null? lhs*)
 	   body.already-processed)
@@ -3931,23 +3893,9 @@
 					(list (make-constant loc) ($car lhs*)))
 			  (%global-assign ($cdr lhs*) body.already-processed))))
 	  (else
-	   (%global-assign ($cdr lhs*) body.already-processed))))
+	   (%global-fix ($cdr lhs*) body.already-processed))))
 
-  (define (E-known x)
-    (struct-case x
-      ((known expr type)
-       (make-known (E expr) type))
-      (else
-       (E x))))
-
-  (define (M-known x)
-    (struct-case x
-      ((known expr type)
-       (make-known (M expr) type))
-      (else
-       (M x))))
-
-  #| end of module: insert-global-assignments |# )
+  #| end of module: INSERT-GLOBAL-ASSIGNMENTS |# )
 
 
 (module (introduce-vars)
