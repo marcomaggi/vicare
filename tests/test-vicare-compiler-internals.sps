@@ -1801,7 +1801,6 @@
 	   (D (compiler.$optimize-letrec D))
 	   (D (compiler.$source-optimize D))
 	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$introduce-vars D))
 	   (D (compiler.$sanitize-bindings D))
 	   (S (compiler.$unparse-recordized-code/sexp D)))
       S))
@@ -1826,8 +1825,8 @@
 ;;; --------------------------------------------------------------------
 
   (doit (lambda () '1)
-	(fix ((clambda-lift_0 (lambda () (constant 1))))
-	  clambda-lift_0))
+	(fix ((tmp_0 (lambda () (constant 1))))
+	  tmp_0))
 
   (doit (let ((a (lambda () '1)))
 	  a)

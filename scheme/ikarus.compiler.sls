@@ -55,8 +55,8 @@
      (source-optimize				$source-optimize)
      (rewrite-references-and-assignments	$rewrite-references-and-assignments)
      (introduce-tags				$introduce-tags)
-     (introduce-vars				$introduce-vars)
      (sanitize-bindings				$sanitize-bindings)
+     (introduce-vars				$introduce-vars)
      (optimize-for-direct-jumps			$optimize-for-direct-jumps)
      (insert-global-assignments			$insert-global-assignments)
      (convert-closures				$convert-closures)
@@ -634,8 +634,8 @@
 	     (p (if (perform-tag-analysis)
 		    (introduce-tags p)
 		  p))
-	     (p (introduce-vars p))
 	     (p (sanitize-bindings p))
+	     (p (introduce-vars p))
 	     (p (optimize-for-direct-jumps p))
 	     (p (insert-global-assignments p))
 	     (p (convert-closures p))
@@ -676,8 +676,8 @@
 	     (p (if (perform-tag-analysis)
 		    (introduce-tags p)
 		  p))
-	     (p (introduce-vars p))
 	     (p (sanitize-bindings p))
+	     (p (introduce-vars p))
 	     (p (optimize-for-direct-jumps p))
 	     (p (insert-global-assignments p))
 	     (p (convert-closures p))
@@ -3517,7 +3517,7 @@
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
-  ;;   constant		var		primref
+  ;;   constant		prelex		primref
   ;;   bind		fix		conditional
   ;;   seq		clambda		forcall
   ;;   funcall
@@ -3554,7 +3554,7 @@
       ((constant)
        x)
 
-      ((var)
+      ((prelex)
        x)
 
       ((primref)
@@ -3587,7 +3587,7 @@
 
       ((clambda)
        ;;This is a standalone CLAMBDA struct.
-       (let ((tmp (make-unique-var 'clambda-lift)))
+       (let ((tmp (make-prelex-for-tmp-binding)))
          (make-fix (list tmp) (list (E-clambda-rhs x)) tmp)))
 
       ((forcall op rand*)

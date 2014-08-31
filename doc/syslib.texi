@@ -6050,8 +6050,8 @@ Compiler passes
 * syslib compiler optimisation::  Source optimisation.
 * syslib compiler refassig::      Rewriting references and assignments.
 * syslib compiler tags::          Tagging known properties.
-* syslib compiler vars::          Introducing storage locations.
 * syslib compiler sanitbind::     Sanitizing bindings.
+* syslib compiler vars::          Introducing storage locations.
 * syslib compiler direct jumps::  Optimisation for direct jumps.
 * syslib compiler global::        Inserting global assignments.
 * syslib compiler closures::      Closures conversion.
@@ -6787,8 +6787,8 @@ optimize-letrec
 source-optimize
 rewrite-references-and-assignments
 introduce-tags (optional)
-introduce-vars
 sanitize-bindings
+introduce-vars
 optimize-for-direct-jumps
 insert-global-assignments
 convert-closures
@@ -8240,26 +8240,6 @@ skipped.  Defaults to @true{}.
 @end deffn
 
 @c page
-@node syslib compiler vars
-@subsection Introducing storage locations
-
-
-The following bindings are exported by the library @library{vicare
-system $compiler}.
-
-
-@defun $introduce-vars @var{input}
-Perform code transformations traversing the whole hierarchy in
-@var{input}, which must be a struct instance representing recordised
-code, and building a new hierarchy of recordised code; return the new
-hierarchy.
-
-Replace all the @objtype{prelex} structs in recordised code with
-@objtype{var} structs; this is because after this compiler pass we need
-a different set of properties to handle variable bindings.
-@end defun
-
-@c page
 @node syslib compiler sanitbind
 @subsection Sanitizing bindings
 
@@ -8330,6 +8310,26 @@ structs appear in the code as right--hand side initialisation
 expressions of @objtype{fix} structs; all the @objtype{bind} structs
 have a non--@objtype{clambda} struct as right--hand side initialisation
 expression.
+@end defun
+
+@c page
+@node syslib compiler vars
+@subsection Introducing storage locations
+
+
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@defun $introduce-vars @var{input}
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
+
+Replace all the @objtype{prelex} structs in recordised code with
+@objtype{var} structs; this is because after this compiler pass we need
+a different set of properties to handle variable bindings.
 @end defun
 
 @c page
