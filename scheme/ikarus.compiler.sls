@@ -3600,7 +3600,7 @@
        (make-forcall op ($map/stx E rand*)))
 
       ((funcall rator rand*)
-       (E-funcall rator rand*))
+       (E-funcall (E-known rator) ($map/stx E-known rand*)))
 
       (else
        (compile-time-error __who__
@@ -3650,20 +3650,28 @@
 			 clause*)))
 	 (make-clambda label clause*^ cp free name)))))
 
+  (define (E-known x)
+    (struct-case x
+      ((known expr type)
+       (make-known (E expr) type))
+      (else
+       (E x))))
+
 ;;; --------------------------------------------------------------------
 
   (module (E-funcall)
 
     (define (E-funcall rator rand*)
-      (receive (unwrapped-rator type)
-	  (untag (E-known rator))
+      ;;RATOR and RAND* have already been processed by E.
+      ;;
+      (let ((unwrapped-rator (%unwrap-known rator)))
 	(cond
 	 ;;Is UNWRAPPED-RATOR a variable known to  reference a closure?  In this case
 	 ;;we can attempt an optimization.  CLAM is the referenced CLAMBDA.
 	 ((and (var? unwrapped-rator)
 	       ($var-referenced-clambda unwrapped-rator))
 	  => (lambda (clam)
-	       (%optimize-funcall clam unwrapped-rator ($map/stx E-known rand*))))
+	       (%optimize-funcall clam unwrapped-rator rand*)))
 
 	 ;;Is UNWRAPPED-RATOR the low level APPLY operation?  In this case: the first
 	 ;;RAND* should be a struct  instance representing recordized code which will
@@ -3676,21 +3684,21 @@
 	       (eq? (primref-name unwrapped-rator) '$$apply))
 	  ;;JMPCALL does not want KNOWN structs as rator and rands.
 	  (make-jmpcall (sl-apply-label)
-			(E-unpack-known ($car rand*))
-			($map/stx E-unpack-known ($cdr rand*))))
+			(%unwrap-known ($car rand*))
+			($map/stx %unwrap-known ($cdr rand*))))
 
 	 ;;If  we are  here: UNWRAPPED-RATOR  is  just some  unknown struct  instance
 	 ;;representing recordized code which, when  evaluated, will return a closure
 	 ;;object.
 	 (else
-	  (make-funcall rator ($map/stx E-known rand*))))))
+	  (make-funcall rator rand*)))))
 
-    (define (%optimize-funcall clam rator rand*)
+    (define (%optimize-funcall clam var-rator rand*)
       ;;Attempt to optimize the function application:
       ;;
-      ;;   (RATOR . RAND*)
+      ;;   (VAR-RATOR . RAND*)
       ;;
-      ;;CLAM is  a struct instance  of type CLAMBDA.  RATOR  is a struct  instance of
+      ;;CLAM is a struct instance of type CLAMBDA.  VAR-RATOR is a struct instance of
       ;;type VAR which is known to reference the CLAMBDA in CLAM.  RAND* is a list of
       ;;struct  instances representing  recordized code  which, when  evaluated, will
       ;;return the operands for the function application.
@@ -3710,17 +3718,17 @@
 	  (recur ($cdr clause*)))
 	(if (null? clause*)
 	    ;;No matching clause found.  Just call the closure as always.
-	    (make-funcall rator rand*)
+	    (make-funcall var-rator rand*)
 	  (struct-case ($clambda-case-info ($car clause*))
 	    ((case-info label fml* proper?)
 	     (if proper?
 		 ;;This clause has a fixed number of arguments.
 		 (if ($fx= num-of-rand* (length fml*))
-		     (make-jmpcall label (%unwrap-known rator) ($map/stx %unwrap-known rand*))
+		     (make-jmpcall label var-rator ($map/stx %unwrap-known rand*))
 		   (%recur-to-next-clause))
 	       ;;This clause has a variable number of arguments.
 	       (if ($fx<= (length ($cdr fml*)) num-of-rand*)
-		   (make-jmpcall label (%unwrap-known rator) (%prepare-rand* ($cdr fml*) rand*))
+		   (make-jmpcall label var-rator (%prepare-rand* ($cdr fml*) rand*))
 		 (%recur-to-next-clause))))))))
 
     (define (%prepare-rand* fml* rand*)
@@ -3769,32 +3777,6 @@
 	((known expr)
 	 expr)
 	(else x)))
-
-    (define (E-known x)
-      (struct-case x
-	((known expr type)
-	 (make-known (E expr) type))
-	(else
-	 (E x))))
-
-    (define (E-unpack-known x)
-      (struct-case x
-	((known expr)
-	 (E expr))
-	(else
-	 (E x))))
-
-    (define (tag expr type)
-      (if type
-	  (make-known expr type)
-	expr))
-
-    (define (untag x)
-      (struct-case x
-	((known expr type)
-	 (values expr type))
-	(else
-	 (values x #f))))
 
     #| end of module: E-funcall |# )
 
