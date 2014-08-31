@@ -1585,8 +1585,6 @@
   ;;"right-hand side"; ?LOC is a loc gensym;  ?PRIM is a symbol representing the name
   ;;of a primitive function.
   ;;
-  ;;The bulk of the work is performed by the recursive function E.
-  ;;
   ;;About the argument CTXT
   ;;-----------------------
   ;;
@@ -3360,125 +3358,6 @@
 (include "ikarus.compiler.tag-annotation-analysis.ss" #t)
 
 
-(module (introduce-vars)
-  ;;This module replaces all the PRELEX  structs in recordised code with VAR structs;
-  ;;this is  because from  now on  we need a  different set  of properties  to handle
-  ;;variable bindings.
-  ;;
-  ;;Accept as input a nested hierarchy of the following structs:
-  ;;
-  ;;   constant		prelex		primref
-  ;;   bind		fix		conditional
-  ;;   seq		clambda		funcall
-  ;;   forcall		assign		known
-  ;;
-  ;;NOTE  This module  stores  generated VAR  structs  in the  field  OPERAND of  the
-  ;;associated PRELEX structs.   We do not care about resetting  such field of PRELEX
-  ;;structs, because in subsequent compiler passes the PRELEX structs will be no more
-  ;;used: they will be garbage collected.
-  ;;
-  (define-fluid-override __who__
-    (identifier-syntax 'introduce-vars))
-
-  ;;Make the code more readable.
-  (define-syntax E
-    (identifier-syntax introduce-vars))
-
-  (define (introduce-vars x)
-    ;;Perform code transformation traversing the whole  hierarchy in X, which must be
-    ;;a  struct instance  representing  recordized  code in  the  core language,  and
-    ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new
-    ;;hierarchy.
-    ;;
-    (struct-case x
-      ((constant)
-       x)
-
-      ((prelex)
-       (%lookup-already-processed-prelex x))
-
-      ((primref)
-       x)
-
-      ((bind lhs* rhs* body)
-       ;;Process the LHS* before everything else!
-       (let ((lhs* ($map/stx %prelex->var lhs*)))
-         (make-bind lhs* ($map/stx E rhs*) (E body))))
-
-      ((fix lhs* rhs* body)
-       ;;Process the LHS* before everything else!
-       (let ((lhs* ($map/stx %prelex->var lhs*)))
-         (make-fix lhs* ($map/stx E rhs*) (E body))))
-
-      ((conditional e0 e1 e2)
-       (make-conditional (E e0) (E e1) (E e2)))
-
-      ((seq e0 e1)
-       (make-seq (E e0) (E e1)))
-
-      ((clambda label clause* cp free name)
-       ;;The purpose of this form is to apply %PRELEX->VAR to all the items in the
-       ;;ARGS field of all the CASE-INFO structs.  Also we apply E to each body.
-       (make-clambda label
-		     ($map/stx
-			 (lambda (cls)
-			   (struct-case cls
-			     ((clambda-case info body)
-			      (struct-case info
-				((case-info label args proper)
-				 ;;Process the LHS* before everything else!
-				 (let ((info (make-case-info label
-							     ($map/stx %prelex->var args)
-							     proper)))
-				   (make-clambda-case info (E body))))))))
-		       clause*)
-		     cp free name))
-
-      ((funcall rator rand*)
-       (make-funcall (E-known rator) ($map/stx E-known rand*)))
-
-      ((forcall rator rand*)
-       (make-forcall rator ($map/stx E rand*)))
-
-      ((assign lhs rhs)
-       (make-assign (%lookup-already-processed-prelex lhs) (E rhs)))
-
-      (else
-       (compile-time-error __who__
-	 "invalid expression" (unparse-recordized-code x)))))
-
-  (define (%lookup-already-processed-prelex prel)
-    ;;Given a  struct instance of  type PRELEX  in reference or  assignment position,
-    ;;return the associated struct  instance of type VAR.  It is a  very bad error if
-    ;;this function finds a PRELEX not yet processed by %PRELEX->VAR.
-    ;;
-    (receive-and-return (V)
-	($prelex-operand prel)
-      (assert (var? V))))
-
-  (define (%prelex->var prel)
-    ;;Convert the PRELEX struct PREL into a VAR struct; return the VAR struct.
-    ;;
-    ;;The generated VAR struct is stored in the field OPERAND of the PRELEX, so that,
-    ;;later, references to the PRELEX in  the recordized code can be substituted with
-    ;;the VAR.
-    ;;
-    (assert (not (var? ($prelex-operand prel))))
-    (receive-and-return (V)
-	(make-unique-var ($prelex-name prel))
-      ($set-var-global-location! V ($prelex-global-location    prel))
-      ($set-prelex-operand! prel V)))
-
-  (define (E-known x)
-    (struct-case x
-      ((known expr type)
-       (make-known (E expr) type))
-      (else
-       (E x))))
-
-  #| end of module: introduce-vars |# )
-
-
 (module (sanitize-bindings)
   ;;In this module  we want to make  sure that every CLAMBA struct  appears as direct
   ;;RHS expression for a FIX struct:
@@ -4074,6 +3953,125 @@
        (M x))))
 
   #| end of module: insert-global-assignments |# )
+
+
+(module (introduce-vars)
+  ;;This module replaces all the PRELEX  structs in recordised code with VAR structs;
+  ;;this is  because from  now on  we need a  different set  of properties  to handle
+  ;;variable bindings.
+  ;;
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		prelex		primref
+  ;;   bind		fix		conditional
+  ;;   seq		clambda		funcall
+  ;;   forcall		assign		known
+  ;;
+  ;;NOTE  This module  stores  generated VAR  structs  in the  field  OPERAND of  the
+  ;;associated PRELEX structs.   We do not care about resetting  such field of PRELEX
+  ;;structs, because in subsequent compiler passes the PRELEX structs will be no more
+  ;;used: they will be garbage collected.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'introduce-vars))
+
+  ;;Make the code more readable.
+  (define-syntax E
+    (identifier-syntax introduce-vars))
+
+  (define (introduce-vars x)
+    ;;Perform code transformation traversing the whole  hierarchy in X, which must be
+    ;;a  struct instance  representing  recordized  code in  the  core language,  and
+    ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new
+    ;;hierarchy.
+    ;;
+    (struct-case x
+      ((constant)
+       x)
+
+      ((prelex)
+       (%lookup-already-processed-prelex x))
+
+      ((primref)
+       x)
+
+      ((bind lhs* rhs* body)
+       ;;Process the LHS* before everything else!
+       (let ((lhs* ($map/stx %prelex->var lhs*)))
+         (make-bind lhs* ($map/stx E rhs*) (E body))))
+
+      ((fix lhs* rhs* body)
+       ;;Process the LHS* before everything else!
+       (let ((lhs* ($map/stx %prelex->var lhs*)))
+         (make-fix lhs* ($map/stx E rhs*) (E body))))
+
+      ((conditional e0 e1 e2)
+       (make-conditional (E e0) (E e1) (E e2)))
+
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
+
+      ((clambda label clause* cp free name)
+       ;;The purpose of this form is to apply %PRELEX->VAR to all the items in the
+       ;;ARGS field of all the CASE-INFO structs.  Also we apply E to each body.
+       (make-clambda label
+		     ($map/stx
+			 (lambda (cls)
+			   (struct-case cls
+			     ((clambda-case info body)
+			      (struct-case info
+				((case-info label args proper)
+				 ;;Process the LHS* before everything else!
+				 (let ((info (make-case-info label
+							     ($map/stx %prelex->var args)
+							     proper)))
+				   (make-clambda-case info (E body))))))))
+		       clause*)
+		     cp free name))
+
+      ((funcall rator rand*)
+       (make-funcall (E-known rator) ($map/stx E-known rand*)))
+
+      ((forcall rator rand*)
+       (make-forcall rator ($map/stx E rand*)))
+
+      ((assign lhs rhs)
+       (make-assign (%lookup-already-processed-prelex lhs) (E rhs)))
+
+      (else
+       (compile-time-error __who__
+	 "invalid expression" (unparse-recordized-code x)))))
+
+  (define (%lookup-already-processed-prelex prel)
+    ;;Given a  struct instance of  type PRELEX  in reference or  assignment position,
+    ;;return the associated struct  instance of type VAR.  It is a  very bad error if
+    ;;this function finds a PRELEX not yet processed by %PRELEX->VAR.
+    ;;
+    (receive-and-return (V)
+	($prelex-operand prel)
+      (assert (var? V))))
+
+  (define (%prelex->var prel)
+    ;;Convert the PRELEX struct PREL into a VAR struct; return the VAR struct.
+    ;;
+    ;;The generated VAR struct is stored in the field OPERAND of the PRELEX, so that,
+    ;;later, references to the PRELEX in  the recordized code can be substituted with
+    ;;the VAR.
+    ;;
+    (assert (not (var? ($prelex-operand prel))))
+    (receive-and-return (V)
+	(make-unique-var ($prelex-name prel))
+      ($set-var-global-location! V ($prelex-global-location    prel))
+      ($set-prelex-operand! prel V)))
+
+  (define (E-known x)
+    (struct-case x
+      ((known expr type)
+       (make-known (E expr) type))
+      (else
+       (E x))))
+
+  #| end of module: introduce-vars |# )
 
 
 (module (convert-closures)

@@ -6849,10 +6849,187 @@ recordised.  See below for details.
 @end defun
 
 @menu
+* syslib compiler recordize bindings::  Recordisation of bindings.
 * syslib compiler recordize specials::  Special lexical primitives.
 * syslib compiler recordize examples::  Recordisation examples.
 * syslib compiler recordize debug::     Introduction of debug calls.
 @end menu
+
+@c page
+@node syslib compiler recordize bindings
+@subsubsection Recordisation of bindings
+
+
+The core language forms that define bindings are:
+
+@example
+(library-letrec* ((@meta{lhs} @meta{loc} @meta{rhs}) ...) @meta{body})
+(let     ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(letrec  ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(letrec* ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+(lambda @meta{formals} @meta{body})
+(case-lambda (@meta{formals} @meta{body}) ...)
+(annotated-case-lambda @meta{annotation} (@meta{formals} @meta{body}) ...)
+@end example
+
+@noindent
+and as special case:
+
+@example
+(set! @meta{lhs} @meta{rhs})
+@end example
+
+@noindent
+when present at the top level.  In all these expressions @meta{lhs} is a
+lexical gensym uniquely identifying the binding.
+
+The recordisation process transforms:
+
+@itemize
+@item
+@func{library-letrec*} and @func{letrec*} forms into @objtype{rec*bind}
+structs, in which defined lex gensyms are substituted with
+@objtype{prelex} structs.
+
+@item
+@func{letrec} forms into @objtype{recbind} structs, in which defined lex
+gensyms are substituted with @objtype{prelex} structs.
+
+@item
+@func{let} forms into @objtype{bind} structs, in which defined lex
+gensyms are substituted with @objtype{prelex} structs.
+
+@item
+@func{lambda}, @func{case-lambda} and @func{annotated-case-lambda} forms
+into @objtype{clambda} structs, in which lex gensyms representing
+bindings defined by function arguments are substituted with
+@objtype{prelex} structs.
+@end itemize
+
+@c ------------------------------------------------------------
+
+@subsubheading Undefined bindings and previously defined bindings
+
+In the core language input expression: if a binding is defined by the
+expression itself, its lex gensym is present as left--hand side in a
+@func{let}, @func{letrec}, @func{letrec*}, @func{library-letrec*} form
+or as formal argument in a @func{lambda}, @func{case-lambda},
+@func{annotated-case-lambda} form.  Otherwise the lex gensym represents
+an undefined binding or a binding defined outside the input form.
+
+Every symbol in the input form not present as left--hand side in a
+@objtype{bind}, @objtype{recbind}, @objtype{rec*bind} struct or formal
+argument in a @objtype{clambda} struct is interpreted as a reference to
+undefined or previously defined binding.  This interpretation includes:
+
+@itemize
+@item
+Bindings defined by imported libraries.
+
+@item
+Bindings defined by expressions previously evaluated and added to an
+interaction environment.
+
+@item
+Bindings that appear for the first time in top level assignment forms:
+
+@example
+(set! @meta{lhs} @meta{rhs})
+@end example
+
+@noindent
+like the definitions of syntax transformers in the visit code generated
+by the expander or standalone expressions evaluated at the @repl{}; such
+assignments to undefined bindings cause a new binding to be generated.
+@end itemize
+
+@noindent
+for all these cases: the lex gensym acts also as loc gensym.
+
+After the recordisation process:
+
+@itemize
+@item
+All the lex gensyms in reference position representing bindings not
+defined by the input expression have been converted to:
+
+@example
+(funcall (primref top-level-value) (constant @meta{loc}))
+@end example
+
+@noindent
+where @meta{loc} is the loc gensym of the binding.  If this binding is
+truly undefined: the call to @func{top-level-value} will raise an
+exception at run--time.
+
+@item
+All the lex gensyms in assignment position representing bindings not
+defined by the input expression have been converted to:
+
+@example
+(funcall (primref $init-symbol-value!) (constant @meta{loc}) @meta{rhs})
+@end example
+
+@noindent
+where @meta{loc} is the loc gensym of the binding; this is the run--time
+definition of a new binding.
+@end itemize
+
+@noindent
+so all the @objtype{prelex} structs introduced by @func{$recordize}
+represent bindings defined by the input expression.
+
+@quotation
+@strong{NOTE} As specified by @rnrs{6}, bindings defined by imported
+libraries must not be mutated; this means core language forms like:
+
+@example
+(set! @meta{loc} @meta{rhs})
+@end example
+
+@noindent
+in which @meta{loc} is the loc gensym of an imported binding are
+forbidden.  It is the responsibility of the expander not to generate
+such assignment forms for bindings defined by imported libraries.
+@end quotation
+
+@quotation
+@strong{NOTE} The special handling of core language assignment forms:
+
+@example
+(set! @meta{lex} @meta{rhs})
+@end example
+
+@noindent
+in which @meta{lex} is both the lex and loc gensym of a binding not
+defined by the input expression allows:
+
+@itemize
+@item
+The correct handling of visit code generated by the expander.
+
+@item
+The definition of bindings by @func{eval} (for example at the @repl{})
+using just @func{set!} rather than a proper binding form.  This case
+allows bindings to be added to interaction environment using weird
+syntaxes; here is an example session at the @repl{}:
+
+@example
+vicare> (let () (set! a 1) (set! b 2) #f)
+$1 = #f
+
+vicare> a
+$1 = 1
+
+vicare> b
+$1 = 2
+@end example
+
+@noindent
+It is the responsibility of the expander to forbid such definitions when
+processing libraries and programs.
+@end itemize
+@end quotation
 
 @c page
 @node syslib compiler recordize specials
@@ -7272,6 +7449,12 @@ have already been transformed into:
 where instances of the structure @objtype{recbind} represent
 @func{letrec} forms and instances of the structure @objtype{rec*bind}
 represent @func{letrec*} and @func{library-letrec*} forms.
+
+After this compiler pass has been applied: @objtype{recbind} and
+@objtype{rec*bind} structs are no more present in the returned code,
+having been substituted with @objtype{bind} and @objtype{fix} structs.
+So in the returned code: every @objtype{prelex} struct represents a
+binding defined either by @objtype{bind} or @objtype{fix}.
 
 @menu
 * syslib compiler letrec algo::   Introduction to the algorithms.
