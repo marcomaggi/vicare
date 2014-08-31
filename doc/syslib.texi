@@ -6051,9 +6051,9 @@ Compiler passes
 * syslib compiler refassig::      Rewriting references and assignments.
 * syslib compiler tags::          Tagging known properties.
 * syslib compiler sanitbind::     Sanitizing bindings.
-* syslib compiler vars::          Introducing storage locations.
 * syslib compiler direct jumps::  Optimisation for direct jumps.
 * syslib compiler global assign:: Inserting global assignments.
+* syslib compiler vars::          Introducing storage locations.
 * syslib compiler closures::      Closures conversion.
 * syslib compiler lift::          Closures optimization and codes
                                   lifting.
@@ -6788,9 +6788,9 @@ source-optimize
 rewrite-references-and-assignments
 introduce-tags (optional)
 sanitize-bindings
-introduce-vars
 optimize-for-direct-jumps
 insert-global-assignments
+introduce-vars
 convert-closures
 optimize-closures/lift-codes
 @end example
@@ -8398,6 +8398,9 @@ Assignments to assigned local bindings are transformed as follows:
             @meta{rhs})
 @end example
 @end itemize
+
+After this compiler pass: there are no more @objtype{assign} structs in
+the returned recordised code.
 @end defun
 
 @c page
@@ -8496,26 +8499,6 @@ expression.
 @end defun
 
 @c page
-@node syslib compiler vars
-@subsection Introducing storage locations
-
-
-The following bindings are exported by the library @library{vicare
-system $compiler}.
-
-
-@defun $introduce-vars @var{input}
-Perform code transformations traversing the whole hierarchy in
-@var{input}, which must be a struct instance representing recordised
-code, and building a new hierarchy of recordised code; return the new
-hierarchy.
-
-Replace all the @objtype{prelex} structs in recordised code with
-@objtype{var} structs; this is because after this compiler pass we need
-a different set of properties to handle variable bindings.
-@end defun
-
-@c page
 @node syslib compiler direct jumps
 @subsection Optimisation for direct jumps
 
@@ -8597,6 +8580,26 @@ This module inserts global assignments forms that put the value of
 lexical top level bindings in the slot @code{value} of the corresponding
 loc gensym; for bindings whose value is a closure object: the value is
 also stored in the @code{proc} slot of the loc gensym.
+@end defun
+
+@c page
+@node syslib compiler vars
+@subsection Introducing storage locations
+
+
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@defun $introduce-vars @var{input}
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
+
+Replace all the @objtype{prelex} structs in recordised code with
+@objtype{var} structs; this is because after this compiler pass we need
+a different set of properties to handle variable bindings.
 @end defun
 
 @c page

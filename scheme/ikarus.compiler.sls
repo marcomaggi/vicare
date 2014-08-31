@@ -56,9 +56,9 @@
      (rewrite-references-and-assignments	$rewrite-references-and-assignments)
      (introduce-tags				$introduce-tags)
      (sanitize-bindings				$sanitize-bindings)
-     (introduce-vars				$introduce-vars)
      (optimize-for-direct-jumps			$optimize-for-direct-jumps)
      (insert-global-assignments			$insert-global-assignments)
+     (introduce-vars				$introduce-vars)
      (convert-closures				$convert-closures)
      (optimize-closures/lift-codes		$optimize-closures/lift-codes)
      (alt-cogen					$alt-cogen)
@@ -658,9 +658,9 @@
 		    (introduce-tags p)
 		  p))
 	     (p (sanitize-bindings p))
-	     (p (introduce-vars p))
 	     (p (optimize-for-direct-jumps p))
 	     (p (insert-global-assignments p))
+	     (p (introduce-vars p))
 	     (p (convert-closures p))
 	     (p (optimize-closures/lift-codes p))
 	     (ls* (alt-cogen p)))
@@ -700,9 +700,9 @@
 		    (introduce-tags p)
 		  p))
 	     (p (sanitize-bindings p))
-	     (p (introduce-vars p))
 	     (p (optimize-for-direct-jumps p))
 	     (p (insert-global-assignments p))
+	     (p (introduce-vars p))
 	     (p (convert-closures p))
 	     (p (optimize-closures/lift-codes p))
 	     (ls* (alt-cogen p)))
@@ -826,6 +826,20 @@
 		;When such optimization attempts fail,  the assignment to variable is
 		;just left in place and this field is set to true.  So the meaning of
 		;this field is: still assigned after optimization attempt.
+   (referenced-clambda	#f)
+		;False  of a  CLAMBDA  struct.   False if  this  struct represents  a
+		;binding  referencing  a   non-CLAMBDA  right-hand  side  expression.
+		;Otherwise this  variable represents a binding  whose right-hand side
+		;is  a  CLAMBDA expression,  and  the  value  of  this field  is  the
+		;referenced CLAMBDA.
+		;
+		;After the compiler pass "sanitise  bindings" has been performed: all
+		;the PRELEX  structs defined in  BIND structs have a  non-CLAMBDA RHS
+		;expression; all  the PRELEX  structs defined in  FIX structs  have a
+		;CLAMBDA RHS expression.
+		;
+		;This field  is used only in  the compiler pass "optimise  for direct
+		;jumps".
    (global-location      #f)
 		;When the  binding described by  this struct  is a top  level binding
 		;(defined by  the form  LIBRARY-LETREC* in  the core  language): this
@@ -1252,20 +1266,6 @@
 		;False or
     index
 		;False or
-    referenced-clambda
-		;False  of a  CLAMBDA struct.   False if  this variable  represents a
-		;binding  referencing  a   non-CLAMBDA  right-hand  side  expression.
-		;Otherwise this  variable represents a binding  whose right-hand side
-		;is  a  CLAMBDA expression,  and  the  value  of  this field  is  the
-		;referenced CLAMBDA.
-		;
-		;After the compiler pass "sanitise  bindings" has been performed: all
-		;the  VAR structs  defined in  BIND  structs have  a non-CLAMBDA  RHS
-		;expression;  all the  VAR  structs  defined in  FIX  structs have  a
-		;CLAMBDA RHS expression.
-		;
-		;This field  is used only in  the compiler pass "optimise  for direct
-		;jumps".
     global-location
 		;False  or loc  gensym.   When  false: this  VAR  represents a  local
 		;lexical binding.  When a loc gensym: this VAR represents a top level
@@ -1274,7 +1274,7 @@
     ))
 
 (define (make-unique-var name)
-  (make-var name #f #f #f #f #f #f #f #f #f #f))
+  (make-var name #f #f #f #f #f #f #f #f #f))
 
 ;;; --------------------------------------------------------------------
 
@@ -3145,8 +3145,11 @@
   ;;
   ;;   constant		prelex		primref
   ;;   bind		fix		conditional
-  ;;   seq		clambda		forcall
-  ;;   funcall		assign
+  ;;   seq		clambda		assign
+  ;;   forcall		funcall
+  ;;
+  ;;After  this compiler  pass: there  are  no more  ASSIGN structs  in the  returned
+  ;;recordised code.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'rewrite-references-and-assignments))
@@ -3421,8 +3424,8 @@
   ;;
   ;;   constant		prelex		primref
   ;;   bind		fix		conditional
-  ;;   seq		clambda		forcall
-  ;;   funcall
+  ;;   seq		clambda		known
+  ;;   forcall		funcall
   ;;
   ;;Examples
   ;;--------
@@ -3576,9 +3579,10 @@
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
-  ;;   constant		var		primref
+  ;;   constant		prelex		primref
   ;;   bind		fix		conditional
-  ;;   seq		forcall		funcall
+  ;;   seq		clambda		known
+  ;;   forcall		funcall
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'optimize-for-direct-jumps))
@@ -3596,7 +3600,7 @@
       ((constant)
        x)
 
-      ((var)
+      ((prelex)
        x)
 
       ((primref)
@@ -3607,10 +3611,10 @@
 
       ((fix lhs* rhs* body)
        ;;Here we  know that  RHS* is  a list of  CLAMBDA structs,  because it  is the
-       ;;result of previous compiler passes.  We mark each VAR in LHS* as referencing
-       ;;a CLAMBDA struct, so that later  they can be used for jump-call optimisation
-       ;;if they appear in operator position.
-       ($for-each/stx $set-var-referenced-clambda! lhs* rhs*)
+       ;;result  of  previous compiler  passes.   We  mark  each  PRELEX in  LHS*  as
+       ;;referencing a CLAMBDA  struct, so that later they can  be used for jump-call
+       ;;optimisation if they appear in operator position.
+       ($for-each/stx $set-prelex-referenced-clambda! lhs* rhs*)
        (make-fix lhs* ($map/stx E-clambda rhs*) (E body)))
 
       ((conditional test conseq altern)
@@ -3632,28 +3636,29 @@
 ;;; --------------------------------------------------------------------
 
   (define (E-bind lhs* rhs* body)
-    ;;Process  LHS* marking,  when  appropriate,  the VAR  structs  as referencing  a
-    ;;CLAMBDA  struct, so  that later  the  VAR in  LHS*  can be  used for  jump-call
+    ;;Process LHS*  marking, when  appropriate, the PRELEX  structs as  referencing a
+    ;;CLAMBDA struct,  so that  later the PRELEX  in LHS* can  be used  for jump-call
     ;;optimisation if they appear in operator position.
     ;;
     ;;Here we know  that RHS* is *not* a  list of CLAMBDA structs, because  it is the
     ;;result  of  previous  compiler passes;  so  we  try  to  determine if  the  RHS
     ;;expressions will return a CLAMBDA struct.
     ;;
-    ;;By  default the  VAR structs  are marked  as *not*  referencing a  CLAMBDA upon
-    ;;creation, so if a VAR does not reference a CLAMBDA here we need to do nothing.
+    ;;By default  the PRELEX structs are  marked as *not* referencing  a CLAMBDA upon
+    ;;creation,  so if  a PRELEX  does not  reference a  CLAMBDA here  we need  to do
+    ;;nothing.
     ;;
     (let ((rhs*^ ($map/stx E rhs*)))
       ($for-each/stx
 	  (lambda (lhs rhs)
 	    (struct-case rhs
-	      ((var)
-	       (cond (($var-referenced-clambda rhs)
-		      ;;RHS is a VAR struct  referencing a CLAMBDA struct; this means
-		      ;;LHS  references  the  same   CLAMBDA  struct.   CLAM  is  the
+	      ((prelex)
+	       (cond (($prelex-referenced-clambda rhs)
+		      ;;RHS is  a PRELEX  struct referencing  a CLAMBDA  struct; this
+		      ;;means LHS  references the same  CLAMBDA struct.  CLAM  is the
 		      ;;referenced CLAMBDA struct.
 		      => (lambda (clam)
-			   ($set-var-referenced-clambda! lhs clam)))))
+			   ($set-prelex-referenced-clambda! lhs clam)))))
 	      (else
 	       ;;LHS does not reference a CLAMBDA struct.
 	       (void))))
@@ -3689,10 +3694,10 @@
       ;;
       (let ((unwrapped-rator (%unwrap-known rator)))
 	(cond
-	 ;;Is UNWRAPPED-RATOR a variable known to  reference a closure?  In this case
-	 ;;we can attempt an optimization.  CLAM is the referenced CLAMBDA.
-	 ((and (var? unwrapped-rator)
-	       ($var-referenced-clambda unwrapped-rator))
+	 ;;Is UNWRAPPED-RATOR a prelex known to reference a closure?  In this case we
+	 ;;can attempt an optimization.  CLAM is the referenced CLAMBDA.
+	 ((and (prelex? unwrapped-rator)
+	       ($prelex-referenced-clambda unwrapped-rator))
 	  => (lambda (clam)
 	       (%optimize-funcall appform clam unwrapped-rator rand*)))
 
@@ -3716,15 +3721,15 @@
 	 (else
 	  (make-funcall rator rand*)))))
 
-    (define (%optimize-funcall appform clam var-rator rand*)
+    (define (%optimize-funcall appform clam prelex-rator rand*)
       ;;Attempt to optimize the function application:
       ;;
-      ;;   (VAR-RATOR . RAND*)
+      ;;   (PRELEX-RATOR . RAND*)
       ;;
-      ;;CLAM is a struct instance of type CLAMBDA.  VAR-RATOR is a struct instance of
-      ;;type VAR which is known to reference the CLAMBDA in CLAM.  RAND* is a list of
-      ;;struct  instances representing  recordized code  which, when  evaluated, will
-      ;;return the operands for the function application.
+      ;;CLAM is a struct instance of type CLAMBDA.  PRELEX-RATOR is a struct instance
+      ;;of type PRELEX which  is known to reference the CLAMBDA in  CLAM.  RAND* is a
+      ;;list of struct instances representing  recordized code which, when evaluated,
+      ;;will return the operands for the function application.
       ;;
       ;;This function searches for a clause in CLAM which matches the arguments given
       ;;in RAND*:
@@ -3744,7 +3749,7 @@
 	    (if (option.strict-r6rs)
 		;;Just call the closure as always.  A "wrong num args" exception will
 		;;be raised at run-time as mandated by R6RS.
-		(make-funcall var-rator rand*)
+		(make-funcall prelex-rator rand*)
 	      (compile-time-error __who__
 		"wrong number of arguments in closure object application"
 		(unparse-recordized-code/pretty appform)))
@@ -3753,17 +3758,17 @@
 	     (if proper?
 		 ;;This clause has a fixed number of arguments.
 		 (if ($fx= num-of-rand* (length fml*))
-		     (make-jmpcall label var-rator ($map/stx %unwrap-known rand*))
+		     (make-jmpcall label prelex-rator ($map/stx %unwrap-known rand*))
 		   (%recur-to-next-clause))
 	       ;;This clause has a variable number of arguments.
 	       (if ($fx<= (length ($cdr fml*)) num-of-rand*)
-		   (make-jmpcall label var-rator (%prepare-rand* ($cdr fml*) rand*))
+		   (make-jmpcall label prelex-rator (%prepare-rand* ($cdr fml*) rand*))
 		 (%recur-to-next-clause))))))))
 
     (define (%prepare-rand* fml* rand*)
       ;;Recursive function.
       ;;
-      ;;FML* is a  list of structs of  type VAR representing the  formal arguments of
+      ;;FML* is a list of structs of type PRELEX representing the formal arguments of
       ;;the CASE-LAMBDA clause.
       ;;
       ;;RAND* is a  list of structs representing the arguments  to the closure object
@@ -3820,10 +3825,10 @@
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
-  ;;   constant		var		primref
+  ;;   constant		prelex		primref
   ;;   bind		fix		conditional
-  ;;   seq		forcall		funcall
-  ;;   jmpcall
+  ;;   seq		clambda		known
+  ;;   forcall		funcall		jmpcall
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'insert-global-assignments))
@@ -3841,7 +3846,7 @@
       ((constant)
        x)
 
-      ((var)
+      ((prelex)
        x)
 
       ((primref)
@@ -3877,7 +3882,7 @@
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
       ((jmpcall label rator rand*)
-       ;;JMPCALL  rator  and rand*  are  not,  by  construction, wrapped  into  KNOWN
+       ;;JMPCALL's  rator and  rand* are  not,  by construction,  wrapped into  KNOWN
        ;;structs.
        (make-jmpcall label (E rator) ($map/stx E rand*)))
 
@@ -3904,7 +3909,7 @@
 
     (define (%process-bind lhs* body)
       ;;Prepend to the body of a BIND  struct a call to $INIT-SYMBOL-VALUE!  for each
-      ;;of the VAR structs in LHS* representing top level bindings.
+      ;;of the PRELEX structs in LHS* representing top level bindings.
       ;;
       ;;$INIT-SYMBOL-VALUE! stores in the "value" field  of the loc gensym the actual
       ;;binding value; if, at run-time, such binding value is recognised as a closure
@@ -3914,8 +3919,8 @@
 
     (define (%process-fix lhs* body)
       ;;Prepend to the  body of a FIX  struct a call to  $INIT-SYMBOL-VALUE! for each
-      ;;VAR struct in LHS* representing top  level bindings; for efficiency, only for
-      ;;the first binding: the call is to $SET-SYMBOL-VALUE/PROC!.
+      ;;PRELEX struct in  LHS* representing top level bindings;  for efficiency, only
+      ;;for the first binding: the call is to $SET-SYMBOL-VALUE/PROC!.
       ;;
       ;;$INIT-SYMBOL-VALUE! stores in the "value" field  of the loc gensym the actual
       ;;binding value; if, at run-time, such binding value is recognised as a closure
@@ -3933,7 +3938,7 @@
       ;;
       (cond ((null? lhs*)
 	     body)
-	    ((var-global-location ($car lhs*))
+	    ((prelex-global-location ($car lhs*))
 	     => (lambda (loc)
 		  (make-seq (make-funcall SET-PRIMREF (list (make-constant loc) ($car lhs*)))
 			    (%insert-assignments ($cdr lhs*) body INIT-PRIMREF))))
@@ -3942,7 +3947,7 @@
 
     (define (%insert-assignments lhs* body pref)
       ($fold-right/stx (lambda (lhs tail)
-			 (cond ((var-global-location lhs)
+			 (cond ((prelex-global-location lhs)
 				=> (lambda (loc)
 				     (make-seq
 				      (make-funcall pref (list (make-constant loc) lhs))
@@ -3964,8 +3969,8 @@
   ;;
   ;;   constant		prelex		primref
   ;;   bind		fix		conditional
-  ;;   seq		clambda		funcall
-  ;;   forcall		assign		known
+  ;;   seq		clambda		known
+  ;;   funcall		forcall		jmpcall
   ;;
   ;;NOTE  This module  stores  generated VAR  structs  in the  field  OPERAND of  the
   ;;associated PRELEX structs.   We do not care about resetting  such field of PRELEX
@@ -4012,22 +4017,20 @@
        (make-seq (E e0) (E e1)))
 
       ((clambda label clause* cp free name)
-       ;;The purpose of this form is to apply %PRELEX->VAR to all the items in the
+       ;;The purpose of  this form is to  apply %PRELEX->VAR to all the  items in the
        ;;ARGS field of all the CASE-INFO structs.  Also we apply E to each body.
-       (make-clambda label
-		     ($map/stx
-			 (lambda (cls)
-			   (struct-case cls
-			     ((clambda-case info body)
-			      (struct-case info
-				((case-info label args proper)
-				 ;;Process the LHS* before everything else!
-				 (let ((info (make-case-info label
-							     ($map/stx %prelex->var args)
-							     proper)))
-				   (make-clambda-case info (E body))))))))
-		       clause*)
-		     cp free name))
+       (let ((clause*^ ($map/stx (lambda (clause)
+				   (struct-case clause
+				     ((clambda-case info body)
+				      (struct-case info
+					((case-info label args proper)
+					 ;;Process the LHS* before everything else!
+					 (let ((info (make-case-info label
+								     ($map/stx %prelex->var args)
+								     proper)))
+					   (make-clambda-case info (E body))))))))
+			 clause*)))
+	 (make-clambda label clause*^ cp free name)))
 
       ((funcall rator rand*)
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
@@ -4035,17 +4038,19 @@
       ((forcall rator rand*)
        (make-forcall rator ($map/stx E rand*)))
 
-      ((assign lhs rhs)
-       (make-assign (%lookup-already-processed-prelex lhs) (E rhs)))
+      ((jmpcall label rator rand*)
+       ;;JMPCALL's  rator and  rand* are  not,  by construction,  wrapped into  KNOWN
+       ;;structs.
+       (make-jmpcall label (E rator) ($map/stx E rand*)))
 
       (else
        (compile-time-error __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (%lookup-already-processed-prelex prel)
-    ;;Given a  struct instance of  type PRELEX  in reference or  assignment position,
-    ;;return the associated struct  instance of type VAR.  It is a  very bad error if
-    ;;this function finds a PRELEX not yet processed by %PRELEX->VAR.
+    ;;Given a struct  instance of type PRELEX: return the  associated struct instance
+    ;;of type VAR.   It is a very bad  error if this function finds a  PRELEX not yet
+    ;;processed by %PRELEX->VAR.
     ;;
     (receive-and-return (V)
 	($prelex-operand prel)
@@ -6605,7 +6610,6 @@
 		 ,(E body)))
 
 	(else x)))
-
 
     (module (Var)
       ;;Given a struct instance X of type  PRELEX or VAR, identifying the location of
