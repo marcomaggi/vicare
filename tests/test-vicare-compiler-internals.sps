@@ -1853,6 +1853,87 @@
   #t)
 
 
+(parametrise ((check-test-name	'insert-global-assignments))
+
+  (define (%insert-global-assignments core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   (D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (D (compiler.$sanitize-bindings D))
+	   (D (compiler.$optimize-for-direct-jumps D))
+	   (D (compiler.$insert-global-assignments D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%insert-global-assignments (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+  (define-syntax libdoit*
+    (syntax-rules (basic waddell scc)
+      ((_ ?standard-language-form ?expected-result/basic)
+       (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (library-letrec*
+	    ((a.lex a.loc (lambda () '1))
+	     (b.lex b.loc (lambda () '2))
+	     (c.lex c.loc (lambda () '3))
+	     (d.lex d.loc '4))
+	  (quote #!void))
+	(fix ((a.lex_0 (lambda () (constant 1)))
+	      (b.lex_0 (lambda () (constant 2)))
+	      (c.lex_0 (lambda () (constant 3))))
+	  (seq
+	    (funcall (primref $set-symbol-value/proc!) (constant a.loc) a.lex_0)
+	    (funcall (primref $init-symbol-value!)     (constant b.loc) b.lex_0)
+	    (funcall (primref $init-symbol-value!)     (constant c.loc) c.lex_0)
+	    (bind ((d.lex_0 (constant 4)))
+	      (seq
+		(funcall (primref $init-symbol-value!) (constant d.loc) d.lex_0)
+		(constant #!void))))))
+
+;;; --------------------------------------------------------------------
+;;; libraries
+
+  (libdoit* (library (insert-global-assignments-demo-1)
+	      (export a b c d)
+	      (import (rnrs))
+	      (define (a) '1)
+	      (define (b) '2)
+	      (define (c) '3)
+	      (define d '4))
+	    (fix ((a_0 (lambda () (constant 1)))
+		  (b_0 (lambda () (constant 2)))
+		  (c_0 (lambda () (constant 3))))
+	      (seq
+		(funcall (primref $set-symbol-value/proc!) (constant a) a_0)
+		(funcall (primref $init-symbol-value!)     (constant b) b_0)
+		(funcall (primref $init-symbol-value!)     (constant c) c_0)
+		(bind ((d_0 (constant 4)))
+		  (seq
+		    (funcall (primref $init-symbol-value!) (constant d) d_0)
+		    (constant #!void))))))
+  #t)
+
+
 ;;;; done
 
 (check-report)

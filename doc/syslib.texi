@@ -8582,6 +8582,52 @@ loc gensym; for bindings whose value is a closure object: the value is
 also stored in the @code{proc} slot of the loc gensym.
 @end defun
 
+
+As example, the library:
+
+@example
+(library (insert-global-assignments-demo-1)
+  (export a b c d)
+  (import (rnrs))
+  (define (a) '1)
+  (define (b) '2)
+  (define (c) '3)
+  (define d '4))
+@end example
+
+@noindent
+is expanded into the core language form:
+
+@example
+(library-letrec*
+    ((a.lex a.loc (lambda () '1))
+     (b.lex b.loc (lambda () '2))
+     (c.lex c.loc (lambda () '3))
+     (d.lex d.loc '4))
+  (quote #!void))
+@end example
+
+@noindent
+then recordised and transformed into:
+
+@example
+(fix ((a.lex_0 (lambda () (constant 1)))
+      (b.lex_0 (lambda () (constant 2)))
+      (c.lex_0 (lambda () (constant 3))))
+  (seq
+    (funcall (primref $set-symbol-value/proc!)
+             (constant a.loc) a.lex_0)
+    (funcall (primref $init-symbol-value!)
+             (constant b.loc) b.lex_0)
+    (funcall (primref $init-symbol-value!)
+             (constant c.loc) c.lex_0)
+    (bind ((d.lex_0 (constant 4)))
+      (seq
+        (funcall (primref $init-symbol-value!)
+                 (constant d.loc) d.lex_0)
+        (constant #!void)))))
+@end example
+
 @c page
 @node syslib compiler vars
 @subsection Introducing storage locations
