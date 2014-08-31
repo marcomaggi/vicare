@@ -6746,24 +6746,31 @@ system $compiler}.
 
 
 @defun $unparse-recordized-code @var{input}
-Given as argument a struct instance representing recordized code: build
+Given as argument a struct instance representing recordised code: build
 and return a symbolic expression that can be printed in human readable
-form.
-
-@var{input} can be any structure that is produced by the compiler
+form.  @var{input} can be any structure that is produced by the compiler
 passes.
 @end defun
 
 
 @defun $unparse-recordized-code/pretty @var{input}
-Unparse the struct instance @var{input} (representing recordized code in
-the core language already processed by the compiler) into a human
-readable symbolic expression to be used when printing to some port for
-miscellaneous debugging purposes.
+Given as argument a struct instance representing recordised code: build
+and return a symbolic expression that can be printed in human readable
+form.  @var{input} can be any structure that is produced by the compiler
+passes.
 
-This function attempts to unparse recordized code and reconstruct a
-Scheme-like symbolic expression; the returned sexp does @strong{not}
+This function attempts to unparse recordised code and reconstruct a
+Scheme--like symbolic expression; the returned sexp does @strong{not}
 exactly represent the input.
+@end defun
+
+
+@defun $unparse-recordized-code/sexp @var{input}
+Given as argument a struct instance representing recordised code: build
+and return a symbolic expression that can be printed in human readable
+form.  @var{input} can be any structure that is produced by the compiler
+passes.  The output of this function is similar to
+@func{$unparse-recordized-code} but more human readable.
 @end defun
 
 @c page
@@ -7032,11 +7039,16 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $optimize-direct-calls @var{recordised-code}
+@defun $optimize-direct-calls @var{input}
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
+
 Inspect application forms:
 
 @example
-(@meta{operator} @meta{operand} ...)
+(funcall @meta{operator} @meta{operand} ...)
 @end example
 
 @noindent
@@ -8033,9 +8045,11 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $source-optimize @var{recordised-code-expr}
-Perform source code optimizations on the recordized @var{input} code and
-return the resulting recordized code.
+@defun $source-optimize @var{input}
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
 @end defun
 
 
@@ -8119,14 +8133,17 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $rewrite-references-and-assignments @var{recordised-code-expr}
+@defun $rewrite-references-and-assignments @var{input}
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
+
 Transform references and assignments for top level lexical bindings and
 unassigned local lexical bindings according to the implementation of
-such operations.
-
-Remembering that the actual value of a top level binding is stored in
-the @code{value} field of a loc gensym, this function performs the
-following transformations:
+such operations.  Remembering that the actual value of a top level
+binding is stored in the @code{value} field of a loc gensym, this
+function performs the following transformations:
 
 @itemize
 @item
@@ -8210,6 +8227,10 @@ system $compiler}.
 
 
 @defun $introduce-tags @var{input}
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
 @end defun
 
 
@@ -8228,9 +8249,14 @@ system $compiler}.
 
 
 @defun $introduce-vars @var{input}
-This module replaces all the @objtype{prelex} structs in recordised code
-with @objtype{var} structs; this is because from now on we need a
-different set of properties to handle variable bindings.
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
+
+Replace all the @objtype{prelex} structs in recordised code with
+@objtype{var} structs; this is because after this compiler pass we need
+a different set of properties to handle variable bindings.
 @end defun
 
 @c page
@@ -8250,6 +8276,11 @@ system $compiler}.
 
 
 @defun $sanitize-bindings @var{input}
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
+
 Perform the following transformations:
 
 @itemize
@@ -8293,6 +8324,12 @@ not directly as RHS of a @objtype{bind} or @objtype{fix} struct) are
       tmp)
 @end example
 @end itemize
+
+In the returned struct of recordised code: all the @objtype{clambda}
+structs appear in the code as right--hand side initialisation
+expressions of @objtype{fix} structs; all the @objtype{bind} structs
+have a non--@objtype{clambda} struct as right--hand side initialisation
+expression.
 @end defun
 
 @c page
@@ -8300,13 +8337,63 @@ not directly as RHS of a @objtype{bind} or @objtype{fix} struct) are
 @subsection Optimisation for direct jumps
 
 
+Let's consider the following code in which the @func{lambda} sexp has
+not been integrated at the call site:
+
+@example
+(let ((f (lambda (x) x)))
+  (f 123))
+@end example
+
+@noindent
+by inspecting this code we can verify at compile--time that that
+@code{f} references a @objtype{clambda} and the application form has the
+correct number of operands; @value{PRJNAME} offers a technique to
+implement a ``full closure object application'' @code{(f 123)} as a
+faster ``direct jump call'' to the @objtype{clambda} clause with the
+correct number of operands.  Another example, when the @objtype{clambda}
+has multiple clauses:
+
+@example
+(let ((f (case-lambda
+           ((x)   x)
+           ((x y) (list x y)))))
+  (f 1 2))
+@end example
+
+@noindent
+by inspecting this code we can verify at compile--time that @code{f}
+references a @objtype{clambda} and that it is called with 2 arguments:
+there is technique that allows to implement the application @code{(f 1
+2)} as a direct jump to the clause with 2 arguments.
+
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
 @defun $optimize-for-direct-jumps @var{input}
-@end defun
+Perform code optimisation traversing the whole hierarchy in @var{input},
+which must be a struct instance representing recordised code, and
+building a new hierarchy of optimised, recordised code; return the new
+hierarchy.
 
+Transform @objtype{funcall} structs into @objtype{jmpcall} structs
+whenever in the application form:
+
+@example
+(funcall @meta{operator} @meta{operand} ...)
+@end example
+
+@noindent
+the operator is a binding reference known to reference a
+@objtype{clambda} struct.
+
+Upon entering this transformation: all the @objtype{clambda} structs
+must appear in the input as right--hand side initialisation expressions
+of @objtype{fix} structs; all the @objtype{bind} structs must have a
+non--@objtype{clambda} struct as right--hand side initialisation
+expression.
+@end defun
 
 @c page
 @node syslib compiler global

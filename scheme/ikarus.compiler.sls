@@ -598,8 +598,8 @@
 		  "expected symbol as return value from CURRENT-PRIMITIVE-LOCATIONS procedure"
 		  obj))))
 	(else
-	 (error __who__
-	   "*** Vicare error: primitive missing from makefile.sps" name))))
+	 (compiler-internal-error __who__
+	   "while building boot image: primitive missing from makefile.sps" name))))
 
 
 (module (compile-core-expr-to-port
@@ -1256,8 +1256,9 @@
 ;;; --------------------------------------------------------------------
 
 ;;Instances of  this struct type  are substitute  instances of FUNCALL  in recordized
-;;code when it is  possible to perform a direct jump to  a CASE-LAMBDA clause, rather
-;;than call the whole closure.
+;;code when it is possible to perform a faster "direct jump call" to a CLAMBDA clause
+;;with the correct number of arguments, rather than a "full closure object call" with
+;;number of arguments that must be validated.
 ;;
 ;;Example, given the definition:
 ;;
@@ -3638,37 +3639,38 @@
 
 
 (module (optimize-for-direct-jumps)
-  ;;In a  previous compiler pass we  have optimised direct function  applications; as
-  ;;example:
+  ;;This  module transforms  FUNCALL structs  into  JMPCALL structs  whenever in  the
+  ;;application form:
   ;;
-  ;;   ((lambda (x) x) 123)
+  ;;   (funcall ?operator ?operand ...)
   ;;
-  ;;was transformed into:
+  ;;the ?OPERATOR is a binding reference  known to reference a CLAMBDA struct.  There
+  ;;is a technique that allows the  implementation of this "full closure object call"
+  ;;into a faster "direct jump call" into  the closure clause with the correct number
+  ;;of arguments.
   ;;
-  ;;   (let ((x 123)) x)
-  ;;
-  ;;Fine.  This  module is,  in a  way, a generalisation  of the  above optimisation;
-  ;;let's consider the following code:
+  ;;As example, let's  consider the following code  in which the lambda  sexp has not
+  ;;been integrated at the call site:
   ;;
   ;;   (let ((f (lambda (x) x)))
   ;;     (f 123))
   ;;
-  ;;while  we cannot,  in general,  replace the  LAMBDA definition  with a  low level
-  ;;binding, there  is a way  to jump directly from  the function application  to the
-  ;;function implementation without executing a  full closure call.  When the closure
-  ;;definition has multiple clauses:
+  ;;it is  known that F  references a  CLAMBDA, so the  application "(f 123)"  can be
+  ;;implemented as direct jump call.  Another  example, when the CLAMBDA has multiple
+  ;;clauses:
   ;;
   ;;   (let ((f (case-lambda
-  ;;              ((x)		x)
-  ;;              ((x y)	(list x y)))))
+  ;;              ((x)   x)
+  ;;              ((x y) (list x y)))))
   ;;     (f 1 2))
   ;;
-  ;;there is a way to jump directly  from the function application to the clause that
-  ;;matches the number of arguments.
+  ;;it is known that  F references a CLAMBDA and that it is  called with 2 arguments:
+  ;;there is technique that allows to implement the application "(f 1 2)" as a direct
+  ;;jump to the clause with 2 arguments.
   ;;
-  ;;This  optimisation  is  possible  only  when:  a  preliminary  iteration  of  the
-  ;;recordized  code let  us  find  bindings whose  right-hand  size  evaluates to  a
-  ;;CASE-LAMBDA, that is to a closure definition with known clauses.
+  ;;Upon entering this transformation: the all the CLAMBDA structs must appear in the
+  ;;input as RHS  init expressions of FIX  structs; all the BIND structs  must have a
+  ;;non-CLAMBDA struct as RHS init expression.
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
