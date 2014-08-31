@@ -282,6 +282,9 @@
   ;;Like FOR-HEACH, but expand the loop inline.   The "function" to be mapped must be
   ;;specified by an identifier or lambda form because it is evaluated multiple times.
   ;;
+  ;;This implementation:  is tail recursive,  assumes proper list arguments  of equal
+  ;;length.
+  ;;
   (syntax-case stx ()
     ((_ ?func ?ell0 ?ell ...)
      (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
@@ -289,6 +292,26 @@
 	   (unless (null? t)
 	     (?func ($car t) ($car T) ...)
 	     (loop  ($cdr t) ($cdr T) ...)))))
+    ))
+
+(define-syntax ($fold-right/stx stx)
+  ;;Like FOLD-RIGHT, but expand the loop inline.  The "function" to be folded must be
+  ;;specified by an identifier or lambda form because it is evaluated multiple times.
+  ;;
+  ;;This  implementation: is  non-tail recursive,  assumes proper  list arguments  of
+  ;;equal length.
+  ;;
+  (syntax-case stx ()
+    ((_ ?combine ?knil ?ell0 ?ell ...)
+     (with-syntax (((ELL ...) (generate-temporaries #'(?ell ...))))
+       #'(let recur ((knil ?knil)
+		     (ell0 ?ell0)
+		     (ELL  ?ell)
+		     ...)
+	   (if (pair? ell0)
+	       ;;This is FOLD-RIGHT so: first we recur, then we combine.
+	       (?combine ($car ell0) ($car ELL) ... (recur knil ($cdr ell0) ($cdr ELL) ...))
+	     knil))))
     ))
 
 ;;; --------------------------------------------------------------------
@@ -3826,11 +3849,11 @@
 
       ((bind lhs* rhs* body)
        (make-bind lhs* ($map/stx E rhs*)
-		  (%global-assign lhs* (E body))))
+		  (%process-bind lhs* (E body))))
 
       ((fix lhs* rhs* body)
        (make-fix lhs* ($map/stx E rhs*)
-		 (%global-fix lhs* (E body))))
+		 (%process-fix   lhs* (E body))))
 
       ((conditional test conseq altern)
        (make-conditional (E test) (E conseq) (E altern)))
@@ -3871,41 +3894,60 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%global-assign lhs* body.already-processed)
-    ;;Prepend to the body of a BIND struct a call to $INIT-SYMBOL-VALUE!  for each of
-    ;;the VAR structs in LHS* representing top level bindings.
-    ;;
-    ;;$INIT-SYMBOL-VALUE! stores  in the "value" field  of the loc gensym  the actual
-    ;;binding value; if,  at run-time, such binding value is  recognised as a closure
-    ;;object: it is also stored in the "proc" field.
-    ;;
-    (cond ((null? lhs*)
-	   body.already-processed)
-	  ((var-global-location ($car lhs*))
-	   => (lambda (loc)
-		(make-seq (make-funcall (mk-primref '$init-symbol-value!)
-					(list (make-constant loc) ($car lhs*)))
-			  (%global-assign ($cdr lhs*) body.already-processed))))
-	  (else
-	   (%global-assign ($cdr lhs*) body.already-processed))))
+  (module (%process-bind %process-fix)
 
-  (define (%global-fix lhs* body.already-processed)
-    ;;Prepend to the body of a FIX  struct a call to $SET-SYMBOL-VALUE/PROC! for each
-    ;;VAR struct in LHS* representing top level bindings.
-    ;;
-    ;;$SET-SYMBOL-VALUE/PROC!  stores  in both the  "value" and "proc" fields  of the
-    ;;loc gensym  the actual  binding value;  it is known  at compile-time  that such
-    ;;value is a closure object resulting from the evaluation of a CLAMBDA struct.
-    ;;
-    (cond ((null? lhs*)
-	   body.already-processed)
-	  ((var-global-location ($car lhs*))
-	   => (lambda (loc)
-		(make-seq (make-funcall (mk-primref '$set-symbol-value/proc!)
-					(list (make-constant loc) ($car lhs*)))
-			  (%global-assign ($cdr lhs*) body.already-processed))))
-	  (else
-	   (%global-fix ($cdr lhs*) body.already-processed))))
+    (define (%process-bind lhs* body)
+      ;;Prepend to the body of a BIND  struct a call to $INIT-SYMBOL-VALUE!  for each
+      ;;of the VAR structs in LHS* representing top level bindings.
+      ;;
+      ;;$INIT-SYMBOL-VALUE! stores in the "value" field  of the loc gensym the actual
+      ;;binding value; if, at run-time, such binding value is recognised as a closure
+      ;;object: it is also stored in the "proc" field.
+      ;;
+      (%insert-assignments lhs* body (mk-primref '$init-symbol-value!)))
+
+    (define (%process-fix lhs* body)
+      ;;Prepend to the  body of a FIX  struct a call to  $INIT-SYMBOL-VALUE! for each
+      ;;VAR struct in LHS* representing top  level bindings; for efficiency, only for
+      ;;the first binding: the call is to $SET-SYMBOL-VALUE/PROC!.
+      ;;
+      ;;$INIT-SYMBOL-VALUE! stores in the "value" field  of the loc gensym the actual
+      ;;binding value; if, at run-time, such binding value is recognised as a closure
+      ;;object: it is also stored in the "proc" field.
+      ;;
+      ;;$SET-SYMBOL-VALUE/PROC!  stores in both the  "value" and "proc" fields of the
+      ;;loc gensym  the actual binding value;  it is known at  compile-time that such
+      ;;value is a closure object resulting from the evaluation of a CLAMBDA struct.
+      ;;
+      ;;FIXME   Why   in   hell   only   the  first   binding   can   be   set   with
+      ;;$SET-SYMBOL-VALUE/PROC!   and  not  all  of   them?   I  have  tried  to  use
+      ;;$SET-SYMBOL-VALUE/PROC! for all the bindings  and the result is some infinite
+      ;;loop while compiling the boot image.  I do not understand.  (Marco Maggi; Sun
+      ;;Aug 31, 2014)
+      ;;
+      (cond ((null? lhs*)
+	     body)
+	    ((var-global-location ($car lhs*))
+	     => (lambda (loc)
+		  (make-seq (make-funcall (mk-primref '$set-symbol-value/proc!)
+					  (list (make-constant loc) ($car lhs*)))
+			    (%insert-assignments ($cdr lhs*) body (mk-primref '$init-symbol-value!))
+			    ;;;(%process-bind ($cdr lhs*) body)
+			    )))
+	    (else
+	     (%process-fix ($cdr lhs*) body))))
+
+    (define (%insert-assignments lhs* body pref)
+      ($fold-right/stx (lambda (lhs tail)
+			 (cond ((var-global-location lhs)
+				=> (lambda (loc)
+				     (make-seq
+				      (make-funcall pref (list (make-constant loc) lhs))
+				      tail)))
+			       (else tail)))
+		       body lhs*))
+
+    #| end of module |# )
 
   #| end of module: INSERT-GLOBAL-ASSIGNMENTS |# )
 
@@ -6938,6 +6980,7 @@
 ;; eval: (put 'struct-case			'scheme-indent-function 1)
 ;; eval: (put '$map/stx				'scheme-indent-function 1)
 ;; eval: (put '$for-each/stx			'scheme-indent-function 1)
+;; eval: (put '$fold-right/stx			'scheme-indent-function 1)
 ;; eval: (put 'with-prelex-structs-in-plists	'scheme-indent-function 1)
 ;; eval: (put 'compile-time-error		'scheme-indent-function 1)
 ;; eval: (put 'compiler-internal-error		'scheme-indent-function 1)
