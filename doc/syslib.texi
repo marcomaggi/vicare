@@ -8592,6 +8592,11 @@ Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of transformed, recordized code;
 return the new hierarchy.
+
+This module inserts global assignments forms that put the value of
+lexical top level bindings in the slot @code{value} of the corresponding
+loc gensym; for bindings whose value is a closure object: the value is
+also stored in the @code{proc} slot of the loc gensym.
 @end defun
 
 @c page

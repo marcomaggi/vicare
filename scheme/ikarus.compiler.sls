@@ -3790,6 +3790,18 @@
 
 
 (module (insert-global-assignments)
+  ;;This module  inserts global assignments forms  that put the value  of lexical top
+  ;;level bindings in the slot "value"  of the corresponding loc gensym; for bindings
+  ;;whose value is a  closure object: the value is also stored in  the "proc" slot of
+  ;;the loc gensym.
+  ;;
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		var		primref
+  ;;   bind		fix		conditional
+  ;;   seq		forcall		funcall
+  ;;   jmpcall
+  ;;
   (define-fluid-override __who__
     (identifier-syntax 'insert-global-assignments))
 
