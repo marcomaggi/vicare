@@ -3896,6 +3896,12 @@
 
   (module (%process-bind %process-fix)
 
+    (define-constant INIT-PRIMREF
+      (mk-primref '$init-symbol-value!))
+
+    (define-constant SET-PRIMREF
+      (mk-primref '$set-symbol-value/proc!))
+
     (define (%process-bind lhs* body)
       ;;Prepend to the body of a BIND  struct a call to $INIT-SYMBOL-VALUE!  for each
       ;;of the VAR structs in LHS* representing top level bindings.
@@ -3904,7 +3910,7 @@
       ;;binding value; if, at run-time, such binding value is recognised as a closure
       ;;object: it is also stored in the "proc" field.
       ;;
-      (%insert-assignments lhs* body (mk-primref '$init-symbol-value!)))
+      (%insert-assignments lhs* body INIT-PRIMREF))
 
     (define (%process-fix lhs* body)
       ;;Prepend to the  body of a FIX  struct a call to  $INIT-SYMBOL-VALUE! for each
@@ -3929,11 +3935,8 @@
 	     body)
 	    ((var-global-location ($car lhs*))
 	     => (lambda (loc)
-		  (make-seq (make-funcall (mk-primref '$set-symbol-value/proc!)
-					  (list (make-constant loc) ($car lhs*)))
-			    (%insert-assignments ($cdr lhs*) body (mk-primref '$init-symbol-value!))
-			    ;;;(%process-bind ($cdr lhs*) body)
-			    )))
+		  (make-seq (make-funcall SET-PRIMREF (list (make-constant loc) ($car lhs*)))
+			    (%insert-assignments ($cdr lhs*) body INIT-PRIMREF))))
 	    (else
 	     (%process-fix ($cdr lhs*) body))))
 
