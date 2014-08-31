@@ -3525,8 +3525,8 @@
   ;;
   ;;the ?OPERATOR is a binding reference  known to reference a CLAMBDA struct.  There
   ;;is a technique that allows the  implementation of this "full closure object call"
-  ;;into a faster "direct jump call" into  the closure clause with the correct number
-  ;;of arguments.
+  ;;as a faster "direct jump call" into the closure clause with the correct number of
+  ;;arguments.
   ;;
   ;;As example, let's  consider the following code  in which the lambda  sexp has not
   ;;been integrated at the call site:
@@ -3547,7 +3547,7 @@
   ;;there is technique that allows to implement the application "(f 1 2)" as a direct
   ;;jump to the clause with 2 arguments.
   ;;
-  ;;Upon entering this transformation: the all the CLAMBDA structs must appear in the
+  ;;Upon entering  this transformation: all  the CLAMBDA  structs must appear  in the
   ;;input as RHS  init expressions of FIX  structs; all the BIND structs  must have a
   ;;non-CLAMBDA struct as RHS init expression.
   ;;
@@ -3614,10 +3614,10 @@
     ;;optimisation if they appear in operator position.
     ;;
     ;;Here we know  that RHS* is *not* a  list of CLAMBDA structs, because  it is the
-    ;;result of  previous compiler passes.   So here we try  to determine if  the RHS
+    ;;result  of  previous  compiler passes;  so  we  try  to  determine if  the  RHS
     ;;expressions will return a CLAMBDA struct.
     ;;
-    ;;By  default the  VAR  structs  are marked  as  non-referencing  a CLAMBDA  upon
+    ;;By  default the  VAR structs  are marked  as *not*  referencing a  CLAMBDA upon
     ;;creation, so if a VAR does not reference a CLAMBDA here we need to do nothing.
     ;;
     (let ((rhs*^ ($map/stx E rhs*)))
@@ -3659,7 +3659,7 @@
 	  (untag (E-known rator))
 	(cond
 	 ;;Is RATOR  a variable known  to reference a closure?   In this case  we can
-	 ;;attempt an optimization.
+	 ;;attempt an optimization.  CLAM is the referenced CLAMBDA.
 	 ((and (var? rator)
 	       ($var-referenced-clambda rator))
 	  => (lambda (clam)
@@ -3670,16 +3670,17 @@
 	 ;;evaluate to a closure.
 	 ;;
 	 ;;$$APPLY is  used only  in the  body of the  procedure APPLY,  after having
-	 ;;validated the first  arguments as a closure objectt.  So  here we are sure
+	 ;;validated the  first argument as a  closure object; so, here,  we are sure
 	 ;;that "($car rand*)" will evaluate to a closure object.
 	 ((and (primref? rator)
 	       (eq? (primref-name rator) '$$apply))
+	  ;;JMPCALL does not want KNOWN structs ar rator and rands.
 	  (make-jmpcall (sl-apply-label)
 			(E-unpack-known ($car rand*))
 			($map/stx E-unpack-known ($cdr rand*))))
 
 	 ;;If we  are here: RATOR is  just some unknown struct  instance representing
-	 ;;recordized code which, when evaluated, will return a closure.
+	 ;;recordized code which, when evaluated, will return a closure object.
 	 (else
 	  (make-funcall (tag rator type) ($map/stx E-known rand*))))))
 
@@ -3688,13 +3689,10 @@
       ;;
       ;;   (RATOR . RAND*)
       ;;
-      ;;CLAM is a struct instance of type CLAMBDA.
-      ;;
-      ;;RATOR  is a  struct instance  of type  VAR which  is known  to reference  the
-      ;;CLAMBDA in CLAM.
-      ;;
-      ;;RAND* is a list of struct  instances representing recordized code which, when
-      ;;evaluated, will return the operands for the function application.
+      ;;CLAM is  a struct instance  of type CLAMBDA.  RATOR  is a struct  instance of
+      ;;type VAR which is known to reference the CLAMBDA in CLAM.  RAND* is a list of
+      ;;struct  instances representing  recordized code  which, when  evaluated, will
+      ;;return the operands for the function application.
       ;;
       ;;This function searches for a clause in CLAM which matches the arguments given
       ;;in RAND*:
@@ -3705,41 +3703,38 @@
       ;;* If not found: just return a  struct instance of type FUNCALL representing a
       ;;  normal function call.
       ;;
-      (struct-case clam
-	((clambda label.unused clause*)
-	 ;;Number of arguments in this function application.
-	 (define num-of-rand* (length rand*))
-	 (let recur ((clause* clause*))
-	   (define-inline (%recur-to-next-clause)
-	     (recur ($cdr clause*)))
-	   (if (null? clause*)
-	       ;;No matching clause found.  Just call the closure as always.
-	       (make-funcall rator rand*)
-	     (struct-case ($clambda-case-info ($car clause*))
-	       ((case-info label fml* proper?)
-		(if proper?
-		    ;;This clause has a fixed number of arguments.
-		    (if ($fx= num-of-rand* (length fml*))
-			(make-jmpcall label (%unwrap-known rator) ($map/stx %unwrap-known rand*))
-		      (%recur-to-next-clause))
-		  ;;This clause has a variable number of arguments.
-		  (if ($fx<= (length ($cdr fml*)) num-of-rand*)
-		      (make-jmpcall label (%unwrap-known rator) (%prepare-rand* ($cdr fml*) rand*))
-		    (%recur-to-next-clause))))))))))
+      (define num-of-rand* (length rand*))
+      (let recur ((clause* ($clambda-cases clam)))
+	(define-syntax-rule (%recur-to-next-clause)
+	  (recur ($cdr clause*)))
+	(if (null? clause*)
+	    ;;No matching clause found.  Just call the closure as always.
+	    (make-funcall rator rand*)
+	  (struct-case ($clambda-case-info ($car clause*))
+	    ((case-info label fml* proper?)
+	     (if proper?
+		 ;;This clause has a fixed number of arguments.
+		 (if ($fx= num-of-rand* (length fml*))
+		     (make-jmpcall label (%unwrap-known rator) ($map/stx %unwrap-known rand*))
+		   (%recur-to-next-clause))
+	       ;;This clause has a variable number of arguments.
+	       (if ($fx<= (length ($cdr fml*)) num-of-rand*)
+		   (make-jmpcall label (%unwrap-known rator) (%prepare-rand* ($cdr fml*) rand*))
+		 (%recur-to-next-clause))))))))
 
     (define (%prepare-rand* fml* rand*)
       ;;Recursive function.
       ;;
-      ;;FML*  is a  list of  struct  instances of  type VAR  representing the  formal
-      ;;arguments of the CASE-LAMBDA clause.
+      ;;FML* is a  list of structs of  type VAR representing the  formal arguments of
+      ;;the CASE-LAMBDA clause.
       ;;
-      ;;RAND* is a list os struct instances representing the arguments to the closure
+      ;;RAND* is a  list of structs representing the arguments  to the closure object
       ;;application.
       ;;
       ;;This function  processes RAND* and  builds a new list  representing arguments
       ;;that can be assigned to the formals of the clause.  If the clause is:
       ;;
-      ;;   ((a b . args) ?body0 ?body ...)
+      ;;   ((a b . args) ?body)
       ;;
       ;;and RAND* is:
       ;;
@@ -3750,6 +3745,17 @@
       ;;
       ;;   (#[constant 1] #[constant 2]
       ;;    #[funcall #[primref list] (#[constant 3] #[constant 4])])
+      ;;
+      ;;so that the application:
+      ;;
+      ;;   (?rator ?rand0 ?rand1 ?rand2 ?rand3)
+      ;;
+      ;;is converted to:
+      ;;
+      ;;   (?rator ?rand1 ?rand2 (list ?rand3 ?rand4))
+      ;;
+      ;;where ?RAND1  and ?RAND2 are unwrapped  from KNOWN structs, while  ?RAND3 and
+      ;;?RAND4 are not.
       ;;
       (if (null? fml*)
 	  ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
