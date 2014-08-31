@@ -3655,34 +3655,35 @@
   (module (E-funcall)
 
     (define (E-funcall rator rand*)
-      (receive (rator type)
+      (receive (unwrapped-rator type)
 	  (untag (E-known rator))
 	(cond
-	 ;;Is RATOR  a variable known  to reference a closure?   In this case  we can
-	 ;;attempt an optimization.  CLAM is the referenced CLAMBDA.
-	 ((and (var? rator)
-	       ($var-referenced-clambda rator))
+	 ;;Is UNWRAPPED-RATOR a variable known to  reference a closure?  In this case
+	 ;;we can attempt an optimization.  CLAM is the referenced CLAMBDA.
+	 ((and (var? unwrapped-rator)
+	       ($var-referenced-clambda unwrapped-rator))
 	  => (lambda (clam)
-	       (%optimize-funcall clam rator ($map/stx E-known rand*))))
+	       (%optimize-funcall clam unwrapped-rator ($map/stx E-known rand*))))
 
-	 ;;Is RATOR  the low level  APPLY operation?  In  this case: the  first RAND*
-	 ;;should  be  a struct  instance  representing  recordized code  which  will
+	 ;;Is UNWRAPPED-RATOR the low level APPLY operation?  In this case: the first
+	 ;;RAND* should be a struct  instance representing recordized code which will
 	 ;;evaluate to a closure.
 	 ;;
 	 ;;$$APPLY is  used only  in the  body of the  procedure APPLY,  after having
 	 ;;validated the  first argument as a  closure object; so, here,  we are sure
 	 ;;that "($car rand*)" will evaluate to a closure object.
-	 ((and (primref? rator)
-	       (eq? (primref-name rator) '$$apply))
-	  ;;JMPCALL does not want KNOWN structs ar rator and rands.
+	 ((and (primref? unwrapped-rator)
+	       (eq? (primref-name unwrapped-rator) '$$apply))
+	  ;;JMPCALL does not want KNOWN structs as rator and rands.
 	  (make-jmpcall (sl-apply-label)
 			(E-unpack-known ($car rand*))
 			($map/stx E-unpack-known ($cdr rand*))))
 
-	 ;;If we  are here: RATOR is  just some unknown struct  instance representing
-	 ;;recordized code which, when evaluated, will return a closure object.
+	 ;;If  we are  here: UNWRAPPED-RATOR  is  just some  unknown struct  instance
+	 ;;representing recordized code which, when  evaluated, will return a closure
+	 ;;object.
 	 (else
-	  (make-funcall (tag rator type) ($map/stx E-known rand*))))))
+	  (make-funcall rator ($map/stx E-known rand*))))))
 
     (define (%optimize-funcall clam rator rand*)
       ;;Attempt to optimize the function application:
