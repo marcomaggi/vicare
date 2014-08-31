@@ -74,7 +74,7 @@
   (check-syntax-violation 123
     (letrec* ((ciao (lambda (x)
 		      (when x
-			(ciao))
+			(ciao 1))
 		      123))
 	      (b    (ciao #f)))
       b))

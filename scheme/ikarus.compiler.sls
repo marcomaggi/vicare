@@ -3600,7 +3600,7 @@
        (make-forcall op ($map/stx E rand*)))
 
       ((funcall rator rand*)
-       (E-funcall (E-known rator) ($map/stx E-known rand*)))
+       (E-funcall x (E-known rator) ($map/stx E-known rand*)))
 
       (else
        (compile-time-error __who__
@@ -3661,7 +3661,7 @@
 
   (module (E-funcall)
 
-    (define (E-funcall rator rand*)
+    (define (E-funcall appform rator rand*)
       ;;RATOR and RAND* have already been processed by E.
       ;;
       (let ((unwrapped-rator (%unwrap-known rator)))
@@ -3671,7 +3671,7 @@
 	 ((and (var? unwrapped-rator)
 	       ($var-referenced-clambda unwrapped-rator))
 	  => (lambda (clam)
-	       (%optimize-funcall clam unwrapped-rator rand*)))
+	       (%optimize-funcall appform clam unwrapped-rator rand*)))
 
 	 ;;Is UNWRAPPED-RATOR the low level APPLY operation?  In this case: the first
 	 ;;RAND* should be a struct  instance representing recordized code which will
@@ -3693,7 +3693,7 @@
 	 (else
 	  (make-funcall rator rand*)))))
 
-    (define (%optimize-funcall clam var-rator rand*)
+    (define (%optimize-funcall appform clam var-rator rand*)
       ;;Attempt to optimize the function application:
       ;;
       ;;   (VAR-RATOR . RAND*)
@@ -3717,8 +3717,14 @@
 	(define-syntax-rule (%recur-to-next-clause)
 	  (recur ($cdr clause*)))
 	(if (null? clause*)
-	    ;;No matching clause found.  Just call the closure as always.
-	    (make-funcall var-rator rand*)
+	    ;;No matching clause found.
+	    (if (option.strict-r6rs)
+		;;Just call the closure as always.  A "wrong num args" exception will
+		;;be raised at run-time as mandated by R6RS.
+		(make-funcall var-rator rand*)
+	      (compile-time-error __who__
+		"wrong number of arguments in closure object application"
+		(unparse-recordized-code/pretty appform)))
 	  (struct-case ($clambda-case-info ($car clause*))
 	    ((case-info label fml* proper?)
 	     (if proper?
