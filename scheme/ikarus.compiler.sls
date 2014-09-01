@@ -4382,8 +4382,13 @@
       ;;
       ($for-each/stx %var-reset-subst! lhs*)
       (let ((rhs*^ ($map/stx E rhs*)))
+	;;If  an  RHS^  is  a  VAR  struct  with a  subst:  copy  the  subst  to  the
+	;;corresponding LHS.   In other  words: if an  RHS^ is part  of the  graph of
+	;;substitutions, we make LHS part of the graph too.
 	($for-each/stx %var-copy-subst! lhs* rhs*^)
 	(let ((body^ (E body)))
+	  ;;Once the body has  been processed: we do not need the  substs in the LHS*
+	  ;;anymore, so reset them.
 	  ($for-each/stx %var-reset-subst! lhs*)
 	  (make-bind lhs* rhs*^ body^))))
 
@@ -4398,7 +4403,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (E-fix)
+  (module (E-fix node?)
 
     (define-struct node
       (name code deps whacked freevar* recursive?))
@@ -4454,18 +4459,21 @@
 			      (%process-node y))
 		    (node-deps x)))))
 	    ($for-each/stx %process-node node*))
-	  ;;Now those  that have free variables  are actual closures.  Those  with no
-	  ;;free variables are actual combinators.
+	  ;;The CLOSURE structs that still have free variables are will become actual
+	  ;;closure objects; the  CLOSURE structs with no free  variables will become
+	  ;;combinators.
 	  (let ((rhs* (map (lambda (node)
-			     (let ((code       ($node-code       node))
-				   (freevar*   ($node-freevar*   node))
+			     (let ((freevar*   ($node-freevar*   node))
 				   (recursive? ($node-recursive? node)))
 			       (receive-and-return (closure)
-				   (make-closure code freevar* recursive?)
+				   (make-closure ($node-code node) freevar* recursive?)
 				 (let ((name ($node-name node)))
 				   (cond ((null? freevar*)
+					  ;;This CLOSURE struct has no free variables.
 					  (%var-set-subst! name closure))
 					 ((and (null? (cdr freevar*)) recursive?)
+					  ;;This CLOSURE  struct has 1  free variable
+					  ;;and is recursive.
 					  (%var-set-subst! name closure))
 					 (else
 					  (%var-reset-subst! name)))))))
@@ -4603,11 +4611,12 @@
       ($set-var-index! x #f))
 
     (define (%var-set-subst! x v)
-      ;;X is  a VAR struct.  V  can be: a NODE  struct, a CLOSURE struct,  the symbol
-      ;;"q".
+      ;;X is a VAR struct.  V can be:  a VAR struct, a NODE struct, a CLOSURE struct,
+      ;;the symbol "q".
       ;;
       #;(assert (var? x))
-      (set-var-index! x (make-prop v)))
+      (assert (or (node? v) (closure? v) (var? v) (eq? v 'q)))
+      ($set-var-index! x (make-prop v)))
 
     (define (%var-copy-subst! lhs rhs)
       ;;LHS  and  RHS are,  respectively,  the  left-hand  side  VAR struct  and  the
