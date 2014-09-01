@@ -1934,6 +1934,77 @@
   #t)
 
 
+(parametrise ((check-test-name	'lift-codes))
+
+  (define (%lift-codes core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   (D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (D (compiler.$sanitize-bindings D))
+	   (D (compiler.$optimize-for-direct-jumps D))
+	   (D (compiler.$insert-global-assignments D))
+	   (D (compiler.$introduce-vars D))
+	   (D (compiler.$convert-closures D))
+	   (D (compiler.$optimize-closures/lift-codes D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%lift-codes (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+  (define-syntax libdoit*
+    (syntax-rules (basic waddell scc)
+      ((_ ?standard-language-form ?expected-result/basic)
+       (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (library-letrec*
+	    ((a.lex a.loc (lambda () '1))
+	     (b.lex b.loc (lambda () '2))
+	     (c.lex c.loc (lambda () '3))
+	     (d.lex d.loc '4))
+	  (quote #!void))
+	(codes
+	 ((lambda () (constant 3))
+	  (lambda () (constant 2))
+	  (lambda () (constant 1)))
+	 (seq
+	   (funcall (primref $set-symbol-value/proc!)
+	     (constant a.loc)
+	     (closure (code-loc a.lex) () #f))
+	   (funcall (primref $init-symbol-value!)
+	     (constant b.loc)
+	     (closure (code-loc b.lex) () #f))
+	   (funcall (primref $init-symbol-value!)
+	     (constant c.loc)
+	     (closure (code-loc c.lex) () #f))
+	   (bind ((d.lex_0 (constant 4)))
+	     (seq
+	       (funcall (primref $init-symbol-value!)
+		 (constant d.loc) d.lex_0)
+	       (constant #!void))))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

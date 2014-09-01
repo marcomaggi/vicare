@@ -8673,30 +8673,65 @@ free variables referenced by each @objtype{closure}.
 @subsection Closures optimization and codes lifting
 
 
-Let's consider the standard code:
+When arriving at this compiler pass the input recordised code is such
+that:
+
+@itemize
+@item
+All the @objtype{clambda} structs are wrapped into @objtype{closure}
+structs.
+
+@item
+All the @objtype{closure} structs appear as right--hand side expressions
+of bindings defined by @objtype{fix} structs.
+
+@item
+Bindings defined by @objtype{fix} structs are immutable and their
+right--hand side expressions are all @objtype{closure} structs.
+
+@item
+Bindings defined by @objtype{bind} structs have non--@objtype{closure}
+right--hand side expressions.
+
+@item
+If the right--hand side expression of a binding defined by
+@objtype{bind} is a variable: such binding is immutable.
+@end itemize
+
+@noindent
+now let's consider some examples of code creating a function:
+
+@itemize
+@item
+In the recordised code:
 
 @example
-(let ((a 1))
-  (lambda () a))
+(bind ((a_0 (constant 1)))
+  (lambda () a_0))
 @end example
 
 @noindent
 the returned function is a ``true closure'' because its return value
-depends upon the value of the binding @code{a} at the time the closure
-object is created; @code{a} is a free variable in the body of the
-function and the function is closed upon it.  In the following standard
-code:
+depends upon the value of the binding @code{a_0} at the time the closure
+object is created; @code{a_0} is a free variable in the body of the
+function and the function is closed upon it.
+
+@item
+In the following recordised code:
 
 @example
 (lambda ()
-  (list 1 2))
+  ((primitive list) 1 2))
 @end example
 
 @noindent
 the returned function looks like it is closed upon the binding
 @func{list}, but in truth @func{list} is a primitive function whose
 binding never mutates; so the returned function is a ``combinator'', a
-function without free variables.  Another example:
+function without free variables.
+
+@item
+The following standard code:
 
 @example
 (letrec* ((a (lambda () (b)))
@@ -8705,7 +8740,7 @@ function without free variables.  Another example:
 @end example
 
 @noindent
-this code is recordised and processed to:
+is recordised and processed to:
 
 @example
 (fix ((a_0 (lambda () (funcall b_0)))
@@ -8714,12 +8749,27 @@ this code is recordised and processed to:
 @end example
 
 @noindent
-where it is known at compile--time that the bindings defined by
-@objtype{fix} are immutable and reference @objtype{clambda} structs; so
-the functions are just combinators, because it is known at compile--time
-that @code{a_0} and @code{b_0} are immutable bindings referencing
-closures and it is also known which closures are referenced.
+so the functions are just combinators, because it is known at
+compile--time that @code{a_0} and @code{b_0} are immutable bindings
+referencing closures and it is also known which closures are referenced.
 
+@item
+In the following recordised code:
+
+@example
+(fix ((a_0 (lambda () @meta{body})))
+  (bind ((b_0 a_0))
+    (fix ((c_0 (lambda () (funcall b_0))))
+      c_0)))
+@end example
+
+@noindent
+the returned value looks like a closure upon the binding @code{b_0}, but
+in truth it is known at compile--time that @code{b_0} is an immutable
+binding referencing a @objtype{clambda} struct and also which
+@objtype{clambda} is referenced; so the function bound to @code{c_0} is
+just a combinator.
+@end itemize
 
 
 The following bindings are exported by the library @library{vicare

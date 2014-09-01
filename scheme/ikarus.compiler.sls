@@ -1886,20 +1886,19 @@
       ;;Return a struct instance of type CLAMBDA.
       ;;
       ((case-lambda)
-       (let ((label   (gensym "clambda"))
-	     (cases   (E-clambda-case* ($cdr X) ctxt))
+       (let ((cases   (E-clambda-case* ($cdr X) ctxt))
 	     (cp      #f)
 	     (free    #f)
 	     (name    (and (symbol? ctxt) ctxt)))
-	 (make-clambda label cases cp free name)))
+	 (let ((label (gensym (if (symbol? name) name "clambda"))))
+	   (make-clambda label cases cp free name))))
 
       ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body))
       ;;
       ;;Return a struct instance of type CLAMBDA.
       ;;
       ((annotated-case-lambda)
-       (let ((label          (gensym "clambda"))
-	     (cases          (E-clambda-case* ($cddr X) ctxt))
+       (let ((cases          (E-clambda-case* ($cddr X) ctxt))
 	     (cp             #f)
 	     (free           #f)
 	     (name           (cons (and (symbol? ctxt) ctxt)
@@ -1909,7 +1908,8 @@
 					(let ((annotated-expr ($cadr X)))
 					  (and (annotation?       annotated-expr)
 					       (annotation-source annotated-expr)))))))
-	 (make-clambda label cases cp free name)))
+	 (let ((label (gensym (if (symbol? name) name "clambda"))))
+	   (make-clambda label cases cp free name))))
 
       ;;Synopsis: (lambda ?formals ?body)
       ;;
@@ -4323,7 +4323,13 @@
     (identifier-syntax 'optimize-closures/lift-codes))
 
   (define all-codes
+    ;;While  processing  an  input  expression:  a proper  list  of  CLAMBDA  structs
+    ;;representing the set of all the functions defined in the input expression.
+    ;;
     (make-parameter #f))
+
+  (define-syntax-rule (%prepend-to-all-codes! ?obj)
+    (all-codes (cons ?obj (all-codes))))
 
   (define (optimize-closures/lift-codes X)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
@@ -4536,14 +4542,14 @@
     (define (%trim-freevar* freevar*)
       ;;Non-tail recursive function.   Given a list of VAR  structs representing free
       ;;variables in  the body  of a  function: build and  return a  new list  of VAR
-      ;;struct representing the actual free vars we care about:
+      ;;structs representing the actual free vars we care about.
       ;;
       ;;* Include the original VAR structs having no substitution.
       ;;
       ;;*  Filter  out   the  original  VAR  structs  having  a   CLOSURE  struct  as
       ;;substitution.
       ;;
-      ;;* Replace the  original VAR structs havins a VAR  struct as substitution with
+      ;;* Replace the  original VAR structs having a VAR  struct as substitution with
       ;;the substitution itself.
       ;;
       (if (pair? freevar*)
@@ -4551,6 +4557,7 @@
 		(D ($cdr freevar*)))
 	    (let* ((what (%get-forward! A))
 		   (rest (%trim-freevar* D)))
+	      ;;It is possible that WHAT is A itself.
 	      (if what
 		  (struct-case what
 		    ((closure)
@@ -4564,25 +4571,11 @@
 		    (else
 		     (compiler-internal-error __who__ "invalid VAR substitution value" what)))
 		;;No substitution: include the original.
+		;;
+		;;FIXME Can  %GET-FORWARD! actually return  #f?  I think  no.  (Marco
+		;;maggi; Mon Sep 1, 2014)
 		(cons A rest))))
 	'()))
-
-      ;; (cond ((null? freevar*)
-      ;; 	     '())
-      ;; 	    ((%get-forward! (car freevar*))
-      ;; 	     => (lambda (what)
-      ;; 		  (let ((rest (%trim-freevar* (cdr freevar*))))
-      ;; 		    (struct-case what
-      ;; 		      ((closure)
-      ;; 		       rest)
-      ;; 		      ((var)
-      ;; 		       (if (memq what rest)
-      ;; 			   rest
-      ;; 			 (cons what rest)))
-      ;; 		      (else
-      ;; 		       (compiler-internal-error __who__ "invalid VAR substitution value" what))))))
-      ;; 	    (else
-      ;; 	     (cons (car freevar*) (%trim-freevar* (cdr freevar*))))))
 
     (define (lift-code cp code freevar*)
       ;;CP is a struct instance of type VAR to which a closure is bound.
@@ -4596,19 +4589,20 @@
       ;;Return a struct  instance of type CODE-LOC holding the  label of the argument
       ;;CODE.
       ;;
-      (define-syntax-rule (%prepend-to-all-codes ?obj)
-	(all-codes (cons ?obj (all-codes))))
       (struct-case code
 	((clambda label clause* cp.dropped freevar*.unused name)
-	 (let ((clause* (map (lambda (clause)
-			       (struct-case clause
-				 ((clambda-case info body)
-				  ($for-each/stx %var-reset-subst! (case-info-args info))
-				  (make-clambda-case info (E body)))))
-			  clause*)))
+	 (let ((clause*^ ($map/stx (lambda (clause)
+				     (struct-case clause
+				       ((clambda-case info body)
+					;;Clear  the field  "index" of  the VAR  structs in
+					;;ARGS  from whatever  value the  previous compiler
+					;;passes have left in.
+					($for-each/stx %var-reset-subst! (case-info-args info))
+					(make-clambda-case info (E body)))))
+			   clause*)))
 	   (begin0
 	     (make-code-loc label)
-	     (%prepend-to-all-codes (make-clambda label clause* cp freevar* name)))))))
+	     (%prepend-to-all-codes! (make-clambda label clause*^ cp freevar* name)))))))
 
     #| end of module: E-fix |# )
 
@@ -4617,7 +4611,15 @@
   (module (%get-forward!)
 
     (define (%get-forward! x)
-      ;;Non-tail recursive function.  X is a VAR struct.
+      ;;Non-tail  recursive function.   X is  a VAR  struct.  Traverse  the graph  of
+      ;;substitutions starting from X and return:
+      ;;
+      ;;* X itself if X has no substitution or its substitution is a NODE struct.
+      ;;
+      ;;* If the substitution of X is a closure object ...
+      ;;
+      ;;* ...
+      ;;
       (when (eq? x 'q)
 	(compile-time-error __who__ "BUG: circular dep"))
       (let ((old-var-subst (%var-get-subst x)))
@@ -4648,7 +4650,9 @@
 			old-var-subst))))
 
 	      ;;The VAR struct X cannot be substituted.  Just use it.
-	      (else x))))
+	      (else
+	       (assert (node? old-var-subst))
+	       x))))
 
     (define (%get-forward-recursion! original-var old-var-subst)
       ;;By temporarily setting the subst to "q" we can detect circular references while
@@ -6744,6 +6748,9 @@
 	((codes clambdas body)
 	 `(codes ,(map E clambdas)
 		 ,(E body)))
+
+	((code-loc label)
+	 `(code-loc ,label))
 
 	(else x)))
 
