@@ -291,9 +291,9 @@
 	 (else
 	  (make-constant #t))))
 
-      ((clambda label.unused clause* cp free name)
+      ((clambda label clause* cp free name)
        (parametrise ((source-optimizer-input x))
-	 (E-clambda clause* cp free name   x ctxt env ec sc)))
+	 (E-clambda label clause* cp free name   x ctxt env ec sc)))
 
       ((bind lhs* rhs* body)
        (E-bind lhs* rhs* body ctxt env ec sc))
@@ -698,7 +698,7 @@
 					referenced-lhs*)
 	      optimized-body))))))
 
-  (define (E-clambda clause* cp free name   x ctxt env ec sc)
+  (define (E-clambda label clause* cp free name   x ctxt env ec sc)
     ;;Process a struct intance of type CLAMBDA.
     ;;
     ;;X is the  original struct instance of type CLAMBDA;  we need it if
@@ -747,8 +747,10 @@
        ;;So here  we want to  optimize the body of  every CASE-LAMBDA
        ;;clause.
        ;;
+       ;;NOTE Yes,  for some reason  we need to  generate new label  gensyms.  (Marco
+       ;;Maggi; Mon Sep 1, 2014)
        (decrement sc 2)
-       (make-clambda (gensym)
+       (make-clambda (gensym label)
 		     (map (lambda (clause)
 			    (struct-case clause
 			      ((clambda-case info body)
@@ -756,7 +758,7 @@
 				 ((case-info label args proper)
 				  (with-extended-env ((env args) <== (env args #f))
 				    (make-clambda-case
-				     (make-case-info (gensym) args proper)
+				     (make-case-info (gensym label) args proper)
 				     (E body 'v env ec sc))))))))
 		       clause*)
 		     cp free name))))

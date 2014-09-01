@@ -1991,13 +1991,16 @@
 ;;; --------------------------------------------------------------------
 
   (define (%name->label name)
-    (gensym (cond ((symbol? name)
-		   name)
-		  ((and (pair? name)
-			(symbol? (car name)))
-		   (car name))
-		  (else
-		   "clambda"))))
+    (receive-and-return (label)
+	(gensym (cond ((symbol? name)
+		       name)
+		      ((and (pair? name)
+			    (symbol? (car name)))
+		       (car name))
+		      (else
+		       "clambda")))
+      #;(fprintf (current-error-port) "generated label=~a, name=~a\n" label name)
+      (void)))
 
   (module (quoted-sym)
 
@@ -4613,22 +4616,25 @@
 		(cons A rest))))
 	'()))
 
-    (define (lift-code cp code new-freevar*)
+    (define (lift-code cp original-clam new-freevar*)
       ;;Given data from a CLOSURE struct: build a new CLAMBDA to be used to generated
       ;;the actual code  object; build a CODE-LOC  struct to be used  to generate the
       ;;actual  closure object;  return the  CODE-LOC; push  the new  CLAMBDA on  the
       ;;parameter ALL-CODES.
       ;;
-      ;;CP is a struct instance of type VAR to which a closure is bound.  CODE is the
-      ;;CLAMBDA struct representing the closure's implementation.
+      ;;CP is the  struct instance of type  VAR to which the closure  is bound.  This
+      ;;VAR struct represents the machine word (CPU register or memory location) from
+      ;;which the code  can load a reference to  the closure to be stored  in the CPR
+      ;;(Closure Pointer Register); such reference allows the body of a run-time code
+      ;;object to access the free variables upon which it is closed.
       ;;
-      ;;NEW-FREEVAR* is  a list  of struct  instances of type  VAR representing  the free
-      ;;variables referenced by the closure.
+      ;;CLAM is the CLAMBDA struct representing the closure's implementation.
       ;;
-      ;;Return a struct  instance of type CODE-LOC holding the  label of the argument
-      ;;CODE.
+      ;;NEW-FREEVAR* is the list of VAR  structs representing the free variables that
+      ;;will actually be  stored in the run-time closure object.   This list replaces
+      ;;the one in the input CLAMBDA struct.
       ;;
-      (struct-case code
+      (struct-case original-clam
 	((clambda label clause* cp.unused freevar*.dropped name)
 	 (let ((clause*^ ($map/stx (lambda (clause)
 				     (struct-case clause
@@ -4639,7 +4645,7 @@
 					($for-each/stx %var-reset-subst! (case-info-args info))
 					(make-clambda-case info (E body)))))
 			   clause*)))
-	   #;(fprintf (current-error-port) "name=~a, label=~a\n" name label)
+	   #;(fprintf (current-error-port) "name=~a, code-loc label=~a\n" name label)
 	   (%prepend-to-all-codes! (make-clambda label clause*^ cp new-freevar* name))
 	   (make-code-loc label)))))
 
@@ -6784,12 +6790,19 @@
 		(body (E body)))
 	   (list 'rec*bind (map list lhs* rhs*) body)))
 
-	((codes clambdas body)
-	 `(codes ,(map E clambdas)
+	((codes clambda* body)
+	 `(codes ,(map (lambda (clam)
+			 (let ((sexp (E clam)))
+			   (cons* (car sexp)
+				  ;;Print the pretty gensym name.
+				  (string->symbol (symbol->string (clambda-label clam)))
+				  (cdr sexp))))
+		    clambda*)
 		 ,(E body)))
 
 	((code-loc label)
-	 `(code-loc ,label))
+	 ;;Print the pretty gensym name.
+	 `(code-loc ,(string->symbol (symbol->string label))))
 
 	(else x)))
 
@@ -7008,9 +7021,19 @@
 		(body (E body)))
 	   (list 'letrec* (map list lhs* rhs*) body)))
 
-	((codes clambdas body)
-	 `(codes ,(map E clambdas)
+	((codes clambda* body)
+	 `(codes ,(map (lambda (clam)
+			 (let ((sexp (E clam)))
+			   (cons* (car sexp)
+				  ;;Print the pretty gensym name.
+				  (string->symbol (symbol->string (clambda-label clam)))
+				  (cdr sexp))))
+		    clambda*)
 		 ,(E body)))
+
+	((code-loc label)
+	 ;;Print the pretty gensym name.
+	 `(code-loc ,(string->symbol (symbol->string label))))
 
 	(else x)))
 

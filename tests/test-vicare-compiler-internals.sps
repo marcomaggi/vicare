@@ -523,7 +523,7 @@
   (define-auxiliary-syntaxes basic waddell scc)
 
   (define-syntax doit
-    (syntax-rules (basic waddell scc)
+    (syntax-rules ()
       ((_ ?core-language-form ?expected-result/basic)
        (check
 	   (parametrise ((compiler.$current-letrec-pass 'basic))
@@ -532,13 +532,13 @@
       ))
 
   (define-syntax doit*
-    (syntax-rules (basic waddell scc)
+    (syntax-rules ()
       ((_ ?standard-language-form ?expected-result/basic)
        (doit ,(%expand (quasiquote ?standard-language-form)) ?expected-result/basic))
       ))
 
   (define-syntax libdoit*
-    (syntax-rules (basic waddell scc)
+    (syntax-rules ()
       ((_ ?standard-language-form ?expected-result/basic)
        (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
       ))
@@ -805,7 +805,7 @@
   (define-auxiliary-syntaxes waddell scc)
 
   (define-syntax doit
-    (syntax-rules (basic waddell scc)
+    (syntax-rules (waddell scc)
       ((_ ?core-language-form
 	  (waddell	?expected-result/waddell)
 	  (scc		?expected-result/scc))
@@ -822,7 +822,7 @@
       ))
 
   (define-syntax doit*
-    (syntax-rules (basic waddell scc)
+    (syntax-rules (waddell scc)
       ((_ ?standard-language-form
 	  (waddell	?expected-result/waddell)
 	  (scc		?expected-result/scc))
@@ -1885,7 +1885,7 @@
       ))
 
   (define-syntax libdoit*
-    (syntax-rules (basic waddell scc)
+    (syntax-rules ()
       ((_ ?standard-language-form ?expected-result/basic)
        (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
       ))
@@ -1969,7 +1969,7 @@
       ))
 
   (define-syntax libdoit*
-    (syntax-rules (basic waddell scc)
+    (syntax-rules ()
       ((_ ?standard-language-form ?expected-result/basic)
        (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
       ))
@@ -1977,29 +1977,29 @@
 ;;; --------------------------------------------------------------------
 
   (doit (library-letrec*
-	    ((a.lex a.loc (lambda () '1))
-	     (b.lex b.loc (lambda () '2))
-	     (c.lex c.loc (lambda () '3))
-	     (d.lex d.loc '4))
+	    ((a a.loc (lambda () '1))
+	     (b b.loc (lambda () '2))
+	     (c c.loc (lambda () '3))
+	     (d d.loc '4))
 	  (quote #!void))
 	(codes
-	 ((lambda () (constant 3))
-	  (lambda () (constant 2))
-	  (lambda () (constant 1)))
+	 ((lambda c () (constant 3))
+	  (lambda b () (constant 2))
+	  (lambda a () (constant 1)))
 	 (seq
 	   (funcall (primref $set-symbol-value/proc!)
 	     (constant a.loc)
-	     (closure (code-loc a.lex) () #f))
+	     (closure (code-loc a) () #f))
 	   (funcall (primref $init-symbol-value!)
 	     (constant b.loc)
-	     (closure (code-loc b.lex) () #f))
+	     (closure (code-loc b) () #f))
 	   (funcall (primref $init-symbol-value!)
 	     (constant c.loc)
-	     (closure (code-loc c.lex) () #f))
-	   (bind ((d.lex_0 (constant 4)))
+	     (closure (code-loc c) () #f))
+	   (bind ((d_0 (constant 4)))
 	     (seq
 	       (funcall (primref $init-symbol-value!)
-		 (constant d.loc) d.lex_0)
+		 (constant d.loc) d_0)
 	       (constant #!void))))))
 
   #t)
