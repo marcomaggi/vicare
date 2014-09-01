@@ -4380,11 +4380,11 @@
       ;;Here we know that RHS* is a  list of non-CLAMBDA expressions in which the VAR
       ;;in LHS* do *not* appear.
       ;;
-      ($for-each/stx %unset-var-index! lhs*)
+      ($for-each/stx %var-reset-subst! lhs*)
       (let ((rhs*^ ($map/stx E rhs*)))
-	($for-each/stx copy-subst! lhs* rhs*^)
+	($for-each/stx %var-copy-subst! lhs* rhs*^)
 	(let ((body^ (E body)))
-	  ($for-each/stx %unset-var-index! lhs*)
+	  ($for-each/stx %var-reset-subst! lhs*)
 	  (make-bind lhs* rhs*^ body^))))
 
     (define (E-known x)
@@ -4410,7 +4410,7 @@
       ;;Here we know that RHS* is a list  of CLOSURE structs in which the VAR in LHS*
       ;;might appear.
       ;;
-      ($for-each/stx %unset-var-index! lhs*)
+      ($for-each/stx %var-reset-subst! lhs*)
       ;;Trim the free lists first; after init.
       (let ((freevar** (map (lambda (lhs rhs)
 			      ;;Remove self also.
@@ -4419,14 +4419,14 @@
 	(let ((node* (map (lambda (lhs rhs)
 			    (receive-and-return (N)
 				(mk-node lhs (closure-code rhs) (closure-recursive? rhs))
-			      (set-subst! lhs N)))
+			      (%var-set-subst! lhs N)))
 		       lhs* rhs*)))
 	  ;;If X  is free  in Y,  then whenever  X becomes  a non-combinator,  Y also
 	  ;;becomes a non-combinator.  Here, we mark these dependencies.
 	  (for-each
 	      (lambda (my-node freevar*)
 		(for-each (lambda (freevar)
-			    (cond ((get-subst freevar)
+			    (cond ((%var-get-subst freevar)
 				   ;;One of ours.
 				   => (lambda (her-node)
 					(set-node-deps! her-node
@@ -4464,11 +4464,11 @@
 				   (make-closure code freevar* recursive?)
 				 (let ((name ($node-name node)))
 				   (cond ((null? freevar*)
-					  (set-subst! name closure))
+					  (%var-set-subst! name closure))
 					 ((and (null? (cdr freevar*)) recursive?)
-					  (set-subst! name closure))
+					  (%var-set-subst! name closure))
 					 (else
-					  (%unset-var-index! name)))))))
+					  (%var-reset-subst! name)))))))
 			node*)))
 	    (for-each (lambda (lhs^ closure)
 			(let* ((lhs  (get-forward! lhs^))
@@ -4489,9 +4489,9 @@
 		      (make-fix l* r* body^))
 		  (let ((lhs (car lhs*))
 			(rhs (car rhs*)))
-		    (if (get-subst lhs)
+		    (if (%var-get-subst lhs)
 			(begin
-			  (%unset-var-index! lhs)
+			  (%var-reset-subst! lhs)
 			  (loop (cdr lhs*) (cdr rhs*) l* r*))
 		      (loop (cdr lhs*) (cdr rhs*) (cons lhs l*) (cons rhs r*)))))))))))
 
@@ -4532,7 +4532,7 @@
 	 (let ((clause* (map (lambda (clause)
 			       (struct-case clause
 				 ((clambda-case info body)
-				  ($for-each/stx %unset-var-index! (case-info-args info))
+				  ($for-each/stx %var-reset-subst! (case-info-args info))
 				  (make-clambda-case info (E body)))))
 			  clause*)))
 	   (begin0
@@ -4546,16 +4546,16 @@
   (define (get-forward! x)
     (when (eq? x 'q)
       (compile-time-error __who__ "BUG: circular dep"))
-    (let ((y (get-subst x)))
+    (let ((y (%var-get-subst x)))
       (cond ((not y)
 	     x)
 	    ((var? y)
 	     ;;By  temporarily setting  the subst  to 'Q  we can  detect
 	     ;;circular references while recursing into GET-FORWARD!.
-	     (set-subst! x 'q)
+	     (%var-set-subst! x 'q)
 	     (let ((y (get-forward! y)))
 	       ;;Restore the subst to its proper value.
-	       (set-subst! x y)
+	       (%var-set-subst! x y)
 	       y))
 	    ((closure? y)
 	     (let ((freevar* (closure-freevar* y)))
@@ -4565,10 +4565,10 @@
 		      ;;By temporarily  setting the  subst to 'Q  we can
 		      ;;detect circular references  while recursing into
 		      ;;GET-FORWARD!.
-		      (set-subst! x 'q)
+		      (%var-set-subst! x 'q)
 		      (let ((y (get-forward! ($car freevar*))))
 			;;Restore the subst to its proper value.
-			(set-subst! x y)
+			(%var-set-subst! x y)
 			y))
 		     (else
 		      y))))
@@ -4577,30 +4577,45 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%unset-var-index! set-subst! get-subst copy-subst!)
+  (module (%var-reset-subst! %var-set-subst! %var-get-subst %var-copy-subst!)
     (define-struct prop
       (val))
 
-    (define (%unset-var-index! x)
+    (define-syntax-rule (%var-reset-subst! x)
       #;(assert (var? x))
-      (set-var-index! x #f))
+      ($set-var-index! x #f))
 
-    (define (set-subst! x v)
+    (define (%var-set-subst! x v)
+      ;;X is  a VAR struct.  V  can be: a NODE  struct, a CLOSURE struct,  the symbol
+      ;;"q".
+      ;;
       #;(assert (var? x))
       (set-var-index! x (make-prop v)))
 
-    (define (copy-subst! lhs rhs)
+    (define (%var-copy-subst! lhs rhs)
+      ;;LHS  and  RHS are,  respectively,  the  left-hand  side  VAR struct  and  the
+      ;;right-hand side expression of a binding defined  by a BIND struct.  If RHS is
+      ;;a VAR struct with a PROP struct in  its "index" field: store such PROP in the
+      ;;"index" field of LHS, so that they have the same PROP.
+      ;;
+      ;;For example, given:
+      ;;
+      ;;   (bind ((a b))
+      ;;     ?body)
+      ;;
+      ;;we want the VAR structs A and B to have the same property.
+      ;;
       #;(assert (var? lhs))
       (cond ((and (var? rhs)
 		  (var-index rhs))
-	     => (lambda (v)
-		  (set-var-index! lhs (if (prop? v) v #f))))
+	     => (lambda (obj)
+		  (set-var-index! lhs (if (prop? obj) obj #f))))
 	    (else
-	     (set-var-index! lhs #f))))
+	     (%var-reset-subst! lhs))))
 
-    (define (get-subst x)
+    (define (%var-get-subst x)
       #;(assert (var? x))
-      (struct-case (var-index x)
+      (struct-case ($var-index x)
 	((prop v)	v)
 	(else		#f)))
 
