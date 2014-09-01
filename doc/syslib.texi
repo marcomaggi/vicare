@@ -8662,12 +8662,11 @@ Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
 hierarchy.
+
+This function wraps each @objtype{clambda} struct in the input
+recordised code into @objtype{closure} structures, compiling a list of
+free variables referenced by each @objtype{closure}.
 @end defun
-
-
-@deffn Parameter $optimize-cp
-To be documented.
-@end deffn
 
 @c page
 @node syslib compiler lift

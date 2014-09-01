@@ -3082,7 +3082,6 @@
 
     ($current-letrec-pass			$compiler)
     ($check-for-illegal-letrec			$compiler)
-    ($optimize-cp				$compiler)
     (optimize-level				$compiler)
     ($source-optimizer-passes-count		$compiler)
     ($perform-tag-analysis			$compiler)

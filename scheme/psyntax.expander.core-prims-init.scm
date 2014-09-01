@@ -2192,7 +2192,6 @@
 
   ;; $current-letrec-pass
   ;; $check-for-illegal-letrec
-  ;; $optimize-cp
   ;; $optimize-level
   ;; $source-optimizer-passes-count
   ;; $perform-tag-analysis

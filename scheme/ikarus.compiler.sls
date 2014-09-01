@@ -35,7 +35,6 @@
      ;; configuration parameters
      (current-letrec-pass			$current-letrec-pass)
      (check-for-illegal-letrec			$check-for-illegal-letrec)
-     (optimize-cp				$optimize-cp)
      (source-optimizer-passes-count		$source-optimizer-passes-count)
      (perform-tag-analysis			$perform-tag-analysis)
      (cp0-effort-limit				$cp0-effort-limit)
@@ -101,7 +100,7 @@
 
 		  cp0-effort-limit		cp0-size-limit
 		  current-letrec-pass		generate-debug-calls
-		  optimize-cp			optimize-level
+		  optimize-level
 		  perform-tag-analysis		strip-source-info
 		  fasl-write)
     ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
@@ -202,9 +201,6 @@
 
 (define strip-source-info
   (make-parameter #f))
-
-(define optimize-cp
-  (make-parameter #t))
 
 (define optimizer-output
   (make-parameter #f))
@@ -4191,8 +4187,8 @@
        ;;JMPCALL's  rator and  rand* are  not,  by construction,  wrapped into  KNOWN
        ;;structs.
        (let-values
-	   (((rator^ freevar*.rator) (if (optimize-cp) (E-rator rator) (E rator)))
-	    ((rand*^ freevar*.rand*) (E-known* rand*)))
+	   (((rator^ freevar*.rator) (E  rator))
+	    ((rand*^ freevar*.rand*) (E* rand*)))
          (values (make-jmpcall label rator^ rand*^)
                  (union freevar*.rator freevar*.rand*))))
 
@@ -4237,20 +4233,6 @@
 	  (((a freevar*.a) (E-known  ($car X*)))
 	   ((d freevar*.d) (E-known* ($cdr X*))))
 	(values (cons a d) (union freevar*.a freevar*.d)))))
-
-  (define (E-rator x)
-    ;;Invoked only when the parameter OPTIMIZE-CP is set to true.
-    ;;
-    ;;FIXME Does this look like optimization to anyone?  (Marco Maggi; Oct 13, 2012)
-    ;;
-    (struct-case x
-      ((var)
-       (values x (list x)))
-      ;;((known x t)
-      ;; (let-values (((x free) (E-rator x)))
-      ;;   (values (make-known x t) free)))
-      (else
-       (E x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4325,16 +4307,8 @@
 
   (define (optimize-closures/lift-codes X)
     (parametrise ((all-codes '()))
-      ;;(when (optimize-cp)
-      ;;  (printf "BEFORE\n")
-      ;;  (parameterize ((pretty-width 200))
-      ;;    (pretty-print (unparse-recordized-code X))))
       (let* ((X^ (E X))
 	     (V  (make-codes (all-codes) X^)))
-	;;(when (optimize-cp)
-	;;  (printf "AFTER\n")
-	;;  (parameterize ((pretty-width 200))
-	;;    (pretty-print (unparse-recordized-code V))))
 	V)))
 
   (module (E)
