@@ -1316,8 +1316,9 @@
 ;;
 (define-struct closure
   (code
-		;A  struct  instance  of  type  CLAMBDA  representing  the  closure's
-		;implementation, or a struct instance of type CODE-LOC.
+		;First a CLAMBDA struct representing  a function defined by the input
+		;expression;  then a  CODE-LOC  struct  to be  used  to generate  the
+		;run-time closure object representing the function.
    freevar*
 		;A  list  of struct  instances  of  type  VAR representing  the  free
 		;variables referenced by this CLOSURE.
@@ -1404,9 +1405,27 @@
 
 ;;; --------------------------------------------------------------------
 
+;;A lambda sexp in the source code:
+;;
+;;   (lambda ?formals ?body)
+;;
+;;is converted first  into a CLAMBDA struct,  then into a CLOSURE  struct holding the
+;;CLAMBDA:
+;;
+;;   (closure ?clambda ?freevar* ?recursive)
+;;
+;;and then into a CLOSURE struct holding a CODE-LOC:
+;;
+;;   (closure ?code-loc ?freevar* ?recursive)
+;;
+;;A CODE-LOC  struct represents  a reference  to the  code object  that is  needed to
+;;construct a  run-time closure object.   We need to  remember that a  closure object
+;;contains a  reference to  a code  object, which in  turn contains  compiled machine
+;;code.
+;;
 (define-struct code-loc
   (label
-		;A loc gensym.
+		;The gensym of the referenced CLAMBDA.
    ))
 
 (define-struct foreign-label
@@ -1890,7 +1909,7 @@
 	     (cp      #f)
 	     (free    #f)
 	     (name    (and (symbol? ctxt) ctxt)))
-	 (let ((label (gensym (if (symbol? name) name "clambda"))))
+	 (let ((label (%name->label name)))
 	   (make-clambda label cases cp free name))))
 
       ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body))
@@ -1908,7 +1927,7 @@
 					(let ((annotated-expr ($cadr X)))
 					  (and (annotation?       annotated-expr)
 					       (annotation-source annotated-expr)))))))
-	 (let ((label (gensym (if (symbol? name) name "clambda"))))
+	 (let ((label (%name->label name)))
 	   (make-clambda label cases cp free name))))
 
       ;;Synopsis: (lambda ?formals ?body)
@@ -1970,6 +1989,15 @@
 	 (E-app make-funcall func rand* ctxt)))))
 
 ;;; --------------------------------------------------------------------
+
+  (define (%name->label name)
+    (gensym (cond ((symbol? name)
+		   name)
+		  ((and (pair? name)
+			(symbol? (car name)))
+		   (car name))
+		  (else
+		   "clambda"))))
 
   (module (quoted-sym)
 
@@ -4324,7 +4352,9 @@
 
   (define all-codes
     ;;While  processing  an  input  expression:  a proper  list  of  CLAMBDA  structs
-    ;;representing the set of all the functions defined in the input expression.
+    ;;representing the  set of  all the  functions defined  in the  input expression.
+    ;;These CLAMBDA structs  will be compiled to  machine code and used  to build the
+    ;;code objects.
     ;;
     (make-parameter #f))
 
@@ -4462,22 +4492,24 @@
 			(mk-node lhs (closure-code rhs) (closure-recursive? rhs))
 		      (%var-set-subst! lhs N)))
 	  lhs* rhs*))
-      ;;If X is free in Y, then whenever X becomes a non-combinator, Y also becomes
-      ;;a non-combinator.  Here, we mark these dependencies.
-      ($for-each/stx (lambda (my-node freevar*)
-		       (for-each (lambda (freevar)
-				   (cond ((%var-get-subst freevar)
-					  ;;One of ours.
-					  => (lambda (her-node)
-					       (node-push-dep! her-node my-node)))
-					 (else
-					  ;;Not one of ours.
-					  (node-push-freevar! my-node freevar))))
-			 freevar*))
+      ;;If X is free in Y, then whenever X becomes a non-combinator, Y also becomes a
+      ;;non-combinator.  Here, we mark these dependencies.
+      ($for-each/stx
+	  (lambda (my-node freevar*)
+	    ($for-each/stx
+		(lambda (freevar)
+		  (cond ((%var-get-subst freevar)
+			 ;;One of ours.
+			 => (lambda (her-node)
+			      (node-push-dep! her-node my-node)))
+			(else
+			 ;;Not one of ours.
+			 (node-push-freevar! my-node freevar))))
+	      freevar*))
 	node* freevar**)
-      ;;Next, we go over the list of nodes,  and if we find one that has any free
-      ;;variables, we know  it's a non-combinator, so  we whack it and  add it to
-      ;;all of its dependents.
+      ;;Next, we  go over the  list of nodes,  and if we find  one that has  any free
+      ;;variables, we know it's a non-combinator, so we whack it and add it to all of
+      ;;its dependents.
       ;;
       (let ()
 	(define (%process-node x)
@@ -4495,32 +4527,36 @@
 			  (%process-node y))
 		(node-deps x)))))
 	($for-each/stx %process-node node*))
-      ;;The  CLOSURE structs  that still  have  free variables  will become  actual
-      ;;closure objects;  the CLOSURE  structs with no  free variables  will become
-      ;;combinators.
-      (let ((rhs* (map (lambda (node)
-			 (let ((freevar*   ($node-freevar*   node))
-			       (recursive? ($node-recursive? node)))
-			   (receive-and-return (closure)
-			       (make-closure ($node-code node) freevar* recursive?)
-			     (let ((name ($node-name node)))
-			       (cond ((null? freevar*)
-				      ;;This CLOSURE struct has no free variables.
-				      (%var-set-subst! name closure))
-				     ((and (null? (cdr freevar*)) recursive?)
-				      ;;This CLOSURE  struct has 1  free variable
-				      ;;and is recursive.
-				      (%var-set-subst! name closure))
-				     (else
-				      (%var-reset-subst! name)))))))
+      ;;The CLOSURE structs that still have free variables will become actual closure
+      ;;objects; the CLOSURE structs with no free variables will become combinators.
+      (let ((rhs* ($map/stx (lambda (node)
+			      (let ((freevar*   ($node-freevar*   node))
+				    (recursive? ($node-recursive? node)))
+				(receive-and-return (closure)
+				    (make-closure ($node-code node) freevar* recursive?)
+				  (let ((name ($node-name node)))
+				    (cond ((null? freevar*)
+					   ;;This CLOSURE struct has no free variables.
+					   (%var-set-subst! name closure))
+					  ((and (null? (cdr freevar*))
+						recursive?)
+					   ;;This CLOSURE struct  has 1 free variable
+					   ;;and is recursive.
+					   (%var-set-subst! name closure))
+					  (else
+					   (%var-reset-subst! name)))))))
 		    node*)))
-	(for-each (lambda (lhs^ closure)
-		    (let* ((lhs  (%get-forward! lhs^))
-			   (free (filter var?
-				   (remq lhs (%trim-freevar* (closure-freevar* closure))))))
-		      (set-closure-freevar*! closure free)
-		      (set-closure-code!     closure (lift-code lhs (closure-code closure)
-								(closure-freevar* closure)))))
+	($for-each/stx
+	    (lambda (lhs^ closure)
+	      (let* ((lhs  (%get-forward! lhs^))
+		     (free (filter var?
+			     (remq lhs (%trim-freevar* (closure-freevar* closure))))))
+		(set-closure-freevar*! closure free)
+		;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
+		;;struct.
+		(set-closure-code!     closure (lift-code lhs
+							  (closure-code     closure)
+							  (closure-freevar* closure)))))
 	  lhs* rhs*)
 	(let ((body^ (E body)))
 	  (let loop ((lhs* lhs*)
@@ -4577,20 +4613,23 @@
 		(cons A rest))))
 	'()))
 
-    (define (lift-code cp code freevar*)
-      ;;CP is a struct instance of type VAR to which a closure is bound.
+    (define (lift-code cp code new-freevar*)
+      ;;Given data from a CLOSURE struct: build a new CLAMBDA to be used to generated
+      ;;the actual code  object; build a CODE-LOC  struct to be used  to generate the
+      ;;actual  closure object;  return the  CODE-LOC; push  the new  CLAMBDA on  the
+      ;;parameter ALL-CODES.
       ;;
-      ;;CODE  is a  a  struct instance  of type  CLAMBDA  representing the  closure's
-      ;;implementation.
+      ;;CP is a struct instance of type VAR to which a closure is bound.  CODE is the
+      ;;CLAMBDA struct representing the closure's implementation.
       ;;
-      ;;FREEVAR* is  a list  of struct  instances of type  VAR representing  the free
+      ;;NEW-FREEVAR* is  a list  of struct  instances of type  VAR representing  the free
       ;;variables referenced by the closure.
       ;;
       ;;Return a struct  instance of type CODE-LOC holding the  label of the argument
       ;;CODE.
       ;;
       (struct-case code
-	((clambda label clause* cp.dropped freevar*.unused name)
+	((clambda label clause* cp.unused freevar*.dropped name)
 	 (let ((clause*^ ($map/stx (lambda (clause)
 				     (struct-case clause
 				       ((clambda-case info body)
@@ -4600,9 +4639,9 @@
 					($for-each/stx %var-reset-subst! (case-info-args info))
 					(make-clambda-case info (E body)))))
 			   clause*)))
-	   (begin0
-	     (make-code-loc label)
-	     (%prepend-to-all-codes! (make-clambda label clause*^ cp freevar* name)))))))
+	   #;(fprintf (current-error-port) "name=~a, label=~a\n" name label)
+	   (%prepend-to-all-codes! (make-clambda label clause*^ cp new-freevar* name))
+	   (make-code-loc label)))))
 
     #| end of module: E-fix |# )
 

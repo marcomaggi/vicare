@@ -8769,8 +8769,17 @@ in truth it is known at compile--time that @code{b_0} is an immutable
 binding referencing a @objtype{clambda} struct and also which
 @objtype{clambda} is referenced; so the function bound to @code{c_0} is
 just a combinator.
-@end itemize
 
+More: everywhere a reference to @code{b_0} appears we can substitute it
+with a reference to @code{a_0}, and so we can transform the code to:
+
+@example
+(fix ((a_0 (lambda () @meta{body})))
+  (bind ((b_0 a_0))
+    (fix ((c_0 (lambda () (funcall a_0))))
+      c_0)))
+@end example
+@end itemize
 
 The following bindings are exported by the library @library{vicare
 system $compiler}.
