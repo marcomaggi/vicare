@@ -8673,6 +8673,55 @@ free variables referenced by each @objtype{closure}.
 @subsection Closures optimization and codes lifting
 
 
+Let's consider the standard code:
+
+@example
+(let ((a 1))
+  (lambda () a))
+@end example
+
+@noindent
+the returned function is a ``true closure'' because its return value
+depends upon the value of the binding @code{a} at the time the closure
+object is created; @code{a} is a free variable in the body of the
+function and the function is closed upon it.  In the following standard
+code:
+
+@example
+(lambda ()
+  (list 1 2))
+@end example
+
+@noindent
+the returned function looks like it is closed upon the binding
+@func{list}, but in truth @func{list} is a primitive function whose
+binding never mutates; so the returned function is a ``combinator'', a
+function without free variables.  Another example:
+
+@example
+(letrec* ((a (lambda () (b)))
+          (b (lambda () (a))))
+  @meta{body})
+@end example
+
+@noindent
+this code is recordised and processed to:
+
+@example
+(fix ((a_0 (lambda () (funcall b_0)))
+      (b_0 (lambda () (funcall a_0))))
+  @meta{body})
+@end example
+
+@noindent
+where it is known at compile--time that the bindings defined by
+@objtype{fix} are immutable and reference @objtype{clambda} structs; so
+the functions are just combinators, because it is known at compile--time
+that @code{a_0} and @code{b_0} are immutable bindings referencing
+closures and it is also known which closures are referenced.
+
+
+
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
