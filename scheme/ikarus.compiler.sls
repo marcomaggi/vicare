@@ -4551,21 +4551,21 @@
 		    node*)))
 	($for-each/stx
 	    (lambda (lhs^ closure)
-	      (let* ((lhs  (%get-forward! lhs^))
-		     (free (filter var?
-			     (remq lhs (%trim-freevar* (closure-freevar* closure))))))
-		(set-closure-freevar*! closure free)
+	      (let* ((lhs^^     (%get-forward! lhs^))
+		     (freevar*^ (filter var?
+				  (remq lhs^^ (%trim-freevar* (closure-freevar* closure))))))
+		(set-closure-freevar*! closure freevar*^)
 		;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
 		;;struct.
-		(set-closure-code!     closure (lift-code lhs
+		(set-closure-code!     closure (lift-code lhs^^
 							  (closure-code     closure)
 							  (closure-freevar* closure)))))
 	  lhs* rhs*)
 	(let ((body^ (E body)))
 	  (let loop ((lhs* lhs*)
 		     (rhs* rhs*)
-		     (l*   '())
-		     (r*   '()))
+		     (l*   '())	 ;LHS without subst
+		     (r*   '())) ;RHS whose LHS is without subst
 	    (if (null? lhs*)
 		(if (null? l*)
 		    body^
@@ -4574,8 +4574,10 @@
 		    (rhs (car rhs*)))
 		(if (%var-get-subst lhs)
 		    (begin
+		      ;;This LHS has a subst: skip its binding.
 		      (%var-reset-subst! lhs)
 		      (loop (cdr lhs*) (cdr rhs*) l* r*))
+		  ;;This LHS has no subst: include its binding.
 		  (loop (cdr lhs*) (cdr rhs*) (cons lhs l*) (cons rhs r*)))))))))
 
     (define (%trim-freevar* freevar*)
