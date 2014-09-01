@@ -4344,7 +4344,7 @@
 	 x)
 
 	((var)
-	 (get-forward! x))
+	 (%get-forward! x))
 
 	((primref)
 	 x)
@@ -4471,7 +4471,7 @@
 					  (%var-reset-subst! name)))))))
 			node*)))
 	    (for-each (lambda (lhs^ closure)
-			(let* ((lhs  (get-forward! lhs^))
+			(let* ((lhs  (%get-forward! lhs^))
 			       (free (filter var?
 				       (remq lhs (%trim-free (closure-freevar* closure))))))
 			  (set-closure-freevar*! closure free)
@@ -4498,7 +4498,7 @@
     (define (%trim-free ls)
       (cond ((null? ls)
 	     '())
-	    ((get-forward! (car ls))
+	    ((%get-forward! (car ls))
 	     => (lambda (what)
 		  (let ((rest (%trim-free (cdr ls))))
 		    (struct-case what
@@ -4543,37 +4543,54 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (get-forward! x)
-    (when (eq? x 'q)
-      (compile-time-error __who__ "BUG: circular dep"))
-    (let ((y (%var-get-subst x)))
-      (cond ((not y)
-	     x)
-	    ((var? y)
-	     ;;By  temporarily setting  the subst  to 'Q  we can  detect
-	     ;;circular references while recursing into GET-FORWARD!.
-	     (%var-set-subst! x 'q)
-	     (let ((y (get-forward! y)))
-	       ;;Restore the subst to its proper value.
-	       (%var-set-subst! x y)
-	       y))
-	    ((closure? y)
-	     (let ((freevar* (closure-freevar* y)))
-	       (cond ((null? freevar*)
-		      y)
-		     ((null? (cdr freevar*))
-		      ;;By temporarily  setting the  subst to 'Q  we can
-		      ;;detect circular references  while recursing into
-		      ;;GET-FORWARD!.
-		      (%var-set-subst! x 'q)
-		      (let ((y (get-forward! ($car freevar*))))
-			;;Restore the subst to its proper value.
-			(%var-set-subst! x y)
-			y))
-		     (else
-		      y))))
-	    (else
-	     x))))
+  (module (%get-forward!)
+
+    (define (%get-forward! x)
+      ;;Non-tail recursive function.  X is a VAR struct.
+      (when (eq? x 'q)
+	(compile-time-error __who__ "BUG: circular dep"))
+      (let ((old-var-subst (%var-get-subst x)))
+	(cond ((not old-var-subst)
+	       ;;The VAR struct X cannot be  substituted: just use it.  This might be
+	       ;;a substitution:  if X is not  the start of the  graph traversal, the
+	       ;;VAR from which the traversal was started is substituted with X.
+	       x)
+
+	      ((var? old-var-subst)
+	       (%get-forward-recursion! x old-var-subst))
+
+	      ((closure? old-var-subst)
+	       (let ((freevar* (closure-freevar* old-var-subst)))
+		 (cond ((null? freevar*)
+			;;Substitution!!!  The original VAR  struct, at the beginning
+			;;of  the substitutions  graph traversal,  is substituted  by
+			;;this CLOSURE struct which has no free variables.
+			old-var-subst)
+		       ((null? ($cdr freevar*))
+			;;This CLOSURE  struct has a  single free variable.   Move on
+			;;the graph traversal to it.
+			(%get-forward-recursion! x ($car freevar*)))
+		       (else
+			;;Substitution!!!  The original VAR  struct, at the beginning
+			;;of  the substitutions  graph traversal,  is substituted  by
+			;;this CLOSURE struct which has 2 or more free variables.
+			old-var-subst))))
+
+	      ;;The VAR struct X cannot be substituted.  Just use it.
+	      (else x))))
+
+    (define (%get-forward-recursion! original-var old-var-subst)
+      ;;By temporarily setting the subst to "q" we can detect circular references while
+      ;;recursing into %GET-FORWARD!.
+      (%var-set-subst! original-var 'q)
+      (receive-and-return (new-var-subst)
+	  (%get-forward! old-var-subst)
+	;;Down the graph traversal we have retrieved a substitution: store it so that
+	;;further traversals  reaching ORIGINAL-VAR will  just use it rather  than go
+	;;deeper again.
+	(%var-set-subst! original-var new-var-subst)))
+
+    #| end of module: %GET-FORWARD! |# )
 
 ;;; --------------------------------------------------------------------
 
