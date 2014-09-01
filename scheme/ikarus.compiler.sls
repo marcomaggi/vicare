@@ -4087,6 +4087,11 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall		jmpcall
   ;;
+  ;;NOTE This module  makes use of the field  "index" of structs of type  VAR used to
+  ;;reference bindings.   The value of such  fields from previous compiler  passes is
+  ;;expected  to be  #f.   The purpose  of  the field  in this  compiler  pass is  to
+  ;;determine which CLAMBDA structs represent a recursive function.
+  ;;
   (define-fluid-override __who__
     (identifier-syntax 'convert-closures))
 
@@ -4267,8 +4272,9 @@
 	 (assert (not freevar*.unused))
 	 (receive (clause*^ freevar*)
 	     (E-clambda-case* clause*)
-	   (values (make-closure (make-clambda label clause*^ lhs freevar* name)
-				 freevar* #f)
+	   (values (let ((recursive? #f))
+		     (make-closure (make-clambda label clause*^ lhs freevar* name)
+				   freevar* recursive?))
 		   freevar*)))))
 
     (define (E-clambda-case* clause*)
@@ -4305,8 +4311,13 @@
   ;;
   ;;   constant		var		primref
   ;;   bind		fix		conditional
-  ;;   seq		clambda		known
+  ;;   seq		clambda		closure
   ;;   forcall		funcall		jmpcall
+  ;;   known
+  ;;
+  ;;NOTE This module  makes use of the field  "index" of structs of type  VAR used to
+  ;;reference bindings.   The value of such  fields from previous compiler  passes is
+  ;;ignored, because the fields are reset to #f before being used in this module.
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'optimize-closures/lift-codes))
@@ -4369,11 +4380,11 @@
       ;;Here we know that RHS* is a  list of non-CLAMBDA expressions in which the VAR
       ;;in LHS* do *not* appear.
       ;;
-      ($for-each/stx unset! lhs*)
+      ($for-each/stx %unset-var-index! lhs*)
       (let ((rhs*^ ($map/stx E rhs*)))
 	($for-each/stx copy-subst! lhs* rhs*^)
 	(let ((body^ (E body)))
-	  ($for-each/stx unset! lhs*)
+	  ($for-each/stx %unset-var-index! lhs*)
 	  (make-bind lhs* rhs*^ body^))))
 
     (define (E-known x)
@@ -4385,73 +4396,79 @@
 
     #| end of module: E |# )
 
+;;; --------------------------------------------------------------------
+
   (module (E-fix)
 
+    (define-struct node
+      (name code deps whacked freevar* recursive?))
+
+    (define (mk-node lhs code recursive?)
+      (make-node lhs code '() #f '() recursive?))
+
     (define (E-fix lhs* rhs* body)
-      ($for-each/stx unset! lhs*)
+      ;;Here we know that RHS* is a list  of CLOSURE structs in which the VAR in LHS*
+      ;;might appear.
+      ;;
+      ($for-each/stx %unset-var-index! lhs*)
       ;;Trim the free lists first; after init.
       (let ((freevar** (map (lambda (lhs rhs)
 			      ;;Remove self also.
 			      (remq lhs (%trim-free (closure-freevar* rhs))))
 			 lhs* rhs*)))
-	(define-struct node
-	  (name code deps whacked free recursive?))
 	(let ((node* (map (lambda (lhs rhs)
-			    (let ((n (make-node lhs (closure-code rhs)
-						'() #f '()
-						(closure-recursive? rhs))))
-			      (set-subst! lhs n)
-			      n))
+			    (receive-and-return (N)
+				(mk-node lhs (closure-code rhs) (closure-recursive? rhs))
+			      (set-subst! lhs N)))
 		       lhs* rhs*)))
-	  ;;If X is free in Y, then whenever X becomes a non-combinator, Y
-	  ;;also   becomes  a   non-combinator.   Here,   we  mark   these
-	  ;;dependencies.
+	  ;;If X  is free  in Y,  then whenever  X becomes  a non-combinator,  Y also
+	  ;;becomes a non-combinator.  Here, we mark these dependencies.
 	  (for-each
 	      (lambda (my-node freevar*)
-		(for-each (lambda (fvar)
-			    (cond ((get-subst fvar)
+		(for-each (lambda (freevar)
+			    (cond ((get-subst freevar)
 				   ;;One of ours.
 				   => (lambda (her-node)
 					(set-node-deps! her-node
 							(cons my-node (node-deps her-node)))))
 				  (else ;;; not one of ours
-				   (set-node-free! my-node
-						   (cons fvar (node-free my-node))))))
+				   (set-node-freevar*! my-node (cons freevar (node-freevar* my-node))))))
 		  freevar*))
 	    node* freevar**)
-	  ;;Next, we go  over the list of  nodes, and if we  find one that
-	  ;;has any free  variables, we know it's a  non-combinator, so we
-	  ;;whack it and add it to all of its dependents.
+	  ;;Next, we go over the list of nodes,  and if we find one that has any free
+	  ;;variables, we know  it's a non-combinator, so  we whack it and  add it to
+	  ;;all of its dependents.
 	  (let ()
 	    (define (%process-node x)
-	      (when (cond ((null? (node-free x))
+	      (when (cond ((null? (node-freevar* x))
 			   #f)
 			  ;; ((and (node-recursive? x)
-			  ;;       (null? (cdr (node-free x))))
+			  ;;       (null? (cdr (node-freevar* x))))
 			  ;;  #f)
 			  (else
 			   #t))
 		(unless (node-whacked x)
 		  (set-node-whacked! x #t)
 		  (for-each (lambda (y)
-			      (set-node-free! y (cons (node-name x) (node-free y)))
+			      (set-node-freevar*! y (cons (node-name x) (node-freevar* y)))
 			      (%process-node y))
 		    (node-deps x)))))
 	    ($for-each/stx %process-node node*))
-	  ;;Now those that have free variables are actual closures.  Those
-	  ;;with no free variables are actual combinators.
+	  ;;Now those  that have free variables  are actual closures.  Those  with no
+	  ;;free variables are actual combinators.
 	  (let ((rhs* (map (lambda (node)
-			     (let ((recursive? (node-recursive?  node))
-				   (name        (node-name node))
-				   (free        (node-free node)))
-			       (let ((closure (make-closure (node-code node) free recursive?)))
-				 (cond ((null? free)
-					(set-subst! name closure))
-				       ((and (null? (cdr free)) recursive?)
-					(set-subst! name closure))
-				       (else
-					(unset! name)))
-				 closure)))
+			     (let ((code       ($node-code       node))
+				   (freevar*   ($node-freevar*   node))
+				   (recursive? ($node-recursive? node)))
+			       (receive-and-return (closure)
+				   (make-closure code freevar* recursive?)
+				 (let ((name ($node-name node)))
+				   (cond ((null? freevar*)
+					  (set-subst! name closure))
+					 ((and (null? (cdr freevar*)) recursive?)
+					  (set-subst! name closure))
+					 (else
+					  (%unset-var-index! name)))))))
 			node*)))
 	    (for-each (lambda (lhs^ closure)
 			(let* ((lhs  (get-forward! lhs^))
@@ -4474,7 +4491,7 @@
 			(rhs (car rhs*)))
 		    (if (get-subst lhs)
 			(begin
-			  (unset! lhs)
+			  (%unset-var-index! lhs)
 			  (loop (cdr lhs*) (cdr rhs*) l* r*))
 		      (loop (cdr lhs*) (cdr rhs*) (cons lhs l*) (cons rhs r*)))))))))))
 
@@ -4515,7 +4532,7 @@
 	 (let ((clause* (map (lambda (clause)
 			       (struct-case clause
 				 ((clambda-case info body)
-				  ($for-each/stx unset! (case-info-args info))
+				  ($for-each/stx %unset-var-index! (case-info-args info))
 				  (make-clambda-case info (E body)))))
 			  clause*)))
 	   (begin0
@@ -4524,9 +4541,11 @@
 
     #| end of module: E-fix |# )
 
+;;; --------------------------------------------------------------------
+
   (define (get-forward! x)
     (when (eq? x 'q)
-      (error __who__ "BUG: circular dep"))
+      (compile-time-error __who__ "BUG: circular dep"))
     (let ((y (get-subst x)))
       (cond ((not y)
 	     x)
@@ -4556,11 +4575,13 @@
 	    (else
 	     x))))
 
-  (module (unset! set-subst! get-subst copy-subst!)
+;;; --------------------------------------------------------------------
+
+  (module (%unset-var-index! set-subst! get-subst copy-subst!)
     (define-struct prop
       (val))
 
-    (define (unset! x)
+    (define (%unset-var-index! x)
       #;(assert (var? x))
       (set-var-index! x #f))
 

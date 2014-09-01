@@ -6055,7 +6055,7 @@ Compiler passes
 * syslib compiler global assign:: Inserting global assignments.
 * syslib compiler vars::          Introducing storage locations.
 * syslib compiler closures::      Closures conversion.
-* syslib compiler lift::          Closures optimization and codes
+* syslib compiler lift codes::    Closures optimization and codes
                                   lifting.
 * syslib compiler cogen::         Full assembly code generation.
 * syslib compiler assember::      Binary code generation.
@@ -8669,8 +8669,8 @@ free variables referenced by each @objtype{closure}.
 @end defun
 
 @c page
-@node syslib compiler lift
-@subsection Cloaures optimization and codes lifting
+@node syslib compiler lift codes
+@subsection Closures optimization and codes lifting
 
 
 The following bindings are exported by the library @library{vicare
@@ -8678,8 +8678,11 @@ system $compiler}.
 
 
 @defun $optimize-closures/lift-codes @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code in the core language, and building a new hierarchy of transformed,
+recordised code; return a @objtype{codes} struct.
 @end defun
-
 
 @c page
 @node syslib compiler cogen
