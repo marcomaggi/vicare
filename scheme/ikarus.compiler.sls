@@ -4406,10 +4406,32 @@
   (module (E-fix node?)
 
     (define-struct node
-      (name code deps whacked freevar* recursive?))
+      ;;Each CLOSURE struct appears as RHS in  a FIX struct.  Each CLOSURE struct has
+      ;;a NODE associated to it.
+      ;;
+      (name
+		;The VAR struct appearing as LHS in the binding definition associated
+		;to this NODE.
+       code
+		;The CLAMBDA or CODE-LOC associated to the CLOSURE.
+       deps
+		;Null or a list of NODE structs.
+       whacked
+		;Boolean.
+       freevar*
+		;Null or a list of VAR structs.
+       recursive?
+		;Boolean.  True if the CLOSURE associated to this NODE is recursive.
+       ))
 
     (define (mk-node lhs code recursive?)
       (make-node lhs code '() #f '() recursive?))
+
+    (define (node-push-freevar! node freevar)
+      ($set-node-freevar*! node (cons freevar ($node-freevar* node))))
+
+    (define (node-push-dep! node dep)
+      ($set-node-deps! node (cons dep ($node-deps node))))
 
     (define (E-fix lhs* rhs* body)
       ;;Here we know that RHS* is a list  of CLOSURE structs in which the VAR in LHS*
@@ -4417,91 +4439,92 @@
       ;;
       ($for-each/stx %var-reset-subst! lhs*)
       ;;Trim the free lists first; after init.
-      (let ((freevar** (map (lambda (lhs rhs)
-			      ;;Remove self also.
-			      (remq lhs (%trim-free (closure-freevar* rhs))))
-			 lhs* rhs*)))
-	(let ((node* (map (lambda (lhs rhs)
-			    (receive-and-return (N)
-				(mk-node lhs (closure-code rhs) (closure-recursive? rhs))
-			      (%var-set-subst! lhs N)))
-		       lhs* rhs*)))
-	  ;;If X  is free  in Y,  then whenever  X becomes  a non-combinator,  Y also
-	  ;;becomes a non-combinator.  Here, we mark these dependencies.
-	  (for-each
-	      (lambda (my-node freevar*)
-		(for-each (lambda (freevar)
-			    (cond ((%var-get-subst freevar)
-				   ;;One of ours.
-				   => (lambda (her-node)
-					(set-node-deps! her-node
-							(cons my-node (node-deps her-node)))))
-				  (else ;;; not one of ours
-				   (set-node-freevar*! my-node (cons freevar (node-freevar* my-node))))))
-		  freevar*))
-	    node* freevar**)
-	  ;;Next, we go over the list of nodes,  and if we find one that has any free
-	  ;;variables, we know  it's a non-combinator, so  we whack it and  add it to
-	  ;;all of its dependents.
-	  (let ()
-	    (define (%process-node x)
-	      (when (cond ((null? (node-freevar* x))
-			   #f)
-			  ;; ((and (node-recursive? x)
-			  ;;       (null? (cdr (node-freevar* x))))
-			  ;;  #f)
-			  (else
-			   #t))
-		(unless (node-whacked x)
-		  (set-node-whacked! x #t)
-		  (for-each (lambda (y)
-			      (set-node-freevar*! y (cons (node-name x) (node-freevar* y)))
-			      (%process-node y))
-		    (node-deps x)))))
-	    ($for-each/stx %process-node node*))
-	  ;;The CLOSURE structs that still have free variables are will become actual
-	  ;;closure objects; the  CLOSURE structs with no free  variables will become
-	  ;;combinators.
-	  (let ((rhs* (map (lambda (node)
-			     (let ((freevar*   ($node-freevar*   node))
-				   (recursive? ($node-recursive? node)))
-			       (receive-and-return (closure)
-				   (make-closure ($node-code node) freevar* recursive?)
-				 (let ((name ($node-name node)))
-				   (cond ((null? freevar*)
-					  ;;This CLOSURE struct has no free variables.
-					  (%var-set-subst! name closure))
-					 ((and (null? (cdr freevar*)) recursive?)
-					  ;;This CLOSURE  struct has 1  free variable
-					  ;;and is recursive.
-					  (%var-set-subst! name closure))
-					 (else
-					  (%var-reset-subst! name)))))))
-			node*)))
-	    (for-each (lambda (lhs^ closure)
-			(let* ((lhs  (%get-forward! lhs^))
-			       (free (filter var?
-				       (remq lhs (%trim-free (closure-freevar* closure))))))
-			  (set-closure-freevar*! closure free)
-			  (set-closure-code!  closure (lift-code lhs (closure-code  closure)
-								 (closure-freevar* closure)))))
-	      lhs* rhs*)
-	    (let ((body^ (E body)))
-	      (let loop ((lhs* lhs*)
-			 (rhs* rhs*)
-			 (l*   '())
-			 (r*   '()))
-		(if (null? lhs*)
-		    (if (null? l*)
-			body^
-		      (make-fix l* r* body^))
-		  (let ((lhs (car lhs*))
-			(rhs (car rhs*)))
-		    (if (%var-get-subst lhs)
-			(begin
-			  (%var-reset-subst! lhs)
-			  (loop (cdr lhs*) (cdr rhs*) l* r*))
-		      (loop (cdr lhs*) (cdr rhs*) (cons lhs l*) (cons rhs r*)))))))))))
+      (let* ((freevar** ($map/stx (lambda (lhs rhs)
+				    ;;If the VAR referencing the CLOSURE struct is in
+				    ;;the list of free vars: remove it.
+				    (remq lhs (%trim-free (closure-freevar* rhs))))
+			  lhs* rhs*))
+	     (node*     ($map/stx (lambda (lhs rhs)
+				    (receive-and-return (N)
+					(mk-node lhs (closure-code rhs) (closure-recursive? rhs))
+				      (%var-set-subst! lhs N)))
+			  lhs* rhs*)))
+	;;If X is free in Y, then whenever X becomes a non-combinator, Y also becomes
+	;;a non-combinator.  Here, we mark these dependencies.
+	($for-each/stx (lambda (my-node freevar*)
+			 (for-each (lambda (freevar)
+				     (cond ((%var-get-subst freevar)
+					    ;;One of ours.
+					    => (lambda (her-node)
+						 (node-push-dep! her-node my-node)))
+					   (else
+					    ;;Not one of ours.
+					    (node-push-freevar! my-node freevar))))
+			   freevar*))
+	  node* freevar**)
+	;;Next, we go over the list of nodes,  and if we find one that has any free
+	;;variables, we know  it's a non-combinator, so  we whack it and  add it to
+	;;all of its dependents.
+	;;
+	(let ()
+	  (define (%process-node x)
+	    ;;Non-tail recursive function.
+	    (when (cond ((null? (node-freevar* x))
+			 #f)
+			;; ((and (node-recursive? x)
+			;;       (null? (cdr (node-freevar* x))))
+			;;  #f)
+			(else #t))
+	      (unless (node-whacked x)
+		(set-node-whacked! x #t)
+		(for-each (lambda (y)
+			    (node-push-freevar! y (node-name x))
+			    (%process-node y))
+		  (node-deps x)))))
+	  ($for-each/stx %process-node node*))
+	;;The  CLOSURE structs  that still  have  free variables  will become  actual
+	;;closure objects;  the CLOSURE  structs with no  free variables  will become
+	;;combinators.
+	(let ((rhs* (map (lambda (node)
+			   (let ((freevar*   ($node-freevar*   node))
+				 (recursive? ($node-recursive? node)))
+			     (receive-and-return (closure)
+				 (make-closure ($node-code node) freevar* recursive?)
+			       (let ((name ($node-name node)))
+				 (cond ((null? freevar*)
+					;;This CLOSURE struct has no free variables.
+					(%var-set-subst! name closure))
+				       ((and (null? (cdr freevar*)) recursive?)
+					;;This CLOSURE  struct has 1  free variable
+					;;and is recursive.
+					(%var-set-subst! name closure))
+				       (else
+					(%var-reset-subst! name)))))))
+		      node*)))
+	  (for-each (lambda (lhs^ closure)
+		      (let* ((lhs  (%get-forward! lhs^))
+			     (free (filter var?
+				     (remq lhs (%trim-free (closure-freevar* closure))))))
+			(set-closure-freevar*! closure free)
+			(set-closure-code!     closure (lift-code lhs (closure-code closure)
+								  (closure-freevar* closure)))))
+	    lhs* rhs*)
+	  (let ((body^ (E body)))
+	    (let loop ((lhs* lhs*)
+		       (rhs* rhs*)
+		       (l*   '())
+		       (r*   '()))
+	      (if (null? lhs*)
+		  (if (null? l*)
+		      body^
+		    (make-fix l* r* body^))
+		(let ((lhs (car lhs*))
+		      (rhs (car rhs*)))
+		  (if (%var-get-subst lhs)
+		      (begin
+			(%var-reset-subst! lhs)
+			(loop (cdr lhs*) (cdr rhs*) l* r*))
+		    (loop (cdr lhs*) (cdr rhs*) (cons lhs l*) (cons rhs r*))))))))))
 
     (define (%trim-free ls)
       (cond ((null? ls)
@@ -4517,7 +4540,7 @@
 			   rest
 			 (cons what rest)))
 		      (else
-		       (error __who__ "invalid value in %trim-free" what))))))
+		       (compiler-internal-error __who__ "invalid VAR substitution value" what))))))
 	    (else
 	     (cons (car ls) (%trim-free (cdr ls))))))
 
