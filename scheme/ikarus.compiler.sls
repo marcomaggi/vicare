@@ -4080,30 +4080,31 @@
 
 
 (module (convert-closures)
-  ;;This  module  converts  all  the  CLAMBDA  structures  into  CLOSURE
-  ;;structures, compiling  a list of  free variables referenced  by each
-  ;;CLOSURE.
+  ;;This  module  converts  all  the  CLAMBDA  structures  into  CLOSURE  structures,
+  ;;compiling a list of free variables referenced by each CLOSURE.
   ;;
-  (define who 'convert-closures)
+  (define-fluid-override __who__
+    (identifier-syntax 'convert-closures))
 
   (define (convert-closures X)
-    ;;Perform code  transformation traversing the whole  hierarchy in X,
-    ;;which must  be a struct  instance representing recordized  code in
-    ;;the core  language, and building  a new hierarchy  of transformed,
-    ;;recordized code; return the new hierarchy.
+    ;;Perform code transformation traversing the whole  hierarchy in X, which must be
+    ;;a  struct instance  representing  recordised  code in  the  core language,  and
+    ;;building  a new  hierarchy  of  transformed, recordised  code;  return the  new
+    ;;hierarchy.
     ;;
-    ;;The bulk of the work is performed by the recursive function E.
-    ;;
-    (let-values (((X^ free) (E X)))
-      (if (null? free)
+    (receive (X^ freevars)
+	(E X)
+      (if (null? freevars)
 	  X^
-	(error who "free vars encountered in program"
-	       (map unparse-recordized-code free)))))
+	(compiler-internal-error __who__
+	  "free vars encountered in program" (map unparse-recordized-code freevars)))))
 
   (define (E X)
-    ;;Traverse  the  recordized  code  X  and return  2  values:  a  new
-    ;;recordized code hierarchy, a list  of struct instances of type VAR
-    ;;representing the free variables in X.
+    ;;Traverse  the recordized  code X  and return  2 values:  a new  recordized code
+    ;;hierarchy, a list of VAR structs representing the free variables in X.
+    ;;
+    ;;The collected  freevars are consumed by  E-clambda by storing them  in the free
+    ;;field of the CLAMBDA struct.
     ;;
     (struct-case X
       ((constant)
@@ -4117,184 +4118,187 @@
        (values X '()))
 
       ((bind lhs* rhs* body)
-       (let-values (((rhs*^ rhs-free)  (E* rhs*))
-                    ((body^ body-free) (E  body)))
+       ;;This is  a BIND struct,  so, assuming the  recordised input is  correct: the
+       ;;RHS* are non-CLAMBDA structs;  the VARs in LHS* do *not*  appear in the RHS*
+       ;;expressions.
+       (let-values
+	   (((rhs*^ freevars.rhs)  (E* rhs*))
+	    ((body^ freevars.body) (E  body)))
 	 (values (make-bind lhs* rhs*^ body^)
-		 ;;If a VAR struct is a  binding in this BIND: it is not
-		 ;;a free variable; so remove it.
-		 (union rhs-free (difference body-free lhs*)))))
+		 ;;If  a VAR  struct is  a binding  in this  BIND: it  is not  a free
+		 ;;variable; so remove it.
+		 (union freevars.rhs (difference freevars.body lhs*)))))
 
       ((fix lhs* rhs* body)
-       (for-each (lambda (x)
-		   (set-var-index! x #t))
+       ;;This is a FIX struct, so, assuming the recordised input is correct: the RHS*
+       ;;are CLAMBDA structs; the VARs in LHS* do can appear in the RHS* expressions.
+       ($for-each/stx (lambda (lhs)
+			(set-var-index! lhs #t))
 	 lhs*)
-       (let-values (((rhs*^ rhs-free)  (%do-clambda* lhs* rhs*))
-                    ((body^ body-free) (E body)))
-	 ;;RHS*^ is a list of struct instances of type CLOSURE.
-	 (for-each (lambda (lhs rhs)
-		     (when (var-index lhs)
-		       (set-closure-well-known?! rhs #t)
-		       (set-var-index! lhs #f)))
+       (let-values
+	   (((rhs*^ freevars.rhs)  (E-clambda* lhs* rhs*))
+	    ((body^ freevars.body) (E body)))
+	 ;;Here RHS*^ is a list of CLOSURE structs.
+	 ($for-each/stx (lambda (lhs rhs^)
+			  (when (var-index lhs)
+			    (set-closure-well-known?! rhs^ #t)
+			    (set-var-index! lhs #f)))
 	   lhs* rhs*^)
 	 (values (make-fix lhs* rhs*^ body^)
-		 ;;If a VAR struct is a binding in this FIX: it is not a
-		 ;;free variable; so remove it.
-		 (difference (union body-free rhs-free) lhs*))))
+		 ;;If  a VAR  struct is  a binding  in  this FIX:  it is  not a  free
+		 ;;variable; so remove it.
+		 (difference (union freevars.body freevars.rhs) lhs*))))
 
       ((conditional test conseq altern)
-       (let-values (((test^     test-free) (E test))
-                    ((conseq^ conseq-free) (E conseq))
-                    ((altern^ altern-free) (E altern)))
+       (let-values
+	   (((test^   freevars.test)   (E test))
+	    ((conseq^ freevars.conseq) (E conseq))
+	    ((altern^ freevars.altern) (E altern)))
          (values (make-conditional test^ conseq^ altern^)
-                 (union test-free (union conseq-free altern-free)))))
+                 (union freevars.test (union freevars.conseq freevars.altern)))))
 
       ((seq e0 e1)
-       (let-values (((e0^ e0-free) (E e0))
-                    ((e1^ e1-free) (E e1)))
-         (values (make-seq e0^ e1^)
-		 (union e0-free e1-free))))
+       (let-values
+	   (((e0^ freevars.e0) (E e0))
+	    ((e1^ freevars.e1) (E e1)))
+         (values (make-seq e0^ e1^) (union freevars.e0 freevars.e1))))
 
       ((forcall op rand*)
-       (let-values (((rand*^ rand*-free) (E* rand*)))
-         (values (make-forcall op rand*^)
-		 rand*-free)))
+       (receive (rand*^ freevars.rand*)
+	   (E* rand*)
+         (values (make-forcall op rand*^) freevars.rand*)))
 
       ((funcall rator rand*)
-       (let-values (((rator^ rat-free)   (E-known  rator))
-                    ((rand*^ rand*-free) (E-known* rand*)))
-         (values (make-funcall rator^ rand*^)
-                 (union rat-free rand*-free))))
+       (let-values
+	   (((rator^ freevars.rator) (E-known  rator))
+	    ((rand*^ freevars.rand*) (E-known* rand*)))
+         (values (make-funcall rator^ rand*^) (union freevars.rator freevars.rand*))))
 
       ((jmpcall label rator rand*)
-       (let-values (((rator^ rat-free)   (if (optimize-cp)
-					     (Rator rator)
-					   (E rator)))
-                    ((rand*^ rand*-free) (E-known* rand*)))
+       ;;JMPCALL's  rator and  rand* are  not,  by construction,  wrapped into  KNOWN
+       ;;structs.
+       (let-values
+	   (((rator^ freevars.rator) (if (optimize-cp) (E-rator rator) (E rator)))
+	    ((rand*^ freevars.rand*) (E-known* rand*)))
          (values (make-jmpcall label rator^ rand*^)
-                 (union rat-free rand*-free))))
+                 (union freevars.rator freevars.rand*))))
 
       (else
-       (error who "invalid expression" X))))
+       (compile-time-error __who__ "invalid expression" X))))
+
+;;; --------------------------------------------------------------------
 
   (define (E* X*)
-    ;;Map E  over each  element of X*,  which must be  a list  of struct
-    ;;instances  representing  recordized  code; return  2  values:  the
-    ;;processed X*, a list struct instances of type VAR representing the
-    ;;free variables referenced by X*.
+    ;;Map  E over  each element  of X*,  which  must be  a list  of struct  instances
+    ;;representing recordized code; return 2 values:  the processed X*, a list of VAR
+    ;;structs representing the free variables referenced by X*.
     ;;
     (if (null? X*)
 	(values '() '())
-      (let-values (((a a-free) (E  ($car X*)))
-		   ((d d-free) (E* ($cdr X*))))
-	(values (cons a d)
-		(union a-free d-free)))))
-
-  (module (%do-clambda*)
-
-    (define (%do-clambda* lhs* rhs*)
-      ;;LHS* is a list  of struct instances of type VAR;  RHS* is a list
-      ;;of struct instances of type CLAMBDA.
-      ;;
-      ;;Apply %DO-CLAMBDA to every associated couple from LHS* and RHS*;
-      ;;return 2 values:
-      ;;
-      ;;1. A list of struct instances of type CLOSURE which must replace
-      ;;   the original RHS*.
-      ;;
-      ;;2. A list of struct instances  of type VAR representing the free
-      ;;   variables referenced by the CLOSURE structs.
-      ;;
-      (if (null? rhs*)
-	  (values '() '())
-	(let-values (((a a-free) (%do-clambda  ($car lhs*) ($car rhs*)))
-		     ((d d-free) (%do-clambda* ($cdr lhs*) ($cdr rhs*))))
-	  (values (cons a d)
-		  (union a-free d-free)))))
-
-    (define (%do-clambda lhs rhs)
-      ;;LHS is a  struct instance of type VAR; RHS  is a struct instance
-      ;;of type CLAMBDA; LHS is the binding of RHS.
-      ;;
-      ;;Build a struct  instance of type CLOSURE which  must replace the
-      ;;original RHS.
-      ;;
-      ;;Return 2 values: the CLOSURE  struct, a list of struct instances
-      ;;of type  VAR representing the  free variables referenced  by the
-      ;;CLOSURE.
-      ;;
-      (struct-case rhs
-	((clambda label clause* cp.unused free.unused name)
-	 (let-values (((clause*^ free) (%process-clauses clause*)))
-	   (values (make-closure (make-clambda label clause*^ lhs free name)
-				 free #f)
-		   free)))))
-
-    (define (%process-clauses clause*)
-      ;;CLAUSE* is a list of struct instances of type CLAMBDA-CASE.
-      ;;
-      ;;Process all the clauses in CLAUSE*; return 2 values:
-      ;;
-      ;;1. A  list of struct  instances of type CLAMBDA-CASE  which must
-      ;;   replace the original CLAUSE*.
-      ;;
-      ;;2. A list of struct instances  of type VAR representing the free
-      ;;   variables referenced by the bodies of the clauses.
-      ;;
-      (if (null? clause*)
-	  (values '() '())
-	(struct-case (car clause*)
-	  ((clambda-case info body)
-	   (let-values (((body^    body-free)    (E body))
-			((clause*^ clause*-free) (%process-clauses (cdr clause*))))
-	     (values (cons (make-clambda-case info body^) clause*^)
-		     ;;If a VAR  struct is a clause  formal argument: it
-		     ;;is not a free variable; so remove it.
-		     (union (difference body-free (case-info-args info))
-			    clause*-free)))))))
-
-    #| end of module: do-clambda* |# )
+      (let-values
+	  (((a freevars.a) (E  ($car X*)))
+	   ((d freevars.d) (E* ($cdr X*))))
+	(values (cons a d) (union freevars.a freevars.d)))))
 
   (define (E-known x)
-    ;;Apply  E  to X,  which  must  be  a struct  instance  representing
-    ;;recordized  code; return  2 values:  the  processed X,  a list  of
-    ;;struct  instances  of type  VAR  representing  the free  variables
-    ;;referenced by X.
+    ;;Apply E  to X, which  must be a  struct instance representing  recordized code;
+    ;;return 2 values: the  processed X, a list of VAR  structs representing the free
+    ;;variables referenced by X.
     ;;
     (struct-case x
       ((known expr type)
-       (let-values (((expr^ free) (E expr)))
-         (values (make-known expr^ type)
-		 free)))
+       (receive (expr^ freevars)
+	   (E expr)
+         (values (make-known expr^ type) freevars)))
       (else
        (E x))))
 
   (define (E-known* X*)
-    ;;Map  E-known over  each element  of X*,  which must  be a  list of
-    ;;struct instances  representing recordized  code; return  2 values:
-    ;;the processed X*, a list struct instances of type VAR representing
-    ;;the free variables referenced by X*.
+    ;;Map  E-known  over  each element  of  X*,  which  must  be a  list  of  structs
+    ;;representing  code; return  2  values: the  processed X*,  a  list VAR  structs
+    ;;representing the free variables referenced by X*.
     ;;
     (if (null? X*)
 	(values '() '())
-      (let-values (((a a-free) (E-known  ($car X*)))
-		   ((d d-free) (E-known* ($cdr X*))))
-	(values (cons a d)
-		(union a-free d-free)))))
+      (let-values
+	  (((a freevars.a) (E-known  ($car X*)))
+	   ((d freevars.d) (E-known* ($cdr X*))))
+	(values (cons a d) (union freevars.a freevars.d)))))
 
-  (define (Rator x)
+  (define (E-rator x)
     ;;Invoked only when the parameter OPTIMIZE-CP is set to true.
     ;;
-    ;;FIXME Does this  look like optimization to  anyone?  (Marco Maggi;
-    ;;Oct 13, 2012)
+    ;;FIXME Does this look like optimization to anyone?  (Marco Maggi; Oct 13, 2012)
     ;;
     (struct-case x
       ((var)
        (values x (list x)))
       ;;((known x t)
-      ;; (let-values (((x free) (Rator x)))
+      ;; (let-values (((x free) (E-rator x)))
       ;;   (values (make-known x t) free)))
       (else
        (E x))))
+
+;;; --------------------------------------------------------------------
+
+  (module (E-clambda*)
+
+    (define (E-clambda* lhs* rhs*)
+      ;;Non-tail recursive  function.  Apply  E-CLAMBDA to every  associated couple
+      ;;from LHS* and RHS*.  LHS* is a list of VAR structs; RHS* is a list of CLAMBDA
+      ;;structs.  Return 2 values:
+      ;;
+      ;;1. A list of CLOSURE structs which must replace the original RHS*.
+      ;;
+      ;;2. A  list of VAR structs  representing the free variables  referenced by the
+      ;;   CLOSURE structs.
+      ;;
+      (if (null? rhs*)
+	  (values '() '())
+	(let-values
+	    (((a freevars.a) (E-clambda  ($car lhs*) ($car rhs*)))
+	     ((d freevars.d) (E-clambda* ($cdr lhs*) ($cdr rhs*))))
+	  (values (cons a d) (union freevars.a freevars.d)))))
+
+    (define (E-clambda lhs rhs)
+      ;;LHS is a VAR struct; RHS is a CLAMBDA struct; LHS is the binding of RHS.
+      ;;
+      ;;Build a struct instance of type  CLOSURE which must replace the original RHS.
+      ;;Return 2 values:  the CLOSURE struct, a list of  VAR structs representing the
+      ;;free variables referenced by the CLOSURE.
+      ;;
+      (struct-case rhs
+	((clambda label clause* cp.unused free.unused name)
+	 (assert (not free.unused))
+	 (receive (clause*^ freevars)
+	     (E-clambda-case* clause*)
+	   (values (make-closure (make-clambda label clause*^ lhs freevars name)
+				 freevars #f)
+		   freevars)))))
+
+    (define (E-clambda-case* clause*)
+      ;;Non-tail recursive function.   Process all the clauses in  CLAUSE* which must
+      ;;be a list of CLAMBDA-CASE structs.  Return 2 values:
+      ;;
+      ;;1. A list of CLAMBDA-CASE structs which must replace the original CLAUSE*.
+      ;;
+      ;;2. A  list of VAR structs  representing the free variables  referenced by the
+      ;;   bodies of the clauses.
+      ;;
+      (if (null? clause*)
+	  (values '() '())
+	(struct-case ($car clause*)
+	  ((clambda-case info body)
+	   (let-values
+	       (((body^    freevars.body)    (E body))
+		((clause*^ freevars.clause*) (E-clambda-case* ($cdr clause*))))
+	     (values (cons (make-clambda-case info body^) clause*^)
+		     ;;If a  VAR struct is  a clause's formal  argument: it is  not a
+		     ;;free variable; so remove it.
+		     (union (difference freevars.body (case-info-args info))
+			    freevars.clause*)))))))
+
+    #| end of module: do-clambda* |# )
 
   #| end of module: convert closures |# )
 
