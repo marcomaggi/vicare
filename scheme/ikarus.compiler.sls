@@ -4299,17 +4299,31 @@
 
 
 (module (optimize-closures/lift-codes)
-
-  (define who 'optimize-closures/lift-codes)
+  ;;This module
+  ;;
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		var		primref
+  ;;   bind		fix		conditional
+  ;;   seq		clambda		known
+  ;;   forcall		funcall		jmpcall
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'optimize-closures/lift-codes))
 
   (define all-codes
     (make-parameter #f))
 
   (define (optimize-closures/lift-codes X)
+    ;;Perform code transformation traversing the whole  hierarchy in X, which must be
+    ;;a  struct instance  representing  recordised  code in  the  core language,  and
+    ;;building  a new  hierarchy  of  transformed, recordised  code;  return a  CODES
+    ;;struct.
+    ;;
     (parametrise ((all-codes '()))
       (let* ((X^ (E X))
-	     (V  (make-codes (all-codes) X^)))
-	V)))
+	     (C (make-codes (all-codes) X^)))
+	C)))
 
   (module (E)
 
@@ -4325,15 +4339,10 @@
 	 x)
 
 	((bind lhs* rhs* body)
-	 ($for-each/stx unset! lhs*)
-	 (let ((rhs*^ ($map/stx E rhs*)))
-	   ($for-each/stx copy-subst! lhs* rhs*^)
-	   (let ((body^ (E body)))
-	     ($for-each/stx unset! lhs*)
-	     (make-bind lhs* rhs*^ body^))))
+	 (E-bind lhs* rhs* body))
 
 	((fix lhs* rhs* body)
-	 (%do-fix lhs* rhs* body))
+	 (E-fix lhs* rhs* body))
 
 	((conditional test conseq altern)
 	 (make-conditional (E test) (E conseq) (E altern)))
@@ -4348,10 +4357,24 @@
 	 (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
 	((jmpcall label rator rand*)
+	 ;;JMPCALL's rator  and rand*  are not, by  construction, wrapped  into KNOWN
+	 ;;structs.
 	 (make-jmpcall label (E rator) ($map/stx E rand*)))
 
 	(else
-	 (error who "invalid expression" (unparse-recordized-code x)))))
+	 (compiler-internal-error __who__
+	   "invalid expression" (unparse-recordized-code x)))))
+
+    (define (E-bind lhs* rhs* body)
+      ;;Here we know that RHS* is a  list of non-CLAMBDA expressions in which the VAR
+      ;;in LHS* do *not* appear.
+      ;;
+      ($for-each/stx unset! lhs*)
+      (let ((rhs*^ ($map/stx E rhs*)))
+	($for-each/stx copy-subst! lhs* rhs*^)
+	(let ((body^ (E body)))
+	  ($for-each/stx unset! lhs*)
+	  (make-bind lhs* rhs*^ body^))))
 
     (define (E-known x)
       (struct-case x
@@ -4362,15 +4385,15 @@
 
     #| end of module: E |# )
 
-  (module (%do-fix)
+  (module (E-fix)
 
-    (define (%do-fix lhs* rhs* body)
+    (define (E-fix lhs* rhs* body)
       ($for-each/stx unset! lhs*)
       ;;Trim the free lists first; after init.
-      (let ((free** (map (lambda (lhs rhs)
-			   ;;Remove self also.
-			   (remq lhs (%trim-free (closure-freevar* rhs))))
-		      lhs* rhs*)))
+      (let ((freevar** (map (lambda (lhs rhs)
+			      ;;Remove self also.
+			      (remq lhs (%trim-free (closure-freevar* rhs))))
+			 lhs* rhs*)))
 	(define-struct node
 	  (name code deps whacked free recursive?))
 	(let ((node* (map (lambda (lhs rhs)
@@ -4384,7 +4407,7 @@
 	  ;;also   becomes  a   non-combinator.   Here,   we  mark   these
 	  ;;dependencies.
 	  (for-each
-	      (lambda (my-node free*)
+	      (lambda (my-node freevar*)
 		(for-each (lambda (fvar)
 			    (cond ((get-subst fvar)
 				   ;;One of ours.
@@ -4394,8 +4417,8 @@
 				  (else ;;; not one of ours
 				   (set-node-free! my-node
 						   (cons fvar (node-free my-node))))))
-		  free*))
-	    node* free**)
+		  freevar*))
+	    node* freevar**)
 	  ;;Next, we go  over the list of  nodes, and if we  find one that
 	  ;;has any free  variables, we know it's a  non-combinator, so we
 	  ;;whack it and add it to all of its dependents.
@@ -4469,15 +4492,41 @@
 			   rest
 			 (cons what rest)))
 		      (else
-		       (error who "invalid value in %trim-free" what))))))
+		       (error __who__ "invalid value in %trim-free" what))))))
 	    (else
 	     (cons (car ls) (%trim-free (cdr ls))))))
 
-    #| end of module: %do-fix |# )
+    (define (lift-code cp code freevar*)
+      ;;CP is a struct instance of type VAR to which a closure is bound.
+      ;;
+      ;;CODE  is a  a  struct instance  of type  CLAMBDA  representing the  closure's
+      ;;implementation.
+      ;;
+      ;;FREEVAR* is  a list  of struct  instances of type  VAR representing  the free
+      ;;variables referenced by the closure.
+      ;;
+      ;;Return a struct  instance of type CODE-LOC holding the  label of the argument
+      ;;CODE.
+      ;;
+      (define-syntax-rule (%prepend-to-all-codes ?obj)
+	(all-codes (cons ?obj (all-codes))))
+      (struct-case code
+	((clambda label clause* cp.dropped freevar*.unused name)
+	 (let ((clause* (map (lambda (clause)
+			       (struct-case clause
+				 ((clambda-case info body)
+				  ($for-each/stx unset! (case-info-args info))
+				  (make-clambda-case info (E body)))))
+			  clause*)))
+	   (begin0
+	     (make-code-loc label)
+	     (%prepend-to-all-codes (make-clambda label clause* cp freevar* name)))))))
+
+    #| end of module: E-fix |# )
 
   (define (get-forward! x)
     (when (eq? x 'q)
-      (error who "BUG: circular dep"))
+      (error __who__ "BUG: circular dep"))
     (let ((y (get-subst x)))
       (cond ((not y)
 	     x)
@@ -4490,15 +4539,15 @@
 	       (set-subst! x y)
 	       y))
 	    ((closure? y)
-	     (let ((free* (closure-freevar* y)))
-	       (cond ((null? free*)
+	     (let ((freevar* (closure-freevar* y)))
+	       (cond ((null? freevar*)
 		      y)
-		     ((null? (cdr free*))
+		     ((null? (cdr freevar*))
 		      ;;By temporarily  setting the  subst to 'Q  we can
 		      ;;detect circular references  while recursing into
 		      ;;GET-FORWARD!.
 		      (set-subst! x 'q)
-		      (let ((y (get-forward! ($car free*))))
+		      (let ((y (get-forward! ($car freevar*))))
 			;;Restore the subst to its proper value.
 			(set-subst! x y)
 			y))
@@ -4506,32 +4555,6 @@
 		      y))))
 	    (else
 	     x))))
-
-  (define (lift-code cp code free*)
-    ;;CP is a struct instance of type VAR to which a closure is bound.
-    ;;
-    ;;CODE  is a  a struct  instance  of type  CLAMBDA representing  the
-    ;;closure's implementation.
-    ;;
-    ;;FREE* is a  list of struct instances of type  VAR representing the
-    ;;free variables referenced by the closure.
-    ;;
-    ;;Return a struct instance of type CODE-LOC holding the label of the
-    ;;argument CODE.
-    ;;
-    (define-inline (prepend-to-all-codes obj)
-      (all-codes (cons obj (all-codes))))
-    (struct-case code
-      ((clambda label clause* cp.dropped freevar*.unused name)
-       (let ((clause* (map (lambda (clause)
-			     (struct-case clause
-			       ((clambda-case info body)
-				($for-each/stx unset! (case-info-args info))
-				(make-clambda-case info (E body)))))
-			clause*)))
-	 (begin0
-	     (make-code-loc label)
-	   (prepend-to-all-codes (make-clambda label clause* cp free* name)))))))
 
   (module (unset! set-subst! get-subst copy-subst!)
     (define-struct prop
@@ -4566,10 +4589,9 @@
   ;;
   ;; (define (combinator? x)
   ;;   (struct-case x
-  ;;     ((closure code free*)
-  ;;      (null? free*))
-  ;;     (else
-  ;;      #f)))
+  ;;     ((closure code freevar*)
+  ;;      (null? freevar*))
+  ;;     (else #f)))
 
   #| end of module: optimize-closures/lift-codes |# )
 
