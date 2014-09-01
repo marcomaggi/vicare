@@ -31,7 +31,7 @@
 ;;           | (funcall <Expr> <Expr>*)
 ;;           | (jmpcall <label> <Expr> <Expr>*)
 ;;  <codeloc> ::= (code-loc <label>)
-;;  <clambda> ::= (clambda <label> <case>* <cp> <free var>*)
+;;  <clambda> ::= (clambda <label> <case>* <cp> <freevar>*)
 ;;  <case>    ::= (clambda-case <info> <body>)
 ;;  <info>    ::= (clambda-info label <arg var>* proper)
 ;;  <Program> ::= (codes <clambda>* <Expr>)
@@ -197,8 +197,8 @@
     ;;
     (define (E-clambda x)
       (struct-case x
-	((clambda label case* cp free* name)
-	 (make-clambda label ($map/stx E-clambda-case case*) cp free* name))
+	((clambda label case* cp freevar* name)
+	 (make-clambda label ($map/stx E-clambda-case case*) cp freevar* name))
 	(else
 	 (error __who__ "invalid clambda" x))))
 
@@ -338,25 +338,24 @@
       ;;X must be a struct instance of type CLAMBDA.
       ;;
       (struct-case x
-	((clambda label case* cp free* name)
-	 (let ((case-mapper (ClambdaCase cp free*)))
-	   (make-clambda label ($map/stx case-mapper case*) #f free* name)))
+	((clambda label case* cp freevar* name)
+	 (let ((case-mapper (ClambdaCase cp freevar*))
+	       (cp^         #f))
+	   (make-clambda label ($map/stx case-mapper case*) cp^ freevar* name)))
 	(else
 	 (error who "invalid clambda" x))))
 
-    (define (ClambdaCase main-cp free*)
-      ;;MAIN-CP  must be  a struct  instance of  type VAR  to which  the
-      ;;CLOSURE wrapping this CLAMBDA is bound.
+    (define (ClambdaCase main-cp freevar*)
+      ;;MAIN-CP must be a  struct instance of type VAR to  which the CLOSURE wrapping
+      ;;this CLAMBDA is bound.
       ;;
-      ;;FREE*  must  be   a  list  of  struct  instances   of  type  VAR
-      ;;representing  the free  variables referenced  by the  clauses of
-      ;;this CASE-LAMBDA.
+      ;;FREEVAR* must be a list of struct instances of type VAR representing the free
+      ;;variables referenced by the clauses of this CASE-LAMBDA.
       ;;
-      ;;Return  a  function  to  be mapped  over  all  the  CLAMBDA-CASE
-      ;;structures representing the clauses of this CLAMBDA.
+      ;;Return  a  function  to  be  mapped  over  all  the  CLAMBDA-CASE  structures
+      ;;representing the clauses of this CLAMBDA.
       ;;
-      ;;Notice that CPVAR is prepended to the list of arguments for this
-      ;;clause.
+      ;;Notice that CPVAR is prepended to the list of arguments for this clause.
       ;;
       (lambda (x)
 	;;X must be a struct instance of type CLAMBDA-CASE.
@@ -370,7 +369,7 @@
 		     ;;symbol representing the  CPU register holding the
 		     ;;current closure pointer.
 		     (info^ (make-case-info label (cons cpvar args) proper?))
-		     (E     (make-E main-cp cpvar free*))
+		     (E     (make-E main-cp cpvar freevar*))
 		     (body^ (E body)))
 		(make-clambda-case info^ body^)))))
 	  (else
@@ -467,8 +466,8 @@
 	;;RHS must be a struct instance of type CLOSURE.
 	;;
 	(struct-case rhs
-	  ((closure code free* well-known?)
-	   (make-closure code ($map/stx %do-var free*) well-known?))))
+	  ((closure code freevar* well-known?)
+	   (make-closure code ($map/stx %do-var freevar*) well-known?))))
 
       #| end of module: %do-fix |# )
 
@@ -538,8 +537,8 @@
 
     (define (CodeExpr x)
       (struct-case x
-	((clambda label cases cp free name)
-	 (make-clambda label ($map/stx CaseExpr cases) cp free name))))
+	((clambda label cases cp freevar* name)
+	 (make-clambda label ($map/stx CaseExpr cases) cp freevar* name))))
 
     (define (CaseExpr x)
       (struct-case x
@@ -661,8 +660,8 @@
       ;;
       (define (Clambda x)
 	(struct-case x
-	  ((clambda label case* cp free* name)
-	   (make-clambda label (map ClambdaCase case*) cp free* name))))
+	  ((clambda label case* cp freevar* name)
+	   (make-clambda label (map ClambdaCase case*) cp freevar* name))))
 
       (define (ClambdaCase x)
 	(struct-case x
@@ -888,8 +887,8 @@
 
     (define (Clambda x)
       (struct-case x
-	((clambda x.label x.case* x.cp x.free* x.name)
-	 (make-clambda x.label (map ClambdaCase x.case*) x.cp x.free* x.name))))
+	((clambda x.label x.case* x.cp x.freevar* x.name)
+	 (make-clambda x.label (map ClambdaCase x.case*) x.cp x.freevar* x.name))))
 
     (module (ClambdaCase)
 
@@ -2717,8 +2716,8 @@
 
     (define (Clambda x)
       (struct-case x
-	((clambda label case* cp free* name)
-	 (make-clambda label (map ClambdaCase case*) cp free* name))))
+	((clambda label case* cp freevar* name)
+	 (make-clambda label (map ClambdaCase case*) cp freevar* name))))
 
     (define (ClambdaCase x)
       (struct-case x
@@ -3079,8 +3078,8 @@
 
     (define (Clambda x)
       (struct-case x
-        ((clambda label case* cp free* name)
-         (make-clambda label (map ClambdaCase case*) cp free* name))))
+        ((clambda label case* cp freevar* name)
+         (make-clambda label (map ClambdaCase case*) cp freevar* name))))
 
     (define (ClambdaCase x)
       (struct-case x
@@ -4263,8 +4262,8 @@
       ;;error "wrong number of arguments".
       ;;
       (struct-case x
-	((clambda L case* cp free* name)
-	 (cons* (length free*)
+	((clambda L case* cp freevar* name)
+	 (cons* (length freevar*)
 		`(name ,name)
 		(label L)
 		(let ((accum (list '(nop))))
