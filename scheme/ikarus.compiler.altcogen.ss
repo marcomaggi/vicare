@@ -246,36 +246,6 @@
 
     #| end of module: mkfuncall |# )
 
-;;; --------------------------------------------------------------------
-
-  ;;Commented out because unused.  (Marco Maggi; Oct 14, 2012)
-  ;;
-  ;; (define (check-gensym x)
-  ;;   (unless (gensym? x)
-  ;;     (error __who__ "invalid gensym" x)))
-  ;;
-  ;; (define (check-label x)
-  ;;   (struct-case x
-  ;;     ((code-loc label)
-  ;;      (check-gensym label))
-  ;;     (else
-  ;;      (error __who__ "invalid label" x))))
-  ;;
-  ;; (define (check-var x)
-  ;;   (struct-case x
-  ;;     ((var)
-  ;;      (void))
-  ;;     (else
-  ;;      (error __who__ "invalid var" x))))
-  ;;
-  ;; (define (check-closure x)
-  ;;   (struct-case x
-  ;;     ((closure label free*)
-  ;;      (check-label label)
-  ;;      (for-each check-var free*))
-  ;;     (else
-  ;;      (error __who__ "invalid closure" x))))
-
   #| end of module: alt-cogen.introduce-primcalls |# )
 
 
@@ -379,7 +349,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (make-E main-cpvar cpvar free*)
+  (define (make-E main-cpvar cpvar freevar*)
 
     (define (E x)
       ;;Perform code transformation traversing the whole hierarchy in X,
@@ -466,8 +436,8 @@
 	;;RHS must be a struct instance of type CLOSURE.
 	;;
 	(struct-case rhs
-	  ((closure code freevar* well-known?)
-	   (make-closure code ($map/stx %do-var freevar*) well-known?))))
+	  ((closure code freevar* recursive?)
+	   (make-closure code ($map/stx %do-var freevar*) recursive?))))
 
       #| end of module: %do-fix |# )
 
@@ -480,7 +450,7 @@
       ;;CPVAR: a struct instance of type VAR associated to the closure's
       ;;clause whose body we are traversing.
       ;;
-      ;;FREE*: a list  of struct instances of type  VAR representing the
+      ;;FREEVAR*: a list  of struct instances of type  VAR representing the
       ;;free  variables referenced  by  the closure  whose  body we  are
       ;;traversing.
       ;;
@@ -495,16 +465,16 @@
       ;;
       (if (eq? x main-cpvar)
 	  cpvar
-	(let loop ((free* free*)
+	(let loop ((freevar* freevar*)
 		   (i     0))
-	  (cond ((null? free*)
+	  (cond ((null? freevar*)
 		 x)
-		((eq? x ($car free*))
+		((eq? x ($car freevar*))
 		 ;;Replate  a  reference  to   free  variable  with  the
 		 ;;appropriate slot accessor.
 		 (make-primcall '$cpref (list cpvar (make-constant i))))
 		(else
-		 (loop ($cdr free*) ($fxadd1 i)))))))
+		 (loop ($cdr freevar*) ($fxadd1 i)))))))
 
     E)
 
@@ -5163,8 +5133,8 @@
 	 (label-address label))
 	((foreign-label L)
 	 `(foreign-label ,L))
-	((closure label free*)
-	 (unless (null? free*)
+	((closure label freevar*)
+	 (unless (null? freevar*)
 	   (error who "nonempty closure"))
 	 `(obj ,x))
 	((object o)

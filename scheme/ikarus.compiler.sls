@@ -637,15 +637,15 @@
     (fasl-write (compile-core-expr->code expr) port))
 
   (define (compile-core-expr x)
-    ;;This  function  is used  to  compile  libraries' source  code  for
-    ;;serialisation into FASL files.
+    ;;This function is used to compile  libraries' source code for serialisation into
+    ;;FASL files.
     ;;
     (let ((code (compile-core-expr->code x)))
       ($code->closure code)))
 
   (define (compile-core-expr->code core-language-sexp)
-    ;;This is *the*  commpiler function.  It transforms  a core language
-    ;;symbolic expression into a code object.
+    ;;This  is *the*  commpiler function.   It  transforms a  core language  symbolic
+    ;;expression into a code object.
     ;;
     (let* ((p (recordize core-language-sexp))
 	   (p (optimize-direct-calls p))
@@ -676,8 +676,8 @@
 	  (car code*)))))
 
   (define (core-expr->optimized-code core-language-sexp)
-    ;;This  is a  utility  function used  for  debugging and  inspection
-    ;;purposes; it is to be used to inspect the result of optimisation.
+    ;;This is a utility function used for debugging and inspection purposes; it is to
+    ;;be used to inspect the result of optimisation.
     ;;
     (let* ((p (recordize core-language-sexp))
 	   (p (optimize-direct-calls p))
@@ -686,10 +686,10 @@
       (unparse-recordized-code/pretty p)))
 
   (define (core-expr->assembly-code core-language-sexp)
-    ;;This  is a  utility  function used  for  debugging and  inspection
-    ;;purposes.  It  transforms a symbolic expression  representing core
-    ;;language  into  a  list  of sublists,  each  sublist  representing
-    ;;assembly language instructions for a code object.
+    ;;This is  a utility  function used  for debugging  and inspection  purposes.  It
+    ;;transforms  a symbolic  expression representing  core language  into a  list of
+    ;;sublists, each sublist  representing assembly language instructions  for a code
+    ;;object.
     ;;
     (let* ((p (recordize core-language-sexp))
 	   (p (optimize-direct-calls p))
@@ -714,15 +714,14 @@
     ;;associated label (a loc gensym?).
     ;;
     (and (closure? x)
-	 (if (null? (closure-free* x))
+	 (if (null? (closure-freevar* x))
 	     (code-loc-label (closure-code x))
-	   (compiler-internal-error #f
-	     "non-thunk escaped" x))))
+	   (compiler-internal-error #f "non-thunk escaped" x))))
 
   (define (print-instr x)
-    ;;Print  to   the  current   error  port  the   symbolic  expression
-    ;;representing  the  assembly instruction  X.   To  be used  to  log
-    ;;generated assembly for human inspection.
+    ;;Print  to the  current  error  port the  symbolic  expression representing  the
+    ;;assembly  instruction X.   To  be  used to  log  generated  assembly for  human
+    ;;inspection.
     ;;
     (if (and (pair? x)
 	     (eq? ($car x) 'seq))
@@ -1323,10 +1322,12 @@
   (code
 		;A  struct  instance  of  type  CLAMBDA  representing  the  closure's
 		;implementation, or a struct instance of type CODE-LOC.
-   free*
+   freevar*
 		;A  list  of struct  instances  of  type  VAR representing  the  free
 		;variables referenced by this CLOSURE.
-   well-known?
+   recursive?
+		;Boolean.  True if the body of  the CLAMBDA references itself, and so
+		;the function is recursive; false otherwise.
    ))
 
 ;;Instances of this type represent primitive operation applications.
@@ -4149,10 +4150,11 @@
 	 ($for-each/stx (lambda (lhs rhs^)
 			  ;;LHS is the  VAR struct referencing the  CLAMBDA RHS^.  If
 			  ;;the field  "index" of LHS  is true: LHS appears  at least
-			  ;;once in the body of RHS^.  If the field "index" of LHS is
-			  ;;false: LHS does not appear in the body of RHS^.
+			  ;;once  in the  body of  RHS^; this  means the  function is
+			  ;;recursive.  If  the field  "index" of  LHS is  false: LHS
+			  ;;does not appear in the body of RHS^.
 			  (when (var-index lhs)
-			    (set-closure-well-known?! rhs^ #t)
+			    (set-closure-recursive?! rhs^ #t)
 			    (set-var-index! lhs #f)))
 	   lhs* rhs*^)
 	 (values (make-fix lhs* rhs*^ body^)
@@ -4393,14 +4395,14 @@
       ;;Trim the free lists first; after init.
       (let ((free** (map (lambda (lhs rhs)
 			   ;;Remove self also.
-			   (remq lhs (%trim-free (closure-free* rhs))))
+			   (remq lhs (%trim-free (closure-freevar* rhs))))
 		      lhs* rhs*)))
 	(define-struct node
-	  (name code deps whacked free well-known?))
+	  (name code deps whacked free recursive?))
 	(let ((node* (map (lambda (lhs rhs)
 			    (let ((n (make-node lhs (closure-code rhs)
 						'() #f '()
-						(closure-well-known? rhs))))
+						(closure-recursive? rhs))))
 			      (set-subst! lhs n)
 			      n))
 		       lhs* rhs*)))
@@ -4427,7 +4429,7 @@
 	    (define (%process-node x)
 	      (when (cond ((null? (node-free x))
 			   #f)
-			  ;; ((and (node-well-known? x)
+			  ;; ((and (node-recursive? x)
 			  ;;       (null? (cdr (node-free x))))
 			  ;;  #f)
 			  (else
@@ -4442,13 +4444,13 @@
 	  ;;Now those that have free variables are actual closures.  Those
 	  ;;with no free variables are actual combinators.
 	  (let ((rhs* (map (lambda (node)
-			     (let ((well-known? (node-well-known?  node))
+			     (let ((recursive? (node-recursive?  node))
 				   (name        (node-name node))
 				   (free        (node-free node)))
-			       (let ((closure (make-closure (node-code node) free well-known?)))
+			       (let ((closure (make-closure (node-code node) free recursive?)))
 				 (cond ((null? free)
 					(set-subst! name closure))
-				       ((and (null? (cdr free)) well-known?)
+				       ((and (null? (cdr free)) recursive?)
 					(set-subst! name closure))
 				       (else
 					(unset! name)))
@@ -4457,10 +4459,10 @@
 	    (for-each (lambda (lhs^ closure)
 			(let* ((lhs  (get-forward! lhs^))
 			       (free (filter var?
-				       (remq lhs (%trim-free (closure-free* closure))))))
-			  (set-closure-free*! closure free)
+				       (remq lhs (%trim-free (closure-freevar* closure))))))
+			  (set-closure-freevar*! closure free)
 			  (set-closure-code!  closure (lift-code lhs (closure-code  closure)
-								 (closure-free* closure)))))
+								 (closure-freevar* closure)))))
 	      lhs* rhs*)
 	    (let ((body^ (E body)))
 	      (let loop ((lhs* lhs*)
@@ -4514,7 +4516,7 @@
 	       (set-subst! x y)
 	       y))
 	    ((closure? y)
-	     (let ((free* (closure-free* y)))
+	     (let ((free* (closure-freevar* y)))
 	       (cond ((null? free*)
 		      y)
 		     ((null? (cdr free*))
@@ -6416,8 +6418,8 @@
 	       (free:  ,(and freevar* (map unparse-recordized-code freevar*)))
 	       ,@(map unparse-recordized-code cls*)))
 
-    ((closure code free* wk?)
-     `(closure ,(if wk? '(well-known: #t) '(well-known: #f))
+    ((closure code free* recursive?)
+     `(closure ,(if recursive? '(recursive: #t) '(recursive: #f))
 	       (freevars: ,(map unparse-recordized-code free*))
 	       ,(unparse-recordized-code code)))
 
@@ -6562,10 +6564,10 @@
 	((clambda)
 	 (E-clambda x))
 
-	((closure code free* well-known?)
+	((closure code free* recursive?)
 	 `(closure ,(E code)
 		   ,(map E free*)
-		   ,well-known?))
+		   ,recursive?))
 
 	((primcall op arg*)
 	 (cons* 'primcall op (%map-in-order E arg*)))
@@ -6783,10 +6785,10 @@
 	((clambda)
 	 (E-clambda x))
 
-	((closure code free* well-known?)
+	((closure code free* recursive?)
 	 `(closure ,(E code)
 		   ,(map E free*)
-		   ,well-known?))
+		   ,recursive?))
 
 	((primcall op arg*)
 	 (cons op (%map-in-order E arg*)))
