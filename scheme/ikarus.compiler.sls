@@ -2005,7 +2005,7 @@
 ;;; --------------------------------------------------------------------
 
   (define (%name->label name)
-    (receive-and-return (label)
+    (if (option.descriptive-labels)
 	(gensym (cond ((symbol? name)
 		       name)
 		      ((and (pair? name)
@@ -2013,8 +2013,7 @@
 		       (car name))
 		      (else
 		       "clambda")))
-      #;(fprintf (current-error-port) "generated label=~a, name=~a\n" label name)
-      (void)))
+      (gensym)))
 
   (module (quoted-sym)
 
@@ -4573,15 +4572,14 @@
 		    node*)))
 	($for-each/stx
 	    (lambda (lhs^ closure)
-	      (let* ((lhs^^     (%get-forward! lhs^))
-		     (freevar*^ (filter var?
-				  (remq lhs^^ (%trim-freevar* (closure-freevar* closure))))))
-		(set-closure-freevar*! closure freevar*^)
+	      (let ((lhs^^ (%get-forward! lhs^)))
+		(set-closure-freevar*! closure (filter var?
+						 (remq lhs^^ (%trim-freevar* (closure-freevar* closure)))))
 		;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
 		;;struct.
-		(set-closure-code!     closure (lift-code lhs^^
-							  (closure-code     closure)
-							  (closure-freevar* closure)))))
+		(set-closure-code! closure (lift-code lhs^^
+						      (closure-code     closure)
+						      (closure-freevar* closure)))))
 	  lhs* rhs*)
 	(let ((body^ (E body)))
 	  (let loop ((lhs* lhs*)
@@ -6776,7 +6774,7 @@
 	 `(foreign-call ,rator . ,(%map-in-order E rand*)))
 
 	((jmpcall label op rand*)
-	 `(jmpcall ,(%pretty-symbol label) ,(E op) ,(map E rand*)))
+	 `(jmpcall ,(%pretty-symbol label) ,(E op) . ,(map E rand*)))
 
 	((foreign-label x)
 	 `(foreign-label ,x))
@@ -7010,9 +7008,7 @@
 	 `(foreign-call ,rator . ,(%map-in-order E rand*)))
 
 	((jmpcall label op rand*)
-	 `(jmpcall ,label
-		   ,(E op)
-		   ,(map E rand*)))
+	 `(jmpcall ,(%pretty-symbol label) ,(E op) . ,(map E rand*)))
 
 	((foreign-label x)
 	 `(foreign-label ,x))

@@ -1853,6 +1853,86 @@
   #t)
 
 
+(parametrise ((check-test-name						'optimise-direct-jumps)
+	      (compiler.$enabled-function-application-integration?	#f)
+	      (compiler.$descriptive-labels				#t))
+
+  (define (%optimise-direct-jumps core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   (D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (D (compiler.$sanitize-bindings D))
+	   (D (compiler.$optimize-for-direct-jumps D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%optimise-direct-jumps (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+  (define-syntax libdoit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result/basic)
+       (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (let ((f (case-lambda
+		  ((a)   '1)
+		  ((a b) '2))))
+	  ((primitive list) (f '1) (f '1 '2)))
+	(fix ((f_0 (case-lambda
+		    ((a_0)     (constant 1))
+		    ((a_1 b_0) (constant 2)))))
+	  (funcall (primref list)
+	    (jmpcall clambda-case-0 f_0 (constant 1))
+	    (jmpcall clambda-case-1 f_0 (constant 1) (constant 2)))))
+
+  ;;The same as above but expanded.
+  (doit* (let ((f (case-lambda
+		   ((a)   1)
+		   ((a b) 2))))
+	   (list (f 1) (f 1 2)))
+	 (fix ((lex.f_0 (case-lambda
+			 ((lex.a_0)         (constant 1))
+			 ((lex.a_1 lex.b_0) (constant 2)))))
+	   (funcall (primref list)
+	     (jmpcall clambda-case-0 lex.f_0 (constant 1))
+	     (jmpcall clambda-case-1 lex.f_0 (constant 1) (constant 2)))))
+
+  ;;Recursive function.
+  (doit (letrec ((f (case-lambda
+		     (()	(f '1))
+		     ((a)	a))))
+	  ((primitive list) (f) (f '2)))
+	(fix ((f_0 (case-lambda
+		    (()
+		     (jmpcall clambda-case-1 f_0 (constant 1)))
+		    ((a_0)
+		     a_0))))
+	  (funcall (primref list)
+	    (jmpcall clambda-case-0 f_0)
+	    (jmpcall clambda-case-1 f_0 (constant 2)))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'insert-global-assignments))
 
   (define (%insert-global-assignments core-language-form)
@@ -1992,7 +2072,7 @@
   (doit (letrec* ((a (lambda () '1))
 		  (b (lambda () (a))))
 	  b)
-	(codes ((lambda (label: b) () (jmpcall clambda-case-0 (closure (code-loc a) no-freevars) ()))
+	(codes ((lambda (label: b) () (jmpcall clambda-case-0 (closure (code-loc a) no-freevars)))
 		(lambda (label: a) () (constant 1)))
 	       (closure (code-loc b) no-freevars)))
 
@@ -2003,12 +2083,25 @@
 		    (b (lambda () (a))))
 	    b))
 	(codes
-	 ((lambda (label: b) () (jmpcall clambda-case-0 a_0 ()))
+	 ((lambda (label: b) () (jmpcall clambda-case-0 a_0))
 	  (lambda (label: a) () d_0))
 	 (bind ((d_0 (funcall (primref read))))
 	   (fix ((b_0 (closure (code-loc b) (freevars: a_0)))
 		 (a_0 (closure (code-loc a) (freevars: d_0))))
 	     b_0))))
+
+  (doit (letrec ((f (case-lambda
+		     (()	(f '1))
+		     ((a)	a))))
+	  ((primitive list) (f) (f '2)))
+	(codes ((case-lambda
+		 (label: f)
+		 (()
+		  (jmpcall clambda-case-1 (closure (code-loc f) no-freevars) (constant 1)))
+		 ((a_0) a_0)))
+	       (funcall (primref list)
+		 (jmpcall clambda-case-0 (closure (code-loc f) no-freevars))
+		 (jmpcall clambda-case-1 (closure (code-loc f) no-freevars) (constant 2)))))
 
 ;;; --------------------------------------------------------------------
 ;;; LIBRARY-LETREC* forms

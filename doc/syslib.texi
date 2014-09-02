@@ -8579,6 +8579,64 @@ non--@objtype{clambda} struct as right--hand side initialisation
 expression.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Examples
+
+Let's see some example in which we have disable function integration in
+application forms.  The standard code:
+
+@example
+(let ((f (case-lambda
+           ((a)   1)
+           ((a b) 2))))
+  (list (f 1) (f 1 2)))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(fix ((f_0 (case-lambda
+             ((a_0)     (constant 1))
+             ((a_1 b_0) (constant 2)))))
+  (funcall (primref list)
+    (jmpcall clambda-case-0 f_0 (constant 1))
+    (jmpcall clambda-case-1 f_0 (constant 1) (constant 2))))
+@end example
+
+@noindent
+where: @code{clambda-case-0} is a label identifying the first case of
+the @objtype{clambda} bound to @code{f_0}; @code{clambda-case-1} is a
+label identifying the second case.
+
+The following core language code defines a recursive function:
+
+@example
+(letrec ((f (case-lambda
+              (()        (f '1))
+              ((a)       a))))
+  ((primitive list) (f) (f '2)))
+@end example
+
+@noindent
+and it is transformed into:
+
+@example
+(fix ((f_0 (case-lambda
+             (()
+              (jmpcall clambda-case-1 f_0 (constant 1)))
+             ((a_0)
+              a_0))))
+   (funcall (primref list)
+            (jmpcall clambda-case-0 f_0)
+            (jmpcall clambda-case-1 f_0 (constant 2))))
+@end example
+
+@noindent
+where we see the recursive function call is also optimised as direct
+jump.
+
 @c page
 @node syslib compiler global assign
 @subsection Inserting global assignments
