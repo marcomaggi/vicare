@@ -41,6 +41,8 @@
      (cp0-size-limit				$cp0-size-limit)
      (strip-source-info				$strip-source-info)
      (generate-debug-calls			$generate-debug-calls)
+     (enabled-function-application-integration?	$enabled-function-application-integration?)
+     (option.descriptive-labels			$descriptive-labels)
 
      ;; middle pass inspection
      (assembler-output				$assembler-output)
@@ -126,7 +128,8 @@
 	  fasl-write)
     (ikarus.intel-assembler)
     (prefix (only (ikarus.options)
-		  strict-r6rs)
+		  strict-r6rs
+		  descriptive-labels)
 	    option.))
 
 
@@ -213,6 +216,14 @@
 (define assembler-output
   (make-parameter #f))
 
+(define enabled-function-application-integration?
+  ;;When  true:   the  source   optimiser  will   attempt  integration   of  function
+  ;;applications.
+  ;;
+  (make-parameter #t
+    (lambda (obj)
+      (and obj #t))))
+
 
 ;;;; helper syntaxes
 
@@ -236,6 +247,9 @@
   (let ((ell ?ell))
     (and (pair? ell)
 	 (null? ($cdr ell)))))
+
+(define-syntax-rule (fxincr! ?var)
+  (set! ?var (fxadd1 ?var)))
 
 ;;; --------------------------------------------------------------------
 
@@ -2066,7 +2080,10 @@
       ;;Return a list holding new struct instances of type CLAMBDA-CASE, one for each
       ;;clause.
       ;;
-      (let ((ctxt (and (pair? ctxt) ($car ctxt))))
+      (let ((ctxt         (and (pair? ctxt) ($car ctxt)))
+	    ;;This counter  is used only  to generate pretty labels  for CLAMBDA-CASE
+	    ;;structs.
+	    (case-counter 0))
 	($map/stx (lambda (clause)
 		    ;;We expect clause to have the format:
 		    ;;
@@ -2080,8 +2097,13 @@
 				 ;;PROPER? is: true  if FML* is a  proper list; false
 				 ;;if it is an  improper list, including a standalone
 				 ;;lex gensym.
-				 (info  (let ((proper? (list? fml*)))
-					  (make-case-info (gensym "clambda-case") prel* proper?))))
+				 (info  (let ((label   (if (option.descriptive-labels)
+							   (begin0
+							     (gensym (string-append "clambda-case-" (number->string case-counter)))
+							     (fxincr! case-counter))
+							 (gensym)))
+					      (proper? (list? fml*)))
+					  (make-case-info label prel* proper?))))
 			    (make-clambda-case info body^))))))
 	  case*)))
 
@@ -3737,7 +3759,7 @@
 	 ;;validated the  first argument as a  closure object; so, here,  we are sure
 	 ;;that "($car rand*)" will evaluate to a closure object.
 	 ((and (primref? unwrapped-rator)
-	       (eq? (primref-name unwrapped-rator) '$$apply))
+	       (eq? ($primref-name unwrapped-rator) '$$apply))
 	  ;;JMPCALL does not want KNOWN structs as rator and rands.
 	  (make-jmpcall (sl-apply-label)
 			(%unwrap-known ($car rand*))
@@ -6713,7 +6735,7 @@
 	((constant c)
 	 (if (symbol? c)
 	     ;;Extract the pretty name; this is useful when C is a loc gensym.
-	     `(constant ,(string->symbol (symbol->string c)))
+	     `(constant ,(%pretty-symbol c))
 	   `(constant ,c)))
 
 	((prelex)
@@ -6738,8 +6760,10 @@
 
 	((closure code free* recursive?)
 	 `(closure ,(E code)
-		   ,(map E free*)
-		   ,recursive?))
+		   ,(let ((freevar* (map E free*)))
+		      (if (null? freevar*)
+			  'no-freevars
+			`(freevars: . ,freevar*)))))
 
 	((primcall op arg*)
 	 (cons* 'primcall op (%map-in-order E arg*)))
@@ -6752,9 +6776,7 @@
 	 `(foreign-call ,rator . ,(%map-in-order E rand*)))
 
 	((jmpcall label op rand*)
-	 `(jmpcall ,label
-		   ,(E op)
-		   ,(map E rand*)))
+	 `(jmpcall ,(%pretty-symbol label) ,(E op) ,(map E rand*)))
 
 	((foreign-label x)
 	 `(foreign-label ,x))
@@ -6797,14 +6819,14 @@
 			 (let ((sexp (E clam)))
 			   (cons* (car sexp)
 				  ;;Print the pretty gensym name.
-				  (string->symbol (symbol->string (clambda-label clam)))
+				  `(label: ,(%pretty-symbol (clambda-label clam)))
 				  (cdr sexp))))
 		    clambda*)
 		 ,(E body)))
 
 	((code-loc label)
 	 ;;Print the pretty gensym name.
-	 `(code-loc ,(string->symbol (symbol->string label))))
+	 `(code-loc ,(%pretty-symbol label)))
 
 	(else x)))
 
@@ -6908,6 +6930,9 @@
       (let ((a (f (car ls))))
 	(cons a (%map-in-order f (cdr ls))))))
 
+  (define (%pretty-symbol sym)
+    (string->symbol (symbol->string sym)))
+
   #| end of module: unparse-recordized-code/sexp |# )
 
 
@@ -6946,7 +6971,7 @@
 	((constant c)
 	 (if (symbol? c)
 	     ;;Extract the pretty name.
-	     `(quote ,(string->symbol (symbol->string c)))
+	     `(quote ,(%pretty-symbol c))
 	   `(quote ,c)))
 
 	((prelex)
@@ -6969,8 +6994,10 @@
 
 	((closure code free* recursive?)
 	 `(closure ,(E code)
-		   ,(map E free*)
-		   ,recursive?))
+		   ,(let ((freevar* (map E free*)))
+		      (if (null? freevar*)
+			  'no-freevars
+			`(freevars: . ,freevar*)))))
 
 	((primcall op arg*)
 	 (cons op (%map-in-order E arg*)))
@@ -7028,14 +7055,14 @@
 			 (let ((sexp (E clam)))
 			   (cons* (car sexp)
 				  ;;Print the pretty gensym name.
-				  (string->symbol (symbol->string (clambda-label clam)))
+				  `(label: (%pretty-symbol (clambda-label clam)))
 				  (cdr sexp))))
 		    clambda*)
 		 ,(E body)))
 
 	((code-loc label)
 	 ;;Print the pretty gensym name.
-	 `(code-loc ,(string->symbol (symbol->string label))))
+	 `(code-loc ,(%pretty-symbol label)))
 
 	(else x)))
 
@@ -7178,6 +7205,9 @@
 	   (list 'let* (append b* (cadr body)) (caddr body)))
 	  (else
 	   (list 'let b* body))))
+
+  (define (%pretty-symbol sym)
+    (string->symbol (symbol->string sym)))
 
   #| end of module: unparse-recordized-code/pretty |# )
 

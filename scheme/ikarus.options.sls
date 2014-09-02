@@ -81,7 +81,6 @@
 (define-boolean-option cache-compiled-libraries)
 (define-boolean-option report-errors-at-runtime)
 (define-boolean-option strict-r6rs)
-(define-boolean-option descriptive-labels)
 
 
 ;;;; some parameter boolean options
@@ -166,6 +165,8 @@
 ;;true: we must also set to true all the tagged language sub-parameters.
 ;;
 (define-parameter-boolean-option tagged-language?)
+
+(define-parameter-boolean-option descriptive-labels)
 
 
 ;;;; vicare build configuration options

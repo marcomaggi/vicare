@@ -6037,6 +6037,7 @@ of comments.
                                   process.
 * syslib compiler conv::          Compiler coding conventions.
 * syslib compiler topics::        By topic inspection of behaviour.
+* syslib compiler options::       General configuration options.
 * syslib compiler unparse::       Unparsing intermediate
                                   representations.
 
@@ -6735,6 +6736,23 @@ further transformed as follows:
 @noindent
 so, in the end, @objtype{clambda} expressions originally bound to
 assigned bindings end up defined by @objtype{fix} forms.
+
+@c page
+@node syslib compiler options
+@subsection General configuration options
+
+
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@deffn Parameter $descriptive-labels
+When set to true: attempt to generate descriptive pretty names for
+gensyms used by the compiler as lexical gensyms, loc gensyms and code
+labels; this is useful for debugging purposes and code generation
+inspection.  When set to false: attempt to generate gensyms in the
+fastest way.
+@end deffn
 
 @c page
 @node syslib compiler unparse

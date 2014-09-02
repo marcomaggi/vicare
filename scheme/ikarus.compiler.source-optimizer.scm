@@ -1808,7 +1808,8 @@
 	    ;;
 	    ;;Attempt to inline the function application.
 	    ;;
-	    (or (and (not (operand-outer-pending opnd)) ;avoid evaluation cycles
+	    (or (and (enabled-function-application-integration?)
+		     (not (operand-outer-pending opnd)) ;avoid evaluation cycles
 		     (dynamic-wind
 			 (lambda () (set-operand-outer-pending! opnd #t))
 			 (lambda ()

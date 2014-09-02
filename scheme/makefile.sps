@@ -3089,6 +3089,8 @@
     ($cp0-effort-limit				$compiler)
     ($strip-source-info				$compiler)
     ($generate-debug-calls			$compiler)
+    ($enabled-function-application-integration?	$compiler)
+    ($descriptive-labels			$compiler)
 
     ($tag-analysis-output			$compiler)
     ($assembler-output				$compiler)

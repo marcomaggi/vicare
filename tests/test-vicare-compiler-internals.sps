@@ -1934,7 +1934,12 @@
   #t)
 
 
-(parametrise ((check-test-name	'lift-codes))
+(parametrise ((check-test-name						'lift-codes)
+	      (compiler.$enabled-function-application-integration?	#f)
+	      (compiler.$descriptive-labels				#t))
+
+;;;Function  application integration  is disabled  here to  make it  easier to  write
+;;;meaningful code for debugging and inspection.
 
   (define (%lift-codes core-language-form)
     (let* ((D (compiler.$recordize core-language-form))
@@ -1976,6 +1981,38 @@
 
 ;;; --------------------------------------------------------------------
 
+  ;;Recursive function.
+  (doit (letrec* ((a (lambda () a)))
+	  a)
+	(codes ((lambda (label: a) () (closure (code-loc a) no-freevars)))
+	       (closure (code-loc a) no-freevars)))
+
+  ;;The function A is a combinator (no free vars); as a consequence the function B is
+  ;;also a combinator.
+  (doit (letrec* ((a (lambda () '1))
+		  (b (lambda () (a))))
+	  b)
+	(codes ((lambda (label: b) () (jmpcall clambda-case-0 (closure (code-loc a) no-freevars) ()))
+		(lambda (label: a) () (constant 1)))
+	       (closure (code-loc b) no-freevars)))
+
+  ;;The function  A is a closure  upon D, as a  consequence the function B  is also a
+  ;;closure.
+  (doit (let ((d ((primitive read))))
+	  (letrec* ((a (lambda () d))
+		    (b (lambda () (a))))
+	    b))
+	(codes
+	 ((lambda (label: b) () (jmpcall clambda-case-0 a_0 ()))
+	  (lambda (label: a) () d_0))
+	 (bind ((d_0 (funcall (primref read))))
+	   (fix ((b_0 (closure (code-loc b) (freevars: a_0)))
+		 (a_0 (closure (code-loc a) (freevars: d_0))))
+	     b_0))))
+
+;;; --------------------------------------------------------------------
+;;; LIBRARY-LETREC* forms
+
   (doit (library-letrec*
 	    ((a a.loc (lambda () '1))
 	     (b b.loc (lambda () '2))
@@ -1983,19 +2020,19 @@
 	     (d d.loc '4))
 	  (quote #!void))
 	(codes
-	 ((lambda c () (constant 3))
-	  (lambda b () (constant 2))
-	  (lambda a () (constant 1)))
+	 ((lambda (label: c) () (constant 3))
+	  (lambda (label: b) () (constant 2))
+	  (lambda (label: a) () (constant 1)))
 	 (seq
 	   (funcall (primref $set-symbol-value/proc!)
 	     (constant a.loc)
-	     (closure (code-loc a) () #f))
+	     (closure (code-loc a) no-freevars))
 	   (funcall (primref $init-symbol-value!)
 	     (constant b.loc)
-	     (closure (code-loc b) () #f))
+	     (closure (code-loc b) no-freevars))
 	   (funcall (primref $init-symbol-value!)
 	     (constant c.loc)
-	     (closure (code-loc c) () #f))
+	     (closure (code-loc c) no-freevars))
 	   (bind ((d_0 (constant 4)))
 	     (seq
 	       (funcall (primref $init-symbol-value!)
