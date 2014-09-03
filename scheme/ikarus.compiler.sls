@@ -1129,9 +1129,11 @@
 ;;
 (define-struct clambda
   (label
-		;A unique  gensym associated to  this closure.  This will  become the
-		;name  of the  assembly label  representing  the entry  point to  the
-		;CLAMBDA.
+		;A unique gensym associated to this closure.  It will become the name
+		;of the assembly  label representing the entry point  to the CLAMBDA.
+		;It is used to generate, when  possible, direct jumps to this CLAMBDA
+		;entry  point (rather  than  performing  a full  call  to a  run-time
+		;closure object).
    cases
 		;A list  of struct  instances of  type CLAMBDA-CASE  representing the
 		;clauses.
@@ -1204,9 +1206,11 @@
 ;;
 (define-struct case-info
   (label
-		;A  unique  gensym  for  this  CASE-LAMBDA clause.   It  is  used  to
-		;generate, when  possible, direct  jumps to  this clause  rather than
-		;calling the whole closure.
+		;A unique  gensym for  this CASE-LAMBDA clause.   It will  become the
+		;name  of the  assembly label  representing the  entry point  to this
+		;CLAMBDA clause.  It is used to generate, when possible, direct jumps
+		;to this  clause (rather than  performing a  full call to  a run-time
+		;closure object).
    args
 		;In the earliest compiler passes: a  list of struct instances of type
 		;PRELEX representing the ?FORMALS as follows:
@@ -1919,30 +1923,30 @@
       ;;Return a struct instance of type CLAMBDA.
       ;;
       ((case-lambda)
-       (let ((cases   (E-clambda-case* ($cdr X) ctxt))
-	     (cp      #f)
-	     (free    #f)
-	     (name    (and (symbol? ctxt) ctxt)))
-	 (let ((label (%name->label name)))
-	   (make-clambda label cases cp free name))))
+       (let* ((name     (and (symbol? ctxt) ctxt))
+	      (asmlabel (%name->asmlabel name))
+	      (cases    (E-clambda-case* asmlabel ($cdr X) ctxt)))
+	 (let ((cp       #f)
+	       (freevar* #f))
+	   (make-clambda asmlabel cases cp freevar* name))))
 
       ;;Synopsis: (annotated-case-lambda ?annotation (?formals ?body))
       ;;
       ;;Return a struct instance of type CLAMBDA.
       ;;
       ((annotated-case-lambda)
-       (let ((cases          (E-clambda-case* ($cddr X) ctxt))
-	     (cp             #f)
-	     (free           #f)
-	     (name           (cons (and (symbol? ctxt) ctxt)
-				   ;;This annotation  is excluded only  when building
-				   ;;the boot image.
-				   (and (not (strip-source-info))
-					(let ((annotated-expr ($cadr X)))
-					  (and (annotation?       annotated-expr)
-					       (annotation-source annotated-expr)))))))
-	 (let ((label (%name->label name)))
-	   (make-clambda label cases cp free name))))
+       (let* ((name     (cons (and (symbol? ctxt) ctxt)
+			      ;;This annotation  is excluded  only when  building the
+			      ;;boot image.
+			      (and (not (strip-source-info))
+				   (let ((annotated-expr ($cadr X)))
+				     (and (annotation?       annotated-expr)
+					  (annotation-source annotated-expr))))))
+	      (asmlabel (%name->asmlabel name))
+	      (cases    (E-clambda-case* asmlabel ($cddr X) ctxt)))
+	 (let ((cp       #f)
+	       (freevar* #f))
+	   (make-clambda asmlabel cases cp freevar* name))))
 
       ;;Synopsis: (lambda ?formals ?body)
       ;;
@@ -2004,15 +2008,17 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%name->label name)
+  (define (%name->asmlabel name)
     (if (option.descriptive-labels)
-	(gensym (cond ((symbol? name)
-		       name)
-		      ((and (pair? name)
-			    (symbol? (car name)))
-		       (car name))
-		      (else
-		       "clambda")))
+	(gensym (string-append "asmlabel:"
+			       (cond ((symbol? name)
+				      (symbol->string name))
+				     ((and (pair? name)
+					   (symbol? (car name)))
+				      (symbol->string (car name)))
+				     (else
+				      "anonymous"))
+			       ":clambda"))
       (gensym)))
 
   (module (quoted-sym)
@@ -2065,46 +2071,51 @@
 
   (module (E-clambda-case*)
 
-    (define (E-clambda-case* case* ctxt)
+    (define (E-clambda-case* asmlabel clause* ctxt)
       ;;Given a symbolic expression representing a lambda:
       ;;
       ;;   (lambda ?formals ?body)
       ;;   (case-lambda (?formals ?body) ...)
       ;;   (annotated-case-lambda ?annotation (?formals ?body))
       ;;
-      ;;this function is called with CASE* set to the list of clauses:
+      ;;this function is called with CLAUSE* set to the list of clauses:
       ;;
       ;;   ((?formals ?body) ...)
       ;;
       ;;Return a list holding new struct instances of type CLAMBDA-CASE, one for each
       ;;clause.
       ;;
-      (let ((ctxt         (and (pair? ctxt) ($car ctxt)))
-	    ;;This counter  is used only  to generate pretty labels  for CLAMBDA-CASE
-	    ;;structs.
-	    (case-counter 0))
-	($map/stx (lambda (clause)
-		    ;;We expect clause to have the format:
-		    ;;
-		    ;;   (?formals ?body)
-		    ;;
-		    (let ((fml* ($car  clause))	 ;the formals
-			  (body ($cadr clause))) ;the body sequence
-		      (let ((lex* (%properize-clambda-formals fml*)))
-			(with-prelex-structs-in-plists (prel* lex*)
-			  (let* ((body^ (E body ctxt))
-				 ;;PROPER? is: true  if FML* is a  proper list; false
-				 ;;if it is an  improper list, including a standalone
-				 ;;lex gensym.
-				 (info  (let ((label   (if (option.descriptive-labels)
-							   (begin0
-							     (gensym (string-append "clambda-case-" (number->string case-counter)))
-							     (fxincr! case-counter))
-							 (gensym)))
-					      (proper? (list? fml*)))
-					  (make-case-info label prel* proper?))))
-			    (make-clambda-case info body^))))))
-	  case*)))
+      ;;ASMLABEL is  the label identifying the  machine code entry point  of the full
+      ;;CLAMBDA; it is used to generate descriptive labels for each clause.
+      ;;
+      (let ((ctxt (and (pair? ctxt) ($car ctxt))))
+	($map/stx
+	    (lambda (clause)
+	      ;;We expect clause to have the format:
+	      ;;
+	      ;;   (?formals ?body)
+	      ;;
+	      (let ((fml* ($car  clause))	 ;the formals
+		    (body ($cadr clause)))	 ;the body sequence
+		(let ((lex* (%properize-clambda-formals fml*)))
+		  (with-prelex-structs-in-plists (prel* lex*)
+		    (let* ((body^ (E body ctxt))
+			   ;;PROPER? is: true  if FML* is a proper list;  false if it
+			   ;;is an improper list, including a standalone lex gensym.
+			   (info  (let* ((proper?       (list? fml*))
+					 (asmlabel-case (%asmlabel->asmlabel-case asmlabel proper? fml*)))
+				    (make-case-info asmlabel-case prel* proper?))))
+		      (make-clambda-case info body^))))))
+	  clause*)))
+
+    (define (%asmlabel->asmlabel-case asmlabel proper? fml*)
+      (if (option.descriptive-labels)
+	  (gensym (string-append (symbol->string asmlabel)
+				 ":case-"
+				 (if proper?
+				     (number->string (length fml*))
+				   "*")))
+	(gensym)))
 
     (define (%properize-clambda-formals fml*)
       ;;Convert the  formals FML*  of a  CASE-LAMBDA clause into  a proper  list.  We
@@ -4506,8 +4517,8 @@
 	;;Here  the  VAR  structs  in  LHS*  are   not  yet  part  of  the  graph  of
 	;;substitutions.
 	($map/stx (lambda (lhs rhs)
-		    ;;If the  VAR referencing the  CLOSURE struct  is in the  list of
-		    ;;free vars: remove it.
+		    ;;If the  LHS VAR referencing  the RHS  CLOSURE struct is  in the
+		    ;;list of free vars: remove it.
 		    (remq lhs (%trim-freevar* (closure-freevar* rhs))))
 	  lhs* rhs*))
       (define node*
@@ -4618,7 +4629,8 @@
 		(D ($cdr freevar*)))
 	    (let* ((what (%get-forward! A))
 		   (rest (%trim-freevar* D)))
-	      ;;It is possible that WHAT is A itself.
+	      ;;Here WHAT  is the substitution  of A; it is  possible that WHAT  is A
+	      ;;itself.
 	      (if what
 		  (struct-case what
 		    ((closure)
@@ -4630,7 +4642,8 @@
 			 rest
 		       (cons what rest)))
 		    (else
-		     (compiler-internal-error __who__ "invalid VAR substitution value" what)))
+		     (compiler-internal-error __who__
+		       "invalid VAR substitution value" what)))
 		;;No substitution: include the original.
 		;;
 		;;FIXME Can  %GET-FORWARD! actually return  #f?  I think  no.  (Marco

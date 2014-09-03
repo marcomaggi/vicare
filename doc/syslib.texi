@@ -8601,21 +8601,25 @@ is transformed into:
              ((a_0)     (constant 1))
              ((a_1 b_0) (constant 2)))))
   (funcall (primref list)
-    (jmpcall clambda-case-0 f_0 (constant 1))
-    (jmpcall clambda-case-1 f_0 (constant 1) (constant 2))))
+    (jmpcall asmlabel:f:clambda:case-1
+             f_0 (constant 1))
+    (jmpcall asmlabel:f:clambda:case-2
+             f_0 (constant 1) (constant 2))))
 @end example
 
 @noindent
-where: @code{clambda-case-0} is a label identifying the first case of
-the @objtype{clambda} bound to @code{f_0}; @code{clambda-case-1} is a
-label identifying the second case.
+where @code{asmlabel:f:clambda:case-1} is a placeholder for the address
+of the machine code entry point of the first case of the
+@objtype{clambda} bound to @code{f_0} (the one with 1 argument);
+@code{asmlabel:f:clambda:case-2} represents the machine code entry point
+of the second case.
 
 The following core language code defines a recursive function:
 
 @example
 (letrec ((f (case-lambda
-              (()        (f '1))
-              ((a)       a))))
+              (()  (f '1))
+              ((a) a))))
   ((primitive list) (f) (f '2)))
 @end example
 
@@ -8625,12 +8629,15 @@ and it is transformed into:
 @example
 (fix ((f_0 (case-lambda
              (()
-              (jmpcall clambda-case-1 f_0 (constant 1)))
+              (jmpcall asmlabel:f:clambda:case-1
+                       f_0 (constant 1)))
              ((a_0)
               a_0))))
-   (funcall (primref list)
-            (jmpcall clambda-case-0 f_0)
-            (jmpcall clambda-case-1 f_0 (constant 2))))
+  (funcall (primref list)
+    (jmpcall asmlabel:f:clambda:case-0
+             f_0)
+    (jmpcall asmlabel:f:clambda:case-1
+             f_0 (constant 2))))
 @end example
 
 @noindent
@@ -8749,6 +8756,29 @@ free variables referenced by each @objtype{closure}.
 @subsection Closures optimization and codes lifting
 
 
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@defun $optimize-closures/lift-codes @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code in the core language, and building a new hierarchy of transformed,
+recordised code; return a @objtype{codes} struct.
+@end defun
+
+
+@menu
+* syslib compiler lift codes req::      Prerequisites for codes lifting.
+* syslib compiler lift codes closures:: True closures and combinators.
+@end menu
+
+
+@c page
+@node syslib compiler lift codes req
+@subsubsection Prerequisites for codes lifting
+
+
 When arriving at this compiler pass the input recordised code is such
 that:
 
@@ -8774,8 +8804,13 @@ If the right--hand side expression of a binding defined by
 @objtype{bind} is a variable: such binding is immutable.
 @end itemize
 
-@noindent
-now let's consider some examples of code creating a function:
+
+@c page
+@node syslib compiler lift codes closures
+@subsubsection True closures and combinators
+
+
+Let's consider some examples of code creating a function:
 
 @itemize
 @item
@@ -8856,17 +8891,6 @@ with a reference to @code{a_0}, and so we can transform the code to:
       c_0)))
 @end example
 @end itemize
-
-The following bindings are exported by the library @library{vicare
-system $compiler}.
-
-
-@defun $optimize-closures/lift-codes @var{input}
-Perform code transformation traversing the whole hierarchy in
-@var{input}, which must be a struct instance representing recordised
-code in the core language, and building a new hierarchy of transformed,
-recordised code; return a @objtype{codes} struct.
-@end defun
 
 @c page
 @node syslib compiler cogen

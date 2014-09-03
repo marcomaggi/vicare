@@ -1901,8 +1901,8 @@
 		    ((a_0)     (constant 1))
 		    ((a_1 b_0) (constant 2)))))
 	  (funcall (primref list)
-	    (jmpcall clambda-case-0 f_0 (constant 1))
-	    (jmpcall clambda-case-1 f_0 (constant 1) (constant 2)))))
+	    (jmpcall asmlabel:f:clambda:case-1 f_0 (constant 1))
+	    (jmpcall asmlabel:f:clambda:case-2 f_0 (constant 1) (constant 2)))))
 
   ;;The same as above but expanded.
   (doit* (let ((f (case-lambda
@@ -1913,8 +1913,8 @@
 			 ((lex.a_0)         (constant 1))
 			 ((lex.a_1 lex.b_0) (constant 2)))))
 	   (funcall (primref list)
-	     (jmpcall clambda-case-0 lex.f_0 (constant 1))
-	     (jmpcall clambda-case-1 lex.f_0 (constant 1) (constant 2)))))
+	     (jmpcall asmlabel:lex.f:clambda:case-1 lex.f_0 (constant 1))
+	     (jmpcall asmlabel:lex.f:clambda:case-2 lex.f_0 (constant 1) (constant 2)))))
 
   ;;Recursive function.
   (doit (letrec ((f (case-lambda
@@ -1923,12 +1923,12 @@
 	  ((primitive list) (f) (f '2)))
 	(fix ((f_0 (case-lambda
 		    (()
-		     (jmpcall clambda-case-1 f_0 (constant 1)))
+		     (jmpcall asmlabel:f:clambda:case-1 f_0 (constant 1)))
 		    ((a_0)
 		     a_0))))
 	  (funcall (primref list)
-	    (jmpcall clambda-case-0 f_0)
-	    (jmpcall clambda-case-1 f_0 (constant 2)))))
+	    (jmpcall asmlabel:f:clambda:case-0 f_0)
+	    (jmpcall asmlabel:f:clambda:case-1 f_0 (constant 2)))))
 
   #t)
 
@@ -2060,21 +2060,23 @@
       ))
 
 ;;; --------------------------------------------------------------------
+;;; binding reference substitutions
 
   ;;Recursive function.
   (doit (letrec* ((a (lambda () a)))
 	  a)
-	(codes ((lambda (label: a) () (closure (code-loc a) no-freevars)))
-	       (closure (code-loc a) no-freevars)))
+	(codes ((lambda (label: asmlabel:a:clambda) () (closure (code-loc asmlabel:a:clambda) no-freevars)))
+	       (closure (code-loc asmlabel:a:clambda) no-freevars)))
 
   ;;The function A is a combinator (no free vars); as a consequence the function B is
   ;;also a combinator.
   (doit (letrec* ((a (lambda () '1))
 		  (b (lambda () (a))))
 	  b)
-	(codes ((lambda (label: b) () (jmpcall clambda-case-0 (closure (code-loc a) no-freevars)))
-		(lambda (label: a) () (constant 1)))
-	       (closure (code-loc b) no-freevars)))
+	(codes ((lambda (label: asmlabel:b:clambda) ()
+		   (jmpcall asmlabel:a:clambda:case-0 (closure (code-loc asmlabel:a:clambda) no-freevars)))
+		(lambda (label: asmlabel:a:clambda) () (constant 1)))
+	       (closure (code-loc asmlabel:b:clambda) no-freevars)))
 
   ;;The function  A is a closure  upon D, as a  consequence the function B  is also a
   ;;closure.
@@ -2083,25 +2085,27 @@
 		    (b (lambda () (a))))
 	    b))
 	(codes
-	 ((lambda (label: b) () (jmpcall clambda-case-0 a_0))
-	  (lambda (label: a) () d_0))
+	 ((lambda (label: asmlabel:b:clambda) () (jmpcall asmlabel:a:clambda:case-0 a_0))
+	  (lambda (label: asmlabel:a:clambda) () d_0))
 	 (bind ((d_0 (funcall (primref read))))
-	   (fix ((b_0 (closure (code-loc b) (freevars: a_0)))
-		 (a_0 (closure (code-loc a) (freevars: d_0))))
+	   (fix ((b_0 (closure (code-loc asmlabel:b:clambda) (freevars: a_0)))
+		 (a_0 (closure (code-loc asmlabel:a:clambda) (freevars: d_0))))
 	     b_0))))
 
   (doit (letrec ((f (case-lambda
 		     (()	(f '1))
 		     ((a)	a))))
 	  ((primitive list) (f) (f '2)))
-	(codes ((case-lambda
-		 (label: f)
-		 (()
-		  (jmpcall clambda-case-1 (closure (code-loc f) no-freevars) (constant 1)))
-		 ((a_0) a_0)))
+	(codes ((case-lambda (label: asmlabel:f:clambda)
+			     (()
+			      (jmpcall asmlabel:f:clambda:case-1
+				       (closure (code-loc asmlabel:f:clambda) no-freevars)
+				       (constant 1)))
+			     ((a_0)
+			      a_0)))
 	       (funcall (primref list)
-		 (jmpcall clambda-case-0 (closure (code-loc f) no-freevars))
-		 (jmpcall clambda-case-1 (closure (code-loc f) no-freevars) (constant 2)))))
+		 (jmpcall asmlabel:f:clambda:case-0 (closure (code-loc asmlabel:f:clambda) no-freevars))
+		 (jmpcall asmlabel:f:clambda:case-1 (closure (code-loc asmlabel:f:clambda) no-freevars) (constant 2)))))
 
 ;;; --------------------------------------------------------------------
 ;;; LIBRARY-LETREC* forms
@@ -2113,19 +2117,19 @@
 	     (d d.loc '4))
 	  (quote #!void))
 	(codes
-	 ((lambda (label: c) () (constant 3))
-	  (lambda (label: b) () (constant 2))
-	  (lambda (label: a) () (constant 1)))
+	 ((lambda (label: asmlabel:c:clambda) () (constant 3))
+	  (lambda (label: asmlabel:b:clambda) () (constant 2))
+	  (lambda (label: asmlabel:a:clambda) () (constant 1)))
 	 (seq
 	   (funcall (primref $set-symbol-value/proc!)
 	     (constant a.loc)
-	     (closure (code-loc a) no-freevars))
+	     (closure (code-loc asmlabel:a:clambda) no-freevars))
 	   (funcall (primref $init-symbol-value!)
 	     (constant b.loc)
-	     (closure (code-loc b) no-freevars))
+	     (closure (code-loc asmlabel:b:clambda) no-freevars))
 	   (funcall (primref $init-symbol-value!)
 	     (constant c.loc)
-	     (closure (code-loc c) no-freevars))
+	     (closure (code-loc asmlabel:c:clambda) no-freevars))
 	   (bind ((d_0 (constant 4)))
 	     (seq
 	       (funcall (primref $init-symbol-value!)
