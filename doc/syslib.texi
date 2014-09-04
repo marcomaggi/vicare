@@ -6809,7 +6809,7 @@ sanitize-bindings
 optimize-for-direct-jumps
 insert-global-assignments
 introduce-vars
-convert-closures
+introduce-closure-makers
 optimize-closures/lift-codes
 @end example
 
@@ -8740,7 +8740,7 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $convert-closures @var{input}
+@defun $introduce-closure-makers @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new

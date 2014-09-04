@@ -60,7 +60,7 @@
      (optimize-for-direct-jumps			$optimize-for-direct-jumps)
      (insert-global-assignments			$insert-global-assignments)
      (introduce-vars				$introduce-vars)
-     (convert-closures				$convert-closures)
+     (introduce-closure-makers			$introduce-closure-makers)
      (optimize-closures/lift-codes		$optimize-closures/lift-codes)
      (alt-cogen					$alt-cogen)
      (assemble-sources				$assemble-sources)
@@ -671,7 +671,7 @@
 	     (p (optimize-for-direct-jumps p))
 	     (p (insert-global-assignments p))
 	     (p (introduce-vars p))
-	     (p (convert-closures p))
+	     (p (introduce-closure-makers p))
 	     (p (optimize-closures/lift-codes p))
 	     (ls* (alt-cogen p)))
 	(when (assembler-output)
@@ -713,7 +713,7 @@
 	     (p (optimize-for-direct-jumps p))
 	     (p (insert-global-assignments p))
 	     (p (introduce-vars p))
-	     (p (convert-closures p))
+	     (p (introduce-closure-makers p))
 	     (p (optimize-closures/lift-codes p))
 	     (ls* (alt-cogen p)))
 	#;(gensym-prefix "L")
@@ -4139,7 +4139,7 @@
   #| end of module: introduce-vars |# )
 
 
-(module (convert-closures)
+(module (introduce-closure-makers)
   ;;This  module  wraps  each  CLAMBDA  struct in  the  input  recordised  code  into
   ;;CLOSURE-MAKER structures, compiling  a list of free variables  referenced by each
   ;;CLAMBDA.  Each CLOSURE-MAKER struct represents  code that, evaluated at run-time,
@@ -4158,9 +4158,9 @@
   ;;determine which CLAMBDA structs represent a recursive function.
   ;;
   (define-fluid-override __who__
-    (identifier-syntax 'convert-closures))
+    (identifier-syntax 'introduce-closure-makers))
 
-  (define (convert-closures X)
+  (define (introduce-closure-makers X)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
     ;;a  struct instance  representing  recordised  code in  the  core language,  and
     ;;building  a new  hierarchy  of  transformed, recordised  code;  return the  new
@@ -4205,7 +4205,7 @@
 
       ((fix lhs* rhs* body)
        ;;This is a FIX struct, so, assuming the recordised input is correct: the RHS*
-       ;;are CLAMBDA structs; the VARs in LHS* do can appear in the RHS* expressions.
+       ;;are CLAMBDA structs; the VARs in LHS* can appear in the RHS* expressions.
        ($for-each/stx (lambda (lhs)
 			(set-var-index! lhs #t))
 	 lhs*)

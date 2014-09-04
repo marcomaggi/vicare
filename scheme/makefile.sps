@@ -3107,7 +3107,7 @@
     ($sanitize-bindings				$compiler)
     ($optimize-for-direct-jumps			$compiler)
     ($insert-global-assignments			$compiler)
-    ($convert-closures				$compiler)
+    ($introduce-closure-makers			$compiler)
     ($optimize-closures/lift-codes		$compiler)
     ($alt-cogen					$compiler)
     ($assemble-sources				$compiler)

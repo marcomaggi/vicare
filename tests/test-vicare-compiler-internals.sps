@@ -2031,7 +2031,7 @@
 	   (D (compiler.$optimize-for-direct-jumps D))
 	   (D (compiler.$insert-global-assignments D))
 	   (D (compiler.$introduce-vars D))
-	   (D (compiler.$convert-closures D))
+	   (D (compiler.$introduce-closure-makers D))
 	   (D (compiler.$optimize-closures/lift-codes D))
 	   (S (compiler.$unparse-recordized-code/sexp D)))
       S))
