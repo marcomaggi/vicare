@@ -4814,56 +4814,44 @@
       ;;
       (when (eq? x 'q)
 	(compile-time-error __who__ "BUG: circular dep"))
-      (let ((old-var-subst (%var-get-subst x)))
-	(cond ((not old-var-subst)
+      (let ((x.subst (%var-get-subst x)))
+	(cond ((not x.subst)
 	       ;;The VAR struct  X has no substitution, so it  cannot be substituted:
 	       ;;just use it.  This might be a substitution: if X is not the start of
 	       ;;the graph traversal, the VAR from which the traversal was started is
 	       ;;substituted with X.
 	       x)
 
-	      ((var? old-var-subst)
+	      ((var? x.subst)
 	       ;;The VAR  struct X has another  VAR as substitution: step  forward in
 	       ;;the graph of substitutions.
-	       (%get-forward-recursion! x old-var-subst))
+	       (%get-forward-recursion! x x.subst))
 
-	      ((closure-maker? old-var-subst)
-	       ;;The VAR X has a CLOSURE-MAKER as substitution.
-	       (let ((freevar* ($closure-maker-freevar* old-var-subst)))
-		 (cond ((null? freevar*)
-			;;Substitution!!!  The original VAR  struct, at the beginning
-			;;of  the substitutions  graph traversal,  is substituted  by
-			;;this CLOSURE-MAKER  struct which has no  free variables and
-			;;so will return a "combinator" closure object.
-			old-var-subst)
-		       ((null? ($cdr freevar*))
-			;;This CLOSURE-MAKER struct has a single free variable.  Move
-			;;on the graph traversal to it.
-			(%get-forward-recursion! x ($car freevar*)))
-		       (else
-			;;Substitution!!!  The original VAR  struct, at the beginning
-			;;of  the substitutions  graph traversal,  is substituted  by
-			;;this  CLOSURE-MAKER  struct  which   has  2  or  more  free
-			;;variables.
-			old-var-subst))))
+	      ((closure-maker? x.subst)
+	       ;;The VAR  X has  a CLOSURE-MAKER as  substitution.  The  original VAR
+	       ;;struct, at  the beginning of  the substitutions graph  traversal, is
+	       ;;substituted by this CLOSURE-MAKER struct which has no free variables
+	       ;;and so will return a "combinator" closure object.
+	       #;(assert (null? (closure-maker-freevar* x.subst)))
+	       x.subst)
 
 	      ;;The VAR struct X cannot be substituted.  Just use it.
 	      ;;
 	      ;;FIXME Does this case ever happen?  (Marco Maggi; Thu Sep 4, 2014)
 	      (else
-	       (assert (node? old-var-subst))
-	       x))))
+	       (compiler-internal-error __who__
+		 "invalid VAR substitution" x x.subst)))))
 
-    (define (%get-forward-recursion! original-var old-var-subst)
+    (define (%get-forward-recursion! original-var old-subst)
       ;;By temporarily setting the subst to "q" we can detect circular references while
       ;;recursing into %FIND-VAR-SUBSTITUTION!.
       (%var-set-subst! original-var 'q)
-      (receive-and-return (new-var-subst)
-	  (%find-var-substitution! old-var-subst)
+      (receive-and-return (new-subst)
+	  (%find-var-substitution! old-subst)
 	;;Down the graph traversal we have retrieved a substitution: store it so that
 	;;further traversals  reaching ORIGINAL-VAR will  just use it rather  than go
 	;;deeper again.
-	(%var-set-subst! original-var new-var-subst)))
+	(%var-set-subst! original-var new-subst)))
 
     #| end of module: %FIND-VAR-SUBSTITUTION! |# )
 
