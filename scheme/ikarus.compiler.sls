@@ -4513,14 +4513,27 @@
       ;;Here we know that RHS* is a list  of CLOSURE structs in which the VAR in LHS*
       ;;might appear.
       ;;
-      (define freevar**
+      (define substituted-freevar**
 	;;Here  the  VAR  structs  in  LHS*  are   not  yet  part  of  the  graph  of
 	;;substitutions.
-	($map/stx (lambda (lhs rhs)
-		    ;;If the  LHS VAR referencing  the RHS  CLOSURE struct is  in the
-		    ;;list of free vars: remove it.
-		    (remq lhs (%trim-freevar* (closure-freevar* rhs))))
-	  lhs* rhs*))
+	;;
+	;;If  a  VAR  struct is  a  free  variable  for  RHS  and it  has  a  CLOSURE
+	;;substitution: such VAR  struct is not a "true free  variable", rather it is
+	;;removable; so we filter it out.
+	;;
+	;;If the VAR struct VAR1 is a free variable for RHS and it has the VAR struct
+	;;VAR2 as substitution:  the true free variable  of RHS is VAR2  not VAR1; so
+	;;here we replace VAR1 with VAR2.
+	;;
+	;;If RHS is a recursive function:
+	;;
+	;;   (fix ((f (lambda () f)))
+	;;     ?body)
+	;;
+	;;LHS appears  in reference position in  the body of the  function; so, among
+	;;the free  variables of RHS,  there is LHS itself.   We remove LHS  from the
+	;;list of free variables.
+	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
       (define node*
 	($map/stx (lambda (lhs rhs)
 		    (receive-and-return (N)
@@ -4541,7 +4554,7 @@
 			 ;;Not one of ours.
 			 (node-push-freevar! my-node freevar))))
 	      freevar*))
-	node* freevar**)
+	node* substituted-freevar**)
       ;;Next, we  go over the  list of nodes,  and if we find  one that has  any free
       ;;variables, we know it's a non-combinator, so we whack it and add it to all of
       ;;its dependents.
@@ -4612,15 +4625,7 @@
 	($for-each/stx
 	    (lambda (original-lhs closure)
 	      (let* ((lhs-replacement      (%find-var-substitution! original-lhs))
-		     ;;Remove  free  variables  that   have  a  CLOSURE  replacement;
-		     ;;substitute free  variables having a VAR  substitution with the
-		     ;;VAR replacement itself.
-		     (substituted-freevar* (%trim-freevar* ($closure-freevar* closure)))
-		     ;;If the original LHS has a VAR substitution: remove it.
-		     (substituted-freevar* (if (var? lhs-replacement)
-					       (remq lhs-replacement substituted-freevar*)
-					     substituted-freevar*)))
-		(assert (for-all var? substituted-freevar*))
+		     (substituted-freevar* (%filter-and-substitute-binding-freevars lhs-replacement closure)))
 		;;(filter var?
 		($set-closure-freevar*! closure substituted-freevar*)
 		;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
@@ -4656,45 +4661,68 @@
 		     ($cdr input-lhs*) ($cdr input-rhs*)
 		     body)))))
 
-    (define (%trim-freevar* freevar*)
-      ;;Non-tail recursive function.   Given a list of VAR  structs representing free
-      ;;variables in  the body  of a  function: build and  return a  new list  of VAR
-      ;;structs representing the actual free vars we care about.
-      ;;
-      ;;* Include the original VAR structs having no substitution.
-      ;;
-      ;;*  Filter  out   the  original  VAR  structs  having  a   CLOSURE  struct  as
-      ;;substitution.
-      ;;
-      ;;* Replace the  original VAR structs having a VAR  struct as substitution with
-      ;;the substitution itself.
-      ;;
-      (if (pair? freevar*)
-	  (let ((A ($car freevar*))
-		(D ($cdr freevar*)))
-	    (let* ((what (%find-var-substitution! A))
-		   (rest (%trim-freevar* D)))
-	      ;;Here WHAT  is the substitution  of A; it is  possible that WHAT  is A
-	      ;;itself.
-	      (if what
-		  (struct-case what
-		    ((closure)
-		     ;;The substitution is a CLOSURE struct: filter it out.
-		     rest)
-		    ((var)
-		     ;;The substitution is a VAR struct: include it, but only once.
-		     (if (memq what rest)
-			 rest
-		       (cons what rest)))
-		    (else
-		     (compiler-internal-error __who__
-		       "invalid VAR substitution value" what)))
-		;;No substitution: include the original.
-		;;
-		;;FIXME Can  %FIND-VAR-SUBSTITUTION! actually return  #f?  I think  no.  (Marco
-		;;maggi; Mon Sep 1, 2014)
-		(cons A rest))))
-	'()))
+    (module (%filter-and-substitute-binding-freevars)
+
+      (define (%filter-and-substitute-binding-freevars self-var clos)
+	;;Build  and  return a  list  of  VAR  structs  representing the  "true  free
+	;;variables" of the CLOSURE struct in CLOS.  Taken the list of free variables
+	;;from CLOS:
+	;;
+	;;* Include the VAR structs having no substitution.
+	;;
+	;;* Remove the VAR structs that have a CLOSURE struct as replacement.
+	;;
+	;;*  Substitute the  VAR  structs  having a  VAR  substitution  with the  VAR
+	;;  substitution itself.
+	;;
+	;;* If  SELF-VAR is a  VAR struct and  it is in  the list of  free variables:
+	;;  remove it.   This is meant to remove self  references for CLOSURE structs
+	;;  representing recursive functions:
+	;;
+	;;     (fix ((f (lambda () f)))
+	;;       ?body)
+	;;
+	;;  which have a  reference to themselves in the body of  the function and so
+	;;  in the list of free variables.
+	;;
+	(let ((substituted-freevar* (%filter-freevar* ($closure-freevar* clos))))
+	  (if (var? self-var)
+	      (remq self-var substituted-freevar*)
+	    substituted-freevar*)))
+
+      (define (%filter-freevar* freevar*)
+	;;Non-tail recursive function.  Given a list of VAR structs representing free
+	;;variables in  the body of a  function: build and  return a new list  of VAR
+	;;structs representing the actual free vars we care about.
+	(if (pair? freevar*)
+	    (let ((A ($car freevar*))
+		  (D ($cdr freevar*)))
+	      (let* ((what (%find-var-substitution! A))
+		     (rest (%filter-freevar* D)))
+		;;Here WHAT is the  substitution of A; it is possible  that WHAT is A
+		;;itself.
+		(if what
+		    (struct-case what
+		      ((closure)
+		       ;;The substitution is a CLOSURE struct: filter it out.
+		       rest)
+		      ((var)
+		       ;;Either WHAT  is A itself or  the substitution of A  is a VAR
+		       ;;struct: include it, but only once.
+		       (if (memq what rest)
+			   rest
+			 (cons what rest)))
+		      (else
+		       (compiler-internal-error __who__
+			 "invalid VAR substitution value" what)))
+		  ;;No substitution: include the original.
+		  ;;
+		  ;;FIXME Can  %FIND-VAR-SUBSTITUTION! actually return  #f?  I think  no.  (Marco
+		  ;;maggi; Mon Sep 1, 2014)
+		  (cons A rest))))
+	  '()))
+
+      #| end of module: %ORIGINAL-FREEVAR*->FILTERED-AND-SUBSTITUTED-FREEVAR *|# )
 
     (define (lift-code cp original-clam new-freevar*)
       ;;Given data from a CLOSURE struct: build a new CLAMBDA to be used to generated
@@ -4719,13 +4747,12 @@
 	 (let ((clause*^ ($map/stx (lambda (clause)
 				     (struct-case clause
 				       ((clambda-case info body)
-					;;Clear  the field  "index" of  the VAR  structs in
-					;;ARGS  from whatever  value the  previous compiler
-					;;passes have left in.
+					;;Clear the field "index"  of the VAR structs
+					;;in  ARGS from  whatever value  the previous
+					;;compiler passes have left in.
 					($for-each/stx %var-reset-subst! (case-info-args info))
 					(make-clambda-case info (E body)))))
 			   clause*)))
-	   #;(fprintf (current-error-port) "name=~a, code-loc label=~a\n" name label)
 	   (%prepend-to-all-codes! (make-clambda label clause*^ cp new-freevar* name))
 	   (make-code-loc label)))))
 
