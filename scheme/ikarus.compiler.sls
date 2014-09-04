@@ -4481,34 +4481,6 @@
 
   (module (E-fix node?)
 
-    (define-struct node
-      ;;Each CLOSURE struct appears as RHS in  a FIX struct.  Each CLOSURE struct has
-      ;;a NODE associated to it.
-      ;;
-      (name
-		;The VAR struct appearing as LHS in the binding definition associated
-		;to this NODE.
-       code
-		;The CLAMBDA or CODE-LOC associated to the CLOSURE.
-       deps
-		;Null or a list of NODE structs.
-       whacked
-		;Boolean.
-       freevar*
-		;Null or a list of VAR structs.
-       recursive?
-		;Boolean.  True if the CLOSURE associated to this NODE is recursive.
-       ))
-
-    (define (mk-node lhs code recursive?)
-      (make-node lhs code '() #f '() recursive?))
-
-    (define (node-push-freevar! node freevar)
-      ($set-node-freevar*! node (cons freevar ($node-freevar* node))))
-
-    (define (node-push-dep! node dep)
-      ($set-node-deps! node (cons dep ($node-deps node))))
-
     (define (E-fix lhs* rhs* body)
       ;;Here we know that RHS* is a list  of CLOSURE structs in which the VAR in LHS*
       ;;might appear.
@@ -4525,6 +4497,9 @@
 	;;
 	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
       (define node*
+	;;Define the  NODE structs  required to establish  the graph  of dependencies
+	;;among "true  closures".  Temporarily set  the NODE as substitution  for the
+	;;VAR.
 	($map/stx (lambda (lhs rhs)
 		    (receive-and-return (N)
 			(mk-node lhs (closure-code rhs) (closure-recursive? rhs))
@@ -4550,76 +4525,17 @@
       ;;its dependents.
       ;;
       (let ()
-	(define (%process-node x)
+	(define (%process-node-successors x)
 	  ;;Non-tail recursive function.
-	  (when (cond ((null? (node-freevar* x))
-		       #f)
-		      ;; ((and (node-recursive? x)
-		      ;;       (null? (cdr (node-freevar* x))))
-		      ;;  #f)
-		      (else #t))
-	    (unless (node-whacked x)
-	      (set-node-whacked! x #t)
-	      (for-each (lambda (y)
-			  (node-push-freevar! y (node-name x))
-			  (%process-node y))
-		(node-deps x)))))
-	($for-each/stx %process-node node*))
-      (let ((rhs* ($map/stx
-		      ;;The  CLOSURE  structs  that  still  have  non-removable  free
-		      ;;variables  are "true  closures":  they  will become  run-time
-		      ;;closure objects  actually closed upon free  variables.  A VAR
-		      ;;struct  referencing such  true-closure  object  must be  left
-		      ;;alone: it cannot be subsituted by the CLOSURE struct itself.
-		      ;;
-		      ;;The  CLOSURE structs  with no  free variables  or whose  free
-		      ;;variables  are all  removable  are  "combinators": they  will
-		      ;;beome run-time closure object not closed upon free variables.
-		      ;;Everywhere a VAR referencing the CLOSURE appears in reference
-		      ;;position,  we  can  substitute  it with  the  CLOSURE  struct
-		      ;;itself.
-		      ;;
-		      ;;Here we scan  the list of NODEs and convert  it into the list
-		      ;;of CLOSURE structs that will be candidate to inclusion in the
-		      ;;output FIX  struct.  We determine  here if a binding  must be
-		      ;;included in the graph of substitutions or not.
-		      ;;
-		      ;;NOTE Upon  entering this loop  all the  VAR in the  LHS* list
-		      ;;have a NODE  struct as substitution.  In this  loop either we
-		      ;;reset the substitution  to false, or replace the  NODE with a
-		      ;;proper CLOSURE substitution.
-		      (lambda (node)
-			(let ((freevar*   ($node-freevar*   node))
-			      (recursive? ($node-recursive? node)))
-			  (receive-and-return (closure)
-			      (make-closure ($node-code node) freevar* recursive?)
-			    ;;Is the binding  of CLOSURE to be included  in the graph
-			    ;;of substitutions?
-			    (let ((lhs ($node-name node)))
-			      (cond ((null? freevar*)
-				     ;;This CLOSURE struct has  no free variables: it
-				     ;;is a combinator.  Let's add it to the graph of
-				     ;;substitutions.
-				     (%var-set-subst! lhs closure))
-				    ((and recursive? (null? ($cdr freevar*)))
-				     ;;This CLOSURE struct has 1 free variable and it
-				     ;;is  recursive;   this  means  the   only  free
-				     ;;variable  is  the  VAR  self  referencing  the
-				     ;;closure itself:
-				     ;;
-				     ;;  (fix ((f (lambda () f)))
-				     ;;    ?body)
-				     ;;
-				     (assert (eq? lhs (car freevar*)))
-				     ;;This CLOSURE is a combinator.  Let's add it to
-				     ;;the graph of substitutions.
-				     (%var-set-subst! lhs closure))
-				    (else
-				     ;;This CLOSURE  struct has true,  not removable,
-				     ;;free variables: it is a "true closure".  Let's
-				     ;;leave it alone.
-				     (%var-reset-subst! lhs)))))))
-		    node*)))
+	  (unless (or (null? ($node-freevar* x))
+		      ($node-done? x))
+	    ($set-node-done?! x #t)
+	    ($for-each/stx (lambda (successor)
+			     (node-push-freevar! successor ($node-name x))
+			     (%process-node-successors successor))
+	      ($node-deps x))))
+	($for-each/stx %process-node-successors node*))
+      (let ((rhs* (%assign-substitutions-to-closures node*)))
 	;;Clean the lists of free variables  for the substitutions of the bindings in
 	;;this very FIX struct.  Introduce the  CODE-LOC structs and push the CLAMBDA
 	;;structs to ALL-CODES.
@@ -4627,6 +4543,97 @@
 	;;Process  the BODY  substituting  VAR structs  from  LHS* when  appropriate.
 	;;Build and return the output FIX struct.
 	(%mk-fix '() '() lhs* rhs* (E body))))
+
+    (define (%assign-substitutions-to-closures node*)
+      ;;The CLOSURE  structs that still  have non-removable free variables  are "true
+      ;;closures": they  will become  run-time closure  objects actually  closed upon
+      ;;free variables.  The VAR struct  referencing such true-closure object must be
+      ;;left alone: it cannot be subsituted by the CLOSURE struct itself.
+      ;;
+      ;;The CLOSURE  structs with no free  variables or whose free  variables are all
+      ;;removable  are "combinators":  they will  beome run-time  closure object  not
+      ;;closed upon free variables.  The  VAR struct referencing such combinator must
+      ;;be substituted with the CLOSURE struct itself.
+      ;;
+      ;;Here  we scan  the list  of NODEs  and convert  it into  the list  of CLOSURE
+      ;;structs that  will be candidate  to inclusion in  the output FIX  struct.  We
+      ;;determine here if a binding must be included in the graph of substitutions or
+      ;;not.  If a binding  is defined by a FIX: either it has  no substitution or it
+      ;;has its CLOSURE as substitution.
+      ;;
+      ;;NOTE Upon entering this loop all the VAR  in the LHS* list have a NODE struct
+      ;;as substitution.  Here we either reset  the substitution to false, or replace
+      ;;the NODE with a proper CLOSURE substitution.
+      ;;
+      ($map/stx (lambda (node)
+		  (let ((freevar*   ($node-freevar*   node))
+			(recursive? ($node-recursive? node)))
+		    (receive-and-return (closure)
+			;;Make the  new CLOSURE using  the list of free  variables we
+			;;have cleaned before.
+			(make-closure ($node-code node) freevar* recursive?)
+		      ;;Is the  binding of  CLOSURE to  be included  in the  graph of
+		      ;;substitutions?
+		      (let ((lhs ($node-name node)))
+			(cond ((null? freevar*)
+			       ;;This CLOSURE struct  has no free variables:  it is a
+			       ;;combinator.    Let's  add   it  to   the  graph   of
+			       ;;substitutions.
+			       (%var-set-subst! lhs closure))
+			      ((and recursive? (null? ($cdr freevar*)))
+			       ;;This CLOSURE  struct has 1  free variable and  it is
+			       ;;recursive; this means the  only free variable is the
+			       ;;VAR self referencing the closure itself:
+			       ;;
+			       ;;  (fix ((f (lambda () f)))
+			       ;;    ?body)
+			       ;;
+			       #;(assert (eq? lhs (car freevar*)))
+			       ;;This CLOSURE is  a combinator.  Let's add  it to the
+			       ;;graph of substitutions.
+			       (%var-set-subst! lhs closure))
+			      (else
+			       ;;This CLOSURE  struct has  true, not  removable, free
+			       ;;variables: it  is a "true closure".   Let's leave it
+			       ;;alone.
+			       (%var-reset-subst! lhs)))))))
+	node*))
+
+;;; --------------------------------------------------------------------
+
+    (define-struct node
+      ;;Each CLOSURE struct appears as RHS in  a FIX struct.  Each CLOSURE struct has
+      ;;a NODE associated to it.
+      ;;
+      (name
+		;The VAR struct appearing as LHS in the binding definition associated
+		;to this NODE.
+       code
+		;The CLAMBDA or CODE-LOC associated to the CLOSURE.
+       deps
+		;Null or a list of NODE structs.
+       done?
+		;Boolean.  If  true this  NODE struct has  already been  processed to
+		;establish its "true closure" dependencies.
+       freevar*
+		;Null or the  list of VAR structs representing free  variables in the
+		;CLAMBDA.   This   list  of  free   variables  is  cleaned   up  from
+		;substitutions in outer binding forms  and from the possible self VAR
+		;reference (in recursive functions).
+       recursive?
+		;Boolean.  True if the CLOSURE associated to this NODE is recursive.
+       ))
+
+    (define (mk-node lhs code recursive?)
+      (make-node lhs code '() #f '() recursive?))
+
+    (define (node-push-freevar! node freevar)
+      ($set-node-freevar*! node (cons freevar ($node-freevar* node))))
+
+    (define (node-push-dep! node dep)
+      ($set-node-deps! node (cons dep ($node-deps node))))
+
+;;; --------------------------------------------------------------------
 
     (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
       ;;Perform the final cleanup of the list of free variables in each RHS's CLOSURE
@@ -4862,7 +4869,7 @@
       ;;the symbol "q".
       ;;
       #;(assert (var? x))
-      (assert (or (node? v) (closure? v) (var? v) (eq? v 'q)))
+      #;(assert (or (node? v) (closure? v) (var? v) (eq? v 'q)))
       ($set-var-index! x (make-prop v)))
 
     (define (%var-copy-subst! lhs rhs)
