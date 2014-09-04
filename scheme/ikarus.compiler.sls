@@ -4575,21 +4575,29 @@
 			  (%process-node y))
 		(node-deps x)))))
 	($for-each/stx %process-node node*))
-      ;;The CLOSURE  structs that still  have non-removable free variables  are "true
-      ;;closures": they  will become  run-time closure  objects actually  closed upon
-      ;;free variables.   A VAR struct  referencing such true-closure object  must be
-      ;;left alone: it cannot be subsituted by the CLOSURE struct itself.
-      ;;
-      ;;The CLOSURE  structs with no free  variables or whose free  variables are all
-      ;;removable  are "combinators":  they will  beome run-time  closure object  not
-      ;;closed upon free variables.  Everywhere a VAR referencing the CLOSURE appears
-      ;;in reference position, we can substitute it with the CLOSURE struct itself.
-      ;;
-      ;;Here  we scan  the list  of NODEs  and convert  it into  the list  of CLOSURE
-      ;;structs the  will be  candidate to  inclusion in the  output FIX  struct.  We
-      ;;determine here if a binding must be included in the graph of substitutions or
-      ;;not.
       (let ((rhs* ($map/stx
+		      ;;The  CLOSURE  structs  that  still  have  non-removable  free
+		      ;;variables  are "true  closures":  they  will become  run-time
+		      ;;closure objects  actually closed upon free  variables.  A VAR
+		      ;;struct  referencing such  true-closure  object  must be  left
+		      ;;alone: it cannot be subsituted by the CLOSURE struct itself.
+		      ;;
+		      ;;The  CLOSURE structs  with no  free variables  or whose  free
+		      ;;variables  are all  removable  are  "combinators": they  will
+		      ;;beome run-time closure object not closed upon free variables.
+		      ;;Everywhere a VAR referencing the CLOSURE appears in reference
+		      ;;position,  we  can  substitute  it with  the  CLOSURE  struct
+		      ;;itself.
+		      ;;
+		      ;;Here we scan  the list of NODEs and convert  it into the list
+		      ;;of CLOSURE structs that will be candidate to inclusion in the
+		      ;;output FIX  struct.  We determine  here if a binding  must be
+		      ;;included in the graph of substitutions or not.
+		      ;;
+		      ;;NOTE Upon  entering this loop  all the  VAR in the  LHS* list
+		      ;;have a NODE  struct as substitution.  In this  loop either we
+		      ;;reset the substitution  to false, or replace the  NODE with a
+		      ;;proper CLOSURE substitution.
 		      (lambda (node)
 			(let ((freevar*   ($node-freevar*   node))
 			      (recursive? ($node-recursive? node)))
@@ -4622,20 +4630,29 @@
 				     ;;leave it alone.
 				     (%var-reset-subst! lhs)))))))
 		    node*)))
-	($for-each/stx
-	    (lambda (original-lhs closure)
-	      (let* ((lhs-replacement      (%find-var-substitution! original-lhs))
-		     (substituted-freevar* (%filter-and-substitute-binding-freevars lhs-replacement closure)))
-		;;(filter var?
-		($set-closure-freevar*! closure substituted-freevar*)
-		;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
-		;;struct.
-		($set-closure-code! closure (lift-code lhs-replacement
-						       ($closure-code     closure)
-						       ($closure-freevar* closure)))))
-	  lhs* rhs*)
+	(%final-freevars-cleanup-and-code-lifting lhs* rhs*)
 	;;Build and return the output FIX struct.
 	(%mk-fix '() '() lhs* rhs* (E body))))
+
+    (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
+      ;;Perform the final cleanup of the list of free variables in each RHS's CLOSURE
+      ;;struct; then replace the CLAMBDA in the CLOSURE struct with a CODE-LOC struct
+      ;;and enqueue the CLAMBDA in the list  of all the CLAMBDAs defined by the input
+      ;;expression.
+      ;;
+      ($for-each/stx
+	  (lambda (lhs closure)
+	    (let ((substituted-freevar* (%filter-and-substitute-binding-freevars lhs closure)))
+	      (assert (let ((lhs-replacement (%find-var-substitution! lhs)))
+			(or (eq? lhs lhs-replacement)
+			    (closure? lhs-replacement))))
+	      ($set-closure-freevar*! closure substituted-freevar*)
+	      ;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
+	      ;;struct.
+	      ($set-closure-code! closure (%lift-code lhs
+						      ($closure-code     closure)
+						      ($closure-freevar* closure)))))
+	lhs* rhs*))
 
     (define (%mk-fix output-lhs* output-rhs* input-lhs* input-rhs* body)
       ;;Tail-recursive function.  Build and return the output FIX struct.  Of all the
@@ -4724,7 +4741,7 @@
 
       #| end of module: %ORIGINAL-FREEVAR*->FILTERED-AND-SUBSTITUTED-FREEVAR *|# )
 
-    (define (lift-code cp original-clam new-freevar*)
+    (define (%lift-code cp original-clam new-freevar*)
       ;;Given data from a CLOSURE struct: build a new CLAMBDA to be used to generated
       ;;the actual code  object; build a CODE-LOC  struct to be used  to generate the
       ;;actual  closure object;  return the  CODE-LOC; push  the new  CLAMBDA on  the
