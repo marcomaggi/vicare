@@ -4529,8 +4529,8 @@
       (let ()
 	(define (%process-node-successors x)
 	  ;;Non-tail recursive function.
-	  (unless (or (null? ($node-freevar* x))
-		      ($node-done? x))
+	  (unless (or ($node-done? x)
+		      (null? ($node-freevar* x)))
 	    ($set-node-done?! x #t)
 	    ($for-each/stx (lambda (successor)
 			     (node-push-freevar! successor ($node-name x))
@@ -4619,7 +4619,7 @@
 			       ;;This CLOSURE-MAKER struct has  no free variables: it
 			       ;;will return a combinator.  Let's add it to the graph
 			       ;;of substitutions.
-			       (%var-set-subst! lhs clmaker))
+			       (%var-reset-node/set-subst! lhs clmaker))
 			      ((and recursive? (null? ($cdr freevar*)))
 			       ;;This CLOSURE-MAKER struct has 1 free variable and it
 			       ;;is recursive;  this means the only  free variable is
@@ -4631,12 +4631,12 @@
 			       #;(assert (eq? lhs (car freevar*)))
 			       ;;This CLOSURE-MAKER will  return a combinator.  Let's
 			       ;;add it to the graph of substitutions.
-			       (%var-set-subst! lhs closure-maker))
+			       (%var-reset-node/set-subst! lhs closure-maker))
 			      (else
 			       ;;This CLOSURE-MAKER  struct has true,  not removable,
 			       ;;free  variables: it  will return  a "true  closure".
 			       ;;Let's leave it alone.
-			       (%var-reset-subst! lhs)))))))
+			       (%var-reset-node! lhs)))))))
 	node*))
 
     (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
@@ -4925,12 +4925,12 @@
     ($set-var-index! x #f))
 
   (define (%var-set-subst! x v)
-    ;;X is  a VAR struct.   V can be:  a VAR struct,  a NODE struct,  a CLOSURE-MAKER
-    ;;struct, the symbol "q".
-    ;;
     #;(assert (var? x))
     #;(assert (or (node? v) (closure-maker? v) (var? v) (eq? v 'q)))
     ($set-var-index! x v))
+
+  (define (%var-reset-node/set-subst! x v)
+    (%var-set-subst! x v))
 
   (define (%var-copy-subst! lhs rhs)
     ;;LHS and RHS are, respectively, the left-hand side VAR struct and the right-hand
