@@ -4602,8 +4602,8 @@
       ;;has its CLOSURE-MAKER as substitution.
       ;;
       ;;NOTE Upon entering this loop all the VAR  in the LHS* list have a NODE struct
-      ;;as substitution.  Here we either reset  the substitution to false, or replace
-      ;;the NODE with a proper CLOSURE-MAKER substitution.
+      ;;as value in the  "index" field.  Here we either reset the  field to false, or
+      ;;replace the NODE with a proper CLOSURE-MAKER substitution.
       ;;
       ($map/stx (lambda (node)
 		  (let ((freevar*   ($node-freevar*   node))
@@ -4615,28 +4615,15 @@
 		      ;;Is the binding  of CLOSURE-MAKER to be included  in the graph
 		      ;;of substitutions?
 		      (let ((lhs ($node-name node)))
-			(cond ((null? freevar*)
-			       ;;This CLOSURE-MAKER struct has  no free variables: it
-			       ;;will return a combinator.  Let's add it to the graph
-			       ;;of substitutions.
-			       (%var-reset-node/set-subst! lhs clmaker))
-			      ((and recursive? (null? ($cdr freevar*)))
-			       ;;This CLOSURE-MAKER struct has 1 free variable and it
-			       ;;is recursive;  this means the only  free variable is
-			       ;;the VAR self referencing the closure itself:
-			       ;;
-			       ;;  (fix ((f (lambda () f)))
-			       ;;    ?body)
-			       ;;
-			       #;(assert (eq? lhs (car freevar*)))
-			       ;;This CLOSURE-MAKER will  return a combinator.  Let's
-			       ;;add it to the graph of substitutions.
-			       (%var-reset-node/set-subst! lhs closure-maker))
-			      (else
-			       ;;This CLOSURE-MAKER  struct has true,  not removable,
-			       ;;free  variables: it  will return  a "true  closure".
-			       ;;Let's leave it alone.
-			       (%var-reset-node! lhs)))))))
+			(if (null? freevar*)
+			    ;;This  CLOSURE-MAKER struct  has no  free variables:  it
+			    ;;will return a combinator.  Let's add it to the graph of
+			    ;;substitutions.
+			    (%var-reset-node/set-subst! lhs clmaker)
+			  ;;This CLOSURE-MAKER  struct has true, not  removable, free
+			  ;;variables: it will return  a "true closure".  Let's leave
+			  ;;it alone.
+			  (%var-reset-node! lhs))))))
 	node*))
 
     (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
