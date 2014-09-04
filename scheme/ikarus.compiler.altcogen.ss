@@ -26,7 +26,7 @@
 ;;           | (fix var* <FixRhs>* <Expr>)
 ;;           | (conditional <Expr> <Expr> <Expr>)
 ;;           | (seq <Expr> <Expr>)
-;;           | (closure <codeloc> <var>*)  ; thunk special case
+;;           | (closure-maker <codeloc> <var>*)  ; thunk special case
 ;;           | (forcall "name" <Expr>*)
 ;;           | (funcall <Expr> <Expr>*)
 ;;           | (jmpcall <label> <Expr> <Expr>*)
@@ -103,7 +103,7 @@
   ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
   ;;recordized code must be composed by struct instances of the following types:
   ;;
-  ;;   bind		closure		conditional
+  ;;   bind		closure-maker	conditional
   ;;   constant		fix		forcall
   ;;   funcall		jmpcall		known
   ;;   primref		seq		var
@@ -165,7 +165,7 @@
 	((seq e0 e1)
 	 (make-seq (E e0) (E e1)))
 
-	((closure)
+	((closure-maker)
 	 x)
 
 	((forcall op arg*)
@@ -280,13 +280,13 @@
   ;;   object from  the associated slot in the data  area of the closure
   ;;   built in object.
   ;;
-  ;;4.  For every  ?CLOSURE in the expressions of  the <Program> perform
-  ;;   this transformation:
+  ;;4.  For  every ?CLOSURE-MAKER in  the expressions  of the <Program>  perform this
+  ;;   transformation:
   ;;
-  ;;      (let ((T ?closure))
+  ;;      (let ((T ?closure-maker))
   ;;        T)
   ;;
-    (define who 'alt-cogen.eliminate-fix)
+  (define who 'alt-cogen.eliminate-fix)
 
   (define (alt-cogen.eliminate-fix Program)
     (struct-case Program
@@ -316,8 +316,8 @@
 	 (error who "invalid clambda" x))))
 
     (define (ClambdaCase main-cp freevar*)
-      ;;MAIN-CP must be a  struct instance of type VAR to  which the CLOSURE wrapping
-      ;;this CLAMBDA is bound.
+      ;;MAIN-CP must  be a  struct instance  of type VAR  to which  the CLOSURE-MAKER
+      ;;referencing this CLAMBDA is bound.
       ;;
       ;;FREEVAR* must be a list of struct instances of type VAR representing the free
       ;;variables referenced by the clauses of this CASE-LAMBDA.
@@ -364,10 +364,10 @@
       ;;
       ;;2. Map %DO-FIX to every struct instance of type FIX.
       ;;
-      ;;3. Convert every  struct instance of type CLOSURE  into a struct
-      ;;   instance of type FIX representing this form:
+      ;;3.  Convert every  standalone struct  instance of  type CLOSURE-MAKER  into a
+      ;;   struct instance of type FIX representing this form:
       ;;
-      ;;      (let ((T ?closure))
+      ;;      (let ((T ?closure-maker))
       ;;        T)
       ;;
       ;;   where T is a unique variable.
@@ -394,7 +394,7 @@
 	((seq e0 e1)
 	 (make-seq (E e0) (E e1)))
 
-	((closure)
+	((closure-maker)
 	 (let ((t (make-unique-var 'tmp)))
 	   (E (make-fix (list t) (list x) t))))
 
@@ -430,11 +430,11 @@
 	(make-fix lhs* ($map/stx %handle-closure rhs*) body))
 
       (define (%handle-closure rhs)
-	;;RHS must be a struct instance of type CLOSURE.
+	;;RHS must be a struct instance of type CLOSURE-MAKER.
 	;;
 	(struct-case rhs
-	  ((closure code freevar* recursive?)
-	   (make-closure code ($map/stx %do-var freevar*) recursive?))))
+	  ((closure-maker code freevar* recursive?)
+	   (make-closure-maker code ($map/stx %do-var freevar*) recursive?))))
 
       #| end of module: %do-fix |# )
 
@@ -5130,7 +5130,9 @@
 	 (label-address label))
 	((foreign-label L)
 	 `(foreign-label ,L))
-	((closure label freevar*)
+	;;FIXME Can a  CLOSURE-MAKER actually appear here?  (Marco Maggi;  Thu Sep 4,
+	;;2014)
+	((closure-maker code freevar*)
 	 (unless (null? freevar*)
 	   (error who "nonempty closure"))
 	 `(obj ,x))

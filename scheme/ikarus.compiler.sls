@@ -720,12 +720,12 @@
 	ls*)))
 
   (define (thunk?-label x)
-    ;;If X is  a struct instance of  type CLOSURE with no free  variables: return the
-    ;;associated label (a loc gensym?).
+    ;;If X is a struct instance of  type CLOSURE-MAKER with no free variables: return
+    ;;the associated label.
     ;;
-    (and (closure? x)
-	 (if (null? (closure-freevar* x))
-	     (code-loc-label (closure-code x))
+    (and (closure-maker? x)
+	 (if (null? (closure-maker-freevar* x))
+	     (code-loc-label (closure-maker-code x))
 	   (compiler-internal-error #f "non-thunk escaped" x))))
 
   (define (print-instr x)
@@ -1129,18 +1129,19 @@
 ;;
 (define-struct clambda
   (label
-		;A unique gensym associated to this closure.  It will become the name
-		;of the assembly  label representing the entry point  to the CLAMBDA.
-		;It is used to generate, when  possible, direct jumps to this CLAMBDA
-		;entry  point (rather  than  performing  a full  call  to a  run-time
-		;closure object).
+		;A unique  gensym associated to  the code object that  will implememt
+		;this  CLAMBDA.   It will  become  the  name  of the  assembly  label
+		;representing the  entry point  to the CLAMBDA  machine code.   It is
+		;used to generate, when possible,  direct jumps to this CLAMBDA entry
+		;point  (rather than  performing a  full call  to a  run-time closure
+		;object).
    cases
 		;A list  of struct  instances of  type CLAMBDA-CASE  representing the
 		;clauses.
    cp
 		;Initialised to #f, it  is set to the struct instance  of type VAR to
-		;which the  CLOSURE wrapping  this CLAMBDA is  bound.  CP  stands for
-		;"Closure Pointer".
+		;which the CLOSURE-MAKER  wrapping this CLAMBDA is  bound.  CP stands
+		;for "Closure Pointer".
    freevar*
 		;Initialised to #f,  it is set to a list  of VAR structs representing
 		;the free variables referenced by this CLAMBDA.
@@ -1326,20 +1327,17 @@
 
 ;;; --------------------------------------------------------------------
 
-;;Instances of this type represent closures.
+;;Instances of this  type represent form that, evaluated at  run-time, will build and
+;;return closure objects.
 ;;
-;;NOTE  We must  not confuse  struct  instances of  type CLOSURE,  used to  represent
-;;recordized code, with  instances of Scheme built in objects  of type closure, which
-;;represent closures at run time.
-;;
-(define-struct closure
+(define-struct closure-maker
   (code
 		;First a CLAMBDA struct representing  a function defined by the input
-		;expression;  then a  CODE-LOC  struct  to be  used  to generate  the
-		;run-time closure object representing the function.
+		;expression; then, after  code lifting, a CODE-LOC struct  to be used
+		;to generate the run-time closure object representing the function.
    freevar*
-		;A  list  of struct  instances  of  type  VAR representing  the  free
-		;variables referenced by this CLOSURE.
+		;Null or a  proper list of struct instances of  type VAR representing
+		;the free variables referenced by the generated closure object.
    recursive?
 		;Boolean.  True if the body of  the CLAMBDA references itself, and so
 		;the function is recursive; false otherwise.
@@ -1427,14 +1425,14 @@
 ;;
 ;;   (lambda ?formals ?body)
 ;;
-;;is converted first  into a CLAMBDA struct,  then into a CLOSURE  struct holding the
-;;CLAMBDA:
+;;is converted first into a CLAMBDA  struct, then into a CLOSURE-MAKER struct holding
+;;the CLAMBDA:
 ;;
-;;   (closure ?clambda ?freevar* ?recursive)
+;;   (closure-maker ?clambda ?freevar* ?recursive)
 ;;
-;;and then into a CLOSURE struct holding a CODE-LOC:
+;;and then into a CLOSURE-MAKER struct holding a CODE-LOC:
 ;;
-;;   (closure ?code-loc ?freevar* ?recursive)
+;;   (closure-maker ?code-loc ?freevar* ?recursive)
 ;;
 ;;A CODE-LOC  struct represents  a reference  to the  code object  that is  needed to
 ;;construct a  run-time closure object.   We need to  remember that a  closure object
@@ -1443,7 +1441,9 @@
 ;;
 (define-struct code-loc
   (label
-		;The gensym of the referenced CLAMBDA.
+		;The gensym  of the referenced CLAMBDA.   It will become the  name of
+		;the  assembly label  representing  the entry  point  to the  CLAMBDA
+		;machine code.
    ))
 
 (define-struct foreign-label
@@ -4140,8 +4140,10 @@
 
 
 (module (convert-closures)
-  ;;This module wraps  each CLAMBDA struct in the input  recordised code into CLOSURE
-  ;;structures, compiling a list of free variables referenced by each CLOSURE.
+  ;;This  module  wraps  each  CLAMBDA  struct in  the  input  recordised  code  into
+  ;;CLOSURE-MAKER structures, compiling  a list of free variables  referenced by each
+  ;;CLAMBDA.  Each CLOSURE-MAKER struct represents  code that, evaluated at run-time,
+  ;;will build and return a closure object.
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
@@ -4210,7 +4212,7 @@
        (let-values
 	   (((rhs*^ freevar*.rhs)  (E-clambda* lhs* rhs*))
 	    ((body^ freevar*.body) (E body)))
-	 ;;Here RHS*^ is a list of CLOSURE structs.
+	 ;;Here RHS*^ is a list of CLOSURE-MAKER structs.
 	 ($for-each/stx (lambda (lhs rhs^)
 			  ;;LHS is the  VAR struct referencing the  CLAMBDA RHS^.  If
 			  ;;the field  "index" of LHS  is true: LHS appears  at least
@@ -4218,7 +4220,7 @@
 			  ;;recursive.  If  the field  "index" of  LHS is  false: LHS
 			  ;;does not appear in the body of RHS^.
 			  (when (var-index lhs)
-			    (set-closure-recursive?! rhs^ #t)
+			    (set-closure-maker-recursive?! rhs^ #t)
 			    (set-var-index! lhs #f)))
 	   lhs* rhs*^)
 	 (values (make-fix lhs* rhs*^ body^)
@@ -4311,10 +4313,10 @@
       ;;from LHS* and RHS*.  LHS* is a list of VAR structs; RHS* is a list of CLAMBDA
       ;;structs.  Return 2 values:
       ;;
-      ;;1. A list of CLOSURE structs which must replace the original RHS*.
+      ;;1. A list of CLOSURE-MAKER structs which must replace the original RHS*.
       ;;
       ;;2. A  list of VAR structs  representing the free variables  referenced by the
-      ;;   CLOSURE structs.
+      ;;   CLOSURE-MAKER structs.
       ;;
       (if (null? rhs*)
 	  (values '() '())
@@ -4326,18 +4328,18 @@
     (define (E-clambda lhs rhs)
       ;;LHS is a VAR struct; RHS is a CLAMBDA struct; LHS is the binding of RHS.
       ;;
-      ;;Build a struct instance of type  CLOSURE which must replace the original RHS.
-      ;;Return 2 values:  the CLOSURE struct, a list of  VAR structs representing the
-      ;;free variables referenced by the CLOSURE.
+      ;;Build a struct instance of type CLOSURE-MAKER which must replace the original
+      ;;RHS.   Return 2  values:  the CLOSURE-MAKER  struct, a  list  of VAR  structs
+      ;;representing the free variables referenced by the CLOSURE-MAKER.
       ;;
       (struct-case rhs
 	((clambda label clause* cp.unused freevar*.unused name)
-	 (assert (not freevar*.unused))
+	 #;(assert (not freevar*.unused))
 	 (receive (clause*^ freevar*)
 	     (E-clambda-case* clause*)
-	   (values (let ((recursive? #f))
-		     (make-closure (make-clambda label clause*^ lhs freevar* name)
-				   freevar* recursive?))
+	   (values (let ((clam       (make-clambda label clause*^ lhs freevar* name))
+			 (recursive? #f))
+		     (make-closure-maker clam freevar* recursive?))
 		   freevar*)))))
 
     (define (E-clambda-case* clause*)
@@ -4374,7 +4376,7 @@
   ;;
   ;;   constant		var		primref
   ;;   bind		fix		conditional
-  ;;   seq		clambda		closure
+  ;;   seq		clambda		closure-maker
   ;;   forcall		funcall		jmpcall
   ;;   known
   ;;
@@ -4482,8 +4484,8 @@
   (module (E-fix node?)
 
     (define (E-fix lhs* rhs* body)
-      ;;Here we know that RHS* is a list  of CLOSURE structs in which the VAR in LHS*
-      ;;might appear.
+      ;;Here we know that RHS* is a list of CLOSURE-MAKER structs in which the VAR in
+      ;;LHS* might appear.
       ;;
       (define cleaned-freevar**
 	;;Here  the  VAR  structs  in  LHS*  are   not  yet  part  of  the  graph  of
@@ -4502,7 +4504,7 @@
 	;;VAR.
 	($map/stx (lambda (lhs rhs)
 		    (receive-and-return (N)
-			(mk-node lhs (closure-code rhs) (closure-recursive? rhs))
+			(mk-node lhs ($closure-maker-code rhs) ($closure-maker-recursive? rhs))
 		      (%var-set-subst! lhs N)))
 	  lhs* rhs*))
       ;;If X is free in Y, then whenever X becomes a non-combinator, Y also becomes a
@@ -4545,71 +4547,72 @@
 	(%mk-fix '() '() lhs* rhs* (E body))))
 
     (define (%assign-substitutions-to-closures node*)
-      ;;The CLOSURE  structs that still  have non-removable free variables  are "true
-      ;;closures": they  will become  run-time closure  objects actually  closed upon
-      ;;free variables.  The VAR struct  referencing such true-closure object must be
-      ;;left alone: it cannot be subsituted by the CLOSURE struct itself.
+      ;;The CLOSURE-MAKER  structs that still  have non-removable free  variables are
+      ;;"true closures":  they will become  run-time closure objects  actually closed
+      ;;upon free  variables.  The  VAR struct  referencing such  true-closure object
+      ;;must  be left  alone: it  cannot be  subsituted by  the CLOSURE-MAKER  struct
+      ;;itself.
       ;;
-      ;;The CLOSURE  structs with no free  variables or whose free  variables are all
-      ;;removable  are "combinators":  they will  beome run-time  closure object  not
+      ;;The CLOSURE-MAKER structs with no free  variables or whose free variables are
+      ;;all removable are "combinators": they  will beome run-time closure object not
       ;;closed upon free variables.  The  VAR struct referencing such combinator must
-      ;;be substituted with the CLOSURE struct itself.
+      ;;be substituted with the CLOSURE-MAKER struct itself.
       ;;
-      ;;Here  we scan  the list  of NODEs  and convert  it into  the list  of CLOSURE
+      ;;Here we scan the list of NODEs  and convert it into the list of CLOSURE-MAKER
       ;;structs that  will be candidate  to inclusion in  the output FIX  struct.  We
       ;;determine here if a binding must be included in the graph of substitutions or
       ;;not.  If a binding  is defined by a FIX: either it has  no substitution or it
-      ;;has its CLOSURE as substitution.
+      ;;has its CLOSURE-MAKER as substitution.
       ;;
       ;;NOTE Upon entering this loop all the VAR  in the LHS* list have a NODE struct
       ;;as substitution.  Here we either reset  the substitution to false, or replace
-      ;;the NODE with a proper CLOSURE substitution.
+      ;;the NODE with a proper CLOSURE-MAKER substitution.
       ;;
       ($map/stx (lambda (node)
 		  (let ((freevar*   ($node-freevar*   node))
 			(recursive? ($node-recursive? node)))
-		    (receive-and-return (closure)
-			;;Make the  new CLOSURE using  the list of free  variables we
-			;;have cleaned before.
-			(make-closure ($node-code node) freevar* recursive?)
-		      ;;Is the  binding of  CLOSURE to  be included  in the  graph of
-		      ;;substitutions?
+		    (receive-and-return (clmaker)
+			;;Make the new CLOSURE-MAKER using the list of free variables
+			;;we have cleaned before.
+			(make-closure-maker ($node-code node) freevar* recursive?)
+		      ;;Is the binding  of CLOSURE-MAKER to be included  in the graph
+		      ;;of substitutions?
 		      (let ((lhs ($node-name node)))
 			(cond ((null? freevar*)
-			       ;;This CLOSURE struct  has no free variables:  it is a
-			       ;;combinator.    Let's  add   it  to   the  graph   of
-			       ;;substitutions.
-			       (%var-set-subst! lhs closure))
+			       ;;This CLOSURE-MAKER struct has  no free variables: it
+			       ;;will return a combinator.  Let's add it to the graph
+			       ;;of substitutions.
+			       (%var-set-subst! lhs clmaker))
 			      ((and recursive? (null? ($cdr freevar*)))
-			       ;;This CLOSURE  struct has 1  free variable and  it is
-			       ;;recursive; this means the  only free variable is the
-			       ;;VAR self referencing the closure itself:
+			       ;;This CLOSURE-MAKER struct has 1 free variable and it
+			       ;;is recursive;  this means the only  free variable is
+			       ;;the VAR self referencing the closure itself:
 			       ;;
 			       ;;  (fix ((f (lambda () f)))
 			       ;;    ?body)
 			       ;;
 			       #;(assert (eq? lhs (car freevar*)))
-			       ;;This CLOSURE is  a combinator.  Let's add  it to the
-			       ;;graph of substitutions.
-			       (%var-set-subst! lhs closure))
+			       ;;This CLOSURE-MAKER will  return a combinator.  Let's
+			       ;;add it to the graph of substitutions.
+			       (%var-set-subst! lhs closure-maker))
 			      (else
-			       ;;This CLOSURE  struct has  true, not  removable, free
-			       ;;variables: it  is a "true closure".   Let's leave it
-			       ;;alone.
+			       ;;This CLOSURE-MAKER  struct has true,  not removable,
+			       ;;free  variables: it  will return  a "true  closure".
+			       ;;Let's leave it alone.
 			       (%var-reset-subst! lhs)))))))
 	node*))
 
 ;;; --------------------------------------------------------------------
 
     (define-struct node
-      ;;Each CLOSURE struct appears as RHS in  a FIX struct.  Each CLOSURE struct has
-      ;;a NODE associated to it.
+      ;;Each CLOSURE-MAKER struct appears as RHS in a FIX struct.  Each CLOSURE-MAKER
+      ;;struct has a NODE associated to it.
       ;;
       (name
 		;The VAR struct appearing as LHS in the binding definition associated
 		;to this NODE.
        code
-		;The CLAMBDA or CODE-LOC associated to the CLOSURE.
+		;The CLAMBDA or CODE-LOC associated to the CLOSURE-MAKER.
        deps
 		;Null or a list of NODE structs.
        done?
@@ -4621,7 +4624,8 @@
 		;substitutions in outer binding forms  and from the possible self VAR
 		;reference (in recursive functions).
        recursive?
-		;Boolean.  True if the CLOSURE associated to this NODE is recursive.
+		;Boolean.   True  if  the  function  returned  by  the  CLOSURE-MAKER
+		;associated to this NODE is recursive.
        ))
 
     (define (mk-node lhs code recursive?)
@@ -4636,40 +4640,40 @@
 ;;; --------------------------------------------------------------------
 
     (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
-      ;;Perform the final cleanup of the list of free variables in each RHS's CLOSURE
-      ;;struct; this  cleanup processes  free variables referencing  bindings defined
-      ;;this very FIX struct:
+      ;;Perform  the final  cleanup  of the  list  of free  variables  in each  RHS's
+      ;;CLOSURE-MAKER  struct;  this  cleanup processes  free  variables  referencing
+      ;;bindings defined this very FIX struct:
       ;;
       ;;
       ;;   (fix ((?lhs ?rhs) ...) ;cleanup between these bindings
       ;;     ?body)
       ;;
-      ;;Then replace  the CLAMBDA in the  CLOSURE struct with an  associated CODE-LOC
-      ;;struct and enqueue the CLAMBDA in the list of all the CLAMBDAs defined by the
-      ;;input expression.  Before:
+      ;;Then  replace the  CLAMBDA in  the  CLOSURE-MAKER struct  with an  associated
+      ;;CODE-LOC  struct and  enqueue the  CLAMBDA in  the list  of all  the CLAMBDAs
+      ;;defined by the input expression.  Before:
       ;;
-      ;;   (fix ((?lhs (closure ?clambda)) ...)
+      ;;   (fix ((?lhs (closure-maker ?clambda)) ...)
       ;;     ?body)
       ;;
       ;;after:
       ;;
-      ;;   (fix ((?lhs (closure (code-loc ?asmlabel)) ...))
+      ;;   (fix ((?lhs (closure-maker (code-loc ?asmlabel)) ...))
       ;;     ?body)
       ;;
       ;;   all-codes := (?clambda ...)
       ;;
       ($for-each/stx
-	  (lambda (lhs closure)
-	    (let ((substituted-freevar* (%filter-and-substitute-binding-freevars lhs closure)))
+	  (lambda (lhs clmaker)
+	    (let ((substituted-freevar* (%filter-and-substitute-binding-freevars lhs clmaker)))
 	      ;; (assert (let ((lhs-replacement (%find-var-substitution! lhs)))
 	      ;; 		(or (eq? lhs lhs-replacement)
-	      ;; 		    (closure? lhs-replacement))))
-	      ($set-closure-freevar*! closure substituted-freevar*)
+	      ;; 		    (clmaker? lhs-replacement))))
+	      ($set-closure-maker-freevar*! clmaker substituted-freevar*)
 	      ;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
 	      ;;struct.
-	      ($set-closure-code! closure (%lift-code lhs
-						      ($closure-code     closure)
-						      ($closure-freevar* closure)))))
+	      ($set-closure-maker-code! clmaker (%lift-code lhs
+							    ($closure-maker-code     clmaker)
+							    ($closure-maker-freevar* clmaker)))))
 	lhs* rhs*))
 
     (define (%mk-fix output-lhs* output-rhs* input-lhs* input-rhs* body)
@@ -4698,21 +4702,21 @@
 
     (module (%filter-and-substitute-binding-freevars)
 
-      (define (%filter-and-substitute-binding-freevars self-var clos)
+      (define (%filter-and-substitute-binding-freevars self-var clmaker)
 	;;Build  and  return a  list  of  VAR  structs  representing the  "true  free
-	;;variables" of the CLOSURE struct in CLOS.  Taken the list of free variables
-	;;from CLOS:
+	;;variables" of the CLOSURE-MAKER struct in  CLMAKER.  Taken the list of free
+	;;variables from CLMAKER
 	;;
 	;;* Include the VAR structs having no substitution.
 	;;
-	;;* Remove the VAR structs that have a CLOSURE struct as replacement.
+	;;* Remove the VAR structs that have a CLOSURE-MAKER struct as replacement.
 	;;
 	;;*  Substitute the  VAR  structs  having a  VAR  substitution  with the  VAR
 	;;  substitution itself.
 	;;
 	;;* If  SELF-VAR is a  VAR struct and  it is in  the list of  free variables:
-	;;  remove it.   This is meant to remove self  references for CLOSURE structs
-	;;  representing recursive functions:
+	;;  remove  it.  This is  meant to  remove self references  for CLOSURE-MAKER
+	;;  structs representing recursive functions:
 	;;
 	;;     (fix ((f (lambda () f)))
 	;;       ?body)
@@ -4720,7 +4724,7 @@
 	;;  which have a  reference to themselves in the body of  the function and so
 	;;  in the list of free variables.
 	;;
-	(let ((substituted-freevar* (%filter-freevar* ($closure-freevar* clos))))
+	(let ((substituted-freevar* (%filter-freevar* ($closure-maker-freevar* clmaker))))
 	  (if (var? self-var)
 	      (remq self-var substituted-freevar*)
 	    substituted-freevar*)))
@@ -4729,6 +4733,7 @@
 	;;Non-tail recursive function.  Given a list of VAR structs representing free
 	;;variables in  the body of a  function: build and  return a new list  of VAR
 	;;structs representing the actual free vars we care about.
+	;;
 	(if (pair? freevar*)
 	    (let ((A ($car freevar*))
 		  (D ($cdr freevar*)))
@@ -4738,8 +4743,8 @@
 		;;itself.
 		(if what
 		    (struct-case what
-		      ((closure)
-		       ;;The substitution is a CLOSURE struct: filter it out.
+		      ((closure-maker)
+		       ;;The substitution is a CLOSURE-MAKER struct: filter it out.
 		       rest)
 		      ((var)
 		       ;;Either WHAT  is A itself or  the substitution of A  is a VAR
@@ -4760,10 +4765,10 @@
       #| end of module: %ORIGINAL-FREEVAR*->FILTERED-AND-SUBSTITUTED-FREEVAR *|# )
 
     (define (%lift-code cp original-clam new-freevar*)
-      ;;Given data from a CLOSURE struct: build a new CLAMBDA to be used to generated
-      ;;the actual code  object; build a CODE-LOC  struct to be used  to generate the
-      ;;actual  closure object;  return the  CODE-LOC; push  the new  CLAMBDA on  the
-      ;;parameter ALL-CODES.
+      ;;Given data  from a CLOSURE-MAKER  struct: build a new  CLAMBDA to be  used to
+      ;;generated  the actual  code object;  build a  CODE-LOC struct  to be  used to
+      ;;generate the actual closure object; return the CODE-LOC; push the new CLAMBDA
+      ;;on the parameter ALL-CODES.
       ;;
       ;;CP is the  struct instance of type  VAR to which the closure  is bound.  This
       ;;VAR struct represents the machine word (CPU register or memory location) from
@@ -4803,7 +4808,7 @@
       ;;
       ;;* X itself if X has no substitution or its substitution is a NODE struct.
       ;;
-      ;;* If the substitution of X is a closure object ...
+      ;;* If the substitution of X is a closure maker object ...
       ;;
       ;;* ...
       ;;
@@ -4811,32 +4816,40 @@
 	(compile-time-error __who__ "BUG: circular dep"))
       (let ((old-var-subst (%var-get-subst x)))
 	(cond ((not old-var-subst)
-	       ;;The VAR struct X cannot be  substituted: just use it.  This might be
-	       ;;a substitution:  if X is not  the start of the  graph traversal, the
-	       ;;VAR from which the traversal was started is substituted with X.
+	       ;;The VAR struct  X has no substitution, so it  cannot be substituted:
+	       ;;just use it.  This might be a substitution: if X is not the start of
+	       ;;the graph traversal, the VAR from which the traversal was started is
+	       ;;substituted with X.
 	       x)
 
 	      ((var? old-var-subst)
+	       ;;The VAR  struct X has another  VAR as substitution: step  forward in
+	       ;;the graph of substitutions.
 	       (%get-forward-recursion! x old-var-subst))
 
-	      ((closure? old-var-subst)
-	       (let ((freevar* (closure-freevar* old-var-subst)))
+	      ((closure-maker? old-var-subst)
+	       ;;The VAR X has a CLOSURE-MAKER as substitution.
+	       (let ((freevar* ($closure-maker-freevar* old-var-subst)))
 		 (cond ((null? freevar*)
 			;;Substitution!!!  The original VAR  struct, at the beginning
 			;;of  the substitutions  graph traversal,  is substituted  by
-			;;this CLOSURE struct which has no free variables.
+			;;this CLOSURE-MAKER  struct which has no  free variables and
+			;;so will return a "combinator" closure object.
 			old-var-subst)
 		       ((null? ($cdr freevar*))
-			;;This CLOSURE  struct has a  single free variable.   Move on
-			;;the graph traversal to it.
+			;;This CLOSURE-MAKER struct has a single free variable.  Move
+			;;on the graph traversal to it.
 			(%get-forward-recursion! x ($car freevar*)))
 		       (else
 			;;Substitution!!!  The original VAR  struct, at the beginning
 			;;of  the substitutions  graph traversal,  is substituted  by
-			;;this CLOSURE struct which has 2 or more free variables.
+			;;this  CLOSURE-MAKER  struct  which   has  2  or  more  free
+			;;variables.
 			old-var-subst))))
 
 	      ;;The VAR struct X cannot be substituted.  Just use it.
+	      ;;
+	      ;;FIXME Does this case ever happen?  (Marco Maggi; Thu Sep 4, 2014)
 	      (else
 	       (assert (node? old-var-subst))
 	       x))))
@@ -4865,11 +4878,11 @@
       ($set-var-index! x #f))
 
     (define (%var-set-subst! x v)
-      ;;X is a VAR struct.  V can be:  a VAR struct, a NODE struct, a CLOSURE struct,
-      ;;the symbol "q".
+      ;;X is a  VAR struct.  V can be:  a VAR struct, a NODE  struct, a CLOSURE-MAKER
+      ;;struct, the symbol "q".
       ;;
       #;(assert (var? x))
-      #;(assert (or (node? v) (closure? v) (var? v) (eq? v 'q)))
+      #;(assert (or (node? v) (closure-maker? v) (var? v) (eq? v 'q)))
       ($set-var-index! x (make-prop v)))
 
     (define (%var-copy-subst! lhs rhs)
@@ -4900,14 +4913,6 @@
 	(else		#f)))
 
     #| end of module |# )
-
-  ;;Commented out because unused.  (Marco Maggi; Oct 13, 2012)
-  ;;
-  ;; (define (combinator? x)
-  ;;   (struct-case x
-  ;;     ((closure code freevar*)
-  ;;      (null? freevar*))
-  ;;     (else #f)))
 
   #| end of module: optimize-closures/lift-codes |# )
 
@@ -5167,7 +5172,7 @@
 (define off-code-data			(fx- disp-code-data vector-tag))
 
 ;;; --------------------------------------------------------------------
-;;; closures
+;;; closure objects
 
 (define closure-mask			7)
 (define closure-tag			3)
@@ -6730,9 +6735,9 @@
 	       (free:  ,(and freevar* (map unparse-recordized-code freevar*)))
 	       ,@(map unparse-recordized-code cls*)))
 
-    ((closure code free* recursive?)
+    ((closure-maker code freevar* recursive?)
      `(closure ,(if recursive? '(recursive: #t) '(recursive: #f))
-	       (freevars: ,(map unparse-recordized-code free*))
+	       (freevars: ,(map unparse-recordized-code freevar*))
 	       ,(unparse-recordized-code code)))
 
     ((codes list body)
@@ -6876,12 +6881,12 @@
 	((clambda)
 	 (E-clambda x))
 
-	((closure code free* recursive?)
-	 `(closure ,(E code)
-		   ,(let ((freevar* (map E free*)))
-		      (if (null? freevar*)
-			  'no-freevars
-			`(freevars: . ,freevar*)))))
+	((closure-maker code freevar* recursive?)
+	 `(closure-maker ,(E code)
+			 ,(let ((freevar* (map E freevar*)))
+			    (if (null? freevar*)
+				'no-freevars
+			      `(freevars: . ,freevar*)))))
 
 	((primcall op arg*)
 	 (cons* 'primcall op (%map-in-order E arg*)))
@@ -7110,12 +7115,12 @@
 	((clambda)
 	 (E-clambda x))
 
-	((closure code free* recursive?)
-	 `(closure ,(E code)
-		   ,(let ((freevar* (map E free*)))
-		      (if (null? freevar*)
-			  'no-freevars
-			`(freevars: . ,freevar*)))))
+	((closure-maker code freevar* recursive?)
+	 `(closure-maker ,(E code)
+			 ,(let ((freevar* (map E freevar*)))
+			    (if (null? freevar*)
+				'no-freevars
+			      `(freevars: . ,freevar*)))))
 
 	((primcall op arg*)
 	 (cons op (%map-in-order E arg*)))

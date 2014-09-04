@@ -5007,22 +5007,25 @@
 (section
 
  (define-primop $make-call-with-values-procedure unsafe
-   ;;Return a closure object implementing the CALL-WITH-VALUES primitive
-   ;;function through the assembly routine "SL_call_with_values".
+   ;;Return a CLOSURE-MAKER struct  representing code that, evaluated at
+   ;;run-time,    returns   a    closure    object   implementing    the
+   ;;CALL-WITH-VALUES  primitive function  through the  assembly routine
+   ;;"SL_call_with_values".
    ;;
    ((V)
-    (K (make-closure (make-code-loc (sl-cwv-label)) '() #f)))
+    (K (make-closure-maker (make-code-loc (sl-cwv-label)) '() #f)))
    ((P)
     (interrupt))
    ((E)
     (interrupt)))
 
  (define-primop $make-values-procedure unsafe
-   ;;Return a closure object  implementing the VALUES primitive function
-   ;;through the assembly routine "SL_values".
+   ;;Return a CLOSURE-MAKER struct  representing code that, evaluated at
+   ;;run-time,  returns   a  closure  object  implementing   the  VALUES
+   ;;primitive function through the assembly routine "SL_values".
    ;;
    ((V)
-    (K (make-closure (make-code-loc (sl-values-label)) '() #f)))
+    (K (make-closure-maker (make-code-loc (sl-values-label)) '() #f)))
    ((P)
     (interrupt))
    ((E)

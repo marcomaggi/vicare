@@ -2065,8 +2065,8 @@
   ;;Recursive function.
   (doit (letrec* ((a (lambda () a)))
 	  a)
-	(codes ((lambda (label: asmlabel:a:clambda) () (closure (code-loc asmlabel:a:clambda) no-freevars)))
-	       (closure (code-loc asmlabel:a:clambda) no-freevars)))
+	(codes ((lambda (label: asmlabel:a:clambda) () (closure-maker (code-loc asmlabel:a:clambda) no-freevars)))
+	       (closure-maker (code-loc asmlabel:a:clambda) no-freevars)))
 
   ;;The function A is a combinator (no free vars); as a consequence the function B is
   ;;also a combinator.
@@ -2074,9 +2074,9 @@
 		  (b (lambda () (a))))
 	  b)
 	(codes ((lambda (label: asmlabel:b:clambda) ()
-		   (jmpcall asmlabel:a:clambda:case-0 (closure (code-loc asmlabel:a:clambda) no-freevars)))
+		   (jmpcall asmlabel:a:clambda:case-0 (closure-maker (code-loc asmlabel:a:clambda) no-freevars)))
 		(lambda (label: asmlabel:a:clambda) () (constant 1)))
-	       (closure (code-loc asmlabel:b:clambda) no-freevars)))
+	       (closure-maker (code-loc asmlabel:b:clambda) no-freevars)))
 
   ;;The function  A is a closure  upon D, as a  consequence the function B  is also a
   ;;closure.
@@ -2088,8 +2088,8 @@
 	 ((lambda (label: asmlabel:b:clambda) () (jmpcall asmlabel:a:clambda:case-0 a_0))
 	  (lambda (label: asmlabel:a:clambda) () d_0))
 	 (bind ((d_0 (funcall (primref read))))
-	   (fix ((b_0 (closure (code-loc asmlabel:b:clambda) (freevars: a_0)))
-		 (a_0 (closure (code-loc asmlabel:a:clambda) (freevars: d_0))))
+	   (fix ((b_0 (closure-maker (code-loc asmlabel:b:clambda) (freevars: a_0)))
+		 (a_0 (closure-maker (code-loc asmlabel:a:clambda) (freevars: d_0))))
 	     b_0))))
 
   (doit (letrec ((f (case-lambda
@@ -2099,13 +2099,13 @@
 	(codes ((case-lambda (label: asmlabel:f:clambda)
 			     (()
 			      (jmpcall asmlabel:f:clambda:case-1
-				       (closure (code-loc asmlabel:f:clambda) no-freevars)
+				       (closure-maker (code-loc asmlabel:f:clambda) no-freevars)
 				       (constant 1)))
 			     ((a_0)
 			      a_0)))
 	       (funcall (primref list)
-		 (jmpcall asmlabel:f:clambda:case-0 (closure (code-loc asmlabel:f:clambda) no-freevars))
-		 (jmpcall asmlabel:f:clambda:case-1 (closure (code-loc asmlabel:f:clambda) no-freevars) (constant 2)))))
+		 (jmpcall asmlabel:f:clambda:case-0 (closure-maker (code-loc asmlabel:f:clambda) no-freevars))
+		 (jmpcall asmlabel:f:clambda:case-1 (closure-maker (code-loc asmlabel:f:clambda) no-freevars) (constant 2)))))
 
 ;;; --------------------------------------------------------------------
 ;;; LIBRARY-LETREC* forms
@@ -2123,13 +2123,13 @@
 	 (seq
 	   (funcall (primref $set-symbol-value/proc!)
 	     (constant a.loc)
-	     (closure (code-loc asmlabel:a:clambda) no-freevars))
+	     (closure-maker (code-loc asmlabel:a:clambda) no-freevars))
 	   (funcall (primref $init-symbol-value!)
 	     (constant b.loc)
-	     (closure (code-loc asmlabel:b:clambda) no-freevars))
+	     (closure-maker (code-loc asmlabel:b:clambda) no-freevars))
 	   (funcall (primref $init-symbol-value!)
 	     (constant c.loc)
-	     (closure (code-loc asmlabel:c:clambda) no-freevars))
+	     (closure-maker (code-loc asmlabel:c:clambda) no-freevars))
 	   (bind ((d_0 (constant 4)))
 	     (seq
 	       (funcall (primref $init-symbol-value!)

@@ -671,12 +671,13 @@
 		      (cons rhs rhs-non-combin)))))))
 
     (define (%combinator? lhs.unused rhs)
-      ;;Return true  if the struct instance  of type CLOSURE in  RHS has
-      ;;*no* free variables.
+      ;;Return true if the struct  instance of type CLOSURE-MAKER in RHS
+      ;;has *no* free variables.
       ;;
       (struct-case rhs
-	((closure code free*)
-	 (null? free*))))
+	((closure-maker code freevar*)
+	 (null? freevar*))
+	(else #f)))
 
     #| end of module |# )
 
@@ -717,7 +718,7 @@
 	      ($cdr n*))))
 
     (define (%closure-size x)
-      ;;X  must  be a  struct  instance  of  type CLOSURE.   Return  the
+      ;;X must be  a struct instance of type  CLOSURE-MAKER.  Return the
       ;;*aligned*  number of  bytes needed  to hold  the free  variables
       ;;slots in the closure built in object.
       ;;
@@ -729,10 +730,10 @@
       ;;    binary code
       ;;
       (struct-case x
-	((closure code free*)
-	 (if (null? free*)
+	((closure-maker code freevar*)
+	 (if (null? freevar*)
 	     0
-	   (align (+ disp-closure-data (* (length free*) wordsize)))))))
+	   (align (+ disp-closure-data (* (length freevar*) wordsize)))))))
 
     #| end of module |# )
 
@@ -760,7 +761,7 @@
       ;;LHS* must be a list of struct instances of type VAR representing
       ;;memory locations containing references to the closure objects.
       ;;
-      ;;RHS* must be a list of struct instances of type CLOSURE.
+      ;;RHS* must be a list of struct instances of type CLOSURE-MAKER.
       ;;
       ;;BODY must be  a struct instance representing  recordized code in
       ;;which the closure bindings are visible.
@@ -772,9 +773,9 @@
 
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
-	((closure code free*)
+	((closure-maker code freevar*)
 	 (make-seq (prm 'mset lhs (K off-closure-code) (V code))
-		   (%slot-setters lhs free* off-closure-data body)))))
+		   (%slot-setters lhs freevar* off-closure-data body)))))
 
     (define (%slot-setters lhs free* slot-offset body)
       ;;LHS  must be  a struct  instance  of type  VAR representing  the
@@ -929,7 +930,7 @@
   ;;
   ;;Accept as input recordized code holding the following struct types:
   ;;
-  ;;bind		closure		code-loc
+  ;;bind		closure-maker	code-loc
   ;;conditional		constant	fix
   ;;forcall		funcall		jmpcall
   ;;known		primcall	primref
@@ -943,8 +944,8 @@
   ;;
   ;;* Instances of PRIMREF are replaced by instances of PRIMCALL.
   ;;
-  ;;* Instances  of CODE-LOC and  CLOSURE are wrapped into  instances of
-  ;;  CONSTANT.
+  ;;* Instances of CODE-LOC and CLOSURE-MAKER are wrapped into instances
+  ;;  of CONSTANT.
   ;;
   ;;* Instances of PRIMCALL ...
   ;;
@@ -983,7 +984,7 @@
       ((code-loc)
        (make-constant x))
 
-      ((closure)
+      ((closure-maker)
        (make-constant x))
 
       ((bind lhs* rhs* body)
@@ -1028,7 +1029,7 @@
   ;;
   ;;Accept as input recordized code holding the following struct types:
   ;;
-  ;;bind		closure		code-loc
+  ;;bind		closure-maker	code-loc
   ;;conditional		constant	fix
   ;;forcall		funcall		jmpcall
   ;;known		primcall	primref
@@ -1046,7 +1047,7 @@
     ((code-loc)
      (K #t))
 
-    ((closure)
+    ((closure-maker)
      (K #t))
 
     ((bind lhs* rhs* body)
@@ -1099,7 +1100,7 @@
   ;;
   ;;Accept as input recordized code holding the following struct types:
   ;;
-  ;;bind		closure		code-loc
+  ;;bind		closure-maker	code-loc
   ;;conditional		constant	fix
   ;;forcall		funcall		jmpcall
   ;;known		primcall	primref
@@ -1114,7 +1115,7 @@
     ((var)		(nop))
     ((primref)		(nop))
     ((code-loc)		(nop))
-    ((closure)		(nop))
+    ((closure-maker)	(nop))
 
     ((bind lhs* rhs* body)
      (make-bind lhs* (map V rhs*) (E body)))
