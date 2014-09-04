@@ -4737,29 +4737,23 @@
 	(if (pair? freevar*)
 	    (let ((A ($car freevar*))
 		  (D ($cdr freevar*)))
-	      (let* ((what (%find-var-substitution! A))
-		     (rest (%filter-freevar* D)))
+	      (let ((what (%find-var-substitution! A))
+		    (rest (%filter-freevar* D)))
 		;;Here WHAT is the  substitution of A; it is possible  that WHAT is A
 		;;itself.
-		(if what
-		    (struct-case what
-		      ((closure-maker)
-		       ;;The substitution is a CLOSURE-MAKER struct: filter it out.
-		       rest)
-		      ((var)
-		       ;;Either WHAT  is A itself or  the substitution of A  is a VAR
-		       ;;struct: include it, but only once.
-		       (if (memq what rest)
-			   rest
-			 (cons what rest)))
-		      (else
-		       (compiler-internal-error __who__
-			 "invalid VAR substitution value" what)))
-		  ;;No substitution: include the original.
-		  ;;
-		  ;;FIXME Can  %FIND-VAR-SUBSTITUTION! actually return  #f?  I think  no.  (Marco
-		  ;;maggi; Mon Sep 1, 2014)
-		  (cons A rest))))
+		(struct-case what
+		  ((closure-maker)
+		   ;;The substitution is a CLOSURE-MAKER struct: filter it out.
+		   rest)
+		  ((var)
+		   ;;Either WHAT  is A itself or  the substitution of A  is a VAR
+		   ;;struct: include it, but only once.
+		   (if (memq what rest)
+		       rest
+		     (cons what rest)))
+		  (else
+		   (compiler-internal-error __who__
+		     "invalid VAR substitution value" what)))))
 	  '()))
 
       #| end of module: %ORIGINAL-FREEVAR*->FILTERED-AND-SUBSTITUTED-FREEVAR *|# )
