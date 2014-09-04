@@ -4513,26 +4513,16 @@
       ;;Here we know that RHS* is a list  of CLOSURE structs in which the VAR in LHS*
       ;;might appear.
       ;;
-      (define substituted-freevar**
+      (define cleaned-freevar**
 	;;Here  the  VAR  structs  in  LHS*  are   not  yet  part  of  the  graph  of
-	;;substitutions.
+	;;substitutions.   We clean  up the  lists of  free variables  performing the
+	;;substitutions defined for the outer bindings:
 	;;
-	;;If  a  VAR  struct is  a  free  variable  for  RHS  and it  has  a  CLOSURE
-	;;substitution: such VAR  struct is not a "true free  variable", rather it is
-	;;removable; so we filter it out.
+	;;   (bind ((?lhs1 ?rhs1) ...)    ;clean for these bindings
+	;;     (fix ((?lhs2 ?rhs2) ...))  ;clean for these bindings
+	;;       (fix ((?lhs ?rhs) ...)   ;this is the FIX we are processing
+	;;         ?body))
 	;;
-	;;If the VAR struct VAR1 is a free variable for RHS and it has the VAR struct
-	;;VAR2 as substitution:  the true free variable  of RHS is VAR2  not VAR1; so
-	;;here we replace VAR1 with VAR2.
-	;;
-	;;If RHS is a recursive function:
-	;;
-	;;   (fix ((f (lambda () f)))
-	;;     ?body)
-	;;
-	;;LHS appears  in reference position in  the body of the  function; so, among
-	;;the free  variables of RHS,  there is LHS itself.   We remove LHS  from the
-	;;list of free variables.
 	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
       (define node*
 	($map/stx (lambda (lhs rhs)
@@ -4554,7 +4544,7 @@
 			 ;;Not one of ours.
 			 (node-push-freevar! my-node freevar))))
 	      freevar*))
-	node* substituted-freevar**)
+	node* cleaned-freevar**)
       ;;Next, we  go over the  list of nodes,  and if we find  one that has  any free
       ;;variables, we know it's a non-combinator, so we whack it and add it to all of
       ;;its dependents.
@@ -4630,22 +4620,43 @@
 				     ;;leave it alone.
 				     (%var-reset-subst! lhs)))))))
 		    node*)))
+	;;Clean the lists of free variables  for the substitutions of the bindings in
+	;;this very FIX struct.  Introduce the  CODE-LOC structs and push the CLAMBDA
+	;;structs to ALL-CODES.
 	(%final-freevars-cleanup-and-code-lifting lhs* rhs*)
+	;;Process  the BODY  substituting  VAR structs  from  LHS* when  appropriate.
 	;;Build and return the output FIX struct.
 	(%mk-fix '() '() lhs* rhs* (E body))))
 
     (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
       ;;Perform the final cleanup of the list of free variables in each RHS's CLOSURE
-      ;;struct; then replace the CLAMBDA in the CLOSURE struct with a CODE-LOC struct
-      ;;and enqueue the CLAMBDA in the list  of all the CLAMBDAs defined by the input
-      ;;expression.
+      ;;struct; this  cleanup processes  free variables referencing  bindings defined
+      ;;this very FIX struct:
+      ;;
+      ;;
+      ;;   (fix ((?lhs ?rhs) ...) ;cleanup between these bindings
+      ;;     ?body)
+      ;;
+      ;;Then replace  the CLAMBDA in the  CLOSURE struct with an  associated CODE-LOC
+      ;;struct and enqueue the CLAMBDA in the list of all the CLAMBDAs defined by the
+      ;;input expression.  Before:
+      ;;
+      ;;   (fix ((?lhs (closure ?clambda)) ...)
+      ;;     ?body)
+      ;;
+      ;;after:
+      ;;
+      ;;   (fix ((?lhs (closure (code-loc ?asmlabel)) ...))
+      ;;     ?body)
+      ;;
+      ;;   all-codes := (?clambda ...)
       ;;
       ($for-each/stx
 	  (lambda (lhs closure)
 	    (let ((substituted-freevar* (%filter-and-substitute-binding-freevars lhs closure)))
-	      (assert (let ((lhs-replacement (%find-var-substitution! lhs)))
-			(or (eq? lhs lhs-replacement)
-			    (closure? lhs-replacement))))
+	      ;; (assert (let ((lhs-replacement (%find-var-substitution! lhs)))
+	      ;; 		(or (eq? lhs lhs-replacement)
+	      ;; 		    (closure? lhs-replacement))))
 	      ($set-closure-freevar*! closure substituted-freevar*)
 	      ;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
 	      ;;struct.
