@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -47,7 +47,7 @@
     $sanitize-bindings
     $optimize-for-direct-jumps
     $insert-global-assignments
-    $convert-closures
+    $introduce-closure-makers
     $optimize-closures/lift-codes
     $alt-cogen
     $assemble-sources
@@ -84,7 +84,7 @@
 		 $sanitize-bindings
 		 $optimize-for-direct-jumps
 		 $insert-global-assignments
-		 $convert-closures
+		 $introduce-closure-makers
 		 $optimize-closures/lift-codes
 		 $alt-cogen
 		 $assemble-sources
@@ -110,7 +110,7 @@
     ((_ $sanitize-bindings		?body)	(%compile-up-to  8 ?body))
     ((_ $optimize-for-direct-jumps	?body)	(%compile-up-to  9 ?body))
     ((_ $insert-global-assignments	?body)	(%compile-up-to 10 ?body))
-    ((_ $convert-closures		?body)	(%compile-up-to 11 ?body))
+    ((_ $introduce-closure-makers		?body)	(%compile-up-to 11 ?body))
     ((_ $optimize-closures/lift-codes	?body)	(%compile-up-to 12 ?body))
     ((_ $alt-cogen			?body)	(%compile-up-to 13 ?body))
     ((_ $assemble-sources		?body)	(%compile-up-to 14 ?body))
@@ -147,7 +147,7 @@
 	   (R (doit R  8 $sanitize-bindings))
 	   (R (doit R  9 $optimize-for-direct-jumps))
 	   (R (doit R 10 $insert-global-assignments))
-	   (R (doit R 12 $convert-closures))
+	   (R (doit R 12 $introduce-closure-makers))
 	   (R (doit R 12 $optimize-closures/lift-codes))
 	   (R (if (or (fx= 13 requested-idx)
 		      (fx= 14 requested-idx))

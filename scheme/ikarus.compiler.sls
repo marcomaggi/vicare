@@ -4185,7 +4185,7 @@
        (values X '()))
 
       ((var)
-       (set-var-index! X #f)
+       ($set-var-index! X #f)
        (values X (list X)))
 
       ((primref)
@@ -4207,7 +4207,7 @@
        ;;This is a FIX struct, so, assuming the recordised input is correct: the RHS*
        ;;are CLAMBDA structs; the VARs in LHS* can appear in the RHS* expressions.
        ($for-each/stx (lambda (lhs)
-			(set-var-index! lhs #t))
+			($set-var-index! lhs #t))
 	 lhs*)
        (let-values
 	   (((rhs*^ freevar*.rhs)  (E-clambda* lhs* rhs*))
@@ -4219,9 +4219,9 @@
 			  ;;once  in the  body of  RHS^; this  means the  function is
 			  ;;recursive.  If  the field  "index" of  LHS is  false: LHS
 			  ;;does not appear in the body of RHS^.
-			  (when (var-index lhs)
+			  (when ($var-index lhs)
 			    (set-closure-maker-recursive?! rhs^ #t)
-			    (set-var-index! lhs #f)))
+			    ($set-var-index! lhs #f)))
 	   lhs* rhs*^)
 	 (values (make-fix lhs* rhs*^ body^)
 		 ;;If  a VAR  struct is  a binding  in  this FIX:  it is  not a  free
@@ -4546,6 +4546,43 @@
 	;;Build and return the output FIX struct.
 	(%mk-fix '() '() lhs* rhs* (E body))))
 
+;;; --------------------------------------------------------------------
+
+    (define-struct node
+      ;;Each CLOSURE-MAKER struct appears as RHS in a FIX struct.  Each CLOSURE-MAKER
+      ;;struct has a NODE associated to it.
+      ;;
+      (name
+		;The VAR struct appearing as LHS in the binding definition associated
+		;to this NODE.
+       code
+		;The CLAMBDA or CODE-LOC associated to the CLOSURE-MAKER.
+       deps
+		;Null or a list of NODE structs.
+       done?
+		;Boolean.  If  true this  NODE struct has  already been  processed to
+		;establish its "true closure" dependencies.
+       freevar*
+		;Null or the  list of VAR structs representing free  variables in the
+		;CLAMBDA.   This   list  of  free   variables  is  cleaned   up  from
+		;substitutions in outer binding forms  and from the possible self VAR
+		;reference (in recursive functions).
+       recursive?
+		;Boolean.   True  if  the  function  returned  by  the  CLOSURE-MAKER
+		;associated to this NODE is recursive.
+       ))
+
+    (define (mk-node lhs code recursive?)
+      (make-node lhs code '() #f '() recursive?))
+
+    (define (node-push-freevar! node freevar)
+      ($set-node-freevar*! node (cons freevar ($node-freevar* node))))
+
+    (define (node-push-dep! node dep)
+      ($set-node-deps! node (cons dep ($node-deps node))))
+
+;;; --------------------------------------------------------------------
+
     (define (%assign-substitutions-to-closures node*)
       ;;The CLOSURE-MAKER  structs that still  have non-removable free  variables are
       ;;"true closures":  they will become  run-time closure objects  actually closed
@@ -4601,43 +4638,6 @@
 			       ;;Let's leave it alone.
 			       (%var-reset-subst! lhs)))))))
 	node*))
-
-;;; --------------------------------------------------------------------
-
-    (define-struct node
-      ;;Each CLOSURE-MAKER struct appears as RHS in a FIX struct.  Each CLOSURE-MAKER
-      ;;struct has a NODE associated to it.
-      ;;
-      (name
-		;The VAR struct appearing as LHS in the binding definition associated
-		;to this NODE.
-       code
-		;The CLAMBDA or CODE-LOC associated to the CLOSURE-MAKER.
-       deps
-		;Null or a list of NODE structs.
-       done?
-		;Boolean.  If  true this  NODE struct has  already been  processed to
-		;establish its "true closure" dependencies.
-       freevar*
-		;Null or the  list of VAR structs representing free  variables in the
-		;CLAMBDA.   This   list  of  free   variables  is  cleaned   up  from
-		;substitutions in outer binding forms  and from the possible self VAR
-		;reference (in recursive functions).
-       recursive?
-		;Boolean.   True  if  the  function  returned  by  the  CLOSURE-MAKER
-		;associated to this NODE is recursive.
-       ))
-
-    (define (mk-node lhs code recursive?)
-      (make-node lhs code '() #f '() recursive?))
-
-    (define (node-push-freevar! node freevar)
-      ($set-node-freevar*! node (cons freevar ($node-freevar* node))))
-
-    (define (node-push-dep! node dep)
-      ($set-node-deps! node (cons dep ($node-deps node))))
-
-;;; --------------------------------------------------------------------
 
     (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
       ;;Perform  the final  cleanup  of the  list  of free  variables  in each  RHS's
