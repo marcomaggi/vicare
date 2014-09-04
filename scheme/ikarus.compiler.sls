@@ -4431,7 +4431,7 @@
 	((fix lhs* rhs* body)
 	 ;;Clear the field "index" of the VAR structs in LHS* from whatever value the
 	 ;;previous compiler passes have left in.
-	 ($for-each/stx %var-reset-subst! lhs*)
+	 ($for-each/stx %var-reset-node! lhs*)
 	 (E-fix lhs* rhs* body))
 
 	((conditional test conseq altern)
@@ -4505,7 +4505,7 @@
 	($map/stx (lambda (lhs rhs)
 		    (receive-and-return (N)
 			(mk-node lhs ($closure-maker-code rhs) ($closure-maker-recursive? rhs))
-		      (%var-set-subst! lhs N)))
+		      (%var-set-node! lhs N)))
 	  lhs* rhs*))
       ;;If X is free in Y, then whenever X becomes a non-combinator, Y also becomes a
       ;;non-combinator.  Here, we mark these dependencies.
@@ -4513,7 +4513,7 @@
 	  (lambda (my-node freevar*)
 	    ($for-each/stx
 		(lambda (freevar)
-		  (cond ((%var-get-subst freevar)
+		  (cond ((%var-get-node freevar)
 			 ;;One of ours.
 			 => (lambda (her-node)
 			      (node-push-dep! her-node my-node)))
@@ -4868,51 +4868,96 @@
     #| end of module: %FIND-VAR-SUBSTITUTION! |# )
 
 ;;; --------------------------------------------------------------------
+;;; VAR structs and associated NODE structs
 
-  (module (%var-reset-subst! %var-set-subst! %var-get-subst %var-copy-subst!)
-    (define-struct prop
-      (val))
+  ;;Whenever bindings defined by  a FIX struct are processed: a  NODE struct for each
+  ;;binding is  created to represent  a graph of  dependencies; such graph  allows to
+  ;;establish which bindings define a "combinator function" and which bindings define
+  ;;a "true closure function".
+  ;;
+  ;;The  field "index"  of the  VAR structs  representing the  left-hand side  of FIX
+  ;;bindings, is used to hold the NODE struct associated to the VAR struct itself.
+  ;;
+  ;;The fields  "index" are reset  to false before the  VAR structs are  processed to
+  ;;enter the graph of substitutions.
+  ;;
 
-    (define-syntax-rule (%var-reset-subst! x)
-      #;(assert (var? x))
-      ($set-var-index! x #f))
+  (define (%var-reset-node! V)
+    #;(assert (var? V))
+    ($set-var-index! V #f))
 
-    (define (%var-set-subst! x v)
-      ;;X is a  VAR struct.  V can be:  a VAR struct, a NODE  struct, a CLOSURE-MAKER
-      ;;struct, the symbol "q".
-      ;;
-      #;(assert (var? x))
-      #;(assert (or (node? v) (closure-maker? v) (var? v) (eq? v 'q)))
-      ($set-var-index! x (make-prop v)))
+  (define (%var-set-node! V N)
+    #;(assert (var?  V))
+    #;(assert (node? N))
+    ($set-var-index! V N))
 
-    (define (%var-copy-subst! lhs rhs)
-      ;;LHS  and  RHS are,  respectively,  the  left-hand  side  VAR struct  and  the
-      ;;right-hand side expression of a binding defined  by a BIND struct.  If RHS is
-      ;;a VAR struct with a PROP struct in  its "index" field: store such PROP in the
-      ;;"index" field of LHS, so that they have the same PROP.
-      ;;
-      ;;For example, given:
-      ;;
-      ;;   (bind ((a b))
-      ;;     ?body)
-      ;;
-      ;;we want the VAR structs A and B to have the same property.
-      ;;
-      #;(assert (var? lhs))
-      (cond ((and (var? rhs)
-		  (var-index rhs))
-	     => (lambda (obj)
-		  (set-var-index! lhs (if (prop? obj) obj #f))))
-	    (else
-	     (%var-reset-subst! lhs))))
+  (define (%var-get-node V)
+    #;(assert (var? x))
+    ($var-index V))
 
-    (define (%var-get-subst x)
-      #;(assert (var? x))
-      (struct-case ($var-index x)
-	((prop v)	v)
-	(else		#f)))
+;;; --------------------------------------------------------------------
+;;; VAR structs and associated substitutions
 
-    #| end of module |# )
+  ;;The field  "index" of VAR structs  is used to  hold the substitution for  the VAR
+  ;;struct itself.  If "index" holds false: the VAR struct cannot be substituted with
+  ;;anything; if the "index" holds another  VAR struct or a CLOSURE-MAKER struct: the
+  ;;VAR struct can be substituted with such object.
+  ;;
+  ;;Bindings defined by BIND have left-hand side VAR structs:
+  ;;
+  ;;* Are without substitution.
+  ;;
+  ;;* Have another VAR struct as substitution.
+  ;;
+  ;;* Have a CLOSURE-MAKER struct as substitution.
+  ;;
+  ;;Upon entering  this compiler pass, bindings  defined by FIX have  a CLOSURE-MAKER
+  ;;struct as right-hand side expression; their left-hand side VAR structs:
+  ;;
+  ;;* Are without substitution, when their RHS expression returns a "true closure".
+  ;;
+  ;;* Have  the right-hand side CLOSURE-MAKER  struct as substitution, when  such RHS
+  ;;  expression returns a "combinator".
+  ;;
+
+  (define (%var-reset-subst! x)
+    #;(assert (var? x))
+    ($set-var-index! x #f))
+
+  (define (%var-set-subst! x v)
+    ;;X is  a VAR struct.   V can be:  a VAR struct,  a NODE struct,  a CLOSURE-MAKER
+    ;;struct, the symbol "q".
+    ;;
+    #;(assert (var? x))
+    #;(assert (or (node? v) (closure-maker? v) (var? v) (eq? v 'q)))
+    ($set-var-index! x v))
+
+  (define (%var-copy-subst! lhs rhs)
+    ;;LHS and RHS are, respectively, the left-hand side VAR struct and the right-hand
+    ;;side expression of a binding defined  by a BIND struct.  Conditionally copy the
+    ;;substitution object from RHS to LHS:
+    ;;
+    ;;* If  RHS is  a VAR struct  with non-false substitution  object in  its "index"
+    ;;  field: store such  object in the "index" field of LHS, so  that they have the
+    ;;  same substitution.
+    ;;
+    ;;* Otherwise RHS is  not a VAR struct or it has no  substitution: store false in
+    ;;  the LHS "index" field, so that LHS also has no substitution.
+    ;;
+    ;;For example, given:
+    ;;
+    ;;   (bind ((a b))
+    ;;     ?body)
+    ;;
+    ;;we want the VAR structs A and B to have the same property.
+    ;;
+    #;(assert (var? lhs))
+    (set-var-index! lhs (and (var? rhs)
+			     (var-index rhs))))
+
+  (define (%var-get-subst x)
+    #;(assert (var? x))
+    ($var-index x))
 
   #| end of module: optimize-closures/lift-codes |# )
 
