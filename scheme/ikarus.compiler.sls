@@ -4800,60 +4800,55 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%find-var-substitution!)
+  (define (%find-var-substitution! x)
+    ;;Non-tail  recursive function.   X  is  a VAR  struct.   Traverse  the graph  of
+    ;;substitutions starting from X and return:
+    ;;
+    ;;* X itself if X has no substitution.
+    ;;
+    ;;* If the substitution  of X is a CLOSURE-MAKER struct:  return such struct.  In
+    ;;   this case  the CLOSURE-MAKER  represents code  that, evaluated  at run-time,
+    ;;  returns a "combinator" function.
+    ;;
+    ;;* If  the substitution of  X is another VAR  struct: recurse searching  for its
+    ;;  substitution, which will become the substitution of X.
+    ;;
+    (when (eq? x 'q)
+      (compile-time-error __who__
+	"circular dependency searching for VAR substitution"))
+    (let ((x.subst (%var-get-subst x)))
+      (cond ((not x.subst)
+	     ;;The VAR  struct X has  no substitution,  so it cannot  be substituted:
+	     ;;just use it.  This  might be a substitution: if X is  not the start of
+	     ;;the graph traversal,  the VAR from which the traversal  was started is
+	     ;;substituted with X.
+	     x)
 
-    (define (%find-var-substitution! x)
-      ;;Non-tail  recursive function.   X is  a VAR  struct.  Traverse  the graph  of
-      ;;substitutions starting from X and return:
-      ;;
-      ;;* X itself if X has no substitution or its substitution is a NODE struct.
-      ;;
-      ;;* If the substitution of X is a closure maker object ...
-      ;;
-      ;;* ...
-      ;;
-      (when (eq? x 'q)
-	(compile-time-error __who__ "BUG: circular dep"))
-      (let ((x.subst (%var-get-subst x)))
-	(cond ((not x.subst)
-	       ;;The VAR struct  X has no substitution, so it  cannot be substituted:
-	       ;;just use it.  This might be a substitution: if X is not the start of
-	       ;;the graph traversal, the VAR from which the traversal was started is
-	       ;;substituted with X.
-	       x)
+	    ((var? x.subst)
+	     ;;The VAR struct X has another  VAR as substitution: step forward in the
+	     ;;graph of substitutions.
+	     ;;
+	     ;;By  temporarily  setting the  subst  to  "q"  we can  detect  circular
+	     ;;references while recursing into %FIND-VAR-SUBSTITUTION!.
+	     (%var-set-subst! x 'q)
+	     (receive-and-return (new-subst)
+		 (%find-var-substitution! x.subst)
+	       ;;Down the graph traversal we  have retrieved a substitution: store it
+	       ;;so that  further traversals reaching  ORIGINAL-VAR will just  use it
+	       ;;rather than go deeper again.
+	       (%var-set-subst! x new-subst)))
 
-	      ((var? x.subst)
-	       ;;The VAR  struct X has another  VAR as substitution: step  forward in
-	       ;;the graph of substitutions.
-	       (%get-forward-recursion! x x.subst))
+	    ((closure-maker? x.subst)
+	     ;;The  VAR X  has a  CLOSURE-MAKER  as substitution.   The original  VAR
+	     ;;struct,  at the  beginning of  the substitutions  graph traversal,  is
+	     ;;substituted by this  CLOSURE-MAKER struct which has  no free variables
+	     ;;and so will return a "combinator" closure object.
+	     #;(assert (null? (closure-maker-freevar* x.subst)))
+	     x.subst)
 
-	      ((closure-maker? x.subst)
-	       ;;The VAR  X has  a CLOSURE-MAKER as  substitution.  The  original VAR
-	       ;;struct, at  the beginning of  the substitutions graph  traversal, is
-	       ;;substituted by this CLOSURE-MAKER struct which has no free variables
-	       ;;and so will return a "combinator" closure object.
-	       #;(assert (null? (closure-maker-freevar* x.subst)))
-	       x.subst)
-
-	      ;;The VAR struct X cannot be substituted.  Just use it.
-	      ;;
-	      ;;FIXME Does this case ever happen?  (Marco Maggi; Thu Sep 4, 2014)
-	      (else
-	       (compiler-internal-error __who__
-		 "invalid VAR substitution" x x.subst)))))
-
-    (define (%get-forward-recursion! original-var old-subst)
-      ;;By temporarily setting the subst to "q" we can detect circular references while
-      ;;recursing into %FIND-VAR-SUBSTITUTION!.
-      (%var-set-subst! original-var 'q)
-      (receive-and-return (new-subst)
-	  (%find-var-substitution! old-subst)
-	;;Down the graph traversal we have retrieved a substitution: store it so that
-	;;further traversals  reaching ORIGINAL-VAR will  just use it rather  than go
-	;;deeper again.
-	(%var-set-subst! original-var new-subst)))
-
-    #| end of module: %FIND-VAR-SUBSTITUTION! |# )
+	    (else
+	     (compiler-internal-error __who__
+	       "invalid VAR substitution" x x.subst)))))
 
 ;;; --------------------------------------------------------------------
 ;;; VAR structs and associated NODE structs
