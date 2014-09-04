@@ -4504,7 +4504,7 @@
 	;;VAR.
 	($map/stx (lambda (lhs rhs)
 		    (receive-and-return (N)
-			(mk-node lhs ($closure-maker-code rhs) ($closure-maker-recursive? rhs))
+			(mk-node lhs ($closure-maker-code rhs))
 		      (%var-set-node! lhs N)))
 	  lhs* rhs*))
       ;;If X is free in Y, then whenever X becomes a non-combinator, Y also becomes a
@@ -4567,13 +4567,10 @@
 		;CLAMBDA.   This   list  of  free   variables  is  cleaned   up  from
 		;substitutions in outer binding forms  and from the possible self VAR
 		;reference (in recursive functions).
-       recursive?
-		;Boolean.   True  if  the  function  returned  by  the  CLOSURE-MAKER
-		;associated to this NODE is recursive.
        ))
 
-    (define (mk-node lhs code recursive?)
-      (make-node lhs code '() #f '() recursive?))
+    (define (mk-node lhs code)
+      (make-node lhs code '() #f '()))
 
     (define (node-push-freevar! node freevar)
       ($set-node-freevar*! node (cons freevar ($node-freevar* node))))
@@ -4606,12 +4603,11 @@
       ;;replace the NODE with a proper CLOSURE-MAKER substitution.
       ;;
       ($map/stx (lambda (node)
-		  (let ((freevar*   ($node-freevar*   node))
-			(recursive? ($node-recursive? node)))
+		  (let ((freevar* ($node-freevar* node)))
 		    (receive-and-return (clmaker)
 			;;Make the new CLOSURE-MAKER using the list of free variables
 			;;we have cleaned before.
-			(make-closure-maker ($node-code node) freevar* recursive?)
+			(make-closure-maker ($node-code node) freevar* #f)
 		      ;;Is the binding  of CLOSURE-MAKER to be included  in the graph
 		      ;;of substitutions?
 		      (let ((lhs ($node-name node)))
