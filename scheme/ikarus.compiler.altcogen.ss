@@ -394,9 +394,6 @@
 	((seq e0 e1)
 	 (make-seq (E e0) (E e1)))
 
-	;;FIXME Is it actually possible,  here, to find a CLOSURE struct
-	;;not already in a FIX?  (Marco Maggi; Oct 15, 2012)
-	;;
 	((closure)
 	 (let ((t (make-unique-var 'tmp)))
 	   (E (make-fix (list t) (list x) t))))
