@@ -4415,7 +4415,7 @@
 	 x)
 
 	((var)
-	 (%get-forward! x))
+	 (%find-var-substitution! x))
 
 	((primref)
 	 x)
@@ -4610,13 +4610,22 @@
 				     (%var-reset-subst! lhs)))))))
 		    node*)))
 	($for-each/stx
-	    (lambda (lhs^ closure)
-	      (let ((lhs^^ (%get-forward! lhs^)))
-		($set-closure-freevar*! closure (filter var?
-						  (remq lhs^^ (%trim-freevar* ($closure-freevar* closure)))))
+	    (lambda (original-lhs closure)
+	      (let* ((lhs-replacement      (%find-var-substitution! original-lhs))
+		     ;;Remove  free  variables  that   have  a  CLOSURE  replacement;
+		     ;;substitute free  variables having a VAR  substitution with the
+		     ;;VAR replacement itself.
+		     (substituted-freevar* (%trim-freevar* ($closure-freevar* closure)))
+		     ;;If the original LHS has a VAR substitution: remove it.
+		     (substituted-freevar* (if (var? lhs-replacement)
+					       (remq lhs-replacement substituted-freevar*)
+					     substituted-freevar*)))
+		(assert (for-all var? substituted-freevar*))
+		;;(filter var?
+		($set-closure-freevar*! closure substituted-freevar*)
 		;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
 		;;struct.
-		($set-closure-code! closure (lift-code lhs^^
+		($set-closure-code! closure (lift-code lhs-replacement
 						       ($closure-code     closure)
 						       ($closure-freevar* closure)))))
 	  lhs* rhs*)
@@ -4663,7 +4672,7 @@
       (if (pair? freevar*)
 	  (let ((A ($car freevar*))
 		(D ($cdr freevar*)))
-	    (let* ((what (%get-forward! A))
+	    (let* ((what (%find-var-substitution! A))
 		   (rest (%trim-freevar* D)))
 	      ;;Here WHAT  is the substitution  of A; it is  possible that WHAT  is A
 	      ;;itself.
@@ -4682,7 +4691,7 @@
 		       "invalid VAR substitution value" what)))
 		;;No substitution: include the original.
 		;;
-		;;FIXME Can  %GET-FORWARD! actually return  #f?  I think  no.  (Marco
+		;;FIXME Can  %FIND-VAR-SUBSTITUTION! actually return  #f?  I think  no.  (Marco
 		;;maggi; Mon Sep 1, 2014)
 		(cons A rest))))
 	'()))
@@ -4724,9 +4733,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%get-forward!)
+  (module (%find-var-substitution!)
 
-    (define (%get-forward! x)
+    (define (%find-var-substitution! x)
       ;;Non-tail  recursive function.   X is  a VAR  struct.  Traverse  the graph  of
       ;;substitutions starting from X and return:
       ;;
@@ -4772,16 +4781,16 @@
 
     (define (%get-forward-recursion! original-var old-var-subst)
       ;;By temporarily setting the subst to "q" we can detect circular references while
-      ;;recursing into %GET-FORWARD!.
+      ;;recursing into %FIND-VAR-SUBSTITUTION!.
       (%var-set-subst! original-var 'q)
       (receive-and-return (new-var-subst)
-	  (%get-forward! old-var-subst)
+	  (%find-var-substitution! old-var-subst)
 	;;Down the graph traversal we have retrieved a substitution: store it so that
 	;;further traversals  reaching ORIGINAL-VAR will  just use it rather  than go
 	;;deeper again.
 	(%var-set-subst! original-var new-var-subst)))
 
-    #| end of module: %GET-FORWARD! |# )
+    #| end of module: %FIND-VAR-SUBSTITUTION! |# )
 
 ;;; --------------------------------------------------------------------
 
