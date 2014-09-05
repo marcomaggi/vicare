@@ -4186,6 +4186,7 @@
        ;;This is  a BIND struct,  so, assuming the  recordised input is  correct: the
        ;;RHS* are non-CLAMBDA structs;  the VARs in LHS* do *not*  appear in the RHS*
        ;;expressions.
+       #;(assert (for-all (lambda (rhs) (not (clambda? rhs))) rhs*))
        (let-values
 	   (((rhs*^ freevar*.rhs)  (E* rhs*))
 	    ((body^ freevar*.body) (E  body)))
@@ -4197,6 +4198,7 @@
       ((fix lhs* rhs* body)
        ;;This is a FIX struct, so, assuming the recordised input is correct: the RHS*
        ;;are CLAMBDA structs; the VARs in LHS* can appear in the RHS* expressions.
+       #;(assert (for-all (lambda (rhs) (clambda? rhs)) rhs*))
        (let-values
 	   (((rhs*^ freevar*.rhs)  (E-clambda* lhs* rhs*))
 	    ((body^ freevar*.body) (E body)))

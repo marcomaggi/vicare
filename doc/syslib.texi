@@ -6033,46 +6033,46 @@ the source code, where additional documentation is present in the form
 of comments.
 
 @menu
-* syslib compiler intro::         Introduction to the compilation
-                                  process.
-* syslib compiler conv::          Compiler coding conventions.
-* syslib compiler topics::        By topic inspection of behaviour.
-* syslib compiler options::       General configuration options.
-* syslib compiler unparse::       Unparsing intermediate
-                                  representations.
+* syslib compiler intro::          Introduction to the compilation
+                                   process.
+* syslib compiler conv::           Compiler coding conventions.
+* syslib compiler topics::         By topic inspection of behaviour.
+* syslib compiler options::        General configuration options.
+* syslib compiler unparse::        Unparsing intermediate
+                                   representations.
 
 Compiler passes
 
-* syslib compiler full::          The full transformation.
-* syslib compiler recordize::     Scheme code to nested structs.
-* syslib compiler dircalls::      Optimisation for direct calls.
-* syslib compiler letrec::        Optimisation of @func{letrec} and
-                                  @func{letrec*} forms.
-* syslib compiler optimisation::  Source optimisation.
-* syslib compiler refassig::      Rewriting references and assignments.
-* syslib compiler tags::          Tagging known properties.
-* syslib compiler sanitbind::     Sanitizing bindings.
-* syslib compiler direct jumps::  Optimisation for direct jumps.
-* syslib compiler global assign:: Inserting global assignments.
-* syslib compiler vars::          Introducing storage locations.
-* syslib compiler closures::      Closures conversion.
-* syslib compiler lift codes::    Closures optimization and codes
-                                  lifting.
-* syslib compiler cogen::         Full assembly code generation.
-* syslib compiler assember::      Binary code generation.
+* syslib compiler full::           The full transformation.
+* syslib compiler recordize::      Scheme code to nested structs.
+* syslib compiler dircalls::       Optimisation for direct calls.
+* syslib compiler letrec::         Optimisation of @func{letrec} and
+                                   @func{letrec*} forms.
+* syslib compiler optimisation::   Source optimisation.
+* syslib compiler refassig::       Rewriting references and assignments.
+* syslib compiler tags::           Tagging known properties.
+* syslib compiler sanitbind::      Sanitizing bindings.
+* syslib compiler direct jumps::   Optimisation for direct jumps.
+* syslib compiler global assign::  Inserting global assignments.
+* syslib compiler vars::           Introducing storage locations.
+* syslib compiler closure makers:: Introducing closure makers.
+* syslib compiler lifting::        Closures optimization and @objtype{clambda}
+                                   lifting.
+* syslib compiler cogen::          Full assembly code generation.
+* syslib compiler assember::       Binary code generation.
 
 Code generation passes
 
-* syslib compiler primcall::      Introducing primitive calls.
-* syslib compiler fix::           Removing fixes.
-* syslib compiler engine::        Inserting engine checks.
-* syslib compiler stack::         Inserting stack overflow checks.
-* syslib compiler primop::        Expanding primitive operations.
-* syslib compiler order::         Imposing calling convention and
-                                  evaluation order.
-* syslib compiler frame::         Assigning frame sizes.
-* syslib compiler color::         Colorising by Chaitin.
-* syslib compiler flatten::       Flattening codes.
+* syslib compiler primcall::       Introducing primitive calls.
+* syslib compiler fix::            Removing fixes.
+* syslib compiler engine::         Inserting engine checks.
+* syslib compiler stack::          Inserting stack overflow checks.
+* syslib compiler primop::         Expanding primitive operations.
+* syslib compiler order::          Imposing calling convention and
+                                   evaluation order.
+* syslib compiler frame::          Assigning frame sizes.
+* syslib compiler color::          Colorising by Chaitin.
+* syslib compiler flatten::        Flattening codes.
 @end menu
 
 @c page
@@ -8732,9 +8732,62 @@ a different set of properties to handle variable bindings.
 @end defun
 
 @c page
-@node syslib compiler closures
-@subsection Closure conversion
+@node syslib compiler closure makers
+@subsection Introducing closure makers
 
+
+We can think of @objtype{clambda} structs as representing code that,
+once compiled, becomes the machine code stored in code objects
+implementing Scheme functions.  This compiler pass wraps each
+@objtype{clambda} struct into a @objtype{closure-maker} struct, which
+represents code that, executed at run--time, builds and returns a
+closure object using the @objtype{clambda}'s code object as
+implementation.
+
+Upon entering this compiler pass:
+
+@itemize
+@item
+For bindings defined by @objtype{bind} structs:
+
+@example
+(bind ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@end example
+
+@noindent
+the @meta{lhs} are @objtype{var} structs; the @meta{rhs} are
+non--@objtype{clambda} structs; the @objtype{var} in @meta{lhs} do
+@strong{not} appear in the @meta{rhs} expressions.
+
+@item
+For bindings defined by @objtype{fix} structs:
+
+@example
+(fix ((@meta{lhs} @meta{rhs}) ...) @meta{body})
+@end example
+
+@noindent
+the @meta{lhs} are @objtype{var} structs; the @meta{rhs} are
+@objtype{clambda} structs; the @objtype{var} in @meta{lhs} might appear
+in the @meta{rhs} expressions.
+@end itemize
+
+Being that @objtype{clambda} structs appear only as right--hand side
+expressions of @objtype{fix} structs, this compiler pass transforms:
+
+@example
+(fix ((@meta{lhs} @meta{clambda-rhs}) ...) @meta{body})
+@end example
+
+@noindent
+into:
+
+@example
+(fix ((@meta{lhs} (closure-maker @meta{clambda-rhs})) ...) @meta{body})
+@end example
+
+While wrapping @objtype{clambda}, a list of free variables in the body
+of the @objtype{clambda} is computed for future use.
 
 The following bindings are exported by the library @library{vicare
 system $compiler}.
@@ -8747,13 +8800,64 @@ code, and building a new hierarchy of recordised code; return the new
 hierarchy.
 
 This function wraps each @objtype{clambda} struct in the input
-recordised code into @objtype{closure} structures, compiling a list of
-free variables referenced by each @objtype{closure}.
+recordised code into @objtype{closure-maker} structures, compiling a
+list of free variables referenced by each @objtype{clambda}.
 @end defun
 
+@c ------------------------------------------------------------
+
+@subsubheading Examples
+
+This example generates a function with no free variables:
+
+@example
+(lambda () '1)
+@expansion{} (fix ((tmp_0 (closure-maker (lambda () (constant 1))
+                                no-freevars)))
+      tmp_0)
+@end example
+
+This example generates a multi--clause function with no free variables:
+
+@example
+(case-lambda
+ (() '1)
+ ((a) a))
+@expansion{} (fix ((tmp_0 (closure-maker (case-lambda
+                                 (()    (constant 1))
+                                 ((a_0) a_0))
+                                no-freevars)))
+      tmp_0)
+@end example
+
+This example generates a function with a free variable:
+
+@example
+(let ((a ((primitive read))))
+  (lambda () a))
+@expansion{} (bind ((a_0 (funcall (primref read))))
+      (fix ((tmp_0 (closure-maker (lambda () a_0)
+                                  (freevars: a_0))))
+        tmp_0))
+@end example
+
+This example generates a recursive function with no free variables other
+than the reference to itself:
+
+@example
+(letrec ((f (lambda () (f))))
+  f)
+@expansion{} (fix ((f_0 (closure-maker
+                           (lambda ()
+                             (jmpcall asmlabel:f:clambda:case-0
+                               f_0))
+                           (freevars: f_0))))
+      f_0)
+@end example
+
 @c page
-@node syslib compiler lift codes
-@subsection Closures optimization and codes lifting
+@node syslib compiler lifting
+@subsection Closures optimization and @objtype{clambda} lifting
 
 
 The following bindings are exported by the library @library{vicare
@@ -8769,13 +8873,13 @@ recordised code; return a @objtype{codes} struct.
 
 
 @menu
-* syslib compiler lift codes req::      Prerequisites for codes lifting.
-* syslib compiler lift codes closures:: True closures and combinators.
+* syslib compiler lifting req::      Prerequisites for codes lifting.
+* syslib compiler lifting closures:: True closures and combinators.
 @end menu
 
 
 @c page
-@node syslib compiler lift codes req
+@node syslib compiler lifting req
 @subsubsection Prerequisites for codes lifting
 
 
@@ -8806,7 +8910,7 @@ If the right--hand side expression of a binding defined by
 
 
 @c page
-@node syslib compiler lift codes closures
+@node syslib compiler lifting closures
 @subsubsection True closures and combinators
 
 

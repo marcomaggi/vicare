@@ -2014,6 +2014,86 @@
   #t)
 
 
+(parametrise ((check-test-name						'closure-makers)
+	      (compiler.$enabled-function-application-integration?	#f)
+	      (compiler.$descriptive-labels				#t))
+
+;;;Function  application integration  is disabled  here to  make it  easier to  write
+;;;meaningful code for debugging and inspection.
+
+  (define (%introduce-closure-makers core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   (D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (D (compiler.$sanitize-bindings D))
+	   (D (compiler.$optimize-for-direct-jumps D))
+	   (D (compiler.$insert-global-assignments D))
+	   (D (compiler.$introduce-vars D))
+	   (D (compiler.$introduce-closure-makers D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%introduce-closure-makers (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+  (define-syntax libdoit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result/basic)
+       (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  ;;LAMBDA combinator.
+  (doit (lambda () '1)
+	(fix ((tmp_0 (closure-maker (lambda () (constant 1))
+				    no-freevars)))
+	  tmp_0))
+
+  ;;CASE-LAMBDA combinator.
+  (doit (case-lambda
+	 (() '1)
+	 ((a) a))
+	(fix ((tmp_0 (closure-maker (case-lambda
+				     (()    (constant 1))
+				     ((a_0) a_0))
+				    no-freevars)))
+	  tmp_0))
+
+  ;;LAMBDA closure.
+  (doit (let ((a ((primitive read))))
+	  (lambda () a))
+	(bind ((a_0 (funcall (primref read))))
+	  (fix ((tmp_0 (closure-maker (lambda () a_0)
+				      (freevars: a_0))))
+	    tmp_0)))
+
+  ;;Recursive LAMBDA combinator.
+  (doit (letrec ((f (lambda () (f))))
+	  f)
+	(fix ((f_0 (closure-maker (lambda () (jmpcall asmlabel:f:clambda:case-0 f_0))
+				  (freevars: f_0))))
+	  f_0))
+
+  #t)
+
+
 (parametrise ((check-test-name						'lift-codes)
 	      (compiler.$enabled-function-application-integration?	#f)
 	      (compiler.$descriptive-labels				#t))
