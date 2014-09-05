@@ -9253,6 +9253,32 @@ binding never mutates; so the returned function is a ``combinator'', a
 function without free variables.
 
 @item
+In this example a single true closure is called twice:
+
+@example
+(let ((a ((primitive read))))
+  (let ((f (lambda () a)))
+    ((primitive list) (f) (f))))
+@end example
+
+@noindent
+the result of the transformation is:
+
+@example
+(codes
+  ((lambda (label: asmlabel:f:clambda) () a_0))
+  (bind ((a_0 (funcall (primref read))))
+    (fix ((f_0 (closure-maker (code-loc asmlabel:f:clambda)
+                              (freevars: a_0))))
+      (funcall (primref list)
+               (jmpcall asmlabel:f:clambda:case-0 f_0)
+               (jmpcall asmlabel:f:clambda:case-0 f_0)))))
+@end example
+
+@noindent
+we see that a single @objtype{closure-maker} is introduced.
+
+@item
 The following standard code:
 
 @example
@@ -9301,6 +9327,32 @@ with a reference to @code{a_0}, and so we can transform the code to:
     (fix ((c_0 (lambda () (funcall a_0))))
       c_0)))
 @end example
+
+@item
+We may think that a self reference in a recursive function makes it a
+closure, but this is not true.  For example:
+
+@example
+(fix ((f (lambda () (f))))
+  @meta{body})
+@end example
+
+@noindent
+defines @code{f} as a combinator because the recursive call to @code{f}
+can be implemented as a @objtype{jmpcall} to the assembly entry point of
+the function and there are no other free variables.  Instead:
+
+@example
+(bind ((a @meta{rhs}))
+  (fix ((f (lambda (b) (f a))))
+    @meta{body}))
+@end example
+
+@noindent
+defines @code{f} as a true closure: the recursive call to @code{f} can
+be implemented as a @objtype{jmpcall} to the assembly entry point of the
+function, but the function is closed upon the variable @code{a}.  It is
+the free variable @code{a} that makes @code{f} a true closure.
 @end itemize
 
 @c page

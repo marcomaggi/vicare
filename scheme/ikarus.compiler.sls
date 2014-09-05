@@ -4483,24 +4483,7 @@
 	;;         ?body))
 	;;
 	;;We  also remove  self  references  in recursive  functions  because a  self
-	;;reference does not cause a function to be a "true closure".  For example:
-	;;
-	;;   (fix ((f (lambda () (f))))
-	;;     ?body)
-	;;
-	;;defines  F  as  a  combinator  because  the recursive  call  to  F  can  be
-	;;implemented as  a JMPCALL to the  assembly entry point of  the function and
-	;;there are no other free variables.  Instead:
-	;;
-	;;   (bind ((a ?rhs))
-	;;     (fix ((f (lambda (b) (f a))))
-	;;       ?body))
-	;;
-	;;defines F as a true closure: the  recursive call to F can be implemented as
-	;;a JMPCALL to the assembly entry point  of the function, but the function is
-	;;closed upon the variable A.  It is the  free variable A that makes F a true
-	;;closure.
-	;;
+	;;reference does not cause a function to be a "true closure".
 	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
       (define node*
 	;;Define the  NODE structs  required to establish  the graph  of dependencies

@@ -2197,6 +2197,7 @@
 ;;; --------------------------------------------------------------------
 ;;; true closures
 
+  ;;Single function, single call.
   (doit (let ((a ((primitive read))))
 	  (lambda () a))
 	(codes
@@ -2205,6 +2206,19 @@
 	   (fix ((tmp_0 (closure-maker (code-loc asmlabel:anonymous:clambda)
 				       (freevars: a_0))))
 	     tmp_0))))
+
+  ;;Single function, 2 calls.
+  (doit (let ((a ((primitive read))))
+	  (let ((f (lambda () a)))
+	    ((primitive list) (f) (f))))
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) () a_0))
+	 (bind ((a_0 (funcall (primref read))))
+	   (fix ((f_0 (closure-maker (code-loc asmlabel:f:clambda)
+				     (freevars: a_0))))
+	     (funcall (primref list)
+	       (jmpcall asmlabel:f:clambda:case-0 f_0)
+	       (jmpcall asmlabel:f:clambda:case-0 f_0))))))
 
 ;;; --------------------------------------------------------------------
 ;;; binding reference substitutions
