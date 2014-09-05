@@ -5013,7 +5013,7 @@
    ;;"SL_call_with_values".
    ;;
    ((V)
-    (K (make-closure-maker (make-code-loc (sl-cwv-label)) '() #f)))
+    (K (make-closure-maker (make-code-loc (sl-cwv-label)) '())))
    ((P)
     (interrupt))
    ((E)
@@ -5025,7 +5025,7 @@
    ;;primitive function through the assembly routine "SL_values".
    ;;
    ((V)
-    (K (make-closure-maker (make-code-loc (sl-values-label)) '() #f)))
+    (K (make-closure-maker (make-code-loc (sl-values-label)) '())))
    ((P)
     (interrupt))
    ((E)

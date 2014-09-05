@@ -433,8 +433,8 @@
 	;;RHS must be a struct instance of type CLOSURE-MAKER.
 	;;
 	(struct-case rhs
-	  ((closure-maker code freevar* recursive?)
-	   (make-closure-maker code ($map/stx %do-var freevar*) recursive?))))
+	  ((closure-maker code freevar*)
+	   (make-closure-maker code ($map/stx %do-var freevar*)))))
 
       #| end of module: %do-fix |# )
 

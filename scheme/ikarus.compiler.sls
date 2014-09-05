@@ -1338,9 +1338,6 @@
    freevar*
 		;Null or a  proper list of struct instances of  type VAR representing
 		;the free variables referenced by the generated closure object.
-   recursive?
-		;Boolean.  True if the body of  the CLAMBDA references itself, and so
-		;the function is recursive; false otherwise.
    ))
 
 ;;Instances of this type represent primitive operation applications.
@@ -4152,11 +4149,6 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall		jmpcall
   ;;
-  ;;NOTE This module  makes use of the field  "index" of structs of type  VAR used to
-  ;;reference bindings.   The value of such  fields from previous compiler  passes is
-  ;;expected  to be  #f.   The purpose  of  the field  in this  compiler  pass is  to
-  ;;determine which CLAMBDA structs represent a recursive function.
-  ;;
   (define-fluid-override __who__
     (identifier-syntax 'introduce-closure-makers))
 
@@ -4185,7 +4177,6 @@
        (values X '()))
 
       ((var)
-       ($set-var-index! X #f)
        (values X (list X)))
 
       ((primref)
@@ -4206,23 +4197,10 @@
       ((fix lhs* rhs* body)
        ;;This is a FIX struct, so, assuming the recordised input is correct: the RHS*
        ;;are CLAMBDA structs; the VARs in LHS* can appear in the RHS* expressions.
-       ($for-each/stx (lambda (lhs)
-			($set-var-index! lhs #t))
-	 lhs*)
        (let-values
 	   (((rhs*^ freevar*.rhs)  (E-clambda* lhs* rhs*))
 	    ((body^ freevar*.body) (E body)))
 	 ;;Here RHS*^ is a list of CLOSURE-MAKER structs.
-	 ($for-each/stx (lambda (lhs rhs^)
-			  ;;LHS is the  VAR struct referencing the  CLAMBDA RHS^.  If
-			  ;;the field  "index" of LHS  is true: LHS appears  at least
-			  ;;once  in the  body of  RHS^; this  means the  function is
-			  ;;recursive.  If  the field  "index" of  LHS is  false: LHS
-			  ;;does not appear in the body of RHS^.
-			  (when ($var-index lhs)
-			    (set-closure-maker-recursive?! rhs^ #t)
-			    ($set-var-index! lhs #f)))
-	   lhs* rhs*^)
 	 (values (make-fix lhs* rhs*^ body^)
 		 ;;If  a VAR  struct is  a binding  in  this FIX:  it is  not a  free
 		 ;;variable; so remove it.
@@ -4337,9 +4315,8 @@
 	 #;(assert (not freevar*.unused))
 	 (receive (clause*^ freevar*)
 	     (E-clambda-case* clause*)
-	   (values (let ((clam       (make-clambda label clause*^ lhs freevar* name))
-			 (recursive? #f))
-		     (make-closure-maker clam freevar* recursive?))
+	   (values (let ((clam (make-clambda label clause*^ lhs freevar* name)))
+		     (make-closure-maker clam freevar*))
 		   freevar*)))))
 
     (define (E-clambda-case* clause*)
@@ -4607,7 +4584,7 @@
 		    (receive-and-return (clmaker)
 			;;Make the new CLOSURE-MAKER using the list of free variables
 			;;we have cleaned before.
-			(make-closure-maker ($node-code node) freevar* #f)
+			(make-closure-maker ($node-code node) freevar*)
 		      ;;Is the binding  of CLOSURE-MAKER to be included  in the graph
 		      ;;of substitutions?
 		      (let ((lhs ($node-name node)))
@@ -6740,9 +6717,8 @@
 	       (free:  ,(and freevar* (map unparse-recordized-code freevar*)))
 	       ,@(map unparse-recordized-code cls*)))
 
-    ((closure-maker code freevar* recursive?)
-     `(closure ,(if recursive? '(recursive: #t) '(recursive: #f))
-	       (freevars: ,(map unparse-recordized-code freevar*))
+    ((closure-maker code freevar*)
+     `(closure (freevars: ,(map unparse-recordized-code freevar*))
 	       ,(unparse-recordized-code code)))
 
     ((codes list body)
@@ -6886,7 +6862,7 @@
 	((clambda)
 	 (E-clambda x))
 
-	((closure-maker code freevar* recursive?)
+	((closure-maker code freevar*)
 	 `(closure-maker ,(E code)
 			 ,(let ((freevar* (map E freevar*)))
 			    (if (null? freevar*)
@@ -7120,7 +7096,7 @@
 	((clambda)
 	 (E-clambda x))
 
-	((closure-maker code freevar* recursive?)
+	((closure-maker code freevar*)
 	 `(closure-maker ,(E code)
 			 ,(let ((freevar* (map E freevar*)))
 			    (if (null? freevar*)
