@@ -6810,7 +6810,7 @@ optimize-for-direct-jumps
 insert-global-assignments
 introduce-vars
 introduce-closure-makers
-optimize-closures/lift-codes
+optimize-combinator-calls/lift-clambdas
 @end example
 
 @noindent
@@ -8760,7 +8760,7 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $optimize-closures/lift-codes @var{input}
+@defun $optimize-combinator-calls/lift-clambdas @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code in the core language, and building a new hierarchy of transformed,

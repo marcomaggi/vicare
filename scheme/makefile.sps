@@ -3108,7 +3108,7 @@
     ($optimize-for-direct-jumps			$compiler)
     ($insert-global-assignments			$compiler)
     ($introduce-closure-makers			$compiler)
-    ($optimize-closures/lift-codes		$compiler)
+    ($optimize-combinator-calls/lift-clambdas	$compiler)
     ($alt-cogen					$compiler)
     ($assemble-sources				$compiler)
 

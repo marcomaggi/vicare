@@ -2032,7 +2032,7 @@
 	   (D (compiler.$insert-global-assignments D))
 	   (D (compiler.$introduce-vars D))
 	   (D (compiler.$introduce-closure-makers D))
-	   (D (compiler.$optimize-closures/lift-codes D))
+	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
 	   (S (compiler.$unparse-recordized-code/sexp D)))
       S))
 

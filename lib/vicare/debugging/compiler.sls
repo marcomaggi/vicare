@@ -48,7 +48,7 @@
     $optimize-for-direct-jumps
     $insert-global-assignments
     $introduce-closure-makers
-    $optimize-closures/lift-codes
+    $optimize-combinator-calls/lift-clambdas
     $alt-cogen
     $assemble-sources
 
@@ -85,7 +85,7 @@
 		 $optimize-for-direct-jumps
 		 $insert-global-assignments
 		 $introduce-closure-makers
-		 $optimize-closures/lift-codes
+		 $optimize-combinator-calls/lift-clambdas
 		 $alt-cogen
 		 $assemble-sources
 
@@ -111,7 +111,7 @@
     ((_ $optimize-for-direct-jumps	?body)	(%compile-up-to  9 ?body))
     ((_ $insert-global-assignments	?body)	(%compile-up-to 10 ?body))
     ((_ $introduce-closure-makers		?body)	(%compile-up-to 11 ?body))
-    ((_ $optimize-closures/lift-codes	?body)	(%compile-up-to 12 ?body))
+    ((_ $optimize-combinator-calls/lift-clambdas	?body)	(%compile-up-to 12 ?body))
     ((_ $alt-cogen			?body)	(%compile-up-to 13 ?body))
     ((_ $assemble-sources		?body)	(%compile-up-to 14 ?body))
     ;;code generation passes
@@ -148,7 +148,7 @@
 	   (R (doit R  9 $optimize-for-direct-jumps))
 	   (R (doit R 10 $insert-global-assignments))
 	   (R (doit R 12 $introduce-closure-makers))
-	   (R (doit R 12 $optimize-closures/lift-codes))
+	   (R (doit R 12 $optimize-combinator-calls/lift-clambdas))
 	   (R (if (or (fx= 13 requested-idx)
 		      (fx= 14 requested-idx))
 		  ($alt-cogen R)

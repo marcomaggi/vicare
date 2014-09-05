@@ -61,7 +61,7 @@
      (insert-global-assignments			$insert-global-assignments)
      (introduce-vars				$introduce-vars)
      (introduce-closure-makers			$introduce-closure-makers)
-     (optimize-closures/lift-codes		$optimize-closures/lift-codes)
+     (optimize-combinator-calls/lift-clambdas	$optimize-combinator-calls/lift-clambdas)
      (alt-cogen					$alt-cogen)
      (assemble-sources				$assemble-sources)
 
@@ -672,7 +672,7 @@
 	     (p (insert-global-assignments p))
 	     (p (introduce-vars p))
 	     (p (introduce-closure-makers p))
-	     (p (optimize-closures/lift-codes p))
+	     (p (optimize-combinator-calls/lift-clambdas p))
 	     (ls* (alt-cogen p)))
 	(when (assembler-output)
 	  ;;Print nicely the assembly labels.
@@ -714,7 +714,7 @@
 	     (p (insert-global-assignments p))
 	     (p (introduce-vars p))
 	     (p (introduce-closure-makers p))
-	     (p (optimize-closures/lift-codes p))
+	     (p (optimize-combinator-calls/lift-clambdas p))
 	     (ls* (alt-cogen p)))
 	#;(gensym-prefix "L")
 	ls*)))
@@ -4346,7 +4346,7 @@
   #| end of module: convert closures |# )
 
 
-(module (optimize-closures/lift-codes)
+(module (optimize-combinator-calls/lift-clambdas)
   ;;This module
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
@@ -4362,9 +4362,9 @@
   ;;ignored, because the fields are reset to #f before being used in this module.
   ;;
   (define-fluid-override __who__
-    (identifier-syntax 'optimize-closures/lift-codes))
+    (identifier-syntax 'optimize-combinator-calls/lift-clambdas))
 
-  (define all-codes
+  (define all-clambdas
     ;;While  processing  an  input  expression:  a proper  list  of  CLAMBDA  structs
     ;;representing the  set of  all the  functions defined  in the  input expression.
     ;;These CLAMBDA structs  will be compiled to  machine code and used  to build the
@@ -4372,18 +4372,18 @@
     ;;
     (make-parameter #f))
 
-  (define-syntax-rule (%prepend-to-all-codes! ?obj)
-    (all-codes (cons ?obj (all-codes))))
+  (define-syntax-rule (%prepend-to-all-clambdas! ?obj)
+    (all-clambdas (cons ?obj (all-clambdas))))
 
-  (define (optimize-closures/lift-codes X)
+  (define (optimize-combinator-calls/lift-clambdas X)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
     ;;a  struct instance  representing  recordised  code in  the  core language,  and
     ;;building  a new  hierarchy  of  transformed, recordised  code;  return a  CODES
     ;;struct.
     ;;
-    (parametrise ((all-codes '()))
+    (parametrise ((all-clambdas '()))
       (let* ((X^ (E X))
-	     (C (make-codes (all-codes) X^)))
+	     (C (make-codes (all-clambdas) X^)))
 	C)))
 
   (module (E)
@@ -4517,7 +4517,7 @@
       (let ((rhs* (%assign-substitutions-to-closures node*)))
 	;;Clean the lists of free variables  for the substitutions of the bindings in
 	;;this very FIX struct.  Introduce the  CODE-LOC structs and push the CLAMBDA
-	;;structs to ALL-CODES.
+	;;structs to ALL-CLAMBDAS.
 	(%final-freevars-cleanup-and-code-lifting lhs* rhs*)
 	;;Process  the BODY  substituting  VAR structs  from  LHS* when  appropriate.
 	;;Build and return the output FIX struct.
@@ -4620,7 +4620,7 @@
       ;;   (fix ((?lhs (closure-maker (code-loc ?asmlabel)) ...))
       ;;     ?body)
       ;;
-      ;;   all-codes := (?clambda ...)
+      ;;   all-clambdas := (?clambda ...)
       ;;
       ($for-each/stx
 	  (lambda (lhs clmaker)
@@ -4722,7 +4722,7 @@
       ;;Given data  from a CLOSURE-MAKER  struct: build a new  CLAMBDA to be  used to
       ;;generated  the actual  code object;  build a  CODE-LOC struct  to be  used to
       ;;generate the actual closure object; return the CODE-LOC; push the new CLAMBDA
-      ;;on the parameter ALL-CODES.
+      ;;on the parameter ALL-CLAMBDAS.
       ;;
       ;;CP is the  struct instance of type  VAR to which the closure  is bound.  This
       ;;VAR struct represents the machine word (CPU register or memory location) from
@@ -4747,7 +4747,7 @@
 					($for-each/stx %var-reset-subst! (case-info-args info))
 					(make-clambda-case info (E body)))))
 			   clause*)))
-	   (%prepend-to-all-codes! (make-clambda label clause*^ cp new-freevar* name))
+	   (%prepend-to-all-clambdas! (make-clambda label clause*^ cp new-freevar* name))
 	   (make-code-loc label)))))
 
     #| end of module: E-fix |# )
@@ -4896,7 +4896,7 @@
     #;(assert (var? x))
     ($var-index x))
 
-  #| end of module: optimize-closures/lift-codes |# )
+  #| end of module: OPTIMIZE-COMBINATOR-CALLS/LIFT-CLAMBDAS |# )
 
 
 ;;;; definitions for assembly code generation
