@@ -9101,6 +9101,24 @@ Let's see some examples in which function integration has been disabled:
 
 @itemize
 @item
+This core language expression:
+
+@example
+(lambda () ((primitive read)))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+ ((lambda (label: asmlabel:anonymous:clambda)
+    () (funcall (primref read))))
+ (closure-maker (code-loc asmlabel:anonymous:clambda)
+                no-freevars))
+@end example
+
+@item
 In this core language expression:
 
 @example
@@ -9207,7 +9225,18 @@ In the recordised code:
 the returned function is a ``true closure'' because its return value
 depends upon the value of the binding @code{a_0} at the time the closure
 object is created; @code{a_0} is a free variable in the body of the
-function and the function is closed upon it.
+function and the function is closed upon it.  Indeed such form is
+transformed into:
+
+@example
+(codes
+  ((lambda (label: asmlabel:anonymous:clambda) () a_0))
+  (bind ((a_0 (funcall (primref read))))
+    (fix ((tmp_0 (closure-maker
+                   (code-loc asmlabel:anonymous:clambda)
+                   (freevars: a_0))))
+      tmp_0)))
+@end example
 
 @item
 In the following recordised code:

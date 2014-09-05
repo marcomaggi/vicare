@@ -2163,6 +2163,12 @@
 ;;; --------------------------------------------------------------------
 ;;; combinator functions
 
+  (doit (lambda () ((primitive read)))
+	(codes
+	 ((lambda (label: asmlabel:anonymous:clambda) () (funcall (primref read))))
+	 (closure-maker (code-loc asmlabel:anonymous:clambda)
+			no-freevars)))
+
   (doit (let ((f (lambda () '1))
 	      (g (lambda () '2)))
 	  ((primitive list) (f) (g)))
@@ -2187,6 +2193,18 @@
 	   (jmpcall asmlabel:f:clambda:case-0
 		    (closure-maker (code-loc asmlabel:f:clambda)
 				   no-freevars)))))
+
+;;; --------------------------------------------------------------------
+;;; true closures
+
+  (doit (let ((a ((primitive read))))
+	  (lambda () a))
+	(codes
+	 ((lambda (label: asmlabel:anonymous:clambda) () a_0))
+	 (bind ((a_0 (funcall (primref read))))
+	   (fix ((tmp_0 (closure-maker (code-loc asmlabel:anonymous:clambda)
+				       (freevars: a_0))))
+	     tmp_0))))
 
 ;;; --------------------------------------------------------------------
 ;;; binding reference substitutions
