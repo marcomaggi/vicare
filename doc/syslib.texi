@@ -8770,10 +8770,13 @@ For bindings defined by @objtype{fix} structs:
 the @meta{lhs} are @objtype{var} structs; the @meta{rhs} are
 @objtype{clambda} structs; the @objtype{var} in @meta{lhs} might appear
 in the @meta{rhs} expressions.
+
+@item
+Structs of type @objtype{clambda} appear only as right--hand side
+expressions of @objtype{fix} structs.
 @end itemize
 
-Being that @objtype{clambda} structs appear only as right--hand side
-expressions of @objtype{fix} structs, this compiler pass transforms:
+This compiler pass transforms:
 
 @example
 (fix ((@meta{lhs} @meta{clambda-rhs}) ...) @meta{body})
@@ -8786,7 +8789,8 @@ into:
 (fix ((@meta{lhs} (closure-maker @meta{clambda-rhs})) ...) @meta{body})
 @end example
 
-While wrapping @objtype{clambda}, a list of free variables in the body
+@noindent
+while wrapping @objtype{clambda}, a list of free variables in the body
 of the @objtype{clambda} is computed for future use.
 
 The following bindings are exported by the library @library{vicare
@@ -8848,10 +8852,9 @@ than the reference to itself:
 (letrec ((f (lambda () (f))))
   f)
 @expansion{} (fix ((f_0 (closure-maker
-                           (lambda ()
-                             (jmpcall asmlabel:f:clambda:case-0
-                               f_0))
-                           (freevars: f_0))))
+                  (lambda ()
+                    (jmpcall asmlabel:f:clambda:case-0 f_0))
+                  (freevars: f_0))))
       f_0)
 @end example
 

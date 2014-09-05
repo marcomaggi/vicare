@@ -4402,12 +4402,14 @@
 	 x)
 
 	((bind lhs* rhs* body)
+	 #;(assert (for-all (lambda (rhs) (and (not (clambda? rhs)) (not (closure-maker? rhs)))) rhs*))
 	 ;;Clear the field "index" of the VAR structs in LHS* from whatever value the
 	 ;;previous compiler passes have left in.
 	 ($for-each/stx %var-reset-subst! lhs*)
 	 (E-bind lhs* rhs* body))
 
 	((fix lhs* rhs* body)
+	 #;(assert (for-all (lambda (rhs) (closure-maker? rhs)) rhs*))
 	 ;;Clear the field "index" of the VAR structs in LHS* from whatever value the
 	 ;;previous compiler passes have left in.
 	 ($for-each/stx %var-reset-node! lhs*)
