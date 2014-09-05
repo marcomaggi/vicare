@@ -2091,10 +2091,31 @@
 				  (freevars: f_0))))
 	  f_0))
 
+;;; --------------------------------------------------------------------
+;;; libraries
+
+  (doit (library-letrec*
+	    ((a a.loc (lambda () '1))
+	     (b b.loc (lambda () '2))
+	     (c c.loc (lambda () '3))
+	     (d d.loc '4))
+	  (quote #!void))
+	(fix ((a_0 (closure-maker (lambda () (constant 1)) no-freevars))
+	      (b_0 (closure-maker (lambda () (constant 2)) no-freevars))
+	      (c_0 (closure-maker (lambda () (constant 3)) no-freevars)))
+	  (seq
+	    (funcall (primref $set-symbol-value/proc!) (constant a.loc) a_0)
+	    (funcall (primref $init-symbol-value!)     (constant b.loc) b_0)
+	    (funcall (primref $init-symbol-value!)     (constant c.loc) c_0)
+	    (bind ((d_0 (constant 4)))
+	      (seq
+		(funcall (primref $init-symbol-value!) (constant d.loc) d_0)
+		(constant #!void))))))
+
   #t)
 
 
-(parametrise ((check-test-name						'lift-codes)
+(parametrise ((check-test-name						'clambda-lifting)
 	      (compiler.$enabled-function-application-integration?	#f)
 	      (compiler.$descriptive-labels				#t))
 
@@ -2138,6 +2159,34 @@
       ((_ ?standard-language-form ?expected-result/basic)
        (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
       ))
+
+;;; --------------------------------------------------------------------
+;;; combinator functions
+
+  (doit (let ((f (lambda () '1))
+	      (g (lambda () '2)))
+	  ((primitive list) (f) (g)))
+	(codes
+	 ((lambda (label: asmlabel:g:clambda) () (constant 2))
+	  (lambda (label: asmlabel:f:clambda) () (constant 1)))
+	 (funcall (primref list)
+	   (jmpcall asmlabel:f:clambda:case-0
+		    (closure-maker (code-loc asmlabel:f:clambda) no-freevars))
+	   (jmpcall asmlabel:g:clambda:case-0
+		    (closure-maker (code-loc asmlabel:g:clambda) no-freevars)))))
+
+  ;;Single function, multiple closures.
+  (doit (let ((f (lambda () '1)))
+	  ((primitive list) (f) (f)))
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) () (constant 1)))
+	 (funcall (primref list)
+	   (jmpcall asmlabel:f:clambda:case-0
+		    (closure-maker (code-loc asmlabel:f:clambda)
+				   no-freevars))
+	   (jmpcall asmlabel:f:clambda:case-0
+		    (closure-maker (code-loc asmlabel:f:clambda)
+				   no-freevars)))))
 
 ;;; --------------------------------------------------------------------
 ;;; binding reference substitutions
@@ -2188,6 +2237,17 @@
 		 (jmpcall asmlabel:f:clambda:case-1 (closure-maker (code-loc asmlabel:f:clambda) no-freevars) (constant 2)))))
 
 ;;; --------------------------------------------------------------------
+;;; special cases
+
+  (doit (let ((a (lambda () '1)))
+	  (eq? a a))
+	(codes
+	 ((lambda (label: asmlabel:a:clambda) () (constant 1)))
+	 (funcall (funcall (primref top-level-value) (constant eq?))
+	   (closure-maker (code-loc asmlabel:a:clambda) no-freevars)
+	   (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
+
+;;; --------------------------------------------------------------------
 ;;; LIBRARY-LETREC* forms
 
   (doit (library-letrec*
@@ -2215,6 +2275,30 @@
 	       (funcall (primref $init-symbol-value!)
 		 (constant d.loc) d_0)
 	       (constant #!void))))))
+
+  (libdoit* (library (clambda-lifting-demo-0)
+	      (export a b c d)
+	      (import (rnrs))
+	      (define (a) '1)
+	      (define (b) '2)
+	      (define (c) '3)
+	      (define d 4))
+	    (codes
+	     ((lambda (label: asmlabel:lex.c:clambda) () (constant 3))
+	      (lambda (label: asmlabel:lex.b:clambda) () (constant 2))
+	      (lambda (label: asmlabel:lex.a:clambda) () (constant 1)))
+	     (seq
+	       (funcall (primref $set-symbol-value/proc!)
+		 (constant lex.a)
+		 (closure-maker (code-loc asmlabel:lex.a:clambda) no-freevars))
+	       (funcall (primref $init-symbol-value!) (constant lex.b)
+			(closure-maker (code-loc asmlabel:lex.b:clambda) no-freevars))
+	       (funcall (primref $init-symbol-value!) (constant lex.c)
+			(closure-maker (code-loc asmlabel:lex.c:clambda) no-freevars))
+	       (bind ((lex.d_0 (constant 4)))
+		 (seq
+		   (funcall (primref $init-symbol-value!) (constant lex.d) lex.d_0)
+		   (constant #!void))))))
 
   #t)
 

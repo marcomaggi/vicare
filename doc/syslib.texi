@@ -8858,28 +8858,184 @@ than the reference to itself:
       f_0)
 @end example
 
+The core language form:
+
+@example
+(library-letrec*
+    ((a a.loc (lambda () '1))
+     (b b.loc (lambda () '2))
+     (c c.loc (lambda () '3))
+     (d d.loc '4))
+  (quote #!void))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(fix ((a_0 (closure-maker (lambda () (constant 1)) no-freevars))
+      (b_0 (closure-maker (lambda () (constant 2)) no-freevars))
+      (c_0 (closure-maker (lambda () (constant 3)) no-freevars)))
+  (seq
+    (funcall (primref $set-symbol-value/proc!)
+             (constant a.loc) a_0)
+    (funcall (primref $init-symbol-value!)
+             (constant b.loc) b_0)
+    (funcall (primref $init-symbol-value!)
+             (constant c.loc) c_0)
+    (bind ((d_0 (constant 4)))
+      (seq
+        (funcall (primref $init-symbol-value!)
+                 (constant d.loc) d_0)
+        (constant #!void)))))
+@end example
+
 @c page
 @node syslib compiler lifting
 @subsection Closures optimization and @objtype{clambda} lifting
 
 
-The following bindings are exported by the library @library{vicare
-system $compiler}.
+This compiler pass performs @objtype{clambda} lifting and optimisation
+of calls to functions without free variables.  To discuss the
+transformations we define:
 
+@table @emph
+@item combinator
+A Scheme function without free variables; a combinator does not capture
+any binding.  The closure object implementing a combinator can be
+created once and for all; for example:
 
-@defun $optimize-combinator-calls/lift-clambdas @var{input}
-Perform code transformation traversing the whole hierarchy in
-@var{input}, which must be a struct instance representing recordised
-code in the core language, and building a new hierarchy of transformed,
-recordised code; return a @objtype{codes} struct.
-@end defun
+@example
+(define (compute x y z)
+  (define (lincomb a b c)
+    (+ (* a b) (* a c)))
+  (lincomb x y z))
+@end example
 
+@noindent
+assuming function integration is disabled: the closure object
+implementing the function @func{lincomb} can be created once and reused
+at every call to @func{compute}.
+
+@item true closure
+A Scheme function with free variables, whose current value is captured
+every time the closure object is created.  The closure object
+implementing a true closure must be created every time to capture the
+current values of the free variables; for example:
+
+@example
+(define (adder x)
+  (lambda (x)
+    (+ x y)))
+@end example
+
+@noindent
+at every call to the function @func{adder} a new closure object must be
+created and returned, capturing the value of the argument @code{x}.
+@end table
 
 @menu
-* syslib compiler lifting req::      Prerequisites for codes lifting.
-* syslib compiler lifting closures:: True closures and combinators.
+* syslib compiler lifting intro::  Introduction to @objtype{clambda} lifting.
+* syslib compiler lifting req::    Prerequisites for codes lifting.
+* syslib compiler lifting combin:: Optimisation of combinator calls.
+* syslib compiler lifting closur:: True closures and combinators.
+* syslib compiler lifting api::    @objtype{clambda} lifting @api{}.
 @end menu
 
+@c page
+@node syslib compiler lifting intro
+@subsubsection Introduction to @objtype{clambda} lifting
+
+
+The purpose of this compiler pass is to partition the input expression
+into: the code that will be compiled to code objects implementing
+closure objects; code that will be compiled to a code object
+implementing the main body of the expression.  As example, the library:
+
+@example
+(library (clambda-lifting-demo-0)
+  (export a b c d)
+  (import (rnrs))
+  (define (a) '1)
+  (define (b) '2)
+  (define (c) '3)
+  (define d 4))
+@end example
+
+@noindent
+is expanded into:
+
+@example
+(library-letrec*
+    ((a a.loc (lambda () '1))
+     (b b.loc (lambda () '2))
+     (c c.loc (lambda () '3))
+     (d d.loc '4))
+  (quote #!void))
+@end example
+
+@noindent
+before this compiler pass it is transformed into:
+
+@example
+(fix ((a_0 (closure-maker (lambda () (constant 1)) no-freevars))
+      (b_0 (closure-maker (lambda () (constant 2)) no-freevars))
+      (c_0 (closure-maker (lambda () (constant 3)) no-freevars)))
+  (seq
+    (funcall (primref $set-symbol-value/proc!)
+             (constant a.loc) a_0)
+    (funcall (primref $init-symbol-value!)
+             (constant b.loc) b_0)
+    (funcall (primref $init-symbol-value!)
+             (constant c.loc) c_0)
+    (bind ((d_0 (constant 4)))
+      (seq
+        (funcall (primref $init-symbol-value!)
+                 (constant d.loc) d_0)
+        (constant #!void)))))
+@end example
+
+@noindent
+and after this compiler pass it will become:
+
+@example
+(codes
+  ((lambda (label: asmlabel:c:clambda) () (constant 3))
+   (lambda (label: asmlabel:b:clambda) () (constant 2))
+   (lambda (label: asmlabel:a:clambda) () (constant 1)))
+  (seq
+    (funcall (primref $set-symbol-value/proc!)
+      (constant a.loc)
+      (closure-maker (code-loc asmlabel:a:clambda) no-freevars))
+    (funcall (primref $init-symbol-value!)
+      (constant b.loc)
+      (closure-maker (code-loc asmlabel:b:clambda) no-freevars))
+    (funcall (primref $init-symbol-value!)
+      (constant c.loc)
+      (closure-maker (code-loc asmlabel:c:clambda) no-freevars))
+    (bind ((d_0 (constant 4)))
+      (seq
+        (funcall (primref $init-symbol-value!)
+          (constant d.loc) d_0)
+        (constant #!void)))))
+@end example
+
+We see the result of the transformation is a struct of type
+@objtype{codes} in which the @objtype{clambda} forms have been extracted
+and separated; in addition, the top level @objtype{fix} struct has been
+removed and references to the @objtype{fix} bindings have been replaced
+by @objtype{closure-maker} forms.
+
+The @objtype{closure-maker} form:
+
+@example
+(closure-maker (code-loc asmlabel:a:clambda) no-freevars)
+@end example
+
+@noindent
+will be compiled to code that return a closure object implementing the
+function @code{a}, with assembly entry point label
+@code{asmlabel:a:clambda}.
 
 @c page
 @node syslib compiler lifting req
@@ -8891,33 +9047,152 @@ that:
 
 @itemize
 @item
-All the @objtype{clambda} structs are wrapped into @objtype{closure}
-structs.
+All the @objtype{clambda} structs are wrapped into
+@objtype{closure-maker} structs.
 
 @item
-All the @objtype{closure} structs appear as right--hand side expressions
-of bindings defined by @objtype{fix} structs.
+All the @objtype{closure-maker} structs appear as right--hand side
+expressions of bindings defined by @objtype{fix} structs.
 
 @item
 Bindings defined by @objtype{fix} structs are immutable and their
-right--hand side expressions are all @objtype{closure} structs.
+right--hand side expressions are all @objtype{closure-maker} structs.
 
 @item
-Bindings defined by @objtype{bind} structs have non--@objtype{closure}
-right--hand side expressions.
+Bindings defined by @objtype{bind} structs have right--hand side
+expressions of type different from @objtype{closure-maker} and
+@objtype{clambda}.
 
 @item
 If the right--hand side expression of a binding defined by
-@objtype{bind} is a variable: such binding is immutable.
+@objtype{bind} is a @objtype{var} struct: such binding is immutable.
+For example:
+
+@example
+(bind ((a @meta{rhs}))
+  (bind ((b a))
+    @meta{body}))
+@end example
+
+@noindent
+the binding @code{b} is immutable, so @code{b} is a synonym of @code{a};
+it is perfectly all right to substitute all the occurrences of the
+@objtype{var} @code{b} in @meta{body} with occurrences of the
+@objtype{var} @code{a}.
 @end itemize
 
+@c page
+@node syslib compiler lifting combin
+@subsubsection Optimisation of combinator calls
+
+
+If a Scheme function is a combinator it does not need to capture the
+current value of any binding; this means we might create a single
+closure object for every combinator function and use it everywhere the
+function is referenced (including in function applications).
+
+Conversely, if a Scheme function is a combinator: there is no need to
+allocate a closure object for it and keep it in memory forever; we can
+delay the creation until the function is actually referenced (including
+in function applications).  This compiler pass assumes that delaying the
+creation of closure objects for combinators is advantageous.
+
+Let's see some examples in which function integration has been disabled:
+
+@itemize
+@item
+In this core language expression:
+
+@example
+(let ((f (lambda () '1))
+      (g (lambda () '2)))
+  ((primitive list) (f) (g)))
+@end example
+
+@noindent
+the @objtype{closure-maker} struct is introduced at the functions call
+site:
+
+@example
+(codes
+  ((lambda (label: asmlabel:g:clambda) () (constant 2))
+   (lambda (label: asmlabel:f:clambda) () (constant 1)))
+  (funcall (primref list)
+    (jmpcall asmlabel:f:clambda:case-0
+             (closure-maker (code-loc asmlabel:f:clambda)
+                            no-freevars))
+    (jmpcall asmlabel:g:clambda:case-0
+             (closure-maker (code-loc asmlabel:g:clambda)
+                            no-freevars))))
+@end example
+
+@item
+In this core languge form:
+
+@example
+(let ((f (lambda () '1)))
+   ((primitive list) (f) (f)))
+@end example
+
+@noindent
+multiple @objtype{closure-maker} structs are introduced for the same
+function:
+
+@example
+ (codes
+  ((lambda (label: asmlabel:f:clambda) () (constant 1)))
+  (funcall (primref list)
+    (jmpcall asmlabel:f:clambda:case-0
+             (closure-maker (code-loc asmlabel:f:clambda)
+                            no-freevars))
+    (jmpcall asmlabel:f:clambda:case-0
+             (closure-maker (code-loc asmlabel:f:clambda)
+                            no-freevars))))
+@end example
+@end itemize
+
+The fact that we introduce multiple @objtype{closure-maker} structs to
+create closure objects with the same @objtype{clambda} implementation,
+takes advantage of the @rnrs{6} statement that we cannot assume Scheme
+functions are @func{eq?} to themselves:
+
+@example
+(define (func) @meta{body})
+(eq? func func) @result{} unspecified
+@end example
+
+@noindent
+for example, the following core language
+form:
+
+@example
+(let ((a (lambda () '1)))
+  (eq? a a))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+  ((lambda (label: asmlabel:a:clambda) () (constant 1)))
+  (funcall (funcall (primref top-level-value) (constant eq?))
+    (closure-maker (code-loc asmlabel:a:clambda) no-freevars)
+    (closure-maker (code-loc asmlabel:a:clambda) no-freevars))
+@end example
+
+@noindent
+further transformations of the code might recognise the operands of
+@func{eq?} as being references to the same function, but in more complex
+cases this may not happen.
 
 @c page
-@node syslib compiler lifting closures
+@node syslib compiler lifting closur
 @subsubsection True closures and combinators
 
 
-Let's consider some examples of code creating a function:
+Let's consider some examples of code creating a function and reason
+about the function being a combinator or a true closure:
 
 @itemize
 @item
@@ -8998,6 +9273,25 @@ with a reference to @code{a_0}, and so we can transform the code to:
       c_0)))
 @end example
 @end itemize
+
+@c page
+@node syslib compiler lifting api
+@subsubsection @objtype{clambda} lifting @api{}
+
+
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@defun $optimize-combinator-calls/lift-clambdas @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code in the core language, and building a new hierarchy of transformed,
+recordised code; return a @objtype{codes} struct.
+
+Perform @objtype{clambda} lifting and optimisation of calls to functions
+without free variables.
+@end defun
 
 @c page
 @node syslib compiler cogen

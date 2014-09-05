@@ -4396,6 +4396,10 @@
 	 x)
 
 	((var)
+	 ;;X is a VAR  struct.  If this VAR is a node in  the graph of substitutions:
+	 ;;start  a  visit  to  the  graph  starting at  X  and  return  the  sulting
+	 ;;substitution.   The  result  can  be:  X itself,  another  VAR  struct,  a
+	 ;;CLOSURE-MAKER struct.
 	 (%find-var-substitution! x))
 
 	((primref)
@@ -4441,13 +4445,13 @@
       ;;in LHS* do *not* appear.
       ;;
       (let ((rhs*^ ($map/stx E rhs*)))
-	;;If  an  RHS^  is  a  VAR  struct  with a  subst:  copy  the  subst  to  the
-	;;corresponding LHS.   In other  words: if an  RHS^ is part  of the  graph of
+	;;If an RHS^  is a VAR struct  with a substitution: copy  the substitution to
+	;;the corresponding LHS.  In other words: if  an RHS^ is part of the graph of
 	;;substitutions, we make LHS part of the graph too.
 	($for-each/stx %var-copy-subst! lhs* rhs*^)
 	(let ((body^ (E body)))
-	  ;;Once the body has  been processed: we do not need the  substs in the LHS*
-	  ;;anymore, so reset them.
+	  ;;Once the body has been processed: we do not need the substitutions in the
+	  ;;LHS* anymore, so reset them.
 	  ($for-each/stx %var-reset-subst! lhs*)
 	  (make-bind lhs* rhs*^ body^))))
 
@@ -4477,6 +4481,25 @@
 	;;     (fix ((?lhs2 ?rhs2) ...))  ;clean for these bindings
 	;;       (fix ((?lhs ?rhs) ...)   ;this is the FIX we are processing
 	;;         ?body))
+	;;
+	;;We  also remove  self  references  in recursive  functions  because a  self
+	;;reference does not cause a function to be a "true closure".  For example:
+	;;
+	;;   (fix ((f (lambda () (f))))
+	;;     ?body)
+	;;
+	;;defines  F  as  a  combinator  because  the recursive  call  to  F  can  be
+	;;implemented as  a JMPCALL to the  assembly entry point of  the function and
+	;;there are no other free variables.  Instead:
+	;;
+	;;   (bind ((a ?rhs))
+	;;     (fix ((f (lambda (b) (f a))))
+	;;       ?body))
+	;;
+	;;defines F as a true closure: the  recursive call to F can be implemented as
+	;;a JMPCALL to the assembly entry point  of the function, but the function is
+	;;closed upon the variable A.  It is the  free variable A that makes F a true
+	;;closure.
 	;;
 	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
       (define node*
