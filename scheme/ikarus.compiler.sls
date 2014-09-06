@@ -4329,6 +4329,9 @@
 	   ;;stored in the CPR (Closure  Pointer Register); such reference allows the
 	   ;;body of a  run-time code object to access the  free variables upon which
 	   ;;it is closed.
+	   ;;
+	   ;;From now on this LHS VAR is associated to the both the CLOSURE-MAKER and
+	   ;;the CLAMBDA, and it will never be substituted with another VAR.
 	   (values (let* ((cp   lhs)
 			  (clam (make-clambda label clause*^ cp freevar*.unset name)))
 		     (make-closure-maker clam freevar*))
@@ -4483,12 +4486,12 @@
 
     (define (E-fix lhs* rhs* body)
       ;;Here we know that RHS* is a list of CLOSURE-MAKER structs in which the VAR in
-      ;;LHS* might appear.
+      ;;LHS* might  appear.  Here the  VAR structs  in LHS* are  not yet part  of the
+      ;;graph of substitutions.
       ;;
-      (define clean-freevar**
-	;;Here  the  VAR  structs  in  LHS*  are   not  yet  part  of  the  graph  of
-	;;substitutions.   We clean  up the  lists of  free variables  performing the
-	;;substitutions defined for the outer bindings:
+      (define extern-clean-freevar**
+	;;We  clean up  the  lists  of free  variables  performing the  substitutions
+	;;defined for the outer bindings:
 	;;
 	;;   (bind ((?lhs1 ?rhs1) ...)    ;clean for these bindings
 	;;     (fix ((?lhs2 ?rhs2) ...))  ;clean for these bindings
@@ -4498,65 +4501,97 @@
 	;;We  also remove  self  references  in recursive  functions  because a  self
 	;;reference does not cause a function to be a non-combinator.
 	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
+      ;;Now we have  to clean and substitute the free  variables referencing bindings
+      ;;defined in this very FIX.
+      ;;
+      ;;Build a NODE struct  for every binding defined by this  FIX; the NODE structs
+      ;;start with an empty list of free variables.
       (define node*
-	;;Define the  NODE structs  required to establish  the graph  of dependencies
-	;;among non-combinator.   The NODE structs start  with an empty list  of free
-	;;variables.
 	($map/stx (lambda (lhs rhs)
 		    (receive-and-return (N)
 			(mk-node lhs ($closure-maker-code rhs))
 		      (%var-set-node! lhs N)))
 	  lhs* rhs*))
-      ;;If the function F1  is referenced in the body o F2:  if F1 is non-combinator,
-      ;;F2 is a  non-combinator too.  Here, we mark these  dependencies by building a
-      ;;graph of NODE structs.
+      ;;Build a (possibly cyclic) directed  graph representing the dependencies among
+      ;;the NODE of this FIX.  Example:
       ;;
-      ;;The NODE structs start with an empty list of free variables.  In this loop:
+      ;;   (fix ((A (closure-maker ?clambda no-freevars))
+      ;;         (B (closure-maker ?clambda (freevars: A)))
+      ;;         (C (closure-maker ?clambda (freevars: A B))))
+      ;;     ?body)
       ;;
-      ;;* If VAR1 of NODE1 is a free variable of NODE2:
+      ;;is represented with the graph:
       ;;
-      ;;     (define (var1) ?body1)
-      ;;     (define (var2) var1)
+      ;;   node[A] ---> node[B]
+      ;;     |            |
+      ;;     |            v
+      ;;      --------> node[C]
       ;;
-      ;;  NODE2 becomes a successor of NODE1 in the graph:
+      ;;the outgoing links are stored in the list DEPS of each node; for this example
+      ;;it means:
       ;;
-      ;;     NODE2 ---> NODE1
+      ;;   node[A].deps := (node[B] node[C])
+      ;;   node[B].deps := (node[C])
+      ;;   node[C].deps := ()
       ;;
+      ;;which in turn means:
       ;;
+      ;;* If A is a non-combinator: both B and C are non-combinators.
+      ;;
+      ;;* If B is a non-combinator: C is a non-combinator.
+      ;;
+      ;;* If C is a non-combinator: fine.
+      ;;
+      ;;In this loop: we  begin the iteration with each NODE having  an empty list of
+      ;;free variables; we end the iteration  with each NODE having the external free
+      ;;variables added to the list.
       ($for-each/stx
-	  (lambda (this-node clean-freevar*)
+	  (lambda (this-node extern-clean-freevar*)
 	    ($for-each/stx
 		(lambda (freevar)
 		  (cond ((%var-get-node freevar)
-			 ;;One of ours.
-			 => (lambda (successor-node)
-			      (node-push-dep! successor-node this-node)))
+			 ;;The FREEVAR references a binding created by this very FIX;
+			 ;;its associated NODE is  PREDECESSOR-NODE.  We register the
+			 ;;dependency among nodes; but we leave FREEVAR out for now.
+			 => (lambda (predecessor-node)
+			      (node-push-dep-from/to! predecessor-node this-node)))
 			(else
-			 ;;Not one of ours.
+			 ;;The FREEVAR references a  binding created by some external
+			 ;;binding form.  This  FREEVAR does not create  a link among
+			 ;;nodes;  this  FREEVAR  is  inclued in  the  list  of  free
+			 ;;variables of this node.
 			 (node-push-freevar! this-node freevar))))
-	      clean-freevar*))
-	node* clean-freevar**)
-      ;;Perform a  depth-first visit of the  graph of NODE structs,  starting from N1
-      ;;and  visiting all  the  nodes that  have  not already  been  marked as  done.
-      ;;Whenever from node N1 we step to its successor N2:
+	      extern-clean-freevar*))
+	node* extern-clean-freevar**)
+      ;;Now  we need  to add  to  each NODE  its free  variables referencing  binding
+      ;;defined by this  FIX, but only if the added  VAR references a non-combinator;
+      ;;VARs referencing a combinator are left out.
       ;;
-      ;;   N1 ---> N2
+      ;;We perform a depth-first visit of the graph of NODE structs, visiting all the
+      ;;nodes  that have  not already  been marked  as done  and following  the paths
+      ;;formed by outgoing links.
       ;;
-      ;;we add the VAR of N1 to the list of free variables of N2.
+      ;;* If a NODE  has empty list of free variables: we leave  it alone.  This node
+      ;;  is a non-combinator only if it references a non-combinator.
+      ;;
+      ;;*  If  the visited  NODE  has  non-empty list  of  free  variables: it  is  a
+      ;;   non-combinator; we  visit all  its  successors, adding  the free  variable
+      ;;  referencing the visited node to the list of its successors.
+      ;;
       (letrec ((%depth-first-visit
-		(lambda (N1)
+		(lambda (visited-node)
 		  ;;Non-tail recursive function.
-		  (unless (or ($node-done? N1)
-			      (null? ($node-freevar* N1)))
-		    ($set-node-done?! N1 #t)
-		    ;;In the graph of nodes we have:
+		  (unless (or ($node-done? visited-node)
+			      (null? ($node-freevar* visited-node)))
+		    ($set-node-done?! visited-node #t)
+		    ;;If we are here, in the graph of nodes we have:
 		    ;;
-		    ;;   N ---> N2
+		    ;;   visited-node ---> successor-node
 		    ;;
-		    ($for-each/stx (lambda (N2)
-				     (node-push-freevar! N2 ($node-name N1))
-				     (%depth-first-visit N2))
-		      ($node-deps N1))))))
+		    ($for-each/stx (lambda (successor-node)
+				     (node-push-freevar! successor-node ($node-var visited-node))
+				     (%depth-first-visit successor-node))
+		      ($node-deps visited-node))))))
 	($for-each/stx %depth-first-visit node*))
       (let ((new-rhs* (%assign-substitutions-to-closures node*)))
 	;;Clean the lists of free variables  for the substitutions of the bindings in
@@ -4573,21 +4608,20 @@
       ;;Each CLOSURE-MAKER struct appears as RHS in a FIX struct.  Each CLOSURE-MAKER
       ;;struct has a NODE associated to it.
       ;;
-      (name
-		;The VAR struct appearing as LHS in the binding definition associated
-		;to this NODE.
-       code
-		;The CLAMBDA or CODE-LOC associated to the CLOSURE-MAKER.
+      (var
+		;The VAR struct appearing as LHS in this binding's definition.
+       clambda
+		;The CLAMBDA struct appearing as RHS in this binding's definition.
        deps
-		;Null or a list of NODE structs.
+		;Null  or a  list of  successor  NODE structs.   The list  represents
+		;outgoing links.
        done?
 		;Boolean.  If  true this  NODE struct has  already been  processed to
 		;establish its non-combinator dependencies.
        freevar*
-		;Null or the  list of VAR structs representing free  variables in the
-		;CLAMBDA.   This   list  of  free   variables  is  cleaned   up  from
-		;substitutions in outer binding forms  and from the possible self VAR
-		;reference (in recursive functions).
+		;Null or  a list of  VAR structs  representing free variables  in the
+		;CLAMBDA.  This  list is progressively  built to include  the "true",
+		;non-removable, substituted free variables from the original list.
        ))
 
     (define (mk-node lhs code)
@@ -4596,7 +4630,7 @@
     (define (node-push-freevar! node freevar)
       ($set-node-freevar*! node (cons freevar ($node-freevar* node))))
 
-    (define (node-push-dep! node dep)
+    (define (node-push-dep-from/to! node dep)
       ($set-node-deps! node (cons dep ($node-deps node))))
 
 ;;; --------------------------------------------------------------------
@@ -4628,10 +4662,10 @@
 		    (receive-and-return (clmaker)
 			;;Make the new CLOSURE-MAKER using the list of free variables
 			;;we have cleaned before.
-			(make-closure-maker ($node-code node) freevar*)
+			(make-closure-maker ($node-clambda node) freevar*)
 		      ;;Is the binding  of CLOSURE-MAKER to be included  in the graph
 		      ;;of substitutions?
-		      (let ((lhs ($node-name node)))
+		      (let ((lhs ($node-var node)))
 			(if (null? freevar*)
 			    ;;This  CLOSURE-MAKER struct  has no  free variables:  it
 			    ;;will return a combinator.  Let's add it to the graph of
