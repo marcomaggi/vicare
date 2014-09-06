@@ -4588,6 +4588,11 @@
 		    ;;
 		    ;;   visited-node ---> successor-node
 		    ;;
+		    ;;we know  that VISITED-NODE  represents a non-combinator  and we
+		    ;;know  that  VISITED-NODE  was   original  in  the  freevar*  of
+		    ;;SUCCESSOR-NODE.  So we must put VISITED-NODE in the freevar* of
+		    ;;SUCCESSOR-NODE    to    make   SUCCESSOR-NODE    represent    a
+		    ;;non-combinator too.
 		    ($for-each/stx (lambda (successor-node)
 				     (node-push-freevar! successor-node ($node-var visited-node))
 				     (%depth-first-visit successor-node))
@@ -4608,15 +4613,15 @@
 			    ;;"index" field of its VAR  struct.  Here we either reset
 			    ;;the field to  false, or replace the NODE  with a proper
 			    ;;CLOSURE-MAKER substitution.
-			    (let ((freevar* ($node-freevar* node)))
+			    (let ((true-freevar* ($node-freevar* node)))
 			      (receive-and-return (clmaker)
 				  ;;Make the new CLOSURE-MAKER using the list of free
 				  ;;variables we have cleaned before.
-				  (make-closure-maker ($node-clambda node) freevar*)
+				  (make-closure-maker ($node-clambda node) true-freevar*)
 				;;Is the  binding of CLOSURE-MAKER to  be included in
 				;;the graph of substitutions?
 				(let ((lhs ($node-var node)))
-				  (if (null? freevar*)
+				  (if (null? true-freevar*)
 				      ;;This   CLOSURE-MAKER  struct   has  no   free
 				      ;;variables:  it  will   return  a  combinator.
 				      ;;Let's add it to the graph of substitutions.
@@ -4693,6 +4698,7 @@
       ($for-each/stx
 	  (lambda (lhs clmaker)
 	    (let ((substituted-freevar* (%filter-and-substitute-binding-freevars lhs clmaker)))
+	      (assert (equal? substituted-freevar* (closure-maker-freevar* clmaker)))
 	      ;; (assert (let ((lhs-replacement (%find-var-substitution! lhs)))
 	      ;; 		(or (eq? lhs lhs-replacement)
 	      ;; 		    (clmaker? lhs-replacement))))
