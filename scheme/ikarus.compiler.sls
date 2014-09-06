@@ -4323,7 +4323,14 @@
 	 #;(assert (not freevar*.unset))
 	 (receive (clause*^ freevar*)
 	     (E-clambda-case* clause*)
-	   (values (let ((clam (make-clambda label clause*^ cp.unset freevar*.unset name)))
+	   ;;CP is  the struct instance  of type VAR to  which the closure  is bound.
+	   ;;This  VAR struct  represents the  machine word  (CPU register  or memory
+	   ;;location) from which the code can load  a reference to the closure to be
+	   ;;stored in the CPR (Closure  Pointer Register); such reference allows the
+	   ;;body of a  run-time code object to access the  free variables upon which
+	   ;;it is closed.
+	   (values (let* ((cp   lhs)
+			  (clam (make-clambda label clause*^ cp freevar*.unset name)))
 		     (make-closure-maker clam freevar*))
 		   freevar*)))))
 
@@ -4668,9 +4675,8 @@
 	      ($set-closure-maker-freevar*! clmaker substituted-freevar*)
 	      ;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
 	      ;;struct.
-	      ($set-closure-maker-code! clmaker (%lift-code lhs
-							    ($closure-maker-code     clmaker)
-							    ($closure-maker-freevar* clmaker)))))
+	      ($set-closure-maker-code! clmaker (%lift-clambda ($closure-maker-code     clmaker)
+							       ($closure-maker-freevar* clmaker)))))
 	lhs* rhs*))
 
     (define (%mk-fix output-lhs* output-rhs* input-lhs* input-rhs* body)
@@ -4755,27 +4761,20 @@
 
       #| end of module: %ORIGINAL-FREEVAR*->FILTERED-AND-SUBSTITUTED-FREEVAR *|# )
 
-    (define (%lift-code cp original-clam new-freevar*)
+    (define (%lift-clambda original-clam new-freevar*)
       ;;Given data  from a CLOSURE-MAKER  struct: build a new  CLAMBDA to be  used to
       ;;generated  the actual  code object;  build a  CODE-LOC struct  to be  used to
       ;;generate the actual closure object; return the CODE-LOC; push the new CLAMBDA
       ;;on the parameter ALL-CLAMBDAS.
       ;;
-      ;;CP is the  struct instance of type  VAR to which the closure  is bound.  This
-      ;;VAR struct represents the machine word (CPU register or memory location) from
-      ;;which the code  can load a reference to  the closure to be stored  in the CPR
-      ;;(Closure Pointer Register); such reference allows the body of a run-time code
-      ;;object to access the free variables upon which it is closed.
-      ;;
       ;;CLAM is the CLAMBDA struct representing the closure's implementation.
       ;;
       ;;NEW-FREEVAR* is the list of VAR  structs representing the free variables that
-      ;;will actually be  stored in the run-time closure object.   This list replaces
-      ;;the one in the input CLAMBDA struct.
+      ;;will actually be stored in the run-time closure object.
       ;;
       (struct-case original-clam
-	((clambda label clause* cp.unset freevar*.unset name)
-	 #;(assert (not cp.unset))
+	((clambda label clause* cp freevar*.unset name)
+	 #;(assert (var? cp))
 	 #;(assert (not freevar*.unset))
 	 (let ((clause*^ ($map/stx (lambda (clause)
 				     (struct-case clause
