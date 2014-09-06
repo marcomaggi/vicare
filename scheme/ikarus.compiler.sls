@@ -4593,7 +4593,39 @@
 				     (%depth-first-visit successor-node))
 		      ($node-deps visited-node))))))
 	($for-each/stx %depth-first-visit node*))
-      (let ((new-rhs* (%assign-substitutions-to-closures node*)))
+      ;;Here we scan  the list of NODEs  and convert it into a  list of CLOSURE-MAKER
+      ;;structs that will be candidate for inclusion  in the output FIX struct.  If a
+      ;;NODE arrives here with no free  variables: it represents a combinator and its
+      ;;VAR can  be included in  the graph of substitution.   If a NODE  arrives here
+      ;;with  free variables:  it  represents a  non-combinator and  its  VAR has  no
+      ;;substitution.
+      ;;
+      ;;If  a  binding   is  defined  by  a  FIX:  either   it  has  no  substitution
+      ;;(non-combinator) or it has its CLOSURE-MAKER as substitution (combinator).
+      (let ((new-rhs* ($map/stx
+			  (lambda (node)
+			    ;;NOTE Upon  entering the  NODE struct  is stored  in the
+			    ;;"index" field of its VAR  struct.  Here we either reset
+			    ;;the field to  false, or replace the NODE  with a proper
+			    ;;CLOSURE-MAKER substitution.
+			    (let ((freevar* ($node-freevar* node)))
+			      (receive-and-return (clmaker)
+				  ;;Make the new CLOSURE-MAKER using the list of free
+				  ;;variables we have cleaned before.
+				  (make-closure-maker ($node-clambda node) freevar*)
+				;;Is the  binding of CLOSURE-MAKER to  be included in
+				;;the graph of substitutions?
+				(let ((lhs ($node-var node)))
+				  (if (null? freevar*)
+				      ;;This   CLOSURE-MAKER  struct   has  no   free
+				      ;;variables:  it  will   return  a  combinator.
+				      ;;Let's add it to the graph of substitutions.
+				      (%var-reset-node/set-subst! lhs clmaker)
+				    ;;This   CLOSURE-MAKER  struct   has  true,   not
+				    ;;removable,  free variables:  it  will return  a
+				    ;;non-combinator.  Let's leave it alone.
+				    (%var-reset-node! lhs))))))
+			node*)))
 	;;Clean the lists of free variables  for the substitutions of the bindings in
 	;;this very FIX struct.  Introduce the  CODE-LOC structs and push the CLAMBDA
 	;;structs to ALL-CLAMBDAS.
@@ -4634,48 +4666,6 @@
       ($set-node-deps! node (cons dep ($node-deps node))))
 
 ;;; --------------------------------------------------------------------
-
-    (define (%assign-substitutions-to-closures node*)
-      ;;The CLOSURE-MAKER  structs that still  have non-removable free  variables are
-      ;;non-combinators: they  will become  run-time closure objects  actually closed
-      ;;upon free variables.   The VAR struct referencing  such non-combinator object
-      ;;must  be left  alone: it  cannot be  subsituted by  the CLOSURE-MAKER  struct
-      ;;itself.
-      ;;
-      ;;The CLOSURE-MAKER structs with no free  variables or whose free variables are
-      ;;all removable  are combinators: they  will beome run-time closure  object not
-      ;;closed upon free variables.  The  VAR struct referencing such combinator must
-      ;;be substituted with the CLOSURE-MAKER struct itself.
-      ;;
-      ;;Here we scan the list of NODEs  and convert it into the list of CLOSURE-MAKER
-      ;;structs that  will be candidate  to inclusion in  the output FIX  struct.  We
-      ;;determine here if a binding must be included in the graph of substitutions or
-      ;;not.  If a binding  is defined by a FIX: either it has  no substitution or it
-      ;;has its CLOSURE-MAKER as substitution.
-      ;;
-      ;;NOTE Upon entering this loop all the VAR  in the LHS* list have a NODE struct
-      ;;as value in the  "index" field.  Here we either reset the  field to false, or
-      ;;replace the NODE with a proper CLOSURE-MAKER substitution.
-      ;;
-      ($map/stx (lambda (node)
-		  (let ((freevar* ($node-freevar* node)))
-		    (receive-and-return (clmaker)
-			;;Make the new CLOSURE-MAKER using the list of free variables
-			;;we have cleaned before.
-			(make-closure-maker ($node-clambda node) freevar*)
-		      ;;Is the binding  of CLOSURE-MAKER to be included  in the graph
-		      ;;of substitutions?
-		      (let ((lhs ($node-var node)))
-			(if (null? freevar*)
-			    ;;This  CLOSURE-MAKER struct  has no  free variables:  it
-			    ;;will return a combinator.  Let's add it to the graph of
-			    ;;substitutions.
-			    (%var-reset-node/set-subst! lhs clmaker)
-			  ;;This CLOSURE-MAKER  struct has true, not  removable, free
-			  ;;variables: it will return  a non-combinator.  Let's leave
-			  ;;it alone.
-			  (%var-reset-node! lhs))))))
-	node*))
 
     (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
       ;;Perform  the final  cleanup  of the  list  of free  variables  in each  RHS's
