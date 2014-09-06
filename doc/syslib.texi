@@ -8917,10 +8917,10 @@ assuming function integration is disabled: the closure object
 implementing the function @func{lincomb} can be created once and reused
 at every call to @func{compute}.
 
-@item true closure
+@item non--combinator
 A Scheme function with free variables, whose current value is captured
 every time the closure object is created.  The closure object
-implementing a true closure must be created every time to capture the
+implementing a non--combinator must be created every time to capture the
 current values of the free variables; for example:
 
 @example
@@ -8938,7 +8938,7 @@ created and returned, capturing the value of the argument @code{x}.
 * syslib compiler lifting intro::  Introduction to @objtype{clambda} lifting.
 * syslib compiler lifting req::    Prerequisites for codes lifting.
 * syslib compiler lifting combin:: Optimisation of combinator calls.
-* syslib compiler lifting closur:: True closures and combinators.
+* syslib compiler lifting noncom:: Combinators and non--combinators.
 * syslib compiler lifting api::    @objtype{clambda} lifting @api{}.
 @end menu
 
@@ -9205,12 +9205,151 @@ further transformations of the code might recognise the operands of
 cases this may not happen.
 
 @c page
-@node syslib compiler lifting closur
-@subsubsection True closures and combinators
+@node syslib compiler lifting noncom
+@subsubsection Combinators and non--combinators
 
+
+We want to discuss how to recognise combinators and non--combinators
+among the bindings defined by a @objtype{fix} struct.
+
+Let's consider the recordised code:
+
+@example
+(bind ((@metai{lhs} @metai{rhs}) ...)
+  (fix ((@metao{lhs} @metao{rhs}) ...)
+    (bind ((@metaii{lhs} @metaii{rhs}) ...)
+      @meta{body})))
+@end example
+
+@noindent
+at this point in the sequence of compiler passes, we know that all the
+@metao{rhs} are @objtype{closure-maker} structs.  The @objtype{var}
+structs @metao{lhs} and @metai{lhs} may appear in the body of each
+@metao{rhs}, while the internally defined @objtype{var} structs
+@metaii{lhs} cannot; so the @metaii{lhs} do not influence the nature of
+the @metao{rhs} expressions.  We can ignore all the internally defined
+bindings.
+
+Let's switch to inspect the recordised code:
+
+@example
+(bind ((@metai{lhs} @metai{rhs}) ...)
+  (fix ((@metao{lhs} @metao{rhs}) ...)
+    @meta{body}))
+@end example
+
+@noindent
+the @objtype{var} structs @metao{lhs} and @metai{lhs} may appear in the
+body of each @metao{rhs}; this includes the case of recursive
+@metao{rhs}, in which a @metao{lhs} @objtype{var} appears in the list of
+free variables of the associated @metao{rhs}.
+
+@itemize
+@item
+If a list of free variables is empty: the corresponding @metao{rhs} is a
+combinator.  For example, in the recordised code:
+
+@example
+(bind ((a @meta{rhs-a}) (b @meta{rhs-b}))
+  (fix ((f (closure-maker (lambda () '3) no-freevars))
+        (g (closure-maker (lambda () '4) no-freevars)))
+    @meta{body}))
+@end example
+
+@noindent
+both the @objtype{fix}--bound @objtype{clambda} have empty list of free
+variables, so both functions are combinators.
+
+@item
+If a list of free variables contains only externally defined @metai{lhs}
+structs: the corresponding @metao{rhs} is a non--combinator.  For
+example, in the recordised code:
+
+@example
+(bind ((a @meta{rhs-a}) (b @meta{rhs-b}))
+  (fix ((f (closure-maker (lambda () a)
+                          (freevars: a)))
+        (g (closure-maker (lambda () (constant 3))
+                          no-freevars)))
+    @meta{body}))
+@end example
+
+@noindent
+the @objtype{clambda} bound to @code{f} has the @objtype{var} @code{a}
+in its free variables list; the value of the free variable @code{a} is
+known only at run--time, so the closure maker must capture a run--time
+value, so the function @code{f} is a non--combinator.
+
+@item
+If a list of free variables contains only @metao{lhs} structs defined at
+by the same @objtype{fix} and bound to combinators: the corresponding
+@metao{rhs} is a combinator.  For example, in the recordised code:
+
+@example
+(bind ((a @meta{rhs-a}) (b @meta{rhs-b}))
+  (fix ((f (closure-maker (lambda () (constant 3))
+                          no-freevars))
+        (g (closure-maker (lambda () (funcall f))
+                          (freevars: f))))
+    @meta{body}))
+@end example
+
+@noindent
+the @objtype{clambda} bound to @code{f} is has no free variables, so it
+is a combinator; the @objtype{clambda} bound to @code{g} has @code{f} in
+its list of free variables; the value of @code{f} is known at
+compile--time, so the closure maker of @code{g} does not need to capture
+a free variable run--time value, so the function @code{g} is a
+combinator too.
+
+@item
+If every list of free variables contains only @metao{lhs} structs
+defined by the same @objtype{fix}: all the corresponding @metao{rhs} are
+combinators.  For example, in the recordised code:
+
+@example
+(bind ((a @meta{rhs-a}) (b @meta{rhs-b}))
+  (fix ((f (closure-maker (lambda () (funcall g))
+                          (freevars: g)))
+        (g (closure-maker (lambda () (funcall f))
+                          (freevars: f))))
+    @meta{body}))
+@end example
+
+@noindent
+both @objtype{clambda} structs have lists of free variables including
+only @objtype{var} structs defined by the same @objtype{fix}; the values
+of the free variables is known at compile--time, so the closure makers
+do not need to capture the free variables' run--time values, so both the
+functions are combinators.
+
+@item
+If a list of free variables contains a @metao{lhs} struct bound to a
+non--combinator, the corresponding @metao{rhs} is a non--combinator too.
+For example, in the recordised code:
+
+@example
+(bind ((a @meta{rhs-a}) (b @meta{rhs-b}))
+  (fix ((f (closure-maker (lambda () a)
+                          (freevars: a)))
+        (g (closure-maker (lambda () (funcall f))
+                          (freevars: f))))
+    @meta{body}))
+@end example
+
+@noindent
+the @objtype{clambda} bound to @code{f} is a non--combinator; the
+@objtype{clambda} bound to @code{g} has @code{f} in its free variables
+list; the value of @code{f} includes the run--time value of @code{a}, so
+the value of the free variable @code{f} is known only at run--time, so
+the closure maker of @code{g} must capture the run--time value, so the
+function @code{g} is a non--combinator.
+@end itemize
+
+@c ------------------------------------------------------------
 
 Let's consider some examples of code creating a function and reason
-about the function being a combinator or a true closure:
+about the function being a combinator or a non--combinator:
 
 @itemize
 @item
@@ -9222,7 +9361,7 @@ In the recordised code:
 @end example
 
 @noindent
-the returned function is a ``true closure'' because its return value
+the returned function is a non--combinator because its return value
 depends upon the value of the binding @code{a_0} at the time the closure
 object is created; @code{a_0} is a free variable in the body of the
 function and the function is closed upon it.  Indeed such form is
@@ -9253,7 +9392,7 @@ binding never mutates; so the returned function is a ``combinator'', a
 function without free variables.
 
 @item
-In this example a single true closure is called twice:
+In this example a single non--combinator is called twice:
 
 @example
 (let ((a ((primitive read))))
@@ -9349,10 +9488,10 @@ the function and there are no other free variables.  Instead:
 @end example
 
 @noindent
-defines @code{f} as a true closure: the recursive call to @code{f} can
-be implemented as a @objtype{jmpcall} to the assembly entry point of the
-function, but the function is closed upon the variable @code{a}.  It is
-the free variable @code{a} that makes @code{f} a true closure.
+defines @code{f} as a non--combinator: the recursive call to @code{f}
+can be implemented as a @objtype{jmpcall} to the assembly entry point of
+the function, but the function is closed upon the variable @code{a}.  It
+is the free variable @code{a} that makes @code{f} a non--combinator.
 @end itemize
 
 @c page

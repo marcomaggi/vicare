@@ -4312,12 +4312,18 @@
       ;;RHS.   Return 2  values:  the CLOSURE-MAKER  struct, a  list  of VAR  structs
       ;;representing the free variables referenced by the CLOSURE-MAKER.
       ;;
+      ;;NOTE The free  variables collected here are stored in  the CLOSURE-MAKER, but
+      ;;not in the new CLAMBDA; further compiler passes will process the freevars* in
+      ;;the CLOSURE-MAKER,  performing a  cleanup to  determine the  actual freevars*
+      ;;that will end in the CLAMBDA.
+      ;;
       (struct-case rhs
-	((clambda label clause* cp.unused freevar*.unused name)
-	 #;(assert (not freevar*.unused))
+	((clambda label clause* cp.unset freevar*.unset name)
+	 #;(assert (not cp.unset))
+	 #;(assert (not freevar*.unset))
 	 (receive (clause*^ freevar*)
 	     (E-clambda-case* clause*)
-	   (values (let ((clam (make-clambda label clause*^ lhs freevar* name)))
+	   (values (let ((clam (make-clambda label clause*^ cp.unset freevar*.unset name)))
 		     (make-closure-maker clam freevar*))
 		   freevar*)))))
 
@@ -4483,47 +4489,68 @@
 	;;         ?body))
 	;;
 	;;We  also remove  self  references  in recursive  functions  because a  self
-	;;reference does not cause a function to be a "true closure".
+	;;reference does not cause a function to be a non-combinator.
 	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
       (define node*
 	;;Define the  NODE structs  required to establish  the graph  of dependencies
-	;;among "true closures".
+	;;among non-combinator.   The NODE structs start  with an empty list  of free
+	;;variables.
 	($map/stx (lambda (lhs rhs)
 		    (receive-and-return (N)
 			(mk-node lhs ($closure-maker-code rhs))
 		      (%var-set-node! lhs N)))
 	  lhs* rhs*))
-      ;;If the function F1 is referenced in the  body o F2: if F1 is true closure, F2
-      ;;is a true closure too.  Here, we  mark these dependencies by building a graph
-      ;;of NODE structs.
+      ;;If the function F1  is referenced in the body o F2:  if F1 is non-combinator,
+      ;;F2 is a  non-combinator too.  Here, we mark these  dependencies by building a
+      ;;graph of NODE structs.
+      ;;
+      ;;The NODE structs start with an empty list of free variables.  In this loop:
+      ;;
+      ;;* If VAR1 of NODE1 is a free variable of NODE2:
+      ;;
+      ;;     (define (var1) ?body1)
+      ;;     (define (var2) var1)
+      ;;
+      ;;  NODE2 becomes a successor of NODE1 in the graph:
+      ;;
+      ;;     NODE2 ---> NODE1
+      ;;
+      ;;
       ($for-each/stx
-	  (lambda (my-node clean-freevar*)
+	  (lambda (this-node clean-freevar*)
 	    ($for-each/stx
 		(lambda (freevar)
 		  (cond ((%var-get-node freevar)
 			 ;;One of ours.
-			 => (lambda (her-node)
-			      (node-push-dep! her-node my-node)))
+			 => (lambda (successor-node)
+			      (node-push-dep! successor-node this-node)))
 			(else
 			 ;;Not one of ours.
-			 (node-push-freevar! my-node freevar))))
+			 (node-push-freevar! this-node freevar))))
 	      clean-freevar*))
 	node* clean-freevar**)
-      ;;Next, we  go over the  list of nodes,  and if we find  one that has  any free
-      ;;variables, we know it's a non-combinator, so we whack it and add it to all of
-      ;;its dependents.
+      ;;Perform a  depth-first visit of the  graph of NODE structs,  starting from N1
+      ;;and  visiting all  the  nodes that  have  not already  been  marked as  done.
+      ;;Whenever from node N1 we step to its successor N2:
       ;;
-      (let ()
-	(define (%process-node-successors x)
-	  ;;Non-tail recursive function.
-	  (unless (or ($node-done? x)
-		      (null? ($node-freevar* x)))
-	    ($set-node-done?! x #t)
-	    ($for-each/stx (lambda (successor)
-			     (node-push-freevar! successor ($node-name x))
-			     (%process-node-successors successor))
-	      ($node-deps x))))
-	($for-each/stx %process-node-successors node*))
+      ;;   N1 ---> N2
+      ;;
+      ;;we add the VAR of N1 to the list of free variables of N2.
+      (letrec ((%depth-first-visit
+		(lambda (N1)
+		  ;;Non-tail recursive function.
+		  (unless (or ($node-done? N1)
+			      (null? ($node-freevar* N1)))
+		    ($set-node-done?! N1 #t)
+		    ;;In the graph of nodes we have:
+		    ;;
+		    ;;   N ---> N2
+		    ;;
+		    ($for-each/stx (lambda (N2)
+				     (node-push-freevar! N2 ($node-name N1))
+				     (%depth-first-visit N2))
+		      ($node-deps N1))))))
+	($for-each/stx %depth-first-visit node*))
       (let ((new-rhs* (%assign-substitutions-to-closures node*)))
 	;;Clean the lists of free variables  for the substitutions of the bindings in
 	;;this very FIX struct.  Introduce the  CODE-LOC structs and push the CLAMBDA
@@ -4548,7 +4575,7 @@
 		;Null or a list of NODE structs.
        done?
 		;Boolean.  If  true this  NODE struct has  already been  processed to
-		;establish its "true closure" dependencies.
+		;establish its non-combinator dependencies.
        freevar*
 		;Null or the  list of VAR structs representing free  variables in the
 		;CLAMBDA.   This   list  of  free   variables  is  cleaned   up  from
@@ -4569,13 +4596,13 @@
 
     (define (%assign-substitutions-to-closures node*)
       ;;The CLOSURE-MAKER  structs that still  have non-removable free  variables are
-      ;;"true closures":  they will become  run-time closure objects  actually closed
-      ;;upon free  variables.  The  VAR struct  referencing such  true-closure object
+      ;;non-combinators: they  will become  run-time closure objects  actually closed
+      ;;upon free variables.   The VAR struct referencing  such non-combinator object
       ;;must  be left  alone: it  cannot be  subsituted by  the CLOSURE-MAKER  struct
       ;;itself.
       ;;
       ;;The CLOSURE-MAKER structs with no free  variables or whose free variables are
-      ;;all removable are "combinators": they  will beome run-time closure object not
+      ;;all removable  are combinators: they  will beome run-time closure  object not
       ;;closed upon free variables.  The  VAR struct referencing such combinator must
       ;;be substituted with the CLOSURE-MAKER struct itself.
       ;;
@@ -4604,7 +4631,7 @@
 			    ;;substitutions.
 			    (%var-reset-node/set-subst! lhs clmaker)
 			  ;;This CLOSURE-MAKER  struct has true, not  removable, free
-			  ;;variables: it will return  a "true closure".  Let's leave
+			  ;;variables: it will return  a non-combinator.  Let's leave
 			  ;;it alone.
 			  (%var-reset-node! lhs))))))
 	node*))
@@ -4747,7 +4774,9 @@
       ;;the one in the input CLAMBDA struct.
       ;;
       (struct-case original-clam
-	((clambda label clause* cp.unused freevar*.dropped name)
+	((clambda label clause* cp.unset freevar*.unset name)
+	 #;(assert (not cp.unset))
+	 #;(assert (not freevar*.unset))
 	 (let ((clause*^ ($map/stx (lambda (clause)
 				     (struct-case clause
 				       ((clambda-case info body)
@@ -4820,7 +4849,7 @@
   ;;Whenever bindings defined by  a FIX struct are processed: a  NODE struct for each
   ;;binding is  created to represent  a graph of  dependencies; such graph  allows to
   ;;establish which bindings define a "combinator function" and which bindings define
-  ;;a "true closure function".
+  ;;a "non-combinator function".
   ;;
   ;;The  field "index"  of the  VAR structs  representing the  left-hand side  of FIX
   ;;bindings, is used to hold the NODE struct associated to the VAR struct itself.
@@ -4861,10 +4890,10 @@
   ;;Upon entering  this compiler pass, bindings  defined by FIX have  a CLOSURE-MAKER
   ;;struct as right-hand side expression; their left-hand side VAR structs:
   ;;
-  ;;* Are without substitution, when their RHS expression returns a "true closure".
+  ;;* Are without substitution, when their RHS expression returns a non-combinator.
   ;;
   ;;* Have  the right-hand side CLOSURE-MAKER  struct as substitution, when  such RHS
-  ;;  expression returns a "combinator".
+  ;;  expression returns a combinator.
   ;;
 
   (define (%var-reset-subst! x)
