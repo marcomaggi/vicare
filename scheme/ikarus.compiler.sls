@@ -4472,7 +4472,7 @@
       ;;Here we know that RHS* is a list of CLOSURE-MAKER structs in which the VAR in
       ;;LHS* might appear.
       ;;
-      (define cleaned-freevar**
+      (define clean-freevar**
 	;;Here  the  VAR  structs  in  LHS*  are   not  yet  part  of  the  graph  of
 	;;substitutions.   We clean  up the  lists of  free variables  performing the
 	;;substitutions defined for the outer bindings:
@@ -4487,17 +4487,17 @@
 	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
       (define node*
 	;;Define the  NODE structs  required to establish  the graph  of dependencies
-	;;among "true  closures".  Temporarily set  the NODE as substitution  for the
-	;;VAR.
+	;;among "true closures".
 	($map/stx (lambda (lhs rhs)
 		    (receive-and-return (N)
 			(mk-node lhs ($closure-maker-code rhs))
 		      (%var-set-node! lhs N)))
 	  lhs* rhs*))
-      ;;If X is free in Y, then whenever X becomes a non-combinator, Y also becomes a
-      ;;non-combinator.  Here, we mark these dependencies.
+      ;;If the function F1 is referenced in the  body o F2: if F1 is true closure, F2
+      ;;is a true closure too.  Here, we  mark these dependencies by building a graph
+      ;;of NODE structs.
       ($for-each/stx
-	  (lambda (my-node freevar*)
+	  (lambda (my-node clean-freevar*)
 	    ($for-each/stx
 		(lambda (freevar)
 		  (cond ((%var-get-node freevar)
@@ -4507,8 +4507,8 @@
 			(else
 			 ;;Not one of ours.
 			 (node-push-freevar! my-node freevar))))
-	      freevar*))
-	node* cleaned-freevar**)
+	      clean-freevar*))
+	node* clean-freevar**)
       ;;Next, we  go over the  list of nodes,  and if we find  one that has  any free
       ;;variables, we know it's a non-combinator, so we whack it and add it to all of
       ;;its dependents.
@@ -4524,14 +4524,14 @@
 			     (%process-node-successors successor))
 	      ($node-deps x))))
 	($for-each/stx %process-node-successors node*))
-      (let ((rhs* (%assign-substitutions-to-closures node*)))
+      (let ((new-rhs* (%assign-substitutions-to-closures node*)))
 	;;Clean the lists of free variables  for the substitutions of the bindings in
 	;;this very FIX struct.  Introduce the  CODE-LOC structs and push the CLAMBDA
 	;;structs to ALL-CLAMBDAS.
-	(%final-freevars-cleanup-and-code-lifting lhs* rhs*)
+	(%final-freevars-cleanup-and-code-lifting lhs* new-rhs*)
 	;;Process  the BODY  substituting  VAR structs  from  LHS* when  appropriate.
 	;;Build and return the output FIX struct.
-	(%mk-fix '() '() lhs* rhs* (E body))))
+	(%mk-fix '() '() lhs* new-rhs* (E body))))
 
 ;;; --------------------------------------------------------------------
 
