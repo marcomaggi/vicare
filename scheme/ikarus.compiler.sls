@@ -3474,8 +3474,8 @@
   ;;     ==> (fix ((tmp (clambda (?formals ?body) ...)))
   ;;           tmp)
   ;;
-  ;;After  this  pass is  complete,  all  the BIND  structs  have  a non-CLAMBDA  RHS
-  ;;expression.
+  ;;After  this  pass is  complete:  all  the BIND  structs  have  a non-CLAMBDA  RHS
+  ;;expression; all CLAMBDA structs appear as RHS of a FIX struct.
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
@@ -3664,9 +3664,11 @@
        x)
 
       ((bind lhs* rhs* body)
+       #;(assert (for-all (lambda (rhs) (not (clambda? rhs))) rhs*))
        (E-bind lhs* rhs* body))
 
       ((fix lhs* rhs* body)
+       #;(assert (for-all (lambda (rhs) (clambda? rhs)) rhs*))
        ;;Here we  know that  RHS* is  a list of  CLAMBDA structs,  because it  is the
        ;;result  of  previous compiler  passes.   We  mark  each  PRELEX in  LHS*  as
        ;;referencing a CLAMBDA  struct, so that later they can  be used for jump-call
@@ -3910,27 +3912,20 @@
        x)
 
       ((bind lhs* rhs* body)
+       #;(assert (for-all (lambda (rhs) (not (clambda? rhs))) rhs*))
        (make-bind lhs* ($map/stx E rhs*)
 		  (%process-bind lhs* (E body))))
 
       ((fix lhs* rhs* body)
-       (make-fix lhs* ($map/stx E rhs*)
-		 (%process-fix   lhs* (E body))))
+       #;(assert (for-all (lambda (rhs) (clambda? rhs)) rhs*))
+       (make-fix lhs* ($map/stx E-clambda rhs*)
+		 (%process-fix lhs* (E body))))
 
       ((conditional test conseq altern)
        (make-conditional (E test) (E conseq) (E altern)))
 
       ((seq e0 e1)
        (make-seq (E e0) (E e1)))
-
-      ((clambda label clause* cp freevar* name)
-       ;;Apply E to every body of every CASE-LAMBDA clause.
-       (let ((clause*^ ($map/stx (lambda (clause)
-				   (struct-case clause
-				     ((clambda-case info body)
-				      (make-clambda-case info (E body)))))
-			 clause*)))
-	 (make-clambda label clause*^ cp freevar* name)))
 
       ((forcall op rand*)
        (make-forcall op ($map/stx E rand*)))
@@ -3946,6 +3941,17 @@
       (else
        (compiler-internal-error __who__
 	 "invalid expression" (unparse-recordized-code x)))))
+
+  (define (E-clambda rhs)
+    (struct-case rhs
+      ((clambda label clause* cp freevar* name)
+       ;;Apply E to every body of every CASE-LAMBDA clause.
+       (let ((clause*^ ($map/stx (lambda (clause)
+				   (struct-case clause
+				     ((clambda-case info body)
+				      (make-clambda-case info (E body)))))
+			 clause*)))
+	 (make-clambda label clause*^ cp freevar* name)))))
 
   (define (E-known x)
     (struct-case x
@@ -4058,36 +4064,22 @@
        x)
 
       ((bind lhs* rhs* body)
+       #;(assert (for-all (lambda (rhs) (not (clambda? rhs))) rhs*))
        ;;Process the LHS* before everything else!
        (let ((lhs* ($map/stx %prelex->var lhs*)))
          (make-bind lhs* ($map/stx E rhs*) (E body))))
 
       ((fix lhs* rhs* body)
+       #;(assert (for-all (lambda (rhs) (clambda? rhs)) rhs*))
        ;;Process the LHS* before everything else!
        (let ((lhs* ($map/stx %prelex->var lhs*)))
-         (make-fix lhs* ($map/stx E rhs*) (E body))))
+         (make-fix lhs* ($map/stx E-clambda rhs*) (E body))))
 
       ((conditional e0 e1 e2)
        (make-conditional (E e0) (E e1) (E e2)))
 
       ((seq e0 e1)
        (make-seq (E e0) (E e1)))
-
-      ((clambda label clause* cp freevar* name)
-       ;;The purpose of  this form is to  apply %PRELEX->VAR to all the  items in the
-       ;;ARGS field of all the CASE-INFO structs.  Also we apply E to each body.
-       (let ((clause*^ ($map/stx (lambda (clause)
-				   (struct-case clause
-				     ((clambda-case info body)
-				      (struct-case info
-					((case-info label args proper)
-					 ;;Process the LHS* before everything else!
-					 (let ((info (make-case-info label
-								     ($map/stx %prelex->var args)
-								     proper)))
-					   (make-clambda-case info (E body))))))))
-			 clause*)))
-	 (make-clambda label clause*^ cp freevar* name)))
 
       ((funcall rator rand*)
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
@@ -4103,6 +4095,33 @@
       (else
        (compile-time-error __who__
 	 "invalid expression" (unparse-recordized-code x)))))
+
+  (define (E-clambda rhs)
+    (struct-case rhs
+      ((clambda label clause* cp freevar* name)
+       ;;The purpose of  this form is to  apply %PRELEX->VAR to all the  items in the
+       ;;ARGS field of all the CASE-INFO structs.  Also we apply E to each body.
+       (let ((clause*^ ($map/stx (lambda (clause)
+				   (struct-case clause
+				     ((clambda-case info body)
+				      (struct-case info
+					((case-info label args proper)
+					 ;;Process the LHS* before everything else!
+					 (let ((info (make-case-info label
+								     ($map/stx %prelex->var args)
+								     proper)))
+					   (make-clambda-case info (E body))))))))
+			 clause*)))
+	 (make-clambda label clause*^ cp freevar* name)))))
+
+  (define (E-known x)
+    (struct-case x
+      ((known expr type)
+       (make-known (E expr) type))
+      (else
+       (E x))))
+
+;;; --------------------------------------------------------------------
 
   (define (%lookup-already-processed-prelex prel)
     ;;Given a struct  instance of type PRELEX: return the  associated struct instance
@@ -4126,14 +4145,7 @@
       ($set-var-global-location! V ($prelex-global-location    prel))
       ($set-prelex-operand! prel V)))
 
-  (define (E-known x)
-    (struct-case x
-      ((known expr type)
-       (make-known (E expr) type))
-      (else
-       (E x))))
-
-  #| end of module: introduce-vars |# )
+  #| end of module: INTRODUCE-VARS |# )
 
 
 (module (introduce-closure-makers)
