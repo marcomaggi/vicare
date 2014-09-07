@@ -39,6 +39,7 @@
 
 (module (alt-cogen
 	 compile-call-table
+	 core-primitive-operation?
 	 alt-cogen.introduce-primcalls
 	 alt-cogen.eliminate-fix
 	 alt-cogen.insert-engine-checks
@@ -111,10 +112,11 @@
   ;;NOTE  Not  all  the  struct  instances of  type  PRIMREF  reference  a  primitive
   ;;operation: the struct  type PRIMREF is used  to represent a reference  to all the
   ;;function bindings exported  by the boot image.   Only those for which  ?NAME is a
-  ;;symbol  satisfying the  predicate  PRIMOP?  are  primitive  operations; in  other
-  ;;words,  only the  operations defined  by the  syntax DEFINE-PRIMOP  are primitive
-  ;;operations.   Examples:  $CAR,  $CDR,  FIXNUM? are  primitive  operations;  LIST,
-  ;;NUMBER?, STRING-LENGTH are *not* primitive operations.
+  ;;symbol   satisfying  the   predicate  CORE-PRIMITIVE-OPERATION?    are  primitive
+  ;;operations;  in  other   words,  only  the  operations  defined   by  the  syntax
+  ;;DEFINE-PRIMOP  are  primitive  operations.   Examples: $CAR,  $CDR,  FIXNUM?  are
+  ;;primitive   operations;  LIST,   NUMBER?,  STRING-LENGTH   are  *not*   primitive
+  ;;operations.
   ;;
   ;;NOTE Not  all the instances  of struct PRIMCALL  are generated from  instances of
   ;;FUNCALL; so  not all the instances  of PRIMCALL are generated  here.  PRIMCALL is
@@ -238,11 +240,11 @@
 	 (make-funcall op arg*))))
 
     (define (%primitive-operation? x)
-      ;;Import    the    function   "primop?"     from    a    module   defined    in
+      ;;Import  the  function CORE-PRIMITIVE-OPERATION?   from  a  module defined  in
       ;;"pass-specify-rep.ss".  (Marco Maggi; Oct 14, 2012)
-      (import primops)
+      (import core-primitive-operations)
       (or (eq? x 'debug-call)
-	  (primop? x)))
+	  (core-primitive-operation? x)))
 
     #| end of module: mkfuncall |# )
 
@@ -751,6 +753,7 @@
 ;;;; some external code
 
 (include "pass-specify-rep.ss" #t)
+(import core-primitive-operations)
 
 
 ;;;; some CPU registers stuff

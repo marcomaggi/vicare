@@ -78,28 +78,32 @@
 ;;
 
 
-(module primops
-  (primop? get-primop set-primop!)
+(module core-primitive-operations
+  (core-primitive-operation? get-primop set-primop!)
   ;;This  module has  the  only  purpose of  making  the binding  COOKIE
-  ;;visible only to PRIMOP?, GET-PRIMOP and SET-PRIMOP!.
+  ;;visible only to CORE-PRIMITIVE-OPERATION?, GET-PRIMOP and SET-PRIMOP!.
   ;;
-  (define cookie (gensym "primitive-operation-cookie"))
+  (import (only (vicare system $symbols)
+		$getprop $putprop))
 
-  (define (primop? x)
-    (and (getprop x cookie) #t))
+  (define-constant COOKIE
+    (compile-time-gensym "primitive-operation-cookie"))
+
+  (define (core-primitive-operation? x)
+    (and ($getprop x COOKIE) #t))
 
   (define (get-primop x)
-    (or (getprop x cookie)
+    (or ($getprop x COOKIE)
 	(error 'getprimop "not a primitive" x)))
 
   (define (set-primop! symbol value)
-    (putprop symbol cookie value))
+    ($putprop symbol COOKIE value))
 
   #| end of module PRIMOPS |# )
 
 
 (module (alt-cogen.specify-representation)
-  (import primops)
+  (import core-primitive-operations)
 
   (define (alt-cogen.specify-representation x)
     (Program x))
@@ -902,7 +906,7 @@
 	  (args		(cddr arg*))) ;args to the wrapped function
       (struct-case (%remove-tag func)
 	((primref name)
-	 (if (primop? name)
+	 (if (core-primitive-operation? name)
 	     (cogen-debug-primop name src/expr ctxt args)
 	   (%fail kont arg*)))
 	(else

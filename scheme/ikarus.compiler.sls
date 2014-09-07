@@ -251,6 +251,22 @@
 (define-syntax-rule (fxincr! ?var)
   (set! ?var (fxadd1 ?var)))
 
+(define-syntax (compile-time-gensym stx)
+  ;;Generate a gensym at expand time and expand to the quoted symbol.
+  ;;
+  (syntax-case stx ()
+    ((_ ?template)
+     (let* ((tmp (syntax->datum #'?template))
+	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	    (str (apply string-append tmp (map (lambda (N)
+						 (string-append "." (number->string N)))
+					    fxs)))
+	    (sym (gensym str)))
+       (with-syntax
+	   ((SYM (datum->syntax #'here sym)))
+	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	 #'(quote SYM))))))
+
 ;;; --------------------------------------------------------------------
 
 (define-syntax ($map/stx stx)
