@@ -4073,7 +4073,7 @@
        #;(assert (for-all (lambda (rhs) (clambda? rhs)) rhs*))
        ;;Process the LHS* before everything else!
        (let ((lhs* ($map/stx %prelex->var lhs*)))
-         (make-fix lhs* ($map/stx E-clambda rhs*) (E body))))
+         (make-fix lhs* ($map/stx E-clambda lhs* rhs*) (E body))))
 
       ((conditional e0 e1 e2)
        (make-conditional (E e0) (E e1) (E e2)))
@@ -4096,12 +4096,24 @@
        (compile-time-error __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
-  (define (E-clambda rhs)
+  (define (E-clambda lhs rhs)
+    ;;Process a FIX-defined binding.
+    ;;
+    ;;LHS is the struct instance of type VAR to which the function generated from RHS
+    ;;will be  bound.  This VAR struct  represents the machine word  (CPU register or
+    ;;memory location) from which the code can  load a reference to the closure to be
+    ;;stored in the CPR (Closure Pointer Register); such reference allows the body of
+    ;;a run-time code  object to access the  free variables upon which  it is closed.
+    ;;From now  on this LHS VAR  is associated to the  CLAMBDA, and it will  never be
+    ;;substituted with another VAR.
+    ;;
     (struct-case rhs
-      ((clambda label clause* cp freevar* name)
+      ((clambda label clause* cp.unset freevar* name)
+       (assert (not cp.unset))
        ;;The purpose of  this form is to  apply %PRELEX->VAR to all the  items in the
        ;;ARGS field of all the CASE-INFO structs.  Also we apply E to each body.
-       (let ((clause*^ ($map/stx (lambda (clause)
+       (let ((cp       lhs)
+	     (clause*^ ($map/stx (lambda (clause)
 				   (struct-case clause
 				     ((clambda-case info body)
 				      (struct-case info
@@ -4212,7 +4224,7 @@
        ;;are CLAMBDA structs; the VARs in LHS* can appear in the RHS* expressions.
        #;(assert (for-all (lambda (rhs) (clambda? rhs)) rhs*))
        (let-values
-	   (((rhs*^ freevar*.rhs)  (E-clambda* lhs* rhs*))
+	   (((rhs*^ freevar*.rhs)  (E-clambda* rhs*))
 	    ((body^ freevar*.body) (E body)))
 	 ;;Here RHS*^ is a list of CLOSURE-MAKER structs.
 	 (values (make-fix lhs* rhs*^ body^)
@@ -4300,10 +4312,9 @@
 
   (module (E-clambda*)
 
-    (define (E-clambda* lhs* rhs*)
-      ;;Non-tail recursive  function.  Apply  E-CLAMBDA to every  associated couple
-      ;;from LHS* and RHS*.  LHS* is a list of VAR structs; RHS* is a list of CLAMBDA
-      ;;structs.  Return 2 values:
+    (define (E-clambda* rhs*)
+      ;;Non-tail recursive  function.  Apply  "E-clambda" to  every CLAMBDA  in RHS*.
+      ;;Return 2 values:
       ;;
       ;;1. A list of CLOSURE-MAKER structs which must replace the original RHS*.
       ;;
@@ -4313,13 +4324,11 @@
       (if (null? rhs*)
 	  (values '() '())
 	(let-values
-	    (((a freevar*.a) (E-clambda  ($car lhs*) ($car rhs*)))
-	     ((d freevar*.d) (E-clambda* ($cdr lhs*) ($cdr rhs*))))
+	    (((a freevar*.a) (E-clambda  ($car rhs*)))
+	     ((d freevar*.d) (E-clambda* ($cdr rhs*))))
 	  (values (cons a d) (union freevar*.a freevar*.d)))))
 
-    (define (E-clambda lhs rhs)
-      ;;LHS is a VAR struct; RHS is a CLAMBDA struct; LHS is the binding of RHS.
-      ;;
+    (define (E-clambda rhs)
       ;;Build a struct instance of type CLOSURE-MAKER which must replace the original
       ;;RHS.   Return 2  values:  the CLOSURE-MAKER  struct, a  list  of VAR  structs
       ;;representing the free variables referenced by the CLOSURE-MAKER.
@@ -4330,22 +4339,11 @@
       ;;that will end in the CLAMBDA.
       ;;
       (struct-case rhs
-	((clambda label clause* cp.unset freevar*.unset name)
-	 #;(assert (not cp.unset))
+	((clambda label clause* cp freevar*.unset name)
 	 #;(assert (not freevar*.unset))
 	 (receive (clause*^ freevar*)
 	     (E-clambda-case* clause*)
-	   ;;CP is  the struct instance  of type VAR to  which the closure  is bound.
-	   ;;This  VAR struct  represents the  machine word  (CPU register  or memory
-	   ;;location) from which the code can load  a reference to the closure to be
-	   ;;stored in the CPR (Closure  Pointer Register); such reference allows the
-	   ;;body of a  run-time code object to access the  free variables upon which
-	   ;;it is closed.
-	   ;;
-	   ;;From now on this LHS VAR is associated to the both the CLOSURE-MAKER and
-	   ;;the CLAMBDA, and it will never be substituted with another VAR.
-	   (values (let* ((cp   lhs)
-			  (clam (make-clambda label clause*^ cp freevar*.unset name)))
+	   (values (let ((clam (make-clambda label clause*^ cp freevar*.unset name)))
 		     (make-closure-maker clam freevar*))
 		   freevar*)))))
 
