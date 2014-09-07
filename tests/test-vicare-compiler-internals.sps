@@ -2194,8 +2194,29 @@
 		    (closure-maker (code-loc asmlabel:f:clambda)
 				   no-freevars)))))
 
+  ;;Cycle of combinators.
+  (doit (letrec* ((a (lambda () (d)))
+		  (b (lambda () (a)))
+		  (c (lambda () (b)))
+		  (d (lambda () (c))))
+	  ((primitive list) (a) (b) (c) (d)))
+	(codes
+	 ((lambda (label: asmlabel:a:clambda) ()
+	     (jmpcall asmlabel:d:clambda:case-0 (closure-maker (code-loc asmlabel:d:clambda) no-freevars)))
+	  (lambda (label: asmlabel:d:clambda) ()
+	     (jmpcall asmlabel:c:clambda:case-0 (closure-maker (code-loc asmlabel:c:clambda) no-freevars)))
+	  (lambda (label: asmlabel:c:clambda) ()
+	     (jmpcall asmlabel:b:clambda:case-0 (closure-maker (code-loc asmlabel:b:clambda) no-freevars)))
+	  (lambda (label: asmlabel:b:clambda) ()
+	     (jmpcall asmlabel:a:clambda:case-0 (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
+	 (funcall (primref list)
+	   (jmpcall asmlabel:a:clambda:case-0 (closure-maker (code-loc asmlabel:a:clambda) no-freevars))
+	   (jmpcall asmlabel:b:clambda:case-0 (closure-maker (code-loc asmlabel:b:clambda) no-freevars))
+	   (jmpcall asmlabel:c:clambda:case-0 (closure-maker (code-loc asmlabel:c:clambda) no-freevars))
+	   (jmpcall asmlabel:d:clambda:case-0 (closure-maker (code-loc asmlabel:d:clambda) no-freevars)))))
+
 ;;; --------------------------------------------------------------------
-;;; true closures
+;;; non-combinators
 
   ;;Single function, single call.
   (doit (let ((a ((primitive read))))
@@ -2219,6 +2240,60 @@
 	     (funcall (primref list)
 	       (jmpcall asmlabel:f:clambda:case-0 f_0)
 	       (jmpcall asmlabel:f:clambda:case-0 f_0))))))
+
+  ;;Cycle of non-combinators.
+  (doit (let ((v ((primitive read))))
+	  (letrec* ((a (lambda (x) (d v)))
+		    (b (lambda (x) (a v)))
+		    (c (lambda (x) (b v)))
+		    (d (lambda (x) (c v))))
+	    ((primitive list) (a '1) (b '2) (c '3) (d '4))))
+	(codes
+	 ((lambda (label: asmlabel:a:clambda) (x_0)
+	     (jmpcall asmlabel:d:clambda:case-1 d_0 v_0))
+	  (lambda (label: asmlabel:d:clambda) (x_1)
+	     (jmpcall asmlabel:c:clambda:case-1 c_0 v_0))
+	  (lambda (label: asmlabel:c:clambda) (x_2)
+	     (jmpcall asmlabel:b:clambda:case-1 b_0 v_0))
+	  (lambda (label: asmlabel:b:clambda) (x_3)
+	     (jmpcall asmlabel:a:clambda:case-1 a_0 v_0)))
+	 (bind ((v_0 (funcall (primref read))))
+	   (fix ((a_0 (closure-maker (code-loc asmlabel:a:clambda) (freevars: d_0 v_0)))
+		 (d_0 (closure-maker (code-loc asmlabel:d:clambda) (freevars: c_0 v_0)))
+		 (c_0 (closure-maker (code-loc asmlabel:c:clambda) (freevars: b_0 v_0)))
+		 (b_0 (closure-maker (code-loc asmlabel:b:clambda) (freevars: a_0 v_0))))
+	     (funcall (primref list)
+	       (jmpcall asmlabel:a:clambda:case-1 a_0 (constant 1))
+	       (jmpcall asmlabel:b:clambda:case-1 b_0 (constant 2))
+	       (jmpcall asmlabel:c:clambda:case-1 c_0 (constant 3))
+	       (jmpcall asmlabel:d:clambda:case-1 d_0 (constant 4)))))))
+
+  ;;Cycle of non-combinators induced by a single explicit free variable.
+  (doit (let ((v ((primitive read))))
+	  (letrec* ((a (lambda (x) (d x)))
+		    (b (lambda (x) (a x)))
+		    (c (lambda (x) (b x)))
+		    (d (lambda (x) (c v))))
+	    ((primitive list) (a '1) (b '2) (c '3) (d '4))))
+	(codes
+	 ((lambda (label: asmlabel:a:clambda) (x_0)
+	     (jmpcall asmlabel:d:clambda:case-1 d_0 x_0))
+	  (lambda (label: asmlabel:d:clambda) (x_1)
+	     (jmpcall asmlabel:c:clambda:case-1 c_0 v_0))
+	  (lambda (label: asmlabel:c:clambda) (x_2)
+	     (jmpcall asmlabel:b:clambda:case-1 b_0 x_2))
+	  (lambda (label: asmlabel:b:clambda) (x_3)
+	     (jmpcall asmlabel:a:clambda:case-1 a_0 x_3)))
+	 (bind ((v_0 (funcall (primref read))))
+	   (fix ((a_0 (closure-maker (code-loc asmlabel:a:clambda) (freevars: d_0)))
+		 (d_0 (closure-maker (code-loc asmlabel:d:clambda) (freevars: c_0 v_0)))
+		 (c_0 (closure-maker (code-loc asmlabel:c:clambda) (freevars: b_0)))
+		 (b_0 (closure-maker (code-loc asmlabel:b:clambda) (freevars: a_0))))
+	     (funcall (primref list)
+	       (jmpcall asmlabel:a:clambda:case-1 a_0 (constant 1))
+	       (jmpcall asmlabel:b:clambda:case-1 b_0 (constant 2))
+	       (jmpcall asmlabel:c:clambda:case-1 c_0 (constant 3))
+	       (jmpcall asmlabel:d:clambda:case-1 d_0 (constant 4)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; binding reference substitutions
