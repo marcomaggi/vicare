@@ -4166,6 +4166,12 @@
   ;;CLAMBDA.  Each CLOSURE-MAKER struct represents  code that, evaluated at run-time,
   ;;will build and return a closure object.
   ;;
+  ;;The *true*  purpose of this  compiler pass is to  gather lists of  free variables
+  ;;referenced by CLAMBDA  bodies.  We might introduce the closure  makers at a later
+  ;;pass and store the  lists of free variables in the  CLAMBDA structs; we introduce
+  ;;the  closure  makers  here  because  it  helps  a  bit  in  reasoning  about  the
+  ;;transformations.
+  ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
   ;;   constant		var		primref
@@ -4375,7 +4381,8 @@
 
 
 (module (optimize-combinator-calls/lift-clambdas)
-  ;;This module
+  ;;This  module performs  CLAMBDA lifting  and  optimisation of  calls to  functions
+  ;;having no free variables (combinators).
   ;;
   ;;Accept as input a nested hierarchy of the following structs:
   ;;
@@ -4392,17 +4399,6 @@
   (define-fluid-override __who__
     (identifier-syntax 'optimize-combinator-calls/lift-clambdas))
 
-  (define all-clambdas
-    ;;While  processing  an  input  expression:  a proper  list  of  CLAMBDA  structs
-    ;;representing the  set of  all the  functions defined  in the  input expression.
-    ;;These CLAMBDA structs  will be compiled to  machine code and used  to build the
-    ;;code objects.
-    ;;
-    (make-parameter #f))
-
-  (define-syntax-rule (%prepend-to-all-clambdas! ?obj)
-    (all-clambdas (cons ?obj (all-clambdas))))
-
   (define (optimize-combinator-calls/lift-clambdas X)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
     ;;a  struct instance  representing  recordised  code in  the  core language,  and
@@ -4410,9 +4406,10 @@
     ;;struct.
     ;;
     (parametrise ((all-clambdas '()))
-      (let* ((X^ (E X))
-	     (C (make-codes (all-clambdas) X^)))
-	C)))
+      ;;First apply E to X...
+      (let ((X^ (E X)))
+	;;... then gather ALL-CLAMBDAS.
+	(make-codes (all-clambdas) X^))))
 
   (module (E)
 
@@ -4423,7 +4420,7 @@
 
 	((var)
 	 ;;X is a VAR  struct.  If this VAR is a node in  the graph of substitutions:
-	 ;;start  a  visit  to  the  graph  starting at  X  and  return  the  sulting
+	 ;;start  a  visit to  the  graph  starting at  X  and  return the  resulting
 	 ;;substitution.   The  result  can  be:  X itself,  another  VAR  struct,  a
 	 ;;CLOSURE-MAKER struct.
 	 (%find-var-substitution! x))
@@ -4467,14 +4464,27 @@
 	   "invalid expression" (unparse-recordized-code x)))))
 
     (define (E-bind lhs* rhs* body)
-      ;;Here we know that RHS* is a  list of non-CLAMBDA expressions in which the VAR
-      ;;in LHS* do *not* appear.
-      ;;
       (let ((rhs*^ ($map/stx E rhs*)))
-	;;If an RHS^  is a VAR struct  with a substitution: copy  the substitution to
-	;;the corresponding LHS.  In other words: if  an RHS^ is part of the graph of
-	;;substitutions, we make LHS part of the graph too.
-	($for-each/stx %var-copy-subst! lhs* rhs*^)
+	;;Make sure  that each LHS*  has the  same substitution of  the corresponding
+	;;RHS*^:
+	;;
+	;;* If RHS^ is a VAR struct with non-false substitution object in its "index"
+	;;  field: store such  object in the "index" field of LHS,  so that they have
+	;;  the same substitution.
+	;;
+	;;* Otherwise RHS is not a VAR  struct or it has no substitution: store false
+	;;  in the LHS "index" field, so that LHS also has no substitution.
+	;;
+	;;For example, given:
+	;;
+	;;   (bind ((a b))
+	;;     ?body)
+	;;
+	;;we want the VAR structs A and B to have the same substitution.
+	($for-each/stx (lambda (lhs rhs^)
+			 (%var-set-subst! lhs (and (var? rhs^)
+						   (%var-get-subst rhs^))))
+	  lhs* rhs*^)
 	(let ((body^ (E body)))
 	  ;;Once the body has been processed: we do not need the substitutions in the
 	  ;;LHS* anymore, so reset them.
@@ -4489,6 +4499,19 @@
 	 (E x))))
 
     #| end of module: E |# )
+
+;;; --------------------------------------------------------------------
+
+  (define all-clambdas
+    ;;While processing  an input expression:  this parameter  holds a proper  list of
+    ;;CLAMBDA structs representing  the set of all the CLAMBDAs  defined in the input
+    ;;expression.  These CLAMBDA structs will be compiled to machine code and used to
+    ;;build the code objects.
+    ;;
+    (make-parameter #f))
+
+  (define-syntax-rule (%gather-clambda! ?obj)
+    (all-clambdas (cons ?obj (all-clambdas))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4509,7 +4532,7 @@
 	;;         ?body))
 	;;
 	;;We  also remove  self  references  in recursive  functions  because a  self
-	;;reference does not cause a function to be a non-combinator.
+	;;reference (by itself) does not cause a function to be a non-combinator.
 	($map/stx %filter-and-substitute-binding-freevars lhs* rhs*))
       ;;Now we have  to clean and substitute the free  variables referencing bindings
       ;;defined in this very FIX.
@@ -4807,7 +4830,7 @@
 					  ($for-each/stx %var-reset-subst! (case-info-args info))
 					  (make-clambda-case info (E body)))))
 			     clause*)))
-	     (%prepend-to-all-clambdas! (make-clambda label clause*^ cp new-freevar* name))
+	     (%gather-clambda! (make-clambda label clause*^ cp new-freevar* name))
 	     ($set-closure-maker-code! clmaker (make-code-loc label)))))))
 
     #| end of module: E-fix |# )
@@ -4928,29 +4951,6 @@
 
   (define (%var-reset-node/set-subst! x v)
     (%var-set-subst! x v))
-
-  (define (%var-copy-subst! lhs rhs)
-    ;;LHS and RHS are, respectively, the left-hand side VAR struct and the right-hand
-    ;;side expression of a binding defined  by a BIND struct.  Conditionally copy the
-    ;;substitution object from RHS to LHS:
-    ;;
-    ;;* If  RHS is  a VAR struct  with non-false substitution  object in  its "index"
-    ;;  field: store such  object in the "index" field of LHS, so  that they have the
-    ;;  same substitution.
-    ;;
-    ;;* Otherwise RHS is  not a VAR struct or it has no  substitution: store false in
-    ;;  the LHS "index" field, so that LHS also has no substitution.
-    ;;
-    ;;For example, given:
-    ;;
-    ;;   (bind ((a b))
-    ;;     ?body)
-    ;;
-    ;;we want the VAR structs A and B to have the same property.
-    ;;
-    #;(assert (var? lhs))
-    (set-var-index! lhs (and (var? rhs)
-			     (var-index rhs))))
 
   (define (%var-get-subst x)
     #;(assert (var? x))

@@ -8742,7 +8742,18 @@ implementing Scheme functions.  This compiler pass wraps each
 @objtype{clambda} struct into a @objtype{closure-maker} struct, which
 represents code that, executed at run--time, builds and returns a
 closure object using the @objtype{clambda}'s code object as
-implementation.
+implementation.  While wrapping @objtype{clambda}, a list of variable
+references that are free in the body of the @objtype{clambda} is
+gathered for future use.
+
+@quotation
+@strong{NOTE} The @strong{true} purpose of this compiler pass is to
+gather lists of free variables referenced by @objtype{clambda} bodies.
+We might introduce the closure makers at a later pass and store the
+lists of free variables in the @objtype{clambda} structs; we introduce
+the closure makers here because it helps a bit in reasoning about the
+transformations.
+@end quotation
 
 Upon entering this compiler pass:
 
@@ -8788,10 +8799,6 @@ into:
 @example
 (fix ((@meta{lhs} (closure-maker @meta{clambda-rhs})) ...) @meta{body})
 @end example
-
-@noindent
-while wrapping @objtype{clambda}, a list of free variables in the body
-of the @objtype{clambda} is computed for future use.
 
 The following bindings are exported by the library @library{vicare
 system $compiler}.
