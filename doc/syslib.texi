@@ -6058,15 +6058,15 @@ Compiler passes
 * syslib compiler closure makers:: Introducing closure makers.
 * syslib compiler lifting::        Closures optimization and @objtype{clambda}
                                    lifting.
+* syslib compiler primcalls::      Introducing primitive calls.
+* syslib compiler fix::            Removing fixes.
+* syslib compiler engine::         Inserting engine checks.
+* syslib compiler stack::          Inserting stack overflow checks.
 * syslib compiler cogen::          Full assembly code generation.
 * syslib compiler assember::       Binary code generation.
 
 Code generation passes
 
-* syslib compiler primcall::       Introducing primitive calls.
-* syslib compiler fix::            Removing fixes.
-* syslib compiler engine::         Inserting engine checks.
-* syslib compiler stack::          Inserting stack overflow checks.
 * syslib compiler primop::         Expanding primitive operations.
 * syslib compiler order::          Imposing calling convention and
                                    evaluation order.
@@ -9521,40 +9521,50 @@ without free variables.
 @end defun
 
 @c page
-@node syslib compiler cogen
-@subsection Full assembly code generation
-
-
-The following bindings are exported by the library @library{vicare
-system $compiler}.
-
-
-@defun $alt-cogen @var{input}
-@end defun
-
-
-@c page
-@node syslib compiler assember
-@subsection Binary code generation
-
-
-The following bindings are exported by the library @library{vicare
-system $compiler}.
-
-
-@defun $assemble-sources @var{input}
-@end defun
-
-@c page
-@node syslib compiler primcall
+@node syslib compiler primcalls
 @subsection Introducing primitive calls
 
+
+The purpose of this compiler pass is to examine all the function calls:
+
+@example
+(@meta{operator} @meta{operand} ...)
+@end example
+
+@noindent
+which, in recordized code, are represented by struct instances of type
+@objtype{funcall}; everything else is left untouched.  If the
+@meta{operator} is a struct instance of type @objtype{primref}
+representing a primitive operation: such struct is replaced by an
+appropriate struct instance of type @objtype{primcall}.  So recordised
+code like:
+
+@example
+(funcall (primref @meta{name}) (@meta{operand} ...))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(primcall @meta{name} (@meta{operand} ...))
+@end example
+
+If the @objtype{funcall} struct represents a call to a proper lexical
+core primitive function (not operation): it is left untouched as
+@objtype{funcall} struct.
 
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
 @defun $introduce-primcalls @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a @objtype{codes} struct representing
+recordised code; build and return a new @objtype{codes} struct.
+
+Transform @objtype{funcall} structs representing core primitive
+operation applications into @objtype{primcall} structs.
 @end defun
 
 @c page
@@ -9591,6 +9601,30 @@ system $compiler}.
 
 
 @defun $insert-stack-overflow-check @var{input}
+@end defun
+
+@c page
+@node syslib compiler cogen
+@subsection Full assembly code generation
+
+
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@defun $alt-cogen @var{input}
+@end defun
+
+@c page
+@node syslib compiler assember
+@subsection Binary code generation
+
+
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@defun $assemble-sources @var{input}
 @end defun
 
 @c page

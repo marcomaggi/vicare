@@ -3109,13 +3109,13 @@
     ($insert-global-assignments			$compiler)
     ($introduce-closure-makers			$compiler)
     ($optimize-combinator-calls/lift-clambdas	$compiler)
-    ($alt-cogen					$compiler)
-    ($assemble-sources				$compiler)
-
     ($introduce-primcalls			$compiler)
     ($eliminate-fix				$compiler)
     ($insert-engine-checks			$compiler)
     ($insert-stack-overflow-check		$compiler)
+    ($alt-cogen					$compiler)
+    ($assemble-sources				$compiler)
+
     ($specify-representation			$compiler)
     ($impose-calling-convention/evaluation-order $compiler)
     ($assign-frame-sizes			$compiler)

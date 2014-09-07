@@ -62,13 +62,13 @@
      (introduce-vars				$introduce-vars)
      (introduce-closure-makers			$introduce-closure-makers)
      (optimize-combinator-calls/lift-clambdas	$optimize-combinator-calls/lift-clambdas)
+     (introduce-primcalls			$introduce-primcalls)
+     (eliminate-fix				$eliminate-fix)
+     (insert-engine-checks			$insert-engine-checks)
+     (insert-stack-overflow-check		$insert-stack-overflow-check)
      (alt-cogen					$alt-cogen)
      (assemble-sources				$assemble-sources)
 
-     (alt-cogen.introduce-primcalls		$introduce-primcalls)
-     (alt-cogen.eliminate-fix			$eliminate-fix)
-     (alt-cogen.insert-engine-checks		$insert-engine-checks)
-     (alt-cogen.insert-stack-overflow-check	$insert-stack-overflow-check)
      (alt-cogen.specify-representation		$specify-representation)
      (alt-cogen.impose-calling-convention/evaluation-order
       $impose-calling-convention/evaluation-order)
@@ -689,6 +689,10 @@
 	     (p (introduce-vars p))
 	     (p (introduce-closure-makers p))
 	     (p (optimize-combinator-calls/lift-clambdas p))
+	     (p (introduce-primcalls p))
+	     (p (eliminate-fix p))
+	     (p (insert-engine-checks p))
+	     (p (insert-stack-overflow-check p))
 	     (ls* (alt-cogen p)))
 	(when (assembler-output)
 	  ;;Print nicely the assembly labels.
@@ -731,6 +735,10 @@
 	     (p (introduce-vars p))
 	     (p (introduce-closure-makers p))
 	     (p (optimize-combinator-calls/lift-clambdas p))
+	     (p (introduce-primcalls p))
+	     (p (eliminate-fix p))
+	     (p (insert-engine-checks p))
+	     (p (insert-stack-overflow-check p))
 	     (ls* (alt-cogen p)))
 	#;(gensym-prefix "L")
 	ls*)))
@@ -4973,6 +4981,675 @@
     ($var-index x))
 
   #| end of module: OPTIMIZE-COMBINATOR-CALLS/LIFT-CLAMBDAS |# )
+
+
+(module (introduce-primcalls)
+  ;;The purpose of this module is to examine all the function calls:
+  ;;
+  ;;   (?operator ?arg ...)
+  ;;
+  ;;which, in recordized  code, are represented by struct instances  of type FUNCALL;
+  ;;everything else is left untouched.  If the ?OPERATOR is a struct instance of type
+  ;;PRIMREF  representing  a primitive  operation:  such  struct  is replaced  by  an
+  ;;appropriate struct instance of type PRIMCALL; recordized code like:
+  ;;
+  ;;   #[funcall  #[primref ?name] (?arg ...)]
+  ;;
+  ;;is converted to:
+  ;;
+  ;;   #[primcall ?name (?arg ...)]
+  ;;
+  ;;If  the FUNCALL  struct represents  a call  to a  proper primitive  function (not
+  ;;operation): it is left untouched as FUNCALL struct.
+  ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   bind		closure-maker	conditional
+  ;;   constant		fix		forcall
+  ;;   funcall		jmpcall		known
+  ;;   primref		seq		var
+  ;;
+  ;;NOTE  Not  all  the  struct  instances of  type  PRIMREF  reference  a  primitive
+  ;;operation: the struct  type PRIMREF is used  to represent a reference  to all the
+  ;;function bindings exported  by the boot image.   Only those for which  ?NAME is a
+  ;;symbol   satisfying  the   predicate  CORE-PRIMITIVE-OPERATION?    are  primitive
+  ;;operations;  in  other   words,  only  the  operations  defined   by  the  syntax
+  ;;DEFINE-PRIMOP  are  primitive  operations.   Examples: $CAR,  $CDR,  FIXNUM?  are
+  ;;primitive   operations;  LIST,   NUMBER?,  STRING-LENGTH   are  *not*   primitive
+  ;;operations.
+  ;;
+  ;;NOTE Not  all the instances  of struct PRIMCALL  are generated from  instances of
+  ;;FUNCALL; so  not all the instances  of PRIMCALL are generated  here.  PRIMCALL is
+  ;;also used to represent high-level assembly instructions such as "mref".
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'introduce-primcalls))
+
+  (define (introduce-primcalls Program)
+    (struct-case Program
+      ((codes code* body)
+       (make-codes ($map/stx E-clambda code*)
+		   (E body)))
+      (else
+       (error __who__ "invalid program" Program))))
+
+;;; --------------------------------------------------------------------
+
+  (module (E)
+
+    (define (E x)
+      ;;Perform code transformation  traversing the whole hierarchy in  X, which must
+      ;;be a struct instance representing recordized  code, and build a new hierarchy
+      ;;of transformed, recordized code; return the new hierarchy.
+      ;;
+      ;;The purpose of this recordized code  traversal is to process struct instances
+      ;;of  type  FUNCALL  with  the  module  MK-FUNCALL;  everything  else  is  left
+      ;;untouched.
+      ;;
+      (struct-case x
+	((constant)
+	 x)
+
+	((var)
+	 x)
+
+	((primref)
+	 x)
+
+	((bind lhs* rhs* body)
+	 (make-bind lhs* ($map/stx E rhs*) (E body)))
+
+	((fix lhs* rhs* body)
+	 (make-fix lhs* rhs* (E body)))
+
+	((conditional e0 e1 e2)
+	 (make-conditional (E e0) (E e1) (E e2)))
+
+	((seq e0 e1)
+	 (make-seq (E e0) (E e1)))
+
+	((closure-maker)
+	 x)
+
+	((forcall op arg*)
+	 (make-forcall op ($map/stx E arg*)))
+
+	((funcall rator arg*)
+	 (mk-funcall (E-known rator) ($map/stx E-known arg*)))
+
+	((jmpcall label rator arg*)
+	 (make-jmpcall label (E rator) ($map/stx E arg*)))
+
+	(else
+	 (error __who__ "invalid expr" x))))
+
+    (define (E-known x)
+      (struct-case x
+	((known expr type)
+	 (make-known (E expr) type))
+	(else
+	 (E x))))
+
+    #| end of module: E |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (E-clambda)
+    ;;The purpose  of this  module is  to apply E  to the  body of  every CASE-LAMBDA
+    ;;clause.
+    ;;
+    (define (E-clambda x)
+      (struct-case x
+	((clambda label case* cp freevar* name)
+	 (make-clambda label ($map/stx E-clambda-case case*) cp freevar* name))
+	(else
+	 (error __who__ "invalid clambda" x))))
+
+    (define (E-clambda-case x)
+      (struct-case x
+	((clambda-case info body)
+	 (make-clambda-case info (E body)))
+	(else
+	 (error __who__ "invalid clambda-case" x))))
+
+    #| end of module: E-clambda |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (mk-funcall)
+
+    (define (mk-funcall op arg*)
+      ;;OP is a struct instance representing the operator in a function application.
+      ;;
+      ;;ARG* is a  list of struct instances representing the  arguments of a function
+      ;;application.
+      ;;
+      ;;If the operator is a struct instance of type PRIMREF representing a primitive
+      ;;operation: such struct is replaced by  an appropriate struct instance of type
+      ;;PRIMCALL.
+      ;;
+      (struct-case op
+	((known expr)
+	 (mk-funcall expr arg*))
+
+	((primref name)
+	 (if (%primitive-operation? name)
+	     (make-primcall name arg*)
+	   (make-funcall op arg*)))
+
+	(else
+	 (make-funcall op arg*))))
+
+    (define (%primitive-operation? x)
+      ;;Import  the  function CORE-PRIMITIVE-OPERATION?   from  a  module defined  in
+      ;;"pass-specify-rep.ss".  (Marco Maggi; Oct 14, 2012)
+      (import core-primitive-operations)
+      (or (eq? x 'debug-call)
+	  (core-primitive-operation? x)))
+
+    #| end of module: MK-FUNCALL |# )
+
+  #| end of module: INTRODUCE-PRIMCALLS |# )
+
+
+(module (eliminate-fix)
+  ;;Despite its name, the purpose of  this module is *not* to remove the
+  ;;FIX structures from recordized code.
+  ;;
+  ;;FIXME The following  description is not quite  correct (Marco Maggi;
+  ;;Oct 15, 2012).  Knowing that, in general, every closure has multiple
+  ;;clauses (generated by CASE-LAMBDA), let's think of the closure built
+  ;;in object as a memory block holding a slot for every free variable:
+  ;;
+  ;;                  0   1   2   3   4   5
+  ;;   |------------|---|---|---|---|---|---| closure object
+  ;;         ^
+  ;;         |      |.......................|
+  ;;    pointer to     one slot for every
+  ;;    binary code    free variable
+  ;;
+  ;;the purpose of this module is to:
+  ;;
+  ;;1. For every closure's clause make a new struct instance of type VAR
+  ;;   called CPVAR.
+  ;;
+  ;;2. In  every closure  clause's body: find  every struct  instance of
+  ;;    type VAR  referencing the  closure itself,  and replace  it with
+  ;;   CPVAR.
+  ;;
+  ;;3. In  every closure  clause's body: find  every struct  instance of
+  ;;   type  VAR referencing  a closure's free  variable and  replace it
+  ;;    with  a primitive  operation  %CPREF  retrieving the  referenced
+  ;;   object from  the associated slot in the data  area of the closure
+  ;;   built in object.
+  ;;
+  ;;4.  For  every ?CLOSURE-MAKER in  the expressions  of the <Program>  perform this
+  ;;   transformation:
+  ;;
+  ;;      (let ((T ?closure-maker))
+  ;;        T)
+  ;;
+  (define who 'eliminate-fix)
+
+  (define (eliminate-fix Program)
+    (struct-case Program
+      ((codes code* body)
+       ;;First traverse the CASE-LAMBDA  bodies, then traverse the whole
+       ;;expression.
+       (let* ((code*^ ($map/stx Clambda code*))
+	      (E      (make-E #f #f '()))
+	      (body^  (E body)))
+	 (make-codes code*^ body^)))
+      (else
+       (error who "invalid program" Program))))
+
+;;; --------------------------------------------------------------------
+
+  (module (Clambda)
+
+    (define (Clambda x)
+      ;;X must be a struct instance of type CLAMBDA.
+      ;;
+      (struct-case x
+	((clambda label case* cp freevar* name)
+	 (let ((case-mapper (ClambdaCase cp freevar*))
+	       (cp^         #f))
+	   (make-clambda label ($map/stx case-mapper case*) cp^ freevar* name)))
+	(else
+	 (error who "invalid clambda" x))))
+
+    (define (ClambdaCase main-cp freevar*)
+      ;;MAIN-CP must  be a  struct instance  of type VAR  to which  the CLOSURE-MAKER
+      ;;referencing this CLAMBDA is bound.
+      ;;
+      ;;FREEVAR* must be a list of struct instances of type VAR representing the free
+      ;;variables referenced by the clauses of this CASE-LAMBDA.
+      ;;
+      ;;Return  a  function  to  be  mapped  over  all  the  CLAMBDA-CASE  structures
+      ;;representing the clauses of this CLAMBDA.
+      ;;
+      ;;Notice that CPVAR is prepended to the list of arguments for this clause.
+      ;;
+      (lambda (x)
+	;;X must be a struct instance of type CLAMBDA-CASE.
+	;;
+	(struct-case x
+	  ((clambda-case info body)
+	   (struct-case info
+	     ((case-info label args proper?)
+	      (let* ((cpvar (make-unique-var 'cp))
+		     ;;Prepend  to the  properized list  of formals  the
+		     ;;symbol representing the  CPU register holding the
+		     ;;current closure pointer.
+		     (info^ (make-case-info label (cons cpvar args) proper?))
+		     (E     (make-E main-cp cpvar freevar*))
+		     (body^ (E body)))
+		(make-clambda-case info^ body^)))))
+	  (else
+	   (error who "invalid clambda-case" x)))))
+
+    #| end of module: Clambda |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (make-E main-cpvar cpvar freevar*)
+
+    (define (E x)
+      ;;Perform code transformation traversing the whole hierarchy in X,
+      ;;which must  be a  struct instance representing  recordized code,
+      ;;and building  a new  hierarchy of transformed,  recordized code;
+      ;;return the new hierarchy.
+      ;;
+      ;;The purposes of this code traversal are:
+      ;;
+      ;;1.  Map  %DO-VAR over  every  struct  instance  of type  VAR  in
+      ;;   reference position.
+      ;;
+      ;;2. Map %DO-FIX to every struct instance of type FIX.
+      ;;
+      ;;3.  Convert every  standalone struct  instance of  type CLOSURE-MAKER  into a
+      ;;   struct instance of type FIX representing this form:
+      ;;
+      ;;      (let ((T ?closure-maker))
+      ;;        T)
+      ;;
+      ;;   where T is a unique variable.
+      ;;
+      (struct-case x
+	((constant)
+	 x)
+
+	((var)
+	 (%do-var x))
+
+	((primref)
+	 x)
+
+	((bind lhs* rhs* body)
+	 (make-bind lhs* ($map/stx E rhs*) (E body)))
+
+	((fix lhs* rhs* body)
+	 (%do-fix lhs* rhs* (E body)))
+
+	((conditional e0 e1 e2)
+	 (make-conditional (E e0) (E e1) (E e2)))
+
+	((seq e0 e1)
+	 (make-seq (E e0) (E e1)))
+
+	((closure-maker)
+	 (let ((t (make-unique-var 'tmp)))
+	   (E (make-fix (list t) (list x) t))))
+
+	((primcall op arg*)
+	 (make-primcall op ($map/stx E-known arg*)))
+
+	((forcall op arg*)
+	 (make-forcall op ($map/stx E arg*)))
+
+	((funcall rator arg*)
+	 (make-funcall (E-known rator) ($map/stx E-known arg*)))
+
+	((jmpcall label rator arg*)
+	 (make-jmpcall label (E rator) ($map/stx E arg*)))
+
+	(else
+	 (error who "invalid expr" x))))
+
+    (define (E-known x)
+      (struct-case x
+	((known expr type)
+	 (make-known (E expr) type))
+	(else
+	 (E x))))
+
+    (module (%do-fix)
+      ;;The purpose of  this module is to map %DO-VAR  to all the struct
+      ;;instances of  type VAR  being free  variables referenced  by the
+      ;;closures.   We cannot  move this  module out  of MAKE-E  because
+      ;;%DO-VAR is a closure on the arguments of MAKE-E itself.
+      ;;
+      (define (%do-fix lhs* rhs* body)
+	(make-fix lhs* ($map/stx %handle-closure rhs*) body))
+
+      (define (%handle-closure rhs)
+	;;RHS must be a struct instance of type CLOSURE-MAKER.
+	;;
+	(struct-case rhs
+	  ((closure-maker code freevar*)
+	   (make-closure-maker code ($map/stx %do-var freevar*)))))
+
+      #| end of module: %do-fix |# )
+
+    (define (%do-var x)
+      ;;This function is a closure  upon the arguments of MAKE-E:
+      ;;
+      ;;MAIN-CPVAR:  a  struct  instance  of type  VAR  referencing  the
+      ;;closure whose body we are traversing.
+      ;;
+      ;;CPVAR: a struct instance of type VAR associated to the closure's
+      ;;clause whose body we are traversing.
+      ;;
+      ;;FREEVAR*: a list  of struct instances of type  VAR representing the
+      ;;free  variables referenced  by  the closure  whose  body we  are
+      ;;traversing.
+      ;;
+      ;;X must  be a struct instance  of type VAR.
+      ;;
+      ;;If X references the closure itself: replace it with CPVAR.
+      ;;
+      ;;If X  references a  closure's free variable:  replace it  with a
+      ;;primitive operation %CPREF retrieving the referenced object from
+      ;;the associated  slot in the  data area  of the closure  built in
+      ;;object.
+      ;;
+      (if (eq? x main-cpvar)
+	  cpvar
+	(let loop ((freevar* freevar*)
+		   (i     0))
+	  (cond ((null? freevar*)
+		 x)
+		((eq? x ($car freevar*))
+		 ;;Replate  a  reference  to   free  variable  with  the
+		 ;;appropriate slot accessor.
+		 (make-primcall '$cpref (list cpvar (make-constant i))))
+		(else
+		 (loop ($cdr freevar*) ($fxadd1 i)))))))
+
+    E)
+
+  #| end of module: eliminate-fix |# )
+
+
+(module (insert-engine-checks)
+  ;;This module traverses all the function bodies  and, if the body contains at least
+  ;;one  JMPCALL struct  or one  FUNCALL struct  (in which  the operator  is *not*  a
+  ;;PRIMREF), it transforms the ?BODY into:
+  ;;
+  ;;   (begin
+  ;;     (primcall '$do-event '())
+  ;;     ?body)
+  ;;
+  ;;the call  to the primitive operation  $DO-EVENT suspends the execution  of Scheme
+  ;;code  for the  current process  and enters  a subprocess  which can  take actions
+  ;;asynchronously.
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'insert-engine-checks))
+
+  (module (insert-engine-checks)
+
+    (define (insert-engine-checks x)
+      (struct-case x
+	((codes list body)
+	 (make-codes ($map/stx CodeExpr list)
+		     (%process-body body)))))
+
+    (define (CodeExpr x)
+      (struct-case x
+	((clambda label cases cp freevar* name)
+	 (make-clambda label ($map/stx CaseExpr cases) cp freevar* name))))
+
+    (define (CaseExpr x)
+      (struct-case x
+	((clambda-case info body)
+	 (make-clambda-case info (%process-body body)))))
+
+    (define (%process-body body)
+      (if (E body)
+	  (make-seq (make-primcall '$do-event '())
+		    body)
+	body))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (E)
+
+    (define (E x)
+      ;;The purpose of this recordized code traversal is to return true if:
+      ;;
+      ;;* At least one of the nested structs is an instance of JMPCALL.
+      ;;
+      ;;* At least one  of the nested structs is an instance of  FUNCALL in which the
+      ;;operator is *not* a struct instance of type PRIMREF.
+      ;;
+      ;;else the return value is false.
+      ;;
+      (struct-case x
+	((constant)
+	 #f)
+
+	((var)
+	 #f)
+
+	((primref)
+	 #f)
+
+	((jmpcall label rator arg*)
+	 #t)
+
+	((funcall rator arg*)
+	 (if (%known-primref? rator)
+	     (ormap E-known arg*)
+	   #t))
+
+	((bind lhs* rhs* body)
+	 (or (ormap E rhs*) (E body)))
+
+	((fix lhs* rhs* body)
+	 (E body))
+
+	((conditional e0 e1 e2)
+	 (or (E e0) (E e1) (E e2)))
+
+	((seq e0 e1)
+	 (or (E e0) (E e1)))
+
+	((primcall op arg*)
+	 (ormap E-known arg*))
+
+	((forcall op arg*)
+	 (ormap E arg*))
+
+	(else
+	 (error __who__ "invalid expr" x))))
+
+    (define (E-known x)
+      (struct-case x
+	((known expr)
+	 (E expr))
+	(else
+	 (E x))))
+
+    (define (%known-primref? x)
+      ;;Return true if X is a struct  instance of type PRIMREF, possibly wrapped into
+      ;;a struct instance of type KNOWN.
+      ;;
+      (struct-case x
+	((known expr)
+	 (%known-primref? expr))
+	((primref)
+	 #t)
+	(else
+	 #f)))
+
+    #| end of module: E |# )
+
+  #| end of file: insert-engine-checks |# )
+
+
+(module (insert-stack-overflow-check)
+  ;;This module traverses all the function bodies  and: if a ?BODY contains code that
+  ;;will cause further use of the stack, it transforms it as follows:
+  ;;
+  ;;   (begin
+  ;;     (primcall '$stack-overflow-check '())
+  ;;     ?body)
+  ;;
+  ;;so  that, right  after entering  the execution  of a  function, the  call to  the
+  ;;primitive operation $STACK-OVERFLOW-CHECK  checks if the current  Scheme stack is
+  ;;about to be  exhausted.  If a ?BODY does  not make further use of  the stack: its
+  ;;function execution is a "stack tail".
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'insert-stack-overflow-check))
+
+  (module (insert-stack-overflow-check)
+
+    (define (insert-stack-overflow-check Program)
+      (struct-case Program
+	((codes code* body)
+	 (make-codes (map Clambda code*)
+		     (%process-body body)))))
+
+    (module (Clambda)
+      ;;The purpose of this module is  to apply %PROCESS-BODY to all the
+      ;;bodies of closure's clauses.
+      ;;
+      (define (Clambda x)
+	(struct-case x
+	  ((clambda label case* cp freevar* name)
+	   (make-clambda label (map ClambdaCase case*) cp freevar* name))))
+
+      (define (ClambdaCase x)
+	(struct-case x
+	  ((clambda-case info body)
+	   (make-clambda-case info (%process-body body)))))
+
+      #| end of module: Clambda |# )
+
+    (define (%process-body body)
+      (if (%tail? body)
+	  (make-seq (make-primcall '$stack-overflow-check '())
+		    body)
+	body))
+
+    #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%tail?)
+
+    (define (%tail? body)
+      ;;Return true if  the recordized code BODY  contains only function
+      ;;calls in tail position.
+      ;;
+      (struct-case body
+	((constant)		#f)
+	((var)			#f)
+	((primref)		#f)
+
+	((bind lhs* rhs* body)
+	 (or (ormap %non-tail? rhs*)
+	     (%tail? body)))
+
+	((fix lhs* rhs* body)
+	 (%tail? body))
+
+	((conditional e0 e1 e2)
+	 (or (%non-tail? e0)
+	     (%tail? e1)
+	     (%tail? e2)))
+
+	((seq e0 e1)
+	 (or (%non-tail? e0)
+	     (%tail? e1)))
+
+	((primcall op arg*)
+	 (ormap %non-tail? arg*))
+
+	((forcall op arg*)
+	 (ormap %non-tail? arg*))
+
+	((funcall rator arg*)
+	 (or (%non-tail? rator)
+	     (ormap %non-tail? arg*)))
+
+	((jmpcall label rator arg*)
+	 (or (%non-tail? rator)
+	     (ormap %non-tail? arg*)))
+
+	(else
+	 (error __who__ "invalid expr" body))))
+
+    (module (%non-tail?)
+
+      (define (%non-tail? x)
+	;;Notice that this function never  calls %TAIL?.  Return true if
+	;;the recordized code X contains any type of function call.
+	;;
+	(struct-case x
+	  ((constant)			#f)
+	  ((var)			#f)
+	  ((primref)			#f)
+
+	  ((funcall rator arg*)		#t)
+	  ((jmpcall label rator arg*)	#t)
+
+	  ;;FIXME!  (Abdulaziz Ghuloum)
+	  ((primcall op arg*)
+	   (ormap %non-tail?-known arg*))
+
+	  ((bind lhs* rhs* body)
+	   (or (ormap %non-tail? rhs*)
+	       (%non-tail? body)))
+
+	  ((fix lhs* rhs* body)
+	   (%non-tail? body))
+
+	  ((conditional e0 e1 e2)
+	   (or (%non-tail? e0)
+	       (%non-tail? e1)
+	       (%non-tail? e2)))
+
+	  ((seq e0 e1)
+	   (or (%non-tail? e0)
+	       (%non-tail? e1)))
+
+	  ((forcall op arg*)
+	   (ormap %non-tail? arg*))
+
+	  ((known expr)
+	   (%non-tail? expr))
+
+	  (else
+	   (error __who__ "invalid expr" x))))
+
+      (define (%non-tail?-known x)
+	(struct-case x
+	  ((known expr)
+	   (%non-tail? expr))
+	  (else
+	   (%non-tail? x))))
+
+      #| end of module: %non-tail? |# )
+
+    #| end of module: %tail? |# )
+
+  #| end of module: insert-stack-overflow-check |# )
 
 
 ;;;; definitions for assembly code generation
