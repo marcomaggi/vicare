@@ -5449,7 +5449,7 @@
 
 (module ()
   ;;Initialize the cogen.  This parameter is used by the assembler.
-  (code-entry-adjustment (- disp-code-data vector-tag)))
+  (code-entry-adjustment off-code-data))
 
 ;;; --------------------------------------------------------------------
 
