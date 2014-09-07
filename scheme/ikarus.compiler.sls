@@ -4631,10 +4631,32 @@
 				    ;;non-combinator.  Let's leave it alone.
 				    (%var-reset-node! lhs))))))
 			node*)))
-	;;Clean the lists of free variables  for the substitutions of the bindings in
-	;;this very FIX struct.  Introduce the  CODE-LOC structs and push the CLAMBDA
-	;;structs to ALL-CLAMBDAS.
-	(%final-freevars-cleanup-and-code-lifting lhs* new-rhs*)
+	;;Perform  the final  cleanup  of the  list  of free  variables  in each  RHS's
+	;;CLOSURE-MAKER  struct;  this  cleanup processes  free  variables  referencing
+	;;bindings defined this very FIX struct:
+	;;
+	;;
+	;;   (fix ((?lhs ?rhs) ...) ;cleanup between these bindings
+	;;     ?body)
+	;;
+	;;Then  replace the  CLAMBDA in  the  CLOSURE-MAKER struct  with an  associated
+	;;CODE-LOC  struct and  enqueue the  CLAMBDA in  the list  of all  the CLAMBDAs
+	;;defined by the input expression.  Before:
+	;;
+	;;   (fix ((?lhs (closure-maker ?clambda)) ...)
+	;;     ?body)
+	;;
+	;;after:
+	;;
+	;;   (fix ((?lhs (closure-maker (code-loc ?asmlabel)) ...))
+	;;     ?body)
+	;;
+	;;   all-clambdas := (?clambda ...)
+	;;
+	($for-each/stx
+	    (lambda (clmaker)
+	      (%lift-clambda clmaker))
+	  new-rhs*)
 	;;Process  the BODY  substituting  VAR structs  from  LHS* when  appropriate.
 	;;Build and return the output FIX struct.
 	(%mk-fix '() '() lhs* new-rhs* (E body))))
@@ -4671,43 +4693,6 @@
       ($set-node-deps! node (cons dep ($node-deps node))))
 
 ;;; --------------------------------------------------------------------
-
-    (define (%final-freevars-cleanup-and-code-lifting lhs* rhs*)
-      ;;Perform  the final  cleanup  of the  list  of free  variables  in each  RHS's
-      ;;CLOSURE-MAKER  struct;  this  cleanup processes  free  variables  referencing
-      ;;bindings defined this very FIX struct:
-      ;;
-      ;;
-      ;;   (fix ((?lhs ?rhs) ...) ;cleanup between these bindings
-      ;;     ?body)
-      ;;
-      ;;Then  replace the  CLAMBDA in  the  CLOSURE-MAKER struct  with an  associated
-      ;;CODE-LOC  struct and  enqueue the  CLAMBDA in  the list  of all  the CLAMBDAs
-      ;;defined by the input expression.  Before:
-      ;;
-      ;;   (fix ((?lhs (closure-maker ?clambda)) ...)
-      ;;     ?body)
-      ;;
-      ;;after:
-      ;;
-      ;;   (fix ((?lhs (closure-maker (code-loc ?asmlabel)) ...))
-      ;;     ?body)
-      ;;
-      ;;   all-clambdas := (?clambda ...)
-      ;;
-      ($for-each/stx
-	  (lambda (lhs clmaker)
-	    (let ((substituted-freevar* (%filter-and-substitute-binding-freevars lhs clmaker)))
-	      (assert (equal? substituted-freevar* (closure-maker-freevar* clmaker)))
-	      ;; (assert (let ((lhs-replacement (%find-var-substitution! lhs)))
-	      ;; 		(or (eq? lhs lhs-replacement)
-	      ;; 		    (clmaker? lhs-replacement))))
-	      ($set-closure-maker-freevar*! clmaker substituted-freevar*)
-	      ;;Replace  the CLAMBDA  struct in  the "code"  field with  a CODE-LOC
-	      ;;struct.
-	      ($set-closure-maker-code! clmaker (%lift-clambda ($closure-maker-code     clmaker)
-							       ($closure-maker-freevar* clmaker)))))
-	lhs* rhs*))
 
     (define (%mk-fix output-lhs* output-rhs* input-lhs* input-rhs* body)
       ;;Tail-recursive function.  Build and return the output FIX struct.  Of all the
@@ -4791,32 +4776,29 @@
 
       #| end of module: %ORIGINAL-FREEVAR*->FILTERED-AND-SUBSTITUTED-FREEVAR *|# )
 
-    (define (%lift-clambda original-clam new-freevar*)
+    (define (%lift-clambda clmaker)
       ;;Given data  from a CLOSURE-MAKER  struct: build a new  CLAMBDA to be  used to
       ;;generated  the actual  code object;  build a  CODE-LOC struct  to be  used to
       ;;generate the actual closure object; return the CODE-LOC; push the new CLAMBDA
       ;;on the parameter ALL-CLAMBDAS.
       ;;
-      ;;CLAM is the CLAMBDA struct representing the closure's implementation.
-      ;;
-      ;;NEW-FREEVAR* is the list of VAR  structs representing the free variables that
-      ;;will actually be stored in the run-time closure object.
-      ;;
-      (struct-case original-clam
-	((clambda label clause* cp freevar*.unset name)
-	 #;(assert (var? cp))
-	 #;(assert (not freevar*.unset))
-	 (let ((clause*^ ($map/stx (lambda (clause)
-				     (struct-case clause
-				       ((clambda-case info body)
-					;;Clear the field "index"  of the VAR structs
-					;;in  ARGS from  whatever value  the previous
-					;;compiler passes have left in.
-					($for-each/stx %var-reset-subst! (case-info-args info))
-					(make-clambda-case info (E body)))))
-			   clause*)))
-	   (%prepend-to-all-clambdas! (make-clambda label clause*^ cp new-freevar* name))
-	   (make-code-loc label)))))
+      (let ((original-clam ($closure-maker-code     clmaker))
+	    (new-freevar*  ($closure-maker-freevar* clmaker)))
+	(struct-case original-clam
+	  ((clambda label clause* cp freevar*.unset name)
+	   #;(assert (var? cp))
+	   #;(assert (not freevar*.unset))
+	   (let ((clause*^ ($map/stx (lambda (clause)
+				       (struct-case clause
+					 ((clambda-case info body)
+					  ;;Clear  the  field   "index"  of  the  VAR
+					  ;;structs in  ARGS from whatever  value the
+					  ;;previous compiler passes have left in.
+					  ($for-each/stx %var-reset-subst! (case-info-args info))
+					  (make-clambda-case info (E body)))))
+			     clause*)))
+	     (%prepend-to-all-clambdas! (make-clambda label clause*^ cp new-freevar* name))
+	     ($set-closure-maker-code! clmaker (make-code-loc label)))))))
 
     #| end of module: E-fix |# )
 
