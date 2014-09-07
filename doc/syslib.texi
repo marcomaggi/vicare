@@ -9584,11 +9584,33 @@ system $compiler}.
 @subsection Inserting engine checks
 
 
+This compiler pass traverses all the function bodies and, if the body
+contains at least one @objtype{jmpcall} struct or one @objtype{funcall}
+struct (in which the operator is @strong{not} a @objtype{primref}), it
+transforms the @meta{?body} into:
+
+@example
+(seq
+  (primcall $do-event ())
+  @meta{body})
+@end example
+
+@noindent
+the call to the primitive operation @func{$do-event} suspends the
+execution of Scheme code for the current internal process and enters an
+internal subprocess which can take actions asynchronously.
+
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
 @defun $insert-engine-checks @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a @objtype{codes} struct representing
+recordised code; build and return a new @objtype{codes} struct.
+
+Insert calls to the primitive operation @func{$do-event} when
+appropriate.
 @end defun
 
 @c page
@@ -9596,11 +9618,34 @@ system $compiler}.
 @subsection Inserting stack overflow checks
 
 
+This compiler pass traverses all the function bodies and: if a
+@meta{body} contains code that will cause further use of the Scheme
+stack, it transforms it as follows:
+
+@example
+(seq
+  (primcall $stack-overflow-check ())
+  @meta{body})
+@end example
+
+@noindent
+so that, right after entering the execution of a function, the call to
+the primitive operation @func{$stack-overflow-check} checks if the
+current Scheme stack is about to be exhausted.  If a @meta{body} does
+not make further use of the stack: its function execution is a ``stack
+tail''.
+
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
 @defun $insert-stack-overflow-check @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a @objtype{codes} struct representing
+recordised code; build and return a new @objtype{codes} struct.
+
+Insert calls to the primitive operation @func{$stack-overflow-check}
+when appropriate.
 @end defun
 
 @c page
