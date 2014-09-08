@@ -36,7 +36,7 @@ Compiler passes
 * compiler optimisation::       Source optimisation.
 * compiler refassig::           Rewriting references and assignments.
 * compiler tags::               Tagging known properties.
-* compiler sanitbind::          Sanitizing bindings.
+* compiler sanitise bindings::  Sanitising bindings.
 * compiler direct jumps::       Optimisation for direct jumps.
 * compiler global assign::      Inserting global assignments.
 * compiler vars::               Introducing storage locations.
@@ -2428,7 +2428,7 @@ skipped.  Defaults to @true{}.
 @end deffn
 
 @c page
-@node compiler sanitbind
+@node compiler sanitise bindings
 @section Sanitizing bindings
 
 
