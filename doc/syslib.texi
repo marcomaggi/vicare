@@ -8903,43 +8903,7 @@ is transformed into:
 
 
 This compiler pass performs @objtype{clambda} lifting and optimisation
-of calls to functions without free variables.  To discuss the
-transformations we define:
-
-@table @emph
-@item combinator
-A Scheme function without free variables; a combinator does not capture
-any binding.  The closure object implementing a combinator can be
-created once and for all; for example:
-
-@example
-(define (compute x y z)
-  (define (lincomb a b c)
-    (+ (* a b) (* a c)))
-  (lincomb x y z))
-@end example
-
-@noindent
-assuming function integration is disabled: the closure object
-implementing the function @func{lincomb} can be created once and reused
-at every call to @func{compute}.
-
-@item non--combinator
-A Scheme function with free variables, whose current value is captured
-every time the closure object is created.  The closure object
-implementing a non--combinator must be created every time to capture the
-current values of the free variables; for example:
-
-@example
-(define (adder x)
-  (lambda (x)
-    (+ x y)))
-@end example
-
-@noindent
-at every call to the function @func{adder} a new closure object must be
-created and returned, capturing the value of the argument @code{x}.
-@end table
+of calls to functions without free variables.
 
 @menu
 * syslib compiler lifting intro::  Introduction to @objtype{clambda} lifting.
@@ -9215,6 +9179,43 @@ cases this may not happen.
 @node syslib compiler lifting noncom
 @subsubsection Combinators and non--combinators
 
+
+To discuss the transformations we define:
+
+@table @emph
+@item combinator
+A Scheme function without free variables; a combinator does not capture
+any binding.  The closure object implementing a combinator can be
+created once and for all; for example:
+
+@example
+(define (compute x y z)
+  (define (lincomb a b c)
+    (+ (* a b) (* a c)))
+  (lincomb x y z))
+@end example
+
+@noindent
+assuming function integration is disabled: the closure object
+implementing the function @func{lincomb} can be created once and reused
+at every call to @func{compute}.
+
+@item non--combinator
+A Scheme function with free variables, whose current value is captured
+every time the closure object is created.  The closure object
+implementing a non--combinator must be created every time to capture the
+current values of the free variables; for example:
+
+@example
+(define (adder x)
+  (lambda (x)
+    (+ x y)))
+@end example
+
+@noindent
+at every call to the function @func{adder} a new closure object must be
+created and returned, capturing the value of the argument @code{x}.
+@end table
 
 We want to discuss how to recognise combinators and non--combinators
 among the bindings defined by a @objtype{fix} struct.
