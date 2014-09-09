@@ -3759,6 +3759,9 @@ implemented:
           (lambda @metai{formals}
             @metai{consumer}))))
 @end example
+
+The auxiliary syntax @func{=>} is the one exported by
+@rsixlibrary{base}.
 @end deffn
 
 

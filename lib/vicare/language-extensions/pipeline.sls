@@ -27,7 +27,7 @@
 
 #!r6rs
 (library (vicare language-extensions pipeline)
-  (export pipeline)
+  (export pipeline =>)
   (import (rnrs (6)))
 
 
