@@ -2890,11 +2890,14 @@ This compiler pass performs @objtype{clambda} lifting and optimisation
 of calls to functions without free variables.
 
 @menu
-* compiler lifting intro::      Introduction to @objtype{clambda} lifting.
-* compiler lifting req::        Prerequisites for codes lifting.
-* compiler lifting combin::     Optimisation of combinator calls.
-* compiler lifting noncom::     Combinators and non--combinators.
-* compiler lifting api::        @objtype{clambda} lifting @api{}.
+* compiler lifting intro::         Introduction to @objtype{clambda} lifting.
+* compiler lifting prerequisites:: Prerequisites for codes lifting.
+* compiler lifting combinators::   Combinators and non--combinators.
+* compiler lifting optimisation::  Optimisation of combinator calls.
+* compiler lifting examples::      Examples of combinators and
+                                   non--combinators.
+* compiler lifting substitutions:: Substitution optimisations.
+* compiler lifting api::           @objtype{clambda} lifting @api{}.
 @end menu
 
 @c page
@@ -2994,7 +2997,7 @@ function @code{a}, with assembly entry point label
 @code{asmlabel:a:clambda}.
 
 @c page
-@node compiler lifting req
+@node compiler lifting prerequisites
 @subsection Prerequisites for codes lifting
 
 
@@ -3040,130 +3043,7 @@ it is perfectly all right to substitute all the occurrences of the
 @end itemize
 
 @c page
-@node compiler lifting combin
-@subsection Optimisation of combinator calls
-
-
-If a Scheme function is a combinator it does not need to capture the
-current value of any binding; this means we might create a single
-closure object for every combinator function and use it everywhere the
-function is referenced (including in function applications).
-
-Conversely, if a Scheme function is a combinator: there is no need to
-allocate a closure object for it and keep it in memory forever; we can
-delay the creation until the function is actually referenced (including
-in function applications).  This compiler pass assumes that delaying the
-creation of closure objects for combinators is advantageous.
-
-Let's see some examples in which function integration has been disabled:
-
-@itemize
-@item
-This core language expression:
-
-@example
-(lambda () ((primitive read)))
-@end example
-
-@noindent
-is transformed into:
-
-@example
-(codes
- ((lambda (label: asmlabel:anonymous:clambda)
-    () (funcall (primref read))))
- (closure-maker (code-loc asmlabel:anonymous:clambda)
-                no-freevars))
-@end example
-
-@item
-In this core language expression:
-
-@example
-(let ((f (lambda () '1))
-      (g (lambda () '2)))
-  ((primitive list) (f) (g)))
-@end example
-
-@noindent
-the @objtype{closure-maker} struct is introduced at the functions call
-site:
-
-@example
-(codes
-  ((lambda (label: asmlabel:g:clambda) () (constant 2))
-   (lambda (label: asmlabel:f:clambda) () (constant 1)))
-  (funcall (primref list)
-    (jmpcall asmlabel:f:clambda:case-0
-             (closure-maker (code-loc asmlabel:f:clambda)
-                            no-freevars))
-    (jmpcall asmlabel:g:clambda:case-0
-             (closure-maker (code-loc asmlabel:g:clambda)
-                            no-freevars))))
-@end example
-
-@item
-In this core languge form:
-
-@example
-(let ((f (lambda () '1)))
-   ((primitive list) (f) (f)))
-@end example
-
-@noindent
-multiple @objtype{closure-maker} structs are introduced for the same
-function:
-
-@example
- (codes
-  ((lambda (label: asmlabel:f:clambda) () (constant 1)))
-  (funcall (primref list)
-    (jmpcall asmlabel:f:clambda:case-0
-             (closure-maker (code-loc asmlabel:f:clambda)
-                            no-freevars))
-    (jmpcall asmlabel:f:clambda:case-0
-             (closure-maker (code-loc asmlabel:f:clambda)
-                            no-freevars))))
-@end example
-@end itemize
-
-The fact that we introduce multiple @objtype{closure-maker} structs to
-create closure objects with the same @objtype{clambda} implementation,
-takes advantage of the @rnrs{6} statement that we cannot assume Scheme
-functions are @func{eq?} to themselves:
-
-@example
-(define (func) @meta{body})
-(eq? func func) @result{} unspecified
-@end example
-
-@noindent
-for example, the following core language
-form:
-
-@example
-(let ((a (lambda () '1)))
-  (eq? a a))
-@end example
-
-@noindent
-is transformed into:
-
-@example
-(codes
-  ((lambda (label: asmlabel:a:clambda) () (constant 1)))
-  (funcall (funcall (primref top-level-value) (constant eq?))
-    (closure-maker (code-loc asmlabel:a:clambda) no-freevars)
-    (closure-maker (code-loc asmlabel:a:clambda) no-freevars))
-@end example
-
-@noindent
-further transformations of the code might recognise the operands of
-@func{eq?} as being references to the same function, but in more complex
-cases this may not happen.
-
-@c page
-@node compiler lifting noncom
+@node compiler lifting combinators
 @subsection Combinators and non--combinators
 
 
@@ -3173,7 +3053,7 @@ To discuss the transformations we define:
 @item combinator
 A Scheme function without free variables; a combinator does not capture
 any binding.  The closure object implementing a combinator can be
-created once and for all; for example:
+created once and for all at compile--time; for example:
 
 @example
 (define (compute x y z)
@@ -3184,14 +3064,15 @@ created once and for all; for example:
 
 @noindent
 assuming function integration is disabled: the closure object
-implementing the function @func{lincomb} can be created once and reused
-at every call to @func{compute}.
+implementing the function @func{lincomb} can be created once at
+compile--time and reused at every call to @func{compute}.
 
 @item non--combinator
-A Scheme function with free variables, whose current value is captured
-every time the closure object is created.  The closure object
-implementing a non--combinator must be created every time to capture the
-current values of the free variables; for example:
+A Scheme function with free variables, whose current value must be
+captured at run--time.  To implement a non--combinator: a new closure
+object must be created at run--time every time the control flow reaches
+the @func{lambda} form, to capture the current values of the free
+variables; for example:
 
 @example
 (define (adder x)
@@ -3205,9 +3086,8 @@ created and returned, capturing the value of the argument @code{x}.
 @end table
 
 We want to discuss how to recognise combinators and non--combinators
-among the bindings defined by a @objtype{fix} struct.
-
-Let's consider the recordised code:
+among the bindings defined by a @objtype{fix} struct.  Let's consider
+the recordised code:
 
 @example
 (bind ((@metai{lhs} @metai{rhs}) ...)
@@ -3222,10 +3102,8 @@ at this point in the sequence of compiler passes, we know that all the
 structs @metao{lhs} and @metai{lhs} may appear in the body of each
 @metao{rhs}, while the internally defined @objtype{var} structs
 @metaii{lhs} cannot; so the @metaii{lhs} do not influence the nature of
-the @metao{rhs} expressions.  We can ignore all the internally defined
-bindings.
-
-Let's switch to inspect the recordised code:
+the @metao{rhs} expressions: we can ignore all the internally defined
+bindings.  So let's switch to inspect the recordised code:
 
 @example
 (bind ((@metai{lhs} @metai{rhs}) ...)
@@ -3252,7 +3130,7 @@ combinator.  For example, in the recordised code:
 @end example
 
 @noindent
-both the @objtype{fix}--bound @objtype{clambda} have empty list of free
+both the @objtype{fix}--bound functions have empty list of free
 variables, so both functions are combinators.
 
 @item
@@ -3270,10 +3148,10 @@ example, in the recordised code:
 @end example
 
 @noindent
-the @objtype{clambda} bound to @code{f} has the @objtype{var} @code{a}
-in its free variables list; the value of the free variable @code{a} is
-known only at run--time, so the closure maker must capture a run--time
-value, so the function @code{f} is a non--combinator.
+the function bound to @code{f} has the @objtype{var} @code{a} in its
+free variables list; the value of the free variable @code{a} is known
+only at run--time, so the closure maker must capture a run--time value,
+so the function @code{f} is a non--combinator.
 
 @item
 If a list of free variables contains only @metao{lhs} structs defined at
@@ -3290,12 +3168,11 @@ by the same @objtype{fix} and bound to combinators: the corresponding
 @end example
 
 @noindent
-the @objtype{clambda} bound to @code{f} is has no free variables, so it
-is a combinator; the @objtype{clambda} bound to @code{g} has @code{f} in
-its list of free variables; the value of @code{f} is known at
-compile--time, so the closure maker of @code{g} does not need to capture
-a free variable run--time value, so the function @code{g} is a
-combinator too.
+the function bound to @code{f} has no free variables, so it is a
+combinator; the function bound to @code{g} has @code{f} in its list of
+free variables; the value of @code{f} is known at compile--time, so the
+closure maker of @code{g} does not need to capture a free variable's
+run--time value, so the function @code{g} is a combinator too.
 
 @item
 If every list of free variables contains only @metao{lhs} structs
@@ -3312,10 +3189,10 @@ combinators.  For example, in the recordised code:
 @end example
 
 @noindent
-both @objtype{clambda} structs have lists of free variables including
-only @objtype{var} structs defined by the same @objtype{fix}; the values
-of the free variables is known at compile--time, so the closure makers
-do not need to capture the free variables' run--time values, so both the
+both the functions have lists of free variables including only
+@objtype{var} structs defined by the same @objtype{fix}; the values of
+the free variables is known at compile--time, so the closure makers do
+not need to capture the free variables' run--time values, so both the
 functions are combinators.
 
 @item
@@ -3333,32 +3210,208 @@ For example, in the recordised code:
 @end example
 
 @noindent
-the @objtype{clambda} bound to @code{f} is a non--combinator; the
-@objtype{clambda} bound to @code{g} has @code{f} in its free variables
-list; the value of @code{f} includes the run--time value of @code{a}, so
-the value of the free variable @code{f} is known only at run--time, so
-the closure maker of @code{g} must capture the run--time value, so the
-function @code{g} is a non--combinator.
+the function bound to @code{f} is a non--combinator; the function bound
+to @code{g} has @code{f} in its free variables list; the value of
+@code{f} includes the run--time value of @code{a}, so the value of the
+free variable @code{f} is known only at run--time, so the closure maker
+of @code{g} must capture the run--time value, so the function @code{g}
+is a non--combinator too.
 @end itemize
 
-@c ------------------------------------------------------------
+@c page
+@node compiler lifting optimisation
+@subsection Optimisation of combinator calls
 
-Let's consider some examples of code creating a function and reason
-about the function being a combinator or a non--combinator:
+
+If a Scheme function is a combinator it does not need to capture the
+current value of any binding; this means we can adopt two opposite
+strategies of implementation:
 
 @itemize
 @item
-In the recordised code:
+For every combinator function definition: we might create a single
+closure object at compile--time and use it everywhere the function is
+referenced.  We create a combinator closure object and keep it in memory
+even when the running Scheme process never uses the function.
+
+@item
+For every reference to combinator function: we might create a different
+closure object at compile-time.  We delay the creation of a closure
+object until the combinator function is actually referenced by the
+running Scheme process.
+@end itemize
+
+@noindent
+this compiler pass, as implemented by @value{PRJNAME}, assumes that
+delaying the creation of combinator closure objects is advantageous.  As
+example, the core language expression:
 
 @example
-(bind ((a_0 (constant 1)))
-  (lambda () a_0))
+(let ((f (lambda () '1)))
+   ((primitive list) (f) (f)))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+ ((lambda (label: asmlabel:f:clambda) () (constant 1)))
+ (funcall (primref list)
+   (jmpcall asmlabel:f:clambda:case-0
+            (closure-maker (code-loc asmlabel:f:clambda)
+                           no-freevars))
+   (jmpcall asmlabel:f:clambda:case-0
+            (closure-maker (code-loc asmlabel:f:clambda)
+                           no-freevars))))
+@end example
+
+@noindent
+where multiple @objtype{closure-maker} structs are introduced for the
+same function.
+
+The fact that we introduce multiple @objtype{closure-maker} structs to
+create closure objects with the same @objtype{clambda} implementation,
+takes advantage of the @rnrs{6} statement that we cannot assume Scheme
+functions are @func{eq?} to themselves:
+
+@example
+(define (func) @meta{body})
+(eq? func func) @result{} unspecified
+@end example
+
+@noindent
+for example, the following core language
+form:
+
+@example
+(let ((a (lambda () '1)))
+  ((primitive eq?) a a))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+  ((lambda (label: asmlabel:a:clambda) () (constant 1)))
+  (funcall (primref eq?)
+    (closure-maker (code-loc asmlabel:a:clambda) no-freevars)
+    (closure-maker (code-loc asmlabel:a:clambda) no-freevars)))
+@end example
+
+@noindent
+further transformations of the code might recognise the operands of
+@func{eq?} as being references to the same function, but in more complex
+cases this may not happen.
+
+@c page
+@node compiler lifting examples
+@subsection Examples of combinators and non--combinators
+
+
+Let's consider some examples of code creating a function and reason
+about the function being a combinator or a non--combinator; in these
+examples function integration has been disabled.
+
+@c ------------------------------------------------------------
+
+@subsubheading Standalone combinator
+
+This core language expression:
+
+@example
+(lambda () ((primitive read)))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+  ((lambda (label: asmlabel:anonymous:clambda)
+     () (funcall (primref read))))
+  (closure-maker (code-loc asmlabel:anonymous:clambda)
+                 no-freevars))
+@end example
+
+@noindent
+the returned function looks like it is closed upon the binding
+@func{read}, but in truth @func{read} is a primitive function whose
+value is known at compile--time; so the returned function is a
+combinator.
+
+@c ------------------------------------------------------------
+
+@subsubheading Simple combinators definition
+
+This core language expression:
+
+@example
+(let ((f (lambda () '1))
+      (g (lambda () '2)))
+  ((primitive list) (f) (g)))
+@end example
+
+@noindent
+defines two combinator functions; the @objtype{closure-maker} struct is
+introduced at the functions' call site:
+
+@example
+(codes
+  ((lambda (label: asmlabel:g:clambda) () (constant 2))
+   (lambda (label: asmlabel:f:clambda) () (constant 1)))
+  (funcall (primref list)
+    (jmpcall asmlabel:f:clambda:case-0
+             (closure-maker (code-loc asmlabel:f:clambda)
+                            no-freevars))
+    (jmpcall asmlabel:g:clambda:case-0
+             (closure-maker (code-loc asmlabel:g:clambda)
+                            no-freevars))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Multiple calls to single combinator
+
+This core language form:
+
+@example
+(let ((f (lambda () '1)))
+   ((primitive list) (f) (f)))
+@end example
+
+@noindent
+defines a combinator function; multiple @objtype{closure-maker} structs
+are introduced at the call site for the same function:
+
+@example
+(codes
+  ((lambda (label: asmlabel:f:clambda) () (constant 1)))
+  (funcall (primref list)
+    (jmpcall asmlabel:f:clambda:case-0
+             (closure-maker (code-loc asmlabel:f:clambda)
+                            no-freevars))
+    (jmpcall asmlabel:f:clambda:case-0
+             (closure-maker (code-loc asmlabel:f:clambda)
+                            no-freevars))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Non--combinator definition
+
+In the core language expression:
+
+@example
+(let ((a ((primitive read))))
+  (lambda () a))
 @end example
 
 @noindent
 the returned function is a non--combinator because its return value
-depends upon the value of the binding @code{a_0} at the time the closure
-object is created; @code{a_0} is a free variable in the body of the
+depends upon the value of the binding @code{a} at the time the closure
+object is created; @code{a} is a free variable in the body of the
 function and the function is closed upon it.  Indeed such form is
 transformed into:
 
@@ -3372,21 +3425,10 @@ transformed into:
       tmp_0)))
 @end example
 
-@item
-In the following recordised code:
+@c ------------------------------------------------------------
 
-@example
-(lambda ()
-  ((primitive list) 1 2))
-@end example
+@subsubheading Multiple calls to non--combinator
 
-@noindent
-the returned function looks like it is closed upon the binding
-@func{list}, but in truth @func{list} is a primitive function whose
-binding never mutates; so the returned function is a ``combinator'', a
-function without free variables.
-
-@item
 In this example a single non--combinator is called twice:
 
 @example
@@ -3412,30 +3454,210 @@ the result of the transformation is:
 @noindent
 we see that a single @objtype{closure-maker} is introduced.
 
-@item
-The following standard code:
+@c ------------------------------------------------------------
+
+@subsubheading Recursive combinator and non--combinator
+
+A self reference in a recursive function does not necessarily make it a
+non--combinator.  For example:
 
 @example
-(letrec* ((a (lambda () (b)))
-          (b (lambda () (a))))
+(letrec ((f (lambda () (f))))
   @meta{body})
 @end example
 
 @noindent
-is recordised and processed to:
+is transformed into:
 
 @example
-(fix ((a_0 (lambda () (funcall b_0)))
-      (b_0 (lambda () (funcall a_0))))
-  @meta{body})
+(codes
+  ((lambda (label: asmlabel:f:clambda) ()
+     (jmpcall asmlabel:f:clambda:case-0
+              (closure-maker (code-loc asmlabel:f:clambda)
+                             no-freevars))))
+  (closure-maker (code-loc asmlabel:f:clambda) no-freevars))
 @end example
 
 @noindent
-so the functions are just combinators, because it is known at
-compile--time that @code{a_0} and @code{b_0} are immutable bindings
-referencing closures and it is also known which closures are referenced.
+there are no free variables other than the recursive reference, so the
+function is a combinator.  Conversely, in the expression:
 
-@item
+@example
+(let ((a ((primitive read))))
+  (letrec ((f (lambda (x) (f a))))
+    (f '1)))
+@end example
+
+@noindent
+in addition to the self reference there is a non--removable free
+variable, so the result of the transformation is:
+
+@example
+(codes
+  ((lambda (label: asmlabel:f:clambda) (x_0)
+      (jmpcall asmlabel:f:clambda:case-1 f_0 a_0)))
+  (bind ((a_0 (funcall (primref read))))
+    (fix ((f_0 (closure-maker (code-loc asmlabel:f:clambda)
+                              (freevars: a_0))))
+      (jmpcall asmlabel:f:clambda:case-1 f_0 (constant 1)))))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Cycle of combinator calls
+
+In this expression functions defined at the same lexical contour call
+each other in a cycle:
+
+@example
+(letrec* ((a (lambda () (d)))
+          (b (lambda () (a)))
+          (c (lambda () (b)))
+          (d (lambda () (c))))
+  ((primitive list) (a) (b) (c) (d)))
+@end example
+
+@noindent
+there are no true free variables, so all the functions are implemented
+as combinators:
+
+@smallexample
+(codes
+ ((lambda (label: asmlabel:a:clambda) ()
+     (jmpcall asmlabel:d:clambda:case-0
+              (closure-maker (code-loc asmlabel:d:clambda)
+                             no-freevars)))
+  (lambda (label: asmlabel:d:clambda) ()
+     (jmpcall asmlabel:c:clambda:case-0
+              (closure-maker (code-loc asmlabel:c:clambda)
+                             no-freevars)))
+  (lambda (label: asmlabel:c:clambda) ()
+     (jmpcall asmlabel:b:clambda:case-0
+              (closure-maker (code-loc asmlabel:b:clambda)
+              no-freevars)))
+  (lambda (label: asmlabel:b:clambda) ()
+     (jmpcall asmlabel:a:clambda:case-0
+              (closure-maker (code-loc asmlabel:a:clambda)
+              no-freevars))))
+ (funcall (primref list)
+   (jmpcall asmlabel:a:clambda:case-0
+            (closure-maker (code-loc asmlabel:a:clambda)
+                           no-freevars))
+   (jmpcall asmlabel:b:clambda:case-0
+            (closure-maker (code-loc asmlabel:b:clambda)
+                           no-freevars))
+   (jmpcall asmlabel:c:clambda:case-0
+            (closure-maker (code-loc asmlabel:c:clambda)
+                           no-freevars))
+   (jmpcall asmlabel:d:clambda:case-0
+            (closure-maker (code-loc asmlabel:d:clambda)
+            no-freevars))))
+@end smallexample
+
+@c ------------------------------------------------------------
+
+@subsubheading Cycle of non--combinator calls
+
+In this expression functions defined at the same lexical contour call
+each other in a cycle; one of them has a true free variable, causing all
+of them to be non--combinators:
+
+@example
+(let ((v ((primitive read))))
+  (letrec* ((a (lambda (x) (d x)))
+            (b (lambda (x) (a x)))
+            (c (lambda (x) (b x)))
+            (d (lambda (x) (c v))))
+    ((primitive list) (a '1) (b '2) (c '3) (d '4))))
+@end example
+
+@noindent
+the result of the transformation is:
+
+@smallexample
+(codes
+ ((lambda (label: asmlabel:a:clambda) (x_0)
+     (jmpcall asmlabel:d:clambda:case-1 d_0 x_0))
+  (lambda (label: asmlabel:d:clambda) (x_1)
+     (jmpcall asmlabel:c:clambda:case-1 c_0 v_0))
+  (lambda (label: asmlabel:c:clambda) (x_2)
+     (jmpcall asmlabel:b:clambda:case-1 b_0 x_2))
+  (lambda (label: asmlabel:b:clambda) (x_3)
+     (jmpcall asmlabel:a:clambda:case-1 a_0 x_3)))
+ (bind ((v_0 (funcall (primref read))))
+   (fix ((a_0 (closure-maker (code-loc asmlabel:a:clambda)
+                             (freevars: d_0)))
+         (d_0 (closure-maker (code-loc asmlabel:d:clambda)
+                             (freevars: c_0 v_0)))
+         (c_0 (closure-maker (code-loc asmlabel:c:clambda)
+                             (freevars: b_0)))
+         (b_0 (closure-maker (code-loc asmlabel:b:clambda)
+                             (freevars: a_0))))
+     (funcall (primref list)
+       (jmpcall asmlabel:a:clambda:case-1 a_0 (constant 1))
+       (jmpcall asmlabel:b:clambda:case-1 b_0 (constant 2))
+       (jmpcall asmlabel:c:clambda:case-1 c_0 (constant 3))
+       (jmpcall asmlabel:d:clambda:case-1 d_0 (constant 4))))))
+@end smallexample
+
+@c page
+@node compiler lifting substitutions
+@subsection Substitution optimisations
+
+
+This compiler pass performs substitutions of binding references with the
+purpose of optimising their implementation.  One of the possible results
+is to reduce the number of free variables non--combinator functions are
+closed upon; if all the free variables are removed: some non--combinator
+functions can be implemented as combinators.
+
+@c ------------------------------------------------------------
+
+@subsubheading Substituting references to combinators
+
+This has already been discussed.  Whenever a function is recognised to
+be a combinator: every reference to it is substituted with a form
+building and returning a new closure object; as example, the core
+language form:
+
+@example
+(let ((f (lambda () '1)))
+  (f))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+  ((lambda (label: asmlabel:f:clambda) () (constant 1)))
+  (jmpcall asmlabel:f:clambda:case-0
+           (closure-maker (code-loc asmlabel:f:clambda)
+                          no-freevars)))
+@end example
+
+@c ------------------------------------------------------------
+
+@subsubheading Synonym variables substitution
+
+In the following core language expression:
+
+@example
+(let ((a ((primitive read))))
+  (let ((b a))
+    b))
+@end example
+
+@noindent
+the binding @code{b} is a synonym for @code{a}, so it is transformed into:
+
+@example
+(codes
+  ()
+  (bind ((a_0 (funcall (primref read))))
+    a_0))
+@end example
+
 In the following recordised code:
 
 @example
@@ -3450,10 +3672,9 @@ the returned value looks like a closure upon the binding @code{b_0}, but
 in truth it is known at compile--time that @code{b_0} is an immutable
 binding referencing a @objtype{clambda} struct and also which
 @objtype{clambda} is referenced; so the function bound to @code{c_0} is
-just a combinator.
-
-More: everywhere a reference to @code{b_0} appears we can substitute it
-with a reference to @code{a_0}, and so we can transform the code to:
+just a combinator; more: everywhere a reference to @code{b_0} appears we
+can substitute it with a reference to @code{a_0}, and so we can
+transform the code to:
 
 @example
 (fix ((a_0 (lambda () @meta{body})))
@@ -3462,32 +3683,11 @@ with a reference to @code{a_0}, and so we can transform the code to:
       c_0)))
 @end example
 
-@item
-We may think that a self reference in a recursive function makes it a
-closure, but this is not true.  For example:
-
-@example
-(fix ((f (lambda () (f))))
-  @meta{body})
-@end example
-
-@noindent
-defines @code{f} as a combinator because the recursive call to @code{f}
-can be implemented as a @objtype{jmpcall} to the assembly entry point of
-the function and there are no other free variables.  Instead:
-
-@example
-(bind ((a @meta{rhs}))
-  (fix ((f (lambda (b) (f a))))
-    @meta{body}))
-@end example
-
-@noindent
-defines @code{f} as a non--combinator: the recursive call to @code{f}
-can be implemented as a @objtype{jmpcall} to the assembly entry point of
-the function, but the function is closed upon the variable @code{a}.  It
-is the free variable @code{a} that makes @code{f} a non--combinator.
-@end itemize
+@quotation
+@strong{NOTE} While synonym binding elimination is performed by this
+compiler pass: it should have already been performed by the source
+optimiser.
+@end quotation
 
 @c page
 @node compiler lifting api

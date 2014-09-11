@@ -2092,6 +2092,20 @@
 	  f_0))
 
 ;;; --------------------------------------------------------------------
+;;; special cases
+
+  ;;This  is to  verify that  the substitution  of the  synonym A  with F  is already
+  ;;happened here.
+  (doit (let ((f (lambda () '1)))
+	  (let ((a f))
+	    (let ((g (lambda () (a))))
+	      g)))
+	(fix ((f_0 (closure-maker (lambda () (constant 1)) no-freevars)))
+	  (fix ((g_0 (closure-maker (lambda () (jmpcall asmlabel:f:clambda:case-0 f_0))
+				    (freevars: f_0))))
+	    g_0)))
+
+;;; --------------------------------------------------------------------
 ;;; libraries
 
   (doit (library-letrec*
@@ -2169,6 +2183,13 @@
 	 (closure-maker (code-loc asmlabel:anonymous:clambda)
 			no-freevars)))
 
+  (doit (let ((f (lambda () '1)))
+	  (f))
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) () (constant 1)))
+	 (jmpcall asmlabel:f:clambda:case-0
+		  (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
+
   (doit (let ((f (lambda () '1))
 	      (g (lambda () '2)))
 	  ((primitive list) (f) (g)))
@@ -2241,6 +2262,16 @@
 	       (jmpcall asmlabel:f:clambda:case-0 f_0)
 	       (jmpcall asmlabel:f:clambda:case-0 f_0))))))
 
+  ;;Recursive combinator.
+  (doit (letrec ((f (lambda () (f))))
+	  f)
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) ()
+	     (jmpcall asmlabel:f:clambda:case-0
+		      (closure-maker (code-loc asmlabel:f:clambda)
+				     no-freevars))))
+	 (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
+
   ;;Cycle of non-combinators.
   (doit (let ((v ((primitive read))))
 	  (letrec* ((a (lambda (x) (d v)))
@@ -2298,11 +2329,28 @@
 ;;; --------------------------------------------------------------------
 ;;; binding reference substitutions
 
-  ;;Recursive function.
-  (doit (letrec* ((a (lambda () a)))
-	  a)
-	(codes ((lambda (label: asmlabel:a:clambda) () (closure-maker (code-loc asmlabel:a:clambda) no-freevars)))
-	       (closure-maker (code-loc asmlabel:a:clambda) no-freevars)))
+  ;;Variable synonym substitution.  This does not happen at this compiler pass: it is
+  ;;performed earlier.
+  (doit (let ((a ((primitive read))))
+	  (let ((b a))
+	    b))
+	(codes
+	 ()
+	 (bind ((a_0 (funcall (primref read))))
+	   a_0)))
+
+  ;;Variable synonym substitution.
+  (doit (let ((f (lambda () '1)))
+	  (let ((a f))
+	    (let ((g (lambda () (a))))
+	      g)))
+	(codes
+	 ((lambda (label: asmlabel:g:clambda) ()
+	     (jmpcall asmlabel:f:clambda:case-0
+		      (closure-maker (code-loc asmlabel:f:clambda)
+				     no-freevars)))
+	  (lambda (label: asmlabel:f:clambda) () (constant 1)))
+	 (closure-maker (code-loc asmlabel:g:clambda) no-freevars)))
 
   ;;The function A is a combinator (no free vars); as a consequence the function B is
   ;;also a combinator.
@@ -2328,6 +2376,18 @@
 		 (a_0 (closure-maker (code-loc asmlabel:a:clambda) (freevars: d_0))))
 	     b_0))))
 
+  ;;Recursive non-combinator.
+  (doit (let ((a ((primitive read))))
+	  (letrec ((f (lambda (x) (f a))))
+	    (f '1)))
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) (x_0)
+	     (jmpcall asmlabel:f:clambda:case-1 f_0 a_0)))
+	 (bind ((a_0 (funcall (primref read))))
+	   (fix ((f_0 (closure-maker (code-loc asmlabel:f:clambda)
+				     (freevars: a_0))))
+	     (jmpcall asmlabel:f:clambda:case-1 f_0 (constant 1))))))
+
   (doit (letrec ((f (case-lambda
 		     (()	(f '1))
 		     ((a)	a))))
@@ -2347,10 +2407,10 @@
 ;;; special cases
 
   (doit (let ((a (lambda () '1)))
-	  (eq? a a))
+	  ((primitive eq?) a a))
 	(codes
 	 ((lambda (label: asmlabel:a:clambda) () (constant 1)))
-	 (funcall (funcall (primref top-level-value) (constant eq?))
+	 (funcall (primref eq?)
 	   (closure-maker (code-loc asmlabel:a:clambda) no-freevars)
 	   (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
 
