@@ -43,30 +43,30 @@
 	((=> . ?stuff)
 	 (synner "missing producer expression" clause*))
 
-	((?producer-expr => ?vars)
-	 (synner "receiver variables specified without consumer expression" #'?vars))
+	((?producer-expr => ?formals)
+	 (synner "receiver variables specified without consumer expression" #'?formals))
 
-	((?producer-expr => (?var ...) . ?consumer-expr*)
-	 (all-identifiers? #'(?var ...))
-	 #`(call-with-values
-	       (lambda () ?producer-expr)
-	     (lambda (?var ...) #,(generate-nested-exprs #'?consumer-expr*))))
-	((?producer-expr => (?var0 ?var ... . ?rest) . ?consumer-expr*)
-	 (and (all-identifiers? #'(?var0 ?var ...))
-	      (identifier? #'?rest)
-	      #`(call-with-values
-		    (lambda () ?producer-expr)
-		  (lambda (?var0 ?var ... . ?rest) #,(generate-nested-exprs #'?consumer-expr*)))))
+	((?producer-expr => ?formals . ?consumer-expr*)
+	 (if (proper-or-improper-identifiers? #'?formals)
+	     #`(call-with-values
+		   (lambda () ?producer-expr)
+		 (lambda ?formals #,(generate-nested-exprs #'?consumer-expr*)))
+	   (synner "expected proper or improper list of identifiers as receiver formals"
+		   #'?formals)))
+
 	((?final-expr)
 	 #'?final-expr)
 	))
 
-    (define (all-identifiers? ell)
-      (syntax-case ell ()
+    (define (proper-or-improper-identifiers? formals)
+      (syntax-case formals ()
 	(() #t)
+	(?rest
+	 (identifier? #'?rest)
+	 #t)
 	((?car . ?cdr)
 	 (identifier? #'?car)
-	 (all-identifiers? #'?cdr))
+	 (proper-or-improper-identifiers? #'?cdr))
 	(_  #f)))
 
     (define (synner message subform)

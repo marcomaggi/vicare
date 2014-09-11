@@ -43,6 +43,7 @@
     ((_ ?form)
      (check
 	 (guard (E ((syntax-violation? E)
+		    (fprintf (current-error-port) "~s\n" (condition-message E))
 		    #t)
 		   (else
 		    (debug-print E)
@@ -98,6 +99,20 @@
        => (a3 b3 . rest3)
        (cons* a3 b3 rest3))
     => '(1000 2000 3000 4000))
+
+  ;;invalid list of receiver formals
+  (catch-syntax-violation
+   (pipeline
+    1
+    => 123
+    1))
+
+  ;;invalid list of receiver formals
+  (catch-syntax-violation
+   (pipeline
+    1
+    => (a b 3)
+    1))
 
   ;;error missing producer expression
   (catch-syntax-violation
