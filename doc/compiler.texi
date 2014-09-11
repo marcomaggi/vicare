@@ -3888,7 +3888,7 @@ is transformed into:
 This compiler pass traverses all the function bodies and, if the body
 contains at least one @objtype{jmpcall} struct or one @objtype{funcall}
 struct (in which the operator is @strong{not} a @objtype{primref}), it
-transforms the @meta{?body} into:
+transforms the @meta{body} into:
 
 @example
 (seq

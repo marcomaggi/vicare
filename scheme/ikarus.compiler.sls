@@ -5411,24 +5411,26 @@
     (define (insert-engine-checks x)
       (struct-case x
 	((codes list body)
-	 (make-codes ($map/stx CodeExpr list)
-		     (%process-body body)))))
+	 (make-codes ($map/stx E-clambda list)
+		     (%introduce-check-maybe body)))))
 
-    (define (CodeExpr x)
+    (define (E-clambda x)
       (struct-case x
 	((clambda label cases cp freevar* name)
-	 (make-clambda label ($map/stx CaseExpr cases) cp freevar* name))))
+	 (make-clambda label ($map/stx E-clambda-clause cases) cp freevar* name))))
 
-    (define (CaseExpr x)
+    (define (E-clambda-clause x)
       (struct-case x
 	((clambda-case info body)
-	 (make-clambda-case info (%process-body body)))))
+	 (make-clambda-case info (%introduce-check-maybe body)))))
 
-    (define (%process-body body)
+    (define (%introduce-check-maybe body)
       (if (E body)
-	  (make-seq (make-primcall '$do-event '())
-		    body)
+	  (make-seq EVENT-PRIMCALL body)
 	body))
+
+    (define-constant EVENT-PRIMCALL
+      (make-primcall '$do-event '()))
 
     #| end of module |# )
 
@@ -5528,33 +5530,35 @@
 
   (module (insert-stack-overflow-check)
 
-    (define (insert-stack-overflow-check Program)
-      (struct-case Program
+    (define (insert-stack-overflow-check x)
+      (struct-case x
 	((codes code* body)
-	 (make-codes (map Clambda code*)
+	 (make-codes (map E-clambda code*)
 		     (%process-body body)))))
 
-    (module (Clambda)
+    (module (E-clambda)
       ;;The purpose of this module is  to apply %PROCESS-BODY to all the
       ;;bodies of closure's clauses.
       ;;
-      (define (Clambda x)
+      (define (E-clambda x)
 	(struct-case x
 	  ((clambda label case* cp freevar* name)
-	   (make-clambda label (map ClambdaCase case*) cp freevar* name))))
+	   (make-clambda label (map E-clambda-clause case*) cp freevar* name))))
 
-      (define (ClambdaCase x)
+      (define (E-clambda-clause x)
 	(struct-case x
 	  ((clambda-case info body)
 	   (make-clambda-case info (%process-body body)))))
 
-      #| end of module: Clambda |# )
+      #| end of module: E-clambda |# )
 
     (define (%process-body body)
       (if (%tail? body)
-	  (make-seq (make-primcall '$stack-overflow-check '())
-		    body)
+	  (make-seq CHECK-PRIMCALL body)
 	body))
+
+    (define-constant CHECK-PRIMCALL
+      (make-primcall '$stack-overflow-check '()))
 
     #| end of module |# )
 
