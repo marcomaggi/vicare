@@ -223,7 +223,7 @@
 
 (section
 
- (define-primop base-rtd safe
+ (define-primitive-operation base-rtd safe
    ;;The base RTD  of all the struct  types is stored in  the C language
    ;;structure PCB.
    ;;
@@ -231,7 +231,7 @@
    ((P) (K #t))
    ((E) (prm 'nop)))
 
- (define-primop void safe
+ (define-primitive-operation void safe
    ;;This  is the  definition  of  the Scheme  function  VOID.  It  just
    ;;returns the void object, which is true.
    ;;
@@ -239,18 +239,18 @@
    ((P) (K #t))
    ((E) (prm 'nop)))
 
- (define-primop nop unsafe
+ (define-primitive-operation nop unsafe
    ;;This is the definition of the primitive operation NOP.
    ;;
    ((E) (prm 'nop)))
 
- (define-primop neq? unsafe
+ (define-primitive-operation neq? unsafe
    ;;This is the implementation of the Scheme function NEQ?.
    ;;
    ((P x y) (prm '!= (T x) (T y)))
    ((E x y) (nop)))
 
- (define-primop eq? safe
+ (define-primitive-operation eq? safe
    ;;This is the implementation of the Scheme function EQ?.
    ;;
    ((P x y) (prm '= (T x) (T y)))
@@ -269,7 +269,7 @@
      (else
       #f)))
 
- (define-primop eqv? safe
+ (define-primitive-operation eqv? safe
    ;;This is the implementation of the primitive operation EQV?.
    ;;
    ;;Notice  that at  the Scheme  level the  EQV? predicate  is the  one
@@ -282,39 +282,39 @@
       (interrupt)))
    ((E x y) (nop)))
 
- (define-primop null? safe
+ (define-primitive-operation null? safe
    ;;This is the implementation of the Scheme function NULL?.
    ;;
    ((P x) (prm '= (T x) (K nil)))
    ((E x) (nop)))
 
- (define-primop not safe
+ (define-primitive-operation not safe
    ;;This is the implementation of the Scheme function NOT.
    ;;
    ((P x) (prm '= (T x) (K bool-f)))
    ((E x) (nop)))
 
- (define-primop eof-object safe
+ (define-primitive-operation eof-object safe
    ;;This is the implementation of the Scheme function EOF-OBJECT.
    ;;
    ((V) (K eof))
    ((P) (K #t))
    ((E) (nop)))
 
- (define-primop eof-object? safe
+ (define-primitive-operation eof-object? safe
    ;;This is the implementation of the Scheme function EOF-OBJECT?.
    ;;
    ((P x) (prm '= (T x) (K eof)))
    ((E x) (nop)))
 
- (define-primop $unbound-object? unsafe
+ (define-primitive-operation $unbound-object? unsafe
    ;;This   is   the   implementation   of   the   primitive   operation
    ;;$UNBOUND-OBJECT?.
    ;;
    ((P x) (prm '= (T x) (K unbound)))
    ((E x) (nop)))
 
- (define-primop immediate? safe
+ (define-primitive-operation immediate? safe
    ;;This is the implementation of the Scheme function IMMEDIATE?.
    ;;
    ((P x)
@@ -324,20 +324,20 @@
       (tag-test (T x) 7 7)))
    ((E x) (nop)))
 
- (define-primop boolean? safe
+ (define-primitive-operation boolean? safe
    ;;This is the implementation of the Scheme function BOOLEAN?.
    ;;
    ((P x)
     (tag-test (T x) bool-mask bool-tag))
    ((E x) (nop)))
 
- (define-primop bwp-object? safe
+ (define-primitive-operation bwp-object? safe
    ;;This is the implementation of the Scheme function BWP-OBJECT?.
    ;;
    ((P x) (prm '= (T x) (K BWP-OBJECT)))
    ((E x) (nop)))
 
- (define-primop $forward-ptr? unsafe
+ (define-primitive-operation $forward-ptr? unsafe
    ;;Primitive operation.  When a Scheme  object's memory block is moved
    ;;by the garbage collector: the first word of the old memory block is
    ;;overwritten with a  special value, the "forward  pointer".  See the
@@ -356,7 +356,7 @@
    ((E x)
     (nop)))
 
- (define-primop pointer-value unsafe
+ (define-primitive-operation pointer-value unsafe
    ;;FIXME What is this for?  (Marco Maggi; Oct 17, 2012)
    ;;
    ((V x) (prm 'logand
@@ -365,7 +365,7 @@
    ((P x) (K #t))
    ((E x) (nop)))
 
- (define-primop $arg-list unsafe
+ (define-primitive-operation $arg-list unsafe
    ;;Return  the  value  of  the  field "arg_list"  in  the  C  language
    ;;structure PCB.
    ;;
@@ -373,14 +373,14 @@
    ((P) (K #t))
    ((E) (nop)))
 
- (define-primop $collect-key unsafe
+ (define-primitive-operation $collect-key unsafe
    ;;Return  the value  of the  field  "collect_key" in  the C  language
    ;;structure PCB.
    ;;
    ((V)   (prm 'mref pcr (K pcb-collect-key)))
    ((E x) (prm 'mset pcr (K pcb-collect-key) (T x))))
 
- (define-primop $memq safe
+ (define-primitive-operation $memq safe
    ((P x ls)
     (struct-case ls
       ((constant ls)
@@ -428,7 +428,7 @@
    ((E x ls)
     (nop)))
 
- (define-primop memq safe
+ (define-primitive-operation memq safe
    ((P x ls)
     (cogen-pred-$memq x ls))
    ((V x ls)
@@ -444,7 +444,7 @@
       (else
        (interrupt)))))
 
- (define-primop memv safe
+ (define-primitive-operation memv safe
    ((V x ls)
     (struct-case ls
       ((constant lsv)
@@ -492,12 +492,12 @@
 ;;
 (section
 
- (define-primop pair? safe
+ (define-primitive-operation pair? safe
    ((P x)
     (tag-test (T x) pair-mask pair-tag))
    ((E x) (nop)))
 
- (define-primop cons safe
+ (define-primitive-operation cons safe
    ((V a d)
     (with-tmp ((t (prm 'alloc (K pair-size) (K pair-tag))))
       (prm 'mset t (K off-car) (T a))
@@ -506,21 +506,21 @@
    ((P a d) (K #t))
    ((E a d) (prm 'nop)))
 
- (define-primop $car unsafe
+ (define-primitive-operation $car unsafe
    ((V x) (prm 'mref  (T x) (K off-car)))
    ((E x) (nop)))
 
- (define-primop $cdr unsafe
+ (define-primitive-operation $cdr unsafe
    ((V x) (prm 'mref  (T x) (K off-cdr)))
    ((E x) (nop)))
 
- (define-primop $set-car! unsafe
+ (define-primitive-operation $set-car! unsafe
    ((E x v)
     (with-tmp ((x^ (T x)))
       (prm 'mset x^ (K off-car) (T v))
       (smart-dirty-vector-set x^ v))))
 
- (define-primop $set-cdr! unsafe
+ (define-primitive-operation $set-cdr! unsafe
    ((E x v)
     (with-tmp ((x^ (T x)))
       (prm 'mset x^ (K off-cdr) (T v))
@@ -541,7 +541,7 @@
      (else
       (interrupt-unless (tag-test x pair-mask pair-tag)))))
 
- (define-primop car safe
+ (define-primitive-operation car safe
    ((V x)
     (with-tmp ((x^ (T x)))
       (assert-pair x^)
@@ -549,7 +549,7 @@
    ((E x)
     (assert-pair (T x))))
 
- (define-primop cdr safe
+ (define-primitive-operation cdr safe
    ((V x)
     (with-tmp ((x^ (T x)))
       (assert-pair x^)
@@ -557,14 +557,14 @@
    ((E x)
     (assert-pair (T x))))
 
- (define-primop set-car! safe
+ (define-primitive-operation set-car! safe
    ((E x v)
     (with-tmp ((x^ (T x)))
       (assert-pair x^)
       (prm 'mset x^ (K off-car) (T v))
       (smart-dirty-vector-set x^ v))))
 
- (define-primop set-cdr! safe
+ (define-primitive-operation set-cdr! safe
    ((E x v)
     (with-tmp ((x^ (T x)))
       (assert-pair x^)
@@ -596,38 +596,38 @@
 		(K off-car)
 	      (K off-cdr))))))
 
- (define-primop caar   safe ((V x) (expand-cxr x '(a a))))
- (define-primop cadr   safe ((V x) (expand-cxr x '(a d))))
- (define-primop cdar   safe ((V x) (expand-cxr x '(d a))))
- (define-primop cddr   safe ((V x) (expand-cxr x '(d d))))
+ (define-primitive-operation caar   safe ((V x) (expand-cxr x '(a a))))
+ (define-primitive-operation cadr   safe ((V x) (expand-cxr x '(a d))))
+ (define-primitive-operation cdar   safe ((V x) (expand-cxr x '(d a))))
+ (define-primitive-operation cddr   safe ((V x) (expand-cxr x '(d d))))
 
- (define-primop caaar  safe ((V x) (expand-cxr x '(a a a))))
- (define-primop caadr  safe ((V x) (expand-cxr x '(a a d))))
- (define-primop cadar  safe ((V x) (expand-cxr x '(a d a))))
- (define-primop caddr  safe ((V x) (expand-cxr x '(a d d))))
- (define-primop cdaar  safe ((V x) (expand-cxr x '(d a a))))
- (define-primop cdadr  safe ((V x) (expand-cxr x '(d a d))))
- (define-primop cddar  safe ((V x) (expand-cxr x '(d d a))))
- (define-primop cdddr  safe ((V x) (expand-cxr x '(d d d))))
+ (define-primitive-operation caaar  safe ((V x) (expand-cxr x '(a a a))))
+ (define-primitive-operation caadr  safe ((V x) (expand-cxr x '(a a d))))
+ (define-primitive-operation cadar  safe ((V x) (expand-cxr x '(a d a))))
+ (define-primitive-operation caddr  safe ((V x) (expand-cxr x '(a d d))))
+ (define-primitive-operation cdaar  safe ((V x) (expand-cxr x '(d a a))))
+ (define-primitive-operation cdadr  safe ((V x) (expand-cxr x '(d a d))))
+ (define-primitive-operation cddar  safe ((V x) (expand-cxr x '(d d a))))
+ (define-primitive-operation cdddr  safe ((V x) (expand-cxr x '(d d d))))
 
- (define-primop caaaar safe ((V x) (expand-cxr x '(a a a a))))
- (define-primop caaadr safe ((V x) (expand-cxr x '(a a a d))))
- (define-primop caadar safe ((V x) (expand-cxr x '(a a d a))))
- (define-primop caaddr safe ((V x) (expand-cxr x '(a a d d))))
- (define-primop cadaar safe ((V x) (expand-cxr x '(a d a a))))
- (define-primop cadadr safe ((V x) (expand-cxr x '(a d a d))))
- (define-primop caddar safe ((V x) (expand-cxr x '(a d d a))))
- (define-primop cadddr safe ((V x) (expand-cxr x '(a d d d))))
- (define-primop cdaaar safe ((V x) (expand-cxr x '(d a a a))))
- (define-primop cdaadr safe ((V x) (expand-cxr x '(d a a d))))
- (define-primop cdadar safe ((V x) (expand-cxr x '(d a d a))))
- (define-primop cdaddr safe ((V x) (expand-cxr x '(d a d d))))
- (define-primop cddaar safe ((V x) (expand-cxr x '(d d a a))))
- (define-primop cddadr safe ((V x) (expand-cxr x '(d d a d))))
- (define-primop cdddar safe ((V x) (expand-cxr x '(d d d a))))
- (define-primop cddddr safe ((V x) (expand-cxr x '(d d d d))))
+ (define-primitive-operation caaaar safe ((V x) (expand-cxr x '(a a a a))))
+ (define-primitive-operation caaadr safe ((V x) (expand-cxr x '(a a a d))))
+ (define-primitive-operation caadar safe ((V x) (expand-cxr x '(a a d a))))
+ (define-primitive-operation caaddr safe ((V x) (expand-cxr x '(a a d d))))
+ (define-primitive-operation cadaar safe ((V x) (expand-cxr x '(a d a a))))
+ (define-primitive-operation cadadr safe ((V x) (expand-cxr x '(a d a d))))
+ (define-primitive-operation caddar safe ((V x) (expand-cxr x '(a d d a))))
+ (define-primitive-operation cadddr safe ((V x) (expand-cxr x '(a d d d))))
+ (define-primitive-operation cdaaar safe ((V x) (expand-cxr x '(d a a a))))
+ (define-primitive-operation cdaadr safe ((V x) (expand-cxr x '(d a a d))))
+ (define-primitive-operation cdadar safe ((V x) (expand-cxr x '(d a d a))))
+ (define-primitive-operation cdaddr safe ((V x) (expand-cxr x '(d a d d))))
+ (define-primitive-operation cddaar safe ((V x) (expand-cxr x '(d d a a))))
+ (define-primitive-operation cddadr safe ((V x) (expand-cxr x '(d d a d))))
+ (define-primitive-operation cdddar safe ((V x) (expand-cxr x '(d d d a))))
+ (define-primitive-operation cddddr safe ((V x) (expand-cxr x '(d d d d))))
 
- (define-primop list safe
+ (define-primitive-operation list safe
    ((V)		;this is the case of: (list)
     (K nil))
    ((V . arg*)	;this is the case of: (list 1 2 3)
@@ -660,7 +660,7 @@
    ((E . arg*)
     (nop)))
 
- (define-primop cons* safe
+ (define-primitive-operation cons* safe
    ((V)		;this is the invalid case: (cons*)
     (interrupt))
    ((V x)	;this is the case: (cons* '(1 2 3)) = (1 2 3)
@@ -936,13 +936,13 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop vector? safe
+ (define-primitive-operation vector? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag fx-mask fx-tag))
    ((E x)
     (nop)))
 
- (define-primop $make-vector unsafe
+ (define-primitive-operation $make-vector unsafe
    ;;Notice that  the code  below does not  initialise the  vector's data
    ;;area leaving the items set to  whatever is there on the Scheme heap;
    ;;this can be bad for garbage  collection if the newly built vector is
@@ -980,14 +980,14 @@
    ((E len)
     (nop)))
 
- (define-primop make-vector safe
+ (define-primitive-operation make-vector safe
    ((V len)
     (with-tmp ((vec (make-forcall "ikrt_make_vector1" (list (T len)))))
       (interrupt-when
        (prm '= vec (K 0)))
       vec)))
 
- (define-primop $vector-ref unsafe
+ (define-primitive-operation $vector-ref unsafe
    ((V vec idx)
     (or (struct-case idx
 	  ((constant idx.val)
@@ -1010,7 +1010,7 @@
    ((E vec idx)
     (nop)))
 
- (define-primop $vector-length unsafe
+ (define-primitive-operation $vector-length unsafe
    ((V vec)
     (prm 'mref (T vec) (K off-vector-length)))
    ((E vec)
@@ -1018,7 +1018,7 @@
    ((P vec)
     (K #t)))
 
- (define-primop vector-length safe
+ (define-primitive-operation vector-length safe
    ((V vec)
     (struct-case vec
       ((known vec.expr vec.type)
@@ -1059,7 +1059,7 @@
      (cogen-effect-vector-length vec)
      (K #t))))
 
- (define-primop vector-ref safe
+ (define-primitive-operation vector-ref safe
    ((V vec idx)
     (multiple-forms-sequence
      (vector-range-check vec idx)
@@ -1067,7 +1067,7 @@
    ((E vec idx)
     (vector-range-check vec idx)))
 
- (define-primop $vector-set! unsafe
+ (define-primitive-operation $vector-set! unsafe
    ((E vec idx item)
     (struct-case idx
       ((constant idx.val)
@@ -1088,13 +1088,13 @@
        ;;in bytes of the word in the I-th slot.
        (mem-assign item (prm 'int+ (T vec) (T idx)) off-vector-data)))))
 
- (define-primop vector-set! safe
+ (define-primitive-operation vector-set! safe
    ((E vec idx item)
     (multiple-forms-sequence
      (vector-range-check vec idx)
      (cogen-effect-$vector-set! vec idx item))))
 
- (define-primop vector safe
+ (define-primitive-operation vector safe
    ((V . arg*)
     ;;This is the case:
     ;;
@@ -1143,13 +1143,13 @@
 ;;
 (section
 
- (define-primop symbol? safe
+ (define-primitive-operation symbol? safe
    ((P x)
     (sec-tag-test (T x) vector-mask symbol-primary-tag #f symbol-tag))
    ((E x)
     (nop)))
 
- (define-primop $make-symbol unsafe
+ (define-primitive-operation $make-symbol unsafe
    ((V str)
     (with-tmp ((sym (prm 'alloc
 			 (K (align symbol-record-size))
@@ -1168,49 +1168,49 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $symbol-string unsafe
+ (define-primitive-operation $symbol-string unsafe
    ((V x)
     (prm 'mref (T x) (K off-symbol-record-string)))
    ((E x)
     (nop)))
 
- (define-primop $set-symbol-string! unsafe
+ (define-primitive-operation $set-symbol-string! unsafe
    ((E x v)
     (mem-assign v (T x) off-symbol-record-string)))
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $symbol-unique-string unsafe
+ (define-primitive-operation $symbol-unique-string unsafe
    ((V x)
     (prm 'mref (T x) (K off-symbol-record-ustring)))
    ((E x)
     (nop)))
 
- (define-primop $set-symbol-unique-string! unsafe
+ (define-primitive-operation $set-symbol-unique-string! unsafe
    ((E x v)
     (mem-assign v (T x) off-symbol-record-ustring)))
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $symbol-plist unsafe
+ (define-primitive-operation $symbol-plist unsafe
    ((V x)
     (prm 'mref (T x) (K off-symbol-record-plist)))
    ((E x)
     (nop)))
 
- (define-primop $set-symbol-plist! unsafe
+ (define-primitive-operation $set-symbol-plist! unsafe
    ((E x v)
     (mem-assign v (T x) off-symbol-record-plist)))
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $symbol-value unsafe
+ (define-primitive-operation $symbol-value unsafe
    ((V x)
     (prm 'mref (T x) (K off-symbol-record-value)))
    ((E x)
     (nop)))
 
- (define-primop $set-symbol-value! unsafe
+ (define-primitive-operation $set-symbol-value! unsafe
    ((E x v)
     (with-tmp ((x^ (T x)))
       (prm 'mset x^ (K off-symbol-record-value) (T v))
@@ -1229,13 +1229,13 @@
  ;;
  ;;* Actually call the closure object.
  ;;
- (define-primop $symbol-proc unsafe
+ (define-primitive-operation $symbol-proc unsafe
    ((V x)
     (prm 'mref (T x) (K off-symbol-record-proc)))
    ((E x)
     (nop)))
 
- (define-primop $set-symbol-proc! unsafe
+ (define-primitive-operation $set-symbol-proc! unsafe
    ((E x v)
     (with-tmp ((x^ (T x)))
       (prm 'mset x^ (K off-symbol-record-proc) (T v))
@@ -1243,7 +1243,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $set-symbol-value/proc! unsafe
+ (define-primitive-operation $set-symbol-value/proc! unsafe
    ((E x v)
     (with-tmp ((x^ (T x))
 	       (v^ (T v)))
@@ -1253,7 +1253,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop top-level-value safe
+ (define-primitive-operation top-level-value safe
    ;;Expect the single argument to be a  loc gensym associated to a top level lexical
    ;;binding; extract the value from the slot "value" of the symbol object and return
    ;;it.  If the value is the unbound object: raise an exception.
@@ -1333,7 +1333,7 @@
 
  ;;Commented out because unused.
  ;;
- ;; (define-primop $init-symbol-function! unsafe
+ ;; (define-primitive-operation $init-symbol-function! unsafe
  ;;   ((E sym v)
  ;;    (with-tmp ((sym^ (T sym))
  ;; 	       (v^   (T v)))
@@ -1359,13 +1359,13 @@
 ;;
 (section
 
- (define-primop fixnum? safe
+ (define-primitive-operation fixnum? safe
    ((P x)
     (tag-test (T x) fx-mask fx-tag))
    ((E x)
     (nop)))
 
- (define-primop fixnum-width safe
+ (define-primitive-operation fixnum-width safe
    ((V)
     (K (fxsll max-bitcount-in-fixnum-binary-representation fx-shift)))
    ((E)
@@ -1373,7 +1373,7 @@
    ((P)
     (K #t)))
 
- (define-primop least-fixnum safe
+ (define-primitive-operation least-fixnum safe
    ((V)
     (K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1))) fx-shift)))
    ((E)
@@ -1381,7 +1381,7 @@
    ((P)
     (K #t)))
 
- (define-primop greatest-fixnum safe
+ (define-primitive-operation greatest-fixnum safe
    ((V)
     (K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1)) 1) fx-shift)))
    ((E)
@@ -1391,25 +1391,25 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $fxzero? unsafe
+ (define-primitive-operation $fxzero? unsafe
    ((P x)
     (prm '= (T x) (K 0)))
    ((E x)
     (nop)))
 
- (define-primop $fxnegative? unsafe
+ (define-primitive-operation $fxnegative? unsafe
    ((P x)
     (prm '< (T x) (K 0)))
    ((E x)
     (nop)))
 
- (define-primop $fxpositive? unsafe
+ (define-primitive-operation $fxpositive? unsafe
    ((P x)
     (prm '> (T x) (K 0)))
    ((E x)
     (nop)))
 
- ;; (define-primop $fxeven? unsafe
+ ;; (define-primitive-operation $fxeven? unsafe
  ;;   ((P x)
  ;;    (prm '= (prm 'logand (T x) (K 1)) (K 0)))
  ;;   ((E x)
@@ -1417,37 +1417,37 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $fx= unsafe
+ (define-primitive-operation $fx= unsafe
    ((P x y)
     (prm '= (T x) (T y)))
    ((E x y)
     (nop)))
 
- (define-primop $fx< unsafe
+ (define-primitive-operation $fx< unsafe
    ((P x y)
     (prm '< (T x) (T y)))
    ((E x y)
     (nop)))
 
- (define-primop $fx<= unsafe
+ (define-primitive-operation $fx<= unsafe
    ((P x y)
     (prm '<= (T x) (T y)))
    ((E x y)
     (nop)))
 
- (define-primop $fx> unsafe
+ (define-primitive-operation $fx> unsafe
    ((P x y)
     (prm '> (T x) (T y)))
    ((E x y)
     (nop)))
 
- (define-primop $fx>= unsafe
+ (define-primitive-operation $fx>= unsafe
    ((P x y)
     (prm '>= (T x) (T y)))
    ((E x y)
     (nop)))
 
- (define-primop $fxadd1 unsafe
+ (define-primitive-operation $fxadd1 unsafe
    ((V x)
     (cogen-value-$fx+ x (K 1)))
    ((P x)
@@ -1455,7 +1455,7 @@
    ((E x)
     (nop)))
 
- (define-primop $fxsub1 unsafe
+ (define-primitive-operation $fxsub1 unsafe
    ((V x)
     (cogen-value-$fx+ x (K -1)))
    ((P x)
@@ -1463,7 +1463,7 @@
    ((E x)
     (nop)))
 
- (define-primop $fx+ unsafe
+ (define-primitive-operation $fx+ unsafe
    ((V x y)
     (prm 'int+ (T x) (T y)))
    ((P x y)
@@ -1471,7 +1471,7 @@
    ((E x y)
     (nop)))
 
- (define-primop $fx* unsafe
+ (define-primitive-operation $fx* unsafe
    ((V a b)
     (struct-case a
       ((constant a.val)
@@ -1507,7 +1507,7 @@
    ((E x y)
     (nop)))
 
- (define-primop $fxlognot unsafe
+ (define-primitive-operation $fxlognot unsafe
    ((V x)
     (cogen-value-$fxlogxor x (K -1)))
    ((P x)
@@ -1515,28 +1515,28 @@
    ((E x)
     (nop)))
 
- (define-primop $fxlogand unsafe
+ (define-primitive-operation $fxlogand unsafe
    ((V x y) (prm 'logand (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
- (define-primop $fxlogor unsafe
+ (define-primitive-operation $fxlogor unsafe
    ((V x y) (prm 'logor (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
- (define-primop $fxlogxor unsafe
+ (define-primitive-operation $fxlogxor unsafe
    ((V x y) (prm 'logxor (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
- (define-primop $fx- unsafe
+ (define-primitive-operation $fx- unsafe
    ((V x)   (prm 'int- (K 0) (T x)))
    ((V x y) (prm 'int- (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
- (define-primop $fxsll unsafe
+ (define-primitive-operation $fxsll unsafe
    ;;Shift-left logic.
    ;;
    ((V x numbits)
@@ -1567,7 +1567,7 @@
    ((E x i)
     (nop)))
 
- (define-primop $fxsra unsafe
+ (define-primitive-operation $fxsra unsafe
    ;;Shift-right arithmetic: right-shifts the bits  of the operand by an
    ;;amount of positions; if the most  significant bit of the operand is
    ;;set to:
@@ -1715,7 +1715,7 @@
    ((E x i)
     (nop)))
 
- (define-primop $fxquotient unsafe
+ (define-primitive-operation $fxquotient unsafe
    ((V a b)
     (with-tmp ((b (T b)))
       (prm-tag-as-fixnum (prm 'int-quotient (T a) b))))
@@ -1726,13 +1726,13 @@
 
  ;;FIXME This  is used nowhere, is  it finished?  (Marco Maggi;  Oct 19,
  ;;2012)
- (define-primop $int-quotient unsafe
+ (define-primitive-operation $int-quotient unsafe
    ((V a b)
     (prm-tag-as-fixnum (prm 'int-quotient (T a) (T b)))))
 
  ;;FIXME This is  used nowhere, and it looks  unfinished?  (Marco Maggi;
  ;;Oct 19, 2012)
- (define-primop $int-remainder unsafe
+ (define-primitive-operation $int-remainder unsafe
    ((V a b)
     (prm 'int-remainder (T a))))
 
@@ -1740,7 +1740,7 @@
  ;;results for negative numbers.  It is replaced with another version in
  ;;"ikarus.fixnums.sls".  (Marco Maggi)
  ;;
- ;; (define-primop $fxmodulo unsafe
+ ;; (define-primitive-operation $fxmodulo unsafe
  ;;   ((V a b)
  ;;    (with-tmp ((b (T b)))
  ;;      (with-tmp ((c (prm 'logand b
@@ -1750,7 +1750,7 @@
  ;;   ((P a b) (K #t))
  ;;   ((E a b) (nop)))
 
- (define-primop $fxabs unsafe
+ (define-primitive-operation $fxabs unsafe
    ((V x)
     (with-tmp ((n (T x)))
       (make-conditional (prm '< n (K 0))
@@ -1763,7 +1763,7 @@
 
  ;;FIXME This looks  to be used nowhere; is it  finished?  (Marco Maggi;
  ;;Oct 19, 2012)
- (define-primop $fxinthash unsafe
+ (define-primitive-operation $fxinthash unsafe
    ((V key)
     (with-tmp ((k (T key)))
       (with-tmp ((k (prm 'int+ k (prm 'logxor (prm 'sll k (K 15)) (K -1)))))
@@ -1816,13 +1816,13 @@
 ;;
 (section
 
- (define-primop bignum? safe
+ (define-primitive-operation bignum? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag bignum-mask bignum-tag))
    ((E x)
     (nop)))
 
- (define-primop $bignum-positive? unsafe
+ (define-primitive-operation $bignum-positive? unsafe
    ;;Extract the  sign bit from the  first word and evaluate  to true if
    ;;the sign bit is set to zero.
    ;;
@@ -1834,7 +1834,7 @@
    ((E x)
     (nop)))
 
- (define-primop $bignum-size unsafe
+ (define-primitive-operation $bignum-size unsafe
    ;;Extract the  number of limbs from  the first word and  return it as
    ;;fixnum.
    ;;
@@ -1848,7 +1848,7 @@
 	 ;;the binary representation of the left-shift amount.
 	 (K (* 2 fx-shift)))))
 
- (define-primop $bignum-byte-ref unsafe
+ (define-primitive-operation $bignum-byte-ref unsafe
    ;;Return a fixnum representing a byte  from the array of limbs in the
    ;;data area.  On a *little*  endian 32-bit platform, the byte indexes
    ;;are as follows:
@@ -2039,13 +2039,13 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop flonum? safe
+ (define-primitive-operation flonum? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag #f flonum-tag))
    ((E x)
     (nop)))
 
- (define-primop $make-flonum unsafe
+ (define-primitive-operation $make-flonum unsafe
    ((V)
     (with-tmp ((flo (prm 'alloc
 			 (K (align flonum-size))
@@ -2057,7 +2057,7 @@
    ((E str)
     (nop)))
 
- (define-primop $flonum-u8-ref unsafe
+ (define-primitive-operation $flonum-u8-ref unsafe
    ;;Return a fixnum representing the octect at OFFSET (a fixnum) in the
    ;;data area of FLO (a flonum).
    ;;
@@ -2102,7 +2102,7 @@
    ((E s i)
     (nop)))
 
- (define-primop $flonum-set! unsafe
+ (define-primitive-operation $flonum-set! unsafe
    ;;Store the  octet represented by the  fixnum OCTET at OFFSET  in the
    ;;data area of the flonum FLO.
    ;;
@@ -2143,7 +2143,7 @@
        ;;FIXME Why is this not implemented?  (Marco Maggi; Oct 20, 2012)
        (interrupt)))))
 
- (define-primop $fixnum->flonum unsafe
+ (define-primitive-operation $fixnum->flonum unsafe
    ((V fx)
     (boot.case-word-size
       ((32)
@@ -2167,11 +2167,11 @@
 ;;; --------------------------------------------------------------------
 ;;; UNsafe arithmetic primitive operations
 
- (define-primop $fl+ unsafe
+ (define-primitive-operation $fl+ unsafe
    ((V x y)
     ($flop-aux 'fl:add! x y)))
 
- (define-primop $fl- unsafe
+ (define-primitive-operation $fl- unsafe
    ((V x)
     ;;Notice that we cannot do this as: +0.0 - x, because such operation
     ;;does not handle correctly the case: +0.0 - +0.0 = -0.0.
@@ -2179,18 +2179,18 @@
    ((V x y)
     ($flop-aux 'fl:sub! x y)))
 
- (define-primop $fl* unsafe
+ (define-primitive-operation $fl* unsafe
    ((V x y)
     ($flop-aux 'fl:mul! x y)))
 
- (define-primop $fl/ unsafe
+ (define-primitive-operation $fl/ unsafe
    ((V x y)
     ($flop-aux 'fl:div! x y)))
 
 ;;; --------------------------------------------------------------------
 ;;; safe arithmetic primitive operations
 
- (define-primop fl+ safe
+ (define-primitive-operation fl+ safe
    ((V)
     (K (make-object 0.0)))
    ((V x)
@@ -2203,7 +2203,7 @@
    ((E . x*)
     (check-flonums x* (nop))))
 
- (define-primop fl* safe
+ (define-primitive-operation fl* safe
    ((V)
     (K (make-object 1.0)))
    ((V x)
@@ -2219,7 +2219,7 @@
     (check-flonums x*
       (nop))))
 
- (define-primop fl- safe
+ (define-primitive-operation fl- safe
    ((V x)
     ;;Notice that we cannot do this as: +0.0 - x, because such operation
     ;;does not handle correctly the case: +0.0 - +0.0 = -0.0.
@@ -2235,7 +2235,7 @@
     (check-flonums (cons x x*)
       (nop))))
 
- (define-primop fl/ safe
+ (define-primitive-operation fl/ safe
    ((V x)
     (check-flonums (list x)
       ($flop-aux 'fl:div! (K 1.0) x)))
@@ -2252,26 +2252,26 @@
 ;;; --------------------------------------------------------------------
 ;;; UNsafe comparison primitive operations
 
- (define-primop $fl= unsafe
+ (define-primitive-operation $fl= unsafe
    ;;Notice that  this predicate does  not distinguish between  +0.0 and
    ;;-0.0 and this is compliant with what R6RS states.
    ;;
    ((P x y)
     ($flcmp-aux 'fl:= x y)))
 
- (define-primop $fl< unsafe
+ (define-primitive-operation $fl< unsafe
    ((P x y)
     ($flcmp-aux 'fl:< x y)))
 
- (define-primop $fl<= unsafe
+ (define-primitive-operation $fl<= unsafe
    ((P x y)
     ($flcmp-aux 'fl:<= x y)))
 
- (define-primop $fl> unsafe
+ (define-primitive-operation $fl> unsafe
    ((P x y)
     ($flcmp-aux 'fl:> x y)))
 
- (define-primop $fl>= unsafe
+ (define-primitive-operation $fl>= unsafe
    ((P x y)
     ($flcmp-aux 'fl:>= x y)))
 
@@ -2281,18 +2281,18 @@
 ;;and -0.0; so  it is not a primitive operation.   (Marco Maggi; Nov 17,
 ;;2012)
 
- (define-primop $flpositive? unsafe
+ (define-primitive-operation $flpositive? unsafe
    ((P x)
     ($flcmp-aux 'fl:> x (K +0.0))))
 
- (define-primop $flnegative? unsafe
+ (define-primitive-operation $flnegative? unsafe
    ((P x)
     ($flcmp-aux 'fl:< x (K -0.0))))
 
 ;;; --------------------------------------------------------------------
 ;;; safe comparison primitive operations
 
- (define-primop fl=? safe
+ (define-primitive-operation fl=? safe
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:= x y)))
@@ -2300,7 +2300,7 @@
     (check-flonums (list x y)
       (nop))))
 
- (define-primop fl<? safe
+ (define-primitive-operation fl<? safe
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:< x y)))
@@ -2308,7 +2308,7 @@
     (check-flonums (list x y)
       (nop))))
 
- (define-primop fl<=? safe
+ (define-primitive-operation fl<=? safe
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:<= x y)))
@@ -2316,7 +2316,7 @@
     (check-flonums (list x y)
       (nop))))
 
- (define-primop fl>? safe
+ (define-primitive-operation fl>? safe
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:> x y)))
@@ -2324,7 +2324,7 @@
     (check-flonums (list x y)
       (nop))))
 
- (define-primop fl>=? safe
+ (define-primitive-operation fl>=? safe
    ((P x y)
     (check-flonums (list x y)
       ($flcmp-aux 'fl:>= x y)))
@@ -2334,7 +2334,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $flonum-sbe unsafe
+ (define-primitive-operation $flonum-sbe unsafe
    ;;Given a  flonum object  FLO, inspects the  IEEE 754  floating point
    ;;number; on a 32-bit platform:
    ;;
@@ -2393,13 +2393,13 @@
 ;;
 (section
 
- (define-primop ratnum? safe
+ (define-primitive-operation ratnum? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag #f ratnum-tag))
    ((E x)
     (nop)))
 
- (define-primop $make-ratnum unsafe
+ (define-primitive-operation $make-ratnum unsafe
    ((V num den)
     (with-tmp ((rat (prm 'alloc
 			 (K (align ratnum-size))
@@ -2414,19 +2414,19 @@
     (nop)))
 
 
- (define-primop $ratnum-n unsafe
+ (define-primitive-operation $ratnum-n unsafe
    ((V x)
     (prm 'mref (T x) (K off-ratnum-num))))
 
- (define-primop $ratnum-num unsafe
+ (define-primitive-operation $ratnum-num unsafe
    ((V x)
     (prm 'mref (T x) (K off-ratnum-num))))
 
- (define-primop $ratnum-d unsafe
+ (define-primitive-operation $ratnum-d unsafe
    ((V x)
     (prm 'mref (T x) (K off-ratnum-den))))
 
- (define-primop $ratnum-den unsafe
+ (define-primitive-operation $ratnum-den unsafe
    ((V x)
     (prm 'mref (T x) (K off-ratnum-den))))
 
@@ -2456,13 +2456,13 @@
 ;;
 (section
 
- (define-primop compnum? safe
+ (define-primitive-operation compnum? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag #f compnum-tag))
    ((E x)
     (nop)))
 
- (define-primop $make-compnum unsafe
+ (define-primitive-operation $make-compnum unsafe
    ((V real imag)
     (with-tmp ((comp (prm 'alloc
 			  (K (align compnum-size))
@@ -2476,11 +2476,11 @@
    ((E str)
     (nop)))
 
- (define-primop $compnum-real unsafe
+ (define-primitive-operation $compnum-real unsafe
    ((V comp)
     (prm 'mref (T comp) (K off-compnum-real))))
 
- (define-primop $compnum-imag unsafe
+ (define-primitive-operation $compnum-imag unsafe
    ((V comp)
     (prm 'mref (T comp) (K off-compnum-imag))))
 
@@ -2510,13 +2510,13 @@
 ;;
 (section
 
- (define-primop cflonum? safe
+ (define-primitive-operation cflonum? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag #f cflonum-tag))
    ((E x)
     (nop)))
 
- (define-primop $make-cflonum unsafe
+ (define-primitive-operation $make-cflonum unsafe
    ((V real imag)
     (with-tmp ((cflo (prm 'alloc
 			  (K (align cflonum-size))
@@ -2530,11 +2530,11 @@
    ((E str)
     (nop)))
 
- (define-primop $cflonum-real unsafe
+ (define-primitive-operation $cflonum-real unsafe
    ((V cflo)
     (prm 'mref (T cflo) (K off-cflonum-real))))
 
- (define-primop $cflonum-imag unsafe
+ (define-primitive-operation $cflonum-imag unsafe
    ((V cflo)
     (prm 'mref (T cflo) (K off-cflonum-imag))))
 
@@ -2647,7 +2647,7 @@
 ;;; --------------------------------------------------------------------
 ;;; generic comparison
 
- (define-primop = safe
+ (define-primitive-operation = safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2659,7 +2659,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop < safe
+ (define-primitive-operation < safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2671,7 +2671,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop <= safe
+ (define-primitive-operation <= safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2683,7 +2683,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop > safe
+ (define-primitive-operation > safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2695,7 +2695,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop >= safe
+ (define-primitive-operation >= safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2710,7 +2710,7 @@
 ;;; --------------------------------------------------------------------
 ;;; safe fixnum comparison
 
- (define-primop fx= safe
+ (define-primitive-operation fx= safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2722,7 +2722,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx< safe
+ (define-primitive-operation fx< safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2734,7 +2734,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx<= safe
+ (define-primitive-operation fx<= safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2746,7 +2746,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx> safe
+ (define-primitive-operation fx> safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2758,7 +2758,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx>= safe
+ (define-primitive-operation fx>= safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2770,7 +2770,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx=? safe
+ (define-primitive-operation fx=? safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2782,7 +2782,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx<? safe
+ (define-primitive-operation fx<? safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2794,7 +2794,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx<=? safe
+ (define-primitive-operation fx<=? safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2806,7 +2806,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx>? safe
+ (define-primitive-operation fx>? safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2818,7 +2818,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop fx>=? safe
+ (define-primitive-operation fx>=? safe
    ((P)
     ;;According R6RS: it is an error to call this without arguments.
     (interrupt))
@@ -2833,32 +2833,32 @@
 ;;; --------------------------------------------------------------------
 ;;; safe fixnum arithmetic
 
- (define-primop fx+ safe
+ (define-primitive-operation fx+ safe
    ((V x y)
     (cogen-value-+ x y)))
 
- (define-primop fx- safe
+ (define-primitive-operation fx- safe
    ((V x)
     (cogen-value-- (K 0) x))
    ((V x y)
     (cogen-value-- x y)))
 
- (define-primop fx* safe
+ (define-primitive-operation fx* safe
    ((V a b)
     (cogen-binary-* a b)))
 
- (define-primop fxadd1 safe
+ (define-primitive-operation fxadd1 safe
    ((V x)
     (cogen-value-+ x (K 1))))
 
- (define-primop fxsub1 safe
+ (define-primitive-operation fxsub1 safe
    ((V x)
     (cogen-value-+ x (K -1))))
 
 ;;; --------------------------------------------------------------------
 ;;; safe fixnum bitwise
 
- (define-primop fxarithmetic-shift-left safe
+ (define-primitive-operation fxarithmetic-shift-left safe
    ((V x bitcount)
     (struct-case bitcount
       ((constant bitcount.val)
@@ -2900,7 +2900,7 @@
 	      (prm '= (prm 'sra x2 n) x))
 	     x2)))))))
 
- (define-primop fxarithmetic-shift-right safe
+ (define-primitive-operation fxarithmetic-shift-right safe
    ((V x bitcount)
     (struct-case bitcount
       ;;FIXME Check for known types.  (Abdulaziz Ghuloum)
@@ -2929,7 +2929,7 @@
 ;;; --------------------------------------------------------------------
 ;;; safe generic arithmetic
 
- (define-primop - safe
+ (define-primitive-operation - safe
    ((V a)
     ;;FIXME Why do we interrupt here?  (Marco Maggi; Oct 22, 2012)
     (interrupt)
@@ -2954,7 +2954,7 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop + safe
+ (define-primitive-operation + safe
    ((V)
     (K 0))
    ((V a . a*)
@@ -2979,15 +2979,15 @@
    ((E a . a*)
     (assert-fixnums a a*)))
 
- (define-primop add1 safe
+ (define-primitive-operation add1 safe
    ((V x)
     (cogen-value-+ x (K 1))))
 
- (define-primop sub1 safe
+ (define-primitive-operation sub1 safe
    ((V x)
     (cogen-value-+ x (K -1))))
 
- (define-primop * safe
+ (define-primitive-operation * safe
    ((V)
     (K (fxsll 1 fx-shift)))
    ((V a b)
@@ -3005,7 +3005,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop bitwise-and safe
+ (define-primitive-operation bitwise-and safe
    ((V) (K (fxsll -1 fx-shift)))
    ((V a . a*)
     (interrupt)
@@ -3024,7 +3024,7 @@
    ((E) (nop))
    ((E a . a*) (assert-fixnums a a*)))
 
- (define-primop zero? safe
+ (define-primitive-operation zero? safe
    ((P x)
     (multiple-forms-sequence
      (assert-fixnum x)
@@ -3035,7 +3035,7 @@
 	  cogen-effect-div
 	  cogen-value-div)
 
-   (define-primop div safe
+   (define-primitive-operation div safe
      ((V x n)
       (struct-case n
 	((constant i)
@@ -3068,7 +3068,7 @@
 
    #| end of module |# )
 
- (define-primop quotient safe
+ (define-primitive-operation quotient safe
    ((V num den)
     (struct-case den
       ((constant den.val)
@@ -3125,13 +3125,13 @@
 ;;
 (section
 
- (define-primop $struct? unsafe
+ (define-primitive-operation $struct? unsafe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag vector-mask vector-tag))
    ((E x)
     (nop)))
 
- (define-primop $struct/rtd? unsafe
+ (define-primitive-operation $struct/rtd? unsafe
    ;;Evaluate to true if X is a structure and its type is STD.
    ;;
    ((P x std)
@@ -3143,7 +3143,7 @@
    ((E x std)
     (nop)))
 
- (define-primop $make-struct unsafe
+ (define-primitive-operation $make-struct unsafe
    ;;Allocate a  new data structure of  type STD capable of  holding LEN
    ;;words/fields.
    ;;
@@ -3180,7 +3180,7 @@
    ((E std len)
     (nop)))
 
- (define-primop $struct-rtd unsafe
+ (define-primitive-operation $struct-rtd unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-struct-std)))
    ((E stru)
@@ -3191,7 +3191,7 @@
 ;;; --------------------------------------------------------------------
 ;;; struct type descriptor accessor
 
- (define-primop $std-std unsafe
+ (define-primitive-operation $std-std unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-std)))
    ((E stru)
@@ -3199,7 +3199,7 @@
    ((P stru)
     (K #t)))
 
- (define-primop $std-name unsafe
+ (define-primitive-operation $std-name unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-name)))
    ((E stru)
@@ -3207,7 +3207,7 @@
    ((P stru)
     (K #t)))
 
- (define-primop $std-length unsafe
+ (define-primitive-operation $std-length unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-length)))
    ((E stru)
@@ -3215,7 +3215,7 @@
    ((P stru)
     (K #t)))
 
- (define-primop $std-fields unsafe
+ (define-primitive-operation $std-fields unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-fields)))
    ((E stru)
@@ -3223,13 +3223,13 @@
    ((P stru)
     (K #t)))
 
- (define-primop $std-printer unsafe
+ (define-primitive-operation $std-printer unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-printer)))
    ((E stru)
     (nop)))
 
- (define-primop $std-symbol unsafe
+ (define-primitive-operation $std-symbol unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-symbol)))
    ((E stru)
@@ -3238,7 +3238,7 @@
     ;;The UID is always set.
     (K #t)))
 
- (define-primop $std-destructor unsafe
+ (define-primitive-operation $std-destructor unsafe
    ((V stru)
     (prm 'mref (T stru) (K off-std-destructor)))
    ((E stru)
@@ -3253,7 +3253,7 @@
  (let-syntax
      ((define-std-mutator (syntax-rules ()
 			    ((_ ?who ?off)
-			     (define-primop ?who unsafe
+			     (define-primitive-operation ?who unsafe
 			       ((V stru v)
 				(multiple-forms-sequence
 				 (mem-assign v (T stru) ?off)
@@ -3277,7 +3277,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $struct-ref unsafe
+ (define-primitive-operation $struct-ref unsafe
    ;;Return the  word in the  field at index  I.  Accessing a  struct is
    ;;like accessing a vector.
    ;;
@@ -3286,7 +3286,7 @@
    ((E stru idx)
     (nop)))
 
- (define-primop $struct-set! unsafe
+ (define-primitive-operation $struct-set! unsafe
    ;;Store a  new word in  the field at index  I.  Mutating a  struct is
    ;;like mutating a vector.
    ;;
@@ -3301,7 +3301,7 @@
      (cogen-effect-$vector-set! stru idx v)
      (K #t))))
 
- (define-primop $struct unsafe
+ (define-primitive-operation $struct unsafe
    ((V std . field*)
     (with-tmp ((stru (prm 'alloc
 			  (K (align (+ disp-struct-data (* (length field*) wordsize))))
@@ -3436,7 +3436,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop char? safe
+ (define-primitive-operation char? safe
    ((P x)
     (tag-test (T x) char-mask char-tag))
    ((E x)
@@ -3445,7 +3445,7 @@
 ;;; --------------------------------------------------------------------
 ;;; fixnum to and from character
 
- (define-primop $fixnum->char unsafe
+ (define-primitive-operation $fixnum->char unsafe
    ;;Given  a machine  word representing  a fixnum,  whose payload  bits
    ;;represent a Unicode code point,  return a machine word representing
    ;;the corresponding standalone character.
@@ -3475,7 +3475,7 @@
    ((E x)
     (nop)))
 
- (define-primop $char->fixnum unsafe
+ (define-primitive-operation $char->fixnum unsafe
    ;;Given a machine word representing  a standalone character: return a
    ;;machine word  representing a  fixnum, whose payload  bits represent
    ;;the corresponding Unicode code point.
@@ -3512,7 +3512,7 @@
  (let-syntax
      ((define-$char-comparison (syntax-rules ()
 				 ((_ ?who ?prim)
-				  (define-primop ?who unsafe
+				  (define-primitive-operation ?who unsafe
 				    ((P x y)
 				     (prm (quote ?prim) (T x) (T y)))
 				    ((E x y)
@@ -3527,7 +3527,7 @@
 ;;; --------------------------------------------------------------------
 ;;; safe character comparisons
 
- (define-primop char=? safe
+ (define-primitive-operation char=? safe
    ((P)
     (interrupt))
    ((P a . a*)
@@ -3537,7 +3537,7 @@
    ((E a . a*)
     (assert-chars a a*)))
 
- (define-primop char<? safe
+ (define-primitive-operation char<? safe
    ((P)
     (interrupt))
    ((P a . a*)
@@ -3547,7 +3547,7 @@
    ((E a . a*)
     (assert-chars a a*)))
 
- (define-primop char<=? safe
+ (define-primitive-operation char<=? safe
    ((P)
     (interrupt))
    ((P a . a*)
@@ -3557,7 +3557,7 @@
    ((E a . a*)
     (assert-chars a a*)))
 
- (define-primop char>? safe
+ (define-primitive-operation char>? safe
    ((P)
     (interrupt))
    ((P a . a*)
@@ -3567,7 +3567,7 @@
    ((E a . a*)
     (assert-chars a a*)))
 
- (define-primop char>=? safe
+ (define-primitive-operation char>=? safe
    ((P)
     (interrupt))
    ((P a . a*)
@@ -3608,13 +3608,13 @@
 ;;
 (section
 
- (define-primop bytevector? safe
+ (define-primitive-operation bytevector? safe
    ((P x)
     (tag-test (T x) bytevector-mask bytevector-tag))
    ((E x)
     (nop)))
 
- (define-primop $make-bytevector unsafe
+ (define-primitive-operation $make-bytevector unsafe
    ((V num-of-bytes)
     (struct-case num-of-bytes
       ((constant num-of-bytes.val)
@@ -3658,7 +3658,7 @@
    ((E num-of-bytes)
     (nop)))
 
- (define-primop $bytevector-length unsafe
+ (define-primitive-operation $bytevector-length unsafe
    ((V bv)
     (prm 'mref (T bv) (K off-bytevector-length)))
    ((P bv)
@@ -3668,7 +3668,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $bytevector-u8-ref unsafe
+ (define-primitive-operation $bytevector-u8-ref unsafe
    ((V bv idx)
     (struct-case idx
       ((constant idx.val)
@@ -3692,7 +3692,7 @@
    ((E bv idx)
     (nop)))
 
- (define-primop $bytevector-s8-ref unsafe
+ (define-primitive-operation $bytevector-s8-ref unsafe
    ((V bv idx)
     (let-syntax
 	((%extend-sign (syntax-rules ()
@@ -3739,7 +3739,7 @@
    ((E bv idx)
     (nop)))
 
- (define-primop $bytevector-set! unsafe
+ (define-primitive-operation $bytevector-set! unsafe
    ((E bv idx byte)
     (define (%check-byte byte.val)
       (cond ((<= -128 byte.val 127)
@@ -3786,7 +3786,7 @@
 ;;; --------------------------------------------------------------------
 ;;; double flonum ref
 
- (define-primop $bytevector-ieee-double-native-ref unsafe
+ (define-primitive-operation $bytevector-ieee-double-native-ref unsafe
    ((V bv idx)
     (with-tmp ((flo (prm 'alloc
 			 (K (align flonum-size))
@@ -3801,7 +3801,7 @@
       (prm 'fl:store flo (K off-flonum-data))
       flo)))
 
- (define-primop $bytevector-ieee-double-nonnative-ref unsafe
+ (define-primitive-operation $bytevector-ieee-double-nonnative-ref unsafe
    ((V bv i)
     (boot.case-word-size
      ((32)
@@ -3833,7 +3833,7 @@
 ;;;The  following   uses  unsupported  SSE3   instructions.   (Abdulaziz
 ;;;Ghuloum)
 ;;;
-;;;(define-primop $bytevector-ieee-double-nonnative-ref unsafe
+;;;(define-primitive-operation $bytevector-ieee-double-nonnative-ref unsafe
 ;;;  ((V bv i)
 ;;;   (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
 ;;;     (prm 'mset x (K off-flonum-tag) (K flonum-tag))
@@ -3849,7 +3849,7 @@
 ;;; --------------------------------------------------------------------
 ;;; double flonum set
 
- (define-primop $bytevector-ieee-double-native-set! unsafe
+ (define-primitive-operation $bytevector-ieee-double-native-set! unsafe
    ((E bv idx flo)
     (multiple-forms-sequence
      ;;Load the double from the data  area of the flonum into a floating
@@ -3861,7 +3861,7 @@
 	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
 	  (K off-bytevector-data)))))
 
- (define-primop $bytevector-ieee-double-nonnative-set! unsafe
+ (define-primitive-operation $bytevector-ieee-double-nonnative-set! unsafe
    ((E bv idx flo)
     (boot.case-word-size
      ((32)
@@ -3880,7 +3880,7 @@
 
 ;;;The following uses unsupported SSE3 instructions.  (Abdulaziz Ghuloum)
 ;;;
-;;;(define-primop $bytevector-ieee-double-nonnative-set! unsafe
+;;;(define-primitive-operation $bytevector-ieee-double-nonnative-set! unsafe
 ;;;  ((E bv i x)
 ;;;   (multiple-forms-sequence
 ;;;     (prm 'fl:load (T x) (K off-flonum-data))
@@ -3894,7 +3894,7 @@
 ;;; --------------------------------------------------------------------
 ;;; single flonum ref
 
- (define-primop $bytevector-ieee-single-native-ref unsafe
+ (define-primitive-operation $bytevector-ieee-single-native-ref unsafe
    ((V bv idx)
     (with-tmp ((flo (prm 'alloc
 			 (K (align flonum-size))
@@ -3912,7 +3912,7 @@
       (prm 'fl:store flo (K off-flonum-data))
       flo)))
 
- (define-primop $bytevector-ieee-single-nonnative-ref unsafe
+ (define-primitive-operation $bytevector-ieee-single-nonnative-ref unsafe
    ((V bv idx)
     (with-tmp ((flo (prm 'alloc
 			 (K (align flonum-size))
@@ -3937,7 +3937,7 @@
 ;;; --------------------------------------------------------------------
 ;;; single flonum set
 
- (define-primop $bytevector-ieee-single-native-set! unsafe
+ (define-primitive-operation $bytevector-ieee-single-native-set! unsafe
    ((E bv idx flo)
     (multiple-forms-sequence
      ;;Load the single into a floating point register.
@@ -3949,7 +3949,7 @@
 	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
 	  (K off-bytevector-data)))))
 
- (define-primop $bytevector-ieee-single-nonnative-set! unsafe
+ (define-primitive-operation $bytevector-ieee-single-nonnative-set! unsafe
    ((E bv i flo)
     (multiple-forms-sequence
      ;;Load the single into a floating point register.
@@ -4004,13 +4004,13 @@
 ;;
 (section
 
- (define-primop string? safe
+ (define-primitive-operation string? safe
    ((P x)
     (tag-test (T x) string-mask string-tag))
    ((E x)
     (nop)))
 
- (define-primop $make-string unsafe
+ (define-primitive-operation $make-string unsafe
    ((V num-of-chars)
     (struct-case num-of-chars
       ((constant num-of-chars.val)
@@ -4057,7 +4057,7 @@
    ((E n)
     (nop)))
 
- (define-primop $string-length unsafe
+ (define-primitive-operation $string-length unsafe
    ((V x)
     (prm 'mref (T x) (K off-string-length)))
    ((P x)
@@ -4067,7 +4067,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $string-ref unsafe
+ (define-primitive-operation $string-ref unsafe
    ((V str idx)
     (struct-case idx
       ((constant idx.val)
@@ -4096,7 +4096,7 @@
    ((E str idx)
     (nop)))
 
- (define-primop $string-set! unsafe
+ (define-primitive-operation $string-set! unsafe
    ((E str idx ch)
     (struct-case idx
       ((constant idx.val)
@@ -4125,7 +4125,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop string-ref safe
+ (define-primitive-operation string-ref safe
    ((V str idx)
     (struct-case idx
       ((constant idx.val)
@@ -4199,7 +4199,7 @@
 ;;
 (section
 
- (define-primop port? safe
+ (define-primitive-operation port? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag port-mask port-tag))
    ((E x)
@@ -4212,7 +4212,7 @@
  ;;     ((define-predicate-operation
  ;;        (syntax-rules ()
  ;;          ((_ ?who ?tag)
- ;;           (define-primop ?who safe
+ ;;           (define-primitive-operation ?who safe
  ;;             ((P x)
  ;;              (define bits
  ;;                (bitwise-ior port-tag
@@ -4228,7 +4228,7 @@
 
 ;;; --------------------------------------------------------------------
 
- (define-primop $make-port unsafe
+ (define-primitive-operation $make-port unsafe
    ((V attrs idx sz buf tr id read write getp setp cl cookie)
     (with-tmp ((p (prm 'alloc
 		       (K (align port-size))
@@ -4257,7 +4257,7 @@
  (let-syntax
      ((define-port-accessor (syntax-rules ()
 			      ((_ ?who ?offset)
-			       (define-primop ?who unsafe
+			       (define-primitive-operation ?who unsafe
 				 ((V port)
 				  (prm 'mref (T port) (K ?offset))))
 			       ))))
@@ -4273,7 +4273,7 @@
    (define-port-accessor $port-close		off-port-close)
    (define-port-accessor $port-cookie		off-port-cookie))
 
- (define-primop $port-attrs unsafe
+ (define-primitive-operation $port-attrs unsafe
    ;;Given  a  port value  X:  return  a  fixnum representing  the  port
    ;;attributes.   To  be  used  when  the  argument  has  already  been
    ;;validated as port value.
@@ -4282,7 +4282,7 @@
 	 (prm 'mref (T port) (K off-port-attrs))
 	 (K port-attrs-shift))))
 
- (define-primop $port-tag unsafe
+ (define-primitive-operation $port-tag unsafe
    ;;Extract  from  a port  reference  a  fixnum  representing the  port
    ;;attributes.  If  the argument  is not a  port reference  the return
    ;;value is zero.
@@ -4297,7 +4297,7 @@
  (let-syntax
      ((define-port-mutator (syntax-rules ()
 			     ((_ ?who ?offset)
-			      (define-primop ?who unsafe
+			      (define-primitive-operation ?who unsafe
 				((E port val)
 				 ;;We do  not need  to update  the dirty
 				 ;;vector because VAL is always a fixnum
@@ -4307,7 +4307,7 @@
    (define-port-mutator $set-port-index!	off-port-index)
    (define-port-mutator $set-port-size!		off-port-size))
 
- (define-primop $set-port-attrs! unsafe
+ (define-primitive-operation $set-port-attrs! unsafe
    ;;Store  in the  first word  of  a port  memory  block a  new set  of
    ;;attributes.
    ;;
@@ -4336,11 +4336,11 @@
 ;;
 (section
 
- (define-primop transcoder? unsafe
+ (define-primitive-operation transcoder? unsafe
    ((P x)
     (tag-test (T x) transcoder-mask transcoder-tag)))
 
- (define-primop $data->transcoder unsafe
+ (define-primitive-operation $data->transcoder unsafe
    ;;Given a fixnum FX: encode it  as payload bits of a transcoder word.
    ;;In one step untag it as fixnum and tag it as transcoder.
    ;;
@@ -4349,7 +4349,7 @@
 	 (prm 'sll (T fx) (K (fx- transcoder-payload-shift fx-shift)))
 	 (K transcoder-tag))))
 
- (define-primop $transcoder->data unsafe
+ (define-primitive-operation $transcoder->data unsafe
    ;;Given a transcoder  word TRAN: extract the payload  bits and return
    ;;them as fixnum.
    ;;
@@ -4378,19 +4378,19 @@
 ;;
 (section
 
- (define-primop pointer? safe
+ (define-primitive-operation pointer? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag #f pointer-tag))
    ((E x)
     (nop)))
 
- (define-primop $pointer? safe
+ (define-primitive-operation $pointer? safe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag #f pointer-tag))
    ((E x)
     (nop)))
 
- (define-primop $pointer= unsafe
+ (define-primitive-operation $pointer= unsafe
    ((V x y)
     ;;FIXME This is a predicate but a forcall is currently not supported
     ;;by the P function.  (Marco Maggi; Nov 30, 2011)
@@ -4425,13 +4425,13 @@
 ;;
 (section
 
- (define-primop procedure? safe
+ (define-primitive-operation procedure? safe
    ;;Evaluate to true if X is a closure object.
    ;;
    ((P x)
     (tag-test (T x) closure-mask closure-tag)))
 
- (define-primop $cpref unsafe
+ (define-primitive-operation $cpref unsafe
    ;;Whenever  the body  of a  closure  references a  free variable  the
    ;;closure is closed upon...
    ;;
@@ -4450,7 +4450,7 @@
        ;;Free variable indexes are always generated by the compiler.
        (interrupt)))))
 
- (define-primop $closure-code unsafe
+ (define-primitive-operation $closure-code unsafe
    ;;First  extract  from the  closure  object  the raw  memory  pointer
    ;;referencing the first  byte of binary code in a  code object's data
    ;;area:
@@ -4511,27 +4511,27 @@
 
  ;;An object is a code object if the reference to it is tagged as vector
  ;;and if the first word is tagged as code.
- (define-primop code? unsafe
+ (define-primitive-operation code? unsafe
    ((P x)
     (sec-tag-test (T x) vector-mask vector-tag #f code-tag)))
 
- (define-primop $code-freevars unsafe
+ (define-primitive-operation $code-freevars unsafe
    ((V x)
     (prm 'mref (T x) (K off-code-freevars))))
 
- (define-primop $code-reloc-vector unsafe
+ (define-primitive-operation $code-reloc-vector unsafe
    ((V x)
     (prm 'mref (T x) (K off-code-relocsize))))
 
- (define-primop $code-size unsafe
+ (define-primitive-operation $code-size unsafe
    ((V x)
     (prm 'mref (T x) (K off-code-instrsize))))
 
- (define-primop $code-annotation unsafe
+ (define-primitive-operation $code-annotation unsafe
    ((V x)
     (prm 'mref (T x) (K off-code-annotation))))
 
- (define-primop $code->closure unsafe
+ (define-primitive-operation $code->closure unsafe
    ((V code)
     (with-tmp
 	;;Allocate a closure's memory block  and tag the reference to it
@@ -4545,7 +4545,7 @@
 	   (prm 'int+ (T code) (K off-code-data)))
       clo)))
 
- (define-primop $code-ref unsafe
+ (define-primitive-operation $code-ref unsafe
    ((V code idx)
     (prm-tag-as-fixnum
      (prm-isolate-least-significant-byte
@@ -4553,14 +4553,14 @@
 	   (prm 'int+ (prm-UNtag-as-fixnum (T idx))
 		(K off-code-data)))))))
 
- (define-primop $code-set! unsafe
+ (define-primitive-operation $code-set! unsafe
    ((E code idx val)
     (prm 'bset (T code)
 	 (prm 'int+ (prm-UNtag-as-fixnum (T idx))
 	      (K off-code-data))
 	 (prm-UNtag-as-fixnum (T val)))))
 
- (define-primop $set-code-annotation! unsafe
+ (define-primitive-operation $set-code-annotation! unsafe
    ((E code ann)
     (mem-assign ann (T code) off-code-annotation)))
 
@@ -4589,7 +4589,7 @@
 ;;
 (section
 
- (define-primop $make-tcbucket unsafe
+ (define-primitive-operation $make-tcbucket unsafe
    ((V tconc key val next)
     (with-tmp ((buck (prm 'alloc
 			  (K (align tcbucket-size))
@@ -4603,34 +4603,34 @@
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
- (define-primop $tcbucket-key unsafe
+ (define-primitive-operation $tcbucket-key unsafe
    ((V buck)
     (prm 'mref (T buck) (K off-tcbucket-key))))
 
- (define-primop $tcbucket-val unsafe
+ (define-primitive-operation $tcbucket-val unsafe
    ((V buck)
     (prm 'mref (T buck) (K off-tcbucket-val))))
 
- (define-primop $tcbucket-next unsafe
+ (define-primitive-operation $tcbucket-next unsafe
    ((V buck)
     (prm 'mref (T buck) (K off-tcbucket-next))))
 
 ;;; --------------------------------------------------------------------
 ;;; mutators
 
- (define-primop $set-tcbucket-key! unsafe
+ (define-primitive-operation $set-tcbucket-key! unsafe
    ((E buck val)
     (mem-assign val (T buck) off-tcbucket-key)))
 
- (define-primop $set-tcbucket-val! unsafe
+ (define-primitive-operation $set-tcbucket-val! unsafe
    ((E buck val)
     (mem-assign val (T buck) off-tcbucket-val)))
 
- (define-primop $set-tcbucket-next! unsafe
+ (define-primitive-operation $set-tcbucket-next! unsafe
    ((E buck val)
     (mem-assign val (T buck) off-tcbucket-next)))
 
- (define-primop $set-tcbucket-tconc! unsafe
+ (define-primitive-operation $set-tcbucket-tconc! unsafe
    ((E buck val)
     (mem-assign val (T buck) off-tcbucket-tconc)))
 
@@ -4645,20 +4645,20 @@
 ;;
 (section
 
- (define-primop $interrupted? unsafe
+ (define-primitive-operation $interrupted? unsafe
    ;;Evaluate  to true  if the  field  "interrupted" of  the C  language
    ;;struct PCB is not zero.
    ;;
    ((P)
     (prm '!= (prm 'mref pcr (K pcb-interrupted)) (K 0))))
 
- (define-primop $unset-interrupted! unsafe
+ (define-primitive-operation $unset-interrupted! unsafe
    ;;Set to zero the field "interrupted" of the C language struct PCB.
    ;;
    ((E)
     (prm 'mset pcr (K pcb-interrupted) (K 0))))
 
- (define-primop $do-event safe
+ (define-primitive-operation $do-event safe
    ;;Set to 1 the field "engine_counter" of the C language struct PCB.
    ;;
    ((E)
@@ -4667,7 +4667,7 @@
       (prm 'incr/zero? pcr (K pcb-engine-counter)
 	   (K (fxsll 1 fx-shift))))))
 
- (define-primop $swap-engine-counter! unsafe
+ (define-primitive-operation $swap-engine-counter! unsafe
    ;;Set to X  the field "engine_counter" of the C  language struct PCB;
    ;;return the previous field value.
    ;;
@@ -4724,7 +4724,7 @@
 ;;
 (section
 
- (define-primop $fp-at-base unsafe
+ (define-primitive-operation $fp-at-base unsafe
    ;;Evaluate to true if the Frame Pointer Register (FPR) references the
    ;;highest machine  word in the  Scheme stack segment as  described by
    ;;the PCB structure, the highest machine  word is the one holding the
@@ -4754,7 +4754,7 @@
 		 (K (- wordsize)))
 	 fpr)))
 
- (define-primop $current-frame unsafe
+ (define-primitive-operation $current-frame unsafe
    ;;Extract from  the PCB  structure a reference  to the  "next process
    ;;continuation" and  return it.   In C  language terms:  the returned
    ;;value is "pcb->next_k".
@@ -4762,7 +4762,7 @@
    ((V)
     (prm 'mref pcr (K pcb-next-continuation))))
 
- (define-primop $seal-frame-and-call unsafe
+ (define-primitive-operation $seal-frame-and-call unsafe
    ;;This primitive  operation is used  to implement CALL/CC  (call with
    ;;current continuation)  and CALL/CF (call with  current frame), file
    ;;"ikarus.control.sls".  Let's  super simplify  and comment  the code
@@ -4913,7 +4913,7 @@
    ((P . args)
     (interrupt)))
 
- (define-primop $frame->continuation unsafe
+ (define-primitive-operation $frame->continuation unsafe
    ;;Build  and return  a  new  closure object.   When  such closure  is
    ;;invoked:    it   makes    use    of    the   assembly    subroutine
    ;;SL-CONTINUATION-CODE to  resume the  execution of  the continuation
@@ -4934,7 +4934,7 @@
    ((E x)
     (nop)))
 
- (define-primop $stack-overflow-check unsafe
+ (define-primitive-operation $stack-overflow-check unsafe
    ;;Check if  the topmost Scheme stack  call frame has crossed  the red
    ;;line of  stack usage; this  condition triggers a new  stack segment
    ;;allocation.   The   scenario  on   the  stack  that   triggers  the
@@ -5006,7 +5006,7 @@
 ;;
 (section
 
- (define-primop $make-call-with-values-procedure unsafe
+ (define-primitive-operation $make-call-with-values-procedure unsafe
    ;;Return a CLOSURE-MAKER struct  representing code that, evaluated at
    ;;run-time,    returns   a    closure    object   implementing    the
    ;;CALL-WITH-VALUES  primitive function  through the  assembly routine
@@ -5019,7 +5019,7 @@
    ((E)
     (interrupt)))
 
- (define-primop $make-values-procedure unsafe
+ (define-primitive-operation $make-values-procedure unsafe
    ;;Return a CLOSURE-MAKER struct  representing code that, evaluated at
    ;;run-time,  returns   a  closure  object  implementing   the  VALUES
    ;;primitive function through the assembly routine "SL_values".
@@ -5042,7 +5042,7 @@
 ;;
 (section
 
- (define-primop $make-annotated-procedure unsafe
+ (define-primitive-operation $make-annotated-procedure unsafe
    ;;Build and return  a new closure object wrapping  the closure object
    ;;PROC  and  just adding  an  annotation  object  to it.   When  such
    ;;annotated closure is applied: it  makes use of the assembly routine
@@ -5069,7 +5069,7 @@
    ((E)
     (interrupt)))
 
- (define-primop $annotated-procedure-annotation unsafe
+ (define-primitive-operation $annotated-procedure-annotation unsafe
    ;;Given a closure object PROC being an annotated procedure created by
    ;;$MAKE-ANNOTATED-PROCEDURE: return the annotation object.
    ;;

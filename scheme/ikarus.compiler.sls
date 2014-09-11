@@ -5016,11 +5016,11 @@
   ;;
   ;;NOTE  Not  all  the  struct  instances of  type  PRIMREF  reference  a  primitive
   ;;operation: the struct  type PRIMREF is used  to represent a reference  to all the
-  ;;function bindings exported  by the boot image.   Only those for which  ?NAME is a
+  ;;lexical core bindings defined by the boot image.  Only those for which ?NAME is a
   ;;symbol   satisfying  the   predicate  CORE-PRIMITIVE-OPERATION?    are  primitive
   ;;operations;  in  other   words,  only  the  operations  defined   by  the  syntax
-  ;;DEFINE-PRIMOP  are  primitive  operations.   Examples: $CAR,  $CDR,  FIXNUM?  are
-  ;;primitive   operations;  LIST,   NUMBER?,  STRING-LENGTH   are  *not*   primitive
+  ;;DEFINE-PRIMITIVE-OPERATION  are  primitive  operations.   Examples:  $CAR,  $CDR,
+  ;;FIXNUM?  are  primitive operations;  LIST, NUMBER?,  DISPLAY are  *not* primitive
   ;;operations.
   ;;
   ;;NOTE Not  all the instances  of struct PRIMCALL  are generated from  instances of

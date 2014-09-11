@@ -26,9 +26,9 @@
 
 ;;;; adding a primitive operation to an existing system library
 ;;
-;;Primitive operations are  defined by the macro DEFINE-PRIMOPS;  examples are: $CAR,
-;;$CDR, $FX+ and  $VECTOR-LENGTH but also FIXNUM? and STRING?.   Some core primitives
-;;are implemented both as:
+;;Primitive operations are defined  by the macro DEFINE-PRIMITIVE-OPERATION; examples
+;;are: $CAR, $CDR,  $FX+ and $VECTOR-LENGTH but also FIXNUM?  and STRING?.  Some core
+;;primitives are implemented both as:
 ;;
 ;;* Proper  procedures.  There exists  a loc gensym  whose "value" slot  references a
 ;;  closure object,  which in  turn references  a code  object implementing  the core
@@ -61,7 +61,7 @@
 ;;
 ;;Here we want to examine the process  of adding a primitive operation to an existing
 ;;system library;  we will not  discuss how to define  the operation using  the macro
-;;DEFINE-PRIMOPS.
+;;DEFINE-PRIMITIVE-OPERATION.
 ;;
 ;;What is  a primitive  operation?  We can  think of  it as a  macro embedded  in the
 ;;compiler,  which, when  used,  expands  inline the  elementary  instructions to  be
@@ -91,7 +91,7 @@
 ;;First we  define the $SWIRL-PAIR operation  adding to the compiler  library (in the
 ;;appropriate place) a form like:
 ;;
-;;  (define-primop $swirl-pair unsafe ---)
+;;  (define-primitive-operation $swirl-pair unsafe ---)
 ;;
 ;;this  form alone  is enough  to make  the compiler  aware of  the existence  of the
 ;;operation.    Then,  in   this   makefile,   we  add   an   entry   to  the   table
@@ -138,7 +138,7 @@
 ;;First  we define  the  $SWIRL operation  adding  to the  compiler  library (in  the
 ;;appropriate place) a form like:
 ;;
-;;  (define-primop $swirl unsafe ---)
+;;  (define-primitive-operation $swirl unsafe ---)
 ;;
 ;;this  form alone  is enough  to make  the compiler  aware of  the existence  of the
 ;;operation.   Then, in  this makefile,  we add  an  entry at  the end  of the  table
