@@ -39,7 +39,9 @@
 
 (module (alt-cogen
 	 compile-call-table
-	 core-primitive-operations
+	 refresh-cached-labels!
+	 sl-apply-label
+	 CORE-PRIMITIVE-OPERATIONS
 	 alt-cogen.specify-representation
 	 alt-cogen.impose-calling-convention/evaluation-order
 	 alt-cogen.assign-frame-sizes
@@ -76,8 +78,10 @@
 
 ;;;; some external code
 
+(include "ikarus.compiler.scheme-object-defs.scm" #t)
+(include "ikarus.compiler.common-assembly-subroutines.scm" #t)
 (include "pass-specify-rep.ss" #t)
-(import core-primitive-operations)
+(import CORE-PRIMITIVE-OPERATIONS)
 
 
 ;;;; some CPU registers stuff

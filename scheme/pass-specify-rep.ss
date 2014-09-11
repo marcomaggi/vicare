@@ -78,7 +78,7 @@
 ;;
 
 
-(module core-primitive-operations
+(module CORE-PRIMITIVE-OPERATIONS
   (core-primitive-operation? get-primop set-primop!)
   ;;This  module has  the  only  purpose of  making  the binding  COOKIE
   ;;visible only to CORE-PRIMITIVE-OPERATION?, GET-PRIMOP and SET-PRIMOP!.
@@ -103,7 +103,7 @@
 
 
 (module (alt-cogen.specify-representation)
-  (import core-primitive-operations)
+  (import CORE-PRIMITIVE-OPERATIONS)
 
   (define (alt-cogen.specify-representation x)
     (Program x))

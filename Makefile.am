@@ -291,6 +291,8 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.letrec-optimizer.scm		\
 	scheme/ikarus.compiler.source-optimizer.scm		\
 	scheme/ikarus.compiler.tag-annotation-analysis.ss	\
+	scheme/ikarus.compiler.scheme-object-defs.scm		\
+	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
 	scheme/pass-specify-rep-primops.ss			\
 	scheme/pass-specify-rep.ss				\
 	\
