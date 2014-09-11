@@ -190,66 +190,77 @@
 	(struct-case cas
 	  ((clambda-case cas.info cas.body)
 	   (struct-case cas.info
+	     ;;Remember that CAS.INFO.ARGS  is a proper list of VAR  structs with the
+	     ;;format:
+	     ;;
+	     ;;   (?cpvar ?arg ...)
+	     ;;
+	     ;;where: ?CPVAR  represents a machine word  that must hold a  pointer to
+	     ;;the closure object; each ?ARG represents a machine word that must hold
+	     ;;a CLAMBDA clause's argument.
 	     ((case-info cas.info.label cas.info.args cas.info.proper)
-	      (let-values (((rargs rlocs fargs flocs)
-			    (%partition-formals PARAMETER-REGISTERS cas.info.args)))
-		;;RARGS = list of register symbols associated to formals.
-		;;RLOCS = list of formals associated to symbols.
-		;;FARGS = list of formals associated to FVAR structures.
-		;;FLOCS = list of FVAR structures associated to formals.
-		(parametrise ((locals rargs))
-		  (for-each set-var-loc!
-		    fargs flocs)
-		  (let ((body (let recur ((args rargs)
-					  (locs rlocs))
+	      (receive (register-args register-names stack-args stack-locations)
+		  (%partition-formals PARAMETER-REGISTERS cas.info.args)
+		;;The  arguments  listed  in  REGISTER-ARGS will  be  stored  in  the
+		;;registers  listed  in  REGISTER-NAMES.   The  arguments  listed  in
+		;;STACK-ARGS will be stored in  the Scheme stack machine words listed
+		;;in STACK-LOCATIONS.
+		(parametrise ((locals register-args))
+		  ($for-each/stx set-var-loc! stack-args stack-locations)
+		  (let ((body (let recur ((args register-args)
+					  (locs register-names))
 				(if (null? args)
 				    (Tail cas.body)
 				  (make-seq (%move-dst<-src ($car args) ($car locs))
-					    (recur      ($cdr args) ($cdr locs)))))))
+					    (recur          ($cdr args) ($cdr locs)))))))
 		    (make-clambda-case
-		     (make-case-info cas.info.label (append rlocs flocs) cas.info.proper)
+		     (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
 		     (make-locals (locals) body))))))))))
 
-      (define (%partition-formals regs ls)
-	;;Recursive  function.   Associate  CASE-LAMBDA formals  to  CPU
-	;;available registers.
+      (define (%partition-formals available-registers formals)
+	;;Recursive function.  Associate the formals of a CLAMBDA clause to available
+	;;CPU registers.
 	;;
-	;;REGS must be a list of symbols representing CPU registers.
+	;;AVAILABLE-REGISTERS must  be a list  of symbols representing  available CPU
+	;;registers.
 	;;
-	;;LS must be a list of CASE-LAMBDA formals.
+	;;FORMALS must be a list of CLAMBDA clause's formals.
 	;;
 	;;Return 4 values:
 	;;
-	;;1. a list of register symbols associated to formals;
+	;;1.  The  list of  lex gensyms representing  formal arguments  associated to
+	;;   available registers.
 	;;
-	;;2. a list of formals associated  to symbols;
+	;;2. The  list of  symbols representing register  names associated  to formal
+	;;   arguments.
 	;;
-	;;3. a list of formals associated to FVAR structures;
+	;;3. The list of lex gensyms representing formal arguments associated to FVAR
+	;;   structures.
 	;;
-	;;4. a list of FVAR structures associated to formals.
+	;;4. The list of FVAR structures associated to formals.
 	;;
-	(cond ((null? regs)
-	       ;;If  the  number of  formals  is  <=  of the  number  of
-	       ;;registers:  the left-over  registers are  associated to
-	       ;;FVAR structures.
-	       (let ((flocs (%one-fvar-for-each-left-over-formal 1 ls)))
-		 (values '() '() ls flocs)))
-	      ((null? ls)
+	(cond ((null? available-registers)
+	       ;;If  the number  of formals  is <=  of the  number of  registers: the
+	       ;;left-over  registers  are  associated   to  FVAR  structures,  which
+	       ;;represent Scheme stack machine words.
+	       (let ((stack-locations (%one-fvar-for-each-left-over-formal 1 formals)))
+		 (values '() '() formals stack-locations)))
+	      ((null? formals)
 	       ;;If there are more registers than formals: fine.
 	       (values '() '() '() '()))
 	      (else
-	       ;;If there is a register for this formal: associate them.
-	       (let-values (((rargs rlocs fargs flocs)
-			     (%partition-formals ($cdr regs) ($cdr ls))))
-		 (values (cons ($car ls)   rargs)
-			 (cons ($car regs) rlocs)
-			 fargs flocs)))))
+	       ;;If there is a register for the next formal: associate them.
+	       (receive (register-args register-names stack-args stack-locations)
+		   (%partition-formals ($cdr available-registers) ($cdr formals))
+		 (values (cons ($car formals)             register-args)
+			 (cons ($car available-registers) register-names)
+			 stack-args stack-locations)))))
 
-      (define (%one-fvar-for-each-left-over-formal i ls)
-	(if (null? ls)
+      (define (%one-fvar-for-each-left-over-formal i leftover-formal)
+	(if (null? leftover-formal)
 	    '()
 	  (cons (mkfvar i)
-		(%one-fvar-for-each-left-over-formal ($fxadd1 i) ($cdr ls)))))
+		(%one-fvar-for-each-left-over-formal ($fxadd1 i) ($cdr leftover-formal)))))
 
       #| end of module: ClambdaCase |# )
 
