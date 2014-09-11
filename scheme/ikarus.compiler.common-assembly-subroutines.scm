@@ -119,7 +119,7 @@
 
 ;;;; assembly labels for common subroutines
 
-(module (refresh-cached-labels!
+(module (refresh-common-assembly-subroutines-cached-labels!
 	 sl-annotated-procedure-label
 	 sl-apply-label
 	 sl-continuation-code-label
@@ -185,7 +185,7 @@
 	   ))
 	)))
 
-  (define-cached refresh-cached-labels!
+  (define-cached refresh-common-assembly-subroutines-cached-labels!
 
     ;;SL-ANNOTATED-PROCEDURE-LABEL Given a reference to a closure object
     ;;stored  in the  Closure  Pointer Register  (CPR), representing  an

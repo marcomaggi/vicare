@@ -38,8 +38,7 @@
 
 
 (module (alt-cogen
-	 compile-call-table
-	 refresh-cached-labels!
+	 refresh-common-assembly-subroutines-cached-labels!
 	 sl-apply-label
 	 CORE-PRIMITIVE-OPERATIONS
 	 alt-cogen.specify-representation

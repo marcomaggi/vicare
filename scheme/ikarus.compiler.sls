@@ -621,7 +621,7 @@
        plocs)
       (({p procedure?})
        (set! plocs p)
-       (refresh-cached-labels!)))))
+       (refresh-common-assembly-subroutines-cached-labels!)))))
 
 (define* (primitive-public-function-name->location-gensym {name symbol?})
   ;;Given the  symbol NAME,  which must be  the public name  of a  primitive function
