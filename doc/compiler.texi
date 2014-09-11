@@ -2979,7 +2979,8 @@ We see the result of the transformation is a struct of type
 @objtype{codes} in which the @objtype{clambda} forms have been extracted
 and separated; in addition, the top level @objtype{fix} struct has been
 removed and references to the @objtype{fix} bindings have been replaced
-by @objtype{closure-maker} forms.
+by @objtype{closure-maker} forms, this happens because all the functions
+are combinators.
 
 The @objtype{closure-maker} form:
 
@@ -2988,7 +2989,7 @@ The @objtype{closure-maker} form:
 @end example
 
 @noindent
-will be compiled to code that return a closure object implementing the
+will be compiled to code that returns a closure object implementing the
 function @code{a}, with assembly entry point label
 @code{asmlabel:a:clambda}.
 
@@ -3014,14 +3015,16 @@ Bindings defined by @objtype{fix} structs are immutable and their
 right--hand side expressions are all @objtype{closure-maker} structs.
 
 @item
-Bindings defined by @objtype{bind} structs have right--hand side
-expressions of type different from @objtype{closure-maker} and
-@objtype{clambda}.
+Bindings defined by @objtype{bind} structs are immutable and their
+right--hand side expressions are of type different from
+@objtype{closure-maker} and @objtype{clambda}.  These bindings are
+immutable because the assigned ones have been previously transformed
+into immutable references to mutable vector objects.
 
 @item
 If the right--hand side expression of a binding defined by
-@objtype{bind} is a @objtype{var} struct: such binding is immutable.
-For example:
+@objtype{bind} is a @objtype{var} struct: such binding defines a
+synonym.  For example:
 
 @example
 (bind ((a @meta{rhs}))
