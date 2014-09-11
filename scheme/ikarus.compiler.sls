@@ -63,7 +63,7 @@
      (introduce-closure-makers			$introduce-closure-makers)
      (optimize-combinator-calls/lift-clambdas	$optimize-combinator-calls/lift-clambdas)
      (introduce-primcalls			$introduce-primcalls)
-     (eliminate-fix				$eliminate-fix)
+     (rewrite-freevar-references		$rewrite-freevar-references)
      (insert-engine-checks			$insert-engine-checks)
      (insert-stack-overflow-check		$insert-stack-overflow-check)
      (alt-cogen					$alt-cogen)
@@ -690,7 +690,7 @@
 	     (p (introduce-closure-makers p))
 	     (p (optimize-combinator-calls/lift-clambdas p))
 	     (p (introduce-primcalls p))
-	     (p (eliminate-fix p))
+	     (p (rewrite-freevar-references p))
 	     (p (insert-engine-checks p))
 	     (p (insert-stack-overflow-check p))
 	     (ls* (alt-cogen p)))
@@ -736,7 +736,7 @@
 	     (p (introduce-closure-makers p))
 	     (p (optimize-combinator-calls/lift-clambdas p))
 	     (p (introduce-primcalls p))
-	     (p (eliminate-fix p))
+	     (p (rewrite-freevar-references p))
 	     (p (insert-engine-checks p))
 	     (p (insert-stack-overflow-check p))
 	     (ls* (alt-cogen p)))
@@ -5159,7 +5159,7 @@
   #| end of module: INTRODUCE-PRIMCALLS |# )
 
 
-(module (eliminate-fix)
+(module (rewrite-freevar-references)
   ;;Despite  its  name, the  purpose  of  this module  is  *not*  to remove  the  FIX
   ;;structures from recordized code.
   ;;
@@ -5193,10 +5193,13 @@
   ;;      (fix ((tmp ?closure-maker))
   ;;        tmp)
   ;;
+  ;;   This is  an independent additional task that must  be performed somewhere, and
+  ;;   we do it here.
+  ;;
   (define-fluid-override __who__
-    (identifier-syntax 'eliminate-fix))
+    (identifier-syntax 'rewrite-freevar-references))
 
-  (define (eliminate-fix Program)
+  (define (rewrite-freevar-references Program)
     (struct-case Program
       ((codes code* body)
        ;;First traverse  the bodies of  the lifted  CLAMBDAs, then traverse  the init
@@ -5246,9 +5249,8 @@
 	   (struct-case info
 	     ((case-info label args proper?)
 	      (let* ((cpvar (make-unique-var 'cp))
-		     ;;Prepend  to   the  properized  list  of   formals  the  symbol
-		     ;;representing  the CPU  register  holding  the current  closure
-		     ;;pointer.
+		     ;;Prepend to the properised list of formals the VAR representing
+		     ;;the machine word holding the current closure pointer.
 		     (info^ (make-case-info label (cons cpvar args) proper?))
 		     (E     (make-E main-cp cpvar freevar*))
 		     (body^ (E body)))
@@ -5383,7 +5385,7 @@
 
     E)
 
-  #| end of module: ELIMINATE-FIX |# )
+  #| end of module: REWRITE-FREEVAR-REFERENCES |# )
 
 
 (module (insert-engine-checks)

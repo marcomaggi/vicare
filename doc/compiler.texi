@@ -3764,7 +3764,7 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $eliminate-fix @var{input}
+@defun $rewrite-freevar-references @var{input}
 @end defun
 
 @c page

@@ -54,7 +54,7 @@
 
     ;; code generation passes
     $introduce-primcalls
-    $eliminate-fix
+    $rewrite-freevar-references
     $insert-engine-checks
     $insert-stack-overflow-check
     $specify-representation
@@ -90,7 +90,7 @@
 		 $assemble-sources
 
 		 $introduce-primcalls
-		 $eliminate-fix
+		 $rewrite-freevar-references
 		 $insert-engine-checks
 		 $insert-stack-overflow-check
 		 $specify-representation
@@ -116,7 +116,7 @@
     ((_ $assemble-sources		?body)	(%compile-up-to 14 ?body))
     ;;code generation passes
     ((_ $introduce-primcalls		?body)	(%compile-up-to 15 ?body))
-    ((_ $eliminate-fix			?body)	(%compile-up-to 16 ?body))
+    ((_ $rewrite-freevar-references			?body)	(%compile-up-to 16 ?body))
     ((_ $insert-engine-checks		?body)	(%compile-up-to 17 ?body))
     ((_ $insert-stack-overflow-check	?body)	(%compile-up-to 18 ?body))
     ((_ $specify-representation		?body)	(%compile-up-to 19 ?body))
@@ -157,7 +157,7 @@
 	  ($assemble-sources R)
 	;;code generation passes
 	(let* ((R (doit R 15 $introduce-primcalls))
-	       (R (doit R 16 $eliminate-fix))
+	       (R (doit R 16 $rewrite-freevar-references))
 	       (R (doit R 17 $insert-engine-checks))
 	       (R (doit R 18 $insert-stack-overflow-check))
 	       (R (doit R 19 $specify-representation))

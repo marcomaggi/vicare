@@ -82,13 +82,31 @@
 
 ;;;; some CPU registers stuff
 
-(define-constant PARAMETER-REGISTERS '(%edi))
+
+;;Arguments  count  register.  Upon  entering  a  function:  it  must hold  a  fixnum
+;;representing zero or the negated number of arguments.
+;;
+(define-constant ARGC-REGISTER '%eax)
 
 (define-constant RETURN-VALUE-REGISTER '%eax)
 
-;;Closure Pointer Register (CPR).
+;;Closure Pointer Register (CPR).  Upon entering a function: a pointer to the closure
+;;object being executed  is loaded from "some machine word"  into this register; this
+;;way the body of the function can access the value of the free variables.
 ;;
 (define-constant CP-REGISTER '%edi)
+
+;;The list of CPU  registers that can be used to store  function call parameters; the
+;;first item *must* be the CP-REGISTER.
+;;
+;;NOTE This list  is used in the code,  but currently it has no effect  other than to
+;;assign  to CP-REGISTER  its role.   Currenlty,  there is  no support  to pass  true
+;;function arguments in registers: all of them  are passed on the Scheme stack.  This
+;;stems from the  implementation of continuations, which need local  variables on the
+;;stack.  (Marco Maggi; Thu Sep 11, 2014)
+;;
+(define-constant PARAMETER-REGISTERS
+  `(,CP-REGISTER))
 
 (define-constant ALL-REGISTERS
   (boot.case-word-size
@@ -101,8 +119,6 @@
   (boot.case-word-size
    ((32)	'(%edi))
    ((64)	'(%edi))))
-
-(define-constant ARGC-REGISTER '%eax)
 
 ;;; apr = %ebp		allocation pointer
 ;;; esp = %esp		stack pointer

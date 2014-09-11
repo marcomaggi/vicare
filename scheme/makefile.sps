@@ -3110,7 +3110,7 @@
     ($introduce-closure-makers			$compiler)
     ($optimize-combinator-calls/lift-clambdas	$compiler)
     ($introduce-primcalls			$compiler)
-    ($eliminate-fix				$compiler)
+    ($rewrite-freevar-references		$compiler)
     ($insert-engine-checks			$compiler)
     ($insert-stack-overflow-check		$compiler)
     ($alt-cogen					$compiler)
