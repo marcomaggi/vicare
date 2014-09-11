@@ -5188,11 +5188,10 @@
   ;;   operation %CPREF retrieving the referenced  object from the associated slot in
   ;;   the data area of the closure built in object.
   ;;
-  ;;4.  For  every ?CLOSURE-MAKER in  the expressions  of the <Program>  perform this
-  ;;   transformation:
+  ;;4. Transform every ?CLOSURE-MAKER not appearing as RHS of a FIX into:
   ;;
-  ;;      (let ((T ?closure-maker))
-  ;;        T)
+  ;;      (fix ((tmp ?closure-maker))
+  ;;        tmp)
   ;;
   (define-fluid-override __who__
     (identifier-syntax 'eliminate-fix))
@@ -5200,10 +5199,13 @@
   (define (eliminate-fix Program)
     (struct-case Program
       ((codes code* body)
-       ;;First traverse the CASE-LAMBDA  bodies, then traverse the whole
+       ;;First traverse  the bodies of  the lifted  CLAMBDAs, then traverse  the init
        ;;expression.
-       (let* ((code*^ ($map/stx Clambda code*))
-	      (E      (make-E #f #f '()))
+       (let* ((code*^ ($map/stx E-clambda code*))
+	      (E      (let ((main-cpvar #f)
+			    (cpvar      #f)
+			    (freevar*   '()))
+			(make-E main-cpvar cpvar freevar*)))
 	      (body^  (E body)))
 	 (make-codes code*^ body^)))
       (else
@@ -5211,28 +5213,28 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (Clambda)
+  (module (E-clambda)
 
-    (define (Clambda x)
+    (define (E-clambda x)
       ;;X must be a struct instance of type CLAMBDA.
       ;;
       (struct-case x
-	((clambda label case* cp freevar* name)
-	 (let ((case-mapper (ClambdaCase cp freevar*))
+	((clambda label clause* cp freevar* name)
+	 (let ((case-mapper (make-E-clambda-case cp freevar*))
 	       (cp^         #f))
-	   (make-clambda label ($map/stx case-mapper case*) cp^ freevar* name)))
+	   (make-clambda label ($map/stx case-mapper clause*) cp^ freevar* name)))
 	(else
 	 (compiler-internal-error __who__ "invalid clambda" x))))
 
-    (define (ClambdaCase main-cp freevar*)
+    (define (make-E-clambda-case main-cp freevar*)
       ;;MAIN-CP must  be a  struct instance  of type VAR  to which  the CLOSURE-MAKER
-      ;;referencing this CLAMBDA is bound.
+      ;;referencing this CLAMBDA is bound; it  represents the machine word from which
+      ;;a pointer to the closure object can be acquired.
       ;;
       ;;FREEVAR* must be a list of struct instances of type VAR representing the free
       ;;variables referenced by the clauses of this CASE-LAMBDA.
       ;;
-      ;;Return  a  function  to  be  mapped  over  all  the  CLAMBDA-CASE  structures
-      ;;representing the clauses of this CLAMBDA.
+      ;;Return a function to be mapped over all the CLAMBDA clauses.
       ;;
       ;;Notice that CPVAR is prepended to the list of arguments for this clause.
       ;;
@@ -5244,9 +5246,9 @@
 	   (struct-case info
 	     ((case-info label args proper?)
 	      (let* ((cpvar (make-unique-var 'cp))
-		     ;;Prepend  to the  properized list  of formals  the
-		     ;;symbol representing the  CPU register holding the
-		     ;;current closure pointer.
+		     ;;Prepend  to   the  properized  list  of   formals  the  symbol
+		     ;;representing  the CPU  register  holding  the current  closure
+		     ;;pointer.
 		     (info^ (make-case-info label (cons cpvar args) proper?))
 		     (E     (make-E main-cp cpvar freevar*))
 		     (body^ (E body)))
@@ -5259,17 +5261,16 @@
 ;;; --------------------------------------------------------------------
 
   (define (make-E main-cpvar cpvar freevar*)
-
+    ;;Create and return the function E.
+    ;;
     (define (E x)
-      ;;Perform code transformation traversing the whole hierarchy in X,
-      ;;which must  be a  struct instance representing  recordized code,
-      ;;and building  a new  hierarchy of transformed,  recordized code;
-      ;;return the new hierarchy.
+      ;;Perform code transformation  traversing the whole hierarchy in  X, which must
+      ;;be  a  struct instance  representing  recordized  code,  and building  a  new
+      ;;hierarchy of transformed, recordized code; return the new hierarchy.
       ;;
       ;;The purposes of this code traversal are:
       ;;
-      ;;1.  Map  %DO-VAR over  every  struct  instance  of type  VAR  in
-      ;;   reference position.
+      ;;1. Map %DO-VAR over every struct instance of type VAR in reference position.
       ;;
       ;;2. Map %DO-FIX to every struct instance of type FIX.
       ;;
@@ -5330,10 +5331,10 @@
 	 (E x))))
 
     (module (%do-fix)
-      ;;The purpose of  this module is to map %DO-VAR  to all the struct
-      ;;instances of  type VAR  being free  variables referenced  by the
-      ;;closures.   We cannot  move this  module out  of MAKE-E  because
-      ;;%DO-VAR is a closure on the arguments of MAKE-E itself.
+      ;;The purpose of this module is to map %DO-VAR over all the struct instances of
+      ;;type VAR  being free variables  referenced by  the closures.  We  cannot move
+      ;;this module out  of MAKE-E because %DO-VAR  is a closure on  the arguments of
+      ;;MAKE-E itself.
       ;;
       (define (%do-fix lhs* rhs* body)
 	(make-fix lhs* ($map/stx %handle-closure rhs*) body))
@@ -5350,34 +5351,32 @@
     (define (%do-var x)
       ;;This function is a closure  upon the arguments of MAKE-E:
       ;;
-      ;;MAIN-CPVAR:  a  struct  instance  of type  VAR  referencing  the
-      ;;closure whose body we are traversing.
+      ;;MAIN-CPVAR: false  or a struct instance  of type VAR referencing  the closure
+      ;;whose body we are traversing.
       ;;
-      ;;CPVAR: a struct instance of type VAR associated to the closure's
+      ;;CPVAR: false  or a struct  instance of type  VAR associated to  the closure's
       ;;clause whose body we are traversing.
       ;;
-      ;;FREEVAR*: a list  of struct instances of type  VAR representing the
-      ;;free  variables referenced  by  the closure  whose  body we  are
-      ;;traversing.
+      ;;FREEVAR*:  a list  of  struct instances  of type  VAR  representing the  free
+      ;;variables referenced by the closure whose body we are traversing.
       ;;
       ;;X must  be a struct instance  of type VAR.
       ;;
       ;;If X references the closure itself: replace it with CPVAR.
       ;;
-      ;;If X  references a  closure's free variable:  replace it  with a
-      ;;primitive operation %CPREF retrieving the referenced object from
-      ;;the associated  slot in the  data area  of the closure  built in
-      ;;object.
+      ;;If  X references  a  closure's free  variable: replace  it  with a  primitive
+      ;;operation %CPREF retrieving the referenced object from the associated slot in
+      ;;the data area of the closure built in object.
       ;;
       (if (eq? x main-cpvar)
 	  cpvar
 	(let loop ((freevar* freevar*)
-		   (i     0))
+		   (i        0))
 	  (cond ((null? freevar*)
 		 x)
 		((eq? x ($car freevar*))
-		 ;;Replate  a  reference  to   free  variable  with  the
-		 ;;appropriate slot accessor.
+		 ;;Replace a  reference to  free variable  with the  appropriate slot
+		 ;;accessor.
 		 (make-primcall '$cpref (list cpvar (make-constant i))))
 		(else
 		 (loop ($cdr freevar*) ($fxadd1 i)))))))
