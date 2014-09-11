@@ -2470,6 +2470,158 @@
   #t)
 
 
+(parametrise ((check-test-name						'introduce-primcalls)
+	      (compiler.$enabled-function-application-integration?	#f)
+	      (compiler.$descriptive-labels				#t))
+
+;;;Function  application integration  is disabled  here to  make it  easier to  write
+;;;meaningful code for debugging and inspection.
+
+  (define (%introduce-primcalls core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   (D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (D (compiler.$sanitize-bindings D))
+	   (D (compiler.$optimize-for-direct-jumps D))
+	   (D (compiler.$insert-global-assignments D))
+	   (D (compiler.$introduce-vars D))
+	   (D (compiler.$introduce-closure-makers D))
+	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
+	   (D (compiler.$introduce-primcalls D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%introduce-primcalls (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+  (define-syntax libdoit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result/basic)
+       (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit ((primitive list) '1 '2)
+	(codes
+	 ()
+	 (primcall list (constant 1) (constant 2))))
+
+#t)
+
+
+(parametrise ((check-test-name						'rewrite-freevar-refs)
+	      (compiler.$enabled-function-application-integration?	#f)
+	      (compiler.$descriptive-labels				#t))
+
+;;;Function  application integration  is disabled  here to  make it  easier to  write
+;;;meaningful code for debugging and inspection.
+
+  (define (%rewrite-freevar-refs core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   (D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (D (compiler.$sanitize-bindings D))
+	   (D (compiler.$optimize-for-direct-jumps D))
+	   (D (compiler.$insert-global-assignments D))
+	   (D (compiler.$introduce-vars D))
+	   (D (compiler.$introduce-closure-makers D))
+	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
+	   (D (compiler.$introduce-primcalls D))
+	   (D (compiler.$rewrite-freevar-references D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%rewrite-freevar-refs (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+  (define-syntax libdoit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result/basic)
+       (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (let ((a ((primitive read))))
+	  (lambda () a))
+	(codes
+	 ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
+	     (primcall $cpref cp_0 (constant 0))))
+	 (bind ((a_0 (funcall (primref read))))
+	   (fix ((tmp_0 (closure-maker (code-loc asmlabel:anonymous:clambda)
+				       (freevars: a_0))))
+	     tmp_0))))
+
+  (doit (let ((a ((primitive read)))
+	      (b ((primitive read))))
+	  (lambda () ((primitive list) a b)))
+	(codes
+	 ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
+	     (primcall list
+	       (primcall $cpref cp_0 (constant 1))
+	       (primcall $cpref cp_0 (constant 0)))))
+	 (bind ((a_0 (funcall (primref read)))
+		(b_0 (funcall (primref read))))
+	   (fix ((tmp_0 (closure-maker (code-loc asmlabel:anonymous:clambda)
+				       (freevars: b_0 a_0))))
+	     tmp_0))))
+
+  ;;Assigned free variable.
+  (doit (let ((a ((primitive read))))
+	  (lambda ()
+	    (begin
+	      (set! a '1)
+	      a)))
+	(codes
+	 ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
+	     (seq
+	       (primcall $vector-set!
+			 (primcall $cpref cp_0 (constant 0)) (constant 0)
+			 (constant 1))
+	       (primcall $vector-ref
+			 (primcall $cpref cp_0 (constant 0)) (constant 0)))))
+	 (bind ((a_0 (funcall (primref read))))
+	   (bind ((a_1 (primcall vector a_0)))
+	     (fix ((tmp_0 (closure-maker (code-loc asmlabel:anonymous:clambda)
+					 (freevars: a_1))))
+	       tmp_0)))))
+
+#t)
+
+
 ;;;; done
 
 (check-report)

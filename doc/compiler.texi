@@ -44,7 +44,7 @@ Compiler passes
 * compiler lifting::            Closures optimization and @objtype{clambda}
                                 lifting.
 * compiler primcalls::          Introducing primitive calls.
-* compiler fix::                Removing fixes.
+* compiler freevar refs::       Rewriting references to free variables.
 * compiler engine::             Inserting engine checks.
 * compiler stack::              Inserting stack overflow checks.
 * compiler cogen::              Full assembly code generation.
@@ -3755,17 +3755,130 @@ Transform @objtype{funcall} structs representing core primitive
 operation applications into @objtype{primcall} structs.
 @end defun
 
-@c page
-@node compiler fix
-@section Removing fixes
 
+As example, @func{list} is both a lexical core function and a core
+primitive operation which must return a new list at each invocation; so
+the core language expression:
+
+@example
+((primitive list) '1 '2)
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+  ()
+  (primcall list (constant 1) (constant 2)))
+@end example
+
+@c page
+@node compiler freevar refs
+@section Rewriting references to free variables
+
+
+This compiler pass rewrites references to free variables in closure
+objects to forms actually accessing the values from the run--time
+closure object.
+
+We know that a Scheme closure object (satisfiying the predicate
+@func{procedure?}) has memory layout:
+
+@example
+                0   1   2   3   4   5
+ |------------|---|---|---|---|---|---| closure object
+       ^
+       |      |.......................|
+  pointer to     one slot for every
+  binary code    free variable
+@end example
+
+@noindent
+the purpose of this compiler pass is to replace references to free
+variables with @objtype{primcall} structs representing the use of the
+primitive @func{$cpref}.
+
+In addition, it transforms every @objtype{closure-maker} not appearing
+as right-hand side expression of a @objtype{fix} into:
+
+@example
+(fix ((tmp ?closure-maker))
+  tmp)
+@end example
+
+@noindent
+this is an independent task that must be performed somewhere, and we do
+it here.
 
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
 @defun $rewrite-freevar-references @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a @objtype{codes} struct representing
+recordised code; build and return a new @objtype{codes} struct.
+
+Introduce primitive calls to the primitive operation @func{$cpref} to
+access free variables in closure objects.
 @end defun
+
+
+As example, the core language expression:
+
+@example
+(let ((a ((primitive read))))
+  (lambda () a))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+  ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
+     (primcall $cpref cp_0 (constant 0))))
+  (bind ((a_0 (funcall (primref read))))
+    (fix ((tmp_0 (closure-maker
+                    (code-loc asmlabel:anonymous:clambda)
+                    (freevars: a_0))))
+      tmp_0)))
+@end example
+
+@noindent
+and the following core language expression, defining an assigned free
+variable:
+
+@example
+(let ((a ((primitive read))))
+  (lambda ()
+    (begin
+      (set! a '1)
+      a)))
+@end example
+
+@noindent
+is transformed into:
+
+@example
+(codes
+ ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
+     (seq
+       (primcall $vector-set!
+                 (primcall $cpref cp_0 (constant 0))
+                 (constant 0)
+                 (constant 1))
+       (primcall $vector-ref
+                 (primcall $cpref cp_0 (constant 0))
+                 (constant 0)))))
+ (bind ((a_0 (funcall (primref read))))
+   (bind ((a_1 (primcall vector a_0)))
+     (fix ((tmp_0 (closure-maker
+                     (code-loc asmlabel:anonymous:clambda)
+                     (freevars: a_1))))
+       tmp_0))))
+@end example
 
 @c page
 @node compiler engine

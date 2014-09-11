@@ -4125,12 +4125,9 @@
     ;;Process a FIX-defined binding.
     ;;
     ;;LHS is the struct instance of type VAR to which the function generated from RHS
-    ;;will be  bound.  This VAR struct  represents the machine word  (CPU register or
-    ;;memory location) from which the code can  load a reference to the closure to be
-    ;;stored in the CPR (Closure Pointer Register); such reference allows the body of
-    ;;a run-time code  object to access the  free variables upon which  it is closed.
-    ;;From now  on this LHS VAR  is associated to the  CLAMBDA, and it will  never be
-    ;;substituted with another VAR.
+    ;;will be bound.  This VAR struct is present in reference position in the body of
+    ;;the  CLAMBDA clauses;  after  CLAMBDA  lifting, a  further  compiler pass  will
+    ;;process these references.
     ;;
     (struct-case rhs
       ((clambda label clause* cp.unset freevar* name)
@@ -5160,13 +5157,11 @@
 
 
 (module (rewrite-freevar-references)
-  ;;Despite  its  name, the  purpose  of  this module  is  *not*  to remove  the  FIX
-  ;;structures from recordized code.
+  ;;This module  rewrites references to  free variables  in closure objects  to forms
+  ;;actually accessing the values from the run-time closure object.
   ;;
-  ;;FIXME The following description is not quite correct (Marco Maggi; Oct 15, 2012).
-  ;;Knowing  that, in  general,  every  closure has  multiple  clauses (generated  by
-  ;;CASE-LAMBDA),  let's think  of the  closure  built in  object as  a memory  block
-  ;;holding a slot for every free variable:
+  ;;We know that  a Scheme closure object (satisfiying the  predicate PROCEDURE?) has
+  ;;memory layout:
   ;;
   ;;                  0   1   2   3   4   5
   ;;   |------------|---|---|---|---|---|---| closure object
@@ -5175,7 +5170,9 @@
   ;;    pointer to     one slot for every
   ;;    binary code    free variable
   ;;
-  ;;the purpose of this module is to:
+  ;;in which a slot for every free  variable is allocated to: directly hold the value
+  ;;for unassigned  variables; hold a  reference to  the mutable vector  for assigned
+  ;;variables.  The purpose of this module is to:
   ;;
   ;;1. For  every closure's  clause make  a new  struct instance  of type  VAR called
   ;;   CPVAR.
@@ -5185,7 +5182,7 @@
   ;;
   ;;3.  In every  closure  clause's body:  find  every struct  instance  of type  VAR
   ;;    referencing  a closure's  free  variable  and  replace  it with  a  primitive
-  ;;   operation %CPREF retrieving the referenced  object from the associated slot in
+  ;;   operation $CPREF retrieving the referenced  object from the associated slot in
   ;;   the data area of the closure built in object.
   ;;
   ;;4. Transform every ?CLOSURE-MAKER not appearing as RHS of a FIX into:
@@ -5248,6 +5245,11 @@
 	  ((clambda-case info body)
 	   (struct-case info
 	     ((case-info label args proper?)
+	      ;;The VAR  struct CPVAR  represents the machine  word (CPU  register or
+	      ;;memory location)  from which  the code  can load  a reference  to the
+	      ;;closure  to be  stored in  the CPR  (Closure Pointer  Register); such
+	      ;;reference allows  the body of  a run-time  code object to  access the
+	      ;;free variables upon which it is closed.
 	      (let* ((cpvar (make-unique-var 'cp))
 		     ;;Prepend to the properised list of formals the VAR representing
 		     ;;the machine word holding the current closure pointer.
@@ -5367,7 +5369,7 @@
       ;;If X references the closure itself: replace it with CPVAR.
       ;;
       ;;If  X references  a  closure's free  variable: replace  it  with a  primitive
-      ;;operation %CPREF retrieving the referenced object from the associated slot in
+      ;;operation $CPREF retrieving the referenced object from the associated slot in
       ;;the data area of the closure built in object.
       ;;
       (if (eq? x main-cpvar)
