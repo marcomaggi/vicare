@@ -59,6 +59,8 @@
   ;;NOTE Every PRELEX struct in the  input expression must represent a proper lexical
   ;;binding defined by a BIND or FIX struct.
   ;;
+  ;;NOTE This module stores a number in the field OPERAND of the PRELEX structs.
+  ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
 
   (define-fluid-override __who__
@@ -73,6 +75,11 @@
 (module (V)
 
   (define (V x env)
+    ;;
+    ;;ENV must be an association list with the format:
+    ;;
+    ;;   ((?number . ?prelex-type) ...)
+    ;;
     (struct-case x
       ((constant k)
        (values x env (%determine-constant-type k)))
@@ -134,91 +141,120 @@
 		    (((x.conseq env1 t1) (V x.conseq env))
 		     ((x.altern env2 t2) (V x.altern env)))
 		  (values (make-conditional x.test x.conseq x.altern)
-			  (or-envs env1 env2)
+			  (%or-envs env1 env2)
 			  (T:or t1 t2)))))))
 
       ((bind lhs* rhs* body)
-       (let-values (((rhs* env t*) (V* rhs* env)))
-	 (for-each number! lhs*)
+       (receive (rhs* env t*)
+	   (V* rhs* env)
+	 ;;Assign a unique number to each  PRELEX.  Remember that the RHS expressions
+	 ;;of a BIND do not reference the LHS PRELEX structs.
+	 (for-each %assign-index-to-prelex! lhs*)
 	 (let ((env (extend-env* lhs* t* env)))
-	   (let-values (((body env t) (V body env)))
+	   (receive (body env t)
+	       (V body env)
 	     (values (make-bind lhs* rhs* body) env t)))))
 
       ((fix lhs* rhs* body)
-       (for-each number! lhs*)
-       (let-values (((rhs* env t*) (V* rhs* env)))
+       ;;Assign a unique number to each PRELEX.  Remember that the RHS expressions of
+       ;;a FIX might reference the LHS PRELEX structs.
+       (for-each %assign-index-to-prelex! lhs*)
+       (receive (rhs* env t*)
+	   (V* rhs* env)
 	 (let ((env (extend-env* lhs* t* env)))
-	   (let-values (((body env t) (V body env)))
+	   (receive (body env t)
+	       (V body env)
 	     (values (make-fix lhs* rhs* body) env t)))))
 
-      ((clambda label cls* cp free name)
+      ((clambda label clause* cp free name)
        (values (make-clambda label
-			     (map (lambda (x)
-				    (struct-case x
-				      ((clambda-case info body)
-				       (for-each number! (case-info-args info))
-				       (let-values (((body env t) (V body env)))
-					 ;;dropped env and t
-					 (make-clambda-case info body)))))
-			       cls*)
+			     ($map/stx (lambda (clause)
+					 (struct-case clause
+					   ((clambda-case info body)
+					    ;;Assign a unique number to each PRELEX.
+					    (for-each %assign-index-to-prelex! (case-info-args info))
+					    (receive (body env t)
+						(V body env)
+					      ;;We drop the ENV and T of the body.
+					      (make-clambda-case info body)))))
+			       clause*)
 			     cp free name)
-	       env
-	       T:procedure))
+	       env T:procedure))
 
       ((funcall rator rand*)
-       (let-values (((rator rator-env rator-val) (V  rator env))
-		    ((rand* rand*-env rand*-val) (V* rand* env)))
+       (let-values
+	   (((rator rator.env rator.tag) (V  rator env))
+	    ((rand* rand*.env rand*.tag) (V* rand* env)))
 	 (%apply-funcall rator     rand*
-			 rator-val rand*-val
-			 rator-env rand*-env)))
+			 rator.tag rand*.tag
+			 rator.env rand*.env)))
 
       ((forcall rator rand*)
-       (let-values (((rand* rand*-env rand*-val) (V* rand* env)))
-	 (values (make-forcall rator rand*) rand*-env T:object)))
+       (receive (rand* rand*.env rand*.tag)
+	   (V* rand* env)
+	 ;;FIXME Maybe, by inspecting the RATOR, we could determine a better type tag
+	 ;;than "T:object"; remember that the type tag  here is the one of the object
+	 ;;returned by  the RATOR, which  is a  C language foreign  function.  (Marco
+	 ;;Maggi; Fri Sep 12, 2014)
+	 (values (make-forcall rator rand*) rand*.env T:object)))
 
       (else
-       (error __who__ "invalid expression" (unparse-recordized-code x)))))
-
-;;; --------------------------------------------------------------------
+       (compiler-internal-error __who__
+	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (V* x* env)
+    ;;Apply V to all the structs in the list X*; gather the environment.
+    ;;
     (if (null? x*)
 	(values '() env '())
       (let-values (((x  env1 t)  (V  ($car x*) env))
 		   ((x* env2 t*) (V* ($cdr x*) env)))
 	(values (cons x x*)
-		(and-envs env1 env2)
+		(%and-envs env1 env2)
 		(cons t t*)))))
 
-  (define number!
+;;; --------------------------------------------------------------------
+
+  (define %assign-index-to-prelex!
     (let ((i 0))
       (lambda (x)
 	(set-prelex-operand! x i)
 	(set! i (+ i 1)))))
 
-  (define (%determine-prelex-type x env)
-    (cond ((eq? env 'bottom)
-	   #f)
-	  ((assq (prelex-operand x) env)
+  (define (%determine-prelex-type prel env)
+    ;;Search the alist ENV  for an entry whose key is the index  of the PRELEX struct
+    ;;PREL;  if found:  return a  record  of type  T  representing the  type of  PREL
+    ;;previously determined, otherwise return "T:object".
+    ;;
+    (cond ((assq (prelex-operand prel) env)
 	   => cdr)
 	  (else
 	   T:object)))
 
-  (define (%apply-funcall rator rand* rator-val rand*-val rator-env rand*-env)
-    (let ((env   (and-envs rator-env rand*-env))
-	  (rand* (map %annotate rand* rand*-val)))
-      (struct-case rator
-	((primref op)
-	 (apply-primcall op rand* env))
-	(else
-	 (values (make-funcall (%annotate rator rator-val) rand*)
-		 env
-		 T:object)))))
+  (module (%apply-funcall)
+    ;;Here!!!   The whole  purpose of  determining type  tags is  to wrap  into KNOWN
+    ;;structs the rator and the rands of FUNCALL structs.
+    ;;
+    (define (%apply-funcall rator rand* rator.tag rand*.tag rator.env rand*.env)
+      (let ((env   (%and-envs rator.env rand*.env))
+	    (rand* ($map/stx %annotate rand* rand*.tag)))
+	(struct-case rator
+	  ((primref op)
+	   ;;It is a core primitive application, either lexical primitive function or
+	   ;;primitive operation: we process it specially.
+	   (%apply-primcall op rand* env))
+	  (else
+	   (values (make-funcall (%annotate rator rator.tag) rand*)
+		   env T:object)))))
 
-  (define (%annotate x t)
-    (if (T=? t T:object)
-  	x
-      (make-known x t)))
+    (define (%annotate x t)
+      (if (T=? t T:object)
+	  ;;It is useless  to tag a value with "T:object",  because any Scheme object
+	  ;;has tag "T:object".
+	  x
+	(make-known x t)))
+
+    #| end of module: %APPLY-FUNCALL |# )
 
   #| end of module: V |# )
 
@@ -257,9 +293,13 @@
   #| end of module: %DETERMINE-CONSTANT-TYPE |# )
 
 
-(module (apply-primcall)
-
-  (define (apply-primcall op rand* env)
+(module (%apply-primcall)
+  ;;This  module processes  a core  primitive application,  either lexical  primitive
+  ;;function or primitive operation:
+  ;;
+  ;;   (funcall (primref ?op) ?rand ...)
+  ;;
+  (define (%apply-primcall op rand* env)
     (define (return t)
       (values (make-funcall (mk-primref op) rand*) env t))
     (define-syntax %inject
@@ -275,10 +315,10 @@
        (return T:pair))
 
       (($car cdr
-	    caar cadr cdar cddr
-	    caaar caadr cadar caddr cdaar cdadr cddar cdddr
-	    caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
-	    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
+	     caar cadr cdar cddr
+	     caaar caadr cadar caddr cdaar cdadr cddar cdddr
+	     caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
+	     cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
        (%inject T:object T:pair))
 
       ((set-car! set-cdr!)
@@ -370,7 +410,7 @@
        (return T:fixnum))
 
       (else
-       (return T:object)))) ;;end of APPLY-PRIMCALL
+       (return T:object)))) ;;end of %APPLY-PRIMCALL
 
 ;;; --------------------------------------------------------------------
 
@@ -428,10 +468,28 @@
 
     #| end of module: inject* |# )
 
-  #| end of module: apply-primcall |# )
+  #| end of module: %APPLY-PRIMCALL |# )
 
 
 ;;;; env functions
+;;
+;;Environments have the purpose  to map PRELEX structs to the type  tag of the values
+;;they reference.  An environment is an association list with the format:
+;;
+;;   ((?number . ?prelex-type) ...)
+;;
+;;where:  ?NUMBER  is an  exact  integer  uniquely  associated  to a  PRELEX  struct;
+;;?PRELEX-TYPE  is a  record of  type  T representing  the type  informations of  the
+;;PRELEX.  The entries are kept sorted in the alist:
+;;
+;;   ((0 . ?prelex-type-0)
+;;    (1 . ?prelex-type-1)
+;;    (2 . ?prelex-type-2)
+;;    ...)
+;;
+;;to make  it faster to  merge multiple  enviroments and search  for an entry  with a
+;;given key.
+;;
 
 (define-inline-constant EMPTY-ENV
   '())
@@ -443,20 +501,29 @@
     env))
 
 (define (extend-env x t env)
+  ;;Add the given PRELEX and the record of type T to the environment.  Return the new
+  ;;environment.
+  ;;
+  #;(assert (prelex? x))
+  #;(assert (T? x))
   (if (T=? t T:object)
+      ;;It is useless to  tag a value with "T:object", because  any Scheme object has
+      ;;tag "T:object"; so we skip this PRELEX.
       env
-    (let ((x (prelex-operand x)))
+    (let ((x.index (prelex-operand x)))
       (let recur ((env env))
 	(if (or (null? env)
-		(< x (caar env)))
-	    (cons (cons x t) env)
+		;;If this is true: we can stop  recursing because we know in a sorted
+		;;alist all the following entries have greater key.
+		(< x.index (caar env)))
+	    (cons (cons x.index t) env)
 	  (cons ($car env) (recur ($cdr env))))))))
 
 ;;; --------------------------------------------------------------------
 
-(module (or-envs)
+(module (%or-envs)
 
-  (define-syntax-rule (or-envs env1 env2)
+  (define-syntax-rule (%or-envs env1 env2)
     (%merge-envs env1 env2))
 
   (define (%merge-envs env1 env2)
@@ -489,16 +556,18 @@
 
   (define (cons-env x v env)
     (if (T=? v T:object)
+	;;It is useless to tag a value with "T:object", because any Scheme object has
+	;;tag "T:object"; so we skip this PRELEX.
   	env
       (cons (cons x v) env)))
 
-  #| end of module: or-envs |# )
+  #| end of module: %or-envs |# )
 
 ;;; --------------------------------------------------------------------
 
-(module (and-envs)
+(module (%and-envs)
 
-  (define-syntax-rule (and-envs env1 env2)
+  (define-syntax-rule (%and-envs env1 env2)
     (%merge-envs env1 env2))
 
   (define (%merge-envs env1 env2)
@@ -530,10 +599,12 @@
 
   (define (cons-env x v env)
     (if (T=? v T:object)
+	;;It is useless to tag a value with "T:object", because any Scheme object has
+	;;tag "T:object"; so we skip this PRELEX.
   	env
       (cons (cons x v) env)))
 
-  #| end of module: and-envs |# )
+  #| end of module: %and-envs |# )
 
 
 ;;;; miscellaneous stuff

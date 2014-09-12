@@ -71,6 +71,9 @@
    ;;
    ;;The names are self explanatory with the following exceptions:
    ;;
+   ;;T:object?
+   ;;   All the Scheme objects satisfy this validator.
+   ;;
    ;;T:other-number?
    ;;   Tests  for numbers that  are neither  fixnums nor flonums:  ratnums, bignums,
    ;;   compnums, cflonums.
