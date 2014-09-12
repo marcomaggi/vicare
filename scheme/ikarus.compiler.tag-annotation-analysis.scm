@@ -90,27 +90,49 @@
        (values x env T:procedure))
 
       ((seq e0 e1)
-       (receive (e0 env t)
+       (receive (e0^ env^ t)
 	   (V e0 env)
 	 (if (eq? (T:object? t) 'no)
-	     (values e0 env t)
-	   (receive (e1 env t)
-	       (V e1 env)
-	     (values (make-seq e0 e1) env t)))))
+	     ;;Evaluating E0 will  result in a raise exception, so  there is no point
+	     ;;in including E1.
+	     (if (option.strict-r6rs)
+		 (values e0 env t)
+	       (compiler-internal-error __who__
+		 "invalid tag annotation from expression analysis"
+		 (unparse-recordized-code e0) t))
+	   (receive (e1^ env^^ t)
+	       (V e1 env^)
+	     (values (make-seq e0^ e1^) env^^ t)))))
 
       ((conditional x.test x.conseq x.altern)
-       (let-values (((x.test env t) (V x.test env)))
+       (receive (x.test env t)
+	   (V x.test env)
 	 (cond ((eq? (T:object? t) 'no)
 		(values x.test env t))
 	       ((eq? (T:false? t) 'yes)
-		(let-values (((x.altern env t) (V x.altern env)))
+		;;We know the test is false, so do the transformation:
+		;;
+		;;   (conditional ?test ?conseq ?altern)
+		;;   ==> (seq ?test ?conseq)
+		;;
+		;;we conserve ?TEST for its side effects.
+		(receive (x.altern env t)
+		    (V x.altern env)
 		  (values (make-seq x.test x.altern) env t)))
 	       ((eq? (T:false? t) 'no)
-		(let-values (((x.conseq env t) (V x.conseq env)))
+		;;We know the test is true, so do the transformation:
+		;;
+		;;   (conditional ?test ?conseq ?altern)
+		;;   ==> (seq ?test ?altern)
+		;;
+		;;we conserve ?TEST for its side effects.
+		(receive (x.conseq env t)
+		    (V x.conseq env)
 		  (values (make-seq x.test x.conseq) env t)))
 	       (else
-		(let-values (((x.conseq env1 t1) (V x.conseq env))
-			     ((x.altern env2 t2) (V x.altern env)))
+		(let-values
+		    (((x.conseq env1 t1) (V x.conseq env))
+		     ((x.altern env2 t2) (V x.altern env)))
 		  (values (make-conditional x.test x.conseq x.altern)
 			  (or-envs env1 env2)
 			  (T:or t1 t2)))))))
@@ -204,17 +226,18 @@
 (module (%determine-constant-type)
 
   (define (%determine-constant-type x)
-    (cond ((number? x)    (%numeric x))
-	  ((boolean? x)   (if x T:true T:false))
-	  ((null? x)      T:null)
-	  ((char? x)      T:char)
-	  ((string? x)    T:string)
-	  ((vector? x)    T:vector)
-	  ((pair? x)      T:pair)
-	  ((eq? x (void)) T:void)
-	  (else           T:object)))
+    (cond ((number?     x)   (%determine-numeric-constant-type x))
+	  ((boolean?    x)   (if x T:true T:false))
+	  ((null?       x)   T:null)
+	  ((char?       x)   T:char)
+	  ((string?     x)   T:string)
+	  ((vector?     x)   T:vector)
+	  ((pair?       x)   T:pair)
+	  ((bytevector? x)   T:bytevector)
+	  ((eq? x (void))    T:void)
+	  (else              T:object)))
 
-  (define (%numeric x)
+  (define (%determine-numeric-constant-type x)
     (cond ((fixnum? x)
 	   (%sign x T:fixnum))
 	  ((flonum? x)
@@ -297,15 +320,13 @@
       ((char->integer)
        (%inject T:fixnum T:char))
 
-      ((bytevector-u8-ref bytevector-s8-ref
-			  bytevector-u16-native-ref bytevector-s16-native-ref)
+      ((bytevector-u8-ref bytevector-s8-ref bytevector-u16-native-ref bytevector-s16-native-ref)
        (%inject T:fixnum T:bytevector T:fixnum))
 
       ((bytevector-u16-ref bytevector-s16-ref)
        (%inject T:fixnum T:bytevector T:fixnum T:symbol))
 
-      ((bytevector-u8-set! bytevector-s8-set!
-			   bytevector-u16-native-set! bytevector-s16-native-set!)
+      ((bytevector-u8-set! bytevector-s8-set! bytevector-u16-native-set! bytevector-s16-native-set!)
        (%inject T:void T:bytevector T:fixnum T:fixnum))
 
       ((bytevector-u16-set! bytevector-s16-set!)

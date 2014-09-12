@@ -81,6 +81,14 @@
    ;;T:other-inexact?
    ;;   Tests for numbers that are inexact, but not flonums: compnums, cflonums.
    ;;
+   ;;T:other-object?
+   ;;   Tests for objects that are not:
+   ;;
+   ;;	   T:symbol	T:bytevector	T:void		T:char
+   ;;      T:null	T:pair		T:vector	T:string
+   ;;      T:procedure	T:false		T:true		T:other-exact
+   ;;      T:fixnum	T:other-inexact	T:flonum
+   ;;
    T:object?		T:immediate?		T:nonimmediate?
    T:boolean?		T:non-false?
    T:number?		T:exact?		T:inexact?
@@ -128,16 +136,20 @@
 	     (define (%test-bits bits predefined-type-bits)
 	       (cond (($fxzero? ($fxlogand bits predefined-type-bits))
 		      ;;None of the PREDEFINED-TYPE-BITS are  set in BITS; some other
-		      ;;bits may be set in BITS.  Examples:
+		      ;;bits may be set in BITS.  Bits examples:
 		      ;;
 		      ;;   BITS   := #b110000
 		      ;;   PREDEF := #b001111
 		      ;;
-		      ;;BITS and PREDEF is disjunct.
+		      ;;BITS and PREDEF is disjunct.  Validator examples:
+		      ;;
+		      ;;   (T:string? T:fixnum)			=> no
+		      ;;   (T:string? (T:or T:fixnum T:pair))	=> no
+		      ;;
 		      'no)
 		     (($fx= predefined-type-bits ($fxlogor bits predefined-type-bits))
 		      ;;All the  BITS are also  set in PREDEFINED-TYPE-BITS;  some of
-		      ;;the PREDEFINED-TYPE-BITS are not set in BITS.  Examples:
+		      ;;the PREDEFINED-TYPE-BITS are not set in BITS.  Bits examples:
 		      ;;
 		      ;;   BITS   := #b001111
 		      ;;   PREDEF := #b001111
@@ -145,14 +157,23 @@
 		      ;;   BITS   := #b000011
 		      ;;   PREDEF := #b001111
 		      ;;
-		      ;;BITS is equal to, or a subset of, PREDEF.
+		      ;;BITS is equal to, or a subset of, PREDEF.  Validator examples:
+		      ;;
+		      ;;   (T:number? T:number)			=> yes
+		      ;;   (T:number? T:fixnum)			=> yes
+		      ;;   (T:exact?  T:fixnum)			=> yes
+		      ;;
 		      'yes)
 		     (else
 		      ;;Some of the PREDEFINED-TYPE-BITS are set in BITS; some of the
-		      ;;BITS are not set in PREDEFINED-TYPE-BITS.  Examples:
+		      ;;BITS are not set in PREDEFINED-TYPE-BITS.  Bits examples:
 		      ;;
 		      ;;   BITS   := #b110011
 		      ;;   PREDEF := #b001111
+		      ;;
+		      ;;Validator examples:
+		      ;;
+		      ;;   (T:string? (T:or T:fixnum T:string))	=> maybe
 		      ;;
 		      'maybe)))
 
@@ -420,6 +441,7 @@
        (%do-check '?expr ?expr '?expected))))
 
   (check (T:object? T:object)			=> yes)
+  (check (T:object? T:other-object)		=> yes)
   (check (T:object? T:true)			=> yes)
   (check (T:object? (T:and T:true T:false))	=> no)
 
@@ -486,16 +508,26 @@
   (check (T:other-inexact? T:number)		=> maybe)
   (check (T:other-inexact? T:string)		=> no)
 
-  ;;Tests for numbers, but neither fixnums nor flonums.
+  ;;Tests  for bignum  and  ratnum numbers;  but neither  fixnums,  nor flonums,  nor
+  ;;compnums, nor cflonums.
   (check (T:other-number? T:other-number)	=> yes)
+  (check (T:other-number? T:number)		=> maybe)
   (check (T:other-number? T:fixnum)		=> no)
   (check (T:other-number? T:flonum)		=> no)
-  (check (T:other-number? T:number)		=> maybe)
   (check (T:other-number? T:exact)		=> maybe)
   (check (T:other-number? T:inexact)		=> maybe)
   (check (T:other-number? T:other-exact)	=> yes) ;T:other-exact is exact but not fixnum
   (check (T:other-number? T:other-inexact)	=> yes) ;T:other-inexact is inexact but not flonum
   (check (T:other-number? T:string)		=> no)
+
+  ;;Multitype tests.
+  (check (T:fixnum? (T:or T:fixnum T:flonum))	=> maybe)
+  (check (T:flonum? (T:or T:fixnum T:flonum))	=> maybe)
+  (check (T:string? (T:or T:fixnum T:flonum))	=> no)
+
+  (check (T:fixnum? (T:or T:fixnum T:string))	=> maybe)
+  (check (T:string? (T:or T:fixnum T:string))	=> maybe)
+  (check (T:pair?   (T:or T:fixnum T:string))	=> no)
 
   #| end of module |# )
 
