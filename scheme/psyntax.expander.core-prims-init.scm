@@ -2200,7 +2200,6 @@
   ;; $strip-source-info
   ;; $generate-debug-calls
 
-  ;; $tag-analysis-output
   ;; $assembler-output
   ;; $optimizer-output
 

@@ -47,7 +47,6 @@
      ;; middle pass inspection
      (assembler-output				$assembler-output)
      (optimizer-output				$optimizer-output)
-     (tag-analysis-output			$tag-analysis-output)
 
      (compile-core-expr->code			$compile-core-expr->code)
      (recordize					$recordize)
@@ -96,9 +95,7 @@
 		  eval-core			current-core-eval
 		  compile-core-expr-to-port	compile-core-expr
 
-		  assembler-output
-		  optimizer-output
-		  tag-analysis-output
+		  assembler-output		optimizer-output
 
 		  cp0-effort-limit		cp0-size-limit
 		  current-letrec-pass		generate-debug-calls
@@ -3463,6 +3460,7 @@
 
 ;;;; some other external code
 
+(include "ikarus.compiler.ontology.ss" #t)
 (include "ikarus.compiler.tag-annotation-analysis.ss" #t)
 
 
@@ -5678,6 +5676,7 @@
   ;;Being  that this  function is  used only  when signaling  errors: it
   ;;makes no sense to use unsafe operations: let's keep it safe!!!
   ;;
+  (import SCHEME-OBJECTS-ONTOLOGY)
   (struct-case x
     ((constant c)
      `(quote ,c))
@@ -5877,6 +5876,8 @@
   ;;
   ;;other values are not processed and are returned as they are.
   ;;
+  (import SCHEME-OBJECTS-ONTOLOGY)
+
   (define-fluid-override __who__
     (identifier-syntax 'unparse-recordized-code/sexp))
 
@@ -6114,7 +6115,10 @@
   ;;
   ;;other values are not processed and are returned as they are.
   ;;
-  (define who 'unparse-recordized-code/pretty)
+  (import SCHEME-OBJECTS-ONTOLOGY)
+
+  (define-fluid-override __who__
+    (identifier-syntax 'unparse-recordized-code/pretty))
 
   (define (unparse-recordized-code/pretty input-expr)
     ;;

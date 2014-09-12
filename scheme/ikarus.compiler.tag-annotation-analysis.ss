@@ -15,21 +15,58 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(include "ikarus.compiler.ontology.ss" #t)
+(module (introduce-tags)
+  ;;This compiler pass  analyses the type of values returned  by expressions with the
+  ;;purpose of tranforming FUNCALL recordised forms:
+  ;;
+  ;;   (funcall ?rator (?rand ...))
+  ;;
+  ;;into:
+  ;;
+  ;;   (funcall (known ?rator ?rator-type) ((known ?rand ?rand-type) ...))
+  ;;
+  ;;where: ?RATOR-TYPE  is the type  specification of  the value returned  by ?RATOR;
+  ;;each  ?RAND-TYPE  is  the  type  specification  of  the  value  returned  by  the
+  ;;corresponding  ?RAND.  The  type  specifications are  records  wrapping an  exact
+  ;;integer which encodes in its bits the type informations.
+  ;;
+  ;;The  structs of  type  KNOWN  are annotation  "tags"  consumed  by the  functions
+  ;;generating  the implementation  of the  core primitive  operations; for  example,
+  ;;given the recordised code:
+  ;;
+  ;;   (funcall (primref vector-length) (?rand))
+  ;;
+  ;;which makes use  of the primitive operation VECTOR-LENGTH:
+  ;;
+  ;;*  If no  type tag  is  assigned to  ?RAND: the  implementation of  VECTOR-LENGTH
+  ;;   integrated at  the call  site must  include a  validation of  ?RAND as  vector
+  ;;  object.
+  ;;
+  ;;* If the tag "T:vector" is introduced for the operand:
+  ;;
+  ;;     (funcall (primref vector-length) ((known ?rand (T:vector))))
+  ;;
+  ;;  the  implementation of  VECTOR-LENGTH integrated  at the  call site  does *not*
+  ;;  include a validation of ?RAND as vector object.
+  ;;
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		prelex		primref
+  ;;   bind		fix		conditional
+  ;;   seq		clambda
+  ;;   forcall		funcall
+  ;;
+  ;;NOTE Every PRELEX struct in the  input expression must represent a proper lexical
+  ;;binding defined by a BIND or FIX struct.
+  ;;
+  (import SCHEME-OBJECTS-ONTOLOGY)
 
-(module (introduce-tags tag-analysis-output)
-  (define who 'introduce-tags)
-
-  (define tag-analysis-output
-    (make-parameter #f))
-
-  (define-inline-constant EMPTY-ENV
-    '())
+  (define-fluid-override __who__
+    (identifier-syntax 'introduce-tags))
 
   (define (introduce-tags x)
-    (let-values (((x env t) (V x EMPTY-ENV)))
-      (when (tag-analysis-output)
-	(pretty-print (unparse-recordized-code/pretty x)))
+    (receive (x env t)
+	(V x EMPTY-ENV)
       x))
 
 
@@ -38,19 +75,27 @@
   (define (V x env)
     (struct-case x
       ((constant k)
-       (values x env (constant-type k)))
+       (values x env (%determine-constant-type k)))
 
       ((prelex)
-       (values x env (%lookup x env)))
+       ;;We search  the PRELEX in  the environment collected  so far to  retrieve its
+       ;;type tag  (previously determined when  processing the RHS expression  of the
+       ;;binding struct that defined the PRELEX's binding).
+       (values x env (%determine-prelex-type x env)))
 
       ((primref op)
+       ;;This PRIMREF is standalone, it is not the operator of a FUNCALL; so it is an
+       ;;error if it references a core primitive operation that is not also a lexical
+       ;;core primitive function.
        (values x env T:procedure))
 
       ((seq e0 e1)
-       (let-values (((e0 env t) (V e0 env)))
+       (receive (e0 env t)
+	   (V e0 env)
 	 (if (eq? (T:object? t) 'no)
 	     (values e0 env t)
-	   (let-values (((e1 env t) (V e1 env)))
+	   (receive (e1 env t)
+	       (V e1 env)
 	     (values (make-seq e0 e1) env t)))))
 
       ((conditional x.test x.conseq x.altern)
@@ -110,7 +155,7 @@
 	 (values (make-forcall rator rand*) rand*-env T:object)))
 
       (else
-       (error who "invalid expression" (unparse-recordized-code x)))))
+       (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -129,7 +174,7 @@
 	(set-prelex-operand! x i)
 	(set! i (+ i 1)))))
 
-  (define (%lookup x env)
+  (define (%determine-prelex-type x env)
     (cond ((eq? env 'bottom)
 	   #f)
 	  ((assq (prelex-operand x) env)
@@ -156,9 +201,9 @@
   #| end of module: V |# )
 
 
-(module (constant-type)
+(module (%determine-constant-type)
 
-  (define (constant-type x)
+  (define (%determine-constant-type x)
     (cond ((number? x)    (%numeric x))
 	  ((boolean? x)   (if x T:true T:false))
 	  ((null? x)      T:null)
@@ -186,7 +231,7 @@
 		   ((= x 0) T:zero)
 		   (else    t))))
 
-  #| end of module: constant-type |# )
+  #| end of module: %DETERMINE-CONSTANT-TYPE |# )
 
 
 (module (apply-primcall)
@@ -367,11 +412,14 @@
 
 ;;;; env functions
 
+(define-inline-constant EMPTY-ENV
+  '())
+
 (define (extend-env* x* v* env)
-  (if (null? x*)
-      env
-    (extend-env* ($cdr x*) ($cdr v*)
-		 (extend-env ($car x*) ($car v*) env))))
+  (if (pair? x*)
+      (extend-env* ($cdr x*) ($cdr v*)
+		   (extend-env ($car x*) ($car v*) env))
+    env))
 
 (define (extend-env x t env)
   (if (T=? t T:object)
@@ -387,7 +435,7 @@
 
 (module (or-envs)
 
-  (define-inline (or-envs env1 env2)
+  (define-syntax-rule (or-envs env1 env2)
     (%merge-envs env1 env2))
 
   (define (%merge-envs env1 env2)
@@ -410,6 +458,7 @@
 	    ((< x2 x1)
 	     (%merge-envs1 a1 env1 env2))
 	    (else
+	     #;(assert (>= x2 x1))
 	     (%merge-envs1 a2 env2 env1)))))
 
   (define (%merge-envs1 a1 env1 env2)
@@ -428,7 +477,7 @@
 
 (module (and-envs)
 
-  (define-inline (and-envs env1 env2)
+  (define-syntax-rule (and-envs env1 env2)
     (%merge-envs env1 env2))
 
   (define (%merge-envs env1 env2)
@@ -554,3 +603,6 @@
 #| end of module: introduce-tags |# )
 
 ;;; end of file
+;; Local Variables:
+;; mode: vicare
+;; End:

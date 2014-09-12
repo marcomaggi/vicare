@@ -3092,7 +3092,6 @@
     ($enabled-function-application-integration?	$compiler)
     ($descriptive-labels			$compiler)
 
-    ($tag-analysis-output			$compiler)
     ($assembler-output				$compiler)
     ($optimizer-output				$compiler)
 

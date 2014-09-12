@@ -103,7 +103,7 @@
 
 
 (module (alt-cogen.specify-representation)
-  (import CORE-PRIMITIVE-OPERATIONS)
+  (import CORE-PRIMITIVE-OPERATIONS SCHEME-OBJECTS-ONTOLOGY)
 
   (define (alt-cogen.specify-representation x)
     (Program x))

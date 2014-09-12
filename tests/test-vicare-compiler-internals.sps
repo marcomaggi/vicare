@@ -1793,6 +1793,56 @@
   #f)
 
 
+(parametrise ((check-test-name	'introduce-tags))
+
+  (define (%introduce-tags core-language-form)
+    (let* ((D (compiler.$recordize core-language-form))
+	   (D (compiler.$optimize-direct-calls D))
+	   (D (compiler.$optimize-letrec D))
+	   #;(D (compiler.$source-optimize D))
+	   (D (compiler.$rewrite-references-and-assignments D))
+	   (D (compiler.$introduce-tags D))
+	   (S (compiler.$unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%introduce-tags (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+;;; --------------------------------------------------------------------
+
+  (doit (let ((f (lambda (x) x)))
+	  (f '1))
+	(bind ((f_0 (lambda (x_0) x_0)))
+	  (funcall (known f_0
+			  (T:procedure T:non-false T:nonimmediate T:object))
+	    (known (constant 1)
+		   (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object)))))
+
+  (doit (let ((f (lambda (x) x)))
+	  (f '"1"))
+	(bind ((f_0 (lambda (x_0) x_0)))
+	  (funcall (known f_0
+			  (T:procedure T:non-false T:nonimmediate T:object))
+	    (known (constant "1")
+		   (T:string T:non-false T:nonimmediate T:object)))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'sanitise-bindings))
 
   (define (%sanitize-bindings core-language-form)
