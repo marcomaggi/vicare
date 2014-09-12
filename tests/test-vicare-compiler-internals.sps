@@ -1799,6 +1799,8 @@
     (let* ((D (compiler.$recordize core-language-form))
 	   (D (compiler.$optimize-direct-calls D))
 	   (D (compiler.$optimize-letrec D))
+	   ;;By skipping source optimisation we  make it simpler to write inspectable
+	   ;;test cases.
 	   #;(D (compiler.$source-optimize D))
 	   (D (compiler.$rewrite-references-and-assignments D))
 	   (D (compiler.$introduce-tags D))
@@ -1839,6 +1841,53 @@
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant "1")
 		   (T:string T:non-false T:nonimmediate T:object)))))
+
+;;; --------------------------------------------------------------------
+
+  ;;The following tests are related.  We  test what happens when a variable reference
+  ;;is used as operand for CDR; the primitive CDR accepts a pair as operand.
+  (begin
+    ;;Here  the variable  X  is of  known  type from  the start:  it  is tagged  with
+    ;;"T:pair".
+    (doit* (let ((f (lambda (y) y))
+		 (x '(1 . 2)))
+	     (f (cdr x)))
+	   (bind ((f_0 (lambda (y_0) y_0))
+		  (x_0 (constant (1 . 2))))
+	     (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
+	       (funcall (primref cdr)
+		 (known x_0 (T:pair T:non-false T:nonimmediate T:object))))))
+
+    ;;Here the variable X is of unknown type: it is left untagged.
+    (doit* (let ((f (lambda (y) y))
+		 (x (read)))
+	     (f (cdr x)))
+	   (bind ((f_0 (lambda (y_0) y_0))
+		  (x_0 (funcall (primref read))))
+	     (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
+	       (funcall (primref cdr) x_0))))
+
+    ;;Here the variable X is of unknown type  when its binding is created: it is left
+    ;;untagged.   But,  after  being  used  as argument  for  X  without  raising  an
+    ;;exception: it is known that its type  is "T:pair"; so the second reference to X
+    ;;is tagged with "T:pair".
+    ;;
+    ;;We know  that a "wrong  operand type" exception  is non-continuable; so  if CDR
+    ;;raises an exception because X is not a pair: the control flow cannot come back.
+    (doit* (let ((f (lambda (y) y))
+		 (x (read)))
+	     (begin
+	       (f (cdr x))
+	       (f x)))
+	   (bind ((f_0 (lambda (y_0) y_0))
+		  (x_0 (funcall (primref read))))
+	     (seq
+	       (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
+		 (funcall (primref cdr) x_0))
+	       (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
+		 (known x_0 (T:pair T:non-false T:nonimmediate T:object))))))
+
+    #| end of BEGIN |# )
 
   #t)
 

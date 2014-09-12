@@ -296,10 +296,10 @@
 
 
 (module (%apply-primcall)
-  ;;This  module processes  a core  primitive application,  either lexical  primitive
-  ;;function or primitive operation:
+  ;;This module  processes a core  primitive application, lexical  primitive function
+  ;;and/or primitive operation:
   ;;
-  ;;   (funcall (primref ?op) ?rand ...)
+  ;;   (funcall (primref ?op) (known ?rand ?rand-type) ...)
   ;;
   ;;A core primitive  might care about the type  of its operands or not.   If it does
   ;;not care, either it is because: any operand will do; no optimisation is possible;
@@ -324,14 +324,16 @@
       ((cons)
        (return T:pair))
 
-      (($car cdr
-	     caar cadr cdar cddr
-	     caaar caadr cadar caddr cdaar cdadr cddar cdddr
-	     caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
-	     cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
+      ((car cdr
+	    caar cadr cdar cddr
+	    caaar caadr cadar caddr cdaar cdadr cddar cdddr
+	    caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
+	    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
+       ;;All of these accept a pair as operand and return some object.
        (%inject T:object T:pair))
 
       ((set-car! set-cdr!)
+       ;;All of these accept a pair and some object as operands and return void.
        (%inject T:void T:pair T:object))
 
       ((vector make-vector list->vector)
