@@ -3460,8 +3460,8 @@
 
 ;;;; some other external code
 
-(include "ikarus.compiler.ontology.ss" #t)
-(include "ikarus.compiler.tag-annotation-analysis.ss" #t)
+(include "ikarus.compiler.scheme-objects-ontology.scm" #t)
+(include "ikarus.compiler.tag-annotation-analysis.scm" #t)
 
 
 (module (sanitize-bindings)
