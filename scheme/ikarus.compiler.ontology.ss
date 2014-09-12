@@ -2,23 +2,37 @@
 ;;;Copyright (C) 2006,2007,2008  Abdulaziz Ghuloum
 ;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under  the terms of  the GNU General  Public License version  3 as
-;;;published by the Free Software Foundation.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of the  GNU General  Public  License version  3  as published  by the  Free
+;;;Software Foundation.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
 #!vicare
 (module SCHEME-OBJECTS-ONTOLOGY
   (T:description
+		;Given an  instance of record type  T: convert it into  a descriptive
+		;and human readable  list of symbols representing the  type bits that
+		;are set in X.
+
    T=?
-   T:and		T:or
+		;Given  two instances  of record  type T:  return true  if they  have
+		;exactly the same bits, otherwise return false.
+
+   T:and
+		;Given two  instances of  record type  T: combine  their bits  with a
+		;bitwise AND  operation and  return a  record of  type T  holding the
+		;result.
+
+   T:or
+		;Given two  instances of  record type  T: combine  their bits  with a
+		;bitwise  OR operation  and return  a record  of type  T holding  the
+		;result.
 
    ;;Records of  type T representing  predefined type specifications.   By themselves
    ;;they represent valid type  tags; they are also used as  arguments to "T:and" and
@@ -35,8 +49,37 @@
    T:positive		T:zero			T:negative
    T:other-number
 
-   ;;Type predicates: applied  to a record of type  T return true if the  bits in the
-   ;;record are equal to the bits in the predefined type.
+   ;;Type validators; applied to a record of type T return the symbol:
+   ;;
+   ;;yes
+   ;;
+   ;;   If the type of the record is a subset of the predefined type.  Examples:
+   ;;
+   ;;      (T:number? T:fixnum)		=> yes
+   ;;      (T:number? T:exact)		=> yes
+   ;;
+   ;;no
+   ;;   If the type of the record it not a subset of the predefined type.  Examples:
+   ;;
+   ;;      (T:number? T:string)		=> no
+   ;;      (T:number? T:exact)		=> no
+   ;;
+   ;;maybe
+   ;;   If some the bits in the record are equal to the bits in the predefined type.
+   ;;
+   ;;      (T:exact? T:number)		=> maybe
+   ;;
+   ;;The names are self explanatory with the following exceptions:
+   ;;
+   ;;T:other-number?
+   ;;   Tests  for numbers that  are neither  fixnums nor flonums:  ratnums, bignums,
+   ;;   compnums, cflonums.
+   ;;
+   ;;T:other-exact?
+   ;;   Tests for numbers that are exact, but not fixnums: ratnums, bignums.
+   ;;
+   ;;T:other-inexact?
+   ;;   Tests for numbers that are inexact, but not flonums: compnums, cflonums.
    ;;
    T:object?		T:immediate?		T:nonimmediate?
    T:boolean?		T:non-false?
@@ -73,6 +116,9 @@
 		  (lambda* ({bits fixnum?})
 		    (make-instance bits)))))
 
+	     (define* (T:=? {x T?} {y T?})
+	       ($fx= ($T-bits x) ($T-bits y)))
+
 	     (define* (T:and {x0 T?} {x1 T?})
 	       (make-T ($fxlogand ($T-bits x0) ($T-bits x1))))
 
@@ -81,13 +127,33 @@
 
 	     (define (%test-bits bits predefined-type-bits)
 	       (cond (($fxzero? ($fxlogand bits predefined-type-bits))
-		      ;;None of the PREDEFINED-TYPE-BITS is set in bits.
+		      ;;None of the PREDEFINED-TYPE-BITS are  set in BITS; some other
+		      ;;bits may be set in BITS.  Examples:
+		      ;;
+		      ;;   BITS   := #b110000
+		      ;;   PREDEF := #b001111
+		      ;;
+		      ;;BITS and PREDEF is disjunct.
 		      'no)
 		     (($fx= predefined-type-bits ($fxlogor bits predefined-type-bits))
-		      ;;All the PREDEFINED-TYPE-BITS are set in bits.
+		      ;;All the  BITS are also  set in PREDEFINED-TYPE-BITS;  some of
+		      ;;the PREDEFINED-TYPE-BITS are not set in BITS.  Examples:
+		      ;;
+		      ;;   BITS   := #b001111
+		      ;;   PREDEF := #b001111
+		      ;;
+		      ;;   BITS   := #b000011
+		      ;;   PREDEF := #b001111
+		      ;;
+		      ;;BITS is equal to, or a subset of, PREDEF.
 		      'yes)
 		     (else
-		      ;;Some of the PREDEFINED-TYPE-BITS are set in bits.
+		      ;;Some of the PREDEFINED-TYPE-BITS are set in BITS; some of the
+		      ;;BITS are not set in PREDEFINED-TYPE-BITS.  Examples:
+		      ;;
+		      ;;   BITS   := #b110011
+		      ;;   PREDEF := #b001111
+		      ;;
 		      'maybe)))
 
 	     (define-constant NAME (make-T VAL))
@@ -107,9 +173,6 @@
 			    (else  ls)))
 		      ...)
 		 ls))
-
-	     (define* (T:=? {x T?} {y T?})
-	       ($fx= ($T-bits x) ($T-bits y)))
 
 	     )))))
 
@@ -339,6 +402,103 @@
 
 #| end of module: SCHEME-OBJECTS-ONTOLOGY |# )
 
+
+;;;inline tests
+
+;;Uncomment this form to test.
+(module ()
+  (import SCHEME-OBJECTS-ONTOLOGY)
+
+  (define (%do-check expr result expected)
+    (if (equal? result expected)
+	(printf "OK: ~s -> ~s\n" expr expected)
+      (error 'check "failed/got/expected" expr result expected)))
+
+  (define-syntax check
+    (syntax-rules (=>)
+      ((_ ?expr => ?expected)
+       (%do-check '?expr ?expr '?expected))))
+
+  (check (T:object? T:object)			=> yes)
+  (check (T:object? T:true)			=> yes)
+  (check (T:object? (T:and T:true T:false))	=> no)
+
+  (check (T:true? T:object)			=> maybe)
+  (check (T:true? T:true)			=> yes)
+  (check (T:true? T:false)			=> no)
+  (check (T:true? T:null)			=> no)
+
+  (check (T:non-false? T:true)			=> yes)
+  (check (T:non-false? T:null)			=> yes)
+  (check (T:non-false? T:false)			=> no)
+  (check (T:non-false? T:boolean)		=> maybe)
+  (check (T:non-false? T:object)		=> maybe)
+
+  (check (T:boolean? T:true)			=> yes)
+  (check (T:boolean? T:false)			=> yes)
+  (check (T:boolean? (T:or T:true T:false))	=> yes)
+  (check (T:boolean? (T:and T:true T:false))	=> no)
+
+  (check (T:number? T:fixnum)			=> yes)
+  (check (T:number? T:flonum)			=> yes)
+  (check (T:number? T:exact)			=> yes)
+  (check (T:number? T:inexact)			=> yes)
+  (check (T:number? T:other-inexact)		=> yes)
+  (check (T:number? T:string)			=> no)
+
+  (check (T:exact? T:exact)			=> yes)
+  (check (T:exact? T:inexact)			=> no)
+  (check (T:exact? T:fixnum)			=> yes)
+  (check (T:exact? T:flonum)			=> no)
+  (check (T:exact? T:number)			=> maybe)
+  (check (T:exact? T:other-exact)		=> yes)
+  (check (T:exact? T:other-inexact)		=> no)
+  (check (T:exact? T:other-number)		=> maybe)
+  (check (T:exact? T:string)			=> no)
+
+  (check (T:inexact? T:exact)			=> no)
+  (check (T:inexact? T:inexact)			=> yes)
+  (check (T:inexact? T:fixnum)			=> no)
+  (check (T:inexact? T:flonum)			=> yes)
+  (check (T:inexact? T:other-exact)		=> no)
+  (check (T:inexact? T:other-inexact)		=> yes)
+  (check (T:inexact? T:other-number)		=> maybe) ;T:other-number = not fixnum, not flonum
+  (check (T:inexact? T:number)			=> maybe)
+  (check (T:inexact? T:string)			=> no)
+
+  ;;Tests for exact number, but not fixnum.
+  (check (T:other-exact? T:other-exact)		=> yes)
+  (check (T:other-exact? T:other-inexact)	=> no)
+  (check (T:other-exact? T:exact)		=> maybe)
+  (check (T:other-exact? T:inexact)		=> no)
+  (check (T:other-exact? T:fixnum)		=> no)
+  (check (T:other-exact? T:flonum)		=> no)
+  (check (T:other-exact? T:number)		=> maybe)
+  (check (T:other-exact? T:string)		=> no)
+
+  ;;Tests for inexact number, but not flonum.
+  (check (T:other-inexact? T:other-inexact)	=> yes)
+  (check (T:other-inexact? T:other-exact)	=> no)
+  (check (T:other-inexact? T:exact)		=> no)
+  (check (T:other-inexact? T:inexact)		=> maybe)
+  (check (T:other-inexact? T:fixnum)		=> no)
+  (check (T:other-inexact? T:flonum)		=> no)
+  (check (T:other-inexact? T:number)		=> maybe)
+  (check (T:other-inexact? T:string)		=> no)
+
+  ;;Tests for numbers, but neither fixnums nor flonums.
+  (check (T:other-number? T:other-number)	=> yes)
+  (check (T:other-number? T:fixnum)		=> no)
+  (check (T:other-number? T:flonum)		=> no)
+  (check (T:other-number? T:number)		=> maybe)
+  (check (T:other-number? T:exact)		=> maybe)
+  (check (T:other-number? T:inexact)		=> maybe)
+  (check (T:other-number? T:other-exact)	=> yes) ;T:other-exact is exact but not fixnum
+  (check (T:other-number? T:other-inexact)	=> yes) ;T:other-inexact is inexact but not flonum
+  (check (T:other-number? T:string)		=> no)
+
+  #| end of module |# )
+
 #!eof
 
 
@@ -346,12 +506,16 @@
 ;;;for readability) (last updated Fri Sep 12, 2014):
 
 (begin
-  (define-record-type (T make-T T?) (sealed #t)
+  (define-record-type (T make-T T?)
+    (sealed #t)
     (fields (immutable bits))
     (protocol
      (lambda (make-instance)
        (lambda* ((brace bits fixnum?))
 	 (make-instance bits)))))
+
+  (define* (T=? (brace x T?) (brace y T?))
+    ($fx= ($T-bits x) ($T-bits y)))
 
   (define* (T:and (brace x0 T?) (brace x1 T?))
     (make-T ($fxlogand ($T-bits x0) ($T-bits x1))))
@@ -574,40 +738,7 @@
 		 (else ls))))
       ls))
 
-  (define* (T=? (brace x T?) (brace y T?))
-    ($fx= ($T-bits x) ($T-bits y)))
-
   #| end of BEGIN |# )
-
-
-;;;; inline tests
-
-(define (%do-check expr result expected)
-  (if (equal? result expected)
-      (printf "OK: ~s -> ~s\n" expr expected)
-    (error 'check "failed/got/expected" expr result expected)))
-
-(define-syntax check
-  (syntax-rules ()
-    ((_ expr expected)
-     (%do-check 'expr expr 'expected))))
-
-(check (T:object? T:object) yes)
-(check (T:object? T:true)   yes)
-(check (T:true? T:object)   maybe)
-(check (T:true? T:true)     yes)
-(check (T:true? T:false)    no)
-(check (T:true? T:null)     no)
-(check (T:non-false? T:true) yes)
-(check (T:non-false? T:null) yes)
-(check (T:non-false? T:false) no)
-(check (T:non-false? T:boolean) maybe)
-(check (T:non-false? T:object) maybe)
-(check (T:boolean? T:true) yes)
-(check (T:boolean? T:false) yes)
-(check (T:boolean? (T:or T:true T:false)) yes)
-(check (T:boolean? (T:and T:true T:false)) no)
-(check (T:object? (T:and T:true T:false)) no)
 
 ;;; end of file
 ;; Local Variables:

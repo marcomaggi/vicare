@@ -195,7 +195,7 @@
 
   (define (%annotate x t)
     (if (T=? t T:object)
-	x
+  	x
       (make-known x t)))
 
   #| end of module: V |# )
@@ -468,7 +468,7 @@
 
   (define (cons-env x v env)
     (if (T=? v T:object)
-	env
+  	env
       (cons (cons x v) env)))
 
   #| end of module: or-envs |# )
@@ -509,7 +509,7 @@
 
   (define (cons-env x v env)
     (if (T=? v T:object)
-	env
+  	env
       (cons (cons x v) env)))
 
   #| end of module: and-envs |# )
