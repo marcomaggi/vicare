@@ -662,6 +662,8 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-collect.sps					\
 	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-compiler-internals.sps			\
+	tests/test-vicare-compiler-source-optimiser.sps			\
+	tests/test-vicare-compiler-specify-rep.sps			\
 	tests/test-vicare-conditions.sps				\
 	tests/test-vicare-enumerations.sps				\
 	tests/test-vicare-environment-inquiry.sps			\
@@ -723,7 +725,6 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-numerics-sqrt.sps				\
 	tests/test-vicare-numerics-cbrt.sps				\
 	tests/test-vicare-numerics-bitwise.sps				\
-	tests/test-vicare-source-optimiser.sps				\
 	tests/test-vicare-parameters.sps				\
 	tests/test-vicare-parser-logic.sps				\
 	tests/test-vicare-pointers.sps					\

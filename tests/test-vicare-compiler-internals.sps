@@ -2862,6 +2862,8 @@
 (parametrise ((check-test-name						'specify-representation)
 	      (compiler.$descriptive-labels				#t))
 
+;;;NOTE There is a separate file for testing this compiler pass!!!
+
   (define (%specify-representation core-language-form)
     (let* ((D (compiler.$recordize core-language-form))
 	   (D (compiler.$optimize-direct-calls D))
