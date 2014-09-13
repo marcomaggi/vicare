@@ -5677,9 +5677,17 @@
   ;;makes no sense to use unsafe operations: let's keep it safe!!!
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
+  (define-syntax-rule (E ?x)
+    (unparse-recordized-code ?x))
   (struct-case x
     ((constant c)
-     `(quote ,c))
+     (cond ((symbol? c)
+	    ;;Extract the pretty name; this is useful when C is a loc gensym.
+	    `(quote c))
+	   ((object? c)
+	    `(constant ,(E c)))
+	   (else
+	    `(constant ,c))))
 
     ((known expr type)
      `(known ,(unparse-recordized-code expr) ,(core-type-tag-description type)))
@@ -5892,10 +5900,13 @@
     (define (E x)
       (struct-case x
 	((constant c)
-	 (if (symbol? c)
-	     ;;Extract the pretty name; this is useful when C is a loc gensym.
-	     `(constant ,(%pretty-symbol c))
-	   `(constant ,c)))
+	 (cond ((symbol? c)
+		;;Extract the pretty name; this is useful when C is a loc gensym.
+		`(constant ,(%pretty-symbol c)))
+	       ((object? c)
+		`(constant ,(E c)))
+	       (else
+		`(constant ,c))))
 
 	((prelex)
 	 (Var x))
@@ -5986,6 +5997,15 @@
 	((code-loc label)
 	 ;;Print the pretty gensym name.
 	 `(code-loc ,(%pretty-symbol label)))
+
+	((shortcut body handler)
+	 `(shortcut ,(E body) ,(E handler)))
+
+	((object obj)
+	 `(object ,(cond ((symbol? obj)
+			  (%pretty-symbol obj))
+			 (else
+			  (E obj)))))
 
 	(else x)))
 
@@ -6131,10 +6151,13 @@
     (define (E x)
       (struct-case x
 	((constant c)
-	 (if (symbol? c)
-	     ;;Extract the pretty name.
-	     `(quote ,(%pretty-symbol c))
-	   `(quote ,c)))
+	 (cond ((symbol? c)
+		;;Extract the pretty name; this is useful when C is a loc gensym.
+		`(quote ,(%pretty-symbol c)))
+	       ((object? c)
+		`(quote ,(E c)))
+	       (else
+		`(quote ,c))))
 
 	((prelex)
 	 (Var x))
@@ -6223,6 +6246,15 @@
 	((code-loc label)
 	 ;;Print the pretty gensym name.
 	 `(code-loc ,(%pretty-symbol label)))
+
+	((shortcut body handler)
+	 `(shortcut ,(E body) ,(E handler)))
+
+	((object obj)
+	 `(object ,(cond ((symbol? obj)
+			  (%pretty-symbol obj))
+			 (else
+			  (E obj)))))
 
 	(else x)))
 

@@ -49,15 +49,6 @@ Compiler passes
 * compiler stack::              Inserting stack overflow checks.
 * compiler cogen::              Full assembly code generation.
 * compiler assember::           Binary code generation.
-
-Code generation passes
-
-* compiler primop::             Expanding primitive operations.
-* compiler order::              Imposing calling convention and
-                                evaluation order.
-* compiler frame::              Assigning frame sizes.
-* compiler color::              Colorising by Chaitin.
-* compiler flatten::            Flattening codes.
 @end menu
 
 @c page
@@ -4056,21 +4047,18 @@ system $compiler}.
 @defun $alt-cogen @var{input}
 @end defun
 
-@c page
-@node compiler assember
-@section Binary code generation
-
-
-The following bindings are exported by the library @library{vicare
-system $compiler}.
-
-
-@defun $assemble-sources @var{input}
-@end defun
+@menu
+* compiler cogen primop::       Expanding primitive operations.
+* compiler cogen order::        Imposing calling convention and
+                                evaluation order.
+* compiler cogen frame::        Assigning frame sizes.
+* compiler cogen color::        Colorising by Chaitin.
+* compiler cogen flatten::      Flattening codes.
+@end menu
 
 @c page
-@node compiler primop
-@section Expanding primitive operations
+@node compiler cogen primop
+@subsection Expanding primitive operations
 
 
 The following bindings are exported by the library @library{vicare
@@ -4081,8 +4069,8 @@ system $compiler}.
 @end defun
 
 @c page
-@node compiler order
-@section Imposing calling convention and evaluation order
+@node compiler cogen order
+@subsection Imposing calling convention and evaluation order
 
 
 The following bindings are exported by the library @library{vicare
@@ -4093,8 +4081,8 @@ system $compiler}.
 @end defun
 
 @c page
-@node compiler frame
-@section Assigning frame sizes
+@node compiler cogen frame
+@subsection Assigning frame sizes
 
 
 The following bindings are exported by the library @library{vicare
@@ -4105,8 +4093,8 @@ system $compiler}.
 @end defun
 
 @c page
-@node compiler color
-@section Colorising by Chaitin
+@node compiler cogen color
+@subsection Colorising by Chaitin
 
 
 For an introduction to register allocation see:
@@ -4121,8 +4109,8 @@ system $compiler}.
 @end defun
 
 @c page
-@node compiler flatten
-@section Flattening codes
+@node compiler cogen flatten
+@subsection Flattening codes
 
 
 The following bindings are exported by the library @library{vicare
@@ -4132,6 +4120,17 @@ system $compiler}.
 @defun $flatten-codes @var{input}
 @end defun
 
+@c page
+@node compiler assember
+@section Binary code generation
+
+
+The following bindings are exported by the library @library{vicare
+system $compiler}.
+
+
+@defun $assemble-sources @var{input}
+@end defun
 
 
 @c Local Variables:
