@@ -1868,7 +1868,7 @@
 	       (funcall (primref cdr) x_0))))
 
     ;;Here the variable X is of unknown type  when its binding is created: it is left
-    ;;untagged.   But,  after  being  used  as argument  for  X  without  raising  an
+    ;;untagged.   But, after  being  used  as argument  for  CDR  without raising  an
     ;;exception: it is known that its type  is "T:pair"; so the second reference to X
     ;;is tagged with "T:pair".
     ;;
@@ -1876,9 +1876,8 @@
     ;;raises an exception because X is not a pair: the control flow cannot come back.
     (doit* (let ((f (lambda (y) y))
 		 (x (read)))
-	     (begin
-	       (f (cdr x))
-	       (f x)))
+	     (f (cdr x))
+	     (f x))
 	   (bind ((f_0 (lambda (y_0) y_0))
 		  (x_0 (funcall (primref read))))
 	     (seq

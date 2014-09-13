@@ -5682,7 +5682,7 @@
      `(quote ,c))
 
     ((known expr type)
-     `(known ,(unparse-recordized-code expr) ,(T:description type)))
+     `(known ,(unparse-recordized-code expr) ,(core-type-tag-description type)))
 
     ((code-loc x)
      `(code-loc ,x))
@@ -5912,7 +5912,7 @@
 	 `(primref ,x))
 
 	((known expr type)
-	 `(known ,(E expr) ,(T:description type)))
+	 `(known ,(E expr) ,(core-type-tag-description type)))
 
 	((clambda)
 	 (E-clambda x))
@@ -6149,7 +6149,7 @@
 	 x)
 
 	((known expr type)
-	 `(known ,(E expr) ,(T:description type)))
+	 `(known ,(E expr) ,(core-type-tag-description type)))
 
 	((clambda)
 	 (E-clambda x))

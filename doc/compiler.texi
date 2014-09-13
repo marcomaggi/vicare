@@ -2410,6 +2410,59 @@ the returned recordised code.
 @section Tagging known properties
 
 
+This optional compiler pass analyses the type of values returned by
+expressions with the purpose of transforming @objtype{funcall}
+recordised forms:
+
+@example
+(funcall (primref @meta{prim-name}) @meta{rand} ...)
+(funcall @meta{rator}               @meta{rand} ...)
+@end example
+
+into:
+
+@example
+(funcall (primref @meta{prim-name})       (known @meta{rand} @meta{rand-type}) ...)
+(funcall (known @meta{rator} @meta{rator-type}) (known @meta{rand} @meta{rand-type}) ...)
+@end example
+
+@noindent
+where: @meta{rator-type} is the type description of the value returned
+by @meta{rator}; each @meta{rand-type} is the type description of the
+value returned by the corresponding @meta{rand}; a @objtype{primref}
+operator is left untouched.  The type descriptions are records of type
+@objtype{core-type-tag} whose represented types are inferred by this
+compiler pass.
+
+The structs of type @objtype{known} are annotation ``tags'' consumed by
+the functions generating the implementation of the core primitive
+operations; for example, given the recordised code:
+
+@example
+(funcall (primref vector-length) @meta{rand})
+@end example
+
+@noindent
+which makes use of the primitive operation @func{vector-length}:
+
+@itemize
+@item
+If no type tag is assigned to @meta{rand}: the implementation of
+@func{vector-length} integrated at the call site must include a
+validation of @meta{rand} as vector object.
+
+@item
+If the tag @code{T:vector} is introduced for the operand:
+
+@example
+(funcall (primref vector-length) (known @meta{rand} T:vector))
+@end example
+
+@noindent
+the implementation of @func{vector-length} integrated at the call site
+does @strong{not} include a validation of @meta{RAND} as vector object.
+@end itemize
+
 The following bindings are exported by the library @library{vicare
 system $compiler}.
 
@@ -2426,6 +2479,47 @@ hierarchy.
 When true the pass @func{$introduce-tags} is performed, else it is
 skipped.  Defaults to @true{}.
 @end deffn
+
+@c ------------------------------------------------------------
+
+@subsubheading Properties propagation through function arguments
+
+Let's examine what happens when a variable reference is used as operand
+for the primitive operation @func{cdr}; the primitive @func{cdr} accepts
+a pair as operand.  In the following standard code example the variable
+@code{x} is of unknown type, when its binding is created @code{x} is
+left untagged:
+
+@example
+(let ((f (lambda (y) y))
+      (x (read)))
+  (f (cdr x))
+  (f x))
+@end example
+
+@noindent
+but, after being used as argument for @func{cdr} without raising an
+exception: it is known that its type is @code{T:pair}, so the second
+reference to @code{x} is tagged with @code{T:pair}; the result of the
+transformation is:
+
+@example
+(bind ((f_0 (lambda (y_0) y_0))
+       (x_0 (funcall (primref read))))
+  (seq
+    (funcall (known f_0 (T:procedure T:non-false
+                         T:nonimmediate T:object))
+      (funcall (primref cdr) x_0))
+    (funcall (known f_0 (T:procedure T:non-false
+                         T:nonimmediate T:object))
+      (known x_0 (T:pair T:non-false
+                  T:nonimmediate T:object)))))
+@end example
+
+We know that a ``wrong operand type'' exception is non--continuable; so
+if @func{cdr} raises an exception because @code{x} is not a pair: the
+control flow cannot come back.  This allows us to determine type
+informations and propagate them after the arguments have been validated.
 
 @c page
 @node compiler sanitise bindings

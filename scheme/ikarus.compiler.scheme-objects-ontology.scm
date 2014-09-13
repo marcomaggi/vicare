@@ -13,30 +13,31 @@
 ;;;You should have received a copy of  the GNU General Public License along with this
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 #!vicare
 (module SCHEME-OBJECTS-ONTOLOGY
-  (T:description
-		;Given an  instance of record type  T: convert it into  a descriptive
-		;and human readable  list of symbols representing the  type bits that
-		;are set in X.
+  (core-type-tag-description
+		;Given an  instance of record  type CORE-TYPE-TAG: convert it  into a
+		;descriptive and human readable list of symbols representing the type
+		;bits that are set in X.
 
-   T=?
-		;Given  two instances  of record  type T:  return true  if they  have
-		;exactly the same bits, otherwise return false.
+   core-type-tag=?
+		;Given two  instances of  record type  CORE-TYPE-TAG: return  true if
+		;they have exactly the same bits, otherwise return false.
 
-   T:and
-		;Given two  instances of  record type  T: combine  their bits  with a
-		;bitwise AND  operation and  return a  record of  type T  holding the
-		;result.
+   core-type-tag-and
+		;Given two instances of record type CORE-TYPE-TAG: combine their bits
+		;with  a  bitwise   AND  operation  and  return  a   record  of  type
+		;CORE-TYPE-TAG holding the result.
 
-   T:or
-		;Given two  instances of  record type  T: combine  their bits  with a
-		;bitwise  OR operation  and return  a record  of type  T holding  the
-		;result.
+   core-type-tag-or
+		;Given two instances of record type CORE-TYPE-TAG: combine their bits
+		;with  a   bitwise  OR  operation   and  return  a  record   of  type
+		;CORE-TYPE-TAG holding the result.
 
-   ;;Records of  type T representing  predefined type specifications.   By themselves
-   ;;they represent valid type  tags; they are also used as  arguments to "T:and" and
-   ;;"T:or" to compose more informative type tags.
+   ;;Records  of type  CORE-TYPE-TAG representing  predefined type  descriptions.  By
+   ;;themselves they  represent valid type tags;  they are also used  as arguments to
+   ;;CORE-TYPE-TAG-AND and CORE-TYPE-TAG-OR to compose more informative type tags.
    ;;
    T:object		T:immediate		T:boolean
    T:number		T:exact			T:inexact
@@ -49,22 +50,21 @@
    T:positive		T:zero			T:negative
    T:other-number
 
-   ;;Type validators; applied to a record of type T return the symbol:
+   ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
    ;;
-   ;;yes
-   ;;
+   ;;yes -
    ;;   If the type of the record is a subset of the predefined type.  Examples:
    ;;
    ;;      (T:number? T:fixnum)		=> yes
    ;;      (T:number? T:exact)		=> yes
    ;;
-   ;;no
+   ;;no -
    ;;   If the type of the record it not a subset of the predefined type.  Examples:
    ;;
    ;;      (T:number? T:string)		=> no
    ;;      (T:number? T:exact)		=> no
    ;;
-   ;;maybe
+   ;;maybe -
    ;;   If some the bits in the record are equal to the bits in the predefined type.
    ;;
    ;;      (T:exact? T:number)		=> maybe
@@ -105,8 +105,8 @@
 
 
 (define-syntax (define-ontology x)
-  ;;Define the operators: T:description, T?, T=?, T:and, T:or to be applied to Scheme
-  ;;values.
+  ;;Define  the operators:  T:description,  T?, T=?,  T:and, T:or  to  be applied  to
+  ;;records of type T.
   ;;
   (define (main x)
     (syntax-case x ()
@@ -114,8 +114,13 @@
 	  (?name0 ?cls0)
 	  (?name  ?cls)
 	  ...)
-       (with-syntax ((((NAME PREDNAME VAL) ...)
-		      (%generate-base-cases #'T #'?name0 #'((?name0 ?cls0) (?name ?cls) ...))))
+       (with-syntax
+	   ((((NAME PREDNAME VAL) ...)
+	     (%generate-base-cases #'T #'?name0 #'((?name0 ?cls0) (?name ?cls) ...)))
+	    ($T-bits (datum->syntax #'T (string->symbol
+					 (string-append "$"
+							(symbol->string (syntax->datum #'T))
+							"-bits")))))
 	 #'(begin
 	     ;;NOTE This  is a record  rather than a struct  because I like  the fact
 	     ;;that the field is immutable.  (Marco Maggi; Fri Sep 12, 2014)
@@ -206,13 +211,13 @@
     (define (%value-name x)
       ;;Return an identifier with name "T:x" in the lexical context of
       ;;T.
-      (datum->syntax T (string->symbol (string-append (symbol->string (syntax->datum T)) ":"
-						      (symbol->string x)))))
+      (datum->syntax T (string->symbol (string-append "T:" (symbol->string x)))))
+
     (define (%predicate-name x)
       ;;Return an  identifier with name "T:x?" in  the lexical context
       ;;of T.
-      (datum->syntax T (string->symbol (string-append (symbol->string (syntax->datum T)) ":"
-						      (symbol->string x) "?"))))
+      (datum->syntax T (string->symbol (string-append "T:" (symbol->string x) "?"))))
+
     (define (%property-names ls)
       ;;Given a list of S-expressions each having one of the formats:
       ;;
@@ -408,7 +413,9 @@
 ;;;; ontology definition
 
 ;;See below for the expansion of this syntax.
-(define-ontology T T:description T? T=? T:and T:or
+(define-ontology core-type-tag core-type-tag-description
+  core-type-tag? core-type-tag=?
+  core-type-tag-and core-type-tag-or
   (object		(inclusive obj-tag obj-immediacy obj-truth))
   (obj-immediacy	(exclusive nonimmediate immediate))
   (immediate		(exclusive fixnum boolean null char void))
@@ -446,7 +453,7 @@
   (check (T:object? T:object)			=> yes)
   (check (T:object? T:other-object)		=> yes)
   (check (T:object? T:true)			=> yes)
-  (check (T:object? (T:and T:true T:false))	=> no)
+  (check (T:object? (core-type-tag-and T:true T:false))	=> no)
 
   (check (T:true? T:object)			=> maybe)
   (check (T:true? T:true)			=> yes)
@@ -461,8 +468,12 @@
 
   (check (T:boolean? T:true)			=> yes)
   (check (T:boolean? T:false)			=> yes)
-  (check (T:boolean? (T:or T:true T:false))	=> yes)
-  (check (T:boolean? (T:and T:true T:false))	=> no)
+  (check
+      (T:boolean? (core-type-tag-or T:true T:false))
+    => yes)
+  (check
+      (T:boolean? (core-type-tag-and T:true T:false))
+    => no)
 
   (check (T:number? T:fixnum)			=> yes)
   (check (T:number? T:flonum)			=> yes)
@@ -524,13 +535,13 @@
   (check (T:other-number? T:string)		=> no)
 
   ;;Multitype tests.
-  (check (T:fixnum? (T:or T:fixnum T:flonum))	=> maybe)
-  (check (T:flonum? (T:or T:fixnum T:flonum))	=> maybe)
-  (check (T:string? (T:or T:fixnum T:flonum))	=> no)
+  (check (T:fixnum? (core-type-tag-or T:fixnum T:flonum))	=> maybe)
+  (check (T:flonum? (core-type-tag-or T:fixnum T:flonum))	=> maybe)
+  (check (T:string? (core-type-tag-or T:fixnum T:flonum))	=> no)
 
-  (check (T:fixnum? (T:or T:fixnum T:string))	=> maybe)
-  (check (T:string? (T:or T:fixnum T:string))	=> maybe)
-  (check (T:pair?   (T:or T:fixnum T:string))	=> no)
+  (check (T:fixnum? (core-type-tag-or T:fixnum T:string))	=> maybe)
+  (check (T:string? (core-type-tag-or T:fixnum T:string))	=> maybe)
+  (check (T:pair?   (core-type-tag-or T:fixnum T:string))	=> no)
 
   #| end of module |# )
 
@@ -538,10 +549,10 @@
 
 
 ;;;The expansion  of DEFINE-ONTOLOGY above  is the following (minus  some adjustement
-;;;for readability) (last updated Fri Sep 12, 2014):
+;;;for readability) (last updated Sat Sep 13, 2014):
 
 (begin
-  (define-record-type (T make-T T?)
+  (define-record-type (core-type-tag make-T core-type-tag?)
     (sealed #t)
     (fields (immutable bits))
     (protocol
@@ -549,22 +560,24 @@
        (lambda* ((brace bits fixnum?))
 	 (make-instance bits)))))
 
-  (define* (T=? (brace x T?) (brace y T?))
-    ($fx= ($T-bits x) ($T-bits y)))
+  (define* (core-type-tag=? (brace x core-type-tag?) (brace y core-type-tag?))
+    ($fx= ($core-type-tag-bits x) ($core-type-tag-bits y)))
 
-  (define* (T:and (brace x0 T?) (brace x1 T?))
-    (make-T ($fxlogand ($T-bits x0) ($T-bits x1))))
+  (define* (core-type-tag-and (brace x0 core-type-tag?) (brace x1 core-type-tag?))
+    (make-T ($fxlogand ($core-type-tag-bits x0)
+		       ($core-type-tag-bits x1))))
 
-  (define* (T:or (brace x0 T?) (brace x1 T?))
-    (make-T ($fxlogor ($T-bits x0) ($T-bits x1))))
+  (define* (core-type-tag-or (brace x0 core-type-tag?) (brace x1 core-type-tag?))
+    (make-T ($fxlogor ($core-type-tag-bits x0)
+		      ($core-type-tag-bits x1))))
 
   (define (%test-bits bits predefined-type-bits)
     (cond (($fxzero? ($fxlogand bits predefined-type-bits))
 	   'no)
-	  (($fx= predefined-type-bits ($fxlogor bits predefined-type-bits))
+	  (($fx= predefined-type-bits
+		 ($fxlogor bits predefined-type-bits))
 	   'yes)
-	  (else
-	   'maybe)))
+	  (else 'maybe)))
 
 ;;;Define  the exact  integers representing  the type  informations.  By  keeping the
 ;;;values in the 24-bit range we make sure that they fit into fixnums.
@@ -601,91 +614,91 @@
   (define-constant T:negative		(make-T 9584640))	;100100100100000000000000
   (define-constant T:other-number	(make-T 1863680))	;   111000111000000000000
 
-  (define* (T:object? (brace x T?))
-    (%test-bits ($T-bits x) 16777215))
+  (define* (T:object? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 16777215))
 
-  (define* (T:immediate? (brace x T?))
-    (%test-bits ($T-bits x) 232504))
+  (define* (T:immediate? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 232504))
 
-  (define* (T:boolean? (brace x T?))
-    (%test-bits ($T-bits x) 3072))
+  (define* (T:boolean? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 3072))
 
-  (define* (T:number? (brace x T?))
-    (%test-bits ($T-bits x) 16773120))
+  (define* (T:number? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 16773120))
 
-  (define* (T:exact? (brace x T?))
-    (%test-bits ($T-bits x) 258048))
+  (define* (T:exact? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 258048))
 
-  (define* (T:inexact? (brace x T?))
-    (%test-bits ($T-bits x) 16515072))
+  (define* (T:inexact? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 16515072))
 
-  (define* (T:nonimmediate? (brace x T?))
-    (%test-bits ($T-bits x) 16544711))
+  (define* (T:nonimmediate? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 16544711))
 
-  (define* (T:non-false? (brace x T?))
-    (%test-bits ($T-bits x) 16776191))
+  (define* (T:non-false? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 16776191))
 
-  (define* (T:other-object? (brace x T?))
-    (%test-bits ($T-bits x) 1))
+  (define* (T:other-object? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 1))
 
-  (define* (T:symbol? (brace x T?))
-    (%test-bits ($T-bits x) 2))
+  (define* (T:symbol? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 2))
 
-  (define* (T:bytevector? (brace x T?))
-    (%test-bits ($T-bits x) 4))
+  (define* (T:bytevector? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 4))
 
-  (define* (T:void? (brace x T?))
-    (%test-bits ($T-bits x) 8))
+  (define* (T:void? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 8))
 
-  (define* (T:char? (brace x T?))
-    (%test-bits ($T-bits x) 16))
+  (define* (T:char? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 16))
 
-  (define* (T:null? (brace x T?))
-    (%test-bits ($T-bits x) 32))
+  (define* (T:null? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 32))
 
-  (define* (T:pair? (brace x T?))
-    (%test-bits ($T-bits x) 64))
+  (define* (T:pair? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 64))
 
-  (define* (T:vector? (brace x T?))
-    (%test-bits ($T-bits x) 128))
+  (define* (T:vector? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 128))
 
-  (define* (T:string? (brace x T?))
-    (%test-bits ($T-bits x) 256))
+  (define* (T:string? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 256))
 
-  (define* (T:procedure? (brace x T?))
-    (%test-bits ($T-bits x) 512))
+  (define* (T:procedure? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 512))
 
-  (define* (T:false? (brace x T?))
-    (%test-bits ($T-bits x) 1024))
+  (define* (T:false? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 1024))
 
-  (define* (T:true? (brace x T?))
-    (%test-bits ($T-bits x) 2048))
+  (define* (T:true? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 2048))
 
-  (define* (T:positive? (brace x T?))
-    (%test-bits ($T-bits x) 2396160))
+  (define* (T:positive? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 2396160))
 
-  (define* (T:zero? (brace x T?))
-    (%test-bits ($T-bits x) 4792320))
+  (define* (T:zero? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 4792320))
 
-  (define* (T:negative? (brace x T?))
-    (%test-bits ($T-bits x) 9584640))
+  (define* (T:negative? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 9584640))
 
-  (define* (T:other-number? (brace x T?))
-    (%test-bits ($T-bits x) 1863680))
+  (define* (T:other-number? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 1863680))
 
-  (define* (T:other-exact? (brace x T?))
-    (%test-bits ($T-bits x) 28672))
+  (define* (T:other-exact? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 28672))
 
-  (define* (T:fixnum? (brace x T?))
-    (%test-bits ($T-bits x) 229376))
+  (define* (T:fixnum? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 229376))
 
-  (define* (T:other-inexact? (brace x T?))
-    (%test-bits ($T-bits x) 1835008))
+  (define* (T:other-inexact? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 1835008))
 
-  (define* (T:flonum? (brace x T?))
-    (%test-bits ($T-bits x) 14680064))
+  (define* (T:flonum? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 14680064))
 
-  (define (T:description x)
+  (define (core-type-tag-description x)
     (let* ((ls '())
 	   (ls (case (T:object? x)
 		 ((yes) (cons 'T:object ls))
