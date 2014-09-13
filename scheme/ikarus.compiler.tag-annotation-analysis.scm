@@ -109,37 +109,7 @@
       ((conditional x.test x.conseq x.altern)
        ;;FIXME Should TEST.ENV be merged  with CONSEQ.ENV and ALTERN.ENV to propagate
        ;;tag informations?  I am not sure.  (Marco Maggi; Sat Sep 13, 2014)
-       (receive (test test.env test.tag)
-	   (V x.test env)
-	 (case (T:false? test.tag)
-	   ((yes)
-	    ;;We know the test is false, so do the transformation:
-	    ;;
-	    ;;   (conditional ?test ?conseq ?altern)
-	    ;;   ==> (seq ?test ?conseq)
-	    ;;
-	    ;;we keep ?TEST for its side effects.
-	    (receive (altern altern.env altern.tag)
-		(V x.altern env)
-	      (values (make-seq test altern) altern.env altern.tag)))
-	   ((no)
-	    ;;We know the test is true, so do the transformation:
-	    ;;
-	    ;;   (conditional ?test ?conseq ?altern)
-	    ;;   ==> (seq ?test ?altern)
-	    ;;
-	    ;;we kepp ?TEST for its side effects.
-	    (receive (conseq conseq.env conseq.tag)
-		(V x.conseq env)
-	      (values (make-seq test conseq) conseq.env conseq.tag)))
-	   (else
-	    ;;We do not know the result of the test.
-	    (let-values
-		(((conseq conseq.env conseq.tag) (V x.conseq env))
-		 ((altern altern.env altern.tag) (V x.altern env)))
-	      (values (make-conditional test conseq altern)
-		      (%or-envs conseq.env altern.env)
-		      (core-type-tag-or conseq.tag altern.tag)))))))
+       (V-conditional x.test x.conseq x.altern env))
 
       ((bind lhs* x.rhs* x.body)
        (receive (rhs* env^ rhs*.tag)
@@ -161,20 +131,8 @@
 	     (V x.body (extend-env* lhs* rhs*.tag env^))
 	   (values (make-fix lhs* rhs* body) body.env body.tag))))
 
-      ((clambda label clause* cp free name)
-       (values (make-clambda label
-			     ($map/stx (lambda (clause)
-					 (struct-case clause
-					   ((clambda-case info body)
-					    ;;Assign a unique number to each PRELEX.
-					    ($for-each/stx %assign-index-to-prelex! (case-info-args info))
-					    (receive (body env t)
-						(V body env)
-					      ;;We drop the ENV and T of the body.
-					      (make-clambda-case info body)))))
-			       clause*)
-			     cp free name)
-	       env T:procedure))
+      ((clambda)
+       (V-clambda x env))
 
       ((funcall rator rand*)
        (let-values
@@ -207,6 +165,67 @@
 	(values (cons x x*)
 		(%and-envs env1 env2)
 		(cons t t*)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (V-conditional x.test x.conseq x.altern x.env)
+    (receive (test test.env test.tag)
+	(V x.test x.env)
+      (case (T:false? test.tag)
+	((yes)
+	 ;;We know the test is false, so do the transformation:
+	 ;;
+	 ;;   (conditional ?test ?conseq ?altern)
+	 ;;   ==> (seq ?test ?conseq)
+	 ;;
+	 ;;we keep ?TEST for its side effects.
+	 (receive (altern altern.env altern.tag)
+	     (V x.altern x.env)
+	   (values (make-seq test altern) altern.env altern.tag)))
+	((no)
+	 ;;We know the test is true, so do the transformation:
+	 ;;
+	 ;;   (conditional ?test ?conseq ?altern)
+	 ;;   ==> (seq ?test ?altern)
+	 ;;
+	 ;;we kepp ?TEST for its side effects.
+	 (receive (conseq conseq.env conseq.tag)
+	     (V x.conseq x.env)
+	   (values (make-seq test conseq) conseq.env conseq.tag)))
+	(else
+	 ;;We do not know the result of the test.
+	 (let-values
+	     (((conseq conseq.env conseq.tag) (V x.conseq x.env))
+	      ((altern altern.env altern.tag) (V x.altern x.env)))
+	   (values (make-conditional test conseq altern)
+		   (%or-envs conseq.env altern.env)
+		   (core-type-tag-or conseq.tag altern.tag)))))))
+
+  (module (V-clambda)
+    ;;The purposes of this  module are: to apply V to all  the CLAMBDA clause bodies;
+    ;;to  tag  the  CLAMBDA  itself  with the  type  descriptor  "T:procedure".   The
+    ;;environment  is not  modified: no  binding defined  by the  CLAMBDA is  visible
+    ;;outside.
+    ;;
+    (define (V-clambda x x.env)
+      (struct-case x
+	((clambda label clause* cp free name)
+	 (let ((clause*^ ($map/stx (lambda (clause)
+				     (V-clambda-clause clause x.env))
+			   clause*)))
+	   (values (make-clambda label clause*^ cp free name)
+		   x.env T:procedure)))))
+
+    (define (V-clambda-clause clause x.env)
+      (struct-case clause
+	((clambda-case clause.info clause.body)
+	 ;;Assign a unique number to each PRELEX.
+	 ($for-each/stx %assign-index-to-prelex! (case-info-args clause.info))
+	 (receive (body body.env.unused body.tag.unused)
+	     (V clause.body x.env)
+	   (make-clambda-case clause.info body)))))
+
+    #| end of module: V-clambda |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -290,14 +309,39 @@
 
 
 (module (%apply-primcall)
-  ;;This module  processes a core  primitive application, lexical  primitive function
-  ;;and/or primitive operation:
+  ;;This module  processes a core  primitive application, either a  lexical primitive
+  ;;function or primitive operation (or both):
   ;;
   ;;   (funcall (primref ?op) (known ?rand ?rand-type) ...)
   ;;
   ;;A core primitive  might care about the type  of its operands or not.   If it does
   ;;not care, either it is because: any operand will do; no optimisation is possible;
   ;;some optimisation is possible, but at present it is not implemented.
+  ;;
+  ;;This module has two purposes:
+  ;;
+  ;;* To specify the type tag of the  FUNCALL return value; this can be done for both
+  ;;  safe and unsafe core primitives.
+  ;;
+  ;;* To  attach additional type informations  to PRELEX structs used  as operands to
+  ;;  the core primitive;  this can be done only for safe  primitives.  We extend the
+  ;;   environment with  informations gathered  from the  fact that:  after the  safe
+  ;;  primitive has been successfully executed,  its arguments have been validated as
+  ;;  correct, so we know their type.
+  ;;
+  ;;As example of second purpose, let's consider the following standard code:
+  ;;
+  ;;   (let ((f (lambda (y) y))
+  ;;         (x (read)))
+  ;;     (f (cdr x))
+  ;;     (f x))
+  ;;
+  ;;the body  of the LET  form contains a  sequence of forms:  "(f (cdr x))"  will be
+  ;;executed first, "(f x)"  will be executed last.  We know that  CDR accepts a pair
+  ;;as argument:  after "(cdr  x)" has  been executed without  raising a  "wrong type
+  ;;argument" exception,  we know that the  variable X is  a pair.  So when,  in this
+  ;;very  module, we  process  "(cdr x)"  we extend  the  environment by  associating
+  ;;"T:pair" to X; when later we process "(f x)", X is tagged.
   ;;
   (define (%apply-primcall op rand* env)
     (define (return retval.tag)
@@ -421,7 +465,10 @@
 ;;; --------------------------------------------------------------------
 
   (module (inject)
-
+    ;;Extend the environment with informations gathered from the fact that: after the
+    ;;safe  primitive  has  been  successfully  executed,  its  arguments  have  been
+    ;;determined as correct, so we know their type.
+    ;;
     (define (inject op rand* env retval.tag . rand*.tag)
       ;;This is for core primitives accepting a fixed number of arguments.
       ;;
@@ -436,12 +483,13 @@
 
     (define (%extend* rand* rand.tag* env)
       ;;Non-tail  recursive   function.   Extend   the  environment  ENV   with  type
-      ;;informations  about the  PRELEX  structs in  RAND*, using  the  T records  in
-      ;;RAND.TAG*.  Return the extended environment.
+      ;;informations  about the  PRELEX  structs in  RAND*,  using the  CORE-TYPE-TAG
+      ;;records in RAND.TAG*.  Return the extended environment.
       ;;
       ;;RAND* can  be a list of  structs representing recordised code,  either PRELEX
       ;;structs, KNOWN  structs or  some other struct  type; if a  RAND is  neither a
-      ;;PRELEX nor a KNOWN holding a PRELEX: it is silently skipped here.
+      ;;PRELEX nor a KNOWN  holding a PRELEX: it is silently  skipped because no type
+      ;;informations can be associated to it.
       ;;
       (if (pair? rand*)
 	  (%extend ($car rand*) ($car rand.tag*)
@@ -463,7 +511,10 @@
 ;;; --------------------------------------------------------------------
 
   (module (inject*)
-
+    ;;Extend the environment with informations gathered from the fact that: after the
+    ;;safe  primitive  has  been  successfully  executed,  its  arguments  have  been
+    ;;determined as correct, so we know their type.
+    ;;
     (define (inject* op rand* env retval.tag rand.tag)
       ;;This  is for  core  primitives accepting  any number  of  operands after  the
       ;;mandatory ones, but with all the operands of the same type RAND.TAG.
@@ -475,11 +526,12 @@
     (define (%extend* rand* env rand.tag)
       ;;Non-tail  recursive   function.   Extend   the  environment  ENV   with  type
       ;;informations about  the PRELEX structs  in RAND*, using  for all of  them the
-      ;;same T record RAND.TAG.  Return the extended environment.
+      ;;same CORE-TYPE-TAG record RAND.TAG.  Return the extended environment.
       ;;
       ;;RAND* can  be a list of  structs representing recordised code,  either PRELEX
       ;;structs, KNOWN  structs or  some other struct  type; if a  RAND is  neither a
-      ;;PRELEX nor a KNOWN holding a PRELEX: it is silently skipped here.
+      ;;PRELEX nor a KNOWN  holding a PRELEX: it is silently  skipped because no type
+      ;;informations can be associated to it.
       ;;
       (if (null? rand*)
 	  env
