@@ -5663,6 +5663,30 @@
   #| end of module: insert-stack-overflow-check |# )
 
 
+(module CORE-PRIMITIVE-OPERATIONS
+  (core-primitive-operation? get-primop set-primop!)
+  ;;This  module has  the  only  purpose of  making  the binding  COOKIE
+  ;;visible only to CORE-PRIMITIVE-OPERATION?, GET-PRIMOP and SET-PRIMOP!.
+  ;;
+  (import (only (vicare system $symbols)
+		$getprop $putprop))
+
+  (define-constant COOKIE
+    (compile-time-gensym "primitive-operation-cookie"))
+
+  (define (core-primitive-operation? x)
+    (and ($getprop x COOKIE) #t))
+
+  (define (get-primop x)
+    (or ($getprop x COOKIE)
+	(error 'getprimop "not a primitive" x)))
+
+  (define (set-primop! symbol value)
+    ($putprop symbol COOKIE value))
+
+  #| end of module CORE-PRIMITIVE-OPERATIONS |# )
+
+
 ;;;; external code for actual code generation
 
 (include "ikarus.compiler.altcogen.ss" #t)

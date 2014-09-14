@@ -40,7 +40,6 @@
 (module (alt-cogen
 	 refresh-common-assembly-subroutines-cached-labels!
 	 sl-apply-label
-	 CORE-PRIMITIVE-OPERATIONS
 	 alt-cogen.specify-representation
 	 alt-cogen.impose-calling-convention/evaluation-order
 	 alt-cogen.assign-frame-sizes
