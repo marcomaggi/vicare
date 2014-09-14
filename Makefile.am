@@ -293,8 +293,8 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.tag-annotation-analysis.scm	\
 	scheme/ikarus.compiler.scheme-object-defs.scm		\
 	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
+	scheme/ikarus.compiler.specify-representation.scm	\
 	scheme/pass-specify-rep-primops.ss			\
-	scheme/pass-specify-rep.ss				\
 	\
 	scheme/ikarus.apply.sls					\
 	scheme/ikarus.apropos.sls				\

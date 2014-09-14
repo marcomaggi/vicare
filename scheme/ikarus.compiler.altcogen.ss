@@ -79,7 +79,7 @@
 
 (include "ikarus.compiler.scheme-object-defs.scm" #t)
 (include "ikarus.compiler.common-assembly-subroutines.scm" #t)
-(include "pass-specify-rep.ss" #t)
+(include "ikarus.compiler.specify-representation.scm" #t)
 (import CORE-PRIMITIVE-OPERATIONS)
 
 
