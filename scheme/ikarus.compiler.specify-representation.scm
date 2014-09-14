@@ -242,23 +242,41 @@
     (syntax-case x ()
       ((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
        (with-syntax
-	   (((VAR ...) (generate-temporaries #'(?lhs ...)))
+	   (((LHS ...) (generate-temporaries #'(?lhs ...)))
 	    ((RHS ...) (generate-temporaries #'(?lhs ...))))
-	 ;;Evaluate the right-hand sides, which must return recordized code.
+	 ;;Evaluate the right-hand sides, which must return recordized code.  We want
+	 ;;to evaluate the ?RHS expression outside the region of the ?LHS bindings.
 	 #'(let ((RHS ?rhs) ...)
-	     ;;Generate new struct instances of type VAR.
-	     (let ((VAR (make-unique-var '?lhs)) ...)
+	     ;;Generate new struct instances of type VAR to be used as left-hand side
+	     ;;in the BIND struct below.
+	     (let ((LHS (make-unique-var '?lhs)) ...)
 	       ;;Make the binding struct, which represents machine words allocated on
 	       ;;the stack  and initialised with  the results of evaluating  the ?RHS
 	       ;;expressions.
-	       (make-bind (list VAR ...)
+	       (make-bind (list LHS ...)
 			  (list RHS ...)
 			  ;;The ?BODY forms expect Scheme bindings to exist with name
-			  ;;?LHS, referencing the VAR structures.
-			  (let ((?lhs (%copy-core-type-descr RHS VAR)) ...)
+			  ;;?LHS,  referencing  the  VAR structures.   Wrap  the  VAR
+			  ;;structs into KNOWN structs whenever the corresponding RHS
+			  ;;has a type description.
+			  (let ((?lhs (%copy-core-type-descr LHS RHS)) ...)
 			    ;;Evaluate  the body  forms,  each of  which must  return
 			    ;;recordized code.
 			    (multiple-forms-sequence ?body0 ?body ...)))))))
+      ))
+
+  #;(define-syntax (with-tmp* stx)
+    ;;We use this when we want the ?RHS  expressions to be evaluated in the region of
+    ;;the previous  ?LHS binding.  If WITH-TMP  works like LET, WITH-TMP*  works like
+    ;;LET*.
+    ;;
+    (syntax-case stx ()
+      ((_ () ?body0 ?body ...)
+       #'(let () ?body0 ?body ...))
+      ((_ ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body0 ?body ...)
+       #'(with-tmp ((?lhs0 ?rhs0))
+	   (with-tmp* ((?lhs ?rhs) ...)
+	     ?body0 ?body ...)))
       ))
 
   (define-syntax (with-tmp* x)
@@ -270,8 +288,7 @@
 	   (((VAR ...) (generate-temporaries #'(?lhs ...)))
 	    ((RHS ...) (generate-temporaries #'(?lhs ...))))
 	 ;;Evaluate the  right-hand sides,  which must  return recordized  code.  The
-	 ;;?RHS  expressions  expect  Scheme  bindings  to  exists  with  name  ?LHS,
-	 ;;referencing the VAR structures.
+	 ;;?RHS expressions expect Scheme bindings to exists with name ?LHS.
 	 #'(let* ((?lhs ?rhs) ...)
 	     ;;Generate new struct instances of type VAR.
 	     (let ((VAR (make-unique-var '?lhs)) ...)
@@ -282,13 +299,13 @@
 			  (list ?lhs ...)
 			  ;;The  ?BODY forms  expect Scheme  bindings to  exists with
 			  ;;name ?LHS, referencing the VAR structures.
-			  (let* ((?lhs (%copy-core-type-descr ?lhs VAR)) ...)
+			  (let* ((?lhs (%copy-core-type-descr VAR ?lhs)) ...)
 			    ;;Evaluate  the body  forms,  each of  which must  return
 			    ;;recordized code.
 			    (multiple-forms-sequence ?body0 ?body ...)))))))
       ))
 
-  (define (%copy-core-type-descr rhs.struct lhs.var)
+  (define (%copy-core-type-descr lhs.var rhs.struct)
     (struct-case rhs.struct
       ((known _ type)
        (make-known lhs.var type))
