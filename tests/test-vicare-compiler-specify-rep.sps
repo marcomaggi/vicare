@@ -58,17 +58,8 @@
 ;;; expansion helpers
 
 (define-constant THE-ENVIRONMENT
-  (environment '(rnrs)
-	       '(vicare system $fx)
-	       ;;We  import this  library for  $SYMBOL-STRING, which  is a  primitive
-	       ;;operation bot not a primitive function.
-	       '(vicare system $symbols)
-	       ;;We import this library to  inspect how imported bindings are handled
-	       ;;by the compiler.
-	       '(libtest compiler-internals)
-	       ;;This is to build annotated forms and test debug-calls.
-	       '(only (vicare)
-		      get-annotated-datum)))
+  (environment '(vicare)
+	       '(vicare unsafe operations)))
 
 (define (%expand standard-language-form)
   (receive (code libs)
@@ -137,6 +128,156 @@
     ((_ ?standard-language-form ?expected-result/basic)
      (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
     ))
+
+
+(parametrise ((check-test-name	'fixnums))
+
+  (doit* (fx+ 1 2)
+	 (codes
+	  ()
+	  (shortcut
+	      (seq
+		(primcall nop)
+		(primcall int+/overflow (constant 8) (constant 16)))
+	    (funcall (primcall mref (constant (object error@fx+)) (constant 19))
+	      (constant 8) (constant 16)))))
+
+  ;;Notice how the return value of the SHORTCUT becomes the operand of DISPLAY.
+  (doit* (display (fx+ 1 2))
+	 (codes
+	  ()
+	  (funcall (primcall mref (constant (object display)) (constant 19))
+	    (shortcut
+		(seq
+		  (primcall nop)
+		  (primcall int+/overflow (constant 8) (constant 16)))
+	      (funcall (primcall mref (constant (object error@fx+)) (constant 19))
+		(constant 8) (constant 16))))))
+
+;;; --------------------------------------------------------------------
+
+  (doit* (fx- 1 2)
+	 (codes
+	  ()
+	  (shortcut
+	      (seq
+		(primcall nop)
+		(primcall int-/overflow (constant 8) (constant 16)))
+	    (funcall (primcall mref (constant (object error@fx-)) (constant 19))
+	      (constant 8) (constant 16)))))
+
+;;; --------------------------------------------------------------------
+
+  ;;This is an unsafe operation: it means we  do not check for overflow; we trust the
+  ;;code writer to  have already verified that  overflow is not possible  or does not
+  ;;matter.  So we use the assembly instruction "int*" rather than "int*/overflow".
+  ;;
+  ;;How do we multiply two fixnums A and B?  Naively we could:
+  ;;
+  ;;1. Untag A right shifting by 3  bits (on 64-bit platforms), obtaining the machine
+  ;;   word A1.
+  ;;
+  ;;2. Untag B right shifting by 3  bits (on 64-bit platforms), obtaining the machine
+  ;;   word B1.
+  ;;
+  ;;3. Multiply the machine words A1 and B1, obtaining the machine word C1.
+  ;;
+  ;;4.   Tag the  machine word  C1 by  left shifting  3 bits  (on 64-bit  platforms),
+  ;;   obtaining as result the fixnum C.
+  ;;
+  ;;As expression:
+  ;;
+  ;;   C = ((A >> 3) * (B >> 3)) << 3
+  ;;
+  ;;which,  using exact  integer operations  and  remembering that  8 =  2^3, can  be
+  ;;written:
+  ;;
+  ;;   C = ((A / 8) * (B / 8)) * 8 = A * (B / 8) = (A / 8) * B
+  ;;
+  ;;so the following expressions are equivalent and save some operations:
+  ;;
+  ;;   C = A * (B >> 3) = (A >> 3) * B
+  ;;
+  (doit* ($fx* 2 4)
+	 (codes
+	  ()
+	  (primcall int* (constant 32) (constant 2))))
+
+  ;;Here we  do care about  the overflow.   Here we do  now at compile-time  that the
+  ;;operands are both fixnum, so there is no need to introduce type validation code.
+  ;;
+  ;;The internal CONDITIONAL  validates "b_0" as a fixnum; "7"  is the representation
+  ;;of the machine  word #b111 which is the  bitmask used to isolate the  type tag of
+  ;;fixnums  on  64-bit  platforms; the  type  tag  of  fixnums  is #b000  on  64-bit
+  ;;platforms.  So:
+  ;;
+  ;;   (primcall = (primcall logand b_0 (constant 7)) (constant 0))
+  ;;
+  ;;is true if  "b_0" has the 3  least significant bits set  to zero, and so  it is a
+  ;;64-bit fixnum.
+  ;;
+  (doit* (fx* 2 4)
+	 (codes
+	  ()
+	  (shortcut
+	      (bind ((b_0 (constant 32)))
+		(seq
+		  (conditional (primcall = (primcall logand b_0 (constant 7)) (constant 0))
+		      (primcall nop)
+		    (primcall interrupt))
+		  (primcall int*/overflow (constant 2) b_0)))
+	    (funcall
+		(primcall mref (constant (object error@fx*)) (constant 19))
+	      (constant 16) (constant 32)))))
+
+  ;;Here the type of the operands is unknown.
+  ;;
+  (doit* (fx* (read) (read))
+	 (codes
+	  ()
+	  (seq
+	    ;;Here we check if the use of Scheme stack has crossed the red line and a
+	    ;;stack  enlargement  is  needed.   This is  the  implementation  of  the
+	    ;;primitive operation "$stack-overflow-check".
+	    (shortcut
+		(conditional (primcall u< %esp (primcall mref %esi (constant 32)))
+		    (primcall interrupt)
+		  (primcall nop))
+	      (foreign-call "ik_stack_overflow"))
+	    ;;Here we start the actual form implementation.
+	    (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19))))
+		   (tmp_1 (funcall (primcall mref (constant (object read)) (constant 19)))))
+	      (shortcut
+		  (bind ((a_0 tmp_0)
+			 (b_0 tmp_1))
+		    (seq
+		      ;;Validate a_0 as 64-bit fixnum.
+		      (conditional (primcall = (primcall logand a_0 (constant 7)) (constant 0))
+			  (primcall nop)
+			(primcall interrupt))
+		      ;;Validate b_0 as 64-bit fixnum.
+		      (conditional (primcall = (primcall logand b_0 (constant 7)) (constant 0))
+			  (primcall nop)
+			(primcall interrupt))
+		      ;;Perform the  product, by untagging (right-shifting)  only one
+		      ;;operand.
+		      (primcall int*/overflow a_0 (primcall sra b_0 (constant 3)))))
+		;;If  an operand  is not  a finxum  or an  overflow occurs:  raise an
+		;;exception.  The single primitive function "error@fx*" is called for
+		;;both the causes  or error: first it validates  (again) the operands
+		;;as fixnums, and if they are: it means the error is an overflow.
+		(funcall (primcall mref (constant (object error@fx*)) (constant 19))
+		  tmp_0 tmp_1))))))
+
+;;; --------------------------------------------------------------------
+
+  (doit* (fxdiv 6 3)
+	 (codes
+	  ()
+	  (funcall (primcall mref (constant (object fxdiv)) (constant 19))
+	    (constant 48) (constant 24))))
+
+  #t)
 
 
 (parametrise ((check-test-name	'arithmetics))
