@@ -159,6 +159,21 @@
    ))
 
 
+;;;; high-level assembly primitives
+
+(define (prm op . args)
+  ;;Build  and return  recordised  call  which performs  the  primitive operation  OP
+  ;;applying it to the arguments ARGS.
+  ;;
+  (make-primcall op args))
+
+(define (nop)
+  ;;Build  and  return  recordised  call   representing  the  dummy  instruction  "no
+  ;;operation".
+  ;;
+  (make-primcall 'nop '()))
+
+
 (module (with-interrupt-handler interrupt)
 
   (define-constant interrupt-handler
@@ -167,7 +182,6 @@
 
   (define (interrupt)
     ((interrupt-handler))
-    ;;Remember that PRM is a maker of struct instances of type PRIMCALL.
     (prm 'interrupt))
 
   (define* (with-interrupt-handler p x ctxt args make-interrupt-call make-no-interrupt-call k)
@@ -221,81 +235,66 @@
 
 (module (with-tmp with-tmp*)
 
-  (define-syntax with-tmp
-    ;;Do what is  needed to generate recordized code in  the region of a
-    ;;local binding definition.   It works like LET  for recordized code
-    ;;generation
+  (define-syntax (with-tmp x)
+    ;;Do what is needed to generate recordized  code in the region of a local binding
+    ;;definition.  It works like LET for recordized code generation
     ;;
-    (lambda (x)
-      (syntax-case x ()
-	((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
-	 (with-syntax (((VAR ...) (generate-temporaries #'(?lhs ...))))
-	   ;;Evaluate the right-hand sides, which must return recordized
-	   ;;code.
-	   #'(let ((?lhs ?rhs)
-		   ...)
-	       ;;Generate new struct instances of type VAR.
-	       (let ((VAR (make-unique-var '?lhs))
-		     ...)
-#;(debug-print 'here '(copy-tag ?lhs VAR) ...)
-#;(debug-print 'here1 (copy-tag ?lhs VAR) ...)
-		 ;;Make the binding struct.
-		 (make-bind (list VAR ...) (list ?lhs ...)
-			    ;;The ?BODY forms  expect Scheme bindings to
-			    ;;exists with name ?LHS, referencing the VAR
-			    ;;structures.
-			    (let ((?lhs (copy-tag ?lhs VAR))
-				  ...)
-#;(debug-print 'there)
-			      ;;Evaluate the  body forms, each  of which
-			      ;;must return recordized code.
-			      (multiple-forms-sequence ?body0 ?body ...))))))))))
+    (syntax-case x ()
+      ((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
+       (with-syntax
+	   (((VAR ...) (generate-temporaries #'(?lhs ...)))
+	    ((RHS ...) (generate-temporaries #'(?lhs ...))))
+	 ;;Evaluate the right-hand sides, which must return recordized code.
+	 #'(let ((RHS ?rhs) ...)
+	     ;;Generate new struct instances of type VAR.
+	     (let ((VAR (make-unique-var '?lhs)) ...)
+	       ;;Make the binding struct, which represents machine words allocated on
+	       ;;the stack  and initialised with  the results of evaluating  the ?RHS
+	       ;;expressions.
+	       (make-bind (list VAR ...)
+			  (list RHS ...)
+			  ;;The ?BODY forms expect Scheme bindings to exist with name
+			  ;;?LHS, referencing the VAR structures.
+			  (let ((?lhs (%copy-core-type-descr RHS VAR)) ...)
+			    ;;Evaluate  the body  forms,  each of  which must  return
+			    ;;recordized code.
+			    (multiple-forms-sequence ?body0 ?body ...)))))))
+      ))
 
-  (define-syntax with-tmp*
-    ;;Do what is  needed to generate recordized code in  the region of a
-    ;;local binding definition.  It works  like LET* for recordized code
-    ;;generation
-    ;;
-    #;(syntax-rules ()
-      ((_ () ?body0 ?body ...)
-       (begin ?body0 ?body ...))
-      ((_ ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body0 ?body ...)
-       (with-tmp ((?lhs0 ?rhs0))
-	 (with-tmp* ((?lhs ?rhs) ...)
-	   ?body0 ?body ...))))
-    (lambda (x)
-      (syntax-case x ()
-	((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
-	 (with-syntax (((VAR ...) (generate-temporaries #'(?lhs ...))))
-	   ;;Evaluate the right-hand sides, which must return recordized
-	   ;;code.
-	   #'(let* ((?lhs ?rhs)
-		    ...)
-	       ;;Generate new struct instances of type VAR.
-	       (let ((VAR (make-unique-var '?lhs))
-		     ...)
-		 ;;Make the binding struct.
-		 (make-bind (list VAR ...) (list ?lhs ...)
-			    ;;The ?BODY forms  expect Scheme bindings to
-			    ;;exists with name ?LHS, referencing the VAR
-			    ;;structures.
-			    (let* ((?lhs (copy-tag ?lhs VAR))
-				   ...)
-			      ;;Evaluate the  body forms, each  of which
-			      ;;must return recordized code.
-			      (multiple-forms-sequence ?body0 ?body ...))))))))))
+  (define-syntax (with-tmp* x)
+    ;;Do what is needed to generate recordized  code in the region of a local binding
+    ;;definition.  It works like LET* for recordized code generation
+    (syntax-case x ()
+      ((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
+       (with-syntax
+	   (((VAR ...) (generate-temporaries #'(?lhs ...)))
+	    ((RHS ...) (generate-temporaries #'(?lhs ...))))
+	 ;;Evaluate the  right-hand sides,  which must  return recordized  code.  The
+	 ;;?RHS  expressions  expect  Scheme  bindings  to  exists  with  name  ?LHS,
+	 ;;referencing the VAR structures.
+	 #'(let* ((?lhs ?rhs) ...)
+	     ;;Generate new struct instances of type VAR.
+	     (let ((VAR (make-unique-var '?lhs)) ...)
+	       ;;Make the binding struct, which represents machine words allocated on
+	       ;;the stack  and initialised with  the results of evaluating  the ??lhs
+	       ;;expressions.
+	       (make-bind (list VAR ...)
+			  (list ?lhs ...)
+			  ;;The  ?BODY forms  expect Scheme  bindings to  exists with
+			  ;;name ?LHS, referencing the VAR structures.
+			  (let* ((?lhs (%copy-core-type-descr ?lhs VAR)) ...)
+			    ;;Evaluate  the body  forms,  each of  which must  return
+			    ;;recordized code.
+			    (multiple-forms-sequence ?body0 ?body ...)))))))
+      ))
 
-  (define (copy-tag orig new)
-#;(debug-print 'enter-copy-tag orig new)
-    (struct-case orig
+  (define (%copy-core-type-descr rhs.struct lhs.var)
+    (struct-case rhs.struct
       ((known _ type)
-#;(debug-print 'copy-tag/known new type)
-       (make-known new type))
-      (else
-#;(debug-print 'copy-tag/not-known new)
-       new)))
+       (make-known lhs.var type))
+      (else lhs.var)))
 
-  #| end of module: with-tmp |# )
+  #| end of module: WITH-TMP, WITH-TMP* |# )
 
 
 (module cogen-handler-maker

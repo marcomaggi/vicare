@@ -68,15 +68,6 @@
  (define-constant NUM-OF-BITS-IN-WORD
    (* wordsize 8))
 
- (define (prm op . args)
-   ;;Perform  the primitive operation  OP applying  it to  the arguments
-   ;;ARGS.
-   ;;
-   (make-primcall op args))
-
- (define (nop)
-   (make-primcall 'nop '()))
-
  (define (tag-test x mask tag)
    ;;Primary tag test.  X must be a word referencing a Scheme value.
    ;;
@@ -5081,10 +5072,11 @@
  /section)
 
 ;;; end of file
-;;;Local Variables:
-;;;eval: (put 'make-conditional	'scheme-indent-function 2)
-;;;eval: (put 'with-tmp		'scheme-indent-function 1)
-;;;eval: (put 'with-tmp*	'scheme-indent-function 1)
-;;;eval: (put 'struct-case	'scheme-indent-function 1)
-;;;eval: (put 'check-flonums	'scheme-indent-function 1)
-;;;End:
+;;Local Variables:
+;;mode: vicare
+;;eval: (put 'make-conditional	'scheme-indent-function 2)
+;;eval: (put 'with-tmp		'scheme-indent-function 1)
+;;eval: (put 'with-tmp*	'scheme-indent-function 1)
+;;eval: (put 'struct-case	'scheme-indent-function 1)
+;;eval: (put 'check-flonums	'scheme-indent-function 1)
+;;End:
