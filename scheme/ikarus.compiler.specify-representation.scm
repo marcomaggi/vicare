@@ -235,11 +235,11 @@
 
 (module (with-tmp with-tmp*)
 
-  (define-syntax (with-tmp x)
+  (define-syntax (with-tmp stx)
     ;;Do what is needed to generate recordized  code in the region of a local binding
     ;;definition.  It works like LET for recordized code generation
     ;;
-    (syntax-case x ()
+    (syntax-case stx ()
       ((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
        (with-syntax
 	   (((LHS ...) (generate-temporaries #'(?lhs ...)))
@@ -265,41 +265,49 @@
 			    (multiple-forms-sequence ?body0 ?body ...)))))))
       ))
 
-  #;(define-syntax (with-tmp* stx)
+  ;;FIXME Why in  hell does this implementation of WITH-TMP*  cause a segfault?!?  It
+  ;;should be the correct and  simpler implementation of the error-containing version
+  ;;below.  (Marco Maggi; Sun Sep 14, 2014)
+  ;;
+  ;; (define-syntax (with-tmp* stx)
+  ;;   ;;We use this when we want the ?RHS  expressions to be evaluated in the region of
+  ;;   ;;the previous  ?LHS binding.  If WITH-TMP  works like LET, WITH-TMP*  works like
+  ;;   ;;LET*.
+  ;;   (syntax-case stx ()
+  ;;     ((_ () ?body0 ?body ...)
+  ;;      #'(let () ?body0 ?body ...))
+  ;;     ((_ ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body0 ?body ...)
+  ;;      #'(with-tmp ((?lhs0 ?rhs0))
+  ;; 	   (with-tmp* ((?lhs ?rhs) ...)
+  ;; 	     ?body0 ?body ...)))
+  ;;     ))
+
+  (define-syntax (with-tmp* x)
     ;;We use this when we want the ?RHS  expressions to be evaluated in the region of
     ;;the previous  ?LHS binding.  If WITH-TMP  works like LET, WITH-TMP*  works like
     ;;LET*.
-    ;;
-    (syntax-case stx ()
-      ((_ () ?body0 ?body ...)
-       #'(let () ?body0 ?body ...))
-      ((_ ((?lhs0 ?rhs0) (?lhs ?rhs) ...) ?body0 ?body ...)
-       #'(with-tmp ((?lhs0 ?rhs0))
-	   (with-tmp* ((?lhs ?rhs) ...)
-	     ?body0 ?body ...)))
-      ))
-
-  (define-syntax (with-tmp* x)
-    ;;Do what is needed to generate recordized  code in the region of a local binding
-    ;;definition.  It works like LET* for recordized code generation
     (syntax-case x ()
       ((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
        (with-syntax
-	   (((VAR ...) (generate-temporaries #'(?lhs ...)))
-	    ((RHS ...) (generate-temporaries #'(?lhs ...))))
+	   (((LHS ...) (generate-temporaries #'(?lhs ...))))
 	 ;;Evaluate the  right-hand sides,  which must  return recordized  code.  The
 	 ;;?RHS expressions expect Scheme bindings to exists with name ?LHS.
+	 ;;
+	 ;;FIXME Error!!!   We evaluate the ?RHS  in the region of  the previous ?LHS
+	 ;;bindings,  which means  that recordised  code is  duplicated.  We  should,
+	 ;;instead evaluate  the ?RHS  in the  region of  the ?LHS  bound to  the VAR
+	 ;;structs generated below.  (Marco Maggi; Sun Sep 14, 2014)
 	 #'(let* ((?lhs ?rhs) ...)
-	     ;;Generate new struct instances of type VAR.
-	     (let ((VAR (make-unique-var '?lhs)) ...)
+	     ;;Generate new struct instances of type LHS.
+	     (let ((LHS (make-unique-var '?lhs)) ...)
 	       ;;Make the binding struct, which represents machine words allocated on
 	       ;;the stack  and initialised with  the results of evaluating  the ??lhs
 	       ;;expressions.
-	       (make-bind (list VAR ...)
+	       (make-bind (list LHS ...)
 			  (list ?lhs ...)
 			  ;;The  ?BODY forms  expect Scheme  bindings to  exists with
 			  ;;name ?LHS, referencing the VAR structures.
-			  (let* ((?lhs (%copy-core-type-descr VAR ?lhs)) ...)
+			  (let* ((?lhs (%copy-core-type-descr LHS ?lhs)) ...)
 			    ;;Evaluate  the body  forms,  each of  which must  return
 			    ;;recordized code.
 			    (multiple-forms-sequence ?body0 ?body ...)))))))
