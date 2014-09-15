@@ -4249,6 +4249,66 @@
 
 ;;; --------------------------------------------------------------------
 
+ (define-primitive-operation string-length safe
+   ((V str)
+    (struct-case str
+      ((known str.expr str.type)
+       (case (T:string? str.type)
+	 ((yes)
+	  (cogen-value-$string-length str.expr))
+	 ((no)
+	  (if (option.strict-r6rs)
+	      (interrupt)
+	    (compile-time-error 'string-length
+	      "expected string as operand" (unparse-recordized-code str))))
+	 (else
+	  (cogen-value-string-length str.expr))))
+      ((constant str.const)
+       ;;Here the operand has no type description, but still we can check the operand
+       ;;at compile-time.
+       (cond ((string? str.const)
+	      (cogen-value-$string-length str))
+	     ((option.strict-r6rs)
+	      (interrupt))
+	     (else
+	      (compile-time-error 'string-length
+		"expected string as operand" (unparse-recordized-code str)))))
+      (else
+       (multiple-forms-sequence
+	(assert-string str)
+	(with-tmp ((str.len (cogen-value-$string-length str)))
+	  (interrupt-unless-fixnum str.len)
+	  str.len)))))
+   ((E str)
+    (struct-case str
+      ((known str.expr str.type)
+       (case (T:string? str.type)
+	 ((yes)
+	  (nop))
+	 ((no)
+	  (if (option.strict-r6rs)
+	      (interrupt)
+	    (compile-time-error 'string-length
+	      "expected string as operand" (unparse-recordized-code str))))
+	 (else
+	  (cogen-effect-string-length str.expr))))
+      ((constant str.const)
+       ;;Here the operand has no type description, but still we can check the operand
+       ;;at compile-time.
+       (cond ((string? str.const)
+	      (nop))
+	     ((option.strict-r6rs)
+	      (interrupt))
+	     (else
+	      (compile-time-error 'string-length
+		"expected string as operand" (unparse-recordized-code str)))))
+      (else
+       (assert-string str))))
+   ((P str)
+    (multiple-forms-sequence
+     (cogen-effect-string-length str)
+     (K #t))))
+
  (define-primitive-operation string-ref safe
    ((V str idx)
     (struct-case idx
