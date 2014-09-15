@@ -578,10 +578,10 @@
 	    (%partition-simple-operands (cdr rand*))
 	  (let ((rand (car rand*)))
 	    (struct-case rand
-	      ;; ((var)
-	      ;;  ;;This  operand is  a variable  reference: it  is fine  to include  it
-	      ;;  ;;multiple times; it is a simple operand.
-	      ;;  (values lhs* rhs* (cons rand simplified-rand*)))
+	      ((var)
+	       ;;This  operand is  a variable  reference: it  is fine  to include  it
+	       ;;multiple times; it is a simple operand.
+	       (values lhs* rhs* (cons rand simplified-rand*)))
 	      ((known rand.expr rand.type)
 	       (struct-case rand.expr
 		 ((constant)
@@ -589,17 +589,31 @@
 		  ;;
 		  ;;   (known (constant ?rand.expr.const) ?type)
 		  ;;
-		  ;;it is fine to include it  multiple times: it is a simple operand;
-		  ;;we keep the type description.
+		  ;;it is fine to include it  multiple times: it is a simple operand.
+		  ;;
+		  ;;FIXME Here I  would like to keep the type  description and so add
+		  ;;RAND itself as simplified operand, rather than add RAND.EXPR; but
+		  ;;if I  do it: there  are expressions  that fail to  compile.  This
+		  ;;must  be further  investigated and  solved because  handing KNOWN
+		  ;;structs to the primitive-operation implementation-handlers is the
+		  ;;whole point of  having KNOWN structs.  (Marco Maggi;  Mon Sep 15,
+		  ;;2014)
 		  (values lhs* rhs* (cons rand.expr simplified-rand*)))
-		 ;; ((var)
-		 ;;  ;;This operand is:
-		 ;;  ;;
-		 ;;  ;;   (known var ?type)
-		 ;;  ;;
-		 ;;  ;;it is fine  to include it multiple times; it  is a simple operand
-		 ;;  ;;we keep the type description.
-		 ;;  (values lhs* rhs* (cons rand simplified-rand*)))
+		 ((var)
+		  ;;This operand is:
+		  ;;
+		  ;;   (known var ?type)
+		  ;;
+		  ;;it is fine to include it multiple times; it is a simple operand.
+		  ;;
+		  ;;FIXME Here I  would like to keep the type  description and so add
+		  ;;RAND itself as simplified operand, rather than add RAND.EXPR; but
+		  ;;if I  do it: there  are expressions  that fail to  compile.  This
+		  ;;must  be further  investigated and  solved because  handing KNOWN
+		  ;;structs to the primitive-operation implementation-handlers is the
+		  ;;whole point of  having KNOWN structs.  (Marco Maggi;  Mon Sep 15,
+		  ;;2014)
+		  (values lhs* rhs* (cons rand.expr simplified-rand*)))
 		 (else
 		  ;;This operand is:
 		  ;;
@@ -1158,7 +1172,7 @@
   (define (unknown-V x)
     (struct-case x
       ((constant)
-       (T x))
+       (constant->constant-representation x))
 
       ((var)
        x)
@@ -1348,84 +1362,80 @@
      (error 'cogen-E "invalid effect expr" (unparse-recordized-code x)))))
 
 
-(module (T)
+(define (T x)
+  ;;X must be a  struct instance representing recordized code to  be executed in "for
+  ;;returned value" context, evaluating to a single value to be used as argument to a
+  ;;primitive operation.  Return  a struct instance representing  recordized code (to
+  ;;be executed in "for returned value" context) which is meant to replace X.
+  ;;
+  ;;Accept as input recordized code holding the following struct types:
+  ;;
+  ;;   constant		known		var
+  ;;
+  (struct-case x
+    ((var)
+     x)
 
-  (define (T x)
-    ;;X must be a struct instance representing recordized code to be executed in "for
-    ;;returned value" context, evaluating to a single value to be used as argument to
-    ;;a primitive operation.   Return a struct instance  representing recordized code
-    ;;(to be executed in "for returned value" context) which is meant to replace X.
-    ;;
-    ;;Accept as input recordized code holding the following struct types:
-    ;;
-    ;;   constant		known		var
-    ;;
-    (struct-case x
-      ((var)
-       x)
+    ((constant)
+     (constant->constant-representation x))
 
-      ((constant)
-       (constant-rep x))
+    ((known expr type)
+     (make-known (T expr) type))
 
-      ((known expr type)
-       (make-known (T expr) type))
+    (else
+     (error 'cogen-T "invalid" (unparse-recordized-code x)))))
 
-      (else
-       (error 'cogen-T "invalid" (unparse-recordized-code x)))))
+(define* (constant->constant-representation x)
+  ;;X must  be a struct  instance of  type CONSTANT.  When  the constant value  has a
+  ;;binary  representation:  return   a  new  CONSTANT  struct   holding  the  binary
+  ;;representation itself.  Otherwise return:
+  ;;
+  ;;   (constant (object ?const))
+  ;;
+  ;;which meant that ?CONST will end in the code object's relocation vector.
+  ;;
+  ;;The binary  representation is an  exact integer that  fits into a  single machine
+  ;;word.
+  ;;
+  (let ((c (constant-value x)))
+    (cond ((fx? c)
+	   ;;Shifting as is done below is equivalent to:
+	   ;;
+	   ;;   (make-constant (* c fx-scale))
+	   ;;
+	   (make-constant (bitwise-arithmetic-shift-left c fx-shift)))
 
-  (define* (constant-rep x)
-    ;;X must be  a struct instance of  type CONSTANT.  When the constant  value has a
-    ;;binary  representation:  return  a  new  CONSTANT  struct  holding  the  binary
-    ;;representation itself.  Otherwise return:
-    ;;
-    ;;   (constant (object ?const))
-    ;;
-    ;;which meant that ?CONST will end in the code object's relocation vector.
-    ;;
-    ;;The binary  representation is an  exact integer that  fits into a  single machine
-    ;;word.
-    ;;
-    (let ((c (constant-value x)))
-      (cond ((fx? c)
-	     ;;Shifting as is done below is equivalent to:
-	     ;;
-	     ;;   (make-constant (* c fx-scale))
-	     ;;
-	     (make-constant (bitwise-arithmetic-shift-left c fx-shift)))
+	  ((boolean? c)
+	   (make-constant (if c bool-t bool-f)))
 
-	    ((boolean? c)
-	     (make-constant (if c bool-t bool-f)))
+	  ((eq? c (void))
+	   (make-constant void-object))
 
-	    ((eq? c (void))
-	     (make-constant void-object))
+	  ((bwp-object? c)
+	   (make-constant BWP-OBJECT))
 
-	    ((bwp-object? c)
-	     (make-constant BWP-OBJECT))
+	  ((char? c)
+	   ;;Here  we are  interested  in Scheme  characters  as standalone  objects:
+	   ;;machine words whose least significant bits  are set to the character tag
+	   ;;and whose most significant bits are  set to the character's Unicode code
+	   ;;point.
+	   (make-constant ($fxlogor char-tag
+				    ($fxsll (char->integer c)
+					    char-shift))))
 
-	    ((char? c)
-	     ;;Here we  are interested in Scheme  characters as standalone
-	     ;;objects: machine words whose least significant bits are set
-	     ;;to the  character tag and  whose most significant  bits are
-	     ;;set to the character's Unicode code point.
-	     (make-constant ($fxlogor char-tag
-				      ($fxsll (char->integer c)
-					      char-shift))))
+	  ((null? c)
+	   (make-constant nil))
 
-	    ((null? c)
-	     (make-constant nil))
+	  ((eof-object? c)
+	   (make-constant eof))
 
-	    ((eof-object? c)
-	     (make-constant eof))
+	  ((object? c)
+	   (compiler-internal-error __who__
+	     "found recordised constant with double wrapping" (unparse-recordized-code x)))
 
-	    ((object? c)
-	     (compiler-internal-error __who__
-	       "found recordised constant with double wrapping" (unparse-recordized-code x)))
-
-	    (else
-	     ;;Everything else will go in the relocation vector.
-	     (make-constant (make-object c))))))
-
-  #| end of module: T |# )
+	  (else
+	   ;;Everything else will go in the relocation vector.
+	   (make-constant (make-object c))))))
 
 
 (define-syntax K
@@ -1491,7 +1501,9 @@
 	      ;;here, at compile-time?  (Marco Maggi; Mon May 19, 2014)
 	      => (lambda (loc)
 		   (reset-symbol-proc! loc)
-		   (prm 'mref (T (K loc)) (K off-symbol-record-proc))))
+		   (prm 'mref
+			(constant->constant-representation (K loc))
+			(K off-symbol-record-proc))))
 	     (else
 	      (nonproc x check?))))
 
