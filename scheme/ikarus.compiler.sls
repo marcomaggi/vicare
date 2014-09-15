@@ -5665,8 +5665,8 @@
 
 (module CORE-PRIMITIVE-OPERATIONS
   (core-primitive-operation? get-primop set-primop!)
-  ;;This  module has  the  only  purpose of  making  the binding  COOKIE
-  ;;visible only to CORE-PRIMITIVE-OPERATION?, GET-PRIMOP and SET-PRIMOP!.
+  ;;This module  has the only  purpose of making the  binding COOKIE visible  only to
+  ;;CORE-PRIMITIVE-OPERATION?, GET-PRIMOP and SET-PRIMOP!.
   ;;
   (import (only (vicare system $symbols)
 		$getprop $putprop))
@@ -5674,15 +5674,26 @@
   (define-constant COOKIE
     (compile-time-gensym "primitive-operation-cookie"))
 
-  (define (core-primitive-operation? x)
-    (and ($getprop x COOKIE) #t))
+  (define (core-primitive-operation? core-primitive-symbol-name)
+    ;;Return  true  if  CORE-PRIMITIVE-SYMBOL-NAME  is  the public  name  of  a  core
+    ;;primitive operation; otherwise return false.
+    ;;
+    (and ($getprop core-primitive-symbol-name COOKIE) #t))
 
-  (define (get-primop x)
-    (or ($getprop x COOKIE)
-	(error 'getprimop "not a primitive" x)))
+  (define (get-primop core-primitive-symbol-name)
+    ;;If CORE-PRIMITIVE-SYMBOL-NAME is the public name of a core primitive operation:
+    ;;return a PRIMITIVE-HANDLER struct describind  the operation; otherwise raise an
+    ;;exception.
+    ;;
+    (or ($getprop core-primitive-symbol-name COOKIE)
+	(compiler-internal-error 'getprimop
+	  "not a core primitive operation" core-primitive-symbol-name)))
 
-  (define (set-primop! symbol value)
-    ($putprop symbol COOKIE value))
+  (define (set-primop! symbol primitive-handler)
+    ;;Associate to  SYMBOL the struct  PRIMITIVE-HANDLER, turning SYMBOL into  a core
+    ;;primitive's symbol name.
+    ;;
+    ($putprop symbol COOKIE primitive-handler))
 
   #| end of module CORE-PRIMITIVE-OPERATIONS |# )
 

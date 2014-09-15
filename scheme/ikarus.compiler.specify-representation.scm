@@ -185,9 +185,8 @@
     (prm 'interrupt))
 
   (define* (with-interrupt-handler p x ctxt args make-interrupt-call make-no-interrupt-call k)
-    ;;P must be a struct instance of type primitive-handler.
-    ;;
-    ;;CTXT must be one of the symbols: V, E, P.
+    ;;PRIM is a struct  of type PRIMITIVE-HANDLER.  CTXT must be  one of the symbols:
+    ;;V, E, P.
     ;;
     (if (not (primitive-handler-interruptable? p))
 	;;Raise an error if INTERRUPT is called by an uninterruptible primitive.
@@ -322,162 +321,200 @@
   #| end of module: WITH-TMP, WITH-TMP* |# )
 
 
-(module cogen-handler-maker
-  ;;This module is used only by the module COGEN-PRIMOP-STUFF.
-  ;;
-  (make-cogen-handler)
-
-  (define (make-cogen-handler make-interrupt-call make-no-interrupt-call)
-    ;;Build and return the COGEN-PRIMOP-FUNC closure.
-    ;;
-    (define (cogen-primop-func x ctxt args)
-      (let ((p (get-primop x)))
-	(simplify* args
-		   (lambda (args)
-		     (with-interrupt-handler
-		      p x ctxt (map T args)
-		      make-interrupt-call make-no-interrupt-call
-		      (lambda ()
-			(case ctxt
-			  ((P)
-			   (cond ((primitive-handler-p-handled? p)
-				  (apply (primitive-handler-p-handler p) args))
-				 ((primitive-handler-v-handled? p)
-				  (let ((e (apply (primitive-handler-v-handler p) args)))
-				    (if (%interrupt-primcall? e) e (prm '!= e (K bool-f)))))
-				 ((primitive-handler-e-handled? p)
-				  (let ((e (apply (primitive-handler-e-handler p) args)))
-				    (if (%interrupt-primcall? e) e (make-seq e (K #t)))))
-				 (else
-				  (error 'cogen-primop "not handled" x))))
-			  ((V)
-			   (cond ((primitive-handler-v-handled? p)
-				  (apply (primitive-handler-v-handler p) args))
-				 ((primitive-handler-p-handled? p)
-				  (let ((e (apply (primitive-handler-p-handler p) args)))
-				    (if (%interrupt-primcall? e)
-					e
-				      (make-conditional e (K bool-t) (K bool-f)))))
-				 ((primitive-handler-e-handled? p)
-				  (let ((e (apply (primitive-handler-e-handler p) args)))
-				    (if (%interrupt-primcall? e)
-					e
-				      (make-seq e (K void-object)))))
-				 (else
-				  (error 'cogen-primop "not handled" x))))
-			  ((E)
-			   (cond ((primitive-handler-e-handled? p)
-				  (apply (primitive-handler-e-handler p) args))
-				 ((primitive-handler-p-handled? p)
-				  (let ((e (apply (primitive-handler-p-handler p) args)))
-				    (if (%interrupt-primcall? e)
-					e
-				      (make-conditional e (prm 'nop) (prm 'nop)))))
-				 ((primitive-handler-v-handled? p)
-				  (let ((e (apply (primitive-handler-v-handler p) args)))
-				    (if (%interrupt-primcall? e)
-					e
-				      (with-tmp ((t e)) (prm 'nop)))))
-				 (else
-				  (error 'cogen-primop "not handled" x))))
-			  (else
-			   (error 'cogen-primop "invalid context" ctxt)))))))))
-    cogen-primop-func)
-
-  (define (%interrupt-primcall? body)
-    (struct-case body
-      ((primcall op)
-       (eq? op 'interrupt))
-      (else
-       #f)))
-
-
-  ;; if ctxt is V:
-  ;;   if cogen-value, then V
-  ;;   if cogen-pred, then (if P #f #t)
-  ;;   if cogen-effect, then (seq E (void))
-  ;;
-  ;; if ctxt is P:
-  ;;   if cogen-pred, then P
-  ;;   if cogen-value, then (!= V #f)
-  ;;   if cogen-effect, then (seq E #t)
-  ;;
-  ;; if ctxt is E:
-  ;;   if cogen-effect, then E
-  ;;   if cogen-value, then (let ((tmp V)) (nop))
-  ;;   if cogen-pred, then (if P (nop) (nop))
-  (define (simplify* args k)
-    (define (S* ls)
-      (if (null? ls)
-	  (values '() '() '())
-	(let-values (((lhs* rhs* arg*) (S* (cdr ls))))
-	  (let ((a (car ls)))
-	    (struct-case a
-	      ((known expr type)
-	       (struct-case expr
-		 ((constant i)
-		  ;; erase known tag
-		  (values lhs* rhs* (cons expr arg*)))
-		 (else
-		;(printf "known ~s ~s\n" type expr)
-		  (let ((tmp (make-unique-var 'tmp)))
-		    (values (cons tmp lhs*)
-			    (cons (V expr) rhs*)
-			    (cons (make-known tmp type) arg*))))))
-	      ((constant i)
-	       (values lhs* rhs* (cons a arg*)))
-	      (else
-	       (let ((t (make-unique-var 'tmp)))
-		 (values (cons t lhs*) (cons (V a) rhs*) (cons t arg*)))))))))
-    (let-values (((lhs* rhs* args) (S* args)))
-      (if (null? lhs*)
-	  (k args)
-	(make-bind lhs* rhs* (k args)))))
-
-  #| end of module |# )
-
-
-(module cogen-primop-stuff
+(module CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS
   (cogen-primop cogen-debug-primop)
-  (import cogen-handler-maker)
+  ;;Some core primitives are implemented both as:
+  ;;
+  ;;*  Core primitive  functions.   There  exists a  loc  gensym  whose "value"  slot
+  ;;   references  a  closure  object,  which   in  turn  references  a  code  object
+  ;;  implementing  the core primitive as  machine code.  When the  core primitive is
+  ;;  used as argument as in:
+  ;;
+  ;;     (map fx+ a* b*)
+  ;;
+  ;;  the closure object implementation is used.
+  ;;
+  ;;* Core  primitive operations.  There exist  functions that the compiler  calls to
+  ;;  integrate assembly instructions implementing the core primitive.  When the core
+  ;;  primitive is used as first subform of an application form as in:
+  ;;
+  ;;     (fx+ 1 2)
+  ;;
+  ;;  the primitive operation is used.
+  ;;
+  ;;Example: the FX+ primitive function and primitive operation
+  ;;-----------------------------------------------------------
+  ;;
+  ;;Let's consider FX+.  When the  primitive function implementation detects overflow
+  ;;or  underflow: it  raises an  exception.   When the  primitive operation  detects
+  ;;overflow  or underflow  what  should  it do?   The  answer  is: every  integrated
+  ;;primitive-operation assembly-code will jump to  the same routine which will raise
+  ;;an exception; such exception-raising routines are called ERROR@?PRIM, where ?PRIM
+  ;;is the name of the core primitive.
+  ;;
+  ;;Let's consider:
+  ;;
+  ;;   (fx+ ?rand1 ?rand2)
+  ;;
+  ;;in which  the operands are  known at compile-time  to be fixnums;  when debugging
+  ;;mode  is disabled,  the recordised  representation we  want to  generate in  this
+  ;;module is:
+  ;;
+  ;;   (shortcut
+  ;;       (seq
+  ;;         (primcall nop)
+  ;;         (primcall int+/overflow ?rand1 ?rand2))
+  ;;     (funcall (primcall mref (constant (object error@fx+))
+  ;;                             ?offset-of-slot-value-in-loc-gensym)
+  ;; 	    ?rand1 ?rand2))
+  ;;
+  ;;where  "(object error@fx+)"  represents  the  loc gensym  of  the core  primitive
+  ;;function "error@fx+".
+  ;;
 
-  (define (%make-no-interrupt-call op args)
-    (let ((pref (mk-primref op)))
-      (make-funcall (V pref) args)))
+  (module (make-cogen-handler)
+
+    (define (make-cogen-handler make-interrupt-call make-no-interrupt-call)
+      ;;Build and  return the  COGEN-PRIMOP-FUNC closure.   CTXT must  be one  of the
+      ;;symbols:  P,  V,  E  representing  the evaluation  context  of  a  struct  of
+      ;;recordised code.
+      ;;
+      (define* (cogen-primop-func x ctxt args)
+	;;PRIM is a struct of type PRIMITIVE-HANDLER.
+	;;
+	(let ((prim (get-primop x)))
+	  (simplify* args
+		     (lambda (args)
+		       (define-fluid-override __who__
+			 (identifier-syntax 'code-generation-handler))
+		       (define (%error-context-not-handled)
+			 (compile-time-error __who__
+			   "evaluation context not handled by core primitive operation"
+			   prim x))
+		       (with-interrupt-handler
+			prim x ctxt (map T args)
+			make-interrupt-call make-no-interrupt-call
+			(lambda ()
+			  (case ctxt
+			    ((P)
+			     (cond ((primitive-handler-p-handled? prim)
+				    (apply (primitive-handler-p-handler prim) args))
+				   ((primitive-handler-v-handled? prim)
+				    (let ((e (apply (primitive-handler-v-handler prim) args)))
+				      (if (%interrupt-primcall? e) e (prm '!= e (K bool-f)))))
+				   ((primitive-handler-e-handled? prim)
+				    (let ((e (apply (primitive-handler-e-handler prim) args)))
+				      (if (%interrupt-primcall? e) e (make-seq e (K #t)))))
+				   (else
+				    (%error-context-not-handled))))
+			    ((V)
+			     (cond ((primitive-handler-v-handled? prim)
+				    (apply (primitive-handler-v-handler prim) args))
+				   ((primitive-handler-p-handled? prim)
+				    (let ((e (apply (primitive-handler-p-handler prim) args)))
+				      (if (%interrupt-primcall? e)
+					  e
+					(make-conditional e (K bool-t) (K bool-f)))))
+				   ((primitive-handler-e-handled? prim)
+				    (let ((e (apply (primitive-handler-e-handler prim) args)))
+				      (if (%interrupt-primcall? e)
+					  e
+					(make-seq e (K void-object)))))
+				   (else
+				    (%error-context-not-handled))))
+			    ((E)
+			     (cond ((primitive-handler-e-handled? prim)
+				    (apply (primitive-handler-e-handler prim) args))
+				   ((primitive-handler-p-handled? prim)
+				    (let ((e (apply (primitive-handler-p-handler prim) args)))
+				      (if (%interrupt-primcall? e)
+					  e
+					(make-conditional e (prm 'nop) (prm 'nop)))))
+				   ((primitive-handler-v-handled? prim)
+				    (let ((e (apply (primitive-handler-v-handler prim) args)))
+				      (if (%interrupt-primcall? e)
+					  e
+					(with-tmp ((t e)) (prm 'nop)))))
+				   (else
+				    (%error-context-not-handled))))
+			    (else
+			     (compiler-internal-error __who__
+			       "invalid evaluation context" ctxt)))))))))
+      cogen-primop-func)
+
+    (define (%interrupt-primcall? x)
+      ;;Return true if X is a PRIMCALL struct representing a call to INTERRUPT.
+      ;;
+      (struct-case x
+	((primcall op)
+	 (eq? op 'interrupt))
+	(else #f)))
+
+    ;; if ctxt is V:
+    ;;   if cogen-value, then V
+    ;;   if cogen-pred, then (if P #f #t)
+    ;;   if cogen-effect, then (seq E (void))
+    ;;
+    ;; if ctxt is P:
+    ;;   if cogen-pred, then P
+    ;;   if cogen-value, then (!= V #f)
+    ;;   if cogen-effect, then (seq E #t)
+    ;;
+    ;; if ctxt is E:
+    ;;   if cogen-effect, then E
+    ;;   if cogen-value, then (let ((tmp V)) (nop))
+    ;;   if cogen-pred, then (if P (nop) (nop))
+    (define (simplify* args k)
+      (define (S* ls)
+	(if (null? ls)
+	    (values '() '() '())
+	  (let-values (((lhs* rhs* arg*) (S* (cdr ls))))
+	    (let ((a (car ls)))
+	      (struct-case a
+		((known expr type)
+		 (struct-case expr
+		   ((constant i)
+		    ;; erase known tag
+		    (values lhs* rhs* (cons expr arg*)))
+		   (else
+		;(printf "known ~s ~s\n" type expr)
+		    (let ((tmp (make-unique-var 'tmp)))
+		      (values (cons tmp lhs*)
+			      (cons (V expr) rhs*)
+			      (cons (make-known tmp type) arg*))))))
+		((constant i)
+		 (values lhs* rhs* (cons a arg*)))
+		(else
+		 (let ((t (make-unique-var 'tmp)))
+		   (values (cons t lhs*) (cons (V a) rhs*) (cons t arg*)))))))))
+      (let-values (((lhs* rhs* args) (S* args)))
+	(if (null? lhs*)
+	    (k args)
+	  (make-bind lhs* rhs* (k args)))))
+
+    #| end of module: MAKE-COGEN-HANDLER |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (%make-no-interrupt-call primitive-symbol-name rand*)
+    (make-funcall (V (mk-primref primitive-symbol-name)) rand*))
 
   (module (%make-interrupt-call)
-    ;;Some core primitives are implemented both as:
-    ;;
-    ;;* Proper procedures.  There exists a loc gensym whose "value" slot references a
-    ;;  closure object, which in turn  references a code object implementing the core
-    ;;  primitive as machine code.
-    ;;
-    ;;*  Primitive operations.   There exist  functions  that the  compiler calls  to
-    ;;  integrate assembly instructions implementing the core primitive.
-    ;;
-    ;;When the core primitive is used as argument as in:
-    ;;
-    ;;   (map fx+ a* b*)
-    ;;
-    ;;the closure object  implementation is used; when the core  primitive is used as
-    ;;first subform of an application form as in:
-    ;;
-    ;;   (fx+ 1 2)
-    ;;
-    ;;the primitive operation is used.
-    ;;
-    ;;Let's consider  FX+.  When the  code object implementation detects  overflow or
-    ;;underflow:  it  raises an  exception.   When  the primitive  operation  detects
-    ;;overflow  or underflow  what should  it do?   The answer  is: every  integrated
-    ;;primitive-operation  assembly-code will  jump to  the same  routine which  will
-    ;;raise an exception.
-    ;;
-    ;;Such exception-raising routines are called ERROR@?PRIM, where ?PRIM is the name
-    ;;of the core primitive.
-    ;;
-    (define (%make-interrupt-call op args)
-      (let ((pref (mk-primref (%primop-interrupt-handler op))))
-	(make-funcall (V pref) args)))
+
+    (define (%make-interrupt-call primitive-symbol-name rand*)
+      ;;Build and return recordised code representing the interrupt handler.
+      ;;
+      ;;In the FX+ example, this function generates the code:
+      ;;
+      ;;   (funcall (primcall mref (constant (object error@fx+))
+      ;;                           ?offset-of-slot-value-in-loc-gensym)
+      ;;            ?rand1 ?rand2)
+      ;;
+      ;;where "(object  error@fx+)" represents the  loc gensym of the  core primitive
+      ;;function "error@fx+".
+      ;;
+      (make-funcall (V (mk-primref (%primop-interrupt-handler primitive-symbol-name)))
+		    rand*))
 
     (define (%primop-interrupt-handler x)
       (case x
@@ -492,14 +529,16 @@
 	((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
 	(else				x)))
 
-    #| end of module: %make-interrupt-call |# )
+    #| end of module: %MAKE-INTERRUPT-CALL |# )
+
+;;; --------------------------------------------------------------------
 
   (define cogen-primop
     (make-cogen-handler %make-interrupt-call %make-no-interrupt-call))
 
   (define (cogen-debug-primop op src/loc ctxt args)
     (define (%make-call op args)
-      ;;This function clauses upon the argument SRC/LOC.
+      ;;This function closes upon the argument SRC/LOC.
       ;;
       (make-funcall (V (mk-primref 'debug-call))
 		    (cons* (V src/loc)
@@ -507,7 +546,7 @@
 			   args)))
     ((make-cogen-handler %make-call %make-call) op ctxt args))
 
-  #| end of module: cogen-primop cogen-debug-primop |# )
+  #| end of module: COGEN-PRIMOP, COGEN-DEBUG-PRIMOP |# )
 
 
 (define-syntax define-primitive-operation
@@ -858,7 +897,7 @@
 
 (module cogen-debug-call-stuff
   (cogen-debug-call)
-  (import cogen-primop-stuff)
+  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
 
   (define (cogen-debug-call op ctxt arg* kont)
     ;;This function is used to process struct instances of type PRIMCALL
@@ -962,7 +1001,7 @@
   ;;* Instances of FIX are handled.
   ;;
   (import cogen-debug-call-stuff)
-  (import cogen-primop-stuff)
+  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
   (define (V x)
     (struct-case x
       ((known expr)
@@ -1046,7 +1085,7 @@
   ;;seq			var
   ;;
   (import cogen-debug-call-stuff)
-  (import cogen-primop-stuff)
+  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
   (struct-case x
     ((constant c)
      (if c (K #t) (K #f)))
@@ -1117,7 +1156,7 @@
   ;;seq			var
   ;;
   (import cogen-debug-call-stuff)
-  (import cogen-primop-stuff)
+  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
   (struct-case x
 
     ;;Useless for side effects: remove!
