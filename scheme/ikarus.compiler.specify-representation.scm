@@ -509,71 +509,150 @@
 
     (define (%cogen-primop-call cogen-core-primitive-interrupt-handler-function-call
 				cogen-core-primitive-standalone-function-call
-				primitive-symbol-name ctxt args)
+				primitive-symbol-name ctxt rand*)
       ;;CTXT must be one of the symbols:  P, V, E representing the evaluation context
       ;;of a struct of recordised code.
       ;;
-      (let ((prim (get-primop primitive-symbol-name)))
+      (define-syntax-rule (%cogen ?simplified-rand*)
+	(%generate-code cogen-core-primitive-interrupt-handler-function-call
+			cogen-core-primitive-standalone-function-call
+			primitive-symbol-name ctxt ?simplified-rand*))
+      (receive (lhs* rhs* simplified-rand*)
+	  (S* rand*)
+	(if (null? lhs*)
+	    (%cogen simplified-rand*)
+	  (make-bind lhs* rhs* (%cogen simplified-rand*)))))
+
+    (define (S* rand*)
+      ;;Given a  list of structs representing  the operands of a  primitive operation
+      ;;call:  build what  is  needed to  separate the  operands  requiring a  single
+      ;;reference from the others.
+      ;;
+      (if (null? rand*)
+	  (values '() '() '())
+	(receive (lhs* rhs* simplified-rand*)
+	    (S* (cdr rand*))
+	  (let ((rand (car rand*)))
+	    (struct-case rand
+	      ((known rand.expr rand.type)
+	       (struct-case rand.expr
+		 ((constant rand.expr.const)
+		  ;;This operand is:
+		  ;;
+		  ;;   (known (constant ?rand.expr.const) ?type)
+		  ;;
+		  ;;it is  fine to include  it multiple times;  and we keep  the type
+		  ;;description.
+		  (values lhs* rhs* (cons rand.expr simplified-rand*)))
+		 (else
+		  ;;This operand is:
+		  ;;
+		  ;;   (known ?expr ?type)
+		  ;;
+		  ;;the ?EXPR must  be included only once in the  recordised code; we
+		  ;;introduce a  VAR binding and  move the type description  from the
+		  ;;expression to the VAR in reference position.
+		  (let ((tmp (make-unique-var 'tmp)))
+		    (values (cons tmp           lhs*)
+			    (cons (V rand.expr) rhs*)
+			    (cons (make-known tmp rand.type) simplified-rand*))))))
+	      ((constant rand.const)
+	       ;;This operand is a constant: it is fine to include it multiple times.
+	       (values lhs* rhs* (cons rand simplified-rand*)))
+	      (else
+	       ;;This operand  is an  expression with  unknown type  description; the
+	       ;;RAND must be included only once in the recordised code; we introduce
+	       ;;a VAR binding.
+	       (let ((tmp (make-unique-var 'tmp)))
+		 (values (cons tmp      lhs*)
+			 (cons (V rand) rhs*)
+			 (cons tmp simplified-rand*)))))))))
+
+    (define (%generate-code cogen-core-primitive-interrupt-handler-function-call
+			    cogen-core-primitive-standalone-function-call
+			    primitive-symbol-name ctxt rand*)
+      (define-fluid-override __who__
+	(identifier-syntax 'code-generation-handler))
+      (define (%error-context-not-handled)
+	(compile-time-error __who__
+	  "evaluation context not handled by core primitive operation" prim primitive-symbol-name))
+      (define prim
 	;;PRIM is a struct of type PRIMITIVE-HANDLER.
-	(simplify* args
-		   (lambda (args)
-		     (define-fluid-override __who__
-		       (identifier-syntax 'code-generation-handler))
-		     (define (%error-context-not-handled)
-		       (compile-time-error __who__
-			 "evaluation context not handled by core primitive operation"
-			 prim primitive-symbol-name))
-		     (with-interrupt-handler
-		      prim primitive-symbol-name ctxt (map T args)
-		      cogen-core-primitive-interrupt-handler-function-call
-		      cogen-core-primitive-standalone-function-call
-		      (lambda ()
-			;;This  thunk  actually generates  the  BODY  of a  primitive
-			;;operation call.
-			(case ctxt
-			  ((P)
-			   (cond ((primitive-handler-p-handled? prim)
-				  (apply (primitive-handler-p-handler prim) args))
-				 ((primitive-handler-v-handled? prim)
-				  (let ((e (apply (primitive-handler-v-handler prim) args)))
-				    (if (%interrupt-primcall? e) e (prm '!= e (K bool-f)))))
-				 ((primitive-handler-e-handled? prim)
-				  (let ((e (apply (primitive-handler-e-handler prim) args)))
-				    (if (%interrupt-primcall? e) e (make-seq e (K #t)))))
-				 (else
-				  (%error-context-not-handled))))
-			  ((V)
-			   (cond ((primitive-handler-v-handled? prim)
-				  (apply (primitive-handler-v-handler prim) args))
-				 ((primitive-handler-p-handled? prim)
-				  (let ((e (apply (primitive-handler-p-handler prim) args)))
-				    (if (%interrupt-primcall? e)
-					e
-				      (make-conditional e (K bool-t) (K bool-f)))))
-				 ((primitive-handler-e-handled? prim)
-				  (let ((e (apply (primitive-handler-e-handler prim) args)))
-				    (if (%interrupt-primcall? e)
-					e
-				      (make-seq e (K void-object)))))
-				 (else
-				  (%error-context-not-handled))))
-			  ((E)
-			   (cond ((primitive-handler-e-handled? prim)
-				  (apply (primitive-handler-e-handler prim) args))
-				 ((primitive-handler-p-handled? prim)
-				  (let ((e (apply (primitive-handler-p-handler prim) args)))
-				    (if (%interrupt-primcall? e)
-					e
-				      (make-conditional e (prm 'nop) (prm 'nop)))))
-				 ((primitive-handler-v-handled? prim)
-				  (let ((e (apply (primitive-handler-v-handler prim) args)))
-				    (if (%interrupt-primcall? e)
-					e
-				      (with-tmp ((t e)) (prm 'nop)))))
-				 (else
-				  (%error-context-not-handled))))
-			  (else
-			   (compiler-internal-error __who__ "invalid evaluation context" ctxt)))))))))
+	(get-primop primitive-symbol-name))
+      (with-interrupt-handler
+       prim primitive-symbol-name ctxt (map T rand*)
+       cogen-core-primitive-interrupt-handler-function-call
+       cogen-core-primitive-standalone-function-call
+       (lambda ()
+	 ;;This thunk actually generates the BODY of a primitive operation call.
+	 ;;
+	 ;;* If CTXT is V:
+	 ;;
+	 ;;   if cogen-value, then V
+	 ;;   if cogen-pred, then (if P #f #t)
+	 ;;   if cogen-effect, then (seq E (void))
+	 ;;
+	 ;;* If CTXT is P:
+	 ;;
+	 ;;   if cogen-pred, then P
+	 ;;   if cogen-value, then (!= V #f)
+	 ;;   if cogen-effect, then (seq E #t)
+	 ;;
+	 ;;* If CTXT is E:
+	 ;;
+	 ;;   if cogen-effect, then E
+	 ;;   if cogen-value, then (let ((tmp V)) (nop))
+	 ;;   if cogen-pred, then (if P (nop) (nop))
+	 ;;
+	 (case ctxt
+	   ((P)
+	    (cond ((primitive-handler-p-handled? prim)
+		   (apply (primitive-handler-p-handler prim) rand*))
+		  ((primitive-handler-v-handled? prim)
+		   (let ((e (apply (primitive-handler-v-handler prim) rand*)))
+		     (if (%interrupt-primcall? e)
+			 e
+		       (prm '!= e (K bool-f)))))
+		  ((primitive-handler-e-handled? prim)
+		   (let ((e (apply (primitive-handler-e-handler prim) rand*)))
+		     (if (%interrupt-primcall? e)
+			 e
+		       (make-seq e (K #t)))))
+		  (else
+		   (%error-context-not-handled))))
+	   ((V)
+	    (cond ((primitive-handler-v-handled? prim)
+		   (apply (primitive-handler-v-handler prim) rand*))
+		  ((primitive-handler-p-handled? prim)
+		   (let ((e (apply (primitive-handler-p-handler prim) rand*)))
+		     (if (%interrupt-primcall? e)
+			 e
+		       (make-conditional e (K bool-t) (K bool-f)))))
+		  ((primitive-handler-e-handled? prim)
+		   (let ((e (apply (primitive-handler-e-handler prim) rand*)))
+		     (if (%interrupt-primcall? e)
+			 e
+		       (make-seq e (K void-object)))))
+		  (else
+		   (%error-context-not-handled))))
+	   ((E)
+	    (cond ((primitive-handler-e-handled? prim)
+		   (apply (primitive-handler-e-handler prim) rand*))
+		  ((primitive-handler-p-handled? prim)
+		   (let ((e (apply (primitive-handler-p-handler prim) rand*)))
+		     (if (%interrupt-primcall? e)
+			 e
+		       (make-conditional e (prm 'nop) (prm 'nop)))))
+		  ((primitive-handler-v-handled? prim)
+		   (let ((e (apply (primitive-handler-v-handler prim) rand*)))
+		     (if (%interrupt-primcall? e)
+			 e
+		       (with-tmp ((t e))
+			 (prm 'nop)))))
+		  (else
+		   (%error-context-not-handled))))
+	   (else
+	    (compiler-internal-error __who__ "invalid evaluation context" ctxt))))))
 
     (define (%interrupt-primcall? x)
       ;;Return true if  X is a PRIMCALL  struct representing a jump  to the interrupt
@@ -583,48 +662,6 @@
 	((primcall op)
 	 (eq? op 'interrupt))
 	(else #f)))
-
-    ;; if ctxt is V:
-    ;;   if cogen-value, then V
-    ;;   if cogen-pred, then (if P #f #t)
-    ;;   if cogen-effect, then (seq E (void))
-    ;;
-    ;; if ctxt is P:
-    ;;   if cogen-pred, then P
-    ;;   if cogen-value, then (!= V #f)
-    ;;   if cogen-effect, then (seq E #t)
-    ;;
-    ;; if ctxt is E:
-    ;;   if cogen-effect, then E
-    ;;   if cogen-value, then (let ((tmp V)) (nop))
-    ;;   if cogen-pred, then (if P (nop) (nop))
-    (define (simplify* args k)
-      (define (S* ls)
-	(if (null? ls)
-	    (values '() '() '())
-	  (let-values (((lhs* rhs* arg*) (S* (cdr ls))))
-	    (let ((a (car ls)))
-	      (struct-case a
-		((known expr type)
-		 (struct-case expr
-		   ((constant i)
-		    ;; erase known tag
-		    (values lhs* rhs* (cons expr arg*)))
-		   (else
-		;(printf "known ~s ~s\n" type expr)
-		    (let ((tmp (make-unique-var 'tmp)))
-		      (values (cons tmp lhs*)
-			      (cons (V expr) rhs*)
-			      (cons (make-known tmp type) arg*))))))
-		((constant i)
-		 (values lhs* rhs* (cons a arg*)))
-		(else
-		 (let ((t (make-unique-var 'tmp)))
-		   (values (cons t lhs*) (cons (V a) rhs*) (cons t arg*)))))))))
-      (let-values (((lhs* rhs* args) (S* args)))
-	(if (null? lhs*)
-	    (k args)
-	  (make-bind lhs* rhs* (k args)))))
 
     #| end of module: %COGEN-PRIMOP-CALL |# )
 
