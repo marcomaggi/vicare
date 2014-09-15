@@ -342,6 +342,41 @@
   ;;
   ;;  the primitive operation is used.
   ;;
+  ;;
+  ;;Disabled debugging mode
+  ;;-----------------------
+  ;;
+  ;;If a core  primitive has both the implementations as  operation and function, the
+  ;;general integration pattern is to use this code template:
+  ;;
+  ;;   (shortcut ?body ?interrupt-handler)
+  ;;
+  ;;where:  ?BODY is  recordised code  implementing a  fast and  sometimes simplified
+  ;;implementation of the  primitive, working with the most  probable argument types;
+  ;;?INTERRUPT-HANDLER  is  recordised code  implementing  a  call to  the  primitive
+  ;;function.
+  ;;
+  ;;If the fast implementation  works: it generates the result that  is handed to the
+  ;;caller.   If the  fast implementation  fails:  it jumps  to  a call  to the  full
+  ;;function; the  function validates the arguments  and retries to perform  the task
+  ;;for all the supported argument types.
+  ;;
+  ;;For a few core  primitives with simple arguments, it is useless  to call the full
+  ;;function: if  the fast implementation failed  it means the operands  are of wrong
+  ;;type or the operation is impossible.   For these primitives the interrupt handler
+  ;;is a special function  that knows the operands are invalid,  so it just validates
+  ;;them  and raises  the appropriate  exception.   The core  primitives having  this
+  ;;implementation are:
+  ;;
+  ;;   fx+		fx-		fx*
+  ;;   add1				sub1
+  ;;   fxadd1				fxsub1
+  ;;   fxarithmetic-shift-left		fxarithmetic-shift-right
+  ;;
+  ;;not many, but still important  cases.  Such exception-raising routines are called
+  ;;ERROR@?PRIM, where ?PRIM is the name of the core primitive.
+  ;;
+  ;;
   ;;Example: the FX+ primitive function and primitive operation
   ;;-----------------------------------------------------------
   ;;
@@ -370,6 +405,19 @@
   ;;
   ;;where  "(object error@fx+)"  represents  the  loc gensym  of  the core  primitive
   ;;function "error@fx+".
+  ;;
+  ;;The first form in SHORTCUT is the core primitive operation call's "body":
+  ;;
+  ;;   (seq
+  ;;     (primcall nop)
+  ;;     (primcall int+/overflow ?rand1 ?rand2))
+  ;;
+  ;;the second  form in SHORTCUT  is the  core primitive operation  call's "interrupt
+  ;;handler":
+  ;;
+  ;;   (funcall (primcall mref (constant (object error@fx+))
+  ;;                           ?offset-of-slot-value-in-loc-gensym)
+  ;;     ?rand1 ?rand2)
   ;;
 
   (module (make-cogen-handler)
@@ -496,12 +544,16 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%make-no-interrupt-call primitive-symbol-name rand*)
+  (define (%cogen-core-primitive-function-call primitive-symbol-name rand*)
+    ;;Generate code representing  a call to the core primitive  function.  This is to
+    ;;be used when no core primitive  operation integration is performed (for example
+    ;;because the primitive has no operation implementation).
+    ;;
     (make-funcall (V (mk-primref primitive-symbol-name)) rand*))
 
-  (module (%make-interrupt-call)
+  (module (%generate-interrupt-handler-code)
 
-    (define (%make-interrupt-call primitive-symbol-name rand*)
+    (define (%generate-interrupt-handler-code primitive-symbol-name rand*)
       ;;Build and return recordised code representing the interrupt handler.
       ;;
       ;;In the FX+ example, this function generates the code:
@@ -529,12 +581,12 @@
 	((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
 	(else				x)))
 
-    #| end of module: %MAKE-INTERRUPT-CALL |# )
+    #| end of module: %GENERATE-INTERRUPT-HANDLER-CODE |# )
 
 ;;; --------------------------------------------------------------------
 
   (define cogen-primop
-    (make-cogen-handler %make-interrupt-call %make-no-interrupt-call))
+    (make-cogen-handler %generate-interrupt-handler-code %cogen-core-primitive-function-call))
 
   (define (cogen-debug-primop op src/loc ctxt args)
     (define (%make-call op args)
