@@ -377,6 +377,48 @@
   ;;ERROR@?PRIM, where ?PRIM is the name of the core primitive.
   ;;
   ;;
+  ;;Example: the VECTOR-LENGTH primitive function and primitive operation
+  ;;---------------------------------------------------------------------
+  ;;
+  ;;Let's consider:
+  ;;
+  ;;   (vector-length ?rand)
+  ;;
+  ;;which is recordised as:
+  ;;
+  ;;   (funcall (primref vector-length) ?rand)
+  ;;
+  ;;when debugging is disabled, the recordised  representation we want to generate in
+  ;;this module is (slightly edited):
+  ;;
+  ;;   (bind ((tmp_0 ?rand))
+  ;;     (shortcut
+  ;;         (seq
+  ;;           ;;If the operand is a tagged pointer tagged as vector...
+  ;;           (conditional (primcall = (primcall logand tmp_0 (constant 7))
+  ;;                                    (constant 5))
+  ;;               ;;... fine.
+  ;;               (primcall nop)
+  ;;             ;;... otherwise call the full core primitive function.
+  ;;             (primcall interrupt))
+  ;;           ;;Retrieve the first word.
+  ;;           (bind ((vec.len_0 (primcall mref tmp_0 (constant -5))))
+  ;;             (seq
+  ;;               ;;If the first word is a fixnum...
+  ;;               (conditional (primcall = (primcall logand vec.len_0 (constant 7))
+  ;;                                        (constant 0))
+  ;;                   ;;... fine.
+  ;;                   (primcall nop)
+  ;;                 ;;... otherwise call the full core primitive function.
+  ;;                 (primcall interrupt))
+  ;;             ;;Return the first word.
+  ;;             vec.len_0)))
+  ;;       ;;Interrupt handler: perform a full call to the primitive function and let
+  ;;       ;;it raise an exception if there is the need.
+  ;;       (funcall (primcall mref (constant (object vector-length)) (constant 19))
+  ;;                tmp_0)))
+  ;;
+  ;;
   ;;Example: the FX+ primitive function and primitive operation
   ;;-----------------------------------------------------------
   ;;
@@ -547,14 +589,18 @@
   (define (%cogen-core-primitive-function-call primitive-symbol-name rand*)
     ;;Generate code representing  a call to the core primitive  function.  This is to
     ;;be used when no core primitive  operation integration is performed (for example
-    ;;because the primitive has no operation implementation).
+    ;;because  the  primitive  has  no  operation  implementation,  just  a  function
+    ;;implementation).
     ;;
     (make-funcall (V (mk-primref primitive-symbol-name)) rand*))
 
-  (module (%generate-interrupt-handler-code)
+  (module (%cogen-core-primitive-interrupt-handler-function-call)
 
-    (define (%generate-interrupt-handler-code primitive-symbol-name rand*)
-      ;;Build and return recordised code representing the interrupt handler.
+    (define (%cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name rand*)
+      ;;Generate code representing a call to the core primitive function.  This is to
+      ;;be used as implementation of the interrupt handler, after the integrated fast
+      ;;implementation has failed.   If the core primitive has  the special interrupt
+      ;;handler implementation: use such function.
       ;;
       ;;In the FX+ example, this function generates the code:
       ;;
@@ -581,22 +627,23 @@
 	((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
 	(else				x)))
 
-    #| end of module: %GENERATE-INTERRUPT-HANDLER-CODE |# )
+    #| end of module: %COGEN-CORE-PRIMITIVE-INTERRUPT-HANDLER-FUNCTION-CALL |# )
 
 ;;; --------------------------------------------------------------------
 
   (define cogen-primop
-    (make-cogen-handler %generate-interrupt-handler-code %cogen-core-primitive-function-call))
+    (make-cogen-handler %cogen-core-primitive-interrupt-handler-function-call
+			%cogen-core-primitive-function-call))
 
-  (define (cogen-debug-primop op src/loc ctxt args)
-    (define (%make-call op args)
+  (define (cogen-debug-primop op src/loc ctxt rand*)
+    (define (%make-call op rand*)
       ;;This function closes upon the argument SRC/LOC.
       ;;
       (make-funcall (V (mk-primref 'debug-call))
 		    (cons* (V src/loc)
 			   (V (mk-primref op))
-			   args)))
-    ((make-cogen-handler %make-call %make-call) op ctxt args))
+			   rand*)))
+    ((make-cogen-handler %make-call %make-call) op ctxt rand*))
 
   #| end of module: COGEN-PRIMOP, COGEN-DEBUG-PRIMOP |# )
 
@@ -1351,7 +1398,6 @@
 
       ((known x.expr x.type)
        (cond ((eq? (T:procedure? x.type) 'yes)
-	      ;;(record-optimization 'procedure expr)
 	      (F x.expr #f))
 	     (else
 	      (F x.expr check?))))
@@ -1391,25 +1437,6 @@
       (V x)))
 
   #| end of module: Function |# )
-
-
-(module (record-optimization)
-  ;;Currently unused.  (Marco Maggi; Oct 18, 2012)
-  ;;
-  (define-syntax record-optimization
-    (syntax-rules ()
-      ((_ ?what ?expr)
-       (void))))
-
-  #;(define the-table
-    (make-eq-hashtable))
-
-  #;(define (record-optimization^ what expr)
-    (let ((n (hashtable-ref the-table what 0)))
-      (hashtable-set! the-table what (+ n 1))
-      (printf "optimize ~a(~s): ~s\n" what n (unparse-recordized-code expr))))
-
-  #| end of module: record-optimization |# )
 
 
 ;;;; predefined checks

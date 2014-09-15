@@ -84,6 +84,40 @@
 
 ;;; --------------------------------------------------------------------
 
+(define (%core-type-inference core-language-form)
+  (let* ((D (compiler.$recordize core-language-form))
+	 (D (compiler.$optimize-direct-calls D))
+	 (D (compiler.$optimize-letrec D))
+	 ;;Source optimisation is skipped here to  make it easier to write meaningful
+	 ;;code for debugging and inspection.
+	 #;(D (compiler.$source-optimize D))
+	 (D (compiler.$rewrite-references-and-assignments D))
+	 (D (compiler.$introduce-tags D))
+	 (S (compiler.$unparse-recordized-code/sexp D)))
+    S))
+
+(define (%before-specify-representation core-language-form)
+  (let* ((D (compiler.$recordize core-language-form))
+	 (D (compiler.$optimize-direct-calls D))
+	 (D (compiler.$optimize-letrec D))
+	 ;;Source optimisation is skipped here to  make it easier to write meaningful
+	 ;;code for debugging and inspection.
+	 #;(D (compiler.$source-optimize D))
+	 (D (compiler.$rewrite-references-and-assignments D))
+	 (D (compiler.$introduce-tags D))
+	 (D (compiler.$sanitize-bindings D))
+	 (D (compiler.$optimize-for-direct-jumps D))
+	 (D (compiler.$insert-global-assignments D))
+	 (D (compiler.$introduce-vars D))
+	 (D (compiler.$introduce-closure-makers D))
+	 (D (compiler.$optimize-combinator-calls/lift-clambdas D))
+	 (D (compiler.$introduce-primcalls D))
+	 (D (compiler.$rewrite-freevar-references D))
+	 (D (compiler.$insert-engine-checks D))
+	 (D (compiler.$insert-stack-overflow-check D))
+	 (S (compiler.$unparse-recordized-code/sexp D)))
+    S))
+
 (define (%specify-representation core-language-form)
   (let* ((D (compiler.$recordize core-language-form))
 	 (D (compiler.$optimize-direct-calls D))
@@ -92,6 +126,7 @@
 	 ;;code for debugging and inspection.
 	 #;(D (compiler.$source-optimize D))
 	 (D (compiler.$rewrite-references-and-assignments D))
+	 (D (compiler.$introduce-tags D))
 	 (D (compiler.$sanitize-bindings D))
 	 (D (compiler.$optimize-for-direct-jumps D))
 	 (D (compiler.$insert-global-assignments D))
@@ -319,57 +354,55 @@
 
 (parametrise ((check-test-name	'vectors))
 
-  (doit* (vector-length '#(1 2))
-	 (codes
-	  ()
-	  (shortcut
-	      ;;Shortcut body.
-	      (seq
-		;;If the operand is a tagged pointer tagged as vector...
-		(conditional (primcall = (primcall logand (constant (object #(1 2))) (constant 7)) (constant 5))
-		    ;;... fine.
-		    (primcall nop)
-		  ;;... otherwise call the full core primitive function.
-		  (primcall interrupt))
-		;;Retrieve the first word.
-		(bind ((vec.len_0 (primcall mref (constant (object #(1 2))) (constant -5))))
-		  (seq
-		    ;;If the first word is a fixnum...
-		    (conditional (primcall = (primcall logand vec.len_0 (constant 7)) (constant 0))
-			;;... fine.
-			(primcall nop)
-		      ;;... otherwise call the full core primitive function.
-		      (primcall interrupt))
-		    ;;Return the first word.
-		    vec.len_0)))
-	    ;;Shortcut  interrupt  handler: perform  a  full  call to  the  primitive
-	    ;;function and let it raise an exception if there is the need.
-	    (funcall (primcall mref (constant (object vector-length)) (constant 19))
-	      (constant (object #(1 2)))))))
+  (check
+      (%core-type-inference '((primitive vector-length) '#(1 2)))
+    => '(funcall (primref vector-length)
+	  (known (constant #(1 2)) (T:vector T:non-false T:nonimmediate T:object))))
 
-  (doit* (vector-length (read))
-	 (codes
-	  ()
-	  (seq
-	    (shortcut
-		(conditional (primcall u< %esp (primcall mref %esi (constant 32)))
-		    (primcall interrupt)
-		  (primcall nop))
-	      (foreign-call "ik_stack_overflow"))
-	    (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19)))))
-	      (shortcut
-		  (seq
-		    (conditional (primcall = (primcall logand tmp_0 (constant 7)) (constant 5))
-			(primcall nop)
-		      (primcall interrupt))
-		    (bind ((vec.len_0 (primcall mref tmp_0 (constant -5))))
-		      (seq
-			(conditional (primcall = (primcall logand vec.len_0 (constant 7)) (constant 0))
-			    (primcall nop)
-			  (primcall interrupt))
-			vec.len_0)))
-		(funcall (primcall mref (constant (object vector-length)) (constant 19))
-		  tmp_0))))))
+  (check
+      (%before-specify-representation '((primitive vector-length) '#(1 2)))
+    => '(codes
+	 ()
+	 (primcall vector-length
+		   (known (constant #(1 2)) (T:vector T:non-false T:nonimmediate T:object)))))
+
+  (doit ((primitive vector-length) '#(1 2))
+	(codes
+	 ()
+	 (primcall mref (constant (object #(1 2))) (constant -5))))
+
+  (doit ((primitive vector-length) ((primitive read)))
+	(codes
+	 ()
+	 (seq
+	   (shortcut
+	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
+		   (primcall interrupt)
+		 (primcall nop))
+	     (foreign-call "ik_stack_overflow"))
+	   (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19)))))
+	     (shortcut
+		 (seq
+		   ;;If the operand is a tagged pointer tagged as vector...
+		   (conditional (primcall = (primcall logand tmp_0 (constant 7)) (constant 5))
+		       ;;... fine.
+		       (primcall nop)
+		     ;;... otherwise call the full core primitive function.
+		     (primcall interrupt))
+		   ;;Retrieve the first word.
+		   (bind ((vec.len_0 (primcall mref tmp_0 (constant -5))))
+		     (seq
+		       ;;If the first word is a fixnum...
+		       (conditional (primcall = (primcall logand vec.len_0 (constant 7)) (constant 0))
+			   ;;... fine.
+			   (primcall nop)
+			 ;;... otherwise call the full core primitive function.
+			 (primcall interrupt))
+		       vec.len_0)))
+	       ;;Interrupt handler: perform a full call to the primitive function and
+	       ;;let it raise an exception if there is the need.
+	       (funcall (primcall mref (constant (object vector-length)) (constant 19))
+		 tmp_0))))))
 
   #t)
 

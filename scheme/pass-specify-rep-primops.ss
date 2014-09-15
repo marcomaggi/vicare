@@ -112,7 +112,6 @@
 	(dirty-vector-set addr)))
      ((known expr type)
       (cond ((eq? (T:immediate? type) 'yes)
-	     (record-optimization 'smart-dirty-vec type)
 	     (nop))
 	    (else
 	     (smart-dirty-vector-set addr expr))))
@@ -144,7 +143,6 @@
 	  (%slow-mem-assign v base offset)))
        ((known expr type)
 	(cond ((eq? (T:immediate? type) 'yes)
-	       (record-optimization 'mem-assign v)
 	       (prm 'mset base (K offset) (T expr)))
 	      (else
 	       (%slow-mem-assign expr base offset))))
@@ -200,7 +198,6 @@
      ((known expr type)
       (case (T:string? type)
 	((yes)
-	 (record-optimization 'assert-string x)
 	 (nop))
 	((no)
 	 (interrupt))
@@ -524,7 +521,7 @@
      ((known expr type)
       (case (T:pair? type)
 	((yes)
-	 (record-optimization 'assert-pair expr) (nop))
+	 (nop))
 	((no)
 	 (interrupt))
 	(else
@@ -751,7 +748,6 @@
        ((known expr type)
 	(case (T:vector? type)
 	  ((yes)
-	   (record-optimization 'check-vector expr)
 	   (%check-vector expr maybe-idx))
 	  ((no)
 	   (interrupt))
@@ -1015,12 +1011,21 @@
       ((known vec.expr vec.type)
        (case (T:vector? vec.type)
 	 ((yes)
-	  (record-optimization 'vector-length vec.expr)
 	  (cogen-value-$vector-length vec.expr))
 	 ((no)
 	  (interrupt))
 	 (else
 	  (cogen-value-vector-length vec.expr))))
+      ((constant vec.const)
+       ;;Here the operand has no type description, but still we can check the operand
+       ;;at compile-time.
+       (cond ((vector? vec.const)
+	      (cogen-value-$vector-length vec))
+	     ((option.strict-r6rs)
+	      (interrupt))
+	     (else
+	      (compile-time-error 'vector-length
+		"expected vector as operand" (unparse-recordized-code vec)))))
       (else
        (multiple-forms-sequence
 	(interrupt-unless
@@ -1033,12 +1038,21 @@
       ((known vec.expr vec.type)
        (case (T:vector? vec.type)
 	 ((yes)
-	  (record-optimization 'vector-length vec.expr)
 	  (nop))
 	 ((no)
 	  (interrupt))
 	 (else
 	  (cogen-effect-vector-length vec.expr))))
+      ((constant vec.const)
+       ;;Here the operand has no type description, but still we can check the operand
+       ;;at compile-time.
+       (cond ((vector? vec.const)
+	      (nop))
+	     ((option.strict-r6rs)
+	      (interrupt))
+	     (else
+	      (compile-time-error 'vector-length
+		"expected vector as operand" (unparse-recordized-code vec)))))
       (else
        (multiple-forms-sequence
 	(interrupt-unless
@@ -2011,7 +2025,6 @@
        ((known expr type)
 	(case (T:flonum? type)
 	  ((yes)
-	   (record-optimization 'check-flonum expr)
 	   (check-flonums ($cdr ls) code))
 	  ((no)
 	   (interrupt))
@@ -2566,13 +2579,9 @@
 	(fx? x.val))
        ((known x.expr x.type)
 	(case (T:fixnum? x.type)
-	  ((yes)
-	   (record-optimization 'assert-fixnum x.expr)
-	   #t)
-	  (else
-	   #f)))
-       (else
-	#f)))
+	  ((yes)  #t)
+	  (else   #f)))
+       (else #f)))
 
    (define (known-non-fixnum? x)
      (struct-case x

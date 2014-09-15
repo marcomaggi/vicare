@@ -1844,6 +1844,13 @@
 
 ;;; --------------------------------------------------------------------
 
+  (doit* (vector-length '#(1 2))
+	 (funcall (primref vector-length)
+	   (known (constant #(1 2))
+		  (T:vector T:non-false T:nonimmediate T:object))))
+
+;;; --------------------------------------------------------------------
+
   ;;The following tests are related.  We  test what happens when a variable reference
   ;;is used as operand for CDR; the primitive CDR accepts a pair as operand.
   (begin
@@ -2859,8 +2866,8 @@
   #t)
 
 
-(parametrise ((check-test-name						'specify-representation)
-	      (compiler.$descriptive-labels				#t))
+(parametrise ((check-test-name			'specify-representation)
+	      (compiler.$descriptive-labels	#t))
 
 ;;;NOTE There is a separate file for testing this compiler pass!!!
 
