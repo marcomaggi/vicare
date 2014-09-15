@@ -417,79 +417,163 @@
   ;;     ?rand1 ?rand2)
   ;;
 
-  (module (%make-cogen-primop-call)
+  (define (cogen-debug-primop primitive-symbol-name src/loc ctxt rand*)
+    ;;Return  recordised  code  representing  the application  of  a  core  primitive
+    ;;function, when debugging mode is ENabled.
+    ;;
+    ;;CTXT is one of  the symbols: V, E, P.  RAND* is a  list of structs representing
+    ;;the operands as recordised code.
+    ;;
+    (define (%cogen-core-primitive-debug-call primitive-symbol-name rand*)
+      (make-funcall (V (mk-primref 'debug-call))
+		    (cons* (V src/loc)
+			   (V (mk-primref primitive-symbol-name))
+			   rand*)))
+    (%cogen-primop-call %cogen-core-primitive-debug-call
+			%cogen-core-primitive-debug-call
+			primitive-symbol-name ctxt rand*))
 
-    (define (%make-cogen-primop-call cogen-core-primitive-interrupt-handler-function-call
-				     cogen-core-primitive-standalone-function-call)
-      ;;Build and return a closure that  is the actual implementation of COGEN-PRIMOP
-      ;;and the heart of the implementation of COGEN-DEBUG-PRIMOP.
+  (module (cogen-primop)
+
+    (define (cogen-primop primitive-symbol-name ctxt rand*)
+      ;;This is a function with signature:
       ;;
-      (lambda (primitive-symbol-name ctxt args)
-	;;CTXT  must be  one of  the  symbols: P,  V, E  representing the  evaluation
-	;;context of a struct of recordised code.
+      ;;   (cogen-primop ?primitive-symbol-name ?ctxt ?rand*)
+      ;;
+      ;;where: ?CTXT  is one of  the symbols: V,  E, P; ?RAND*  is a list  of structs
+      ;;representing  the  operands  as  recordised  code.   Return  recordised  code
+      ;;representing  the  application  of  a  core  primitive,  either  function  or
+      ;;operation, when debugging mode is DISabled.
+      ;;
+      (%cogen-primop-call %cogen-core-primitive-interrupt-handler-function-call
+			  %cogen-core-primitive-standalone-function-call
+			  primitive-symbol-name ctxt rand*))
+
+    (define (%cogen-core-primitive-standalone-function-call primitive-symbol-name rand*)
+      ;;Generate code representing a call to the core primitive function.  This is to
+      ;;be  used when  no  core  primitive operation  integration  is performed  (for
+      ;;example  because  the  primitive  has no  operation  implementation,  just  a
+      ;;function implementation).
+      ;;
+      (make-funcall (V (mk-primref primitive-symbol-name)) rand*))
+
+    (module (%cogen-core-primitive-interrupt-handler-function-call)
+
+      (define (%cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name rand*)
+	;;Generate code representing a call to  the core primitive function.  This is
+	;;to be used as implementation of the interrupt handler, after the integrated
+	;;fast  implementation has  failed.  If  the core  primitive has  the special
+	;;interrupt handler implementation: use such function.
 	;;
-	(let ((prim (get-primop primitive-symbol-name)))
-	  ;;PRIM is a struct of type PRIMITIVE-HANDLER.
-	  (simplify* args
-		     (lambda (args)
-		       (define-fluid-override __who__
-			 (identifier-syntax 'code-generation-handler))
-		       (define (%error-context-not-handled)
-			 (compile-time-error __who__
-			   "evaluation context not handled by core primitive operation"
-			   prim primitive-symbol-name))
-		       (with-interrupt-handler
-			prim primitive-symbol-name ctxt (map T args)
-			cogen-core-primitive-interrupt-handler-function-call
-			cogen-core-primitive-standalone-function-call
-			(lambda ()
-			  ;;This  thunk actually  generates the  BODY of  a primitive
-			  ;;operation call.
-			  (case ctxt
-			    ((P)
-			     (cond ((primitive-handler-p-handled? prim)
-				    (apply (primitive-handler-p-handler prim) args))
-				   ((primitive-handler-v-handled? prim)
-				    (let ((e (apply (primitive-handler-v-handler prim) args)))
-				      (if (%interrupt-primcall? e) e (prm '!= e (K bool-f)))))
-				   ((primitive-handler-e-handled? prim)
-				    (let ((e (apply (primitive-handler-e-handler prim) args)))
-				      (if (%interrupt-primcall? e) e (make-seq e (K #t)))))
-				   (else
-				    (%error-context-not-handled))))
-			    ((V)
-			     (cond ((primitive-handler-v-handled? prim)
-				    (apply (primitive-handler-v-handler prim) args))
-				   ((primitive-handler-p-handled? prim)
-				    (let ((e (apply (primitive-handler-p-handler prim) args)))
-				      (if (%interrupt-primcall? e)
-					  e
-					(make-conditional e (K bool-t) (K bool-f)))))
-				   ((primitive-handler-e-handled? prim)
-				    (let ((e (apply (primitive-handler-e-handler prim) args)))
-				      (if (%interrupt-primcall? e)
-					  e
-					(make-seq e (K void-object)))))
-				   (else
-				    (%error-context-not-handled))))
-			    ((E)
-			     (cond ((primitive-handler-e-handled? prim)
-				    (apply (primitive-handler-e-handler prim) args))
-				   ((primitive-handler-p-handled? prim)
-				    (let ((e (apply (primitive-handler-p-handler prim) args)))
-				      (if (%interrupt-primcall? e)
-					  e
-					(make-conditional e (prm 'nop) (prm 'nop)))))
-				   ((primitive-handler-v-handled? prim)
-				    (let ((e (apply (primitive-handler-v-handler prim) args)))
-				      (if (%interrupt-primcall? e)
-					  e
-					(with-tmp ((t e)) (prm 'nop)))))
-				   (else
-				    (%error-context-not-handled))))
-			    (else
-			     (compiler-internal-error __who__
-			       "invalid evaluation context" ctxt))))))))))
+	;;In the VECTOR-LENGTH example, this function generates the code:
+	;;
+	;;   (funcall (primcall mref (constant (object vector-length))
+	;;                           ?offset-of-slot-value-in-loc-gensym)
+	;;            tmp_0)
+	;;
+	;;where  "(object  vector-length)" represents  the  loc  gensym of  the  core
+	;;primitive function "error@fx+".
+	;;
+	;;In the FX+ example, this function generates the code:
+	;;
+	;;   (funcall (primcall mref (constant (object error@fx+))
+	;;                           ?offset-of-slot-value-in-loc-gensym)
+	;;            ?rand1 ?rand2)
+	;;
+	;;where "(object error@fx+)" represents the  loc gensym of the core primitive
+	;;function "error@fx+".
+	;;
+	(make-funcall (V (mk-primref (%primop-interrupt-handler primitive-symbol-name)))
+		      rand*))
+
+      (define (%primop-interrupt-handler primitive-symbol-name)
+	(case primitive-symbol-name
+	  ((fx+)			'error@fx+)
+	  ((fx-)			'error@fx-)
+	  ((fx*)			'error@fx*)
+	  ((add1)			'error@add1)
+	  ((sub1)			'error@sub1)
+	  ((fxadd1)			'error@fxadd1)
+	  ((fxsub1)			'error@fxsub1)
+	  ((fxarithmetic-shift-left)	'error@fxarithmetic-shift-left)
+	  ((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
+	  (else				primitive-symbol-name)))
+
+      #| end of module: %COGEN-CORE-PRIMITIVE-INTERRUPT-HANDLER-FUNCTION-CALL |# )
+
+    #| end of module: COGEN-PRIMOP |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%cogen-primop-call)
+
+    (define (%cogen-primop-call cogen-core-primitive-interrupt-handler-function-call
+				cogen-core-primitive-standalone-function-call
+				primitive-symbol-name ctxt args)
+      ;;CTXT must be one of the symbols:  P, V, E representing the evaluation context
+      ;;of a struct of recordised code.
+      ;;
+      (let ((prim (get-primop primitive-symbol-name)))
+	;;PRIM is a struct of type PRIMITIVE-HANDLER.
+	(simplify* args
+		   (lambda (args)
+		     (define-fluid-override __who__
+		       (identifier-syntax 'code-generation-handler))
+		     (define (%error-context-not-handled)
+		       (compile-time-error __who__
+			 "evaluation context not handled by core primitive operation"
+			 prim primitive-symbol-name))
+		     (with-interrupt-handler
+		      prim primitive-symbol-name ctxt (map T args)
+		      cogen-core-primitive-interrupt-handler-function-call
+		      cogen-core-primitive-standalone-function-call
+		      (lambda ()
+			;;This  thunk  actually generates  the  BODY  of a  primitive
+			;;operation call.
+			(case ctxt
+			  ((P)
+			   (cond ((primitive-handler-p-handled? prim)
+				  (apply (primitive-handler-p-handler prim) args))
+				 ((primitive-handler-v-handled? prim)
+				  (let ((e (apply (primitive-handler-v-handler prim) args)))
+				    (if (%interrupt-primcall? e) e (prm '!= e (K bool-f)))))
+				 ((primitive-handler-e-handled? prim)
+				  (let ((e (apply (primitive-handler-e-handler prim) args)))
+				    (if (%interrupt-primcall? e) e (make-seq e (K #t)))))
+				 (else
+				  (%error-context-not-handled))))
+			  ((V)
+			   (cond ((primitive-handler-v-handled? prim)
+				  (apply (primitive-handler-v-handler prim) args))
+				 ((primitive-handler-p-handled? prim)
+				  (let ((e (apply (primitive-handler-p-handler prim) args)))
+				    (if (%interrupt-primcall? e)
+					e
+				      (make-conditional e (K bool-t) (K bool-f)))))
+				 ((primitive-handler-e-handled? prim)
+				  (let ((e (apply (primitive-handler-e-handler prim) args)))
+				    (if (%interrupt-primcall? e)
+					e
+				      (make-seq e (K void-object)))))
+				 (else
+				  (%error-context-not-handled))))
+			  ((E)
+			   (cond ((primitive-handler-e-handled? prim)
+				  (apply (primitive-handler-e-handler prim) args))
+				 ((primitive-handler-p-handled? prim)
+				  (let ((e (apply (primitive-handler-p-handler prim) args)))
+				    (if (%interrupt-primcall? e)
+					e
+				      (make-conditional e (prm 'nop) (prm 'nop)))))
+				 ((primitive-handler-v-handled? prim)
+				  (let ((e (apply (primitive-handler-v-handler prim) args)))
+				    (if (%interrupt-primcall? e)
+					e
+				      (with-tmp ((t e)) (prm 'nop)))))
+				 (else
+				  (%error-context-not-handled))))
+			  (else
+			   (compiler-internal-error __who__ "invalid evaluation context" ctxt)))))))))
 
     (define (%interrupt-primcall? x)
       ;;Return true if  X is a PRIMCALL  struct representing a jump  to the interrupt
@@ -542,92 +626,7 @@
 	    (k args)
 	  (make-bind lhs* rhs* (k args)))))
 
-    #| end of module: %MAKE-COGEN-PRIMOP-CALL |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (%cogen-core-primitive-standalone-function-call primitive-symbol-name rand*)
-    ;;Generate code representing  a call to the core primitive  function.  This is to
-    ;;be used when no core primitive  operation integration is performed (for example
-    ;;because  the  primitive  has  no  operation  implementation,  just  a  function
-    ;;implementation).
-    ;;
-    (make-funcall (V (mk-primref primitive-symbol-name)) rand*))
-
-  (module (%cogen-core-primitive-interrupt-handler-function-call)
-
-    (define (%cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name rand*)
-      ;;Generate code representing a call to the core primitive function.  This is to
-      ;;be used as implementation of the interrupt handler, after the integrated fast
-      ;;implementation has failed.   If the core primitive has  the special interrupt
-      ;;handler implementation: use such function.
-      ;;
-      ;;In the VECTOR-LENGTH example, this function generates the code:
-      ;;
-      ;;   (funcall (primcall mref (constant (object vector-length))
-      ;;                           ?offset-of-slot-value-in-loc-gensym)
-      ;;            tmp_0)
-      ;;
-      ;;where  "(object  vector-length)"  represents  the  loc  gensym  of  the  core
-      ;;primitive function "error@fx+".
-      ;;
-      ;;In the FX+ example, this function generates the code:
-      ;;
-      ;;   (funcall (primcall mref (constant (object error@fx+))
-      ;;                           ?offset-of-slot-value-in-loc-gensym)
-      ;;            ?rand1 ?rand2)
-      ;;
-      ;;where "(object  error@fx+)" represents the  loc gensym of the  core primitive
-      ;;function "error@fx+".
-      ;;
-      (make-funcall (V (mk-primref (%primop-interrupt-handler primitive-symbol-name)))
-		    rand*))
-
-    (define (%primop-interrupt-handler primitive-symbol-name)
-      (case primitive-symbol-name
-	((fx+)				'error@fx+)
-	((fx-)				'error@fx-)
-	((fx*)				'error@fx*)
-	((add1)				'error@add1)
-	((sub1)				'error@sub1)
-	((fxadd1)			'error@fxadd1)
-	((fxsub1)			'error@fxsub1)
-	((fxarithmetic-shift-left)	'error@fxarithmetic-shift-left)
-	((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
-	(else				primitive-symbol-name)))
-
-    #| end of module: %COGEN-CORE-PRIMITIVE-INTERRUPT-HANDLER-FUNCTION-CALL |# )
-
-;;; --------------------------------------------------------------------
-
-  (define cogen-primop
-    ;;This is a function with signature:
-    ;;
-    ;;   (cogen-primop ?primitive-symbol-name ?ctxt ?rand*)
-    ;;
-    ;;where: ?CTXT  is one  of the  symbols: V,  E, P;  ?RAND* is  a list  of structs
-    ;;representing  the   operands  as  recordised  code.    Return  recordised  code
-    ;;representing the application of a core primitive, either function or operation,
-    ;;when debugging mode is DISabled.
-    ;;
-    (%make-cogen-primop-call %cogen-core-primitive-interrupt-handler-function-call
-			     %cogen-core-primitive-standalone-function-call))
-
-  (define (cogen-debug-primop primitive-symbol-name src/loc ctxt rand*)
-    ;;Return  recordised  code  representing  the application  of  a  core  primitive
-    ;;function, when debugging mode is ENabled.
-    ;;
-    ;;CTXT is one of  the symbols: V, E, P.  RAND* is a  list of structs representing
-    ;;the operands as recordised code.
-    ;;
-    (define (%make-call primitive-symbol-name rand*)
-      ;;This function closes upon the argument SRC/LOC.
-      ;;
-      (make-funcall (V (mk-primref 'debug-call))
-		    (cons* (V src/loc)
-			   (V (mk-primref primitive-symbol-name))
-			   rand*)))
-    ((%make-cogen-primop-call %make-call %make-call) primitive-symbol-name ctxt rand*))
+    #| end of module: %COGEN-PRIMOP-CALL |# )
 
 ;;; --------------------------------------------------------------------
 
