@@ -421,14 +421,15 @@
 
     (define (%make-cogen-primop-call cogen-core-primitive-interrupt-handler-function-call
 				     cogen-core-primitive-standalone-function-call)
-      ;;Build  and  return the  %COGEN-CORE-PRIMITIVE-OPERATION-APPLICATION  closure.
-      ;;CTXT must be one of the symbols:  P, V, E representing the evaluation context
-      ;;of a struct of recordised code.
+      ;;Build and return a closure that  is the actual implementation of COGEN-PRIMOP
+      ;;and the heart of the implementation of COGEN-DEBUG-PRIMOP.
       ;;
-      (define* (%cogen-core-primitive-operation-application primitive-symbol-name ctxt args)
-	;;PRIM is a struct of type PRIMITIVE-HANDLER.
+      (lambda (primitive-symbol-name ctxt args)
+	;;CTXT  must be  one of  the  symbols: P,  V, E  representing the  evaluation
+	;;context of a struct of recordised code.
 	;;
 	(let ((prim (get-primop primitive-symbol-name)))
+	  ;;PRIM is a struct of type PRIMITIVE-HANDLER.
 	  (simplify* args
 		     (lambda (args)
 		       (define-fluid-override __who__
@@ -442,6 +443,8 @@
 			cogen-core-primitive-interrupt-handler-function-call
 			cogen-core-primitive-standalone-function-call
 			(lambda ()
+			  ;;This  thunk actually  generates the  BODY of  a primitive
+			  ;;operation call.
 			  (case ctxt
 			    ((P)
 			     (cond ((primitive-handler-p-handled? prim)
@@ -486,8 +489,7 @@
 				    (%error-context-not-handled))))
 			    (else
 			     (compiler-internal-error __who__
-			       "invalid evaluation context" ctxt)))))))))
-      %cogen-core-primitive-operation-application)
+			       "invalid evaluation context" ctxt))))))))))
 
     (define (%interrupt-primcall? x)
       ;;Return true if  X is a PRIMCALL  struct representing a jump  to the interrupt
