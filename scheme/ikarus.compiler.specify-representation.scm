@@ -134,10 +134,11 @@
   ;;DEFINE-PRIMITIVE-OPERATION syntax.
   ;;
   (interruptable?
-		;Boolean, true if  the assembly code implementing  this operation can
-		;be "interrupted"  by a jump to  a label without leaving  behind some
-		;structure  in  inconsistent  state.  (FIXME  Is  this  documentation
-		;correct?  Marco Maggi; Oct 16, 2012)
+		;Boolean.   True if  the high-level  assembly code  implementing this
+		;core primitive operation must be  wrapped into a SHORTCUT struct and
+		;so it might  contain INTERRUPT PRIMCALL structs  representing a jump
+		;to the interrupt handler.  False  if this primitive operation is not
+		;interruptible and so it must not contain INTERRUPT PRIMCALLs.
    p-handler
 		;CASE-LAMBDA  function generating  assembly  code  for the  predicate
 		;execution context.
@@ -172,64 +173,6 @@
   ;;operation".
   ;;
   (make-primcall 'nop '()))
-
-
-(module (with-interrupt-handler interrupt)
-
-  (define-constant interrupt-handler
-    (make-parameter (lambda ()
-		      (error 'interrupt-handler "uninitialized"))))
-
-  (define (interrupt)
-    ((interrupt-handler))
-    (prm 'interrupt))
-
-  (define* (with-interrupt-handler p x ctxt args make-interrupt-call make-no-interrupt-call k)
-    ;;PRIM is a struct  of type PRIMITIVE-HANDLER.  CTXT must be  one of the symbols:
-    ;;V, E, P.
-    ;;
-    (if (not (primitive-handler-interruptable? p))
-	;;Raise an error if INTERRUPT is called by an uninterruptible primitive.
-	(parameterize ((interrupt-handler (lambda ()
-					    (error 'cogen "uninterruptable" x args ctxt))))
-	  (k))
-      (let ((interrupted? #f))
-	(let ((body (parameterize ((interrupt-handler (lambda ()
-							(set! interrupted? #t))))
-		      (k))))
-	  (if (not interrupted?)
-	      body
-	    (case ctxt
-	      ((V)
-	       (let ((h (make-interrupt-call x args)))
-		 (if (%interrupt-primcall? body)
-		     (make-no-interrupt-call x args)
-		   (make-shortcut body h))))
-
-	      ((E)
-	       (let ((h (make-interrupt-call x args)))
-		 (if (%interrupt-primcall? body)
-		     (make-no-interrupt-call x args)
-		   (make-shortcut body h))))
-
-	      ((P)
-	       (let ((h (prm '!= (make-interrupt-call x args)
-			     (K bool-f))))
-		 (if (%interrupt-primcall? body)
-		     (prm '!= (make-no-interrupt-call x args)
-			  (K bool-f))
-		   (make-shortcut body h))))
-
-	      (else
-	       (error __who__ "invalid context" ctxt))))))))
-
-  (define (%interrupt-primcall? body)
-    (struct-case body
-      ((primcall op)
-       (eq? op 'interrupt))
-      (else #f)))
-
-  #| end of module: WITH-INTERRUPT-HANDLER |# )
 
 
 (module (with-tmp with-tmp*)
@@ -322,7 +265,7 @@
 
 
 (module CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS
-  (cogen-primop cogen-debug-primop)
+  (cogen-primop cogen-debug-primop interrupt)
   ;;Some core primitives are implemented both as:
   ;;
   ;;*  Core primitive  functions.   There  exists a  loc  gensym  whose "value"  slot
@@ -341,6 +284,18 @@
   ;;     (fx+ 1 2)
   ;;
   ;;  the primitive operation is used.
+  ;;
+  ;;The functions COGEN-PRIMOP and COGEN-DEBUG-PRIMOP  are used to process recordised
+  ;;code:
+  ;;
+  ;;   (primcall ?primitive-symbol-name ?rand ...)
+  ;;
+  ;;in which  it is known  that ?PRIMITIVE-SYMBOL-NAME  is a symbol  representing the
+  ;;public name of a core primitive operation, so that:
+  ;;
+  ;;   (get-primop '?primitive-symbol-name)
+  ;;
+  ;;will retrieve a struct of type PRIMITIVE-HANDLER.
   ;;
   ;;
   ;;Disabled debugging mode
@@ -462,17 +417,18 @@
   ;;     ?rand1 ?rand2)
   ;;
 
-  (module (make-cogen-handler)
+  (module (%make-cogen-primop-call)
 
-    (define (make-cogen-handler make-interrupt-call make-no-interrupt-call)
-      ;;Build and  return the  COGEN-PRIMOP-FUNC closure.   CTXT must  be one  of the
-      ;;symbols:  P,  V,  E  representing  the evaluation  context  of  a  struct  of
-      ;;recordised code.
+    (define (%make-cogen-primop-call cogen-core-primitive-interrupt-handler-function-call
+				     cogen-core-primitive-standalone-function-call)
+      ;;Build  and  return the  %COGEN-CORE-PRIMITIVE-OPERATION-APPLICATION  closure.
+      ;;CTXT must be one of the symbols:  P, V, E representing the evaluation context
+      ;;of a struct of recordised code.
       ;;
-      (define* (cogen-primop-func x ctxt args)
+      (define* (%cogen-core-primitive-operation-application primitive-symbol-name ctxt args)
 	;;PRIM is a struct of type PRIMITIVE-HANDLER.
 	;;
-	(let ((prim (get-primop x)))
+	(let ((prim (get-primop primitive-symbol-name)))
 	  (simplify* args
 		     (lambda (args)
 		       (define-fluid-override __who__
@@ -480,10 +436,11 @@
 		       (define (%error-context-not-handled)
 			 (compile-time-error __who__
 			   "evaluation context not handled by core primitive operation"
-			   prim x))
+			   prim primitive-symbol-name))
 		       (with-interrupt-handler
-			prim x ctxt (map T args)
-			make-interrupt-call make-no-interrupt-call
+			prim primitive-symbol-name ctxt (map T args)
+			cogen-core-primitive-interrupt-handler-function-call
+			cogen-core-primitive-standalone-function-call
 			(lambda ()
 			  (case ctxt
 			    ((P)
@@ -530,10 +487,11 @@
 			    (else
 			     (compiler-internal-error __who__
 			       "invalid evaluation context" ctxt)))))))))
-      cogen-primop-func)
+      %cogen-core-primitive-operation-application)
 
     (define (%interrupt-primcall? x)
-      ;;Return true if X is a PRIMCALL struct representing a call to INTERRUPT.
+      ;;Return true if  X is a PRIMCALL  struct representing a jump  to the interrupt
+      ;;handler.
       ;;
       (struct-case x
 	((primcall op)
@@ -582,11 +540,11 @@
 	    (k args)
 	  (make-bind lhs* rhs* (k args)))))
 
-    #| end of module: MAKE-COGEN-HANDLER |# )
+    #| end of module: %MAKE-COGEN-PRIMOP-CALL |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (%cogen-core-primitive-function-call primitive-symbol-name rand*)
+  (define (%cogen-core-primitive-standalone-function-call primitive-symbol-name rand*)
     ;;Generate code representing  a call to the core primitive  function.  This is to
     ;;be used when no core primitive  operation integration is performed (for example
     ;;because  the  primitive  has  no  operation  implementation,  just  a  function
@@ -602,6 +560,15 @@
       ;;implementation has failed.   If the core primitive has  the special interrupt
       ;;handler implementation: use such function.
       ;;
+      ;;In the VECTOR-LENGTH example, this function generates the code:
+      ;;
+      ;;   (funcall (primcall mref (constant (object vector-length))
+      ;;                           ?offset-of-slot-value-in-loc-gensym)
+      ;;            tmp_0)
+      ;;
+      ;;where  "(object  vector-length)"  represents  the  loc  gensym  of  the  core
+      ;;primitive function "error@fx+".
+      ;;
       ;;In the FX+ example, this function generates the code:
       ;;
       ;;   (funcall (primcall mref (constant (object error@fx+))
@@ -614,8 +581,8 @@
       (make-funcall (V (mk-primref (%primop-interrupt-handler primitive-symbol-name)))
 		    rand*))
 
-    (define (%primop-interrupt-handler x)
-      (case x
+    (define (%primop-interrupt-handler primitive-symbol-name)
+      (case primitive-symbol-name
 	((fx+)				'error@fx+)
 	((fx-)				'error@fx-)
 	((fx*)				'error@fx*)
@@ -625,124 +592,143 @@
 	((fxsub1)			'error@fxsub1)
 	((fxarithmetic-shift-left)	'error@fxarithmetic-shift-left)
 	((fxarithmetic-shift-right)	'error@fxarithmetic-shift-right)
-	(else				x)))
+	(else				primitive-symbol-name)))
 
     #| end of module: %COGEN-CORE-PRIMITIVE-INTERRUPT-HANDLER-FUNCTION-CALL |# )
 
 ;;; --------------------------------------------------------------------
 
   (define cogen-primop
-    (make-cogen-handler %cogen-core-primitive-interrupt-handler-function-call
-			%cogen-core-primitive-function-call))
+    ;;This is a function with signature:
+    ;;
+    ;;   (cogen-primop ?primitive-symbol-name ?ctxt ?rand*)
+    ;;
+    ;;where: ?CTXT  is one  of the  symbols: V,  E, P;  ?RAND* is  a list  of structs
+    ;;representing  the   operands  as  recordised  code.    Return  recordised  code
+    ;;representing the application of a core primitive, either function or operation,
+    ;;when debugging mode is DISabled.
+    ;;
+    (%make-cogen-primop-call %cogen-core-primitive-interrupt-handler-function-call
+			     %cogen-core-primitive-standalone-function-call))
 
-  (define (cogen-debug-primop op src/loc ctxt rand*)
-    (define (%make-call op rand*)
+  (define (cogen-debug-primop primitive-symbol-name src/loc ctxt rand*)
+    ;;Return  recordised  code  representing  the application  of  a  core  primitive
+    ;;function, when debugging mode is ENabled.
+    ;;
+    ;;CTXT is one of  the symbols: V, E, P.  RAND* is a  list of structs representing
+    ;;the operands as recordised code.
+    ;;
+    (define (%make-call primitive-symbol-name rand*)
       ;;This function closes upon the argument SRC/LOC.
       ;;
       (make-funcall (V (mk-primref 'debug-call))
 		    (cons* (V src/loc)
-			   (V (mk-primref op))
+			   (V (mk-primref primitive-symbol-name))
 			   rand*)))
-    ((make-cogen-handler %make-call %make-call) op ctxt rand*))
+    ((%make-cogen-primop-call %make-call %make-call) primitive-symbol-name ctxt rand*))
+
+;;; --------------------------------------------------------------------
+
+  (module (with-interrupt-handler interrupt)
+    ;;
+    ;;NOTE  When it  is determined  at compile-time  that the  operands of  a primitive
+    ;;operation are invalid, the generated SHORTCUT's ?BODY can be a simple:
+    ;;
+    ;;   (primcall interrupt)
+    ;;
+    ;;in this case, if we do nothing special, we end up generating:
+    ;;
+    ;;   (shortcut
+    ;;       (primcall interrupt)
+    ;;     ?interrupt-handler)
+    ;;
+    ;;which would be stupid;  so we take care of recognising  this special ?BODY case
+    ;;and instead of a  SHORTCUT return a plain call to  the core primitive function.
+    ;;In this case, it  also makes sense to raise a  compile-time exception to signal
+    ;;the error early;  we do not do it  here, we delegate this task  to the specific
+    ;;primitive operation definition macro.
+    ;;
+
+    (define (interrupt)
+      ;;Record that this body has requested the presence of an interrupt handler.
+      ((%record-use-of-interrupt-in-body))
+      ;;Return the "(primcall interrupt)".
+      (prm 'interrupt))
+
+    (define* (with-interrupt-handler prim primitive-symbol-name ctxt rand*
+				     cogen-core-primitive-interrupt-handler-function-call
+				     cogen-core-primitive-standalone-function-call
+				     cogen-body)
+      ;;Compose the primitive operation call, generating the SHORTCUT if needed.
+      ;;
+      ;;PRIM is a struct of type PRIMITIVE-HANDLER.  CTXT must be one of the symbols:
+      ;;V, E, P.  RAND* is a list  of structs representing the operands as recordised
+      ;;code.
+      ;;
+      ;;COGEN-BODY must be a continuation thunk:  when we do not generate a SHORTCUT,
+      ;;COGEN-BODY  is called  to  generate  the primitive  operation  call; when  we
+      ;;generate a  SHORTCUT, COGEN-BODY  is called to  generate the  recordised code
+      ;;body.
+      ;;
+      (define (interrupt-handler/uninterruptible-primitive-error)
+	;;Function     to    be     used     as    value     for    the     parameter
+	;;%RECORD-USE-OF-INTERRUPT-IN-BODY.  It raises an error.
+	;;
+	(compiler-internal-error '%record-use-of-interrupt-in-body
+	  "attempt to introduce a jump to interrupt handler in the body of an uninterruptible core primitive operation"
+	  primitive-symbol-name rand* ctxt))
+      (if (not (primitive-handler-interruptable? prim))
+	  ;;Raise an error if INTERRUPT is called by an uninterruptible primitive.
+	  (parameterize ((%record-use-of-interrupt-in-body interrupt-handler/uninterruptible-primitive-error))
+	    (cogen-body))
+	(let* ((interrupted? #f)
+	       (body         (parameterize ((%record-use-of-interrupt-in-body (lambda ()
+										(set! interrupted? #t))))
+			       (cogen-body))))
+	  (if (not interrupted?)
+	      ;;No jumps to the interrupt handler  in BODY: avoid creating a SHORTCUT
+	      ;;and just return the BODY itself.
+	      body
+	    ;;There is at least one:
+	    ;;
+	    ;;   (primcall interrupt)
+	    ;;
+	    ;;in the  generated BODY; so  we must  generate an interrupt  handler and
+	    ;;wrap the BODY into a SHORTCUT.
+	    (case ctxt
+	      ((V)
+	       (if (%the-body-is-just-an-interrupt-primcall? body)
+		   (cogen-core-primitive-standalone-function-call primitive-symbol-name rand*)
+		 (make-shortcut body (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name rand*))))
+
+	      ((E)
+	       (if (%the-body-is-just-an-interrupt-primcall? body)
+		   (cogen-core-primitive-standalone-function-call primitive-symbol-name rand*)
+		 (make-shortcut body (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name rand*))))
+
+	      ((P)
+	       (if (%the-body-is-just-an-interrupt-primcall? body)
+		   (prm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name rand*)
+			(K bool-f))
+		 (make-shortcut body (prm '!= (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name rand*)
+					  (K bool-f)))))
+
+	      (else
+	       (error __who__ "invalid context" ctxt)))))))
+
+    (define-constant %record-use-of-interrupt-in-body
+      (make-parameter (lambda ()
+			(error '%record-use-of-interrupt-in-body "uninitialized"))))
+
+    (define (%the-body-is-just-an-interrupt-primcall? body)
+      (struct-case body
+	((primcall op)
+	 (eq? op 'interrupt))
+	(else #f)))
+
+    #| end of module: WITH-INTERRUPT-HANDLER, INTERRUPT |# )
 
   #| end of module: COGEN-PRIMOP, COGEN-DEBUG-PRIMOP |# )
-
-
-(define-syntax define-primitive-operation
-  ;;Transform a declaration like:
-  ;;
-  ;;  (define-primitive-operation $vector-length unsafe
-  ;;    ((P x) body-P)	;when used as "conditional test expression"
-  ;;    ((E x) body-E)	;when used as "for side-effects expression"
-  ;;    ((V x) body-V))	;when used as "for return value expression"
-  ;;
-  ;;into:
-  ;;
-  ;;  (begin
-  ;;    (define cogen-pred-$vector-length
-  ;;      (case-lambda
-  ;;       ((x)		body-P)
-  ;;       (args	(interrupt))))
-  ;;
-  ;;    (define cogen-effect-$vector-length
-  ;;      (case-lambda
-  ;;       ((x)		body-E))
-  ;;       (args	(interrupt))))
-  ;;
-  ;;    (define cogen-value-$vector-length
-  ;;      (case-lambda
-  ;;       ((x)		body-V)
-  ;;       (args	(interrupt))))
-  ;;
-  ;;    (module ()
-  ;;      (set-primop! '$vector-length
-  ;;                   (make-primitive-handler #f
-  ;;                     cogen-pred-$vector-length    #t
-  ;;                     cogen-value-$vector-length   #t
-  ;;                     cogen-effect-$vector-length  #t))))
-  ;;
-  ;;The P,  V and  E clauses  are optional and  there can  be multiple
-  ;;clauses for each type: they are like SYNTAX-CASE clauses.
-  ;;
-  (lambda (stx)
-    (define (main stx)
-      (syntax-case stx ()
-	((?stx ?name ?interruptable ?clause* ...)
-	 (let ((cases #'(?clause* ...)))
-	   (with-syntax
-	       ((COGEN-P	(%cogen-name #'?stx "pred"   #'?name))
-		(COGEN-V	(%cogen-name #'?stx "value"  #'?name))
-		(COGEN-E	(%cogen-name #'?stx "effect" #'?name))
-		(INTERRUPTABLE?	(syntax-case #'?interruptable (safe unsafe)
-				  (safe   #t)
-				  (unsafe #f))))
-	     (let-values
-		 (((P-handler P-handled?) (%generate-handler #'P cases))
-		  ((V-handler V-handled?) (%generate-handler #'V cases))
-		  ((E-handler E-handled?) (%generate-handler #'E cases)))
-	       #`(begin
-		   (define COGEN-P #,P-handler)
-		   (define COGEN-V #,V-handler)
-		   (define COGEN-E #,E-handler)
-		   (module ()
-		     (set-primop! '?name
-				  (make-primitive-handler INTERRUPTABLE?
-							  COGEN-P #,P-handled?
-							  COGEN-V #,V-handled?
-							  COGEN-E #,E-handled?))))
-	       ))))
-	))
-
-    (define (%generate-handler execution-context clause*)
-      ;;Return 2  values: a  CASE-LAMBDA syntax object  representing the
-      ;;primitive  operation handler  for  EXECUTION-CONTEXT; a  boolean
-      ;;value,  true  if  the  primitive operation  is  implemented  for
-      ;;EXECUTION-CONTEXT.
-      ;;
-      (let ((clause* (%filter-cases execution-context clause*)))
-	(with-syntax (((CLAUSE* ...) clause*))
-	  (values #'(case-lambda CLAUSE* ... (args (interrupt)))
-		  (not (null? clause*))))))
-
-    (define (%filter-cases execution-context clause*)
-      ;;Extract from CLAUSE* the  cases matching EXECUTION-CONTEXT among
-      ;;the possible P, V, E.  Return a list of CASE-LAMBDA clauses.
-      ;;
-      (syntax-case clause* ()
-	(() '())
-	((((?PVE . ?arg*) ?body0 ?body ...) . ?rest)
-	 (free-identifier=? #'?PVE execution-context)
-	 (cons #'(?arg* ?body0 ?body ...)
-	       (%filter-cases execution-context #'?rest)))
-	((?case . ?rest)
-	 (%filter-cases execution-context #'?rest))))
-
-    (define (%cogen-name stx infix name)
-      (let* ((name.str  (symbol->string (syntax->datum name)))
-	     (cogen.str (string-append "cogen-" infix "-"  name.str)))
-	(datum->syntax stx (string->symbol cogen.str))))
-
-    (main stx)))
 
 
 (module (handle-fix)
@@ -1420,47 +1406,37 @@
       (else
        #f)))
 
-  (define (nonproc x check?)
-    ;;When CHECK? is true: generate the  code needed to test at run-time
-    ;;if evaluating X yields a closure object; if it does: X is returned
-    ;;at run-time, otherwise an error is raised at run-time.
-    ;;
-    (if check?
-	(with-tmp ((x (V x)))
-	  (make-shortcut
-	   (make-seq (make-conditional (tag-test x closure-mask closure-tag)
-			 (prm 'nop)
-		       (prm 'interrupt))
-		     x)
-	   (V (make-funcall (mk-primref 'error)
-			    (list (K 'apply) (K "not a procedure") x)))))
-      (V x)))
+  (module (nonproc)
+
+    (define (nonproc x check?)
+      ;;When  CHECK?  is true:  generate  the  code needed  to  test  at run-time  if
+      ;;evaluating X yields a closure object; if  it does: X is returned at run-time,
+      ;;otherwise an error is raised at run-time.
+      ;;
+      (if check?
+	  (with-tmp ((x (V x)))
+	    (make-shortcut
+	     (make-seq (make-conditional (%tag-test x closure-mask closure-tag)
+			   (prm 'nop)
+			 (prm 'interrupt))
+		       x)
+	     (V (make-funcall (mk-primref 'error)
+			      (list (K 'apply) (K "not a procedure") x)))))
+	(V x)))
+
+    (define (%tag-test x mask tag)
+      ;;Primary tag test.  X must be recordised code representing an immediate Scheme
+      ;;object or a tagged pointer referencing a  Scheme object.  Test if X is a word
+      ;;of type  TAG: use MASK to  extract bits from X,  then verify if the  bits are
+      ;;equal to TAG.
+      ;;
+      (if mask
+	  (prm '= (prm 'logand x (K mask)) (K tag))
+	(prm '= x (K tag))))
+
+    #| end of module: NONPROC |# )
 
   #| end of module: Function |# )
-
-
-;;;; predefined checks
-
-(define (interrupt-unless recordized-code)
-  (make-conditional recordized-code
-      (prm 'nop)
-    (interrupt)))
-
-(define (interrupt-when recordized-code)
-  (make-conditional recordized-code
-      (interrupt)
-    (prm 'nop)))
-
-(define (interrupt-unless-fixnum recordized-code)
-  (interrupt-unless
-   (tag-test recordized-code fx-mask fx-tag)))
-
-(define (interrupt-unless-fx binary-representation)
-  (if (fx? binary-representation)
-      (nop)
-    (interrupt))
-  #;(unless (fx? binary-representation)
-    (interrupt)))
 
 
 ;;;; some external code

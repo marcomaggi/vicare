@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2011-2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2011-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -63,10 +63,13 @@
 
 ;;; --------------------------------------------------------------------
 
-  (check
-      (catch #f
-	(vector-length 123))
-    => '(123))
+  ;;This is commented out because it is a compile-time error with the default command
+  ;;line options.
+  ;;
+  ;; (check
+  ;;     (catch #f
+  ;; 	(vector-length 123))
+  ;;   => '(123))
 
 ;;; --------------------------------------------------------------------
 

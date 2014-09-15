@@ -21,6 +21,108 @@
 ;;representation: see the file "pass-specify-rep.ss".
 ;;
 
+(module ()
+  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
+
+
+(define-syntax define-primitive-operation
+  ;;Transform a declaration like:
+  ;;
+  ;;  (define-primitive-operation $vector-length unsafe
+  ;;    ((P x) body-P)	;when used as "conditional test expression"
+  ;;    ((E x) body-E)	;when used as "for side-effects expression"
+  ;;    ((V x) body-V))	;when used as "for return value expression"
+  ;;
+  ;;into:
+  ;;
+  ;;  (begin
+  ;;    (define cogen-pred-$vector-length
+  ;;      (case-lambda
+  ;;       ((x)		body-P)
+  ;;       (args	(interrupt))))
+  ;;
+  ;;    (define cogen-effect-$vector-length
+  ;;      (case-lambda
+  ;;       ((x)		body-E))
+  ;;       (args	(interrupt))))
+  ;;
+  ;;    (define cogen-value-$vector-length
+  ;;      (case-lambda
+  ;;       ((x)		body-V)
+  ;;       (args	(interrupt))))
+  ;;
+  ;;    (module ()
+  ;;      (set-primop! '$vector-length
+  ;;                   (make-primitive-handler #f
+  ;;                     cogen-pred-$vector-length    #t
+  ;;                     cogen-value-$vector-length   #t
+  ;;                     cogen-effect-$vector-length  #t))))
+  ;;
+  ;;The P,  V and  E clauses  are optional and  there can  be multiple
+  ;;clauses for each type: they are like SYNTAX-CASE clauses.
+  ;;
+  (lambda (stx)
+    (define (main stx)
+      (syntax-case stx ()
+	((?stx ?name ?interruptable ?clause* ...)
+	 (let ((cases #'(?clause* ...)))
+	   (with-syntax
+	       ((COGEN-P	(%cogen-name #'?stx "pred"   #'?name))
+		(COGEN-V	(%cogen-name #'?stx "value"  #'?name))
+		(COGEN-E	(%cogen-name #'?stx "effect" #'?name))
+		(INTERRUPTABLE?	(syntax-case #'?interruptable (safe unsafe)
+				  (safe   #t)
+				  (unsafe #f))))
+	     (let-values
+		 (((P-handler P-handled?) (%generate-handler #'P cases))
+		  ((V-handler V-handled?) (%generate-handler #'V cases))
+		  ((E-handler E-handled?) (%generate-handler #'E cases)))
+	       #`(begin
+		   (define COGEN-P #,P-handler)
+		   (define COGEN-V #,V-handler)
+		   (define COGEN-E #,E-handler)
+		   (module ()
+		     ;;Import this module for INTERRUPT.
+		     (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
+		     (set-primop! '?name
+				  (make-primitive-handler INTERRUPTABLE?
+							  COGEN-P #,P-handled?
+							  COGEN-V #,V-handled?
+							  COGEN-E #,E-handled?))))
+	       ))))
+	))
+
+    (define (%generate-handler execution-context clause*)
+      ;;Return 2  values: a  CASE-LAMBDA syntax object  representing the
+      ;;primitive  operation handler  for  EXECUTION-CONTEXT; a  boolean
+      ;;value,  true  if  the  primitive operation  is  implemented  for
+      ;;EXECUTION-CONTEXT.
+      ;;
+      (let ((clause* (%filter-cases execution-context clause*)))
+	(with-syntax (((CLAUSE* ...) clause*))
+	  (values #'(case-lambda CLAUSE* ... (args (interrupt)))
+		  (not (null? clause*))))))
+
+    (define (%filter-cases execution-context clause*)
+      ;;Extract from CLAUSE* the  cases matching EXECUTION-CONTEXT among
+      ;;the possible P, V, E.  Return a list of CASE-LAMBDA clauses.
+      ;;
+      (syntax-case clause* ()
+	(() '())
+	((((?PVE . ?arg*) ?body0 ?body ...) . ?rest)
+	 (free-identifier=? #'?PVE execution-context)
+	 (cons #'(?arg* ?body0 ?body ...)
+	       (%filter-cases execution-context #'?rest)))
+	((?case . ?rest)
+	 (%filter-cases execution-context #'?rest))))
+
+    (define (%cogen-name stx infix name)
+      (let* ((name.str  (symbol->string (syntax->datum name)))
+	     (cogen.str (string-append "cogen-" infix "-"  name.str)))
+	(datum->syntax stx (string->symbol cogen.str))))
+
+    (main stx)))
+
 
 ;;;; syntax helpers
 
@@ -59,6 +161,28 @@
   ;;?MACHINE-WORD.
   ;;
   (prm 'logand ?machine-word (K 255)))
+
+;;; --------------------------------------------------------------------
+;;; predefined checks
+
+(define (interrupt-unless recordized-code)
+  (make-conditional recordized-code
+      (prm 'nop)
+    (interrupt)))
+
+(define (interrupt-when recordized-code)
+  (make-conditional recordized-code
+      (interrupt)
+    (prm 'nop)))
+
+(define (interrupt-unless-fixnum recordized-code)
+  (interrupt-unless
+   (tag-test recordized-code fx-mask fx-tag)))
+
+(define (interrupt-unless-fx binary-representation)
+  (if (fx? binary-representation)
+      (nop)
+    (interrupt)))
 
 
 ;;;; helpers
@@ -5080,12 +5204,17 @@
 
  /section)
 
+
+;;;; done
+
+#| end of module |# )
+
 ;;; end of file
 ;;Local Variables:
 ;;mode: vicare
 ;;eval: (put 'make-conditional	'scheme-indent-function 2)
 ;;eval: (put 'with-tmp		'scheme-indent-function 1)
-;;eval: (put 'with-tmp*	'scheme-indent-function 1)
+;;eval: (put 'with-tmp*		'scheme-indent-function 1)
 ;;eval: (put 'struct-case	'scheme-indent-function 1)
 ;;eval: (put 'check-flonums	'scheme-indent-function 1)
 ;;End:
