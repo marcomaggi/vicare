@@ -1380,7 +1380,8 @@
      (constant->constant-representation x))
 
     ((known expr type)
-     (make-known (T expr) type))
+     (T expr))
+;;;     (make-known (T expr) type))
 
     (else
      (error 'cogen-T "invalid" (unparse-recordized-code x)))))
