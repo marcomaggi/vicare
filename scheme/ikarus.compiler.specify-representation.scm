@@ -1386,7 +1386,7 @@
      (T expr))
 
     (else
-     (compiler-internal-error 'cogen-spevify-representation:T
+     (compiler-internal-error 'cogen-specify-representation:T
        "invalid struct as simplified operand to core primitive operation application"
        (unparse-recordized-code x)))))
 
@@ -1549,12 +1549,13 @@
       (if check?
 	  (with-tmp ((x (V x)))
 	    (make-shortcut
-	     (make-seq (make-conditional (%tag-test x closure-mask closure-tag)
-			   (prm 'nop)
-			 (prm 'interrupt))
-		       x)
-	     (V (make-funcall (mk-primref 'error)
-			      (list (K 'apply) (K "not a procedure") x)))))
+		(make-seq
+		 (make-conditional (%tag-test x closure-mask closure-tag)
+		     (prm 'nop)
+		   (prm 'interrupt))
+		 x)
+	      (V (make-funcall (mk-primref 'error)
+			       (list (K 'apply) (K "not a procedure") x)))))
 	(V x)))
 
     (define (%tag-test x mask tag)

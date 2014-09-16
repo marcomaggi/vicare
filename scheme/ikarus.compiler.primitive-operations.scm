@@ -305,6 +305,13 @@
     (%shift-right
      (prm 'int+ UNknown-amount (K (+ known-amount (sub1 object-alignment)))))))
 
+ /section)
+
+
+;;;; values validation
+
+(section
+
  (define (assert-fixnum x)
    (struct-case x
      ((constant x.val)
@@ -317,7 +324,55 @@
 	((no)  (interrupt))
 	(else  (assert-fixnum x.expr))))
      (else
-      (interrupt-unless (cogen-pred-fixnum? x)))))
+      (interrupt-unless
+       (cogen-pred-fixnum? x)))))
+
+ (module (assert-fixnums)
+
+   (define (assert-fixnums a a*)
+     ;;Generate and return recordized code that validates, at run time, the arguments
+     ;;as fixnums.
+     ;;
+     (let*-values (((fx* others)  (partition %known-fixnum?     (cons a a*)))
+		   ((nfx* others) (partition %known-non-fixnum? others)))
+       (cond ((not (null? nfx*))
+	      (interrupt))
+	     ((null? others)
+	      (nop))
+	     (else
+	      (interrupt-unless
+	       (tag-test (%or* (T (car others))
+			       (cdr others))
+			 fx-mask fx-tag))))))
+
+   (define (%or* a a*)
+     (if (null? a*)
+	 a
+       (%or* (prm 'logor a (T (car a*)))
+	     (cdr a*))))
+
+   (define (%known-fixnum? x)
+     (struct-case x
+       ((constant x.val)
+	(fx? x.val))
+       ((known x.expr x.type)
+	(case (T:fixnum? x.type)
+	  ((yes)  #t)
+	  (else   #f)))
+       (else #f)))
+
+   (define (%known-non-fixnum? x)
+     (struct-case x
+       ((constant x.val)
+	(not (fx? x.val)))
+       ((known x.expr x.type)
+	(eq? (T:fixnum? x.type) 'no))
+       (else
+	#f)))
+
+   #| end of module: assert-fixnums |# )
+
+;;; --------------------------------------------------------------------
 
  (define (assert-string x)
    (struct-case x
@@ -2678,51 +2733,6 @@
 ;;;; generic arithmetic
 
 (section
-
- (module (assert-fixnums)
-
-   (define (assert-fixnums a a*)
-     ;;Generate and return recordized code  that validates, at run time,
-     ;;the arguments as fixnums.
-     ;;
-     (let*-values (((fx* others)  (partition known-fixnum?     (cons a a*)))
-		   ((nfx* others) (partition known-non-fixnum? others)))
-       (cond ((not (null? nfx*))
-	      (interrupt))
-	     ((null? others)
-	      (nop))
-	     (else
-	      (interrupt-unless
-	       (tag-test (or* (T (car others))
-			      (cdr others))
-			 fx-mask fx-tag))))))
-
-   (define (or* a a*)
-     (if (null? a*)
-	 a
-       (or* (prm 'logor a (T (car a*)))
-	    (cdr a*))))
-
-   (define (known-fixnum? x)
-     (struct-case x
-       ((constant x.val)
-	(fx? x.val))
-       ((known x.expr x.type)
-	(case (T:fixnum? x.type)
-	  ((yes)  #t)
-	  (else   #f)))
-       (else #f)))
-
-   (define (known-non-fixnum? x)
-     (struct-case x
-       ((constant x.val)
-	(not (fx? x.val)))
-       ((known x.expr x.type)
-	(eq? (T:fixnum? x.type) 'no))
-       (else
-	#f)))
-
-   #| end of module: assert-fixnums |# )
 
  (define (fixnum-fold-p op a a*)
    ;;Generate and return  recordized code that: first  validates all the
@@ -5186,10 +5196,10 @@
    ;;
    ((E)
     (make-shortcut
-     (make-conditional (prm 'u< fpr (prm 'mref pcr (K pcb-frame-redline)))
-	 (prm 'interrupt)
-       (prm 'nop))
-     (make-forcall "ik_stack_overflow" '()))))
+	(make-conditional (prm 'u< fpr (prm 'mref pcr (K pcb-frame-redline)))
+	    (prm 'interrupt)
+	  (prm 'nop))
+      (make-forcall "ik_stack_overflow" '()))))
 
  /section)
 
@@ -5279,6 +5289,7 @@
 ;;Local Variables:
 ;;mode: vicare
 ;;eval: (put 'make-conditional	'scheme-indent-function 2)
+;;eval: (put 'make-shortcut	'scheme-indent-function 1)
 ;;eval: (put 'with-tmp		'scheme-indent-function 1)
 ;;eval: (put 'with-tmp*		'scheme-indent-function 1)
 ;;eval: (put 'struct-case	'scheme-indent-function 1)

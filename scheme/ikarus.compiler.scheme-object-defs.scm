@@ -476,11 +476,11 @@
     (- (* wordsize 8) fx-shift))
 
   (define-constant intbits
-    ($fx* wordsize 8))
+    (fx* wordsize 8))
   (define-constant fxbits
-    ($fx- intbits fx-shift))
+    (fx- intbits fx-shift))
   (define-constant t
-    (expt 2 ($fx- fxbits 1)))
+    (expt 2 (fx- fxbits 1)))
   (define-constant least-signed-machine-word
     (- t))
   (define-constant greatest-signed-machine-word
