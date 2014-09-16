@@ -1358,10 +1358,18 @@
 
 
 (define (T x)
+  ;;Similar to V  but it must be  applied only to the  "simplified operands" prepared
+  ;;for  a   core  primitive  operation   application.   Return  a   struct  instance
+  ;;representing recordized  code (to  be executed in  "for returned  value" context)
+  ;;which is meant to replace X.
+  ;;
+  ;;All    the     core    primitive     implementation    handlers     defined    by
+  ;;DEFINE-PRIMITIVE-OPERATION must filter their arguments through T before including
+  ;;them in their output recordised code.
+  ;;
   ;;X must be a  struct instance representing recordized code to  be executed in "for
   ;;returned value" context, evaluating to a single value to be used as argument to a
-  ;;primitive operation.  Return  a struct instance representing  recordized code (to
-  ;;be executed in "for returned value" context) which is meant to replace X.
+  ;;primitive operation.
   ;;
   ;;Accept as input recordized code holding the following struct types:
   ;;
@@ -1376,10 +1384,11 @@
 
     ((known expr type)
      (T expr))
-;;;     (make-known (T expr) type))
 
     (else
-     (error 'cogen-T "invalid" (unparse-recordized-code x)))))
+     (compiler-internal-error 'cogen-spevify-representation:T
+       "invalid struct as simplified operand to core primitive operation application"
+       (unparse-recordized-code x)))))
 
 (define* (constant->native-constant-representation x)
   ;;X must  be a struct  instance of  type CONSTANT.  When  the constant value  has a
