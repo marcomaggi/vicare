@@ -68,27 +68,12 @@
 
 ** (vicare expander object-type-specs)
 ** (vicare expander tags)
-* letrec optimiser
+* core type inference
 
-** Add to the letrec optimiser the code to integrate nested rhs let:
+** Whenever a conditional:
 
-     (letrec* (bi ...
-               [x (let ([lhs* rhs*] ...) body)]
-               bj ...)
-       body)
-     ===>
-     (letrec* (bi ...
-               [tmp* rhs*] ...
-               [lhs* tmp*] ...
-               [x body]
-               bj ...)
-       body)
+   (if (type? ?var) ?conseq ?altern)
 
-** Review the use of SEQ structures.  They should be built as:
-
-      (begin a b c d) ==> (seq (seq (seq a b) c) d)
-
-   not as:
-
-      (begin a b c d) ==> (seq a (seq b (seq c d)))
+   is found, the ?conseq should be processed with an augmented environment in
+   which the VAR struct ?var is known to have type "T:type".
 
