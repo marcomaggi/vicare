@@ -1570,7 +1570,7 @@
 
 ;;;; some external code
 
-(include "pass-specify-rep-primops.ss" #t)
+(include "ikarus.compiler.primitive-operations.scm" #t)
 
 
 ;;;; done

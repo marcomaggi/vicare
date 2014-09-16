@@ -5700,7 +5700,7 @@
 
 ;;;; external code for actual code generation
 
-(include "ikarus.compiler.altcogen.ss" #t)
+(include "ikarus.compiler.altcogen.scm" #t)
 
 
 (define (unparse-recordized-code x)

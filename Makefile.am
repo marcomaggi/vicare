@@ -286,7 +286,6 @@ endif
 VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm				\
 	scheme/ikarus.compiler.sls				\
-	scheme/ikarus.compiler.altcogen.ss			\
 	scheme/ikarus.compiler.scheme-objects-ontology.scm	\
 	scheme/ikarus.compiler.letrec-optimizer.scm		\
 	scheme/ikarus.compiler.source-optimizer.scm		\
@@ -294,7 +293,8 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.scheme-object-defs.scm		\
 	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
 	scheme/ikarus.compiler.specify-representation.scm	\
-	scheme/pass-specify-rep-primops.ss			\
+	scheme/ikarus.compiler.altcogen.scm			\
+	scheme/ikarus.compiler.primitive-operations.scm		\
 	\
 	scheme/ikarus.apply.sls					\
 	scheme/ikarus.apropos.sls				\
