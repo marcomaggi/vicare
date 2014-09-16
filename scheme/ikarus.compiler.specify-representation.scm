@@ -170,7 +170,7 @@
   (make-primcall 'nop '()))
 
 
-(module (with-tmp with-tmp*)
+(module (with-tmp)
 
   (define-syntax (with-tmp stx)
     ;;Do what is needed to generate recordized  code in the region of a local binding
@@ -202,9 +202,8 @@
 			    (multiple-forms-sequence ?body0 ?body ...)))))))
       ))
 
-  ;;FIXME Why in  hell does this implementation of WITH-TMP*  cause a segfault?!?  It
-  ;;should be the correct and  simpler implementation of the error-containing version
-  ;;below.  (Marco Maggi; Sun Sep 14, 2014)
+  ;;FIXME  Why in  hell does  this implementation  of WITH-TMP*  cause a  segfault?!?
+  ;;(Marco Maggi; Sun Sep 14, 2014)
   ;;
   ;; (define-syntax (with-tmp* stx)
   ;;   ;;We use this when we want the ?RHS  expressions to be evaluated in the region of
@@ -219,44 +218,13 @@
   ;; 	     ?body0 ?body ...)))
   ;;     ))
 
-  (define-syntax (with-tmp* x)
-    ;;We use this when we want the ?RHS  expressions to be evaluated in the region of
-    ;;the previous  ?LHS binding.  If WITH-TMP  works like LET, WITH-TMP*  works like
-    ;;LET*.
-    (syntax-case x ()
-      ((_ ((?lhs ?rhs) ...) ?body0 ?body ...)
-       (with-syntax
-	   (((LHS ...) (generate-temporaries #'(?lhs ...))))
-	 ;;Evaluate the  right-hand sides,  which must  return recordized  code.  The
-	 ;;?RHS expressions expect Scheme bindings to exists with name ?LHS.
-	 ;;
-	 ;;FIXME Error!!!   We evaluate the ?RHS  in the region of  the previous ?LHS
-	 ;;bindings,  which means  that recordised  code is  duplicated.  We  should,
-	 ;;instead evaluate  the ?RHS  in the  region of  the ?LHS  bound to  the VAR
-	 ;;structs generated below.  (Marco Maggi; Sun Sep 14, 2014)
-	 #'(let* ((?lhs ?rhs) ...)
-	     ;;Generate new struct instances of type LHS.
-	     (let ((LHS (make-unique-var '?lhs)) ...)
-	       ;;Make the binding struct, which represents machine words allocated on
-	       ;;the stack  and initialised with  the results of evaluating  the ??lhs
-	       ;;expressions.
-	       (make-bind (list LHS ...)
-			  (list ?lhs ...)
-			  ;;The  ?BODY forms  expect Scheme  bindings to  exists with
-			  ;;name ?LHS, referencing the VAR structures.
-			  (let* ((?lhs (%copy-core-type-descr LHS ?lhs)) ...)
-			    ;;Evaluate  the body  forms,  each of  which must  return
-			    ;;recordized code.
-			    (multiple-forms-sequence ?body0 ?body ...)))))))
-      ))
-
   (define (%copy-core-type-descr lhs.var rhs.struct)
     (struct-case rhs.struct
       ((known _ type)
        (make-known lhs.var type))
       (else lhs.var)))
 
-  #| end of module: WITH-TMP, WITH-TMP* |# )
+  #| end of module: WITH-TMP |# )
 
 
 (module CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS

@@ -1143,10 +1143,10 @@
       (else
        ;;Here LEN is recordized code  which, when evaluated, must return
        ;;a finxum representing the number of slots.
-       (with-tmp* ((alen (align-code (T len) disp-vector-data))
-		   (vec  (prm 'alloc alen (K vector-tag))))
-	 (prm 'mset vec (K off-vector-length) (T len))
-	 vec))))
+       (with-tmp ((alen (align-code (T len) disp-vector-data)))
+	 (with-tmp ((vec (prm 'alloc alen (K vector-tag))))
+	   (prm 'mset vec (K off-vector-length) (T len))
+	   vec)))))
    ((P len)
     (K #t))
    ((E len)
@@ -1891,15 +1891,14 @@
       (else
        ;;Here NUMBITS is recordized code that must return a fixnum.
        ;;
-       (with-tmp*
-	   ((numbits.val (prm-UNtag-as-fixnum (T numbits)))
-	    (numbits.val (let ((word-numbits NUM-OF-BITS-IN-WORD))
-			   (make-conditional (prm '< numbits.val (K word-numbits))
-			       numbits.val
-			     (K (- word-numbits 1))))))
-	 (prm 'logand
-	      (prm 'sra (T x) numbits.val)
-	      (K (* -1 fx-scale)))))))
+       (with-tmp ((numbits.val (prm-UNtag-as-fixnum (T numbits))))
+	 (with-tmp ((numbits.val (let ((word-numbits NUM-OF-BITS-IN-WORD))
+				   (make-conditional (prm '< numbits.val (K word-numbits))
+				       numbits.val
+				     (K (- word-numbits 1))))))
+	   (prm 'logand
+		(prm 'sra (T x) numbits.val)
+		(K (* -1 fx-scale))))))))
    ((P x i)
     (K #t))
    ((E x i)
@@ -3311,10 +3310,10 @@
       (else
        ;;Here LEN is recordized code  which, when evaluated, must return
        ;;a fixnum representing the number of fields.
-       (with-tmp* ((size (align-code len disp-struct-data))
-		   (stru (prm 'alloc size (K vector-tag))))
-	 (prm 'mset stru (K off-struct-std) (T std))
-	 stru))))
+       (with-tmp ((size (align-code len disp-struct-data)))
+	 (with-tmp ((stru (prm 'alloc size (K vector-tag))))
+	   (prm 'mset stru (K off-struct-std) (T std))
+	   stru)))))
    ((P std len)
     (K #t))
    ((E std len)
@@ -3964,10 +3963,10 @@
 			   (K vector-tag))))
 	;;Tag the first word as flonum.
 	(prm 'mset flo (K off-flonum-tag) (K flonum-tag))
-	(with-tmp* ((t  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i))))
-		    (x0 (prm 'mref t (K off-bytevector-data))))
-	  (prm 'bswap! x0 x0)
-	  (prm 'mset flo (K off-flonum-data) x0))
+	(with-tmp ((t  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
+	  (with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
+	    (prm 'bswap! x0 x0)
+	    (prm 'mset flo (K off-flonum-data) x0)))
 	flo)))))
 
 ;;;The  following   uses  unsupported  SSE3   instructions.   (Abdulaziz
@@ -4013,10 +4012,10 @@
 	  (prm 'bswap! x0 x0)
 	  (prm 'mset t (K off-bytevector-data) x0))))
      ((64)
-      (with-tmp* ((t  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx))))
-		  (x0 (prm 'mref (T flo) (K off-flonum-data))))
-	(prm 'bswap! x0 x0)
-	(prm 'mset t (K off-bytevector-data) x0))))))
+      (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
+	(with-tmp ((x0 (prm 'mref (T flo) (K off-flonum-data))))
+	  (prm 'bswap! x0 x0)
+	  (prm 'mset t (K off-bytevector-data) x0)))))))
 
 ;;;The following uses unsupported SSE3 instructions.  (Abdulaziz Ghuloum)
 ;;;
@@ -4062,10 +4061,10 @@
       ;;Copy the single  from the bytevector data area  into a register;
       ;;reverse  its bytes;  copy the  reversed single  into the  flonum
       ;;data.
-      (with-tmp* ((t  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx))))
-		  (x0 (prm 'mref t (K off-bytevector-data))))
-	(prm 'bswap! x0 x0)
-	(prm 'mset flo (K off-flonum-data) x0))
+      (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
+	(with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
+	  (prm 'bswap! x0 x0)
+	  (prm 'mset flo (K off-flonum-data) x0)))
       ;;Load the reversed single into a floating point register.
       (prm 'fl:load-single flo (K (+ off-flonum-data (- wordsize 4))))
       ;;Convert the single into a double.
@@ -4594,9 +4593,9 @@
    ((V x y)
     ;;FIXME This is a predicate but a forcall is currently not supported
     ;;by the P function.  (Marco Maggi; Nov 30, 2011)
-    (with-tmp* ((arg1 (T x))
-		(arg2 (T y)))
-      (make-forcall "ikrt_pointer_eq" (list arg1 arg2))))
+    (with-tmp ((arg1 (T x)))
+      (with-tmp ((arg2 (T y)))
+	(make-forcall "ikrt_pointer_eq" (list arg1 arg2)))))
    ((E x y)
     (nop)))
 
@@ -4877,10 +4876,10 @@
     ;;FIXME: should be atomic swap  instead of load and set!  (Abdulaziz
     ;;Ghuloum)
     ;;
-    (with-tmp* ((x0 (T x))
-		(t  (prm 'mref pcr (K pcb-engine-counter))))
-      (prm 'mset pcr (K pcb-engine-counter) x0)
-      t)))
+    (with-tmp ((x0 (T x)))
+      (with-tmp ((t (prm 'mref pcr (K pcb-engine-counter))))
+	(prm 'mset pcr (K pcb-engine-counter) x0)
+	t))))
 
  /section)
 
@@ -5031,85 +5030,79 @@
    ;;   actually performed by $CALL-WITH-UNDERFLOW-HANDLER.
    ;;
    ((V func)
-    (with-tmp*
-	(;;Here we  perform the  allocation using  ALLOC-NO-HOOKS, which
-	 ;;does not  execute the  post-GC hooks.  When  we come  here we
-	 ;;have already  determined that the FPR  is not at the  base of
-	 ;;the  Scheme  stack;  running  the post-GC  could  change  the
-	 ;;scenario  leaving  the  FPR  at   base  and  so  causing  the
-	 ;;generation of a corrupt continuation  object (with size 0 and
-	 ;;the underflow  handler as return  point of the  topmost stack
-	 ;;frame).
-	 (kont			(prm 'alloc-no-hooks
-				     (K continuation-size)
-				     (K vector-tag)))
-	 ;;BASE references the underflow handler:
-	 ;;
-	 ;;        high memory
-	 ;; |                      | <-- pcb->frame_base
-	 ;; |----------------------|
-	 ;; | ik_underflow_handler | <-- BASE = pcb->frame_base - wordsize
-	 ;; |----------------------|
-	 ;; |                      |
-	 ;;       low memory
-	 ;;
-	 (base			(prm 'int+
-				     (prm 'mref pcr (K pcb-frame-base))
-				     (K (- wordsize))))
-	 (underflow-handler	(prm 'mref base (K 0))))
-      ;;Store the continuation tag in the first word.
-      (prm 'mset kont (K off-continuation-tag)  (K continuation-tag))
-      ;;Set the current Frame Pointer Register  as address to go back to
-      ;;when resuming the continuation.
-      (prm 'mset kont (K off-continuation-top)  fpr)
-      ;;Set  the number  of bytes  representing  the total  size of  the
-      ;;freezed stack frames.
-      (prm 'mset kont (K off-continuation-size) (prm 'int- base fpr))
-      ;;Prepend the new continuation object  to the linked list of "next
-      ;;process continuations" in the PCB.
-      (prm 'mset kont (K off-continuation-next) (prm 'mref pcr (K pcb-next-continuation)))
-      (prm 'mset pcr  (K pcb-next-continuation) kont)
-      ;;The  machine  word  containing   "return  address  0"  (the  one
-      ;;referenced by the FPR) is the new frame base for subsequent code
-      ;;execution; store the FPR in the PCB as frame base.
-      (prm 'mset pcr (K pcb-frame-base) fpr)
-      ;;When arriving here the situation of the Scheme stack is:
+    ;;Here we perform the allocation using ALLOC-NO-HOOKS, which does not execute the
+    ;;post-GC hooks.  When  we come here we  have already determined that  the FPR is
+    ;;not at  the base  of the  Scheme stack;  running the  post-GC could  change the
+    ;;scenario leaving  the FPR at  base and so causing  the generation of  a corrupt
+    ;;continuation object (with  size 0 and the underflow handler  as return point of
+    ;;the topmost stack frame).
+    (with-tmp ((kont (prm 'alloc-no-hooks (K continuation-size) (K vector-tag))))
+      ;;BASE references the underflow handler:
       ;;
-      ;;         high memory
-      ;;   |                      |
-      ;;   |----------------------|
-      ;;   | ik_underflow_handler |
-      ;;   |----------------------|                           --
-      ;;     ... other frames ...                             .
-      ;;   |----------------------|                           .
-      ;;   |     local value 1    |                           .
-      ;;   |----------------------|                           .
-      ;;   |     local value 1    |                           .
-      ;;   |----------------------|                           . freezed
-      ;;   |   return address 1   |                           . frames
-      ;;   |----------------------|                           .
-      ;;   |     local value 0    |                           .
-      ;;   |----------------------|                           .
-      ;;   |     local value 0    |                           .
-      ;;   |----------------------|                           .
-      ;;   |   return address 0   | <- FPR = pcb->frame_base  .
-      ;;   |----------------------|                           --
-      ;;   |         func         | -> closure object
-      ;;   |----------------------|
-      ;;             ...
-      ;;   |----------------------|
-      ;;   |      free word       | <- pcb->stack_base
-      ;;   |----------------------|
-      ;;   |                      |
-      ;;          low memory
+      ;;        high memory
+      ;; |                      | <-- pcb->frame_base
+      ;; |----------------------|
+      ;; | ik_underflow_handler | <-- BASE = pcb->frame_base - wordsize
+      ;; |----------------------|
+      ;; |                      |
+      ;;       low memory
       ;;
-      ;;ARGC-REGISTER still  contains the  encoded number  of arguments,
-      ;;counting  the single  argument FUNC  to %PRIMITIVE-CALL/CF;  the
-      ;;reference to continuation  object KONT is in  some CPU register;
-      ;;the  raw  memory  pointer   UNDERFLOW-HANDLER  is  in  some  CPU
-      ;;register.
-      ;;
-      (prm '$call-with-underflow-handler underflow-handler (T func) kont)))
+      (with-tmp ((base (prm 'int+
+			    (prm 'mref pcr (K pcb-frame-base))
+			    (K (- wordsize)))))
+	(with-tmp ((underflow-handler (prm 'mref base (K 0))))
+	  ;;Store the continuation tag in the first word.
+	  (prm 'mset kont (K off-continuation-tag)  (K continuation-tag))
+	  ;;Set the  current Frame  Pointer Register  as address to  go back  to when
+	  ;;resuming the continuation.
+	  (prm 'mset kont (K off-continuation-top)  fpr)
+	  ;;Set the number of bytes representing  the total size of the freezed stack
+	  ;;frames.
+	  (prm 'mset kont (K off-continuation-size) (prm 'int- base fpr))
+	  ;;Prepend the new  continuation object to the linked list  of "next process
+	  ;;continuations" in the PCB.
+	  (prm 'mset kont (K off-continuation-next) (prm 'mref pcr (K pcb-next-continuation)))
+	  (prm 'mset pcr  (K pcb-next-continuation) kont)
+	  ;;The machine word containing "return address 0" (the one referenced by the
+	  ;;FPR) is the  new frame base for subsequent code  execution; store the FPR
+	  ;;in the PCB as frame base.
+	  (prm 'mset pcr (K pcb-frame-base) fpr)
+	  ;;When arriving here the situation of the Scheme stack is:
+	  ;;
+	  ;;         high memory
+	  ;;   |                      |
+	  ;;   |----------------------|
+	  ;;   | ik_underflow_handler |
+	  ;;   |----------------------|                           --
+	  ;;     ... other frames ...                             .
+	  ;;   |----------------------|                           .
+	  ;;   |     local value 1    |                           .
+	  ;;   |----------------------|                           .
+	  ;;   |     local value 1    |                           .
+	  ;;   |----------------------|                           . freezed
+	  ;;   |   return address 1   |                           . frames
+	  ;;   |----------------------|                           .
+	  ;;   |     local value 0    |                           .
+	  ;;   |----------------------|                           .
+	  ;;   |     local value 0    |                           .
+	  ;;   |----------------------|                           .
+	  ;;   |   return address 0   | <- FPR = pcb->frame_base  .
+	  ;;   |----------------------|                           --
+	  ;;   |         func         | -> closure object
+	  ;;   |----------------------|
+	  ;;             ...
+	  ;;   |----------------------|
+	  ;;   |      free word       | <- pcb->stack_base
+	  ;;   |----------------------|
+	  ;;   |                      |
+	  ;;          low memory
+	  ;;
+	  ;;ARGC-REGISTER still  contains the  encoded number of  arguments, counting
+	  ;;the  single  argument  FUNC   to  %PRIMITIVE-CALL/CF;  the  reference  to
+	  ;;continuation object KONT is in some  CPU register; the raw memory pointer
+	  ;;UNDERFLOW-HANDLER is in some CPU register.
+	  ;;
+	  (prm '$call-with-underflow-handler underflow-handler (T func) kont)))))
    ((E . args)
     (interrupt))
    ((P . args)
@@ -5291,7 +5284,6 @@
 ;;eval: (put 'make-conditional	'scheme-indent-function 2)
 ;;eval: (put 'make-shortcut	'scheme-indent-function 1)
 ;;eval: (put 'with-tmp		'scheme-indent-function 1)
-;;eval: (put 'with-tmp*		'scheme-indent-function 1)
 ;;eval: (put 'struct-case	'scheme-indent-function 1)
 ;;eval: (put 'check-flonums	'scheme-indent-function 1)
 ;;End:
