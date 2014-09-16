@@ -1793,9 +1793,9 @@
   #f)
 
 
-(parametrise ((check-test-name	'introduce-tags))
+(parametrise ((check-test-name	'core-type-inference))
 
-  (define (%introduce-tags core-language-form)
+  (define (%core-type-inference core-language-form)
     (let* ((D (compiler.$recordize core-language-form))
 	   (D (compiler.$optimize-direct-calls D))
 	   (D (compiler.$optimize-letrec D))
@@ -1803,7 +1803,7 @@
 	   ;;test cases.
 	   #;(D (compiler.$source-optimize D))
 	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$introduce-tags D))
+	   (D (compiler.$core-type-inference D))
 	   (S (compiler.$unparse-recordized-code/sexp D)))
       S))
 
@@ -1811,7 +1811,7 @@
     (syntax-rules ()
       ((_ ?core-language-form ?expected-result)
        (check
-	   (%introduce-tags (quasiquote ?core-language-form))
+	   (%core-type-inference (quasiquote ?core-language-form))
 	 => (quasiquote ?expected-result)))
       ))
 

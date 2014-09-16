@@ -42,7 +42,7 @@
     $optimize-letrec
     $source-optimize
     $rewrite-references-and-assignments
-    $introduce-tags
+    $core-type-inference
     $introduce-vars
     $sanitize-bindings
     $optimize-for-direct-jumps
@@ -79,7 +79,7 @@
 		 $optimize-letrec
 		 $source-optimize
 		 $rewrite-references-and-assignments
-		 $introduce-tags
+		 $core-type-inference
 		 $introduce-vars
 		 $sanitize-bindings
 		 $optimize-for-direct-jumps
@@ -105,7 +105,7 @@
     ((_ $optimize-letrec		?body)	(%compile-up-to  3 ?body))
     ((_ $source-optimize		?body)	(%compile-up-to  4 ?body))
     ((_ $rewrite-references-and-assignments ?body) (%compile-up-to  5 ?body))
-    ((_ $introduce-tags			?body)	(%compile-up-to  6 ?body))
+    ((_ $core-type-inference			?body)	(%compile-up-to  6 ?body))
     ((_ $introduce-vars			?body)	(%compile-up-to  7 ?body))
     ((_ $sanitize-bindings		?body)	(%compile-up-to  8 ?body))
     ((_ $optimize-for-direct-jumps	?body)	(%compile-up-to  9 ?body))
@@ -142,7 +142,7 @@
 	   (R (doit R  3 $optimize-letrec))
 	   (R (doit R  4 $source-optimize))
 	   (R (doit R  5 $rewrite-references-and-assignments))
-	   (R (doit R  6 $introduce-tags))
+	   (R (doit R  6 $core-type-inference))
 	   (R (doit R  7 $introduce-vars))
 	   (R (doit R  8 $sanitize-bindings))
 	   (R (doit R  9 $optimize-for-direct-jumps))

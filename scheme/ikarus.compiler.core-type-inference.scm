@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(module (introduce-tags)
+(module (core-type-inference)
   ;;This optional compiler  pass analyses the type of values  returned by expressions
   ;;with the purpose of transforming FUNCALL recordised forms:
   ;;
@@ -66,9 +66,9 @@
   (import SCHEME-OBJECTS-ONTOLOGY)
 
   (define-fluid-override __who__
-    (identifier-syntax 'introduce-tags))
+    (identifier-syntax 'core-type-inference))
 
-  (define (introduce-tags x)
+  (define (core-type-inference x)
     (receive (y env y.tag)
 	(V x EMPTY-ENV)
       y))
@@ -774,7 +774,7 @@
 
 ;;;; done
 
-#| end of module: introduce-tags |# )
+#| end of module: CORE-TYPE-INFERENCE |# )
 
 ;;; end of file
 ;; Local Variables:

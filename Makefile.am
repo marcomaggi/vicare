@@ -289,7 +289,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.scheme-objects-ontology.scm	\
 	scheme/ikarus.compiler.letrec-optimizer.scm		\
 	scheme/ikarus.compiler.source-optimizer.scm		\
-	scheme/ikarus.compiler.tag-annotation-analysis.scm	\
+	scheme/ikarus.compiler.core-type-inference.scm		\
 	scheme/ikarus.compiler.scheme-object-defs.scm		\
 	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
 	scheme/ikarus.compiler.specify-representation.scm	\

@@ -188,7 +188,7 @@
 ;;
 ;;(compiler.optimize-level 2)
 
-(compiler.$perform-tag-analysis #t)
+(compiler.$perform-core-type-inference #t)
 (pretty-width 160)
 ((pretty-format 'fix)
  ((pretty-format 'letrec)))
@@ -3084,7 +3084,7 @@
     ($check-for-illegal-letrec			$compiler)
     (optimize-level				$compiler)
     ($source-optimizer-passes-count		$compiler)
-    ($perform-tag-analysis			$compiler)
+    ($perform-core-type-inference		$compiler)
     ($cp0-size-limit				$compiler)
     ($cp0-effort-limit				$compiler)
     ($strip-source-info				$compiler)
@@ -3101,7 +3101,7 @@
     ($optimize-letrec				$compiler)
     ($source-optimize				$compiler)
     ($rewrite-references-and-assignments	$compiler)
-    ($introduce-tags				$compiler)
+    ($core-type-inference			$compiler)
     ($introduce-vars				$compiler)
     ($sanitize-bindings				$compiler)
     ($optimize-for-direct-jumps			$compiler)

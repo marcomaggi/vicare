@@ -92,7 +92,7 @@
 	 ;;code for debugging and inspection.
 	 #;(D (compiler.$source-optimize D))
 	 (D (compiler.$rewrite-references-and-assignments D))
-	 (D (compiler.$introduce-tags D))
+	 (D (compiler.$core-type-inference D))
 	 (S (compiler.$unparse-recordized-code/sexp D)))
     S))
 
@@ -104,7 +104,7 @@
 	 ;;code for debugging and inspection.
 	 #;(D (compiler.$source-optimize D))
 	 (D (compiler.$rewrite-references-and-assignments D))
-	 (D (compiler.$introduce-tags D))
+	 (D (compiler.$core-type-inference D))
 	 (D (compiler.$sanitize-bindings D))
 	 (D (compiler.$optimize-for-direct-jumps D))
 	 (D (compiler.$insert-global-assignments D))
@@ -126,7 +126,7 @@
 	 ;;code for debugging and inspection.
 	 #;(D (compiler.$source-optimize D))
 	 (D (compiler.$rewrite-references-and-assignments D))
-	 (D (compiler.$introduce-tags D))
+	 (D (compiler.$core-type-inference D))
 	 (D (compiler.$sanitize-bindings D))
 	 (D (compiler.$optimize-for-direct-jumps D))
 	 (D (compiler.$insert-global-assignments D))

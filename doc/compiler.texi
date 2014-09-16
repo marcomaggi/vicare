@@ -779,7 +779,7 @@ optimize-direct-calls
 optimize-letrec
 source-optimize
 rewrite-references-and-assignments
-introduce-tags (optional)
+core-type-inference (optional)
 sanitize-bindings
 optimize-for-direct-jumps
 insert-global-assignments
@@ -2459,7 +2459,7 @@ The following bindings are exported by the library @library{vicare
 system $compiler}.
 
 
-@defun $introduce-tags @var{input}
+@defun $core-type-inference @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2467,8 +2467,8 @@ hierarchy.
 @end defun
 
 
-@deffn Parameter $perform-tag-analysis
-When true the pass @func{$introduce-tags} is performed, else it is
+@deffn Parameter $perform-core-type-inference
+When true the pass @func{$core-type-inference} is performed, else it is
 skipped.  Defaults to @true{}.
 @end deffn
 

@@ -36,7 +36,7 @@
      (current-letrec-pass			$current-letrec-pass)
      (check-for-illegal-letrec			$check-for-illegal-letrec)
      (source-optimizer-passes-count		$source-optimizer-passes-count)
-     (perform-tag-analysis			$perform-tag-analysis)
+     (perform-core-type-inference		$perform-core-type-inference)
      (cp0-effort-limit				$cp0-effort-limit)
      (cp0-size-limit				$cp0-size-limit)
      (strip-source-info				$strip-source-info)
@@ -54,7 +54,7 @@
      (optimize-letrec				$optimize-letrec)
      (source-optimize				$source-optimize)
      (rewrite-references-and-assignments	$rewrite-references-and-assignments)
-     (introduce-tags				$introduce-tags)
+     (core-type-inference			$core-type-inference)
      (sanitize-bindings				$sanitize-bindings)
      (optimize-for-direct-jumps			$optimize-for-direct-jumps)
      (insert-global-assignments			$insert-global-assignments)
@@ -100,7 +100,7 @@
 		  cp0-effort-limit		cp0-size-limit
 		  current-letrec-pass		generate-debug-calls
 		  optimize-level
-		  perform-tag-analysis		strip-source-info
+		  perform-core-type-inference		strip-source-info
 		  fasl-write)
     ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
     ;;
@@ -205,8 +205,8 @@
 (define optimizer-output
   (make-parameter #f))
 
-(define perform-tag-analysis
-  ;;When true the pass INTRODUCE-TAGS is performed, else it is skipped.
+(define perform-core-type-inference
+  ;;When true the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
   ;;
   (make-parameter #t))
 
@@ -677,8 +677,8 @@
       (when (optimizer-output)
 	(pretty-print (unparse-recordized-code/pretty p) (current-error-port)))
       (let* ((p (rewrite-references-and-assignments p))
-	     (p (if (perform-tag-analysis)
-		    (introduce-tags p)
+	     (p (if (perform-core-type-inference)
+		    (core-type-inference p)
 		  p))
 	     (p (sanitize-bindings p))
 	     (p (optimize-for-direct-jumps p))
@@ -723,8 +723,8 @@
 	   (p (optimize-letrec p))
 	   (p (source-optimize p)))
       (let* ((p (rewrite-references-and-assignments p))
-	     (p (if (perform-tag-analysis)
-		    (introduce-tags p)
+	     (p (if (perform-core-type-inference)
+		    (core-type-inference p)
 		  p))
 	     (p (sanitize-bindings p))
 	     (p (optimize-for-direct-jumps p))
@@ -3461,7 +3461,7 @@
 ;;;; some other external code
 
 (include "ikarus.compiler.scheme-objects-ontology.scm" #t)
-(include "ikarus.compiler.tag-annotation-analysis.scm" #t)
+(include "ikarus.compiler.core-type-inference.scm" #t)
 
 
 (module (sanitize-bindings)
