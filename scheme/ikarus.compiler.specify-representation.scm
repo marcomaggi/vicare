@@ -17,16 +17,11 @@
 
 ;;;; introduction
 ;;
-;;This  file  is part  of  the  compiler; it  is  included  by the  file
-;;"ikarus.compiler.sls"; it includes "pass-specify-rep-primops.ss".
-;;
-;;NOTE   Some   functions   used   in   this   file   are   defined   in
-;;"pass-specify-rep-primops.ss".
 ;;
 
 
 (module (alt-cogen.specify-representation)
-  (import CORE-PRIMITIVE-OPERATIONS SCHEME-OBJECTS-ONTOLOGY)
+  (import CORE-PRIMITIVE-OPERATION-NAMES SCHEME-OBJECTS-ONTOLOGY)
 
   (define (alt-cogen.specify-representation x)
     (V-codes x))
@@ -1172,7 +1167,7 @@
   (define (unknown-V x)
     (struct-case x
       ((constant)
-       (constant->constant-representation x))
+       (constant->native-constant-representation x))
 
       ((var)
        x)
@@ -1377,7 +1372,7 @@
      x)
 
     ((constant)
-     (constant->constant-representation x))
+     (constant->native-constant-representation x))
 
     ((known expr type)
      (T expr))
@@ -1386,7 +1381,7 @@
     (else
      (error 'cogen-T "invalid" (unparse-recordized-code x)))))
 
-(define* (constant->constant-representation x)
+(define* (constant->native-constant-representation x)
   ;;X must  be a struct  instance of  type CONSTANT.  When  the constant value  has a
   ;;binary  representation:  return   a  new  CONSTANT  struct   holding  the  binary
   ;;representation itself.  Otherwise return:
@@ -1503,7 +1498,7 @@
 	      => (lambda (loc)
 		   (reset-symbol-proc! loc)
 		   (prm 'mref
-			(constant->constant-representation (K loc))
+			(constant->native-constant-representation (make-constant loc))
 			(K off-symbol-record-proc))))
 	     (else
 	      (nonproc x check?))))

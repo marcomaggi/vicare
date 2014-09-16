@@ -17,15 +17,14 @@
 
 ;;;; Introduction
 ;;
-;;For  an explanation  of  primitive operation  definition and  internal
-;;representation: see the file "pass-specify-rep.ss".
 ;;
 
-(module ()
+(module CORE-PRIMITIVE-OPERATION-DEFINITIONS
+  ()
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
 
 
-(define-syntax define-primitive-operation
+(define-syntax (define-primitive-operation stx)
   ;;Transform a declaration like:
   ;;
   ;;  (define-primitive-operation $vector-length unsafe
@@ -58,70 +57,76 @@
   ;;                     cogen-value-$vector-length   #t
   ;;                     cogen-effect-$vector-length  #t))))
   ;;
-  ;;The P,  V and  E clauses  are optional and  there can  be multiple
-  ;;clauses for each type: they are like SYNTAX-CASE clauses.
+  ;;If a  core primitive is  defined as  "safe": it is  interruptible and it  will be
+  ;;implemented by a SHORTCUT struct:
   ;;
-  (lambda (stx)
-    (define (main stx)
-      (syntax-case stx ()
-	((?stx ?name ?interruptable ?clause* ...)
-	 (let ((cases #'(?clause* ...)))
-	   (with-syntax
-	       ((COGEN-P	(%cogen-name #'?stx "pred"   #'?name))
-		(COGEN-V	(%cogen-name #'?stx "value"  #'?name))
-		(COGEN-E	(%cogen-name #'?stx "effect" #'?name))
-		(INTERRUPTABLE?	(syntax-case #'?interruptable (safe unsafe)
+  ;;   (shortcut ?integrated-fast-implementation ?call-to-function-implementation)
+  ;;
+  ;;If  it is  defined as  "unsafe": it  will  not be  interruptible and  it will  be
+  ;;implemented with simple body struct.
+  ;;
+  ;;The P, V  and E clauses are optional  and there can be multiple  clauses for each
+  ;;type: they are like SYNTAX-CASE clauses.
+  ;;
+  (define (main stx)
+    (syntax-case stx ()
+      ((?stx ?name ?interruptable ?clause* ...)
+       (let ((cases #'(?clause* ...)))
+	 (with-syntax
+	     ((COGEN-P	(%cogen-name #'?stx "pred"   #'?name))
+	      (COGEN-V	(%cogen-name #'?stx "value"  #'?name))
+	      (COGEN-E	(%cogen-name #'?stx "effect" #'?name))
+	      (INTERRUPTABLE?	(syntax-case #'?interruptable (safe unsafe)
 				  (safe   #t)
 				  (unsafe #f))))
-	     (let-values
-		 (((P-handler P-handled?) (%generate-handler #'P cases))
-		  ((V-handler V-handled?) (%generate-handler #'V cases))
-		  ((E-handler E-handled?) (%generate-handler #'E cases)))
-	       #`(begin
-		   (define COGEN-P #,P-handler)
-		   (define COGEN-V #,V-handler)
-		   (define COGEN-E #,E-handler)
-		   (module ()
-		     ;;Import this module for INTERRUPT.
-		     (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
-		     (set-primop! '?name
-				  (make-primitive-handler INTERRUPTABLE?
-							  COGEN-P #,P-handled?
-							  COGEN-V #,V-handled?
-							  COGEN-E #,E-handled?))))
-	       ))))
-	))
+	   (let-values
+	       (((P-handler P-handled?) (%generate-handler #'P cases))
+		((V-handler V-handled?) (%generate-handler #'V cases))
+		((E-handler E-handled?) (%generate-handler #'E cases)))
+	     #`(begin
+		 (define COGEN-P #,P-handler)
+		 (define COGEN-V #,V-handler)
+		 (define COGEN-E #,E-handler)
+		 (module ()
+		   ;;Import this module for INTERRUPT.
+		   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
+		   (set-primop! '?name
+				(make-primitive-handler INTERRUPTABLE?
+							COGEN-P #,P-handled?
+							COGEN-V #,V-handled?
+							COGEN-E #,E-handled?))))
+	     ))))
+      ))
 
-    (define (%generate-handler execution-context clause*)
-      ;;Return 2  values: a  CASE-LAMBDA syntax object  representing the
-      ;;primitive  operation handler  for  EXECUTION-CONTEXT; a  boolean
-      ;;value,  true  if  the  primitive operation  is  implemented  for
-      ;;EXECUTION-CONTEXT.
-      ;;
-      (let ((clause* (%filter-cases execution-context clause*)))
-	(with-syntax (((CLAUSE* ...) clause*))
-	  (values #'(case-lambda CLAUSE* ... (args (interrupt)))
-		  (not (null? clause*))))))
+  (define (%generate-handler execution-context clause*)
+    ;;Return  2  values:  a  CASE-LAMBDA syntax  object  representing  the  primitive
+    ;;operation handler for EXECUTION-CONTEXT; a boolean value, true if the primitive
+    ;;operation is implemented for EXECUTION-CONTEXT.
+    ;;
+    (let ((clause* (%filter-cases execution-context clause*)))
+      (with-syntax (((CLAUSE* ...) clause*))
+	(values #'(case-lambda CLAUSE* ... (args (interrupt)))
+		(not (null? clause*))))))
 
-    (define (%filter-cases execution-context clause*)
-      ;;Extract from CLAUSE* the  cases matching EXECUTION-CONTEXT among
-      ;;the possible P, V, E.  Return a list of CASE-LAMBDA clauses.
-      ;;
-      (syntax-case clause* ()
-	(() '())
-	((((?PVE . ?arg*) ?body0 ?body ...) . ?rest)
-	 (free-identifier=? #'?PVE execution-context)
-	 (cons #'(?arg* ?body0 ?body ...)
-	       (%filter-cases execution-context #'?rest)))
-	((?case . ?rest)
-	 (%filter-cases execution-context #'?rest))))
+  (define (%filter-cases execution-context clause*)
+    ;;Extract from CLAUSE* the cases matching EXECUTION-CONTEXT among the possible P,
+    ;;V, E.  Return a list of CASE-LAMBDA clauses.
+    ;;
+    (syntax-case clause* ()
+      (() '())
+      ((((?PVE . ?arg*) ?body0 ?body ...) . ?rest)
+       (free-identifier=? #'?PVE execution-context)
+       (cons #'(?arg* ?body0 ?body ...)
+	     (%filter-cases execution-context #'?rest)))
+      ((?case . ?rest)
+       (%filter-cases execution-context #'?rest))))
 
-    (define (%cogen-name stx infix name)
-      (let* ((name.str  (symbol->string (syntax->datum name)))
-	     (cogen.str (string-append "cogen-" infix "-"  name.str)))
-	(datum->syntax stx (string->symbol cogen.str))))
+  (define (%cogen-name stx infix name)
+    (let* ((name.str  (symbol->string (syntax->datum name)))
+	   (cogen.str (string-append "cogen-" infix "-"  name.str)))
+      (datum->syntax stx (string->symbol cogen.str))))
 
-    (main stx)))
+  (main stx))
 
 
 ;;;; syntax helpers
@@ -131,34 +136,35 @@
 
 (define-syntax section
   (syntax-rules (/section)
-    ((section e* ... /section) (begin e* ...))))
+    ((section ?body ... /section)
+     (begin ?body ...))
+    ))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (prm-tag-as-fixnum ?machine-word)
-  ;;Given a struct instance  ?MACHINE-WORD representing recordized code:
-  ;;return a  struct instance  representing recordized code  which, when
+(define-syntax-rule (prm-tag-as-fixnum ?machine-word)
+  ;;Given the struct ?MACHINE-WORD representing recordized code that will evaluate to
+  ;;an integer:  return a  struct instance representing  recordized code  which, when
   ;;evaluated, will tag the result of ?MACHINE-WORD as fixnum.
   ;;
   (prm 'sll ?machine-word (K fx-shift)))
 
-(define-inline (prm-UNtag-as-fixnum ?machine-word)
-  ;;Given a struct instance  ?MACHINE-WORD representing recordized code:
-  ;;return a  struct instance  representing recordized code  which, when
-  ;;evaluated, will untag the result of ?MACHINE-WORD as fixnum.
+(define-syntax-rule (prm-UNtag-as-fixnum ?machine-word)
+  ;;Given the struct ?MACHINE-WORD representing recordized code that will evaluate to
+  ;;an  integer  representing  a  fixnum:   return  a  struct  instance  representing
+  ;;recordized code which, when evaluated, will  untag the result of ?MACHINE-WORD as
+  ;;fixnum.
   ;;
-  ;;Notice  that   untagging  *must*  be  performed   with  *arithmetic*
-  ;;right-shift.
+  ;;Notice that untagging *must* be performed with *arithmetic* right-shift.
   ;;
   (prm 'sra ?machine-word (K fx-shift)))
 
 ;;; --------------------------------------------------------------------
 
-(define-inline (prm-isolate-least-significant-byte ?machine-word)
-  ;;Given a struct instance  ?MACHINE-WORD representing recordized code:
-  ;;return a  struct instance  representing recordized code  which, when
-  ;;evaluated, will isolate the least  significant byte of the result of
-  ;;?MACHINE-WORD.
+(define-syntax-rule (prm-isolate-least-significant-byte ?machine-word)
+  ;;Given  a struct  instance ?MACHINE-WORD  representing recordized  code: return  a
+  ;;struct instance representing recordized code  which, when evaluated, will isolate
+  ;;the least significant byte of the result of ?MACHINE-WORD.
   ;;
   (prm 'logand ?machine-word (K 255)))
 

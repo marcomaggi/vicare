@@ -5145,7 +5145,7 @@
     (define (%primitive-operation? x)
       ;;Import  the  function CORE-PRIMITIVE-OPERATION?   from  a  module defined  in
       ;;"pass-specify-rep.ss".  (Marco Maggi; Oct 14, 2012)
-      (import CORE-PRIMITIVE-OPERATIONS)
+      (import CORE-PRIMITIVE-OPERATION-NAMES)
       (or (eq? x 'debug-call)
 	  (core-primitive-operation? x)))
 
@@ -5663,7 +5663,7 @@
   #| end of module: insert-stack-overflow-check |# )
 
 
-(module CORE-PRIMITIVE-OPERATIONS
+(module CORE-PRIMITIVE-OPERATION-NAMES
   (core-primitive-operation? get-primop set-primop!)
   ;;This module  has the only  purpose of making the  binding COOKIE visible  only to
   ;;CORE-PRIMITIVE-OPERATION?, GET-PRIMOP and SET-PRIMOP!.
@@ -5695,7 +5695,7 @@
     ;;
     ($putprop symbol COOKIE primitive-handler))
 
-  #| end of module CORE-PRIMITIVE-OPERATIONS |# )
+  #| end of module CORE-PRIMITIVE-OPERATION-NAMES |# )
 
 
 ;;;; external code for actual code generation
