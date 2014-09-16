@@ -352,6 +352,50 @@
   #t)
 
 
+(parametrise ((check-test-name	'pairs))
+
+  ;;NOTE The  second operand to  MREF is the  "offset" of the  car with respect  to a
+  ;;tagged pointer referencing the pair; this offset untags the pointer.
+  (doit ((primitive $car) '(1 . 2))
+	(codes
+	 ()
+	 (primcall mref (constant (object (1 . 2))) (constant -1))))
+
+  ;;Here it is known that the operand is a "T:pair".
+  (doit ((primitive car) '(1 . 2))
+	(codes
+	 ()
+	 (primcall mref (constant (object (1 . 2))) (constant -1))))
+
+  ;;Here the operand is of unknown type.
+  (doit ((primitive car) ((primitive read)))
+	(codes
+	 ()
+	 (seq
+	   (shortcut
+	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
+		   (primcall interrupt)
+		 (primcall nop))
+	     (foreign-call "ik_stack_overflow"))
+	   (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19)))))
+	     (shortcut
+		 (seq
+		   ;;If the primary tag is the pair tag...
+		   (conditional (primcall =
+					  (primcall logand tmp_0 (constant 7))
+					  (constant 1))
+		       ;;... fine.
+		       (primcall nop)
+		     ;;... otherwise jump to the interrupt handler.
+		     (primcall interrupt))
+		   ;;Extract the car.
+		   (primcall mref tmp_0 (constant -1)))
+	       (funcall (primcall mref (constant (object car)) (constant 19))
+		 tmp_0))))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'vectors))
 
   (check
