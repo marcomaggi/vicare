@@ -437,13 +437,14 @@
 ;;;inline tests
 
 ;;Uncomment this form to test.
+#|
 (module ()
   (import SCHEME-OBJECTS-ONTOLOGY)
 
   (define (%do-check expr result expected)
-    (if (equal? result expected)
-	(printf "OK: ~s -> ~s\n" expr expected)
-      (error 'check "failed/got/expected" expr result expected)))
+    (unless (equal? result expected)
+      (compiler-internal-error 'check-objects-ontology
+	"failed/got/expected" expr result expected)))
 
   (define-syntax check
     (syntax-rules (=>)
@@ -544,6 +545,8 @@
   (check (T:pair?   (core-type-tag-or T:fixnum T:string))	=> no)
 
   #| end of module |# )
+
+|#
 
 #!eof
 
