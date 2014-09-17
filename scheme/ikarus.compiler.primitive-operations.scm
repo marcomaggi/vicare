@@ -173,13 +173,13 @@
 
 (define (interrupt-unless recordized-code)
   (make-conditional recordized-code
-      (prm 'nop)
+      (nop)
     (interrupt)))
 
 (define (interrupt-when recordized-code)
   (make-conditional recordized-code
       (interrupt)
-    (prm 'nop)))
+    (nop)))
 
 (define (interrupt-unless-fixnum recordized-code)
   (interrupt-unless
@@ -238,7 +238,7 @@
    (struct-case what
      ((constant t)
       (if (or (fx? t) (immediate? t))
-	  (prm 'nop)
+	  (nop)
 	(dirty-vector-set addr)))
      ((known expr type)
       (cond ((eq? (T:immediate? type) 'yes)
@@ -374,6 +374,46 @@
 
 ;;; --------------------------------------------------------------------
 
+ (define* (assert-pair x)
+   ;;Return recordised code  that validates X as  a Scheme pair object.  X  must be a
+   ;;struct instance representing recordized code not yet filtered through T.
+   ;;
+   (define (%compile-time-error)
+     (compile-time-error __who__
+       "expected pair as argument" (unparse-recordized-code/sexp x)))
+   (struct-case x
+     ((known x.expr x.type)
+      (case (T:pair? x.type)
+	((yes)
+	 (nop))
+	((no)
+	 (if (option.strict-r6rs)
+	     (interrupt)
+	   (%compile-time-error)))
+	(else
+	 (assert-pair x.expr))))
+     ((constant x.const)
+      (cond ((pair? x.const)
+	     (nop))
+	    ((option.strict-r6rs)
+	     (interrupt))
+	    (else
+	     (%compile-time-error))))
+     (else
+      (interrupt-unless-pair (T x)))))
+
+ (define (interrupt-unless-pair x)
+   ;;Return recordised code  that validates X as  a Scheme pair object.  X  must be a
+   ;;struct instance representing recordized code that does *not* need to be filtered
+   ;;through T.
+   ;;
+   ;;NOTE The primitive implementation  handler COGEN-PRED-PAIR?  expects an argument
+   ;;that still needs to be filtered through T, so we cannot use it here.
+   ;;
+   (interrupt-unless (tag-test x pair-mask pair-tag)))
+
+;;; --------------------------------------------------------------------
+
  (define (assert-string x)
    (struct-case x
      ((constant s)
@@ -402,7 +442,7 @@
    ;;
    ((V) (prm 'mref pcr (K pcb-base-rtd)))
    ((P) (K #t))
-   ((E) (prm 'nop)))
+   ((E) (nop)))
 
  (define-primitive-operation void safe
    ;;This  is the  definition  of  the Scheme  function  VOID.  It  just
@@ -410,12 +450,12 @@
    ;;
    ((V) (K void-object))
    ((P) (K #t))
-   ((E) (prm 'nop)))
+   ((E) (nop)))
 
  (define-primitive-operation nop unsafe
    ;;This is the definition of the primitive operation NOP.
    ;;
-   ((E) (prm 'nop)))
+   ((E) (nop)))
 
  (define-primitive-operation neq? unsafe
    ;;This is the implementation of the Scheme function NEQ?.
@@ -667,8 +707,23 @@
 
  (define-primitive-operation pair? safe
    ((P x)
-    (tag-test (T x) pair-mask pair-tag))
-   ((E x) (nop)))
+    (struct-case x
+      ((known x.expr x.type)
+       (case (T:pair? x.type)
+	 ((yes)
+	  (K bool-t))
+	 ((no)
+	  (K bool-f))
+	 (else
+	  (cogen-value-pair? x.expr))))
+      ((constant x.const)
+       (if (pair? x.const)
+	   (K bool-t)
+	 (K bool-f)))
+      (else
+       (tag-test (T x) pair-mask pair-tag))))
+   ((E x)
+    (nop)))
 
  (define-primitive-operation cons safe
    ((V a d)
@@ -676,129 +731,222 @@
       (prm 'mset t (K off-car) (T a))
       (prm 'mset t (K off-cdr) (T d))
       t))
-   ((P a d) (K #t))
-   ((E a d) (prm 'nop)))
+   ((P a d)
+    (K #t))
+   ((E a d)
+    (nop)))
+
+;;; --------------------------------------------------------------------
 
  (define-primitive-operation $car unsafe
-   ((V x) (prm 'mref  (T x) (K off-car)))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'mref  (T x) (K off-car)))
+   ((E x)
+    (nop)))
 
  (define-primitive-operation $cdr unsafe
-   ((V x) (prm 'mref  (T x) (K off-cdr)))
-   ((E x) (nop)))
+   ((V x)
+    (prm 'mref  (T x) (K off-cdr)))
+   ((E x)
+    (nop)))
 
  (define-primitive-operation $set-car! unsafe
    ((E x v)
-    (with-tmp ((x^ (T x)))
-      (prm 'mset x^ (K off-car) (T v))
-      (smart-dirty-vector-set x^ v))))
+    (with-tmp ((tx (T x)))
+      (prm 'mset tx (K off-car) (T v))
+      (smart-dirty-vector-set tx v))))
 
  (define-primitive-operation $set-cdr! unsafe
    ((E x v)
-    (with-tmp ((x^ (T x)))
-      (prm 'mset x^ (K off-cdr) (T v))
-      (smart-dirty-vector-set x^ v))))
+    (with-tmp ((tx (T x)))
+      (prm 'mset tx (K off-cdr) (T v))
+      (smart-dirty-vector-set tx v))))
 
- (define (assert-pair x)
-   ;;X must be a struct instance representing recordized code.
-   ;;
-   (struct-case x
-     ((known expr type)
-      (case (T:pair? type)
-	((yes)
-	 (nop))
-	((no)
-	 (interrupt))
-	(else
-	 (assert-pair expr))))
-     (else
-      (interrupt-unless (tag-test x pair-mask pair-tag)))))
+;;; --------------------------------------------------------------------
 
  (define-primitive-operation car safe
    ((V x)
-    (with-tmp ((x^ (T x)))
-      (assert-pair x^)
-      (prm 'mref x^ (K off-car))))
+    (define (%error-wrong-operand)
+      (if (option.strict-r6rs)
+	  (interrupt)
+	(compile-time-error 'car
+	  "expected pair as argument" (unparse-recordized-code/sexp x))))
+    (struct-case x
+      ((known x.expr x.type)
+       (case (T:pair? x.type)
+	 ((yes)
+	  (cogen-value-$car x.expr))
+	 ((no)
+	  (%error-wrong-operand))
+	 (else
+	  (cogen-value-car x.expr))))
+      ((constant x.const)
+       (if (pair? x.const)
+	   (cogen-value-$car x)
+	 (%error-wrong-operand)))
+      ((var)
+       ;;This is a special case in which we  know "(T x)" would just return X itself;
+       ;;so we avoid creating a temporary location.
+       (multiple-forms-sequence
+	(interrupt-unless-pair x)
+	(prm 'mref x (K off-car))))
+      (else
+       (with-tmp ((tx (T x)))
+	 (interrupt-unless-pair tx)
+	 (prm 'mref tx (K off-car))))))
    ((E x)
-    (assert-pair (T x))))
+    (assert-pair x)))
 
  (define-primitive-operation cdr safe
    ((V x)
-    (with-tmp ((x^ (T x)))
-      (assert-pair x^)
-      (prm 'mref x^ (K off-cdr))))
+    (define (%error-wrong-operand)
+      (if (option.strict-r6rs)
+	  (interrupt)
+	(compile-time-error 'cdr
+	  "expected pair as argument" (unparse-recordized-code/sexp x))))
+    (struct-case x
+      ((known x.expr x.type)
+       (case (T:pair? x.type)
+	 ((yes)
+	  (cogen-value-$cdr x.expr))
+	 ((no)
+	  (%error-wrong-operand))
+	 (else
+	  (cogen-value-cdr x.expr))))
+      ((constant x.const)
+       (if (pair? x.const)
+	   (cogen-value-$cdr x)
+	 (%error-wrong-operand)))
+      ((var)
+       ;;This is a special case in which we  know "(T x)" would just return X itself;
+       ;;so we avoid creating a temporary location.
+       (multiple-forms-sequence
+	(interrupt-unless-pair x)
+	(prm 'mref x (K off-cdr))))
+      (else
+       (with-tmp ((tx (T x)))
+	 (interrupt-unless-pair tx)
+	 (prm 'mref tx (K off-cdr))))))
    ((E x)
-    (assert-pair (T x))))
+    (assert-pair x)))
 
  (define-primitive-operation set-car! safe
    ((E x v)
-    (with-tmp ((x^ (T x)))
-      (assert-pair x^)
-      (prm 'mset x^ (K off-car) (T v))
-      (smart-dirty-vector-set x^ v))))
+    (define (%error-wrong-operand)
+      (if (option.strict-r6rs)
+	  (interrupt)
+	(compile-time-error 'set-car!
+	  "expected pair as argument" (unparse-recordized-code/sexp x))))
+    (struct-case x
+      ((known x.expr x.type)
+       (case (T:pair? x.type)
+	 ((yes)
+	  (cogen-value-$set-car! x.expr))
+	 ((no)
+	  (%error-wrong-operand))
+	 (else
+	  (cogen-value-set-car! x.expr))))
+      ((constant x.const)
+       (if (pair? x.const)
+	   (if (option.strict-r6rs)
+	       (cogen-value-$set-car! x)
+	     (compile-time-error 'set-car!
+	       "invalid mutation of pair datum" (unparse-recordized-code/sexp x)))
+	 (%error-wrong-operand)))
+      (else
+       (with-tmp ((tx (T x)))
+	 (interrupt-unless-pair tx)
+	 (prm 'mset tx (K off-car) (T v))
+	 (smart-dirty-vector-set tx v))))))
 
  (define-primitive-operation set-cdr! safe
    ((E x v)
-    (with-tmp ((x^ (T x)))
-      (assert-pair x^)
-      (prm 'mset x^ (K off-cdr) (T v))
-      (smart-dirty-vector-set x^ v))))
+    (define (%error-wrong-operand)
+      (if (option.strict-r6rs)
+	  (interrupt)
+	(compile-time-error 'set-cdr!
+	  "expected pair as argument" (unparse-recordized-code/sexp x))))
+    (struct-case x
+      ((known x.expr x.type)
+       (case (T:pair? x.type)
+	 ((yes)
+	  (cogen-value-$set-cdr! x.expr))
+	 ((no)
+	  (%error-wrong-operand))
+	 (else
+	  (cogen-value-set-cdr! x.expr))))
+      ((constant x.const)
+       (if (pair? x.const)
+	   (if (option.strict-r6rs)
+	       (cogen-value-$set-cdr! x)
+	     (compile-time-error 'set-cdr!
+	       "invalid mutation of pair datum" (unparse-recordized-code/sexp x)))
+	 (%error-wrong-operand)))
+      (else
+       (with-tmp ((tx (T x)))
+	 (interrupt-unless-pair tx)
+	 (prm 'mset tx (K off-cdr) (T v))
+	 (smart-dirty-vector-set tx v))))))
 
- (define (expand-cxr val ls)
-   ;;LS must  be a  list of  symbols "a" and  "d" representing  a nested
-   ;;sequence of car and cdr operations.
-   ;;
-   ;;Return a struct instance representing  recordized code for a nested
-   ;;sequence of car and cdr calls.  For example:
-   ;;
-   ;;   (expand-cxr x '(a d))
-   ;;
-   ;;returns recordized code for:
-   ;;
-   ;;   (prm 'mref x (prm 'mref x off-cdr)
-   ;;                off-car)
-   ;;
-   ;;and so it implements cadr.
-   ;;
-   (if (null? ls)
-       (T val)
-     (with-tmp ((x^ (expand-cxr val ($cdr ls))))
-       (assert-pair x^)
-       (prm 'mref x^
-	    (if (eq? 'a ($car ls))
-		(K off-car)
-	      (K off-cdr))))))
+;;; --------------------------------------------------------------------
 
- (define-primitive-operation caar   safe ((V x) (expand-cxr x '(a a))))
- (define-primitive-operation cadr   safe ((V x) (expand-cxr x '(a d))))
- (define-primitive-operation cdar   safe ((V x) (expand-cxr x '(d a))))
- (define-primitive-operation cddr   safe ((V x) (expand-cxr x '(d d))))
+ (define (%expand-cxr val ls)
+   ;;Return a struct  instance representing recordized code for a  nested sequence of
+   ;;car and  cdr calls.  LS  must be a  list of symbols  "a" and "d"  representing a
+   ;;nested sequence of car and cdr operations.
+   ;;
+   ;;For example:
+   ;;
+   ;;   (%expand-cxr x '(a d))
+   ;;
+   ;;returns recordized code representing internal CDR and external CAR:
+   ;;
+   ;;   (with-tmp ((tmp (prm 'mref x off-cdr)))
+   ;;     (interrupt-unless-pair tmp)
+   ;;     (prm 'mref tmp off-car))
+   ;;
+   ;;and so it implements CADR.
+   ;;
+   (if (pair? ls)
+       (with-tmp ((item (%expand-cxr val (cdr ls))))
+	 (interrupt-unless-pair item)
+	 (prm 'mref item (if (eq? 'a (car ls))
+			     (K off-car)
+			   (K off-cdr))))
+     (T val)))
 
- (define-primitive-operation caaar  safe ((V x) (expand-cxr x '(a a a))))
- (define-primitive-operation caadr  safe ((V x) (expand-cxr x '(a a d))))
- (define-primitive-operation cadar  safe ((V x) (expand-cxr x '(a d a))))
- (define-primitive-operation caddr  safe ((V x) (expand-cxr x '(a d d))))
- (define-primitive-operation cdaar  safe ((V x) (expand-cxr x '(d a a))))
- (define-primitive-operation cdadr  safe ((V x) (expand-cxr x '(d a d))))
- (define-primitive-operation cddar  safe ((V x) (expand-cxr x '(d d a))))
- (define-primitive-operation cdddr  safe ((V x) (expand-cxr x '(d d d))))
+ (define-primitive-operation caar   safe ((V x) (%expand-cxr x '(a a))))
+ (define-primitive-operation cadr   safe ((V x) (%expand-cxr x '(a d))))
+ (define-primitive-operation cdar   safe ((V x) (%expand-cxr x '(d a))))
+ (define-primitive-operation cddr   safe ((V x) (%expand-cxr x '(d d))))
 
- (define-primitive-operation caaaar safe ((V x) (expand-cxr x '(a a a a))))
- (define-primitive-operation caaadr safe ((V x) (expand-cxr x '(a a a d))))
- (define-primitive-operation caadar safe ((V x) (expand-cxr x '(a a d a))))
- (define-primitive-operation caaddr safe ((V x) (expand-cxr x '(a a d d))))
- (define-primitive-operation cadaar safe ((V x) (expand-cxr x '(a d a a))))
- (define-primitive-operation cadadr safe ((V x) (expand-cxr x '(a d a d))))
- (define-primitive-operation caddar safe ((V x) (expand-cxr x '(a d d a))))
- (define-primitive-operation cadddr safe ((V x) (expand-cxr x '(a d d d))))
- (define-primitive-operation cdaaar safe ((V x) (expand-cxr x '(d a a a))))
- (define-primitive-operation cdaadr safe ((V x) (expand-cxr x '(d a a d))))
- (define-primitive-operation cdadar safe ((V x) (expand-cxr x '(d a d a))))
- (define-primitive-operation cdaddr safe ((V x) (expand-cxr x '(d a d d))))
- (define-primitive-operation cddaar safe ((V x) (expand-cxr x '(d d a a))))
- (define-primitive-operation cddadr safe ((V x) (expand-cxr x '(d d a d))))
- (define-primitive-operation cdddar safe ((V x) (expand-cxr x '(d d d a))))
- (define-primitive-operation cddddr safe ((V x) (expand-cxr x '(d d d d))))
+ (define-primitive-operation caaar  safe ((V x) (%expand-cxr x '(a a a))))
+ (define-primitive-operation caadr  safe ((V x) (%expand-cxr x '(a a d))))
+ (define-primitive-operation cadar  safe ((V x) (%expand-cxr x '(a d a))))
+ (define-primitive-operation caddr  safe ((V x) (%expand-cxr x '(a d d))))
+ (define-primitive-operation cdaar  safe ((V x) (%expand-cxr x '(d a a))))
+ (define-primitive-operation cdadr  safe ((V x) (%expand-cxr x '(d a d))))
+ (define-primitive-operation cddar  safe ((V x) (%expand-cxr x '(d d a))))
+ (define-primitive-operation cdddr  safe ((V x) (%expand-cxr x '(d d d))))
+
+ (define-primitive-operation caaaar safe ((V x) (%expand-cxr x '(a a a a))))
+ (define-primitive-operation caaadr safe ((V x) (%expand-cxr x '(a a a d))))
+ (define-primitive-operation caadar safe ((V x) (%expand-cxr x '(a a d a))))
+ (define-primitive-operation caaddr safe ((V x) (%expand-cxr x '(a a d d))))
+ (define-primitive-operation cadaar safe ((V x) (%expand-cxr x '(a d a a))))
+ (define-primitive-operation cadadr safe ((V x) (%expand-cxr x '(a d a d))))
+ (define-primitive-operation caddar safe ((V x) (%expand-cxr x '(a d d a))))
+ (define-primitive-operation cadddr safe ((V x) (%expand-cxr x '(a d d d))))
+ (define-primitive-operation cdaaar safe ((V x) (%expand-cxr x '(d a a a))))
+ (define-primitive-operation cdaadr safe ((V x) (%expand-cxr x '(d a a d))))
+ (define-primitive-operation cdadar safe ((V x) (%expand-cxr x '(d a d a))))
+ (define-primitive-operation cdaddr safe ((V x) (%expand-cxr x '(d a d d))))
+ (define-primitive-operation cddaar safe ((V x) (%expand-cxr x '(d d a a))))
+ (define-primitive-operation cddadr safe ((V x) (%expand-cxr x '(d d a d))))
+ (define-primitive-operation cdddar safe ((V x) (%expand-cxr x '(d d d a))))
+ (define-primitive-operation cddddr safe ((V x) (%expand-cxr x '(d d d d))))
+
+;;; --------------------------------------------------------------------
 
  (define-primitive-operation list safe
    ((V)		;this is the case of: (list)
@@ -1308,7 +1456,7 @@
 	   (make-seq (prm 'mset vec (K offset) (car arg*^))
 		     (recur (cdr arg*^) (+ offset wordsize))))))))
    ((E . arg*)
-    (prm 'nop))
+    (nop))
    ((P . arg*)
     (K #t)))
 
@@ -5191,7 +5339,7 @@
     (make-shortcut
 	(make-conditional (prm 'u< fpr (prm 'mref pcr (K pcb-frame-redline)))
 	    (prm 'interrupt)
-	  (prm 'nop))
+	  (nop))
       (make-forcall "ik_stack_overflow" '()))))
 
  /section)
