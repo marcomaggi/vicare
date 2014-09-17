@@ -61,7 +61,9 @@
 					 ((strict-r6rs)	#t)
 					 (else		#f)))
 			       library-option*)))
-    `(with-compilation-options ,compilation-option* ,body)))
+    (if (null? compilation-option*)
+	body
+      `(with-compilation-options ,compilation-option* ,body))))
 
 
 (define (build-void)
