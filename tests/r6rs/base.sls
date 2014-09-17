@@ -1,4 +1,5 @@
 ;;;Copyright (c) 2008 Matthew Flatt
+;;;Modified by Marco Maggi <marco.maggi-ipsu@poste.it>.
 ;;;
 ;;;This library is free software;  you can redistribute it and/or modify
 ;;;it  under the  terms of  the GNU  Library General  Public  License as
@@ -18,6 +19,7 @@
 #!r6rs
 
 (library (r6rs base)
+  (options strict-r6rs)
   (export run-base-tests)
   (import (rnrs)
           (r6rs test))

@@ -1273,6 +1273,6 @@
 )
 
 ;;; end of file
-;; Local Variables:
-;; eval: (put 'with-pending-library-request 'scheme-indent-function 1)
-;; End:
+;;Local Variables:
+;;eval: (put 'with-pending-library-request	'scheme-indent-function 1)
+;;End:

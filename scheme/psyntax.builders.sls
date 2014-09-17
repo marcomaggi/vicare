@@ -47,10 +47,21 @@
     build-letrec*			#;build-global-define
     build-library-letrec*
 
+    build-with-compilation-options
+
     core-language->sexp)
   (import (rnrs)
     (psyntax compat)
     (psyntax config))
+
+
+(define (build-with-compilation-options library-option* body)
+  (let ((compilation-option* (filter (lambda (sym)
+				       (case sym
+					 ((strict-r6rs)	#t)
+					 (else		#f)))
+			       library-option*)))
+    `(with-compilation-options ,compilation-option* ,body)))
 
 
 (define (build-void)

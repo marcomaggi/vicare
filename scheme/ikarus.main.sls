@@ -1200,7 +1200,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
   ;;
   (with-run-time-config (cfg)
     (doit
-     (receive (lib* invoke-code macro* export-subst export-env)
+     (receive (lib* invoke-code macro* export-subst export-env option*)
 	 (psyntax.expand-top-level (read-script-source-file cfg.script))
        (define port (current-output-port))
        (pretty-print invoke-code port)

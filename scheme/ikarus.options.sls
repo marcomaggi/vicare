@@ -80,7 +80,6 @@
 (define-boolean-option print-loaded-libraries)
 (define-boolean-option cache-compiled-libraries)
 (define-boolean-option report-errors-at-runtime)
-(define-boolean-option strict-r6rs)
 
 
 ;;;; some parameter boolean options
@@ -95,6 +94,8 @@
 	 (lambda (value)
 	   (and value #t)))))
     ))
+
+(define-parameter-boolean-option strict-r6rs)
 
 ;;This option is about the tagged language.  When we write:
 ;;

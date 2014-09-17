@@ -357,6 +357,11 @@ methods to Nausicaa's multimethods.
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
 @end defvr
 
+
+@defvr {Library Option} strict-r6rs
+Turn on strict support for @rnrs{6} language.
+@end defvr
+
 @c page
 @node iklib syntaxes programs
 @subsection Extended program syntax
@@ -381,6 +386,11 @@ where each @meta{option} is a symbolic expression.
 
 @defvr {Library Option} tagged-language
 Turn on the tagged language extensions, @ref{tags, Tagged language}.
+@end defvr
+
+
+@defvr {Library Option} strict-r6rs
+Turn on strict support for @rnrs{6} language.
 @end defvr
 
 @c page
@@ -4223,7 +4233,7 @@ the @code{guard-code} is:
 
 @defun expand-top-level @var{sexp}
 Expand an @rnrs{6} program whose symbolic expression is @var{sexp}.
-Return @math{5} values:
+Return @math{6} values:
 
 @table @var
 @item invoke-lib*
@@ -4241,6 +4251,10 @@ A subst representing the top--level bindings.
 
 @item export-env
 A list representing the bindings exported by the program.
+
+@item option*
+A list of symbols representing the options enabled for this program;
+@ref{iklib syntaxes programs} for details.
 @end table
 @end defun
 
@@ -4254,6 +4268,7 @@ alist with the following symbols as keys:
 invoke-lib* invoke-code
 macro*
 export-subst export-env
+option*
 @end example
 @end defun
 

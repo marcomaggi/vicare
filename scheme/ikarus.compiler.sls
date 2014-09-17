@@ -670,47 +670,51 @@
     ;;This  is *the*  commpiler function.   It  transforms a  core language  symbolic
     ;;expression into a code object.
     ;;
-    (let* ((p (recordize core-language-sexp))
-	   (p (optimize-direct-calls p))
-	   (p (optimize-letrec p))
-	   (p (source-optimize p)))
-      (when (optimizer-output)
-	(pretty-print (unparse-recordized-code/pretty p) (current-error-port)))
-      (let* ((p (rewrite-references-and-assignments p))
-	     (p (if (perform-core-type-inference)
-		    (core-type-inference p)
-		  p))
-	     (p (sanitize-bindings p))
-	     (p (optimize-for-direct-jumps p))
-	     (p (insert-global-assignments p))
-	     (p (introduce-vars p))
-	     (p (introduce-closure-makers p))
-	     (p (optimize-combinator-calls/lift-clambdas p))
-	     (p (introduce-primcalls p))
-	     (p (rewrite-freevar-references p))
-	     (p (insert-engine-checks p))
-	     (p (insert-stack-overflow-check p))
-	     (ls* (alt-cogen p)))
-	(when (assembler-output)
-	  ;;Print nicely the assembly labels.
-	  (parameterize ((gensym-prefix "L")
-			 (print-gensym  #f))
-	    (for-each (lambda (ls)
-			(newline (current-error-port))
-			($for-each/stx print-instr ls))
-	      ls*)))
-	(let ((code* (assemble-sources thunk?-label ls*)))
-	  (car code*)))))
+    (%parse-compilation-options core-language-sexp
+      (lambda (core-language-sexp)
+	(let* ((p (recordize core-language-sexp))
+	       (p (optimize-direct-calls p))
+	       (p (optimize-letrec p))
+	       (p (source-optimize p)))
+	  (when (optimizer-output)
+	    (pretty-print (unparse-recordized-code/pretty p) (current-error-port)))
+	  (let* ((p (rewrite-references-and-assignments p))
+		 (p (if (perform-core-type-inference)
+			(core-type-inference p)
+		      p))
+		 (p (sanitize-bindings p))
+		 (p (optimize-for-direct-jumps p))
+		 (p (insert-global-assignments p))
+		 (p (introduce-vars p))
+		 (p (introduce-closure-makers p))
+		 (p (optimize-combinator-calls/lift-clambdas p))
+		 (p (introduce-primcalls p))
+		 (p (rewrite-freevar-references p))
+		 (p (insert-engine-checks p))
+		 (p (insert-stack-overflow-check p))
+		 (ls* (alt-cogen p)))
+	    (when (assembler-output)
+	      ;;Print nicely the assembly labels.
+	      (parameterize ((gensym-prefix "L")
+			     (print-gensym  #f))
+		(for-each (lambda (ls)
+			    (newline (current-error-port))
+			    ($for-each/stx print-instr ls))
+		  ls*)))
+	    (let ((code* (assemble-sources thunk?-label ls*)))
+	      (car code*)))))))
 
   (define (core-expr->optimized-code core-language-sexp)
     ;;This is a utility function used for debugging and inspection purposes; it is to
     ;;be used to inspect the result of optimisation.
     ;;
-    (let* ((p (recordize core-language-sexp))
-	   (p (optimize-direct-calls p))
-	   (p (optimize-letrec p))
-	   (p (source-optimize p)))
-      (unparse-recordized-code/pretty p)))
+    (%parse-compilation-options core-language-sexp
+      (lambda (core-language-sexp)
+	(let* ((p (recordize core-language-sexp))
+	       (p (optimize-direct-calls p))
+	       (p (optimize-letrec p))
+	       (p (source-optimize p)))
+	  (unparse-recordized-code/pretty p)))))
 
   (define (core-expr->assembly-code core-language-sexp)
     ;;This is  a utility  function used  for debugging  and inspection  purposes.  It
@@ -718,27 +722,29 @@
     ;;sublists, each sublist  representing assembly language instructions  for a code
     ;;object.
     ;;
-    (let* ((p (recordize core-language-sexp))
-	   (p (optimize-direct-calls p))
-	   (p (optimize-letrec p))
-	   (p (source-optimize p)))
-      (let* ((p (rewrite-references-and-assignments p))
-	     (p (if (perform-core-type-inference)
-		    (core-type-inference p)
-		  p))
-	     (p (sanitize-bindings p))
-	     (p (optimize-for-direct-jumps p))
-	     (p (insert-global-assignments p))
-	     (p (introduce-vars p))
-	     (p (introduce-closure-makers p))
-	     (p (optimize-combinator-calls/lift-clambdas p))
-	     (p (introduce-primcalls p))
-	     (p (rewrite-freevar-references p))
-	     (p (insert-engine-checks p))
-	     (p (insert-stack-overflow-check p))
-	     (ls* (alt-cogen p)))
-	#;(gensym-prefix "L")
-	ls*)))
+    (%parse-compilation-options core-language-sexp
+      (lambda (core-language-sexp)
+	(let* ((p (recordize core-language-sexp))
+	       (p (optimize-direct-calls p))
+	       (p (optimize-letrec p))
+	       (p (source-optimize p)))
+	  (let* ((p (rewrite-references-and-assignments p))
+		 (p (if (perform-core-type-inference)
+			(core-type-inference p)
+		      p))
+		 (p (sanitize-bindings p))
+		 (p (optimize-for-direct-jumps p))
+		 (p (insert-global-assignments p))
+		 (p (introduce-vars p))
+		 (p (introduce-closure-makers p))
+		 (p (optimize-combinator-calls/lift-clambdas p))
+		 (p (introduce-primcalls p))
+		 (p (rewrite-freevar-references p))
+		 (p (insert-engine-checks p))
+		 (p (insert-stack-overflow-check p))
+		 (ls* (alt-cogen p)))
+	    ;;(gensym-prefix "L")
+	    ls*)))))
 
   (define (thunk?-label x)
     ;;If X is a struct instance of  type CLOSURE-MAKER with no free variables: return
@@ -761,6 +767,26 @@
 	(display "   " port)
 	(write x port)
 	(newline port))))
+
+  (define (%parse-compilation-options core-language-sexp kont)
+    ;;Parse  the given  core language  expression; extract  the optional  compilation
+    ;;options  and the  body;  apply KONT  to  the body  in  the dynamic  environment
+    ;;configured by the options.
+    ;;
+    ;;If the input expression selects compilation options, it has the format:
+    ;;
+    ;;   (with-compilation-options (?option ...) ?body)
+    ;;
+    ;;and we want to  apply KONT to the body; otherwise it is  a normal core language
+    ;;expression.
+    ;;
+    (if (eq? 'with-compilation-options (car core-language-sexp))
+	(let ((option* (cadr  core-language-sexp))
+	      (body    (caddr core-language-sexp)))
+	  (parametrise ((option.strict-r6rs (or (memq 'strict-r6rs option*)
+						(option.strict-r6rs))))
+	    (kont body)))
+      (kont core-language-sexp)))
 
   #| end of module: compile-core-expr |# )
 
@@ -6455,4 +6481,5 @@
 ;; eval: (put 'with-prelex-structs-in-plists	'scheme-indent-function 1)
 ;; eval: (put 'compile-time-error		'scheme-indent-function 1)
 ;; eval: (put 'compiler-internal-error		'scheme-indent-function 1)
+;; eval: (put '%parse-compilation-options	'scheme-indent-function 1)
 ;; End:

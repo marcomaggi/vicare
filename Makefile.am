@@ -634,32 +634,6 @@ VICARE_SCHEME_R6RS_TESTS	= \
 	tests/test-r6rs-unicode.sps
 
 VICARE_SCHEME_CORE_TESTS	= \
-	tests/test-r6rs-arithmetic-bitwise.sps				\
-	tests/test-r6rs-arithmetic-fixnums.sps				\
-	tests/test-r6rs-arithmetic-flonums.sps				\
-	tests/test-r6rs-base.sps					\
-	tests/test-r6rs-bytevectors.sps					\
-	tests/test-r6rs-conditions.sps					\
-	tests/test-r6rs-contrib.sps					\
-	tests/test-r6rs-control.sps					\
-	tests/test-r6rs-enums.sps					\
-	tests/test-r6rs-eval.sps					\
-	tests/test-r6rs-exceptions.sps					\
-	tests/test-r6rs-hashtables.sps					\
-	tests/test-r6rs-io-ports.sps					\
-	tests/test-r6rs-io-simple.sps					\
-	tests/test-r6rs-lists.sps					\
-	tests/test-r6rs-mutable-pairs.sps				\
-	tests/test-r6rs-mutable-strings.sps				\
-	tests/test-r6rs-programs.sps					\
-	tests/test-r6rs-r5rs.sps					\
-	tests/test-r6rs-reader.sps					\
-	tests/test-r6rs-records-procedural.sps				\
-	tests/test-r6rs-records-syntactic.sps				\
-	tests/test-r6rs-sorting.sps					\
-	tests/test-r6rs-syntax-case.sps					\
-	tests/test-r6rs-unicode.sps					\
-	\
 	tests/test-ikarus-bignum-to-flonum.sps				\
 	tests/test-ikarus-bitwise.sps					\
 	tests/test-ikarus-bytevectors.sps				\
@@ -1158,10 +1132,7 @@ VICARE_TEST_RUN		= $(VICARE_TEST_ENV) $(VICARE_TIME_TESTS) $(GDB) $(builddir)/vi
 #
 # We must make sure that this ends with a semicolon!!!
 AM_TESTS_ENVIRONMENT	= VICARE_CHECK_QUIET=yes; export VICARE_CHECK_QUIET; $(VICARE_TEST_ENV)
-TEST_EXTENSIONS		= .strictsps .sps
-
-STRICT_SPS_LOG_COMPILER	= $(builddir)/vicare
-AM_STRICT_SPS_LOG_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS) --strict-r6rs
+TEST_EXTENSIONS		= .sps
 
 SPS_LOG_COMPILER	= $(builddir)/vicare
 AM_SPS_LOG_FLAGS	= -b $(VICARE_NEW_BOOT) $(AX_VFLAGS) $(VFLAGS)
