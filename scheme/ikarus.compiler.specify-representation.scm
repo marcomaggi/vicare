@@ -27,8 +27,8 @@
     (V-codes x))
 
   (module (V-codes)
-      (define-fluid-override __who__
-	(identifier-syntax 'alt-cogen.specify-representation))
+    (define-fluid-override __who__
+      (identifier-syntax 'alt-cogen.specify-representation))
 
     (define (V-codes x)
       (struct-case x
@@ -37,21 +37,21 @@
 	       (body  (V body)))
 	   (make-codes code* body)))
 	(else
-	 (error __who__ "invalid program" x))))
+	 (compiler-internal-error __who__ "invalid program" x))))
 
     (define (V-clambda x)
       (struct-case x
 	((clambda label clause* cp free* name)
 	 (make-clambda label (map V-clambda-clause clause*) cp free* name))
 	(else
-	 (error __who__ "invalid clambda" x))))
+	 (compiler-internal-error __who__ "invalid clambda" x))))
 
     (define (V-clambda-clause x)
       (struct-case x
 	((clambda-case info body)
 	 (make-clambda-case info (V body)))
 	(else
-	 (error __who__ "invalid clambda-case" x))))
+	 (compiler-internal-error __who__ "invalid clambda-case" x))))
 
     #| end of module: V-codes |# )
 
@@ -1417,6 +1417,15 @@
   (syntax-rules ()
     ((_ ?x)
      (make-constant ?x))))
+
+(define (KN x)
+  ;;Wrap  X with  a  struct instance  of  type CONSTANT;  X must  be  a native  value
+  ;;representation.
+  ;;
+  (cond ((fx? x)
+	 (make-constant x))
+	(else
+	 (make-object (make-constant x)))))
 
 
 (module (Function)
