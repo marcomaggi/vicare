@@ -483,6 +483,9 @@ Lots of backwards incompatibilities... life is hard!
 * BACKWARDS  INCOMPATIBILITY The  command  line  options regarding  open
   mvcalls have been removed.
 
+* BACKWARDS  INCOMPATIBILITY The  command line  options about  reporting
+  errors at run-time or compile-time have been removed.
+
 
 Notes for revision 0.3d7
 ------------------------

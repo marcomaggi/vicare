@@ -314,18 +314,6 @@ port.  This is for debugging purposes.
 @cindex @option{--no-print-loaded-libraries}, command line option
 Disables the effect of @option{--print-loaded-libraries}.
 
-@item --report-errors-at-runtime
-@cindex Command line option @option{--report-errors-at-runtime}
-@cindex @option{--report-errors-at-runtime}, command line option
-When possible and meaningful: report errors at runtime rather than at
-compile time.  Runtime errors reporting is @rnrs{6} compliant.  The
-default is to raise errors at compile time.
-
-@item --no-report-errors-at-runtime
-@cindex Command line option @option{--no-report-errors-at-runtime}
-@cindex @option{--no-report-errors-at-runtime}, command line option
-Disables the effect of @option{--report-errors-at-runtime}.
-
 @item --strict-r6rs
 @cindex Command line option @option{--strict-r6rs}
 @cindex @option{--strict-r6rs}, command line option

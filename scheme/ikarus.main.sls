@@ -59,7 +59,6 @@
 		  debug-mode-enabled?
 		  print-loaded-libraries
 		  cache-compiled-libraries
-		  report-errors-at-runtime
 		  strict-r6rs
 		  descriptive-labels)
 	    option.)
@@ -576,14 +575,6 @@
 	   (option.verbose? #f)
 	   (next-option (cdr args) k))
 
-	  ((%option= "--report-errors-at-runtime")
-	   (option.report-errors-at-runtime #t)
-	   (next-option (cdr args) k))
-
-	  ((%option= "--no-report-errors-at-runtime")
-	   (option.report-errors-at-runtime #f)
-	   (next-option (cdr args) k))
-
 	  ((%option= "--strict-r6rs")
 	   (option.strict-r6rs #t)
 	   (next-option (cdr args) k))
@@ -964,14 +955,6 @@ Other options:
 
    --no-print-loaded-libraries
         Disables the effect of --print-loaded-libraries.
-
-   --report-errors-at-runtime
-        When possible  and meaningful:  report errors at  runtime rather
-        than  at  compile  time.    Runtime  errors  reporting  is  R6RS
-        compliant.  The default is to raise errors at compile time.
-
-   --no-report-errors-at-runtime
-        Disables the effect of --report-errors-at-runtime.
 
    --strict-r6rs
         Strictly follow R6RS specifications: disable Vicare extensions.

@@ -32,7 +32,6 @@
     verbose-about-libraries?
     print-loaded-libraries
     cache-compiled-libraries
-    report-errors-at-runtime
     strict-r6rs
     descriptive-labels
     ;; tagged language parameter options
@@ -79,7 +78,6 @@
 (define-boolean-option debug-mode-enabled?)
 (define-boolean-option print-loaded-libraries)
 (define-boolean-option cache-compiled-libraries)
-(define-boolean-option report-errors-at-runtime)
 
 
 ;;;; some parameter boolean options
