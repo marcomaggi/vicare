@@ -2090,6 +2090,7 @@
 	(initial-visit! macro*)
 	;;Convert  the expanded  language  code to  core language  code,
 	;;compile it and evaluate it.
+	(compiler.eval-core (expanded->core invoke-code))
 	(make-interaction-env (export-subst->rib export-subst)
 			      (map %export-env-entry->lexenv-entry export-env)
 			      '()))))
