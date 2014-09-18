@@ -676,6 +676,9 @@
 			e
 		      (%doit-as-pred)))
 		   ((constant e.const)
+		    ;;The "for predicate" handler can return a CONSTANT holding #t or
+		    ;;#f; we convert the constant returned by the "for value" handler
+		    ;;accordingly.
 		    (if (eq? e.const bool-f)
 			(K #f)
 		      (K #t)))
@@ -717,12 +720,12 @@
 			e
 		      (%doit-as-conditional)))
 		   ((constant e.const)
-		    (if (or (fx=? e.const bool-f)
-			    (fx=? e.const bool-t))
-			e
-		      (compiler-internal-error __who__
-			"invalid constant value from primitive-operation implementation-handler for predicate context"
-			(unparse-recordized-code/sexp e))))
+		    ;;If the "for predicate" handler has returned a constant, it is a
+		    ;;boolean;  so  we  convert  it  into  the  corresponding  native
+		    ;;representation of a boolean.
+		    (if e.const
+			(KN bool-t)
+		      (KN bool-f)))
 		   (else
 		    (%doit-as-conditional)))))
 	      ((E)
@@ -750,12 +753,31 @@
 	   ((E)
 	    (case-primitive-operation-handler prim
 	      ((E)
+	       ;;There is a  "for side effects" context  implementation handler; just
+	       ;;use it.
 	       (apply E-handler simplified-rand*))
 	      ((P)
+	       ;;There is  no "for side  effects" implementation handler, but  a "for
+	       ;;predicate"  implementation  handler  exists;   we  generate  a  "for
+	       ;;effects" handler as:
+	       ;;
+	       ;;   (condition (for-pred-primcall)
+	       ;;       (nop)
+	       ;;     (nop))
+	       ;;
+	       ;;and we handle special cases.
 	       (let ((e (apply P-handler simplified-rand*)))
-		 (if (%interrupt-primcall? e)
-		     e
-		   (make-conditional e (prm 'nop) (prm 'nop)))))
+		 (define (%doit-as-conditional)
+		   (make-conditional e (nop) (nop)))
+		 (struct-case e
+		   ((primcall op)
+		    (if (eq? op 'interrupt)
+			e
+		      (%doit-as-conditional)))
+		   ((constant)
+		    (nop))
+		   (else
+		    (%doit-as-conditional)))))
 	      ((V)
 	       (let ((e (apply V-handler simplified-rand*)))
 		 (if (%interrupt-primcall? e)

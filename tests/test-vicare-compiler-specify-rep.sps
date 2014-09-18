@@ -391,7 +391,7 @@
 	  '"no")
 	(codes
 	 ()
-	 (conditional (constant 63)
+	 (conditional (constant #t)
 	     (constant (object "yes"))
 	   (constant (object "no")))))
 
@@ -401,7 +401,7 @@
 	  '"no")
 	(codes
 	 ()
-	 (conditional (constant 47)
+	 (conditional (constant #f)
 	     (constant (object "yes"))
 	   (constant (object "no")))))
 

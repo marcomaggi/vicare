@@ -32,7 +32,7 @@
   ;;    ((E x) body-E)	;when used as "for side-effects expression"
   ;;    ((V x) body-V))	;when used as "for return value expression"
   ;;
-  ;;into:
+  ;;into (a bit simplified):
   ;;
   ;;  (begin
   ;;    (define cogen-pred-$vector-length
@@ -68,6 +68,9 @@
   ;;The P, V  and E clauses are optional  and there can be multiple  clauses for each
   ;;type: they are like SYNTAX-CASE clauses.
   ;;
+  ;;The P implementation handler is used to generate a test for a CONDITIONAL struct.
+  ;;This handler must return recordised with specific characteristics; ...
+  ;;
   (define (main stx)
     (syntax-case stx ()
       ((?stx ?name ?interruptable ?clause* ...)
@@ -80,11 +83,13 @@
 				  (safe   #t)
 				  (unsafe #f))))
 	   (let-values
-	       (((P-handler P-handled?) (%generate-handler #'P cases))
-		((V-handler V-handled?) (%generate-handler #'V cases))
-		((E-handler E-handled?) (%generate-handler #'E cases)))
+	       (((P-handler P-handled?) (%generate-handler #'COGEN-P #'P cases))
+		((V-handler V-handled?) (%generate-handler #'COGEN-V #'V cases))
+		((E-handler E-handled?) (%generate-handler #'COGEN-E #'E cases)))
 	     #`(begin
-		 (define COGEN-P #,P-handler)
+		 (define COGEN-P
+		   (lambda args
+		     (%validate-P-implementation-handler-retval (apply #,P-handler args) (quote COGEN-P))))
 		 (define COGEN-V #,V-handler)
 		 (define COGEN-E #,E-handler)
 		 (module ()
@@ -98,14 +103,22 @@
 	     ))))
       ))
 
-  (define (%generate-handler execution-context clause*)
+  (define (%generate-handler who.id execution-context clause*)
     ;;Return  2  values:  a  CASE-LAMBDA syntax  object  representing  the  primitive
     ;;operation handler for EXECUTION-CONTEXT; a boolean value, true if the primitive
     ;;operation is implemented for EXECUTION-CONTEXT.
     ;;
     (let ((clause* (%filter-cases execution-context clause*)))
       (with-syntax (((CLAUSE* ...) clause*))
-	(values #'(case-lambda CLAUSE* ... (args (interrupt)))
+	(values #`(case-lambda
+		   CLAUSE* ...
+		   ;;This case with any number  of arguments will cause the primitive
+		   ;;operation to jump  to the interrupt handler which  will call the
+		   ;;primitive  function.  This  way we  can integrate  the primitive
+		   ;;calls with few and simple arguments, while reverting to the full
+		   ;;function for applications to more arguments.
+		   (args
+		    (interrupt)))
 		(not (null? clause*))))))
 
   (define (%filter-cases execution-context clause*)
@@ -127,6 +140,49 @@
       (datum->syntax stx (string->symbol cogen.str))))
 
   (main stx))
+
+
+;;;; primitive operation definition helpers
+
+(define (%validate-P-implementation-handler-retval rv who)
+  ;;Called by all the  "for predicate" primitive-operation implementation-handlers to
+  ;;validate the return value.  If the return  value RV is correct: return RV itself,
+  ;;otherwise raise an exception.
+  ;;
+  ;;An  implementation handler  for the  P context  can return:
+  ;;
+  ;;*  The constants  (K #t)  or  (K #f)  as special  values  to be  recognised in  a
+  ;;  subsequent compiler pass.
+  ;;
+  ;;* A PRIMCALL with operand among: =, !=, <,  <=, >, >=, u<, u<=, u>, u>=.  This is
+  ;;  the "true" return value; it is  the proper operation that generates as Assembly
+  ;;  instructions a jump to the "label for consequent" or "label for alternate".
+  ;;
+  ;;* A  variety of recordised  code which has  one of the  above as last  form.  For
+  ;;   example:  a  call  to  SEC-TAG-TEST  used  to  implement  SYMBOL?   returns  a
+  ;;  CONDITIONAL; a call to $FLCMP-AUX used to implement "fl=?" returns a SEQ.
+  ;;
+  ;;Here we do what we can to validate such return value.
+  ;;
+  (define (%error msg)
+    (compiler-internal-error who msg (unparse-recordized-code/sexp rv)))
+  (struct-case rv
+    ((constant rv.const)
+     (if (boolean? rv.const)
+	 rv
+       (%error "wrong CONSTANT recordised code returned from \
+                primitive-operation implementation handler, expected (K #t) or (K #f)")))
+    ((primcall op args)
+     (case op
+       ((interrupt)
+	rv)
+       ((= != < <= > >= u< u<= u> u>=)
+	rv)
+       (else
+	(%error "invalid PRIMCALL operand in recordised code returned from primitive-operation implementation handler,\
+                 expected an operand among: =, !=, <, <=, >, >=, u<, u<=, u>, u>=, interrupt"))))
+    (else
+     rv)))
 
 
 ;;;; syntax helpers
@@ -749,34 +805,27 @@
 ;;
 (section
 
- (define (%pv-implementation-handler-pair? x)
-   (struct-case x
-     ((known x.expr x.type)
-      (case (T:pair? x.type)
-     	((yes)
-     	 ;;We know  the result of  the predicate; we can  discard X because,  being a
-     	 ;;simplified operand, we know it has no side effects.
-     	 (KN bool-t))
-     	((no)
-     	 ;;We know  the result of  the predicate; we can  discard X because,  being a
-     	 ;;simplified operand, we know it has no side effects.
-     	 (KN bool-f))
-     	(else
-     	 (cogen-pred-pair? x.expr))))
-     ((constant x.const)
-      (if (pair? x.const)
-     	  (KN bool-t)
-     	(KN bool-f)))
-     (else
-      (tag-test (T x) pair-mask pair-tag))))
-
  (define-primitive-operation pair? safe
-   ;;FIXME Why this does not work?  (Marco Maggi; Wed Sep 17, 2014)
-   ;;
-   ;; ((V x)
-   ;;  (%pv-implementation-handler-pair? x))
    ((P x)
-    (%pv-implementation-handler-pair? x))
+    (struct-case x
+      ((known x.expr x.type)
+       (case (T:pair? x.type)
+	 ((yes)
+	  ;;We know the  result of the predicate;  we can discard X  because, being a
+	  ;;simplified operand, we know it has no side effects.
+	  (K #t))
+	 ((no)
+	  ;;We know the  result of the predicate;  we can discard X  because, being a
+	  ;;simplified operand, we know it has no side effects.
+	  (K #f))
+	 (else
+	  (cogen-pred-pair? x.expr))))
+      ((constant x.const)
+       (if (pair? x.const)
+	   (K #t)
+	 (K #f)))
+      (else
+       (tag-test (T x) pair-mask pair-tag))))
    ((E x)
     (nop)))
 
