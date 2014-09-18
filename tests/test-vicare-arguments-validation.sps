@@ -92,40 +92,40 @@
 
   ;;These  tests can  be run  only when  the library  (vicare posix)  is
   ;;available.
-  #;(begin
-    (check
-	(begin
-	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t)
-	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare platform configuration)
-				      config.))))
-      => #t)
+  ;; (begin
+  ;;   (check
+  ;; 	(begin
+  ;; 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t)
+  ;; 	  (eval 'config.arguments-validation
+  ;; 		(environment '(prefix (vicare platform configuration)
+  ;; 				      config.))))
+  ;;     => #t)
 
-    (check
-	(begin
-	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "no" #t)
-	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare platform configuration)
-				      config.))))
-      => #f)
+  ;;   (check
+  ;; 	(begin
+  ;; 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "no" #t)
+  ;; 	  (eval 'config.arguments-validation
+  ;; 		(environment '(prefix (vicare platform configuration)
+  ;; 				      config.))))
+  ;;     => #f)
 
-    (check
-	(begin
-	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "1" #t)
-	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare platform configuration)
-				      config.))))
-      => #t)
+  ;;   (check
+  ;; 	(begin
+  ;; 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "1" #t)
+  ;; 	  (eval 'config.arguments-validation
+  ;; 		(environment '(prefix (vicare platform configuration)
+  ;; 				      config.))))
+  ;;     => #t)
 
-    (check
-	(begin
-	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "0" #t)
-	  (eval 'config.arguments-validation
-		(environment '(prefix (vicare platform configuration)
-				      config.))))
-      => #f)
+  ;;   (check
+  ;; 	(begin
+  ;; 	  (px.setenv "VICARE_ARGUMENTS_VALIDATION" "0" #t)
+  ;; 	  (eval 'config.arguments-validation
+  ;; 		(environment '(prefix (vicare platform configuration)
+  ;; 				      config.))))
+  ;;     => #f)
 
-    (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t))
+  ;; (px.setenv "VICARE_ARGUMENTS_VALIDATION" "yes" #t))
 
   #f)
 
