@@ -812,15 +812,6 @@
 	   (else
 	    (compiler-internal-error __who__ "invalid evaluation context" ctxt))))))
 
-    (define (%interrupt-primcall? x)
-      ;;Return true if  X is a PRIMCALL  struct representing a jump  to the interrupt
-      ;;handler.
-      ;;
-      (struct-case x
-	((primcall op)
-	 (eq? op 'interrupt))
-	(else #f)))
-
     (define-syntax (case-primitive-operation-handler stx)
       (define (main stx)
 	(syntax-case stx ()
