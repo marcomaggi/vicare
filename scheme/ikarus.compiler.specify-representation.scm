@@ -656,13 +656,39 @@
 	   ((P)
 	    (case-primitive-operation-handler prim
 	      ((P)
+	       ;;There is a "for predicate"  context implementation handler; just use
+	       ;;it.
 	       (apply P-handler simplified-rand*))
 	      ((V)
+	       ;;There  is no  "for  predicate" implementation  handler,  but a  "for
+	       ;;value" implementation handler exists;  we generate a "for predicate"
+	       ;;handler as:
+	       ;;
+	       ;;   (primcall != (for-value-primcall) (KN bool-f))
+	       ;;
+	       ;;and we handle special cases.
 	       (let ((e (apply V-handler simplified-rand*)))
-		 (if (%interrupt-primcall? e)
-		     e
-		   (prm '!= e (K bool-f)))))
+		 (define (%doit-as-pred)
+		   (prm '!= e (KN bool-f)))
+		 (struct-case e
+		   ((primcall op)
+		    (if (eq? op 'interrupt)
+			e
+		      (%doit-as-pred)))
+		   ((constant e.const)
+		    (if (eq? e.const bool-f)
+			(K #f)
+		      (K #t)))
+		   (else
+		    (%doit-as-pred)))))
 	      ((E)
+	       ;;There is neither a "for  predicate" nor a "for value" implementation
+	       ;;handler, but a "for side  effects" implementation handler exists; we
+	       ;;generate a "for predicate" handler as:
+	       ;;
+	       ;;   (seq (for-effects-primcall) (K t))
+	       ;;
+	       ;;and we handle special cases.
 	       (let ((e (apply E-handler simplified-rand*)))
 		 (if (%interrupt-primcall? e)
 		     e
@@ -677,7 +703,7 @@
 	       ;;predicate" implementation handler exists;  we generate a "for value"
 	       ;;handler as:
 	       ;;
-	       ;;   (condition (for-value-primcall)
+	       ;;   (condition (for-pred-primcall)
 	       ;;       (KN bool-t)
 	       ;;     (KN bool-f))
 	       ;;
@@ -695,7 +721,7 @@
 			    (fx=? e.const bool-t))
 			e
 		      (compiler-internal-error __who__
-			"invalid constant value from primitive operation implementation handler for predicate context"
+			"invalid constant value from primitive-operation implementation-handler for predicate context"
 			(unparse-recordized-code/sexp e))))
 		   (else
 		    (%doit-as-conditional)))))
@@ -718,7 +744,7 @@
 			e
 		      (%doit-as-sequence)))
 		   ((constant)
-		    (KN void-object))
+		    (nop))
 		   (else
 		    (%doit-as-sequence)))))))
 	   ((E)
