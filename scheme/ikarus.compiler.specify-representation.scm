@@ -625,192 +625,199 @@
 	;;PRIM is a struct of type PRIMITIVE-HANDLER.
 	(get-primop primitive-symbol-name))
       (with-interrupt-handler
-       prim primitive-symbol-name ctxt (map T simplified-rand*)
+       prim primitive-symbol-name ctxt
+       (map T simplified-rand*) simplified-rand*
        cogen-core-primitive-interrupt-handler-function-call
-       cogen-core-primitive-standalone-function-call
-       (lambda ()
-	 ;;This thunk actually generates the BODY of a primitive operation call.
-	 ;;
-	 ;;* If CTXT is V:
-	 ;;
-	 ;;   if cogen-value, then V
-	 ;;   if cogen-pred, then (if P #f #t)
-	 ;;   if cogen-effect, then (seq E (void))
-	 ;;
-	 ;;* If CTXT is P:
-	 ;;
-	 ;;   if cogen-pred, then P
-	 ;;   if cogen-value, then (!= V #f)
-	 ;;   if cogen-effect, then (seq E #t)
-	 ;;
-	 ;;* If CTXT is E:
-	 ;;
-	 ;;   if cogen-effect, then E
-	 ;;   if cogen-value, then (let ((tmp V)) (nop))
-	 ;;   if cogen-pred, then (if P (nop) (nop))
-	 ;;
-         ;;The  primitive handler  functions extracted  from PRIM  will take  care of
-         ;;filtering the SIMPLIFIED-RAND* through the function T.
-         ;;
-	 (case ctxt
+       cogen-core-primitive-standalone-function-call))
+
+    #| end of module: %COGEN-PRIMOP-CALL |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%cogen-primop-body)
+
+    (define (%cogen-primop-body prim ctxt simplified-rand*)
+      ;;Actually generate the BODY of a primitive operation call.  This body might be
+      ;;wrapped or not into a SHORTCUT.
+      ;;
+      ;;* If CTXT is V:
+      ;;
+      ;;   if cogen-value, then V
+      ;;   if cogen-pred, then (if P #f #t)
+      ;;   if cogen-effect, then (seq E (void))
+      ;;
+      ;;* If CTXT is P:
+      ;;
+      ;;   if cogen-pred, then P
+      ;;   if cogen-value, then (!= V #f)
+      ;;   if cogen-effect, then (seq E #t)
+      ;;
+      ;;* If CTXT is E:
+      ;;
+      ;;   if cogen-effect, then E
+      ;;   if cogen-value, then (let ((tmp V)) (nop))
+      ;;   if cogen-pred, then (if P (nop) (nop))
+      ;;
+      ;;The  primitive  handler functions  extracted  from  PRIM  will take  care  of
+      ;;filtering the SIMPLIFIED-RAND* through the function T.
+      ;;
+      (case ctxt
+	((P)
+	 (case-primitive-operation-handler prim
 	   ((P)
-	    (case-primitive-operation-handler prim
-	      ((P)
-	       ;;There is a "for predicate"  context implementation handler; just use
-	       ;;it.
-	       (apply P-handler simplified-rand*))
-	      ((V)
-	       ;;There  is no  "for  predicate" implementation  handler,  but a  "for
-	       ;;value" implementation handler exists;  we generate a "for predicate"
-	       ;;handler as:
-	       ;;
-	       ;;   (primcall != (for-value-primcall) (KN bool-f))
-	       ;;
-	       ;;and we handle special cases.
-	       (let ((e (apply V-handler simplified-rand*)))
-		 (define (%doit-with-adapter)
-		   (prm '!= e (KN bool-f)))
-		 (struct-case e
-		   ((primcall op)
-		    (if (eq? op 'interrupt)
-			e
-		      (%doit-with-adapter)))
-		   ((constant e.const)
-		    ;;The "for predicate" handler can return a CONSTANT holding #t or
-		    ;;#f; we convert the constant returned by the "for value" handler
-		    ;;accordingly.
-		    (if (eq? e.const bool-f)
-			(K #f)
-		      (K #t)))
-		   (else
-		    (%doit-with-adapter)))))
-	      ((E)
-	       ;;There is neither a "for  predicate" nor a "for value" implementation
-	       ;;handler, but a "for side  effects" implementation handler exists; we
-	       ;;generate a "for predicate" handler as:
-	       ;;
-	       ;;   (seq (for-effects-primcall) (K t))
-	       ;;
-	       ;;and we handle special cases.
-	       (let ((e (apply E-handler simplified-rand*)))
-		 (define (%doit-with-adapter)
-		   (make-seq e (K #t)))
-		 (struct-case e
-		   ((primcall op)
-		    (if (eq? op 'interrupt)
-			e
-		      (%doit-with-adapter)))
-		   ((constant)
-		    ;;This should not happen... whatever.
-		    (K #t))
-		   (else
-		    (%doit-with-adapter)))))))
+	    ;;There is a "for predicate" context implementation handler; just use it.
+	    (apply P-handler simplified-rand*))
 	   ((V)
-	    (case-primitive-operation-handler prim
-	      ((V)
-	       ;;There is a "for value" context implementation handler; just use it.
-	       (apply V-handler simplified-rand*))
-	      ((P)
-	       ;;There  is  no  "for  value"   implementation  handler,  but  a  "for
-	       ;;predicate" implementation handler exists;  we generate a "for value"
-	       ;;handler as:
-	       ;;
-	       ;;   (condition (for-pred-primcall)
-	       ;;       (KN bool-t)
-	       ;;     (KN bool-f))
-	       ;;
-	       ;;and we handle special cases.
-	       (let ((e (apply P-handler simplified-rand*)))
-		 (define (%doit-with-adapter)
-		   (make-conditional e (KN bool-t) (KN bool-f)))
-		 (struct-case e
-		   ((primcall op)
-		    (if (eq? op 'interrupt)
-			e
-		      (%doit-with-adapter)))
-		   ((constant e.const)
-		    ;;If the "for predicate" handler has returned a constant, it is a
-		    ;;boolean;  so  we  convert  it  into  the  corresponding  native
-		    ;;representation of a boolean.
-		    (if e.const
-			(KN bool-t)
-		      (KN bool-f)))
-		   (else
-		    (%doit-with-adapter)))))
-	      ((E)
-	       ;;There are neither a "for value" nor a "for predicate" implementation
-	       ;;handlers, but a "for side effects" implementation handler exists; we
-	       ;;generate a "for value" handler as:
-	       ;;
-	       ;;   (seq
-	       ;;     (for-effects-primcall)
-	       ;;     (KN void-object))
-	       ;;
-	       ;;and we handle special cases.
-	       (let ((e (apply E-handler simplified-rand*)))
-		 (define (%doit-with-adapter)
-		   (make-seq e (KN void-object)))
-		 (struct-case e
-		   ((primcall op)
-		    (if (eq? op 'interrupt)
-			e
-		      (%doit-with-adapter)))
-		   ((constant)
-		    (nop))
-		   (else
-		    (%doit-with-adapter)))))))
+	    ;;There is no  "for predicate" implementation handler, but  a "for value"
+	    ;;implementation handler  exists; we  generate a "for  predicate" handler
+	    ;;as:
+	    ;;
+	    ;;   (primcall != (for-value-primcall) (KN bool-f))
+	    ;;
+	    ;;and we handle special cases.
+	    (let ((e (apply V-handler simplified-rand*)))
+	      (define (%doit-with-adapter)
+		(prm '!= e (KN bool-f)))
+	      (struct-case e
+		((primcall op)
+		 (if (eq? op 'interrupt)
+		     e
+		   (%doit-with-adapter)))
+		((constant e.const)
+		 ;;The "for  predicate" handler can  return a CONSTANT holding  #t or
+		 ;;#f; we  convert the constant  returned by the "for  value" handler
+		 ;;accordingly.
+		 (if (eq? e.const bool-f)
+		     (K #f)
+		   (K #t)))
+		(else
+		 (%doit-with-adapter)))))
 	   ((E)
-	    (case-primitive-operation-handler prim
-	      ((E)
-	       ;;There is a  "for side effects" context  implementation handler; just
-	       ;;use it.
-	       (apply E-handler simplified-rand*))
-	      ((P)
-	       ;;There is  no "for side  effects" implementation handler, but  a "for
-	       ;;predicate"  implementation  handler  exists;   we  generate  a  "for
-	       ;;effects" handler as:
-	       ;;
-	       ;;   (condition (for-pred-primcall)
-	       ;;       (nop)
-	       ;;     (nop))
-	       ;;
-	       ;;and we handle special cases.
-	       (let ((e (apply P-handler simplified-rand*)))
-		 (define (%doit-with-adapter)
-		   (make-conditional e (nop) (nop)))
-		 (struct-case e
-		   ((primcall op)
-		    (if (eq? op 'interrupt)
-			e
-		      (%doit-with-adapter)))
-		   ((constant)
-		    (nop))
-		   (else
-		    (%doit-with-adapter)))))
-	      ((V)
-	       ;;There  are  neither a  "for  side  effects"  nor a  "for  predicate"
-	       ;;implementation handlers,  but a  "for value"  implementation handler
-	       ;;exists; we generate a "for effects" handler as:
-	       ;;
-	       ;;   (bind ((tmp (for-value-primcall)))
-	       ;;     (nop))
-	       ;;
-	       ;;and we handle special cases.
-	       (let ((e (apply V-handler simplified-rand*)))
-		 (define (%doit-with-adapter)
-		   (with-tmp ((t e))
-		     (nop)))
-		 (struct-case e
-		   ((primcall op)
-		    (if (eq? op 'interrupt)
-			e
-		      (%doit-with-adapter)))
-		   ((constant)
-		    (nop))
-		   (else
-		    (%doit-with-adapter)))))))
-	   (else
-	    (compiler-internal-error __who__ "invalid evaluation context" ctxt))))))
+	    ;;There is  neither a  "for predicate" nor  a "for  value" implementation
+	    ;;handler, but  a "for  side effects"  implementation handler  exists; we
+	    ;;generate a "for predicate" handler as:
+	    ;;
+	    ;;   (seq (for-effects-primcall) (K t))
+	    ;;
+	    ;;and we handle special cases.
+	    (let ((e (apply E-handler simplified-rand*)))
+	      (define (%doit-with-adapter)
+		(make-seq e (K #t)))
+	      (struct-case e
+		((primcall op)
+		 (if (eq? op 'interrupt)
+		     e
+		   (%doit-with-adapter)))
+		((constant)
+		 ;;This should not happen... whatever.
+		 (K #t))
+		(else
+		 (%doit-with-adapter)))))))
+	((V)
+	 (case-primitive-operation-handler prim
+	   ((V)
+	    ;;There is a "for value" context implementation handler; just use it.
+	    (apply V-handler simplified-rand*))
+	   ((P)
+	    ;;There is no  "for value" implementation handler, but  a "for predicate"
+	    ;;implementation handler exists; we generate a "for value" handler as:
+	    ;;
+	    ;;   (condition (for-pred-primcall)
+	    ;;       (KN bool-t)
+	    ;;     (KN bool-f))
+	    ;;
+	    ;;and we handle special cases.
+	    (let ((e (apply P-handler simplified-rand*)))
+	      (define (%doit-with-adapter)
+		(make-conditional e (KN bool-t) (KN bool-f)))
+	      (struct-case e
+		((primcall op)
+		 (if (eq? op 'interrupt)
+		     e
+		   (%doit-with-adapter)))
+		((constant e.const)
+		 ;;If the  "for predicate" handler has  returned a constant, it  is a
+		 ;;boolean;  so   we  convert   it  into  the   corresponding  native
+		 ;;representation of a boolean.
+		 (if e.const
+		     (KN bool-t)
+		   (KN bool-f)))
+		(else
+		 (%doit-with-adapter)))))
+	   ((E)
+	    ;;There are  neither a "for  value" nor a "for  predicate" implementation
+	    ;;handlers, but  a "for side  effects" implementation handler  exists; we
+	    ;;generate a "for value" handler as:
+	    ;;
+	    ;;   (seq
+	    ;;     (for-effects-primcall)
+	    ;;     (KN void-object))
+	    ;;
+	    ;;and we handle special cases.
+	    (let ((e (apply E-handler simplified-rand*)))
+	      (define (%doit-with-adapter)
+		(make-seq e (KN void-object)))
+	      (struct-case e
+		((primcall op)
+		 (if (eq? op 'interrupt)
+		     e
+		   (%doit-with-adapter)))
+		((constant)
+		 (nop))
+		(else
+		 (%doit-with-adapter)))))))
+	((E)
+	 (case-primitive-operation-handler prim
+	   ((E)
+	    ;;There is a "for side  effects" context implementation handler; just use
+	    ;;it.
+	    (apply E-handler simplified-rand*))
+	   ((P)
+	    ;;There  is no  "for side  effects"  implementation handler,  but a  "for
+	    ;;predicate" implementation  handler exists; we generate  a "for effects"
+	    ;;handler as:
+	    ;;
+	    ;;   (condition (for-pred-primcall)
+	    ;;       (nop)
+	    ;;     (nop))
+	    ;;
+	    ;;and we handle special cases.
+	    (let ((e (apply P-handler simplified-rand*)))
+	      (define (%doit-with-adapter)
+		(make-conditional e (nop) (nop)))
+	      (struct-case e
+		((primcall op)
+		 (if (eq? op 'interrupt)
+		     e
+		   (%doit-with-adapter)))
+		((constant)
+		 (nop))
+		(else
+		 (%doit-with-adapter)))))
+	   ((V)
+	    ;;There  are  neither  a  "for   side  effects"  nor  a  "for  predicate"
+	    ;;implementation  handlers,  but  a "for  value"  implementation  handler
+	    ;;exists; we generate a "for effects" handler as:
+	    ;;
+	    ;;   (bind ((tmp (for-value-primcall)))
+	    ;;     (nop))
+	    ;;
+	    ;;and we handle special cases.
+	    (let ((e (apply V-handler simplified-rand*)))
+	      (define (%doit-with-adapter)
+		(with-tmp ((t e))
+		  (nop)))
+	      (struct-case e
+		((primcall op)
+		 (if (eq? op 'interrupt)
+		     e
+		   (%doit-with-adapter)))
+		((constant)
+		 (nop))
+		(else
+		 (%doit-with-adapter)))))))
+	(else
+	 (compiler-internal-error __who__ "invalid evaluation context" ctxt))))
 
     (define-syntax (case-primitive-operation-handler stx)
       (define (main stx)
@@ -881,7 +888,7 @@
       (compile-time-error __who__
 	"evaluation context not handled by core primitive operation" prim))
 
-    #| end of module: %COGEN-PRIMOP-CALL |# )
+    #| end of module: %COGEN-PRIMOP-BODY |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -911,20 +918,14 @@
       ;;Return the "(primcall interrupt)".
       (prm 'interrupt))
 
-    (define* (with-interrupt-handler prim primitive-symbol-name ctxt filtered-simplified-rand*
+    (define* (with-interrupt-handler prim primitive-symbol-name ctxt filtered-simplified-rand* simplified-rand*
 				     cogen-core-primitive-interrupt-handler-function-call
-				     cogen-core-primitive-standalone-function-call
-				     cogen-body)
+				     cogen-core-primitive-standalone-function-call)
       ;;Compose the primitive operation call, generating the SHORTCUT if needed.
       ;;
       ;;PRIM is a struct of type PRIMITIVE-HANDLER.  CTXT must be one of the symbols:
       ;;V, E,  P.  FILTERED-SIMPLIFIED-RAND*  is a list  of structs  representing the
       ;;operands as recordised code.
-      ;;
-      ;;COGEN-BODY must be a continuation thunk:  when we do not generate a SHORTCUT,
-      ;;COGEN-BODY  is called  to  generate  the primitive  operation  call; when  we
-      ;;generate a  SHORTCUT, COGEN-BODY  is called to  generate the  recordised code
-      ;;body.
       ;;
       (define (interrupt-handler/uninterruptible-primitive-error)
 	;;Function     to    be     used     as    value     for    the     parameter
@@ -936,11 +937,11 @@
       (if (not (primitive-handler-interruptable? prim))
 	  ;;Raise an error if INTERRUPT is called by an uninterruptible primitive.
 	  (parameterize ((%record-use-of-interrupt-in-body interrupt-handler/uninterruptible-primitive-error))
-	    (cogen-body))
+	    (%cogen-primop-body prim ctxt simplified-rand*))
 	(let* ((interrupted? #f)
 	       (body         (parameterize ((%record-use-of-interrupt-in-body (lambda ()
 										(set! interrupted? #t))))
-			       (cogen-body))))
+			       (%cogen-primop-body prim ctxt simplified-rand*))))
 	  (if (not interrupted?)
 	      ;;No jumps to the interrupt handler  in BODY: avoid creating a SHORTCUT
 	      ;;and just return the BODY itself.
