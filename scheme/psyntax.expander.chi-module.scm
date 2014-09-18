@@ -715,21 +715,26 @@
 
   (define (%process-lambda-application input-form.stx lexenv.run lexenv.expand
 				       rator.lambda-signature rator.psi rand*.psi)
-    (if (%match-rator-signature-against-rand-signatures input-form.stx rator.lambda-signature
-							rator.psi rand*.psi)
-	;;The signatures do match.
-	(let ((rator.stx (psi-stx rator.psi)))
-	  (cond ((identifier? rator.stx)
-		 (cond ((identifier-unsafe-variant rator.stx)
-			=> (lambda (unsafe-rator.stx)
-			     (let ((unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
-			       (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi))))
-		       (else
-			(%build-core-expression input-form.stx rator.psi rand*.psi))))
-	      (else
-	       (%build-core-expression input-form.stx rator.psi rand*.psi))))
-      ;;The signatures do not match, but we rely on run-time checking.
-      (%build-core-expression input-form.stx rator.psi rand*.psi)))
+    (cond ((option.strict-r6rs)
+	   ;;We rely on run-time checking.
+	   (%build-core-expression input-form.stx rator.psi rand*.psi))
+	  ((%match-rator-signature-against-rand-signatures input-form.stx rator.lambda-signature
+							   rator.psi rand*.psi)
+	   ;;The signatures do match.
+	   (let ((rator.stx (psi-stx rator.psi)))
+	     (cond ((identifier? rator.stx)
+		    (cond ((identifier-unsafe-variant rator.stx)
+			   => (lambda (unsafe-rator.stx)
+				(let ((unsafe-rator.psi (chi-expr unsafe-rator.stx lexenv.run lexenv.expand)))
+				  (%build-core-expression input-form.stx unsafe-rator.psi rand*.psi))))
+			  (else
+			   (%build-core-expression input-form.stx rator.psi rand*.psi))))
+		   (else
+		    (%build-core-expression input-form.stx rator.psi rand*.psi)))))
+	  (else
+	   ;;It is not possible to validate the signatures at expand-time; we rely on
+	   ;;run-time checking.
+	   (%build-core-expression input-form.stx rator.psi rand*.psi))))
 
   (define (%process-clambda-application input-form.stx rator.callable rator.psi rand*.psi)
     ;;FIXME Insert here  something special for CLAMBDA-COMPOUNDs.   (Marco Maggi; Thu
@@ -846,7 +851,7 @@
 		  (rand.signature-tags    (retvals-signature-tags rand.retvals-signature)))
 	     (syntax-match rand.signature-tags ()
 	       ((?rand.tag)
-		;;Single return value: good, this is what we want.
+		;;Single return value from operand: good, this is what we want.
 		(cond ((top-tag-id? ?rand.tag)
 		       ;;The  argument expression  returns a  single "<top>"  object;
 		       ;;this  is  what  happens   with  standard  (untagged)  Scheme
