@@ -621,9 +621,6 @@
 			    primitive-symbol-name ctxt simplified-rand*)
       (define-fluid-override __who__
 	(identifier-syntax 'code-generation-handler))
-      (define (%error-context-not-handled)
-	(compile-time-error __who__
-	  "evaluation context not handled by core primitive operation" prim primitive-symbol-name))
       (define prim
 	;;PRIM is a struct of type PRIMITIVE-HANDLER.
 	(get-primop primitive-symbol-name))
@@ -657,74 +654,88 @@
          ;;
 	 (case ctxt
 	   ((P)
-	    (cond ((primitive-handler-p-handled? prim)
-		   (apply (primitive-handler-p-handler prim) simplified-rand*))
-		  ((primitive-handler-v-handled? prim)
-		   (let ((e (apply (primitive-handler-v-handler prim) simplified-rand*)))
-		     (if (%interrupt-primcall? e)
-			 e
-		       (prm '!= e (K bool-f)))))
-		  ((primitive-handler-e-handled? prim)
-		   (let ((e (apply (primitive-handler-e-handler prim) simplified-rand*)))
-		     (if (%interrupt-primcall? e)
-			 e
-		       (make-seq e (K #t)))))
-		  (else
-		   (%error-context-not-handled))))
+	    (case-primitive-operation-handler prim
+	      ((P)
+	       (apply P-handler simplified-rand*))
+	      ((V)
+	       (let ((e (apply V-handler simplified-rand*)))
+		 (if (%interrupt-primcall? e)
+		     e
+		   (prm '!= e (K bool-f)))))
+	      ((E)
+	       (let ((e (apply E-handler simplified-rand*)))
+		 (if (%interrupt-primcall? e)
+		     e
+		   (make-seq e (K #t)))))))
 	   ((V)
-	    (cond ((primitive-handler-v-handled? prim)
-		   ;;There is a "for value"  context implementation handler; just use
-		   ;;it.
-		   (apply (primitive-handler-v-handler prim) simplified-rand*))
-		  ((primitive-handler-p-handled? prim)
-		   ;;There  is no  "for  value" implementation  handler,  but a  "for
-		   ;;predicate"  implementation handler  exists; we  generate a  "for
-		   ;;value" handler as:
-		   ;;
-		   ;;   (condition (for-value-primcall)
-		   ;;       (KN bool-t)
-		   ;;     (KN bool-f))
-		   ;;
-		   ;;and we handle special cases.
-		   (let ((e (apply (primitive-handler-p-handler prim) simplified-rand*)))
-		     (define (%doit-as-conditional)
-		       (make-conditional e (KN bool-t) (KN bool-f)))
-		     (struct-case e
-		       ((primcall op)
-			(if (eq? op 'interrupt)
-			    e
-			  (%doit-as-conditional)))
-		       ((constant e.const)
-			(if (boolean? e.const)
-			    e
-			  (compiler-internal-error __who__
-			    "invalid constant value from primitive operation implementation handler for predicate context"
-			    (unparse-recordized-code/sexp e))))
-		       (else
-			(%doit-as-conditional)))))
-		  ((primitive-handler-e-handled? prim)
-		   (let ((e (apply (primitive-handler-e-handler prim) simplified-rand*)))
-		     (if (%interrupt-primcall? e)
-			 e
-		       (make-seq e (K void-object)))))
-		  (else
-		   (%error-context-not-handled))))
+	    (case-primitive-operation-handler prim
+	      ((V)
+	       ;;There is a "for value" context implementation handler; just use it.
+	       (apply V-handler simplified-rand*))
+	      ((P)
+	       ;;There  is  no  "for  value"   implementation  handler,  but  a  "for
+	       ;;predicate" implementation handler exists;  we generate a "for value"
+	       ;;handler as:
+	       ;;
+	       ;;   (condition (for-value-primcall)
+	       ;;       (KN bool-t)
+	       ;;     (KN bool-f))
+	       ;;
+	       ;;and we handle special cases.
+	       (let ((e (apply P-handler simplified-rand*)))
+		 (define (%doit-as-conditional)
+		   (make-conditional e (KN bool-t) (KN bool-f)))
+		 (struct-case e
+		   ((primcall op)
+		    (if (eq? op 'interrupt)
+			e
+		      (%doit-as-conditional)))
+		   ((constant e.const)
+		    (if (or (fx=? e.const bool-f)
+			    (fx=? e.const bool-t))
+			e
+		      (compiler-internal-error __who__
+			"invalid constant value from primitive operation implementation handler for predicate context"
+			(unparse-recordized-code/sexp e))))
+		   (else
+		    (%doit-as-conditional)))))
+	      ((E)
+	       ;;There are neither a "for value" nor a "for predicate" implementation
+	       ;;handlers, but a "for side effects" implementation handler exists; we
+	       ;;generate a "for value" handler as:
+	       ;;
+	       ;;   (seq
+	       ;;     (for-effects-primcall)
+	       ;;     (KN void-object))
+	       ;;
+	       ;;and we handle special cases.
+	       (let ((e (apply E-handler simplified-rand*)))
+		 (define (%doit-as-sequence)
+		   (make-seq e (KN void-object)))
+		 (struct-case e
+		   ((primcall op)
+		    (if (eq? op 'interrupt)
+			e
+		      (%doit-as-sequence)))
+		   ((constant)
+		    (KN void-object))
+		   (else
+		    (%doit-as-sequence)))))))
 	   ((E)
-	    (cond ((primitive-handler-e-handled? prim)
-		   (apply (primitive-handler-e-handler prim) simplified-rand*))
-		  ((primitive-handler-p-handled? prim)
-		   (let ((e (apply (primitive-handler-p-handler prim) simplified-rand*)))
-		     (if (%interrupt-primcall? e)
-			 e
-		       (make-conditional e (prm 'nop) (prm 'nop)))))
-		  ((primitive-handler-v-handled? prim)
-		   (let ((e (apply (primitive-handler-v-handler prim) simplified-rand*)))
-		     (if (%interrupt-primcall? e)
-			 e
-		       (with-tmp ((t e))
-			 (prm 'nop)))))
-		  (else
-		   (%error-context-not-handled))))
+	    (case-primitive-operation-handler prim
+	      ((E)
+	       (apply E-handler simplified-rand*))
+	      ((P)
+	       (let ((e (apply P-handler simplified-rand*)))
+		 (if (%interrupt-primcall? e)
+		     e
+		   (make-conditional e (prm 'nop) (prm 'nop)))))
+	      ((V)
+	       (let ((e (apply V-handler simplified-rand*)))
+		 (if (%interrupt-primcall? e)
+		     e
+		   (with-tmp ((t e))
+		     (nop)))))))
 	   (else
 	    (compiler-internal-error __who__ "invalid evaluation context" ctxt))))))
 
@@ -736,6 +747,75 @@
 	((primcall op)
 	 (eq? op 'interrupt))
 	(else #f)))
+
+    (define-syntax (case-primitive-operation-handler stx)
+      (define (main stx)
+	(syntax-case stx ()
+	  ((?ctx ?prim
+		 ((V) . ?V-body)
+		 ((P) . ?P-body)
+		 ((E) . ?E-body))
+	   (%fender #'V #'P #'E)
+	   (%generate-output-form #'?ctx #'?prim
+				  (%generate-v-branch #'?ctx #'?V-body)
+				  (%generate-p-branch #'?ctx #'?P-body)
+				  (%generate-e-branch #'?ctx #'?E-body)))
+	  ((?ctx ?prim
+		 ((P) . ?P-body)
+		 ((V) . ?V-body)
+		 ((E) . ?E-body))
+	   (%fender #'V #'P #'E)
+	   (%generate-output-form #'?ctx #'?prim
+				  (%generate-p-branch #'?ctx #'?P-body)
+				  (%generate-v-branch #'?ctx #'?V-body)
+				  (%generate-e-branch #'?ctx #'?E-body)))
+	  ((?ctx ?prim
+		 ((E) . ?E-body)
+		 ((P) . ?P-body)
+		 ((V) . ?V-body))
+	   (%fender #'V #'P #'E)
+	   (%generate-output-form #'?ctx #'?prim
+				  (%generate-e-branch #'?ctx #'?E-body)
+				  (%generate-p-branch #'?ctx #'?P-body)
+				  (%generate-v-branch #'?ctx #'?V-body)))
+	  ))
+
+      (define (%generate-output-form ctx prim.stx branch-0 branch-1 branch-2)
+	#`(let ((prim #,prim.stx))
+	    (cond #,branch-0
+		  #,branch-1
+		  #,branch-2
+		  (else
+		   (%error-context-not-handled prim)))))
+
+      (define (%fender V P E)
+	(and (eq? 'V (syntax->datum V))
+	     (eq? 'P (syntax->datum P))
+	     (eq? 'E (syntax->datum E))))
+
+      (define (%generate-v-branch ctx body)
+	(with-syntax ((V-handler (datum->syntax ctx 'V-handler)))
+	  #`((primitive-handler-v-handled? prim)
+	     (let ((V-handler (primitive-handler-v-handler prim)))
+	       . #,body))))
+
+      (define (%generate-p-branch ctx body)
+	(with-syntax ((P-handler (datum->syntax ctx 'P-handler)))
+	  #`((primitive-handler-p-handled? prim)
+	     (let ((P-handler (primitive-handler-p-handler prim)))
+	       . #,body))))
+
+      (define (%generate-e-branch ctx body)
+	(with-syntax ((E-handler (datum->syntax ctx 'E-handler)))
+	  #`((primitive-handler-e-handled? prim)
+	     (let ((E-handler (primitive-handler-e-handler prim)))
+	       . #,body))))
+
+      (main stx))
+
+    (define (%error-context-not-handled prim)
+      (compile-time-error __who__
+	"evaluation context not handled by core primitive operation" prim))
 
     #| end of module: %COGEN-PRIMOP-CALL |# )
 
@@ -1599,4 +1679,5 @@
 ;; mode: vicare
 ;; eval: (put 'make-conditional		'scheme-indent-function 2)
 ;; eval: (put 'make-shortcut		'scheme-indent-function 1)
+;; eval: (put 'case-primitive-operation-handler	'scheme-indent-function 1)
 ;; End:

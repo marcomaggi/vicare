@@ -357,13 +357,13 @@
   ;;Predicate application in V context.
   (doit ((primitive pair?) '(1 . 2))
 	(codes ()
-	       (conditional (constant 63) (constant 63) (constant 47))))
+	       (constant 63)))
 
   ;;Predicate application in V context.
   (doit ((primitive pair?) '())
 	(codes
 	 ()
-	 (conditional (constant 47) (constant 63) (constant 47))))
+	 (constant 47)))
 
   ;;Predicate application in V context.
   (doit ((primitive pair?) ((primitive read)))
