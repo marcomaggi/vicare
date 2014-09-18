@@ -707,22 +707,22 @@
 
  (define (%pv-implementation-handler-pair? x)
    (struct-case x
-     ;; ((known x.expr x.type)
-     ;;  (case (T:pair? x.type)
-     ;; 	((yes)
-     ;; 	 ;;We know  the result of  the predicate; we can  discard X because,  being a
-     ;; 	 ;;simplified operand, we know it has no side effects.
-     ;; 	 (KN bool-t))
-     ;; 	((no)
-     ;; 	 ;;We know  the result of  the predicate; we can  discard X because,  being a
-     ;; 	 ;;simplified operand, we know it has no side effects.
-     ;; 	 (KN bool-f))
-     ;; 	(else
-     ;; 	 (cogen-pred-pair? x.expr))))
-     ;; ((constant x.const)
-     ;;  (if (pair? x.const)
-     ;; 	  (KN bool-t)
-     ;; 	(KN bool-f)))
+     ((known x.expr x.type)
+      (case (T:pair? x.type)
+     	((yes)
+     	 ;;We know  the result of  the predicate; we can  discard X because,  being a
+     	 ;;simplified operand, we know it has no side effects.
+     	 (KN bool-t))
+     	((no)
+     	 ;;We know  the result of  the predicate; we can  discard X because,  being a
+     	 ;;simplified operand, we know it has no side effects.
+     	 (KN bool-f))
+     	(else
+     	 (cogen-pred-pair? x.expr))))
+     ((constant x.const)
+      (if (pair? x.const)
+     	  (KN bool-t)
+     	(KN bool-f)))
      (else
       (tag-test (T x) pair-mask pair-tag))))
 
@@ -783,24 +783,24 @@
 	(compile-time-error 'car
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
-      ;; ((known x.expr x.type)
-      ;;  (case (T:pair? x.type)
-      ;; 	 ((yes)
-      ;; 	  (cogen-value-$car x.expr))
-      ;; 	 ((no)
-      ;; 	  (%error-wrong-operand))
-      ;; 	 (else
-      ;; 	  (cogen-value-car x.expr))))
-      ;; ((constant x.const)
-      ;;  (if (pair? x.const)
-      ;; 	   (cogen-value-$car x)
-      ;; 	 (%error-wrong-operand)))
-      ;; ((var)
-      ;;  ;;This is a special case in which we  know "(T x)" would just return X itself;
-      ;;  ;;so we avoid creating a temporary location.
-      ;;  (multiple-forms-sequence
-      ;; 	(interrupt-unless-pair x)
-      ;; 	(prm 'mref x (KN off-car))))
+      ((known x.expr x.type)
+       (case (T:pair? x.type)
+      	 ((yes)
+      	  (cogen-value-$car x.expr))
+      	 ((no)
+      	  (%error-wrong-operand))
+      	 (else
+      	  (cogen-value-car x.expr))))
+      ((constant x.const)
+       (if (pair? x.const)
+      	   (cogen-value-$car x)
+      	 (%error-wrong-operand)))
+      ((var)
+       ;;This is a special case in which we  know "(T x)" would just return X itself;
+       ;;so we avoid creating a temporary location.
+       (multiple-forms-sequence
+      	(interrupt-unless-pair x)
+      	(prm 'mref x (KN off-car))))
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
@@ -816,24 +816,24 @@
 	(compile-time-error 'cdr
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
-      ;; ((known x.expr x.type)
-      ;;  (case (T:pair? x.type)
-      ;; 	 ((yes)
-      ;; 	  (cogen-value-$cdr x.expr))
-      ;; 	 ((no)
-      ;; 	  (%error-wrong-operand))
-      ;; 	 (else
-      ;; 	  (cogen-value-cdr x.expr))))
-      ;; ((constant x.const)
-      ;;  (if (pair? x.const)
-      ;; 	   (cogen-value-$cdr x)
-      ;; 	 (%error-wrong-operand)))
-      ;; ((var)
-      ;;  ;;This is a special case in which we  know "(T x)" would just return X itself;
-      ;;  ;;so we avoid creating a temporary location.
-      ;;  (multiple-forms-sequence
-      ;; 	(interrupt-unless-pair x)
-      ;; 	(prm 'mref x (KN off-cdr))))
+      ((known x.expr x.type)
+       (case (T:pair? x.type)
+      	 ((yes)
+      	  (cogen-value-$cdr x.expr))
+      	 ((no)
+      	  (%error-wrong-operand))
+      	 (else
+      	  (cogen-value-cdr x.expr))))
+      ((constant x.const)
+       (if (pair? x.const)
+      	   (cogen-value-$cdr x)
+      	 (%error-wrong-operand)))
+      ((var)
+       ;;This is a special case in which we  know "(T x)" would just return X itself;
+       ;;so we avoid creating a temporary location.
+       (multiple-forms-sequence
+      	(interrupt-unless-pair x)
+      	(prm 'mref x (KN off-cdr))))
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)

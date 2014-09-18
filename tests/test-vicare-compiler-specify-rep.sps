@@ -354,6 +354,59 @@
 
 (parametrise ((check-test-name	'pairs))
 
+  ;;Predicate application in V context.
+  (doit ((primitive pair?) '(1 . 2))
+	(codes ()
+	       (conditional (constant 63) (constant 63) (constant 47))))
+
+  ;;Predicate application in V context.
+  (doit ((primitive pair?) '())
+	(codes
+	 ()
+	 (conditional (constant 47) (constant 63) (constant 47))))
+
+  ;;Predicate application in V context.
+  (doit ((primitive pair?) ((primitive read)))
+	(codes
+	 ()
+	 (seq
+	   (shortcut
+	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
+		   (primcall interrupt)
+		 (primcall nop))
+	     (foreign-call "ik_stack_overflow"))
+	   (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19)))))
+	     ;;If the operand is a pair...
+	     (conditional (primcall =
+				    (primcall logand tmp_0 (constant 7))
+				    (constant 1))
+		 ;;... return true.
+		 (constant 63)
+	       ;;... otherwise return false.
+	       (constant 47))))))
+
+  ;;Predicate application in P context.
+  (doit (if ((primitive pair?) '(1 . 2))
+	    '"yes"
+	  '"no")
+	(codes
+	 ()
+	 (conditional (constant 63)
+	     (constant (object "yes"))
+	   (constant (object "no")))))
+
+  ;;Predicate application in P context.
+  (doit (if ((primitive pair?) '())
+	    '"yes"
+	  '"no")
+	(codes
+	 ()
+	 (conditional (constant 47)
+	     (constant (object "yes"))
+	   (constant (object "no")))))
+
+;;; --------------------------------------------------------------------
+
   ;;NOTE The  second operand to  MREF is the  "offset" of the  car with respect  to a
   ;;tagged pointer referencing the pair; this offset untags the pointer.
   (doit ((primitive $car) '(1 . 2))
