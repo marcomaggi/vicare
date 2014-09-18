@@ -351,15 +351,15 @@ algorithms}.  For details on the built--in library locators @api{}
 @item -O0
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
-Turn off use of the source optimizer.
+Disable the of the compiler's source optimiser.
 
 @item -O1
 @itemx -O2
 @itemx -O3
 @cindex Command line option @option{-O}
 @cindex @option{-O}, command line option
-Turn on various levels of compile optimisations.  The default
-optimisation level is equivalent to @code{-O2}.
+Enable the use of the compiler's source optimiser at various levels.
+The default optimisation level is equivalent to @code{-O2}.
 
 @item --optimizer-passes-count @var{COUNT}
 @cindex Command line option @option{--optimizer-passes-count}
