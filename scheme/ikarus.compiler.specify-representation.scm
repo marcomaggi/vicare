@@ -664,8 +664,7 @@
 	      body
 	    ;;At least one jump to the interrupt handler is present in BODY: wrap the
 	    ;;body into a SHORTCUT; return the SHORTCUT struct.
-	    (with-interrupt-handler prim primitive-symbol-name ctxt body
-				    (map T simplified-rand*)
+	    (with-interrupt-handler prim ctxt body primitive-symbol-name simplified-rand*
 				    cogen-core-primitive-interrupt-handler-function-call
 				    cogen-core-primitive-standalone-function-call)))))
 
@@ -968,13 +967,15 @@
     ;;the error early;  we do not do it  here, we delegate this task  to the specific
     ;;primitive operation definition macro.
     ;;
-    (define* (with-interrupt-handler prim primitive-symbol-name ctxt body filtered-simplified-rand*
+    (define* (with-interrupt-handler prim ctxt body primitive-symbol-name simplified-rand*
 				     cogen-core-primitive-interrupt-handler-function-call
 				     cogen-core-primitive-standalone-function-call)
       ;;PRIM is a struct of type PRIMITIVE-HANDLER.  CTXT must be one of the symbols:
       ;;V, E,  P.  FILTERED-SIMPLIFIED-RAND*  is a list  of structs  representing the
       ;;operands as recordised code.
       ;;
+      (define filtered-simplified-rand*
+	(map T simplified-rand*))
       (case ctxt
 	((V)
 	 (if (%the-body-is-just-an-interrupt-primcall? body)
