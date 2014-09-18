@@ -616,21 +616,71 @@
 			 (cons (V rand) rhs*)
 			 (cons tmp simplified-rand*)))))))))
 
+    #| end of module: %COGEN-PRIMOP-CALL |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (%generate-code interrupt)
+
     (define (%generate-code cogen-core-primitive-interrupt-handler-function-call
 			    cogen-core-primitive-standalone-function-call
 			    primitive-symbol-name ctxt simplified-rand*)
+      ;;Build and  return the  recordised code  representing the  primitive operation
+      ;;application.  Return  either a  standalone integrated  application body  or a
+      ;;SHORTCUT struct wrapping the integrated application body.
+      ;;
+      ;;First we compose the integration body, then:
+      ;;
+      ;;* If the body contains at least one "(interrupt)" call: we wrap the body into
+      ;;  a SHORTCUT.
+      ;;
+      ;;*  If the  body contains  *no*  "(interrupt)" calls:  we return  the body  as
+      ;;  standalone struct.
+      ;;
       (define-fluid-override __who__
 	(identifier-syntax 'code-generation-handler))
       (define prim
 	;;PRIM is a struct of type PRIMITIVE-HANDLER.
 	(get-primop primitive-symbol-name))
-      (with-interrupt-handler
-       prim primitive-symbol-name ctxt
-       (map T simplified-rand*) simplified-rand*
-       cogen-core-primitive-interrupt-handler-function-call
-       cogen-core-primitive-standalone-function-call))
+      (define (interrupt-handler/uninterruptible-primitive-error)
+	;;Function     to    be     used     as    value     for    the     parameter
+	;;%RECORD-USE-OF-INTERRUPT-IN-BODY.  It raises an error.
+	;;
+	(compiler-internal-error '%record-use-of-interrupt-in-body
+	  "attempt to introduce a jump to interrupt handler in the body of an uninterruptible core primitive operation"
+	  primitive-symbol-name simplified-rand* ctxt))
+      (if (not (primitive-handler-interruptable? prim))
+	  ;;Build  and return  the integrated  body as  standalone struct.   Raise an
+	  ;;error if INTERRUPT is called by an uninterruptible primitive.
+	  (parameterize ((%record-use-of-interrupt-in-body interrupt-handler/uninterruptible-primitive-error))
+	    (%cogen-primop-body prim ctxt simplified-rand*))
+	(let* ((interrupted? #f)
+	       (body         (parameterize ((%record-use-of-interrupt-in-body (lambda ()
+										(set! interrupted? #t))))
+			       (%cogen-primop-body prim ctxt simplified-rand*))))
+	  (if (not interrupted?)
+	      ;;No jumps to the interrupt handler  is present in BODY: avoid creating
+	      ;;a SHORTCUT and just return the BODY itself.
+	      body
+	    ;;At least one jump to the interrupt handler is present in BODY: wrap the
+	    ;;body into a SHORTCUT; return the SHORTCUT struct.
+	    (with-interrupt-handler prim primitive-symbol-name ctxt body
+				    (map T simplified-rand*)
+				    cogen-core-primitive-interrupt-handler-function-call
+				    cogen-core-primitive-standalone-function-call)))))
 
-    #| end of module: %COGEN-PRIMOP-CALL |# )
+    (define-constant %record-use-of-interrupt-in-body
+      (make-parameter (lambda ()
+			(compiler-internal-error '%record-use-of-interrupt-in-body
+			  "uninitialized parameter"))))
+
+    (define (interrupt)
+      ;;Record that this body has requested the presence of an interrupt handler.
+      ((%record-use-of-interrupt-in-body))
+      ;;Return the "(primcall interrupt)".
+      (prm 'interrupt))
+
+    #| end of module: %GENERATE-CODE |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -892,7 +942,14 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (with-interrupt-handler interrupt)
+  (module (with-interrupt-handler)
+    ;;This module is used when there is at least one:
+    ;;
+    ;;   (primcall interrupt)
+    ;;
+    ;;in  the  recordised  code   representing  the  integrated  primitive  operation
+    ;;application; so we must generate an interrupt  handler and wrap the BODY into a
+    ;;SHORTCUT.
     ;;
     ;;NOTE  When it  is determined  at compile-time  that the  operands of  a primitive
     ;;operation are invalid, the generated SHORTCUT's ?BODY can be a simple:
@@ -911,77 +968,39 @@
     ;;the error early;  we do not do it  here, we delegate this task  to the specific
     ;;primitive operation definition macro.
     ;;
-
-    (define (interrupt)
-      ;;Record that this body has requested the presence of an interrupt handler.
-      ((%record-use-of-interrupt-in-body))
-      ;;Return the "(primcall interrupt)".
-      (prm 'interrupt))
-
-    (define* (with-interrupt-handler prim primitive-symbol-name ctxt filtered-simplified-rand* simplified-rand*
+    (define* (with-interrupt-handler prim primitive-symbol-name ctxt body filtered-simplified-rand*
 				     cogen-core-primitive-interrupt-handler-function-call
 				     cogen-core-primitive-standalone-function-call)
-      ;;Compose the primitive operation call, generating the SHORTCUT if needed.
-      ;;
       ;;PRIM is a struct of type PRIMITIVE-HANDLER.  CTXT must be one of the symbols:
       ;;V, E,  P.  FILTERED-SIMPLIFIED-RAND*  is a list  of structs  representing the
       ;;operands as recordised code.
       ;;
-      (define (interrupt-handler/uninterruptible-primitive-error)
-	;;Function     to    be     used     as    value     for    the     parameter
-	;;%RECORD-USE-OF-INTERRUPT-IN-BODY.  It raises an error.
-	;;
-	(compiler-internal-error '%record-use-of-interrupt-in-body
-	  "attempt to introduce a jump to interrupt handler in the body of an uninterruptible core primitive operation"
-	  primitive-symbol-name filtered-simplified-rand* ctxt))
-      (if (not (primitive-handler-interruptable? prim))
-	  ;;Raise an error if INTERRUPT is called by an uninterruptible primitive.
-	  (parameterize ((%record-use-of-interrupt-in-body interrupt-handler/uninterruptible-primitive-error))
-	    (%cogen-primop-body prim ctxt simplified-rand*))
-	(let* ((interrupted? #f)
-	       (body         (parameterize ((%record-use-of-interrupt-in-body (lambda ()
-										(set! interrupted? #t))))
-			       (%cogen-primop-body prim ctxt simplified-rand*))))
-	  (if (not interrupted?)
-	      ;;No jumps to the interrupt handler  in BODY: avoid creating a SHORTCUT
-	      ;;and just return the BODY itself.
-	      body
-	    ;;There is at least one:
-	    ;;
-	    ;;   (primcall interrupt)
-	    ;;
-	    ;;in the  generated BODY; so  we must  generate an interrupt  handler and
-	    ;;wrap the BODY into a SHORTCUT.
-	    (case ctxt
-	      ((V)
-	       (if (%the-body-is-just-an-interrupt-primcall? body)
-		   (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
-		 (make-shortcut
-		     body
-		   (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*))))
+      (case ctxt
+	((V)
+	 (if (%the-body-is-just-an-interrupt-primcall? body)
+	     (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
+	   (make-shortcut
+	       body
+	     (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*))))
 
-	      ((E)
-	       (if (%the-body-is-just-an-interrupt-primcall? body)
-		   (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
-		 (make-shortcut
-		     body
-		   (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*))))
+	((E)
+	 (if (%the-body-is-just-an-interrupt-primcall? body)
+	     (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
+	   (make-shortcut
+	       body
+	     (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*))))
 
-	      ((P)
-	       (if (%the-body-is-just-an-interrupt-primcall? body)
-		   (prm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
-			(K bool-f))
-		 (make-shortcut
-		     body
-		   (prm '!= (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*)
-			(K bool-f)))))
+	((P)
+	 (if (%the-body-is-just-an-interrupt-primcall? body)
+	     (prm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
+		  (K bool-f))
+	   (make-shortcut
+	       body
+	     (prm '!= (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*)
+		  (K bool-f)))))
 
-	      (else
-	       (error __who__ "invalid context" ctxt)))))))
-
-    (define-constant %record-use-of-interrupt-in-body
-      (make-parameter (lambda ()
-			(error '%record-use-of-interrupt-in-body "uninitialized"))))
+	(else
+	 (compiler-internal-error __who__ "invalid context" ctxt))))
 
     (define (%the-body-is-just-an-interrupt-primcall? body)
       (struct-case body
@@ -989,7 +1008,7 @@
 	 (eq? op 'interrupt))
 	(else #f)))
 
-    #| end of module: WITH-INTERRUPT-HANDLER, INTERRUPT |# )
+    #| end of module: WITH-INTERRUPT-HANDLER |# )
 
   #| end of module: COGEN-PRIMOP, COGEN-DEBUG-PRIMOP |# )
 
