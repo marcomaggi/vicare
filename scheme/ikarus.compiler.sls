@@ -780,7 +780,16 @@
     ;;and we want to  apply KONT to the body; otherwise it is  a normal core language
     ;;expression.
     ;;
-    (if (eq? 'with-compilation-options (car core-language-sexp))
+    ;;NOTE We  have to remember  that the CORE-LANGUAGE-SEXP may  not be a  pair, for
+    ;;example:
+    ;;
+    ;;   (eval 123     (environment '(vicare)))
+    ;;   (eval display (environment '(vicare)))
+    ;;
+    ;;will generate perfectly valid, non-pair, core language expressions.
+    ;;
+    (if (and (pair? core-language-sexp)
+	     (eq? 'with-compilation-options (car core-language-sexp)))
 	(let ((option* (cadr  core-language-sexp))
 	      (body    (caddr core-language-sexp)))
 	  (parametrise ((option.strict-r6rs (or (memq 'strict-r6rs option*)
