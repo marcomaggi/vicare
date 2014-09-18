@@ -516,6 +516,9 @@
 
   (module (%cogen-primop-call)
 
+    (define-fluid-override __who__
+      (identifier-syntax '%cogen-primop-call))
+
     (define (%cogen-primop-call cogen-core-primitive-interrupt-handler-function-call
 				cogen-core-primitive-standalone-function-call
 				primitive-symbol-name ctxt rand*)
@@ -670,12 +673,35 @@
 		   (%error-context-not-handled))))
 	   ((V)
 	    (cond ((primitive-handler-v-handled? prim)
+		   ;;There is a "for value"  context implementation handler; just use
+		   ;;it.
 		   (apply (primitive-handler-v-handler prim) simplified-rand*))
 		  ((primitive-handler-p-handled? prim)
+		   ;;There  is no  "for  value" implementation  handler,  but a  "for
+		   ;;predicate"  implementation handler  exists; we  generate a  "for
+		   ;;value" handler as:
+		   ;;
+		   ;;   (condition (for-value-primcall)
+		   ;;       (KN bool-t)
+		   ;;     (KN bool-f))
+		   ;;
+		   ;;and we handle special cases.
 		   (let ((e (apply (primitive-handler-p-handler prim) simplified-rand*)))
-		     (if (%interrupt-primcall? e)
-			 e
-		       (make-conditional e (K bool-t) (K bool-f)))))
+		     (define (%doit-as-conditional)
+		       (make-conditional e (KN bool-t) (KN bool-f)))
+		     (struct-case e
+		       ((primcall op)
+			(if (eq? op 'interrupt)
+			    e
+			  (%doit-as-conditional)))
+		       ((constant e.const)
+			(if (boolean? e.const)
+			    e
+			  (compiler-internal-error __who__
+			    "invalid constant value from primitive operation implementation handler for predicate context"
+			    (unparse-recordized-code/sexp e))))
+		       (else
+			(%doit-as-conditional)))))
 		  ((primitive-handler-e-handled? prim)
 		   (let ((e (apply (primitive-handler-e-handler prim) simplified-rand*)))
 		     (if (%interrupt-primcall? e)
