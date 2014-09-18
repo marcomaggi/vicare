@@ -668,13 +668,13 @@
 	       ;;
 	       ;;and we handle special cases.
 	       (let ((e (apply V-handler simplified-rand*)))
-		 (define (%doit-as-pred)
+		 (define (%doit-with-adapter)
 		   (prm '!= e (KN bool-f)))
 		 (struct-case e
 		   ((primcall op)
 		    (if (eq? op 'interrupt)
 			e
-		      (%doit-as-pred)))
+		      (%doit-with-adapter)))
 		   ((constant e.const)
 		    ;;The "for predicate" handler can return a CONSTANT holding #t or
 		    ;;#f; we convert the constant returned by the "for value" handler
@@ -683,7 +683,7 @@
 			(K #f)
 		      (K #t)))
 		   (else
-		    (%doit-as-pred)))))
+		    (%doit-with-adapter)))))
 	      ((E)
 	       ;;There is neither a "for  predicate" nor a "for value" implementation
 	       ;;handler, but a "for side  effects" implementation handler exists; we
@@ -693,9 +693,18 @@
 	       ;;
 	       ;;and we handle special cases.
 	       (let ((e (apply E-handler simplified-rand*)))
-		 (if (%interrupt-primcall? e)
-		     e
-		   (make-seq e (K #t)))))))
+		 (define (%doit-with-adapter)
+		   (make-seq e (K #t)))
+		 (struct-case e
+		   ((primcall op)
+		    (if (eq? op 'interrupt)
+			e
+		      (%doit-with-adapter)))
+		   ((constant)
+		    ;;This should not happen... whatever.
+		    (K #t))
+		   (else
+		    (%doit-with-adapter)))))))
 	   ((V)
 	    (case-primitive-operation-handler prim
 	      ((V)
@@ -712,13 +721,13 @@
 	       ;;
 	       ;;and we handle special cases.
 	       (let ((e (apply P-handler simplified-rand*)))
-		 (define (%doit-as-conditional)
+		 (define (%doit-with-adapter)
 		   (make-conditional e (KN bool-t) (KN bool-f)))
 		 (struct-case e
 		   ((primcall op)
 		    (if (eq? op 'interrupt)
 			e
-		      (%doit-as-conditional)))
+		      (%doit-with-adapter)))
 		   ((constant e.const)
 		    ;;If the "for predicate" handler has returned a constant, it is a
 		    ;;boolean;  so  we  convert  it  into  the  corresponding  native
@@ -727,7 +736,7 @@
 			(KN bool-t)
 		      (KN bool-f)))
 		   (else
-		    (%doit-as-conditional)))))
+		    (%doit-with-adapter)))))
 	      ((E)
 	       ;;There are neither a "for value" nor a "for predicate" implementation
 	       ;;handlers, but a "for side effects" implementation handler exists; we
@@ -739,17 +748,17 @@
 	       ;;
 	       ;;and we handle special cases.
 	       (let ((e (apply E-handler simplified-rand*)))
-		 (define (%doit-as-sequence)
+		 (define (%doit-with-adapter)
 		   (make-seq e (KN void-object)))
 		 (struct-case e
 		   ((primcall op)
 		    (if (eq? op 'interrupt)
 			e
-		      (%doit-as-sequence)))
+		      (%doit-with-adapter)))
 		   ((constant)
 		    (nop))
 		   (else
-		    (%doit-as-sequence)))))))
+		    (%doit-with-adapter)))))))
 	   ((E)
 	    (case-primitive-operation-handler prim
 	      ((E)
@@ -767,23 +776,39 @@
 	       ;;
 	       ;;and we handle special cases.
 	       (let ((e (apply P-handler simplified-rand*)))
-		 (define (%doit-as-conditional)
+		 (define (%doit-with-adapter)
 		   (make-conditional e (nop) (nop)))
 		 (struct-case e
 		   ((primcall op)
 		    (if (eq? op 'interrupt)
 			e
-		      (%doit-as-conditional)))
+		      (%doit-with-adapter)))
 		   ((constant)
 		    (nop))
 		   (else
-		    (%doit-as-conditional)))))
+		    (%doit-with-adapter)))))
 	      ((V)
+	       ;;There  are  neither a  "for  side  effects"  nor a  "for  predicate"
+	       ;;implementation handlers,  but a  "for value"  implementation handler
+	       ;;exists; we generate a "for effects" handler as:
+	       ;;
+	       ;;   (bind ((tmp (for-value-primcall)))
+	       ;;     (nop))
+	       ;;
+	       ;;and we handle special cases.
 	       (let ((e (apply V-handler simplified-rand*)))
-		 (if (%interrupt-primcall? e)
-		     e
+		 (define (%doit-with-adapter)
 		   (with-tmp ((t e))
-		     (nop)))))))
+		     (nop)))
+		 (struct-case e
+		   ((primcall op)
+		    (if (eq? op 'interrupt)
+			e
+		      (%doit-with-adapter)))
+		   ((constant)
+		    (nop))
+		   (else
+		    (%doit-with-adapter)))))))
 	   (else
 	    (compiler-internal-error __who__ "invalid evaluation context" ctxt))))))
 
