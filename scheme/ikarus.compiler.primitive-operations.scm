@@ -374,13 +374,14 @@
 
 ;;; --------------------------------------------------------------------
 
- (define* (assert-pair x)
+ (define* (assert-pair x who)
    ;;Return recordised code  that validates X as  a Scheme pair object.  X  must be a
    ;;struct instance representing recordized code not yet filtered through T.
    ;;
    (define (%compile-time-error)
      (compile-time-error __who__
-       "expected pair as argument" (unparse-recordized-code/sexp x)))
+       "expected pair as primitive operation argument"
+       (cons who (unparse-recordized-code/sexp x))))
    (struct-case x
      ((known x.expr x.type)
       (case (T:pair? x.type)
@@ -391,7 +392,7 @@
 	     (interrupt)
 	   (%compile-time-error)))
 	(else
-	 (assert-pair x.expr))))
+	 (assert-pair x.expr who))))
      ((constant x.const)
       (cond ((pair? x.const)
 	     (nop))
@@ -696,40 +697,50 @@
 
 ;;;; pairs
 ;;
-;;A  pair is  a fixed-length  block of  memory composed  of  two machine
-;;words; the least significant bits of  a reference to a pair are a pair
-;;tag.
+;;A pair is a  fixed-length block of memory composed of two  machine words; the least
+;;significant bits of a reference to a pair are the pair tag.
 ;;
 ;;  |------------------------|-------------| reference to pair
 ;;        heap offset           pair tag
 ;;
 (section
 
+ (define (%pv-implementation-handler-pair? x)
+   (struct-case x
+     ;; ((known x.expr x.type)
+     ;;  (case (T:pair? x.type)
+     ;; 	((yes)
+     ;; 	 ;;We know  the result of  the predicate; we can  discard X because,  being a
+     ;; 	 ;;simplified operand, we know it has no side effects.
+     ;; 	 (KN bool-t))
+     ;; 	((no)
+     ;; 	 ;;We know  the result of  the predicate; we can  discard X because,  being a
+     ;; 	 ;;simplified operand, we know it has no side effects.
+     ;; 	 (KN bool-f))
+     ;; 	(else
+     ;; 	 (cogen-pred-pair? x.expr))))
+     ;; ((constant x.const)
+     ;;  (if (pair? x.const)
+     ;; 	  (KN bool-t)
+     ;; 	(KN bool-f)))
+     (else
+      (tag-test (T x) pair-mask pair-tag))))
+
  (define-primitive-operation pair? safe
+   ;;FIXME Why this does not work?  (Marco Maggi; Wed Sep 17, 2014)
+   ;;
+   ;; ((V x)
+   ;;  (%pv-implementation-handler-pair? x))
    ((P x)
-    (struct-case x
-      ((known x.expr x.type)
-       (case (T:pair? x.type)
-	 ((yes)
-	  (K bool-t))
-	 ((no)
-	  (K bool-f))
-	 (else
-	  (cogen-value-pair? x.expr))))
-      ((constant x.const)
-       (if (pair? x.const)
-	   (K bool-t)
-	 (K bool-f)))
-      (else
-       (tag-test (T x) pair-mask pair-tag))))
+    (%pv-implementation-handler-pair? x))
    ((E x)
     (nop)))
 
  (define-primitive-operation cons safe
    ((V a d)
     (with-tmp ((t (prm 'alloc (K pair-size) (K pair-tag))))
-      (prm 'mset t (K off-car) (T a))
-      (prm 'mset t (K off-cdr) (T d))
+      (prm 'mset t (KN off-car) (T a))
+      (prm 'mset t (KN off-cdr) (T d))
       t))
    ((P a d)
     (K #t))
@@ -740,26 +751,26 @@
 
  (define-primitive-operation $car unsafe
    ((V x)
-    (prm 'mref  (T x) (K off-car)))
+    (prm 'mref  (T x) (KN off-car)))
    ((E x)
     (nop)))
 
  (define-primitive-operation $cdr unsafe
    ((V x)
-    (prm 'mref  (T x) (K off-cdr)))
+    (prm 'mref  (T x) (KN off-cdr)))
    ((E x)
     (nop)))
 
  (define-primitive-operation $set-car! unsafe
    ((E x v)
     (with-tmp ((tx (T x)))
-      (prm 'mset tx (K off-car) (T v))
+      (prm 'mset tx (KN off-car) (T v))
       (smart-dirty-vector-set tx v))))
 
  (define-primitive-operation $set-cdr! unsafe
    ((E x v)
     (with-tmp ((tx (T x)))
-      (prm 'mset tx (K off-cdr) (T v))
+      (prm 'mset tx (KN off-cdr) (T v))
       (smart-dirty-vector-set tx v))))
 
 ;;; --------------------------------------------------------------------
@@ -770,32 +781,32 @@
       (if (option.strict-r6rs)
 	  (interrupt)
 	(compile-time-error 'car
-	  "expected pair as argument" (unparse-recordized-code/sexp x))))
+	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
-      ((known x.expr x.type)
-       (case (T:pair? x.type)
-	 ((yes)
-	  (cogen-value-$car x.expr))
-	 ((no)
-	  (%error-wrong-operand))
-	 (else
-	  (cogen-value-car x.expr))))
-      ((constant x.const)
-       (if (pair? x.const)
-	   (cogen-value-$car x)
-	 (%error-wrong-operand)))
-      ((var)
-       ;;This is a special case in which we  know "(T x)" would just return X itself;
-       ;;so we avoid creating a temporary location.
-       (multiple-forms-sequence
-	(interrupt-unless-pair x)
-	(prm 'mref x (K off-car))))
+      ;; ((known x.expr x.type)
+      ;;  (case (T:pair? x.type)
+      ;; 	 ((yes)
+      ;; 	  (cogen-value-$car x.expr))
+      ;; 	 ((no)
+      ;; 	  (%error-wrong-operand))
+      ;; 	 (else
+      ;; 	  (cogen-value-car x.expr))))
+      ;; ((constant x.const)
+      ;;  (if (pair? x.const)
+      ;; 	   (cogen-value-$car x)
+      ;; 	 (%error-wrong-operand)))
+      ;; ((var)
+      ;;  ;;This is a special case in which we  know "(T x)" would just return X itself;
+      ;;  ;;so we avoid creating a temporary location.
+      ;;  (multiple-forms-sequence
+      ;; 	(interrupt-unless-pair x)
+      ;; 	(prm 'mref x (KN off-car))))
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
-	 (prm 'mref tx (K off-car))))))
+	 (prm 'mref tx (KN off-car))))))
    ((E x)
-    (assert-pair x)))
+    (assert-pair x 'car)))
 
  (define-primitive-operation cdr safe
    ((V x)
@@ -803,32 +814,32 @@
       (if (option.strict-r6rs)
 	  (interrupt)
 	(compile-time-error 'cdr
-	  "expected pair as argument" (unparse-recordized-code/sexp x))))
+	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
-      ((known x.expr x.type)
-       (case (T:pair? x.type)
-	 ((yes)
-	  (cogen-value-$cdr x.expr))
-	 ((no)
-	  (%error-wrong-operand))
-	 (else
-	  (cogen-value-cdr x.expr))))
-      ((constant x.const)
-       (if (pair? x.const)
-	   (cogen-value-$cdr x)
-	 (%error-wrong-operand)))
-      ((var)
-       ;;This is a special case in which we  know "(T x)" would just return X itself;
-       ;;so we avoid creating a temporary location.
-       (multiple-forms-sequence
-	(interrupt-unless-pair x)
-	(prm 'mref x (K off-cdr))))
+      ;; ((known x.expr x.type)
+      ;;  (case (T:pair? x.type)
+      ;; 	 ((yes)
+      ;; 	  (cogen-value-$cdr x.expr))
+      ;; 	 ((no)
+      ;; 	  (%error-wrong-operand))
+      ;; 	 (else
+      ;; 	  (cogen-value-cdr x.expr))))
+      ;; ((constant x.const)
+      ;;  (if (pair? x.const)
+      ;; 	   (cogen-value-$cdr x)
+      ;; 	 (%error-wrong-operand)))
+      ;; ((var)
+      ;;  ;;This is a special case in which we  know "(T x)" would just return X itself;
+      ;;  ;;so we avoid creating a temporary location.
+      ;;  (multiple-forms-sequence
+      ;; 	(interrupt-unless-pair x)
+      ;; 	(prm 'mref x (KN off-cdr))))
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
-	 (prm 'mref tx (K off-cdr))))))
+	 (prm 'mref tx (KN off-cdr))))))
    ((E x)
-    (assert-pair x)))
+    (assert-pair x 'cdr)))
 
  (define-primitive-operation set-car! safe
    ((E x v)
@@ -836,7 +847,7 @@
       (if (option.strict-r6rs)
 	  (interrupt)
 	(compile-time-error 'set-car!
-	  "expected pair as argument" (unparse-recordized-code/sexp x))))
+	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
        (case (T:pair? x.type)
@@ -856,7 +867,7 @@
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
-	 (prm 'mset tx (K off-car) (T v))
+	 (prm 'mset tx (KN off-car) (T v))
 	 (smart-dirty-vector-set tx v))))))
 
  (define-primitive-operation set-cdr! safe
@@ -865,7 +876,7 @@
       (if (option.strict-r6rs)
 	  (interrupt)
 	(compile-time-error 'set-cdr!
-	  "expected pair as argument" (unparse-recordized-code/sexp x))))
+	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
        (case (T:pair? x.type)
@@ -885,7 +896,7 @@
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
-	 (prm 'mset tx (K off-cdr) (T v))
+	 (prm 'mset tx (KN off-cdr) (T v))
 	 (smart-dirty-vector-set tx v))))))
 
 ;;; --------------------------------------------------------------------
@@ -911,8 +922,8 @@
        (with-tmp ((item (%expand-cxr val (cdr ls))))
 	 (interrupt-unless-pair item)
 	 (prm 'mref item (if (eq? 'a (car ls))
-			     (K off-car)
-			   (K off-cdr))))
+			     (KN off-car)
+			   (KN off-cdr))))
      (T val)))
 
  (define-primitive-operation caar   safe ((V x) (%expand-cxr x '(a a))))
@@ -959,7 +970,7 @@
 				  (K (align (* len pair-size)))
 				  (K pair-tag))))
 	;;Store the first value in the car of the first pair.
-	(prm 'mset first-pair (K off-car) (car arg*^))
+	(prm 'mset first-pair (KN off-car) (car arg*^))
 	;;Store nil in the cdr of the last pair.
 	(prm 'mset first-pair
 	     (K (+ off-cdr (* (sub1 len) pair-size)))
@@ -970,7 +981,7 @@
 	      first-pair
 	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
 	      ;;Store a value in the car of this pair.
-	      (prm 'mset tmp (K off-car) (car arg*^))
+	      (prm 'mset tmp (KN off-car) (car arg*^))
 	      ;;Store  a  reference to  this  pair  in  the cdr  of  the
 	      ;;previous pair.
 	      (prm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
@@ -994,7 +1005,7 @@
       (with-tmp ((first-pair (prm 'alloc
 				  (K (* len pair-size))
 				  (K pair-tag))))
-	(prm 'mset first-pair (K off-car) (T a))
+	(prm 'mset first-pair (KN off-car) (T a))
 	(let loop ((arg*^  arg*^)
 		   (offset pair-size)) ;offset in bytes of the next pair
 	  (if (null? (cdr arg*^))
@@ -1010,7 +1021,7 @@
 	       first-pair)
 	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
 	      ;;Store a value in the car of this pair.
-	      (prm 'mset tmp (K off-car) (car arg*^))
+	      (prm 'mset tmp (KN off-car) (car arg*^))
 	      ;;Store  a  reference to  this  pair  in  the cdr  of  the
 	      ;;previous pair.
 	      (prm 'mset tmp (K (fx- off-cdr pair-size)) tmp)

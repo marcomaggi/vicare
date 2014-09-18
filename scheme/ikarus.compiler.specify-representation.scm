@@ -26,6 +26,15 @@
   (define (alt-cogen.specify-representation x)
     (V-codes x))
 
+  ;;The one below is for debugging purposes.  (Marco Maggi, Thu Sep 18, 2014)
+  ;;
+  ;; (define (alt-cogen.specify-representation x)
+  ;;   (debug-print* 'input (unparse-recordized-code/sexp x))
+  ;;   (receive-and-return (code)
+  ;; 	(V-codes x)
+  ;;     (void)
+  ;;     (debug-print* 'output (unparse-recordized-code/sexp code))))
+
   (module (V-codes)
     (define-fluid-override __who__
       (identifier-syntax 'alt-cogen.specify-representation))
