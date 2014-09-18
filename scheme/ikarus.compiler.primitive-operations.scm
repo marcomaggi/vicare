@@ -199,32 +199,76 @@
    (* wordsize 8))
 
  (define (tag-test x mask tag)
-   ;;Primary tag test.  X must be a word referencing a Scheme value.
+   ;;Primary tag test: test if X is a word of type TAG; use MASK to extract bits from
+   ;;X, then verify if the bits are equal to TAG.
    ;;
-   ;;Test if X is a word of  type TAG.  Use MASK to extract bits from X,
-   ;;then verify if the bits are equal to TAG.
+   ;;X must be recordised code representing a simplified operand; at run-time it will
+   ;;evaluate to an immediate Scheme object  or a tagged pointer referencing a Scheme
+   ;;object.
+   ;;
+   ;;This  function  can be  used  to  in  primop  implementation handlers  for  type
+   ;;predicates, like FIXNUM? and PAIR?; example:
+   ;;
+   ;;   (define-primitive-operation fixnum? safe
+   ;;     ((P x)
+   ;;      (tag-test (T x) fx-mask fx-tag))
+   ;;     ((E x)
+   ;;      (nop)))
+   ;;
+   ;;However, notice that the code returned by this function does not generate a full
+   ;;predicate that returns  a boolean Scheme object; rather  it generates recordised
+   ;;code representing a test that will end with an assembly instruction like "je" or
+   ;;"jne".  So it must be further processed  by a successive compiler pass that will
+   ;;generate and use  the appropriate assembly labels  to be used as  target for the
+   ;;jump.
    ;;
    (if mask
-       (prm '= (prm 'logand x (K mask)) (K tag))
-     (prm '= x (K tag))))
+       (prm '= (prm 'logand x (KN mask)) (KN tag))
+     (prm '= x (KN tag))))
 
  (define (sec-tag-test x primary-mask primary-tag secondary-mask secondary-tag)
-   ;;Primary and secondary  tag test; to be used when  a Scheme value is
-   ;;implemented by specialising another value (example: port values are
-   ;;specialised vector values).  X must  be a word referencing a Scheme
-   ;;value.
+   ;;Primary and  secondary tag  test: test if  X is a  tagged pointer  referencing a
+   ;;Scheme object in which:  the tagged pointer holds a primary  tag; the first word
+   ;;of the  referenced memory block holds  the secondary tag.  Example:  port values
+   ;;are referenced by pointers tagged as vectors.
    ;;
-   ;;Test  if X  is  a word  of  type PRIMARY-TAG:  use PRIMARY-MASK  to
-   ;;extract  bits  from  X,  then  verify  if the  bits  are  equal  to
-   ;;PRIMARY-TAG.
+   ;;X must be recordised code representing a simplified operand; at run-time it will
+   ;;evaluate to an immediate Scheme object  or a tagged pointer referencing a Scheme
+   ;;object.
    ;;
-   ;;If the  primary test is successful:  extract the first  word W from
-   ;;the  memory block referenced  by X,  use SECONDARY-MASK  to extract
-   ;;bits from W, then verify if the bits are equal to SECONDARY-TAG.
+   ;;This is how it goes:
+   ;;
+   ;;* We use PRIMARY-MASK to extract bits from  X, then verify if the bits are equal
+   ;;  to PRIMARY-TAG.
+   ;;
+   ;;* If the  primary test is successful:  extract the first word W  from the memory
+   ;;  block referenced by X, use SECONDARY-MASK  to extract bits from W, then verify
+   ;;  if the bits are equal to SECONDARY-TAG.
+   ;;
+   ;;This function can be used in primop implementation handlers for type predicates,
+   ;;like VECTOR? and SYMBOL?; example:
+   ;;
+   ;;   (define-primitive-operation vector? safe
+   ;;     ((P x)
+   ;;      (sec-tag-test (T x) vector-mask vector-tag fx-mask fx-tag))
+   ;;     ((E x)
+   ;;      (nop)))
+   ;;
+   ;;However, notice that the code returned by this function does not generate a full
+   ;;predicate that returns  a boolean Scheme object; rather  it generates recordised
+   ;;code representing a test that will end with an assembly instruction like "je" or
+   ;;"jne".  So it must be further processed  by a successive compiler pass that will
+   ;;generate and use  the appropriate assembly labels  to be used as  target for the
+   ;;jump.
+   ;;
+   ;;There are two TAG-TEST  calls each of which will be  transformed into a sequence
+   ;;of Assembly instructions terminating with a  jump; it means a system of Assembly
+   ;;labels  must be  generated to  handle this  conditional.  The  alternate of  the
+   ;;CONDITIONAL is a  constant #f, not a  native constant BOOL-F; this  case will be
+   ;;recognised and specially handled by a subsequent compiler pass.
    ;;
    (make-conditional (tag-test x primary-mask primary-tag)
-       (tag-test (prm 'mref x (K (- primary-tag)))
-		 secondary-mask secondary-tag)
+       (tag-test (prm 'mref x (KN (fx- primary-tag))) secondary-mask secondary-tag)
      (K #f)))
 
  (define (dirty-vector-set address)
