@@ -171,35 +171,37 @@
   (define (V-conditional x.test x.conseq x.altern x.env)
     (receive (test test.env test.tag)
 	(V x.test x.env)
-      (case (T:false? test.tag)
-	((yes)
-	 ;;We know the test is false, so do the transformation:
-	 ;;
-	 ;;   (conditional ?test ?conseq ?altern)
-	 ;;   ==> (seq ?test ?conseq)
-	 ;;
-	 ;;we keep ?TEST for its side effects.
-	 (receive (altern altern.env altern.tag)
-	     (V x.altern x.env)
-	   (values (make-seq test altern) altern.env altern.tag)))
-	((no)
-	 ;;We know the test is true, so do the transformation:
-	 ;;
-	 ;;   (conditional ?test ?conseq ?altern)
-	 ;;   ==> (seq ?test ?altern)
-	 ;;
-	 ;;we kepp ?TEST for its side effects.
-	 (receive (conseq conseq.env conseq.tag)
-	     (V x.conseq x.env)
-	   (values (make-seq test conseq) conseq.env conseq.tag)))
-	(else
-	 ;;We do not know the result of the test.
-	 (let-values
-	     (((conseq conseq.env conseq.tag) (V x.conseq x.env))
-	      ((altern altern.env altern.tag) (V x.altern x.env)))
-	   (values (make-conditional test conseq altern)
-		   (%or-envs conseq.env altern.env)
-		   (core-type-tag-or conseq.tag altern.tag)))))))
+      (receive (x.conseq.env x.altern.env)
+	  (%augment-env-with-conditional-test-info test x.env)
+	(case (T:false? test.tag)
+	  ((yes)
+	   ;;We know the test is false, so do the transformation:
+	   ;;
+	   ;;   (conditional ?test ?conseq ?altern)
+	   ;;   ==> (seq ?test ?conseq)
+	   ;;
+	   ;;we keep ?TEST for its side effects.
+	   (receive (altern altern.env altern.tag)
+	       (V x.altern x.altern.env)
+	     (values (make-seq test altern) altern.env altern.tag)))
+	  ((no)
+	   ;;We know the test is true, so do the transformation:
+	   ;;
+	   ;;   (conditional ?test ?conseq ?altern)
+	   ;;   ==> (seq ?test ?altern)
+	   ;;
+	   ;;we kepp ?TEST for its side effects.
+	   (receive (conseq conseq.env conseq.tag)
+	       (V x.conseq x.conseq.env)
+	     (values (make-seq test conseq) conseq.env conseq.tag)))
+	  (else
+	   ;;We do not know the result of the test.
+	   (let-values
+	       (((conseq conseq.env conseq.tag) (V x.conseq x.conseq.env))
+		((altern altern.env altern.tag) (V x.altern x.altern.env)))
+	     (values (make-conditional test conseq altern)
+		     (%or-envs conseq.env altern.env)
+		     (core-type-tag-or conseq.tag altern.tag))))))))
 
   (module (V-clambda)
     ;;The purposes of this  module are: to apply V to all  the CLAMBDA clause bodies;
@@ -306,6 +308,110 @@
 			       (else    t))))
 
   #| end of module: %DETERMINE-CONSTANT-TYPE |# )
+
+
+(module (%augment-env-with-conditional-test-info)
+  ;;There is a special, but common, case of TEST expression:
+  ;;
+  ;;   (funcall (primref ?type-pred) ?var)
+  ;;
+  ;;in which the  operator of the function application is  a type predicate (FIXNUM?,
+  ;;STRING?, ...) and the  operand is a PRELEX struct; in this case  we know that, if
+  ;;the test is successful, the type of ?VAR in the consequent branch is determined.
+  ;;
+  ;;Another special case is:
+  ;;
+  ;;   (if var ?conseq ?altern)
+  ;;
+  ;;here we know that the VAR is non-false in the ?CONSEQ and false in the ?ALTERN.
+  ;;
+  (define (%augment-env-with-conditional-test-info test env)
+    ;;TEST must  be recordised code  representing the  test of a  CONDITIONAL struct.
+    ;;ENV must be the environment in which the CONDITIONAL is processed.
+    ;;
+    ;;Inspect TEST and  augment ENV with inferred type properties.   Return 2 values:
+    ;;the  augmented  environment in  which  the  consequent  can be  processed;  the
+    ;;augmented environment in which the alternate can be processed.
+    ;;
+    (struct-case test
+      ((funcall rator rand*)
+       (struct-case rator
+	 ((primref prim-name)
+	  (if (and (pair? rand*)
+		   (null? (cdr rand*)))
+	      ;;There is only one operand.
+	      (let ((rand (car rand*)))
+		(struct-case rand
+		  ((prelex)
+		   (%process-predicate-application-to-var prim-name rand env))
+		  (else
+		   (values env env))))
+	    (values env env)))
+	 (else
+	  (values env env))))
+      ((prelex)
+       (values (extend-env test T:non-false env)
+	       (extend-env test T:false     env)))
+      (else
+       (values env env))))
+
+  (define (%process-predicate-application-to-var prim-name rand env)
+    (case prim-name
+      ((null?)
+       (values (extend-env rand T:null env)
+	       env))
+      ((pair?)
+       (values (extend-env rand T:pair env)
+	       env))
+      ((fixnum?)
+       (values (extend-env rand T:fixnum env)
+	       env))
+      ((flonum?)
+       (values (extend-env rand T:flonum env)
+	       env))
+      ((string?)
+       (values (extend-env rand T:string env)
+	       env))
+      ((vector?)
+       (values (extend-env rand T:vector env)
+	       env))
+      ((char?)
+       (values (extend-env rand T:char env)
+	       env))
+      ((number?)
+       (values (extend-env rand T:number env)
+	       env))
+      ((exact?)
+       (values (extend-env rand T:exact env)
+	       env))
+      ((inexact?)
+       (values (extend-env rand T:inexact env)
+	       env))
+      ((symbol?)
+       (values (extend-env rand T:symbol env)
+	       env))
+      ((bytevector?)
+       (values (extend-env rand T:bytevector env)
+	       env))
+      ((boolean?)
+       (values (extend-env rand T:boolean env)
+	       env))
+      ((procedure?)
+       (values (extend-env rand T:procedure env)
+	       env))
+      ((positive?)
+       (values (extend-env rand T:positive env)
+	       env))
+      ((negative?)
+       (values (extend-env rand T:negative env)
+	       env))
+      ((zero?)
+       (values (extend-env rand T:zero env)
+	       env))
+      (else
+       (values env env))))
+
+  #| end of module: %AUGMENT-ENV-WITH-CONDITIONAL-TEST-INFO |# )
 
 
 (module (%apply-primcall)

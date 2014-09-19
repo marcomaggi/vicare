@@ -1825,6 +1825,7 @@
       ))
 
 ;;; --------------------------------------------------------------------
+;;; fixnum type
 
   (doit (let ((f (lambda (x) x)))
 	  (f '1))
@@ -1843,6 +1844,7 @@
 		   (T:string T:non-false T:nonimmediate T:object)))))
 
 ;;; --------------------------------------------------------------------
+;;; vector type
 
   (doit* (vector-length '#(1 2))
 	 (funcall (primref vector-length)
@@ -1850,6 +1852,52 @@
 		  (T:vector T:non-false T:nonimmediate T:object))))
 
 ;;; --------------------------------------------------------------------
+;;; inference of type after successful variable test
+
+  (doit* (let ((x (read)))
+	   (if x
+	       (display x)
+	     (display x)))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional x_0
+	       (funcall (primref display)
+		 (known x_0 (T:non-false T:object)))
+	     (funcall (primref display)
+	       (known x_0 (T:false T:boolean T:immediate T:object))))))
+
+;;; --------------------------------------------------------------------
+;;; inference of type after successful type predicate application
+
+  (doit* (let ((x (read)))
+	   (if (fixnum? x)
+	       (display x)
+	     (display x)))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref fixnum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:fixnum T:non-false T:exact T:number T:immediate T:object)))
+	     (funcall (primref display)
+	       x_0))))
+
+  (doit* (let ((x (read)))
+	   (cond ((fixnum? x)
+		  (display x))
+		 ((string? x)
+		  (display x))
+		 (else
+		  (display x))))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref fixnum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:fixnum T:non-false T:exact T:number T:immediate T:object)))
+	     (conditional (funcall (primref string?) x_0)
+		 (funcall (primref display)
+		   (known x_0 (T:string T:non-false T:nonimmediate T:object)))
+	       (funcall (primref display)
+		 x_0)))))
+
+;;; --------------------------------------------------------------------
+;;; propagation of type after successful primitive argument validation
 
   ;;The following tests are related.  We  test what happens when a variable reference
   ;;is used as operand for CDR; the primitive CDR accepts a pair as operand.
