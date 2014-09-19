@@ -269,7 +269,7 @@
 	  x
 	(make-known x t)))
 
-    #| end of module: %APPLY-FUNCALL |# )
+    #| end of module: V-funcall |# )
 
   #| end of module: V |# )
 

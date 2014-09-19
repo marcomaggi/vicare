@@ -35,7 +35,8 @@ Compiler passes
                                 forms.
 * compiler optimisation::       Source optimisation.
 * compiler refassig::           Rewriting references and assignments.
-* compiler tags::               Tagging known properties.
+* compiler type inference::     Core type inference.
+* compiler unsafe primcalls::   Safe to unsafe core primitive applications.
 * compiler sanitise bindings::  Sanitising bindings.
 * compiler direct jumps::       Optimisation for direct jumps.
 * compiler global assign::      Inserting global assignments.
@@ -780,6 +781,7 @@ optimize-letrec
 source-optimize
 rewrite-references-and-assignments
 core-type-inference (optional)
+introduce-unsafe-primcalls (optional)
 sanitize-bindings
 optimize-for-direct-jumps
 insert-global-assignments
@@ -2397,8 +2399,8 @@ the returned recordised code.
 @end defun
 
 @c page
-@node compiler tags
-@section Tagging known properties
+@node compiler type inference
+@section Core type inference
 
 
 This optional compiler pass analyses the type of values returned by
@@ -2512,6 +2514,44 @@ We know that a ``wrong operand type'' exception is non--continuable; so
 if @func{cdr} raises an exception because @code{x} is not a pair: the
 control flow cannot come back.  This allows us to determine type
 informations and propagate them after the arguments have been validated.
+
+@c page
+@node compiler unsafe primcalls
+@section Safe to unsafe core primitive applications
+
+
+This optional compiler pass recognises the application of @strong{safe}
+core primitive functions having operands of the correct type and
+replaces them with the corresponding application of @strong{unsafe} core
+primitive functions or operations.  The result is faster code.
+
+It makes sense to perform this compiler pass only if
+@func{core-type-inference} has been performed first.  Performing this
+pass could be useless because:
+
+@itemize
+@item
+The same transformation may have been already performed by the expander
+when the tagged language is enabled.
+
+@item
+The same transformation is performed by the primitive operation
+implementation handlers.
+@end itemize
+
+
+@defun $introduce-unsafe-primcalls @var{input}
+Perform code transformations traversing the whole hierarchy in
+@var{input}, which must be a struct instance representing recordised
+code, and building a new hierarchy of recordised code; return the new
+hierarchy.
+@end defun
+
+
+@deffn Parameter $perform-unsafe-primcalls-introduction
+When true the pass @func{$introduce-unsafe-primcalls} is performed, else
+it is skipped.  Defaults to @true{}.
+@end deffn
 
 @c page
 @node compiler sanitise bindings

@@ -37,6 +37,7 @@
      (check-for-illegal-letrec			$check-for-illegal-letrec)
      (source-optimizer-passes-count		$source-optimizer-passes-count)
      (perform-core-type-inference		$perform-core-type-inference)
+     (perform-unsafe-primcalls-introduction	$perform-unsafe-primcalls-introduction)
      (cp0-effort-limit				$cp0-effort-limit)
      (cp0-size-limit				$cp0-size-limit)
      (strip-source-info				$strip-source-info)
@@ -55,6 +56,7 @@
      (source-optimize				$source-optimize)
      (rewrite-references-and-assignments	$rewrite-references-and-assignments)
      (core-type-inference			$core-type-inference)
+     (introduce-unsafe-primcalls		$introduce-unsafe-primcalls)
      (sanitize-bindings				$sanitize-bindings)
      (optimize-for-direct-jumps			$optimize-for-direct-jumps)
      (insert-global-assignments			$insert-global-assignments)
@@ -149,6 +151,13 @@
 
 (define perform-core-type-inference
   ;;When true: the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
+  ;;
+  (make-parameter #t))
+
+(define perform-unsafe-primcalls-introduction
+  ;;When true: the pass INTRODUCE-UNSAFE-PRIMCALLS-INFERENCE is performed, else it is
+  ;;skipped.  It  makes sense  to perform such  compiler pass only  if we  have first
+  ;;performed the core type inference.
   ;;
   (make-parameter #t))
 
@@ -611,6 +620,10 @@
 		 (p (if (perform-core-type-inference)
 			(core-type-inference p)
 		      p))
+		 (p (if (and (perform-core-type-inference)
+			     (perform-unsafe-primcalls-introduction))
+			(introduce-unsafe-primcalls p)
+		      p))
 		 (p (sanitize-bindings p))
 		 (p (optimize-for-direct-jumps p))
 		 (p (insert-global-assignments p))
@@ -660,6 +673,10 @@
 	  (let* ((p (rewrite-references-and-assignments p))
 		 (p (if (perform-core-type-inference)
 			(core-type-inference p)
+		      p))
+		 (p (if (and (perform-core-type-inference)
+			     (perform-unsafe-primcalls-introduction))
+			(introduce-unsafe-primcalls p)
 		      p))
 		 (p (sanitize-bindings p))
 		 (p (optimize-for-direct-jumps p))
@@ -3426,6 +3443,106 @@
 
 (include "ikarus.compiler.scheme-objects-ontology.scm" #t)
 (include "ikarus.compiler.core-type-inference.scm" #t)
+
+
+(module (introduce-unsafe-primcalls)
+  ;;This optional compiler  pass recognises the application of  *safe* core primitive
+  ;;functions  having  operands of  the  correct  type  and  replaces them  with  the
+  ;;corresponding  application of  *unsafe* core  primitive functions  or operations.
+  ;;The result is faster code.
+  ;;
+  ;;It makes sense to perform this compiler pass only if CORE-TYPE-INFERENCE has been
+  ;;performed first.
+  ;;
+  ;;Accept as input a nested hierarchy of the following structs:
+  ;;
+  ;;   constant		prelex		primref
+  ;;   bind		fix		conditional
+  ;;   seq		clambda		known
+  ;;   forcall		funcall
+  ;;
+  (define-fluid-override __who__
+    (identifier-syntax 'introduce-unsafe-primcalls))
+
+  (define (introduce-unsafe-primcalls x)
+    (V x))
+
+  (define (V x)
+    (struct-case x
+      ((constant)
+       x)
+
+      ((prelex)
+       x)
+
+      ((primref op)
+       x)
+
+      ((seq e0 e1)
+       (make-seq (V e0) (V e1)))
+
+      ((conditional test conseq altern)
+       (make-conditional (V test) (V conseq) (V altern)))
+
+      ((bind lhs* rhs* body)
+       (make-bind lhs* ($map/stx V rhs*) (V body)))
+
+      ((fix  lhs* rhs* body)
+       (make-fix  lhs* ($map/stx V rhs*) (V body)))
+
+      ((clambda)
+       (V-clambda x))
+
+      ((funcall rator rand*)
+       (V-funcall rator rand*))
+
+      ((forcall rator rand*)
+       (make-forcall rator ($map/stx V rand*)))
+
+      (else
+       (compiler-internal-error __who__
+	 "invalid expression" (unparse-recordized-code x)))))
+
+  (define (V-known x)
+    (struct-case x
+      ((known x.expr x.type)
+       (make-known (V x.expr) x.type))
+      (else x)))
+
+;;; --------------------------------------------------------------------
+
+  (module (V-clambda)
+    ;;The purpose of this module is to apply V to all the CLAMBDA clause bodies.
+    ;;
+    (define (V-clambda x)
+      (struct-case x
+	((clambda label clause* cp free name)
+	 (make-clambda label ($map/stx V-clambda-clause clause*) cp free name))))
+
+    (define (V-clambda-clause clause)
+      (struct-case clause
+	((clambda-case info body)
+	 (make-clambda-case info (V body)))))
+
+    #| end of module: V-clambda |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (V-funcall)
+
+    (define (V-funcall rator rand*)
+      (struct-case rator
+	((primref op)
+	 (%V-primcall op rand*))
+	(else
+	 (make-funcall rator ($map/stx V-known rand*)))))
+
+    (define (%V-primcall op rand*)
+      (make-funcall (make-primref op) ($map/stx V-known rand*)))
+
+    #| end of module: V-FUNCALL |# )
+
+  #| end of module: INTRODUCE-UNSAFE-PRIMCALLS |# )
 
 
 (module (sanitize-bindings)
