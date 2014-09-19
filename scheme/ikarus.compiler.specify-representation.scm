@@ -303,7 +303,7 @@
   ;;not many, but still important  cases.  Such exception-raising routines are called
   ;;ERROR@?PRIM, where ?PRIM is the name of the core primitive.
   ;;
-  ;;Partitioning simple and comples bindings
+  ;;Partitioning simple and complex bindings
   ;;----------------------------------------
   ;;
   ;;We implement a call to core primitive operation with the template:
@@ -339,6 +339,18 @@
   ;;be included multiple  times with no problems.   So, in this module,  we split the
   ;;operands between simple (which can be included multiple times) and complex (which
   ;;must be included through a local binding).
+  ;;
+  ;;The  result is  that the  primitive-operation implementation-handlers  receive as
+  ;;operands only structs with the format:
+  ;;
+  ;;   (constant ?const)
+  ;;   (known (constant ?const) ?type)
+  ;;   var
+  ;;   (known var ?type)
+  ;;
+  ;;which are  called "simplified operands";  such operands must be  filtered through
+  ;;the function  T, before  being included in  recordised code to  be handed  to the
+  ;;subsequent compiler pass.
   ;;
   ;;
   ;;Example: the VECTOR-LENGTH primitive function and primitive operation
@@ -565,15 +577,7 @@
 		    ;;
 		    ;;it  is fine  to  include  it multiple  times:  it  is a  simple
 		    ;;operand.
-		    ;;
-		    ;;FIXME Here I would like to keep the type description and so add
-		    ;;RAND itself  as simplified operand, rather  than add RAND.EXPR;
-		    ;;but if  I do it:  there are  expressions that fail  to compile.
-		    ;;This must  be further  investigated and solved  because handing
-		    ;;KNOWN       structs       to      the       primitive-operation
-		    ;;implementation-handlers  is the  whole  point  of having  KNOWN
-		    ;;structs.  (Marco Maggi; Mon Sep 15, 2014)
-		    (values lhs* rhs* (cons rand.expr simplified-rand*)))
+		    (values lhs* rhs* (cons rand simplified-rand*)))
 		   ((var)
 		    ;;This operand is:
 		    ;;
@@ -581,15 +585,7 @@
 		    ;;
 		    ;;it  is fine  to  include  it multiple  times;  it  is a  simple
 		    ;;operand.
-		    ;;
-		    ;;FIXME Here I would like to keep the type description and so add
-		    ;;RAND itself  as simplified operand, rather  than add RAND.EXPR;
-		    ;;but if  I do it:  there are  expressions that fail  to compile.
-		    ;;This must  be further  investigated and solved  because handing
-		    ;;KNOWN       structs       to      the       primitive-operation
-		    ;;implementation-handlers  is the  whole  point  of having  KNOWN
-		    ;;structs.  (Marco Maggi; Mon Sep 15, 2014)
-		    (values lhs* rhs* (cons rand.expr simplified-rand*)))
+		    (values lhs* rhs* (cons rand simplified-rand*)))
 		   (else
 		    ;;This operand is:
 		    ;;
