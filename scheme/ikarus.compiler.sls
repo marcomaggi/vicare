@@ -6103,10 +6103,10 @@
     ;;This version of  MAP imposes an order to  the application of F to  the items in
     ;;LS.
     ;;
-    (if (null? ls)
-	'()
-      (let ((a (f (car ls))))
-	(cons a (%map-in-order f (cdr ls))))))
+    (if (pair? ls)
+	(let ((a (f (car ls))))
+	  (cons a (%map-in-order f (cdr ls))))
+      '()))
 
   (define (%pretty-symbol sym)
     (string->symbol (symbol->string sym)))
@@ -6310,9 +6310,9 @@
 		 (recur expr.e0 (cons expr.e1 expr*)))
 		(else
 		 (let ((expr^ (E expr)))
-		   (if (null? expr*)
-		       (list expr^)
-		     (cons expr^ (recur (car expr*) (cdr expr*))))))))))
+		   (if (pair? expr*)
+		       (cons expr^ (recur (car expr*) (cdr expr*)))
+		     (list expr^))))))))
 
     (module (E-clambda)
 
@@ -6337,10 +6337,10 @@
 	  ;;improper list X.
 	  (let recur ((A (car x))
 		      (D (cdr x)))
-	    (if (null? D)
-		(Var A)
-	      (let ((A (Var A)))
-		(cons A (recur (car D) (cdr D))))))))
+	    (if (pair? D)
+		(let ((A (Var A)))
+		  (cons A (recur (car D) (cdr D))))
+	      (Var A)))))
 
       #| end of module: E-clambda |# )
 
@@ -6352,10 +6352,10 @@
     ;;This version of  MAP imposes an order to  the application of F to  the items in
     ;;LS.
     ;;
-    (if (null? ls)
-	'()
-      (let ((a (f (car ls))))
-	(cons a (%map-in-order f (cdr ls))))))
+    (if (pair? ls)
+	(let ((a (f (car ls))))
+	  (cons a (%map-in-order f (cdr ls))))
+      '()))
 
   (define (%build-let b* body)
     ;;B* must be a list of already unparsed LET-like bindings; BODY must
