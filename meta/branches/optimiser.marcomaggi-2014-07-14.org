@@ -68,12 +68,4 @@
 
 ** (vicare expander object-type-specs)
 ** (vicare expander tags)
-* core type inference
-
-** Whenever a AND:
-
-   (and (type? ?var) ?conseq)
-
-   is found, the ?conseq should be processed with an augmented environment in
-   which the VAR struct ?var is known to have type "T:type".
 

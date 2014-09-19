@@ -255,8 +255,8 @@
 	      (rand*.known ($map/stx %wrap-into-known rand* rand*.tag)))
 	  (struct-case rator
 	    ((primref op)
-	     ;;It is a core primitive application, either lexical primitive function or
-	     ;;primitive operation: we process it specially.
+	     ;;It is a core primitive  application, either lexical primitive function
+	     ;;or primitive operation: we process it specially.
 	     (%process-primitive-application op rand*.known env))
 	    (else
 	     (values (make-funcall (%wrap-into-known rator rator.tag) rand*.known)
@@ -574,6 +574,9 @@
 
       ((fixnum-width greatest-fixnum least-fixnum)
        (return T:fixnum))
+
+      ((not)
+       (return T:boolean))
 
       (else
        (return T:object))))

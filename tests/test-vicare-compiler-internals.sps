@@ -1866,6 +1866,16 @@
 	       (known x_0 (T:false T:boolean T:immediate T:object))))))
 
 ;;; --------------------------------------------------------------------
+;;; return value type descriptors
+
+  ;;Test for NOT return value type descriptor.
+  (doit (let ((x ((primitive not) ((primitive read)))))
+	  ((primitive display) x))
+	(bind ((x_0 (funcall (primref not)
+		      (funcall (primref read)))))
+	  (funcall (primref display)
+	    (known x_0 (T:boolean T:immediate T:object)))))
+
 ;;; inference of type after successful type predicate application
 
   (doit* (let ((x (read)))
@@ -1919,7 +1929,7 @@
 		     (known x_0 (T:pair T:non-false T:nonimmediate T:object)))
 		 (funcall (primref display) x_0))))))
 
-  ;;Test for NOT.
+  ;;Test for NOT in conditional's test position.
   (doit* (let ((x (read)))
 	   (if (not x)
 	       (display x)
@@ -1997,6 +2007,18 @@
 				     (funcall (primref display)
 				       (known x_0 (T:non-false T:nonimmediate T:inexact T:number T:object)))
 				   (funcall (primref display) x_0)))))))))))))))
+
+  ;;Test for AND syntax type propagation.  AND expands to IF.
+  (doit* (let ((x (read)))
+	   (and (pair? x)
+		(car   x)))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref pair?) x_0)
+	       (seq
+		 (constant #f)
+		 (funcall (primref car)
+		   (known x_0 (T:pair T:non-false T:nonimmediate T:object))))
+	     (constant #f))))
 
 ;;; --------------------------------------------------------------------
 ;;; propagation of type after successful primitive argument validation
