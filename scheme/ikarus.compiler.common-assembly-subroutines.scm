@@ -24,9 +24,9 @@
 ;;; --------------------------------------------------------------------
 
 (define (align n)
-  ($fxsll ($fxsra ($fx+ n ($fxsub1 object-alignment))
-		  align-shift)
-	  align-shift))
+  (fxsll (fxsra (fx+ n (fxsub1 object-alignment))
+		align-shift)
+	 align-shift))
 
 (define (mem off val)
   (cond ((fixnum? off)
@@ -222,7 +222,7 @@
       ;;      |                          |
       ;;       --------------------------
       ;;
-      (movl (mem ($fx- ($fx+ disp-closure-data wordsize) closure-tag)
+      (movl (mem (fx- (fx+ disp-closure-data wordsize) closure-tag)
 		 cpr)
 	    cpr)
       ;;Fetch a binary  code address from the  closure object referenced

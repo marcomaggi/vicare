@@ -133,16 +133,16 @@
 		    (make-instance bits)))))
 
 	     (define* (T:=? {x T?} {y T?})
-	       ($fx= ($T-bits x) ($T-bits y)))
+	       (fx=? ($T-bits x) ($T-bits y)))
 
 	     (define* (T:and {x0 T?} {x1 T?})
-	       (make-T ($fxlogand ($T-bits x0) ($T-bits x1))))
+	       (make-T (fxlogand ($T-bits x0) ($T-bits x1))))
 
 	     (define* (T:or {x0 T?} {x1 T?})
-	       (make-T ($fxlogor ($T-bits x0) ($T-bits x1))))
+	       (make-T (fxlogor ($T-bits x0) ($T-bits x1))))
 
 	     (define (%test-bits bits predefined-type-bits)
-	       (cond (($fxzero? ($fxlogand bits predefined-type-bits))
+	       (cond ((fxzero? (fxlogand bits predefined-type-bits))
 		      ;;None of the PREDEFINED-TYPE-BITS are  set in BITS; some other
 		      ;;bits may be set in BITS.  Bits examples:
 		      ;;
@@ -155,7 +155,7 @@
 		      ;;   (T:string? (T:or T:fixnum T:pair))	=> no
 		      ;;
 		      'no)
-		     (($fx= predefined-type-bits ($fxlogor bits predefined-type-bits))
+		     ((fx=? predefined-type-bits (fxlogor bits predefined-type-bits))
 		      ;;All the  BITS are also  set in PREDEFINED-TYPE-BITS;  some of
 		      ;;the PREDEFINED-TYPE-BITS are not set in BITS.  Bits examples:
 		      ;;
@@ -564,21 +564,21 @@
 	 (make-instance bits)))))
 
   (define* (core-type-tag=? (brace x core-type-tag?) (brace y core-type-tag?))
-    ($fx= ($core-type-tag-bits x) ($core-type-tag-bits y)))
+    (fx=? ($core-type-tag-bits x) ($core-type-tag-bits y)))
 
   (define* (core-type-tag-and (brace x0 core-type-tag?) (brace x1 core-type-tag?))
-    (make-T ($fxlogand ($core-type-tag-bits x0)
-		       ($core-type-tag-bits x1))))
-
-  (define* (core-type-tag-or (brace x0 core-type-tag?) (brace x1 core-type-tag?))
-    (make-T ($fxlogor ($core-type-tag-bits x0)
+    (make-T (fxlogand ($core-type-tag-bits x0)
 		      ($core-type-tag-bits x1))))
 
+  (define* (core-type-tag-or (brace x0 core-type-tag?) (brace x1 core-type-tag?))
+    (make-T (fxlogor ($core-type-tag-bits x0)
+		     ($core-type-tag-bits x1))))
+
   (define (%test-bits bits predefined-type-bits)
-    (cond (($fxzero? ($fxlogand bits predefined-type-bits))
+    (cond ((fxzero? (fxlogand bits predefined-type-bits))
 	   'no)
-	  (($fx= predefined-type-bits
-		 ($fxlogor bits predefined-type-bits))
+	  ((fx=? predefined-type-bits
+		 (fxlogor bits predefined-type-bits))
 	   'yes)
 	  (else 'maybe)))
 

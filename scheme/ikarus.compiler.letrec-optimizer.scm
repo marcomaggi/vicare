@@ -118,13 +118,13 @@
   ((func serial-idx ell1)
    (if (null? ell1)
        '()
-     (cons (func                          serial-idx          ($car ell1))
-	   (%map-in-order-with-index func (fxadd1 serial-idx) ($cdr ell1)))))
+     (cons (func                          serial-idx          (car ell1))
+	   (%map-in-order-with-index func (fxadd1 serial-idx) (cdr ell1)))))
   ((func serial-idx ell1 ell2)
    (if (null? ell1)
        '()
-     (cons (func                          serial-idx          ($car ell1) ($car ell2))
-	   (%map-in-order-with-index func (fxadd1 serial-idx) ($cdr ell1) ($cdr ell2))))))
+     (cons (func                          serial-idx          (car ell1) (car ell2))
+	   (%map-in-order-with-index func (fxadd1 serial-idx) (cdr ell1) (cdr ell2))))))
 
 (define-syntax* (define-fold-right stx)
   ;;Define  a  new FOLD-RIGHT  function  with  a  fixed number  of  list
@@ -141,8 +141,8 @@
   ;;     (if (null? ell)
   ;;         (values nil1 nil2)
   ;;       (receive (nil1^ nil2^)
-  ;;           (%fold-right/1-list/2-retvals combine nil1 nil2 ($cdr ell))
-  ;;         (combine ($car ell) nil1^ nil2^))))
+  ;;           (%fold-right/1-list/2-retvals combine nil1 nil2 (cdr ell))
+  ;;         (combine (car ell) nil1^ nil2^))))
   ;;
   ;;we blindly assume that the  list arguments are correct: proper lists
   ;;with equal length.
@@ -170,8 +170,8 @@
 	     (if (null? ELL0)
 		 (values NIL0 NIL ...)
 	       (receive (NIL0 NIL ...)
-		   (?who combine NIL0 NIL ... ($cdr ELL0) ($cdr ELL) ...)
-		 (combine ($car ELL0) ($car ELL) ... NIL0 NIL ...)))))))
+		   (?who combine NIL0 NIL ... (cdr ELL0) (cdr ELL) ...)
+		 (combine (car ELL0) (car ELL) ... NIL0 NIL ...)))))))
     ))
 
 (define-auxiliary-syntaxes number-of-lists number-of-retvals)
@@ -341,8 +341,8 @@
 			(rhs* rhs*))
 	       (if (null? rhs*)
 		   #f
-		 (or (C/error ($car rhs*) (%illegal-augment lhs* illegals))
-		     (loop ($cdr lhs*) ($cdr rhs*))))))
+		 (or (C/error (car rhs*) (%illegal-augment lhs* illegals))
+		     (loop (cdr lhs*) (cdr rhs*))))))
 	   (C body illegals)))
 
       ((conditional test conseq altern)
@@ -391,11 +391,11 @@
     (let loop ((x* x*))
       (cond ((null? x*)
 	     #f)
-	    ((C ($car x*) illegals)
+	    ((C (car x*) illegals)
 	     => (lambda (illegal)
-		  (%error illegal ($car x*))))
+		  (%error illegal (car x*))))
 	    (else
-	     (loop ($cdr x*))))))
+	     (loop (cdr x*))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -864,8 +864,8 @@
     (define (E* x*)
       (if (null? x*)
 	  '()
-	(cons (E  ($car x*))
-	      (E* ($cdr x*)))))
+	(cons (E  (car x*))
+	      (E* (cdr x*)))))
 
     (module (E-clambda)
       ;;Process  a CLAMBDA  structure.  In  general  we just  process the  body of  a
@@ -990,18 +990,14 @@
     ;;has  been referenced  or assigned  at least  once in  the right-hand  side init
     ;;expressions of the same lexical contour.
     ;;
-    (import (only (vicare system $vectors)
-		  $vector-set!
-		  $vector-ref))
-
     (define (%make-lhs-usage-flags lhs*)
       (make-vector (length lhs*) #f))
 
     (define-syntax-rule (%lhs-usage-flags-set! ?flags ?lhs-index)
-      ($vector-set! ?flags ?lhs-index #t))
+      (vector-set! ?flags ?lhs-index #t))
 
     (define-syntax-rule (%lhs-usage-flags-ref ?flags ?lhs-index)
-      ($vector-ref ?flags ?lhs-index))
+      (vector-ref ?flags ?lhs-index))
 
     #| end of module: LHS-USAGE-FLAGS |# )
 
@@ -1019,18 +1015,14 @@
     ;;the LHS in the same lexical contour (we  cannot be sure if it actually does it,
     ;;nor of which bindings are mutated), or it performs a complex function call.
     ;;
-    (import (only (vicare system $vectors)
-		  $vector-set!
-		  $vector-ref))
-
     (define (%make-rhs-complexity-flags rhs*)
       (make-vector (length rhs*) #f))
 
     (define-syntax-rule (%rhs-complexity-flags-set! ?flags ?rhs-index)
-      ($vector-set! ?flags ?rhs-index #t))
+      (vector-set! ?flags ?rhs-index #t))
 
     (define-syntax-rule (%rhs-complexity-flags-ref ?flags ?rhs-index)
-      ($vector-ref ?flags ?rhs-index))
+      (vector-ref ?flags ?rhs-index))
 
     #| end of module: RHS-COMPLEXITY-FLAGS |# )
 
@@ -1148,10 +1140,10 @@
       ((item ell counter)
        (cond ((null? ell)
 	      #f)
-	     ((eq? item ($car ell))
+	     ((eq? item (car ell))
 	      counter)
 	     (else
-	      (%find-index item ($cdr ell) ($fxadd1 counter))))))
+	      (%find-index item (cdr ell) (fxadd1 counter))))))
 
     #| end of module |# )
 
@@ -1273,9 +1265,9 @@
        (if (null? lhs*)
 	   (values '() '() '() '() '() '())
 	 (receive (simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
-	     (%partition-rhs* ($cdr lhs*) ($cdr rhs*) used-lhs-flags cplx-rhs-flags ($fxadd1 binding-index))
-	   (let ((lhs ($car lhs*))
-		 (rhs ($car rhs*)))
+	     (%partition-rhs* (cdr lhs*) (cdr rhs*) used-lhs-flags cplx-rhs-flags (fxadd1 binding-index))
+	   (let ((lhs (car lhs*))
+		 (rhs (car rhs*)))
 	     (cond ((prelex-source-assigned? lhs)
 		    ;;This binding is "complex".  It does  not matter if the RHS is a
 		    ;;CLAMBDA  structure:   the  fact  that  it   is  assigned  takes
@@ -1744,22 +1736,22 @@
 	;;"complex" bindings: do nothing.  Return unspecified values.
 	;;
 	(unless (null? binding*)
-	  (let ((B ($car binding*)))
+	  (let ((B (car binding*)))
 	    (if (%complex-binding? B)
-		(%mark B ($cdr binding*))
-	      (insert-order-edges! ($cdr binding*))))))
+		(%mark B (cdr binding*))
+	      (insert-order-edges! (cdr binding*))))))
 
       (define (%mark previous-B binding*)
 	(unless (null? binding*)
-	  (let ((B ($car binding*)))
+	  (let ((B (car binding*)))
 	    (if (%complex-binding? B)
 		(begin
 		  ;;Set "previous-B" as dependency for B, if it is not already.
 		  #;(assert (%complex-binding? previous-B))
 		  (<binding>-add-edge-from/to! B previous-B)
-		  (%mark B ($cdr binding*)))
+		  (%mark B (cdr binding*)))
 	      ;;Skip B and inspect the next.
-	      (%mark previous-B ($cdr binding*))))))
+	      (%mark previous-B (cdr binding*))))))
 
       (define (%complex-binding? B)
 	(or ($<binding>-complex B)
@@ -1834,9 +1826,9 @@
 	;;         (?lhs2 ?rhs2))
 	;;     ?body)
 	;;
-	(if (null? ($cdr scc))
+	(if (null? (cdr scc))
 	    ;;In this cluster there is a single binding.
-	    (let ((B ($car scc)))
+	    (let ((B (car scc)))
 	      (cond ((%fixable-binding? B)
 		     ;;We will process this <BINDING> along with the outer SCC.
 		     (values (cons B fixable*) body))
@@ -2056,7 +2048,7 @@
 	;;
 	(define-constant vertex.index-upon-entering index)
 	(define (%vertex-index-UNchanged-since-entering?)
-	  (fx= ($<binding>-index vertex)
+	  (fx=? ($<binding>-index vertex)
 	       vertex.index-upon-entering))
 	(fxincr! index)
 	($set-<binding>-index! vertex vertex.index-upon-entering)
@@ -2118,17 +2110,17 @@
 	;;caller.  In  addition, as  side effects:  mark as  "done" all  the vertexes
 	;;popped from the stack and included in the cluster.
 	;;
-	(let ((vertex-on-stack ($car stk)))
+	(let ((vertex-on-stack (car stk)))
 	  ($set-<binding>-done! vertex-on-stack #t)
 	  (cons vertex-on-stack
 		(if (eq? vertex-on-stack limit-vertex)
 		    ;;We have found the limit...
 		    (begin
 		      ;;... trim the stack ...
-		      (set! stack-of-traversed ($cdr stk))
+		      (set! stack-of-traversed (cdr stk))
 		      ;;... end the cluster.
 		      '())
-		  (%make-scc-cluster-from-visited-vertexes limit-vertex ($cdr stk))))))
+		  (%make-scc-cluster-from-visited-vertexes limit-vertex (cdr stk))))))
 
       (visit-vertex start-vertex accum-reverse-scc*))
 

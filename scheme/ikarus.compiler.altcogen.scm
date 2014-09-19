@@ -1353,7 +1353,7 @@
 			      (let ((p (assq y ls)))
 				(set-cdr! p (set-rem x (cdr p)))))
 		    (set->list (cdr p)))
-		  ($set-cdr! p (make-empty-set))))
+		  (set-cdr! p (make-empty-set))))
 	    (else
 	     (void)))))
 
@@ -2248,7 +2248,7 @@
 	  (module (make-mask)
 
 	    (define (make-mask n)
-	      (let ((vec (make-vector ($fxsra ($fx+ n 7) 3) 0)))
+	      (let ((vec (make-vector (fxsra (fx+ n 7) 3) 0)))
 		(for-each (lambda (fvar)
 			    (%set-bit! vec ($fvar-idx fvar)))
 		  live-frms1)

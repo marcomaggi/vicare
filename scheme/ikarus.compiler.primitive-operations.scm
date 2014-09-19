@@ -706,13 +706,13 @@
 	     (let loop ((ls ls))
 	       (cond ((null? ls)
 		      (K #f))
-		     ((null? ($cdr ls))
-		      (prm '= x (T (K ($car ls)))))
+		     ((null? (cdr ls))
+		      (prm '= x (T (K (car ls)))))
 		     (else
 		      (make-conditional
-			  (prm '= x (T (K ($car ls))))
+			  (prm '= x (T (K (car ls))))
 			(K #t) ;return a boolean
-			(loop ($cdr ls)))))))
+			(loop (cdr ls)))))))
 	 (interrupt)))
       ((known expr)
        (cogen-pred-$memq x expr))
@@ -731,9 +731,9 @@
 		      (K bool-f))
 		     (else
 		      (make-conditional
-			  (prm '= x (T (K ($car ls))))
+			  (prm '= x (T (K (car ls))))
 			(T (K ls)) ;return the value
-			(loop ($cdr ls)))))))
+			(loop (cdr ls)))))))
 	 (interrupt)))
       ((known expr)
        (cogen-value-$memq x expr))
@@ -2226,12 +2226,12 @@
 ;;;      ;  key ^=  (key >> 16);
 ;;;      ;  return key;
 ;;;      ;}
-;;;      (let* ((key ($fx+ key ($fxlognot ($fxsll key 15))))
-;;;             (key ($fxlogxor key ($fxsra key 10)))
-;;;             (key ($fx+ key ($fxsll key 3)))
-;;;             (key ($fxlogxor key ($fxsra key 6)))
-;;;             (key ($fx+ key ($fxlognot ($fxsll key 11))))
-;;;             (key ($fxlogxor key ($fxsra key 16))))
+;;;      (let* ((key (fx+ key (fxlognot (fxsll key 15))))
+;;;             (key (fxlogxor key (fxsra key 10)))
+;;;             (key (fx+ key (fxsll key 3)))
+;;;             (key (fxlogxor key (fxsra key 6)))
+;;;             (key (fx+ key (fxlognot (fxsll key 11))))
+;;;             (key (fxlogxor key (fxsra key 16))))
 ;;;        key)))
 
  /section)
@@ -2453,22 +2453,22 @@
    ;;
    (if (null? ls)
        code
-     (struct-case ($car ls)
+     (struct-case (car ls)
        ((constant v)
 	(if (flonum? v)
-	    (check-flonums ($cdr ls) code)
+	    (check-flonums (cdr ls) code)
 	  (interrupt)))
        ((known expr type)
 	(case (T:flonum? type)
 	  ((yes)
-	   (check-flonums ($cdr ls) code))
+	   (check-flonums (cdr ls) code))
 	  ((no)
 	   (interrupt))
 	  (else
-	   (check-flonums (cons expr ($cdr ls)) code))))
+	   (check-flonums (cons expr (cdr ls)) code))))
        (else
-	(check-flonums ($cdr ls)
-	  (with-tmp ((x (T ($car ls))))
+	(check-flonums (cdr ls)
+	  (with-tmp ((x (T (car ls))))
 	    (interrupt-unless
 	     (tag-test x vector-mask vector-tag))
 	    (interrupt-unless
@@ -2998,9 +2998,9 @@
       (cond ((null? a*)
 	     (K #t))
 	    (else
-	     (let ((b ($car a*)))
+	     (let ((b (car a*)))
 	       (make-conditional (prm op (T a) (T b))
-		   (recur b ($cdr a*))
+		   (recur b (cdr a*))
 		 (K #f))))))))
 
  (module (cogen-binary-*)
@@ -3705,8 +3705,8 @@
 	(cond ((null? field*)
 	       stru)
 	      (else
-	       (make-seq (prm 'mset stru (K offset) (T ($car field*)))
-			 (recur ($cdr field*) (+ offset wordsize))))))))
+	       (make-seq (prm 'mset stru (K offset) (T (car field*)))
+			 (recur (cdr field*) (+ offset wordsize))))))))
    ((P std . field*)
     (K #t))
    ((E std . field*)
@@ -3752,8 +3752,8 @@
 	      ;;together  all the  resulting machine  words, then  check
 	      ;;that the result is tagged as char.
 	      (interrupt-unless
-	       (tag-test (or* (T ($car others))
-			      ($cdr others))
+	       (tag-test (or* (T (car others))
+			      (cdr others))
 			 char-mask char-tag))))))
 
    (define (or* a a*)
@@ -3773,8 +3773,8 @@
      ;;
      (if (null? a*)
 	 a
-       (or* (prm 'logor a (T ($car a*)))
-	    ($cdr a*))))
+       (or* (prm 'logor a (T (car a*)))
+	    (cdr a*))))
 
    (define (known-char? x)
      (struct-case x
@@ -3820,9 +3820,9 @@
 		(a* a*))
       (if (null? a*)
 	  (K #t)
-	(let ((b ($car a*)))
+	(let ((b (car a*)))
 	  (make-conditional (prm op (T a) (T b))
-	      (recur b ($cdr a*))
+	      (recur b (cdr a*))
 	    (K #f)))))))
 
 ;;; --------------------------------------------------------------------
