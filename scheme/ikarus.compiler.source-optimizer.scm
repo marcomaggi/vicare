@@ -961,7 +961,7 @@
 	   #'(quote SYM))))))
 
   (define-constant UNIQUE-PROPERTY-KEY
-    (expand-time-gensym "primitive-operation-property"))
+    (expand-time-gensym "core-primitive-operation/source-optimiser-properties"))
 
   (module (%initialise-primitive-properties)
     ;;For each  symbol being the  name of  a primitive function:  add an

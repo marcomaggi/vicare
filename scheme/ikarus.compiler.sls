@@ -5707,7 +5707,7 @@
 		$getprop $putprop))
 
   (define-constant COOKIE
-    (compile-time-gensym "primitive-operation-cookie"))
+    (compile-time-gensym "core-primitive-operation/integration-handler"))
 
   (define (core-primitive-operation? core-primitive-symbol-name)
     ;;Return  true  if  CORE-PRIMITIVE-SYMBOL-NAME  is  the public  name  of  a  core
