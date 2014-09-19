@@ -446,10 +446,10 @@
 			 fx-mask fx-tag))))))
 
    (define (%or* a a*)
-     (if (null? a*)
-	 a
-       (%or* (prm 'logor a (T (car a*)))
-	     (cdr a*))))
+     (if (pair? a*)
+	 (%or* (prm 'logor a (T (car a*)))
+	       (cdr a*))
+       a))
 
    (define (%known-fixnum? x)
      (struct-case x
@@ -1070,15 +1070,14 @@
 	     (K nil))
 	(let loop ((arg*^  (cdr arg*^))
 		   (offset pair-size)) ;offset in bytes of the next pair
-	  (if (null? arg*^)
-	      first-pair
-	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
-	      ;;Store a value in the car of this pair.
-	      (prm 'mset tmp (KN off-car) (car arg*^))
-	      ;;Store  a  reference to  this  pair  in  the cdr  of  the
-	      ;;previous pair.
-	      (prm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
-	      (loop (cdr arg*^) (+ offset pair-size)))))
+	  (if (pair? arg*^)
+	      (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
+		;;Store a value in the car of this pair.
+		(prm 'mset tmp (KN off-car) (car arg*^))
+		;;Store a reference to this pair in the cdr of the previous pair.
+		(prm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
+		(loop (cdr arg*^) (+ offset pair-size)))
+	    first-pair))
 	)))
    ((P . arg*)
     (K #t))
@@ -1555,10 +1554,10 @@
        (prm 'mset vec (K off-vector-length) (K (* (length arg*) wordsize)))
        (let recur ((arg*^  (map T arg*))
 		   (offset off-vector-data))
-	 (if (null? arg*^)
-	     vec
-	   (make-seq (prm 'mset vec (K offset) (car arg*^))
-		     (recur (cdr arg*^) (+ offset wordsize))))))))
+	 (if (pair? arg*^)
+	     (make-seq (prm 'mset vec (K offset) (car arg*^))
+		       (recur (cdr arg*^) (+ offset wordsize)))
+	   vec)))))
    ((E . arg*)
     (nop))
    ((P . arg*)
@@ -2424,13 +2423,13 @@
      ;;Load the first operand in a register for flonums.
      (prm 'fl:load (T fl) (K off-flonum-data))
      (let recur ((fl* fl*))
-       (if (null? fl*)
-	   (nop)
-	 (make-seq
-	  ;;Perform  the operation  between  the register  and the  next
-	  ;;operand.
-	  (prm op (T (car fl*)) (K off-flonum-data))
-	  (recur (cdr fl*)))))
+       (if (pair? fl*)
+	   (make-seq
+	    ;;Perform  the operation  between  the register  and the  next
+	    ;;operand.
+	    (prm op (T (car fl*)) (K off-flonum-data))
+	    (recur (cdr fl*)))
+	 (nop)))
      ;;Store the result from the register into memory referenced by X.
      (prm 'fl:store x (K off-flonum-data))
      x))
@@ -2451,31 +2450,31 @@
    ;;flonum  objects, then  return  recordized code  that performs  with
    ;;valid arguments CODE.
    ;;
-   (if (null? ls)
-       code
-     (struct-case (car ls)
-       ((constant v)
-	(if (flonum? v)
-	    (check-flonums (cdr ls) code)
-	  (interrupt)))
-       ((known expr type)
-	(case (T:flonum? type)
-	  ((yes)
-	   (check-flonums (cdr ls) code))
-	  ((no)
-	   (interrupt))
-	  (else
-	   (check-flonums (cons expr (cdr ls)) code))))
-       (else
-	(check-flonums (cdr ls)
-	  (with-tmp ((x (T (car ls))))
-	    (interrupt-unless
-	     (tag-test x vector-mask vector-tag))
-	    (interrupt-unless
-	     (prm '=
-		  (prm 'mref x (K off-flonum-tag))
-		  (K flonum-tag)))
-	    code))))))
+   (if (pair? ls)
+       (struct-case (car ls)
+	 ((constant v)
+	  (if (flonum? v)
+	      (check-flonums (cdr ls) code)
+	    (interrupt)))
+	 ((known expr type)
+	  (case (T:flonum? type)
+	    ((yes)
+	     (check-flonums (cdr ls) code))
+	    ((no)
+	     (interrupt))
+	    (else
+	     (check-flonums (cons expr (cdr ls)) code))))
+	 (else
+	  (check-flonums (cdr ls)
+	    (with-tmp ((x (T (car ls))))
+	      (interrupt-unless
+	       (tag-test x vector-mask vector-tag))
+	      (interrupt-unless
+	       (prm '=
+		    (prm 'mref x (K off-flonum-tag))
+		    (K flonum-tag)))
+	      code))))
+     code))
 
 ;;; --------------------------------------------------------------------
 
@@ -2995,13 +2994,12 @@
     (assert-fixnums a a*)
     (let recur ((a  a)
 		(a* a*))
-      (cond ((null? a*)
-	     (K #t))
-	    (else
-	     (let ((b (car a*)))
-	       (make-conditional (prm op (T a) (T b))
-		   (recur b (cdr a*))
-		 (K #f))))))))
+      (if (pair? a*)
+	  (let ((b (car a*)))
+	    (make-conditional (prm op (T a) (T b))
+		(recur b (cdr a*))
+	      (K #f)))
+	(K #t)))))
 
  (module (cogen-binary-*)
 
@@ -3334,10 +3332,10 @@
      (assert-fixnums a a*)
      (let recur ((a  (T a))
 		 (a* a*))
-       (if (null? a*)
-	   a
-	 (recur (prm 'int-/overflow a (T (car a*)))
-		(cdr a*))))))
+       (if (pair? a*)
+	   (recur (prm 'int-/overflow a (T (car a*)))
+		  (cdr a*))
+	 a))))
    ((P a . a*)
     (multiple-forms-sequence
      (assert-fixnums a a*)
@@ -3355,10 +3353,10 @@
      (assert-fixnums a a*)
      (let recur ((a  (T a))
 		 (a* a*))
-       (if (null? a*)
-	   a
-	 (recur (prm 'int+/overflow a (T (car a*)))
-		(cdr a*))))))
+       (if (pair? a*)
+	   (recur (prm 'int+/overflow a (T (car a*)))
+		  (cdr a*))
+	 a))))
    ((P)
     (K #t))
    ((P a . a*)
@@ -3397,23 +3395,27 @@
 ;;; --------------------------------------------------------------------
 
  (define-primitive-operation bitwise-and safe
-   ((V) (K (fxsll -1 fx-shift)))
+   ((V)
+    (K (fxsll -1 fx-shift)))
    ((V a . a*)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
-     (let f ((a (T a)) (a* a*))
-       (cond
-	((null? a*) a)
-	(else
-	 (f (prm 'logand a (T (car a*))) (cdr a*)))))))
-   ((P) (K #t))
+     (let loop ((a  (T a))
+		(a* a*))
+       (if (pair? a*)
+	   (loop (prm 'logand a (T (car a*))) (cdr a*))
+	 a))))
+   ((P)
+    (K #t))
    ((P a . a*)
     (multiple-forms-sequence
      (assert-fixnums a a*)
      (K #t)))
-   ((E) (nop))
-   ((E a . a*) (assert-fixnums a a*)))
+   ((E)
+    (nop))
+   ((E a . a*)
+    (assert-fixnums a a*)))
 
  (define-primitive-operation zero? safe
    ((P x)
@@ -3702,11 +3704,10 @@
       ;;Store the fields.
       (let recur ((field* field*)
 		  (offset off-struct-data)) ;offset in bytes
-	(cond ((null? field*)
-	       stru)
-	      (else
-	       (make-seq (prm 'mset stru (K offset) (T (car field*)))
-			 (recur (cdr field*) (+ offset wordsize))))))))
+	(if (pair? field*)
+	    (make-seq (prm 'mset stru (K offset) (T (car field*)))
+		      (recur (cdr field*) (+ offset wordsize)))
+	  stru))))
    ((P std . field*)
     (K #t))
    ((E std . field*)
@@ -3771,10 +3772,10 @@
      ;;               arg2)
      ;;          arg3)
      ;;
-     (if (null? a*)
-	 a
-       (or* (prm 'logor a (T (car a*)))
-	    (cdr a*))))
+     (if (pair? a*)
+	 (or* (prm 'logor a (T (car a*)))
+	      (cdr a*))
+       a))
 
    (define (known-char? x)
      (struct-case x
@@ -3818,12 +3819,12 @@
     (assert-chars a a*)
     (let recur ((a  a)
 		(a* a*))
-      (if (null? a*)
-	  (K #t)
-	(let ((b (car a*)))
-	  (make-conditional (prm op (T a) (T b))
-	      (recur b (cdr a*))
-	    (K #f)))))))
+      (if (pair? a*)
+	  (let ((b (car a*)))
+	    (make-conditional (prm op (T a) (T b))
+		(recur b (cdr a*))
+	      (K #f)))
+	(K #t)))))
 
 ;;; --------------------------------------------------------------------
 
