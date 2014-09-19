@@ -227,10 +227,10 @@
 		  ($for-each/stx set-var-loc! stack-args stack-locations)
 		  (let ((body (let recur ((args register-args)
 					  (locs register-names))
-				(if (null? args)
-				    (Tail cas.body)
-				  (make-seq (%move-dst<-src (car args) (car locs))
-					    (recur          (cdr args) (cdr locs)))))))
+				(if (pair? args)
+				    (make-seq (%move-dst<-src (car args) (car locs))
+					      (recur          (cdr args) (cdr locs)))
+				  (Tail cas.body)))))
 		    (make-clambda-case
 		     (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
 		     (make-locals (locals) body))))))))))
@@ -275,10 +275,10 @@
 			 stack-args stack-locations)))))
 
       (define (%one-fvar-for-each-left-over-formal i leftover-formal)
-	(if (null? leftover-formal)
-	    '()
-	  (cons (mkfvar i)
-		(%one-fvar-for-each-left-over-formal (fxadd1 i) (cdr leftover-formal)))))
+	(if (pair? leftover-formal)
+	    (cons (mkfvar i)
+		  (%one-fvar-for-each-left-over-formal (fxadd1 i) (cdr leftover-formal)))
+	  '()))
 
       #| end of module: ClambdaCase |# )
 
@@ -502,11 +502,11 @@
 ;;; helpers
 
   (define (S* x* kont)
-    (if (null? x*)
-	(kont '())
-      (S (car x*) (lambda (a)
-		     (S* (cdr x*) (lambda (d)
-				     (kont (cons a d))))))))
+    (if (pair? x*)
+	(S (car x*) (lambda (a)
+		      (S* (cdr x*) (lambda (d)
+				     (kont (cons a d))))))
+      (kont '())))
 
   (define (S x kont)
     (struct-case x
@@ -535,21 +535,21 @@
 ;;; --------------------------------------------------------------------
 
   (define (%do-bind lhs* rhs* body)
-    (if (null? lhs*)
-	body
-      (begin
-	(%locals-cons (car lhs*))
-	(make-seq (V (car lhs*) (car rhs*))
-		  (%do-bind (cdr lhs*) (cdr rhs*) body)))))
+    (if (pair? lhs*)
+	(begin
+	  (%locals-cons (car lhs*))
+	  (make-seq (V (car lhs*) (car rhs*))
+		    (%do-bind (cdr lhs*) (cdr rhs*) body)))
+      body))
 
   (define-inline (%move-dst<-src lhs rhs)
     (make-asm-instr 'move lhs rhs))
 
   (define (%do-bind-frmt* nf* v* ac)
-    (if (null? nf*)
-	ac
-      (make-seq (V (car nf*) (car v*))
-		(%do-bind-frmt* (cdr nf*) (cdr v*) ac))))
+    (if (pair? nf*)
+	(make-seq (V (car nf*) (car v*))
+		  (%do-bind-frmt* (cdr nf*) (cdr v*) ac))
+      ac))
 
   (module (handle-nontail-call)
 
@@ -796,10 +796,10 @@
     ;;     ...
     ;;     . ?tail-body)
     ;;
-    (if (null? lhs*)
-	tail-body
-      (make-seq (%move-dst<-src (car lhs*) (car rhs*))
-		(assign*        (cdr lhs*) (cdr rhs*) tail-body))))
+    (if (pair? lhs*)
+	(make-seq (%move-dst<-src (car lhs*) (car rhs*))
+		  (assign*        (cdr lhs*) (cdr rhs*) tail-body))
+      tail-body))
 
 ;;; --------------------------------------------------------------------
 
@@ -956,10 +956,10 @@
 	     (cons (car regs) (%formals-locations (cdr regs) (cdr args))))))
 
     (define (%one-fvar-for-each-arg i args)
-      (if (null? args)
-	  '()
-	(cons (mkfvar i)
-	      (%one-fvar-for-each-arg (fxadd1 i) (cdr args)))))
+      (if (pair? args)
+	  (cons (mkfvar i)
+		(%one-fvar-for-each-arg (fxadd1 i) (cdr args)))
+	'()))
 
     #| end of module: %handle-tail-call |# )
 
@@ -1030,10 +1030,9 @@
       ;;Remove from the list ELL1 all  the elements of the list ELL2.  Use
       ;;EQ? for comparison.
       ;;
-      (cond ((null? ell2)
-	     ell1)
-	    (else
-	     ($difference ($remq (car ell2) ell1) (cdr ell2)))))
+      (if (pair? ell2)
+	  ($difference ($remq (car ell2) ell1) (cdr ell2))
+	ell1))
 
     #| end of module: set-difference |# )
 
@@ -1236,9 +1235,9 @@
     (define* (list->set {ls list-of-fixnums?})
       (let recur ((ls ls)
 		  (S  0))
-	(if (null? ls)
-	    S
-	  (recur (cdr ls) (set-add (car ls) S)))))
+	(if (pair? ls)
+	    (recur (cdr ls) (set-add (car ls) S))
+	  S)))
 
     (define (list-of-fixnums? obj)
       (and (list? obj)
@@ -1478,7 +1477,7 @@
   (define (init-vars! ls)
     (let loop ((ls ls)
 	       (i  0))
-      (unless (null? ls)
+      (when (pair? ls)
 	(init-var! (car ls) i)
 	(loop (cdr ls) (fxadd1 i)))))
 
@@ -1653,11 +1652,11 @@
 	   (error who "invalid R" x))))
 
   (define (R* ls vs rs fs ns)
-    (if (null? ls)
-	(values vs rs fs ns)
-      (let-values (((vs rs fs ns)
-		    (R (car ls) vs rs fs ns)))
-	(R* (cdr ls) vs rs fs ns))))
+    (if (pair? ls)
+	(receive (vs rs fs ns)
+	    (R (car ls) vs rs fs ns)
+	  (R* (cdr ls) vs rs fs ns))
+      (values vs rs fs ns)))
 
 ;;; --------------------------------------------------------------------
 
