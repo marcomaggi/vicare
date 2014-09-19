@@ -133,12 +133,7 @@
        (V-clambda x env))
 
       ((funcall rator rand*)
-       (let-values
-	   (((rator rator.env rator.tag) (V  rator env))
-	    ((rand* rand*.env rand*.tag) (V* rand* env)))
-	 (%apply-funcall rator     rand*
-			 rator.tag rand*.tag
-			 rator.env rand*.env)))
+       (V-funcall rator rand* env))
 
       ((forcall rator rand*)
        (receive (rand* rand*.env rand*.tag)
@@ -247,22 +242,25 @@
 	  (else
 	   T:object)))
 
-  (module (%apply-funcall)
+  (module (V-funcall)
     ;;Here!!!   The whole  purpose of  determining type  tags is  to wrap  into KNOWN
     ;;structs the RATOR and  RAND* of FUNCALL structs.  Notice that  we do *not* wrap
     ;;the RATOR if it is a PRIMREF.
     ;;
-    (define (%apply-funcall rator rand* rator.tag rand*.tag rator.env rand*.env)
-      (let ((env         (%and-envs rator.env rand*.env))
-	    (rand*.known ($map/stx %wrap-into-known rand* rand*.tag)))
-	(struct-case rator
-	  ((primref op)
-	   ;;It is a core primitive application, either lexical primitive function or
-	   ;;primitive operation: we process it specially.
-	   (%apply-primcall op rand*.known env))
-	  (else
-	   (values (make-funcall (%wrap-into-known rator rator.tag) rand*.known)
-		   env T:object)))))
+    (define (V-funcall rator rand* env)
+      (let-values
+	  (((rator rator.env rator.tag) (V  rator env))
+	   ((rand* rand*.env rand*.tag) (V* rand* env)))
+	(let ((env         (%and-envs rator.env rand*.env))
+	      (rand*.known ($map/stx %wrap-into-known rand* rand*.tag)))
+	  (struct-case rator
+	    ((primref op)
+	     ;;It is a core primitive application, either lexical primitive function or
+	     ;;primitive operation: we process it specially.
+	     (%process-primitive-application op rand*.known env))
+	    (else
+	     (values (make-funcall (%wrap-into-known rator rator.tag) rand*.known)
+		     env T:object))))))
 
     (define (%wrap-into-known x t)
       (if (core-type-tag=? t T:object)
@@ -420,7 +418,7 @@
   #| end of module: %AUGMENT-ENV-WITH-CONDITIONAL-TEST-INFO |# )
 
 
-(module (%apply-primcall)
+(module (%process-primitive-application)
   ;;This module  processes a core  primitive application, either a  lexical primitive
   ;;function or primitive operation (or both):
   ;;
@@ -455,7 +453,7 @@
   ;;very  module, we  process  "(cdr x)"  we extend  the  environment by  associating
   ;;"T:pair" to X; when later we process "(f x)", X is tagged.
   ;;
-  (define (%apply-primcall op rand* env)
+  (define (%process-primitive-application op rand* env)
     (define (return retval.tag)
       ;;We use  this when  the core  primitive does not  care about  the type  of its
       ;;operands, but we known the type of the return value.
@@ -668,7 +666,7 @@
 
     #| end of module: inject* |# )
 
-  #| end of module: %APPLY-PRIMCALL |# )
+  #| end of module: %PROCESS-PRIMITIVE-APPLICATION |# )
 
 
 ;;;; env functions
