@@ -114,10 +114,6 @@
     ;;When building a new  boot image: the hashtables library is  loaded from the old
     ;;boot image.
     (rnrs hashtables)
-    (only (vicare system $codes)
-	  $code->closure)
-    (only (vicare system $structs)
-	  $struct-ref $struct/rtd?)
     ;;When building a new boot image: the FASL write library is loaded from source.
     ;;This needs to be loaded here so that it evaluates with the freshly loaded
     ;;"ikarus.config.ss", including the correct value for WORDSIZE.
@@ -383,6 +379,8 @@
 	((_ ?expr ?clause ...)
 	 (with-syntax ((BODY (%generate-body #'(?clause ...))))
 	   #'(let ((v ?expr))
+	       (import (only (vicare system $structs)
+			     $struct-ref $struct/rtd?))
 	       BODY)))))
 
     (define (%generate-body clauses-stx)
@@ -663,6 +661,8 @@
     ;;This function is used to compile  libraries' source code for serialisation into
     ;;FASL files.
     ;;
+    (import (only (vicare system $codes)
+		  $code->closure))
     (let ((code (compile-core-expr->code x)))
       ($code->closure code)))
 
