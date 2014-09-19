@@ -981,7 +981,7 @@
     ;;CONS* applied to 2 or more arguments.
     ;;
     (define (%initialise-primitive-properties info-list)
-      (unless (null? info-list)
+      (when (pair? info-list)
 	(let* ((a	(car info-list))
 	       (cc	(car a))	;list, primitive usage template
 	       (cv	(cdr a))	;list of symbols, properties
@@ -997,16 +997,17 @@
       ;;specifying attributes and the tail  of INFO-LIST; if it does not
       ;;return: nil and INFO-LIST itself.
       ;;
-      (if (null? info-list)
-	  (values '() '())
-	(let* ((a  (car info-list))
-	       (cc (car a)))
-	  (if (eq? (car cc) prim)
-	      (let-values (((p* info-list) (%get prim (cdr info-list))))
-		(values (cons (cons (cdr cc) (cdr a))
-			      p*)
-			info-list))
-	    (values '() info-list)))))
+      (if (pair? info-list)
+	  (let* ((a  (car info-list))
+		 (cc (car a)))
+	    (if (eq? (car cc) prim)
+		(receive (p* info-list)
+		    (%get prim (cdr info-list))
+		  (values (cons (cons (cdr cc) (cdr a))
+				p*)
+			  info-list))
+	      (values '() info-list)))
+	(values '() '())))
 
     #| end of module: %initialise-primitive-properties |# )
 
@@ -1991,17 +1992,17 @@
       ;;3. A  struct instance of type  PRELEX being the LHS  of the rest
       ;;   argument binding.
       ;;
-      (if (null? (cdr formals))
-	  ;;Everything else goes into the rest argument.
-	  (let* ((rest-formal (car formals))
-		 (tmp-formal* (map (lambda (unused)
-				     (make-prelex-replacement rest-formal))
-				rand*)))
-	    (values '() tmp-formal* rest-formal))
-	(let ((lhs (car formals)))
-	  (let-values (((lhs* tmp-formal* rest-formal)
-			(%partition (cdr formals) (cdr rand*))))
-	    (values (cons lhs lhs*) tmp-formal* rest-formal)))))
+      (if (pair? (cdr formals))
+	  (let ((lhs (car formals)))
+	    (receive (lhs* tmp-formal* rest-formal)
+		(%partition (cdr formals) (cdr rand*))
+	      (values (cons lhs lhs*) tmp-formal* rest-formal)))
+	;;Everything else goes into the rest argument.
+	(let* ((rest-formal (car formals))
+	       (tmp-formal* (map (lambda (unused)
+				   (make-prelex-replacement rest-formal))
+			      rand*)))
+	  (values '() tmp-formal* rest-formal))))
 
     #| end of module: %APPLICATION-WITH-VAR-FORMALS |# )
 
@@ -2102,10 +2103,11 @@
 	(make-bind lhs* rhs* optimized-body))))
 
   (define (%attempt-bindings-removal var* rand* sc)
-    (if (null? var*)
-	(values '() '())
-      (let-values (((lhs* rhs*) (%attempt-bindings-removal (cdr var*) (cdr rand*) sc)))
-	(%process-single-binding (car var*) (car rand*) lhs* rhs* sc))))
+    (if (pair? var*)
+	(receive (lhs* rhs*)
+	    (%attempt-bindings-removal (cdr var*) (cdr rand*) sc)
+	  (%process-single-binding (car var*) (car rand*) lhs* rhs* sc))
+      (values '() '())))
 
   (define (%process-single-binding var rand lhs* rhs* sc)
     ;;

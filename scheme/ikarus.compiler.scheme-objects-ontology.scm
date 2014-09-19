@@ -226,19 +226,20 @@
       ;;
       ;;return the list: (IPROP ...)
       ;;
-      (if (null? ls)
-	  '()
-	(let ((first (car ls))
-	      (rest  (%property-names (cdr ls))))
-	  (let ((name (car  first))
-		(info (cadr first)))
-	    (case (car info)
-	      ((exclusive)
-	       rest)
-	      ((inclusive)
-	       (append (cdr info) rest))
-	      (else
-	       (assert #f)))))))
+      (if (pair? ls)
+	  (let ((first (car ls))
+		(rest  (%property-names (cdr ls))))
+	    (let ((name (car  first))
+		  (info (cadr first)))
+	      (case (car info)
+		((exclusive)
+		 rest)
+		((inclusive)
+		 (append (cdr info) rest))
+		(else
+		 (assert #f)))))
+	'()))
+
     (let* ((main-datum (syntax->datum main))
 	   (ls-datum   (syntax->datum ls))
 	   (pnames     (%property-names ls-datum))
