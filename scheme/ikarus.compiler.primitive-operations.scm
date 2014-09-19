@@ -1912,6 +1912,10 @@
    ((E x y)
     (nop)))
 
+ ;; (define-primitive-operation $fx+/overflow safe
+ ;;   ((V x y)
+ ;;    (prm 'int+/overflow (T x) (T y))))
+
  (define-primitive-operation $fx* unsafe
    ((V a b)
     (struct-case a

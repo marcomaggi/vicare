@@ -664,6 +664,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-compiler-internals.sps			\
 	tests/test-vicare-compiler-source-optimiser.sps			\
+	tests/test-vicare-compiler-introduce-unsafe-primcalls.sps	\
 	tests/test-vicare-compiler-specify-rep.sps			\
 	tests/test-vicare-conditions.sps				\
 	tests/test-vicare-enumerations.sps				\

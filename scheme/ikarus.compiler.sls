@@ -3529,6 +3529,7 @@
 ;;; --------------------------------------------------------------------
 
   (module (V-funcall)
+    (import SCHEME-OBJECTS-ONTOLOGY)
 
     (define (V-funcall rator rand*)
       (struct-case rator
@@ -3538,7 +3539,54 @@
 	 (make-funcall rator ($map/stx V-known rand*)))))
 
     (define (%V-primcall op rand*)
-      (make-funcall (make-primref op) ($map/stx V-known rand*)))
+      (define ou-rand*
+	($map/stx V-known rand*))
+      (define (%no-replacement)
+	(make-funcall (make-primref op) ou-rand*))
+      (cond ((null? rand*)
+	     (%no-replacement))
+	    ((getprop op COOKIE)
+	     => (lambda (signature)
+		  (define unsafe (car signature))
+		  (define pred*  (cdr signature))
+		  (let recur ((pred* pred*)
+			      (rand* rand*))
+		    (if (pair? pred*)
+			(if (pair? rand*)
+			    (let ((pred (car pred*))
+				  (rand (car rand*)))
+			      (struct-case rand
+				((known expr type)
+				 (case (pred type)
+				   ((yes)
+				    ;;Operand's type matches  the predefined argument
+				    ;;type.  Success!!!
+				    (recur (cdr pred*) (cdr rand*)))
+				   ((no)
+				    ;;Operand's  type does  not match  the predefined
+				    ;;argument type.  Error!!!
+				    (%no-replacement))
+				   (else
+				    ;;Operand's  type  maybe matches  the  predefined
+				    ;;argument   type.    Not   an  error,   but   no
+				    ;;replacement is possible.
+				    (%no-replacement))))
+				(else
+				 ;;Operand of unknown type: no replacement possible.
+				 (%no-replacement))))
+			  ;;Wrong number of arguments error.
+			  (%no-replacement))
+		      ;;All  the   operands  matched   the  type   predicates:  total
+		      ;;success!!!  We replace the original call
+		      (make-funcall (make-primref unsafe) ou-rand*)))))
+	    (else
+	     (%no-replacement))))
+
+    (define-constant COOKIE
+      (compile-time-gensym "core-primitive/core-types-signature"))
+
+    ;;;(putprop 'fx+ COOKIE (list '$fx+/overflow T:fixnum? T:fixnum?))
+    (putprop 'car COOKIE (list '$car T:pair?))
 
     #| end of module: V-FUNCALL |# )
 

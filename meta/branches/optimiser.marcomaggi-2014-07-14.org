@@ -68,4 +68,7 @@
 
 ** (vicare expander object-type-specs)
 ** (vicare expander tags)
+* Compiler pass: introduce unsafe primcalls
+
+** Compose a table of primitives with corresponding unsafe primitives.
 
