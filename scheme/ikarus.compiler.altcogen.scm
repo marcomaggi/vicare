@@ -2263,17 +2263,17 @@
 		vec))
 
 	    (define (%set-bit! vec idx)
-	      (let ((q ($fxsra    idx 3))
-		    (r ($fxlogand idx 7)))
-		($vector-set! vec q ($fxlogor ($vector-ref vec q) ($fxsll 1 r)))))
+	      (let ((q (fxsra    idx 3))
+		    (r (fxlogand idx 7)))
+		(vector-set! vec q (fxlogor (vector-ref vec q) (fxsll 1 r)))))
 
 	    #| end of module: make-mask |# )
 
 	  (let ((i (actual-frame-size
 		    vars
-		    ($fx+ 2 (max-frm live-frms1
-				     (max-nfv live-nfvs
-					      (max-ls live-frms2 0)))))))
+		    (fx+ 2 (max-frm live-frms1
+				    (max-nfv live-nfvs
+					     (max-ls live-frms2 0)))))))
 	    (%assign-frame-vars! vars i)
 	    (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
 
@@ -2340,7 +2340,7 @@
 	    (vars ($var-var-conf x)))
 	(let loop ((i 1))
 	  (if (set-member? i frms)
-	      (loop ($fxadd1 i))
+	      (loop (fxadd1 i))
 	    (let ((fv (mkfvar i)))
 	      ($set-var-loc! x fv)
 	      (for-each-var vars varvec
@@ -2352,7 +2352,7 @@
       (let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
 	(if (null? mr)
 	    #f
-	  (let ((fv (mkfvar ($car mr))))
+	  (let ((fv (mkfvar (car mr))))
 	    ($set-var-loc! x fv)
 	    (for-each-var ($var-var-conf x) varvec
 			  (lambda (var)
@@ -2399,8 +2399,8 @@
       (define who '%color-program)
       (struct-case x
 	((locals x.vars x.body)
-	 (let ((varvec ($car x.vars))
-	       (sp*    ($cdr x.vars)))
+	 (let ((varvec (car x.vars))
+	       (sp*    (cdr x.vars)))
 	   (let loop ((sp*^ (list->set sp*))
 		      (un*  (make-empty-set))
 		      (body x.body))
@@ -2437,8 +2437,8 @@
     (define (R* ls)
       (if (null? ls)
 	  (make-empty-set)
-	(set-union (R  ($car ls))
-		   (R* ($cdr ls)))))
+	(set-union (R  (car ls))
+		   (R* (cdr ls)))))
 
     (define (R x)
       (struct-case x
@@ -2655,7 +2655,7 @@
 			(values spills (set-add sp sp*) (cons (cons sp r) env)))))))
 
 	    ((pair? (set->list sp*))
-	     (let* ((sp ($car (set->list sp*)))
+	     (let* ((sp (car (set->list sp*)))
 		    (n* (node-neighbors sp G)))
 	       (delete-node! sp G)
 	       (let-values (((spills sp* env)
@@ -2671,11 +2671,11 @@
     (define (find-low-degree ls G)
       (cond ((null? ls)
 	     #f)
-	    ((fx< (length (set->list (node-neighbors ($car ls) G)))
+	    ((fx< (length (set->list (node-neighbors (car ls) G)))
 		  (length ALL-REGISTERS))
-	     ($car ls))
+	     (car ls))
 	    (else
-	     (find-low-degree ($cdr ls) G))))
+	     (find-low-degree (cdr ls) G))))
 
     (define (find-color/maybe x confs env)
       (let ((cr (map (lambda (x)
@@ -2690,7 +2690,7 @@
 					     (list->set cr)))))
           (if (null? r*)
               #f
-	    ($car r*)))))
+	    (car r*)))))
 
     (define (find-color x confs env)
       (or (find-color/maybe x confs env)
@@ -2843,7 +2843,7 @@
 		 (conf ($var-frm-conf x)))
         (let ((fv (mkfvar i)))
           (if (mem-frm? fv conf)
-	      (loop ($fxadd1 i) conf)
+	      (loop (fxadd1 i) conf)
 	    (begin
 	      (for-each-var ($var-var-conf x) varvec
 			    (lambda (y)
