@@ -79,8 +79,8 @@
      (unparse-recordized-code/sexp		$unparse-recordized-code/sexp)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   ;;NOTE  This library  is  needed  to build  a  new boot  image.   Let's  try to  do
-  ;;everything here  using the system  libraries and not loading  external libraries.
-  ;;(Marco Maggi; Fri May 23, 2014)
+  ;;everything  here *not*  loading external  libraries.  (Marco  Maggi; Fri  May 23,
+  ;;2014)
   (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
@@ -100,7 +100,7 @@
 		  cp0-effort-limit		cp0-size-limit
 		  current-letrec-pass		generate-debug-calls
 		  optimize-level
-		  perform-core-type-inference		strip-source-info
+		  perform-core-type-inference	strip-source-info
 		  fasl-write)
     ;;Here we *truly* want to use the SYSTEM-VALUE provided by the library (vicare).
     ;;
@@ -111,9 +111,6 @@
     ;;
     ;;We really need it this way for the use we do of such procedure.
     (only (vicare) system-value)
-    ;;When building a new  boot image: the hashtables library is  loaded from the old
-    ;;boot image.
-    (rnrs hashtables)
     ;;When building a new boot image: the FASL write library is loaded from source.
     ;;This needs to be loaded here so that it evaluates with the freshly loaded
     ;;"ikarus.config.ss", including the correct value for WORDSIZE.
@@ -196,13 +193,19 @@
   (make-parameter #f))
 
 (define strip-source-info
+  ;;When true:  while processing  the core  language form  ANNOTATED-CASE-LAMBDA, the
+  ;;annotation about the source code location of the expression is removed; otherwise
+  ;;it is left in to be used by the debugger.
+  ;;
+  ;;We should strip source annotations when building the boot image.
+  ;;
   (make-parameter #f))
 
 (define optimizer-output
   (make-parameter #f))
 
 (define perform-core-type-inference
-  ;;When true the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
+  ;;When true: the pass CORE-TYPE-INFERENCE is performed, else it is skipped.
   ;;
   (make-parameter #t))
 
