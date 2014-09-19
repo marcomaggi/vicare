@@ -107,8 +107,6 @@
 	   (values (make-seq e0 e1) e1.env e1.tag))))
 
       ((conditional x.test x.conseq x.altern)
-       ;;FIXME Should TEST.ENV be merged  with CONSEQ.ENV and ALTERN.ENV to propagate
-       ;;tag informations?  I am not sure.  (Marco Maggi; Sat Sep 13, 2014)
        (V-conditional x.test x.conseq x.altern env))
 
       ((bind lhs* x.rhs* x.body)
@@ -171,6 +169,8 @@
   (define (V-conditional x.test x.conseq x.altern x.env)
     (receive (test test.env test.tag)
 	(V x.test x.env)
+      ;;FIXME Should TEST.ENV  be merged with CONSEQ.ENV and  ALTERN.ENV to propagate
+      ;;tag informations?  I am not sure.  (Marco Maggi; Sat Sep 13, 2014)
       (receive (x.conseq.env x.altern.env)
 	  (%augment-env-with-conditional-test-info test x.env)
 	(case (T:false? test.tag)
@@ -357,10 +357,13 @@
 
   (define (%process-predicate-application-to-var prim-name rand env)
     (case prim-name
+      ((not)
+       (values (extend-env rand T:false     env)
+	       (extend-env rand T:non-false env)))
       ((null?)
        (values (extend-env rand T:null env)
 	       env))
-      ((pair?)
+      ((pair? list?)
        (values (extend-env rand T:pair env)
 	       env))
       ((fixnum?)
@@ -378,8 +381,11 @@
       ((char?)
        (values (extend-env rand T:char env)
 	       env))
-      ((number?)
+      ((number? integer? integer-valued? real? real-valued? rational? rational-valued?)
        (values (extend-env rand T:number env)
+	       env))
+      ((complex? ratnum? bignum? compnum? cflonum?)
+       (values (extend-env rand T:other-number env)
 	       env))
       ((exact?)
        (values (extend-env rand T:exact env)
@@ -545,6 +551,12 @@
 	     fleven? flodd? flzero? flpositive? flnegative?
 	     flfinite? flinfinite? flinteger? flnan?)
        (%inject* T:boolean T:flonum))
+
+      ((exact)
+       (%inject T:exact T:number))
+
+      ((inexact)
+       (%inject T:inexact T:number))
 
       ((char=? char<? char<=? char>? char>=?
 	       char-ci=? char-ci<? char-ci<=? char-ci>? char-ci>=?)
