@@ -88,14 +88,14 @@
 ;;For a primitive operation used in predicate context: the only thing that matters is
 ;;if the return value is true or false, as in:
 ;;
-;;   (if ($vector-length vec)
+;;   (if (vector-length vec)
 ;;       (this)
 ;;     (that))
 ;;
 ;;in which case, if we know that the return value is always true, we can optimise to:
 ;;
 ;;   (begin
-;;     ($vector-length vec)
+;;     (vector-length vec)
 ;;     (this))
 ;;
 ;;For side effects context
@@ -106,7 +106,7 @@
 ;;whole expression.  As example, we can optimise:
 ;;
 ;;   (begin
-;;     ($vector-length vec)
+;;     (vector-length vec)
 ;;     (this))
 ;;
 ;;to:
@@ -128,7 +128,7 @@
 ;;
 ;;When a primitive operation is used for its return value, as in:
 ;;
-;;   (display ($vector-length vec))
+;;   (display (vector-length vec))
 ;;
 ;;we really have to perform the operation.
 ;;
@@ -1074,9 +1074,9 @@
       (if (null? lhs*)
 	  (values '() '() '() '())
 	(let-values (((lhs-combin* rhs-combin lhs-non-combin rhs-non-combin)
-		      (%partition ($cdr lhs*) ($cdr rhs*))))
-	  (let ((lhs ($car lhs*))
-		(rhs ($car rhs*)))
+		      (%partition (cdr lhs*) (cdr rhs*))))
+	  (let ((lhs (car lhs*))
+		(rhs (car rhs*)))
 	    (if (%combinator? lhs rhs)
 		(values (cons lhs lhs-combin*)
 			(cons rhs rhs-combin)
@@ -1101,10 +1101,10 @@
   (module (build-closures)
 
     (define (build-closures lhs* rhs* body)
-      (let ((lhs  ($car lhs*))
-	    (rhs  ($car rhs*))
-	    (lhs* ($cdr lhs*))
-	    (rhs* ($cdr rhs*)))
+      (let ((lhs  (car lhs*))
+	    (rhs  (car rhs*))
+	    (lhs* (cdr lhs*))
+	    (rhs* (cdr rhs*)))
 	(let ((n  (%closure-size rhs))
 	      (n* (map %closure-size rhs*)))
 	  (make-bind (list lhs)
@@ -1118,21 +1118,21 @@
       ;;Return   a   list  of   struct   instances   of  type   PRIMCALL
       ;;representing...
       ;;
-      (if (null? n*)
-	  '()
-	(cons (prm 'int+ lhs (K n))
-	      (%adders lhs
-		       (+ n ($car n*))
-		       ($cdr n*)))))
+      (if (pair? n*)
+	  (cons (prm 'int+ lhs (K n))
+		(%adders lhs
+			 (+ n (car n*))
+			 (cdr n*)))
+	'()))
 
     (define (%sum n n*)
       ;;Return the sum between the numbers in the list N* and the number
       ;;N.
       ;;
-      (if (null? n*)
-	  n
-	(%sum (+ n ($car n*))
-	      ($cdr n*))))
+      (if (pair? n*)
+	  (%sum (+ n (car n*))
+		(cdr n*))
+	n))
 
     (define (%closure-size x)
       ;;X must be  a struct instance of type  CLOSURE-MAKER.  Return the
@@ -1185,8 +1185,8 @@
       ;;
       (if (null? lhs*)
 	  body
-	(%single-closure-setters ($car lhs*) ($car rhs*)
-				 (closure-object-setters ($cdr lhs*) ($cdr rhs*) body))))
+	(%single-closure-setters (car lhs*) (car rhs*)
+				 (closure-object-setters (cdr lhs*) (cdr rhs*) body))))
 
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
@@ -1210,8 +1210,8 @@
       ;;
       (if (null? free*)
 	  body
-	(make-seq (prm 'mset lhs (K slot-offset) (V ($car free*)))
-		  (%slot-setters lhs ($cdr free*) (+ slot-offset wordsize) body))))
+	(make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
+		  (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))))
 
     #| end of module: closure-object-setters |# )
 
@@ -1592,9 +1592,9 @@
 	   ;;machine words whose least significant bits  are set to the character tag
 	   ;;and whose most significant bits are  set to the character's Unicode code
 	   ;;point.
-	   (make-constant ($fxlogor char-tag
-				    ($fxsll (char->integer c)
-					    char-shift))))
+	   (make-constant (fxlogor char-tag
+				   (fxsll (char->integer c)
+					  char-shift))))
 
 	  ((null? c)
 	   (make-constant nil))
@@ -1655,8 +1655,8 @@
     (struct-case x
       ((primcall op args)
        (cond ((and (eq? op 'top-level-value)
-		   (null? ($cdr args)) ;only one argument
-		   (%recordized-symbol ($car args)))
+		   (null? (cdr args)) ;only one argument
+		   (%recordized-symbol (car args)))
 	      ;;The recordized code:
 	      ;;
 	      ;;   #[primcall #[primref top-level-value] (?loc)]

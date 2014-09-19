@@ -158,8 +158,8 @@
     ;;
     (if (null? x*)
 	(values '() env '())
-      (let-values (((x  env1 t)  (V  ($car x*) env))
-		   ((x* env2 t*) (V* ($cdr x*) env)))
+      (let-values (((x  env1 t)  (V  (car x*) env))
+		   ((x* env2 t*) (V* (cdr x*) env)))
 	(values (cons x x*)
 		(%and-envs env1 env2)
 		(cons t t*)))))
@@ -610,8 +610,8 @@
       ;;informations can be associated to it.
       ;;
       (if (pair? rand*)
-	  (%extend ($car rand*) ($car rand.tag*)
-		   (%extend* ($cdr rand*) ($cdr rand.tag*) env))
+	  (%extend (car rand*) (car rand.tag*)
+		   (%extend* (cdr rand*) (cdr rand.tag*) env))
 	env))
 
     (define (%extend rand rand.tag env)
@@ -651,10 +651,10 @@
       ;;PRELEX nor a KNOWN  holding a PRELEX: it is silently  skipped because no type
       ;;informations can be associated to it.
       ;;
-      (if (null? rand*)
-	  env
-	(%extend ($car rand*) rand.tag
-		 (%extend* ($cdr rand*) env rand.tag))))
+      (if (pair? rand*)
+	  (%extend (car rand*) rand.tag
+		   (%extend* (cdr rand*) env rand.tag))
+	env))
 
     (define (%extend rand rand.tag env)
       (struct-case rand
@@ -696,8 +696,8 @@
 
 (define (extend-env* x* v* env)
   (if (pair? x*)
-      (extend-env* ($cdr x*) ($cdr v*)
-		   (extend-env ($car x*) ($car v*) env))
+      (extend-env* (cdr x*) (cdr v*)
+		   (extend-env (car x*) (car v*) env))
     env))
 
 (define (extend-env x t env)
@@ -717,7 +717,7 @@
 		;;alist all the following entries have greater key.
 		(< x.index (caar env)))
 	    (cons (cons x.index t) env)
-	  (cons ($car env) (recur ($cdr env))))))))
+	  (cons (car env) (recur (cdr env))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -731,17 +731,17 @@
 	   env1)
 	  ((pair? env1)
 	   (if (pair? env2)
-	       (%merge-envs2 ($car env1) ($cdr env1)
-			     ($car env2) ($cdr env2))
+	       (%merge-envs2 (car env1) (cdr env1)
+			     (car env2) (cdr env2))
 	     EMPTY-ENV))
 	  (else
 	   EMPTY-ENV)))
 
   (define (%merge-envs2 a1 env1 a2 env2)
-    (let ((x1 ($car a1))
-	  (x2 ($car a2)))
+    (let ((x1 (car a1))
+	  (x2 (car a2)))
       (cond ((eq? x1 x2)
-	     (cons-env x1 (core-type-tag-or ($cdr a1) ($cdr a2))
+	     (cons-env x1 (core-type-tag-or (cdr a1) (cdr a2))
 		       (%merge-envs env1 env2)))
 	    ((< x2 x1)
 	     (%merge-envs1 a1 env1 env2))
@@ -751,7 +751,7 @@
 
   (define (%merge-envs1 a1 env1 env2)
     (if (pair? env2)
-	(%merge-envs2 a1 env1 ($car env2) ($cdr env2))
+	(%merge-envs2 a1 env1 (car env2) (cdr env2))
       EMPTY-ENV))
 
   (define (cons-env x v env)
@@ -775,17 +775,17 @@
 	   env1)
 	  ((pair? env1)
 	   (if (pair? env2)
-	       (%merge-envs2 ($car env1) ($cdr env1)
-			     ($car env2) ($cdr env2))
+	       (%merge-envs2 (car env1) (cdr env1)
+			     (car env2) (cdr env2))
 	     env1))
 	  (else
 	   env2)))
 
   (define (%merge-envs2 a1 env1 a2 env2)
-    (let ((x1 ($car a1))
-	  (x2 ($car a2)))
+    (let ((x1 (car a1))
+	  (x2 (car a2)))
       (cond ((eq? x1 x2)
-	     (cons-env x1 (core-type-tag-and ($cdr a1) ($cdr a2))
+	     (cons-env x1 (core-type-tag-and (cdr a1) (cdr a2))
 		       (%merge-envs env1 env2)))
 	    ((< x2 x1)
 	     (cons a2 (%merge-envs1 a1 env1 env2)))
@@ -794,7 +794,7 @@
 
   (define (%merge-envs1 a1 env1 env2)
     (if (pair? env2)
-	(%merge-envs2 a1 env1 ($car env2) ($cdr env2))
+	(%merge-envs2 a1 env1 (car env2) (cdr env2))
       env1))
 
   (define (cons-env x v env)

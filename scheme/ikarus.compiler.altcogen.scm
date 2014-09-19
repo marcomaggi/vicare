@@ -229,8 +229,8 @@
 					  (locs register-names))
 				(if (null? args)
 				    (Tail cas.body)
-				  (make-seq (%move-dst<-src ($car args) ($car locs))
-					    (recur          ($cdr args) ($cdr locs)))))))
+				  (make-seq (%move-dst<-src (car args) (car locs))
+					    (recur          (cdr args) (cdr locs)))))))
 		    (make-clambda-case
 		     (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
 		     (make-locals (locals) body))))))))))
@@ -269,16 +269,16 @@
 	      (else
 	       ;;If there is a register for the next formal: associate them.
 	       (receive (register-args register-names stack-args stack-locations)
-		   (%partition-formals ($cdr available-registers) ($cdr formals))
-		 (values (cons ($car formals)             register-args)
-			 (cons ($car available-registers) register-names)
+		   (%partition-formals (cdr available-registers) (cdr formals))
+		 (values (cons (car formals)             register-args)
+			 (cons (car available-registers) register-names)
 			 stack-args stack-locations)))))
 
       (define (%one-fvar-for-each-left-over-formal i leftover-formal)
 	(if (null? leftover-formal)
 	    '()
 	  (cons (mkfvar i)
-		(%one-fvar-for-each-left-over-formal ($fxadd1 i) ($cdr leftover-formal)))))
+		(%one-fvar-for-each-left-over-formal (fxadd1 i) (cdr leftover-formal)))))
 
       #| end of module: ClambdaCase |# )
 
@@ -366,9 +366,9 @@
 	      (let ((t0			(make-unique-var 't))
 		    (t1			(make-unique-var 't))
 		    (t2			(make-unique-var 't))
-		    (underflow-handler	($car rands))
-		    (func		($cadr rands))
-		    (kont-object	($caddr rands)))
+		    (underflow-handler	(car rands))
+		    (func		(cadr rands))
+		    (kont-object	(caddr rands)))
 		(%locals-cons* t0 t1 t2)
 		(multiple-forms-sequence
 		 ;;Copy the arguments in CPU registers.
@@ -504,8 +504,8 @@
   (define (S* x* kont)
     (if (null? x*)
 	(kont '())
-      (S ($car x*) (lambda (a)
-		     (S* ($cdr x*) (lambda (d)
+      (S (car x*) (lambda (a)
+		     (S* (cdr x*) (lambda (d)
 				     (kont (cons a d))))))))
 
   (define (S x kont)
@@ -538,9 +538,9 @@
     (if (null? lhs*)
 	body
       (begin
-	(%locals-cons ($car lhs*))
-	(make-seq (V ($car lhs*) ($car rhs*))
-		  (%do-bind ($cdr lhs*) ($cdr rhs*) body)))))
+	(%locals-cons (car lhs*))
+	(make-seq (V (car lhs*) (car rhs*))
+		  (%do-bind (cdr lhs*) (cdr rhs*) body)))))
 
   (define-inline (%move-dst<-src lhs rhs)
     (make-asm-instr 'move lhs rhs))
@@ -548,8 +548,8 @@
   (define (%do-bind-frmt* nf* v* ac)
     (if (null? nf*)
 	ac
-      (make-seq (V ($car nf*) ($car v*))
-		(%do-bind-frmt* ($cdr nf*) ($cdr v*) ac))))
+      (make-seq (V (car nf*) (car v*))
+		(%do-bind-frmt* (cdr nf*) (cdr v*) ac))))
 
   (module (handle-nontail-call)
 
@@ -570,9 +570,9 @@
 			frmt* #f
 			(%do-bind-frmt*
 			 frmt* frm-args
-			 (%do-bind ($cdr regt*) ($cdr reg-args)
+			 (%do-bind (cdr regt*) (cdr reg-args)
 				   ;;evaluate cpt last
-				   (%do-bind (list ($car regt*)) (list ($car reg-args))
+				   (%do-bind (list (car regt*)) (list (car reg-args))
 					     (assign*
 					      reg-locs regt*
 					      (make-seq
@@ -591,9 +591,9 @@
 	     (values '() '() args))
 	    (else
 	     (let-values (((r* rl* f*)
-			   (%nontail-locations ($cdr regs) ($cdr args))))
-	       (values (cons ($car regs) r*)
-		       (cons ($car args) rl*)
+			   (%nontail-locations (cdr regs) (cdr args))))
+	       (values (cons (car regs) r*)
+		       (cons (car args) rl*)
 		       f*)))))
 
     #| end of module: handle-nontail-call |# )
@@ -684,10 +684,10 @@
 	  ;;  DO-OVERFLOW, then increment the APR and return the old APR
 	  ;;  after the GC.
 	  ;;
-          (S ($car rands)
+          (S (car rands)
              (lambda (size)
                (make-seq (alloc-check size)
-			 (S ($cadr rands)
+			 (S (cadr rands)
 			    (lambda (tag)
 			      (make-seq (make-seq (%move-dst<-src d apr)
 						  (make-asm-instr 'logor d tag))
@@ -705,10 +705,10 @@
 	  ;;$SEAL-FRAME-AND-CALL should be the only operation making use
 	  ;;of this heap allocation method.
 	  ;;
-          (S ($car rands)
+          (S (car rands)
              (lambda (size)
                (make-seq (alloc-check/no-hooks size)
-			 (S ($cadr rands)
+			 (S (cadr rands)
 			    (lambda (tag)
 			      (make-seq (make-seq (%move-dst<-src d apr)
 						  (make-asm-instr 'logor d tag))
@@ -716,40 +716,40 @@
 
          ((mref)
           (S* rands (lambda (rands)
-		      (%move-dst<-src d (make-disp ($car rands) ($cadr rands))))))
+		      (%move-dst<-src d (make-disp (car rands) (cadr rands))))))
 
          ((mref32)
           (S* rands (lambda (rands)
-		      (make-asm-instr 'load32 d (make-disp ($car rands) ($cadr rands))))))
+		      (make-asm-instr 'load32 d (make-disp (car rands) (cadr rands))))))
 
          ((bref)
           (S* rands (lambda (rands)
-		      (make-asm-instr 'load8 d (make-disp ($car rands) ($cadr rands))))))
+		      (make-asm-instr 'load8 d (make-disp (car rands) (cadr rands))))))
 
          ((logand logxor logor int+ int- int*
                   int-/overflow int+/overflow int*/overflow)
-          (make-seq (V d ($car rands))
-		    (S ($cadr rands) (lambda (s)
-				       (make-asm-instr op d s)))))
+          (make-seq (V d (car rands))
+		    (S (cadr rands) (lambda (s)
+				      (make-asm-instr op d s)))))
          ((int-quotient)
           (S* rands (lambda (rands)
 		      (multiple-forms-sequence
-		       (%move-dst<-src eax ($car rands))
+		       (%move-dst<-src eax (car rands))
 		       (make-asm-instr 'cltd edx eax)
-		       (make-asm-instr 'idiv eax ($cadr rands))
+		       (make-asm-instr 'idiv eax (cadr rands))
 		       (%move-dst<-src d eax)))))
 
          ((int-remainder)
           (S* rands (lambda (rands)
 		      (multiple-forms-sequence
-		       (%move-dst<-src eax ($car rands))
+		       (%move-dst<-src eax (car rands))
 		       (make-asm-instr 'cltd edx eax)
-		       (make-asm-instr 'idiv edx ($cadr rands))
+		       (make-asm-instr 'idiv edx (cadr rands))
 		       (%move-dst<-src d edx)))))
 
          ((sll sra srl sll/overflow)
-          (let ((a ($car rands))
-		(b ($cadr rands)))
+          (let ((a (car rands))
+		(b (cadr rands)))
             (if (constant? b)
 		(make-seq (V d a)
 			  (make-asm-instr op d b))
@@ -798,8 +798,8 @@
     ;;
     (if (null? lhs*)
 	tail-body
-      (make-seq (%move-dst<-src ($car lhs*) ($car rhs*))
-		(assign*  ($cdr lhs*) ($cdr rhs*) tail-body))))
+      (make-seq (%move-dst<-src (car lhs*) (car rhs*))
+		(assign*        (cdr lhs*) (cdr rhs*) tail-body))))
 
 ;;; --------------------------------------------------------------------
 
@@ -818,13 +818,13 @@
        (case op
          ((mset bset mset32)
           (S* rands (lambda (s*)
-		      (make-asm-instr op (make-disp ($car s*) ($cadr s*))
+		      (make-asm-instr op (make-disp (car s*) (cadr s*))
 				      (caddr s*)))))
          ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
                    fl:from-int fl:shuffle bswap!
                    fl:store-single fl:load-single)
           (S* rands (lambda (s*)
-		      (make-asm-instr op ($car s*) ($cadr s*)))))
+		      (make-asm-instr op (car s*) (cadr s*)))))
          ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	  x)
          (else
@@ -864,7 +864,7 @@
 	 (%do-bind lhs* rhs* (P e)))
 
 	((primcall op rands)
-	 (let ((a ($car rands)) (b ($cadr rands)))
+	 (let ((a (car rands)) (b (cadr rands)))
 	   (if (and (constant? a)
 		    (constant? b))
 	       (let ((t (make-unique-var 'tmp)))
@@ -885,7 +885,7 @@
 	((primcall op arg*)
 	 (if (eq? op 'mref)
 	     (S* arg* (lambda (arg*)
-			(kont (make-disp ($car arg*) ($cadr arg*)))))
+			(kont (make-disp (car arg*) (cadr arg*)))))
 	   (S x kont)))
 	(else
 	 (S x kont))))
@@ -925,27 +925,27 @@
 		    (tlocs '()))
 	  (cond ((null? args)
 		 (assign* tlocs targs rest))
-		((constant? ($car args))
-		 (recur ($cdr args)
-			($cdr locs)
-			(cons ($car args) targs)
-			(cons ($car locs) tlocs)))
-		((and (fvar? ($car locs))
-		      (var? ($car args))
-		      (eq? ($car locs)
-			   (var-loc ($car args))))
-		 (recur ($cdr args)
-			($cdr locs)
+		((constant? (car args))
+		 (recur (cdr args)
+			(cdr locs)
+			(cons (car args) targs)
+			(cons (car locs) tlocs)))
+		((and (fvar? (car locs))
+		      (var?  (car args))
+		      (eq?   (car locs)
+			     (var-loc (car args))))
+		 (recur (cdr args)
+			(cdr locs)
 			targs
 			tlocs))
 		(else
 		 (let ((t (make-unique-var 'tmp)))
 		   (%locals-cons t)
-		   (make-seq (V t ($car args))
-			     (recur ($cdr args)
-				    ($cdr locs)
+		   (make-seq (V t (car args))
+			     (recur (cdr args)
+				    (cdr locs)
 				    (cons t targs)
-				    (cons ($car locs) tlocs)))))))))
+				    (cons (car locs) tlocs)))))))))
 
     (define (%formals-locations regs args)
       (cond ((null? args)
@@ -953,13 +953,13 @@
 	    ((null? regs)
 	     (%one-fvar-for-each-arg 1 args))
 	    (else
-	     (cons ($car regs) (%formals-locations ($cdr regs) ($cdr args))))))
+	     (cons (car regs) (%formals-locations (cdr regs) (cdr args))))))
 
     (define (%one-fvar-for-each-arg i args)
       (if (null? args)
 	  '()
 	(cons (mkfvar i)
-	      (%one-fvar-for-each-arg (fxadd1 i) ($cdr args)))))
+	      (%one-fvar-for-each-arg (fxadd1 i) (cdr args)))))
 
     #| end of module: %handle-tail-call |# )
 
@@ -1013,10 +1013,10 @@
     ;;
     (cond ((null? ell)
 	   '())
-	  ((eq? x ($car ell))
-	   ($cdr ell))
+	  ((eq? x (car ell))
+	   (cdr ell))
 	  (else
-	   (cons ($car ell) ($remq x ($cdr ell))))))
+	   (cons (car ell) ($remq x (cdr ell))))))
 
   (define* (set-rem x {S set?})
     (make-set ($remq x ($set-v S))))
@@ -1033,7 +1033,7 @@
       (cond ((null? ell2)
 	     ell1)
 	    (else
-	     ($difference ($remq ($car ell2) ell1) ($cdr ell2)))))
+	     ($difference ($remq (car ell2) ell1) (cdr ell2)))))
 
     #| end of module: set-difference |# )
 
@@ -1045,10 +1045,10 @@
     (define ($union S1 S2)
       (cond ((null? S1)
 	     S2)
-	    ((memq ($car S1) S2)
-	     ($union ($cdr S1) S2))
+	    ((memq (car S1) S2)
+	     ($union (cdr S1) S2))
 	    (else
-	     (cons ($car S1) (union ($cdr S1) S2)))))
+	     (cons (car S1) (union (cdr S1) S2)))))
 
     #| end of module: set-union |# )
 
@@ -1072,20 +1072,6 @@
    set-add		set-rem
    set-difference	set-union
    set->list		list->set)
-
-  (begin       ;just comment out this form to switch from unsafe to safe
-    (define-inline (car x)		($car x))
-    (define-inline (cdr x)		($cdr x))
-    (define-inline (fx= x y)		($fx= x y))
-    (define-inline (fxsll x amount)	($fxsll x amount))
-    (define-inline (fxsra x amount)	($fxsra x amount))
-    (define-inline (fxlogor x y)	($fxlogor x y))
-    (define-inline (fxlogand x y)	($fxlogand x y))
-    (define-inline (fxlognot x)		($fxlognot x))
-    (define-inline (fxadd1 x)		($fxadd1 x))
-    (define-inline (fx+ x y)		($fx+ x y))
-    (define-inline (fxzero? x)		($fxzero? x))
-    (define-inline (fxeven? x)		($fxzero? ($fxlogand x 1))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1311,7 +1297,7 @@
 
   (define (empty-graph? G)
     (andmap (lambda (x)
-	      (empty-set? ($cdr x)))
+	      (empty-set? (cdr x)))
 	    ($graph-ls G)))
 
   (module (add-edge!)
@@ -1320,16 +1306,16 @@
       (let ((ls ($graph-ls G)))
 	(cond ((assq x ls)
 	       => (lambda (p0)
-		    (unless (set-member? y ($cdr p0))
-		      ($set-cdr! p0 (set-add y ($cdr p0)))
+		    (unless (set-member? y (cdr p0))
+		      (set-cdr! p0 (set-add y (cdr p0)))
 		      (cond ((assq y ls)
 			     => (lambda (p1)
-				  ($set-cdr! p1 (set-add x ($cdr p1)))))
+				  (set-cdr! p1 (set-add x (cdr p1)))))
 			    (else
 			     ($set-graph-ls! G (cons (cons y (single x)) ls)))))))
 	      ((assq y ls)
 	       => (lambda (p1)
-		    ($set-cdr! p1 (set-add x ($cdr p1)))
+		    (set-cdr! p1 (set-add x (cdr p1)))
 		    ($set-graph-ls! G (cons (cons x (single y)) ls))))
 	      (else
 	       ($set-graph-ls! G (cons* (cons x (single y))
@@ -1345,8 +1331,8 @@
     (printf "G={\n")
     (parameterize ((print-gensym 'pretty))
       (for-each (lambda (x)
-                  (let ((lhs  ($car x))
-			(rhs* ($cdr x)))
+                  (let ((lhs  (car x))
+			(rhs* (cdr x)))
                     (printf "  ~s => ~s\n"
                             (unparse-recordized-code lhs)
                             (map unparse-recordized-code (set->list rhs*)))))
@@ -1365,8 +1351,8 @@
 	     => (lambda (p)
 		  (for-each (lambda (y)
 			      (let ((p (assq y ls)))
-				($set-cdr! p (set-rem x ($cdr p)))))
-		    (set->list ($cdr p)))
+				(set-cdr! p (set-rem x (cdr p)))))
+		    (set->list (cdr p)))
 		  ($set-cdr! p (make-empty-set))))
 	    (else
 	     (void)))))
@@ -1407,7 +1393,7 @@
 
   (define (empty-graph? g)
     (andmap (lambda (x)
-	      (empty-set? ($cdr x)))
+	      (empty-set? (cdr x)))
 	    ($graph-ls g)))
 
   (define (single x)
@@ -1417,16 +1403,16 @@
     (let ((ls ($graph-ls g)))
       (cond ((assq x ls)
 	     => (lambda (p0)
-		  (unless (set-member? y ($cdr p0))
-		    (set-cdr! p0 (set-add y ($cdr p0)))
+		  (unless (set-member? y (cdr p0))
+		    (set-cdr! p0 (set-add y (cdr p0)))
 		    (cond ((assq y ls)
 			   => (lambda (p1)
-				(set-cdr! p1 (set-add x ($cdr p1)))))
+				(set-cdr! p1 (set-add x (cdr p1)))))
 			  (else
 			   ($set-graph-ls! g (cons (cons y (single x)) ls)))))))
 	    ((assq y ls)
 	     => (lambda (p1)
-		  (set-cdr! p1 (set-add x ($cdr p1)))
+		  (set-cdr! p1 (set-add x (cdr p1)))
 		  ($set-graph-ls! g (cons (cons x (single y)) ls))))
 	    (else
 	     ($set-graph-ls! g (cons* (cons x (single y))
@@ -1437,8 +1423,8 @@
     (printf "G={\n")
     (parameterize ((print-gensym 'pretty))
       (for-each (lambda (x)
-                  (let ((lhs ($car x))
-			(rhs* ($cdr x)))
+                  (let ((lhs  (car x))
+			(rhs* (cdr x)))
                     (printf "  ~s => ~s\n"
                             (unparse-recordized-code lhs)
                             (map unparse-recordized-code (set->list rhs*)))))
@@ -1457,8 +1443,8 @@
 	     => (lambda (p)
 		  (for-each (lambda (y)
 			      (let ((p (assq y ls)))
-				(set-cdr! p (set-rem x ($cdr p)))))
-		    (set->list ($cdr p)))
+				(set-cdr! p (set-rem x (cdr p)))))
+		    (set->list (cdr p)))
 		  (set-cdr! p (make-empty-set))))
 	    (else
 	     (void)))))
@@ -1804,10 +1790,10 @@
           (let ((v (exception-live-set)))
             (unless (vector? v)
               (error who "unbound exception" x v))
-            (let ((vs (union-vars vs ($vector-ref v 0)))
-                  (rs (union-regs rs ($vector-ref v 1)))
-                  (fs (union-frms fs ($vector-ref v 2)))
-                  (ns (union-nfvs ns ($vector-ref v 3))))
+            (let ((vs (union-vars vs (vector-ref v 0)))
+                  (rs (union-regs rs (vector-ref v 1)))
+                  (fs (union-frms fs (vector-ref v 2)))
+                  (ns (union-nfvs ns (vector-ref v 3))))
               (cond ((var? d)
 		     (cond ((not (mem-var? d vs))
 			    (set-asm-instr-op! x 'nop)
@@ -1899,10 +1885,10 @@
           (let ((v (exception-live-set)))
             (unless (vector? v)
               (error who "unbound exception2"))
-            (values ($vector-ref v 0)
-                    ($vector-ref v 1)
-                    ($vector-ref v 2)
-                    ($vector-ref v 3))))
+            (values (vector-ref v 0)
+                    (vector-ref v 1)
+                    (vector-ref v 2)
+                    (vector-ref v 3))))
          (else
 	  (error who "invalid effect op" op))))
 
@@ -2069,10 +2055,10 @@
       ;;
       (cond ((null? vars)
 	     '())
-	    (($var-loc ($car vars))
-	     (%discard-vars-with-loc ($cdr vars)))
+	    (($var-loc (car vars))
+	     (%discard-vars-with-loc (cdr vars)))
 	    (else
-	     (cons ($car vars) (%discard-vars-with-loc ($cdr vars))))))
+	     (cons (car vars) (%discard-vars-with-loc (cdr vars))))))
 
     #| end of module: Program |# )
 
@@ -2190,61 +2176,61 @@
 
       (define (E-nframe vars live body)
 	(let ((live-frms1 (map (lambda (i)
-				 (Var ($vector-ref varvec i)))
-			    (set->list ($vector-ref live 0))))
-	      (live-frms2 (set->list ($vector-ref live 1)))
-	      (live-nfvs  ($vector-ref live 2)))
+				 (Var (vector-ref varvec i)))
+			    (set->list (vector-ref live 0))))
+	      (live-frms2 (set->list (vector-ref live 1)))
+	      (live-nfvs  (vector-ref live 2)))
 
 	  (define (max-frm ls i)
 	    (if (null? ls)
 		i
-	      (max-frm ($cdr ls) (max i ($fvar-idx ($car ls))))))
+	      (max-frm (cdr ls) (max i ($fvar-idx (car ls))))))
 
 	  (define (max-ls ls i)
 	    (if (null? ls)
 		i
-	      (max-ls  ($cdr ls) (max i ($car ls)))))
+	      (max-ls  (cdr ls) (max i (car ls)))))
 
 	  (define (max-nfv ls i)
 	    (if (null? ls)
 		i
-	      (let ((loc ($nfv-loc ($car ls))))
+	      (let ((loc ($nfv-loc (car ls))))
 		(unless (fvar? loc)
 		  (error who "FVAR not assigned in MAX-NFV" loc))
-		(max-nfv ($cdr ls) (max i ($fvar-idx loc))))))
+		(max-nfv (cdr ls) (max i ($fvar-idx loc))))))
 
 	  (module (actual-frame-size)
 
 	    (define (actual-frame-size vars i)
 	      (if (%frame-size-ok? i vars)
 		  i
-		(actual-frame-size vars ($fxadd1 i))))
+		(actual-frame-size vars (fxadd1 i))))
 
 	    (define (%frame-size-ok? i vars)
 	      (or (null? vars)
-		  (let ((x ($car vars)))
+		  (let ((x (car vars)))
 		    (and (not (set-member?    i ($nfv-frm-conf x)))
 			 (not (%var-conflict? i ($nfv-var-conf x)))
-			 (%frame-size-ok? ($fxadd1 i) ($cdr vars))))))
+			 (%frame-size-ok? (fxadd1 i) (cdr vars))))))
 
 	    (define (%var-conflict? i vs)
 	      (ormap (lambda (xi)
-		       (let ((loc ($var-loc ($vector-ref varvec xi))))
+		       (let ((loc ($var-loc (vector-ref varvec xi))))
 			 (and (fvar? loc)
-			      ($fx= i ($fvar-idx loc)))))
+			      (fx=? i ($fvar-idx loc)))))
 		     (set->list vs)))
 
 	    #| end of module: actual-frame-size |# )
 
 	  (define (%assign-frame-vars! vars i)
 	    (unless (null? vars)
-	      (let ((v  ($car vars))
+	      (let ((v  (car vars))
 		    (fv (mkfvar i)))
 		($set-nfv-loc! v fv)
 		(for-each (lambda (x)
 			    (let ((loc ($nfv-loc x)))
 			      (if loc
-				  (when ($fx= ($fvar-idx loc) i)
+				  (when (fx=? ($fvar-idx loc) i)
 				    (error who "invalid assignment"))
 				(begin
 				 ($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
@@ -2254,10 +2240,10 @@
 			      (lambda (x)
 				(let ((loc ($var-loc x)))
 				  (if (fvar? loc)
-				      (when (fx= (fvar-idx loc) i)
+				      (when (fx=? (fvar-idx loc) i)
 					(error who "invalid assignment"))
 				    ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
-	      (%assign-frame-vars! ($cdr vars) ($fxadd1 i))))
+	      (%assign-frame-vars! (cdr vars) (fxadd1 i))))
 
 	  (module (make-mask)
 

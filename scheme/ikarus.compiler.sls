@@ -79,8 +79,10 @@
      (unparse-recordized-code/sexp		$unparse-recordized-code/sexp)
      (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
   ;;NOTE  This library  is  needed  to build  a  new boot  image.   Let's  try to  do
-  ;;everything  here *not*  loading external  libraries.  (Marco  Maggi; Fri  May 23,
-  ;;2014)
+  ;;everything  here  *not*  loading  external  libraries.  Also,  let's  try  to  do
+  ;;everything without  importing libraries in  the hierarchy (vicare system  --); we
+  ;;should rely on the expander's type tagging and the compiler's core type inference
+  ;;to introduce unsafe calls when appropriate.  (Marco Maggi; Fri Sep 19, 2014)
   (import (except (vicare)
 		  fixnum-width
 		  greatest-fixnum
@@ -122,66 +124,65 @@
 		  descriptive-labels)
 	    option.))
 
-
-;;;; helper modules
+  (include "ikarus.wordsize.scm" #t)
 
-(include "ikarus.wordsize.scm" #t)
+  (module UNSAFE
+    ;;Remember that this file defines the primitive operations.
+    ($car $cdr $set-car! $set-cdr!
+	  $fx= $fx< $fx> $fx<= $fx>=
+	  $fxadd1 $fxsub1 $fx+ $fx- $fx* $fxdiv
+	  $fxlogand $fxlogor $fxlognot $fxsra $fxsll
+	  $fxzero?)
 
-(module UNSAFE
-  ;;Remember that this file defines the primitive operations.
-  ($car $cdr $set-car! $set-cdr!
-	$fx= $fx< $fx> $fx<= $fx>=
-	$fxadd1 $fxsub1 $fx+ $fx- $fx* $fxdiv
-	$fxlogand $fxlogor $fxlognot $fxsra $fxsll
-	$fxzero?)
+    #;(vicare system $pairs)
+    (begin
+      (define $car car)
+      (define $cdr cdr)
+      (define-syntax $set-car!
+	(syntax-rules ()
+	  ((_ ?var ?val)
+	   (set-car! ?var ?val))))
+      (define-syntax $set-cdr!
+	(syntax-rules ()
+	  ((_ ?var ?val)
+	   (set-cdr! ?var ?val))))
+      #| end of begin |# )
 
-  #;(vicare system $pairs)
-  (begin
-    (define $car car)
-    (define $cdr cdr)
-    (define-syntax $set-car!
-      (syntax-rules ()
-	((_ ?var ?val)
-	 (set-car! ?var ?val))))
-    (define-syntax $set-cdr!
-      (syntax-rules ()
-	((_ ?var ?val)
-	 (set-cdr! ?var ?val))))
-    #| end of begin |# )
+    #;(vicare system $fx)
+    (begin
+      (define $fxzero?	 fxzero?)
+      (define $fx=	fx=?)
+      (define $fx<	fx<?)
+      (define $fx>	fx>?)
+      (define $fx<=	fx<=?)
+      (define $fx>=	fx>=?)
+      (define $fx+	fx+)
+      (define $fx-	fx-)
+      (define $fx*	fx*)
+      (define $fxdiv	fxdiv)
+      (define $fxlogand	fxand)
+      (define $fxlogor	fxior)
+      (define $fxlognot	fxnot)
+      (define ($fxadd1 x)
+	(fx+ x 1))
+      (define ($fxsub1 x)
+	(fx- x 1))
+      (define ($fxsra x count)
+	(import (prefix (vicare system $fx) unsafe.))
+	(assert (fixnum? x))
+	(assert (fixnum? count))
+	(unsafe.$fxsra x count))
+      (define ($fxsll x count)
+	(import (prefix (vicare system $fx) unsafe.))
+	(assert (fixnum? x))
+	(assert (fixnum? count))
+	(unsafe.$fxsll x count))
+      #| end of begin |# )
+    #| end of module |# )
 
-  #;(vicare system $fx)
-  (begin
-    (define $fxzero?	 fxzero?)
-    (define $fx=	fx=?)
-    (define $fx<	fx<?)
-    (define $fx>	fx>?)
-    (define $fx<=	fx<=?)
-    (define $fx>=	fx>=?)
-    (define $fx+	fx+)
-    (define $fx-	fx-)
-    (define $fx*	fx*)
-    (define $fxdiv	fxdiv)
-    (define $fxlogand	fxand)
-    (define $fxlogor	fxior)
-    (define $fxlognot	fxnot)
-    (define ($fxadd1 x)
-      (fx+ x 1))
-    (define ($fxsub1 x)
-      (fx- x 1))
-    (define ($fxsra x count)
-      (import (prefix (vicare system $fx) unsafe.))
-      (assert (fixnum? x))
-      (assert (fixnum? count))
-      (unsafe.$fxsra x count))
-    (define ($fxsll x count)
-      (import (prefix (vicare system $fx) unsafe.))
-      (assert (fixnum? x))
-      (assert (fixnum? count))
-      (unsafe.$fxsll x count))
-    #| end of begin |# )
-  #| end of module |# )
+  (import UNSAFE)
 
-(import UNSAFE)
+
 
 
 ;;;; configuration parameters
@@ -223,26 +224,10 @@
 
 ;;;; helper syntaxes
 
-(define-inline ($caar x)	($car ($car x)))
-(define-inline ($cadr x)	($car ($cdr x)))
-(define-inline ($cdar x)	($cdr ($car x)))
-(define-inline ($cddr x)	($cdr ($cdr x)))
-
-(define-inline ($caaar x)	($car ($car ($car x))))
-(define-inline ($caadr x)	($car ($car ($cdr x))))
-(define-inline ($cadar x)	($car ($cdr ($car x))))
-(define-inline ($cdaar x)	($cdr ($car ($car x))))
-(define-inline ($cdadr x)	($cdr ($car ($cdr x))))
-(define-inline ($cddar x)	($cdr ($cdr ($car x))))
-(define-inline ($cdddr x)	($cdr ($cdr ($cdr x))))
-(define-inline ($caddr x)	($car ($cdr ($cdr x))))
-
-(define-inline ($cadddr x)	($car ($cdddr x)))
-
 (define-syntax-rule (%list-of-one-item? ?ell)
   (let ((ell ?ell))
     (and (pair? ell)
-	 (null? ($cdr ell)))))
+	 (null? (cdr ell)))))
 
 (define-syntax-rule (fxincr! ?var)
   (set! ?var (fxadd1 ?var)))
@@ -276,17 +261,17 @@
 	 (((ELL0 ELL ...) (generate-temporaries #'(?ell0 ?ell ...))))
        #'(letrec ((loop (lambda (result.head result.last-pair ELL0 ELL ...)
 			  (if (pair? ELL0)
-			      (let* ((result.last-pair^ (let ((new-last-pair (cons (?proc ($car ELL0)
-											  ($car ELL)
+			      (let* ((result.last-pair^ (let ((new-last-pair (cons (?proc (car ELL0)
+											  (car ELL)
 											  ...)
 										   '())))
 							  (if result.last-pair
 							      (begin
-								($set-cdr! result.last-pair new-last-pair)
+								(set-cdr! result.last-pair new-last-pair)
 								new-last-pair)
 							    new-last-pair)))
 				     (result.head^       (or result.head result.last-pair^)))
-				(loop result.head^ result.last-pair^ ($cdr ELL0) ($cdr ELL) ...))
+				(loop result.head^ result.last-pair^ (cdr ELL0) (cdr ELL) ...))
 			    (or result.head '())))))
 	   (loop #f #f ?ell0 ?ell ...)))
      ;;This alternative  implementation: is non-tail recursive,  loops in unspecified
@@ -296,8 +281,8 @@
      ;;   #'(let recur ((t ?ell0) (T ?ell) ...)
      ;; 	   (if (null? t)
      ;; 	       '()
-     ;; 	     (cons (?proc ($car t) ($car T) ...)
-     ;; 		   (recur ($cdr t) ($cdr T) ...))))))
+     ;; 	     (cons (?proc (car t) (car T) ...)
+     ;; 		   (recur (cdr t) (cdr T) ...))))))
      )))
 
 (define-syntax ($for-each/stx stx)
@@ -312,8 +297,8 @@
      (with-syntax (((T ...) (generate-temporaries #'(?ell ...))))
        #'(let loop ((t ?ell0) (T ?ell) ...)
 	   (unless (null? t)
-	     (?func ($car t) ($car T) ...)
-	     (loop  ($cdr t) ($cdr T) ...)))))
+	     (?func (car t) (car T) ...)
+	     (loop  (cdr t) (cdr T) ...)))))
     ))
 
 (define-syntax ($fold-right/stx stx)
@@ -332,7 +317,7 @@
 		     ...)
 	   (if (pair? ell0)
 	       ;;This is FOLD-RIGHT so: first we recur, then we combine.
-	       (?combine ($car ell0) ($car ELL) ... (recur knil ($cdr ell0) ($cdr ELL) ...))
+	       (?combine (car ell0) (car ELL) ... (recur knil (cdr ell0) (cdr ELL) ...))
 	     knil))))
     ))
 
@@ -518,26 +503,25 @@
   ;;Scan the list  LS and remove only the  first instance of object X,  using EQ?  as
   ;;comparison function; return the resulting list which may share its tail with LS.
   ;;
-  (cond ((null? ls)
-	 '())
-	((eq? x ($car ls))
-	 ($cdr ls))
-	(else
-	 (let ((t (remq1 x ($cdr ls))))
-	   (cond ((eq? t ($cdr ls))
-		  ls)
-		 (else
-		  (cons ($car ls) t)))))))
+  (if (pair? ls)
+      (if (eq? x (car ls))
+	  (cdr ls)
+	(let ((t (remq1 x (cdr ls))))
+	  (cond ((eq? t (cdr ls))
+		 ls)
+		(else
+		 (cons (car ls) t)))))
+    '()))
 
 (define (union s1 s2)
   ;;Return a  list which  is the  union between  the lists  S1 and  S2, with  all the
   ;;duplicates removed.
   ;;
   (define (add* s1 s2)
-    (if (null? s1)
-	s2
-      (add ($car s1)
-	   (add* ($cdr s1) s2))))
+    (if (pair? s1)
+	(add (car s1)
+	     (add* (cdr s1) s2))
+      s2))
   (define (add x s)
     (if (memq x s)
 	s
@@ -554,8 +538,8 @@
   (define (rem* s2 s1)
     (if (null? s2)
 	s1
-      (remq1 ($car s2)
-	     (rem* ($cdr s2) s1))))
+      (remq1 (car s2)
+	     (rem* (cdr s2) s1))))
   (cond ((null? s1) '())
 	((null? s2) s1)
 	(else
@@ -764,8 +748,8 @@
     ;;inspection.
     ;;
     (if (and (pair? x)
-	     (eq? ($car x) 'seq))
-	($for-each/stx print-instr ($cdr x))
+	     (eq? (car x) 'seq))
+	($for-each/stx print-instr (cdr x))
       (let ((port (current-error-port)))
 	(display "   " port)
 	(write x port)
@@ -1853,14 +1837,14 @@
 	    (compile-time-error __who__ "invalid core language expression" X)))))
 
   (define-syntax-rule (%recordize-pair-sexp X ctxt)
-    (case ($car X)
+    (case (car X)
 
       ;;Synopsis: (quote ?datum)
       ;;
       ;;Return a struct instance of type CONSTANT.
       ;;
       ((quote)
-       (make-constant ($cadr X)))
+       (make-constant (cadr X)))
 
       ;;Synopsis: (if ?test ?consequent ?alternate)
       ;;
@@ -1868,9 +1852,9 @@
       ;;
       ((if)
        (make-conditional
-	   (E ($cadr X))
-	   (E ($caddr  X) ctxt)
-	 (E ($cadddr X) ctxt)))
+	   (E (cadr X))
+	   (E (caddr X) ctxt)
+	 (E (cadddr X) ctxt)))
 
       ;;Synopsis: (set! ?lhs ?rhs)
       ;;
@@ -1882,8 +1866,8 @@
       ;;For more details: see the documentation of the primitive TOP-LEVEL-VALUE.
       ;;
       ((set!)
-       (let* ((lhs.sexp ($cadr  X)) ;left-hand side
-	      (rhs.sexp ($caddr X)) ;right-hand side
+       (let* ((lhs.sexp (cadr  X)) ;left-hand side
+	      (rhs.sexp (caddr X)) ;right-hand side
 	      ;;We recordize the right-hand side in the context of LHS.
 	      (rhs.reco (E rhs.sexp lhs.sexp)))
 	 (cond ((lexical lhs.sexp)
@@ -1902,11 +1886,11 @@
       ;;   #[seq ?body0 #[seq ?body ...]]
       ;;
       ((begin)
-       (let recur ((A ($cadr X))
-      		   (D ($cddr X)))
+       (let recur ((A (cadr X))
+      		   (D (cddr X)))
       	 (if (null? D)
       	     (E A ctxt)
-      	   (make-seq (E A) (recur ($car D) ($cdr D))))))
+      	   (make-seq (E A) (recur (car D) (cdr D))))))
 
       ;;Synopsis: (let     ((?lhs ?rhs) ...) ?body)
       ;;Synopsis: (letrec  ((?lhs ?rhs) ...) ?body)
@@ -1918,14 +1902,14 @@
       ;;Return, respectively, a struct instance of type: BIND, RECBIND, REC*BIND.
       ;;
       ((let letrec letrec*)
-       (let ((bind* ($cadr  X))		      ;list of bindings
-	     (body  ($caddr X)))	      ;list of body forms
-	 (let ((lex* ($map/stx $car  bind*))  ;list of bindings left-hand sides
-	       (rhs* ($map/stx $cadr bind*))) ;list of bindings right-hand sides
+       (let ((bind* (cadr  X))		      ;list of bindings
+	     (body  (caddr X)))		      ;list of body forms
+	 (let ((lex* ($map/stx car  bind*))  ;list of bindings left-hand sides
+	       (rhs* ($map/stx cadr bind*))) ;list of bindings right-hand sides
 	   (with-prelex-structs-in-plists (prel* lex*)
 	     (let* ((rhs*^ ($map/stx E rhs* lex*))
 		    (body^ (E body ctxt)))
-	       (case ($car X)
+	       (case (car X)
 		 ((let)
 		  (make-bind     prel* rhs*^ body^))
 		 ((letrec)
@@ -1964,11 +1948,11 @@
       ;;the PRELEX structs.
       ;;
       ((library-letrec*)
-       (let ((bind* ($cadr  X))		       ;list of bindings
-	     (body  ($caddr X)))	       ;list of body forms
-	 (let ((lex* ($map/stx $car   bind*))  ;list of lex gensyms
-	       (loc* ($map/stx $cadr  bind*))  ;list of loc gensyms
-	       (rhs* ($map/stx $caddr bind*))) ;list of bindings right-hand sides
+       (let ((bind* (cadr  X))		       ;list of bindings
+	     (body  (caddr X)))		       ;list of body forms
+	 (let ((lex* ($map/stx car   bind*))  ;list of lex gensyms
+	       (loc* ($map/stx cadr  bind*))  ;list of loc gensyms
+	       (rhs* ($map/stx caddr bind*))) ;list of bindings right-hand sides
 	   (with-prelex-structs-in-plists (prel* lex*)
 	     ($for-each/stx set-prelex-global-location! prel* loc*)
 	     (let* ((rhs*^ ($map/stx E rhs* lex*))
@@ -1982,7 +1966,7 @@
       ((case-lambda)
        (let* ((name     (and (symbol? ctxt) ctxt))
 	      (asmlabel (%name->asmlabel name))
-	      (cases    (E-clambda-case* asmlabel ($cdr X) ctxt)))
+	      (cases    (E-clambda-case* asmlabel (cdr X) ctxt)))
 	 (let ((cp       #f)
 	       (freevar* #f))
 	   (make-clambda asmlabel cases cp freevar* name))))
@@ -1996,11 +1980,11 @@
 			      ;;This annotation  is excluded  only when  building the
 			      ;;boot image.
 			      (and (not (strip-source-info))
-				   (let ((annotated-expr ($cadr X)))
+				   (let ((annotated-expr (cadr X)))
 				     (and (annotation?       annotated-expr)
 					  (annotation-source annotated-expr))))))
 	      (asmlabel (%name->asmlabel name))
-	      (cases    (E-clambda-case* asmlabel ($cddr X) ctxt)))
+	      (cases    (E-clambda-case* asmlabel (cddr X) ctxt)))
 	 (let ((cp       #f)
 	       (freevar* #f))
 	   (make-clambda asmlabel cases cp freevar* name))))
@@ -2013,15 +1997,15 @@
       ;;   ===> (case-lambda (?formals ?body))
       ;;
       ((lambda)
-       (E `(case-lambda ,($cdr X)) ctxt))
+       (E `(case-lambda ,(cdr X)) ctxt))
 
       ;;Synopsis: (foreign-call "?function-name" ?arg ...)
       ;;
       ;;Return a struct instance of type FORCALL.
       ;;
       ((foreign-call)
-       (let ((name (quoted-string ($cadr X)))
-	     (arg* ($cddr X)))
+       (let ((name (quoted-string (cadr X)))
+	     (arg* (cddr X)))
 	 (make-forcall name ($map/stx E arg*))))
 
       ;;Synopsis: (primitive ?prim)
@@ -2044,7 +2028,7 @@
       ;;   (funcall (primref fx+) (constant 1) (constant 2))
       ;;
       ((primitive)
-       (let ((name ($cadr X)))
+       (let ((name (cadr X)))
 	 (mk-primref name)))
 
       ;;Synopsis: (annotated-call ?annotation ?fun ?arg ...)
@@ -2059,8 +2043,8 @@
        ;;
        ;;Return a struct instance of type FUNCALL.
        ;;
-       (let ((func  ($car X))
-	     (rand* ($cdr X)))
+       (let ((func  (car X))
+	     (rand* (cdr X)))
 	 (E-app make-funcall func rand* ctxt)))))
 
 ;;; --------------------------------------------------------------------
@@ -2086,9 +2070,9 @@
       ;;   (quote ?symbol)
       ;;
       (and (list? obj)
-	   (null? ($cddr obj))
-	   (eq? 'quote ($car obj))
-	   (symbol? ($cadr obj))))
+	   (null? (cddr obj))
+	   (eq? 'quote (car obj))
+	   (symbol? (cadr obj))))
 
     (define* (quoted-sym {x quoted-sym?})
       ;;Check that X has the format:
@@ -2097,7 +2081,7 @@
       ;;
       ;;and return ?SYMBOL.
       ;;
-      ($cadr x))
+      (cadr x))
 
     #| end of module: quoted-sym |# )
 
@@ -2109,9 +2093,9 @@
       ;;   (quote ?string)
       ;;
       (and (list? obj)
-	   (null? ($cddr obj))
-	   (eq? 'quote ($car obj))
-	   (string? ($cadr obj))))
+	   (null? (cddr obj))
+	   (eq? 'quote (car obj))
+	   (string? (cadr obj))))
 
     (define* (quoted-string {x quoted-string?})
       ;;Check that X has the format:
@@ -2120,7 +2104,7 @@
       ;;
       ;;and return ?string.
       ;;
-      ($cadr x))
+      (cadr x))
 
     #| end of module: quoted-string |# )
 
@@ -2145,15 +2129,15 @@
       ;;ASMLABEL is  the label identifying the  machine code entry point  of the full
       ;;CLAMBDA; it is used to generate descriptive labels for each clause.
       ;;
-      (let ((ctxt (and (pair? ctxt) ($car ctxt))))
+      (let ((ctxt (and (pair? ctxt) (car ctxt))))
 	($map/stx
 	    (lambda (clause)
 	      ;;We expect clause to have the format:
 	      ;;
 	      ;;   (?formals ?body)
 	      ;;
-	      (let ((fml* ($car  clause))	 ;the formals
-		    (body ($cadr clause)))	 ;the body sequence
+	      (let ((fml* (car  clause))	 ;the formals
+		    (body (cadr clause)))	 ;the body sequence
 		(let ((lex* (%properize-clambda-formals fml*)))
 		  (with-prelex-structs-in-plists (prel* lex*)
 		    (let* ((body^ (E body ctxt))
@@ -2200,8 +2184,8 @@
       ;;     (%properize-clambda-formals args) => (args)
       ;;
       (cond ((pair? fml*)
-	     (cons ($car fml*)
-		   (%properize-clambda-formals ($cdr fml*))))
+	     (cons (car fml*)
+		   (%properize-clambda-formals (cdr fml*))))
 	    ((null? fml*)
 	     '())
 	    (else
@@ -2226,9 +2210,9 @@
       ;;NOTE At present, this  function is the only place in  the compiler that makes
       ;;use of the parameter GENERATE-DEBUG-CALLS.  (Marco Maggi; Oct 11, 2012)
       ;;
-      (let ((anno ($cadr  X))  ;annotation
-	    (func ($caddr X))  ;expression evaluating to the function
-	    (args ($cdddr X))) ;arguments
+      (let ((anno (cadr  X))  ;annotation
+	    (func (caddr X))  ;expression evaluating to the function
+	    (args (cdddr X))) ;arguments
 	(let ((mk-call (if (generate-debug-calls)
 			   (%make-funcall-maker anno)
 			 make-funcall)))
@@ -2305,8 +2289,8 @@
       (define-syntax-rule (%common-function-application)
 	(E-function-application mk-call rator rand* ctxt))
       (if (and (pair? rator)
-	       (eq? 'primitive ($car rator)))
-	  (case ($cadr rator)
+	       (eq? 'primitive (car rator)))
+	  (case (cadr rator)
 	    ((make-parameter)
 	     (E-integration-make-parameter mk-call rand* ctxt))
 	    ;;NOTE  With this  function  written as  it is,  everything  is ready  to
@@ -2385,9 +2369,9 @@
 	    (let recur ((rand* rand*)
 			(fmls  fmls))
 	      (if (pair? fmls)
-		  (cons (let ((ctxt ($car fmls)))
-			  (E ($car rand*) ctxt))
-			(recur ($cdr rand*) ($cdr fmls)))
+		  (cons (let ((ctxt (car fmls)))
+			  (E (car rand*) ctxt))
+			(recur (cdr rand*) (cdr fmls)))
 		($map/stx E rand*))))))
 
       (module (%get-matching-formals)
@@ -2412,15 +2396,15 @@
 	    (cond ((null? case*)
 		   ;;The RATOR is not a lambda sexp, or it is but no case matched.
 		   '())
-		  ((let ((fmls ($caar case*)))
+		  ((let ((fmls (caar case*)))
 		     (%matching? fmls rand*))
 		   ;;The RATOR is a lambda sexp and the first case in CASE* matches the
 		   ;;RAND*: return the formals.
-		   ($caar case*))
+		   (caar case*))
 		  (else
 		   ;;The RATOR is  a lambda sexp and  the first case in  CASE* does not
 		   ;;match: try the next.
-		   (loop ($cdr case*))))))
+		   (loop (cdr case*))))))
 
 	(define (%matching? fmls rand*)
 	  ;;FMLS is a  proper or improper list of lex  gensyms representing the formals
@@ -2432,7 +2416,7 @@
 		 (null? rand*))
 		((pair? fmls)
 		 (and (pair? rand*)
-		      (%matching? ($cdr fmls) ($cdr rand*))))
+		      (%matching? (cdr fmls) (cdr rand*))))
 		(else #t)))
 
 	(define (%extract-lambda-cases rator)
@@ -2448,11 +2432,11 @@
 	  ;;return null if RATOR is not a lambda sexp.
 	  ;;
 	  (if (pair? rator)
-	      (case ($car rator)
+	      (case (car rator)
 		((case-lambda)
-		 ($cdr rator))
+		 (cdr rator))
 		((annotated-case-lambda)
-		 ($cddr rator))
+		 (cddr rator))
 		(else '()))
 	    '()))
 
@@ -2628,9 +2612,9 @@
 	   #'(let loop ((key ?key)
 			(ell ?ell))
 	       (and (pair? ell)
-		    (if (eq? key ($caar ell))
-			($cdar ell)
-		      (loop key ($cdr ell))))))
+		    (if (eq? key (caar ell))
+			(cdar ell)
+		      (loop key (cdr ell))))))
 	  ))
 
       #| end of module: LEXICAL |# )
@@ -2664,9 +2648,9 @@
 		   (value   ?value))
 	       (let loop ((plist ($symbol-plist symbol)))
 		 (if (pair? plist)
-		     (if (eq? key ($caar plist))
-			 ($set-cdr! ($car plist) value)
-		       (loop ($cdr plist)))
+		     (if (eq? key (caar plist))
+			 (set-cdr! (car plist) value)
+		       (loop (cdr plist)))
 		   ($set-symbol-plist! symbol (cons (cons key value) plist))))))
 	  ))
 
@@ -2692,16 +2676,16 @@
 	       (key    ?key)
 	       (plist  ($symbol-plist symbol)))
 	  (unless (null? plist)
-	    (let ((a ($car plist)))
-	      (if (eq? ($car a) key)
-		  ($set-symbol-plist! symbol ($cdr plist))
+	    (let ((a (car plist)))
+	      (if (eq? (car a) key)
+		  ($set-symbol-plist! symbol (cdr plist))
 		(let loop ((q     plist)
-			   (plist ($cdr plist)))
+			   (plist (cdr plist)))
 		  (unless (null? plist)
-		    (let ((a ($car plist)))
-		      (if (eq? ($car a) key)
-			  ($set-cdr! q ($cdr plist))
-			(loop plist ($cdr plist)))))))))))
+		    (let ((a (car plist)))
+		      (if (eq? (car a) key)
+			  (set-cdr! q (cdr plist))
+			(loop plist (cdr plist)))))))))))
 
       #| end of module: %REMOVE-PRELEX-FROM-PROPLIST-OF-LEX |# )
 
@@ -2998,9 +2982,9 @@
       ;;where we can  understand how the MK  wrapper we generate here is  used in the
       ;;internal function call.
       ;;
-      (let ((annotation ($car rand*))
-	    (orig-rator ($cadr rand*))
-	    (orig-rand* ($cddr rand*)))
+      (let ((annotation (car rand*))
+	    (orig-rator (cadr rand*))
+	    (orig-rand* (cddr rand*)))
 	(%attempt-integration (lambda (op^ rand*^)
 				(mk debug-call-rator (cons* annotation op^ rand*^)))
 			      orig-rator
@@ -3064,7 +3048,7 @@
       (struct-case consumer
 	((clambda label.unused clause*)
 	 (and (%list-of-one-item? clause*)
-	      (struct-case ($car clause*)
+	      (struct-case (car clause*)
 		((clambda-case info)
 		 (struct-case info
 		   ((case-info label.unused args proper?)
@@ -3085,9 +3069,9 @@
       ;;
       (cond ((null? clause*)
 	     default)
-	    ((%attempt-integration/clambda-clause ($car clause*) rand*))
+	    ((%attempt-integration/clambda-clause (car clause*) rand*))
 	    (else
-	     (%attempt-integration/clambda ($cdr clause*) rand* default))))
+	     (%attempt-integration/clambda (cdr clause*) rand* default))))
 
     (define (%attempt-integration/clambda-clause clause rand*)
       ;;Try to convert the CLAMBDA clause in  CLAUSE into a set of local bindings for
@@ -3108,7 +3092,7 @@
 		;;
 		;;   (let ((a 1) (b 2) (c 3)) ?body)
 		;;
-		(and ($fx= (length fml*)
+		(and (fx=? (length fml*)
 			   (length rand*))
 		     (make-bind fml* rand* body))
 	      ;;The formals of the CLAMBDA clause  is an improper list (including the
@@ -3129,7 +3113,7 @@
 	      ;;
 	      ;;   (let ((a 1) (b 2) (args (list 3 4))) ?body)
 	      ;;
-	      (and ($fx<= (length fml*)
+	      (and (fx<=? (length fml*)
 			  (length rand*))
 		   (make-bind fml* (%properize-operands fml* rand*) body))))))))
 
@@ -3181,18 +3165,18 @@
       ;;
       (cond ((null? lhs*)
 	     (compile-time-error __who__ "improper improper"))
-	    ((null? ($cdr lhs*))
+	    ((null? (cdr lhs*))
 	     (list (%make-conses rhs*)))
 	    (else
-	     (cons ($car rhs*)
-		   (%properize-operands ($cdr lhs*)
-					($cdr rhs*))))))
+	     (cons (car rhs*)
+		   (%properize-operands (cdr lhs*)
+					(cdr rhs*))))))
 
     (define (%make-conses ls)
       (if (null? ls)
 	  (make-constant '())
 	(make-funcall (mk-primref 'cons)
-		      (list ($car ls) (%make-conses ($cdr ls))))))
+		      (list (car ls) (%make-conses (cdr ls))))))
 
     #| end of module: %ATTEMPT-INTEGRATION/CLAMBDA |# )
 
@@ -3440,9 +3424,9 @@
     ;;
     (if (null? lhs*)
 	(values '() '() '())
-      (let ((prel ($car lhs*)))
+      (let ((prel (car lhs*)))
 	(receive (tmp* assigned-lhs* vector-prel*)
-	    (%process-assigned-lhs* ($cdr lhs*))
+	    (%process-assigned-lhs* (cdr lhs*))
 	  (if (and (prelex-source-assigned? prel)
 		   (not (prelex-global-location prel)))
 	      ;;PREL is an assigned lexical local binding.  We process it.
@@ -3586,17 +3570,17 @@
       ((bind lhs* rhs* body)
        (receive (fixable* bindable*)
 	   (partition (lambda (x)
-			(clambda? ($cdr x)))
+			(clambda? (cdr x)))
 	     ($map/stx cons lhs* rhs*))
 	 ;;FIXABLE* is  a list  of pairs  (?LHS . ?RHS)  in which  ?RHS is  a CLAMBDA
 	 ;;struct.  BINDABLE*  is a  list of pairs  (?LHS .  ?RHS)  in which  ?RHS is
 	 ;;*not* a CLAMBDA struct.
-	 (%mk-bind ($map/stx $car bindable*)
+	 (%mk-bind ($map/stx car bindable*)
 		   ($map/stx (lambda (bindable)
-			       (E ($cdr bindable)))
+			       (E (cdr bindable)))
 		     bindable*)
-		   (E-fix ($map/stx $car fixable*)
-			  ($map/stx $cdr fixable*)
+		   (E-fix ($map/stx car fixable*)
+			  ($map/stx cdr fixable*)
 			  body))))
 
       ((fix lhs* rhs* body)
@@ -3827,13 +3811,13 @@
 	 ;;
 	 ;;$$APPLY is  used only  in the  body of the  procedure APPLY,  after having
 	 ;;validated the  first argument as a  closure object; so, here,  we are sure
-	 ;;that "($car rand*)" will evaluate to a closure object.
+	 ;;that "(car rand*)" will evaluate to a closure object.
 	 ((and (primref? unwrapped-rator)
 	       (eq? ($primref-name unwrapped-rator) '$$apply))
 	  ;;JMPCALL does not want KNOWN structs as rator and rands.
 	  (make-jmpcall (sl-apply-label)
-			(%unwrap-known ($car rand*))
-			($map/stx %unwrap-known ($cdr rand*))))
+			(%unwrap-known (car rand*))
+			($map/stx %unwrap-known (cdr rand*))))
 
 	 ;;If  we are  here: UNWRAPPED-RATOR  is  just some  unknown struct  instance
 	 ;;representing recordized code which, when  evaluated, will return a closure
@@ -3863,7 +3847,7 @@
       (define num-of-rand* (length rand*))
       (let recur ((clause* ($clambda-cases clam)))
 	(define-syntax-rule (%recur-to-next-clause)
-	  (recur ($cdr clause*)))
+	  (recur (cdr clause*)))
 	(if (null? clause*)
 	    ;;No matching clause found.
 	    (if (option.strict-r6rs)
@@ -3873,16 +3857,16 @@
 	      (compile-time-error __who__
 		"wrong number of arguments in closure object application"
 		(unparse-recordized-code/pretty appform)))
-	  (struct-case ($clambda-case-info ($car clause*))
+	  (struct-case ($clambda-case-info (car clause*))
 	    ((case-info label fml* proper?)
 	     (if proper?
 		 ;;This clause has a fixed number of arguments.
-		 (if ($fx= num-of-rand* (length fml*))
+		 (if (fx=? num-of-rand* (length fml*))
 		     (make-jmpcall label prelex-rator ($map/stx %unwrap-known rand*))
 		   (%recur-to-next-clause))
 	       ;;This clause has a variable number of arguments.
-	       (if ($fx<= (length ($cdr fml*)) num-of-rand*)
-		   (make-jmpcall label prelex-rator (%prepare-rand* ($cdr fml*) rand*))
+	       (if (fx<=? (length (cdr fml*)) num-of-rand*)
+		   (make-jmpcall label prelex-rator (%prepare-rand* (cdr fml*) rand*))
 		 (%recur-to-next-clause))))))))
 
     (define (%prepare-rand* fml* rand*)
@@ -3923,8 +3907,8 @@
       (if (null? fml*)
 	  ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
 	  (list (make-funcall (mk-primref 'list) rand*))
-	(cons (%unwrap-known ($car rand*))
-	      (%prepare-rand* ($cdr fml*) ($cdr rand*)))))
+	(cons (%unwrap-known (car rand*))
+	      (%prepare-rand* (cdr fml*) (cdr rand*)))))
 
     (define (%unwrap-known x)
       (struct-case x
@@ -4062,12 +4046,12 @@
       ;;
       (cond ((null? lhs*)
 	     body)
-	    ((prelex-global-location ($car lhs*))
+	    ((prelex-global-location (car lhs*))
 	     => (lambda (loc)
-		  (make-seq (make-funcall SET-PRIMREF (list (make-constant loc) ($car lhs*)))
-			    (%insert-assignments ($cdr lhs*) body INIT-PRIMREF))))
+		  (make-seq (make-funcall SET-PRIMREF (list (make-constant loc) (car lhs*)))
+			    (%insert-assignments (cdr lhs*) body INIT-PRIMREF))))
 	    (else
-	     (%process-fix ($cdr lhs*) body))))
+	     (%process-fix (cdr lhs*) body))))
 
     (define (%insert-assignments lhs* body pref)
       ($fold-right/stx (lambda (lhs tail)
@@ -4343,8 +4327,8 @@
     (if (null? X*)
 	(values '() '())
       (let-values
-	  (((a freevar*.a) (E  ($car X*)))
-	   ((d freevar*.d) (E* ($cdr X*))))
+	  (((a freevar*.a) (E  (car X*)))
+	   ((d freevar*.d) (E* (cdr X*))))
 	(values (cons a d) (union freevar*.a freevar*.d)))))
 
   (define (E-known x)
@@ -4368,8 +4352,8 @@
     (if (null? X*)
 	(values '() '())
       (let-values
-	  (((a freevar*.a) (E-known  ($car X*)))
-	   ((d freevar*.d) (E-known* ($cdr X*))))
+	  (((a freevar*.a) (E-known  (car X*)))
+	   ((d freevar*.d) (E-known* (cdr X*))))
 	(values (cons a d) (union freevar*.a freevar*.d)))))
 
 ;;; --------------------------------------------------------------------
@@ -4388,8 +4372,8 @@
       (if (null? rhs*)
 	  (values '() '())
 	(let-values
-	    (((a freevar*.a) (E-clambda  ($car rhs*)))
-	     ((d freevar*.d) (E-clambda* ($cdr rhs*))))
+	    (((a freevar*.a) (E-clambda  (car rhs*)))
+	     ((d freevar*.d) (E-clambda* (cdr rhs*))))
 	  (values (cons a d) (union freevar*.a freevar*.d)))))
 
     (define (E-clambda rhs)
@@ -4422,11 +4406,11 @@
       ;;
       (if (null? clause*)
 	  (values '() '())
-	(struct-case ($car clause*)
+	(struct-case (car clause*)
 	  ((clambda-case info body)
 	   (let-values
 	       (((body^    freevar*.body)    (E body))
-		((clause*^ freevar*.clause*) (E-clambda-case* ($cdr clause*))))
+		((clause*^ freevar*.clause*) (E-clambda-case* (cdr clause*))))
 	     (values (cons (make-clambda-case info body^) clause*^)
 		     ;;If a  VAR struct is  a clause's formal  argument: it is  not a
 		     ;;free variable; so remove it.
@@ -4808,20 +4792,20 @@
 	  (if (null? output-lhs*)
 	      body
 	    (make-fix output-lhs* output-rhs* body))
-	(let ((input-lhs ($car input-lhs*))
-	      (input-rhs ($car input-rhs*)))
+	(let ((input-lhs (car input-lhs*))
+	      (input-rhs (car input-rhs*)))
 	  (if (%var-get-subst input-lhs)
 	      (begin
 		;;This INPUT-LHS  has a  substitution, it is  a combinator:  skip its
 		;;binding.
 		(%var-reset-subst! input-lhs)
 		(%mk-fix output-lhs* output-rhs*
-			 ($cdr input-lhs*) ($cdr input-rhs*)
+			 (cdr input-lhs*) (cdr input-rhs*)
 			 body))
 	    ;;This  LHS has  no substitution,  it  is a  non-combinator: include  its
 	    ;;binding.
 	    (%mk-fix (cons input-lhs output-lhs*) (cons input-rhs output-rhs*)
-		     ($cdr input-lhs*) ($cdr input-rhs*)
+		     (cdr input-lhs*) (cdr input-rhs*)
 		     body)))))
 
     (module (%filter-and-substitute-binding-freevars)
@@ -4861,8 +4845,8 @@
 	;;structs representing the actual free vars we care about.
 	;;
 	(if (pair? freevar*)
-	    (let ((A ($car freevar*))
-		  (D ($cdr freevar*)))
+	    (let ((A (car freevar*))
+		  (D (cdr freevar*)))
 	      (let ((what (%find-var-substitution! A))
 		    (rest (%filter-freevar* D)))
 		;;Here WHAT is the  substitution of A; it is possible  that WHAT is A
@@ -5414,12 +5398,12 @@
 		   (i        0))
 	  (cond ((null? freevar*)
 		 x)
-		((eq? x ($car freevar*))
+		((eq? x (car freevar*))
 		 ;;Replace a  reference to  free variable  with the  appropriate slot
 		 ;;accessor.
 		 (make-primcall '$cpref (list cpvar (make-constant i))))
 		(else
-		 (loop ($cdr freevar*) ($fxadd1 i)))))))
+		 (loop (cdr freevar*) (fxadd1 i)))))))
 
     E)
 
