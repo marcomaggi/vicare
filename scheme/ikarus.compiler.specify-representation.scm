@@ -547,74 +547,76 @@
       ;;
       ;;Filter the complex operands through V, leave the simple operands unfiltered.
       ;;
-      (if (null? rand*)
-	  (values '() '() '())
-	(receive (lhs* rhs* simplified-rand*)
-	    (%partition-simple-operands (cdr rand*))
-	  (let ((rand (car rand*)))
-	    (struct-case rand
-	      ((var)
-	       ;;This  operand is  a variable  reference: it  is fine  to include  it
-	       ;;multiple times; it is a simple operand.
-	       (values lhs* rhs* (cons rand simplified-rand*)))
-	      ((known rand.expr rand.type)
-	       (struct-case rand.expr
-		 ((constant)
-		  ;;This operand is:
-		  ;;
-		  ;;   (known (constant ?rand.expr.const) ?type)
-		  ;;
-		  ;;it is fine to include it  multiple times: it is a simple operand.
-		  ;;
-		  ;;FIXME Here I  would like to keep the type  description and so add
-		  ;;RAND itself as simplified operand, rather than add RAND.EXPR; but
-		  ;;if I  do it: there  are expressions  that fail to  compile.  This
-		  ;;must  be further  investigated and  solved because  handing KNOWN
-		  ;;structs to the primitive-operation implementation-handlers is the
-		  ;;whole point of  having KNOWN structs.  (Marco Maggi;  Mon Sep 15,
-		  ;;2014)
-		  (values lhs* rhs* (cons rand.expr simplified-rand*)))
-		 ((var)
-		  ;;This operand is:
-		  ;;
-		  ;;   (known var ?type)
-		  ;;
-		  ;;it is fine to include it multiple times; it is a simple operand.
-		  ;;
-		  ;;FIXME Here I  would like to keep the type  description and so add
-		  ;;RAND itself as simplified operand, rather than add RAND.EXPR; but
-		  ;;if I  do it: there  are expressions  that fail to  compile.  This
-		  ;;must  be further  investigated and  solved because  handing KNOWN
-		  ;;structs to the primitive-operation implementation-handlers is the
-		  ;;whole point of  having KNOWN structs.  (Marco Maggi;  Mon Sep 15,
-		  ;;2014)
-		  (values lhs* rhs* (cons rand.expr simplified-rand*)))
-		 (else
-		  ;;This operand is:
-		  ;;
-		  ;;   (known ?expr ?type)
-		  ;;
-		  ;;the ?EXPR must  be included only once in the  recordised code: it
-		  ;;is a  complex operand; we  introduce a  VAR binding and  move the
-		  ;;type  description from  the expression  to the  VAR in  reference
-		  ;;position.
-		  (let ((tmp (make-unique-var 'tmp)))
-		    (values (cons tmp           lhs*)
-			    (cons (V rand.expr) rhs*)
-			    (cons (make-known tmp rand.type) simplified-rand*))))))
-	      ((constant)
-	       ;;This operand is a constant: it is fine to include it multiple times;
-	       ;;it is a simple operand.
-	       (values lhs* rhs* (cons rand simplified-rand*)))
-	      (else
-	       ;;This operand  is an  expression with  unknown type  description; the
-	       ;;RAND must  be included  only once  in the recordised  code: it  is a
-	       ;;complex operand; we introduce a new VAR binding and a simple operand
-	       ;;referencing it.
-	       (let ((tmp (make-unique-var 'tmp)))
-		 (values (cons tmp      lhs*)
-			 (cons (V rand) rhs*)
-			 (cons tmp simplified-rand*)))))))))
+      (if (pair? rand*)
+	  (receive (lhs* rhs* simplified-rand*)
+	      (%partition-simple-operands (cdr rand*))
+	    (let ((rand (car rand*)))
+	      (struct-case rand
+		((var)
+		 ;;This operand  is a variable  reference: it  is fine to  include it
+		 ;;multiple times; it is a simple operand.
+		 (values lhs* rhs* (cons rand simplified-rand*)))
+		((known rand.expr rand.type)
+		 (struct-case rand.expr
+		   ((constant)
+		    ;;This operand is:
+		    ;;
+		    ;;   (known (constant ?rand.expr.const) ?type)
+		    ;;
+		    ;;it  is fine  to  include  it multiple  times:  it  is a  simple
+		    ;;operand.
+		    ;;
+		    ;;FIXME Here I would like to keep the type description and so add
+		    ;;RAND itself  as simplified operand, rather  than add RAND.EXPR;
+		    ;;but if  I do it:  there are  expressions that fail  to compile.
+		    ;;This must  be further  investigated and solved  because handing
+		    ;;KNOWN       structs       to      the       primitive-operation
+		    ;;implementation-handlers  is the  whole  point  of having  KNOWN
+		    ;;structs.  (Marco Maggi; Mon Sep 15, 2014)
+		    (values lhs* rhs* (cons rand.expr simplified-rand*)))
+		   ((var)
+		    ;;This operand is:
+		    ;;
+		    ;;   (known var ?type)
+		    ;;
+		    ;;it  is fine  to  include  it multiple  times;  it  is a  simple
+		    ;;operand.
+		    ;;
+		    ;;FIXME Here I would like to keep the type description and so add
+		    ;;RAND itself  as simplified operand, rather  than add RAND.EXPR;
+		    ;;but if  I do it:  there are  expressions that fail  to compile.
+		    ;;This must  be further  investigated and solved  because handing
+		    ;;KNOWN       structs       to      the       primitive-operation
+		    ;;implementation-handlers  is the  whole  point  of having  KNOWN
+		    ;;structs.  (Marco Maggi; Mon Sep 15, 2014)
+		    (values lhs* rhs* (cons rand.expr simplified-rand*)))
+		   (else
+		    ;;This operand is:
+		    ;;
+		    ;;   (known ?expr ?type)
+		    ;;
+		    ;;the ?EXPR must be included only once in the recordised code: it
+		    ;;is a complex  operand; we introduce a VAR binding  and move the
+		    ;;type description  from the expression  to the VAR  in reference
+		    ;;position.
+		    (let ((tmp (make-unique-var 'tmp)))
+		      (values (cons tmp           lhs*)
+			      (cons (V rand.expr) rhs*)
+			      (cons (make-known tmp rand.type) simplified-rand*))))))
+		((constant)
+		 ;;This operand  is a  constant: it  is fine  to include  it multiple
+		 ;;times; it is a simple operand.
+		 (values lhs* rhs* (cons rand simplified-rand*)))
+		(else
+		 ;;This operand is  an expression with unknown  type description; the
+		 ;;RAND must  be included only once  in the recordised code:  it is a
+		 ;;complex  operand; we  introduce a  new  VAR binding  and a  simple
+		 ;;operand referencing it.
+		 (let ((tmp (make-unique-var 'tmp)))
+		   (values (cons tmp      lhs*)
+			   (cons (V rand) rhs*)
+			   (cons tmp simplified-rand*)))))))
+	(values '() '() '())))
 
     #| end of module: %COGEN-PRIMOP-CALL |# )
 
@@ -1071,21 +1073,21 @@
 								  body)))))))
 
     (define (%partition lhs* rhs*)
-      (if (null? lhs*)
-	  (values '() '() '() '())
-	(let-values (((lhs-combin* rhs-combin lhs-non-combin rhs-non-combin)
-		      (%partition (cdr lhs*) (cdr rhs*))))
-	  (let ((lhs (car lhs*))
-		(rhs (car rhs*)))
-	    (if (%combinator? lhs rhs)
-		(values (cons lhs lhs-combin*)
-			(cons rhs rhs-combin)
-			lhs-non-combin
-			rhs-non-combin)
-	      (values lhs-combin*
-		      rhs-combin
-		      (cons lhs lhs-non-combin)
-		      (cons rhs rhs-non-combin)))))))
+      (if (pair? lhs*)
+	  (receive (lhs-combin* rhs-combin lhs-non-combin rhs-non-combin)
+	      (%partition (cdr lhs*) (cdr rhs*))
+	    (let ((lhs (car lhs*))
+		  (rhs (car rhs*)))
+	      (if (%combinator? lhs rhs)
+		  (values (cons lhs lhs-combin*)
+			  (cons rhs rhs-combin)
+			  lhs-non-combin
+			  rhs-non-combin)
+		(values lhs-combin*
+			rhs-combin
+			(cons lhs lhs-non-combin)
+			(cons rhs rhs-non-combin)))))
+	(values '() '() '() '())))
 
     (define (%combinator? lhs.unused rhs)
       ;;Return true if the struct  instance of type CLOSURE-MAKER in RHS
@@ -1183,10 +1185,10 @@
       ;;BODY must be  a struct instance representing  recordized code in
       ;;which the closure bindings are visible.
       ;;
-      (if (null? lhs*)
-	  body
-	(%single-closure-setters (car lhs*) (car rhs*)
-				 (closure-object-setters (cdr lhs*) (cdr rhs*) body))))
+      (if (pair? lhs*)
+	  (%single-closure-setters (car lhs*) (car rhs*)
+				   (closure-object-setters (cdr lhs*) (cdr rhs*) body))
+	body))
 
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
@@ -1208,10 +1210,10 @@
       ;;BODY must be  a struct instance representing  recordized code in
       ;;which the closure bindings are visible.
       ;;
-      (if (null? free*)
-	  body
-	(make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
-		  (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))))
+      (if (pair? free*)
+	  (make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
+		    (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))
+	body))
 
     #| end of module: closure-object-setters |# )
 
