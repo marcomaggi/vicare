@@ -151,13 +151,13 @@
   (define (V* x* env)
     ;;Apply V to all the structs in the list X*; gather the environment.
     ;;
-    (if (null? x*)
-	(values '() env '())
-      (let-values (((x  env1 t)  (V  (car x*) env))
-		   ((x* env2 t*) (V* (cdr x*) env)))
-	(values (cons x x*)
-		(%and-envs env1 env2)
-		(cons t t*)))))
+    (if (pair? x*)
+	(let-values (((x  env1 t)  (V  (car x*) env))
+		     ((x* env2 t*) (V* (cdr x*) env)))
+	  (values (cons x x*)
+		  (%and-envs env1 env2)
+		  (cons t t*)))
+      (values '() env '())))
 
 ;;; --------------------------------------------------------------------
 
