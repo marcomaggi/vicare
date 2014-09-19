@@ -116,15 +116,15 @@
 
 (case-define %map-in-order-with-index
   ((func serial-idx ell1)
-   (if (null? ell1)
-       '()
-     (cons (func                          serial-idx          (car ell1))
-	   (%map-in-order-with-index func (fxadd1 serial-idx) (cdr ell1)))))
+   (if (pair? ell1)
+       (cons (func                          serial-idx          (car ell1))
+	     (%map-in-order-with-index func (fxadd1 serial-idx) (cdr ell1)))
+     '()))
   ((func serial-idx ell1 ell2)
-   (if (null? ell1)
-       '()
-     (cons (func                          serial-idx          (car ell1) (car ell2))
-	   (%map-in-order-with-index func (fxadd1 serial-idx) (cdr ell1) (cdr ell2))))))
+   (if (pair? ell1)
+       (cons (func                          serial-idx          (car ell1) (car ell2))
+	     (%map-in-order-with-index func (fxadd1 serial-idx) (cdr ell1) (cdr ell2)))
+     '())))
 
 (define-syntax* (define-fold-right stx)
   ;;Define  a  new FOLD-RIGHT  function  with  a  fixed number  of  list
@@ -138,11 +138,11 @@
   ;;to expand into:
   ;;
   ;;   (define (%fold-right/1-list/2-retvals combine nil1 nil2 ell)
-  ;;     (if (null? ell)
-  ;;         (values nil1 nil2)
-  ;;       (receive (nil1^ nil2^)
-  ;;           (%fold-right/1-list/2-retvals combine nil1 nil2 (cdr ell))
-  ;;         (combine (car ell) nil1^ nil2^))))
+  ;;     (if (pair? ell)
+  ;;         (receive (nil1^ nil2^)
+  ;;             (%fold-right/1-list/2-retvals combine nil1 nil2 (cdr ell))
+  ;;           (combine (car ell) nil1^ nil2^))
+  ;;       (values nil1 nil2)))
   ;;
   ;;we blindly assume that the  list arguments are correct: proper lists
   ;;with equal length.
@@ -167,11 +167,11 @@
 	    ((NIL0 NIL ...) (generate-temporaries (make-list (syntax->datum #'?num-of-retvals)))))
 	 #'(define (?who combine NIL0 NIL ... ELL0 ELL ...)
 	     (import (vicare system $pairs))
-	     (if (null? ELL0)
-		 (values NIL0 NIL ...)
-	       (receive (NIL0 NIL ...)
-		   (?who combine NIL0 NIL ... (cdr ELL0) (cdr ELL) ...)
-		 (combine (car ELL0) (car ELL) ... NIL0 NIL ...)))))))
+	     (if (pair? ELL0)
+		 (receive (NIL0 NIL ...)
+		     (?who combine NIL0 NIL ... (cdr ELL0) (cdr ELL) ...)
+		   (combine (car ELL0) (car ELL) ... NIL0 NIL ...))
+	       (values NIL0 NIL ...))))))
     ))
 
 (define-auxiliary-syntaxes number-of-lists number-of-retvals)
@@ -862,10 +862,10 @@
 	 (error __who__ "invalid expression" (unparse-recordized-code x)))))
 
     (define (E* x*)
-      (if (null? x*)
-	  '()
-	(cons (E  (car x*))
-	      (E* (cdr x*)))))
+      (if (pair? x*)
+	  (cons (E  (car x*))
+		(E* (cdr x*)))
+	'()))
 
     (module (E-clambda)
       ;;Process  a CLAMBDA  structure.  In  general  we just  process the  body of  a
@@ -1262,36 +1262,36 @@
        ;;   bindings whose RHS is a CLAMBDA.
        ;;
        (import LHS-USAGE-FLAGS RHS-COMPLEXITY-FLAGS)
-       (if (null? lhs*)
-	   (values '() '() '() '() '() '())
-	 (receive (simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
-	     (%partition-rhs* (cdr lhs*) (cdr rhs*) used-lhs-flags cplx-rhs-flags (fxadd1 binding-index))
-	   (let ((lhs (car lhs*))
-		 (rhs (car rhs*)))
-	     (cond ((prelex-source-assigned? lhs)
-		    ;;This binding is "complex".  It does  not matter if the RHS is a
-		    ;;CLAMBDA  structure:   the  fact  that  it   is  assigned  takes
-		    ;;precedence when deciding how to classify it.
-		    (values simple.lhs* simple.rhs*
-			    fixable.lhs* fixable.rhs*
-			    (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
-		   ((clambda? rhs)
-		    ;;This binding is "fixable".
-		    (values simple.lhs* simple.rhs*
-			    (cons lhs fixable.lhs*) (cons rhs fixable.rhs*)
-			    complex.lhs* complex.rhs*))
-		   ((or (%lhs-usage-flags-ref      used-lhs-flags binding-index)
-			(%rhs-complexity-flags-ref cplx-rhs-flags binding-index))
-		    ;;This binding is "complex".
-		    (values simple.lhs* simple.rhs*
-			    fixable.lhs* fixable.rhs*
-			    (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
-		   (else
-		    ;;This binding is "simple".
-		    (values (cons lhs simple.lhs*) (cons rhs simple.rhs*)
-			    fixable.lhs* fixable.rhs*
-			    complex.lhs* complex.rhs*))
-		   ))))))
+       (if (pair? lhs*)
+	   (receive (simple.lhs* simple.rhs* fixable.lhs* fixable.rhs* complex.lhs* complex.rhs*)
+	       (%partition-rhs* (cdr lhs*) (cdr rhs*) used-lhs-flags cplx-rhs-flags (fxadd1 binding-index))
+	     (let ((lhs (car lhs*))
+		   (rhs (car rhs*)))
+	       (cond ((prelex-source-assigned? lhs)
+		      ;;This binding is "complex".  It does  not matter if the RHS is
+		      ;;a  CLAMBDA structure:  the  fact that  it  is assigned  takes
+		      ;;precedence when deciding how to classify it.
+		      (values simple.lhs* simple.rhs*
+			      fixable.lhs* fixable.rhs*
+			      (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
+		     ((clambda? rhs)
+		      ;;This binding is "fixable".
+		      (values simple.lhs* simple.rhs*
+			      (cons lhs fixable.lhs*) (cons rhs fixable.rhs*)
+			      complex.lhs* complex.rhs*))
+		     ((or (%lhs-usage-flags-ref      used-lhs-flags binding-index)
+			  (%rhs-complexity-flags-ref cplx-rhs-flags binding-index))
+		      ;;This binding is "complex".
+		      (values simple.lhs* simple.rhs*
+			      fixable.lhs* fixable.rhs*
+			      (cons lhs complex.lhs*) (cons rhs complex.rhs*)))
+		     (else
+		      ;;This binding is "simple".
+		      (values (cons lhs simple.lhs*) (cons rhs simple.rhs*)
+			      fixable.lhs* fixable.rhs*
+			      complex.lhs* complex.rhs*))
+		     )))
+	 (values '() '() '() '() '() '()))))
 
     #| end of module: %DO-RECBIND %DO-REC*BIND |# )
 
@@ -1735,14 +1735,14 @@
 	;;Add  edges  between  "complex"  <BINDING>  structures.   If  there  are  no
 	;;"complex" bindings: do nothing.  Return unspecified values.
 	;;
-	(unless (null? binding*)
+	(when (pair? binding*)
 	  (let ((B (car binding*)))
 	    (if (%complex-binding? B)
 		(%mark B (cdr binding*))
 	      (insert-order-edges! (cdr binding*))))))
 
       (define (%mark previous-B binding*)
-	(unless (null? binding*)
+	(when (pair? binding*)
 	  (let ((B (car binding*)))
 	    (if (%complex-binding? B)
 		(begin
