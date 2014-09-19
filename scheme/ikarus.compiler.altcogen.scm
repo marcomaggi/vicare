@@ -2181,22 +2181,22 @@
 	      (live-nfvs  (vector-ref live 2)))
 
 	  (define (max-frm ls i)
-	    (if (null? ls)
-		i
-	      (max-frm (cdr ls) (max i ($fvar-idx (car ls))))))
+	    (if (pair? ls)
+		(max-frm (cdr ls) (max i ($fvar-idx (car ls))))
+	      i))
 
 	  (define (max-ls ls i)
-	    (if (null? ls)
-		i
-	      (max-ls  (cdr ls) (max i (car ls)))))
+	    (if (pair? ls)
+		(max-ls  (cdr ls) (max i (car ls)))
+	      i))
 
 	  (define (max-nfv ls i)
-	    (if (null? ls)
-		i
-	      (let ((loc ($nfv-loc (car ls))))
-		(unless (fvar? loc)
-		  (error who "FVAR not assigned in MAX-NFV" loc))
-		(max-nfv (cdr ls) (max i ($fvar-idx loc))))))
+	    (if (pair? ls)
+		(let ((loc ($nfv-loc (car ls))))
+		  (unless (fvar? loc)
+		    (error who "FVAR not assigned in MAX-NFV" loc))
+		  (max-nfv (cdr ls) (max i ($fvar-idx loc))))
+	      i))
 
 	  (module (actual-frame-size)
 
@@ -2222,7 +2222,7 @@
 	    #| end of module: actual-frame-size |# )
 
 	  (define (%assign-frame-vars! vars i)
-	    (unless (null? vars)
+	    (when (pair? vars)
 	      (let ((v  (car vars))
 		    (fv (mkfvar i)))
 		($set-nfv-loc! v fv)
@@ -2340,26 +2340,25 @@
 	(let loop ((i 1))
 	  (if (set-member? i frms)
 	      (loop (fxadd1 i))
-	    (let ((fv (mkfvar i)))
+	    (receive-and-return (fv)
+		(mkfvar i)
 	      ($set-var-loc! x fv)
 	      (for-each-var vars varvec
 			    (lambda (var)
-			      ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
-	      fv)))))
+			      ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
 
     (define (%assign-move x varvec)
       (let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
-	(if (null? mr)
-	    #f
-	  (let ((fv (mkfvar (car mr))))
-	    ($set-var-loc! x fv)
-	    (for-each-var ($var-var-conf x) varvec
-			  (lambda (var)
-			    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
-	    (for-each-var ($var-var-move x) varvec
-			  (lambda (var)
-			    ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))
-	    fv))))
+	(and (pair? mr)
+	     (receive-and-return (fv)
+		 (mkfvar (car mr))
+	       ($set-var-loc! x fv)
+	       (for-each-var ($var-var-conf x) varvec
+			     (lambda (var)
+			       ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
+	       (for-each-var ($var-var-move x) varvec
+			     (lambda (var)
+			       ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
 
     #| end of module: assign |# )
 
@@ -2434,10 +2433,10 @@
       (make-parameter #f))
 
     (define (R* ls)
-      (if (null? ls)
-	  (make-empty-set)
-	(set-union (R  (car ls))
-		   (R* (cdr ls)))))
+      (if (pair? ls)
+	  (set-union (R  (car ls))
+		     (R* (cdr ls)))
+	(make-empty-set)))
 
     (define (R x)
       (struct-case x
@@ -2687,9 +2686,9 @@
 		  (set->list confs))))
         (let ((r* (set->list (set-difference (list->set ALL-REGISTERS)
 					     (list->set cr)))))
-          (if (null? r*)
-              #f
-	    (car r*)))))
+          (if (pair? r*)
+	      (car r*)
+	    #f))))
 
     (define (find-color x confs env)
       (or (find-color/maybe x confs env)
@@ -3577,10 +3576,10 @@
 		(let ((accum (list '(nop))))
 		  (parameterize ((exceptions-concatenation accum))
 		    (let recur ((case* case*))
-		      (if (null? case*)
-			  (cons `(jmp (label ,(sl-invalid-args-label))) accum)
-			(ClambdaCase (car case*)
-				     (recur (cdr case*)))))))))))
+		      (if (pair? case*)
+			  (ClambdaCase (car case*)
+				       (recur (cdr case*)))
+			(cons `(jmp (label ,(sl-invalid-args-label))) accum)))))))))
 
     (define (ClambdaCase x accum)
       ;;Flatten the struct instance of  type CLAMBDA-CASE into a list of
