@@ -3115,10 +3115,10 @@
 					(cdr rhs*))))))
 
     (define (%make-conses ls)
-      (if (null? ls)
-	  (make-constant '())
-	(make-funcall (mk-primref 'cons)
-		      (list (car ls) (%make-conses (cdr ls))))))
+      (if (pair? ls)
+	  (make-funcall (mk-primref 'cons)
+			(list (car ls) (%make-conses (cdr ls))))
+	(make-constant '())))
 
     #| end of module: %ATTEMPT-INTEGRATION/CLAMBDA |# )
 
@@ -3364,21 +3364,21 @@
     ;;
     ;;3. A list holding the PRELEX for T for the RHS vector creation expression.
     ;;
-    (if (null? lhs*)
-	(values '() '() '())
-      (let ((prel (car lhs*)))
-	(receive (tmp* assigned-lhs* vector-prel*)
-	    (%process-assigned-lhs* (cdr lhs*))
-	  (if (and (prelex-source-assigned? prel)
-		   (not (prelex-global-location prel)))
-	      ;;PREL is an assigned lexical local binding.  We process it.
-	      (let ((tmp (make-prelex-for-tmp-binding prel)))
-		(values (cons tmp  tmp*)
-			(cons prel assigned-lhs*)
-			(cons tmp  vector-prel*)))
-	    ;;PREL is  an unassigned  lexical local  binding or  a lexical  top level
-	    ;;binding.  We skip it.
-	    (values (cons prel tmp*) assigned-lhs* vector-prel*))))))
+    (if (pair? lhs*)
+	(let ((prel (car lhs*)))
+	  (receive (tmp* assigned-lhs* vector-prel*)
+	      (%process-assigned-lhs* (cdr lhs*))
+	    (if (and (prelex-source-assigned? prel)
+		     (not (prelex-global-location prel)))
+		;;PREL is an assigned lexical local binding.  We process it.
+		(let ((tmp (make-prelex-for-tmp-binding prel)))
+		  (values (cons tmp  tmp*)
+			  (cons prel assigned-lhs*)
+			  (cons tmp  vector-prel*)))
+	      ;;PREL is  an unassigned  lexical local  binding or  a lexical  top level
+	      ;;binding.  We skip it.
+	      (values (cons prel tmp*) assigned-lhs* vector-prel*))))
+      (values '() '() '())))
 
   (define (%bind-assigned assigned-lhs* vector-prel* body)
     ;;ASSIGNED-LHS* must be a list of PRELEX structs representing the true read-write
@@ -3790,26 +3790,26 @@
       (let recur ((clause* ($clambda-cases clam)))
 	(define-syntax-rule (%recur-to-next-clause)
 	  (recur (cdr clause*)))
-	(if (null? clause*)
-	    ;;No matching clause found.
-	    (if (option.strict-r6rs)
-		;;Just call the closure as always.  A "wrong num args" exception will
-		;;be raised at run-time as mandated by R6RS.
-		(make-funcall prelex-rator rand*)
-	      (compile-time-error __who__
-		"wrong number of arguments in closure object application"
-		(unparse-recordized-code/pretty appform)))
-	  (struct-case ($clambda-case-info (car clause*))
-	    ((case-info label fml* proper?)
-	     (if proper?
-		 ;;This clause has a fixed number of arguments.
-		 (if (fx=? num-of-rand* (length fml*))
-		     (make-jmpcall label prelex-rator ($map/stx %unwrap-known rand*))
-		   (%recur-to-next-clause))
-	       ;;This clause has a variable number of arguments.
-	       (if (fx<=? (length (cdr fml*)) num-of-rand*)
-		   (make-jmpcall label prelex-rator (%prepare-rand* (cdr fml*) rand*))
-		 (%recur-to-next-clause))))))))
+	(if (pair? clause*)
+	    (struct-case ($clambda-case-info (car clause*))
+	      ((case-info label fml* proper?)
+	       (if proper?
+		   ;;This clause has a fixed number of arguments.
+		   (if (fx=? num-of-rand* (length fml*))
+		       (make-jmpcall label prelex-rator ($map/stx %unwrap-known rand*))
+		     (%recur-to-next-clause))
+		 ;;This clause has a variable number of arguments.
+		 (if (fx<=? (length (cdr fml*)) num-of-rand*)
+		     (make-jmpcall label prelex-rator (%prepare-rand* (cdr fml*) rand*))
+		   (%recur-to-next-clause)))))
+	  ;;No matching clause found.
+	  (if (option.strict-r6rs)
+	      ;;Just call the closure as always.  A "wrong num args" exception will
+	      ;;be raised at run-time as mandated by R6RS.
+	      (make-funcall prelex-rator rand*)
+	    (compile-time-error __who__
+	      "wrong number of arguments in closure object application"
+	      (unparse-recordized-code/pretty appform))))))
 
     (define (%prepare-rand* fml* rand*)
       ;;Recursive function.
@@ -3846,11 +3846,11 @@
       ;;where ?RAND1  and ?RAND2 are unwrapped  from KNOWN structs, while  ?RAND3 and
       ;;?RAND4 are not.
       ;;
-      (if (null? fml*)
-	  ;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
-	  (list (make-funcall (mk-primref 'list) rand*))
-	(cons (%unwrap-known (car rand*))
-	      (%prepare-rand* (cdr fml*) (cdr rand*)))))
+      (if (pair? fml*)
+	  (cons (%unwrap-known (car rand*))
+		(%prepare-rand* (cdr fml*) (cdr rand*)))
+	;;FIXME Construct list afterwards.  (Abdulaziz Ghuloum)
+	(list (make-funcall (mk-primref 'list) rand*))))
 
     (define (%unwrap-known x)
       (struct-case x
@@ -4266,12 +4266,12 @@
     ;;representing recordized code; return 2 values:  the processed X*, a list of VAR
     ;;structs representing the free variables referenced by X*.
     ;;
-    (if (null? X*)
-	(values '() '())
-      (let-values
-	  (((a freevar*.a) (E  (car X*)))
-	   ((d freevar*.d) (E* (cdr X*))))
-	(values (cons a d) (union freevar*.a freevar*.d)))))
+    (if (pair? X*)
+	(let-values
+	    (((a freevar*.a) (E  (car X*)))
+	     ((d freevar*.d) (E* (cdr X*))))
+	  (values (cons a d) (union freevar*.a freevar*.d)))
+      (values '() '())))
 
   (define (E-known x)
     ;;Apply E  to X, which  must be a  struct instance representing  recordized code;
@@ -4291,12 +4291,12 @@
     ;;representing  code; return  2  values: the  processed X*,  a  list VAR  structs
     ;;representing the free variables referenced by X*.
     ;;
-    (if (null? X*)
-	(values '() '())
-      (let-values
-	  (((a freevar*.a) (E-known  (car X*)))
-	   ((d freevar*.d) (E-known* (cdr X*))))
-	(values (cons a d) (union freevar*.a freevar*.d)))))
+    (if (pair? X*)
+	(let-values
+	    (((a freevar*.a) (E-known  (car X*)))
+	     ((d freevar*.d) (E-known* (cdr X*))))
+	  (values (cons a d) (union freevar*.a freevar*.d)))
+      (values '() '())))
 
 ;;; --------------------------------------------------------------------
 
