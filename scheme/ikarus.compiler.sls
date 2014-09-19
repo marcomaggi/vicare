@@ -4311,12 +4311,12 @@
       ;;2. A  list of VAR structs  representing the free variables  referenced by the
       ;;   CLOSURE-MAKER structs.
       ;;
-      (if (null? rhs*)
-	  (values '() '())
-	(let-values
-	    (((a freevar*.a) (E-clambda  (car rhs*)))
-	     ((d freevar*.d) (E-clambda* (cdr rhs*))))
-	  (values (cons a d) (union freevar*.a freevar*.d)))))
+      (if (pair? rhs*)
+	  (let-values
+	      (((a freevar*.a) (E-clambda  (car rhs*)))
+	       ((d freevar*.d) (E-clambda* (cdr rhs*))))
+	    (values (cons a d) (union freevar*.a freevar*.d)))
+	(values '() '())))
 
     (define (E-clambda rhs)
       ;;Build a struct instance of type CLOSURE-MAKER which must replace the original
@@ -4346,18 +4346,18 @@
       ;;2. A  list of VAR structs  representing the free variables  referenced by the
       ;;   bodies of the clauses.
       ;;
-      (if (null? clause*)
-	  (values '() '())
-	(struct-case (car clause*)
-	  ((clambda-case info body)
-	   (let-values
-	       (((body^    freevar*.body)    (E body))
-		((clause*^ freevar*.clause*) (E-clambda-case* (cdr clause*))))
-	     (values (cons (make-clambda-case info body^) clause*^)
-		     ;;If a  VAR struct is  a clause's formal  argument: it is  not a
-		     ;;free variable; so remove it.
-		     (union (difference freevar*.body (case-info-args info))
-			    freevar*.clause*)))))))
+      (if (pair? clause*)
+	  (struct-case (car clause*)
+	    ((clambda-case info body)
+	     (let-values
+		 (((body^    freevar*.body)    (E body))
+		  ((clause*^ freevar*.clause*) (E-clambda-case* (cdr clause*))))
+	       (values (cons (make-clambda-case info body^) clause*^)
+		       ;;If a  VAR struct is  a clause's formal  argument: it is  not a
+		       ;;free variable; so remove it.
+		       (union (difference freevar*.body (case-info-args info))
+			      freevar*.clause*)))))
+	(values '() '())))
 
     #| end of module: do-clambda* |# )
 
@@ -4730,25 +4730,25 @@
       ;;has  no substitutions  will  be included  in  the output;  if  a binding  has
       ;;INPUT-LHS with substitution it is filtered out.
       ;;
-      (if (null? input-lhs*)
-	  (if (null? output-lhs*)
-	      body
-	    (make-fix output-lhs* output-rhs* body))
-	(let ((input-lhs (car input-lhs*))
-	      (input-rhs (car input-rhs*)))
-	  (if (%var-get-subst input-lhs)
-	      (begin
-		;;This INPUT-LHS  has a  substitution, it is  a combinator:  skip its
-		;;binding.
-		(%var-reset-subst! input-lhs)
-		(%mk-fix output-lhs* output-rhs*
-			 (cdr input-lhs*) (cdr input-rhs*)
-			 body))
-	    ;;This  LHS has  no substitution,  it  is a  non-combinator: include  its
-	    ;;binding.
-	    (%mk-fix (cons input-lhs output-lhs*) (cons input-rhs output-rhs*)
-		     (cdr input-lhs*) (cdr input-rhs*)
-		     body)))))
+      (cond ((pair? input-lhs*)
+	     (let ((input-lhs (car input-lhs*))
+		   (input-rhs (car input-rhs*)))
+	       (if (%var-get-subst input-lhs)
+		   (begin
+		     ;;This INPUT-LHS  has a substitution,  it is a  combinator: skip
+		     ;;its binding.
+		     (%var-reset-subst! input-lhs)
+		     (%mk-fix output-lhs* output-rhs*
+			      (cdr input-lhs*) (cdr input-rhs*)
+			      body))
+		 ;;This LHS has no substitution,  it is a non-combinator: include its
+		 ;;binding.
+		 (%mk-fix (cons input-lhs output-lhs*) (cons input-rhs output-rhs*)
+			  (cdr input-lhs*) (cdr input-rhs*)
+			  body))))
+	    ((pair? output-lhs*)
+	     (make-fix output-lhs* output-rhs* body))
+	    (else body)))
 
     (module (%filter-and-substitute-binding-freevars)
 
@@ -5765,9 +5765,9 @@
 	  (let ((X (case-info-args info)))
 	    (let recur ((A (car X))
 			(D (cdr X)))
-	      (if (null? D)
-		  (unparse-recordized-code A)
-		(cons (unparse-recordized-code A) (recur (car D) (cdr D)))))))
+	      (if (pair? D)
+		  (cons (unparse-recordized-code A) (recur (car D) (cdr D)))
+		(unparse-recordized-code A)))))
        ,(unparse-recordized-code body)))
 
     ((clambda label cls* cp freevar*)
@@ -6061,9 +6061,9 @@
 		 (recur expr.e0 (cons expr.e1 expr*)))
 		(else
 		 (let ((expr^ (E expr)))
-		   (if (null? expr*)
-		       (list expr^)
-		     (cons expr^ (recur (car expr*) (cdr expr*))))))))))
+		   (if (pair? expr*)
+		       (cons expr^ (recur (car expr*) (cdr expr*)))
+		     (list expr^))))))))
 
     (module (E-clambda)
 
@@ -6088,10 +6088,10 @@
 	  ;;improper list X.
 	  (let recur ((A (car x))
 		      (D (cdr x)))
-	    (if (null? D)
-		(Var A)
-	      (let ((A (Var A)))
-		(cons A (recur (car D) (cdr D))))))))
+	    (if (pair? D)
+		(let ((A (Var A)))
+		  (cons A (recur (car D) (cdr D))))
+	      (Var A)))))
 
       #| end of module: E-clambda |# )
 
