@@ -3324,22 +3324,40 @@
 
  (define-primitive-operation - safe
    ((V a)
-    ;;FIXME Why do we interrupt here?  (Marco Maggi; Oct 22, 2012)
+    ;;FIXME Why  do we interrupt  here?  If I  remove the interrupt:  this integrated
+    ;;body uncovers an error in a subsequent compiler pass.
+    ;;
+    ;;My current understanding is: by interrupting  here we jump directly to the full
+    ;;primitive function  call, skipping the  integrated body.   But this is  not the
+    ;;whole story: by  examining the generated assembly code (possibly  by turning of
+    ;;the source optimiser), I see a  correct SHORTCUT generated, without direct jump
+    ;;to the function call.
+    ;;
+    ;;I need to understand and fix this!!! (Marco Maggi; Fri Sep 19, 2014)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a '())
      (prm 'int-/overflow (K 0) (T a))))
    ((V a . a*)
-    ;;FIXME Why do we interrupt here?  (Marco Maggi; Oct 22, 2012)
+    ;;FIXME Why  do we interrupt  here?  If I  remove the interrupt:  this integrated
+    ;;body uncovers an error in a subsequent compiler pass.
+    ;;
+    ;;My current understanding is: by interrupting  here we jump directly to the full
+    ;;primitive function  call, skipping the  integrated body.   But this is  not the
+    ;;whole story: by  examining the generated assembly code (possibly  by turning of
+    ;;the source optimiser), I see a  correct SHORTCUT generated, without direct jump
+    ;;to the function call.
+    ;;
+    ;;I need to understand and fix this!!! (Marco Maggi; Fri Sep 19, 2014)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
      (let recur ((a  (T a))
-		 (a* a*))
+    		 (a* a*))
        (if (pair? a*)
-	   (recur (prm 'int-/overflow a (T (car a*)))
-		  (cdr a*))
-	 a))))
+    	   (recur (prm 'int-/overflow a (T (car a*)))
+    		  (cdr a*))
+    	 a))))
    ((P a . a*)
     (multiple-forms-sequence
      (assert-fixnums a a*)
@@ -3351,16 +3369,25 @@
    ((V)
     (K 0))
    ((V a . a*)
-    ;;FIXME Why do we interrupt here?  (Marco Maggi; Oct 22, 2012)
+    ;;FIXME Why  do we interrupt  here?  If I  remove the interrupt:  this integrated
+    ;;body uncovers an error in a subsequent compiler pass.
+    ;;
+    ;;My current understanding is: by interrupting  here we jump directly to the full
+    ;;primitive function  call, skipping the  integrated body.   But this is  not the
+    ;;whole story: by  examining the generated assembly code (possibly  by turning of
+    ;;the source optimiser), I see a  correct SHORTCUT generated, without direct jump
+    ;;to the function call.
+    ;;
+    ;;I need to understand and fix this!!! (Marco Maggi; Fri Sep 19, 2014)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
      (let recur ((a  (T a))
-		 (a* a*))
+    		 (a* a*))
        (if (pair? a*)
-	   (recur (prm 'int+/overflow a (T (car a*)))
-		  (cdr a*))
-	 a))))
+    	   (recur (prm 'int+/overflow a (T (car a*)))
+    		  (cdr a*))
+    	 a))))
    ((P)
     (K #t))
    ((P a . a*)
