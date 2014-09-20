@@ -3461,13 +3461,13 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'introduce-unsafe-primcalls))
 
   (define (introduce-unsafe-primcalls x)
-    (V x))
+    (E x))
 
-  (define (V x)
+  (define (E x)
     (struct-case x
       ((constant)
        x)
@@ -3479,116 +3479,377 @@
        x)
 
       ((seq e0 e1)
-       (make-seq (V e0) (V e1)))
+       (make-seq (E e0) (E e1)))
 
       ((conditional test conseq altern)
-       (make-conditional (V test) (V conseq) (V altern)))
+       (make-conditional (E test) (E conseq) (E altern)))
 
       ((bind lhs* rhs* body)
-       (make-bind lhs* ($map/stx V rhs*) (V body)))
+       (make-bind lhs* ($map/stx E rhs*) (E body)))
 
       ((fix  lhs* rhs* body)
-       (make-fix  lhs* ($map/stx V rhs*) (V body)))
+       (make-fix  lhs* ($map/stx E rhs*) (E body)))
 
       ((clambda)
-       (V-clambda x))
+       (E-clambda x))
 
       ((funcall rator rand*)
-       (V-funcall rator rand*))
+       (E-funcall rator rand*))
 
       ((forcall rator rand*)
-       (make-forcall rator ($map/stx V rand*)))
+       (make-forcall rator ($map/stx E rand*)))
 
       (else
        (compiler-internal-error __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
-  (define (V-known x)
+  (define (E-known x)
     (struct-case x
       ((known x.expr x.type)
-       (make-known (V x.expr) x.type))
+       (make-known (E x.expr) x.type))
       (else x)))
 
 ;;; --------------------------------------------------------------------
 
-  (module (V-clambda)
-    ;;The purpose of this module is to apply V to all the CLAMBDA clause bodies.
+  (module (E-clambda)
+    ;;The purpose of this module is to apply E to all the CLAMBDA clause bodies.
     ;;
-    (define (V-clambda x)
+    (define (E-clambda x)
       (struct-case x
 	((clambda label clause* cp free name)
-	 (make-clambda label ($map/stx V-clambda-clause clause*) cp free name))))
+	 (make-clambda label ($map/stx E-clambda-clause clause*) cp free name))))
 
-    (define (V-clambda-clause clause)
+    (define (E-clambda-clause clause)
       (struct-case clause
 	((clambda-case info body)
-	 (make-clambda-case info (V body)))))
+	 (make-clambda-case info (E body)))))
 
-    #| end of module: V-clambda |# )
+    #| end of module: E-clambda |# )
 
 ;;; --------------------------------------------------------------------
 
-  (module (V-funcall)
+  (module (E-funcall)
     (import SCHEME-OBJECTS-ONTOLOGY)
 
-    (define (V-funcall rator rand*)
-      (struct-case rator
-	((primref op)
-	 (%V-primcall op rand*))
-	(else
-	 (make-funcall rator ($map/stx V-known rand*)))))
+    (define (E-funcall rator rand*)
+      (let ((rand*^ ($map/stx E-known rand*)))
+	(struct-case rator
+	  ((primref op)
+	   (%E-primcall op rand*^))
+	  (else
+	   (make-funcall (E-known rator) rand*^)))))
 
-    (define (%V-primcall op rand*)
-      (define ou-rand*
-	($map/stx V-known rand*))
+    (define (%E-primcall safe-prim-name rand*)
       (define (%no-replacement)
-	(make-funcall (make-primref op) ou-rand*))
+	(make-funcall (make-primref safe-prim-name) rand*))
       (cond ((null? rand*)
 	     (%no-replacement))
-	    ((getprop op COOKIE)
-	     => (lambda (signature)
-		  (define unsafe (car signature))
-		  (define pred*  (cdr signature))
-		  (let recur ((pred* pred*)
-			      (rand* rand*))
-		    (if (pair? pred*)
-			(if (pair? rand*)
-			    (let ((pred (car pred*))
-				  (rand (car rand*)))
-			      (struct-case rand
-				((known expr type)
-				 (case (pred type)
-				   ((yes)
-				    ;;Operand's type matches  the predefined argument
-				    ;;type.  Success!!!
-				    (recur (cdr pred*) (cdr rand*)))
-				   ((no)
-				    ;;Operand's  type does  not match  the predefined
-				    ;;argument type.  Error!!!
-				    (%no-replacement))
-				   (else
-				    ;;Operand's  type  maybe matches  the  predefined
-				    ;;argument   type.    Not   an  error,   but   no
-				    ;;replacement is possible.
-				    (%no-replacement))))
-				(else
-				 ;;Operand of unknown type: no replacement possible.
-				 (%no-replacement))))
-			  ;;Wrong number of arguments error.
-			  (%no-replacement))
-		      ;;All  the   operands  matched   the  type   predicates:  total
-		      ;;success!!!  We replace the original call
-		      (make-funcall (make-primref unsafe) ou-rand*)))))
+	    ((getprop safe-prim-name UNSAFE-REPLACEMENTS-KEY)
+	     => (lambda (unsafe-signature*)
+		  (cond ((exists (lambda (unsafe-signature)
+				   (%find-signature-matching-operands unsafe-signature rand*))
+			   unsafe-signature*)
+			 => (lambda (unsafe-prim-name)
+			      (make-funcall (make-primref unsafe-prim-name) rand*)))
+			(else
+			 (%no-replacement)))))
 	    (else
 	     (%no-replacement))))
 
-    (define-constant COOKIE
+    (define (%find-signature-matching-operands unsafe-signature rand*)
+      ;;We expect UNSAFE-SIGNATURE to be a list with the format:
+      ;;
+      ;;   (?unsafe-prim-name ?type-pred0 ?type-pred ...)
+      ;;
+      ;;where: ?UNSAFE-PRIM-NAME  is the symbol  representing the public name  of the
+      ;;unsafe  primitive;  ?TYPE-PRED is  a  predicate  function among  "T:fixnum?",
+      ;;"T:string?", et cetera.
+      ;;
+      (define (%match-pred-rand pred rand)
+	(cond ((procedure? pred)
+	       ;;PRED is a type predicate procedure.
+	       (struct-case rand
+		 ((known _ type)
+		  (case (pred type)
+		    ;;Operand's type matches the predefined argument type; let's move
+		    ;;on to the next operand.
+		    ((yes) #t)
+		    ;;Operand's  type does  not match  the predefined  argument type;
+		    ;;this unsafe primitive cannot replace the original safe.
+		    ((no)  #f)
+		    ;;Operand's  type maybe  matches  the  predefined argument  type,
+		    ;;maybe not;  this unsafe  primitive cannot replace  the original
+		    ;;safe.
+		    (else  #f)))
+		 ;;Operand of unknown type: no replacement possible.
+		 (else #f)))
+	      ((not pred)
+	       ;;PRED is  false, which means  that this operand  can be of  any type;
+	       ;;this case is equivalent to using "T:object?"  as predicate, but this
+	       ;;way we  also handle the case  of unknown operand.  Let's  move on to
+	       ;;the next operand.
+	       #t)
+	      (else
+	       (compiler-internal-error __who__
+		 "invalid replacement core primitive type predicate" pred))))
+      (let recur ((pred* (cdr unsafe-signature))
+		  (rand* rand*))
+	(cond ((pair? rand*)
+	       ;;There are further operands to be processed.
+	       (cond ((pair? pred*)
+		      ;;There are further predicates to be processed.
+		      (and (%match-pred-rand (car pred*) (car rand*))
+			   (recur (cdr pred*) (cdr rand*))))
+		     ((null? pred*)
+		      ;;The unsafe primitive has a  fixed number of arguments.  There
+		      ;;are  further operands  but no  more predicates.   This unsafe
+		      ;;primitive does not replace the safe one.
+		      #f)
+		     ((procedure? pred*)
+		      ;;The unsafe primitive  has a variable number  of argument; the
+		      ;;rest arguments must all satisfy the predicate PRED*.
+		      (and (%match-pred-rand pred* (car rand*))
+			   (recur pred* (cdr rand*))))
+		     ((not pred*)
+		      ;;The unsafe primitive  has a variable number  of argument; the
+		      ;;rest arguments  must all  satisfy the  predicate "T:object?".
+		      ;;If we are here: all the operands matched the type predicates:
+		      ;;total success!!!  We replace  the original primitive with the
+		      ;;corresponding unsafe primitive.
+		      (car unsafe-signature))
+		     (else
+		      (compiler-internal-error __who__
+			"invalid type specification for replacement unsafe core primitive"
+			pred*))))
+	      ((pair? pred*)
+	       ;;There are  no more operands to  be processed, but there  are further
+	       ;;predicates.  This unsafe primitive  cannot replace the original safe
+	       ;;one.
+	       #f)
+	      (else
+	       ;;No  more  operands  to  be  processed,  no  more  predicates  to  be
+	       ;;processed.   All the  operands  matched the  type predicates:  total
+	       ;;success!!!  We replace the original primitive with the corresponding
+	       ;;unsafe primitive.
+	       (car unsafe-signature)))))
+
+    (define-constant CORE-TYPES-SIGNATURE-KEY
       (compile-time-gensym "core-primitive/core-types-signature"))
 
-    ;;;(putprop 'fx+ COOKIE (list '$fx+/overflow T:fixnum? T:fixnum?))
-    (putprop 'car COOKIE (list '$car T:pair?))
+    (define-constant UNSAFE-REPLACEMENTS-KEY
+      (compile-time-gensym "core-primitive/unsafe-replacements-signatures"))
 
-    #| end of module: V-FUNCALL |# )
+    (define-auxiliary-syntaxes safe unsafe unsafe-replacements)
+
+    (define-syntax* (define-core-primitive input-form)
+      (define (main stx)
+	(syntax-case stx (safe unsafe unsafe-replacements)
+
+	  ;;Unsafe primitive.
+	  ((_ ?prim-name unsafe)
+	   (let ((prim-name.id (%acquire-prim-name #'?prim-name)))
+	     #'(void)))
+
+	  ;;Safe primitive without unsafe replacements.
+	  ((_ ?prim-name safe)
+	   (let ((prim-name.id (%acquire-prim-name #'?prim-name)))
+	     #'(void)))
+
+	  ;;Safe primitive with unsafe replacements.
+	  ((?ctx ?prim-name safe
+		 (unsafe-replacements
+		  (?unsafe-prim-name0 . ?types0)
+		  (?unsafe-prim-name  . ?types)
+		  ...))
+	   (let ((prim-name.id          (%acquire-prim-name #'?prim-name))
+		 (unsafe-prim-name*.id  (%acquire-unsafe-prim-name* #'(?unsafe-prim-name0 ?unsafe-prim-name ...)))
+		 (types*                (%acquire-unsafe-prim-types* #'(?types0 ?types ...))))
+	     (if (null? types*)
+		 #'(void)
+	       (let ((preds* (types*->preds* #'?ctx types*)))
+		 (with-syntax
+		     (((UNSAFE-SPEC ...) (map (lambda (unsafe-prim-name.id preds)
+						(cons unsafe-prim-name.id
+						      (let recur ((preds preds))
+							(cond ((pair? preds)
+							       (cons #`(unquote #,(car preds))
+								     (recur (cdr preds))))
+							      ((null? preds)
+							       '())
+							      (else
+							       #`(unquote #,preds))))))
+					   unsafe-prim-name*.id preds*)))
+		   #`(putprop (quote ?prim-name) UNSAFE-REPLACEMENTS-KEY
+			      (quasiquote (UNSAFE-SPEC ...))))))))
+	  ))
+
+      (define (%acquire-prim-name stx)
+	(unless (identifier? stx)
+	  (synner "expected identifier as core primitive name" stx))
+	stx)
+
+      (define (%acquire-unsafe-prim-name* stx)
+	(receive-and-return (id*)
+	    (syntax->list stx)
+	  (for-each
+	      (lambda (id)
+		(unless (identifier? id)
+		  (synner "expected identifier as name of replacement unsafe core primitive" id)))
+	    id*)))
+
+      (define (%acquire-unsafe-prim-types* stx)
+	;;Parse STX and return a list of  items, each item being a proper or improper
+	;;list of identifiers and false objects.
+	;;
+	(define (%acquire-type type)
+	  ;;We accept a type identifier or #f; false means "any type".
+	  (cond ((identifier? type)
+		 type)
+		((not (syntax->datum type))
+		 #f)
+		(else
+		 (synner "expected false or identifier as type name for replacement unsafe core primitive" type))))
+	(map (lambda (ell)
+	       ;;We expect ELL to be a proper or improper list.
+	       (syntax-case ell ()
+		 ;;Proper list of types.  This unsafe primitive has a fixed number of
+		 ;;arguments.
+		 ((?type0 ?type ...)
+		  (map %acquire-type (syntax->list #'(?type0 ?type ...))))
+		 ;;Improper  list of  types.  This  unsafe primitive  has a  variable
+		 ;;number of arguments.
+		 ((?type0 ?type ... . ?rest-type)
+		  (let recur ((ell ell))
+		    (syntax-case ell ()
+		      ((?car . ?cdr)
+		       (cons (%acquire-type #'?car) (recur #'?cdr)))
+		      (()
+		       '())
+		      (?rest
+		       (%acquire-type #'?rest)))))
+		 ;;Standalone type.  This  unsafe primitive has a  variable number of
+		 ;;arguments, all satisfying the same predicate.
+		 (?args-type
+		  (%acquire-type #'?args-type))
+		 ))
+	  (syntax->list stx)))
+
+      (define (types*->preds* ctx types*)
+	(define (%type->pred type)
+	  (cond ((identifier? type)
+		 (datum->syntax ctx (string->symbol
+				     (string-append (symbol->string (syntax->datum type))
+						    "?"))))
+		(else
+		 (assert (not type))
+		 type)))
+	(map (lambda (types)
+	       ;;TYPES is a proper or improper list of identifiers and false objects.
+	       (let recur ((types types))
+		 (syntax-case types ()
+		   ((?car . ?cdr)
+		    (cons (%type->pred #'?car) (recur #'?cdr)))
+		   (()
+		    '())
+		   (?rest
+		    (%type->pred #'?rest)))))
+	  types*))
+
+      (receive-and-return (output-form)
+	  (main input-form)
+	;;(debug-print (syntax->datum output-form))
+	(void)))
+
+    (define-core-primitive putprop safe
+      (unsafe-replacements
+       ($putprop T:symbol T:symbol #f)))
+
+    (define-core-primitive getprop safe
+      (unsafe-replacements
+       ($getprop T:symbol T:symbol)))
+
+    (define-core-primitive remprop safe
+      (unsafe-replacements
+       ($remprop T:symbol T:symbol)))
+
+    (define-core-primitive property-list safe
+      (unsafe-replacements
+       ($property-list T:symbol)))
+
+    ;; (define-core-primitive fx+ safe
+    ;;   (unsafe-replacements
+    ;;    ($fx+/overflow T:fixnum T:fixnum)))
+
+    (define-core-primitive + safe
+      ;;The commented out variants handle operands  of a type that is not categorised
+      ;;by the core type system.
+      (unsafe-replacements
+       ($add-fixnum-fixnum T:fixnum T:fixnum)
+       ;;($add-fixnum-bignum T:fixnum T:bignum)
+       ($add-fixnum-flonum T:fixnum T:flonum)
+       ;;($add-fixnum-ratnum T:fixnum T:ratnum)
+       ;;($add-fixnum-compnum T:fixnum T:compnum)
+       ;;($add-fixnum-cflonum T:fixnum T:cflonum)
+
+       ;;($add-bignum-fixnum T:bignum T:fixnum)
+       ;;($add-bignum-bignum T:bignum T:bignum)
+       ;;($add-bignum-flonum T:bignum T:flonum)
+       ;;($add-bignum-ratnum T:bignum T:ratnum)
+       ;;($add-bignum-compnum T:bignum T:compnum)
+       ;;($add-bignum-cflonum T:bignum T:cflonum)
+
+       ($add-flonum-fixnum T:flonum T:fixnum)
+       ;;($add-flonum-bignum T:flonum T:bignum)
+       ($add-flonum-flonum T:flonum T:flonum)
+       ;;($add-flonum-ratnum T:flonum T:ratnum)
+       ;;($add-flonum-compnum T:flonum T:compnum)
+       ;;($add-flonum-cflonum T:flonum T:cflonum)
+
+       ;;($add-ratnum-fixnum T:ratnum T:fixnum)
+       ;;($add-ratnum-bignum T:ratnum T:bignum)
+       ;;($add-ratnum-flonum T:ratnum T:flonum)
+       ;;($add-ratnum-ratnum T:ratnum T:ratnum)
+       ;;($add-ratnum-compnum T:ratnum T:compnum)
+       ;;($add-ratnum-cflonum T:ratnum T:cflonum)
+
+       ;;($add-compnum-fixnum T:compnum T:fixnum)
+       ;;($add-compnum-bignum T:compnum T:bignum)
+       ;;($add-compnum-ratnum T:compnum T:ratnum)
+       ;;($add-compnum-compnum T:compnum T:compnum)
+       ;;($add-compnum-flonum T:compnum T:flonum)
+       ;;($add-compnum-cflonum T:compnum T:cflonum)
+
+       ;;($add-cflonum-fixnum T:cflonum T:fixnum)
+       ;;($add-cflonum-bignum T:cflonum T:bignum)
+       ;;($add-cflonum-ratnum T:cflonum T:ratnum)
+       ;;($add-cflonum-flonum T:cflonum T:flonum)
+       ;;($add-cflonum-compnum T:cflonum T:compnum)
+       ;;($add-cflonum-cflonum T:cflonum T:cflonum)
+
+       ($add-fixnum-number T:fixnum T:number)
+       ;;($add-bignum-number T:bignum T:number)
+       ($add-flonum-number T:flonum T:number)
+       ;;($add-ratnum-number T:ratnum T:number)
+       ;;($add-compnum-number T:compnum T:number)
+       ;;($add-cflonum-number T:cflonum T:number)
+
+       ($add-number-fixnum T:number T:fixnum)
+       ;;($add-number-bignum T:number T:bignum)
+       ($add-number-flonum T:number T:flonum)
+       ;;($add-number-ratnum T:number T:ratnum)
+       ;;($add-number-compnum T:number T:compnum)
+       ;;($add-number-cflonum T:number T:cflonum)
+       ($add-number-number T:number T:number)))
+
+    (define-core-primitive car safe
+      (unsafe-replacements
+       ($car T:pair)))
+
+    (define-core-primitive cdr safe
+      (unsafe-replacements
+       ($cdr T:pair)))
+
+    #| end of module: E-funcall |# )
 
   #| end of module: INTRODUCE-UNSAFE-PRIMCALLS |# )
 

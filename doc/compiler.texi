@@ -2523,11 +2523,20 @@ informations and propagate them after the arguments have been validated.
 This optional compiler pass recognises the application of @strong{safe}
 core primitive functions having operands of the correct type and
 replaces them with the corresponding application of @strong{unsafe} core
-primitive functions or operations.  The result is faster code.
+primitive functions or operations; the result is faster code.
+
+@quotation
+@strong{NOTE} A @dfn{safe} core primitive validates its arguments and
+raises an exception it they have the wrong type; an @dfn{unsafe} core
+primitive assumes its operands are correct and just attempts to perform
+the algorithm.
+@end quotation
 
 It makes sense to perform this compiler pass only if
-@func{core-type-inference} has been performed first.  Performing this
-pass could be useless because:
+@func{$core-type-inference} has been performed first: it is the ``type
+inference'' pass that introduces the type descriptions consumed by the
+``unsafe primitives introduction'' pass.  Performing this pass could be
+useless because:
 
 @itemize
 @item
@@ -2538,6 +2547,13 @@ when the tagged language is enabled.
 The same transformation is performed by the primitive operation
 implementation handlers.
 @end itemize
+
+@noindent
+nevertheless, it is technologically possible to compose core language
+expressions by means different from applying the expander to source
+code; in such scenario this compiler pass makes sense, because there are
+core primitives implemented only as functions (not operations) that
+still have an unsafe variant.
 
 
 @defun $introduce-unsafe-primcalls @var{input}

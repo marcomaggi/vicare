@@ -131,16 +131,50 @@
   ;; (doit ((primitive fx+) '1 '2)
   ;; 	(funcall (primref $fx+/overflow)
   ;; 	  (known (constant 1)
-  ;; 		 (T:fixnum T:positive T:non-false T:exact T:number
-  ;; 			   T:immediate T:object))
+  ;; 		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))
   ;; 	  (known (constant 2)
-  ;; 		 (T:fixnum T:positive T:non-false T:exact T:number
-  ;; 			   T:immediate T:object))))
+  ;; 		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'arithmetics))
+
+  ;;Two fixnum operands: successful replacement.
+  (doit ((primitive +) '1 '2)
+  	(funcall (primref $add-fixnum-fixnum)
+  	  (known (constant 1)
+  		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))
+  	  (known (constant 2)
+  		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))))
+
+  ;;No replacement for "+" when there are more than 2 operands.
+  (doit ((primitive +) '1 '2 '3)
+  	(funcall (primref +)
+  	  (known (constant 1)
+  		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))
+  	  (known (constant 2)
+  		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))
+  	  (known (constant 3)
+  		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'pairs))
 
   (doit ((primitive car) '(1 . 2))
 	(funcall (primref $car)
 	  (known (constant (1 . 2))
 		 (T:pair T:non-false T:nonimmediate T:object))))
+
+  ;;Wrong number of  operands.  It would cause a &compile-time-error  exception to be
+  ;;raised.
+  ;;
+  ;; (doit ((primitive car) '(1 . 2) '3)
+  ;; 	(funcall (primref $car)
+  ;; 	  (known (constant (1 . 2))
+  ;; 		 (T:pair T:non-false T:nonimmediate T:object))))
 
   #t)
 
