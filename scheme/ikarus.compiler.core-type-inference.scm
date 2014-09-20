@@ -282,6 +282,7 @@
 	  ((null?       x)   T:null)
 	  ((char?       x)   T:char)
 	  ((string?     x)   T:string)
+	  ((symbol?     x)   T:symbol)
 	  ((vector?     x)   T:vector)
 	  ((pair?       x)   T:pair)
 	  ((bytevector? x)   T:bytevector)

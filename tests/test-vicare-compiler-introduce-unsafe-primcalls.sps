@@ -179,6 +179,17 @@
   #t)
 
 
+(parametrise ((check-test-name	'symbols))
+
+  (doit ((primitive putprop) 'a 'b '1)
+	(funcall (primref $putprop)
+	  (known (constant a) (T:symbol T:non-false T:nonimmediate T:object))
+	  (known (constant b) (T:symbol T:non-false T:nonimmediate T:object))
+	  (known (constant 1) (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

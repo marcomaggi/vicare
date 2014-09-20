@@ -3702,13 +3702,14 @@
 	;;list of identifiers and false objects.
 	;;
 	(define (%acquire-type type)
-	  ;;We accept a type identifier or #f; false means "any type".
-	  (cond ((identifier? type)
-		 type)
-		((not (syntax->datum type))
-		 #f)
-		(else
-		 (synner "expected false or identifier as type name for replacement unsafe core primitive" type))))
+	  ;;We accept a  type identifier; "T:object?" and "_" mean  "any type" and we
+	  ;;convert them to false.
+	  (if (identifier? type)
+	      (if (or (free-identifier=? type #'T:object?)
+		      (eq? '_ (syntax->datum type)))
+		  #f
+		type)
+	    (synner "expected identifier as type name for replacement unsafe core primitive" type)))
 	(map (lambda (ell)
 	       ;;We expect ELL to be a proper or improper list.
 	       (syntax-case ell ()
@@ -3762,7 +3763,7 @@
 
     (define-core-primitive putprop safe
       (unsafe-replacements
-       ($putprop T:symbol T:symbol #f)))
+       ($putprop T:symbol T:symbol _)))
 
     (define-core-primitive getprop safe
       (unsafe-replacements
