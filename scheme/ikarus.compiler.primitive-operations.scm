@@ -76,9 +76,9 @@
       ((?stx ?name ?interruptable ?clause* ...)
        (let ((cases #'(?clause* ...)))
 	 (with-syntax
-	     ((COGEN-P	(%cogen-name #'?stx "pred"   #'?name))
-	      (COGEN-V	(%cogen-name #'?stx "value"  #'?name))
-	      (COGEN-E	(%cogen-name #'?stx "effect" #'?name))
+	     ((COGEN-P		(%cogen-name #'?stx "pred"   #'?name))
+	      (COGEN-V		(%cogen-name #'?stx "value"  #'?name))
+	      (COGEN-E		(%cogen-name #'?stx "effect" #'?name))
 	      (INTERRUPTABLE?	(syntax-case #'?interruptable (safe unsafe)
 				  (safe   #t)
 				  (unsafe #f))))
@@ -86,12 +86,17 @@
 	       (((P-handler P-handled?) (%generate-handler #'COGEN-P #'P cases))
 		((V-handler V-handled?) (%generate-handler #'COGEN-V #'V cases))
 		((E-handler E-handled?) (%generate-handler #'COGEN-E #'E cases)))
-	     #`(begin
+	     #`(module (COGEN-P COGEN-V COGEN-E)
 		 (define COGEN-P
-		   (lambda args
-		     (%validate-P-implementation-handler-retval (apply #,P-handler args) (quote COGEN-P))))
-		 (define COGEN-V #,V-handler)
-		 (define COGEN-E #,E-handler)
+		   (fluid-let-syntax ((__who__ (identifier-syntax (quote ?name))))
+		     (lambda args
+		       (%validate-P-implementation-handler-retval (apply #,P-handler args) (quote COGEN-P)))))
+		 (define COGEN-V
+		   (fluid-let-syntax ((__who__ (identifier-syntax (quote ?name))))
+		     #,V-handler))
+		 (define COGEN-E
+		   (fluid-let-syntax ((__who__ (identifier-syntax (quote ?name))))
+		     #,E-handler))
 		 (module ()
 		   ;;Import this module for INTERRUPT.
 		   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
@@ -479,7 +484,7 @@
    ;;struct instance representing recordized code not yet filtered through T.
    ;;
    (define (%compile-time-error)
-     (compile-time-error __who__
+     (compile-time-operand-core-type-error __who__
        "expected pair as primitive operation argument"
        (cons who (unparse-recordized-code/sexp x))))
    (struct-case x
@@ -873,7 +878,7 @@
     (define (%error-wrong-operand)
       (if (option.strict-r6rs)
 	  (interrupt)
-	(compile-time-error 'car
+	(compile-time-operand-core-type-error __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
@@ -906,7 +911,7 @@
     (define (%error-wrong-operand)
       (if (option.strict-r6rs)
 	  (interrupt)
-	(compile-time-error 'cdr
+	(compile-time-operand-core-type-error __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
@@ -939,7 +944,7 @@
     (define (%error-wrong-operand)
       (if (option.strict-r6rs)
 	  (interrupt)
-	(compile-time-error 'set-car!
+	(compile-time-operand-core-type-error __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
@@ -968,7 +973,7 @@
     (define (%error-wrong-operand)
       (if (option.strict-r6rs)
 	  (interrupt)
-	(compile-time-error 'set-cdr!
+	(compile-time-operand-core-type-error __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
@@ -1460,7 +1465,7 @@
 	     ((option.strict-r6rs)
 	      (interrupt))
 	     (else
-	      (compile-time-error 'vector-length
+	      (compile-time-operand-core-type-error __who__
 		"expected vector as operand" (unparse-recordized-code vec)))))
       (else
        (multiple-forms-sequence
@@ -1487,7 +1492,7 @@
 	     ((option.strict-r6rs)
 	      (interrupt))
 	     (else
-	      (compile-time-error 'vector-length
+	      (compile-time-operand-core-type-error __who__
 		"expected vector as operand" (unparse-recordized-code vec)))))
       (else
        (multiple-forms-sequence
@@ -1720,7 +1725,7 @@
 	      (interrupt))
 	     (else
 	      ;;Report error at compile-time.
-	      (compile-time-error 'top-level-value
+	      (compile-time-operand-core-type-error __who__
 		"expected symbol as loc gensym argument" sym.val))))
       ((known sym.expr)
        ;;The argument is an  expression whose return value type is  known.  Act as if
@@ -1754,7 +1759,7 @@
 	      (interrupt))
 	     (else
 	      ;;Report error at compile-time.
-	      (compile-time-error 'top-level-value
+	      (compile-time-operand-core-type-error __who__
 		"expected symbol as loc gensym argument" sym.val))))
       ((known sym.expr)
        ;;The argument is an  expression whose return value type is  known.  Act as if
@@ -4558,7 +4563,7 @@
 	 ((no)
 	  (if (option.strict-r6rs)
 	      (interrupt)
-	    (compile-time-error 'string-length
+	    (compile-time-operand-core-type-error __who__
 	      "expected string as operand" (unparse-recordized-code str))))
 	 (else
 	  (cogen-value-string-length str.expr))))
@@ -4570,7 +4575,7 @@
 	     ((option.strict-r6rs)
 	      (interrupt))
 	     (else
-	      (compile-time-error 'string-length
+	      (compile-time-operand-core-type-error __who__
 		"expected string as operand" (unparse-recordized-code str)))))
       (else
        (multiple-forms-sequence
@@ -4587,7 +4592,7 @@
 	 ((no)
 	  (if (option.strict-r6rs)
 	      (interrupt)
-	    (compile-time-error 'string-length
+	    (compile-time-operand-core-type-error __who__
 	      "expected string as operand" (unparse-recordized-code str))))
 	 (else
 	  (cogen-effect-string-length str.expr))))
@@ -4599,7 +4604,7 @@
 	     ((option.strict-r6rs)
 	      (interrupt))
 	     (else
-	      (compile-time-error 'string-length
+	      (compile-time-operand-core-type-error __who__
 		"expected string as operand" (unparse-recordized-code str)))))
       (else
        (assert-string str))))

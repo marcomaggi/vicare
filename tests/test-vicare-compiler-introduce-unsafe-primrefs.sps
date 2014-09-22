@@ -127,6 +127,30 @@
      (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
     ))
 
+;;; --------------------------------------------------------------------
+
+(define-syntax check-arity-error
+  (syntax-rules ()
+    ((_ ?form)
+     (check
+	 (guard (E ((compiler.compile-time-arity-error? E)
+		    #t)
+		   (else E))
+	   (%introduce-unsafe-primrefs (quasiquote ?form)))
+       => #t))
+    ))
+
+(define-syntax check-operand-core-type-error
+  (syntax-rules ()
+    ((_ ?form)
+     (check
+	 (guard (E ((compiler.compile-time-operand-core-type-error? E)
+		    #t)
+		   (else E))
+	   (%introduce-unsafe-primrefs (quasiquote ?form)))
+       => #t))
+    ))
+
 
 (parametrise ((check-test-name	'fixnums))
 
@@ -194,13 +218,11 @@
 	  (known (constant (1 . 2))
 		 (T:pair T:non-false T:nonimmediate T:object))))
 
-  ;;Wrong number of  operands.  It would cause a &compile-time-error  exception to be
-  ;;raised.
-  ;;
-  ;; (doit ((primitive car) '(1 . 2) '3)
-  ;; 	(funcall (primref $car)
-  ;; 	  (known (constant (1 . 2))
-  ;; 		 (T:pair T:non-false T:nonimmediate T:object))))
+  (check-arity-error
+   ((primitive car) '(1 . 2) '3))
+
+  (check-operand-core-type-error
+   ((primitive car) '123))
 
 ;;; --------------------------------------------------------------------
 

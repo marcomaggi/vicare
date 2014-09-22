@@ -30,6 +30,11 @@
     core-expr->optimized-code		core-expr->assembly-code
 
     ;; these go in (vicare system $compiler)
+    make-compile-time-error			compile-time-error?
+    make-compile-time-arity-error		compile-time-arity-error?
+    make-compile-time-core-type-error		compile-time-core-type-error?
+    make-compile-time-operand-core-type-error	compile-time-operand-core-type-error?
+    make-compile-time-retval-core-type-error	compile-time-retval-core-type-error?
     optimize-level
     (rename
      ;; configuration parameters
@@ -502,19 +507,47 @@
 (define-condition-type &compile-time-error &assertion
   make-compile-time-error compile-time-error?)
 
+(define-condition-type &compile-time-arity-error
+    &compile-time-error
+  make-compile-time-arity-error compile-time-arity-error?)
+
+(define-condition-type &compile-time-core-type-error
+    &compile-time-error
+  make-compile-time-core-type-error compile-time-core-type-error?)
+
+(define-condition-type &compile-time-operand-core-type-error
+    &compile-time-error
+  make-compile-time-operand-core-type-error compile-time-operand-core-type-error?)
+
+(define-condition-type &compile-time-retval-core-type-error
+    &compile-time-error
+  make-compile-time-retval-core-type-error compile-time-retval-core-type-error?)
+
+(define (compile-time-error who message . irritants)
+  (%raise-error who message (make-compile-time-error) irritants))
+
+(define (compile-time-arity-error who message . irritants)
+  (%raise-error who message (make-compile-time-arity-error) irritants))
+
+(define (compile-time-operand-core-type-error who message . irritants)
+  (%raise-error who message (make-compile-time-operand-core-type-error) irritants))
+
+(define (compile-time-retval-core-type-error who message . irritants)
+  (%raise-error who message (make-compile-time-retval-core-type-error) irritants))
+
+;;; --------------------------------------------------------------------
+
 (define-condition-type &compiler-internal-error &compile-time-error
   make-compiler-internal-error compiler-internal-error?)
 
-(define (compile-time-error who message . irritants)
-  (raise
-   (condition (make-compile-time-error)
-	      (make-who-condition who)
-	      (make-message-condition message)
-	      (make-irritants-condition irritants))))
-
 (define (compiler-internal-error who message . irritants)
+  (%raise-error who message (make-compiler-internal-error) irritants))
+
+;;; --------------------------------------------------------------------
+
+(define (%raise-error who message cnd irritants)
   (raise
-   (condition (make-compiler-internal-error)
+   (condition cnd
 	      (make-who-condition who)
 	      (make-message-condition message)
 	      (make-irritants-condition irritants))))
@@ -3541,19 +3574,24 @@
     (define (%E-primcall safe-prim-name rand*)
       (define (%no-replacement)
 	(make-funcall (make-primref safe-prim-name) rand*))
-      (cond ((null? rand*)
-	     (%no-replacement))
-	    ((%compatible-operands-for-primitive-call? safe-prim-name rand*)
-	     (or (%find-unsafe-primitive-replacement safe-prim-name rand*)
-		 (%no-replacement)))
-	    ((option.strict-r6rs)
-	     ;;The operands do  not match the expected arguments:  resort to run-time
-	     ;;error as mandated by R6RS.
-	     (%no-replacement))
-	    (else
-	     (compile-time-error __who__
-	       "operands of invalid core type in call to core primitive"
-	       (unparse-recordized-code/sexp (%no-replacement))))))
+      (parametrise ((%exception-raiser compile-time-error))
+	(cond ((null? rand*)
+	       (%no-replacement))
+	      ((%compatible-operands-for-primitive-call? safe-prim-name rand*)
+	       (or (%find-unsafe-primitive-replacement safe-prim-name rand*)
+		   (%no-replacement)))
+	      ((option.strict-r6rs)
+	       ;;The operands do  not match the expected arguments:  resort to run-time
+	       ;;error as mandated by R6RS.
+	       (%no-replacement))
+	      (else
+	       ((%exception-raiser) __who__
+		"operands of invalid core type in call to core primitive"
+		(unparse-recordized-code/sexp (%no-replacement)))))))
+
+    (define %exception-raiser
+      ;;Procedure used to raise an exception when the validation or operands fails.
+      (make-parameter compile-time-error))
 
     (define (%compatible-operands-for-primitive-call? prim-name rand*)
       ;;Validate the operands  against the types expected by the  core primitive.  If
@@ -3634,6 +3672,7 @@
 		    ;;We  expect a  fixed  number of  arguments.   There are  further
 		    ;;operands but no  more predicates.  The operands  do *not* match
 		    ;;the predicates.
+		    (%exception-raiser compile-time-arity-error)
 		    #f)
 		   ((procedure? preds)
 		    ;;We expect  a variable  number of  arguments; the  rest operands
@@ -3715,7 +3754,9 @@
 		  ;;Operand's type matches the expected argument's type.
 		  ((yes) #t)
 		  ;;Operand's type does *not* match the expected argument's type.
-		  ((no)  #f)
+		  ((no)
+		   (%exception-raiser compile-time-operand-core-type-error)
+		   #f)
 		  ;;Operand's type maybe matches  the expected argument's type, maybe
 		  ;;not: it is compatible.
 		  (else  #t)))
@@ -4412,7 +4453,7 @@
 	      ;;Just call the closure as always.  A "wrong num args" exception will
 	      ;;be raised at run-time as mandated by R6RS.
 	      (make-funcall prelex-rator rand*)
-	    (compile-time-error __who__
+	    (compile-time-arity-error __who__
 	      "wrong number of arguments in closure object application"
 	      (unparse-recordized-code/pretty appform))))))
 
@@ -7025,5 +7066,7 @@
 ;; eval: (put 'with-prelex-structs-in-plists	'scheme-indent-function 1)
 ;; eval: (put 'compile-time-error		'scheme-indent-function 1)
 ;; eval: (put 'compiler-internal-error		'scheme-indent-function 1)
+;; eval: (put 'compile-time-arity-error		'scheme-indent-function 1)
+;; eval: (put 'compile-time-operand-core-type-error 'scheme-indent-function 1)
 ;; eval: (put '%parse-compilation-options	'scheme-indent-function 1)
 ;; End:
