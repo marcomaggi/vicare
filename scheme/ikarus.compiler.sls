@@ -5695,9 +5695,9 @@
       ;;ARG* is a  list of struct instances representing the  arguments of a function
       ;;application.
       ;;
-      ;;If the operator is a struct instance of type PRIMREF representing a primitive
-      ;;operation: such struct is replaced by  an appropriate struct instance of type
-      ;;PRIMCALL.
+      ;;If the  operator is  a struct  instance of type  PRIMREF representing  a core
+      ;;primitive  operation:  such  struct  is replaced  by  an  appropriate  struct
+      ;;instance of type PRIMCALL.
       ;;
       (struct-case op
 	((known expr)
@@ -5714,7 +5714,8 @@
     (define (%primitive-operation? x)
       ;;Import  the  function CORE-PRIMITIVE-OPERATION?   from  a  module defined  in
       ;;"pass-specify-rep.ss".  (Marco Maggi; Oct 14, 2012)
-      (import CORE-PRIMITIVE-OPERATION-NAMES)
+      (module (core-primitive-operation?)
+	(import CORE-PRIMITIVE-OPERATION-NAMES))
       (or (eq? x 'debug-call)
 	  (core-primitive-operation? x)))
 
