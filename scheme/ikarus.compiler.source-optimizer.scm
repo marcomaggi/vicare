@@ -2140,36 +2140,27 @@
 
 
 (module (fold-prim)
-  ;;Whenever possible  attempt to precompute  the result of  a primitive
-  ;;function  application.   This is  the  place  where the  "foldable",
-  ;;"effect-free", "result-true" and "result-false" primitive attributes
-  ;;are used.
+  ;;Whenever  possible attempt  to  precompute  the result  of  a primitive  function
+  ;;application.    This  is   the   place  where   the  "foldable",   "effect-free",
+  ;;"result-true" and "result-false" primitive attributes are used.
   ;;
-  (define (fold-prim primsym appctxt ec sc)
-    ;;PRIMSYM must be a symbol being the name of a primitive function.
-    ;;
-    ;;APPCTXT must  be a struct  instance of type APP,  representing the
-    ;;context of appliction for PRIMSYM.
-    ;;
-    ;;EC is the effort counter.
-    ;;
-    ;;SC is the size counter.
+  (define (fold-prim prim-name appctxt ec sc)
+    ;;PRIM-NAME must  be a symbol  being the name  of a primitive  function.  APPCTXT
+    ;;must be a  struct instance of type APP, representing  the context of appliction
+    ;;for PRIM-NAME.  EC is the effort counter.  SC is the size counter.
     ;;
     (let* ((rand*  (app-rand* appctxt))
-	   (info   (%primitive-info primsym rand*))
+	   (info   (%primitive-info prim-name rand*))
 	   (result (or (and (%info-effect-free? info)
 			    (%precompute-effect-free-primitive info appctxt))
 		       (and (%info-foldable? info)
-			    (%precompute-foldable-primitive primsym rand* ec)))))
-      ;; (debug-print 'fold-prim/examining primsym
-      ;; 		   'foldable? (%info-effect-free? info)
-      ;; 		   'effect-free? (%info-effect-free? info))
+			    (%precompute-foldable-primitive prim-name rand* ec)))))
       (if result
 	  (begin
 	    (decrement ec 1)
-	    ;;When we  avoid calling a primitive  function, its operands
-	    ;;must still  be evaluated for  their side effects;  so mark
-	    ;;them for this.  In other words, we want:
+	    ;;When we avoid calling a primitive  function, its operands must still be
+	    ;;evaluated for  their side  effects; so  mark them  for this.   In other
+	    ;;words, we want:
 	    ;;
 	    ;;  (begin
 	    ;;    (list (display "ciao"))
@@ -2181,20 +2172,19 @@
 	    ;;    (display "ciao")
 	    ;;    123)
 	    ;;
-	    (for-each (lambda (x)
-			(set-operand-residualize-for-effect! x #t))
+	    ($for-each/stx (lambda (x)
+			     (set-operand-residualize-for-effect! x #t))
 	      rand*)
 	    (set-app-inlined! appctxt #t)
 	    result)
 	(begin
 	  (decrement sc 1)
-	  (mk-primref primsym)))))
+	  (mk-primref prim-name)))))
 
   (define (%precompute-effect-free-primitive info appctxt)
-    ;;The function  call is effect  free.  If the evaluation  context is
-    ;;"for  side effects":  the function  call can  be removed.   If the
-    ;;evaluation context is "predicate": check  if the function call has
-    ;;known boolean result.
+    ;;The  function call  is effect  free.  If  the evaluation  context is  "for side
+    ;;effects":  the function  call can  be removed.   If the  evaluation context  is
+    ;;"predicate": check if the function call has known boolean result.
     ;;
     (case-context (app-ctxt appctxt)
       ((e)
@@ -2203,102 +2193,43 @@
        (cond ((%info-result-true?  info)	(make-constant #t))
 	     ((%info-result-false? info)	(make-constant #f))
 	     (else				#f)))
-      (else
-       #f)))
+      (else #f)))
 
-  (define (%precompute-foldable-primitive primsym rand* ec)
-    ;;The function call  is foldable; if all the  operands are constant:
-    ;;precompute the function call and  return a struct instance of type
-    ;;CONSTANT; else return false.
+  (define (%precompute-foldable-primitive prim-name rand* ec)
+    ;;The function call is foldable; if all the operands are constant: precompute the
+    ;;function call and return a struct instance of type CONSTANT; else return false.
     ;;
-    ;;PRIMSYM must be a symbol being the name of a primitive function.
-    ;;
-    ;;RAND* must be  a list of struct  instances representing recordized
-    ;;code which, when evaluated, will return the arguments.
-    ;;
-    ;;EC is a counter.
+    ;;PRIM-NAME must be a symbol being the  name of a primitive function.  RAND* must
+    ;;be  a  list  of  struct  instances representing  recordized  code  which,  when
+    ;;evaluated, will return the arguments.  EC is the effort counter.
     ;;
     (let ((val* (map (lambda (x)
 		       (value-visit-operand! x))
 		  rand*)))
-      (cond ((andmap constant? val*)
-	     (%apply-at-compile-time primsym (map constant-value val*) ec))
-	    (else
-	     #f))))
+      (and (andmap constant? val*)
+	   (%apply-at-compile-time prim-name (map constant-value val*) ec))))
 
-  (define (%apply-at-compile-time primsym args ec)
-    ;;PRIMSYM must be a symbol being the name of a primitive function.
+  (define (%apply-at-compile-time prim-name args ec)
+    ;;Apply  the primitive  associated  to PRIM-NAME  to the  list  of arguments;  if
+    ;;successful: return a struct instance of  type CONSTANT holding the result; else
+    ;;return false.
     ;;
-    ;;ARGS must be a list  of constant values representing the arguments
-    ;;of a call to P.
+    ;;PRIM-NAME must be a  symbol being the name of a  primitive function.  ARGS must
+    ;;be a list of constant values representing the  arguments of a call to P.  EC is
+    ;;the effort counter.
     ;;
-    ;;EC is a counter.
-    ;;
-    ;;Apply the primitive  associated to P to the list  of arguments; if
-    ;;successful: return a struct instance  of type CONSTANT holding the
-    ;;result; else return false.
-    ;;
-    ;;See  the  documentation  of   the  function  SYSTEM-VALUE  for  an
-    ;;explanation of why we can extract the function from PRIMSYM.
+    ;;See the documentation of the function SYSTEM-VALUE for an explanation of why we
+    ;;can extract the function from PRIM-NAME.
     ;;
     (call/cc
-	(lambda (k)
+	(lambda (escape)
 	  (with-exception-handler
 	      (lambda (con)
 		(decrement ec 10)
-		(k #f))
+		(escape #f))
 	    (lambda ()
-;;;(debug-print 'apply-at-compile-time primsym args)
-	      (make-constant (apply (system-value primsym) args)))))))
-
-;;; --------------------------------------------------------------------
-
-  (define (%primitive-info primsym rand*)
-    ;;PRIMSYM  must be  a symbol  representing the  name of  a primitive
-    ;;function.  RAND* must be null  or a list representing the arguments
-    ;;in a function call to PRIMSYM.
-    ;;
-    ;;This function scans  the attributes list of  PRIMSYM searching for
-    ;;entries that match the arguments  call represented by RAND*.  If a
-    ;;match  is  found:  return  a  list  of  symbols  representing  the
-    ;;attributes; else return nil.
-    ;;
-    (define who '%primitive-info)
-    (define (%matches? attributes-sublist)
-      (let loop ((rand*           rand*)
-		 (template-params (car attributes-sublist)))
-	(cond ((pair? template-params)
-	       (and (pair? rand*)
-		    (let ((template-arg (car template-params)))
-		      (case template-arg
-			((_)
-			 ;;An argument matched.  Go on with the rest.
-			 (loop (cdr rand*) (cdr template-params)))
-			((#f 0 ())
-			 ;;The  template  specifies that  this  argument
-			 ;;must be one  among: #f, 0, nil; if  it is: go
-			 ;;on with the rest; else this template does not
-			 ;;match.
-			 (let ((v (value-visit-operand! (car rand*))))
-			   (and (constant? v)
-				(equal? template-arg (constant-value v))
-				(loop (cdr rand*) (cdr template-params)))))
-			(else
-			 ;;Invalid template specification.
-			 (error who "internal error" primsym (car template-params)))))))
-	      ((eq? template-params '_)
-	       ;;Success!  The template represents  a call accepting any
-	       ;;number  of  arguments  (possibly after  some  mandatory
-	       ;;arguments).
-	       #t)
-	      ((null? template-params)
-	       ;;If  RAND* is  null: success,  the template  matches the
-	       ;;arguments!  Else this template does not match.
-	       (null? rand*))
-	      (else
-	       (error who "internal error" primsym template-params)))))
-    (or (find %matches? (primprop primsym))
-	'()))
+	      #;(debug-print 'apply-at-compile-time prim-name args)
+	      (make-constant (apply (system-value prim-name) args)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -2314,7 +2245,55 @@
   (define-syntax-rule (%info-result-false? ?info)
     (memq 'result-false ?info))
 
-  #| end of module: fold-prim |# )
+;;; --------------------------------------------------------------------
+
+  (define* (%primitive-info prim-name rand*)
+    ;;PRIM-NAME  must be  a symbol  representing the  name of  a primitive  function.
+    ;;RAND* must be null  or a list representing the arguments in  a function call to
+    ;;PRIM-NAME.
+    ;;
+    ;;This function scans the attributes list of PRIM-NAME searching for entries that
+    ;;match the arguments call  represented by RAND*.  If a match  is found: return a
+    ;;list of symbols representing the attributes; else return null.
+    ;;
+    (define (%matches? attributes-sublist)
+      (let loop ((rand*           rand*)
+		 (template-params (car attributes-sublist)))
+	(cond ((pair? template-params)
+	       (and (pair? rand*)
+		    (let ((template-arg (car template-params)))
+		      (case template-arg
+			((_)
+			 ;;An argument matched.  Go on with the rest.
+			 (loop (cdr rand*) (cdr template-params)))
+			((#f 0 ())
+			 ;;The  template specifies  that  this argument  must be  one
+			 ;;among: #f,  0, nil; if  it is: go  on with the  rest; else
+			 ;;this template does not match.
+			 (let ((v (value-visit-operand! (car rand*))))
+			   (and (constant? v)
+				(equal? template-arg (constant-value v))
+				(loop (cdr rand*) (cdr template-params)))))
+			(else
+			 (compiler-internal-error __who__
+			   "invalid core primitive template operand specification"
+			   prim-name (car template-params)))))))
+	      ((eq? template-params '_)
+	       ;;Success!  The  template represents  a call  accepting any  number of
+	       ;;arguments (possibly after some mandatory arguments).
+	       #t)
+	      ((null? template-params)
+	       ;;If RAND* is null: success, the template matches the arguments!  Else
+	       ;;this template does not match.
+	       (null? rand*))
+	      (else
+	       (compiler-internal-error __who__
+		 "invalid core primitive template operand specification"
+		 prim-name template-params)))))
+    (or (find %matches? (primprop prim-name))
+	'()))
+
+  #| end of module: FOLD-PRIM |# )
 
 
 ;;;; done
