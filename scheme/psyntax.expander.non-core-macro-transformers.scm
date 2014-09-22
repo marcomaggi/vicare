@@ -2816,7 +2816,7 @@
        (begin
 	 (unless (and (identifier? ?rest-id)
 		      (identifier? ?rest-pred))
-	   (synner "invalid rest argument specification" (cons 'brace ?rest-id ?rest-pred)))
+	   (synner "invalid rest argument specification" #'(brace ?rest-id ?rest-pred)))
 	 (let recur ((?pred-arg* ?pred-arg*))
 	   (if (pair? ?pred-arg*)
 	       (receive (?standard-formals arg-validation-spec*)

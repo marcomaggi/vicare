@@ -631,7 +631,7 @@
 		      (identifier? ?rest-tag)
 		      (tag-super-and-sub? (list-tag-id) ?rest-tag))
 	   (syntax-violation __who__
-	     "invalid rest argument specification" original-formals.stx (cons 'brace ?rest-id ?rest-tag)))
+	     "invalid rest argument specification" original-formals.stx #'(brace ?rest-id ?rest-tag)))
 	 (assert-tag-identifier? ?rest-tag)
 	 (receive-and-return (standard-formals.stx tags)
 	     (let recur ((?arg* ?arg*))
