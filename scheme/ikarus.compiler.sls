@@ -3567,8 +3567,8 @@
 ;;; --------------------------------------------------------------------
 
   (module (E-funcall)
-    (module (CORE-PRIMITIVE-CORE-TYPE-SIGNATURES-KEY
-	     CORE-PRIMITIVE-REPLACEMENTS-KEY)
+    (module (CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES
+	     CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS)
       (import CORE-PRIMITIVE-PROPERTIES))
 
     (define (E-funcall rator rand*)
@@ -3605,7 +3605,7 @@
       ;;Validate the operands  against the types expected by the  core primitive.  If
       ;;they are compatible: return true, otherwise return false.
       ;;
-      (cond ((getprop prim-name CORE-PRIMITIVE-CORE-TYPE-SIGNATURES-KEY)
+      (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES)
 	     => (lambda (signature*)
 		  ;;We expect SIGNATURE* to be a list of pairs pair with the format:
 		  ;;
@@ -3628,7 +3628,7 @@
       ;;Validate the operands  against the types expected by the  core primitive.  If
       ;;they match: return true, otherwise return false.
       ;;
-      (cond ((getprop prim-name CORE-PRIMITIVE-CORE-TYPE-SIGNATURES-KEY)
+      (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES)
 	     => (lambda (signature*)
 		  ;;We expect SIGNATURE* to be a list of pairs pair with the format:
 		  ;;
@@ -3650,7 +3650,7 @@
       ;;expected argument  types match  the RAND*.  If  successful: return  a FUNCALL
       ;;struct that must replace the original; otherwise return false.
       ;;
-      (cond ((getprop safe-prim-name CORE-PRIMITIVE-REPLACEMENTS-KEY)
+      (cond ((getprop safe-prim-name CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS)
 	     ;;REPLACEMENT-PRIM-NAME* is a list  of symbols representing public names
 	     ;;of unsafe primitives.
 	     => (lambda (replacement-prim-name*)

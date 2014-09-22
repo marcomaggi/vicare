@@ -32,14 +32,14 @@
 
 
 (module CORE-PRIMITIVE-PROPERTIES
-  (CORE-PRIMITIVE-CORE-TYPE-SIGNATURES-KEY
-   CORE-PRIMITIVE-REPLACEMENTS-KEY)
+  (CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES
+   CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS)
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-constant CORE-PRIMITIVE-CORE-TYPE-SIGNATURES-KEY
+  (define-constant CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES
     (compile-time-gensym "core-primitive/core-types-signature"))
 
-  (define-constant CORE-PRIMITIVE-REPLACEMENTS-KEY
+  (define-constant CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS
     (compile-time-gensym "core-primitive/replacements-signatures"))
 
 
@@ -79,12 +79,12 @@
 
   (define (%compose-signature-output-form prim-name signature-pred*)
     (if (pair? signature-pred*)
-	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-CORE-TYPE-SIGNATURES-KEY (quasiquote #,signature-pred*))
+	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES (quasiquote #,signature-pred*))
       #'(void)))
 
   (define (%compose-replacements-output-orm prim-name replacement-prim-name*)
     (if (pair? replacement-prim-name*)
-	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-REPLACEMENTS-KEY (quote #,replacement-prim-name*))
+	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS (quote #,replacement-prim-name*))
       #'(void)))
 
   (define (%parse-prim-name stx)
@@ -303,7 +303,10 @@
     #;(debug-print (syntax->datum output-form))
     (void)))
 
-  (include "ikarus.compiler.core-primitive-tables.scm" #t)
+
+;;;; include core primitive tables
+
+(include "ikarus.compiler.core-primitive-tables.scm" #t)
 
 
 ;;;; done
