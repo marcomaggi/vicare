@@ -28,41 +28,41 @@
 ;;;; pairs
 
 (declare-core-primitive car
-    safe
+    (safe)
   (signatures ((T:pair) => (_)))
-  (unsafe-replacements $car))
+  (replacements $car))
 
 (declare-core-primitive cdr
-    safe
+    (safe)
   (signatures ((T:pair) => (_)))
-  (unsafe-replacements $cdr))
+  (replacements $cdr))
 
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive $car
-    unsafe
+    (unsafe)
   (signatures ((T:pair) => (_))))
 
 (declare-core-primitive $cdr
-    unsafe
+    (unsafe)
   (signatures ((T:pair) => (_))))
 
 
 ;;;; fixnums
 
 ;; (declare-core-primitive fx+ safe
-;;   (unsafe-replacements
+;;   (replacements
 ;;    ($fx+/overflow T:fixnum T:fixnum)))
 
 
 ;;;; general arithmetics
 
 (declare-core-primitive +
-    safe
+    (safe)
   (signatures (T:number => (T:number)))
   ;;The commented out variants  handle operands of a type that  is not categorised by
   ;;the core type system.
-  (unsafe-replacements
+  (replacements
    $add-fixnum-fixnum		#;$add-fixnum-bignum	$add-fixnum-flonum
    #;$add-fixnum-ratnum		#;$add-fixnum-compnum	#;$add-fixnum-cflonum
 
@@ -92,255 +92,255 @@
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive $add-fixnum-fixnum
-    unsafe
+    (unsafe)
   (signatures ((T:fixnum T:fixnum) => (T:number))))
 
 (declare-core-primitive $add-fixnum-bignum
-    unsafe
+    (unsafe)
   (signatures ((T:fixnum T:bignum) => (T:number))))
 
 (declare-core-primitive $add-fixnum-flonum
-    unsafe
+    (unsafe)
   (signatures ((T:fixnum T:flonum) => (T:number))))
 
 (declare-core-primitive $add-fixnum-ratnum
-    unsafe
+    (unsafe)
   (signatures ((T:fixnum T:ratnum) => (T:number))))
 
 (declare-core-primitive $add-fixnum-compnum
-    unsafe
+    (unsafe)
   (signatures ((T:fixnum T:compnum) => (T:number))))
 
 (declare-core-primitive $add-fixnum-cflonum
-    unsafe
+    (unsafe)
   (signatures ((T:fixnum T:cflonum) => (T:number))))
 
 ;;;
 
 (declare-core-primitive $add-bignum-fixnum
-    unsafe
+    (unsafe)
   (signatures ((T:bignum T:fixnum) => (T:number))))
 
 (declare-core-primitive $add-bignum-bignum
-    unsafe
+    (unsafe)
   (signatures ((T:bignum T:bignum) => (T:number))))
 
 (declare-core-primitive $add-bignum-flonum
-    unsafe
+    (unsafe)
   (signatures ((T:bignum T:flonum) => (T:number))))
 
 (declare-core-primitive $add-bignum-ratnum
-    unsafe
+    (unsafe)
   (signatures ((T:bignum T:ratnum) => (T:number))))
 
 (declare-core-primitive $add-bignum-compnum
-    unsafe
+    (unsafe)
   (signatures ((T:bignum T:compnum) => (T:number))))
 
 (declare-core-primitive $add-bignum-cflonum
-    unsafe
+    (unsafe)
   (signatures ((T:bignum T:cflonum) => (T:number))))
 
 ;;;
 
 (declare-core-primitive $add-flonum-fixnum
-    unsafe
+    (unsafe)
   (signatures ((T:flonum T:fixnum) => (T:number))))
 
 (declare-core-primitive $add-flonum-bignum
-    unsafe
+    (unsafe)
   (signatures ((T:flonum T:bignum) => (T:number))))
 
 (declare-core-primitive $add-flonum-flonum
-    unsafe
+    (unsafe)
   (signatures ((T:flonum T:flonum) => (T:number))))
 
 (declare-core-primitive $add-flonum-ratnum
-    unsafe
+    (unsafe)
   (signatures ((T:flonum T:ratnum) => (T:number))))
 
 (declare-core-primitive $add-flonum-compnum
-    unsafe
+    (unsafe)
   (signatures ((T:flonum T:compnum) => (T:number))))
 
 (declare-core-primitive $add-flonum-cflonum
-    unsafe
+    (unsafe)
   (signatures ((T:flonum T:cflonum) => (T:number))))
 
 ;;;
 
 (declare-core-primitive $add-ratnum-fixnum
-    unsafe
+    (unsafe)
   (signatures ((T:ratnum T:fixnum) => (T:number))))
 
 (declare-core-primitive $add-ratnum-bignum
-    unsafe
+    (unsafe)
   (signatures ((T:ratnum T:bignum) => (T:number))))
 
 (declare-core-primitive $add-ratnum-flonum
-    unsafe
+    (unsafe)
   (signatures ((T:ratnum T:flonum) => (T:number))))
 
 (declare-core-primitive $add-ratnum-ratnum
-    unsafe
+    (unsafe)
   (signatures ((T:ratnum T:ratnum) => (T:number))))
 
 (declare-core-primitive $add-ratnum-compnum
-    unsafe
+    (unsafe)
   (signatures ((T:ratnum T:compnum) => (T:number))))
 
 (declare-core-primitive $add-ratnum-cflonum
-    unsafe
+    (unsafe)
   (signatures ((T:ratnum T:cflonum) => (T:number))))
 
 ;;;
 
 (declare-core-primitive $add-compnum-fixnum
-    unsafe
+    (unsafe)
   (signatures ((T:compnum T:fixnum) => (T:number))))
 
 (declare-core-primitive $add-compnum-bignum
-    unsafe
+    (unsafe)
   (signatures ((T:compnum T:bignum) => (T:number))))
 
 (declare-core-primitive $add-compnum-ratnum
-    unsafe
+    (unsafe)
   (signatures ((T:compnum T:ratnum) => (T:number))))
 
 (declare-core-primitive $add-compnum-compnum
-    unsafe
+    (unsafe)
   (signatures ((T:compnum T:compnum) => (T:number))))
 
 (declare-core-primitive $add-compnum-flonum
-    unsafe
+    (unsafe)
   (signatures ((T:compnum T:flonum) => (T:number))))
 
 (declare-core-primitive $add-compnum-cflonum
-    unsafe
+    (unsafe)
   (signatures ((T:compnum T:cflonum) => (T:number))))
 
 ;;;
 
 (declare-core-primitive $add-cflonum-fixnum
-    unsafe
+    (unsafe)
   (signatures ((T:cflonum T:fixnum) => (T:number))))
 
 (declare-core-primitive $add-cflonum-bignum
-    unsafe
+    (unsafe)
   (signatures ((T:cflonum T:bignum) => (T:number))))
 
 (declare-core-primitive $add-cflonum-ratnum
-    unsafe
+    (unsafe)
   (signatures ((T:cflonum T:ratnum) => (T:number))))
 
 (declare-core-primitive $add-cflonum-flonum
-    unsafe
+    (unsafe)
   (signatures ((T:cflonum T:flonum) => (T:number))))
 
 (declare-core-primitive $add-cflonum-compnum
-    unsafe
+    (unsafe)
   (signatures ((T:cflonum T:compnum) => (T:number))))
 
 (declare-core-primitive $add-cflonum-cflonum
-    unsafe
+    (unsafe)
   (signatures ((T:cflonum T:cflonum) => (T:number))))
 
 ;;;
 
 (declare-core-primitive $add-fixnum-number
-    unsafe
+    (unsafe)
   (signatures ((T:fixnum T:number) => (T:number))))
 
 (declare-core-primitive $add-bignum-number
-    unsafe
+    (unsafe)
   (signatures ((T:bignum T:number) => (T:number))))
 
 (declare-core-primitive $add-flonum-number
-    unsafe
+    (unsafe)
   (signatures ((T:flonum T:number) => (T:number))))
 
 (declare-core-primitive $add-ratnum-number
-    unsafe
+    (unsafe)
   (signatures ((T:ratnum T:number) => (T:number))))
 
 (declare-core-primitive $add-compnum-number
-    unsafe
+    (unsafe)
   (signatures ((T:compnum T:number) => (T:number))))
 
 (declare-core-primitive $add-cflonum-number
-    unsafe
+    (unsafe)
   (signatures ((T:cflonum T:number) => (T:number))))
 
 ;;;
 
 (declare-core-primitive $add-number-fixnum
-    unsafe
+    (unsafe)
   (signatures ((T:number T:fixnum) => (T:number))))
 
 (declare-core-primitive $add-number-bignum
-    unsafe
+    (unsafe)
   (signatures ((T:number T:bignum) => (T:number))))
 
 (declare-core-primitive $add-number-flonum
-    unsafe
+    (unsafe)
   (signatures ((T:number T:flonum) => (T:number))))
 
 (declare-core-primitive $add-number-ratnum
-    unsafe
+    (unsafe)
   (signatures ((T:number T:ratnum) => (T:number))))
 
 (declare-core-primitive $add-number-compnum
-    unsafe
+    (unsafe)
   (signatures ((T:number T:compnum) => (T:number))))
 
 (declare-core-primitive $add-number-cflonum
-    unsafe
+    (unsafe)
   (signatures ((T:number T:cflonum) => (T:number))))
 
 (declare-core-primitive $add-number-number
-    unsafe
+    (unsafe)
   (signatures ((T:number T:number) => (T:number))))
 
 
 ;;;; core primitives: symbols
 
 (declare-core-primitive putprop
-    safe
+    (safe)
   (signatures ((T:symbol T:symbol _) => (_)))
-  (unsafe-replacements $putprop))
+  (replacements $putprop))
 
 (declare-core-primitive getprop
-    safe
+    (safe)
   (signatures ((T:symbol T:symbol) => (T:void)))
-  (unsafe-replacements $getprop))
+  (replacements $getprop))
 
 (declare-core-primitive remprop
-    safe
+    (safe)
   (signatures ((T:symbol T:symbol) => (T:void)))
-  (unsafe-replacements $remprop))
+  (replacements $remprop))
 
 (declare-core-primitive property-list
-    safe
+    (safe)
   ;;The return value can be null or a pair.
   (signatures ((T:symbol) => (_)))
-  (unsafe-replacements $property-list))
+  (replacements $property-list))
 
 ;;; --------------------------------------------------------------------
 
 (declare-core-primitive $putprop
-    unsafe
+    (unsafe)
   (signatures ((T:symbol T:symbol _) => (T:void))))
 
 (declare-core-primitive $getprop
-    unsafe
+    (unsafe)
   (signatures ((T:symbol T:symbol) => (T:void))))
 
 (declare-core-primitive $remprop
-    unsafe
+    (unsafe)
   (signatures ((T:symbol T:symbol) => (T:void))))
 
 (declare-core-primitive $property-list
-    unsafe
+    (unsafe)
   (signatures ((T:symbol) => (_))))
 
 
