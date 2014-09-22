@@ -652,7 +652,8 @@
   ;;
   (pretty-print args (current-error-port))
   (newline (current-error-port))
-  (newline (current-error-port)))
+  (newline (current-error-port))
+  (flush-output-port (current-error-port)))
 
 (define debug-print-enabled?
   (make-parameter #f
