@@ -6,7 +6,7 @@
 ;;;
 ;;;Abstract
 ;;;
-;;;
+;;;	Test the compiler pass "introduce unsafe primrefs".
 ;;;
 ;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -31,11 +31,11 @@
 	  compiler.))
 
 (check-set-mode! 'report-failed)
-(check-display "*** testing Vicare compiler pass: unsafe primcalls introduction\n")
+(check-display "*** testing Vicare compiler pass: unsafe primrefs introduction\n")
 
 (compiler.$descriptive-labels #t)
 
-(debug-print-enabled? #t)
+#;(debug-print-enabled? #t)
 
 
 ;;;; helpers
@@ -91,7 +91,7 @@
 	 (S (compiler.$unparse-recordized-code/sexp D)))
     S))
 
-(define (%introduce-unsafe-primcalls core-language-form)
+(define (%introduce-unsafe-primrefs core-language-form)
   (let* ((D (compiler.$recordize core-language-form))
 	 (D (compiler.$optimize-direct-calls D))
 	 (D (compiler.$optimize-letrec D))
@@ -100,7 +100,7 @@
 	 #;(D (compiler.$source-optimize D))
 	 (D (compiler.$rewrite-references-and-assignments D))
 	 (D (compiler.$core-type-inference D))
-	 (D (compiler.$introduce-unsafe-primcalls D))
+	 (D (compiler.$introduce-unsafe-primrefs D))
 	 (S (compiler.$unparse-recordized-code/sexp D)))
     S))
 
@@ -108,7 +108,7 @@
   (syntax-rules ()
     ((_ ?core-language-form ?expected-result)
      (check
-	 (%introduce-unsafe-primcalls (quasiquote ?core-language-form))
+	 (%introduce-unsafe-primrefs (quasiquote ?core-language-form))
        => (quasiquote ?expected-result)))
     ))
 

@@ -36,7 +36,7 @@ Compiler passes
 * compiler optimisation::       Source optimisation.
 * compiler refassig::           Rewriting references and assignments.
 * compiler type inference::     Core type inference.
-* compiler unsafe primcalls::   Safe to unsafe core primitive applications.
+* compiler unsafe primrefs::    Safe to unsafe core primitive applications.
 * compiler sanitise bindings::  Sanitising bindings.
 * compiler direct jumps::       Optimisation for direct jumps.
 * compiler global assign::      Inserting global assignments.
@@ -781,7 +781,7 @@ optimize-letrec
 source-optimize
 rewrite-references-and-assignments
 core-type-inference (optional)
-introduce-unsafe-primcalls (optional)
+introduce-unsafe-primrefs (optional)
 sanitize-bindings
 optimize-for-direct-jumps
 insert-global-assignments
@@ -2516,7 +2516,7 @@ control flow cannot come back.  This allows us to determine type
 informations and propagate them after the arguments have been validated.
 
 @c page
-@node compiler unsafe primcalls
+@node compiler unsafe primrefs
 @section Safe to unsafe core primitive applications
 
 
@@ -2556,7 +2556,7 @@ core primitives implemented only as functions (not operations) that
 still have an unsafe variant.
 
 
-@defun $introduce-unsafe-primcalls @var{input}
+@defun $introduce-unsafe-primrefs @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2564,8 +2564,8 @@ hierarchy.
 @end defun
 
 
-@deffn Parameter $perform-unsafe-primcalls-introduction
-When true the pass @func{$introduce-unsafe-primcalls} is performed, else
+@deffn Parameter $perform-unsafe-primrefs-introduction
+When true the pass @func{$introduce-unsafe-primrefs} is performed, else
 it is skipped.  Defaults to @true{}.
 @end deffn
 

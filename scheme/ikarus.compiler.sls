@@ -37,7 +37,7 @@
      (check-for-illegal-letrec			$check-for-illegal-letrec)
      (source-optimizer-passes-count		$source-optimizer-passes-count)
      (perform-core-type-inference		$perform-core-type-inference)
-     (perform-unsafe-primcalls-introduction	$perform-unsafe-primcalls-introduction)
+     (perform-unsafe-primrefs-introduction	$perform-unsafe-primrefs-introduction)
      (cp0-effort-limit				$cp0-effort-limit)
      (cp0-size-limit				$cp0-size-limit)
      (strip-source-info				$strip-source-info)
@@ -56,7 +56,7 @@
      (source-optimize				$source-optimize)
      (rewrite-references-and-assignments	$rewrite-references-and-assignments)
      (core-type-inference			$core-type-inference)
-     (introduce-unsafe-primcalls		$introduce-unsafe-primcalls)
+     (introduce-unsafe-primrefs			$introduce-unsafe-primrefs)
      (sanitize-bindings				$sanitize-bindings)
      (optimize-for-direct-jumps			$optimize-for-direct-jumps)
      (insert-global-assignments			$insert-global-assignments)
@@ -154,10 +154,10 @@
   ;;
   (make-parameter #t))
 
-(define perform-unsafe-primcalls-introduction
-  ;;When true: the pass INTRODUCE-UNSAFE-PRIMCALLS-INFERENCE is performed, else it is
-  ;;skipped.  It  makes sense  to perform such  compiler pass only  if we  have first
-  ;;performed the core type inference.
+(define perform-unsafe-primrefs-introduction
+  ;;When true: the pass INTRODUCE-UNSAFE-PRIMREFS  is performed, else it is skipped.
+  ;;It makes sense to perform such compiler  pass only if we have first performed the
+  ;;core type inference.
   ;;
   (make-parameter #t))
 
@@ -621,8 +621,8 @@
 			(core-type-inference p)
 		      p))
 		 (p (if (and (perform-core-type-inference)
-			     (perform-unsafe-primcalls-introduction))
-			(introduce-unsafe-primcalls p)
+			     (perform-unsafe-primrefs-introduction))
+			(introduce-unsafe-primrefs p)
 		      p))
 		 (p (sanitize-bindings p))
 		 (p (optimize-for-direct-jumps p))
@@ -675,8 +675,8 @@
 			(core-type-inference p)
 		      p))
 		 (p (if (and (perform-core-type-inference)
-			     (perform-unsafe-primcalls-introduction))
-			(introduce-unsafe-primcalls p)
+			     (perform-unsafe-primrefs-introduction))
+			(introduce-unsafe-primrefs p)
 		      p))
 		 (p (sanitize-bindings p))
 		 (p (optimize-for-direct-jumps p))
@@ -3445,7 +3445,7 @@
 (include "ikarus.compiler.core-type-inference.scm" #t)
 
 
-(module (introduce-unsafe-primcalls)
+(module (introduce-unsafe-primrefs)
   ;;This optional compiler  pass recognises the application of  *safe* core primitive
   ;;functions  having  operands of  the  correct  type  and  replaces them  with  the
   ;;corresponding  application of  *unsafe* core  primitive functions  or operations.
@@ -3462,9 +3462,9 @@
   ;;   forcall		funcall
   ;;
   (define-syntax __who__
-    (identifier-syntax 'introduce-unsafe-primcalls))
+    (identifier-syntax 'introduce-unsafe-primrefs))
 
-  (define (introduce-unsafe-primcalls x)
+  (define (introduce-unsafe-primrefs x)
     (E x))
 
   (define (E x)
@@ -4030,7 +4030,7 @@
 
     #| end of module: E-funcall |# )
 
-  #| end of module: INTRODUCE-UNSAFE-PRIMCALLS |# )
+  #| end of module: INTRODUCE-UNSAFE-PRIMREFS |# )
 
 
 (module (sanitize-bindings)
