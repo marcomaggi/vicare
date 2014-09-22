@@ -13,7 +13,7 @@
 ;;;	returned values; miscellaneous properties used by the source optimiser.
 ;;;
 ;;;	  Scheme  object's core  types  are  defined by  the  module "Scheme  objects
-;;;	ontology".
+;;;	ontology".  The actual core primitive tables are in a different source file.
 ;;;
 ;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
@@ -64,14 +64,14 @@
       ;;Safe primitive.
       ((?ctx ?prim-name (safe)
 	     (signatures ?signature ...)
-	     (replacements ?unsafe-prim-name ...))
+	     (replacements ?replacement-prim-name ...))
        (let* ((prim-name		(%parse-prim-name #'?prim-name))
 	      (signature*		(%parse-signatures-sexp #'(signatures ?signature ...)))
-	      (unsafe-prim-name*	(%parse-replacements-sexp #'(replacements ?unsafe-prim-name ...)))
+	      (replacement-prim-name*	(%parse-replacements-sexp #'(replacements ?replacement-prim-name ...)))
 	      (signature-pred*		(%signatures->signature-pred* #'?ctx signature*)))
 	 (with-syntax
 	     ((SIGNATURE-FORM		(%compose-signature-output-form prim-name signature-pred*))
-	      (REPLACEMENTS-FORM	(%compose-replacements-output-orm prim-name unsafe-prim-name*)))
+	      (REPLACEMENTS-FORM	(%compose-replacements-output-orm prim-name replacement-prim-name*)))
 	   #'(begin SIGNATURE-FORM REPLACEMENTS-FORM))))
 
       (_
@@ -82,9 +82,9 @@
 	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-CORE-TYPE-SIGNATURES-KEY (quasiquote #,signature-pred*))
       #'(void)))
 
-  (define (%compose-replacements-output-orm prim-name unsafe-prim-name*)
-    (if (pair? unsafe-prim-name*)
-	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-REPLACEMENTS-KEY (quote #,unsafe-prim-name*))
+  (define (%compose-replacements-output-orm prim-name replacement-prim-name*)
+    (if (pair? replacement-prim-name*)
+	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-REPLACEMENTS-KEY (quote #,replacement-prim-name*))
       #'(void)))
 
   (define (%parse-prim-name stx)
@@ -235,13 +235,13 @@
 
   (define (%parse-replacements-sexp stx)
     (syntax-case stx (replacements)
-      ((replacements ?unsafe-prim-name ...)
-       (receive-and-return (unsafe-prim-name*)
-	   (syntax->list #'(?unsafe-prim-name ...))
+      ((replacements ?replacement-prim-name ...)
+       (receive-and-return (replacement-prim-name*)
+	   (syntax->list #'(?replacement-prim-name ...))
 	 (for-each (lambda (id)
 		     (unless (identifier? id)
 		       (synner "expected identifier as replacement name in core primitive declaration" id)))
-	   unsafe-prim-name*)))
+	   replacement-prim-name*)))
       (_
        (synner "invalid replacements specification in core primitive declaration" stx))))
 
