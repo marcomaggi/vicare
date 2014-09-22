@@ -50,6 +50,10 @@
    T:positive		T:zero			T:negative
    T:other-number
 
+   ;;These are not fully implemented.
+   ;; T:ratnum		T:bignum		T:compnum
+   ;; T:cflonum
+
    ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
    ;;
    ;;yes -
@@ -101,7 +105,11 @@
    T:procedure?		T:false?		T:true?
    T:positive?		T:zero?			T:negative?
    T:other-number?	T:other-exact?		T:fixnum?
-   T:other-inexact?	T:flonum?)
+   T:other-inexact?	T:flonum?
+
+   ;;These are not fully implemented.
+   T:ratnum?		T:bignum?		T:compnum?
+   T:cflonum?)
 
 
 (define-syntax (define-ontology x)
@@ -431,6 +439,30 @@
   (number-exactness	(exclusive exact inexact))
   (exact		(exclusive fixnum other-exact))
   (inexact		(exclusive flonum other-inexact)))
+
+(define* (T:ratnum? (brace x core-type-tag?))
+  (case (T:other-number? x)
+    ((yes)	'maybe)
+    ((no)	'no)
+    ((maybe)	'maybe)))
+
+(define* (T:bignum? (brace x core-type-tag?))
+  (case (T:other-number? x)
+    ((yes)	'maybe)
+    ((no)	'no)
+    ((maybe)	'maybe)))
+
+(define* (T:compnum? (brace x core-type-tag?))
+  (case (T:other-number? x)
+    ((yes)	'maybe)
+    ((no)	'no)
+    ((maybe)	'maybe)))
+
+(define* (T:cflonum? (brace x core-type-tag?))
+  (case (T:other-number? x)
+    ((yes)	'maybe)
+    ((no)	'no)
+    ((maybe)	'maybe)))
 
 #| end of module: SCHEME-OBJECTS-ONTOLOGY |# )
 

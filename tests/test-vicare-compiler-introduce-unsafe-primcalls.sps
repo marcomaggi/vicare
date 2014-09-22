@@ -35,6 +35,8 @@
 
 (compiler.$descriptive-labels #t)
 
+(debug-print-enabled? #t)
+
 
 ;;;; helpers
 
@@ -148,6 +150,30 @@
   	  (known (constant 2)
   		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))))
 
+  ;;Fixnum, flonum operands: successful replacement.
+  (doit ((primitive +) '1 '2.2)
+	(funcall (primref $add-fixnum-flonum)
+	  (known (constant 1)
+		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))
+	  (known (constant 2.2)
+		 (T:flonum T:positive T:non-false T:nonimmediate T:inexact T:number T:object))))
+
+  ;;Flonum, fixnum operands: successful replacement.
+  (doit ((primitive +) '1.1 '2)
+	(funcall (primref $add-flonum-fixnum)
+	  (known (constant 1.1)
+		 (T:flonum T:positive T:non-false T:nonimmediate T:inexact T:number T:object))
+	  (known (constant 2)
+		 (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))))
+
+  ;;Flonum, flonum operands: successful replacement.
+  (doit ((primitive +) '1.1 '2.2)
+	(funcall (primref $add-flonum-flonum)
+	  (known (constant 1.1)
+		 (T:flonum T:positive T:non-false T:nonimmediate T:inexact T:number T:object))
+	  (known (constant 2.2)
+		 (T:flonum T:positive T:non-false T:nonimmediate T:inexact T:number T:object))))
+
   ;;No replacement for "+" when there are more than 2 operands.
   (doit ((primitive +) '1 '2 '3)
   	(funcall (primref +)
@@ -176,6 +202,13 @@
   ;; 	  (known (constant (1 . 2))
   ;; 		 (T:pair T:non-false T:nonimmediate T:object))))
 
+;;; --------------------------------------------------------------------
+
+  (doit ((primitive cdr) '(1 . 2))
+	(funcall (primref $cdr)
+	  (known (constant (1 . 2))
+		 (T:pair T:non-false T:nonimmediate T:object))))
+
   #t)
 
 
@@ -186,6 +219,20 @@
 	  (known (constant a) (T:symbol T:non-false T:nonimmediate T:object))
 	  (known (constant b) (T:symbol T:non-false T:nonimmediate T:object))
 	  (known (constant 1) (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object))))
+
+  (doit ((primitive remprop) 'a 'b)
+	(funcall (primref $remprop)
+	  (known (constant a) (T:symbol T:non-false T:nonimmediate T:object))
+	  (known (constant b) (T:symbol T:non-false T:nonimmediate T:object))))
+
+  (doit ((primitive getprop) 'a 'b)
+	(funcall (primref $getprop)
+	  (known (constant a) (T:symbol T:non-false T:nonimmediate T:object))
+	  (known (constant b) (T:symbol T:non-false T:nonimmediate T:object))))
+
+  (doit ((primitive property-list) 'a)
+	(funcall (primref $property-list)
+	  (known (constant a) (T:symbol T:non-false T:nonimmediate T:object))))
 
   #t)
 

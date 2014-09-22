@@ -3529,7 +3529,6 @@
 ;;; --------------------------------------------------------------------
 
   (module (E-funcall)
-    (import SCHEME-OBJECTS-ONTOLOGY)
 
     (define (E-funcall rator rand*)
       (let ((rand*^ ($map/stx E-known rand*)))
@@ -3544,311 +3543,490 @@
 	(make-funcall (make-primref safe-prim-name) rand*))
       (cond ((null? rand*)
 	     (%no-replacement))
-	    ((getprop safe-prim-name UNSAFE-REPLACEMENTS-KEY)
-	     => (lambda (unsafe-signature*)
-		  (cond ((exists (lambda (unsafe-signature)
-				   (%find-signature-matching-operands unsafe-signature rand*))
-			   unsafe-signature*)
-			 => (lambda (unsafe-prim-name)
-			      (make-funcall (make-primref unsafe-prim-name) rand*)))
-			(else
-			 (%no-replacement)))))
+	    ((%compatible-operands-for-primitive-call? safe-prim-name rand*)
+	     (or (%find-unsafe-primitive-replacement safe-prim-name rand*)
+		 (%no-replacement)))
+	    ((option.strict-r6rs)
+	     ;;The operands do  not match the expected arguments:  resort to run-time
+	     ;;error as mandated by R6RS.
+	     (%no-replacement))
 	    (else
-	     (%no-replacement))))
+	     (compile-time-error __who__
+	       "operands of invalid core type in call to core primitive"
+	       (unparse-recordized-code/sexp (%no-replacement))))))
 
-    (define (%find-signature-matching-operands unsafe-signature rand*)
-      ;;We expect UNSAFE-SIGNATURE to be a list with the format:
+    (define (%compatible-operands-for-primitive-call? prim-name rand*)
+      ;;Validate the operands  against the types expected by the  core primitive.  If
+      ;;they are compatible: return true, otherwise return false.
       ;;
-      ;;   (?unsafe-prim-name ?type-pred0 ?type-pred ...)
-      ;;
-      ;;where: ?UNSAFE-PRIM-NAME  is the symbol  representing the public name  of the
-      ;;unsafe  primitive;  ?TYPE-PRED is  a  predicate  function among  "T:fixnum?",
-      ;;"T:string?", et cetera.
-      ;;
-      (define (%match-pred-rand pred rand)
-	(cond ((procedure? pred)
-	       ;;PRED is a type predicate procedure.
-	       (struct-case rand
-		 ((known _ type)
-		  (case (pred type)
-		    ;;Operand's type matches the predefined argument type; let's move
-		    ;;on to the next operand.
-		    ((yes) #t)
-		    ;;Operand's  type does  not match  the predefined  argument type;
-		    ;;this unsafe primitive cannot replace the original safe.
-		    ((no)  #f)
-		    ;;Operand's  type maybe  matches  the  predefined argument  type,
-		    ;;maybe not;  this unsafe  primitive cannot replace  the original
-		    ;;safe.
-		    (else  #f)))
-		 ;;Operand of unknown type: no replacement possible.
-		 (else #f)))
-	      ((not pred)
-	       ;;PRED is  false, which means  that this operand  can be of  any type;
-	       ;;this case is equivalent to using "T:object?"  as predicate, but this
-	       ;;way we  also handle the case  of unknown operand.  Let's  move on to
-	       ;;the next operand.
-	       #t)
-	      (else
-	       (compiler-internal-error __who__
-		 "invalid replacement core primitive type predicate" pred))))
-      (let recur ((pred* (cdr unsafe-signature))
-		  (rand* rand*))
-	(cond ((pair? rand*)
-	       ;;There are further operands to be processed.
-	       (cond ((pair? pred*)
-		      ;;There are further predicates to be processed.
-		      (and (%match-pred-rand (car pred*) (car rand*))
-			   (recur (cdr pred*) (cdr rand*))))
-		     ((null? pred*)
-		      ;;The unsafe primitive has a  fixed number of arguments.  There
-		      ;;are  further operands  but no  more predicates.   This unsafe
-		      ;;primitive does not replace the safe one.
-		      #f)
-		     ((procedure? pred*)
-		      ;;The unsafe primitive  has a variable number  of argument; the
-		      ;;rest arguments must all satisfy the predicate PRED*.
-		      (and (%match-pred-rand pred* (car rand*))
-			   (recur pred* (cdr rand*))))
-		     ((not pred*)
-		      ;;The unsafe primitive  has a variable number  of argument; the
-		      ;;rest arguments  must all  satisfy the  predicate "T:object?".
-		      ;;If we are here: all the operands matched the type predicates:
-		      ;;total success!!!  We replace  the original primitive with the
-		      ;;corresponding unsafe primitive.
-		      (car unsafe-signature))
-		     (else
-		      (compiler-internal-error __who__
-			"invalid type specification for replacement unsafe core primitive"
-			pred*))))
-	      ((pair? pred*)
-	       ;;There are  no more operands to  be processed, but there  are further
-	       ;;predicates.  This unsafe primitive  cannot replace the original safe
-	       ;;one.
-	       #f)
-	      (else
-	       ;;No  more  operands  to  be  processed,  no  more  predicates  to  be
-	       ;;processed.   All the  operands  matched the  type predicates:  total
-	       ;;success!!!  We replace the original primitive with the corresponding
-	       ;;unsafe primitive.
-	       (car unsafe-signature)))))
+      (cond ((getprop prim-name CORE-TYPE-SIGNATURES-KEY)
+	     => (lambda (signature*)
+		  ;;We expect SIGNATURE* to be a list of pairs pair with the format:
+		  ;;
+		  ;;   ((?rand-preds . ?rv-preds) ...)
+		  ;;
+		  ;;in which  both ?RAND-PREDS and  ?RV-PREDS are proper  or improper
+		  ;;lists of type predicates and false objects.
+		  (find (lambda (signature)
+			  (%compatible-type-predicates-and-operands? (car signature) rand*))
+		    signature*)))
+	    ;;This  core primitive  has no  registered type  signatures.  Let's  fake
+	    ;;matching arguments.
+	    ;;
+	    ;;FIXME  In future  we should  replace this  with an  exception: all  the
+	    ;;primitive should have a type  specification.  (Marco Maggi; Sun Sep 21,
+	    ;;2014)
+	    (else #t)))
 
-    (define-constant CORE-TYPES-SIGNATURE-KEY
+    (define (%matching-operands-for-primitive-call? prim-name rand*)
+      ;;Validate the operands  against the types expected by the  core primitive.  If
+      ;;they match: return true, otherwise return false.
+      ;;
+      (cond ((getprop prim-name CORE-TYPE-SIGNATURES-KEY)
+	     => (lambda (signature*)
+		  ;;We expect SIGNATURE* to be a list of pairs pair with the format:
+		  ;;
+		  ;;   ((?rand-preds . ?rv-preds) ...)
+		  ;;
+		  ;;in which  both ?RAND-PREDS and  ?RV-PREDS are proper  or improper
+		  ;;lists of type predicates and false objects.
+		  (find (lambda (signature)
+			  (%matching-type-predicates-and-operands? (car signature) rand*))
+		    signature*)))
+	    ;;This core primitive has no  registered type signatures.  We must assume
+	    ;;the operands do *not* match.
+	    (else #f)))
+
+    (define (%find-unsafe-primitive-replacement safe-prim-name rand*)
+      ;;This function  should be  called if  we know  the list  of operands  in RAND*
+      ;;matches the expected argument types of  the SAFE-PRIM-NAME.  Scan the list of
+      ;;registered unsafe  primitives that can  replace SAFE-PRIM-NAME for  one whose
+      ;;expected argument  types match  the RAND*.  If  successful: return  a FUNCALL
+      ;;struct that must replace the original; otherwise return false.
+      ;;
+      (cond ((getprop safe-prim-name UNSAFE-REPLACEMENTS-KEY)
+	     ;;UNSAFE-PRIM-NAME* is  a list of  symbols representing public  names of
+	     ;;unsafe primitives.
+	     => (lambda (unsafe-prim-name*)
+		  (exists (lambda (unsafe-prim-name)
+			    (and (%matching-operands-for-primitive-call? unsafe-prim-name rand*)
+				 (make-funcall (make-primref unsafe-prim-name) rand*)))
+		    unsafe-prim-name*)))
+	    ;;This primitive has no registered unsafe replacements.
+	    (else #f)))
+
+    (define (%compatible-type-predicates-and-operands? preds rand*)
+      ;;Recursive  function.   Validate  the  operands  in  RAND*  against  the  type
+      ;;predicates in  PREDS; if they  are compatible: return true,  otherwise return
+      ;;false.   The  purpose of  this  function  is to  check  if  the operands  are
+      ;;*invalid* according to the KNOWN structs.
+      ;;
+      ;;PREDS must  be a  proper or  improper list of  predicates and  false objects.
+      ;;RAND* must be a proper list of structs representing recordised code.
+      ;;
+      (cond ((pair? rand*)
+	     ;;There are further operands to be processed.
+	     (cond ((pair? preds)
+		    ;;There are further predicates to be processed.
+		    (and (%compatible-type-predicate-and-operand?   (car preds) (car rand*))
+			 (%compatible-type-predicates-and-operands? (cdr preds) (cdr rand*))))
+		   ((null? preds)
+		    ;;We  expect a  fixed  number of  arguments.   There are  further
+		    ;;operands but no  more predicates.  The operands  do *not* match
+		    ;;the predicates.
+		    #f)
+		   ((procedure? preds)
+		    ;;We expect  a variable  number of  arguments; the  rest operands
+		    ;;must all satisfy the predicate PREDS.
+		    (and (%compatible-type-predicate-and-operand?   preds (car rand*))
+			 (%compatible-type-predicates-and-operands? preds (cdr rand*))))
+		   ((not preds)
+		    ;;We expect  a variable  number of  arguments; the  rest operands
+		    ;;must  all  satisfy the  predicate  "T:object?",  which they  do
+		    ;;whatever their type.  If we  are here: all the operands matched
+		    ;;the type predicates: total success!!!
+		    #t)
+		   (else
+		    (compiler-internal-error __who__
+		      "invalid type specification in signature of core primitive"
+		      preds))))
+	    ((pair? preds)
+	     ;;There are  no more  operands to  be processed,  but there  are further
+	     ;;predicates.  The operands do *not* match the predicates.
+	     #f)
+	    (else
+	     ;;No more operands to be processed,  no more predicates to be processed.
+	     ;;All the operands matched the type predicates: total success!!!
+	     #t)))
+
+    (define (%matching-type-predicates-and-operands? preds rand*)
+      ;;Recursive  function.   Validate  the  operands  in  RAND*  against  the  type
+      ;;predicates in PREDS; if they match: return true, otherwise return false.  The
+      ;;purpose of this function is to check if the operands are *valid* according to
+      ;;the KNOWN structs.
+      ;;
+      ;;PREDS must  be a  proper or  improper list of  predicates and  false objects.
+      ;;RAND* must be a proper list of structs representing recordised code.
+      ;;
+      (cond ((pair? rand*)
+	     ;;There are further operands to be processed.
+	     (cond ((pair? preds)
+		    ;;There are further predicates to be processed.
+		    (and (%matching-type-predicate-and-operand?   (car preds) (car rand*))
+			 (%matching-type-predicates-and-operands? (cdr preds) (cdr rand*))))
+		   ((null? preds)
+		    ;;We  expect a  fixed  number of  arguments.   There are  further
+		    ;;operands but no  more predicates.  The operands  do *not* match
+		    ;;the predicates.
+		    #f)
+		   ((procedure? preds)
+		    ;;We expect  a variable  number of  arguments; the  rest operands
+		    ;;must all satisfy the predicate PREDS.
+		    (and (%matching-type-predicate-and-operand?   preds (car rand*))
+			 (%matching-type-predicates-and-operands? preds (cdr rand*))))
+		   ((not preds)
+		    ;;We expect  a variable  number of  arguments; the  rest operands
+		    ;;must  all  satisfy the  predicate  "T:object?",  which they  do
+		    ;;whatever their type.  If we  are here: all the operands matched
+		    ;;the type predicates: total success!!!
+		    #t)
+		   (else
+		    (compiler-internal-error __who__
+		      "invalid type specification in signature of core primitive"
+		      preds))))
+	    ((pair? preds)
+	     ;;There are  no more  operands to  be processed,  but there  are further
+	     ;;predicates.  The operands do *not* match the predicates.
+	     #f)
+	    (else
+	     ;;No more operands to be processed,  no more predicates to be processed.
+	     ;;All the operands matched the type predicates: total success!!!
+	     #t)))
+
+    (define (%compatible-type-predicate-and-operand? type? rand)
+      ;;Apply the core type specification TYPE? to the operand RAND.  Return false if
+      ;;it is known that RAND is not of type TYPE?; otherwise return true.
+      ;;
+      (cond ((procedure? type?)
+	     ;;TYPE? is a type predicate procedure.
+	     (struct-case rand
+	       ((known _ type)
+		(case (type? type)
+		  ;;Operand's type matches the expected argument's type.
+		  ((yes) #t)
+		  ;;Operand's type does *not* match the expected argument's type.
+		  ((no)  #f)
+		  ;;Operand's type maybe matches  the expected argument's type, maybe
+		  ;;not: it is compatible.
+		  (else  #t)))
+	       ;;Operand of unknown type: let's handle it as compatible.
+	       (else #t)))
+	    ((not type?)
+	     ;;TYPE? is  false, which  means that  this operand can  be of  any type;
+	     ;;operand's type matches the expected argument's type.
+	     #t)
+	    (else
+	     (compiler-internal-error __who__
+	       "invalid type specification in signature of core primitive" type?))))
+
+    (define (%matching-type-predicate-and-operand? type? rand)
+      ;;Apply the core type specification TYPE?  to the operand RAND.  Return true if
+      ;;it is known that RAND is of type TYPE?; otherwise return false.
+      ;;
+      (cond ((procedure? type?)
+	     ;;TYPE? is a type predicate procedure.
+	     (struct-case rand
+	       ((known _ type)
+		(case (type? type)
+		  ;;Operand's type matches the expected argument's type.
+		  ((yes) #t)
+		  ;;Operand's type does *not* match the expected argument's type.
+		  ((no)  #f)
+		  ;;Operand's type maybe matches  the expected argument's type, maybe
+		  ;;not: let's handle it as *not* matching.
+		  (else  #f)))
+	       ;;Operand of unknown type: let's handle it as *not* matching.
+	       (else #f)))
+	    ((not type?)
+	     ;;TYPE? is  false, which  means that  this operand can  be of  any type;
+	     ;;operand's type matches the expected argument's type.
+	     #t)
+	    (else
+	     (compiler-internal-error __who__
+	       "invalid type specification in signature of core primitive" type?))))
+
+;;; --------------------------------------------------------------------
+
+    (define-constant CORE-TYPE-SIGNATURES-KEY
       (compile-time-gensym "core-primitive/core-types-signature"))
 
     (define-constant UNSAFE-REPLACEMENTS-KEY
       (compile-time-gensym "core-primitive/unsafe-replacements-signatures"))
 
-    (define-auxiliary-syntaxes safe unsafe unsafe-replacements)
+    (module ()
+      (import SCHEME-OBJECTS-ONTOLOGY)
 
-    (define-syntax* (define-core-primitive input-form)
-      (define (main stx)
-	(syntax-case stx (safe unsafe unsafe-replacements)
+      (define-auxiliary-syntaxes safe unsafe signatures unsafe-replacements)
 
-	  ;;Unsafe primitive.
-	  ((_ ?prim-name unsafe)
-	   (let ((prim-name.id (%acquire-prim-name #'?prim-name)))
-	     #'(void)))
+      (define-syntax* (declare-core-primitive input-form)
+	(define (main stx)
+	  (syntax-case stx (safe unsafe signatures unsafe-replacements)
 
-	  ;;Safe primitive without unsafe replacements.
-	  ((_ ?prim-name safe)
-	   (let ((prim-name.id (%acquire-prim-name #'?prim-name)))
-	     #'(void)))
+	    ;;Unsafe primitive.
+	    ((?ctx ?prim-name unsafe
+		   (signatures ?signature ...))
+	     (let* ((prim-name		(%parse-prim-name #'?prim-name))
+		    (signature*		(%parse-signatures-sexp #'(signatures ?signature ...)))
+		    (signature-pred*	(%signatures->signature-pred* #'?ctx signature*)))
+	       (with-syntax
+		   ((SIGNATURE-FORM	(%compose-signature-output-form prim-name signature-pred*)))
+		 #'(begin SIGNATURE-FORM))))
 
-	  ;;Safe primitive with unsafe replacements.
-	  ((?ctx ?prim-name safe
-		 (unsafe-replacements
-		  (?unsafe-prim-name0 . ?types0)
-		  (?unsafe-prim-name  . ?types)
-		  ...))
-	   (let ((prim-name.id          (%acquire-prim-name #'?prim-name))
-		 (unsafe-prim-name*.id  (%acquire-unsafe-prim-name* #'(?unsafe-prim-name0 ?unsafe-prim-name ...)))
-		 (types*                (%acquire-unsafe-prim-types* #'(?types0 ?types ...))))
-	     (if (null? types*)
-		 #'(void)
-	       (let ((preds* (types*->preds* #'?ctx types*)))
-		 (with-syntax
-		     (((UNSAFE-SPEC ...) (map (lambda (unsafe-prim-name.id preds)
-						(cons unsafe-prim-name.id
-						      (let recur ((preds preds))
-							(cond ((pair? preds)
-							       (cons #`(unquote #,(car preds))
-								     (recur (cdr preds))))
-							      ((null? preds)
-							       '())
-							      (else
-							       #`(unquote #,preds))))))
-					   unsafe-prim-name*.id preds*)))
-		   #`(putprop (quote ?prim-name) UNSAFE-REPLACEMENTS-KEY
-			      (quasiquote (UNSAFE-SPEC ...))))))))
-	  ))
+	    ;;Safe primitive.
+	    ((?ctx ?prim-name safe
+		   (signatures ?signature ...)
+		   (unsafe-replacements ?unsafe-prim-name ...))
+	     (let* ((prim-name		(%parse-prim-name #'?prim-name))
+		    (signature*		(%parse-signatures-sexp #'(signatures ?signature ...)))
+		    (unsafe-prim-name*	(%parse-unsafe-replacements-sexp #'(unsafe-replacements ?unsafe-prim-name ...)))
+		    (signature-pred*	(%signatures->signature-pred* #'?ctx signature*)))
+	       (with-syntax
+		   ((SIGNATURE-FORM	(%compose-signature-output-form prim-name signature-pred*))
+		    (REPLACEMENTS-FORM	(%compose-unsafe-replacements-output-orm prim-name unsafe-prim-name*)))
+		 #'(begin SIGNATURE-FORM REPLACEMENTS-FORM))))
 
-      (define (%acquire-prim-name stx)
-	(unless (identifier? stx)
-	  (synner "expected identifier as core primitive name" stx))
-	stx)
+	    (_
+	     (synner "invalid syntax in core primitive declaration"))))
 
-      (define (%acquire-unsafe-prim-name* stx)
-	(receive-and-return (id*)
-	    (syntax->list stx)
-	  (for-each
-	      (lambda (id)
-		(unless (identifier? id)
-		  (synner "expected identifier as name of replacement unsafe core primitive" id)))
-	    id*)))
+	(define (%compose-signature-output-form prim-name signature-pred*)
+	  (if (pair? signature-pred*)
+	      #`(putprop (quote #,prim-name) CORE-TYPE-SIGNATURES-KEY (quasiquote #,signature-pred*))
+	    #'(void)))
 
-      (define (%acquire-unsafe-prim-types* stx)
-	;;Parse STX and return a list of  items, each item being a proper or improper
-	;;list of identifiers and false objects.
-	;;
-	(define (%acquire-type type)
-	  ;;We accept a  type identifier; "T:object?" and "_" mean  "any type" and we
-	  ;;convert them to false.
-	  (if (identifier? type)
-	      (if (or (free-identifier=? type #'T:object?)
-		      (eq? '_ (syntax->datum type)))
-		  #f
-		type)
-	    (synner "expected identifier as type name for replacement unsafe core primitive" type)))
-	(map (lambda (ell)
-	       ;;We expect ELL to be a proper or improper list.
-	       (syntax-case ell ()
-		 ;;Proper list of types.  This unsafe primitive has a fixed number of
-		 ;;arguments.
-		 ((?type0 ?type ...)
-		  (map %acquire-type (syntax->list #'(?type0 ?type ...))))
-		 ;;Improper  list of  types.  This  unsafe primitive  has a  variable
-		 ;;number of arguments.
-		 ((?type0 ?type ... . ?rest-type)
-		  (let recur ((ell ell))
-		    (syntax-case ell ()
-		      ((?car . ?cdr)
-		       (cons (%acquire-type #'?car) (recur #'?cdr)))
-		      (()
-		       '())
-		      (?rest
-		       (%acquire-type #'?rest)))))
-		 ;;Standalone type.  This  unsafe primitive has a  variable number of
-		 ;;arguments, all satisfying the same predicate.
-		 (?args-type
-		  (%acquire-type #'?args-type))
-		 ))
-	  (syntax->list stx)))
+	(define (%compose-unsafe-replacements-output-orm prim-name unsafe-prim-name*)
+	  (if (pair? unsafe-prim-name*)
+	      #`(putprop (quote #,prim-name) UNSAFE-REPLACEMENTS-KEY (quote #,unsafe-prim-name*))
+	    #'(void)))
 
-      (define (types*->preds* ctx types*)
-	(define (%type->pred type)
-	  (cond ((identifier? type)
-		 (datum->syntax ctx (string->symbol
-				     (string-append (symbol->string (syntax->datum type))
-						    "?"))))
-		(else
-		 (assert (not type))
-		 type)))
-	(map (lambda (types)
-	       ;;TYPES is a proper or improper list of identifiers and false objects.
-	       (let recur ((types types))
-		 (syntax-case types ()
-		   ((?car . ?cdr)
-		    (cons (%type->pred #'?car) (recur #'?cdr)))
-		   (()
-		    '())
-		   (?rest
-		    (%type->pred #'?rest)))))
-	  types*))
+	(define (%parse-prim-name stx)
+	  (if (identifier? stx)
+	      stx
+	    (synner "expected identifier as core primitive name" stx)))
 
-      (receive-and-return (output-form)
-	  (main input-form)
-	;;(debug-print (syntax->datum output-form))
-	(void)))
+	(define (%parse-signatures-sexp stx)
+	  ;;A SIGNATURES form has the format:
+	  ;;
+	  ;;   (signatures ?signature ...)
+	  ;;
+	  ;;where each ?SIGNATURE has the format:
+	  ;;
+	  ;;   (?rand-types => ?rv-types)
+	  ;;
+	  ;;in which  both ?RAND-TYPES and  ?RV-TYPES are  proper or improper  lists of
+	  ;;identifiers, each identifier  representing the core type of  an argument or
+	  ;;return  value; the  type  identifiers  are defined  by  the Scheme  objects
+	  ;;ontology.  The  identifiers "_"  and "T:object"  are wildcards  meaning "an
+	  ;;object of any type".
+	  ;;
+	  ;;The specification  of the return  value types  is the specification  of the
+	  ;;types of the consumer procedure:
+	  ;;
+	  ;;   (call-with-values
+	  ;;       (lambda ()
+	  ;;         (?call-to-core-primitive))
+	  ;;     (lambda ?rv-types
+	  ;;       (consume-rvs)))
+	  ;;
+	  ;;When the list is proper:
+	  ;;
+	  ;;   (?rand-type ...)
+	  ;;   (?rv-type ...)
+	  ;;
+	  ;;the primitive has a fixed number of arguments/return values, possibly zero.
+	  ;;When the list is improper:
+	  ;;
+	  ;;   (?rand-type0 ?rand-type ... . ?rest-arg-type)
+	  ;;   (?rv-type0   ?rv-type   ... . ?rest-rv-type)
+	  ;;   ?args-rand-type
+	  ;;   ?args-rv-type
+	  ;;
+	  ;;the primitive  has a variable  number of arguments/return  values, possibly
+	  ;;zero;  the ?REST-*-TYPE  and ?ARGS-*-TYPE  represent  the type  of all  the
+	  ;;optional arguments/return values.
+	  ;;
+	  ;;This function parses the SIGNATURES  form, raising a "&syntax" exception in
+	  ;;case of error, and returns a proper list of pairs:
+	  ;;
+	  ;;   ((?rand-types . ?rv-types) ...)
+	  ;;
+	  ;;in collecting the arguments and return value types; the returned expression
+	  ;;has a false object in place of the wildcards "_" and "T:object".
+	  ;;
+	  (define (%syntax-error)
+	    (synner "invalid signatures specification in core primitive declaration" stx))
+	  (syntax-case stx (signatures)
+	    ((signatures ?signature ...)
+	     (map (lambda (signature)
+		    (syntax-case signature (=>)
+		      ((?rand-types => ?rv-types)
+		       (cons (%parse-proper-or-improper-list-of-core-types #'?rand-types)
+			     (%parse-proper-or-improper-list-of-core-types #'?rv-types)))
+		      (_
+		       (%syntax-error))))
+	       (syntax->list #'(?signature ...))))
+	    (_
+	     (%syntax-error))))
 
-    (define-core-primitive putprop safe
-      (unsafe-replacements
-       ($putprop T:symbol T:symbol _)))
+	(define (%parse-proper-or-improper-list-of-core-types stx)
+	  ;;Parse a proper  or improper list of core type  identifiers representing the
+	  ;;types of arguments  or return values for a core  primitive.  If successful:
+	  ;;return a proper or improper list  of identifiers and false objects in which
+	  ;;the  false objects  substitute the  wildcards  "_" and  "T:object".  If  an
+	  ;;invalid syntax is found: raise a "&syntax" exception.
+	  ;;
+	  (syntax-case stx ()
+	    ((?type0 ?type ...)
+	     (map %parse-core-object-type (syntax->list #'(?type0 ?type ...))))
+	    ((?type0 ?type ... . ?rest-type)
+	     (let recur ((stx stx))
+	       (syntax-case stx ()
+		 ((?car . ?cdr)
+		  (cons (%parse-core-object-type #'?car) (recur #'?cdr)))
+		 (()  '())
+		 (?rest
+		  (%parse-core-object-type #'?rest)))))
+	    (?args-type
+	     (%parse-core-object-type #'?args-type))
+	    (_
+	     (synner "invalid signatures component in core primitive declaration" stx))))
 
-    (define-core-primitive getprop safe
-      (unsafe-replacements
-       ($getprop T:symbol T:symbol)))
+	(define (%parse-core-object-type type)
+	  ;;We accept  a core type  identifier and return  it; "T:object" and  "_" mean
+	  ;;"any type" and we convert them to false.
+	  (syntax-case type (T:object
+			     T:immediate	T:boolean
+			     T:number		T:exact			T:inexact
+			     T:nonimmediate	T:non-false		T:other-object
+			     T:symbol		T:bytevector		T:void
+			     T:char		T:null			T:pair
+			     T:vector		T:string		T:procedure
+			     T:false		T:true			T:other-exact
+			     T:fixnum		T:other-inexact		T:flonum
+			     T:ratnum		T:bignum		T:compnum
+			     T:cflonum		T:other-number
+			     T:positive		T:zero			T:negative)
+	    (T:object		#f)
+	    (T:immediate	type)
+	    (T:boolean		type)
+	    (T:number		type)
+	    (T:exact		type)
+	    (T:inexact		type)
+	    (T:nonimmediate	type)
+	    (T:non-false	type)
+	    (T:other-object	type)
+	    (T:symbol		type)
+	    (T:bytevector	type)
+	    (T:void		type)
+	    (T:char		type)
+	    (T:null		type)
+	    (T:pair		type)
+	    (T:vector		type)
+	    (T:string		type)
+	    (T:procedure	type)
+	    (T:false		type)
+	    (T:true		type)
+	    (T:other-exact	type)
+	    (T:fixnum		type)
+	    (T:other-inexact	type)
+	    (T:flonum		type)
+	    (T:ratnum		type)
+	    (T:bignum		type)
+	    (T:compnum		type)
+	    (T:cflonum		type)
+	    (T:other-number	type)
+	    (T:positive		type)
+	    (T:zero		type)
+	    (T:negative		type)
+	    (_
+	     (if (identifier? type)
+		 (if (free-identifier=? type #'_)
+		     #f
+		   type)
+	       (synner "expected identifier as core type name in core primitive declaration" type)))))
 
-    (define-core-primitive remprop safe
-      (unsafe-replacements
-       ($remprop T:symbol T:symbol)))
+	(define (%parse-unsafe-replacements-sexp stx)
+	  (syntax-case stx (unsafe-replacements)
+	    ((unsafe-replacements ?unsafe-prim-name ...)
+	     (receive-and-return (unsafe-prim-name*)
+		 (syntax->list #'(?unsafe-prim-name ...))
+	       (for-each (lambda (id)
+			   (unless (identifier? id)
+			     (synner "expected identifier as replacement name in core primitive declaration" id)))
+		 unsafe-prim-name*)))
+	    (_
+	     (synner "invalid unsafe replacements specification in core primitive declaration" stx))))
 
-    (define-core-primitive property-list safe
-      (unsafe-replacements
-       ($property-list T:symbol)))
+	(define (%signatures->signature-pred* ctx signature*)
+	  ;;Given a  list of (already  parsed) core primitive  signature specifications
+	  ;;with the format:
+	  ;;
+	  ;;   ((?rand-types . ?rv-types) ...)
+	  ;;
+	  ;;build and  return a new  list of pairs in  which the type  identifiers have
+	  ;;been  replaced by  the  identifiers of  the  corresponding type  predicates
+	  ;;wrapped into an UNQUOTE syntax.
+	  ;;
+	  ;;For example, the original signature:
+	  ;;
+	  ;;   ((T:fixnum T:string _) => (T:string _))
+	  ;;
+	  ;;is parsed into:
+	  ;;
+	  ;;   ((T:fixnum T:string #f) . (T:string #f))
+	  ;;
+	  ;;and this function transforms it into:
+	  ;;
+	  ;;   ((,T:fixnum? ,T:string? #f) . (,T:string? #f))
+	  ;;
+	  (define (%type->pred type)
+	    (cond ((identifier? type)
+		   (list #'unquote
+			 (datum->syntax ctx (string->symbol
+					     (string-append (symbol->string (syntax->datum type))
+							    "?")))))
+		  (else
+		   (assert (not type))
+		   type)))
+	  (map (lambda (signature)
+		 ;;RAND-TYPES is a proper or improper list of core type identifiers and
+		 ;;false objects.
+		 (cons (let recur ((rand-types (car signature)))
+			 (cond ((pair? rand-types)
+				(cons (%type->pred (car rand-types))
+				      (recur (cdr rand-types))))
+			       ((null? rand-types)
+				'())
+			       (else
+				(%type->pred rand-types))))
+		       (let recur ((rand-types (cdr signature)))
+			 (cond ((pair? rand-types)
+				(cons (%type->pred (car rand-types))
+				      (recur (cdr rand-types))))
+			       ((null? rand-types)
+				'())
+			       (else
+				(%type->pred rand-types))))))
+	    signature*))
 
-    ;; (define-core-primitive fx+ safe
-    ;;   (unsafe-replacements
-    ;;    ($fx+/overflow T:fixnum T:fixnum)))
+	;;This is the last form in the definition of DECLARE-CORE-PRIMITIVE.
+	(receive-and-return (output-form)
+	    (main input-form)
+	  #;(debug-print (syntax->datum output-form))
+	  (void)))
 
-    (define-core-primitive + safe
-      ;;The commented out variants handle operands  of a type that is not categorised
-      ;;by the core type system.
-      (unsafe-replacements
-       ($add-fixnum-fixnum T:fixnum T:fixnum)
-       ;;($add-fixnum-bignum T:fixnum T:bignum)
-       ($add-fixnum-flonum T:fixnum T:flonum)
-       ;;($add-fixnum-ratnum T:fixnum T:ratnum)
-       ;;($add-fixnum-compnum T:fixnum T:compnum)
-       ;;($add-fixnum-cflonum T:fixnum T:cflonum)
+      (include "ikarus.compiler.core-primitive-tables.scm" #t)
 
-       ;;($add-bignum-fixnum T:bignum T:fixnum)
-       ;;($add-bignum-bignum T:bignum T:bignum)
-       ;;($add-bignum-flonum T:bignum T:flonum)
-       ;;($add-bignum-ratnum T:bignum T:ratnum)
-       ;;($add-bignum-compnum T:bignum T:compnum)
-       ;;($add-bignum-cflonum T:bignum T:cflonum)
-
-       ($add-flonum-fixnum T:flonum T:fixnum)
-       ;;($add-flonum-bignum T:flonum T:bignum)
-       ($add-flonum-flonum T:flonum T:flonum)
-       ;;($add-flonum-ratnum T:flonum T:ratnum)
-       ;;($add-flonum-compnum T:flonum T:compnum)
-       ;;($add-flonum-cflonum T:flonum T:cflonum)
-
-       ;;($add-ratnum-fixnum T:ratnum T:fixnum)
-       ;;($add-ratnum-bignum T:ratnum T:bignum)
-       ;;($add-ratnum-flonum T:ratnum T:flonum)
-       ;;($add-ratnum-ratnum T:ratnum T:ratnum)
-       ;;($add-ratnum-compnum T:ratnum T:compnum)
-       ;;($add-ratnum-cflonum T:ratnum T:cflonum)
-
-       ;;($add-compnum-fixnum T:compnum T:fixnum)
-       ;;($add-compnum-bignum T:compnum T:bignum)
-       ;;($add-compnum-ratnum T:compnum T:ratnum)
-       ;;($add-compnum-compnum T:compnum T:compnum)
-       ;;($add-compnum-flonum T:compnum T:flonum)
-       ;;($add-compnum-cflonum T:compnum T:cflonum)
-
-       ;;($add-cflonum-fixnum T:cflonum T:fixnum)
-       ;;($add-cflonum-bignum T:cflonum T:bignum)
-       ;;($add-cflonum-ratnum T:cflonum T:ratnum)
-       ;;($add-cflonum-flonum T:cflonum T:flonum)
-       ;;($add-cflonum-compnum T:cflonum T:compnum)
-       ;;($add-cflonum-cflonum T:cflonum T:cflonum)
-
-       ($add-fixnum-number T:fixnum T:number)
-       ;;($add-bignum-number T:bignum T:number)
-       ($add-flonum-number T:flonum T:number)
-       ;;($add-ratnum-number T:ratnum T:number)
-       ;;($add-compnum-number T:compnum T:number)
-       ;;($add-cflonum-number T:cflonum T:number)
-
-       ($add-number-fixnum T:number T:fixnum)
-       ;;($add-number-bignum T:number T:bignum)
-       ($add-number-flonum T:number T:flonum)
-       ;;($add-number-ratnum T:number T:ratnum)
-       ;;($add-number-compnum T:number T:compnum)
-       ;;($add-number-cflonum T:number T:cflonum)
-       ($add-number-number T:number T:number)))
-
-    (define-core-primitive car safe
-      (unsafe-replacements
-       ($car T:pair)))
-
-    (define-core-primitive cdr safe
-      (unsafe-replacements
-       ($cdr T:pair)))
+      #| end of module |# )
 
     #| end of module: E-funcall |# )
 

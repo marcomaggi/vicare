@@ -295,6 +295,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.specify-representation.scm	\
 	scheme/ikarus.compiler.altcogen.scm			\
 	scheme/ikarus.compiler.primitive-operations.scm		\
+	scheme/ikarus.compiler.core-primitive-tables.scm	\
 	\
 	scheme/ikarus.apply.sls					\
 	scheme/ikarus.apropos.sls				\
