@@ -183,48 +183,48 @@
     ;;We accept a  core type identifier and  return it; "T:object" and  "_" mean "any
     ;;type" and we convert them to false.
     (syntax-case type (T:object
-		       T:immediate	T:boolean
-		       T:number		T:exact			T:inexact
-		       T:nonimmediate	T:non-false		T:other-object
-		       T:symbol		T:bytevector		T:void
-		       T:char		T:null			T:pair
-		       T:vector		T:string		T:procedure
-		       T:false		T:true			T:other-exact
-		       T:fixnum		T:other-inexact		T:flonum
-		       T:ratnum		T:bignum		T:compnum
+		       T:immediate		T:boolean
+		       T:number			T:exact			T:inexact
+		       T:nonimmediate		T:non-false		T:other-object
+		       T:symbol			T:bytevector		T:void
+		       T:char			T:null			T:pair
+		       T:vector			T:string		T:procedure
+		       T:false			T:true			T:other-exact
+		       T:fixnum			T:other-inexact		T:flonum
+		       T:ratnum			T:bignum		T:compnum
 		       T:cflonum		T:other-number
 		       T:positive		T:zero			T:negative)
-      (T:object		#f)
-      (T:immediate	type)
+      (T:object			#f)
+      (T:immediate		type)
       (T:boolean		type)
-      (T:number		type)
-      (T:exact		type)
+      (T:number			type)
+      (T:exact			type)
       (T:inexact		type)
-      (T:nonimmediate	type)
-      (T:non-false	type)
-      (T:other-object	type)
-      (T:symbol		type)
-      (T:bytevector	type)
-      (T:void		type)
-      (T:char		type)
-      (T:null		type)
-      (T:pair		type)
-      (T:vector		type)
-      (T:string		type)
-      (T:procedure	type)
-      (T:false		type)
-      (T:true		type)
-      (T:other-exact	type)
-      (T:fixnum		type)
-      (T:other-inexact	type)
-      (T:flonum		type)
-      (T:ratnum		type)
-      (T:bignum		type)
+      (T:nonimmediate		type)
+      (T:non-false		type)
+      (T:other-object		type)
+      (T:symbol			type)
+      (T:bytevector		type)
+      (T:void			type)
+      (T:char			type)
+      (T:null			type)
+      (T:pair			type)
+      (T:vector			type)
+      (T:string			type)
+      (T:procedure		type)
+      (T:false			type)
+      (T:true			type)
+      (T:other-exact		type)
+      (T:fixnum			type)
+      (T:other-inexact		type)
+      (T:flonum			type)
+      (T:ratnum			type)
+      (T:bignum			type)
       (T:compnum		type)
       (T:cflonum		type)
-      (T:other-number	type)
+      (T:other-number		type)
       (T:positive		type)
-      (T:zero		type)
+      (T:zero			type)
       (T:negative		type)
       (_
        (if (identifier? type)
