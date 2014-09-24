@@ -7064,6 +7064,13 @@ The following bindings are exported by the library @library{vicare}.
 Reset to void all the fields of a record, whatever its type.
 @end defun
 
+
+@defun record-object? @var{obj}
+Return @true{} if @var{obj} is an @rnrs{6} record, otherwise return
+@false{}.  This procedure does @strong{not} care if the associated
+record--type is opaque.
+@end defun
+
 @c page
 @node iklib promises
 @section Delay, force and promises

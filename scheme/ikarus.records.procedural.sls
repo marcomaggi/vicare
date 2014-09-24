@@ -36,7 +36,8 @@
     ;; extension utility functions, non-R6RS
     rtd-subtype?			print-r6rs-record-instance
     record-reset			record-and-rtd?
-    record-destructor-set!		record-destructor)
+    record-destructor-set!		record-destructor
+    record-object?)
   (import (except (vicare)
 		  ;; bindings for (rnrs records procedural (6))
 		  make-record-type-descriptor		make-record-constructor-descriptor
@@ -56,7 +57,8 @@
 		  ;; extension utility functions, non-R6RS
 		  rtd-subtype?				print-r6rs-record-instance
 		  record-reset				record-and-rtd?
-		  record-destructor-set!		record-destructor)
+		  record-destructor-set!		record-destructor
+		  record-object?)
     (vicare system $structs)
     (vicare system $symbols)
     (vicare arguments validation)
@@ -474,7 +476,7 @@
 ;;; --------------------------------------------------------------------
 
 (define-argument-validation (record who obj)
-  (%record-object? obj)
+  (record-object? obj)
   (procedure-argument-violation who ERROR-MESSAGE-EXPECTED-RECORD obj))
 
 (define-argument-validation (non-opaque-record who obj)
@@ -551,13 +553,12 @@
 
 ;;;; record instance inspection
 
-(define-inline (%record-object? ?obj)
-  ;;Return #t if  OBJ is a record, else return #f.   Does not care about
-  ;;the opaqueness of the record type.
+(define (record-object? obj)
+  ;;Return #t if OBJ is a record, else return #f.  Does not care about the opaqueness
+  ;;of the record type.
   ;;
-  (let ((obj ?obj))
-    (and ($struct? obj)
-	 (<rtd>? ($struct-rtd obj)))))
+  (and ($struct? obj)
+       (<rtd>? ($struct-rtd obj))))
 
 (define (record? x)
   ;;Defined by R6RS.   Return #t if OBJ is a record  and its record type

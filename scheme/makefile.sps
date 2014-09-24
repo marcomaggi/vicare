@@ -179,7 +179,12 @@
   (prefix (only (psyntax system $bootstrap)
 		current-library-collection
 		find-library-by-name)
-	  bootstrap.))
+	  bootstrap.)
+  (prefix (only (ikarus.fasl.write)
+		writing-boot-image?)
+	  fasl-write.))
+
+(fasl-write.writing-boot-image? #t)
 
 ;;The optimisation level should already default to  2.  By commenting out this we let
 ;;the user set it to 3, if he wants, at package configuration time with:
@@ -2371,6 +2376,7 @@
     (record-guardian-logger			v $language)
     (record-guardian-log			v $language)
     (record-reset				v $language)
+    (record-object?				v $language)
     (record-and-rtd?				v $language)
     (record-accessor				v r rp)
     (record-mutator				v r rp)

@@ -546,10 +546,15 @@ do_read (ikpcb* pcb, fasl_port* p)
     if (DEBUG_FASL) ik_debug_message("close %d: struct instance object", --object_count);
     return s_struct;
   }
+  else if (c == 'W') { /* W is for R6RS record-type descriptors */
+    ikptr	s_name   = do_read(pcb, p);
+    ik_debug_message_no_newline("R6RS record-type descriptor in boot image: ");
+    ik_print(s_name);
+    ik_abort("invalid type '%c' (0x%02x), R6RS record-type descriptor, found in fasl file", c, c);
+    return IK_VOID_OBJECT;
 #if 0
   /* This  is currently  excluded because  there is  no way  to build  a
      record-type descriptor from C language level. */
-  else if (c == 'W') { /* W is for R6RS record-type descriptors */
     long	i, record_size;
     ikptr	s_name   = do_read(pcb, p);
     ikptr	s_parent = do_read(pcb, p);
@@ -577,8 +582,8 @@ do_read (ikpcb* pcb, fasl_port* p)
     }
     /* FIXME How do we build a record type descriptor here? */
     return s_record;
-  }
 #endif
+  }
   else if (c == 'Q') { /* thunk */
     if (DEBUG_FASL) ik_debug_message("open %d: thunk object", object_count++);
     ikptr s_proc = ik_unsafe_alloc(pcb, IK_ALIGN(disp_closure_data)) | closure_tag;
