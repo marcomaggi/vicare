@@ -1802,126 +1802,131 @@
 
 ;;;; chi procedures: function definitions and lambda syntaxes
 
-(module (chi-defun)
-  (import CHI-LAMBDA-CLAUSES)
+(module (chi-defun chi-lambda chi-case-lambda)
 
-  (define (chi-defun input-form.stx lexenv.run lexenv.expand)
-    ;;Expand a  syntax object representing a  INTERNAL-DEFINE syntax for the  case of
-    ;;function definition.   Return an expanded language  expression representing the
-    ;;expanded definition.
-    ;;
-    ;;The  returned expression  will  be  coupled (by  the  caller)  with an  already
-    ;;generated  lex gensym  serving as  lexical variable  name; for  this reason  we
-    ;;return a lambda core form rather than a define core form.
-    ;;
-    ;;NOTE This function assumes the INPUT-FORM.STX  has already been parsed, and the
-    ;;binding for ?CTXT has already been added to LEXENV by the caller.
-    ;;
-    (syntax-match input-form.stx (brace)
-      ((_ ?attributes ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
-       ;; (let ((formals.stx (bless
-       ;; 			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
-       ;; 	     (body*.stx   (bless
-       ;; 			   `(fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
-       ;; 			      (let () . ,?body-form*)))))
-       (let ((formals.stx (bless
-       			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
-       	     (body*.stx   (cons (bless
-       				 `(define-fluid-override __who__
-       				    (identifier-syntax (quote ,?ctxt))))
-       				?body-form*)))
-	 (%expand input-form.stx lexenv.run lexenv.expand
-		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
+  (module (chi-defun)
+    (import CHI-LAMBDA-CLAUSES)
 
-      ((_ ?attributes (?ctxt . ?fmls) . ?body-form*)
-       ;; (let ((formals.stx ?fmls)
-       ;; 	     (body*.stx   (bless
-       ;; 			   `(fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
-       ;; 			      (let () . ,?body-form*)))))
-       (let ((formals.stx ?fmls)
-       	     (body*.stx   (cons (bless
-       				 `(define-fluid-override __who__
-       				    (identifier-syntax (quote ,?ctxt))))
-       				?body-form*)))
-	 (%expand input-form.stx lexenv.run lexenv.expand
-		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
-      ))
+    (define (chi-defun input-form.stx lexenv.run lexenv.expand)
+      ;;Expand a syntax object representing a  INTERNAL-DEFINE syntax for the case of
+      ;;function definition.  Return an expanded language expression representing the
+      ;;expanded definition.
+      ;;
+      ;;The  returned expression  will be  coupled (by  the caller)  with an  already
+      ;;generated lex  gensym serving as  lexical variable  name; for this  reason we
+      ;;return a lambda core form rather than a define core form.
+      ;;
+      ;;NOTE This  function assumes the  INPUT-FORM.STX has already been  parsed, and
+      ;;the binding for ?WHO has already been added to LEXENV by the caller.
+      ;;
+      (syntax-match input-form.stx (brace)
+	((_ ?attributes ((brace ?who ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
+	 (let ((formals.stx (bless
+			     `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
+	       (body*.stx   (%introduce-who-fluid-syntax ?who ?body-form*)))
+	   (%expand input-form.stx lexenv.run lexenv.expand
+		    (syntax->datum ?attributes) ?who formals.stx body*.stx)))
 
-  (define (%expand input-form.stx lexenv.run lexenv.expand
-		   attributes.sexp ctxt.id formals.stx body*.stx)
-    ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT.ID in the
-    ;;core language LAMBDA sexp's annotation.
-    (receive (formals.core lambda-signature body.psi)
-	(%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			    attributes.sexp formals.stx body*.stx)
-      ;;FORMALS.CORE is composed of lex gensyms.
-      (make-psi input-form.stx
-		(build-lambda (syntax-annotation ctxt.id)
-		  formals.core
-		  (psi-core-expr body.psi))
-		(make-retvals-signature-with-fabricated-procedure-tag (syntax->datum ctxt.id) lambda-signature))))
+	((_ ?attributes (?who . ?fmls) . ?body-form*)
+	 (let ((formals.stx ?fmls)
+	       (body*.stx   (%introduce-who-fluid-syntax ?who ?body-form*)))
+	   (%expand input-form.stx lexenv.run lexenv.expand
+		    (syntax->datum ?attributes) ?who formals.stx body*.stx)))
+	))
 
-  #| end of module: CHI-DEFUN |# )
+    (define (%expand input-form.stx lexenv.run lexenv.expand
+		     attributes.sexp ctxt.id formals.stx body*.stx)
+      ;;This procedure is  like CHI-LAMBDA, but, in addition, it  puts CTXT.ID in the
+      ;;core language LAMBDA sexp's annotation.
+      (receive (formals.core lambda-signature body.psi)
+	  (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
+			      attributes.sexp formals.stx body*.stx)
+	;;FORMALS.CORE is composed of lex gensyms.
+	(make-psi input-form.stx
+		  (build-lambda (syntax-annotation ctxt.id)
+		    formals.core
+		    (psi-core-expr body.psi))
+		  (make-retvals-signature-with-fabricated-procedure-tag (syntax->datum ctxt.id) lambda-signature))))
+
+    #| end of module: CHI-DEFUN |# )
 
 ;;; --------------------------------------------------------------------
 
-(define* (chi-lambda input-form.stx lexenv.run lexenv.expand
-		     attributes.stx formals.stx body*.stx)
-  ;;Expand the contents of CASE syntax and return a "psi" struct.
-  ;;
-  ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
-  ;;
-  ;;FORMALS.STX is a syntax object representing the formals of the LAMBDA syntax.
-  ;;
-  ;;BODY*.STX is  a list of syntax  objects representing the body  expressions in the
-  ;;LAMBDA syntax.
-  ;;
-  (import CHI-LAMBDA-CLAUSES)
-  (define attributes.sexp (syntax->datum attributes.stx))
-  (receive (formals.lex lambda-signature body.psi)
-      (%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
-			  attributes.sexp formals.stx body*.stx)
-    (make-psi input-form.stx
-	      (build-lambda (syntax-annotation input-form.stx)
-		formals.lex
-		(psi-core-expr body.psi))
-	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
+  (define* (chi-lambda input-form.stx lexenv.run lexenv.expand
+		       attributes.stx formals.stx body*.stx)
+    ;;Expand the contents of CASE syntax and return a "psi" struct.
+    ;;
+    ;;INPUT-FORM.STX is a syntax object representing the original LAMBDA expression.
+    ;;
+    ;;FORMALS.STX is a syntax object representing the formals of the LAMBDA syntax.
+    ;;
+    ;;BODY*.STX is a list of syntax  objects representing the body expressions in the
+    ;;LAMBDA syntax.
+    ;;
+    (import CHI-LAMBDA-CLAUSES)
+    (define attributes.sexp (syntax->datum attributes.stx))
+    (receive (formals.lex lambda-signature body.psi)
+	(%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
+			    attributes.sexp formals.stx
+			    body*.stx #;(%introduce-who-fluid-syntax 'anonymous-lambda body*.stx)
+			    )
+      (make-psi input-form.stx
+		(build-lambda (syntax-annotation input-form.stx)
+		  formals.lex
+		  (psi-core-expr body.psi))
+		(make-retvals-signature-with-fabricated-procedure-tag (gensym) lambda-signature))))
 
-(define* (chi-case-lambda input-form.stx lexenv.run lexenv.expand
-			  attributes.stx formals*.stx body**.stx)
-  ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
-  ;;
-  ;;INPUT-FORM.STX  is   a  syntax  object  representing   the  original  CASE-LAMBDA
-  ;;expression.
-  ;;
-  ;;FORMALS*.STX is  a list  of syntax  objects whose  items are  the formals  of the
-  ;;CASE-LAMBDA clauses.
-  ;;
-  ;;BODY**.STX  is a  list  of syntax  objects  whose  items are  the  bodies of  the
-  ;;CASE-LAMBDA clauses.
-  ;;
-  ;;Example, for the input form:
-  ;;
-  ;;   (case-lambda ((a b c) body1) ((d e f) body2))
-  ;;
-  ;;this function is invoked as:
-  ;;
-  ;;   (chi-case-lambda
-  ;;    #'(case-lambda ((a b c) body1) ((d e f) body2))
-  ;;    (list #'(a b c) #'(d e f))
-  ;;    (list #'(body1) #'(body2))
-  ;;    lexenv.run lexenv.expand)
-  ;;
-  (import CHI-LAMBDA-CLAUSES)
-  (define attributes.sexp (syntax->datum attributes.stx))
-  (receive (formals*.lex lambda-signature* body**.psi)
-      (%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
-			   attributes.sexp formals*.stx body**.stx)
-    (make-psi input-form.stx
-	      (build-case-lambda (syntax-annotation input-form.stx)
-		formals*.lex
-		(map psi-core-expr body**.psi))
-	      (make-retvals-signature-with-fabricated-procedure-tag (gensym) (make-clambda-compound lambda-signature*)))))
+  (define* (chi-case-lambda input-form.stx lexenv.run lexenv.expand
+			    attributes.stx formals*.stx body**.stx)
+    ;;Expand the clauses of a CASE-LAMBDA syntax and return a "psi" struct.
+    ;;
+    ;;INPUT-FORM.STX  is  a  syntax  object  representing  the  original  CASE-LAMBDA
+    ;;expression.
+    ;;
+    ;;FORMALS*.STX is  a list of  syntax objects whose items  are the formals  of the
+    ;;CASE-LAMBDA clauses.
+    ;;
+    ;;BODY**.STX  is a  list of  syntax objects  whose items  are the  bodies of  the
+    ;;CASE-LAMBDA clauses.
+    ;;
+    ;;Example, for the input form:
+    ;;
+    ;;   (case-lambda ((a b c) body1) ((d e f) body2))
+    ;;
+    ;;this function is invoked as:
+    ;;
+    ;;   (chi-case-lambda
+    ;;    #'(case-lambda ((a b c) body1) ((d e f) body2))
+    ;;    (list #'(a b c) #'(d e f))
+    ;;    (list #'(body1) #'(body2))
+    ;;    lexenv.run lexenv.expand)
+    ;;
+    (import CHI-LAMBDA-CLAUSES)
+    (define attributes.sexp (syntax->datum attributes.stx))
+    (receive (formals*.lex lambda-signature* body**.psi)
+	(%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
+			     attributes.sexp formals*.stx
+			     body**.stx
+			     ;; (map (lambda (body-form*.stx)
+			     ;; 	    (%introduce-who-fluid-syntax 'anonymous-lambda body-form*.stx))
+			     ;;   body**.stx)
+			     )
+      (make-psi input-form.stx
+		(build-case-lambda (syntax-annotation input-form.stx)
+		  formals*.lex
+		  (map psi-core-expr body**.psi))
+		(make-retvals-signature-with-fabricated-procedure-tag (gensym) (make-clambda-compound lambda-signature*)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%introduce-who-fluid-syntax who.id body-form*.stx)
+    ;;The body must be a list of forms.
+    ;;
+    (bless
+     `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,who.id))))
+	 (internal-body . ,body-form*.stx)))))
+
+  #| end of module |# )
 
 
 ;;;; chi procedures: lexical bindings qualified right-hand sides
