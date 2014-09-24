@@ -32,60 +32,177 @@
 
 
 (module CORE-PRIMITIVE-PROPERTIES
-  (CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES
-   CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS)
+  (core-primitive-name->application-attributes*
+   core-primitive-name->signature*
+   core-primitive-name->replacement*
+   application-attributes-operands-template
+   application-attributes-foldable?
+   application-attributes-effect-free?
+   application-attributes-result-true?
+   application-attributes-result-false?
+   CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-constant CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES
-    (compile-time-gensym "core-primitive/core-types-signature"))
+  (define-constant CORE-PRIMITIVE-PROPKEY
+    (compile-time-gensym "core-primitive-properties"))
 
-  (define-constant CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS
-    (compile-time-gensym "core-primitive/replacements-signatures"))
+  (define* (core-primitive-name->application-attributes* {prim-name symbol?})
+    ;;Return the APPLICATION-ATTRIBUTES* list of the core primitive PRIM-NAME; return
+    ;;false if PRIM-NAME has  no attributes associated or it is  not a core primitive
+    ;;name.
+    ;;
+    (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+	   => core-primitive-properties-application-attributes*)
+	  (else #f)))
+
+  (define* (core-primitive-name->signature* {prim-name symbol?})
+    ;;Return the  SIGNATURE* list of  the core  primitive PRIM-NAME; return  false if
+    ;;PRIM-NAME has no registered signatures or it is not a core primitive name.
+    ;;
+    (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+	   => core-primitive-properties-signature*)
+	  (else #f)))
+
+  (define* (core-primitive-name->replacement* {prim-name symbol?})
+    ;;Return the REPLACEMENT*  list of the core primitive PRIM-NAME;  return false if
+    ;;PRIM-NAME has no registered replacements or it is not a core primitive name.
+    ;;
+    (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY)
+	   => core-primitive-properties-replacement*)
+	  (else #f)))
+
+
+;;;; core primitive properties representation
+
+(define-struct core-primitive-properties
+  (signature*
+		;A list of pairs with the format:
+		;
+		;   ((?rand-preds . ?rv-preds) ...)
+		;
+		;in which both ?RAND-PREDS and ?RV-PREDS are proper or improper lists
+		;of type predicates and false objects.
+		;
+		;Every  pair  represents  an  alternative  core  type  signature  for
+		;operands and return values.
+   application-attributes*
+		;A proper list:
+		;
+		;   (?application-attributes ...)
+		;
+		;in  which   every  ?APPLICATION-ATTRIBUTES  is  a   struct  of  type
+		;APPLICATION-ATTRIBUTES.
+   replacement*
+		;List of symbols  representing core primitives that  can replace this
+		;one if the operands are of the correct type.
+   ))
+
+(define-struct application-attributes
+  (operands-template
+		;A  proper or  improper  list  of items  representing  a template  of
+		;application for the core primitive.  The items are: "_" representing
+		;any operand; "0"  representing an operand equal to  the fixnum zero;
+		;"#f"  representing  an operand  equal  to  the boolean  false;  "()"
+		;representing an operand equal to null.
+   foldable?
+		;Boolean.  True if  the associated core primitive  application can be
+		;precomputed at compile-time when the operands are constants.
+   effect-free?
+		;Boolean.  True if  the associated core primitive  application has no
+		;side effects.
+   result-true?
+		;Boolean.  True  if the associated core  primitive application always
+		;has non-false as return value.
+   result-false?
+		;Boolean.  True  if the associated core  primitive application always
+		;has false as return value.
+   ))
+
+(define-constant CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES
+  (make-application-attributes '_ #f #f #f #f))
 
 
 ;;;; syntaxes for parsing tables
 
-(define-auxiliary-syntaxes safe unsafe signatures replacements)
+(define-auxiliary-syntaxes
+  safe unsafe
+  signatures attributes replacements
+  foldable effect-free result-true result-false)
 
 (define-syntax* (declare-core-primitive input-form)
   (define (main stx)
-    (syntax-case stx (safe unsafe signatures replacements)
+    (syntax-case stx (safe unsafe signatures attributes replacements)
 
       ;;Unsafe primitive.
       ((?ctx ?prim-name (unsafe)
-	     (signatures ?signature ...))
+	     (signatures ?signature ...)
+	     (attributes ?attr-spec ...))
        (let* ((prim-name	(%parse-prim-name #'?prim-name))
-	      (signature*	(%parse-signatures-sexp #'(signatures ?signature ...)))
+	      (signature*	(%parse-signatures-sexp #'(?signature ...)))
+	      (attribute*	(%parse-application-attributes-sexp #'(?attr-spec ...)))
 	      (signature-pred*	(%signatures->signature-pred* #'?ctx signature*)))
 	 (with-syntax
-	     ((SIGNATURE-FORM	(%compose-signature-output-form prim-name signature-pred*)))
-	   #'(begin SIGNATURE-FORM))))
+	     ((SIGNATURES-FORM	(%compose-signature-output-form signature-pred*))
+	      (ATTRIBUTES-FORM	(%compose-attributes-output-form attribute*)))
+	   #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
+		      (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM '())))))
 
       ;;Safe primitive.
       ((?ctx ?prim-name (safe)
 	     (signatures ?signature ...)
+	     (attributes ?attr-spec ...))
+       #'(?ctx ?prim-name (safe)
+	       (signatures ?signature ...)
+	       (attributes ?attr-spec ...)
+	       (replacements)))
+
+      ;;Safe primitive.
+      ((?ctx ?prim-name (safe)
+	     (signatures ?signature ...)
+	     (attributes ?attr-spec ...)
 	     (replacements ?replacement-prim-name ...))
        (let* ((prim-name		(%parse-prim-name #'?prim-name))
-	      (signature*		(%parse-signatures-sexp #'(signatures ?signature ...)))
-	      (replacement-prim-name*	(%parse-replacements-sexp #'(replacements ?replacement-prim-name ...)))
+	      (signature*		(%parse-signatures-sexp #'(?signature ...)))
+	      (attribute*		(%parse-application-attributes-sexp #'(?attr-spec ...)))
+	      (replacement-prim-name*	(%parse-replacements-sexp #'(?replacement-prim-name ...)))
 	      (signature-pred*		(%signatures->signature-pred* #'?ctx signature*)))
 	 (with-syntax
-	     ((SIGNATURE-FORM		(%compose-signature-output-form prim-name signature-pred*))
-	      (REPLACEMENTS-FORM	(%compose-replacements-output-orm prim-name replacement-prim-name*)))
-	   #'(begin SIGNATURE-FORM REPLACEMENTS-FORM))))
+	     ((SIGNATURES-FORM		(%compose-signature-output-form signature-pred*))
+	      (ATTRIBUTES-FORM		(%compose-attributes-output-form attribute*))
+	      (REPLACEMENTS-FORM	(%compose-replacements-output-orm replacement-prim-name*)))
+	   #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
+		      (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM REPLACEMENTS-FORM)))))
 
       (_
        (synner "invalid syntax in core primitive declaration"))))
 
-  (define (%compose-signature-output-form prim-name signature-pred*)
-    (if (pair? signature-pred*)
-	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES (quasiquote #,signature-pred*))
-      #'(void)))
+;;; --------------------------------------------------------------------
 
-  (define (%compose-replacements-output-orm prim-name replacement-prim-name*)
-    (if (pair? replacement-prim-name*)
-	#`(putprop (quote #,prim-name) CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS (quote #,replacement-prim-name*))
-      #'(void)))
+  (define (%compose-signature-output-form signature-pred*)
+    (if (pair? signature-pred*)
+	#`(quasiquote #,signature-pred*)
+      #'(quote ())))
+
+  (define (%compose-attributes-output-form attribute*)
+    (if (pair? attribute*)
+	#`(quasiquote #,(map (lambda (attribute*)
+			       (let ((operands-template (car attribute*))
+				     (attributes-vector (cdr attribute*)))
+				 #`(unquote (make-application-attributes
+					     (quote #,operands-template)
+					     #,(vector-ref attributes-vector 0)
+					     #,(vector-ref attributes-vector 1)
+					     #,(vector-ref attributes-vector 2)
+					     #,(vector-ref attributes-vector 3)))))
+			  attribute*))
+      #'(quote ())))
+
+  (define (%compose-replacements-output-orm replacement*)
+    (if (pair? replacement*)
+	#`(quote #,replacement*)
+      #'(quote ())))
+
+;;; --------------------------------------------------------------------
 
   (define (%parse-prim-name stx)
     (if (identifier? stx)
@@ -143,8 +260,8 @@
     ;;
     (define (%syntax-error)
       (synner "invalid signatures specification in core primitive declaration" stx))
-    (syntax-case stx (signatures)
-      ((signatures ?signature ...)
+    (syntax-case stx ()
+      ((?signature ...)
        (map (lambda (signature)
 	      (syntax-case signature (=>)
 		((?rand-types => ?rv-types)
@@ -157,25 +274,19 @@
        (%syntax-error))))
 
   (define (%parse-proper-or-improper-list-of-core-types stx)
-    ;;Parse a proper or improper list of core type identifiers representing the types
-    ;;of arguments  or return values for  a core primitive.  If  successful: return a
-    ;;proper or  improper list of  identifiers and false  objects in which  the false
-    ;;objects substitute the  wildcards "_" and "T:object".  If an  invalid syntax is
-    ;;found: raise a "&syntax" exception.
+    ;;Non-tail recursive  function.  Parse  a proper  or improper  list of  core type
+    ;;identifiers representing  the types of  arguments or  return values for  a core
+    ;;primitive.  If successful: return a proper  or improper list of identifiers and
+    ;;false  objects in  which the  false objects  substitute the  wildcards "_"  and
+    ;;"T:object".  If an invalid syntax is found: raise a "&syntax" exception.
     ;;
     (syntax-case stx ()
-      ((?type0 ?type ...)
-       (map %parse-core-object-type (syntax->list #'(?type0 ?type ...))))
-      ((?type0 ?type ... . ?rest-type)
-       (let recur ((stx stx))
-	 (syntax-case stx ()
-	   ((?car . ?cdr)
-	    (cons (%parse-core-object-type #'?car) (recur #'?cdr)))
-	   (()  '())
-	   (?rest
-	    (%parse-core-object-type #'?rest)))))
-      (?args-type
-       (%parse-core-object-type #'?args-type))
+      ((?car . ?cdr)
+       (cons (%parse-core-object-type #'?car)
+	     (%parse-proper-or-improper-list-of-core-types #'?cdr)))
+      (()  '())
+      (?rest
+       (%parse-core-object-type #'?rest))
       (_
        (synner "invalid signatures component in core primitive declaration" stx))))
 
@@ -228,14 +339,117 @@
       (T:negative		type)
       (_
        (if (identifier? type)
-	   (if (free-identifier=? type #'_)
+	   (if (eq? '_ (syntax->datum type))
 	       #f
 	     type)
 	 (synner "expected identifier as core type name in core primitive declaration" type)))))
 
+;;; --------------------------------------------------------------------
+
+  (module (%parse-application-attributes-sexp)
+
+    (define (%parse-application-attributes-sexp stx)
+      ;;Parse   a  syntax   object   representing  the   core  primitive   attributes
+      ;;specification.  The format must be:
+      ;;
+      ;;   (attributes ?attr-spec ...)
+      ;;
+      ;;in which every ?ATTR-SPEC has the format:
+      ;;
+      ;;   (?args . ?attr*)
+      ;;
+      ;;where: ?ARGS is a proper or improper  list of symbols "_", constant #f, 0 and
+      ;;null; ?ATTR* is a proper list of the identifiers:
+      ;;
+      ;;   foldable	effect-free
+      ;;   result-true	result-false
+      ;;
+      ;;Return a list of pairs with the format:
+      ;;
+      ;;   ((?args . ?attr*) ...)
+      ;;
+      (define (%syntax-error)
+	(synner "invalid attributes specification in core primitive declaration" stx))
+      (syntax-case stx ()
+	((?attr-spec ...)
+	 (map (lambda (attr-spec)
+		(syntax-case attr-spec ()
+		  ((?args-spec . ?attr*)
+		   (cons (%parse-appliation-attributes-operands-template  #'?args-spec)
+			 (%parse-appliaction-attributes-attributes-specification #'?attr*)))
+		  (_
+		   (%syntax-error))))
+	   (syntax->list #'(?attr-spec ...))))
+	(_
+	 (%syntax-error))))
+
+    (define (%parse-appliation-attributes-operands-template args-spec)
+      ;;Non-tail recursive function.  Parse the arguments specification ARGS-SPEC for
+      ;;the attributes of a core primitive  application.  Return a proper or improper
+      ;;list representing the arguments specification.
+      ;;
+      ;;The  attributes arguments  specification  is  a proper  or  improper list  of
+      ;;symbols "_",  constant #f, 0  and null: a  symbol "_" represents  an argument
+      ;;that  accepts operands  of  any type;  the constants  #f,  0, null  represent
+      ;;arguments that accept as operands #f, 0, null respecitely.
+      ;;
+      (define (%error-invalid-argument-spec)
+	(synner "invalid core primitive argument specification for attributes" args-spec))
+      (define (%arg-spec? A)
+	(or (eq? '_ A)
+	    (null? A)
+	    (not A)
+	    (and (fixnum? A)
+		 (fxzero? A))))
+      (syntax-case args-spec ()
+	((?car . ?cdr)
+	 (let ((A (syntax->datum #'?car)))
+	   (if (%arg-spec? A)
+	       (cons #'?car (%parse-appliation-attributes-operands-template #'?cdr))
+	     (%error-invalid-argument-spec))))
+	(()
+	 '())
+	(?rest
+	 (let ((A (syntax->datum #'?rest)))
+	   (if (%arg-spec? A)
+               #'?rest
+	     (%error-invalid-argument-spec))))
+	(_
+	 (%error-invalid-argument-spec))))
+
+    (define (%parse-appliaction-attributes-attributes-specification attr*)
+      (let recur ((flags (make-vector 4 #f))
+		  (attr* attr*))
+	(syntax-case attr* (foldable effect-free result-true result-false)
+	  ((foldable . ?rest)
+	   (vector-set! flags 0 #t)
+	   (recur flags #'?rest))
+
+	  ((effect-free . ?rest)
+	   (vector-set! flags 1 #t)
+	   (recur flags #'?rest))
+
+	  ((result-true . ?rest)
+	   (vector-set! flags 2 #t)
+	   (recur flags #'?rest))
+
+	  ((result-false . ?rest)
+	   (vector-set! flags 3 #t)
+	   (recur flags #'?rest))
+
+	  (()
+	   flags)
+
+	  (_
+	   (synner "invalid core primitive attributes specification" attr*)))))
+
+    #| end of module: %PARSE-APPLICATION-ATTRIBUTES-SEXP |# )
+
+;;; --------------------------------------------------------------------
+
   (define (%parse-replacements-sexp stx)
-    (syntax-case stx (replacements)
-      ((replacements ?replacement-prim-name ...)
+    (syntax-case stx ()
+      ((?replacement-prim-name ...)
        (receive-and-return (replacement-prim-name*)
 	   (syntax->list #'(?replacement-prim-name ...))
 	 (for-each (lambda (id)
@@ -244,6 +458,8 @@
 	   replacement-prim-name*)))
       (_
        (synner "invalid replacements specification in core primitive declaration" stx))))
+
+;;; --------------------------------------------------------------------
 
   (define (%signatures->signature-pred* ctx signature*)
     ;;Given a list  of (already parsed) core primitive  signature specifications with
@@ -297,10 +513,12 @@
 			  (%type->pred rand-types))))))
       signature*))
 
+;;; --------------------------------------------------------------------
+
   ;;This is the last form in the definition of DECLARE-CORE-PRIMITIVE.
   (receive-and-return (output-form)
       (main input-form)
-    #;(debug-print (syntax->datum output-form))
+    (debug-print (syntax->datum output-form))
     (void)))
 
 

@@ -3567,8 +3567,8 @@
 ;;; --------------------------------------------------------------------
 
   (module (E-funcall)
-    (module (CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES
-	     CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS)
+    (module (core-primitive-name->signature*
+	     core-primitive-name->replacement*)
       (import CORE-PRIMITIVE-PROPERTIES))
 
     (define (E-funcall rator rand*)
@@ -3586,7 +3586,7 @@
 	(cond ((null? rand*)
 	       (%no-replacement))
 	      ((%compatible-operands-for-primitive-call? safe-prim-name rand*)
-	       (or (%find-unsafe-primitive-replacement safe-prim-name rand*)
+	       (or (%find-core-primitive-replacement safe-prim-name rand*)
 		   (%no-replacement)))
 	      ((option.strict-r6rs)
 	       ;;The operands do  not match the expected arguments:  resort to run-time
@@ -3605,9 +3605,9 @@
       ;;Validate the operands  against the types expected by the  core primitive.  If
       ;;they are compatible: return true, otherwise return false.
       ;;
-      (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES)
+      (cond ((core-primitive-name->signature* prim-name)
 	     => (lambda (signature*)
-		  ;;We expect SIGNATURE* to be a list of pairs pair with the format:
+		  ;;We expect SIGNATURE* to be a list of pairs with the format:
 		  ;;
 		  ;;   ((?rand-preds . ?rv-preds) ...)
 		  ;;
@@ -3628,7 +3628,7 @@
       ;;Validate the operands  against the types expected by the  core primitive.  If
       ;;they match: return true, otherwise return false.
       ;;
-      (cond ((getprop prim-name CORE-PRIMITIVE-PROPKEY:CORE-TYPE-SIGNATURES)
+      (cond ((core-primitive-name->signature* prim-name)
 	     => (lambda (signature*)
 		  ;;We expect SIGNATURE* to be a list of pairs pair with the format:
 		  ;;
@@ -3643,14 +3643,14 @@
 	    ;;the operands do *not* match.
 	    (else #f)))
 
-    (define (%find-unsafe-primitive-replacement safe-prim-name rand*)
+    (define (%find-core-primitive-replacement original-prim-name rand*)
       ;;This function  should be  called if  we know  the list  of operands  in RAND*
-      ;;matches the expected argument types of  the SAFE-PRIM-NAME.  Scan the list of
-      ;;registered unsafe  primitives that can  replace SAFE-PRIM-NAME for  one whose
-      ;;expected argument  types match  the RAND*.  If  successful: return  a FUNCALL
-      ;;struct that must replace the original; otherwise return false.
+      ;;matches the expected argument types of the ORIGINAL-PRIM-NAME.  Scan the list
+      ;;of registered unsafe  primitives that can replace  ORIGINAL-PRIM-NAME for one
+      ;;whose  expected argument  types match  the  RAND*.  If  successful: return  a
+      ;;FUNCALL struct that must replace the original; otherwise return false.
       ;;
-      (cond ((getprop safe-prim-name CORE-PRIMITIVE-PROPKEY:CALL-REPLACEMENTS)
+      (cond ((core-primitive-name->replacement* original-prim-name)
 	     ;;REPLACEMENT-PRIM-NAME* is a list  of symbols representing public names
 	     ;;of unsafe primitives.
 	     => (lambda (replacement-prim-name*)

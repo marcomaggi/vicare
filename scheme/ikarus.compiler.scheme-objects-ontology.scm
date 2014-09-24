@@ -118,7 +118,7 @@
   ;;
   (define (main x)
     (syntax-case x ()
-      ((_ T T:description T? T:=? T:and T:or
+      ((_ T make-T T? T:=? T:and T:or T:description
 	  (?name0 ?cls0)
 	  (?name  ?cls)
 	  ...)
@@ -422,9 +422,10 @@
 ;;;; ontology definition
 
 ;;See below for the expansion of this syntax.
-(define-ontology core-type-tag core-type-tag-description
-  core-type-tag? core-type-tag=?
+(define-ontology core-type-tag
+  make-core-type-tag core-type-tag? core-type-tag=?
   core-type-tag-and core-type-tag-or
+  core-type-tag-description
   (object		(inclusive obj-tag obj-immediacy obj-truth))
   (obj-immediacy	(exclusive nonimmediate immediate))
   (immediate		(exclusive fixnum boolean null char void))

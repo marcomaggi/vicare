@@ -929,564 +929,6 @@
   #| end of module: with-extended-env |# )
 
 
-(module (primprop)
-  ;;Prepare a distributed  table of primitive function  attributes to be
-  ;;used to precompute results of function applications.
-  ;;
-  ;;Attributes are the symbols:
-  ;;
-  ;;effect-free -  The application produces no side effects.
-  ;;
-  ;;foldable -     The application can be precomputed at compile time.
-  ;;
-  ;;result-true -  The application always has non-#f result.
-  ;;
-  ;;result-false - The application always has #f result.
-  ;;
-  (define (primprop p)
-    (or (getprop p UNIQUE-PROPERTY-KEY) '()))
-
-  (define-syntax (expand-time-gensym stx)
-    (syntax-case stx ()
-      ((_ ?template)
-       (let* ((tmp (syntax->datum #'?template))
-	      (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
-	      (str (apply string-append tmp (map (lambda (N)
-						   (string-append "." (number->string N)))
-					      fxs)))
-	      (sym (gensym str)))
-	 (with-syntax
-	     ((SYM (datum->syntax #'here sym)))
-	   (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
-	   #'(quote SYM))))))
-
-  (define-constant UNIQUE-PROPERTY-KEY
-    (expand-time-gensym "core-primitive-operation/source-optimiser-properties"))
-
-  (module (%initialise-primitive-properties)
-    ;;For each  symbol being the  name of  a primitive function:  add an
-    ;;element to the property list of the symbol.
-    ;;
-    ;;The key of the property is UNIQUE-PROPERTY-KEY.
-    ;;
-    ;;The value of  the property is a list of  sublists representing the
-    ;;attributes  for a  mode of  calling the  primitive function.   For
-    ;;example, for CONS* the value will be:
-    ;;
-    ;;   (((_)		foldable effect-free)
-    ;;    ((_ . _)	effect-free result-true))
-    ;;
-    ;;the first sublist  specifies the attributes of CONS*  applied to a
-    ;;single argument;  the second  sublist specifies the  attributes of
-    ;;CONS* applied to 2 or more arguments.
-    ;;
-    (define (%initialise-primitive-properties info-list)
-      (when (pair? info-list)
-	(let* ((a	(car info-list))
-	       (cc	(car a))	;list, primitive usage template
-	       (cv	(cdr a))	;list of symbols, properties
-	       (prim	(car cc))	;symbol, primitive name
-	       (args	(cdr cc)))	;list, arguments specification
-	  (let-values (((p* info-list) (%get prim (cdr info-list))))
-	    (putprop prim UNIQUE-PROPERTY-KEY (cons (cons args cv) p*))
-	    (%initialise-primitive-properties info-list)))))
-
-    (define (%get prim info-list)
-      ;;Check  if  the  head  of  the  INFO-LIST  represents  additional
-      ;;attributes for the primitive PRIM;  if it does return: a sublist
-      ;;specifying attributes and the tail  of INFO-LIST; if it does not
-      ;;return: nil and INFO-LIST itself.
-      ;;
-      (if (pair? info-list)
-	  (let* ((a  (car info-list))
-		 (cc (car a)))
-	    (if (eq? (car cc) prim)
-		(receive (p* info-list)
-		    (%get prim (cdr info-list))
-		  (values (cons (cons (cdr cc) (cdr a))
-				p*)
-			  info-list))
-	      (values '() info-list)))
-	(values '() '())))
-
-    #| end of module: %initialise-primitive-properties |# )
-
-  (define-constant PRIMITIVE-INFO-LIST
-    ;;Attributes  specifications for  each mode  of calling  a primitive
-    ;;function.  There  can be any  number of specs for  each primitive,
-    ;;but they must be in adjacent items.
-    ;;
-    ;;FIXME  There are  a  lot more  functions for  which  it should  be
-    ;;interesting to specify attributes.  (Marco Maggi; Nov 3, 2012)
-    ;;
-    '(((cons _ _)				 effect-free result-true)
-      ((cons* _)			foldable effect-free            )
-      ((cons* _ . _)				 effect-free result-true)
-      ((list)				foldable effect-free result-true)
-      ((list . _)				 effect-free result-true)
-      ((reverse _)			foldable effect-free result-true)
-
-      ;;According to  R6RS: STRING and	MAKE-STRING must return	 a newly
-      ;;allocated string at every invocation; if we want the same string
-      ;;we just	 use the double	 quotes.  So STRING and	 MAKE-STRING are
-      ;;not foldable.
-      ((string)				    effect-free result-true)
-      ((string . _)			    effect-free result-true)
-      ((make-string 0)			    effect-free result-true)
-      ((make-string 0 _)		    effect-free result-true)
-      ((make-string . _)		    effect-free result-true)
-
-      ;;According to R6RS: MAKE-BYTEVECTOR must return a newly allocated
-      ;;string at every invocation; so it is not foldable.
-      ((make-bytevector 0)		    effect-free result-true)
-      ((make-bytevector 0 _)		    effect-free result-true)
-      ((make-bytevector . _)				result-true)
-
-      ((string-length _)	   foldable effect-free result-true)
-      ((string-ref _ _)		   foldable effect-free result-true)
-
-      ;;According to  R6RS: VECTOR and	MAKE-VECTOR must return	 a newly
-      ;;allocated string at every invocation; so they are not foldable.
-      ((vector)				    effect-free result-true)
-      ((vector . _)			    effect-free result-true)
-      ((make-vector 0)			    effect-free result-true)
-      ((make-vector 0 _)		    effect-free result-true)
-      ((make-vector . _)		    effect-free result-true)
-
-      ((vector-length _)	   foldable effect-free result-true)
-      ((vector-ref _ _)		   foldable effect-free		   )
-      ((vector-set! _ _)	   foldable 			   )
-      ((eq? _ _)		   foldable effect-free		   )
-      ((eqv? _ _)		   foldable effect-free		   )
-      ((assq _ _)		   foldable effect-free		   )
-      ((assv _ _)		   foldable effect-free		   )
-      ((assoc _ _)		   foldable effect-free		   )
-      ((not _)			   foldable effect-free		   )
-      ((null? _)		   foldable effect-free		   )
-      ((pair? _)		   foldable effect-free		   )
-      ((fixnum? _)		   foldable effect-free		   )
-      ((vector? _)		   foldable effect-free		   )
-      ((string? _)		   foldable effect-free		   )
-      ((char? _)		   foldable effect-free		   )
-      ((symbol? _)		   foldable effect-free		   )
-      ((procedure? _)		   foldable effect-free		   )
-      ((eof-object? _)		   foldable effect-free		   )
-      ((flonum? _)		   foldable effect-free		   )
-      ((cflonum? _)		   foldable effect-free		   )
-      ((compnum? _)		   foldable effect-free		   )
-      ((integer? _)		   foldable effect-free		   )
-      ((bignum? _)		   foldable effect-free		   )
-      ((ratnum? _)		   foldable effect-free		   )
-      ((pointer? _)		   foldable effect-free		   )
-      ((void)			   foldable effect-free result-true)
-      ((car _)			   foldable effect-free		   )
-      ((cdr _)			   foldable effect-free		   )
-      ((set-car! _ _)		   foldable			   )
-      ((set-cdr! _ _)		   foldable			   )
-      ((caar _)			   foldable effect-free		   )
-      ((cadr _)			   foldable effect-free		   )
-      ((cdar _)			   foldable effect-free		   )
-      ((cddr _)			   foldable effect-free		   )
-      ((caaar _)		   foldable effect-free		   )
-      ((caadr _)		   foldable effect-free		   )
-      ((cadar _)		   foldable effect-free		   )
-      ((caddr _)		   foldable effect-free		   )
-      ((cdaar _)		   foldable effect-free		   )
-      ((cdadr _)		   foldable effect-free		   )
-      ((cddar _)		   foldable effect-free		   )
-      ((cdddr _)		   foldable effect-free		   )
-      ((caaaar _)		   foldable effect-free		   )
-      ((caaadr _)		   foldable effect-free		   )
-      ((caadar _)		   foldable effect-free		   )
-      ((caaddr _)		   foldable effect-free		   )
-      ((cadaar _)		   foldable effect-free		   )
-      ((cadadr _)		   foldable effect-free		   )
-      ((caddar _)		   foldable effect-free		   )
-      ((cadddr _)		   foldable effect-free		   )
-      ((cdaaar _)		   foldable effect-free		   )
-      ((cdaadr _)		   foldable effect-free		   )
-      ((cdadar _)		   foldable effect-free		   )
-      ((cdaddr _)		   foldable effect-free		   )
-      ((cddaar _)		   foldable effect-free		   )
-      ((cddadr _)		   foldable effect-free		   )
-      ((cdddar _)		   foldable effect-free		   )
-      ((cddddr _)		   foldable effect-free		   )
-      (($car _)			   foldable effect-free		   )
-      (($cdr _)			   foldable effect-free		   )
-      (($set-car! _ _)		   foldable			   )
-      (($set-cdr! _ _)		   foldable			   )
-      ((memq _ _)		   foldable effect-free		   )
-      ((memv _ _)		   foldable effect-free		   )
-      ((length _)		   foldable effect-free result-true)
-;;;
-      ((+ . _)			   foldable effect-free result-true)
-      ((* . _)			   foldable effect-free result-true)
-      ((/ _ . _)		   foldable effect-free result-true)
-      ((- _ . _)		   foldable effect-free result-true)
-      ((real-part _)		   foldable effect-free result-true)
-      ((imag-part _)		   foldable effect-free result-true)
-      ((greatest-fixnum)	   foldable effect-free result-true)
-      ((least-fixnum)		   foldable effect-free result-true)
-      ((fixnum-width)		   foldable effect-free result-true)
-      ((char->integer _)	   foldable effect-free result-true)
-      ((integer->char _)	   foldable effect-free result-true)
-      ((eof-object)		   foldable effect-free result-true)
-      ((zero? _)		   foldable effect-free		   )
-      ((= _ . _)		   foldable effect-free		   )
-      ((< _ . _)		   foldable effect-free		   )
-      ((<= _ . _)		   foldable effect-free		   )
-      ((> _ . _)		   foldable effect-free		   )
-      ((>= _ . _)		   foldable effect-free		   )
-      ((expt _ _)		   foldable effect-free result-true)
-      ((log _)			   foldable effect-free result-true)
-      ((sll _ _)		   foldable effect-free result-true)
-      ((sra _ _)		   foldable effect-free result-true)
-      ((inexact _)		   foldable effect-free result-true)
-      ((exact _)		   foldable effect-free result-true)
-      ((add1 _)			   foldable effect-free result-true)
-      ((sub1 _)			   foldable effect-free result-true)
-      ((bitwise-and _ _)	   foldable effect-free result-true)
-      ((make-rectangular _ _)	   foldable effect-free result-true)
-      ((sin _)			   foldable effect-free result-true)
-      ((cos _)			   foldable effect-free result-true)
-      ((tan _)			   foldable effect-free result-true)
-      ((asin _)			   foldable effect-free result-true)
-      ((acos _)			   foldable effect-free result-true)
-      ((atan _)			   foldable effect-free result-true)
-      ((atan _ _)		   foldable effect-free result-true)
-      ((make-eq-hashtable)		    effect-free result-true)
-      ((string->number _)	   foldable effect-free		   )
-      ((string->number _ _)	   foldable effect-free		   )
-
-;;; --------------------------------------------------------------------
-;;; fixnums
-
-      ((fx+ _ _)		   foldable effect-free result-true)
-      ((fx- _ _)		   foldable effect-free result-true)
-      ((fx* _ _)		   foldable effect-free result-true)
-      ((fxior . _)		   foldable effect-free result-true)
-      ((fxlogor . _)		   foldable effect-free result-true)
-      ((fxnot _)		   foldable effect-free result-true)
-      ((fxadd1 _)		   foldable effect-free result-true)
-      ((fxsub1 _)		   foldable effect-free result-true)
-      ((fxzero? _)		   foldable effect-free            )
-      ((fxpositive? _)		   foldable effect-free            )
-      ((fxnegative? _)		   foldable effect-free            )
-      ((fx=? _ . _)		   foldable effect-free		   )
-      ((fx<? _ . _)		   foldable effect-free		   )
-      ((fx<=? _ . _)		   foldable effect-free		   )
-      ((fx>? _ . _)		   foldable effect-free		   )
-      ((fx>=? _ . _)		   foldable effect-free		   )
-      ((fx= _ . _)		   foldable effect-free		   )
-      ((fx< _ . _)		   foldable effect-free		   )
-      ((fx<= _ . _)		   foldable effect-free		   )
-      ((fx> _ . _)		   foldable effect-free		   )
-      ((fx>= _ . _)		   foldable effect-free		   )
-      ((fxmin _ _)		   foldable effect-free result-true)
-      ((fxmax _ _)		   foldable effect-free result-true)
-      ((fxsll _ _)		   foldable effect-free result-true)
-      ((fxsra _ _)		   foldable effect-free result-true)
-      ((fxremainder _ _)	   foldable effect-free result-true)
-      ((fxquotient _ _)		   foldable effect-free result-true)
-      ((fxmodulo _ _)		   foldable effect-free result-true)
-      ((fxsign _)		   foldable effect-free result-true)
-
-      (($fixnum->flonum _)	   foldable effect-free result-true)
-      (($char->fixnum _)	   foldable effect-free result-true)
-      (($fixnum->char _)	   foldable effect-free result-true)
-      (($fxzero? _)		   foldable effect-free		   )
-      (($fxpositive? _)		   foldable effect-free		   )
-      (($fxnegative? _)		   foldable effect-free		   )
-      (($fx+ _ _)		   foldable effect-free result-true)
-      (($fx* _ _)		   foldable effect-free result-true)
-      (($fx- _ _)		   foldable effect-free result-true)
-      (($fx= _ _)		   foldable effect-free		   )
-      (($fx>= _ _)		   foldable effect-free		   )
-      (($fx> _ _)		   foldable effect-free		   )
-      (($fx<= _ _)		   foldable effect-free		   )
-      (($fx< _ _)		   foldable effect-free		   )
-      (($fxmin _ _)		   foldable effect-free result-true)
-      (($fxmax _ _)		   foldable effect-free result-true)
-      (($struct-ref _ _)	   foldable effect-free		   )
-      (($struct/rtd? _ _)	   foldable effect-free		   )
-      (($fxsll _ _)		   foldable effect-free result-true)
-      (($fxsra _ _)		   foldable effect-free result-true)
-      (($fxlogor _ _)		   foldable effect-free result-true)
-      (($fxlogand _ _)		   foldable effect-free result-true)
-      (($fxadd1 _)		   foldable effect-free result-true)
-      (($fxsub1 _)		   foldable effect-free result-true)
-      (($fxsign _)		   foldable effect-free result-true)
-      (($fxdiv _ _)		   foldable effect-free result-true)
-      (($fxdiv0 _ _)		   foldable effect-free result-true)
-      (($fxmod _ _)		   foldable effect-free result-true)
-      (($fxmod0 _ _)		   foldable effect-free result-true)
-      ;;Do we support multiple values?  No!!!
-      ;;(($fxdiv-and-mod _ _)	   foldable effect-free result-true)
-      ;;(($fxdiv0-and-mod0 _ _)	   foldable effect-free result-true)
-
-;;; --------------------------------------------------------------------
-;;; ratnums
-
-      (($make-ratnum _ _)	   foldable effect-free result-true)
-      (($make-rational _ _)	   foldable effect-free result-true)
-      (($ratnum-n _)		   foldable effect-free result-true)
-      (($ratnum-d _)		   foldable effect-free result-true)
-      (($ratnum-num _)		   foldable effect-free result-true)
-      (($ratnum-den _)		   foldable effect-free result-true)
-
-;;; --------------------------------------------------------------------
-;;; flonums
-
-      ((inexact->exact _)	   foldable effect-free result-true)
-      ((exact _)		   foldable effect-free result-true)
-      ((fixnum->flonum _)	   foldable effect-free result-true)
-      ((flzero? _)		   foldable effect-free            )
-      ((flpositive? _)		   foldable effect-free            )
-      ((flnegative? _)		   foldable effect-free            )
-      ((fleven? _)		   foldable effect-free            )
-      ((flodd? _)		   foldable effect-free            )
-      ((flround _)		   foldable effect-free result-true)
-      ((flfloor _)		   foldable effect-free result-true)
-      ((flceiling _)		   foldable effect-free result-true)
-      ((fltruncate _)		   foldable effect-free result-true)
-      ((flnumerator _)		   foldable effect-free result-true)
-      ((fldenominator _)	   foldable effect-free result-true)
-      ((flabs _)		   foldable effect-free result-true)
-      ((flsin _)		   foldable effect-free result-true)
-      ((flcos _)		   foldable effect-free result-true)
-      ((fltan _)		   foldable effect-free result-true)
-      ((flasin _)		   foldable effect-free result-true)
-      ((flacos _)		   foldable effect-free result-true)
-      ((flatan _)		   foldable effect-free result-true)
-      ((flatan _ _)		   foldable effect-free result-true)
-      ((flexp _)		   foldable effect-free result-true)
-      ((fllog _)		   foldable effect-free result-true)
-      ((fllog _ _)		   foldable effect-free result-true)
-      ((flexpm1 _)		   foldable effect-free result-true)
-      ((fllog1p _)		   foldable effect-free result-true)
-      ((flexpt _)		   foldable effect-free result-true)
-      ((flsqrt _)		   foldable effect-free result-true)
-      ((flsquare _)		   foldable effect-free result-true)
-      ((flinteger? _)		   foldable effect-free            )
-      ((flnan? _)		   foldable effect-free            )
-      ((flfinite? _)		   foldable effect-free            )
-      ((flinfinite? _)		   foldable effect-free            )
-      ((fl=? _ _)		   foldable effect-free            )
-      ((fl<? _ _)		   foldable effect-free            )
-      ((fl>? _ _)		   foldable effect-free            )
-      ((fl<=? _ _)		   foldable effect-free            )
-      ((fl>=? _ _)		   foldable effect-free            )
-      ((fl+)			   foldable effect-free result-true)
-      ((fl+ _)			   foldable effect-free result-true)
-      ((fl+ _ _)		   foldable effect-free result-true)
-      ((fl+ _ _ _)		   foldable effect-free result-true)
-      ((fl+ _ _ _ _ . _)	   foldable effect-free result-true)
-      ((fl- _)			   foldable effect-free result-true)
-      ((fl- _ _)		   foldable effect-free result-true)
-      ((fl- _ _ _)		   foldable effect-free result-true)
-      ((fl- _ _ _ _ . _)	   foldable effect-free result-true)
-      ((fl*)			   foldable effect-free result-true)
-      ((fl* _)			   foldable effect-free result-true)
-      ((fl* _ _)		   foldable effect-free result-true)
-      ((fl* _ _ _)		   foldable effect-free result-true)
-      ((fl* _ _ _ . _)		   foldable effect-free result-true)
-      ((fl/ _)			   foldable effect-free result-true)
-      ((fl/ _ _)		   foldable effect-free result-true)
-      ((fl/ _ _ _)		   foldable effect-free result-true)
-      ((fl/ _ _ _ . _)		   foldable effect-free result-true)
-      ((flmax _)		   foldable effect-free result-true)
-      ((flmax _ _)		   foldable effect-free result-true)
-      ((flmax _ _ _ . _)	   foldable effect-free result-true)
-      ((flmin _)		   foldable effect-free result-true)
-      ((flmin _ _)		   foldable effect-free result-true)
-      ((flmin _ _ _ . _)	   foldable effect-free result-true)
-
-      ;;$MAKE-FLONUM must return a new flonum every time.
-      (($make-flonum . _)	            effect-free result-true)
-      (($flonum->exact _)	   foldable effect-free result-true)
-      (($flzero? _)		   foldable effect-free            )
-      (($flpositive? _)		   foldable effect-free            )
-      (($flnegative? _)		   foldable effect-free            )
-      (($fleven? _)		   foldable effect-free            )
-      (($flodd? _)		   foldable effect-free            )
-      (($flnan? _)		   foldable effect-free            )
-      (($flfinite? _)		   foldable effect-free            )
-      (($flinfinite? _)		   foldable effect-free            )
-      (($flonum-integer? _)	   foldable effect-free            )
-      (($flonum-rational? _)	   foldable effect-free            )
-      (($flround _)		   foldable effect-free result-true)
-      (($flfloor _)		   foldable effect-free result-true)
-      (($flceiling _)		   foldable effect-free result-true)
-      (($fltruncate _)		   foldable effect-free result-true)
-      (($flnumerator _)		   foldable effect-free result-true)
-      (($fldenominator _)	   foldable effect-free result-true)
-      (($flabs _)		   foldable effect-free result-true)
-      (($flsin _)		   foldable effect-free result-true)
-      (($flcos _)		   foldable effect-free result-true)
-      (($fltan _)		   foldable effect-free result-true)
-      (($flasin _)		   foldable effect-free result-true)
-      (($flacos _)		   foldable effect-free result-true)
-      (($flatan _)		   foldable effect-free result-true)
-      (($flatan2 _ _)		   foldable effect-free result-true)
-      (($flexp _)		   foldable effect-free result-true)
-      (($fllog _)		   foldable effect-free result-true)
-      (($fllog2 _ _)		   foldable effect-free result-true)
-      (($flexpm1 _)		   foldable effect-free result-true)
-      (($fllog1p _)		   foldable effect-free result-true)
-      (($flexpt _)		   foldable effect-free result-true)
-      (($flsqrt _)		   foldable effect-free result-true)
-      (($flsquare _)		   foldable effect-free result-true)
-      (($flmax _ _)		   foldable effect-free result-true)
-      (($flmin _ _)		   foldable effect-free result-true)
-      (($fl= _ _)		   foldable effect-free            )
-      (($fl< _ _)		   foldable effect-free            )
-      (($fl> _ _)		   foldable effect-free            )
-      (($fl<= _ _)		   foldable effect-free            )
-      (($fl>= _ _)		   foldable effect-free            )
-      (($fl+ _ _)		   foldable effect-free result-true)
-      (($fl- _ _)		   foldable effect-free result-true)
-      (($fl* _ _)		   foldable effect-free result-true)
-      (($fl/ _ _)		   foldable effect-free result-true)
-      (($fldiv _ _)		   foldable effect-free result-true)
-      (($flmod _ _)		   foldable effect-free result-true)
-      (($fldiv0 _ _)		   foldable effect-free result-true)
-      (($flmod0 _ _)		   foldable effect-free result-true)
-      ;;We do not do multiple return values.
-      ;;(($fldiv-and-mod _ _)	   foldable effect-free result-true)
-      ;;(($fldiv0-and-mod0 _ _)	   foldable effect-free result-true)
-
-;;; --------------------------------------------------------------------
-;;; vectors
-
-      (($vector-length _)	   foldable effect-free result-true)
-      (($vector-ref _ _)	   foldable effect-free)
-
-;;; --------------------------------------------------------------------
-;;; bytevectors
-
-      ;;$MAKE-BYTEVECTOR  must not  be foldable:  it must  return a  new
-      ;;bytevector every time.
-      (($make-bytevector 0)		    effect-free result-true)
-      (($make-bytevector 0 _)		    effect-free result-true)
-      (($make-bytevector . _)		    effect-free result-true)
-      (($bytevector-u8-ref _ _)	   foldable effect-free result-true)
-      (($bytevector-length _)	   foldable effect-free result-true)
-
-;;; --------------------------------------------------------------------
-
-      ((annotation? #f)		    foldable effect-free result-false)
-      ((annotation-stripped #f)	    foldable effect-free result-false)
-
-;;; --------------------------------------------------------------------
-
-      ;;This must return a new struct every time.
-      (($struct . _)			     effect-free result-true)
-
-      ((condition . _))
-      ((top-level-value . _))
-      ((make-message-condition . _))
-      ((make-lexical-violation . _))
-      ((make-who-condition . _))
-      ((make-error . _))
-      ((make-i/o-error . _))
-      ((make-i/o-write-error . _))
-      ((make-i/o-read-error . _))
-      ((make-i/o-file-already-exists-error . _))
-      ((make-i/o-file-is-read-only-error . _))
-      ((make-i/o-file-protection-error . _))
-      ((make-i/o-file-does-not-exist-error . _))
-      ((make-undefined-violation . _))
-      ((die . _))
-      ;;This must return a new gensym every time.
-      ((gensym . _)				effect-free result-true)
-      ((values . _))
-      ((error . _))
-      ((assertion-violation . _))
-      ;;FIXME Reduce to display.  (Abdulaziz Ghuloum)
-      ((printf . _))
-      ((newline . _))
-      ((native-transcoder . _))
-      ((open-string-output-port . _))
-      ((open-string-input-port . _))
-      ((environment . _))
-      ((print-gensym . _))
-      ((exit . _))
-      ((interrupt-handler . _))
-      ((display . _))
-      ((write-char . _))
-      ((current-input-port . _))
-      ((current-output-port . _))
-      ((current-error-port . _))
-      ((standard-input-port . _))
-      ((standard-output-port . _))
-      ((standard-error-port . _))
-
-      ;;It appears that something can go  wrong if we do these, not sure
-      ;;why.  (Marco Maggi; Nov 3, 2012)
-      ;;
-      ;;((current-input-port . _)		 effect-free result-true)
-      ;;((current-output-port . _)		 effect-free result-true)
-      ;;((current-error-port . _)		 effect-free result-true)
-
-      ((standard-input-port . _)		 effect-free result-true)
-      ((standard-output-port . _)		 effect-free result-true)
-      ((standard-error-port . _)		 effect-free result-true)
-      ((console-input-port . _)			 effect-free result-true)
-      ((console-output-port . _)		 effect-free result-true)
-      ((console-error-port . _)			 effect-free result-true)
-      (($current-frame . _))
-      ((pretty-width . _))
-      (($fp-at-base . _))
-      ((get-annotated-datum . _))
-      (($collect-key . _))
-      ((make-non-continuable-violation . _))
-
-      ;;FIXME Reduce to string-copy (Abdulaziz Ghuloum).
-      ((format . _))
-      ((uuid . _))
-      ((print-graph . _))
-      ((interaction-environment . _))
-      ((make-guardian)					 effect-free result-true)
-      ((command-line-arguments))
-      ;;FIXME (Abdulaziz Ghuloum)
-      ((make-record-type-descriptor . _))
-      ((record-constructor _)				 effect-free result-true)
-      ((record-predicate _)				 effect-free result-true)
-      ((record-accessor . _)				 effect-free result-true)
-      ((record-mutator . _)				 effect-free result-true)
-      ((make-assertion-violation . _))
-      ((new-cafe . _))
-      ((getenv . _))
-      ((gensym-prefix . _))
-      (($arg-list . _))
-      (($make-symbol . _)				 effect-free result-true)
-      ((string->utf8 . _)				 effect-free result-true)
-      ((string->utf16be . _)				 effect-free result-true)
-      ((string->utf16le . _)				 effect-free result-true)
-      ((string->utf16n . _)				 effect-free result-true)
-      ((string->keyword . _)				 effect-free result-true)
-      ((string->ascii . _)				 effect-free result-true)
-      ((string->latin1 . _)				 effect-free result-true)
-      (($make-call-with-values-procedure . _))
-      (($make-values-procedure . _))
-      (($unset-interrupted! . _))
-      ((make-interrupted-condition . _))
-      (($interrupted? . _))
-      (($symbol-value . _))
-      ((library-extensions . _))
-      ;;The base struct type descriptor is a constant created at process
-      ;;boot time.
-      ((base-rtd . _))
-      (($data->transcoder . _)			foldable effect-free result-true)
-      ((current-time . _))
-      ))
-
-  ;;This is an initialisation expression outside of any function.
-  (%initialise-primitive-properties PRIMITIVE-INFO-LIST)
-
-  #| end of module: primprop |# )
-
-
 (define-syntax case-context
   ;;Dispatch to a  branch specialised for a  specific evaluation context
   ;;among:  predicate  (p),   for  value  (v),  for   side  effect  (e),
@@ -2140,10 +1582,19 @@
 
 
 (module (fold-prim)
-  ;;Whenever  possible attempt  to  precompute  the result  of  a primitive  function
+  ;;Whenever possible attempt  to precompute the result of a  core primitive function
   ;;application.    This  is   the   place  where   the  "foldable",   "effect-free",
-  ;;"result-true" and "result-false" primitive attributes are used.
+  ;;"result-true" and "result-false" primitive application attributes are used.
   ;;
+  (module (core-primitive-name->application-attributes*
+	   application-attributes-operands-template
+	   application-attributes-foldable?
+	   application-attributes-effect-free?
+	   application-attributes-result-true?
+	   application-attributes-result-false?
+	   CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
+    (import CORE-PRIMITIVE-PROPERTIES))
+
   (define (fold-prim prim-name appctxt ec sc)
     ;;PRIM-NAME must  be a symbol  being the name  of a primitive  function.  APPCTXT
     ;;must be a  struct instance of type APP, representing  the context of appliction
@@ -2151,9 +1602,9 @@
     ;;
     (let* ((rand*  (app-rand* appctxt))
 	   (info   (%primitive-info prim-name rand*))
-	   (result (or (and (%info-effect-free? info)
+	   (result (or (and (application-attributes-effect-free? info)
 			    (%precompute-effect-free-primitive info appctxt))
-		       (and (%info-foldable? info)
+		       (and (application-attributes-foldable? info)
 			    (%precompute-foldable-primitive prim-name rand* ec)))))
       (if result
 	  (begin
@@ -2190,9 +1641,11 @@
       ((e)
        VOID-CONSTANT)
       ((p)
-       (cond ((%info-result-true?  info)	(make-constant #t))
-	     ((%info-result-false? info)	(make-constant #f))
-	     (else				#f)))
+       (cond ((application-attributes-result-true?  info)
+	      (make-constant #t))
+	     ((application-attributes-result-false? info)
+	      (make-constant #f))
+	     (else #f)))
       (else #f)))
 
   (define (%precompute-foldable-primitive prim-name rand* ec)
@@ -2233,20 +1686,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-syntax-rule (%info-foldable? ?info)
-    (memq 'foldable ?info))
-
-  (define-syntax-rule (%info-effect-free? ?info)
-    (memq 'effect-free ?info))
-
-  (define-syntax-rule (%info-result-true? ?info)
-    (memq 'result-true ?info))
-
-  (define-syntax-rule (%info-result-false? ?info)
-    (memq 'result-false ?info))
-
-;;; --------------------------------------------------------------------
-
   (define* (%primitive-info prim-name rand*)
     ;;PRIM-NAME  must be  a symbol  representing the  name of  a primitive  function.
     ;;RAND* must be null  or a list representing the arguments in  a function call to
@@ -2256,42 +1695,57 @@
     ;;match the arguments call  represented by RAND*.  If a match  is found: return a
     ;;list of symbols representing the attributes; else return null.
     ;;
-    (define (%matches? attributes-sublist)
-      (let loop ((rand*           rand*)
-		 (template-params (car attributes-sublist)))
-	(cond ((pair? template-params)
+    (define (%matches? application-attributes)
+      ;;Match the operands in RAND* against the primitive application template in the
+      ;;items of APPLICATION-ATTRIBUTES.
+      ;;
+      (let loop ((rand*             rand*)
+		 (operands-template (application-attributes-operands-template application-attributes)))
+	(cond ((pair? operands-template)
 	       (and (pair? rand*)
-		    (let ((template-arg (car template-params)))
-		      (case template-arg
+		    (let ((optmpl (car operands-template)))
+		      (case optmpl
 			((_)
 			 ;;An argument matched.  Go on with the rest.
-			 (loop (cdr rand*) (cdr template-params)))
+			 (loop (cdr rand*) (cdr operands-template)))
 			((#f 0 ())
 			 ;;The  template specifies  that  this argument  must be  one
-			 ;;among: #f,  0, nil; if  it is: go  on with the  rest; else
-			 ;;this template does not match.
+			 ;;among: #f,  0, nil; if it  is: we can fold  specially this
+			 ;;primitive application; else this template does not match.
 			 (let ((v (value-visit-operand! (car rand*))))
 			   (and (constant? v)
-				(equal? template-arg (constant-value v))
-				(loop (cdr rand*) (cdr template-params)))))
+				(equal? optmpl (constant-value v))
+				(loop (cdr rand*) (cdr operands-template)))))
 			(else
 			 (compiler-internal-error __who__
 			   "invalid core primitive template operand specification"
-			   prim-name (car template-params)))))))
-	      ((eq? template-params '_)
-	       ;;Success!  The  template represents  a call  accepting any  number of
-	       ;;arguments (possibly after some mandatory arguments).
+			   prim-name (car operands-template)))))))
+	      ((eq? operands-template '_)
+	       ;;Success!  The  template is  an improper list:  it represents  a call
+	       ;;accepting  any number  of arguments  (possibly after  some mandatory
+	       ;;arguments).
 	       #t)
-	      ((null? template-params)
-	       ;;If RAND* is null: success, the template matches the arguments!  Else
-	       ;;this template does not match.
+	      ((null? operands-template)
+	       ;;The  template is  a proper  list.  If  RAND* is  null: success,  the
+	       ;;template matches the arguments!  Else this template does not match.
 	       (null? rand*))
 	      (else
 	       (compiler-internal-error __who__
 		 "invalid core primitive template operand specification"
-		 prim-name template-params)))))
-    (or (find %matches? (primprop prim-name))
-	'()))
+		 prim-name operands-template)))))
+    (cond ((core-primitive-name->application-attributes* prim-name)
+	   => (lambda (application-attributes*)
+		;;A proper list:
+		;;
+		;; (?application-attributes ...)
+		;;
+		;;in  which  every  ?APPLICATION-ATTRIBUTES   is  a  struct  of  type
+		;;APPLICATION-ATTRIBUTES.
+		(cond ((find %matches? application-attributes*))
+		      (else
+		       CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES))))
+	  (else
+	   CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)))
 
   #| end of module: FOLD-PRIM |# )
 
