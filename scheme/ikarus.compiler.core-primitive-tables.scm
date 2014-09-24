@@ -510,7 +510,7 @@
     (safe)
   (signatures ((T:symbol T:symbol) => (T:void)))
   (attributes
-   ((_ _)		effect-free result-true))
+   ((_ _)		effect-free))
   (replacements $getprop))
 
 (declare-core-primitive remprop
@@ -540,7 +540,7 @@
     (unsafe)
   (signatures ((T:symbol T:symbol) => (T:void)))
   (attributes
-   ((_ _)		effect-free result-true)))
+   ((_ _)		effect-free)))
 
 (declare-core-primitive $remprop
     (unsafe)
