@@ -1868,8 +1868,12 @@
     (receive (formals.lex lambda-signature body.psi)
 	(%chi-lambda-clause input-form.stx lexenv.run lexenv.expand
 			    attributes.sexp formals.stx
-			    body*.stx #;(%introduce-who-fluid-syntax 'anonymous-lambda body*.stx)
-			    )
+			    ;;FIXME Why  I cannot  wrap the body  here?  Right  now I
+			    ;;have no will  to investigate (Marco Maggi;  Wed Sep 24,
+			    ;;2014)
+			    ;;
+			    ;;(%introduce-who-fluid-syntax 'anonymous-lambda body*.stx)
+			    body*.stx)
       (make-psi input-form.stx
 		(build-lambda (syntax-annotation input-form.stx)
 		  formals.lex
@@ -1906,11 +1910,14 @@
     (receive (formals*.lex lambda-signature* body**.psi)
 	(%chi-lambda-clause* input-form.stx lexenv.run lexenv.expand
 			     attributes.sexp formals*.stx
-			     body**.stx
+			     ;;FIXME Why  I cannot  wrap the body  here?  Right  now I
+			     ;;have no will  to investigate (Marco Maggi;  Wed Sep 24,
+			     ;;2014)
+			     ;;
 			     ;; (map (lambda (body-form*.stx)
 			     ;; 	    (%introduce-who-fluid-syntax 'anonymous-lambda body-form*.stx))
 			     ;;   body**.stx)
-			     )
+			     body**.stx)
       (make-psi input-form.stx
 		(build-case-lambda (syntax-annotation input-form.stx)
 		  formals*.lex
@@ -1919,11 +1926,11 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%introduce-who-fluid-syntax who.id body-form*.stx)
+  (define (%introduce-who-fluid-syntax who body-form*.stx)
     ;;The body must be a list of forms.
     ;;
     (bless
-     `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,who.id))))
+     `((fluid-let-syntax ((__who__ (identifier-syntax (quote ,who))))
 	 (internal-body . ,body-form*.stx)))))
 
   #| end of module |# )
