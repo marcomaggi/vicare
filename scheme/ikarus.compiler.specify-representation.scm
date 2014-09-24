@@ -20,15 +20,15 @@
 ;;
 
 
-(module (alt-cogen.specify-representation)
+(module (specify-representation)
   (import CORE-PRIMITIVE-OPERATION-NAMES SCHEME-OBJECTS-ONTOLOGY)
 
-  (define (alt-cogen.specify-representation x)
+  (define (specify-representation x)
     (V-codes x))
 
   ;;The one below is for debugging purposes.  (Marco Maggi, Thu Sep 18, 2014)
   ;;
-  ;; (define (alt-cogen.specify-representation x)
+  ;; (define (specify-representation x)
   ;;   (debug-print* 'input (unparse-recordized-code/sexp x))
   ;;   (receive-and-return (code)
   ;; 	(V-codes x)
@@ -37,7 +37,7 @@
 
   (module (V-codes)
     (define-syntax __who__
-      (identifier-syntax 'alt-cogen.specify-representation))
+      (identifier-syntax 'specify-representation))
 
     (define (V-codes x)
       (struct-case x
@@ -1755,7 +1755,7 @@
 
 ;;;; done
 
-#| end of module ALT-COGEN.SPECIFY-REPRESENTATION |# )
+#| end of module SPECIFY-REPRESENTATION |# )
 
 ;;; end of file
 ;; Local Variables:

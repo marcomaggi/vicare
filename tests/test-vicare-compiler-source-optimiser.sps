@@ -27,7 +27,7 @@
 
 #!vicare
 (import (vicare)
-  (prefix (vicare system $compiler) compiler.)
+  (prefix (vicare compiler) compiler.)
   (vicare unsafe operations)
   (vicare checks))
 
@@ -35,9 +35,9 @@
 (check-display "*** testing Vicare optimiser\n")
 
 (compiler.optimize-level 2)
-(compiler.$source-optimizer-passes-count 2)
-;;(compiler.$cp0-effort-limit 50)
-;;(compiler.$cp0-size-limit   8)
+(compiler.source-optimizer-passes-count 2)
+;;(compiler.cp0-effort-limit 50)
+;;(compiler.cp0-size-limit   8)
 
 
 ;;;; syntax helpers

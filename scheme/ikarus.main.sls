@@ -64,10 +64,10 @@
 	    option.)
     (prefix (only (ikarus.compiler)
 		  optimize-level
-		  $generate-debug-calls
-		  $assembler-output
-		  $optimizer-output
-		  $source-optimizer-passes-count)
+		  generate-debug-calls
+		  assembler-output
+		  optimizer-output
+		  source-optimizer-passes-count)
 	    compiler.)
     (only (ikarus.debugger)
 	  guarded-start)
@@ -517,11 +517,11 @@
 
 	  ((%option= "-d" "-g" "--debug")
 	   (option.debug-mode-enabled? #t)
-	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #t))))
+	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #t))))
 
 	  ((%option= "-nd" "--no-debug")
 	   (option.debug-mode-enabled? #f)
-	   (next-option (cdr args) (lambda () (k) (compiler.$generate-debug-calls #f))))
+	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #f))))
 
 	  ((%option= "--gc-integrity-checks")
 	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_enable_gc_integrity_checks"))))
@@ -534,10 +534,10 @@
 	   (next-option (cdr args) k))
 
 	  ((%option= "--print-assembly")
-	   (next-option (cdr args) (lambda () (k) (compiler.$assembler-output #t))))
+	   (next-option (cdr args) (lambda () (k) (compiler.assembler-output #t))))
 
 	  ((%option= "--print-optimizer" "--print-optimiser")
-	   (next-option (cdr args) (lambda () (k) (compiler.$optimizer-output #t))))
+	   (next-option (cdr args) (lambda () (k) (compiler.optimizer-output #t))))
 
 	  ((%option= "--no-rcfile")
 	   (run-time-config-rcfiles-register! cfg #f)
@@ -690,7 +690,7 @@
 	     (begin
 	       (guard (E (else
 			  (%error-and-exit "invalid argument to --optimizer-passes-count")))
-		 (compiler.$source-optimizer-passes-count (string->number (cadr args))))
+		 (compiler.source-optimizer-passes-count (string->number (cadr args))))
 	       (next-option (cddr args) k))))
 
 ;;; --------------------------------------------------------------------
@@ -1123,7 +1123,7 @@ Consult Vicare Scheme User's Guide for more details.\n\n")
      (start (lambda () ?body0 ?body ...)))))
 
 (define (start proc)
-  (if (compiler.$generate-debug-calls)
+  (if (compiler.generate-debug-calls)
       (guarded-start proc)
     (proc)))
 

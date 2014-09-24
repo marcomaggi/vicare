@@ -2,8 +2,8 @@
 @chapter Low level interface to the compiler
 
 
-@cindex @library{vicare system $compiler}, library
-@cindex Library @library{vicare system $compiler}
+@cindex @library{vicare compiler}, library
+@cindex Library @library{vicare compiler}
 @cindex Compiler passes
 @cindex Passes, compiler
 
@@ -11,8 +11,8 @@
 @value{PRJNAME} is a compiler for the Scheme language; internally it
 implements a multitude of passes, each of which performing a
 transformation step from Scheme code to executable binary code.  The
-library @library{vicare system $compiler} exports one binding for each
-compiler pass, allowing inspection of the performed transformations.
+library @library{vicare compiler} exports one binding for each compiler
+pass, allowing inspection of the performed transformations.
 
 This section contains some documentation for each pass; however, it is
 almost impossible to truly understand what a pass does without reading
@@ -719,10 +719,10 @@ assigned bindings end up defined by @objtype{fix} forms.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@deffn Parameter $descriptive-labels
+@deffn Parameter descriptive-labels
 When set to true: attempt to generate descriptive pretty names for
 gensyms used by the compiler as lexical gensyms, loc gensyms and code
 labels; this is useful for debugging purposes and code generation
@@ -736,10 +736,10 @@ fastest way.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $unparse-recordized-code @var{input}
+@defun unparse-recordized-code @var{input}
 Given as argument a struct instance representing recordised code: build
 and return a symbolic expression that can be printed in human readable
 form.  @var{input} can be any structure that is produced by the compiler
@@ -747,7 +747,7 @@ passes.
 @end defun
 
 
-@defun $unparse-recordized-code/pretty @var{input}
+@defun unparse-recordized-code/pretty @var{input}
 Given as argument a struct instance representing recordised code: build
 and return a symbolic expression that can be printed in human readable
 form.  @var{input} can be any structure that is produced by the compiler
@@ -759,12 +759,12 @@ exactly represent the input.
 @end defun
 
 
-@defun $unparse-recordized-code/sexp @var{input}
+@defun unparse-recordized-code/sexp @var{input}
 Given as argument a struct instance representing recordised code: build
 and return a symbolic expression that can be printed in human readable
 form.  @var{input} can be any structure that is produced by the compiler
 passes.  The output of this function is similar to
-@func{$unparse-recordized-code} but more human readable.
+@func{unparse-recordized-code} but more human readable.
 @end defun
 
 @c page
@@ -797,10 +797,10 @@ functions are to be considered unsafe: if the input is invalid, the
 behaviour is undefined.
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $compile-core-expr->code @var{core-language-sexp}
+@defun compile-core-expr->code @var{core-language-sexp}
 @end defun
 
 @c page
@@ -815,10 +815,10 @@ struct types used for this recordisation are used to represent code in
 the core language in a way which is better inspectable and optimisable.
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $recordize @var{core-language-form}
+@defun recordize @var{core-language-form}
 Given a symbolic expression representing a form in the core language,
 convert it into a nested hierarchy of struct instances; return the outer
 struct instance.
@@ -971,7 +971,7 @@ definition of a new binding.
 @end itemize
 
 @noindent
-so all the @objtype{prelex} structs introduced by @func{$recordize}
+so all the @objtype{prelex} structs introduced by @func{recordize}
 represent bindings defined by the input expression.
 
 @quotation
@@ -1208,10 +1208,10 @@ is expanded and recordised into:
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $optimize-direct-calls @var{input}
+@defun optimize-direct-calls @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -1514,10 +1514,10 @@ algorithm''@footnote{@url{https:@//@//en.wikipedia.org@//wiki@//Tarjan%27s_stron
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $optimize-letrec @var{recordised-code}
+@defun optimize-letrec @var{recordised-code}
 Perform transformations and optimisations to convert the recordised
 representation of @func{letrec}, @func{letrec*} and
 @func{libary-letrec*} core language forms into a composition of low
@@ -1525,10 +1525,10 @@ level binding constructs and assignments.
 @end defun
 
 
-@deffn Parameter $check-for-illegal-letrec
-If set to true: @func{$optimize-letrec} will perform an
-additional recordized code pass to check for illegal binding references
-in the right--hand sides of @func{letrec}, @func{letrec*} and
+@deffn Parameter check-for-illegal-letrec
+If set to true: @func{optimize-letrec} will perform an additional
+recordized code pass to check for illegal binding references in the
+right--hand sides of @func{letrec}, @func{letrec*} and
 @func{library-letrec*} syntaxes, raising a syntax violation error if one
 is found.  This is the default.
 
@@ -1537,9 +1537,9 @@ for no problems in code.
 @end deffn
 
 
-@deffn Parameter $current-letrec-pass
-Select the transformations performed by
-@func{$optimize-letrec}; possible values are the symbols:
+@deffn Parameter current-letrec-pass
+Select the transformations performed by @func{optimize-letrec}; possible
+values are the symbols:
 
 @table @code
 @item basic
@@ -2220,10 +2220,10 @@ Technical Report No. 484.
 @end quotation
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $source-optimize @var{input}
+@defun source-optimize @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2231,7 +2231,7 @@ hierarchy.
 @end defun
 
 
-@deffn Parameter $source-optimizer-passes-count
+@deffn Parameter source-optimizer-passes-count
 Specify how many passes to perform with the source optimizer; it must be
 a positive fixnum.  Defaults to @code{1}; it is set to 2 when the
 optimisation level is @code{3}.
@@ -2250,7 +2250,7 @@ The optimization level; accepted values are the fixnums @code{0},
 @end deffn
 
 
-@deffn Parameter $cp0-effort-limit
+@deffn Parameter cp0-effort-limit
 The initial value of an "effort counter" that is decremented every time
 an optimisation is performed by the source optimiser; when the counter
 reaches zero: the current optimisation effort is abandoned and the
@@ -2259,7 +2259,7 @@ optimiser enters specific subexpressions of the input.
 @end deffn
 
 
-@deffn Parameter $cp0-size-limit
+@deffn Parameter cp0-size-limit
 The initial value of a (estimated) code size counter that is decremented
 every time an optimisation is performed by the source optimiser; when
 the counter reaches zero: the current optimisation effort is abandoned
@@ -2308,10 +2308,10 @@ locbind, Handling of lexical local bindings}.
 @end itemize
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $rewrite-references-and-assignments @var{input}
+@defun rewrite-references-and-assignments @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2458,10 +2458,10 @@ does @strong{not} include a validation of @meta{RAND} as vector object.
 @end itemize
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $core-type-inference @var{input}
+@defun core-type-inference @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2469,8 +2469,8 @@ hierarchy.
 @end defun
 
 
-@deffn Parameter $perform-core-type-inference
-When true the pass @func{$core-type-inference} is performed, else it is
+@deffn Parameter perform-core-type-inference
+When true the pass @func{core-type-inference} is performed, else it is
 skipped.  Defaults to @true{}.
 @end deffn
 
@@ -2533,7 +2533,7 @@ the algorithm.
 @end quotation
 
 It makes sense to perform this compiler pass only if
-@func{$core-type-inference} has been performed first: it is the ``type
+@func{core-type-inference} has been performed first: it is the ``type
 inference'' pass that introduces the type descriptions consumed by the
 ``unsafe primitives introduction'' pass.  Performing this pass could be
 useless because:
@@ -2556,7 +2556,7 @@ core primitives implemented only as functions (not operations) that
 still have an unsafe variant.
 
 
-@defun $introduce-unsafe-primrefs @var{input}
+@defun introduce-unsafe-primrefs @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2564,8 +2564,8 @@ hierarchy.
 @end defun
 
 
-@deffn Parameter $perform-unsafe-primrefs-introduction
-When true the pass @func{$introduce-unsafe-primrefs} is performed, else
+@deffn Parameter perform-unsafe-primrefs-introduction
+When true the pass @func{introduce-unsafe-primrefs} is performed, else
 it is skipped.  Defaults to @true{}.
 @end deffn
 
@@ -2582,10 +2582,10 @@ as direct right--hand side expression in a @objtype{fix} struct:
 @end example
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $sanitize-bindings @var{input}
+@defun sanitize-bindings @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2678,10 +2678,10 @@ there is technique that allows to implement the application @code{(f 1
 2)} as a direct jump to the clause with 2 arguments.
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $optimize-for-direct-jumps @var{input}
+@defun optimize-for-direct-jumps @var{input}
 Perform code optimisation traversing the whole hierarchy in @var{input},
 which must be a struct instance representing recordised code, and
 building a new hierarchy of optimised, recordised code; return the new
@@ -2776,10 +2776,10 @@ jump.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $insert-global-assignments @var{input}
+@defun insert-global-assignments @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of transformed, recordized code;
@@ -2843,10 +2843,10 @@ then recordised and transformed into:
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $introduce-vars @var{input}
+@defun introduce-vars @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -2927,10 +2927,10 @@ into:
 @end example
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $introduce-closure-makers @var{input}
+@defun introduce-closure-makers @var{input}
 Perform code transformations traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code, and building a new hierarchy of recordised code; return the new
@@ -3837,10 +3837,10 @@ optimiser.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $optimize-combinator-calls/lift-clambdas @var{input}
+@defun optimize-combinator-calls/lift-clambdas @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a struct instance representing recordised
 code in the core language, and building a new hierarchy of transformed,
@@ -3885,10 +3885,10 @@ core primitive function (not operation): it is left untouched as
 @objtype{funcall} struct.
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $introduce-primcalls @var{input}
+@defun introduce-primcalls @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -3954,10 +3954,10 @@ this is an independent task that must be performed somewhere, and we do
 it here.
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $rewrite-freevar-references @var{input}
+@defun rewrite-freevar-references @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -4044,10 +4044,10 @@ execution of Scheme code for the current internal process and enters an
 internal subprocess which can take actions asynchronously.
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $insert-engine-checks @var{input}
+@defun insert-engine-checks @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -4079,10 +4079,10 @@ not make further use of the stack: its function execution is a ``stack
 tail''.
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $insert-stack-overflow-check @var{input}
+@defun insert-stack-overflow-check @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.
@@ -4097,10 +4097,10 @@ when appropriate.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $alt-cogen @var{input}
+@defun alt-cogen @var{input}
 @end defun
 
 @menu
@@ -4118,10 +4118,10 @@ system $compiler}.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $specify-representation @var{input}
+@defun specify-representation @var{input}
 @end defun
 
 @c page
@@ -4130,10 +4130,10 @@ system $compiler}.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $impose-calling-convention/evaluation-order @var{input}
+@defun impose-calling-convention/evaluation-order @var{input}
 @end defun
 
 @c page
@@ -4142,10 +4142,10 @@ system $compiler}.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $assign-frame-sizes @var{input}
+@defun assign-frame-sizes @var{input}
 @end defun
 
 @c page
@@ -4158,10 +4158,10 @@ For an introduction to register allocation see:
 @center @url{http://en.wikipedia.org/wiki/Register_allocation}
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $color-by-chaitin @var{input}
+@defun color-by-chaitin @var{input}
 @end defun
 
 @c page
@@ -4170,10 +4170,10 @@ system $compiler}.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $flatten-codes @var{input}
+@defun flatten-codes @var{input}
 @end defun
 
 @c page
@@ -4182,10 +4182,10 @@ system $compiler}.
 
 
 The following bindings are exported by the library @library{vicare
-system $compiler}.
+compiler}.
 
 
-@defun $assemble-sources @var{input}
+@defun assemble-sources @var{input}
 @end defun
 
 

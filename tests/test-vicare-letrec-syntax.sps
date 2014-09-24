@@ -27,8 +27,7 @@
 
 #!r6rs
 (import (vicare)
-  (vicare checks)
-  (vicare system $compiler))
+  (vicare checks))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare LETREC and LETREC* syntaxes\n")

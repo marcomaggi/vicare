@@ -32,7 +32,11 @@
   (prefix (vicare arguments validation)
 	  args.)
   #;(prefix (vicare posix) px.)
+  (prefix (only (vicare compiler)
+		strict-r6rs)
+	  compiler.)
   (vicare checks))
+(options strict-r6rs)
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare arguments validation library\n")
@@ -64,12 +68,13 @@
 		  (check-pretty-print (condition-message E)))
 		(condition-irritants E))
 	       (else E))
-       (eval '(begin . ?body)
-	     (environment '(vicare)
-			  '(vicare language-extensions syntaxes)
-			  '(vicare arguments validation)
-			  '(prefix (vicare arguments validation)
-				   args.)))))))
+       (parametrise ((compiler.strict-r6rs #t))
+	 (eval '(begin . ?body)
+	       (environment '(vicare)
+			    '(vicare language-extensions syntaxes)
+			    '(vicare arguments validation)
+			    '(prefix (vicare arguments validation)
+				     args.))))))))
 
 
 (define-syntax doit
@@ -1362,7 +1367,7 @@
 
   (check
       (doit #f non-empty-string 123)
-    => 123)
+    => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; non-empty-string/false
@@ -1383,7 +1388,7 @@
 
   (check
       (doit #f non-empty-string/false 123)
-    => 123)
+    => '(123))
 
 ;;; --------------------------------------------------------------------
 ;;; index-for-string

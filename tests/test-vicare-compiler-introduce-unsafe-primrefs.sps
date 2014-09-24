@@ -27,13 +27,13 @@
 #!vicare
 (import (vicare)
   (vicare checks)
-  (prefix (vicare system $compiler)
+  (prefix (vicare compiler)
 	  compiler.))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler pass: unsafe primrefs introduction\n")
 
-(compiler.$descriptive-labels #t)
+(compiler.descriptive-labels #t)
 
 #;(debug-print-enabled? #t)
 
@@ -80,28 +80,28 @@
 ;;; --------------------------------------------------------------------
 
 (define (%core-type-inference core-language-form)
-  (let* ((D (compiler.$recordize core-language-form))
-	 (D (compiler.$optimize-direct-calls D))
-	 (D (compiler.$optimize-letrec D))
+  (let* ((D (compiler.recordize core-language-form))
+	 (D (compiler.optimize-direct-calls D))
+	 (D (compiler.optimize-letrec D))
 	 ;;Source optimisation is skipped here to  make it easier to write meaningful
 	 ;;code for debugging and inspection.
-	 #;(D (compiler.$source-optimize D))
-	 (D (compiler.$rewrite-references-and-assignments D))
-	 (D (compiler.$core-type-inference D))
-	 (S (compiler.$unparse-recordized-code/sexp D)))
+	 #;(D (compiler.source-optimize D))
+	 (D (compiler.rewrite-references-and-assignments D))
+	 (D (compiler.core-type-inference D))
+	 (S (compiler.unparse-recordized-code/sexp D)))
     S))
 
 (define (%introduce-unsafe-primrefs core-language-form)
-  (let* ((D (compiler.$recordize core-language-form))
-	 (D (compiler.$optimize-direct-calls D))
-	 (D (compiler.$optimize-letrec D))
+  (let* ((D (compiler.recordize core-language-form))
+	 (D (compiler.optimize-direct-calls D))
+	 (D (compiler.optimize-letrec D))
 	 ;;Source optimisation is skipped here to  make it easier to write meaningful
 	 ;;code for debugging and inspection.
-	 #;(D (compiler.$source-optimize D))
-	 (D (compiler.$rewrite-references-and-assignments D))
-	 (D (compiler.$core-type-inference D))
-	 (D (compiler.$introduce-unsafe-primrefs D))
-	 (S (compiler.$unparse-recordized-code/sexp D)))
+	 #;(D (compiler.source-optimize D))
+	 (D (compiler.rewrite-references-and-assignments D))
+	 (D (compiler.core-type-inference D))
+	 (D (compiler.introduce-unsafe-primrefs D))
+	 (S (compiler.unparse-recordized-code/sexp D)))
     S))
 
 (define-syntax doit

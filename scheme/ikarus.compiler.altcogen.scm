@@ -40,23 +40,23 @@
 (module (alt-cogen
 	 refresh-common-assembly-subroutines-cached-labels!
 	 sl-apply-label
-	 alt-cogen.specify-representation
-	 alt-cogen.impose-calling-convention/evaluation-order
-	 alt-cogen.assign-frame-sizes
-	 alt-cogen.color-by-chaitin
-	 alt-cogen.flatten-codes)
+	 specify-representation
+	 impose-calling-convention/evaluation-order
+	 assign-frame-sizes
+	 color-by-chaitin
+	 flatten-codes)
 
   (define (alt-cogen x)
     ;;Commenting out this definition causes some passes to be timed.
     (define-inline (time-it name proc)
       (proc))
-    (let* ((x (alt-cogen.specify-representation x))
-	   (x (alt-cogen.impose-calling-convention/evaluation-order x))
+    (let* ((x (specify-representation x))
+	   (x (impose-calling-convention/evaluation-order x))
 	   (x (time-it "frame"    (lambda ()
-				    (alt-cogen.assign-frame-sizes x))))
+				    (assign-frame-sizes x))))
 	   (x (time-it "register" (lambda ()
-				    (alt-cogen.color-by-chaitin x))))
-	   (ls (alt-cogen.flatten-codes x)))
+				    (color-by-chaitin x))))
+	   (ls (flatten-codes x)))
       ls))
 
 
@@ -135,7 +135,7 @@
 	 (error 'register-index "not a register" x))))
 
 
-(module (alt-cogen.impose-calling-convention/evaluation-order)
+(module (impose-calling-convention/evaluation-order)
   ;;This module does stuff:
   ;;
   ;;*  All the  BIND  struct instances  in  the input  expression  are processed  and
@@ -170,9 +170,9 @@
   ;;so that the order of evaluation of the argument's expressions is decided.
   ;;
   (define-syntax __who__
-    (identifier-syntax 'alt-cogen.impose-calling-convention/evaluation-order))
+    (identifier-syntax 'impose-calling-convention/evaluation-order))
 
-  (define (alt-cogen.impose-calling-convention/evaluation-order x)
+  (define (impose-calling-convention/evaluation-order x)
     (Program x))
 
 ;;; --------------------------------------------------------------------
@@ -963,7 +963,7 @@
 
     #| end of module: %handle-tail-call |# )
 
-  #| end of module: alt-cogen.impose-calling-convention/evaluation-order |# )
+  #| end of module: impose-calling-convention/evaluation-order |# )
 
 
 (module ListySet
@@ -1564,7 +1564,7 @@
 
 
 (define (uncover-frame-conflicts x varvec)
-  ;;This function is used only by ALT-COGEN.ASSIGN-FRAME-SIZES.
+  ;;This function is used only by ASSIGN-FRAME-SIZES.
   ;;
   (import IntegerSet)
   (import conflict-helpers)
@@ -2001,15 +2001,15 @@
   spill-set)
 
 
-(module (alt-cogen.assign-frame-sizes)
+(module (assign-frame-sizes)
   (import IntegerSet)
   (import conflict-helpers)
   (import (only (vicare system $vectors)
 		$vector-ref
 		$vector-set!))
-  (define who 'alt-cogen.assign-frame-sizes)
+  (define who 'assign-frame-sizes)
 
-  (define (alt-cogen.assign-frame-sizes x)
+  (define (assign-frame-sizes x)
     (let ((v (Program x)))
       v))
 
@@ -2362,16 +2362,16 @@
 
     #| end of module: assign |# )
 
-  #| end of module: alt-cogen.assign-frame-sizes |# )
+  #| end of module: assign-frame-sizes |# )
 
 
-(module (alt-cogen.color-by-chaitin)
+(module (color-by-chaitin)
   (import ListySet)
   (import ListyGraphs)
   ;(import IntegerSet)
   ;(import IntegerGraphs)
 
-  (define (alt-cogen.color-by-chaitin x)
+  (define (color-by-chaitin x)
     (Program x))
 
   (module (Program)
@@ -3449,7 +3449,7 @@
 	  (%adjust-frame-pointer-register 'addl))))
 
 
-(module (alt-cogen.flatten-codes)
+(module (flatten-codes)
   ;;This module converts a struct instance  of type CODES into a list of
   ;;assembly  language instructions,  all inclusive.   Return a  list of
   ;;lists with the following format:
@@ -3503,14 +3503,14 @@
   ;;    (set-cdr! tail-pair (append ?error-handler-instructions
   ;;                                (cdr tail-pair))))
   ;;
-  (define who 'alt-cogen.flatten-codes)
+  (define who 'flatten-codes)
 
   (define exceptions-concatenation
     (make-parameter #f))
 
   (define exception-label (make-parameter #f))
 
-  (define (alt-cogen.flatten-codes x)
+  (define (flatten-codes x)
     (Program x))
 
   (module (Program)
@@ -4506,7 +4506,7 @@
   ;; 	  (else
   ;; 	   (error who "invalid reg/h" x))))
 
-  #| end of module: alt-cogen.flatten-codes |# )
+  #| end of module: flatten-codes |# )
 
 
 ;;;; done

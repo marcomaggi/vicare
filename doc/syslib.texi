@@ -33,7 +33,6 @@ public interface exported by @library{vicare} and @library{rnrs}.
 * syslib hashtables::           Low level hashtable objects operations.
 * syslib codes::                Low level code objects operations.
 * syslib closures::             Low level closures operations.
-* syslib compiler::             Low level interface to the compiler.
 @end menu
 
 @c page
@@ -6011,18 +6010,5 @@ annotated closure is applied: it applies @var{clo} to the arguments.
 Given a closure object @var{clo} being an annotated procedure created by
 @func{$make-annotated-procedure}: return the annotation object.
 @end defun
-
-@c page
-@node syslib compiler
-@section Low level interface to the compiler
-
-
-@cindex @library{vicare system $compiler}, library
-@cindex Library @library{vicare system $compiler}
-
-
-The library @library{vicare system $compiler} exports bindings that
-allow inspection and debugging of compiler passes; @ref{compiler} for
-details.
 
 @c end of file

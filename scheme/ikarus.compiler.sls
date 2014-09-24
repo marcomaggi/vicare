@@ -29,62 +29,61 @@
     compile-core-expr-to-port		compile-core-expr
     core-expr->optimized-code		core-expr->assembly-code
 
-    ;; these go in (vicare system $compiler)
+    ;; these go in (vicare compiler)
     make-compile-time-error			compile-time-error?
     make-compile-time-arity-error		compile-time-arity-error?
     make-compile-time-core-type-error		compile-time-core-type-error?
     make-compile-time-operand-core-type-error	compile-time-operand-core-type-error?
     make-compile-time-retval-core-type-error	compile-time-retval-core-type-error?
     optimize-level
-    (rename
-     ;; configuration parameters
-     (current-letrec-pass			$current-letrec-pass)
-     (check-for-illegal-letrec			$check-for-illegal-letrec)
-     (source-optimizer-passes-count		$source-optimizer-passes-count)
-     (perform-core-type-inference		$perform-core-type-inference)
-     (perform-unsafe-primrefs-introduction	$perform-unsafe-primrefs-introduction)
-     (cp0-effort-limit				$cp0-effort-limit)
-     (cp0-size-limit				$cp0-size-limit)
-     (strip-source-info				$strip-source-info)
-     (generate-debug-calls			$generate-debug-calls)
-     (enabled-function-application-integration?	$enabled-function-application-integration?)
-     (option.descriptive-labels			$descriptive-labels)
 
-     ;; middle pass inspection
-     (assembler-output				$assembler-output)
-     (optimizer-output				$optimizer-output)
+    ;; configuration parameters
+    current-letrec-pass
+    check-for-illegal-letrec
+    source-optimizer-passes-count
+    perform-core-type-inference
+    perform-unsafe-primrefs-introduction
+    cp0-effort-limit
+    cp0-size-limit
+    strip-source-info
+    generate-debug-calls
+    enabled-function-application-integration?
+    option.descriptive-labels
 
-     (compile-core-expr->code			$compile-core-expr->code)
-     (recordize					$recordize)
-     (optimize-direct-calls			$optimize-direct-calls)
-     (optimize-letrec				$optimize-letrec)
-     (source-optimize				$source-optimize)
-     (rewrite-references-and-assignments	$rewrite-references-and-assignments)
-     (core-type-inference			$core-type-inference)
-     (introduce-unsafe-primrefs			$introduce-unsafe-primrefs)
-     (sanitize-bindings				$sanitize-bindings)
-     (optimize-for-direct-jumps			$optimize-for-direct-jumps)
-     (insert-global-assignments			$insert-global-assignments)
-     (introduce-vars				$introduce-vars)
-     (introduce-closure-makers			$introduce-closure-makers)
-     (optimize-combinator-calls/lift-clambdas	$optimize-combinator-calls/lift-clambdas)
-     (introduce-primcalls			$introduce-primcalls)
-     (rewrite-freevar-references		$rewrite-freevar-references)
-     (insert-engine-checks			$insert-engine-checks)
-     (insert-stack-overflow-check		$insert-stack-overflow-check)
-     (alt-cogen					$alt-cogen)
-     (assemble-sources				$assemble-sources)
+    ;; middle pass inspection
+    assembler-output
+    optimizer-output
 
-     (alt-cogen.specify-representation		$specify-representation)
-     (alt-cogen.impose-calling-convention/evaluation-order
-      $impose-calling-convention/evaluation-order)
-     (alt-cogen.assign-frame-sizes		$assign-frame-sizes)
-     (alt-cogen.color-by-chaitin		$color-by-chaitin)
-     (alt-cogen.flatten-codes			$flatten-codes)
+    compile-core-expr->code
+    recordize
+    optimize-direct-calls
+    optimize-letrec
+    source-optimize
+    rewrite-references-and-assignments
+    core-type-inference
+    introduce-unsafe-primrefs
+    sanitize-bindings
+    optimize-for-direct-jumps
+    insert-global-assignments
+    introduce-vars
+    introduce-closure-makers
+    optimize-combinator-calls/lift-clambdas
+    introduce-primcalls
+    rewrite-freevar-references
+    insert-engine-checks
+    insert-stack-overflow-check
+    alt-cogen
+    assemble-sources
 
-     (unparse-recordized-code			$unparse-recordized-code)
-     (unparse-recordized-code/sexp		$unparse-recordized-code/sexp)
-     (unparse-recordized-code/pretty		$unparse-recordized-code/pretty)))
+    specify-representation
+    impose-calling-convention/evaluation-order
+    assign-frame-sizes
+    color-by-chaitin
+    flatten-codes
+
+    unparse-recordized-code
+    unparse-recordized-code/sexp
+    unparse-recordized-code/pretty)
   ;;NOTE  This library  is  needed  to build  a  new boot  image.   Let's  try to  do
   ;;everything  here  *not*  loading  external  libraries.  Also,  let's  try  to  do
   ;;everything without  importing libraries in  the hierarchy (vicare system  --); we

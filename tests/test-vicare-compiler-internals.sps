@@ -29,16 +29,16 @@
   (vicare checks)
   (only (vicare libraries)
 	uninstall-library)
-  (prefix (vicare system $compiler)
+  (prefix (vicare compiler)
 	  compiler.))
 
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler internals\n")
 
 (compiler.optimize-level 2)
-(compiler.$source-optimizer-passes-count 2)
-;;(compiler.$cp0-effort-limit 50)
-;;(compiler.$cp0-size-limit   8)
+(compiler.source-optimizer-passes-count 2)
+;;(compiler.cp0-effort-limit 50)
+;;(compiler.cp0-size-limit   8)
 
 
 ;;;; helpers
@@ -133,8 +133,8 @@
 (parametrise ((check-test-name		'recordisation))
 
   (define (%recordise core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax-rule (doit ?core-language-form ?expected-result)
@@ -243,7 +243,7 @@
 ;;; --------------------------------------------------------------------
 ;;; debug calls, no annotation
 
-  (parametrise ((compiler.$generate-debug-calls #t))
+  (parametrise ((compiler.generate-debug-calls #t))
 
     (doit* (list '1 '2)
 	   (funcall (primref debug-call) (constant (#f . (list '1 '2)))
@@ -294,7 +294,7 @@
 ;;;   (?port-identifier . ?first-character-offset)
 ;;;
 
-  (parametrise ((compiler.$generate-debug-calls #t))
+  (parametrise ((compiler.generate-debug-calls #t))
 
     (doit* ,(%make-annotated-form '(list 1 2))
 	   (funcall (primref debug-call)
@@ -342,9 +342,9 @@
 (parametrise ((check-test-name		'direct-calls-optimisation))
 
   (define (%optimize-direct-calls core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax-rule (doit ?core-language-form ?expected-result)
@@ -489,7 +489,7 @@
 ;;; --------------------------------------------------------------------
 ;;; debugging calls
 
-  (parametrise ((compiler.$generate-debug-calls #t))
+  (parametrise ((compiler.generate-debug-calls #t))
 
     (doit* ,(%make-annotated-form '((lambda (x) x) '1))
 	   (bind ((x_0 (constant 1)))
@@ -514,10 +514,10 @@
 ;;;We do the "waddell" and "scc" tests below.
 
   (define (%optimize-letrec core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-auxiliary-syntaxes basic waddell scc)
@@ -526,7 +526,7 @@
     (syntax-rules ()
       ((_ ?core-language-form ?expected-result/basic)
        (check
-	   (parametrise ((compiler.$current-letrec-pass 'basic))
+	   (parametrise ((compiler.current-letrec-pass 'basic))
 	     (%optimize-letrec (quasiquote ?core-language-form)))
 	 => (quasiquote ?expected-result/basic)))
       ))
@@ -796,10 +796,10 @@
 ;;;interesting for "waddell".
 
   (define (%optimize-letrec core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-auxiliary-syntaxes waddell scc)
@@ -811,11 +811,11 @@
 	  (scc		?expected-result/scc))
        (begin
 	 (check
-	     (parametrise ((compiler.$current-letrec-pass 'waddell))
+	     (parametrise ((compiler.current-letrec-pass 'waddell))
 	       (%optimize-letrec (quasiquote ?core-language-form)))
 	   => (quasiquote ?expected-result/waddell))
 	 (check
-	     (parametrise ((compiler.$current-letrec-pass 'scc))
+	     (parametrise ((compiler.current-letrec-pass 'scc))
 	       (%optimize-letrec (quasiquote ?core-language-form)))
 	   => (quasiquote ?expected-result/scc))
 	 ))
@@ -1527,7 +1527,7 @@
 
   ;;This test will install the library!!!
   (check
-      (parametrise ((compiler.$current-letrec-pass 'waddell))
+      (parametrise ((compiler.current-letrec-pass 'waddell))
 	(let* ((form1 '(library (optimize-letrec-waddell-demo-1)
 			 (export a b c)
 			 (import (rnrs))
@@ -1543,7 +1543,7 @@
 
   ;;This test will install the library!!!
   (check
-      (parametrise ((compiler.$current-letrec-pass 'scc))
+      (parametrise ((compiler.current-letrec-pass 'scc))
 	(let* ((form1 '(library (optimize-letrec-scc-demo-1)
 			 (export a b c)
 			 (import (rnrs))
@@ -1559,7 +1559,7 @@
 
   ;;Record type definition.
   (check
-      (parametrise ((compiler.$current-letrec-pass 'scc))
+      (parametrise ((compiler.current-letrec-pass 'scc))
 	(let* ((form1 '(library (optimize-letrec-scc-demo-2)
 			 (export make-a a?)
 			 (import (rnrs))
@@ -1583,12 +1583,12 @@
 (parametrise ((check-test-name	'rewrite-references-and-assignments))
 
   (define (%rewrite-references-and-assignments core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -1796,15 +1796,15 @@
 (parametrise ((check-test-name	'core-type-inference))
 
   (define (%core-type-inference core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
 	   ;;By skipping source optimisation we  make it simpler to write inspectable
 	   ;;test cases.
-	   #;(D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$core-type-inference D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+	   #;(D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.core-type-inference D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2073,13 +2073,13 @@
 (parametrise ((check-test-name	'sanitise-bindings))
 
   (define (%sanitize-bindings core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2131,18 +2131,18 @@
 
 
 (parametrise ((check-test-name						'optimise-direct-jumps)
-	      (compiler.$enabled-function-application-integration?	#f)
-	      (compiler.$descriptive-labels				#t))
+	      (compiler.enabled-function-application-integration?	#f)
+	      (compiler.descriptive-labels				#t))
 
   (define (%optimise-direct-jumps core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2213,15 +2213,15 @@
 (parametrise ((check-test-name	'insert-global-assignments))
 
   (define (%insert-global-assignments core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (D (compiler.$insert-global-assignments D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2292,24 +2292,24 @@
 
 
 (parametrise ((check-test-name						'closure-makers)
-	      (compiler.$enabled-function-application-integration?	#f)
-	      (compiler.$descriptive-labels				#t))
+	      (compiler.enabled-function-application-integration?	#f)
+	      (compiler.descriptive-labels				#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
 
   (define (%introduce-closure-makers core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (D (compiler.$insert-global-assignments D))
-	   (D (compiler.$introduce-vars D))
-	   (D (compiler.$introduce-closure-makers D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (D (compiler.introduce-vars D))
+	   (D (compiler.introduce-closure-makers D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2407,25 +2407,25 @@
 
 
 (parametrise ((check-test-name						'clambda-lifting)
-	      (compiler.$enabled-function-application-integration?	#f)
-	      (compiler.$descriptive-labels				#t))
+	      (compiler.enabled-function-application-integration?	#f)
+	      (compiler.descriptive-labels				#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
 
   (define (%lift-codes core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (D (compiler.$insert-global-assignments D))
-	   (D (compiler.$introduce-vars D))
-	   (D (compiler.$introduce-closure-makers D))
-	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (D (compiler.introduce-vars D))
+	   (D (compiler.introduce-closure-makers D))
+	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2748,26 +2748,26 @@
 
 
 (parametrise ((check-test-name						'introduce-primcalls)
-	      (compiler.$enabled-function-application-integration?	#f)
-	      (compiler.$descriptive-labels				#t))
+	      (compiler.enabled-function-application-integration?	#f)
+	      (compiler.descriptive-labels				#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
 
   (define (%introduce-primcalls core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (D (compiler.$insert-global-assignments D))
-	   (D (compiler.$introduce-vars D))
-	   (D (compiler.$introduce-closure-makers D))
-	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.$introduce-primcalls D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (D (compiler.introduce-vars D))
+	   (D (compiler.introduce-closure-makers D))
+	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
+	   (D (compiler.introduce-primcalls D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2804,27 +2804,27 @@
 
 
 (parametrise ((check-test-name						'rewrite-freevar-refs)
-	      (compiler.$enabled-function-application-integration?	#f)
-	      (compiler.$descriptive-labels				#t))
+	      (compiler.enabled-function-application-integration?	#f)
+	      (compiler.descriptive-labels				#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
 
   (define (%rewrite-freevar-refs core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (D (compiler.$insert-global-assignments D))
-	   (D (compiler.$introduce-vars D))
-	   (D (compiler.$introduce-closure-makers D))
-	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.$introduce-primcalls D))
-	   (D (compiler.$rewrite-freevar-references D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (D (compiler.introduce-vars D))
+	   (D (compiler.introduce-closure-makers D))
+	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
+	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.rewrite-freevar-references D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2900,28 +2900,28 @@
 
 
 (parametrise ((check-test-name						'engine-checks)
-	      (compiler.$enabled-function-application-integration?	#f)
-	      (compiler.$descriptive-labels				#t))
+	      (compiler.enabled-function-application-integration?	#f)
+	      (compiler.descriptive-labels				#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
 
   (define (%insert-engine-checks core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (D (compiler.$insert-global-assignments D))
-	   (D (compiler.$introduce-vars D))
-	   (D (compiler.$introduce-closure-makers D))
-	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.$introduce-primcalls D))
-	   (D (compiler.$rewrite-freevar-references D))
-	   (D (compiler.$insert-engine-checks D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (D (compiler.introduce-vars D))
+	   (D (compiler.introduce-closure-makers D))
+	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
+	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.rewrite-freevar-references D))
+	   (D (compiler.insert-engine-checks D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -2969,29 +2969,29 @@
 
 
 (parametrise ((check-test-name						'stack-overflow-checks)
-	      (compiler.$enabled-function-application-integration?	#f)
-	      (compiler.$descriptive-labels				#t))
+	      (compiler.enabled-function-application-integration?	#f)
+	      (compiler.descriptive-labels				#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
 
   (define (%stack-overflow-checks core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
-	   (D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (D (compiler.$insert-global-assignments D))
-	   (D (compiler.$introduce-vars D))
-	   (D (compiler.$introduce-closure-makers D))
-	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.$introduce-primcalls D))
-	   (D (compiler.$rewrite-freevar-references D))
-	   (D (compiler.$insert-engine-checks D))
-	   (D (compiler.$insert-stack-overflow-check D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   (D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (D (compiler.introduce-vars D))
+	   (D (compiler.introduce-closure-makers D))
+	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
+	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.rewrite-freevar-references D))
+	   (D (compiler.insert-engine-checks D))
+	   (D (compiler.insert-stack-overflow-check D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
@@ -3039,30 +3039,30 @@
 
 
 (parametrise ((check-test-name			'specify-representation)
-	      (compiler.$descriptive-labels	#t))
+	      (compiler.descriptive-labels	#t))
 
 ;;;NOTE There is a separate file for testing this compiler pass!!!
 
   (define (%specify-representation core-language-form)
-    (let* ((D (compiler.$recordize core-language-form))
-	   (D (compiler.$optimize-direct-calls D))
-	   (D (compiler.$optimize-letrec D))
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
 	   ;;Source  optimisation  is  skipped  here  to  make  it  easier  to  write
 	   ;;meaningful code for debugging and inspection.
-	   #;(D (compiler.$source-optimize D))
-	   (D (compiler.$rewrite-references-and-assignments D))
-	   (D (compiler.$sanitize-bindings D))
-	   (D (compiler.$optimize-for-direct-jumps D))
-	   (D (compiler.$insert-global-assignments D))
-	   (D (compiler.$introduce-vars D))
-	   (D (compiler.$introduce-closure-makers D))
-	   (D (compiler.$optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.$introduce-primcalls D))
-	   (D (compiler.$rewrite-freevar-references D))
-	   (D (compiler.$insert-engine-checks D))
-	   (D (compiler.$insert-stack-overflow-check D))
-	   (D (compiler.$specify-representation D))
-	   (S (compiler.$unparse-recordized-code/sexp D)))
+	   #;(D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (D (compiler.introduce-vars D))
+	   (D (compiler.introduce-closure-makers D))
+	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
+	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.rewrite-freevar-references D))
+	   (D (compiler.insert-engine-checks D))
+	   (D (compiler.insert-stack-overflow-check D))
+	   (D (compiler.specify-representation D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
   (define-syntax doit
