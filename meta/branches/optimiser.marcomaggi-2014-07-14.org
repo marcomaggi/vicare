@@ -72,3 +72,7 @@
 
 ** Finish the table of core primitives.
 
+* Compiler pass: core type inference
+
+** Rely on the core primitives table to determine the type of operands and return values.
+
