@@ -2129,9 +2129,9 @@
 
   (define (%verbose-messages-thunk)
     (when (option.tagged-language?)
-      (print-warning-message "enabling tagged language support for program"))
+      (print-expander-warning-message "enabling tagged language support for program"))
     (when (option.strict-r6rs)
-      (print-warning-message "enabling strict R6RS support for program")))
+      (print-expander-warning-message "enabling strict R6RS support for program")))
 
   (define (%parse-top-level-program program-form*)
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
@@ -2509,9 +2509,9 @@
   (define (%make-verbose-messages-thunk libname.sexp)
     (lambda ()
       (when (option.tagged-language?)
-	(print-warning-message "enabling tagged language support for library: ~a" libname.sexp))
+	(print-expander-warning-message "enabling tagged language support for library: ~a" libname.sexp))
       (when (option.strict-r6rs)
-	(print-warning-message "enabling strict R6RS support for library: ~a" libname.sexp))))
+	(print-expander-warning-message "enabling strict R6RS support for library: ~a" libname.sexp))))
 
   (define (%parse-library library-sexp)
     ;;Given an  ANNOTATION struct  representing a LIBRARY  form symbolic

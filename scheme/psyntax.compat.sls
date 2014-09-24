@@ -96,7 +96,7 @@
     library-stale-warning
     procedure-argument-violation
     warning
-    print-warning-message
+    print-expander-warning-message
 
     ;; system stuff
     file-modification-time
@@ -181,19 +181,19 @@
 
 
 (define (library-version-mismatch-warning name depname filename)
-  (print-warning-message "library ~s has an inconsistent dependency \
-                          on library ~s; file ~s will be recompiled from source."
-			 name depname filename))
+  (print-expander-warning-message "library ~s has an inconsistent dependency \
+                                   on library ~s; file ~s will be recompiled from source."
+				  name depname filename))
 
 (define (library-stale-warning name filename)
-  (print-warning-message "library ~s is stale; file ~s will be \
-                          recompiled from source."
-			 name filename))
+  (print-expander-warning-message "library ~s is stale; file ~s will be \
+                                   recompiled from source."
+				  name filename))
 
-(define (print-warning-message template . args)
+(define (print-expander-warning-message template . args)
   (when (option.verbose?)
     (let ((P (current-error-port)))
-      (display "*** Vicare warning: " P)
+      (display "vicare: expander warning: " P)
       (apply fprintf P template args)
       (newline P))))
 
