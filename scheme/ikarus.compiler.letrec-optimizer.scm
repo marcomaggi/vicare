@@ -250,7 +250,7 @@
   ;;This module is used to check for illegal references to bindings in the right-hand
   ;;sides of LETREC and LETREC* syntaxes.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'check-for-illegal-letrec-references))
 
   (define (check-for-illegal-letrec-references x)
@@ -438,7 +438,7 @@
   ;;See below the functions "E-recbind" and  "E-rec*bind" for the list of implemented
   ;;transformations.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'integrate-nested-binding-forms))
 
   (define-syntax-rule (integrate-nested-binding-forms X)
@@ -683,7 +683,7 @@
   ;;
   ;;Notice that the transformation for LETREC is described also in the R5RS document.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'optimize-letrec/basic))
 
   ;;Make the code more readable.
@@ -789,7 +789,7 @@
   ;;LETREC*  forms into  LET-like forms  and assignments.   This function  performs a
   ;;transformation similar (but not equal to) the one described in the [WSD] paper.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'optimize-letrec/waddell))
 
   (define (optimize-letrec/waddell x)
@@ -1319,7 +1319,7 @@
   ;;structures representing recursive bindings; however,  such fields are reset to #f
   ;;before this compiler pass returns to the caller.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'optimize-letrec/scc))
 
   (define (optimize-letrec/scc x)

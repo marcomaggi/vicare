@@ -42,7 +42,7 @@
 ;;;; filled built-in tag template
 ;;
 ;; (let ()
-;;   (define-fluid-override __who__
+;;   (define-syntax __who__
 ;;     (identifier-syntax (quote <keyword>)))
 ;;
 ;;   (define-constant THE-TAG
@@ -112,7 +112,7 @@
 ;;;; empty built-in tag template
 ;;
 ;; (let ()
-;;   (define-fluid-override __who__
+;;   (define-syntax __who__
 ;;     (identifier-syntax (quote <keyword>)))
 ;;
 ;;   (define-constant THE-TAG
@@ -177,7 +177,7 @@
 ;;;; non-compound built-in tags: <symbol>
 
 (define (%initialise-<symbol>)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax (quote <symbol>)))
 
   (define-constant THE-TAG
@@ -231,7 +231,7 @@
 ;;;; non-compound built-in tags: <keyword>
 
 (define (%initialise-<keyword>)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax (quote <keyword>)))
 
   (define-constant THE-TAG
@@ -266,7 +266,7 @@
 ;;;; non-compound built-in tags: <pointer>
 
 (define (%initialise-<pointer>)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax (quote <pointer>)))
 
   (define-constant THE-TAG
@@ -318,7 +318,7 @@
 ;;;; non-compound built-in tags: <char>
 
 (define (%initialise-<char>)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax (quote <char>)))
 
   (define-constant THE-TAG
@@ -364,7 +364,7 @@
 ;;;; non-compound built-in tags: <transcoder>
 
 (define (%initialise-<transcoder>)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax (quote <transcoder>)))
 
   (define-constant THE-TAG
@@ -399,7 +399,7 @@
 ;;;; compound built-in tags: <pair>
 
 (define (%initialise-<pair>)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax (quote <pair>)))
 
   (define-constant THE-TAG
@@ -460,7 +460,7 @@
 ;;;; compound built-in tags: <string>
 
 (define (%initialise-<string>)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax (quote <string>)))
 
   (define-constant THE-TAG

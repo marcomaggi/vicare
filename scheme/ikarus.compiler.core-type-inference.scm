@@ -65,7 +65,7 @@
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'core-type-inference))
 
   (define (core-type-inference x)

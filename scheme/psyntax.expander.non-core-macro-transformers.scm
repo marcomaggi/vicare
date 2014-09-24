@@ -405,7 +405,7 @@
   ;;
   ;;FIXME There is  room for  improvement.  (Marco  Maggi; Thu  Apr 17, 2014)
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'case))
 
   (define (case-macro input-form.stx)
@@ -663,7 +663,7 @@
   ;;top-level built in environment.  Expand  the contents of INPUT-FORM.STX; return a
   ;;syntax object that must be further expanded.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'define-struct))
 
   (define (define-struct-macro input-form.stx)
@@ -2195,7 +2195,7 @@
   ;;                 (c G.c) (d G.d) (e G.e))
   ;;             ?body0 ?body)))))
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'let-values))
 
   (define (let-values-macro input-form.stx)

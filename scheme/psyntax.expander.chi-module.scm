@@ -698,7 +698,7 @@
   ;;and ?RATOR will evaluate to a closure object with tag identifier RATOR.TAG, which
   ;;is a sub-tag of "<procedure>".
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax '%process-closure-object-application))
 
   (define (%process-closure-object-application input-form.stx lexenv.run lexenv.expand
@@ -1190,7 +1190,7 @@
 ;;;; chi procedures: general operator application, nothing already expanded
 
 (module (chi-application)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax (quote chi-application)))
 
   (define (chi-application input-form.stx lexenv.run lexenv.expand)
@@ -1819,21 +1819,30 @@
     ;;
     (syntax-match input-form.stx (brace)
       ((_ ?attributes ((brace ?ctxt ?rv-tag* ... . ?rest-rv-tag) . ?fmls) . ?body-form*)
+       ;; (let ((formals.stx (bless
+       ;; 			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
+       ;; 	     (body*.stx   (bless
+       ;; 			   `(fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
+       ;; 			      (let () . ,?body-form*)))))
        (let ((formals.stx (bless
-			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
-	     (body*.stx   (cons (bless
-				 `(define-fluid-override __who__
-				    (identifier-syntax (quote ,?ctxt))))
-				?body-form*)))
+       			   `((brace _ ,@?rv-tag* . ,?rest-rv-tag) . ,?fmls)))
+       	     (body*.stx   (cons (bless
+       				 `(define-fluid-override __who__
+       				    (identifier-syntax (quote ,?ctxt))))
+       				?body-form*)))
 	 (%expand input-form.stx lexenv.run lexenv.expand
 		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
 
       ((_ ?attributes (?ctxt . ?fmls) . ?body-form*)
+       ;; (let ((formals.stx ?fmls)
+       ;; 	     (body*.stx   (bless
+       ;; 			   `(fluid-let-syntax ((__who__ (identifier-syntax (quote ,?ctxt))))
+       ;; 			      (let () . ,?body-form*)))))
        (let ((formals.stx ?fmls)
-	     (body*.stx   (cons (bless
-				 `(define-fluid-override __who__
-				    (identifier-syntax (quote ,?ctxt))))
-				?body-form*)))
+       	     (body*.stx   (cons (bless
+       				 `(define-fluid-override __who__
+       				    (identifier-syntax (quote ,?ctxt))))
+       				?body-form*)))
 	 (%expand input-form.stx lexenv.run lexenv.expand
 		  (syntax->datum ?attributes) ?ctxt formals.stx body*.stx)))
       ))

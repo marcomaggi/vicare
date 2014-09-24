@@ -518,7 +518,7 @@
   ;;This is the last form in the definition of DECLARE-CORE-PRIMITIVE.
   (receive-and-return (output-form)
       (main input-form)
-    (debug-print (syntax->datum output-form))
+    #;(debug-print (syntax->datum output-form))
     (void)))
 
 

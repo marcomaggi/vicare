@@ -1776,7 +1776,7 @@
   ;;and its  return value is the  result of "(lambda ()  y)" which ends up  being bound to
   ;;"x"; so we want "(lambda () y)" to be annotated as "x".
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'recordize))
 
   (case-define E
@@ -2769,7 +2769,7 @@
   ;;         (let ((Y t)) (that Y))
   ;;       (those)))
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'optimize-direct-calls))
 
   (define (optimize-direct-calls x)
@@ -3250,7 +3250,7 @@
   ;;After  this compiler  pass: there  are  no more  ASSIGN structs  in the  returned
   ;;recordised code.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'rewrite-references-and-assignments))
 
   (define (rewrite-references-and-assignments x)
@@ -3867,7 +3867,7 @@
   ;;     (fix ((b (lambda (x) (this))))
   ;;       (that)))
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'sanitize-bindings))
 
   ;;Make the code more readable.
@@ -4009,7 +4009,7 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'optimize-for-direct-jumps))
 
   ;;Make the code more readable.
@@ -4257,7 +4257,7 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall		jmpcall
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'insert-global-assignments))
 
   ;;Make the code more readable.
@@ -4408,7 +4408,7 @@
   ;;structs, because in subsequent compiler passes the PRELEX structs will be no more
   ;;used: they will be garbage collected.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'introduce-vars))
 
   ;;Make the code more readable.
@@ -4544,7 +4544,7 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall		jmpcall
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'introduce-closure-makers))
 
   (define (introduce-closure-makers X)
@@ -4761,7 +4761,7 @@
   ;;reference bindings.   The value of such  fields from previous compiler  passes is
   ;;ignored, because the fields are reset to #f before being used in this module.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'optimize-combinator-calls/lift-clambdas))
 
   (define (optimize-combinator-calls/lift-clambdas X)
@@ -5367,7 +5367,7 @@
   ;;FUNCALL; so  not all the instances  of PRIMCALL are generated  here.  PRIMCALL is
   ;;also used to represent high-level assembly instructions such as "mref".
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'introduce-primcalls))
 
   (define (introduce-primcalls Program)
@@ -5537,7 +5537,7 @@
   ;;   This is  an independent additional task that must  be performed somewhere, and
   ;;   we do it here.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'rewrite-freevar-references))
 
   (define (rewrite-freevar-references Program)
@@ -5747,7 +5747,7 @@
   ;;code  for the  current process  and enters  a subprocess  which can  take actions
   ;;asynchronously.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'insert-engine-checks))
 
   (module (insert-engine-checks)
@@ -5869,7 +5869,7 @@
   ;;about to be  exhausted.  If a ?BODY does  not make further use of  the stack: its
   ;;function execution is a "stack tail".
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'insert-stack-overflow-check))
 
   (module (insert-stack-overflow-check)
@@ -6267,7 +6267,7 @@
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'unparse-recordized-code/sexp))
 
   (define (unparse-recordized-code/sexp input-expr)
@@ -6518,7 +6518,7 @@
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'unparse-recordized-code/pretty))
 
   (define (unparse-recordized-code/pretty input-expr)

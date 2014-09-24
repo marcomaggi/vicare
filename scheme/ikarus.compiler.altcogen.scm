@@ -169,7 +169,7 @@
   ;;
   ;;so that the order of evaluation of the argument's expressions is decided.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'alt-cogen.impose-calling-convention/evaluation-order))
 
   (define (alt-cogen.impose-calling-convention/evaluation-order x)

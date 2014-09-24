@@ -36,7 +36,7 @@
   ;;     (debug-print* 'output (unparse-recordized-code/sexp code))))
 
   (module (V-codes)
-    (define-fluid-override __who__
+    (define-syntax __who__
       (identifier-syntax 'alt-cogen.specify-representation))
 
     (define (V-codes x)
@@ -437,6 +437,8 @@
   ;;                           ?offset-of-slot-value-in-loc-gensym)
   ;;     ?rand1 ?rand2)
   ;;
+  (define-syntax __who__
+    (identifier-syntax 'code-generation-handler))
 
   (define (cogen-debug-primop primitive-symbol-name src/loc ctxt rand*)
     ;;Return  recordised  code  representing  the application  of  a  core  primitive
@@ -528,7 +530,7 @@
 
   (module (%cogen-primop-call)
 
-    (define-fluid-override __who__
+    (define-syntax __who__
       (identifier-syntax '%cogen-primop-call))
 
     (define (%cogen-primop-call cogen-core-primitive-interrupt-handler-function-call
@@ -635,8 +637,6 @@
       ;;*  If the  body contains  *no*  "(interrupt)" calls:  we return  the body  as
       ;;  standalone struct.
       ;;
-      (define-fluid-override __who__
-	(identifier-syntax 'code-generation-handler))
       (define prim
 	;;PRIM is a struct of type PRIMITIVE-HANDLER.
 	(get-primop primitive-symbol-name))

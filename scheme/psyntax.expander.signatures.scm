@@ -594,7 +594,7 @@
   ;;
   ;;2..An object representing the LET-VALUES tagging signature.
   ;;
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'parse-tagged-formals-syntax))
 
   (case-define* parse-tagged-formals-syntax

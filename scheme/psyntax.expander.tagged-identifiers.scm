@@ -322,7 +322,7 @@
 	    (loop ($object-type-spec-parent-spec spec)))))))
 
 (module (tag-identifier-dispatch)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'tag-identifier-dispatch))
 
   (define* (tag-identifier-dispatch {tag tag-identifier?} {member.id identifier?} {input-form.stx syntax-object?})

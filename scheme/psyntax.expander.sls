@@ -1965,7 +1965,7 @@
 
 
 (module (expand-form-to-core-language)
-  (define-fluid-override __who__
+  (define-syntax __who__
     (identifier-syntax 'expand-form-to-core-language))
 
   (define (expand-form-to-core-language expr env)
@@ -2110,6 +2110,8 @@
 ;;;; R6RS program expander
 
 (module (expand-top-level)
+  (define-syntax __who__
+    (identifier-syntax 'expand-top-level))
 
   (define (expand-top-level program-form*)
     ;;Given  a list  of SYNTAX-MATCH  expression arguments  representing an  R6RS top
@@ -2155,11 +2157,11 @@
 
       (((?import . x) . y)
        (eq? (syntax->datum ?import) 'import)
-       (syntax-violation 'expander
+       (syntax-violation __who__
 	 "invalid syntax of top-level program" (syntax-car program-form*)))
 
       (_
-       (assertion-violation 'expander
+       (assertion-violation __who__
 	 "top-level program is missing an (import ---) clause"))))
 
   (define (%parse-program-options option*)
