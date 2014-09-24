@@ -36,7 +36,7 @@
   ;;     (debug-print* 'output (unparse-recordized-code/sexp code))))
 
   (module (V-codes)
-    (define-syntax __who__
+    (define-syntax __module_who__
       (identifier-syntax 'specify-representation))
 
     (define (V-codes x)
@@ -46,21 +46,21 @@
 	       (body  (V body)))
 	   (make-codes code* body)))
 	(else
-	 (compiler-internal-error __who__ "invalid program" x))))
+	 (compiler-internal-error __module_who__ "invalid program" x))))
 
     (define (V-clambda x)
       (struct-case x
 	((clambda label clause* cp free* name)
 	 (make-clambda label (map V-clambda-clause clause*) cp free* name))
 	(else
-	 (compiler-internal-error __who__ "invalid clambda" x))))
+	 (compiler-internal-error __module_who__ "invalid clambda" x))))
 
     (define (V-clambda-clause x)
       (struct-case x
 	((clambda-case info body)
 	 (make-clambda-case info (V body)))
 	(else
-	 (compiler-internal-error __who__ "invalid clambda-case" x))))
+	 (compiler-internal-error __module_who__ "invalid clambda-case" x))))
 
     #| end of module: V-codes |# )
 
@@ -437,7 +437,7 @@
   ;;                           ?offset-of-slot-value-in-loc-gensym)
   ;;     ?rand1 ?rand2)
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'code-generation-handler))
 
   (define (cogen-debug-primop primitive-symbol-name src/loc ctxt rand*)
@@ -530,7 +530,7 @@
 
   (module (%cogen-primop-call)
 
-    (define-syntax __who__
+    (define-syntax __module_who__
       (identifier-syntax '%cogen-primop-call))
 
     (define (%cogen-primop-call cogen-core-primitive-interrupt-handler-function-call
@@ -864,7 +864,7 @@
 		(else
 		 (%doit-with-adapter)))))))
 	(else
-	 (compiler-internal-error __who__ "invalid evaluation context" ctxt))))
+	 (compiler-internal-error __module_who__ "invalid evaluation context" ctxt))))
 
     (define-syntax (case-primitive-operation-handler stx)
       (define (main stx)
@@ -932,7 +932,7 @@
       (main stx))
 
     (define (%error-context-not-handled prim)
-      (compile-time-error __who__
+      (compile-time-error __module_who__
 	"evaluation context not handled by core primitive operation" prim))
 
     #| end of module: %COGEN-PRIMOP-BODY |# )
@@ -999,7 +999,7 @@
 		  (K bool-f)))))
 
 	(else
-	 (compiler-internal-error __who__ "invalid context" ctxt))))
+	 (compiler-internal-error __module_who__ "invalid context" ctxt))))
 
     (define (%the-body-is-just-an-interrupt-primcall? body)
       (struct-case body

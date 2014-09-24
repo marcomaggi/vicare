@@ -1595,6 +1595,9 @@
 	   CORE-PRIMITIVE-DEFAULT-APPLICATION-ATTRIBUTES)
     (import CORE-PRIMITIVE-PROPERTIES))
 
+  (define-syntax __module_who__
+    (identifier-syntax 'fold-prim))
+
   (define (fold-prim prim-name appctxt ec sc)
     ;;PRIM-NAME must  be a symbol  being the name  of a primitive  function.  APPCTXT
     ;;must be a  struct instance of type APP, representing  the context of appliction
@@ -1686,7 +1689,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%primitive-info prim-name rand*)
+  (define (%primitive-info prim-name rand*)
     ;;PRIM-NAME  must be  a symbol  representing the  name of  a primitive  function.
     ;;RAND* must be null  or a list representing the arguments in  a function call to
     ;;PRIM-NAME.
@@ -1717,7 +1720,7 @@
 				(equal? optmpl (constant-value v))
 				(loop (cdr rand*) (cdr operands-template)))))
 			(else
-			 (compiler-internal-error __who__
+			 (compiler-internal-error __module_who__
 			   "invalid core primitive template operand specification"
 			   prim-name (car operands-template)))))))
 	      ((eq? operands-template '_)
@@ -1730,7 +1733,7 @@
 	       ;;template matches the arguments!  Else this template does not match.
 	       (null? rand*))
 	      (else
-	       (compiler-internal-error __who__
+	       (compiler-internal-error __module_who__
 		 "invalid core primitive template operand specification"
 		 prim-name operands-template)))))
     (cond ((core-primitive-name->application-attributes* prim-name)

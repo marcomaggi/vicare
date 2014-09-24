@@ -1775,7 +1775,7 @@
   ;;and its  return value is the  result of "(lambda ()  y)" which ends up  being bound to
   ;;"x"; so we want "(lambda () y)" to be annotated as "x".
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'recordize))
 
   (case-define E
@@ -1831,7 +1831,7 @@
 				 (list (make-constant X))))))
 
 	   (else
-	    (compile-time-error __who__ "invalid core language expression" X)))))
+	    (compile-time-error __module_who__ "invalid core language expression" X)))))
 
   (define-syntax-rule (%recordize-pair-sexp X ctxt)
     (case (car X)
@@ -2768,7 +2768,7 @@
   ;;         (let ((Y t)) (that Y))
   ;;       (those)))
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'optimize-direct-calls))
 
   (define (optimize-direct-calls x)
@@ -2828,7 +2828,7 @@
        (make-assign lhs (E rhs)))
 
       (else
-       (compile-time-error __who__ "invalid expression" (unparse-recordized-code x)))))
+       (compile-time-error __module_who__ "invalid expression" (unparse-recordized-code x)))))
 
   (module (%attempt-integration)
 
@@ -3161,7 +3161,7 @@
       ;;                          #[constant ()])])])
       ;;
       (cond ((null? lhs*)
-	     (compile-time-error __who__ "improper improper"))
+	     (compile-time-error __module_who__ "improper improper"))
 	    ((null? (cdr lhs*))
 	     (list (%make-conses rhs*)))
 	    (else
@@ -3249,7 +3249,7 @@
   ;;After  this compiler  pass: there  are  no more  ASSIGN structs  in the  returned
   ;;recordised code.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'rewrite-references-and-assignments))
 
   (define (rewrite-references-and-assignments x)
@@ -3341,11 +3341,11 @@
 			 (else
 			  (%assigned-local-binding-assignment lhs (E rhs))))))
 	     (else
-	      (compiler-internal-error __who__
+	      (compiler-internal-error __module_who__
 		"assigned PRELEX has non-assigned state" lhs x))))
 
       (else
-       (compile-time-error __who__
+       (compile-time-error __module_who__
 	 "invalid recordised expression" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
@@ -3498,7 +3498,7 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'introduce-unsafe-primrefs))
 
   (define (introduce-unsafe-primrefs x)
@@ -3537,7 +3537,7 @@
        (make-forcall rator ($map/stx E rand*)))
 
       (else
-       (compiler-internal-error __who__
+       (compiler-internal-error __module_who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (E-known x)
@@ -3592,7 +3592,7 @@
 	       ;;error as mandated by R6RS.
 	       (%no-replacement))
 	      (else
-	       ((%exception-raiser) __who__
+	       ((%exception-raiser) __module_who__
 		"operands of invalid core type in call to core primitive"
 		(unparse-recordized-code/sexp (%no-replacement)))))))
 
@@ -3693,7 +3693,7 @@
 		    ;;the type predicates: total success!!!
 		    #t)
 		   (else
-		    (compiler-internal-error __who__
+		    (compiler-internal-error __module_who__
 		      "invalid type specification in signature of core primitive"
 		      preds))))
 	    ((pair? preds)
@@ -3737,7 +3737,7 @@
 		    ;;the type predicates: total success!!!
 		    #t)
 		   (else
-		    (compiler-internal-error __who__
+		    (compiler-internal-error __module_who__
 		      "invalid type specification in signature of core primitive"
 		      preds))))
 	    ((pair? preds)
@@ -3774,7 +3774,7 @@
 	     ;;operand's type matches the expected argument's type.
 	     #t)
 	    (else
-	     (compiler-internal-error __who__
+	     (compiler-internal-error __module_who__
 	       "invalid type specification in signature of core primitive" type?))))
 
     (define (%matching-type-predicate-and-operand? type? rand)
@@ -3800,7 +3800,7 @@
 	     ;;operand's type matches the expected argument's type.
 	     #t)
 	    (else
-	     (compiler-internal-error __who__
+	     (compiler-internal-error __module_who__
 	       "invalid type specification in signature of core primitive" type?))))
 
     #| end of module: E-funcall |# )
@@ -3866,7 +3866,7 @@
   ;;     (fix ((b (lambda (x) (this))))
   ;;       (that)))
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'sanitize-bindings))
 
   ;;Make the code more readable.
@@ -3926,7 +3926,7 @@
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
       (else
-       (compile-time-error __who__
+       (compile-time-error __module_who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (%mk-bind lhs* rhs* body)
@@ -4008,7 +4008,7 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'optimize-for-direct-jumps))
 
   ;;Make the code more readable.
@@ -4056,7 +4056,7 @@
        (E-funcall x (E-known rator) ($map/stx E-known rand*)))
 
       (else
-       (compile-time-error __who__
+       (compile-time-error __module_who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
@@ -4187,7 +4187,7 @@
 	      ;;Just call the closure as always.  A "wrong num args" exception will
 	      ;;be raised at run-time as mandated by R6RS.
 	      (make-funcall prelex-rator rand*)
-	    (compile-time-arity-error __who__
+	    (compile-time-arity-error __module_who__
 	      "wrong number of arguments in closure object application"
 	      (unparse-recordized-code/pretty appform))))))
 
@@ -4256,7 +4256,7 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall		jmpcall
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'insert-global-assignments))
 
   ;;Make the code more readable.
@@ -4306,7 +4306,7 @@
        (make-jmpcall label (E rator) ($map/stx E rand*)))
 
       (else
-       (compiler-internal-error __who__
+       (compiler-internal-error __module_who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (E-clambda rhs)
@@ -4407,7 +4407,7 @@
   ;;structs, because in subsequent compiler passes the PRELEX structs will be no more
   ;;used: they will be garbage collected.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'introduce-vars))
 
   ;;Make the code more readable.
@@ -4460,7 +4460,7 @@
        (make-jmpcall label (E rator) ($map/stx E rand*)))
 
       (else
-       (compile-time-error __who__
+       (compile-time-error __module_who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (E-clambda lhs rhs)
@@ -4543,7 +4543,7 @@
   ;;   seq		clambda		known
   ;;   forcall		funcall		jmpcall
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'introduce-closure-makers))
 
   (define (introduce-closure-makers X)
@@ -4556,7 +4556,7 @@
 	(E X)
       (if (null? freevar*)
 	  X^
-	(compiler-internal-error __who__
+	(compiler-internal-error __module_who__
 	  "free vars encountered in program" (map unparse-recordized-code freevar*)))))
 
   (define (E X)
@@ -4637,7 +4637,7 @@
                  (union freevar*.rator freevar*.rand*))))
 
       (else
-       (compile-time-error __who__ "invalid expression" X))))
+       (compile-time-error __module_who__ "invalid expression" X))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4760,7 +4760,7 @@
   ;;reference bindings.   The value of such  fields from previous compiler  passes is
   ;;ignored, because the fields are reset to #f before being used in this module.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'optimize-combinator-calls/lift-clambdas))
 
   (define (optimize-combinator-calls/lift-clambdas X)
@@ -4824,7 +4824,7 @@
 	 (make-jmpcall label (E rator) ($map/stx E rand*)))
 
 	(else
-	 (compiler-internal-error __who__
+	 (compiler-internal-error __module_who__
 	   "invalid expression" (unparse-recordized-code x)))))
 
     (define (E-bind lhs* rhs* body)
@@ -5184,7 +5184,7 @@
 		       rest
 		     (cons what rest)))
 		  (else
-		   (compiler-internal-error __who__
+		   (compiler-internal-error __module_who__
 		     "invalid VAR substitution value" what)))))
 	  '()))
 
@@ -5234,7 +5234,7 @@
     ;;  substitution of Y as substitution of X.
     ;;
     (when (eq? x 'q)
-      (compile-time-error __who__
+      (compile-time-error __module_who__
 	"circular dependency searching for VAR substitution"))
     (let ((x.subst (%var-get-subst x)))
       (cond ((not x.subst)
@@ -5267,7 +5267,7 @@
 	     x.subst)
 
 	    (else
-	     (compiler-internal-error __who__
+	     (compiler-internal-error __module_who__
 	       "invalid VAR substitution" x x.subst)))))
 
 ;;; --------------------------------------------------------------------
@@ -5366,7 +5366,7 @@
   ;;FUNCALL; so  not all the instances  of PRIMCALL are generated  here.  PRIMCALL is
   ;;also used to represent high-level assembly instructions such as "mref".
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'introduce-primcalls))
 
   (define (introduce-primcalls Program)
@@ -5375,7 +5375,7 @@
        (make-codes ($map/stx E-clambda code*)
 		   (E body)))
       (else
-       (compiler-internal-error __who__
+       (compiler-internal-error __module_who__
 	 "invalid input expression" (unparse-recordized-code Program)))))
 
 ;;; --------------------------------------------------------------------
@@ -5426,7 +5426,7 @@
 	 (make-jmpcall label (E rator) ($map/stx E arg*)))
 
 	(else
-	 (compiler-internal-error __who__
+	 (compiler-internal-error __module_who__
 	   "invalid input expression" (unparse-recordized-code x)))))
 
     (define (E-known x)
@@ -5449,14 +5449,14 @@
 	((clambda label case* cp freevar* name)
 	 (make-clambda label ($map/stx E-clambda-case case*) cp freevar* name))
 	(else
-	 (compiler-internal-error __who__ "invalid clambda" x))))
+	 (compiler-internal-error __module_who__ "invalid clambda" x))))
 
     (define (E-clambda-case x)
       (struct-case x
 	((clambda-case info body)
 	 (make-clambda-case info (E body)))
 	(else
-	 (compiler-internal-error __who__ "invalid clambda-case" x))))
+	 (compiler-internal-error __module_who__ "invalid clambda-case" x))))
 
     #| end of module: E-clambda |# )
 
@@ -5536,7 +5536,7 @@
   ;;   This is  an independent additional task that must  be performed somewhere, and
   ;;   we do it here.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'rewrite-freevar-references))
 
   (define (rewrite-freevar-references Program)
@@ -5552,7 +5552,7 @@
 	      (body^  (E body)))
 	 (make-codes code*^ body^)))
       (else
-       (compiler-internal-error __who__ "invalid program" Program))))
+       (compiler-internal-error __module_who__ "invalid program" Program))))
 
 ;;; --------------------------------------------------------------------
 
@@ -5567,7 +5567,7 @@
 	       (cp^         #f))
 	   (make-clambda label ($map/stx case-mapper clause*) cp^ freevar* name)))
 	(else
-	 (compiler-internal-error __who__ "invalid clambda" x))))
+	 (compiler-internal-error __module_who__ "invalid clambda" x))))
 
     (define (make-E-clambda-case main-cp freevar*)
       ;;MAIN-CP must  be a  struct instance  of type VAR  to which  the CLOSURE-MAKER
@@ -5601,7 +5601,7 @@
 		     (body^ (E body)))
 		(make-clambda-case info^ body^)))))
 	  (else
-	   (compiler-internal-error __who__ "invalid clambda-case" x)))))
+	   (compiler-internal-error __module_who__ "invalid clambda-case" x)))))
 
     #| end of module: Clambda |# )
 
@@ -5668,7 +5668,7 @@
 	 (make-jmpcall label (E rator) ($map/stx E arg*)))
 
 	(else
-	 (compiler-internal-error __who__ "invalid expr" x))))
+	 (compiler-internal-error __module_who__ "invalid expr" x))))
 
     (define (E-known x)
       (struct-case x
@@ -5746,7 +5746,7 @@
   ;;code  for the  current process  and enters  a subprocess  which can  take actions
   ;;asynchronously.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'insert-engine-checks))
 
   (module (insert-engine-checks)
@@ -5828,7 +5828,7 @@
 	 (ormap E arg*))
 
 	(else
-	 (compiler-internal-error __who__
+	 (compiler-internal-error __module_who__
 	   "invalid input expression" (unparse-recordized-code x)))))
 
     (define (E-known x)
@@ -5868,7 +5868,7 @@
   ;;about to be  exhausted.  If a ?BODY does  not make further use of  the stack: its
   ;;function execution is a "stack tail".
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'insert-stack-overflow-check))
 
   (module (insert-stack-overflow-check)
@@ -5949,7 +5949,7 @@
 	     (ormap %non-tail? arg*)))
 
 	(else
-	 (compiler-internal-error __who__ "invalid expr" body))))
+	 (compiler-internal-error __module_who__ "invalid expr" body))))
 
     (module (%non-tail?)
 
@@ -5992,7 +5992,7 @@
 	   (%non-tail? expr))
 
 	  (else
-	   (compiler-internal-error __who__ "invalid expr" x))))
+	   (compiler-internal-error __module_who__ "invalid expr" x))))
 
       (define (%non-tail?-known x)
 	(struct-case x
@@ -6266,7 +6266,7 @@
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'unparse-recordized-code/sexp))
 
   (define (unparse-recordized-code/sexp input-expr)
@@ -6517,7 +6517,7 @@
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'unparse-recordized-code/pretty))
 
   (define (unparse-recordized-code/pretty input-expr)

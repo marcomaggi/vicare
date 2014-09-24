@@ -65,7 +65,7 @@
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
 
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'core-type-inference))
 
   (define (core-type-inference x)
@@ -145,7 +145,7 @@
 	 (values (make-forcall rator rand*) rand*.env T:object)))
 
       (else
-       (compiler-internal-error __who__
+       (compiler-internal-error __module_who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (V* x* env)

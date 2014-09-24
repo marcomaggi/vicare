@@ -250,7 +250,7 @@
   ;;This module is used to check for illegal references to bindings in the right-hand
   ;;sides of LETREC and LETREC* syntaxes.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'check-for-illegal-letrec-references))
 
   (define (check-for-illegal-letrec-references x)
@@ -366,7 +366,7 @@
        (C* rand* illegals))
 
       (else
-       (error __who__ "invalid expression" (unparse-recordized-code x)))))
+       (error __module_who__ "invalid expression" (unparse-recordized-code x)))))
 
   (define (C/error x illegals)
     ;;Like C,  but in case  of error make  use of X as  enclosing form in  the raised
@@ -422,7 +422,7 @@
     ;;R6RS requests that this error is of type "&assertion", but "&syntax" is not bad
     ;;either.
     ;;
-    (syntax-violation __who__
+    (syntax-violation __module_who__
       "illegal binding reference in right-hand side of LETREC, LETREC* or LIBRARY syntax"
       (unparse-recordized-code/pretty enclosing-code)
       (unparse-recordized-code/pretty illegal-prelex)))
@@ -438,7 +438,7 @@
   ;;See below the functions "E-recbind" and  "E-rec*bind" for the list of implemented
   ;;transformations.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'integrate-nested-binding-forms))
 
   (define-syntax-rule (integrate-nested-binding-forms X)
@@ -491,7 +491,7 @@
        (make-forcall rator (E* rand*)))
 
       (else
-       (error __who__ "invalid expression" (unparse-recordized-code X)))))
+       (error __module_who__ "invalid expression" (unparse-recordized-code X)))))
 
   (define (E* X*)
     ;;Apply E to every item in the list X*.
@@ -683,7 +683,7 @@
   ;;
   ;;Notice that the transformation for LETREC is described also in the R5RS document.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'optimize-letrec/basic))
 
   ;;Make the code more readable.
@@ -737,7 +737,7 @@
        (make-forcall rator (map E rand*)))
 
       (else
-       (error __who__ "invalid expression" (unparse-recordized-code x)))))
+       (error __module_who__ "invalid expression" (unparse-recordized-code x)))))
 
   (define (E-clambda x)
     (struct-case x
@@ -789,7 +789,7 @@
   ;;LETREC*  forms into  LET-like forms  and assignments.   This function  performs a
   ;;transformation similar (but not equal to) the one described in the [WSD] paper.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'optimize-letrec/waddell))
 
   (define (optimize-letrec/waddell x)
@@ -859,7 +859,7 @@
 	 (make-forcall rator (E* rand*)))
 
 	(else
-	 (error __who__ "invalid expression" (unparse-recordized-code x)))))
+	 (error __module_who__ "invalid expression" (unparse-recordized-code x)))))
 
     (define (E* x*)
       (if (pair? x*)
@@ -1040,7 +1040,7 @@
     ;;happen.
     ;;
     (lambda (prel)
-      (assertion-violation __who__ "found free variable reference" prel)))
+      (assertion-violation __module_who__ "found free variable reference" prel)))
 
   (module (%make-nonrec-lhs-used-registrar-func
 	   %make-recbind-lhs-used-registrar-func)
@@ -1319,7 +1319,7 @@
   ;;structures representing recursive bindings; however,  such fields are reset to #f
   ;;before this compiler pass returns to the caller.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'optimize-letrec/scc))
 
   (define (optimize-letrec/scc x)
@@ -1531,7 +1531,7 @@
 	 (make-forcall rator (E* rand* enclosing-binding)))
 
 	(else
-	 (error __who__ "invalid expression" (unparse-recordized-code x)))))
+	 (error __module_who__ "invalid expression" (unparse-recordized-code x)))))
 
     (define (E* x* enclosing-binding)
       (map (lambda (x)

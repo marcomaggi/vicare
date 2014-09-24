@@ -169,7 +169,7 @@
   ;;
   ;;so that the order of evaluation of the argument's expressions is decided.
   ;;
-  (define-syntax __who__
+  (define-syntax __module_who__
     (identifier-syntax 'impose-calling-convention/evaluation-order))
 
   (define (impose-calling-convention/evaluation-order x)
@@ -485,7 +485,7 @@
 	   (Tail expr))
 
 	  (else
-	   (error __who__ "invalid tail" x))))
+	   (error __module_who__ "invalid tail" x))))
 
       (define (VT x)
 	;;X is a struct of type: CONSTANT, VAR, PRIMCALL, FORCALL.
@@ -530,7 +530,7 @@
 	      (let ((t (make-unique-var 'tmp)))
 		(%do-bind (list t) (list x) (kont t))))
 	     (else
-	      (error __who__ "invalid S" x))))))
+	      (error __module_who__ "invalid S" x))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -760,7 +760,7 @@
 		      (make-asm-instr op d ecx)))))))
 
          (else
-	  (error __who__ "invalid value op" op rands))))
+	  (error __module_who__ "invalid value op" op rands))))
 
       ((funcall rator rands)
        (handle-nontail-call rator rands d #f))
@@ -782,7 +782,7 @@
       (else
        (if (symbol? x)
            (%move-dst<-src d x)
-	 (error __who__ "invalid value" (unparse-recordized-code x))))))
+	 (error __module_who__ "invalid value" (unparse-recordized-code x))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -828,7 +828,7 @@
          ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	  x)
          (else
-	  (error __who__ "invalid instr" x))))
+	  (error __module_who__ "invalid instr" x))))
 
       ((funcall rator rands)
        (handle-nontail-call rator rands #f #f))
@@ -843,7 +843,7 @@
        (make-shortcut (E body) (E handler)))
 
       (else
-       (error __who__ "invalid effect" x))))
+       (error __module_who__ "invalid effect" x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -878,7 +878,7 @@
 	 (make-shortcut (P body) (P handler)))
 
 	(else
-	 (error __who__ "invalid pred" x))))
+	 (error __module_who__ "invalid pred" x))))
 
     (define (Mem x kont)
       (struct-case x
