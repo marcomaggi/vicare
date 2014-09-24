@@ -420,7 +420,7 @@ VICARE_BOOT_ENV		= \
 	VICARE_SRC_DIR=$(srcdir)/scheme; export VICARE_SRC_DIR; \
 	VICARE_BUILD_DIR=$(builddir)/scheme; export VICARE_BUILD_DIR; \
 	VICARE_LIBRARY_PATH=$(BOOT_SEARCH_PATH); export VICARE_LIBRARY_PATH;
-VICARE_BOOT_FLAGS	= --print-loaded-libraries --no-rcfile --library-locator source --r6rs-script
+VICARE_BOOT_FLAGS	= --print-loaded-libraries --no-rcfile --library-locator source $(BOOT_VFLAGS) --r6rs-script
 
 CLEANFILES		+= ikarus.config.ss $(VICARE_NEW_BOOT)
 
