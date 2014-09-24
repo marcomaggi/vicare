@@ -127,7 +127,8 @@
     (ikarus.intel-assembler)
     (prefix (only (ikarus.options)
 		  strict-r6rs
-		  descriptive-labels)
+		  descriptive-labels
+		  verbose?)
 	    option.))
 
   (include "ikarus.wordsize.scm" #t)
@@ -453,6 +454,15 @@
 
 
 ;;;; helper functions
+
+(define (print-compiler-warning-message template . args)
+  (when (option.verbose?)
+    (let ((P (current-error-port)))
+      (display "vicare: compiler warning: " P)
+      (apply fprintf P template args)
+      (newline P))))
+
+;;; --------------------------------------------------------------------
 
 (define (remq1 x ls)
   ;;Scan the list  LS and remove only the  first instance of object X,  using EQ?  as
@@ -2503,7 +2513,11 @@
 	      ctxt)))
 	(else
 	 (if (option.strict-r6rs)
-	     (mk-call (make-primref 'make-parameter) ($map/stx E rand*))
+	     (begin
+	       (print-compiler-warning-message
+		"invalid number of operands to core language function integration: ~a"
+		rand*)
+	       (mk-call (make-primref 'make-parameter) ($map/stx E rand*)))
 	   (assertion-violation 'make-parameter
 	     "invalid number of operands to core language function integration"
 	     rand*)))))
@@ -3590,6 +3604,8 @@
 	      ((option.strict-r6rs)
 	       ;;The operands do  not match the expected arguments:  resort to run-time
 	       ;;error as mandated by R6RS.
+	       (print-compiler-warning-message "operands of invalid core type in call to core primitive: ~a"
+					       (unparse-recordized-code/sexp (%no-replacement)))
 	       (%no-replacement))
 	      (else
 	       ((%exception-raiser) __module_who__
@@ -4186,7 +4202,10 @@
 	  (if (option.strict-r6rs)
 	      ;;Just call the closure as always.  A "wrong num args" exception will
 	      ;;be raised at run-time as mandated by R6RS.
-	      (make-funcall prelex-rator rand*)
+	      (begin
+		(print-compiler-warning-message "wrong number of arguments in closure object application: ~a"
+						(unparse-recordized-code/pretty appform))
+		(make-funcall prelex-rator rand*))
 	    (compile-time-arity-error __module_who__
 	      "wrong number of arguments in closure object application"
 	      (unparse-recordized-code/pretty appform))))))
