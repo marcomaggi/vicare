@@ -64,14 +64,10 @@
 
 (define-syntax multiple-forms-sequence
   (syntax-rules ()
-    ((_ ?e)
-     ?e)
+    ((_ ?expr)
+     ?expr)
     ((_ ?expr ... ?last-expr)
      (make-seq (multiple-forms-sequence ?expr ...) ?last-expr))))
-
-(define (print-code x)
-  (parameterize ((print-gensym '#t))
-    (pretty-print (unparse-recordized-code x))))
 
 
 ;;;; some external code
@@ -83,13 +79,27 @@
 
 
 ;;;; some CPU registers stuff
-
+;;
+;;On the Intel architecture, the CPU registers have special use:
+;;
+;;APR = %ebp		allocation pointer
+;;ESP = %esp		stack pointer
+;;PCR = %esi		pointer to PCB
+;;CPR = %edi		pointer to closure
+;;
 
 ;;Arguments  count  register.  Upon  entering  a  function:  it  must hold  a  fixnum
 ;;representing zero or the negated number of arguments.
 ;;
 (define-constant ARGC-REGISTER '%eax)
 
+;;When a function returns a single Scheme  object: the immediate Scheme object or the
+;;tagged pointer to the Scheme object is stored in this register.
+;;
+;;When a  function returns  zero, two  or more values:  the immediate  Scheme objects
+;;and/or the  tagged pointers  to the Scheme  objects are stored  on the  stack; this
+;;register holds zero or a fixnum representing the negated number of objects.
+;;
 (define-constant RETURN-VALUE-REGISTER '%eax)
 
 ;;Closure Pointer Register (CPR).  Upon entering a function: a pointer to the closure
@@ -98,18 +108,15 @@
 ;;
 (define-constant CP-REGISTER '%edi)
 
-;;The list of CPU  registers that can be used to store  function call parameters; the
-;;first item *must* be the CP-REGISTER.
-;;
-;;NOTE This list  is used in the code,  but currently it has no effect  other than to
-;;assign  to CP-REGISTER  its role.   Currenlty,  there is  no support  to pass  true
-;;function arguments in registers: all of them  are passed on the Scheme stack.  This
-;;stems from the  implementation of continuations, which need local  variables on the
-;;stack.  (Marco Maggi; Thu Sep 11, 2014)
+;;The list of  CPU registers the function  caller uses to hand  special parameters to
+;;the callee function.  The first item *must* be the CP-REGISTER.
 ;;
 (define-constant PARAMETER-REGISTERS
   `(,CP-REGISTER))
 
+;;The list of CPU registers that the code in a code object can use to store temporary
+;;results.
+;;
 (define-constant ALL-REGISTERS
   (boot.case-word-size
    ((32)
@@ -122,17 +129,14 @@
    ((32)	'(%edi))
    ((64)	'(%edi))))
 
-;;; apr = %ebp		allocation pointer
-;;; esp = %esp		stack pointer
-;;; pcr = %esi		pointer to PCB
-;;; cpr = %edi		pointer to closure
-
-(define (register-index x)
-  (cond ((assq x '((%eax 0) (%edi 1) (%ebx 2) (%edx 3)
-		   (%ecx 4) (%esi 5) (%esp 6) (%ebp 7)))
-	 => cadr)
+(define* (register-index x)
+  (cond ((assq x '((%eax . 0) (%edi . 1) (%ebx . 2) (%edx . 3)
+		   (%ecx . 4) (%esi . 5) (%esp . 6) (%ebp . 7)))
+	 => cdr)
 	(else
-	 (error 'register-index "not a register" x))))
+	 (compiler-internal-error __who__
+	   "expected symbol representing an Intel CPU register name (lower-case)"
+	   x))))
 
 
 (module (impose-calling-convention/evaluation-order)
@@ -168,6 +172,16 @@
   ;;     (?operator arg ...))
   ;;
   ;;so that the order of evaluation of the argument's expressions is decided.
+  ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   bind		conditional		constant
+  ;;   forcall		funcall			jmpcall
+  ;;   known		primcall		seq
+  ;;   shortcut		var
+  ;;
+  ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
   (define-syntax __module_who__
     (identifier-syntax 'impose-calling-convention/evaluation-order))
@@ -542,8 +556,8 @@
 		    (%do-bind (cdr lhs*) (cdr rhs*) body)))
       body))
 
-  (define-inline (%move-dst<-src lhs rhs)
-    (make-asm-instr 'move lhs rhs))
+  (define-syntax-rule (%move-dst<-src ?lhs ?rhs)
+    (make-asm-instr 'move ?lhs ?rhs))
 
   (define (%do-bind-frmt* nf* v* ac)
     (if (pair? nf*)
@@ -602,25 +616,25 @@
 
     (define (alloc-check size)
       (E (make-shortcut
-	  (make-conditional (%test size)
-	      (make-primcall 'nop '())
-	    (make-primcall 'interrupt '()))
-	  (make-funcall
-	   ;;From the  relocation vector of  this code object: retrieve  the location
-	   ;;gensym associated to DO-OVERFLOW, then  retrieve the value of its "proc"
-	   ;;slot.  The  "proc" slot of such  loc gensym contains a  reference to the
-	   ;;closure object implementing DO-OVERFLOW.
-	   (make-primcall 'mref
-	     (list (make-constant (make-object (primitive-public-function-name->location-gensym 'do-overflow)))
-		   (make-constant off-symbol-record-proc)))
-	   (list size)))))
+	     (make-conditional (%test size)
+		 (make-primcall 'nop '())
+	       (make-primcall 'interrupt '()))
+	   (make-funcall
+	    ;;From the  relocation vector of  this code object: retrieve  the location
+	    ;;gensym associated to DO-OVERFLOW, then  retrieve the value of its "proc"
+	    ;;slot.  The  "proc" slot of such  loc gensym contains a  reference to the
+	    ;;closure object implementing DO-OVERFLOW.
+	    (make-primcall 'mref
+	      (list (make-constant (make-object (primitive-public-function-name->location-gensym 'do-overflow)))
+		    (make-constant off-symbol-record-proc)))
+	    (list size)))))
 
     (define (alloc-check/no-hooks size)
       (E (make-shortcut
-	  (make-conditional (%test size)
-	      (make-primcall 'nop '())
-	    (make-primcall 'interrupt '()))
-	  (make-forcall "ik_collect" (list size)))))
+	     (make-conditional (%test size)
+		 (make-primcall 'nop '())
+	       (make-primcall 'interrupt '()))
+	   (make-forcall "ik_collect" (list size)))))
 
     (define (%test size)
       (if (struct-case size
@@ -774,7 +788,7 @@
 
       ((shortcut body handler)
        (make-shortcut (V d body)
-		      (V d handler)))
+	 (V d handler)))
 
       ((known expr)
        (V d expr))
@@ -2002,6 +2016,16 @@
 
 
 (module (assign-frame-sizes)
+  ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   asm-instr	conditional	constant
+  ;;   locals		nframe		ntcall
+  ;;   primcall		seq		shortcut
+  ;;
+  ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
+  ;;
   (import IntegerSet)
   (import conflict-helpers)
   (import (only (vicare system $vectors)
@@ -2076,15 +2100,15 @@
            (make-seq e0^ (NFE idx mask e1))))
         ((ntcall target value args mask^ size)
          (make-ntcall target value
-            (map (lambda (x)
-                   (cond ((symbol? x)
-			  x)
-			 ((nfv? x)
-			  ($nfv-loc x))
-			 (else
-			  (error who "invalid arg"))))
-                 args)
-            mask idx))
+		      (map (lambda (x)
+			     (cond ((symbol? x)
+				    x)
+				   ((nfv? x)
+				    ($nfv-loc x))
+				   (else
+				    (error who "invalid arg"))))
+			args)
+		      mask idx))
         (else
 	 (error who "invalid NF effect" x))))
 
@@ -2232,8 +2256,8 @@
 				  (when (fx=? ($fvar-idx loc) i)
 				    (error who "invalid assignment"))
 				(begin
-				 ($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
-				 ($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
+				  ($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
+				  ($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
 		  ($nfv-nfv-conf v))
 		(for-each-var ($nfv-var-conf v) varvec
 			      (lambda (x)
@@ -2366,10 +2390,22 @@
 
 
 (module (color-by-chaitin)
+  ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   asm-instr	code-loc	conditional
+  ;;   constant		disp		fvar
+  ;;   locals		nfv		ntcall
+  ;;   primcall		seq		shortcut
+  ;;   var
+  ;;
+  ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
+  ;;
   (import ListySet)
   (import ListyGraphs)
-  ;(import IntegerSet)
-  ;(import IntegerGraphs)
+  ;;(import IntegerSet)
+  ;;(import IntegerGraphs)
 
   (define (color-by-chaitin x)
     (Program x))
@@ -2615,7 +2651,7 @@
         ((shortcut body handler)
          (let ((s2 (T handler)))
            (parameterize ((exception-live-set s2))
-              (T body))))
+	     (T body))))
 
         (else
 	 (error who "invalid tail" (unparse-recordized-code x)))))
@@ -2829,7 +2865,6 @@
         (else
 	 (error who "invalid tail" (unparse-recordized-code x)))))
 
-    ;;(print-code x)
     (T x))
 
 ;;; --------------------------------------------------------------------
@@ -3503,6 +3538,16 @@
   ;;    (set-cdr! tail-pair (append ?error-handler-instructions
   ;;                                (cdr tail-pair))))
   ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   asm-instr	code-loc	conditional
+  ;;   constant		disp		foreign-label
+  ;;   fvar		ntcall		object
+  ;;   primcall		seq		shortcut
+  ;;
+  ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
+  ;;
   (define who 'flatten-codes)
 
   (define exceptions-concatenation
@@ -3818,8 +3863,8 @@
        ;;the empty  machine word is the  one in which "call"  will store
        ;;the return address.
        ;;
-       (compile-call-table 0	;frame words count
-			   '#()	;livemask
+       (compile-call-table 0	    ;frame words count
+			   '#()	    ;livemask
 			   '(int 0) ;multivalue return point, NULL because unused
 			   (indirect-cpr-call))
        ;;Pop framesize and drop it.
@@ -3850,12 +3895,12 @@
        (movl (int nil) ebx)
 
        CONTINUE_LABEL
-       (movl ebx (mem disp-cdr apr))	  ;store the cdr
-       (movl (mem fpr ARGC-REGISTER) ebx) ;load the next car value
-       (movl ebx (mem disp-car apr))	  ;store the car value
-       (movl apr ebx)			  ;load the allocation pointer
-       (addl (int pair-tag) ebx)  ;tag the pointer as reference to pair
-       (addl (int pair-size) apr) ;increment the allocation pointer
+       (movl ebx (mem disp-cdr apr))	   ;store the cdr
+       (movl (mem fpr ARGC-REGISTER) ebx)  ;load the next car value
+       (movl ebx (mem disp-car apr))	   ;store the car value
+       (movl apr ebx)			   ;load the allocation pointer
+       (addl (int pair-tag) ebx)	   ;tag the pointer as reference to pair
+       (addl (int pair-size) apr)	   ;increment the allocation pointer
        (addl (int wordsize) ARGC-REGISTER) ;increment the negative arguments count
        ;;Loop if more arguments.
        (cmpl (int properized-formals-argc) ARGC-REGISTER)
@@ -3956,7 +4001,7 @@
 	((conditional x.test x.conseq x.altern)
 	 (cond ((interrupt? x.conseq)
 		(let ((label-true  (or (exception-label)
-				      (error who "no exception label")))
+				       (error who "no exception label")))
 		      (label-false #f))
 		  (P x.test label-true label-false
 		     (E x.altern accum))))
@@ -4416,7 +4461,7 @@
     (define (R x)
       (struct-case x
 	((constant c)
-	 (C c))
+	 (%process-constant c))
 	((fvar i)
 	 (FVar i))
 	((disp s0 s1)
@@ -4433,7 +4478,7 @@
       (define (R/l x)
 	(struct-case x
 	  ((constant c)
-	   (C c))
+	   (%process-constant c))
 	  ((fvar i)
 	   (FVar i))
 	  ((disp s0 s1)
@@ -4458,20 +4503,18 @@
     (define (D x)
       (struct-case x
 	((constant c)
-	 (C c))
+	 (%process-constant c))
 	(else
 	 (if (symbol? x)
 	     x
 	   (error who "invalid D" x)))))
 
-    (define (C x)
+    (define (%process-constant x)
       (struct-case x
 	((code-loc label)
 	 (label-address label))
 	((foreign-label L)
 	 `(foreign-label ,L))
-	;;FIXME Can a  CLOSURE-MAKER actually appear here?  (Marco Maggi;  Thu Sep 4,
-	;;2014)
 	((closure-maker code freevar*)
 	 (unless (null? freevar*)
 	   (error who "nonempty closure"))

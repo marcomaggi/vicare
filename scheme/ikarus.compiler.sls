@@ -191,14 +191,11 @@
        #'(let-syntax ((OUTPUT (lambda (stx)
 				(syntax-case stx ()
 				  ((??ctx)
-				   (receive-and-return (output-form)
-				       (datum->syntax #'??ctx
-						      (cond (?test0 '(begin . ?clause0*))
-							    (?test  '(begin . ?clause*))
-							    ...
-							    (else   '(begin . ?else*))))
-				     (debug-print (syntax->datum output-form))
-				     (void)))
+				   (datum->syntax #'??ctx
+						  (cond (?test0 '(begin . ?clause0*))
+							(?test  '(begin . ?clause*))
+							...
+							(else   '(begin . ?else*)))))
 				  ))))
 	   (OUTPUT))))
     ((?ctx (?test0 . ?clause0*) (?test . ?clause*) ...)
