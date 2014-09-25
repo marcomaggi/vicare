@@ -293,6 +293,9 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.pass-source-optimizer.scm	\
 	scheme/ikarus.compiler.pass-core-type-inference.scm	\
 	scheme/ikarus.compiler.pass-specify-representation.scm	\
+	scheme/ikarus.compiler.pass-impose-order.scm		\
+	scheme/ikarus.compiler.pass-assign-frame-sizes.scm	\
+	scheme/ikarus.compiler.pass-color-by-chaitin.scm	\
 	scheme/ikarus.compiler.pass-flatten-codes.scm		\
 	scheme/ikarus.compiler.core-primitive-properties.scm	\
 	scheme/ikarus.compiler.core-primitive-tables.scm	\
