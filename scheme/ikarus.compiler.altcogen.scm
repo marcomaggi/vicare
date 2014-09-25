@@ -1582,7 +1582,6 @@
   ;;
   (import IntegerSet)
   (import conflict-helpers)
-  (import (vicare system $vectors))
   (define who 'uncover-frame-conflicts)
 
   (define spill-set
@@ -2028,9 +2027,6 @@
   ;;
   (import IntegerSet)
   (import conflict-helpers)
-  (import (only (vicare system $vectors)
-		$vector-ref
-		$vector-set!))
   (define who 'assign-frame-sizes)
 
   (define (assign-frame-sizes x)

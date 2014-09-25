@@ -166,7 +166,6 @@
 	   (((ELL0 ELL ...) (generate-temporaries (make-list (syntax->datum #'?num-of-lists))))
 	    ((NIL0 NIL ...) (generate-temporaries (make-list (syntax->datum #'?num-of-retvals)))))
 	 #'(define (?who combine NIL0 NIL ... ELL0 ELL ...)
-	     (import (vicare system $pairs))
 	     (if (pair? ELL0)
 		 (receive (NIL0 NIL ...)
 		     (?who combine NIL0 NIL ... (cdr ELL0) (cdr ELL) ...)
