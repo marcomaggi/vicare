@@ -26,13 +26,10 @@
 		  greatest-fixnum
 		  least-fixnum)
     ;;NOTE  This library  is needed  to build  a  new boot  image.  Let's  try to  do
-    ;;everything here using the system  libraries and not loading external libraries.
-    ;;(Marco Maggi; Fri May 23, 2014)
+    ;;everything here without loading external  libraries.  (Marco Maggi; Thu Sep 25,
+    ;;2014)
     (except (ikarus.code-objects)
 	    procedure-annotation)
-    (vicare system $fx)
-    (vicare system $pairs)
-    (vicare system $vectors)
     (except (vicare system $codes)
 	    assembler-property-key)
     (prefix (vicare platform words)
@@ -112,42 +109,31 @@
 
 ;;;; helpers
 
-(define-syntax-rule ($cadr ?x)
-  ($car ($cdr ?x)))
+(define-syntax-rule (fxadd2 ?op)
+  (fx+ ?op 2))
 
-(define-syntax-rule ($cddr ?x)
-  ($cdr ($cdr ?x)))
+(define-syntax-rule (fxadd3 ?op)
+  (fx+ ?op 3))
 
-(define-syntax-rule ($caddr ?x)
-  ($car ($cdr ($cdr ?x))))
+(define-syntax-rule (fxadd4 ?op)
+  (fx+ ?op 4))
 
-;; ------------------------------------------------------------
-
-(define-syntax-rule ($fxadd2 ?op)
-  ($fx+ ?op 2))
-
-(define-syntax-rule ($fxadd3 ?op)
-  ($fx+ ?op 3))
-
-(define-syntax-rule ($fxadd4 ?op)
-  ($fx+ ?op 4))
-
-(define-syntax $fxincr!
+(define-syntax fxincr!
   (syntax-rules ()
     ((_ ?op)
-     ($fxincr! ?op 1))
+     (fxincr! ?op 1))
     ((_ ?op 0)
      ?op)
     ((_ ?op 1)
-     (set! ?op ($fxadd1 ?op)))
+     (set! ?op (fxadd1 ?op)))
     ((_ ?op 2)
-     (set! ?op ($fxadd2 ?op)))
+     (set! ?op (fxadd2 ?op)))
     ((_ ?op 3)
-     (set! ?op ($fxadd3 ?op)))
+     (set! ?op (fxadd3 ?op)))
     ((_ ?op 4)
-     (set! ?op ($fxadd4 ?op)))
+     (set! ?op (fxadd4 ?op)))
     ((_ ?op ?N)
-     (set! ?op ($fx+ ?op ?N)))
+     (set! ?op (fx+ ?op ?N)))
     ))
 
 
@@ -156,7 +142,7 @@
 (define (fold func init ls)
   (if (null? ls)
       init
-    (func ($car ls) (fold func init ($cdr ls)))))
+    (func (car ls) (fold func init (cdr ls)))))
 
 (define-syntax with-args
   ;;Expect ?X to be an expression evaluating to a list of 2 values; bind
@@ -167,13 +153,13 @@
     ((_ ?x (lambda (?a0 ?a1) ?body0 . ?body))
      (let ((t ?x))
        (if (pair? t)
-           (let ((t ($cdr t)))
+           (let ((t (cdr t)))
              (if (pair? t)
-                 (let ((?a0 ($car t))
-		       (t   ($cdr t)))
+                 (let ((?a0 (car t))
+		       (t   (cdr t)))
                    (if (pair? t)
-		       (let ((?a1 ($car t)))
-			 (if (null? ($cdr t))
+		       (let ((?a1 (car t)))
+			 (if (null? (cdr t))
 			     (let ()
 			       ?body0 . ?body)
 			   (die 'with-args "too many args")))
@@ -198,7 +184,7 @@
     ((_ ?who ?symbol)
      (define (?who x)
        (and (pair? x)
-	    (eq? ($car x) '?symbol))))))
+	    (eq? (car x) '?symbol))))))
 
 
 ;;;; constants
@@ -305,7 +291,7 @@
 		    (define (?who x)
 		      (cond ((assq x register-mapping)
 			     => (lambda (x)
-				  (eqv? ($cadr x) ?val)))
+				  (eqv? (cadr x) ?val)))
 			    (else #f)))))))
     (define-register-mapping-predicate reg8?   8)
     (define-register-mapping-predicate reg32?  32)
@@ -331,27 +317,27 @@
 
   (define (byte? x)
     (and (fixnum? x)
-	 ($fx>= x -128)
-	 ($fx<= x +127)))
+	 (fx>= x -128)
+	 (fx<= x +127)))
 
   (define-entry-predicate mem? disp)
 
   (define (small-disp? x)
     (and (mem? x)
-	 (byte? ($cadr x))))
+	 (byte? (cadr x))))
 
   (define (CODE n ac)
     (cons (byte n) ac))
 
   (define (CODE+r n r ac)
-    (cons (byte ($fxlogor n (register-index r)))
+    (cons (byte (fxlogor n (register-index r)))
 	  ac))
 
   (define (ModRM mod reg r/m ac)
-    (cons (byte ($fxlogor (register-index r/m)
-			  ($fxlogor ($fxsll (register-index reg) 3)
-				    ($fxsll mod 6))))
-	  (if (and (not ($fx= mod 3)) (eq? r/m '%esp))
+    (cons (byte (fxlogor (register-index r/m)
+			  (fxlogor (fxsll (register-index reg) 3)
+				    (fxsll mod 6))))
+	  (if (and (not (fx= mod 3)) (eq? r/m '%esp))
 	      (cons (byte #x24) ac)
 	    ac)))
 
@@ -382,7 +368,7 @@
   ;;Maggi; Oct 8, 2012)
   ;;
   ;; (define (IMM32 n ac)
-  ;;   (cond (($fx= wordsize 4)
+  ;;   (cond ((fx= wordsize 4)
   ;; 	 (IMM n ac))
   ;; 	((imm32? n)
   ;; 	 (cons* (byte n)
@@ -425,14 +411,14 @@
 		    (byte (sra n 56))
 		    ac))))
 	  ((obj? n)
-	   (let ((v ($cadr n)))
+	   (let ((v (cadr n)))
 	     (cons (if (immediate? v)
 		       (word v)
 		     (reloc-word v))
 		   ac)))
 	  ((obj+? n)
-	   (let ((v ($cadr  n))
-		 (d ($caddr n)))
+	   (let ((v (cadr  n))
+		 (d (caddr n)))
 	     (cons (reloc-word+ v d) ac)))
 	  ((label-address? n)
 	   (cons `(label-addr	. ,(label-name n))
@@ -470,7 +456,7 @@
   (define-entry-predicate label-address? label-address)
 
   (define-inline (label-name x)
-    ($cadr x))
+    (cadr x))
 
   (define-inline (immediate-int? ?x)
     (let ((X ?x))
@@ -501,15 +487,15 @@
 	  ((eq? r1 '%ebp)
 	   (die 'assembler "BUG: invalid src %ebp"))
 	  (else
-	   (cons* (byte ($fxlogor 4                   ($fxsll (register-index r1) 3)))
-		  (byte ($fxlogor (register-index r2) ($fxsll (register-index r3) 3)))
+	   (cons* (byte (fxlogor 4                   (fxsll (register-index r1) 3)))
+		  (byte (fxlogor (register-index r2) (fxsll (register-index r3) 3)))
 		  ac))))
 
   (define (IMM*2 i1 i2 ac)
     (cond ((and (immediate-int? i1)
 		(obj? i2))
 	   (let ((d i1)
-		 (v ($cadr i2)))
+		 (v (cadr i2)))
 	     (cons (reloc-word+ v d) ac)))
 	  ((and (immediate-int? i2)
 		(obj? i1))
@@ -522,9 +508,9 @@
 	   (die 'assemble "invalid IMM*2" i1 i2))))
 
   (define (SIB s i b ac)
-    (cons (byte ($fxlogor (register-index b)
-			  ($fxlogor ($fxsll (register-index i) 3)
-				    ($fxsll s 6))))
+    (cons (byte (fxlogor (register-index b)
+			  (fxlogor (fxsll (register-index i) 3)
+				    (fxsll s 6))))
 	  ac))
 
   (define (imm32? x)
@@ -572,25 +558,25 @@
     ;;  (current-frame-offset)
     ;;
     (define key
-      ($car assembly-sexp))
+      (car assembly-sexp))
     (cond ((getprop key *cogen*)
 	   ;;Convert an assembly instruction specification.
 	   ;;
 	   => (lambda (prop)
-		(let ((n    ($car prop))
-		      (proc ($cdr prop))
-		      (args ($cdr assembly-sexp)))
+		(let ((n    (car prop))
+		      (proc (cdr prop))
+		      (args (cdr assembly-sexp)))
 		  (define-inline (%with-checked-args ?nargs ?body-form)
-		    (if ($fx= (length args) ?nargs)
+		    (if (fx= (length args) ?nargs)
 			?body-form
 		      (%error-incorrect-args assembly-sexp n)))
 		  (case n
 		    ((2)
 		     (%with-checked-args 2
-		       (proc assembly-sexp accum ($car args) ($cadr args))))
+		       (proc assembly-sexp accum (car args) (cadr args))))
 		    ((1)
 		     (%with-checked-args 1
-		       (proc assembly-sexp accum ($car args))))
+		       (proc assembly-sexp accum (car args))))
 		    ((0)
 		     (%with-checked-args 0
 		       (proc assembly-sexp accum)))
@@ -605,13 +591,13 @@
 	   ;;where   ?ASM-SEXPS  is   a   list   of  assembly   symbolic
 	   ;;expressions.
 	   ;;
-	   (fold %convert-single-sexp accum ($cdr assembly-sexp)))
+	   (fold %convert-single-sexp accum (cdr assembly-sexp)))
 	  ((eq? key 'pad)
 	   ;;Process a PAD sexp.  Convert the assembly code and return a
 	   ;;new accumulator list padded with a prefix of zeros.
 	   ;;
-	   (let* ((n              ($cadr assembly-sexp))
-		  (asm-sexps      ($cddr assembly-sexp))
+	   (let* ((n              (cadr assembly-sexp))
+		  (asm-sexps      (cddr assembly-sexp))
 		  (new-accum.tail (fold %convert-single-sexp accum asm-sexps))
 		  (prefix.len     (compute-code-size (%find-prefix accum new-accum.tail))))
 	     (append (make-list (- n prefix.len) 0)
@@ -630,11 +616,11 @@
     (let loop ((ls new-accum))
       (if (eq? ls old-accum)
 	  '()
-	(let ((asm-sexp ($car ls)))
+	(let ((asm-sexp (car ls)))
 	  (if (bottom-code? asm-sexp)
 	      ;;Skip BOTTOM-CODE sexp.
-	      (loop ($cdr ls))
-	    (cons asm-sexp (loop ($cdr ls))))))))
+	      (loop (cdr ls))
+	    (cons asm-sexp (loop (cdr ls))))))))
 
   (define-entry-predicate bottom-code? bottom-code)
 
@@ -654,16 +640,16 @@
 
   (define (%%uncover-local-labels names accum)
     (define-inline (%next ?names)
-      (%%uncover-local-labels ?names ($cdr accum)))
+      (%%uncover-local-labels ?names (cdr accum)))
     (if (null? accum)
 	names
-      (let ((entry ($car accum)))
+      (let ((entry (car accum)))
 	(if (pair? entry)
-	    (case ($car entry)
+	    (case (car entry)
 	      ((label)
 	       (%next (cons (label-name entry) names)))
 	      ((seq pad)
-	       (%next (%%uncover-local-labels names ($cdr entry))))
+	       (%next (%%uncover-local-labels names (cdr entry))))
 	      (else
 	       (%next names)))
 	  (%next names)))))
@@ -675,11 +661,11 @@
   ;;   (define locals '())
   ;;   (define (find x)
   ;;     (when (pair? x)
-  ;; 	(case ($car x)
+  ;; 	(case (car x)
   ;; 	  ((label)
   ;; 	   (set! locals (cons (label-name x) locals)))
   ;; 	  ((seq pad)
-  ;; 	   (for-each find ($cdr x))))))
+  ;; 	   (for-each find (cdr x))))))
   ;;   (for-each find accum)
   ;;   locals)
 
@@ -765,12 +751,12 @@
 ;;; --------------------------------------------------------------------
 
   (define (REX.R bits ac)
-    (if ($fx= wordsize 4)
+    (if (fx= wordsize 4)
 	(error who "BUG: REX.R invalid in 32-bit mode")
-      (cons ($fxlogor #b01001000 bits) ac)))
+      (cons (fxlogor #b01001000 bits) ac)))
 
   (define (REX+r r ac)
-    (cond (($fx= wordsize 4)
+    (cond ((fx= wordsize 4)
 	   ac)
 	  ((reg-requires-REX? r)
 	   (REX.R #b001 ac))
@@ -790,7 +776,7 @@
     ;;    (f (cdr ac) (- i 1))))
     ;;(newline)
     ;;ac)
-    (cond (($fx= wordsize 4)
+    (cond ((fx= wordsize 4)
 	   ac)
 	  ((mem? rm)
 	   (if (reg-requires-REX? r)
@@ -861,17 +847,17 @@
 	  ((reg? rm)
 	   (let* ((bits 0)
 		  (bits (if (reg-requires-REX? r)
-			    ($fxlogor bits #b100)
+			    (fxlogor bits #b100)
 			  bits))
 		  (bits (if (reg-requires-REX? rm)
-			    ($fxlogor bits #b001)
+			    (fxlogor bits #b001)
 			  bits)))
 	     (REX.R bits ac)))
 	  (else
 	   (die who "unhandled" rm))))
 
   (define (C c ac)
-    (if ($fx= 4 wordsize)
+    (if (fx= 4 wordsize)
 	(CODE c ac)
       (REX.R 0 (CODE c ac))))
 
@@ -1034,7 +1020,7 @@
 	    (CR*-no-rex #x89 src dst ac))
 	   ((and (mem? src)
 		 (reg? dst))
-	    (if ($fx= wordsize 4)
+	    (if (fx= wordsize 4)
 		(CR* #x8B dst src ac)
 	      (CR*-no-rex #x8B dst src ac)))
 	   (else
@@ -1466,19 +1452,19 @@
   ;;
   (fold (lambda (x size)
 	  (if (fixnum? x)
-	      ($fxadd1 size)
-	    (case ($car x)
+	      (fxadd1 size)
+	    (case (car x)
 	      ((byte)
-	       ($fxadd1 size))
+	       (fxadd1 size))
 	      ((relative local-relative)
-	       ($fxadd4 size))
+	       (fxadd4 size))
 	      ((label)
 	       size)
 	      ((word reloc-word reloc-word+ label-addr
 		     current-frame-offset foreign-label)
-	       ($fx+ size wordsize))
+	       (fx+ size wordsize))
 	      ((bottom-code)
-	       ($fx+ size (compute-code-size ($cdr x))))
+	       (fx+ size (compute-code-size (cdr x))))
 	      (else
 	       (error __who__ "unknown instruction" x)))))
 	0
@@ -1508,45 +1494,45 @@
       (cond ((null? ls)
 	     (if (null? bot*)
 		 reloc
-	       (loop ($car bot*) idx reloc ($cdr bot*))))
+	       (loop (car bot*) idx reloc (cdr bot*))))
 	    (else
-	     (let ((a ($car ls)))
+	     (let ((a (car ls)))
 	       (if (fixnum? a)
 		   (begin
 		     ;;Store a byte of binary code in the data area.
 		     ($code-set! x idx a)
-		     (loop ($cdr ls) ($fxadd1 idx) reloc bot*))
-		 (case ($car a)
+		     (loop (cdr ls) (fxadd1 idx) reloc bot*))
+		 (case (car a)
 		   ((byte)
 		    ;;Store a byte of binary code in the data area.
-		    ($code-set! x idx ($cdr a))
-		    (loop ($cdr ls) ($fxadd1 idx) reloc bot*))
+		    ($code-set! x idx (cdr a))
+		    (loop (cdr ls) (fxadd1 idx) reloc bot*))
 		   ((relative local-relative)
 		    ;;Add an entry to the relocation list; leave 4 bytes
 		    ;;of room in the data area.
-		    (loop ($cdr ls) ($fx+ idx 4) (cons (cons idx a) reloc) bot*))
+		    (loop (cdr ls) (fx+ idx 4) (cons (cons idx a) reloc) bot*))
 		   ((reloc-word reloc-word+ label-addr foreign-label)
 		    ;;Add an entry to the  relocation list; leave a word
 		    ;;of room in the data area.
-		    (loop ($cdr ls) ($fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
+		    (loop (cdr ls) (fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
 		   ((word)
 		    ;;Store a machine word in the data area.
-		    (%set-code-word! x idx ($cdr a))
-		    (loop ($cdr ls) ($fx+ idx wordsize) reloc bot*))
+		    (%set-code-word! x idx (cdr a))
+		    (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
 		   ((current-frame-offset)
 		    ;;Store a machine word in  the data area holding the
 		    ;;current offset in the data area.
 		    (%set-code-word! x idx idx) ;;; FIXME 64bit
-		    (loop ($cdr ls) ($fx+ idx wordsize) reloc bot*))
+		    (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
 		   ((label)
 		    ;;Store informations  about the current  location in
-		    ;;the code object in the symbol ($cdr a).
-		    (%set-label-loc! ($cdr a) (list x idx))
-		    (loop ($cdr ls) idx reloc bot*))
+		    ;;the code object in the symbol (cdr a).
+		    (%set-label-loc! (cdr a) (list x idx))
+		    (loop (cdr ls) idx reloc bot*))
 		   ((bottom-code)
 		    ;;Push this  entry in  BOT* to  be processed  at the
 		    ;;end.
-		    (loop ($cdr ls) idx reloc (cons ($cdr a) bot*)))
+		    (loop (cdr ls) idx reloc (cons (cdr a) bot*)))
 		   (else
 		    (die 'store-binary-code-in-code-objects "unknown instr" a))))))))
     (loop ls 0 '() '()))
@@ -1555,21 +1541,21 @@
     ;;Store a machine  word, whose value is  X, in the data  area of the
     ;;code object CODE at index IDX.
     ;;
-    (if ($fx= wordsize 4)
+    (if (fx= wordsize 4)
 	(begin
-	  ($code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x3F) 2))
-	  ($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 6) #xFF))
-	  ($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 14) #xFF))
-	  ($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 22) #xFF)))
+	  ($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x3F) 2))
+	  ($code-set! code (fx+ idx 1) (fxlogand (fxsra x 6) #xFF))
+	  ($code-set! code (fx+ idx 2) (fxlogand (fxsra x 14) #xFF))
+	  ($code-set! code (fx+ idx 3) (fxlogand (fxsra x 22) #xFF)))
       (begin
-	($code-set! code ($fx+ idx 0) ($fxsll ($fxlogand x #x1F) 3))
-	($code-set! code ($fx+ idx 1) ($fxlogand ($fxsra x 5) #xFF))
-	($code-set! code ($fx+ idx 2) ($fxlogand ($fxsra x 13) #xFF))
-	($code-set! code ($fx+ idx 3) ($fxlogand ($fxsra x 21) #xFF))
-	($code-set! code ($fx+ idx 4) ($fxlogand ($fxsra x 29) #xFF))
-	($code-set! code ($fx+ idx 5) ($fxlogand ($fxsra x 37) #xFF))
-	($code-set! code ($fx+ idx 6) ($fxlogand ($fxsra x 45) #xFF))
-	($code-set! code ($fx+ idx 7) ($fxlogand ($fxsra x 53) #xFF)))))
+	($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x1F) 3))
+	($code-set! code (fx+ idx 1) (fxlogand (fxsra x 5) #xFF))
+	($code-set! code (fx+ idx 2) (fxlogand (fxsra x 13) #xFF))
+	($code-set! code (fx+ idx 3) (fxlogand (fxsra x 21) #xFF))
+	($code-set! code (fx+ idx 4) (fxlogand (fxsra x 29) #xFF))
+	($code-set! code (fx+ idx 5) (fxlogand (fxsra x 37) #xFF))
+	($code-set! code (fx+ idx 6) (fxlogand (fxsra x 45) #xFF))
+	($code-set! code (fx+ idx 7) (fxlogand (fxsra x 53) #xFF)))))
 
   (define (%set-label-loc! x loc)
     (if (getprop x '*label-loc*)
@@ -1590,56 +1576,56 @@
     (define reloc-idx 0)
     (lambda (r)
       (define val
-	(let ((v ($cddr r)))
+	(let ((v (cddr r)))
 	  (cond ((thunk?-label v)
 		 => (lambda (label)
 		      (let ((p (%label-loc label)))
-			(cond (($fx= (length p) 2)
-			       (let ((code ($car  p))
-				     (idx  ($cadr p)))
-				 (unless ($fxzero? idx)
+			(cond ((fx= (length p) 2)
+			       (let ((code (car  p))
+				     (idx  (cadr p)))
+				 (unless (fxzero? idx)
 				   (%error "cannot create a thunk pointing" idx))
 				 (let ((thunk (code->thunk code)))
-				   ($set-cdr! ($cdr p) (list thunk))
+				   (set-cdr! (cdr p) (list thunk))
 				   thunk)))
 			      (else
-			       ($caddr p))))))
+			       (caddr p))))))
 		(else v))))
       (define-syntax key
-	(identifier-syntax ($cadr r)))
+	(identifier-syntax (cadr r)))
       (case key
 	((reloc-word)
 	 ;;Add a record of type "vanilla object".
-	 (let ((off ($car r))) ;Offset into the data area of the code object.
+	 (let ((off (car r))) ;Offset into the data area of the code object.
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG off)
-	   ($vector-set! vec ($fxadd1 reloc-idx) val)
-	   ($fxincr! reloc-idx 2)))
+	   (vector-set! vec (fxadd1 reloc-idx) val)
+	   (fxincr! reloc-idx 2)))
 	((foreign-label)
 	 ;;Add a record of type "foreign address".
-	 (let ((off  ($car r)) ;Offset into the data area of the code object.
+	 (let ((off  (car r)) ;Offset into the data area of the code object.
 	       (name (%foreign-string->bytevector val)))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG off)
-	   ($vector-set! vec ($fxadd1 reloc-idx) name)
-	   ($fxincr! reloc-idx 2)))
+	   (vector-set! vec (fxadd1 reloc-idx) name)
+	   (fxincr! reloc-idx 2)))
 	((reloc-word+)
 	 ;;Add a record of type "displaced object".
-	 (let ((off  ($car r)) ;Offset into the data area of the code object.
-	       (obj  ($car val))
-	       (disp ($cdr val)))
+	 (let ((off  (car r)) ;Offset into the data area of the code object.
+	       (obj  (car val))
+	       (disp (cdr val)))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
-	   ($vector-set! vec ($fxadd1 reloc-idx) disp)
-	   ($vector-set! vec ($fxadd2 reloc-idx) obj)
-	   ($fxincr! reloc-idx 3)))
+	   (vector-set! vec (fxadd1 reloc-idx) disp)
+	   (vector-set! vec (fxadd2 reloc-idx) obj)
+	   (fxincr! reloc-idx 3)))
 	((label-addr)
 	 ;;Add a record of type "displaced object".
-	 (let* ((off  ($car r))	;Offset into the data area of the code object.
+	 (let* ((off  (car r))	;Offset into the data area of the code object.
 		(loc  (%label-loc val))
-		(obj  ($car  loc))
-		(disp ($cadr loc)))
+		(obj  (car  loc))
+		(disp (cadr loc)))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
-	   ($vector-set! vec ($fxadd1 reloc-idx) ($fx+ disp (code-entry-adjustment)))
-	   ($vector-set! vec ($fxadd2 reloc-idx) obj))
-	 ($fxincr! reloc-idx 3))
+	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp (code-entry-adjustment)))
+	   (vector-set! vec (fxadd2 reloc-idx) obj))
+	 (fxincr! reloc-idx 3))
 	((local-relative)
 	 ;;This entry requires the address of a label in the binary code
 	 ;;of this very  code object.  There is no need  to add a record
@@ -1661,30 +1647,30 @@
 	 ;;Notice that local  labels are specified with  a 32-bit offset
 	 ;;on all the platforms.
 	 ;;
-	 (let* ((off  ($car r))	;Offset into the data area of the code object.
+	 (let* ((off  (car r))	;Offset into the data area of the code object.
 		(loc  (%label-loc val))
-		(obj  ($car  loc))
-		(disp ($cadr loc)))
+		(obj  (car  loc))
+		(disp (cadr loc)))
 	   (unless (eq? obj code)
 	     (%error "source code object and target code object of \
                       a local relative jump are not the same"))
-	   (let ((rel ($fx- disp ($fxadd4 off))))
-	     ($code-set! code          off  ($fxlogand         rel     #xFF))
-	     ($code-set! code ($fxadd1 off) ($fxlogand ($fxsra rel 8)  #xFF))
-	     ($code-set! code ($fxadd2 off) ($fxlogand ($fxsra rel 16) #xFF))
-	     ($code-set! code ($fxadd3 off) ($fxlogand ($fxsra rel 24) #xFF)))))
+	   (let ((rel (fx- disp (fxadd4 off))))
+	     ($code-set! code          off  (fxlogand         rel     #xFF))
+	     ($code-set! code (fxadd1 off) (fxlogand (fxsra rel 8)  #xFF))
+	     ($code-set! code (fxadd2 off) (fxlogand (fxsra rel 16) #xFF))
+	     ($code-set! code (fxadd3 off) (fxlogand (fxsra rel 24) #xFF)))))
 	((relative)
 	 ;;Add a record of type "jump label".
-	 (let* ((off  ($car r))	;Offset into the data area of the code object.
+	 (let* ((off  (car r))	;Offset into the data area of the code object.
 		(loc  (%label-loc val))
-		(obj  ($car  loc))
-		(disp ($cadr loc)))
+		(obj  (car  loc))
+		(disp (cadr loc)))
 	   (unless (and (code? obj) (fixnum? disp))
 	     (%error "invalid relative jump obj/disp" obj disp))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_TAG off)
-	   ($vector-set! vec ($fxadd1 reloc-idx) ($fx+ disp (code-entry-adjustment)))
-	   ($vector-set! vec ($fxadd2 reloc-idx) obj))
-	 ($fxincr! reloc-idx 3))
+	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp (code-entry-adjustment)))
+	   (vector-set! vec (fxadd2 reloc-idx) obj))
+	 (fxincr! reloc-idx 3))
 	(else
 	 (%error "invalid entry key while filling relocation vector" key)))
       ))
@@ -1715,9 +1701,9 @@
   (define-syntax %store-first-word!
     (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)
       ((_ ?vec ?reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG ?binary-code.offset)
-       ($vector-set! ?vec ?reloc-idx                ($fxsll ?binary-code.offset 2)))
+       (vector-set! ?vec ?reloc-idx                (fxsll ?binary-code.offset 2)))
       ((_ ?vec ?reloc-idx ?tag ?binary-code.offset)
-       ($vector-set! ?vec ?reloc-idx ($fxlogor ?tag ($fxsll ?binary-code.offset 2))))
+       (vector-set! ?vec ?reloc-idx (fxlogor ?tag (fxsll ?binary-code.offset 2))))
       ))
 
   (define (%label-loc x)
@@ -1773,14 +1759,14 @@
   (define-entry-predicate name? name)
 
   (define (code-list ls)
-    (if (name? ($cadr ls))
-	($cddr ls)
-      ($cdr ls)))
+    (if (name? (cadr ls))
+	(cddr ls)
+      (cdr ls)))
 
   (define (code-name ls)
-    (let ((a ($cadr ls)))
+    (let ((a (cadr ls)))
       (if (name? a)
-	  ($cadr a)
+	  (cadr a)
 	#f)))
 
   (define (%optimize-local-jumps octets-and-labels)
@@ -1796,20 +1782,20 @@
 	  (G      (gensym)))
       (define (%mark-labels-with-property x)
 	(when (pair? x)
-	  (case ($car x)
+	  (case (car x)
 	    ((label)
-	     (putprop ($cdr x) G 'local)
-	     (set! locals (cons ($cdr x) locals)))
+	     (putprop (cdr x) G 'local)
+	     (set! locals (cons (cdr x) locals)))
 	    ((bottom-code)
-	     (for-each %mark-labels-with-property ($cdr x))))))
+	     (for-each %mark-labels-with-property (cdr x))))))
       (define (%relative->local-relative x)
 	(when (pair? x)
-	  (case ($car x)
+	  (case (car x)
 	    ((relative)
-	     (when (eq? (getprop ($cdr x) G) 'local)
-	       ($set-car! x 'local-relative)))
+	     (when (eq? (getprop (cdr x) G) 'local)
+	       (set-car! x 'local-relative)))
 	    ((bottom-code)
-	     (for-each %relative->local-relative ($cdr x))))))
+	     (for-each %relative->local-relative (cdr x))))))
       (for-each %mark-labels-with-property octets-and-labels)
       (for-each %relative->local-relative  octets-and-labels)
       ;;Clean up the property lists of label symbols.
@@ -1826,15 +1812,15 @@
     (fold (lambda (x ac)
 	    (if (fixnum? x)
 		ac
-	      (case ($car x)
+	      (case (car x)
 		((word byte label current-frame-offset local-relative)
 		 ac)
 		((reloc-word foreign-label)
-		 ($fx+ ac 2))
+		 (fx+ ac 2))
 		((relative reloc-word+ label-addr)
-		 ($fx+ ac 3))
+		 (fx+ ac 3))
 		((bottom-code)
-		 ($fx+ ac (%compute-reloc-size ($cdr x))))
+		 (fx+ ac (%compute-reloc-size (cdr x))))
 		(else
 		 (assertion-violation who "unknown instr" x)))))
 	  0

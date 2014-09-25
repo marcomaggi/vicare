@@ -1001,8 +1001,8 @@
 	(lambda (asm-instr)
 	  (if FPR-DELTA
 	      (list asm-instr FPR-DELTA fpr)
-	    ;;An empty SEQ generates no assembly code.
-	    '(seq)))))
+	    ;;NOP generates no assembly code.
+	    '(nop)))))
     (list 'seq
 	  (%adjust-frame-pointer-register 'subl)
 	  (jmp L_CALL)
