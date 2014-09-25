@@ -247,7 +247,7 @@
    (tag-test recordized-code fx-mask fx-tag)))
 
 (define (interrupt-unless-fx binary-representation)
-  (if (fx? binary-representation)
+  (if (target-platform-fixnum? binary-representation)
       (nop)
     (interrupt)))
 
@@ -332,17 +332,20 @@
        (tag-test (prm 'mref x (KN (fx- primary-tag))) secondary-mask secondary-tag)
      (K #f)))
 
+ (define-inline-constant DIRTY-WORD
+   -1)
+
  (define (dirty-vector-set address)
    (define shift-bits 2)
    (prm 'mset32
 	(prm 'mref pcr (K pcb-dirty-vector))
 	(prm 'sll (prm 'srl address (K pageshift)) (K shift-bits))
-	(K dirty-word)))
+	(K DIRTY-WORD)))
 
  (define (smart-dirty-vector-set addr what)
    (struct-case what
      ((constant t)
-      (if (or (fx? t) (immediate? t))
+      (if (or (target-platform-fixnum? t) (immediate? t))
 	  (nop)
 	(dirty-vector-set addr)))
      ((known expr type)
@@ -372,7 +375,7 @@
      ;;
      (struct-case v
        ((constant value)
-	(if (or (fx? value)
+	(if (or (target-platform-fixnum? value)
 		(immediate? value))
 	    (prm 'mset base (K offset) (T v))
 	  (%slow-mem-assign v base offset)))
@@ -420,7 +423,7 @@
  (define (assert-fixnum x)
    (struct-case x
      ((constant x.val)
-      (if (fx? x.val)
+      (if (target-platform-fixnum? x.val)
 	  (nop)
 	(interrupt)))
      ((known x.expr x.type)
@@ -459,7 +462,7 @@
    (define (%known-fixnum? x)
      (struct-case x
        ((constant x.val)
-	(fx? x.val))
+	(target-platform-fixnum? x.val))
        ((known x.expr x.type)
 	(case (T:fixnum? x.type)
 	  ((yes)  #t)
@@ -469,7 +472,7 @@
    (define (%known-non-fixnum? x)
      (struct-case x
        ((constant x.val)
-	(not (fx? x.val)))
+	(not (target-platform-fixnum? x.val)))
        ((known x.expr x.type)
 	(eq? (T:fixnum? x.type) 'no))
        (else
@@ -576,7 +579,7 @@
    ((E x y) (nop)))
 
  (define (equable? x)
-   (or (fx? x)
+   (or (target-platform-fixnum? x)
        (not (number? x))))
 
  (define (equable-constant? x)
@@ -1214,7 +1217,7 @@
        ;;
        (struct-case maybe-idx
 	 ((constant val)
-	  (if (and (fx? val)
+	  (if (and (target-platform-fixnum? val)
 		   (>= val 0))
 	      (%check-fx maybe-vector maybe-idx)
 	    (%check-? maybe-vector maybe-idx)))
@@ -1303,7 +1306,7 @@
        ;;
        (struct-case maybe-idx
 	 ((constant val)
-	  (if (and (fx? val)
+	  (if (and (target-platform-fixnum? val)
 		   (>= val 0))
 	      (%check-fx the-vector maybe-idx)
 	    (interrupt)))
@@ -1385,7 +1388,7 @@
       ((constant len.val)
        ;;LEN.VAL is  an exact  integer (possibly a  bignum) representing
        ;;the binary representation of the number of slots.
-       (if (and (fx? len.val) #f)
+       (if (and (target-platform-fixnum? len.val) #f)
 	   (interrupt)
 	 (with-tmp ((vec (prm 'alloc
 			      (K (align (+ (* len.val wordsize) disp-vector-data)))
@@ -1422,7 +1425,7 @@
 	   ;;LEN.VAL   is  an   exact   integer   (possibly  a   bignum)
 	   ;;representing  the binary  representation of  the number  of
 	   ;;slots.
-	   (and (fx? idx.val)
+	   (and (target-platform-fixnum? idx.val)
 		(fx>= idx.val 0)
 		(prm 'mref (T vec) (K (+ (* idx.val wordsize) off-vector-data)))))
 	  ((known idx.expr)
@@ -1519,7 +1522,7 @@
       ((constant idx.val)
        ;;IDX.VAL  is an  exact  integer (possibly  a  bignum) being  the
        ;;binary representation of a fixnum slot index.
-       (if (not (fx? idx.val))
+       (if (not (target-platform-fixnum? idx.val))
 	   (interrupt)
 	 (mem-assign item (T vec) (+ (* idx.val wordsize) off-vector-data))))
       ((known idx.expr)
@@ -1813,7 +1816,7 @@
 
  (define-primitive-operation fixnum-width safe
    ((V)
-    (K (fxsll max-bitcount-in-fixnum-binary-representation fx-shift)))
+    (K (fxsll NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION fx-shift)))
    ((E)
     (nop))
    ((P)
@@ -1821,7 +1824,7 @@
 
  (define-primitive-operation least-fixnum safe
    ((V)
-    (K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1))) fx-shift)))
+    (K (sll (- (expt 2 (- NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION 1))) fx-shift)))
    ((E)
     (nop))
    ((P)
@@ -1829,7 +1832,7 @@
 
  (define-primitive-operation greatest-fixnum safe
    ((V)
-    (K (sll (- (expt 2 (- max-bitcount-in-fixnum-binary-representation 1)) 1) fx-shift)))
+    (K (sll (- (expt 2 (- NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION 1)) 1) fx-shift)))
    ((E)
     (nop))
    ((P)
@@ -2523,7 +2526,7 @@
       ((constant offset.val)
        ;;OFFSET.VAL  is an  exact  integer whose  payload  bits are  the
        ;;binary representation of the offset as machine word.
-       (unless (and (fx? offset.val)
+       (unless (and (target-platform-fixnum? offset.val)
 		    ;;The data area is 8 bytes wide.
 		    (fx>= offset.val 0)
 		    (fx<= offset.val 7))
@@ -2568,7 +2571,7 @@
       ((constant offset.val)
        ;;OFFSET.VAL  is an  exact  integer whose  payload  bits are  the
        ;;binary representation of the offset as machine word.
-       (unless (and (fx? offset.val)
+       (unless (and (target-platform-fixnum? offset.val)
 		    ;;The data area is 8 bytes wide.
 		    (fx>= offset.val 0)
 		    (fx<= offset.val 7))
@@ -3020,7 +3023,7 @@
    (define (cogen-*-constant a b)
      (struct-case a
        ((constant a.val)
-	(if (fx? a.val)
+	(if (target-platform-fixnum? a.val)
 	    (begin
 	      (interrupt)
 	      (with-tmp ((b (T b)))
@@ -3262,9 +3265,9 @@
       ((constant bitcount.val)
        ;;BITCOUNT.VAL is  an exact  integer whose  payload bits  are the
        ;;binary representation of the shift amount as a fixnum.
-       (cond ((and (fx? bitcount.val)
+       (cond ((and (target-platform-fixnum? bitcount.val)
 		   (>= bitcount.val 0)
-		   (<  bitcount.val max-bitcount-in-fixnum-binary-representation))
+		   (<  bitcount.val NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION))
 	      (with-tmp ((x (T x)))
 		(assert-fixnum x)
 		(if (< bitcount.val 6)
@@ -3292,7 +3295,7 @@
 	   (interrupt-when
 	    (prm '< n (K 0)))
 	   (interrupt-when
-	    (prm '>= n (K max-bitcount-in-fixnum-binary-representation)))
+	    (prm '>= n (K NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)))
 	   (with-tmp ((x2 (prm 'sll x n)))
 	     (interrupt-unless
 	      (prm '= (prm 'sra x2 n) x))
@@ -3303,9 +3306,9 @@
     (struct-case bitcount
       ;;FIXME Check for known types.  (Abdulaziz Ghuloum)
       ((constant bitcount.val)
-       (if (and (fx? bitcount.val)
+       (if (and (target-platform-fixnum? bitcount.val)
 		(>= bitcount.val 0)
-		(<  bitcount.val max-bitcount-in-fixnum-binary-representation))
+		(<  bitcount.val NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION))
 	   (prm-tag-as-fixnum
 	    (prm 'sra (T x) (K (+ bitcount.val fx-shift))))
 	 (interrupt)))
@@ -3317,7 +3320,7 @@
 	   (interrupt-when
 	    (prm '<  n (K 0)))
 	   (interrupt-when
-	    (prm '>= n (K max-bitcount-in-fixnum-binary-representation)))
+	    (prm '>= n (K NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)))
 	   ;;Untagging and  then tagging as  fixnum makes sure  that the
 	   ;;bits of the fixnum tag are zero.
 	   (prm-tag-as-fixnum
@@ -3468,7 +3471,7 @@
      ((V x n)
       (struct-case n
 	((constant i)
-	 (cond ((and (fx? i)
+	 (cond ((and (target-platform-fixnum? i)
 		     (> i 0)
 		     (log2 i))
 		=> (lambda (bits)
@@ -3587,7 +3590,7 @@
       ((constant len.val)
        ;;LEN.VAL must  be an  exact integer whose  payload bits  are the
        ;;binary representation of a fixnum.
-       (unless (fx? len.val)
+       (unless (target-platform-fixnum? len.val)
 	 (interrupt))
        (with-tmp ((stru (prm 'alloc
 			     (K (align (+ (* len.val wordsize) disp-struct-data)))
@@ -4048,7 +4051,7 @@
       ((constant num-of-bytes.val)
        ;;NUM-OF-BYTES.VAL is an exact integer whose payload bits are the
        ;;binary representation of a fixnum.
-       (unless (fx? num-of-bytes.val)
+       (unless (target-platform-fixnum? num-of-bytes.val)
 	 (interrupt))
        (with-tmp ((bv (prm 'alloc
 			   (K (align (+ num-of-bytes.val 1 disp-bytevector-data)))
@@ -4102,7 +4105,7 @@
       ((constant idx.val)
        ;;IDX.VAL is an  exact integer whose payload bits  are the binary
        ;;representation of a fixnum.
-       (unless (fx? idx.val)
+       (unless (target-platform-fixnum? idx.val)
 	 (interrupt))
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
@@ -4133,7 +4136,7 @@
 	((constant idx.val)
 	 ;;IDX.VAL is an exact integer whose payload bits are the binary
 	 ;;representation of a fixnum.
-	 (unless (fx? idx.val)
+	 (unless (target-platform-fixnum? idx.val)
 	   (interrupt))
 	 ;;Retrieve the  requested byte than left-shift  and right-shift
 	 ;;so that  the most  significant bit  is extended  to correctly
@@ -4178,14 +4181,14 @@
 	     (interrupt))))
     (struct-case idx
       ((constant idx.val)
-       (unless (fx? idx.val)
+       (unless (target-platform-fixnum? idx.val)
 	 (interrupt))
        ;;IDX.VAL is an  exact integer whose payload bits  are the binary
        ;;representation of a fixnum.
        (let ((byte-offset (+ idx.val off-bytevector-data)))
 	 (struct-case byte
 	   ((constant byte.val)
-	    (unless (fx? byte.val)
+	    (unless (target-platform-fixnum? byte.val)
 	      (interrupt))
 	    ;;BYTE.VAL is  an exact integer  whose payload bits  are the
 	    ;;binary representation of a fixnum.
@@ -4201,7 +4204,7 @@
 	 (prm 'int+ (prm-UNtag-as-fixnum (T idx)) (K off-bytevector-data)))
        (struct-case byte
 	 ((constant byte.val)
-	  (unless (fx? byte.val)
+	  (unless (target-platform-fixnum? byte.val)
 	    (interrupt))
 	  ;;BYTE.VAL is  an exact integer  whose payload bits  are the
 	  ;;binary representation of a fixnum.
@@ -4442,7 +4445,7 @@
    ((V num-of-chars)
     (struct-case num-of-chars
       ((constant num-of-chars.val)
-       (unless (fx? num-of-chars.val)
+       (unless (target-platform-fixnum? num-of-chars.val)
 	 (interrupt))
        ;;NUM-OF-CHARS.VAL is an exact integer whose payload bits are the
        ;;binary representation of a fixnum.
@@ -4617,7 +4620,7 @@
    ((V str idx)
     (struct-case idx
       ((constant idx.val)
-       (unless (and (fx? idx.val)
+       (unless (and (target-platform-fixnum? idx.val)
 		    (<= 0 idx.val))
 	 (error 'cogen/string-ref
 	   "expected non-negative fixnum as constant character index" idx.val))
@@ -4929,7 +4932,7 @@
        ;;FREEVAR-IDX.VAL is an exact integer  whose payload bits are the
        ;;binary representation  of the index  of a free variable  in the
        ;;closure's data area; such index is zero-based.
-       (unless (fx? freevar-idx.val)
+       (unless (target-platform-fixnum? freevar-idx.val)
 	 (interrupt))
        (prm 'mref (T clo) (K (+ off-closure-data (* freevar-idx.val wordsize)))))
       ((known freevar-idx.expr)

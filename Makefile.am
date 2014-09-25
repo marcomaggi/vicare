@@ -287,16 +287,16 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.wordsize.scm				\
 	scheme/ikarus.compiler.sls				\
 	scheme/ikarus.compiler.scheme-objects-ontology.scm	\
-	scheme/ikarus.compiler.letrec-optimizer.scm		\
-	scheme/ikarus.compiler.source-optimizer.scm		\
-	scheme/ikarus.compiler.core-type-inference.scm		\
-	scheme/ikarus.compiler.scheme-object-defs.scm		\
-	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
-	scheme/ikarus.compiler.specify-representation.scm	\
+	scheme/ikarus.compiler.scheme-objects-layout.scm	\
+	scheme/ikarus.compiler.pass-letrec-optimizer.scm	\
+	scheme/ikarus.compiler.pass-source-optimizer.scm	\
+	scheme/ikarus.compiler.pass-core-type-inference.scm	\
 	scheme/ikarus.compiler.altcogen.scm			\
-	scheme/ikarus.compiler.primitive-operations.scm		\
+	scheme/ikarus.compiler.pass-specify-representation.scm	\
 	scheme/ikarus.compiler.core-primitive-properties.scm	\
 	scheme/ikarus.compiler.core-primitive-tables.scm	\
+	scheme/ikarus.compiler.core-primitive-operations.scm	\
+	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
 	\
 	scheme/ikarus.apply.sls					\
 	scheme/ikarus.apropos.sls				\

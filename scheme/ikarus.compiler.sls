@@ -3230,8 +3230,8 @@
 
 ;;;; let's include some external code
 
-(include "ikarus.compiler.letrec-optimizer.scm" #t)
-(include "ikarus.compiler.source-optimizer.scm" #t)
+(include "ikarus.compiler.pass-letrec-optimizer.scm" #t)
+(include "ikarus.compiler.pass-source-optimizer.scm" #t)
 
 
 (module (rewrite-references-and-assignments)
@@ -3527,7 +3527,7 @@
 
 ;;;; some other external code
 
-(include "ikarus.compiler.core-type-inference.scm" #t)
+(include "ikarus.compiler.pass-core-type-inference.scm" #t)
 
 
 (module (introduce-unsafe-primrefs)

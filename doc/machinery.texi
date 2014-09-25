@@ -136,9 +136,10 @@ While running Scheme code @value{PRJNAME} assigns a special role to some
 @cpu{} registers.
 
 @table @strong
-@item Accumulator and Arguments count Register, @aar{}
+@item Accumulator and Arguments count Register, @aar{}, @code{AA-REGISTER}
 @cindex Accumulator and Arguments count Register, @aar{}
 @cindex @aar{}, Accumulator and Arguments count Register
+@cindex @code{AA-REGISTER}, Accumulator and Arguments count Register
 It is used to hold:
 
 @itemize
@@ -163,16 +164,18 @@ function call that just returned, when such function returns @math{0},
 it is also used as general purpose register.  On a 32-bit i686 @cpu{} it
 is the register @code{EAX}.
 
-@item Allocation Pointer Register, @apr{}
+@item Allocation Pointer Register, @apr{}, @code{AP-REGISTER}
 @cindex Allocation Pointer Register, @apr{}
 @cindex @apr{}, Allocation Pointer Register
+@cindex @code{AP-REGISTER}, Allocation Pointer Register
 Holds the address of the first free machine word in the memory segment
 of the Scheme heap nursery.  On a 32-bit i686 @cpu{} it is the register
 @code{EBP}.
 
-@item Closure Pointer Register, @cpr{}
+@item Closure Pointer Register, @cpr{}, @code{CP-REGISTER}
 @cindex Closure Pointer Register, @cpr{}
 @cindex @cpr{}, Closure Pointer Register
+@cindex @code{CP-REGISTER}, Closure Pointer Register
 Holds the tagged address of a machine word in the Scheme heap,
 representing the reference to the closure object being executed; when no
 closure is being executed: it is set to zero.  It is used to enter the
@@ -180,18 +183,20 @@ execution of the closure code and to access the free variables the
 closure is closed upon.  On a 32-bit i686 @cpu{} it is the register
 @code{EDI}.
 
-@item Frame Pointer Register, @fpr{}
+@item Frame Pointer Register, @fpr{}, @code{FP-REGISTER}
 @cindex Frame Pointer Register, @fpr{}
 @cindex @fpr{}, Frame Pointer Register
+@cindex @code{FP-REGISTER}, Frame Pointer Register
 Holds the address of the machine word in the memory segment of the
 Scheme stack holding the return address of the last performed function
 call.  It is used to access the machine words on the stack containing
 function arguments and local variables.  On a 32-bit i686 @cpu{} it is
 the register @code{ESP}.
 
-@item Process Control Register, @pcr{}
+@item Process Control Register, @pcr{}, @code{PC-REGISTER}
 @cindex Process Control Register, @pcr{}
 @cindex @pcr{}, Process Control Register
+@cindex @code{PC-REGISTER}, Process Control Register
 Holds the raw address of a machine word in the C language heap; such
 address references the first word in the @pcb{} data structure.  On a
 32-bit i686 @cpu{} it is the register @code{ESI}.

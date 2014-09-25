@@ -26,13 +26,8 @@
 (define-constant pagesize		4096)
 (define-constant pageshift		12)
 
-(define-constant fx-scale		wordsize)
-(define-constant fx-shift		wordshift)
-(define-constant fx-mask		(- wordsize 1))
-(define-constant fx-tag			0)
-
-;;; --------------------------------------------------------------------
-;;; built in Scheme values
+
+;;;; built in Scheme values
 
 (define-constant bool-f			#x2F)	;the constant #f
 (define-constant bool-t			#x3F)	;the constant #t
@@ -46,30 +41,8 @@
 (define-constant void-object		#x7F)
 (define-constant BWP-OBJECT		#x8F)
 
-;;; --------------------------------------------------------------------
-;;; characters
-
-;;Characters are 32-bit integers, on any platform.
-(define-constant char-size		4)
-(define-constant char-shift		8)
-(define-constant char-tag		#x0F)
-(define-constant char-mask		#xFF)
-
-;;; --------------------------------------------------------------------
-;;; pairs
-
-(define-constant pair-mask		7)
-(define-constant pair-tag		1)
-
-(define-constant disp-car		0)
-(define-constant disp-cdr		wordsize)
-(define-constant pair-size		(fx* 2 wordsize))
-
-(define-constant off-car			(fx- disp-car pair-tag))
-(define-constant off-cdr			(fx- disp-cdr pair-tag))
-
-;;; --------------------------------------------------------------------
-;;; vectors
+
+;;;; vectors
 
 (define-constant vector-tag		5)
 (define-constant vector-mask		7)
@@ -80,59 +53,16 @@
 (define-constant off-vector-length	(fx- disp-vector-length vector-tag))
 (define-constant off-vector-data	(fx- disp-vector-data   vector-tag))
 
-;;; --------------------------------------------------------------------
-;;; flonums
+
+;;;; fixnums
 
-(define-constant flonum-tag		#x17)
-(define-constant flonum-size		16)
+(define-constant fx-scale		wordsize)
+(define-constant fx-shift		wordshift)
+(define-constant fx-mask		(- wordsize 1))
+(define-constant fx-tag			0)
 
-(define-constant disp-flonum-tag	0)
-(define-constant disp-flonum-data	8)
-
-(define-constant off-flonum-tag		(fx- disp-flonum-tag  vector-tag))
-(define-constant off-flonum-data	(fx- disp-flonum-data vector-tag))
-
-;;; --------------------------------------------------------------------
-;;; ratnums
-
-(define-constant ratnum-tag		#x27)
-(define-constant disp-ratnum-tag	0)
-(define-constant disp-ratnum-num	(fx* 1 wordsize))
-(define-constant disp-ratnum-den	(fx* 2 wordsize))
-(define-constant ratnum-size		(fx* 4 wordsize))
-
-(define-constant off-ratnum-tag		(fx- disp-ratnum-tag vector-tag))
-(define-constant off-ratnum-num		(fx- disp-ratnum-num vector-tag))
-(define-constant off-ratnum-den		(fx- disp-ratnum-den vector-tag))
-
-;;; --------------------------------------------------------------------
-;;; compnums
-
-(define-constant compnum-tag		#x37)
-(define-constant disp-compnum-tag	0)
-(define-constant disp-compnum-real	(* 1 wordsize))
-(define-constant disp-compnum-imag	(* 2 wordsize))
-(define-constant compnum-size		(* 4 wordsize))
-
-(define-constant off-compnum-tag	(fx- disp-compnum-tag  vector-tag))
-(define-constant off-compnum-real	(fx- disp-compnum-real vector-tag))
-(define-constant off-compnum-imag	(fx- disp-compnum-imag vector-tag))
-
-;;; --------------------------------------------------------------------
-;;; cflonums
-
-(define-constant cflonum-tag		#x47)
-(define-constant disp-cflonum-tag	0)
-(define-constant disp-cflonum-real	(* 1 wordsize))
-(define-constant disp-cflonum-imag	(* 2 wordsize))
-(define-constant cflonum-size		(* 4 wordsize))
-
-(define-constant off-cflonum-tag	(fx- disp-cflonum-tag  vector-tag))
-(define-constant off-cflonum-real	(fx- disp-cflonum-real vector-tag))
-(define-constant off-cflonum-imag	(fx- disp-cflonum-imag vector-tag))
-
-;;; --------------------------------------------------------------------
-;;; bignums
+
+;;;; bignums
 
 (define-constant bignum-mask		#b111)
 (define-constant bignum-tag		#b011)
@@ -158,8 +88,81 @@
 (define-constant off-bignum-tag		(fx- disp-bignum-tag  vector-tag))
 (define-constant off-bignum-data	(fx- disp-bignum-data vector-tag))
 
-;;; --------------------------------------------------------------------
-;;; bytevectors
+
+;;;; flonums
+
+(define-constant flonum-tag		#x17)
+(define-constant flonum-size		16)
+
+(define-constant disp-flonum-tag	0)
+(define-constant disp-flonum-data	8)
+
+(define-constant off-flonum-tag		(fx- disp-flonum-tag  vector-tag))
+(define-constant off-flonum-data	(fx- disp-flonum-data vector-tag))
+
+
+;;;; ratnums
+
+(define-constant ratnum-tag		#x27)
+(define-constant disp-ratnum-tag	0)
+(define-constant disp-ratnum-num	(fx* 1 wordsize))
+(define-constant disp-ratnum-den	(fx* 2 wordsize))
+(define-constant ratnum-size		(fx* 4 wordsize))
+
+(define-constant off-ratnum-tag		(fx- disp-ratnum-tag vector-tag))
+(define-constant off-ratnum-num		(fx- disp-ratnum-num vector-tag))
+(define-constant off-ratnum-den		(fx- disp-ratnum-den vector-tag))
+
+
+;;;; compnums
+
+(define-constant compnum-tag		#x37)
+(define-constant disp-compnum-tag	0)
+(define-constant disp-compnum-real	(* 1 wordsize))
+(define-constant disp-compnum-imag	(* 2 wordsize))
+(define-constant compnum-size		(* 4 wordsize))
+
+(define-constant off-compnum-tag	(fx- disp-compnum-tag  vector-tag))
+(define-constant off-compnum-real	(fx- disp-compnum-real vector-tag))
+(define-constant off-compnum-imag	(fx- disp-compnum-imag vector-tag))
+
+
+;;;; cflonums
+
+(define-constant cflonum-tag		#x47)
+(define-constant disp-cflonum-tag	0)
+(define-constant disp-cflonum-real	(* 1 wordsize))
+(define-constant disp-cflonum-imag	(* 2 wordsize))
+(define-constant cflonum-size		(* 4 wordsize))
+
+(define-constant off-cflonum-tag	(fx- disp-cflonum-tag  vector-tag))
+(define-constant off-cflonum-real	(fx- disp-cflonum-real vector-tag))
+(define-constant off-cflonum-imag	(fx- disp-cflonum-imag vector-tag))
+
+
+;;;; characters
+
+;;Characters are 32-bit integers, on any platform.
+(define-constant char-size		4)
+(define-constant char-shift		8)
+(define-constant char-tag		#x0F)
+(define-constant char-mask		#xFF)
+
+
+;;;; pairs
+
+(define-constant pair-mask		7)
+(define-constant pair-tag		1)
+
+(define-constant disp-car		0)
+(define-constant disp-cdr		wordsize)
+(define-constant pair-size		(fx* 2 wordsize))
+
+(define-constant off-car		(fx- disp-car pair-tag))
+(define-constant off-cdr		(fx- disp-cdr pair-tag))
+
+
+;;;; bytevectors
 
 (define-constant bytevector-mask	7)
 (define-constant bytevector-tag		2)
@@ -170,8 +173,8 @@
 (define-constant off-bytevector-length	(fx- disp-bytevector-length bytevector-tag))
 (define-constant off-bytevector-data	(fx- disp-bytevector-data   bytevector-tag))
 
-;;; --------------------------------------------------------------------
-;;; symbols
+
+;;;; symbols
 
 (define-constant symbol-primary-tag		vector-tag)
 (define-constant symbol-tag			#x5F)
@@ -192,8 +195,8 @@
 (define-constant off-symbol-record-proc		(fx- disp-symbol-record-proc    symbol-primary-tag))
 (define-constant off-symbol-record-plist	(fx- disp-symbol-record-plist   symbol-primary-tag))
 
-;;; --------------------------------------------------------------------
-;;; structs
+
+;;;; structs
 
 (define-constant record-tag			vector-tag)
 (define-constant disp-struct-rtd		0)
@@ -231,8 +234,8 @@
 (define-constant off-std-symbol			(fx- disp-std-symbol	 vector-tag))
 (define-constant off-std-destructor		(fx- disp-std-destructor vector-tag))
 
-;;; --------------------------------------------------------------------
-;;; strings
+
+;;;; strings
 
 (define-constant string-mask			#b111)
 (define-constant string-tag			6)
@@ -243,8 +246,8 @@
 (define-constant off-string-length		(fx- disp-string-length string-tag))
 (define-constant off-string-data		(fx- disp-string-data   string-tag))
 
-;;; --------------------------------------------------------------------
-;;; code objects
+
+;;;; code objects
 
 (define-constant code-tag			#x2F)
 (define-constant disp-code-tag			0)
@@ -263,8 +266,8 @@
 (define-constant off-code-unused		(fx- disp-code-unused vector-tag))
 (define-constant off-code-data			(fx- disp-code-data vector-tag))
 
-;;; --------------------------------------------------------------------
-;;; closure objects
+
+;;;; closure objects
 
 (define-constant closure-mask			7)
 (define-constant closure-tag			3)
@@ -275,8 +278,8 @@
 (define-constant off-closure-code		(fx- disp-closure-code closure-tag))
 (define-constant off-closure-data		(fx- disp-closure-data closure-tag))
 
-;;; --------------------------------------------------------------------
-;;; continuations
+
+;;;; continuations
 
 (define-constant continuation-tag		#x1F)
 
@@ -291,8 +294,8 @@
 (define-constant off-continuation-size		(fx- disp-continuation-size vector-tag))
 (define-constant off-continuation-next		(fx- disp-continuation-next vector-tag))
 
-;;; --------------------------------------------------------------------
-;;; input/output ports
+
+;;;; input/output ports
 
 (define-constant port-tag			#x3F)
 (define-constant port-mask			#x3F)
@@ -339,8 +342,8 @@
 (define-constant off-port-unused1		(fx- disp-port-unused1		vector-tag))
 (define-constant off-port-unused2		(fx- disp-port-unused2		vector-tag))
 
-;;; --------------------------------------------------------------------
-;;; transcoders
+
+;;;; transcoders
 
 (define-constant transcoder-mask			#xFF) ;;; 0011
 (define-constant transcoder-tag				#x7F) ;;; 0011
@@ -375,8 +378,8 @@
 (define-constant transcoder-codec:utf-8			#b010)
 (define-constant transcoder-codec:utf-16		#b011)
 
-;;; --------------------------------------------------------------------
-;;; pointer objects
+
+;;;; pointer objects
 
 (define-constant pointer-tag			#x107)
 (define-constant disp-pointer-data		wordsize)
@@ -384,8 +387,8 @@
 
 (define-constant off-pointer-data		(fx- disp-pointer-data vector-tag))
 
-;;; --------------------------------------------------------------------
-;;; tcbuckets
+
+;;;; tcbuckets
 
 (define-constant disp-tcbucket-tconc		0)
 (define-constant disp-tcbucket-key		(fx* 1 wordsize))
@@ -398,10 +401,11 @@
 (define-constant off-tcbucket-val		(fx- disp-tcbucket-val   vector-tag))
 (define-constant off-tcbucket-next		(fx- disp-tcbucket-next  vector-tag))
 
-;;; --------------------------------------------------------------------
-
-;;Whenever a "call" assembly instruction  is generated: the compiler, in
-;;truth, generates this sequence:
+
+;;;; function call table constants
+;;
+;;Whenever  a "call"  assembly  instruction  is generated:  the  compiler, in  truth,
+;;generates this sequence:
 ;;
 ;;     jmp L0
 ;;     livemask-bytes		;array of bytes             |
@@ -416,17 +420,17 @@
 ;;   multi-value-rp:		;multi value return point
 ;;     ... instructions...
 ;;
-;;and remember that  the "call" pushes on the stack  the return address,
-;;which is the label SINGLE-VALUE-RP.
+;;and remember that the  "call" pushes on the stack the return  address, which is the
+;;label SINGLE-VALUE-RP.
 ;;
-;;If the called function wants to  return a single argument: it can just
-;;put it in EAX  and perform a "ret"; this will  make the execution flow
-;;jump back to the entry point SINGLE-VALUE-RP.
+;;If the  called function wants to  return a single argument:  it can just put  it in
+;;AA-REGISTER and perform a "ret"; this will make the execution flow jump back to the
+;;entry point SINGLE-VALUE-RP.
 ;;
-;;If the called function wants to return zero or 2 or more arguments: it
-;;retrieves  the address  SINGLE-VALUE-RP  from the  stack,  adds to  it
-;;DISP-MULTIVALUE-RP  as  defined  below  and  it  obtains  the  address
-;;MULTI-VALUE-RP, then performs a "jmp" directly to MULTI-VALUE-RP.
+;;If the called  function wants to return  zero or 2 or more  arguments: it retrieves
+;;the  address SINGLE-VALUE-RP  from  the  stack, adds  to  it DISP-MULTIVALUE-RP  as
+;;defined below  and it  obtains the  address MULTI-VALUE-RP,  then performs  a "jmp"
+;;directly to MULTI-VALUE-RP.
 
 ;;Refer  to  the picture  in  src/ikarus-collect.c  for details  on  how
 ;;call-frames are laid out (search for livemask).
@@ -436,22 +440,29 @@
    ((32) 5)
    ((64) 10)))
 
-;;Commented out because unused.
-;;
-;;(define-constant disp-frame-size	(- (+ call-instruction-size (* 3 wordsize))))
+;;; The following are "displacements" from the address SINGLE-VALUE-RP.
 
 ;;Commented out because unused.
 ;;
-;;(define-constant disp-frame-offset	(- (+ call-instruction-size (* 2 wordsize))))
+;;(define-constant disp-frame-size
+;;  (- (+ call-instruction-size (* 3 wordsize))))
+
+;;Commented out because unused.
+;;
+;;(define-constant disp-frame-offset
+;;  (- (+ call-instruction-size (* 2 wordsize))))
 
 ;;Multivalue return point.
 ;;
-(define-constant disp-multivalue-rp	(- (+ call-instruction-size (* 1 wordsize))))
-
-(define-constant dirty-word		-1)
+(define-constant disp-multivalue-rp
+  (- (+ call-instruction-size (* 1 wordsize))))
 
 
-;;;; interfacing with the C language struct pcb
+;;;; interfacing with the C language struct PCB
+;;
+;;The following are offsets to be added to  a PCB pointer to obtain the offset of the
+;;specified struct field.
+;;
 
 ;;(define-constant pcb-allocation-pointer	(fx*  0 wordsize)) NOT USED
 (define-constant pcb-allocation-redline		(fx*  1 wordsize))
@@ -470,30 +481,51 @@
 
 ;;;; utility functions for assembly code generation
 
-(module (fx? max-bitcount-in-fixnum-binary-representation)
+(module (target-platform-fixnum? NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)
 
-  (define-constant max-bitcount-in-fixnum-binary-representation
-    (- (* wordsize 8) fx-shift))
+  ;;WORDSIZE is  the number of bytes  in a word: 4  on 32-bit platforms, 8  on 64-bit
+  ;;platforms.
 
-  (define-constant intbits
+  (define-constant NUMBER-OF-BITS-IN-WORD
     (fx* wordsize 8))
-  (define-constant fxbits
-    (fx- intbits fx-shift))
-  (define-constant t
-    (expt 2 (fx- fxbits 1)))
-  (define-constant least-signed-machine-word
-    (- t))
-  (define-constant greatest-signed-machine-word
-    (- t 1))
 
-  (define (fx? x)
-    ;;Return  true if  X is  an exact  signed integer  that fits  in a  machine word;
-    ;;otherwise return  false.  When the  return value is  true: X is  a compile-time
-    ;;constant that can be represented by a fixnum at run-time.
+  (define-constant NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
+    ;;This is 30 on 32-bit platforms and 61 on 64-bit platforms.
+    (fx- NUMBER-OF-BITS-IN-WORD fx-shift))
+
+  (define-constant NUMBER-OF-NEGATIVE-FIXNUMS
+    (expt 2 (fx- NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION 1)))
+
+  (define-constant TARGET-PLATFORM-LEAST-FIXNUM
+    (- NUMBER-OF-NEGATIVE-FIXNUMS))
+
+  (define-constant TARGET-PLATFORM-GREATEST-FIXNUM
+    (- NUMBER-OF-NEGATIVE-FIXNUMS 1))
+
+  (define (target-platform-fixnum? x)
+    ;;Return true if X is a compile-time constant that can be represented by a fixnum
+    ;;on the target platform.
     ;;
     (and (or (fixnum? x)
 	     (bignum? x))
-	 (<= least-signed-machine-word x greatest-signed-machine-word)))
+	 (<= TARGET-PLATFORM-LEAST-FIXNUM x TARGET-PLATFORM-GREATEST-FIXNUM)))
+
+  ;; (fprintf (current-error-port)
+  ;; 	   "target platform's word size = ~a\n\
+  ;;           target platform's NUMBER-OF-BITS-IN-WORD = ~a\n\
+  ;; 	    target platform's NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION = ~a\n\
+  ;; 	    target platform's NUMBER-OF-NEGATIVE-FIXNUMS = ~a\n\
+  ;; 	    TARGET-PLATFORM-LEAST-FIXNUM = ~a\n\
+  ;; 	    TARGET-PLATFORM-GREATEST-FIXNUM = ~a\n\
+  ;; 	    host's (least-fixnum)    = ~a\n\
+  ;; 	    host's (greatest-fixnum) = ~a\n"
+  ;; 	   wordsize
+  ;; 	   NUMBER-OF-BITS-IN-WORD
+  ;; 	   NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
+  ;; 	   NUMBER-OF-NEGATIVE-FIXNUMS
+  ;; 	   TARGET-PLATFORM-LEAST-FIXNUM
+  ;; 	   TARGET-PLATFORM-GREATEST-FIXNUM
+  ;; 	   (least-fixnum) (greatest-fixnum)))
 
   #| end od module |# )
 

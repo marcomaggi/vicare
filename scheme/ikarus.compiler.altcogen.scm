@@ -72,9 +72,9 @@
 
 ;;;; some external code
 
-(include "ikarus.compiler.scheme-object-defs.scm" #t)
+(include "ikarus.compiler.scheme-objects-layout.scm" #t)
 (include "ikarus.compiler.common-assembly-subroutines.scm" #t)
-(include "ikarus.compiler.specify-representation.scm" #t)
+(include "ikarus.compiler.pass-specify-representation.scm" #t)
 (import CORE-PRIMITIVE-OPERATION-NAMES)
 
 

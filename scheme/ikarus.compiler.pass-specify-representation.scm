@@ -1579,7 +1579,7 @@
   ;;word.
   ;;
   (let ((c (constant-value x)))
-    (cond ((fx? c)
+    (cond ((target-platform-fixnum? c)
 	   ;;Shifting as is done below is equivalent to:
 	   ;;
 	   ;;   (make-constant (* c fx-scale))
@@ -1630,7 +1630,7 @@
   ;;Wrap  X with  a  struct instance  of  type CONSTANT;  X must  be  a native  value
   ;;representation.
   ;;
-  (cond ((fx? x)
+  (cond ((target-platform-fixnum? x)
 	 (make-constant x))
 	(else
 	 (make-object (make-constant x)))))
@@ -1760,7 +1760,7 @@
 
 ;;;; some external code
 
-(include "ikarus.compiler.primitive-operations.scm" #t)
+(include "ikarus.compiler.core-primitive-operations.scm" #t)
 
 
 ;;;; done
