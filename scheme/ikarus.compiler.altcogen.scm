@@ -47,15 +47,10 @@
 	 flatten-codes)
 
   (define (alt-cogen x)
-    ;;Commenting out this definition causes some passes to be timed.
-    (define-inline (time-it name proc)
-      (proc))
-    (let* ((x (specify-representation x))
-	   (x (impose-calling-convention/evaluation-order x))
-	   (x (time-it "frame"    (lambda ()
-				    (assign-frame-sizes x))))
-	   (x (time-it "register" (lambda ()
-				    (color-by-chaitin x))))
+    (let* ((x  (specify-representation x))
+	   (x  (impose-calling-convention/evaluation-order x))
+	   (x  (assign-frame-sizes x))
+	   (x  (color-by-chaitin x))
 	   (ls (flatten-codes x)))
       ls))
 
@@ -163,6 +158,9 @@
 
 
 (module ListySet
+  ;;This module implements sets of bits; each  set is a proper list of items, wrapped
+  ;;by a struct.
+  ;;
   ;;This module has the same API of the module IntegerSet.
   ;;
   (make-empty-set
@@ -207,12 +205,14 @@
   (define ($remq x ell)
     ;;Remove X from the list ELL.
     ;;
-    (cond ((null? ell)
-	   '())
-	  ((eq? x (car ell))
-	   (cdr ell))
+    (cond ((pair? ell)
+	   (cond ((eq? x (car ell))
+		  (cdr ell))
+		 (else
+		  (cons (car ell) ($remq x (cdr ell))))))
 	  (else
-	   (cons (car ell) ($remq x (cdr ell))))))
+	   ;;(assert (null? ell))
+	   '())))
 
   (define* (set-rem x {S set?})
     (make-set ($remq x ($set-v S))))
@@ -238,12 +238,14 @@
       (make-set ($union ($set-v S1) ($set-v S2))))
 
     (define ($union S1 S2)
-      (cond ((null? S1)
-	     S2)
-	    ((memq (car S1) S2)
-	     ($union (cdr S1) S2))
+      (cond ((pair? S1)
+	     (cond ((memq (car S1) S2)
+		    ($union (cdr S1) S2))
+		   (else
+		    (cons (car S1) (union (cdr S1) S2)))))
 	    (else
-	     (cons (car S1) (union (cdr S1) S2)))))
+	     ;;(assert (null? S1))
+	     S2)))
 
     #| end of module: set-union |# )
 
@@ -251,13 +253,13 @@
 
 
 (module IntegerSet
-  ;;This module implements sets of bits;  each set is a nested hierarchy
-  ;;of  lists, pairs  and fixnums  interpreted  as a  tree; fixnums  are
-  ;;interpreted as bitvectors.  The empty set is the fixnum zero.
+  ;;This module  implements sets of  bits; each set is  a nested hierarchy  of lists,
+  ;;pairs and fixnums  interpreted as a tree; fixnums are  interpreted as bitvectors.
+  ;;The empty set is the fixnum zero.
   ;;
-  ;;To search for a  bit: we compute a "bit index",  then start from the
-  ;;root of the tree and: if the index  is even we go left (the car), if
-  ;;the index is odd we go right (the cdr).
+  ;;To search for  a bit: we compute a  "bit index", then start from the  root of the
+  ;;tree and: if  the index is even we go  left (the car), if the index  is odd we go
+  ;;right (the cdr).
   ;;
   ;;This module has the same API of the module ListySet.
   ;;
@@ -270,22 +272,21 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-inline-constant BITS 28)
+  (define-inline-constant BITS
+    28)
 
-  (define-inline (make-empty-set)
+  (define-syntax-rule (make-empty-set)
     0)
 
-  (define-inline ($index-of N)
-    ;;Given a  set element N  to be added to,  or searched into,  a set:
-    ;;return a fixnum representing the "index"  of the fixnum in which N
-    ;;should be stored.
+  (define-syntax-rule ($index-of N)
+    ;;Given a set element N to be added  to, or searched into, a set: return a fixnum
+    ;;representing the "index" of the fixnum in which N should be stored.
     ;;
     (fxquotient N BITS))
 
   (define ($mask-of n)
-    ;;Given a  set element N  to be added to,  or searched into,  a set:
-    ;;return a  fixnum representing the bitmask  of N for the  fixnum in
-    ;;which N should be stored.
+    ;;Given a set element N to be added  to, or searched into, a set: return a fixnum
+    ;;representing the bitmask of N for the fixnum in which N should be stored.
     ;;
     (fxsll 1 (fxremainder n BITS)))
 
@@ -302,20 +303,19 @@
   (define* (set-member? {N fixnum?} SET)
     (let loop ((SET SET)
 	       (idx ($index-of N))
-	       (msk ($mask-of  N)))	;this never changes in the loop
+	       (msk ($mask-of  N))) ;this never changes in the loop
       (cond ((pair? SET)
 	     (if (fxeven? idx)
 		 (loop (car SET) (fxsra idx 1) msk)
 	       (loop (cdr SET) (fxsra idx 1) msk)))
 	    ((fxzero? idx)
-	     (fx= msk (fxlogand SET msk)))
-	    (else
-	     #f))))
+	     (fx=? msk (fxlogand SET msk)))
+	    (else #f))))
 
   (define* (set-add {N fixnum?} SET)
     (let recur ((SET SET)
 		(idx ($index-of N))
-		(msk ($mask-of  N)))	;this never changes in the loop
+		(msk ($mask-of  N))) ;this never changes in the loop
       (cond ((pair? SET)
 	     (if (fxeven? idx)
 		 (let* ((a0 (car SET))
@@ -653,7 +653,9 @@
    empty-frm-set rem-frm add-frm union-frms mem-frm?
    empty-reg-set rem-reg add-reg union-regs mem-reg?
    reg?)
-  (import IntegerSet INTEL-CPU-STUFF)
+  (import IntegerSet)
+  (module (%cpu-register-name->index)
+    (import INTEL-CPU-STUFF))
 
   (define (add-frm x s)
     (set-add (fvar-idx x) s))
