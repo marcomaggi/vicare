@@ -180,6 +180,43 @@
 
 ;;;; helper syntaxes
 
+(define-syntax (cond-expand stx)
+  ;;A  simple  implementation of  COND-EXPAND  in  which  the tests  are  expressions
+  ;;evaluated at expand time.
+  ;;
+  (syntax-case stx (else)
+    ((?ctx (?test0 . ?clause0*) (?test . ?clause*) ... (else . ?else*))
+     (with-syntax
+	 ((OUTPUT (datum->syntax #'?ctx 'output)))
+       #'(let-syntax ((OUTPUT (lambda (stx)
+				(syntax-case stx ()
+				  ((??ctx)
+				   (receive-and-return (output-form)
+				       (datum->syntax #'??ctx
+						      (cond (?test0 '(begin . ?clause0*))
+							    (?test  '(begin . ?clause*))
+							    ...
+							    (else   '(begin . ?else*))))
+				     (debug-print (syntax->datum output-form))
+				     (void)))
+				  ))))
+	   (OUTPUT))))
+    ((?ctx (?test0 . ?clause0*) (?test . ?clause*) ...)
+     (with-syntax
+	 ((OUTPUT (datum->syntax #'?ctx 'output)))
+       #'(let-syntax ((OUTPUT (lambda (stx)
+				(syntax-case stx ()
+				  ((??ctx)
+				   (datum->syntax #'??ctx
+						  (cond (?test0 '(begin . ?clause0*))
+							(?test  '(begin . ?clause*))
+							...
+							(else   '(void)))))))))
+	   (OUTPUT))))
+    ))
+
+;;; --------------------------------------------------------------------
+
 (define-syntax-rule (%list-of-one-item? ?ell)
   (let ((ell ?ell))
     (and (pair? ell)
@@ -5555,6 +5592,14 @@
   ;;   This is  an independent additional task that must  be performed somewhere, and
   ;;   we do it here.
   ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   bind		closure-maker	conditional
+  ;;   constant		fix		forcall
+  ;;   funcall		jmpcall		known
+  ;;   primref		seq		var
+  ;;
   (define-syntax __module_who__
     (identifier-syntax 'rewrite-freevar-references))
 
@@ -5765,6 +5810,14 @@
   ;;code  for the  current process  and enters  a subprocess  which can  take actions
   ;;asynchronously.
   ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   bind		closure-maker	conditional
+  ;;   constant		fix		forcall
+  ;;   funcall		jmpcall		known
+  ;;   primref		seq		var
+  ;;
   (define-syntax __module_who__
     (identifier-syntax 'insert-engine-checks))
 
@@ -5886,6 +5939,14 @@
   ;;primitive operation $STACK-OVERFLOW-CHECK  checks if the current  Scheme stack is
   ;;about to be  exhausted.  If a ?BODY does  not make further use of  the stack: its
   ;;function execution is a "stack tail".
+  ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   bind		closure-maker	conditional
+  ;;   constant		fix		forcall
+  ;;   funcall		jmpcall		known
+  ;;   primref		seq		var
   ;;
   (define-syntax __module_who__
     (identifier-syntax 'insert-stack-overflow-check))
@@ -6032,32 +6093,29 @@
   ;;This module  has the only  purpose of making the  binding COOKIE visible  only to
   ;;CORE-PRIMITIVE-OPERATION?, GET-PRIMOP and SET-PRIMOP!.
   ;;
-  (import (only (vicare system $symbols)
-		$getprop $putprop))
-
   (define-constant COOKIE
     (compile-time-gensym "core-primitive-operation/integration-handler"))
 
-  (define (core-primitive-operation? core-primitive-symbol-name)
+  (define* (core-primitive-operation? {core-primitive-symbol-name symbol?})
     ;;Return  true  if  CORE-PRIMITIVE-SYMBOL-NAME  is  the public  name  of  a  core
     ;;primitive operation; otherwise return false.
     ;;
-    (and ($getprop core-primitive-symbol-name COOKIE) #t))
+    (and (getprop core-primitive-symbol-name COOKIE) #t))
 
-  (define (get-primop core-primitive-symbol-name)
+  (define* (get-primop {core-primitive-symbol-name symbol?})
     ;;If CORE-PRIMITIVE-SYMBOL-NAME is the public name of a core primitive operation:
     ;;return a PRIMITIVE-HANDLER struct describind  the operation; otherwise raise an
     ;;exception.
     ;;
-    (or ($getprop core-primitive-symbol-name COOKIE)
+    (or (getprop core-primitive-symbol-name COOKIE)
 	(compiler-internal-error 'getprimop
 	  "not a core primitive operation" core-primitive-symbol-name)))
 
-  (define (set-primop! symbol primitive-handler)
+  (define* (set-primop! {symbol symbol?} primitive-handler)
     ;;Associate to  SYMBOL the struct  PRIMITIVE-HANDLER, turning SYMBOL into  a core
     ;;primitive's symbol name.
     ;;
-    ($putprop symbol COOKIE primitive-handler))
+    (putprop symbol COOKIE primitive-handler))
 
   #| end of module CORE-PRIMITIVE-OPERATION-NAMES |# )
 

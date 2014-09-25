@@ -15,30 +15,40 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-;;;; introduction
-;;
-;;
-
-
 (module (specify-representation)
+  ;;
+  ;;
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
+  ;;
+  ;;   bind		closure-maker	conditional
+  ;;   constant		fix		forcall
+  ;;   funcall		jmpcall		known
+  ;;   primref		seq		var
+  ;;
   (import CORE-PRIMITIVE-OPERATION-NAMES SCHEME-OBJECTS-ONTOLOGY)
 
-  (define (specify-representation x)
-    (V-codes x))
+  (define-syntax __module_who__
+    (identifier-syntax 'specify-representation))
 
-  ;;The one below is for debugging purposes.  (Marco Maggi, Thu Sep 18, 2014)
-  ;;
-  ;; (define (specify-representation x)
-  ;;   (debug-print* 'input (unparse-recordized-code/sexp x))
-  ;;   (receive-and-return (code)
-  ;; 	(V-codes x)
-  ;;     (void)
-  ;;     (debug-print* 'output (unparse-recordized-code/sexp code))))
+  (cond-expand
+   (#t
+    (define (specify-representation x)
+      ;;Perform code transformation  traversing the whole hierarchy in  X, which must
+      ;;be a CODES struct representing recordised  code; build and return a new CODES
+      ;;struct.
+      ;;
+      (V-codes x)))
+   (else
+    ;;The one below is for debugging purposes
+    (define (specify-representation x)
+      (debug-print* 'input (unparse-recordized-code/sexp x))
+      (receive-and-return (code)
+	  (V-codes x)
+	(void)
+	(debug-print* 'output (unparse-recordized-code/sexp code))))))
 
   (module (V-codes)
-    (define-syntax __module_who__
-      (identifier-syntax 'specify-representation))
-
     (define (V-codes x)
       (struct-case x
 	((codes code* body)

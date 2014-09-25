@@ -4101,7 +4101,11 @@ compiler}.
 
 
 @defun alt-cogen @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a @objtype{codes} struct representing
+recordised code; build and return a new @objtype{codes} struct.
 @end defun
+
 
 @menu
 * compiler cogen primop::       Expanding primitive operations.
@@ -4122,6 +4126,9 @@ compiler}.
 
 
 @defun specify-representation @var{input}
+Perform code transformation traversing the whole hierarchy in
+@var{input}, which must be a @objtype{codes} struct representing
+recordised code; build and return a new @objtype{codes} struct.
 @end defun
 
 @c page
