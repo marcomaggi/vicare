@@ -187,6 +187,31 @@
 	    (eq? (car x) '?symbol))))))
 
 
+;;;; symbols properties
+
+(define-syntax (compile-time-gensym stx)
+  ;;Generate a gensym at expand time and expand to the quoted symbol.
+  ;;
+  (syntax-case stx ()
+    ((_ ?template)
+     (let* ((tmp (syntax->datum #'?template))
+	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	    (str (apply string-append tmp (map (lambda (N)
+						 (string-append "." (number->string N)))
+					    fxs)))
+	    (sym (gensym str)))
+       (with-syntax
+	   ((SYM (datum->syntax #'here sym)))
+	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	 #'(quote SYM))))))
+
+(define-constant *cogen*
+  (compile-time-gensym "assembler-property-key"))
+
+(define (assembler-property-key)
+  *cogen*)
+
+
 ;;;; constants
 
 (define-constant const.wordsize-bitmask
@@ -196,12 +221,6 @@
   (- (expt 2 (* wordsize 8)) 1))
 
 ;;; --------------------------------------------------------------------
-
-(define *cogen*
-  (gensym "*cogen*"))
-
-(define (assembler-property-key)
-  *cogen*)
 
 (define register-mapping
 ;;;   reg  cls  idx  REX.R
