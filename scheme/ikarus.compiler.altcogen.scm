@@ -1179,7 +1179,7 @@
 (include "ikarus.compiler.scheme-objects-layout.scm"		#t)
 (include "ikarus.compiler.common-assembly-subroutines.scm"	#t)
 (include "ikarus.compiler.pass-specify-representation.scm"	#t)
-(include "ikarus.compiler.pass-impose-order.scm"		#t)
+(include "ikarus.compiler.pass-impose-evaluation-order.scm"	#t)
 (include "ikarus.compiler.pass-assign-frame-sizes.scm"		#t)
 (include "ikarus.compiler.pass-color-by-chaitin.scm"		#t)
 (include "ikarus.compiler.pass-flatten-codes.scm"		#t)
