@@ -55,7 +55,7 @@
       ls))
 
 
-;;;; helpers
+;;;; syntax helpers
 
 (define-syntax multiple-forms-sequence
   (syntax-rules ()
@@ -65,23 +65,35 @@
      (make-seq (multiple-forms-sequence ?expr ...) ?last-expr))))
 
 
-;;;; some external code
+;;;; assembly code helpers
 
-(include "ikarus.compiler.scheme-objects-layout.scm" #t)
-(include "ikarus.compiler.common-assembly-subroutines.scm" #t)
-(include "ikarus.compiler.pass-specify-representation.scm" #t)
+(module INTEL-ASSEMBLY-DEFINITIONS
+  (ARGC-REGISTER		RETURN-VALUE-REGISTER
+   CP-REGISTER			NON-8BIT-REGISTERS
+   PARAMETER-REGISTERS		ALL-REGISTERS
+   %cpu-register-name->index
 
-
-;;;; some Intel CPU registers stuff
+   mem
+   int		obj		byte		byte-vector
+   tail-indirect-cpr-call	indirect-cpr-call
+   argc-convention		register?
 
-(module INTEL-CPU-STUFF
-  (ARGC-REGISTER
-   RETURN-VALUE-REGISTER
-   CP-REGISTER
-   PARAMETER-REGISTERS
-   ALL-REGISTERS
-   NON-8BIT-REGISTERS
-   %cpu-register-name->index)
+   label	label-address
+
+   addl		andl		call		cltd
+   cmpl		idivl		imull		ja
+   jb		je		jg		jge
+   jl		jle		jmp		jne
+   jo		leal		movb		movl
+   movzbl	negl		notl		orl
+   pop		popl		push		pushl
+   ret		sall		sarl		sete
+   shrl		subl		xorl
+
+   al		ah		bh		cl
+   eax		ebx		ecx		edx		esp
+   apr		fpr		cpr		pcr)
+
   ;;On the Intel architecture, the CPU registers have special use:
   ;;
   ;;APR = %ebp		allocation pointer
@@ -154,7 +166,97 @@
 
     #| end of module |# )
 
-  #| end of module: INTEL-CPU-STUFF |# )
+;;; --------------------------------------------------------------------
+
+  (define (mem off val)
+    (cond ((fixnum? off)
+	   (list 'disp (int off) val))
+	  ((register? off)
+	   (list 'disp off val))
+	  (else
+	   (error 'mem "invalid disp" off))))
+
+  (define-syntax int
+    (syntax-rules ()
+      ((_ x) x)))
+
+  (define (obj x)		(list 'obj x))
+  (define (byte x)	(list 'byte x))
+  (define (byte-vector x) (list 'byte-vector x))
+  (define (movzbl src targ) (list 'movzbl src targ))
+  (define (sall src targ)	(list 'sall src targ))
+  (define (sarl src targ) (list 'sarl src targ))
+  (define (shrl src targ) (list 'shrl src targ))
+  (define (notl src)	(list 'notl src))
+  (define (pushl src)	(list 'pushl src))
+  (define (popl src)	(list 'popl src))
+  (define (orl src targ)	(list 'orl src targ))
+  (define (xorl src targ) (list 'xorl src targ))
+  (define (andl src targ) (list 'andl src targ))
+  (define (movl src targ) (list 'movl src targ))
+  (define (leal src targ) (list 'leal src targ))
+  (define (movb src targ) (list 'movb src targ))
+  (define (addl src targ) (list 'addl src targ))
+  (define (imull src targ) (list 'imull src targ))
+  (define (idivl src)	(list 'idivl src))
+  (define (subl src targ) (list 'subl src targ))
+  (define (push src)	(list 'push src))
+  (define (pop targ)	(list 'pop targ))
+  (define (sete targ)	(list 'sete targ))
+  (define (call targ)	(list 'call targ))
+
+  (define (tail-indirect-cpr-call)
+    ;;Fetch a  binary code address  from the closure object  referenced by
+    ;;the CPR (Closure Pointer Register) and jump directly there.
+    ;;
+    (jmp  (mem off-closure-code cpr)))
+
+  (define (indirect-cpr-call)
+    ;;Fetch a  binary code address  from the closure object  referenced by
+    ;;the CPR (Closure Pointer Register) and perform a call to there.
+    ;;
+    (call (mem off-closure-code cpr)))
+
+  (define (negl targ)	(list 'negl targ))
+  (define (label x)	(list 'label x))
+  (define (label-address x) (list 'label-address x))
+  (define (ret)		'(ret))
+  (define (cltd)		'(cltd))
+  (define (cmpl arg1 arg2) (list 'cmpl arg1 arg2))
+  (define (je label)	(list 'je label))
+  (define (jne label)	(list 'jne label))
+  (define (jle label)	(list 'jle label))
+  (define (jge label)	(list 'jge label))
+  (define (jg label)	(list 'jg label))
+  (define (jl label)	(list 'jl label))
+  (define (jb label)	(list 'jb label))
+  (define (ja label)	(list 'ja label))
+  (define (jo label)	(list 'jo label))
+  (define (jmp label)	(list 'jmp label))
+
+  (define esp		'%esp) ; stack frame pointer
+  (define al		'%al)
+  (define ah		'%ah)
+  (define bh		'%bh)
+  (define cl		'%cl)
+  (define eax		'%eax)
+  (define ebx		'%ebx)
+  (define ecx		'%ecx)
+  (define edx		'%edx)
+  (define apr		'%ebp) ; allocation pointer
+  (define fpr		'%esp) ; frame pointer
+  (define cpr		'%edi) ; closure pointer
+  (define pcr		'%esi) ; pcb pointer
+  (define register?	symbol?)
+
+  (define (argc-convention n)
+    ;;At run  time: the  number of  arguments in a  function call  is represented  by a
+    ;;negative fixnum  which is  the number  of arguments negated.   Example: -2  <-> 2
+    ;;arguments.
+    ;;
+    (fx- 0 (fxsll n fx-shift)))
+
+  #| end of module: INTEL-ASSEMBLY-HELPERS |# )
 
 
 (module ListySet
@@ -655,7 +757,7 @@
    reg?)
   (import IntegerSet)
   (module (%cpu-register-name->index)
-    (import INTEL-CPU-STUFF))
+    (import INTEL-ASSEMBLY-DEFINITIONS))
 
   (define (add-frm x s)
     (set-add (fvar-idx x) s))
@@ -761,6 +863,61 @@
   #| end of module: FRAME-CONFLICT-HELPERS |# )
 
 
+;;;; function call table
+;;
+;;Whenever  a "call"  assembly  instruction  is generated:  the  compiler, in  truth,
+;;generates this sequence:
+;;
+;;     jmp L0
+;;     livemask-bytes		;array of bytes             |
+;;     framesize		;data word, a "long"        | call
+;;     rp_offset		;data word, a fixnum        | table
+;;     multi-value-rp		;data word, assembly label  |
+;;     pad-bytes
+;;   L0:
+;;     call function-address
+;;   single-value-rp:		;single value return point
+;;     ... instructions...
+;;   multi-value-rp:		;multi value return point
+;;     ... instructions...
+;;
+;;and remember that the  "call" pushes on the stack the return  address, which is the
+;;label SINGLE-VALUE-RP.
+;;
+;;If the  called function wants to  return a single argument:  it can just put  it in
+;;AA-REGISTER and perform a "ret"; this will make the execution flow jump back to the
+;;entry point SINGLE-VALUE-RP.
+;;
+;;If the called  function wants to return  zero or 2 or more  arguments: it retrieves
+;;the  address SINGLE-VALUE-RP  from  the  stack, adds  to  it DISP-MULTIVALUE-RP  as
+;;defined below  and it  obtains the  address MULTI-VALUE-RP,  then performs  a "jmp"
+;;directly to MULTI-VALUE-RP.
+
+;;Refer  to  the picture  in  src/ikarus-collect.c  for details  on  how
+;;call-frames are laid out (search for livemask).
+;;
+(define-constant CALL-INSTRUCTION-SIZE
+  (boot.case-word-size
+   ((32) 5)
+   ((64) 10)))
+
+;;; The following are "displacements" from the address SINGLE-VALUE-RP.
+
+;;Commented out because unused.
+;;
+;;(define-constant disp-frame-size
+;;  (- (+ CALL-INSTRUCTION-SIZE (* 3 wordsize))))
+
+;;Commented out because unused.
+;;
+;;(define-constant disp-frame-offset
+;;  (- (+ CALL-INSTRUCTION-SIZE (* 2 wordsize))))
+
+;;Multivalue return point.
+;;
+(define-constant DISP-MULTIVALUE-RP
+  (- (+ CALL-INSTRUCTION-SIZE (* 1 wordsize))))
+
 (define (compile-call-table frame-words-count livemask-vec multiarg-rp call-sequence)
   ;;To generate a call to a Scheme  function, we need to follow both the
   ;;protocol for  handling multiple return  values, and the  protocol to
@@ -994,6 +1151,7 @@
   ;;   |                           |
   ;;           low memory
   ;;
+  (import INTEL-ASSEMBLY-DEFINITIONS)
   (let ((L_CALL (label (gensym "call_label"))))
     (define %adjust-frame-pointer-register
       (let ((FPR-DELTA (if (or (fxzero? frame-words-count)
@@ -1012,15 +1170,19 @@
 	  `(int ,(* frame-words-count wordsize))
 	  '(current-frame-offset)
 	  multiarg-rp
-	  `(pad ,call-instruction-size ,L_CALL ,call-sequence)
+	  `(pad ,CALL-INSTRUCTION-SIZE ,L_CALL ,call-sequence)
 	  (%adjust-frame-pointer-register 'addl))))
 
 
+;;;; include some external code for compiler passes and modules
 
-(include "ikarus.compiler.pass-impose-order.scm"       #t)
-(include "ikarus.compiler.pass-assign-frame-sizes.scm" #t)
-(include "ikarus.compiler.pass-color-by-chaitin.scm"   #t)
-(include "ikarus.compiler.pass-flatten-codes.scm"      #t)
+(include "ikarus.compiler.scheme-objects-layout.scm"		#t)
+(include "ikarus.compiler.common-assembly-subroutines.scm"	#t)
+(include "ikarus.compiler.pass-specify-representation.scm"	#t)
+(include "ikarus.compiler.pass-impose-order.scm"		#t)
+(include "ikarus.compiler.pass-assign-frame-sizes.scm"		#t)
+(include "ikarus.compiler.pass-color-by-chaitin.scm"		#t)
+(include "ikarus.compiler.pass-flatten-codes.scm"		#t)
 
 
 ;;;; done

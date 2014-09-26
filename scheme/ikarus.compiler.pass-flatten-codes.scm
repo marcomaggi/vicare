@@ -77,7 +77,7 @@
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
-  (import INTEL-CPU-STUFF)
+  (import INTEL-ASSEMBLY-DEFINITIONS)
 
 
 ;;;; helpers
@@ -805,7 +805,7 @@
 ;;; --------------------------------------------------------------------
 
 (define (unique-interrupt-label)
-  (label (gensym "L_error_interrupt")))
+  (label (gensym "L_shortcut_interrupt_handler")))
 
 (define unique-label
   (case-lambda

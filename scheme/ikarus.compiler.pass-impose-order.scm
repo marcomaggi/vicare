@@ -59,7 +59,7 @@
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
-  (import INTEL-CPU-STUFF)
+  (import INTEL-ASSEMBLY-DEFINITIONS)
 
 
 ;;;;

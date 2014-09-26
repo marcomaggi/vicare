@@ -32,7 +32,7 @@
   (import ListyGraphs)
   ;;(import IntegerSet)
   ;;(import IntegerGraphs)
-  (import INTEL-CPU-STUFF)
+  (import INTEL-ASSEMBLY-DEFINITIONS)
 
 
 ;;;;

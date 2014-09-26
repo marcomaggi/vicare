@@ -21,10 +21,20 @@
    ((32) 2)
    ((64) 3)))
 
+;;Whenever we allocate a memory block on the nursery heap to hold a new non-immediate
+;;Scheme object: we allocate  a block whose size is twice  the target platform's word
+;;size.
+;;
+;;
 (define-constant object-alignment	(* 2 wordsize))
 (define-constant align-shift		(+ wordshift 1))
-(define-constant pagesize		4096)
+;;(define-constant pagesize		4096)
 (define-constant pageshift		12)
+
+(define (align n)
+  (fxsll (fxsra (fx+ n (fxsub1 object-alignment))
+		align-shift)
+	 align-shift))
 
 
 ;;;; built in Scheme values
@@ -266,6 +276,18 @@
 (define-constant off-code-unused		(fx- disp-code-unused vector-tag))
 (define-constant off-code-data			(fx- disp-code-data vector-tag))
 
+;;Notify the assembler about the offset of the binary code area from the beginning of
+;;a code object's memory block.
+;;
+;;   |-----------|-----------------------------------|
+;;     meta data           binary data area
+;;
+;;   |...........|
+;;      offset
+;;
+(module ()
+  (code-entry-adjustment off-code-data))
+
 
 ;;;; closure objects
 
@@ -402,62 +424,6 @@
 (define-constant off-tcbucket-next		(fx- disp-tcbucket-next  vector-tag))
 
 
-;;;; function call table constants
-;;
-;;Whenever  a "call"  assembly  instruction  is generated:  the  compiler, in  truth,
-;;generates this sequence:
-;;
-;;     jmp L0
-;;     livemask-bytes		;array of bytes             |
-;;     framesize		;data word, a "long"        | call
-;;     rp_offset		;data word, a fixnum        | table
-;;     multi-value-rp		;data word, assembly label  |
-;;     pad-bytes
-;;   L0:
-;;     call function-address
-;;   single-value-rp:		;single value return point
-;;     ... instructions...
-;;   multi-value-rp:		;multi value return point
-;;     ... instructions...
-;;
-;;and remember that the  "call" pushes on the stack the return  address, which is the
-;;label SINGLE-VALUE-RP.
-;;
-;;If the  called function wants to  return a single argument:  it can just put  it in
-;;AA-REGISTER and perform a "ret"; this will make the execution flow jump back to the
-;;entry point SINGLE-VALUE-RP.
-;;
-;;If the called  function wants to return  zero or 2 or more  arguments: it retrieves
-;;the  address SINGLE-VALUE-RP  from  the  stack, adds  to  it DISP-MULTIVALUE-RP  as
-;;defined below  and it  obtains the  address MULTI-VALUE-RP,  then performs  a "jmp"
-;;directly to MULTI-VALUE-RP.
-
-;;Refer  to  the picture  in  src/ikarus-collect.c  for details  on  how
-;;call-frames are laid out (search for livemask).
-;;
-(define-constant call-instruction-size
-  (boot.case-word-size
-   ((32) 5)
-   ((64) 10)))
-
-;;; The following are "displacements" from the address SINGLE-VALUE-RP.
-
-;;Commented out because unused.
-;;
-;;(define-constant disp-frame-size
-;;  (- (+ call-instruction-size (* 3 wordsize))))
-
-;;Commented out because unused.
-;;
-;;(define-constant disp-frame-offset
-;;  (- (+ call-instruction-size (* 2 wordsize))))
-
-;;Multivalue return point.
-;;
-(define-constant disp-multivalue-rp
-  (- (+ call-instruction-size (* 1 wordsize))))
-
-
 ;;;; interfacing with the C language struct PCB
 ;;
 ;;The following are offsets to be added to  a PCB pointer to obtain the offset of the
@@ -477,57 +443,6 @@
 (define-constant pcb-interrupted		(fx* 10 wordsize))
 (define-constant pcb-base-rtd			(fx* 11 wordsize))
 (define-constant pcb-collect-key		(fx* 12 wordsize))
-
-
-;;;; utility functions for assembly code generation
-
-(module (target-platform-fixnum? NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)
-
-  ;;WORDSIZE is  the number of bytes  in a word: 4  on 32-bit platforms, 8  on 64-bit
-  ;;platforms.
-
-  (define-constant NUMBER-OF-BITS-IN-WORD
-    (fx* wordsize 8))
-
-  (define-constant NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
-    ;;This is 30 on 32-bit platforms and 61 on 64-bit platforms.
-    (fx- NUMBER-OF-BITS-IN-WORD fx-shift))
-
-  (define-constant NUMBER-OF-NEGATIVE-FIXNUMS
-    (expt 2 (fx- NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION 1)))
-
-  (define-constant TARGET-PLATFORM-LEAST-FIXNUM
-    (- NUMBER-OF-NEGATIVE-FIXNUMS))
-
-  (define-constant TARGET-PLATFORM-GREATEST-FIXNUM
-    (- NUMBER-OF-NEGATIVE-FIXNUMS 1))
-
-  (define (target-platform-fixnum? x)
-    ;;Return true if X is a compile-time constant that can be represented by a fixnum
-    ;;on the target platform.
-    ;;
-    (and (or (fixnum? x)
-	     (bignum? x))
-	 (<= TARGET-PLATFORM-LEAST-FIXNUM x TARGET-PLATFORM-GREATEST-FIXNUM)))
-
-  ;; (fprintf (current-error-port)
-  ;; 	   "target platform's word size = ~a\n\
-  ;;           target platform's NUMBER-OF-BITS-IN-WORD = ~a\n\
-  ;; 	    target platform's NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION = ~a\n\
-  ;; 	    target platform's NUMBER-OF-NEGATIVE-FIXNUMS = ~a\n\
-  ;; 	    TARGET-PLATFORM-LEAST-FIXNUM = ~a\n\
-  ;; 	    TARGET-PLATFORM-GREATEST-FIXNUM = ~a\n\
-  ;; 	    host's (least-fixnum)    = ~a\n\
-  ;; 	    host's (greatest-fixnum) = ~a\n"
-  ;; 	   wordsize
-  ;; 	   NUMBER-OF-BITS-IN-WORD
-  ;; 	   NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
-  ;; 	   NUMBER-OF-NEGATIVE-FIXNUMS
-  ;; 	   TARGET-PLATFORM-LEAST-FIXNUM
-  ;; 	   TARGET-PLATFORM-GREATEST-FIXNUM
-  ;; 	   (least-fixnum) (greatest-fixnum)))
-
-  #| end od module |# )
 
 ;;; end of file
 ;; Local Variables:

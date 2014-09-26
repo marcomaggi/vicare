@@ -38,26 +38,29 @@
     ;;
     (V-codes x))
 
-  (module (V-codes)
+
+;;;; process CODES struct
 
-    (define (V-codes x)
-      (struct-case x
-	((codes code* body)
-	 (let ((code* (map V-clambda code*))
-	       (body  (V body)))
-	   (make-codes code* body)))))
+(module (V-codes)
 
-    (define (V-clambda x)
-      (struct-case x
-	((clambda label clause* cp free* name)
-	 (make-clambda label (map V-clambda-clause clause*) cp free* name))))
+  (define (V-codes x)
+    (struct-case x
+      ((codes code* body)
+       (let ((code* (map V-clambda code*))
+	     (body  (V body)))
+	 (make-codes code* body)))))
 
-    (define (V-clambda-clause x)
-      (struct-case x
-	((clambda-case info body)
-	 (make-clambda-case info (V body)))))
+  (define (V-clambda x)
+    (struct-case x
+      ((clambda label clause* cp free* name)
+       (make-clambda label (map V-clambda-clause clause*) cp free* name))))
 
-    #| end of module: V-codes |# )
+  (define (V-clambda-clause x)
+    (struct-case x
+      ((clambda-case info body)
+       (make-clambda-case info (V body)))))
+
+  #| end of module: V-codes |# )
 
 
 ;;;; internal representation of primitive operations
@@ -1741,6 +1744,57 @@
     #| end of module: NONPROC |# )
 
   #| end of module: Function |# )
+
+
+;;;; utility functions for Assembly code generation
+
+(module (target-platform-fixnum? NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)
+
+  ;;WORDSIZE is  the number of bytes  in a word: 4  on 32-bit platforms, 8  on 64-bit
+  ;;platforms.
+
+  (define-constant NUMBER-OF-BITS-IN-WORD
+    (fx* wordsize 8))
+
+  (define-constant NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
+    ;;This is 30 on 32-bit platforms and 61 on 64-bit platforms.
+    (fx- NUMBER-OF-BITS-IN-WORD fx-shift))
+
+  (define-constant NUMBER-OF-NEGATIVE-FIXNUMS
+    (expt 2 (fx- NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION 1)))
+
+  (define-constant TARGET-PLATFORM-LEAST-FIXNUM
+    (- NUMBER-OF-NEGATIVE-FIXNUMS))
+
+  (define-constant TARGET-PLATFORM-GREATEST-FIXNUM
+    (- NUMBER-OF-NEGATIVE-FIXNUMS 1))
+
+  (define (target-platform-fixnum? x)
+    ;;Return true if X is a compile-time constant that can be represented by a fixnum
+    ;;on the target platform.
+    ;;
+    (and (or (fixnum? x)
+	     (bignum? x))
+	 (<= TARGET-PLATFORM-LEAST-FIXNUM x TARGET-PLATFORM-GREATEST-FIXNUM)))
+
+  ;; (fprintf (current-error-port)
+  ;; 	   "target platform's word size = ~a\n\
+  ;;           target platform's NUMBER-OF-BITS-IN-WORD = ~a\n\
+  ;; 	    target platform's NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION = ~a\n\
+  ;; 	    target platform's NUMBER-OF-NEGATIVE-FIXNUMS = ~a\n\
+  ;; 	    TARGET-PLATFORM-LEAST-FIXNUM = ~a\n\
+  ;; 	    TARGET-PLATFORM-GREATEST-FIXNUM = ~a\n\
+  ;; 	    host's (least-fixnum)    = ~a\n\
+  ;; 	    host's (greatest-fixnum) = ~a\n"
+  ;; 	   wordsize
+  ;; 	   NUMBER-OF-BITS-IN-WORD
+  ;; 	   NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION
+  ;; 	   NUMBER-OF-NEGATIVE-FIXNUMS
+  ;; 	   TARGET-PLATFORM-LEAST-FIXNUM
+  ;; 	   TARGET-PLATFORM-GREATEST-FIXNUM
+  ;; 	   (least-fixnum) (greatest-fixnum)))
+
+  #| end od module |# )
 
 
 ;;;; some external code

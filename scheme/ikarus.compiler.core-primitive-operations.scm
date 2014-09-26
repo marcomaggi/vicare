@@ -22,6 +22,8 @@
 (module CORE-PRIMITIVE-OPERATION-DEFINITIONS
   ()
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
+  (module (pcr fpr)
+    (import INTEL-ASSEMBLY-DEFINITIONS))
 
 
 (define-auxiliary-syntaxes safe unsafe)
