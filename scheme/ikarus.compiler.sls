@@ -6140,6 +6140,10 @@
 	    `(quote c))
 	   ((object? c)
 	    `(constant ,(E c)))
+	   ((closure-maker? c)
+	    `(constant ,(E c)))
+	   ((code-loc? c)
+	    `(constant ,(E c)))
 	   (else
 	    `(constant ,c))))
 
@@ -6358,6 +6362,10 @@
 		;;Extract the pretty name; this is useful when C is a loc gensym.
 		`(constant ,(%pretty-symbol c)))
 	       ((object? c)
+		`(constant ,(E c)))
+	       ((closure-maker? c)
+		`(constant ,(E c)))
+	       ((code-loc? c)
 		`(constant ,(E c)))
 	       (else
 		`(constant ,c))))
@@ -6610,6 +6618,10 @@
 		`(quote ,(%pretty-symbol c)))
 	       ((object? c)
 		`(quote ,(E c)))
+	       ((closure-maker? c)
+		`(constant ,(E c)))
+	       ((code-loc? c)
+		`(constant ,(E c)))
 	       (else
 		`(quote ,c))))
 

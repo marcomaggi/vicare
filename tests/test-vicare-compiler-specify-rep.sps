@@ -504,6 +504,103 @@
   #t)
 
 
+(parametrise ((check-test-name	'fix))
+
+  ;;All combinator bindings.
+  (doit (let ((a (lambda () '1))
+	      (b (lambda () '2))
+	      (c (lambda () '3)))
+	  (list a b c))
+	(codes
+	 ((lambda (label: asmlabel:c:clambda) (cp_0) (constant 24))
+	  (lambda (label: asmlabel:b:clambda) (cp_1) (constant 16))
+	  (lambda (label: asmlabel:a:clambda) (cp_2) (constant 8)))
+	 (seq
+	   (shortcut
+	       (primcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall
+		 (primcall mref (constant (object $do-event)) (constant 19))))
+	   (funcall (primcall mref (constant (object list)) (constant 27))
+	     (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
+	       tmp_0)
+	     (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:b:clambda) no-freevars))))
+	       tmp_1)
+	     (bind ((tmp_2 (constant (closure-maker (code-loc asmlabel:c:clambda) no-freevars))))
+	       tmp_2)))))
+
+  ;;All non-combinator bindings.
+  (doit (let ((x (read)))
+	  (let ((a (lambda () x))
+		(b (lambda () x))
+		(c (lambda () x)))
+	    (list a b c)))
+	(codes
+	 ((lambda (label: asmlabel:c:clambda) (cp_0) (primcall mref cp_0 (constant 5)))
+	  (lambda (label: asmlabel:b:clambda) (cp_1) (primcall mref cp_1 (constant 5)))
+	  (lambda (label: asmlabel:a:clambda) (cp_2) (primcall mref cp_2 (constant 5))))
+	 (seq
+	   (shortcut
+	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
+		   (primcall interrupt)
+		 (primcall nop))
+	     (foreign-call "ik_stack_overflow"))
+	   (shortcut
+	       (primcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (primcall mref (constant (object $do-event)) (constant 19))))
+	   (bind ((x_0 (funcall (primcall mref (constant (object read)) (constant 27)))))
+	     (bind ((c_0 (primcall alloc (constant 48) (constant 3))))
+	       (bind ((b_0 (primcall int+ c_0 (constant 16)))
+		      (a_0 (primcall int+ c_0 (constant 32))))
+		 (seq
+		   (primcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
+		   (primcall mset c_0 (constant  5) x_0)
+		   (primcall mset b_0 (constant -3) (constant (code-loc asmlabel:b:clambda)))
+		   (primcall mset b_0 (constant  5) x_0)
+		   (primcall mset a_0 (constant -3) (constant (code-loc asmlabel:a:clambda)))
+		   (primcall mset a_0 (constant  5) x_0)
+		   (funcall (primcall mref (constant (object list)) (constant 27))
+		     a_0 b_0 c_0))))))))
+
+  ;;Mixed combinator/non-combinator bindings.
+  (doit (let ((x (read)))
+	  (let ((a (lambda () '1))
+		(b (lambda () '2))
+		(c (lambda () x))
+		(d (lambda () x)))
+	    (list a b c)))
+	(codes
+	 ((lambda (label: asmlabel:d:clambda) (cp_0) (primcall mref cp_0 (constant 5)))
+	  (lambda (label: asmlabel:c:clambda) (cp_1) (primcall mref cp_1 (constant 5)))
+	  (lambda (label: asmlabel:b:clambda) (cp_2) (constant 16))
+	  (lambda (label: asmlabel:a:clambda) (cp_3) (constant 8)))
+	 (seq
+	   (shortcut
+	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
+		   (primcall interrupt)
+		 (primcall nop))
+	     (foreign-call "ik_stack_overflow"))
+	   (shortcut
+	       (primcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall
+		 (primcall mref (constant (object $do-event)) (constant 19))))
+	   (bind ((x_0 (funcall (primcall mref (constant (object read)) (constant 27)))))
+	     (bind ((d_0 (primcall alloc (constant 32) (constant 3))))
+	       (bind ((c_0 (primcall int+ d_0 (constant 16))))
+		 (seq
+		   (primcall mset d_0 (constant -3) (constant (code-loc asmlabel:d:clambda)))
+		   (primcall mset d_0 (constant  5) x_0)
+		   (primcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
+		   (primcall mset c_0 (constant  5) x_0)
+		   (funcall (primcall mref (constant (object list)) (constant 27))
+		     (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
+		       tmp_0)
+		     (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:b:clambda) no-freevars))))
+		       tmp_1)
+		     c_0))))))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
