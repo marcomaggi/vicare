@@ -1025,7 +1025,7 @@
   ;;*  If the  FIX  struct contains  only  bindings for  combinators:  a single  BIND
   ;;  structure is returned, representing the following operations:
   ;;
-  ;;     (bind ((?combinator-var (constant ?combinator-closure-maker)) ...)
+  ;;     (bind ((?var (constant ?closure-maker)) ...)
   ;;       ?body)
   ;;
   ;;  combinator closure  objects can be generated at compile-time  and stored in the
@@ -1035,8 +1035,11 @@
   ;;  structure  is returned, containing  recordized code to allocate  and initialise
   ;;  the closures:
   ;;
-  ;;     (bind ((?non-combin-name (alloc-and-init-closure ?non-combin-code)) ...)
-  ;;       ?body)
+  ;;     (bind ((?var0 (primcall alloc ?total-closure-objects-size)))
+  ;;       (bind ((?var1 (primcall int+ ?var0 ?offset-of-closure-1))
+  ;;              (?var2 (primcall int+ ?var0 ?offset-of-closure-2))
+  ;;              ...)
+  ;;         ?body))
   ;;
   ;;  non-combinator  closure objects must be  generated at run-time, to  capture the
   ;;  current value of the free variables.
@@ -1113,8 +1116,10 @@
 	    (rhs  (car rhs*))
 	    (lhs* (cdr lhs*))
 	    (rhs* (cdr rhs*)))
-	(let ((n  (%closure-size rhs))
-	      (n* (map %closure-size rhs*)))
+	;;LHS represents a  machine word holding the tagged poniter  to the allocated
+	;;memory block; such pointer also references the first closure object.
+	(let ((n  (%slots-area-size rhs))
+	      (n* (map %slots-area-size rhs*)))
 	  (make-bind (list lhs)
 		     (list (prm 'alloc
 				(K (apply + n n*))
@@ -1123,8 +1128,8 @@
 				body)))))
 
     (define (%adders lhs n n*)
-      ;;Return   a   list  of   struct   instances   of  type   PRIMCALL
-      ;;representing...
+      ;;Return a list  of PRIMCALL structs representing expressions  that compute the
+      ;;offset of an embedded closure object in the global memory block.
       ;;
       (if (pair? n*)
 	  (cons (prm 'int+ lhs (K n))
@@ -1133,10 +1138,10 @@
 			 (cdr n*)))
 	'()))
 
-    (define (%closure-size x)
-      ;;X must be  a struct instance of type  CLOSURE-MAKER.  Return the
-      ;;*aligned*  number of  bytes needed  to hold  the free  variables
-      ;;slots in the closure built in object.
+    (define (%slots-area-size x)
+      ;;X must  be a  struct instance  of type  CLOSURE-MAKER.  Return  the *aligned*
+      ;;number of bytes needed to hold the  free variables slots in the closure built
+      ;;in object.
       ;;
       ;;                  0   1   2   3   4   5
       ;;   |------------|---|---|---|---|---|---| closure object
@@ -1147,9 +1152,8 @@
       ;;
       (struct-case x
 	((closure-maker code freevar*)
-	 (if (null? freevar*)
-	     0
-	   (align (+ disp-closure-data (* (length freevar*) wordsize)))))))
+	 (assert (not (null? freevar*)))
+	 (align (+ disp-closure-data (* (length freevar*) wordsize))))))
 
     #| end of module: %MAKE-BIND-FOR-NON-COMBINATORS |# )
 
