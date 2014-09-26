@@ -1011,92 +1011,104 @@
 
 
 (module (handle-fix)
-  ;;This module transforms and expands the values in struct instances of
-  ;;type FIX.  Knowing that a closure is a:
+  ;;This module  transforms and expands the  values in struct instances  of type FIX.
   ;;
-  ;;* "combinator" if it has *no* free variables;
+  ;;Upon entering this module: the argument LHS* is a proper list of VAR structs; the
+  ;;argument RHS* is a proper list of  CLOSURE-MAKER structs; the argument BODY is as
+  ;;struct representin recordised code *already* processed  by the caller with the P,
+  ;;V or E function.
   ;;
-  ;;* "non-combinator" if it has free variables;
+  ;;We must remember that a closure is a: "combinator" if it has *no* free variables;
+  ;;"non-combinator" if  it has free variables.   The FIX struct is  transformed into
+  ;;one or two BIND structs as follows:
   ;;
-  ;;the values from a FIX struct are processed as follows:
+  ;;*  If the  FIX  struct contains  only  bindings for  combinators:  a single  BIND
+  ;;  structure is returned, representing the following operations:
   ;;
-  ;;* If the FIX struct contains only bindings for combinators: a single
-  ;;  BIND structure is returned, representing the following operations:
-  ;;
-  ;;     (let ((?combinator-name ?combinator-code))
-  ;;           ...))
+  ;;     (bind ((?combinator-var (constant ?combinator-closure-maker)) ...)
   ;;       ?body)
   ;;
-  ;;* If  the FIX struct  contains only bindings for  non-combinators: a
-  ;;  single BIND  structure is returned, containing  recordized code to
-  ;;  allocate and initialise the closures:
+  ;;  combinator closure  objects can be generated at compile-time  and stored in the
+  ;;  relocation vector of the code object that calls the closures.
   ;;
-  ;;     (let ((?non-combin-name
-  ;;                  (alloc-and-init-closure ?non-combin-code))
-  ;;           ...)
+  ;;* If  the FIX struct  contains only bindings  for non-combinators: a  single BIND
+  ;;  structure  is returned, containing  recordized code to allocate  and initialise
+  ;;  the closures:
+  ;;
+  ;;     (bind ((?non-combin-name (alloc-and-init-closure ?non-combin-code)) ...)
   ;;       ?body)
   ;;
-  ;;* If the  FIX struct contains both  combinators and non-combinators,
-  ;;  the  return value  is recordized  code representing  the following
-  ;;  operations:
+  ;;  non-combinator  closure objects must be  generated at run-time, to  capture the
+  ;;  current value of the free variables.
   ;;
-  ;;     (let ((?combinator-name ?combinator-code))
-  ;;           ...))
-  ;;       (let ((?non-combin-name
-  ;;                   (alloc-and-init-closure ?non-combin-code))
-  ;;             ...)
-  ;;         ?body))
+  ;;* If  the FIX struct  contains both  combinators and non-combinators,  the return
+  ;;   value is  recordized code  representing  nested bindings  for combinators  and
+  ;;  non-combinators.
   ;;
-  (module (handle-fix)
+  (define (handle-fix lhs* rhs* body)
+    (receive (lhs-combin* rhs-combin* lhs-non-combin* rhs-non-combin*)
+	(%partition-combinators/non-combinators lhs* rhs*)
+      (cond ((null? lhs-non-combin*)
+	     ;;Only combinators in this FIX.
+	     (%handle-fix/combinators lhs-combin* rhs-combin* body))
 
-    (define (handle-fix lhs* rhs* body)
-      (let-values (((lhs-combin* rhs-combin* lhs-non-combin* rhs-non-combin*)
-		    (%partition lhs* rhs*)))
-	(cond ((null? lhs-non-combin*)
-	       (make-bind lhs-combin* (map V rhs-combin*) body))
-	      ((null? lhs-combin*)
-	       (build-closures lhs-non-combin* rhs-non-combin*
-			       (closure-object-setters lhs-non-combin*
-						       rhs-non-combin*
-						       body)))
-	      (else
-	       (make-bind lhs-combin* (map V rhs-combin*)
-			  (build-closures lhs-non-combin* rhs-non-combin*
-					  (closure-object-setters lhs-non-combin*
-								  rhs-non-combin*
-								  body)))))))
+	    ((null? lhs-combin*)
+	     ;;Only non-combinators in this FIX.
+	     (%handle-fix/non-combinators lhs-non-combin* rhs-non-combin* body))
+	    (else
+	     ;;Both combinators and non-combinators in this FIX.
+	     (%handle-fix/combinators lhs-combin*
+				      rhs-combin*
+				      (%handle-fix/non-combinators lhs-non-combin*
+								   rhs-non-combin*
+								   body))))))
 
-    (define (%partition lhs* rhs*)
+  (define (%handle-fix/combinators lhs-combin* rhs-combin* body)
+    (make-bind lhs-combin* (map make-constant rhs-combin*) body))
+
+  (define (%handle-fix/non-combinators lhs-non-combin* rhs-non-combin* body)
+    (%make-bind-for-non-combinators lhs-non-combin* rhs-non-combin*
+				    (%closure-object-setters lhs-non-combin*
+							     rhs-non-combin*
+							     body)))
+
+;;; --------------------------------------------------------------------
+
+  (module (%partition-combinators/non-combinators)
+
+    (define (%partition-combinators/non-combinators lhs* rhs*)
       (if (pair? lhs*)
-	  (receive (lhs-combin* rhs-combin lhs-non-combin rhs-non-combin)
-	      (%partition (cdr lhs*) (cdr rhs*))
+	  (receive (lhs-combin* rhs-combin* lhs-non-combin* rhs-non-combin*)
+	      (%partition-combinators/non-combinators (cdr lhs*) (cdr rhs*))
 	    (let ((lhs (car lhs*))
 		  (rhs (car rhs*)))
-	      (if (%combinator? lhs rhs)
+	      (if (%combinator? rhs)
 		  (values (cons lhs lhs-combin*)
-			  (cons rhs rhs-combin)
-			  lhs-non-combin
-			  rhs-non-combin)
+			  (cons rhs rhs-combin*)
+			  lhs-non-combin*
+			  rhs-non-combin*)
 		(values lhs-combin*
-			rhs-combin
-			(cons lhs lhs-non-combin)
-			(cons rhs rhs-non-combin)))))
+			rhs-combin*
+			(cons lhs lhs-non-combin*)
+			(cons rhs rhs-non-combin*)))))
 	(values '() '() '() '())))
 
-    (define (%combinator? lhs.unused rhs)
-      ;;Return true if the struct  instance of type CLOSURE-MAKER in RHS
-      ;;has *no* free variables.
+    (define (%combinator? rhs)
+      ;;Return true if the struct instance of type CLOSURE-MAKER in RHS has *no* free
+      ;;variables.
       ;;
       (struct-case rhs
 	((closure-maker code freevar*)
 	 (null? freevar*))
 	(else #f)))
 
-    #| end of module |# )
+    #| end of module: %PARTITION-COMBINATORS/NON-COMBINATORS |# )
 
-  (module (build-closures)
+;;; --------------------------------------------------------------------
 
-    (define (build-closures lhs* rhs* body)
+  (module (%make-bind-for-non-combinators)
+
+    (define (%make-bind-for-non-combinators lhs* rhs* body)
       (let ((lhs  (car lhs*))
 	    (rhs  (car rhs*))
 	    (lhs* (cdr lhs*))
@@ -1105,7 +1117,7 @@
 	      (n* (map %closure-size rhs*)))
 	  (make-bind (list lhs)
 		     (list (prm 'alloc
-				(K (%sum n n*))
+				(K (apply + n n*))
 				(K closure-tag)))
 		     (make-bind lhs* (%adders lhs n n*)
 				body)))))
@@ -1120,15 +1132,6 @@
 			 (+ n (car n*))
 			 (cdr n*)))
 	'()))
-
-    (define (%sum n n*)
-      ;;Return the sum between the numbers in the list N* and the number
-      ;;N.
-      ;;
-      (if (pair? n*)
-	  (%sum (+ n (car n*))
-		(cdr n*))
-	n))
 
     (define (%closure-size x)
       ;;X must be  a struct instance of type  CLOSURE-MAKER.  Return the
@@ -1148,9 +1151,11 @@
 	     0
 	   (align (+ disp-closure-data (* (length freevar*) wordsize)))))))
 
-    #| end of module |# )
+    #| end of module: %MAKE-BIND-FOR-NON-COMBINATORS |# )
 
-  (module (closure-object-setters)
+;;; --------------------------------------------------------------------
+
+  (module (%closure-object-setters)
     ;;To build  a closure built  in object we  must allocate a  block of
     ;;memory and then intialise it.  Given  a built in code object and a
     ;;list of free variables, initialisation means:
@@ -1170,7 +1175,7 @@
     ;;   (mset ?var (+ 1 off-closure-data) ?free-var-1)
     ;;   (mset ?var (+ 2 off-closure-data) ?free-var-2)
     ;;
-    (define (closure-object-setters lhs* rhs* body)
+    (define (%closure-object-setters lhs* rhs* body)
       ;;LHS* must be a list of struct instances of type VAR representing
       ;;memory locations containing references to the closure objects.
       ;;
@@ -1181,7 +1186,7 @@
       ;;
       (if (pair? lhs*)
 	  (%single-closure-setters (car lhs*) (car rhs*)
-				   (closure-object-setters (cdr lhs*) (cdr rhs*) body))
+				   (%closure-object-setters (cdr lhs*) (cdr rhs*) body))
 	body))
 
     (define (%single-closure-setters lhs rhs body)
@@ -1209,9 +1214,9 @@
 		    (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))
 	body))
 
-    #| end of module: closure-object-setters |# )
+    #| end of module: %CLOSURE-OBJECT-SETTERS |# )
 
-  #| end of module: handle-fix |# )
+  #| end of module: HANDLE-FIX |# )
 
 
 (module cogen-debug-call-stuff
@@ -1298,7 +1303,7 @@
   ;;
   ;;Accept as input recordized code holding the following struct types:
   ;;
-  ;;bind		closure-maker	code-loc
+  ;;bind		code-loc
   ;;conditional		constant	fix
   ;;forcall		funcall		jmpcall
   ;;known		primcall	primref
@@ -1312,8 +1317,7 @@
   ;;
   ;;* Instances of PRIMREF are replaced by instances of PRIMCALL.
   ;;
-  ;;* Instances of CODE-LOC and CLOSURE-MAKER are wrapped into instances
-  ;;  of CONSTANT.
+  ;;* Instances of CODE-LOC are wrapped into instances of CONSTANT.
   ;;
   ;;* Instances of PRIMCALL ...
   ;;
@@ -1350,9 +1354,6 @@
 	    (K off-symbol-record-value)))
 
       ((code-loc)
-       (make-constant x))
-
-      ((closure-maker)
        (make-constant x))
 
       ((bind lhs* rhs* body)
