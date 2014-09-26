@@ -1,11 +1,8 @@
 * Branch purpose
 
+  Total review of the compiler.
+
   Development of the source optimiser.
-
-* Files affected
-
-  The source optimiser code is in "ikarus.compiler.source-optimiser.scm"; the optimiser is
-  configured with command line options defined in "ikarus.main.sls".
 
 * For every library defined by the boot image classify the relevant primitives
 
@@ -75,4 +72,24 @@
 * Compiler pass: core type inference
 
 ** Rely on the core primitives table to determine the type of operands and return values.
+
+* Compiler pass: source optimiser
+
+  Total code review.
+
+* Compiler pass: impose-calling-convention/evaluation-order
+
+  Total code review.
+
+* Compiler pass: assign-frame-sizes
+
+  Total code review.
+
+* Compiler pass: color-by-chaitin
+
+  Total code review.
+
+* Compiler pass: flatten-codes
+
+  Total code review.
 
