@@ -528,7 +528,14 @@
 	     (bind ((tmp_2 (constant (closure-maker (code-loc asmlabel:c:clambda) no-freevars))))
 	       tmp_2)))))
 
-  ;;All non-combinator bindings.
+  ;;All  non-combinator  bindings.  Every  non-combinator  has  1 free  variable;  we
+  ;;allocate a single memory block for the 3 closure objects:
+  ;;
+  ;;    code entry  freevar   code entry  freevar    code entry  freevar
+  ;;    point C_0   slot C_0  point B_0   slot B_0  point A_0   slot A_0
+  ;;   |----------|----------|----------|----------|----------|----------|
+  ;;
+  ;;
   (doit (let ((x (read)))
 	  (let ((a (lambda () x))
 		(b (lambda () x))

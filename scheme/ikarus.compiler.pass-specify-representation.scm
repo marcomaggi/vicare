@@ -1118,12 +1118,12 @@
 	    (rhs* (cdr rhs*)))
 	;;LHS represents a  machine word holding the tagged poniter  to the allocated
 	;;memory block; such pointer also references the first closure object.
-	(let ((n  (%slots-area-size rhs))
-	      (n* (map %slots-area-size rhs*)))
+	(let ((n  (%closure-object-area-size rhs))
+	      (n* (map %closure-object-area-size rhs*)))
 	  (make-bind (list lhs)
 		     (list (prm 'alloc
-				(K (apply + n n*))
-				(K closure-tag)))
+				(KN (apply + n n*))
+				(KN closure-tag)))
 		     (make-bind lhs* (%adders lhs n n*)
 				body)))))
 
@@ -1132,47 +1132,47 @@
       ;;offset of an embedded closure object in the global memory block.
       ;;
       (if (pair? n*)
-	  (cons (prm 'int+ lhs (K n))
-		(%adders lhs
-			 (+ n (car n*))
-			 (cdr n*)))
-	'()))
+    	  (cons (prm 'int+ lhs (KN n))
+    		(%adders lhs
+    			 (+ n (car n*))
+    			 (cdr n*)))
+    	'()))
 
-    (define (%slots-area-size x)
+    (define (%closure-object-area-size x)
       ;;X must  be a  struct instance  of type  CLOSURE-MAKER.  Return  the *aligned*
-      ;;number of bytes needed to hold the  free variables slots in the closure built
-      ;;in object.
+      ;;number  of  bytes needed  to  hold:  the pointer  to  binary  code, the  free
+      ;;variables' slots.
       ;;
-      ;;                  0   1   2   3   4   5
-      ;;   |------------|---|---|---|---|---|---| closure object
-      ;;         ^
-      ;;         |      |.......................|
-      ;;    pointer to         slots size
-      ;;    binary code
+      ;;          pointer to
+      ;;          binary code   0   1   2   3   4   5
+      ;;         |------------|---|---|---|---|---|---| closure object
+      ;;
+      ;;         |............|.......................|
+      ;;     disp-closure-data       slots size
       ;;
       (struct-case x
 	((closure-maker code freevar*)
-	 (assert (not (null? freevar*)))
-	 (align (+ disp-closure-data (* (length freevar*) wordsize))))))
+	 #;(assert (not (null? freevar*)))
+	 (align (fx+ disp-closure-data (fx* (length freevar*) wordsize))))))
 
     #| end of module: %MAKE-BIND-FOR-NON-COMBINATORS |# )
 
 ;;; --------------------------------------------------------------------
 
   (module (%closure-object-setters)
-    ;;To build  a closure built  in object we  must allocate a  block of
-    ;;memory and then intialise it.  Given  a built in code object and a
-    ;;list of free variables, initialisation means:
+    ;;To build a closure built in object we  must allocate a block of memory and then
+    ;;intialise it.   Given a  built in  code object  and a  list of  free variables,
+    ;;initialisation means:
     ;;
-    ;;1. Store a  pointer to the binary  code in the code  object in the
-    ;;   first word of the closure object.
+    ;;1. Store a pointer  to the binary code in the code object  in the first word of
+    ;;   the closure object.
     ;;
-    ;;2.   For each  free variable:  store the  reference to  it in  the
-    ;;   associated slot of the closure object.
+    ;;2.  For each free variable: store the reference to it in the associated slot of
+    ;;   the closure object.
     ;;
-    ;;If ?VAR is the address of  a closure built in object, ?BINARY-CODE
-    ;;is a pointer  to the binary code, ?FREE-VAR is  the reference to a
-    ;;free variable, the initialisation for a single closure object is:
+    ;;If ?VAR is the address of a  closure built in object, ?BINARY-CODE is a pointer
+    ;;to  the  binary code,  ?FREE-VAR  is  the reference  to  a  free variable,  the
+    ;;initialisation for a single closure object is:
     ;;
     ;;   (mset ?var off-closure-code ?binary-code)
     ;;   (mset ?var (+ 0 off-closure-data) ?free-var-0)
@@ -1180,13 +1180,13 @@
     ;;   (mset ?var (+ 2 off-closure-data) ?free-var-2)
     ;;
     (define (%closure-object-setters lhs* rhs* body)
-      ;;LHS* must be a list of struct instances of type VAR representing
-      ;;memory locations containing references to the closure objects.
+      ;;LHS*  must be  a list  of struct  instances of  type VAR  representing memory
+      ;;locations containing references to the closure objects.
       ;;
       ;;RHS* must be a list of struct instances of type CLOSURE-MAKER.
       ;;
-      ;;BODY must be  a struct instance representing  recordized code in
-      ;;which the closure bindings are visible.
+      ;;BODY must  be a  struct instance  representing recordized  code in  which the
+      ;;closure bindings are visible.
       ;;
       (if (pair? lhs*)
 	  (%single-closure-setters (car lhs*) (car rhs*)
@@ -1196,25 +1196,24 @@
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
 	((closure-maker code freevar*)
-	 (make-seq (prm 'mset lhs (K off-closure-code) (V code))
+	 (make-seq (prm 'mset lhs (KN off-closure-code) (V code))
 		   (%slot-setters lhs freevar* off-closure-data body)))))
 
     (define (%slot-setters lhs free* slot-offset body)
-      ;;LHS  must be  a struct  instance  of type  VAR representing  the
-      ;;address of the closure memory block.
+      ;;LHS must  be a struct  instance of type VAR  representing the address  of the
+      ;;closure memory block.
       ;;
-      ;;FREE*  must  be   a  list  of  struct  instances   of  type  VAR
-      ;;representing references to free variables.
+      ;;FREE* must be a list of  struct instances of type VAR representing references
+      ;;to free variables.
       ;;
-      ;;SLOT-OFFSET must be  a fixnum representing the  offset (from the
-      ;;beginning of the closure memory block) of the next free variable
-      ;;slot, measured in bytes.
+      ;;SLOT-OFFSET must be  a fixnum representing the offset (from  the beginning of
+      ;;the closure memory block) of the next free variable slot, measured in bytes.
       ;;
-      ;;BODY must be  a struct instance representing  recordized code in
-      ;;which the closure bindings are visible.
+      ;;BODY must  be a  struct instance  representing recordized  code in  which the
+      ;;closure bindings are visible.
       ;;
       (if (pair? free*)
-	  (make-seq (prm 'mset lhs (K slot-offset) (V (car free*)))
+	  (make-seq (prm 'mset lhs (KN slot-offset) (V (car free*)))
 		    (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))
 	body))
 
