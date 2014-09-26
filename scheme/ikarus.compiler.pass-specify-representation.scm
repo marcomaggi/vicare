@@ -31,46 +31,31 @@
   (define-syntax __module_who__
     (identifier-syntax 'specify-representation))
 
-  (cond-expand
-   (#t
-    (define (specify-representation x)
-      ;;Perform code transformation  traversing the whole hierarchy in  X, which must
-      ;;be a CODES struct representing recordised  code; build and return a new CODES
-      ;;struct.
-      ;;
-      (V-codes x)))
-   (else
-    ;;The one below is for debugging purposes
-    (define (specify-representation x)
-      (debug-print* 'input (unparse-recordized-code/sexp x))
-      (receive-and-return (code)
-	  (V-codes x)
-	(void)
-	(debug-print* 'output (unparse-recordized-code/sexp code))))))
+  (define (specify-representation x)
+    ;;Perform code transformation traversing the whole  hierarchy in X, which must be
+    ;;a  CODES struct  representing recordised  code; build  and return  a new  CODES
+    ;;struct.
+    ;;
+    (V-codes x))
 
   (module (V-codes)
+
     (define (V-codes x)
       (struct-case x
 	((codes code* body)
 	 (let ((code* (map V-clambda code*))
 	       (body  (V body)))
-	   (make-codes code* body)))
-	(else
-	 (compiler-internal-error __module_who__ "invalid program" x))))
+	   (make-codes code* body)))))
 
     (define (V-clambda x)
       (struct-case x
 	((clambda label clause* cp free* name)
-	 (make-clambda label (map V-clambda-clause clause*) cp free* name))
-	(else
-	 (compiler-internal-error __module_who__ "invalid clambda" x))))
+	 (make-clambda label (map V-clambda-clause clause*) cp free* name))))
 
     (define (V-clambda-clause x)
       (struct-case x
 	((clambda-case info body)
-	 (make-clambda-case info (V body)))
-	(else
-	 (compiler-internal-error __module_who__ "invalid clambda-case" x))))
+	 (make-clambda-case info (V body)))))
 
     #| end of module: V-codes |# )
 
