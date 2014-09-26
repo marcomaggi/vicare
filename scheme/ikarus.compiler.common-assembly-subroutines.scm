@@ -26,7 +26,7 @@
 	 sl-mv-error-rp-label
 	 sl-values-label
 	 sl-cwv-label)
-  (import INTEL-ASSEMBLY-DEFINITIONS)
+  (import INTEL-ASSEMBLY-CODE-GENERATION)
 
 
 (define-syntax (define-cached x)

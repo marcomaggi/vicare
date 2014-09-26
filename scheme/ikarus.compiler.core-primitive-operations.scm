@@ -23,7 +23,7 @@
   ()
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
   (module (pcr fpr)
-    (import INTEL-ASSEMBLY-DEFINITIONS))
+    (import INTEL-ASSEMBLY-CODE-GENERATION))
 
 
 (define-auxiliary-syntaxes safe unsafe)

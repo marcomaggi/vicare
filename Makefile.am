@@ -300,6 +300,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.compiler.core-primitive-properties.scm	\
 	scheme/ikarus.compiler.core-primitive-tables.scm	\
 	scheme/ikarus.compiler.core-primitive-operations.scm	\
+	scheme/ikarus.compiler.intel-assembly.scm		\
 	scheme/ikarus.compiler.common-assembly-subroutines.scm	\
 	\
 	scheme/ikarus.apply.sls					\

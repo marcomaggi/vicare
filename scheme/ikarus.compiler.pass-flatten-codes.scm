@@ -77,7 +77,7 @@
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
-  (import INTEL-ASSEMBLY-DEFINITIONS)
+  (import INTEL-ASSEMBLY-CODE-GENERATION)
 
 
 ;;;; helpers

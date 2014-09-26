@@ -28,7 +28,7 @@
   ;;
   (import IntegerSet)
   (import FRAME-CONFLICT-HELPERS)
-  (import INTEL-ASSEMBLY-DEFINITIONS)
+  (import INTEL-ASSEMBLY-CODE-GENERATION)
   (define who 'assign-frame-sizes)
 
 
