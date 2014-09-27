@@ -1684,16 +1684,15 @@
   ;;* Inserting code to evaluate an arbitrary expression and check at runtime that it
   ;;  is actually a closure (if not: raise an exception).
   ;;
-  (define-inline (Function rator)
-    ;;X must  be a  struct instance representing  recordized code  to be
-    ;;executed  in  "for  returned  value"  context.   Return  a  struct
-    ;;instance  representing recordized  code  (to be  executed in  "for
-    ;;returned value" context) which is meant to replace X.
+  (define-syntax-rule (Function rator)
+    ;;X must be a struct instance representing recordized code to be executed in "for
+    ;;returned value" context.  Return a struct instance representing recordized code
+    ;;(to be executed in "for returned value" context) which is meant to replace X.
     ;;
     (F rator #t))
 
-  (define (F x check?)
-    (struct-case x
+  (define (F rator check?)
+    (struct-case rator
       ((primcall op args)
        (cond ((and (eq? op 'top-level-value)
 		   (null? (cdr args)) ;only one argument
@@ -1702,91 +1701,81 @@
 	      ;;
 	      ;;   #[primcall #[primref top-level-value] (?loc)]
 	      ;;
-	      ;;represents a  reference to a top  level value.  Whenever
-	      ;;binary code performs a call  to a global closure object,
-	      ;;it does the following:
+	      ;;represents a  reference to a  top level value.  Whenever  binary code
+	      ;;performs a call to a top level closure object, it does the following:
 	      ;;
-	      ;;* From the relocation vector of the current code object:
-	      ;;  retrieve the loc gensym of the procedure to call.
+	      ;;* From the relocation vector of the current code object: retrieve the
+	      ;;  loc gensym of the procedure to call.
 	      ;;
-	      ;;* From the  loc gensym: extract the value  of the "proc"
-	      ;;  slot, which is meant to be a closure object.
+	      ;;* From the loc gensym: extract the value of the "proc" slot, which is
+	      ;;  meant to be a closure object.
 	      ;;
 	      ;;* Actually call the closure object.
 	      ;;
-	      ;;Here we generate  the code needed to  retrieve the value
-	      ;;of the field "proc" from the symbol ?LOC.
+	      ;;Here we generate  the code needed to retrieve the  value of the field
+	      ;;"proc" from the symbol ?LOC.
 	      ;;
-	      ;;FIXME It is  clear that: at the time  the closure object
-	      ;;call is performed, the loc gensym must have been already
-	      ;;initialised by storing the  closure object in the "proc"
-	      ;;slot.   Good.  But  why  do  we call  RESET-SYMBOL-PROC!
-	      ;;here, at compile-time?  (Marco Maggi; Mon May 19, 2014)
 	      => (lambda (loc)
+		   ;;FIXME It is  clear that: at the time the  closure object call is
+		   ;;performed, the loc gensym must  have been already initialised by
+		   ;;storing the closure  object in the "proc" slot.   Good.  But why
+		   ;;do we  call RESET-SYMBOL-PROC!   here, at  compile-time?  (Marco
+		   ;;Maggi; Mon May 19, 2014)
 		   (reset-symbol-proc! loc)
 		   (prm 'mref
 			(constant->native-constant-representation (make-constant loc))
 			(K off-symbol-record-proc))))
 	     (else
-	      (nonproc x check?))))
+	      (F-nonproc rator check?))))
 
       ((primref op)
-       (V x))
+       ;;This is  a function application  in which the  function is a  core primitive
+       ;;function, not a core primitive operation.  See the function V for what needs
+       ;;to be done.
+       (V rator))
 
-      ((known x.expr x.type)
-       (cond ((eq? (T:procedure? x.type) 'yes)
-	      (F x.expr #f))
+      ((known rator.expr rator.type)
+       (cond ((eq? (T:procedure? rator.type) 'yes)
+	      (F rator.expr #f))
 	     (else
-	      (F x.expr check?))))
+	      (F rator.expr check?))))
 
       (else
-       (nonproc x check?))))
+       (F-nonproc rator check?))))
 
   (define (%recordized-symbol arg)
-    ;;ARG must be a struct instance representing recordized code.
-    ;;
-    ;;If ARG is  an intance of CONSTANT (possibly wrapped  into a KNOWN)
-    ;;whose value is a symbol: return that symbol; else return #f.  Such
-    ;;symbol is meant to be the location gensym of a procedure.
+    ;;ARG  must be  a struct  instance representing  recordized code.   If ARG  is an
+    ;;instance of CONSTANT  (possibly wrapped into a KNOWN) whose  value is a symbol:
+    ;;return that symbol;  else return #f.  Such  symbol is meant to  be the location
+    ;;gensym of a procedure.
     ;;
     (struct-case arg
       ((constant arg.val)
        (and (symbol? arg.val) arg.val))
       ((known arg.expr)
+       ;;NOTE Here we really want a CONSTANT  holding a symbol; it does not matter if
+       ;;the type in the KNOWN struct is "T:symbol".
        (%recordized-symbol arg.expr))
-      (else
-       #f)))
+      (else #f)))
 
-  (module (nonproc)
-
-    (define (nonproc x check?)
-      ;;When  CHECK?  is true:  generate  the  code needed  to  test  at run-time  if
-      ;;evaluating X yields a closure object; if  it does: X is returned at run-time,
-      ;;otherwise an error is raised at run-time.
-      ;;
-      (if check?
-	  (with-tmp ((x (V x)))
-	    (make-shortcut
-		(make-seq
-		 (make-conditional (%tag-test x closure-mask closure-tag)
-		     (prm 'nop)
-		   (prm 'interrupt))
-		 x)
-	      (V (make-funcall (mk-primref 'error)
-			       (list (K 'apply) (K "not a procedure") x)))))
-	(V x)))
-
-    (define (%tag-test x mask tag)
-      ;;Primary tag test.  X must be recordised code representing an immediate Scheme
-      ;;object or a tagged pointer referencing a  Scheme object.  Test if X is a word
-      ;;of type  TAG: use MASK to  extract bits from X,  then verify if the  bits are
-      ;;equal to TAG.
-      ;;
-      (if mask
-	  (prm '= (prm 'logand x (K mask)) (K tag))
-	(prm '= x (K tag))))
-
-    #| end of module: NONPROC |# )
+  (define (F-nonproc rator check?)
+    ;;When  CHECK?   is  true: generate  the  code  needed  to  test at  run-time  if
+    ;;evaluating RATOR  yields a  closure object;  if it does:  RATOR is  returned at
+    ;;run-time, otherwise an error is raised at run-time.
+    ;;
+    (if check?
+	(with-tmp ((x (V rator)))
+	  (make-shortcut
+	      (make-seq
+	       (make-conditional (prm '=
+				      (prm 'logand x (K closure-mask))
+				      (K closure-tag))
+		   (prm 'nop)
+		 (prm 'interrupt))
+	       x)
+	    (V (make-funcall (mk-primref 'error)
+			     (list (K 'apply) (K "not a procedure") x)))))
+      (V rator)))
 
   #| end of module: Function |# )
 
