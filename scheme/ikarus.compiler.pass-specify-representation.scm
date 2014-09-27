@@ -1117,73 +1117,35 @@
   ;;     closure object C_0    closure object B_0    closure object C_0
   ;;
   (define (handle-fix lhs* rhs* body)
-    (receive (lhs-combin* rhs-combin* lhs-non-combin* rhs-non-combin*)
-	(%partition-combinators/non-combinators lhs* rhs*)
-      (cond ((null? lhs-non-combin*)
-	     ;;Only combinators in this FIX.
-	     (%handle-fix/combinators lhs-combin* rhs-combin* body))
+    (cond ((null? rhs*)
+	   (compiler-internal-error __module_who__
+	     "invalid FIX struct with empty bindings" lhs* rhs* body))
+	  ((and (null? (cdr rhs*))
+		(%combinator-closure-maker? (car rhs*)))
+	   (make-bind lhs* (list (make-constant (car rhs*))) body))
+	  (else
+	   ;;NOTE For safety  I am leaving this assertion in.   (Marco Maggi; Sat Sep
+	   ;;27, 2014)
+	   (assert (for-all %non-combinator-closure-maker? rhs*))
+	   (%make-bind-for-non-combinators lhs* rhs* (%closure-object-setters lhs* rhs* body)))))
 
-	    ((null? lhs-combin*)
-	     ;;Only non-combinators in this FIX.
-	     (%handle-fix/non-combinators lhs-non-combin* rhs-non-combin* body))
-	    (else
-	     (compiler-internal-error __module_who__
-	       "invalid FIX struct holding both combinators and non-combinators"
-	       (unparse-recordized-code/sexp (make-fix lhs* rhs* body)))
-	     ;;NOTE  In  truth  we  could  process  here  FIX  structs  holding  both
-	     ;;combinators and non-combinators:
-	     ;;
-	     ;;   (%handle-fix/combinators
-	     ;;      lhs-combin* rhs-combin*
-	     ;;      (%handle-fix/non-combinators
-	     ;;         lhs-non-combin* rhs-non-combin* body))
-	     ;;
-	     ;;like  it  or  not, I  am  keeping  this  code  in comment  for  better
-	     ;;understanding of  what is going on  here.  Sue me.  (Marco  Maggi; Sat
-	     ;;Sep 27, 2014)
-	     ))))
+  (define (%combinator-closure-maker? rhs)
+    ;;Return true if the  struct instance of type CLOSURE-MAKER in  RHS has *no* free
+    ;;variables.
+    ;;
+    (struct-case rhs
+      ((closure-maker code freevar*)
+       (null? freevar*))
+      (else #f)))
 
-  (define (%handle-fix/combinators lhs-combin* rhs-combin* body)
-    (assert (%list-of-one-item? lhs-combin*))
-    (make-bind lhs-combin* ($map/stx make-constant rhs-combin*) body))
-
-  (define (%handle-fix/non-combinators lhs-non-combin* rhs-non-combin* body)
-    (%make-bind-for-non-combinators lhs-non-combin* rhs-non-combin*
-				    (%closure-object-setters lhs-non-combin*
-							     rhs-non-combin*
-							     body)))
-
-;;; --------------------------------------------------------------------
-
-  (module (%partition-combinators/non-combinators)
-
-    (define (%partition-combinators/non-combinators lhs* rhs*)
-      (if (pair? lhs*)
-	  (receive (lhs-combin* rhs-combin* lhs-non-combin* rhs-non-combin*)
-	      (%partition-combinators/non-combinators (cdr lhs*) (cdr rhs*))
-	    (let ((lhs (car lhs*))
-		  (rhs (car rhs*)))
-	      (if (%combinator? rhs)
-		  (values (cons lhs lhs-combin*)
-			  (cons rhs rhs-combin*)
-			  lhs-non-combin*
-			  rhs-non-combin*)
-		(values lhs-combin*
-			rhs-combin*
-			(cons lhs lhs-non-combin*)
-			(cons rhs rhs-non-combin*)))))
-	(values '() '() '() '())))
-
-    (define (%combinator? rhs)
-      ;;Return true if the struct instance of type CLOSURE-MAKER in RHS has *no* free
-      ;;variables.
-      ;;
-      (struct-case rhs
-	((closure-maker code freevar*)
-	 (null? freevar*))
-	(else #f)))
-
-    #| end of module: %PARTITION-COMBINATORS/NON-COMBINATORS |# )
+  (define (%non-combinator-closure-maker? rhs)
+    ;;Return  true if  the struct  instance  of type  CLOSURE-MAKER in  RHS has  free
+    ;;variables.
+    ;;
+    (struct-case rhs
+      ((closure-maker code freevar*)
+       (pair? freevar*))
+      (else #f)))
 
 ;;; --------------------------------------------------------------------
 
@@ -1238,9 +1200,8 @@
 ;;; --------------------------------------------------------------------
 
   (module (%closure-object-setters)
-    ;;To build a closure built in object we  must allocate a block of memory and then
-    ;;intialise it.   Given a  built in  code object  and a  list of  free variables,
-    ;;initialisation means:
+    ;;To build a closure object we must allocate a block of memory and then intialise
+    ;;it.  Given a code object and a list of free variables, initialisation means:
     ;;
     ;;1. Store a pointer  to the binary code in the code object  in the first word of
     ;;   the closure object.
@@ -1248,9 +1209,9 @@
     ;;2.  For each free variable: store the reference to it in the associated slot of
     ;;   the closure object.
     ;;
-    ;;If ?VAR is the address of a  closure built in object, ?BINARY-CODE is a pointer
-    ;;to  the  binary code,  ?FREE-VAR  is  the reference  to  a  free variable,  the
-    ;;initialisation for a single closure object is:
+    ;;If ?VAR is  the address of a  closure object, ?BINARY-CODE is a  pointer to the
+    ;;binary code, ?FREE-VAR is the reference  to a free variable, the initialisation
+    ;;for a single closure object is:
     ;;
     ;;   (mset ?var off-closure-code ?binary-code)
     ;;   (mset ?var (+ 0 off-closure-data) ?free-var-0)
