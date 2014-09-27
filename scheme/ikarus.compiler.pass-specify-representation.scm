@@ -1261,7 +1261,7 @@
   #| end of module: HANDLE-FIX |# )
 
 
-(module cogen-debug-call-stuff
+(module COGEN-DEBUG-CALL-STUFF
   (cogen-debug-call)
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
 
@@ -1365,7 +1365,7 @@
   ;;
   ;;* Instances of FIX are handled.
   ;;
-  (import cogen-debug-call-stuff)
+  (import COGEN-DEBUG-CALL-STUFF)
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
   (define (V x)
     (struct-case x
@@ -1446,7 +1446,7 @@
   ;;known		primcall	primref
   ;;seq			var
   ;;
-  (import cogen-debug-call-stuff)
+  (import COGEN-DEBUG-CALL-STUFF)
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
   (struct-case x
     ((constant c)
@@ -1484,16 +1484,16 @@
 	(cogen-primop     op 'P arg*))))
 
     ((var)
-     (prm '!= (V x) (V (K #f))))
+     (prm '!= (V x) (KN bool-f)))
 
     ((funcall)
-     (prm '!= (V x) (V (K #f))))
+     (prm '!= (V x) (KN bool-f)))
 
     ((jmpcall)
-     (prm '!= (V x) (V (K #f))))
+     (prm '!= (V x) (KN bool-f)))
 
     ((forcall)
-     (prm '!= (V x) (V (K #f))))
+     (prm '!= (V x) (KN bool-f)))
 
     ((known expr)
      ;;FIXME.  Suboptimal.  (Abdulaziz Ghuloum)
@@ -1517,7 +1517,7 @@
   ;;known		primcall	primref
   ;;seq			var
   ;;
-  (import cogen-debug-call-stuff)
+  (import COGEN-DEBUG-CALL-STUFF)
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
   (struct-case x
 
@@ -1668,27 +1668,29 @@
 
 
 (module (Function)
-  ;;This module is used to process the operator of every struct instance
-  ;;of type FUNCALL by the V and  E.  The operator can be a reference to
-  ;;a top level binding, but also  an expression which should evaluate a
-  ;;closure at runtime.
+  ;;This module  is used  to process the  operator of every  struct instance  of type
+  ;;FUNCALL by the functions V and E:
+  ;;
+  ;;   (make-funcall (Function rator) (map V rand*))
+  ;;
+  ;;the RATOR can be a reference to a top level binding, but also an expression which
+  ;;should evaluate to a closure at runtime.
   ;;
   ;;This module takes care of:
   ;;
-  ;;* Expanding recordized  references to top level bindings  to what is
-  ;;  needed to retrieve the reference to closure.
+  ;;* Expanding  recordised references  to top  level bindings to  what is  needed to
+  ;;  retrieve the reference to closure.
   ;;
-  ;;* Inserting  code to evaluate  an arbitrary expression and  check at
-  ;;   runtime  that  it  is  actually  a  closure  (if  not:  raise  an
-  ;;  exception).
+  ;;* Inserting code to evaluate an arbitrary expression and check at runtime that it
+  ;;  is actually a closure (if not: raise an exception).
   ;;
-  (define-inline (Function x)
+  (define-inline (Function rator)
     ;;X must  be a  struct instance representing  recordized code  to be
     ;;executed  in  "for  returned  value"  context.   Return  a  struct
     ;;instance  representing recordized  code  (to be  executed in  "for
     ;;returned value" context) which is meant to replace X.
     ;;
-    (F x #t))
+    (F rator #t))
 
   (define (F x check?)
     (struct-case x
