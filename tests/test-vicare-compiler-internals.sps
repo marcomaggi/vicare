@@ -2896,7 +2896,24 @@
 					 (freevars: a_1))))
 	       tmp_0)))))
 
-#t)
+;;; --------------------------------------------------------------------
+
+  (doit (let ((f (lambda () '1)))
+	  f)
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) (cp_0) (constant 1)))
+	 (fix ((tmp_0 (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
+	   tmp_0)))
+
+  (doit (let ((f (lambda () '1)))
+	  (f))
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) (cp_0) (constant 1)))
+	 (jmpcall asmlabel:f:clambda:case-0
+		  (fix ((tmp_0 (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
+		    tmp_0))))
+
+  #t)
 
 
 (parametrise ((check-test-name						'engine-checks)

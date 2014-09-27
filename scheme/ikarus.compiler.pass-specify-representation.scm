@@ -1011,42 +1011,110 @@
 
 
 (module (handle-fix)
-  ;;This module  transforms and expands the  values in struct instances  of type FIX.
+  ;;This module transforms the structs fix.
   ;;
   ;;Upon entering this module: the argument LHS* is a proper list of VAR structs; the
   ;;argument RHS* is a proper list of  CLOSURE-MAKER structs; the argument BODY is as
-  ;;struct representin recordised code *already* processed  by the caller with the P,
+  ;;struct representing recordised code *already* processed by the caller with the P,
   ;;V or E function.
   ;;
-  ;;We must remember that a closure is a: "combinator" if it has *no* free variables;
-  ;;"non-combinator" if  it has free variables.   The FIX struct is  transformed into
-  ;;one or two BIND structs as follows:
+  ;;We know  that the  VAR in LHS*  will represent (in  further compiler  passes) CPU
+  ;;registers  or Scheme  stack locations  holding a  tagged pointer  to the  closure
+  ;;object resulting from the evaluation of the CLOSURE-MAKER structs in RHS*.
   ;;
-  ;;*  If the  FIX  struct contains  only  bindings for  combinators:  a single  BIND
-  ;;  structure is returned, representing the following operations:
   ;;
-  ;;     (bind ((?var (constant ?closure-maker)) ...)
-  ;;       ?body)
+  ;;Handling all-combinators FIX structs
+  ;;------------------------------------
   ;;
-  ;;  combinator closure  objects can be generated at compile-time  and stored in the
-  ;;  relocation vector of the code object that calls the closures.
+  ;;A closure is a  "combinator" if it has *no* free  variables: everything needed to
+  ;;generate the closure  object is known at  run-time.  We know that,  in a previous
+  ;;compiler  pass:  VAR structs  referencing  combinator  CLOSURE-MAKER structs  are
+  ;;substituted by direct references to the  CLOSURE-MAKER struct itself, so that the
+  ;;core language expression:
   ;;
-  ;;* If  the FIX struct  contains only bindings  for non-combinators: a  single BIND
-  ;;  structure  is returned, containing  recordized code to allocate  and initialise
-  ;;  the closures:
+  ;;   (let ((f (lambda () '1)))
+  ;;     (f))
   ;;
-  ;;     (bind ((?var0 (primcall alloc ?total-closure-objects-size)))
-  ;;       (bind ((?var1 (primcall int+ ?var0 ?offset-of-closure-1))
-  ;;              (?var2 (primcall int+ ?var0 ?offset-of-closure-2))
-  ;;              ...)
-  ;;         ?body))
+  ;;is transformed into:
   ;;
-  ;;  non-combinator  closure objects must be  generated at run-time, to  capture the
-  ;;  current value of the free variables.
+  ;;   (codes
+  ;;     ((lambda (label: asmlabel:f:clambda) (cp_0) (constant 1)))
+  ;;     (jmpcall asmlabel:f:clambda:case-0
+  ;;       (fix ((tmp_0 (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
+  ;;         tmp_0)))
   ;;
-  ;;* If  the FIX struct  contains both  combinators and non-combinators,  the return
-  ;;   value is  recordized code  representing  nested bindings  for combinators  and
-  ;;  non-combinators.
+  ;;so, in this  compiler pass, expect to find combinator  CLOSURE-MAKER structs only
+  ;;in FIX structs defining a single binding.   In this module, we transform such FIX
+  ;;structs as follows:
+  ;;
+  ;;   (bind ((tmp_0 (constant (closure-maker
+  ;;                              (code-loc asmlabel:f:clambda)
+  ;;                              no-freevars))))
+  ;;     tmp_0)
+  ;;
+  ;;in which the CLOSURE-MAKER has been wrapped into a CONSTANT.  This will cause the
+  ;;CLOSURE-MAKER struct to  generate a closure object at  compile-time; such closure
+  ;;object will  be stored in  the relocation vector of  the code object  calling the
+  ;;function.
+  ;;
+  ;;
+  ;;Handling all-non-combinators FIX structs
+  ;;----------------------------------------
+  ;;
+  ;;A closure is  a "non-combinator" if it  has free variables: we  must generate the
+  ;;closure  object at  run-time to  capture the  values of  the free  variables.  In
+  ;;previous  compiler  passes the  non-combinator  CLOSURE-MAKER  structs have  been
+  ;;grouped (as much as possible) into single FIX structs; so, in this compiler pass,
+  ;;we expect to find FIX structs defining multiple non-combinator bindings.
+  ;;
+  ;;Closure objects defined  by the same FIX  struct are "block allocated";  if a FIX
+  ;;struct defines  three closures bound  to A_0, B_0, C_0  a single memory  block is
+  ;;allocated to hold the thee closure objects.  Let's see how this is done.
+  ;;
+  ;;In the core language expression:
+  ;;
+  ;;   (let ((x (read)))
+  ;;     (let ((a (lambda () x))
+  ;;           (b (lambda () x))
+  ;;           (c (lambda () x)))
+  ;;       (list a b c)))
+  ;;
+  ;;the internal LET form is transformed into:
+  ;;
+  ;;         ;;allocate a single memory block
+  ;;   (bind ((c_0 (primcall alloc (constant 48) (constant 3))))
+  ;;           ;;compute the tagged pointers referencing the other closure objects
+  ;;     (bind ((b_0 (primcall int+ c_0 (constant 16)))
+  ;;            (a_0 (primcall int+ c_0 (constant 32))))
+  ;;       (seq
+  ;;         ;;Initialise the closure object C_0: store in the 1st word
+  ;;         ;;the address of the binary code entry point; store in the
+  ;;         ;;2nd word the value of the free variable.
+  ;;         (primcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
+  ;;         (primcall mset c_0 (constant  5) x_0)
+  ;;
+  ;;         ;;Initialise the closure object B_0: store in the 1st word
+  ;;         ;;the address of the binary code entry point; store in the
+  ;;         ;;2nd word the value of the free variable.
+  ;;         (primcall mset b_0 (constant -3) (constant (code-loc asmlabel:b:clambda)))
+  ;;         (primcall mset b_0 (constant  5) x_0)
+  ;;
+  ;;         ;;Initialise the closure object A_0: store in the 1st word
+  ;;         ;;the address of the binary code entry point; store in the
+  ;;         ;;2nd word the value of the free variable.
+  ;;         (primcall mset a_0 (constant -3) (constant (code-loc asmlabel:a:clambda)))
+  ;;         (primcall mset a_0 (constant  5) x_0)
+  ;;
+  ;;         ?body)))
+  ;;
+  ;;the layout of the single memory block is:
+  ;;
+  ;;    code entry  freevar   code entry  freevar   code entry  freevar
+  ;;    point C_0   slot C_0  point B_0   slot B_0  point A_0   slot A_0
+  ;;   |----------|----------|----------|----------|----------|----------|
+  ;;
+  ;;   |.....................|.....................|.....................|
+  ;;     closure object C_0    closure object B_0    closure object C_0
   ;;
   (define (handle-fix lhs* rhs* body)
     (receive (lhs-combin* rhs-combin* lhs-non-combin* rhs-non-combin*)
@@ -1059,15 +1127,25 @@
 	     ;;Only non-combinators in this FIX.
 	     (%handle-fix/non-combinators lhs-non-combin* rhs-non-combin* body))
 	    (else
-	     ;;Both combinators and non-combinators in this FIX.
-	     (%handle-fix/combinators lhs-combin*
-				      rhs-combin*
-				      (%handle-fix/non-combinators lhs-non-combin*
-								   rhs-non-combin*
-								   body))))))
+	     (compiler-internal-error __module_who__
+	       "invalid FIX struct holding both combinators and non-combinators"
+	       (unparse-recordized-code/sexp (make-fix lhs* rhs* body)))
+	     ;;NOTE  In  truth  we  could  process  here  FIX  structs  holding  both
+	     ;;combinators and non-combinators:
+	     ;;
+	     ;;   (%handle-fix/combinators
+	     ;;      lhs-combin* rhs-combin*
+	     ;;      (%handle-fix/non-combinators
+	     ;;         lhs-non-combin* rhs-non-combin* body))
+	     ;;
+	     ;;like  it  or  not, I  am  keeping  this  code  in comment  for  better
+	     ;;understanding of  what is going on  here.  Sue me.  (Marco  Maggi; Sat
+	     ;;Sep 27, 2014)
+	     ))))
 
   (define (%handle-fix/combinators lhs-combin* rhs-combin* body)
-    (make-bind lhs-combin* (map make-constant rhs-combin*) body))
+    (assert (%list-of-one-item? lhs-combin*))
+    (make-bind lhs-combin* ($map/stx make-constant rhs-combin*) body))
 
   (define (%handle-fix/non-combinators lhs-non-combin* rhs-non-combin* body)
     (%make-bind-for-non-combinators lhs-non-combin* rhs-non-combin*

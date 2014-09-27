@@ -506,6 +506,25 @@
 
 (parametrise ((check-test-name	'fix))
 
+  (doit (let ((f (lambda () '1)))
+	  f)
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) (cp_0) (constant 8)))
+	 (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
+	   tmp_0)))
+
+  (doit (let ((f (lambda () '1)))
+	  (f))
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) (cp_0) (constant 8)))
+	 (seq
+	   (shortcut
+	       (primcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (primcall mref (constant (object $do-event)) (constant 19))))
+	   (jmpcall asmlabel:f:clambda:case-0
+		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
+		      tmp_0)))))
+
   ;;All combinator bindings.
   (doit (let ((a (lambda () '1))
 	      (b (lambda () '2))
@@ -527,6 +546,8 @@
 	       tmp_1)
 	     (bind ((tmp_2 (constant (closure-maker (code-loc asmlabel:c:clambda) no-freevars))))
 	       tmp_2)))))
+
+;;; --------------------------------------------------------------------
 
   ;;All  non-combinator  bindings.  Every  non-combinator  has  1 free  variable;  we
   ;;allocate a single memory block for the 3 closure objects:
