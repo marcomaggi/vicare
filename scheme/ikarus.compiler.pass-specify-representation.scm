@@ -401,7 +401,7 @@
   ;;             (seq
   ;;               ;;If the first word is a fixnum...
   ;;               (conditional (asmcall = (asmcall logand vec.len_0 (constant 7))
-  ;;                                        (constant 0))
+  ;;                                       (constant 0))
   ;;                   ;;... fine.
   ;;                   (asmcall nop)
   ;;                 ;;... otherwise call the full core primitive function.

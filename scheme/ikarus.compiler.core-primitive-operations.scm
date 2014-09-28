@@ -5341,7 +5341,7 @@
    ;;   process continuations".
    ;;
    ;;3..Apply the closure object FUNC to  the object KONT.  This step is
-   ;;   actually performed by $CALL-WITH-UNDERFLOW-HANDLER.
+   ;;   actually performed by CALL-WITH-UNDERFLOW-HANDLER.
    ;;
    ((V func)
     ;;Here we perform the allocation using ALLOC-NO-HOOKS, which does not execute the
@@ -5416,7 +5416,7 @@
 	  ;;continuation object KONT is in some  CPU register; the raw memory pointer
 	  ;;UNDERFLOW-HANDLER is in some CPU register.
 	  ;;
-	  (prm '$call-with-underflow-handler underflow-handler (T func) kont)))))
+	  (prm 'call-with-underflow-handler underflow-handler (T func) kont)))))
    ((E . args)
     (interrupt))
    ((P . args)

@@ -195,7 +195,7 @@
 
 	((asmcall op rands)
 	 (case op
-	   (($call-with-underflow-handler)
+	   ((call-with-underflow-handler)
 	    ;;This    primitive    is    used   by    the    primitive    operation
 	    ;;$SEAL-FRAME-AND-CALL  to implement  the heart  of CALL/CC  (call with
 	    ;;current  continuation) and  CALL/CF (call  with current  frame), file
