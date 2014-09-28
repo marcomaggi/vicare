@@ -230,7 +230,7 @@
   ;;an integer:  return a  struct instance representing  recordized code  which, when
   ;;evaluated, will tag the result of ?MACHINE-WORD as fixnum.
   ;;
-  (prm 'sll ?machine-word (K fx-shift)))
+  (asm 'sll ?machine-word (K fx-shift)))
 
 (define-syntax-rule (prm-UNtag-as-fixnum ?machine-word)
   ;;Given the struct ?MACHINE-WORD representing recordized code that will evaluate to
@@ -240,7 +240,7 @@
   ;;
   ;;Notice that untagging *must* be performed with *arithmetic* right-shift.
   ;;
-  (prm 'sra ?machine-word (K fx-shift)))
+  (asm 'sra ?machine-word (K fx-shift)))
 
 ;;; --------------------------------------------------------------------
 
@@ -249,7 +249,7 @@
   ;;struct instance representing recordized code  which, when evaluated, will isolate
   ;;the least significant byte of the result of ?MACHINE-WORD.
   ;;
-  (prm 'logand ?machine-word (K 255)))
+  (asm 'logand ?machine-word (K 255)))
 
 ;;; --------------------------------------------------------------------
 ;;; predefined checks
@@ -306,8 +306,8 @@
    ;;jump.
    ;;
    (if mask
-       (prm '= (prm 'logand x (KN mask)) (KN tag))
-     (prm '= x (KN tag))))
+       (asm '= (asm 'logand x (KN mask)) (KN tag))
+     (asm '= x (KN tag))))
 
  (define (sec-tag-test x primary-mask primary-tag secondary-mask secondary-tag)
    ;;Primary and  secondary tag  test: test if  X is a  tagged pointer  referencing a
@@ -351,7 +351,7 @@
    ;;recognised and specially handled by a subsequent compiler pass.
    ;;
    (make-conditional (tag-test x primary-mask primary-tag)
-       (tag-test (prm 'mref x (KN (fx- primary-tag))) secondary-mask secondary-tag)
+       (tag-test (asm 'mref x (KN (fx- primary-tag))) secondary-mask secondary-tag)
      (K #f)))
 
  (define-inline-constant DIRTY-WORD
@@ -359,9 +359,9 @@
 
  (define (dirty-vector-set address)
    (define shift-bits 2)
-   (prm 'mset32
-	(prm 'mref pcr (K pcb-dirty-vector))
-	(prm 'sll (prm 'srl address (K pageshift)) (K shift-bits))
+   (asm 'mset32
+	(asm 'mref pcr (K pcb-dirty-vector))
+	(asm 'sll (asm 'srl address (K pageshift)) (K shift-bits))
 	(K DIRTY-WORD)))
 
  (define (smart-dirty-vector-set addr what)
@@ -399,11 +399,11 @@
        ((constant value)
 	(if (or (target-platform-fixnum? value)
 		(immediate? value))
-	    (prm 'mset base (K offset) (T v))
+	    (asm 'mset base (K offset) (T v))
 	  (%slow-mem-assign v base offset)))
        ((known expr type)
 	(cond ((eq? (T:immediate? type) 'yes)
-	       (prm 'mset base (K offset) (T expr)))
+	       (asm 'mset base (K offset) (T expr)))
 	      (else
 	       (%slow-mem-assign expr base offset))))
        (else
@@ -413,8 +413,8 @@
      ;;Generate recordised code to  perform the memory location mutation
      ;;and to signal dirt in the corresponding slot of the dirty vector.
      ;;
-     (with-tmp ((t (prm 'int+ base (K offset))))
-       (make-seq (prm 'mset t (K 0) (T v))
+     (with-tmp ((t (asm 'int+ base (K offset))))
+       (make-seq (asm 'mset t (K 0) (T v))
 		 (dirty-vector-set t))))
 
    #| end of module: mem-assign |# )
@@ -429,11 +429,11 @@
    ;;See details about memory allocation in the documentation.  See also
    ;;the ALIGN function defined in the library (ikarus.compiler).
    ;;
-   (define-inline (%shift-left  ?expr)	(prm 'sll ?expr (K align-shift)))
-   (define-inline (%shift-right ?expr)	(prm 'sra ?expr (K align-shift)))
+   (define-inline (%shift-left  ?expr)	(asm 'sll ?expr (K align-shift)))
+   (define-inline (%shift-right ?expr)	(asm 'sra ?expr (K align-shift)))
    (%shift-left
     (%shift-right
-     (prm 'int+ UNknown-amount (K (+ known-amount (sub1 object-alignment)))))))
+     (asm 'int+ UNknown-amount (K (+ known-amount (sub1 object-alignment)))))))
 
  /section)
 
@@ -477,7 +477,7 @@
 
    (define (%or* a a*)
      (if (pair? a*)
-	 (%or* (prm 'logor a (T (car a*)))
+	 (%or* (asm 'logor a (T (car a*)))
 	       (cdr a*))
        a))
 
@@ -571,7 +571,7 @@
    ;;The base RTD  of all the struct  types is stored in  the C language
    ;;structure PCB.
    ;;
-   ((V) (prm 'mref pcr (K pcb-base-rtd)))
+   ((V) (asm 'mref pcr (K pcb-base-rtd)))
    ((P) (K #t))
    ((E) (nop)))
 
@@ -591,13 +591,13 @@
  (define-core-primitive-operation neq? unsafe
    ;;This is the implementation of the Scheme function NEQ?.
    ;;
-   ((P x y) (prm '!= (T x) (T y)))
+   ((P x y) (asm '!= (T x) (T y)))
    ((E x y) (nop)))
 
  (define-core-primitive-operation eq? safe
    ;;This is the implementation of the Scheme function EQ?.
    ;;
-   ((P x y) (prm '= (T x) (T y)))
+   ((P x y) (asm '= (T x) (T y)))
    ((E x y) (nop)))
 
  (define (equable? x)
@@ -622,20 +622,20 @@
    ((P x y)
     (if (or (equable-constant? x)
 	    (equable-constant? y))
-	(prm '= (T x) (T y))
+	(asm '= (T x) (T y))
       (interrupt)))
    ((E x y) (nop)))
 
  (define-core-primitive-operation null? safe
    ;;This is the implementation of the Scheme function NULL?.
    ;;
-   ((P x) (prm '= (T x) (K nil)))
+   ((P x) (asm '= (T x) (K nil)))
    ((E x) (nop)))
 
  (define-core-primitive-operation not safe
    ;;This is the implementation of the Scheme function NOT.
    ;;
-   ((P x) (prm '= (T x) (K bool-f)))
+   ((P x) (asm '= (T x) (K bool-f)))
    ((E x) (nop)))
 
  (define-core-primitive-operation eof-object safe
@@ -648,14 +648,14 @@
  (define-core-primitive-operation eof-object? safe
    ;;This is the implementation of the Scheme function EOF-OBJECT?.
    ;;
-   ((P x) (prm '= (T x) (K eof)))
+   ((P x) (asm '= (T x) (K eof)))
    ((E x) (nop)))
 
  (define-core-primitive-operation $unbound-object? unsafe
    ;;This   is   the   implementation   of   the   primitive   operation
    ;;$UNBOUND-OBJECT?.
    ;;
-   ((P x) (prm '= (T x) (K unbound)))
+   ((P x) (asm '= (T x) (K unbound)))
    ((E x) (nop)))
 
  (define-core-primitive-operation immediate? safe
@@ -678,7 +678,7 @@
  (define-core-primitive-operation bwp-object? safe
    ;;This is the implementation of the Scheme function BWP-OBJECT?.
    ;;
-   ((P x) (prm '= (T x) (K BWP-OBJECT)))
+   ((P x) (asm '= (T x) (K BWP-OBJECT)))
    ((E x) (nop)))
 
  (define-core-primitive-operation $forward-ptr? unsafe
@@ -696,15 +696,15 @@
    ;;library, should it be?  (Marco Maggi; Oct 17, 2012)
    ;;
    ((P x)
-    (prm '= (T x) (K -1)))
+    (asm '= (T x) (K -1)))
    ((E x)
     (nop)))
 
  (define-core-primitive-operation pointer-value unsafe
    ;;FIXME What is this for?  (Marco Maggi; Oct 17, 2012)
    ;;
-   ((V x) (prm 'logand
-	       (prm 'srl (T x) (K 1))
+   ((V x) (asm 'logand
+	       (asm 'srl (T x) (K 1))
 	       (K (* -1 fx-scale))))
    ((P x) (K #t))
    ((E x) (nop)))
@@ -713,7 +713,7 @@
    ;;Return  the  value  of  the  field "arg_list"  in  the  C  language
    ;;structure PCB.
    ;;
-   ((V) (prm 'mref pcr (K pcb-arg-list)))
+   ((V) (asm 'mref pcr (K pcb-arg-list)))
    ((P) (K #t))
    ((E) (nop)))
 
@@ -721,8 +721,8 @@
    ;;Return  the value  of the  field  "collect_key" in  the C  language
    ;;structure PCB.
    ;;
-   ((V)   (prm 'mref pcr (K pcb-collect-key)))
-   ((E x) (prm 'mset pcr (K pcb-collect-key) (T x))))
+   ((V)   (asm 'mref pcr (K pcb-collect-key)))
+   ((E x) (asm 'mset pcr (K pcb-collect-key) (T x))))
 
  (define-core-primitive-operation $memq safe
    ((P x ls)
@@ -737,10 +737,10 @@
 	       (cond ((null? ls)
 		      (K #f))
 		     ((null? (cdr ls))
-		      (prm '= x (T (K (car ls)))))
+		      (asm '= x (T (K (car ls)))))
 		     (else
 		      (make-conditional
-			  (prm '= x (T (K (car ls))))
+			  (asm '= x (T (K (car ls))))
 			(K #t) ;return a boolean
 			(loop (cdr ls)))))))
 	 (interrupt)))
@@ -761,7 +761,7 @@
 		      (K bool-f))
 		     (else
 		      (make-conditional
-			  (prm '= x (T (K (car ls))))
+			  (asm '= x (T (K (car ls))))
 			(T (K ls)) ;return the value
 			(loop (cdr ls)))))))
 	 (interrupt)))
@@ -861,9 +861,9 @@
 
  (define-core-primitive-operation cons safe
    ((V a d)
-    (with-tmp ((t (prm 'alloc (K pair-size) (K pair-tag))))
-      (prm 'mset t (KN off-car) (T a))
-      (prm 'mset t (KN off-cdr) (T d))
+    (with-tmp ((t (asm 'alloc (K pair-size) (K pair-tag))))
+      (asm 'mset t (KN off-car) (T a))
+      (asm 'mset t (KN off-cdr) (T d))
       t))
    ((P a d)
     (K #t))
@@ -874,26 +874,26 @@
 
  (define-core-primitive-operation $car unsafe
    ((V x)
-    (prm 'mref  (T x) (KN off-car)))
+    (asm 'mref  (T x) (KN off-car)))
    ((E x)
     (nop)))
 
  (define-core-primitive-operation $cdr unsafe
    ((V x)
-    (prm 'mref  (T x) (KN off-cdr)))
+    (asm 'mref  (T x) (KN off-cdr)))
    ((E x)
     (nop)))
 
  (define-core-primitive-operation $set-car! unsafe
    ((E x v)
     (with-tmp ((tx (T x)))
-      (prm 'mset tx (KN off-car) (T v))
+      (asm 'mset tx (KN off-car) (T v))
       (smart-dirty-vector-set tx v))))
 
  (define-core-primitive-operation $set-cdr! unsafe
    ((E x v)
     (with-tmp ((tx (T x)))
-      (prm 'mset tx (KN off-cdr) (T v))
+      (asm 'mset tx (KN off-cdr) (T v))
       (smart-dirty-vector-set tx v))))
 
 ;;; --------------------------------------------------------------------
@@ -923,11 +923,11 @@
        ;;so we avoid creating a temporary location.
        (multiple-forms-sequence
       	(interrupt-unless-pair x)
-      	(prm 'mref x (KN off-car))))
+      	(asm 'mref x (KN off-car))))
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
-	 (prm 'mref tx (KN off-car))))))
+	 (asm 'mref tx (KN off-car))))))
    ((E x)
     (assert-pair x 'car)))
 
@@ -956,11 +956,11 @@
        ;;so we avoid creating a temporary location.
        (multiple-forms-sequence
       	(interrupt-unless-pair x)
-      	(prm 'mref x (KN off-cdr))))
+      	(asm 'mref x (KN off-cdr))))
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
-	 (prm 'mref tx (KN off-cdr))))))
+	 (asm 'mref tx (KN off-cdr))))))
    ((E x)
     (assert-pair x 'cdr)))
 
@@ -990,7 +990,7 @@
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
-	 (prm 'mset tx (KN off-car) (T v))
+	 (asm 'mset tx (KN off-car) (T v))
 	 (smart-dirty-vector-set tx v))))))
 
  (define-core-primitive-operation set-cdr! safe
@@ -1019,7 +1019,7 @@
       (else
        (with-tmp ((tx (T x)))
 	 (interrupt-unless-pair tx)
-	 (prm 'mset tx (KN off-cdr) (T v))
+	 (asm 'mset tx (KN off-cdr) (T v))
 	 (smart-dirty-vector-set tx v))))))
 
 ;;; --------------------------------------------------------------------
@@ -1035,16 +1035,16 @@
    ;;
    ;;returns recordized code representing internal CDR and external CAR:
    ;;
-   ;;   (with-tmp ((tmp (prm 'mref x off-cdr)))
+   ;;   (with-tmp ((tmp (asm 'mref x off-cdr)))
    ;;     (interrupt-unless-pair tmp)
-   ;;     (prm 'mref tmp off-car))
+   ;;     (asm 'mref tmp off-car))
    ;;
    ;;and so it implements CADR.
    ;;
    (if (pair? ls)
        (with-tmp ((item (%expand-cxr val (cdr ls))))
 	 (interrupt-unless-pair item)
-	 (prm 'mref item (if (eq? 'a (car ls))
+	 (asm 'mref item (if (eq? 'a (car ls))
 			     (KN off-car)
 			   (KN off-cdr))))
      (T val)))
@@ -1089,23 +1089,23 @@
     (let ((len   (length arg*))	;number of pairs
 	  (arg*^ (map T arg*)))
       ;;Allocate on the heap enough room for all the pairs.
-      (with-tmp ((first-pair (prm 'alloc
+      (with-tmp ((first-pair (asm 'alloc
 				  (K (align (* len pair-size)))
 				  (K pair-tag))))
 	;;Store the first value in the car of the first pair.
-	(prm 'mset first-pair (KN off-car) (car arg*^))
+	(asm 'mset first-pair (KN off-car) (car arg*^))
 	;;Store nil in the cdr of the last pair.
-	(prm 'mset first-pair
+	(asm 'mset first-pair
 	     (K (+ off-cdr (* (sub1 len) pair-size)))
 	     (K nil))
 	(let loop ((arg*^  (cdr arg*^))
 		   (offset pair-size)) ;offset in bytes of the next pair
 	  (if (pair? arg*^)
-	      (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
+	      (with-tmp ((tmp (asm 'int+ first-pair (K offset))))
 		;;Store a value in the car of this pair.
-		(prm 'mset tmp (KN off-car) (car arg*^))
+		(asm 'mset tmp (KN off-car) (car arg*^))
 		;;Store a reference to this pair in the cdr of the previous pair.
-		(prm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
+		(asm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
 		(loop (cdr arg*^) (+ offset pair-size)))
 	    first-pair))
 	)))
@@ -1124,10 +1124,10 @@
 	  (len   (length a*)))	;number of pairs
       ;;Allocate on the heap enough room for all the pairs.  Notice that
       ;;a multiple of the PAIR-SIZE is automatically aligned.
-      (with-tmp ((first-pair (prm 'alloc
+      (with-tmp ((first-pair (asm 'alloc
 				  (K (* len pair-size))
 				  (K pair-tag))))
-	(prm 'mset first-pair (KN off-car) (T a))
+	(asm 'mset first-pair (KN off-car) (T a))
 	(let loop ((arg*^  arg*^)
 		   (offset pair-size)) ;offset in bytes of the next pair
 	  (if (null? (cdr arg*^))
@@ -1137,16 +1137,16 @@
 	      ;;Notice  that, here,  OFFSET  references  the first  byte
 	      ;;*after* the last pair.
 	      (multiple-forms-sequence
-	       (prm 'mset first-pair
+	       (asm 'mset first-pair
 		    (K (+ (- offset pair-size) off-cdr))
 		    (car arg*^))
 	       first-pair)
-	    (with-tmp ((tmp (prm 'int+ first-pair (K offset))))
+	    (with-tmp ((tmp (asm 'int+ first-pair (K offset))))
 	      ;;Store a value in the car of this pair.
-	      (prm 'mset tmp (KN off-car) (car arg*^))
+	      (asm 'mset tmp (KN off-car) (car arg*^))
 	      ;;Store  a  reference to  this  pair  in  the cdr  of  the
 	      ;;previous pair.
-	      (prm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
+	      (asm 'mset tmp (K (fx- off-cdr pair-size)) tmp)
 	      (loop (cdr arg*^) (+ offset pair-size)))))
 	)))
    ((P)
@@ -1278,7 +1278,7 @@
 	  ;;will  work with  any machine  word?  (Marco  Maggi; Oct  18,
 	  ;;2012)
 	  (interrupt-unless
-	   (prm 'u< (T idx) len))
+	   (asm 'u< (T idx) len))
 	  (interrupt-unless-fixnum len))))
 
      (define (%check-? maybe-vector maybe-idx)
@@ -1304,8 +1304,8 @@
 	  ;;will work with any machine word?   What kind of check is the
 	  ;;second one?  (Marco Maggi; Oct 18, 2012)
 	  (interrupt-unless
-	   (prm 'u< (T maybe-idx) len))
-	  (with-tmp ((t (prm 'logor len (T maybe-idx))))
+	   (asm 'u< (T maybe-idx) len))
+	  (with-tmp ((t (asm 'logor len (T maybe-idx))))
 	    (interrupt-unless-fixnum t)))))
 
      #| end of module: %check-non-vector |#)
@@ -1356,7 +1356,7 @@
        ;;
        (with-tmp ((len (cogen-value-$vector-length the-vector)))
 	 (interrupt-unless
-	  (prm 'u< (T idx) len))))
+	  (asm 'u< (T idx) len))))
 
      (define (%check-? the-vector maybe-idx)
        ;;THE-VECTOR must  be a  struct instance  representing recordized
@@ -1379,8 +1379,8 @@
 	  ;;will work with any machine word?   What kind of check is the
 	  ;;second one?  (Marco Maggi; Oct 18, 2012)
 	  (interrupt-unless
-	   (prm 'u< (T maybe-idx) len))
-	  (with-tmp ((t (prm 'logor len (T maybe-idx))))
+	   (asm 'u< (T maybe-idx) len))
+	  (with-tmp ((t (asm 'logor len (T maybe-idx))))
 	    (interrupt-unless-fixnum t)))))
 
      #| end of module: %check-vector |# )
@@ -1412,10 +1412,10 @@
        ;;the binary representation of the number of slots.
        (if (and (target-platform-fixnum? len.val) #f)
 	   (interrupt)
-	 (with-tmp ((vec (prm 'alloc
+	 (with-tmp ((vec (asm 'alloc
 			      (K (align (+ (* len.val wordsize) disp-vector-data)))
 			      (K vector-tag))))
-	   (prm 'mset vec
+	   (asm 'mset vec
 		(K off-vector-length)
 		(K (* len.val fx-scale)))
 	   vec)))
@@ -1425,8 +1425,8 @@
        ;;Here LEN is recordized code  which, when evaluated, must return
        ;;a finxum representing the number of slots.
        (with-tmp ((alen (align-code (T len) disp-vector-data)))
-	 (with-tmp ((vec (prm 'alloc alen (K vector-tag))))
-	   (prm 'mset vec (K off-vector-length) (T len))
+	 (with-tmp ((vec (asm 'alloc alen (K vector-tag))))
+	   (asm 'mset vec (K off-vector-length) (T len))
 	   vec)))))
    ((P len)
     (K #t))
@@ -1437,7 +1437,7 @@
    ((V len)
     (with-tmp ((vec (make-forcall "ikrt_make_vector1" (list (T len)))))
       (interrupt-when
-       (prm '= vec (K 0)))
+       (asm '= vec (K 0)))
       vec)))
 
  (define-core-primitive-operation $vector-ref unsafe
@@ -1449,7 +1449,7 @@
 	   ;;slots.
 	   (and (target-platform-fixnum? idx.val)
 		(fx>= idx.val 0)
-		(prm 'mref (T vec) (K (+ (* idx.val wordsize) off-vector-data)))))
+		(asm 'mref (T vec) (K (+ (* idx.val wordsize) off-vector-data)))))
 	  ((known idx.expr)
 	   (cogen-value-$vector-ref vec idx.expr))
 	  (else
@@ -1459,13 +1459,13 @@
 	;;return a fixnum representing the index of the IDX-th slot in a
 	;;vector; also,  taken as  a "long",  such value  represents the
 	;;offset in bytes of the word in the IDX-th slot.
-	(prm 'mref (T vec) (prm 'int+ (T idx) (K off-vector-data)))))
+	(asm 'mref (T vec) (asm 'int+ (T idx) (K off-vector-data)))))
    ((E vec idx)
     (nop)))
 
  (define-core-primitive-operation $vector-length unsafe
    ((V vec)
-    (prm 'mref (T vec) (K off-vector-length)))
+    (asm 'mref (T vec) (K off-vector-length)))
    ((E vec)
     (nop))
    ((P vec)
@@ -1557,7 +1557,7 @@
        ;;because I is  a fixnum representing the index of  the I-th slot
        ;;in a vector; also, taken as  a "long", it represents the offset
        ;;in bytes of the word in the I-th slot.
-       (mem-assign item (prm 'int+ (T vec) (T idx)) off-vector-data)))))
+       (mem-assign item (asm 'int+ (T vec) (T idx)) off-vector-data)))))
 
  (define-core-primitive-operation vector-set! safe
    ((E vec idx item)
@@ -1576,16 +1576,16 @@
     ;;of  arguments;   so  we  generate  unrolled   recordized  code  to
     ;;initialise the items.
     ;;
-    (with-tmp ((vec (prm 'alloc
+    (with-tmp ((vec (asm 'alloc
 			 (K (align (fx+ disp-vector-data (* (length arg*) wordsize))))
 			 (K vector-tag))))
       (multiple-forms-sequence
        ;;Store the vector length in the first word.
-       (prm 'mset vec (K off-vector-length) (K (* (length arg*) wordsize)))
+       (asm 'mset vec (K off-vector-length) (K (* (length arg*) wordsize)))
        (let recur ((arg*^  (map T arg*))
 		   (offset off-vector-data))
 	 (if (pair? arg*^)
-	     (make-seq (prm 'mset vec (K offset) (car arg*^))
+	     (make-seq (asm 'mset vec (K offset) (car arg*^))
 		       (recur (cdr arg*^) (+ offset wordsize)))
 	   vec)))))
    ((E . arg*)
@@ -1622,15 +1622,15 @@
 
  (define-core-primitive-operation $make-symbol unsafe
    ((V str)
-    (with-tmp ((sym (prm 'alloc
+    (with-tmp ((sym (asm 'alloc
 			 (K (align symbol-record-size))
 			 (K symbol-primary-tag))))
-      (prm 'mset sym (K off-symbol-record-tag)     (K symbol-tag))
-      (prm 'mset sym (K off-symbol-record-string)  (T str))
-      (prm 'mset sym (K off-symbol-record-ustring) (K 0))
-      (prm 'mset sym (K off-symbol-record-value)   (K unbound))
-      (prm 'mset sym (K off-symbol-record-proc)    (K unbound))
-      (prm 'mset sym (K off-symbol-record-plist)   (K nil))
+      (asm 'mset sym (K off-symbol-record-tag)     (K symbol-tag))
+      (asm 'mset sym (K off-symbol-record-string)  (T str))
+      (asm 'mset sym (K off-symbol-record-ustring) (K 0))
+      (asm 'mset sym (K off-symbol-record-value)   (K unbound))
+      (asm 'mset sym (K off-symbol-record-proc)    (K unbound))
+      (asm 'mset sym (K off-symbol-record-plist)   (K nil))
       sym))
    ((P str)
     (K #t))
@@ -1641,7 +1641,7 @@
 
  (define-core-primitive-operation $symbol-string unsafe
    ((V x)
-    (prm 'mref (T x) (K off-symbol-record-string)))
+    (asm 'mref (T x) (K off-symbol-record-string)))
    ((E x)
     (nop)))
 
@@ -1653,7 +1653,7 @@
 
  (define-core-primitive-operation $symbol-unique-string unsafe
    ((V x)
-    (prm 'mref (T x) (K off-symbol-record-ustring)))
+    (asm 'mref (T x) (K off-symbol-record-ustring)))
    ((E x)
     (nop)))
 
@@ -1665,7 +1665,7 @@
 
  (define-core-primitive-operation $symbol-plist unsafe
    ((V x)
-    (prm 'mref (T x) (K off-symbol-record-plist)))
+    (asm 'mref (T x) (K off-symbol-record-plist)))
    ((E x)
     (nop)))
 
@@ -1677,14 +1677,14 @@
 
  (define-core-primitive-operation $symbol-value unsafe
    ((V x)
-    (prm 'mref (T x) (K off-symbol-record-value)))
+    (asm 'mref (T x) (K off-symbol-record-value)))
    ((E x)
     (nop)))
 
  (define-core-primitive-operation $set-symbol-value! unsafe
    ((E x v)
     (with-tmp ((x^ (T x)))
-      (prm 'mset x^ (K off-symbol-record-value) (T v))
+      (asm 'mset x^ (K off-symbol-record-value) (T v))
       (dirty-vector-set x^))))
 
 ;;; --------------------------------------------------------------------
@@ -1702,14 +1702,14 @@
  ;;
  (define-core-primitive-operation $symbol-proc unsafe
    ((V x)
-    (prm 'mref (T x) (K off-symbol-record-proc)))
+    (asm 'mref (T x) (K off-symbol-record-proc)))
    ((E x)
     (nop)))
 
  (define-core-primitive-operation $set-symbol-proc! unsafe
    ((E x v)
     (with-tmp ((x^ (T x)))
-      (prm 'mset x^ (K off-symbol-record-proc) (T v))
+      (asm 'mset x^ (K off-symbol-record-proc) (T v))
       (dirty-vector-set x^))))
 
 ;;; --------------------------------------------------------------------
@@ -1718,8 +1718,8 @@
    ((E x v)
     (with-tmp ((x^ (T x))
 	       (v^ (T v)))
-      (prm 'mset x^ (K off-symbol-record-value) v^)
-      (prm 'mset x^ (K off-symbol-record-proc)  v^)
+      (asm 'mset x^ (K off-symbol-record-value) v^)
+      (asm 'mset x^ (K off-symbol-record-proc)  v^)
       (dirty-vector-set x^))))
 
 ;;; --------------------------------------------------------------------
@@ -1808,7 +1808,7 @@
  ;;   ((E sym v)
  ;;    (with-tmp ((sym^ (T sym))
  ;; 	       (v^   (T v)))
- ;;      (prm 'mset sym^ (K off-symbol-record-proc) v^)
+ ;;      (asm 'mset sym^ (K off-symbol-record-proc) v^)
  ;;      (dirty-vector-set sym^))))
 
  /section)
@@ -1864,25 +1864,25 @@
 
  (define-core-primitive-operation $fxzero? unsafe
    ((P x)
-    (prm '= (T x) (K 0)))
+    (asm '= (T x) (K 0)))
    ((E x)
     (nop)))
 
  (define-core-primitive-operation $fxnegative? unsafe
    ((P x)
-    (prm '< (T x) (K 0)))
+    (asm '< (T x) (K 0)))
    ((E x)
     (nop)))
 
  (define-core-primitive-operation $fxpositive? unsafe
    ((P x)
-    (prm '> (T x) (K 0)))
+    (asm '> (T x) (K 0)))
    ((E x)
     (nop)))
 
  ;; (define-core-primitive-operation $fxeven? unsafe
  ;;   ((P x)
- ;;    (prm '= (prm 'logand (T x) (K 1)) (K 0)))
+ ;;    (asm '= (asm 'logand (T x) (K 1)) (K 0)))
  ;;   ((E x)
  ;;    (nop)))
 
@@ -1890,31 +1890,31 @@
 
  (define-core-primitive-operation $fx= unsafe
    ((P x y)
-    (prm '= (T x) (T y)))
+    (asm '= (T x) (T y)))
    ((E x y)
     (nop)))
 
  (define-core-primitive-operation $fx< unsafe
    ((P x y)
-    (prm '< (T x) (T y)))
+    (asm '< (T x) (T y)))
    ((E x y)
     (nop)))
 
  (define-core-primitive-operation $fx<= unsafe
    ((P x y)
-    (prm '<= (T x) (T y)))
+    (asm '<= (T x) (T y)))
    ((E x y)
     (nop)))
 
  (define-core-primitive-operation $fx> unsafe
    ((P x y)
-    (prm '> (T x) (T y)))
+    (asm '> (T x) (T y)))
    ((E x y)
     (nop)))
 
  (define-core-primitive-operation $fx>= unsafe
    ((P x y)
-    (prm '>= (T x) (T y)))
+    (asm '>= (T x) (T y)))
    ((E x y)
     (nop)))
 
@@ -1936,7 +1936,7 @@
 
  (define-core-primitive-operation $fx+ unsafe
    ((V x y)
-    (prm 'int+ (T x) (T y)))
+    (asm 'int+ (T x) (T y)))
    ((P x y)
     (K #t))
    ((E x y)
@@ -1944,7 +1944,7 @@
 
  ;; (define-core-primitive-operation $fx+/overflow safe
  ;;   ((V x y)
- ;;    (prm 'int+/overflow (T x) (T y))))
+ ;;    (asm 'int+/overflow (T x) (T y))))
 
  (define-core-primitive-operation $fx* unsafe
    ((V a b)
@@ -1955,7 +1955,7 @@
        (interrupt-unless-fx a.val)
        ;;Since we want the  result to be a fixnum, there  is no need to:
        ;;untag A, multiply A, retag A; we just multiply the tagged A.
-       (prm 'int* (T b) (K a.val)))
+       (asm 'int* (T b) (K a.val)))
       ((known a)
        (cogen-value-$fx* a b))
       (else
@@ -1966,7 +1966,7 @@
 	  ;;B.VAL is an exact integer  (possibly a bignum) whose payload
 	  ;;bits are the binary representation of the fixnum B.
 	  (interrupt-unless-fx b.val)
-	  (prm 'int* (T a) (K b.val)))
+	  (asm 'int* (T a) (K b.val)))
 	 ((known b.expr)
 	  (cogen-value-$fx* a b.expr))
 	 (else
@@ -1976,7 +1976,7 @@
 	  ;;Since we  want the result to  be a fixnum, there  is no need
 	  ;;to:  untag A,  multiply A,  retag  A; we  just multiply  the
 	  ;;tagged A.
-	  (prm 'int* (T a) (prm-UNtag-as-fixnum (T b))))))))
+	  (asm 'int* (T a) (prm-UNtag-as-fixnum (T b))))))))
    ((P x y)
     (K #t))
    ((E x y)
@@ -1991,23 +1991,23 @@
     (nop)))
 
  (define-core-primitive-operation $fxlogand unsafe
-   ((V x y) (prm 'logand (T x) (T y)))
+   ((V x y) (asm 'logand (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
  (define-core-primitive-operation $fxlogor unsafe
-   ((V x y) (prm 'logor (T x) (T y)))
+   ((V x y) (asm 'logor (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
  (define-core-primitive-operation $fxlogxor unsafe
-   ((V x y) (prm 'logxor (T x) (T y)))
+   ((V x y) (asm 'logxor (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
  (define-core-primitive-operation $fx- unsafe
-   ((V x)   (prm 'int- (K 0) (T x)))
-   ((V x y) (prm 'int- (T x) (T y)))
+   ((V x)   (asm 'int- (K 0) (T x)))
+   ((V x y) (asm 'int- (T x) (T y)))
    ((P x y) (K #t))
    ((E x y) (nop)))
 
@@ -2027,7 +2027,7 @@
        ;;done by FXARITHMETIC-SHIFT,  but we decide not  to because this
        ;;is a low level operation.  (Marco Maggi; Oct 18, 2012)
        (interrupt-unless-fx numbits.val)
-       (prm 'sll (T x) (K numbits.val)))
+       (asm 'sll (T x) (K numbits.val)))
       ((known numbits.expr)
        (cogen-value-$fxsll x numbits.expr))
       (else
@@ -2036,7 +2036,7 @@
        ;;By right-shifting NUMBITS we untag  it.  Since we want a fixnum
        ;;as result: there is no need  to untag X, left-shift X, retag X;
        ;;we just left-shift the tagged X.
-       (prm 'sll (T x) (prm-UNtag-as-fixnum (T numbits))))))
+       (asm 'sll (T x) (prm-UNtag-as-fixnum (T numbits))))))
    ((P x i)
     (K #t))
    ((E x i)
@@ -2165,8 +2165,8 @@
        ;;are the  binary representation of  the shift amount  as machine
        ;;word.
        (interrupt-unless-fx numbits.val)
-       (prm 'logand
-	    (prm 'sra (T x) (K (let ((word-numbits NUM-OF-BITS-IN-WORD))
+       (asm 'logand
+	    (asm 'sra (T x) (K (let ((word-numbits NUM-OF-BITS-IN-WORD))
 				 (if (< numbits.val word-numbits)
 				     numbits.val
 				   (- word-numbits 1)))))
@@ -2178,11 +2178,11 @@
        ;;
        (with-tmp ((numbits.val (prm-UNtag-as-fixnum (T numbits))))
 	 (with-tmp ((numbits.val (let ((word-numbits NUM-OF-BITS-IN-WORD))
-				   (make-conditional (prm '< numbits.val (K word-numbits))
+				   (make-conditional (asm '< numbits.val (K word-numbits))
 				       numbits.val
 				     (K (- word-numbits 1))))))
-	   (prm 'logand
-		(prm 'sra (T x) numbits.val)
+	   (asm 'logand
+		(asm 'sra (T x) numbits.val)
 		(K (* -1 fx-scale))))))))
    ((P x i)
     (K #t))
@@ -2192,7 +2192,7 @@
  (define-core-primitive-operation $fxquotient unsafe
    ((V a b)
     (with-tmp ((b (T b)))
-      (prm-tag-as-fixnum (prm 'int-quotient (T a) b))))
+      (prm-tag-as-fixnum (asm 'int-quotient (T a) b))))
    ((P a b)
     (K #t))
    ((E a b)
@@ -2202,13 +2202,13 @@
  ;;2012)
  (define-core-primitive-operation $int-quotient unsafe
    ((V a b)
-    (prm-tag-as-fixnum (prm 'int-quotient (T a) (T b)))))
+    (prm-tag-as-fixnum (asm 'int-quotient (T a) (T b)))))
 
  ;;FIXME This is  used nowhere, and it looks  unfinished?  (Marco Maggi;
  ;;Oct 19, 2012)
  (define-core-primitive-operation $int-remainder unsafe
    ((V a b)
-    (prm 'int-remainder (T a))))
+    (asm 'int-remainder (T a))))
 
  ;;This  implementation is  wrong as  documented in  issue 9:  incorrect
  ;;results for negative numbers.  It is replaced with another version in
@@ -2217,18 +2217,18 @@
  ;; (define-core-primitive-operation $fxmodulo unsafe
  ;;   ((V a b)
  ;;    (with-tmp ((b (T b)))
- ;;      (with-tmp ((c (prm 'logand b
- ;;                       (prm 'sra (prm 'logxor b (T a))
+ ;;      (with-tmp ((c (asm 'logand b
+ ;;                       (asm 'sra (asm 'logxor b (T a))
  ;;                          (K (sub1 (* 8 wordsize)))))))
- ;;        (prm 'int+ c (prm 'int-remainder (T a) b)))))
+ ;;        (asm 'int+ c (asm 'int-remainder (T a) b)))))
  ;;   ((P a b) (K #t))
  ;;   ((E a b) (nop)))
 
  (define-core-primitive-operation $fxabs unsafe
    ((V x)
     (with-tmp ((n (T x)))
-      (make-conditional (prm '< n (K 0))
-	  (prm 'int- (K 0) n)
+      (make-conditional (asm '< n (K 0))
+	  (asm 'int- (K 0) n)
 	n)))
    ((P x)
     (K #t))
@@ -2240,13 +2240,13 @@
  (define-core-primitive-operation $fxinthash unsafe
    ((V key)
     (with-tmp ((k (T key)))
-      (with-tmp ((k (prm 'int+ k (prm 'logxor (prm 'sll k (K 15)) (K -1)))))
-	(with-tmp ((k (prm 'logxor k (prm 'sra k (K 10)))))
-	  (with-tmp ((k (prm 'int+ k (prm 'sll k (K 3)))))
-	    (with-tmp ((k (prm 'logxor k (prm 'sra k (K 6)))))
-	      (with-tmp ((k (prm 'int+ k (prm 'logxor (prm 'sll k (K 11)) (K -1)))))
-		(with-tmp ((k (prm 'logxor k (prm 'sra k (K 16)))))
-		  (prm 'sll k (K fx-shift)))))))))))
+      (with-tmp ((k (asm 'int+ k (asm 'logxor (asm 'sll k (K 15)) (K -1)))))
+	(with-tmp ((k (asm 'logxor k (asm 'sra k (K 10)))))
+	  (with-tmp ((k (asm 'int+ k (asm 'sll k (K 3)))))
+	    (with-tmp ((k (asm 'logxor k (asm 'sra k (K 6)))))
+	      (with-tmp ((k (asm 'int+ k (asm 'logxor (asm 'sll k (K 11)) (K -1)))))
+		(with-tmp ((k (asm 'logxor k (asm 'sra k (K 16)))))
+		  (asm 'sll k (K fx-shift)))))))))))
 ;;;(define inthash
 ;;;    (lambda (key)
 ;;;      ;static int inthash(int key) { /* from Bob Jenkin's */
@@ -2301,8 +2301,8 @@
    ;;the sign bit is set to zero.
    ;;
    ((P x)
-    (prm '= (prm 'logand
-		 (prm 'mref (T x) (K off-bignum-tag))
+    (asm '= (asm 'logand
+		 (asm 'mref (T x) (K off-bignum-tag))
 		 (K bignum-sign-mask))
 	 (K 0)))
    ((E x)
@@ -2313,10 +2313,10 @@
    ;;fixnum.
    ;;
    ((V x)
-    (prm 'sll  ;In one step:  multiply the number  of limbs by  the word
+    (asm 'sll  ;In one step:  multiply the number  of limbs by  the word
 		;size and tag the result as fixnum.
-	 (prm 'sra ;extract the number of limbs
-	      (prm 'mref (T x) (K off-bignum-tag))
+	 (asm 'sra ;extract the number of limbs
+	      (asm 'mref (T x) (K off-bignum-tag))
 	      (K bignum-length-shift))
 	 ;;This constant must be an exact integer whose payload bits are
 	 ;;the binary representation of the left-shift amount.
@@ -2350,7 +2350,7 @@
        (interrupt-unless-fx byte-idx.val)
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
-	 (prm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data))))))
+	 (asm 'mref (T bigN) (K (+ byte-idx.val off-bignum-data))))))
       ((known byte-idx.expr)
        (cogen-value-$bignum-byte-ref bigN byte-idx.expr))
       (else
@@ -2361,8 +2361,8 @@
        ;;platforms.  (Marco Maggi; Oct 19, 2012)
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
-	 (prm 'mref (T bigN)
-	      (prm 'int+
+	 (asm 'mref (T bigN)
+	      (asm 'int+
 		   (prm-UNtag-as-fixnum (T byte-idx))
 		   (K off-bignum-data)))))
        ;;
@@ -2372,9 +2372,9 @@
        ;;2012)
        ;;
        ;; (prm-tag-as-fixnum
-       ;;      (prm 'srl ;shift-right logic.  FIXME bref.  (Abdulaziz Ghuloum)
-       ;;           (prm 'mref (T bigN)
-       ;;                (prm 'int+
+       ;;      (asm 'srl ;shift-right logic.  FIXME bref.  (Abdulaziz Ghuloum)
+       ;;           (asm 'mref (T bigN)
+       ;;                (asm 'int+
        ;;                     (prm-UNtag-as-fixnum (T byte-idx))
        ;;                     (K (- off-bignum-data (- wordsize 1)))))
        ;;           (K (* (- wordsize 1) 8))))
@@ -2432,40 +2432,40 @@
  (define ($flop-aux op fl0 fl1)
    ;;Flonum operation between two operands.
    ;;
-   (with-tmp ((x (prm 'alloc
+   (with-tmp ((x (asm 'alloc
 		      (K (align flonum-size))
 		      (K vector-tag))))
      ;;Tag the first word of the result as flonum.
-     (prm 'mset x (K off-flonum-tag) (K flonum-tag))
+     (asm 'mset x (K off-flonum-tag) (K flonum-tag))
      ;;Load the first operand in a register for flonums.
-     (prm 'fl:load  (T fl0) (K off-flonum-data))
+     (asm 'fl:load  (T fl0) (K off-flonum-data))
      ;;Perform the operation between the register and FL1.
-     (prm op        (T fl1) (K off-flonum-data))
+     (asm op        (T fl1) (K off-flonum-data))
      ;;Store the result from the register into memory referenced by X.
-     (prm 'fl:store x       (K off-flonum-data))
+     (asm 'fl:store x       (K off-flonum-data))
      x))
 
  (define ($flop-aux* op fl fl*)
    ;;Flonum operation  between three or  more operands (but also  upon a
    ;;single operand).
    ;;
-   (with-tmp ((x (prm 'alloc
+   (with-tmp ((x (asm 'alloc
 		      (K (align flonum-size))
 		      (K vector-tag))))
      ;;Tag the first word of the result as flonum.
-     (prm 'mset x (K off-flonum-tag) (K flonum-tag))
+     (asm 'mset x (K off-flonum-tag) (K flonum-tag))
      ;;Load the first operand in a register for flonums.
-     (prm 'fl:load (T fl) (K off-flonum-data))
+     (asm 'fl:load (T fl) (K off-flonum-data))
      (let recur ((fl* fl*))
        (if (pair? fl*)
 	   (make-seq
 	    ;;Perform  the operation  between  the register  and the  next
 	    ;;operand.
-	    (prm op (T (car fl*)) (K off-flonum-data))
+	    (asm op (T (car fl*)) (K off-flonum-data))
 	    (recur (cdr fl*)))
 	 (nop)))
      ;;Store the result from the register into memory referenced by X.
-     (prm 'fl:store x (K off-flonum-data))
+     (asm 'fl:store x (K off-flonum-data))
      x))
 
  (define ($flcmp-aux op fl0 fl1)
@@ -2473,9 +2473,9 @@
    ;;
    (make-seq
     ;;Load the first operand in a register for flonums.
-    (prm 'fl:load (T fl0) (K off-flonum-data))
+    (asm 'fl:load (T fl0) (K off-flonum-data))
     ;;Perform the operation between the register and FL1.
-    (prm op       (T fl1) (K off-flonum-data))))
+    (asm op       (T fl1) (K off-flonum-data))))
 
  (define (check-flonums ls code)
    ;;CODE must be a struct instance representing recordized code.
@@ -2504,8 +2504,8 @@
 	      (interrupt-unless
 	       (tag-test x vector-mask vector-tag))
 	      (interrupt-unless
-	       (prm '=
-		    (prm 'mref x (K off-flonum-tag))
+	       (asm '=
+		    (asm 'mref x (K off-flonum-tag))
 		    (K flonum-tag)))
 	      code))))
      code))
@@ -2520,10 +2520,10 @@
 
  (define-core-primitive-operation $make-flonum unsafe
    ((V)
-    (with-tmp ((flo (prm 'alloc
+    (with-tmp ((flo (asm 'alloc
 			 (K (align flonum-size))
 			 (K vector-tag))))
-      (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      (asm 'mset flo (K off-flonum-tag) (K flonum-tag))
       flo))
    ((P str)
     (K #t))
@@ -2555,7 +2555,7 @@
 	 (interrupt))
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
-	 (prm 'bref (T flo)
+	 (asm 'bref (T flo)
 	      (K (fx+ (fx- 7 offset.val) off-flonum-data))))))
       ((known offset.expr)
        (cogen-value-$flonum-u8-ref flo offset.expr))
@@ -2599,7 +2599,7 @@
 		    (fx<= offset.val 7))
 	 (interrupt))
        ;;store the byte
-       (prm 'bset (T flo)
+       (asm 'bset (T flo)
 	    (K (fx+ (fx- 7 offset.val) off-flonum-data))
 	    (prm-UNtag-as-fixnum (T octet))))
       ((known offset.expr)
@@ -2620,18 +2620,18 @@
    ((V fx)
     (boot.case-word-size
       ((32)
-       (with-tmp ((flo (prm 'alloc
+       (with-tmp ((flo (asm 'alloc
 			    (K (align flonum-size))
 			    (K vector-tag))))
 	 ;;Tag the first word of the result as flonum.
-	 (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+	 (asm 'mset flo (K off-flonum-tag) (K flonum-tag))
 	 ;;Perform the operation storing the  result in a floating point
 	 ;;register.
-	 (prm 'fl:from-int
+	 (asm 'fl:from-int
 	      (K 0) ; dummy
 	      (prm-UNtag-as-fixnum (T fx)))
 	 ;;Store the result from the register into memory referenced by X
-	 (prm 'fl:store flo (K off-flonum-data))
+	 (asm 'fl:store flo (K off-flonum-data))
 	 flo))
       ((64)
        (with-tmp ((flo (cogen-value-$make-flonum)))
@@ -2834,9 +2834,9 @@
    ((V flo)
     (prm-tag-as-fixnum
      ;;extract the 12 most significant bits
-     (prm 'srl
+     (asm 'srl
 	  ;;retrieve the second data word
-	  (prm 'mref32 (T flo)
+	  (asm 'mref32 (T flo)
 	       (K (+ off-flonum-data 4)))
 	  (K 20)))))
 
@@ -2874,12 +2874,12 @@
 
  (define-core-primitive-operation $make-ratnum unsafe
    ((V num den)
-    (with-tmp ((rat (prm 'alloc
+    (with-tmp ((rat (asm 'alloc
 			 (K (align ratnum-size))
 			 (K vector-tag))))
-      (prm 'mset rat (K off-ratnum-tag) (K ratnum-tag))
-      (prm 'mset rat (K off-ratnum-num) (T num))
-      (prm 'mset rat (K off-ratnum-den) (T den))
+      (asm 'mset rat (K off-ratnum-tag) (K ratnum-tag))
+      (asm 'mset rat (K off-ratnum-num) (T num))
+      (asm 'mset rat (K off-ratnum-den) (T den))
       rat))
    ((P str)
     (K #t))
@@ -2889,19 +2889,19 @@
 
  (define-core-primitive-operation $ratnum-n unsafe
    ((V x)
-    (prm 'mref (T x) (K off-ratnum-num))))
+    (asm 'mref (T x) (K off-ratnum-num))))
 
  (define-core-primitive-operation $ratnum-num unsafe
    ((V x)
-    (prm 'mref (T x) (K off-ratnum-num))))
+    (asm 'mref (T x) (K off-ratnum-num))))
 
  (define-core-primitive-operation $ratnum-d unsafe
    ((V x)
-    (prm 'mref (T x) (K off-ratnum-den))))
+    (asm 'mref (T x) (K off-ratnum-den))))
 
  (define-core-primitive-operation $ratnum-den unsafe
    ((V x)
-    (prm 'mref (T x) (K off-ratnum-den))))
+    (asm 'mref (T x) (K off-ratnum-den))))
 
  /section)
 
@@ -2937,12 +2937,12 @@
 
  (define-core-primitive-operation $make-compnum unsafe
    ((V real imag)
-    (with-tmp ((comp (prm 'alloc
+    (with-tmp ((comp (asm 'alloc
 			  (K (align compnum-size))
 			  (K vector-tag))))
-      (prm 'mset comp (K off-compnum-tag)  (K compnum-tag))
-      (prm 'mset comp (K off-compnum-real) (T real))
-      (prm 'mset comp (K off-compnum-imag) (T imag))
+      (asm 'mset comp (K off-compnum-tag)  (K compnum-tag))
+      (asm 'mset comp (K off-compnum-real) (T real))
+      (asm 'mset comp (K off-compnum-imag) (T imag))
       comp))
    ((P str)
     (K #t))
@@ -2951,11 +2951,11 @@
 
  (define-core-primitive-operation $compnum-real unsafe
    ((V comp)
-    (prm 'mref (T comp) (K off-compnum-real))))
+    (asm 'mref (T comp) (K off-compnum-real))))
 
  (define-core-primitive-operation $compnum-imag unsafe
    ((V comp)
-    (prm 'mref (T comp) (K off-compnum-imag))))
+    (asm 'mref (T comp) (K off-compnum-imag))))
 
  /section)
 
@@ -2991,12 +2991,12 @@
 
  (define-core-primitive-operation $make-cflonum unsafe
    ((V real imag)
-    (with-tmp ((cflo (prm 'alloc
+    (with-tmp ((cflo (asm 'alloc
 			  (K (align cflonum-size))
 			  (K vector-tag))))
-      (prm 'mset cflo (K off-cflonum-tag)  (K cflonum-tag))
-      (prm 'mset cflo (K off-cflonum-real) (T real))
-      (prm 'mset cflo (K off-cflonum-imag) (T imag))
+      (asm 'mset cflo (K off-cflonum-tag)  (K cflonum-tag))
+      (asm 'mset cflo (K off-cflonum-real) (T real))
+      (asm 'mset cflo (K off-cflonum-imag) (T imag))
       cflo))
    ((P str)
     (K #t))
@@ -3005,11 +3005,11 @@
 
  (define-core-primitive-operation $cflonum-real unsafe
    ((V cflo)
-    (prm 'mref (T cflo) (K off-cflonum-real))))
+    (asm 'mref (T cflo) (K off-cflonum-real))))
 
  (define-core-primitive-operation $cflonum-imag unsafe
    ((V cflo)
-    (prm 'mref (T cflo) (K off-cflonum-imag))))
+    (asm 'mref (T cflo) (K off-cflonum-imag))))
 
  /section)
 
@@ -3030,7 +3030,7 @@
 		(a* a*))
       (if (pair? a*)
 	  (let ((b (car a*)))
-	    (make-conditional (prm op (T a) (T b))
+	    (make-conditional (asm op (T a) (T b))
 		(recur b (cdr a*))
 	      (K #f)))
 	(K #t)))))
@@ -3050,7 +3050,7 @@
 	      (interrupt)
 	      (with-tmp ((b (T b)))
 		(assert-fixnum b)
-		(prm 'int*/overflow a b)))
+		(asm 'int*/overflow a b)))
 	  (interrupt)))
        ((known a.expr)
 	(cogen-*-constant a.expr b))
@@ -3063,7 +3063,7 @@
 		(b (T b)))
        (assert-fixnum a)
        (assert-fixnum b)
-       (prm 'int*/overflow a (prm-UNtag-as-fixnum b))))
+       (asm 'int*/overflow a (prm-UNtag-as-fixnum b))))
 
    #| end of module: cogen-binary-* |# )
 
@@ -3298,13 +3298,13 @@
 			  x
 			(begin
 			  (interrupt)
-			  (prm 'sll/overflow
+			  (asm 'sll/overflow
 			       (recur (- i 1))
 			       (K 1)))))
-		  (with-tmp ((x2 (prm 'sll x (K bitcount.val))))
+		  (with-tmp ((x2 (asm 'sll x (K bitcount.val))))
 		    (interrupt-unless
-		     (prm '=
-			  (prm 'sra x2 (K bitcount.val))
+		     (asm '=
+			  (asm 'sra x2 (K bitcount.val))
 			  x))
 		    x2))))
 	     (else
@@ -3315,12 +3315,12 @@
 	 (assert-fixnums x (list n))
 	 (with-tmp ((n (prm-UNtag-as-fixnum n)))
 	   (interrupt-when
-	    (prm '< n (K 0)))
+	    (asm '< n (K 0)))
 	   (interrupt-when
-	    (prm '>= n (K NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)))
-	   (with-tmp ((x2 (prm 'sll x n)))
+	    (asm '>= n (K NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)))
+	   (with-tmp ((x2 (asm 'sll x n)))
 	     (interrupt-unless
-	      (prm '= (prm 'sra x2 n) x))
+	      (asm '= (asm 'sra x2 n) x))
 	     x2)))))))
 
  (define-core-primitive-operation fxarithmetic-shift-right safe
@@ -3332,7 +3332,7 @@
 		(>= bitcount.val 0)
 		(<  bitcount.val NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION))
 	   (prm-tag-as-fixnum
-	    (prm 'sra (T x) (K (+ bitcount.val fx-shift))))
+	    (asm 'sra (T x) (K (+ bitcount.val fx-shift))))
 	 (interrupt)))
       (else
        (with-tmp ((x (T x))
@@ -3340,14 +3340,14 @@
 	 (assert-fixnums x (list n))
 	 (with-tmp ((n (prm-UNtag-as-fixnum n)))
 	   (interrupt-when
-	    (prm '<  n (K 0)))
+	    (asm '<  n (K 0)))
 	   (interrupt-when
-	    (prm '>= n (K NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)))
+	    (asm '>= n (K NUMBER-OF-BITS-IN-FIXNUM-REPRESENTATION)))
 	   ;;Untagging and  then tagging as  fixnum makes sure  that the
 	   ;;bits of the fixnum tag are zero.
 	   (prm-tag-as-fixnum
 	    (prm-UNtag-as-fixnum
-	     (prm 'sra x n)))))))))
+	     (asm 'sra x n)))))))))
 
 ;;; --------------------------------------------------------------------
 ;;; safe generic arithmetic
@@ -3367,7 +3367,7 @@
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a '())
-     (prm 'int-/overflow (K 0) (T a))))
+     (asm 'int-/overflow (K 0) (T a))))
    ((V a . a*)
     ;;FIXME Why  do we interrupt  here?  If I  remove the interrupt:  this integrated
     ;;body uncovers an error in a subsequent compiler pass.
@@ -3385,7 +3385,7 @@
      (let recur ((a  (T a))
     		 (a* a*))
        (if (pair? a*)
-    	   (recur (prm 'int-/overflow a (T (car a*)))
+    	   (recur (asm 'int-/overflow a (T (car a*)))
     		  (cdr a*))
     	 a))))
    ((P a . a*)
@@ -3415,7 +3415,7 @@
      (let recur ((a  (T a))
     		 (a* a*))
        (if (pair? a*)
-    	   (recur (prm 'int+/overflow a (T (car a*)))
+    	   (recur (asm 'int+/overflow a (T (car a*)))
     		  (cdr a*))
     	 a))))
    ((P)
@@ -3465,7 +3465,7 @@
      (let loop ((a  (T a))
 		(a* a*))
        (if (pair? a*)
-	   (loop (prm 'logand a (T (car a*))) (cdr a*))
+	   (loop (asm 'logand a (T (car a*))) (cdr a*))
 	 a))))
    ((P)
     (K #t))
@@ -3501,7 +3501,7 @@
 		      (interrupt-unless
 		       (cogen-pred-fixnum? x))
 		      (prm-tag-as-fixnum
-		       (prm 'sra (T x) (K (+ bits fx-shift)))))))
+		       (asm 'sra (T x) (K (+ bits fx-shift)))))))
 	       (else
 		(interrupt))))
 	((known expr)
@@ -3531,14 +3531,14 @@
 	    (interrupt-unless
 	     (cogen-pred-fixnum? num))
 	    (make-conditional
-		(prm '< (T num) (K 0))
-		(prm 'logand
-		     (prm 'int+
-			  (prm 'sra (T num) (K 1))
+		(asm '< (T num) (K 0))
+		(asm 'logand
+		     (asm 'int+
+			  (asm 'sra (T num) (K 1))
 			  (K (fxsll 1 (sub1 fx-shift))))
 		     (K (fxsll -1 fx-shift)))
-	      (prm 'logand
-		   (prm 'sra (T num) (K 1))
+	      (asm 'logand
+		   (asm 'sra (T num) (K 1))
 		   (K (fxsll -1 fx-shift)))))
 	 (interrupt)))
       ((known expr)
@@ -3590,8 +3590,8 @@
    ;;
    ((P x std)
     (make-conditional (tag-test (T x) vector-mask vector-tag)
-	(prm '=
-	     (prm 'mref (T x) (K off-struct-std))
+	(asm '=
+	     (asm 'mref (T x) (K off-struct-std))
 	     (T std))
       (K #f)))
    ((E x std)
@@ -3614,11 +3614,11 @@
        ;;binary representation of a fixnum.
        (unless (target-platform-fixnum? len.val)
 	 (interrupt))
-       (with-tmp ((stru (prm 'alloc
+       (with-tmp ((stru (asm 'alloc
 			     (K (align (+ (* len.val wordsize) disp-struct-data)))
 			     (K vector-tag))))
 	 ;;Store the STD in the first word.
-	 (prm 'mset stru (K off-struct-std) (T std))
+	 (asm 'mset stru (K off-struct-std) (T std))
 	 stru))
       ((known len.expr)
        (cogen-value-$make-struct std len.expr))
@@ -3626,8 +3626,8 @@
        ;;Here LEN is recordized code  which, when evaluated, must return
        ;;a fixnum representing the number of fields.
        (with-tmp ((size (align-code len disp-struct-data)))
-	 (with-tmp ((stru (prm 'alloc size (K vector-tag))))
-	   (prm 'mset stru (K off-struct-std) (T std))
+	 (with-tmp ((stru (asm 'alloc size (K vector-tag))))
+	   (asm 'mset stru (K off-struct-std) (T std))
 	   stru)))))
    ((P std len)
     (K #t))
@@ -3636,7 +3636,7 @@
 
  (define-core-primitive-operation $struct-rtd unsafe
    ((V stru)
-    (prm 'mref (T stru) (K off-struct-std)))
+    (asm 'mref (T stru) (K off-struct-std)))
    ((E stru)
     (nop))
    ((P stru)
@@ -3647,7 +3647,7 @@
 
  (define-core-primitive-operation $std-std unsafe
    ((V stru)
-    (prm 'mref (T stru) (K off-std-std)))
+    (asm 'mref (T stru) (K off-std-std)))
    ((E stru)
     (nop))
    ((P stru)
@@ -3655,7 +3655,7 @@
 
  (define-core-primitive-operation $std-name unsafe
    ((V stru)
-    (prm 'mref (T stru) (K off-std-name)))
+    (asm 'mref (T stru) (K off-std-name)))
    ((E stru)
     (nop))
    ((P stru)
@@ -3663,7 +3663,7 @@
 
  (define-core-primitive-operation $std-length unsafe
    ((V stru)
-    (prm 'mref (T stru) (K off-std-length)))
+    (asm 'mref (T stru) (K off-std-length)))
    ((E stru)
     (nop))
    ((P stru)
@@ -3671,7 +3671,7 @@
 
  (define-core-primitive-operation $std-fields unsafe
    ((V stru)
-    (prm 'mref (T stru) (K off-std-fields)))
+    (asm 'mref (T stru) (K off-std-fields)))
    ((E stru)
     (nop))
    ((P stru)
@@ -3679,13 +3679,13 @@
 
  (define-core-primitive-operation $std-printer unsafe
    ((V stru)
-    (prm 'mref (T stru) (K off-std-printer)))
+    (asm 'mref (T stru) (K off-std-printer)))
    ((E stru)
     (nop)))
 
  (define-core-primitive-operation $std-symbol unsafe
    ((V stru)
-    (prm 'mref (T stru) (K off-std-symbol)))
+    (asm 'mref (T stru) (K off-std-symbol)))
    ((E stru)
     (nop))
    ((P stru)
@@ -3694,7 +3694,7 @@
 
  (define-core-primitive-operation $std-destructor unsafe
    ((V stru)
-    (prm 'mref (T stru) (K off-std-destructor)))
+    (asm 'mref (T stru) (K off-std-destructor)))
    ((E stru)
     (nop)))
 
@@ -3757,16 +3757,16 @@
 
  (define-core-primitive-operation $struct unsafe
    ((V std . field*)
-    (with-tmp ((stru (prm 'alloc
+    (with-tmp ((stru (asm 'alloc
 			  (K (align (+ disp-struct-data (* (length field*) wordsize))))
 			  (K vector-tag))))
       ;;Store a reference to the STD in the first word.
-      (prm 'mset stru (K off-struct-std) (T std))
+      (asm 'mset stru (K off-struct-std) (T std))
       ;;Store the fields.
       (let recur ((field* field*)
 		  (offset off-struct-data)) ;offset in bytes
 	(if (pair? field*)
-	    (make-seq (prm 'mset stru (K offset) (T (car field*)))
+	    (make-seq (asm 'mset stru (K offset) (T (car field*)))
 		      (recur (cdr field*) (+ offset wordsize)))
 	  stru))))
    ((P std . field*)
@@ -3827,14 +3827,14 @@
      ;;  => arg0
      ;;
      ;;  (or* arg0 (list arg1 arg2 arg3))
-     ;;  => (prm 'logor
-     ;;          (prm 'logor
-     ;;               (prm 'logor arg0 arg1)
+     ;;  => (asm 'logor
+     ;;          (asm 'logor
+     ;;               (asm 'logor arg0 arg1)
      ;;               arg2)
      ;;          arg3)
      ;;
      (if (pair? a*)
-	 (or* (prm 'logor a (T (car a*)))
+	 (or* (asm 'logor a (T (car a*)))
 	      (cdr a*))
        a))
 
@@ -3868,9 +3868,9 @@
    ;;The returned recordized code is as follows:
    ;;
    ;;   (char-fold-p op arg0 (list arg1 arg2 arg3))
-   ;;   => (make-conditional (prm op arg0 arg1)
-   ;;          (make-conditional (prm op arg1 arg2)
-   ;;              (make-conditional (prm arg2 arg3)
+   ;;   => (make-conditional (asm op arg0 arg1)
+   ;;          (make-conditional (asm op arg1 arg2)
+   ;;              (make-conditional (asm arg2 arg3)
    ;;                  (K #t)
    ;;                (K #f))
    ;;            (K #f))
@@ -3882,7 +3882,7 @@
 		(a* a*))
       (if (pair? a*)
 	  (let ((b (car a*)))
-	    (make-conditional (prm op (T a) (T b))
+	    (make-conditional (asm op (T a) (T b))
 		(recur b (cdr a*))
 	      (K #f)))
 	(K #t)))))
@@ -3920,8 +3920,8 @@
    ;;                              ******** char tag
    ;;
    ((V x)
-    (prm 'logor
-	 (prm 'sll (T x) (K (fx- char-shift fx-shift)))
+    (asm 'logor
+	 (asm 'sll (T x) (K (fx- char-shift fx-shift)))
 	 (K char-tag)))
    ((P x)
     (K #t))
@@ -3953,7 +3953,7 @@
    ;;zero both when represented as fixnum and character.
    ;;
    ((V x)
-    (prm 'sra (T x) (K (fx- char-shift fx-shift))))
+    (asm 'sra (T x) (K (fx- char-shift fx-shift))))
    ((P x)
     (K #t))
    ((E x)
@@ -3967,7 +3967,7 @@
 				 ((_ ?who ?prim)
 				  (define-core-primitive-operation ?who unsafe
 				    ((P x y)
-				     (prm (quote ?prim) (T x) (T y)))
+				     (asm (quote ?prim) (T x) (T y)))
 				    ((E x y)
 				     (nop)))
 				  ))))
@@ -4075,16 +4075,16 @@
        ;;binary representation of a fixnum.
        (unless (target-platform-fixnum? num-of-bytes.val)
 	 (interrupt))
-       (with-tmp ((bv (prm 'alloc
+       (with-tmp ((bv (asm 'alloc
 			   (K (align (+ num-of-bytes.val 1 disp-bytevector-data)))
 			   (K bytevector-tag))))
 	 ;;Store the length in the first word.
-	 (prm 'mset bv
+	 (asm 'mset bv
 	      (K off-bytevector-length)
 	      ;;Tag as fixnum.
 	      (K (* num-of-bytes.val fx-scale)))
 	 ;;Set to zero the one-off byte.
-	 (prm 'bset bv
+	 (asm 'bset bv
 	      (K (+ num-of-bytes.val off-bytevector-data))
 	      (K 0))
 	 bv))
@@ -4093,15 +4093,15 @@
       (else
        ;;Here NUM-OF-BYTES is a  struct instance representing recordized
        ;;code which, when evaluated, must return a fixnum.
-       (with-tmp ((bv (prm 'alloc
+       (with-tmp ((bv (asm 'alloc
 			   (align-code (prm-UNtag-as-fixnum (T num-of-bytes))
 				       (+ 1 disp-bytevector-data))
 			   (K bytevector-tag))))
 	 ;;Store the length in the first word.
-	 (prm 'mset bv (K off-bytevector-length) (T num-of-bytes))
+	 (asm 'mset bv (K off-bytevector-length) (T num-of-bytes))
 	 ;;Set to zero the one-off byte.
-	 (prm 'bset bv
-	      (prm 'int+
+	 (asm 'bset bv
+	      (asm 'int+
 		   (prm-UNtag-as-fixnum (T num-of-bytes))
 		   (K off-bytevector-data))
 	      (K 0))
@@ -4113,7 +4113,7 @@
 
  (define-core-primitive-operation $bytevector-length unsafe
    ((V bv)
-    (prm 'mref (T bv) (K off-bytevector-length)))
+    (asm 'mref (T bv) (K off-bytevector-length)))
    ((P bv)
     (K #t))
    ((E bv)
@@ -4131,13 +4131,13 @@
 	 (interrupt))
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
-	 (prm 'bref (T bv) (K (+ idx.val off-bytevector-data))))))
+	 (asm 'bref (T bv) (K (+ idx.val off-bytevector-data))))))
       (else
        ;;Here  IDX is  a  struct instance  representing recordized  code
        ;;which, when evaluated, must return a fixnum.
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
-	 (prm 'bref (T bv) (prm 'int+
+	 (asm 'bref (T bv) (asm 'int+
 				(prm-UNtag-as-fixnum (T idx))
 				(K off-bytevector-data))))))))
    ((P bv idx)
@@ -4150,8 +4150,8 @@
     (let-syntax
 	((%extend-sign (syntax-rules ()
 			 ((_ ?machine-word)
-			  (prm 'sra ;this extends the sign
-			       (prm 'sll ?machine-word
+			  (asm 'sra ;this extends the sign
+			       (asm 'sll ?machine-word
 				    (K (fx- NUM-OF-BITS-IN-WORD 8)))
 			       (K (fx- NUM-OF-BITS-IN-WORD (fx+ 8 fx-shift))))))))
       (struct-case idx
@@ -4164,7 +4164,7 @@
 	 ;;so that  the most  significant bit  is extended  to correctly
 	 ;;represent the sign in the returned fixnum.
 	 (%extend-sign
-	  (prm 'bref (T bv) (K (+ idx.val off-bytevector-data))))
+	  (asm 'bref (T bv) (K (+ idx.val off-bytevector-data))))
 	 ;;
 	 ;;The one below  is the original code from  Ikarus; in addition
 	 ;;to the code  above, it contains a byte  isolation that, IMHO,
@@ -4172,7 +4172,7 @@
 	 ;;
          ;; (%extend-sign
          ;;  (prm-isolate-least-significant-byte
-         ;;   (prm 'bref (T bv) (K (+ idx.val off-bytevector-data)))))
+         ;;   (asm 'bref (T bv) (K (+ idx.val off-bytevector-data)))))
 	 ;;
 	 )
 	(else
@@ -4183,7 +4183,7 @@
 	 ;;so that  the most  significant bit  is extended  to correctly
 	 ;;represent the sign in the returned fixnum.
 	 (%extend-sign
-	  (prm 'bref (T bv) (prm 'int+
+	  (asm 'bref (T bv) (asm 'int+
 				 (prm-UNtag-as-fixnum (T idx))
 				 (K off-bytevector-data))))
 	 ))))
@@ -4214,73 +4214,73 @@
 	      (interrupt))
 	    ;;BYTE.VAL is  an exact integer  whose payload bits  are the
 	    ;;binary representation of a fixnum.
-	    (prm 'bset (T bv) (K byte-offset) (%check-byte byte.val)))
+	    (asm 'bset (T bv) (K byte-offset) (%check-byte byte.val)))
 	   (else
 	    ;;BYTE  is a  struct instance  representing recordized  code
 	    ;;which, when evaluate, must return a fixnum.
-	    (prm 'bset (T bv) (K byte-offset) (prm-UNtag-as-fixnum (T byte)))))))
+	    (asm 'bset (T bv) (K byte-offset) (prm-UNtag-as-fixnum (T byte)))))))
       (else
        ;;IDX is  a struct  instance representing recordized  code which,
        ;;when evaluate, must return a fixnum.
        (define byte-offset
-	 (prm 'int+ (prm-UNtag-as-fixnum (T idx)) (K off-bytevector-data)))
+	 (asm 'int+ (prm-UNtag-as-fixnum (T idx)) (K off-bytevector-data)))
        (struct-case byte
 	 ((constant byte.val)
 	  (unless (target-platform-fixnum? byte.val)
 	    (interrupt))
 	  ;;BYTE.VAL is  an exact integer  whose payload bits  are the
 	  ;;binary representation of a fixnum.
-	  (prm 'bset (T bv) byte-offset (%check-byte byte.val)))
+	  (asm 'bset (T bv) byte-offset (%check-byte byte.val)))
 	 (else
 	  ;;BYTE  is a  struct instance  representing recordized  code
 	  ;;which, when evaluate, must return a fixnum.
-	  (prm 'bset (T bv) byte-offset (prm-UNtag-as-fixnum (T byte)))))))))
+	  (asm 'bset (T bv) byte-offset (prm-UNtag-as-fixnum (T byte)))))))))
 
 ;;; --------------------------------------------------------------------
 ;;; double flonum ref
 
  (define-core-primitive-operation $bytevector-ieee-double-native-ref unsafe
    ((V bv idx)
-    (with-tmp ((flo (prm 'alloc
+    (with-tmp ((flo (asm 'alloc
 			 (K (align flonum-size))
 			 (K vector-tag))))
       ;;Tag the first word as flonum.
-      (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      (asm 'mset flo (K off-flonum-tag) (K flonum-tag))
       ;;Load the number in a floating point register.
-      (prm 'fl:load
-	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
+      (asm 'fl:load
+	   (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
 	   (K off-bytevector-data))
       ;;Store the number in the data area of the flonum.
-      (prm 'fl:store flo (K off-flonum-data))
+      (asm 'fl:store flo (K off-flonum-data))
       flo)))
 
  (define-core-primitive-operation $bytevector-ieee-double-nonnative-ref unsafe
    ((V bv i)
     (boot.case-word-size
      ((32)
-      (with-tmp ((flo (prm 'alloc
+      (with-tmp ((flo (asm 'alloc
 			   (K (align flonum-size))
 			   (K vector-tag))))
 	;;Tag the first word as flonum.
-	(prm 'mset flo (K off-flonum-tag) (K flonum-tag))
-	(with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
-	  (with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
-	    (prm 'bswap! x0 x0)
-	    (prm 'mset flo (K (+ off-flonum-data wordsize)) x0))
-	  (with-tmp ((x0 (prm 'mref t (K (+ off-bytevector-data wordsize)))))
-	    (prm 'bswap! x0 x0)
-	    (prm 'mset flo (K off-flonum-data) x0)))
+	(asm 'mset flo (K off-flonum-tag) (K flonum-tag))
+	(with-tmp ((t (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
+	  (with-tmp ((x0 (asm 'mref t (K off-bytevector-data))))
+	    (asm 'bswap! x0 x0)
+	    (asm 'mset flo (K (+ off-flonum-data wordsize)) x0))
+	  (with-tmp ((x0 (asm 'mref t (K (+ off-bytevector-data wordsize)))))
+	    (asm 'bswap! x0 x0)
+	    (asm 'mset flo (K off-flonum-data) x0)))
 	flo))
      ((64)
-      (with-tmp ((flo (prm 'alloc
+      (with-tmp ((flo (asm 'alloc
 			   (K (align flonum-size))
 			   (K vector-tag))))
 	;;Tag the first word as flonum.
-	(prm 'mset flo (K off-flonum-tag) (K flonum-tag))
-	(with-tmp ((t  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
-	  (with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
-	    (prm 'bswap! x0 x0)
-	    (prm 'mset flo (K off-flonum-data) x0)))
+	(asm 'mset flo (K off-flonum-tag) (K flonum-tag))
+	(with-tmp ((t  (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
+	  (with-tmp ((x0 (asm 'mref t (K off-bytevector-data))))
+	    (asm 'bswap! x0 x0)
+	    (asm 'mset flo (K off-flonum-data) x0)))
 	flo)))))
 
 ;;;The  following   uses  unsupported  SSE3   instructions.   (Abdulaziz
@@ -4288,15 +4288,15 @@
 ;;;
 ;;;(define-core-primitive-operation $bytevector-ieee-double-nonnative-ref unsafe
 ;;;  ((V bv i)
-;;;   (with-tmp ((x (prm 'alloc (K (align flonum-size)) (K vector-tag))))
-;;;     (prm 'mset x (K off-flonum-tag) (K flonum-tag))
-;;;     (prm 'fl:load
-;;;       (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
+;;;   (with-tmp ((x (asm 'alloc (K (align flonum-size)) (K vector-tag))))
+;;;     (asm 'mset x (K off-flonum-tag) (K flonum-tag))
+;;;     (asm 'fl:load
+;;;       (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 ;;;       (K off-bytevector-data))
-;;;     (prm 'fl:shuffle
+;;;     (asm 'fl:shuffle
 ;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
 ;;;       (K off-bytevector-data))
-;;;     (prm 'fl:store x (K off-flonum-data))
+;;;     (asm 'fl:store x (K off-flonum-data))
 ;;;     x)))
 
 ;;; --------------------------------------------------------------------
@@ -4307,41 +4307,41 @@
     (multiple-forms-sequence
      ;;Load the double from the data  area of the flonum into a floating
      ;;point register.
-     (prm 'fl:load (T flo) (K off-flonum-data))
+     (asm 'fl:load (T flo) (K off-flonum-data))
      ;;Store the  double from  the register  into the  data area  of the
      ;;bytevector.
-     (prm 'fl:store
-	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
+     (asm 'fl:store
+	  (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
 	  (K off-bytevector-data)))))
 
  (define-core-primitive-operation $bytevector-ieee-double-nonnative-set! unsafe
    ((E bv idx flo)
     (boot.case-word-size
      ((32)
-      (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
-	(with-tmp ((x0 (prm 'mref (T flo) (K off-flonum-data))))
-	  (prm 'bswap! x0 x0)
-	  (prm 'mset t (K (+ off-bytevector-data wordsize)) x0))
-	(with-tmp ((x0 (prm 'mref (T flo) (K (+ off-flonum-data wordsize)))))
-	  (prm 'bswap! x0 x0)
-	  (prm 'mset t (K off-bytevector-data) x0))))
+      (with-tmp ((t (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
+	(with-tmp ((x0 (asm 'mref (T flo) (K off-flonum-data))))
+	  (asm 'bswap! x0 x0)
+	  (asm 'mset t (K (+ off-bytevector-data wordsize)) x0))
+	(with-tmp ((x0 (asm 'mref (T flo) (K (+ off-flonum-data wordsize)))))
+	  (asm 'bswap! x0 x0)
+	  (asm 'mset t (K off-bytevector-data) x0))))
      ((64)
-      (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
-	(with-tmp ((x0 (prm 'mref (T flo) (K off-flonum-data))))
-	  (prm 'bswap! x0 x0)
-	  (prm 'mset t (K off-bytevector-data) x0)))))))
+      (with-tmp ((t (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
+	(with-tmp ((x0 (asm 'mref (T flo) (K off-flonum-data))))
+	  (asm 'bswap! x0 x0)
+	  (asm 'mset t (K off-bytevector-data) x0)))))))
 
 ;;;The following uses unsupported SSE3 instructions.  (Abdulaziz Ghuloum)
 ;;;
 ;;;(define-core-primitive-operation $bytevector-ieee-double-nonnative-set! unsafe
 ;;;  ((E bv i x)
 ;;;   (multiple-forms-sequence
-;;;     (prm 'fl:load (T x) (K off-flonum-data))
-;;;     (prm 'fl:shuffle
+;;;     (asm 'fl:load (T x) (K off-flonum-data))
+;;;     (asm 'fl:shuffle
 ;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
 ;;;       (K off-bytevector-data))
-;;;     (prm 'fl:store
-;;;       (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
+;;;     (asm 'fl:store
+;;;       (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))
 ;;;       (K off-bytevector-data)))))
 
 ;;; --------------------------------------------------------------------
@@ -4349,42 +4349,42 @@
 
  (define-core-primitive-operation $bytevector-ieee-single-native-ref unsafe
    ((V bv idx)
-    (with-tmp ((flo (prm 'alloc
+    (with-tmp ((flo (asm 'alloc
 			 (K (align flonum-size))
 			 (K vector-tag))))
       ;;Tag the first word of the flonum memory block.
-      (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      (asm 'mset flo (K off-flonum-tag) (K flonum-tag))
       ;;Load  the  single from  the  bytevector  into a  floating  point
       ;;register.
-      (prm 'fl:load-single
-	   (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
+      (asm 'fl:load-single
+	   (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
 	   (K off-bytevector-data))
       ;;Convert the single into a double.
-      (prm 'fl:single->double)
+      (asm 'fl:single->double)
       ;;Store the double into the data area of the flonum.
-      (prm 'fl:store flo (K off-flonum-data))
+      (asm 'fl:store flo (K off-flonum-data))
       flo)))
 
  (define-core-primitive-operation $bytevector-ieee-single-nonnative-ref unsafe
    ((V bv idx)
-    (with-tmp ((flo (prm 'alloc
+    (with-tmp ((flo (asm 'alloc
 			 (K (align flonum-size))
 			 (K vector-tag))))
       ;;Tag the first word of the flonum memory block.
-      (prm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      (asm 'mset flo (K off-flonum-tag) (K flonum-tag))
       ;;Copy the single  from the bytevector data area  into a register;
       ;;reverse  its bytes;  copy the  reversed single  into the  flonum
       ;;data.
-      (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
-	(with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
-	  (prm 'bswap! x0 x0)
-	  (prm 'mset flo (K off-flonum-data) x0)))
+      (with-tmp ((t (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))))
+	(with-tmp ((x0 (asm 'mref t (K off-bytevector-data))))
+	  (asm 'bswap! x0 x0)
+	  (asm 'mset flo (K off-flonum-data) x0)))
       ;;Load the reversed single into a floating point register.
-      (prm 'fl:load-single flo (K (+ off-flonum-data (- wordsize 4))))
+      (asm 'fl:load-single flo (K (+ off-flonum-data (- wordsize 4))))
       ;;Convert the single into a double.
-      (prm 'fl:single->double)
+      (asm 'fl:single->double)
       ;;Store the double into the data area of the flonum.
-      (prm 'fl:store flo (K off-flonum-data))
+      (asm 'fl:store flo (K off-flonum-data))
       flo)))
 
 ;;; --------------------------------------------------------------------
@@ -4394,39 +4394,39 @@
    ((E bv idx flo)
     (multiple-forms-sequence
      ;;Load the single into a floating point register.
-     (prm 'fl:load (T flo) (K off-flonum-data))
+     (asm 'fl:load (T flo) (K off-flonum-data))
      ;;Convert the double into a single.
-     (prm 'fl:double->single)
+     (asm 'fl:double->single)
      ;;Store the double into the bytevector.
-     (prm 'fl:store-single
-	  (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
+     (asm 'fl:store-single
+	  (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T idx)))
 	  (K off-bytevector-data)))))
 
  (define-core-primitive-operation $bytevector-ieee-single-nonnative-set! unsafe
    ((E bv i flo)
     (multiple-forms-sequence
      ;;Load the single into a floating point register.
-     (prm 'fl:load (T flo) (K off-flonum-data))
+     (asm 'fl:load (T flo) (K off-flonum-data))
      ;;Convert the double into a single.
-     (prm 'fl:double->single)
-     (with-tmp ((t (prm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
+     (asm 'fl:double->single)
+     (with-tmp ((t (asm 'int+ (T bv) (prm-UNtag-as-fixnum (T i)))))
        ;;Store the single into the bytevector data area.
-       (prm 'fl:store-single t (K off-bytevector-data))
+       (asm 'fl:store-single t (K off-bytevector-data))
        (boot.case-word-size
 	((32)
 	 ;;Load the single into a register.
-	 (with-tmp ((x0 (prm 'mref t (K off-bytevector-data))))
+	 (with-tmp ((x0 (asm 'mref t (K off-bytevector-data))))
 	   ;;Reverse the bytes.
-	   (prm 'bswap! x0 x0)
+	   (asm 'bswap! x0 x0)
 	   ;;Store the reversed single in the bytevector.
-	   (prm 'mset   t (K off-bytevector-data) x0)))
+	   (asm 'mset   t (K off-bytevector-data) x0)))
 	((64)
 	 ;;Load the single into a register.
-	 (with-tmp ((x0 (prm 'mref32 t (K off-bytevector-data))))
+	 (with-tmp ((x0 (asm 'mref32 t (K off-bytevector-data))))
 	   ;;Reverse the bytes.
-	   (prm 'bswap! x0 x0)
+	   (asm 'bswap! x0 x0)
 	   ;;Store the reversed single in the bytevector.
-	   (prm 'mset32 t (K off-bytevector-data) (prm 'sra x0 (K 32))))))))))
+	   (asm 'mset32 t (K off-bytevector-data) (asm 'sra x0 (K 32))))))))))
 
  /section)
 
@@ -4471,11 +4471,11 @@
 	 (interrupt))
        ;;NUM-OF-CHARS.VAL is an exact integer whose payload bits are the
        ;;binary representation of a fixnum.
-       (with-tmp ((str (prm 'alloc
+       (with-tmp ((str (asm 'alloc
 			    (K (align (+ (* num-of-chars.val char-size) disp-string-data)))
 			    (K string-tag))))
 	 ;;Store the string length in the first word.
-	 (prm 'mset str (K off-string-length) (K (* num-of-chars.val fx-scale)))
+	 (asm 'mset str (K off-string-length) (K (* num-of-chars.val fx-scale)))
 	 str))
       ((known num-of-chars.expr)
        (cogen-value-$make-string num-of-chars.expr))
@@ -4484,11 +4484,11 @@
        ;;which, when evaluated, must return a fixnum.
        (boot.case-word-size
 	((32)
-	 (with-tmp ((str (prm 'alloc
+	 (with-tmp ((str (asm 'alloc
 			      (align-code (T num-of-chars) disp-string-data)
 			      (K string-tag))))
 	   ;;Store the string length in the first word.
-	   (prm 'mset str (K off-string-length) (T num-of-chars))
+	   (asm 'mset str (K off-string-length) (T num-of-chars))
 	   str))
 	((64)
 	 ;;FIXME  CHECK In  the  original Ikarus  sources  there was  no
@@ -4498,12 +4498,12 @@
 	 ;;bytes wide,  not (* 4  NUM-OF-CHARS) bytes wide as  it should
 	 ;;be.  So I have introduced the right-shift.  (Marco Maggi; Oct
 	 ;;24, 2012)
-	 (with-tmp ((str (prm 'alloc
-			      (align-code (prm 'sra (T num-of-chars) (K 1))
+	 (with-tmp ((str (asm 'alloc
+			      (align-code (asm 'sra (T num-of-chars) (K 1))
 					  disp-string-data)
 			      (K string-tag))))
 	   ;;Store the string length in the first word.
-	   (prm 'mset str (K off-string-length) (T num-of-chars))
+	   (asm 'mset str (K off-string-length) (T num-of-chars))
 	   str))))))
    ((P n)
     (K #t))
@@ -4512,7 +4512,7 @@
 
  (define-core-primitive-operation $string-length unsafe
    ((V x)
-    (prm 'mref (T x) (K off-string-length)))
+    (asm 'mref (T x) (K off-string-length)))
    ((P x)
     (K #t))
    ((E x)
@@ -4527,11 +4527,11 @@
        (interrupt-unless-fx idx.val)
        ;;IDX.VAL is an  exact integer whose payload bits  are the binary
        ;;representation of a fixnum.
-       (prm 'mref32 (T str) (K (+ (* idx.val char-size) off-string-data))))
+       (asm 'mref32 (T str) (K (+ (* idx.val char-size) off-string-data))))
       (else
        ;;IDX is  a struct  instance representing recordized  code which,
        ;;when evaluated, must return a fixnum.
-       (prm 'mref32 (T str) (prm 'int+ (boot.case-word-size
+       (asm 'mref32 (T str) (asm 'int+ (boot.case-word-size
 					;;IDX is a fixnum representing a
 					;;character  index  and its  raw
 					;;value  is also  the offset  in
@@ -4542,7 +4542,7 @@
 					;;shifting  one   bit,  its  raw
 					;;value  is also  the offset  in
 					;;bytes.
-					((64)	(prm 'sra (T idx) (K 1))))
+					((64)	(asm 'sra (T idx) (K 1))))
 				 (K off-string-data))))))
    ((P str idx)
     (K #t))
@@ -4556,12 +4556,12 @@
        (interrupt-unless-fx idx.val)
        ;;IDX.VAL is an  exact integer whose payload bits  are the binary
        ;;representation of a fixnum.
-       (prm 'mset32 (T str) (K (+ (* idx.val char-size) off-string-data))
+       (asm 'mset32 (T str) (K (+ (* idx.val char-size) off-string-data))
 	    (T ch)))
       (else
        ;;IDX is  a struct  instance representing recordized  code which,
        ;;when evaluated, must return a fixnum.
-       (prm 'mset32 (T str) (prm 'int+ (boot.case-word-size
+       (asm 'mset32 (T str) (asm 'int+ (boot.case-word-size
 					;;IDX is a fixnum representing a
 					;;character  index  and its  raw
 					;;value  is also  the offset  in
@@ -4572,7 +4572,7 @@
 					;;shifting  one   bit,  its  raw
 					;;value  is also  the offset  in
 					;;bytes.
-					((64)	(prm 'sra (T idx) (K 1))))
+					((64)	(asm 'sra (T idx) (K 1))))
 				 (K off-string-data))
 	    (T ch))))))
 
@@ -4651,7 +4651,7 @@
        (multiple-forms-sequence
 	(assert-string str)
 	(interrupt-unless
-	 (prm 'u< (T idx) (cogen-value-$string-length str)))
+	 (asm 'u< (T idx) (cogen-value-$string-length str)))
 	(cogen-value-$string-ref str idx)))
       ((known idx.expr idx.type)
        (case (T:fixnum? idx.type)
@@ -4659,7 +4659,7 @@
 	  (multiple-forms-sequence
 	   (assert-string str)
 	   (interrupt-unless
-	    (prm 'u< (T idx.expr) (cogen-value-$string-length str)))
+	    (asm 'u< (T idx.expr) (cogen-value-$string-length str)))
 	   (cogen-value-$string-ref str idx)))
 	 ((no)
 	  (interrupt))
@@ -4672,21 +4672,21 @@
 	(assert-fixnum idx)
 	(assert-string str)
 	(interrupt-unless
-	 (prm 'u< (T idx) (cogen-value-$string-length str)))
+	 (asm 'u< (T idx) (cogen-value-$string-length str)))
 	(cogen-value-$string-ref str idx)))))
    ((P str idx)
     (multiple-forms-sequence
      (assert-fixnum idx)
      (assert-string str)
      (interrupt-unless
-      (prm 'u< (T idx) (cogen-value-$string-length str)))
+      (asm 'u< (T idx) (cogen-value-$string-length str)))
      (K #t)))
    ((E str idx)
     (multiple-forms-sequence
      (assert-fixnum idx)
      (assert-string str)
      (interrupt-unless
-      (prm 'u< (T idx) (cogen-value-$string-length str))))))
+      (asm 'u< (T idx) (cogen-value-$string-length str))))))
 
  /section)
 
@@ -4743,28 +4743,28 @@
 
  (define-core-primitive-operation $make-port unsafe
    ((V attrs idx sz buf tr id read write getp setp cl cookie)
-    (with-tmp ((p (prm 'alloc
+    (with-tmp ((p (asm 'alloc
 		       (K (align port-size))
 		       (K vector-tag))))
       ;;Store  in  the  first  word  a machine  word  holding  the  port
       ;;attributes and the port tag.
-      (prm 'mset p (K off-port-attrs)
-	   (prm 'logor
-		(prm 'sll (T attrs) (K port-attrs-shift))
+      (asm 'mset p (K off-port-attrs)
+	   (asm 'logor
+		(asm 'sll (T attrs) (K port-attrs-shift))
 		(K port-tag)))
-      (prm 'mset p (K off-port-index)		(T idx))
-      (prm 'mset p (K off-port-size)		(T sz))
-      (prm 'mset p (K off-port-buffer)		(T buf))
-      (prm 'mset p (K off-port-transcoder)	(T tr))
-      (prm 'mset p (K off-port-id)		(T id))
-      (prm 'mset p (K off-port-read!)		(T read))
-      (prm 'mset p (K off-port-write!)		(T write))
-      (prm 'mset p (K off-port-get-position)	(T getp))
-      (prm 'mset p (K off-port-set-position!)	(T setp))
-      (prm 'mset p (K off-port-close)		(T cl))
-      (prm 'mset p (K off-port-cookie)		(T cookie))
-      (prm 'mset p (K off-port-unused1)		(K 0))
-      (prm 'mset p (K off-port-unused2)		(K 0))
+      (asm 'mset p (K off-port-index)		(T idx))
+      (asm 'mset p (K off-port-size)		(T sz))
+      (asm 'mset p (K off-port-buffer)		(T buf))
+      (asm 'mset p (K off-port-transcoder)	(T tr))
+      (asm 'mset p (K off-port-id)		(T id))
+      (asm 'mset p (K off-port-read!)		(T read))
+      (asm 'mset p (K off-port-write!)		(T write))
+      (asm 'mset p (K off-port-get-position)	(T getp))
+      (asm 'mset p (K off-port-set-position!)	(T setp))
+      (asm 'mset p (K off-port-close)		(T cl))
+      (asm 'mset p (K off-port-cookie)		(T cookie))
+      (asm 'mset p (K off-port-unused1)		(K 0))
+      (asm 'mset p (K off-port-unused2)		(K 0))
       p)))
 
  (let-syntax
@@ -4772,7 +4772,7 @@
 			      ((_ ?who ?offset)
 			       (define-core-primitive-operation ?who unsafe
 				 ((V port)
-				  (prm 'mref (T port) (K ?offset))))
+				  (asm 'mref (T port) (K ?offset))))
 			       ))))
    (define-port-accessor $port-index		off-port-index)
    (define-port-accessor $port-size		off-port-size)
@@ -4791,8 +4791,8 @@
    ;;attributes.   To  be  used  when  the  argument  has  already  been
    ;;validated as port value.
    ((V port)
-    (prm 'sra
-	 (prm 'mref (T port) (K off-port-attrs))
+    (asm 'sra
+	 (asm 'mref (T port) (K off-port-attrs))
 	 (K port-attrs-shift))))
 
  (define-core-primitive-operation $port-tag unsafe
@@ -4801,9 +4801,9 @@
    ;;value is zero.
    ((V port)
     (make-conditional (tag-test (T port) vector-mask vector-tag)
-	(with-tmp ((first-word (prm 'mref (T port) (K off-port-attrs))))
+	(with-tmp ((first-word (asm 'mref (T port) (K off-port-attrs))))
 	  (make-conditional (tag-test first-word port-mask port-tag)
-	      (prm 'sra first-word (K port-attrs-shift))
+	      (asm 'sra first-word (K port-attrs-shift))
 	    (K 0)))
       (K 0))))
 
@@ -4815,7 +4815,7 @@
 				 ;;We do  not need  to update  the dirty
 				 ;;vector because VAL is always a fixnum
 				 ;;here.
-				 (prm 'mset (T port) (K ?offset) (T val))))
+				 (asm 'mset (T port) (K ?offset) (T val))))
 			      ))))
    (define-port-mutator $set-port-index!	off-port-index)
    (define-port-mutator $set-port-size!		off-port-size))
@@ -4830,9 +4830,9 @@
    ;;value is always a fixnum.
    ;;
    ((E port attrs)
-    (prm 'mset (T port) (K off-port-attrs)
-	 (prm 'logor
-	      (prm 'sll (T attrs) (K port-attrs-shift))
+    (asm 'mset (T port) (K off-port-attrs)
+	 (asm 'logor
+	      (asm 'sll (T attrs) (K port-attrs-shift))
 	      (K port-tag)))))
 
  /section)
@@ -4858,8 +4858,8 @@
    ;;In one step untag it as fixnum and tag it as transcoder.
    ;;
    ((V fx)
-    (prm 'logor
-	 (prm 'sll (T fx) (K (fx- transcoder-payload-shift fx-shift)))
+    (asm 'logor
+	 (asm 'sll (T fx) (K (fx- transcoder-payload-shift fx-shift)))
 	 (K transcoder-tag))))
 
  (define-core-primitive-operation $transcoder->data unsafe
@@ -4867,7 +4867,7 @@
    ;;them as fixnum.
    ;;
    ((V tran)
-    (prm 'sra (T tran) (K (fx- transcoder-payload-shift fx-shift)))))
+    (asm 'sra (T tran) (K (fx- transcoder-payload-shift fx-shift)))))
 
  /section)
 
@@ -4956,7 +4956,7 @@
        ;;closure's data area; such index is zero-based.
        (unless (target-platform-fixnum? freevar-idx.val)
 	 (interrupt))
-       (prm 'mref (T clo) (K (+ off-closure-data (* freevar-idx.val wordsize)))))
+       (asm 'mref (T clo) (K (+ off-closure-data (* freevar-idx.val wordsize)))))
       ((known freevar-idx.expr)
        (cogen-value-$cpref clo freevar-idx.expr))
       (else
@@ -4970,7 +4970,7 @@
    ;;referencing the first  byte of binary code in a  code object's data
    ;;area:
    ;;
-   ;;  memory pointer = (prm 'mref (T closure) (K off-closure-code))
+   ;;  memory pointer = (asm 'mref (T closure) (K off-closure-code))
    ;;
    ;;we know that such memory  pointer is DISP-CODE-DATA bytes after the
    ;;pointer  to the  first  byte of  the code  object,  so we  subtract
@@ -4988,8 +4988,8 @@
    ;;    |...........| disp-code-data
    ;;
    ((V clo)
-    (prm 'int+
-	 (prm 'mref (T clo) (K off-closure-code))
+    (asm 'int+
+	 (asm 'mref (T clo) (K off-closure-code))
 	 (K (fx- vector-tag disp-code-data)))))
 
  /section)
@@ -5032,46 +5032,46 @@
 
  (define-core-primitive-operation $code-freevars unsafe
    ((V x)
-    (prm 'mref (T x) (K off-code-freevars))))
+    (asm 'mref (T x) (K off-code-freevars))))
 
  (define-core-primitive-operation $code-reloc-vector unsafe
    ((V x)
-    (prm 'mref (T x) (K off-code-relocsize))))
+    (asm 'mref (T x) (K off-code-relocsize))))
 
  (define-core-primitive-operation $code-size unsafe
    ((V x)
-    (prm 'mref (T x) (K off-code-instrsize))))
+    (asm 'mref (T x) (K off-code-instrsize))))
 
  (define-core-primitive-operation $code-annotation unsafe
    ((V x)
-    (prm 'mref (T x) (K off-code-annotation))))
+    (asm 'mref (T x) (K off-code-annotation))))
 
  (define-core-primitive-operation $code->closure unsafe
    ((V code)
     (with-tmp
 	;;Allocate a closure's memory block  and tag the reference to it
 	;;as closure.
-	((clo (prm 'alloc
+	((clo (asm 'alloc
 		   (K (align (+ 0 disp-closure-data)))
 		   (K closure-tag))))
       ;;Store in the  closure's memory block a raw pointer  to the first
       ;;byte of the code object's data area.
-      (prm 'mset clo (K off-closure-code)
-	   (prm 'int+ (T code) (K off-code-data)))
+      (asm 'mset clo (K off-closure-code)
+	   (asm 'int+ (T code) (K off-code-data)))
       clo)))
 
  (define-core-primitive-operation $code-ref unsafe
    ((V code idx)
     (prm-tag-as-fixnum
      (prm-isolate-least-significant-byte
-      (prm 'bref (T code)
-	   (prm 'int+ (prm-UNtag-as-fixnum (T idx))
+      (asm 'bref (T code)
+	   (asm 'int+ (prm-UNtag-as-fixnum (T idx))
 		(K off-code-data)))))))
 
  (define-core-primitive-operation $code-set! unsafe
    ((E code idx val)
-    (prm 'bset (T code)
-	 (prm 'int+ (prm-UNtag-as-fixnum (T idx))
+    (asm 'bset (T code)
+	 (asm 'int+ (prm-UNtag-as-fixnum (T idx))
 	      (K off-code-data))
 	 (prm-UNtag-as-fixnum (T val)))))
 
@@ -5106,13 +5106,13 @@
 
  (define-core-primitive-operation $make-tcbucket unsafe
    ((V tconc key val next)
-    (with-tmp ((buck (prm 'alloc
+    (with-tmp ((buck (asm 'alloc
 			  (K (align tcbucket-size))
 			  (K vector-tag))))
-      (prm 'mset buck (K off-tcbucket-tconc) (T tconc))
-      (prm 'mset buck (K off-tcbucket-key)   (T key))
-      (prm 'mset buck (K off-tcbucket-val)   (T val))
-      (prm 'mset buck (K off-tcbucket-next)  (T next))
+      (asm 'mset buck (K off-tcbucket-tconc) (T tconc))
+      (asm 'mset buck (K off-tcbucket-key)   (T key))
+      (asm 'mset buck (K off-tcbucket-val)   (T val))
+      (asm 'mset buck (K off-tcbucket-next)  (T next))
       buck)))
 
 ;;; --------------------------------------------------------------------
@@ -5120,15 +5120,15 @@
 
  (define-core-primitive-operation $tcbucket-key unsafe
    ((V buck)
-    (prm 'mref (T buck) (K off-tcbucket-key))))
+    (asm 'mref (T buck) (K off-tcbucket-key))))
 
  (define-core-primitive-operation $tcbucket-val unsafe
    ((V buck)
-    (prm 'mref (T buck) (K off-tcbucket-val))))
+    (asm 'mref (T buck) (K off-tcbucket-val))))
 
  (define-core-primitive-operation $tcbucket-next unsafe
    ((V buck)
-    (prm 'mref (T buck) (K off-tcbucket-next))))
+    (asm 'mref (T buck) (K off-tcbucket-next))))
 
 ;;; --------------------------------------------------------------------
 ;;; mutators
@@ -5165,13 +5165,13 @@
    ;;struct PCB is not zero.
    ;;
    ((P)
-    (prm '!= (prm 'mref pcr (K pcb-interrupted)) (K 0))))
+    (asm '!= (asm 'mref pcr (K pcb-interrupted)) (K 0))))
 
  (define-core-primitive-operation $unset-interrupted! unsafe
    ;;Set to zero the field "interrupted" of the C language struct PCB.
    ;;
    ((E)
-    (prm 'mset pcr (K pcb-interrupted) (K 0))))
+    (asm 'mset pcr (K pcb-interrupted) (K 0))))
 
  (define-core-primitive-operation $do-event safe
    ;;Set to 1 the field "engine_counter" of the C language struct PCB.
@@ -5179,7 +5179,7 @@
    ((E)
     (begin
       (interrupt)
-      (prm 'incr/zero? pcr (K pcb-engine-counter)
+      (asm 'incr/zero? pcr (K pcb-engine-counter)
 	   (K (fxsll 1 fx-shift))))))
 
  (define-core-primitive-operation $swap-engine-counter! unsafe
@@ -5191,8 +5191,8 @@
     ;;Ghuloum)
     ;;
     (with-tmp ((x0 (T x)))
-      (with-tmp ((t (prm 'mref pcr (K pcb-engine-counter))))
-	(prm 'mset pcr (K pcb-engine-counter) x0)
+      (with-tmp ((t (asm 'mref pcr (K pcb-engine-counter))))
+	(asm 'mset pcr (K pcb-engine-counter) x0)
 	t))))
 
  /section)
@@ -5265,7 +5265,7 @@
    ;;   call whose stack frame is the last on the stack segment.
    ;;
    ((P)
-    (prm '= (prm 'int+ (prm 'mref pcr (K pcb-frame-base))
+    (asm '= (asm 'int+ (asm 'mref pcr (K pcb-frame-base))
 		 (K (- wordsize)))
 	 fpr)))
 
@@ -5275,7 +5275,7 @@
    ;;value is "pcb->next_k".
    ;;
    ((V)
-    (prm 'mref pcr (K pcb-next-continuation))))
+    (asm 'mref pcr (K pcb-next-continuation))))
 
  (define-core-primitive-operation $seal-frame-and-call unsafe
    ;;This primitive  operation is used  to implement CALL/CC  (call with
@@ -5350,7 +5350,7 @@
     ;;scenario leaving  the FPR at  base and so causing  the generation of  a corrupt
     ;;continuation object (with  size 0 and the underflow handler  as return point of
     ;;the topmost stack frame).
-    (with-tmp ((kont (prm 'alloc-no-hooks (K continuation-size) (K vector-tag))))
+    (with-tmp ((kont (asm 'alloc-no-hooks (K continuation-size) (K vector-tag))))
       ;;BASE references the underflow handler:
       ;;
       ;;        high memory
@@ -5361,26 +5361,26 @@
       ;; |                      |
       ;;       low memory
       ;;
-      (with-tmp ((base (prm 'int+
-			    (prm 'mref pcr (K pcb-frame-base))
+      (with-tmp ((base (asm 'int+
+			    (asm 'mref pcr (K pcb-frame-base))
 			    (K (- wordsize)))))
-	(with-tmp ((underflow-handler (prm 'mref base (K 0))))
+	(with-tmp ((underflow-handler (asm 'mref base (K 0))))
 	  ;;Store the continuation tag in the first word.
-	  (prm 'mset kont (K off-continuation-tag)  (K continuation-tag))
+	  (asm 'mset kont (K off-continuation-tag)  (K continuation-tag))
 	  ;;Set the  current Frame  Pointer Register  as address to  go back  to when
 	  ;;resuming the continuation.
-	  (prm 'mset kont (K off-continuation-top)  fpr)
+	  (asm 'mset kont (K off-continuation-top)  fpr)
 	  ;;Set the number of bytes representing  the total size of the freezed stack
 	  ;;frames.
-	  (prm 'mset kont (K off-continuation-size) (prm 'int- base fpr))
+	  (asm 'mset kont (K off-continuation-size) (asm 'int- base fpr))
 	  ;;Prepend the new  continuation object to the linked list  of "next process
 	  ;;continuations" in the PCB.
-	  (prm 'mset kont (K off-continuation-next) (prm 'mref pcr (K pcb-next-continuation)))
-	  (prm 'mset pcr  (K pcb-next-continuation) kont)
+	  (asm 'mset kont (K off-continuation-next) (asm 'mref pcr (K pcb-next-continuation)))
+	  (asm 'mset pcr  (K pcb-next-continuation) kont)
 	  ;;The machine word containing "return address 0" (the one referenced by the
 	  ;;FPR) is the  new frame base for subsequent code  execution; store the FPR
 	  ;;in the PCB as frame base.
-	  (prm 'mset pcr (K pcb-frame-base) fpr)
+	  (asm 'mset pcr (K pcb-frame-base) fpr)
 	  ;;When arriving here the situation of the Scheme stack is:
 	  ;;
 	  ;;         high memory
@@ -5416,7 +5416,7 @@
 	  ;;continuation object KONT is in some  CPU register; the raw memory pointer
 	  ;;UNDERFLOW-HANDLER is in some CPU register.
 	  ;;
-	  (prm 'call-with-underflow-handler underflow-handler (T func) kont)))))
+	  (asm 'call-with-underflow-handler underflow-handler (T func) kont)))))
    ((E . args)
     (interrupt))
    ((P . args)
@@ -5432,11 +5432,11 @@
    ;;variables.
    ;;
    ((V x)
-    (with-tmp ((clo (prm 'alloc
+    (with-tmp ((clo (asm 'alloc
 			 (K (align (+ disp-closure-data wordsize)))
 			 (K closure-tag))))
-      (prm 'mset clo (K off-closure-code) (K (make-code-loc (sl-continuation-code-label))))
-      (prm 'mset clo (K off-closure-data) (T x))
+      (asm 'mset clo (K off-closure-code) (K (make-code-loc (sl-continuation-code-label))))
+      (asm 'mset clo (K off-closure-data) (T x))
       clo))
    ((P x)
     (K #t))
@@ -5503,8 +5503,8 @@
    ;;
    ((E)
     (make-shortcut
-	(make-conditional (prm 'u< fpr (prm 'mref pcr (K pcb-frame-redline)))
-	    (prm 'interrupt)
+	(make-conditional (asm 'u< fpr (asm 'mref pcr (K pcb-frame-redline)))
+	    (asm 'interrupt)
 	  (nop))
       (make-forcall "ik_stack_overflow" '()))))
 
@@ -5563,15 +5563,15 @@
    ;;want.  (Marco Maggi; Oct 25, 2012)
    ;;
    ((V annotation proc)
-    (with-tmp ((clo (prm 'alloc
+    (with-tmp ((clo (asm 'alloc
 			 (K (align (+ disp-closure-data (* 2 wordsize))))
 			 (K closure-tag))))
-      (prm 'mset clo (K off-closure-code)
+      (asm 'mset clo (K off-closure-code)
 	   (K (make-code-loc (sl-annotated-procedure-label))))
       ;;Store the annotation in the first slot for free variables.
-      (prm 'mset clo (K off-closure-data)              (T annotation))
+      (asm 'mset clo (K off-closure-data)              (T annotation))
       ;;Store the wrapped closure in the second slot for free variables.
-      (prm 'mset clo (K (+ off-closure-data wordsize)) (T proc))
+      (asm 'mset clo (K (+ off-closure-data wordsize)) (T proc))
       clo))
    ((P)
     (interrupt))
@@ -5583,7 +5583,7 @@
    ;;$MAKE-ANNOTATED-PROCEDURE: return the annotation object.
    ;;
    ((V proc)
-    (prm 'mref (T proc) (K off-closure-data))))
+    (asm 'mref (T proc) (K off-closure-data))))
 
  /section)
 

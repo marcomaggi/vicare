@@ -164,11 +164,11 @@
 
 ;;;; high-level assembly primitives
 
-(define (prm op . args)
-  ;;Build  and return  recordised  call  which performs  the  primitive operation  OP
-  ;;applying it to the arguments ARGS.
+(define (asm op . rand*)
+  ;;Build  and  return  recordised  call   which  performs  the  high-level  Assembly
+  ;;instruction OP applying it to the arguments ARGS.
   ;;
-  (make-asmcall op args))
+  (make-asmcall op rand*))
 
 (define (nop)
   ;;Build  and  return  recordised  call   representing  the  dummy  instruction  "no
@@ -690,7 +690,7 @@
       ;;Record that this body has requested the presence of an interrupt handler.
       ((%record-use-of-interrupt-in-body))
       ;;Return the "(asmcall interrupt)".
-      (prm 'interrupt))
+      (asm 'interrupt))
 
     #| end of module: %GENERATE-CODE |# )
 
@@ -739,7 +739,7 @@
 	    ;;and we handle special cases.
 	    (let ((e (apply V-handler simplified-rand*)))
 	      (define (%doit-with-adapter)
-		(prm '!= e (KN bool-f)))
+		(asm '!= e (KN bool-f)))
 	      (struct-case e
 		((asmcall op)
 		 (if (eq? op 'interrupt)
@@ -1006,12 +1006,12 @@
 
 	((P)
 	 (if (%the-body-is-just-an-interrupt-asmcall? body)
-	     (prm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
-		  (K bool-f))
+	     (asm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
+		    (K bool-f))
 	   (make-shortcut
 	       body
-	     (prm '!= (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*)
-		  (K bool-f)))))
+	     (asm '!= (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*)
+		    (K bool-f)))))
 
 	(else
 	 (compiler-internal-error __module_who__ "invalid context" ctxt))))
@@ -1178,9 +1178,9 @@
 	(let ((n  (%closure-object-area-size rhs))
 	      (n* (map %closure-object-area-size rhs*)))
 	  (make-bind (list lhs)
-		     (list (prm 'alloc
-				(KN (apply + n n*))
-				(KN closure-tag)))
+		     (list (asm 'alloc
+				  (KN (apply + n n*))
+				  (KN closure-tag)))
 		     (make-bind lhs* (%adders lhs n n*)
 				body)))))
 
@@ -1189,7 +1189,7 @@
       ;;offset of an embedded closure object in the global memory block.
       ;;
       (if (pair? n*)
-    	  (cons (prm 'int+ lhs (KN n))
+    	  (cons (asm 'int+ lhs (KN n))
     		(%adders lhs
     			 (+ n (car n*))
     			 (cdr n*)))
@@ -1252,7 +1252,7 @@
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
 	((closure-maker code freevar*)
-	 (make-seq (prm 'mset lhs (KN off-closure-code) (V code))
+	 (make-seq (asm 'mset lhs (KN off-closure-code) (V code))
 		   (%slot-setters lhs freevar* off-closure-data body)))))
 
     (define (%slot-setters lhs free* slot-offset body)
@@ -1269,7 +1269,7 @@
       ;;closure bindings are visible.
       ;;
       (if (pair? free*)
-	  (make-seq (prm 'mset lhs (KN slot-offset) (V (car free*)))
+	  (make-seq (asm 'mset lhs (KN slot-offset) (V (car free*)))
 		    (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))
 	body))
 
@@ -1407,9 +1407,9 @@
        ;;associate such gensym to the generated binary code; the location gensym will
        ;;be stored  in the  relocation vector  associated to the  code object  we are
        ;;building.  This is what the OBJECT struct generated below is for.
-       (prm 'mref
-	    (K (make-object (primitive-public-function-name->location-gensym name)))
-	    (K off-symbol-record-value)))
+       (asm 'mref
+	      (K (make-object (primitive-public-function-name->location-gensym name)))
+	      (K off-symbol-record-value)))
 
       ((code-loc)
        (make-constant x))
@@ -1500,16 +1500,16 @@
 	(cogen-primop     op 'P arg*))))
 
     ((var)
-     (prm '!= (V x) (KN bool-f)))
+     (asm '!= (V x) (KN bool-f)))
 
     ((funcall)
-     (prm '!= (V x) (KN bool-f)))
+     (asm '!= (V x) (KN bool-f)))
 
     ((jmpcall)
-     (prm '!= (V x) (KN bool-f)))
+     (asm '!= (V x) (KN bool-f)))
 
     ((forcall)
-     (prm '!= (V x) (KN bool-f)))
+     (asm '!= (V x) (KN bool-f)))
 
     ((known expr)
      ;;FIXME.  Suboptimal.  (Abdulaziz Ghuloum)
@@ -1738,9 +1738,9 @@
 		   ;;do we  call RESET-SYMBOL-PROC!   here, at  compile-time?  (Marco
 		   ;;Maggi; Mon May 19, 2014)
 		   (reset-symbol-proc! loc)
-		   (prm 'mref
-			(constant->native-constant-representation (make-constant loc))
-			(K off-symbol-record-proc))))
+		   (asm 'mref
+			  (constant->native-constant-representation (make-constant loc))
+			  (K off-symbol-record-proc))))
 	     (else
 	      (F-nonproc rator check?))))
 
@@ -1783,11 +1783,11 @@
 	(with-tmp ((x (V rator)))
 	  (make-shortcut
 	      (make-seq
-	       (make-conditional (prm '=
-				      (prm 'logand x (K closure-mask))
-				      (K closure-tag))
-		   (prm 'nop)
-		 (prm 'interrupt))
+	       (make-conditional (asm '=
+					(asm 'logand x (K closure-mask))
+					(K closure-tag))
+		   (asm 'nop)
+		 (asm 'interrupt))
 	       x)
 	    (V (make-funcall (mk-primref 'error)
 			     (list (K 'apply) (K "not a procedure") x)))))
