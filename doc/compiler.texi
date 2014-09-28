@@ -3866,7 +3866,7 @@ which, in recordized code, are represented by struct instances of type
 @objtype{funcall}; everything else is left untouched.  If the
 @meta{operator} is a struct instance of type @objtype{primref}
 representing a primitive operation: such struct is replaced by an
-appropriate struct instance of type @objtype{primcall}.  So recordised
+appropriate struct instance of type @objtype{primopcall}.  So recordised
 code like:
 
 @example
@@ -3877,7 +3877,7 @@ code like:
 is transformed into:
 
 @example
-(primcall @meta{name} (@meta{operand} ...))
+(primopcall @meta{name} (@meta{operand} ...))
 @end example
 
 If the @objtype{funcall} struct represents a call to a proper lexical
@@ -3894,7 +3894,7 @@ Perform code transformation traversing the whole hierarchy in
 recordised code; build and return a new @objtype{codes} struct.
 
 Transform @objtype{funcall} structs representing core primitive
-operation applications into @objtype{primcall} structs.
+operation applications into @objtype{primopcall} structs.
 @end defun
 
 
@@ -3912,7 +3912,7 @@ is transformed into:
 @example
 (codes
   ()
-  (primcall list (constant 1) (constant 2)))
+  (primopcall list (constant 1) (constant 2)))
 @end example
 
 @c page
@@ -3938,8 +3938,8 @@ We know that a Scheme closure object (satisfiying the predicate
 
 @noindent
 the purpose of this compiler pass is to replace references to free
-variables with @objtype{primcall} structs representing the use of the
-primitive @func{$cpref}.
+variables with @objtype{primopcall} structs representing the use of the
+primitive operation @func{$cpref}.
 
 In addition, it transforms every @objtype{closure-maker} not appearing
 as right-hand side expression of a @objtype{fix} into:
@@ -3980,7 +3980,7 @@ is transformed into:
 @example
 (codes
   ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
-     (primcall $cpref cp_0 (constant 0))))
+     (primopcall $cpref cp_0 (constant 0))))
   (bind ((a_0 (funcall (primref read))))
     (fix ((tmp_0 (closure-maker
                     (code-loc asmlabel:anonymous:clambda)
@@ -4007,15 +4007,15 @@ is transformed into:
 (codes
  ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
      (seq
-       (primcall $vector-set!
-                 (primcall $cpref cp_0 (constant 0))
-                 (constant 0)
-                 (constant 1))
-       (primcall $vector-ref
-                 (primcall $cpref cp_0 (constant 0))
-                 (constant 0)))))
+       (primopcall $vector-set!
+                  (primopcall $cpref cp_0 (constant 0))
+                  (constant 0)
+                  (constant 1))
+       (primopcall $vector-ref
+                  (primopcall $cpref cp_0 (constant 0))
+                  (constant 0)))))
  (bind ((a_0 (funcall (primref read))))
-   (bind ((a_1 (primcall vector a_0)))
+   (bind ((a_1 (primopcall vector a_0)))
      (fix ((tmp_0 (closure-maker
                      (code-loc asmlabel:anonymous:clambda)
                      (freevars: a_1))))
@@ -4034,7 +4034,7 @@ transforms the @meta{body} into:
 
 @example
 (seq
-  (primcall $do-event ())
+  (primopcall $do-event ())
   @meta{body})
 @end example
 
@@ -4067,7 +4067,7 @@ stack, it transforms it as follows:
 
 @example
 (seq
-  (primcall $stack-overflow-check ())
+  (primopcall $stack-overflow-check ())
   @meta{body})
 @end example
 

@@ -29,6 +29,7 @@
 ;;           | (closure-maker <codeloc> <var>*)  ; thunk special case
 ;;           | (forcall "name" <Expr>*)
 ;;           | (funcall <Expr> <Expr>*)
+;;           | (primopcall <primop> <Expr>*)
 ;;           | (jmpcall <label> <Expr> <Expr>*)
 ;;  <codeloc> ::= (code-loc <label>)
 ;;  <clambda> ::= (clambda <label> <case>* <cp> <freevar>*)
@@ -693,8 +694,9 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'make-primcall 'scheme-indent-function 1)
-;; eval: (put 'assemble-sources 'scheme-indent-function 1)
-;; eval: (put 'make-conditional 'scheme-indent-function 2)
-;; eval: (put 'struct-case 'scheme-indent-function 1)
+;; eval: (put 'make-primopcall		'scheme-indent-function 1)
+;; eval: (put 'make-asmcall		'scheme-indent-function 1)
+;; eval: (put 'assemble-sources		'scheme-indent-function 1)
+;; eval: (put 'make-conditional		'scheme-indent-function 2)
+;; eval: (put 'struct-case		'scheme-indent-function 1)
 ;; End:

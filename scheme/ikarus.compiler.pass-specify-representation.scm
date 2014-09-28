@@ -138,9 +138,9 @@
   (interruptable?
 		;Boolean.   True if  the high-level  assembly code  implementing this
 		;core primitive operation must be  wrapped into a SHORTCUT struct and
-		;so it might  contain INTERRUPT PRIMCALL structs  representing a jump
-		;to the interrupt handler.  False  if this primitive operation is not
-		;interruptible and so it must not contain INTERRUPT PRIMCALLs.
+		;so it might contain INTERRUPT ASMCALL structs representing a jump to
+		;the interrupt  handler.  False  if this  primitive operation  is not
+		;interruptible and so it must not contain INTERRUPT ASMCALLs.
    p-handler
 		;CASE-LAMBDA  function generating  assembly  code  for the  predicate
 		;execution context.
@@ -168,13 +168,13 @@
   ;;Build  and return  recordised  call  which performs  the  primitive operation  OP
   ;;applying it to the arguments ARGS.
   ;;
-  (make-primcall op args))
+  (make-asmcall op args))
 
 (define (nop)
   ;;Build  and  return  recordised  call   representing  the  dummy  instruction  "no
   ;;operation".
   ;;
-  (make-primcall 'nop '()))
+  (make-asmcall 'nop '()))
 
 
 (module (with-tmp)
@@ -258,7 +258,7 @@
   ;;The functions COGEN-PRIMOP and COGEN-DEBUG-PRIMOP  are used to process recordised
   ;;code:
   ;;
-  ;;   (primcall ?primitive-symbol-name ?rand ...)
+  ;;   (primopcall ?primitive-symbol-name ?rand ...)
   ;;
   ;;in which  it is known  that ?PRIMITIVE-SYMBOL-NAME  is a symbol  representing the
   ;;public name of a core primitive operation, so that:
@@ -312,12 +312,12 @@
   ;;but  we have  to  be careful  not  to  include twice  the  code representing  the
   ;;operands; in general, the recordised code:
   ;;
-  ;;   (primcall ?prim-name ?rand ...)
+  ;;   (primopcall ?prim-name ?rand ...)
   ;;
   ;;must be (conceptually) transformed into:
   ;;
   ;;   (bind ((?tmp ?rand) ...)
-  ;;     (primcall ?prim-name ?tmp ...))
+  ;;     (primopcall ?prim-name ?tmp ...))
   ;;
   ;;and then into:
   ;;
@@ -390,27 +390,27 @@
   ;;     (shortcut
   ;;         (seq
   ;;           ;;If the operand is a tagged pointer tagged as vector...
-  ;;           (conditional (primcall = (primcall logand tmp_0 (constant 7))
-  ;;                                    (constant 5))
+  ;;           (conditional (asmcall = (asmcall logand tmp_0 (constant 7))
+  ;;                                   (constant 5))
   ;;               ;;... fine.
-  ;;               (primcall nop)
+  ;;               (asmcall nop)
   ;;             ;;... otherwise call the full core primitive function.
-  ;;             (primcall interrupt))
+  ;;             (asmcall interrupt))
   ;;           ;;Retrieve the first word.
-  ;;           (bind ((vec.len_0 (primcall mref tmp_0 (constant -5))))
+  ;;           (bind ((vec.len_0 (asmcall mref tmp_0 (constant -5))))
   ;;             (seq
   ;;               ;;If the first word is a fixnum...
-  ;;               (conditional (primcall = (primcall logand vec.len_0 (constant 7))
+  ;;               (conditional (asmcall = (asmcall logand vec.len_0 (constant 7))
   ;;                                        (constant 0))
   ;;                   ;;... fine.
-  ;;                   (primcall nop)
+  ;;                   (asmcall nop)
   ;;                 ;;... otherwise call the full core primitive function.
-  ;;                 (primcall interrupt))
+  ;;                 (asmcall interrupt))
   ;;             ;;Return the first word, which is the length of the vector.
   ;;             vec.len_0)))
   ;;       ;;Interrupt handler: perform a full call to the primitive function and let
   ;;       ;;it raise an exception if there is the need.
-  ;;       (funcall (primcall mref (constant (object vector-length)) (constant 19))
+  ;;       (funcall (asmcall mref (constant (object vector-length)) (constant 19))
   ;;                tmp_0)))
   ;;
   ;;
@@ -433,8 +433,8 @@
   ;;module is:
   ;;
   ;;   (shortcut
-  ;;       (primcall int+/overflow ?rand1 ?rand2)
-  ;;     (funcall (primcall mref (constant (object error@fx+))
+  ;;       (asmcall int+/overflow ?rand1 ?rand2)
+  ;;     (funcall (asmcall mref (constant (object error@fx+))
   ;;                             off-symbol-record-value)
   ;; 	    ?rand1 ?rand2))
   ;;
@@ -443,12 +443,12 @@
   ;;
   ;;The first form in SHORTCUT is the core primitive operation call's "body":
   ;;
-  ;;   (primcall int+/overflow ?rand1 ?rand2)
+  ;;   (asmcall int+/overflow ?rand1 ?rand2)
   ;;
   ;;the second  form in SHORTCUT  is the  core primitive operation  call's "interrupt
   ;;handler":
   ;;
-  ;;   (funcall (primcall mref (constant (object error@fx+))
+  ;;   (funcall (asmcall mref (constant (object error@fx+))
   ;;                           off-symbol-record-value)
   ;;     ?rand1 ?rand2)
   ;;
@@ -505,7 +505,7 @@
 	;;
 	;;In the VECTOR-LENGTH example, this function generates the code:
 	;;
-	;;   (funcall (primcall mref (constant (object vector-length))
+	;;   (funcall (asmcall mref (constant (object vector-length))
 	;;                           ?offset-of-slot-value-in-loc-gensym)
 	;;            tmp_0)
 	;;
@@ -514,7 +514,7 @@
 	;;
 	;;In the FX+ example, this function generates the code:
 	;;
-	;;   (funcall (primcall mref (constant (object error@fx+))
+	;;   (funcall (asmcall mref (constant (object error@fx+))
 	;;                           ?offset-of-slot-value-in-loc-gensym)
 	;;            ?rand1 ?rand2)
 	;;
@@ -689,7 +689,7 @@
     (define (interrupt)
       ;;Record that this body has requested the presence of an interrupt handler.
       ((%record-use-of-interrupt-in-body))
-      ;;Return the "(primcall interrupt)".
+      ;;Return the "(asmcall interrupt)".
       (prm 'interrupt))
 
     #| end of module: %GENERATE-CODE |# )
@@ -734,14 +734,14 @@
 	    ;;implementation handler  exists; we  generate a "for  predicate" handler
 	    ;;as:
 	    ;;
-	    ;;   (primcall != (for-value-primcall) (KN bool-f))
+	    ;;   (asmcall != (for-value-asmcall) (KN bool-f))
 	    ;;
 	    ;;and we handle special cases.
 	    (let ((e (apply V-handler simplified-rand*)))
 	      (define (%doit-with-adapter)
 		(prm '!= e (KN bool-f)))
 	      (struct-case e
-		((primcall op)
+		((asmcall op)
 		 (if (eq? op 'interrupt)
 		     e
 		   (%doit-with-adapter)))
@@ -759,14 +759,14 @@
 	    ;;handler, but  a "for  side effects"  implementation handler  exists; we
 	    ;;generate a "for predicate" handler as:
 	    ;;
-	    ;;   (seq (for-effects-primcall) (K t))
+	    ;;   (seq (for-effects-asmcall) (K t))
 	    ;;
 	    ;;and we handle special cases.
 	    (let ((e (apply E-handler simplified-rand*)))
 	      (define (%doit-with-adapter)
 		(make-seq e (K #t)))
 	      (struct-case e
-		((primcall op)
+		((asmcall op)
 		 (if (eq? op 'interrupt)
 		     e
 		   (%doit-with-adapter)))
@@ -784,7 +784,7 @@
 	    ;;There is no  "for value" implementation handler, but  a "for predicate"
 	    ;;implementation handler exists; we generate a "for value" handler as:
 	    ;;
-	    ;;   (condition (for-pred-primcall)
+	    ;;   (condition (for-pred-asmcall)
 	    ;;       (KN bool-t)
 	    ;;     (KN bool-f))
 	    ;;
@@ -793,7 +793,7 @@
 	      (define (%doit-with-adapter)
 		(make-conditional e (KN bool-t) (KN bool-f)))
 	      (struct-case e
-		((primcall op)
+		((asmcall op)
 		 (if (eq? op 'interrupt)
 		     e
 		   (%doit-with-adapter)))
@@ -812,7 +812,7 @@
 	    ;;generate a "for value" handler as:
 	    ;;
 	    ;;   (seq
-	    ;;     (for-effects-primcall)
+	    ;;     (for-effects-asmcall)
 	    ;;     (KN void-object))
 	    ;;
 	    ;;and we handle special cases.
@@ -820,7 +820,7 @@
 	      (define (%doit-with-adapter)
 		(make-seq e (KN void-object)))
 	      (struct-case e
-		((primcall op)
+		((asmcall op)
 		 (if (eq? op 'interrupt)
 		     e
 		   (%doit-with-adapter)))
@@ -839,7 +839,7 @@
 	    ;;predicate" implementation  handler exists; we generate  a "for effects"
 	    ;;handler as:
 	    ;;
-	    ;;   (condition (for-pred-primcall)
+	    ;;   (condition (for-pred-asmcall)
 	    ;;       (nop)
 	    ;;     (nop))
 	    ;;
@@ -848,7 +848,7 @@
 	      (define (%doit-with-adapter)
 		(make-conditional e (nop) (nop)))
 	      (struct-case e
-		((primcall op)
+		((asmcall op)
 		 (if (eq? op 'interrupt)
 		     e
 		   (%doit-with-adapter)))
@@ -861,7 +861,7 @@
 	    ;;implementation  handlers,  but  a "for  value"  implementation  handler
 	    ;;exists; we generate a "for effects" handler as:
 	    ;;
-	    ;;   (bind ((tmp (for-value-primcall)))
+	    ;;   (bind ((tmp (for-value-asmcall)))
 	    ;;     (nop))
 	    ;;
 	    ;;and we handle special cases.
@@ -870,7 +870,7 @@
 		(with-tmp ((t e))
 		  (nop)))
 	      (struct-case e
-		((primcall op)
+		((asmcall op)
 		 (if (eq? op 'interrupt)
 		     e
 		   (%doit-with-adapter)))
@@ -957,7 +957,7 @@
   (module (with-interrupt-handler)
     ;;This module is used when there is at least one:
     ;;
-    ;;   (primcall interrupt)
+    ;;   (asmcall interrupt)
     ;;
     ;;in  the  recordised  code   representing  the  integrated  primitive  operation
     ;;application; so we must generate an interrupt  handler and wrap the BODY into a
@@ -966,12 +966,12 @@
     ;;NOTE  When it  is determined  at compile-time  that the  operands of  a primitive
     ;;operation are invalid, the generated SHORTCUT's ?BODY can be a simple:
     ;;
-    ;;   (primcall interrupt)
+    ;;   (asmcall interrupt)
     ;;
     ;;in this case, if we do nothing special, we end up generating:
     ;;
     ;;   (shortcut
-    ;;       (primcall interrupt)
+    ;;       (asmcall interrupt)
     ;;     ?interrupt-handler)
     ;;
     ;;which would be stupid;  so we take care of recognising  this special ?BODY case
@@ -991,21 +991,21 @@
 	(map T simplified-rand*))
       (case ctxt
 	((V)
-	 (if (%the-body-is-just-an-interrupt-primcall? body)
+	 (if (%the-body-is-just-an-interrupt-asmcall? body)
 	     (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
 	   (make-shortcut
 	       body
 	     (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*))))
 
 	((E)
-	 (if (%the-body-is-just-an-interrupt-primcall? body)
+	 (if (%the-body-is-just-an-interrupt-asmcall? body)
 	     (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
 	   (make-shortcut
 	       body
 	     (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*))))
 
 	((P)
-	 (if (%the-body-is-just-an-interrupt-primcall? body)
+	 (if (%the-body-is-just-an-interrupt-asmcall? body)
 	     (prm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
 		  (K bool-f))
 	   (make-shortcut
@@ -1016,9 +1016,9 @@
 	(else
 	 (compiler-internal-error __module_who__ "invalid context" ctxt))))
 
-    (define (%the-body-is-just-an-interrupt-primcall? body)
+    (define (%the-body-is-just-an-interrupt-asmcall? body)
       (struct-case body
-	((primcall op)
+	((asmcall op)
 	 (eq? op 'interrupt))
 	(else #f)))
 
@@ -1099,28 +1099,28 @@
   ;;the internal LET form is transformed into:
   ;;
   ;;         ;;allocate a single memory block
-  ;;   (bind ((c_0 (primcall alloc (constant 48) (constant 3))))
+  ;;   (bind ((c_0 (asmcall alloc (constant 48) (constant 3))))
   ;;           ;;compute the tagged pointers referencing the other closure objects
-  ;;     (bind ((b_0 (primcall int+ c_0 (constant 16)))
-  ;;            (a_0 (primcall int+ c_0 (constant 32))))
+  ;;     (bind ((b_0 (asmcall int+ c_0 (constant 16)))
+  ;;            (a_0 (asmcall int+ c_0 (constant 32))))
   ;;       (seq
   ;;         ;;Initialise the closure object C_0: store in the 1st word
   ;;         ;;the address of the binary code entry point; store in the
   ;;         ;;2nd word the value of the free variable.
-  ;;         (primcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
-  ;;         (primcall mset c_0 (constant  5) x_0)
+  ;;         (asmcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
+  ;;         (asmcall mset c_0 (constant  5) x_0)
   ;;
   ;;         ;;Initialise the closure object B_0: store in the 1st word
   ;;         ;;the address of the binary code entry point; store in the
   ;;         ;;2nd word the value of the free variable.
-  ;;         (primcall mset b_0 (constant -3) (constant (code-loc asmlabel:b:clambda)))
-  ;;         (primcall mset b_0 (constant  5) x_0)
+  ;;         (asmcall mset b_0 (constant -3) (constant (code-loc asmlabel:b:clambda)))
+  ;;         (asmcall mset b_0 (constant  5) x_0)
   ;;
   ;;         ;;Initialise the closure object A_0: store in the 1st word
   ;;         ;;the address of the binary code entry point; store in the
   ;;         ;;2nd word the value of the free variable.
-  ;;         (primcall mset a_0 (constant -3) (constant (code-loc asmlabel:a:clambda)))
-  ;;         (primcall mset a_0 (constant  5) x_0)
+  ;;         (asmcall mset a_0 (constant -3) (constant (code-loc asmlabel:a:clambda)))
+  ;;         (asmcall mset a_0 (constant  5) x_0)
   ;;
   ;;         ?body)))
   ;;
@@ -1185,7 +1185,7 @@
 				body)))))
 
     (define (%adders lhs n n*)
-      ;;Return a list  of PRIMCALL structs representing expressions  that compute the
+      ;;Return a  list of ASMCALL  structs representing expressions that  compute the
       ;;offset of an embedded closure object in the global memory block.
       ;;
       (if (pair? n*)
@@ -1283,10 +1283,9 @@
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
 
   (define (cogen-debug-call op ctxt arg* kont)
-    ;;This function is used to process struct instances of type PRIMCALL
-    ;;with operand "debug-call"; such PRIMCALLs are inserted in the code
-    ;;when debug  mode is  on, function  calls are  wrapped in  calls to
-    ;;"debug-call".  So:
+    ;;This function is used to process  struct instances of type ASMCALL with operand
+    ;;"debug-call"; such  ASMCALLs are inserted  in the code  when debug mode  is on,
+    ;;function calls are wrapped in calls to "debug-call".  So:
     ;;
     ;;   (list 1 2)
     ;;
@@ -1301,10 +1300,10 @@
     ;;This function returns a FUNCALL struct instance.
     ;;
     ;;OP is  always the symbol "debug-call";  it is the value  of the OP
-    ;;field of the PRIMCALL structure.
+    ;;field of the ASMCALL structure.
     ;;
-    ;;CTXT is one of the symbols: V, E, P.  It represents the context in
-    ;;which the PRIMCALL was found in recordized code.
+    ;;CTXT is one  of the symbols: V, E,  P.  It represents the context  in which the
+    ;;ASMCALL was found in recordized code.
     ;;
     ;;ARG* is  a list  of struct  instance representing  recordized code
     ;;that,   when  evaluated,   will  return   the  arguments   to  the
@@ -1365,7 +1364,7 @@
   ;;bind		code-loc
   ;;conditional		constant	fix
   ;;forcall		funcall		jmpcall
-  ;;known		primcall	primref
+  ;;known		primopcall	primref
   ;;seq			var
   ;;
   ;;
@@ -1374,11 +1373,11 @@
   ;;* Instances  of CONSTANT  contain the  binary representation  of the
   ;;  object.
   ;;
-  ;;* Instances of PRIMREF are replaced by instances of PRIMCALL.
+  ;;* Instances of PRIMREF are replaced by instances of ASMCALL.
   ;;
   ;;* Instances of CODE-LOC are wrapped into instances of CONSTANT.
   ;;
-  ;;* Instances of PRIMCALL ...
+  ;;* Instances of PRIMOPCALL ...
   ;;
   ;;* Instances of FIX are handled.
   ;;
@@ -1427,7 +1426,7 @@
       ((seq e0 e1)
        (make-seq (E e0) (V e1)))
 
-      ((primcall op arg*)
+      ((primopcall op arg*)
        (case op
 	 ((debug-call)
 	  (cogen-debug-call op 'V arg* V))
@@ -1460,7 +1459,7 @@
   ;;bind		closure-maker	code-loc
   ;;conditional		constant	fix
   ;;forcall		funcall		jmpcall
-  ;;known		primcall	primref
+  ;;known		primopcall	primref
   ;;seq			var
   ;;
   (import COGEN-DEBUG-CALL-STUFF)
@@ -1493,7 +1492,7 @@
     ((fix lhs* rhs* body)
      (handle-fix lhs* rhs* (P body)))
 
-    ((primcall op arg*)
+    ((primopcall op arg*)
      (case op
        ((debug-call)
 	(cogen-debug-call op 'P arg* P))
@@ -1531,7 +1530,7 @@
   ;;bind		closure-maker	code-loc
   ;;conditional		constant	fix
   ;;forcall		funcall		jmpcall
-  ;;known		primcall	primref
+  ;;known		primopcall	primref
   ;;seq			var
   ;;
   (import COGEN-DEBUG-CALL-STUFF)
@@ -1557,7 +1556,7 @@
     ((fix lhs* rhs* body)
      (handle-fix lhs* rhs* (E body)))
 
-    ((primcall op arg*)
+    ((primopcall op arg*)
      (case op
        ((debug-call)
 	(cogen-debug-call op 'E arg* E))
@@ -1710,13 +1709,13 @@
 
   (define (F rator check?)
     (struct-case rator
-      ((primcall op args)
+      ((primopcall op args)
        (cond ((and (eq? op 'top-level-value)
 		   (null? (cdr args)) ;only one argument
 		   (%recordized-symbol (car args)))
 	      ;;The recordized code:
 	      ;;
-	      ;;   #[primcall #[primref top-level-value] (?loc)]
+	      ;;   #[primopcall #[primref top-level-value] (?loc)]
 	      ;;
 	      ;;represents a  reference to a  top level value.  Whenever  binary code
 	      ;;performs a call to a top level closure object, it does the following:

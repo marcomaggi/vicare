@@ -30,13 +30,13 @@
   ;;Accept as input recordized code containing the following struct types:
   ;;
   ;;   asm-instr	conditional	constant
-  ;;   ntcall		primcall	seq
+  ;;   ntcall		asmcall		seq
   ;;   shortcut
   ;;
   ;;only the following types are accepted in tail position:
   ;;
   ;;   conditional
-  ;;   primcall
+  ;;   asmcall
   ;;   seq
   ;;   shortcut
   ;;
@@ -73,7 +73,7 @@
   ;;   asm-instr	code-loc	conditional
   ;;   constant		disp		foreign-label
   ;;   fvar		ntcall		object
-  ;;   primcall		seq		shortcut
+  ;;   asmcall		seq		shortcut
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
@@ -478,7 +478,7 @@
 	     (cons label-for-false-predicate
 		   (T x.altern accum))))))
 
-    ((primcall op rands)
+    ((asmcall op rands)
      (case op
        ((return)
 	(cons '(ret) accum))
@@ -578,8 +578,8 @@
       ((asm-instr op d s)
        (E-asm-instr op d s x accum))
 
-      ((primcall op rands)
-       (E-primcall op rands x accum))
+      ((asmcall op rands)
+       (E-asmcall op rands x accum))
 
       ((shortcut body handler)
        ;;Flatten the body instructions inserting a label at the end:
@@ -756,7 +756,7 @@
       (else
        (error __module_who__ "invalid instr" (unparse-recordized-code x)))))
 
-  (define (E-primcall op rands x accum)
+  (define (E-asmcall op rands x accum)
     (case op
       ((nop)
        accum)
@@ -784,7 +784,7 @@
 
   (define (interrupt? x)
     (struct-case x
-      ((primcall op args)
+      ((asmcall op args)
        (eq? op 'interrupt))
       (else
        #f)))
@@ -1097,8 +1097,8 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'make-primcall 'scheme-indent-function 1)
-;; eval: (put 'assemble-sources 'scheme-indent-function 1)
-;; eval: (put 'make-conditional 'scheme-indent-function 2)
-;; eval: (put 'struct-case 'scheme-indent-function 1)
+;; eval: (put 'make-asmcall		'scheme-indent-function 1)
+;; eval: (put 'assemble-sources		'scheme-indent-function 1)
+;; eval: (put 'make-conditional		'scheme-indent-function 2)
+;; eval: (put 'struct-case		'scheme-indent-function 1)
 ;; End:

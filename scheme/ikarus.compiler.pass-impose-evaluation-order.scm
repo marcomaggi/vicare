@@ -36,7 +36,7 @@
   ;;
   ;;so that the order of evaluation of the argument's expressions is decided.
   ;;
-  ;;*  All the  PRIMCALL  struct instances  in the  input  expression representing  a
+  ;;*  All the  ASMCALL  struct instances  in the  input  expression representing  a
   ;;primitive operation call:
   ;;
   ;;   (?operator ?arg-expr ...)
@@ -54,7 +54,7 @@
   ;;
   ;;   bind		conditional		constant
   ;;   forcall		funcall			jmpcall
-  ;;   known		primcall		seq
+  ;;   known		asmcall		seq
   ;;   shortcut		var
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
@@ -193,7 +193,7 @@
 	((var)
 	 (VT x))
 
-	((primcall op rands)
+	((asmcall op rands)
 	 (case op
 	   (($call-with-underflow-handler)
 	    ;;This    primitive    is    used   by    the    primitive    operation
@@ -350,7 +350,7 @@
 	       ;;handler must  pop the  continuation object from  "pcb->next_k" and
 	       ;;process it as explained in the documentation.
 	       ;;
-	       (make-primcall 'indirect-jump
+	       (make-asmcall 'indirect-jump
 		 (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
 	   (else
 	    (VT x))))
@@ -383,11 +383,11 @@
 	 (error __module_who__ "invalid tail" x))))
 
     (define (VT x)
-      ;;X is a struct of type: CONSTANT, VAR, PRIMCALL, FORCALL.
+      ;;X is a struct of type: CONSTANT, VAR, ASMCALL, FORCALL.
       ;;
       (S x (lambda (x)
 	     (make-seq (%move-dst<-src RETURN-VALUE-REGISTER x)
-		       (make-primcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
+		       (make-asmcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
 
     #| end of module: Tail |# )
 
@@ -420,7 +420,7 @@
 		   => kont)
 		  (else
 		   (kont x))))
-	   ((or (funcall? x) (primcall? x) (jmpcall? x)
+	   ((or (funcall? x) (asmcall? x) (jmpcall? x)
 		(forcall? x) (shortcut? x) (conditional? x))
 	    (let ((t (make-unique-var 'tmp)))
 	      (%do-bind (list t) (list x) (kont t))))
@@ -498,14 +498,14 @@
   (define (alloc-check size)
     (E (make-shortcut
 	   (make-conditional (%test size)
-	       (make-primcall 'nop '())
-	     (make-primcall 'interrupt '()))
+	       (make-asmcall 'nop '())
+	     (make-asmcall 'interrupt '()))
 	 (make-funcall
 	  ;;From the  relocation vector of  this code object: retrieve  the location
 	  ;;gensym associated to DO-OVERFLOW, then  retrieve the value of its "proc"
 	  ;;slot.  The  "proc" slot of such  loc gensym contains a  reference to the
 	  ;;closure object implementing DO-OVERFLOW.
-	  (make-primcall 'mref
+	  (make-asmcall 'mref
 	    (list (make-constant (make-object (primitive-public-function-name->location-gensym 'do-overflow)))
 		  (make-constant off-symbol-record-proc)))
 	  (list size)))))
@@ -513,8 +513,8 @@
   (define (alloc-check/no-hooks size)
     (E (make-shortcut
 	   (make-conditional (%test size)
-	       (make-primcall 'nop '())
-	     (make-primcall 'interrupt '()))
+	       (make-asmcall 'nop '())
+	     (make-asmcall 'interrupt '()))
 	 (make-forcall "ik_collect" (list size)))))
 
   (define (%test size)
@@ -523,13 +523,13 @@
 	   (<= i 4096))
 	  (else
 	   #f))
-	(make-primcall '<=
+	(make-asmcall '<=
 	  (list apr
-		(make-primcall 'mref
+		(make-asmcall 'mref
 		  (list pcr (make-constant pcb-allocation-redline)))))
-      (make-primcall '>=
-	(list (make-primcall 'int-
-		(list (make-primcall 'mref
+      (make-asmcall '>=
+	(list (make-asmcall 'int-
+		(list (make-asmcall 'mref
 			(list pcr (make-constant pcb-allocation-redline)))
 		      apr))
 	      size))))
@@ -564,7 +564,7 @@
     ((conditional e0 e1 e2)
      (make-conditional (P e0) (V d e1) (V d e2)))
 
-    ((primcall op rands)
+    ((asmcall op rands)
      (case op
 
        ((alloc)
@@ -709,7 +709,7 @@
     ((bind lhs* rhs* e)
      (%do-bind lhs* rhs* (E e)))
 
-    ((primcall op rands)
+    ((asmcall op rands)
      (case op
        ((mset bset mset32)
 	(S* rands (lambda (s*)
@@ -758,13 +758,13 @@
       ((bind lhs* rhs* e)
        (%do-bind lhs* rhs* (P e)))
 
-      ((primcall op rands)
+      ((asmcall op rands)
        (let ((a (car rands)) (b (cadr rands)))
 	 (if (and (constant? a)
 		  (constant? b))
 	     (let ((t (make-unique-var 'tmp)))
 	       (P (make-bind (list t) (list a)
-		    (make-primcall op (list t b)))))
+		    (make-asmcall op (list t b)))))
 	   (Mem a (lambda (a)
 		    (Mem b (lambda (b)
 			     (make-asm-instr op a b))))))))
@@ -777,7 +777,7 @@
 
   (define (Mem x kont)
     (struct-case x
-      ((primcall op arg*)
+      ((asmcall op arg*)
        (if (eq? op 'mref)
 	   (S* arg* (lambda (arg*)
 		      (kont (make-disp (car arg*) (cadr arg*)))))
@@ -810,9 +810,9 @@
 	   (rest (make-seq (%move-dst<-src ARGC-REGISTER
 					   (make-constant (argc-convention (length rands))))
 			   (if target
-			       (make-primcall 'direct-jump
+			       (make-asmcall 'direct-jump
 				 (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
-			     (make-primcall 'indirect-jump
+			     (make-asmcall 'indirect-jump
 			       (cons* ARGC-REGISTER pcr esp apr locs))))))
       (let recur ((args  (reverse args))
 		  (locs  (reverse locs))
@@ -866,8 +866,8 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'make-primcall 'scheme-indent-function 1)
-;; eval: (put 'assemble-sources 'scheme-indent-function 1)
-;; eval: (put 'make-conditional 'scheme-indent-function 2)
-;; eval: (put 'struct-case 'scheme-indent-function 1)
+;; eval: (put 'make-asmcall		'scheme-indent-function 1)
+;; eval: (put 'assemble-sources		'scheme-indent-function 1)
+;; eval: (put 'make-conditional		'scheme-indent-function 2)
+;; eval: (put 'struct-case		'scheme-indent-function 1)
 ;; End:

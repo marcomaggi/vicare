@@ -1453,9 +1453,9 @@
 ;;In a  low-level compiler  pass: FX+  is recognised as  primitive operation  and the
 ;;recordised representation becomes:
 ;;
-;;   (primcall fx+ (constant 1) (constant 2))
+;;   (primopcall fx+ (constant 1) (constant 2))
 ;;
-;;an even lower compiler pass with transform PRIMCALL into the actuall asssembly code
+;;an even lower compiler pass with transform PRIMOPCALL into the actuall asssembly code
 ;;implementing the primitive operation.
 ;;
 ;;NOTE Given the  symbol representing the public name of  a primitive operation which
@@ -1467,13 +1467,21 @@
 ;;operation  representing a  high-level  assembly  instruction: there  is  no way  to
 ;;recognise it as such.
 ;;
-(define-struct primcall
+(define-struct primopcall
   (op
-		;A symbol representing the public name of a primitive operation.
+		;A symbol representing the public name of a core primitive operation.
    arg*
 		;A  list  of  struct instances  representing  recordized  expressions
 		;which, when evaluated,  will return the arguments  of this primitive
 		;call.
+   ))
+
+(define-struct asmcall
+  (instr
+		;A symbol representing the name of a high-level Assembly instruction.
+   rand*
+		;A list of struct instances  representing recordised code which, when
+		;evaluated, will result in the operands of this Assembly instruction.
    ))
 
 (define-struct codes
@@ -3622,11 +3630,11 @@
       (let ((rand*^ ($map/stx E-known rand*)))
 	(struct-case rator
 	  ((primref op)
-	   (%E-primcall op rand*^))
+	   (%E-primref-call op rand*^))
 	  (else
 	   (make-funcall (E-known rator) rand*^)))))
 
-    (define (%E-primcall safe-prim-name rand*)
+    (define (%E-primref-call safe-prim-name rand*)
       (define (%no-replacement)
 	(make-funcall (make-primref safe-prim-name) rand*))
       (parametrise ((%exception-raiser compile-time-error))
@@ -5387,13 +5395,13 @@
   ;;which, in recordized  code, are represented by struct instances  of type FUNCALL;
   ;;everything else is left untouched.  If the ?OPERATOR is a struct instance of type
   ;;PRIMREF  representing  a primitive  operation:  such  struct  is replaced  by  an
-  ;;appropriate struct instance of type PRIMCALL; recordized code like:
+  ;;appropriate struct instance of type PRIMOPCALL; recordized code like:
   ;;
   ;;   #[funcall  #[primref ?name] (?arg ...)]
   ;;
   ;;is converted to:
   ;;
-  ;;   #[primcall ?name (?arg ...)]
+  ;;   #[primopcall ?name (?arg ...)]
   ;;
   ;;If  the FUNCALL  struct represents  a call  to a  proper primitive  function (not
   ;;operation): it is left untouched as FUNCALL struct.
@@ -5415,9 +5423,8 @@
   ;;FIXNUM?  are  primitive operations;  LIST, NUMBER?,  DISPLAY are  *not* primitive
   ;;operations.
   ;;
-  ;;NOTE Not  all the instances  of struct PRIMCALL  are generated from  instances of
-  ;;FUNCALL; so  not all the instances  of PRIMCALL are generated  here.  PRIMCALL is
-  ;;also used to represent high-level assembly instructions such as "mref".
+  ;;NOTE Not all  the instances of struct PRIMOPCALL are  generated from instances of
+  ;;FUNCALL; so not all the instances of PRIMOPCALL are generated here.
   ;;
   (define-syntax __module_who__
     (identifier-syntax 'introduce-primitive-operation-calls))
@@ -5525,7 +5532,7 @@
       ;;
       ;;If the  operator is  a struct  instance of type  PRIMREF representing  a core
       ;;primitive  operation:  such  struct  is replaced  by  an  appropriate  struct
-      ;;instance of type PRIMCALL.
+      ;;instance of type PRIMOPCALL.
       ;;
       (struct-case op
 	((known expr)
@@ -5533,7 +5540,7 @@
 
 	((primref name)
 	 (if (%primitive-operation? name)
-	     (make-primcall name arg*)
+	     (make-primopcall name arg*)
 	   (make-funcall op arg*)))
 
 	(else
@@ -5716,8 +5723,8 @@
 	 (let ((t (make-unique-var 'tmp)))
 	   (E (make-fix (list t) (list x) t))))
 
-	((primcall op arg*)
-	 (make-primcall op ($map/stx E-known arg*)))
+	((primopcall op arg*)
+	 (make-primopcall op ($map/stx E-known arg*)))
 
 	((forcall op arg*)
 	 (make-forcall op ($map/stx E arg*)))
@@ -5785,7 +5792,7 @@
 		((eq? x (car freevar*))
 		 ;;Replace a  reference to  free variable  with the  appropriate slot
 		 ;;accessor.
-		 (make-primcall '$cpref (list cpvar (make-constant i))))
+		 (make-primopcall '$cpref (list cpvar (make-constant i))))
 		(else
 		 (loop (cdr freevar*) (fxadd1 i)))))))
 
@@ -5800,7 +5807,7 @@
   ;;PRIMREF), it transforms the ?BODY into:
   ;;
   ;;   (begin
-  ;;     (primcall '$do-event '())
+  ;;     (primopcall '$do-event '())
   ;;     ?body)
   ;;
   ;;the call  to the primitive operation  $DO-EVENT suspends the execution  of Scheme
@@ -5838,11 +5845,11 @@
 
     (define (%introduce-check-maybe body)
       (if (E body)
-	  (make-seq EVENT-PRIMCALL body)
+	  (make-seq EVENT-PRIMOPCALL body)
 	body))
 
-    (define-constant EVENT-PRIMCALL
-      (make-primcall '$do-event '()))
+    (define-constant EVENT-PRIMOPCALL
+      (make-primopcall '$do-event '()))
 
     #| end of module |# )
 
@@ -5890,7 +5897,7 @@
 	((seq e0 e1)
 	 (or (E e0) (E e1)))
 
-	((primcall op arg*)
+	((primopcall op arg*)
 	 (ormap E-known arg*))
 
 	((forcall op arg*)
@@ -5929,7 +5936,7 @@
   ;;will cause further use of the stack, it transforms it as follows:
   ;;
   ;;   (begin
-  ;;     (primcall '$stack-overflow-check '())
+  ;;     (primopcall '$stack-overflow-check '())
   ;;     ?body)
   ;;
   ;;so  that, right  after entering  the execution  of a  function, the  call to  the
@@ -5974,11 +5981,11 @@
 
     (define (%process-body body)
       (if (%tail? body)
-	  (make-seq CHECK-PRIMCALL body)
+	  (make-seq CHECK-PRIMOPCALL body)
 	body))
 
-    (define-constant CHECK-PRIMCALL
-      (make-primcall '$stack-overflow-check '()))
+    (define-constant CHECK-PRIMOPCALL
+      (make-primopcall '$stack-overflow-check '()))
 
     #| end of module |# )
 
@@ -6011,7 +6018,7 @@
 	 (or (%non-tail? e0)
 	     (%tail? e1)))
 
-	((primcall op arg*)
+	((primopcall op arg*)
 	 (ormap %non-tail? arg*))
 
 	((forcall op arg*)
@@ -6043,7 +6050,7 @@
 	  ((jmpcall label rator arg*)	#t)
 
 	  ;;FIXME!  (Abdulaziz Ghuloum)
-	  ((primcall op arg*)
+	  ((primopcall op arg*)
 	   (ormap %non-tail?-known arg*))
 
 	  ((bind lhs* rhs* body)
@@ -6170,8 +6177,11 @@
     ((interrupt-call e0 e1)
      `(interrupt-call ,(unparse-recordized-code e0) ,(unparse-recordized-code e1)))
 
-    ((primcall op arg*)
+    ((primopcall op arg*)
      `(,op . ,(map unparse-recordized-code arg*)))
+
+    ((asmcall op arg*)
+     `(asmcall ,op . ,(map unparse-recordized-code arg*)))
 
     ((bind lhs* rhs* body)
      `(let ,(map (lambda (lhs rhs)
@@ -6336,9 +6346,9 @@
   ;;   assign		bind		clambda
   ;;   conditional	constant	fix
   ;;   forcall		foreign-label	funcall
-  ;;   known		prelex		primcall
+  ;;   known		prelex		primopcall
   ;;   primref		rec*bind	recbind
-  ;;   seq		var
+  ;;   seq		var		asmcall
   ;;
   ;;other values are not processed and are returned as they are.
   ;;
@@ -6397,8 +6407,11 @@
 				'no-freevars
 			      `(freevars: . ,freevar*)))))
 
-	((primcall op arg*)
-	 (cons* 'primcall op (%map-in-order E arg*)))
+	((primopcall op arg*)
+	 (cons* 'primopcall op (%map-in-order E arg*)))
+
+	((asmcall op arg*)
+	 (cons* 'asmcall    op (%map-in-order E arg*)))
 
 	((funcall rator rand*)
 	 (let ((rator (E rator)))
@@ -6591,9 +6604,9 @@
   ;;   assign		bind		clambda
   ;;   conditional	constant	fix
   ;;   forcall		foreign-label	funcall
-  ;;   known		prelex		primcall
+  ;;   known		prelex		primopcall
   ;;   primref		rec*bind	recbind
-  ;;   seq		var
+  ;;   seq		var		asmcall
   ;;
   ;;other values are not processed and are returned as they are.
   ;;
@@ -6650,8 +6663,11 @@
 				'no-freevars
 			      `(freevars: . ,freevar*)))))
 
-	((primcall op arg*)
+	((primopcall op arg*)
 	 (cons op (%map-in-order E arg*)))
+
+	((asmcall op arg*)
+	 (cons* 'asmcall op (%map-in-order E arg*)))
 
 	((funcall rator rand*)
 	 (let ((rator (E rator)))

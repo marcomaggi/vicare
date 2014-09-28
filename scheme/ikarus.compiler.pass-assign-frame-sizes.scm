@@ -22,7 +22,7 @@
   ;;
   ;;   asm-instr	conditional	constant
   ;;   locals		nframe		ntcall
-  ;;   primcall		seq		shortcut
+  ;;   asmcall		seq		shortcut
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
@@ -155,7 +155,7 @@
 	((nframe vars live body)
 	 (E-nframe vars live body))
 
-	((primcall op args)
+	((asmcall op args)
 	 (case op
 	   ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	    x)
@@ -176,7 +176,7 @@
 	 (let ((d (R d))
 	       (s (R s)))
 	   (if (eq? d s)
-	       (make-primcall 'nop '())
+	       (make-asmcall 'nop '())
 	     (make-asm-instr op d s))))
 
 	(( ;;some assembly instructions
@@ -193,7 +193,7 @@
 	 (make-asm-instr op (R d) (R s)))
 
 	((nop)
-	 (make-primcall 'nop '()))
+	 (make-asmcall 'nop '()))
 
 	(else
 	 (error who "invalid op" op))))
@@ -340,7 +340,7 @@
       ((conditional e0 e1 e2)
        (make-conditional (P e0) (T e1) (T e2)))
 
-      ((primcall op args)
+      ((asmcall op args)
        x)
 
       ((shortcut body handler)
@@ -700,7 +700,7 @@
        (set-nframe-live! x (vector vs fs ns))
        (E body vs rs fs ns))
 
-      ((primcall op args)
+      ((asmcall op args)
        (case op
          ((nop fl:double->single fl:single->double)
 	  (values vs rs fs ns))
@@ -797,7 +797,7 @@
             (union-frms fs1 fs2)
             (union-nfvs ns1 ns2))))
 
-      ((primcall op arg*)
+      ((asmcall op arg*)
        (case op
          ((return indirect-jump direct-jump)
           (R* arg*
@@ -832,8 +832,8 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'make-primcall 'scheme-indent-function 1)
-;; eval: (put 'assemble-sources 'scheme-indent-function 1)
-;; eval: (put 'make-conditional 'scheme-indent-function 2)
-;; eval: (put 'struct-case 'scheme-indent-function 1)
+;; eval: (put 'make-asmcall		'scheme-indent-function 1)
+;; eval: (put 'assemble-sources		'scheme-indent-function 1)
+;; eval: (put 'make-conditional		'scheme-indent-function 2)
+;; eval: (put 'struct-case		'scheme-indent-function 1)
 ;; End:

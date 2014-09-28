@@ -172,21 +172,21 @@
 	  ()
 	  (shortcut
 	      (seq
-		(primcall nop)
-		(primcall int+/overflow (constant 8) (constant 16)))
-	    (funcall (primcall mref (constant (object error@fx+)) (constant 19))
+		(asmcall nop)
+		(asmcall int+/overflow (constant 8) (constant 16)))
+	    (funcall (asmcall mref (constant (object error@fx+)) (constant 19))
 	      (constant 8) (constant 16)))))
 
   ;;Notice how the return value of the SHORTCUT becomes the operand of DISPLAY.
   (doit* (display (fx+ 1 2))
 	 (codes
 	  ()
-	  (funcall (primcall mref (constant (object display)) (constant 19))
+	  (funcall (asmcall mref (constant (object display)) (constant 19))
 	    (shortcut
 		(seq
-		  (primcall nop)
-		  (primcall int+/overflow (constant 8) (constant 16)))
-	      (funcall (primcall mref (constant (object error@fx+)) (constant 19))
+		  (asmcall nop)
+		  (asmcall int+/overflow (constant 8) (constant 16)))
+	      (funcall (asmcall mref (constant (object error@fx+)) (constant 19))
 		(constant 8) (constant 16))))))
 
 ;;; --------------------------------------------------------------------
@@ -196,9 +196,9 @@
 	  ()
 	  (shortcut
 	      (seq
-		(primcall nop)
-		(primcall int-/overflow (constant 8) (constant 16)))
-	    (funcall (primcall mref (constant (object error@fx-)) (constant 19))
+		(asmcall nop)
+		(asmcall int-/overflow (constant 8) (constant 16)))
+	    (funcall (asmcall mref (constant (object error@fx-)) (constant 19))
 	      (constant 8) (constant 16)))))
 
 ;;; --------------------------------------------------------------------
@@ -236,7 +236,7 @@
   (doit* ($fx* 2 4)
 	 (codes
 	  ()
-	  (primcall int* (constant 32) (constant 2))))
+	  (asmcall int* (constant 32) (constant 2))))
 
   ;;Here we  do care about  the overflow.   Here we do  now at compile-time  that the
   ;;operands are both fixnum, so there is no need to introduce type validation code.
@@ -246,7 +246,7 @@
   ;;fixnums  on  64-bit  platforms; the  type  tag  of  fixnums  is #b000  on  64-bit
   ;;platforms.  So:
   ;;
-  ;;   (primcall = (primcall logand b_0 (constant 7)) (constant 0))
+  ;;   (asmcall = (asmcall logand b_0 (constant 7)) (constant 0))
   ;;
   ;;is true if  "b_0" has the 3  least significant bits set  to zero, and so  it is a
   ;;64-bit fixnum.
@@ -257,12 +257,12 @@
 	  (shortcut
 	      (bind ((b_0 (constant 32)))
 		(seq
-		  (conditional (primcall = (primcall logand b_0 (constant 7)) (constant 0))
-		      (primcall nop)
-		    (primcall interrupt))
-		  (primcall int*/overflow (constant 2) b_0)))
+		  (conditional (asmcall = (asmcall logand b_0 (constant 7)) (constant 0))
+		      (asmcall nop)
+		    (asmcall interrupt))
+		  (asmcall int*/overflow (constant 2) b_0)))
 	    (funcall
-		(primcall mref (constant (object error@fx*)) (constant 19))
+		(asmcall mref (constant (object error@fx*)) (constant 19))
 	      (constant 16) (constant 32)))))
 
   ;;Here the type of the operands is unknown.
@@ -275,33 +275,33 @@
 	    ;;stack  enlargement  is  needed.   This is  the  implementation  of  the
 	    ;;primitive operation "$stack-overflow-check".
 	    (shortcut
-		(conditional (primcall u< %esp (primcall mref %esi (constant 32)))
-		    (primcall interrupt)
-		  (primcall nop))
+		(conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		    (asmcall interrupt)
+		  (asmcall nop))
 	      (foreign-call "ik_stack_overflow"))
 	    ;;Here we start the actual form implementation.
-	    (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19))))
-		   (tmp_1 (funcall (primcall mref (constant (object read)) (constant 19)))))
+	    (bind ((tmp_0 (funcall (asmcall mref (constant (object read)) (constant 19))))
+		   (tmp_1 (funcall (asmcall mref (constant (object read)) (constant 19)))))
 	      (shortcut
 		  (bind ((a_0 tmp_0)
 			 (b_0 tmp_1))
 		    (seq
 		      ;;Validate a_0 as 64-bit fixnum.
-		      (conditional (primcall = (primcall logand a_0 (constant 7)) (constant 0))
-			  (primcall nop)
-			(primcall interrupt))
+		      (conditional (asmcall = (asmcall logand a_0 (constant 7)) (constant 0))
+			  (asmcall nop)
+			(asmcall interrupt))
 		      ;;Validate b_0 as 64-bit fixnum.
-		      (conditional (primcall = (primcall logand b_0 (constant 7)) (constant 0))
-			  (primcall nop)
-			(primcall interrupt))
+		      (conditional (asmcall = (asmcall logand b_0 (constant 7)) (constant 0))
+			  (asmcall nop)
+			(asmcall interrupt))
 		      ;;Perform the  product, by untagging (right-shifting)  only one
 		      ;;operand.
-		      (primcall int*/overflow a_0 (primcall sra b_0 (constant 3)))))
+		      (asmcall int*/overflow a_0 (asmcall sra b_0 (constant 3)))))
 		;;If  an operand  is not  a finxum  or an  overflow occurs:  raise an
 		;;exception.  The single primitive function "error@fx*" is called for
 		;;both the causes  or error: first it validates  (again) the operands
 		;;as fixnums, and if they are: it means the error is an overflow.
-		(funcall (primcall mref (constant (object error@fx*)) (constant 19))
+		(funcall (asmcall mref (constant (object error@fx*)) (constant 19))
 		  tmp_0 tmp_1))))))
 
 ;;; --------------------------------------------------------------------
@@ -309,7 +309,7 @@
   (doit* (fxdiv 6 3)
 	 (codes
 	  ()
-	  (funcall (primcall mref (constant (object fxdiv)) (constant 19))
+	  (funcall (asmcall mref (constant (object fxdiv)) (constant 19))
 	    (constant 48) (constant 24))))
 
   #t)
@@ -332,21 +332,21 @@
 	 ()
 	 (shortcut
 	     (seq
-	       (primcall nop)
-	       (primcall int+/overflow (constant 8) (constant 16)))
-	   (funcall (primcall mref (constant (object +)) (constant 19))
+	       (asmcall nop)
+	       (asmcall int+/overflow (constant 8) (constant 16)))
+	   (funcall (asmcall mref (constant (object +)) (constant 19))
 	     (constant 8) (constant 16)))))
 
   ;;Notice how the return value of the SHORTCUT becomes the operand of DISPLAY.
   (doit* (display (+ 1 2))
 	 (codes
 	  ()
-	  (funcall (primcall mref (constant (object display)) (constant 19))
+	  (funcall (asmcall mref (constant (object display)) (constant 19))
 	    (shortcut
 		(seq
-		  (primcall nop)
-		  (primcall int+/overflow (constant 8) (constant 16)))
-	      (funcall (primcall mref (constant (object +)) (constant 19))
+		  (asmcall nop)
+		  (asmcall int+/overflow (constant 8) (constant 16)))
+	      (funcall (asmcall mref (constant (object +)) (constant 19))
 		(constant 8) (constant 16))))))
 
   #t)
@@ -371,15 +371,15 @@
 	 ()
 	 (seq
 	   (shortcut
-	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
-		   (primcall interrupt)
-		 (primcall nop))
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
-	   (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19)))))
+	   (bind ((tmp_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
 	     ;;If the operand is a pair...
-	     (conditional (primcall =
-				    (primcall logand tmp_0 (constant 7))
-				    (constant 1))
+	     (conditional (asmcall =
+				   (asmcall logand tmp_0 (constant 7))
+				   (constant 1))
 		 ;;... return true.
 		 (constant 63)
 	       ;;... otherwise return false.
@@ -412,13 +412,13 @@
   (doit ((primitive $car) '(1 . 2))
 	(codes
 	 ()
-	 (primcall mref (constant (object (1 . 2))) (constant -1))))
+	 (asmcall mref (constant (object (1 . 2))) (constant -1))))
 
   ;;Here it is known that the operand is a "T:pair".
   (doit ((primitive car) '(1 . 2))
 	(codes
 	 ()
-	 (primcall mref (constant (object (1 . 2))) (constant -1))))
+	 (asmcall mref (constant (object (1 . 2))) (constant -1))))
 
   ;;Here the operand is of unknown type.
   (doit ((primitive car) ((primitive read)))
@@ -426,24 +426,24 @@
 	 ()
 	 (seq
 	   (shortcut
-	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
-		   (primcall interrupt)
-		 (primcall nop))
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
-	   (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19)))))
+	   (bind ((tmp_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
 	     (shortcut
 		 (seq
 		   ;;If the primary tag is the pair tag...
-		   (conditional (primcall =
-					  (primcall logand tmp_0 (constant 7))
-					  (constant 1))
+		   (conditional (asmcall =
+					 (asmcall logand tmp_0 (constant 7))
+					 (constant 1))
 		       ;;... fine.
-		       (primcall nop)
+		       (asmcall nop)
 		     ;;... otherwise jump to the interrupt handler.
-		     (primcall interrupt))
+		     (asmcall interrupt))
 		   ;;Extract the car.
-		   (primcall mref tmp_0 (constant -1)))
-	       (funcall (primcall mref (constant (object car)) (constant 19))
+		   (asmcall mref tmp_0 (constant -1)))
+	       (funcall (asmcall mref (constant (object car)) (constant 19))
 		 tmp_0))))))
 
   #t)
@@ -460,45 +460,45 @@
       (%before-specify-representation '((primitive vector-length) '#(1 2)))
     => '(codes
 	 ()
-	 (primcall vector-length
-		   (known (constant #(1 2)) (T:vector T:non-false T:nonimmediate T:object)))))
+	 (primopcall vector-length
+		     (known (constant #(1 2)) (T:vector T:non-false T:nonimmediate T:object)))))
 
   (doit ((primitive vector-length) '#(1 2))
 	(codes
 	 ()
-	 (primcall mref (constant (object #(1 2))) (constant -5))))
+	 (asmcall mref (constant (object #(1 2))) (constant -5))))
 
   (doit ((primitive vector-length) ((primitive read)))
 	(codes
 	 ()
 	 (seq
 	   (shortcut
-	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
-		   (primcall interrupt)
-		 (primcall nop))
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
-	   (bind ((tmp_0 (funcall (primcall mref (constant (object read)) (constant 19)))))
+	   (bind ((tmp_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
 	     (shortcut
 		 (seq
 		   ;;If the operand is a tagged pointer tagged as vector...
-		   (conditional (primcall = (primcall logand tmp_0 (constant 7)) (constant 5))
+		   (conditional (asmcall = (asmcall logand tmp_0 (constant 7)) (constant 5))
 		       ;;... fine.
-		       (primcall nop)
+		       (asmcall nop)
 		     ;;... otherwise call the full core primitive function.
-		     (primcall interrupt))
+		     (asmcall interrupt))
 		   ;;Retrieve the first word.
-		   (bind ((vec.len_0 (primcall mref tmp_0 (constant -5))))
+		   (bind ((vec.len_0 (asmcall mref tmp_0 (constant -5))))
 		     (seq
 		       ;;If the first word is a fixnum...
-		       (conditional (primcall = (primcall logand vec.len_0 (constant 7)) (constant 0))
+		       (conditional (asmcall = (asmcall logand vec.len_0 (constant 7)) (constant 0))
 			   ;;... fine.
-			   (primcall nop)
+			   (asmcall nop)
 			 ;;... otherwise call the full core primitive function.
-			 (primcall interrupt))
+			 (asmcall interrupt))
 		       vec.len_0)))
 	       ;;Interrupt handler: perform a full call to the primitive function and
 	       ;;let it raise an exception if there is the need.
-	       (funcall (primcall mref (constant (object vector-length)) (constant 19))
+	       (funcall (asmcall mref (constant (object vector-length)) (constant 19))
 		 tmp_0))))))
 
   #t)
@@ -519,8 +519,8 @@
 	 ((lambda (label: asmlabel:f:clambda) (cp_0) (constant 8)))
 	 (seq
 	   (shortcut
-	       (primcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (primcall mref (constant (object $do-event)) (constant 19))))
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
 	   (jmpcall asmlabel:f:clambda:case-0
 		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
 		      tmp_0)))))
@@ -536,10 +536,10 @@
 	  (lambda (label: asmlabel:a:clambda) (cp_2) (constant 8)))
 	 (seq
 	   (shortcut
-	       (primcall incr/zero? %esi (constant 72) (constant 8))
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
 	     (funcall
-		 (primcall mref (constant (object $do-event)) (constant 19))))
-	   (funcall (primcall mref (constant (object list)) (constant 27))
+		 (asmcall mref (constant (object $do-event)) (constant 19))))
+	   (funcall (asmcall mref (constant (object list)) (constant 27))
 	     (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
 	       tmp_0)
 	     (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:b:clambda) no-freevars))))
@@ -563,30 +563,30 @@
 		(c (lambda () x)))
 	    (list a b c)))
 	(codes
-	 ((lambda (label: asmlabel:c:clambda) (cp_0) (primcall mref cp_0 (constant 5)))
-	  (lambda (label: asmlabel:b:clambda) (cp_1) (primcall mref cp_1 (constant 5)))
-	  (lambda (label: asmlabel:a:clambda) (cp_2) (primcall mref cp_2 (constant 5))))
+	 ((lambda (label: asmlabel:c:clambda) (cp_0) (asmcall mref cp_0 (constant 5)))
+	  (lambda (label: asmlabel:b:clambda) (cp_1) (asmcall mref cp_1 (constant 5)))
+	  (lambda (label: asmlabel:a:clambda) (cp_2) (asmcall mref cp_2 (constant 5))))
 	 (seq
 	   (shortcut
-	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
-		   (primcall interrupt)
-		 (primcall nop))
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
 	   (shortcut
-	       (primcall incr/zero? %esi (constant 72) (constant 8))
-	     (funcall (primcall mref (constant (object $do-event)) (constant 19))))
-	   (bind ((x_0 (funcall (primcall mref (constant (object read)) (constant 27)))))
-	     (bind ((c_0 (primcall alloc (constant 48) (constant 3))))
-	       (bind ((b_0 (primcall int+ c_0 (constant 16)))
-		      (a_0 (primcall int+ c_0 (constant 32))))
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	   (bind ((x_0 (funcall (asmcall mref (constant (object read)) (constant 27)))))
+	     (bind ((c_0 (asmcall alloc (constant 48) (constant 3))))
+	       (bind ((b_0 (asmcall int+ c_0 (constant 16)))
+		      (a_0 (asmcall int+ c_0 (constant 32))))
 		 (seq
-		   (primcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
-		   (primcall mset c_0 (constant  5) x_0)
-		   (primcall mset b_0 (constant -3) (constant (code-loc asmlabel:b:clambda)))
-		   (primcall mset b_0 (constant  5) x_0)
-		   (primcall mset a_0 (constant -3) (constant (code-loc asmlabel:a:clambda)))
-		   (primcall mset a_0 (constant  5) x_0)
-		   (funcall (primcall mref (constant (object list)) (constant 27))
+		   (asmcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
+		   (asmcall mset c_0 (constant  5) x_0)
+		   (asmcall mset b_0 (constant -3) (constant (code-loc asmlabel:b:clambda)))
+		   (asmcall mset b_0 (constant  5) x_0)
+		   (asmcall mset a_0 (constant -3) (constant (code-loc asmlabel:a:clambda)))
+		   (asmcall mset a_0 (constant  5) x_0)
+		   (funcall (asmcall mref (constant (object list)) (constant 27))
 		     a_0 b_0 c_0))))))))
 
   ;;Mixed combinator/non-combinator bindings.
@@ -597,29 +597,29 @@
 		(d (lambda () x)))
 	    (list a b c)))
 	(codes
-	 ((lambda (label: asmlabel:d:clambda) (cp_0) (primcall mref cp_0 (constant 5)))
-	  (lambda (label: asmlabel:c:clambda) (cp_1) (primcall mref cp_1 (constant 5)))
+	 ((lambda (label: asmlabel:d:clambda) (cp_0) (asmcall mref cp_0 (constant 5)))
+	  (lambda (label: asmlabel:c:clambda) (cp_1) (asmcall mref cp_1 (constant 5)))
 	  (lambda (label: asmlabel:b:clambda) (cp_2) (constant 16))
 	  (lambda (label: asmlabel:a:clambda) (cp_3) (constant 8)))
 	 (seq
 	   (shortcut
-	       (conditional (primcall u< %esp (primcall mref %esi (constant 32)))
-		   (primcall interrupt)
-		 (primcall nop))
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
 	     (foreign-call "ik_stack_overflow"))
 	   (shortcut
-	       (primcall incr/zero? %esi (constant 72) (constant 8))
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
 	     (funcall
-		 (primcall mref (constant (object $do-event)) (constant 19))))
-	   (bind ((x_0 (funcall (primcall mref (constant (object read)) (constant 27)))))
-	     (bind ((d_0 (primcall alloc (constant 32) (constant 3))))
-	       (bind ((c_0 (primcall int+ d_0 (constant 16))))
+		 (asmcall mref (constant (object $do-event)) (constant 19))))
+	   (bind ((x_0 (funcall (asmcall mref (constant (object read)) (constant 27)))))
+	     (bind ((d_0 (asmcall alloc (constant 32) (constant 3))))
+	       (bind ((c_0 (asmcall int+ d_0 (constant 16))))
 		 (seq
-		   (primcall mset d_0 (constant -3) (constant (code-loc asmlabel:d:clambda)))
-		   (primcall mset d_0 (constant  5) x_0)
-		   (primcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
-		   (primcall mset c_0 (constant  5) x_0)
-		   (funcall (primcall mref (constant (object list)) (constant 27))
+		   (asmcall mset d_0 (constant -3) (constant (code-loc asmlabel:d:clambda)))
+		   (asmcall mset d_0 (constant  5) x_0)
+		   (asmcall mset c_0 (constant -3) (constant (code-loc asmlabel:c:clambda)))
+		   (asmcall mset c_0 (constant  5) x_0)
+		   (funcall (asmcall mref (constant (object list)) (constant 27))
 		     (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
 		       tmp_0)
 		     (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:b:clambda) no-freevars))))

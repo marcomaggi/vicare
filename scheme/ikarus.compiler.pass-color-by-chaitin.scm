@@ -23,7 +23,7 @@
   ;;   asm-instr	code-loc	conditional
   ;;   constant		disp		fvar
   ;;   locals		nfv		ntcall
-  ;;   primcall		seq		shortcut
+  ;;   asmcall		seq		shortcut
   ;;   var
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
@@ -141,7 +141,7 @@
 	((ntcall targ value args mask size)
 	 (set-union (R* args) s))
 
-	((primcall op arg*)
+	((asmcall op arg*)
 	 (case op
 	   ((nop fl:single->double fl:double->single)
 	    s)
@@ -149,7 +149,7 @@
 	    (or (exception-live-set)
 		(error who "uninitialized exception")))
 	   (else
-	    (error who "invalid effect primcall" op))))
+	    (error who "invalid effect asmcall" op))))
 
 	((shortcut body handler)
 	 (let ((s2 (E handler s)))
@@ -272,7 +272,7 @@
 	     (s2 (T e2)))
 	 (P e0 s1 s2 (set-union s1 s2))))
 
-      ((primcall op rands)
+      ((asmcall op rands)
        (R* rands))
 
       ((seq e0 e1)
@@ -370,7 +370,7 @@
   ;;to replace X.
   ;;
   ;;The purpose of this function is  to apply the subfunction R to the
-  ;;operands in the structures of type ASM-INSTR and PRIMCALL.
+  ;;operands in the structures of type ASM-INSTR and ASMCALL.
   ;;
   ;;A lot  of functions are nested  here because they make  use of the
   ;;subfunction "Var", and "Var" needs to close upon the argument ENV.
@@ -424,8 +424,8 @@
     ;; 	(struct-case x
     ;; 	  ((var)
     ;; 	   (Var x))
-    ;; 	  ((primcall op rand*)
-    ;; 	   (make-primcall op (map Rand rand*)))
+    ;; 	  ((asmcall op rand*)
+    ;; 	   (make-asmcall op (map Rand rand*)))
     ;; 	  (else x)))
     ;;
     ;;   (define (Rand x)
@@ -458,8 +458,8 @@
        (make-conditional (P e0) (E e1) (E e2)))
       ((asm-instr op x v)
        (make-asm-instr op (R x) (R v)))
-      ((primcall op rands)
-       (make-primcall op (map R rands)))
+      ((asmcall op rands)
+       (make-asmcall op (map R rands)))
       ((ntcall)
        x)
       ((shortcut body handler)
@@ -484,7 +484,7 @@
 
   (define (T x)
     (struct-case x
-      ((primcall op rands)
+      ((asmcall op rands)
        x)
       ((conditional e0 e1 e2)
        (make-conditional (P e0) (T e1) (T e2)))
@@ -546,7 +546,7 @@
 	  ((asm-instr op a b)
 	   (E-asm-instr op a b x))
 
-	  ((primcall op rands)
+	  ((asmcall op rands)
 	   (case op
 	     ((nop interrupt incr/zero? fl:single->double fl:double->single)
 	      x)
@@ -578,7 +578,7 @@
 	   (cond ((and (eq? op 'move)
 		       (eq? a b))
 		  ;;Source and dest are the same: do nothing.
-		  (make-primcall 'nop '()))
+		  (make-asmcall 'nop '()))
 		 ((and (= wordsize 8)
 		       (not (eq? op 'move))
 		       (long-imm? b))
@@ -778,7 +778,7 @@
 
     (define (T x)
       (struct-case x
-	((primcall op rands)
+	((asmcall op rands)
 	 x)
 
 	((conditional e0 e1 e2)
@@ -865,8 +865,8 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
-;; eval: (put 'make-primcall 'scheme-indent-function 1)
-;; eval: (put 'assemble-sources 'scheme-indent-function 1)
-;; eval: (put 'make-conditional 'scheme-indent-function 2)
-;; eval: (put 'struct-case 'scheme-indent-function 1)
+;; eval: (put 'make-asmcall		'scheme-indent-function 1)
+;; eval: (put 'assemble-sources		'scheme-indent-function 1)
+;; eval: (put 'make-conditional		'scheme-indent-function 2)
+;; eval: (put 'struct-case		'scheme-indent-function 1)
 ;; End:

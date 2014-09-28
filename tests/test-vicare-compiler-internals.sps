@@ -2500,13 +2500,13 @@
 	  ((primitive list) (a) (b) (c) (d)))
 	(codes
 	 ((lambda (label: asmlabel:a:clambda) ()
-	     (jmpcall asmlabel:d:clambda:case-0 (closure-maker (code-loc asmlabel:d:clambda) no-freevars)))
+		  (jmpcall asmlabel:d:clambda:case-0 (closure-maker (code-loc asmlabel:d:clambda) no-freevars)))
 	  (lambda (label: asmlabel:d:clambda) ()
-	     (jmpcall asmlabel:c:clambda:case-0 (closure-maker (code-loc asmlabel:c:clambda) no-freevars)))
+		  (jmpcall asmlabel:c:clambda:case-0 (closure-maker (code-loc asmlabel:c:clambda) no-freevars)))
 	  (lambda (label: asmlabel:c:clambda) ()
-	     (jmpcall asmlabel:b:clambda:case-0 (closure-maker (code-loc asmlabel:b:clambda) no-freevars)))
+		  (jmpcall asmlabel:b:clambda:case-0 (closure-maker (code-loc asmlabel:b:clambda) no-freevars)))
 	  (lambda (label: asmlabel:b:clambda) ()
-	     (jmpcall asmlabel:a:clambda:case-0 (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
+		  (jmpcall asmlabel:a:clambda:case-0 (closure-maker (code-loc asmlabel:a:clambda) no-freevars))))
 	 (funcall (primref list)
 	   (jmpcall asmlabel:a:clambda:case-0 (closure-maker (code-loc asmlabel:a:clambda) no-freevars))
 	   (jmpcall asmlabel:b:clambda:case-0 (closure-maker (code-loc asmlabel:b:clambda) no-freevars))
@@ -2544,9 +2544,9 @@
 	  f)
 	(codes
 	 ((lambda (label: asmlabel:f:clambda) ()
-	     (jmpcall asmlabel:f:clambda:case-0
-		      (closure-maker (code-loc asmlabel:f:clambda)
-				     no-freevars))))
+		  (jmpcall asmlabel:f:clambda:case-0
+			   (closure-maker (code-loc asmlabel:f:clambda)
+					  no-freevars))))
 	 (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
 
   ;;Cycle of non-combinators.
@@ -2558,13 +2558,13 @@
 	    ((primitive list) (a '1) (b '2) (c '3) (d '4))))
 	(codes
 	 ((lambda (label: asmlabel:a:clambda) (x_0)
-	     (jmpcall asmlabel:d:clambda:case-1 d_0 v_0))
+		  (jmpcall asmlabel:d:clambda:case-1 d_0 v_0))
 	  (lambda (label: asmlabel:d:clambda) (x_1)
-	     (jmpcall asmlabel:c:clambda:case-1 c_0 v_0))
+		  (jmpcall asmlabel:c:clambda:case-1 c_0 v_0))
 	  (lambda (label: asmlabel:c:clambda) (x_2)
-	     (jmpcall asmlabel:b:clambda:case-1 b_0 v_0))
+		  (jmpcall asmlabel:b:clambda:case-1 b_0 v_0))
 	  (lambda (label: asmlabel:b:clambda) (x_3)
-	     (jmpcall asmlabel:a:clambda:case-1 a_0 v_0)))
+		  (jmpcall asmlabel:a:clambda:case-1 a_0 v_0)))
 	 (bind ((v_0 (funcall (primref read))))
 	   (fix ((a_0 (closure-maker (code-loc asmlabel:a:clambda) (freevars: d_0 v_0)))
 		 (d_0 (closure-maker (code-loc asmlabel:d:clambda) (freevars: c_0 v_0)))
@@ -2585,13 +2585,13 @@
 	    ((primitive list) (a '1) (b '2) (c '3) (d '4))))
 	(codes
 	 ((lambda (label: asmlabel:a:clambda) (x_0)
-	     (jmpcall asmlabel:d:clambda:case-1 d_0 x_0))
+		  (jmpcall asmlabel:d:clambda:case-1 d_0 x_0))
 	  (lambda (label: asmlabel:d:clambda) (x_1)
-	     (jmpcall asmlabel:c:clambda:case-1 c_0 v_0))
+		  (jmpcall asmlabel:c:clambda:case-1 c_0 v_0))
 	  (lambda (label: asmlabel:c:clambda) (x_2)
-	     (jmpcall asmlabel:b:clambda:case-1 b_0 x_2))
+		  (jmpcall asmlabel:b:clambda:case-1 b_0 x_2))
 	  (lambda (label: asmlabel:b:clambda) (x_3)
-	     (jmpcall asmlabel:a:clambda:case-1 a_0 x_3)))
+		  (jmpcall asmlabel:a:clambda:case-1 a_0 x_3)))
 	 (bind ((v_0 (funcall (primref read))))
 	   (fix ((a_0 (closure-maker (code-loc asmlabel:a:clambda) (freevars: d_0)))
 		 (d_0 (closure-maker (code-loc asmlabel:d:clambda) (freevars: c_0 v_0)))
@@ -2623,9 +2623,9 @@
 	      g)))
 	(codes
 	 ((lambda (label: asmlabel:g:clambda) ()
-	     (jmpcall asmlabel:f:clambda:case-0
-		      (closure-maker (code-loc asmlabel:f:clambda)
-				     no-freevars)))
+		  (jmpcall asmlabel:f:clambda:case-0
+			   (closure-maker (code-loc asmlabel:f:clambda)
+					  no-freevars)))
 	  (lambda (label: asmlabel:f:clambda) () (constant 1)))
 	 (closure-maker (code-loc asmlabel:g:clambda) no-freevars)))
 
@@ -2635,7 +2635,7 @@
 		  (b (lambda () (a))))
 	  b)
 	(codes ((lambda (label: asmlabel:b:clambda) ()
-		   (jmpcall asmlabel:a:clambda:case-0 (closure-maker (code-loc asmlabel:a:clambda) no-freevars)))
+			(jmpcall asmlabel:a:clambda:case-0 (closure-maker (code-loc asmlabel:a:clambda) no-freevars)))
 		(lambda (label: asmlabel:a:clambda) () (constant 1)))
 	       (closure-maker (code-loc asmlabel:b:clambda) no-freevars)))
 
@@ -2659,7 +2659,7 @@
 	    (f '1)))
 	(codes
 	 ((lambda (label: asmlabel:f:clambda) (x_0)
-	     (jmpcall asmlabel:f:clambda:case-1 f_0 a_0)))
+		  (jmpcall asmlabel:f:clambda:case-1 f_0 a_0)))
 	 (bind ((a_0 (funcall (primref read))))
 	   (fix ((f_0 (closure-maker (code-loc asmlabel:f:clambda)
 				     (freevars: a_0))))
@@ -2798,9 +2798,9 @@
   (doit ((primitive list) '1 '2)
 	(codes
 	 ()
-	 (primcall list (constant 1) (constant 2))))
+	 (primopcall list (constant 1) (constant 2))))
 
-#t)
+  #t)
 
 
 (parametrise ((check-test-name						'rewrite-freevar-refs)
@@ -2856,7 +2856,7 @@
 	  (lambda () a))
 	(codes
 	 ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
-	     (primcall $cpref cp_0 (constant 0))))
+	     (primopcall $cpref cp_0 (constant 0))))
 	 (bind ((a_0 (funcall (primref read))))
 	   (fix ((tmp_0 (closure-maker (code-loc asmlabel:anonymous:clambda)
 				       (freevars: a_0))))
@@ -2867,9 +2867,9 @@
 	  (lambda () ((primitive list) a b)))
 	(codes
 	 ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
-	     (primcall list
-	       (primcall $cpref cp_0 (constant 1))
-	       (primcall $cpref cp_0 (constant 0)))))
+	     (primopcall list
+			 (primopcall $cpref cp_0 (constant 1))
+			 (primopcall $cpref cp_0 (constant 0)))))
 	 (bind ((a_0 (funcall (primref read)))
 		(b_0 (funcall (primref read))))
 	   (fix ((tmp_0 (closure-maker (code-loc asmlabel:anonymous:clambda)
@@ -2885,13 +2885,13 @@
 	(codes
 	 ((lambda (label: asmlabel:anonymous:clambda) (cp_0)
 	     (seq
-	       (primcall $vector-set!
-			 (primcall $cpref cp_0 (constant 0)) (constant 0)
-			 (constant 1))
-	       (primcall $vector-ref
-			 (primcall $cpref cp_0 (constant 0)) (constant 0)))))
+	       (primopcall $vector-set!
+			   (primopcall $cpref cp_0 (constant 0)) (constant 0)
+			   (constant 1))
+	       (primopcall $vector-ref
+			   (primopcall $cpref cp_0 (constant 0)) (constant 0)))))
 	 (bind ((a_0 (funcall (primref read))))
-	   (bind ((a_1 (primcall vector a_0)))
+	   (bind ((a_1 (primopcall vector a_0)))
 	     (fix ((tmp_0 (closure-maker (code-loc asmlabel:anonymous:clambda)
 					 (freevars: a_1))))
 	       tmp_0)))))
@@ -2971,13 +2971,13 @@
 	  (g))
 	(codes
 	 ((lambda (label: asmlabel:g:clambda) (cp_0)
-	     (seq (primcall $do-event)
+	     (seq (primopcall $do-event)
 		  (jmpcall asmlabel:f:clambda:case-0
 			   (fix ((tmp_0 (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
 			     tmp_0))))
 	  (lambda (label: asmlabel:f:clambda) (cp_1)
 	     (primref read)))
-	 (seq (primcall $do-event)
+	 (seq (primopcall $do-event)
 	      (jmpcall asmlabel:g:clambda:case-0
 		       (fix ((tmp_1 (closure-maker (code-loc asmlabel:g:clambda) no-freevars)))
 			 tmp_1)))))
@@ -3041,13 +3041,13 @@
 	  (g))
 	(codes
 	 ((lambda (label: asmlabel:g:clambda) (cp_0)
-	     (seq (primcall $do-event)
+	     (seq (primopcall $do-event)
 		  (jmpcall asmlabel:f:clambda:case-0
 			   (fix ((tmp_0 (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
 			     tmp_0))))
 	  (lambda (label: asmlabel:f:clambda) (cp_1)
 	     (primref read)))
-	 (seq (primcall $do-event)
+	 (seq (primopcall $do-event)
 	      (jmpcall asmlabel:g:clambda:case-0
 		       (fix ((tmp_1 (closure-maker (code-loc asmlabel:g:clambda) no-freevars)))
 			 tmp_1)))))
@@ -3122,21 +3122,21 @@
 	 ()
 	 (shortcut
 	     (seq
-	       (primcall nop)
-	       (primcall int+/overflow (constant 8) (constant 16)))
-	   (funcall (primcall mref (constant (object +)) (constant 19))
+	       (asmcall nop)
+	       (asmcall int+/overflow (constant 8) (constant 16)))
+	   (funcall (asmcall mref (constant (object +)) (constant 19))
 	     (constant 8) (constant 16)))))
 
   ;;Notice how the return value of the SHORTCUT becomes the operand of DISPLAY.
   (doit* (display (+ 1 2))
 	 (codes
 	  ()
-	  (funcall (primcall mref (constant (object display)) (constant 19))
+	  (funcall (asmcall mref (constant (object display)) (constant 19))
 	    (shortcut
 		(seq
-		  (primcall nop)
-		  (primcall int+/overflow (constant 8) (constant 16)))
-	      (funcall (primcall mref (constant (object +)) (constant 19))
+		  (asmcall nop)
+		  (asmcall int+/overflow (constant 8) (constant 16)))
+	      (funcall (asmcall mref (constant (object +)) (constant 19))
 		(constant 8) (constant 16))))))
 
   #t)

@@ -181,7 +181,7 @@
   ;;*  The constants  (K #t)  or  (K #f)  as special  values  to be  recognised in  a
   ;;  subsequent compiler pass.
   ;;
-  ;;* A PRIMCALL with operand among: =, !=, <,  <=, >, >=, u<, u<=, u>, u>=.  This is
+  ;;* An ASMCALL with operand among: =, !=, <,  <=, >, >=, u<, u<=, u>, u>=.  This is
   ;;  the "true" return value; it is the proper operation that generates, as Assembly
   ;;  instructions, a jump to the "label for consequent" or "label for alternate".
   ;;
@@ -199,14 +199,14 @@
 	 rv
        (%error "wrong CONSTANT recordised code returned from \
                 primitive-operation implementation handler, expected (K #t) or (K #f)")))
-    ((primcall op args)
+    ((asmcall op args)
      (case op
        ((interrupt)
 	rv)
        ((= != < <= > >= u< u<= u> u>=)
 	rv)
        (else
-	(%error "invalid PRIMCALL operand in recordised code returned from primitive-operation implementation handler,\
+	(%error "invalid ASMCALL operand in recordised code returned from primitive-operation implementation handler,\
                  expected an operand among: =, !=, <, <=, >, >=, u<, u<=, u>, u>=, interrupt"))))
     (else
      rv)))
