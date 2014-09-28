@@ -279,7 +279,7 @@
   ;;where:  ?BODY is  recordised code  implementing a  fast and  sometimes simplified
   ;;implementation of the  primitive, working with the most  probable argument types;
   ;;?INTERRUPT-HANDLER  is  recordised code  implementing  a  call to  the  primitive
-  ;;function.
+  ;;function.  See below for examples.
   ;;
   ;;If the fast implementation  works: it generates the result that  is handed to the
   ;;caller.   If the  fast implementation  fails:  it jumps  to  a call  to the  full
@@ -300,6 +300,7 @@
   ;;
   ;;not many, but still important  cases.  Such exception-raising routines are called
   ;;ERROR@?PRIM, where ?PRIM is the name of the core primitive.
+  ;;
   ;;
   ;;Partitioning simple and complex bindings
   ;;----------------------------------------
@@ -325,8 +326,8 @@
   ;;         (?integrated-fast-implementation ?tmp ...)
   ;;       (?function-implementation ?tmp ...))
   ;;
-  ;;this way the ?RAND code is included only  once.  But, whenever a ?RAND is has one
-  ;;of the formats:
+  ;;this way each ?RAND is included only once.   But, whenever a ?RAND has one of the
+  ;;formats:
   ;;
   ;;   (constant ?const)
   ;;   (known (constant ?const) ?type)
@@ -336,7 +337,27 @@
   ;;there is no need to introduce a  binding for it, because such operand structs can
   ;;be included multiple  times with no problems.   So, in this module,  we split the
   ;;operands between simple (which can be included multiple times) and complex (which
-  ;;must be included through a local binding).
+  ;;must  be included  through  a  local binding).   As  example,  the core  language
+  ;;expression:
+  ;;
+  ;;   ((primitive fx+) '1 '2)
+  ;;
+  ;;is transformed into the pseudo-code:
+  ;;
+  ;;   (shortcut
+  ;;       (cogen-value-fx+ (constant 1) (constant 2))
+  ;;     (funcall (primref fx+) (constant 1) (constant 2)))
+  ;;
+  ;;while the core language expression:
+  ;;
+  ;;   ((primitive fx+) '1 ((primitive read)))
+  ;;
+  ;;is transformed into the pseudo-code:
+  ;;
+  ;;   (bind ((tmp ((primitive read))))
+  ;;     (shortcut
+  ;;         (cogen-value-fx+ (constant 1) tmp)
+  ;;       (funcall (primref fx+) (constant 1) tmp)))
   ;;
   ;;The  result is  that the  primitive-operation implementation-handlers  receive as
   ;;operands only structs with the format:
@@ -354,9 +375,9 @@
   ;;Example: the VECTOR-LENGTH primitive function and primitive operation
   ;;---------------------------------------------------------------------
   ;;
-  ;;Let's consider:
+  ;;Let's consider the core language expression:
   ;;
-  ;;   (vector-length ?rand)
+  ;;   ((primitive vector-length) ?rand)
   ;;
   ;;which is recordised as:
   ;;
@@ -385,7 +406,7 @@
   ;;                   (primcall nop)
   ;;                 ;;... otherwise call the full core primitive function.
   ;;                 (primcall interrupt))
-  ;;             ;;Return the first word.
+  ;;             ;;Return the first word, which is the length of the vector.
   ;;             vec.len_0)))
   ;;       ;;Interrupt handler: perform a full call to the primitive function and let
   ;;       ;;it raise an exception if there is the need.
@@ -396,27 +417,25 @@
   ;;Example: the FX+ primitive function and primitive operation
   ;;-----------------------------------------------------------
   ;;
-  ;;Let's consider FX+.  When the  primitive function implementation detects overflow
-  ;;or  underflow: it  raises an  exception.   When the  primitive operation  detects
-  ;;overflow  or underflow  what  should  it do?   The  answer  is: every  integrated
-  ;;primitive-operation assembly-code will jump to  the same routine which will raise
-  ;;an exception; such exception-raising routines are called ERROR@?PRIM, where ?PRIM
-  ;;is the name of the core primitive.
+  ;;When the primitive function implementation  of FX+ detects overflow or underflow:
+  ;;it  raises  an exception.   When  the  primitive  operation detects  overflow  or
+  ;;underflow what should it do?  The answer is: every integrated primitive-operation
+  ;;assembly-code will jump  to the same routine which will  raise an exception; such
+  ;;exception-raising routines are called ERROR@?PRIM, where ?PRIM is the name of the
+  ;;core primitive.
   ;;
-  ;;Let's consider:
+  ;;Let's consider the core language expression:
   ;;
-  ;;   (fx+ ?rand1 ?rand2)
+  ;;   ((primitive fx+) ?rand1 ?rand2)
   ;;
   ;;in which  the operands are  known at compile-time  to be fixnums;  when debugging
   ;;mode  is disabled,  the recordised  representation we  want to  generate in  this
   ;;module is:
   ;;
   ;;   (shortcut
-  ;;       (seq
-  ;;         (primcall nop)
-  ;;         (primcall int+/overflow ?rand1 ?rand2))
+  ;;       (primcall int+/overflow ?rand1 ?rand2)
   ;;     (funcall (primcall mref (constant (object error@fx+))
-  ;;                             ?offset-of-slot-value-in-loc-gensym)
+  ;;                             off-symbol-record-value)
   ;; 	    ?rand1 ?rand2))
   ;;
   ;;where  "(object error@fx+)"  represents  the  loc gensym  of  the core  primitive
@@ -424,15 +443,13 @@
   ;;
   ;;The first form in SHORTCUT is the core primitive operation call's "body":
   ;;
-  ;;   (seq
-  ;;     (primcall nop)
-  ;;     (primcall int+/overflow ?rand1 ?rand2))
+  ;;   (primcall int+/overflow ?rand1 ?rand2)
   ;;
   ;;the second  form in SHORTCUT  is the  core primitive operation  call's "interrupt
   ;;handler":
   ;;
   ;;   (funcall (primcall mref (constant (object error@fx+))
-  ;;                           ?offset-of-slot-value-in-loc-gensym)
+  ;;                           off-symbol-record-value)
   ;;     ?rand1 ?rand2)
   ;;
   (define-syntax __module_who__

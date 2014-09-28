@@ -44,7 +44,7 @@ Compiler passes
 * compiler closure makers::     Introducing closure makers.
 * compiler lifting::            Closures optimization and @objtype{clambda}
                                 lifting.
-* compiler primcalls::          Introducing primitive calls.
+* compiler primopcalls::        Introducing primitive operation calls.
 * compiler freevar refs::       Rewriting references to free variables.
 * compiler engine::             Inserting engine checks.
 * compiler stack::              Inserting stack overflow checks.
@@ -3851,8 +3851,8 @@ without free variables.
 @end defun
 
 @c page
-@node compiler primcalls
-@section Introducing primitive calls
+@node compiler primopcalls
+@section Introducing primitive operation calls
 
 
 The purpose of this compiler pass is to examine all the function calls:
@@ -3888,7 +3888,7 @@ The following bindings are exported by the library @library{vicare
 compiler}.
 
 
-@defun introduce-primcalls @var{input}
+@defun introduce-primitive-operation-calls @var{input}
 Perform code transformation traversing the whole hierarchy in
 @var{input}, which must be a @objtype{codes} struct representing
 recordised code; build and return a new @objtype{codes} struct.

@@ -2747,14 +2747,14 @@
   #t)
 
 
-(parametrise ((check-test-name						'introduce-primcalls)
+(parametrise ((check-test-name						'introduce-primitive-operation-calls)
 	      (compiler.enabled-function-application-integration?	#f)
 	      (compiler.descriptive-labels				#t))
 
 ;;;Function  application integration  is disabled  here to  make it  easier to  write
 ;;;meaningful code for debugging and inspection.
 
-  (define (%introduce-primcalls core-language-form)
+  (define (%introduce-primitive-operation-calls core-language-form)
     (let* ((D (compiler.recordize core-language-form))
 	   (D (compiler.optimize-direct-calls D))
 	   (D (compiler.optimize-letrec D))
@@ -2766,7 +2766,7 @@
 	   (D (compiler.introduce-vars D))
 	   (D (compiler.introduce-closure-makers D))
 	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.introduce-primitive-operation-calls D))
 	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
 
@@ -2774,7 +2774,7 @@
     (syntax-rules ()
       ((_ ?core-language-form ?expected-result)
        (check
-	   (%introduce-primcalls (quasiquote ?core-language-form))
+	   (%introduce-primitive-operation-calls (quasiquote ?core-language-form))
 	 => (quasiquote ?expected-result)))
       ))
 
@@ -2822,7 +2822,7 @@
 	   (D (compiler.introduce-vars D))
 	   (D (compiler.introduce-closure-makers D))
 	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.introduce-primitive-operation-calls D))
 	   (D (compiler.rewrite-freevar-references D))
 	   (S (compiler.unparse-recordized-code/sexp D)))
       S))
@@ -2935,7 +2935,7 @@
 	   (D (compiler.introduce-vars D))
 	   (D (compiler.introduce-closure-makers D))
 	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.introduce-primitive-operation-calls D))
 	   (D (compiler.rewrite-freevar-references D))
 	   (D (compiler.insert-engine-checks D))
 	   (S (compiler.unparse-recordized-code/sexp D)))
@@ -3004,7 +3004,7 @@
 	   (D (compiler.introduce-vars D))
 	   (D (compiler.introduce-closure-makers D))
 	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.introduce-primitive-operation-calls D))
 	   (D (compiler.rewrite-freevar-references D))
 	   (D (compiler.insert-engine-checks D))
 	   (D (compiler.insert-stack-overflow-check D))
@@ -3074,7 +3074,7 @@
 	   (D (compiler.introduce-vars D))
 	   (D (compiler.introduce-closure-makers D))
 	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
-	   (D (compiler.introduce-primcalls D))
+	   (D (compiler.introduce-primitive-operation-calls D))
 	   (D (compiler.rewrite-freevar-references D))
 	   (D (compiler.insert-engine-checks D))
 	   (D (compiler.insert-stack-overflow-check D))

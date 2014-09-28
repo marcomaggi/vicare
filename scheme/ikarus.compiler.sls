@@ -68,7 +68,7 @@
     introduce-vars
     introduce-closure-makers
     optimize-combinator-calls/lift-clambdas
-    introduce-primcalls
+    introduce-primitive-operation-calls
     rewrite-freevar-references
     insert-engine-checks
     insert-stack-overflow-check
@@ -706,7 +706,7 @@
 		 (p (introduce-vars p))
 		 (p (introduce-closure-makers p))
 		 (p (optimize-combinator-calls/lift-clambdas p))
-		 (p (introduce-primcalls p))
+		 (p (introduce-primitive-operation-calls p))
 		 (p (rewrite-freevar-references p))
 		 (p (insert-engine-checks p))
 		 (p (insert-stack-overflow-check p))
@@ -760,7 +760,7 @@
 		 (p (introduce-vars p))
 		 (p (introduce-closure-makers p))
 		 (p (optimize-combinator-calls/lift-clambdas p))
-		 (p (introduce-primcalls p))
+		 (p (introduce-primitive-operation-calls p))
 		 (p (rewrite-freevar-references p))
 		 (p (insert-engine-checks p))
 		 (p (insert-stack-overflow-check p))
@@ -5379,7 +5379,7 @@
   #| end of module: OPTIMIZE-COMBINATOR-CALLS/LIFT-CLAMBDAS |# )
 
 
-(module (introduce-primcalls)
+(module (introduce-primitive-operation-calls)
   ;;The purpose of this module is to examine all the function calls:
   ;;
   ;;   (?operator ?arg ...)
@@ -5420,9 +5420,9 @@
   ;;also used to represent high-level assembly instructions such as "mref".
   ;;
   (define-syntax __module_who__
-    (identifier-syntax 'introduce-primcalls))
+    (identifier-syntax 'introduce-primitive-operation-calls))
 
-  (define (introduce-primcalls Program)
+  (define (introduce-primitive-operation-calls Program)
     (struct-case Program
       ((codes code* body)
        (make-codes ($map/stx E-clambda code*)
@@ -5549,7 +5549,7 @@
 
     #| end of module: MK-FUNCALL |# )
 
-  #| end of module: INTRODUCE-PRIMCALLS |# )
+  #| end of module: INTRODUCE-PRIMITIVE-OPERATION-CALLS |# )
 
 
 (module (rewrite-freevar-references)

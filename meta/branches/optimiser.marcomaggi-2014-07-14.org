@@ -65,6 +65,12 @@
 
 ** (vicare expander object-type-specs)
 ** (vicare expander tags)
+* Review of internal language representation structs
+
+  PRIMOPCALL should be for core primitive operation calls.
+
+  ASMCALL should be for high-level Assembly operations: mem, int+, int+/overflow, ...
+
 * Compiler pass: introduce unsafe primcalls
 
 ** Finish the table of core primitives.

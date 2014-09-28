@@ -1866,20 +1866,6 @@ endif
 EXTRA_DIST += lib/vicare/assembler/inspection.sls
 CLEANFILES += lib/vicare/assembler/inspection.fasl
 
-lib/vicare/debugging/compiler.fasl: \
-		lib/vicare/debugging/compiler.sls \
-		$(FASL_PREREQUISITES)
-	$(VICARE_COMPILE_RUN) --output $@ --compile-library $<
-
-lib_vicare_debugging_compiler_fasldir = $(bundledlibsdir)/vicare/debugging
-lib_vicare_debugging_compiler_slsdir  = $(bundledlibsdir)/vicare/debugging
-nodist_lib_vicare_debugging_compiler_fasl_DATA = lib/vicare/debugging/compiler.fasl
-if WANT_INSTALL_SOURCES
-dist_lib_vicare_debugging_compiler_sls_DATA = lib/vicare/debugging/compiler.sls
-endif
-EXTRA_DIST += lib/vicare/debugging/compiler.sls
-CLEANFILES += lib/vicare/debugging/compiler.fasl
-
 lib/vicare/parser-logic.fasl: \
 		lib/vicare/parser-logic.sls \
 		lib/vicare/unsafe/operations.fasl \

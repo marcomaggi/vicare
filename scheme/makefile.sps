@@ -3126,7 +3126,7 @@
     (insert-global-assignments				$compiler)
     (introduce-closure-makers				$compiler)
     (optimize-combinator-calls/lift-clambdas		$compiler)
-    (introduce-primcalls				$compiler)
+    (introduce-primitive-operation-calls		$compiler)
     (rewrite-freevar-references				$compiler)
     (insert-engine-checks				$compiler)
     (insert-stack-overflow-check			$compiler)
