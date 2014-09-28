@@ -1476,6 +1476,43 @@
 		;call.
    ))
 
+;;Instances  of  this  type  represent  the  application  of  a  high-level  Assembly
+;;instruction.  High-level Assembly instructions are:
+;;
+;;   interrupt		nop		return
+;;   !=			<		<=
+;;   =			>		>=
+;;   u<			u<=
+;;   u>			u>=
+;;   bset		bswap!		cltd
+;;   direct-jump	indirect-jump
+;;   fl:!=		fl:<		fl:<=
+;;   fl:=		fl:>		fl:>=
+;;   fl:add!		fl:sub!
+;;   fl:div!		fl:mul!
+;;   fl:from-int	fl:load		fl:load-single
+;;   fl:o!=		fl:o<		fl:o<=
+;;   fl:o=		fl:o>		fl:o>=
+;;   fl:shuffle		fl:store	fl:store-single
+;;   fl:double->single	fl:single->double
+;;   int+		int+/overflow
+;;   int-		int-/overflow
+;;   int*		int*/overflow
+;;   idiv		incr/zero?
+;;   load32		load8
+;;   logand		logor		logxor
+;;   move		mset		mset32
+;;   sll		sll/overflow
+;;   sra		srl
+;;
+;;other high-level Assembly operations (like function calls) are represented by other
+;;structs.
+;;
+;;High-level  Assembly  instructions have  structs  representing  recordised code  as
+;;operands.   Each high-level  Assembly instruction  is transformed  into a  group of
+;;target CPU Assembly instructions that actually implement the with CPU registers and
+;;memory locations as operands.
+;;
 (define-struct asmcall
   (instr
 		;A symbol representing the name of a high-level Assembly instruction.

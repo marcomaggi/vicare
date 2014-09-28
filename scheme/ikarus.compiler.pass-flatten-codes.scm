@@ -936,30 +936,31 @@
 	     (error __module_who__ "invalid cmpops" a0 a1))))
 
     (define (%select-negated-P-asm-instr x)
-      (cond ((assq x '((= !=) (!= =) (< >=) (<= >) (> <=) (>= <)
-		       (u< u>=) (u<= u>) (u> u<=) (u>= u<)
-		       (fl:= fl:o!=) (fl:!= fl:o=)
-		       (fl:< fl:o>=) (fl:<= fl:o>)
-		       (fl:> fl:o<=) (fl:>= fl:o<)))
-	     => cadr)
+      (cond ((assq x '((= . !=) (!= . =)
+		       (< . >=) (<= . >) (> . <=) (>= . <)
+		       (u< . u>=) (u<= . u>) (u> . u<=) (u>= . u<)
+		       (fl:= . fl:o!=) (fl:!= . fl:o=)
+		       (fl:< . fl:o>=) (fl:<= . fl:o>)
+		       (fl:> . fl:o<=) (fl:>= . fl:o<)))
+	     => cdr)
 	    (else
 	     (error __module_who__ "assembly instruction invalid in predicate context" x))))
 
     (define (jmpname x)
-      (cond ((assq x '((= je) (!= jne) (< jl) (<= jle) (> jg) (>= jge)
-		       (u< jb) (u<= jbe) (u> ja) (u>= jae)
-		       (fl:= je) (fl:!= jne)
-		       (fl:< jb) (fl:> ja) (fl:<= jbe) (fl:>= jae)
-		       (fl:o= je) (fl:o!= jne)
-		       (fl:o< jb) (fl:o> ja) (fl:o<= jbe) (fl:o>= jae)))
-	     => cadr)
+      (cond ((assq x '((= . je) (!= . jne) (< . jl) (<= . jle) (> . jg) (>= . jge)
+		       (u< . jb) (u<= . jbe) (u> . ja) (u>= . jae)
+		       (fl:= . je) (fl:!= . jne)
+		       (fl:< . jb) (fl:> . ja) (fl:<= . jbe) (fl:>= . jae)
+		       (fl:o= . je) (fl:o!= . jne)
+		       (fl:o< . jb) (fl:o> . ja) (fl:o<= . jbe) (fl:o>= . jae)))
+	     => cdr)
 	    (else
 	     (error __module_who__ "invalid jmpname" x))))
 
     (define (revjmpname x)
-      (cond ((assq x '((= je) (!= jne) (< jg) (<= jge) (> jl) (>= jle)
-		       (u< ja) (u<= jae) (u> jb) (u>= jbe)))
-	     => cadr)
+      (cond ((assq x '((= . je) (!= . jne) (< . jg) (<= . jge) (> . jl) (>= . jle)
+		       (u< . ja) (u<= . jae) (u> . jb) (u>= . jbe)))
+	     => cdr)
 	    (else
 	     (error __module_who__ "invalid jmpname" x))))
 
@@ -1031,10 +1032,10 @@
 	   (error __module_who__ "invalid R/l" x)))))
 
     (define (reg/l x)
-      (cond ((assq x '((%eax %al) (%ebx %bl) (%ecx %cl) (%edx %dl)
-		       (%r8 %r8l) (%r9 %r9l) (%r10 %r10l) (%r11 %r11l)
-		       (%r12 %r12l) (%r13 %r13l) (%r14 %r14l) (%r15 %r15l)))
-	     => cadr)
+      (cond ((assq x '((%eax . %al) (%ebx . %bl) (%ecx . %cl) (%edx . %dl)
+		       (%r8  . %r8l) (%r9 . %r9l) (%r10 . %r10l) (%r11 . %r11l)
+		       (%r12 . %r12l) (%r13 . %r13l) (%r14 . %r14l) (%r15 . %r15l)))
+	     => cdr)
 	    (else
 	     (error __module_who__ "invalid reg/l" x))))
 
