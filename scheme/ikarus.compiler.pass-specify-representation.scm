@@ -368,8 +368,8 @@
   ;;   (known var ?type)
   ;;
   ;;which are  called "simplified operands";  such operands must be  filtered through
-  ;;the function  T, before  being included in  recordised code to  be handed  to the
-  ;;subsequent compiler pass.
+  ;;the function "V-simple-operand",  before being included in recordised  code to be
+  ;;handed to the subsequent compiler pass.
   ;;
   ;;
   ;;Example: the VECTOR-LENGTH primitive function and primitive operation
@@ -988,7 +988,7 @@
       ;;operands as recordised code.
       ;;
       (define filtered-simplified-rand*
-	(map T simplified-rand*))
+	(map V-simple-operand simplified-rand*))
       (case ctxt
 	((V)
 	 (if (%the-body-is-just-an-interrupt-asmcall? body)
@@ -1580,15 +1580,15 @@
      (error 'cogen-E "invalid effect expr" (unparse-recordized-code x)))))
 
 
-(define (T x)
+(define (V-simple-operand x)
   ;;Similar to V  but it must be  applied only to the  "simplified operands" prepared
   ;;for  a   core  primitive  operation   application.   Return  a   struct  instance
   ;;representing recordized  code (to  be executed in  "for returned  value" context)
   ;;which is meant to replace X.
   ;;
   ;;All    the     core    primitive     implementation    handlers     defined    by
-  ;;DEFINE-PRIMITIVE-OPERATION must filter their arguments through T before including
-  ;;them in their output recordised code.
+  ;;DEFINE-PRIMITIVE-OPERATION must filter their arguments through "V-simple-operand"
+  ;;before including them in their output recordised code.
   ;;
   ;;X must be a  struct instance representing recordized code to  be executed in "for
   ;;returned value" context, evaluating to a single value to be used as argument to a
@@ -1606,7 +1606,7 @@
      (constant->native-constant-representation x))
 
     ((known expr type)
-     (T expr))
+     (V-simple-operand expr))
 
     (else
      (compiler-internal-error 'cogen-specify-representation:T
