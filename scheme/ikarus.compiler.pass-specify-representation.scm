@@ -271,12 +271,12 @@
   ;;function; the  function validates the arguments  and retries to perform  the task
   ;;for all the supported argument types.
   ;;
-  ;;For a few core  primitives with simple arguments, it is useless  to call the full
-  ;;function: if  the fast implementation failed  it means the operands  are of wrong
-  ;;type or the operation is impossible.   For these primitives the interrupt handler
-  ;;is a special function  that knows the operands are invalid,  so it just validates
-  ;;them  and raises  the appropriate  exception.   The core  primitives having  this
-  ;;implementation are:
+  ;;For a few core primitives implementing simple computations, it is useless to call
+  ;;the full function: if the fast implementation failed it means the operands are of
+  ;;wrong type  or the operation is  impossible.  For these primitives  the interrupt
+  ;;handler is  a special function  that knows the operands  are invalid, so  it just
+  ;;validates them and raises the  appropriate exception.  The core primitives having
+  ;;this implementation are:
   ;;
   ;;   fx+		fx-		fx*
   ;;   add1				sub1
@@ -287,7 +287,7 @@
   ;;ERROR@?PRIM, where ?PRIM is the name of the core primitive.
   ;;
   ;;
-  ;;Partitioning simple and complex bindings
+  ;;Partitioning simple and complex operands
   ;;----------------------------------------
   ;;
   ;;We implement a call to core primitive operation with the template:
@@ -352,8 +352,8 @@
   ;;   var
   ;;   (known var ?type)
   ;;
-  ;;which are  called "simplified operands";  such operands must be  filtered through
-  ;;the function "V-simple-operand",  before being included in recordised  code to be
+  ;;which are  called "simple operands"; such  operands must be filtered  through the
+  ;;function  "V-simple-operand", before  being  included in  recordised  code to  be
   ;;handed to the subsequent compiler pass.
   ;;
   ;;
@@ -447,11 +447,11 @@
     ;;CTXT is one of  the symbols: V, E, P.  RAND* is a  list of structs representing
     ;;the operands as recordised code, not yet filtered through V.
     ;;
-    (define (%cogen-core-primitive-debug-call primitive-symbol-name simplified-rand*)
+    (define (%cogen-core-primitive-debug-call primitive-symbol-name simple-rand*)
       (make-funcall (V (mk-primref 'debug-call))
 		    (cons* (V src/loc)
 			   (V (mk-primref primitive-symbol-name))
-			   simplified-rand*)))
+			   simple-rand*)))
     (%cogen-primop-call %cogen-core-primitive-debug-call
 			%cogen-core-primitive-debug-call
 			primitive-symbol-name ctxt rand*))
@@ -472,17 +472,17 @@
 			  %cogen-core-primitive-standalone-function-call
 			  primitive-symbol-name ctxt rand*))
 
-    (define (%cogen-core-primitive-standalone-function-call primitive-symbol-name simplified-rand*)
+    (define (%cogen-core-primitive-standalone-function-call primitive-symbol-name simple-rand*)
       ;;Generate code representing a call to the core primitive function.  This is to
       ;;be  used when  no  core  primitive operation  integration  is performed  (for
       ;;example  because  the  primitive  has no  operation  implementation,  just  a
       ;;function implementation).
       ;;
-      (make-funcall (V (mk-primref primitive-symbol-name)) simplified-rand*))
+      (make-funcall (V (mk-primref primitive-symbol-name)) simple-rand*))
 
     (module (%cogen-core-primitive-interrupt-handler-function-call)
 
-      (define (%cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name simplified-rand*)
+      (define (%cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name simple-rand*)
 	;;Generate code representing a call to  the core primitive function.  This is
 	;;to be used as implementation of the interrupt handler, after the integrated
 	;;fast  implementation has  failed.  If  the core  primitive has  the special
@@ -490,26 +490,30 @@
 	;;
 	;;In the VECTOR-LENGTH example, this function generates the code:
 	;;
-	;;   (funcall (asmcall mref (constant (object vector-length))
-	;;                           ?offset-of-slot-value-in-loc-gensym)
+	;;   (funcall (asmcall mref
+	;;                     (constant (object vector-length))
+	;;                     off-symbol-record-value)
 	;;            tmp_0)
 	;;
 	;;where  "(object  vector-length)" represents  the  loc  gensym of  the  core
-	;;primitive function "error@fx+".
+	;;primitive function VECTOR-LENGTH.
 	;;
 	;;In the FX+ example, this function generates the code:
 	;;
-	;;   (funcall (asmcall mref (constant (object error@fx+))
-	;;                           ?offset-of-slot-value-in-loc-gensym)
+	;;   (funcall (asmcall mref
+	;;                     (constant (object error@fx+))
+	;;                     off-symbol-record-value)
 	;;            ?rand1 ?rand2)
 	;;
 	;;where "(object error@fx+)" represents the  loc gensym of the core primitive
-	;;function "error@fx+".
+	;;function ERROR@FX+"
 	;;
 	(make-funcall (V (mk-primref (%primop-interrupt-handler primitive-symbol-name)))
-		      simplified-rand*))
+		      simple-rand*))
 
       (define (%primop-interrupt-handler primitive-symbol-name)
+	;;FIXME  Should this  mapping  of names  be  included in  the  table of  core
+	;;primitive declarations?  (Marco Maggi; Mon Sep 29, 2014)
 	(case primitive-symbol-name
 	  ((fx+)			'error@fx+)
 	  ((fx-)			'error@fx-)
@@ -537,74 +541,69 @@
 				cogen-core-primitive-standalone-function-call
 				primitive-symbol-name ctxt rand*)
       ;;CTXT must be one of the symbols:  P, V, E representing the evaluation context
-      ;;of a struct of recordised code.
+      ;;of a struct of recordised code.  RAND*  is a list of structs representing the
+      ;;operands as recordised code, not yet filtered through V.
       ;;
-      ;;RAND* is a list of structs  representing the operands as recordised code, not
-      ;;yet filtered through V.
-      ;;
-      (define-syntax-rule (%cogen ?simplified-rand*)
+      (define-syntax-rule (%cogen ?simple-rand*)
 	(%generate-code cogen-core-primitive-interrupt-handler-function-call
 			cogen-core-primitive-standalone-function-call
-			primitive-symbol-name ctxt ?simplified-rand*))
-      ;;Here the RHS*  have been already filtered through V  and the SIMPLIFIED-RAND*
-      ;;have been left alone.
-      (receive (lhs* rhs* simplified-rand*)
-	  (%partition-simple-operands rand*)
+			primitive-symbol-name ctxt ?simple-rand*))
+      ;;Here the complex  operand structs in RHS* have been  already filtered through
+      ;;V; the  SIMPLE-RAND* structs have been  left alone, not yet  filtered through
+      ;;"V-simple-operand".
+      (receive (lhs* rhs* simple-rand*)
+	  (%partition-simple/complex-operands rand*)
 	(if (null? lhs*)
-	    (%cogen simplified-rand*)
-	  (make-bind lhs* rhs* (%cogen simplified-rand*)))))
+	    (%cogen simple-rand*)
+	  (make-bind lhs* rhs* (%cogen simple-rand*)))))
 
-    (define (%partition-simple-operands rand*)
-      ;;Given a  list of structs representing  the operands of a  primitive operation
-      ;;call:  build what  is  needed to  separate the  operands  requiring a  single
-      ;;reference from the others.
+    (define (%partition-simple/complex-operands rand*)
+      ;;Non-tail  recursive  function.  Given  a  list  of structs  representing  the
+      ;;operands  of a  primitive  operation  application: build  what  is needed  to
+      ;;separate the operands requiring a single reference from the others.
       ;;
       ;;Filter the complex operands through V, leave the simple operands unfiltered.
       ;;
       (if (pair? rand*)
-	  (receive (lhs* rhs* simplified-rand*)
-	      (%partition-simple-operands (cdr rand*))
+	  (receive (lhs* rhs* simple-rand*)
+	      (%partition-simple/complex-operands (cdr rand*))
 	    (let ((rand (car rand*)))
 	      (struct-case rand
 		((var)
-		 ;;This operand  is a variable  reference: it  is fine to  include it
-		 ;;multiple times; it is a simple operand.
-		 (values lhs* rhs* (cons rand simplified-rand*)))
+		 ;;This operand is a variable reference: it is a simple operand.
+		 (values lhs* rhs* (cons rand simple-rand*)))
 		((known rand.expr rand.type)
 		 (struct-case rand.expr
 		   ((constant)
 		    ;;This operand is:
 		    ;;
-		    ;;   (known (constant ?rand.expr.const) ?type)
+		    ;;   (known (constant ?rand.expr.const) ?rand.type)
 		    ;;
-		    ;;it  is fine  to  include  it multiple  times:  it  is a  simple
-		    ;;operand.
-		    (values lhs* rhs* (cons rand simplified-rand*)))
+		    ;;it is a simple operand.
+		    (values lhs* rhs* (cons rand simple-rand*)))
 		   ((var)
 		    ;;This operand is:
 		    ;;
-		    ;;   (known var ?type)
+		    ;;   (known var ?rand.type)
 		    ;;
-		    ;;it  is fine  to  include  it multiple  times;  it  is a  simple
-		    ;;operand.
-		    (values lhs* rhs* (cons rand simplified-rand*)))
+		    ;;it is a simple operand.
+		    (values lhs* rhs* (cons rand simple-rand*)))
 		   (else
 		    ;;This operand is:
 		    ;;
-		    ;;   (known ?expr ?type)
+		    ;;   (known ?rand.expr ?rand.type)
 		    ;;
-		    ;;the ?EXPR must be included only once in the recordised code: it
-		    ;;is a complex  operand; we introduce a VAR binding  and move the
-		    ;;type description  from the expression  to the VAR  in reference
-		    ;;position.
+		    ;;the ?RAND.EXPR  must be  included only  once in  the recordised
+		    ;;code: it is  a complex operand; we introduce a  VAR binding and
+		    ;;move the  type description  from the expression  to the  VAR in
+		    ;;reference position.
 		    (let ((tmp (make-unique-var 'tmp)))
 		      (values (cons tmp           lhs*)
 			      (cons (V rand.expr) rhs*)
-			      (cons (make-known tmp rand.type) simplified-rand*))))))
+			      (cons (make-known tmp rand.type) simple-rand*))))))
 		((constant)
-		 ;;This operand  is a  constant: it  is fine  to include  it multiple
-		 ;;times; it is a simple operand.
-		 (values lhs* rhs* (cons rand simplified-rand*)))
+		 ;;This operand is a constant: it is a simple operand.
+		 (values lhs* rhs* (cons rand simple-rand*)))
 		(else
 		 ;;This operand is  an expression with unknown  type description; the
 		 ;;RAND must  be included only once  in the recordised code:  it is a
@@ -613,7 +612,7 @@
 		 (let ((tmp (make-unique-var 'tmp)))
 		   (values (cons tmp      lhs*)
 			   (cons (V rand) rhs*)
-			   (cons tmp simplified-rand*)))))))
+			   (cons tmp simple-rand*)))))))
 	(values '() '() '())))
 
     #| end of module: %COGEN-PRIMOP-CALL |# )
@@ -624,7 +623,7 @@
 
     (define (%generate-code cogen-core-primitive-interrupt-handler-function-call
 			    cogen-core-primitive-standalone-function-call
-			    primitive-symbol-name ctxt simplified-rand*)
+			    primitive-symbol-name ctxt simple-rand*)
       ;;Build and  return the  recordised code  representing the  primitive operation
       ;;application.  Return  either a  standalone integrated  application body  or a
       ;;SHORTCUT struct wrapping the integrated application body.
@@ -646,23 +645,23 @@
 	;;
 	(compiler-internal-error '%record-use-of-interrupt-in-body
 	  "attempt to introduce a jump to interrupt handler in the body of an uninterruptible core primitive operation"
-	  primitive-symbol-name simplified-rand* ctxt))
+	  primitive-symbol-name simple-rand* ctxt))
       (if (not (primitive-handler-interruptable? prim))
 	  ;;Build  and return  the integrated  body as  standalone struct.   Raise an
 	  ;;error if INTERRUPT is called by an uninterruptible primitive.
 	  (parameterize ((%record-use-of-interrupt-in-body interrupt-handler/uninterruptible-primitive-error))
-	    (%cogen-primop-body prim ctxt simplified-rand*))
+	    (%cogen-primop-body prim ctxt simple-rand*))
 	(let* ((interrupted? #f)
 	       (body         (parameterize ((%record-use-of-interrupt-in-body (lambda ()
 										(set! interrupted? #t))))
-			       (%cogen-primop-body prim ctxt simplified-rand*))))
+			       (%cogen-primop-body prim ctxt simple-rand*))))
 	  (if (not interrupted?)
 	      ;;No jumps to the interrupt handler  is present in BODY: avoid creating
 	      ;;a SHORTCUT and just return the BODY itself.
 	      body
 	    ;;At least one jump to the interrupt handler is present in BODY: wrap the
 	    ;;body into a SHORTCUT; return the SHORTCUT struct.
-	    (with-interrupt-handler prim ctxt body primitive-symbol-name simplified-rand*
+	    (with-interrupt-handler prim ctxt body primitive-symbol-name simple-rand*
 				    cogen-core-primitive-interrupt-handler-function-call
 				    cogen-core-primitive-standalone-function-call)))))
 
@@ -683,9 +682,11 @@
 
   (module (%cogen-primop-body)
 
-    (define (%cogen-primop-body prim ctxt simplified-rand*)
-      ;;Actually generate the BODY of a primitive operation call.  This body might be
-      ;;wrapped or not into a SHORTCUT.
+    (define (%cogen-primop-body prim ctxt simple-rand*)
+      ;;Actually generate the BODY of a  primitive operation call; this body might be
+      ;;wrapped  or not  into  a  SHORTCUT.  This  function  is  where the  primitive
+      ;;operation handlers stored in the PRIMITIVE-HANDLER structs are applied to the
+      ;;simple operands.
       ;;
       ;;* If CTXT is V:
       ;;
@@ -706,14 +707,14 @@
       ;;   if cogen-pred, then (if P (nop) (nop))
       ;;
       ;;The  primitive  handler functions  extracted  from  PRIM  will take  care  of
-      ;;filtering the SIMPLIFIED-RAND* through the function T.
+      ;;filtering the SIMPLE-RAND* through the function T.
       ;;
       (case ctxt
 	((P)
 	 (case-primitive-operation-handler prim
 	   ((P)
 	    ;;There is a "for predicate" context implementation handler; just use it.
-	    (apply P-handler simplified-rand*))
+	    (apply P-handler simple-rand*))
 	   ((V)
 	    ;;There is no  "for predicate" implementation handler, but  a "for value"
 	    ;;implementation handler  exists; we  generate a "for  predicate" handler
@@ -722,7 +723,7 @@
 	    ;;   (asmcall != (for-value-asmcall) (KN bool-f))
 	    ;;
 	    ;;and we handle special cases.
-	    (let ((e (apply V-handler simplified-rand*)))
+	    (let ((e (apply V-handler simple-rand*)))
 	      (define (%doit-with-adapter)
 		(asm '!= e (KN bool-f)))
 	      (struct-case e
@@ -747,7 +748,7 @@
 	    ;;   (seq (for-effects-asmcall) (K t))
 	    ;;
 	    ;;and we handle special cases.
-	    (let ((e (apply E-handler simplified-rand*)))
+	    (let ((e (apply E-handler simple-rand*)))
 	      (define (%doit-with-adapter)
 		(make-seq e (K #t)))
 	      (struct-case e
@@ -764,7 +765,7 @@
 	 (case-primitive-operation-handler prim
 	   ((V)
 	    ;;There is a "for value" context implementation handler; just use it.
-	    (apply V-handler simplified-rand*))
+	    (apply V-handler simple-rand*))
 	   ((P)
 	    ;;There is no  "for value" implementation handler, but  a "for predicate"
 	    ;;implementation handler exists; we generate a "for value" handler as:
@@ -774,7 +775,7 @@
 	    ;;     (KN bool-f))
 	    ;;
 	    ;;and we handle special cases.
-	    (let ((e (apply P-handler simplified-rand*)))
+	    (let ((e (apply P-handler simple-rand*)))
 	      (define (%doit-with-adapter)
 		(make-conditional e (KN bool-t) (KN bool-f)))
 	      (struct-case e
@@ -801,7 +802,7 @@
 	    ;;     (KN void-object))
 	    ;;
 	    ;;and we handle special cases.
-	    (let ((e (apply E-handler simplified-rand*)))
+	    (let ((e (apply E-handler simple-rand*)))
 	      (define (%doit-with-adapter)
 		(make-seq e (KN void-object)))
 	      (struct-case e
@@ -818,7 +819,7 @@
 	   ((E)
 	    ;;There is a "for side  effects" context implementation handler; just use
 	    ;;it.
-	    (apply E-handler simplified-rand*))
+	    (apply E-handler simple-rand*))
 	   ((P)
 	    ;;There  is no  "for side  effects"  implementation handler,  but a  "for
 	    ;;predicate" implementation  handler exists; we generate  a "for effects"
@@ -829,7 +830,7 @@
 	    ;;     (nop))
 	    ;;
 	    ;;and we handle special cases.
-	    (let ((e (apply P-handler simplified-rand*)))
+	    (let ((e (apply P-handler simple-rand*)))
 	      (define (%doit-with-adapter)
 		(make-conditional e (nop) (nop)))
 	      (struct-case e
@@ -849,8 +850,10 @@
 	    ;;   (bind ((tmp (for-value-asmcall)))
 	    ;;     (nop))
 	    ;;
-	    ;;and we handle special cases.
-	    (let ((e (apply V-handler simplified-rand*)))
+	    ;;and  we handle  special cases.   Notice  that the  "for value"  handler
+	    ;;represents code that generates and returns a value, so we must allocate
+	    ;;a location for it, even if we do not use such return value.
+	    (let ((e (apply V-handler simple-rand*)))
 	      (define (%doit-with-adapter)
 		(with-tmp ((t e))
 		  (nop)))
@@ -948,7 +951,7 @@
     ;;application; so we must generate an interrupt  handler and wrap the BODY into a
     ;;SHORTCUT.
     ;;
-    ;;NOTE  When it  is determined  at compile-time  that the  operands of  a primitive
+    ;;NOTE When  it is determined  at compile-time that  the operands of  a primitive
     ;;operation are invalid, the generated SHORTCUT's ?BODY can be a simple:
     ;;
     ;;   (asmcall interrupt)
@@ -965,37 +968,37 @@
     ;;the error early;  we do not do it  here, we delegate this task  to the specific
     ;;primitive operation definition macro.
     ;;
-    (define* (with-interrupt-handler prim ctxt body primitive-symbol-name simplified-rand*
+    (define* (with-interrupt-handler prim ctxt body primitive-symbol-name simple-rand*
 				     cogen-core-primitive-interrupt-handler-function-call
 				     cogen-core-primitive-standalone-function-call)
       ;;PRIM is a struct of type PRIMITIVE-HANDLER.  CTXT must be one of the symbols:
-      ;;V, E,  P.  FILTERED-SIMPLIFIED-RAND*  is a list  of structs  representing the
+      ;;V,  E,  P.  FILTERED-SIMPLE-RAND*  is  a  list  of structs  representing  the
       ;;operands as recordised code.
       ;;
-      (define filtered-simplified-rand*
-	(map V-simple-operand simplified-rand*))
+      (define filtered-simple-rand*
+	(map V-simple-operand simple-rand*))
       (case ctxt
 	((V)
 	 (if (%the-body-is-just-an-interrupt-asmcall? body)
-	     (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
+	     (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simple-rand*)
 	   (make-shortcut
 	       body
-	     (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*))))
+	     (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simple-rand*))))
 
 	((E)
 	 (if (%the-body-is-just-an-interrupt-asmcall? body)
-	     (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
+	     (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simple-rand*)
 	   (make-shortcut
 	       body
-	     (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*))))
+	     (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simple-rand*))))
 
 	((P)
 	 (if (%the-body-is-just-an-interrupt-asmcall? body)
-	     (asm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simplified-rand*)
+	     (asm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simple-rand*)
 		    (K bool-f))
 	   (make-shortcut
 	       body
-	     (asm '!= (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simplified-rand*)
+	     (asm '!= (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simple-rand*)
 		    (K bool-f)))))
 
 	(else

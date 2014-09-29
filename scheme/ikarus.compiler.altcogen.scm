@@ -66,11 +66,11 @@
      (make-seq (multiple-forms-sequence ?expr ...) ?last-expr))))
 
 
-;;;; high-level assembly primitives
+;;;; high-level assembly instructions
 
 (define (asm op . rand*)
   ;;Build  and  return  recordised  call   which  performs  the  high-level  Assembly
-  ;;instruction OP applying it to the arguments ARGS.
+  ;;instruction OP applying it to the arguments RAND*.
   ;;
   (make-asmcall op rand*))
 
