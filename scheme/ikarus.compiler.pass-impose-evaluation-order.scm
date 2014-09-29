@@ -498,8 +498,8 @@
   (define (alloc-check size)
     (E (make-shortcut
 	   (make-conditional (%test size)
-	       (make-asmcall 'nop '())
-	     (make-asmcall 'interrupt '()))
+	       (nop)
+	     (interrupt))
 	 (make-funcall
 	  ;;From the  relocation vector of  this code object: retrieve  the location
 	  ;;gensym associated to DO-OVERFLOW, then  retrieve the value of its "proc"
@@ -513,8 +513,8 @@
   (define (alloc-check/no-hooks size)
     (E (make-shortcut
 	   (make-conditional (%test size)
-	       (make-asmcall 'nop '())
-	     (make-asmcall 'interrupt '()))
+	       (nop)
+	     (interrupt))
 	 (make-forcall "ik_collect" (list size)))))
 
   (define (%test size)

@@ -176,7 +176,7 @@
 	 (let ((d (R d))
 	       (s (R s)))
 	   (if (eq? d s)
-	       (make-asmcall 'nop '())
+	       (nop)
 	     (make-asm-instr op d s))))
 
 	(( ;;some assembly instructions
@@ -193,7 +193,7 @@
 	 (make-asm-instr op (R d) (R s)))
 
 	((nop)
-	 (make-asmcall 'nop '()))
+	 (nop))
 
 	(else
 	 (error who "invalid op" op))))
@@ -706,12 +706,12 @@
 	  (values vs rs fs ns))
          ((interrupt incr/zero?)
           (let ((v (exception-live-set)))
-            (unless (vector? v)
-              (error who "unbound exception2"))
-            (values (vector-ref v 0)
-                    (vector-ref v 1)
-                    (vector-ref v 2)
-                    (vector-ref v 3))))
+            (if (vector? v)
+		(values (vector-ref v 0)
+			(vector-ref v 1)
+			(vector-ref v 2)
+			(vector-ref v 3))
+              (error who "unbound exception2"))))
          (else
 	  (error who "invalid effect op" op))))
 

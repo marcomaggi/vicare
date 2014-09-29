@@ -162,21 +162,6 @@
    ))
 
 
-;;;; high-level assembly primitives
-
-(define (asm op . rand*)
-  ;;Build  and  return  recordised  call   which  performs  the  high-level  Assembly
-  ;;instruction OP applying it to the arguments ARGS.
-  ;;
-  (make-asmcall op rand*))
-
-(define (nop)
-  ;;Build  and  return  recordised  call   representing  the  dummy  instruction  "no
-  ;;operation".
-  ;;
-  (make-asmcall 'nop '()))
-
-
 (module (with-tmp)
 
   (define-syntax (with-tmp stx)

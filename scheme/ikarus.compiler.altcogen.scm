@@ -66,6 +66,30 @@
      (make-seq (multiple-forms-sequence ?expr ...) ?last-expr))))
 
 
+;;;; high-level assembly primitives
+
+(define (asm op . rand*)
+  ;;Build  and  return  recordised  call   which  performs  the  high-level  Assembly
+  ;;instruction OP applying it to the arguments ARGS.
+  ;;
+  (make-asmcall op rand*))
+
+(define (nop)
+  ;;Build  and  return  recordised  call   representing  the  dummy  instruction  "no
+  ;;operation".
+  ;;
+  (asm 'nop))
+
+(define (interrupt)
+  ;;Build and  return recordised  call representing  a jump  to a  SHORTCUT interrupt
+  ;;handler.
+  ;;
+  ;;NOTE This  function is shadowed in  the pass "specify representation"  by a local
+  ;;INTERRUPT function.
+  ;;
+  (asm 'interrupt))
+
+
 (module ListySet
   ;;This module implements sets of bits; each  set is a proper list of items, wrapped
   ;;by a struct.

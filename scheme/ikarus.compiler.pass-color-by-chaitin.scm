@@ -578,7 +578,7 @@
 	   (cond ((and (eq? op 'move)
 		       (eq? a b))
 		  ;;Source and dest are the same: do nothing.
-		  (make-asmcall 'nop '()))
+		  (nop))
 		 ((and (= wordsize 8)
 		       (not (eq? op 'move))
 		       (long-imm? b))
