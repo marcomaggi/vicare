@@ -1415,8 +1415,20 @@
 		;lambda  lifting:  a CODE-LOC  struct  to  be  used to  generate  the
 		;run-time closure object representing the function.
    freevar*
-		;Null or a  proper list of struct instances of  type VAR representing
-		;the free variables referenced by the generated closure object.
+		;Before  the VAR  structs  representing captured  free variables  are
+		;rewritten to  use the CP-REGISTER: null  or a proper list  of struct
+		;instances of type VAR representing  the free variables referenced by
+		;the generated closure object.
+		;
+		;After  the  VAR structs  representing  captured  free variables  are
+		;rewritten to use the CP-REGISTER: null  or a proper list of structs.
+		;Each struct can be a PRIMOPCALL with the format:
+		;
+		;   (primopcall $cpref (?cpvar (constant ?index)))
+		;
+		;which represents access to a free variable in a closure object; or a
+		;VAR  struct representing  a  self-reference: when  a closure  object
+		;references itself.
    ))
 
 ;;Instances of this type represent primitive operation applications.
@@ -1470,7 +1482,7 @@
 (define-struct primopcall
   (op
 		;A symbol representing the public name of a core primitive operation.
-   arg*
+   rand*
 		;A  list  of  struct instances  representing  recordized  expressions
 		;which, when evaluated,  will return the arguments  of this primitive
 		;call.

@@ -2897,6 +2897,22 @@
 	       tmp_0)))))
 
 ;;; --------------------------------------------------------------------
+;;; recursive free variables
+
+  (doit (let ((a ((primitive read))))
+	  (letrec ((f (lambda () (list a f))))
+	    f))
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) (cp_0)
+	     (funcall (primopcall top-level-value (constant list))
+	       (primopcall $cpref cp_0 (constant 0))
+	       cp_0)))
+	 (bind ((a_0 (funcall (primref read))))
+	   (fix ((f_0 (closure-maker (code-loc asmlabel:f:clambda) (freevars: a_0))))
+	     f_0))))
+
+;;; --------------------------------------------------------------------
+;;; no free variables
 
   (doit (let ((f (lambda () '1)))
 	  f)

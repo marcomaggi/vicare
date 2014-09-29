@@ -449,7 +449,7 @@
     ;;
     (define (%cogen-core-primitive-debug-call primitive-symbol-name simple-rand*)
       (make-funcall (V (mk-primref 'debug-call))
-		    (cons* (V src/loc)
+		    (cons* (V-known src/loc)
 			   (V (mk-primref primitive-symbol-name))
 			   simple-rand*)))
     (%cogen-primop-call %cogen-core-primitive-debug-call
@@ -549,7 +549,7 @@
 			cogen-core-primitive-standalone-function-call
 			primitive-symbol-name ctxt ?simple-rand*))
       ;;Here the complex  operand structs in RHS* have been  already filtered through
-      ;;V; the  SIMPLE-RAND* structs have been  left alone, not yet  filtered through
+      ;;"V"; the SIMPLE-RAND* structs have been  left alone, not yet filtered through
       ;;"V-simple-operand".
       (receive (lhs* rhs* simple-rand*)
 	  (%partition-simple/complex-operands rand*)
@@ -1023,9 +1023,10 @@
   (define (cogen-primop-debug-call ctxt rand* kont)
     ;;This  function is  used to  process struct  instances of  type PRIMOPCALL  with
     ;;operand "debug-call"; such PRIMOPCALLs are inserted in the code when debug mode
-    ;;is on: function calls are wrapped in calls to "debug-call".  So:
+    ;;is  on: function  calls are  wrapped  in calls  to "debug-call".   So the  core
+    ;;language expression:
     ;;
-    ;;   (funcall (primref list) '1 '2)
+    ;;   (annotated-call (list 1 2) (primitive list) '1 '2)
     ;;
     ;;becomes:
     ;;
@@ -1034,6 +1035,19 @@
     ;;where  the  #f  at the  beginning  of  the  quoted  list represents  a  missing
     ;;annotation  source.   See   the  function  RECORDIZE  for   details  about  how
     ;;"debug-call" PRIMREFs are generated.
+    ;;
+    ;;If the operator to apply to the operands is:
+    ;;
+    ;;* A  user-defined function call: just  return a FUNCALL performing  the call to
+    ;;  DEBUG-CALL with the function as argument.
+    ;;
+    ;;* A  core primitive function, not  operation: just return a  FUNCALL performing
+    ;;  the call to DEBUG-CALL with the core primitive function as argument.
+    ;;
+    ;;* A core primitive operation: return a SHORTCUT in which the integrated body is
+    ;;  the normal  implementation of the operation, the interrupt  call is a FUNCALL
+    ;;   performing the  call  to  DEBUG-CALL with  the  core  primitive function  as
+    ;;  argument.
     ;;
     ;;The argument CTXT is one of the symbols:  V, E, P; it represents the context in
     ;;which the PRIMOPCALL was found in recordized code.
@@ -1056,16 +1070,15 @@
     ;;3.  A  possibly empty list of  structs representing recordised code  that, when
     ;;   evaluated, will return the operands of the wrapped function call.
     ;;
-    ;;The argument  KONT is a  continuation function.  For the  context V: it  is the
-    ;;function V; for the  context P: it is the function P; for  the context E: it is
-    ;;the function E.
-    ;;
-    ;;Return a FUNCALL struct instance.
+    ;;The argument KONT is  a continuation function: it is used  only when the return
+    ;;value of  this function is a  FUNCALL struct.  For  the context V: KONT  is the
+    ;;function V; for the context P: KONT is  the function P; for the context E: KONT
+    ;;is the function E.
     ;;
     ;;NOTE The core primitive DEBUG-CALL is actually a primitive function exported by
     ;;"ikarus.debugger.sls".
     ;;
-    (assert (>= (length rand*) 2))
+    #;(assert (>= (length rand*) 2))
     (let ((src/expr	(car  rand*))  ;source expression
 	  (func		(cadr rand*))  ;the wrapped function
 	  (func-rand*	(cddr rand*))) ;args to the wrapped function
@@ -1314,7 +1327,8 @@
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
 	((closure-maker code freevar*)
-	 (make-seq (asm 'mset lhs (KN off-closure-code) (V code))
+	 (assert (code-loc? code))
+	 (make-seq (asm 'mset lhs (KN off-closure-code) (make-constant code))
 		   (%slot-setters lhs freevar* off-closure-data body)))))
 
     (define (%slot-setters lhs free* slot-offset body)
@@ -1331,8 +1345,15 @@
       ;;closure bindings are visible.
       ;;
       (if (pair? free*)
-	  (make-seq (asm 'mset lhs (KN slot-offset) (V (car free*)))
-		    (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))
+	  (begin
+	    (assert (struct-case (car free*)
+		      ((primopcall op rand*)
+		       (eq? op '$cpref))
+		      ((var)
+		       #t)
+		      (else #f)))
+	    (make-seq (asm 'mset lhs (KN slot-offset) (V (car free*)))
+		      (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body)))
 	body))
 
     #| end of module: %CLOSURE-OBJECT-SETTERS |# )
@@ -1340,21 +1361,28 @@
   #| end of module: HANDLE-FIX |# )
 
 
-(module (V)
-  ;;The function V erases known values;  its argument X must be a struct
-  ;;instance  representing  recordized  code  to  be  executed  in  "for
-  ;;returned  value" context;  its  return value  is  a struct  instance
-  ;;representing recordized code (to be executed in "for returned value"
-  ;;context) which is meant to replace X.
+;;;; processing expressions in "for value" context
+
+(define (V-known x)
+  (struct-case x
+    ((known x.expr)
+     (V x.expr))
+    (else
+     (V x))))
+
+(define (V x)
+  ;;X must be a  struct instance representing recordized code to  be executed in "for
+  ;;returned  value" context;  the return  value  is a  struct instance  representing
+  ;;recordized code (to  be executed in "for returned value"  context) which is meant
+  ;;to replace X.
   ;;
   ;;Accept as input recordized code holding the following struct types:
   ;;
-  ;;bind		code-loc
-  ;;conditional		constant	fix
-  ;;forcall		funcall		jmpcall
-  ;;known		primopcall	primref
-  ;;seq			var
-  ;;
+  ;;   bind		code-loc
+  ;;   conditional	constant	fix
+  ;;   forcall		funcall		jmpcall
+  ;;   known		primopcall	primref
+  ;;   seq		var
   ;;
   ;;Return recordized code in which:
   ;;
@@ -1373,70 +1401,60 @@
     (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
   (module (cogen-primop-debug-call)
     (import COGEN-PRIMOP-DEBUG-CALL))
+  (struct-case x
+    ((constant)
+     (constant->native-constant-representation x))
 
-  (define (V x)
-    (struct-case x
-      ((known expr)
-       (unknown-V expr))
-      (else
-       (unknown-V x))))
+    ((var)
+     x)
 
-  (define (unknown-V x)
-    (struct-case x
-      ((constant)
-       (constant->native-constant-representation x))
+    ((primref name)
+     ;;Generate code to retrieve the "value"  field from a location gensym; the value
+     ;;of such  slot must contain  a reference to  the closure object  implementing a
+     ;;global lexical procedure.
+     ;;
+     ;;NOTE Once we reference  the loc gensym in the assembly code: we  need a way to
+     ;;associate such gensym  to the generated binary code; the  location gensym will
+     ;;be  stored in  the relocation  vector  associated to  the code  object we  are
+     ;;building.  This is what the OBJECT struct generated below is for.
+     (asm 'mref
+	  (K (make-object (primitive-public-function-name->location-gensym name)))
+	  (K off-symbol-record-value)))
 
-      ((var)
-       x)
+    ((code-loc)
+     (make-constant x))
 
-      ((primref name)
-       ;;Generate code  to retrieve  the "value"  field from  a location  gensym; the
-       ;;value  of  such  slot  must  contain  a  reference  to  the  closure  object
-       ;;implementing a global lexical procedure.
-       ;;
-       ;;NOTE Once we reference the loc gensym in the assembly code: we need a way to
-       ;;associate such gensym to the generated binary code; the location gensym will
-       ;;be stored  in the  relocation vector  associated to the  code object  we are
-       ;;building.  This is what the OBJECT struct generated below is for.
-       (asm 'mref
-	      (K (make-object (primitive-public-function-name->location-gensym name)))
-	      (K off-symbol-record-value)))
+    ((bind lhs* rhs* body)
+     (make-bind lhs* (map V rhs*) (V body)))
 
-      ((code-loc)
-       (make-constant x))
+    ((fix lhs* rhs* body)
+     (handle-fix lhs* rhs* (V body)))
 
-      ((bind lhs* rhs* body)
-       (make-bind lhs* (map V rhs*) (V body)))
+    ((conditional test conseq altern)
+     (make-conditional (P test) (V conseq) (V altern)))
 
-      ((fix lhs* rhs* body)
-       (handle-fix lhs* rhs* (V body)))
+    ((seq e0 e1)
+     (make-seq (E e0) (V e1)))
 
-      ((conditional test conseq altern)
-       (make-conditional (P test) (V conseq) (V altern)))
+    ((primopcall op rand*)
+     (case op
+       ((debug-call)
+	(cogen-primop-debug-call    'V rand* V))
+       (else
+	(cogen-primop            op 'V rand*))))
 
-      ((seq e0 e1)
-       (make-seq (E e0) (V e1)))
+    ((forcall op rand*)
+     (make-forcall op (map V rand*)))
 
-      ((primopcall op rand*)
-       (case op
-	 ((debug-call)
-	  (cogen-primop-debug-call    'V rand* V))
-	 (else
-	  (cogen-primop            op 'V rand*))))
+    ((funcall rator rand*)
+     (make-funcall (Function rator) (map V-known rand*)))
 
-      ((forcall op rand*)
-       (make-forcall op (map V rand*)))
+    ((jmpcall label rator rand*)
+     (make-jmpcall label (V rator) (map V rand*)))
 
-      ((funcall rator rand*)
-       (make-funcall (Function rator) (map V rand*)))
-
-      ((jmpcall label rator rand*)
-       (make-jmpcall label (V rator) (map V rand*)))
-
-      (else
-       (error 'cogen-V "invalid value expr" (unparse-recordized-code x)))))
-
-  #| end of module: V |# )
+    (else
+     (compiler-internal-error __module_who__
+       "invalid expression in V context" (unparse-recordized-code x)))))
 
 
 (define (P x)
@@ -1562,7 +1580,7 @@
      (make-forcall op (map V rand*)))
 
     ((funcall rator rand*)
-     (make-funcall (Function rator) (map V rand*)))
+     (make-funcall (Function rator) (map V-known rand*)))
 
     ((jmpcall label rator rand*)
      (make-jmpcall label (V rator) (map V rand*)))
