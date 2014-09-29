@@ -1489,10 +1489,9 @@
 
 
 (define (P x)
-  ;;X  must be  a struct  instance  representing recordized  code to  be
-  ;;executed   in  predicate   context.    Return   a  struct   instance
-  ;;representing recordized  code (to be executed  in predicate context)
-  ;;which is meant to replace X.
+  ;;X  must be  a struct  instance  representing recordized  code to  be executed  in
+  ;;predicate context.  Return a struct  instance representing recordized code (to be
+  ;;executed in predicate context) which is meant to replace X.
   ;;
   (module (cogen-primop)
     (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
@@ -1505,16 +1504,12 @@
     ((primref)
      (K #t))
 
-    ((closure-maker)
-     (K #t))
-
     ((bind lhs* rhs* body)
      (make-bind lhs* (map V rhs*) (P body)))
 
     ((conditional test conseq altern)
-     ;;FIXME Should  this be processed  further to  test the case  of (P
-     ;;test)  always true  or always  false?   Or is  this already  done
-     ;;later?  (Marco Maggi; Oct 16, 2012)
+     ;;NOTE Later  this will  be processed  further to  test the  case of  "(P test)"
+     ;;always true or always false; we do nothing here.
      (make-conditional (P test) (P conseq) (P altern)))
 
     ((seq e0 e1)
@@ -1542,19 +1537,16 @@
     ((forcall)
      (asm '!= (V x) (KN bool-f)))
 
-    ((known expr)
-     ;;FIXME.  Suboptimal.  (Abdulaziz Ghuloum)
-     (P expr))
-
     (else
-     (error 'cogen-P "invalid pred expr" (unparse-recordized-code x)))))
+     (compiler-internal-error __module_who__
+       "invalid recordised expression in P context"
+       (unparse-recordized-code x)))))
 
 
 (define (E x)
-  ;;X  must be  a struct  instance  representing recordized  code to  be
-  ;;executed in  "for side  effect" context.   Return a  struct instance
-  ;;representing recordized  code (to be  executed in "for  side effect"
-  ;;context) which is meant to replace X.
+  ;;X must be a  struct instance representing recordized code to  be executed in "for
+  ;;side effect" context.  Return a  struct instance representing recordized code (to
+  ;;be executed in "for side effect" context) which is meant to replace X.
   ;;
   (module (cogen-primop)
     (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
@@ -1566,7 +1558,6 @@
     ((constant)		(nop))
     ((var)		(nop))
     ((primref)		(nop))
-    ((closure-maker)	(nop))
 
     ((bind lhs* rhs* body)
      (make-bind lhs* (map V rhs*) (E body)))
@@ -1596,12 +1587,10 @@
     ((jmpcall label rator rand*)
      (make-jmpcall label (V rator) (map V rand*)))
 
-    ((known expr)
-     ;;FIXME Suboptimal.  (Abdulaziz Ghuloum)
-     (E expr))
-
     (else
-     (error 'cogen-E "invalid effect expr" (unparse-recordized-code x)))))
+     (compiler-internal-error __module_who__
+       "invalid recordised expression in E context"
+       (unparse-recordized-code x)))))
 
 
 ;;;; constants and native constants
