@@ -653,7 +653,8 @@
 		 first-pair_0))))))
 
   ;;The  core  primitive  operation/function  FX+ can  fail  with  special  interrupt
-  ;;handler.
+  ;;handler.   When  debugging mode  is  enabled:  rather  than calling  the  special
+  ;;interrupt handler, we call the full core primitive function.
   (doit (annotated-call (fx+ 1 2) (primitive fx+) '1 '2)
 	(codes
 	 ()
@@ -677,7 +678,7 @@
 	       (asmcall nop)
 	       (asmcall int+/overflow (constant 8) (constant 16)))
 	   (funcall (asmcall mref (constant (object debug-call)) (constant 19))
-	     (constant (object (#f + 1 2)))
+	     (constant (object (#f . (+ 1 2))))
 	     (asmcall mref (constant (object +)) (constant 19))
 	     (constant 8)
 	     (constant 16)))))
