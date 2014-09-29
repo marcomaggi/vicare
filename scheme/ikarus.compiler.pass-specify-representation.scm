@@ -952,7 +952,7 @@
     ;;SHORTCUT.
     ;;
     ;;NOTE When  it is determined  at compile-time that  the operands of  a primitive
-    ;;operation are invalid, the generated SHORTCUT's ?BODY can be a simple:
+    ;;operation are invalid, the whole generated SHORTCUT's ?BODY can be a simple:
     ;;
     ;;   (asmcall interrupt)
     ;;
