@@ -1422,13 +1422,37 @@
 		;
 		;After  the  VAR structs  representing  captured  free variables  are
 		;rewritten to use the CP-REGISTER: null  or a proper list of structs.
-		;Each struct can be a PRIMOPCALL with the format:
+		;Each struct can be:
 		;
-		;   (primopcall $cpref (?cpvar (constant ?index)))
+		;* A VAR struct representing  a self-reference: when a closure object
+		;  references itself.  Example:
 		;
-		;which represents access to a free variable in a closure object; or a
-		;VAR  struct representing  a  self-reference: when  a closure  object
-		;references itself.
+		;   (let ((a ((primitive read))))
+		;     (letrec ((f (lambda () (list a f))))
+		;       f))
+		;
+		;  the LAMBDA is a non-combinator and it references itself.
+		;
+		;*  A  VAR struct  representing  a  free  variable defined  by  BIND.
+		;  Example:
+		;
+		;     (let ((a ---))
+		;       (lambda () a))
+		;
+		;* A PRIMOPCALL with the format:
+		;
+		;     (primopcall $cpref (?cpvar (constant ?index)))
+		;
+		;  which represents access to a free variable that is a free variable
+		;  of an enclosing closure object; for example:
+		;
+		;     (let ((a ((primitive read))))
+		;       (lambda () (lambda () a)))
+		;
+		;  the variable A is free for  both the outer and inner LAMBDA forms,
+		;  so the inner  must access it from the closure  object slots of the
+		;  outer.
+		;
    ))
 
 ;;Instances of this type represent primitive operation applications.
@@ -5844,14 +5868,13 @@
 	  cpvar
 	(let loop ((freevar* freevar*)
 		   (i        0))
-	  (cond ((null? freevar*)
-		 x)
-		((eq? x (car freevar*))
-		 ;;Replace a  reference to  free variable  with the  appropriate slot
-		 ;;accessor.
-		 (make-primopcall '$cpref (list cpvar (make-constant i))))
-		(else
-		 (loop (cdr freevar*) (fxadd1 i)))))))
+	  (if (pair? freevar*)
+	      (if (eq? x (car freevar*))
+		  ;;Replace a  reference to free  variable with the  appropriate slot
+		  ;;accessor.
+		  (make-primopcall '$cpref (list cpvar (make-constant i)))
+		(loop (cdr freevar*) (fxadd1 i)))
+	    x))))
 
     E)
 

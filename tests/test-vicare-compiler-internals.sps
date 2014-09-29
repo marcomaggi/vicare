@@ -2896,9 +2896,27 @@
 					 (freevars: a_1))))
 	       tmp_0)))))
 
-;;; --------------------------------------------------------------------
-;;; recursive free variables
+  ;;Closure object closed upon a free variable of an enclosing closure.  The variable
+  ;;A is free in both the outer and  inner LAMBDA, so the inner LAMBDA must access it
+  ;;from the closure object slots of the outer.
+  (doit (let ((a ((primitive read))))
+	  (let ((f (lambda ()
+		     (let ((g (lambda () a)))
+		       g))))
+	    f))
+	(codes
+	 ((lambda (label: asmlabel:f:clambda) (cp_0)
+	     (fix ((g_0 (closure-maker (code-loc asmlabel:g:clambda)
+				       (freevars: (primopcall $cpref cp_0 (constant 0))))))
+	       g_0))
+	  (lambda (label: asmlabel:g:clambda) (cp_1)
+	     (primopcall $cpref cp_1 (constant 0))))
+	 (bind ((a_0 (funcall (primref read))))
+	   (fix ((f_0 (closure-maker (code-loc asmlabel:f:clambda) (freevars: a_0))))
+	     f_0))))
 
+  ;;Recursive  free variables.   The LAMBDA  is  a non-combinator  and it  references
+  ;;itself; the self-reference *cannot* be removed from the list of free variables.
   (doit (let ((a ((primitive read))))
 	  (letrec ((f (lambda () (list a f))))
 	    f))
