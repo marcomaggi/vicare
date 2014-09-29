@@ -21,10 +21,18 @@
   ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
   ;;recordized code must be composed by struct instances of the following types:
   ;;
-  ;;   bind		closure-maker	conditional
-  ;;   constant		fix		forcall
-  ;;   funcall		jmpcall		known
-  ;;   primref		seq		var
+  ;;   bind		fix		conditional
+  ;;   seq		closure-maker	code-loc
+  ;;   forcall		funcall		jmpcall
+  ;;   primopcall	primref
+  ;;   constant		known		var
+  ;;
+  ;;CLOSURE-MAKER structs are present only in the RHS of FIX structs.
+  ;;
+  ;;CODE-LOC structs are present only in the CODE field of CLOSURE-MAKER structs.
+  ;;
+  ;;KNOWN structs  are possibly  present only:  as operator  and operands  of FUNCALL
+  ;;structs; as operands of PRIMOPCALL structs.
   ;;
   (import CORE-PRIMITIVE-OPERATION-NAMES SCHEME-OBJECTS-ONTOLOGY)
 
@@ -1327,16 +1335,22 @@
     (define (%single-closure-setters lhs rhs body)
       (struct-case rhs
 	((closure-maker code freevar*)
-	 (assert (code-loc? code))
-	 (make-seq (asm 'mset lhs (KN off-closure-code) (make-constant code))
+	 #;(assert (code-loc? code))
+	 (make-seq (asm 'mset lhs (KN off-closure-code) (K code))
 		   (%slot-setters lhs freevar* off-closure-data body)))))
 
     (define (%slot-setters lhs free* slot-offset body)
-      ;;LHS must  be a struct  instance of type VAR  representing the address  of the
-      ;;closure memory block.
+      ;;Non-tail  recursive function.  LHS  must be  a struct  instance  of type  VAR
+      ;;representing the address of the closure memory block.
       ;;
-      ;;FREE* must be a list of  struct instances of type VAR representing references
-      ;;to free variables.
+      ;;FREE*  must  be  a  list  of  struct instances  of  type  VAR  or  PRIMOPCALL
+      ;;representing  references  to  free  variables; the  PRIMOPCALL  structs  have
+      ;;format:
+      ;;
+      ;;   (primopcall $cpref (?cpvar (constant ?index)))
+      ;;
+      ;;and represent  access to free variables  from the closure object  slots.  See
+      ;;the CLOSURE-MAKER struct type definition for details.
       ;;
       ;;SLOT-OFFSET must be  a fixnum representing the offset (from  the beginning of
       ;;the closure memory block) of the next free variable slot, measured in bytes.
@@ -1345,15 +1359,9 @@
       ;;closure bindings are visible.
       ;;
       (if (pair? free*)
-	  (begin
-	    (assert (struct-case (car free*)
-		      ((primopcall op rand*)
-		       (eq? op '$cpref))
-		      ((var)
-		       #t)
-		      (else #f)))
-	    (make-seq (asm 'mset lhs (KN slot-offset) (V (car free*)))
-		      (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body)))
+	  (make-seq
+	   (asm 'mset lhs (KN slot-offset) (V (car free*)))
+	   (%slot-setters lhs (cdr free*) (+ slot-offset wordsize) body))
 	body))
 
     #| end of module: %CLOSURE-OBJECT-SETTERS |# )
@@ -1376,26 +1384,20 @@
   ;;recordized code (to  be executed in "for returned value"  context) which is meant
   ;;to replace X.
   ;;
-  ;;Accept as input recordized code holding the following struct types:
-  ;;
-  ;;   bind		code-loc
-  ;;   conditional	constant	fix
-  ;;   forcall		funcall		jmpcall
-  ;;   known		primopcall	primref
-  ;;   seq		var
-  ;;
   ;;Return recordized code in which:
   ;;
-  ;;* Instances  of CONSTANT  contain the  binary representation  of the
+  ;;* Instances of CONSTANT are transformed  to hold the binary representation of the
   ;;  object.
   ;;
-  ;;* Instances of PRIMREF are replaced by instances of ASMCALL.
+  ;;*  Instances of  PRIMREF  are  transformed into  ASMCALL  structs extracting  the
+  ;;  reference to core primitive closure object from the associated loc gensym.
   ;;
-  ;;* Instances of CODE-LOC are wrapped into instances of CONSTANT.
+  ;;*  Instances of  PRIMOPCALL are  transformed  by the  functions COGEN-PRIMOP  and
+  ;;  COGEN-PRIMOP-DEBUG-CALL.
   ;;
-  ;;* Instances of PRIMOPCALL ...
-  ;;
-  ;;* Instances of FIX are handled.
+  ;;* Instances  of FIX are  transformed into  instances of BIND  that: appropriately
+  ;;   allocate the  non-combinator  closure objects;  retrieve  from the  relocation
+  ;;  vector a prebuilt combinator closure object.
   ;;
   (module (cogen-primop)
     (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
@@ -1419,10 +1421,7 @@
      ;;building.  This is what the OBJECT struct generated below is for.
      (asm 'mref
 	  (K (make-object (primitive-public-function-name->location-gensym name)))
-	  (K off-symbol-record-value)))
-
-    ((code-loc)
-     (make-constant x))
+	  (KN off-symbol-record-value)))
 
     ((bind lhs* rhs* body)
      (make-bind lhs* (map V rhs*) (V body)))
@@ -1456,20 +1455,44 @@
      (compiler-internal-error __module_who__
        "invalid expression in V context" (unparse-recordized-code x)))))
 
+(define (V-simple-operand x)
+  ;;Similar to V  but it must be  applied only to the  "simplified operands" prepared
+  ;;for  a   core  primitive  operation   application.   Return  a   struct  instance
+  ;;representing recordized  code (to  be executed in  "for returned  value" context)
+  ;;which is meant to replace X.
+  ;;
+  ;;All    the     core    primitive     implementation    handlers     defined    by
+  ;;DEFINE-PRIMITIVE-OPERATION must filter their arguments through "V-simple-operand"
+  ;;before including them in their output recordised code.
+  ;;
+  ;;X must be a  struct instance representing recordized code to  be executed in "for
+  ;;returned value" context, evaluating to a single value to be used as argument to a
+  ;;primitive  operation.  Accept  as  input recordized  code  holding the  following
+  ;;struct types:
+  ;;
+  ;;   constant		known		var
+  ;;
+  (struct-case x
+    ((var)
+     x)
+
+    ((constant)
+     (constant->native-constant-representation x))
+
+    ((known expr type)
+     (V-simple-operand expr))
+
+    (else
+     (compiler-internal-error 'cogen-specify-representation:T
+       "invalid struct as simplified operand to core primitive operation application"
+       (unparse-recordized-code x)))))
+
 
 (define (P x)
   ;;X  must be  a struct  instance  representing recordized  code to  be
   ;;executed   in  predicate   context.    Return   a  struct   instance
   ;;representing recordized  code (to be executed  in predicate context)
   ;;which is meant to replace X.
-  ;;
-  ;;Accept as input recordized code holding the following struct types:
-  ;;
-  ;;bind		closure-maker	code-loc
-  ;;conditional		constant	fix
-  ;;forcall		funcall		jmpcall
-  ;;known		primopcall	primref
-  ;;seq			var
   ;;
   (module (cogen-primop)
     (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
@@ -1480,9 +1503,6 @@
      (if c (K #t) (K #f)))
 
     ((primref)
-     (K #t))
-
-    ((code-loc)
      (K #t))
 
     ((closure-maker)
@@ -1536,14 +1556,6 @@
   ;;representing recordized  code (to be  executed in "for  side effect"
   ;;context) which is meant to replace X.
   ;;
-  ;;Accept as input recordized code holding the following struct types:
-  ;;
-  ;;bind		closure-maker	code-loc
-  ;;conditional		constant	fix
-  ;;forcall		funcall		jmpcall
-  ;;known		primopcall	primref
-  ;;seq			var
-  ;;
   (module (cogen-primop)
     (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
   (module (cogen-primop-debug-call)
@@ -1554,7 +1566,6 @@
     ((constant)		(nop))
     ((var)		(nop))
     ((primref)		(nop))
-    ((code-loc)		(nop))
     ((closure-maker)	(nop))
 
     ((bind lhs* rhs* body)
@@ -1593,38 +1604,23 @@
      (error 'cogen-E "invalid effect expr" (unparse-recordized-code x)))))
 
 
-(define (V-simple-operand x)
-  ;;Similar to V  but it must be  applied only to the  "simplified operands" prepared
-  ;;for  a   core  primitive  operation   application.   Return  a   struct  instance
-  ;;representing recordized  code (to  be executed in  "for returned  value" context)
-  ;;which is meant to replace X.
-  ;;
-  ;;All    the     core    primitive     implementation    handlers     defined    by
-  ;;DEFINE-PRIMITIVE-OPERATION must filter their arguments through "V-simple-operand"
-  ;;before including them in their output recordised code.
-  ;;
-  ;;X must be a  struct instance representing recordized code to  be executed in "for
-  ;;returned value" context, evaluating to a single value to be used as argument to a
-  ;;primitive operation.
-  ;;
-  ;;Accept as input recordized code holding the following struct types:
-  ;;
-  ;;   constant		known		var
-  ;;
-  (struct-case x
-    ((var)
-     x)
+;;;; constants and native constants
 
-    ((constant)
-     (constant->native-constant-representation x))
+(define-syntax K
+  ;;Wrap X with a struct instance of type CONSTANT.
+  ;;
+  (syntax-rules ()
+    ((_ ?x)
+     (make-constant ?x))))
 
-    ((known expr type)
-     (V-simple-operand expr))
-
-    (else
-     (compiler-internal-error 'cogen-specify-representation:T
-       "invalid struct as simplified operand to core primitive operation application"
-       (unparse-recordized-code x)))))
+(define (KN x)
+  ;;Wrap  X with  a  struct instance  of  type CONSTANT;  X must  be  a native  value
+  ;;representation.
+  ;;
+  (cond ((target-platform-fixnum? x)
+	 (make-constant x))
+	(else
+	 (make-object (make-constant x)))))
 
 (define* (constant->native-constant-representation x)
   ;;X must  be a struct  instance of  type CONSTANT.  When  the constant value  has a
@@ -1677,23 +1673,6 @@
 	  (else
 	   ;;Everything else will go in the relocation vector.
 	   (make-constant (make-object c))))))
-
-
-(define-syntax K
-  ;;Wrap X with a struct instance of type CONSTANT.
-  ;;
-  (syntax-rules ()
-    ((_ ?x)
-     (make-constant ?x))))
-
-(define (KN x)
-  ;;Wrap  X with  a  struct instance  of  type CONSTANT;  X must  be  a native  value
-  ;;representation.
-  ;;
-  (cond ((target-platform-fixnum? x)
-	 (make-constant x))
-	(else
-	 (make-object (make-constant x)))))
 
 
 (module (Function)
