@@ -35,11 +35,8 @@
 (check-set-mode! 'report-failed)
 (check-display "*** testing Vicare compiler pass: specify representation\n")
 
-(compiler.optimize-level 2)
-(compiler.source-optimizer-passes-count 2)
-;;(compiler.cp0-effort-limit 50)
-;;(compiler.cp0-size-limit   8)
-(compiler.descriptive-labels #t)
+(compiler.descriptive-labels   #t)
+(compiler.generate-debug-calls #f)
 
 
 ;;;; helpers
@@ -625,6 +622,65 @@
 		     (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:b:clambda) no-freevars))))
 		       tmp_1)
 		     c_0))))))))
+
+  #t)
+
+
+(parametrise ((check-test-name			'debug-call)
+	      (compiler.generate-debug-calls	#t))
+
+  ;;The core  primitive function READ  is called with  an ordinary function  call, no
+  ;;SHORTCUT.
+  (doit (annotated-call (read) (primitive read))
+	(codes
+	 ()
+	 (funcall (asmcall mref (constant (object debug-call)) (constant 19))
+	   (constant (object (#f . (read))))
+	   (asmcall mref (constant (object read)) (constant 19)))))
+
+  ;;The core primitive operation/function LIST cannot fail.
+  (doit (annotated-call (list 1 2) (primitive list) '1 '2)
+	(codes
+	 ()
+	 (bind ((first-pair_0 (asmcall alloc (constant 32) (constant 1))))
+	   (seq
+	     (asmcall mset first-pair_0 (constant -1) (constant 8))
+	     (asmcall mset first-pair_0 (constant 23) (constant 79))
+	     (bind ((tmp_0 (asmcall int+ first-pair_0 (constant 16))))
+	       (seq
+		 (asmcall mset tmp_0 (constant -1) (constant 16))
+		 (asmcall mset tmp_0 (constant -9) tmp_0)
+		 first-pair_0))))))
+
+  ;;The  core  primitive  operation/function  FX+ can  fail  with  special  interrupt
+  ;;handler.
+  (doit (annotated-call (fx+ 1 2) (primitive fx+) '1 '2)
+	(codes
+	 ()
+	 (shortcut
+	     (seq
+	       (asmcall nop)
+	       (asmcall int+/overflow (constant 8) (constant 16)))
+	   (funcall (asmcall mref (constant (object debug-call)) (constant 19))
+	     (constant (object (#f . (fx+ 1 2))))
+	     (asmcall mref (constant (object fx+)) (constant 19))
+	     (constant 8)
+	     (constant 16)))))
+
+  ;;The core primitive  operation/function + can fail with  "function call" interrupt
+  ;;handler.
+  (doit (annotated-call (+ 1 2) (primitive +) '1 '2)
+	(codes
+	 ()
+	 (shortcut
+	     (seq
+	       (asmcall nop)
+	       (asmcall int+/overflow (constant 8) (constant 16)))
+	   (funcall (asmcall mref (constant (object debug-call)) (constant 19))
+	     (constant (object (#f + 1 2)))
+	     (asmcall mref (constant (object +)) (constant 19))
+	     (constant 8)
+	     (constant 16)))))
 
   #t)
 

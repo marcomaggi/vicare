@@ -354,37 +354,42 @@
     (%printf "CALL FRAMES:\n")
     (for-each print-step ls)))
 
-(define (guarded-start proc)
-  (with-exception-handler
-      (lambda (con)
-        (define (enter-debugger con)
-          (define (help)
-            (%printf "Exception trapped by debugger.\n")
-            (print-condition con)
-            (%printf "~a\n"
-		    (string-append
-		     "[t] Trace. "
-		     "[r] Reraise exception. "
-		     "[c] Continue. "
-		     "[q] Quit. "
-		     "[?] Help. ")))
-          (help)
-          ((call/cc
-	       (lambda (k)
-		 (new-cafe
-		  (lambda (x)
-		    (case x
-		      ((R r) (k (lambda () (raise-continuable con))))
-		      ((Q q) (exit 99))
-		      ((T t) (print-all-traces))
-		      ((C c) (k void))
-		      ((?)   (help))
-		      (else (%printf "invalid option\n")))))
-		 void))))
-        (if (serious-condition? con)
-            (enter-debugger con)
-	  (raise-continuable con)))
-    proc))
+(module (guarded-start)
+
+  (define (guarded-start proc)
+    (with-exception-handler
+	(lambda (con)
+	  (if (serious-condition? con)
+	      (enter-debugger con)
+	    (raise-continuable con)))
+      proc))
+
+  (define (enter-debugger con)
+    (help con)
+    ((call/cc
+	 (lambda (k)
+	   (new-cafe
+	    (lambda (x)
+	      (case x
+		((R r) (k (lambda () (raise-continuable con))))
+		((Q q) (exit 99))
+		((T t) (print-all-traces))
+		((C c) (k void))
+		((?)   (help con))
+		(else (%printf "invalid option\n")))))
+	   void))))
+
+  (define (help con)
+    (%printf "Exception trapped by debugger.\n")
+    (print-condition con)
+    (%printf "~a\n"
+	     (string-append "[t] Trace. "
+			    "[r] Reraise exception. "
+			    "[c] Continue. "
+			    "[q] Quit. "
+			    "[?] Help. ")))
+
+  #| end of module: GUARDED-START |# )
 
 
 ;;;; done

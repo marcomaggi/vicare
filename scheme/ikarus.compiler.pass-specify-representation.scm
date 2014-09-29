@@ -1015,6 +1015,80 @@
   #| end of module: COGEN-PRIMOP, COGEN-DEBUG-PRIMOP |# )
 
 
+(module COGEN-PRIMOP-DEBUG-CALL
+  (cogen-primop-debug-call)
+  (module (cogen-debug-primop)
+    (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
+
+  (define (cogen-primop-debug-call ctxt rand* kont)
+    ;;This  function is  used to  process struct  instances of  type PRIMOPCALL  with
+    ;;operand "debug-call"; such PRIMOPCALLs are inserted in the code when debug mode
+    ;;is on: function calls are wrapped in calls to "debug-call".  So:
+    ;;
+    ;;   (funcall (primref list) '1 '2)
+    ;;
+    ;;becomes:
+    ;;
+    ;;   (primopcall debug-call '(#f . (list 1 2)) 'list '1 '2)
+    ;;
+    ;;where  the  #f  at the  beginning  of  the  quoted  list represents  a  missing
+    ;;annotation  source.   See   the  function  RECORDIZE  for   details  about  how
+    ;;"debug-call" PRIMREFs are generated.
+    ;;
+    ;;The argument CTXT is one of the symbols:  V, E, P; it represents the context in
+    ;;which the PRIMOPCALL was found in recordized code.
+    ;;
+    ;;The argument RAND* is a list of structs representing recordized code that, when
+    ;;evaluated, will return the arguments to  the "debug-call".  It is composed of 3
+    ;;items:
+    ;;
+    ;;1.  A pair; the car is #f  or data representing the source location annotation;
+    ;;   the cdr  is  a symbolic  expression  representing the  source  form of  this
+    ;;  function call.
+    ;;
+    ;;2. A struct instance representing the function to call in debug mode; it can be
+    ;;   a KNOWN wrapping a PRIMREF:
+    ;;
+    ;;      (known (primref ?prim-name) T:procedure)
+    ;;
+    ;;   or a reference to a used-defined function.
+    ;;
+    ;;3.  A  possibly empty list of  structs representing recordised code  that, when
+    ;;   evaluated, will return the operands of the wrapped function call.
+    ;;
+    ;;The argument  KONT is a  continuation function.  For the  context V: it  is the
+    ;;function V; for the  context P: it is the function P; for  the context E: it is
+    ;;the function E.
+    ;;
+    ;;Return a FUNCALL struct instance.
+    ;;
+    ;;NOTE The core primitive DEBUG-CALL is actually a primitive function exported by
+    ;;"ikarus.debugger.sls".
+    ;;
+    (assert (>= (length rand*) 2))
+    (let ((src/expr	(car  rand*))  ;source expression
+	  (func		(cadr rand*))  ;the wrapped function
+	  (func-rand*	(cddr rand*))) ;args to the wrapped function
+      (struct-case (%remove-known func)
+	((primref name)
+	 (if (core-primitive-operation? name)
+	     (cogen-debug-primop name src/expr ctxt func-rand*)
+	   (%fail kont rand*)))
+	(else
+	 (%fail kont rand*)))))
+
+  (define (%fail kont rand*)
+    (kont (make-funcall (mk-primref 'debug-call) rand*)))
+
+  (define (%remove-known x)
+    (struct-case x
+      ((known expr)
+       expr)
+      (else x)))
+
+  #| end of module: COGEN-PRIMOP-DEBUG-CALL |# )
+
+
 (module (handle-fix)
   ;;This module transforms the structs fix.
   ;;
@@ -1266,80 +1340,6 @@
   #| end of module: HANDLE-FIX |# )
 
 
-(module COGEN-DEBUG-CALL-STUFF
-  (cogen-debug-call)
-  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
-
-  (define (cogen-debug-call op ctxt arg* kont)
-    ;;This function is used to process  struct instances of type ASMCALL with operand
-    ;;"debug-call"; such  ASMCALLs are inserted  in the code  when debug mode  is on,
-    ;;function calls are wrapped in calls to "debug-call".  So:
-    ;;
-    ;;   (list 1 2)
-    ;;
-    ;;becomes:
-    ;;
-    ;;   (debug-call '(#f list 1 2) 'list '1 '2)
-    ;;
-    ;;where the  #f at  the beginning  of the  quoted list  represents a
-    ;;missing annotation source.  See the function RECORDIZE for details
-    ;;about how "debug-call" PRIMREFs are generated.
-    ;;
-    ;;This function returns a FUNCALL struct instance.
-    ;;
-    ;;OP is  always the symbol "debug-call";  it is the value  of the OP
-    ;;field of the ASMCALL structure.
-    ;;
-    ;;CTXT is one  of the symbols: V, E,  P.  It represents the context  in which the
-    ;;ASMCALL was found in recordized code.
-    ;;
-    ;;ARG* is  a list  of struct  instance representing  recordized code
-    ;;that,   when  evaluated,   will  return   the  arguments   to  the
-    ;;"debug-call".  It is composed of 3 items:
-    ;;
-    ;;1.  A  symbolic expression  representing the  source form  of this
-    ;;   function call.
-    ;;
-    ;;2. A  struct instance representing  the function to call  in debug
-    ;;   mode.
-    ;;
-    ;;3.   A  list of  struct  instances  representing code  that,  when
-    ;;   evaluated,  will return the  arguments of the  wrapped function
-    ;;   call.
-    ;;
-    ;;KONT is  a continuation function.   For the  context V: it  is the
-    ;;function  V; for  the context  P: it  is the  function P;  for the
-    ;;context E: it is the function E.
-    ;;
-    ;;Notice that  DEBUG-CALL is actually a  primitive function exported
-    ;;by "ikarus.debugger.sls".
-    ;;
-    (assert (eq? op 'debug-call))
-    (assert (>= (length arg*) 2))
-    (let ((src/expr	(car  arg*))  ;source expression
-	  (func		(cadr arg*))  ;the wrapped function
-	  (args		(cddr arg*))) ;args to the wrapped function
-      (struct-case (%remove-tag func)
-	((primref name)
-	 (if (core-primitive-operation? name)
-	     (cogen-debug-primop name src/expr ctxt args)
-	   (%fail kont arg*)))
-	(else
-	 (%fail kont arg*)))))
-
-  (define (%fail kont arg*)
-    (kont (make-funcall (mk-primref 'debug-call) arg*)))
-
-  (define (%remove-tag x)
-    (struct-case x
-      ((known expr)
-       expr)
-      (else
-       x)))
-
-  #| end of module: cogen-debug-call |# )
-
-
 (module (V)
   ;;The function V erases known values;  its argument X must be a struct
   ;;instance  representing  recordized  code  to  be  executed  in  "for
@@ -1369,8 +1369,11 @@
   ;;
   ;;* Instances of FIX are handled.
   ;;
-  (import COGEN-DEBUG-CALL-STUFF)
-  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
+  (module (cogen-primop)
+    (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
+  (module (cogen-primop-debug-call)
+    (import COGEN-PRIMOP-DEBUG-CALL))
+
   (define (V x)
     (struct-case x
       ((known expr)
@@ -1414,21 +1417,21 @@
       ((seq e0 e1)
        (make-seq (E e0) (V e1)))
 
-      ((primopcall op arg*)
+      ((primopcall op rand*)
        (case op
 	 ((debug-call)
-	  (cogen-debug-call op 'V arg* V))
+	  (cogen-primop-debug-call    'V rand* V))
 	 (else
-	  (cogen-primop     op 'V arg*))))
+	  (cogen-primop            op 'V rand*))))
 
-      ((forcall op arg*)
-       (make-forcall op (map V arg*)))
+      ((forcall op rand*)
+       (make-forcall op (map V rand*)))
 
-      ((funcall rator arg*)
-       (make-funcall (Function rator) (map V arg*)))
+      ((funcall rator rand*)
+       (make-funcall (Function rator) (map V rand*)))
 
-      ((jmpcall label rator arg*)
-       (make-jmpcall label (V rator) (map V arg*)))
+      ((jmpcall label rator rand*)
+       (make-jmpcall label (V rator) (map V rand*)))
 
       (else
        (error 'cogen-V "invalid value expr" (unparse-recordized-code x)))))
@@ -1450,8 +1453,10 @@
   ;;known		primopcall	primref
   ;;seq			var
   ;;
-  (import COGEN-DEBUG-CALL-STUFF)
-  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
+  (module (cogen-primop)
+    (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
+  (module (cogen-primop-debug-call)
+    (import COGEN-PRIMOP-DEBUG-CALL))
   (struct-case x
     ((constant c)
      (if c (K #t) (K #f)))
@@ -1480,12 +1485,12 @@
     ((fix lhs* rhs* body)
      (handle-fix lhs* rhs* (P body)))
 
-    ((primopcall op arg*)
+    ((primopcall op rand*)
      (case op
        ((debug-call)
-	(cogen-debug-call op 'P arg* P))
+	(cogen-primop-debug-call    'P rand* P))
        (else
-	(cogen-primop     op 'P arg*))))
+	(cogen-primop            op 'P rand*))))
 
     ((var)
      (asm '!= (V x) (KN bool-f)))
@@ -1521,8 +1526,10 @@
   ;;known		primopcall	primref
   ;;seq			var
   ;;
-  (import COGEN-DEBUG-CALL-STUFF)
-  (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
+  (module (cogen-primop)
+    (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS))
+  (module (cogen-primop-debug-call)
+    (import COGEN-PRIMOP-DEBUG-CALL))
   (struct-case x
 
     ;;Useless for side effects: remove!
@@ -1544,21 +1551,21 @@
     ((fix lhs* rhs* body)
      (handle-fix lhs* rhs* (E body)))
 
-    ((primopcall op arg*)
+    ((primopcall op rand*)
      (case op
        ((debug-call)
-	(cogen-debug-call op 'E arg* E))
+	(cogen-primop-debug-call    'E rand* E))
        (else
-	(cogen-primop     op 'E arg*))))
+	(cogen-primop            op 'E rand*))))
 
-    ((forcall op arg*)
-     (make-forcall op (map V arg*)))
+    ((forcall op rand*)
+     (make-forcall op (map V rand*)))
 
-    ((funcall rator arg*)
-     (make-funcall (Function rator) (map V arg*)))
+    ((funcall rator rand*)
+     (make-funcall (Function rator) (map V rand*)))
 
-    ((jmpcall label rator arg*)
-     (make-jmpcall label (V rator) (map V arg*)))
+    ((jmpcall label rator rand*)
+     (make-jmpcall label (V rator) (map V rand*)))
 
     ((known expr)
      ;;FIXME Suboptimal.  (Abdulaziz Ghuloum)
