@@ -6634,7 +6634,7 @@
 	(struct-case x
 	  ((clambda label.unused cls*)
 	   (let ((cls* (%map-in-order E-clambda-clause cls*)))
-	     (if (= (length cls*) 1)
+	     (if (%list-of-one-item? cls*)
 		 (cons 'lambda (car cls*))
 	       (cons 'case-lambda cls*))))))
 
@@ -6890,7 +6890,7 @@
 	(struct-case x
 	  ((clambda label.unused cls*)
 	   (let ((cls* (%map-in-order E-clambda-clause cls*)))
-	     (if (= (length cls*) 1)
+	     (if (%list-of-one-item? cls*)
 		 (cons 'lambda (car cls*))
 	       (cons 'case-lambda cls*))))))
 
@@ -6958,11 +6958,11 @@
     ;;
     ;;is returned as is.
     ;;
-    (cond ((and (= (length b*) 1)
+    (cond ((and (%list-of-one-item? b*)
 		(pair? body)
 		(or (eq? (car body) 'let*)
 		    (and (eq? (car body) 'let)
-			 (= (length (cadr body)) 1))))
+			 (%list-of-one-item? (cadr body)))))
 	   (list 'let* (append b* (cadr body)) (caddr body)))
 	  (else
 	   (list 'let b* body))))
@@ -6975,7 +6975,7 @@
 
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

@@ -400,12 +400,10 @@
 	       ((primref op)
 		;;*NOTE* This form can return #f too!!!
 		(and (eq? op 'not)
-		     (= (length rand*) 1)
+		     (%list-of-one-item? rand*)
 		     (%build-conditional (car rand*) altern conseq)))
-	       (else
-		#f)))
-	    (else
-	     #f))
+	       (else #f)))
+	    (else #f))
 	  (make-conditional test conseq altern)))
 
     #| end of module: E-conditional |# )
