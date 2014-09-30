@@ -1446,7 +1446,7 @@
      (make-forcall op (map V rand*)))
 
     ((funcall rator rand*)
-     (make-funcall (Function rator) (map V-known rand*)))
+     (make-funcall (VE-function rator) (map V-known rand*)))
 
     ((jmpcall label rator rand*)
      (make-jmpcall label (V rator) (map V rand*)))
@@ -1582,7 +1582,7 @@
      (make-forcall op (map V rand*)))
 
     ((funcall rator rand*)
-     (make-funcall (Function rator) (map V-known rand*)))
+     (make-funcall (VE-function rator) (map V-known rand*)))
 
     ((jmpcall label rator rand*)
      (make-jmpcall label (V rator) (map V rand*)))
@@ -1664,11 +1664,11 @@
 	   (make-constant (make-object x.const))))))
 
 
-(module (Function)
+(module (VE-function)
   ;;This module  is used  to process the  operator of every  struct instance  of type
   ;;FUNCALL by the functions V and E:
   ;;
-  ;;   (make-funcall (Function rator) (map V rand*))
+  ;;   (make-funcall (VE-function rator) (map V rand*))
   ;;
   ;;the RATOR can be a reference to a top level binding, but also an expression which
   ;;should evaluate to a closure at runtime.
@@ -1681,7 +1681,7 @@
   ;;* Inserting code to evaluate an arbitrary expression and check at runtime that it
   ;;  is actually a closure (if not: raise an exception).
   ;;
-  (define-syntax-rule (Function rator)
+  (define-syntax-rule (VE-function rator)
     ;;X must be a struct instance representing recordized code to be executed in "for
     ;;returned value" context.  Return a struct instance representing recordized code
     ;;(to be executed in "for returned value" context) which is meant to replace X.
@@ -1690,10 +1690,10 @@
 
   (define (F rator check?)
     (struct-case rator
-      ((primopcall op args)
-       (cond ((and (eq? op 'top-level-value)
-		   (null? (cdr args)) ;only one argument
-		   (%recordized-symbol (car args)))
+      ((primopcall rator.op rator.rand*)
+       (cond ((and (eq? rator.op 'top-level-value)
+		   (%list-of-one-item? rator.rand*)
+		   (%recordized-symbol (car rator.rand*)))
 	      ;;The recordized code:
 	      ;;
 	      ;;   #[primopcall #[primref top-level-value] (?loc)]
@@ -1720,12 +1720,13 @@
 		   ;;Maggi; Mon May 19, 2014)
 		   (reset-symbol-proc! loc)
 		   (asm 'mref
-			  (constant->native-constant-representation (make-constant loc))
-			  (K off-symbol-record-proc))))
+			(KN loc)
+			#;(constant->native-constant-representation (make-constant loc))
+			(KN off-symbol-record-proc))))
 	     (else
 	      (F-nonproc rator check?))))
 
-      ((primref op)
+      ((primref)
        ;;This is  a function application  in which the  function is a  core primitive
        ;;function, not a core primitive operation.  See the function V for what needs
        ;;to be done.
@@ -1765,9 +1766,9 @@
 	  (make-shortcut
 	      (make-seq
 	       (make-conditional (asm '=
-					(asm 'logand x (K closure-mask))
-					(K closure-tag))
-		   (asm 'nop)
+				      (asm 'logand x (KN closure-mask))
+				      (KN closure-tag))
+		   (nop)
 		 (asm 'interrupt))
 	       x)
 	    (V (make-funcall (mk-primref 'error)
