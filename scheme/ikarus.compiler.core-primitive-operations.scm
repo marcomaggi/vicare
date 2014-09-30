@@ -225,6 +225,11 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-syntax-rule (interrupt)
+  (flagged-interrupt))
+
+;;; --------------------------------------------------------------------
+
 (define-syntax-rule (prm-tag-as-fixnum ?machine-word)
   ;;Given the struct ?MACHINE-WORD representing recordized code that will evaluate to
   ;;an integer:  return a  struct instance representing  recordized code  which, when

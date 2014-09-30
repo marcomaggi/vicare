@@ -228,7 +228,7 @@
 
 
 (module CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS
-  (cogen-primop cogen-debug-primop interrupt)
+  (cogen-primop cogen-debug-primop flagged-interrupt)
   ;;Some core primitives are implemented both as:
   ;;
   ;;*  Core primitive  functions.   There  exists a  loc  gensym  whose "value"  slot
@@ -627,7 +627,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module (%generate-code interrupt)
+  (module (%generate-code flagged-interrupt)
 
     (define (%generate-code cogen-core-primitive-interrupt-handler-function-call
 			    cogen-core-primitive-standalone-function-call
@@ -638,11 +638,11 @@
       ;;
       ;;First we compose the integration body, then:
       ;;
-      ;;* If the body contains at least one "(interrupt)" call: we wrap the body into
-      ;;  a SHORTCUT.
+      ;;* If the  body contains at least one "(flagged-interrupt)"  call: we wrap the
+      ;;  body into a SHORTCUT.
       ;;
-      ;;*  If the  body contains  *no*  "(interrupt)" calls:  we return  the body  as
-      ;;  standalone struct.
+      ;;* If the  body contains *no* "(flagged-interrupt)" calls: we  return the body
+      ;;  as standalone struct.
       ;;
       (define prim
 	;;PRIM is a struct of type PRIMITIVE-HANDLER.
@@ -678,11 +678,11 @@
 			(compiler-internal-error '%record-use-of-interrupt-in-body
 			  "uninitialized parameter"))))
 
-    (define (interrupt)
+    (define (flagged-interrupt)
       ;;Record that this body has requested the presence of an interrupt handler.
       ((%record-use-of-interrupt-in-body))
       ;;Return the "(asmcall interrupt)".
-      (asm 'interrupt))
+      (interrupt))
 
     #| end of module: %GENERATE-CODE |# )
 
