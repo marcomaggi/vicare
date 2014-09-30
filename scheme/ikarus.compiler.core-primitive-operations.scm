@@ -575,18 +575,28 @@
    ((P) (K #t))
    ((E) (nop)))
 
- (define-core-primitive-operation void safe
-   ;;This  is the  definition  of  the Scheme  function  VOID.  It  just
-   ;;returns the void object, which is true.
-   ;;
-   ((V) (K void-object))
-   ((P) (K #t))
-   ((E) (nop)))
-
  (define-core-primitive-operation nop unsafe
    ;;This is the definition of the primitive operation NOP.
    ;;
    ((E) (nop)))
+
+ (define-core-primitive-operation void safe
+   ;;This is the  definition of the Scheme  function VOID.  It just  returns the void
+   ;;object, which is true.
+   ;;
+   ((V) (KN VOID-OBJECT))
+   ((P) (K #t))
+   ((E) (nop)))
+
+ (define-core-primitive-operation void-object? safe
+   ((P x) (asm '= (V-simple-operand x) (KN VOID-OBJECT)))
+   ((E x) (nop)))
+
+ (define-core-primitive-operation bwp-object? safe
+   ;;This is the implementation of the Scheme function BWP-OBJECT?.
+   ;;
+   ((P x) (asm '= (V-simple-operand x) (K BWP-OBJECT)))
+   ((E x) (nop)))
 
  (define-core-primitive-operation neq? unsafe
    ;;This is the implementation of the Scheme function NEQ?.
@@ -673,12 +683,6 @@
    ;;
    ((P x)
     (tag-test (V-simple-operand x) bool-mask bool-tag))
-   ((E x) (nop)))
-
- (define-core-primitive-operation bwp-object? safe
-   ;;This is the implementation of the Scheme function BWP-OBJECT?.
-   ;;
-   ((P x) (asm '= (V-simple-operand x) (K BWP-OBJECT)))
    ((E x) (nop)))
 
  (define-core-primitive-operation $forward-ptr? unsafe
@@ -3711,7 +3715,7 @@
 			       ((V stru v)
 				(multiple-forms-sequence
 				 (mem-assign v (V-simple-operand stru) ?off)
-				 (K void-object)))
+				 (KN VOID-OBJECT)))
 			       ((E stru v)
 				(mem-assign v (V-simple-operand stru) ?off))
 			       ((P stru v)
@@ -3747,7 +3751,7 @@
    ((V stru idx v)
     (multiple-forms-sequence
      (cogen-effect-$vector-set! stru idx v)
-     (K void-object)))
+     (KN VOID-OBJECT)))
    ((E stru idx v)
     (cogen-effect-$vector-set! stru idx v))
    ((P stru idx v)

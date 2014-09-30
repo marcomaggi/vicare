@@ -48,7 +48,7 @@
 (define-constant nil			#x4F)
 (define-constant eof			#x5F)
 (define-constant unbound		#x6F)
-(define-constant void-object		#x7F)
+(define-constant VOID-OBJECT		#x7F)
 (define-constant BWP-OBJECT		#x8F)
 
 

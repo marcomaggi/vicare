@@ -807,12 +807,12 @@
 	    ;;
 	    ;;   (seq
 	    ;;     (for-effects-asmcall)
-	    ;;     (KN void-object))
+	    ;;     (KN VOID-OBJECT))
 	    ;;
 	    ;;and we handle special cases.
 	    (let ((e (apply E-handler simple-rand*)))
 	      (define (%doit-with-adapter)
-		(make-seq e (KN void-object)))
+		(make-seq e (KN VOID-OBJECT)))
 	      (struct-case e
 		((asmcall op)
 		 (if (eq? op 'interrupt)
@@ -1634,12 +1634,6 @@
 	  ((boolean? c)
 	   (make-constant (if c bool-t bool-f)))
 
-	  ((eq? c (void))
-	   (make-constant void-object))
-
-	  ((bwp-object? c)
-	   (make-constant BWP-OBJECT))
-
 	  ((char? c)
 	   ;;Here  we are  interested  in Scheme  characters  as standalone  objects:
 	   ;;machine words whose least significant bits  are set to the character tag
@@ -1651,6 +1645,12 @@
 
 	  ((null? c)
 	   (make-constant nil))
+
+	  ((void-object? c)
+	   (make-constant VOID-OBJECT))
+
+	  ((bwp-object? c)
+	   (make-constant BWP-OBJECT))
 
 	  ((eof-object? c)
 	   (make-constant eof))

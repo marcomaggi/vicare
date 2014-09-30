@@ -2443,6 +2443,7 @@
     (string-upcase				v r uc)
     (load					v $language)
     (void					v $language $boot)
+    (void-object?				v $language)
     (gensym					v $language $boot)
     (symbol-value				v $language $boot)
     (set-symbol-value!				v $language $boot)

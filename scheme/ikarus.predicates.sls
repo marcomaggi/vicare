@@ -23,7 +23,7 @@
     inexact?		exact-integer?
     finite?		infinite?	nan?
     real-valued?	rational-valued? integer-valued?
-    eof-object?		bwp-object?
+    eof-object?		bwp-object?	void-object?
     boolean?		char?		vector?
     bytevector?		string?		procedure?
     null?		pair?		symbol?
@@ -32,25 +32,24 @@
     immediate?		code?
     transcoder?		weak-pair?
     not			bwp-object)
-  (import
-    (except (vicare)
-	    fixnum?		flonum?		bignum?
-	    ratnum?		compnum?	cflonum?
-            number?		complex?	real?
-            rational?		integer?	exact?
-	    inexact?		exact-integer?
-	    finite?		infinite?	nan?
-	    real-valued?	rational-valued? integer-valued?
-	    eof-object?		bwp-object?
-	    boolean?		char?		vector?
-	    bytevector?		string?		procedure?
-            null?		pair?		symbol?
-	    eq?			eqv?
-	    boolean=?		symbol=?
-            immediate?		code?
-            transcoder?		weak-pair?
-	    not			bwp-object
-	    always-true		always-false)
+  (import (except (vicare)
+		  fixnum?		flonum?			bignum?
+		  ratnum?		compnum?		cflonum?
+		  number?		complex?		real?
+		  rational?		integer?		exact?
+		  inexact?		exact-integer?
+		  finite?		infinite?		nan?
+		  real-valued?		rational-valued?	integer-valued?
+		  eof-object?		bwp-object?		void-object?
+		  boolean?		char?			vector?
+		  bytevector?		string?			procedure?
+		  null?			pair?			symbol?
+		  eq?			eqv?
+		  boolean=?		symbol=?
+		  immediate?		code?
+		  transcoder?		weak-pair?
+		  not			bwp-object
+		  always-true		always-false)
     (vicare system $fx)
     (vicare system $flonums)
     (vicare system $compnums)
@@ -64,13 +63,16 @@
     ;;These are the ones implemented as primitive operations.
     (rename (only (vicare)
 		  fixnum? flonum? bignum? ratnum? compnum? cflonum?
-                  eof-object? bwp-object?
+                  eof-object? bwp-object? #;void-object?
 		  immediate? boolean? char? vector? string?
                   bytevector? procedure? null? pair? symbol? code? eq?
                   transcoder?)
             (bignum?		sys:bignum?)
             (boolean?		sys:boolean?)
             (bwp-object?	sys:bwp-object?)
+	    ;;FIXME To be uncommented at the next boot image rotation.  (Marco Maggi;
+	    ;;Tue Sep 30, 2014)
+	    #;(void-object?	sys:void-object?)
             (bytevector?	sys:bytevector?)
             (cflonum?		sys:cflonum?)
             (char?		sys:char?)
@@ -262,6 +264,9 @@
 
 (define (boolean?    x) (sys:boolean?    x))
 (define (bwp-object? x) (sys:bwp-object? x))
+(define (void-object? x)
+  #;(sys:void-object? x)
+  (eq? x (void)))
 (define (bytevector? x) (sys:bytevector? x))
 (define (char?       x) (sys:char?       x))
 (define (code?       x) (sys:code?       x))

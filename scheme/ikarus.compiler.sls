@@ -498,6 +498,13 @@
 
 ;;; --------------------------------------------------------------------
 
+;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Tue  Sep 30,
+;;2014)
+(define (void-object? x)
+  (eq? x (void)))
+
+;;; --------------------------------------------------------------------
+
 (define (remq1 x ls)
   ;;Scan the list  LS and remove only the  first instance of object X,  using EQ?  as
   ;;comparison function; return the resulting list which may share its tail with LS.
