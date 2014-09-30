@@ -26,35 +26,39 @@
   ;;*  All the  FUNCALL  struct  instances in  the  input  expression representing  a
   ;;function call:
   ;;
-  ;;   (?operator ?arg-expr ...)
+  ;;   (funcall (asmcall mref
+  ;;                    (constant (object ?loc))
+  ;;                    (constant ?off-symbol-record-proc))
+  ;;            (?rand ...))
+  ;;
+  ;;are converted to:
+  ;;
+  ;;   (bind ((tmp ?rand) ...)
+  ;;     (funcall (asmcall mref
+  ;;                      (constant (object ?loc))
+  ;;                      (constant ?off-symbol-record-proc))
+  ;;              (tmp ...)))
+  ;;
+  ;;so that the order of evaluation of the operands' expressions is decided.
+  ;;
+  ;;*  All the  ASMCALL  struct  instances in  the  input  expression representing  a
+  ;;high-level Assembly instruction:
+  ;;
+  ;;   (asmcall ?instr (?rand ...))
   ;;
   ;;are converted to the equivalent of:
   ;;
-  ;;   (let* ((arg ?arg-expr)
-  ;;          ...)
-  ;;     (?operator arg ...))
+  ;;   (bind ((tmp ?rand) ...)
+  ;;     (asmcall ?instr (tmp ...)))
   ;;
-  ;;so that the order of evaluation of the argument's expressions is decided.
-  ;;
-  ;;*  All the  ASMCALL  struct instances  in the  input  expression representing  a
-  ;;primitive operation call:
-  ;;
-  ;;   (?operator ?arg-expr ...)
-  ;;
-  ;;are converted to the equivalent of:
-  ;;
-  ;;   (let* ((arg ?arg-expr)
-  ;;          ...)
-  ;;     (?operator arg ...))
-  ;;
-  ;;so that the order of evaluation of the argument's expressions is decided.
+  ;;so that the order of evaluation of the operands' expressions is decided.
   ;;
   ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
   ;;recordized code must be composed by struct instances of the following types:
   ;;
   ;;   bind		conditional		constant
   ;;   forcall		funcall			jmpcall
-  ;;   known		asmcall		seq
+  ;;   known		asmcall			seq
   ;;   shortcut		var
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
@@ -75,13 +79,11 @@
 (define locals
   (make-parameter #f))
 
-(define-inline (%locals-cons A)
-  (locals (cons A (locals))))
+(define-syntax-rule (%locals-cons ?A)
+  (locals (cons ?A (locals))))
 
-(define-syntax %locals-cons*
-  (syntax-rules ()
-    ((_ A0 A ...)
-     (locals (cons* A0 A ... (locals))))))
+(define-syntax-rule (%locals-cons* ?A0 ?A ...)
+  (locals (cons* ?A0 ?A ... (locals))))
 
 ;;; --------------------------------------------------------------------
 
@@ -393,8 +395,8 @@
 
   #| end of module: Program |# )
 
-;;; --------------------------------------------------------------------
-;;; helpers
+
+;;;; helpers
 
 (define (S* x* kont)
   (if (pair? x*)
@@ -427,7 +429,22 @@
 	   (else
 	    (error __module_who__ "invalid S" x))))))
 
-;;; --------------------------------------------------------------------
+(define (assign* lhs* rhs* tail-body)
+  ;;Given a list of left-hand  sides and right-hand sides for assembly
+  ;;assignments,  build  and  return a  struct  instance  representing
+  ;;recordized code for this pseudo-code:
+  ;;
+  ;;   (begin
+  ;;     (move ?lhs ?rhs)
+  ;;     ...
+  ;;     . ?tail-body)
+  ;;
+  (if (pair? lhs*)
+      (make-seq (%move-dst<-src (car lhs*) (car rhs*))
+		(assign*        (cdr lhs*) (cdr rhs*) tail-body))
+    tail-body))
+
+
 
 (define (%do-bind lhs* rhs* body)
   (if (pair? lhs*)
@@ -446,53 +463,7 @@
 		(%do-bind-frmt* (cdr nf*) (cdr v*) ac))
     ac))
 
-(module (handle-nontail-call)
-
-  (define (handle-nontail-call rator rands value-dest call-targ)
-    (let-values (((reg-locs reg-args frm-args)
-		  (%nontail-locations PARAMETER-REGISTERS (cons rator rands))))
-      (let ((regt* (map (lambda (x)
-			  (make-unique-var 'rt))
-		     reg-args))
-	    (frmt* (map (lambda (x)
-			  (make-nfv 'unset-conflicts #f #f #f #f))
-		     frm-args)))
-	(let* ((call (make-ntcall call-targ value-dest
-				  (cons* ARGC-REGISTER pcr esp apr
-					 (append reg-locs frmt*))
-				  #f #f))
-	       (body (make-nframe
-		      frmt* #f
-		      (%do-bind-frmt*
-		       frmt* frm-args
-		       (%do-bind (cdr regt*) (cdr reg-args)
-				 ;;evaluate cpt last
-				 (%do-bind (list (car regt*)) (list (car reg-args))
-					   (assign*
-					    reg-locs regt*
-					    (make-seq
-					     (%move-dst<-src ARGC-REGISTER
-							     (make-constant
-							      (argc-convention (length rands))))
-					     call))))))))
-	  (if value-dest
-	      (make-seq body (%move-dst<-src value-dest RETURN-VALUE-REGISTER))
-	    body)))))
-
-  (define (%nontail-locations regs args)
-    (cond ((null? args)
-	   (values '() '() '()))
-	  ((null? regs)
-	   (values '() '() args))
-	  (else
-	   (let-values (((r* rl* f*)
-			 (%nontail-locations (cdr regs) (cdr args))))
-	     (values (cons (car regs) r*)
-		     (cons (car args) rl*)
-		     f*)))))
-
-  #| end of module: handle-nontail-call |# )
-
+
 (module (alloc-check alloc-check/no-hooks)
 
   (define (alloc-check size)
@@ -534,10 +505,9 @@
 		      apr))
 	      size))))
 
-  #| end of module: alloc-check |# )
+  #| end of module: ALLOC-CHECK, ALLOC-CHECK/NO-HOOKS |# )
 
-;;; --------------------------------------------------------------------
-
+
 (define (V d x)
   ;;Generate assembly instructions  to compute a value from struct  X and store the
   ;;result in destination D.
@@ -679,25 +649,7 @@
 	 (%move-dst<-src d x)
        (error __module_who__ "invalid value" (unparse-recordized-code x))))))
 
-;;; --------------------------------------------------------------------
-
-(define (assign* lhs* rhs* tail-body)
-  ;;Given a list of left-hand  sides and right-hand sides for assembly
-  ;;assignments,  build  and  return a  struct  instance  representing
-  ;;recordized code for this pseudo-code:
-  ;;
-  ;;   (begin
-  ;;     (move ?lhs ?rhs)
-  ;;     ...
-  ;;     . ?tail-body)
-  ;;
-  (if (pair? lhs*)
-      (make-seq (%move-dst<-src (car lhs*) (car rhs*))
-		(assign*        (cdr lhs*) (cdr rhs*) tail-body))
-    tail-body))
-
-;;; --------------------------------------------------------------------
-
+
 (define (E x)
   (struct-case x
     ((seq e0 e1)
@@ -740,8 +692,7 @@
     (else
      (error __module_who__ "invalid effect" x))))
 
-;;; --------------------------------------------------------------------
-
+
 (module (P)
 
   (define (P x)
@@ -764,7 +715,7 @@
 		  (constant? b))
 	     (let ((t (make-unique-var 'tmp)))
 	       (P (make-bind (list t) (list a)
-		    (make-asmcall op (list t b)))))
+			     (make-asmcall op (list t b)))))
 	   (Mem a (lambda (a)
 		    (Mem b (lambda (b)
 			     (make-asm-instr op a b))))))))
@@ -787,8 +738,7 @@
 
   #| end of module: P |# )
 
-;;; --------------------------------------------------------------------
-
+
 (module (%handle-tail-call)
 
   (define (%handle-tail-call target rator rands)
@@ -856,12 +806,60 @@
 	      (%one-fvar-for-each-arg (fxadd1 i) (cdr args)))
       '()))
 
-  #| end of module: %handle-tail-call |# )
+  #| end of module: %HANDLE-TAIL-CALL |# )
+
+
+(module (handle-nontail-call)
+
+  (define (handle-nontail-call rator rands value-dest call-targ)
+    (let-values (((reg-locs reg-args frm-args)
+		  (%nontail-locations PARAMETER-REGISTERS (cons rator rands))))
+      (let ((regt* (map (lambda (x)
+			  (make-unique-var 'rt))
+		     reg-args))
+	    (frmt* (map (lambda (x)
+			  (make-nfv 'unset-conflicts #f #f #f #f))
+		     frm-args)))
+	(let* ((call (make-ntcall call-targ value-dest
+				  (cons* ARGC-REGISTER pcr esp apr
+					 (append reg-locs frmt*))
+				  #f #f))
+	       (body (make-nframe
+		      frmt* #f
+		      (%do-bind-frmt*
+		       frmt* frm-args
+		       (%do-bind (cdr regt*) (cdr reg-args)
+				 ;;evaluate cpt last
+				 (%do-bind (list (car regt*)) (list (car reg-args))
+					   (assign*
+					    reg-locs regt*
+					    (make-seq
+					     (%move-dst<-src ARGC-REGISTER
+							     (make-constant
+							      (argc-convention (length rands))))
+					     call))))))))
+	  (if value-dest
+	      (make-seq body (%move-dst<-src value-dest RETURN-VALUE-REGISTER))
+	    body)))))
+
+  (define (%nontail-locations regs args)
+    (cond ((null? args)
+	   (values '() '() '()))
+	  ((null? regs)
+	   (values '() '() args))
+	  (else
+	   (let-values (((r* rl* f*)
+			 (%nontail-locations (cdr regs) (cdr args))))
+	     (values (cons (car regs) r*)
+		     (cons (car args) rl*)
+		     f*)))))
+
+  #| end of module: HANDLE-NONTAIL-CALL |# )
 
 
 ;;;; done
 
-#| end of module: impose-calling-convention/evaluation-order |# )
+#| end of module: IMPOSE-CALLING-CONVENTION/EVALUATION-ORDER |# )
 
 ;;; end of file
 ;; Local Variables:

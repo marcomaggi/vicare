@@ -1719,10 +1719,7 @@
 		   ;;do we  call RESET-SYMBOL-PROC!   here, at  compile-time?  (Marco
 		   ;;Maggi; Mon May 19, 2014)
 		   (reset-symbol-proc! loc)
-		   (asm 'mref
-			(KN loc)
-			#;(constant->native-constant-representation (make-constant loc))
-			(KN off-symbol-record-proc))))
+		   (asm 'mref (KN loc) (KN off-symbol-record-proc))))
 	     (else
 	      (F-nonproc rator check?))))
 
