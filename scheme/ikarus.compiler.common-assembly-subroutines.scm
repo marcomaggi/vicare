@@ -179,7 +179,7 @@
     ;;Load in EBX the word at offset EAX from the frame pointer.
     (movl (mem fpr eax) ebx)
     ;;If EBX holds the Scheme null object ...
-    (cmpl (int nil) ebx)
+    (cmpl (int NULL-OBJECT) ebx)
     ;;... there are no further arguments to push on the stack.
     (je (label L_apply_done))
 
@@ -194,7 +194,7 @@
     ;;argument, if any.
     (subl (int wordsize) eax)
     ;;If EBX does not hold the Scheme null object ...
-    (cmpl (int nil) ebx)
+    (cmpl (int NULL-OBJECT) ebx)
     ;;... there are more function call arguments to push on the stack.
     (jne (label L_apply_loop))
 

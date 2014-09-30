@@ -347,8 +347,8 @@
    ;;There are two TAG-TEST  calls each of which will be  transformed into a sequence
    ;;of Assembly instructions terminating with a  jump; it means a system of Assembly
    ;;labels  must be  generated to  handle this  conditional.  The  alternate of  the
-   ;;CONDITIONAL is a  constant #f, not a  native constant BOOL-F; this  case will be
-   ;;recognised and specially handled by a subsequent compiler pass.
+   ;;CONDITIONAL is a constant #f, not a native constant BOOL-FALSE-OBJECT; this case
+   ;;will be recognised and specially handled by a subsequent compiler pass.
    ;;
    (make-conditional (tag-test x primary-mask primary-tag)
        (tag-test (asm 'mref x (KN (fx- primary-tag))) secondary-mask secondary-tag)
@@ -639,33 +639,33 @@
  (define-core-primitive-operation null? safe
    ;;This is the implementation of the Scheme function NULL?.
    ;;
-   ((P x) (asm '= (V-simple-operand x) (K nil)))
+   ((P x) (asm '= (V-simple-operand x) (KN NULL-OBJECT)))
    ((E x) (nop)))
 
  (define-core-primitive-operation not safe
    ;;This is the implementation of the Scheme function NOT.
    ;;
-   ((P x) (asm '= (V-simple-operand x) (K bool-f)))
+   ((P x) (asm '= (V-simple-operand x) (KN BOOL-FALSE-OBJECT)))
    ((E x) (nop)))
 
  (define-core-primitive-operation eof-object safe
    ;;This is the implementation of the Scheme function EOF-OBJECT.
    ;;
-   ((V) (K eof))
+   ((V) (KN EOF-OBJECT))
    ((P) (K #t))
    ((E) (nop)))
 
  (define-core-primitive-operation eof-object? safe
    ;;This is the implementation of the Scheme function EOF-OBJECT?.
    ;;
-   ((P x) (asm '= (V-simple-operand x) (K eof)))
+   ((P x) (asm '= (V-simple-operand x) (KN EOF-OBJECT)))
    ((E x) (nop)))
 
  (define-core-primitive-operation $unbound-object? unsafe
    ;;This   is   the   implementation   of   the   primitive   operation
    ;;$UNBOUND-OBJECT?.
    ;;
-   ((P x) (asm '= (V-simple-operand x) (K unbound)))
+   ((P x) (asm '= (V-simple-operand x) (KN UNBOUND-OBJECT)))
    ((E x) (nop)))
 
  (define-core-primitive-operation immediate? safe
@@ -762,7 +762,7 @@
 	   (with-tmp ((x (V-simple-operand x)))
 	     (let loop ((ls ls))
 	       (cond ((null? ls)
-		      (K bool-f))
+		      (KN BOOL-FALSE-OBJECT))
 		     (else
 		      (make-conditional
 			  (asm '= x (V-simple-operand (K (car ls))))
@@ -1088,7 +1088,7 @@
 
  (define-core-primitive-operation list safe
    ((V)		;this is the case of: (list)
-    (K nil))
+    (KN NULL-OBJECT))
    ((V . arg*)	;this is the case of: (list 1 2 3)
     (let ((len   (length arg*))	;number of pairs
 	  (arg*^ (map V-simple-operand arg*)))
@@ -1098,10 +1098,10 @@
 				  (K pair-tag))))
 	;;Store the first value in the car of the first pair.
 	(asm 'mset first-pair (KN off-car) (car arg*^))
-	;;Store nil in the cdr of the last pair.
+	;;Store null in the cdr of the last pair.
 	(asm 'mset first-pair
 	     (K (+ off-cdr (* (sub1 len) pair-size)))
-	     (K nil))
+	     (KN NULL-OBJECT))
 	(let loop ((arg*^  (cdr arg*^))
 		   (offset pair-size)) ;offset in bytes of the next pair
 	  (if (pair? arg*^)
@@ -1632,9 +1632,9 @@
       (asm 'mset sym (K off-symbol-record-tag)     (K symbol-tag))
       (asm 'mset sym (K off-symbol-record-string)  (V-simple-operand str))
       (asm 'mset sym (K off-symbol-record-ustring) (K 0))
-      (asm 'mset sym (K off-symbol-record-value)   (K unbound))
-      (asm 'mset sym (K off-symbol-record-proc)    (K unbound))
-      (asm 'mset sym (K off-symbol-record-plist)   (K nil))
+      (asm 'mset sym (K off-symbol-record-value)   (KN UNBOUND-OBJECT))
+      (asm 'mset sym (K off-symbol-record-proc)    (KN UNBOUND-OBJECT))
+      (asm 'mset sym (K off-symbol-record-plist)   (KN NULL-OBJECT))
       sym))
    ((P str)
     (K #t))

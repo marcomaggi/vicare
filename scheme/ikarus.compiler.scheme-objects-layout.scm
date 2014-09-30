@@ -39,17 +39,22 @@
 
 ;;;; built in Scheme values
 
-(define-constant bool-f			#x2F)	;the constant #f
-(define-constant bool-t			#x3F)	;the constant #t
+(define-constant NULL-OBJECT		#x4F)	;the constant ()
+(define-constant EOF-OBJECT		#x5F)	;the constant (eof-object)
+(define-constant UNBOUND-OBJECT		#x6F)	;the constant (unbound-object)
+(define-constant VOID-OBJECT		#x7F)	;the constant (void)
+(define-constant BWP-OBJECT		#x8F)	;the constant (bwp-object)
+
+
+;;;; boolean objects
+
+(define-constant BOOL-FALSE-OBJECT	#x2F)	;the constant #f
+(define-constant BOOL-TRUE-OBJECT	#x3F)	;the constant #t
 (define-constant bool-mask		#xEF)
 (define-constant bool-tag		#x2F)
-(define-constant bool-shift		4)
-
-(define-constant nil			#x4F)
-(define-constant eof			#x5F)
-(define-constant unbound		#x6F)
-(define-constant VOID-OBJECT		#x7F)
-(define-constant BWP-OBJECT		#x8F)
+;;Commented out because unused.
+;;
+;;(define-constant bool-shift		4)
 
 
 ;;;; vectors

@@ -728,12 +728,12 @@
 	    ;;implementation handler  exists; we  generate a "for  predicate" handler
 	    ;;as:
 	    ;;
-	    ;;   (asmcall != (for-value-asmcall) (KN bool-f))
+	    ;;   (asmcall != (for-value-asmcall) (KN BOOL-FALSE-OBJECT))
 	    ;;
 	    ;;and we handle special cases.
 	    (let ((e (apply V-handler simple-rand*)))
 	      (define (%doit-with-adapter)
-		(asm '!= e (KN bool-f)))
+		(asm '!= e (KN BOOL-FALSE-OBJECT)))
 	      (struct-case e
 		((asmcall op)
 		 (if (eq? op 'interrupt)
@@ -743,7 +743,7 @@
 		 ;;The "for  predicate" handler can  return a CONSTANT holding  #t or
 		 ;;#f; we  convert the constant  returned by the "for  value" handler
 		 ;;accordingly.
-		 (if (eq? e.const bool-f)
+		 (if (eq? e.const BOOL-FALSE-OBJECT)
 		     (K #f)
 		   (K #t)))
 		(else
@@ -779,13 +779,13 @@
 	    ;;implementation handler exists; we generate a "for value" handler as:
 	    ;;
 	    ;;   (condition (for-pred-asmcall)
-	    ;;       (KN bool-t)
-	    ;;     (KN bool-f))
+	    ;;       (KN BOOL-TRUE-OBJECT)
+	    ;;     (KN BOOL-FALSE-OBJECT))
 	    ;;
 	    ;;and we handle special cases.
 	    (let ((e (apply P-handler simple-rand*)))
 	      (define (%doit-with-adapter)
-		(make-conditional e (KN bool-t) (KN bool-f)))
+		(make-conditional e (KN BOOL-TRUE-OBJECT) (KN BOOL-FALSE-OBJECT)))
 	      (struct-case e
 		((asmcall op)
 		 (if (eq? op 'interrupt)
@@ -796,8 +796,8 @@
 		 ;;boolean;  so   we  convert   it  into  the   corresponding  native
 		 ;;representation of a boolean.
 		 (if e.const
-		     (KN bool-t)
-		   (KN bool-f)))
+		     (KN BOOL-TRUE-OBJECT)
+		   (KN BOOL-FALSE-OBJECT)))
 		(else
 		 (%doit-with-adapter)))))
 	   ((E)
@@ -1003,11 +1003,11 @@
 	((P)
 	 (if (%the-body-is-just-an-interrupt-asmcall? body)
 	     (asm '!= (cogen-core-primitive-standalone-function-call primitive-symbol-name filtered-simple-rand*)
-		    (K bool-f))
+		    (K BOOL-FALSE-OBJECT))
 	   (make-shortcut
 	       body
 	     (asm '!= (cogen-core-primitive-interrupt-handler-function-call primitive-symbol-name filtered-simple-rand*)
-		    (K bool-f)))))
+		    (K BOOL-FALSE-OBJECT)))))
 
 	(else
 	 (compiler-internal-error __module_who__ "invalid context" ctxt))))
@@ -1526,16 +1526,16 @@
 	(cogen-primop            op 'P rand*))))
 
     ((var)
-     (asm '!= (V x) (KN bool-f)))
+     (asm '!= (V x) (KN BOOL-FALSE-OBJECT)))
 
     ((funcall)
-     (asm '!= (V x) (KN bool-f)))
+     (asm '!= (V x) (KN BOOL-FALSE-OBJECT)))
 
     ((jmpcall)
-     (asm '!= (V x) (KN bool-f)))
+     (asm '!= (V x) (KN BOOL-FALSE-OBJECT)))
 
     ((forcall)
-     (asm '!= (V x) (KN bool-f)))
+     (asm '!= (V x) (KN BOOL-FALSE-OBJECT)))
 
     (else
      (compiler-internal-error __module_who__
@@ -1623,45 +1623,45 @@
   ;;The binary  representation is an  exact integer that  fits into a  single machine
   ;;word.
   ;;
-  (let ((c (constant-value x)))
-    (cond ((target-platform-fixnum? c)
+  (let ((x.const (constant-value x)))
+    (cond ((target-platform-fixnum? x.const)
 	   ;;Shifting as is done below is equivalent to:
 	   ;;
-	   ;;   (make-constant (* c fx-scale))
+	   ;;   (make-constant (* x.const fx-scale))
 	   ;;
-	   (make-constant (bitwise-arithmetic-shift-left c fx-shift)))
+	   (make-constant (bitwise-arithmetic-shift-left x.const fx-shift)))
 
-	  ((boolean? c)
-	   (make-constant (if c bool-t bool-f)))
+	  ((boolean? x.const)
+	   (make-constant (if x.const BOOL-TRUE-OBJECT BOOL-FALSE-OBJECT)))
 
-	  ((char? c)
+	  ((char? x.const)
 	   ;;Here  we are  interested  in Scheme  characters  as standalone  objects:
 	   ;;machine words whose least significant bits  are set to the character tag
 	   ;;and whose most significant bits are  set to the character's Unicode code
 	   ;;point.
 	   (make-constant (fxlogor char-tag
-				   (fxsll (char->integer c)
+				   (fxsll (char->integer x.const)
 					  char-shift))))
 
-	  ((null? c)
-	   (make-constant nil))
+	  ((null? x.const)
+	   (make-constant NULL-OBJECT))
 
-	  ((void-object? c)
+	  ((void-object? x.const)
 	   (make-constant VOID-OBJECT))
 
-	  ((bwp-object? c)
+	  ((bwp-object? x.const)
 	   (make-constant BWP-OBJECT))
 
-	  ((eof-object? c)
-	   (make-constant eof))
+	  ((eof-object? x.const)
+	   (make-constant EOF-OBJECT))
 
-	  ((object? c)
+	  ((object? x.const)
 	   (compiler-internal-error __who__
 	     "found recordised constant with double wrapping" (unparse-recordized-code x)))
 
 	  (else
 	   ;;Everything else will go in the relocation vector.
-	   (make-constant (make-object c))))))
+	   (make-constant (make-object x.const))))))
 
 
 (module (Function)

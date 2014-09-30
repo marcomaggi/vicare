@@ -321,8 +321,8 @@
      ;;   (define (the-func arg . rest) . ?body)
      ;;   (the-func 1)
      ;;
-     ;;the REST binding will be set to nil.
-     (movl (int nil) ebx)
+     ;;the REST binding will be set to NULL-OBJECT.
+     (movl (int NULL-OBJECT) ebx)
      (jmp DONE_LABEL)
 
      ;;Check that  there is enough  room on  the heap to  allocate the
@@ -424,14 +424,14 @@
      ;;        tail pair         head pair
      ;;   |.................|.................|
      ;;
-     ;;    fixnum 3    nil   fixnum 2 pair ref
+     ;;    fixnum 3   null   fixnum 2 pair ref
      ;;   |--------|--------|--------|--------| heap
      ;;       ^                          |
      ;;       |                          |
      ;;        --------------------------
      ;;
      LOOP_HEAD
-     (movl (int nil) ebx)
+     (movl (int NULL-OBJECT) ebx)
 
      CONTINUE_LABEL
      (movl ebx (mem disp-cdr apr))	   ;store the cdr
@@ -446,9 +446,8 @@
      (jle CONTINUE_LABEL)
 
      DONE_LABEL
-     ;;Store nil or the reference to the rest list on the stack, right
-     ;;below the  last mandatory argument (overwriting  the first rest
-     ;;argument).
+     ;;Store NULL-OBJECT or the reference to the  rest list on the stack, right below
+     ;;the last mandatory argument (overwriting the first rest argument).
      (movl ebx (mem properized-formals-argc fpr))
      accum))
 
