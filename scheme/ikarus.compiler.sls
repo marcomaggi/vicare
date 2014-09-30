@@ -1621,45 +1621,18 @@
 (define-struct foreign-label
   (label))
 
-(define-struct cp-var
-  (idx))
-
-(define-struct frame-var
-  (idx))
-
-(define-struct new-frame
-  (base-idx size body))
-
-(define-struct save-cp
-  (loc))
-
-(define-struct eval-cp
-  (check body))
-
-(define-struct return
-  (value))
-
-(define-struct call-cp
-  (call-convention
-   label
-   save-cp?
-   rp-convention
-   base-idx
-   arg-count
-   live-mask))
-
-(define-struct tailcall-cp
-  (convention
-   label
-   arg-count
-   ))
-
-(define-struct interrupt-call
-  (test handler))
-
+;;Structs of this type are introduced by  the compiler pass "core type inference" and
+;;consumed  by  the   compiler  passes  "introduce  unsafe   primrefs"  and  "specify
+;;representation".  These structs represents type informations of operands in FUNCALL
+;;structs and  derived "call" structs;  these informations  are consumed by  the core
+;;primitive operation's implementation handlers.
+;;
 (define-struct known
   (expr
+		;A struct representing an expression as recordised code.
    type
+		;A struct  of type CORE-TYPE-TAG representing  core type informations
+		;of EXPR.
    ))
 
 (define-struct shortcut
@@ -6261,9 +6234,6 @@
 		   ,(unparse-recordized-code conseq)
 		   ,(unparse-recordized-code altern)))
 
-    ((interrupt-call e0 e1)
-     `(interrupt-call ,(unparse-recordized-code e0) ,(unparse-recordized-code e1)))
-
     ((primopcall op arg*)
      `(,op . ,(map unparse-recordized-code arg*)))
 
@@ -6353,39 +6323,6 @@
     ((assign lhs rhs)
      `(set! ,(unparse-recordized-code lhs) ,(unparse-recordized-code rhs)))
 
-    ((return x)
-     `(return ,(unparse-recordized-code x)))
-
-    ((new-frame base-idx size body)
-     `(new-frame (base: ,base-idx)
-		 (size: ,size)
-		 ,(unparse-recordized-code body)))
-
-    ((frame-var idx)
-     (string->symbol (format "fv.~a" idx)))
-
-    ((cp-var idx)
-     (string->symbol (format "cp.~a" idx)))
-
-    ((save-cp expr)
-     `(save-cp ,(unparse-recordized-code expr)))
-
-    ((eval-cp check body)
-     `(eval-cp ,check ,(unparse-recordized-code body)))
-
-    ((call-cp call-convention label save-cp? rp-convention base-idx arg-count live-mask)
-     `(call-cp (conv:		,call-convention)
-	       (label:	,label)
-	       (rpconv:	,(if (symbol? rp-convention)
-			     rp-convention
-			   (unparse-recordized-code rp-convention)))
-	       (base-idx:	,base-idx)
-	       (arg-count:	,arg-count)
-	       (live-mask:	,live-mask)))
-
-    ((tailcall-cp convention label arg-count)
-     `(tailcall-cp ,convention ,label ,arg-count))
-
     ((foreign-label x)
      `(foreign-label ,x))
 
@@ -6396,7 +6333,8 @@
      'nfv)
 
     ((locals vars body)
-     `(locals ,(map unparse-recordized-code vars) ,(unparse-recordized-code body)))
+     `(locals ,(and vars (map unparse-recordized-code vars))
+	      ,(unparse-recordized-code body)))
 
     ((asm-instr op d s)
      `(asm ,op ,(unparse-recordized-code d) ,(unparse-recordized-code s)))
@@ -6453,19 +6391,20 @@
     ;;to use unsafe operations: LET'S KEEP IT SAFE!!!
     ;;
     (define (E x)
+      ;;;(debug-print 'there x)
       (struct-case x
-	((constant c)
-	 (cond ((symbol? c)
+	((constant x.const)
+	 (cond ((symbol? x.const)
 		;;Extract the pretty name; this is useful when C is a loc gensym.
-		`(constant ,(%pretty-symbol c)))
-	       ((object? c)
-		`(constant ,(E c)))
-	       ((closure-maker? c)
-		`(constant ,(E c)))
-	       ((code-loc? c)
-		`(constant ,(E c)))
+		`(constant ,(%pretty-symbol x.const)))
+	       ((object? x.const)
+		`(constant ,(E x.const)))
+	       ((closure-maker? x.const)
+		`(constant ,(E x.const)))
+	       ((code-loc? x.const)
+		`(constant ,(E x.const)))
 	       (else
-		`(constant ,c))))
+		`(constant ,x.const))))
 
 	((prelex)
 	 (Var x))
@@ -6509,9 +6448,6 @@
 
 	((jmpcall label op rand*)
 	 `(jmpcall ,(%pretty-symbol label) ,(E op) . ,(map E rand*)))
-
-	((foreign-label x)
-	 `(foreign-label ,x))
 
 	((seq e0 e1)
 	 (%do-seq e0 e1))
@@ -6563,11 +6499,49 @@
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
 
+	((locals vars body)
+	 `(locals ,(and vars
+			(map E vars))
+		  ,(E body)))
+
 	((object obj)
 	 `(object ,(cond ((symbol? obj)
 			  (%pretty-symbol obj))
 			 (else
 			  (E obj)))))
+
+	;; ------------------------------
+
+	((foreign-label x)
+	 `(foreign-label ,x))
+
+	((fvar idx)
+	 (string->symbol (format "fvar.~a" idx)))
+
+	((nfv idx)
+	 `(nfv ,idx))
+
+	((asm-instr op d s)
+	 `(asm-instr ,op ,(E d) ,(E s)))
+
+	((disp s0 s1)
+	 `(disp ,(E s0) ,(E s1)))
+
+	((nframe vars live body)
+	 `(nframe
+	   (vars: ,(if vars
+		       (map E vars)
+		     #f))
+	   (live: ,(if live
+		       (map E live)
+		     #f))
+	   ,(unparse-recordized-code body)))
+
+	((shortcut body handler)
+	 `(shortcut ,(E body) ,(E handler)))
+
+	((ntcall target valuw args mask size)
+	 `(ntcall ,target ,size))
 
 	(else x)))
 
@@ -6602,6 +6576,8 @@
 	       (%build-name x x.name))
 	      ((var x.name)
 	       (%build-name x x.name))
+	      ((fvar)
+	       (E x))
 	      (else x))))
 
       (define (%build-name x x.name)
@@ -6614,7 +6590,7 @@
 
       #| end of module: Var |# )
 
-   (define (%do-seq e0 e1)
+    (define (%do-seq e0 e1)
       (cons 'seq
 	    ;;Here we flatten nested SEQ instances into a unique output SEQ form.
 	    (let recur ((expr  e0)
@@ -6819,11 +6795,48 @@
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
 
+	((locals vars body)
+	 `(locals ,(and vars (map E vars))
+		  ,(E body)))
+
 	((object obj)
 	 `(object ,(cond ((symbol? obj)
 			  (%pretty-symbol obj))
 			 (else
 			  (E obj)))))
+
+	;; ------------------------------
+
+	((foreign-label x)
+	 `(foreign-label ,x))
+
+	((fvar idx)
+	 (string->symbol (format "fvar.~a" idx)))
+
+	((nfv idx)
+	 `(nfv ,idx))
+
+	((asm-instr op d s)
+	 `(asm-instr ,op ,(E d) ,(E s)))
+
+	((disp s0 s1)
+	 `(disp ,(E s0) ,(E s1)))
+
+	((nframe vars live body)
+	 `(nframe
+	   (vars: ,(if vars
+		       (map E vars)
+		     #f))
+	   (live: ,(if live
+		       (map E live)
+		     #f))
+	   ,(unparse-recordized-code body)))
+
+	((shortcut body handler)
+	 `(shortcut ,(E body) ,(E handler)))
+
+	((ntcall target valuw args mask size)
+	 `(ntcall ,target ,size))
 
 	(else x)))
 
@@ -6858,6 +6871,8 @@
 	       (%build-name x x.name))
 	      ((var x.name)
 	       (%build-name x x.name))
+	      ((fvar)
+	       (E x))
 	      (else x))))
 
       (define (%build-name x x.name)

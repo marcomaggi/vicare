@@ -3176,6 +3176,67 @@
   #t)
 
 
+(parametrise ((check-test-name			'impose-evaluation-order)
+	      (compiler.descriptive-labels	#t))
+
+;;;NOTE There is a separate file for testing this compiler pass!!!
+
+  (define (%impose-evaluation-order core-language-form)
+    (let* ((D (compiler.recordize core-language-form))
+	   (D (compiler.optimize-direct-calls D))
+	   (D (compiler.optimize-letrec D))
+	   ;;Source  optimisation  is  skipped  here  to  make  it  easier  to  write
+	   ;;meaningful code for debugging and inspection.
+	   #;(D (compiler.source-optimize D))
+	   (D (compiler.rewrite-references-and-assignments D))
+	   (D (compiler.sanitize-bindings D))
+	   (D (compiler.optimize-for-direct-jumps D))
+	   (D (compiler.insert-global-assignments D))
+	   (D (compiler.introduce-vars D))
+	   (D (compiler.introduce-closure-makers D))
+	   (D (compiler.optimize-combinator-calls/lift-clambdas D))
+	   (D (compiler.introduce-primitive-operation-calls D))
+	   (D (compiler.rewrite-freevar-references D))
+	   (D (compiler.insert-engine-checks D))
+	   (D (compiler.insert-stack-overflow-check D))
+	   (D (compiler.specify-representation D))
+	   (D (compiler.impose-calling-convention/evaluation-order D))
+	   (S (compiler.unparse-recordized-code/sexp D)))
+      S))
+
+  (define-syntax doit
+    (syntax-rules ()
+      ((_ ?core-language-form ?expected-result)
+       (check
+	   (%impose-evaluation-order (quasiquote ?core-language-form))
+	 => (quasiquote ?expected-result)))
+      ))
+
+  (define-syntax doit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result)
+       ;;We want the ?STANDARD-LANGUAGE-FORM to appear  in the output of CHECK when a
+       ;;test fails.
+       (doit ,(%expand (quasiquote ?standard-language-form))
+	     ?expected-result))
+      ))
+
+  (define-syntax libdoit*
+    (syntax-rules ()
+      ((_ ?standard-language-form ?expected-result/basic)
+       (doit ,(%expand-library (quasiquote ?standard-language-form)) ?expected-result/basic))
+      ))
+
+;;; --------------------------------------------------------------------
+;;; generic examples
+
+  (doit (let ((F (lambda (x) ((primitive +) '1 x))))
+	  (F '2))
+	#f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

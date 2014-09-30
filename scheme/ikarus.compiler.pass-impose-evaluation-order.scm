@@ -65,16 +65,14 @@
   ;;
   (import INTEL-ASSEMBLY-CODE-GENERATION)
 
+  (define-syntax __module_who__
+    (identifier-syntax 'impose-calling-convention/evaluation-order))
+
+  (define (impose-calling-convention/evaluation-order codes)
+    (V-codes codes))
+
 
 ;;;;
-
-(define-syntax __module_who__
-  (identifier-syntax 'impose-calling-convention/evaluation-order))
-
-(define (impose-calling-convention/evaluation-order x)
-  (Program x))
-
-;;; --------------------------------------------------------------------
 
 (define locals
   (make-parameter #f))
@@ -85,315 +83,318 @@
 (define-syntax-rule (%locals-cons* ?A0 ?A ...)
   (locals (cons* ?A0 ?A ... (locals))))
 
-;;; --------------------------------------------------------------------
+
+;;;;
 
-(module (Program)
+(module (V-codes)
 
-  (define (Program x)
+  (define (V-codes x)
     (struct-case x
       ((codes x.code* x.body)
-       (make-codes (map Clambda x.code*) (Main x.body)))))
+       (make-codes (map V-clambda x.code*) (V-body x.body)))))
 
-  (define (Clambda x)
+  (define (V-body x)
+    (parametrise ((locals '()))
+      (let ((y (V-tail x)))
+	(make-locals (locals) y))))
+
+  #| end of module: V-codes |# )
+
+
+(module (V-clambda)
+
+  (define (V-clambda x)
     (struct-case x
       ((clambda x.label x.case* x.cp x.freevar* x.name)
-       (make-clambda x.label (map ClambdaCase x.case*) x.cp x.freevar* x.name))))
+       (make-clambda x.label (map V-clambda-case x.case*) x.cp x.freevar* x.name))))
 
-  (module (ClambdaCase)
+  (define (V-clambda-case cas)
+    (struct-case cas
+      ((clambda-case cas.info cas.body)
+       (struct-case cas.info
+	 ;;Remember  that CAS.INFO.ARGS  is a  proper list  of VAR  structs with  the
+	 ;;format:
+	 ;;
+	 ;;   (?cpvar ?arg ...)
+	 ;;
+	 ;;where: ?CPVAR  represents a machine word  that must hold a  pointer to the
+	 ;;closure  object; each  ?ARG represents  a machine  word that  must hold  a
+	 ;;CLAMBDA clause's argument.
+	 ((case-info cas.info.label cas.info.args cas.info.proper)
+	  (receive (register-args register-names stack-args stack-locations)
+	      (%partition-formals PARAMETER-REGISTERS cas.info.args)
+	    ;;The arguments listed  in REGISTER-ARGS will be stored  in the registers
+	    ;;listed in REGISTER-NAMES.   The arguments listed in  STACK-ARGS will be
+	    ;;stored in the Scheme stack machine words listed in STACK-LOCATIONS.
+	    (parametrise ((locals register-args))
+	      ($for-each/stx set-var-loc! stack-args stack-locations)
+	      (let ((body (let recur ((args register-args)
+				      (locs register-names))
+			    (if (pair? args)
+				(make-seq
+				  (%move-dst<-src (car args) (car locs))
+				  (recur          (cdr args) (cdr locs)))
+			      (V-tail cas.body)))))
+		(make-clambda-case
+		 (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
+		 (make-locals (locals) body))))))))))
 
-    (define (ClambdaCase cas)
-      (struct-case cas
-	((clambda-case cas.info cas.body)
-	 (struct-case cas.info
-	   ;;Remember that CAS.INFO.ARGS  is a proper list of VAR  structs with the
-	   ;;format:
-	   ;;
-	   ;;   (?cpvar ?arg ...)
-	   ;;
-	   ;;where: ?CPVAR  represents a machine word  that must hold a  pointer to
-	   ;;the closure object; each ?ARG represents a machine word that must hold
-	   ;;a CLAMBDA clause's argument.
-	   ((case-info cas.info.label cas.info.args cas.info.proper)
-	    (receive (register-args register-names stack-args stack-locations)
-		(%partition-formals PARAMETER-REGISTERS cas.info.args)
-	      ;;The  arguments  listed  in  REGISTER-ARGS will  be  stored  in  the
-	      ;;registers  listed  in  REGISTER-NAMES.   The  arguments  listed  in
-	      ;;STACK-ARGS will be stored in  the Scheme stack machine words listed
-	      ;;in STACK-LOCATIONS.
-	      (parametrise ((locals register-args))
-		($for-each/stx set-var-loc! stack-args stack-locations)
-		(let ((body (let recur ((args register-args)
-					(locs register-names))
-			      (if (pair? args)
-				  (make-seq (%move-dst<-src (car args) (car locs))
-					    (recur          (cdr args) (cdr locs)))
-				(Tail cas.body)))))
-		  (make-clambda-case
-		   (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
-		   (make-locals (locals) body))))))))))
+  (define (%partition-formals available-registers formals)
+    ;;Recursive function.  Associate the formals of a CLAMBDA clause to available CPU
+    ;;registers.
+    ;;
+    ;;The  argument  AVAILABLE-REGISTERS  must  be a  list  of  symbols  representing
+    ;;available  CPU registers.   The  argument FORMALS  must be  a  list of  CLAMBDA
+    ;;clause's formals.
+    ;;
+    ;;Return 4 values:
+    ;;
+    ;;1.   The  list of  lex  gensyms  representing  formal arguments  associated  to
+    ;;   available registers.
+    ;;
+    ;;2.  The  list of  symbols  representing  register  names associated  to  formal
+    ;;   arguments.
+    ;;
+    ;;3. The  list of lex  gensyms representing  formal arguments associated  to FVAR
+    ;;   structures.
+    ;;
+    ;;4. The list of FVAR structures associated to formals.
+    ;;
+    (cond ((null? available-registers)
+	   ;;If  the number  of formals  is <=  of the  number of  registers: the
+	   ;;left-over  registers  are  associated   to  FVAR  structures,  which
+	   ;;represent Scheme stack machine words.
+	   (let ((stack-locations (%one-fvar-for-each-left-over-formal 1 formals)))
+	     (values '() '() formals stack-locations)))
+	  ((null? formals)
+	   ;;If there are more registers than formals: fine.
+	   (values '() '() '() '()))
+	  (else
+	   ;;If there is a register for the next formal: associate them.
+	   (receive (register-args register-names stack-args stack-locations)
+	       (%partition-formals (cdr available-registers) (cdr formals))
+	     (values (cons (car formals)             register-args)
+		     (cons (car available-registers) register-names)
+		     stack-args stack-locations)))))
 
-    (define (%partition-formals available-registers formals)
-      ;;Recursive function.  Associate the formals of a CLAMBDA clause to available
-      ;;CPU registers.
-      ;;
-      ;;AVAILABLE-REGISTERS must  be a list  of symbols representing  available CPU
-      ;;registers.
-      ;;
-      ;;FORMALS must be a list of CLAMBDA clause's formals.
-      ;;
-      ;;Return 4 values:
-      ;;
-      ;;1.  The  list of  lex gensyms representing  formal arguments  associated to
-      ;;   available registers.
-      ;;
-      ;;2. The  list of  symbols representing register  names associated  to formal
-      ;;   arguments.
-      ;;
-      ;;3. The list of lex gensyms representing formal arguments associated to FVAR
-      ;;   structures.
-      ;;
-      ;;4. The list of FVAR structures associated to formals.
-      ;;
-      (cond ((null? available-registers)
-	     ;;If  the number  of formals  is <=  of the  number of  registers: the
-	     ;;left-over  registers  are  associated   to  FVAR  structures,  which
-	     ;;represent Scheme stack machine words.
-	     (let ((stack-locations (%one-fvar-for-each-left-over-formal 1 formals)))
-	       (values '() '() formals stack-locations)))
-	    ((null? formals)
-	     ;;If there are more registers than formals: fine.
-	     (values '() '() '() '()))
-	    (else
-	     ;;If there is a register for the next formal: associate them.
-	     (receive (register-args register-names stack-args stack-locations)
-		 (%partition-formals (cdr available-registers) (cdr formals))
-	       (values (cons (car formals)             register-args)
-		       (cons (car available-registers) register-names)
-		       stack-args stack-locations)))))
+  (define (%one-fvar-for-each-left-over-formal i leftover-formal)
+    (if (pair? leftover-formal)
+	(cons (mkfvar i)
+	      (%one-fvar-for-each-left-over-formal (fxadd1 i) (cdr leftover-formal)))
+      '()))
 
-    (define (%one-fvar-for-each-left-over-formal i leftover-formal)
-      (if (pair? leftover-formal)
-	  (cons (mkfvar i)
-		(%one-fvar-for-each-left-over-formal (fxadd1 i) (cdr leftover-formal)))
-	'()))
+  #| end of module: V-clambda |# )
 
-    #| end of module: ClambdaCase |# )
+
+(module (V-tail)
 
-  (define (Main x)
-    (parametrise ((locals '()))
-      (let ((x (Tail x)))
-	(make-locals (locals) x))))
+  (define (V-tail x)
+    (struct-case x
 
-  (module (Tail)
+      ((constant)
+       (VT x))
 
-    (define (Tail x)
-      (struct-case x
+      ((var)
+       (VT x))
 
-	((constant)
-	 (VT x))
+      ((asmcall op rands)
+       (case op
+	 ((call-with-underflow-handler)
+	  ;;This    primitive    is    used   by    the    primitive    operation
+	  ;;$SEAL-FRAME-AND-CALL  to implement  the heart  of CALL/CC  (call with
+	  ;;current  continuation) and  CALL/CF (call  with current  frame), file
+	  ;;"ikarus.control.sls".   Let's super  simplify  and  comment the  code
+	  ;;starting with  the call to  %PRIMITIVE-CALL/CF which is the  heart of
+	  ;;both CALL/CC and CALL/CF.
+	  ;;
+	  ;;Remember that:
+	  ;;
+	  ;;* FPR stands for Frame Pointer Register;
+	  ;;
+	  ;;*  PCR stands  for Process  Control  Register and  it references  the
+	  ;;structure PCB defined at the C language level;
+	  ;;
+	  ;;*  CPR stands  for Closure  Pointer Register  and it  must contain  a
+	  ;;reference to the closure object being executed.
+	  ;;
+	  ;;* ARGC-REGISTER stands for Argument Count Register.
+	  ;;
+	  ;;When arriving here  the scenario of the Scheme stack  is the one left
+	  ;;by $SEAL-FRAME-AND-CALL:
+	  ;;
+	  ;;         high memory
+	  ;;   |                      |
+	  ;;   |----------------------|
+	  ;;   | ik_underflow_handler |
+	  ;;   |----------------------|                           --
+	  ;;     ... other frames ...                             .
+	  ;;   |----------------------|                           .
+	  ;;   |      local value     |                           . freezed
+	  ;;   |----------------------|                           . frames
+	  ;;   |      local value     |                           .
+	  ;;   |----------------------|                           .
+	  ;;   |     return address   | <- FPR = pcb->frame_base  .
+	  ;;   |----------------------|                           --
+	  ;;   |         func         | -> closure object
+	  ;;   |----------------------|
+	  ;;             ...
+	  ;;   |----------------------|
+	  ;;   |      free word       | <- pcb->stack_base
+	  ;;   |----------------------|
+	  ;;   |                      |
+	  ;;          low memory
+	  ;;
+	  ;;ARGC-REGISTER contains the encoded  number of arguments, counting the
+	  ;;single  argument FUNC  to %PRIMITIVE-CALL/CF.   The reference  to the
+	  ;;just created  continuation object is  in some CPU register.   The raw
+	  ;;memory pointer UNDERFLOW-HANDLER is in some CPU register.
+	  ;;
+	  ;;There are 3 operands in RANDS:
+	  ;;
+	  ;;*  A representation  of  the CPU  register  containing the  underflow
+	  ;;handler:  a   raw  memory  address   equal  to  the   assembly  label
+	  ;;"ik_underflow_handler".
+	  ;;
+	  ;;* A representation of the stack location containing FUNC.
+	  ;;
+	  ;;* A representation of the CPU  register containing a reference to the
+	  ;;continuation   object   referencing   the   freezed   frames.    Such
+	  ;;continuation object  is also the  "next process continuation"  in the
+	  ;;PCB, that is: it is the value of the field "pcb->next_k".
+	  ;;
+	  (let ((t0			(make-unique-var 't))
+		(t1			(make-unique-var 't))
+		(t2			(make-unique-var 't))
+		(underflow-handler	(car rands))
+		(func		(cadr rands))
+		(kont-object	(caddr rands)))
+	    (%locals-cons* t0 t1 t2)
+	    (multiple-forms-sequence
+	     ;;Copy the arguments in CPU registers.
+	     (V t0 underflow-handler)
+	     (V t1 kont-object)
+	     (V t2 func)
+	     ;;Move IK_UNDERFLOW_HANDLER in  its reserved slot the  on the Scheme
+	     ;;stack.
+	     (%move-dst<-src (mkfvar 1) t0)
+	     ;;Move the the reference to continuation object in its reserved slog
+	     ;;on the Scheme stack, as argument to THE-FUNC.
+	     (%move-dst<-src (mkfvar 2) t1)
+	     ;;When we arrive here the situation on the Scheme stack is:
+	     ;;
+	     ;;         high memory
+	     ;;   |                      |
+	     ;;   |----------------------|
+	     ;;   | ik_underflow_handler |
+	     ;;   |----------------------|                           --
+	     ;;     ... other frames ...                             .
+	     ;;   |----------------------|                           .
+	     ;;   |      local value     |                           . freezed
+	     ;;   |----------------------|                           . frames
+	     ;;   |      local value     |                           .
+	     ;;   |----------------------|                           .
+	     ;;   |     return address   | <- FPR = pcb->frame_base  .
+	     ;;   |----------------------|                           --
+	     ;;   | ik_underflow_handler |
+	     ;;   |----------------------|
+	     ;;   |         kont         | -> continuation object
+	     ;;   |----------------------|
+	     ;;             ...
+	     ;;   |----------------------|
+	     ;;   |      free word       | <- pcb->stack_base
+	     ;;   |----------------------|
+	     ;;   |                      |
+	     ;;          low memory
+	     ;;
+	     ;;Load the reference to closure object FUNC in the CPR.
+	     (%move-dst<-src cpr t2)
+	     ;;Load in  ARGC-REGISTER the  encoded number of  arguments, counting
+	     ;;the continuation object.
+	     (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention 1)))
+	     ;;Decrement the FPR so that it points to the underflow handler.
+	     (make-asm-instr 'int- fpr (make-constant wordsize))
+	     ;;When we arrive here the situation on the Scheme stack is:
+	     ;;
+	     ;;         high memory
+	     ;;   |                      |
+	     ;;   |----------------------|
+	     ;;   | ik_underflow_handler |
+	     ;;   |----------------------|                     --
+	     ;;     ... other frames ...                       .
+	     ;;   |----------------------|                     .
+	     ;;   |      local value     |                     . freezed
+	     ;;   |----------------------|                     . frames
+	     ;;   |      local value     |                     .
+	     ;;   |----------------------|                     .
+	     ;;   |     return address   | <- pcb->frame_base  .
+	     ;;   |----------------------|                     --
+	     ;;   | ik_underflow_handler | <- FPR
+	     ;;   |----------------------|
+	     ;;   |         kont         | -> continuation object
+	     ;;   |----------------------|
+	     ;;             ...
+	     ;;   |----------------------|
+	     ;;   |      free word       | <- pcb->stack_base
+	     ;;   |----------------------|
+	     ;;   |                      |
+	     ;;          low memory
+	     ;;
+	     ;;The following INDIRECT-JUMP compiles to a single "jmp" instruction
+	     ;;that  jumps  to  the  machine  code entry  point  in  the  closure
+	     ;;referenced by  the CPR, which is  FUNC.  By doing a  "jmp", rather
+	     ;;than a  "call", we avoid  pushing a  return address on  the Scheme
+	     ;;stack.
+	     ;;
+	     ;;Notice that the stack frame of FUNC starts with the argument KONT.
+	     ;;The  IK_UNDERFLOW_HANDLER we  have  put on  the  stack does  *not*
+	     ;;belong to any stack frame.
+	     ;;
+	     ;;If the closure FUNC returns  without calling a continuation escape
+	     ;;function: it will return to  the underflow handler; such underflow
+	     ;;handler must  pop the  continuation object from  "pcb->next_k" and
+	     ;;process it as explained in the documentation.
+	     ;;
+	     (make-asmcall 'indirect-jump
+	       (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
+	 (else
+	  (VT x))))
 
-	((var)
-	 (VT x))
+      ((bind lhs* rhs* e)
+       (%do-bind lhs* rhs* (V-tail e)))
 
-	((asmcall op rands)
-	 (case op
-	   ((call-with-underflow-handler)
-	    ;;This    primitive    is    used   by    the    primitive    operation
-	    ;;$SEAL-FRAME-AND-CALL  to implement  the heart  of CALL/CC  (call with
-	    ;;current  continuation) and  CALL/CF (call  with current  frame), file
-	    ;;"ikarus.control.sls".   Let's super  simplify  and  comment the  code
-	    ;;starting with  the call to  %PRIMITIVE-CALL/CF which is the  heart of
-	    ;;both CALL/CC and CALL/CF.
-	    ;;
-	    ;;Remember that:
-	    ;;
-	    ;;* FPR stands for Frame Pointer Register;
-	    ;;
-	    ;;*  PCR stands  for Process  Control  Register and  it references  the
-	    ;;structure PCB defined at the C language level;
-	    ;;
-	    ;;*  CPR stands  for Closure  Pointer Register  and it  must contain  a
-	    ;;reference to the closure object being executed.
-	    ;;
-	    ;;* ARGC-REGISTER stands for Argument Count Register.
-	    ;;
-	    ;;When arriving here  the scenario of the Scheme stack  is the one left
-	    ;;by $SEAL-FRAME-AND-CALL:
-	    ;;
-	    ;;         high memory
-	    ;;   |                      |
-	    ;;   |----------------------|
-	    ;;   | ik_underflow_handler |
-	    ;;   |----------------------|                           --
-	    ;;     ... other frames ...                             .
-	    ;;   |----------------------|                           .
-	    ;;   |      local value     |                           . freezed
-	    ;;   |----------------------|                           . frames
-	    ;;   |      local value     |                           .
-	    ;;   |----------------------|                           .
-	    ;;   |     return address   | <- FPR = pcb->frame_base  .
-	    ;;   |----------------------|                           --
-	    ;;   |         func         | -> closure object
-	    ;;   |----------------------|
-	    ;;             ...
-	    ;;   |----------------------|
-	    ;;   |      free word       | <- pcb->stack_base
-	    ;;   |----------------------|
-	    ;;   |                      |
-	    ;;          low memory
-	    ;;
-	    ;;ARGC-REGISTER contains the encoded  number of arguments, counting the
-	    ;;single  argument FUNC  to %PRIMITIVE-CALL/CF.   The reference  to the
-	    ;;just created  continuation object is  in some CPU register.   The raw
-	    ;;memory pointer UNDERFLOW-HANDLER is in some CPU register.
-	    ;;
-	    ;;There are 3 operands in RANDS:
-	    ;;
-	    ;;*  A representation  of  the CPU  register  containing the  underflow
-	    ;;handler:  a   raw  memory  address   equal  to  the   assembly  label
-	    ;;"ik_underflow_handler".
-	    ;;
-	    ;;* A representation of the stack location containing FUNC.
-	    ;;
-	    ;;* A representation of the CPU  register containing a reference to the
-	    ;;continuation   object   referencing   the   freezed   frames.    Such
-	    ;;continuation object  is also the  "next process continuation"  in the
-	    ;;PCB, that is: it is the value of the field "pcb->next_k".
-	    ;;
-	    (let ((t0			(make-unique-var 't))
-		  (t1			(make-unique-var 't))
-		  (t2			(make-unique-var 't))
-		  (underflow-handler	(car rands))
-		  (func		(cadr rands))
-		  (kont-object	(caddr rands)))
-	      (%locals-cons* t0 t1 t2)
-	      (multiple-forms-sequence
-	       ;;Copy the arguments in CPU registers.
-	       (V t0 underflow-handler)
-	       (V t1 kont-object)
-	       (V t2 func)
-	       ;;Move IK_UNDERFLOW_HANDLER in  its reserved slot the  on the Scheme
-	       ;;stack.
-	       (%move-dst<-src (mkfvar 1) t0)
-	       ;;Move the the reference to continuation object in its reserved slog
-	       ;;on the Scheme stack, as argument to THE-FUNC.
-	       (%move-dst<-src (mkfvar 2) t1)
-	       ;;When we arrive here the situation on the Scheme stack is:
-	       ;;
-	       ;;         high memory
-	       ;;   |                      |
-	       ;;   |----------------------|
-	       ;;   | ik_underflow_handler |
-	       ;;   |----------------------|                           --
-	       ;;     ... other frames ...                             .
-	       ;;   |----------------------|                           .
-	       ;;   |      local value     |                           . freezed
-	       ;;   |----------------------|                           . frames
-	       ;;   |      local value     |                           .
-	       ;;   |----------------------|                           .
-	       ;;   |     return address   | <- FPR = pcb->frame_base  .
-	       ;;   |----------------------|                           --
-	       ;;   | ik_underflow_handler |
-	       ;;   |----------------------|
-	       ;;   |         kont         | -> continuation object
-	       ;;   |----------------------|
-	       ;;             ...
-	       ;;   |----------------------|
-	       ;;   |      free word       | <- pcb->stack_base
-	       ;;   |----------------------|
-	       ;;   |                      |
-	       ;;          low memory
-	       ;;
-	       ;;Load the reference to closure object FUNC in the CPR.
-	       (%move-dst<-src cpr t2)
-	       ;;Load in  ARGC-REGISTER the  encoded number of  arguments, counting
-	       ;;the continuation object.
-	       (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention 1)))
-	       ;;Decrement the FPR so that it points to the underflow handler.
-	       (make-asm-instr 'int- fpr (make-constant wordsize))
-	       ;;When we arrive here the situation on the Scheme stack is:
-	       ;;
-	       ;;         high memory
-	       ;;   |                      |
-	       ;;   |----------------------|
-	       ;;   | ik_underflow_handler |
-	       ;;   |----------------------|                     --
-	       ;;     ... other frames ...                       .
-	       ;;   |----------------------|                     .
-	       ;;   |      local value     |                     . freezed
-	       ;;   |----------------------|                     . frames
-	       ;;   |      local value     |                     .
-	       ;;   |----------------------|                     .
-	       ;;   |     return address   | <- pcb->frame_base  .
-	       ;;   |----------------------|                     --
-	       ;;   | ik_underflow_handler | <- FPR
-	       ;;   |----------------------|
-	       ;;   |         kont         | -> continuation object
-	       ;;   |----------------------|
-	       ;;             ...
-	       ;;   |----------------------|
-	       ;;   |      free word       | <- pcb->stack_base
-	       ;;   |----------------------|
-	       ;;   |                      |
-	       ;;          low memory
-	       ;;
-	       ;;The following INDIRECT-JUMP compiles to a single "jmp" instruction
-	       ;;that  jumps  to  the  machine  code entry  point  in  the  closure
-	       ;;referenced by  the CPR, which is  FUNC.  By doing a  "jmp", rather
-	       ;;than a  "call", we avoid  pushing a  return address on  the Scheme
-	       ;;stack.
-	       ;;
-	       ;;Notice that the stack frame of FUNC starts with the argument KONT.
-	       ;;The  IK_UNDERFLOW_HANDLER we  have  put on  the  stack does  *not*
-	       ;;belong to any stack frame.
-	       ;;
-	       ;;If the closure FUNC returns  without calling a continuation escape
-	       ;;function: it will return to  the underflow handler; such underflow
-	       ;;handler must  pop the  continuation object from  "pcb->next_k" and
-	       ;;process it as explained in the documentation.
-	       ;;
-	       (make-asmcall 'indirect-jump
-		 (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
-	   (else
-	    (VT x))))
+      ((seq e0 e1)
+       (make-seq (E e0) (V-tail e1)))
 
-	((bind lhs* rhs* e)
-	 (%do-bind lhs* rhs* (Tail e)))
+      ((conditional e0 e1 e2)
+       (make-conditional (P e0) (V-tail e1) (V-tail e2)))
 
-	((seq e0 e1)
-	 (make-seq (E e0) (Tail e1)))
+      ((funcall rator rands)
+       (%handle-tail-call #f rator rands))
 
-	((conditional e0 e1 e2)
-	 (make-conditional (P e0) (Tail e1) (Tail e2)))
+      ((jmpcall label rator rands)
+       (%handle-tail-call (make-code-loc label) rator rands))
 
-	((funcall rator rands)
-	 (%handle-tail-call #f rator rands))
+      ((forcall)
+       (VT x))
 
-	((jmpcall label rator rands)
-	 (%handle-tail-call (make-code-loc label) rator rands))
+      ((shortcut body handler)
+       (make-shortcut (V-tail body) (V-tail handler)))
 
-	((forcall)
-	 (VT x))
+      ((known expr)
+       (V-tail expr))
 
-	((shortcut body handler)
-	 (make-shortcut (Tail body) (Tail handler)))
+      (else
+       (compiler-internal-error __module_who__ "invalid tail" x))))
 
-	((known expr)
-	 (Tail expr))
+  (define (VT x)
+    ;;X is a struct of type: CONSTANT, VAR, ASMCALL, FORCALL.
+    ;;
+    (S x (lambda (x)
+	   (make-seq
+	     (%move-dst<-src RETURN-VALUE-REGISTER x)
+	     (make-asmcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
 
-	(else
-	 (error __module_who__ "invalid tail" x))))
-
-    (define (VT x)
-      ;;X is a struct of type: CONSTANT, VAR, ASMCALL, FORCALL.
-      ;;
-      (S x (lambda (x)
-	     (make-seq (%move-dst<-src RETURN-VALUE-REGISTER x)
-		       (make-asmcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
-
-    #| end of module: Tail |# )
-
-  #| end of module: Program |# )
+  #| end of module: V-tail |# )
 
 
 ;;;; helpers
@@ -427,7 +428,7 @@
 	    (let ((t (make-unique-var 'tmp)))
 	      (%do-bind (list t) (list x) (kont t))))
 	   (else
-	    (error __module_who__ "invalid S" x))))))
+	    (compiler-internal-error __module_who__ "invalid S" x))))))
 
 (define (assign* lhs* rhs* tail-body)
   ;;Given a list of left-hand  sides and right-hand sides for assembly
@@ -440,8 +441,9 @@
   ;;     . ?tail-body)
   ;;
   (if (pair? lhs*)
-      (make-seq (%move-dst<-src (car lhs*) (car rhs*))
-		(assign*        (cdr lhs*) (cdr rhs*) tail-body))
+      (make-seq
+	(%move-dst<-src (car lhs*) (car rhs*))
+	(assign*        (cdr lhs*) (cdr rhs*) tail-body))
     tail-body))
 
 
@@ -450,8 +452,9 @@
   (if (pair? lhs*)
       (begin
 	(%locals-cons (car lhs*))
-	(make-seq (V (car lhs*) (car rhs*))
-		  (%do-bind (cdr lhs*) (cdr rhs*) body)))
+	(make-seq
+	  (V        (car lhs*) (car rhs*))
+	  (%do-bind (cdr lhs*) (cdr rhs*) body)))
     body))
 
 (define-syntax-rule (%move-dst<-src ?lhs ?rhs)
@@ -459,8 +462,9 @@
 
 (define (%do-bind-frmt* nf* v* ac)
   (if (pair? nf*)
-      (make-seq (V (car nf*) (car v*))
-		(%do-bind-frmt* (cdr nf*) (cdr v*) ac))
+      (make-seq
+	(V              (car nf*) (car v*))
+	(%do-bind-frmt* (cdr nf*) (cdr v*) ac))
     ac))
 
 
@@ -554,9 +558,11 @@
 	     (make-seq (alloc-check size)
 		       (S (cadr rands)
 			  (lambda (tag)
-			    (make-seq (make-seq (%move-dst<-src d apr)
-						(make-asm-instr 'logor d tag))
-				      (make-asm-instr 'int+ apr size))))))))
+			    (make-seq
+			      (make-seq
+				(%move-dst<-src d apr)
+				(make-asm-instr 'logor d tag))
+			      (make-asm-instr 'int+ apr size))))))))
 
        ((alloc-no-hooks)
 	;;This is like ALLOC, but, if there is the need, run a garbage
@@ -575,9 +581,11 @@
 	     (make-seq (alloc-check/no-hooks size)
 		       (S (cadr rands)
 			  (lambda (tag)
-			    (make-seq (make-seq (%move-dst<-src d apr)
-						(make-asm-instr 'logor d tag))
-				      (make-asm-instr 'int+ apr size))))))))
+			    (make-seq
+			      (make-seq
+				(%move-dst<-src d apr)
+				(make-asm-instr 'logor d tag))
+			      (make-asm-instr 'int+ apr size))))))))
 
        ((mref)
 	(S* rands (lambda (rands)
@@ -625,7 +633,7 @@
 		    (make-asm-instr op d ecx)))))))
 
        (else
-	(error __module_who__ "invalid value op" op rands))))
+	(compiler-internal-error __module_who__ "invalid value op" op rands))))
 
     ((funcall rator rands)
      (handle-nontail-call rator rands d #f))
@@ -647,7 +655,7 @@
     (else
      (if (symbol? x)
 	 (%move-dst<-src d x)
-       (error __module_who__ "invalid value" (unparse-recordized-code x))))))
+       (compiler-internal-error __module_who__ "invalid value" (unparse-recordized-code x))))))
 
 
 (define (E x)
@@ -675,7 +683,7 @@
        ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	x)
        (else
-	(error __module_who__ "invalid instr" x))))
+	(compiler-internal-error __module_who__ "invalid instr" x))))
 
     ((funcall rator rands)
      (handle-nontail-call rator rands #f #f))
@@ -690,7 +698,7 @@
      (make-shortcut (E body) (E handler)))
 
     (else
-     (error __module_who__ "invalid effect" x))))
+     (compiler-internal-error __module_who__ "invalid effect" x))))
 
 
 (module (P)
@@ -724,7 +732,7 @@
        (make-shortcut (P body) (P handler)))
 
       (else
-       (error __module_who__ "invalid pred" x))))
+       (compiler-internal-error __module_who__ "invalid pred" x))))
 
   (define (Mem x kont)
     (struct-case x
@@ -757,13 +765,11 @@
     ;;
     (let* ((args (cons rator rands))
 	   (locs (%formals-locations PARAMETER-REGISTERS args))
-	   (rest (make-seq (%move-dst<-src ARGC-REGISTER
-					   (make-constant (argc-convention (length rands))))
-			   (if target
-			       (make-asmcall 'direct-jump
-				 (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
-			     (make-asmcall 'indirect-jump
-			       (cons* ARGC-REGISTER pcr esp apr locs))))))
+	   (rest (make-seq
+		   (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention (length rands))))
+		   (if target
+		       (make-asmcall 'direct-jump (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
+		     (make-asmcall 'indirect-jump (cons* ARGC-REGISTER pcr esp apr locs))))))
       (let recur ((args  (reverse args))
 		  (locs  (reverse locs))
 		  (targs '())
@@ -824,22 +830,23 @@
 				  (cons* ARGC-REGISTER pcr esp apr
 					 (append reg-locs frmt*))
 				  #f #f))
-	       (body (make-nframe
-		      frmt* #f
-		      (%do-bind-frmt*
-		       frmt* frm-args
-		       (%do-bind (cdr regt*) (cdr reg-args)
-				 ;;evaluate cpt last
-				 (%do-bind (list (car regt*)) (list (car reg-args))
-					   (assign*
-					    reg-locs regt*
-					    (make-seq
-					     (%move-dst<-src ARGC-REGISTER
-							     (make-constant
-							      (argc-convention (length rands))))
-					     call))))))))
+	       (body (make-nframe frmt* #f
+				  (%do-bind-frmt*
+				   frmt* frm-args
+				   (%do-bind (cdr regt*) (cdr reg-args)
+					     ;;evaluate cpt last
+					     (%do-bind (list (car regt*))
+						       (list (car reg-args))
+						       (assign* reg-locs regt*
+								(make-seq
+								  (%move-dst<-src ARGC-REGISTER
+										  (make-constant
+										   (argc-convention (length rands))))
+								  call))))))))
 	  (if value-dest
-	      (make-seq body (%move-dst<-src value-dest RETURN-VALUE-REGISTER))
+	      (make-seq
+		body
+		(%move-dst<-src value-dest RETURN-VALUE-REGISTER))
 	    body)))))
 
   (define (%nontail-locations regs args)
@@ -868,4 +875,5 @@
 ;; eval: (put 'assemble-sources		'scheme-indent-function 1)
 ;; eval: (put 'make-conditional		'scheme-indent-function 2)
 ;; eval: (put 'struct-case		'scheme-indent-function 1)
+;; eval: (put 'make-seq			'scheme-indent-function 0)
 ;; End:
