@@ -1609,7 +1609,7 @@
   (cond ((target-platform-fixnum? x)
 	 (make-constant x))
 	(else
-	 (make-object (make-constant x)))))
+	 (make-constant (make-object x)))))
 
 (define* (constant->native-constant-representation x)
   ;;X must  be a struct  instance of  type CONSTANT.  When  the constant value  has a
