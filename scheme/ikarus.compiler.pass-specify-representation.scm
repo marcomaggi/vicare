@@ -1733,10 +1733,21 @@
        (V rator))
 
       ((known rator.expr rator.type)
-       (cond ((eq? (T:procedure? rator.type) 'yes)
-	      (F rator.expr #f))
-	     (else
-	      (F rator.expr check?))))
+       (case (T:procedure? rator.type)
+	 ((yes)
+	  (F rator.expr #f))
+	 ((no)
+	  (let ((rator.sexp (unparse-recordized-code/sexp rator)))
+	    (if (option.strict-r6rs)
+		(begin
+		  (print-compiler-warning-message
+		   "operator of FUNCALL is known not to be a procedure: ~a"
+		   rator.sexp)
+		  (F rator.expr check?))
+	      (compile-time-error __module_who__
+		"operator of FUNCALL is known not to be a procedure" rator.sexp))))
+	 ((maybe)
+	  (F rator.expr #t))))
 
       (else
        (F-nonproc rator check?))))
@@ -1771,11 +1782,22 @@
 		   (nop)
 		 (asm 'interrupt))
 	       x)
+	    ;;NOTE The  constants in  this recordised expression  are processed  by K
+	    ;;(rather than by KN) because the whole recordised expression is filtered
+	    ;;through V.  The value returned by V is something like:
+	    ;;
+	    ;;   (funcall (asmcall mref
+	    ;;                     (constant (object error))
+	    ;;                     (constant ?off-symbol-record-proc))
+	    ;;            (constant (object apply))
+	    ;;            (constant (object "not a procedure"))
+	    ;;            x_0)
+	    ;;
 	    (V (make-funcall (mk-primref 'error)
 			     (list (K 'apply) (K "not a procedure") x)))))
       (V rator)))
 
-  #| end of module: Function |# )
+  #| end of module: VE-function |# )
 
 
 ;;;; utility functions for Assembly code generation
