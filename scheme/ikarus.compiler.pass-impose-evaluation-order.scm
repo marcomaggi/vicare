@@ -510,211 +510,241 @@
     ac))
 
 
-(module (alloc-check alloc-check/no-hooks)
+(module (V)
 
-  (define (alloc-check size)
-    (E (make-shortcut
-	   (make-conditional (%test size)
-	       (nop)
-	     (interrupt))
-	 (make-funcall
-	  ;;From the  relocation vector of  this code object: retrieve  the location
-	  ;;gensym associated to DO-OVERFLOW, then  retrieve the value of its "proc"
-	  ;;slot.  The  "proc" slot of such  loc gensym contains a  reference to the
-	  ;;closure object implementing DO-OVERFLOW.
-	  (make-asmcall 'mref
-	    (list (make-constant (make-object (primitive-public-function-name->location-gensym 'do-overflow)))
-		  (make-constant off-symbol-record-proc)))
-	  (list size)))))
+  (define* (V {dst var/nfv?} x)
+    ;;Generate assembly instructions  to compute a value from struct  X and store the
+    ;;result in destination DST.
+    ;;
+    (struct-case x
+      ((constant)
+       (%move-dst<-src dst x))
 
-  (define (alloc-check/no-hooks size)
-    (E (make-shortcut
-	   (make-conditional (%test size)
-	       (nop)
-	     (interrupt))
-	 (make-forcall "ik_collect" (list size)))))
+      ((var)
+       (cond ((var-loc x)
+	      => (lambda (loc)
+		   (%move-dst<-src dst loc)))
+	     (else
+	      (%move-dst<-src dst x))))
 
-  (define (%test size)
-    (if (struct-case size
-	  ((constant i)
-	   (<= i 4096))
-	  (else
-	   #f))
-	(make-asmcall '<=
-	  (list apr
-		(make-asmcall 'mref
-		  (list pcr (make-constant pcb-allocation-redline)))))
-      (make-asmcall '>=
-	(list (make-asmcall 'int-
-		(list (make-asmcall 'mref
-			(list pcr (make-constant pcb-allocation-redline)))
-		      apr))
-	      size))))
+      ((bind lhs* rhs* body)
+       (%do-bind lhs* rhs* (V dst body)))
 
-  #| end of module: ALLOC-CHECK, ALLOC-CHECK/NO-HOOKS |# )
+      ((seq e0 e1)
+       (make-seq (E e0) (V dst e1)))
 
-
-(define* (V {dst var/nfv?} x)
-  ;;Generate assembly  instructions to compute  a value from  struct X and  store the
-  ;;result in destination DST.
-  ;;
-  (struct-case x
-    ((constant)
-     (%move-dst<-src dst x))
+      ((conditional e0 e1 e2)
+       (make-conditional (P e0) (V dst e1) (V dst e2)))
 
-    ((var)
-     (cond ((var-loc x)
-	    => (lambda (loc)
-		 (%move-dst<-src dst loc)))
-	   (else
-	    (%move-dst<-src dst x))))
+      ((asmcall op rands)
+       (V-asmcall dst op rands))
 
-    ((bind lhs* rhs* e)
-     (%do-bind lhs* rhs* (V dst e)))
+      ((funcall rator rands)
+       (%handle-nontail-call rator rands dst #f))
 
-    ((seq e0 e1)
-     (make-seq (E e0) (V dst e1)))
+      ((jmpcall label rator rands)
+       (%handle-nontail-call rator rands dst label))
 
-    ((conditional e0 e1 e2)
-     (make-conditional (P e0) (V dst e1) (V dst e2)))
+      ((forcall op rands)
+       (%handle-nontail-call (make-constant (make-foreign-label op))
+			     rands dst op))
 
-    ((asmcall op rands)
-     (case op
+      ((shortcut body handler)
+       (make-shortcut
+	   (V dst body)
+	 (V dst handler)))
 
-       ((alloc)
-	;;Allocate a Scheme object on the heap.  We expect X to have the format:
-	;;
-	;;   (asmcall alloc (?aligned-memory-block-size ?scheme-object-primary-tag))
-	;;
-	;;First check if there is enough room on the heap segment:
-	;;
-	;;* If  there is: just  increment the  Allocation Pointer Register  (APR) and
-	;;  return the old APR value.
-	;;
-	;;* If  there is not:  run a garbage  collection (complete with  execution of
-	;;  post-GC  hooks) by calling  the function DO-OVERFLOW, then  increment the
-	;;  APR and return the old APR after the GC.
-	;;
-	(S (car rands)
-	   (lambda (aligned-size)
-	     (make-seq
-	       (alloc-check aligned-size)
-	       (S (cadr rands)
-		  (lambda (primary-tag)
-		    (make-seq
-		      (make-seq
-			;;Load in DST  the value in the  Allocation Pointer Register:
-			;;this value is a pointer to  a usable block of memory on the
-			;;heap nursery.
-			(%move-dst<-src dst apr)
-			;;Add the tag to the pointer.
-			(make-asm-instr 'logor dst primary-tag))
-		      ;;Increment the Allocation Pointer Register by the aligned size
-		      ;;of the block.
-		      (make-asm-instr 'int+ apr aligned-size))))))))
+      ;; ((known expr)
+      ;;  (V dst expr))
 
-       ((alloc-no-hooks)
-	;;This is  like ALLOC, but,  if there is the  need, run a  garbage collection
-	;;without executing the post-GC hooks.
-	;;
-	;;This  simpler  GC  run  does  not touch  the  Scheme  stack,  avoiding  the
-	;;generation  of  corrupt continuation  objects  by  the primitive  operation
-	;;$SEAL-FRAME-AND-CALL (which was a cause of issue #35).
-	;;
-	;;$SEAL-FRAME-AND-CALL should be  the only operation making use  of this heap
-	;;allocation method.
-	;;
-	(S (car rands)
-	   (lambda (aligned-size)
-	     (make-seq
-	       (alloc-check/no-hooks aligned-size)
-	       (S (cadr rands)
-		  (lambda (primary-tag)
-		    (multiple-forms-sequence
-		      (%move-dst<-src dst apr)
-		      (make-asm-instr 'logor dst primary-tag)
-		      (make-asm-instr 'int+  apr aligned-size))))))))
+      (else
+       (if (symbol? x)
+	   (%move-dst<-src dst x)
+	 (compiler-internal-error __module_who__ "invalid value" (unparse-recordized-code x))))))
 
-       ((mref)
-	(S* rands (lambda (rands)
-		    (%move-dst<-src dst (make-disp (car rands) (cadr rands))))))
-
-       ((mref32)
-	(S* rands (lambda (rands)
-		    (make-asm-instr 'load32 dst (make-disp (car rands) (cadr rands))))))
-
-       ((bref)
-	(S* rands (lambda (rands)
-		    (make-asm-instr 'load8 dst (make-disp (car rands) (cadr rands))))))
-
-       ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)
-	;;We expect X to have the format:
-	;;
-	;;   (asmcall ?op (?first-operand ?second-operand))
-	;;
-	;;representing  a  high-level  Assembly   instruction  that  must  store  the
-	;;resulting value in ?FIRST-OPERAND.
-	(make-seq
-	  ;;Load the first operand in DST.
-	  (V dst (car rands))
-	  (S (cadr rands)
-	     (lambda (src)
-	       ;;Perform the  operation OP between the  first operand in DST  and the
-	       ;;second operand in SRC; store the resulting value in DST.
-	       (make-asm-instr op dst src)))))
-
-       ((int-quotient)
-	(S* rands (lambda (rands)
-		    (multiple-forms-sequence
-		      (%move-dst<-src eax (car rands))
-		      (make-asm-instr 'cltd edx eax)
-		      (make-asm-instr 'idiv eax (cadr rands))
-		      (%move-dst<-src dst eax)))))
-
-       ((int-remainder)
-	(S* rands (lambda (rands)
-		    (multiple-forms-sequence
-		      (%move-dst<-src eax (car rands))
-		      (make-asm-instr 'cltd edx eax)
-		      (make-asm-instr 'idiv edx (cadr rands))
-		      (%move-dst<-src dst edx)))))
-
-       ((sll sra srl sll/overflow)
-	(let ((a (car rands))
-	      (b (cadr rands)))
-	  (if (constant? b)
-	      (make-seq (V dst a)
-			(make-asm-instr op dst b))
-	    (S b (lambda (b)
+  (define (V-asmcall dst op rands)
+    (case op
+      ((alloc)
+       ;;Allocate a Scheme object on the heap.  We expect X to have the format:
+       ;;
+       ;;   (asmcall alloc (?aligned-memory-block-size ?scheme-object-primary-tag))
+       ;;
+       ;;First check if there is enough room on the heap segment:
+       ;;
+       ;;* If  there is:  just increment  the Allocation  Pointer Register  (APR) and
+       ;;  return the old APR value.
+       ;;
+       ;;* If  there is  not: run  a garbage collection  (complete with  execution of
+       ;;  post-GC hooks) by calling the function DO-OVERFLOW, then increment the APR
+       ;;  and return the old APR after the GC.
+       ;;
+       (S (car rands)
+	  (lambda (aligned-size)
+	    (make-seq
+	      (alloc-check aligned-size)
+	      (S (cadr rands)
+		 (lambda (primary-tag)
 		   (multiple-forms-sequence
-		     (V dst a)
-		     (%move-dst<-src ecx b)
-		     (make-asm-instr op dst ecx)))))))
+		     ;;Load in DST the value in the Allocation Pointer Register: this
+		     ;;value is  a pointer to  a usable block  of memory on  the heap
+		     ;;nursery.
+		     (%move-dst<-src dst apr)
+		     ;;Add the tag to the pointer.
+		     (make-asm-instr 'logor dst primary-tag)
+		     ;;Increment the Allocation Pointer  Register by the aligned size
+		     ;;of the block.
+		     (make-asm-instr 'int+ apr aligned-size))))))))
 
-       (else
-	(compiler-internal-error __module_who__ "invalid value op" op rands))))
+      ((alloc-no-hooks)
+       ;;This is  like ALLOC,  but, if there  is the need,  run a  garbage collection
+       ;;without executing the post-GC hooks.
+       ;;
+       ;;This simpler GC run does not touch the Scheme stack, avoiding the generation
+       ;;of    corrupt   continuation    objects   by    the   primitive    operation
+       ;;$SEAL-FRAME-AND-CALL (which was a cause of issue #35).
+       ;;
+       ;;$SEAL-FRAME-AND-CALL should  be the only  operation making use of  this heap
+       ;;allocation method.
+       ;;
+       (S (car rands)
+	  (lambda (aligned-size)
+	    (make-seq
+	      (alloc-check/no-hooks aligned-size)
+	      (S (cadr rands)
+		 (lambda (primary-tag)
+		   (multiple-forms-sequence
+		     (%move-dst<-src dst apr)
+		     (make-asm-instr 'logor dst primary-tag)
+		     (make-asm-instr 'int+  apr aligned-size))))))))
 
-    ((funcall rator rands)
-     (%handle-nontail-call rator rands dst #f))
+      ((mref)
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall mref (?operand-referencing-sheme-object ?offset))
+       ;;
+       (S* rands (lambda (rands)
+		   (%move-dst<-src dst (make-disp (car rands) (cadr rands))))))
 
-    ((jmpcall label rator rands)
-     (%handle-nontail-call rator rands dst label))
+      ((mref32)
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall mref32 (?operand-referencing-sheme-object ?offset))
+       ;;
+       ;;MREF32 is used, for example, to extract single characters from a string.
+       (S* rands (lambda (rands)
+		   (make-asm-instr 'load32 dst (make-disp (car rands) (cadr rands))))))
 
-    ((forcall op rands)
-     (%handle-nontail-call (make-constant (make-foreign-label op))
-			   rands dst op))
+      ((bref)
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall bref (?operand-referencing-scheme-objet ?offset))
+       ;;
+       ;;BREF is used, for example, to extract single bytes from a bytevector.
+       (S* rands (lambda (rands)
+		   (make-asm-instr 'load8 dst (make-disp (car rands) (cadr rands))))))
 
-    ((shortcut body handler)
-     (make-shortcut (V dst body)
-       (V dst handler)))
+      ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall ?op (?first-operand ?second-operand))
+       ;;
+       ;;representing a high-level Assembly instruction that must store the resulting
+       ;;value in ?FIRST-OPERAND.
+       (make-seq
+	 ;;Load the first operand in DST.
+	 (V dst (car rands))
+	 (S (cadr rands)
+	    (lambda (src)
+	      ;;Perform the  operation OP between  the first  operand in DST  and the
+	      ;;second operand in SRC; store the resulting value in DST.
+	      (make-asm-instr op dst src)))))
 
-    ((known expr)
-     (V dst expr))
+      ((int-quotient)
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall int-quotient (?first-operand ?second-operand))
+       ;;
+       (S* rands
+	   (lambda (rands)
+	     (multiple-forms-sequence
+	       (%move-dst<-src eax (car rands))
+	       (make-asm-instr 'cltd edx eax)
+	       (make-asm-instr 'idiv eax (cadr rands))
+	       (%move-dst<-src dst eax)))))
 
-    (else
-     (if (symbol? x)
-	 (%move-dst<-src dst x)
-       (compiler-internal-error __module_who__ "invalid value" (unparse-recordized-code x))))))
+      ((int-remainder)
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall int-remainder (?first-operand ?second-operand))
+       ;;
+       (S* rands
+	   (lambda (rands)
+	     (multiple-forms-sequence
+	       (%move-dst<-src eax (car rands))
+	       (make-asm-instr 'cltd edx eax)
+	       (make-asm-instr 'idiv edx (cadr rands))
+	       (%move-dst<-src dst edx)))))
+
+      ((sll sra srl sll/overflow)
+       (let ((a (car rands))
+	     (b (cadr rands)))
+	 (if (constant? b)
+	     (make-seq
+	       (V dst a)
+	       (make-asm-instr op dst b))
+	   (S b (lambda (b)
+		  (multiple-forms-sequence
+		    (V dst a)
+		    (%move-dst<-src ecx b)
+		    (make-asm-instr op dst ecx)))))))
+
+      (else
+       (compiler-internal-error __module_who__ "invalid value op" op rands))))
+
+  (module (alloc-check alloc-check/no-hooks)
+
+    (define (alloc-check size)
+      (E (make-shortcut
+	     (make-conditional (%test size)
+		 (nop)
+	       (interrupt))
+	   (make-funcall
+	    ;;From the relocation  vector of this code object:  retrieve the location
+	    ;;gensym associated to DO-OVERFLOW, then retrieve the value of its "proc"
+	    ;;slot.  The "proc"  slot of such loc gensym contains  a reference to the
+	    ;;closure object implementing DO-OVERFLOW.
+	    (make-asmcall 'mref
+	      (list (make-constant (make-object (primitive-public-function-name->location-gensym 'do-overflow)))
+		    (make-constant off-symbol-record-proc)))
+	    (list size)))))
+
+    (define (alloc-check/no-hooks size)
+      (E (make-shortcut
+	     (make-conditional (%test size)
+		 (nop)
+	       (interrupt))
+	   (make-forcall "ik_collect" (list size)))))
+
+    (define (%test size)
+      (if (struct-case size
+	    ((constant i)
+	     (<= i 4096))
+	    (else
+	     #f))
+	  (make-asmcall '<=
+	    (list apr
+		  (make-asmcall 'mref
+		    (list pcr (make-constant pcb-allocation-redline)))))
+	(make-asmcall '>=
+	  (list (make-asmcall 'int-
+		  (list (make-asmcall 'mref
+			  (list pcr (make-constant pcb-allocation-redline)))
+			apr))
+		size))))
+
+    #| end of module: ALLOC-CHECK, ALLOC-CHECK/NO-HOOKS |# )
+
+  #| end of module: V |# )
 
 
 (define (E x)

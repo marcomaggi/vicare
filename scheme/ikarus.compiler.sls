@@ -1781,8 +1781,9 @@
    ))
 
 (define-struct disp
-  ;;Represent the  displacement of a  machine word in a  Scheme object stored  in the
-  ;;relocation vector of the current code object.
+  ;;Represent the  displacement of a  machine word, 32-bit word,  byte or octet  in a
+  ;;Scheme object.  The  Scheme object can either be stored  in the relocation vector
+  ;;of the current code object, in a CPU register or on the Scheme stack.
   ;;
   (s0
 		;A CONSTANT struct holding an OBJECT struct.  It represents an object
