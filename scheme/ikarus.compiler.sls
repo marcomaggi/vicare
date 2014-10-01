@@ -6190,32 +6190,31 @@
 
 
 (define (unparse-recordized-code x)
-  ;;Unparse the struct  instance X (representing recordized  code in the
-  ;;core  language  already processed  by  the  compiler) into  a  human
-  ;;readable symbolic expression to be used when raising errors.
+  ;;Unparse the struct instance X (representing  recordized code in the core language
+  ;;already processed by  the compiler) into a human readable  symbolic expression to
+  ;;be used when raising errors.
   ;;
-  ;;Being  that this  function is  used only  when signaling  errors: it
-  ;;makes no sense to use unsafe operations: let's keep it safe!!!
+  ;;Being that this function is used only when signaling errors: it makes no sense to
+  ;;use unsafe operations: let's keep it safe!!!
   ;;
   (import SCHEME-OBJECTS-ONTOLOGY)
-  (define-syntax-rule (E ?x)
-    (unparse-recordized-code ?x))
+  (define E unparse-recordized-code)
   (struct-case x
-    ((constant c)
-     (cond ((symbol? c)
-	    ;;Extract the pretty name; this is useful when C is a loc gensym.
-	    `(quote c))
-	   ((object? c)
-	    `(constant ,(E c)))
-	   ((closure-maker? c)
-	    `(constant ,(E c)))
-	   ((code-loc? c)
-	    `(constant ,(E c)))
+    ((constant x.const)
+     (cond ((symbol? x.const)
+	    ;;Extract the pretty name; this is useful when X.CONST is a loc gensym.
+	    `(constant ,x.const))
+	   ((object? x.const)
+	    `(constant ,(E x.const)))
+	   ((closure-maker? x.const)
+	    `(constant ,(E x.const)))
+	   ((code-loc? x.const)
+	    `(constant ,(E x.const)))
 	   (else
-	    `(constant ,c))))
+	    `(constant ,x.const))))
 
     ((known expr type)
-     `(known ,(unparse-recordized-code expr) ,(core-type-tag-description type)))
+     `(known ,(E expr) ,(core-type-tag-description type)))
 
     ((code-loc x)
      `(code-loc ,x))
@@ -6230,49 +6229,39 @@
      x)
 
     ((conditional test conseq altern)
-     `(conditional ,(unparse-recordized-code test)
-		   ,(unparse-recordized-code conseq)
-		   ,(unparse-recordized-code altern)))
+     `(conditional ,(E test)
+	  ,(E conseq)
+	,(E altern)))
 
     ((primopcall op arg*)
-     `(,op . ,(map unparse-recordized-code arg*)))
+     `(,op . ,(map E arg*)))
 
     ((asmcall op arg*)
-     `(asmcall ,op . ,(map unparse-recordized-code arg*)))
+     `(asmcall ,op . ,(map E arg*)))
 
     ((bind lhs* rhs* body)
      `(let ,(map (lambda (lhs rhs)
-		   (list (unparse-recordized-code lhs) (unparse-recordized-code rhs)))
+		   (list (E lhs) (E rhs)))
 	      lhs* rhs*)
-	,(unparse-recordized-code body)))
+	,(E body)))
 
     ((recbind lhs* rhs* body)
      `(letrec ,(map (lambda (lhs rhs)
-		      (list (unparse-recordized-code lhs) (unparse-recordized-code rhs)))
+		      (list (E lhs) (E rhs)))
 		 lhs* rhs*)
-	,(unparse-recordized-code body)))
+	,(E body)))
 
     ((rec*bind lhs* rhs* body)
      `(letrec* ,(map (lambda (lhs rhs)
-		       (list (unparse-recordized-code lhs) (unparse-recordized-code rhs)))
+		       (list (E lhs) (E rhs)))
 		  lhs* rhs*)
-	,(unparse-recordized-code body)))
-
-    ;;Commented out because unused;  notice that LIBRARY-LETREC* forms
-    ;;are  represented by  structures of  type REC*BIND;  there is  no
-    ;;structure of type LIBRARY-RECBIND.  (Marco Maggi; Oct 11, 2012)
-    ;;
-    ;; ((library-recbind lhs* loc* rhs* body)
-    ;;  `(letrec ,(map (lambda (lhs loc rhs)
-    ;; 			(list (unparse-recordized-code lhs) loc (unparse-recordized-code rhs)))
-    ;; 		   lhs* loc* rhs*)
-    ;; 	  ,(unparse-recordized-code body)))
+	,(E body)))
 
     ((fix lhs* rhs* body)
      `(fix ,(map (lambda (lhs rhs)
-		   (list (unparse-recordized-code lhs) (unparse-recordized-code rhs)))
+		   (list (E lhs) (E rhs)))
 	      lhs* rhs*)
-	   ,(unparse-recordized-code body)))
+	,(E body)))
 
     ((seq e0 e1)
      (letrec ((recur (lambda (x ac)
@@ -6280,48 +6269,48 @@
 			 ((seq e0 e1)
 			  (recur e0 (recur e1 ac)))
 			 (else
-			  (cons (unparse-recordized-code x) ac))))))
+			  (cons (E x) ac))))))
        (cons 'seq (recur e0 (recur e1 '())))))
 
     ((clambda-case info body)
      `(,(if (case-info-proper info)
-	    (map unparse-recordized-code (case-info-args info))
-	  ;;The loop below  is like MAP but for improper  lists: it maps
-	  ;;UNPARSE-RECORDIZED-CODE over the improper list X.
+	    (map E (case-info-args info))
+	  ;;The loop  below is like MAP  but for improper  lists: it maps E  over the
+	  ;;improper list X.
 	  (let ((X (case-info-args info)))
 	    (let recur ((A (car X))
 			(D (cdr X)))
 	      (if (pair? D)
-		  (cons (unparse-recordized-code A) (recur (car D) (cdr D)))
-		(unparse-recordized-code A)))))
-       ,(unparse-recordized-code body)))
+		  (cons (E A) (recur (car D) (cdr D)))
+		(E A)))))
+       ,(E body)))
 
     ((clambda label cls* cp freevar*)
      ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
      `(clambda (label: ,label)
-	       (cp:    ,(unparse-recordized-code cp))
-	       (free:  ,(and freevar* (map unparse-recordized-code freevar*)))
-	       ,@(map unparse-recordized-code cls*)))
+	       (cp:    ,(E cp))
+	       (free:  ,(and freevar* (map E freevar*)))
+	       ,@(map E cls*)))
 
     ((closure-maker code freevar*)
-     `(closure (freevars: ,(map unparse-recordized-code freevar*))
-	       ,(unparse-recordized-code code)))
+     `(closure (freevars: ,(map E freevar*))
+	       ,(E code)))
 
     ((codes list body)
-     `(codes ,(map unparse-recordized-code list)
-	     ,(unparse-recordized-code body)))
+     `(codes ,(map E list)
+	     ,(E body)))
 
     ((funcall rator rand*)
-     `(funcall ,(unparse-recordized-code rator) . ,(map unparse-recordized-code rand*)))
+     `(funcall ,(E rator) . ,(map E rand*)))
 
     ((jmpcall label rator rand*)
-     `(jmpcall ,label ,(unparse-recordized-code rator) . ,(map unparse-recordized-code rand*)))
+     `(jmpcall ,label ,(E rator) . ,(map E rand*)))
 
     ((forcall rator rand*)
-     `(foreign-call ,rator . ,(map unparse-recordized-code rand*)))
+     `(foreign-call ,rator . ,(map E rand*)))
 
     ((assign lhs rhs)
-     `(set! ,(unparse-recordized-code lhs) ,(unparse-recordized-code rhs)))
+     `(set! ,(E lhs) ,(E rhs)))
 
     ((foreign-label x)
      `(foreign-label ,x))
@@ -6333,23 +6322,30 @@
      'nfv)
 
     ((locals vars body)
-     `(locals ,(and vars (map unparse-recordized-code vars))
-	      ,(unparse-recordized-code body)))
+     `(locals ,(if vars
+		   `(local-vars: . ,(map E vars))
+		 '(local-vars: #f))
+	      ,(E body)))
 
     ((asm-instr op d s)
-     `(asm ,op ,(unparse-recordized-code d) ,(unparse-recordized-code s)))
+     `(asm ,op ,(E d) ,(E s)))
 
     ((disp s0 s1)
-     `(disp ,(unparse-recordized-code s0) ,(unparse-recordized-code s1)))
+     `(disp ,(E s0) ,(E s1)))
 
     ((nframe vars live body)
-     `(nframe
-       #;(vars: ,(map unparse-recordized-code vars))
-       #;(live: ,(map unparse-recordized-code live))
-       ,(unparse-recordized-code body)))
+     `(nframe ,(if (pair? vars)
+		   `(vars: . ,(map E vars))
+		 '(vars: #f))
+	      ,(if live
+		   `(live: . ,(map E live))
+		 '(live: #f))
+	      ,(E body)))
 
     ((shortcut body handler)
-     `(shortcut ,(unparse-recordized-code body) ,(unparse-recordized-code handler)))
+     `(shortcut
+	  ,(E body)
+	,(E handler)))
 
     ((ntcall target valuw args mask size)
      `(ntcall ,target ,size))
@@ -6395,7 +6391,8 @@
       (struct-case x
 	((constant x.const)
 	 (cond ((symbol? x.const)
-		;;Extract the pretty name; this is useful when C is a loc gensym.
+		;;Extract  the pretty  name; this  is useful  when X.CONST  is a  loc
+		;;gensym.
 		`(constant ,(%pretty-symbol x.const)))
 	       ((object? x.const)
 		`(constant ,(E x.const)))
@@ -6500,8 +6497,9 @@
 	 `(shortcut ,(E body) ,(E handler)))
 
 	((locals vars body)
-	 `(locals ,(and vars
-			(map E vars))
+	 `(locals ,(if vars
+		       `(local-vars: . ,(map E vars))
+		     '(local-vars: #f))
 		  ,(E body)))
 
 	((object obj)
@@ -6528,14 +6526,13 @@
 	 `(disp ,(E s0) ,(E s1)))
 
 	((nframe vars live body)
-	 `(nframe
-	   (vars: ,(if vars
-		       (map E vars)
-		     #f))
-	   (live: ,(if live
-		       (map E live)
-		     #f))
-	   ,(unparse-recordized-code body)))
+	 `(nframe ,(if (pair? vars)
+		       `(vars: . ,(map E vars))
+		     '(vars: #f))
+		  ,(if live
+		       `(live: . ,(map E live))
+		     '(live: #f))
+		  ,(E body)))
 
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
@@ -6688,18 +6685,19 @@
     ;;
     (define (E x)
       (struct-case x
-	((constant c)
-	 (cond ((symbol? c)
-		;;Extract the pretty name; this is useful when C is a loc gensym.
-		`(quote ,(%pretty-symbol c)))
-	       ((object? c)
-		`(quote ,(E c)))
-	       ((closure-maker? c)
-		`(constant ,(E c)))
-	       ((code-loc? c)
-		`(constant ,(E c)))
+	((constant x.const)
+	 (cond ((symbol? x.const)
+		;;Extract  the pretty  name; this  is useful  when X.CONST  is a  loc
+		;;gensym.
+		`(constant ,(%pretty-symbol x.const)))
+	       ((object? x.const)
+		`(constant ,(E x.const)))
+	       ((closure-maker? x.const)
+		`(constant ,(E x.const)))
+	       ((code-loc? x.const)
+		`(constant ,(E x.const)))
 	       (else
-		`(quote ,c))))
+		`(constant ,x.const))))
 
 	((prelex)
 	 (Var x))
@@ -6796,7 +6794,9 @@
 	 `(shortcut ,(E body) ,(E handler)))
 
 	((locals vars body)
-	 `(locals ,(and vars (map E vars))
+	 `(locals ,(if vars
+		       `(local-vars: . ,(map E vars))
+		     '(local-vars: #f))
 		  ,(E body)))
 
 	((object obj)
@@ -6823,14 +6823,13 @@
 	 `(disp ,(E s0) ,(E s1)))
 
 	((nframe vars live body)
-	 `(nframe
-	   (vars: ,(if vars
-		       (map E vars)
-		     #f))
-	   (live: ,(if live
-		       (map E live)
-		     #f))
-	   ,(unparse-recordized-code body)))
+	 `(nframe ,(if (pair? vars)
+		       `(vars: . ,(map E vars))
+		     '(vars: #f))
+		  ,(if live
+		       `(live: . ,(map E live))
+		     '(live: #f))
+		  ,(E body)))
 
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
