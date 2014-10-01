@@ -6552,14 +6552,7 @@
 	   `(shortcut ,(E body) ,(E handler)))
 
 	  ((non-tail-call target value args mask size)
-	   `(non-tail-call
-	     (target: ,target)
-	     (value:  ,value)
-	     ,(if (and args (pair? args))
-		  `(args: . ,args)
-		'(args: #f))
-	     (mask:   ,mask)
-	     (size:   ,size)))
+	   (E-non-tail-call x E))
 
 	  (else x)))
 
@@ -6843,14 +6836,7 @@
 	   `(shortcut ,(E body) ,(E handler)))
 
 	  ((non-tail-call target value args mask size)
-	   `(non-tail-call
-	     (target: ,target)
-	     (value:  ,value)
-	     ,(if (and args (pair? args))
-		  `(args: . ,args)
-		'(args: #f))
-	     (mask:   ,mask)
-	     (size:   ,size)))
+	   (E-non-tail-call x E))
 
 	  (else x)))
 
@@ -7012,6 +6998,10 @@
 	      `(constant ,(E x.const)))
 	     ((code-loc? x.const)
 	      `(constant ,(E x.const)))
+	     ((foreign-label? x.const)
+	      (struct-case x.const
+		((foreign-label name)
+		 `(constant (foreign-label ,name)))))
 	     (else
 	      `(constant ,x.const))))))
 
@@ -7022,7 +7012,13 @@
 	 (target: ,target)
 	 (retval-var:  ,(and retval-var (E retval-var)))
 	 ,(if (and args (pair? args))
-	      `(args: . ,args)
+	      `(args: . ,(map (lambda (arg)
+				(cond ((symbol? arg)
+				       arg)
+				      ((nfv? arg)
+				       (E arg))
+				      (else arg)))
+			   args))
 	    '(args: #f))
 	 (mask:   ,mask)
 	 (size:   ,size)))))
