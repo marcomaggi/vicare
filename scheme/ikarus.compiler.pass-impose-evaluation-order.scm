@@ -725,9 +725,13 @@
 	(compiler-internal-error __module_who__ "invalid instr" x))))
 
     ((funcall rator rands)
+     ;;For  side effects  the return  value is  discarded, so  there is  no DST-LOCAL
+     ;;location.
      (%handle-nontail-call rator rands #f #f))
 
     ((jmpcall label rator rands)
+     ;;For  side effects  the return  value is  discarded, so  there is  no DST-LOCAL
+     ;;location.
      (%handle-nontail-call rator rands #f label))
 
     ((forcall op rands)
@@ -858,13 +862,22 @@
 (module (%handle-nontail-call)
 
   (define (%handle-nontail-call rator rands dst-local call-targ)
-    ;;The argument DST-LOCAL  must be false a  VAR or NFV struct;  when non-false, it
-    ;;represents the location to which the return  value of the function call must be
-    ;;stored:  first   the  callee  function   stores  its  return  value   into  the
-    ;;RETURN-VALUE-REGISTER, then caller moves it into DST-LOCAL.
+    ;;The argument DST-LOCAL must be false a VAR or NFV struct:
     ;;
-    (let-values (((reg-locs reg-args frm-args)
-		  (%nontail-locations PARAMETER-REGISTERS (cons rator rands))))
+    ;;* When  false: it means  the return value of  this function call  is discarded;
+    ;;  this function call is performed for its side effects.
+    ;;
+    ;;* When non-false: it  represents the location to which the  return value of the
+    ;;  function  call must be  stored: first the  callee function stores  its return
+    ;;  value into the RETURN-VALUE-REGISTER, then caller moves it into DST-LOCAL.
+    ;;
+    ;;When the function returns a single  value: the return value stored in DST-LOCAL
+    ;;is the  actually returned  Scheme object.  When  the function  returns multiple
+    ;;values: the return  value stored in DST-LOCAL is the  number of returned Scheme
+    ;;objects (0, 2 or more) and the Scheme objects are on the Scheme stack.
+    ;;
+    (receive (reg-locs reg-args frm-args)
+	(%nontail-locations PARAMETER-REGISTERS (cons rator rands))
       (let ((regt* (map (lambda (x)
 			  (make-unique-var 'tmp))
 		     reg-args))
@@ -897,16 +910,15 @@
   (define (%nontail-locations regs args)
     ;;Non-tail recursive function.
     ;;
-    (cond ((null? args)
-	   (values '() '() '()))
-	  ((null? regs)
-	   (values '() '() args))
-	  (else
-	   (let-values (((r* rl* f*)
-			 (%nontail-locations (cdr regs) (cdr args))))
-	     (values (cons (car regs) r*)
-		     (cons (car args) rl*)
-		     f*)))))
+    (if (pair? args)
+	(if (pair? regs)
+	    (receive (r* rl* f*)
+		(%nontail-locations (cdr regs) (cdr args))
+	      (values (cons (car regs) r*)
+		      (cons (car args) rl*)
+		      f*))
+	  (values '() '() args))
+      (values '() '() '())))
 
   #| end of module: %HANDLE-NONTAIL-CALL |# )
 

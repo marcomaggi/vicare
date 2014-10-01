@@ -336,6 +336,22 @@
   #t)
 
 
+(parametrise ((check-test-name	'call-display-for-side-effects))
+
+  (check
+      (%before-impose-eval-order '(begin
+				    ((primitive display) '1)
+				    '2))
+    => #f)
+
+  (doit (begin
+	  ((primitive display) '1)
+	  '2)
+	#f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

@@ -1737,8 +1737,25 @@
    ))
 
 (define-struct non-tail-call
+  ;;Represent a non-tail function call.
+  ;;
   (target
-   value
+   retval-var
+		;False, VAR or NFV struct:
+		;
+		;* When  false: it means  the return value  of this function  call is
+		;  discarded; this function call is performed for its side effects.
+		;
+		;* When  non-false: it  represents the location  to which  the return
+		;   value of  the  function call  must be  stored:  first the  callee
+		;  function stores its return value into the AA-REGISTER, then caller
+		;  moves it into RETVAL-VAR.
+		;
+		;When the function returns a single value: the return value stored in
+		;RETVAL-VAR  is  the  actually  returned  Scheme  object.   When  the
+		;function  returns  multiple  values:  the  return  value  stored  in
+		;RETVAL-VAR is the  number of returned Scheme objects (0,  2 or more)
+		;and the Scheme objects are on the Scheme stack.
    args
    mask
    size
@@ -6203,823 +6220,819 @@
 (include "ikarus.compiler.altcogen.scm" #t)
 
 
-(define (unparse-recordized-code x)
-  ;;Unparse the struct instance X (representing  recordized code in the core language
-  ;;already processed by  the compiler) into a human readable  symbolic expression to
-  ;;be used when raising errors.
-  ;;
-  ;;Being that this function is used only when signaling errors: it makes no sense to
-  ;;use unsafe operations: let's keep it safe!!!
-  ;;
-  (import SCHEME-OBJECTS-ONTOLOGY)
-  (define E unparse-recordized-code)
-  (struct-case x
-    ((constant x.const)
-     (cond ((symbol? x.const)
-	    ;;Extract the pretty name; this is useful when X.CONST is a loc gensym.
-	    `(constant ,x.const))
-	   ((object? x.const)
-	    `(constant ,(E x.const)))
-	   ((closure-maker? x.const)
-	    `(constant ,(E x.const)))
-	   ((code-loc? x.const)
-	    `(constant ,(E x.const)))
-	   (else
-	    `(constant ,x.const))))
+(module (unparse-recordized-code
+	 unparse-recordized-code/sexp
+	 unparse-recordized-code/pretty)
 
-    ((known expr type)
-     `(known ,(E expr) ,(core-type-tag-description type)))
+  (define (unparse-recordized-code x)
+    ;;Unparse  the  struct instance  X  (representing  recordized  code in  the  core
+    ;;language  already processed  by the  compiler) into  a human  readable symbolic
+    ;;expression to be used when raising errors.
+    ;;
+    ;;Being that this function is used only  when signaling errors: it makes no sense
+    ;;to use unsafe operations: let's keep it safe!!!
+    ;;
+    (import SCHEME-OBJECTS-ONTOLOGY)
+    (define E unparse-recordized-code)
+    (struct-case x
+      ((constant)
+       (E-constant x E))
 
-    ((code-loc x)
-     `(code-loc ,x))
+      ((known expr type)
+       `(known ,(E expr) ,(core-type-tag-description type)))
 
-    ((var x)
-     (string->symbol (format ":~a" x)))
+      ((code-loc x)
+       `(code-loc ,x))
 
-    ((prelex name)
-     (string->symbol (format ":~a" name)))
+      ((var x)
+       (string->symbol (format ":~a" x)))
 
-    ((primref x)
-     x)
+      ((prelex name)
+       (string->symbol (format ":~a" name)))
 
-    ((conditional test conseq altern)
-     `(conditional ,(E test)
-	  ,(E conseq)
-	,(E altern)))
+      ((primref x)
+       x)
 
-    ((primopcall op arg*)
-     `(,op . ,(map E arg*)))
+      ((conditional test conseq altern)
+       `(conditional ,(E test)
+	    ,(E conseq)
+	  ,(E altern)))
 
-    ((asmcall op arg*)
-     `(asmcall ,op . ,(map E arg*)))
+      ((primopcall op arg*)
+       `(,op . ,(map E arg*)))
 
-    ((bind lhs* rhs* body)
-     `(let ,(map (lambda (lhs rhs)
-		   (list (E lhs) (E rhs)))
-	      lhs* rhs*)
-	,(E body)))
+      ((asmcall op arg*)
+       `(asmcall ,op . ,(map E arg*)))
 
-    ((recbind lhs* rhs* body)
-     `(letrec ,(map (lambda (lhs rhs)
-		      (list (E lhs) (E rhs)))
-		 lhs* rhs*)
-	,(E body)))
+      ((bind lhs* rhs* body)
+       `(let ,(map (lambda (lhs rhs)
+		     (list (E lhs) (E rhs)))
+		lhs* rhs*)
+	  ,(E body)))
 
-    ((rec*bind lhs* rhs* body)
-     `(letrec* ,(map (lambda (lhs rhs)
-		       (list (E lhs) (E rhs)))
-		  lhs* rhs*)
-	,(E body)))
+      ((recbind lhs* rhs* body)
+       `(letrec ,(map (lambda (lhs rhs)
+			(list (E lhs) (E rhs)))
+		   lhs* rhs*)
+	  ,(E body)))
 
-    ((fix lhs* rhs* body)
-     `(fix ,(map (lambda (lhs rhs)
-		   (list (E lhs) (E rhs)))
-	      lhs* rhs*)
-	,(E body)))
+      ((rec*bind lhs* rhs* body)
+       `(letrec* ,(map (lambda (lhs rhs)
+			 (list (E lhs) (E rhs)))
+		    lhs* rhs*)
+	  ,(E body)))
 
-    ((seq e0 e1)
-     (letrec ((recur (lambda (x ac)
-		       (struct-case x
-			 ((seq e0 e1)
-			  (recur e0 (recur e1 ac)))
-			 (else
-			  (cons (E x) ac))))))
-       (cons 'seq (recur e0 (recur e1 '())))))
+      ((fix lhs* rhs* body)
+       `(fix ,(map (lambda (lhs rhs)
+		     (list (E lhs) (E rhs)))
+		lhs* rhs*)
+	  ,(E body)))
 
-    ((clambda-case info body)
-     `(,(if (case-info-proper info)
-	    (map E (case-info-args info))
-	  ;;The loop  below is like MAP  but for improper  lists: it maps E  over the
-	  ;;improper list X.
-	  (let ((X (case-info-args info)))
-	    (let recur ((A (car X))
-			(D (cdr X)))
+      ((seq e0 e1)
+       (letrec ((recur (lambda (x ac)
+			 (struct-case x
+			   ((seq e0 e1)
+			    (recur e0 (recur e1 ac)))
+			   (else
+			    (cons (E x) ac))))))
+	 (cons 'seq (recur e0 (recur e1 '())))))
+
+      ((clambda-case info body)
+       `(,(if (case-info-proper info)
+	      (map E (case-info-args info))
+	    ;;The loop  below is like MAP  but for improper  lists: it maps E  over the
+	    ;;improper list X.
+	    (let ((X (case-info-args info)))
+	      (let recur ((A (car X))
+			  (D (cdr X)))
+		(if (pair? D)
+		    (cons (E A) (recur (car D) (cdr D)))
+		  (E A)))))
+	 ,(E body)))
+
+      ((clambda label cls* cp freevar*)
+       ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
+       `(clambda (label: ,label)
+		 (cp:    ,(E cp))
+		 (free:  ,(and freevar* (map E freevar*)))
+		 ,@(map E cls*)))
+
+      ((closure-maker code freevar*)
+       `(closure (freevars: ,(map E freevar*))
+		 ,(E code)))
+
+      ((codes list body)
+       `(codes ,(map E list)
+	       ,(E body)))
+
+      ((funcall rator rand*)
+       `(funcall ,(E rator) . ,(map E rand*)))
+
+      ((jmpcall label rator rand*)
+       `(jmpcall ,label ,(E rator) . ,(map E rand*)))
+
+      ((forcall rator rand*)
+       `(foreign-call ,rator . ,(map E rand*)))
+
+      ((assign lhs rhs)
+       `(set! ,(E lhs) ,(E rhs)))
+
+      ((foreign-label x)
+       `(foreign-label ,x))
+
+      ((fvar idx)
+       (string->symbol (format "fv.~a" idx)))
+
+      ((nfv idx)
+       'nfv)
+
+      ((locals vars body)
+       `(locals ,(if vars
+		     `(local-vars: . ,(map E vars))
+		   '(local-vars: #f))
+		,(E body)))
+
+      ((asm-instr op d s)
+       `(asm ,op ,(E d) ,(E s)))
+
+      ((disp s0 s1)
+       `(disp ,(E s0) ,(E s1)))
+
+      ((nframe vars live body)
+       `(nframe ,(if (pair? vars)
+		     `(vars: . ,(map E vars))
+		   '(vars: #f))
+		,(if live
+		     `(live: . ,(map E live))
+		   '(live: #f))
+		,(E body)))
+
+      ((shortcut body handler)
+       `(shortcut
+	    ,(E body)
+	  ,(E handler)))
+
+      ((non-tail-call)
+       (E-non-tail-call x E))
+
+      (else x)))
+
+;;; --------------------------------------------------------------------
+
+  (module (unparse-recordized-code/sexp)
+    ;;Unparse the struct instance INPUT-EXPR  (representing recordized code in the core
+    ;;language  already processed  by  the  compiler) into  a  human readable  symbolic
+    ;;expression to  be used  when printing  to some  port for  miscellaneous debugging
+    ;;purposes.
+    ;;
+    ;;This  module  attempts  to  unparse  recordized code  and  construct  a  symbolic
+    ;;expression that still represents the struct types in the recordized code.
+    ;;
+    ;;This function recognises only structures of the following type:
+    ;;
+    ;;   assign		bind		clambda
+    ;;   conditional	constant	fix
+    ;;   forcall		foreign-label	funcall
+    ;;   known		prelex		primopcall
+    ;;   primref		rec*bind	recbind
+    ;;   seq		var		asmcall
+    ;;
+    ;;other values are not processed and are returned as they are.
+    ;;
+    (import SCHEME-OBJECTS-ONTOLOGY)
+
+    (define-syntax __module_who__
+      (identifier-syntax 'unparse-recordized-code/sexp))
+
+    (define (unparse-recordized-code/sexp input-expr)
+      ;;
+      ;;A lot of functions are nested here  because they make use of the closure "Var",
+      ;;which has internal state.
+      ;;
+      ;;*NOTE* Being that this function is used  only when debugging: it makes no sense
+      ;;to use unsafe operations: LET'S KEEP IT SAFE!!!
+      ;;
+      (define (E x)
+	(struct-case x
+	  ((constant)
+	   (E-constant x E))
+
+	  ((prelex)
+	   (Var x))
+
+	  ((var)
+	   (Var x))
+
+	  ((assign lhs rhs)
+	   (if (symbol? (prelex-source-assigned? lhs))
+	       `(assign-init ,(E lhs) ,(E rhs))
+	     `(assign ,(E lhs) ,(E rhs))))
+
+	  ((primref x)
+	   `(primref ,x))
+
+	  ((known expr type)
+	   `(known ,(E expr) ,(core-type-tag-description type)))
+
+	  ((clambda)
+	   (E-clambda x))
+
+	  ((closure-maker code freevar*)
+	   `(closure-maker ,(E code)
+			   ,(let ((freevar* (map E freevar*)))
+			      (if (null? freevar*)
+				  'no-freevars
+				`(freevars: . ,freevar*)))))
+
+	  ((primopcall op arg*)
+	   (cons* 'primopcall op (%map-in-order E arg*)))
+
+	  ((asmcall op arg*)
+	   (cons* 'asmcall    op (%map-in-order E arg*)))
+
+	  ((funcall rator rand*)
+	   (let ((rator (E rator)))
+	     (cons* 'funcall rator (%map-in-order E rand*))))
+
+	  ((forcall rator rand*)
+	   `(foreign-call ,rator . ,(%map-in-order E rand*)))
+
+	  ((jmpcall label op rand*)
+	   `(jmpcall ,(%pretty-symbol label) ,(E op) . ,(map E rand*)))
+
+	  ((seq e0 e1)
+	   (%do-seq e0 e1))
+
+	  ((conditional test conseq altern)
+	   (let ((test^   (E test))
+		 (conseq^ (E conseq))
+		 (altern^ (E altern)))
+	     (list 'conditional test^ conseq^ altern^)))
+
+	  ((bind lhs* rhs* body)
+	   (let* ((lhs* (%map-in-order Var lhs*))
+		  (rhs* (%map-in-order E   rhs*))
+		  (body (E body)))
+	     (list 'bind (map list lhs* rhs*) body)))
+
+	  ((fix lhs* rhs* body)
+	   (let* ((lhs* (%map-in-order Var lhs*))
+		  (rhs* (%map-in-order E   rhs*))
+		  (body (E body)))
+	     (list 'fix (map list lhs* rhs*) body)))
+
+	  ((recbind lhs* rhs* body)
+	   (let* ((lhs* (%map-in-order Var lhs*))
+		  (rhs* (%map-in-order E   rhs*))
+		  (body (E body)))
+	     (list 'recbind (map list lhs* rhs*) body)))
+
+	  ((rec*bind lhs* rhs* body)
+	   (let* ((lhs* (%map-in-order Var lhs*))
+		  (rhs* (%map-in-order E   rhs*))
+		  (body (E body)))
+	     (list 'rec*bind (map list lhs* rhs*) body)))
+
+	  ((codes clambda* body)
+	   `(codes ,(map (lambda (clam)
+			   (let ((sexp (E clam)))
+			     (cons* (car sexp)
+				    ;;Print the pretty gensym name.
+				    `(label: ,(%pretty-symbol (clambda-label clam)))
+				    (cdr sexp))))
+		      clambda*)
+		   ,(E body)))
+
+	  ((code-loc label)
+	   ;;Print the pretty gensym name.
+	   `(code-loc ,(%pretty-symbol label)))
+
+	  ((shortcut body handler)
+	   `(shortcut ,(E body) ,(E handler)))
+
+	  ((locals vars body)
+	   `(locals ,(if vars
+			 `(local-vars: . ,(map E vars))
+		       '(local-vars: #f))
+		    ,(E body)))
+
+	  ((object obj)
+	   `(object ,(cond ((symbol? obj)
+			    (%pretty-symbol obj))
+			   (else
+			    (E obj)))))
+
+	  ;; ------------------------------
+
+	  ((foreign-label x)
+	   `(foreign-label ,x))
+
+	  ((fvar idx)
+	   (string->symbol (format "fvar.~a" idx)))
+
+	  ((nfv idx)
+	   `(nfv ,idx))
+
+	  ((asm-instr op d s)
+	   `(asm-instr ,op ,(E d) ,(E s)))
+
+	  ((disp s0 s1)
+	   `(disp ,(E s0) ,(E s1)))
+
+	  ((nframe vars live body)
+	   `(nframe ,(if (pair? vars)
+			 `(vars: . ,(map E vars))
+		       '(vars: #f))
+		    ,(if live
+			 `(live: . ,(map E live))
+		       '(live: #f))
+		    ,(E body)))
+
+	  ((shortcut body handler)
+	   `(shortcut ,(E body) ,(E handler)))
+
+	  ((non-tail-call target value args mask size)
+	   `(non-tail-call
+	     (target: ,target)
+	     (value:  ,value)
+	     ,(if (and args (pair? args))
+		  `(args: . ,args)
+		'(args: #f))
+	     (mask:   ,mask)
+	     (size:   ,size)))
+
+	  (else x)))
+
+      (module (Var)
+	;;Given a struct instance X of type  PRELEX or VAR, identifying the location of
+	;;a binding: return  a symbol representing a unique name  for the binding.  The
+	;;map between structures and symbols is cached in a hash table.
+	;;
+	;;This function acts in such a way that the input:
+	;;
+	;;   (let ((a 1))
+	;;     (let ((a a))
+	;;       a))
+	;;
+	;;is transformed into:
+	;;
+	;;   (let ((a_0 1))
+	;;     (let ((a_1 a_0))
+	;;       a_1))
+	;;
+	(define H
+	  ;;Map PRELEX and VAR structures to already built binding name symbols.
+	  (make-eq-hashtable))
+	(define T
+	  ;;Map binding  pretty string names  to number of  times this string  name has
+	  ;;already been used.
+	  (make-hashtable string-hash string=?))
+	(define (Var x)
+	  (or (hashtable-ref H x #f)
+	      (struct-case x
+		((prelex x.name)
+		 (%build-name x x.name))
+		((var x.name)
+		 (%build-name x x.name))
+		((fvar)
+		 (E x))
+		(else x))))
+
+	(define (%build-name x x.name)
+	  (let* ((name (symbol->string x.name))
+		 (N    (hashtable-ref T name 0)))
+	    (hashtable-set! T name (+ N 1))
+	    (receive-and-return (sym)
+		(string->symbol (string-append name "_" (number->string N)))
+	      (hashtable-set! H x sym))))
+
+	#| end of module: Var |# )
+
+      (define (%do-seq e0 e1)
+	(cons 'seq
+	      ;;Here we flatten nested SEQ instances into a unique output SEQ form.
+	      (let recur ((expr  e0)
+			  (expr* (list e1)))
+		(struct-case expr
+		  ((seq expr.e0 expr.e1)
+		   (recur expr.e0 (cons expr.e1 expr*)))
+		  (else
+		   (let ((expr^ (E expr)))
+		     (if (pair? expr*)
+			 (cons expr^ (recur (car expr*) (cdr expr*)))
+		       (list expr^))))))))
+
+      (module (E-clambda)
+
+	(define (E-clambda x)
+	  (struct-case x
+	    ((clambda label.unused cls*)
+	     (let ((cls* (%map-in-order E-clambda-clause cls*)))
+	       (if (%list-of-one-item? cls*)
+		   (cons 'lambda (car cls*))
+		 (cons 'case-lambda cls*))))))
+
+	(define (E-clambda-clause x)
+	  (struct-case x
+	    ((clambda-case info body)
+	     (let ((args (E-args (case-info-proper info) (case-info-args info))))
+	       (list args (E body))))))
+
+	(define (E-args proper x)
+	  (if proper
+	      (%map-in-order Var x)
+	    ;;The loop below is  like MAP but for improper lists: it  maps Var over the
+	    ;;improper list X.
+	    (let recur ((A (car x))
+			(D (cdr x)))
 	      (if (pair? D)
-		  (cons (E A) (recur (car D) (cdr D)))
-		(E A)))))
-       ,(E body)))
+		  (let ((A (Var A)))
+		    (cons A (recur (car D) (cdr D))))
+		(Var A)))))
 
-    ((clambda label cls* cp freevar*)
-     ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
-     `(clambda (label: ,label)
-	       (cp:    ,(E cp))
-	       (free:  ,(and freevar* (map E freevar*)))
-	       ,@(map E cls*)))
+	#| end of module: E-clambda |# )
 
-    ((closure-maker code freevar*)
-     `(closure (freevars: ,(map E freevar*))
-	       ,(E code)))
-
-    ((codes list body)
-     `(codes ,(map E list)
-	     ,(E body)))
-
-    ((funcall rator rand*)
-     `(funcall ,(E rator) . ,(map E rand*)))
-
-    ((jmpcall label rator rand*)
-     `(jmpcall ,label ,(E rator) . ,(map E rand*)))
-
-    ((forcall rator rand*)
-     `(foreign-call ,rator . ,(map E rand*)))
-
-    ((assign lhs rhs)
-     `(set! ,(E lhs) ,(E rhs)))
-
-    ((foreign-label x)
-     `(foreign-label ,x))
-
-    ((fvar idx)
-     (string->symbol (format "fv.~a" idx)))
-
-    ((nfv idx)
-     'nfv)
-
-    ((locals vars body)
-     `(locals ,(if vars
-		   `(local-vars: . ,(map E vars))
-		 '(local-vars: #f))
-	      ,(E body)))
-
-    ((asm-instr op d s)
-     `(asm ,op ,(E d) ,(E s)))
-
-    ((disp s0 s1)
-     `(disp ,(E s0) ,(E s1)))
-
-    ((nframe vars live body)
-     `(nframe ,(if (pair? vars)
-		   `(vars: . ,(map E vars))
-		 '(vars: #f))
-	      ,(if live
-		   `(live: . ,(map E live))
-		 '(live: #f))
-	      ,(E body)))
-
-    ((shortcut body handler)
-     `(shortcut
-	  ,(E body)
-	,(E handler)))
-
-    ((non-tail-call target value args mask size)
-     `(non-tail-call
-       (target: ,target)
-       (value:  ,value)
-       ,(if (and args (pair? args))
-	    `(args: . ,args)
-	  '(args: #f))
-       (mask:   ,mask)
-       (size:   ,size)))
-
-    (else x)))
-
-
-(module (unparse-recordized-code/sexp)
-  ;;Unparse the struct instance INPUT-EXPR  (representing recordized code in the core
-  ;;language  already processed  by  the  compiler) into  a  human readable  symbolic
-  ;;expression to  be used  when printing  to some  port for  miscellaneous debugging
-  ;;purposes.
-  ;;
-  ;;This  module  attempts  to  unparse  recordized code  and  construct  a  symbolic
-  ;;expression that still represents the struct types in the recordized code.
-  ;;
-  ;;This function recognises only structures of the following type:
-  ;;
-  ;;   assign		bind		clambda
-  ;;   conditional	constant	fix
-  ;;   forcall		foreign-label	funcall
-  ;;   known		prelex		primopcall
-  ;;   primref		rec*bind	recbind
-  ;;   seq		var		asmcall
-  ;;
-  ;;other values are not processed and are returned as they are.
-  ;;
-  (import SCHEME-OBJECTS-ONTOLOGY)
-
-  (define-syntax __module_who__
-    (identifier-syntax 'unparse-recordized-code/sexp))
-
-  (define (unparse-recordized-code/sexp input-expr)
-    ;;
-    ;;A lot of functions are nested here  because they make use of the closure "Var",
-    ;;which has internal state.
-    ;;
-    ;;*NOTE* Being that this function is used  only when debugging: it makes no sense
-    ;;to use unsafe operations: LET'S KEEP IT SAFE!!!
-    ;;
-    (define (E x)
-      ;;;(debug-print 'there x)
-      (struct-case x
-	((constant x.const)
-	 (cond ((symbol? x.const)
-		;;Extract  the pretty  name; this  is useful  when X.CONST  is a  loc
-		;;gensym.
-		`(constant ,(%pretty-symbol x.const)))
-	       ((object? x.const)
-		`(constant ,(E x.const)))
-	       ((closure-maker? x.const)
-		`(constant ,(E x.const)))
-	       ((code-loc? x.const)
-		`(constant ,(E x.const)))
-	       (else
-		`(constant ,x.const))))
-
-	((prelex)
-	 (Var x))
-
-	((var)
-	 (Var x))
-
-	((assign lhs rhs)
-	 (if (symbol? (prelex-source-assigned? lhs))
-	     `(assign-init ,(E lhs) ,(E rhs))
-	   `(assign ,(E lhs) ,(E rhs))))
-
-	((primref x)
-	 `(primref ,x))
-
-	((known expr type)
-	 `(known ,(E expr) ,(core-type-tag-description type)))
-
-	((clambda)
-	 (E-clambda x))
-
-	((closure-maker code freevar*)
-	 `(closure-maker ,(E code)
-			 ,(let ((freevar* (map E freevar*)))
-			    (if (null? freevar*)
-				'no-freevars
-			      `(freevars: . ,freevar*)))))
-
-	((primopcall op arg*)
-	 (cons* 'primopcall op (%map-in-order E arg*)))
-
-	((asmcall op arg*)
-	 (cons* 'asmcall    op (%map-in-order E arg*)))
-
-	((funcall rator rand*)
-	 (let ((rator (E rator)))
-	   (cons* 'funcall rator (%map-in-order E rand*))))
-
-	((forcall rator rand*)
-	 `(foreign-call ,rator . ,(%map-in-order E rand*)))
-
-	((jmpcall label op rand*)
-	 `(jmpcall ,(%pretty-symbol label) ,(E op) . ,(map E rand*)))
-
-	((seq e0 e1)
-	 (%do-seq e0 e1))
-
-	((conditional test conseq altern)
-	 (let ((test^   (E test))
-	       (conseq^ (E conseq))
-	       (altern^ (E altern)))
-	   (list 'conditional test^ conseq^ altern^)))
-
-	((bind lhs* rhs* body)
-	 (let* ((lhs* (%map-in-order Var lhs*))
-		(rhs* (%map-in-order E   rhs*))
-		(body (E body)))
-	   (list 'bind (map list lhs* rhs*) body)))
-
-	((fix lhs* rhs* body)
-	 (let* ((lhs* (%map-in-order Var lhs*))
-		(rhs* (%map-in-order E   rhs*))
-		(body (E body)))
-	   (list 'fix (map list lhs* rhs*) body)))
-
-	((recbind lhs* rhs* body)
-	 (let* ((lhs* (%map-in-order Var lhs*))
-		(rhs* (%map-in-order E   rhs*))
-		(body (E body)))
-	   (list 'recbind (map list lhs* rhs*) body)))
-
-	((rec*bind lhs* rhs* body)
-	 (let* ((lhs* (%map-in-order Var lhs*))
-		(rhs* (%map-in-order E   rhs*))
-		(body (E body)))
-	   (list 'rec*bind (map list lhs* rhs*) body)))
-
-	((codes clambda* body)
-	 `(codes ,(map (lambda (clam)
-			 (let ((sexp (E clam)))
-			   (cons* (car sexp)
-				  ;;Print the pretty gensym name.
-				  `(label: ,(%pretty-symbol (clambda-label clam)))
-				  (cdr sexp))))
-		    clambda*)
-		 ,(E body)))
-
-	((code-loc label)
-	 ;;Print the pretty gensym name.
-	 `(code-loc ,(%pretty-symbol label)))
-
-	((shortcut body handler)
-	 `(shortcut ,(E body) ,(E handler)))
-
-	((locals vars body)
-	 `(locals ,(if vars
-		       `(local-vars: . ,(map E vars))
-		     '(local-vars: #f))
-		  ,(E body)))
-
-	((object obj)
-	 `(object ,(cond ((symbol? obj)
-			  (%pretty-symbol obj))
-			 (else
-			  (E obj)))))
-
-	;; ------------------------------
-
-	((foreign-label x)
-	 `(foreign-label ,x))
-
-	((fvar idx)
-	 (string->symbol (format "fvar.~a" idx)))
-
-	((nfv idx)
-	 `(nfv ,idx))
-
-	((asm-instr op d s)
-	 `(asm-instr ,op ,(E d) ,(E s)))
-
-	((disp s0 s1)
-	 `(disp ,(E s0) ,(E s1)))
-
-	((nframe vars live body)
-	 `(nframe ,(if (pair? vars)
-		       `(vars: . ,(map E vars))
-		     '(vars: #f))
-		  ,(if live
-		       `(live: . ,(map E live))
-		     '(live: #f))
-		  ,(E body)))
-
-	((shortcut body handler)
-	 `(shortcut ,(E body) ,(E handler)))
-
-	((non-tail-call target value args mask size)
-	 `(non-tail-call
-	   (target: ,target)
-	   (value:  ,value)
-	   ,(if (and args (pair? args))
-		`(args: . ,args)
-	      '(args: #f))
-	   (mask:   ,mask)
-	   (size:   ,size)))
-
-	(else x)))
-
-    (module (Var)
-      ;;Given a struct instance X of type  PRELEX or VAR, identifying the location of
-      ;;a binding: return  a symbol representing a unique name  for the binding.  The
-      ;;map between structures and symbols is cached in a hash table.
-      ;;
-      ;;This function acts in such a way that the input:
-      ;;
-      ;;   (let ((a 1))
-      ;;     (let ((a a))
-      ;;       a))
-      ;;
-      ;;is transformed into:
-      ;;
-      ;;   (let ((a_0 1))
-      ;;     (let ((a_1 a_0))
-      ;;       a_1))
-      ;;
-      (define H
-	;;Map PRELEX and VAR structures to already built binding name symbols.
-	(make-eq-hashtable))
-      (define T
-	;;Map binding  pretty string names  to number of  times this string  name has
-	;;already been used.
-	(make-hashtable string-hash string=?))
-      (define (Var x)
-	(or (hashtable-ref H x #f)
-	    (struct-case x
-	      ((prelex x.name)
-	       (%build-name x x.name))
-	      ((var x.name)
-	       (%build-name x x.name))
-	      ((fvar)
-	       (E x))
-	      (else x))))
-
-      (define (%build-name x x.name)
-	(let* ((name (symbol->string x.name))
-	       (N    (hashtable-ref T name 0)))
-	  (hashtable-set! T name (+ N 1))
-	  (receive-and-return (sym)
-	      (string->symbol (string-append name "_" (number->string N)))
-	    (hashtable-set! H x sym))))
-
-      #| end of module: Var |# )
-
-    (define (%do-seq e0 e1)
-      (cons 'seq
-	    ;;Here we flatten nested SEQ instances into a unique output SEQ form.
-	    (let recur ((expr  e0)
-			(expr* (list e1)))
-	      (struct-case expr
-		((seq expr.e0 expr.e1)
-		 (recur expr.e0 (cons expr.e1 expr*)))
-		(else
-		 (let ((expr^ (E expr)))
-		   (if (pair? expr*)
-		       (cons expr^ (recur (car expr*) (cdr expr*)))
-		     (list expr^))))))))
-
-    (module (E-clambda)
-
-      (define (E-clambda x)
-	(struct-case x
-	  ((clambda label.unused cls*)
-	   (let ((cls* (%map-in-order E-clambda-clause cls*)))
-	     (if (%list-of-one-item? cls*)
-		 (cons 'lambda (car cls*))
-	       (cons 'case-lambda cls*))))))
-
-      (define (E-clambda-clause x)
-	(struct-case x
-	  ((clambda-case info body)
-	   (let ((args (E-args (case-info-proper info) (case-info-args info))))
-	     (list args (E body))))))
-
-      (define (E-args proper x)
-	(if proper
-	    (%map-in-order Var x)
-	  ;;The loop below is  like MAP but for improper lists: it  maps Var over the
-	  ;;improper list X.
-	  (let recur ((A (car x))
-		      (D (cdr x)))
-	    (if (pair? D)
-		(let ((A (Var A)))
-		  (cons A (recur (car D) (cdr D))))
-	      (Var A)))))
-
-      #| end of module: E-clambda |# )
-
-    (E input-expr))
+      (E input-expr))
 
 ;;; --------------------------------------------------------------------
 
-  (define (%map-in-order f ls)
-    ;;This version of  MAP imposes an order to  the application of F to  the items in
-    ;;LS.
+    (define (%map-in-order f ls)
+      ;;This version of  MAP imposes an order to  the application of F to  the items in
+      ;;LS.
+      ;;
+      (if (pair? ls)
+	  (let ((a (f (car ls))))
+	    (cons a (%map-in-order f (cdr ls))))
+	'()))
+
+    #| end of module: unparse-recordized-code/sexp |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (unparse-recordized-code/pretty)
+    ;;Unparse the struct instance INPUT-EXPR  (representing recordized code in the core
+    ;;language  already processed  by  the  compiler) into  a  human readable  symbolic
+    ;;expression to  be used  when printing  to some  port for  miscellaneous debugging
+    ;;purposes.
     ;;
-    (if (pair? ls)
-	(let ((a (f (car ls))))
-	  (cons a (%map-in-order f (cdr ls))))
-      '()))
+    ;;This module  attempts to  unparse recordized code  and reconstruct  a Scheme-like
+    ;;symbolic expression; the returned sexp does *not* exactly represent the input.
+    ;;
+    ;;This function recognises only structures of the following type:
+    ;;
+    ;;   assign		bind		clambda
+    ;;   conditional	constant	fix
+    ;;   forcall		foreign-label	funcall
+    ;;   known		prelex		primopcall
+    ;;   primref		rec*bind	recbind
+    ;;   seq		var		asmcall
+    ;;
+    ;;other values are not processed and are returned as they are.
+    ;;
+    (import SCHEME-OBJECTS-ONTOLOGY)
+
+    (define-syntax __module_who__
+      (identifier-syntax 'unparse-recordized-code/pretty))
+
+    (define (unparse-recordized-code/pretty input-expr)
+      ;;
+      ;;A lot of functions are nested here  because they make use of the closure "Var",
+      ;;which has internal state.
+      ;;
+      ;;*NOTE* Being that this function is used  only when debugging: it makes no sense
+      ;;to use unsafe operations: LET'S KEEP IT SAFE!!!
+      ;;
+      (define (E x)
+	(struct-case x
+	  ((constant)
+	   (E-constant x E))
+
+	  ((prelex)
+	   (Var x))
+
+	  ((var)
+	   (Var x))
+
+	  ((assign lhs rhs)
+	   `(set! ,(E lhs) ,(E rhs)))
+
+	  ((primref x)
+	   x)
+
+	  ((known expr type)
+	   `(known ,(E expr) ,(core-type-tag-description type)))
+
+	  ((clambda)
+	   (E-clambda x))
+
+	  ((closure-maker code freevar*)
+	   `(closure-maker ,(E code)
+			   ,(let ((freevar* (map E freevar*)))
+			      (if (null? freevar*)
+				  'no-freevars
+				`(freevars: . ,freevar*)))))
+
+	  ((primopcall op arg*)
+	   (cons op (%map-in-order E arg*)))
+
+	  ((asmcall op arg*)
+	   (cons* 'asmcall op (%map-in-order E arg*)))
+
+	  ((funcall rator rand*)
+	   (let ((rator (E rator)))
+	     (cons rator (%map-in-order E rand*))))
+
+	  ((forcall rator rand*)
+	   `(foreign-call ,rator . ,(%map-in-order E rand*)))
+
+	  ((jmpcall label op rand*)
+	   `(jmpcall ,(%pretty-symbol label) ,(E op) . ,(map E rand*)))
+
+	  ((foreign-label x)
+	   `(foreign-label ,x))
+
+	  ((seq e0 e1)
+	   (%do-seq e0 e1))
+
+	  ((conditional test conseq altern)
+	   (let ((test^   (E test))
+		 (conseq^ (E conseq))
+		 (altern^ (E altern)))
+	     (list 'if test^ conseq^ altern^)))
+
+	  ((bind lhs* rhs* body)
+	   (let* ((lhs* (%map-in-order Var lhs*))
+		  (rhs* (%map-in-order E   rhs*))
+		  (body (E body)))
+	     (%build-let (map list lhs* rhs*) body)))
+
+	  ((fix lhs* rhs* body)
+	   (let* ((lhs* (%map-in-order Var lhs*))
+		  (rhs* (%map-in-order E   rhs*))
+		  (body (E body)))
+	     (list 'fix (map list lhs* rhs*) body)))
+
+	  ((recbind lhs* rhs* body)
+	   (let* ((lhs* (%map-in-order Var lhs*))
+		  (rhs* (%map-in-order E   rhs*))
+		  (body (E body)))
+	     (list 'letrec (map list lhs* rhs*) body)))
+
+	  ((rec*bind lhs* rhs* body)
+	   (let* ((lhs* (%map-in-order Var lhs*))
+		  (rhs* (%map-in-order E   rhs*))
+		  (body (E body)))
+	     (list 'letrec* (map list lhs* rhs*) body)))
+
+	  ((codes clambda* body)
+	   `(codes ,(map (lambda (clam)
+			   (let ((sexp (E clam)))
+			     (cons* (car sexp)
+				    ;;Print the pretty gensym name.
+				    `(label: (%pretty-symbol (clambda-label clam)))
+				    (cdr sexp))))
+		      clambda*)
+		   ,(E body)))
+
+	  ((code-loc label)
+	   ;;Print the pretty gensym name.
+	   `(code-loc ,(%pretty-symbol label)))
+
+	  ((shortcut body handler)
+	   `(shortcut ,(E body) ,(E handler)))
+
+	  ((locals vars body)
+	   `(locals ,(if vars
+			 `(local-vars: . ,(map E vars))
+		       '(local-vars: #f))
+		    ,(E body)))
+
+	  ((object obj)
+	   `(object ,(cond ((symbol? obj)
+			    (%pretty-symbol obj))
+			   (else
+			    (E obj)))))
+
+	  ;; ------------------------------
+
+	  ((foreign-label x)
+	   `(foreign-label ,x))
+
+	  ((fvar idx)
+	   (string->symbol (format "fvar.~a" idx)))
+
+	  ((nfv idx)
+	   `(nfv ,idx))
+
+	  ((asm-instr op d s)
+	   `(asm-instr ,op ,(E d) ,(E s)))
+
+	  ((disp s0 s1)
+	   `(disp ,(E s0) ,(E s1)))
+
+	  ((nframe vars live body)
+	   `(nframe ,(if (pair? vars)
+			 `(vars: . ,(map E vars))
+		       '(vars: #f))
+		    ,(if live
+			 `(live: . ,(map E live))
+		       '(live: #f))
+		    ,(E body)))
+
+	  ((shortcut body handler)
+	   `(shortcut ,(E body) ,(E handler)))
+
+	  ((non-tail-call target value args mask size)
+	   `(non-tail-call
+	     (target: ,target)
+	     (value:  ,value)
+	     ,(if (and args (pair? args))
+		  `(args: . ,args)
+		'(args: #f))
+	     (mask:   ,mask)
+	     (size:   ,size)))
+
+	  (else x)))
+
+      (module (Var)
+	;;Given a struct instance X of type  PRELEX or VAR, identifying the location of
+	;;a binding: return  a symbol representing a unique name  for the binding.  The
+	;;map between structures and symbols is cached in a hash table.
+	;;
+	;;This function acts in such a way that the input:
+	;;
+	;;   (let ((a 1))
+	;;     (let ((a a))
+	;;       a))
+	;;
+	;;is transformed into:
+	;;
+	;;   (let ((a_0 1))
+	;;     (let ((a_1 a_0))
+	;;       a_1))
+	;;
+	(define H
+	  ;;Map PRELEX and VAR structures to already built binding name symbols.
+	  (make-eq-hashtable))
+	(define T
+	  ;;Map binding  pretty string names  to number of  times this string  name has
+	  ;;already been used.
+	  (make-hashtable string-hash string=?))
+	(define (Var x)
+	  (or (hashtable-ref H x #f)
+	      (struct-case x
+		((prelex x.name)
+		 (%build-name x x.name))
+		((var x.name)
+		 (%build-name x x.name))
+		((fvar)
+		 (E x))
+		(else x))))
+
+	(define (%build-name x x.name)
+	  (let* ((name (symbol->string x.name))
+		 (N    (hashtable-ref T name 0)))
+	    (hashtable-set! T name (+ N 1))
+	    (receive-and-return (sym)
+		(string->symbol (string-append name "_" (number->string N)))
+	      (hashtable-set! H x sym))))
+
+	#| end of module: Var |# )
+
+      (define (%do-seq e0 e1)
+	(cons 'begin
+	      ;;Here we flatten nested SEQ instances into a unique output SEQ form.
+	      (let recur ((expr  e0)
+			  (expr* (list e1)))
+		(struct-case expr
+		  ((seq expr.e0 expr.e1)
+		   (recur expr.e0 (cons expr.e1 expr*)))
+		  (else
+		   (let ((expr^ (E expr)))
+		     (if (pair? expr*)
+			 (cons expr^ (recur (car expr*) (cdr expr*)))
+		       (list expr^))))))))
+
+      (module (E-clambda)
+
+	(define (E-clambda x)
+	  (struct-case x
+	    ((clambda label.unused cls*)
+	     (let ((cls* (%map-in-order E-clambda-clause cls*)))
+	       (if (%list-of-one-item? cls*)
+		   (cons 'lambda (car cls*))
+		 (cons 'case-lambda cls*))))))
+
+	(define (E-clambda-clause x)
+	  (struct-case x
+	    ((clambda-case info body)
+	     (let ((args (E-args (case-info-proper info) (case-info-args info))))
+	       (list args (E body))))))
+
+	(define (E-args proper x)
+	  (if proper
+	      (%map-in-order Var x)
+	    ;;The loop below is  like MAP but for improper lists: it  maps Var over the
+	    ;;improper list X.
+	    (let recur ((A (car x))
+			(D (cdr x)))
+	      (if (pair? D)
+		  (let ((A (Var A)))
+		    (cons A (recur (car D) (cdr D))))
+		(Var A)))))
+
+	#| end of module: E-clambda |# )
+
+      (E input-expr))
+
+;;; --------------------------------------------------------------------
+
+    (define (%map-in-order f ls)
+      ;;This version of  MAP imposes an order to  the application of F to  the items in
+      ;;LS.
+      ;;
+      (if (pair? ls)
+	  (let ((a (f (car ls))))
+	    (cons a (%map-in-order f (cdr ls))))
+	'()))
+
+    (define (%build-let b* body)
+      ;;B* must be a list of already unparsed LET-like bindings; BODY must
+      ;;be an already unparsed symbolic expression representing a body.
+      ;;
+      ;;If B*  represents a single  binding: compress nested LET  and LET*
+      ;;forms  into  a  single  LET*  form.   If  B*  represents  multiple
+      ;;bindings: just return a LET-like form.
+      ;;
+      ;;Example:
+      ;;
+      ;;   (let ((a 1))
+      ;;     (let ((b 2))
+      ;;       (let ((a 3))
+      ;;         (list a b))))
+      ;;
+      ;;is compressed into:
+      ;;
+      ;;   (let* ((a 1)
+      ;;          (b 2)
+      ;;          (a 3))
+      ;;     (list a b))
+      ;;
+      ;;while:
+      ;;
+      ;;   (let ((a 1)
+      ;;         (b 2))
+      ;;     (let ((c 3))
+      ;;       (list a b c)))
+      ;;
+      ;;is returned as is.
+      ;;
+      (cond ((and (%list-of-one-item? b*)
+		  (pair? body)
+		  (or (eq? (car body) 'let*)
+		      (and (eq? (car body) 'let)
+			   (%list-of-one-item? (cadr body)))))
+	     (list 'let* (append b* (cadr body)) (caddr body)))
+	    (else
+	     (list 'let b* body))))
+
+    #| end of module: unparse-recordized-code/pretty |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (E-constant x E)
+    (struct-case x
+      ((constant x.const)
+       (cond ((symbol? x.const)
+	      ;;Extract the pretty name; this is useful when X.CONST is a loc gensym.
+	      `(constant ,(%pretty-symbol x.const)))
+	     ((object? x.const)
+	      `(constant ,(E x.const)))
+	     ((closure-maker? x.const)
+	      `(constant ,(E x.const)))
+	     ((code-loc? x.const)
+	      `(constant ,(E x.const)))
+	     (else
+	      `(constant ,x.const))))))
+
+  (define (E-non-tail-call x E)
+    (struct-case x
+      ((non-tail-call target retval-var args mask size)
+       `(non-tail-call
+	 (target: ,target)
+	 (retval-var:  ,(and retval-var (E retval-var)))
+	 ,(if (and args (pair? args))
+	      `(args: . ,args)
+	    '(args: #f))
+	 (mask:   ,mask)
+	 (size:   ,size)))))
+
+;;; --------------------------------------------------------------------
 
   (define (%pretty-symbol sym)
     (string->symbol (symbol->string sym)))
 
-  #| end of module: unparse-recordized-code/sexp |# )
-
-
-(module (unparse-recordized-code/pretty)
-  ;;Unparse the struct instance INPUT-EXPR  (representing recordized code in the core
-  ;;language  already processed  by  the  compiler) into  a  human readable  symbolic
-  ;;expression to  be used  when printing  to some  port for  miscellaneous debugging
-  ;;purposes.
-  ;;
-  ;;This module  attempts to  unparse recordized code  and reconstruct  a Scheme-like
-  ;;symbolic expression; the returned sexp does *not* exactly represent the input.
-  ;;
-  ;;This function recognises only structures of the following type:
-  ;;
-  ;;   assign		bind		clambda
-  ;;   conditional	constant	fix
-  ;;   forcall		foreign-label	funcall
-  ;;   known		prelex		primopcall
-  ;;   primref		rec*bind	recbind
-  ;;   seq		var		asmcall
-  ;;
-  ;;other values are not processed and are returned as they are.
-  ;;
-  (import SCHEME-OBJECTS-ONTOLOGY)
-
-  (define-syntax __module_who__
-    (identifier-syntax 'unparse-recordized-code/pretty))
-
-  (define (unparse-recordized-code/pretty input-expr)
-    ;;
-    ;;A lot of functions are nested here  because they make use of the closure "Var",
-    ;;which has internal state.
-    ;;
-    ;;*NOTE* Being that this function is used  only when debugging: it makes no sense
-    ;;to use unsafe operations: LET'S KEEP IT SAFE!!!
-    ;;
-    (define (E x)
-      (struct-case x
-	((constant x.const)
-	 (cond ((symbol? x.const)
-		;;Extract  the pretty  name; this  is useful  when X.CONST  is a  loc
-		;;gensym.
-		`(constant ,(%pretty-symbol x.const)))
-	       ((object? x.const)
-		`(constant ,(E x.const)))
-	       ((closure-maker? x.const)
-		`(constant ,(E x.const)))
-	       ((code-loc? x.const)
-		`(constant ,(E x.const)))
-	       (else
-		`(constant ,x.const))))
-
-	((prelex)
-	 (Var x))
-
-	((var)
-	 (Var x))
-
-	((assign lhs rhs)
-	 `(set! ,(E lhs) ,(E rhs)))
-
-	((primref x)
-	 x)
-
-	((known expr type)
-	 `(known ,(E expr) ,(core-type-tag-description type)))
-
-	((clambda)
-	 (E-clambda x))
-
-	((closure-maker code freevar*)
-	 `(closure-maker ,(E code)
-			 ,(let ((freevar* (map E freevar*)))
-			    (if (null? freevar*)
-				'no-freevars
-			      `(freevars: . ,freevar*)))))
-
-	((primopcall op arg*)
-	 (cons op (%map-in-order E arg*)))
-
-	((asmcall op arg*)
-	 (cons* 'asmcall op (%map-in-order E arg*)))
-
-	((funcall rator rand*)
-	 (let ((rator (E rator)))
-	   (cons rator (%map-in-order E rand*))))
-
-	((forcall rator rand*)
-	 `(foreign-call ,rator . ,(%map-in-order E rand*)))
-
-	((jmpcall label op rand*)
-	 `(jmpcall ,(%pretty-symbol label) ,(E op) . ,(map E rand*)))
-
-	((foreign-label x)
-	 `(foreign-label ,x))
-
-	((seq e0 e1)
-	 (%do-seq e0 e1))
-
-	((conditional test conseq altern)
-	 (let ((test^   (E test))
-	       (conseq^ (E conseq))
-	       (altern^ (E altern)))
-	   (list 'if test^ conseq^ altern^)))
-
-	((bind lhs* rhs* body)
-	 (let* ((lhs* (%map-in-order Var lhs*))
-		(rhs* (%map-in-order E   rhs*))
-		(body (E body)))
-	   (%build-let (map list lhs* rhs*) body)))
-
-	((fix lhs* rhs* body)
-	 (let* ((lhs* (%map-in-order Var lhs*))
-		(rhs* (%map-in-order E   rhs*))
-		(body (E body)))
-	   (list 'fix (map list lhs* rhs*) body)))
-
-	((recbind lhs* rhs* body)
-	 (let* ((lhs* (%map-in-order Var lhs*))
-		(rhs* (%map-in-order E   rhs*))
-		(body (E body)))
-	   (list 'letrec (map list lhs* rhs*) body)))
-
-	((rec*bind lhs* rhs* body)
-	 (let* ((lhs* (%map-in-order Var lhs*))
-		(rhs* (%map-in-order E   rhs*))
-		(body (E body)))
-	   (list 'letrec* (map list lhs* rhs*) body)))
-
-	((codes clambda* body)
-	 `(codes ,(map (lambda (clam)
-			 (let ((sexp (E clam)))
-			   (cons* (car sexp)
-				  ;;Print the pretty gensym name.
-				  `(label: (%pretty-symbol (clambda-label clam)))
-				  (cdr sexp))))
-		    clambda*)
-		 ,(E body)))
-
-	((code-loc label)
-	 ;;Print the pretty gensym name.
-	 `(code-loc ,(%pretty-symbol label)))
-
-	((shortcut body handler)
-	 `(shortcut ,(E body) ,(E handler)))
-
-	((locals vars body)
-	 `(locals ,(if vars
-		       `(local-vars: . ,(map E vars))
-		     '(local-vars: #f))
-		  ,(E body)))
-
-	((object obj)
-	 `(object ,(cond ((symbol? obj)
-			  (%pretty-symbol obj))
-			 (else
-			  (E obj)))))
-
-	;; ------------------------------
-
-	((foreign-label x)
-	 `(foreign-label ,x))
-
-	((fvar idx)
-	 (string->symbol (format "fvar.~a" idx)))
-
-	((nfv idx)
-	 `(nfv ,idx))
-
-	((asm-instr op d s)
-	 `(asm-instr ,op ,(E d) ,(E s)))
-
-	((disp s0 s1)
-	 `(disp ,(E s0) ,(E s1)))
-
-	((nframe vars live body)
-	 `(nframe ,(if (pair? vars)
-		       `(vars: . ,(map E vars))
-		     '(vars: #f))
-		  ,(if live
-		       `(live: . ,(map E live))
-		     '(live: #f))
-		  ,(E body)))
-
-	((shortcut body handler)
-	 `(shortcut ,(E body) ,(E handler)))
-
-	((non-tail-call target value args mask size)
-	 `(non-tail-call
-	   (target: ,target)
-	   (value:  ,value)
-	   ,(if (and args (pair? args))
-		`(args: . ,args)
-	      '(args: #f))
-	   (mask:   ,mask)
-	   (size:   ,size)))
-
-	(else x)))
-
-    (module (Var)
-      ;;Given a struct instance X of type  PRELEX or VAR, identifying the location of
-      ;;a binding: return  a symbol representing a unique name  for the binding.  The
-      ;;map between structures and symbols is cached in a hash table.
-      ;;
-      ;;This function acts in such a way that the input:
-      ;;
-      ;;   (let ((a 1))
-      ;;     (let ((a a))
-      ;;       a))
-      ;;
-      ;;is transformed into:
-      ;;
-      ;;   (let ((a_0 1))
-      ;;     (let ((a_1 a_0))
-      ;;       a_1))
-      ;;
-      (define H
-	;;Map PRELEX and VAR structures to already built binding name symbols.
-	(make-eq-hashtable))
-      (define T
-	;;Map binding  pretty string names  to number of  times this string  name has
-	;;already been used.
-	(make-hashtable string-hash string=?))
-      (define (Var x)
-	(or (hashtable-ref H x #f)
-	    (struct-case x
-	      ((prelex x.name)
-	       (%build-name x x.name))
-	      ((var x.name)
-	       (%build-name x x.name))
-	      ((fvar)
-	       (E x))
-	      (else x))))
-
-      (define (%build-name x x.name)
-	(let* ((name (symbol->string x.name))
-	       (N    (hashtable-ref T name 0)))
-	  (hashtable-set! T name (+ N 1))
-	  (receive-and-return (sym)
-	      (string->symbol (string-append name "_" (number->string N)))
-	    (hashtable-set! H x sym))))
-
-      #| end of module: Var |# )
-
-    (define (%do-seq e0 e1)
-      (cons 'begin
-	    ;;Here we flatten nested SEQ instances into a unique output SEQ form.
-	    (let recur ((expr  e0)
-			(expr* (list e1)))
-	      (struct-case expr
-		((seq expr.e0 expr.e1)
-		 (recur expr.e0 (cons expr.e1 expr*)))
-		(else
-		 (let ((expr^ (E expr)))
-		   (if (pair? expr*)
-		       (cons expr^ (recur (car expr*) (cdr expr*)))
-		     (list expr^))))))))
-
-    (module (E-clambda)
-
-      (define (E-clambda x)
-	(struct-case x
-	  ((clambda label.unused cls*)
-	   (let ((cls* (%map-in-order E-clambda-clause cls*)))
-	     (if (%list-of-one-item? cls*)
-		 (cons 'lambda (car cls*))
-	       (cons 'case-lambda cls*))))))
-
-      (define (E-clambda-clause x)
-	(struct-case x
-	  ((clambda-case info body)
-	   (let ((args (E-args (case-info-proper info) (case-info-args info))))
-	     (list args (E body))))))
-
-      (define (E-args proper x)
-	(if proper
-	    (%map-in-order Var x)
-	  ;;The loop below is  like MAP but for improper lists: it  maps Var over the
-	  ;;improper list X.
-	  (let recur ((A (car x))
-		      (D (cdr x)))
-	    (if (pair? D)
-		(let ((A (Var A)))
-		  (cons A (recur (car D) (cdr D))))
-	      (Var A)))))
-
-      #| end of module: E-clambda |# )
-
-    (E input-expr))
-
-;;; --------------------------------------------------------------------
-
-  (define (%map-in-order f ls)
-    ;;This version of  MAP imposes an order to  the application of F to  the items in
-    ;;LS.
-    ;;
-    (if (pair? ls)
-	(let ((a (f (car ls))))
-	  (cons a (%map-in-order f (cdr ls))))
-      '()))
-
-  (define (%build-let b* body)
-    ;;B* must be a list of already unparsed LET-like bindings; BODY must
-    ;;be an already unparsed symbolic expression representing a body.
-    ;;
-    ;;If B*  represents a single  binding: compress nested LET  and LET*
-    ;;forms  into  a  single  LET*  form.   If  B*  represents  multiple
-    ;;bindings: just return a LET-like form.
-    ;;
-    ;;Example:
-    ;;
-    ;;   (let ((a 1))
-    ;;     (let ((b 2))
-    ;;       (let ((a 3))
-    ;;         (list a b))))
-    ;;
-    ;;is compressed into:
-    ;;
-    ;;   (let* ((a 1)
-    ;;          (b 2)
-    ;;          (a 3))
-    ;;     (list a b))
-    ;;
-    ;;while:
-    ;;
-    ;;   (let ((a 1)
-    ;;         (b 2))
-    ;;     (let ((c 3))
-    ;;       (list a b c)))
-    ;;
-    ;;is returned as is.
-    ;;
-    (cond ((and (%list-of-one-item? b*)
-		(pair? body)
-		(or (eq? (car body) 'let*)
-		    (and (eq? (car body) 'let)
-			 (%list-of-one-item? (cadr body)))))
-	   (list 'let* (append b* (cadr body)) (caddr body)))
-	  (else
-	   (list 'let b* body))))
-
-  (define (%pretty-symbol sym)
-    (string->symbol (symbol->string sym)))
-
-  #| end of module: unparse-recordized-code/pretty |# )
+  #| end of module |# )
 
 
 ;;;; done
