@@ -72,6 +72,13 @@
     (V-codes codes))
 
 
+;;;; helpers
+
+(define (var/nfv? x)
+  (or (var? x)
+      (nfv? x)))
+
+
 ;;;; local values
 ;;
 ;;Some Assembly instructions generate result values  that must be stored somewhere to
@@ -97,106 +104,128 @@
   (local-values (cons* ?A0 ?A ... (local-values))))
 
 
-;;;;
+;;;; processing CODES structs
 
 (module (V-codes)
 
   (define (V-codes x)
+    ;;X must be a CODES struct:
+    ;;
+    ;;   (codes
+    ;;     ((clambda ?label
+    ;;        (?clause ...)
+    ;;        ---)
+    ;;      ...)
+    ;;     ?body)
+    ;;
+    ;;Return a CODES struct  in which the init body and each  CLAMBDA clause body are
+    ;;wrapped into a LOCALS struct:
+    ;;
+    ;;   (codes
+    ;;     ((clambda ?label
+    ;;        ((locals ?local-vars ?clause) ...)
+    ;;        ---)
+    ;;      ...)
+    ;;     (locals ?local-vars ?body))
+    ;;
     (struct-case x
-      ((codes x.code* x.body)
-       (make-codes (map V-clambda x.code*) (V-body x.body)))))
+      ((codes x.clambda* x.body)
+       (make-codes (map V-clambda x.clambda*) (V-body x.body)))))
 
   (define (V-body x)
     (parametrise ((local-values '()))
       (let ((y (V-tail x)))
 	(make-locals (local-values) y))))
 
+  (module (V-clambda)
+
+    (define (V-clambda x)
+      (struct-case x
+	((clambda x.label x.clause* x.cp x.freevar* x.name)
+	 (make-clambda x.label (map V-clambda-clause x.clause*) x.cp x.freevar* x.name))))
+
+    (define (V-clambda-clause cas)
+      ;;This function has two purposes: apply "V-tail" to the body of the clause;
+      ;;
+      (struct-case cas
+	((clambda-case cas.info cas.body)
+	 (struct-case cas.info
+	   ((case-info cas.info.label cas.info.args cas.info.proper)
+	    ;;Remember that  CAS.INFO.ARGS is a proper  list of VAR structs  with the
+	    ;;format:
+	    ;;
+	    ;;   (?cpvar ?arg ...)
+	    ;;
+	    ;;where: ?CPVAR represents a machine word that must hold a pointer to the
+	    ;;closure object;  each ?ARG represents a  machine word that must  hold a
+	    ;;CLAMBDA clause's argument.
+	    (receive (register-args register-names stack-args stack-locations)
+		(%partition-formals PARAMETER-REGISTERS cas.info.args)
+	      ;;The arguments listed in REGISTER-ARGS will be stored in the registers
+	      ;;listed in REGISTER-NAMES.  The arguments listed in STACK-ARGS will be
+	      ;;stored in the Scheme stack machine words listed in STACK-LOCATIONS.
+	      (parametrise ((local-values register-args))
+		($for-each/stx set-var-loc! stack-args stack-locations)
+		(let ((body (let recur ((args register-args)
+					(locs register-names))
+			      (if (pair? args)
+				  (make-seq
+				    ;;Load a special parameter  from the CPU register
+				    ;;into the locally allocated VAR.
+				    (%move-dst<-src (car args) (car locs))
+				    (recur          (cdr args) (cdr locs)))
+				(V-tail cas.body)))))
+		  (make-clambda-case
+		   (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
+		   (make-locals (local-values) body))))))))))
+
+    (define (%partition-formals available-registers formals)
+      ;;Recursive function.  Associate  the formals of a CLAMBDA  clause to available
+      ;;CPU registers.
+      ;;
+      ;;The  argument AVAILABLE-REGISTERS  must  be a  list  of symbols  representing
+      ;;available CPU  registers.  The  argument FORMALS  must be  a list  of CLAMBDA
+      ;;clause's formals.
+      ;;
+      ;;Return 4 values:
+      ;;
+      ;;1.   The list  of lex  gensyms  representing formal  arguments associated  to
+      ;;   available registers.
+      ;;
+      ;;2.   The list  of symbols  representing register  names associated  to formal
+      ;;   arguments.
+      ;;
+      ;;3. The list  of lex gensyms representing formal arguments  associated to FVAR
+      ;;   structures.
+      ;;
+      ;;4. The list of FVAR structures associated to formals.
+      ;;
+      (cond ((null? available-registers)
+	     ;;If  the number  of formals  is <=  of the  number of  registers: the
+	     ;;left-over  registers  are  associated   to  FVAR  structures,  which
+	     ;;represent Scheme stack machine words.
+	     (let ((stack-locations (%one-fvar-for-each-left-over-formal 1 formals)))
+	       (values '() '() formals stack-locations)))
+	    ((null? formals)
+	     ;;If there are more registers than formals: fine.
+	     (values '() '() '() '()))
+	    (else
+	     ;;If there is a register for the next formal: associate them.
+	     (receive (register-args register-names stack-args stack-locations)
+		 (%partition-formals (cdr available-registers) (cdr formals))
+	       (values (cons (car formals)             register-args)
+		       (cons (car available-registers) register-names)
+		       stack-args stack-locations)))))
+
+    (define (%one-fvar-for-each-left-over-formal i leftover-formal)
+      (if (pair? leftover-formal)
+	  (cons (mkfvar i)
+		(%one-fvar-for-each-left-over-formal (fxadd1 i) (cdr leftover-formal)))
+	'()))
+
+    #| end of module: V-clambda |# )
+
   #| end of module: V-codes |# )
-
-
-(module (V-clambda)
-
-  (define (V-clambda x)
-    (struct-case x
-      ((clambda x.label x.case* x.cp x.freevar* x.name)
-       (make-clambda x.label (map V-clambda-case x.case*) x.cp x.freevar* x.name))))
-
-  (define (V-clambda-case cas)
-    (struct-case cas
-      ((clambda-case cas.info cas.body)
-       (struct-case cas.info
-	 ;;Remember  that CAS.INFO.ARGS  is a  proper list  of VAR  structs with  the
-	 ;;format:
-	 ;;
-	 ;;   (?cpvar ?arg ...)
-	 ;;
-	 ;;where: ?CPVAR  represents a machine word  that must hold a  pointer to the
-	 ;;closure  object; each  ?ARG represents  a machine  word that  must hold  a
-	 ;;CLAMBDA clause's argument.
-	 ((case-info cas.info.label cas.info.args cas.info.proper)
-	  (receive (register-args register-names stack-args stack-locations)
-	      (%partition-formals PARAMETER-REGISTERS cas.info.args)
-	    ;;The arguments listed  in REGISTER-ARGS will be stored  in the registers
-	    ;;listed in REGISTER-NAMES.   The arguments listed in  STACK-ARGS will be
-	    ;;stored in the Scheme stack machine words listed in STACK-LOCATIONS.
-	    (parametrise ((local-values register-args))
-	      ($for-each/stx set-var-loc! stack-args stack-locations)
-	      (let ((body (let recur ((args register-args)
-				      (locs register-names))
-			    (if (pair? args)
-				(make-seq
-				  (%move-dst<-src (car args) (car locs))
-				  (recur          (cdr args) (cdr locs)))
-			      (V-tail cas.body)))))
-		(make-clambda-case
-		 (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
-		 (make-locals (local-values) body))))))))))
-
-  (define (%partition-formals available-registers formals)
-    ;;Recursive function.  Associate the formals of a CLAMBDA clause to available CPU
-    ;;registers.
-    ;;
-    ;;The  argument  AVAILABLE-REGISTERS  must  be a  list  of  symbols  representing
-    ;;available  CPU registers.   The  argument FORMALS  must be  a  list of  CLAMBDA
-    ;;clause's formals.
-    ;;
-    ;;Return 4 values:
-    ;;
-    ;;1.   The  list of  lex  gensyms  representing  formal arguments  associated  to
-    ;;   available registers.
-    ;;
-    ;;2.  The  list of  symbols  representing  register  names associated  to  formal
-    ;;   arguments.
-    ;;
-    ;;3. The  list of lex  gensyms representing  formal arguments associated  to FVAR
-    ;;   structures.
-    ;;
-    ;;4. The list of FVAR structures associated to formals.
-    ;;
-    (cond ((null? available-registers)
-	   ;;If  the number  of formals  is <=  of the  number of  registers: the
-	   ;;left-over  registers  are  associated   to  FVAR  structures,  which
-	   ;;represent Scheme stack machine words.
-	   (let ((stack-locations (%one-fvar-for-each-left-over-formal 1 formals)))
-	     (values '() '() formals stack-locations)))
-	  ((null? formals)
-	   ;;If there are more registers than formals: fine.
-	   (values '() '() '() '()))
-	  (else
-	   ;;If there is a register for the next formal: associate them.
-	   (receive (register-args register-names stack-args stack-locations)
-	       (%partition-formals (cdr available-registers) (cdr formals))
-	     (values (cons (car formals)             register-args)
-		     (cons (car available-registers) register-names)
-		     stack-args stack-locations)))))
-
-  (define (%one-fvar-for-each-left-over-formal i leftover-formal)
-    (if (pair? leftover-formal)
-	(cons (mkfvar i)
-	      (%one-fvar-for-each-left-over-formal (fxadd1 i) (cdr leftover-formal)))
-      '()))
-
-  #| end of module: V-clambda |# )
 
 
 (module (V-tail)
@@ -525,31 +554,28 @@
   #| end of module: ALLOC-CHECK, ALLOC-CHECK/NO-HOOKS |# )
 
 
-(define (V d x)
-  ;;Generate assembly instructions  to compute a value from struct  X and store the
-  ;;result in destination D.
-  ;;
-  ;;We can think of D as an allocated  machine word on the stack which will receive
-  ;;the result of a subexpression computation.
+(define* (V {dst var/nfv?} x)
+  ;;Generate assembly  instructions to compute  a value from  struct X and  store the
+  ;;result in destination DST.
   ;;
   (struct-case x
     ((constant)
-     (%move-dst<-src d x))
+     (%move-dst<-src dst x))
 
     ((var)
      (cond ((var-loc x)
 	    => (lambda (loc)
-		 (%move-dst<-src d loc)))
+		 (%move-dst<-src dst loc)))
 	   (else
-	    (%move-dst<-src d x))))
+	    (%move-dst<-src dst x))))
     ((bind lhs* rhs* e)
-     (%do-bind lhs* rhs* (V d e)))
+     (%do-bind lhs* rhs* (V dst e)))
 
     ((seq e0 e1)
-     (make-seq (E e0) (V d e1)))
+     (make-seq (E e0) (V dst e1)))
 
     ((conditional e0 e1 e2)
-     (make-conditional (P e0) (V d e1) (V d e2)))
+     (make-conditional (P e0) (V dst e1) (V dst e2)))
 
     ((asmcall op rands)
      (case op
@@ -573,8 +599,8 @@
 			  (lambda (tag)
 			    (make-seq
 			      (make-seq
-				(%move-dst<-src d apr)
-				(make-asm-instr 'logor d tag))
+				(%move-dst<-src dst apr)
+				(make-asm-instr 'logor dst tag))
 			      (make-asm-instr 'int+ apr size))))))))
 
        ((alloc-no-hooks)
@@ -596,34 +622,34 @@
 			  (lambda (tag)
 			    (make-seq
 			      (make-seq
-				(%move-dst<-src d apr)
-				(make-asm-instr 'logor d tag))
+				(%move-dst<-src dst apr)
+				(make-asm-instr 'logor dst tag))
 			      (make-asm-instr 'int+ apr size))))))))
 
        ((mref)
 	(S* rands (lambda (rands)
-		    (%move-dst<-src d (make-disp (car rands) (cadr rands))))))
+		    (%move-dst<-src dst (make-disp (car rands) (cadr rands))))))
 
        ((mref32)
 	(S* rands (lambda (rands)
-		    (make-asm-instr 'load32 d (make-disp (car rands) (cadr rands))))))
+		    (make-asm-instr 'load32 dst (make-disp (car rands) (cadr rands))))))
 
        ((bref)
 	(S* rands (lambda (rands)
-		    (make-asm-instr 'load8 d (make-disp (car rands) (cadr rands))))))
+		    (make-asm-instr 'load8 dst (make-disp (car rands) (cadr rands))))))
 
        ((logand logxor logor int+ int- int*
 		int-/overflow int+/overflow int*/overflow)
-	(make-seq (V d (car rands))
+	(make-seq (V dst (car rands))
 		  (S (cadr rands) (lambda (s)
-				    (make-asm-instr op d s)))))
+				    (make-asm-instr op dst s)))))
        ((int-quotient)
 	(S* rands (lambda (rands)
 		    (multiple-forms-sequence
 		     (%move-dst<-src eax (car rands))
 		     (make-asm-instr 'cltd edx eax)
 		     (make-asm-instr 'idiv eax (cadr rands))
-		     (%move-dst<-src d eax)))))
+		     (%move-dst<-src dst eax)))))
 
        ((int-remainder)
 	(S* rands (lambda (rands)
@@ -631,43 +657,43 @@
 		     (%move-dst<-src eax (car rands))
 		     (make-asm-instr 'cltd edx eax)
 		     (make-asm-instr 'idiv edx (cadr rands))
-		     (%move-dst<-src d edx)))))
+		     (%move-dst<-src dst edx)))))
 
        ((sll sra srl sll/overflow)
 	(let ((a (car rands))
 	      (b (cadr rands)))
 	  (if (constant? b)
-	      (make-seq (V d a)
-			(make-asm-instr op d b))
+	      (make-seq (V dst a)
+			(make-asm-instr op dst b))
 	    (S b (lambda (b)
 		   (multiple-forms-sequence
-		    (V d a)
+		    (V dst a)
 		    (%move-dst<-src ecx b)
-		    (make-asm-instr op d ecx)))))))
+		    (make-asm-instr op dst ecx)))))))
 
        (else
 	(compiler-internal-error __module_who__ "invalid value op" op rands))))
 
     ((funcall rator rands)
-     (handle-nontail-call rator rands d #f))
+     (%handle-nontail-call rator rands dst #f))
 
     ((jmpcall label rator rands)
-     (handle-nontail-call rator rands d label))
+     (%handle-nontail-call rator rands dst label))
 
     ((forcall op rands)
-     (handle-nontail-call (make-constant (make-foreign-label op))
-			  rands d op))
+     (%handle-nontail-call (make-constant (make-foreign-label op))
+			  rands dst op))
 
     ((shortcut body handler)
-     (make-shortcut (V d body)
-       (V d handler)))
+     (make-shortcut (V dst body)
+       (V dst handler)))
 
     ((known expr)
-     (V d expr))
+     (V dst expr))
 
     (else
      (if (symbol? x)
-	 (%move-dst<-src d x)
+	 (%move-dst<-src dst x)
        (compiler-internal-error __module_who__ "invalid value" (unparse-recordized-code x))))))
 
 
@@ -699,13 +725,13 @@
 	(compiler-internal-error __module_who__ "invalid instr" x))))
 
     ((funcall rator rands)
-     (handle-nontail-call rator rands #f #f))
+     (%handle-nontail-call rator rands #f #f))
 
     ((jmpcall label rator rands)
-     (handle-nontail-call rator rands #f label))
+     (%handle-nontail-call rator rands #f label))
 
     ((forcall op rands)
-     (handle-nontail-call (make-constant (make-foreign-label op))
+     (%handle-nontail-call (make-constant (make-foreign-label op))
 			  rands #f op))
     ((shortcut body handler)
      (make-shortcut (E body) (E handler)))
@@ -829,9 +855,14 @@
   #| end of module: %HANDLE-TAIL-CALL |# )
 
 
-(module (handle-nontail-call)
+(module (%handle-nontail-call)
 
-  (define (handle-nontail-call rator rands value-dest call-targ)
+  (define (%handle-nontail-call rator rands dst-local call-targ)
+    ;;The argument DST-LOCAL  must be false a  VAR or NFV struct;  when non-false, it
+    ;;represents the location to which the return  value of the function call must be
+    ;;stored:  first   the  callee  function   stores  its  return  value   into  the
+    ;;RETURN-VALUE-REGISTER, then caller moves it into DST-LOCAL.
+    ;;
     (let-values (((reg-locs reg-args frm-args)
 		  (%nontail-locations PARAMETER-REGISTERS (cons rator rands))))
       (let ((regt* (map (lambda (x)
@@ -840,7 +871,7 @@
 	    (frmt* (map (lambda (x)
 			  (make-nfv 'unset-conflicts #f #f #f #f))
 		     frm-args)))
-	(let* ((call (make-non-tail-call call-targ value-dest
+	(let* ((call (make-non-tail-call call-targ dst-local
 					 (cons* ARGC-REGISTER pcr esp apr
 						(append reg-locs frmt*))
 					 #f #f))
@@ -857,13 +888,15 @@
 										  (make-constant
 										   (argc-convention (length rands))))
 								  call))))))))
-	  (if value-dest
+	  (if dst-local
 	      (make-seq
 		body
-		(%move-dst<-src value-dest RETURN-VALUE-REGISTER))
+		(%move-dst<-src dst-local RETURN-VALUE-REGISTER))
 	    body)))))
 
   (define (%nontail-locations regs args)
+    ;;Non-tail recursive function.
+    ;;
     (cond ((null? args)
 	   (values '() '() '()))
 	  ((null? regs)
@@ -875,7 +908,7 @@
 		     (cons (car args) rl*)
 		     f*)))))
 
-  #| end of module: HANDLE-NONTAIL-CALL |# )
+  #| end of module: %HANDLE-NONTAIL-CALL |# )
 
 
 ;;;; done

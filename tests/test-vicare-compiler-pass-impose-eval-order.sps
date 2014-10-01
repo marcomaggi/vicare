@@ -286,6 +286,56 @@
   #t)
 
 
+(parametrise ((check-test-name	'calling-clambda-non-combinator))
+
+  ;;Let's see first the previous compiler pass output.
+  (check
+      (%before-impose-eval-order '(let ((x ((primitive read))))
+				    (let ((F (lambda (y) ((primitive +) x y))))
+				      (F '2))))
+    => '(codes
+	 ((lambda (label: asmlabel:F:clambda) (cp_0 y_0)
+	     (bind ((tmp_0 (asmcall mref cp_0 (constant 5))))
+	       (shortcut
+		   (seq
+		     (conditional (asmcall =
+					   (asmcall logand (asmcall logor tmp_0 y_0)
+						    (constant 7))
+					   (constant 0))
+			 (asmcall nop)
+		       (asmcall interrupt))
+		     (asmcall int+/overflow tmp_0 y_0))
+		 (funcall (asmcall mref (constant (object +)) (constant 19))
+		   tmp_0
+		   y_0)))))
+	 (seq
+	   (shortcut
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
+	     (foreign-call "ik_stack_overflow"))
+	   (shortcut
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	   (bind ((x_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
+	     (bind ((F_0 (asmcall alloc (constant 16) (constant 3))))
+	       (bind ()
+		 (seq
+		   (asmcall mset F_0 (constant -3) (constant (code-loc asmlabel:F:clambda)))
+		   (asmcall mset F_0 (constant 5) x_0)
+		   (jmpcall asmlabel:F:clambda:case-1 F_0 (constant 16)))))))))
+
+;;; --------------------------------------------------------------------
+
+  ;;Let's see then the output of this compiler pass.
+  (doit (let ((x ((primitive read))))
+	  (let ((F (lambda (y) ((primitive +) x y))))
+	    (F '2)))
+	#f)
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
