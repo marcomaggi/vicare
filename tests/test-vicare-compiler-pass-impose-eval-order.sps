@@ -248,25 +248,25 @@
 		;;This  is  the  integrated  body of  the  core  primitive  operation
 		;;"$do-event": check if the PCB's engine counter has been set.
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
-	      (nframe
-	       (vars: #f)
-	       (live: #f)
-	       (seq
-		 ;;Load the reference to the function "$do-event" from the loc gensym
-		 ;;in the relocation vector.
-		 (asm-instr move tmp_4 (disp (constant (object $do-event))
-					     (constant 19)))
-		 ;;Store the reference to function "$do-event" in the CP-REGISTER.
-		 (asm-instr move %edi tmp_4)
-		 ;;Load the negated number of  arguments in the AA-REGISTER; zero for
-		 ;;"$do-event".
-		 (asm-instr move %eax (constant 0))
-		 (non-tail-call
-		  (target:      #f)
-		  (retval-var:  #f)
-		  (args:        %eax %esi %esp %ebp %edi)
-		  (mask:        #f)
-		  (size:        #f)))))
+	      (non-tail-call-frame
+		(vars: #f)
+		(live: #f)
+		(seq
+		  ;;Load the reference to the function "$do-event" from the loc gensym
+		  ;;in the relocation vector.
+		  (asm-instr move tmp_4 (disp (constant (object $do-event))
+					      (constant 19)))
+		  ;;Store the reference to function "$do-event" in the CP-REGISTER.
+		  (asm-instr move %edi tmp_4)
+		  ;;Load the negated number of  arguments in the AA-REGISTER; zero for
+		  ;;"$do-event".
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target:      #f)
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi)
+		    (mask:        #f)
+		    (size:        #f)))))
 	    ;;Retrieve  from the  relocation vector  of the  code object  the closure
 	    ;;object of the combinator F.
 	    (asm-instr move tmp_5 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
@@ -365,69 +365,69 @@
 		(conditional (asm-instr u< %esp (disp %esi (constant 32)))
 		    (asmcall interrupt)
 		  (asmcall nop))
-	      (nframe
-	       (vars: #f)
-	       (live: #f)
-	       (seq
-		 (asm-instr move tmp_6 (constant (foreign-label "ik_stack_overflow")))
-		 (asm-instr move %edi tmp_6)
-		 (asm-instr move %eax (constant 0))
-		 (non-tail-call
-		  (target: "ik_stack_overflow")
-		  (retval-var: #f)
-		  (args: %eax %esi %esp %ebp %edi)
-		  (mask: #f)
-		  (size: #f)))))
+	      (non-tail-call-frame
+		(vars: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move tmp_6 (constant (foreign-label "ik_stack_overflow")))
+		  (asm-instr move %edi tmp_6)
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target: "ik_stack_overflow")
+		    (retval-var: #f)
+		    (args: %eax %esi %esp %ebp %edi)
+		    (mask: #f)
+		    (size: #f)))))
 	    (shortcut
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
-	      (nframe
-	       (vars: #f)
-	       (live: #f)
-	       (seq
-		 (asm-instr move tmp_7 (disp (constant (object $do-event))
-					     (constant 19)))
-		 (asm-instr move %edi tmp_7)
-		 (asm-instr move %eax (constant 0))
-		 (non-tail-call
+	      (non-tail-call-frame
+		(vars: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move tmp_7 (disp (constant (object $do-event))
+					      (constant 19)))
+		  (asm-instr move %edi tmp_7)
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target:      #f)
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi)
+		    (mask:        #f)
+		    (size:        #f)))))
+	    (non-tail-call-frame
+	      (vars: #f)
+	      (live: #f)
+	      (seq
+		(asm-instr move tmp_8 (disp (constant (object read))
+					    (constant 19)))
+		(asm-instr move %edi tmp_8)
+		(asm-instr move %eax (constant 0))
+		(non-tail-call
 		  (target:      #f)
-		  (retval-var:  #f)
+		  (retval-var:  x_0)
 		  (args:        %eax %esi %esp %ebp %edi)
 		  (mask:        #f)
-		  (size:        #f)))))
-	    (nframe
-	     (vars: #f)
-	     (live: #f)
-	     (seq
-	       (asm-instr move tmp_8 (disp (constant (object read))
-					   (constant 19)))
-	       (asm-instr move %edi tmp_8)
-	       (asm-instr move %eax (constant 0))
-	       (non-tail-call
-		(target:      #f)
-		(retval-var:  x_0)
-		(args:        %eax %esi %esp %ebp %edi)
-		(mask:        #f)
-		(size:        #f))))
+		  (size:        #f))))
 	    (asm-instr move x_0 %eax)
 	    (shortcut
 		(conditional
 		    (asm-instr <= %ebp (disp %esi (constant 8)))
 		    (asmcall nop) (asmcall interrupt))
-	      (nframe
-	       (vars: (nfv unset-conflicts))
-	       (live: #f)
-	       (seq
-		 (asm-instr move (nfv unset-conflicts) (constant 16))
-		 (asm-instr move tmp_9 (disp (constant (object do-overflow))
-					     (constant 27)))
-		 (asm-instr move %edi tmp_9)
-		 (asm-instr move %eax (constant -8))
-		 (non-tail-call
-		  (target:      #f)
-		  (retval-var:  #f)
-		  (args:        %eax %esi %esp %ebp %edi (nfv unset-conflicts))
-		  (mask:        #f)
-		  (size:        #f)))))
+	      (non-tail-call-frame
+		(vars: (nfv unset-conflicts))
+		(live: #f)
+		(seq
+		  (asm-instr move (nfv unset-conflicts) (constant 16))
+		  (asm-instr move tmp_9 (disp (constant (object do-overflow))
+					      (constant 27)))
+		  (asm-instr move %edi tmp_9)
+		  (asm-instr move %eax (constant -8))
+		  (non-tail-call
+		    (target:      #f)
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi (nfv unset-conflicts))
+		    (mask:        #f)
+		    (size:        #f)))))
 	    (asm-instr move F_0 %ebp)
 	    (asm-instr logor F_0 (constant 3))
 	    (asm-instr int+ %ebp (constant 16))
@@ -485,49 +485,49 @@
 	      ;;A stack  reallocation is needed.   Perform a  call to the  C function
 	      ;;"ik_stack_overflow()",   through   calling   the   Assembly   routine
 	      ;;"ik_foreign_call".
-	      (nframe
-	       (vars: #f)
-	       (live: #f)
-	       (seq
-		 ;;Retrieve  the address  of  the  C function  "ik_stack_overflow()";
-		 ;;store it in TMP_0.
-		 (asm-instr move tmp_0 (constant (foreign-label "ik_stack_overflow")))
-		 ;;Load in  CP-REGISTER the address  of the C function;  the Assembly
-		 ;;routine "ik_foreign_call" expects it there.
-		 (asm-instr move %edi tmp_0)
-		 ;;Load in  AA-REGISTER a fixnum  representing the negated  number of
-		 ;;aruments; 0 for this call.
-		 (asm-instr move %eax (constant 0))
-		 ;;Do the call.  Discard the return value.
-		 (non-tail-call
-		  (target:      "ik_stack_overflow")
-		  (retval-var:  #f)
-		  (args:        %eax %esi %esp %ebp %edi)
-		  (mask:        #f)
-		  (size:        #f)))))
+	      (non-tail-call-frame
+		(vars: #f)
+		(live: #f)
+		(seq
+		  ;;Retrieve  the address  of  the  C function  "ik_stack_overflow()";
+		  ;;store it in TMP_0.
+		  (asm-instr move tmp_0 (constant (foreign-label "ik_stack_overflow")))
+		  ;;Load in  CP-REGISTER the address  of the C function;  the Assembly
+		  ;;routine "ik_foreign_call" expects it there.
+		  (asm-instr move %edi tmp_0)
+		  ;;Load in  AA-REGISTER a fixnum  representing the negated  number of
+		  ;;aruments; 0 for this call.
+		  (asm-instr move %eax (constant 0))
+		  ;;Do the call.  Discard the return value.
+		  (non-tail-call
+		    (target:      "ik_stack_overflow")
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi)
+		    (mask:        #f)
+		    (size:        #f)))))
 	    ;;Perform the non-tail call to DISPLAY.
-	    (nframe
-	     (vars: (nfv unset-conflicts))
-	     (live: #f)
-	     (seq
-	       ;;Load in NFV the operand of DISPLAY.
-	       (asm-instr move (nfv unset-conflicts) (constant 8))
-	       ;;Retrieve  from  the relocation  vector  the  reference to  the  core
-	       ;;primitive function DISPLAY.
-	       (asm-instr move tmp_1 (disp (constant (object display))
-					   (constant 19)))
-	       ;;Store the reference to DISPLAY in the CP-REGISTER.
-	       (asm-instr move %edi tmp_1)
-	       ;;Load in  AA-REGISTER the fixnum  representing the negated  number of
-	       ;;operands; -1 for this call to DISPLAY.
-	       (asm-instr move %eax (constant -8))
-	       ;;Do the call.  The return value is discarded.
-	       (non-tail-call
-		(target:      #f)
-		(retval-var:  #f)
-		(args:        %eax %esi %esp %ebp %edi (nfv unset-conflicts))
-		(mask:        #f)
-		(size:        #f))))
+	    (non-tail-call-frame
+	      (vars: (nfv unset-conflicts))
+	      (live: #f)
+	      (seq
+		;;Load in NFV the operand of DISPLAY.
+		(asm-instr move (nfv unset-conflicts) (constant 8))
+		;;Retrieve  from  the relocation  vector  the  reference to  the  core
+		;;primitive function DISPLAY.
+		(asm-instr move tmp_1 (disp (constant (object display))
+					    (constant 19)))
+		;;Store the reference to DISPLAY in the CP-REGISTER.
+		(asm-instr move %edi tmp_1)
+		;;Load in  AA-REGISTER the fixnum  representing the negated  number of
+		;;operands; -1 for this call to DISPLAY.
+		(asm-instr move %eax (constant -8))
+		;;Do the call.  The return value is discarded.
+		(non-tail-call
+		  (target:      #f)
+		  (retval-var:  #f)
+		  (args:        %eax %esi %esp %ebp %edi (nfv unset-conflicts))
+		  (mask:        #f)
+		  (size:        #f))))
 	    ;;Load in AA-REGISTER the return value of this standalone expression.
 	    (asm-instr move %eax (constant 16))
 	    ;;Return to the caller.
@@ -551,4 +551,6 @@
 ;; eval: (put 'funcall			'scheme-indent-function 1)
 ;; eval: (put 'library-letrec*		'scheme-indent-function 1)
 ;; eval: (put 'shortcut			'scheme-indent-function 1)
+;; eval: (put 'non-tail-call		'scheme-indent-function 0)
+;; eval: (put 'non-tail-call-frame	'scheme-indent-function 0)
 ;; End:

@@ -21,7 +21,7 @@
   ;;recordized code must be composed by struct instances of the following types:
   ;;
   ;;   asm-instr	conditional	constant
-  ;;   locals		nframe		non-tail-call
+  ;;   locals		non-tail-call-frame		non-tail-call
   ;;   asmcall		seq		shortcut
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
@@ -152,8 +152,8 @@
 	((asm-instr op d s)
 	 (E-asm-instr op d s))
 
-	((nframe vars live body)
-	 (E-nframe vars live body))
+	((non-tail-call-frame vars live body)
+	 (E-non-tail-call-frame vars live body))
 
 	((asmcall op args)
 	 (case op
@@ -199,7 +199,7 @@
 	(else
 	 (error who "invalid op" op))))
 
-    (define (E-nframe vars live body)
+    (define (E-non-tail-call-frame vars live body)
       (let ((live-frms1 (map (lambda (i)
 			       (Var (vector-ref vars.vec i)))
 			  (set->list (vector-ref live 0))))
@@ -696,9 +696,9 @@
 				   ($set-var-loc! x #t)))
        (R* args vs (empty-reg-set) fs ns))
 
-      ((nframe nfvs live body)
+      ((non-tail-call-frame nfvs live body)
        (for-each init-nfv! nfvs)
-       (set-nframe-live! x (vector vs fs ns))
+       (set-non-tail-call-frame-live! x (vector vs fs ns))
        (E body vs rs fs ns))
 
       ((asmcall op args)

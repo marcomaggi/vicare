@@ -1722,10 +1722,12 @@
 		;A struct representing recordised code.
    ))
 
-(define-struct nframe
+(define-struct non-tail-call-frame
   (vars
    live
    body
+		;A  struct representing  recordised  code.  It  implemnts a  function
+		;non-tail call, including the call table.
    ))
 
 (define-struct nfv
@@ -6353,14 +6355,15 @@
       ((disp s0 s1)
        `(disp ,(E s0) ,(E s1)))
 
-      ((nframe vars live body)
-       `(nframe ,(if (pair? vars)
-		     `(vars: . ,(map E vars))
-		   '(vars: #f))
-		,(if live
-		     `(live: . ,(map E live))
-		   '(live: #f))
-		,(E body)))
+      ((non-tail-call-frame vars live body)
+       `(non-tail-call-frame
+	 ,(if (pair? vars)
+	      `(vars: . ,(map E vars))
+	    '(vars: #f))
+	 ,(if live
+	      `(live: . ,(map E live))
+	    '(live: #f))
+	 ,(E body)))
 
       ((shortcut body handler)
        `(shortcut
@@ -6519,14 +6522,15 @@
 	((disp s0 s1)
 	 `(disp ,(E s0) ,(E s1)))
 
-	((nframe vars live body)
-	 `(nframe ,(if (pair? vars)
-		       `(vars: . ,(map E vars))
-		     '(vars: #f))
-		  ,(if live
-		       `(live: . ,(map E live))
-		     '(live: #f))
-		  ,(E body)))
+	((non-tail-call-frame vars live body)
+	 `(non-tail-call-frame
+	   ,(if (pair? vars)
+		`(vars: . ,(map E vars))
+	      '(vars: #f))
+	   ,(if live
+		`(live: . ,(map E live))
+	      '(live: #f))
+	   ,(E body)))
 
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
@@ -6688,14 +6692,15 @@
 	((disp s0 s1)
 	 `(disp ,(E s0) ,(E s1)))
 
-	((nframe vars live body)
-	 `(nframe ,(if (pair? vars)
-		       `(vars: . ,(map E vars))
-		     '(vars: #f))
-		  ,(if live
-		       `(live: . ,(map E live))
-		     '(live: #f))
-		  ,(E body)))
+	((non-tail-call-frame vars live body)
+	 `(non-tail-call-frame
+	   ,(if (pair? vars)
+		`(vars: . ,(map E vars))
+	      '(vars: #f))
+	   ,(if live
+		`(live: . ,(map E live))
+	      '(live: #f))
+	   ,(E body)))
 
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))

@@ -888,19 +888,20 @@
 					 (cons* ARGC-REGISTER pcr esp apr
 						(append reg-locs frmt*))
 					 #f #f))
-	       (body (make-nframe frmt* #f
-				  (%do-bind-frmt*
-				   frmt* frm-args
-				   (%do-bind (cdr regt*) (cdr reg-args)
-					     ;;evaluate cpt last
-					     (%do-bind (list (car regt*))
-						       (list (car reg-args))
-						       (assign* reg-locs regt*
-								(make-seq
-								  (%move-dst<-src ARGC-REGISTER
-										  (make-constant
-										   (argc-convention (length rands))))
-								  call))))))))
+	       (body (make-non-tail-call-frame
+		      frmt* #f
+		      (%do-bind-frmt*
+		       frmt* frm-args
+		       (%do-bind (cdr regt*) (cdr reg-args)
+				 ;;evaluate cpt last
+				 (%do-bind (list (car regt*))
+					   (list (car reg-args))
+					   (assign* reg-locs regt*
+						    (make-seq
+						      (%move-dst<-src ARGC-REGISTER
+								      (make-constant
+								       (argc-convention (length rands))))
+						      call))))))))
 	  (if dst-local
 	      (make-seq
 		body
