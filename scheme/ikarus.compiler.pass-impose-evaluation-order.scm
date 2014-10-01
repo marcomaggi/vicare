@@ -568,6 +568,7 @@
 		 (%move-dst<-src dst loc)))
 	   (else
 	    (%move-dst<-src dst x))))
+
     ((bind lhs* rhs* e)
      (%do-bind lhs* rhs* (V dst e)))
 
@@ -581,50 +582,58 @@
      (case op
 
        ((alloc)
-	;;Allocate a Scheme object on  the heap.  First check if there
-	;;is  enough room  on  the  heap segment:
+	;;Allocate a Scheme object on the heap.  We expect X to have the format:
 	;;
-	;;*  If  there  is:  just  increment  the  Allocation  Pointer
-	;;  Register (APR) and return the old APR value.
+	;;   (asmcall alloc (?aligned-memory-block-size ?scheme-object-primary-tag))
 	;;
-	;;* If there  is not: run a garbage  collection (complete with
-	;;   execution  of  post-GC  hooks) by  calling  the  function
-	;;  DO-OVERFLOW, then increment the APR and return the old APR
-	;;  after the GC.
+	;;First check if there is enough room on the heap segment:
+	;;
+	;;* If  there is: just  increment the  Allocation Pointer Register  (APR) and
+	;;  return the old APR value.
+	;;
+	;;* If  there is not:  run a garbage  collection (complete with  execution of
+	;;  post-GC  hooks) by calling  the function DO-OVERFLOW, then  increment the
+	;;  APR and return the old APR after the GC.
 	;;
 	(S (car rands)
-	   (lambda (size)
-	     (make-seq (alloc-check size)
-		       (S (cadr rands)
-			  (lambda (tag)
-			    (make-seq
-			      (make-seq
-				(%move-dst<-src dst apr)
-				(make-asm-instr 'logor dst tag))
-			      (make-asm-instr 'int+ apr size))))))))
+	   (lambda (aligned-size)
+	     (make-seq
+	       (alloc-check aligned-size)
+	       (S (cadr rands)
+		  (lambda (primary-tag)
+		    (make-seq
+		      (make-seq
+			;;Load in DST  the value in the  Allocation Pointer Register:
+			;;this value is a pointer to  a usable block of memory on the
+			;;heap nursery.
+			(%move-dst<-src dst apr)
+			;;Add the tag to the pointer.
+			(make-asm-instr 'logor dst primary-tag))
+		      ;;Increment the Allocation Pointer Register by the aligned size
+		      ;;of the block.
+		      (make-asm-instr 'int+ apr aligned-size))))))))
 
        ((alloc-no-hooks)
-	;;This is like ALLOC, but, if there is the need, run a garbage
-	;;collection without executing the post-GC hooks.
+	;;This is  like ALLOC, but,  if there is the  need, run a  garbage collection
+	;;without executing the post-GC hooks.
 	;;
-	;;This  simpler  GC  run  does not  touch  the  Scheme  stack,
-	;;avoiding the  generation of corrupt continuation  objects by
-	;;the  primitive operation  $SEAL-FRAME-AND-CALL (which  was a
-	;;cause of issue #35).
+	;;This  simpler  GC  run  does  not touch  the  Scheme  stack,  avoiding  the
+	;;generation  of  corrupt continuation  objects  by  the primitive  operation
+	;;$SEAL-FRAME-AND-CALL (which was a cause of issue #35).
 	;;
-	;;$SEAL-FRAME-AND-CALL should be the only operation making use
-	;;of this heap allocation method.
+	;;$SEAL-FRAME-AND-CALL should be  the only operation making use  of this heap
+	;;allocation method.
 	;;
 	(S (car rands)
-	   (lambda (size)
-	     (make-seq (alloc-check/no-hooks size)
-		       (S (cadr rands)
-			  (lambda (tag)
-			    (make-seq
-			      (make-seq
-				(%move-dst<-src dst apr)
-				(make-asm-instr 'logor dst tag))
-			      (make-asm-instr 'int+ apr size))))))))
+	   (lambda (aligned-size)
+	     (make-seq
+	       (alloc-check/no-hooks aligned-size)
+	       (S (cadr rands)
+		  (lambda (primary-tag)
+		    (multiple-forms-sequence
+		      (%move-dst<-src dst apr)
+		      (make-asm-instr 'logor dst primary-tag)
+		      (make-asm-instr 'int+  apr aligned-size))))))))
 
        ((mref)
 	(S* rands (lambda (rands)
@@ -638,26 +647,37 @@
 	(S* rands (lambda (rands)
 		    (make-asm-instr 'load8 dst (make-disp (car rands) (cadr rands))))))
 
-       ((logand logxor logor int+ int- int*
-		int-/overflow int+/overflow int*/overflow)
-	(make-seq (V dst (car rands))
-		  (S (cadr rands) (lambda (s)
-				    (make-asm-instr op dst s)))))
+       ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)
+	;;We expect X to have the format:
+	;;
+	;;   (asmcall ?op (?first-operand ?second-operand))
+	;;
+	;;representing  a  high-level  Assembly   instruction  that  must  store  the
+	;;resulting value in ?FIRST-OPERAND.
+	(make-seq
+	  ;;Load the first operand in DST.
+	  (V dst (car rands))
+	  (S (cadr rands)
+	     (lambda (src)
+	       ;;Perform the  operation OP between the  first operand in DST  and the
+	       ;;second operand in SRC; store the resulting value in DST.
+	       (make-asm-instr op dst src)))))
+
        ((int-quotient)
 	(S* rands (lambda (rands)
 		    (multiple-forms-sequence
-		     (%move-dst<-src eax (car rands))
-		     (make-asm-instr 'cltd edx eax)
-		     (make-asm-instr 'idiv eax (cadr rands))
-		     (%move-dst<-src dst eax)))))
+		      (%move-dst<-src eax (car rands))
+		      (make-asm-instr 'cltd edx eax)
+		      (make-asm-instr 'idiv eax (cadr rands))
+		      (%move-dst<-src dst eax)))))
 
        ((int-remainder)
 	(S* rands (lambda (rands)
 		    (multiple-forms-sequence
-		     (%move-dst<-src eax (car rands))
-		     (make-asm-instr 'cltd edx eax)
-		     (make-asm-instr 'idiv edx (cadr rands))
-		     (%move-dst<-src dst edx)))))
+		      (%move-dst<-src eax (car rands))
+		      (make-asm-instr 'cltd edx eax)
+		      (make-asm-instr 'idiv edx (cadr rands))
+		      (%move-dst<-src dst edx)))))
 
        ((sll sra srl sll/overflow)
 	(let ((a (car rands))
@@ -667,9 +687,9 @@
 			(make-asm-instr op dst b))
 	    (S b (lambda (b)
 		   (multiple-forms-sequence
-		    (V dst a)
-		    (%move-dst<-src ecx b)
-		    (make-asm-instr op dst ecx)))))))
+		     (V dst a)
+		     (%move-dst<-src ecx b)
+		     (make-asm-instr op dst ecx)))))))
 
        (else
 	(compiler-internal-error __module_who__ "invalid value op" op rands))))
@@ -682,7 +702,7 @@
 
     ((forcall op rands)
      (%handle-nontail-call (make-constant (make-foreign-label op))
-			  rands dst op))
+			   rands dst op))
 
     ((shortcut body handler)
      (make-shortcut (V dst body)
@@ -936,4 +956,5 @@
 ;; eval: (put 'make-conditional		'scheme-indent-function 2)
 ;; eval: (put 'struct-case		'scheme-indent-function 1)
 ;; eval: (put 'make-seq			'scheme-indent-function 0)
+;; eval: (put 'multiple-forms-sequence	'scheme-indent-function 0)
 ;; End:
