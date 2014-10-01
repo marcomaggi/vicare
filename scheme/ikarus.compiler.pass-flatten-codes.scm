@@ -30,7 +30,7 @@
   ;;Accept as input recordized code containing the following struct types:
   ;;
   ;;   asm-instr	conditional	constant
-  ;;   ntcall		asmcall		seq
+  ;;   non-tail-call		asmcall		seq
   ;;   shortcut
   ;;
   ;;only the following types are accepted in tail position:
@@ -72,7 +72,7 @@
   ;;
   ;;   asm-instr	code-loc	conditional
   ;;   constant		disp		foreign-label
-  ;;   fvar		ntcall		object
+  ;;   fvar		non-tail-call		object
   ;;   asmcall		seq		shortcut
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
@@ -571,8 +571,8 @@
 				      label-false
 				      (E x.altern (cons label-end accum)))))))))
 
-      ((ntcall target value args mask size)
-       (E-ntcall target value args mask size accum))
+      ((non-tail-call target value args mask size)
+       (E-non-tail-call target value args mask size accum))
 
       ((asm-instr op d s)
        (E-asm-instr op d s x accum))
@@ -608,7 +608,7 @@
       (else
        (error __module_who__ "invalid effect" (unparse-recordized-code x)))))
 
-  (define (E-ntcall target value args mask frame-words-count accum)
+  (define (E-non-tail-call target value args mask frame-words-count accum)
     ;;Flatten a  non-tail call;  this is  the call  making use  of the
     ;;"call" assembly instruction.
     ;;

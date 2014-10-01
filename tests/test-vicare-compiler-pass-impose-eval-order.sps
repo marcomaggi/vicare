@@ -152,130 +152,136 @@
     ))
 
 
-(parametrise ((check-test-name	'clambdas))
+(parametrise ((check-test-name	'calling-clambda-combinator))
 
-  (begin
-    ;;Let's see first the previous compiler pass output.
-    (check
-	(%before-impose-eval-order '(let ((F (lambda (x) ((primitive +) '1 x))))
-				      (F '2)))
-      => '(codes
-	   ((lambda (label: asmlabel:F:clambda) (cp_0 x_0)
-	       (shortcut
-		   (seq
-		     ;;Check if X_0 is a fixnum.
-		     (conditional (asmcall =
-					   (asmcall logand x_0 (constant 7))
-					   (constant 0))
-			 (asmcall nop)
-		       (asmcall interrupt))
-		     ;;Attempt to sum the fixnums.
-		     (asmcall int+/overflow (constant 8) x_0))
-		 (funcall (asmcall mref (constant (object +)) (constant 19))
-		   (constant 8)
-		   x_0))))
-	   (seq
+  ;;Let's see first the previous compiler pass output.
+  (check
+      (%before-impose-eval-order '(let ((F (lambda (x) ((primitive +) '1 x))))
+				    (F '2)))
+    => '(codes
+	 ((lambda (label: asmlabel:F:clambda) (cp_0 x_0)
 	     (shortcut
-		 (asmcall incr/zero? %esi (constant 72) (constant 8))
-	       (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
-	     (jmpcall asmlabel:F:clambda:case-1
-		      (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
-			tmp_0)
-		      (constant 16)))))
-
-    ;;Let's see then the output of this compiler pass.
-    (doit (let ((F (lambda (x) ((primitive +) '1 x))))
-	    (F '2))
-	  (codes
-	   ((lambda (label: asmlabel:F:clambda) (%edi fvar.1)
-	       (locals
-		;;The list  of machine  words we  need in this  function to  hold the
-		;;temporary local values.  They will be CPU registers or Scheme stack
-		;;words.
-		(local-vars: tmp_0 tmp_1 tmp_2 tmp_3 cp_0)
-		(seq
-		  ;;Load the  reference to closure  object from the  CP-REGISTER into
-		  ;;CP_0.
-		  (asm-instr move cp_0 %edi)
-		  (shortcut
-		      ;;This is the  integrated body of the  core primitive operation
-		      ;;"+".
-		      (seq
-			;;Check  if the  argument in  the Scheme  stack machine  word
-			;;FVAR.1 is a fixnum.
-			(conditional (seq
-				       (asm-instr move tmp_0 fvar.1)
-				       (asm-instr logand tmp_0 (constant 7))
-				       (asm-instr = tmp_0 (constant 0)))
-			    (asmcall nop)
-			  (asmcall interrupt))
-			;;Attempt to sum the fixnums.
-			(asm-instr move tmp_1 (constant 8))
-			(asm-instr int+/overflow tmp_1 fvar.1)
-			;;If successful: return the result in AA-REGISTER.
-			(asm-instr move %eax tmp_1)
-			(asmcall return %esi %esp %ebp %eax))
-		    ;;The sum  between fixnums  failed: tail-call the  core primitive
-		    ;;function "+".
-		    (seq
-		      ;;To  prepare for  the  tail call  we need  to  remove the  old
-		      ;;operands from the  Scheme stack: we need  the location FVAR.1
-		      ;;for the tail call's operands.
-		      (asm-instr move tmp_3 fvar.1)
-		      ;;Load the reference to the function "+" from the loc gensym in
-		      ;;the relocation vector.
-		      (asm-instr move tmp_2 (disp (constant (object +))
-						  (constant 19)))
-		      ;;Store the reference to function "+" in the CP-REGISTER.
-		      (asm-instr move %edi tmp_2)
-		      ;;Put the operands of "+" on the Scheme stack.
-		      (asm-instr move fvar.1 (constant 8))
-		      (asm-instr move fvar.2 tmp_3)
-		      ;;Load the negated number of operands in the AA-REGISTER.
-		      (asm-instr move %eax (constant -16))
-		      ;;Perform the  tail-call as indirect  jump: the address  of the
-		      ;;entry  point of  the function  "+" is  in the  closure object
-		      ;;referenced by CP-REGISTER.
-		      (asmcall indirect-jump %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))))
-	   (locals
-	    ;;The  list of  machine words  we  need in  this expression  to hold  the
-	    ;;temporary local  values.  They  will be CPU  registers or  Scheme stack
-	    ;;words.
-	    (local-vars: tmp_4 tmp_5 tmp_6)
-	    (seq
-	      (shortcut
-		  ;;This  is the  integrated  body of  the  core primitive  operation
-		  ;;"$do-event": check if the PCB's engine counter has been set.
-		  (asmcall incr/zero? %esi (constant 72) (constant 8))
-		(nframe
-		 (vars: #f)
-		 (live: #f)
 		 (seq
-		   ;;Load  the reference  to the  function "$do-event"  from the  loc
-		   ;;gensym in the relocation vector.
-		   (asm-instr move tmp_4 (disp (constant (object $do-event))
-					       (constant 19)))
-		   ;;Store the reference to function "$do-event" in the CP-REGISTER.
-		   (asm-instr move %edi tmp_4)
-		   ;;Load the  negated number of  arguments in the  AA-REGISTER; zero
-		   ;;for "$do-event".
-		   (asm-instr move %eax (constant 0))
-		   (ntcall #f #f))))
-	      ;;Retrieve from  the relocation vector  of the code object  the closure
-	      ;;object of the combinator F.
-	      (asm-instr move tmp_5 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
-	      (asm-instr move tmp_6 tmp_5)
-	      ;;Store a reference to the combinator F in the CP-REGISTER.
-	      (asm-instr move %edi tmp_6)
-	      ;;Put on the Scheme stack the operand of F.
-	      (asm-instr move fvar.1 (constant 16))
-	      ;;Load the negated number of arguments in the AA-REGISTER; -1 for F.
-	      (asm-instr move %eax (constant -8))
-	      ;;Tail-call the operator F.
-	      (asmcall direct-jump
-		       (code-loc asmlabel:F:clambda:case-1)
-		       %eax %esi %esp %ebp %edi fvar.1)))))
-    #| end of BEGIN |# )
+		   ;;Check if X_0 is a fixnum.
+		   (conditional (asmcall =
+					 (asmcall logand x_0 (constant 7))
+					 (constant 0))
+		       (asmcall nop)
+		     (asmcall interrupt))
+		   ;;Attempt to sum the fixnums.
+		   (asmcall int+/overflow (constant 8) x_0))
+	       (funcall (asmcall mref (constant (object +)) (constant 19))
+		 (constant 8)
+		 x_0))))
+	 (seq
+	   (shortcut
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	   (jmpcall asmlabel:F:clambda:case-1
+		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
+		      tmp_0)
+		    (constant 16)))))
+
+;;; --------------------------------------------------------------------
+
+  ;;Let's see then the output of this compiler pass.
+  (doit (let ((F (lambda (x) ((primitive +) '1 x))))
+	  (F '2))
+	(codes
+	 ((lambda (label: asmlabel:F:clambda) (%edi fvar.1)
+	     (locals
+	      ;;The  list of  machine words  we  need in  this function  to hold  the
+	      ;;temporary local values.   They will be CPU registers  or Scheme stack
+	      ;;words.
+	      (local-vars: tmp_0 tmp_1 tmp_2 tmp_3 cp_0)
+	      (seq
+		;;Load  the reference  to closure  object from  the CP-REGISTER  into
+		;;CP_0.
+		(asm-instr move cp_0 %edi)
+		(shortcut
+		    ;;This is  the integrated  body of  the core  primitive operation
+		    ;;"+".
+		    (seq
+		      ;;Check if the argument in the Scheme stack machine word FVAR.1
+		      ;;is a fixnum.
+		      (conditional (seq
+				     (asm-instr move tmp_0 fvar.1)
+				     (asm-instr logand tmp_0 (constant 7))
+				     (asm-instr = tmp_0 (constant 0)))
+			  (asmcall nop)
+			(asmcall interrupt))
+		      ;;Attempt to sum the fixnums.
+		      (asm-instr move tmp_1 (constant 8))
+		      (asm-instr int+/overflow tmp_1 fvar.1)
+		      ;;If successful: return the result in AA-REGISTER.
+		      (asm-instr move %eax tmp_1)
+		      (asmcall return %esi %esp %ebp %eax))
+		  ;;The  sum between  fixnums  failed: tail-call  the core  primitive
+		  ;;function "+".
+		  (seq
+		    ;;To prepare for the tail call we need to remove the old operands
+		    ;;from the Scheme stack: we need the location FVAR.1 for the tail
+		    ;;call's operands.
+		    (asm-instr move tmp_3 fvar.1)
+		    ;;Load the reference  to the function "+" from the  loc gensym in
+		    ;;the relocation vector.
+		    (asm-instr move tmp_2 (disp (constant (object +))
+						(constant 19)))
+		    ;;Store the reference to function "+" in the CP-REGISTER.
+		    (asm-instr move %edi tmp_2)
+		    ;;Put the operands of "+" on the Scheme stack.
+		    (asm-instr move fvar.1 (constant 8))
+		    (asm-instr move fvar.2 tmp_3)
+		    ;;Load the negated number of operands in the AA-REGISTER.
+		    (asm-instr move %eax (constant -16))
+		    ;;Perform  the tail-call  as indirect  jump: the  address of  the
+		    ;;entry  point of  the  function  "+" is  in  the closure  object
+		    ;;referenced by CP-REGISTER.
+		    (asmcall indirect-jump %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))))
+	 (locals
+	  ;;The  list  of machine  words  we  need in  this  expression  to hold  the
+	  ;;temporary  local values.   They will  be  CPU registers  or Scheme  stack
+	  ;;words.
+	  (local-vars: tmp_4 tmp_5 tmp_6)
+	  (seq
+	    (shortcut
+		;;This  is  the  integrated  body of  the  core  primitive  operation
+		;;"$do-event": check if the PCB's engine counter has been set.
+		(asmcall incr/zero? %esi (constant 72) (constant 8))
+	      (nframe
+	       (vars: #f)
+	       (live: #f)
+	       (seq
+		 ;;Load the reference to the function "$do-event" from the loc gensym
+		 ;;in the relocation vector.
+		 (asm-instr move tmp_4 (disp (constant (object $do-event))
+					     (constant 19)))
+		 ;;Store the reference to function "$do-event" in the CP-REGISTER.
+		 (asm-instr move %edi tmp_4)
+		 ;;Load the negated number of  arguments in the AA-REGISTER; zero for
+		 ;;"$do-event".
+		 (asm-instr move %eax (constant 0))
+		 (non-tail-call
+		  (target: #f)
+		  (value:  #f)
+		  (args:   %eax %esi %esp %ebp %edi)
+		  (mask:   #f)
+		  (size:   #f)))))
+	    ;;Retrieve  from the  relocation vector  of the  code object  the closure
+	    ;;object of the combinator F.
+	    (asm-instr move tmp_5 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
+	    (asm-instr move tmp_6 tmp_5)
+	    ;;Store  a  reference  to  the  combinator  F's  closure  object  in  the
+	    ;;CP-REGISTER.
+	    (asm-instr move %edi tmp_6)
+	    ;;Put on the Scheme stack the operand of F.
+	    (asm-instr move fvar.1 (constant 16))
+	    ;;Load the negated number of arguments in the AA-REGISTER; -1 for F.
+	    (asm-instr move %eax (constant -8))
+	    ;;Tail-call the operator F.
+	    (asmcall direct-jump
+		     (code-loc asmlabel:F:clambda:case-1)
+		     %eax %esi %esp %ebp %edi fvar.1)))))
 
   #t)
 

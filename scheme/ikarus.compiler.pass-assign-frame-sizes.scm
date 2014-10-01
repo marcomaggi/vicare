@@ -21,7 +21,7 @@
   ;;recordized code must be composed by struct instances of the following types:
   ;;
   ;;   asm-instr	conditional	constant
-  ;;   locals		nframe		ntcall
+  ;;   locals		nframe		non-tail-call
   ;;   asmcall		seq		shortcut
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
@@ -99,8 +99,8 @@
       ((seq e0 e1)
        (let ((e0^ (E e0)))
 	 (make-seq e0^ (NFE idx mask e1))))
-      ((ntcall target value args mask^ size)
-       (make-ntcall target value
+      ((non-tail-call target value args mask^ size)
+       (make-non-tail-call target value
 		    (map (lambda (x)
 			   (cond ((symbol? x)
 				  x)
@@ -689,7 +689,7 @@
          (else
 	  (error who "invalid effect op" (unparse-recordized-code x)))))
 
-      ((ntcall target value args mask size)
+      ((non-tail-call target value args mask size)
        (set! spill-set (union-vars vs spill-set))
        (for-each-var vs varvec (lambda (x)
 				 ($set-var-loc! x #t)))

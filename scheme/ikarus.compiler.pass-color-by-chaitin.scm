@@ -22,7 +22,7 @@
   ;;
   ;;   asm-instr	code-loc	conditional
   ;;   constant		disp		fvar
-  ;;   locals		nfv		ntcall
+  ;;   locals		nfv		non-tail-call
   ;;   asmcall		seq		shortcut
   ;;   var
   ;;
@@ -138,7 +138,7 @@
 	       (s2 (E e2 s)))
 	   (P e0 s1 s2 (set-union s1 s2))))
 
-	((ntcall targ value args mask size)
+	((non-tail-call targ value args mask size)
 	 (set-union (R* args) s))
 
 	((asmcall op arg*)
@@ -460,7 +460,7 @@
        (make-asm-instr op (R x) (R v)))
       ((asmcall op rands)
        (make-asmcall op (map R rands)))
-      ((ntcall)
+      ((non-tail-call)
        x)
       ((shortcut body handler)
        (make-shortcut (E body) (E handler)))
@@ -553,7 +553,7 @@
 	     (else
 	      (error who "invalid op in" (unparse-recordized-code x)))))
 
-	  ((ntcall)
+	  ((non-tail-call)
 	   x)
 
 	  ((shortcut body handler)

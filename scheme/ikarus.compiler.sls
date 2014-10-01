@@ -1711,8 +1711,14 @@
 ;;; --------------------------------------------------------------------
 
 (define-struct locals
+  ;;Used to wrap top level expressions and bodies of CLAMBDA clauses.
+  ;;
   (vars
+		;A list  of VAR structs  representing machine word  storage locations
+		;that must  be allocated to hold  the local variables of  BODY.  Such
+		;locations will be allocated to CPU registers or Scheme stack words.
    body
+		;A struct representing recordised code.
    ))
 
 (define-struct nframe
@@ -1729,7 +1735,7 @@
    nfv-conf
    ))
 
-(define-struct ntcall
+(define-struct non-tail-call
   (target
    value
    args
@@ -1737,9 +1743,9 @@
    size
    ))
 
-;;Represent an assembly instruction.
-;;
 (define-struct asm-instr
+  ;;Represent an assembly instruction.
+  ;;
   (op
 		;Operand.
    dst
@@ -1749,8 +1755,15 @@
    ))
 
 (define-struct disp
+  ;;Represent the  displacement of a  machine word in a  Scheme object stored  in the
+  ;;relocation vector of the current code object.
+  ;;
   (s0
+		;A CONSTANT struct holding an OBJECT struct.  It represents an object
+		;that will be stored in the relocation vector of a code object.
    s1
+		;A CONSTANT struct  representing the offset of the  machine word that
+		;must be extracted from the Scheme object referenced by S0.
    ))
 
 
@@ -6347,8 +6360,15 @@
 	  ,(E body)
 	,(E handler)))
 
-    ((ntcall target valuw args mask size)
-     `(ntcall ,target ,size))
+    ((non-tail-call target value args mask size)
+     `(non-tail-call
+       (target: ,target)
+       (value:  ,value)
+       ,(if (and args (pair? args))
+	    `(args: . ,args)
+	  '(args: #f))
+       (mask:   ,mask)
+       (size:   ,size)))
 
     (else x)))
 
@@ -6537,8 +6557,15 @@
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
 
-	((ntcall target valuw args mask size)
-	 `(ntcall ,target ,size))
+	((non-tail-call target value args mask size)
+	 `(non-tail-call
+	   (target: ,target)
+	   (value:  ,value)
+	   ,(if (and args (pair? args))
+		`(args: . ,args)
+	      '(args: #f))
+	   (mask:   ,mask)
+	   (size:   ,size)))
 
 	(else x)))
 
@@ -6834,8 +6861,15 @@
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
 
-	((ntcall target valuw args mask size)
-	 `(ntcall ,target ,size))
+	((non-tail-call target value args mask size)
+	 `(non-tail-call
+	   (target: ,target)
+	   (value:  ,value)
+	   ,(if (and args (pair? args))
+		`(args: . ,args)
+	      '(args: #f))
+	   (mask:   ,mask)
+	   (size:   ,size)))
 
 	(else x)))
 

@@ -827,10 +827,10 @@
 	    (frmt* (map (lambda (x)
 			  (make-nfv 'unset-conflicts #f #f #f #f))
 		     frm-args)))
-	(let* ((call (make-ntcall call-targ value-dest
-				  (cons* ARGC-REGISTER pcr esp apr
-					 (append reg-locs frmt*))
-				  #f #f))
+	(let* ((call (make-non-tail-call call-targ value-dest
+					 (cons* ARGC-REGISTER pcr esp apr
+						(append reg-locs frmt*))
+					 #f #f))
 	       (body (make-nframe frmt* #f
 				  (%do-bind-frmt*
 				   frmt* frm-args
