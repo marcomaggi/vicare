@@ -560,9 +560,12 @@
       (else
        (if (symbol? x)
 	   (%move-dst<-src dst x)
-	 (compiler-internal-error __module_who__ "invalid value" (unparse-recordized-code x))))))
+	 (compiler-internal-error __module_who__
+	   "invalid recordised code" (unparse-recordized-code/sexp x))))))
 
-  (define (V-asmcall dst op rands)
+;;; --------------------------------------------------------------------
+
+  (define (V-asmcall dst op rand*)
     (case op
       ((alloc)
        ;;Allocate a Scheme object on the heap.  We expect X to have the format:
@@ -578,11 +581,11 @@
        ;;  post-GC hooks) by calling the function DO-OVERFLOW, then increment the APR
        ;;  and return the old APR after the GC.
        ;;
-       (S (car rands)
+       (S (car rand*)
 	  (lambda (aligned-size)
 	    (make-seq
 	      (alloc-check aligned-size)
-	      (S (cadr rands)
+	      (S (cadr rand*)
 		 (lambda (primary-tag)
 		   (multiple-forms-sequence
 		     ;;Load in DST the value in the Allocation Pointer Register: this
@@ -606,11 +609,11 @@
        ;;$SEAL-FRAME-AND-CALL should  be the only  operation making use of  this heap
        ;;allocation method.
        ;;
-       (S (car rands)
+       (S (car rand*)
 	  (lambda (aligned-size)
 	    (make-seq
 	      (alloc-check/no-hooks aligned-size)
-	      (S (cadr rands)
+	      (S (cadr rand*)
 		 (lambda (primary-tag)
 		   (multiple-forms-sequence
 		     (%move-dst<-src dst apr)
@@ -622,8 +625,9 @@
        ;;
        ;;   (asmcall mref (?operand-referencing-sheme-object ?offset))
        ;;
-       (S* rands (lambda (rands)
-		   (%move-dst<-src dst (make-disp (car rands) (cadr rands))))))
+       (S* rand*
+	   (lambda (rand*)
+	     (%move-dst<-src dst (make-disp (car rand*) (cadr rand*))))))
 
       ((mref32)
        ;;We expect X to have the format:
@@ -631,8 +635,9 @@
        ;;   (asmcall mref32 (?operand-referencing-sheme-object ?offset))
        ;;
        ;;MREF32 is used, for example, to extract single characters from a string.
-       (S* rands (lambda (rands)
-		   (make-asm-instr 'load32 dst (make-disp (car rands) (cadr rands))))))
+       (S* rand*
+	   (lambda (rand*)
+	     (make-asm-instr 'load32 dst (make-disp (car rand*) (cadr rand*))))))
 
       ((bref)
        ;;We expect X to have the format:
@@ -640,8 +645,9 @@
        ;;   (asmcall bref (?operand-referencing-scheme-objet ?offset))
        ;;
        ;;BREF is used, for example, to extract single bytes from a bytevector.
-       (S* rands (lambda (rands)
-		   (make-asm-instr 'load8 dst (make-disp (car rands) (cadr rands))))))
+       (S* rand*
+	   (lambda (rand*)
+	     (make-asm-instr 'load8 dst (make-disp (car rand*) (cadr rand*))))))
 
       ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)
        ;;We expect X to have the format:
@@ -652,8 +658,8 @@
        ;;value in ?FIRST-OPERAND.
        (make-seq
 	 ;;Load the first operand in DST.
-	 (V dst (car rands))
-	 (S (cadr rands)
+	 (V dst (car rand*))
+	 (S (cadr rand*)
 	    (lambda (src)
 	      ;;Perform the  operation OP between  the first  operand in DST  and the
 	      ;;second operand in SRC; store the resulting value in DST.
@@ -664,12 +670,12 @@
        ;;
        ;;   (asmcall int-quotient (?first-operand ?second-operand))
        ;;
-       (S* rands
-	   (lambda (rands)
+       (S* rand*
+	   (lambda (rand*)
 	     (multiple-forms-sequence
-	       (%move-dst<-src eax (car rands))
+	       (%move-dst<-src eax (car rand*))
 	       (make-asm-instr 'cltd edx eax)
-	       (make-asm-instr 'idiv eax (cadr rands))
+	       (make-asm-instr 'idiv eax (cadr rand*))
 	       (%move-dst<-src dst eax)))))
 
       ((int-remainder)
@@ -677,17 +683,26 @@
        ;;
        ;;   (asmcall int-remainder (?first-operand ?second-operand))
        ;;
-       (S* rands
-	   (lambda (rands)
+       (S* rand*
+	   (lambda (rand*)
 	     (multiple-forms-sequence
-	       (%move-dst<-src eax (car rands))
+	       (%move-dst<-src eax (car rand*))
 	       (make-asm-instr 'cltd edx eax)
-	       (make-asm-instr 'idiv edx (cadr rands))
+	       (make-asm-instr 'idiv edx (cadr rand*))
 	       (%move-dst<-src dst edx)))))
 
       ((sll sra srl sll/overflow)
-       (let ((a (car rands))
-	     (b (cadr rands)))
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall ?op (?operand ?shift-amount))
+       ;;
+       ;;If the  ?SHIFT-AMOUNT is a  constant: the  Assembly instruction can  load it
+       ;;directly.
+       ;;
+       ;;If the ?SHIFT-AMOUNT must be  computed at run-time: the Assembly instruction
+       ;;expects it to be computed and the result loaded into ECX.
+       (let ((a (car rand*))
+	     (b (cadr rand*)))
 	 (if (constant? b)
 	     (make-seq
 	       (V dst a)
@@ -699,7 +714,11 @@
 		    (make-asm-instr op dst ecx)))))))
 
       (else
-       (compiler-internal-error __module_who__ "invalid value op" op rands))))
+       (compiler-internal-error __module_who__
+	 "invalid value operator in ASMCALL evaluated for its return value"
+	 (unparse-recordized-code/sexp (make-asmcall op rand*))))))
+
+;;; --------------------------------------------------------------------
 
   (module (alloc-check alloc-check/no-hooks)
 
