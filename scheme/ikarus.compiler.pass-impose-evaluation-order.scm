@@ -58,7 +58,7 @@
   ;;
   ;;   bind		conditional		constant
   ;;   forcall		funcall			jmpcall
-  ;;   known		asmcall			seq
+  ;;   asmcall		seq
   ;;   shortcut		var
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
@@ -422,9 +422,6 @@
       ((shortcut body handler)
        (make-shortcut (V-tail body) (V-tail handler)))
 
-      ((known expr)
-       (V-tail expr))
-
       (else
        (compiler-internal-error __module_who__ "invalid tail" x))))
 
@@ -454,8 +451,6 @@
      (%do-bind lhs* rhs* (S body kont)))
     ((seq e0 e1)
      (make-seq (E e0) (S e1 kont)))
-    ((known expr)
-     (S expr kont))
     (else
      (cond ((or (constant? x)
 		(symbol?   x))
@@ -553,9 +548,6 @@
        (make-shortcut
 	   (V dst body)
 	 (V dst handler)))
-
-      ;; ((known expr)
-      ;;  (V dst expr))
 
       (else
        (if (symbol? x)
@@ -658,6 +650,9 @@
        ;;value in ?FIRST-OPERAND.
        (make-seq
 	 ;;Load the first operand in DST.
+	 ;;
+	 ;;NOTE We do not filter "(car rand*)" through S here: we hand it to V, which
+	 ;;takes care of filtering it.
 	 (V dst (car rand*))
 	 (S (cadr rand*)
 	    (lambda (src)
@@ -701,30 +696,33 @@
        ;;
        ;;If the ?SHIFT-AMOUNT must be  computed at run-time: the Assembly instruction
        ;;expects it to be computed and the result loaded into ECX.
-       (let ((a (car rand*))
-	     (b (cadr rand*)))
-	 (if (constant? b)
+       (let ((operand      (car  rand*))
+	     (shift-amount (cadr rand*)))
+	 ;;NOTE We do not filter OPERAND through  S here: we hand OPERAND to V, which
+	 ;;takes care of filtering it.
+	 (if (constant? shift-amount)
 	     (make-seq
-	       (V dst a)
-	       (make-asm-instr op dst b))
-	   (S b (lambda (b)
-		  (multiple-forms-sequence
-		    (V dst a)
-		    (%move-dst<-src ecx b)
-		    (make-asm-instr op dst ecx)))))))
+	       (V dst operand)
+	       (make-asm-instr op dst shift-amount))
+	   (S shift-amount
+	      (lambda (shift-amount)
+		(multiple-forms-sequence
+		  (V dst operand)
+		  (%move-dst<-src ecx shift-amount)
+		  (make-asm-instr op dst ecx)))))))
 
       (else
        (compiler-internal-error __module_who__
-	 "invalid value operator in ASMCALL evaluated for its return value"
+	 "invalid ASMCALL operator in return value context"
 	 (unparse-recordized-code/sexp (make-asmcall op rand*))))))
 
 ;;; --------------------------------------------------------------------
 
   (module (alloc-check alloc-check/no-hooks)
 
-    (define (alloc-check size)
+    (define (alloc-check aligned-size)
       (E (make-shortcut
-	     (make-conditional (%test size)
+	     (make-conditional (%test aligned-size)
 		 (nop)
 	       (interrupt))
 	   (make-funcall
@@ -735,31 +733,41 @@
 	    (make-asmcall 'mref
 	      (list (make-constant (make-object (primitive-public-function-name->location-gensym 'do-overflow)))
 		    (make-constant off-symbol-record-proc)))
-	    (list size)))))
+	    (list aligned-size)))))
 
-    (define (alloc-check/no-hooks size)
+    (define (alloc-check/no-hooks aligned-size)
       (E (make-shortcut
-	     (make-conditional (%test size)
+	     (make-conditional (%test aligned-size)
 		 (nop)
 	       (interrupt))
-	   (make-forcall "ik_collect" (list size)))))
+	   (make-forcall "ik_collect" (list aligned-size)))))
 
-    (define (%test size)
-      (if (struct-case size
+    (define (%test aligned-size)
+      ;;There is a page  between the heap nursery allocation red line  and the end of
+      ;;the nursery.  How does the garbage collector handle big objects?
+      ;;
+      ;;* If  the requested  size is less  than, or  equal to, a  page size:  we just
+      ;;  compare the Allocation Pointer Register with the red line pointer.
+      ;;
+      ;;* If the requested size is greater than  a page size: we check that the whole
+      ;;  allocated memory block fits the nursery area before the red line.
+      ;;
+      (if (struct-case aligned-size
 	    ((constant i)
-	     (<= i 4096))
-	    (else
-	     #f))
-	  (make-asmcall '<=
-	    (list apr
-		  (make-asmcall 'mref
-		    (list pcr (make-constant pcb-allocation-redline)))))
+	     (<= i PAGE-SIZE))
+	    (else #f))
+	  (make-asmcall '<= (list apr RED-LINE-POINTER))
+	;;(RED-LINE-POINTER - apr) >= aligned-size
 	(make-asmcall '>=
-	  (list (make-asmcall 'int-
-		  (list (make-asmcall 'mref
-			  (list pcr (make-constant pcb-allocation-redline)))
-			apr))
-		size))))
+	  (list (make-asmcall 'int- (list RED-LINE-POINTER apr))
+		aligned-size))))
+
+    (define-constant RED-LINE-POINTER
+      (make-asmcall 'mref
+	(list pcr (make-constant pcb-allocation-redline))))
+
+    (define-inline-constant PAGE-SIZE
+      4096)
 
     #| end of module: ALLOC-CHECK, ALLOC-CHECK/NO-HOOKS |# )
 
