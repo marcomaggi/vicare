@@ -72,16 +72,29 @@
     (V-codes codes))
 
 
-;;;;
+;;;; local values
+;;
+;;Some Assembly instructions generate result values  that must be stored somewhere to
+;;be consumed  later; to represent  such machine words  we use VAR  structs.  Ideally
+;;such temporary values are all stored in  CPU registers, but sometimes there are not
+;;enough registers and we need to spill them on the Scheme stack.
+;;
+;;We usually  use the BIND  struct to represent the  need to allocate  such temporary
+;;location.
+;;
+;;For every standalone expression  and body of CLAMBDA clause we  collect the list of
+;;VAR structs representing such locations and store  it in the VARS field of a LOCALS
+;;struct; we use the parameter LOCAL-VALUES to accumulate the list.
+;;
 
-(define locals
+(define local-values
   (make-parameter #f))
 
-(define-syntax-rule (%locals-cons ?A)
-  (locals (cons ?A (locals))))
+(define-syntax-rule (%local-value-cons ?A)
+  (local-values (cons ?A (local-values))))
 
-(define-syntax-rule (%locals-cons* ?A0 ?A ...)
-  (locals (cons* ?A0 ?A ... (locals))))
+(define-syntax-rule (%local-value-cons* ?A0 ?A ...)
+  (local-values (cons* ?A0 ?A ... (local-values))))
 
 
 ;;;;
@@ -94,9 +107,9 @@
        (make-codes (map V-clambda x.code*) (V-body x.body)))))
 
   (define (V-body x)
-    (parametrise ((locals '()))
+    (parametrise ((local-values '()))
       (let ((y (V-tail x)))
-	(make-locals (locals) y))))
+	(make-locals (local-values) y))))
 
   #| end of module: V-codes |# )
 
@@ -126,7 +139,7 @@
 	    ;;The arguments listed  in REGISTER-ARGS will be stored  in the registers
 	    ;;listed in REGISTER-NAMES.   The arguments listed in  STACK-ARGS will be
 	    ;;stored in the Scheme stack machine words listed in STACK-LOCATIONS.
-	    (parametrise ((locals register-args))
+	    (parametrise ((local-values register-args))
 	      ($for-each/stx set-var-loc! stack-args stack-locations)
 	      (let ((body (let recur ((args register-args)
 				      (locs register-names))
@@ -137,7 +150,7 @@
 			      (V-tail cas.body)))))
 		(make-clambda-case
 		 (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
-		 (make-locals (locals) body))))))))))
+		 (make-locals (local-values) body))))))))))
 
   (define (%partition-formals available-registers formals)
     ;;Recursive function.  Associate the formals of a CLAMBDA clause to available CPU
@@ -268,7 +281,7 @@
 		(underflow-handler	(car rands))
 		(func		(cadr rands))
 		(kont-object	(caddr rands)))
-	    (%locals-cons* t0 t1 t2)
+	    (%local-value-cons* t0 t1 t2)
 	    (multiple-forms-sequence
 	     ;;Copy the arguments in CPU registers.
 	     (V t0 underflow-handler)
@@ -451,7 +464,7 @@
 (define (%do-bind lhs* rhs* body)
   (if (pair? lhs*)
       (begin
-	(%locals-cons (car lhs*))
+	(%local-value-cons (car lhs*))
 	(make-seq
 	  (V        (car lhs*) (car rhs*))
 	  (%do-bind (cdr lhs*) (cdr rhs*) body)))
@@ -792,7 +805,7 @@
 		      tlocs))
 	      (else
 	       (let ((t (make-unique-var 'tmp)))
-		 (%locals-cons t)
+		 (%local-value-cons t)
 		 (make-seq (V t (car args))
 			   (recur (cdr args)
 				  (cdr locs)
