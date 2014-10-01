@@ -1714,9 +1714,10 @@
   ;;Used to wrap top level expressions and bodies of CLAMBDA clauses.
   ;;
   (vars
-		;A list  of VAR structs  representing machine word  storage locations
-		;that must  be allocated to hold  the local variables of  BODY.  Such
-		;locations will be allocated to CPU registers or Scheme stack words.
+		;A possibly  empty proper  list of  VAR structs  representing machine
+		;word  storage locations  that must  be allocated  to hold  the local
+		;variables  of  BODY.   Such  locations  will  be  allocated  to  CPU
+		;registers or Scheme stack words.
    body
 		;A struct representing recordised code.
    ))

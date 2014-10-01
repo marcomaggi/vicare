@@ -65,10 +65,10 @@
     (struct-case x
       ((locals vars body)
        (init-vars! vars)
-       (let* ((varvec		(list->vector vars))
-	      (call-live*	(uncover-frame-conflicts body varvec))
-	      (body		(%rewrite body varvec)))
-	 (make-locals (cons varvec (%discard-vars-with-loc vars))
+       (let* ((vars.vec		(list->vector vars))
+	      (call-live*	(uncover-frame-conflicts body vars.vec))
+	      (body		(%rewrite body vars.vec)))
+	 (make-locals (cons vars.vec (%discard-vars-with-loc vars))
 		      body)))
       (else
        (error who "invalid main" x))))
@@ -88,11 +88,11 @@
 
 ;;; --------------------------------------------------------------------
 
-(define (%rewrite x varvec)
+(define (%rewrite x vars.vec)
   ;;X must be a struct instance representing a recordized body.
   ;;
   ;;A lot of functions are nested here because they need to close upon
-  ;;the argument VARVEC.
+  ;;the argument VARS.VEC.
   ;;
   (define (NFE idx mask x)
     (struct-case x
@@ -118,7 +118,7 @@
 	   => (lambda (loc)
 		(if (fvar? loc)
 		    loc
-		  (%assign x varvec))))
+		  (%assign x vars.vec))))
 	  (else x)))
 
   (define (R x)
@@ -181,15 +181,16 @@
 
 	(( ;;some assembly instructions
 	  logand		logor		logxor
-				int+		int-		int*
-				mset		bset		mset32
-				sll			sra		srl		bswap!
-				cltd		idiv
-				int-/overflow	int+/overflow	int*/overflow
-				fl:load		fl:store
-				fl:add!		fl:sub!		fl:mul!		fl:div!
-				fl:from-int		fl:shuffle	fl:load-single	fl:store-single
-				sll/overflow)
+	  int+			int-		int*
+	  mset			mset32
+	  bset			bswap!
+	  sll			sll/overflow
+	  sra			srl
+	  cltd			idiv
+	  int-/overflow		int+/overflow	int*/overflow
+	  fl:load		fl:store
+	  fl:add!		fl:sub!		fl:mul!		fl:div!
+	  fl:from-int		fl:shuffle	fl:load-single	fl:store-single)
 	 (make-asm-instr op (R d) (R s)))
 
 	((nop)
@@ -200,7 +201,7 @@
 
     (define (E-nframe vars live body)
       (let ((live-frms1 (map (lambda (i)
-			       (Var (vector-ref varvec i)))
+			       (Var (vector-ref vars.vec i)))
 			  (set->list (vector-ref live 0))))
 	    (live-frms2 (set->list (vector-ref live 1)))
 	    (live-nfvs  (vector-ref live 2)))
@@ -239,7 +240,7 @@
 
 	  (define (%var-conflict? i vs)
 	    (ormap (lambda (xi)
-		     (let ((loc ($var-loc (vector-ref varvec xi))))
+		     (let ((loc ($var-loc (vector-ref vars.vec xi))))
 		       (and (fvar? loc)
 			    (fx=? i ($fvar-idx loc)))))
 		   (set->list vs)))
@@ -260,7 +261,7 @@
 				($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
 				($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
 		($nfv-nfv-conf v))
-	      (for-each-var ($nfv-var-conf v) varvec
+	      (for-each-var ($nfv-var-conf v) vars.vec
 			    (lambda (x)
 			      (let ((loc ($var-loc x)))
 				(if (fvar? loc)
@@ -355,11 +356,11 @@
 
 (module (%assign)
 
-  (define (%assign x varvec)
-    (or (%assign-move x varvec)
-	(%assign-any  x varvec)))
+  (define (%assign x vars.vec)
+    (or (%assign-move x vars.vec)
+	(%assign-any  x vars.vec)))
 
-  (define (%assign-any x varvec)
+  (define (%assign-any x vars.vec)
     (let ((frms ($var-frm-conf x))
 	  (vars ($var-var-conf x)))
       (let loop ((i 1))
@@ -368,27 +369,27 @@
 	  (receive-and-return (fv)
 	      (mkfvar i)
 	    ($set-var-loc! x fv)
-	    (for-each-var vars varvec
+	    (for-each-var vars vars.vec
 			  (lambda (var)
 			    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
 
-  (define (%assign-move x varvec)
+  (define (%assign-move x vars.vec)
     (let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
       (and (pair? mr)
 	   (receive-and-return (fv)
 	       (mkfvar (car mr))
 	     ($set-var-loc! x fv)
-	     (for-each-var ($var-var-conf x) varvec
+	     (for-each-var ($var-var-conf x) vars.vec
 			   (lambda (var)
 			     ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
-	     (for-each-var ($var-var-move x) varvec
+	     (for-each-var ($var-var-move x) vars.vec
 			   (lambda (var)
 			     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
 
   #| end of module: %assign |# )
 
 
-(define (uncover-frame-conflicts x varvec)
+(define (uncover-frame-conflicts x vars.vec)
   ;;This function is used only by ASSIGN-FRAME-SIZES.
   ;;
   (import IntegerSet)
@@ -400,12 +401,12 @@
     (make-empty-set))
 
   (define (mark-reg/vars-conf! r vs)
-    (for-each-var vs varvec
+    (for-each-var vs vars.vec
       (lambda (v)
         ($set-var-reg-conf! v (add-reg r ($var-reg-conf v))))))
 
   (define (mark-frm/vars-conf! f vs)
-    (for-each-var vs varvec
+    (for-each-var vs vars.vec
       (lambda (v)
         ($set-var-frm-conf! v (add-frm f ($var-frm-conf v))))))
 
@@ -415,7 +416,7 @@
         ($set-nfv-frm-conf! n (add-frm f ($nfv-frm-conf n))))))
 
   (define (mark-var/vars-conf! v vs)
-    (for-each-var vs varvec
+    (for-each-var vs vars.vec
       (lambda (w)
         ($set-var-var-conf! w (add-var v ($var-var-conf w)))))
     ($set-var-var-conf! v (union-vars vs ($var-var-conf v))))
@@ -691,8 +692,8 @@
 
       ((non-tail-call target value args mask size)
        (set! spill-set (union-vars vs spill-set))
-       (for-each-var vs varvec (lambda (x)
-				 ($set-var-loc! x #t)))
+       (for-each-var vs vars.vec (lambda (x)
+				   ($set-var-loc! x #t)))
        (R* args vs (empty-reg-set) fs ns))
 
       ((nframe nfvs live body)
