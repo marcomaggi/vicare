@@ -1619,7 +1619,13 @@
    ))
 
 (define-struct foreign-label
-  (label))
+  ;;This struct represents the address of a  C language foreign function that must be
+  ;;called.  It is  used in a low-level representation of  the FOREIGN-CALL macro and
+  ;;FORCALL struct.
+  ;;
+  (label
+		;A string representing the name of the C language foreign function.
+   ))
 
 ;;Structs of this type are introduced by  the compiler pass "core type inference" and
 ;;consumed  by  the   compiler  passes  "introduce  unsafe   primrefs"  and  "specify
