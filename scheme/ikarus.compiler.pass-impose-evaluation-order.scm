@@ -532,7 +532,10 @@
 
       ((var)
        (cond ((var-loc x)
+	      ;;X is an argument to function call  already stored on the stack in the
+	      ;;FVAR stored in the LOC field.
 	      => (lambda (loc)
+		   (assert (fvar? loc))
 		   (%move-dst<-src dst loc)))
 	     (else
 	      (%move-dst<-src dst x))))
@@ -1003,45 +1006,60 @@
     ;;
     (let* ((args (cons rator rand*))
 	   (locs (%formals-locations PARAMETER-REGISTERS args)))
-      (let recur ((rev-args  (reverse args))
-		  (rev-locs  (reverse locs))
-		  (targs '())
-		  (tlocs '()))
-	(cond ((null? rev-args)
-	       (%assign*
-		   tlocs
-		   targs
-		 (make-seq
-		   ;;Store  in  the AA-REGISTER  a  fixnum  representing the  negated
-		   ;;number of operands.
-		   (%notify-number-of-operands (length rand*))
-		   (if target
-		       (make-asmcall 'direct-jump (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
-		     (make-asmcall 'indirect-jump (cons* ARGC-REGISTER pcr esp apr locs))))))
-	      ((constant? (car rev-args))
-	       (recur (cdr rev-args)
-		      (cdr rev-locs)
-		      (cons (car rev-args) targs)
-		      (cons (car rev-locs) tlocs)))
-	      ((and (fvar? (car rev-locs))
-		    (var?  (car rev-args))
-		    (eq?   (car rev-locs)
-			   (var-loc (car rev-args))))
-	       (recur (cdr rev-args)
-		      (cdr rev-locs)
-		      targs
-		      tlocs))
-	      (else
-	       (let ((dst (make-unique-var 'tmp)))
-		 (%local-value-cons dst)
-		 (make-seq
-		   ;;Generate  assembly instructions  to compute  a value  from "(car
-		   ;;rev-args)" and store the result in destination DST.
-		   (V dst (car rev-args))
-		   (recur (cdr rev-args)
-			  (cdr rev-locs)
-			  (cons dst targs)
-			  (cons (car rev-locs) tlocs)))))))))
+      ;;We want  to determine which ARGS  are complex expressions for  which there is
+      ;;the need to allocate a temporary location in which to store the result.
+      (let recur ((input-arg*  (reverse args))
+		  (input-dst*  (reverse locs))
+		  (output-arg* '())
+		  (output-dst* '()))
+	(define-syntax-rule (%do-recur ?output-arg* ?output-dst*)
+	  (recur (cdr input-arg*) (cdr input-dst*) ?output-arg* ?output-dst*))
+	(if (pair? input-arg*)
+	    (let ((arg (car input-arg*))
+		  (dst (car input-dst*)))
+	      (cond ((constant? arg)
+		     ;;The operand is  either a register operand or  a stack operand;
+		     ;;the operand's expression is a CONSTANT: we can just load it in
+		     ;;the associated location.
+		     (%do-recur (cons arg output-arg*)
+				(cons dst output-dst*)))
+
+		    ((and (fvar? dst)
+			  (var?  arg)
+			  (eq? dst (var-loc arg)))
+		     ;;The operand is a stack  operand; the operand's expression is a
+		     ;;VAR; the destination  location is an FVAR; the  operand VAR is
+		     ;;already  allocated  to  the  location's FVAR.   We  skip  this
+		     ;;operand: there is nothing to be done.
+		     ;;
+		     ;;This is the case, for example,  in which a function tail calls
+		     ;;itself with the same operands:
+		     ;;
+		     ;;   (define (f a b)
+		     ;;     (f a b))
+		     ;;   (f 1 2)
+		     ;;
+		     (%do-recur output-arg* output-dst*))
+
+		    (else
+		     (let ((tmp (make-unique-var 'tmp)))
+		       (%local-value-cons tmp)
+		       (make-seq
+			 ;;Generate assembly instructions to compute a value from ARG
+			 ;;and store the result in destination DST.
+			 (V tmp arg)
+			 (%do-recur (cons tmp output-arg*)
+				    (cons dst output-dst*)))))))
+	  (%assign*
+	      output-dst*
+	      output-arg*
+	    (make-seq
+	      ;;Store in the AA-REGISTER a  fixnum representing the negated number of
+	      ;;operands.
+	      (%notify-number-of-operands (length rand*))
+	      (if target
+		  (make-asmcall 'direct-jump (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
+		(make-asmcall 'indirect-jump (cons* ARGC-REGISTER pcr esp apr locs)))))))))
 
   (define (%formals-locations regs args)
     (cond ((null? args)
