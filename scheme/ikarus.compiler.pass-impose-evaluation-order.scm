@@ -487,35 +487,54 @@
   (S S*)
 
   (define (S* x* kont)
+    ;;Simplify the  list of structs  X then  apply the function  KONT to the  list of
+    ;;simplified structs.
+    ;;
     (if (pair? x*)
 	(S (car x*)
-	   (lambda (a)
+	   (lambda (A)
 	     (S* (cdr x*)
-		 (lambda (d)
-		   (kont (cons a d))))))
+		 (lambda (D)
+		   (kont (cons A D))))))
       (kont '())))
 
   (define (S x kont)
+    ;;Simplify the struct X then apply the function KONT to the simplified struct.  X
+    ;;must be an operand for a high-level Assembly instruction in an ASMCALL struct.
+    ;;
     (struct-case x
       ((bind lhs* rhs* body)
-       (%do-bind lhs* rhs* (S body kont)))
+       (%do-bind
+	   lhs*
+	   rhs*
+	 (S body kont)))
       ((seq e0 e1)
        (make-seq (E e0) (S e1 kont)))
+      ((constant)
+       (kont x))
       (else
-       (cond ((or (constant? x)
-		  (symbol?   x))
+       (cond ((symbol? x)
+	      ;;When X is a symbol: it is the name of a CPU register.
+	      #;(assert (memq x '(%esi %esp %ebp)))
 	      (kont x))
 	     ((var? x)
 	      (cond ((var-loc x)
+		     ;;X is an argument to function  call already stored on the stack
+		     ;;in the FVAR from the LOC field.
 		     => kont)
 		    (else
 		     (kont x))))
-	     ((or (funcall? x) (asmcall? x) (jmpcall? x)
+	     ((or (funcall? x) (asmcall?  x) (jmpcall?     x)
 		  (forcall? x) (shortcut? x) (conditional? x))
 	      (let ((t (make-unique-var 'tmp)))
-		(%do-bind (list t) (list x) (kont t))))
+		(%do-bind
+		    (list t)
+		    (list x)
+		  (kont t))))
 	     (else
-	      (compiler-internal-error __module_who__ "invalid S" x))))))
+	      (compiler-internal-error __module_who__
+		"invalid ASMCALL operand to be simpliefied"
+		(unparse-recordized-code/sexp x)))))))
 
   #| end of module: OPERANDS-SIMPLIFICATION |# )
 
