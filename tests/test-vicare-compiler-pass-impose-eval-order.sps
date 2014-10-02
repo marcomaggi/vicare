@@ -899,6 +899,149 @@
   #t)
 
 
+(parametrise ((check-test-name	'seal-frame-and-call))
+
+  (check
+      (%before-impose-eval-order
+       (receive (code libs)
+	   (expand-form-to-core-language '($seal-frame-and-call void)
+					 (environment '(vicare)
+						      '(vicare system $stack)))
+	 code))
+    => '(codes
+	 ()
+	 ;;Retrieve a reference to the closure object implementing VOID.
+	 (bind ((tmp_0 (asmcall mref (constant (object void)) (constant 19))))
+	   ;;Allocate a continuation object.
+	   (bind ((kont_0 (asmcall alloc-no-hooks (constant 32) (constant 5))))
+	     ;;Compute  the address  of  the word  on the  stack  holding the  return
+	     ;;address to the underflow handler.
+	     (bind ((base_0 (asmcall int+
+				     (asmcall mref %esi (constant 24))
+				     (constant -8))))
+	       ;;Load  the return  address  to  the underflow  handler  into a  local
+	       ;;variable.
+	       (bind ((underflow-handler_0 (asmcall mref base_0 (constant 0))))
+		 (seq
+		   ;;Store the  continuation secondary tag  in the first word  of the
+		   ;;continuation object.
+		   (asmcall mset kont_0 (constant -5) (constant 31))
+		   ;;Store  in  the continuation  object  the  current Frame  Pointer
+		   ;;Register  as   address  to   go  back   to  when   resuming  the
+		   ;;continuation.
+		   (asmcall mset kont_0 (constant 3) %esp)
+		   ;;Store   in  the   continuation  object   the  number   of  bytes
+		   ;;representing the total size of the freezed stack frames.
+		   (asmcall mset kont_0 (constant 11) (asmcall int- base_0 %esp))
+		   ;;Prepend the new continuation object  to the linked list of "next
+		   ;;process continuations" in the PCB.
+		   (asmcall mset kont_0 (constant 19)
+			    (asmcall mref %esi (constant 40)))
+		   (asmcall mset %esi (constant 40) kont_0)
+		   ;;The machine word referenced by the FPR is the new frame base for
+		   ;;subsequent code  execution; store  the FPR in  the PCB  as frame
+		   ;;base.
+		   (asmcall mset %esi (constant 24) %esp)
+		   (asmcall call-with-underflow-handler
+			    underflow-handler_0 tmp_0 kont_0))))))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (%impose-eval-order
+       (receive (code libs)
+	   (expand-form-to-core-language '($seal-frame-and-call void)
+					 (environment '(vicare)
+						      '(vicare system $stack)))
+	 code))
+    => '(codes
+	 ()
+	 (locals
+	  (local-vars: tmp_0 tmp_1 kont_0 base_0
+		       underflow-handler_0 tmp_2 tmp_3 tmp-underfow-handler_0
+		       tmp-kont-object_0 tmp-func_0)
+	  (seq
+	    ;;Retrieve a reference to the closure object implementing VOID.
+	    (asm-instr move tmp_0 (disp (constant (object void)) (constant 19)))
+	    ;;Make  sure  there  is  enough  room  in the  heap  nursery  for  a  new
+	    ;;continuation object.
+	    (shortcut
+		(conditional
+		    (asm-instr <= %ebp (disp %esi (constant 8)))
+		    (asmcall nop) (asmcall interrupt))
+	      (non-tail-call-frame
+		(vars: (nfv unset-conflicts))
+		(live: #f)
+		(seq
+		  (asm-instr move (nfv unset-conflicts) (constant 32))
+		  (asm-instr move tmp_1 (constant (foreign-label "ik_collect")))
+		  (asm-instr move %edi tmp_1)
+		  (asm-instr move %eax (constant -8))
+		  (non-tail-call
+		    (target:      "ik_collect")
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi (nfv unset-conflicts))
+		    (mask:        #f)
+		    (size:        #f)))))
+	    ;;Store  in  a local  variable  the  Allocation Pointer  Register,  which
+	    ;;represents the untagged pointer to the continuation object.
+	    (asm-instr move kont_0 %ebp)
+	    ;;Tag the pointer as continuation object.
+	    (asm-instr logor kont_0 (constant 5))
+	    ;;Increment the  Allocation Pointer Register  by the aligned size  of the
+	    ;;continuation object.
+	    (asm-instr int+ %ebp (constant 32))
+	    ;;Compute the address of the word on the stack holding the return address
+	    ;;to the underflow handler.
+	    (asm-instr move base_0 (disp %esi (constant 24)))
+	    (asm-instr int+ base_0 (constant -8))
+	    ;;Load the return address to the underflow handler into a local variable.
+	    (asm-instr move underflow-handler_0 (disp base_0 (constant 0)))
+	    ;;Store  the  continuation  secondary  tag  in  the  first  word  of  the
+	    ;;continuation object.
+	    (asm-instr mset (disp kont_0 (constant -5)) (constant 31))
+	    ;;Store in the continuation object  the current Frame Pointer Register as
+	    ;;address to go back to when resuming the continuation.
+	    (asm-instr mset (disp kont_0 (constant 3)) %esp)
+	    ;;Store in the  continuation object the number of  bytes representing the
+	    ;;total size of the freezed stack frames.
+	    (asm-instr move tmp_2 base_0)
+	    (asm-instr int- tmp_2 %esp)
+	    (asm-instr mset (disp kont_0 (constant 11)) tmp_2)
+	    ;;Prepend the new continuation object to the linked list of "next process
+	    ;;continuations" in the PCB.
+	    (asm-instr move tmp_3 (disp %esi (constant 40)))
+	    (asm-instr mset (disp kont_0 (constant 19)) tmp_3)
+	    (asm-instr mset (disp %esi (constant 40)) kont_0)
+	    ;;The  machine word  referenced by  the  FPR is  the new  frame base  for
+	    ;;subsequent code execution; store the FPR in the PCB as frame base.
+	    (asm-instr mset (disp %esi (constant 24)) %esp)
+	    ;;Store in a local variable the return address to the underflow handler.
+	    (asm-instr move tmp-underfow-handler_0 underflow-handler_0)
+	    ;;Store in a local variable the reference to continuation object.
+	    (asm-instr move tmp-kont-object_0 kont_0)
+	    ;;Store in a local variable the reference to closure object to call.
+	    (asm-instr move tmp-func_0 tmp_0)
+	    ;;Move IK_UNDERFLOW_HANDLER in its reserved slot the on the Scheme stack.
+	    (asm-instr move fvar.1 tmp-underfow-handler_0)
+	    ;;Move the the  reference to continuation object in its  reserved slot on
+	    ;;the Scheme stack, as operand to the closure referenced by TMP-FUNC_0.
+	    (asm-instr move fvar.2 tmp-kont-object_0)
+	    ;;Load the reference to closure object in the CP-REGISTER.
+	    (asm-instr move %edi tmp-func_0)
+	    ;;Load in  the AA-REGISTER  a fixnum representing  the negated  number of
+	    ;;operands: -1.
+	    (asm-instr move %eax (constant -8))
+	    ;;Decrement the FP-REGISTER so that it points to the underflow handler as
+	    ;;return address.
+	    (asm-instr int- %esp (constant 8))
+	    ;;Jump to  the binary code entry  point by retrieving it  from the cloure
+	    ;;object referenced by CP-REGISTER.
+	    (asmcall indirect-jump %eax %edi %esi %esp %ebp fvar.1 fvar.2)))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
