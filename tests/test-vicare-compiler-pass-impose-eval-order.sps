@@ -787,6 +787,118 @@
   #t)
 
 
+(parametrise ((check-test-name	'recursive-function-same-operands))
+
+;;;Check  what happens  when a  function tail-calls  itself with  the same  operands.
+;;;Before the recursive  tail-call: no operands movement should  be inserted, because
+;;;all the operands are already in the correctl place on the Scheme stack.
+
+  (check
+      (%before-impose-eval-order '(let ((F (lambda (a b) (F a b))))
+				    (F '1 '2)))
+    => '(codes
+	 ((lambda (label: asmlabel:F:clambda) (cp_0 a_0 b_0)
+	     (seq
+	       ;;Check if the PCB's engine counter has changed.
+	       (shortcut
+		   (asmcall incr/zero? %esi (constant 72) (constant 8))
+		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	       ;;Perform the recursive tail-call.
+	       (jmpcall asmlabel:F:clambda:case-2
+			(bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
+			  tmp_0)
+			a_0 b_0))))
+	 (seq
+	   ;;Check if the PCB's engine counter has changed.
+	   (shortcut
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	   ;;Perform the tail-call to F.
+	   (jmpcall asmlabel:F:clambda:case-2
+		    (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
+		      tmp_1)
+		    (constant 8)
+		    (constant 16)))))
+
+;;; --------------------------------------------------------------------
+
+  (doit (let ((F (lambda (a b) (F a b))))
+	  (F '1 '2))
+	(codes
+	 ((lambda (label: asmlabel:F:clambda) (%edi fvar.1 fvar.2)
+	     (locals
+	      (local-vars: tmp_0 tmp_1 tmp_2 cp_0)
+	      (seq
+		;;Load in CP_0 the reference to closure object from the CP-REGISTER.
+		(asm-instr move cp_0 %edi)
+		;;Check if the PCB's engine counter has changed.
+		(shortcut
+		    (asmcall incr/zero? %esi (constant 72) (constant 8))
+		  (non-tail-call-frame
+		    (vars: #f)
+		    (live: #f)
+		    (seq
+		      (asm-instr move tmp_0 (disp (constant (object $do-event))
+						  (constant 19)))
+		      (asm-instr move %edi tmp_0)
+		      (asm-instr move %eax (constant 0))
+		      (non-tail-call
+			(target:      #f)
+			(retval-var:  #f)
+			(args:        %eax %esi %esp %ebp %edi)
+			(mask:        #f)
+			(size:        #f)))))
+		;;Load the reference to closure object.
+		(asm-instr move tmp_1 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
+		(asm-instr move tmp_2 tmp_1)
+		;;Store the reference to closure object into CP-REGISTER.
+		(asm-instr move %edi tmp_2)
+		;;Store in  AA-REGISTER a fixnum  representing the negated  number of
+		;;arguments: -2.
+		(asm-instr move %eax (constant -16))
+		;;Perform the tail-call.
+		(asmcall direct-jump
+			 (code-loc asmlabel:F:clambda:case-2)
+			 %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))
+	 (locals
+	  (local-vars: tmp_3 tmp_4 tmp_5)
+	  (seq
+	    ;;Check if the PCB's engine counter has changed.
+	    (shortcut
+		(asmcall incr/zero? %esi (constant 72) (constant 8))
+	      (non-tail-call-frame
+		(vars: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move tmp_3 (disp (constant (object $do-event))
+					      (constant 19)))
+		  (asm-instr move %edi tmp_3)
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target:      #f)
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi)
+		    (mask:        #f)
+		    (size:        #f)))))
+	    ;;Load the reference to closure object.
+	    (asm-instr move tmp_4 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
+	    (asm-instr move tmp_5 tmp_4)
+	    ;;Store the reference to closure object into CP-REGISTER.
+	    (asm-instr move %edi tmp_5)
+	    ;;Put on the stack the operands, in the correct order.
+	    (asm-instr move fvar.1 (constant 8))
+	    (asm-instr move fvar.2 (constant 16))
+	    ;;Store  in  AA-REGISTER a  fixnum  representing  the negated  number  of
+	    ;;arguments: -2.
+	    (asm-instr move %eax (constant -16))
+	    ;;Perform the tail-call.
+	    (asmcall direct-jump
+		     (code-loc asmlabel:F:clambda:case-2)
+		     %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)

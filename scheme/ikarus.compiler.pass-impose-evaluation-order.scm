@@ -987,7 +987,74 @@
 
 
 (module (%handle-tail-call)
-
+  ;;Here we build the Scheme stack layout needed  to perform a tail call to a closure
+  ;;object.  Let's consider the common case in which we are already inside a function
+  ;;call and we perform another function call; the old, uplevel call frame is already
+  ;;on the stack.  We build the following layout:
+  ;;
+  ;;           high memory
+  ;;   |                          |         --
+  ;;               ...                      .
+  ;;   |--------------------------|         . uplevel stack frame
+  ;;   | uplevel return address   | <-- FPR .
+  ;;   |--------------------------|         --
+  ;;   | uplevel stack operand 0  |         .
+  ;;   |--------------------------|         .
+  ;;   | uplevel stack operand 1  |         . uplevel operands and local variables
+  ;;   |--------------------------|         . represented by FVAR structs
+  ;;   |       local var 0        |         .
+  ;;   |--------------------------|         .
+  ;;   |       local var 1        |         .
+  ;;   |--------------------------|         .--
+  ;;   |  stack operand 0 in tmp  |         .
+  ;;   |--------------------------|         . operands to the call
+  ;;   |  stack operand 1 in tmp  |         . in temporary locations
+  ;;   |--------------------------|         . represented by FVAR structs
+  ;;   |  stack operand 2 in tmp  |         .
+  ;;   |--------------------------|         --
+  ;;   |                          |
+  ;;           low memory
+  ;;
+  ;;The stack  local variables  are represented  by FVAR  structs.  These  locals are
+  ;;allocated by  the BIND structs  that survived  all the previous  compiler passes;
+  ;;this compiler pass creates additional locals with the function %DO-BIND.
+  ;;
+  ;;The stack operands variables are represented by FVAR structs; these operands must
+  ;;match the  actual function  arguments.  This compiler  pass computes  the operand
+  ;;values and allocates temporary stack locations for them.
+  ;;
+  ;;In  addition to  the stack  operands: some  register operands  are handed  to the
+  ;;callee  closure object;  such values  are computed  and stored  in dedicated  CPU
+  ;;registers, where  the binary code of  the callee expects them.   At present, only
+  ;;the reference  to closure  object is  handled this way,  passing it  throught the
+  ;;CP-REGISTER.
+  ;;
+  ;;When all the operand values have been computed and stored in temporary locations:
+  ;;they are moved  to the actual stack  locations for the call,  overwriting the old
+  ;;operands and the local variables.  The resulting scenario follows:
+  ;;
+  ;;           high memory
+  ;;   |                          |         --
+  ;;               ...                      .
+  ;;   |--------------------------|         . uplevel stack frame
+  ;;   | uplevel return address   | <-- FPR .
+  ;;   |--------------------------|         --
+  ;;   |     stack operand 0      |         .
+  ;;   |--------------------------|         . operands to the call
+  ;;   |     stack operand 1      |         . in correct locations
+  ;;   |--------------------------|         . represented by FVAR structs
+  ;;   |     stack operand 2      |         .
+  ;;   |--------------------------|         --
+  ;;   |       local var 1        |
+  ;;   |--------------------------|
+  ;;   |                          |
+  ;;           low memory
+  ;;
+  ;;The uplevel  return address is left  untouched because it becomes  the new return
+  ;;address.  If  there are  leftover operands  or local  variables from  the uplevel
+  ;;function execution:  they are left alone  and simply overwritten by  further code
+  ;;execution.
+  ;;
   (define (%handle-tail-call target rator rand*)
     ;;Handle FUNCALL and JMPCALL structures in tail position.
     ;;
@@ -1058,7 +1125,12 @@
 	      ;;operands.
 	      (%notify-number-of-operands (length rand*))
 	      (if target
+		  ;;This is was a JMPCALL: we  jump directly to the binary code entry
+		  ;;point represented  by the Assembly  label in the  CODE-LOC struct
+		  ;;TARGET.
 		  (make-asmcall 'direct-jump (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
+		;;This was a FUNCALL: we jump  to indirectly to the binary code entry
+		;;point by retrieving it, at run-time, from the closure object.
 		(make-asmcall 'indirect-jump (cons* ARGC-REGISTER pcr esp apr locs)))))))))
 
   (define (%formals-locations regs args)
@@ -1093,26 +1165,26 @@
   ;;   | uplevel stack operand 0  |         .
   ;;   |--------------------------|         .
   ;;   | uplevel stack operand 1  |         .
-  ;;   |--------------------------|         .
-  ;;   |       local var 0        |         . stack frame described
-  ;;   |--------------------------|         . by the call table
+  ;;   |--------------------------|         . stack frame described
+  ;;   |       local var 0        |         . by this call's call table,
+  ;;   |--------------------------|         . represented by FVAR structs
   ;;   |       local var 1        |         .
   ;;   |--------------------------|         .
   ;;   |        empty word        |         .
   ;;   |--------------------------|         --
   ;;   |      stack operand 0     |         .
   ;;   |--------------------------|         . operands to the call
-  ;;   |      stack operand 1     |         .
+  ;;   |      stack operand 1     |         . represented by NFV structs
   ;;   |--------------------------|         --
   ;;   |                          |
   ;;           low memory
   ;;
   ;;The stack  local variables  are represented  by FVAR  structs.  These  locals are
-  ;;represented by the  BIND structs that survived all the  previous compiler passes;
+  ;;allocated by  the BIND structs  that survived  all the previous  compiler passes;
   ;;this compiler pass creates additional locals with the function %DO-BIND.
   ;;
   ;;The stack operands variables are represented  by NFV structs; these operands must
-  ;;match  the actual  function arguments.   This  compiler pass  creates such  stack
+  ;;match the  actual function  arguments.  This compiler  pass allocates  such stack
   ;;operands with the function %DO-OPERANDS-BIND.
   ;;
   ;;In  addition to  the stack  operands: some  register operands  are handed  to the
