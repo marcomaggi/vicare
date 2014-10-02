@@ -535,7 +535,7 @@
 	      ;;X is an argument to function call  already stored on the stack in the
 	      ;;FVAR stored in the LOC field.
 	      => (lambda (loc)
-		   (assert (fvar? loc))
+		   ;;(assert (fvar? loc))
 		   (%move-dst<-src dst loc)))
 	     (else
 	      (%move-dst<-src dst x))))
@@ -1129,22 +1129,30 @@
 		  ;;point represented  by the Assembly  label in the  CODE-LOC struct
 		  ;;TARGET.
 		  (make-asmcall 'direct-jump (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
-		;;This was a FUNCALL: we jump  to indirectly to the binary code entry
+		;;This was  a FUNCALL: we  jump indirectly  to the binary  code entry
 		;;point by retrieving it, at run-time, from the closure object.
 		(make-asmcall 'indirect-jump (cons* ARGC-REGISTER pcr esp apr locs)))))))))
 
-  (define (%formals-locations regs args)
-    (cond ((null? args)
-	   '())
-	  ((null? regs)
-	   (%one-fvar-for-each-arg 1 args))
-	  (else
-	   (cons (car regs) (%formals-locations (cdr regs) (cdr args))))))
+  (define (%formals-locations parameter-registers regparm*+rand*)
+    ;;Non-tail recursive function.  Return a list  of items having the same length of
+    ;;REGPARM*+RAND*; the first items are  taken from PARAMETER-REGISTERS, the others
+    ;;are newly constructed FVAR structs.
+    ;;
+    (if (pair? regparm*+rand*)
+	(if (pair? parameter-registers)
+	    (cons (car parameter-registers)
+		  (%formals-locations (cdr parameter-registers) (cdr regparm*+rand*)))
+	  ;;Here we have consumed all the REGPARM* and only the RAND* are left.
+	  (%one-fvar-for-each-rand 1 regparm*+rand*))
+      '()))
 
-  (define (%one-fvar-for-each-arg i args)
-    (if (pair? args)
+  (define (%one-fvar-for-each-rand i rand*)
+    ;;Non-tail recursive  function.  Build and return  a list of FVAR  structs having
+    ;;the same length of RAND*.
+    ;;
+    (if (pair? rand*)
 	(cons (mkfvar i)
-	      (%one-fvar-for-each-arg (fxadd1 i) (cdr args)))
+	      (%one-fvar-for-each-rand (fxadd1 i) (cdr rand*)))
       '()))
 
   #| end of module: %HANDLE-TAIL-CALL |# )
