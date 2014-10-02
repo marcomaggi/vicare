@@ -432,7 +432,7 @@
 	      (vars: (nfv unset-conflicts))
 	      (live: #f)
 	      (seq
-		;;Load in the NFV the fixnum 2.
+		;;Load in the stack operand location the operand fixnum 2.
 		(asm-instr move (nfv unset-conflicts) (constant 16))
 		;;Load in TMP_6 the reference to closure object implementing F.
 		(asm-instr move tmp_6 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
@@ -465,35 +465,55 @@
 				      (F '2))))
     => '(codes
 	 ((lambda (label: asmlabel:F:clambda) (cp_0 y_0)
+	     ;;Retrieve the value of X from the closure object.
 	     (bind ((tmp_0 (asmcall mref cp_0 (constant 5))))
 	       (shortcut
+		   ;;This is the integrated body of the core primitive operation "+".
 		   (seq
-		     (conditional (asmcall =
-					   (asmcall logand (asmcall logor tmp_0 y_0)
-						    (constant 7))
+		     ;;Check  in a  single step  if both  the captured  value of  the
+		     ;;variable X=TMP_0 and the operand Y_0 are fixnums.
+		     ;;
+		     ;;   ((X | Y) & fx-mask) == fx-tag
+		     ;;
+		     (conditional (asmcall = (asmcall logand
+						      (asmcall logor tmp_0 y_0)
+						      (constant 7))
 					   (constant 0))
 			 (asmcall nop)
 		       (asmcall interrupt))
+		     ;;Attempt to sum the operands.
 		     (asmcall int+/overflow tmp_0 y_0))
+		 ;;This is the interrupt handler of the core primitive operation "+".
 		 (funcall (asmcall mref (constant (object +)) (constant 19))
-		   tmp_0
-		   y_0)))))
+		   tmp_0 y_0)))))
 	 (seq
+	   ;;Check the use of the Scheme stack.
 	   (shortcut
+	       ;;This   is   the  integrated   body   of   the  primitive   operation
+	       ;;$STACK-OVERFLOW-CHECK.
 	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
 		   (asmcall interrupt)
 		 (asmcall nop))
+	     ;;This   is   the   interrupt    body   of   the   primitive   operation
+	     ;;$STACK-OVERFLOW-CHECK.
 	     (foreign-call "ik_stack_overflow"))
+	   ;;Check if the PCB engine counter is set.
 	   (shortcut
 	       (asmcall incr/zero? %esi (constant 72) (constant 8))
 	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	   ;;Here is the actual expression.
 	   (bind ((x_0 (funcall (asmcall mref (constant (object read)) (constant 19)))))
+	     ;;Allocate the run-time closure object.
 	     (bind ((F_0 (asmcall alloc (constant 16) (constant 3))))
-	       (bind ()
-		 (seq
-		   (asmcall mset F_0 (constant -3) (constant (code-loc asmlabel:F:clambda)))
-		   (asmcall mset F_0 (constant 5) x_0)
-		   (jmpcall asmlabel:F:clambda:case-1 F_0 (constant 16)))))))))
+	       (seq
+		 ;;Store in the  closure object the address of the  binary code entry
+		 ;;point.
+		 (asmcall mset F_0 (constant -3) (constant (code-loc asmlabel:F:clambda)))
+		 ;;Store  in the  closure object  the current  value of  the captured
+		 ;;variable.
+		 (asmcall mset F_0 (constant 5) x_0)
+		 ;;Perform the tail call.
+		 (jmpcall asmlabel:F:clambda:case-1 F_0 (constant 16))))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -506,31 +526,54 @@
 	     (locals
 	      (local-vars: tmp_0 tmp_1 tmp_2 tmp_3 tmp_4 tmp_5 cp_0)
 	      (seq
+		;;Load in CP_0 the reference to closure object from the CP-REGISTER.
 		(asm-instr move cp_0 %edi)
+		;;Retrieve the value of X from the closure object.
 		(asm-instr move tmp_0 (disp cp_0 (constant 5)))
 		(shortcut
+		    ;;This is the integrated body of the core primitive operation "+".
 		    (seq
+		      ;;Check in  a single  step if  both the  captured value  of the
+		      ;;variable X=TMP_0 and the operand Y_0 are fixnums.
+		      ;;
+		      ;;   ((X | Y) & fx-mask) == fx-tag
+		      ;;
 		      (conditional (seq (asm-instr move tmp_1 tmp_0)
 					(asm-instr logor tmp_1 fvar.1)
 					(asm-instr logand tmp_1 (constant 7))
 					(asm-instr = tmp_1 (constant 0)))
 			  (asmcall nop)
 			(asmcall interrupt))
+		      ;;Attempt to sum the operands.
 		      (asm-instr move tmp_2 tmp_0)
 		      (asm-instr int+/overflow tmp_2 fvar.1)
+		      ;;Load the result in AA-REGISTER.
 		      (asm-instr move %eax tmp_2)
+		      ;;Return to the caller.
 		      (asmcall return %esi %esp %ebp %eax))
-		  (seq (asm-instr move tmp_5 fvar.1)
-		       (asm-instr move tmp_4 tmp_0)
-		       (asm-instr move tmp_3 (disp (constant (object +)) (constant 19)))
-		       (asm-instr move %edi tmp_3)
-		       (asm-instr move fvar.1 tmp_4)
-		       (asm-instr move fvar.2 tmp_5)
-		       (asm-instr move %eax (constant -16))
-		       (asmcall indirect-jump %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))))
+		  ;;This is  the interrupt  handler of  the core  primitive operation
+		  ;;"+".
+		  (seq
+		    ;;Move the operands in temporary locations.
+		    (asm-instr move tmp_5 fvar.1)
+		    (asm-instr move tmp_4 tmp_0)
+		    ;;Retrieve form  the relocation  vector a  reference to  the core
+		    ;;primitive "+".
+		    (asm-instr move tmp_3 (disp (constant (object +)) (constant 19)))
+		    ;;Store in CP-REGISTER the reference to "+".
+		    (asm-instr move %edi tmp_3)
+		    ;;Put the operands on the stack, in the correct order.
+		    (asm-instr move fvar.1 tmp_4)
+		    (asm-instr move fvar.2 tmp_5)
+		    ;;Store in  AA-REGISTER a fixnum representing  the negated number
+		    ;;of operands: -2.
+		    (asm-instr move %eax (constant -16))
+		    ;;Perform the tail call.
+		    (asmcall indirect-jump %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))))
 	 (locals
 	  (local-vars: tmp_6 tmp_7 tmp_8 x_0 tmp_9 F_0 tmp_10)
 	  (seq
+	    ;;Check the use of the Scheme stack.
 	    (shortcut
 		(conditional (asm-instr u< %esp (disp %esi (constant 32)))
 		    (asmcall interrupt)
@@ -543,11 +586,12 @@
 		  (asm-instr move %edi tmp_6)
 		  (asm-instr move %eax (constant 0))
 		  (non-tail-call
-		    (target: "ik_stack_overflow")
-		    (retval-var: #f)
-		    (args: %eax %esi %esp %ebp %edi)
-		    (mask: #f)
-		    (size: #f)))))
+		    (target:      "ik_stack_overflow")
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi)
+		    (mask:        #f)
+		    (size:        #f)))))
+	    ;;Check if the PCB engine counter is set.
 	    (shortcut
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
 	      (non-tail-call-frame
@@ -564,53 +608,90 @@
 		    (args:        %eax %esi %esp %ebp %edi)
 		    (mask:        #f)
 		    (size:        #f)))))
+	    ;;Here is the actual expression.  First we call READ and store the result
+	    ;;in the location X_0.
 	    (non-tail-call-frame
 	      (vars: #f)
 	      (live: #f)
 	      (seq
+		;;Retrieve,  from the  relocation  vector, the  reference to  closure
+		;;object implementing READ.
 		(asm-instr move tmp_8 (disp (constant (object read))
 					    (constant 19)))
+		;;Store in CP-REGISTER the reference to READ.
 		(asm-instr move %edi tmp_8)
+		;;Store in  AA-REGISTER a fixnum  representing the negated  number of
+		;;operands for READ: zero.
 		(asm-instr move %eax (constant 0))
+		;;Perform  the  non-tail  call  to   READ;  the  result  is  left  in
+		;;AA-REGISTER.
 		(non-tail-call
 		  (target:      #f)
 		  (retval-var:  x_0)
 		  (args:        %eax %esi %esp %ebp %edi)
 		  (mask:        #f)
 		  (size:        #f))))
+	    ;;Load in X_0 the result of READ from AA-REGISTER.
 	    (asm-instr move x_0 %eax)
+	    ;;Here we begin what is needed to allocate the run-time closure object.
+	    ;;
+	    ;;First make sure that there is enough room for the closure object in the
+	    ;;heap nursery.
 	    (shortcut
-		(conditional
-		    (asm-instr <= %ebp (disp %esi (constant 8)))
-		    (asmcall nop) (asmcall interrupt))
+		;;Compare the  AP-REGISTER with the  nursery red line pointer  in the
+		;;PCB.
+		(conditional (asm-instr <= %ebp (disp %esi (constant 8)))
+		    (asmcall nop)
+		  (asmcall interrupt))
+	      ;;If there is no room: call  DO-OVERFLOW to perform a garbage collector
+	      ;;run.
 	      (non-tail-call-frame
 		(vars: (nfv unset-conflicts))
 		(live: #f)
 		(seq
+		  ;;Store in the stack operand  location the operand for the non-tail
+		  ;;call to DO-OVERFLOW.
 		  (asm-instr move (nfv unset-conflicts) (constant 16))
+		  ;;Retrieve from  the relocation vector  a reference to  the closure
+		  ;;object implementing DO-OVERFLOW.
 		  (asm-instr move tmp_9 (disp (constant (object do-overflow))
 					      (constant 27)))
+		  ;;Store in CP-REGISTER the reference to DO-OVERFLOW.
 		  (asm-instr move %edi tmp_9)
+		  ;;Store in AA-REGISTER a fixnum  representing the negated number of
+		  ;;operands: -1.
 		  (asm-instr move %eax (constant -8))
+		  ;;Perform the non-tail call; the returned value is discarded.
 		  (non-tail-call
 		    (target:      #f)
 		    (retval-var:  #f)
 		    (args:        %eax %esi %esp %ebp %edi (nfv unset-conflicts))
 		    (mask:        #f)
 		    (size:        #f)))))
+	    ;;The  pointer to  the new  closure object  is the  current value  of the
+	    ;;AP-REGISTER.
 	    (asm-instr move F_0 %ebp)
+	    ;;Tag the pointer with the CLOSURE-TAG.
 	    (asm-instr logor F_0 (constant 3))
+	    ;;Increment the AP-REGISTER by the closure object's aligned size.
 	    (asm-instr int+ %ebp (constant 16))
+	    ;;Store in the closure object the address of the binary code entry point.
 	    (asm-instr mset
 		       (disp F_0 (constant -3))
 		       (constant (code-loc asmlabel:F:clambda)))
+	    ;;Store in the closure object the current value of the captured variable.
 	    (asm-instr mset
 		       (disp F_0 (constant 5))
 		       x_0)
+	    ;;Store in the CP-REGSITER the reference to closure object.
 	    (asm-instr move tmp_10 F_0)
 	    (asm-instr move %edi tmp_10)
+	    ;;Put on the stack the operand to the closure call.
 	    (asm-instr move fvar.1 (constant 16))
+	    ;;Store  in  AA-REGISTER a  fixnum  representing  the negated  number  of
+	    ;;operands: -1.
 	    (asm-instr move %eax (constant -8))
+	    ;;Perform the tail call.
 	    (asmcall direct-jump
 		     (code-loc asmlabel:F:clambda:case-1)
 		     %eax %esi %esp %ebp %edi fvar.1)))))
@@ -680,7 +761,7 @@
 	      (vars: (nfv unset-conflicts))
 	      (live: #f)
 	      (seq
-		;;Load in NFV the operand of DISPLAY.
+		;;Load in the stack operand location the operand of DISPLAY.
 		(asm-instr move (nfv unset-conflicts) (constant 8))
 		;;Retrieve  from  the relocation  vector  the  reference to  the  core
 		;;primitive function DISPLAY.

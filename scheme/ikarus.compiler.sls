@@ -1737,6 +1737,29 @@
    ))
 
 (define-struct nfv
+  ;;Represent a Scheme stack location used to  hold an operand to a non-tail function
+  ;;call.  Such locations are below the return address to the caller; the scenario on
+  ;;the Scheme stack right after the "call" Assembly instruction is:
+  ;;
+  ;;      high memory
+  ;;   |                |
+  ;;   |----------------|
+  ;;   | return address | <- Frame Pointer Register (FPR)
+  ;;   |----------------|
+  ;;   |  1st operand   | <- FPR - 1 * wordsize
+  ;;   |----------------|
+  ;;   |  2nd operand   | <- FPR - 2 * wordsize
+  ;;   |----------------|
+  ;;   |  3rd operand   | <- FPR - 3 * wordsize
+  ;;   |----------------|
+  ;;   |                | <- FPR - AA-REGISTER
+  ;;   |----------------|
+  ;;   |                |
+  ;;       low memory
+  ;;
+  ;;so  the offset  of  the operands  with  respect  to the  FPR  is negative,  hence
+  ;;"negative frame variables".
+  ;;
   (conf
    loc
    var-conf

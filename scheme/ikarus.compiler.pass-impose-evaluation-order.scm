@@ -454,12 +454,10 @@
   ;;
   (if (pair? lhs*)
       (begin
-	(assert (let ((lhs (car lhs*)))
-		  (or (and (symbol? lhs)
-			   (memq lhs PARAMETER-REGISTERS))
-		      (fvar? lhs)
-		      #;(nfv?  lhs)
-		      )))
+	;; (assert (let ((lhs (car lhs*)))
+	;; 	  (or (and (symbol? lhs)
+	;; 		   (memq lhs PARAMETER-REGISTERS))
+	;; 	      (fvar? lhs))))
 	(make-seq
 	  (%move-dst<-src (car lhs*) (car rhs*))
 	  (%assign*       (cdr lhs*) (cdr rhs*) tail-body)))
@@ -478,20 +476,6 @@
 	  (V        (car lhs*) (car rhs*))
 	  (%do-bind (cdr lhs*) (cdr rhs*)
 	    tail-body)))
-    tail-body))
-
-(define (%do-bind-frmt* nfv* rhs* tail-body)
-  ;;Non-tail recursive function.   This function is like %ASSIGN*,  but, in addition:
-  ;;it filters the RHS* through V.
-  ;;
-  (if (pair? nfv*)
-      (begin
-	(assert (nfv? (car nfv*)))
-	(make-seq
-	  ;;Generate assembly instructions  to compute a value from  "(car rhs*)" and
-	  ;;store the result in destination "(car nfv*)".
-	  (V              (car nfv*) (car rhs*))
-	  (%do-bind-frmt* (cdr nfv*) (cdr rhs*) tail-body)))
     tail-body))
 
 
@@ -1064,7 +1048,51 @@
 
 
 (module (%handle-non-tail-call)
-
+  ;;Here we  build the Scheme  stack layout  needed to perform  a non-tail call  to a
+  ;;closure object.  Let's consider the common case  in which we are already inside a
+  ;;function call and  we perform another function call; the  old, uplevel call frame
+  ;;is already on the stack.  We build the following layout:
+  ;;
+  ;;           high memory
+  ;;   |                          |         --
+  ;;               ...                      .
+  ;;   |--------------------------|         . uplevel stack frame
+  ;;   | uplevel return address   | <-- FPR .
+  ;;   |--------------------------|         --
+  ;;   | uplevel stack operand 0  |         .
+  ;;   |--------------------------|         .
+  ;;   | uplevel stack operand 1  |         .
+  ;;   |--------------------------|         .
+  ;;   |       local var 0        |         . stack frame described
+  ;;   |--------------------------|         . by the call table
+  ;;   |       local var 1        |         .
+  ;;   |--------------------------|         .
+  ;;   |        empty word        |         .
+  ;;   |--------------------------|         --
+  ;;   |      stack operand 0     |         .
+  ;;   |--------------------------|         . operands to the call
+  ;;   |      stack operand 1     |         .
+  ;;   |--------------------------|         --
+  ;;   |                          |
+  ;;           low memory
+  ;;
+  ;;The stack  local variables  are represented  by FVAR  structs.  These  locals are
+  ;;represented by the  BIND structs that survived all the  previous compiler passes;
+  ;;this compiler pass creates additional locals with the function %DO-BIND.
+  ;;
+  ;;The stack operands variables are represented  by NFV structs; these operands must
+  ;;match  the actual  function arguments.   This  compiler pass  creates such  stack
+  ;;operands with the function %DO-OPERANDS-BIND.
+  ;;
+  ;;In  addition to  the stack  operands: some  register operands  are handed  to the
+  ;;callee  closure object;  such values  are computed  and stored  in dedicated  CPU
+  ;;registers, where  the binary code of  the callee expects them.   At present, only
+  ;;the reference  to closure  object is  handled this way,  passing it  throught the
+  ;;CP-REGISTER.
+  ;;
+  ;;The "empty  word" will be  filled by  the return address  of the function  we are
+  ;;about to call.
+  ;;
   (define (%handle-non-tail-call rator rand* dst-local call-target)
     ;;Build a NON-TAIL-CALL-FRAME  including everything needed to  perform a non-tail
     ;;call to a closure object.  If the return  value of the call is requested by the
@@ -1110,15 +1138,20 @@
     (receive (register-name* register-arg* stack-arg*)
 	(%nontail-locations PARAMETER-REGISTERS (cons rator rand*))
       ;;REGISTER-ARG* and  STACK-ARG* may be  complex operands; so first  we evaluate
-      ;;such complex expressions and store the results in temporary locations:
+      ;;the proper function operands, which are  stack operands, and load them in the
+      ;;appropriate stack locations:
       ;;
       ;;   (asm-instr move ?stack-arg.nfv    ?stack-arg)
       ;;   ...
+      ;;
+      ;;then we  evaluate the register operands'  values and store them  in temporary
+      ;;locations:
+      ;;
       ;;   (asm-instr move ?register-arg.var ?register-arg)
       ;;   ...
       ;;
-      ;;then we  store the  each REGISTER-ARG.VAR  in the  CPU registers  selected by
-      ;;REGISTER-NAME*:
+      ;;finally  we load  the  values of  the  register operands  in  the actual  CPU
+      ;;registers:
       ;;
       ;;   (asm-instr move ?register-name ?register-arg.var)
       ;;   ...
@@ -1164,7 +1197,9 @@
   (define (%make-call-frame-body stack-arg*.nfv stack-arg*
 				 register-arg*.var register-arg*
 				 register-name* rand* ntcall)
-    (%do-bind-frmt*
+    ;;Load  on the  stack  the stack  operands  of the  function  call.  These  stack
+    ;;locations are below the location that will hold the return address of the call.
+    (%do-operands-bind*
 	stack-arg*.nfv
 	stack-arg*
       ;;Load in temporary  locations the values of the register  parameters; skip the
@@ -1187,6 +1222,28 @@
 	      (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention (length rand*))))
 	      ntcall))))))
 
+  (define (%do-operands-bind* nfv* rhs* tail-body)
+    ;;Non-tail recursive function.  Given a list  of destination locations NFV* and a
+    ;;list  of  source   expressions  RHS*,  build  and  return   a  struct  instance
+    ;;representing:
+    ;;
+    ;;   (seq
+    ;;     (asm-instr move ?nfv ?rhs)
+    ;;     ...
+    ;;     ?tail-body)
+    ;;
+    ;;in addition: filter the RHS* through V.
+    ;;
+    (if (pair? nfv*)
+	(begin
+	  ;;(assert (nfv? (car nfv*)))
+	  (make-seq
+	    ;;Generate assembly instructions to compute a value from "(car rhs*)" and
+	    ;;store the result in destination "(car nfv*)".
+	    (V                  (car nfv*) (car rhs*))
+	    (%do-operands-bind* (cdr nfv*) (cdr rhs*) tail-body)))
+      tail-body))
+
   #| end of module: %HANDLE-NON-TAIL-CALL |# )
 
 
@@ -1205,7 +1262,7 @@
 ;; eval: (put 'multiple-forms-sequence	'scheme-indent-function 0)
 ;; eval: (put 'S			'scheme-indent-function 1)
 ;; eval: (put 'S*			'scheme-indent-function 1)
-;; eval: (put '%do-bind-frmt*		'scheme-indent-function 2)
+;; eval: (put '%do-operands-bind*	'scheme-indent-function 2)
 ;; eval: (put '%do-bind			'scheme-indent-function 2)
 ;; eval: (put '%assign*			'scheme-indent-function 2)
 ;; End:

@@ -1264,8 +1264,13 @@
 		     (list (asm 'alloc
 				  (KN (apply + n n*))
 				  (KN closure-tag)))
-		     (make-bind lhs* (%adders lhs n n*)
-				body)))))
+		     (%mk-bind lhs* (%adders lhs n n*)
+			       body)))))
+
+    (define (%mk-bind lhs* rhs* body)
+      (if (pair? lhs*)
+	  (make-bind lhs* rhs* body)
+	body))
 
     (define (%adders lhs n n*)
       ;;Return a  list of ASMCALL  structs representing expressions that  compute the
