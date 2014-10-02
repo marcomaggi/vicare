@@ -353,9 +353,9 @@
 	     ;;
 	     ;;Load the reference to closure object FUNC in the CPR.
 	     (%move-dst<-src cpr t2)
-	     ;;Load in  ARGC-REGISTER the  encoded number of  arguments, counting
-	     ;;the continuation object.
-	     (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention 1)))
+	     ;;Load in  ARGC-REGISTER the encoded  number of arguments,  counting the
+	     ;;continuation object.
+	     (%notify-number-of-operands 1)
 	     ;;Decrement the FPR so that it points to the underflow handler.
 	     (make-asm-instr 'int- fpr (make-constant wordsize))
 	     ;;When we arrive here the situation on the Scheme stack is:
@@ -442,6 +442,10 @@
 
 
 ;;;; helpers
+
+(define (%notify-number-of-operands num-of-rands)
+  ;;Store in the AA-REGISTER a fixnum representing the negated number of operands.
+  (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention num-of-rands))))
 
 (define (%assign* lhs* rhs* tail-body)
   ;;Non-tail recursive  function.  Given a list  of destination locations LHS*  and a
@@ -981,10 +985,12 @@
 
 (module (%handle-tail-call)
 
-  (define (%handle-tail-call target rator rands)
+  (define (%handle-tail-call target rator rand*)
     ;;Handle FUNCALL and JMPCALL structures in tail position.
     ;;
-    ;;If TARGET is true: the call is a JMPCALL and TARGET is a CODE-LOC.
+    ;;If the  argument TARGET  is true:  the tail call  is for  a JMPCALL  struct and
+    ;;TARGET is a CODE-LOC wrapping the name of the target Assembly label.  If TARGET
+    ;;is false: the tail call is for a FUNCALL struct.
     ;;
     ;;We build and return a struct instance to represent:
     ;;
@@ -995,40 +1001,47 @@
     ;;
     ;;3. The actual call.
     ;;
-    (let* ((args (cons rator rands))
-	   (locs (%formals-locations PARAMETER-REGISTERS args))
-	   (rest (make-seq
-		   (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention (length rands))))
+    (let* ((args (cons rator rand*))
+	   (locs (%formals-locations PARAMETER-REGISTERS args)))
+      (let recur ((rev-args  (reverse args))
+		  (rev-locs  (reverse locs))
+		  (targs '())
+		  (tlocs '()))
+	(cond ((null? rev-args)
+	       (%assign*
+		   tlocs
+		   targs
+		 (make-seq
+		   ;;Store  in  the AA-REGISTER  a  fixnum  representing the  negated
+		   ;;number of operands.
+		   (%notify-number-of-operands (length rand*))
 		   (if target
 		       (make-asmcall 'direct-jump (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
 		     (make-asmcall 'indirect-jump (cons* ARGC-REGISTER pcr esp apr locs))))))
-      (let recur ((args  (reverse args))
-		  (locs  (reverse locs))
-		  (targs '())
-		  (tlocs '()))
-	(cond ((null? args)
-	       (%assign* tlocs targs rest))
-	      ((constant? (car args))
-	       (recur (cdr args)
-		      (cdr locs)
-		      (cons (car args) targs)
-		      (cons (car locs) tlocs)))
-	      ((and (fvar? (car locs))
-		    (var?  (car args))
-		    (eq?   (car locs)
-			   (var-loc (car args))))
-	       (recur (cdr args)
-		      (cdr locs)
+	      ((constant? (car rev-args))
+	       (recur (cdr rev-args)
+		      (cdr rev-locs)
+		      (cons (car rev-args) targs)
+		      (cons (car rev-locs) tlocs)))
+	      ((and (fvar? (car rev-locs))
+		    (var?  (car rev-args))
+		    (eq?   (car rev-locs)
+			   (var-loc (car rev-args))))
+	       (recur (cdr rev-args)
+		      (cdr rev-locs)
 		      targs
 		      tlocs))
 	      (else
-	       (let ((t (make-unique-var 'tmp)))
-		 (%local-value-cons t)
-		 (make-seq (V t (car args))
-			   (recur (cdr args)
-				  (cdr locs)
-				  (cons t targs)
-				  (cons (car locs) tlocs)))))))))
+	       (let ((dst (make-unique-var 'tmp)))
+		 (%local-value-cons dst)
+		 (make-seq
+		   ;;Generate  assembly instructions  to compute  a value  from "(car
+		   ;;rev-args)" and store the result in destination DST.
+		   (V dst (car rev-args))
+		   (recur (cdr rev-args)
+			  (cdr rev-locs)
+			  (cons dst targs)
+			  (cons (car rev-locs) tlocs)))))))))
 
   (define (%formals-locations regs args)
     (cond ((null? args)
@@ -1219,7 +1232,7 @@
 	    (make-seq
 	      ;;Load  in AA-REGISTER  a  fixnum representing  the  negated number  of
 	      ;;operands.
-	      (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention (length rand*))))
+	      (%notify-number-of-operands (length rand*))
 	      ntcall))))))
 
   (define (%do-operands-bind* nfv* rhs* tail-body)
