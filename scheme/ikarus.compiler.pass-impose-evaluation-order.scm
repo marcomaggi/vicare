@@ -78,6 +78,9 @@
   (or (var? x)
       (nfv? x)))
 
+(define-syntax-rule (%move-dst<-src ?dst ?src)
+  (make-asm-instr 'move ?dst ?src))
+
 
 ;;;; local values
 ;;
@@ -428,44 +431,53 @@
   (define (VT x)
     ;;X is a struct of type: CONSTANT, VAR, ASMCALL, FORCALL.
     ;;
-    (S x (lambda (x)
-	   (make-seq
-	     (%move-dst<-src RETURN-VALUE-REGISTER x)
-	     (make-asmcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
+    (import OPERANDS-SIMPLIFICATION)
+    (S x
+      (lambda (x)
+	(make-seq
+	  (%move-dst<-src RETURN-VALUE-REGISTER x)
+	  (make-asmcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
 
   #| end of module: V-tail |# )
 
 
 ;;;; helpers
 
-(define (S* x* kont)
-  (if (pair? x*)
-      (S (car x*) (lambda (a)
-		    (S* (cdr x*) (lambda (d)
-				   (kont (cons a d))))))
-    (kont '())))
+(module OPERANDS-SIMPLIFICATION
+  (S S*)
 
-(define (S x kont)
-  (struct-case x
-    ((bind lhs* rhs* body)
-     (%do-bind lhs* rhs* (S body kont)))
-    ((seq e0 e1)
-     (make-seq (E e0) (S e1 kont)))
-    (else
-     (cond ((or (constant? x)
-		(symbol?   x))
-	    (kont x))
-	   ((var? x)
-	    (cond ((var-loc x)
-		   => kont)
-		  (else
-		   (kont x))))
-	   ((or (funcall? x) (asmcall? x) (jmpcall? x)
-		(forcall? x) (shortcut? x) (conditional? x))
-	    (let ((t (make-unique-var 'tmp)))
-	      (%do-bind (list t) (list x) (kont t))))
-	   (else
-	    (compiler-internal-error __module_who__ "invalid S" x))))))
+  (define (S* x* kont)
+    (if (pair? x*)
+	(S (car x*)
+	   (lambda (a)
+	     (S* (cdr x*)
+		 (lambda (d)
+		   (kont (cons a d))))))
+      (kont '())))
+
+  (define (S x kont)
+    (struct-case x
+      ((bind lhs* rhs* body)
+       (%do-bind lhs* rhs* (S body kont)))
+      ((seq e0 e1)
+       (make-seq (E e0) (S e1 kont)))
+      (else
+       (cond ((or (constant? x)
+		  (symbol?   x))
+	      (kont x))
+	     ((var? x)
+	      (cond ((var-loc x)
+		     => kont)
+		    (else
+		     (kont x))))
+	     ((or (funcall? x) (asmcall? x) (jmpcall? x)
+		  (forcall? x) (shortcut? x) (conditional? x))
+	      (let ((t (make-unique-var 'tmp)))
+		(%do-bind (list t) (list x) (kont t))))
+	     (else
+	      (compiler-internal-error __module_who__ "invalid S" x))))))
+
+  #| end of module: OPERANDS-SIMPLIFICATION |# )
 
 (define (assign* lhs* rhs* tail-body)
   ;;Given a list of left-hand  sides and right-hand sides for assembly
@@ -493,9 +505,6 @@
 	  (V        (car lhs*) (car rhs*))
 	  (%do-bind (cdr lhs*) (cdr rhs*) body)))
     body))
-
-(define-syntax-rule (%move-dst<-src ?lhs ?rhs)
-  (make-asm-instr 'move ?lhs ?rhs))
 
 (define (%do-bind-frmt* nf* v* ac)
   (if (pair? nf*)
@@ -532,17 +541,18 @@
        (make-conditional (P e0) (V dst e1) (V dst e2)))
 
       ((asmcall op rands)
-       (V-asmcall dst op rands))
+       (V-asmcall x dst op rands))
 
       ((funcall rator rands)
-       (%handle-nontail-call rator rands dst #f))
+       (let ((target #f))
+	 (%handle-nontail-call rator rands dst target)))
 
-      ((jmpcall label rator rands)
-       (%handle-nontail-call rator rands dst label))
+      ((jmpcall asmlabel rator rands)
+       (%handle-nontail-call rator rands dst asmlabel))
 
-      ((forcall op rands)
-       (%handle-nontail-call (make-constant (make-foreign-label op))
-			     rands dst op))
+      ((forcall cfunc-name.str rands)
+       (let ((rator (make-constant (make-foreign-label cfunc-name.str))))
+	 (%handle-nontail-call rator rands dst cfunc-name.str)))
 
       ((shortcut body handler)
        (make-shortcut
@@ -553,11 +563,12 @@
        (if (symbol? x)
 	   (%move-dst<-src dst x)
 	 (compiler-internal-error __module_who__
-	   "invalid recordised code" (unparse-recordized-code/sexp x))))))
+	   "invalid recordised code in V context" (unparse-recordized-code/sexp x))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (V-asmcall dst op rand*)
+  (define (V-asmcall x dst op rand*)
+    (import OPERANDS-SIMPLIFICATION)
     (case op
       ((alloc)
        ;;Allocate a Scheme object on the heap.  We expect X to have the format:
@@ -574,21 +585,21 @@
        ;;  and return the old APR after the GC.
        ;;
        (S (car rand*)
-	  (lambda (aligned-size)
-	    (make-seq
-	      (alloc-check aligned-size)
-	      (S (cadr rand*)
-		 (lambda (primary-tag)
-		   (multiple-forms-sequence
-		     ;;Load in DST the value in the Allocation Pointer Register: this
-		     ;;value is  a pointer to  a usable block  of memory on  the heap
-		     ;;nursery.
-		     (%move-dst<-src dst apr)
-		     ;;Add the tag to the pointer.
-		     (make-asm-instr 'logor dst primary-tag)
-		     ;;Increment the Allocation Pointer  Register by the aligned size
-		     ;;of the block.
-		     (make-asm-instr 'int+ apr aligned-size))))))))
+	 (lambda (aligned-size)
+	   (make-seq
+	     (alloc-check aligned-size)
+	     (S (cadr rand*)
+	       (lambda (primary-tag)
+		 (multiple-forms-sequence
+		   ;;Load in DST the value in the Allocation Pointer Register: this
+		   ;;value is  a pointer to  a usable block  of memory on  the heap
+		   ;;nursery.
+		   (%move-dst<-src dst apr)
+		   ;;Add the tag to the pointer.
+		   (make-asm-instr 'logor dst primary-tag)
+		   ;;Increment the Allocation Pointer  Register by the aligned size
+		   ;;of the block.
+		   (make-asm-instr 'int+ apr aligned-size))))))))
 
       ((alloc-no-hooks)
        ;;This is  like ALLOC,  but, if there  is the need,  run a  garbage collection
@@ -602,34 +613,34 @@
        ;;allocation method.
        ;;
        (S (car rand*)
-	  (lambda (aligned-size)
-	    (make-seq
-	      (alloc-check/no-hooks aligned-size)
-	      (S (cadr rand*)
-		 (lambda (primary-tag)
-		   (multiple-forms-sequence
-		     (%move-dst<-src dst apr)
-		     (make-asm-instr 'logor dst primary-tag)
-		     (make-asm-instr 'int+  apr aligned-size))))))))
+	 (lambda (aligned-size)
+	   (make-seq
+	     (alloc-check/no-hooks aligned-size)
+	     (S (cadr rand*)
+	       (lambda (primary-tag)
+		 (multiple-forms-sequence
+		   (%move-dst<-src dst apr)
+		   (make-asm-instr 'logor dst primary-tag)
+		   (make-asm-instr 'int+  apr aligned-size))))))))
 
       ((mref)
        ;;We expect X to have the format:
        ;;
-       ;;   (asmcall mref (?operand-referencing-sheme-object ?offset))
+       ;;   (asmcall mref (?operand-referencing-scheme-object ?offset))
        ;;
        (S* rand*
-	   (lambda (rand*)
-	     (%move-dst<-src dst (make-disp (car rand*) (cadr rand*))))))
+	 (lambda (rand*)
+	   (%move-dst<-src dst (make-disp (car rand*) (cadr rand*))))))
 
       ((mref32)
        ;;We expect X to have the format:
        ;;
-       ;;   (asmcall mref32 (?operand-referencing-sheme-object ?offset))
+       ;;   (asmcall mref32 (?operand-referencing-scheme-object ?offset))
        ;;
        ;;MREF32 is used, for example, to extract single characters from a string.
        (S* rand*
-	   (lambda (rand*)
-	     (make-asm-instr 'load32 dst (make-disp (car rand*) (cadr rand*))))))
+	 (lambda (rand*)
+	   (make-asm-instr 'load32 dst (make-disp (car rand*) (cadr rand*))))))
 
       ((bref)
        ;;We expect X to have the format:
@@ -638,8 +649,8 @@
        ;;
        ;;BREF is used, for example, to extract single bytes from a bytevector.
        (S* rand*
-	   (lambda (rand*)
-	     (make-asm-instr 'load8 dst (make-disp (car rand*) (cadr rand*))))))
+	 (lambda (rand*)
+	   (make-asm-instr 'load8 dst (make-disp (car rand*) (cadr rand*))))))
 
       ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)
        ;;We expect X to have the format:
@@ -655,10 +666,10 @@
 	 ;;takes care of filtering it.
 	 (V dst (car rand*))
 	 (S (cadr rand*)
-	    (lambda (src)
-	      ;;Perform the  operation OP between  the first  operand in DST  and the
-	      ;;second operand in SRC; store the resulting value in DST.
-	      (make-asm-instr op dst src)))))
+	   (lambda (src)
+	     ;;Perform the  operation OP between  the first  operand in DST  and the
+	     ;;second operand in SRC; store the resulting value in DST.
+	     (make-asm-instr op dst src)))))
 
       ((int-quotient)
        ;;We expect X to have the format:
@@ -666,12 +677,12 @@
        ;;   (asmcall int-quotient (?first-operand ?second-operand))
        ;;
        (S* rand*
-	   (lambda (rand*)
-	     (multiple-forms-sequence
-	       (%move-dst<-src eax (car rand*))
-	       (make-asm-instr 'cltd edx eax)
-	       (make-asm-instr 'idiv eax (cadr rand*))
-	       (%move-dst<-src dst eax)))))
+	 (lambda (rand*)
+	   (multiple-forms-sequence
+	     (%move-dst<-src eax (car rand*))
+	     (make-asm-instr 'cltd edx eax)
+	     (make-asm-instr 'idiv eax (cadr rand*))
+	     (%move-dst<-src dst eax)))))
 
       ((int-remainder)
        ;;We expect X to have the format:
@@ -679,12 +690,12 @@
        ;;   (asmcall int-remainder (?first-operand ?second-operand))
        ;;
        (S* rand*
-	   (lambda (rand*)
-	     (multiple-forms-sequence
-	       (%move-dst<-src eax (car rand*))
-	       (make-asm-instr 'cltd edx eax)
-	       (make-asm-instr 'idiv edx (cadr rand*))
-	       (%move-dst<-src dst edx)))))
+	 (lambda (rand*)
+	   (multiple-forms-sequence
+	     (%move-dst<-src eax (car rand*))
+	     (make-asm-instr 'cltd edx eax)
+	     (make-asm-instr 'idiv edx (cadr rand*))
+	     (%move-dst<-src dst edx)))))
 
       ((sll sra srl sll/overflow)
        ;;We expect X to have the format:
@@ -705,16 +716,16 @@
 	       (V dst operand)
 	       (make-asm-instr op dst shift-amount))
 	   (S shift-amount
-	      (lambda (shift-amount)
-		(multiple-forms-sequence
-		  (V dst operand)
-		  (%move-dst<-src ecx shift-amount)
-		  (make-asm-instr op dst ecx)))))))
+	     (lambda (shift-amount)
+	       (multiple-forms-sequence
+		 (V dst operand)
+		 (%move-dst<-src ecx shift-amount)
+		 (make-asm-instr op dst ecx)))))))
 
       (else
        (compiler-internal-error __module_who__
 	 "invalid ASMCALL operator in return value context"
-	 (unparse-recordized-code/sexp (make-asmcall op rand*))))))
+	 (unparse-recordized-code/sexp x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -774,51 +785,114 @@
   #| end of module: V |# )
 
 
-(define (E x)
-  (struct-case x
-    ((seq e0 e1)
-     (make-seq (E e0) (E e1)))
+(module (E)
 
-    ((conditional e0 e1 e2)
-     (make-conditional (P e0) (E e1) (E e2)))
+  (define (E x)
+    (struct-case x
+      ((seq e0 e1)
+       (make-seq (E e0) (E e1)))
 
-    ((bind lhs* rhs* e)
-     (%do-bind lhs* rhs* (E e)))
+      ((conditional e0 e1 e2)
+       (make-conditional (P e0) (E e1) (E e2)))
 
-    ((asmcall op rands)
-     (case op
-       ((mset bset mset32)
-	(S* rands (lambda (s*)
-		    (make-asm-instr op (make-disp (car s*) (cadr s*))
-				    (caddr s*)))))
-       ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div!
-		 fl:from-int fl:shuffle bswap!
-		 fl:store-single fl:load-single)
-	(S* rands (lambda (s*)
-		    (make-asm-instr op (car s*) (cadr s*)))))
-       ((nop interrupt incr/zero? fl:double->single fl:single->double)
-	x)
-       (else
-	(compiler-internal-error __module_who__ "invalid instr" x))))
+      ((bind lhs* rhs* e)
+       (%do-bind lhs* rhs* (E e)))
 
-    ((funcall rator rands)
-     ;;For  side effects  the return  value is  discarded, so  there is  no DST-LOCAL
-     ;;location.
-     (%handle-nontail-call rator rands #f #f))
+      ((asmcall op rand*)
+       (E-asmcall x op rand*))
 
-    ((jmpcall label rator rands)
-     ;;For  side effects  the return  value is  discarded, so  there is  no DST-LOCAL
-     ;;location.
-     (%handle-nontail-call rator rands #f label))
+      ((funcall rator rand*)
+       ;;For side effects the return value is discarded, so there is no DST location.
+       (let ((dst       #f)
+	     (asmlabel  #f))
+	 (%handle-nontail-call rator rand* dst asmlabel)))
 
-    ((forcall op rands)
-     (%handle-nontail-call (make-constant (make-foreign-label op))
-			  rands #f op))
-    ((shortcut body handler)
-     (make-shortcut (E body) (E handler)))
+      ((jmpcall asmlabel rator rand*)
+       ;;For side effects the return value is discarded, so there is no DST location.
+       (let ((dst #f))
+	 (%handle-nontail-call rator rand* dst asmlabel)))
 
-    (else
-     (compiler-internal-error __module_who__ "invalid effect" x))))
+      ((forcall op rand*)
+       ;;For side effects the return value is discarded, so there is no DST location.
+       (let ((rator  (make-constant (make-foreign-label op)))
+	     (dst    #f))
+	 (%handle-nontail-call rator rand* dst op)))
+
+      ((shortcut body handler)
+       (make-shortcut (E body) (E handler)))
+
+      (else
+       (compiler-internal-error __module_who__
+	 "invalid recordised code in E context"
+	 (unparse-recordized-code/sexp x)))))
+
+  (define (E-asmcall x op rand*)
+    (import OPERANDS-SIMPLIFICATION)
+    (case op
+      ((mset bset mset32)
+       ;;We expect X to have one of the formats:
+       ;;
+       ;;   (asmcall mset   (?operand-referencing-scheme-object ?offset ?new-val))
+       ;;   (asmcall bset   (?operand-referencing-scheme-object ?offset ?new-val))
+       ;;   (asmcall mset32 (?operand-referencing-scheme-object ?offset ?new-val))
+       ;;
+       ;;MSET is  used, for example, to  store objects in  the car and cdr  of pairs.
+       ;;MSET32 is used,  for example, to store single characters  in a string.  BSET
+       ;;is used, for example, to store single bytes in a bytevector.
+       (S* rand*
+	 (lambda (simple-rand*)
+	   (let ((objref  (make-disp (car simple-rand*) (cadr simple-rand*)))
+		 (new-val (caddr simple-rand*)))
+	     (make-asm-instr op objref new-val)))))
+
+      ((fl:load fl:store
+		fl:add! fl:sub! fl:mul! fl:div!
+		fl:from-int fl:shuffle
+		fl:store-single fl:load-single
+		bswap!)
+       ;;Remembering that the floating point operations are performed on the stack of
+       ;;the CPU's floating point unit, we expect X to have one of the formats:
+       ;;
+       ;;   (asmcall fl:load  (?flonum-operand ?offset))
+       ;;   (asmcall fl:store (?flonum-operand ?offset))
+       ;;
+       ;;   (asmcall fl:add!  (?flonum-operand ?offset))
+       ;;   (asmcall fl:sub!  (?flonum-operand ?offset))
+       ;;   (asmcall fl:mul!  (?flonum-operand ?offset))
+       ;;   (asmcall fl:div!  (?flonum-operand ?offset))
+       ;;
+       ;;   (asmcall fl:from-int (?int-operand ?int-operand))
+       ;;   (asmcall fl:shuffle  (?bv-operand ?offset))
+       ;;
+       ;;   (asmcall fl:store-single (?pointer ?offset))
+       ;;   (asmcall fl:load-single  (?flonum-operand ?offset))
+       ;;
+       ;;   (asmcall bswap! (?int-operand ?int-operand))
+       ;;
+       (S* rand*
+	 (lambda (simple-rand*)
+	   (make-asm-instr op (car simple-rand*) (cadr simple-rand*)))))
+
+      ((nop interrupt incr/zero? fl:double->single fl:single->double)
+       ;;Remembering that the floating point operations are performed on the stack of
+       ;;the CPU's floating point unit, we expect X to have the format:
+       ;;
+       ;;   (asmcall nop       ())
+       ;;   (asmcall interrupt ())
+       ;;
+       ;;   (asmcall incr/zero? (?pointer ?offset ?incr-step))
+       ;;
+       ;;   (asmcall fl:double->single ())
+       ;;   (asmcall fl:single->double ())
+       ;;
+       x)
+
+      (else
+       (compiler-internal-error __module_who__
+	 "invalid ASMCALL operator in E context"
+	 (unparse-recordized-code/sexp x)))))
+
+  #| end of module: E |# )
 
 
 (module (P)
@@ -838,32 +912,67 @@
        (%do-bind lhs* rhs* (P e)))
 
       ((asmcall op rand*)
-       (let ((a (car  rand*))
-	     (b (cadr rand*)))
-	 (if (and (constant? a)
-		  (constant? b))
-	     (let ((t (make-unique-var 'tmp)))
-	       (P (make-bind (list t) (list a)
-			     (make-asmcall op (list t b)))))
-	   (Mem a (lambda (a)
-		    (Mem b (lambda (b)
-			     (make-asm-instr op a b))))))))
+       (P-asmcall op rand*))
 
       ((shortcut body handler)
        (make-shortcut (P body) (P handler)))
 
       (else
-       (compiler-internal-error __module_who__ "invalid pred" x))))
+       (compiler-internal-error __module_who__
+	 "invalid recordised code in P context"
+	 (unparse-recordized-code/sexp x)))))
 
-  (define (Mem x kont)
-    (struct-case x
-      ((asmcall op arg*)
-       (if (eq? op 'mref)
-	   (S* arg* (lambda (arg*)
-		      (kont (make-disp (car arg*) (cadr arg*)))))
-	 (S x kont)))
-      (else
-       (S x kont))))
+  (module (P-asmcall)
+
+    (define (P-asmcall op rand*)
+      ;;We expect an input ASMCALL struct with the format:
+      ;;
+      ;;   (asmcall ?op (?rand1 ?rand2))
+      ;;
+      ;;If both  the operands are  simple constants,  we transform the  input ASMCALL
+      ;;into:
+      ;;
+      ;;   (asm-instr move (tmp1 ?rand1))
+      ;;   (asmcall   ?op  (tmp1 ?rand2))
+      ;;
+      ;;otherwise we  assume the operands may  be complex, so we  transform the input
+      ;;ASMCALL into  code that evaluates the  operands and loads the  results in CPU
+      ;;registers; for example:
+      ;;
+      ;;   (asm-instr move (tmp1 ?rand1))
+      ;;   (asm-instr move (tmp2 ?rand2))
+      ;;   (asm-instr ?op  (tmp1 tmp2))
+      ;;
+      (let ((rand1 (car  rand*))
+	    (rand2 (cadr rand*)))
+	(if (and (constant? rand1)
+		 (constant? rand2))
+	    (let ((t (make-unique-var 'tmp)))
+	      (P (make-bind (list t) (list rand1)
+			    (make-asmcall op (list t rand2)))))
+	  (%simplify-rand rand1
+	    (lambda (simple-rand1)
+	      (%simplify-rand rand2
+		(lambda (simple-rand2)
+		  (make-asm-instr op simple-rand1 simple-rand2))))))))
+
+    (define (%simplify-rand x.rand kont)
+      (import OPERANDS-SIMPLIFICATION)
+      (struct-case x.rand
+	((asmcall x.rand.op x.rand.rand*)
+	 (if (eq? x.rand.op 'mref)
+	     ;;We expect x.rand to have the format:
+	     ;;
+	     ;;   (asmcall mref (?operand-referencing-scheme-object ?offset))
+	     ;;
+	     (S* x.rand.rand*
+	       (lambda (simple-x.rand.rand*)
+		 (kont (make-disp (car simple-x.rand.rand*) (cadr simple-x.rand.rand*)))))
+	   (S x.rand kont)))
+	(else
+	 (S x.rand kont))))
+
+    #| end of module: P-asmcall |# )
 
   #| end of module: P |# )
 
@@ -1014,4 +1123,6 @@
 ;; eval: (put 'struct-case		'scheme-indent-function 1)
 ;; eval: (put 'make-seq			'scheme-indent-function 0)
 ;; eval: (put 'multiple-forms-sequence	'scheme-indent-function 0)
+;; eval: (put 'S			'scheme-indent-function 1)
+;; eval: (put 'S*			'scheme-indent-function 1)
 ;; End:

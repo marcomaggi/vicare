@@ -152,7 +152,7 @@
     ))
 
 
-(parametrise ((check-test-name	'calling-clambda-combinator))
+(parametrise ((check-test-name	'tail-calling-clambda-combinator))
 
   ;;Let's see first the previous compiler pass output.
   (check
@@ -286,7 +286,7 @@
   #t)
 
 
-(parametrise ((check-test-name	'calling-clambda-non-combinator))
+(parametrise ((check-test-name	'tail-calling-clambda-non-combinator))
 
   ;;Let's see first the previous compiler pass output.
   (check
