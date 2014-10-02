@@ -286,6 +286,176 @@
   #t)
 
 
+(parametrise ((check-test-name	'nontail-calling-clambda-combinator))
+
+  ;;Let's see first the previous compiler pass output.
+  (check
+      (%before-impose-eval-order '(let ((F (lambda (x) ((primitive +) '1 x))))
+				    (begin
+				      (F '2)
+				      '3)))
+    => '(codes
+	 ((lambda (label: asmlabel:F:clambda) (cp_0 x_0)
+	     (shortcut
+		 ;;This is the integrated body of the core primitive operation "+".
+		 (seq
+		   ;;Check if the argument X_0 is a fixnum.
+		   (conditional (asmcall = (asmcall logand x_0 (constant 7)) (constant 0))
+		       (asmcall nop)
+		     (asmcall interrupt))
+		   ;;Attempt to sum the fixnum argument X_0 and the fixnum constant.
+		   (asmcall int+/overflow (constant 8) x_0))
+	       ;;This is the interrupt handler of the core primitive operation "+".
+	       (funcall (asmcall mref (constant (object +)) (constant 19))
+		 (constant 8)
+		 x_0))))
+	 (seq
+	   ;;Check the use of the Scheme stack.
+	   (shortcut
+	       ;;This   is   the  integrated   body   of   the  primitive   operation
+	       ;;$STACK-OVERFLOW-CHECK.
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
+	     ;;This   is   the  interrupt   handler   of   the  primitive   operation
+	     ;;$STACK-OVERFLOW-CHECK.
+	     (foreign-call "ik_stack_overflow"))
+	   ;;Check if the PCB's engine counter is set.
+	   (shortcut
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	   ;;Perfor the non-tail call to the combinator function.
+	   (jmpcall asmlabel:F:clambda:case-1
+		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
+		      tmp_0)
+		    (constant 16))
+	   ;;Return the fixnum 3.
+	   (constant 24))))
+
+;;; --------------------------------------------------------------------
+
+  ;;Let's see then the output of this compiler pass.
+  (doit (let ((F (lambda (x) ((primitive +) '1 x))))
+	  (begin
+	    (F '2)
+	    '3))
+	(codes
+	 ((lambda (label: asmlabel:F:clambda) (%edi fvar.1)
+	     (locals
+	      (local-vars: tmp_0 tmp_1 tmp_2 tmp_3 cp_0)
+	      (seq
+		;;Load  in  CP_0  the  reference  to  the  closure  object  from  the
+		;;CP-REGISTER.
+		(asm-instr move cp_0 %edi)
+		(shortcut
+		    ;;This is  the integrated  body of  the core  primitive operation
+		    ;;"+".
+		    (seq
+		      ;;Check if the argument FVAR.1 is a fixnum
+		      (conditional (seq (asm-instr move tmp_0 fvar.1)
+					(asm-instr logand tmp_0 (constant 7))
+					(asm-instr = tmp_0 (constant 0)))
+			  (asmcall nop)
+			(asmcall interrupt))
+		      ;;Attempt  to add  the fixnum  argument FVAR.1  and the  fixnum
+		      ;;constant.
+		      (asm-instr move tmp_1 (constant 8))
+		      (asm-instr int+/overflow tmp_1 fvar.1)
+		      ;;Store the result in the AA-REGISTER.
+		      (asm-instr move %eax tmp_1)
+		      ;;Return to the caller.
+		      (asmcall return %esi %esp %ebp %eax))
+		  ;;This is  the interrupt  handler of  the core  primitive operation
+		  ;;"+".
+		  (seq
+		    ;;Store in TMP_3 the argument.
+		    (asm-instr move tmp_3 fvar.1)
+		    ;;Load  in TMP_2  the reference  to closure  object "+"  from the
+		    ;;relocation vector.
+		    (asm-instr move tmp_2 (disp (constant (object +))
+						(constant 19)))
+		    ;;Store in the CP-REGISTER the reference to the closure object to
+		    ;;call.
+		    (asm-instr move %edi tmp_2)
+		    ;;Put on the stack the operands of the call.
+		    (asm-instr move fvar.1 (constant 8))
+		    (asm-instr move fvar.2 tmp_3)
+		    ;;Load in AA-REGISTER a fixnum representing the negated number of
+		    ;;operands.
+		    (asm-instr move %eax (constant -16))
+		    ;;Tail-call the closure object in the CP-REGISTER.
+		    (asmcall indirect-jump %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))))
+	 (locals
+	  (local-vars: tmp_4 tmp_5 tmp_6 tmp_7)
+	  (seq
+	    ;;Check the use of the Scheme stack.
+	    (shortcut
+		;;This   is  the   integrated   body  of   the  primitive   operation
+		;;$STACK-OVERFLOW-CHECK.
+		(conditional (asm-instr u< %esp (disp %esi (constant 32)))
+		    (asmcall interrupt)
+		  (asmcall nop))
+	      ;;This   is   the  interrupt   hanler   of   the  primitive   operation
+	      ;;$STACK-OVERFLOW-CHECK.
+	      (non-tail-call-frame
+		(vars: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move tmp_4 (constant (foreign-label "ik_stack_overflow")))
+		  (asm-instr move %edi tmp_4)
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target:      "ik_stack_overflow")
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi)
+		    (mask:        #f)
+		    (size:        #f)))))
+	    ;;Check if the PCB's engine counter is set.
+	    (shortcut
+		(asmcall incr/zero? %esi (constant 72) (constant 8))
+	      (non-tail-call-frame
+		(vars: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move tmp_5 (disp (constant (object $do-event))
+					      (constant 19)))
+		  (asm-instr move %edi tmp_5)
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target:      #f)
+		    (retval-var:  #f)
+		    (args:        %eax %esi %esp %ebp %edi)
+		    (mask:        #f)
+		    (size:        #f)))))
+	    ;;Non-tail call the operator function.
+	    (non-tail-call-frame
+	      (vars: (nfv unset-conflicts))
+	      (live: #f)
+	      (seq
+		;;Load in the NFV the fixnum 2.
+		(asm-instr move (nfv unset-conflicts) (constant 16))
+		;;Load in TMP_6 the reference to closure object implementing F.
+		(asm-instr move tmp_6 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
+		(asm-instr move tmp_7 tmp_6)
+		;;Store in CP-REGISTER the reference to closure object.
+		(asm-instr move %edi tmp_7)
+		;;Load in  AA-REGISTER a  fixnum representing  the negated  number of
+		;;arguments: -1.
+		(asm-instr move %eax (constant -8))
+		(non-tail-call
+		  (target:      asmlabel:F:clambda:case-1)
+		  (retval-var:  #f)
+		  (args:        %eax %esi %esp %ebp %edi (nfv unset-conflicts))
+		  (mask:        #f)
+		  (size:        #f))))
+	    ;;Load in AA-REGISTER the fixnum 3.
+	    (asm-instr move %eax (constant 24))
+	    ;;Return to the caller.
+	    (asmcall return %esi %esp %ebp %eax)))))
+
+  #t)
+
+
 (parametrise ((check-test-name	'tail-calling-clambda-non-combinator))
 
   ;;Let's see first the previous compiler pass output.

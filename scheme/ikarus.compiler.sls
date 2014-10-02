@@ -1748,6 +1748,15 @@
   ;;Represent a non-tail function call.
   ;;
   (target
+		;False, a string or a gensym:
+		;
+		;* When false: this call is to a core primitive function.
+		;
+		;* When a string:  this call is to a foreign  C language function and
+		;  the string is its name.
+		;
+		;*  When a  gensym: this  call is  a  jump to  the entry  point of  a
+		;  combinator function.
    retval-var
 		;False, VAR or NFV struct:
 		;
@@ -6888,7 +6897,10 @@
     (struct-case x
       ((non-tail-call target retval-var args mask size)
        `(non-tail-call
-	 (target: ,target)
+	 (target: ,(and target
+			(cond ((symbol? target)
+			       (%pretty-symbol target))
+			      (else target))))
 	 (retval-var:  ,(and retval-var (E retval-var)))
 	 ,(if (and args (pair? args))
 	      `(args: . ,(map (lambda (arg)

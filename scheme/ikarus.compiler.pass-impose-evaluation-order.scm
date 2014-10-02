@@ -443,6 +443,58 @@
 
 ;;;; helpers
 
+(define (%assign* lhs* rhs* tail-body)
+  ;;Non-tail recursive  function.  Given a list  of destination locations LHS*  and a
+  ;;list of source expressions RHS*, build and return a struct instance representing:
+  ;;
+  ;;   (seq
+  ;;     (asm-instr move ?lhs ?rhs)
+  ;;     ...
+  ;;     ?tail-body)
+  ;;
+  (if (pair? lhs*)
+      (begin
+	(assert (let ((lhs (car lhs*)))
+		  (or (and (symbol? lhs)
+			   (memq lhs PARAMETER-REGISTERS))
+		      (fvar? lhs)
+		      #;(nfv?  lhs)
+		      )))
+	(make-seq
+	  (%move-dst<-src (car lhs*) (car rhs*))
+	  (%assign*       (cdr lhs*) (cdr rhs*) tail-body)))
+    tail-body))
+
+(define (%do-bind lhs* rhs* tail-body)
+  ;;Non-tail recursive function.   This function is like %ASSIGN*,  but, in addition:
+  ;;it registers the LHS* as local variables and filters the RHS* through V.
+  ;;
+  (if (pair? lhs*)
+      (begin
+	(%local-value-cons (car lhs*))
+	(make-seq
+	  ;;Generate assembly instructions  to compute a value from  "(car rhs*)" and
+	  ;;store the result in destination "(car lhs*)".
+	  (V        (car lhs*) (car rhs*))
+	  (%do-bind (cdr lhs*) (cdr rhs*)
+	    tail-body)))
+    tail-body))
+
+(define (%do-bind-frmt* nfv* rhs* tail-body)
+  ;;Non-tail recursive function.   This function is like %ASSIGN*,  but, in addition:
+  ;;it filters the RHS* through V.
+  ;;
+  (if (pair? nfv*)
+      (begin
+	(assert (nfv? (car nfv*)))
+	(make-seq
+	  ;;Generate assembly instructions  to compute a value from  "(car rhs*)" and
+	  ;;store the result in destination "(car nfv*)".
+	  (V              (car nfv*) (car rhs*))
+	  (%do-bind-frmt* (cdr nfv*) (cdr rhs*) tail-body)))
+    tail-body))
+
+
 (module OPERANDS-SIMPLIFICATION
   (S S*)
 
@@ -479,40 +531,6 @@
 
   #| end of module: OPERANDS-SIMPLIFICATION |# )
 
-(define (assign* lhs* rhs* tail-body)
-  ;;Given a list of left-hand  sides and right-hand sides for assembly
-  ;;assignments,  build  and  return a  struct  instance  representing
-  ;;recordized code for this pseudo-code:
-  ;;
-  ;;   (begin
-  ;;     (move ?lhs ?rhs)
-  ;;     ...
-  ;;     . ?tail-body)
-  ;;
-  (if (pair? lhs*)
-      (make-seq
-	(%move-dst<-src (car lhs*) (car rhs*))
-	(assign*        (cdr lhs*) (cdr rhs*) tail-body))
-    tail-body))
-
-
-
-(define (%do-bind lhs* rhs* body)
-  (if (pair? lhs*)
-      (begin
-	(%local-value-cons (car lhs*))
-	(make-seq
-	  (V        (car lhs*) (car rhs*))
-	  (%do-bind (cdr lhs*) (cdr rhs*) body)))
-    body))
-
-(define (%do-bind-frmt* nf* v* ac)
-  (if (pair? nf*)
-      (make-seq
-	(V              (car nf*) (car v*))
-	(%do-bind-frmt* (cdr nf*) (cdr v*) ac))
-    ac))
-
 
 (module (V)
 
@@ -543,16 +561,16 @@
       ((asmcall op rands)
        (V-asmcall x dst op rands))
 
-      ((funcall rator rands)
+      ((funcall rator rand*)
        (let ((target #f))
-	 (%handle-nontail-call rator rands dst target)))
+	 (%handle-non-tail-call rator rand* dst target)))
 
-      ((jmpcall asmlabel rator rands)
-       (%handle-nontail-call rator rands dst asmlabel))
+      ((jmpcall asmlabel rator rand*)
+       (%handle-non-tail-call rator rand* dst asmlabel))
 
-      ((forcall cfunc-name.str rands)
+      ((forcall cfunc-name.str rand*)
        (let ((rator (make-constant (make-foreign-label cfunc-name.str))))
-	 (%handle-nontail-call rator rands dst cfunc-name.str)))
+	 (%handle-non-tail-call rator rand* dst cfunc-name.str)))
 
       ((shortcut body handler)
        (make-shortcut
@@ -805,18 +823,18 @@
        ;;For side effects the return value is discarded, so there is no DST location.
        (let ((dst       #f)
 	     (asmlabel  #f))
-	 (%handle-nontail-call rator rand* dst asmlabel)))
+	 (%handle-non-tail-call rator rand* dst asmlabel)))
 
       ((jmpcall asmlabel rator rand*)
        ;;For side effects the return value is discarded, so there is no DST location.
        (let ((dst #f))
-	 (%handle-nontail-call rator rand* dst asmlabel)))
+	 (%handle-non-tail-call rator rand* dst asmlabel)))
 
       ((forcall op rand*)
        ;;For side effects the return value is discarded, so there is no DST location.
        (let ((rator  (make-constant (make-foreign-label op)))
 	     (dst    #f))
-	 (%handle-nontail-call rator rand* dst op)))
+	 (%handle-non-tail-call rator rand* dst op)))
 
       ((shortcut body handler)
        (make-shortcut (E body) (E handler)))
@@ -1005,7 +1023,7 @@
 		  (targs '())
 		  (tlocs '()))
 	(cond ((null? args)
-	       (assign* tlocs targs rest))
+	       (%assign* tlocs targs rest))
 	      ((constant? (car args))
 	       (recur (cdr args)
 		      (cdr locs)
@@ -1045,9 +1063,26 @@
   #| end of module: %HANDLE-TAIL-CALL |# )
 
 
-(module (%handle-nontail-call)
+(module (%handle-non-tail-call)
 
-  (define (%handle-nontail-call rator rands dst-local call-targ)
+  (define (%handle-non-tail-call rator rand* dst-local call-target)
+    ;;Build a NON-TAIL-CALL-FRAME  including everything needed to  perform a non-tail
+    ;;call to a closure object.  If the return  value of the call is requested by the
+    ;;caller, the return value is recordised code representing:
+    ;;
+    ;;   (seq
+    ;;     (non-tail-call-frame
+    ;;       --- preparation of call operands ---
+    ;;       (non-tail-call ---))
+    ;;     (asm-instr move ?DST-LOCAL AA-REGISTER)))
+    ;;
+    ;;otherwise, if the return value of the call is to be discarded, the return value
+    ;;is recordised code representing:
+    ;;
+    ;;   (non-tail-call-frame
+    ;;     --- preparation of call operands ---
+    ;;     (non-tail-call ---))
+    ;;
     ;;The argument DST-LOCAL must be false a VAR or NFV struct:
     ;;
     ;;* When  false: it means  the return value of  this function call  is discarded;
@@ -1062,37 +1097,56 @@
     ;;values: the return  value stored in DST-LOCAL is the  number of returned Scheme
     ;;objects (0, 2 or more) and the Scheme objects are on the Scheme stack.
     ;;
-    (receive (reg-locs reg-args frm-args)
-	(%nontail-locations PARAMETER-REGISTERS (cons rator rands))
-      (let ((regt* (map (lambda (x)
-			  (make-unique-var 'tmp))
-		     reg-args))
-	    (frmt* (map (lambda (x)
-			  (make-nfv 'unset-conflicts #f #f #f #f))
-		     frm-args)))
-	(let* ((call (make-non-tail-call call-targ dst-local
-					 (cons* ARGC-REGISTER pcr esp apr
-						(append reg-locs frmt*))
-					 #f #f))
-	       (body (make-non-tail-call-frame
-		      frmt* #f
-		      (%do-bind-frmt*
-		       frmt* frm-args
-		       (%do-bind (cdr regt*) (cdr reg-args)
-				 ;;evaluate cpt last
-				 (%do-bind (list (car regt*))
-					   (list (car reg-args))
-					   (assign* reg-locs regt*
-						    (make-seq
-						      (%move-dst<-src ARGC-REGISTER
-								      (make-constant
-								       (argc-convention (length rands))))
-						      call))))))))
-	  (if dst-local
-	      (make-seq
-		body
-		(%move-dst<-src dst-local RETURN-VALUE-REGISTER))
-	    body)))))
+    ;;The argument CALL-TARGET is false, a string or a gensym:
+    ;;
+    ;;* When false: this call is to a core primitive function.
+    ;;
+    ;;* When a string:  this call is to a foreign C language  function and the string
+    ;;  is its name.
+    ;;
+    ;;*  When a  gensym: this  call is  a jump  to the  entry point  of a  combinator
+    ;;  function.
+    ;;
+    (receive (register-name* register-arg* stack-arg*)
+	(%nontail-locations PARAMETER-REGISTERS (cons rator rand*))
+      ;;REGISTER-ARG* and  STACK-ARG* may be  complex operands; so first  we evaluate
+      ;;such complex expressions and store the results in temporary locations:
+      ;;
+      ;;   (asm-instr move ?stack-arg.nfv    ?stack-arg)
+      ;;   ...
+      ;;   (asm-instr move ?register-arg.var ?register-arg)
+      ;;   ...
+      ;;
+      ;;then we  store the  each REGISTER-ARG.VAR  in the  CPU registers  selected by
+      ;;REGISTER-NAME*:
+      ;;
+      ;;   (asm-instr move ?register-name ?register-arg.var)
+      ;;   ...
+      ;;
+      ;;the  ?RATOR  is always  loaded  in  the CP-REGISTER,  so  the  first item  of
+      ;;PARAMETER-REGISTER must be CP-REGISTER.
+      (let ((register-arg*.var ($map/stx (lambda (x)
+					   (make-unique-var 'tmp))
+				 register-arg*))
+	    (stack-arg*.nfv    ($map/stx (lambda (x)
+					   (make-nfv 'unset-conflicts #f #f #f #f))
+				 stack-arg*)))
+	(define body
+	  (let ((live #f)
+		(body (let ((ntcall (let ((args (cons* ARGC-REGISTER pcr esp apr
+						       (append register-name* stack-arg*.nfv)))
+					  (mask #f)
+					  (size #f))
+				      (make-non-tail-call call-target dst-local args mask size))))
+			(%make-call-frame-body stack-arg*.nfv stack-arg*
+					       register-arg*.var register-arg*
+					       register-name* rand* ntcall))))
+	    (make-non-tail-call-frame stack-arg*.nfv live body)))
+	(if dst-local
+	    (make-seq
+	      body
+	      (%move-dst<-src dst-local RETURN-VALUE-REGISTER))
+	  body))))
 
   (define (%nontail-locations regs args)
     ;;Non-tail recursive function.
@@ -1107,7 +1161,33 @@
 	  (values '() '() args))
       (values '() '() '())))
 
-  #| end of module: %HANDLE-NONTAIL-CALL |# )
+  (define (%make-call-frame-body stack-arg*.nfv stack-arg*
+				 register-arg*.var register-arg*
+				 register-name* rand* ntcall)
+    (%do-bind-frmt*
+	stack-arg*.nfv
+	stack-arg*
+      ;;Load in temporary  locations the values of the register  parameters; skip the
+      ;;RATOR.
+      (%do-bind
+	  (cdr register-arg*.var)
+	  (cdr register-arg*)
+	;;Load in a temporary location the value of the RATOR register parameter.
+	(%do-bind
+	    (list (car register-arg*.var))
+	    (list (car register-arg*))
+	  ;;Store  in the  actual CPU  registers the  register parameter  values from
+	  ;;their temporary locations.
+	  (%assign*
+	      register-name*
+	      register-arg*.var
+	    (make-seq
+	      ;;Load  in AA-REGISTER  a  fixnum representing  the  negated number  of
+	      ;;operands.
+	      (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention (length rand*))))
+	      ntcall))))))
+
+  #| end of module: %HANDLE-NON-TAIL-CALL |# )
 
 
 ;;;; done
@@ -1125,4 +1205,7 @@
 ;; eval: (put 'multiple-forms-sequence	'scheme-indent-function 0)
 ;; eval: (put 'S			'scheme-indent-function 1)
 ;; eval: (put 'S*			'scheme-indent-function 1)
+;; eval: (put '%do-bind-frmt*		'scheme-indent-function 2)
+;; eval: (put '%do-bind			'scheme-indent-function 2)
+;; eval: (put '%assign*			'scheme-indent-function 2)
 ;; End:
