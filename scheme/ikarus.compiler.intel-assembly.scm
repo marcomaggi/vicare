@@ -47,8 +47,7 @@
    AP-REGISTER			FP-REGISTER
    PC-REGISTER
 
-   NON-8BIT-REGISTERS
-   PARAMETER-REGISTERS		ALL-REGISTERS
+   NON-8BIT-REGISTERS		ALL-REGISTERS
    %cpu-register-name->index)
 
 
@@ -126,12 +125,6 @@
 ;;references the first word in the PCB data structure.
 ;;
 (define-constant PC-REGISTER '%esi)
-
-;;The list of CPU registers the function  caller uses to hand special parameters to
-;;the callee function.  The first item *must* be the CP-REGISTER.
-;;
-(define-constant PARAMETER-REGISTERS
-  `(,CP-REGISTER))
 
 ;;The  list of  CPU registers  that the  code in  a code  object can  use to  store
 ;;temporary results.

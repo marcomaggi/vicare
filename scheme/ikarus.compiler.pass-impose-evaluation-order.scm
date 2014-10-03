@@ -380,10 +380,10 @@
 	;;          low memory
 	;;
 	;;Load the reference to closure object FUNC in the CPR.
-	(%move-dst<-src CP-REGISTER t2)
+	(%load-register-operand/closure-object-reference t2)
 	;;Load  in  AA-REGISTER  the  encoded   number  of  arguments,  counting  the
 	;;continuation object.
-	(%notify-number-of-operands 1)
+	(%load-register-operand/number-of-operands 1)
 	;;Decrement the FPR so that it points to the underflow handler.
 	(make-asm-instr 'int- fpr (make-constant wordsize))
 	;;When we arrive here the situation on the Scheme stack is:
@@ -434,9 +434,12 @@
 
 ;;;; helpers
 
-(define (%notify-number-of-operands num-of-rands)
+(define (%load-register-operand/number-of-operands num-of-rands)
   ;;Store in the AA-REGISTER a fixnum representing the negated number of operands.
   (%move-dst<-src AA-REGISTER (make-constant (argc-convention num-of-rands))))
+
+(define (%load-register-operand/closure-object-reference closure-object-ref)
+  (%move-dst<-src CP-REGISTER closure-object-ref))
 
 (define (%assign* lhs* rhs* tail-body)
   ;;Non-tail recursive  function.  Given a list  of destination locations LHS*  and a
@@ -1143,7 +1146,7 @@
 	  (make-seq
 	    ;;Store in the AA-REGISTER a  fixnum representing the negated number of
 	    ;;operands.
-	    (%notify-number-of-operands (length rand*))
+	    (%load-register-operand/number-of-operands (length rand*))
 	    (if target
 		;;This is was a JMPCALL: we  jump directly to the binary code entry
 		;;point represented  by the Assembly  label in the  CODE-LOC struct
@@ -1304,13 +1307,11 @@
 	(%do-bind
 	    (list rator.var)
 	    (list rator)
-	  ;;Store  in the  actual CPU  registers the  register parameter  values from
-	  ;;their temporary locations.
+	  ;;Load in the  actual CPU registers the register operand  values from their
+	  ;;temporary locations.
 	  (multiple-forms-sequence
-	    (%move-dst<-src CP-REGISTER rator.var)
-	    ;;Load  in  AA-REGISTER  a  fixnum representing  the  negated  number  of
-	    ;;operands.
-	    (%notify-number-of-operands (length rand*))
+	    (%load-register-operand/closure-object-reference rator.var)
+	    (%load-register-operand/number-of-operands (length rand*))
 	    ntcall)))))
 
   (define (%do-operands-bind* nfv* rhs* tail-body)
