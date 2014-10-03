@@ -148,7 +148,9 @@
 	 (make-clambda x.label (map V-clambda-clause x.clause*) x.cp x.freevar* x.name))))
 
     (define (V-clambda-clause cas)
-      ;;This function has two purposes: apply "V-and-return" to the body of the clause;
+      ;;This  function has  two purposes:  apply "V-and-return"  to the  body of  the
+      ;;clause;  to include  what is  needed to  handle clause's  stack operands  and
+      ;;register operands.
       ;;
       (struct-case cas
 	((clambda-case cas.info cas.body)
@@ -282,8 +284,8 @@
     (S x
       (lambda (x)
 	(make-seq
-	  (%move-dst<-src RETURN-VALUE-REGISTER x)
-	  (make-asmcall 'return (list pcr esp apr RETURN-VALUE-REGISTER))))))
+	  (%move-dst<-src AA-REGISTER x)
+	  (make-asmcall 'return (list pcr esp apr AA-REGISTER))))))
 
   (define (V-call-with-underflow-handler op rand*)
     ;;This  high-level  Assembly instruction  is  used  only  by the  core  primitive
@@ -302,7 +304,7 @@
     ;;* CPR stands  for Closure Pointer Register  and it must contain  a reference to
     ;;  the closure object being executed.
     ;;
-    ;;* ARGC-REGISTER stands for Argument Count Register.
+    ;;* AA-REGISTER stands for Argument Count Register.
     ;;
     ;;When  arriving here  the  scenario of  the  Scheme  stack is  the  one left  by
     ;;$SEAL-FRAME-AND-CALL:
@@ -329,7 +331,7 @@
     ;;   |                      |
     ;;          low memory
     ;;
-    ;;ARGC-REGISTER contains  the encoded  number of  arguments, counting  the single
+    ;;AA-REGISTER  contains the  encoded  number of  arguments,  counting the  single
     ;;argument  FUNC  to  %PRIMITIVE-CALL/CF.   The reference  to  the  just  created
     ;;continuation  object  is  in  some   CPU  register.   The  raw  memory  pointer
     ;;UNDERFLOW-HANDLER is in some CPU register.
@@ -391,7 +393,7 @@
 	;;
 	;;Load the reference to closure object FUNC in the CPR.
 	(%move-dst<-src cpr t2)
-	;;Load  in  ARGC-REGISTER  the  encoded number  of  arguments,  counting  the
+	;;Load  in  AA-REGISTER  the  encoded   number  of  arguments,  counting  the
 	;;continuation object.
 	(%notify-number-of-operands 1)
 	;;Decrement the FPR so that it points to the underflow handler.
@@ -437,7 +439,7 @@
 	;;the documentation.
 	;;
 	(make-asmcall 'indirect-jump
-	  (list ARGC-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
+	  (list AA-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
 
   #| end of module: V-and-return |# )
 
@@ -446,7 +448,7 @@
 
 (define (%notify-number-of-operands num-of-rands)
   ;;Store in the AA-REGISTER a fixnum representing the negated number of operands.
-  (%move-dst<-src ARGC-REGISTER (make-constant (argc-convention num-of-rands))))
+  (%move-dst<-src AA-REGISTER (make-constant (argc-convention num-of-rands))))
 
 (define (%assign* lhs* rhs* tail-body)
   ;;Non-tail recursive  function.  Given a list  of destination locations LHS*  and a
@@ -1148,10 +1150,10 @@
 		  ;;This is was a JMPCALL: we  jump directly to the binary code entry
 		  ;;point represented  by the Assembly  label in the  CODE-LOC struct
 		  ;;TARGET.
-		  (make-asmcall 'direct-jump (cons target (cons* ARGC-REGISTER pcr esp apr locs)))
+		  (make-asmcall 'direct-jump (cons target (cons* AA-REGISTER pcr esp apr locs)))
 		;;This was  a FUNCALL: we  jump indirectly  to the binary  code entry
 		;;point by retrieving it, at run-time, from the closure object.
-		(make-asmcall 'indirect-jump (cons* ARGC-REGISTER pcr esp apr locs)))))))))
+		(make-asmcall 'indirect-jump (cons* AA-REGISTER pcr esp apr locs)))))))))
 
   (define (%formals-locations parameter-registers regparm*+rand*)
     ;;Non-tail recursive function.  Return a list  of items having the same length of
@@ -1249,7 +1251,7 @@
     ;;
     ;;* When non-false: it  represents the location to which the  return value of the
     ;;  function  call must be  stored: first the  callee function stores  its return
-    ;;  value into the RETURN-VALUE-REGISTER, then caller moves it into DST-LOCAL.
+    ;;  value into the AA-REGISTER, then caller moves it into DST-LOCAL.
     ;;
     ;;When the function returns a single  value: the return value stored in DST-LOCAL
     ;;is the  actually returned  Scheme object.  When  the function  returns multiple
@@ -1297,7 +1299,7 @@
 				 stack-arg*)))
 	(define body
 	  (let ((live #f)
-		(body (let ((ntcall (let ((args (cons* ARGC-REGISTER pcr esp apr
+		(body (let ((ntcall (let ((args (cons* AA-REGISTER pcr esp apr
 						       (append register-name* stack-arg*.nfv)))
 					  (mask #f)
 					  (size #f))
@@ -1309,7 +1311,7 @@
 	(if dst-local
 	    (make-seq
 	      body
-	      (%move-dst<-src dst-local RETURN-VALUE-REGISTER))
+	      (%move-dst<-src dst-local AA-REGISTER))
 	  body))))
 
   (define (%nontail-locations regs args)

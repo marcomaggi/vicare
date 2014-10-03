@@ -43,40 +43,89 @@
    al		ah		bh		cl
    eax		ebx		ecx		edx		esp
    apr		fpr		cpr		pcr
-   ARGC-REGISTER		RETURN-VALUE-REGISTER
-   CP-REGISTER			NON-8BIT-REGISTERS
+   AA-REGISTER			CP-REGISTER
+   AP-REGISTER			FP-REGISTER
+   PC-REGISTER
+
+   NON-8BIT-REGISTERS
    PARAMETER-REGISTERS		ALL-REGISTERS
    %cpu-register-name->index)
 
 
 ;;On the Intel architecture, the CPU registers have special use:
 ;;
+;;AAR = %eax		accumulator and arguments count
 ;;APR = %ebp		allocation pointer
 ;;ESP = %esp		stack pointer
 ;;PCR = %esi		pointer to PCB
 ;;CPR = %edi		pointer to closure
 ;;
 
-;;Arguments  count register.   Upon  entering a  function: it  must  hold a  fixnum
-;;representing zero or the negated number of arguments.
+;;Accumulator, Arguments count Register (AAR).
 ;;
-(define-constant ARGC-REGISTER '%eax)
+;;Notice  that the  return values  of  a function  call  become the  operands of  the
+;;continuation; this is because this register  is called "Arguments Count", it counts
+;;both the operands to a function call and the operands to the continuation.
+;;
+;;Use as "Operands Count Register"
+;;--------------------------------
+;;
+;;Upon entering a function: it must hold  a fixnum representing the negated number of
+;;stack operands.  Such fixnum is built by  the caller and placed in AA-REGISTER; the
+;;callee consumes it by matching it against the number of expected arguments.
+;;
+;;Examples: if the number  of stack operands is 2, the fixnum  in AA-REGISTER must be
+;;-2; if the number of stack operands is 0, the fixnum in AA-REGISTER must be 0.
+;;
+;;Use as "Return Values Count Register"
+;;-------------------------------------
+;;
+;;When a function returns a single Scheme  object: the immediate Scheme object or the
+;;tagged pointer to the Scheme object is stored in this register.
+;;
+;;When a  function returns  zero, two  or more values:  the immediate  Scheme objects
+;;and/or the  tagged pointers  to the Scheme  objects are stored  on the  stack; this
+;;register holds a fixnum representing the negated number of objects.
+;;
+;;Examples: if the  number of return values  is 2, the fixnum in  AA-REGISTER must be
+;;-2; if the number of returned values is 0, the fixnum in AA-REGISTER must be 0.
+;;
+(define-constant AA-REGISTER '%eax)
 
-;;When a  function returns a single  Scheme object: the immediate  Scheme object or
-;;the tagged pointer to the Scheme object is stored in this register.
+;;Allocation Pointer Register (APR)
 ;;
-;;When a  function returns zero, two  or more values: the  immediate Scheme objects
-;;and/or the tagged  pointers to the Scheme  objects are stored on  the stack; this
-;;register holds zero or a fixnum representing the negated number of objects.
+;;Holds the  address of  the first  free machine word  in the  memory segment  of the
+;;Scheme heap nursery.
 ;;
-(define-constant RETURN-VALUE-REGISTER '%eax)
+(define-constant AP-REGISTER '%ebp)
 
-;;Closure  Pointer Register  (CPR).  Upon  entering a  function: a  pointer to  the
-;;closure  object being  executed  is loaded  from "some  machine  word" into  this
-;;register; this  way the body  of the  function can access  the value of  the free
-;;variables.
+;;Closure Pointer Register (CPR)
+;;
+;;Holds the  tagged address of  a machine word in  the Scheme heap,  representing the
+;;reference to the closure object being  executed; when no closure is being executed:
+;;it is set  to zero.  It is used to  enter the execution of the closure  code and to
+;;access the free variables the closure is closed upon.
+;;
+;;It is responsibility of  the caller to a closure to store in  the CPR the reference
+;;to closure object.
 ;;
 (define-constant CP-REGISTER '%edi)
+
+;;Frame Pointer Register (FPR)
+;;
+;;Holds the  address of the machine  word in the  memory segment of the  Scheme stack
+;;holding the  return address  of the last  performed function call.   It is  used to
+;;access  the machine  words on  the stack  containing function  arguments and  local
+;;variables.
+;;
+(define-constant FP-REGISTER '%esp)
+
+;;Process Control Register (PCR)
+;;
+;;Holds  the raw  address of  a machine  word in  the C  language heap;  such address
+;;references the first word in the PCB data structure.
+;;
+(define-constant PC-REGISTER '%esi)
 
 ;;The list of CPU registers the function  caller uses to hand special parameters to
 ;;the callee function.  The first item *must* be the CP-REGISTER.

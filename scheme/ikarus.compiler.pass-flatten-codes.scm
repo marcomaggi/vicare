@@ -174,7 +174,7 @@
     ;;The generated assembly code must  check if this CLAMBDA case has
     ;;a specification  of requested  arguments matching  the arguments
     ;;given to the CLAMBDA function application; when arriving to this
-    ;;code: ARGC-REGISTER  contains a fixnum being  the encoded number
+    ;;code: AA-REGISTER  contains a fixnum being  the encoded number
     ;;of given arguments.
     ;;
     ;;For  a CLAMBDA  case with  fixed number  of requested  arguments
@@ -183,7 +183,7 @@
     ;;arguments, else we jump to the next case.  The returned list has
     ;;the format:
     ;;
-    ;;   ((cmpl ?this-case-number-of-args ARGC-REGISTER)
+    ;;   ((cmpl ?this-case-number-of-args AA-REGISTER)
     ;;    (jne ?next-case-entry-point-label)
     ;;    (label ?case-entry-point)
     ;;    ?case-asm-instr
@@ -199,7 +199,7 @@
     ;;remember  that  the comparison  is  between  encoded numbers  of
     ;;arguments.  The returned list has the format:
     ;;
-    ;;   ((cmpl ?this-case-number-of-mandatory-args ARGC-REGISTER)
+    ;;   ((cmpl ?this-case-number-of-mandatory-args AA-REGISTER)
     ;;    (jg ?next-case-entry-point-label)
     ;;    (label ?case-entry-point)
     ;;    ?case-asm-instr
@@ -219,7 +219,7 @@
 	    (cons* `(cmpl ,(argc-convention (if x.info.proper?
 						(length (cdr x.info.args))
 					      (length (cddr x.info.args))))
-			  ,ARGC-REGISTER)
+			  ,AA-REGISTER)
 		   (cond (x.info.proper?
 			  `(jne ,next-case-entry-point-label))
 			 ((> (argc-convention 0)
@@ -257,7 +257,7 @@
     ;;this is  the Scheme language,  so the  caller does not  know how
     ;;THE-FUNC  will  handle  its  arguments:  it  can  only  put  the
     ;;arguments  on  the  Scheme  stack.   Right  after  the  assembly
-    ;;instruction "call" to THE-FUNC  has been executed: ARGC-REGISTER
+    ;;instruction "call" to THE-FUNC  has been executed: AA-REGISTER
     ;;is  set  to the  fixnum  -3,  which  is  the negated  number  of
     ;;arguments, and the Scheme stack is:
     ;;
@@ -270,7 +270,7 @@
     ;; |----------------|
     ;; |    fixnum 2    | <-- FPR - 2 * wordsize
     ;; |----------------|
-    ;; |    fixnum 3    | <-- FPR - 3 * wordsize = FPR + ARGC-REGISTER
+    ;; |    fixnum 3    | <-- FPR - 3 * wordsize = FPR + AA-REGISTER
     ;; |----------------|
     ;; |                |
     ;;     low memory
@@ -308,11 +308,11 @@
      ;;Check if there are rest arguments to put into a list.  We could
      ;;check if:
      ;;
-     ;;  (= (argc-convention properized-formals-count) ARGC-REGISTER)
+     ;;  (= (argc-convention properized-formals-count) AA-REGISTER)
      ;;
      ;;and jump to CONS_LABEL if they are not equal (jne).  Instead we
      ;;do:
-     (cmpl (int (argc-convention mandatory-formals-count)) ARGC-REGISTER)
+     (cmpl (int (argc-convention mandatory-formals-count)) AA-REGISTER)
      (jl CONS_LABEL)
 
      ;;There are no rest arguments:  the function has been called with
@@ -330,8 +330,8 @@
      ;;list is twice the number of rest arguments.
      CONS_LABEL
      (movl (mem pcb-allocation-redline pcr) ebx)
-     (addl ARGC-REGISTER ebx)
-     (addl ARGC-REGISTER ebx)
+     (addl AA-REGISTER ebx)
+     (addl AA-REGISTER ebx)
      (cmpl ebx apr)
      (jle LOOP_HEAD)
 
@@ -340,30 +340,30 @@
      ;;space.
      ;;
      ;;Advance FPR to step over the plain arguments on the stack.
-     (addl ARGC-REGISTER fpr)
+     (addl AA-REGISTER fpr)
      (pushl cpr)
-     (pushl ARGC-REGISTER)
+     (pushl AA-REGISTER)
      ;;Make argc positive.
-     (negl ARGC-REGISTER)
+     (negl AA-REGISTER)
      ;;Add 4 words to adjust frame size (see the picture below).
-     (addl (int (fx* +4 wordsize)) ARGC-REGISTER)
+     (addl (int (fx* +4 wordsize)) AA-REGISTER)
      ;;Push the frame size.
-     (pushl ARGC-REGISTER)
+     (pushl AA-REGISTER)
      ;;Undo adding 4 words.
      ;;
      ;;NOTE In the original Ikarus code  the number of bytes needed on
      ;;the  heap   for  the  rest   list  was  computed   by  doubling
-     ;;ARGC-REGISTER augmented  with 4 word sizes;  this was reserving
+     ;;AA-REGISTER augmented  with 4 word sizes;  this was reserving
      ;;extra space on the heap.  We  avoid it here.  (Marco Maggi; Mar
      ;;26, 2013)
-     (addl (int (fx* -4 wordsize)) ARGC-REGISTER)
+     (addl (int (fx* -4 wordsize)) AA-REGISTER)
      ;;Double the  number of arguments  obtaining the number  of bytes
      ;;needed on the heap ...
-     (addl ARGC-REGISTER ARGC-REGISTER)
+     (addl AA-REGISTER AA-REGISTER)
      ;;... pass it as first argument to DO-VARARG-OVERFLOW.
-     (movl ARGC-REGISTER (mem (fx* -2 wordsize) fpr))
+     (movl AA-REGISTER (mem (fx* -2 wordsize) fpr))
      ;;DO-VARARG-OVERFLOW is called with one argument.
-     (movl (int (argc-convention 1)) ARGC-REGISTER)
+     (movl (int (argc-convention 1)) AA-REGISTER)
      ;;From the  relocation vector of  this code object:  retrieve the
      ;;location gensym associated to DO-VARARG-OVERFLOW and load it in
      ;;the Closure  Pointer Register (CPR).   The "proc" slot  of such
@@ -407,14 +407,14 @@
 			 '(int 0) ;multivalue return point, NULL because unused
 			 (indirect-cpr-call))
      ;;Pop framesize and drop it.
-     (popl ARGC-REGISTER)
+     (popl AA-REGISTER)
      ;;Reload number of arguments for this CLAMBDA case.
-     (popl ARGC-REGISTER)
+     (popl AA-REGISTER)
      ;;Reload pointer to current closure object.
      (popl cpr)
      ;;Re-adjust  the  frame  pointer  to step  back  over  the  plain
      ;;arguments on the stack.
-     (subl ARGC-REGISTER fpr)
+     (subl AA-REGISTER fpr)
 
      ;;There is enough room on the heap to allocate the rest list.  We
      ;;allocate it backwards, the list (2 3) is laid out as:
@@ -435,14 +435,14 @@
 
      CONTINUE_LABEL
      (movl ebx (mem disp-cdr apr))	   ;store the cdr
-     (movl (mem fpr ARGC-REGISTER) ebx)  ;load the next car value
+     (movl (mem fpr AA-REGISTER) ebx)  ;load the next car value
      (movl ebx (mem disp-car apr))	   ;store the car value
      (movl apr ebx)			   ;load the allocation pointer
      (addl (int pair-tag) ebx)	   ;tag the pointer as reference to pair
      (addl (int pair-size) apr)	   ;increment the allocation pointer
-     (addl (int wordsize) ARGC-REGISTER) ;increment the negative arguments count
+     (addl (int wordsize) AA-REGISTER) ;increment the negative arguments count
      ;;Loop if more arguments.
-     (cmpl (int properized-formals-argc) ARGC-REGISTER)
+     (cmpl (int properized-formals-argc) AA-REGISTER)
      (jle CONTINUE_LABEL)
 
      DONE_LABEL

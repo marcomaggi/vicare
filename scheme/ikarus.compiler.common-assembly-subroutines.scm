@@ -229,10 +229,9 @@
   ;;  variables  contains a  reference to  the continuation  object to
   ;;   resume.
   ;;
-  ;;* The ARGC-REGISTER must contain a fixnum representing the negated
-  ;;   number  of  arguments  handed  to  the  escape  function;  such
-  ;;  arguments are the values returned to the topmost function in the
-  ;;  continuation.
+  ;;*  The AA-REGISTER  must  contain a  fixnum representing  the  negated number  of
+  ;;  arguments handed to the escape function; such arguments are the values returned
+  ;;  to the topmost function in the continuation.
   ;;
   ;;Before  resuming  execution: we  want  to  set the  Frame  Pointer
   ;;Register to the address of the  highest machine word on the Scheme

@@ -5300,7 +5300,7 @@
    ;;* PCR  stands for  Process Control Register  and it  references the
    ;;  structure PCB defined at the C language level;
    ;;
-   ;;* ARGC-REGISTER stands for Argument Count Register.
+   ;;* AA-REGISTER stands for Argument Count Register.
    ;;
    ;;Upon entering  this primitive operation  it has been  determined by
    ;;%PRIMITIVE-CALL/CF that the scenario on the Sceme stack is:
@@ -5420,9 +5420,9 @@
 	  ;;   |                      |
 	  ;;          low memory
 	  ;;
-	  ;;ARGC-REGISTER still  contains the  encoded number of  arguments, counting
-	  ;;the  single  argument  FUNC   to  %PRIMITIVE-CALL/CF;  the  reference  to
-	  ;;continuation object KONT is in some  CPU register; the raw memory pointer
+	  ;;AA-REGISTER still contains the encoded  number of arguments, counting the
+	  ;;single argument FUNC to %PRIMITIVE-CALL/CF; the reference to continuation
+	  ;;object  KONT   is  in   some  CPU  register;   the  raw   memory  pointer
 	  ;;UNDERFLOW-HANDLER is in some CPU register.
 	  ;;
 	  (asm 'call-with-underflow-handler underflow-handler (V-simple-operand func) kont)))))
