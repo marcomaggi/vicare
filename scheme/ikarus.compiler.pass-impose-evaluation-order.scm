@@ -273,7 +273,7 @@
       (lambda (x)
 	(make-seq
 	  (%move-dst<-src AA-REGISTER x)
-	  (make-asmcall 'return (list PC-REGISTER FP-REGISTER AP-REGISTER AA-REGISTER))))))
+	  (make-asmcall 'return (list AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER))))))
 
   (define (V-call-with-underflow-handler op rand*)
     ;;This  high-level  Assembly instruction  is  used  only  by the  core  primitive
@@ -427,7 +427,7 @@
 	;;the documentation.
 	;;
 	(make-asmcall 'indirect-jump
-	  (list AA-REGISTER CP-REGISTER PC-REGISTER FP-REGISTER AP-REGISTER (mkfvar 1) (mkfvar 2))))))
+	  (list AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER (mkfvar 1) (mkfvar 2))))))
 
   #| end of module: V-and-return |# )
 
@@ -1144,17 +1144,21 @@
 	    output-dst*
 	    output-arg*
 	  (make-seq
-	    ;;Store in the AA-REGISTER a  fixnum representing the negated number of
+	    ;;Store in  the AA-REGISTER a  fixnum representing the negated  number of
 	    ;;operands.
 	    (%load-register-operand/number-of-operands (length rand*))
 	    (if target
-		;;This is was a JMPCALL: we  jump directly to the binary code entry
-		;;point represented  by the Assembly  label in the  CODE-LOC struct
+		;;This is  was a JMPCALL: we  jump directly to the  binary code entry
+		;;point  represented by  the Assembly  label in  the CODE-LOC  struct
 		;;TARGET.
-		(make-asmcall 'direct-jump (cons* target AA-REGISTER PC-REGISTER FP-REGISTER AP-REGISTER dst*))
-	      ;;This was  a FUNCALL: we  jump indirectly  to the binary  code entry
-	      ;;point by retrieving it, at run-time, from the closure object.
-	      (make-asmcall 'indirect-jump (cons* AA-REGISTER PC-REGISTER FP-REGISTER AP-REGISTER dst*))))))))
+		;;
+		;;NOTE When the  ASMCALL has DIRECT-JUMP as operator:  the first item
+		;;in the  operands must be  the CODE-LOC representing  target!!!  The
+		;;order of the other operands does not matter.
+		(make-asmcall 'direct-jump (cons* target AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER dst*))
+	      ;;This was a FUNCALL: we jump indirectly to the binary code entry point
+	      ;;by retrieving it, at run-time, from the closure object.
+	      (make-asmcall 'indirect-jump (cons* AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER dst*))))))))
 
   (define (%one-fvar-for-each-stack-operand i rand*)
     ;;Non-tail recursive  function.  Build and return  a list of FVAR  structs having
@@ -1283,7 +1287,7 @@
     (let* ((rand*.nfv ($map/stx (lambda (x)
 				  (make-nfv 'unset-conflicts #f #f #f #f))
 			rand*))
-	   (ntcall    (let ((args (cons* AA-REGISTER PC-REGISTER FP-REGISTER AP-REGISTER CP-REGISTER rand*.nfv))
+	   (ntcall    (let ((args (cons* AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER rand*.nfv))
 			    (mask #f)
 			    (size #f))
 			(make-non-tail-call call-target dst-local args mask size)))
@@ -1302,11 +1306,18 @@
     (%do-operands-bind*
 	rand*.nfv
 	rand*
-      ;;Load in a temporary location the value of the RATOR register parameter.
-      (let ((rator.var (make-unique-var 'tmp)))
+      ;;If the  RATOR is  a "complex"  struct that evaluates  into a  closure object:
+      ;;evaluate it and load  the result in a temporary location;  later we will load
+      ;;the reference to closure object in the CP-parameter.
+      (let* ((rator.var (if (or (var?  rator)
+				(fvar? rator)
+				(constant? rator))
+			    rator
+			  (make-unique-var 'tmp)))
+	     (simple?   (eq? rator.var rator)))
 	(%do-bind
-	    (list rator.var)
-	    (list rator)
+	    (if simple? '() (list rator.var))
+	    (if simple? '() (list rator))
 	  ;;Load in the  actual CPU registers the register operand  values from their
 	  ;;temporary locations.
 	  (multiple-forms-sequence

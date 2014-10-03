@@ -489,8 +489,9 @@
 	      accum))
 
        ((direct-jump)
-	;;We jump directly to a  known address, available as immediate
-	;;value.
+	;;We jump  directly to a known  address, available as immediate  value.  When
+	;;the ASMCALL  has DIRECT-JUMP as  operator: the  first item in  the operands
+	;;must be the CODE-LOC representing target!!!
 	(cons `(jmp (label ,(code-loc-label (car rands))))
 	      accum))
 
