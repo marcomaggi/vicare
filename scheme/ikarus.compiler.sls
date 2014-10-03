@@ -1737,9 +1737,9 @@
    ))
 
 (define-struct nfv
-  ;;Represent a Scheme stack location used to  hold an operand to a non-tail function
-  ;;call.  Such locations are below the return address to the caller; the scenario on
-  ;;the Scheme stack right after the "call" Assembly instruction is:
+  ;;Represent a Scheme stack location used to hold an operand to an upcoming non-tail
+  ;;function call.   Such locations are below  the return address to  the caller; the
+  ;;scenario on the Scheme stack right after the "call" Assembly instruction is:
   ;;
   ;;      high memory
   ;;   |                |
@@ -1757,8 +1757,10 @@
   ;;   |                |
   ;;       low memory
   ;;
-  ;;so  the offset  of  the operands  with  respect  to the  FPR  is negative,  hence
-  ;;"negative frame variables".
+  ;;so the  offset of the operands  with respect to  the FPR is negative.   While the
+  ;;non-tail call is prepared: these stack location are not part of the current stack
+  ;;frame, rather  they will be part  of the next  stack frame; hence the  name "Next
+  ;;Frame Variables".
   ;;
   (conf
    loc
