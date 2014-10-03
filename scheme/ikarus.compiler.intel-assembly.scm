@@ -56,7 +56,7 @@
 ;;
 ;;AAR = %eax		accumulator and arguments count
 ;;APR = %ebp		allocation pointer
-;;ESP = %esp		stack pointer
+;;FPR = %esp		frame pointer register
 ;;PCR = %esi		pointer to PCB
 ;;CPR = %edi		pointer to closure
 ;;

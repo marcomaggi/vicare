@@ -141,22 +141,47 @@
 	(make-locals (local-values) y))))
 
   (module (V-clambda)
-
+    ;;Upon entering the  execution, the binary code of a  callee function expects the
+    ;;following "register operands" to be present:
+    ;;
+    ;;AAR:  the  Accumulator  and  Arguments   count  Register  must  hold  a  fixnum
+    ;;representing the negated number of operands on the stack.
+    ;;
+    ;;APR: the Allocation Pointer Register must hold an untagged pointer to the first
+    ;;free  word on  the Scheme  heap nursery.   This value  is mutated  only if  the
+    ;;function allocates new Scheme objects on the heap.
+    ;;
+    ;;FPR: the  Frame Pointer Register  must hold an  untagged pointer to  the return
+    ;;address for  this function call.   This value is  mutated only if  the function
+    ;;performs nested function calls, either tail calls or non-tail calls.
+    ;;
+    ;;PCR:  the Process  Control Register  must  hold an  untagged pointer  to the  C
+    ;;language structure PCB.  This value is never mutated.
+    ;;
+    ;;CPR: the  Closure Pointer Register  must hold a  tagged pointer to  the closure
+    ;;object  implementing this  function.   This  reference is  used  to access  the
+    ;;variables this  function is  closed upon.   This value is  mutated only  if the
+    ;;function performs nested function calls.
+    ;;
+    ;;The proper operands to the function call, the "stack operands", if any, must be
+    ;;on the Scheme stack at negative offsets from the pointer in the FPR.
+    ;;
     (define (V-clambda x)
       (struct-case x
 	((clambda x.label x.clause* x.cp x.freevar* x.name)
-	 (make-clambda x.label (map V-clambda-clause x.clause*) x.cp x.freevar* x.name))))
+	 (make-clambda x.label ($map/stx V-clambda-clause x.clause*) x.cp x.freevar* x.name))
+	))
 
-    (define (V-clambda-clause cas)
+    (define (V-clambda-clause clause)
       ;;This  function has  two purposes:  apply "V-and-return"  to the  body of  the
-      ;;clause;  to include  what is  needed to  handle clause's  stack operands  and
-      ;;register operands.
+      ;;clause; to  include what is needed  to handle clause's register  operands and
+      ;;stack operands.
       ;;
-      (struct-case cas
-	((clambda-case cas.info cas.body)
-	 (struct-case cas.info
-	   ((case-info cas.info.label cas.info.args cas.info.proper)
-	    ;;Remember that  CAS.INFO.ARGS is a proper  list of VAR structs  with the
+      (struct-case clause
+	((clambda-case clause.info clause.body)
+	 (struct-case clause.info
+	   ((case-info clause.info.label clause.info.args clause.info.proper)
+	    ;;Remember that CLAUSE.INFO.ARGS is a proper list of VAR structs with the
 	    ;;format:
 	    ;;
 	    ;;   (?cpvar ?arg ...)
@@ -164,68 +189,31 @@
 	    ;;where: ?CPVAR represents a machine word that must hold a pointer to the
 	    ;;closure object;  each ?ARG represents a  machine word that must  hold a
 	    ;;CLAMBDA clause's argument.
-	    (receive (register-args register-names stack-args stack-locations)
-		(%partition-formals PARAMETER-REGISTERS cas.info.args)
-	      ;;The arguments listed in REGISTER-ARGS will be stored in the registers
-	      ;;listed in REGISTER-NAMES.  The arguments listed in STACK-ARGS will be
-	      ;;stored in the Scheme stack machine words listed in STACK-LOCATIONS.
-	      (parametrise ((local-values register-args))
-		($for-each/stx set-var-loc! stack-args stack-locations)
-		(let ((body (let recur ((args register-args)
-					(locs register-names))
-			      (if (pair? args)
-				  (make-seq
-				    ;;Load a special parameter  from the CPU register
-				    ;;into the locally allocated VAR.
-				    (%move-dst<-src (car args) (car locs))
-				    (recur          (cdr args) (cdr locs)))
-				(V-and-return cas.body)))))
-		  (make-clambda-case
-		   (make-case-info cas.info.label (append register-names stack-locations) cas.info.proper)
-		   (make-locals (local-values) body))))))))))
+	    ;;
+	    ;;RAND*.VAR is a list of VAR structs,  one for each stack operand, in the
+	    ;;order in which they must appear on  the stack; the VAR structs are used
+	    ;;in the body  of the function to access the  operands.  Here we allocate
+	    ;;an  FVAR  for  each VAR:  wherever  a  VAR  appears  in the  code,  its
+	    ;;associated FVAR will be inserted in a later compiler pass.
+	    (let* ((cpvar       (car clause.info.args))
+		   (rand*.var   (cdr clause.info.args))
+		   (rand*.fvar  (%one-fvar-for-each-stack-operand 1 rand*.var)))
+	      ($for-each/stx set-var-loc! rand*.var rand*.fvar)
+	      (parametrise ((local-values (list cpvar)))
+		(define body
+		  (make-seq
+		    ;;Load in CPVAR  the reference to closure object  receiving it as
+		    ;;register operand.
+		    (%move-dst<-src cpvar CP-REGISTER)
+		    (V-and-return clause.body)))
+		(make-clambda-case
+		 (make-case-info clause.info.label (cons CP-REGISTER rand*.fvar) clause.info.proper)
+		 (make-locals (local-values) body)))))))))
 
-    (define (%partition-formals available-registers formals)
-      ;;Recursive function.  Associate  the formals of a CLAMBDA  clause to available
-      ;;CPU registers.
-      ;;
-      ;;The  argument AVAILABLE-REGISTERS  must  be a  list  of symbols  representing
-      ;;available CPU  registers.  The  argument FORMALS  must be  a list  of CLAMBDA
-      ;;clause's formals.
-      ;;
-      ;;Return 4 values:
-      ;;
-      ;;1.   The list  of lex  gensyms  representing formal  arguments associated  to
-      ;;   available registers.
-      ;;
-      ;;2.   The list  of symbols  representing register  names associated  to formal
-      ;;   arguments.
-      ;;
-      ;;3. The list  of lex gensyms representing formal arguments  associated to FVAR
-      ;;   structures.
-      ;;
-      ;;4. The list of FVAR structures associated to formals.
-      ;;
-      (cond ((null? available-registers)
-	     ;;If  the number  of formals  is <=  of the  number of  registers: the
-	     ;;left-over  registers  are  associated   to  FVAR  structures,  which
-	     ;;represent Scheme stack machine words.
-	     (let ((stack-locations (%one-fvar-for-each-left-over-formal 1 formals)))
-	       (values '() '() formals stack-locations)))
-	    ((null? formals)
-	     ;;If there are more registers than formals: fine.
-	     (values '() '() '() '()))
-	    (else
-	     ;;If there is a register for the next formal: associate them.
-	     (receive (register-args register-names stack-args stack-locations)
-		 (%partition-formals (cdr available-registers) (cdr formals))
-	       (values (cons (car formals)             register-args)
-		       (cons (car available-registers) register-names)
-		       stack-args stack-locations)))))
-
-    (define (%one-fvar-for-each-left-over-formal i leftover-formal)
-      (if (pair? leftover-formal)
+    (define (%one-fvar-for-each-stack-operand i rand*.var)
+      (if (pair? rand*.var)
 	  (cons (mkfvar i)
-		(%one-fvar-for-each-left-over-formal (fxadd1 i) (cdr leftover-formal)))
+		(%one-fvar-for-each-stack-operand (fxadd1 i) (cdr rand*.var)))
 	'()))
 
     #| end of module: V-clambda |# )
