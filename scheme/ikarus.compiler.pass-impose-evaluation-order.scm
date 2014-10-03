@@ -449,10 +449,10 @@
   ;;
   (if (pair? lhs*)
       (begin
-	;; (assert (let ((lhs (car lhs*)))
-	;; 	  (or (and (symbol? lhs)
-	;; 		   (memq lhs PARAMETER-REGISTERS))
-	;; 	      (fvar? lhs))))
+	(assert (let ((lhs (car lhs*)))
+		  (or (and (symbol? lhs)
+			   (eq? lhs CP-REGISTER))
+		      (fvar? lhs))))
 	(make-seq
 	  (%move-dst<-src (car lhs*) (car rhs*))
 	  (%assign*       (cdr lhs*) (cdr rhs*) tail-body)))
@@ -998,9 +998,33 @@
 
 (module (%handle-tail-call)
   ;;Here we build the Scheme stack layout needed  to perform a tail call to a closure
-  ;;object.  Let's consider the common case in which we are already inside a function
-  ;;call and we perform another function call; the old, uplevel call frame is already
-  ;;on the stack.  We build the following layout:
+  ;;object.
+  ;;
+  ;;Upon entering  the execution, the  binary code of  a callee function  expects the
+  ;;following "register operands" to be present:
+  ;;
+  ;;AAR: the Accumulator and Arguments count Register must hold a fixnum representing
+  ;;the negated number of operands on the stack.
+  ;;
+  ;;APR: the Allocation  Pointer Register must hold an untagged  pointer to the first
+  ;;free word on the Scheme heap nursery.
+  ;;
+  ;;FPR:  the Frame  Pointer Register  must hold  an untagged  pointer to  the return
+  ;;address for this function call.
+  ;;
+  ;;PCR: the Process Control Register must hold an untagged pointer to the C language
+  ;;structure PCB.  This value is never mutated.
+  ;;
+  ;;CPR:  the Closure  Pointer Register  must hold  a tagged  pointer to  the closure
+  ;;object implementing this function.
+  ;;
+  ;;With  the exception  of the  CPR: all  these register  operands already  have the
+  ;;correct value  when the code  generated here is executed.   Here we only  need to
+  ;;store the correct value in the CPR.
+  ;;
+  ;;Let's consider the common case in which we are already inside a function call and
+  ;;we perform another function  call; the old, uplevel call frame  is already on the
+  ;;stack.  We build the following layout:
   ;;
   ;;           high memory
   ;;   |                          |         --
@@ -1033,12 +1057,6 @@
   ;;match the  actual function  arguments.  This compiler  pass computes  the operand
   ;;values and allocates temporary stack locations for them.
   ;;
-  ;;In  addition to  the stack  operands: some  register operands  are handed  to the
-  ;;callee  closure object;  such values  are computed  and stored  in dedicated  CPU
-  ;;registers, where  the binary code of  the callee expects them.   At present, only
-  ;;the reference  to closure  object is  handled this way,  passing it  throught the
-  ;;CP-REGISTER.
-  ;;
   ;;When all the operand values have been computed and stored in temporary locations:
   ;;they are moved  to the actual stack  locations for the call,  overwriting the old
   ;;operands and the local variables.  The resulting scenario follows:
@@ -1061,7 +1079,7 @@
   ;;           low memory
   ;;
   ;;The uplevel  return address is left  untouched because it becomes  the new return
-  ;;address.  If  there are  leftover operands  or local  variables from  the uplevel
+  ;;address.  If there are leftover operands  and/or local variables from the uplevel
   ;;function execution:  they are left alone  and simply overwritten by  further code
   ;;execution.
   ;;
@@ -1072,97 +1090,76 @@
     ;;TARGET is a CODE-LOC wrapping the name of the target Assembly label.  If TARGET
     ;;is false: the tail call is for a FUNCALL struct.
     ;;
-    ;;We build and return a struct instance to represent:
-    ;;
-    ;;1.  For the operator and the operands: a sequence of assignments to store the
-    ;;values in registers or memory locations.
-    ;;
-    ;;2. Loading the number of  arguments in the appropriate register.
-    ;;
-    ;;3. The actual call.
-    ;;
-    (let* ((args (cons rator rand*))
-	   (locs (%formals-locations PARAMETER-REGISTERS args)))
-      ;;We want  to determine which ARGS  are complex expressions for  which there is
-      ;;the need to allocate a temporary location in which to store the result.
-      (let recur ((input-arg*  (reverse args))
-		  (input-dst*  (reverse locs))
-		  (output-arg* '())
-		  (output-dst* '()))
-	(define-syntax-rule (%do-recur ?output-arg* ?output-dst*)
-	  (recur (cdr input-arg*) (cdr input-dst*) ?output-arg* ?output-dst*))
-	(if (pair? input-arg*)
-	    (let ((arg (car input-arg*))
-		  (dst (car input-dst*)))
-	      (cond ((constant? arg)
-		     ;;The operand is  either a register operand or  a stack operand;
-		     ;;the operand's expression is a CONSTANT: we can just load it in
-		     ;;the associated location.
-		     (%do-recur (cons arg output-arg*)
-				(cons dst output-dst*)))
+    (define rand*.fvar
+      (%one-fvar-for-each-stack-operand 1 rand*))
+    (define dst*
+      (cons CP-REGISTER rand*.fvar))
+    ;;We want  to determine which RATOR  and RAND* are complex  expressions for which
+    ;;there  is the  need to  allocate a  temporary location  in which  to store  the
+    ;;result.
+    (let recur ((input-arg*  (reverse (cons rator       rand*)))
+		(input-dst*  (reverse dst*))
+		(output-arg* '())
+		(output-dst* '()))
+      (define-syntax-rule (%do-recur ?output-arg* ?output-dst*)
+	(recur (cdr input-arg*) (cdr input-dst*) ?output-arg* ?output-dst*))
+      (if (pair? input-arg*)
+	  (let ((arg (car input-arg*))
+		(dst (car input-dst*)))
+	    (cond ((constant? arg)
+		   ;;The operand's expression  is a CONSTANT: we can just  load it in
+		   ;;the associated location.
+		   (%do-recur (cons arg output-arg*)
+			      (cons dst output-dst*)))
 
-		    ((and (fvar? dst)
-			  (var?  arg)
-			  (eq? dst (var-loc arg)))
-		     ;;The operand is a stack  operand; the operand's expression is a
-		     ;;VAR; the destination  location is an FVAR; the  operand VAR is
-		     ;;already  allocated  to  the  location's FVAR.   We  skip  this
-		     ;;operand: there is nothing to be done.
-		     ;;
-		     ;;This is the case, for example,  in which a function tail calls
-		     ;;itself with the same operands:
-		     ;;
-		     ;;   (define (f a b)
-		     ;;     (f a b))
-		     ;;   (f 1 2)
-		     ;;
-		     (%do-recur output-arg* output-dst*))
+		  ((and (fvar? dst)
+			(var?  arg)
+			(eq? dst (var-loc arg)))
+		   ;;The operand's expression  is a VAR; the  destination location is
+		   ;;an FVAR; the operand VAR  is already allocated to the location's
+		   ;;FVAR.  We skip this operand: there is nothing to be done.
+		   ;;
+		   ;;This is  the case, for example,  in which a function  tail calls
+		   ;;itself with the same operands:
+		   ;;
+		   ;;   (define (f a b)
+		   ;;     (f a b))
+		   ;;   (f 1 2)
+		   ;;
+		   (%do-recur output-arg* output-dst*))
 
-		    (else
-		     (let ((tmp (make-unique-var 'tmp)))
-		       (%local-value-cons tmp)
-		       (make-seq
-			 ;;Generate assembly instructions to compute a value from ARG
-			 ;;and store the result in destination DST.
-			 (V tmp arg)
-			 (%do-recur (cons tmp output-arg*)
-				    (cons dst output-dst*)))))))
-	  (%assign*
-	      output-dst*
-	      output-arg*
-	    (make-seq
-	      ;;Store in the AA-REGISTER a  fixnum representing the negated number of
-	      ;;operands.
-	      (%notify-number-of-operands (length rand*))
-	      (if target
-		  ;;This is was a JMPCALL: we  jump directly to the binary code entry
-		  ;;point represented  by the Assembly  label in the  CODE-LOC struct
-		  ;;TARGET.
-		  (make-asmcall 'direct-jump (cons target (cons* AA-REGISTER pcr esp apr locs)))
-		;;This was  a FUNCALL: we  jump indirectly  to the binary  code entry
-		;;point by retrieving it, at run-time, from the closure object.
-		(make-asmcall 'indirect-jump (cons* AA-REGISTER pcr esp apr locs)))))))))
+		  (else
+		   (let ((tmp (make-unique-var 'tmp)))
+		     (%local-value-cons tmp)
+		     (make-seq
+		       ;;Generate assembly  instructions to compute a  value from ARG
+		       ;;and store the result in destination DST.
+		       (V tmp arg)
+		       (%do-recur (cons tmp output-arg*)
+				  (cons dst output-dst*)))))))
+	(%assign*
+	    output-dst*
+	    output-arg*
+	  (make-seq
+	    ;;Store in the AA-REGISTER a  fixnum representing the negated number of
+	    ;;operands.
+	    (%notify-number-of-operands (length rand*))
+	    (if target
+		;;This is was a JMPCALL: we  jump directly to the binary code entry
+		;;point represented  by the Assembly  label in the  CODE-LOC struct
+		;;TARGET.
+		(make-asmcall 'direct-jump (cons* target AA-REGISTER pcr esp apr dst*))
+	      ;;This was  a FUNCALL: we  jump indirectly  to the binary  code entry
+	      ;;point by retrieving it, at run-time, from the closure object.
+	      (make-asmcall 'indirect-jump (cons* AA-REGISTER pcr esp apr dst*))))))))
 
-  (define (%formals-locations parameter-registers regparm*+rand*)
-    ;;Non-tail recursive function.  Return a list  of items having the same length of
-    ;;REGPARM*+RAND*; the first items are  taken from PARAMETER-REGISTERS, the others
-    ;;are newly constructed FVAR structs.
-    ;;
-    (if (pair? regparm*+rand*)
-	(if (pair? parameter-registers)
-	    (cons (car parameter-registers)
-		  (%formals-locations (cdr parameter-registers) (cdr regparm*+rand*)))
-	  ;;Here we have consumed all the REGPARM* and only the RAND* are left.
-	  (%one-fvar-for-each-rand 1 regparm*+rand*))
-      '()))
-
-  (define (%one-fvar-for-each-rand i rand*)
+  (define (%one-fvar-for-each-stack-operand i rand*)
     ;;Non-tail recursive  function.  Build and return  a list of FVAR  structs having
     ;;the same length of RAND*.
     ;;
     (if (pair? rand*)
 	(cons (mkfvar i)
-	      (%one-fvar-for-each-rand (fxadd1 i) (cdr rand*)))
+	      (%one-fvar-for-each-stack-operand (fxadd1 i) (cdr rand*)))
       '()))
 
   #| end of module: %HANDLE-TAIL-CALL |# )
