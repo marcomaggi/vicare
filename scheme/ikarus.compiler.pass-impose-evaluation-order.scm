@@ -449,10 +449,10 @@
   ;;
   (if (pair? lhs*)
       (begin
-	(assert (let ((lhs (car lhs*)))
-		  (or (and (symbol? lhs)
-			   (eq? lhs CP-REGISTER))
-		      (fvar? lhs))))
+	;; (assert (let ((lhs (car lhs*)))
+	;; 	  (or (and (symbol? lhs)
+	;; 		   (eq? lhs CP-REGISTER))
+	;; 	      (fvar? lhs))))
 	(make-seq
 	  (%move-dst<-src (car lhs*) (car rhs*))
 	  (%assign*       (cdr lhs*) (cdr rhs*) tail-body)))
@@ -1167,9 +1167,33 @@
 
 (module (%handle-non-tail-call)
   ;;Here we  build the Scheme  stack layout  needed to perform  a non-tail call  to a
-  ;;closure object.  Let's consider the common case  in which we are already inside a
-  ;;function call and  we perform another function call; the  old, uplevel call frame
-  ;;is already on the stack.  We build the following layout:
+  ;;closure object.
+  ;;
+  ;;Upon entering  the execution, the  binary code of  a callee function  expects the
+  ;;following "register operands" to be present:
+  ;;
+  ;;AAR: the Accumulator and Arguments count Register must hold a fixnum representing
+  ;;the negated number of operands on the stack.
+  ;;
+  ;;APR: the Allocation  Pointer Register must hold an untagged  pointer to the first
+  ;;free word on the Scheme heap nursery.
+  ;;
+  ;;FPR:  the Frame  Pointer Register  must hold  an untagged  pointer to  the return
+  ;;address for this function call.
+  ;;
+  ;;PCR: the Process Control Register must hold an untagged pointer to the C language
+  ;;structure PCB.  This value is never mutated.
+  ;;
+  ;;CPR:  the Closure  Pointer Register  must hold  a tagged  pointer to  the closure
+  ;;object implementing this function.
+  ;;
+  ;;With the exception of  AAR and CPR: all these register  operands already have the
+  ;;correct value  when the code  generated here is executed.   Here we only  need to
+  ;;store the correct values in AAR and CPR.
+  ;;
+  ;;Let's consider the common case in which we are already inside a function call and
+  ;;we perform another function  call; the old, uplevel call frame  is already on the
+  ;;stack.  We build the following layout:
   ;;
   ;;           high memory
   ;;   |                          |         --
@@ -1253,92 +1277,56 @@
     ;;*  When a  gensym: this  call is  a jump  to the  entry point  of a  combinator
     ;;  function.
     ;;
-    (receive (register-name* register-arg* stack-arg*)
-	(%nontail-locations PARAMETER-REGISTERS (cons rator rand*))
-      ;;REGISTER-ARG* and  STACK-ARG* may be  complex operands; so first  we evaluate
-      ;;the proper function operands, which are  stack operands, and load them in the
-      ;;appropriate stack locations:
-      ;;
-      ;;   (asm-instr move ?stack-arg.nfv    ?stack-arg)
-      ;;   ...
-      ;;
-      ;;then we  evaluate the register operands'  values and store them  in temporary
-      ;;locations:
-      ;;
-      ;;   (asm-instr move ?register-arg.var ?register-arg)
-      ;;   ...
-      ;;
-      ;;finally  we load  the  values of  the  register operands  in  the actual  CPU
-      ;;registers:
-      ;;
-      ;;   (asm-instr move ?register-name ?register-arg.var)
-      ;;   ...
-      ;;
-      ;;the  ?RATOR  is always  loaded  in  the CP-REGISTER,  so  the  first item  of
-      ;;PARAMETER-REGISTER must be CP-REGISTER.
-      (let ((register-arg*.var ($map/stx (lambda (x)
-					   (make-unique-var 'tmp))
-				 register-arg*))
-	    (stack-arg*.nfv    ($map/stx (lambda (x)
-					   (make-nfv 'unset-conflicts #f #f #f #f))
-				 stack-arg*)))
-	(define body
-	  (let ((live #f)
-		(body (let ((ntcall (let ((args (cons* AA-REGISTER pcr esp apr
-						       (append register-name* stack-arg*.nfv)))
-					  (mask #f)
-					  (size #f))
-				      (make-non-tail-call call-target dst-local args mask size))))
-			(%make-call-frame-body stack-arg*.nfv stack-arg*
-					       register-arg*.var register-arg*
-					       register-name* rand* ntcall))))
-	    (make-non-tail-call-frame stack-arg*.nfv live body)))
-	(if dst-local
-	    (make-seq
-	      body
-	      (%move-dst<-src dst-local AA-REGISTER))
-	  body))))
+    (define rand*.nfv
+      ($map/stx (lambda (x)
+		  (make-nfv 'unset-conflicts #f #f #f #f))
+	rand*))
+    (define ntframe
+      (let ((live #f)
+	    (body (let ((ntcall (let ((args (cons* AA-REGISTER pcr esp apr CP-REGISTER rand*.nfv))
+				      (mask #f)
+				      (size #f))
+				  (make-non-tail-call call-target dst-local args mask size))))
+		    (%make-call-frame-body rator rand* rand*.nfv ntcall))))
+	(make-non-tail-call-frame rand*.nfv live body)))
+    (if dst-local
+	(make-seq
+	  ntframe
+	  (%move-dst<-src dst-local AA-REGISTER))
+      ntframe))
 
-  (define (%nontail-locations regs args)
-    ;;Non-tail recursive function.
-    ;;
-    (if (pair? args)
-	(if (pair? regs)
-	    (receive (r* rl* f*)
-		(%nontail-locations (cdr regs) (cdr args))
-	      (values (cons (car regs) r*)
-		      (cons (car args) rl*)
-		      f*))
-	  (values '() '() args))
-      (values '() '() '())))
+  ;; (define (%nontail-locations regs args)
+  ;;   ;;Non-tail recursive function.
+  ;;   ;;
+  ;;   (if (pair? args)
+  ;; 	(if (pair? regs)
+  ;; 	    (receive (r* rl* f*)
+  ;; 		(%nontail-locations (cdr regs) (cdr args))
+  ;; 	      (values (cons (car regs) r*)
+  ;; 		      (cons (car args) rl*)
+  ;; 		      f*))
+  ;; 	  (values '() '() args))
+  ;;     (values '() '() '())))
 
-  (define (%make-call-frame-body stack-arg*.nfv stack-arg*
-				 register-arg*.var register-arg*
-				 register-name* rand* ntcall)
+  (define (%make-call-frame-body rator rand* rand*.nfv ntcall)
     ;;Load  on the  stack  the stack  operands  of the  function  call.  These  stack
     ;;locations are below the location that will hold the return address of the call.
     (%do-operands-bind*
-	stack-arg*.nfv
-	stack-arg*
-      ;;Load in temporary  locations the values of the register  parameters; skip the
-      ;;RATOR.
-      (%do-bind
-	  (cdr register-arg*.var)
-	  (cdr register-arg*)
-	;;Load in a temporary location the value of the RATOR register parameter.
+	rand*.nfv
+	rand*
+      ;;Load in a temporary location the value of the RATOR register parameter.
+      (let ((rator.var (make-unique-var 'tmp)))
 	(%do-bind
-	    (list (car register-arg*.var))
-	    (list (car register-arg*))
+	    (list rator.var)
+	    (list rator)
 	  ;;Store  in the  actual CPU  registers the  register parameter  values from
 	  ;;their temporary locations.
-	  (%assign*
-	      register-name*
-	      register-arg*.var
-	    (make-seq
-	      ;;Load  in AA-REGISTER  a  fixnum representing  the  negated number  of
-	      ;;operands.
-	      (%notify-number-of-operands (length rand*))
-	      ntcall))))))
+	  (multiple-forms-sequence
+	    (%move-dst<-src CP-REGISTER rator.var)
+	    ;;Load  in  AA-REGISTER  a  fixnum representing  the  negated  number  of
+	    ;;operands.
+	    (%notify-number-of-operands (length rand*))
+	    ntcall)))))
 
   (define (%do-operands-bind* nfv* rhs* tail-body)
     ;;Non-tail recursive function.  Given a list  of destination locations NFV* and a
