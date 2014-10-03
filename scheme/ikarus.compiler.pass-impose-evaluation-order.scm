@@ -273,7 +273,7 @@
       (lambda (x)
 	(make-seq
 	  (%move-dst<-src AA-REGISTER x)
-	  (make-asmcall 'return (list pcr esp apr AA-REGISTER))))))
+	  (make-asmcall 'return (list PC-REGISTER FP-REGISTER AP-REGISTER AA-REGISTER))))))
 
   (define (V-call-with-underflow-handler op rand*)
     ;;This  high-level  Assembly instruction  is  used  only  by the  core  primitive
@@ -380,7 +380,7 @@
 	;;          low memory
 	;;
 	;;Load the reference to closure object FUNC in the CPR.
-	(%move-dst<-src cpr t2)
+	(%move-dst<-src CP-REGISTER t2)
 	;;Load  in  AA-REGISTER  the  encoded   number  of  arguments,  counting  the
 	;;continuation object.
 	(%notify-number-of-operands 1)
@@ -427,7 +427,7 @@
 	;;the documentation.
 	;;
 	(make-asmcall 'indirect-jump
-	  (list AA-REGISTER cpr pcr esp apr (mkfvar 1) (mkfvar 2))))))
+	  (list AA-REGISTER CP-REGISTER PC-REGISTER FP-REGISTER AP-REGISTER (mkfvar 1) (mkfvar 2))))))
 
   #| end of module: V-and-return |# )
 
@@ -1148,10 +1148,10 @@
 		;;This is was a JMPCALL: we  jump directly to the binary code entry
 		;;point represented  by the Assembly  label in the  CODE-LOC struct
 		;;TARGET.
-		(make-asmcall 'direct-jump (cons* target AA-REGISTER pcr esp apr dst*))
+		(make-asmcall 'direct-jump (cons* target AA-REGISTER PC-REGISTER FP-REGISTER AP-REGISTER dst*))
 	      ;;This was  a FUNCALL: we  jump indirectly  to the binary  code entry
 	      ;;point by retrieving it, at run-time, from the closure object.
-	      (make-asmcall 'indirect-jump (cons* AA-REGISTER pcr esp apr dst*))))))))
+	      (make-asmcall 'indirect-jump (cons* AA-REGISTER PC-REGISTER FP-REGISTER AP-REGISTER dst*))))))))
 
   (define (%one-fvar-for-each-stack-operand i rand*)
     ;;Non-tail recursive  function.  Build and return  a list of FVAR  structs having
@@ -1277,36 +1277,21 @@
     ;;*  When a  gensym: this  call is  a jump  to the  entry point  of a  combinator
     ;;  function.
     ;;
-    (define rand*.nfv
-      ($map/stx (lambda (x)
-		  (make-nfv 'unset-conflicts #f #f #f #f))
-	rand*))
-    (define ntframe
-      (let ((live #f)
-	    (body (let ((ntcall (let ((args (cons* AA-REGISTER pcr esp apr CP-REGISTER rand*.nfv))
-				      (mask #f)
-				      (size #f))
-				  (make-non-tail-call call-target dst-local args mask size))))
-		    (%make-call-frame-body rator rand* rand*.nfv ntcall))))
-	(make-non-tail-call-frame rand*.nfv live body)))
-    (if dst-local
-	(make-seq
-	  ntframe
-	  (%move-dst<-src dst-local AA-REGISTER))
-      ntframe))
-
-  ;; (define (%nontail-locations regs args)
-  ;;   ;;Non-tail recursive function.
-  ;;   ;;
-  ;;   (if (pair? args)
-  ;; 	(if (pair? regs)
-  ;; 	    (receive (r* rl* f*)
-  ;; 		(%nontail-locations (cdr regs) (cdr args))
-  ;; 	      (values (cons (car regs) r*)
-  ;; 		      (cons (car args) rl*)
-  ;; 		      f*))
-  ;; 	  (values '() '() args))
-  ;;     (values '() '() '())))
+    (let* ((rand*.nfv ($map/stx (lambda (x)
+				  (make-nfv 'unset-conflicts #f #f #f #f))
+			rand*))
+	   (ntcall    (let ((args (cons* AA-REGISTER PC-REGISTER FP-REGISTER AP-REGISTER CP-REGISTER rand*.nfv))
+			    (mask #f)
+			    (size #f))
+			(make-non-tail-call call-target dst-local args mask size)))
+	   (ntframe   (let ((live   #f)
+			    (ntbody (%make-call-frame-body rator rand* rand*.nfv ntcall)))
+			(make-non-tail-call-frame rand*.nfv live ntbody))))
+      (if dst-local
+	  (make-seq
+	    ntframe
+	    (%move-dst<-src dst-local AA-REGISTER))
+	ntframe)))
 
   (define (%make-call-frame-body rator rand* rand*.nfv ntcall)
     ;;Load  on the  stack  the stack  operands  of the  function  call.  These  stack
