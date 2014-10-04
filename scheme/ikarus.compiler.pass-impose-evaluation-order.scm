@@ -346,106 +346,111 @@
     (let ((underflow-handler  (car rand*))
 	  (kont-object        (cadr rand*))
 	  (receiver-func      (caddr rand*)))
-      ;;We know that these values are VAR  structs, but will they be allocated to CPU
-      ;;registers  or to  Scheme stack  locations?  Do  we have  to create  temporary
-      ;;locations and copy these values in them?
-      ;;
-      ;;We  know that:  when doing  an  Assembly MOVE,  if  one operand  is a  memory
-      ;;location the other must be a register,
-      ;;
       (assert (var? underflow-handler))
       (assert (var? kont-object))
       (assert (var? receiver-func))
+      (assert (fvar? (var-loc receiver-func)))
+      ;;Fine.  Here we know that  the operands to CALL-WITH-UNDERFLOW-HANDLER are VAR
+      ;;structs, and  that RECEIVER-FUNC is on  the Scheme stack as  stack operand to
+      ;;the call to %PRIMITIVE-CALL/CF.
+      ;;
+      ;;Will UNDERFLOW-HANDLER  and KONT-OBJECT be  allocated to CPU registers  or to
+      ;;Scheme stack  locations?  Do we have  to create temporary locations  and copy
+      ;;these values in them?
       (let ((tmp-underflow-handler  (make-unique-var 'tmp-underfow-handler))
 	    (tmp-kont-object        (make-unique-var 'tmp-kont-object))
 	    (tmp-receiver-func      (make-unique-var 'tmp-func)))
-	(%local-value-cons* tmp-underflow-handler
-			    tmp-kont-object
-			    tmp-receiver-func)
-	(multiple-forms-sequence
-	  (V tmp-underflow-handler underflow-handler)
-	  (V tmp-kont-object       kont-object)
-	  (V tmp-receiver-func     receiver-func)
-	  ;;Move IK_UNDERFLOW_HANDLER in its reserved slot the on the Scheme stack.
-	  (%move-dst<-src (mkfvar 1) tmp-underflow-handler)
-	  ;;Move the the reference to continuation object in its reserved slot on the
-	  ;;Scheme stack, as argument to RECEIVER-FUNC.
-	  (%move-dst<-src (mkfvar 2) tmp-kont-object)
-	  ;;When we arrive here the situation on the Scheme stack is:
-	  ;;
-	  ;;         high memory
-	  ;;   |                      |
-	  ;;   |----------------------|
-	  ;;   | ik_underflow_handler |
-	  ;;   |----------------------|                           --
-	  ;;     ... other frames ...                             .
-	  ;;   |----------------------|                           .
-	  ;;   |      local value     |                           . freezed
-	  ;;   |----------------------|                           . frames
-	  ;;   |      local value     |                           .
-	  ;;   |----------------------|                           .
-	  ;;   |     return address   | <- FPR = pcb->frame_base  .
-	  ;;   |----------------------|                           --
-	  ;;   | ik_underflow_handler |
-	  ;;   |----------------------|
-	  ;;   |         kont         | -> continuation object
-	  ;;   |----------------------|
-	  ;;             ...
-	  ;;   |----------------------|
-	  ;;   |      free word       | <- pcb->stack_base
-	  ;;   |----------------------|
-	  ;;   |                      |
-	  ;;          low memory
-	  ;;
-	  ;;Load the reference to closure object RECEIVER-FUNC in the CP-REGISTER.
-	  (%load-register-operand/closure-object-reference tmp-receiver-func)
-	  ;;Load  in  AA-REGISTER  the  encoded number  of  arguments,  counting  the
-	  ;;continuation object.
-	  (%load-register-operand/number-of-stack-operands 1)
-	  ;;Decrement the FPR so that it points to the underflow handler.
-	  (make-asm-instr 'int- fpr (make-constant wordsize))
-	  ;;When we arrive here the situation on the Scheme stack is:
-	  ;;
-	  ;;         high memory
-	  ;;   |                      |
-	  ;;   |----------------------|
-	  ;;   | ik_underflow_handler |
-	  ;;   |----------------------|                     --
-	  ;;     ... other frames ...                       .
-	  ;;   |----------------------|                     .
-	  ;;   |      local value     |                     . freezed
-	  ;;   |----------------------|                     . frames
-	  ;;   |      local value     |                     .
-	  ;;   |----------------------|                     .
-	  ;;   |     return address   | <- pcb->frame_base  .
-	  ;;   |----------------------|                     --
-	  ;;   | ik_underflow_handler | <- FPR
-	  ;;   |----------------------|
-	  ;;   |         kont         | -> continuation object
-	  ;;   |----------------------|
-	  ;;             ...
-	  ;;   |----------------------|
-	  ;;   |      free word       | <- pcb->stack_base
-	  ;;   |----------------------|
-	  ;;   |                      |
-	  ;;          low memory
-	  ;;
-	  ;;The following INDIRECT-JUMP  compiles to a single  "jmp" instruction that
-	  ;;jumps to  the machine code entry  point in the closure  referenced by the
-	  ;;CPR, which is RECEIVER-FUNC.  By doing  a "jmp", rather than a "call", we
-	  ;;avoid pushing a return address on the Scheme stack.
-	  ;;
-	  ;;Notice that  the stack  frame of RECEIVER-FUNC  starts with  the argument
-	  ;;KONT.   The IK_UNDERFLOW_HANDLER  we have  put  on the  stack does  *not*
-	  ;;belong to any stack frame.
-	  ;;
-	  ;;If  the  closure RECEIVER-FUNC  returns  without  calling a  continuation
-	  ;;escape function: it will return  to the underflow handler; such underflow
-	  ;;handler must pop  the continuation object from  "pcb->next_k" and process
-	  ;;it as explained in the documentation.
-	  ;;
-	  (make-asmcall 'indirect-jump
-	    (list AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER (mkfvar 1) (mkfvar 2)))))))
+	;; (%local-value-cons* tmp-underflow-handler
+	;; 		    tmp-kont-object
+	;; 		    tmp-receiver-func)
+	;; (multiple-forms-sequence
+	;;   (V tmp-underflow-handler underflow-handler)
+	;;   (V tmp-kont-object       kont-object)
+	;;   (V tmp-receiver-func     receiver-func)
+	(%assign-complex-rhs-to-local-lhs*
+	    (list tmp-underflow-handler tmp-kont-object tmp-receiver-func)
+	    (list     underflow-handler     kont-object     receiver-func)
+	  (multiple-forms-sequence
+	    ;;Move IK_UNDERFLOW_HANDLER in its reserved slot the on the Scheme stack.
+	    (%move-dst<-src (mkfvar 1) tmp-underflow-handler)
+	    ;;Move the the reference to continuation object in its reserved slot on the
+	    ;;Scheme stack, as argument to RECEIVER-FUNC.
+	    (%move-dst<-src (mkfvar 2) tmp-kont-object)
+	    ;;When we arrive here the situation on the Scheme stack is:
+	    ;;
+	    ;;         high memory
+	    ;;   |                      |
+	    ;;   |----------------------|
+	    ;;   | ik_underflow_handler |
+	    ;;   |----------------------|                           --
+	    ;;     ... other frames ...                             .
+	    ;;   |----------------------|                           .
+	    ;;   |      local value     |                           . freezed
+	    ;;   |----------------------|                           . frames
+	    ;;   |      local value     |                           .
+	    ;;   |----------------------|                           .
+	    ;;   |     return address   | <- FPR = pcb->frame_base  .
+	    ;;   |----------------------|                           --
+	    ;;   | ik_underflow_handler |
+	    ;;   |----------------------|
+	    ;;   |         kont         | -> continuation object
+	    ;;   |----------------------|
+	    ;;             ...
+	    ;;   |----------------------|
+	    ;;   |      free word       | <- pcb->stack_base
+	    ;;   |----------------------|
+	    ;;   |                      |
+	    ;;          low memory
+	    ;;
+	    ;;Load the reference to closure object RECEIVER-FUNC in the CP-REGISTER.
+	    (%load-register-operand/closure-object-reference tmp-receiver-func)
+	    ;;Load  in  AA-REGISTER  the  encoded number  of  arguments,  counting  the
+	    ;;continuation object.
+	    (%load-register-operand/number-of-stack-operands 1)
+	    ;;Decrement the FPR so that it points to the underflow handler.
+	    (make-asm-instr 'int- fpr (make-constant wordsize))
+	    ;;When we arrive here the situation on the Scheme stack is:
+	    ;;
+	    ;;         high memory
+	    ;;   |                      |
+	    ;;   |----------------------|
+	    ;;   | ik_underflow_handler |
+	    ;;   |----------------------|                     --
+	    ;;     ... other frames ...                       .
+	    ;;   |----------------------|                     .
+	    ;;   |      local value     |                     . freezed
+	    ;;   |----------------------|                     . frames
+	    ;;   |      local value     |                     .
+	    ;;   |----------------------|                     .
+	    ;;   |     return address   | <- pcb->frame_base  .
+	    ;;   |----------------------|                     --
+	    ;;   | ik_underflow_handler | <- FPR
+	    ;;   |----------------------|
+	    ;;   |         kont         | -> continuation object
+	    ;;   |----------------------|
+	    ;;             ...
+	    ;;   |----------------------|
+	    ;;   |      free word       | <- pcb->stack_base
+	    ;;   |----------------------|
+	    ;;   |                      |
+	    ;;          low memory
+	    ;;
+	    ;;The following INDIRECT-JUMP  compiles to a single  "jmp" instruction that
+	    ;;jumps to  the machine code entry  point in the closure  referenced by the
+	    ;;CPR, which is RECEIVER-FUNC.  By doing  a "jmp", rather than a "call", we
+	    ;;avoid pushing a return address on the Scheme stack.
+	    ;;
+	    ;;Notice that  the stack  frame of RECEIVER-FUNC  starts with  the argument
+	    ;;KONT.   The IK_UNDERFLOW_HANDLER  we have  put  on the  stack does  *not*
+	    ;;belong to any stack frame.
+	    ;;
+	    ;;If  the  closure RECEIVER-FUNC  returns  without  calling a  continuation
+	    ;;escape function: it will return  to the underflow handler; such underflow
+	    ;;handler must pop  the continuation object from  "pcb->next_k" and process
+	    ;;it as explained in the documentation.
+	    ;;
+	    (make-asmcall 'indirect-jump
+	      (list AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER (mkfvar 1) (mkfvar 2))))))))
 
   #| end of module: V-and-return |# )
 
