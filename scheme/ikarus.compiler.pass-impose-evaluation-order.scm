@@ -246,7 +246,9 @@
 	  (V-tail x))))
 
       ((bind lhs* rhs* e)
-       (%do-bind lhs* rhs* (V-and-return e)))
+       (%assign-complex-rhs-to-local-lhs*
+	   lhs* rhs*
+	 (V-and-return e)))
 
       ((seq e0 e1)
        (make-seq (E e0) (V-and-return e1)))
@@ -445,7 +447,7 @@
 (define (%load-register-operand/closure-object-reference closure-object-ref)
   (%move-dst<-src CP-REGISTER closure-object-ref))
 
-(define (%assign* lhs* rhs* tail-body)
+(define (%assign-complex-rhs-to-local-lhs* lhs* rhs* tail-body)
   ;;Non-tail recursive  function.  Given a list  of destination locations LHS*  and a
   ;;list of source expressions RHS*, build and return a struct instance representing:
   ;;
@@ -454,20 +456,8 @@
   ;;     ...
   ;;     ?tail-body)
   ;;
-  (if (pair? lhs*)
-      (begin
-	;; (assert (let ((lhs (car lhs*)))
-	;; 	  (or (and (symbol? lhs)
-	;; 		   (eq? lhs CP-REGISTER))
-	;; 	      (fvar? lhs))))
-	(make-seq
-	  (%move-dst<-src (car lhs*) (car rhs*))
-	  (%assign*       (cdr lhs*) (cdr rhs*) tail-body)))
-    tail-body))
-
-(define (%do-bind lhs* rhs* tail-body)
-  ;;Non-tail recursive function.   This function is like %ASSIGN*,  but, in addition:
-  ;;it registers the LHS* as local variables and filters the RHS* through V.
+  ;;The  LHS* are  local  variables:  they must  be  registered  in the  LOCAL-VALUES
+  ;;parameter.  The RHS* are complex: they must be filtered through V.
   ;;
   (if (pair? lhs*)
       (begin
@@ -475,8 +465,9 @@
 	(make-seq
 	  ;;Generate assembly instructions  to compute a value from  "(car rhs*)" and
 	  ;;store the result in destination "(car lhs*)".
-	  (V        (car lhs*) (car rhs*))
-	  (%do-bind (cdr lhs*) (cdr rhs*)
+	  (V (car lhs*) (car rhs*))
+	  (%assign-complex-rhs-to-local-lhs*
+	      (cdr lhs*) (cdr rhs*)
 	    tail-body)))
     tail-body))
 
@@ -502,7 +493,7 @@
     ;;
     (struct-case x
       ((bind lhs* rhs* body)
-       (%do-bind
+       (%assign-complex-rhs-to-local-lhs*
 	   lhs*
 	   rhs*
 	 (S body kont)))
@@ -525,7 +516,7 @@
 	     ((or (funcall? x) (asmcall?  x) (jmpcall?     x)
 		  (forcall? x) (shortcut? x) (conditional? x))
 	      (let ((t (make-unique-var 'tmp)))
-		(%do-bind
+		(%assign-complex-rhs-to-local-lhs*
 		    (list t)
 		    (list x)
 		  (kont t))))
@@ -551,14 +542,20 @@
        (cond ((var-loc x)
 	      ;;X is an argument to function call  already stored on the stack in the
 	      ;;FVAR stored in the LOC field.
+	      ;;
+	      ;;We may  rightfully need to  move it into  another place: this  is not
+	      ;;necessarily a useless move from VAR to VAR.
 	      => (lambda (loc)
 		   ;;(assert (fvar? loc))
 		   (%move-dst<-src dst loc)))
 	     (else
+	      ;;This may be a useless move from VAR to VAR.
 	      (%move-dst<-src dst x))))
 
       ((bind lhs* rhs* body)
-       (%do-bind lhs* rhs* (V dst body)))
+       (%assign-complex-rhs-to-local-lhs*
+	   lhs* rhs*
+	 (V dst body)))
 
       ((seq e0 e1)
        (make-seq (E e0) (V dst e1)))
@@ -822,7 +819,9 @@
        (make-conditional (P e0) (E e1) (E e2)))
 
       ((bind lhs* rhs* e)
-       (%do-bind lhs* rhs* (E e)))
+       (%assign-complex-rhs-to-local-lhs*
+	   lhs* rhs*
+	 (E e)))
 
       ((asmcall op rand*)
        (E-asmcall x op rand*))
@@ -935,7 +934,9 @@
        (make-conditional (P e0) (P e1) (P e2)))
 
       ((bind lhs* rhs* e)
-       (%do-bind lhs* rhs* (P e)))
+       (%assign-complex-rhs-to-local-lhs*
+	   lhs* rhs*
+	 (P e)))
 
       ((asmcall op rand*)
        (P-asmcall op rand*))
@@ -1165,8 +1166,8 @@
     ;;
     ;;* If RATOR is a "complex" struct that needs temporary locations allocation (CPU
     ;;  registers  and stack locals) to  produce the result: we  allocate a temporary
-    ;;  location  here, RATOR.VAR,  and use  %DO-BIND to filter  RATOR through  V and
-    ;;  store the result in it.
+    ;;  location here, RATOR.VAR, and use %ASSIGN-COMPLEX-RHS-TO-LOCAL-LHS* to filter
+    ;;  RATOR through V and store the result in it.
     ;;
     ;;* If  the RATOR is a  "simple" struct, we do  not need to allocate  a temporary
     ;;  location: we  just load the value in the  CP-REGISTER.  Simple operators are:
@@ -1189,12 +1190,12 @@
 	   (already-simple? (eq? rator.simple rator)))
       ;;If  there  is the  need:  compute  the  reference  to closure  object  before
       ;;overwriting the stack locations with the new stack operands.
-      (%do-bind
+      (%assign-complex-rhs-to-local-lhs*
 	  (if already-simple? '() (list rator.simple))
 	  (if already-simple? '() (list rator))
 	;;Put the stack operands  on the stack in the correct  positions for the tail
 	;;call.
-	(%assign*
+	(%assign-simple-rhs-to-non-local-lhs*
 	    rand*.dst
 	    rand*.src
 	  (multiple-forms-sequence
@@ -1225,6 +1226,33 @@
 	(cons (mkfvar i)
 	      (%one-fvar-for-each-stack-operand (fxadd1 i) (cdr rand*)))
       '()))
+
+  (define (%assign-simple-rhs-to-non-local-lhs* lhs* rhs* tail-body)
+    ;;Non-tail recursive function.  Given a list  of destination locations LHS* and a
+    ;;list  of  source   expressions  RHS*,  build  and  return   a  struct  instance
+    ;;representing:
+    ;;
+    ;;   (seq
+    ;;     (asm-instr move ?lhs ?rhs)
+    ;;     ...
+    ;;     ?tail-body)
+    ;;
+    ;;The LHS*  are not local  variables: they  do not need  to be registered  in the
+    ;;LOCAL-VALUES parameter.  The  RHS* are simple: they do not  need to be filtered
+    ;;through V.
+    ;;
+    (if (pair? lhs*)
+	(begin
+	  ;; (assert (let ((lhs (car lhs*)))
+	  ;; 	  (or (and (symbol? lhs)
+	  ;; 		   (eq? lhs CP-REGISTER))
+	  ;; 	      (fvar? lhs))))
+	  (make-seq
+	    (%move-dst<-src (car lhs*) (car rhs*))
+	    (%assign-simple-rhs-to-non-local-lhs*
+		(cdr lhs*) (cdr rhs*)
+	      tail-body)))
+      tail-body))
 
   #| end of module: %HANDLE-TAIL-CALL |# )
 
@@ -1373,8 +1401,9 @@
       ;;
       ;;* If  RATOR is a "complex"  struct that needs temporary  locations allocation
       ;;   (CPU registers  and stack  locals) to  produce the  result: we  allocate a
-      ;;   temporary location  here,  RATOR.VAR,  and use  %DO-BIND  to filter  RATOR
-      ;;  through V and store the result in it.
+      ;;       temporary       location      here,      RATOR.VAR,       and      use
+      ;;  %ASSIGN-COMPLEX-RHS-TO-LOCAL-LHS* to  filter RATOR through V  and store the
+      ;;  result in it.
       ;;
       ;;* If the RATOR  is a "simple" struct, we do not need  to allocate a temporary
       ;;  location: we just load the value in the CP-REGISTER.  Simple operators are:
@@ -1387,7 +1416,7 @@
 			    rator
 			  (make-unique-var 'tmp)))
 	     (simple?   (eq? rator.var rator)))
-	(%do-bind
+	(%assign-complex-rhs-to-local-lhs*
 	    (if simple? '() (list rator.var))
 	    (if simple? '() (list rator))
 	  ;;Load in the  actual CPU registers the register operand  values from their
@@ -1438,6 +1467,6 @@
 ;; eval: (put 'S			'scheme-indent-function 1)
 ;; eval: (put 'S*			'scheme-indent-function 1)
 ;; eval: (put '%do-operands-bind*	'scheme-indent-function 2)
-;; eval: (put '%do-bind			'scheme-indent-function 2)
-;; eval: (put '%assign*			'scheme-indent-function 2)
+;; eval: (put '%assign-simple-rhs-to-non-local-lhs*	'scheme-indent-function 2)
+;; eval: (put '%assign-complex-rhs-to-local-lhs*	'scheme-indent-function 2)
 ;; End:
