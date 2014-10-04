@@ -360,13 +360,6 @@
       (let ((tmp-underflow-handler  (make-unique-var 'tmp-underfow-handler))
 	    (tmp-kont-object        (make-unique-var 'tmp-kont-object))
 	    (tmp-receiver-func      (make-unique-var 'tmp-func)))
-	;; (%local-value-cons* tmp-underflow-handler
-	;; 		    tmp-kont-object
-	;; 		    tmp-receiver-func)
-	;; (multiple-forms-sequence
-	;;   (V tmp-underflow-handler underflow-handler)
-	;;   (V tmp-kont-object       kont-object)
-	;;   (V tmp-receiver-func     receiver-func)
 	(%assign-complex-rhs-to-local-lhs*
 	    (list tmp-underflow-handler tmp-kont-object tmp-receiver-func)
 	    (list     underflow-handler     kont-object     receiver-func)
@@ -403,7 +396,7 @@
 	    ;;          low memory
 	    ;;
 	    ;;Load the reference to closure object RECEIVER-FUNC in the CP-REGISTER.
-	    (%load-register-operand/closure-object-reference tmp-receiver-func)
+	    (%load-register-operand/closure-object-reference #;(var-loc receiver-func) tmp-receiver-func)
 	    ;;Load  in  AA-REGISTER  the  encoded number  of  arguments,  counting  the
 	    ;;continuation object.
 	    (%load-register-operand/number-of-stack-operands 1)
