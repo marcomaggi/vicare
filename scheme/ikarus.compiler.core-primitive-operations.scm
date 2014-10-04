@@ -5342,15 +5342,14 @@
    ;;
    ;;It goes like this:
    ;;
-   ;;1..Freeze the used portion of the current Scheme stack segment, as
-   ;;   described by the PCB  structure, into a new continuation object
-   ;;   KONT.
+   ;;1..Freeze the used portion of the  current Scheme stack segment, as described by
+   ;;   the PCB structure, into a new continuation object KONT-OBJ.
    ;;
-   ;;2..Push the  new continuation object  to the PCB's stack  of "next
-   ;;   process continuations".
+   ;;2.  Push  the new  continuation  object  to the  PCB's  stack  of "next  process
+   ;;   continuations".
    ;;
-   ;;3..Apply the closure object FUNC to  the object KONT.  This step is
-   ;;   actually performed by CALL-WITH-UNDERFLOW-HANDLER.
+   ;;3. Apply the closure object FUNC to  the object KONT-OBJ.  This step is actually
+   ;;   performed by CALL-WITH-UNDERFLOW-HANDLER.
    ;;
    ((V func)
     ;;Here we perform the allocation using ALLOC-NO-HOOKS, which does not execute the
@@ -5359,7 +5358,7 @@
     ;;scenario leaving  the FPR at  base and so causing  the generation of  a corrupt
     ;;continuation object (with  size 0 and the underflow handler  as return point of
     ;;the topmost stack frame).
-    (with-tmp ((kont (asm 'alloc-no-hooks (K continuation-size) (K vector-tag))))
+    (with-tmp ((kont-obj (asm 'alloc-no-hooks (K continuation-size) (K vector-tag))))
       ;;BASE references the underflow handler:
       ;;
       ;;        high memory
@@ -5375,17 +5374,17 @@
 			    (K (- wordsize)))))
 	(with-tmp ((underflow-handler (asm 'mref base (K 0))))
 	  ;;Store the continuation tag in the first word.
-	  (asm 'mset kont (K off-continuation-tag)  (K continuation-tag))
+	  (asm 'mset kont-obj (K off-continuation-tag)  (K continuation-tag))
 	  ;;Set the  current Frame  Pointer Register  as address to  go back  to when
 	  ;;resuming the continuation.
-	  (asm 'mset kont (K off-continuation-top)  fpr)
+	  (asm 'mset kont-obj (K off-continuation-top)  fpr)
 	  ;;Set the number of bytes representing  the total size of the freezed stack
 	  ;;frames.
-	  (asm 'mset kont (K off-continuation-size) (asm 'int- base fpr))
+	  (asm 'mset kont-obj (K off-continuation-size) (asm 'int- base fpr))
 	  ;;Prepend the new  continuation object to the linked list  of "next process
 	  ;;continuations" in the PCB.
-	  (asm 'mset kont (K off-continuation-next) (asm 'mref pcr (K pcb-next-continuation)))
-	  (asm 'mset pcr  (K pcb-next-continuation) kont)
+	  (asm 'mset kont-obj (K off-continuation-next) (asm 'mref pcr (K pcb-next-continuation)))
+	  (asm 'mset pcr  (K pcb-next-continuation) kont-obj)
 	  ;;The machine word containing "return address 0" (the one referenced by the
 	  ;;FPR) is the  new frame base for subsequent code  execution; store the FPR
 	  ;;in the PCB as frame base.
@@ -5422,10 +5421,12 @@
 	  ;;
 	  ;;AA-REGISTER still contains the encoded  number of arguments, counting the
 	  ;;single argument FUNC to %PRIMITIVE-CALL/CF; the reference to continuation
-	  ;;object  KONT   is  in   some  CPU  register;   the  raw   memory  pointer
+	  ;;object  KONT-OBJ  is  in  some  CPU  register;  the  raw  memory  pointer
 	  ;;UNDERFLOW-HANDLER is in some CPU register.
 	  ;;
-	  (asm 'call-with-underflow-handler underflow-handler (V-simple-operand func) kont)))))
+	  ;;NOTE Here  we know  that UNDERFLOW-HANDLER and  KONT-OBJ are  already VAR
+	  ;;structs.
+	  (asm 'call-with-underflow-handler underflow-handler kont-obj (V-simple-operand func))))))
    ((E . args)
     (interrupt))
    ((P . args)

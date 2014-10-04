@@ -279,7 +279,7 @@
       (lambda (x)
 	(make-seq
 	  (%move-dst<-src AA-REGISTER x)
-	  (make-asmcall 'return (list AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER))))))
+	  (asm 'return AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)))))
 
   (define (V-call-with-underflow-handler op rand*)
     ;;This  high-level  Assembly instruction  is  used  only  by the  core  primitive
@@ -345,19 +345,21 @@
     (let ((t0			(make-unique-var 'tmp-underfow-handler))
 	  (t1			(make-unique-var 'tmp-kont-object))
 	  (t2			(make-unique-var 'tmp-func))
-	  (underflow-handler	(car rand*))
-	  (func		(cadr rand*))
-	  (kont-object	(caddr rand*)))
+	  (underflow-handler-address	(car rand*))
+	  (kont-object			(cadr rand*))
+	  (receiver-func		(caddr rand*)))
+      (assert (var? underflow-handler-address))
+      (assert (var? kont-object))
       (%local-value-cons* t0 t1 t2)
       (multiple-forms-sequence
 	;;Copy the arguments in CPU registers.
-	(V t0 underflow-handler)
+	(V t0 underflow-handler-address)
 	(V t1 kont-object)
-	(V t2 func)
+	(V t2 receiver-func)
 	;;Move IK_UNDERFLOW_HANDLER in its reserved slot the on the Scheme stack.
 	(%move-dst<-src (mkfvar 1) t0)
 	;;Move the the  reference to continuation object in its  reserved slot on the
-	;;Scheme stack, as argument to FUNC.
+	;;Scheme stack, as argument to RECEIVER-FUNC.
 	(%move-dst<-src (mkfvar 2) t1)
 	;;When we arrive here the situation on the Scheme stack is:
 	;;
@@ -385,7 +387,7 @@
 	;;   |                      |
 	;;          low memory
 	;;
-	;;Load the reference to closure object FUNC in the CPR.
+	;;Load the reference to closure object RECEIVER-FUNC in the CPR.
 	(%load-register-operand/closure-object-reference t2)
 	;;Load  in  AA-REGISTER  the  encoded   number  of  arguments,  counting  the
 	;;continuation object.
@@ -420,17 +422,17 @@
 	;;
 	;;The following  INDIRECT-JUMP compiles  to a  single "jmp"  instruction that
 	;;jumps to the machine code entry point in the closure referenced by the CPR,
-	;;which is FUNC.  By doing a "jmp",  rather than a "call", we avoid pushing a
-	;;return address on the Scheme stack.
+	;;which is RECEIVER-FUNC.   By doing a "jmp", rather than  a "call", we avoid
+	;;pushing a return address on the Scheme stack.
 	;;
-	;;Notice that  the stack frame  of FUNC starts  with the argument  KONT.  The
-	;;IK_UNDERFLOW_HANDLER we  have put  on the  stack does  *not* belong  to any
+	;;Notice that the stack frame of RECEIVER-FUNC starts with the argument KONT.
+	;;The IK_UNDERFLOW_HANDLER we have put on  the stack does *not* belong to any
 	;;stack frame.
 	;;
-	;;If the closure FUNC returns without calling a continuation escape function:
-	;;it will  return to the underflow  handler; such underflow handler  must pop
-	;;the continuation object  from "pcb->next_k" and process it  as explained in
-	;;the documentation.
+	;;If the closure RECEIVER-FUNC returns  without calling a continuation escape
+	;;function: it will  return to the underflow handler;  such underflow handler
+	;;must  pop the  continuation object  from  "pcb->next_k" and  process it  as
+	;;explained in the documentation.
 	;;
 	(make-asmcall 'indirect-jump
 	  (list AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER (mkfvar 1) (mkfvar 2))))))
