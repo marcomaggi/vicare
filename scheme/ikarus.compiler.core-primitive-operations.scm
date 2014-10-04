@@ -22,7 +22,7 @@
 (module CORE-PRIMITIVE-OPERATION-DEFINITIONS
   ()
   (import CODE-GENERATION-FOR-CORE-PRIMITIVE-OPERATION-CALLS)
-  (module (pcr fpr)
+  (module (PC-REGISTER FP-REGISTER)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
 
 
@@ -365,7 +365,7 @@
  (define (dirty-vector-set address)
    (define shift-bits 2)
    (asm 'mset32
-	(asm 'mref pcr (K pcb-dirty-vector))
+	(asm 'mref PC-REGISTER (K pcb-dirty-vector))
 	(asm 'sll (asm 'srl address (K pageshift)) (K shift-bits))
 	(K DIRTY-WORD)))
 
@@ -576,7 +576,7 @@
    ;;The base RTD  of all the struct  types is stored in  the C language
    ;;structure PCB.
    ;;
-   ((V) (asm 'mref pcr (K pcb-base-rtd)))
+   ((V) (asm 'mref PC-REGISTER (K pcb-base-rtd)))
    ((P) (K #t))
    ((E) (nop)))
 
@@ -722,7 +722,7 @@
    ;;Return  the  value  of  the  field "arg_list"  in  the  C  language
    ;;structure PCB.
    ;;
-   ((V) (asm 'mref pcr (K pcb-arg-list)))
+   ((V) (asm 'mref PC-REGISTER (K pcb-arg-list)))
    ((P) (K #t))
    ((E) (nop)))
 
@@ -730,8 +730,8 @@
    ;;Return  the value  of the  field  "collect_key" in  the C  language
    ;;structure PCB.
    ;;
-   ((V)   (asm 'mref pcr (K pcb-collect-key)))
-   ((E x) (asm 'mset pcr (K pcb-collect-key) (V-simple-operand x))))
+   ((V)   (asm 'mref PC-REGISTER (K pcb-collect-key)))
+   ((E x) (asm 'mset PC-REGISTER (K pcb-collect-key) (V-simple-operand x))))
 
  (define-core-primitive-operation $memq safe
    ((P x ls)
@@ -5165,7 +5165,7 @@
 ;;
 ;;These  primitive operations  make  use of  some fields  of  the PCB  C
 ;;language data  structure; a pointer to  the PCB is meant  to be always
-;;stored in the process control register (PCR).
+;;stored in the process control register (PC-REGISTER).
 ;;
 (section
 
@@ -5174,13 +5174,13 @@
    ;;struct PCB is not zero.
    ;;
    ((P)
-    (asm '!= (asm 'mref pcr (K pcb-interrupted)) (K 0))))
+    (asm '!= (asm 'mref PC-REGISTER (K pcb-interrupted)) (K 0))))
 
  (define-core-primitive-operation $unset-interrupted! unsafe
    ;;Set to zero the field "interrupted" of the C language struct PCB.
    ;;
    ((E)
-    (asm 'mset pcr (K pcb-interrupted) (K 0))))
+    (asm 'mset PC-REGISTER (K pcb-interrupted) (K 0))))
 
  (define-core-primitive-operation $do-event safe
    ;;Set to 1 the field "engine_counter" of the C language struct PCB.
@@ -5188,7 +5188,7 @@
    ((E)
     (begin
       (interrupt)
-      (asm 'incr/zero? pcr (K pcb-engine-counter)
+      (asm 'incr/zero? PC-REGISTER (K pcb-engine-counter)
 	   (K (fxsll 1 fx-shift))))))
 
  (define-core-primitive-operation $swap-engine-counter! unsafe
@@ -5200,8 +5200,8 @@
     ;;Ghuloum)
     ;;
     (with-tmp ((x0 (V-simple-operand x)))
-      (with-tmp ((t (asm 'mref pcr (K pcb-engine-counter))))
-	(asm 'mset pcr (K pcb-engine-counter) x0)
+      (with-tmp ((t (asm 'mref PC-REGISTER (K pcb-engine-counter))))
+	(asm 'mset PC-REGISTER (K pcb-engine-counter) x0)
 	t))))
 
  /section)
@@ -5249,23 +5249,23 @@
 (section
 
  (define-core-primitive-operation $fp-at-base unsafe
-   ;;Evaluate to true if the Frame Pointer Register (FPR) references the
-   ;;highest machine  word in the  Scheme stack segment as  described by
-   ;;the PCB structure, the highest machine  word is the one holding the
-   ;;address of the assembly label "ik_underflow_handler".
+   ;;Evaluate  to true  if the  Frame Pointer  Register (FP-REGISTER)  references the
+   ;;highest  machine word  in  the Scheme  stack  segment as  described  by the  PCB
+   ;;structure,  the highest  machine word  is  the one  holding the  address of  the
+   ;;assembly label "ik_underflow_handler".
    ;;
    ;;          high memory
    ;;   |                      | <-- pcb->frame_base
    ;;   |----------------------|
-   ;;   | ik_underflow_handler | <-- FPR
+   ;;   | ik_underflow_handler | <-- FP-REGISTER
    ;;   |----------------------|
    ;;   |                      |
    ;;          low memory
    ;;
-   ;;The Process Control  Register (PCR) contains the  memory address of
-   ;;the PCB structure.
+   ;;The Process  Control Register (PC-REGISTER)  contains the memory address  of the
+   ;;PCB structure.
    ;;
-   ;;FPR is at the frame base:
+   ;;FP-REGISTER is at the frame base:
    ;;
    ;;1..Right after  a new Scheme  stack segment has been  allocated and
    ;;   initialised.
@@ -5274,9 +5274,9 @@
    ;;   call whose stack frame is the last on the stack segment.
    ;;
    ((P)
-    (asm '= (asm 'int+ (asm 'mref pcr (K pcb-frame-base))
+    (asm '= (asm 'int+ (asm 'mref PC-REGISTER (K pcb-frame-base))
 		 (K (- wordsize)))
-	 fpr)))
+	 FP-REGISTER)))
 
  (define-core-primitive-operation $current-frame unsafe
    ;;Extract from  the PCB  structure a reference  to the  "next process
@@ -5284,26 +5284,32 @@
    ;;value is "pcb->next_k".
    ;;
    ((V)
-    (asm 'mref pcr (K pcb-next-continuation))))
+    (asm 'mref PC-REGISTER (K pcb-next-continuation))))
 
  (define-core-primitive-operation $seal-frame-and-call unsafe
-   ;;This primitive  operation is used  to implement CALL/CC  (call with
-   ;;current continuation)  and CALL/CF (call with  current frame), file
-   ;;"ikarus.control.sls".  Let's  super simplify  and comment  the code
-   ;;starting with the call to  %PRIMITIVE-CALL/CF which is the heart of
-   ;;both CALL/CC and CALL/CF.
+   ;;This  primitive  operation is  used  to  implement  CALL/CC (call  with  current
+   ;;continuation) and CALL/CF (call  with current frame), file "ikarus.control.sls".
+   ;;Let's  super  simplify   and  comment  the  code  starting  with   the  call  to
+   ;;%PRIMITIVE-CALL/CF which is the heart of  both CALL/CC and CALL/CF; the function
+   ;;%PRIMITIVE-CALL/CF contains the code:
+   ;;
+   ;;   ($seal-frame-and-call receiver-func)
+   ;;
+   ;;where RECEIVER-FUNC  is a  local binding  evaluating to  a closure  object: this
+   ;;closure accepts a  single argument being the continuation  object describing the
+   ;;freezed frames.
    ;;
    ;;Remember that:
    ;;
-   ;;* FPR  stands for  Frame Pointer Register;
+   ;;* FPR stands for Frame Pointer Register.
    ;;
-   ;;* PCR  stands for  Process Control Register  and it  references the
-   ;;  structure PCB defined at the C language level;
+   ;;* PC-REGISTER  stands for Process Control  Register and it references  the structure PCB
+   ;;  defined at the C language level.
    ;;
    ;;* AA-REGISTER stands for Argument Count Register.
    ;;
-   ;;Upon entering  this primitive operation  it has been  determined by
-   ;;%PRIMITIVE-CALL/CF that the scenario on the Sceme stack is:
+   ;;Upon   entering   this  primitive   operation   it   has  been   determined   by
+   ;;%PRIMITIVE-CALL/CF that the scenario on the Scheme stack is:
    ;;
    ;;         high memory
    ;;   |                      | <-- pcb->frame_base
@@ -5324,7 +5330,7 @@
    ;;   |----------------------|          .
    ;;   |   return address 0   | <-- FPR  .
    ;;   |----------------------|          --
-   ;;   |         func         | --> closure object
+   ;;   |     receiver-func    | --> closure object
    ;;   |----------------------|
    ;;             ...
    ;;   |----------------------|
@@ -5333,25 +5339,26 @@
    ;;   |                      |
    ;;          low memory
    ;;
-   ;;where FUNC  (the argument  to this primitive  operation) is  a data
-   ;;structure  representing the  memory  location on  the Scheme  stack
-   ;;containing a reference to a closure object.
+   ;;where RECEIVER-FUNC (the  argument to this primitive operation) is  a VAR struct
+   ;;representing the memory location on the Scheme stack containing a reference to a
+   ;;closure object.
    ;;
-   ;;The  value  "return  address  0"   leads  back  to  the  caller  of
-   ;;%PRIMITIVE-CALL/CF.
+   ;;The value "return address 0" leads back to the caller of %PRIMITIVE-CALL/CF.
    ;;
    ;;It goes like this:
    ;;
-   ;;1..Freeze the used portion of the  current Scheme stack segment, as described by
-   ;;   the PCB structure, into a new continuation object KONT-OBJ.
+   ;;1. We freeze the used portion of  the current Scheme stack segment, as described
+   ;;   by the PCB structure, into a new continuation object KONT-OBJ.
    ;;
-   ;;2.  Push  the new  continuation  object  to the  PCB's  stack  of "next  process
+   ;;2. We  push the  new continuation  object to  the PCB's  stack of  "next process
    ;;   continuations".
    ;;
-   ;;3. Apply the closure object FUNC to  the object KONT-OBJ.  This step is actually
-   ;;   performed by CALL-WITH-UNDERFLOW-HANDLER.
+   ;;3.  We apply the closure object RECEIVER-FUNC to the object KONT-OBJ.  This step
+   ;;   is  actually performed by CALL-WITH-UNDERFLOW-HANDLER,  a high-level Assembly
+   ;;   instruction.
    ;;
-   ((V func)
+   ((V receiver-func)
+    (assert (var? receiver-func))
     ;;Here we perform the allocation using ALLOC-NO-HOOKS, which does not execute the
     ;;post-GC hooks.  When  we come here we  have already determined that  the FPR is
     ;;not at  the base  of the  Scheme stack;  running the  post-GC could  change the
@@ -5370,25 +5377,29 @@
       ;;       low memory
       ;;
       (with-tmp ((base (asm 'int+
-			    (asm 'mref pcr (K pcb-frame-base))
+			    (asm 'mref PC-REGISTER (K pcb-frame-base))
 			    (K (- wordsize)))))
 	(with-tmp ((underflow-handler (asm 'mref base (K 0))))
 	  ;;Store the continuation tag in the first word.
 	  (asm 'mset kont-obj (K off-continuation-tag)  (K continuation-tag))
 	  ;;Set the  current Frame  Pointer Register  as address to  go back  to when
 	  ;;resuming the continuation.
-	  (asm 'mset kont-obj (K off-continuation-top)  fpr)
+	  (asm 'mset kont-obj (K off-continuation-top)  FP-REGISTER)
 	  ;;Set the number of bytes representing  the total size of the freezed stack
 	  ;;frames.
-	  (asm 'mset kont-obj (K off-continuation-size) (asm 'int- base fpr))
+	  (asm 'mset kont-obj (K off-continuation-size) (asm 'int- base FP-REGISTER))
 	  ;;Prepend the new  continuation object to the linked list  of "next process
 	  ;;continuations" in the PCB.
-	  (asm 'mset kont-obj (K off-continuation-next) (asm 'mref pcr (K pcb-next-continuation)))
-	  (asm 'mset pcr  (K pcb-next-continuation) kont-obj)
+	  ;;
+	  ;;   s_kont->next  = pcb->next_k;
+	  ;;   pcb->next_k   = s_kont->next;
+	  ;;
+	  (asm 'mset kont-obj (K off-continuation-next) (asm 'mref PC-REGISTER (K pcb-next-continuation)))
+	  (asm 'mset PC-REGISTER (K pcb-next-continuation) kont-obj)
 	  ;;The machine word containing "return address 0" (the one referenced by the
 	  ;;FPR) is the  new frame base for subsequent code  execution; store the FPR
 	  ;;in the PCB as frame base.
-	  (asm 'mset pcr (K pcb-frame-base) fpr)
+	  (asm 'mset PC-REGISTER (K pcb-frame-base) FP-REGISTER)
 	  ;;When arriving here the situation of the Scheme stack is:
 	  ;;
 	  ;;         high memory
@@ -5410,7 +5421,7 @@
 	  ;;   |----------------------|                           .
 	  ;;   |   return address 0   | <- FPR = pcb->frame_base  .
 	  ;;   |----------------------|                           --
-	  ;;   |         func         | -> closure object
+	  ;;   |     receiver-func    | -> closure object
 	  ;;   |----------------------|
 	  ;;             ...
 	  ;;   |----------------------|
@@ -5420,13 +5431,13 @@
 	  ;;          low memory
 	  ;;
 	  ;;AA-REGISTER still contains the encoded  number of arguments, counting the
-	  ;;single argument FUNC to %PRIMITIVE-CALL/CF; the reference to continuation
-	  ;;object  KONT-OBJ  is  in  some  CPU  register;  the  raw  memory  pointer
-	  ;;UNDERFLOW-HANDLER is in some CPU register.
+	  ;;single  argument RECEIVER-FUNC  to %PRIMITIVE-CALL/CF;  the reference  to
+	  ;;continuation  object KONT-OBJ  is in  some VAR  location; the  raw memory
+	  ;;pointer UNDERFLOW-HANDLER is in some VAR register.
 	  ;;
 	  ;;NOTE Here  we know  that UNDERFLOW-HANDLER and  KONT-OBJ are  already VAR
 	  ;;structs.
-	  (asm 'call-with-underflow-handler underflow-handler kont-obj (V-simple-operand func))))))
+	  (asm 'call-with-underflow-handler underflow-handler kont-obj (V-simple-operand receiver-func))))))
    ((E . args)
     (interrupt))
    ((P . args)
@@ -5513,7 +5524,7 @@
    ;;
    ((E)
     (make-shortcut
-	(make-conditional (asm 'u< fpr (asm 'mref pcr (K pcb-frame-redline)))
+	(make-conditional (asm 'u< FP-REGISTER (asm 'mref PC-REGISTER (K pcb-frame-redline)))
 	    (asm 'interrupt)
 	  (nop))
       (make-forcall "ik_stack_overflow" '()))))

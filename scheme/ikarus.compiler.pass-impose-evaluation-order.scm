@@ -316,7 +316,7 @@
     ;;   |----------------------|                           .
     ;;   |     return address   | <- FPR = pcb->frame_base  .
     ;;   |----------------------|                           --
-    ;;   |         func         | -> closure object
+    ;;   |     receiver-func    | -> closure object
     ;;   |----------------------|
     ;;             ...
     ;;   |----------------------|
@@ -326,21 +326,22 @@
     ;;          low memory
     ;;
     ;;AA-REGISTER  contains the  encoded  number of  arguments,  counting the  single
-    ;;argument  FUNC  to  %PRIMITIVE-CALL/CF.   The reference  to  the  just  created
-    ;;continuation  object  is  in  some   CPU  register.   The  raw  memory  pointer
+    ;;argument  RECEIVER-FUNC  to  %PRIMITIVE-CALL/CF.   The reference  to  the  just
+    ;;created continuation  object is in some  CPU register.  The raw  memory pointer
     ;;UNDERFLOW-HANDLER is in some CPU register.
     ;;
     ;;There are 3 operands in RAND*:
     ;;
-    ;;* A representation of the CPU  register containing the underflow handler: a raw
+    ;;* A  VAR struct representing  a location holding  the underflow handler:  a raw
     ;;  memory address equal to the assembly label "ik_underflow_handler".
     ;;
-    ;;* A representation of the stack location containing FUNC.
+    ;;* A VAR struct representing a  location holding a reference to the continuation
+    ;;  object describing  the freezed frames.  Such continuation object  is also the
+    ;;  "next process continuation" in the PCB, that is: it is the value of the field
+    ;;  "pcb->next_k".
     ;;
-    ;;*  A  representation  of  the  CPU  register  containing  a  reference  to  the
-    ;;  continuation object referencing the freezed frames.  Such continuation object
-    ;;  is also the "next process continuation" in  the PCB, that is: it is the value
-    ;;  of the field "pcb->next_k".
+    ;;* A  struct representing  recordised code  that will  evaluate to  the receiver
+    ;;  function: the function accepting the continuation object as argument.
     ;;
     (let ((t0			(make-unique-var 'tmp-underfow-handler))
 	  (t1			(make-unique-var 'tmp-kont-object))
