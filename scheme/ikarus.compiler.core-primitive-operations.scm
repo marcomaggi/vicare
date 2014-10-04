@@ -5237,14 +5237,14 @@
 ;;   |                      |
 ;;          low memory
 ;;
-;;and remember that "pcb->frame_base" references  a word that is one-off
-;;the end of the stack segment; so the first word in the stack is:
+;;and remember  that "pcb->frame_base" references a  word that is one-off  the end of
+;;the stack segment; so the first word in the stack is:
 ;;
 ;;   pcb->frame_base - wordsize
 ;;
-;;"ik_underflow_handler"  is  an  assembly  label defined  in  the  file
-;;"ikarus-enter.S", to which  the execution flow returns  after the last
-;;Scheme code execution using this stack segment completes.
+;;"ik_underflow_handler" is an  assembly label defined in  the file "ikarus-enter.S",
+;;to which the execution flow returns after the last Scheme code execution using this
+;;stack segment completes.
 ;;
 (section
 
@@ -5267,24 +5267,22 @@
    ;;
    ;;FP-REGISTER is at the frame base:
    ;;
-   ;;1..Right after  a new Scheme  stack segment has been  allocated and
-   ;;   initialised.
+   ;;1. Right after a new Scheme stack segment has been allocated and initialised.
    ;;
-   ;;2..After the  execution flow  has returned  from a  Scheme function
-   ;;   call whose stack frame is the last on the stack segment.
+   ;;2. After the execution flow has returned from a Scheme function call whose stack
+   ;;   frame is the last on the stack segment.
    ;;
    ((P)
-    (asm '= (asm 'int+ (asm 'mref PC-REGISTER (K pcb-frame-base))
-		 (K (- wordsize)))
+    (asm '= (asm 'int+ (asm 'mref PC-REGISTER (KN pcb-frame-base))
+		 (KN (- wordsize)))
 	 FP-REGISTER)))
 
  (define-core-primitive-operation $current-frame unsafe
-   ;;Extract from  the PCB  structure a reference  to the  "next process
-   ;;continuation" and  return it.   In C  language terms:  the returned
-   ;;value is "pcb->next_k".
+   ;;Extract from  the PCB structure a  reference to the "next  process continuation"
+   ;;and return it.  In C language terms: the returned value is "pcb->next_k".
    ;;
    ((V)
-    (asm 'mref PC-REGISTER (K pcb-next-continuation))))
+    (asm 'mref PC-REGISTER (KN pcb-next-continuation))))
 
  (define-core-primitive-operation $seal-frame-and-call unsafe
    ;;This  primitive  operation is  used  to  implement  CALL/CC (call  with  current
@@ -5365,7 +5363,7 @@
     ;;scenario leaving  the FPR at  base and so causing  the generation of  a corrupt
     ;;continuation object (with  size 0 and the underflow handler  as return point of
     ;;the topmost stack frame).
-    (with-tmp ((kont-obj (asm 'alloc-no-hooks (K continuation-size) (K vector-tag))))
+    (with-tmp ((kont-obj (asm 'alloc-no-hooks (KN continuation-size) (KN vector-tag))))
       ;;BASE references the underflow handler:
       ;;
       ;;        high memory
@@ -5377,29 +5375,29 @@
       ;;       low memory
       ;;
       (with-tmp ((base (asm 'int+
-			    (asm 'mref PC-REGISTER (K pcb-frame-base))
-			    (K (- wordsize)))))
-	(with-tmp ((underflow-handler (asm 'mref base (K 0))))
+			    (asm 'mref PC-REGISTER (KN pcb-frame-base))
+			    (KN (- wordsize)))))
+	(with-tmp ((underflow-handler (asm 'mref base (KN 0))))
 	  ;;Store the continuation tag in the first word.
-	  (asm 'mset kont-obj (K off-continuation-tag)  (K continuation-tag))
+	  (asm 'mset kont-obj (KN off-continuation-tag)  (KN continuation-tag))
 	  ;;Set the  current Frame  Pointer Register  as address to  go back  to when
 	  ;;resuming the continuation.
-	  (asm 'mset kont-obj (K off-continuation-top)  FP-REGISTER)
+	  (asm 'mset kont-obj (KN off-continuation-top)  FP-REGISTER)
 	  ;;Set the number of bytes representing  the total size of the freezed stack
 	  ;;frames.
-	  (asm 'mset kont-obj (K off-continuation-size) (asm 'int- base FP-REGISTER))
+	  (asm 'mset kont-obj (KN off-continuation-size) (asm 'int- base FP-REGISTER))
 	  ;;Prepend the new  continuation object to the linked list  of "next process
 	  ;;continuations" in the PCB.
 	  ;;
 	  ;;   s_kont->next  = pcb->next_k;
 	  ;;   pcb->next_k   = s_kont->next;
 	  ;;
-	  (asm 'mset kont-obj (K off-continuation-next) (asm 'mref PC-REGISTER (K pcb-next-continuation)))
-	  (asm 'mset PC-REGISTER (K pcb-next-continuation) kont-obj)
+	  (asm 'mset kont-obj (KN off-continuation-next) (asm 'mref PC-REGISTER (KN pcb-next-continuation)))
+	  (asm 'mset PC-REGISTER (KN pcb-next-continuation) kont-obj)
 	  ;;The machine word containing "return address 0" (the one referenced by the
 	  ;;FPR) is the  new frame base for subsequent code  execution; store the FPR
 	  ;;in the PCB as frame base.
-	  (asm 'mset PC-REGISTER (K pcb-frame-base) FP-REGISTER)
+	  (asm 'mset PC-REGISTER (KN pcb-frame-base) FP-REGISTER)
 	  ;;When arriving here the situation of the Scheme stack is:
 	  ;;
 	  ;;         high memory
@@ -5437,27 +5435,28 @@
 	  ;;
 	  ;;NOTE Here  we know  that UNDERFLOW-HANDLER and  KONT-OBJ are  already VAR
 	  ;;structs.
-	  (asm 'call-with-underflow-handler underflow-handler kont-obj (V-simple-operand receiver-func))))))
+	  (asm 'call-with-underflow-handler underflow-handler kont-obj receiver-func)))))
    ((E . args)
     (interrupt))
    ((P . args)
     (interrupt)))
 
  (define-core-primitive-operation $frame->continuation unsafe
-   ;;Build  and return  a  new  closure object.   When  such closure  is
-   ;;invoked:    it   makes    use    of    the   assembly    subroutine
-   ;;SL-CONTINUATION-CODE to  resume the  execution of  the continuation
-   ;;object X.
+   ;;Build and return a  new closure object.  When such closure  is invoked: it makes
+   ;;use of the  assembly subroutine SL-CONTINUATION-CODE to resume  the execution of
+   ;;the continuation object X.
    ;;
-   ;;The continuation  object X  is stored  in the  first slot  for free
-   ;;variables.
+   ;;The continuation object X is stored in the first slot for free variables.
    ;;
    ((V x)
     (with-tmp ((clo (asm 'alloc
-			 (K (align (+ disp-closure-data wordsize)))
-			 (K closure-tag))))
-      (asm 'mset clo (K off-closure-code) (K (make-code-loc (sl-continuation-code-label))))
-      (asm 'mset clo (K off-closure-data) (V-simple-operand x))
+			 (KN (align (+ disp-closure-data wordsize)))
+			 (KN closure-tag))))
+      (asm 'mset clo (KN off-closure-code)
+	   ;;This CODE-LOC  must be in  a bare CONSTANT  struct, *not* in  a CONSTANT
+	   ;;wrapping an OBJECT.
+	   (K (make-code-loc (sl-continuation-code-label))))
+      (asm 'mset clo (KN off-closure-data) (V-simple-operand x))
       clo))
    ((P x)
     (K #t))
@@ -5465,10 +5464,9 @@
     (nop)))
 
  (define-core-primitive-operation $stack-overflow-check unsafe
-   ;;Check if  the topmost Scheme stack  call frame has crossed  the red
-   ;;line of  stack usage; this  condition triggers a new  stack segment
-   ;;allocation.   The   scenario  on   the  stack  that   triggers  the
-   ;;reallocation is:
+   ;;Check if the topmost  Scheme stack call frame has crossed the  red line of stack
+   ;;usage; this condition triggers a new  stack segment allocation.  The scenario on
+   ;;the stack that triggers the reallocation is:
    ;;
    ;;         high memory
    ;;   |                      | <- pcb->frame_base
@@ -5498,12 +5496,12 @@
    ;;
    ;;we see that: FPR < pcb->frame_redline.
    ;;
-   ;;This operation is inserted right after  the entry point of the body
-   ;;of *every* Scheme function that does enlarge the stack; it is *not*
-   ;;inserted in the body of functions that only perform tail calls.
+   ;;This operation is  inserted right after the  entry point of the  body of *every*
+   ;;Scheme function that does enlarge the stack; it is *not* inserted in the body of
+   ;;functions that only perform tail calls.
    ;;
-   ;;See  the  comments  in  the C  function  "ik_stack_overflow()"  for
-   ;;details of what happens in case of stack overflow.
+   ;;See the  comments in the  C function  "ik_stack_overflow()" for details  of what
+   ;;happens in case of stack overflow.
    ;;
    ;;The generated code looks somewhat like this i686 pseudo-Assembly:
    ;;
@@ -5519,12 +5517,12 @@
    ;;     (forcall "ik_stack_overflow")
    ;;     (jmp L1)
    ;;
-   ;;NOTE The Assembly instruction JB is for comparison between UNsigned
-   ;;integers, while JL is for comparison between signed integers.
+   ;;NOTE The  Assembly instruction JB  is for comparison between  UNsigned integers,
+   ;;while JL is for comparison between signed integers.
    ;;
    ((E)
     (make-shortcut
-	(make-conditional (asm 'u< FP-REGISTER (asm 'mref PC-REGISTER (K pcb-frame-redline)))
+	(make-conditional (asm 'u< FP-REGISTER (asm 'mref PC-REGISTER (KN pcb-frame-redline)))
 	    (asm 'interrupt)
 	  (nop))
       (make-forcall "ik_stack_overflow" '()))))
@@ -5543,6 +5541,8 @@
    ;;"SL_call_with_values".
    ;;
    ((V)
+    ;;This  CLOSURE-MAKER must  be in  a bare  CONSTANT struct,  *not* in  a CONSTANT
+    ;;wrapping an OBJECT.
     (K (make-closure-maker (make-code-loc (sl-cwv-label)) '())))
    ((P)
     (interrupt))
@@ -5555,6 +5555,8 @@
    ;;primitive function through the assembly routine "SL_values".
    ;;
    ((V)
+    ;;This  CLOSURE-MAKER must  be in  a bare  CONSTANT struct,  *not* in  a CONSTANT
+    ;;wrapping an OBJECT.
     (K (make-closure-maker (make-code-loc (sl-values-label)) '())))
    ((P)
     (interrupt))
@@ -5588,6 +5590,8 @@
 			 (K (align (+ disp-closure-data (* 2 wordsize))))
 			 (K closure-tag))))
       (asm 'mset clo (K off-closure-code)
+	   ;;This CODE-LOC  must be in  a bare CONSTANT  struct, *not* in  a CONSTANT
+	   ;;wrapping an OBJECT.
 	   (K (make-code-loc (sl-annotated-procedure-label))))
       ;;Store the annotation in the first slot for free variables.
       (asm 'mset clo (K off-closure-data)              (V-simple-operand annotation))
