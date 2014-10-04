@@ -470,15 +470,20 @@
   ;;parameter.  The RHS* are complex: they must be filtered through V.
   ;;
   (if (pair? lhs*)
-      (begin
-	(%local-value-cons (car lhs*))
-	(make-seq
-	  ;;Generate assembly instructions  to compute a value from  "(car rhs*)" and
-	  ;;store the result in destination "(car lhs*)".
-	  (V (car lhs*) (car rhs*))
-	  (%assign-complex-rhs-to-local-lhs*
-	      (cdr lhs*) (cdr rhs*)
-	    tail-body)))
+      (%assign-complex-rhs-to-local-lhs
+	  (car lhs*)
+	  (car rhs*)
+	(%assign-complex-rhs-to-local-lhs*
+	    (cdr lhs*) (cdr rhs*)
+	  tail-body))
+    tail-body))
+
+(define (%assign-complex-rhs-to-local-lhs lhs rhs tail-body)
+  (%local-value-cons lhs)
+  (make-seq
+    ;;Generate assembly instructions to compute a value from RHS and store the result
+    ;;in destination LHS.
+    (V lhs rhs)
     tail-body))
 
 
@@ -504,8 +509,7 @@
     (struct-case x
       ((bind lhs* rhs* body)
        (%assign-complex-rhs-to-local-lhs*
-	   lhs*
-	   rhs*
+	   lhs* rhs*
 	 (S body kont)))
       ((seq e0 e1)
        (make-seq (E e0) (S e1 kont)))
@@ -526,9 +530,8 @@
 	     ((or (funcall? x) (asmcall?  x) (jmpcall?     x)
 		  (forcall? x) (shortcut? x) (conditional? x))
 	      (let ((t (make-unique-var 'tmp)))
-		(%assign-complex-rhs-to-local-lhs*
-		    (list t)
-		    (list x)
+		(%assign-complex-rhs-to-local-lhs
+		    t x
 		  (kont t))))
 	     (else
 	      (compiler-internal-error __module_who__
@@ -1153,11 +1156,8 @@
 
 		  (else
 		   (let ((tmp (make-unique-var 'tmp)))
-		     (%local-value-cons tmp)
-		     (make-seq
-		       ;;Generate assembly  instructions to compute a  value from ARG
-		       ;;and store the result in destination DST.
-		       (V tmp arg)
+		     (%assign-complex-rhs-to-local-lhs
+			 tmp arg
 		       (%do-recur (cons tmp output-arg*)
 				  (cons dst output-dst*)))))))
 	;;Here OUTPUT-DST* is  a subset of RAND*.FVAR and OUTPUT-ARG*  is a subset of
@@ -1479,4 +1479,5 @@
 ;; eval: (put '%do-operands-bind*	'scheme-indent-function 2)
 ;; eval: (put '%assign-simple-rhs-to-non-local-lhs*	'scheme-indent-function 2)
 ;; eval: (put '%assign-complex-rhs-to-local-lhs*	'scheme-indent-function 2)
+;; eval: (put '%assign-complex-rhs-to-local-lhs		'scheme-indent-function 2)
 ;; End:
