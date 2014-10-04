@@ -242,8 +242,9 @@
 	  ;;The  list  of machine  words  we  need in  this  expression  to hold  the
 	  ;;temporary  local values.   They will  be  CPU registers  or Scheme  stack
 	  ;;words.
-	  (local-vars: tmp_4 tmp_5 tmp_6)
+	  (local-vars: tmp_4 tmp_5)
 	  (seq
+	    ;;Check if the PCB engine counter is set.
 	    (shortcut
 		;;This  is  the  integrated  body of  the  core  primitive  operation
 		;;"$do-event": check if the PCB's engine counter has been set.
@@ -264,16 +265,15 @@
 		  (non-tail-call
 		    (target:      #f)
 		    (retval-var:  #f)
-		    (args:        %eax %esi %esp %ebp %edi)
+		    (args:        %eax %ebp %edi %esp %esi)
 		    (mask:        #f)
 		    (size:        #f)))))
 	    ;;Retrieve  from the  relocation vector  of the  code object  the closure
 	    ;;object of the combinator F.
 	    (asm-instr move tmp_5 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
-	    (asm-instr move tmp_6 tmp_5)
 	    ;;Store  a  reference  to  the  combinator  F's  closure  object  in  the
 	    ;;CP-REGISTER.
-	    (asm-instr move %edi tmp_6)
+	    (asm-instr move %edi tmp_5)
 	    ;;Put on the Scheme stack the operand of F.
 	    (asm-instr move fvar.1 (constant 16))
 	    ;;Load the negated number of arguments in the AA-REGISTER; -1 for F.
@@ -281,7 +281,7 @@
 	    ;;Tail-call the operator F.
 	    (asmcall direct-jump
 		     (code-loc asmlabel:F:clambda:case-1)
-		     %eax %esi %esp %ebp %edi fvar.1)))))
+		     %eax %ebp %esp %esi %edi fvar.1)))))
 
   #t)
 

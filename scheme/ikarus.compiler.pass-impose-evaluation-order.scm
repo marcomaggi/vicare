@@ -383,7 +383,7 @@
 	(%load-register-operand/closure-object-reference t2)
 	;;Load  in  AA-REGISTER  the  encoded   number  of  arguments,  counting  the
 	;;continuation object.
-	(%load-register-operand/number-of-operands 1)
+	(%load-register-operand/number-of-stack-operands 1)
 	;;Decrement the FPR so that it points to the underflow handler.
 	(make-asm-instr 'int- fpr (make-constant wordsize))
 	;;When we arrive here the situation on the Scheme stack is:
@@ -434,7 +434,7 @@
 
 ;;;; helpers
 
-(define (%load-register-operand/number-of-operands num-of-rands)
+(define (%load-register-operand/number-of-stack-operands num-of-rands)
   ;;Store in the AA-REGISTER a fixnum representing the negated number of operands.
   (%move-dst<-src AA-REGISTER (make-constant (argc-convention num-of-rands))))
 
@@ -1093,15 +1093,15 @@
     ;;TARGET is a CODE-LOC wrapping the name of the target Assembly label.  If TARGET
     ;;is false: the tail call is for a FUNCALL struct.
     ;;
+    ;;These  RAND*.FVAR represent  the  location  on the  stack  in  which the  stack
+    ;;operands must be put.
     (define rand*.fvar
       (%one-fvar-for-each-stack-operand 1 rand*))
-    (define dst*
-      (cons CP-REGISTER rand*.fvar))
-    ;;We want  to determine which RATOR  and RAND* are complex  expressions for which
-    ;;there  is the  need to  allocate a  temporary location  in which  to store  the
-    ;;result.
-    (let recur ((input-arg*  (reverse (cons rator       rand*)))
-		(input-dst*  (reverse dst*))
+    ;;We want to determine which RAND* are complex expressions for which there is the
+    ;;need to  allocate a  temporary location  in which to  store the  result, before
+    ;;putting the value in the operands's FVAR.
+    (let recur ((input-arg*  (reverse rand*))
+		(input-dst*  (reverse rand*.fvar))
 		(output-arg* '())
 		(output-dst* '()))
       (define-syntax-rule (%do-recur ?output-arg* ?output-dst*)
@@ -1140,13 +1140,33 @@
 		       (V tmp arg)
 		       (%do-recur (cons tmp output-arg*)
 				  (cons dst output-dst*)))))))
+	;;Here OUTPUT-DST* is  a subset of RAND*.FVAR and OUTPUT-ARG*  is a subset of
+	;;RAND*.
+	(%make-tail-call-sequence target rator rand*.fvar output-dst* output-arg*))))
+
+  (define (%make-tail-call-sequence target rator rand*.fvar rand*.dst rand*.src)
+    ;;If  the RATOR  is a  "complex"  struct that  evaluates into  a closure  object:
+    ;;evaluate it and load the result in a temporary location.
+    (let* ((rator.simple    (if (or (var?      rator)
+				    (fvar?     rator)
+				    ;;(constant? rator)
+				    )
+				rator
+			      (make-unique-var 'tmp)))
+	   (rator.simple    (make-unique-var 'tmp))
+	   (already-simple? (eq? rator.simple rator)))
+      (%do-bind
+	  (if already-simple? '() (list rator.simple))
+	  (if already-simple? '() (list rator))
+	;;Put the operands' values on the stack in the correct positions for the tail
+	;;call.
 	(%assign*
-	    output-dst*
-	    output-arg*
-	  (make-seq
-	    ;;Store in  the AA-REGISTER a  fixnum representing the negated  number of
-	    ;;operands.
-	    (%load-register-operand/number-of-operands (length rand*))
+	    rand*.dst
+	    rand*.src
+	  (multiple-forms-sequence
+	    ;;Load in the actual CPU registers the register operand values.
+	    (%load-register-operand/closure-object-reference rator.simple)
+	    (%load-register-operand/number-of-stack-operands (length rand*.fvar))
 	    (if target
 		;;This is  was a JMPCALL: we  jump directly to the  binary code entry
 		;;point  represented by  the Assembly  label in  the CODE-LOC  struct
@@ -1155,10 +1175,13 @@
 		;;NOTE When the  ASMCALL has DIRECT-JUMP as operator:  the first item
 		;;in the  operands must be  the CODE-LOC representing  target!!!  The
 		;;order of the other operands does not matter.
-		(make-asmcall 'direct-jump (cons* target AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER dst*))
+		(make-asmcall 'direct-jump (cons* target
+						  AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER
+						  rand*.fvar))
 	      ;;This was a FUNCALL: we jump indirectly to the binary code entry point
 	      ;;by retrieving it, at run-time, from the closure object.
-	      (make-asmcall 'indirect-jump (cons* AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER dst*))))))))
+	      (make-asmcall 'indirect-jump (cons* AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER
+						  rand*.fvar))))))))
 
   (define (%one-fvar-for-each-stack-operand i rand*)
     ;;Non-tail recursive  function.  Build and return  a list of FVAR  structs having
@@ -1292,7 +1315,7 @@
 			    (size #f))
 			(make-non-tail-call call-target dst-local args mask size)))
 	   (ntframe   (let ((live   #f)
-			    (ntbody (%make-call-frame-body rator rand* rand*.nfv ntcall)))
+			    (ntbody (%make-non-tail-call-frame-body rator rand* rand*.nfv ntcall)))
 			(make-non-tail-call-frame rand*.nfv live ntbody))))
       (if dst-local
 	  (make-seq
@@ -1300,21 +1323,23 @@
 	    (%move-dst<-src dst-local AA-REGISTER))
 	ntframe)))
 
-  (define (%make-call-frame-body rator rand* rand*.nfv ntcall)
-    ;;Load  on the  stack  the stack  operands  of the  function  call.  These  stack
-    ;;locations are below the location that will hold the return address of the call.
-    (%do-operands-bind*
-	rand*.nfv
-	rand*
-      ;;If the  RATOR is  a "complex"  struct that evaluates  into a  closure object:
-      ;;evaluate it and load  the result in a temporary location;  later we will load
-      ;;the reference to closure object in the CP-parameter.
-      (let* ((rator.var (if (or (var?  rator)
-				(fvar? rator)
-				(constant? rator))
-			    rator
-			  (make-unique-var 'tmp)))
-	     (simple?   (eq? rator.var rator)))
+  (define (%make-non-tail-call-frame-body rator rand* rand*.nfv ntcall)
+    ;;If  the RATOR  is a  "complex"  struct that  evaluates into  a closure  object:
+    ;;evaluate it and load the result in a temporary location; later we will load the
+    ;;reference to closure object in the CP-parameter.
+    (let* ((rator.var (if (or (var?  rator)
+			      (fvar? rator)
+			      ;;(constant? rator)
+			      )
+			  rator
+			(make-unique-var 'tmp)))
+	   (simple?   (eq? rator.var rator)))
+      ;;Load  on the  stack the  stack operands  of the  function call.   These stack
+      ;;locations are  below the location  that will hold  the return address  of the
+      ;;call.
+      (%do-operands-bind*
+	  rand*.nfv
+	  rand*
 	(%do-bind
 	    (if simple? '() (list rator.var))
 	    (if simple? '() (list rator))
@@ -1322,7 +1347,7 @@
 	  ;;temporary locations.
 	  (multiple-forms-sequence
 	    (%load-register-operand/closure-object-reference rator.var)
-	    (%load-register-operand/number-of-operands (length rand*))
+	    (%load-register-operand/number-of-stack-operands (length rand*))
 	    ntcall)))))
 
   (define (%do-operands-bind* nfv* rhs* tail-body)
