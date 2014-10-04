@@ -63,6 +63,10 @@
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
+  ;;NOTE In this module we create FVAR structs and NFV structs in the recordised code
+  ;;returned to  the caller; such  structures will  be processed in  further compiler
+  ;;passes.  But *no* FVAR and NFV structs are present in the input recordised code.
+  ;;
   (import INTEL-ASSEMBLY-CODE-GENERATION)
 
   (define-syntax __module_who__
@@ -1052,13 +1056,15 @@
   ;;   |                          |
   ;;           low memory
   ;;
-  ;;The stack  local variables  are represented  by FVAR  structs.  These  locals are
+  ;;The stack local variables are represented  by VAR structs in the input recordised
+  ;;code and by FVAR structs in the output recordised code.  Some of these locals are
   ;;allocated by  the BIND structs  that survived  all the previous  compiler passes;
-  ;;this compiler pass creates additional locals with the function %DO-BIND.
+  ;;this compiler pass creates additional locals.
   ;;
-  ;;The stack operands variables are represented by FVAR structs; these operands must
-  ;;match the  actual function  arguments.  This compiler  pass computes  the operand
-  ;;values and allocates temporary stack locations for them.
+  ;;The  stack operands  variables  are represented  by FVAR  structs  in the  output
+  ;;recordised code; these  operands must match the actual  function arguments.  This
+  ;;compiler pass computes the operand values and allocates temporary stack locations
+  ;;for them, when needed.
   ;;
   ;;When all the operand values have been computed and stored in temporary locations:
   ;;they are moved  to the actual stack  locations for the call,  overwriting the old
@@ -1087,7 +1093,10 @@
   ;;execution.
   ;;
   (define (%handle-tail-call target rator rand*)
-    ;;Handle FUNCALL and JMPCALL structures in tail position.
+    ;;Handle  FUNCALL and  JMPCALL  structures  in tail  position.   Since the  stack
+    ;;operands are  placed in stack locations  already occupied by the  uplevel stack
+    ;;operands and local  variables: here we must take care  of preserving the values
+    ;;already on the stack while computing the operands.
     ;;
     ;;If the  argument TARGET  is true:  the tail call  is for  a JMPCALL  struct and
     ;;TARGET is a CODE-LOC wrapping the name of the target Assembly label.  If TARGET
@@ -1098,8 +1107,8 @@
     (define rand*.fvar
       (%one-fvar-for-each-stack-operand 1 rand*))
     ;;We want to determine which RAND* are complex expressions for which there is the
-    ;;need to  allocate a  temporary location  in which to  store the  result, before
-    ;;putting the value in the operands's FVAR.
+    ;;need  to  allocate  temporary  locations,  before  putting  the  value  in  the
+    ;;operands's FVAR.
     (let recur ((input-arg*  (reverse rand*))
 		(input-dst*  (reverse rand*.fvar))
 		(output-arg* '())
@@ -1145,26 +1154,51 @@
 	(%make-tail-call-sequence target rator rand*.fvar output-dst* output-arg*))))
 
   (define (%make-tail-call-sequence target rator rand*.fvar rand*.dst rand*.src)
-    ;;If  the RATOR  is a  "complex"  struct that  evaluates into  a closure  object:
-    ;;evaluate it and load the result in a temporary location.
-    (let* ((rator.simple    (if (or (var?      rator)
-				    (fvar?     rator)
-				    ;;(constant? rator)
-				    )
+    ;;Build and return  recordised code that puts stack operands  on the stack, loads
+    ;;register operands  in the register, and  finally performs the call.   Since the
+    ;;stack operands  are placed in stack  locations already occupied by  the uplevel
+    ;;stack operands  and local variables: here  we must take care  of preserving the
+    ;;values already on the stack while computing the operands.
+    ;;
+    ;;The RATOR is supposed to be a struct representing recordised code evaluating to
+    ;;a closure object.
+    ;;
+    ;;* If RATOR is a "complex" struct that needs temporary locations allocation (CPU
+    ;;  registers  and stack locals) to  produce the result: we  allocate a temporary
+    ;;  location  here, RATOR.VAR,  and use  %DO-BIND to filter  RATOR through  V and
+    ;;  store the result in it.
+    ;;
+    ;;* If  the RATOR is a  "simple" struct, we do  not need to allocate  a temporary
+    ;;  location: we  just load the value in the  CP-REGISTER.  Simple operators are:
+    ;;   VAR structs  that  do not  represent uplevel  stack  operands, because  they
+    ;;  already are  references to closure objects stored in  memory locations or CPU
+    ;;  registers;  CONSTANT structs, because  they can  be directly loaded  into the
+    ;;  CP-REGISTER.
+    ;;
+    ;;NOTE If a VAR  struct represents an uplevel stack operand:  its LOC field holds
+    ;;an  FVAR; otherwise  its LOC  field holds  false.  VAR  structs that  represent
+    ;;uplevel  stack operands  are not  simple operators:  they are  stored in  stack
+    ;;locations that  may be  overwritten by  the new operands,  so we  must preserve
+    ;;their values until  all the stack operands and the  reference to closure object
+    ;;have been computed.
+    (let* ((rator.simple    (if (or (and (var? rator)
+					 (not (var-loc rator)))
+				    (constant? rator))
 				rator
 			      (make-unique-var 'tmp)))
-	   (rator.simple    (make-unique-var 'tmp))
 	   (already-simple? (eq? rator.simple rator)))
+      ;;If  there  is the  need:  compute  the  reference  to closure  object  before
+      ;;overwriting the stack locations with the new stack operands.
       (%do-bind
 	  (if already-simple? '() (list rator.simple))
 	  (if already-simple? '() (list rator))
-	;;Put the operands' values on the stack in the correct positions for the tail
+	;;Put the stack operands  on the stack in the correct  positions for the tail
 	;;call.
 	(%assign*
 	    rand*.dst
 	    rand*.src
 	  (multiple-forms-sequence
-	    ;;Load in the actual CPU registers the register operand values.
+	    ;;Load in the actual CPU registers the register operands.
 	    (%load-register-operand/closure-object-reference rator.simple)
 	    (%load-register-operand/number-of-stack-operands (length rand*.fvar))
 	    (if target
@@ -1248,13 +1282,13 @@
   ;;   |                          |
   ;;           low memory
   ;;
-  ;;The stack  local variables  are represented  by FVAR  structs.  These  locals are
+  ;;The stack local variables are represented  by VAR structs in the input recordised
+  ;;code and by FVAR structs in the output recordised code.  Some of these locals are
   ;;allocated by  the BIND structs  that survived  all the previous  compiler passes;
-  ;;this compiler pass creates additional locals with the function %DO-BIND.
+  ;;this compiler pass creates additional locals.
   ;;
-  ;;The stack operands variables are represented  by NFV structs; these operands must
-  ;;match the  actual function  arguments.  This compiler  pass allocates  such stack
-  ;;operands with the function %DO-OPERANDS-BIND.
+  ;;The  stack operands  variables  are  represented by  NFV  structs  in the  output
+  ;;recordised code; these operands must match the actual function arguments.
   ;;
   ;;In  addition to  the stack  operands: some  register operands  are handed  to the
   ;;callee  closure object;  such values  are computed  and stored  in dedicated  CPU
@@ -1324,22 +1358,35 @@
 	ntframe)))
 
   (define (%make-non-tail-call-frame-body rator rand* rand*.nfv ntcall)
-    ;;If  the RATOR  is a  "complex"  struct that  evaluates into  a closure  object:
-    ;;evaluate it and load the result in a temporary location; later we will load the
-    ;;reference to closure object in the CP-parameter.
-    (let* ((rator.var (if (or (var?  rator)
-			      (fvar? rator)
-			      ;;(constant? rator)
-			      )
-			  rator
-			(make-unique-var 'tmp)))
-	   (simple?   (eq? rator.var rator)))
-      ;;Load  on the  stack the  stack operands  of the  function call.   These stack
-      ;;locations are  below the location  that will hold  the return address  of the
-      ;;call.
-      (%do-operands-bind*
-	  rand*.nfv
-	  rand*
+    ;;Build and  return recordised code to  be used as body  in a NON-TAIL-CALL-FRAME
+    ;;struct.   Since  the  stack  operands  are  placed  in  fresh  stack  locations
+    ;;(described  by the  NFV structs):  here we  do not  worry about  preserving the
+    ;;values already on the stack while computing the operands.
+    ;;
+    ;;Load on the  stack operands of the  function call in the  "next frame variable"
+    ;;slots.
+    (%do-operands-bind*
+	rand*.nfv
+	rand*
+      ;;The RATOR is supposed to be  a struct representing recordised code evaluating
+      ;;to a closure object.
+      ;;
+      ;;* If  RATOR is a "complex"  struct that needs temporary  locations allocation
+      ;;   (CPU registers  and stack  locals) to  produce the  result: we  allocate a
+      ;;   temporary location  here,  RATOR.VAR,  and use  %DO-BIND  to filter  RATOR
+      ;;  through V and store the result in it.
+      ;;
+      ;;* If the RATOR  is a "simple" struct, we do not need  to allocate a temporary
+      ;;  location: we just load the value in the CP-REGISTER.  Simple operators are:
+      ;;  VAR structs, because they already  are references to closure objects stored
+      ;;  in memory locations or CPU registers; CONSTANT structs, because they can be
+      ;;  directly loaded into the CP-REGISTER.
+      ;;
+      (let* ((rator.var (if (or (var?      rator)
+				(constant? rator))
+			    rator
+			  (make-unique-var 'tmp)))
+	     (simple?   (eq? rator.var rator)))
 	(%do-bind
 	    (if simple? '() (list rator.var))
 	    (if simple? '() (list rator))

@@ -215,7 +215,7 @@
 		      (asm-instr int+/overflow tmp_1 fvar.1)
 		      ;;If successful: return the result in AA-REGISTER.
 		      (asm-instr move %eax tmp_1)
-		      (asmcall return %esi %esp %ebp %eax))
+		      (asmcall return %eax %ebp %esp %esi))
 		  ;;The  sum between  fixnums  failed: tail-call  the core  primitive
 		  ;;function "+".
 		  (seq
@@ -227,22 +227,22 @@
 		    ;;the relocation vector.
 		    (asm-instr move tmp_2 (disp (constant (object +))
 						(constant 19)))
-		    ;;Store the reference to function "+" in the CP-REGISTER.
-		    (asm-instr move %edi tmp_2)
 		    ;;Put the operands of "+" on the Scheme stack.
 		    (asm-instr move fvar.1 (constant 8))
 		    (asm-instr move fvar.2 tmp_3)
+		    ;;Store the reference to function "+" in the CP-REGISTER.
+		    (asm-instr move %edi tmp_2)
 		    ;;Load the negated number of operands in the AA-REGISTER.
 		    (asm-instr move %eax (constant -16))
 		    ;;Perform  the tail-call  as indirect  jump: the  address of  the
 		    ;;entry  point of  the  function  "+" is  in  the closure  object
 		    ;;referenced by CP-REGISTER.
-		    (asmcall indirect-jump %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))))
+		    (asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))))
 	 (locals
 	  ;;The  list  of machine  words  we  need in  this  expression  to hold  the
 	  ;;temporary  local values.   They will  be  CPU registers  or Scheme  stack
 	  ;;words.
-	  (local-vars: tmp_4 tmp_5)
+	  (local-vars: tmp_4 tmp_5 tmp_6)
 	  (seq
 	    ;;Check if the PCB engine counter is set.
 	    (shortcut
@@ -271,17 +271,18 @@
 	    ;;Retrieve  from the  relocation vector  of the  code object  the closure
 	    ;;object of the combinator F.
 	    (asm-instr move tmp_5 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
-	    ;;Store  a  reference  to  the  combinator  F's  closure  object  in  the
-	    ;;CP-REGISTER.
-	    (asm-instr move %edi tmp_5)
+	    (asm-instr move tmp_6 tmp_5)
 	    ;;Put on the Scheme stack the operand of F.
 	    (asm-instr move fvar.1 (constant 16))
+	    ;;Store  a  reference  to  the  combinator  F's  closure  object  in  the
+	    ;;CP-REGISTER.
+	    (asm-instr move %edi tmp_6)
 	    ;;Load the negated number of arguments in the AA-REGISTER; -1 for F.
 	    (asm-instr move %eax (constant -8))
 	    ;;Tail-call the operator F.
 	    (asmcall direct-jump
 		     (code-loc asmlabel:F:clambda:case-1)
-		     %eax %ebp %esp %esi %edi fvar.1)))))
+		     %eax %ebp %edi %esp %esi fvar.1)))))
 
   #t)
 
@@ -550,7 +551,7 @@
 		      ;;Load the result in AA-REGISTER.
 		      (asm-instr move %eax tmp_2)
 		      ;;Return to the caller.
-		      (asmcall return %esi %esp %ebp %eax))
+		      (asmcall return %eax %ebp %esp %esi))
 		  ;;This is  the interrupt  handler of  the core  primitive operation
 		  ;;"+".
 		  (seq
@@ -560,16 +561,16 @@
 		    ;;Retrieve form  the relocation  vector a  reference to  the core
 		    ;;primitive "+".
 		    (asm-instr move tmp_3 (disp (constant (object +)) (constant 19)))
-		    ;;Store in CP-REGISTER the reference to "+".
-		    (asm-instr move %edi tmp_3)
 		    ;;Put the operands on the stack, in the correct order.
 		    (asm-instr move fvar.1 tmp_4)
 		    (asm-instr move fvar.2 tmp_5)
+		    ;;Store in CP-REGISTER the reference to "+".
+		    (asm-instr move %edi tmp_3)
 		    ;;Store in  AA-REGISTER a fixnum representing  the negated number
 		    ;;of operands: -2.
 		    (asm-instr move %eax (constant -16))
 		    ;;Perform the tail call.
-		    (asmcall indirect-jump %eax %esi %esp %ebp %edi fvar.1 fvar.2)))))))
+		    (asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))))
 	 (locals
 	  (local-vars: tmp_6 tmp_7 tmp_8 x_0 tmp_9 F_0 tmp_10)
 	  (seq
@@ -588,7 +589,7 @@
 		  (non-tail-call
 		    (target:      "ik_stack_overflow")
 		    (retval-var:  #f)
-		    (args:        %eax %esi %esp %ebp %edi)
+		    (args:        %eax %ebp %edi %esp %esi)
 		    (mask:        #f)
 		    (size:        #f)))))
 	    ;;Check if the PCB engine counter is set.
@@ -605,7 +606,7 @@
 		  (non-tail-call
 		    (target:      #f)
 		    (retval-var:  #f)
-		    (args:        %eax %esi %esp %ebp %edi)
+		    (args:        %eax %ebp %edi %esp %esi)
 		    (mask:        #f)
 		    (size:        #f)))))
 	    ;;Here is the actual expression.  First we call READ and store the result
@@ -683,11 +684,11 @@
 	    (asm-instr mset
 		       (disp F_0 (constant 5))
 		       x_0)
-	    ;;Store in the CP-REGSITER the reference to closure object.
 	    (asm-instr move tmp_10 F_0)
-	    (asm-instr move %edi tmp_10)
 	    ;;Put on the stack the operand to the closure call.
 	    (asm-instr move fvar.1 (constant 16))
+	    ;;Store in the CP-REGSITER the reference to closure object.
+	    (asm-instr move %edi tmp_10)
 	    ;;Store  in  AA-REGISTER a  fixnum  representing  the negated  number  of
 	    ;;operands: -1.
 	    (asm-instr move %eax (constant -8))
