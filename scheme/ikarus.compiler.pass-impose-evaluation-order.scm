@@ -354,12 +354,12 @@
       ;;structs, and  that RECEIVER-FUNC is on  the Scheme stack as  stack operand to
       ;;the call to %PRIMITIVE-CALL/CF.
       ;;
-      ;;Will UNDERFLOW-HANDLER  and KONT-OBJECT be  allocated to CPU registers  or to
-      ;;Scheme stack  locations?  Do we have  to create temporary locations  and copy
-      ;;these values in them?
+      ;;I would  like to spare  additional temporary  locations when possible,  and I
+      ;;think it should be possible to spare the one of RECEVEIR-FUNC, but instead it
+      ;;appears they are all needed.  (Marco Maggi; Sat Oct 4, 2014)
       (let ((tmp-underflow-handler  (make-unique-var 'tmp-underfow-handler))
 	    (tmp-kont-object        (make-unique-var 'tmp-kont-object))
-	    (tmp-receiver-func      (make-unique-var 'tmp-func)))
+	    (tmp-receiver-func      (make-unique-var 'tmp-receiver-func)))
 	(%assign-complex-rhs-to-local-lhs*
 	    (list tmp-underflow-handler tmp-kont-object tmp-receiver-func)
 	    (list     underflow-handler     kont-object     receiver-func)
@@ -396,7 +396,7 @@
 	    ;;          low memory
 	    ;;
 	    ;;Load the reference to closure object RECEIVER-FUNC in the CP-REGISTER.
-	    (%load-register-operand/closure-object-reference #;(var-loc receiver-func) tmp-receiver-func)
+	    (%load-register-operand/closure-object-reference tmp-receiver-func)
 	    ;;Load  in  AA-REGISTER  the  encoded number  of  arguments,  counting  the
 	    ;;continuation object.
 	    (%load-register-operand/number-of-stack-operands 1)
