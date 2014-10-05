@@ -605,7 +605,7 @@
 		    ;;code: it is  a complex operand; we introduce a  VAR binding and
 		    ;;move the  type description  from the expression  to the  VAR in
 		    ;;reference position.
-		    (let ((tmp (make-unique-var 'tmp)))
+		    (let ((tmp (make-unique-var)))
 		      (values (cons tmp           lhs*)
 			      (cons (V rand.expr) rhs*)
 			      (cons (make-known tmp rand.type) simple-rand*))))))
@@ -617,7 +617,7 @@
 		 ;;RAND must  be included only once  in the recordised code:  it is a
 		 ;;complex  operand; we  introduce a  new  VAR binding  and a  simple
 		 ;;operand referencing it.
-		 (let ((tmp (make-unique-var 'tmp)))
+		 (let ((tmp (make-unique-var)))
 		   (values (cons tmp      lhs*)
 			   (cons (V rand) rhs*)
 			   (cons tmp simple-rand*)))))))

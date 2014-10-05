@@ -1372,8 +1372,11 @@
 		;current value in the "value" slot.
     ))
 
-(define (make-unique-var name)
-  (make-var name #f #f #f #f #f #f #f #f #f))
+(case-define make-unique-var
+  (()
+   (make-unique-var 'tmp))
+  ((name)
+   (make-var name #f #f #f #f #f #f #f #f #f)))
 
 ;;; --------------------------------------------------------------------
 
@@ -5855,7 +5858,7 @@
 	 (make-seq (E e0) (E e1)))
 
 	((closure-maker)
-	 (let ((t (make-unique-var 'tmp)))
+	 (let ((t (make-unique-var)))
 	   (E (make-fix (list t) (list x) t))))
 
 	((primopcall op arg*)

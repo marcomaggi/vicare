@@ -31,7 +31,7 @@
   ;;                    (constant ?off-symbol-record-proc))
   ;;            (?rand ...))
   ;;
-  ;;are converted to:
+  ;;are converted to the equivalent of:
   ;;
   ;;   (bind ((tmp ?rand) ...)
   ;;     (funcall (asmcall mref
@@ -53,6 +53,12 @@
   ;;
   ;;so that the order of evaluation of the operands' expressions is decided.
   ;;
+  ;;* Function call  instruction blocks are inserted to represent  non-tail calls and
+  ;;tail-calls.
+  ;;
+  ;;* High-level Assembly instructions requiring temporary locations to store partial
+  ;;results are expanded into more basic instructions.
+  ;;
   ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
   ;;recordized code must be composed by struct instances of the following types:
   ;;
@@ -61,7 +67,8 @@
   ;;   asmcall		seq
   ;;   shortcut		var
   ;;
-  ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
+  ;;in  addition CLOSURE-MAKER  and  CODE-LOC  structs can  appear  in side  CONSTANT
+  ;;structs.
   ;;
   ;;NOTE In this module we create FVAR structs and NFV structs in the recordised code
   ;;returned to  the caller; such  structures will  be processed in  further compiler
@@ -529,7 +536,7 @@
 		     (kont x))))
 	     ((or (funcall? x) (asmcall?  x) (jmpcall?     x)
 		  (forcall? x) (shortcut? x) (conditional? x))
-	      (let ((t (make-unique-var 'tmp)))
+	      (let ((t (make-unique-var)))
 		(%assign-complex-rhs-to-local-lhs
 		    t x
 		  (kont t))))
@@ -987,7 +994,7 @@
 	    (rand2 (cadr rand*)))
 	(if (and (constant? rand1)
 		 (constant? rand2))
-	    (let ((t (make-unique-var 'tmp)))
+	    (let ((t (make-unique-var)))
 	      (P (make-bind (list t) (list rand1)
 			    (make-asmcall op (list t rand2)))))
 	  (%simplify-rand rand1
@@ -1155,7 +1162,7 @@
 		   (%do-recur output-arg* output-dst*))
 
 		  (else
-		   (let ((tmp (make-unique-var 'tmp)))
+		   (let ((tmp (make-unique-var)))
 		     (%assign-complex-rhs-to-local-lhs
 			 tmp arg
 		       (%do-recur (cons tmp output-arg*)
@@ -1196,12 +1203,12 @@
 	(struct-case rator
 	  ((var)
 	   (if (var-loc rator)
-	       (values (make-unique-var 'tmp) #f)
+	       (values (make-unique-var) #f)
 	     (values rator #t)))
 	  ((constant)
 	   (values rator #t))
 	  (else
-	   (values (make-unique-var 'tmp) #f)))
+	   (values (make-unique-var) #f)))
       ;;If  there  is the  need:  compute  the  reference  to closure  object  before
       ;;overwriting the stack locations with the new stack operands.
       (%assign-complex-rhs-to-local-lhs*
@@ -1432,7 +1439,7 @@
 	    ((constant)
 	     (values rator #t))
 	    (else
-	     (values (make-unique-var 'tmp) #f)))
+	     (values (make-unique-var) #f)))
 	(%assign-complex-rhs-to-local-lhs*
 	    (if already-simple? '() (list rator.simple))
 	    (if already-simple? '() (list rator))
