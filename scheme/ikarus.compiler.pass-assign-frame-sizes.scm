@@ -27,6 +27,12 @@
   ;;in  addition CLOSURE-MAKER  and  CODE-LOC  structs can  appear  in side  CONSTANT
   ;;structs.
   ;;
+  ;;The only ASMCALL operators still accepted as input in this compiler pass are:
+  ;;
+  ;;   return			indirect-jump		direct-jump
+  ;;   nop			interrupt		incr/zero?
+  ;;   fl:double->single	fl:single->double
+  ;;
   (import IntegerSet)
   (import INTEL-ASSEMBLY-CODE-GENERATION)
   (define-syntax __module_who__
@@ -94,13 +100,13 @@
   ;;branch a struct like:
   ;;
   ;;   (seq
-  ;;     (asmcall move   (AA-REGISTER ?result))
+  ;;     (asm-instr move (AA-REGISTER ?result))
   ;;     (asmcall return (AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)))
   ;;
   ;;Throughout  this  function  the  arguments  VS,  RS,  FS,  NS  are  integer  sets
   ;;representing, respectively the VARS set the REGS set and the FRMS set.
   ;;
-  ;;The true work is done in the functions R and ...
+  ;;The true work is done in the functions "R" and "E-asm-instr".
   ;;
   ;;Whenever a  SHORTCUT is processed: first  the interrupt handler is  processed and
   ;;the resulting  VS, RS,  FS, NS  are stored  (as vector  object) in  the parameter
@@ -248,8 +254,8 @@
            (values vs.conseq rs.conseq fs.conseq ns.conseq)
 	 (values vs.altern rs.altern fs.altern ns.altern)))
 
-      ((asm-instr op d s)
-       (R* (list d s) vs.union  rs.union  fs.union  ns.union))
+      ((asm-instr op dst src)
+       (R* (list dst src) vs.union  rs.union  fs.union  ns.union))
 
       ((shortcut body handler)
        (receive (vs.handler rs.handler fs.handler ns.handler)
@@ -272,13 +278,14 @@
     (struct-case x
 
       ((seq e0 e1)
-       (let-values (((vs rs fs ns)
-		     (E e1 vs rs fs ns)))
+       (receive (vs rs fs ns)
+	   (E e1 vs rs fs ns)
          (E e0 vs rs fs ns)))
 
       ((conditional e0 e1 e2)
-       (let-values (((vs1 rs1 fs1 ns1)  (E e1 vs rs fs ns))
-                    ((vs2 rs2 fs2 ns2)  (E e2 vs rs fs ns)))
+       (let-values
+	   (((vs1 rs1 fs1 ns1)  (E e1 vs rs fs ns))
+	    ((vs2 rs2 fs2 ns2)  (E e2 vs rs fs ns)))
          (P e0
             vs1 rs1 fs1 ns1
             vs2 rs2 fs2 ns2
@@ -293,8 +300,9 @@
       ((non-tail-call target value args mask size)
        (set! spill-set (union-vars vs spill-set))
        (for-each-var
-	   vs vars.vec (lambda (x)
-			 ($set-var-loc! x #t)))
+	   vs vars.vec
+	 (lambda (x)
+	   ($set-var-loc! x #t)))
        (R* args vs (empty-reg-set) fs ns))
 
       ((non-tail-call-frame nfvs live body)
@@ -302,7 +310,7 @@
        (set-non-tail-call-frame-live! x (vector vs fs ns))
        (E body vs rs fs ns))
 
-      ((asmcall op args)
+      ((asmcall op)
        (case op
          ((nop fl:double->single fl:single->double)
 	  (values vs rs fs ns))
@@ -315,7 +323,8 @@
 			(vector-ref v 3))
               (compiler-internal-error __module_who__ "unbound exception2"))))
          (else
-	  (compiler-internal-error __module_who__ "invalid effect op" op))))
+	  (compiler-internal-error __module_who__
+	    "invalid ASMCALL operator in for effect form" op))))
 
       ((shortcut body handler)
        (receive (vs.handler rs.handler fs.handler ns.handler)
