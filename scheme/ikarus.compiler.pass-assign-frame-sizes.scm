@@ -21,79 +21,79 @@
   ;;recordized code must be composed by struct instances of the following types:
   ;;
   ;;   asm-instr	conditional	constant
-  ;;   locals		non-tail-call-frame		non-tail-call
   ;;   asmcall		seq		shortcut
+  ;;   locals		non-tail-call	non-tail-call-frame
   ;;
-  ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
+  ;;in  addition CLOSURE-MAKER  and  CODE-LOC  structs can  appear  in side  CONSTANT
+  ;;structs.
   ;;
   (import IntegerSet)
-  (import FRAME-CONFLICT-HELPERS)
   (import INTEL-ASSEMBLY-CODE-GENERATION)
-  (define who 'assign-frame-sizes)
+  (define-syntax __module_who__
+    (identifier-syntax 'assign-frame-sizes))
+
+  (define (assign-frame-sizes x)
+    (V-codes x))
 
 
-;;;;
+(module (V-codes)
 
-(define (assign-frame-sizes x)
-  (let ((v (Program x)))
-    v))
-
-(module (Program)
-  ;;The purpose of  this module is to apply the  function "Main" below
-  ;;to all the bodies.
-  ;;
-  (define (Program x)
+  (define (V-codes x)
     (struct-case x
-      ((codes code* body)
-       (make-codes (map Clambda code*) (Main body)))))
+      ((codes clam* body)
+       (make-codes (map V-clambda clam*) (V-locals body)))))
 
-  (define (Clambda x)
+  (define (V-clambda x)
     (struct-case x
-      ((clambda label case* cp freevar* name)
-       (make-clambda label (map ClambdaCase case*) cp freevar* name))))
+      ((clambda label clause* cp freevar* name)
+       (make-clambda label (map V-clambda-clause clause*) cp freevar* name))))
 
-  (define (ClambdaCase x)
+  (define (V-clambda-clause x)
     (struct-case x
       ((clambda-case info body)
-       (make-clambda-case info (Main body)))))
+       (make-clambda-case info (V-locals body)))))
 
-  (define (Main x)
-    ;;X must  be a struct instance  of type LOCALS.  Update  the field
-    ;;VARS of X and return a  new struct instance of type LOCALS which
-    ;;is meant to replace X.
+  (define (V-locals x)
+    ;;X must  be a struct instance  of type LOCALS.  Update  the field VARS of  X and
+    ;;return a new struct instance of type LOCALS which is meant to replace X.
     ;;
+    (module (init-vars!)
+      (import FRAME-CONFLICT-HELPERS))
     (struct-case x
       ((locals vars body)
        (init-vars! vars)
-       (let* ((vars.vec		(list->vector vars))
-	      (call-live*	(uncover-frame-conflicts body vars.vec))
-	      (body		(%rewrite body vars.vec)))
-	 (make-locals (cons vars.vec (%discard-vars-with-loc vars))
-		      body)))
+       (let* ((vars.vec    (list->vector vars))
+	      (call-live*  (%uncover-frame-conflicts body vars.vec))
+	      (body        (%rewrite body vars.vec)))
+	 (make-locals (cons vars.vec (%discard-vars-being-stack-operands vars)) body)))
       (else
-       (error who "invalid main" x))))
+       (compiler-internal-error __module_who__
+	 "expected LOCALS struct as body form"
+	 x))))
 
-  (define (%discard-vars-with-loc vars)
-    ;;Given a list of struct instances  of type VAR, return a new list
-    ;;containing only those having #f in the LOC field.
+  (define (%discard-vars-being-stack-operands vars)
+    ;;Tail-recursive function.  Given a list of  struct instances of type VAR, return
+    ;;a new list containing only those having #f in the LOC field.
     ;;
-    (cond ((null? vars)
-	   '())
-	  (($var-loc (car vars))
-	   (%discard-vars-with-loc (cdr vars)))
-	  (else
-	   (cons (car vars) (%discard-vars-with-loc (cdr vars))))))
+    ;;The VAR  with a non-false LOC  fields have a  FVAR struct in it,  and represent
+    ;;stack operands in closure object bodies.
+    ;;
+    (if (pair? vars)
+	(if ($var-loc (car vars))
+	    (%discard-vars-being-stack-operands (cdr vars))
+	  (cons (car vars) (%discard-vars-being-stack-operands (cdr vars))))
+      '()))
 
-  #| end of module: Program |# )
+  #| end of module: V-codes |# )
 
-;;; --------------------------------------------------------------------
-
+
 (define (%rewrite x vars.vec)
   ;;X must be a struct instance representing a recordized body.
   ;;
   ;;A lot of functions are nested here because they need to close upon
   ;;the argument VARS.VEC.
   ;;
+  (import FRAME-CONFLICT-HELPERS)
   (define (NFE idx mask x)
     (struct-case x
       ((seq e0 e1)
@@ -107,11 +107,11 @@
 				 ((nfv? x)
 				  ($nfv-loc x))
 				 (else
-				  (error who "invalid arg"))))
+				  (compiler-internal-error __module_who__ "invalid arg"))))
 		      args)
 		    mask idx))
       (else
-       (error who "invalid NF effect" x))))
+       (compiler-internal-error __module_who__ "invalid NF effect" x))))
 
   (define (Var x)
     (cond (($var-loc x)
@@ -128,13 +128,13 @@
 	   x)
 	  ((nfv? x)
 	   (or ($nfv-loc x)
-	       (error who "unassigned nfv")))
+	       (compiler-internal-error __module_who__ "unassigned nfv")))
 	  ((var? x)
 	   (Var x))
 	  ((disp? x)
 	   (make-disp (R ($disp-s0 x)) (R ($disp-s1 x))))
 	  (else
-	   (error who "invalid R" (unparse-recordized-code x)))))
+	   (compiler-internal-error __module_who__ "invalid R" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -160,13 +160,13 @@
 	   ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	    x)
 	   (else
-	    (error who "invalid effect prim" op))))
+	    (compiler-internal-error __module_who__ "invalid effect prim" op))))
 
 	((shortcut body handler)
 	 (make-shortcut (E body) (E handler)))
 
 	(else
-	 (error who "invalid effect" (unparse-recordized-code x)))))
+	 (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
 
     (define (E-asm-instr op d s)
       (case op
@@ -197,7 +197,7 @@
 	 (nop))
 
 	(else
-	 (error who "invalid op" op))))
+	 (compiler-internal-error __module_who__ "invalid op" op))))
 
     (define (E-non-tail-call-frame vars live body)
       (let ((live-frms1 (map (lambda (i)
@@ -220,7 +220,7 @@
 	  (if (pair? ls)
 	      (let ((loc ($nfv-loc (car ls))))
 		(unless (fvar? loc)
-		  (error who "FVAR not assigned in MAX-NFV" loc))
+		  (compiler-internal-error __module_who__ "FVAR not assigned in MAX-NFV" loc))
 		(max-nfv (cdr ls) (max i ($fvar-idx loc))))
 	    i))
 
@@ -256,7 +256,7 @@
 			  (let ((loc ($nfv-loc x)))
 			    (if loc
 				(when (fx=? ($fvar-idx loc) i)
-				  (error who "invalid assignment"))
+				  (compiler-internal-error __module_who__ "invalid assignment"))
 			      (begin
 				($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
 				($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
@@ -266,7 +266,7 @@
 			      (let ((loc ($var-loc x)))
 				(if (fvar? loc)
 				    (when (fx=? (fvar-idx loc) i)
-				      (error who "invalid assignment"))
+				      (compiler-internal-error __module_who__ "invalid assignment"))
 				  ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
 	    (%assign-frame-vars! (cdr vars) (fxadd1 i))))
 
@@ -325,7 +325,7 @@
        (make-shortcut (P body) (P handler)))
 
       (else
-       (error who "invalid pred" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ "invalid pred" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -348,13 +348,13 @@
        (make-shortcut (T body) (T handler)))
 
       (else
-       (error who "invalid tail" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ "invalid tail" (unparse-recordized-code x)))))
 
   (T x))
 
-;;; --------------------------------------------------------------------
-
+
 (module (%assign)
+  (import FRAME-CONFLICT-HELPERS)
 
   (define (%assign x vars.vec)
     (or (%assign-move x vars.vec)
@@ -389,36 +389,104 @@
   #| end of module: %assign |# )
 
 
-(define (uncover-frame-conflicts x vars.vec)
-  ;;This function is used only by ASSIGN-FRAME-SIZES.
+(define (%uncover-frame-conflicts locals.body vars.vec)
+  ;;The argument BODY is the body of a LOCALS struct; the LOCALS struct is either the
+  ;;body of a CLAMBDA clause or the init expression of a CODES struct.  We know that,
+  ;;after being processed by the previous compiler pass, it has as last form of every
+  ;;branch a struct like:
+  ;;
+  ;;   (seq
+  ;;     (asmcall move   (AA-REGISTER ?result))
+  ;;     (asmcall return (AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)))
   ;;
   (import IntegerSet)
   (import FRAME-CONFLICT-HELPERS)
-  (define who 'uncover-frame-conflicts)
 
   (define spill-set
     ;;This will be the return value.
     (make-empty-set))
 
+  (define exception-live-set
+    (make-parameter #f))
+
+  (define (main body)
+    (T body)
+    spill-set)
+
+;;; --------------------------------------------------------------------
+
+  (define (T x)
+    ;;Process the  recordised code X  as a form in  tail position.  In  tail position
+    ;;there can be only structs of  type: SEQ, CONDITIONAL, SHORTCUT and ASMCALL with
+    ;;operator among: RETURN, INDIRECT-JUMP, DIRECT-JUMP.
+    ;;
+    (struct-case x
+      ((seq e0 e1)
+       (receive (vs rs fs ns)
+	   (T e1)
+         (E e0 vs rs fs ns)))
+
+      ((conditional test conseq altern)
+       (let-values
+	   (((vs1 rs1 fs1 ns1) (T conseq))
+	    ((vs2 rs2 fs2 ns2) (T altern)))
+         (P test
+            vs1 rs1 fs1 ns1
+            vs2 rs2 fs2 ns2
+            (union-vars vs1 vs2)
+            (union-regs rs1 rs2)
+            (union-frms fs1 fs2)
+            (union-nfvs ns1 ns2))))
+
+      ((asmcall rator rand*)
+       (case rator
+         ((return indirect-jump direct-jump)
+          (R* rand*
+	      (empty-var-set)
+              (empty-reg-set)
+              (empty-frm-set)
+              (empty-nfv-set)))
+         (else
+	  (compiler-internal-error __module_who__
+	    "invalid ASMCALL operator in tail position"
+	    (unparse-recordized-code/sexp x)))))
+
+      ((shortcut body handler)
+       (receive (vsh rsh fsh nsh)
+	   (T handler)
+	 (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
+	   (T body))))
+
+      (else
+       (compiler-internal-error __module_who__
+	 "invalid tail"
+	 (unparse-recordized-code/sexp x)))))
+
+;;; --------------------------------------------------------------------
+
   (define (mark-reg/vars-conf! r vs)
-    (for-each-var vs vars.vec
+    (for-each-var
+	vs vars.vec
       (lambda (v)
-        ($set-var-reg-conf! v (add-reg r ($var-reg-conf v))))))
+	($set-var-reg-conf! v (add-reg r ($var-reg-conf v))))))
 
   (define (mark-frm/vars-conf! f vs)
-    (for-each-var vs vars.vec
+    (for-each-var
+	vs vars.vec
       (lambda (v)
-        ($set-var-frm-conf! v (add-frm f ($var-frm-conf v))))))
+	($set-var-frm-conf! v (add-frm f ($var-frm-conf v))))))
 
   (define (mark-frm/nfvs-conf! f ns)
-    (for-each-nfv ns
+    (for-each-nfv
+	ns
       (lambda (n)
-        ($set-nfv-frm-conf! n (add-frm f ($nfv-frm-conf n))))))
+	($set-nfv-frm-conf! n (add-frm f ($nfv-frm-conf n))))))
 
   (define (mark-var/vars-conf! v vs)
-    (for-each-var vs vars.vec
+    (for-each-var
+	vs vars.vec
       (lambda (w)
-        ($set-var-var-conf! w (add-var v ($var-var-conf w)))))
+	($set-var-var-conf! w (add-var v ($var-var-conf w)))))
     ($set-var-var-conf! v (union-vars vs ($var-var-conf v))))
 
   (define (mark-var/frms-conf! v fs)
@@ -428,9 +496,10 @@
     ($set-var-reg-conf! v (union-regs rs ($var-reg-conf v))))
 
   (define (mark-var/nfvs-conf! v ns)
-    (for-each-nfv ns
+    (for-each-nfv
+	ns
       (lambda (n)
-        ($set-nfv-var-conf! n (add-var v ($nfv-var-conf n))))))
+	($set-nfv-var-conf! n (add-var v ($nfv-var-conf n))))))
 
   (define (mark-nfv/vars-conf! n vs)
     ($set-nfv-var-conf! n (union-vars vs ($nfv-var-conf n))))
@@ -440,9 +509,10 @@
 
   (define (mark-nfv/nfvs-conf! n ns)
     ($set-nfv-nfv-conf! n (union-nfvs ns ($nfv-nfv-conf n)))
-    (for-each-nfv ns
+    (for-each-nfv
+	ns
       (lambda (m)
-        ($set-nfv-nfv-conf! m (add-nfv n ($nfv-nfv-conf m))))))
+	($set-nfv-nfv-conf! m (add-nfv n ($nfv-nfv-conf m))))))
 
   (define (mark-var/var-move! x y)
     ($set-var-var-move! x (add-var y ($var-var-move x)))
@@ -474,7 +544,7 @@
 			 (R (disp-s0 x) vs rs fs ns)))
 	     (R (disp-s1 x) vs rs fs ns)))
 	  (else
-	   (error who "invalid R" x))))
+	   (compiler-internal-error __module_who__ "invalid R" x))))
 
   (define (R* ls vs rs fs ns)
     (if (pair? ls)
@@ -526,7 +596,7 @@
 			  (mark-reg/vars-conf! d vs)
 			  (values vs rs (add-frm s fs) ns)))
 		       (else
-			(error who "invalid rs" (unparse-recordized-code x)))))
+			(compiler-internal-error __module_who__ "invalid rs" (unparse-recordized-code x)))))
 		((fvar? d)
 		 (cond ((not (mem-frm? d fs))
 			(set-asm-instr-op! x 'nop)
@@ -544,7 +614,7 @@
 			  (mark-frm/nfvs-conf! d ns)
 			  (values (add-var s vs) rs fs ns)))
 		       (else
-			(error who "invalid fs" s))))
+			(compiler-internal-error __module_who__ "invalid fs" s))))
 		((var? d)
 		 (cond ((not (mem-var? d vs))
 			(set-asm-instr-op! x 'nop)
@@ -583,10 +653,10 @@
 			  (mark-var/nfvs-conf! d ns)
 			  (values vs rs (add-frm s fs) ns)))
 		       (else
-			(error who "invalid vs" s))))
+			(compiler-internal-error __module_who__ "invalid vs" s))))
 		((nfv? d)
 		 (cond ((not (mem-nfv? d ns))
-			(error who "dead nfv"))
+			(compiler-internal-error __module_who__ "dead nfv"))
 		       ((or (disp?     s)
 			    (constant? s)
 			    (reg?      s))
@@ -607,13 +677,13 @@
 			  (mark-nfv/frms-conf! d fs)
 			  (values vs rs (add-frm s fs) ns)))
 		       (else
-			(error who "invalid ns" s))))
+			(compiler-internal-error __module_who__ "invalid ns" s))))
 		(else
-		 (error who "invalid d" d))))
+		 (compiler-internal-error __module_who__ "invalid d" d))))
          ((int-/overflow int+/overflow int*/overflow)
           (let ((v (exception-live-set)))
             (unless (vector? v)
-              (error who "unbound exception" x v))
+              (compiler-internal-error __module_who__ "unbound exception" x v))
             (let ((vs (union-vars vs (vector-ref v 0)))
                   (rs (union-regs rs (vector-ref v 1)))
                   (fs (union-frms fs (vector-ref v 2)))
@@ -637,17 +707,17 @@
 			 (R s vs (add-reg d rs) fs ns))))
 		    ((nfv? d)
 		     (if (not (mem-nfv? d ns))
-			 (error who "dead nfv")
+			 (compiler-internal-error __module_who__ "dead nfv")
 		       (let ((ns (rem-nfv d ns)))
 			 (mark-nfv/vars-conf! d vs)
 			 (mark-nfv/frms-conf! d fs)
 			 (R s vs rs fs (add-nfv d ns)))))
 		    (else
-		     (error who "invalid op d" (unparse-recordized-code x)))))))
+		     (compiler-internal-error __module_who__ "invalid op d" (unparse-recordized-code x)))))))
          ((nop)
 	  (values vs rs fs ns))
          ((logand logor logxor sll sra srl int+ int- int* bswap!
-           sll/overflow)
+		  sll/overflow)
           (cond ((var? d)
 		 (cond ((not (mem-var? d vs))
 			(set-asm-instr-op! x 'nop)
@@ -669,13 +739,13 @@
 			  (R s vs (add-reg d rs) fs ns)))))
 		((nfv? d)
 		 (if (not (mem-nfv? d ns))
-		     (error who "dead nfv")
+		     (compiler-internal-error __module_who__ "dead nfv")
 		   (let ((ns (rem-nfv d ns)))
 		     (mark-nfv/vars-conf! d vs)
 		     (mark-nfv/frms-conf! d fs)
 		     (R s vs rs fs (add-nfv d ns)))))
 		(else
-		 (error who "invalid op d" (unparse-recordized-code x)))))
+		 (compiler-internal-error __module_who__ "invalid op d" (unparse-recordized-code x)))))
          ((idiv)
           (mark-reg/vars-conf! eax vs)
           (mark-reg/vars-conf! edx vs)
@@ -684,16 +754,17 @@
           (mark-reg/vars-conf! edx vs)
           (R s vs (rem-reg edx rs) fs ns))
          ((mset mset32 bset
-           fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:from-int
-           fl:shuffle fl:load-single fl:store-single)
+		fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:from-int
+		fl:shuffle fl:load-single fl:store-single)
           (R* (list s d) vs rs fs ns))
          (else
-	  (error who "invalid effect op" (unparse-recordized-code x)))))
+	  (compiler-internal-error __module_who__ "invalid effect op" (unparse-recordized-code x)))))
 
       ((non-tail-call target value args mask size)
        (set! spill-set (union-vars vs spill-set))
-       (for-each-var vs vars.vec (lambda (x)
-				   ($set-var-loc! x #t)))
+       (for-each-var
+	   vs vars.vec (lambda (x)
+			 ($set-var-loc! x #t)))
        (R* args vs (empty-reg-set) fs ns))
 
       ((non-tail-call-frame nfvs live body)
@@ -712,24 +783,24 @@
 			(vector-ref v 1)
 			(vector-ref v 2)
 			(vector-ref v 3))
-              (error who "unbound exception2"))))
+              (compiler-internal-error __module_who__ "unbound exception2"))))
          (else
-	  (error who "invalid effect op" op))))
+	  (compiler-internal-error __module_who__ "invalid effect op" op))))
 
       ((shortcut body handler)
        (let-values (((vsh rsh fsh nsh)
 		     (E handler vs rs fs ns)))
 	 (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
-            (E body vs rs fs ns))))
+	   (E body vs rs fs ns))))
 
       (else
-       (error who "invalid effect" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
   (define (P x vst rst fst nst
-               vsf rsf fsf nsf
-               vsu rsu fsu nsu)
+	     vsf rsf fsf nsf
+	     vsu rsu fsu nsu)
     (struct-case x
       ((seq e0 e1)
        (let-values (((vs rs fs ns)
@@ -741,12 +812,12 @@
       ((conditional e0 e1 e2)
        (let-values (((vs1 rs1 fs1 ns1)
                      (P e1 vst rst fst nst
-                           vsf rsf fsf nsf
-			   vsu rsu fsu nsu))
+			vsf rsf fsf nsf
+			vsu rsu fsu nsu))
                     ((vs2 rs2 fs2 ns2)
                      (P e2 vst rst fst nst
-                           vsf rsf fsf nsf
-			   vsu rsu fsu nsu)))
+			vsf rsf fsf nsf
+			vsu rsu fsu nsu)))
          (P e0
             vs1 rs1 fs1 ns1
             vs2 rs2 fs2 ns2
@@ -758,7 +829,7 @@
       ((constant t)
        (if t
            (values vst rst fst nst)
-           (values vsf rsf fsf nsf)))
+	 (values vsf rsf fsf nsf)))
 
       ((asm-instr op d s)
        (R* (list d s) vsu rsu fsu nsu))
@@ -766,64 +837,19 @@
       ((shortcut body handler)
        (let-values (((vsh rsh fsh nsh)
                      (P handler vst rst fst nst
-                                vsf rsf fsf nsf
-                                vsu rsu fsu nsu)))
-          (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
-            (P body vst rst fst nst
-                    vsf rsf fsf nsf
-                    vsu rsu fsu nsu))))
+			vsf rsf fsf nsf
+			vsu rsu fsu nsu)))
+	 (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
+	   (P body vst rst fst nst
+	      vsf rsf fsf nsf
+	      vsu rsu fsu nsu))))
 
       (else
-       (error who "invalid pred" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ "invalid pred" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (T x)
-    ;;Process the struct  instance T representing recordized  code as if
-    ;;it is in tail position.
-    ;;
-    (struct-case x
-      ((seq e0 e1)
-       (let-values (((vs rs fs ns) (T e1)))
-         (E e0 vs rs fs ns)))
-
-      ((conditional e0 e1 e2)
-       (let-values (((vs1 rs1 fs1 ns1) (T e1))
-                    ((vs2 rs2 fs2 ns2) (T e2)))
-         (P e0
-            vs1 rs1 fs1 ns1
-            vs2 rs2 fs2 ns2
-            (union-vars vs1 vs2)
-            (union-regs rs1 rs2)
-            (union-frms fs1 fs2)
-            (union-nfvs ns1 ns2))))
-
-      ((asmcall op arg*)
-       (case op
-         ((return indirect-jump direct-jump)
-          (R* arg*
-	      (empty-var-set)
-              (empty-reg-set)
-              (empty-frm-set)
-              (empty-nfv-set)))
-         (else
-	  (error who "invalid tail op" x))))
-
-      ((shortcut body handler)
-       (let-values (((vsh rsh fsh nsh) (T handler)))
-          (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
-             (T body))))
-
-      (else
-       (error who "invalid tail" x))))
-
-;;; --------------------------------------------------------------------
-
-  (define exception-live-set
-    (make-parameter #f))
-
-  (T x)
-  spill-set)
+  (main locals.body))
 
 
 ;;;; done
@@ -837,4 +863,6 @@
 ;; eval: (put 'assemble-sources		'scheme-indent-function 1)
 ;; eval: (put 'make-conditional		'scheme-indent-function 2)
 ;; eval: (put 'struct-case		'scheme-indent-function 1)
+;; eval: (put 'for-each-var		'scheme-indent-function 2)
+;; eval: (put 'for-each-nfv		'scheme-indent-function 1)
 ;; End:
