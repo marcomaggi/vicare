@@ -33,27 +33,27 @@
     (identifier-syntax 'assign-frame-sizes))
 
   (define (assign-frame-sizes x)
-    (V-codes x))
+    (E-codes x))
 
 
-(module (V-codes)
+(module (E-codes)
 
-  (define (V-codes x)
+  (define (E-codes x)
     (struct-case x
       ((codes clam* body)
-       (make-codes (map V-clambda clam*) (V-locals body)))))
+       (make-codes (map E-clambda clam*) (E-locals body)))))
 
-  (define (V-clambda x)
+  (define (E-clambda x)
     (struct-case x
       ((clambda label clause* cp freevar* name)
-       (make-clambda label (map V-clambda-clause clause*) cp freevar* name))))
+       (make-clambda label (map E-clambda-clause clause*) cp freevar* name))))
 
-  (define (V-clambda-clause x)
+  (define (E-clambda-clause x)
     (struct-case x
       ((clambda-case info body)
-       (make-clambda-case info (V-locals body)))))
+       (make-clambda-case info (E-locals body)))))
 
-  (define (V-locals x)
+  (define (E-locals x)
     ;;X must  be a struct instance  of type LOCALS.  Update  the field VARS of  X and
     ;;return a new struct instance of type LOCALS which is meant to replace X.
     ;;
@@ -84,309 +84,7 @@
 	  (cons (car vars) (%discard-vars-being-stack-operands (cdr vars))))
       '()))
 
-  #| end of module: V-codes |# )
-
-
-(define (%rewrite x vars.vec)
-  ;;X must be a struct instance representing a recordized body.
-  ;;
-  ;;A lot of functions are nested here because they need to close upon
-  ;;the argument VARS.VEC.
-  ;;
-  (import FRAME-CONFLICT-HELPERS)
-  (define (NFE idx mask x)
-    (struct-case x
-      ((seq e0 e1)
-       (let ((e0^ (E e0)))
-	 (make-seq e0^ (NFE idx mask e1))))
-      ((non-tail-call target value args mask^ size)
-       (make-non-tail-call target value
-		    (map (lambda (x)
-			   (cond ((symbol? x)
-				  x)
-				 ((nfv? x)
-				  ($nfv-loc x))
-				 (else
-				  (compiler-internal-error __module_who__ "invalid arg"))))
-		      args)
-		    mask idx))
-      (else
-       (compiler-internal-error __module_who__ "invalid NF effect" x))))
-
-  (define (Var x)
-    (cond (($var-loc x)
-	   => (lambda (loc)
-		(if (fvar? loc)
-		    loc
-		  (%assign x vars.vec))))
-	  (else x)))
-
-  (define (R x)
-    (cond ((or (constant? x)
-	       (reg?      x)
-	       (fvar?     x))
-	   x)
-	  ((nfv? x)
-	   (or ($nfv-loc x)
-	       (compiler-internal-error __module_who__ "unassigned nfv")))
-	  ((var? x)
-	   (Var x))
-	  ((disp? x)
-	   (make-disp (R ($disp-s0 x)) (R ($disp-s1 x))))
-	  (else
-	   (compiler-internal-error __module_who__ "invalid R" (unparse-recordized-code x)))))
-
-;;; --------------------------------------------------------------------
-
-  (module (E)
-
-    (define (E x)
-      (struct-case x
-	((seq e0 e1)
-	 (let ((e0^ (E e0)))
-	   (make-seq e0^ (E e1))))
-
-	((conditional e0 e1 e2)
-	 (make-conditional (P e0) (E e1) (E e2)))
-
-	((asm-instr op d s)
-	 (E-asm-instr op d s))
-
-	((non-tail-call-frame vars live body)
-	 (E-non-tail-call-frame vars live body))
-
-	((asmcall op args)
-	 (case op
-	   ((nop interrupt incr/zero? fl:double->single fl:single->double)
-	    x)
-	   (else
-	    (compiler-internal-error __module_who__ "invalid effect prim" op))))
-
-	((shortcut body handler)
-	 (make-shortcut (E body) (E handler)))
-
-	(else
-	 (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
-
-    (define (E-asm-instr op d s)
-      (case op
-	((move load8 load32)
-	 ;;If  the   destination  equals  the  source:   convert  this
-	 ;;instruction into a NOP.
-	 (let ((d (R d))
-	       (s (R s)))
-	   (if (eq? d s)
-	       (nop)
-	     (make-asm-instr op d s))))
-
-	(( ;;some assembly instructions
-	  logand		logor		logxor
-	  int+			int-		int*
-	  mset			mset32
-	  bset			bswap!
-	  sll			sll/overflow
-	  sra			srl
-	  cltd			idiv
-	  int-/overflow		int+/overflow	int*/overflow
-	  fl:load		fl:store
-	  fl:add!		fl:sub!		fl:mul!		fl:div!
-	  fl:from-int		fl:shuffle	fl:load-single	fl:store-single)
-	 (make-asm-instr op (R d) (R s)))
-
-	((nop)
-	 (nop))
-
-	(else
-	 (compiler-internal-error __module_who__ "invalid op" op))))
-
-    (define (E-non-tail-call-frame vars live body)
-      (let ((live-frms1 (map (lambda (i)
-			       (Var (vector-ref vars.vec i)))
-			  (set->list (vector-ref live 0))))
-	    (live-frms2 (set->list (vector-ref live 1)))
-	    (live-nfvs  (vector-ref live 2)))
-
-	(define (max-frm ls i)
-	  (if (pair? ls)
-	      (max-frm (cdr ls) (max i ($fvar-idx (car ls))))
-	    i))
-
-	(define (max-ls ls i)
-	  (if (pair? ls)
-	      (max-ls  (cdr ls) (max i (car ls)))
-	    i))
-
-	(define (max-nfv ls i)
-	  (if (pair? ls)
-	      (let ((loc ($nfv-loc (car ls))))
-		(unless (fvar? loc)
-		  (compiler-internal-error __module_who__ "FVAR not assigned in MAX-NFV" loc))
-		(max-nfv (cdr ls) (max i ($fvar-idx loc))))
-	    i))
-
-	(module (actual-frame-size)
-
-	  (define (actual-frame-size vars i)
-	    (if (%frame-size-ok? i vars)
-		i
-	      (actual-frame-size vars (fxadd1 i))))
-
-	  (define (%frame-size-ok? i vars)
-	    (or (null? vars)
-		(let ((x (car vars)))
-		  (and (not (set-member?    i ($nfv-frm-conf x)))
-		       (not (%var-conflict? i ($nfv-var-conf x)))
-		       (%frame-size-ok? (fxadd1 i) (cdr vars))))))
-
-	  (define (%var-conflict? i vs)
-	    (ormap (lambda (xi)
-		     (let ((loc ($var-loc (vector-ref vars.vec xi))))
-		       (and (fvar? loc)
-			    (fx=? i ($fvar-idx loc)))))
-		   (set->list vs)))
-
-	  #| end of module: actual-frame-size |# )
-
-	(define (%assign-frame-vars! vars i)
-	  (when (pair? vars)
-	    (let ((v  (car vars))
-		  (fv (mkfvar i)))
-	      ($set-nfv-loc! v fv)
-	      (for-each (lambda (x)
-			  (let ((loc ($nfv-loc x)))
-			    (if loc
-				(when (fx=? ($fvar-idx loc) i)
-				  (compiler-internal-error __module_who__ "invalid assignment"))
-			      (begin
-				($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
-				($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
-		($nfv-nfv-conf v))
-	      (for-each-var ($nfv-var-conf v) vars.vec
-			    (lambda (x)
-			      (let ((loc ($var-loc x)))
-				(if (fvar? loc)
-				    (when (fx=? (fvar-idx loc) i)
-				      (compiler-internal-error __module_who__ "invalid assignment"))
-				  ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
-	    (%assign-frame-vars! (cdr vars) (fxadd1 i))))
-
-	(module (make-mask)
-
-	  (define (make-mask n)
-	    (let ((vec (make-vector (fxsra (fx+ n 7) 3) 0)))
-	      (for-each (lambda (fvar)
-			  (%set-bit! vec ($fvar-idx fvar)))
-		live-frms1)
-	      (for-each (lambda (idx)
-			  (%set-bit! vec idx))
-		live-frms2)
-	      (for-each (lambda (nfv)
-			  (let ((loc ($nfv-loc nfv)))
-			    (when loc
-			      (%set-bit! vec ($fvar-idx loc)))))
-		live-nfvs)
-	      vec))
-
-	  (define (%set-bit! vec idx)
-	    (let ((q (fxsra    idx 3))
-		  (r (fxlogand idx 7)))
-	      (vector-set! vec q (fxlogor (vector-ref vec q) (fxsll 1 r)))))
-
-	  #| end of module: make-mask |# )
-
-	(let ((i (actual-frame-size
-		  vars
-		  (fx+ 2 (max-frm live-frms1
-				  (max-nfv live-nfvs
-					   (max-ls live-frms2 0)))))))
-	  (%assign-frame-vars! vars i)
-	  (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
-
-    #| end of module: E |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (P x)
-    (struct-case x
-      ((seq e0 e1)
-       (let ((e0^ (E e0)))
-	 (make-seq e0^ (P e1))))
-
-      ((conditional e0 e1 e2)
-       (make-conditional (P e0) (P e1) (P e2)))
-
-      ((asm-instr op d s)
-       (make-asm-instr op (R d) (R s)))
-
-      ((constant)
-       x)
-
-      ((shortcut body handler)
-       (make-shortcut (P body) (P handler)))
-
-      (else
-       (compiler-internal-error __module_who__ "invalid pred" (unparse-recordized-code x)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (T x)
-    ;;Process the struct instance X representing recordized code as if
-    ;;it is in tail position.
-    ;;
-    (struct-case x
-      ((seq e0 e1)
-       (let ((e0^ (E e0)))
-	 (make-seq e0^ (T e1))))
-
-      ((conditional e0 e1 e2)
-       (make-conditional (P e0) (T e1) (T e2)))
-
-      ((asmcall op args)
-       x)
-
-      ((shortcut body handler)
-       (make-shortcut (T body) (T handler)))
-
-      (else
-       (compiler-internal-error __module_who__ "invalid tail" (unparse-recordized-code x)))))
-
-  (T x))
-
-
-(module (%assign)
-  (import FRAME-CONFLICT-HELPERS)
-
-  (define (%assign x vars.vec)
-    (or (%assign-move x vars.vec)
-	(%assign-any  x vars.vec)))
-
-  (define (%assign-any x vars.vec)
-    (let ((frms ($var-frm-conf x))
-	  (vars ($var-var-conf x)))
-      (let loop ((i 1))
-	(if (set-member? i frms)
-	    (loop (fxadd1 i))
-	  (receive-and-return (fv)
-	      (mkfvar i)
-	    ($set-var-loc! x fv)
-	    (for-each-var vars vars.vec
-			  (lambda (var)
-			    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
-
-  (define (%assign-move x vars.vec)
-    (let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
-      (and (pair? mr)
-	   (receive-and-return (fv)
-	       (mkfvar (car mr))
-	     ($set-var-loc! x fv)
-	     (for-each-var ($var-var-conf x) vars.vec
-			   (lambda (var)
-			     ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
-	     (for-each-var ($var-var-move x) vars.vec
-			   (lambda (var)
-			     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
-
-  #| end of module: %assign |# )
+  #| end of module: E-codes |# )
 
 
 (define (%uncover-frame-conflicts locals.body vars.vec)
@@ -441,6 +139,7 @@
       ((asmcall rator rand*)
        (case rator
          ((return indirect-jump direct-jump)
+	  ;;This is the last form of the original input body.
           (R* rand*
 	      (empty-var-set)
               (empty-reg-set)
@@ -452,9 +151,10 @@
 	    (unparse-recordized-code/sexp x)))))
 
       ((shortcut body handler)
-       (receive (vsh rsh fsh nsh)
+       (receive (vs.handler rs.handler fs.handler ns.handler)
 	   (T handler)
-	 (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
+	 (parameterize
+	     ((exception-live-set (vector vs.handler rs.handler fs.handler ns.handler)))
 	   (T body))))
 
       (else
@@ -528,25 +228,32 @@
     (or (constant? x)
         (code-loc? x)))
 
+;;; --------------------------------------------------------------------
+
   (define (R x vs rs fs ns)
+    ;;Recursive function, tail and non-tail.
+    ;;
     (cond ((const? x)
 	   (values vs rs fs ns))
-	  ((reg? x)
+	  ((reg?   x)
 	   (values vs (add-reg x rs) fs ns))
-	  ((fvar? x)
+	  ((fvar?  x)
 	   (values vs rs (add-frm x fs) ns))
-	  ((var? x)
+	  ((var?   x)
 	   (values (add-var x vs) rs fs ns))
-	  ((nfv? x)
+	  ((nfv?   x)
 	   (values vs rs fs (add-nfv x ns)))
-	  ((disp? x)
-	   (let-values (((vs rs fs ns)
-			 (R (disp-s0 x) vs rs fs ns)))
+	  ((disp?  x)
+	   (receive (vs rs fs ns)
+	       (R (disp-s0 x) vs rs fs ns)
 	     (R (disp-s1 x) vs rs fs ns)))
 	  (else
 	   (compiler-internal-error __module_who__ "invalid R" x))))
 
   (define (R* ls vs rs fs ns)
+    ;;Recursive function,  tail and non-tail.   Apply R to every  item in LS  and the
+    ;;other arguments.  Return the final VS, RS, FS, NS arguments.
+    ;;
     (if (pair? ls)
 	(receive (vs rs fs ns)
 	    (R (car ls) vs rs fs ns)
@@ -850,6 +557,308 @@
 ;;; --------------------------------------------------------------------
 
   (main locals.body))
+
+
+(define (%rewrite x vars.vec)
+  ;;X must be a struct instance representing a recordized body.
+  ;;
+  ;;A lot of functions are nested here because they need to close upon
+  ;;the argument VARS.VEC.
+  ;;
+  (import FRAME-CONFLICT-HELPERS)
+  (define (NFE idx mask x)
+    (struct-case x
+      ((seq e0 e1)
+       (let ((e0^ (E e0)))
+	 (make-seq e0^ (NFE idx mask e1))))
+      ((non-tail-call target value args mask^ size)
+       (make-non-tail-call target value
+		    (map (lambda (x)
+			   (cond ((symbol? x)
+				  x)
+				 ((nfv? x)
+				  ($nfv-loc x))
+				 (else
+				  (compiler-internal-error __module_who__ "invalid arg"))))
+		      args)
+		    mask idx))
+      (else
+       (compiler-internal-error __module_who__ "invalid NF effect" x))))
+
+  (define (Var x)
+    (cond (($var-loc x)
+	   => (lambda (loc)
+		(if (fvar? loc)
+		    loc
+		  (%assign x vars.vec))))
+	  (else x)))
+
+  (define (R x)
+    (cond ((or (constant? x)
+	       (reg?      x)
+	       (fvar?     x))
+	   x)
+	  ((nfv? x)
+	   (or ($nfv-loc x)
+	       (compiler-internal-error __module_who__ "unassigned nfv")))
+	  ((var? x)
+	   (Var x))
+	  ((disp? x)
+	   (make-disp (R ($disp-s0 x)) (R ($disp-s1 x))))
+	  (else
+	   (compiler-internal-error __module_who__ "invalid R" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (module (E)
+
+    (define (E x)
+      (struct-case x
+	((seq e0 e1)
+	 (let ((e0^ (E e0)))
+	   (make-seq e0^ (E e1))))
+
+	((conditional e0 e1 e2)
+	 (make-conditional (P e0) (E e1) (E e2)))
+
+	((asm-instr op d s)
+	 (E-asm-instr op d s))
+
+	((non-tail-call-frame vars live body)
+	 (E-non-tail-call-frame vars live body))
+
+	((asmcall op args)
+	 (case op
+	   ((nop interrupt incr/zero? fl:double->single fl:single->double)
+	    x)
+	   (else
+	    (compiler-internal-error __module_who__ "invalid effect prim" op))))
+
+	((shortcut body handler)
+	 (make-shortcut (E body) (E handler)))
+
+	(else
+	 (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
+
+    (define (E-asm-instr op d s)
+      (case op
+	((move load8 load32)
+	 ;;If  the   destination  equals  the  source:   convert  this
+	 ;;instruction into a NOP.
+	 (let ((d (R d))
+	       (s (R s)))
+	   (if (eq? d s)
+	       (nop)
+	     (make-asm-instr op d s))))
+
+	(( ;;some assembly instructions
+	  logand		logor		logxor
+	  int+			int-		int*
+	  mset			mset32
+	  bset			bswap!
+	  sll			sll/overflow
+	  sra			srl
+	  cltd			idiv
+	  int-/overflow		int+/overflow	int*/overflow
+	  fl:load		fl:store
+	  fl:add!		fl:sub!		fl:mul!		fl:div!
+	  fl:from-int		fl:shuffle	fl:load-single	fl:store-single)
+	 (make-asm-instr op (R d) (R s)))
+
+	((nop)
+	 (nop))
+
+	(else
+	 (compiler-internal-error __module_who__ "invalid op" op))))
+
+    (define (E-non-tail-call-frame vars live body)
+      (let ((live-frms1 (map (lambda (i)
+			       (Var (vector-ref vars.vec i)))
+			  (set->list (vector-ref live 0))))
+	    (live-frms2 (set->list (vector-ref live 1)))
+	    (live-nfvs  (vector-ref live 2)))
+
+	(define (max-frm ls i)
+	  (if (pair? ls)
+	      (max-frm (cdr ls) (max i ($fvar-idx (car ls))))
+	    i))
+
+	(define (max-ls ls i)
+	  (if (pair? ls)
+	      (max-ls  (cdr ls) (max i (car ls)))
+	    i))
+
+	(define (max-nfv ls i)
+	  (if (pair? ls)
+	      (let ((loc ($nfv-loc (car ls))))
+		(unless (fvar? loc)
+		  (compiler-internal-error __module_who__ "FVAR not assigned in MAX-NFV" loc))
+		(max-nfv (cdr ls) (max i ($fvar-idx loc))))
+	    i))
+
+	(module (actual-frame-size)
+
+	  (define (actual-frame-size vars i)
+	    (if (%frame-size-ok? i vars)
+		i
+	      (actual-frame-size vars (fxadd1 i))))
+
+	  (define (%frame-size-ok? i vars)
+	    (or (null? vars)
+		(let ((x (car vars)))
+		  (and (not (set-member?    i ($nfv-frm-conf x)))
+		       (not (%var-conflict? i ($nfv-var-conf x)))
+		       (%frame-size-ok? (fxadd1 i) (cdr vars))))))
+
+	  (define (%var-conflict? i vs)
+	    (ormap (lambda (xi)
+		     (let ((loc ($var-loc (vector-ref vars.vec xi))))
+		       (and (fvar? loc)
+			    (fx=? i ($fvar-idx loc)))))
+		   (set->list vs)))
+
+	  #| end of module: actual-frame-size |# )
+
+	(define (%assign-frame-vars! vars i)
+	  (when (pair? vars)
+	    (let ((v  (car vars))
+		  (fv (mkfvar i)))
+	      ($set-nfv-loc! v fv)
+	      (for-each (lambda (x)
+			  (let ((loc ($nfv-loc x)))
+			    (if loc
+				(when (fx=? ($fvar-idx loc) i)
+				  (compiler-internal-error __module_who__ "invalid assignment"))
+			      (begin
+				($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
+				($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
+		($nfv-nfv-conf v))
+	      (for-each-var ($nfv-var-conf v) vars.vec
+			    (lambda (x)
+			      (let ((loc ($var-loc x)))
+				(if (fvar? loc)
+				    (when (fx=? (fvar-idx loc) i)
+				      (compiler-internal-error __module_who__ "invalid assignment"))
+				  ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
+	    (%assign-frame-vars! (cdr vars) (fxadd1 i))))
+
+	(module (make-mask)
+
+	  (define (make-mask n)
+	    (let ((vec (make-vector (fxsra (fx+ n 7) 3) 0)))
+	      (for-each (lambda (fvar)
+			  (%set-bit! vec ($fvar-idx fvar)))
+		live-frms1)
+	      (for-each (lambda (idx)
+			  (%set-bit! vec idx))
+		live-frms2)
+	      (for-each (lambda (nfv)
+			  (let ((loc ($nfv-loc nfv)))
+			    (when loc
+			      (%set-bit! vec ($fvar-idx loc)))))
+		live-nfvs)
+	      vec))
+
+	  (define (%set-bit! vec idx)
+	    (let ((q (fxsra    idx 3))
+		  (r (fxlogand idx 7)))
+	      (vector-set! vec q (fxlogor (vector-ref vec q) (fxsll 1 r)))))
+
+	  #| end of module: make-mask |# )
+
+	(let ((i (actual-frame-size
+		  vars
+		  (fx+ 2 (max-frm live-frms1
+				  (max-nfv live-nfvs
+					   (max-ls live-frms2 0)))))))
+	  (%assign-frame-vars! vars i)
+	  (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
+
+    #| end of module: E |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (P x)
+    (struct-case x
+      ((seq e0 e1)
+       (let ((e0^ (E e0)))
+	 (make-seq e0^ (P e1))))
+
+      ((conditional e0 e1 e2)
+       (make-conditional (P e0) (P e1) (P e2)))
+
+      ((asm-instr op d s)
+       (make-asm-instr op (R d) (R s)))
+
+      ((constant)
+       x)
+
+      ((shortcut body handler)
+       (make-shortcut (P body) (P handler)))
+
+      (else
+       (compiler-internal-error __module_who__ "invalid pred" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (T x)
+    ;;Process the struct instance X representing recordized code as if
+    ;;it is in tail position.
+    ;;
+    (struct-case x
+      ((seq e0 e1)
+       (let ((e0^ (E e0)))
+	 (make-seq e0^ (T e1))))
+
+      ((conditional e0 e1 e2)
+       (make-conditional (P e0) (T e1) (T e2)))
+
+      ((asmcall op args)
+       x)
+
+      ((shortcut body handler)
+       (make-shortcut (T body) (T handler)))
+
+      (else
+       (compiler-internal-error __module_who__ "invalid tail" (unparse-recordized-code x)))))
+
+  (T x))
+
+
+(module (%assign)
+  (import FRAME-CONFLICT-HELPERS)
+
+  (define (%assign x vars.vec)
+    (or (%assign-move x vars.vec)
+	(%assign-any  x vars.vec)))
+
+  (define (%assign-any x vars.vec)
+    (let ((frms ($var-frm-conf x))
+	  (vars ($var-var-conf x)))
+      (let loop ((i 1))
+	(if (set-member? i frms)
+	    (loop (fxadd1 i))
+	  (receive-and-return (fv)
+	      (mkfvar i)
+	    ($set-var-loc! x fv)
+	    (for-each-var vars vars.vec
+			  (lambda (var)
+			    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
+
+  (define (%assign-move x vars.vec)
+    (let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
+      (and (pair? mr)
+	   (receive-and-return (fv)
+	       (mkfvar (car mr))
+	     ($set-var-loc! x fv)
+	     (for-each-var ($var-var-conf x) vars.vec
+			   (lambda (var)
+			     ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
+	     (for-each-var ($var-var-move x) vars.vec
+			   (lambda (var)
+			     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
+
+  #| end of module: %assign |# )
 
 
 ;;;; done
