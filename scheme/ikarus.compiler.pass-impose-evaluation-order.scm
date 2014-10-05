@@ -1192,12 +1192,16 @@
     ;;locations that  may be  overwritten by  the new operands,  so we  must preserve
     ;;their values until  all the stack operands and the  reference to closure object
     ;;have been computed.
-    (let* ((rator.simple    (if (or (and (var? rator)
-					 (not (var-loc rator)))
-				    (constant? rator))
-				rator
-			      (make-unique-var 'tmp)))
-	   (already-simple? (eq? rator.simple rator)))
+    (receive (rator.simple already-simple?)
+	(struct-case rator
+	  ((var)
+	   (if (var-loc rator)
+	       (values (make-unique-var 'tmp) #f)
+	     (values rator #t)))
+	  ((constant)
+	   (values rator #t))
+	  (else
+	   (values (make-unique-var 'tmp) #f)))
       ;;If  there  is the  need:  compute  the  reference  to closure  object  before
       ;;overwriting the stack locations with the new stack operands.
       (%assign-complex-rhs-to-local-lhs*
@@ -1421,18 +1425,21 @@
       ;;  in memory locations or CPU registers; CONSTANT structs, because they can be
       ;;  directly loaded into the CP-REGISTER.
       ;;
-      (let* ((rator.var (if (or (var?      rator)
-				(constant? rator))
-			    rator
-			  (make-unique-var 'tmp)))
-	     (simple?   (eq? rator.var rator)))
+      (receive (rator.simple already-simple?)
+	  (struct-case rator
+	    ((var)
+	     (values rator #t))
+	    ((constant)
+	     (values rator #t))
+	    (else
+	     (values (make-unique-var 'tmp) #f)))
 	(%assign-complex-rhs-to-local-lhs*
-	    (if simple? '() (list rator.var))
-	    (if simple? '() (list rator))
+	    (if already-simple? '() (list rator.simple))
+	    (if already-simple? '() (list rator))
 	  ;;Load in the  actual CPU registers the register operand  values from their
 	  ;;temporary locations.
 	  (multiple-forms-sequence
-	    (%load-register-operand/closure-object-reference rator.var)
+	    (%load-register-operand/closure-object-reference rator.simple)
 	    (%load-register-operand/number-of-stack-operands (length rand*))
 	    ntcall)))))
 
