@@ -268,6 +268,281 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define (E x vs rs fs ns)
+    (struct-case x
+
+      ((seq e0 e1)
+       (let-values (((vs rs fs ns)
+		     (E e1 vs rs fs ns)))
+         (E e0 vs rs fs ns)))
+
+      ((conditional e0 e1 e2)
+       (let-values (((vs1 rs1 fs1 ns1)  (E e1 vs rs fs ns))
+                    ((vs2 rs2 fs2 ns2)  (E e2 vs rs fs ns)))
+         (P e0
+            vs1 rs1 fs1 ns1
+            vs2 rs2 fs2 ns2
+            (union-vars vs1 vs2)
+            (union-regs rs1 rs2)
+            (union-frms fs1 fs2)
+            (union-nfvs ns1 ns2))))
+
+      ((asm-instr op dst src)
+       (E-asm-instr x op dst src vs rs fs ns))
+
+      ((non-tail-call target value args mask size)
+       (set! spill-set (union-vars vs spill-set))
+       (for-each-var
+	   vs vars.vec (lambda (x)
+			 ($set-var-loc! x #t)))
+       (R* args vs (empty-reg-set) fs ns))
+
+      ((non-tail-call-frame nfvs live body)
+       (for-each init-nfv! nfvs)
+       (set-non-tail-call-frame-live! x (vector vs fs ns))
+       (E body vs rs fs ns))
+
+      ((asmcall op args)
+       (case op
+         ((nop fl:double->single fl:single->double)
+	  (values vs rs fs ns))
+         ((interrupt incr/zero?)
+          (let ((v (exception-live-set)))
+            (if (vector? v)
+		(values (vector-ref v 0)
+			(vector-ref v 1)
+			(vector-ref v 2)
+			(vector-ref v 3))
+              (compiler-internal-error __module_who__ "unbound exception2"))))
+         (else
+	  (compiler-internal-error __module_who__ "invalid effect op" op))))
+
+      ((shortcut body handler)
+       (receive (vs.handler rs.handler fs.handler ns.handler)
+	   (E handler vs rs fs ns)
+	 (parameterize
+	     ((exception-live-set (vector vs.handler rs.handler fs.handler ns.handler)))
+	   (E body vs rs fs ns))))
+
+      (else
+       (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (E-asm-instr x op dst src vs rs fs ns)
+    (case op
+      ((move load8 load32)
+       (cond ((reg? dst)
+	      (cond ((not (mem-reg? dst rs))
+		     (set-asm-instr-op! x 'nop)
+		     (values vs rs fs ns))
+		    ((or (const? src) (disp? src) (reg? src))
+		     (let ((rs (rem-reg dst rs)))
+		       (mark-reg/vars-conf! dst vs)
+		       (R src vs rs fs ns)))
+		    ((var? src)
+		     (let ((rs (rem-reg dst rs))
+			   (vs (rem-var src vs)))
+		       (mark-var/reg-move! src dst)
+		       (mark-reg/vars-conf! dst vs)
+		       (values (add-var src vs) rs fs ns)))
+		    ((fvar? src)
+		     (let ((rs (rem-reg dst rs)))
+		       (mark-reg/vars-conf! dst vs)
+		       (values vs rs (add-frm src fs) ns)))
+		    (else
+		     (compiler-internal-error __module_who__ "invalid rs" (unparse-recordized-code x)))))
+	     ((fvar? dst)
+	      (cond ((not (mem-frm? dst fs))
+		     (set-asm-instr-op! x 'nop)
+		     (values vs rs fs ns))
+		    ((or (const? src) (disp? src) (reg? src))
+		     (let ((fs (rem-frm dst fs)))
+		       (mark-frm/vars-conf! dst vs)
+		       (mark-frm/nfvs-conf! dst ns)
+		       (R src vs rs fs ns)))
+		    ((var? src)
+		     (let ((fs (rem-frm dst fs))
+			   (vs (rem-var src vs)))
+		       (mark-var/frm-move! src dst)
+		       (mark-frm/vars-conf! dst vs)
+		       (mark-frm/nfvs-conf! dst ns)
+		       (values (add-var src vs) rs fs ns)))
+		    (else
+		     (compiler-internal-error __module_who__ "invalid fs" src))))
+	     ((var? dst)
+	      (cond ((not (mem-var? dst vs))
+		     (set-asm-instr-op! x 'nop)
+		     (values vs rs fs ns))
+		    ((or (disp? src) (constant? src))
+		     (let ((vs (rem-var dst vs)))
+		       (mark-var/vars-conf! dst vs)
+		       (mark-var/frms-conf! dst fs)
+		       (mark-var/regs-conf! dst rs)
+		       (mark-var/nfvs-conf! dst ns)
+		       (R src vs rs fs ns)))
+		    ((reg? src)
+		     (let ((vs (rem-var dst vs))
+			   (rs (rem-reg src rs)))
+		       (mark-var/reg-move! dst src)
+		       (mark-var/vars-conf! dst vs)
+		       (mark-var/frms-conf! dst fs)
+		       (mark-var/regs-conf! dst rs)
+		       (mark-var/nfvs-conf! dst ns)
+		       (values vs (add-reg src rs) fs ns)))
+		    ((var? src)
+		     (let ((vs (rem-var dst (rem-var src vs))))
+		       (mark-var/var-move! dst src)
+		       (mark-var/vars-conf! dst vs)
+		       (mark-var/frms-conf! dst fs)
+		       (mark-var/regs-conf! dst rs)
+		       (mark-var/nfvs-conf! dst ns)
+		       (values (add-var src vs) rs fs ns)))
+		    ((fvar? src)
+		     (let ((vs (rem-var dst vs))
+			   (fs (rem-frm src fs)))
+		       (mark-var/frm-move! dst src)
+		       (mark-var/vars-conf! dst vs)
+		       (mark-var/frms-conf! dst fs)
+		       (mark-var/regs-conf! dst rs)
+		       (mark-var/nfvs-conf! dst ns)
+		       (values vs rs (add-frm src fs) ns)))
+		    (else
+		     (compiler-internal-error __module_who__ "invalid vs" src))))
+
+	     ((nfv? dst)
+	      (cond ((not (mem-nfv? dst ns))
+		     (compiler-internal-error __module_who__ "dead nfv"))
+
+		    ((or (disp?     src)
+			 (constant? src)
+			 (reg?      src))
+		     (let ((ns (rem-nfv dst ns)))
+		       (mark-nfv/vars-conf! dst vs)
+		       (mark-nfv/frms-conf! dst fs)
+		       (R src vs rs fs ns)))
+
+		    ((var? src)
+		     (let ((ns (rem-nfv dst ns))
+			   (vs (rem-var src vs)))
+		       (mark-nfv/vars-conf! dst vs)
+		       (mark-nfv/frms-conf! dst fs)
+		       (values (add-var src vs) rs fs ns)))
+
+		    ((fvar? src)
+		     (let ((ns (rem-nfv dst ns))
+			   (fs (rem-frm src fs)))
+		       (mark-nfv/vars-conf! dst vs)
+		       (mark-nfv/frms-conf! dst fs)
+		       (values vs rs (add-frm src fs) ns)))
+
+		    (else
+		     (compiler-internal-error __module_who__
+		       "invalid ns" src))))
+
+	     (else
+	      (compiler-internal-error __module_who__
+		"invalid d" dst))))
+
+      ((int-/overflow int+/overflow int*/overflow)
+       (let ((v (exception-live-set)))
+	 (unless (vector? v)
+	   (compiler-internal-error __module_who__
+	     "unbound exception" x v))
+	 (let ((vs (union-vars vs (vector-ref v 0)))
+	       (rs (union-regs rs (vector-ref v 1)))
+	       (fs (union-frms fs (vector-ref v 2)))
+	       (ns (union-nfvs ns (vector-ref v 3))))
+	   (cond ((var? dst)
+		  (cond ((not (mem-var? dst vs))
+			 (set-asm-instr-op! x 'nop)
+			 (values vs rs fs ns))
+			(else
+			 (let ((vs (rem-var dst vs)))
+			   (mark-var/vars-conf! dst vs)
+			   (mark-var/frms-conf! dst fs)
+			   (mark-var/nfvs-conf! dst ns)
+			   (mark-var/regs-conf! dst rs)
+			   (R src (add-var dst vs) rs fs ns)))))
+
+		 ((reg? dst)
+		  (if (not (mem-reg? dst rs))
+		      (values vs rs fs ns)
+		    (let ((rs (rem-reg dst rs)))
+		      (mark-reg/vars-conf! dst vs)
+		      (R src vs (add-reg dst rs) fs ns))))
+
+		 ((nfv? dst)
+		  (if (not (mem-nfv? dst ns))
+		      (compiler-internal-error __module_who__ "dead nfv")
+		    (let ((ns (rem-nfv dst ns)))
+		      (mark-nfv/vars-conf! dst vs)
+		      (mark-nfv/frms-conf! dst fs)
+		      (R src vs rs fs (add-nfv dst ns)))))
+
+		 (else
+		  (compiler-internal-error __module_who__
+		    "invalid op dst"
+		    (unparse-recordized-code x)))))))
+
+      ((nop)
+       (values vs rs fs ns))
+
+      ((logand logor logxor sll sra srl int+ int- int* bswap! sll/overflow)
+       (cond ((var? dst)
+	      (cond ((not (mem-var? dst vs))
+		     (set-asm-instr-op! x 'nop)
+		     (values vs rs fs ns))
+		    (else
+		     (let ((vs (rem-var dst vs)))
+		       (mark-var/vars-conf! dst vs)
+		       (mark-var/frms-conf! dst fs)
+		       (mark-var/nfvs-conf! dst ns)
+		       (mark-var/regs-conf! dst rs)
+		       (R src (add-var dst vs) rs fs ns)))))
+
+	     ((reg? dst)
+	      (cond ((not (mem-reg? dst rs))
+		     (set-asm-instr-op! x 'nop)
+		     (values vs rs fs ns))
+		    (else
+		     (let ((rs (rem-reg dst rs)))
+		       (mark-reg/vars-conf! dst vs)
+		       (R src vs (add-reg dst rs) fs ns)))))
+
+	     ((nfv? dst)
+	      (if (not (mem-nfv? dst ns))
+		  (compiler-internal-error __module_who__ "dead nfv")
+		(let ((ns (rem-nfv dst ns)))
+		  (mark-nfv/vars-conf! dst vs)
+		  (mark-nfv/frms-conf! dst fs)
+		  (R src vs rs fs (add-nfv dst ns)))))
+
+	     (else
+	      (compiler-internal-error __module_who__
+		"invalid op dst" (unparse-recordized-code x)))))
+
+      ((idiv)
+       (mark-reg/vars-conf! eax vs)
+       (mark-reg/vars-conf! edx vs)
+       (R src vs (add-reg eax (add-reg edx rs)) fs ns))
+
+      ((cltd)
+       (mark-reg/vars-conf! edx vs)
+       (R src vs (rem-reg edx rs) fs ns))
+
+      ((mset mset32 bset
+	     fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:from-int
+	     fl:shuffle fl:load-single fl:store-single)
+       (R* (list src dst) vs rs fs ns))
+
+      (else
+       (compiler-internal-error __module_who__
+	 "invalid ASM-INSTR operator in recordised code for effect"
+	 (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
   (define (mark-reg/vars-conf! r vs)
     (for-each-var
 	vs vars.vec
@@ -331,255 +606,6 @@
   (define (const? x)
     (or (constant? x)
         (code-loc? x)))
-
-;;; --------------------------------------------------------------------
-
-  (define (E x vs rs fs ns)
-    (struct-case x
-
-      ((seq e0 e1)
-       (let-values (((vs rs fs ns)
-		     (E e1 vs rs fs ns)))
-         (E e0 vs rs fs ns)))
-
-      ((conditional e0 e1 e2)
-       (let-values (((vs1 rs1 fs1 ns1)  (E e1 vs rs fs ns))
-                    ((vs2 rs2 fs2 ns2)  (E e2 vs rs fs ns)))
-         (P e0
-            vs1 rs1 fs1 ns1
-            vs2 rs2 fs2 ns2
-            (union-vars vs1 vs2)
-            (union-regs rs1 rs2)
-            (union-frms fs1 fs2)
-            (union-nfvs ns1 ns2))))
-
-      ((asm-instr op dst src)
-       (E-asm-instr x op dst src vs rs fs ns))
-
-      ((non-tail-call target value args mask size)
-       (set! spill-set (union-vars vs spill-set))
-       (for-each-var
-	   vs vars.vec (lambda (x)
-			 ($set-var-loc! x #t)))
-       (R* args vs (empty-reg-set) fs ns))
-
-      ((non-tail-call-frame nfvs live body)
-       (for-each init-nfv! nfvs)
-       (set-non-tail-call-frame-live! x (vector vs fs ns))
-       (E body vs rs fs ns))
-
-      ((asmcall op args)
-       (case op
-         ((nop fl:double->single fl:single->double)
-	  (values vs rs fs ns))
-         ((interrupt incr/zero?)
-          (let ((v (exception-live-set)))
-            (if (vector? v)
-		(values (vector-ref v 0)
-			(vector-ref v 1)
-			(vector-ref v 2)
-			(vector-ref v 3))
-              (compiler-internal-error __module_who__ "unbound exception2"))))
-         (else
-	  (compiler-internal-error __module_who__ "invalid effect op" op))))
-
-      ((shortcut body handler)
-       (receive (vs.handler rs.handler fs.handler ns.handler)
-	   (E handler vs rs fs ns)
-	 (parameterize
-	     ((exception-live-set (vector vs.handler rs.handler fs.handler ns.handler)))
-	   (E body vs rs fs ns))))
-
-      (else
-       (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (E-asm-instr x op d s vs rs fs ns)
-    (case op
-      ((move load8 load32)
-       (cond ((reg? d)
-	      (cond ((not (mem-reg? d rs))
-		     (set-asm-instr-op! x 'nop)
-		     (values vs rs fs ns))
-		    ((or (const? s) (disp? s) (reg? s))
-		     (let ((rs (rem-reg d rs)))
-		       (mark-reg/vars-conf! d vs)
-		       (R s vs rs fs ns)))
-		    ((var? s)
-		     (let ((rs (rem-reg d rs))
-			   (vs (rem-var s vs)))
-		       (mark-var/reg-move! s d)
-		       (mark-reg/vars-conf! d vs)
-		       (values (add-var s vs) rs fs ns)))
-		    ((fvar? s)
-		     (let ((rs (rem-reg d rs)))
-		       (mark-reg/vars-conf! d vs)
-		       (values vs rs (add-frm s fs) ns)))
-		    (else
-		     (compiler-internal-error __module_who__ "invalid rs" (unparse-recordized-code x)))))
-	     ((fvar? d)
-	      (cond ((not (mem-frm? d fs))
-		     (set-asm-instr-op! x 'nop)
-		     (values vs rs fs ns))
-		    ((or (const? s) (disp? s) (reg? s))
-		     (let ((fs (rem-frm d fs)))
-		       (mark-frm/vars-conf! d vs)
-		       (mark-frm/nfvs-conf! d ns)
-		       (R s vs rs fs ns)))
-		    ((var? s)
-		     (let ((fs (rem-frm d fs))
-			   (vs (rem-var s vs)))
-		       (mark-var/frm-move! s d)
-		       (mark-frm/vars-conf! d vs)
-		       (mark-frm/nfvs-conf! d ns)
-		       (values (add-var s vs) rs fs ns)))
-		    (else
-		     (compiler-internal-error __module_who__ "invalid fs" s))))
-	     ((var? d)
-	      (cond ((not (mem-var? d vs))
-		     (set-asm-instr-op! x 'nop)
-		     (values vs rs fs ns))
-		    ((or (disp? s) (constant? s))
-		     (let ((vs (rem-var d vs)))
-		       (mark-var/vars-conf! d vs)
-		       (mark-var/frms-conf! d fs)
-		       (mark-var/regs-conf! d rs)
-		       (mark-var/nfvs-conf! d ns)
-		       (R s vs rs fs ns)))
-		    ((reg? s)
-		     (let ((vs (rem-var d vs))
-			   (rs (rem-reg s rs)))
-		       (mark-var/reg-move! d s)
-		       (mark-var/vars-conf! d vs)
-		       (mark-var/frms-conf! d fs)
-		       (mark-var/regs-conf! d rs)
-		       (mark-var/nfvs-conf! d ns)
-		       (values vs (add-reg s rs) fs ns)))
-		    ((var? s)
-		     (let ((vs (rem-var d (rem-var s vs))))
-		       (mark-var/var-move! d s)
-		       (mark-var/vars-conf! d vs)
-		       (mark-var/frms-conf! d fs)
-		       (mark-var/regs-conf! d rs)
-		       (mark-var/nfvs-conf! d ns)
-		       (values (add-var s vs) rs fs ns)))
-		    ((fvar? s)
-		     (let ((vs (rem-var d vs))
-			   (fs (rem-frm s fs)))
-		       (mark-var/frm-move! d s)
-		       (mark-var/vars-conf! d vs)
-		       (mark-var/frms-conf! d fs)
-		       (mark-var/regs-conf! d rs)
-		       (mark-var/nfvs-conf! d ns)
-		       (values vs rs (add-frm s fs) ns)))
-		    (else
-		     (compiler-internal-error __module_who__ "invalid vs" s))))
-	     ((nfv? d)
-	      (cond ((not (mem-nfv? d ns))
-		     (compiler-internal-error __module_who__ "dead nfv"))
-		    ((or (disp?     s)
-			 (constant? s)
-			 (reg?      s))
-		     (let ((ns (rem-nfv d ns)))
-		       (mark-nfv/vars-conf! d vs)
-		       (mark-nfv/frms-conf! d fs)
-		       (R s vs rs fs ns)))
-		    ((var? s)
-		     (let ((ns (rem-nfv d ns))
-			   (vs (rem-var s vs)))
-		       (mark-nfv/vars-conf! d vs)
-		       (mark-nfv/frms-conf! d fs)
-		       (values (add-var s vs) rs fs ns)))
-		    ((fvar? s)
-		     (let ((ns (rem-nfv d ns))
-			   (fs (rem-frm s fs)))
-		       (mark-nfv/vars-conf! d vs)
-		       (mark-nfv/frms-conf! d fs)
-		       (values vs rs (add-frm s fs) ns)))
-		    (else
-		     (compiler-internal-error __module_who__ "invalid ns" s))))
-	     (else
-	      (compiler-internal-error __module_who__ "invalid d" d))))
-      ((int-/overflow int+/overflow int*/overflow)
-       (let ((v (exception-live-set)))
-	 (unless (vector? v)
-	   (compiler-internal-error __module_who__ "unbound exception" x v))
-	 (let ((vs (union-vars vs (vector-ref v 0)))
-	       (rs (union-regs rs (vector-ref v 1)))
-	       (fs (union-frms fs (vector-ref v 2)))
-	       (ns (union-nfvs ns (vector-ref v 3))))
-	   (cond ((var? d)
-		  (cond ((not (mem-var? d vs))
-			 (set-asm-instr-op! x 'nop)
-			 (values vs rs fs ns))
-			(else
-			 (let ((vs (rem-var d vs)))
-			   (mark-var/vars-conf! d vs)
-			   (mark-var/frms-conf! d fs)
-			   (mark-var/nfvs-conf! d ns)
-			   (mark-var/regs-conf! d rs)
-			   (R s (add-var d vs) rs fs ns)))))
-		 ((reg? d)
-		  (if (not (mem-reg? d rs))
-		      (values vs rs fs ns)
-		    (let ((rs (rem-reg d rs)))
-		      (mark-reg/vars-conf! d vs)
-		      (R s vs (add-reg d rs) fs ns))))
-		 ((nfv? d)
-		  (if (not (mem-nfv? d ns))
-		      (compiler-internal-error __module_who__ "dead nfv")
-		    (let ((ns (rem-nfv d ns)))
-		      (mark-nfv/vars-conf! d vs)
-		      (mark-nfv/frms-conf! d fs)
-		      (R s vs rs fs (add-nfv d ns)))))
-		 (else
-		  (compiler-internal-error __module_who__ "invalid op d" (unparse-recordized-code x)))))))
-      ((nop)
-       (values vs rs fs ns))
-      ((logand logor logxor sll sra srl int+ int- int* bswap!
-	       sll/overflow)
-       (cond ((var? d)
-	      (cond ((not (mem-var? d vs))
-		     (set-asm-instr-op! x 'nop)
-		     (values vs rs fs ns))
-		    (else
-		     (let ((vs (rem-var d vs)))
-		       (mark-var/vars-conf! d vs)
-		       (mark-var/frms-conf! d fs)
-		       (mark-var/nfvs-conf! d ns)
-		       (mark-var/regs-conf! d rs)
-		       (R s (add-var d vs) rs fs ns)))))
-	     ((reg? d)
-	      (cond ((not (mem-reg? d rs))
-		     (set-asm-instr-op! x 'nop)
-		     (values vs rs fs ns))
-		    (else
-		     (let ((rs (rem-reg d rs)))
-		       (mark-reg/vars-conf! d vs)
-		       (R s vs (add-reg d rs) fs ns)))))
-	     ((nfv? d)
-	      (if (not (mem-nfv? d ns))
-		  (compiler-internal-error __module_who__ "dead nfv")
-		(let ((ns (rem-nfv d ns)))
-		  (mark-nfv/vars-conf! d vs)
-		  (mark-nfv/frms-conf! d fs)
-		  (R s vs rs fs (add-nfv d ns)))))
-	     (else
-	      (compiler-internal-error __module_who__ "invalid op d" (unparse-recordized-code x)))))
-      ((idiv)
-       (mark-reg/vars-conf! eax vs)
-       (mark-reg/vars-conf! edx vs)
-       (R s vs (add-reg eax (add-reg edx rs)) fs ns))
-      ((cltd)
-       (mark-reg/vars-conf! edx vs)
-       (R s vs (rem-reg edx rs) fs ns))
-      ((mset mset32 bset
-	     fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:from-int
-	     fl:shuffle fl:load-single fl:store-single)
-       (R* (list s d) vs rs fs ns))
-      (else
-       (compiler-internal-error __module_who__ "invalid effect op" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
