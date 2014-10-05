@@ -97,6 +97,9 @@
   ;;     (asmcall move   (AA-REGISTER ?result))
   ;;     (asmcall return (AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)))
   ;;
+  ;;Throughout  this  function  the  arguments  VS,  RS,  FS,  NS  are  integer  sets
+  ;;representing, respectively the VARS set the REGS set and the FRMS set.
+  ;;
   (import IntegerSet)
   (import FRAME-CONFLICT-HELPERS)
 
@@ -113,6 +116,38 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define (R x vs rs fs ns)
+    ;;Recursive function, tail and non-tail.
+    ;;
+    (cond ((const? x)
+	   (values vs rs fs ns))
+	  ((reg?   x)
+	   (values vs (add-reg x rs) fs ns))
+	  ((fvar?  x)
+	   (values vs rs (add-frm x fs) ns))
+	  ((var?   x)
+	   (values (add-var x vs) rs fs ns))
+	  ((nfv?   x)
+	   (values vs rs fs (add-nfv x ns)))
+	  ((disp?  x)
+	   (receive (vs rs fs ns)
+	       (R (disp-s0 x) vs rs fs ns)
+	     (R (disp-s1 x) vs rs fs ns)))
+	  (else
+	   (compiler-internal-error __module_who__ "invalid R" x))))
+
+  (define (R* ls vs rs fs ns)
+    ;;Recursive function,  tail and non-tail.   Apply R to every  item in LS  and the
+    ;;other arguments.  Return the final VS, RS, FS, NS arguments.
+    ;;
+    (if (pair? ls)
+	(receive (vs rs fs ns)
+	    (R (car ls) vs rs fs ns)
+	  (R* (cdr ls) vs rs fs ns))
+      (values vs rs fs ns)))
+
+;;; --------------------------------------------------------------------
+
   (define (T x)
     ;;Process the  recordised code X  as a form in  tail position.  In  tail position
     ;;there can be only structs of  type: SEQ, CONDITIONAL, SHORTCUT and ASMCALL with
@@ -126,15 +161,15 @@
 
       ((conditional test conseq altern)
        (let-values
-	   (((vs1 rs1 fs1 ns1) (T conseq))
-	    ((vs2 rs2 fs2 ns2) (T altern)))
+	   (((vs.conseq rs.conseq fs.conseq ns.conseq) (T conseq))
+	    ((vs.altern rs.altern fs.altern ns.altern) (T altern)))
          (P test
-            vs1 rs1 fs1 ns1
-            vs2 rs2 fs2 ns2
-            (union-vars vs1 vs2)
-            (union-regs rs1 rs2)
-            (union-frms fs1 fs2)
-            (union-nfvs ns1 ns2))))
+            vs.conseq rs.conseq fs.conseq ns.conseq
+            vs.altern rs.altern fs.altern ns.altern
+            (union-vars vs.conseq vs.altern)
+            (union-regs rs.conseq rs.altern)
+            (union-frms fs.conseq fs.altern)
+            (union-nfvs ns.conseq ns.altern))))
 
       ((asmcall rator rand*)
        (case rator
@@ -161,6 +196,68 @@
        (compiler-internal-error __module_who__
 	 "invalid tail"
 	 (unparse-recordized-code/sexp x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (P x
+	     vs.conseq rs.conseq fs.conseq ns.conseq
+	     vs.altern rs.altern fs.altern ns.altern
+	     vs.union  rs.union  fs.union  ns.union)
+    ;;Process  the recordised  code  X as  a  form in  predicate  position.  In  tail
+    ;;position there  can be  only structs  of type:  SEQ, CONDITIONAL,  SHORTCUT and
+    ;;ASMCALL with operator among: RETURN, INDIRECT-JUMP, DIRECT-JUMP.
+    ;;
+    (struct-case x
+      ((seq e0 e1)
+       (receive (vs rs fs ns)
+	   (P e1
+	      vs.conseq rs.conseq fs.conseq ns.conseq
+	      vs.altern rs.altern fs.altern ns.altern
+	      vs.union  rs.union  fs.union  ns.union)
+         (E e0 vs rs fs ns)))
+
+      ((conditional e0 e1 e2)
+       (let-values
+	   (((vs1 rs1 fs1 ns1)
+	     (P e1
+		vs.conseq rs.conseq fs.conseq ns.conseq
+		vs.altern rs.altern fs.altern ns.altern
+		vs.union  rs.union  fs.union  ns.union))
+	    ((vs2 rs2 fs2 ns2)
+	     (P e2
+		vs.conseq rs.conseq fs.conseq ns.conseq
+		vs.altern rs.altern fs.altern ns.altern
+		vs.union  rs.union  fs.union  ns.union)))
+         (P e0
+            vs1 rs1 fs1 ns1
+            vs2 rs2 fs2 ns2
+            (union-vars vs1 vs2)
+            (union-regs rs1 rs2)
+            (union-frms fs1 fs2)
+            (union-nfvs ns1 ns2))))
+
+      ((constant t)
+       (if t
+           (values vs.conseq rs.conseq fs.conseq ns.conseq)
+	 (values vs.altern rs.altern fs.altern ns.altern)))
+
+      ((asm-instr op d s)
+       (R* (list d s) vs.union  rs.union  fs.union  ns.union))
+
+      ((shortcut body handler)
+       (receive (vsh rsh fsh nsh)
+	   (P handler
+	      vs.conseq rs.conseq fs.conseq ns.conseq
+	      vs.altern rs.altern fs.altern ns.altern
+	      vs.union  rs.union  fs.union  ns.union)
+	 (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
+	   (P body
+	      vs.conseq rs.conseq fs.conseq ns.conseq
+	      vs.altern rs.altern fs.altern ns.altern
+	      vs.union  rs.union  fs.union  ns.union))))
+
+      (else
+       (compiler-internal-error __module_who__ "invalid pred" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -227,38 +324,6 @@
   (define (const? x)
     (or (constant? x)
         (code-loc? x)))
-
-;;; --------------------------------------------------------------------
-
-  (define (R x vs rs fs ns)
-    ;;Recursive function, tail and non-tail.
-    ;;
-    (cond ((const? x)
-	   (values vs rs fs ns))
-	  ((reg?   x)
-	   (values vs (add-reg x rs) fs ns))
-	  ((fvar?  x)
-	   (values vs rs (add-frm x fs) ns))
-	  ((var?   x)
-	   (values (add-var x vs) rs fs ns))
-	  ((nfv?   x)
-	   (values vs rs fs (add-nfv x ns)))
-	  ((disp?  x)
-	   (receive (vs rs fs ns)
-	       (R (disp-s0 x) vs rs fs ns)
-	     (R (disp-s1 x) vs rs fs ns)))
-	  (else
-	   (compiler-internal-error __module_who__ "invalid R" x))))
-
-  (define (R* ls vs rs fs ns)
-    ;;Recursive function,  tail and non-tail.   Apply R to every  item in LS  and the
-    ;;other arguments.  Return the final VS, RS, FS, NS arguments.
-    ;;
-    (if (pair? ls)
-	(receive (vs rs fs ns)
-	    (R (car ls) vs rs fs ns)
-	  (R* (cdr ls) vs rs fs ns))
-      (values vs rs fs ns)))
 
 ;;; --------------------------------------------------------------------
 
@@ -502,57 +567,6 @@
 
       (else
        (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
-
-;;; --------------------------------------------------------------------
-
-  (define (P x vst rst fst nst
-	     vsf rsf fsf nsf
-	     vsu rsu fsu nsu)
-    (struct-case x
-      ((seq e0 e1)
-       (let-values (((vs rs fs ns)
-                     (P e1 vst rst fst nst
-                        vsf rsf fsf nsf
-                        vsu rsu fsu nsu)))
-         (E e0 vs rs fs ns)))
-
-      ((conditional e0 e1 e2)
-       (let-values (((vs1 rs1 fs1 ns1)
-                     (P e1 vst rst fst nst
-			vsf rsf fsf nsf
-			vsu rsu fsu nsu))
-                    ((vs2 rs2 fs2 ns2)
-                     (P e2 vst rst fst nst
-			vsf rsf fsf nsf
-			vsu rsu fsu nsu)))
-         (P e0
-            vs1 rs1 fs1 ns1
-            vs2 rs2 fs2 ns2
-            (union-vars vs1 vs2)
-            (union-regs rs1 rs2)
-            (union-frms fs1 fs2)
-            (union-nfvs ns1 ns2))))
-
-      ((constant t)
-       (if t
-           (values vst rst fst nst)
-	 (values vsf rsf fsf nsf)))
-
-      ((asm-instr op d s)
-       (R* (list d s) vsu rsu fsu nsu))
-
-      ((shortcut body handler)
-       (let-values (((vsh rsh fsh nsh)
-                     (P handler vst rst fst nst
-			vsf rsf fsf nsf
-			vsu rsu fsu nsu)))
-	 (parameterize ((exception-live-set (vector vsh rsh fsh nsh)))
-	   (P body vst rst fst nst
-	      vsf rsf fsf nsf
-	      vsu rsu fsu nsu))))
-
-      (else
-       (compiler-internal-error __module_who__ "invalid pred" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
