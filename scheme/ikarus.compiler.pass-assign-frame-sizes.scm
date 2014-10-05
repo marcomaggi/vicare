@@ -117,7 +117,11 @@
   (import FRAME-CONFLICT-HELPERS)
 
   (define spill-set
-    ;;This will be the return value.
+    ;;Whenever, at some point in the LOCALS.BODY, we perform a non-tail call: all the
+    ;;temporary locations (VS) active right before  the a non-tail call must be saved
+    ;;on the stack and restored before calling and restored right after the return.
+    ;;
+    ;;Such locations are collected in this set.
     (make-empty-set))
 
   (define exception-live-set
@@ -298,6 +302,9 @@
        (E-asm-instr x op dst src vs rs fs ns))
 
       ((non-tail-call target value args mask size)
+       ;;All the temporary  locations VS active right befor the  a non-tail call must
+       ;;be saved on  the stack and restored before calling  and restored right after
+       ;;the return.
        (set! spill-set (union-vars vs spill-set))
        (for-each-var
 	   vs vars.vec
@@ -305,8 +312,8 @@
 	   ($set-var-loc! x #t)))
        (R* args vs (empty-reg-set) fs ns))
 
-      ((non-tail-call-frame nfvs live body)
-       (for-each init-nfv! nfvs)
+      ((non-tail-call-frame nfv* live body)
+       (for-each init-nfv! nfv*)
        (set-non-tail-call-frame-live! x (vector vs fs ns))
        (E body vs rs fs ns))
 
@@ -345,7 +352,13 @@
 	      (cond ((not (mem-reg? dst rs))
 		     (set-asm-instr-op! x 'nop)
 		     (values vs rs fs ns))
-		    ((or (const? src) (disp? src) (reg? src))
+		    ;;In the following clauses we know that:
+		    ;;
+		    ;;   (mem-reg? dst rs) => #t
+		    ;;
+		    ((or (const? src)
+			 (disp?  src)
+			 (reg?   src))
 		     (let ((rs (rem-reg dst rs)))
 		       (mark-reg/vars-conf! dst vs)
 		       (R src vs rs fs ns)))
@@ -361,6 +374,7 @@
 		       (values vs rs (add-frm src fs) ns)))
 		    (else
 		     (compiler-internal-error __module_who__ "invalid rs" (unparse-recordized-code x)))))
+
 	     ((fvar? dst)
 	      (cond ((not (mem-frm? dst fs))
 		     (set-asm-instr-op! x 'nop)
@@ -379,6 +393,7 @@
 		       (values (add-var src vs) rs fs ns)))
 		    (else
 		     (compiler-internal-error __module_who__ "invalid fs" src))))
+
 	     ((var? dst)
 	      (cond ((not (mem-var? dst vs))
 		     (set-asm-instr-op! x 'nop)
