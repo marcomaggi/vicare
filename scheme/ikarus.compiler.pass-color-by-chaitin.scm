@@ -590,7 +590,8 @@
 
 
 (define (do-spill sp* varvec)
-  (import FRAME-CONFLICT-HELPERS)
+  (module (for-each-var add-frm rem-var mem-frm?)
+    (import FRAME-CONFLICT-HELPERS))
   (define (find/set-loc x)
     (let loop ((i    1)
 	       (conf ($var-frm-conf x)))
@@ -598,10 +599,12 @@
 	(if (mem-frm? fv conf)
 	    (loop (fxadd1 i) conf)
 	  (begin
-	    (for-each-var ($var-var-conf x) varvec
-			  (lambda (y)
-			    ($set-var-var-conf! y (rem-var x  ($var-var-conf y)))
-			    ($set-var-frm-conf! y (add-frm fv ($var-frm-conf y)))))
+	    (for-each-var
+		($var-var-conf x)
+		varvec
+	      (lambda (y)
+		($set-var-var-conf! y (rem-var x  ($var-var-conf y)))
+		($set-var-frm-conf! y (add-frm fv ($var-frm-conf y)))))
 	    ($set-var-loc! x fv)
 	    (cons x fv))))))
   (map find/set-loc sp*))
