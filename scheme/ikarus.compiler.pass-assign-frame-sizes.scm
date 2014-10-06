@@ -753,21 +753,24 @@
     (import INTEL-ASSEMBLY-CODE-GENERATION))
 
   (define (R x)
-    (cond ((or (constant? x)
-	       (register? x)
-	       (fvar?     x))
-	   x)
-	  ((nfv? x)
-	   (or ($nfv-loc x)
-	       (compiler-internal-error __module_who__
-		 "unassigned nfv")))
-	  ((var? x)
-	   (Var x))
-	  ((disp? x)
-	   (make-disp (R ($disp-s0 x)) (R ($disp-s1 x))))
-	  (else
-	   (compiler-internal-error __module_who__
-	     "invalid R" (unparse-recordized-code x)))))
+    (if (register? x)
+	x
+      (struct-case x
+	((constant)
+	 x)
+	((fvar)
+	 x)
+	((nfv)
+	 (or ($nfv-loc x)
+	     (compiler-internal-error __module_who__
+	       "invali NFV struct without assigned LOC")))
+	((var)
+	 (Var x))
+	((disp objref offset)
+	 (make-disp (R objref) (R offset)))
+	(else
+	 (compiler-internal-error __module_who__
+	   "invalid R" (unparse-recordized-code x))))))
 
 ;;; --------------------------------------------------------------------
 
