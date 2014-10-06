@@ -112,7 +112,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define-inline (make-empty-set)
+  (define-syntax-rule (make-empty-set)
     (make-set '()))
 
   (define (singleton x)
@@ -420,7 +420,7 @@
 		;pair.
      ))
 
-  (define-inline (empty-graph)
+  (define-syntax-rule (empty-graph)
     (make-graph '()))
 
   (define (empty-graph? G)
@@ -516,7 +516,7 @@
 		;pair.
      ))
 
-  (define-inline (empty-graph)
+  (define-syntax-rule (empty-graph)
     (make-graph '()))
 
   (define (empty-graph? g)
@@ -584,14 +584,13 @@
   (empty-var-set rem-var add-var union-vars mem-var? for-each-var init-vars!
    empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv init-nfv!
    empty-frm-set rem-frm add-frm union-frms mem-frm?
-   empty-reg-set rem-reg add-reg union-regs mem-reg?
-   reg?)
+   empty-reg-set rem-reg add-reg union-regs mem-reg?)
   (import IntegerSet)
 
   (define (add-frm x s)
     (set-add (fvar-idx x) s))
 
-  (define-inline (rem-nfv x s)
+  (define-syntax-rule (rem-nfv x s)
     (remq1 x s))
 
   (define (init-var! x i)
@@ -615,10 +614,7 @@
     ($set-nfv-nfv-conf! x (empty-nfv-set))
     ($set-nfv-var-conf! x (empty-var-set)))
 
-  (define-syntax-rule (reg? ?x)
-    (symbol? ?x))
-
-  (define-inline (empty-var-set)
+  (define-syntax-rule (empty-var-set)
     (make-empty-set))
 
   (define (add-var x s)
@@ -630,14 +626,14 @@
   (define (rem-var x s)
     (set-rem (var-index x) s))
 
-  (define-inline (union-vars s1 s2)
+  (define-syntax-rule (union-vars s1 s2)
     (set-union s1 s2))
 
   (define (for-each-var s varvec f)
     (for-each (lambda (i) (f (vector-ref varvec i)))
       (set->list s)))
 
-  (define-inline (empty-reg-set)
+  (define-syntax-rule (empty-reg-set)
     (make-empty-set))
 
   (define (add-reg x s)
@@ -655,10 +651,10 @@
       (import INTEL-ASSEMBLY-CODE-GENERATION))
     (set-member? (%cpu-register-name->index x) s))
 
-  (define-inline (union-regs s1 s2)
+  (define-syntax-rule (union-regs s1 s2)
     (set-union s1 s2))
 
-  (define-inline (empty-frm-set)
+  (define-syntax-rule (empty-frm-set)
     (make-empty-set))
 
   (define (mem-frm? x s)
@@ -667,10 +663,10 @@
   (define (rem-frm x s)
     (set-rem (fvar-idx x) s))
 
-  (define-inline (union-frms s1 s2)
+  (define-syntax-rule (union-frms s1 s2)
     (set-union s1 s2))
 
-  (define-inline (empty-nfv-set)
+  (define-syntax-rule (empty-nfv-set)
     '())
 
   (define (add-nfv x s)
@@ -678,7 +674,7 @@
 	s
       (cons x s)))
 
-  (define-inline (mem-nfv? x s)
+  (define-syntax-rule (mem-nfv? x s)
     (memq x s))
 
   (define (union-nfvs s1 s2)
@@ -692,7 +688,7 @@
 	     (cons (car s1)
 		   (recur (cdr s1) s2))))))
 
-  (define-inline (for-each-nfv s f)
+  (define-syntax-rule (for-each-nfv s f)
     (for-each f s))
 
   #| end of module: FRAME-CONFLICT-HELPERS |# )

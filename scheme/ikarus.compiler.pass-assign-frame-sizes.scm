@@ -114,7 +114,10 @@
   ;;
   (import IntegerSet)
   (import FRAME-CONFLICT-HELPERS)
-  (import INTEL-ASSEMBLY-CODE-GENERATION)
+  (module (register?
+	   eax ecx edx
+	   AA-REGISTER CP-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)
+    (import INTEL-ASSEMBLY-CODE-GENERATION))
 
   (define spill-set
     ;;Whenever, at some point in the LOCALS.BODY, we perform a non-tail call: all the
@@ -136,7 +139,7 @@
   (define (R x vs rs fs ns)
     ;;Recursive function, tail and non-tail.
     ;;
-    (if (reg? x)
+    (if (register? x)
 	;;X is a symbol representing the name of a CPU register.
 	(begin
 	  (assert (memq x (list AA-REGISTER CP-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER ecx edx)))
@@ -356,7 +359,7 @@
   (define (E-asm-instr x op dst src vs rs fs ns)
     (case op
       ((move load8 load32)
-       (cond ((reg? dst)
+       (cond ((register? dst)
 	      (cond ((not (mem-reg? dst rs))
 		     (set-asm-instr-op! x 'nop)
 		     (values vs rs fs ns))
@@ -366,7 +369,7 @@
 		    ;;
 		    ((or (const? src)
 			 (disp?  src)
-			 (reg?   src))
+			 (register?   src))
 		     (let ((rs (rem-reg dst rs)))
 		       (mark-reg/vars-conf! dst vs)
 		       (R src vs rs fs ns)))
@@ -389,7 +392,7 @@
 		     (values vs rs fs ns))
 		    ((or (const? src)
 			 (disp?  src)
-			 (reg?   src))
+			 (register?   src))
 		     (let ((fs (rem-frm dst fs)))
 		       (mark-frm/vars-conf! dst vs)
 		       (mark-frm/nfvs-conf! dst ns)
@@ -415,7 +418,7 @@
 		       (mark-var/regs-conf! dst rs)
 		       (mark-var/nfvs-conf! dst ns)
 		       (R src vs rs fs ns)))
-		    ((reg? src)
+		    ((register? src)
 		     (let ((vs (rem-var dst vs))
 			   (rs (rem-reg src rs)))
 		       (mark-var/reg-move! dst src)
@@ -450,7 +453,7 @@
 
 		    ((or (disp?     src)
 			 (constant? src)
-			 (reg?      src))
+			 (register?      src))
 		     (let ((ns (rem-nfv dst ns)))
 		       (mark-nfv/vars-conf! dst vs)
 		       (mark-nfv/frms-conf! dst fs)
@@ -499,7 +502,7 @@
 			   (mark-var/regs-conf! dst rs)
 			   (R src (add-var dst vs) rs fs ns)))))
 
-		 ((reg? dst)
+		 ((register? dst)
 		  (if (not (mem-reg? dst rs))
 		      (values vs rs fs ns)
 		    (let ((rs (rem-reg dst rs)))
@@ -535,7 +538,7 @@
 		       (mark-var/regs-conf! dst rs)
 		       (R src (add-var dst vs) rs fs ns)))))
 
-	     ((reg? dst)
+	     ((register? dst)
 	      (cond ((not (mem-reg? dst rs))
 		     (set-asm-instr-op! x 'nop)
 		     (values vs rs fs ns))
@@ -653,6 +656,9 @@
   ;;the argument VARS.VEC.
   ;;
   (import FRAME-CONFLICT-HELPERS)
+  (module (register?)
+    (import INTEL-ASSEMBLY-CODE-GENERATION))
+
   (define (NFE idx mask x)
     (struct-case x
       ((seq e0 e1)
@@ -682,7 +688,7 @@
 
   (define (R x)
     (cond ((or (constant? x)
-	       (reg?      x)
+	       (register? x)
 	       (fvar?     x))
 	   x)
 	  ((nfv? x)
