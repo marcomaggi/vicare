@@ -28,9 +28,8 @@
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
-  (import LISTY-SET)
-  (import LISTY-GRAPHS)
   (import INTEL-ASSEMBLY-CODE-GENERATION)
+  (import LISTY-SET)
 
 
 ;;;;
@@ -77,19 +76,114 @@
 
   #| end of module: Program |# )
 
-;;; --------------------------------------------------------------------
-;;; helpers
+
+;;;; helpers
 
 (define-inline (set-for-each f s)
   (for-each f (set->list s)))
 
-;;; --------------------------------------------------------------------
 
+
+(module GRAPHS
+  ;;This module is like INTEGER-GRAPHS, but it makes use of LISTY-SET.
+  ;;
+  (empty-graph
+   add-edge!
+   empty-graph?
+   print-graph
+   node-neighbors
+   delete-node!)
+
+  (define-struct graph
+    (ls
+		;A list of pairs representing the graph.
+		;
+		;The car of each pair represents a graph's node: a struct instance of
+		;type VAR or FVAR, or a symbol representing a register.
+		;
+		;The cdr  of each pair  is an instance  of LISTY-SET (whatever  it is
+		;defined in  that module), representing  the edges outgoing  from the
+		;node.
+		;
+		;The LISTY-SET contains  the target nodes of the  edges outgoing from
+		;the node represented by the car of the pair.
+     ))
+
+  (define-syntax-rule (empty-graph)
+    (make-graph '()))
+
+  (define (empty-graph? G)
+    (andmap (lambda (x)
+	      (empty-set? (cdr x)))
+	    ($graph-ls G)))
+
+  (module (add-edge!)
+
+    (define (add-edge! G x y)
+      (let ((ls ($graph-ls G)))
+	(cond ((assq x ls)
+	       => (lambda (p0)
+		    (unless (set-member? y (cdr p0))
+		      (set-cdr! p0 (set-add y (cdr p0)))
+		      (cond ((assq y ls)
+			     => (lambda (p1)
+				  (set-cdr! p1 (set-add x (cdr p1)))))
+			    (else
+			     ($set-graph-ls! G (cons (cons y (single x)) ls)))))))
+	      ((assq y ls)
+	       => (lambda (p1)
+		    (set-cdr! p1 (set-add x (cdr p1)))
+		    ($set-graph-ls! G (cons (cons x (single y)) ls))))
+	      (else
+	       ($set-graph-ls! G (cons* (cons x (single y))
+					(cons y (single x))
+					ls))))))
+
+    (define (single x)
+      (set-add x (make-empty-set)))
+
+    #| end of module: add-edge! |# )
+
+  (define (print-graph G)
+    (printf "G={\n")
+    (parameterize ((print-gensym 'pretty))
+      (for-each (lambda (x)
+                  (let ((lhs  (car x))
+			(rhs* (cdr x)))
+                    (printf "  ~s => ~s\n"
+                            (unparse-recordized-code lhs)
+                            (map unparse-recordized-code (set->list rhs*)))))
+        ($graph-ls G)))
+    (printf "}\n"))
+
+  (define (node-neighbors x G)
+    (cond ((assq x ($graph-ls G))
+	   => cdr)
+	  (else
+	   (make-empty-set))))
+
+  (define (delete-node! x G)
+    (let ((ls ($graph-ls G)))
+      (cond ((assq x ls)
+	     => (lambda (p)
+		  (for-each (lambda (y)
+			      (let ((p (assq y ls)))
+				(set-cdr! p (set-rem x (cdr p)))))
+		    (set->list (cdr p)))
+		  (set-cdr! p (make-empty-set))))
+	    (else
+	     (void)))))
+
+  #| end of module: GRAPHS |# )
+
+
 (define (build-graph x)
   ;;
   ;;A lot of functions are nested here because they need to close upon
   ;;GRAPH.
   ;;
+  (import GRAPHS)
+
   (define who 'build-graph)
   (define GRAPH
     (empty-graph))
@@ -289,9 +383,9 @@
     ;;(print-graph GRAPH)
     GRAPH))
 
-;;; --------------------------------------------------------------------
-
+
 (module (color-graph)
+  (import GRAPHS)
 
   (define (color-graph sp* un* G)
     (cond ((and (empty-set? sp*)
@@ -358,10 +452,9 @@
     (or (find-color/maybe x confs env)
 	(error 'find-color "cannot find color for" x)))
 
-  #| end of module: color-graph |# )
+  #| end of module: COLOR-GRAPH |# )
 
-;;; --------------------------------------------------------------------
-
+
 (define (substitute env x)
   ;;X must represent recordized code; this function builds and returns
   ;;a new struct instance representing recordized code, which is meant
@@ -495,8 +588,7 @@
 
   (T x))
 
-;;; --------------------------------------------------------------------
-
+
 (define (do-spill sp* varvec)
   (import FRAME-CONFLICT-HELPERS)
   (define (find/set-loc x)
@@ -514,8 +606,7 @@
 	    (cons x fv))))))
   (map find/set-loc sp*))
 
-;;; --------------------------------------------------------------------
-
+
 (module (add-unspillables)
 
   (define (add-unspillables un* x)

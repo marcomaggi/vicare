@@ -33,6 +33,13 @@
   ;;   nop			interrupt		incr/zero?
   ;;   fl:double->single	fl:single->double
   ;;
+  ;;
+  ;;Recapitulation
+  ;;--------------
+  ;;
+  ;;Let's clarify where we are when this compiler pass is applied.
+  ;;
+  ;;
   (import INTEGER-SET)
   (define-syntax __module_who__
     (identifier-syntax 'assign-frame-sizes))
