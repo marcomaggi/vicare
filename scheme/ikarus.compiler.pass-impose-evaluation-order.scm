@@ -74,7 +74,10 @@
   ;;returned to  the caller; such  structures will  be processed in  further compiler
   ;;passes.  But *no* FVAR and NFV structs are present in the input recordised code.
   ;;
-  (import INTEL-ASSEMBLY-CODE-GENERATION)
+  (module (argc-convention
+	   eax ecx edx
+	   AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER)
+    (import INTEL-ASSEMBLY-CODE-GENERATION))
 
   (define-syntax __module_who__
     (identifier-syntax 'impose-calling-convention/evaluation-order))
@@ -408,7 +411,7 @@
 	    ;;continuation object.
 	    (%load-register-operand/number-of-stack-operands 1)
 	    ;;Decrement the FPR so that it points to the underflow handler.
-	    (make-asm-instr 'int- fpr (make-constant wordsize))
+	    (make-asm-instr 'int- FP-REGISTER (make-constant wordsize))
 	    ;;When we arrive here the situation on the Scheme stack is:
 	    ;;
 	    ;;         high memory
@@ -637,12 +640,12 @@
 		   ;;Load in DST the value in the Allocation Pointer Register: this
 		   ;;value is  a pointer to  a usable block  of memory on  the heap
 		   ;;nursery.
-		   (%move-dst<-src dst apr)
+		   (%move-dst<-src dst AP-REGISTER)
 		   ;;Add the tag to the pointer.
 		   (make-asm-instr 'logor dst primary-tag)
 		   ;;Increment the Allocation Pointer  Register by the aligned size
 		   ;;of the block.
-		   (make-asm-instr 'int+ apr aligned-size))))))))
+		   (make-asm-instr 'int+ AP-REGISTER aligned-size))))))))
 
       ((alloc-no-hooks)
        ;;This is  like ALLOC,  but, if there  is the need,  run a  garbage collection
@@ -662,9 +665,9 @@
 	     (S (cadr rand*)
 	       (lambda (primary-tag)
 		 (multiple-forms-sequence
-		   (%move-dst<-src dst apr)
+		   (%move-dst<-src dst AP-REGISTER)
 		   (make-asm-instr 'logor dst primary-tag)
-		   (make-asm-instr 'int+  apr aligned-size))))))))
+		   (make-asm-instr 'int+  AP-REGISTER aligned-size))))))))
 
       ((mref)
        ;;We expect X to have the format:
@@ -810,15 +813,15 @@
 	    ((constant i)
 	     (<= i PAGE-SIZE))
 	    (else #f))
-	  (make-asmcall '<= (list apr RED-LINE-POINTER))
-	;;(RED-LINE-POINTER - apr) >= aligned-size
+	  (make-asmcall '<= (list AP-REGISTER RED-LINE-POINTER))
+	;;(RED-LINE-POINTER - AP-REGISTER) >= aligned-size
 	(make-asmcall '>=
-	  (list (make-asmcall 'int- (list RED-LINE-POINTER apr))
+	  (list (make-asmcall 'int- (list RED-LINE-POINTER AP-REGISTER))
 		aligned-size))))
 
     (define-constant RED-LINE-POINTER
       (make-asmcall 'mref
-	(list pcr (make-constant pcb-allocation-redline))))
+	(list PC-REGISTER (make-constant pcb-allocation-redline))))
 
     (define-inline-constant PAGE-SIZE
       4096)

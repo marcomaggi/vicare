@@ -329,10 +329,10 @@
      ;;list of rest arguments; the amount  of words needed to hold the
      ;;list is twice the number of rest arguments.
      CONS_LABEL
-     (movl (mem pcb-allocation-redline pcr) ebx)
+     (movl (mem pcb-allocation-redline PC-REGISTER) ebx)
      (addl AA-REGISTER ebx)
      (addl AA-REGISTER ebx)
-     (cmpl ebx apr)
+     (cmpl ebx AP-REGISTER)
      (jle LOOP_HEAD)
 
      ;;If we are here: there is not  enough room on the heap; call the
@@ -340,8 +340,8 @@
      ;;space.
      ;;
      ;;Advance FPR to step over the plain arguments on the stack.
-     (addl AA-REGISTER fpr)
-     (pushl cpr)
+     (addl AA-REGISTER FP-REGISTER)
+     (pushl CP-REGISTER)
      (pushl AA-REGISTER)
      ;;Make argc positive.
      (negl AA-REGISTER)
@@ -361,7 +361,7 @@
      ;;needed on the heap ...
      (addl AA-REGISTER AA-REGISTER)
      ;;... pass it as first argument to DO-VARARG-OVERFLOW.
-     (movl AA-REGISTER (mem (fx* -2 wordsize) fpr))
+     (movl AA-REGISTER (mem (fx* -2 wordsize) FP-REGISTER))
      ;;DO-VARARG-OVERFLOW is called with one argument.
      (movl (int (argc-convention 1)) AA-REGISTER)
      ;;From the  relocation vector of  this code object:  retrieve the
@@ -369,10 +369,10 @@
      ;;the Closure  Pointer Register (CPR).   The "proc" slot  of such
      ;;loc  gensym   contains  a  reference  to   the  closure  object
      ;;implementing DO-VARARG-OVERFLOW.
-     (movl (obj (primitive-public-function-name->location-gensym 'do-vararg-overflow)) cpr)
+     (movl (obj (primitive-public-function-name->location-gensym 'do-vararg-overflow)) CP-REGISTER)
      ;;Load in the Closure Pointer Register a reference to the closure
      ;;object implementing DO-VARARG-OVERFLOW.
-     (movl (mem off-symbol-record-proc cpr) cpr)
+     (movl (mem off-symbol-record-proc CP-REGISTER) CP-REGISTER)
      ;;When arriving here the Scheme stack is as follows:
      ;;
      ;;       high memory
@@ -411,10 +411,10 @@
      ;;Reload number of arguments for this CLAMBDA case.
      (popl AA-REGISTER)
      ;;Reload pointer to current closure object.
-     (popl cpr)
+     (popl CP-REGISTER)
      ;;Re-adjust  the  frame  pointer  to step  back  over  the  plain
      ;;arguments on the stack.
-     (subl AA-REGISTER fpr)
+     (subl AA-REGISTER FP-REGISTER)
 
      ;;There is enough room on the heap to allocate the rest list.  We
      ;;allocate it backwards, the list (2 3) is laid out as:
@@ -434,12 +434,12 @@
      (movl (int NULL-OBJECT) ebx)
 
      CONTINUE_LABEL
-     (movl ebx (mem disp-cdr apr))	   ;store the cdr
-     (movl (mem fpr AA-REGISTER) ebx)  ;load the next car value
-     (movl ebx (mem disp-car apr))	   ;store the car value
-     (movl apr ebx)			   ;load the allocation pointer
+     (movl ebx (mem disp-cdr AP-REGISTER))	   ;store the cdr
+     (movl (mem FP-REGISTER AA-REGISTER) ebx)  ;load the next car value
+     (movl ebx (mem disp-car AP-REGISTER))	   ;store the car value
+     (movl AP-REGISTER ebx)			   ;load the allocation pointer
      (addl (int pair-tag) ebx)	   ;tag the pointer as reference to pair
-     (addl (int pair-size) apr)	   ;increment the allocation pointer
+     (addl (int pair-size) AP-REGISTER)	   ;increment the allocation pointer
      (addl (int wordsize) AA-REGISTER) ;increment the negative arguments count
      ;;Loop if more arguments.
      (cmpl (int properized-formals-argc) AA-REGISTER)
@@ -448,7 +448,7 @@
      DONE_LABEL
      ;;Store NULL-OBJECT or the reference to the  rest list on the stack, right below
      ;;the last mandatory argument (overwriting the first rest argument).
-     (movl ebx (mem properized-formals-argc fpr))
+     (movl ebx (mem properized-formals-argc FP-REGISTER))
      accum))
 
   #| end of module: Program |# )
@@ -995,7 +995,7 @@
   ;;   |                |
   ;;       low memory
   ;;
-  `(disp ,(* i (- wordsize)) ,fpr))
+  `(disp ,(* i (- wordsize)) ,FP-REGISTER))
 
 (module (R R/l D)
 

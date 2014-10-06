@@ -34,7 +34,6 @@
   ;;   fl:double->single	fl:single->double
   ;;
   (import IntegerSet)
-  (import INTEL-ASSEMBLY-CODE-GENERATION)
   (define-syntax __module_who__
     (identifier-syntax 'assign-frame-sizes))
 
@@ -115,6 +114,7 @@
   ;;
   (import IntegerSet)
   (import FRAME-CONFLICT-HELPERS)
+  (import INTEL-ASSEMBLY-CODE-GENERATION)
 
   (define spill-set
     ;;Whenever, at some point in the LOCALS.BODY, we perform a non-tail call: all the
@@ -139,6 +139,7 @@
     (if (reg? x)
 	;;X is a symbol representing the name of a CPU register.
 	(begin
+	  (assert (memq x (list AA-REGISTER CP-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER ecx edx)))
 	  (values vs (add-reg x rs) fs ns))
       (struct-case x
 	((fvar)

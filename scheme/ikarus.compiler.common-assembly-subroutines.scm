@@ -123,8 +123,8 @@
     ;;       --------------------------
     ;;
     (movl (mem (fx- (fx+ disp-closure-data wordsize) closure-tag)
-	       cpr)
-	  cpr)
+	       CP-REGISTER)
+	  CP-REGISTER)
     ;;Fetch a binary  code address from the  closure object referenced
     ;;by the CPR (Closure Pointer Register) and call it.
     (tail-indirect-cpr-call)
@@ -177,7 +177,7 @@
    ;;list.
    (assembly
     ;;Load in EBX the word at offset EAX from the frame pointer.
-    (movl (mem fpr eax) ebx)
+    (movl (mem FP-REGISTER eax) ebx)
     ;;If EBX holds the Scheme null object ...
     (cmpl (int NULL-OBJECT) ebx)
     ;;... there are no further arguments to push on the stack.
@@ -189,7 +189,7 @@
     ;;Load in EBX the cdr.
     (movl (mem off-cdr ebx) ebx)
     ;;Move the car at offset EAX from the frame pointer.
-    (movl ecx (mem fpr eax))
+    (movl ecx (mem FP-REGISTER eax))
     ;;Decrement  EAX  by the  word  size:  stack  offset of  the  next
     ;;argument, if any.
     (subl (int wordsize) eax)
@@ -290,13 +290,13 @@
    (assembly
     ;;Move in EBX  the reference to the  continuation object contained
     ;;in the first data slot in the closure object.
-    (movl (mem off-closure-data cpr) ebx)
+    (movl (mem off-closure-data CP-REGISTER) ebx)
     ;;Move  the   reference  to  continuation  object   in  the  field
     ;;"pcb->next_k" (overwriting the old value!!!).
-    (movl ebx (mem pcb-next-continuation pcr))
+    (movl ebx (mem pcb-next-continuation PC-REGISTER))
     ;;Move in EBX the field  "pcb->frame_base".  Notice that we do not
     ;;touch "pcb->frame_pointer" here.
-    (movl (mem pcb-frame-base pcr) ebx)
+    (movl (mem pcb-frame-base PC-REGISTER) ebx)
     ;;Dispatch according to  the number of arguments to  return to the
     ;;continuation.
     (cmpl (int (argc-convention 1)) eax)
@@ -338,14 +338,14 @@
     ;;
     (label L_cont_one_arg)
     ;;Load in EAX the the return value.
-    (movl (mem (fx- wordsize) fpr) eax)
+    (movl (mem (fx- wordsize) FP-REGISTER) eax)
     ;;Load   in   the   Frame    Pointer   Register   the   value   of
     ;;"pcb->frame_base".
-    (movl ebx fpr)
+    (movl ebx FP-REGISTER)
     ;;Decrement  Frame Pointer  Register  by a  wordsize,  so that  it
     ;;contains the address of the  highest machine word in the current
     ;;Scheme stack segment.
-    (subl (int wordsize) fpr)
+    (subl (int wordsize) FP-REGISTER)
     ;;Jump  to  the  underflow   handler  to  actually  reinstate  the
     ;;continuation.  The situation on the stack when arriving here is:
     ;;
@@ -398,7 +398,7 @@
     (subl (int wordsize) ebx)
     ;;Store EBX in  the Frame Pointer Register, so  that it references
     ;;the underflow handler.
-    (movl ebx fpr)
+    (movl ebx FP-REGISTER)
     ;;Load in EBX  the machine word from the address  in EBX.  This is
     ;;like the C language code:
     ;;
@@ -474,7 +474,7 @@
     ;;If the current frame pointer is already at the base of the stack
     ;;(FPR == pcb->frame_base - wordsize): we  do not need to copy the
     ;;return values.
-    (cmpl ebx fpr)
+    (cmpl ebx FP-REGISTER)
     (jne (label L_cont_mult_move_args))
     ;;Load in EBX  the machine word from the address  in EBX.  This is
     ;;like the C language code:
@@ -530,13 +530,13 @@
     (movl (int 0) ecx) ;initialise argument offset
     (label L_cont_mult_copy_loop)
     (subl (int wordsize) ecx)  ;decrement ECX
-    (movl (mem fpr ecx) edx)   ;load arg in EDX from source slot
+    (movl (mem FP-REGISTER ecx) edx)   ;load arg in EDX from source slot
     (movl edx (mem ebx ecx))   ;store arg from EDX to dest slot
     (cmpl ecx eax)	       ;moved all?
     (jne (label L_cont_mult_copy_loop))
     ;;Store  "pcb->frame_base   -  wordsize"  in  the   Frame  Pointer
     ;;Register.
-    (movl ebx fpr)
+    (movl ebx FP-REGISTER)
     ;;Load in EBX  the machine word from the address  in EBX.  This is
     ;;like the C language code:
     ;;
@@ -617,23 +617,23 @@
     ;;Store on the  stack a reference to the closure  object (from the
     ;;Closure  Pointer Register)  as  first argument  to  the call  to
     ;;$INCORRECT-ARGS-ERROR-HANDLER.
-    (movl cpr (mem (fx- wordsize) fpr))
+    (movl CP-REGISTER (mem (fx- wordsize) FP-REGISTER))
     ;;Decode  the incorrect  number  of  arguments, so  that  it is  a
     ;;non-negative fixnum.
     (negl eax)
     ;;Store on the  stack the incorrect number of  arguments as second
     ;;argument to the call to $INCORRECT-ARGS-ERROR-HANDLER.
-    (movl eax (mem (fx- (fx* 2 wordsize)) fpr))
+    (movl eax (mem (fx- (fx* 2 wordsize)) FP-REGISTER))
     ;;From the  relocation vector  of this  code object:  retrieve the
     ;;location gensym associated  to $INCORRECT-ARGS-ERROR-HANDLER and
     ;;load it in the Closure Pointer Register (CPR).
     ;;
     ;;The "proc" slot  of such loc gensym contains a  reference to the
     ;;closure object implementing $INCORRECT-ARGS-ERROR-HANDLER.
-    (movl (obj (primitive-public-function-name->location-gensym '$incorrect-args-error-handler)) cpr)
+    (movl (obj (primitive-public-function-name->location-gensym '$incorrect-args-error-handler)) CP-REGISTER)
     ;;Load in the Closure Pointer  Register a reference to the closure
     ;;object implementing the function $INCORRECT-ARGS-ERROR-HANDLER.
-    (movl (mem off-symbol-record-proc cpr) cpr)
+    (movl (mem off-symbol-record-proc CP-REGISTER) CP-REGISTER)
     ;;Load in  EAX the  encoded number  of arguments  for the  call to
     ;;$INCORRECT-ARGS-ERROR-HANDLER.
     (movl (int (argc-convention 2)) eax)
@@ -693,10 +693,10 @@
     ;;in the Closure Pointer Register  (CPR).  The "proc" slot of such
     ;;loc  gensym   contains  a   reference  to  the   closure  object
     ;;implementing $MULTIPLE-VALUES-ERROR.
-    (movl (obj (primitive-public-function-name->location-gensym '$multiple-values-error)) cpr)
+    (movl (obj (primitive-public-function-name->location-gensym '$multiple-values-error)) CP-REGISTER)
     ;;Load in the Closure Pointer  Register a reference to the closure
     ;;object implementing the function $MULTIPLE-VALUES-ERROR.
-    (movl (mem off-symbol-record-proc cpr) cpr)
+    (movl (mem off-symbol-record-proc CP-REGISTER) CP-REGISTER)
     ;;Fetch a binary  code address from the  closure object referenced
     ;;by the CPR (Closure Pointer Register) and jump directly there.
     (tail-indirect-cpr-call)
@@ -758,13 +758,13 @@
     ;;multivalue  assembly  label   by  adding  DISP-MULTIVALUE-RP  to
     ;;"return address".
     (label L_values_many_values)
-    (movl (mem 0 fpr) ebx)
+    (movl (mem 0 FP-REGISTER) ebx)
     (jmp (mem DISP-MULTIVALUE-RP ebx))
 
     ;;Return a  single value.  Store  in EAX the single  return value,
     ;;then "ret".
     (label L_values_one_value)
-    (movl (mem (fx- wordsize) fpr) eax)
+    (movl (mem (fx- wordsize) FP-REGISTER) eax)
     (ret)
     ))
 
@@ -820,8 +820,8 @@
     ;;3..Check that EBX actually contains a reference to object tagged
     ;;   as closure; else jump to the appropriate error handler.
     ;;
-    (movl (mem (fx- wordsize) fpr) ebx)
-    (movl ebx cpr)
+    (movl (mem (fx- wordsize) FP-REGISTER) ebx)
+    (movl ebx CP-REGISTER)
     (andl (int closure-mask) ebx)
     (cmpl (int closure-tag) ebx)
     (jne (label SL_nonprocedure))
@@ -919,10 +919,10 @@
     ;;then perform a "jmp" to the entry point of the consumer code.
     ;;
     ;;Store in EBX a reference to the consumer closure object.
-    (movl (mem (fx* -2 wordsize) fpr) ebx)
+    (movl (mem (fx* -2 wordsize) FP-REGISTER) ebx)
     ;;Store in the Continuation Pointer  Register (CPR) a reference to
     ;;the consumer closure object.
-    (movl ebx cpr)
+    (movl ebx CP-REGISTER)
     ;;Check that EBX actually contains  a reference to closure object;
     ;;else jump to the appropriate error handler.
     (andl (int closure-mask) ebx)
@@ -930,7 +930,7 @@
     (jne (label SL_nonprocedure))
     ;;Store the  returned value on  the stack, right below  the return
     ;;address.
-    (movl eax (mem (fx- wordsize) fpr))
+    (movl eax (mem (fx- wordsize) FP-REGISTER))
     ;;We will call the consumer closure with one argument.
     (movl (int (argc-convention 1)) eax)
     ;;Fetch a binary  code address from the  closure object referenced
@@ -988,18 +988,18 @@
     (label L_cwv_multi_rp)
     ;;Adjust the  Frame Pointer Register  to reference the  CWV return
     ;;address.
-    (addl (int (fx* wordsize 3)) fpr)
+    (addl (int (fx* wordsize 3)) FP-REGISTER)
     ;;Store  in  the  Closure  Pointer Register  a  reference  to  the
     ;;consumer  closure  object.  We  will  check  below that  CPR  is
     ;;actually a  reference to closure  object (to avoid  moving stuff
     ;;into registers twice).
-    (movl (mem (fx* -2 wordsize) fpr) cpr)
+    (movl (mem (fx* -2 wordsize) FP-REGISTER) CP-REGISTER)
     ;;Check if the number of returned values is zero.
     (cmpl (int (argc-convention 0)) eax)
     (je (label L_cwv_done))
     ;;Make EBX reference the first return value on the stack.
     (movl (int (fx* -4 wordsize)) ebx)
-    (addl fpr ebx)
+    (addl FP-REGISTER ebx)
     ;;Make ECX reference the last return value on the stack.
     (movl ebx ecx)
     (addl eax ecx)
@@ -1015,7 +1015,7 @@
     (label L_cwv_done)
     ;;Check that CPR actually contains  a reference to closure object;
     ;;else jump to the appropriate error handler.
-    (movl cpr ebx)
+    (movl CP-REGISTER ebx)
     (andl (int closure-mask) ebx)
     (cmpl (int closure-tag) ebx)
     (jne (label SL_nonprocedure))
@@ -1057,16 +1057,16 @@
     ;;
     (label SL_nonprocedure)
     ;;Put on the stack the offending object.
-    (movl cpr (mem (fx- wordsize) fpr))
+    (movl CP-REGISTER (mem (fx- wordsize) FP-REGISTER))
     ;;From the  relocation vector  of this  code object:  retrieve the
     ;;location gensym  associated to $APPLY-NONPROCEDURE-ERROR-HANDLER
     ;;and load it  in the Closure Pointer Register  (CPR).  The "proc"
     ;;slot  of such  loc gensym  contains a  reference to  the closure
     ;;object implementing $APPLY-NONPROCEDURE-ERROR-HANDLER.
-    (movl (obj (primitive-public-function-name->location-gensym '$apply-nonprocedure-error-handler)) cpr)
+    (movl (obj (primitive-public-function-name->location-gensym '$apply-nonprocedure-error-handler)) CP-REGISTER)
     ;;Load in the Closure Pointer  Register a reference to the closure
     ;;object implementing $APPLY-NONPROCEDURE-ERROR-HANDLER.
-    (movl (mem off-symbol-record-proc cpr) cpr)
+    (movl (mem off-symbol-record-proc CP-REGISTER) CP-REGISTER)
     ;;Put in EAX the encoded number of arguments, which is 1.
     (movl (int (argc-convention 1)) eax)
     ;;Fetch a binary  code address from the  closure object referenced
@@ -1113,22 +1113,22 @@
     ;;Put on the stack a  reference to the closure object implementing
     ;;CALL-WITH-VALUES,        as       first        argument       to
     ;;$INCORRECT-ARGS-ERROR-HANDLER.
-    (movl cpr (mem (fx- wordsize) fpr))
+    (movl CP-REGISTER (mem (fx- wordsize) FP-REGISTER))
     ;;Decode the  number of  arguments, so that  it is  a non-negative
     ;;fixnum.
     (negl eax)
     ;;Put on the stack the incorrect number of arguments as fixnum, as
     ;;second argument to $INCORRECT-ARGS-ERROR-HANDLER.
-    (movl eax (mem (fx- 0 (fx* 2 wordsize)) fpr))
+    (movl eax (mem (fx- 0 (fx* 2 wordsize)) FP-REGISTER))
     ;;From the  relocation vector  of this  code object:  retrieve the
     ;;location gensym associated  to $INCORRECT-ARGS-ERROR-HANDLER and
     ;;load it in the Closure  Pointer Register (CPR).  The "proc" slot
     ;;of such  loc gensym contains  a reference to the  closure object
     ;;implementing $INCORRECT-ARGS-ERROR-HANDLER.
-    (movl (obj (primitive-public-function-name->location-gensym '$incorrect-args-error-handler)) cpr)
+    (movl (obj (primitive-public-function-name->location-gensym '$incorrect-args-error-handler)) CP-REGISTER)
     ;;Load in the Closure Pointer  Register a reference to the closure
     ;;object implementing $INCORRECT-ARGS-ERROR-HANDLER.
-    (movl (mem off-symbol-record-proc cpr) cpr)
+    (movl (mem off-symbol-record-proc CP-REGISTER) CP-REGISTER)
     ;;Load in  EAX the  encoded number  of arguments  for the  call to
     ;;$INCORRECT-ARGS-ERROR-HANDLER.
     (movl (int (argc-convention 2)) eax)

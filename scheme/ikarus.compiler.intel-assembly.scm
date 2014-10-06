@@ -42,7 +42,6 @@
    ;;CPU registers
    al		ah		bh		cl
    eax		ebx		ecx		edx		esp
-   apr		fpr		cpr		pcr
    AA-REGISTER			CP-REGISTER
    AP-REGISTER			FP-REGISTER
    PC-REGISTER
@@ -166,13 +165,15 @@
 
 ;;;; assembly code generation helpers
 
-(define (mem off val)
+(define* (mem off val)
   (cond ((fixnum? off)
 	 (list 'disp (int off) val))
 	((register? off)
 	 (list 'disp off val))
 	(else
-	 (error 'mem "invalid disp" off))))
+	 (compiler-internal-error __who__
+	   "invalid displacement offset"
+	   off))))
 
 (define-syntax int
   (syntax-rules ()
@@ -207,13 +208,13 @@
   ;;Fetch a  binary code address  from the closure object  referenced by
   ;;the CPR (Closure Pointer Register) and jump directly there.
   ;;
-  (jmp  (mem off-closure-code cpr)))
+  (jmp  (mem off-closure-code CP-REGISTER)))
 
 (define (indirect-cpr-call)
   ;;Fetch a  binary code address  from the closure object  referenced by
   ;;the CPR (Closure Pointer Register) and perform a call to there.
   ;;
-  (call (mem off-closure-code cpr)))
+  (call (mem off-closure-code CP-REGISTER)))
 
 (define (negl targ)	(list 'negl targ))
 (define (label x)	(list 'label x))
@@ -241,10 +242,6 @@
 (define ebx		'%ebx)
 (define ecx		'%ecx)
 (define edx		'%edx)
-(define apr		'%ebp) ; allocation pointer
-(define fpr		'%esp) ; frame pointer
-(define cpr		'%edi) ; closure pointer
-(define pcr		'%esi) ; pcb pointer
 (define register?	symbol?)
 
 (define (argc-convention n)
@@ -311,13 +308,12 @@
   (- (+ CALL-INSTRUCTION-SIZE (* 1 wordsize))))
 
 (define (compile-call-table frame-words-count livemask-vec multiarg-rp call-sequence)
-  ;;To generate a call to a Scheme  function, we need to follow both the
-  ;;protocol for  handling multiple return  values, and the  protocol to
-  ;;expose  informations  about the  caller's  stack  frame for  garbage
-  ;;collection purposes.
+  ;;To generate a call to a Scheme function,  we need to follow both the protocol for
+  ;;handling multiple  return values, and  the protocol to expose  informations about
+  ;;the caller's stack frame for garbage collection purposes.
   ;;
-  ;;This   means   generating   the   following   "calling"   chunk   of
-  ;;pseudo-assembly to be included in the body of the caller function:
+  ;;This  means generating  the following  "calling" chunk  of pseudo-assembly  to be
+  ;;included in the body of the caller function:
   ;;
   ;;     jmp L0
   ;;     livemask-bytes		;array of bytes            --
@@ -332,35 +328,31 @@
   ;;   multi-value-rp:		;multi value return point
   ;;     ... instructions...
   ;;
-  ;;and remember that the "call" pushes on the stack the return address,
-  ;;which is the label SINGLE-VALUE-RP.
+  ;;and remember that the "call" pushes on the stack the return address, which is the
+  ;;label SINGLE-VALUE-RP.
   ;;
-  ;;If the callee function returns a single value: it puts it in EAX and
-  ;;performs a "ret"; this will make the execution flow jump back to the
-  ;;entry point SINGLE-VALUE-RP.
+  ;;If the callee function  returns a single value: it puts it in  EAX and performs a
+  ;;"ret";  this  will  make  the  execution  flow  jump  back  to  the  entry  point
+  ;;SINGLE-VALUE-RP.
   ;;
-  ;;If the callee function wants to  return zero or 2 or more arguments:
-  ;;it retrieves the address SINGLE-VALUE-RP  from the stack, adds to it
-  ;;the    constant    DISP-MULTIVALUE-RP    obtaining    the    address
-  ;;MULTI-VALUE-RP, then it performs a "jmp" directly to MULTI-VALUE-RP.
+  ;;If the callee function wants to return  zero or 2 or more arguments: it retrieves
+  ;;the  address   SINGLE-VALUE-RP  from   the  stack,  adds   to  it   the  constant
+  ;;DISP-MULTIVALUE-RP obtaining the address MULTI-VALUE-RP, then it performs a "jmp"
+  ;;directly to MULTI-VALUE-RP.
   ;;
-  ;;The  argument  FRAME-WORDS-COUNT  must   be  a  non-negative  fixnum
-  ;;representing the  number of words on  the stack frame of  the caller
-  ;;function.
+  ;;The argument  FRAME-WORDS-COUNT must  be a  non-negative fixnum  representing the
+  ;;number of words on the stack frame of the caller function.
   ;;
-  ;;The  argument  LIVEMASK-VEC  must  be   a  vector  of  fixnums  each
-  ;;representing an  octect; the bits in  the octets are live  flags for
-  ;;the  machine words  on the  stack of  the caller.   See the  garbage
-  ;;collector for details.
+  ;;The  argument LIVEMASK-VEC  must  be a  vector of  fixnums  each representing  an
+  ;;octect; the bits in the octets are live  flags for the machine words on the stack
+  ;;of the caller.  See the garbage collector for details.
   ;;
-  ;;MULTIARG-RP must  be a symbolic expression  representing the address
-  ;;of the multi  value return point: the  assembly label MULTI-VALUE-RP
-  ;;in the  pseudo-code above.   This label must  be implemented  in the
-  ;;assembly code generated for the caller.
+  ;;MULTIARG-RP must be  a symbolic expression representing the address  of the multi
+  ;;value return point:  the assembly label MULTI-VALUE-RP in  the pseudo-code above.
+  ;;This label must be implemented in the assembly code generated for the caller.
   ;;
-  ;;CALL-SEQUENCE  must  be  a   symbolic  expression  representing  the
-  ;;assembly code needed to actually  call the closure object.  Examples
-  ;;of this argument are:
+  ;;CALL-SEQUENCE must be a symbolic expression representing the assembly code needed
+  ;;to actually call the closure object.  Examples of this argument are:
   ;;
   ;;(call %ebx)
   ;;	Call the address in %ebx.
@@ -369,16 +361,15 @@
   ;;	Call a label generated at compile time.
   ;;
   ;;(call (disp off-closure-code CPR))
-  ;;	Call the closure object referenced by the Closure Pointer
-  ;;	Register (CPR).
+  ;;	Call the closure object referenced by the Closure Pointer Register (CPR).
   ;;
   ;;(call (disp EAX EBX))
   ;;	Call the entry point at offset EAX from the address in EBX.
   ;;
-  ;;When the  execution flow arrives on  the calling chunk of  code: the
-  ;;Scheme arguments for  the closure to call are already  on the stack;
-  ;;the  Frame  Pointer Register  (FPR)  references  the uplevel  return
-  ;;address.  The situation on the Scheme stack is as follows:
+  ;;When  the  execution flow  arrives  on  the calling  chunk  of  code: the  Scheme
+  ;;arguments for  the closure to  call are already on  the stack; the  Frame Pointer
+  ;;Register  (FPR) references  the uplevel  return  address.  The  situation on  the
+  ;;Scheme stack is as follows:
   ;;
   ;;* When FRAME-WORDS-COUNT is 2 or more:
   ;;
@@ -401,12 +392,11 @@
   ;;   |                           |
   ;;           low memory
   ;;
-  ;;  in this picture FRAME-WORDS-COUNT  is 3, counting: return address,
-  ;;  uplevel Scheme argument 0, uplevel Scheme argument 1.
+  ;;   in this  picture FRAME-WORDS-COUNT  is  3, counting:  return address,  uplevel
+  ;;  Scheme argument 0, uplevel Scheme argument 1.
   ;;
-  ;;   Before executing  the  "call" assembly  instruction:  we need  to
-  ;;  adjust the FPR so that  it references the machine word right above
-  ;;  the "empty word":
+  ;;  Before executing the "call" assembly instruction:  we need to adjust the FPR so
+  ;;  that it references the machine word right above the "empty word":
   ;;
   ;;           high memory
   ;;   |                           |         --
@@ -448,9 +438,8 @@
   ;;   |                           |
   ;;           low memory
   ;;
-  ;;  whenever  the execution flow returns  here we will have  to adjust
-  ;;   back the  FPR so  that it  again references  the "uplevel  return
-  ;;  address".
+  ;;  whenever the execution flow returns here we will have to adjust back the FPR so
+  ;;  that it again references the "uplevel return address".
   ;;
   ;;* When FRAME-WORDS-COUNT is 1:
   ;;
@@ -469,9 +458,8 @@
   ;;   |                           |
   ;;           low memory
   ;;
-  ;;  only the return address is the frame; we do not need to adjust the
-  ;;  FPR, rather we just do the "call" so that right after it the stack
-  ;;  looks like this:
+  ;;  only the return address is the frame;  we do not need to adjust the FPR, rather
+  ;;  we just do the "call" so that right after it the stack looks like this:
   ;;
   ;;           high memory
   ;;   |                           |         --
@@ -513,12 +501,11 @@
   ;;   |                           |
   ;;           low memory
   ;;
-  ;;  an  unspecified number of Scheme  objects is on the  stack and FPR
-  ;;  references a fixnum representing the negated number of such words;
-  ;;  the number of Scheme objects on  the stack is not known at compile
-  ;;  time, rather it is computed at runtime.  We just need to perform a
-  ;;  "call"  instruction, so that right  after it the stack  looks like
-  ;;  this:
+  ;;  an unspecified  number of Scheme objects  is on the stack and  FPR references a
+  ;;  fixnum  representing the  negated number  of such words;  the number  of Scheme
+  ;;  objects  on the stack is  not known at compile  time, rather it is  computed at
+  ;;  runtime.  We just need to perform  a "call" instruction, so that right after it
+  ;;  the stack looks like this:
   ;;
   ;;           high memory
   ;;   |                           |         --
@@ -551,7 +538,7 @@
 			 (fx* (fxsub1 frame-words-count) wordsize))))
 	(lambda (asm-instr)
 	  (if FPR-DELTA
-	      (list asm-instr FPR-DELTA fpr)
+	      (list asm-instr FPR-DELTA FP-REGISTER)
 	    ;;NOP generates no assembly code.
 	    '(nop)))))
     (list 'seq
