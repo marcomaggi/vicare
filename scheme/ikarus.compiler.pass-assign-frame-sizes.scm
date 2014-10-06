@@ -37,8 +37,45 @@
   ;;Recapitulation
   ;;--------------
   ;;
-  ;;Let's clarify where we are when this compiler pass is applied.
+  ;;Let's clarify  where we  are when  this compiler  pass is  applied.  There  are 3
+  ;;entities that we can compile: libraries, programs, standalone EVAL expressions.
   ;;
+  ;;* After the previous compiler passes  the fact that a standalone expression might
+  ;;  reference bindings  defined by previous standalone expressions  does not matter
+  ;;  anymore; those references and  assignments have been converted into appropriate
+  ;;  function calls.
+  ;;
+  ;;* After the  previous compiler passes: all  the code has been  reorganised into a
+  ;;  set of CLAMBDA structs and an initialisation expression.
+  ;;
+  ;;* Every  clause in the  CLAMBDA structs  can be processed  independently, without
+  ;;  informations from other clauses.
+  ;;
+  ;;* There is no significant difference between the body of a CLAMBDA clause and the
+  ;;  body of the init expression; the body  of the init expression is like a CLAMBDA
+  ;;  clause's body with no stack operands and no closure variables.
+  ;;
+  ;;So here we can just consider the  bodies; if we understand how a CLAMBDA clause's
+  ;;body is processed we get everything.   Every body is an expression resulting from
+  ;;the composition of subexpressions; the subexpressions form a tree-like hierarchy.
+  ;;
+  ;;In a  previous compiler pass: for  each body a  list of local variables  has been
+  ;;gathered, representing  the temporary locations  needed to hold data  and partial
+  ;;results from computations;  such lists are stored in LOCALS  structs.  Some local
+  ;;variables exists only in branches of the tree, for example:
+  ;;
+  ;;   (conditional ?test
+  ;;       (bind ((a ?rhs-a))
+  ;;         ?conseq)
+  ;;     (bind ((b ?rhs-b))
+  ;;       ?altern))
+  ;;
+  ;;the local  A exists only  in the ?CONSEQ,  while the local  B exists only  in the
+  ;;?ALTERN.  The set  of locals that exist  in a subexpression branch  is called the
+  ;;"live set".
+  ;;
+  ;;Knowing which  locals are live  in a subexpression  and which are  shared between
+  ;;subexpressions is needed to map locals to available CPU registers.
   ;;
   (import INTEGER-SET)
   (define-syntax __module_who__
