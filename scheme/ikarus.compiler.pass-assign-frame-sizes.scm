@@ -194,7 +194,7 @@
     (if (register? x)
 	;;X is a symbol representing the name of a CPU register.
 	(begin
-	  (assert (memq x (list AA-REGISTER CP-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER ecx edx)))
+	  #;(assert (memq x (list AA-REGISTER CP-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER ecx edx)))
 	  (values vs (add-reg x rs) fs ns))
       (struct-case x
 	((fvar)
@@ -745,39 +745,12 @@
 (define (%rewrite x vars.vec)
   ;;X must be a struct instance representing a recordized body.
   ;;
-  ;;A lot of functions are nested here because they need to close upon
-  ;;the argument VARS.VEC.
+  ;;A lot of functions  are nested here because they need to  close upon the argument
+  ;;VARS.VEC.
   ;;
   (import FRAME-CONFLICT-HELPERS)
   (module (register?)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
-
-  (define (NFE idx mask x)
-    (struct-case x
-      ((seq e0 e1)
-       (let ((e0^ (E e0)))
-	 (make-seq e0^ (NFE idx mask e1))))
-      ((non-tail-call target value args mask^ size)
-       (make-non-tail-call target value
-		    (map (lambda (x)
-			   (cond ((symbol? x)
-				  x)
-				 ((nfv? x)
-				  ($nfv-loc x))
-				 (else
-				  (compiler-internal-error __module_who__ "invalid arg"))))
-		      args)
-		    mask idx))
-      (else
-       (compiler-internal-error __module_who__ "invalid NF effect" x))))
-
-  (define (Var x)
-    (cond (($var-loc x)
-	   => (lambda (loc)
-		(if (fvar? loc)
-		    loc
-		  (%assign x vars.vec))))
-	  (else x)))
 
   (define (R x)
     (cond ((or (constant? x)
@@ -786,13 +759,63 @@
 	   x)
 	  ((nfv? x)
 	   (or ($nfv-loc x)
-	       (compiler-internal-error __module_who__ "unassigned nfv")))
+	       (compiler-internal-error __module_who__
+		 "unassigned nfv")))
 	  ((var? x)
 	   (Var x))
 	  ((disp? x)
 	   (make-disp (R ($disp-s0 x)) (R ($disp-s1 x))))
 	  (else
-	   (compiler-internal-error __module_who__ "invalid R" (unparse-recordized-code x)))))
+	   (compiler-internal-error __module_who__
+	     "invalid R" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (T x)
+    ;;Process the struct instance X representing recordized  code as if it is in tail
+    ;;position.
+    ;;
+    (struct-case x
+      ((seq e0 e1)
+       (let ((e0^ (E e0)))
+	 (make-seq e0^ (T e1))))
+
+      ((conditional e0 e1 e2)
+       (make-conditional (P e0) (T e1) (T e2)))
+
+      ((asmcall op args)
+       x)
+
+      ((shortcut body handler)
+       (make-shortcut (T body) (T handler)))
+
+      (else
+       (compiler-internal-error __module_who__
+	 "invalid tail expression" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (P x)
+    (struct-case x
+      ((seq e0 e1)
+       (let ((e0^ (E e0)))
+	 (make-seq e0^ (P e1))))
+
+      ((conditional e0 e1 e2)
+       (make-conditional (P e0) (P e1) (P e2)))
+
+      ((asm-instr op dst src)
+       (make-asm-instr op (R dst) (R src)))
+
+      ((constant)
+       x)
+
+      ((shortcut body handler)
+       (make-shortcut (P body) (P handler)))
+
+      (else
+       (compiler-internal-error __module_who__
+	 "invalid pred" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -919,13 +942,15 @@
 				($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
 				($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
 		($nfv-nfv-conf v))
-	      (for-each-var ($nfv-var-conf v) vars.vec
-			    (lambda (x)
-			      (let ((loc ($var-loc x)))
-				(if (fvar? loc)
-				    (when (fx=? (fvar-idx loc) i)
-				      (compiler-internal-error __module_who__ "invalid assignment"))
-				  ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
+	      (for-each-var
+		  ($nfv-var-conf v)
+		  vars.vec
+		(lambda (x)
+		  (let ((loc ($var-loc x)))
+		    (if (fvar? loc)
+			(when (fx=? (fvar-idx loc) i)
+			  (compiler-internal-error __module_who__ "invalid assignment"))
+		      ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
 	    (%assign-frame-vars! (cdr vars) (fxadd1 i))))
 
 	(module (make-mask)
@@ -960,91 +985,87 @@
 	  (%assign-frame-vars! vars i)
 	  (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
 
+;;; --------------------------------------------------------------------
+
+    (define (NFE idx mask x)
+      (struct-case x
+	((seq e0 e1)
+	 (let ((e0^ (E e0)))
+	   (make-seq e0^ (NFE idx mask e1))))
+	((non-tail-call target value args mask^ size)
+	 (make-non-tail-call target value
+			     (map (lambda (x)
+				    (cond ((symbol? x)
+					   x)
+					  ((nfv? x)
+					   ($nfv-loc x))
+					  (else
+					   (compiler-internal-error __module_who__ "invalid arg"))))
+			       args)
+			     mask idx))
+	(else
+	 (compiler-internal-error __module_who__ "invalid NF effect" x))))
+
     #| end of module: E |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (P x)
-    (struct-case x
-      ((seq e0 e1)
-       (let ((e0^ (E e0)))
-	 (make-seq e0^ (P e1))))
+  (module (Var)
 
-      ((conditional e0 e1 e2)
-       (make-conditional (P e0) (P e1) (P e2)))
+    (define (Var x)
+      (cond (($var-loc x)
+	     => (lambda (loc)
+		  (if (fvar? loc)
+		      loc
+		    (%assign x vars.vec))))
+	    (else x)))
 
-      ((asm-instr op d s)
-       (make-asm-instr op (R d) (R s)))
+    (module (%assign)
+      (import FRAME-CONFLICT-HELPERS)
 
-      ((constant)
-       x)
+      (define (%assign x vars.vec)
+	(or (%assign-move x vars.vec)
+	    (%assign-any  x vars.vec)))
 
-      ((shortcut body handler)
-       (make-shortcut (P body) (P handler)))
+      (define (%assign-any x vars.vec)
+	(let ((frms ($var-frm-conf x))
+	      (vars ($var-var-conf x)))
+	  (let loop ((i 1))
+	    (if (set-member? i frms)
+		(loop (fxadd1 i))
+	      (receive-and-return (fv)
+		  (mkfvar i)
+		($set-var-loc! x fv)
+		(for-each-var
+		    vars
+		    vars.vec
+		  (lambda (var)
+		    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
 
-      (else
-       (compiler-internal-error __module_who__ "invalid pred" (unparse-recordized-code x)))))
+      (define (%assign-move x vars.vec)
+	(let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
+	  (and (pair? mr)
+	       (receive-and-return (fv)
+		   (mkfvar (car mr))
+		 ($set-var-loc! x fv)
+		 (for-each-var
+		     ($var-var-conf x)
+		     vars.vec
+		   (lambda (var)
+		     ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
+		 (for-each-var
+		     ($var-var-move x)
+		     vars.vec
+		   (lambda (var)
+		     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
+
+      #| end of module: %assign |# )
+
+    #| end of module: Var |# )
 
 ;;; --------------------------------------------------------------------
 
-  (define (T x)
-    ;;Process the struct instance X representing recordized code as if
-    ;;it is in tail position.
-    ;;
-    (struct-case x
-      ((seq e0 e1)
-       (let ((e0^ (E e0)))
-	 (make-seq e0^ (T e1))))
-
-      ((conditional e0 e1 e2)
-       (make-conditional (P e0) (T e1) (T e2)))
-
-      ((asmcall op args)
-       x)
-
-      ((shortcut body handler)
-       (make-shortcut (T body) (T handler)))
-
-      (else
-       (compiler-internal-error __module_who__ "invalid tail" (unparse-recordized-code x)))))
-
   (T x))
-
-
-(module (%assign)
-  (import FRAME-CONFLICT-HELPERS)
-
-  (define (%assign x vars.vec)
-    (or (%assign-move x vars.vec)
-	(%assign-any  x vars.vec)))
-
-  (define (%assign-any x vars.vec)
-    (let ((frms ($var-frm-conf x))
-	  (vars ($var-var-conf x)))
-      (let loop ((i 1))
-	(if (set-member? i frms)
-	    (loop (fxadd1 i))
-	  (receive-and-return (fv)
-	      (mkfvar i)
-	    ($set-var-loc! x fv)
-	    (for-each-var vars vars.vec
-			  (lambda (var)
-			    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
-
-  (define (%assign-move x vars.vec)
-    (let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
-      (and (pair? mr)
-	   (receive-and-return (fv)
-	       (mkfvar (car mr))
-	     ($set-var-loc! x fv)
-	     (for-each-var ($var-var-conf x) vars.vec
-			   (lambda (var)
-			     ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
-	     (for-each-var ($var-var-move x) vars.vec
-			   (lambda (var)
-			     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
-
-  #| end of module: %assign |# )
 
 
 ;;;; done
