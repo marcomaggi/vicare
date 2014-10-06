@@ -102,8 +102,16 @@
   ;;     (asm-instr move (AA-REGISTER ?result))
   ;;     (asmcall return (AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)))
   ;;
-  ;;Throughout  this  function  the  arguments  VS,  RS,  FS,  NS  are  integer  sets
-  ;;representing, respectively the VARS set the REGS set and the FRMS set.
+  ;;Throughout this function the arguments VS, RS,  FS, NS are sets as defined by the
+  ;;module FRAME-CONFLICT-HELPERS (they are not all instances of the same type):
+  ;;
+  ;;VS -	A collection of VAR structs ...
+  ;;
+  ;;RS -	A collection of register name symbols ...
+  ;;
+  ;;FS -	A collection of FVAR structs ...
+  ;;
+  ;;NS -	A collection of NFV structs ...
   ;;
   ;;The true work is done in the functions "R" and "E-asm-instr".
   ;;

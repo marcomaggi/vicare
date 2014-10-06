@@ -141,6 +141,21 @@
    ((64)	'(%edi))))
 
 (module (%cpu-register-name->index)
+  ;;CPU registers  are identified by a  symbol whose string  name is the name  of the
+  ;;register; so  registers have no index  associated to them like,  for example, the
+  ;;VAR  and FVAR  structs have.   For this  reason it  is not  immediate to  collect
+  ;;register identifiers in an integer set as defined by the module IntegerSet.
+  ;;
+  ;;This module artificially introduces a map  between register names and indexes, so
+  ;;it makes it possible to use register identifiers as memebrs of sets.
+  ;;
+  (define* (%cpu-register-name->index x)
+    (cond ((assq x INTEL-CPU-REGISTER/INDEX-MAP)
+	   => cdr)
+	  (else
+	   (compiler-internal-error __who__
+	     "expected symbol representing an Intel CPU register name (lower-case)"
+	     x))))
 
   (define-constant INTEL-CPU-REGISTER/INDEX-MAP
     '((%eax . 0)
@@ -151,14 +166,6 @@
       (%esi . 5)
       (%esp . 6)
       (%ebp . 7)))
-
-  (define* (%cpu-register-name->index x)
-    (cond ((assq x INTEL-CPU-REGISTER/INDEX-MAP)
-	   => cdr)
-	  (else
-	   (compiler-internal-error __who__
-	     "expected symbol representing an Intel CPU register name (lower-case)"
-	     x))))
 
   #| end of module |# )
 
