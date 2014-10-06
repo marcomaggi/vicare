@@ -140,6 +140,17 @@
    ((32)	'(%edi))
    ((64)	'(%edi))))
 
+(define-constant esp	'%esp) ; stack frame pointer
+(define-constant al	'%al)
+(define-constant ah	'%ah)
+(define-constant bh	'%bh)
+(define-constant cl	'%cl)
+(define-constant eax	'%eax)
+(define-constant ebx	'%ebx)
+(define-constant ecx	'%ecx)
+(define-constant edx	'%edx)
+(define register?	symbol?)
+
 (module (%cpu-register-name->index)
   ;;CPU registers  are identified by a  symbol whose string  name is the name  of the
   ;;register; so  registers have no index  associated to them like,  for example, the
@@ -147,25 +158,26 @@
   ;;register identifiers in an integer set as defined by the module IntegerSet.
   ;;
   ;;This module artificially introduces a map  between register names and indexes, so
-  ;;it makes it possible to use register identifiers as memebrs of sets.
+  ;;it makes it  possible to use register  identifiers as memebrs of  sets.  Only the
+  ;;registers actually  used in the compiler  pass "impose evaluation order"  must be
+  ;;mapped.
   ;;
   (define* (%cpu-register-name->index x)
     (cond ((assq x INTEL-CPU-REGISTER/INDEX-MAP)
 	   => cdr)
 	  (else
 	   (compiler-internal-error __who__
-	     "expected symbol representing an Intel CPU register name (lower-case)"
+	     "expected symbol representing an integer-mapped Intel CPU register name (lower-case)"
 	     x))))
 
   (define-constant INTEL-CPU-REGISTER/INDEX-MAP
-    '((%eax . 0)
-      (%edi . 1)
-      (%ebx . 2)
-      (%edx . 3)
-      (%ecx . 4)
-      (%esi . 5)
-      (%esp . 6)
-      (%ebp . 7)))
+    `((,AA-REGISTER	. 0)
+      (,CP-REGISTER	. 1)
+      (,AP-REGISTER	. 2)
+      (,FP-REGISTER	. 3)
+      (,PC-REGISTER	. 4)
+      (,ecx		. 5)
+      (,edx		. 6)))
 
   #| end of module |# )
 
@@ -239,17 +251,6 @@
 (define (ja label)	(list 'ja label))
 (define (jo label)	(list 'jo label))
 (define (jmp label)	(list 'jmp label))
-
-(define esp		'%esp) ; stack frame pointer
-(define al		'%al)
-(define ah		'%ah)
-(define bh		'%bh)
-(define cl		'%cl)
-(define eax		'%eax)
-(define ebx		'%ebx)
-(define ecx		'%ecx)
-(define edx		'%edx)
-(define register?	symbol?)
 
 (define (argc-convention n)
   ;;At run  time: the  number of  arguments in a  function call  is represented  by a
