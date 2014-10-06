@@ -833,8 +833,8 @@
 	((conditional e0 e1 e2)
 	 (make-conditional (P e0) (E e1) (E e2)))
 
-	((asm-instr op d s)
-	 (E-asm-instr op d s))
+	((asm-instr op dst src)
+	 (E-asm-instr x op dst src))
 
 	((non-tail-call-frame vars live body)
 	 (E-non-tail-call-frame vars live body))
@@ -844,24 +844,28 @@
 	   ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	    x)
 	   (else
-	    (compiler-internal-error __module_who__ "invalid effect prim" op))))
+	    (compiler-internal-error __module_who__
+	      "invalid ASMCALL operator in recordised code for side effects"
+	      (unparse-recordised-code/sexp x)))))
 
 	((shortcut body handler)
 	 (make-shortcut (E body) (E handler)))
 
 	(else
-	 (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
+	 (compiler-internal-error __module_who__
+	   "invalid recordised code for effects"
+	   (unparse-recordized-code x)))))
 
-    (define (E-asm-instr op d s)
+    (define (E-asm-instr x op dst src)
       (case op
 	((move load8 load32)
 	 ;;If  the   destination  equals  the  source:   convert  this
 	 ;;instruction into a NOP.
-	 (let ((d (R d))
-	       (s (R s)))
-	   (if (eq? d s)
+	 (let ((dst (R dst))
+	       (src (R src)))
+	   (if (eq? dst src)
 	       (nop)
-	     (make-asm-instr op d s))))
+	     (make-asm-instr op dst src))))
 
 	(( ;;some assembly instructions
 	  logand		logor		logxor
@@ -875,13 +879,15 @@
 	  fl:load		fl:store
 	  fl:add!		fl:sub!		fl:mul!		fl:div!
 	  fl:from-int		fl:shuffle	fl:load-single	fl:store-single)
-	 (make-asm-instr op (R d) (R s)))
+	 (make-asm-instr op (R dst) (R src)))
 
 	((nop)
 	 (nop))
 
 	(else
-	 (compiler-internal-error __module_who__ "invalid op" op))))
+	 (compiler-internal-error __module_who__
+	   "invalid ASM-INSTR operator in recordised code for side effects"
+	   (unparse-recordised-code/sexp x)))))
 
     (define (E-non-tail-call-frame vars live body)
       (let ((live-frms1 (map (lambda (i)
@@ -959,24 +965,24 @@
 	(module (make-mask)
 
 	  (define (make-mask n)
-	    (let ((vec (make-vector (fxsra (fx+ n 7) 3) 0)))
+	    (receive-and-return (mask)
+		(make-vector (fxsra (fx+ n 7) 3) 0)
 	      (for-each (lambda (fvar)
-			  (%set-bit! vec ($fvar-idx fvar)))
+			  (%set-bit! mask ($fvar-idx fvar)))
 		live-frms1)
 	      (for-each (lambda (idx)
-			  (%set-bit! vec idx))
+			  (%set-bit! mask idx))
 		live-frms2)
 	      (for-each (lambda (nfv)
 			  (let ((loc ($nfv-loc nfv)))
 			    (when loc
-			      (%set-bit! vec ($fvar-idx loc)))))
-		live-nfvs)
-	      vec))
+			      (%set-bit! mask ($fvar-idx loc)))))
+		live-nfvs)))
 
-	  (define (%set-bit! vec idx)
+	  (define (%set-bit! mask idx)
 	    (let ((q (fxsra    idx 3))
 		  (r (fxlogand idx 7)))
-	      (vector-set! vec q (fxlogor (vector-ref vec q) (fxsll 1 r)))))
+	      (vector-set! mask q (fxlogor (vector-ref mask q) (fxsll 1 r)))))
 
 	  #| end of module: make-mask |# )
 
