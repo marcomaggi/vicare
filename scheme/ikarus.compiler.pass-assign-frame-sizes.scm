@@ -33,7 +33,7 @@
   ;;   nop			interrupt		incr/zero?
   ;;   fl:double->single	fl:single->double
   ;;
-  (import IntegerSet)
+  (import INTEGER-SET)
   (define-syntax __module_who__
     (identifier-syntax 'assign-frame-sizes))
 
@@ -120,7 +120,7 @@
   ;;EXCEPTION-LIVE-SET; then the body is processed, in the dynamic environment having
   ;;the parameter set.
   ;;
-  (import IntegerSet)
+  (import INTEGER-SET)
   (import FRAME-CONFLICT-HELPERS)
   (module (register?
 	   eax ecx edx

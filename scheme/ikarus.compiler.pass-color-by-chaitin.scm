@@ -28,10 +28,8 @@
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
-  (import ListySet)
-  (import ListyGraphs)
-  ;;(import IntegerSet)
-  ;;(import IntegerGraphs)
+  (import LISTY-SET)
+  (import LISTY-GRAPHS)
   (import INTEL-ASSEMBLY-CODE-GENERATION)
 
 

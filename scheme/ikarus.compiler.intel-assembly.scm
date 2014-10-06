@@ -155,7 +155,7 @@
   ;;CPU registers  are identified by a  symbol whose string  name is the name  of the
   ;;register; so  registers have no index  associated to them like,  for example, the
   ;;VAR  and FVAR  structs have.   For this  reason it  is not  immediate to  collect
-  ;;register identifiers in an integer set as defined by the module IntegerSet.
+  ;;register identifiers in an integer set as defined by the module INTEGER-SET.
   ;;
   ;;This module artificially introduces a map  between register names and indexes, so
   ;;it makes it  possible to use register  identifiers as memebrs of  sets.  Only the

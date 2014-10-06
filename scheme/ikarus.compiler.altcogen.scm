@@ -90,11 +90,11 @@
   (asm 'interrupt))
 
 
-(module ListySet
+(module LISTY-SET
   ;;This module implements sets of bits; each  set is a proper list of items, wrapped
   ;;by a struct.
   ;;
-  ;;This module has the same API of the module IntegerSet.
+  ;;This module has the same API of the module INTEGER-SET.
   ;;
   (make-empty-set
    singleton
@@ -182,10 +182,10 @@
 
     #| end of module: set-union |# )
 
-  #| end of module: ListySet |# )
+  #| end of module: LISTY-SET |# )
 
 
-(module IntegerSet
+(module INTEGER-SET
   ;;This module  implements sets of  bits; each set is  a nested hierarchy  of lists,
   ;;pairs and fixnums  interpreted as a tree; fixnums are  interpreted as bitvectors.
   ;;The empty set is the fixnum zero.
@@ -194,7 +194,7 @@
   ;;tree and: if  the index is even we go  left (the car), if the index  is odd we go
   ;;right (the cdr).
   ;;
-  ;;This module has the same API of the module ListySet.
+  ;;This module has the same API of the module LISTY-SET.
   ;;
   (make-empty-set
    singleton
@@ -391,17 +391,17 @@
 		(inner (fxadd1 i) (fxsra m 1) ac))
 	    (inner (fxadd1 i) (fxsra m 1) (cons i ac)))))))
 
-  #| end of module: IntegerSet |# )
+  #| end of module: INTEGER-SET |# )
 
 
-(module ListyGraphs
+(module LISTY-GRAPHS
   (empty-graph
    add-edge!
    empty-graph?
    print-graph
    node-neighbors
    delete-node!)
-  (import ListySet)
+  (import LISTY-SET)
 
   (define-struct graph
     (ls
@@ -411,11 +411,11 @@
 		;struct  instance  of type  VAR  or  FVAR, or  a  symbol
 		;representing a register.
 		;
-		;The  cdr  of  each  pair is  an  instance  of  ListySet
+		;The  cdr  of  each  pair is  an  instance  of  LISTY-SET
 		;(whatever it  is defined in that  module), representing
 		;the edges outgoing from the node.
 		;
-		;The  ListySet contains  the target  nodes of  the edges
+		;The  LISTY-SET contains  the target  nodes of  the edges
 		;outgoing from  the node represented  by the car  of the
 		;pair.
      ))
@@ -485,11 +485,11 @@
 	    (else
 	     (void)))))
 
-  #| end of module: ListyGraphs |# )
+  #| end of module: LISTY-GRAPHS |# )
 
 
-(module IntegerGraphs
-  ;;This module is like ListyGraph, but it makes use of IntegerSet.
+(module INTEGER-GRAPHS
+  ;;This module is like ListyGraph, but it makes use of INTEGER-SET.
   ;;
   (empty-graph
    add-edge!
@@ -497,7 +497,7 @@
    print-graph
    node-neighbors
    delete-node!)
-  (import IntegerSet)
+  (import INTEGER-SET)
 
   (define-struct graph
     (ls
@@ -507,13 +507,12 @@
 		;struct  instance  of type  VAR  or  FVAR, or  a  symbol
 		;representing a register.
 		;
-		;The  cdr of  each  pair is  an  instance of  IntegerSet
+		;The  cdr of  each  pair is  an  instance of  INTEGER-SET
 		;(whatever it  is defined in that  module), representing
 		;the edges outgoing from the node.
 		;
-		;The  ListySet contains  the target  nodes of  the edges
-		;outgoing from  the node represented  by the car  of the
-		;pair.
+		;The LISTY-SET contains  the target nodes of the  edges outgoing from
+		;the node represented by the car of the pair.
      ))
 
   (define-syntax-rule (empty-graph)
@@ -577,7 +576,7 @@
 	    (else
 	     (void)))))
 
-  #| end of module: IntegerGraphs |# )
+  #| end of module: INTEGER-GRAPHS |# )
 
 
 (module FRAME-CONFLICT-HELPERS
@@ -585,7 +584,7 @@
    empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv init-nfv!
    empty-frm-set rem-frm add-frm union-frms mem-frm?
    empty-reg-set rem-reg add-reg union-regs mem-reg?)
-  (import IntegerSet)
+  (import INTEGER-SET)
 
   (define (add-frm x s)
     (set-add (fvar-idx x) s))
