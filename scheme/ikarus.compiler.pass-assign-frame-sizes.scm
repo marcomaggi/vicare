@@ -106,11 +106,11 @@
     ;;X must  be a struct instance  of type LOCALS.  Update  the field VARS of  X and
     ;;return a new struct instance of type LOCALS which is meant to replace X.
     ;;
-    (module (init-vars!)
+    (module (init-var*!)
       (import FRAME-CONFLICT-HELPERS))
     (struct-case x
       ((locals vars body)
-       (init-vars! vars)
+       (init-var*! vars)
        (let* ((vars.vec    (list->vector vars))
 	      (call-live*  (%uncover-frame-conflicts body vars.vec))
 	      (body        (%rewrite body vars.vec)))
@@ -153,9 +153,9 @@
   ;;
   ;;RS -	A collection of register name symbols ...
   ;;
-  ;;FS -	A collection of FVAR structs ...
+  ;;FS -	A collection of FVAR structs (current stack frame operands) ...
   ;;
-  ;;NS -	A collection of NFV structs ...
+  ;;NS -	A collection of NFV structs (next stack frame operands) ...
   ;;
   ;;The true work is done in the functions "R" and "E-asm-instr".
   ;;

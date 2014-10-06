@@ -395,115 +395,177 @@
 
 
 (module FRAME-CONFLICT-HELPERS
-  (empty-var-set rem-var add-var union-vars mem-var? for-each-var init-vars!
+  (empty-var-set rem-var add-var union-vars mem-var? for-each-var init-var*!
    empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv init-nfv!
    empty-frm-set rem-frm add-frm union-frms mem-frm?
    empty-reg-set rem-reg add-reg union-regs mem-reg?)
   (import INTEGER-SET)
 
-  (define (add-frm x s)
-    (set-add (fvar-idx x) s))
+;;; --------------------------------------------------------------------
+;;; VAR structs
 
-  (define-syntax-rule (rem-nfv x s)
-    (remq1 x s))
+  (module (init-var*!)
 
-  (define (init-var! x i)
-    ($set-var-index! x i)
-    ($set-var-var-move! x (empty-var-set))
-    ($set-var-reg-move! x (empty-reg-set))
-    ($set-var-frm-move! x (empty-frm-set))
-    ($set-var-var-conf! x (empty-var-set))
-    ($set-var-reg-conf! x (empty-reg-set))
-    ($set-var-frm-conf! x (empty-frm-set)))
+    (case-define init-var*!
+      ((ls)
+       (init-var*! ls 0))
+      ((ls idx)
+       (when (pair? ls)
+	 (init-var!  (car ls) idx)
+	 (init-var*! (cdr ls) (fxadd1 idx)))))
 
-  (define (init-vars! ls)
-    (let loop ((ls ls)
-	       (i  0))
-      (when (pair? ls)
-	(init-var! (car ls) i)
-	(loop (cdr ls) (fxadd1 i)))))
+    (define (init-var! x i)
+      ($set-var-index! x i)
+      ($set-var-var-move! x (empty-var-set))
+      ($set-var-reg-move! x (empty-reg-set))
+      ($set-var-frm-move! x (empty-frm-set))
+      ($set-var-var-conf! x (empty-var-set))
+      ($set-var-reg-conf! x (empty-reg-set))
+      ($set-var-frm-conf! x (empty-frm-set)))
+
+    #| end of module |# )
+
+  (define-syntax-rule (empty-var-set)
+    ;;Build and return a new, empty VS set.
+    ;;
+    (make-empty-set))
+
+  (define (add-var x vs)
+    ;;Add the VAR struct X to the set VS.  Return the new set.
+    ;;
+    (set-add (var-index x) vs))
+
+  (define (rem-var x vs)
+    ;;Remove the VAR struct X from the set VS.  Return the new set.
+    ;;
+    (set-rem (var-index x) vs))
+
+  (define (mem-var? x vs)
+    ;;Return true if the VAR struct X is a member of te set VS.
+    ;;
+    (set-member? (var-index x) vs))
+
+  (define-syntax-rule (union-vars ?vs1 ?vs2)
+    ;;Build  and return  a new  VS set  holding  all the  members of  ?VS1 and  ?VS2;
+    ;;duplicate members are included only once.
+    ;;
+    (set-union ?vs1 ?vs2))
+
+  (define (for-each-var vs varvec func)
+    (for-each (lambda (i)
+		(func (vector-ref varvec i)))
+      (set->list vs)))
+
+;;; --------------------------------------------------------------------
+;;; current frame stack operands
+
+  (define-syntax-rule (empty-frm-set)
+    ;;Build and return a new, empty FS set.
+    ;;
+    (make-empty-set))
+
+  (define (add-frm x fs)
+    ;;Add the FVAR struct X to the set FS.  Return the new set.
+    ;;
+    (set-add (fvar-idx x) fs))
+
+  (define (rem-frm x fs)
+    ;;Remove the FVAR struct X from the set FS.  Return the new set.
+    ;;
+    (set-rem (fvar-idx x) fs))
+
+  (define (mem-frm? x fs)
+    ;;Return true if the FVAR struct X is a member of the set FS.
+    ;;
+    (set-member? (fvar-idx x) fs))
+
+  (define-syntax-rule (union-frms ?fs1 ?fs2)
+    ;;Build  and return  a new  FS set  holding  all the  members of  ?FS1 and  ?FS2;
+    ;;duplicate members are included only once.
+    ;;
+    (set-union ?fs1 ?fs2))
+
+;;; --------------------------------------------------------------------
+;;; CPU registers
+
+  (define-syntax-rule (empty-reg-set)
+    ;;Build and return a new, empty RS set.
+    ;;
+    (make-empty-set))
+
+  (define (add-reg x rs)
+    ;;Add the CPU register symbol name X to the set RS.  Return the new set.
+    ;;
+    (module (%cpu-register-name->index)
+      (import INTEL-ASSEMBLY-CODE-GENERATION))
+    (set-add (%cpu-register-name->index x) rs))
+
+  (define (rem-reg x rs)
+    ;;Remove the CPU register symbol name X from the set RS.  Return the new set.
+    ;;
+    (module (%cpu-register-name->index)
+      (import INTEL-ASSEMBLY-CODE-GENERATION))
+    (set-rem (%cpu-register-name->index x) rs))
+
+  (define (mem-reg? x rs)
+    ;;Return true if the CPU register symbol name X is a member of the set RS.
+    ;;
+    (module (%cpu-register-name->index)
+      (import INTEL-ASSEMBLY-CODE-GENERATION))
+    (set-member? (%cpu-register-name->index x) rs))
+
+  (define-syntax-rule (union-regs ?rs1 ?rs2)
+    ;;Build  and return  a new  RS set  holding  all the  members of  ?RS1 and  ?RS2;
+    ;;duplicate members are included only once.
+    ;;
+    (set-union ?rs1 ?rs2))
+
+;;; --------------------------------------------------------------------
+;;; next frame stack operands
 
   (define (init-nfv! x)
     ($set-nfv-frm-conf! x (empty-frm-set))
     ($set-nfv-nfv-conf! x (empty-nfv-set))
     ($set-nfv-var-conf! x (empty-var-set)))
 
-  (define-syntax-rule (empty-var-set)
-    (make-empty-set))
-
-  (define (add-var x s)
-    (set-add (var-index x) s))
-
-  (define (mem-var? x s)
-    (set-member? (var-index x) s))
-
-  (define (rem-var x s)
-    (set-rem (var-index x) s))
-
-  (define-syntax-rule (union-vars s1 s2)
-    (set-union s1 s2))
-
-  (define (for-each-var s varvec f)
-    (for-each (lambda (i) (f (vector-ref varvec i)))
-      (set->list s)))
-
-  (define-syntax-rule (empty-reg-set)
-    (make-empty-set))
-
-  (define (add-reg x s)
-    (module (%cpu-register-name->index)
-      (import INTEL-ASSEMBLY-CODE-GENERATION))
-    (set-add (%cpu-register-name->index x) s))
-
-  (define (rem-reg x s)
-    (module (%cpu-register-name->index)
-      (import INTEL-ASSEMBLY-CODE-GENERATION))
-    (set-rem (%cpu-register-name->index x) s))
-
-  (define (mem-reg? x s)
-    (module (%cpu-register-name->index)
-      (import INTEL-ASSEMBLY-CODE-GENERATION))
-    (set-member? (%cpu-register-name->index x) s))
-
-  (define-syntax-rule (union-regs s1 s2)
-    (set-union s1 s2))
-
-  (define-syntax-rule (empty-frm-set)
-    (make-empty-set))
-
-  (define (mem-frm? x s)
-    (set-member? (fvar-idx x) s))
-
-  (define (rem-frm x s)
-    (set-rem (fvar-idx x) s))
-
-  (define-syntax-rule (union-frms s1 s2)
-    (set-union s1 s2))
-
   (define-syntax-rule (empty-nfv-set)
+    ;;Build and return a new, empty NS set.
+    ;;
     '())
 
-  (define (add-nfv x s)
-    (if (memq x s)
-	s
-      (cons x s)))
+  (define (add-nfv x ns)
+    ;;Add the NFV struct X to the set NS.  Return the new set.
+    ;;
+    (if (memq x ns)
+	ns
+      (cons x ns)))
 
-  (define-syntax-rule (mem-nfv? x s)
-    (memq x s))
+  (define-syntax-rule (rem-nfv ?x ?ns)
+    ;;Remove the NFV struct ?X from the set ?NS.  Return the new set.
+    ;;
+    (remq1 ?x ?ns))
 
-  (define (union-nfvs s1 s2)
-    (let recur ((s1 s1)
-		(s2 s2))
-      (cond ((null? s1)
-	     s2)
-	    ((memq (car s1) s2)
-	     (recur (cdr s1) s2))
+  (define-syntax-rule (mem-nfv? ?x ?ns)
+    ;;Return true if the NFV struct ?X is a member of the set ?NS.
+    ;;
+    (memq ?x ?ns))
+
+  (define (union-nfvs ns1 ns2)
+    ;;Build and return a new NS set holding all the members of NS1 and NS2; duplicate
+    ;;members are included only once.
+    ;;
+    (let recur ((ns1 ns1)
+		(ns2 ns2))
+      (cond ((null? ns1)
+	     ns2)
+	    ((memq (car ns1) ns2)
+	     (recur (cdr ns1) ns2))
 	    (else
-	     (cons (car s1)
-		   (recur (cdr s1) s2))))))
+	     (cons (car ns1)
+		   (recur (cdr ns1) ns2))))))
 
-  (define-syntax-rule (for-each-nfv s f)
-    (for-each f s))
+  (define-syntax-rule (for-each-nfv ?ns ?func)
+    (for-each ?func ?ns))
 
   #| end of module: FRAME-CONFLICT-HELPERS |# )
 
