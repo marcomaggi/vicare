@@ -136,22 +136,29 @@
   (define (R x vs rs fs ns)
     ;;Recursive function, tail and non-tail.
     ;;
-    (cond ((const? x)
-	   (values vs rs fs ns))
-	  ((reg?   x)
-	   (values vs (add-reg x rs) fs ns))
-	  ((fvar?  x)
-	   (values vs rs (add-frm x fs) ns))
-	  ((var?   x)
-	   (values (add-var x vs) rs fs ns))
-	  ((nfv?   x)
-	   (values vs rs fs (add-nfv x ns)))
-	  ((disp?  x)
-	   (receive (vs rs fs ns)
-	       (R (disp-s0 x) vs rs fs ns)
-	     (R (disp-s1 x) vs rs fs ns)))
-	  (else
-	   (compiler-internal-error __module_who__ "invalid R" x))))
+    (if (reg? x)
+	;;X is a symbol representing the name of a CPU register.
+	(begin
+	  (values vs (add-reg x rs) fs ns))
+      (struct-case x
+	((fvar)
+	 (values vs rs (add-frm x fs) ns))
+	((var)
+	 (values (add-var x vs) rs fs ns))
+	((nfv)
+	 (values vs rs fs (add-nfv x ns)))
+	((disp objref offset)
+	 (receive (vs rs fs ns)
+	     (R objref vs rs fs ns)
+	   (R offset vs rs fs ns)))
+	((constant)
+	 (values vs rs fs ns))
+	((code-loc)
+	 (values vs rs fs ns))
+	(else
+	 (compiler-internal-error __module_who__
+	   "invalid recordised code processed by R"
+	   (unparse-recordised-code/sexp x))))))
 
   (define (R* ls vs rs fs ns)
     ;;Recursive function,  tail and non-tail.   Apply R to every  item in LS  and the
@@ -379,7 +386,9 @@
 	      (cond ((not (mem-frm? dst fs))
 		     (set-asm-instr-op! x 'nop)
 		     (values vs rs fs ns))
-		    ((or (const? src) (disp? src) (reg? src))
+		    ((or (const? src)
+			 (disp?  src)
+			 (reg?   src))
 		     (let ((fs (rem-frm dst fs)))
 		       (mark-frm/vars-conf! dst vs)
 		       (mark-frm/nfvs-conf! dst ns)

@@ -615,8 +615,8 @@
     ($set-nfv-nfv-conf! x (empty-nfv-set))
     ($set-nfv-var-conf! x (empty-var-set)))
 
-  (define-inline (reg? x)
-    (symbol? x))
+  (define-syntax-rule (reg? ?x)
+    (symbol? ?x))
 
   (define-inline (empty-var-set)
     (make-empty-set))

@@ -6268,9 +6268,12 @@
 
 (module (unparse-recordized-code
 	 unparse-recordized-code/sexp
-	 unparse-recordized-code/pretty)
+	 unparse-recordized-code/pretty
+	 unparse-recordised-code
+	 unparse-recordised-code/sexp
+	 unparse-recordised-code/pretty)
 
-  (define (unparse-recordized-code x)
+  (define (unparse-recordised-code x)
     ;;Unparse  the  struct instance  X  (representing  recordized  code in  the  core
     ;;language  already processed  by the  compiler) into  a human  readable symbolic
     ;;expression to be used when raising errors.
@@ -6279,7 +6282,7 @@
     ;;to use unsafe operations: let's keep it safe!!!
     ;;
     (import SCHEME-OBJECTS-ONTOLOGY)
-    (define E unparse-recordized-code)
+    (define E unparse-recordised-code)
     (struct-case x
       ((constant)
        (E-constant x E))
@@ -6421,7 +6424,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (unparse-recordized-code/sexp input-expr)
+  (define (unparse-recordised-code/sexp input-expr)
     ;;Unparse the  struct instance  INPUT-EXPR (representing  recordized code  in the
     ;;core language already processed by the compiler) into a human readable symbolic
     ;;expression to  be used when printing  to some port for  miscellaneous debugging
@@ -6590,7 +6593,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (unparse-recordized-code/pretty input-expr)
+  (define (unparse-recordised-code/pretty input-expr)
     ;;Unparse the  struct instance  INPUT-EXPR (representing  recordized code  in the
     ;;core language already processed by the compiler) into a human readable symbolic
     ;;expression to  be used when printing  to some port for  miscellaneous debugging
@@ -6961,6 +6964,12 @@
 	(let ((a (f (car ls))))
 	  (cons a (%map-in-order f (cdr ls))))
       '()))
+
+;;; --------------------------------------------------------------------
+
+  (define unparse-recordized-code        unparse-recordised-code)
+  (define unparse-recordized-code/sexp   unparse-recordised-code/sexp)
+  (define unparse-recordized-code/pretty unparse-recordised-code/pretty)
 
   #| end of module |# )
 
