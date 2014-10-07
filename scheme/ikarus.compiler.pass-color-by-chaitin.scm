@@ -29,7 +29,6 @@
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
   (import INTEL-ASSEMBLY-CODE-GENERATION)
-  (import LISTY-SET)
 
 
 ;;;;
@@ -57,6 +56,8 @@
        (make-clambda-case info (%color-program body)))))
 
   (define (%color-program x)
+    (module (list->set make-empty-set)
+      (import LISTY-SET))
     (define who '%color-program)
     (struct-case x
       ((locals x.vars x.body)
@@ -77,11 +78,99 @@
   #| end of module: Program |# )
 
 
-;;;; helpers
+(module LISTY-SET
+  ;;This module implements sets of bits; each  set is a proper list of items, wrapped
+  ;;by a struct.
+  ;;
+  ;;This module has the same API of the module INTEGER-SET.
+  ;;
+  (make-empty-set
+   singleton
+   set-member?		empty-set?
+   set-add		set-rem
+   set-difference	set-union
+   set->list		list->set)
 
-(define-inline (set-for-each f s)
-  (for-each f (set->list s)))
+  (define-struct set
+    ;;Wrapper for a list of elements used as a set.
+    ;;
+    (v
+		;The list of elements in the set.
+     ))
 
+;;; --------------------------------------------------------------------
+
+  (define-syntax-rule (make-empty-set)
+    (make-set '()))
+
+  (define (singleton x)
+    (make-set (list x)))
+
+  (define* (set-member? x {S set?})
+    (memq x ($set-v S)))
+
+  (define* (empty-set? {S set?})
+    (null? ($set-v S)))
+
+  (define* (set->list {S set?})
+    ($set-v S))
+
+  (define (list->set ls)
+    (make-set ls))
+
+  (define* (set-add x {S set?})
+    (if (memq x ($set-v S))
+	S
+      (make-set (cons x ($set-v S)))))
+
+  (define ($remq x ell)
+    ;;Remove X from the list ELL.
+    ;;
+    (cond ((pair? ell)
+	   (cond ((eq? x (car ell))
+		  (cdr ell))
+		 (else
+		  (cons (car ell) ($remq x (cdr ell))))))
+	  (else
+	   ;;(assert (null? ell))
+	   '())))
+
+  (define* (set-rem x {S set?})
+    (make-set ($remq x ($set-v S))))
+
+  (module (set-difference)
+
+    (define* (set-difference {S1 set?} {S2 set?})
+      (make-set ($difference ($set-v S1) ($set-v S2))))
+
+    (define ($difference ell1 ell2)
+      ;;Remove from the list ELL1 all  the elements of the list ELL2.  Use
+      ;;EQ? for comparison.
+      ;;
+      (if (pair? ell2)
+	  ($difference ($remq (car ell2) ell1) (cdr ell2))
+	ell1))
+
+    #| end of module: set-difference |# )
+
+  (module (set-union)
+
+    (define* (set-union {S1 set?} {S2 set?})
+      (make-set ($union ($set-v S1) ($set-v S2))))
+
+    (define ($union S1 S2)
+      (cond ((pair? S1)
+	     (cond ((memq (car S1) S2)
+		    ($union (cdr S1) S2))
+		   (else
+		    (cons (car S1) (union (cdr S1) S2)))))
+	    (else
+	     ;;(assert (null? S1))
+	     S2)))
+
+    #| end of module: set-union |# )
+
+  #| end of module: LISTY-SET |# )
 
 
 (module GRAPHS
@@ -93,6 +182,7 @@
    print-graph
    node-neighbors
    delete-node!)
+  (import LISTY-SET)
 
   (define-struct graph
     (ls
@@ -182,6 +272,7 @@
   ;;A lot of functions are nested here because they need to close upon
   ;;GRAPH.
   ;;
+  (import LISTY-SET)
   (import GRAPHS)
 
   (define who 'build-graph)
@@ -252,6 +343,8 @@
 	 (error who "invalid effect" (unparse-recordized-code x)))))
 
     (define (E-asm-instr op d v s)
+      (define-syntax-rule (set-for-each ?func ?set)
+	(for-each ?func (set->list ?set)))
       (case op
 	((move load32)
 	 (let ((s (set-rem d s)))
@@ -385,6 +478,7 @@
 
 
 (module (color-graph)
+  (import LISTY-SET)
   (import GRAPHS)
 
   (define (color-graph sp* un* G)
@@ -620,9 +714,11 @@
     (define who 'add-unspillables)
 
     (define (mku)
-      (let ((u (make-unique-var 'u)))
-	(set! un* (set-add u un*))
-	u))
+      (module (set-add)
+	(import LISTY-SET))
+      (receive-and-return (u)
+	  (make-unique-var 'u)
+	(set! un* (set-add u un*))))
 
     (module (E)
 
