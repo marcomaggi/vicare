@@ -865,9 +865,10 @@
 		   ;;
 		   ;;   (mem-reg? dst rs) => #t
 		   ;;
-		   ((or (const? src)
-			(disp?  src)
-			(register?   src))
+		   ((or (constant? src)
+			(code-loc? src)
+			(disp?     src)
+			(register? src))
 		    (let ((rs (rem-reg dst rs)))
 		      (mark-reg/vars-conf! dst vs)
 		      (R src vs rs fs ns)))
@@ -888,9 +889,10 @@
 	     (cond ((not (mem-frm? dst fs))
 		    (set-asm-instr-op! x 'nop)
 		    (values vs rs fs ns))
-		   ((or (const? src)
-			(disp?  src)
-			(register?   src))
+		   ((or (constant? src)
+			(code-loc? src)
+			(disp?     src)
+			(register? src))
 		    (let ((fs (rem-frm dst fs)))
 		      (mark-frm/vars-conf! dst vs)
 		      (mark-frm/nfvs-conf! dst ns)
@@ -1153,10 +1155,6 @@
 
     (define (mark-var/reg-move! x y)
       ($set-var-reg-move! x (add-reg y ($var-reg-move x))))
-
-    (define (const? x)
-      (or (constant? x)
-	  (code-loc? x)))
 
     #| end of module: E-asm-instr |# )
 
