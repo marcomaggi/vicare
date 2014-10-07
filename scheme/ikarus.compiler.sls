@@ -1540,7 +1540,6 @@
 ;;   u<			u<=
 ;;   u>			u>=
 ;;   bset		bref		bswap!
-;;   cltd
 ;;   direct-jump	indirect-jump
 ;;   call-with-underflow-handler
 ;;   fl:!=		fl:<		fl:<=
@@ -1555,7 +1554,7 @@
 ;;   int+		int+/overflow
 ;;   int-		int-/overflow
 ;;   int*		int*/overflow
-;;   idiv		int-quotient	int-remainder
+;;   int-quotient	int-remainder
 ;;   incr/zero?
 ;;   load32		load8
 ;;   logand		logor		logxor

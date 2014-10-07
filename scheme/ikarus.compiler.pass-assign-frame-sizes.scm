@@ -77,6 +77,32 @@
   ;;Knowing which  locals are live  in a subexpression  and which are  shared between
   ;;subexpressions is needed to map locals to available CPU registers.
   ;;
+  ;;NOTE The  previous compiler pass "impose  evaluation order" is the  only place in
+  ;;which structs of type NON-TAIL-CALL are introduced.  The ARGS field of the struct
+  ;;holds a list of items:
+  ;;
+  ;;  (AAR APR CPR FPR PCR . rand*.nfv)
+  ;;
+  ;;first  come all  the register  operands  (in alphabetical  order, but  it is  not
+  ;;important), then come  the NFV structs representing the stack  locations in which
+  ;;the stack operands for the call must be placed.
+  ;;
+  ;;NOTE The  previous compiler pass "impose  evaluation order" is the  only place in
+  ;;which  ASMCALL  structs  with  operator RETURN,  DIRECT-JUMP,  INDIRECT-JUMP  are
+  ;;introduced.  We expect them to have the format:
+  ;;
+  ;;   (asmcall direct-jump   (?target AAR APR CPR FPR PCR . rand*.fvar))
+  ;;   (asmcall indirect-jump         (AAR APR CPR FPR PCR . rand*.fvar))
+  ;;   (asmcall return                (AAR APR     FPR PCR))
+  ;;
+  ;;where: RAND*.FVAR  is a  list of  FVAR structs representing  the location  on the
+  ;;stack in  which the stack  operands of  the tail-call must  be put; ?TARGET  is a
+  ;;CODE-LOC wrapping the name of the tail-call target Assembly label.
+  ;;
+  ;;NOTE The register operands AAR, APR, CPR, FPR, PCR are not the only CPU registers
+  ;;that may appear in the input form.  Some Assembly instructions require the use of
+  ;;specific registers; namely ECX and EDX.
+  ;;
   (define-syntax __module_who__
     (identifier-syntax 'assign-frame-sizes))
 
@@ -552,21 +578,41 @@
   ;;
   ;;NS - A collection of NFV structs (next stack frame operands) ...
   ;;
-  ;;The true work is done in the functions "R" and "E-asm-instr".
-  ;;
-  ;;Whenever a  SHORTCUT is processed: first  the interrupt handler is  processed and
-  ;;the resulting  VS, RS,  FS, NS  are stored  (as vector  object) in  the parameter
-  ;;EXCEPTION-LIVE-SET; then the body is processed, in the dynamic environment having
-  ;;the parameter set.
-  ;;
-  ;;NOTE We know that, after being processed  by the previous compiler pass, the body
-  ;;has as last form of every branch a struct like:
+  ;;We know that, after  being processed by the previous compiler  pass, the body has
+  ;;as last form of every branch a struct like:
   ;;
   ;;   (seq
-  ;;     (asm-instr move (AA-REGISTER ?result))
-  ;;     (asmcall return (AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)))
+  ;;     (asm-instr move (AAR ?result))
+  ;;     (asmcall return (AAR APR FPR PCR)))
   ;;
-  ;;or a function tail-call.
+  ;;or a function tail-call:
+  ;;
+  ;;   (asmcall direct-jump   (?target AAR APR CPR FPR PCR . rand*.fvar))
+  ;;   (asmcall indirect-jump         (AAR APR CPR FPR PCR . rand*.fvar))
+  ;;
+  ;;This module begins its  work by applying T to LOCALS.BODY.   The function T first
+  ;;processes subforms of BODY in tail position with a depth-first visit, recursively
+  ;;applying itself to such forms; until, in the true tail position a struct among:
+  ;;
+  ;;   (asmcall direct-jump   (?target AAR APR CPR FPR PCR . rand*.fvar))
+  ;;   (asmcall indirect-jump         (AAR APR CPR FPR PCR . rand*.fvar))
+  ;;   (asmcall return                (AAR APR     FPR PCR))
+  ;;
+  ;;is found.  Then, while rewinding, this function  applies the functions E and P to
+  ;;the  non-tail subforms  of X.   When  an ASMCALL  struct  with one  of the  above
+  ;;operators is found new, empty sets VS, RS,  FS, NS are created and used as return
+  ;;values while the nested function calls rewind.
+  ;;
+  ;;VS, RS,  FS, NS are filled  while rewinding the  visit and, at any  instant, they
+  ;;represent  the sets  of VARs,  registers, FVARs  and NFVs  that are  used in  the
+  ;;continuation of the current subexpression.
+  ;;
+  ;;The true work is done in the functions "R" and "E-asm-instr".
+  ;;
+  ;;NOTE Whenever a  SHORTCUT is processed: first the interrupt  handler is processed
+  ;;and the resulting VS,  RS, FS, NS are stored (as vector  object) in the parameter
+  ;;EXCEPTION-LIVE-SET; then the body is processed, in the dynamic environment having
+  ;;the parameter set.
   ;;
   (import INTEGER-SET)
   (import FRAME-CONFLICT-HELPERS)
@@ -587,13 +633,26 @@
     (make-parameter #f))
 
   (define (main body)
-    (T body)
+    ;;Return the spill set.  The VS, RS, FS, NS gathered up to here are discarded.
+    ;;
+    (debug-print* 'locals.body (unparse-recordised-code/sexp body))
+    (receive (vs rs fs ns)
+	(T body)
+      (debug-print* 'VARs  vs
+		    'REGs  rs
+		    'FVARs fs
+		    'NFVs  ns)
+      (void))
+    (debug-print* 'spill-set spill-set)
     spill-set)
 
 ;;; --------------------------------------------------------------------
 
   (define (R x vs rs fs ns)
     ;;Recursive function, tail and non-tail.
+    ;;
+    ;;Return  4  values being  the  sets  VS, RS,  FS,  NS  updated with  information
+    ;;representing the operand in X.
     ;;
     (if (register? x)
 	;;X is a symbol representing the name of a CPU register.
@@ -622,7 +681,7 @@
 
   (define (R* ls vs rs fs ns)
     ;;Recursive function,  tail and non-tail.   Apply R to every  item in LS  and the
-    ;;other arguments.  Return the final VS, RS, FS, NS arguments.
+    ;;other arguments.  Return the final VS, RS, FS, NS updated sets.
     ;;
     (if (pair? ls)
 	(receive (vs rs fs ns)
@@ -636,6 +695,9 @@
     ;;Process the  recordised code X  as a form in  tail position.  In  tail position
     ;;there can be only structs of  type: SEQ, CONDITIONAL, SHORTCUT and ASMCALL with
     ;;operator among: RETURN, INDIRECT-JUMP, DIRECT-JUMP.
+    ;;
+    ;;Return 4 values being the sets VS, RS, FS, NS updated with information gathered
+    ;;in X.
     ;;
     (struct-case x
       ((seq e0 e1)
@@ -658,7 +720,13 @@
       ((asmcall rator rand*)
        (case rator
          ((return indirect-jump direct-jump)
-	  ;;This is the last form of the original input body.
+	  ;;This is a form in tail position in the original input body.  We expect it
+	  ;;to be one among:
+	  ;;
+	  ;;   (asmcall direct-jump   (?target AAR APR CPR FPR PCR . rand*.fvar))
+	  ;;   (asmcall indirect-jump         (AAR APR CPR FPR PCR . rand*.fvar))
+	  ;;   (asmcall return                (AAR APR     FPR PCR))
+	  ;;
           (R* rand*
 	      (empty-var-set)
               (empty-reg-set)
@@ -690,6 +758,9 @@
     ;;Process  the recordised  code  X as  a  form in  predicate  position.  In  tail
     ;;position  there  can be  only  structs  of  type: SEQ,  CONDITIONAL,  SHORTCUT,
     ;;CONSTANT and ASM-INSTR with operator among: RETURN, INDIRECT-JUMP, DIRECT-JUMP.
+    ;;
+    ;;Return 4 values being the sets VS, RS, FS, NS updated with information gathered
+    ;;in X.
     ;;
     (struct-case x
       ((seq e0 e1)
@@ -746,6 +817,11 @@
 ;;; --------------------------------------------------------------------
 
   (define (E x vs rs fs ns)
+    ;;Process the recordised code X as a form in side effects position.
+    ;;
+    ;;Return 4 values being the sets VS, RS, FS, NS updated with information gathered
+    ;;in X.
+    ;;
     (struct-case x
 
       ((seq e0 e1)
@@ -768,7 +844,7 @@
       ((asm-instr op dst src)
        (E-asm-instr x op dst src vs rs fs ns))
 
-      ((non-tail-call target value args mask size)
+      ((non-tail-call target.unused value.unused args)
        ;;All  the temporary  location VAR  structs  in VS,  alive right  befor the  a
        ;;non-tail call, must be saved on  the stack before calling and restored right
        ;;after the return.
@@ -778,6 +854,10 @@
 	   vs locals.vars
 	 (lambda (x)
 	   ($set-var-loc! x #t)))
+       ;;We expect ARGS to be:
+       ;;
+       ;;  (AAR APR CPR FPR PCR . rand*.nfv)
+       ;;
        (R* args vs (empty-reg-set) fs ns))
 
       ((non-tail-call-frame nfv* live body)
@@ -816,6 +896,9 @@
   (module (E-asm-instr)
 
     (define (E-asm-instr x op dst src vs rs fs ns)
+      ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
+      ;;representing the operands DST and SRC.
+      ;;
       (case op
 	((move load8 load32)
 	 (E-asm-instr/move x op dst src vs rs fs ns))
@@ -830,11 +913,17 @@
 	 (E-asm-instr/bitwise x op dst src vs rs fs ns))
 
 	((idiv)
+	 ;;Here we know  that DST is the register  EAX; SRC is an operand,  we do not
+	 ;;know which one here.  We know that CLTD and IDIV always come together.
+	 ;;
 	 (mark-reg/vars-conf! eax vs)
 	 (mark-reg/vars-conf! edx vs)
 	 (R src vs (add-reg eax (add-reg edx rs)) fs ns))
 
 	((cltd)
+	 ;;Here we know that DST is the register EAX and SRC is the register EDX.  We
+	 ;;know that CLTD and IDIV always come together.
+	 ;;
 	 (mark-reg/vars-conf! edx vs)
 	 (R src vs (rem-reg edx rs) fs ns))
 
@@ -856,6 +945,9 @@
       ;;   (asm-instr move   (?dst ?src))
       ;;   (asm-instr load8  (?dst ?src))
       ;;   (asm-instr load32 (?dst ?src))
+      ;;
+      ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
+      ;;representing the operands DST and SRC.
       ;;
       (cond ((register? dst)
 	     (cond ((not (mem-reg? dst rs))
@@ -988,6 +1080,9 @@
       ;;   (asm-instr int+/overflow (?dst ?src))
       ;;   (asm-instr int*/overflow (?dst ?src))
       ;;
+      ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
+      ;;representing the operands DST and SRC.
+      ;;
       (let ((v (exception-live-set)))
 	(unless (vector? v)
 	  (compiler-internal-error __module_who__
@@ -1042,6 +1137,9 @@
       ;;   (asm-instr int*   (?dst ?src))
       ;;   (asm-instr bswap! (?dst ?src))
       ;;   (asm-instr sll/overflow (?dst ?src))
+      ;;
+      ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
+      ;;representing the operands DST and SRC.
       ;;
       (cond ((var? dst)
 	     (cond ((not (mem-var? dst vs))
