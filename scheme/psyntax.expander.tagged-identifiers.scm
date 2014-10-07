@@ -608,14 +608,24 @@
 ;;; --------------------------------------------------------------------
 
 (define* (set-label-tag! {label symbol?} {tag tag-identifier?})
-  ;;Given a  syntactic binding LABEL:  add TAG  to its property  list as
-  ;;binding type  tagging.  This  tag should  represent the  object type
-  ;;referenced by the binding.
+  ;;Given a  syntactic binding LABEL:  add TAG to its  property list as  binding type
+  ;;tagging.  This tag should represent the object type referenced by the binding.
+  ;;
+  ;;NOTE It is  legal, in Vicare, to  call this function multiple times;  when at the
+  ;;REPL we do:
+  ;;
+  ;;   vicare> (define a 1)
+  ;;   vicare> (define a 2)
+  ;;
+  ;;the binding should  be silently redefined.  For this reason:  in this function we
+  ;;raise an exception if LABEL is already  tagged only when the new tag is different
+  ;;from the old one.
   ;;
   (cond (($getprop label *EXPAND-TIME-BINDING-TAG-COOKIE*)
 	 => (lambda (old-tag)
-	      (syntax-violation __who__
-		"label binding tag already defined" label old-tag tag)))
+	      (unless (free-identifier=? old-tag tag)
+		(assertion-violation __who__
+		  "label binding tag already defined" label old-tag tag))))
 	(($getprop label *EXPAND-TIME-OBJECT-TYPE-SPEC-COOKIE*)
 	 => (lambda (spec)
 	      (assertion-violation __who__
