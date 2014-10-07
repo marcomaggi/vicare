@@ -1017,6 +1017,13 @@
 		;can be a nested SEQ struct.
    ))
 
+(define-syntax multiple-forms-sequence
+  (syntax-rules ()
+    ((_ ?expr)
+     ?expr)
+    ((_ ?expr ... ?last-expr)
+     (make-seq (multiple-forms-sequence ?expr ...) ?last-expr))))
+
 ;;An instance of this type represents an IF form.
 ;;
 (define-struct conditional
@@ -6261,9 +6268,63 @@
   #| end of module CORE-PRIMITIVE-OPERATION-NAMES |# )
 
 
-;;;; external code for actual code generation
+;;;; Assembly code generation
 
-(include "ikarus.compiler.altcogen.scm" #t)
+(module (alt-cogen
+	 refresh-common-assembly-subroutines-cached-labels!
+	 sl-apply-label
+	 specify-representation
+	 impose-calling-convention/evaluation-order
+	 assign-frame-sizes
+	 color-by-chaitin
+	 flatten-codes)
+
+  (define (alt-cogen x)
+    (let* ((x  (specify-representation x))
+	   (x  (impose-calling-convention/evaluation-order x))
+	   (x  (assign-frame-sizes x))
+	   (x  (color-by-chaitin x))
+	   (ls (flatten-codes x)))
+      ls))
+
+;;; --------------------------------------------------------------------
+;;; high-level assembly instructions
+
+  (define (asm op . rand*)
+    ;;Build  and  return  recordised  call which  performs  the  high-level  Assembly
+    ;;instruction OP applying it to the arguments RAND*.
+    ;;
+    (make-asmcall op rand*))
+
+  (define (nop)
+    ;;Build  and  return  recordised  call representing  the  dummy  instruction  "no
+    ;;operation".
+    ;;
+    (asm 'nop))
+
+  (define (interrupt)
+    ;;Build and  return recordised call representing  a jump to a  SHORTCUT interrupt
+    ;;handler.
+    ;;
+    ;;NOTE This function is shadowed in  the pass "specify representation" by a local
+    ;;INTERRUPT function.
+    ;;
+    (asm 'interrupt))
+
+;;; --------------------------------------------------------------------
+;;; include some external code for compiler passes and modules
+
+  (include "ikarus.compiler.scheme-objects-layout.scm"		#t)
+  (include "ikarus.compiler.intel-assembly.scm"			#t)
+  (include "ikarus.compiler.common-assembly-subroutines.scm"	#t)
+
+  (include "ikarus.compiler.pass-specify-representation.scm"	#t)
+  (include "ikarus.compiler.pass-impose-evaluation-order.scm"	#t)
+  (include "ikarus.compiler.pass-assign-frame-sizes.scm"	#t)
+  (include "ikarus.compiler.pass-color-by-chaitin.scm"		#t)
+  (include "ikarus.compiler.pass-flatten-codes.scm"		#t)
+
+  #| end of module: alt-cogen |# )
 
 
 (module (unparse-recordized-code
