@@ -913,17 +913,19 @@
 	 (E-asm-instr/bitwise x op dst src vs rs fs ns))
 
 	((idiv)
-	 ;;Here we know  that DST is the register  EAX; SRC is an operand,  we do not
-	 ;;know which one here.  We know that CLTD and IDIV always come together.
-	 ;;
+	 ;;Here we know that DST is either  the register EAX or the register EDX; SRC
+	 ;;is an operand, we do not know which  one here.  We know that CLTD and IDIV
+	 ;;always come together.
+	 #;(assert (or (eq? dst eax) (eq? dst edx)))
 	 (mark-reg/vars-conf! eax vs)
 	 (mark-reg/vars-conf! edx vs)
 	 (R src vs (add-reg eax (add-reg edx rs)) fs ns))
 
 	((cltd)
-	 ;;Here we know that DST is the register EAX and SRC is the register EDX.  We
+	 ;;Here we know that DST is the register EDX and SRC is the register EAX.  We
 	 ;;know that CLTD and IDIV always come together.
-	 ;;
+	 #;(assert (eq? dst edx))
+	 #;(assert (eq? src eax))
 	 (mark-reg/vars-conf! edx vs)
 	 (R src vs (rem-reg edx rs) fs ns))
 
