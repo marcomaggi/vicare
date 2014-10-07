@@ -350,9 +350,19 @@
     ;;
     (set-union ?vs1 ?vs2))
 
-  (define (for-each-var vs varvec func)
+  (define (for-each-var vs locals.vars func)
+    ;;Apply FUNC to every VAR struct in the set VS; return unspecified values.
+    ;;
+    ;;The argument  LOCALS.VARS is meant to  be a vector of  VAR structs representing
+    ;;the local variables in  a LOCALS struct's body.  The slot index  of each VAR in
+    ;;LOCALS.VARS equals the value of the INDEX of the VAR struct itself.
+    ;;
+    ;;The set VS contains (encoded) only the indexes of the VAR structs in the vector
+    ;;LOCALS.VARS: this  function exists to  allow the  iteration over VS  by mapping
+    ;;indexes to VAR structs.
+    ;;
     (for-each (lambda (i)
-		(func (vector-ref varvec i)))
+		(func (vector-ref locals.vars i)))
       (set->list vs)))
 
 ;;; --------------------------------------------------------------------
@@ -520,26 +530,27 @@
   #| end of module: E-codes |# )
 
 
-(define (%uncover-frame-conflicts locals.body vars.vec)
-  ;;The argument BODY is the body of a LOCALS struct; the LOCALS struct is either the
-  ;;body of a CLAMBDA clause or the init expression of a CODES struct.  We know that,
-  ;;after being processed by the previous compiler pass, it has as last form of every
-  ;;branch a struct like:
+(define (%uncover-frame-conflicts locals.body locals.vars)
   ;;
-  ;;   (seq
-  ;;     (asm-instr move (AA-REGISTER ?result))
-  ;;     (asmcall return (AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)))
+  ;;
+  ;;The argument  LOCALS.BODY is the  body of a LOCALS  struct; the LOCALS  struct is
+  ;;either the body of a CLAMBDA clause or the init expression of a CODES struct.
+  ;;
+  ;;The  argument LOCALS.VARS  is  a vector  of VAR  structs  representing the  local
+  ;;variables in LOCALS.BODY.   The slot index of each VAR  in LOCALS.VARS equals the
+  ;;value of the INDEX of the VAR struct itself.
   ;;
   ;;Throughout this function the arguments VS, RS,  FS, NS are sets as defined by the
   ;;module FRAME-CONFLICT-HELPERS (they are not all instances of the same type):
   ;;
-  ;;VS -	A collection of VAR structs ...
+  ;;VS - A collection of VAR structs; it is always a subset of the VAR structs listed
+  ;;     in LOCALS.VARS.
   ;;
-  ;;RS -	A collection of register name symbols ...
+  ;;RS - A collection of register name symbols ...
   ;;
-  ;;FS -	A collection of FVAR structs (current stack frame operands) ...
+  ;;FS - A collection of FVAR structs (current stack frame operands) ...
   ;;
-  ;;NS -	A collection of NFV structs (next stack frame operands) ...
+  ;;NS - A collection of NFV structs (next stack frame operands) ...
   ;;
   ;;The true work is done in the functions "R" and "E-asm-instr".
   ;;
@@ -547,6 +558,15 @@
   ;;the resulting  VS, RS,  FS, NS  are stored  (as vector  object) in  the parameter
   ;;EXCEPTION-LIVE-SET; then the body is processed, in the dynamic environment having
   ;;the parameter set.
+  ;;
+  ;;NOTE We know that, after being processed  by the previous compiler pass, the body
+  ;;has as last form of every branch a struct like:
+  ;;
+  ;;   (seq
+  ;;     (asm-instr move (AA-REGISTER ?result))
+  ;;     (asmcall return (AA-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)))
+  ;;
+  ;;or a function tail-call.
   ;;
   (import INTEGER-SET)
   (import FRAME-CONFLICT-HELPERS)
@@ -749,12 +769,13 @@
        (E-asm-instr x op dst src vs rs fs ns))
 
       ((non-tail-call target value args mask size)
-       ;;All the temporary  locations VS active right befor the  a non-tail call must
-       ;;be saved on  the stack and restored before calling  and restored right after
-       ;;the return.
+       ;;All  the temporary  location VAR  structs  in VS,  alive right  befor the  a
+       ;;non-tail call, must be saved on  the stack before calling and restored right
+       ;;after the return.
        (set! spill-set (union-vars vs spill-set))
+       ;;Set to #t the LOC field of every VAR struct which is a member of VS.
        (for-each-var
-	   vs vars.vec
+	   vs locals.vars
 	 (lambda (x)
 	   ($set-var-loc! x #t)))
        (R* args vs (empty-reg-set) fs ns))
@@ -1056,16 +1077,36 @@
 ;;; --------------------------------------------------------------------
 
     (define (mark-reg/vars-conf! r vs)
+      ;;Add the register symbol name R to the REG-CONF set of every VAR struct in VS.
+      ;;
       (for-each-var
-	  vs vars.vec
+	  vs locals.vars
 	(lambda (v)
 	  ($set-var-reg-conf! v (add-reg r ($var-reg-conf v))))))
 
     (define (mark-frm/vars-conf! f vs)
+      ;;Add the FVAR struct F to the FRM-CONF set of every VAR struct in VS.
+      ;;
       (for-each-var
-	  vs vars.vec
+	  vs locals.vars
 	(lambda (v)
 	  ($set-var-frm-conf! v (add-frm f ($var-frm-conf v))))))
+
+    (define (mark-var/vars-conf! v vs)
+      ;;Add the VAR struct V to the VAR-CONF set of every VAR struct in VS.
+      ;;
+      ;;Add to the VAR-CONF set of V the VAR structs in VS.
+      ;;
+      (for-each-var
+	  vs locals.vars
+	(lambda (w)
+	  ($set-var-var-conf! w (add-var v ($var-var-conf w)))))
+      ($set-var-var-conf! v (union-vars vs ($var-var-conf v))))
+
+    (define (mark-nfv/vars-conf! n vs)
+      ($set-nfv-var-conf! n (union-vars vs ($nfv-var-conf n))))
+
+;;; --------------------------------------------------------------------
 
     (define (mark-frm/nfvs-conf! f ns)
       (for-each-nfv
@@ -1073,30 +1114,26 @@
 	(lambda (n)
 	  ($set-nfv-frm-conf! n (add-frm f ($nfv-frm-conf n))))))
 
-    (define (mark-var/vars-conf! v vs)
-      (for-each-var
-	  vs vars.vec
-	(lambda (w)
-	  ($set-var-var-conf! w (add-var v ($var-var-conf w)))))
-      ($set-var-var-conf! v (union-vars vs ($var-var-conf v))))
-
-    (define (mark-var/frms-conf! v fs)
-      ($set-var-frm-conf! v (union-frms fs ($var-frm-conf v))))
-
-    (define (mark-var/regs-conf! v rs)
-      ($set-var-reg-conf! v (union-regs rs ($var-reg-conf v))))
-
     (define (mark-var/nfvs-conf! v ns)
       (for-each-nfv
 	  ns
 	(lambda (n)
 	  ($set-nfv-var-conf! n (add-var v ($nfv-var-conf n))))))
 
-    (define (mark-nfv/vars-conf! n vs)
-      ($set-nfv-var-conf! n (union-vars vs ($nfv-var-conf n))))
+;;; --------------------------------------------------------------------
+
+    (define (mark-var/frms-conf! v fs)
+      ($set-var-frm-conf! v (union-frms fs ($var-frm-conf v))))
 
     (define (mark-nfv/frms-conf! n fs)
       ($set-nfv-frm-conf! n (union-frms fs ($nfv-frm-conf n))))
+
+;;; --------------------------------------------------------------------
+
+    (define (mark-var/regs-conf! v rs)
+      ($set-var-reg-conf! v (union-regs rs ($var-reg-conf v))))
+
+;;; --------------------------------------------------------------------
 
     (define (mark-nfv/nfvs-conf! n ns)
       ($set-nfv-nfv-conf! n (union-nfvs ns ($nfv-nfv-conf n)))
@@ -1104,6 +1141,8 @@
 	  ns
 	(lambda (m)
 	  ($set-nfv-nfv-conf! m (add-nfv n ($nfv-nfv-conf m))))))
+
+;;; --------------------------------------------------------------------
 
     (define (mark-var/var-move! x y)
       ($set-var-var-move! x (add-var y ($var-var-move x)))
@@ -1126,11 +1165,18 @@
   (main locals.body))
 
 
-(define (%rewrite x vars.vec)
-  ;;X must be a struct instance representing a recordized body.
+(define (%rewrite locals.body locals.vars)
   ;;
-  ;;A lot of functions  are nested here because they need to  close upon the argument
-  ;;VARS.VEC.
+  ;;
+  ;;The argument  LOCALS.BODY is the  body of a LOCALS  struct; the LOCALS  struct is
+  ;;either the body of a CLAMBDA clause or the init expression of a CODES struct.
+  ;;
+  ;;The  argument LOCALS.VARS  is  a vector  of VAR  structs  representing the  local
+  ;;variables in LOCALS.BODY.   The slot index of each VAR  in LOCALS.VARS equals the
+  ;;value of the INDEX of the VAR struct itself.
+  ;;
+  ;;NOTE A  lot of  functions are  nested here because  they need  to close  upon the
+  ;;argument LOCALS.VARS.
   ;;
   (module (set-member? set-difference set->list)
     (import INTEGER-SET))
@@ -1278,7 +1324,7 @@
 
     (define (E-non-tail-call-frame vars live body)
       (let ((live-frms1 (map (lambda (i)
-			       (Var (vector-ref vars.vec i)))
+			       (Var (vector-ref locals.vars i)))
 			  (set->list (vector-ref live 0))))
 	    (live-frms2 (set->list (vector-ref live 1)))
 	    (live-nfvs  (vector-ref live 2)))
@@ -1317,7 +1363,7 @@
 
 	  (define (%var-conflict? i vs)
 	    (ormap (lambda (xi)
-		     (let ((loc ($var-loc (vector-ref vars.vec xi))))
+		     (let ((loc ($var-loc (vector-ref locals.vars xi))))
 		       (and (fvar? loc)
 			    (fx=? i ($fvar-idx loc)))))
 		   (set->list vs)))
@@ -1340,7 +1386,7 @@
 		($nfv-nfv-conf v))
 	      (for-each-var
 		  ($nfv-var-conf v)
-		  vars.vec
+		  locals.vars
 		(lambda (x)
 		  (let ((loc ($var-loc x)))
 		    (if (fvar? loc)
@@ -1413,17 +1459,17 @@
 	     => (lambda (loc)
 		  (if (fvar? loc)
 		      loc
-		    (%assign x vars.vec))))
+		    (%assign x locals.vars))))
 	    (else x)))
 
     (module (%assign)
       (import FRAME-CONFLICT-HELPERS)
 
-      (define (%assign x vars.vec)
-	(or (%assign-move x vars.vec)
-	    (%assign-any  x vars.vec)))
+      (define (%assign x locals.vars)
+	(or (%assign-move x locals.vars)
+	    (%assign-any  x locals.vars)))
 
-      (define (%assign-any x vars.vec)
+      (define (%assign-any x locals.vars)
 	(let ((frms ($var-frm-conf x))
 	      (vars ($var-var-conf x)))
 	  (let loop ((i 1))
@@ -1434,11 +1480,11 @@
 		($set-var-loc! x fv)
 		(for-each-var
 		    vars
-		    vars.vec
+		    locals.vars
 		  (lambda (var)
 		    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
 
-      (define (%assign-move x vars.vec)
+      (define (%assign-move x locals.vars)
 	(let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
 	  (and (pair? mr)
 	       (receive-and-return (fv)
@@ -1446,12 +1492,12 @@
 		 ($set-var-loc! x fv)
 		 (for-each-var
 		     ($var-var-conf x)
-		     vars.vec
+		     locals.vars
 		   (lambda (var)
 		     ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
 		 (for-each-var
 		     ($var-var-move x)
-		     vars.vec
+		     locals.vars
 		   (lambda (var)
 		     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
 
@@ -1461,7 +1507,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (T x))
+  (T locals.body))
 
 
 ;;;; done
