@@ -327,7 +327,7 @@
   (import INTEGER-SET)
 
 ;;; --------------------------------------------------------------------
-;;; VAR structs
+;;; temporary locations, VAR structs
 
   (module (init-var*!)
 
@@ -392,7 +392,7 @@
       (set->list vs)))
 
 ;;; --------------------------------------------------------------------
-;;; current frame stack operands
+;;; current frame stack operands, FVAR structs
 
   (define-syntax-rule (empty-frm-set)
     ;;Build and return a new, empty FS set.
@@ -421,7 +421,7 @@
     (set-union ?fs1 ?fs2))
 
 ;;; --------------------------------------------------------------------
-;;; CPU registers
+;;; CPU registers, REG symbols
 
   (define-syntax-rule (empty-reg-set)
     ;;Build and return a new, empty RS set.
@@ -456,7 +456,7 @@
     (set-union ?rs1 ?rs2))
 
 ;;; --------------------------------------------------------------------
-;;; next frame stack operands
+;;; next frame stack operands, NFV structs
 
   (define (init-nfv! x)
     ($set-nfv-frm-conf! x (empty-frm-set))
@@ -569,14 +569,19 @@
   ;;Throughout this function the arguments VS, RS,  FS, NS are sets as defined by the
   ;;module FRAME-CONFLICT-HELPERS (they are not all instances of the same type):
   ;;
-  ;;VS - A collection of VAR structs; it is always a subset of the VAR structs listed
-  ;;     in LOCALS.VARS.
+  ;;VS -  A collection of VAR  structs; it is always  a non-strict subset of  the VAR
+  ;;     structs listed in LOCALS.VARS.
   ;;
-  ;;RS - A collection of register name symbols ...
+  ;;RS -  A collection  of register  name symbols, REGs  for short.   It is  always a
+  ;;     non-strict subset of: AAR, APR, CPR, FPR, PCR, %ecx, %edx.
   ;;
-  ;;FS - A collection of FVAR structs (current stack frame operands) ...
+  ;;FS - A collection of FVAR structs (current stack frame operands).  It is always a
+  ;;     non-strict subset of the FVAR structs  listed in the ARGS field of CASE-INFO
+  ;;     structs.
   ;;
-  ;;NS - A collection of NFV structs (next stack frame operands) ...
+  ;;NS -  A collection of NFV  structs (next stack  frame operands).  It is  always a
+  ;;      non-strict  subset  of  the  NFV  structs listed  in  the  RAND*  field  of
+  ;;     NON-TAIL-CALL-FRAME structs.
   ;;
   ;;We know that, after  being processed by the previous compiler  pass, the body has
   ;;as last form of every branch a struct like:
@@ -656,6 +661,9 @@
     ;;* An operand among DST and SRC in a ASM-INSTR struct.
     ;;
     ;;* An operand among ARGS in a NON-TAIL-CALL struct.
+    ;;
+    ;;If  the argument  X  is a  VAR,  REG, FVAR,  NFV  struct: it  is  added to  the
+    ;;appropriate set among VS, RS, FS, NS.
     ;;
     ;;Return  4  values being  the  sets  VS, RS,  FS,  NS  updated with  information
     ;;representing the operand in X.
@@ -850,7 +858,7 @@
       ((asm-instr op dst src)
        (E-asm-instr x op dst src vs rs fs ns))
 
-      ((non-tail-call target.unused value.unused args)
+      ((non-tail-call target.unused value.unused all-rand*)
        ;;All  the temporary  location VAR  structs  in VS,  alive right  befor the  a
        ;;non-tail call, must be saved on  the stack before calling and restored right
        ;;after the return.
@@ -860,11 +868,11 @@
 	   vs locals.vars
 	 (lambda (x)
 	   ($set-var-loc! x #t)))
-       ;;We expect ARGS to be:
+       ;;We expect ALL-RAND* to be:
        ;;
        ;;  (AAR APR CPR FPR PCR . rand*.nfv)
        ;;
-       (R* args vs (empty-reg-set) fs ns))
+       (R* all-rand* vs (empty-reg-set) fs ns))
 
       ((non-tail-call-frame nfv* live body)
        (for-each init-nfv! nfv*)

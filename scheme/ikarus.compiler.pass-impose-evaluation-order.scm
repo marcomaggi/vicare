@@ -1393,9 +1393,7 @@
     ;;*  When a  gensym: this  call is  a jump  to the  entry point  of a  combinator
     ;;  function.
     ;;
-    (let* ((rand*.nfv ($map/stx (lambda (x)
-				  (make-nfv 'unset-conflicts #f #f #f #f))
-			rand*))
+    (let* ((rand*.nfv (%one-nfv-for-each-stack-operand 1 rand*))
 	   (ntcall    (let ((all-rand* (cons* AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER rand*.nfv))
 			    (mask      #f)
 			    (size      #f))
@@ -1474,6 +1472,15 @@
 	    (V                  (car nfv*) (car rhs*))
 	    (%do-operands-bind* (cdr nfv*) (cdr rhs*) tail-body)))
       tail-body))
+
+  (define (%one-nfv-for-each-stack-operand i rand*)
+    ;;Non-tail recursive function.  Build and return a list of NFV structs having the
+    ;;same length of RAND*.
+    ;;
+    (if (pair? rand*)
+	(cons (make-nfv i #f #f #f #f)
+	      (%one-nfv-for-each-stack-operand (fxadd1 i) (cdr rand*)))
+      '()))
 
   #| end of module: %HANDLE-NON-TAIL-CALL |# )
 

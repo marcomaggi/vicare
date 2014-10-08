@@ -243,7 +243,7 @@
 		;;Check if the PCB engine counter is set.
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
 	      (non-tail-call-frame
-		(vars: #f)
+		(rand*: #f)
 		(live: #f)
 		(seq
 		  ;;Load in  a temporary  location, from  the relocation  vector, the
@@ -283,8 +283,7 @@
   #t)
 
 
-(parametrise ((check-test-name		'non-tail-calling-clambda-combinator)
-	      (debug-print-enabled?	#t))
+(parametrise ((check-test-name		'non-tail-calling-clambda-combinator))
 
   ;;Let's see first the previous compiler pass output.
   (check
@@ -393,7 +392,7 @@
 		    (asmcall interrupt)
 		  (asmcall nop))
 	      (non-tail-call-frame
-		(vars: #f)
+		(rand*: #f)
 		(live: #f)
 		(seq
 		  (asm-instr move %edi (constant (foreign-label "ik_stack_overflow")))
@@ -409,7 +408,7 @@
 	    (shortcut
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
 	      (non-tail-call-frame
-		(vars: #f)
+		(rand*: #f)
 		(live: #f)
 		(seq
 		  (asm-instr move tmp_4 (disp (constant (object $do-event)) (constant 19)))
@@ -423,11 +422,11 @@
 		    (size: #f)))))
 	    ;;This is the call to combinator F.
 	    (non-tail-call-frame
-	      (vars: (nfv unset-conflicts))
+	      (rand*: nfv.1)
 	      (live: #f)
 	      (seq
 		;;Stack operand: load the operand in the stack slot.
-		(asm-instr move (nfv unset-conflicts) (constant 16))
+		(asm-instr move nfv.1 (constant 16))
 		;;Load in a temporary location the Retrieve from the
 		(asm-instr move tmp_5 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
 		(asm-instr move tmp_6 tmp_5)
@@ -440,12 +439,157 @@
 		(non-tail-call
 		  (target: asmlabel:F:clambda:case-1)
 		  (retval-var: #f)
-		  (all-rand*: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
+		  (all-rand*: %eax %ebp %edi %esp %esi nfv.1)
 		  (mask: #f)
 		  (size: #f))))
 	    ;;Load in AA-REGISTER the fixnum 3.
 	    (asm-instr move %eax (constant 24))
 	    ;;Return to the caller.
+	    (asmcall return %eax %ebp %esp %esi)))))
+
+  #t)
+
+
+(parametrise ((check-test-name		'non-tail-calling-clambda-combinator-2))
+
+;;;In this case there are 3 stack operands.
+
+  ;;Let's see first the previous compiler pass output.
+  (check
+      (%before-impose-eval-order '(let ((F (lambda (x y z) ((primitive +) '1 x y z))))
+				    (begin
+				      (F '2 '3 '4)
+				      '5)))
+    => '(codes
+	 ((lambda (label: asmlabel:F:clambda) (cp_0 x_0 y_0 z_0)
+	     (shortcut
+		 (seq
+		   (conditional (asmcall =
+					 (asmcall logand
+						  (asmcall logor (asmcall logor x_0 y_0) z_0)
+						  (constant 7))
+					 (constant 0))
+		       (asmcall nop)
+		     (asmcall interrupt))
+		   (asmcall int+/overflow
+			    (asmcall int+/overflow
+				     (asmcall int+/overflow (constant 8) x_0)
+				     y_0)
+			    z_0))
+	       (funcall (asmcall mref (constant (object +)) (constant 19))
+		 (constant 8) x_0 y_0 z_0))))
+	 (seq
+	   ;;Core primitive operation $STACK-OVERFLOW-CHECK.
+	   (shortcut
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
+	     (foreign-call "ik_stack_overflow"))
+	   ;;Core primitive operation $DO-EVENT.
+	   (shortcut
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	   (jmpcall asmlabel:F:clambda:case-3
+		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars))))
+		      tmp_0)
+		    (constant 16) (constant 24) (constant 32))
+	   (constant 40))))
+
+;;; --------------------------------------------------------------------
+
+  ;;Let's see then the output of this compiler pass.
+  (doit (let ((F (lambda (x y z) ((primitive +) '1 x y z))))
+	  (begin
+	    (F '2 '3 '4)
+	    '5))
+	(codes
+	 ((lambda (label: asmlabel:F:clambda) (%edi fvar.1 fvar.2 fvar.3)
+	     (locals
+	      (local-vars: tmp_0 tmp_1 tmp_2 tmp_3 tmp_4 tmp_5 cp_0)
+	      (seq (asm-instr move cp_0 %edi)
+		   (shortcut
+		       (seq
+			 (conditional
+			     (seq (asm-instr move tmp_0 fvar.1)
+				  (asm-instr logor tmp_0 fvar.2)
+				  (asm-instr logor tmp_0 fvar.3)
+				  (asm-instr logand tmp_0 (constant 7))
+				  (asm-instr = tmp_0 (constant 0)))
+			     (asmcall nop)
+			   (asmcall interrupt))
+			 (asm-instr move tmp_1 (constant 8))
+			 (asm-instr int+/overflow tmp_1 fvar.1)
+			 (asm-instr int+/overflow tmp_1 fvar.2)
+			 (asm-instr int+/overflow tmp_1 fvar.3)
+			 (asm-instr move %eax tmp_1)
+			 (asmcall return %eax %ebp %esp %esi))
+		     (seq
+		       (asm-instr move tmp_2 fvar.3)
+		       (asm-instr move tmp_3 fvar.2)
+		       (asm-instr move tmp_4 fvar.1)
+		       (asm-instr move tmp_5 (disp (constant (object +)) (constant 19)))
+		       (asm-instr move fvar.1 (constant 8))
+		       (asm-instr move fvar.2 tmp_4)
+		       (asm-instr move fvar.3 tmp_3)
+		       (asm-instr move fvar.4 tmp_2)
+		       (asm-instr move %edi tmp_5)
+		       (asm-instr move %eax (constant -32))
+		       (asmcall indirect-jump
+				%eax %ebp %edi %esp %esi
+				fvar.1 fvar.2 fvar.3 fvar.4)))))))
+	 (locals
+	  (local-vars: tmp_6 tmp_7 tmp_8)
+	  (seq
+	    ;;Core primitive operation $STACK-OVERFLOW-CHECK.
+	    (shortcut (conditional (asm-instr u< %esp (disp %esi (constant 32)))
+			  (asmcall interrupt)
+			(asmcall nop))
+	      (non-tail-call-frame
+		(rand*: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move %edi (constant (foreign-label "ik_stack_overflow")))
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target: "ik_stack_overflow")
+		    (retval-var: #f)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
+		    (mask: #f)
+		    (size: #f)))))
+	    ;;Core primitive operation $DO-EVENT.
+	    (shortcut
+		(asmcall incr/zero? %esi (constant 72) (constant 8))
+	      (non-tail-call-frame
+		(rand*: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move %edi tmp_6)
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target: #f)
+		    (retval-var: #f)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
+		    (mask: #f)
+		    (size: #f)))))
+	    (non-tail-call-frame
+	      (rand*: nfv.1 nfv.2 nfv.3)
+	      (live: #f)
+	      (seq
+		(asm-instr move nfv.1 (constant 16))
+		(asm-instr move nfv.2 (constant 24))
+		(asm-instr move nfv.3 (constant 32))
+		(asm-instr move tmp_7 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
+		(asm-instr move tmp_8 tmp_7)
+		(asm-instr move %edi tmp_8)
+		(asm-instr move %eax (constant -24))
+		(non-tail-call
+		  (target: asmlabel:F:clambda:case-3)
+		  (retval-var: #f)
+		  (all-rand*: %eax %ebp %edi %esp %esi nfv.1 nfv.2 nfv.3)
+		  (mask: #f)
+		  (size: #f))))
+	    (asm-instr move %eax (constant 40))
 	    (asmcall return %eax %ebp %esp %esi)))))
 
   #t)
@@ -579,7 +723,7 @@
 		    (asmcall interrupt)
 		  (asmcall nop))
 	      (non-tail-call-frame
-		(vars: #f)
+		(rand*: #f)
 		(live: #f)
 		(seq
 		  ;;Load in CP-REGISTER the address of the C language function.
@@ -600,7 +744,7 @@
 		;;Check if the PCB engine counter is set.
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
 	      (non-tail-call-frame
-		(vars: #f)
+		(rand*: #f)
 		(live: #f)
 		(seq
 		  ;;Load in  a temporary  location, from  the relocation  vector, the
@@ -621,7 +765,7 @@
 		    (size: #f)))))
 	    ;;This is the call to the core primitive function READ.
 	    (non-tail-call-frame
-	      (vars: #f)
+	      (rand*: #f)
 	      (live: #f)
 	      (seq
 		;;Load  in a  temporary  location, from  the  relocation vector,  the
@@ -655,12 +799,12 @@
 	      ;;This is the interrupt handler:  call the function DO-OVERFLOW to make
 	      ;;room for the closure object.
 	      (non-tail-call-frame
-		(vars: (nfv unset-conflicts))
+		(rand*: nfv.1)
 		(live: #f)
 		(seq
 		  ;;Stack  operand:  load in  the  stack  slot the  closure  object's
 		  ;;aligned size.
-		  (asm-instr move (nfv unset-conflicts) (constant 16))
+		  (asm-instr move nfv.1 (constant 16))
 		  ;;Load in  a temporary  location, from  the relocation  vector, the
 		  ;;reference to the closure object implementing DO-OVERFLOW.
 		  (asm-instr move tmp_8 (disp (constant (object do-overflow)) (constant 27)))
@@ -674,7 +818,7 @@
 		  (non-tail-call
 		    (target: #f)
 		    (retval-var: #f)
-		    (all-rand*: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
+		    (all-rand*: %eax %ebp %edi %esp %esi nfv.1)
 		    (mask: #f)
 		    (size: #f)))))
 	    ;;Now the value of AP-REGISTER is a  pointer to the first machine word of
@@ -746,7 +890,7 @@
 		    (asmcall interrupt)
 		  (asmcall nop))
 	      (non-tail-call-frame
-		(vars: #f)
+		(rand*: #f)
 		(live: #f)
 		(seq
 		  (asm-instr move %edi (constant (foreign-label "ik_stack_overflow")))
@@ -758,11 +902,11 @@
 		    (mask: #f)
 		    (size: #f)))))
 	    (non-tail-call-frame
-	      (vars: (nfv unset-conflicts))
+	      (rand*: nfv.1)
 	      (live: #f)
 	      (seq
 		;;Stack operands: put the operand in the stack slot.
-		(asm-instr move (nfv unset-conflicts) (constant 8))
+		(asm-instr move nfv.1 (constant 8))
 		;;Load  in a  temporary  location, from  the  relocation vector,  the
 		;;reference to closure object implementing DISPLAY.
 		(asm-instr move tmp_0 (disp (constant (object display)) (constant 19)))
@@ -775,7 +919,7 @@
 		(non-tail-call
 		  (target: #f)
 		  (retval-var: #f)
-		  (all-rand*: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
+		  (all-rand*: %eax %ebp %edi %esp %esi nfv.1)
 		  (mask: #f)
 		  (size: #f))))
 	    ;;Load in AA-REGISTER the fixnum 2.
@@ -832,7 +976,8 @@
 		(shortcut
 		    (asmcall incr/zero? %esi (constant 72) (constant 8))
 		  (non-tail-call-frame
-		    (vars: #f) (live: #f)
+		    (rand*: #f)
+		    (live: #f)
 		    (seq
 		      (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
 		      (asm-instr move %edi tmp_0)
@@ -856,7 +1001,7 @@
 	    (shortcut
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
 	      (non-tail-call-frame
-		(vars: #f)
+		(rand*: #f)
 		(live: #f)
 		(seq
 		  (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
@@ -951,16 +1096,16 @@
 			(asmcall nop)
 		      (asmcall interrupt))
 		  (non-tail-call-frame
-		    (vars: (nfv unset-conflicts))
+		    (rand*: nfv.1)
 		    (live: #f)
 		    (seq
-		      (asm-instr move (nfv unset-conflicts) (constant 32))
+		      (asm-instr move nfv.1 (constant 32))
 		      (asm-instr move %edi (constant (foreign-label "ik_collect")))
 		      (asm-instr move %eax (constant -8))
 		      (non-tail-call
 			(target: "ik_collect")
 			(retval-var: #f)
-			(all-rand*: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
+			(all-rand*: %eax %ebp %edi %esp %esi nfv.1)
 			(mask: #f)
 			(size: #f)))))
 		(asm-instr move kont-obj_0 %ebp)

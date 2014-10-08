@@ -1738,7 +1738,9 @@
    ))
 
 (define-struct non-tail-call-frame
-  (vars
+  (rand*
+		;Null or a proper list of NFV structs representing the stack operands
+		;of the tail-call.
    live
    body
 		;A  struct representing  recordised  code.  It  implemnts a  function
@@ -1771,7 +1773,9 @@
   ;;frame, rather  they will be part  of the next  stack frame; hence the  name "Next
   ;;Frame Variables".
   ;;
-  (conf
+  (idx
+		;A 1-based  non-negative fixnum  representing the  index of  the this
+		;stack operand.
    loc
    var-conf
    frm-conf
@@ -6457,10 +6461,10 @@
        `(foreign-label ,x))
 
       ((fvar idx)
-       (string->symbol (format "fv.~a" idx)))
+       (E-fvar idx))
 
       ((nfv idx)
-       'nfv)
+       (E-nfv idx))
 
       ((locals vars body)
        (E-locals vars body E))
@@ -6471,8 +6475,8 @@
       ((disp s0 s1)
        `(disp ,(E s0) ,(E s1)))
 
-      ((non-tail-call-frame vars live body)
-       (E-non-tail-call-frame vars live body E))
+      ((non-tail-call-frame rand* live body)
+       (E-non-tail-call-frame rand* live body E))
 
       ((shortcut body handler)
        `(shortcut
@@ -6620,10 +6624,10 @@
 	 `(foreign-label ,x))
 
 	((fvar idx)
-	 (string->symbol (format "fvar.~a" idx)))
+	 (E-fvar idx))
 
 	((nfv idx)
-	 `(nfv ,idx))
+	 (E-nfv idx))
 
 	((asm-instr op d s)
 	 `(asm-instr ,op ,(E d) ,(E s)))
@@ -6631,8 +6635,8 @@
 	((disp s0 s1)
 	 `(disp ,(E s0) ,(E s1)))
 
-	((non-tail-call-frame vars live body)
-	 (E-non-tail-call-frame vars live body E))
+	((non-tail-call-frame rand* live body)
+	 (E-non-tail-call-frame rand* live body E))
 
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
@@ -6783,10 +6787,10 @@
 	 `(foreign-label ,x))
 
 	((fvar idx)
-	 (string->symbol (format "fvar.~a" idx)))
+	 (E-fvar idx))
 
 	((nfv idx)
-	 `(nfv ,idx))
+	 (E-nfv idx))
 
 	((asm-instr op d s)
 	 `(asm-instr ,op ,(E d) ,(E s)))
@@ -6794,8 +6798,8 @@
 	((disp s0 s1)
 	 `(disp ,(E s0) ,(E s1)))
 
-	((non-tail-call-frame vars live body)
-	 (E-non-tail-call-frame vars live body E))
+	((non-tail-call-frame rand* live body)
+	 (E-non-tail-call-frame rand* live body E))
 
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
@@ -6993,15 +6997,21 @@
 	 (mask:   ,mask)
 	 (size:   ,size)))))
 
-  (define (E-non-tail-call-frame vars live body E)
+  (define (E-non-tail-call-frame rand* live body E)
     `(non-tail-call-frame
-      ,(if (pair? vars)
-	   `(vars: . ,(map E vars))
-	 '(vars: #f))
+      ,(if (pair? rand*)
+	   `(rand*: . ,(map E rand*))
+	 '(rand*: #f))
       ,(if live
 	   `(live: . ,(map E live))
 	 '(live: #f))
       ,(E body)))
+
+  (define (E-fvar idx)
+    (string->symbol (format "fvar.~a" idx)))
+
+  (define (E-nfv idx)
+    (string->symbol (format "nfv.~a" idx)))
 
   (define (E-locals vars body E)
     `(locals ,(if vars
