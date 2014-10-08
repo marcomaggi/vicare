@@ -980,12 +980,20 @@
 
     (define (E-asm-instr/move/reg-dst x op dst src vs rs fs ns)
       (cond ((not (mem-reg? dst rs))
-	     (set-asm-instr-op! x 'nop)
-	     (values vs rs fs ns))
-	    ;;In the following clauses we know that:
-	    ;;
-	    ;;   (mem-reg? dst rs) => #t
-	    ;;
+	     ;;If  a REG  is  the destination:  it  must  be that  such  REG is  used
+	     ;;somewhere in the continuation, so the  REG must already be a member of
+	     ;;RS.   If it  is not:  we  have made  a mistake  while generating  this
+	     ;;ASM-INSTR struct.
+	     ;;
+	     ;;NOTE  For reasons  unknown  to me,  in the  original  Ikarus code  the
+	     ;;ASM-INSTR was transformed  in a NOP, as below.  (Marco  Maggi; Wed Oct
+	     ;;8, 2014)
+	     #;(set-asm-instr-op! x 'nop)
+	     #;(values vs rs fs ns)
+	     (compiler-internal-error __module_who__
+	       "register name used as destination operand in Assembly instruction, \
+                but never consumed in the continuation"
+	       (unparse-recordised-code/sexp x)))
 	    ((or (constant? src)
 		 (code-loc? src)
 		 (disp?     src)
