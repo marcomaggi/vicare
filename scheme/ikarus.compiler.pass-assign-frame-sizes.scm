@@ -859,6 +859,10 @@
        (E-asm-instr x op dst src vs rs fs ns))
 
       ((non-tail-call target.unused value.unused all-rand*)
+       ;;A non-tail call is not a "true" tail form, but it both consumes and produces
+       ;;the values  in the  register operands;  it also consumes  values in  the NFV
+       ;;structs.
+       ;;
        ;;All  the temporary  location VAR  structs  in VS,  alive right  befor the  a
        ;;non-tail call, must be saved on  the stack before calling and restored right
        ;;after the return.
