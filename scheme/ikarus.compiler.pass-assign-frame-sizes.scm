@@ -649,7 +649,13 @@
 ;;; --------------------------------------------------------------------
 
   (define (R x vs rs fs ns)
-    ;;Recursive function, tail and non-tail.
+    ;;Recursive function, tail and non-tail.  The argument X can be one among:
+    ;;
+    ;;* An operand among RAND* in a ASMCALL struct.
+    ;;
+    ;;* An operand among DST and SRC in a ASM-INSTR struct.
+    ;;
+    ;;* An operand among ARGS in a NON-TAIL-CALL struct.
     ;;
     ;;Return  4  values being  the  sets  VS, RS,  FS,  NS  updated with  information
     ;;representing the operand in X.

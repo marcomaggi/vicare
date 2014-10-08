@@ -1807,7 +1807,16 @@
 		;function  returns  multiple  values:  the  return  value  stored  in
 		;RETVAL-VAR is the  number of returned Scheme objects (0,  2 or more)
 		;and the Scheme objects are on the Scheme stack.
-   args
+   all-rand*
+		;A list  comprising the register  operand and the stack  operands the
+		;non-tail call:
+		;
+		;   (AAR APR CPR FPR PCR . rand*.nfv)
+		;
+		;where:  AAR, APR,  CPR, FPR,  PCR are  symbols representing  the CPU
+		;register names being  the register operands; RAND*.NFV is  a list of
+		;NFV structs representing locations on the Scheme stack that hold the
+		;stack operands.
    mask
    size
    ))
@@ -6463,14 +6472,7 @@
        `(disp ,(E s0) ,(E s1)))
 
       ((non-tail-call-frame vars live body)
-       `(non-tail-call-frame
-	 ,(if (pair? vars)
-	      `(vars: . ,(map E vars))
-	    '(vars: #f))
-	 ,(if live
-	      `(live: . ,(map E live))
-	    '(live: #f))
-	 ,(E body)))
+       (E-non-tail-call-frame vars live body E))
 
       ((shortcut body handler)
        `(shortcut
@@ -6630,14 +6632,7 @@
 	 `(disp ,(E s0) ,(E s1)))
 
 	((non-tail-call-frame vars live body)
-	 `(non-tail-call-frame
-	   ,(if (pair? vars)
-		`(vars: . ,(map E vars))
-	      '(vars: #f))
-	   ,(if live
-		`(live: . ,(map E live))
-	      '(live: #f))
-	   ,(E body)))
+	 (E-non-tail-call-frame vars live body E))
 
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
@@ -6800,14 +6795,7 @@
 	 `(disp ,(E s0) ,(E s1)))
 
 	((non-tail-call-frame vars live body)
-	 `(non-tail-call-frame
-	   ,(if (pair? vars)
-		`(vars: . ,(map E vars))
-	      '(vars: #f))
-	   ,(if live
-		`(live: . ,(map E live))
-	      '(live: #f))
-	   ,(E body)))
+	 (E-non-tail-call-frame vars live body E))
 
 	((shortcut body handler)
 	 `(shortcut ,(E body) ,(E handler)))
@@ -6986,24 +6974,34 @@
 
   (define (E-non-tail-call x E)
     (struct-case x
-      ((non-tail-call target retval-var args mask size)
+      ((non-tail-call target retval-var all-rand* mask size)
        `(non-tail-call
 	 (target: ,(and target
 			(cond ((symbol? target)
 			       (%pretty-symbol target))
 			      (else target))))
 	 (retval-var:  ,(and retval-var (E retval-var)))
-	 ,(if (and args (pair? args))
-	      `(args: . ,(map (lambda (arg)
-				(cond ((symbol? arg)
-				       arg)
-				      ((nfv? arg)
-				       (E arg))
-				      (else arg)))
-			   args))
-	    '(args: #f))
+	 ,(if (and all-rand* (pair? all-rand*))
+	      `(all-rand*: . ,(map (lambda (arg)
+				     (cond ((symbol? arg)
+					    arg)
+					   ((nfv? arg)
+					    (E arg))
+					   (else arg)))
+				all-rand*))
+	    '(all-rand*: #f))
 	 (mask:   ,mask)
 	 (size:   ,size)))))
+
+  (define (E-non-tail-call-frame vars live body E)
+    `(non-tail-call-frame
+      ,(if (pair? vars)
+	   `(vars: . ,(map E vars))
+	 '(vars: #f))
+      ,(if live
+	   `(live: . ,(map E live))
+	 '(live: #f))
+      ,(E body)))
 
   (define (E-locals vars body E)
     `(locals ,(if vars

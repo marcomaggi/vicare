@@ -259,7 +259,7 @@
 		  (non-tail-call
 		    (target: #f)
 		    (retval-var: #f)
-		    (args: %eax %ebp %edi %esp %esi)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
 		    (mask: #f)
 		    (size: #f)))))
 	    ;;Load in a  temporary location, from the relocation  vector, a reference
@@ -401,7 +401,7 @@
 		  (non-tail-call
 		    (target: "ik_stack_overflow")
 		    (retval-var: #f)
-		    (args: %eax %ebp %edi %esp %esi)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
 		    (mask: #f)
 		    (size: #f)))))
 	    ;;This SHORTCUT  is the  implementation of  the core  primitive operation
@@ -418,7 +418,7 @@
 		  (non-tail-call
 		    (target: #f)
 		    (retval-var: #f)
-		    (args: %eax %ebp %edi %esp %esi)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
 		    (mask: #f)
 		    (size: #f)))))
 	    ;;This is the call to combinator F.
@@ -440,7 +440,7 @@
 		(non-tail-call
 		  (target: asmlabel:F:clambda:case-1)
 		  (retval-var: #f)
-		  (args: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
+		  (all-rand*: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
 		  (mask: #f)
 		  (size: #f))))
 	    ;;Load in AA-REGISTER the fixnum 3.
@@ -592,7 +592,7 @@
 		  (non-tail-call
 		    (target: "ik_stack_overflow")
 		    (retval-var: #f)
-		    (args: %eax %ebp %edi %esp %esi)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
 		    (mask: #f)
 		    (size: #f)))))
 	    ;;This SHORTCUT is the implementation of the core primitive $DO-EVENT.
@@ -616,7 +616,7 @@
 		  (non-tail-call
 		    (target: #f)
 		    (retval-var: #f)
-		    (args: %eax %ebp %edi %esp %esi)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
 		    (mask: #f)
 		    (size: #f)))))
 	    ;;This is the call to the core primitive function READ.
@@ -637,7 +637,7 @@
 		(non-tail-call
 		  (target: #f)
 		  (retval-var: x_0)
-		  (args: %eax %ebp %edi %esp %esi)
+		  (all-rand*: %eax %ebp %edi %esp %esi)
 		  (mask: #f)
 		  (size: #f))))
 	    ;;Store in X_0, from AA-REGISTER, the single value returned by READ.
@@ -674,7 +674,7 @@
 		  (non-tail-call
 		    (target: #f)
 		    (retval-var: #f)
-		    (args: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
+		    (all-rand*: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
 		    (mask: #f)
 		    (size: #f)))))
 	    ;;Now the value of AP-REGISTER is a  pointer to the first machine word of
@@ -754,7 +754,7 @@
 		  (non-tail-call
 		    (target: "ik_stack_overflow")
 		    (retval-var: #f)
-		    (args: %eax %ebp %edi %esp %esi)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
 		    (mask: #f)
 		    (size: #f)))))
 	    (non-tail-call-frame
@@ -775,7 +775,7 @@
 		(non-tail-call
 		  (target: #f)
 		  (retval-var: #f)
-		  (args: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
+		  (all-rand*: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
 		  (mask: #f)
 		  (size: #f))))
 	    ;;Load in AA-REGISTER the fixnum 2.
@@ -840,7 +840,7 @@
 		      (non-tail-call
 			(target: #f)
 			(retval-var: #f)
-			(args: %eax %ebp %edi %esp %esi)
+			(all-rand*: %eax %ebp %edi %esp %esi)
 			(mask: #f)
 			(size: #f)))))
 		(asm-instr move tmp_1 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
@@ -865,7 +865,7 @@
 		  (non-tail-call
 		    (target: #f)
 		    (retval-var: #f)
-		    (args: %eax %ebp %edi %esp %esi)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
 		    (mask: #f)
 		    (size: #f)))))
 	    (asm-instr move tmp_4 (constant (closure-maker (code-loc asmlabel:F:clambda) no-freevars)))
@@ -960,7 +960,7 @@
 		      (non-tail-call
 			(target: "ik_collect")
 			(retval-var: #f)
-			(args: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
+			(all-rand*: %eax %ebp %edi %esp %esi (nfv unset-conflicts))
 			(mask: #f)
 			(size: #f)))))
 		(asm-instr move kont-obj_0 %ebp)
