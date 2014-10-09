@@ -772,6 +772,8 @@
 
   (define (init-nfv! x)
     ($set-nfv-frm-conf! x (empty-frm-set))
+    ;;We set  this field  to an  empty set, even  though, at  present, this  field is
+    ;;unused.
     ($set-nfv-nfv-conf! x (empty-nfv-set))
     ($set-nfv-var-conf! x (empty-var-set)))
 
@@ -1588,7 +1590,24 @@
 
 ;;; --------------------------------------------------------------------
 
-    ;;Commented out because unused.  (Marco Maggi; Thu Oct 9, 2014)
+    ;;At present we never generate Assembly code that moves a value from a NFV struct
+    ;;into a NFV struct:
+    ;;
+    ;;   (asm-instr move (?nfv-dst ?nfv-src))
+    ;;
+    ;;neither between NFV structs of the  same non-tail call, nor between NFV structs
+    ;;of different (nested) non-tail calls.  We could, because in some case it may be
+    ;;efficient.
+    ;;
+    ;;When two stack operands have the  same values, we allocate a temporary location
+    ;;and move the values from there:
+    ;;
+    ;;   (asm-instr move (?tmp-var ?some-value))
+    ;;   (asm-instr move (?nfv.1 ?tmp-var))
+    ;;   (asm-instr move (?nfv.2 ?tmp-var))
+    ;;
+    ;;For this reason  this function is commented out because  unused.  (Marco Maggi;
+    ;;Thu Oct 9, 2014)
     ;;
     ;;(define (mark-nfv/nfvs-conf! n ns)
     ;;  ($set-nfv-nfv-conf! n (union-nfvs ns ($nfv-nfv-conf n)))
@@ -1897,21 +1916,29 @@
 	  (let ((rand.nfv  (car rand*.nfv))
 		(rand.fvar (mkfvar idx)))
 	    ($set-nfv-loc! rand.nfv rand.fvar)
-	    (for-each (lambda (x)
-			(let ((loc ($nfv-loc x)))
-			  (if loc
-			      (when (fx=? ($fvar-idx loc) idx)
-				(compiler-internal-error __module_who__ "invalid assignment"))
-			    (begin
-			      ($set-nfv-nfv-conf! x (rem-nfv rand.nfv  ($nfv-nfv-conf x)))
-			      ($set-nfv-frm-conf! x (add-frm rand.fvar ($nfv-frm-conf x)))))))
-	      ($nfv-nfv-conf rand.nfv))
+	    ;;At present we are not using the field NFV-CONF of NFV structs.
+	    #;(assert (null? (nfv-nfv-conf rand.nfv)))
+	    ;;If, in  future, we start  using the field  NFV-CONF of NFV  structs: we
+	    ;;will consider this code.
+	    ;;
+            ;; (for-each (lambda (x)
+            ;;             ;;X is a NFV struct that is alive while we are putting the value
+	    ;;             ;;of RAND.NFV on the stack.
+            ;;             (let ((loc ($nfv-loc x)))
+            ;;               (if loc
+            ;;                   (when (fx=? ($fvar-idx loc) idx)
+            ;;                     (compiler-internal-error __module_who__ "invalid assignment"))
+            ;;                 (begin
+            ;;                   ($set-nfv-nfv-conf! x (rem-nfv rand.nfv  ($nfv-nfv-conf x)))
+            ;;                   ($set-nfv-frm-conf! x (add-frm rand.fvar ($nfv-frm-conf x)))))))
+            ;;   ($nfv-nfv-conf rand.nfv))
+	    ;;
 	    (for-each-var
 		($nfv-var-conf rand.nfv)
 		locals.vars
 	      (lambda (x)
 		;;X  is a  VAR struct  from LOCALS.VARS  that is  alive while  we are
-		;;putting operands on the stack.
+		;;putting the value of RAND.NFV on the stack.
 		(let ((loc ($var-loc x)))
 		  (if (fvar? loc)
 		      ;;If X is assigned to the same FVAR of RAND.NFV: we have made a
