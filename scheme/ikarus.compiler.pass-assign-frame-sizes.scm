@@ -1459,31 +1459,13 @@
 			    (set->list (vector-ref live 0))))
 	      (live-frms2 (set->list (vector-ref live 1)))
 	      (live-nfvs  (vector-ref live 2)))
-	  (module (make-mask)
-	    (define (make-mask n)
-	      (receive-and-return (mask)
-		  (make-vector (fxsra (fx+ n 7) 3) 0)
-		($for-each/stx (lambda (fvar)
-				 (%set-bit! mask ($fvar-idx fvar)))
-		  live-frms1)
-		($for-each/stx (lambda (idx)
-				 (%set-bit! mask idx))
-		  live-frms2)
-		($for-each/stx (lambda (nfv)
-				 (cond (($nfv-loc nfv)
-					=> (lambda (loc)
-					     (%set-bit! mask ($fvar-idx loc))))))
-		  live-nfvs)))
-	    (define (%set-bit! mask idx)
-	      (let ((q (fxsra    idx 3))
-		    (r (fxlogand idx 7)))
-		(vector-set! mask q (fxlogor (vector-ref mask q) (fxsll 1 r)))))
-	    #| end of module: make-mask |# )
 	  (let ((idx (%actual-frame-size nfv* (fx+ 2 (max-frm live-frms1
 							      (max-nfv live-nfvs
 								       (max-ls live-frms2 0)))))))
 	    (%assign-frame-locations-to-stack-operands! nfv* idx)
-	    (NFE (fxsub1 idx) (make-mask (fxsub1 idx)) body))))
+	    (NFE (fxsub1 idx)
+		 (%make-livemask-vec (fxsub1 idx) live-frms1 live-frms2 live-nfvs)
+		 body))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1509,6 +1491,33 @@
 
 ;;; --------------------------------------------------------------------
 
+      (module (%make-livemask-vec)
+	;;Build and return the livemask vector used in the non-tail call table.
+	;;
+	(define (%make-livemask-vec n live-frms1 live-frms2 live-nfvs)
+	  (receive-and-return (mask)
+	      (make-vector (fxsra (fx+ n 7) 3) 0)
+	    ($for-each/stx (lambda (fvar)
+			     (%set-bit! mask ($fvar-idx fvar)))
+	      live-frms1)
+	    ($for-each/stx (lambda (idx)
+			     (%set-bit! mask idx))
+	      live-frms2)
+	    ($for-each/stx (lambda (nfv)
+			     (cond (($nfv-loc nfv)
+				    => (lambda (loc)
+					 (%set-bit! mask ($fvar-idx loc))))))
+	      live-nfvs)))
+
+	(define (%set-bit! mask idx)
+	  (let ((q (fxsra    idx 3))
+		(r (fxlogand idx 7)))
+	    (vector-set! mask q (fxlogor (vector-ref mask q) (fxsll 1 r)))))
+
+	#| end of module: %make-livemask-vec |# )
+
+;;; --------------------------------------------------------------------
+
       (module (%actual-frame-size)
 
 	(define (%actual-frame-size nfv* i)
@@ -1517,6 +1526,8 @@
 	    (%actual-frame-size nfv* (fxadd1 i))))
 
 	(define (%frame-size-ok? i nfv*)
+	  ;;Tail recursive function.
+	  ;;
 	  (or (null? nfv*)
 	      (let ((x (car nfv*)))
 		(and (not (set-member?    i ($nfv-frm-conf x)))
@@ -1657,11 +1668,15 @@
   (module (R-var)
 
     (define (R-var x)
+      ;;X is a VAR struct.
+      ;;
       (cond (($var-loc x)
+	     ;;This VAR already has a location assigned to it.
 	     => (lambda (loc)
 		  (if (fvar? loc)
 		      loc
 		    (%assign x locals.vars))))
+	    ;;This VAR has no location assigned to it.
 	    (else x)))
 
     (module (%assign)
