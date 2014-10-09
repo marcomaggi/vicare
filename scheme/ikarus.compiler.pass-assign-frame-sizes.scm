@@ -2043,22 +2043,22 @@
 	(or (%assign-move x locals.vars)
 	    (%assign-any  x locals.vars)))
 
-      (define (%assign-move x locals.vars)
-	(let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
+      (define (%assign-move x.var locals.vars)
+	(let ((mr (set->list (set-difference ($var-frm-move x.var) ($var-frm-conf x.var)))))
 	  (and (pair? mr)
-	       (receive-and-return (fv)
+	       (receive-and-return (x.fvar)
 		   (mkfvar (car mr))
-		 ($set-var-loc! x fv)
+		 ($set-var-loc! x.var x.fvar)
 		 (for-each-var
-		     ($var-var-conf x)
+		     ($var-var-conf x.var)
 		     locals.vars
-		   (lambda (var)
-		     ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var)))))
+		   (lambda (y.var)
+		     ($set-var-frm-conf! y.var (add-frm x.fvar ($var-frm-conf y.var)))))
 		 (for-each-var
-		     ($var-var-move x)
+		     ($var-var-move x.var)
 		     locals.vars
-		   (lambda (var)
-		     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
+		   (lambda (y.var)
+		     ($set-var-frm-move! y.var (add-frm x.fvar ($var-frm-move y.var)))))))))
 
       (define (%assign-any x.var locals.vars)
 	;;Scan the stack locations and find the first one in upper memory that is not
