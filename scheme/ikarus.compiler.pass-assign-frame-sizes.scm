@@ -531,9 +531,9 @@
     (struct-case x
       ((locals vars body)
        (init-var*! vars)
-       (let* ((vars.vec    (list->vector vars))
-	      (call-live*  (%uncover-frame-conflicts body vars.vec))
-	      (body        (%rewrite body vars.vec)))
+       (let* ((vars.vec   (list->vector vars))
+	      (spill-set  (%uncover-frame-conflicts body vars.vec))
+	      (body       (%rewrite body vars.vec)))
 	 (make-locals (cons vars.vec (%discard-vars-being-stack-operands vars)) body)))
       (else
        (compiler-internal-error __module_who__
@@ -557,7 +557,6 @@
 
 
 (define (%uncover-frame-conflicts locals.body locals.vars)
-  ;;
   ;;
   ;;The argument  LOCALS.BODY is the  body of a LOCALS  struct; the LOCALS  struct is
   ;;either the body of a CLAMBDA clause or the init expression of a CODES struct.
@@ -618,6 +617,9 @@
   ;;and the resulting VS,  RS, FS, NS are stored (as vector  object) in the parameter
   ;;EXCEPTION-LIVE-SET; then the body is processed, in the dynamic environment having
   ;;the parameter set.
+  ;;
+  ;;NOTE A  lot of  functions are  nested here because  they need  to close  upon the
+  ;;argument LOCALS.VARS.
   ;;
   (import INTEGER-SET)
   (import FRAME-CONFLICT-HELPERS)
@@ -1320,6 +1322,11 @@
   (module (register?)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
 
+  (define (main body)
+    (T locals.body))
+
+;;; --------------------------------------------------------------------
+
   (define (R x)
     (if (register? x)
 	x
@@ -1362,7 +1369,8 @@
 
       (else
        (compiler-internal-error __module_who__
-	 "invalid tail expression" (unparse-recordized-code x)))))
+	 "invalid tail expression"
+	 (unparse-recordized-code/sexp x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1386,7 +1394,8 @@
 
       (else
        (compiler-internal-error __module_who__
-	 "invalid pred" (unparse-recordized-code x)))))
+	 "invalid expression in predicate context"
+	 (unparse-recordized-code/sexp x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -1404,8 +1413,8 @@
 	((asm-instr op dst src)
 	 (E-asm-instr x op dst src))
 
-	((non-tail-call-frame vars live body)
-	 (E-non-tail-call-frame vars live body))
+	((non-tail-call-frame nfv* live body)
+	 (E-non-tail-call-frame nfv* live body))
 
 	((asmcall op args)
 	 (case op
@@ -1427,8 +1436,7 @@
     (define (E-asm-instr x op dst src)
       (case op
 	((move load8 load32)
-	 ;;If  the   destination  equals  the  source:   convert  this
-	 ;;instruction into a NOP.
+	 ;;If the destination equals the source: convert this instruction into a NOP.
 	 (let ((dst (R dst))
 	       (src (R src)))
 	   (if (eq? dst src)
@@ -1477,9 +1485,11 @@
 	(define (max-nfv ls i)
 	  (if (pair? ls)
 	      (let ((loc ($nfv-loc (car ls))))
-		(unless (fvar? loc)
-		  (compiler-internal-error __module_who__ "FVAR not assigned in MAX-NFV" loc))
-		(max-nfv (cdr ls) (max i ($fvar-idx loc))))
+		(if (fvar? loc)
+		    (max-nfv (cdr ls) (max i ($fvar-idx loc)))
+		  (compiler-internal-error __module_who__
+		    "FVAR not assigned to location in MAX-NFV"
+		    loc)))
 	    i))
 
 	(module (actual-frame-size)
@@ -1565,20 +1575,22 @@
 ;;; --------------------------------------------------------------------
 
     (define (NFE idx mask x)
+      ;;Non-tail recursive function.
+      ;;
       (struct-case x
 	((seq e0 e1)
 	 (let ((e0^ (E e0)))
 	   (make-seq e0^ (NFE idx mask e1))))
-	((non-tail-call target value args mask^ size)
-	 (make-non-tail-call target value
+	((non-tail-call target retval-location all-rand*)
+	 (make-non-tail-call target retval-location
 			     (map (lambda (x)
-				    (cond ((symbol? x)
+				    (cond ((register? x)
 					   x)
 					  ((nfv? x)
 					   ($nfv-loc x))
 					  (else
 					   (compiler-internal-error __module_who__ "invalid arg"))))
-			       args)
+			       all-rand*)
 			     mask idx))
 	(else
 	 (compiler-internal-error __module_who__ "invalid NF effect" x))))
@@ -1642,7 +1654,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (T locals.body))
+  (main locals.body))
 
 
 ;;;; done
