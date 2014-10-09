@@ -6386,7 +6386,7 @@ It can be used as @var{printer} argument in calls to
 @deffn Parameter default-struct-printer-details
 When set to true: @func{default-struct-printer} will produce a detailed
 description of the structure; otherwise only minimum informations are
-included.  This parameter is inisialised to @false{}.
+included.  This parameter is initialised to @false{}.
 @end deffn
 
 @c ------------------------------------------------------------
