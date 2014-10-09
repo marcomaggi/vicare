@@ -2060,20 +2060,24 @@
 		   (lambda (var)
 		     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
 
-      (define (%assign-any x locals.vars)
-	(let ((frms ($var-frm-conf x))
-	      (vars ($var-var-conf x)))
-	  (let loop ((i 1))
+      (define (%assign-any x.var locals.vars)
+	;;Scan the stack locations and find the first one in upper memory that is not
+	;;alive; assign that location to X.VAR and return the associated FVAR struct.
+	;;
+	(let ((frms ($var-frm-conf x.var)))
+	  (let search-lowest-index-of-unused-fvar ((i 1))
 	    (if (set-member? i frms)
-		(loop (fxadd1 i))
-	      (receive-and-return (fv)
+		(search-lowest-index-of-unused-fvar (fxadd1 i))
+	      (receive-and-return (x.fvar)
 		  (mkfvar i)
-		($set-var-loc! x fv)
+		($set-var-loc! x.var x.fvar)
+		;;Register X.FVAR  as FVAR struct that  is alive in the  state of all
+		;;the live VARs.
 		(for-each-var
-		    vars
+		    ($var-var-conf x.var)
 		    locals.vars
-		  (lambda (var)
-		    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
+		  (lambda (V)
+		    ($set-var-frm-conf! V (add-frm x.fvar ($var-frm-conf V))))))))))
 
       #| end of module: %assign |# )
 
