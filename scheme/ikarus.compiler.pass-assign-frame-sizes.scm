@@ -1327,28 +1327,6 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (R x)
-    (if (register? x)
-	x
-      (struct-case x
-	((constant)
-	 x)
-	((fvar)
-	 x)
-	((nfv)
-	 (or ($nfv-loc x)
-	     (compiler-internal-error __module_who__
-	       "invali NFV struct without assigned LOC")))
-	((var)
-	 (Var x))
-	((disp objref offset)
-	 (make-disp (R objref) (R offset)))
-	(else
-	 (compiler-internal-error __module_who__
-	   "invalid R" (unparse-recordized-code x))))))
-
-;;; --------------------------------------------------------------------
-
   (define (T x)
     ;;Process the struct instance X representing recordized  code as if it is in tail
     ;;position.
@@ -1465,143 +1443,170 @@
 	   "invalid ASM-INSTR operator in recordised code for side effects"
 	   (unparse-recordised-code/sexp x)))))
 
-    (define (E-non-tail-call-frame vars live body)
-      (let ((live-frms1 (map (lambda (i)
-			       (Var (vector-ref locals.vars i)))
-			  (set->list (vector-ref live 0))))
-	    (live-frms2 (set->list (vector-ref live 1)))
-	    (live-nfvs  (vector-ref live 2)))
+    (module (E-non-tail-call-frame)
 
-	(define (max-frm ls i)
-	  (if (pair? ls)
-	      (max-frm (cdr ls) (max i ($fvar-idx (car ls))))
-	    i))
-
-	(define (max-ls ls i)
-	  (if (pair? ls)
-	      (max-ls  (cdr ls) (max i (car ls)))
-	    i))
-
-	(define (max-nfv ls i)
-	  (if (pair? ls)
-	      (let ((loc ($nfv-loc (car ls))))
-		(if (fvar? loc)
-		    (max-nfv (cdr ls) (max i ($fvar-idx loc)))
-		  (compiler-internal-error __module_who__
-		    "FVAR not assigned to location in MAX-NFV"
-		    loc)))
-	    i))
-
-	(module (actual-frame-size)
-
-	  (define (actual-frame-size vars i)
-	    (if (%frame-size-ok? i vars)
-		i
-	      (actual-frame-size vars (fxadd1 i))))
-
-	  (define (%frame-size-ok? i vars)
-	    (or (null? vars)
-		(let ((x (car vars)))
-		  (and (not (set-member?    i ($nfv-frm-conf x)))
-		       (not (%var-conflict? i ($nfv-var-conf x)))
-		       (%frame-size-ok? (fxadd1 i) (cdr vars))))))
-
-	  (define (%var-conflict? i vs)
-	    (ormap (lambda (xi)
-		     (let ((loc ($var-loc (vector-ref locals.vars xi))))
-		       (and (fvar? loc)
-			    (fx=? i ($fvar-idx loc)))))
-		   (set->list vs)))
-
-	  #| end of module: actual-frame-size |# )
-
-	(define (%assign-frame-vars! vars i)
-	  (when (pair? vars)
-	    (let ((v  (car vars))
-		  (fv (mkfvar i)))
-	      ($set-nfv-loc! v fv)
-	      (for-each (lambda (x)
-			  (let ((loc ($nfv-loc x)))
-			    (if loc
-				(when (fx=? ($fvar-idx loc) i)
-				  (compiler-internal-error __module_who__ "invalid assignment"))
-			      (begin
-				($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
-				($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
-		($nfv-nfv-conf v))
-	      (for-each-var
-		  ($nfv-var-conf v)
-		  locals.vars
-		(lambda (x)
-		  (let ((loc ($var-loc x)))
-		    (if (fvar? loc)
-			(when (fx=? (fvar-idx loc) i)
-			  (compiler-internal-error __module_who__ "invalid assignment"))
-		      ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
-	    (%assign-frame-vars! (cdr vars) (fxadd1 i))))
-
-	(module (make-mask)
-
-	  (define (make-mask n)
-	    (receive-and-return (mask)
-		(make-vector (fxsra (fx+ n 7) 3) 0)
-	      (for-each (lambda (fvar)
-			  (%set-bit! mask ($fvar-idx fvar)))
-		live-frms1)
-	      (for-each (lambda (idx)
-			  (%set-bit! mask idx))
-		live-frms2)
-	      (for-each (lambda (nfv)
-			  (let ((loc ($nfv-loc nfv)))
-			    (when loc
-			      (%set-bit! mask ($fvar-idx loc)))))
-		live-nfvs)))
-
-	  (define (%set-bit! mask idx)
-	    (let ((q (fxsra    idx 3))
-		  (r (fxlogand idx 7)))
-	      (vector-set! mask q (fxlogor (vector-ref mask q) (fxsll 1 r)))))
-
-	  #| end of module: make-mask |# )
-
-	(let ((i (actual-frame-size
-		  vars
-		  (fx+ 2 (max-frm live-frms1
-				  (max-nfv live-nfvs
-					   (max-ls live-frms2 0)))))))
-	  (%assign-frame-vars! vars i)
-	  (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
+      (define (E-non-tail-call-frame vars live body)
+	(let ((live-frms1 (map (lambda (i)
+				 (R-var (vector-ref locals.vars i)))
+			    (set->list (vector-ref live 0))))
+	      (live-frms2 (set->list (vector-ref live 1)))
+	      (live-nfvs  (vector-ref live 2)))
+	  (module (make-mask)
+	    (define (make-mask n)
+	      (receive-and-return (mask)
+		  (make-vector (fxsra (fx+ n 7) 3) 0)
+		($for-each/stx (lambda (fvar)
+				 (%set-bit! mask ($fvar-idx fvar)))
+		  live-frms1)
+		($for-each/stx (lambda (idx)
+				 (%set-bit! mask idx))
+		  live-frms2)
+		($for-each/stx (lambda (nfv)
+				 (cond (($nfv-loc nfv)
+					=> (lambda (loc)
+					     (%set-bit! mask ($fvar-idx loc))))))
+		  live-nfvs)))
+	    (define (%set-bit! mask idx)
+	      (let ((q (fxsra    idx 3))
+		    (r (fxlogand idx 7)))
+		(vector-set! mask q (fxlogor (vector-ref mask q) (fxsll 1 r)))))
+	    #| end of module: make-mask |# )
+	  (let ((i (%actual-frame-size vars (fx+ 2 (max-frm live-frms1
+							    (max-nfv live-nfvs
+								     (max-ls live-frms2 0)))))))
+	    (%assign-frame-vars! vars i)
+	    (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
 
 ;;; --------------------------------------------------------------------
 
-    (define (NFE idx mask x)
-      ;;Non-tail recursive function.
-      ;;
-      (struct-case x
-	((seq e0 e1)
-	 (let ((e0^ (E e0)))
-	   (make-seq e0^ (NFE idx mask e1))))
-	((non-tail-call target retval-location all-rand*)
-	 (make-non-tail-call target retval-location
-			     (map (lambda (x)
-				    (cond ((register? x)
-					   x)
-					  ((nfv? x)
-					   ($nfv-loc x))
-					  (else
-					   (compiler-internal-error __module_who__ "invalid arg"))))
-			       all-rand*)
-			     mask idx))
-	(else
-	 (compiler-internal-error __module_who__ "invalid NF effect" x))))
+      (define (max-frm ls i)
+	(if (pair? ls)
+	    (max-frm (cdr ls) (max i ($fvar-idx (car ls))))
+	  i))
+
+      (define (max-ls ls i)
+	(if (pair? ls)
+	    (max-ls  (cdr ls) (max i (car ls)))
+	  i))
+
+      (define (max-nfv ls i)
+	(if (pair? ls)
+	    (let ((loc ($nfv-loc (car ls))))
+	      (if (fvar? loc)
+		  (max-nfv (cdr ls) (max i ($fvar-idx loc)))
+		(compiler-internal-error __module_who__
+		  "FVAR not assigned to location in MAX-NFV"
+		  loc)))
+	  i))
+
+;;; --------------------------------------------------------------------
+
+      (module (%actual-frame-size)
+
+	(define (%actual-frame-size vars i)
+	  (if (%frame-size-ok? i vars)
+	      i
+	    (%actual-frame-size vars (fxadd1 i))))
+
+	(define (%frame-size-ok? i vars)
+	  (or (null? vars)
+	      (let ((x (car vars)))
+		(and (not (set-member?    i ($nfv-frm-conf x)))
+		     (not (%var-conflict? i ($nfv-var-conf x)))
+		     (%frame-size-ok? (fxadd1 i) (cdr vars))))))
+
+	(define (%var-conflict? i vs)
+	  (ormap (lambda (xi)
+		   (let ((loc ($var-loc (vector-ref locals.vars xi))))
+		     (and (fvar? loc)
+			  (fx=? i ($fvar-idx loc)))))
+		 (set->list vs)))
+
+	#| end of module: %actual-frame-size |# )
+
+      (define (%assign-frame-vars! vars i)
+	(when (pair? vars)
+	  (let ((v  (car vars))
+		(fv (mkfvar i)))
+	    ($set-nfv-loc! v fv)
+	    (for-each (lambda (x)
+			(let ((loc ($nfv-loc x)))
+			  (if loc
+			      (when (fx=? ($fvar-idx loc) i)
+				(compiler-internal-error __module_who__ "invalid assignment"))
+			    (begin
+			      ($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
+			      ($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
+	      ($nfv-nfv-conf v))
+	    (for-each-var
+		($nfv-var-conf v)
+		locals.vars
+	      (lambda (x)
+		(let ((loc ($var-loc x)))
+		  (if (fvar? loc)
+		      (when (fx=? (fvar-idx loc) i)
+			(compiler-internal-error __module_who__ "invalid assignment"))
+		    ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
+	  (%assign-frame-vars! (cdr vars) (fxadd1 i))))
+
+;;; --------------------------------------------------------------------
+
+      (define (NFE idx mask x)
+	;;Non-tail recursive function.
+	;;
+	(struct-case x
+	  ((seq e0 e1)
+	   (let ((e0^ (E e0)))
+	     (make-seq e0^ (NFE idx mask e1))))
+	  ((non-tail-call target retval-location all-rand*)
+	   (make-non-tail-call target retval-location
+			       ;;Replace all the NFV  structs in ALL-RAND* with their
+			       ;;assigned location.
+			       (map (lambda (x)
+				      (cond ((register? x)
+					     x)
+					    ((nfv? x)
+					     ($nfv-loc x))
+					    (else
+					     (compiler-internal-error __module_who__
+					       "invalid operand"
+					       (unparse-recordised-code/sexp x)))))
+				 all-rand*)
+			       mask idx))
+	  (else
+	   (compiler-internal-error __module_who__ "invalid NF effect" x))))
+
+      #| end of module: E-non-tail-call-frame |# )
 
     #| end of module: E |# )
 
 ;;; --------------------------------------------------------------------
 
-  (module (Var)
+  (define (R x)
+    (if (register? x)
+	x
+      (struct-case x
+	((constant)
+	 x)
+	((fvar)
+	 x)
+	((nfv)
+	 (or ($nfv-loc x)
+	     (compiler-internal-error __module_who__
+	       "invali NFV struct without assigned LOC")))
+	((var)
+	 (R-var x))
+	((disp objref offset)
+	 (make-disp (R objref) (R offset)))
+	(else
+	 (compiler-internal-error __module_who__
+	   "invalid R" (unparse-recordized-code x))))))
 
-    (define (Var x)
+;;; --------------------------------------------------------------------
+
+  (module (R-var)
+
+    (define (R-var x)
       (cond (($var-loc x)
 	     => (lambda (loc)
 		  (if (fvar? loc)
@@ -1650,7 +1655,7 @@
 
       #| end of module: %assign |# )
 
-    #| end of module: Var |# )
+    #| end of module: R-var |# )
 
 ;;; --------------------------------------------------------------------
 
