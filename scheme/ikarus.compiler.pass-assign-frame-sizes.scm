@@ -2044,11 +2044,15 @@
 	    (%assign-any  x locals.vars)))
 
       (define (%assign-move x.var locals.vars)
+	;;Assign a FVAR struct to the VAR struct X.VAR.
+	;;
 	(let ((mr (set->list (set-difference ($var-frm-move x.var) ($var-frm-conf x.var)))))
 	  (and (pair? mr)
 	       (receive-and-return (x.fvar)
 		   (mkfvar (car mr))
 		 ($set-var-loc! x.var x.fvar)
+		 ;;Register X.FVAR as  FVAR struct that is alive in  the state of all
+		 ;;the live VARs.
 		 (for-each-var
 		     ($var-var-conf x.var)
 		     locals.vars
