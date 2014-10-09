@@ -1448,6 +1448,12 @@
     (module (E-non-tail-call-frame)
 
       (define (E-non-tail-call-frame nfv* live body)
+	;;
+	;;NOTE We  have to remember that:  while computing the stack  operands for an
+	;;upcoming non-tail call, we might  perform other non-tail calls; so multiple
+	;;groups of NFV structs are present contemporarily.  This is why we also have
+	;;a LIVE-NFVS set to take care of.
+	;;
 	(let ((live-frms1 (map (lambda (i)
 				 (R-var (vector-ref locals.vars i)))
 			    (set->list (vector-ref live 0))))
@@ -1533,30 +1539,36 @@
 	;;operand.
 	;;
 	;;The argument  IDX represents the  index of the  next stack machine  word to
-	;;allocate:
+	;;allocate; in the following scenario, the value of IDX for the first call to
+	;;this function is IDX=6:
 	;;
 	;;           high memory
-        ;;   |                          |              --
-        ;;               ...                           .
-        ;;   |--------------------------|              . uplevel stack frame
-        ;;   | uplevel return address   |      <-- FPR .
-        ;;   |--------------------------|              --
-        ;;   | uplevel stack operand 0  | idx=1        .
-        ;;   |--------------------------|              .
-        ;;   | uplevel stack operand 1  | idx=2        .
-        ;;   |--------------------------|              . stack frame described
-        ;;   |       local var 0        | idx=3        . by this call's call table,
-        ;;   |--------------------------|              . represented by FVAR structs
-        ;;   |       local var 1        | idx=4        .
-        ;;   |--------------------------|              .
-        ;;   |        empty word        | idx=5        .
-        ;;   |--------------------------|              --
-        ;;   |      stack operand 0     | idx=6        .
-        ;;   |--------------------------|              . operands to the call
-        ;;   |      stack operand 1     | idx=7        . represented by NFV structs
-        ;;   |--------------------------|
+        ;;   |                          |               --
+        ;;               ...                            .
+        ;;   |--------------------------|               . uplevel stack frame
+        ;;   | uplevel return address   | <-- FPR       .
+        ;;   |--------------------------|               --
+        ;;   | uplevel stack operand 0  | idx=1 fvar.1  .
+        ;;   |--------------------------|               .
+        ;;   | uplevel stack operand 1  | idx=2 fvar.2  .
+        ;;   |--------------------------|               . stack frame described
+        ;;   |       local var 0        | idx=3 fvar.3  . by this call's call table,
+        ;;   |--------------------------|               . represented by FVAR structs
+        ;;   |       local var 1        | idx=4 fvar.4  .
+        ;;   |--------------------------|               .
+        ;;   |        empty word        | idx=5 fvar.5  .
+        ;;   |--------------------------|               --
+        ;;   |  stack operand 0, nfv.1  | idx=6 fvar.6  .
+        ;;   |--------------------------|               . operands to the call
+        ;;   |  stack operand 1, nfv.2  | idx=7 fvar.7  . represented by NFV structs
+        ;;   |--------------------------|               --
         ;;   |                          |
         ;;           low memory
+	;;
+	;;here we want to allocate stack machine word as follows:
+	;;
+	;;   NFV.1 == FVAR.6
+	;;   NFV.2 == FVAR.7
 	;;
 	(when (pair? rand*.nfv)
 	  (let ((rand.nfv  (car rand*.nfv))
@@ -1575,11 +1587,16 @@
 		($nfv-var-conf rand.nfv)
 		locals.vars
 	      (lambda (x)
+		;;X  is a  VAR struct  from LOCALS.VARS  that is  alive while  we are
+		;;putting operands on the stack.
 		(let ((loc ($var-loc x)))
 		  (if (fvar? loc)
+		      ;;If X is assigned to the same FVAR of RAND.NFV: we have made a
+		      ;;mistake; otherwise there is no conflict.
 		      (when (fx=? (fvar-idx loc) idx)
 			(compiler-internal-error __module_who__ "invalid assignment"))
-		    ($set-var-frm-conf! x (add-frm rand.fvar ($var-frm-conf x))))))))
+		    (begin
+		      ($set-var-frm-conf! x (add-frm rand.fvar ($var-frm-conf x)))))))))
 	  (%assign-frame-locations-to-stack-operands! (cdr rand*.nfv) (fxadd1 idx))))
 
 ;;; --------------------------------------------------------------------
