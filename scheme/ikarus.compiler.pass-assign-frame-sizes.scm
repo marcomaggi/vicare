@@ -2039,9 +2039,9 @@
     (module (%assign)
       (import FRAME-CONFLICT-HELPERS)
 
-      (define (%assign x locals.vars)
-	(or (%assign-move x locals.vars)
-	    (%assign-any  x locals.vars)))
+      (define (%assign x.var locals.vars)
+	(or (%assign-move x.var locals.vars)
+	    (%assign-any  x.var locals.vars)))
 
       (define (%assign-move x.var locals.vars)
 	;;Assign a FVAR struct to the VAR struct X.VAR.
