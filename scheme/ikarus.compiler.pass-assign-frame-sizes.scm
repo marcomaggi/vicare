@@ -870,7 +870,7 @@
        ;;after the return.
        (set! spill-set (union-vars vs spill-set))
        ;;Set to #t  the LOC field of every  VAR struct which is a member  of VS; this
-       ;;way we signal that this VAR has been used in this subform.
+       ;;way we signal that this VAR is alive right before the non-tail call.
        (for-each-var
 	   vs locals.vars
 	 (lambda (x)
@@ -1671,12 +1671,20 @@
       ;;X is a VAR struct.
       ;;
       (cond (($var-loc x)
-	     ;;This VAR already has a location assigned to it.
+	     ;;This VAR has a non-false LOC field, the value is either:
+	     ;;
+	     ;;* A FVAR  struct, meaning this VAR  is a stack operand  for a previous
+	     ;;  call.
+	     ;;
+	     ;;* The  boolean #t, meaning we  are preparing a non-tail  call and this
+	     ;;  VAR is alive right before this non-tail call.
 	     => (lambda (loc)
 		  (if (fvar? loc)
 		      loc
-		    (%assign x locals.vars))))
-	    ;;This VAR has no location assigned to it.
+		    (begin
+		      (assert (boolean? loc))
+		      (%assign x locals.vars)))))
+	    ;;This VAR has no location assigned to it yet.
 	    (else x)))
 
     (module (%assign)
@@ -1685,21 +1693,6 @@
       (define (%assign x locals.vars)
 	(or (%assign-move x locals.vars)
 	    (%assign-any  x locals.vars)))
-
-      (define (%assign-any x locals.vars)
-	(let ((frms ($var-frm-conf x))
-	      (vars ($var-var-conf x)))
-	  (let loop ((i 1))
-	    (if (set-member? i frms)
-		(loop (fxadd1 i))
-	      (receive-and-return (fv)
-		  (mkfvar i)
-		($set-var-loc! x fv)
-		(for-each-var
-		    vars
-		    locals.vars
-		  (lambda (var)
-		    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
 
       (define (%assign-move x locals.vars)
 	(let ((mr (set->list (set-difference ($var-frm-move x) ($var-frm-conf x)))))
@@ -1717,6 +1710,21 @@
 		     locals.vars
 		   (lambda (var)
 		     ($set-var-frm-move! var (add-frm fv ($var-frm-move var)))))))))
+
+      (define (%assign-any x locals.vars)
+	(let ((frms ($var-frm-conf x))
+	      (vars ($var-var-conf x)))
+	  (let loop ((i 1))
+	    (if (set-member? i frms)
+		(loop (fxadd1 i))
+	      (receive-and-return (fv)
+		  (mkfvar i)
+		($set-var-loc! x fv)
+		(for-each-var
+		    vars
+		    locals.vars
+		  (lambda (var)
+		    ($set-var-frm-conf! var (add-frm fv ($var-frm-conf var))))))))))
 
       #| end of module: %assign |# )
 
