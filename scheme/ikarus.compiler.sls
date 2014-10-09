@@ -6356,7 +6356,7 @@
     ;;
     (import SCHEME-OBJECTS-ONTOLOGY)
     (define E unparse-recordised-code)
-    (define E-nfv (make-E-nfv))
+    (define E-nfv (make-E-nfv E))
     (struct-case x
       ((constant)
        (E-constant x E))
@@ -6648,7 +6648,7 @@
 	(else x)))
 
       (define E-var (make-E-var E))
-      (define E-nfv (make-E-nfv))
+      (define E-nfv (make-E-nfv E))
 
       (E input-expr))
 
@@ -6812,7 +6812,7 @@
 	(else x)))
 
     (define E-var (make-E-var E))
-    (define E-nfv (make-E-nfv))
+    (define E-nfv (make-E-nfv E))
 
     (E input-expr))
 
@@ -6946,7 +6946,11 @@
 	      ((prelex x.name)
 	       (%build-name x x.name T H))
 	      ((var x.name)
-	       (%build-name x x.name T H))
+	       (let ((rep (%build-name x x.name T H)))
+		 (cond ((var-loc x)
+			=> (lambda (loc)
+			     (cons rep (E loc))))
+		       (else rep))))
 	      ((fvar)
 	       (E x))
 	      (else x)))))
@@ -6963,7 +6967,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (make-E-nfv)
+  (define (make-E-nfv E)
     ;;Given a struct instance  X of type NFV, identifying the  location of a non-tail
     ;;call stack operand: return a symbol representing a unique name for the operand.
     ;;The map between structures and symbols is cached in a hash table.
@@ -6978,13 +6982,16 @@
     (lambda (x)
       (or (hashtable-ref H x #f)
 	  (struct-case x
-	    ((nfv idx)
-	     (let* ((name (format "nfv.~a" idx))
-		    (N    (hashtable-ref T name 0)))
-	       (hashtable-set! T name (+ N 1))
-	       (receive-and-return (sym)
-		   (string->symbol (string-append name "_" (number->string N)))
-		 (hashtable-set! H x sym))))))))
+	    ((nfv idx loc)
+	     (let ((sym (let* ((name (format "nfv.~a" idx))
+			       (N    (hashtable-ref T name 0)))
+			  (hashtable-set! T name (+ N 1))
+			  (receive-and-return (sym)
+			      (string->symbol (string-append name "_" (number->string N)))
+			    (hashtable-set! H x sym)))))
+	       (if loc
+		   (cons sym (E loc))
+		 sym)))))))
 
 ;;; --------------------------------------------------------------------
 

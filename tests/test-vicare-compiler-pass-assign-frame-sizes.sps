@@ -455,7 +455,7 @@
 	    (asm-instr move %eax (constant -8))
 	    (non-tail-call
 	      (target: asmlabel:g:clambda:case-1)
-	      (retval-var: nfv.1_0)
+	      (retval-var: (nfv.1_0 . fvar.2))
 	      (all-rand*: %eax %ebp %edi %esp %esi fvar.2)
 	      (mask: #(0))
 	      (size: 1))
