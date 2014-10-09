@@ -394,8 +394,7 @@
 		(asm-instr move %edi tmp_2)
 		(asm-instr move %eax (constant -16))
 		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2))))
-	  (lambda (label: asmlabel:f:clambda)
-	    (%edi fvar.1)
+	  (lambda (label: asmlabel:f:clambda) (%edi fvar.1)
 	    (locals
 	     (local-vars: #(tmp_3 tmp_4 tmp_5 cp_1)
 			  tmp_3 tmp_4 tmp_5 cp_1)

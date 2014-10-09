@@ -422,6 +422,14 @@
 ;;
 
 
+;;;; data structures
+
+(define-struct non-tail-call-frame-sets
+  ;;Structs of this type are stored in the LIVE field of NON-TAIL-CALL-FRAME structs.
+  ;;
+  (vs fs ns))
+
+
 (module INTEGER-SET
   ;;This module  implements sets of  bits; each set is  a nested hierarchy  of lists,
   ;;pairs and fixnums  interpreted as a tree; fixnums are  interpreted as bitvectors.
@@ -1197,7 +1205,7 @@
 
       ((non-tail-call-frame nfv* live body)
        (for-each init-nfv! nfv*)
-       (set-non-tail-call-frame-live! x (vector vs fs ns))
+       (set-non-tail-call-frame-live! x (make-non-tail-call-frame-sets vs fs ns))
        (E body vs rs fs ns))
 
       ((asmcall op)
@@ -1779,6 +1787,8 @@
     (module (E-non-tail-call-frame)
 
       (define (E-non-tail-call-frame nfv* live body)
+	;;Process the  fields of a  NON-TAIL-CODE-FRAME struct and  return recordised
+	;;code that does *not* contain NON-TAIL-CODE-FRAME structs anymore.
 	;;
 	;;NOTE We  have to remember that:  while computing the stack  operands for an
 	;;upcoming non-tail call, we might  perform other non-tail calls; so multiple
@@ -1787,9 +1797,9 @@
 	;;
 	(let ((live-frms1 (map (lambda (i)
 				 (R-var (vector-ref locals.vars i)))
-			    (set->list (vector-ref live 0))))
-	      (live-frms2 (set->list (vector-ref live 1)))
-	      (live-nfvs  (vector-ref live 2)))
+			    (set->list (non-tail-call-frame-sets-vs live))))
+	      (live-frms2 (set->list (non-tail-call-frame-sets-fs live)))
+	      (live-nfvs  (non-tail-call-frame-sets-ns live)))
 	  (let ((idx (%actual-frame-size nfv* (fx+ 2 (max-frm live-frms1
 							      (max-nfv live-nfvs
 								       (max-ls live-frms2 0)))))))
