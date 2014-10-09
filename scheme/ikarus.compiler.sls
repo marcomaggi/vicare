@@ -7023,6 +7023,8 @@
 					    arg)
 					   ((nfv? arg)
 					    (E arg))
+					   ((fvar? arg)
+					    (E arg))
 					   (else arg)))
 				all-rand*))
 	    '(all-rand*: #f))
@@ -7043,9 +7045,17 @@
     (string->symbol (format "fvar.~a" idx)))
 
   (define (E-locals vars body E)
-    `(locals ,(if vars
-		  `(local-vars: . ,(map E vars))
-		'(local-vars: #f))
+    `(locals ,(cond ((null? vars)
+		     '(local-vars: . #f))
+		    ((list? vars)
+		     `(local-vars: . ,(let ((A (car vars)))
+					(if (vector? A)
+					    (cons (vector-map E A)
+						  (map E (cdr vars)))
+					  (map E vars)))))
+		    (else
+		     ;;This includes the case of VARS being #f.
+		     `(local-vars: ,vars)))
 	     ,(E body)))
 
 ;;; --------------------------------------------------------------------

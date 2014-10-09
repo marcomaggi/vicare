@@ -143,7 +143,7 @@
 ;;the  uplevel stack  operands  are  represented by  FVAR  structs,  while the  local
 ;;variables are represented by VAR structs having FVAR structs in their LOC field.
 ;;
-;;The case in which  we are not already in a function call  is equivalent, instead of
+;;The case in which  we are not already in a function call  is equivalent; instead of
 ;;the uplevel return address  we have the address of the  underflow handler and there
 ;;are no uplevel stack operands:
 ;;

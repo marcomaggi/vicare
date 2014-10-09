@@ -673,6 +673,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-compiler-introduce-unsafe-primrefs.sps	\
 	tests/test-vicare-compiler-specify-rep.sps			\
 	tests/test-vicare-compiler-pass-impose-eval-order.sps		\
+	tests/test-vicare-compiler-pass-assign-frame-sizes.sps		\
 	tests/test-vicare-conditions.sps				\
 	tests/test-vicare-enumerations.sps				\
 	tests/test-vicare-environment-inquiry.sps			\
