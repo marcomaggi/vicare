@@ -1445,7 +1445,7 @@
 
     (module (E-non-tail-call-frame)
 
-      (define (E-non-tail-call-frame vars live body)
+      (define (E-non-tail-call-frame nfv* live body)
 	(let ((live-frms1 (map (lambda (i)
 				 (R-var (vector-ref locals.vars i)))
 			    (set->list (vector-ref live 0))))
@@ -1471,10 +1471,10 @@
 		    (r (fxlogand idx 7)))
 		(vector-set! mask q (fxlogor (vector-ref mask q) (fxsll 1 r)))))
 	    #| end of module: make-mask |# )
-	  (let ((i (%actual-frame-size vars (fx+ 2 (max-frm live-frms1
+	  (let ((i (%actual-frame-size nfv* (fx+ 2 (max-frm live-frms1
 							    (max-nfv live-nfvs
 								     (max-ls live-frms2 0)))))))
-	    (%assign-frame-vars! vars i)
+	    (%assign-frame-locations-to-stack-operands! nfv* i)
 	    (NFE (fxsub1 i) (make-mask (fxsub1 i)) body))))
 
 ;;; --------------------------------------------------------------------
@@ -1503,17 +1503,17 @@
 
       (module (%actual-frame-size)
 
-	(define (%actual-frame-size vars i)
-	  (if (%frame-size-ok? i vars)
+	(define (%actual-frame-size nfv* i)
+	  (if (%frame-size-ok? i nfv*)
 	      i
-	    (%actual-frame-size vars (fxadd1 i))))
+	    (%actual-frame-size nfv* (fxadd1 i))))
 
-	(define (%frame-size-ok? i vars)
-	  (or (null? vars)
-	      (let ((x (car vars)))
+	(define (%frame-size-ok? i nfv*)
+	  (or (null? nfv*)
+	      (let ((x (car nfv*)))
 		(and (not (set-member?    i ($nfv-frm-conf x)))
 		     (not (%var-conflict? i ($nfv-var-conf x)))
-		     (%frame-size-ok? (fxadd1 i) (cdr vars))))))
+		     (%frame-size-ok? (fxadd1 i) (cdr nfv*))))))
 
 	(define (%var-conflict? i vs)
 	  (ormap (lambda (xi)
@@ -1524,30 +1524,35 @@
 
 	#| end of module: %actual-frame-size |# )
 
-      (define (%assign-frame-vars! vars i)
-	(when (pair? vars)
-	  (let ((v  (car vars))
-		(fv (mkfvar i)))
-	    ($set-nfv-loc! v fv)
+      (define (%assign-frame-locations-to-stack-operands! rand*.nfv i)
+	;;Tail recursive  function.  For each  NFV struct in the  argument RAND*.NFV,
+	;;representing  a  stack operand  in  a  soon-to-be-performed non-tail  call:
+	;;allocate a  FVAR struct  to serve  as actual stack  location for  the stack
+	;;operand.
+	;;
+	(when (pair? rand*.nfv)
+	  (let ((rand.nfv  (car rand*.nfv))
+		(rand.fvar (mkfvar i)))
+	    ($set-nfv-loc! rand.nfv rand.fvar)
 	    (for-each (lambda (x)
 			(let ((loc ($nfv-loc x)))
 			  (if loc
 			      (when (fx=? ($fvar-idx loc) i)
 				(compiler-internal-error __module_who__ "invalid assignment"))
 			    (begin
-			      ($set-nfv-nfv-conf! x (rem-nfv v  ($nfv-nfv-conf x)))
-			      ($set-nfv-frm-conf! x (add-frm fv ($nfv-frm-conf x)))))))
-	      ($nfv-nfv-conf v))
+			      ($set-nfv-nfv-conf! x (rem-nfv rand.nfv  ($nfv-nfv-conf x)))
+			      ($set-nfv-frm-conf! x (add-frm rand.fvar ($nfv-frm-conf x)))))))
+	      ($nfv-nfv-conf rand.nfv))
 	    (for-each-var
-		($nfv-var-conf v)
+		($nfv-var-conf rand.nfv)
 		locals.vars
 	      (lambda (x)
 		(let ((loc ($var-loc x)))
 		  (if (fvar? loc)
 		      (when (fx=? (fvar-idx loc) i)
 			(compiler-internal-error __module_who__ "invalid assignment"))
-		    ($set-var-frm-conf! x (add-frm fv ($var-frm-conf x))))))))
-	  (%assign-frame-vars! (cdr vars) (fxadd1 i))))
+		    ($set-var-frm-conf! x (add-frm rand.fvar ($var-frm-conf x))))))))
+	  (%assign-frame-locations-to-stack-operands! (cdr rand*.nfv) (fxadd1 i))))
 
 ;;; --------------------------------------------------------------------
 
