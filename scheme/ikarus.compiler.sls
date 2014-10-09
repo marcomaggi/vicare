@@ -6356,6 +6356,7 @@
     ;;
     (import SCHEME-OBJECTS-ONTOLOGY)
     (define E unparse-recordised-code)
+    (define E-nfv (make-E-nfv))
     (struct-case x
       ((constant)
        (E-constant x E))
@@ -6463,8 +6464,8 @@
       ((fvar idx)
        (E-fvar idx))
 
-      ((nfv idx)
-       (E-nfv idx))
+      ((nfv)
+       (E-nfv x))
 
       ((locals vars body)
        (E-locals vars body E))
@@ -6626,8 +6627,8 @@
 	((fvar idx)
 	 (E-fvar idx))
 
-	((nfv idx)
-	 (E-nfv idx))
+	((nfv)
+	 (E-nfv x))
 
 	((asm-instr op d s)
 	 `(asm-instr ,op ,(E d) ,(E s)))
@@ -6647,6 +6648,7 @@
 	(else x)))
 
       (define E-var (make-E-var E))
+      (define E-nfv (make-E-nfv))
 
       (E input-expr))
 
@@ -6789,8 +6791,8 @@
 	((fvar idx)
 	 (E-fvar idx))
 
-	((nfv idx)
-	 (E-nfv idx))
+	((nfv)
+	 (E-nfv x))
 
 	((asm-instr op d s)
 	 `(asm-instr ,op ,(E d) ,(E s)))
@@ -6810,6 +6812,7 @@
 	(else x)))
 
     (define E-var (make-E-var E))
+    (define E-nfv (make-E-nfv))
 
     (E input-expr))
 
@@ -6910,6 +6913,8 @@
 	     (else
 	      `(constant ,x.const))))))
 
+;;; --------------------------------------------------------------------
+
   (module (make-E-var)
     ;;Given a struct instance X of type  PRELEX or VAR, identifying the location of a
     ;;binding: return a  symbol representing a unique name for  the binding.  The map
@@ -6955,6 +6960,33 @@
 	  (hashtable-set! H x sym))))
 
     #| end of module: make-E-var |# )
+
+;;; --------------------------------------------------------------------
+
+  (define (make-E-nfv)
+    ;;Given a struct instance  X of type NFV, identifying the  location of a non-tail
+    ;;call stack operand: return a symbol representing a unique name for the operand.
+    ;;The map between structures and symbols is cached in a hash table.
+    ;;
+    (define H
+      ;;Map NFV structures to already built operand name symbols.
+      (make-eq-hashtable))
+    (define T
+      ;;Map  operand pretty  string names  to number  of times  this string  name has
+      ;;already been used.
+      (make-hashtable string-hash string=?))
+    (lambda (x)
+      (or (hashtable-ref H x #f)
+	  (struct-case x
+	    ((nfv idx)
+	     (let* ((name (format "nfv.~a" idx))
+		    (N    (hashtable-ref T name 0)))
+	       (hashtable-set! T name (+ N 1))
+	       (receive-and-return (sym)
+		   (string->symbol (string-append name "_" (number->string N)))
+		 (hashtable-set! H x sym))))))))
+
+;;; --------------------------------------------------------------------
 
   (define (E-seq e0 e1 E)
     (cons 'seq
@@ -7009,9 +7041,6 @@
 
   (define (E-fvar idx)
     (string->symbol (format "fvar.~a" idx)))
-
-  (define (E-nfv idx)
-    (string->symbol (format "nfv.~a" idx)))
 
   (define (E-locals vars body E)
     `(locals ,(if vars
