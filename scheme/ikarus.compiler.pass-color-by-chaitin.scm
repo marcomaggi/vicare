@@ -685,7 +685,7 @@
 
 (define (do-spill sp* varvec)
   (module (for-each-var add-frm rem-var mem-frm?)
-    (import FRAME-CONFLICT-HELPERS))
+    (import FRAME-CONFLICT-SETS))
   (define (find/set-loc x)
     (let loop ((i    1)
 	       (conf ($var-frm-conf x)))

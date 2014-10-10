@@ -15,7 +15,7 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(module (assign-frame-sizes FRAME-CONFLICT-HELPERS)
+(module (assign-frame-sizes FRAME-CONFLICT-SETS)
   ;;
   ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
   ;;recordized code must be composed by struct instances of the following types:
@@ -630,7 +630,7 @@
   #| end of module: INTEGER-SET |# )
 
 
-(module FRAME-CONFLICT-HELPERS
+(module FRAME-CONFLICT-SETS
   (empty-var-set rem-var add-var union-vars mem-var? for-each-var init-var*!
    empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv init-nfv!
    empty-frm-set rem-frm add-frm union-frms mem-frm?
@@ -815,7 +815,7 @@
   (define-syntax-rule (for-each-nfv ?ns ?func)
     (for-each ?func ?ns))
 
-  #| end of module: FRAME-CONFLICT-HELPERS |# )
+  #| end of module: FRAME-CONFLICT-SETS |# )
 
 
 (module (E-codes)
@@ -840,7 +840,7 @@
     ;;return a new struct instance of type LOCALS which is meant to replace X.
     ;;
     (module (init-var*!)
-      (import FRAME-CONFLICT-HELPERS))
+      (import FRAME-CONFLICT-SETS))
     (struct-case x
       ((locals vars body)
        (init-var*! vars)
@@ -879,7 +879,7 @@
   ;;value of the INDEX of the VAR struct itself.
   ;;
   ;;Throughout this function the arguments VS, RS,  FS, NS are sets as defined by the
-  ;;module FRAME-CONFLICT-HELPERS (they are not all instances of the same type):
+  ;;module FRAME-CONFLICT-SETS (they are not all instances of the same type):
   ;;
   ;;VS -  A collection of VAR  structs; it is always  a non-strict subset of  the VAR
   ;;     structs listed in LOCALS.VARS.
@@ -935,7 +935,7 @@
   ;;argument LOCALS.VARS.
   ;;
   (import INTEGER-SET)
-  (import FRAME-CONFLICT-HELPERS)
+  (import FRAME-CONFLICT-SETS)
   (module (register?
 	   eax ecx edx
 	   AA-REGISTER CP-REGISTER AP-REGISTER FP-REGISTER PC-REGISTER)
@@ -1651,7 +1651,7 @@
   (module (set-member? set-difference set->list)
     (import INTEGER-SET))
   (module (for-each-var rem-nfv add-frm)
-    (import FRAME-CONFLICT-HELPERS))
+    (import FRAME-CONFLICT-SETS))
   (module (register?)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
 
@@ -2029,7 +2029,7 @@
 	    (else x)))
 
     (module (%assign)
-      (import FRAME-CONFLICT-HELPERS)
+      (import FRAME-CONFLICT-SETS)
 
       (define (%assign x.var locals.vars)
 	(or (%assign-move x.var locals.vars)
