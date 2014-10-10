@@ -273,152 +273,143 @@
 ;;to perform another non-tail function call;  this happens for example in expressions
 ;;like:
 ;;
-;;   (f (g 1) (h 2))
+;;   (let ((f (lambda (a b) (_  a b)))
+;;         (g (lambda (y)   (_ '1 y)))
+;;         (h (lambda (z)   (_ '2 z))))
+;;     (begin
+;;       (f (g '3) (h '4))
+;;       '5))
 ;;
 ;;to compute the stack operands  of the call to F, we need to call  G and then H.  So
-;;let's consider the recordised code:
+;;let's consider  the recordised code (which  is an excerpt  from a test in  the test
+;;suite):
 ;;
 ;;   (non-tail-call-frame
 ;;     (rand*: nfv.1_0 nfv.2_0)
 ;;     (live: ---)
 ;;     (seq
-;;       ---
+;;
 ;;       (non-tail-call-frame
-;;         (rand*: nfv.1_1 nfv.2_1)
+;;         (rand*: nfv.1_1)
 ;;         (live: ---)
 ;;         (seq
-;;           ...
+;;           (asm-instr move nfv.1_1 (constant 24))
+;;           ---
 ;;           (non-tail-call
-;;             ---
-;;             (all-rand*: AAR APR CPR FPR PCR nfv.1_1 nfv.2_1)
-;;             ---)))
-;;       ---
+;;             (target: asmlabel:g:clambda:case-1)
+;;             (retval-var: nfv.1_0)
+;;             (all-rand*: AAR APR CPR FPR PCR nfv.1_1)
+;;             (mask: #f)
+;;             (size: #f))))
+;;       (asm-instr move nfv.1_0 AAR)
+;;
+;;       (non-tail-call-frame
+;;         (rand*: nfv.1_2)
+;;         (live: #f)
+;;         (seq
+;;           (asm-instr move nfv.1_2 (constant 32))
+;;           ---
+;;           (non-tail-call
+;;             (target: asmlabel:h:clambda:case-1)
+;;             (retval-var: nfv.2_0)
+;;             (all-rand*: AAR APR CPR FPR PCR nfv.1_2)
+;;             (mask: #f)
+;;             (size: #f))))
+;;       (asm-instr move nfv.2_0 AAR)
+;;
 ;;       (non-tail-call
-;;         ---
+;;         (target: asmlabel:f:clambda:case-2)
+;;         (retval-var: #f)
 ;;         (all-rand*: AAR APR CPR FPR PCR nfv.1_0 nfv.2_0)
-;;         ---)))
+;;         (mask: #f)
+;;         (size: #f))))
 ;;
 ;;what's the scenario on the stack?
 ;;
-;;Everything is  like before until we  enter the outer NON-TAIL-CALL-FRAME  and start
-;;computing the outer stack operands:
+;;Right before the first function call the stack is empty:
 ;;
 ;;           high memory
-;;   |                          |                    --
-;;               ...                                 .
-;;   |--------------------------|                    . uplevel stack frame
-;;   | uplevel return address   | <-- FPR            .
-;;   |--------------------------|                    --
-;;   | uplevel stack operand 0  | fvar.1             .
-;;   |--------------------------|                    .
-;;   | uplevel stack operand 1  | fvar.2             .
-;;   |--------------------------|                    . stack frame described
-;;   |       local var 0        | fvar.3 <- var.1    . by the outer call table
-;;   |--------------------------|                    .
-;;   |       local var 1        | fvar.4 <- var.2    .
-;;   |--------------------------|                    .
-;;   |        empty word        | fvar.5             .
-;;   |--------------------------|                    --
-;;   |       still unused       | fvar.6 <- nfv.1_0
+;;   |                          |
 ;;   |--------------------------|
-;;   |       still unused       | fvar.7 <- nfv.2_0
-;;   |--------------------------|
-;;   |     temporary var 0      | fvar.8 <- var.3
-;;   |--------------------------|
-;;   |     temporary var 1      | fvar.9 <- var.4
+;;   |     ik_stack_overflow    | <-- FPR
 ;;   |--------------------------|
 ;;   |                          |
 ;;           low memory
 ;;
-;;then we  enter the inner  NON-TAIL-CALL-FRAME and  start computing the  inner stack
-;;operands:
+;;For the non-tail call to G we prepare the Scheme stack layout:
 ;;
 ;;           high memory
-;;   |                          |                     --
-;;               ...                                  .
-;;   |--------------------------|                     . uplevel stack frame
-;;   | uplevel return address   | <-- FPR             .
-;;   |--------------------------|                     -- --
-;;   | uplevel stack operand 0  | fvar.1              .  .
-;;   |--------------------------|                     .  .
-;;   | uplevel stack operand 1  | fvar.2              .  .
-;;   |--------------------------|                     .  . stack frame described
-;;   |       local var 0        | fvar.3  <- var.1    .  . by the outer call table
-;;   |--------------------------|                     .  .
-;;   |       local var 1        | fvar.4  <- var.2    .  .
-;;   |--------------------------|                     .  .
-;;   |        empty word        | fvar.5              .  .
-;;   |--------------------------|                     .  --
-;;   |       still unused       | fvar.6  <- nfv.1_0  .
-;;   |--------------------------|                     .
-;;   |       still unused       | fvar.7  <- nfv.2_0  .
-;;   |--------------------------|                     . stack frame described
-;;   |     temporary var 0      | fvar.8  <- var.3    . by the inner call table
-;;   |--------------------------|                     .
-;;   |     temporary var 1      | fvar.9  <- var.4    .
-;;   |--------------------------|                     .
-;;   |        empty word        | fvar.10             .
-;;   |--------------------------|                     --
-;;   |       still unused       | fvar.11 <- nfv.1_1
+;;   |                          |
 ;;   |--------------------------|
-;;   |       still unused       | fvar.12 <- nfv.2_2
-;;   |--------------------------|
-;;   |     temporary var 2      | fvar.13 <- var.5
-;;   |--------------------------|
-;;   |     temporary var 3      | fvar.14 <- var.6
+;;   |     ik_stack_overflow    | <-- FPR
+;;   |--------------------------|               --
+;;   |       empty word         | <- fvar.1     . stack frame of the call to G
+;;   |--------------------------|               --
+;;   | stack operand = fixnum 3 | <- fvar.2
 ;;   |--------------------------|
 ;;   |                          |
 ;;           low memory
 ;;
-;;and when finally we are ready to perform the inner function call:
+;;where the empty word  at FVAR.1 will be filled by the  return address.  Right after
+;;the call to G has returned, the return value is moved from AAR on the stack:
 ;;
 ;;           high memory
-;;   |                          |                     --
-;;               ...                                  .
-;;   |--------------------------|                     . uplevel stack frame
-;;   | uplevel return address   | <-- FPR             .
-;;   |--------------------------|                     -- --
-;;   | uplevel stack operand 0  | fvar.1              .  .
-;;   |--------------------------|                     .  .
-;;   | uplevel stack operand 1  | fvar.2              .  .
-;;   |--------------------------|                     .  . stack frame described
-;;   |       local var 0        | fvar.3  <- var.1    .  . by the outer call table
-;;   |--------------------------|                     .  .
-;;   |       local var 1        | fvar.4  <- var.2    .  .
-;;   |--------------------------|                     .  .
-;;   |        empty word        | fvar.5              .  .
-;;   |--------------------------|                     .  --
-;;   |       still unused       | fvar.6  <- nfv.1_0  .
-;;   |--------------------------|                     .
-;;   |       still unused       | fvar.7  <- nfv.2_0  .
-;;   |--------------------------|                     . stack frame described
-;;   |     temporary var 0      | fvar.8  <- var.3    . by the inner call table
-;;   |--------------------------|                     .
-;;   |     temporary var 1      | fvar.9  <- var.4    .
-;;   |--------------------------|                     .
-;;   |        empty word        | fvar.10             .
-;;   |--------------------------|                     --
-;;   |     stack operand 0      | fvar.11 <- nfv.1_1
+;;   |                          |
 ;;   |--------------------------|
-;;   |     stack operand 1      | fvar.12 <- nfv.2_2
-;;   |--------------------------|                     --
-;;   |     temporary var 2      | fvar.13 <- var.5    .
-;;   |--------------------------|                     . no more needed
-;;   |     temporary var 3      | fvar.14 <- var.6    .
-;;   |--------------------------|                     --
+;;   |     ik_stack_overflow    | <-- FPR
+;;   |--------------------------|
+;;   |       empty word         | <- fvar.1
+;;   |--------------------------|
+;;   |      G return value      | <- fvar.2
+;;   |--------------------------|
 ;;   |                          |
 ;;           low memory
 ;;
-;;we see  that the  stack frame of  the inner function  call includes:  the temporary
-;;variables of the outer  function call FVAR.9 and FVAR.8, which are  in use; the NFV
-;;locations of the outer function call FVAR.7 and FVAR.6, which are still unused; the
-;;empty word  that will hold  the return address of  the outer function  call FVAR.5,
-;;which is still unused.
+;;For the non-tail call to H we prepare the Scheme stack layout:
 ;;
-;;So, at the time we perform the inner  function call: some of the stack locations in
-;;the stack frame hold "live" objects, while  others are unused.  The livemask in the
-;;call table  has the  purpose of  tracing which is  which and  to allow  the garbage
-;;collector to do the right thing.
+;;           high memory
+;;   |                          |
+;;   |--------------------------|
+;;   |     ik_stack_overflow    | <-- FPR
+;;   |--------------------------|               --
+;;   |       empty word         | <- fvar.1     .
+;;   |--------------------------|               .
+;;   |      G return value      | <- fvar.2     . stack frame of the call to H
+;;   |--------------------------|               .
+;;   |       empty word         | <- fvar.3     .
+;;   |--------------------------|               --
+;;   | stack operand = fixnum 4 | <- fvar.4
+;;   |--------------------------|
+;;   |                          |
+;;           low memory
+;;
+;;where the empty word at FVAR.3 will be filled by the return address; the empty word
+;;at FVAR.1 is left empty and untouched.  Right after the call to H has returned, the
+;;return value is moved from AAR on the stack:
+;;
+;;           high memory
+;;   |                          |
+;;   |--------------------------|
+;;   |     ik_stack_overflow    | <-- FPR
+;;   |--------------------------|               --
+;;   |       empty word         | <- fvar.1     . stack frame of the call to F
+;;   |--------------------------|               --
+;;   |      G return value      | <- fvar.2
+;;   |--------------------------|
+;;   |      H return value      | <- fvar.3
+;;   |--------------------------|
+;;   |                          |
+;;           low memory
+;;
+;;and we are ready to  call F; the empty word at FVAR.1 will  be filled by the return
+;;address.
+;;
+;;So we see that  the stack frame of the inner function call  to H includes the empty
+;;word that will  be used to store the return  address in the call to F.   So, at the
+;;time we perform  the inner function call to  H: some of the stack  locations in the
+;;stack frame hold "live" objects, while others are unused.  The livemask in the call
+;;table has the purpose of tracing which  is which and to allow the garbage collector
+;;to do the right thing.
 ;;
 
 

@@ -182,9 +182,13 @@
 ;;;We want to show  what happens when we perform a non-tail  call while preparing the
 ;;;stack operands for a non-tail call.
 
+;;;To make things  simpler: we use "_"  as function name, without  defining a binding
+;;;for "_";  whenever the  compiler finds  a standalone symbol,  it interprets  it as
+;;;variable reference.
+
   (check
-      (%specify-representation '(let ((f (lambda (x) (+ '1 x)))
-				      (g (lambda (y) (+ '2 y))))
+      (%specify-representation '(let ((f (lambda (x) (_ '1 x)))
+				      (g (lambda (y) (_ '2 y))))
 				  (begin
 				    (f (g '3))
 				    '4)))
@@ -195,8 +199,8 @@
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
 		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
-	       ;;Tail call to the core primitive function "+".
-	       (funcall (asmcall mref (constant (object +)) (constant 27))
+	       ;;Tail call to the fake function "_".
+	       (funcall (asmcall mref (constant (object _)) (constant 27))
 		 (constant 16) y_0)))
 	  (lambda (label: asmlabel:f:clambda) (cp_1 x_0)
 	     (seq
@@ -204,8 +208,8 @@
 	       (shortcut
 		   (asmcall incr/zero? %esi (constant 72) (constant 8))
 		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
-	       ;;Tail call to the core primitive function "+".
-	       (funcall (asmcall mref (constant (object +)) (constant 27))
+	       ;;Tail call to the core primitive function "_".
+	       (funcall (asmcall mref (constant (object _)) (constant 27))
 		 (constant 8) x_0))))
 	 (seq
 	   ;;Core primitive operation $STACK-OVERFLOW-CHECK.
@@ -230,8 +234,8 @@
 ;;; --------------------------------------------------------------------
 
   (check
-      (%impose-eval-order '(let ((f (lambda (x) (+ '1 x)))
-				 (g (lambda (y) (+ '2 y))))
+      (%impose-eval-order '(let ((f (lambda (x) (_ '1 x)))
+				 (g (lambda (y) (_ '2 y))))
 			     (begin
 			       (f (g '3))
 			       '4)))
@@ -256,9 +260,9 @@
 			(all-rand*: %eax %ebp %edi %esp %esi)
 			(mask: #f)
 			(size: #f)))))
-		;;Tail call to the core primitive function "+".
+		;;Tail call to the fake function "_".
 		(asm-instr move tmp_1 fvar.1)
-		(asm-instr move tmp_2 (disp (constant (object +)) (constant 27)))
+		(asm-instr move tmp_2 (disp (constant (object _)) (constant 27)))
 		(asm-instr move fvar.1 (constant 16))
 		(asm-instr move fvar.2 tmp_1)
 		(asm-instr move %edi tmp_2)
@@ -285,9 +289,9 @@
 			(all-rand*: %eax %ebp %edi %esp %esi)
 			(mask: #f)
 			(size: #f)))))
-		;;Tail call to the core primitive function "+".
+		;;Tail call to the fake function "_".
 		(asm-instr move tmp_4 fvar.1)
-		(asm-instr move tmp_5 (disp (constant (object +)) (constant 27)))
+		(asm-instr move tmp_5 (disp (constant (object _)) (constant 27)))
 		(asm-instr move fvar.1 (constant 8))
 		(asm-instr move fvar.2 tmp_4)
 		(asm-instr move %edi tmp_5)
@@ -363,8 +367,8 @@
 
 ;;; --------------------------------------------------------------------
 
-  (doit (let ((f (lambda (x) (+ '1 x)))
-	      (g (lambda (y) (+ '2 y))))
+  (doit (let ((f (lambda (x) (_ '1 x)))
+	      (g (lambda (y) (_ '2 y))))
 	  (begin
 	    (f (g '3))
 	    '4))
@@ -388,7 +392,7 @@
 		      (mask: #(2))
 		      (size: 2))))
 		(asm-instr move tmp_1 fvar.1)
-		(asm-instr move tmp_2 (disp (constant (object +)) (constant 27)))
+		(asm-instr move tmp_2 (disp (constant (object _)) (constant 27)))
 		(asm-instr move fvar.1 (constant 16))
 		(asm-instr move fvar.2 tmp_1)
 		(asm-instr move %edi tmp_2)
@@ -413,7 +417,7 @@
 		     (mask: #(2))
 		     (size: 2))))
 	       (asm-instr move tmp_4 fvar.1)
-	       (asm-instr move tmp_5 (disp (constant (object +)) (constant 27)))
+	       (asm-instr move tmp_5 (disp (constant (object _)) (constant 27)))
 	       (asm-instr move fvar.1 (constant 8))
 	       (asm-instr move fvar.2 tmp_4)
 	       (asm-instr move %edi tmp_5)
@@ -471,6 +475,451 @@
 	      (mask: #(0))
 	      (size: 1))
 	    (asm-instr move %eax (constant 32))
+	    (asmcall return %eax %ebp %esp %esi)))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'nested-non-tail-calls-2))
+
+;;;We want to show  what happens when we perform a non-tail  call while preparing the
+;;;stack operands for a non-tail call.
+
+;;;To make things  simpler: we use "_"  as function name, without  defining a binding
+;;;for "_";  whenever the  compiler finds  a standalone symbol,  it interprets  it as
+;;;variable reference.
+
+  (check
+      (%specify-representation '(let ((f (lambda (a b) (_ a b)))
+				      (g (lambda (y) (_ '1 y)))
+				      (h (lambda (z) (_ '2 z))))
+				  (begin
+				    (f (g '3) (h '4))
+				    '5)))
+    => '(codes
+	 ((lambda (label: asmlabel:h:clambda) (cp_0 z_0)
+	     (seq
+	       (shortcut
+		   (asmcall incr/zero? %esi (constant 72) (constant 8))
+		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	       (funcall (asmcall mref (constant (object _)) (constant 27))
+		 (constant 16) z_0)))
+	  (lambda (label: asmlabel:g:clambda) (cp_1 y_0)
+	     (seq
+	       (shortcut
+		   (asmcall incr/zero? %esi (constant 72) (constant 8))
+		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	       (funcall (asmcall mref (constant (object _)) (constant 27))
+		 (constant 8) y_0)))
+	  (lambda (label: asmlabel:f:clambda) (cp_2 a_0 b_0)
+	     (seq
+	       (shortcut
+		   (asmcall incr/zero? %esi (constant 72) (constant 8))
+		 (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	       (funcall (asmcall mref (constant (object _)) (constant 27))
+		 a_0 b_0))))
+	 (seq
+	   (shortcut
+	       (conditional (asmcall u< %esp (asmcall mref %esi (constant 32)))
+		   (asmcall interrupt)
+		 (asmcall nop))
+	     (foreign-call "ik_stack_overflow"))
+	   (shortcut
+	       (asmcall incr/zero? %esi (constant 72) (constant 8))
+	     (funcall (asmcall mref (constant (object $do-event)) (constant 19))))
+	   (jmpcall asmlabel:f:clambda:case-2
+		    (bind ((tmp_0 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars))))
+		      tmp_0)
+		    (jmpcall asmlabel:g:clambda:case-1
+			     (bind ((tmp_1 (constant (closure-maker (code-loc asmlabel:g:clambda) no-freevars))))
+			       tmp_1)
+			     (constant 24))
+		    (jmpcall asmlabel:h:clambda:case-1
+			     (bind ((tmp_2 (constant (closure-maker (code-loc asmlabel:h:clambda) no-freevars))))
+			       tmp_2)
+			     (constant 32)))
+	   (constant 40))))
+
+;;; --------------------------------------------------------------------
+
+  (check
+      (%impose-eval-order '(let ((f (lambda (a b) (_ a b)))
+				 (g (lambda (y) (_ '1 y)))
+				 (h (lambda (z) (_ '2 z))))
+			     (begin
+			       (f (g '3) (h '4))
+			       '5)))
+    => '(codes
+	 ((lambda (label: asmlabel:h:clambda) (%edi fvar.1)
+	     (locals
+	      (local-vars: tmp_0 tmp_1 tmp_2 cp_0)
+	      (seq
+		(asm-instr move cp_0 %edi)
+		(shortcut
+		    (asmcall incr/zero? %esi (constant 72) (constant 8))
+		  (non-tail-call-frame
+		    (rand*: #f)
+		    (live: #f)
+		    (seq
+		      (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move %edi tmp_0)
+		      (asm-instr move %eax (constant 0))
+		      (non-tail-call
+			(target: #f)
+			(retval-var: #f)
+			(all-rand*: %eax %ebp %edi %esp %esi)
+			(mask: #f)
+			(size: #f)))))
+		(asm-instr move tmp_1 fvar.1)
+		(asm-instr move tmp_2 (disp (constant (object _)) (constant 27)))
+		(asm-instr move fvar.1 (constant 16))
+		(asm-instr move fvar.2 tmp_1)
+		(asm-instr move %edi tmp_2)
+		(asm-instr move %eax (constant -16))
+		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2))))
+	  (lambda (label: asmlabel:g:clambda) (%edi fvar.1)
+	     (locals
+	      (local-vars: tmp_3 tmp_4 tmp_5 cp_1)
+	      (seq
+		(asm-instr move cp_1 %edi)
+		(shortcut
+		    (asmcall incr/zero? %esi (constant 72) (constant 8))
+		  (non-tail-call-frame
+		    (rand*: #f)
+		    (live: #f)
+		    (seq
+		      (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move %edi tmp_3)
+		      (asm-instr move %eax (constant 0))
+		      (non-tail-call
+			(target: #f)
+			(retval-var: #f)
+			(all-rand*: %eax %ebp %edi %esp %esi)
+			(mask: #f)
+			(size: #f)))))
+		(asm-instr move tmp_4 fvar.1)
+		(asm-instr move tmp_5 (disp (constant (object _)) (constant 27)))
+		(asm-instr move fvar.1 (constant 8))
+		(asm-instr move fvar.2 tmp_4)
+		(asm-instr move %edi tmp_5)
+		(asm-instr move %eax (constant -16))
+		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2))))
+	  (lambda (label: asmlabel:f:clambda) (%edi fvar.1 fvar.2)
+	     (locals
+	      (local-vars: tmp_6 tmp_7 cp_2)
+	      (seq
+		(asm-instr move cp_2 %edi)
+		(shortcut
+		    (asmcall incr/zero? %esi (constant 72) (constant 8))
+		  (non-tail-call-frame
+		    (rand*: #f)
+		    (live: #f)
+		    (seq
+		      (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		      (asm-instr move %edi tmp_6)
+		      (asm-instr move %eax (constant 0))
+		      (non-tail-call
+			(target: #f)
+			(retval-var: #f)
+			(all-rand*: %eax %ebp %edi %esp %esi)
+			(mask: #f)
+			(size: #f)))))
+		(asm-instr move tmp_7 (disp (constant (object _)) (constant 27)))
+		(asm-instr move %edi tmp_7)
+		(asm-instr move %eax (constant -16))
+		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))
+	 (locals
+	  (local-vars: tmp_8 tmp_9 tmp_10 tmp_11 tmp_12 tmp_13 tmp_14)
+	  (seq
+	    (shortcut
+		(conditional (asm-instr u< %esp (disp %esi (constant 32)))
+		    (asmcall interrupt)
+		  (asmcall nop))
+	      (non-tail-call-frame
+		(rand*: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move %edi (constant (foreign-label "ik_stack_overflow")))
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target: "ik_stack_overflow")
+		    (retval-var: #f)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
+		    (mask: #f)
+		    (size: #f)))))
+	    (shortcut
+		(asmcall incr/zero? %esi (constant 72) (constant 8))
+	      (non-tail-call-frame
+		(rand*: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move tmp_8 (disp (constant (object $do-event)) (constant 19)))
+		  (asm-instr move %edi tmp_8)
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target: #f)
+		    (retval-var: #f)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
+		    (mask: #f)
+		    (size: #f)))))
+
+	    (non-tail-call-frame
+	      (rand*: nfv.1_0 nfv.2_0)
+	      (live: #f)
+	      (seq
+		(non-tail-call-frame
+		  (rand*: nfv.1_1)
+		  (live: #f)
+		  (seq
+		    (asm-instr move nfv.1_1 (constant 24))
+		    (asm-instr move tmp_9 (constant (closure-maker (code-loc asmlabel:g:clambda) no-freevars)))
+		    (asm-instr move tmp_10 tmp_9)
+		    (asm-instr move %edi tmp_10)
+		    (asm-instr move %eax (constant -8))
+		    (non-tail-call
+		      (target: asmlabel:g:clambda:case-1)
+		      (retval-var: nfv.1_0)
+		      (all-rand*: %eax %ebp %edi %esp %esi nfv.1_1)
+		      (mask: #f)
+		      (size: #f))))
+		(asm-instr move nfv.1_0 %eax)
+
+		(non-tail-call-frame
+		  (rand*: nfv.1_2)
+		  (live: #f)
+		  (seq
+		    (asm-instr move nfv.1_2 (constant 32))
+		    (asm-instr move tmp_11 (constant (closure-maker (code-loc asmlabel:h:clambda) no-freevars)))
+		    (asm-instr move tmp_12 tmp_11)
+		    (asm-instr move %edi tmp_12)
+		    (asm-instr move %eax (constant -8))
+		    (non-tail-call
+		      (target: asmlabel:h:clambda:case-1)
+		      (retval-var: nfv.2_0)
+		      (all-rand*: %eax %ebp %edi %esp %esi nfv.1_2)
+		      (mask: #f)
+		      (size: #f))))
+		(asm-instr move nfv.2_0 %eax)
+
+		(asm-instr move tmp_13 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
+		(asm-instr move tmp_14 tmp_13)
+		(asm-instr move %edi tmp_14)
+		(asm-instr move %eax (constant -16))
+		(non-tail-call
+		  (target: asmlabel:f:clambda:case-2)
+		  (retval-var: #f)
+		  (all-rand*: %eax %ebp %edi %esp %esi nfv.1_0 nfv.2_0)
+		  (mask: #f)
+		  (size: #f))))
+
+	    (asm-instr move %eax (constant 40))
+	    (asmcall return %eax %ebp %esp %esi)))))
+
+;;; --------------------------------------------------------------------
+
+  (doit (let ((f (lambda (a b) (_ a b)))
+	      (g (lambda (y) (_ '1 y)))
+	      (h (lambda (z) (_ '2 z))))
+	  (begin
+	    (f (g '3) (h '4))
+	    '5))
+	(codes
+	 ((lambda (label: asmlabel:h:clambda) (%edi fvar.1)
+	     (locals
+	      (local-vars: #(tmp_0 tmp_1 tmp_2 cp_0)
+			   tmp_0 tmp_1 tmp_2 cp_0)
+	      (seq
+		(asmcall nop)
+		(shortcut
+		    (asmcall incr/zero? %esi (constant 72) (constant 8))
+		  (seq
+		    (asm-instr move tmp_0 (disp (constant (object $do-event)) (constant 19)))
+		    (asm-instr move %edi tmp_0)
+		    (asm-instr move %eax (constant 0))
+		    (non-tail-call
+		      (target: #f)
+		      (retval-var: #f)
+		      (all-rand*: %eax %ebp %edi %esp %esi)
+		      (mask: #(2))
+		      (size: 2))))
+		(asm-instr move tmp_1 fvar.1)
+		(asm-instr move tmp_2 (disp (constant (object _)) (constant 27)))
+		(asm-instr move fvar.1 (constant 16))
+		(asm-instr move fvar.2 tmp_1)
+		(asm-instr move %edi tmp_2)
+		(asm-instr move %eax (constant -16))
+		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2))))
+	  (lambda (label: asmlabel:g:clambda) (%edi fvar.1)
+	     (locals
+	      (local-vars: #(tmp_3 tmp_4 tmp_5 cp_1)
+			   tmp_3 tmp_4 tmp_5 cp_1)
+	      (seq
+		(asmcall nop)
+		(shortcut
+		    (asmcall incr/zero? %esi (constant 72) (constant 8))
+		  (seq
+		    (asm-instr move tmp_3 (disp (constant (object $do-event)) (constant 19)))
+		    (asm-instr move %edi tmp_3)
+		    (asm-instr move %eax (constant 0))
+		    (non-tail-call
+		      (target: #f)
+		      (retval-var: #f)
+		      (all-rand*: %eax %ebp %edi %esp %esi)
+		      (mask: #(2))
+		      (size: 2))))
+		(asm-instr move tmp_4 fvar.1)
+		(asm-instr move tmp_5 (disp (constant (object _)) (constant 27)))
+		(asm-instr move fvar.1 (constant 8))
+		(asm-instr move fvar.2 tmp_4)
+		(asm-instr move %edi tmp_5)
+		(asm-instr move %eax (constant -16))
+		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2))))
+	  (lambda (label: asmlabel:f:clambda) (%edi fvar.1 fvar.2)
+	     (locals
+	      (local-vars: #(tmp_6 tmp_7 cp_2)
+			   tmp_6 tmp_7 cp_2)
+	      (seq
+		(asmcall nop)
+		(shortcut
+		    (asmcall incr/zero? %esi (constant 72) (constant 8))
+		  (seq
+		    (asm-instr move tmp_6 (disp (constant (object $do-event)) (constant 19)))
+		    (asm-instr move %edi tmp_6)
+		    (asm-instr move %eax (constant 0))
+		    (non-tail-call
+		      (target: #f)
+		      (retval-var: #f)
+		      (all-rand*: %eax %ebp %edi %esp %esi)
+		      (mask: #(6))
+		      (size: 3))))
+		(asm-instr move tmp_7 (disp (constant (object _)) (constant 27)))
+		(asm-instr move %edi tmp_7)
+		(asm-instr move %eax (constant -16))
+		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))
+	 (locals
+	  (local-vars: #(tmp_8 tmp_9 tmp_10 tmp_11 tmp_12 tmp_13 tmp_14)
+		       tmp_8 tmp_9 tmp_10 tmp_11 tmp_12 tmp_13 tmp_14)
+	  (seq
+	    (shortcut
+		(conditional (asm-instr u< %esp (disp %esi (constant 32)))
+		    (asmcall interrupt)
+		  (asmcall nop))
+	      (seq
+		(asm-instr move %edi (constant (foreign-label "ik_stack_overflow")))
+		(asm-instr move %eax (constant 0))
+		(non-tail-call
+		  (target: "ik_stack_overflow")
+		  (retval-var: #f)
+		  (all-rand*: %eax %ebp %edi %esp %esi)
+		  (mask: #(0))
+		  (size: 1))))
+	    (shortcut
+		(asmcall incr/zero? %esi (constant 72) (constant 8))
+	      (seq
+		(asm-instr move tmp_8 (disp (constant (object $do-event)) (constant 19)))
+		(asm-instr move %edi tmp_8)
+		(asm-instr move %eax (constant 0))
+		(non-tail-call
+		  (target: #f)
+		  (retval-var: #f)
+		  (all-rand*: %eax %ebp %edi %esp %esi)
+		  (mask: #(0))
+		  (size: 1))))
+
+	    ;;For the non-tail call to G we prepare the Scheme stack layout:
+	    ;;
+	    ;;           high memory
+	    ;;   |                          |
+	    ;;   |--------------------------|
+	    ;;   |     ik_stack_overflow    | <-- FPR
+	    ;;   |--------------------------|
+	    ;;   |       empty word         | <- fvar.1
+	    ;;   |--------------------------|
+	    ;;   | stack operand = fixnum 3 | <- fvar.2
+	    ;;   |--------------------------|
+	    ;;   |                          |
+	    ;;           low memory
+	    ;;
+	    ;;where the FVAR.1 will be filled by the return address.
+	    ;;
+	    (asm-instr move fvar.2 (constant 24))
+	    (asm-instr move tmp_9 (constant (closure-maker (code-loc asmlabel:g:clambda) no-freevars)))
+	    (asm-instr move tmp_10 tmp_9)
+	    (asm-instr move %edi tmp_10)
+	    (asm-instr move %eax (constant -8))
+	    (non-tail-call
+	      (target: asmlabel:g:clambda:case-1)
+	      (retval-var: (nfv.1_0 . fvar.2))
+	      (all-rand*: %eax %ebp %edi %esp %esi fvar.2)
+	      (mask: #(0))
+	      (size: 1))
+	    (asm-instr move fvar.2 %eax)
+
+	    ;;For the non-tail call to H we prepare the Scheme stack layout:
+	    ;;
+	    ;;           high memory
+	    ;;   |                          |
+	    ;;   |--------------------------|
+	    ;;   |     ik_stack_overflow    | <-- FPR
+	    ;;   |--------------------------|
+	    ;;   |       empty word         | <- fvar.1
+	    ;;   |--------------------------|
+	    ;;   |      G return value      | <- fvar.2
+	    ;;   |--------------------------|
+	    ;;   |       empty word         | <- fvar.3
+	    ;;   |--------------------------|
+	    ;;   | stack operand = fixnum 4 | <- fvar.4
+	    ;;   |--------------------------|
+	    ;;   |                          |
+	    ;;           low memory
+	    ;;
+	    ;;where the FVAR.3 will be filled by the return address.
+	    ;;
+	    (asm-instr move fvar.4 (constant 32))
+	    (asm-instr move tmp_11 (constant (closure-maker (code-loc asmlabel:h:clambda) no-freevars)))
+	    (asm-instr move tmp_12 tmp_11)
+	    (asm-instr move %edi tmp_12)
+	    (asm-instr move %eax (constant -8))
+	    (non-tail-call
+	      (target: asmlabel:h:clambda:case-1)
+	      (retval-var: (nfv.2_0 . fvar.3))
+	      (all-rand*: %eax %ebp %edi %esp %esi fvar.4)
+	      (mask: #(4))
+	      (size: 3))
+	    (asm-instr move fvar.3 %eax)
+
+	    ;;For the non-tail call to F we prepare the Scheme stack layout:
+	    ;;
+	    ;;           high memory
+	    ;;   |                          |
+	    ;;   |--------------------------|
+	    ;;   |     ik_stack_overflow    | <-- FPR
+	    ;;   |--------------------------|
+	    ;;   |       empty word         | <- fvar.1
+	    ;;   |--------------------------|
+	    ;;   |      G return value      | <- fvar.2
+	    ;;   |--------------------------|
+	    ;;   |      H return value      | <- fvar.3
+	    ;;   |--------------------------|
+	    ;;   |                          | <- fvar.4
+	    ;;   |--------------------------|
+	    ;;   |                          |
+	    ;;           low memory
+	    ;;
+	    ;;where the FVAR.1 will be filled by the return address.
+	    ;;
+	    (asm-instr move tmp_13 (constant (closure-maker (code-loc asmlabel:f:clambda) no-freevars)))
+	    (asm-instr move tmp_14 tmp_13)
+	    (asm-instr move %edi tmp_14)
+	    (asm-instr move %eax (constant -16))
+	    (non-tail-call
+	      (target: asmlabel:f:clambda:case-2)
+	      (retval-var: #f)
+	      (all-rand*: %eax %ebp %edi %esp %esi fvar.2 fvar.3)
+	      (mask: #(0))
+	      (size: 1))
+
+	    (asm-instr move %eax (constant 40))
 	    (asmcall return %eax %ebp %esp %esi)))))
 
   #t)
