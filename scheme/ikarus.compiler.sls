@@ -1372,21 +1372,32 @@
 		;core language expression.  For  bindings introduced by the compiler:
 		;this is just a symbol.
     reg-conf
-		;False or
     frm-conf
-		;False or
     var-conf
-		;False or
+		;Falses or sets,  as defined by the  module INTEGER-SET, representing
+		;interference edges  between, respectively: live CPU  registers, live
+		;FVAR structs, live VAR structs.  If  two structs are connected by an
+		;interference edge: they  are alive at the same time,  so they cannot
+		;be stored in the same CPU register.
     reg-move
-		;False or
     frm-move
-		;False or
     var-move
-		;False or
+		;Falses or sets,  as defined by the  module INTEGER-SET, representing
+		;preference  edges between,  respectively: live  CPU registers,  live
+		;FVAR structs, live  VAR structs.  If two structs are  connected by a
+		;preference  edge:  somewhere  an Assembly  instruction  MOVE  exists
+		;moving  a  value  between  the two  structs.
+		;
+		;While allocating CPU registers: it is more efficient to allocate the
+		;same CPU register to two structs  connected by a preference edge, so
+		;that the MOVE instruction can be discarded.
     loc
-		;False or
+		;False or  FVAR struct or  CPU register symbol name  representing the
+		;storage location of this variable.
     index
-		;False or
+		;False or fixnum.  This is a  multipurpose field used in the compiler
+		;passes "optimize  combinator calls/lift clambdas" and  "assign frame
+		;sizes"; see the documentation of the compiler passes for details.
     global-location
 		;False  or loc  gensym.   When  false: this  VAR  represents a  local
 		;lexical binding.  When a loc gensym: this VAR represents a top level
@@ -1752,16 +1763,6 @@
 		;A struct representing recordised code.
    ))
 
-(define-struct non-tail-call-frame
-  (rand*
-		;Null or a proper list of NFV structs representing the stack operands
-		;of the tail-call.
-   live
-   body
-		;A  struct representing  recordised  code.  It  implemnts a  function
-		;non-tail call, including the call table.
-   ))
-
 (define-struct nfv
   ;;Represent a Scheme stack location used to hold an operand to an upcoming non-tail
   ;;function call.   Such locations are below  the return address to  the caller; the
@@ -1784,17 +1785,40 @@
   ;;       low memory
   ;;
   ;;so the  offset of the operands  with respect to  the FPR is negative.   While the
-  ;;non-tail call is prepared: these stack location are not part of the current stack
-  ;;frame, rather  they will be part  of the next  stack frame; hence the  name "Next
-  ;;Frame Variables".
+  ;;non-tail call  is prepared:  these stack  locations are not  part of  the current
+  ;;stack frame,  rather they will be  part of the  next stack frame; hence  the name
+  ;;"Next Frame Variables" (F* Yeah!).
   ;;
   (idx
 		;A 1-based  non-negative fixnum  representing the  index of  the this
 		;stack operand.
    loc
+		;False or  a struct of type  FVAR representing the stack  location in
+		;which this operand is stored.
    var-conf
    frm-conf
    nfv-conf
+		;Falses or sets,  as defined by the  module INTEGER-SET, representing
+		;interference  edges between,  respectively: live  VAR structs,  live
+		;FVAR structs, live NFV structs.  If  two structs are connected by an
+		;interference edge: they  are alive at the same time,  so they cannot
+		;be stored in the same CPU register.
+   ))
+
+(define-struct non-tail-call-frame
+  (rand*
+		;Null or a proper list of NFV structs representing the stack operands
+		;of the tail-call.
+   live
+		;This field is  used only in the compiler pass  "assign frame sizes";
+		;it is set to false or  to a struct of type NON-TAIL-CALL-FRAME-SETS.
+		;See the documentation of the compiler pass for details.
+   body
+		;A  struct  representing  recordised code.   It  contains  everything
+		;needed to  compute values  for the register  operands and  the stack
+		;operands.   The last  form of  the BODY  is a  NON-TAIL-CALL struct,
+		;representing the  actual non-tail function call,  including the call
+		;table describing the stack frame.
    ))
 
 (define-struct non-tail-call
@@ -1837,7 +1861,13 @@
 		;NFV structs representing locations on the Scheme stack that hold the
 		;stack operands.
    mask
+		;False or the  livemask vector used to build the  non-tail call table
+		;describing the stack frame.
    size
+		;False or a positive fixnum representing  the size of the stack frame
+		;(expressed in number  of machine words) of this  non-tail call.  Its
+		;value is 1 or greater, because a call frame always contains at least
+		;the return address.
    ))
 
 (define-struct asm-instr
@@ -1856,12 +1886,13 @@
   ;;Scheme object.  The  Scheme object can either be stored  in the relocation vector
   ;;of the current code object, in a CPU register or on the Scheme stack.
   ;;
-  (s0
-		;A CONSTANT struct holding an OBJECT struct.  It represents an object
-		;that will be stored in the relocation vector of a code object.
-   s1
+  (objref
+		;A  struct  representing  recordised  code, for  example  a  CONSTANT
+		;holding  an OBJECT  struct.  It  represents an  object from  which a
+		;value must be extracted.
+   offset
 		;A CONSTANT struct  representing the offset of the  machine word that
-		;must be extracted from the Scheme object referenced by S0.
+		;must be extracted from the Scheme object referenced by OBJREF.
    ))
 
 

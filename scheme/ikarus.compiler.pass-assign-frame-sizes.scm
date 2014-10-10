@@ -15,6 +15,103 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+;;;; recapitulation
+;;
+;;Let's  clarify where  we are  when  this compiler  pass  is applied.   There are  3
+;;entities that we can compile: libraries, programs, standalone EVAL expressions.
+;;
+;;* After the  previous compiler passes: the fact that  a standalone expression might
+;;  reference bindings  defined by  previous standalone  expressions does  not matter
+;;  anymore; those  references and assignments  have been converted  into appropriate
+;;  function calls.
+;;
+;;* After the previous compiler passes: all  the code has been reorganised into a set
+;;  of CLAMBDA structs and an initialisation expression.
+;;
+;;* Every  clause in the  CLAMBDA structs  can be processed  independently, without
+;;  informations from other clauses.
+;;
+;;* There is no  significant difference between the body of a  CLAMBDA clause and the
+;;  body of the  init expression: the body  of the init expression is  like a CLAMBDA
+;;  clause's body with no stack operands and no closure variables.
+;;
+;;So here we  can just consider the  bodies: if we understand how  a CLAMBDA clause's
+;;body is  processed we get everything.
+;;
+;;Every body is  an expression resulting from the composition  of subexpressions; the
+;;subexpressions form a  tree-like hierarchy.  In a previous compiler  pass: for each
+;;body  a list  of  local variables  has been  gathered,  representing the  temporary
+;;locations needed to hold data and partial results from computations; such lists are
+;;stored in  LOCALS structs.   Some local  variables exists only  in branches  of the
+;;tree, for example:
+;;
+;;   (conditional ?test
+;;       (bind ((a ?rhs-a))
+;;         ?conseq)
+;;     (bind ((b ?rhs-b))
+;;       ?altern))
+;;
+;;the variable A exists only in the ?CONSEQ,  while the variable B exists only in the
+;;?ALTERN.  At every  point in the computation:  the set of local  variables that are
+;;used in the continuation  is called the "live set".  Knowing  which locals are live
+;;in a  subexpression and which  are shared between  subexpressions is needed  to map
+;;local variables to available CPU registers.
+;;
+;;
+;;Note about NON-TAIL-CALL-FRAME and NON-TAIL-CALL structs
+;;--------------------------------------------------------
+;;
+;;The previous  compiler pass "impose  evaluation order" is  the only place  in which
+;;structs  of  type  NON-TAIL-CALL-FRAME   and  NON-TAIL-CALL  are  introduced.   The
+;;ALL-RAND* field of a NON-TAIL-CALL struct holds a list of items:
+;;
+;;  (AAR APR CPR FPR PCR . rand*.nfv)
+;;
+;;first  come  all the  register  operands  (in alphabetical  order,  but  it is  not
+;;important), then come the NFV structs representing the stack locations in which the
+;;stack   operands  for   the  call   must  be   placed.   The   RAND*  field   of  a
+;;NON-TAIL-CALL-FRAME contains the  list RAND*.NFV that is the tail  of the ALL-RAND*
+;;field in the associated NON-TAIL-CALL struct.
+;;
+;;This  compiler  pass  consumes  structs of  type  NON-TAIL-CALL-FRAME  and  returns
+;;recordised code that contains them no more.
+;;
+;;
+;;Note about ASMCALL structs
+;;--------------------------
+;;
+;;The previous  compiler pass "impose  evaluation order" is  the only place  in which
+;;ASMCALL structs  with operator  RETURN, DIRECT-JUMP, INDIRECT-JUMP  are introduced.
+;;We expect them to have the format:
+;;
+;;   (asmcall direct-jump   (?target AAR APR CPR FPR PCR . rand*.fvar))
+;;   (asmcall indirect-jump         (AAR APR CPR FPR PCR . rand*.fvar))
+;;   (asmcall return                (AAR APR     FPR PCR))
+;;
+;;where: RAND*.FVAR is a list of FVAR  structs representing the location on the stack
+;;in which  the stack operands of  the tail-call must  be put; ?TARGET is  a CODE-LOC
+;;wrapping the name of the tail-call target Assembly label.
+;;
+;;
+;;Note about register operands
+;;----------------------------
+;;
+;;The register operands AAR,  APR, CPR, FPR, PCR are not the  only CPU registers that
+;;may  appear in  the input  form.   Some Assembly  instructions require  the use  of
+;;specific registers; namely ECX and EDX.
+;;
+
+
+;;;; CPU registers and stack space allocation
+;;
+;;For an introduction to register allocation see:
+;;
+;;   <http://en.wikipedia.org/wiki/Register_allocation>
+;;
+;;
+;;
+
+
 (module (assign-frame-sizes FRAME-CONFLICT-SETS)
   ;;
   ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
@@ -25,83 +122,12 @@
   ;;   locals		non-tail-call	non-tail-call-frame
   ;;
   ;;in  addition CLOSURE-MAKER  and  CODE-LOC  structs can  appear  in side  CONSTANT
-  ;;structs.
-  ;;
-  ;;The only ASMCALL operators still accepted as input in this compiler pass are:
+  ;;structs.  The  only ASMCALL operators  still accepted  as input in  this compiler
+  ;;pass are:
   ;;
   ;;   return			indirect-jump		direct-jump
   ;;   nop			interrupt		incr/zero?
   ;;   fl:double->single	fl:single->double
-  ;;
-  ;;
-  ;;Recapitulation
-  ;;--------------
-  ;;
-  ;;Let's clarify  where we  are when  this compiler  pass is  applied.  There  are 3
-  ;;entities that we can compile: libraries, programs, standalone EVAL expressions.
-  ;;
-  ;;* After the previous compiler passes  the fact that a standalone expression might
-  ;;  reference bindings  defined by previous standalone expressions  does not matter
-  ;;  anymore; those references and  assignments have been converted into appropriate
-  ;;  function calls.
-  ;;
-  ;;* After the  previous compiler passes: all  the code has been  reorganised into a
-  ;;  set of CLAMBDA structs and an initialisation expression.
-  ;;
-  ;;* Every  clause in the  CLAMBDA structs  can be processed  independently, without
-  ;;  informations from other clauses.
-  ;;
-  ;;* There is no significant difference between the body of a CLAMBDA clause and the
-  ;;  body of the init expression; the body  of the init expression is like a CLAMBDA
-  ;;  clause's body with no stack operands and no closure variables.
-  ;;
-  ;;So here we can just consider the  bodies; if we understand how a CLAMBDA clause's
-  ;;body is processed we get everything.   Every body is an expression resulting from
-  ;;the composition of subexpressions; the subexpressions form a tree-like hierarchy.
-  ;;
-  ;;In a  previous compiler pass: for  each body a  list of local variables  has been
-  ;;gathered, representing  the temporary locations  needed to hold data  and partial
-  ;;results from computations;  such lists are stored in LOCALS  structs.  Some local
-  ;;variables exists only in branches of the tree, for example:
-  ;;
-  ;;   (conditional ?test
-  ;;       (bind ((a ?rhs-a))
-  ;;         ?conseq)
-  ;;     (bind ((b ?rhs-b))
-  ;;       ?altern))
-  ;;
-  ;;the local  A exists only  in the ?CONSEQ,  while the local  B exists only  in the
-  ;;?ALTERN.  The set  of locals that exist  in a subexpression branch  is called the
-  ;;"live set".
-  ;;
-  ;;Knowing which  locals are live  in a subexpression  and which are  shared between
-  ;;subexpressions is needed to map locals to available CPU registers.
-  ;;
-  ;;NOTE The  previous compiler pass "impose  evaluation order" is the  only place in
-  ;;which structs of type NON-TAIL-CALL are introduced.  The ARGS field of the struct
-  ;;holds a list of items:
-  ;;
-  ;;  (AAR APR CPR FPR PCR . rand*.nfv)
-  ;;
-  ;;first  come all  the register  operands  (in alphabetical  order, but  it is  not
-  ;;important), then come  the NFV structs representing the stack  locations in which
-  ;;the stack operands for the call must be placed.
-  ;;
-  ;;NOTE The  previous compiler pass "impose  evaluation order" is the  only place in
-  ;;which  ASMCALL  structs  with  operator RETURN,  DIRECT-JUMP,  INDIRECT-JUMP  are
-  ;;introduced.  We expect them to have the format:
-  ;;
-  ;;   (asmcall direct-jump   (?target AAR APR CPR FPR PCR . rand*.fvar))
-  ;;   (asmcall indirect-jump         (AAR APR CPR FPR PCR . rand*.fvar))
-  ;;   (asmcall return                (AAR APR     FPR PCR))
-  ;;
-  ;;where: RAND*.FVAR  is a  list of  FVAR structs representing  the location  on the
-  ;;stack in  which the stack  operands of  the tail-call must  be put; ?TARGET  is a
-  ;;CODE-LOC wrapping the name of the tail-call target Assembly label.
-  ;;
-  ;;NOTE The register operands AAR, APR, CPR, FPR, PCR are not the only CPU registers
-  ;;that may appear in the input form.  Some Assembly instructions require the use of
-  ;;specific registers; namely ECX and EDX.
   ;;
   (define-syntax __module_who__
     (identifier-syntax 'assign-frame-sizes))
@@ -150,7 +176,7 @@
 ;;           high memory
 ;;   |                          |
 ;;   |--------------------------|
-;;   |     ik_stack_overflow    | <-- FPR
+;;   |   ik_underflow_handler   | <-- FPR
 ;;   |--------------------------|
 ;;   |       local var 0        |
 ;;   |--------------------------|
@@ -190,8 +216,8 @@
 ;;
 ;;all the stack locations will be represented, sooner or later, by FVAR structs whose
 ;;index is  the number  of machine  words from  the location  referenced by  FPR; the
-;;"empty word" will be  filled by the return address of the function  we are about to
-;;call; the stack operands locations are represented by NFV structs.
+;;"empty word"  FVAR.5 will be filled  by the return  address of the function  we are
+;;about to call; the stack operands locations are represented by NFV structs.
 ;;
 ;;Right after we enter the code  described by a NON-TAIL-CALL-FRAME struct: the stack
 ;;locations  for the  NFV structs  are  (conceptually) already  allocated, but  still
@@ -232,7 +258,9 @@
 ;;           low memory
 ;;
 ;;such temporary  locations are represented  by VAR structs  having a FVAR  struct in
-;;their LOC field.
+;;their LOC field.  While computing the stack operands: it is possible to temporarily
+;;use the stack locations allocated to  the NFV structs; for example, while computing
+;;the value of NFV.1, we can temporarily use the location FVAR.7.
 ;;
 ;;Right before  the code  represented by  the NON-TAIL-CALL  struct is  executed: the
 ;;values of the stack operands are in place, and the scenario is:
@@ -1953,13 +1981,13 @@
 
 ;;; --------------------------------------------------------------------
 
-      (define* (NFE idx mask x)
+      (define* (NFE stack-frame-size mask x)
 	;;Non-tail recursive function.
 	;;
 	(struct-case x
 	  ((seq e0 e1)
 	   (let ((e0^ (E e0)))
-	     (make-seq e0^ (NFE idx mask e1))))
+	     (make-seq e0^ (NFE stack-frame-size mask e1))))
 	  ((non-tail-call target retval-location all-rand*)
 	   (make-non-tail-call target retval-location
 			       ;;Replace all the NFV  structs in ALL-RAND* with their
@@ -1974,7 +2002,7 @@
 					       "invalid operand"
 					       (unparse-recordised-code/sexp x)))))
 				 all-rand*)
-			       mask idx))
+			       mask stack-frame-size))
 	  (else
 	   (compiler-internal-error __module_who__ __who__ "invalid NF effect" x))))
 
