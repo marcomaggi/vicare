@@ -835,7 +835,7 @@
       ((clambda-case info body)
        (make-clambda-case info (E-locals body)))))
 
-  (define (E-locals x)
+  (define* (E-locals x)
     ;;X must  be a struct instance  of type LOCALS.  Update  the field VARS of  X and
     ;;return a new struct instance of type LOCALS which is meant to replace X.
     ;;
@@ -849,7 +849,7 @@
 	      (body       (%rewrite body vars.vec)))
 	 (make-locals (cons vars.vec (%discard-vars-being-stack-operands vars)) body)))
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "expected LOCALS struct as body form"
 	 x))))
 
@@ -968,7 +968,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (R x vs rs fs ns)
+  (define* (R x vs rs fs ns)
     ;;Recursive function, tail and non-tail.  The argument X can be one among:
     ;;
     ;;* An operand among RAND* in a ASMCALL struct.
@@ -1004,7 +1004,7 @@
 	((code-loc)
 	 (values vs rs fs ns))
 	(else
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid recordised code processed by R"
 	   (unparse-recordised-code/sexp x))))))
 
@@ -1020,7 +1020,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (T x)
+  (define* (T x)
     ;;Process the  recordised code X  as a form in  tail position.  In  tail position
     ;;there can be only structs of  type: SEQ, CONDITIONAL, SHORTCUT and ASMCALL with
     ;;operator among: RETURN, INDIRECT-JUMP, DIRECT-JUMP.
@@ -1062,7 +1062,7 @@
               (empty-frm-set)
               (empty-nfv-set)))
          (else
-	  (compiler-internal-error __module_who__
+	  (compiler-internal-error __module_who__ __who__
 	    "invalid ASMCALL operator in tail position"
 	    (unparse-recordized-code/sexp x)))))
 
@@ -1074,16 +1074,16 @@
 	   (T body))))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid tail"
 	 (unparse-recordized-code/sexp x)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (P x
-	     vs.conseq rs.conseq fs.conseq ns.conseq
-	     vs.altern rs.altern fs.altern ns.altern
-	     vs.union  rs.union  fs.union  ns.union)
+  (define* (P x
+	      vs.conseq rs.conseq fs.conseq ns.conseq
+	      vs.altern rs.altern fs.altern ns.altern
+	      vs.union  rs.union  fs.union  ns.union)
     ;;Process  the recordised  code  X as  a  form in  predicate  position.  In  tail
     ;;position  there  can be  only  structs  of  type: SEQ,  CONDITIONAL,  SHORTCUT,
     ;;CONSTANT and ASM-INSTR with operator among: RETURN, INDIRECT-JUMP, DIRECT-JUMP.
@@ -1141,11 +1141,12 @@
 	      vs.union  rs.union  fs.union  ns.union))))
 
       (else
-       (compiler-internal-error __module_who__ "invalid pred" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ __who__
+				"invalid pred" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (E x vs rs fs ns)
+  (define* (E x vs rs fs ns)
     ;;Process the recordised code X as a form in side effects position.
     ;;
     ;;Return 4 values being the sets VS, RS, FS, NS updated with information gathered
@@ -1210,9 +1211,9 @@
 			(vector-ref v 1)
 			(vector-ref v 2)
 			(vector-ref v 3))
-              (compiler-internal-error __module_who__ "unbound exception2"))))
+              (compiler-internal-error __module_who__ __who__ "unbound exception2"))))
          (else
-	  (compiler-internal-error __module_who__
+	  (compiler-internal-error __module_who__ __who__
 	    "invalid ASMCALL operator in for effect form" op))))
 
       ((shortcut body handler)
@@ -1223,13 +1224,13 @@
 	   (E body vs rs fs ns))))
 
       (else
-       (compiler-internal-error __module_who__ "invalid effect" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ __who__ "invalid effect" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
   (module (E-asm-instr)
 
-    (define (E-asm-instr x op dst src vs rs fs ns)
+    (define* (E-asm-instr x op dst src vs rs fs ns)
       ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
       ;;representing the operands DST and SRC.
       ;;
@@ -1269,13 +1270,13 @@
 	 (R* (list src dst) vs rs fs ns))
 
 	(else
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid ASM-INSTR operator in recordised code for effect"
 	   (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
-    (define (E-asm-instr/move x op dst src vs rs fs ns)
+    (define* (E-asm-instr/move x op dst src vs rs fs ns)
       ;;We expect the ASM-INSTR struct to have one of the formats:
       ;;
       ;;   (asm-instr move   (?dst ?src))
@@ -1294,10 +1295,10 @@
 	    ((nfv? dst)
 	     (E-asm-instr/move/nfv-dst  x op dst src vs rs fs ns))
 	    (else
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "invalid d" dst))))
 
-    (define (E-asm-instr/move/reg-dst x op dst src vs rs fs ns)
+    (define* (E-asm-instr/move/reg-dst x op dst src vs rs fs ns)
       (cond ((not (mem-reg? dst rs))
 	     ;;If  a REG  is  the destination:  it  must  be that  such  REG is  used
 	     ;;somewhere in the continuation, so the  REG must already be a member of
@@ -1309,7 +1310,7 @@
 	     ;;8, 2014)
 	     #;(set-asm-instr-op! x 'nop)
 	     #;(values vs rs fs ns)
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "register name used as destination operand in Assembly instruction, \
                 but never consumed in the continuation"
 	       (unparse-recordised-code/sexp x)))
@@ -1331,11 +1332,11 @@
 	       (mark-reg/vars-conf! dst vs)
 	       (values vs rs (add-frm src fs) ns)))
 	    (else
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "invalid rs"
 	       (unparse-recordized-code x)))))
 
-    (define (E-asm-instr/move/fvar-dst x op dst src vs rs fs ns)
+    (define* (E-asm-instr/move/fvar-dst x op dst src vs rs fs ns)
       (cond ((not (mem-frm? dst fs))
 	     (set-asm-instr-op! x 'nop)
 	     (values vs rs fs ns))
@@ -1355,9 +1356,9 @@
 	       (mark-frm/nfvs-conf! dst ns)
 	       (values (add-var src vs) rs fs ns)))
 	    (else
-	     (compiler-internal-error __module_who__ "invalid fs" src))))
+	     (compiler-internal-error __module_who__ __who__ "invalid fs" src))))
 
-    (define (E-asm-instr/move/var-dst x op dst src vs rs fs ns)
+    (define* (E-asm-instr/move/var-dst x op dst src vs rs fs ns)
       (cond ((not (mem-var? dst vs))
 	     (set-asm-instr-op! x 'nop)
 	     (values vs rs fs ns))
@@ -1395,11 +1396,11 @@
 	       (mark-var/nfvs-conf! dst ns)
 	       (values vs rs (add-frm src fs) ns)))
 	    (else
-	     (compiler-internal-error __module_who__ "invalid vs" src))))
+	     (compiler-internal-error __module_who__ __who__ "invalid vs" src))))
 
-    (define (E-asm-instr/move/nfv-dst x op dst src vs rs fs ns)
+    (define* (E-asm-instr/move/nfv-dst x op dst src vs rs fs ns)
       (cond ((not (mem-nfv? dst ns))
-	     (compiler-internal-error __module_who__ "dead nfv"))
+	     (compiler-internal-error __module_who__ __who__ "dead nfv"))
 
 	    ((or (disp?     src)
 		 (constant? src)
@@ -1424,10 +1425,10 @@
 	       (values vs rs (add-frm src fs) ns)))
 
 	    (else
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "invalid ns" src))))
 
-    (define (E-asm-instr/int-overflow x op dst src vs rs fs ns)
+    (define* (E-asm-instr/int-overflow x op dst src vs rs fs ns)
       ;;We expect the ASM-INSTR struct to have one of the formats:
       ;;
       ;;   (asm-instr int-/overflow (?dst ?src))
@@ -1439,7 +1440,7 @@
       ;;
       (let ((v (exception-live-set)))
 	(unless (vector? v)
-	  (compiler-internal-error __module_who__
+	  (compiler-internal-error __module_who__ __who__
 	    "unbound exception" x v))
 	(let ((vs (union-vars vs (vector-ref v 0)))
 	      (rs (union-regs rs (vector-ref v 1)))
@@ -1466,18 +1467,18 @@
 
 		((nfv? dst)
 		 (if (not (mem-nfv? dst ns))
-		     (compiler-internal-error __module_who__ "dead nfv")
+		     (compiler-internal-error __module_who__ __who__ "dead nfv")
 		   (let ((ns (rem-nfv dst ns)))
 		     (mark-nfv/vars-conf! dst vs)
 		     (mark-nfv/frms-conf! dst fs)
 		     (R src vs rs fs (add-nfv dst ns)))))
 
 		(else
-		 (compiler-internal-error __module_who__
+		 (compiler-internal-error __module_who__ __who__
 		   "invalid op dst"
 		   (unparse-recordized-code x)))))))
 
-    (define (E-asm-instr/bitwise x op dst src vs rs fs ns)
+    (define* (E-asm-instr/bitwise x op dst src vs rs fs ns)
       ;;We expect the ASM-INSTR struct to have one of the formats:
       ;;
       ;;   (asm-instr logand (?dst ?src))
@@ -1518,14 +1519,14 @@
 
 	    ((nfv? dst)
 	     (if (not (mem-nfv? dst ns))
-		 (compiler-internal-error __module_who__ "dead nfv")
+		 (compiler-internal-error __module_who__ __who__ "dead nfv")
 	       (let ((ns (rem-nfv dst ns)))
 		 (mark-nfv/vars-conf! dst vs)
 		 (mark-nfv/frms-conf! dst fs)
 		 (R src vs rs fs (add-nfv dst ns)))))
 
 	    (else
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "invalid op dst" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
@@ -1659,7 +1660,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (T x)
+  (define* (T x)
     ;;Process the struct instance X representing recordized  code as if it is in tail
     ;;position.
     ;;
@@ -1678,13 +1679,13 @@
        (make-shortcut (T body) (T handler)))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid tail expression"
 	 (unparse-recordized-code/sexp x)))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (P x)
+  (define* (P x)
     (struct-case x
       ((seq e0 e1)
        (let ((e0^ (E e0)))
@@ -1703,7 +1704,7 @@
        (make-shortcut (P body) (P handler)))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid expression in predicate context"
 	 (unparse-recordized-code/sexp x)))))
 
@@ -1711,7 +1712,7 @@
 
   (module (E)
 
-    (define (E x)
+    (define* (E x)
       (struct-case x
 	((seq e0 e1)
 	 (let ((e0^ (E e0)))
@@ -1731,7 +1732,7 @@
 	   ((nop interrupt incr/zero? fl:double->single fl:single->double)
 	    x)
 	   (else
-	    (compiler-internal-error __module_who__
+	    (compiler-internal-error __module_who__ __who__
 	      "invalid ASMCALL operator in recordised code for side effects"
 	      (unparse-recordised-code/sexp x)))))
 
@@ -1739,11 +1740,11 @@
 	 (make-shortcut (E body) (E handler)))
 
 	(else
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid recordised code for effects"
 	   (unparse-recordized-code x)))))
 
-    (define (E-asm-instr x op dst src)
+    (define* (E-asm-instr x op dst src)
       (case op
 	((move load8 load32)
 	 ;;If the destination equals the source: convert this instruction into a NOP.
@@ -1771,7 +1772,7 @@
 	 (nop))
 
 	(else
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid ASM-INSTR operator in recordised code for side effects"
 	   (unparse-recordised-code/sexp x)))))
 
@@ -1811,12 +1812,12 @@
 	    (max-ls  (cdr ls) (max i (car ls)))
 	  i))
 
-      (define (max-nfv ls i)
+      (define* (max-nfv ls i)
 	(if (pair? ls)
 	    (let ((loc ($nfv-loc (car ls))))
 	      (if (fvar? loc)
 		  (max-nfv (cdr ls) (max i ($fvar-idx loc)))
-		(compiler-internal-error __module_who__
+		(compiler-internal-error __module_who__ __who__
 		  "FVAR not assigned to location in MAX-NFV"
 		  loc)))
 	  i))
@@ -1875,7 +1876,7 @@
 
 	#| end of module: %actual-frame-size |# )
 
-      (define (%assign-frame-locations-to-stack-operands! rand*.nfv idx)
+      (define* (%assign-frame-locations-to-stack-operands! rand*.nfv idx)
 	;;Tail recursive  function.  For each  NFV struct in the  argument RAND*.NFV,
 	;;representing  a  stack operand  in  a  soon-to-be-performed non-tail  call:
 	;;allocate a  FVAR struct  to serve  as actual stack  location for  the stack
@@ -1928,7 +1929,7 @@
             ;;             (let ((loc ($nfv-loc x)))
             ;;               (if loc
             ;;                   (when (fx=? ($fvar-idx loc) idx)
-            ;;                     (compiler-internal-error __module_who__ "invalid assignment"))
+            ;;                     (compiler-internal-error __module_who__ __who__ "invalid assignment"))
             ;;                 (begin
             ;;                   ($set-nfv-nfv-conf! x (rem-nfv rand.nfv  ($nfv-nfv-conf x)))
             ;;                   ($set-nfv-frm-conf! x (add-frm rand.fvar ($nfv-frm-conf x)))))))
@@ -1945,14 +1946,14 @@
 		      ;;If X is assigned to the same FVAR of RAND.NFV: we have made a
 		      ;;mistake; otherwise there is no conflict.
 		      (when (fx=? (fvar-idx loc) idx)
-			(compiler-internal-error __module_who__ "invalid assignment"))
+			(compiler-internal-error __module_who__ __who__ "invalid assignment"))
 		    (begin
 		      ($set-var-frm-conf! x (add-frm rand.fvar ($var-frm-conf x)))))))))
 	  (%assign-frame-locations-to-stack-operands! (cdr rand*.nfv) (fxadd1 idx))))
 
 ;;; --------------------------------------------------------------------
 
-      (define (NFE idx mask x)
+      (define* (NFE idx mask x)
 	;;Non-tail recursive function.
 	;;
 	(struct-case x
@@ -1969,13 +1970,13 @@
 					    ((nfv? x)
 					     ($nfv-loc x))
 					    (else
-					     (compiler-internal-error __module_who__
+					     (compiler-internal-error __module_who__ __who__
 					       "invalid operand"
 					       (unparse-recordised-code/sexp x)))))
 				 all-rand*)
 			       mask idx))
 	  (else
-	   (compiler-internal-error __module_who__ "invalid NF effect" x))))
+	   (compiler-internal-error __module_who__ __who__ "invalid NF effect" x))))
 
       #| end of module: E-non-tail-call-frame |# )
 
@@ -1983,7 +1984,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (R x)
+  (define* (R x)
     (if (register? x)
 	x
       (struct-case x
@@ -1993,14 +1994,14 @@
 	 x)
 	((nfv)
 	 (or ($nfv-loc x)
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "invali NFV struct without assigned LOC")))
 	((var)
 	 (R-var x))
 	((disp objref offset)
 	 (make-disp (R objref) (R offset)))
 	(else
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid R" (unparse-recordized-code x))))))
 
 ;;; --------------------------------------------------------------------

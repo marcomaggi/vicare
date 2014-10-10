@@ -76,7 +76,7 @@
 
 (module (V)
 
-  (define (V x env)
+  (define* (V x env)
     ;;
     ;;ENV maps PRELEX structs to records of type CORE-TYPE-TAG.
     ;;
@@ -145,7 +145,7 @@
 	 (values (make-forcall rator rand*) rand*.env T:object)))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (V* x* env)

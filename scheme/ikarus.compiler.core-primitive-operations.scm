@@ -25,6 +25,9 @@
   (module (PC-REGISTER FP-REGISTER)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
 
+  (define-syntax __module_who__
+    (identifier-syntax 'CORE-PRIMITIVE-OPERATION-DEFINITIONS))
+
 
 (define-auxiliary-syntaxes safe unsafe)
 
@@ -192,7 +195,7 @@
   ;;Here we do what we can to validate such return value.
   ;;
   (define (%error msg)
-    (compiler-internal-error who msg (unparse-recordized-code/sexp rv)))
+    (compiler-internal-error __module_who__ who msg (unparse-recordized-code/sexp rv)))
   (struct-case rv
     ((constant rv.const)
      (if (boolean? rv.const)
@@ -514,7 +517,7 @@
    ;;struct instance representing recordized code not yet filtered through T.
    ;;
    (define (%compile-time-error)
-     (compile-time-operand-core-type-error __who__
+     (compile-time-operand-core-type-error __module_who__ __who__
        "expected pair as primitive operation argument"
        (cons who (unparse-recordized-code/sexp x))))
    (struct-case x
@@ -912,7 +915,7 @@
     (define (%error-wrong-operand)
       (if (option.strict-r6rs)
 	  (interrupt)
-	(compile-time-operand-core-type-error __who__
+	(compile-time-operand-core-type-error __module_who__ __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
@@ -945,7 +948,7 @@
     (define (%error-wrong-operand)
       (if (option.strict-r6rs)
 	  (interrupt)
-	(compile-time-operand-core-type-error __who__
+	(compile-time-operand-core-type-error __module_who__ __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
@@ -978,7 +981,7 @@
     (define (%error-wrong-operand)
       (if (option.strict-r6rs)
 	  (interrupt)
-	(compile-time-operand-core-type-error __who__
+	(compile-time-operand-core-type-error __module_who__ __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
@@ -993,7 +996,7 @@
        (if (pair? x.const)
 	   (if (option.strict-r6rs)
 	       (cogen-value-$set-car! x)
-	     (compile-time-error 'set-car!
+	     (compile-time-error __module_who__ __who__
 	       "invalid mutation of pair datum" (unparse-recordized-code/sexp x)))
 	 (%error-wrong-operand)))
       (else
@@ -1007,7 +1010,7 @@
     (define (%error-wrong-operand)
       (if (option.strict-r6rs)
 	  (interrupt)
-	(compile-time-operand-core-type-error __who__
+	(compile-time-operand-core-type-error __module_who__ __who__
 	  "expected pair as primitive operation argument" (unparse-recordized-code/sexp x))))
     (struct-case x
       ((known x.expr x.type)
@@ -1022,7 +1025,7 @@
        (if (pair? x.const)
 	   (if (option.strict-r6rs)
 	       (cogen-value-$set-cdr! x)
-	     (compile-time-error 'set-cdr!
+	     (compile-time-error __module_who__ __who__
 	       "invalid mutation of pair datum" (unparse-recordized-code/sexp x)))
 	 (%error-wrong-operand)))
       (else
@@ -1499,7 +1502,7 @@
 	     ((option.strict-r6rs)
 	      (interrupt))
 	     (else
-	      (compile-time-operand-core-type-error __who__
+	      (compile-time-operand-core-type-error __module_who__ __who__
 		"expected vector as operand" (unparse-recordized-code vec)))))
       (else
        (multiple-forms-sequence
@@ -1526,7 +1529,7 @@
 	     ((option.strict-r6rs)
 	      (interrupt))
 	     (else
-	      (compile-time-operand-core-type-error __who__
+	      (compile-time-operand-core-type-error __module_who__ __who__
 		"expected vector as operand" (unparse-recordized-code vec)))))
       (else
        (multiple-forms-sequence
@@ -1759,7 +1762,7 @@
 	      (interrupt))
 	     (else
 	      ;;Report error at compile-time.
-	      (compile-time-operand-core-type-error __who__
+	      (compile-time-operand-core-type-error __module_who__ __who__
 		"expected symbol as loc gensym argument" sym.val))))
       ((known sym.expr)
        ;;The argument is an  expression whose return value type is  known.  Act as if
@@ -1793,7 +1796,7 @@
 	      (interrupt))
 	     (else
 	      ;;Report error at compile-time.
-	      (compile-time-operand-core-type-error __who__
+	      (compile-time-operand-core-type-error __module_who__ __who__
 		"expected symbol as loc gensym argument" sym.val))))
       ((known sym.expr)
        ;;The argument is an  expression whose return value type is  known.  Act as if
@@ -4597,7 +4600,7 @@
 	 ((no)
 	  (if (option.strict-r6rs)
 	      (interrupt)
-	    (compile-time-operand-core-type-error __who__
+	    (compile-time-operand-core-type-error __module_who__ __who__
 	      "expected string as operand" (unparse-recordized-code str))))
 	 (else
 	  (cogen-value-string-length str.expr))))
@@ -4609,7 +4612,7 @@
 	     ((option.strict-r6rs)
 	      (interrupt))
 	     (else
-	      (compile-time-operand-core-type-error __who__
+	      (compile-time-operand-core-type-error __module_who__ __who__
 		"expected string as operand" (unparse-recordized-code str)))))
       (else
        (multiple-forms-sequence
@@ -4626,7 +4629,7 @@
 	 ((no)
 	  (if (option.strict-r6rs)
 	      (interrupt)
-	    (compile-time-operand-core-type-error __who__
+	    (compile-time-operand-core-type-error __module_who__ __who__
 	      "expected string as operand" (unparse-recordized-code str))))
 	 (else
 	  (cogen-effect-string-length str.expr))))
@@ -4638,7 +4641,7 @@
 	     ((option.strict-r6rs)
 	      (interrupt))
 	     (else
-	      (compile-time-operand-core-type-error __who__
+	      (compile-time-operand-core-type-error __module_who__ __who__
 		"expected string as operand" (unparse-recordized-code str)))))
       (else
        (assert-string str))))
@@ -4970,7 +4973,7 @@
        (cogen-value-$cpref clo freevar-idx.expr))
       (else
        ;;Free variable indexes are always generated by the compiler.
-       (compiler-internal-error '$cpref
+       (compiler-internal-error __module_who__ __who__
 	 "invalid free variable index, expected compile-time value"
 	 freevar-idx)))))
 

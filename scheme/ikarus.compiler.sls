@@ -554,7 +554,20 @@
 
 ;;;; condition objects
 
-(define-condition-type &compile-time-error &assertion
+(define-condition-type &library
+    &condition
+  make-library-condition library-condition?
+  (name		library-condition-name))
+
+(define-condition-type &module
+    &condition
+  make-module-condition module-condition?
+  (name		module-condition-name))
+
+;;; --------------------------------------------------------------------
+
+(define-condition-type &compile-time-error
+    &assertion
   make-compile-time-error compile-time-error?)
 
 (define-condition-type &compile-time-arity-error
@@ -576,28 +589,30 @@
 (define (compile-time-error who message . irritants)
   (%raise-error who message (make-compile-time-error) irritants))
 
-(define (compile-time-arity-error who message . irritants)
-  (%raise-error who message (make-compile-time-arity-error) irritants))
+(define (compile-time-arity-error module-who who message . irritants)
+  (%raise-error module-who who message (make-compile-time-arity-error) irritants))
 
-(define (compile-time-operand-core-type-error who message . irritants)
-  (%raise-error who message (make-compile-time-operand-core-type-error) irritants))
+(define (compile-time-operand-core-type-error module-who who message . irritants)
+  (%raise-error module-who who message (make-compile-time-operand-core-type-error) irritants))
 
-(define (compile-time-retval-core-type-error who message . irritants)
-  (%raise-error who message (make-compile-time-retval-core-type-error) irritants))
+(define (compile-time-retval-core-type-error module-who who message . irritants)
+  (%raise-error module-who who message (make-compile-time-retval-core-type-error) irritants))
 
 ;;; --------------------------------------------------------------------
 
 (define-condition-type &compiler-internal-error &compile-time-error
   make-compiler-internal-error compiler-internal-error?)
 
-(define (compiler-internal-error who message . irritants)
-  (%raise-error who message (make-compiler-internal-error) irritants))
+(define (compiler-internal-error module-who who message . irritants)
+  (%raise-error module-who who message (make-compiler-internal-error) irritants))
 
 ;;; --------------------------------------------------------------------
 
-(define (%raise-error who message cnd irritants)
+(define (%raise-error module-who who message cnd irritants)
   (raise
    (condition cnd
+	      (make-library-condition 'compiler)
+	      (make-module-condition module-who)
 	      (make-who-condition who)
 	      (make-message-condition message)
 	      (make-irritants-condition irritants))))
@@ -663,7 +678,7 @@
 		  "expected symbol as return value from CURRENT-PRIMITIVE-LOCATIONS procedure"
 		  obj))))
 	(else
-	 (compiler-internal-error __who__
+	 (compiler-internal-error #f __who__
 	   "while building boot image: primitive missing from makefile.sps" name))))
 
 
@@ -775,14 +790,14 @@
 	    ;;(gensym-prefix "L")
 	    ls*)))))
 
-  (define (thunk?-label x)
+  (define* (thunk?-label x)
     ;;If X is a struct instance of  type CLOSURE-MAKER with no free variables: return
     ;;the associated label.
     ;;
     (and (closure-maker? x)
 	 (if (null? (closure-maker-freevar* x))
 	     (code-loc-label (closure-maker-code x))
-	   (compiler-internal-error #f "non-thunk escaped" x))))
+	   (compiler-internal-error #f __who__ "non-thunk escaped" x))))
 
   (define (print-instr x)
     ;;Print  to the  current  error  port the  symbolic  expression representing  the
@@ -1856,7 +1871,7 @@
 (include "ikarus.compiler.core-primitive-properties.scm" #t)
 
 
-(define (recordize input-expr)
+(define* (recordize input-expr)
   ;;Given a symbolic expression INPUT-EXPR representing  a form in the core language,
   ;;convert it into  a nested hierarchy of struct instances;  return the outer struct
   ;;instance.
@@ -2040,7 +2055,8 @@
 				 (list (make-constant X))))))
 
 	   (else
-	    (compile-time-error __module_who__ "invalid core language expression" X)))))
+	    (compile-time-error __module_who__ __who__
+	      "invalid core language expression" X)))))
 
   (define-syntax-rule (%recordize-pair-sexp X ctxt)
     (case (car X)
@@ -2984,7 +3000,7 @@
   (define-syntax __module_who__
     (identifier-syntax 'optimize-direct-calls))
 
-  (define (optimize-direct-calls x)
+  (define* (optimize-direct-calls x)
     ;;Perform code optimisation traversing the whole  hierarchy in X, which must be a
     ;;struct instance representing recordized code in the core language, and building
     ;;a new hierarchy of optimised, recordized code; return the new hierarchy.
@@ -3041,7 +3057,8 @@
        (make-assign lhs (E rhs)))
 
       (else
-       (compile-time-error __module_who__ "invalid expression" (unparse-recordized-code x)))))
+       (compile-time-error __module_who__ __who__
+	 "invalid expression" (unparse-recordized-code x)))))
 
   (module (%attempt-integration)
 
@@ -3327,7 +3344,7 @@
 			  (length rand*))
 		   (make-bind fml* (%properize-operands fml* rand*) body))))))))
 
-    (define (%properize-operands lhs* rhs*)
+    (define* (%properize-operands lhs* rhs*)
       ;;LHS* must be a list of PRELEX  structures representing the binding names of a
       ;;CLAMBDA clause, for the cases of formals  being a symbol or an improper list;
       ;;RHS* must be a list of struct instances representing the values to be bound.
@@ -3374,7 +3391,7 @@
       ;;                          #[constant ()])])])
       ;;
       (cond ((null? lhs*)
-	     (compile-time-error __module_who__ "improper improper"))
+	     (compile-time-error __module_who__ __who__ "improper improper"))
 	    ((null? (cdr lhs*))
 	     (list (%make-conses rhs*)))
 	    (else
@@ -3465,7 +3482,7 @@
   (define-syntax __module_who__
     (identifier-syntax 'rewrite-references-and-assignments))
 
-  (define (rewrite-references-and-assignments x)
+  (define* (rewrite-references-and-assignments x)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
     ;;a  struct instance  representing  recordized  code in  the  core language,  and
     ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new
@@ -3554,11 +3571,11 @@
 			 (else
 			  (%assigned-local-binding-assignment lhs (E rhs))))))
 	     (else
-	      (compiler-internal-error __module_who__
+	      (compiler-internal-error __module_who__ __who__
 		"assigned PRELEX has non-assigned state" lhs x))))
 
       (else
-       (compile-time-error __module_who__
+       (compile-time-error __module_who__ __who__
 	 "invalid recordised expression" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
@@ -3717,7 +3734,7 @@
   (define (introduce-unsafe-primrefs x)
     (E x))
 
-  (define (E x)
+  (define* (E x)
     (struct-case x
       ((constant)
        x)
@@ -3750,7 +3767,7 @@
        (make-forcall rator ($map/stx E rand*)))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (E-known x)
@@ -3791,7 +3808,7 @@
 	  (else
 	   (make-funcall (E-known rator) rand*^)))))
 
-    (define (%E-primref-call safe-prim-name rand*)
+    (define* (%E-primref-call safe-prim-name rand*)
       (define (%no-replacement)
 	(make-funcall (make-primref safe-prim-name) rand*))
       (parametrise ((%exception-raiser compile-time-error))
@@ -3807,7 +3824,7 @@
 					       (unparse-recordized-code/sexp (%no-replacement)))
 	       (%no-replacement))
 	      (else
-	       ((%exception-raiser) __module_who__
+	       ((%exception-raiser) __module_who__ __who__
 		"operands of invalid core type in call to core primitive"
 		(unparse-recordized-code/sexp (%no-replacement)))))))
 
@@ -3875,7 +3892,7 @@
 	    ;;This primitive has no registered unsafe replacements.
 	    (else #f)))
 
-    (define (%compatible-type-predicates-and-operands? preds rand*)
+    (define* (%compatible-type-predicates-and-operands? preds rand*)
       ;;Recursive  function.   Validate  the  operands  in  RAND*  against  the  type
       ;;predicates in  PREDS; if they  are compatible: return true,  otherwise return
       ;;false.   The  purpose of  this  function  is to  check  if  the operands  are
@@ -3908,7 +3925,7 @@
 		    ;;the type predicates: total success!!!
 		    #t)
 		   (else
-		    (compiler-internal-error __module_who__
+		    (compiler-internal-error __module_who__ __who__
 		      "invalid type specification in signature of core primitive"
 		      preds))))
 	    ((pair? preds)
@@ -3920,7 +3937,7 @@
 	     ;;All the operands matched the type predicates: total success!!!
 	     #t)))
 
-    (define (%matching-type-predicates-and-operands? preds rand*)
+    (define* (%matching-type-predicates-and-operands? preds rand*)
       ;;Recursive  function.   Validate  the  operands  in  RAND*  against  the  type
       ;;predicates in PREDS; if they match: return true, otherwise return false.  The
       ;;purpose of this function is to check if the operands are *valid* according to
@@ -3952,7 +3969,7 @@
 		    ;;the type predicates: total success!!!
 		    #t)
 		   (else
-		    (compiler-internal-error __module_who__
+		    (compiler-internal-error __module_who__ __who__
 		      "invalid type specification in signature of core primitive"
 		      preds))))
 	    ((pair? preds)
@@ -3964,7 +3981,7 @@
 	     ;;All the operands matched the type predicates: total success!!!
 	     #t)))
 
-    (define (%compatible-type-predicate-and-operand? type? rand)
+    (define* (%compatible-type-predicate-and-operand? type? rand)
       ;;Apply the core type specification TYPE? to the operand RAND.  Return false if
       ;;it is known that RAND is not of type TYPE?; otherwise return true.
       ;;
@@ -3989,10 +4006,10 @@
 	     ;;operand's type matches the expected argument's type.
 	     #t)
 	    (else
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "invalid type specification in signature of core primitive" type?))))
 
-    (define (%matching-type-predicate-and-operand? type? rand)
+    (define* (%matching-type-predicate-and-operand? type? rand)
       ;;Apply the core type specification TYPE?  to the operand RAND.  Return true if
       ;;it is known that RAND is of type TYPE?; otherwise return false.
       ;;
@@ -4015,7 +4032,7 @@
 	     ;;operand's type matches the expected argument's type.
 	     #t)
 	    (else
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "invalid type specification in signature of core primitive" type?))))
 
     #| end of module: E-funcall |# )
@@ -4088,7 +4105,7 @@
   (define-syntax E
     (identifier-syntax sanitize-bindings))
 
-  (define (sanitize-bindings x)
+  (define* (sanitize-bindings x)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
     ;;a  struct instance  representing  recordized  code in  the  core language,  and
     ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new
@@ -4141,7 +4158,7 @@
        (make-funcall (E-known rator) ($map/stx E-known rand*)))
 
       (else
-       (compile-time-error __module_who__
+       (compile-time-error __module_who__ __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (%mk-bind lhs* rhs* body)
@@ -4230,7 +4247,7 @@
   (define-syntax E
     (identifier-syntax optimize-for-direct-jumps))
 
-  (define (optimize-for-direct-jumps x)
+  (define* (optimize-for-direct-jumps x)
     ;;Perform code optimisation traversing the whole  hierarchy in X, which must be a
     ;;struct instance representing recordized code in the core language, and building
     ;;a new hierarchy of optimised, recordized code; return the new hierarchy.
@@ -4271,7 +4288,7 @@
        (E-funcall x (E-known rator) ($map/stx E-known rand*)))
 
       (else
-       (compile-time-error __module_who__
+       (compile-time-error __module_who__ __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
@@ -4362,7 +4379,7 @@
 	 (else
 	  (make-funcall rator rand*)))))
 
-    (define (%optimize-funcall appform clam prelex-rator rand*)
+    (define* (%optimize-funcall appform clam prelex-rator rand*)
       ;;Attempt to optimize the function application:
       ;;
       ;;   (PRELEX-RATOR . RAND*)
@@ -4405,7 +4422,7 @@
 		(print-compiler-warning-message "wrong number of arguments in closure object application: ~a"
 						(unparse-recordized-code/pretty appform))
 		(make-funcall prelex-rator rand*))
-	    (compile-time-arity-error __module_who__
+	    (compile-time-arity-error __module_who__ __who__
 	      "wrong number of arguments in closure object application"
 	      (unparse-recordized-code/pretty appform))))))
 
@@ -4481,7 +4498,7 @@
   (define-syntax E
     (identifier-syntax insert-global-assignments))
 
-  (define (insert-global-assignments x)
+  (define* (insert-global-assignments x)
     ;;Perform code transformations traversing the whole hierarchy in X, which must be
     ;;a struct instance representing recordized code, and building a new hierarchy of
     ;;transformed, recordized code; return the new hierarchy.
@@ -4524,7 +4541,7 @@
        (make-jmpcall label (E rator) ($map/stx E rand*)))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (E-clambda rhs)
@@ -4632,7 +4649,7 @@
   (define-syntax E
     (identifier-syntax introduce-vars))
 
-  (define (introduce-vars x)
+  (define* (introduce-vars x)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
     ;;a  struct instance  representing  recordized  code in  the  core language,  and
     ;;building  a new  hierarchy  of  transformed, recordized  code;  return the  new
@@ -4678,7 +4695,7 @@
        (make-jmpcall label (E rator) ($map/stx E rand*)))
 
       (else
-       (compile-time-error __module_who__
+       (compile-time-error __module_who__ __who__
 	 "invalid expression" (unparse-recordized-code x)))))
 
   (define (E-clambda lhs rhs)
@@ -4764,7 +4781,7 @@
   (define-syntax __module_who__
     (identifier-syntax 'introduce-closure-makers))
 
-  (define (introduce-closure-makers X)
+  (define* (introduce-closure-makers X)
     ;;Perform code transformation traversing the whole  hierarchy in X, which must be
     ;;a  struct instance  representing  recordised  code in  the  core language,  and
     ;;building  a new  hierarchy  of  transformed, recordised  code;  return the  new
@@ -4774,10 +4791,10 @@
 	(E X)
       (if (null? freevar*)
 	  X^
-	(compiler-internal-error __module_who__
+	(compiler-internal-error __module_who__ __who__
 	  "free vars encountered in program" (map unparse-recordized-code freevar*)))))
 
-  (define (E X)
+  (define* (E X)
     ;;Traverse  the recordized  code X  and return  2 values:  a new  recordized code
     ;;hierarchy, a list of VAR structs representing the free variables in X.
     ;;
@@ -4855,7 +4872,8 @@
                  (union freevar*.rator freevar*.rand*))))
 
       (else
-       (compile-time-error __module_who__ "invalid expression" X))))
+       (compile-time-error __module_who__ __who__
+	 "invalid expression" X))))
 
 ;;; --------------------------------------------------------------------
 
@@ -4995,7 +5013,7 @@
 
   (module (E)
 
-    (define (E x)
+    (define* (E x)
       (struct-case x
 	((constant)
 	 x)
@@ -5042,7 +5060,7 @@
 	 (make-jmpcall label (E rator) ($map/stx E rand*)))
 
 	(else
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid expression" (unparse-recordized-code x)))))
 
     (define (E-bind lhs* rhs* body)
@@ -5379,7 +5397,7 @@
 	      (remq self-var substituted-freevar*)
 	    substituted-freevar*)))
 
-      (define (%filter-freevar* freevar*)
+      (define* (%filter-freevar* freevar*)
 	;;Non-tail recursive function.  Given a list of VAR structs representing free
 	;;variables in  the body of a  function: build and  return a new list  of VAR
 	;;structs representing the actual free vars we care about.
@@ -5402,7 +5420,7 @@
 		       rest
 		     (cons what rest)))
 		  (else
-		   (compiler-internal-error __module_who__
+		   (compiler-internal-error __module_who__ __who__
 		     "invalid VAR substitution value" what)))))
 	  '()))
 
@@ -5437,7 +5455,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%find-var-substitution! x)
+  (define* (%find-var-substitution! x)
     ;;Non-tail  recursive function.   X  is  a VAR  struct.   Traverse  the graph  of
     ;;substitutions starting from X and return:
     ;;
@@ -5452,7 +5470,7 @@
     ;;  substitution of Y as substitution of X.
     ;;
     (when (eq? x 'q)
-      (compile-time-error __module_who__
+      (compile-time-error __module_who__ __who__
 	"circular dependency searching for VAR substitution"))
     (let ((x.subst (%var-get-subst x)))
       (cond ((not x.subst)
@@ -5485,7 +5503,7 @@
 	     x.subst)
 
 	    (else
-	     (compiler-internal-error __module_who__
+	     (compiler-internal-error __module_who__ __who__
 	       "invalid VAR substitution" x x.subst)))))
 
 ;;; --------------------------------------------------------------------
@@ -5586,20 +5604,20 @@
   (define-syntax __module_who__
     (identifier-syntax 'introduce-primitive-operation-calls))
 
-  (define (introduce-primitive-operation-calls Program)
+  (define* (introduce-primitive-operation-calls Program)
     (struct-case Program
       ((codes code* body)
        (make-codes ($map/stx E-clambda code*)
 		   (E body)))
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid input expression" (unparse-recordized-code Program)))))
 
 ;;; --------------------------------------------------------------------
 
   (module (E)
 
-    (define (E x)
+    (define* (E x)
       ;;Perform code transformation  traversing the whole hierarchy in  X, which must
       ;;be a struct instance representing recordized  code, and build a new hierarchy
       ;;of transformed, recordized code; return the new hierarchy.
@@ -5643,7 +5661,7 @@
 	 (make-jmpcall label (E rator) ($map/stx E arg*)))
 
 	(else
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid input expression" (unparse-recordized-code x)))))
 
     (define (E-known x)
@@ -5661,19 +5679,19 @@
     ;;The purpose  of this  module is  to apply E  to the  body of  every CASE-LAMBDA
     ;;clause.
     ;;
-    (define (E-clambda x)
+    (define* (E-clambda x)
       (struct-case x
 	((clambda label case* cp freevar* name)
 	 (make-clambda label ($map/stx E-clambda-case case*) cp freevar* name))
 	(else
-	 (compiler-internal-error __module_who__ "invalid clambda" x))))
+	 (compiler-internal-error __module_who__ __who__ "invalid clambda" x))))
 
-    (define (E-clambda-case x)
+    (define* (E-clambda-case x)
       (struct-case x
 	((clambda-case info body)
 	 (make-clambda-case info (E body)))
 	(else
-	 (compiler-internal-error __module_who__ "invalid clambda-case" x))))
+	 (compiler-internal-error __module_who__ __who__ "invalid clambda-case" x))))
 
     #| end of module: E-clambda |# )
 
@@ -5764,7 +5782,7 @@
   (define-syntax __module_who__
     (identifier-syntax 'rewrite-freevar-references))
 
-  (define (rewrite-freevar-references Program)
+  (define* (rewrite-freevar-references Program)
     (struct-case Program
       ((codes code* body)
        ;;First traverse  the bodies of  the lifted  CLAMBDAs, then traverse  the init
@@ -5777,13 +5795,13 @@
 	      (body^  (E body)))
 	 (make-codes code*^ body^)))
       (else
-       (compiler-internal-error __module_who__ "invalid program" Program))))
+       (compiler-internal-error __module_who__ __who__ "invalid program" Program))))
 
 ;;; --------------------------------------------------------------------
 
   (module (E-clambda)
 
-    (define (E-clambda x)
+    (define* (E-clambda x)
       ;;X must be a struct instance of type CLAMBDA.
       ;;
       (struct-case x
@@ -5792,9 +5810,9 @@
 	       (cp^         #f))
 	   (make-clambda label ($map/stx case-mapper clause*) cp^ freevar* name)))
 	(else
-	 (compiler-internal-error __module_who__ "invalid clambda" x))))
+	 (compiler-internal-error __module_who__ __who__ "invalid clambda" x))))
 
-    (define (make-E-clambda-case main-cp freevar*)
+    (define* (make-E-clambda-case main-cp freevar*)
       ;;MAIN-CP must  be a  struct instance  of type VAR  to which  the CLOSURE-MAKER
       ;;referencing this CLAMBDA is bound; it  represents the machine word from which
       ;;a pointer to the closure object can be acquired.
@@ -5826,7 +5844,7 @@
 		     (body^ (E body)))
 		(make-clambda-case info^ body^)))))
 	  (else
-	   (compiler-internal-error __module_who__ "invalid clambda-case" x)))))
+	   (compiler-internal-error __module_who__ __who__ "invalid clambda-case" x)))))
 
     #| end of module: Clambda |# )
 
@@ -5835,7 +5853,7 @@
   (define (make-E main-cpvar cpvar freevar*)
     ;;Create and return the function E.
     ;;
-    (define (E x)
+    (define* (E x)
       ;;Perform code transformation  traversing the whole hierarchy in  X, which must
       ;;be  a  struct instance  representing  recordized  code,  and building  a  new
       ;;hierarchy of transformed, recordized code; return the new hierarchy.
@@ -5893,7 +5911,7 @@
 	 (make-jmpcall label (E rator) ($map/stx E arg*)))
 
 	(else
-	 (compiler-internal-error __module_who__ "invalid expr" x))))
+	 (compiler-internal-error __module_who__ __who__ "invalid expr" x))))
 
     (define (E-known x)
       (struct-case x
@@ -6013,7 +6031,7 @@
 
   (module (E)
 
-    (define (E x)
+    (define* (E x)
       ;;The purpose of this recordized code traversal is to return true if:
       ;;
       ;;* At least one of the nested structs is an instance of JMPCALL.
@@ -6060,7 +6078,7 @@
 	 (ormap E arg*))
 
 	(else
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid input expression" (unparse-recordized-code x)))))
 
     (define (E-known x)
@@ -6149,7 +6167,7 @@
 
   (module (%tail?)
 
-    (define (%tail? body)
+    (define* (%tail? body)
       ;;Return true if  the recordized code BODY  contains only function
       ;;calls in tail position.
       ;;
@@ -6189,11 +6207,11 @@
 	     (ormap %non-tail? arg*)))
 
 	(else
-	 (compiler-internal-error __module_who__ "invalid expr" body))))
+	 (compiler-internal-error __module_who__ __who__ "invalid expr" body))))
 
     (module (%non-tail?)
 
-      (define (%non-tail? x)
+      (define* (%non-tail? x)
 	;;Notice that this function never  calls %TAIL?.  Return true if
 	;;the recordized code X contains any type of function call.
 	;;
@@ -6232,7 +6250,7 @@
 	   (%non-tail? expr))
 
 	  (else
-	   (compiler-internal-error __module_who__ "invalid expr" x))))
+	   (compiler-internal-error __module_who__ __who__ "invalid expr" x))))
 
       (define (%non-tail?-known x)
 	(struct-case x
@@ -6268,7 +6286,7 @@
     ;;exception.
     ;;
     (or (getprop core-primitive-symbol-name COOKIE)
-	(compiler-internal-error 'getprimop
+	(compiler-internal-error 'CORE-PRIMITIVE-OPERATION-NAMES __who__
 	  "not a core primitive operation" core-primitive-symbol-name)))
 
   (define* (set-primop! {symbol symbol?} primitive-handler)
@@ -7102,9 +7120,9 @@
 ;; eval: (put '$for-each/stx			'scheme-indent-function 1)
 ;; eval: (put '$fold-right/stx			'scheme-indent-function 1)
 ;; eval: (put 'with-prelex-structs-in-plists	'scheme-indent-function 1)
-;; eval: (put 'compile-time-error		'scheme-indent-function 1)
-;; eval: (put 'compiler-internal-error		'scheme-indent-function 1)
-;; eval: (put 'compile-time-arity-error		'scheme-indent-function 1)
-;; eval: (put 'compile-time-operand-core-type-error 'scheme-indent-function 1)
+;; eval: (put 'compile-time-error		'scheme-indent-function 2)
+;; eval: (put 'compiler-internal-error		'scheme-indent-function 2)
+;; eval: (put 'compile-time-arity-error		'scheme-indent-function 2)
+;; eval: (put 'compile-time-operand-core-type-error 'scheme-indent-function 2)
 ;; eval: (put '%parse-compilation-options	'scheme-indent-function 1)
 ;; End:

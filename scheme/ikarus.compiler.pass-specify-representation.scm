@@ -942,8 +942,8 @@
 
       (main stx))
 
-    (define (%error-context-not-handled prim)
-      (compile-time-error __module_who__
+    (define* (%error-context-not-handled prim)
+      (compile-time-error __module_who__ __who__
 	"evaluation context not handled by core primitive operation" prim))
 
     #| end of module: %COGEN-PRIMOP-BODY |# )
@@ -1693,7 +1693,7 @@
     ;;
     (F rator #t))
 
-  (define (F rator check?)
+  (define* (F rator check?)
     (struct-case rator
       ((primopcall rator.op rator.rand*)
        (cond ((and (eq? rator.op 'top-level-value)
@@ -1746,7 +1746,7 @@
 		   "operator of FUNCALL is known not to be a procedure: ~a"
 		   rator.sexp)
 		  (F rator.expr check?))
-	      (compile-time-error __module_who__
+	      (compile-time-error __module_who__ __who__
 		"operator of FUNCALL is known not to be a procedure" rator.sexp))))
 	 ((maybe)
 	  (F rator.expr #t))))

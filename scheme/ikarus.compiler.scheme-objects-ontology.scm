@@ -477,7 +477,7 @@
 
   (define (%do-check expr result expected)
     (unless (equal? result expected)
-      (compiler-internal-error 'check-objects-ontology
+      (compiler-internal-error 'check-objects-ontology __who__
 	"failed/got/expected" expr result expected)))
 
   (define-syntax check

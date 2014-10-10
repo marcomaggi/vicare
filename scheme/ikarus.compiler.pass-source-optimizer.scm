@@ -1687,7 +1687,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%primitive-info prim-name rand*)
+  (define* (%primitive-info prim-name rand*)
     ;;PRIM-NAME  must be  a symbol  representing the  name of  a primitive  function.
     ;;RAND* must be null  or a list representing the arguments in  a function call to
     ;;PRIM-NAME.
@@ -1718,7 +1718,7 @@
 				(equal? optmpl (constant-value v))
 				(loop (cdr rand*) (cdr operands-template)))))
 			(else
-			 (compiler-internal-error __module_who__
+			 (compiler-internal-error __module_who__ __who__
 			   "invalid core primitive template operand specification"
 			   prim-name (car operands-template)))))))
 	      ((eq? operands-template '_)

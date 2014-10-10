@@ -49,6 +49,9 @@
    NON-8BIT-REGISTERS		ALL-REGISTERS
    %cpu-register-name->index)
 
+  (define-syntax __module_who__
+    (identifier-syntax 'INTEL-ASSEMBLY-CODE-GENERATION))
+
 
 ;;On the Intel architecture, the CPU registers have special use:
 ;;
@@ -166,7 +169,7 @@
     (cond ((assq x INTEL-CPU-REGISTER/INDEX-MAP)
 	   => cdr)
 	  (else
-	   (compiler-internal-error __who__
+	   (compiler-internal-error __module_who__ __who__
 	     "expected symbol representing an integer-mapped Intel CPU register name (lower-case)"
 	     x))))
 
@@ -190,9 +193,8 @@
 	((register? off)
 	 (list 'disp off val))
 	(else
-	 (compiler-internal-error __who__
-	   "invalid displacement offset"
-	   off))))
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid displacement offset" off))))
 
 (define-syntax int
   (syntax-rules ()

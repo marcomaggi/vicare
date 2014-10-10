@@ -239,7 +239,7 @@
   ;;Process  a recordised  code struct  for  its return  value, and  append a  RETURN
   ;;high-level Assembly instruction that returns the value to the caller.
   ;;
-  (define (V-and-return x)
+  (define* (V-and-return x)
     (struct-case x
 
       ((constant)
@@ -279,7 +279,7 @@
        (make-shortcut (V-and-return body) (V-and-return handler)))
 
       (else
-       (compiler-internal-error __module_who__ "invalid tail" x))))
+       (compiler-internal-error __module_who__ __who__ "invalid tail" x))))
 
   (define (V-tail x)
     ;;X is a struct of type: CONSTANT, VAR, ASMCALL, FORCALL.
@@ -512,7 +512,7 @@
 		   (kont (cons A D))))))
       (kont '())))
 
-  (define (S x kont)
+  (define* (S x kont)
     ;;Simplify the struct X then apply the function KONT to the simplified struct.  X
     ;;must be an operand for a high-level Assembly instruction in an ASMCALL struct.
     ;;
@@ -544,7 +544,7 @@
 		    t x
 		  (kont t))))
 	     (else
-	      (compiler-internal-error __module_who__
+	      (compiler-internal-error __module_who__ __who__
 		"invalid ASMCALL operand to be simpliefied"
 		(unparse-recordized-code/sexp x)))))))
 
@@ -608,12 +608,12 @@
       (else
        (if (symbol? x)
 	   (%move-dst<-src dst x)
-	 (compiler-internal-error __module_who__
+	 (compiler-internal-error __module_who__ __who__
 	   "invalid recordised code in V context" (unparse-recordized-code/sexp x))))))
 
 ;;; --------------------------------------------------------------------
 
-  (define (V-asmcall x dst op rand*)
+  (define* (V-asmcall x dst op rand*)
     (import OPERANDS-SIMPLIFICATION)
     (case op
       ((alloc)
@@ -769,7 +769,7 @@
 		 (make-asm-instr op dst ecx)))))))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid ASMCALL operator in return value context"
 	 (unparse-recordized-code/sexp x)))))
 
@@ -833,7 +833,7 @@
 
 (module (E)
 
-  (define (E x)
+  (define* (E x)
     (struct-case x
       ((seq e0 e1)
        (make-seq (E e0) (E e1)))
@@ -870,11 +870,11 @@
        (make-shortcut (E body) (E handler)))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid recordised code in E context"
 	 (unparse-recordized-code/sexp x)))))
 
-  (define (E-asmcall x op rand*)
+  (define* (E-asmcall x op rand*)
     (import OPERANDS-SIMPLIFICATION)
     (case op
       ((mset bset mset32)
@@ -936,7 +936,7 @@
        x)
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid ASMCALL operator in E context"
 	 (unparse-recordized-code/sexp x)))))
 
@@ -945,7 +945,7 @@
 
 (module (P)
 
-  (define (P x)
+  (define* (P x)
     (struct-case x
       ((constant)
        x)
@@ -968,7 +968,7 @@
        (make-shortcut (P body) (P handler)))
 
       (else
-       (compiler-internal-error __module_who__
+       (compiler-internal-error __module_who__ __who__
 	 "invalid recordised code in P context"
 	 (unparse-recordized-code/sexp x)))))
 
