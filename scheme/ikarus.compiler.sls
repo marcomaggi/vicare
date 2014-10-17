@@ -864,11 +864,9 @@
 		;Multipurpose  field.   When   unused  it  is  set   to  false.   The
 		;documentation of  uses is long:  see the individual  compiler passes
 		;for details.
-   (source-reference-count 0)
-		;Fixnum,  represents  the  number  of times  a  lexical  variable  is
-		;referenced in the source code.
-		;
-		;See also the field RESIDUAL-REFERENCED?.
+   (source-referenced?	#f)
+		;Boolean.  True  if this PRELEX  is referenced  at least once  in the
+		;code.  See also the field RESIDUAL-REFERENCED?.
    (source-assigned?	#f)
 		;Boolean or loc gensym.
 		;
@@ -963,30 +961,6 @@
 		;not described by  a PRELEX struct, so this field  has no relation to
 		;them.
    ))
-
-;;Implement operations on the field SOURCE-REFERENCE-COUNT for the PRELEX structure.
-;;
-(begin
-  (define* (prelex-incr-source-reference-count! {prel prelex?})
-    ($set-prelex-source-reference-count! prel (fxadd1 ($prelex-source-reference-count prel))))
-
-  (define* (prelex-decr-source-reference-count! {prel prelex?})
-    ($set-prelex-source-reference-count! prel (fxsub1 ($prelex-source-reference-count prel)))))
-
-;;Implement the virtual field SOURCE-REFERENCED? for the PRELEX structure.
-;;
-(begin
-  (define (prelex-source-referenced? prel)
-    (fxpositive? (prelex-source-reference-count prel)))
-
-  (define (set-prelex-source-referenced?! prel bool)
-    (set-prelex-source-reference-count! prel (if bool 1 0)))
-
-  (define ($prelex-source-referenced? prel)
-    (fxpositive? ($prelex-source-reference-count prel)))
-
-  (define ($set-prelex-source-referenced?! prel bool)
-    ($set-prelex-source-reference-count! prel (if bool 1 0))))
 
 (case-define* make-prelex-for-tmp-binding
   ;;Build and return a unique PRELEX struct meant to be used for a compiler-generated
@@ -2058,7 +2032,7 @@
 		   ;;pass if this reference must extract a value from a loc gensym or
 		   ;;simply reference a memory location on the Scheme stack.
 		   => (lambda (prel)
-			(prelex-incr-source-reference-count! prel)
+			(set-prelex-source-referenced?! prel #t)
 			prel))
 		  (else
 		   ;;X is  *not* a  lex gensym referencing  a binding  defined inside

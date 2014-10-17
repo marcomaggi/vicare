@@ -591,7 +591,6 @@
        ;;       (void)
        ;;       2))
        ;;
-       (prelex-decr-source-reference-count! x)
        VOID-CONSTANT)
       (else
        (let* ((x.copy (%lookup x env))
@@ -881,8 +880,8 @@
     ;;
     (receive-and-return (y)
 	(make-prelex ($prelex-name x))
-      ($set-prelex-source-reference-count! y ($prelex-source-reference-count x))
-      ($set-prelex-source-assigned?!       y ($prelex-source-assigned?       x))
+      ($set-prelex-source-referenced?! y ($prelex-source-referenced? x))
+      ($set-prelex-source-assigned?!   y ($prelex-source-assigned?   x))
       (let ((loc ($prelex-global-location x)))
 	;;If the  PRELEX struct X represents  a binding defined by  the core language
 	;;form LIBRARY-LETREC*:  LOC is the loc  gensym and X represents  a top level
@@ -890,10 +889,9 @@
 	(when loc
 	  ($set-prelex-global-location!        y loc)
 	  ;;Top level bindings  must not be removed, even if  they are not referenced
-	  ;;in this compilation unit.  So we increment the reference count here: even
-	  ;;if actual references are removed the reference count will never be zero.
-	  (prelex-incr-source-reference-count! y)
-	  ($set-prelex-residual-referenced?!   y #t)))))
+	  ;;in this compilation unit.  So we mark the PRELEX as referenced.
+	  ($set-prelex-source-referenced?!   y #t)
+	  ($set-prelex-residual-referenced?! y #t)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -921,7 +919,7 @@
     (for-each (lambda (x)
 		($set-prelex-source-assigned?!      x ($prelex-residual-assigned?   x))
 		(when ($prelex-residual-referenced? x)
-		  (prelex-incr-source-reference-count! x)))
+		  (set-prelex-source-referenced?! x #t)))
       ls))
 
   #| end of module: with-extended-env |# )
