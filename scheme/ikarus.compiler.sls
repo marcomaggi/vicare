@@ -1379,6 +1379,8 @@
 		;FVAR structs, live VAR structs.  If  two structs are connected by an
 		;interference edge: they  are alive at the same time,  so they cannot
 		;be stored in the same CPU register.
+		;
+		;The suffix "-conf" stands for conflict.
     reg-move
     frm-move
     var-move
@@ -1803,6 +1805,8 @@
 		;FVAR structs, live NFV structs.  If  two structs are connected by an
 		;interference edge: they  are alive at the same time,  so they cannot
 		;be stored in the same CPU register.
+		;
+		;The suffix "-conf" stands for conflict.
    ))
 
 (define-struct non-tail-call-frame

@@ -28,7 +28,7 @@
 ;;* After the previous compiler passes: all  the code has been reorganised into a set
 ;;  of CLAMBDA structs and an initialisation expression.
 ;;
-;;* Every  clause in the  CLAMBDA structs  can be processed  independently, without
+;;*  Every clause  in the  CLAMBDA structs  can be  processed independently,  without
 ;;  informations from other clauses.
 ;;
 ;;* There is no  significant difference between the body of a  CLAMBDA clause and the
@@ -37,25 +37,6 @@
 ;;
 ;;So here we  can just consider the  bodies: if we understand how  a CLAMBDA clause's
 ;;body is  processed we get everything.
-;;
-;;Every body is  an expression resulting from the composition  of subexpressions; the
-;;subexpressions form a  tree-like hierarchy.  In a previous compiler  pass: for each
-;;body  a list  of  local variables  has been  gathered,  representing the  temporary
-;;locations needed to hold data and partial results from computations; such lists are
-;;stored in  LOCALS structs.   Some local  variables exists only  in branches  of the
-;;tree, for example:
-;;
-;;   (conditional ?test
-;;       (bind ((a ?rhs-a))
-;;         ?conseq)
-;;     (bind ((b ?rhs-b))
-;;       ?altern))
-;;
-;;the variable A exists only in the ?CONSEQ,  while the variable B exists only in the
-;;?ALTERN.  At every  point in the computation:  the set of local  variables that are
-;;used in the continuation  is called the "live set".  Knowing  which locals are live
-;;in a  subexpression and which  are shared between  subexpressions is needed  to map
-;;local variables to available CPU registers.
 ;;
 ;;
 ;;Note about NON-TAIL-CALL-FRAME and NON-TAIL-CALL structs
@@ -100,6 +81,44 @@
 ;;may  appear in  the input  form.   Some Assembly  instructions require  the use  of
 ;;specific registers; namely ECX and EDX.
 ;;
+;;
+;;Local variables
+;;---------------
+;;
+;;Every body is  an expression resulting from the composition  of subexpressions; the
+;;subexpressions form a  tree-like hierarchy.  In a previous compiler  pass: for each
+;;body  a list  of  local variables  has been  gathered,  representing the  temporary
+;;locations needed to hold data and partial results from computations; such lists are
+;;stored in  LOCALS structs.
+;;
+;;Some local variables exists only in branches of the tree, for example:
+;;
+;;   (conditional ?test
+;;       (bind ((a ?rhs-a))
+;;         ?conseq)
+;;     (bind ((b ?rhs-b))
+;;       ?altern))
+;;
+;;the variable A exists only in the ?CONSEQ,  while the variable B exists only in the
+;;?ALTERN.
+;;
+;;To minimise  the use of  resources: local  variables, including stack  and register
+;;operands,  are stored  in/mapped to  the CPU  registers and  the minimum  amount of
+;;Scheme stack locations.  Allocating CPU registers to local variables is preferable,
+;;when possible, because  read and write operations to registers  are faster than the
+;;equivalent to  the stack.   Finding the  minimum set  of stack  location is  a hard
+;;problem.
+;;
+;;
+;;Local variables liveness
+;;------------------------
+;;
+;;At every point in the computation: the set  of local variables that are read in the
+;;continuation  is  called the  "live  set".   Knowing which  locals  are  live in  a
+;;subexpression and  which are shared between  subexpressions is needed to  map local
+;;variables to available CPU registers.
+;;
+;;
 
 
 ;;;; CPU registers and stack space allocation
@@ -108,7 +127,10 @@
 ;;
 ;;   <http://en.wikipedia.org/wiki/Register_allocation>
 ;;
+;;For an introduction to live variables analysis see:
 ;;
+;;   <http://en.wikipedia.org/wiki/Data-flow_analysis>
+;;   <http://en.wikipedia.org/wiki/Liveness_analysis>
 ;;
 
 
@@ -659,14 +681,12 @@
 
 
 (module FRAME-CONFLICT-SETS
-  (empty-var-set rem-var add-var union-vars mem-var? for-each-var init-var*!
-   empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv init-nfv!
+  (init-var*! init-nfv!
+   empty-var-set rem-var add-var union-vars mem-var? for-each-var
+   empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv
    empty-frm-set rem-frm add-frm union-frms mem-frm?
    empty-reg-set rem-reg add-reg union-regs mem-reg?)
   (import INTEGER-SET)
-
-;;; --------------------------------------------------------------------
-;;; temporary locations, VAR structs
 
   (module (init-var*!)
 
@@ -680,14 +700,30 @@
 
     (define (init-var! x i)
       ($set-var-index! x i)
+      ;;Sets representing preference  edges.  If a struct is added  to these sets: it
+      ;;means it is connected to all the structs already in the set.
       ($set-var-var-move! x (empty-var-set))
       ($set-var-reg-move! x (empty-reg-set))
       ($set-var-frm-move! x (empty-frm-set))
+      ;;Sets representing interference edges.  If a struct is added to these sets: it
+      ;;means it is connected to all the structs already in the set.
       ($set-var-var-conf! x (empty-var-set))
       ($set-var-reg-conf! x (empty-reg-set))
       ($set-var-frm-conf! x (empty-frm-set)))
 
     #| end of module |# )
+
+  (define (init-nfv! x)
+    ;;Sets representing  preference edges.  If  a struct is  added to these  sets: it
+    ;;means it is connected to all the structs already in the set.
+    ($set-nfv-frm-conf! x (empty-frm-set))
+    ($set-nfv-nfv-conf! x (empty-nfv-set))
+		;We set  this field to  an empty set,  even though, at  present, this
+		;field is unused.
+    ($set-nfv-var-conf! x (empty-var-set)))
+
+;;; --------------------------------------------------------------------
+;;; temporary locations, VAR structs
 
   (define-syntax-rule (empty-var-set)
     ;;Build and return a new, empty VS set.
@@ -796,13 +832,6 @@
 
 ;;; --------------------------------------------------------------------
 ;;; next frame stack operands, NFV structs
-
-  (define (init-nfv! x)
-    ($set-nfv-frm-conf! x (empty-frm-set))
-    ;;We set  this field  to an  empty set, even  though, at  present, this  field is
-    ;;unused.
-    ($set-nfv-nfv-conf! x (empty-nfv-set))
-    ($set-nfv-var-conf! x (empty-var-set)))
 
   (define-syntax-rule (empty-nfv-set)
     ;;Build and return a new, empty NS set.
