@@ -432,7 +432,7 @@ computation.
 @end example
 
 @noindent
-but currently all the LIMY Scheme implementations do:
+but currently many Scheme implementations do:
 
 @example
 (eqv?   +nan.0 +nan.0) @result{} #t
