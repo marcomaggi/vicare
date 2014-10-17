@@ -72,6 +72,7 @@ doc_vicare_scheme_TEXINFOS	= \
 	doc/shmem.texi					\
 	doc/binfmt.texi					\
 	doc/history.texi				\
+	doc/notes.texi					\
 	doc/references.texi
 
 doc_vicare_libs_TEXINFOS = \

@@ -1,0 +1,495 @@
+@node notes
+@appendix Miscellaneous notes on everything
+
+
+@menu
+* notes nan::                   How to deal with not--a--number.
+@end menu
+
+@c page
+@node notes nan
+@appendixsec How to deal with not--a--number
+
+
+@cindex How to deal with NaN
+@cindex NaN, how to deal with it
+
+
+The not--a--number value, @dfn{NaN} for short, represents the result of
+a @emph{wrong} computation.  NaN can appear as literal in Scheme source
+code as @samp{+nan.0} or @samp{-nan.0}, and it can be the result of an
+expression composing Scheme arithmetic functions.  NaN has @strong{no
+sign}, @samp{+nan.0} and @samp{-nan.0} have the same semantic meaning.
+
+What follows is just a set of notes with no commitment to rigour in
+Mathematics.  For more informations on NaN, start from:
+
+@quotation
+Wikipedia contributors.  ``Not a number''.  Wikipedia, The Free
+Encyclopedia.
+@url{http://en.wikipedia.org/w/index.php?title=NaN&oldid=303402207}
+(accessed July 21, 2009).
+@end quotation
+
+@noindent
+see also:
+
+@quotation
+Wikipedia contributors.  ``Division by zero''.  Wikipedia, The Free
+Encyclopedia.
+@url{http://en.wikipedia.org/w/index.php?title=Division_by_zero&oldid=303258289}
+(accessed July 21, 2009).
+@end quotation
+
+Being that NaN is a little weird, let's start by understanding how to
+deal with infinities first.
+
+@menu
+* notes nan inf::               How to deal with infinities.
+* notes nan nan::               Understanding not--a--number.
+@end menu
+
+@c page
+@node notes nan inf
+@appendixsubsec How to deal with infinities
+
+
+Infinities can appear as literals in Scheme source code as @samp{+inf.0}
+or @samp{-inf.0}, and they can be the result of an expression composing
+Scheme arithmetic functions.
+
+We have to distinguish between @dfn{number objects} as defined in
+@rnrs{6} Scheme, and @dfn{numbers} as defined by Mathematics.
+
+@c ------------------------------------------------------------
+
+@subsubheading Infinities in the mathematical realm
+
+We can take that Algebra defines @dfn{groups} as couples @math{(S, o)}
+where: @math{S} is a set of mathematical entities, @math{o} is an
+operation that composes two entities in @math{S} and evaluates to some
+mathematical entity.  We can define the group @math{(R, +)}, where
+@math{R} is the set of real numbers and @math{+} is the common addition,
+because they are compliant with the following axioms:
+
+@table @emph
+@item Closure
+For every couple of reals, their sum is a real.
+
+@item Associativity
+For every triplet of reals:
+
+@example
+a + (b + c) = (a + b) + c
+@end example
+
+@item Identity element
+There exists a unique real @math{0} for which, for every real @math{a}:
+
+@example
+0 + a = a + 0 = a
+@end example
+
+@item Inverse element
+For every real @math{a} there is a unique other real @math{b} for which:
+
+@example
+a + b = 0  @result{}  a = -b
+@end example
+@end table
+
+@noindent
+the existence of the inverse element for addition allows the definition
+of subtraction.  The couple @math{(R, *)}, the reals with the ordinary
+product, is also a group:
+
+@table @emph
+@item Closure
+@example
+\forall a, b \in R     a * b = c   c \in R
+@end example
+
+@item Associativity
+@example
+a * (b * c) = (a * b) * c
+@end example
+
+@item Identity element
+@example
+1 * a = a * 1 = a
+@end example
+
+@item Inverse element
+@example
+a * b = 1  @result{}  a = 1/b
+@end example
+@end table
+
+@noindent
+the existence of the inverse element for multiplication allows the
+definition of division.
+
+The triplet @math{(S, +, *)} in which @math{S} is a set of mathematical
+entities, and @math{+} and @math{*} are composition operations with the
+properties for a group, is called @dfn{field} if the following
+additional axioms hold:
+
+@table @emph
+@item Commutativity
+@example
+a + b = b + a    a * b = b * a
+@end example
+
+@item Distributivity
+@example
+a * (b + c) = a * b + a * c
+@end example
+@end table
+
+Human experience shows that it is convenient to state (simplified):
+Every mathematical entity which is not compliant with the axioms of a
+field is not a number.
+
+Infinities are abstract mathematical entities which we can define
+through the following disequations:
+
+@example
+\forall r \in R        -\infty < r < +\infty
+@end example
+
+@noindent
+which means:
+
+@itemize
+@item
+Positive infinity is comparable to numbers and it is greater than all
+the positive numbers.
+
+@item
+Negative infinity is comparable to numbers and it is lesser than all the
+negative number.
+@end itemize
+
+@noindent
+we notice that the comparison operator @math{<} does not define a group,
+because the result of @math{1 < 2} (as defined in Mathematics) is a
+boolean value not a number.@footnote{This holds despite the fact that
+many programming languages allow a disequation to yield a number.}
+
+Despite the fact that we can compare them to numbers, @strong{infinities
+are not numbers in the Mathematics sense.}  We can show this with the
+following simple mathematical computation; let's consider the following
+equation:
+
+@example
+4 + +\infty = x
+@end example
+
+@noindent
+what should we take as value for @math{x}?  @math{x} cannot be a number
+like, say, @math{8}, because:
+
+@example
+4 + +\infty = 8
+@result{} +\infty = 8 - 4 = 4
+@result{} +\infty = 4  Wrong!
+@end example
+
+@noindent
+the only answer that tries to make some sense is @math{x = +\infty}, but
+then:
+
+@example
+4 + +\infty = +\infty
+@result{}  4 = +\infty - +\infty = 0
+@result{}  4 = 0  Wrong!
+@end example
+
+@noindent
+if we assume that infinities are numbers, some perfectly legal algebraic
+manipulation yields a wrong result.  Human beings define mathematical
+entities based on their usefulness; human experience shows that it is
+more useful to avoid absurd equations like @math{4 = 0}, than to define
+infinities as numbers.
+
+So, infinities are @strong{not} numbers and the equation @math{4 +
+\infty = x} is wrong in the sense that, in Mathematics, it is an error
+to write it.
+
+Mathematics is not ``perfect'', in the sense that it allows us to write
+wrong equations; unfortunately we can recognise an equation as wrong
+only by trying to solve it.
+
+Let's look at this equation:
+
+@example
+   4 - 3       1
+------------ = - = x
+12 - (4 + 8)   0
+@end example
+
+@noindent
+what should we take as value for @math{x}?
+
+If we had the limit:
+
+@example
+         1
+\lim    --- = x      t > 0
+t -> 0   t
+@end example
+
+@noindent
+we would know that @math{x -> +\infty} (@math{x} approaches
+@math{+\infty}, it is not equal to it).  Computing @math{1 / t} for
+@math{t} smaller and smaller, yields a result that is a bigger and
+bigger positive number, which approaches the mathematical entity greater
+than all the positive numbers; that is @math{+\infty}.
+
+But what about the straight @math{1 / 0 = x}?  The only mathematical
+entity that makes sense as answer is @math{x = +\infty}, so @math{1 / 0}
+is not a number.  We can demonstrate this with the following simple
+computation:
+
+@example
+3 * (1 / 0) = y
+@result{}  3 / 0 = y
+@result{}  3 = y * 0 = 0
+@result{}  3 = 0   Wrong!
+@end example
+
+@noindent
+so, it is impossible for @math{1 / 0} and @math{y} to comply with the
+axioms.
+
+@c ------------------------------------------------------------
+
+@subsubheading Infinities in the computer realm
+
+Number objects are all the Scheme values for which the predicate
+@func{number?} returns @true{}.  Both the infinities @samp{+inf.0} and
+@samp{-inf.0} are number objects.  This way Scheme defines a class of
+values which can be used as arguments to arithmetic procedures, and
+which can potentially be the return value of an arithmetic procedure.
+
+We acknowledged that, when a mathematical expression is non--compliant
+with the axioms of definition of numbers, we can verify it by doing the
+computation and checking the final or partial results.  A computer can
+do the same by detecting, for example, if a division has @math{1} and
+@math{0} as operands.
+
+It turns out that making a computer processor interrupt a computation
+when an expression is wrong, is inefficient.  So two special values were
+defined to allow a computation to signal that special error:
+@samp{+inf.0} and @samp{-inf.0}.
+
+When a computation returns @samp{+inf.0} and @samp{-inf.0} we know that
+the expression was wrong.  @rnrs{6} Scheme defines the following
+conventional results:
+
+@example
+(div 1 0) @result{} error
+(/   1 0) @result{} error
+
+(/   1.0 0)   @result{} +inf.0
+(/   1   0.0) @result{} +inf.0
+(/   1.0 0.0) @result{} +inf.0
+@end example
+
+@noindent
+when both the operands are exact, the expression raises an error; when
+one of the operands is inexact, the expression yields infinity.
+
+Special rules were defined to avoid to mistake a wrong computation for a
+correct one; for example:
+
+@example
+(+ 44 (* 23 +inf.0)) @result{} +inf.0
+(+ 44 (* 23 -inf.0)) @result{} -inf.0
+@end example
+
+@noindent
+we know that both of these are wrong, but we also know that they are
+wrong in that special way for which returning an infinity makes some
+sense.  It is our responsibility to decide what to do.
+
+The special rules makes it impossible for an expression to return a
+finite number if one of the partial results was an infinity.  Sometimes
+the composition of two infinities can yield an infinity with no
+confusion; examples:
+
+@example
+(+ +inf.0 +inf.0) @result{} +inf.0
+(+ -inf.0 -inf.0) @result{} -inf.0
+
+(- +inf.0 -inf.0) @result{} +inf.0  ;like (+ +inf.0 +inf.0)
+(- -inf.0 +inf.0) @result{} -inf.0  ;like (+ -inf.0 -inf.0)
+(- +inf.0 -inf.0) @result{} +inf.0  ;like (+ +inf.0 +inf.0)
+
+(* +inf.0 +inf.0) @result{} -inf.0
+(* +inf.0 -inf.0) @result{} -inf.0
+(* -inf.0 -inf.0) @result{} +inf.0
+@end example
+
+@noindent
+but some expressions are difficult to deal with:
+
+@example
+(+ +inf.0 -inf.0) @result{} ?
+(+ -inf.0 +inf.0) @result{} ?
+
+(- -inf.0 -inf.0) @result{} ?
+(- -inf.0 +inf.0) @result{} ?
+
+(/ +inf.0 +inf.0) @result{} ?
+(/ +inf.0 -inf.0) @result{} ?
+(/ -inf.0 +inf.0) @result{} ?
+(/ -inf.0 -inf.0) @result{} ?
+@end example
+
+@noindent
+neither a number nor an infinity makes sense as result here; we need
+NaN.
+
+@c page
+@node notes nan nan
+@appendixsubsec Understanding not--a--number
+
+
+NaN is a special value used as result of a wrong expression.  We have
+seen that the composition of infinities is not always defined; in those
+cases the result is NaN:
+
+@example
+(+ +inf.0 -inf.0) @result{} +nan.0
+(+ -inf.0 +inf.0) @result{} +nan.0
+
+(- -inf.0 -inf.0) @result{} +nan.0
+(- -inf.0 +inf.0) @result{} +nan.0
+
+(/ +inf.0 +inf.0) @result{} +nan.0
+(/ +inf.0 -inf.0) @result{} +nan.0
+(/ -inf.0 +inf.0) @result{} +nan.0
+(/ -inf.0 -inf.0) @result{} +nan.0
+@end example
+
+@noindent
+also it is:
+
+@example
+(div 0   0)   @result{} <error>
+(/   0   0)   @result{} <error>
+(/   0.0 0)   @result{} +nan.0
+(/   0   0.0) @result{} +nan.0
+(/   0.0 0.0) @result{} +nan.0
+@end example
+
+@noindent
+because, in Mathematics, @math{0 / 0} is not compliant to the axioms:
+
+@example
+(0 / 0) = y
+@result{}  0 * y = 0    y is not unique
+@end example
+
+Special rules were defined so that an arithmetic composition between NaN
+and another number always returns NaN.  This allows us not to mistake a
+wrong computation for a correct one:
+
+@example
+(+ 1 +nan.0) @result{} +nan.0
+(- 1 +nan.0) @result{} +nan.0
+(* 1 +nan.0) @result{} +nan.0
+(/ 1 +nan.0) @result{} +nan.0
+@end example
+
+@noindent
+we have to beware, though, that some non--arithmetic function may hide
+the NaN, and give rise to some surprise:
+
+@example
+(max 1 +nan.0) @result{} 1.0       ; ! the inexact 1!!
+(min 1 +nan.0) @result{} +nan.0    ; !?!
+@end example
+
+Scheme defines a predicate to test if a value is NaN, @func{nan?}.
+@rnrs{6} Scheme mandates that:
+
+@example
+(= +nan.0 +nan.0) @result{} #f
+(= +nan.0 z)      @result{} #f
+@end example
+
+@noindent
+for every number @var{z}.  The first is correct because a wrong
+computation is not equal, in numerical sense, to another wrong
+computation.
+
+@rnrs{6} Scheme also states that:
+
+@example
+(eqv? +nan.0 +nan.0) @result{} <undefined>
+@end example
+
+@noindent
+but currently all the LIMY Scheme implementations do:
+
+@example
+(eqv?   +nan.0 +nan.0) @result{} #t
+(equal? +nan.0 +nan.0) @result{} #t
+@end example
+
+@noindent
+notice that, by definition, @func{equal?} relies on @func{eqv?}.  This
+allows us to do tests for wrong computations using not only @func{nan?};
+this is especially useful when writing test suites (with more
+complicated stuff than this):
+
+@example
+(check
+    (list (+ 1 2) (/ 0.0 0.0))
+  => '(3 +nan.0))
+@end example
+
+The behaviour of @func{eqv?} and @func{equal?} does not reduce our
+ability to detect wrong expressions; we can always do:
+
+@example
+(let ((v (expression)))
+  (cond
+    ((= v 1)   (some-thing))
+    ((nan? v)  (some-other-thing))
+    (else      (yet-another-thing))))
+@end example
+
+@noindent
+@func{eqv?} and @func{equal?} just allow us to do (by definition
+@func{case} relies on @func{eqv?}):
+
+@example
+(case (expression)
+  ((1 2)     (some-thing))
+  ((+nan.0)  (some-other-thing))
+  (else      (yet-another-thing)))
+
+(let ((v (expression)))
+  (cond
+    ((= v 1)          (some-thing))
+    ((eqv? v +nan.0)  (some-other-thing))
+    (else             (yet-another-thing))))
+@end example
+
+@noindent
+which, in some situations, is one more possibility to code the logic of
+a function:
+
+@example
+(= (expression1) (expression2))
+@result{} <bool> ; true if the results are equal numbers
+
+(eqv? (expression1) (expression2))
+@result{} <bool> ; true if the results are equal numbers
+          ; or are both wrong expressions
+@end example
+
+@c end of file
