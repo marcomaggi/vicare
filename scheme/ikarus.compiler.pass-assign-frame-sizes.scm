@@ -132,6 +132,11 @@
 ;;   <http://en.wikipedia.org/wiki/Data-flow_analysis>
 ;;   <http://en.wikipedia.org/wiki/Liveness_analysis>
 ;;
+;;A paper on register allocation:
+;;
+;;   G. J.  Chaitin.  "Register  allocation and spilling  via graph  coloring.".  IBM
+;;   Research.
+;;
 
 
 (module (assign-frame-sizes FRAME-CONFLICT-SETS)
