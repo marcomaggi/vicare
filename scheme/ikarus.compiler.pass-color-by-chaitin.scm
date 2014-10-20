@@ -33,24 +33,21 @@
 
 ;;;;
 
-(define (color-by-chaitin x)
-  (Program x))
-
-(module (Program)
-  ;;The purpose of this module is to apply the function %COLOR-PROGRAM
-  ;;below to all the bodies.
+(module (color-by-chaitin)
+  ;;The purpose of this  module is to apply the function  %COLOR-PROGRAM below to all
+  ;;the bodies.
   ;;
-  (define (Program x)
+  (define (color-by-chaitin x)
     (struct-case x
       ((codes code* body)
-       (make-codes (map Clambda code*) (%color-program body)))))
+       (make-codes (map E-clambda code*) (%color-program body)))))
 
-  (define (Clambda x)
+  (define (E-clambda x)
     (struct-case x
       ((clambda label case* cp freevar* name)
-       (make-clambda label (map ClambdaCase case*) cp freevar* name))))
+       (make-clambda label (map E-clambda-clause case*) cp freevar* name))))
 
-  (define (ClambdaCase x)
+  (define (E-clambda-clause x)
     (struct-case x
       ((clambda-case info body)
        (make-clambda-case info (%color-program body)))))
@@ -58,24 +55,25 @@
   (define (%color-program x)
     (module (list->set make-empty-set)
       (import LISTY-SET))
-    (define who '%color-program)
     (struct-case x
       ((locals x.vars x.body)
        (let ((varvec (car x.vars))
 	     (sp*    (cdr x.vars)))
-	 (let loop ((sp*^ (list->set sp*))
-		    (un*  (make-empty-set))
-		    (body x.body))
-	   (let-values (((un*^ body^) (add-unspillables un* body)))
+	 (let loop ((sp*^          (list->set sp*))
+		    (unspillable*  (make-empty-set))
+		    (body          x.body))
+	   (receive (unspillable*^ body^)
+	       (add-unspillables unspillable* body)
 	     (let ((G (build-graph body^)))
-	       (let-values (((spills sp*^^ env) (color-graph sp*^ un*^ G)))
+	       (receive (spills sp*^^ env)
+		   (color-graph sp*^ unspillable*^ G)
 		 (if (null? spills)
 		     (substitute env body^)
 		   (let* ((env^   (do-spill spills varvec))
 			  (body^^ (substitute env^ body^)))
-		     (loop sp*^^ un*^ body^^)))))))))))
+		     (loop sp*^^ unspillable*^ body^^)))))))))))
 
-  #| end of module: Program |# )
+  #| end of module: COLOR-BY-CHAITIN |# )
 
 
 (module LISTY-SET
@@ -269,15 +267,17 @@
 
 (define (build-graph x)
   ;;
-  ;;A lot of functions are nested here because they need to close upon
-  ;;GRAPH.
+  ;;A lot of functions are nested here because they need to close upon GRAPH.
   ;;
   (import LISTY-SET)
   (import GRAPHS)
 
-  (define who 'build-graph)
+  (define-syntax __module_who__
+    (identifier-syntax 'build-graph))
+
   (define GRAPH
     (empty-graph))
+
   (define exception-live-set
     (make-parameter #f))
 
@@ -304,7 +304,7 @@
 	   (if (memq x ALL-REGISTERS)
 	       (set-add x (make-empty-set))
 	     (make-empty-set))
-	 (error who "invalid R" x)))))
+	 (error __module_who__ "invalid R" x)))))
 
   (module (E)
 
@@ -330,9 +330,9 @@
 	    s)
 	   ((interrupt incr/zero?)
 	    (or (exception-live-set)
-		(error who "uninitialized exception")))
+		(error __module_who__ "uninitialized exception")))
 	   (else
-	    (error who "invalid effect asmcall" op))))
+	    (error __module_who__ "invalid effect asmcall" op))))
 
 	((shortcut body handler)
 	 (let ((s2 (E handler s)))
@@ -340,7 +340,7 @@
 	     (E body s))))
 
 	(else
-	 (error who "invalid effect" (unparse-recordized-code x)))))
+	 (error __module_who__ "invalid effect" (unparse-recordized-code x)))))
 
     (define (E-asm-instr op d v s)
       (define-syntax-rule (set-for-each ?func ?set)
@@ -370,7 +370,7 @@
 
 	((int-/overflow int+/overflow int*/overflow)
 	 (unless (exception-live-set)
-	   (error who "uninitialized live set"))
+	   (error __module_who__ "uninitialized live set"))
 	 (let ((s (set-rem d (set-union s (exception-live-set)))))
 	   (set-for-each (lambda (y)
 			   (add-edge! GRAPH d y))
@@ -419,7 +419,7 @@
 	 (set-union (R v) (set-union (R d) s)))
 
 	(else
-	 (error who "invalid effect" x))))
+	 (error __module_who__ "invalid effect" x))))
 
     #| end of module: E |# )
 
@@ -445,11 +445,11 @@
 	   (P body st sf su))))
 
       (else
-       (error who "invalid pred" (unparse-recordized-code x)))))
+       (error __module_who__ "invalid pred" (unparse-recordized-code x)))))
 
   (define (T x)
-    ;;Process the struct instance  X, representing recordized code, as
-    ;;if it is in tail position.
+    ;;Process the  struct instance X,  representing recordized code,  as if it  is in
+    ;;tail position.
     ;;
     (struct-case x
       ((conditional e0 e1 e2)
@@ -469,7 +469,7 @@
 	   (T body))))
 
       (else
-       (error who "invalid tail" (unparse-recordized-code x)))))
+       (error __module_who__ "invalid tail" (unparse-recordized-code x)))))
 
   (let ((s (T x)))
     ;;(pretty-print (unparse-recordized-code x))
@@ -549,19 +549,16 @@
   #| end of module: COLOR-GRAPH |# )
 
 
-(define (substitute env x)
-  ;;X must represent recordized code; this function builds and returns
-  ;;a new struct instance representing recordized code, which is meant
-  ;;to replace X.
+(define* (substitute env x)
+  ;;X must represent  recordized code; this function builds and  returns a new struct
+  ;;instance representing recordized code, which is meant to replace X.
   ;;
-  ;;The purpose of this function is  to apply the subfunction R to the
-  ;;operands in the structures of type ASM-INSTR and ASMCALL.
+  ;;The purpose of this function is to apply the subfunction R to the operands in the
+  ;;structures of type ASM-INSTR and ASMCALL.
   ;;
-  ;;A lot  of functions are nested  here because they make  use of the
-  ;;subfunction "Var", and "Var" needs to close upon the argument ENV.
+  ;;A lot  of functions  are nested  here because  they make  use of  the subfunction
+  ;;"Var", and "Var" needs to close upon the argument ENV.
   ;;
-  (define who 'substitute)
-
   (module (R)
 
     (define (R x)
@@ -574,13 +571,13 @@
 	 x)
 	((nfv c loc)
 	 (or loc
-	     (error who "unset nfv in R" x)))
+	     (error __who__ "unset nfv in R" x)))
 	((disp s0 s1)
 	 (make-disp (D s0) (D s1)))
 	(else
 	 (if (symbol? x)
 	     x
-	   (error who "invalid R" x)))))
+	   (error __who__ "invalid R" x)))))
 
     (define (D x)
       (struct-case x
@@ -593,7 +590,7 @@
 	(else
 	 (if (symbol? x)
 	     x
-	   (error who "invalid D" x)))))
+	   (error __who__ "invalid D" x)))))
 
     (define (Var x)
       (cond ((assq x env)
@@ -629,7 +626,7 @@
     ;; 	 (Var x))
     ;;     ((nfv confs loc)
     ;;      (or loc
-    ;; 	     (error who "LHS not set" x)))
+    ;; 	     (error __who__ "LHS not set" x)))
     ;;     (else x)))
 
     #| end of module: R |# )
@@ -650,7 +647,7 @@
       ((shortcut body handler)
        (make-shortcut (E body) (E handler)))
       (else
-       (error who "invalid effect" (unparse-recordized-code x)))))
+       (error __who__ "invalid effect" (unparse-recordized-code x)))))
 
   (define (P x)
     (struct-case x
@@ -665,7 +662,7 @@
       ((shortcut body handler)
        (make-shortcut (P body) (P handler)))
       (else
-       (error who "invalid pred" (unparse-recordized-code x)))))
+       (error __who__ "invalid pred" (unparse-recordized-code x)))))
 
   (define (T x)
     (struct-case x
@@ -678,7 +675,7 @@
       ((shortcut body handler)
        (make-shortcut (T body) (T handler)))
       (else
-       (error who "invalid tail" (unparse-recordized-code x)))))
+       (error __who__ "invalid tail" (unparse-recordized-code x)))))
 
   (T x))
 
@@ -986,69 +983,56 @@
     (let ((x (T x)))
       (values un* x))) ;;end of function ADD-UNSPILLABLES
 
-  (define (long-imm? x)
-    ;;Return true if X represents a constant signed integer too big to
-    ;;fit in 32-bit.
-    ;;
-    (struct-case x
-      ((constant n)
-       (cond ((integer? n)
-	      (not (<= MIN-SIGNED-32-BIT-INTEGER
-		       n
-		       MAX-SIGNED-32-BIT-INTEGER)))
-	     (else #t)))
-      (else #f)))
-
-  (define (small-operand? x)
-    (boot.case-word-size
-     ((32)
-      (not (mem? x)))
-     ((64)
-      (struct-case x
-	((constant n)
-	 (if (integer? n)
-	     (<= MIN-SIGNED-32-BIT-INTEGER
-		 n
-		 MAX-SIGNED-32-BIT-INTEGER)
-	   #f))
-	(else
-	 (or (register? x)
-	     (var?      x)))))))
+;;; --------------------------------------------------------------------
 
   (define (mem? x)
     (or (disp? x) (fvar? x)))
 
-  (define-inline-constant MIN-SIGNED-32-BIT-INTEGER
-    (- (expt 2 31)))
+  (module (long-imm? small-operand?)
 
-  (define-inline-constant MAX-SIGNED-32-BIT-INTEGER
-    (- (expt 2 31) 1))
+    (define (long-imm? x)
+      ;;Return true  if X  represents a  constant signed  integer too  big to  fit in
+      ;;32-bit.
+      ;;
+      (struct-case x
+	((constant n)
+	 (cond ((integer? n)
+		(not (<= MIN-SIGNED-32-BIT-INTEGER
+			 n
+			 MAX-SIGNED-32-BIT-INTEGER)))
+	       (else #t)))
+	(else #f)))
 
-  ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
-  ;;
-  ;; (define (S x kont)
-  ;;   (if (or (constant? x)
-  ;; 	      (var?      x)
-  ;; 	      (symbol?   x))
-  ;; 	  (kont x)
-  ;; 	(let ((u (mku)))
-  ;; 	  (make-seq (E (make-asm-instr 'move u x))
-  ;; 		    (kont u)))))
-  ;;
-  ;; (define (S* ls kont)
-  ;;   (if (null? ls)
-  ;; 	  (kont '())
-  ;; 	(S ($car ls) (lambda (a)
-  ;; 		       (S* ($cdr ls) (lambda (d)
-  ;; 				       (kont (cons a d))))))))
+    (define (small-operand? x)
+      (boot.case-word-size
+       ((32)
+	(not (mem? x)))
+       ((64)
+	(struct-case x
+	  ((constant n)
+	   (if (integer? n)
+	       (<= MIN-SIGNED-32-BIT-INTEGER
+		   n
+		   MAX-SIGNED-32-BIT-INTEGER)
+	     #f))
+	  (else
+	   (or (register? x)
+	       (var?      x)))))))
+
+    (define-inline-constant MIN-SIGNED-32-BIT-INTEGER
+      (- (expt 2 31)))
+
+    (define-inline-constant MAX-SIGNED-32-BIT-INTEGER
+      (- (expt 2 31) 1))
+
+    #| end of module |# )
 
   #| end of module: add-unspillables |# )
 
 
 ;;;; done
 
-
-#| end of module: chaitin module |# )
+#| end of module: color-by-chaitin |# )
 
 ;;; end of file
 ;; Local Variables:
