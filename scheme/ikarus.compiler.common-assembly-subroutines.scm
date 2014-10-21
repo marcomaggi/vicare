@@ -58,15 +58,15 @@
 				  ?local-definition ...
 				  (define ?local-label (gensym (quote ?local-label)))
 				  ...
-				  ;;We discard the return value of ASSEMBLE-SOURCES.
+				  ;;We discard the  return value of ASSEMBLE-SOURCES.
+				  ;;The   second  argument   must   be   a  list   of
+				  ;;CODE-OBJECT-SEXP symbolic expressions.
 				  (assemble-sources thunk?-label
-				    ;;This  must   be  a  list   of  CODE-OBJECT-SEXP
-				    ;;symbolic expressions.
-				    `((code-object-sexp
-				       (number-of-free-vars:  ,?num-of-freevars)
-				       (annotation:           ,?annotation)
-				       (label ,?entry-point-assembly-label)
-				       . ,(list ?body0 ?body ...))))
+				                    `((code-object-sexp
+						       (number-of-free-vars:  ,?num-of-freevars)
+						       (annotation:           ,?annotation)
+						       (label ,?entry-point-assembly-label)
+						       . ,(list ?body0 ?body ...))))
 				  (set! ENTRY-POINT-ASSEMBLY-LABEL ?entry-point-assembly-label)
 				  (lambda () ?entry-point-assembly-label)))
 		    ...)
