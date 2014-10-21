@@ -36,7 +36,7 @@
 		  assembly)
     ((_ ?refresh
 	((public-function		?func-name)
-	 (entry-point-label		?label-name)
+	 (entry-point-label		?entry-point-assembly-label)
 	 (number-of-free-variables	?num-of-freevars)
 	 (code-annotation		?annotation)
 	 (definitions			?def ...)
@@ -55,11 +55,18 @@
 	       (lambda (stx)
 		 (syntax-violation '?func-name "cannot use label before it is defined" stx #f)))
 	     ...
-	     (let* ((?func-name (let ((label (receive-and-return (?label-name)
-						 (gensym (symbol->string '?label-name))
+	     (let* ((?func-name (let ((label (receive-and-return (?entry-point-assembly-label)
+						 (gensym (symbol->string '?entry-point-assembly-label))
 					       ?def ...
 					       (define ?lab (gensym (symbol->string (quote ?lab))))
 					       ...
+					       ;;We  know  that  ?BODY0 is  always  a
+					       ;;symbolic expression:
+					       ;;
+					       ;;   (label ?entry-point-assembly-label)
+					       ;;
+					       ;;We  discard  the   return  value  of
+					       ;;ASSEMBLE-SOURCES.
 					       (assemble-sources thunk?-label
 						 ;;This   must    be   a    list   of
 						 ;;CODE-OBJECT-SEXP          symbolic

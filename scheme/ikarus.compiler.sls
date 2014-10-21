@@ -735,6 +735,10 @@
 		 (code-object-sexp* (alt-cogen p)))
 	    (%print-assembly code-object-sexp*)
 	    (let ((code* (assemble-sources thunk?-label code-object-sexp*)))
+	      ;;CODE* is  a list of code  objects; the first is  the one representing
+	      ;;the initialisation  expression, the others are  the ones representing
+	      ;;the CLAMBDAs.   The initialisation expression's code  object contains
+	      ;;references to all the CLAMBDA code objects.
 	      (car code*)))))))
 
   (define (core-expr->optimized-code core-language-sexp)
@@ -779,8 +783,8 @@
 		 (p (rewrite-freevar-references p))
 		 (p (insert-engine-checks p))
 		 (p (insert-stack-overflow-check p))
-		 (ls* (alt-cogen p)))
-	    ls*)))))
+		 (code-object-sexp* (alt-cogen p)))
+	    code-object-sexp*)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -6376,8 +6380,8 @@
 	   (x  (impose-calling-convention/evaluation-order x))
 	   (x  (assign-frame-sizes x))
 	   (x  (color-by-chaitin x))
-	   (ls (flatten-codes x)))
-      ls))
+	   (code-object-sexp* (flatten-codes x)))
+      code-object-sexp*))
 
 ;;; --------------------------------------------------------------------
 ;;; high-level assembly instructions
