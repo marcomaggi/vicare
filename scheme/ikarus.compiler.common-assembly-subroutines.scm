@@ -40,7 +40,7 @@
 	 (number-of-free-variables	?num-of-freevars)
 	 (code-annotation		?annotation)
 	 (definitions			?def ...)
-	 (local-labels			?lab ...)
+	 (local-labels			?local-label ...)
 	 (assembly			?body0 ?body ...))
 	...)
      (with-syntax (((LABEL-GENSYM ...) (generate-temporaries #'(?func-name ...))))
@@ -55,28 +55,24 @@
 	       (lambda (stx)
 		 (syntax-violation '?func-name "cannot use label before it is defined" stx #f)))
 	     ...
-	     (let* ((?func-name (let ((label (receive-and-return (?entry-point-assembly-label)
-						 (gensym (symbol->string '?entry-point-assembly-label))
-					       ?def ...
-					       (define ?lab (gensym (symbol->string (quote ?lab))))
-					       ...
-					       ;;We  know  that  ?BODY0 is  always  a
-					       ;;symbolic expression:
-					       ;;
-					       ;;   (label ?entry-point-assembly-label)
-					       ;;
-					       ;;We  discard  the   return  value  of
-					       ;;ASSEMBLE-SOURCES.
-					       (assemble-sources thunk?-label
-						 ;;This   must    be   a    list   of
-						 ;;CODE-OBJECT-SEXP          symbolic
-						 ;;expressions.
-						 `((code-object-sexp
-						    (number-of-free-vars:  ,?num-of-freevars)
-						    (annotation:           ,?annotation)
-						    . ,(list ?body0 ?body ...)))))))
-				  (set! LABEL-GENSYM label)
-				  (lambda () label)))
+	     (let* ((?func-name (let ((asm-label (receive-and-return (?entry-point-assembly-label)
+						     (gensym '?entry-point-assembly-label)
+						   ?def ...
+						   (define ?local-label (gensym (quote ?local-label)))
+						   ...
+						   ;;We discard  the return  value of
+						   ;;ASSEMBLE-SOURCES.
+						   (assemble-sources thunk?-label
+						     ;;This   must  be   a  list   of
+						     ;;CODE-OBJECT-SEXP      symbolic
+						     ;;expressions.
+						     `((code-object-sexp
+							(number-of-free-vars:  ,?num-of-freevars)
+							(annotation:           ,?annotation)
+							(label ,?entry-point-assembly-label)
+							. ,(list ?body0 ?body ...)))))))
+				  (set! LABEL-GENSYM asm-label)
+				  (lambda () asm-label)))
 		    ...)
 	       (void))))
        ))
@@ -120,7 +116,6 @@
 		   make-annotation-indirect)))
    (local-labels)
    (assembly
-    (label SL_annotated)
     ;;Load into CPR (Closure Pointer  Register) a reference to closure
     ;;object retrieving it  from the second free variable  slot in the
     ;;closure object actually referenced by the CPR itself.
@@ -186,7 +181,6 @@
    ;;FPR (Frame  Pointer Register)  there is a  reference to  a Scheme
    ;;list.
    (assembly
-    (label SL_apply)
     ;;Load in EBX the word at offset EAX from the frame pointer.
     (movl (mem FP-REGISTER eax) ebx)
     ;;If EBX holds the Scheme null object ...
@@ -299,7 +293,6 @@
 		 L_cont_mult_move_args
 		 L_cont_mult_copy_loop)
    (assembly
-    (label SL_continuation_code)
     ;;Move in EBX  the reference to the  continuation object contained
     ;;in the first data slot in the closure object.
     (movl (mem off-closure-data CP-REGISTER) ebx)
@@ -626,7 +619,6 @@
    (definitions)
    (local-labels)
    (assembly
-    (label SL_invalid_args)
     ;;Store on the  stack a reference to the closure  object (from the
     ;;Closure  Pointer Register)  as  first argument  to  the call  to
     ;;$INCORRECT-ARGS-ERROR-HANDLER.
@@ -669,7 +661,6 @@
    (definitions)
    (local-labels)
    (assembly
-    (label SL_multiple_values_ignore_rp)
     (ret)
     ))
 
@@ -702,7 +693,6 @@
    (definitions)
    (local-labels)
    (assembly
-    (label SL_multiple_values_error_rp)
     ;;From the  relocation vector  of this  code object:  retrieve the
     ;;location gensym associated to $MULTIPLE-VALUES-ERROR and load it
     ;;in the Closure Pointer Register  (CPR).  The "proc" slot of such
@@ -762,7 +752,6 @@
    (local-labels L_values_one_value
 		 L_values_many_values)
    (assembly
-    (label SL_values)
     ;;Dispatch according  to the number  of arguments.  Jump  when one
     ;;argument (slower)  because, usually, when  we use VALUES  we are
     ;;returning multiple values.
@@ -818,8 +807,6 @@
 		 SL_nonprocedure
 		 SL_invalid_args)
    (assembly
-    (label SL_call_with_values)
-
     ;;Validate the number of arguments.
     (cmpl (int (argc-convention 2)) eax)
     (jne (label SL_invalid_args))
