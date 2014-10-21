@@ -663,18 +663,20 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-ikarus-symbol-table.sps				\
 	tests/test-ikarus-unicode.sps					\
 	\
-	tests/test-vicare-bignums.sps					\
-	tests/test-vicare-bytevectors.sps				\
-	tests/test-vicare-builtin-posix.sps				\
-	tests/test-vicare-chars.sps					\
-	tests/test-vicare-collect.sps					\
-	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-compiler-internals.sps			\
 	tests/test-vicare-compiler-pass-source-optimiser.sps		\
 	tests/test-vicare-compiler-pass-introduce-unsafe-primrefs.sps	\
 	tests/test-vicare-compiler-pass-specify-representation.sps	\
 	tests/test-vicare-compiler-pass-impose-eval-order.sps		\
 	tests/test-vicare-compiler-pass-assign-frame-sizes.sps		\
+	tests/test-vicare-compiler-pass-color-by-chaitin.sps		\
+	\
+	tests/test-vicare-bignums.sps					\
+	tests/test-vicare-bytevectors.sps				\
+	tests/test-vicare-builtin-posix.sps				\
+	tests/test-vicare-chars.sps					\
+	tests/test-vicare-collect.sps					\
+	tests/test-vicare-compensations.sps				\
 	tests/test-vicare-conditions.sps				\
 	tests/test-vicare-enumerations.sps				\
 	tests/test-vicare-environment-inquiry.sps			\
