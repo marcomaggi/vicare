@@ -39,40 +39,36 @@
 	 (entry-point-label		?entry-point-assembly-label)
 	 (number-of-free-variables	?num-of-freevars)
 	 (code-annotation		?annotation)
-	 (definitions			?def ...)
+	 (definitions			?local-definition ...)
 	 (local-labels			?local-label ...)
 	 (assembly			?body0 ?body ...))
 	...)
-     (with-syntax (((LABEL-GENSYM ...) (generate-temporaries #'(?func-name ...))))
+     (with-syntax (((ENTRY-POINT-ASSEMBLY-LABEL ...) (generate-temporaries #'(?func-name ...))))
        #'(begin
-	   (define LABEL-GENSYM #f)
+	   (define ENTRY-POINT-ASSEMBLY-LABEL #f)
 	   ...
 	   (define (?func-name)
-	     (or LABEL-GENSYM (error '?func-name "uninitialized label")))
+	     (or ENTRY-POINT-ASSEMBLY-LABEL (error '?func-name "uninitialized label")))
 	   ...
 	   (define (?refresh)
-	     (define-syntax ?func-name
-	       (lambda (stx)
-		 (syntax-violation '?func-name "cannot use label before it is defined" stx #f)))
+	     (define-syntax (?func-name stx)
+	       (syntax-violation '?func-name "cannot use label before it is defined" stx #f))
 	     ...
-	     (let* ((?func-name (let ((asm-label (receive-and-return (?entry-point-assembly-label)
-						     (gensym '?entry-point-assembly-label)
-						   ?def ...
-						   (define ?local-label (gensym (quote ?local-label)))
-						   ...
-						   ;;We discard  the return  value of
-						   ;;ASSEMBLE-SOURCES.
-						   (assemble-sources thunk?-label
-						     ;;This   must  be   a  list   of
-						     ;;CODE-OBJECT-SEXP      symbolic
-						     ;;expressions.
-						     `((code-object-sexp
-							(number-of-free-vars:  ,?num-of-freevars)
-							(annotation:           ,?annotation)
-							(label ,?entry-point-assembly-label)
-							. ,(list ?body0 ?body ...)))))))
-				  (set! LABEL-GENSYM asm-label)
-				  (lambda () asm-label)))
+	     (let* ((?func-name (let ((?entry-point-assembly-label (gensym '?entry-point-assembly-label)))
+				  ?local-definition ...
+				  (define ?local-label (gensym (quote ?local-label)))
+				  ...
+				  ;;We discard the return value of ASSEMBLE-SOURCES.
+				  (assemble-sources thunk?-label
+				    ;;This  must   be  a  list   of  CODE-OBJECT-SEXP
+				    ;;symbolic expressions.
+				    `((code-object-sexp
+				       (number-of-free-vars:  ,?num-of-freevars)
+				       (annotation:           ,?annotation)
+				       (label ,?entry-point-assembly-label)
+				       . ,(list ?body0 ?body ...))))
+				  (set! ENTRY-POINT-ASSEMBLY-LABEL ?entry-point-assembly-label)
+				  (lambda () ?entry-point-assembly-label)))
 		    ...)
 	       (void))))
        ))
