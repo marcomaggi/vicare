@@ -100,38 +100,35 @@
 (module (Program)
 
   (define (Program x)
-    ;;Flatten  the struct  instance X  of type  CODES into  a list  of
-    ;;assembly instructions:  the BODY expressions first,  the CLAMBDA
-    ;;implementations last.  Return a list of lists with the following
-    ;;format:
+    ;;Flatten  the  struct  instance  X  of  type  CODES  into  a  list  of  assembly
+    ;;instructions: the BODY init expression first, the CLAMBDA implementations last.
+    ;;Return a list of symbolic expressions with the following format:
     ;;
-    ;;   (?asm-list-for-body ?asm-list-for-clambda ...)
+    ;;   (?code-object-sexp ...)
     ;;
-    ;;for each  sublist in  the returned  list a  code object  will be
-    ;;created.
+    ;;each of which has the format:
     ;;
-    ;;The ?ASM-LIST-FOR-BODY has the following format:
-    ;;
-    ;;   (?number-of-free-vars
-    ;;    (label ?body-entry-point)
-    ;;    ?asm-instr
-    ;;    ...)
-    ;;
-    ;;where the ?NUMBER-OF-FREE-VARS is always zero.
+    ;;   (code-object-sexp
+    ;;     (number-of-free-vars:	?num)
+    ;;     (annotation:			?annotation)
+    ;;     (label			?label)
+    ;;     ?asm-instr-sexp ...)
     ;;
     (struct-case x
       ((codes x.clambda* x.body)
-       (cons (cons* 0 (label (gensym "main_label"))
-		    (let ((accum (list '(nop))))
-		      (parameterize ((exceptions-concatenation accum))
-			(T x.body accum))))
+       (cons `(code-object-sexp
+	       (number-of-free-vars:	0)
+	       (annotation:		init-expression)
+	       (label			,(gensym "init_expression_label"))
+	       . ,(let ((accum (list '(nop))))
+		    (parameterize ((exceptions-concatenation accum))
+		      (T x.body accum))))
 	     (map Clambda x.clambda*)))))
 
   (define (Clambda x)
-    ;;Flatten the the  struct instance X of type CLAMBDA,  using a new
-    ;;error handler routines tail, as follows:
+    ;;Flatten the the  struct instance X of  type CLAMBDA, using a  new error handler
+    ;;routines tail, and generate Assembly instructions as follows:
     ;;
-    ;;  (?number-of-free-vars ?annotation
     ;;   (label ?clambda-entry-point)
     ;;   ?asm-instr
     ;;   ...
@@ -141,29 +138,30 @@
     ;;
     ;;where:
     ;;
-    ;;* ?ASM-INSTR  are assembly instructions that  select the CLAMBDA
-    ;;  case with  the correct number of arguments and  run the actual
-    ;;  function code.
+    ;;* ?ASM-INSTR  are assembly instructions that  select the CLAMBDA case  with the
+    ;;  correct number of arguments and run the actual function code.
     ;;
-    ;;*  ?HANDLER-ASM-INSTR  are  assembly  instructions  implementing
-    ;;  error handler routines.
+    ;;*  ?HANDLER-ASM-INSTR  are  assembly instructions  implementing  error  handler
+    ;;  routines.
     ;;
-    ;;If a  CLAMBDA case with the  correct number of arguments  is not
-    ;;found: the execution jumps to  the default routine to handle the
-    ;;error "wrong number of arguments".
+    ;;If  a CLAMBDA  case with  the correct  number of  arguments is  not found:  the
+    ;;execution jumps  to the default  routine to handle  the error "wrong  number of
+    ;;arguments".
     ;;
     (struct-case x
-      ((clambda L case* cp freevar* name)
-       (cons* (length freevar*)
-	      `(name ,name)
-	      (label L)
-	      (let ((accum (list '(nop))))
-		(parameterize ((exceptions-concatenation accum))
-		  (let recur ((case* case*))
-		    (if (pair? case*)
-			(ClambdaCase (car case*)
-				     (recur (cdr case*)))
-		      (cons `(jmp (label ,(sl-invalid-args-label))) accum)))))))))
+      ((clambda label clause* unused.cp freevar* name)
+       `(code-object-sexp
+	 (number-of-free-vars:	,(length freevar*))
+	 (annotation:		,name)
+	 (label			,label)
+	 . ,(let ((accum (list '(nop))))
+	      (parameterize ((exceptions-concatenation accum))
+		(let recur ((clause* clause*))
+		  (if (pair? clause*)
+		      (ClambdaCase (car clause*)
+				   (recur (cdr clause*)))
+		    (cons `(jmp (label ,(sl-invalid-args-label)))
+			  accum)))))))))
 
   (define (ClambdaCase x accum)
     ;;Flatten the struct instance of  type CLAMBDA-CASE into a list of

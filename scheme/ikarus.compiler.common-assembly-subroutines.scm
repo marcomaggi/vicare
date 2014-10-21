@@ -37,10 +37,10 @@
     ((_ ?refresh
 	((public-function		?func-name)
 	 (entry-point-label		?label-name)
-	 (number-of-free-variables	?freevars)
+	 (number-of-free-variables	?num-of-freevars)
 	 (code-annotation		?annotation)
-	 (definitions		?def ...)
-	 (local-labels		?lab ...)
+	 (definitions			?def ...)
+	 (local-labels			?lab ...)
 	 (assembly			?body0 ?body ...))
 	...)
      (with-syntax (((LABEL-GENSYM ...) (generate-temporaries #'(?func-name ...))))
@@ -55,18 +55,21 @@
 	       (lambda (stx)
 		 (syntax-violation '?func-name "cannot use label before it is defined" stx #f)))
 	     ...
-	     (let* ((?func-name
-		     (let ((label
-			    (let ((?label-name (gensym (symbol->string '?label-name))))
-			      ?def ...
-			      (define ?lab (gensym (symbol->string (quote ?lab))))
-			      ...
-			      (assemble-sources thunk?-label
-				(list (cons* ?freevars ?annotation
-					     (list ?body0 ?body ...))))
-			      ?label-name)))
-		       (set! LABEL-GENSYM label)
-		       (lambda () label)))
+	     (let* ((?func-name (let ((label (receive-and-return (?label-name)
+						 (gensym (symbol->string '?label-name))
+					       ?def ...
+					       (define ?lab (gensym (symbol->string (quote ?lab))))
+					       ...
+					       (assemble-sources thunk?-label
+						 ;;This   must    be   a    list   of
+						 ;;CODE-OBJECT-SEXP          symbolic
+						 ;;expressions.
+						 `((code-object-sexp
+						    (number-of-free-vars:  ,?num-of-freevars)
+						    (annotation:           ,?annotation)
+						    . ,(list ?body0 ?body ...)))))))
+				  (set! LABEL-GENSYM label)
+				  (lambda () label)))
 		    ...)
 	       (void))))
        ))
@@ -104,7 +107,7 @@
    ;;ANNOTATION-INDIRECT is a  struct type without fields;  it is used
    ;;to generate unique values of disjoint type.  This will end in the
    ;;code object's annotation field.
-   (code-annotation		`(name ,(make-annotation-indirect)))
+   (code-annotation		(make-annotation-indirect))
    (definitions
      (import (only (ikarus.code-objects)
 		   make-annotation-indirect)))
@@ -165,10 +168,10 @@
   ;;   [FPR + EAX] --> | ?arg4
   ;;                  ---
   ;;
-  ((public-function	sl-apply-label)
+  ((public-function		sl-apply-label)
    (entry-point-label		SL_apply)
    (number-of-free-variables	0)
-   (code-annotation		(label SL_apply))
+   (code-annotation		'sl-apply-label)
    (definitions)
    (local-labels L_apply_done
 		 L_apply_loop)
@@ -176,6 +179,7 @@
    ;;FPR (Frame  Pointer Register)  there is a  reference to  a Scheme
    ;;list.
    (assembly
+    (label SL_apply)
     ;;Load in EBX the word at offset EAX from the frame pointer.
     (movl (mem FP-REGISTER eax) ebx)
     ;;If EBX holds the Scheme null object ...
@@ -280,7 +284,7 @@
   ((public-function		sl-continuation-code-label)
    (entry-point-label		SL_continuation_code)
    (number-of-free-variables	1)
-   (code-annotation		(label SL_continuation_code))
+   (code-annotation		'sl-continuation-code-label)
    (definitions)
    (local-labels L_cont_zero_args
 		 L_cont_mult_args
@@ -288,6 +292,7 @@
 		 L_cont_mult_move_args
 		 L_cont_mult_copy_loop)
    (assembly
+    (label SL_continuation_code)
     ;;Move in EBX  the reference to the  continuation object contained
     ;;in the first data slot in the closure object.
     (movl (mem off-closure-data CP-REGISTER) ebx)
@@ -610,10 +615,11 @@
   ((public-function		sl-invalid-args-label)
    (entry-point-label		SL_invalid_args)
    (number-of-free-variables	0)
-   (code-annotation		(label SL_invalid_args))
+   (code-annotation		'sl-invalid-args-label)
    (definitions)
    (local-labels)
    (assembly
+    (label SL_invalid_args)
     ;;Store on the  stack a reference to the closure  object (from the
     ;;Closure  Pointer Register)  as  first argument  to  the call  to
     ;;$INCORRECT-ARGS-ERROR-HANDLER.
@@ -652,10 +658,11 @@
   ((public-function		sl-mv-ignore-rp-label)
    (entry-point-label		SL_multiple_values_ignore_rp)
    (number-of-free-variables	0)
-   (code-annotation		(label SL_multiple_values_ignore_rp))
+   (code-annotation		'sl-mv-ignore-rp-label)
    (definitions)
    (local-labels)
    (assembly
+    (label SL_multiple_values_ignore_rp)
     (ret)
     ))
 
@@ -684,10 +691,11 @@
   ((public-function		sl-mv-error-rp-label)
    (entry-point-label		SL_multiple_values_error_rp)
    (number-of-free-variables	0)
-   (code-annotation		(label SL_multiple_values_error_rp))
+   (code-annotation		'sl-mv-error-rp-label)
    (definitions)
    (local-labels)
    (assembly
+    (label SL_multiple_values_error_rp)
     ;;From the  relocation vector  of this  code object:  retrieve the
     ;;location gensym associated to $MULTIPLE-VALUES-ERROR and load it
     ;;in the Closure Pointer Register  (CPR).  The "proc" slot of such
@@ -742,7 +750,7 @@
   ((public-function sl-values-label)
    (entry-point-label		SL_values)
    (number-of-free-variables	0)
-   (code-annotation		'(name values))
+   (code-annotation		'values)
    (definitions)
    (local-labels L_values_one_value
 		 L_values_many_values)
@@ -794,7 +802,7 @@
   ((public-function		sl-cwv-label)
    (entry-point-label		SL_call_with_values)
    (number-of-free-variables	0)
-   (code-annotation		'(name call-with-values))
+   (code-annotation		'call-with-values)
    (definitions)
    (local-labels L_cwv_done
 		 L_cwv_loop

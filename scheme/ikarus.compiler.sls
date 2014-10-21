@@ -732,16 +732,9 @@
 		 (p (rewrite-freevar-references p))
 		 (p (insert-engine-checks p))
 		 (p (insert-stack-overflow-check p))
-		 (ls* (alt-cogen p)))
-	    (when (assembler-output)
-	      ;;Print nicely the assembly labels.
-	      (parameterize ((gensym-prefix "L")
-			     (print-gensym  #f))
-		(for-each (lambda (ls)
-			    (newline (current-error-port))
-			    ($for-each/stx print-instr ls))
-		  ls*)))
-	    (let ((code* (assemble-sources thunk?-label ls*)))
+		 (code-object-sexp* (alt-cogen p)))
+	    (%print-assembly code-object-sexp*)
+	    (let ((code* (assemble-sources thunk?-label code-object-sexp*)))
 	      (car code*)))))))
 
   (define (core-expr->optimized-code core-language-sexp)
@@ -787,8 +780,9 @@
 		 (p (insert-engine-checks p))
 		 (p (insert-stack-overflow-check p))
 		 (ls* (alt-cogen p)))
-	    ;;(gensym-prefix "L")
 	    ls*)))))
+
+;;; --------------------------------------------------------------------
 
   (define* (thunk?-label x)
     ;;If X is a struct instance of  type CLOSURE-MAKER with no free variables: return
@@ -798,19 +792,6 @@
 	 (if (null? (closure-maker-freevar* x))
 	     (code-loc-label (closure-maker-code x))
 	   (compiler-internal-error #f __who__ "non-thunk escaped" x))))
-
-  (define (print-instr x)
-    ;;Print  to the  current  error  port the  symbolic  expression representing  the
-    ;;assembly  instruction X.   To  be  used to  log  generated  assembly for  human
-    ;;inspection.
-    ;;
-    (if (and (pair? x)
-	     (eq? (car x) 'seq))
-	($for-each/stx print-instr (cdr x))
-      (let ((port (current-error-port)))
-	(display "   " port)
-	(write x port)
-	(newline port))))
 
   (define (%parse-compilation-options core-language-sexp kont)
     ;;Parse  the given  core language  expression; extract  the optional  compilation
@@ -840,6 +821,78 @@
 						(option.strict-r6rs))))
 	    (kont body)))
       (kont core-language-sexp)))
+
+;;; --------------------------------------------------------------------
+
+  (module (%print-assembly)
+
+    (define (%print-assembly code-object-sexp*)
+      ;;Print nicely the assembly labels.
+      ;;
+      ;;CODE-OBJECT-SEXP* is a list of symbolic expressions:
+      ;;
+      ;;   (?code-object-sexp ...)
+      ;;
+      ;;each of which has the format:
+      ;;
+      ;;   (code-object-sexp
+      ;;     (number-of-free-vars:	?num)
+      ;;     (annotation:		?annotation)
+      ;;     (label			?label)
+      ;;     ?asm-instr-sexp ...)
+      ;;
+      (when (assembler-output)
+	(parameterize ((gensym-prefix "L")
+		       (print-gensym  #f))
+	  (for-each (lambda (sexp)
+		      (let ((port (current-error-port)))
+			(newline port)
+			(fprintf port "(code-object-sexp\n  (number-of-free-variables: ~a)\n  (annotation: ~s)\n"
+				 (%sexp.number-of-free-vars sexp)
+				 (%sexp.annotation          sexp))
+			($for-each/stx %print-assembly-instr (%sexp.asm-instr-sexp* sexp))
+			(fprintf port ")\n")))
+	    code-object-sexp*))))
+
+    (define (%sexp.number-of-free-vars sexp)
+      ;;Given as argument a CODE-OBJECT-SEXP  symbolic expression: extract and return
+      ;;the value of the NUMBER-OF-FREE-VARS: field.
+      ;;
+      (let ((field-sexp (cadr sexp)))
+	(assert (eq? (car field-sexp) 'number-of-free-vars:))
+	(cadr field-sexp)))
+
+    (define (%sexp.annotation sexp)
+      ;;Given as argument a CODE-OBJECT-SEXP  symbolic expression: extract and return
+      ;;the value of the ANNOTATION: field.
+      ;;
+      (let ((field-sexp (caddr sexp)))
+	(assert (eq? (car field-sexp) 'annotation:))
+	(cadr field-sexp)))
+
+    (define (%sexp.asm-instr-sexp* sexp)
+      ;;Given as argument a CODE-OBJECT-SEXP  symbolic expression: extract and return
+      ;;the  list of  Assembly  instructions.  We  know  that the  first  is a  label
+      ;;definition.
+      ;;
+      (receive-and-return (asm-instr-sexp*)
+	  (cdddr sexp)
+	(assert (eq? 'label (caar asm-instr-sexp*)))))
+
+    (define (%print-assembly-instr x)
+      ;;Print  to the  current error  port the  symbolic expression  representing the
+      ;;assembly  instruction X.   To be  used to  log generated  assembly for  human
+      ;;inspection.
+      ;;
+      (if (and (pair? x)
+	       (eq? (car x) 'seq))
+	  ($for-each/stx %print-assembly-instr (cdr x))
+	(let ((port (current-error-port)))
+	  (display "   " port)
+	  (write x port)
+	  (newline port))))
+
+    #| end of module: %PRINT-ASSEMBLY |# )
 
   #| end of module: compile-core-expr |# )
 

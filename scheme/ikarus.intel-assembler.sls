@@ -40,21 +40,21 @@
 
 ;;;; Introduction
 ;;
-;;As reference for  i686 instructions we can look at  (URL last verified
-;;on Oct 9, 2012):
+;;As reference  for i686 instructions  we can  look at (URL  last verified on  Oct 9,
+;;2012):
 ;;
 ;;   Intel(R)  Architecture  Software   Developer's  Manual,  Volume  2:
 ;;   Instruction Set Reference Manual
 ;;
 ;;   <http://www.intel.com/design/intarch/manuals/243191.htm>
 ;;
-;;The entry point in the  assembler is the function ASSEMBLE-SOURCES: it
-;;compiles  assembly code  into binary  code stored  in a  code objects;
-;;every call to ASSEMBLE-SOURCES can generate a list of code objects.
+;;The entry  point in  the assembler  is the  function ASSEMBLE-SOURCES:  it compiles
+;;assembly  code   into  binary  code   stored  in   code  objects;  every   call  to
+;;ASSEMBLE-SOURCES can generate a list of code objects.
 ;;
-;;Assembly code is  represented by a symbolic expression; we  can take a
-;;look  at  the assembly  by  using  "--print-assembly" option  for  the
-;;executable "vicare".
+;;Assembly code is  represented by a symbolic  expression; we can take a  look at the
+;;assembly by using "--print-assembly" option for the executable "vicare".
+;;
 
 
 ;;;; Assembly examples
@@ -72,8 +72,7 @@
    (letrec ((alpha_0 (lambda () '123)))
      (void))
 |#
-;;and the associated assembly symbolic  expression for a 32-bit platform
-;;is:
+;;and the associated assembly symbolic expression for a 32-bit platform is:
 #|
    (name (alpha "var/tmp//proof.sls" . 74))
    (label L2)
@@ -88,23 +87,156 @@
 |#
 ;;where we see:
 ;;
-;;**The label "L2" is the entry  point.
+;;* The label "L2" is the entry  point.
 ;;
-;;**The  number of  required  arguments  is zero,  the  number of  given
-;;  arguments is already stored in %EAX: if more than zero arguments are
-;;  present, jump to "L3".
+;;*  The number  of required  arguments is  zero, the  number of  given arguments  is
+;;  already stored in %EAX: if more than zero arguments are present, jump to "L3".
 ;;
-;;**The fixnum 123 is encoded as raw exact integer:
+;;* The fixnum 123 is encoded as raw exact integer:
 ;;
 ;;    492 = 123 * 4 = 123 << 2
 ;;
 ;;  such raw integer is loaded in %EAX.
 ;;
-;;**The return value is computed and ready: return to the caller.
+;;* The return value is computed and ready: return to the caller.
 ;;
-;;**If the  wrong number of arguments  was given: jump to  the far label
+;;*  If  the   wrong  number  of  arguments   was  given:  jump  to   the  far  label
 ;;  "SL_invalid_args".
 ;;
+
+
+(module (assemble-sources)
+
+  (define (assemble-sources thunk?-label code-object-sexp*)
+    ;;This is the entry point in the assembler.
+    ;;
+    ;;The argument CODE-OBJECT-SEXP* is a list of symbolic expressions:
+    ;;
+    ;;   (?code-object-sexp ...)
+    ;;
+    ;;each of which has the format:
+    ;;
+    ;;   (code-object-sexp
+    ;;     (number-of-free-vars:	?num)
+    ;;     (annotation:			?annotation)
+    ;;     (label			?label)
+    ;;     ?asm-instr-sexp ...)
+    ;;
+    ;;Return a list of code objects.
+    ;;
+    (let ((code.num-of-freevars*  (map %sexp.number-of-free-vars code-object-sexp*))
+	  (code.annotation*       (map %sexp.annotation          code-object-sexp*))
+	  (code.asm-instr-sexp**  (map %sexp.asm-instr-sexp*     code-object-sexp*)))
+      (let* ((octets-and-labels* (map convert-instructions  code.asm-instr-sexp**))
+	     (octets-and-labels* (map %optimize-local-jumps octets-and-labels*)))
+	(let ((code-size*  (map compute-code-size   octets-and-labels*))
+	      (reloc-size* (map %compute-reloc-size octets-and-labels*)))
+	  (let ((code-objects* (map make-code   code-size* code.num-of-freevars*))
+		(reloc-vector* (map make-vector reloc-size*)))
+	    (let ((reloc** (map store-binary-code-in-code-objects
+			     code-objects* octets-and-labels*)))
+	      (for-each
+		  (lambda (code-object reloc-vector reloc*)
+		    (for-each
+			(make-reloc-vector-record-filler thunk?-label code-object reloc-vector)
+		      reloc*))
+		code-objects* reloc-vector* reloc**)
+	      ;;This causes the relocation vector to be processed for each
+	      ;;code object.
+	      (for-each set-code-reloc-vector! code-objects* reloc-vector*)
+	      (for-each (lambda (code annotation)
+			  (when annotation
+			    (set-code-annotation! code annotation)))
+		code-objects* code.annotation*)
+	      code-objects*))))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%sexp.number-of-free-vars sexp)
+    ;;Given as  argument a CODE-OBJECT-SEXP  symbolic expression: extract  and return
+    ;;the value of the NUMBER-OF-FREE-VARS: field.
+    ;;
+    (let ((field-sexp (cadr sexp)))
+      (assert (eq? (car field-sexp) 'number-of-free-vars:))
+      (cadr field-sexp)))
+
+  (define (%sexp.annotation sexp)
+    ;;Given as  argument a CODE-OBJECT-SEXP  symbolic expression: extract  and return
+    ;;the value of the ANNOTATION: field.
+    ;;
+    (let ((field-sexp (caddr sexp)))
+      (assert (eq? (car field-sexp) 'annotation:))
+      (cadr field-sexp)))
+
+  (define (%sexp.asm-instr-sexp* sexp)
+    ;;Given as  argument a CODE-OBJECT-SEXP  symbolic expression: extract  and return
+    ;;the  list  of  Assembly instructions.   We  know  that  the  first is  a  label
+    ;;definition.
+    ;;
+    (receive-and-return (asm-instr-sexp*)
+	(cdddr sexp)
+      (assert (eq? 'label (caar asm-instr-sexp*)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (%optimize-local-jumps octets-and-labels)
+    ;;Scan OCTETS-AND-LABELS  and collect  the LABEL entries,  which are
+    ;;"local"; then scan again OCTETS-AND-LABELS and mutate the RELATIVE
+    ;;entries referencing local labels to be LOCAL-RELATIVE entries.
+    ;;
+    ;;Notice  that   this  function  does   NOT  modify  the   spine  of
+    ;;OCTETS-AND-LABELS in any way; it  just mutates some of the entry's
+    ;;CARs.
+    ;;
+    (let ((locals '())
+	  (G      (gensym)))
+      (define (%mark-labels-with-property x)
+	(when (pair? x)
+	  (case (car x)
+	    ((label)
+	     (putprop (cdr x) G 'local)
+	     (set! locals (cons (cdr x) locals)))
+	    ((bottom-code)
+	     (for-each %mark-labels-with-property (cdr x))))))
+      (define (%relative->local-relative x)
+	(when (pair? x)
+	  (case (car x)
+	    ((relative)
+	     (when (eq? (getprop (cdr x) G) 'local)
+	       (set-car! x 'local-relative)))
+	    ((bottom-code)
+	     (for-each %relative->local-relative (cdr x))))))
+      (for-each %mark-labels-with-property octets-and-labels)
+      (for-each %relative->local-relative  octets-and-labels)
+      ;;Clean up the property lists of label symbols.
+      (for-each (lambda (x)
+		  (remprop x G))
+	locals)
+      octets-and-labels))
+
+  (define (%compute-reloc-size octets-and-labels)
+    ;;Compute the length  of the relocation vector needed  to relocate a
+    ;;code object holding the binary code in OCTETS-AND-LABELS.
+    ;;
+    (define who '%compute-reloc-size)
+    (fold (lambda (x ac)
+	    (if (fixnum? x)
+		ac
+	      (case (car x)
+		((word byte label current-frame-offset local-relative)
+		 ac)
+		((reloc-word foreign-label)
+		 (fx+ ac 2))
+		((relative reloc-word+ label-addr)
+		 (fx+ ac 3))
+		((bottom-code)
+		 (fx+ ac (%compute-reloc-size (cdr x))))
+		(else
+		 (assertion-violation who "unknown instr" x)))))
+	  0
+	  octets-and-labels))
+
+  #| end of module: ASSEMBLE-SOURCES |# )
 
 
 ;;;; helpers
@@ -273,9 +405,6 @@
     (%r14l   8    6  #t)
     (%r15l   8    7  #t)
     ))
-
-
-;;;; arguments validation
 
 
 (module stuff
@@ -1742,115 +1871,9 @@
   #| end of module |# )
 
 
-(module (assemble-sources)
-
-  (define (assemble-sources thunk?-label ls*)
-    ;;This is the entry point in the assembler.
-    ;;
-    ;;Return a list of code objects.
-    ;;
-    (let ((num-of-freevars* (map car       ls*))
-	  (code-name*       (map code-name ls*))
-	  (assembly-sexps*  (map code-list ls*)))
-      (let* ((octets-and-labels* (map convert-instructions  assembly-sexps*))
-	     (octets-and-labels* (map %optimize-local-jumps octets-and-labels*)))
-	(let ((code-size*  (map compute-code-size   octets-and-labels*))
-	      (reloc-size* (map %compute-reloc-size octets-and-labels*)))
-	  (let ((code-objects* (map make-code   code-size* num-of-freevars*))
-		(reloc-vector* (map make-vector reloc-size*)))
-	    (let ((reloc** (map store-binary-code-in-code-objects
-			     code-objects* octets-and-labels*)))
-	      (for-each
-		  (lambda (code-object reloc-vector reloc*)
-		    (for-each
-			(make-reloc-vector-record-filler thunk?-label code-object reloc-vector)
-		      reloc*))
-		code-objects* reloc-vector* reloc**)
-	      ;;This causes the relocation vector to be processed for each
-	      ;;code object.
-	      (for-each set-code-reloc-vector! code-objects* reloc-vector*)
-	      (for-each (lambda (code name)
-			  (when name
-			    (set-code-annotation! code name)))
-		code-objects* code-name*)
-	      code-objects*))))))
-
-  (define-entry-predicate name? name)
-
-  (define (code-list ls)
-    (if (name? (cadr ls))
-	(cddr ls)
-      (cdr ls)))
-
-  (define (code-name ls)
-    (let ((a (cadr ls)))
-      (if (name? a)
-	  (cadr a)
-	#f)))
-
-  (define (%optimize-local-jumps octets-and-labels)
-    ;;Scan OCTETS-AND-LABELS  and collect  the LABEL entries,  which are
-    ;;"local"; then scan again OCTETS-AND-LABELS and mutate the RELATIVE
-    ;;entries referencing local labels to be LOCAL-RELATIVE entries.
-    ;;
-    ;;Notice  that   this  function  does   NOT  modify  the   spine  of
-    ;;OCTETS-AND-LABELS in any way; it  just mutates some of the entry's
-    ;;CARs.
-    ;;
-    (let ((locals '())
-	  (G      (gensym)))
-      (define (%mark-labels-with-property x)
-	(when (pair? x)
-	  (case (car x)
-	    ((label)
-	     (putprop (cdr x) G 'local)
-	     (set! locals (cons (cdr x) locals)))
-	    ((bottom-code)
-	     (for-each %mark-labels-with-property (cdr x))))))
-      (define (%relative->local-relative x)
-	(when (pair? x)
-	  (case (car x)
-	    ((relative)
-	     (when (eq? (getprop (cdr x) G) 'local)
-	       (set-car! x 'local-relative)))
-	    ((bottom-code)
-	     (for-each %relative->local-relative (cdr x))))))
-      (for-each %mark-labels-with-property octets-and-labels)
-      (for-each %relative->local-relative  octets-and-labels)
-      ;;Clean up the property lists of label symbols.
-      (for-each (lambda (x)
-		  (remprop x G))
-	locals)
-      octets-and-labels))
-
-  (define (%compute-reloc-size octets-and-labels)
-    ;;Compute the length  of the relocation vector needed  to relocate a
-    ;;code object holding the binary code in OCTETS-AND-LABELS.
-    ;;
-    (define who '%compute-reloc-size)
-    (fold (lambda (x ac)
-	    (if (fixnum? x)
-		ac
-	      (case (car x)
-		((word byte label current-frame-offset local-relative)
-		 ac)
-		((reloc-word foreign-label)
-		 (fx+ ac 2))
-		((relative reloc-word+ label-addr)
-		 (fx+ ac 3))
-		((bottom-code)
-		 (fx+ ac (%compute-reloc-size (cdr x))))
-		(else
-		 (assertion-violation who "unknown instr" x)))))
-	  0
-	  octets-and-labels))
-
-  #| end of module |# )
-
-
 ;;;; done
 
-)
+#| end of library |# )
 
 ;;; end of file
 ;; Local Variables:

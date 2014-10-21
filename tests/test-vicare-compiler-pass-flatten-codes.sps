@@ -309,8 +309,10 @@
 	     (asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))
 
   (doit ((primitive +) '1 '2)
-	((0
-	  (label main_label)
+	((code-object-sexp
+	  (number-of-free-vars: 0)
+	  (annotation:		init-expression)
+	  (label init_expression_label)
 	  ;;Implementation of primitive operation "+": SHORTCUT's body.
 	  (movl 8 %eax)
 	  (addl 16 %eax)
