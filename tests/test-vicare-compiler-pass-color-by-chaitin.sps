@@ -271,13 +271,14 @@
 	       ;;This move will be discarded by the next compiler pass.
 	       (asm-instr move %eax %eax)
 	       (asmcall return %eax %ebp %esp %esi))
-	   (seq (asm-instr move %eax (constant (object +)))
-		(asm-instr move %eax (disp %eax (constant 19)))
-		(asm-instr move fvar.1 (constant 8))
-		(asm-instr move fvar.2 (constant 16))
-		(asm-instr move %edi %eax)
-		(asm-instr move %eax (constant -16))
-		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))
+	   (seq
+	     (asm-instr move %eax (constant (object +)))
+	     (asm-instr move %eax (disp %eax (constant 19)))
+	     (asm-instr move fvar.1 (constant 8))
+	     (asm-instr move fvar.2 (constant 16))
+	     (asm-instr move %edi %eax)
+	     (asm-instr move %eax (constant -16))
+	     (asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))
 
   #t)
 
