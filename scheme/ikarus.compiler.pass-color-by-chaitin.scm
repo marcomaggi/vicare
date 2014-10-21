@@ -59,6 +59,9 @@
 	  (import LISTY-SET))
 	(struct-case x
 	  ((locals x.vars x.body)
+	   ;;VARVEC  and  SPILLABLE*  contain  the  same  sequence  of  VAR  structs,
+	   ;;representing  the  local  variables  of X.BODY.   VARVEC  is  a  vector,
+	   ;;SPILLABLE* is a list.
 	   (let ((varvec     (car x.vars))
 		 (spillable* (cdr x.vars)))
 	     (let loop ((spillable*^   (list->set spillable*))
