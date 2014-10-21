@@ -6460,7 +6460,7 @@
 
       ((clambda label cls* cp freevar*)
        ;;FIXME Should we print more fields?  (Marco Maggi; Oct 11, 2012)
-       `(clambda (label: ,label)
+       `(clambda (label: ,(%pretty-symbol label))
 		 (cp:    ,(E cp))
 		 (free:  ,(and freevar* (map E freevar*)))
 		 ,@(map E cls*)))
@@ -6477,7 +6477,7 @@
        `(funcall ,(E rator) . ,(map E rand*)))
 
       ((jmpcall label rator rand*)
-       `(jmpcall ,label ,(E rator) . ,(map E rand*)))
+       `(jmpcall ,(%pretty-symbol label) ,(E rator) . ,(map E rand*)))
 
       ((forcall rator rand*)
        `(foreign-call ,rator . ,(map E rand*)))

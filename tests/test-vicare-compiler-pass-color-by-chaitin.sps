@@ -203,7 +203,7 @@
     ))
 
 
-(parametrise ((check-test-name	'simple-expressions))
+(parametrise ((check-test-name	'simple-addition))
 
   (check
       (%specify-representation '((primitive +) '1 '2))
@@ -264,9 +264,11 @@
 	 ()
 	 (shortcut
 	     (seq
+	       ;;This nop will be discarded by the next compiler pass.
 	       (asmcall nop)
 	       (asm-instr move %eax (constant 8))
 	       (asm-instr int+/overflow %eax (constant 16))
+	       ;;This move will be discarded by the next compiler pass.
 	       (asm-instr move %eax %eax)
 	       (asmcall return %eax %ebp %esp %esi))
 	   (seq (asm-instr move %eax (constant (object +)))
@@ -275,8 +277,7 @@
 		(asm-instr move fvar.2 (constant 16))
 		(asm-instr move %edi %eax)
 		(asm-instr move %eax (constant -16))
-		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1
-			 fvar.2)))))
+		(asmcall indirect-jump %eax %ebp %edi %esp %esi fvar.1 fvar.2)))))
 
   #t)
 
