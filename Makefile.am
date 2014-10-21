@@ -670,6 +670,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	tests/test-vicare-compiler-pass-impose-eval-order.sps		\
 	tests/test-vicare-compiler-pass-assign-frame-sizes.sps		\
 	tests/test-vicare-compiler-pass-color-by-chaitin.sps		\
+	tests/test-vicare-compiler-pass-flatten-codes.sps		\
 	\
 	tests/test-vicare-bignums.sps					\
 	tests/test-vicare-bytevectors.sps				\
