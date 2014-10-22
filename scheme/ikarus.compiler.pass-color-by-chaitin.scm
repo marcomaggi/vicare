@@ -75,20 +75,20 @@
 	   ;;(spilled).
 	   (let ((x.vars.vec        (car x.vars))
 		 (x.vars.spillable* (cdr x.vars)))
-	     (let loop ((spillable*    (list->set x.vars.spillable*))
-			(unspillable*  (make-empty-set))
-			(body          x.body))
-	       (receive (unspillable*^ body^)
-		   (%add-unspillables unspillable* body)
+	     (let loop ((spillable.set    (list->set x.vars.spillable*))
+			(unspillable.set  (make-empty-set))
+			(body             x.body))
+	       (receive (unspillable.set^ body^)
+		   (%add-unspillables unspillable.set body)
 		 (let ((G (%build-graph body^)))
 		   #;(print-graph G)
-		   (receive (spilled* spillable*^ env)
-		       (%color-graph spillable* unspillable*^ G)
+		   (receive (spilled* spillable.set^ env)
+		       (%color-graph spillable.set unspillable.set^ G)
 		     (if (null? spilled*)
 			 (%substitute-vars-with-associated-locations env body^)
 		       (let* ((env^   (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec))
 			      (body^^ (%substitute-vars-with-associated-locations env^ body^)))
-			 (loop spillable*^ unspillable*^ body^^)))))))))))
+			 (loop spillable.set^ unspillable.set^ body^^)))))))))))
 
       (define (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec)
 	;;The argument  SPILLED* is the  list of  the VAR structs  representing local
@@ -880,55 +880,63 @@
   (import LISTY-SET)
   (import GRAPHS)
 
-  (define (%color-graph spillable* unspillable* G)
+  (define (%color-graph spillable.set unspillable.set G)
     ;;Non-tail recursive function.
+    ;;
+    ;;The  argument SPILLABLE.SET  must be  a  set including  the VAR  structs that  are
+    ;;spillable.  The argument  UNSPILLABLE.SET must be a set including  the VAR structs
+    ;;that are unspillable.  The argument G is a graph.
     ;;
     ;;Return 3 values:
     ;;
-    ;;1. A list of VAR structs representing the spillable local variables.
+    ;;1. A list of VAR structs representing the spillED local variables.
     ;;
-    ;;2. A list of VAR structs representing the UNspillable local variables.
+    ;;2. A set holding the VAR structs representing the spillABLE local variables.
     ;;
     ;;3.  An ENV  value:  an alist  whose  keys are  VAR  structs representing  local
     ;;    variables in  BODY, and  whose values  are the  associated locations:  FVAR
     ;;   structs or CPU register symbol names.
     ;;
-    (cond ((and (empty-set? spillable*)
-		(empty-set? unspillable*))
+    (cond ((and (empty-set? spillable.set)
+		(empty-set? unspillable.set))
 	   (values '() (make-empty-set) '()))
 
-	  ((find-low-degree (set->list unspillable*) G)
+	  ((find-low-degree (set->list unspillable.set) G)
 	   => (lambda (unspillable)
 		(let ((n* (node-neighbors unspillable G)))
 		  (delete-node! unspillable G)
-		  (receive (spilled* spillable* env)
-		      (%color-graph spillable* (set-rem unspillable unspillable*) G)
+		  (receive (spilled* spillable.set env)
+		      (%color-graph spillable.set (set-rem unspillable unspillable.set) G)
 		    (let ((r (find-color unspillable n* env)))
 		      (values spilled*
-			      spillable*
+			      spillable.set
 			      (cons (cons unspillable r) env)))))))
 
-	  ((find-low-degree (set->list spillable*) G)
+	  ((find-low-degree (set->list spillable.set) G)
 	   => (lambda (spillable)
 		(let ((n* (node-neighbors spillable G)))
 		  (delete-node! spillable G)
-		  (receive (spilled* spillable* env)
-		      (%color-graph (set-rem spillable spillable*) unspillable* G)
+		  (receive (spilled* spillable.set env)
+		      (%color-graph (set-rem spillable spillable.set) unspillable.set G)
 		    (let ((r (find-color spillable n* env)))
 		      (values spilled*
-			      (set-add spillable spillable*)
+			      (set-add spillable spillable.set)
 			      (cons (cons spillable r) env)))))))
 
-	  ((pair? (set->list spillable*))
-	   (let* ((sp (car (set->list spillable*)))
+	  ((pair? (set->list spillable.set))
+	   (let* ((sp (car (set->list spillable.set)))
 		  (n* (node-neighbors sp G)))
 	     (delete-node! sp G)
-	     (receive (spilled* spillable* env)
-		 (%color-graph (set-rem sp spillable*) unspillable* G)
+	     (receive (spilled* spillable.set env)
+		 (%color-graph (set-rem sp spillable.set) unspillable.set G)
 	       (let ((r (find-color/maybe sp n* env)))
 		 (if r
-		     (values spilled* (set-add sp spillable*) (cons (cons sp r) env))
-		   (values (cons sp spilled*) spillable* env))))))
+		     (values spilled*
+			     (set-add sp spillable.set)
+			     (cons (cons sp r) env))
+		   (values (cons sp spilled*)
+			   spillable.set
+			   env))))))
 
 	  (else
 	   (compiler-internal-error __module_who__  '%color-graph "whoaaa"))))
@@ -950,8 +958,7 @@
 			    => cdr)
 			   (else #f)))
 		(set->list confs))))
-      (let ((r* (set->list (set-difference ALL-REGISTERS-SET
-					   (list->set cr)))))
+      (let ((r* (set->list (set-difference ALL-REGISTERS-SET (list->set cr)))))
 	(if (pair? r*)
 	    (car r*)
 	  #f))))
