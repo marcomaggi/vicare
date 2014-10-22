@@ -39,64 +39,90 @@
     ;;
     (define (color-by-chaitin x)
       (struct-case x
-	((codes code* body)
-	 (make-codes (map E-clambda code*) (%color-program body)))))
+	((codes x.clambda* x.locals)
+	 (make-codes (map E-clambda x.clambda*) (%color-program x.locals)))))
 
     (define (E-clambda x)
       (struct-case x
-	((clambda label case* cp freevar* name)
-	 (make-clambda label (map E-clambda-clause case*) cp freevar* name))))
+	((clambda label clause* cp freevar* name)
+	 (make-clambda label (map E-clambda-clause clause*) cp freevar* name))))
 
     (define (E-clambda-clause x)
       (struct-case x
-	((clambda-case info body)
-	 (make-clambda-case info (%color-program body)))))
+	((clambda-case x.info x.locals)
+	 (make-clambda-case x.info (%color-program x.locals)))))
 
     (module (%color-program)
 
       (define (%color-program x)
+	;;The argument X must  be a LOCALS struct representing the  body of a CLAMBDA
+	;;clause or the  body of an initialisation expression.  Return  the return of
+	;;the call to %SUBSTITUTE.
+	;;
 	(module (list->set make-empty-set)
 	  (import LISTY-SET))
 	(struct-case x
 	  ((locals x.vars x.body)
-	   ;;VARVEC  and  SPILLABLE*  contain  the  same  sequence  of  VAR  structs,
-	   ;;representing  the  local  variables  of X.BODY.   VARVEC  is  a  vector,
-	   ;;SPILLABLE* is a list.
-	   (let ((varvec     (car x.vars))
-		 (spillable* (cdr x.vars)))
-	     (let loop ((spillable*^   (list->set spillable*))
+	   ;;X.VARS.VEC  is  a vector  of  VAR  structs  representing all  the  local
+	   ;;variables in  X.BODY.  Some of these  VAR structs have a  FVAR struct in
+	   ;;their LOC  field: they have  already been allocated to  stack locations;
+	   ;;the other  VAR structs  have #f  in their  LOC field:  they are  not yet
+	   ;;allocated.
+	   ;;
+	   ;;X.VARS.SPILLABLE* is  a list of  VAR structs representing the  subset of
+	   ;;VAR structs  in X.VARS.VEC that have  #f in their LOC  field.  These VAR
+	   ;;structs  can  be  allocated  to  CPU registers  or  to  stack  locations
+	   ;;(spilled).
+	   (let ((x.vars.vec        (car x.vars))
+		 (x.vars.spillable* (cdr x.vars)))
+	     (let loop ((spillable*    (list->set x.vars.spillable*))
 			(unspillable*  (make-empty-set))
 			(body          x.body))
 	       (receive (unspillable*^ body^)
 		   (%add-unspillables unspillable* body)
 		 (let ((G (%build-graph body^)))
-		   (receive (spills spillable*^^ env)
-		       (%color-graph spillable*^ unspillable*^ G)
-		     (if (null? spills)
+		   (receive (spilled* spillable*^ env)
+		       (%color-graph spillable* unspillable*^ G)
+		     (if (null? spilled*)
 			 (%substitute env body^)
-		       (let* ((env^   (%do-spill spills varvec))
+		       (let* ((env^   (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec))
 			      (body^^ (%substitute env^ body^)))
-			 (loop spillable*^^ unspillable*^ body^^)))))))))))
+			 (loop spillable*^ unspillable*^ body^^)))))))))))
 
-      (define (%do-spill spillable* varvec)
+      (define (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec)
+	;;The argument  SPILLED* is the  list of  the VAR structs  representing local
+	;;variables spilled on the stack: VAR structs  whose LOC field must be set to
+	;;a newly allocated FVAR struct.
+	;;
+	;;The argument  X.VARS.VEC is a  vector of  VAR structs representing  all the
+	;;local variables in X.BODY.
+	;;
+	;;Return an ENV  value: an alist whose  keys are the spilled  VAR structs and
+	;;whose values are the associated FVAR structs.
+	;;
 	(module (for-each-var add-frm rem-var mem-frm?)
 	  (import FRAME-CONFLICT-SETS))
-	(define (find/set-loc x)
-	  (let loop ((i    1)
-		     (conf ($var-frm-conf x)))
-	    (let ((fv (mkfvar i)))
-	      (if (mem-frm? fv conf)
-		  (loop (fxadd1 i) conf)
+	(define (find/set-loc spilled)
+	  (let loop ((stack-frame-conflicts ($var-frm-conf spilled))
+		     (i                     1))
+	    (let ((spilled.fvar (mkfvar i)))
+	      (if (mem-frm? spilled.fvar stack-frame-conflicts)
+		  ;;The stack  frame location  referenced by SPILLED.FVAR  is already
+		  ;;used by another local variable, check the next one.
+		  (loop stack-frame-conflicts (fxadd1 i))
 		(begin
+		  ;;For each  local variable in  X.VARS.VEC: remove SPILLED  from the
+		  ;;interference graph  of VAR structs  (VAR-CONF) and add it  to the
+		  ;;interference graph of FVAR structs (FRM-CONF).
 		  (for-each-var
-		      ($var-var-conf x)
-		      varvec
-		    (lambda (y)
-		      ($set-var-var-conf! y (rem-var x  ($var-var-conf y)))
-		      ($set-var-frm-conf! y (add-frm fv ($var-frm-conf y)))))
-		  ($set-var-loc! x fv)
-		  (cons x fv))))))
-	(map find/set-loc spillable*))
+		      ($var-var-conf spilled)
+		      x.vars.vec
+		    (lambda (x.var)
+		      ($set-var-var-conf! x.var (rem-var spilled      ($var-var-conf x.var)))
+		      ($set-var-frm-conf! x.var (add-frm spilled.fvar ($var-frm-conf x.var)))))
+		  ($set-var-loc! spilled spilled.fvar)
+		  (cons spilled spilled.fvar))))))
+	(map find/set-loc spilled*))
 
       #| end of module: %COLOR-PROGRAM |# )
 

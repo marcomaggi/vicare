@@ -904,28 +904,42 @@
     (module (init-var*!)
       (import FRAME-CONFLICT-SETS))
     (struct-case x
-      ((locals vars body)
-       (init-var*! vars)
-       (let* ((vars.vec   (list->vector vars))
-	      (spill-set  (%uncover-frame-conflicts body vars.vec))
-	      (body       (%rewrite body vars.vec)))
-	 (make-locals (cons vars.vec (%discard-vars-being-stack-operands vars)) body)))
+      ((locals x.vars x.body)
+       ;;X.VARS is  a possibly empty  proper list  of VAR structs  representing local
+       ;;variables  used in  the code  represented by  X.BODY.  Such  local variables
+       ;;represent  machine-word storage  locations  that must  be  allocated to  CPU
+       ;;registers or Scheme stack words.
+       (init-var*! x.vars)
+       (let* ((x.vars.vec        (list->vector x.vars))
+	      (spill-set         (%uncover-frame-conflicts x.body x.vars.vec))
+	      (x.vars.spillable* (%discard-vars-being-stack-operands x.vars))
+	      (x.body^           (%rewrite x.body x.vars.vec)))
+	 ;;X.VARS.VEC is a vector of VAR structs representing all the local variables
+	 ;;in X.BODY.   Some of  these VAR structs  have a FVAR  struct in  their LOC
+	 ;;field: they have been allocated to  stack locations; the other VAR structs
+	 ;;have #f in their LOC field: they are not yet allocated.
+	 ;;
+	 ;;X.VARS.SPILLABLE* is a list of VAR  structs representing the subset of VAR
+	 ;;structs in X.VARS.VEC that have #f  in their LOC field.  These VAR structs
+	 ;;can be allocated to CPU registers or to stack locations (spilled).
+	 (make-locals (cons x.vars.vec x.vars.spillable*) x.body^)))
       (else
        (compiler-internal-error __module_who__ __who__
-	 "expected LOCALS struct as body form"
-	 x))))
+	 "expected LOCALS struct as body form" x))))
 
-  (define (%discard-vars-being-stack-operands vars)
+  (define (%discard-vars-being-stack-operands x.vars)
     ;;Tail-recursive function.  Given a list of  struct instances of type VAR, return
     ;;a new list containing only those having #f in the LOC field.
     ;;
     ;;The VAR  with a non-false LOC  fields have a  FVAR struct in it,  and represent
     ;;stack operands in closure object bodies.
     ;;
-    (if (pair? vars)
-	(if ($var-loc (car vars))
-	    (%discard-vars-being-stack-operands (cdr vars))
-	  (cons (car vars) (%discard-vars-being-stack-operands (cdr vars))))
+    (if (pair? x.vars)
+	(if ($var-loc (car x.vars))
+	    (begin
+	      #;(assert (fvar? (var-loc (car x.vars))))
+	      (%discard-vars-being-stack-operands (cdr x.vars)))
+	  (cons (car x.vars) (%discard-vars-being-stack-operands (cdr x.vars))))
       '()))
 
   #| end of module: E-codes |# )

@@ -1405,16 +1405,20 @@
     reg-conf
     frm-conf
     var-conf
+		;The suffix "-conf" stands for "conflicts; "reg-conf" stands for "CPU
+		;register conflicts"; "frm-conf" stands for "stack frame conflicts".
+		;
 		;Falses or sets,  as defined by the  module INTEGER-SET, representing
 		;interference edges  between, respectively: live CPU  registers, live
 		;FVAR structs, live VAR structs.  If  two structs are connected by an
 		;interference edge: they  are alive at the same time,  so they cannot
-		;be stored in the same CPU register.
-		;
-		;The suffix "-conf" stands for conflict.
+		;be stored in the same CPU register or the same FVAR stack location.
     reg-move
     frm-move
     var-move
+		;"reg-move"  stand for  "CPU  register move";  "frm-move" stands  for
+		;"stack frame move"; "var-move" stands for "VAR struct move".
+		;
 		;Falses or sets,  as defined by the  module INTEGER-SET, representing
 		;preference  edges between,  respectively: live  CPU registers,  live
 		;FVAR structs, live  VAR structs.  If two structs are  connected by a
@@ -1788,10 +1792,32 @@
   ;;Used to wrap top level expressions and bodies of CLAMBDA clauses.
   ;;
   (vars
-		;A possibly  empty proper  list of  VAR structs  representing machine
-		;word  storage locations  that must  be allocated  to hold  the local
-		;variables  of  BODY.   Such  locations  will  be  allocated  to  CPU
-		;registers or Scheme stack words.
+		;This  field  contains  values  of different  types  after  different
+		;compiler passes.
+		;
+		;After the pass "impose evaluation order"
+		;----------------------------------------
+		;
+		;A  possibly empty  proper  list of  VAR  structs representing  local
+		;variables  used in  the code  represented  by the  BODY field;  such
+		;locations will be allocated to CPU registers or Scheme stack words.
+		;
+		;After the pass "assign frame sizes"
+		;-----------------------------------
+		;
+		;A  pair  whose  car  is  named  VARS.VEC  and  whose  cdr  is  named
+		;VARS.SPILLABLE*.
+		;
+		;VARS.VEC  is a  vector of  VAR  structs representing  all the  local
+		;variables in BODY.  Some of these  VAR structs have a FVAR struct in
+		;their LOC  field: they have  been allocated to stack  locations; the
+		;other  VAR structs  have #f  in their  LOC field:  they are  not yet
+		;allocated.
+		;
+		;VARS.SPILLABLE* is a list of  VAR structs representing the subset of
+		;VAR structs in VARS.VEC that have  #f in their LOC field.  These VAR
+		;structs  can be  allocated to  CPU registers  or to  stack locations
+		;(spilled).
    body
 		;A struct representing recordised code.
    ))
