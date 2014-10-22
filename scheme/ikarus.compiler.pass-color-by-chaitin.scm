@@ -338,18 +338,25 @@
   (define-syntax __who__
     (identifier-syntax '%add-unspillables))
 
-  (define (%add-unspillables un* x)
+  (define (%add-unspillables unspillable.set body)
+    ;;The argument UNSPILLABLE.SET  is a set of VAR  structs representing unspillable
+    ;;local variables in BODY; it starts empty and we fill it in this function.
     ;;
-    ;;A  lot  of  functions  are  nested  here  because  they  call  the
-    ;;subfunction MKU, and the MKU needs to close upon the argument UN*.
+    ;;A  lot  of  functions  are  nested  here  because  they  call  the  subfunction
+    ;;%MAKE-UNIQUE-VAR, and  the %MAKE-UNIQUE-VAR  needs to  close upon  the argument
+    ;;UNSPILLABLE.SET.
     ;;
 
-    (define (mku)
+    (define (main body)
+      ;;Here we want to return the value of the mutated UNSPILLABLE.SET binding.
+      (values unspillable.set (T body)))
+
+    (define (%make-unique-var)
       (module (set-add)
 	(import LISTY-SET))
-      (receive-and-return (u)
-	  (make-unique-var 'u)
-	(set! un* (set-add u un*))))
+      (receive-and-return (unspillable)
+	  (make-unique-var 'unspillable-tmp)
+	(set! unspillable.set (set-add unspillable unspillable.set))))
 
     (module (E)
 
@@ -370,7 +377,9 @@
 	     ((nop interrupt incr/zero? fl:single->double fl:double->single)
 	      x)
 	     (else
-	      (compiler-internal-error __module_who__  __who__ "invalid op in" (unparse-recordized-code x)))))
+	      (compiler-internal-error __module_who__  __who__
+		"ASMCALL struct with invalid operand in E context"
+		(unparse-recordized-code x)))))
 
 	  ((non-tail-call)
 	   x)
@@ -381,7 +390,9 @@
 	     (make-shortcut body^ (E handler))))
 
 	  (else
-	   (compiler-internal-error __module_who__  __who__ "invalid effect" (unparse-recordized-code x)))))
+	   (compiler-internal-error __module_who__  __who__
+	     "invalid code in E context"
+	     (unparse-recordized-code x)))))
 
       (define (E-asm-instr op a b x)
 	(case op
@@ -389,7 +400,7 @@
 	   (%fix-address b (lambda (b)
 			     (if (or (register? a) (var? a))
 				 (make-asm-instr op a b)
-			       (let ((u (mku)))
+			       (let ((u (%make-unique-var)))
 				 (make-seq (make-asm-instr op u b)
 					   (E (make-asm-instr 'move a u))))))))
 
@@ -401,45 +412,45 @@
 		 ((and (= wordsize 8)
 		       (not (eq? op 'move))
 		       (long-imm? b))
-		  (let ((u (mku)))
+		  (let ((u (%make-unique-var)))
 		    (make-seq (E (make-asm-instr 'move u b))
 			      (E (make-asm-instr op a u)))))
 		 ((and (memq op '(int* int*/overflow))
 		       (mem? a))
-		  (let ((u (mku)))
+		  (let ((u (%make-unique-var)))
 		    (make-seq (make-seq (E (make-asm-instr 'move u a))
 					(E (make-asm-instr op u b)))
 			      (E (make-asm-instr 'move a u)))))
 		 ((and (mem? a)
 		       (not (small-operand? b)))
-		  (let ((u (mku)))
+		  (let ((u (%make-unique-var)))
 		    (make-seq (E (make-asm-instr 'move u b))
 			      (E (make-asm-instr op a u)))))
 		 ((disp? a)
 		  (let ((s0 (disp-objref a))
 			(s1 (disp-offset a)))
 		    (cond ((not (small-operand? s0))
-			   (let ((u (mku)))
+			   (let ((u (%make-unique-var)))
 			     (make-seq (E (make-asm-instr 'move u s0))
 				       (E (make-asm-instr op (make-disp u s1) b)))))
 			  ((not (small-operand? s1))
-			   (let ((u (mku)))
+			   (let ((u (%make-unique-var)))
 			     (make-seq (E (make-asm-instr 'move u s1))
 				       (E (make-asm-instr op (make-disp s0 u) b)))))
 			  ((small-operand? b) x)
 			  (else
-			   (let ((u (mku)))
+			   (let ((u (%make-unique-var)))
 			     (make-seq (E (make-asm-instr 'move u b))
 				       (E (make-asm-instr op a u))))))))
 		 ((disp? b)
 		  (let ((s0 (disp-objref b))
 			(s1 (disp-offset b)))
 		    (cond ((not (small-operand? s0))
-			   (let ((u (mku)))
+			   (let ((u (%make-unique-var)))
 			     (make-seq (E (make-asm-instr 'move u s0))
 				       (E (make-asm-instr op a (make-disp u s1))))))
 			  ((not (small-operand? s1))
-			   (let ((u (mku)))
+			   (let ((u (%make-unique-var)))
 			     (make-seq (E (make-asm-instr 'move u s1))
 				       (E (make-asm-instr op a (make-disp s0 u))))))
 			  (else
@@ -449,7 +460,7 @@
 
 	  ((bswap!)
 	   (if (mem? b)
-	       (let ((u (mku)))
+	       (let ((u (%make-unique-var)))
 		 (make-seq (make-seq (E (make-asm-instr 'move u a))
 				     (E (make-asm-instr 'bswap! u u)))
 			   (E (make-asm-instr 'move b u))))
@@ -467,7 +478,7 @@
 	   (if (or (var? b)
 		   (symbol? b))
 	       x
-	     (let ((u (mku)))
+	     (let ((u (%make-unique-var)))
 	       (make-seq (E (make-asm-instr 'move u b))
 			 (E (make-asm-instr 'idiv a u))))))
 
@@ -479,7 +490,7 @@
 
 	  ((mset mset32 bset)
 	   (if (not (small-operand? b))
-	       (let ((u (mku)))
+	       (let ((u (%make-unique-var)))
 		 (make-seq (E (make-asm-instr 'move u b))
 			   (E (make-asm-instr op a u))))
 	     (check-disp a
@@ -488,7 +499,7 @@
 				 (s1 (disp-offset a)))
 			     (if (and (constant? s0)
 				      (constant? s1))
-				 (let ((u (mku)))
+				 (let ((u (%make-unique-var)))
 				   (make-seq (make-seq (E (make-asm-instr 'move u s0))
 						       (E (make-asm-instr 'int+ u s1)))
 					     (make-asm-instr op
@@ -514,11 +525,11 @@
 	    (let ((s0 (disp-objref x))
 		  (s1 (disp-offset x)))
 	      (cond ((not (small-operand? s0))
-		     (let ((u (mku)))
+		     (let ((u (%make-unique-var)))
 		       (make-seq (E (make-asm-instr 'move u s0))
 				 (%fix-address (make-disp u s1) kont))))
 		    ((not (small-operand? s1))
-		     (let ((u (mku)))
+		     (let ((u (%make-unique-var)))
 		       (make-seq (E (make-asm-instr 'move u s1))
 				 (%fix-address (make-disp s0 u) kont))))
 		    (else
@@ -532,7 +543,7 @@
     (define (check-disp-arg x kont)
       (if (small-operand? x)
 	  (kont x)
-	(let ((u (mku)))
+	(let ((u (%make-unique-var)))
 	  (make-seq (E (make-asm-instr 'move u x))
 		    (kont u)))))
 
@@ -561,23 +572,23 @@
 	((asm-instr op a b)
 	 (cond ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
 		(if (mem? a)
-		    (let ((u (mku)))
+		    (let ((u (%make-unique-var)))
 		      (make-seq (E (make-asm-instr 'move u a))
 				(make-asm-instr op u b)))
 		  x))
 	       ((and (not (mem?           a))
 		     (not (small-operand? a)))
-		(let ((u (mku)))
+		(let ((u (%make-unique-var)))
 		  (make-seq (E (make-asm-instr 'move u a))
 			    (P (make-asm-instr op u b)))))
 	       ((and (not (mem?           b))
 		     (not (small-operand? b)))
-		(let ((u (mku)))
+		(let ((u (%make-unique-var)))
 		  (make-seq (E (make-asm-instr 'move u b))
 			    (P (make-asm-instr op a u)))))
 	       ((and (mem? a)
 		     (mem? b))
-		(let ((u (mku)))
+		(let ((u (%make-unique-var)))
 		  (make-seq (E (make-asm-instr 'move u b))
 			    (P (make-asm-instr op a u)))))
 	       (else
@@ -614,8 +625,7 @@
 
 ;;; --------------------------------------------------------------------
 
-    (let ((x (T x)))
-      (values un* x))) ;;end of function %ADD-UNSPILLABLES
+    (main body)) ;;end of function %ADD-UNSPILLABLES
 
 ;;; --------------------------------------------------------------------
 
