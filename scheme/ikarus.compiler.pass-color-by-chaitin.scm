@@ -951,6 +951,8 @@
 	   (find-low-degree (cdr ls) G))))
 
   (define* (find-color x confs env)
+    ;;The argument X is a VAR struct for which we want to allocate a register.
+    ;;
     ;;The argument  ENV is  an alist  whose keys are  VAR structs  representing local
     ;;variables in BODY, and whose values  are the associated locations: FVAR structs
     ;;or CPU register symbol names.
@@ -962,6 +964,8 @@
   (module (find-color/maybe)
 
     (define (find-color/maybe x confs env)
+      ;;The argument X is a VAR struct for which we want to allocate a register.
+      ;;
       ;;The argument  ENV is an alist  whose keys are VAR  structs representing local
       ;;variables  in BODY,  and  whose  values are  the  associated locations:  FVAR
       ;;structs or CPU register symbol names.
