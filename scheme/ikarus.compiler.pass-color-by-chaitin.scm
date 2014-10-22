@@ -363,7 +363,6 @@
     (module (E)
 
       (define (E x)
-	;;unspillable effect
 	(struct-case x
 	  ((seq e0 e1)
 	   (make-seq (E e0) (E e1)))
@@ -501,11 +500,20 @@
 	   x)
 
 	  ((mset mset32 bset)
+	   ;;We expect X to have one of the formats:
+	   ;;
+	   ;;   (asm-instr mset   (disp ?objref ?offset) ?new-val)
+	   ;;   (asm-instr bset   (disp ?objref ?offset) ?new-val)
+	   ;;   (asm-instr mset32 (disp ?objref ?offset) ?new-val)
+	   ;;
+	   ;;MSET is used, for example, to store objects in the car and cdr of pairs.
+	   ;;MSET32 is  used, for example,  to store  single characters in  a string.
+	   ;;BSET is used, for example, to store single bytes in a bytevector.
 	   (if (not (small-operand? b))
 	       (let ((u (%make-unspillable-var)))
 		 (make-seq
-		  (E (make-asm-instr 'move u b))
-		  (E (make-asm-instr op a u))))
+		   (E (make-asm-instr 'move u b))
+		   (E (make-asm-instr op a u))))
 	     (check-disp a
 			 (lambda (a)
 			   (let ((s0 (disp-objref a))
@@ -514,10 +522,10 @@
 				      (constant? s1))
 				 (let ((u (%make-unspillable-var)))
 				   (multiple-forms-sequence
-				    (E (make-asm-instr 'move u s0))
-				    (E (make-asm-instr 'int+ u s1))
-				    (let ((disp (make-disp u (make-constant 0))))
-				      (make-asm-instr op disp b))))
+				     (E (make-asm-instr 'move u s0))
+				     (E (make-asm-instr 'int+ u s1))
+				     (let ((disp (make-disp u (make-constant 0))))
+				       (make-asm-instr op disp b))))
 			       (make-asm-instr op a b)))))))
 
 	  ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:load-single fl:store-single)
@@ -556,56 +564,63 @@
 
 ;;; --------------------------------------------------------------------
 
-    (define (P x)
-      (struct-case x
-	((constant)
-	 x)
+    (module (P)
 
-	((conditional e0 e1 e2)
-	 (make-conditional (P e0) (P e1) (P e2)))
+      (define (P x)
+	(struct-case x
+	  ((constant)
+	   x)
 
-	((seq e0 e1)
-	 (make-seq (E e0) (P e1)))
+	  ((conditional e0 e1 e2)
+	   (make-conditional (P e0) (P e1) (P e2)))
 
-	((asm-instr op a b)
-	 (cond ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
-		(if (mem? a)
-		    (let ((u (%make-unspillable-var)))
-		      (make-seq
+	  ((seq e0 e1)
+	   (make-seq (E e0) (P e1)))
+
+	  ((asm-instr op dst src)
+	   (P-asm-instr op dst src x))
+
+	  ((shortcut body handler)
+	   ;;Do BODY first, then HANDLER.
+	   (let ((body (P body)))
+	     (make-shortcut body (P handler))))
+
+	  (else
+	   (compiler-internal-error __module_who__  __who__
+	     "invalid code in P context" (unparse-recordized-code x)))))
+
+      (define (P-asm-instr op a b x)
+	(cond ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
+	       (if (mem? a)
+		   (let ((u (%make-unspillable-var)))
+		     (make-seq
 		       (E (make-asm-instr 'move u a))
 		       (make-asm-instr op u b)))
-		  x))
-	       ((and (not (mem?           a))
-		     (not (small-operand? a)))
-		(let ((u (%make-unspillable-var)))
-		  (make-seq
+		 x))
+	      ((and (not (mem?           a))
+		    (not (small-operand? a)))
+	       (let ((u (%make-unspillable-var)))
+		 (make-seq
 		   (E (make-asm-instr 'move u a))
 		   (P (make-asm-instr op u b)))))
-	       ((and (not (mem?           b))
-		     (not (small-operand? b)))
-		(let ((u (%make-unspillable-var)))
-		  (make-seq
+	      ((and (not (mem?           b))
+		    (not (small-operand? b)))
+	       (let ((u (%make-unspillable-var)))
+		 (make-seq
 		   (E (make-asm-instr 'move u b))
 		   (P (make-asm-instr op a u)))))
-	       ((and (mem? a)
-		     (mem? b))
-		(let ((u (%make-unspillable-var)))
-		  (make-seq
+	      ((and (mem? a)
+		    (mem? b))
+	       (let ((u (%make-unspillable-var)))
+		 (make-seq
 		   (E (make-asm-instr 'move u b))
 		   (P (make-asm-instr op a u)))))
-	       (else
-		(check-disp a (lambda (a)
-				(check-disp b (lambda (b)
-						(make-asm-instr op a b))))))))
+	      (else
+	       (check-disp a (lambda (a)
+			       (check-disp b (lambda (b)
+					       (make-asm-instr op a b))))))))
 
-	((shortcut body handler)
-	 ;;Do BODY first, then HANDLER.
-	 (let ((body (P body)))
-	   (make-shortcut body (P handler))))
-
-	(else
-	 (compiler-internal-error __module_who__  __who__
-	   "invalid code in P context" (unparse-recordized-code x)))))
+      #| end of module: P |# )
 
 ;;; --------------------------------------------------------------------
 
