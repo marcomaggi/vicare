@@ -516,10 +516,11 @@
 	   x)
 
 	  (else
-	   (compiler-internal-error __module_who__  __who__ "invalid effect op" op))))
+	   (compiler-internal-error __module_who__  __who__
+	     "invalid ASM-INSTR operator" op))))
 
       (define (%fix-address x kont)
-	;;Recursive function.
+	;;Non-tail recursive function.
 	;;
 	(if (disp? x)
 	    (let ((s0 (disp-objref x))
@@ -537,24 +538,6 @@
 	  (kont x)))
 
       #| end of module: E |# )
-
-;;; --------------------------------------------------------------------
-
-    (define (check-disp-arg x kont)
-      (if (small-operand? x)
-	  (kont x)
-	(let ((u (%make-unique-var)))
-	  (make-seq (E (make-asm-instr 'move u x))
-		    (kont u)))))
-
-    (define (check-disp x kont)
-      (struct-case x
-	((disp a b)
-	 (check-disp-arg a (lambda (a)
-			     (check-disp-arg b (lambda (b)
-						 (kont (make-disp a b)))))))
-	(else
-	 (kont x))))
 
 ;;; --------------------------------------------------------------------
 
@@ -602,7 +585,8 @@
 	   (make-shortcut body (P handler))))
 
 	(else
-	 (compiler-internal-error __module_who__  __who__ "invalid pred" (unparse-recordized-code x)))))
+	 (compiler-internal-error __module_who__  __who__
+	   "invalid code in P context" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -621,9 +605,26 @@
 	 (make-shortcut (T body) (T handler)))
 
 	(else
-	 (compiler-internal-error __module_who__  __who__ "invalid tail" (unparse-recordized-code x)))))
+	 (compiler-internal-error __module_who__  __who__
+	   "invalid code in T context" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
+
+    (define (check-disp-arg x kont)
+      (if (small-operand? x)
+	  (kont x)
+	(let ((u (%make-unique-var)))
+	  (make-seq (E (make-asm-instr 'move u x))
+		    (kont u)))))
+
+    (define (check-disp x kont)
+      (struct-case x
+	((disp a b)
+	 (check-disp-arg a (lambda (a)
+			     (check-disp-arg b (lambda (b)
+						 (kont (make-disp a b)))))))
+	(else
+	 (kont x))))
 
     (main body)) ;;end of function %ADD-UNSPILLABLES
 
@@ -952,12 +953,10 @@
 	   (compiler-internal-error __module_who__ __who__ "this should never happen"))))
 
   (define (find-low-degree ls G)
-    (cond ((null? ls)
-	   #f)
-	  ((fx< (length (set->list (node-neighbors (car ls) G)))
-		(length ALL-REGISTERS))
-	   (car ls))
-	  (else
+    (and (pair? ls)
+	 (if (fx< (length (set->list (node-neighbors (car ls) G)))
+		  (length ALL-REGISTERS))
+	     (car ls)
 	   (find-low-degree (cdr ls) G))))
 
   (define* (find-color x confs env)
