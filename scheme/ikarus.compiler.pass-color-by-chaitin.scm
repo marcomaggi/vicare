@@ -97,32 +97,46 @@
 	;;The argument  X.VARS.VEC is a  vector of  VAR structs representing  all the
 	;;local variables in X.BODY.
 	;;
+	;;For every VAR struct in SPILLED*: select a stack frame location that is not
+	;;already used by  other VAR structs and  allocated it to the  VAR by storing
+	;;the  associated FVAR  struct in  its  LOC field;  updated the  interference
+	;;graphs accordingly.
+	;;
 	;;Return an ENV  value: an alist whose  keys are the spilled  VAR structs and
 	;;whose values are the associated FVAR structs.
 	;;
-	(module (for-each-var add-frm rem-var mem-frm?)
-	  (import FRAME-CONFLICT-SETS))
-	(define (find/set-loc spilled)
-	  (let loop ((stack-frame-conflicts ($var-frm-conf spilled))
-		     (i                     1))
-	    (let ((spilled.fvar (mkfvar i)))
-	      (if (mem-frm? spilled.fvar stack-frame-conflicts)
-		  ;;The stack  frame location  referenced by SPILLED.FVAR  is already
-		  ;;used by another local variable, check the next one.
-		  (loop stack-frame-conflicts (fxadd1 i))
-		(begin
-		  ;;For each  local variable in  X.VARS.VEC: remove SPILLED  from the
-		  ;;interference graph  of VAR structs  (VAR-CONF) and add it  to the
-		  ;;interference graph of FVAR structs (FRM-CONF).
-		  (for-each-var
-		      ($var-var-conf spilled)
-		      x.vars.vec
-		    (lambda (x.var)
-		      ($set-var-var-conf! x.var (rem-var spilled      ($var-var-conf x.var)))
-		      ($set-var-frm-conf! x.var (add-frm spilled.fvar ($var-frm-conf x.var)))))
-		  ($set-var-loc! spilled spilled.fvar)
-		  (cons spilled spilled.fvar))))))
-	(map find/set-loc spilled*))
+	(fprintf (current-error-port) "start\n")
+	($map/stx
+	    (lambda (spilled)
+	      (module (for-each-var add-frm rem-var mem-frm?)
+		(import FRAME-CONFLICT-SETS))
+	      (let ((spilled.fvar (let loop ((stack-frame-conflicts ($var-frm-conf spilled))
+					     (stack-offset          1))
+				    (let ((stack-frame-loc (mkfvar stack-offset)))
+				      (if (mem-frm? stack-frame-loc stack-frame-conflicts)
+					  ;;The  stack frame  location referenced  by
+					  ;;STACK-FRAME-LOC   is   already  used   by
+					  ;;another  local variable,  check the  next
+					  ;;one.
+					  (begin
+					    (fprintf (current-error-port) "~a, " stack-offset)
+					    (loop stack-frame-conflicts (fxadd1 stack-offset)))
+					;;The  stack  frame  location  referended  by
+					;;STACK-FRAME-LOC is unused: choose it.
+					stack-frame-loc)))))
+		(fprintf (current-error-port) " i=~a\n" (fvar-idx spilled.fvar))
+		;;For  each local  variable in  X.VARS.VEC: remove  SPILLED from  the
+		;;interference  graph of  VAR structs  (VAR-CONF) and  add it  to the
+		;;interference graph of FVAR structs (FRM-CONF).
+		(for-each-var
+		    ($var-var-conf spilled)
+		    x.vars.vec
+		  (lambda (x.var)
+		    ($set-var-var-conf! x.var (rem-var spilled      ($var-var-conf x.var)))
+		    ($set-var-frm-conf! x.var (add-frm spilled.fvar ($var-frm-conf x.var)))))
+		($set-var-loc! spilled spilled.fvar)
+		(cons spilled spilled.fvar)))
+	  spilled*))
 
       #| end of module: %COLOR-PROGRAM |# )
 
@@ -876,30 +890,30 @@
 	   => (lambda (un)
 		(let ((n* (node-neighbors un G)))
 		  (delete-node! un G)
-		  (receive (spills spillable* env)
+		  (receive (spilled* spillable* env)
 		      (%color-graph spillable* (set-rem un unspillable*) G)
 		    (let ((r (find-color un n* env)))
-		      (values spills spillable* (cons (cons un r) env)))))))
+		      (values spilled* spillable* (cons (cons un r) env)))))))
 
 	  ((find-low-degree (set->list spillable*) G)
 	   => (lambda (sp)
 		(let ((n* (node-neighbors sp G)))
 		  (delete-node! sp G)
-		  (receive (spills spillable* env)
+		  (receive (spilled* spillable* env)
 		      (%color-graph (set-rem sp spillable*) unspillable* G)
 		    (let ((r (find-color sp n* env)))
-		      (values spills (set-add sp spillable*) (cons (cons sp r) env)))))))
+		      (values spilled* (set-add sp spillable*) (cons (cons sp r) env)))))))
 
 	  ((pair? (set->list spillable*))
 	   (let* ((sp (car (set->list spillable*)))
 		  (n* (node-neighbors sp G)))
 	     (delete-node! sp G)
-	     (receive (spills spillable* env)
+	     (receive (spilled* spillable* env)
 		 (%color-graph (set-rem sp spillable*) unspillable* G)
 	       (let ((r (find-color/maybe sp n* env)))
 		 (if r
-		     (values spills (set-add sp spillable*) (cons (cons sp r) env))
-		   (values (cons sp spills) spillable* env))))))
+		     (values spilled* (set-add sp spillable*) (cons (cons sp r) env))
+		   (values (cons sp spilled*) spillable* env))))))
 
 	  (else
 	   (compiler-internal-error __module_who__  '%color-graph "whoaaa"))))
@@ -935,15 +949,18 @@
   #| end of module: %COLOR-GRAPH |# )
 
 
-(define* (%substitute env x)
-  ;;X must represent  recordized code; this function builds and  returns a new struct
-  ;;instance representing recordized code, which is meant to replace X.
+(define* (%substitute env body)
+  ;;The argument BODY  must represent recordised code.  The argument  ENV is an alist
+  ;;whose keys are the  spilled VAR structs and whose values  are the associated FVAR
+  ;;structs.
   ;;
-  ;;The purpose of this function is to apply the subfunction R to the operands in the
-  ;;structures of type ASM-INSTR and ASMCALL.
+  ;;This function  builds and returns  a new struct instance  representing recordised
+  ;;code, which is meant  to replace BODY.  The purpose of this  function is to apply
+  ;;the  subfunction R  to  the operands  in  the structures  of  type ASM-INSTR  and
+  ;;ASMCALL; as a consequence: we apply the subfunction R-var to all the VAR structs.
   ;;
   ;;A lot  of functions  are nested  here because  they make  use of  the subfunction
-  ;;"Var", and "Var" needs to close upon the argument ENV.
+  ;;"R-var", and "R-var" needs to close upon the argument ENV.
   ;;
   (module (R)
 
@@ -952,67 +969,42 @@
 	((constant)
 	 x)
 	((var)
-	 (Var x))
+	 (R-var x))
 	((fvar)
 	 x)
-	((nfv c loc)
-	 (or loc
-	     (compiler-internal-error __module_who__  __who__ "unset nfv in R" x)))
-	((disp s0 s1)
-	 (make-disp (D s0) (D s1)))
+	((nfv unused.idx loc)
+	 (assert (fvar? loc))
+	 loc)
+	((disp objref offset)
+	 (make-disp (R-disp objref) (R-disp offset)))
 	(else
 	 (if (symbol? x)
 	     x
-	   (compiler-internal-error __module_who__  __who__ "invalid R" x)))))
+	   (compiler-internal-error __module_who__  __who__
+	     "invalid operand struct" x)))))
 
-    (define (D x)
+    (define (R-disp x)
       (struct-case x
 	((constant)
 	 x)
 	((var)
-	 (Var x))
+	 (R-var x))
 	((fvar)
 	 x)
 	(else
 	 (if (symbol? x)
 	     x
-	   (compiler-internal-error __module_who__  __who__ "invalid D" x)))))
+	   (compiler-internal-error __module_who__  __who__
+	     "invalid DISP field value" x)))))
 
-    (define (Var x)
+    (define (R-var x)
       (cond ((assq x env)
-	     => cdr)
-	    (else x)))
-
-    ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
-    ;;
-    ;; (module (Rhs)
-    ;;
-    ;;   (define (Rhs x)
-    ;; 	(struct-case x
-    ;; 	  ((var)
-    ;; 	   (Var x))
-    ;; 	  ((asmcall op rand*)
-    ;; 	   (make-asmcall op (map Rand rand*)))
-    ;; 	  (else x)))
-    ;;
-    ;;   (define (Rand x)
-    ;; 	(struct-case x
-    ;; 	  ((var)
-    ;; 	   (Var x))
-    ;; 	  (else x)))
-    ;;
-    ;;   #| end of module: Rhs |# )
-
-    ;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
-    ;;
-    ;; (define (Lhs x)
-    ;;   (struct-case x
-    ;;     ((var)
-    ;; 	 (Var x))
-    ;;     ((nfv confs loc)
-    ;;      (or loc
-    ;; 	     (compiler-internal-error __module_who__  __who__ "LHS not set" x)))
-    ;;     (else x)))
+	     ;;This VAR struct  is in the list of spilled  variables: replace it with
+	     ;;its associated FVAR struct.
+      	     => cdr)
+	    ;;This VAR struct is not in the  list of spilled variables: just leave it
+	    ;;alone.
+      	    (else x)))
 
     #| end of module: R |# )
 
@@ -1051,7 +1043,15 @@
 
   (define (T x)
     (struct-case x
-      ((asmcall op rands)
+      ((asmcall op)
+       (assert (or (eq? op 'return)
+		   (eq? op 'direct-jump)
+		   (eq? op 'indirect-jump)))
+       ;;We assume the input  code is correct; this means in  tail position there are
+       ;;only ASMCALL structs with operand  RETURN, DIRECT-JUMP or INDIRECT-JUMP.  We
+       ;;know that the operands of such ASMCALL structs are CPU register symbol names
+       ;;and FVAR  structs; so there  are no VAR  structs to substitute  there.  Just
+       ;;return X itself.
        x)
       ((conditional e0 e1 e2)
        (make-conditional (P e0) (T e1) (T e2)))
@@ -1062,7 +1062,7 @@
       (else
        (compiler-internal-error __module_who__  __who__ "invalid tail" (unparse-recordized-code x)))))
 
-  (T x))
+  (T body))
 
 
 ;;;; done
