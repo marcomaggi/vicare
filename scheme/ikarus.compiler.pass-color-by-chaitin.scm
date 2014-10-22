@@ -79,6 +79,8 @@
 			(unspillable.set  (make-empty-set))
 			(body             x.body))
 	       (receive (unspillable.set^ body^)
+		   ;;FIXME This really needs to be inside the loop.  But why?  Insert
+		   ;;explanation here.  (Marco Maggi; Wed Oct 22, 2014)
 		   (%add-unspillables unspillable.set body)
 		 (let ((G (%build-graph body^)))
 		   #;(print-graph G)
@@ -370,8 +372,8 @@
 	  ((conditional e0 e1 e2)
 	   (make-conditional (P e0) (E e1) (E e2)))
 
-	  ((asm-instr op a b)
-	   (E-asm-instr op a b x))
+	  ((asm-instr op dst src)
+	   (E-asm-instr op dst src x))
 
 	  ((asmcall op rands)
 	   (case op
@@ -395,108 +397,110 @@
 	     "invalid code in E context"
 	     (unparse-recordized-code x)))))
 
-      (define (E-asm-instr op a b x)
+      (define (E-asm-instr op dst src x)
 	(case op
 	  ((load8 load32)
-	   (%fix-address b (lambda (b)
-			     (if (or (register? a)
-				     (var?      a))
-				 (make-asm-instr op a b)
-			       (let ((unspillable (%make-unspillable-var)))
-				 (make-seq
-				   (make-asm-instr op unspillable b)
-				   (E (make-asm-instr 'move a unspillable))))))))
+	   (%fix-address src
+			 (lambda (src)
+			   (if (or (register? dst)
+				   (var?      dst))
+			       (make-asm-instr op dst src)
+			     (let ((unspillable (%make-unspillable-var)))
+			       (make-seq
+				 (make-asm-instr op unspillable src)
+				 (E (make-asm-instr 'move dst unspillable))))))))
 
 	  ((logor logxor logand int+ int- int* move int-/overflow int+/overflow int*/overflow)
 	   (cond ((and (eq? op 'move)
-		       (eq? a b))
+		       (eq? dst src))
 		  ;;Source and dest are the same: do nothing.
 		  (nop))
 		 ((and (= wordsize 8)
 		       (not (eq? op 'move))
-		       (long-imm? b))
+		       (long-imm? src))
 		  (let ((unspillable (%make-unspillable-var)))
 		    (make-seq
-		      (E (make-asm-instr 'move unspillable b))
-		      (E (make-asm-instr op a unspillable)))))
+		      (E (make-asm-instr 'move unspillable src))
+		      (E (make-asm-instr op dst unspillable)))))
 		 ((and (memq op '(int* int*/overflow))
-		       (mem? a))
+		       (mem? dst))
 		  (let ((unspillable (%make-unspillable-var)))
 		    (multiple-forms-sequence
-		      (E (make-asm-instr 'move unspillable a))
-		      (E (make-asm-instr op unspillable b))
-		      (E (make-asm-instr 'move a unspillable)))))
-		 ((and (mem? a)
-		       (not (small-operand? b)))
+		      (E (make-asm-instr 'move unspillable dst))
+		      (E (make-asm-instr op unspillable src))
+		      (E (make-asm-instr 'move dst unspillable)))))
+		 ((and (mem? dst)
+		       (not (small-operand? src)))
 		  (let ((unspillable (%make-unspillable-var)))
 		    (make-seq
-		      (E (make-asm-instr 'move unspillable b))
-		      (E (make-asm-instr op a unspillable)))))
-		 ((disp? a)
-		  (let ((s0 (disp-objref a))
-			(s1 (disp-offset a)))
+		      (E (make-asm-instr 'move unspillable src))
+		      (E (make-asm-instr op dst unspillable)))))
+		 ((disp? dst)
+		  (let ((s0 (disp-objref dst))
+			(s1 (disp-offset dst)))
 		    (cond ((not (small-operand? s0))
 			   (let ((unspillable (%make-unspillable-var)))
 			     (make-seq
 			       (E (make-asm-instr 'move unspillable s0))
-			       (E (make-asm-instr op (make-disp unspillable s1) b)))))
+			       (E (make-asm-instr op (make-disp unspillable s1) src)))))
 			  ((not (small-operand? s1))
 			   (let ((unspillable (%make-unspillable-var)))
 			     (make-seq
 			       (E (make-asm-instr 'move unspillable s1))
-			       (E (make-asm-instr op (make-disp s0 unspillable) b)))))
-			  ((small-operand? b) x)
+			       (E (make-asm-instr op (make-disp s0 unspillable) src)))))
+			  ((small-operand? src)
+			   x)
 			  (else
 			   (let ((unspillable (%make-unspillable-var)))
 			     (make-seq
-			       (E (make-asm-instr 'move unspillable b))
-			       (E (make-asm-instr op a unspillable))))))))
-		 ((disp? b)
-		  (let ((s0 (disp-objref b))
-			(s1 (disp-offset b)))
+			       (E (make-asm-instr 'move unspillable src))
+			       (E (make-asm-instr op dst unspillable))))))))
+		 ((disp? src)
+		  (let ((s0 (disp-objref src))
+			(s1 (disp-offset src)))
 		    (cond ((not (small-operand? s0))
 			   (let ((unspillable (%make-unspillable-var)))
 			     (make-seq
 			       (E (make-asm-instr 'move unspillable s0))
-			       (E (make-asm-instr op a (make-disp unspillable s1))))))
+			       (E (make-asm-instr op dst (make-disp unspillable s1))))))
 			  ((not (small-operand? s1))
 			   (let ((unspillable (%make-unspillable-var)))
 			     (make-seq
 			       (E (make-asm-instr 'move unspillable s1))
-			       (E (make-asm-instr op a (make-disp s0 unspillable))))))
+			       (E (make-asm-instr op dst (make-disp s0 unspillable))))))
 			  (else x))))
 		 (else x)))
 
 	  ((bswap!)
-	   (if (mem? b)
+	   (if (mem? src)
 	       (let ((unspillable (%make-unspillable-var)))
 		 (multiple-forms-sequence
-		   (E (make-asm-instr 'move   unspillable a))
+		   (E (make-asm-instr 'move   unspillable dst))
 		   (E (make-asm-instr 'bswap! unspillable unspillable))
-		   (E (make-asm-instr 'move   b unspillable))))
+		   (E (make-asm-instr 'move   src         unspillable))))
 	     x))
 
 	  ((cltd)
-	   (unless (and (symbol? a)
-			(symbol? b))
+	   (unless (and (symbol? dst)
+			(symbol? src))
 	     (compiler-internal-error __module_who__  __who__ "invalid args to cltd"))
 	   x)
 
 	  ((idiv)
-	   (unless (symbol? a)
+	   (unless (symbol? dst)
 	     (compiler-internal-error __module_who__  __who__ "invalid arg to idiv"))
-	   (if (or (var? b)
-		   (symbol? b))
+	   (if (or (var?    src)
+		   (symbol? src))
 	       x
 	     (let ((unspillable (%make-unspillable-var)))
 	       (make-seq
-		 (E (make-asm-instr 'move unspillable b))
-		 (E (make-asm-instr 'idiv a unspillable))))))
+		 (E (make-asm-instr 'move unspillable src))
+		 (E (make-asm-instr 'idiv dst unspillable))))))
 
 	  ((sll sra srl sll/overflow)
-	   (unless (or (constant? b)
-		       (eq? b ecx))
-	     (compiler-internal-error __module_who__  __who__ "invalid shift" b))
+	   (unless (or (constant? src)
+		       (eq? src ecx))
+	     (compiler-internal-error __module_who__  __who__ "invalid shift" src))
 	   x)
 
 	  ((mset mset32 bset)
@@ -509,15 +513,15 @@
 	   ;;MSET is used, for example, to store objects in the car and cdr of pairs.
 	   ;;MSET32 is  used, for example,  to store  single characters in  a string.
 	   ;;BSET is used, for example, to store single bytes in a bytevector.
-	   (if (not (small-operand? b))
+	   (if (not (small-operand? src))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
-		   (E (make-asm-instr 'move unspillable b))
-		   (E (make-asm-instr op a unspillable))))
-	     (check-disp a
-			 (lambda (a)
-			   (let ((s0 (disp-objref a))
-				 (s1 (disp-offset a)))
+		   (E (make-asm-instr 'move unspillable src))
+		   (E (make-asm-instr op dst unspillable))))
+	     (check-disp dst
+			 (lambda (dst)
+			   (let ((s0 (disp-objref dst))
+				 (s1 (disp-offset dst)))
 			     (if (and (constant? s0)
 				      (constant? s1))
 				 (let ((unspillable (%make-unspillable-var)))
@@ -525,13 +529,15 @@
 				     (E (make-asm-instr 'move unspillable s0))
 				     (E (make-asm-instr 'int+ unspillable s1))
 				     (let ((disp (make-disp unspillable (make-constant 0))))
-				       (make-asm-instr op disp b))))
-			       (make-asm-instr op a b)))))))
+				       (make-asm-instr op disp src))))
+			       (make-asm-instr op dst src)))))))
 
 	  ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:load-single fl:store-single)
-	   (check-disp-arg a (lambda (a)
-			       (check-disp-arg b (lambda (b)
-						   (make-asm-instr op a b))))))
+	   (check-disp-arg dst
+			   (lambda (dst)
+			     (check-disp-arg src
+					     (lambda (src)
+					       (make-asm-instr op dst src))))))
 
 	  ((fl:from-int fl:shuffle)
 	   x)
@@ -589,36 +595,38 @@
 	   (compiler-internal-error __module_who__  __who__
 	     "invalid code in P context" (unparse-recordized-code x)))))
 
-      (define (P-asm-instr op a b x)
+      (define (P-asm-instr op dst src x)
 	(cond ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
-	       (if (mem? a)
+	       (if (mem? dst)
 		   (let ((unspillable (%make-unspillable-var)))
 		     (make-seq
-		       (E (make-asm-instr 'move unspillable a))
-		       (make-asm-instr op unspillable b)))
+		       (E (make-asm-instr 'move unspillable dst))
+		       (make-asm-instr op unspillable src)))
 		 x))
-	      ((and (not (mem?           a))
-		    (not (small-operand? a)))
+	      ((and (not (mem?           dst))
+		    (not (small-operand? dst)))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
-		   (E (make-asm-instr 'move unspillable a))
-		   (P (make-asm-instr op unspillable b)))))
-	      ((and (not (mem?           b))
-		    (not (small-operand? b)))
+		   (E (make-asm-instr 'move unspillable dst))
+		   (P (make-asm-instr op unspillable src)))))
+	      ((and (not (mem?           src))
+		    (not (small-operand? src)))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
-		   (E (make-asm-instr 'move unspillable b))
-		   (P (make-asm-instr op a unspillable)))))
-	      ((and (mem? a)
-		    (mem? b))
+		   (E (make-asm-instr 'move unspillable src))
+		   (P (make-asm-instr op dst unspillable)))))
+	      ((and (mem? dst)
+		    (mem? src))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
-		   (E (make-asm-instr 'move unspillable b))
-		   (P (make-asm-instr op    a unspillable)))))
+		   (E (make-asm-instr 'move unspillable src))
+		   (P (make-asm-instr op    dst unspillable)))))
 	      (else
-	       (check-disp a (lambda (a)
-			       (check-disp b (lambda (b)
-					       (make-asm-instr op a b))))))))
+	       (check-disp dst
+			   (lambda (dst)
+			     (check-disp src
+					 (lambda (src)
+					   (make-asm-instr op dst src))))))))
 
       #| end of module: P |# )
 
