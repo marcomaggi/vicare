@@ -340,10 +340,12 @@
 
   (define (%add-unspillables unspillable.set body)
     ;;The argument UNSPILLABLE.SET  is a set of VAR  structs representing unspillable
-    ;;local variables in BODY; it starts empty and we fill it in this function.
+    ;;local variables  in BODY;  it starts  empty and  we fill  it in  this function.
+    ;;Return  2 values:  the filled  UNSPILLABLE.SET  and recordised  code that  must
+    ;;replace BODY.
     ;;
     ;;A  lot  of  functions  are  nested  here  because  they  call  the  subfunction
-    ;;%MAKE-UNIQUE-VAR, and  the %MAKE-UNIQUE-VAR  needs to  close upon  the argument
+    ;;%MAKE-UNSPILLABLE-VAR, and  the %MAKE-UNSPILLABLE-VAR  needs to  close upon  the argument
     ;;UNSPILLABLE.SET.
     ;;
 
@@ -351,7 +353,7 @@
       ;;Here we want to return the value of the mutated UNSPILLABLE.SET binding.
       (values unspillable.set (T body)))
 
-    (define (%make-unique-var)
+    (define (%make-unspillable-var)
       (module (set-add)
 	(import LISTY-SET))
       (receive-and-return (unspillable)
@@ -398,11 +400,13 @@
 	(case op
 	  ((load8 load32)
 	   (%fix-address b (lambda (b)
-			     (if (or (register? a) (var? a))
+			     (if (or (register? a)
+				     (var?      a))
 				 (make-asm-instr op a b)
-			       (let ((u (%make-unique-var)))
-				 (make-seq (make-asm-instr op u b)
-					   (E (make-asm-instr 'move a u))))))))
+			       (let ((u (%make-unspillable-var)))
+				 (make-seq
+				  (make-asm-instr op u b)
+				  (E (make-asm-instr 'move a u))))))))
 
 	  ((logor logxor logand int+ int- int* move int-/overflow int+/overflow int*/overflow)
 	   (cond ((and (eq? op 'move)
@@ -412,58 +416,65 @@
 		 ((and (= wordsize 8)
 		       (not (eq? op 'move))
 		       (long-imm? b))
-		  (let ((u (%make-unique-var)))
-		    (make-seq (E (make-asm-instr 'move u b))
-			      (E (make-asm-instr op a u)))))
+		  (let ((u (%make-unspillable-var)))
+		    (make-seq
+		     (E (make-asm-instr 'move u b))
+		     (E (make-asm-instr op a u)))))
 		 ((and (memq op '(int* int*/overflow))
 		       (mem? a))
-		  (let ((u (%make-unique-var)))
-		    (make-seq (make-seq (E (make-asm-instr 'move u a))
-					(E (make-asm-instr op u b)))
-			      (E (make-asm-instr 'move a u)))))
+		  (let ((u (%make-unspillable-var)))
+		    (multiple-forms-sequence
+		     (E (make-asm-instr 'move u a))
+		     (E (make-asm-instr op u b))
+		     (E (make-asm-instr 'move a u)))))
 		 ((and (mem? a)
 		       (not (small-operand? b)))
-		  (let ((u (%make-unique-var)))
-		    (make-seq (E (make-asm-instr 'move u b))
-			      (E (make-asm-instr op a u)))))
+		  (let ((u (%make-unspillable-var)))
+		    (make-seq
+		     (E (make-asm-instr 'move u b))
+		     (E (make-asm-instr op a u)))))
 		 ((disp? a)
 		  (let ((s0 (disp-objref a))
 			(s1 (disp-offset a)))
 		    (cond ((not (small-operand? s0))
-			   (let ((u (%make-unique-var)))
-			     (make-seq (E (make-asm-instr 'move u s0))
-				       (E (make-asm-instr op (make-disp u s1) b)))))
+			   (let ((u (%make-unspillable-var)))
+			     (make-seq
+			      (E (make-asm-instr 'move u s0))
+			      (E (make-asm-instr op (make-disp u s1) b)))))
 			  ((not (small-operand? s1))
-			   (let ((u (%make-unique-var)))
-			     (make-seq (E (make-asm-instr 'move u s1))
-				       (E (make-asm-instr op (make-disp s0 u) b)))))
+			   (let ((u (%make-unspillable-var)))
+			     (make-seq
+			      (E (make-asm-instr 'move u s1))
+			      (E (make-asm-instr op (make-disp s0 u) b)))))
 			  ((small-operand? b) x)
 			  (else
-			   (let ((u (%make-unique-var)))
-			     (make-seq (E (make-asm-instr 'move u b))
-				       (E (make-asm-instr op a u))))))))
+			   (let ((u (%make-unspillable-var)))
+			     (make-seq
+			      (E (make-asm-instr 'move u b))
+			      (E (make-asm-instr op a u))))))))
 		 ((disp? b)
 		  (let ((s0 (disp-objref b))
 			(s1 (disp-offset b)))
 		    (cond ((not (small-operand? s0))
-			   (let ((u (%make-unique-var)))
-			     (make-seq (E (make-asm-instr 'move u s0))
-				       (E (make-asm-instr op a (make-disp u s1))))))
+			   (let ((u (%make-unspillable-var)))
+			     (make-seq
+			      (E (make-asm-instr 'move u s0))
+			      (E (make-asm-instr op a (make-disp u s1))))))
 			  ((not (small-operand? s1))
-			   (let ((u (%make-unique-var)))
-			     (make-seq (E (make-asm-instr 'move u s1))
-				       (E (make-asm-instr op a (make-disp s0 u))))))
-			  (else
-			   x))))
-		 (else
-		  x)))
+			   (let ((u (%make-unspillable-var)))
+			     (make-seq
+			      (E (make-asm-instr 'move u s1))
+			      (E (make-asm-instr op a (make-disp s0 u))))))
+			  (else x))))
+		 (else x)))
 
 	  ((bswap!)
 	   (if (mem? b)
-	       (let ((u (%make-unique-var)))
-		 (make-seq (make-seq (E (make-asm-instr 'move u a))
-				     (E (make-asm-instr 'bswap! u u)))
-			   (E (make-asm-instr 'move b u))))
+	       (let ((u (%make-unspillable-var)))
+		 (multiple-forms-sequence
+		  (E (make-asm-instr 'move u a))
+		  (E (make-asm-instr 'bswap! u u))
+		  (E (make-asm-instr 'move b u))))
 	     x))
 
 	  ((cltd)
@@ -478,9 +489,10 @@
 	   (if (or (var? b)
 		   (symbol? b))
 	       x
-	     (let ((u (%make-unique-var)))
-	       (make-seq (E (make-asm-instr 'move u b))
-			 (E (make-asm-instr 'idiv a u))))))
+	     (let ((u (%make-unspillable-var)))
+	       (make-seq
+		(E (make-asm-instr 'move u b))
+		(E (make-asm-instr 'idiv a u))))))
 
 	  ((sll sra srl sll/overflow)
 	   (unless (or (constant? b)
@@ -490,21 +502,22 @@
 
 	  ((mset mset32 bset)
 	   (if (not (small-operand? b))
-	       (let ((u (%make-unique-var)))
-		 (make-seq (E (make-asm-instr 'move u b))
-			   (E (make-asm-instr op a u))))
+	       (let ((u (%make-unspillable-var)))
+		 (make-seq
+		  (E (make-asm-instr 'move u b))
+		  (E (make-asm-instr op a u))))
 	     (check-disp a
 			 (lambda (a)
 			   (let ((s0 (disp-objref a))
 				 (s1 (disp-offset a)))
 			     (if (and (constant? s0)
 				      (constant? s1))
-				 (let ((u (%make-unique-var)))
-				   (make-seq (make-seq (E (make-asm-instr 'move u s0))
-						       (E (make-asm-instr 'int+ u s1)))
-					     (make-asm-instr op
-							     (make-disp u (make-constant 0))
-							     b)))
+				 (let ((u (%make-unspillable-var)))
+				   (multiple-forms-sequence
+				    (E (make-asm-instr 'move u s0))
+				    (E (make-asm-instr 'int+ u s1))
+				    (let ((disp (make-disp u (make-constant 0))))
+				      (make-asm-instr op disp b))))
 			       (make-asm-instr op a b)))))))
 
 	  ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:load-single fl:store-single)
@@ -526,13 +539,15 @@
 	    (let ((s0 (disp-objref x))
 		  (s1 (disp-offset x)))
 	      (cond ((not (small-operand? s0))
-		     (let ((u (%make-unique-var)))
-		       (make-seq (E (make-asm-instr 'move u s0))
-				 (%fix-address (make-disp u s1) kont))))
+		     (let ((u (%make-unspillable-var)))
+		       (make-seq
+			(E (make-asm-instr 'move u s0))
+			(%fix-address (make-disp u s1) kont))))
 		    ((not (small-operand? s1))
-		     (let ((u (%make-unique-var)))
-		       (make-seq (E (make-asm-instr 'move u s1))
-				 (%fix-address (make-disp s0 u) kont))))
+		     (let ((u (%make-unspillable-var)))
+		       (make-seq
+			(E (make-asm-instr 'move u s1))
+			(%fix-address (make-disp s0 u) kont))))
 		    (else
 		     (kont x))))
 	  (kont x)))
@@ -555,25 +570,29 @@
 	((asm-instr op a b)
 	 (cond ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
 		(if (mem? a)
-		    (let ((u (%make-unique-var)))
-		      (make-seq (E (make-asm-instr 'move u a))
-				(make-asm-instr op u b)))
+		    (let ((u (%make-unspillable-var)))
+		      (make-seq
+		       (E (make-asm-instr 'move u a))
+		       (make-asm-instr op u b)))
 		  x))
 	       ((and (not (mem?           a))
 		     (not (small-operand? a)))
-		(let ((u (%make-unique-var)))
-		  (make-seq (E (make-asm-instr 'move u a))
-			    (P (make-asm-instr op u b)))))
+		(let ((u (%make-unspillable-var)))
+		  (make-seq
+		   (E (make-asm-instr 'move u a))
+		   (P (make-asm-instr op u b)))))
 	       ((and (not (mem?           b))
 		     (not (small-operand? b)))
-		(let ((u (%make-unique-var)))
-		  (make-seq (E (make-asm-instr 'move u b))
-			    (P (make-asm-instr op a u)))))
+		(let ((u (%make-unspillable-var)))
+		  (make-seq
+		   (E (make-asm-instr 'move u b))
+		   (P (make-asm-instr op a u)))))
 	       ((and (mem? a)
 		     (mem? b))
-		(let ((u (%make-unique-var)))
-		  (make-seq (E (make-asm-instr 'move u b))
-			    (P (make-asm-instr op a u)))))
+		(let ((u (%make-unspillable-var)))
+		  (make-seq
+		   (E (make-asm-instr 'move u b))
+		   (P (make-asm-instr op a u)))))
 	       (else
 		(check-disp a (lambda (a)
 				(check-disp b (lambda (b)
@@ -593,6 +612,12 @@
     (define (T x)
       (struct-case x
 	((asmcall op rands)
+	 (assert (or (eq? op 'return) (eq? op 'direct-jump) (eq? op 'indirect-jump)))
+	 ;;We assume the input code is correct; this means in tail position there are
+	 ;;only ASMCALL  structs with  operand RETURN, DIRECT-JUMP  or INDIRECT-JUMP.
+	 ;;We know that the operands of  such ASMCALL structs are CPU register symbol
+	 ;;names and FVAR structs; so there is  nothing to be done here.  Just return
+	 ;;X itself.
 	 x)
 
 	((conditional e0 e1 e2)
@@ -613,16 +638,19 @@
     (define (check-disp-arg x kont)
       (if (small-operand? x)
 	  (kont x)
-	(let ((u (%make-unique-var)))
-	  (make-seq (E (make-asm-instr 'move u x))
-		    (kont u)))))
+	(let ((unspillable (%make-unspillable-var)))
+	  (make-seq
+	   (E (make-asm-instr 'move unspillable x))
+	   (kont unspillable)))))
 
     (define (check-disp x kont)
       (struct-case x
-	((disp a b)
-	 (check-disp-arg a (lambda (a)
-			     (check-disp-arg b (lambda (b)
-						 (kont (make-disp a b)))))))
+	((disp objref offset)
+	 (check-disp-arg objref
+			 (lambda (objref^)
+			   (check-disp-arg offset
+					   (lambda (offset^)
+					     (kont (make-disp objref^ offset^)))))))
 	(else
 	 (kont x))))
 
@@ -1024,7 +1052,7 @@
 	((fvar)
 	 x)
 	((nfv unused.idx loc)
-	 (assert (fvar? loc))
+	 #;(assert (fvar? loc))
 	 loc)
 	((disp objref offset)
 	 (make-disp (R-disp objref) (R-disp offset)))
@@ -1095,9 +1123,7 @@
   (define (T x)
     (struct-case x
       ((asmcall op)
-       (assert (or (eq? op 'return)
-		   (eq? op 'direct-jump)
-		   (eq? op 'indirect-jump)))
+       #;(assert (or (eq? op 'return) (eq? op 'direct-jump) (eq? op 'indirect-jump)))
        ;;We assume the input  code is correct; this means in  tail position there are
        ;;only ASMCALL structs with operand  RETURN, DIRECT-JUMP or INDIRECT-JUMP.  We
        ;;know that the operands of such ASMCALL structs are CPU register symbol names
