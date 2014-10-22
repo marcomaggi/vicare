@@ -57,7 +57,7 @@
       (define (%color-program x)
 	;;The argument X must  be a LOCALS struct representing the  body of a CLAMBDA
 	;;clause or the  body of an initialisation expression.  Return  the return of
-	;;the call to %SUBSTITUTE.
+	;;the call to %SUBSTITUTE-VARS-WITH-ASSOCIATED-LOCATIONS.
 	;;
 	(module (list->set make-empty-set)
 	  (import LISTY-SET))
@@ -81,12 +81,13 @@
 	       (receive (unspillable*^ body^)
 		   (%add-unspillables unspillable* body)
 		 (let ((G (%build-graph body^)))
+		   #;(print-graph G)
 		   (receive (spilled* spillable*^ env)
 		       (%color-graph spillable* unspillable*^ G)
 		     (if (null? spilled*)
-			 (%substitute env body^)
+			 (%substitute-vars-with-associated-locations env body^)
 		       (let* ((env^   (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec))
-			      (body^^ (%substitute env^ body^)))
+			      (body^^ (%substitute-vars-with-associated-locations env^ body^)))
 			 (loop spillable*^ unspillable*^ body^^)))))))))))
 
       (define (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec)
@@ -882,27 +883,41 @@
   (define (%color-graph spillable* unspillable* G)
     ;;Non-tail recursive function.
     ;;
+    ;;Return 3 values:
+    ;;
+    ;;1. A list of VAR structs representing the spillable local variables.
+    ;;
+    ;;2. A list of VAR structs representing the UNspillable local variables.
+    ;;
+    ;;3.  An ENV  value:  an alist  whose  keys are  VAR  structs representing  local
+    ;;    variables in  BODY, and  whose values  are the  associated locations:  FVAR
+    ;;   structs or CPU register symbol names.
+    ;;
     (cond ((and (empty-set? spillable*)
 		(empty-set? unspillable*))
 	   (values '() (make-empty-set) '()))
 
 	  ((find-low-degree (set->list unspillable*) G)
-	   => (lambda (un)
-		(let ((n* (node-neighbors un G)))
-		  (delete-node! un G)
+	   => (lambda (unspillable)
+		(let ((n* (node-neighbors unspillable G)))
+		  (delete-node! unspillable G)
 		  (receive (spilled* spillable* env)
-		      (%color-graph spillable* (set-rem un unspillable*) G)
-		    (let ((r (find-color un n* env)))
-		      (values spilled* spillable* (cons (cons un r) env)))))))
+		      (%color-graph spillable* (set-rem unspillable unspillable*) G)
+		    (let ((r (find-color unspillable n* env)))
+		      (values spilled*
+			      spillable*
+			      (cons (cons unspillable r) env)))))))
 
 	  ((find-low-degree (set->list spillable*) G)
-	   => (lambda (sp)
-		(let ((n* (node-neighbors sp G)))
-		  (delete-node! sp G)
+	   => (lambda (spillable)
+		(let ((n* (node-neighbors spillable G)))
+		  (delete-node! spillable G)
 		  (receive (spilled* spillable* env)
-		      (%color-graph (set-rem sp spillable*) unspillable* G)
-		    (let ((r (find-color sp n* env)))
-		      (values spilled* (set-add sp spillable*) (cons (cons sp r) env)))))))
+		      (%color-graph (set-rem spillable spillable*) unspillable* G)
+		    (let ((r (find-color spillable n* env)))
+		      (values spilled*
+			      (set-add spillable spillable*)
+			      (cons (cons spillable r) env)))))))
 
 	  ((pair? (set->list spillable*))
 	   (let* ((sp (car (set->list spillable*)))
@@ -933,31 +948,35 @@
 			    x)
 			   ((assq x env)
 			    => cdr)
-			   (else
-			    #f)))
+			   (else #f)))
 		(set->list confs))))
-      (let ((r* (set->list (set-difference (list->set ALL-REGISTERS)
+      (let ((r* (set->list (set-difference ALL-REGISTERS-SET
 					   (list->set cr)))))
 	(if (pair? r*)
 	    (car r*)
 	  #f))))
 
-  (define (find-color x confs env)
+  (define-constant ALL-REGISTERS-SET
+    (list->set ALL-REGISTERS))
+
+  (define* (find-color x confs env)
     (or (find-color/maybe x confs env)
-	(compiler-internal-error __module_who__  'find-color "cannot find color for" x)))
+	(compiler-internal-error __module_who__ __who__
+	  "cannot find color local variable" x)))
 
   #| end of module: %COLOR-GRAPH |# )
 
 
-(define* (%substitute env body)
+(define* (%substitute-vars-with-associated-locations env body)
   ;;The argument BODY  must represent recordised code.  The argument  ENV is an alist
-  ;;whose keys are the  spilled VAR structs and whose values  are the associated FVAR
-  ;;structs.
+  ;;whose keys are VAR structs representing local variables in BODY, and whose values
+  ;;are the associated locations: FVAR structs or CPU register symbol names.
   ;;
   ;;This function  builds and returns  a new struct instance  representing recordised
   ;;code, which is meant  to replace BODY.  The purpose of this  function is to apply
   ;;the  subfunction R  to  the operands  in  the structures  of  type ASM-INSTR  and
   ;;ASMCALL; as a consequence: we apply the subfunction R-var to all the VAR structs.
+  ;;The subfunction R-var replaces its VAR argument with the associated location.
   ;;
   ;;A lot  of functions  are nested  here because  they make  use of  the subfunction
   ;;"R-var", and "R-var" needs to close upon the argument ENV.
