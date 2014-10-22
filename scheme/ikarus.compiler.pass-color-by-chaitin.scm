@@ -880,7 +880,7 @@
   (import LISTY-SET)
   (import GRAPHS)
 
-  (define (%color-graph spillable.set unspillable.set G)
+  (define* (%color-graph spillable.set unspillable.set G)
     ;;Non-tail recursive function.
     ;;
     ;;The  argument SPILLABLE.SET  must be  a  set including  the VAR  structs that  are
@@ -893,9 +893,9 @@
     ;;
     ;;2. A set holding the VAR structs representing the spillABLE local variables.
     ;;
-    ;;3.  An ENV  value:  an alist  whose  keys are  VAR  structs representing  local
-    ;;    variables in  BODY, and  whose values  are the  associated locations:  FVAR
-    ;;   structs or CPU register symbol names.
+    ;;3.  An  ENV  value:  an  possibly  empty  alist  whose  keys  are  VAR  structs
+    ;;   representing  local variables in BODY,  and whose values are  the associated
+    ;;   locations: FVAR structs or CPU register symbol names.
     ;;
     (cond ((and (empty-set? spillable.set)
 		(empty-set? unspillable.set))
@@ -907,10 +907,10 @@
 		  (delete-node! unspillable G)
 		  (receive (spilled* spillable.set env)
 		      (%color-graph spillable.set (set-rem unspillable unspillable.set) G)
-		    (let ((r (find-color unspillable n* env)))
+		    (let ((register (find-color unspillable n* env)))
 		      (values spilled*
 			      spillable.set
-			      (cons (cons unspillable r) env)))))))
+			      (cons (cons unspillable register) env)))))))
 
 	  ((find-low-degree (set->list spillable.set) G)
 	   => (lambda (spillable)
@@ -918,28 +918,28 @@
 		  (delete-node! spillable G)
 		  (receive (spilled* spillable.set env)
 		      (%color-graph (set-rem spillable spillable.set) unspillable.set G)
-		    (let ((r (find-color spillable n* env)))
+		    (let ((register (find-color spillable n* env)))
 		      (values spilled*
 			      (set-add spillable spillable.set)
-			      (cons (cons spillable r) env)))))))
+			      (cons (cons spillable register) env)))))))
 
 	  ((pair? (set->list spillable.set))
-	   (let* ((sp (car (set->list spillable.set)))
-		  (n* (node-neighbors sp G)))
-	     (delete-node! sp G)
+	   (let* ((spillable (car (set->list spillable.set)))
+		  (n*        (node-neighbors spillable G)))
+	     (delete-node! spillable G)
 	     (receive (spilled* spillable.set env)
-		 (%color-graph (set-rem sp spillable.set) unspillable.set G)
-	       (let ((r (find-color/maybe sp n* env)))
-		 (if r
+		 (%color-graph (set-rem spillable spillable.set) unspillable.set G)
+	       (let ((register (find-color/maybe spillable n* env)))
+		 (if register
 		     (values spilled*
-			     (set-add sp spillable.set)
-			     (cons (cons sp r) env))
-		   (values (cons sp spilled*)
+			     (set-add spillable spillable.set)
+			     (cons (cons spillable register) env))
+		   (values (cons spillable spilled*)
 			   spillable.set
 			   env))))))
 
 	  (else
-	   (compiler-internal-error __module_who__  '%color-graph "whoaaa"))))
+	   (compiler-internal-error __module_who__ __who__ "this should never happen"))))
 
   (define (find-low-degree ls G)
     (cond ((null? ls)
@@ -950,26 +950,38 @@
 	  (else
 	   (find-low-degree (cdr ls) G))))
 
-  (define (find-color/maybe x confs env)
-    (let ((cr (map (lambda (x)
-		     (cond ((symbol? x)
-			    x)
-			   ((assq x env)
-			    => cdr)
-			   (else #f)))
-		(set->list confs))))
-      (let ((r* (set->list (set-difference ALL-REGISTERS-SET (list->set cr)))))
-	(if (pair? r*)
-	    (car r*)
-	  #f))))
-
-  (define-constant ALL-REGISTERS-SET
-    (list->set ALL-REGISTERS))
-
   (define* (find-color x confs env)
+    ;;The argument  ENV is  an alist  whose keys are  VAR structs  representing local
+    ;;variables in BODY, and whose values  are the associated locations: FVAR structs
+    ;;or CPU register symbol names.
+    ;;
     (or (find-color/maybe x confs env)
 	(compiler-internal-error __module_who__ __who__
 	  "cannot find color local variable" x)))
+
+  (module (find-color/maybe)
+
+    (define (find-color/maybe x confs env)
+      ;;The argument  ENV is an alist  whose keys are VAR  structs representing local
+      ;;variables  in BODY,  and  whose  values are  the  associated locations:  FVAR
+      ;;structs or CPU register symbol names.
+      ;;
+      (define register*
+	(let ((cr ($map/stx (lambda (x)
+			      (cond ((symbol? x)
+				     x)
+				    ((assq x env)
+				     => cdr)
+				    (else #f)))
+		    (set->list confs))))
+	  (set->list (set-difference ALL-REGISTERS-SET (list->set cr)))))
+      (and (pair? register*)
+	   (car   register*)))
+
+    (define-constant ALL-REGISTERS-SET
+      (list->set ALL-REGISTERS))
+
+    #| end of module |# )
 
   #| end of module: %COLOR-GRAPH |# )
 
