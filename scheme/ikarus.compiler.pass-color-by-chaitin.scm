@@ -836,28 +836,28 @@
   (module (E)
     ;;If we are in "for effect" context: there is other code in tail context that has
     ;;been processed  before X by the  backwards code traversal.  Such  tail code has
-    ;;produced the set S used as argument here.
+    ;;produced the set TAIL.SET used as argument here.
     ;;
-    (define (E x s)
+    (define (E x tail.set)
       (struct-case x
 	((asm-instr op dst src)
-	 (E-asm-instr op dst src s x))
+	 (E-asm-instr op dst src tail.set x))
 
 	((seq e0 e1)
-	 (E e0 (E e1 s)))
+	 (E e0 (E e1 tail.set)))
 
 	((conditional test conseq altern)
-	 (let ((conseq.set (E conseq s))
-	       (altern.set (E altern s)))
+	 (let ((conseq.set (E conseq tail.set))
+	       (altern.set (E altern tail.set)))
 	   (P test conseq.set altern.set (set-union conseq.set altern.set))))
 
 	((non-tail-call unused.target unused.retval-var all-rand*)
-	 (set-union (R* all-rand*) s))
+	 (set-union (R* all-rand*) tail.set))
 
 	((asmcall op arg*)
 	 (case op
 	   ((nop fl:single->double fl:double->single)
-	    s)
+	    tail.set)
 	   ((interrupt incr/zero?)
 	    (or (exception-live-set)
 		(compiler-internal-error __module_who__ __who__ "uninitialized exception")))
@@ -865,79 +865,83 @@
 	    (compiler-internal-error __module_who__ __who__ "invalid effect asmcall" op))))
 
 	((shortcut body handler)
-	 (let ((s2 (E handler s)))
-	   (parameterize ((exception-live-set s2))
-	     (E body s))))
+	 (let ((handler.set (E handler tail.set)))
+	   (parameterize ((exception-live-set handler.set))
+	     (E body tail.set))))
 
 	(else
 	 (compiler-internal-error __module_who__ __who__ "invalid effect" (unparse-recordized-code x)))))
 
-    (define (E-asm-instr op d v s x)
+    (define (E-asm-instr op dst src tail.set x)
       (define-syntax-rule (set-for-each ?func ?set)
-	(for-each ?func (set->list ?set)))
+	($for-each/stx ?func (set->list ?set)))
       (case op
 	((move load32)
-	 (let ((s (set-rem d s)))
+	 (let ((S (set-rem dst tail.set)))
 	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH d y))
-			 s)
-	   (set-union (R v) s)))
+			   (add-edge! THE-GRAPH dst y))
+			 S)
+	   (set-union (R src) S)))
 
 	((load8)
-	 (let ((s (set-rem d s)))
+	 (let ((S (set-rem dst tail.set)))
 	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH d y))
-			 s)
-	   (when (var? d)
-	     (for-each (lambda (r)
-			 (add-edge! THE-GRAPH d r))
+			   (add-edge! THE-GRAPH dst y))
+			 S)
+	   (when (var? dst)
+	     (for-each (lambda (register)
+			 (add-edge! THE-GRAPH dst register))
 	       NON-8BIT-REGISTERS))
-	   (when (var? v)
-	     (for-each (lambda (r)
-			 (add-edge! THE-GRAPH v r))
+	   (when (var? src)
+	     (for-each (lambda (register)
+			 (add-edge! THE-GRAPH src register))
 	       NON-8BIT-REGISTERS))
-	   (set-union (R v) s)))
+	   (set-union (R src) S)))
 
 	((int-/overflow int+/overflow int*/overflow)
 	 (unless (exception-live-set)
-	   (compiler-internal-error __module_who__ __who__ "uninitialized live set"))
-	 (let ((s (set-rem d (set-union s (exception-live-set)))))
+	   (compiler-internal-error __module_who__ __who__
+	     "uninitialized live set"))
+	 (let ((S (set-rem dst (set-union tail.set (exception-live-set)))))
 	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH d y))
-			 s)
-	   (set-union (set-union (R v) (R d)) s)))
+			   (add-edge! THE-GRAPH dst y))
+			 S)
+	   (set-union (set-union (R src) (R dst))
+		      S)))
 
 	((logand logxor int+ int- int* logor sll sra srl bswap! sll/overflow)
-	 (let ((s (set-rem d s)))
+	 (let ((S (set-rem dst tail.set)))
 	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH d y))
-			 s)
-	   (set-union (set-union (R v) (R d)) s)))
+			   (add-edge! THE-GRAPH dst y))
+			 S)
+	   (set-union (set-union (R src) (R dst))
+		      S)))
 
 	((bset)
-	 (when (var? v)
-	   (for-each (lambda (r)
-		       (add-edge! THE-GRAPH v r))
+	 (when (var? src)
+	   (for-each (lambda (reg)
+		       (add-edge! THE-GRAPH src reg))
 	     NON-8BIT-REGISTERS))
-	 (set-union (set-union (R v) (R d)) s))
+	 (set-union (set-union (R src) (R dst))
+		    tail.set))
 
 	((cltd)
-	 (let ((s (set-rem edx s)))
+	 (let ((S (set-rem edx tail.set)))
 	   (when (register? edx)
 	     (set-for-each (lambda (y)
 			     (add-edge! THE-GRAPH edx y))
-			   s))
-	   (set-union (R eax) s)))
+			   S))
+	   (set-union (R eax) S)))
 
 	((idiv)
-	 (let ((s (set-rem eax (set-rem edx s))))
+	 (let ((S (set-rem eax (set-rem edx tail.set))))
 	   (when (register? eax)
 	     (set-for-each (lambda (y)
 			     (add-edge! THE-GRAPH eax y)
 			     (add-edge! THE-GRAPH edx y))
-			   s))
+			   S))
 	   (set-union (set-union (R eax) (R edx))
-		      (set-union (R v) s))))
+		      (set-union (R src) S))))
 
 	(( ;;some assembly instructions
 	  mset			mset32
@@ -946,7 +950,8 @@
 	  fl:mul!		fl:div!
 	  fl:from-int		fl:shuffle
 	  fl:store-single	fl:load-single)
-	 (set-union (R v) (set-union (R d) s)))
+	 (set-union (R src)
+		    (set-union (R dst) tail.set)))
 
 	(else
 	 (compiler-internal-error __module_who__ __who__
