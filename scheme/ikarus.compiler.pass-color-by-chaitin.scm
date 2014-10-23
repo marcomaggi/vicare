@@ -1088,8 +1088,8 @@
 	 ;;the enclosing SHORTCUT's interrupt handler.
 	 ;;
 	 ;;While rewinding the  BODY traversal: ?DST changes its status  from live to
-	 ;;dead, it is the moment to add ?DST as node of the interference graph.  The
-	 ;;interference sub-graph of ?DST is:
+	 ;;dead to  live, it is the  moment to add  ?DST as node of  the interference
+	 ;;graph.  The interference sub-graph of ?DST is:
 	 ;;
 	 ;;   ?dst <--> (tail.set + handler.set - ?dst)
 	 ;;
@@ -1111,15 +1111,63 @@
 	   (set-union (set-union (R src) (R dst))
 		      S)))
 
-	((logand logxor int+ int- int* logor sll sra srl bswap! sll/overflow)
+	((logand logor logxor sll sra srl int+ int- int* bswap! sll/overflow)
+	 ;;We expect X to have the format:
+	 ;;
+	 ;;   (asm-instr logand ?dst ?src)
+	 ;;   (asm-instr logor  ?dst ?src)
+	 ;;   (asm-instr logxor ?dst ?src)
+	 ;;   (asm-instr sll    ?dst ?src)
+	 ;;   (asm-instr sra    ?dst ?src)
+	 ;;   (asm-instr srl    ?dst ?src)
+	 ;;   (asm-instr int+   ?dst ?src)
+	 ;;   (asm-instr int-   ?dst ?src)
+	 ;;   (asm-instr int*   ?dst ?src)
+	 ;;   (asm-instr bswap! ?dst ?src)
+	 ;;   (asm-instr sll/overflow (?dst ?src))
+	 ;;
+	 ;;where ?DST is both read and written and ?SRC is read.
+	 ;;
+	 ;;While rewinding the  BODY traversal: ?DST changes its status  from live to
+	 ;;dead to  live, it is the  moment to add  ?DST as node of  the interference
+	 ;;graph.  The interference sub-graph of ?DST is:
+	 ;;
+	 ;;   ?dst <--> (tail.set - ?dst)
+	 ;;
+	 ;;The live set returned to the caller is:
+	 ;;
+	 ;;   ?src + (tail.set)
+	 ;;
 	 (let ((S (set-rem dst tail.set)))
-	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH dst y))
+	   ;;Extract the live locations from S and add interference edges:
+	   ;;
+	   ;;   ?dst -> ?live-loc
+	   ;;
+	   (set-for-each (lambda (live-loc)
+			   (add-edge! THE-GRAPH dst live-loc))
 	     S)
-	   (set-union (set-union (R src) (R dst))
-		      S)))
+	   (set-union (R src) tail.set)))
 
 	((bset)
+	 ;;We expect X ot have the format:
+	 ;;
+	 ;;   (asm-instr load8 (disp ?objref ?offset) ?src)
+	 ;;
+	 ;;here  ?SRC is  read, the  machine word  referenced by  the DISP  struct is
+	 ;;written but ?OBJREF and ?OFFSET themselves are read.
+	 ;;
+	 ;;There is no true node created here because no location is written, but see
+	 ;;below.  The live set returned to the caller is:
+	 ;;
+	 ;;   ?src + ?objref + ?offset + (tail.set)
+	 ;;
+	 (assert (disp? dst))
+	 ;;The source  of an 8-bit  store cannot  be any register:  it can be  only a
+	 ;;register among the ones that support  8-bit operations; for example EAX is
+	 ;;fine, because we can  use the 8-bit register AL as  operand.  So, here, we
+	 ;;add interference edges between SRC and all the CPU registers that do *not*
+	 ;;support  8-bit  operations; this  makes  sure  that  no such  register  is
+	 ;;allocated to SRC.
 	 (when (var? src)
 	   (for-each (lambda (reg)
 		       (add-edge! THE-GRAPH src reg))
@@ -1128,14 +1176,54 @@
 		    tail.set))
 
 	((cltd)
+	 ;;Here we know that DST is the register EDX and SRC is the register EAX.  We
+	 ;;know that CLTD and IDIV always come together.
+	 (assert (eq? dst edx))
+	 (assert (eq? src eax))
+	 ;;We expect X ot have the format:
+	 ;;
+	 ;;   (asm-instr cltd EDX EAX)
+	 ;;
+	 ;;here EAX is read and EDX is written.
+	 ;;
+	 ;;The interference sub-graph of EDX is:
+	 ;;
+	 ;;   EDX <--> (tail.set - EDX)
+	 ;;
+	 ;;The live set returned to the caller is:
+	 ;;
+	 ;;   EAX + (tail.set - EDX)
+	 ;;
 	 (let ((S (set-rem edx tail.set)))
-	   (when (register? edx)
-	     (set-for-each (lambda (y)
-			     (add-edge! THE-GRAPH edx y))
-	       S))
+	   ;;Extract the live locations from S and add interference edges:
+	   ;;
+	   ;;   EDX -> ?live-loc
+	   ;;
+	   (set-for-each (lambda (live-loc)
+			   (add-edge! THE-GRAPH edx live-loc))
+	     S)
 	   (set-union (R eax) S)))
 
 	((idiv)
+	 ;;Here we know that DST is either  the register EAX or the register EDX; SRC
+	 ;;is an operand, we do not know which  one here.  We know that CLTD and IDIV
+	 ;;always come together.
+	 (assert (or (eq? dst eax) (eq? dst edx)))
+	 ;;We expect X ot have the format:
+	 ;;
+	 ;;   (asm-instr cltd EDX ?src)
+	 ;;   (asm-instr cltd EAX ?src)
+	 ;;
+	 ;;here EAX is read and EDX is written.
+	 ;;
+	 ;;The interference sub-graph of EDX is:
+	 ;;
+	 ;;   EDX <--> (tail.set - EDX)
+	 ;;
+	 ;;The live set returned to the caller is:
+	 ;;
+	 ;;   EAX + (tail.set - EDX)
+	 ;;
 	 (let ((S (set-rem eax (set-rem edx tail.set))))
 	   (when (register? eax)
 	     (set-for-each (lambda (y)

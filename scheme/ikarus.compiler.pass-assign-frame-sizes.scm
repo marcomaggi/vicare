@@ -1507,9 +1507,9 @@
     (define* (E-asm-instr/int-overflow x op dst src vs rs fs ns)
       ;;We expect the ASM-INSTR struct to have one of the formats:
       ;;
-      ;;   (asm-instr int-/overflow (?dst ?src))
-      ;;   (asm-instr int+/overflow (?dst ?src))
-      ;;   (asm-instr int*/overflow (?dst ?src))
+      ;;   (asm-instr int-/overflow ?dst ?src)
+      ;;   (asm-instr int+/overflow ?dst ?src)
+      ;;   (asm-instr int*/overflow ?dst ?src)
       ;;
       ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
       ;;representing the operands DST and SRC.
@@ -1557,16 +1557,16 @@
     (define* (E-asm-instr/bitwise x op dst src vs rs fs ns)
       ;;We expect the ASM-INSTR struct to have one of the formats:
       ;;
-      ;;   (asm-instr logand (?dst ?src))
-      ;;   (asm-instr logor  (?dst ?src))
-      ;;   (asm-instr logxor (?dst ?src))
-      ;;   (asm-instr sll    (?dst ?src))
-      ;;   (asm-instr sra    (?dst ?src))
-      ;;   (asm-instr srl    (?dst ?src))
-      ;;   (asm-instr int+   (?dst ?src))
-      ;;   (asm-instr int-   (?dst ?src))
-      ;;   (asm-instr int*   (?dst ?src))
-      ;;   (asm-instr bswap! (?dst ?src))
+      ;;   (asm-instr logand ?dst ?src)
+      ;;   (asm-instr logor  ?dst ?src)
+      ;;   (asm-instr logxor ?dst ?src)
+      ;;   (asm-instr sll    ?dst ?src)
+      ;;   (asm-instr sra    ?dst ?src)
+      ;;   (asm-instr srl    ?dst ?src)
+      ;;   (asm-instr int+   ?dst ?src)
+      ;;   (asm-instr int-   ?dst ?src)
+      ;;   (asm-instr int*   ?dst ?src)
+      ;;   (asm-instr bswap! ?dst ?src)
       ;;   (asm-instr sll/overflow (?dst ?src))
       ;;
       ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
@@ -1678,9 +1678,9 @@
     ;;When two stack operands have the  same values, we allocate a temporary location
     ;;and move the values from there:
     ;;
-    ;;   (asm-instr move (?tmp-var ?some-value))
-    ;;   (asm-instr move (?nfv.1 ?tmp-var))
-    ;;   (asm-instr move (?nfv.2 ?tmp-var))
+    ;;   (asm-instr move ?tmp-var ?some-value)
+    ;;   (asm-instr move ?nfv.1   ?tmp-var)
+    ;;   (asm-instr move ?nfv.2   ?tmp-var)
     ;;
     ;;For this reason  this function is commented out because  unused.  (Marco Maggi;
     ;;Thu Oct 9, 2014)
