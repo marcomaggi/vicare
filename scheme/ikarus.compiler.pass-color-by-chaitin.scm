@@ -259,7 +259,7 @@
   ;;This module is like INTEGER-GRAPHS, but it makes use of LISTY-SET.
   ;;
   (empty-graph
-   add-undirected-edge!
+   add-edge!
    empty-graph?
    print-graph
    node-neighbors
@@ -289,9 +289,9 @@
 	      (empty-set? (cdr x)))
 	    ($graph-entry* G)))
 
-  (module (add-undirected-edge!)
+  (module (add-edge!)
 
-    (define (add-undirected-edge! G node1 node2)
+    (define (add-edge! G node1 node2)
       ;;Add an undirected edge to graph G between NODE1 and NODE2.
       ;;
       (let ((old-entry* ($graph-entry* G)))
@@ -340,7 +340,7 @@
 	 #'(set-cdr! ?src-node-entry (set-add ?dst-node (cdr ?src-node-entry))))
 	))
 
-    #| end of module: ADD-UNDIRECTED-EDGE! |# )
+    #| end of module: ADD-EDGE! |# )
 
   (define (node-neighbors x G)
     ;;Return a set containing the nodes connected to X.  Such nodes are the locations
@@ -788,7 +788,8 @@
   ;;* Build the interference graph: a GRAPH  struct, as defined by the GRAPHS module,
   ;;  containing one node for every VAR  struct, FVAR struct and CPU register that is
   ;;  *written* at least  once.  The edges of each node  represent the locations that
-  ;;  are alive when the node is written.
+  ;;  are  alive when the  node is written:  all the locations  that will be  read at
+  ;;  least once in the continuation.
   ;;
   ;;Return the GRAPH struct representing the interference graph.
   ;;
@@ -800,10 +801,11 @@
   (import GRAPHS)
 
   (define (main body)
-    (let ((s (T body)))
-      #;(pretty-print (unparse-recordized-code/sexp x))
-      #;(print-graph THE-GRAPH)
-      THE-GRAPH))
+    ;;We discard the return value from T.
+    (T body)
+    #;(pretty-print (unparse-recordized-code/sexp x))
+    #;(print-graph THE-GRAPH)
+    THE-GRAPH)
 
   (define THE-GRAPH
     (empty-graph))
@@ -859,8 +861,8 @@
 ;;; --------------------------------------------------------------------
 
   (define (R* rand*)
-    ;;Process the operands of ASMCALL and  NON-TAIL-CALL structs.  Build and return a
-    ;;set representing ...
+    ;;Process the  operands of ASMCALL  and NON-TAIL-CALL structs.  Build  and return
+    ;;the union between the live sets of all the RAND*.
     ;;
     (if (pair? rand*)
 	(set-union (R  (car rand*))
@@ -869,7 +871,7 @@
 
   (define (R x)
     ;;Process X which must be an operand in a struct of type: ASMCALL, NON-TAIL-CALL,
-    ;;ASM-INSTR, DISP.  Return a set representing...
+    ;;ASM-INSTR, DISP.  Return the live set of X.
     ;;
     (struct-case x
       ((constant)
@@ -884,8 +886,9 @@
        (make-empty-set))
       (else
        (if (register? x)
-	   ;;Add the register to  the set only if it is a  full machine word register
-	   ;;and *not* a register with special purpose (APR, CPR, FPR, PCR).
+	   ;;Build a live  set containing the register  only if it is  a full machine
+	   ;;word register and *not* a register  with special purpose (APR, CPR, FPR,
+	   ;;PCR).
 	   (if (memq x ALL-REGISTERS)
 	       (element->set x)
 	     (make-empty-set))
@@ -894,10 +897,53 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define (P x tail-conseq.set tail-altern.set tail-union.set)
+    ;;If we are in "for predicate" context:  there is other code in tail context that
+    ;;has been  processed before X by  the backwards code traversal.   Such tail code
+    ;;has produced the sets:
+    ;;
+    ;;TAIL-CONSEQ.SET -
+    ;;  From the uplevel CONSEQ branch, it is to be used for test-true processing.
+    ;;
+    ;;TAIL-ALTERN.SET -
+    ;;  From the uplevel ALTERN branch, it is to be used for test-false processing.
+    ;;
+    ;;TAIL-UNION.SET -
+    ;;  The union  between the uplevel TAIL-CONSEQ.SET and TAIL-ALTERN.SET;  it is to
+    ;;  be  joined with  the sets  produced here and  the result  is returned  to the
+    ;;  caller.
+    ;;
+    (struct-case x
+      ((constant x.const)
+       (if x.const tail-conseq.set tail-altern.set))
+
+      ((seq e0 e1)
+       (E e0 (P e1 tail-conseq.set tail-altern.set tail-union.set)))
+
+      ((conditional test conseq altern)
+       (let ((conseq.set (P conseq tail-conseq.set tail-altern.set tail-union.set))
+	     (altern.set (P altern tail-conseq.set tail-altern.set tail-union.set)))
+	 (P test conseq.set altern.set (set-union conseq.set altern.set))))
+
+      ((asm-instr op dst src)
+       (set-union (set-union (R dst) (R src))
+		  tail-union.set))
+
+      ((shortcut body handler)
+       (let ((handler.set (P handler tail-conseq.set tail-altern.set tail-union.set)))
+	 (parameterize ((exception-live-set handler.set))
+	   (P body tail-conseq.set tail-altern.set tail-union.set))))
+
+      (else
+       (compiler-internal-error __module_who__ __who__
+	 "invalid code in P context" (unparse-recordized-code/sexp x)))))
+
+;;; --------------------------------------------------------------------
+
   (module (E)
     ;;If we are in "for effect" context: there is other code in tail context that has
     ;;been processed  before X by the  backwards code traversal.  Such  tail code has
-    ;;produced the set TAIL.SET used as argument here.
+    ;;produced the live set TAIL.SET used as argument here.
     ;;
     (define (E x tail.set)
       (struct-case x
@@ -921,9 +967,11 @@
 	    tail.set)
 	   ((interrupt incr/zero?)
 	    (or (exception-live-set)
-		(compiler-internal-error __module_who__ __who__ "uninitialized exception")))
+		(compiler-internal-error __module_who__ __who__
+		  "missing live set for SHORTCUT's handler while processing body")))
 	   (else
-	    (compiler-internal-error __module_who__ __who__ "invalid effect asmcall" op))))
+	    (compiler-internal-error __module_who__ __who__
+	      "invalid ASMCALL operand in E context" op))))
 
 	((shortcut body handler)
 	 (let ((handler.set (E handler tail.set)))
@@ -959,22 +1007,22 @@
 	 (let ((S (set-rem dst tail.set)))
 	   ;;Extract the live locations from S and add edges: ?DST -> ?loc.
 	   (set-for-each (lambda (loc)
-			   (add-undirected-edge! THE-GRAPH dst loc))
-			 S)
+			   (add-edge! THE-GRAPH dst loc))
+	     S)
 	   (set-union (R src) S)))
 
 	((load8)
 	 (let ((S (set-rem dst tail.set)))
 	   (set-for-each (lambda (y)
-			   (add-undirected-edge! THE-GRAPH dst y))
-			 S)
+			   (add-edge! THE-GRAPH dst y))
+	     S)
 	   (when (var? dst)
 	     (for-each (lambda (register)
-			 (add-undirected-edge! THE-GRAPH dst register))
+			 (add-edge! THE-GRAPH dst register))
 	       NON-8BIT-REGISTERS))
 	   (when (var? src)
 	     (for-each (lambda (register)
-			 (add-undirected-edge! THE-GRAPH src register))
+			 (add-edge! THE-GRAPH src register))
 	       NON-8BIT-REGISTERS))
 	   (set-union (R src) S)))
 
@@ -984,23 +1032,23 @@
 	     "uninitialized live set"))
 	 (let ((S (set-rem dst (set-union tail.set (exception-live-set)))))
 	   (set-for-each (lambda (y)
-			   (add-undirected-edge! THE-GRAPH dst y))
-			 S)
+			   (add-edge! THE-GRAPH dst y))
+	     S)
 	   (set-union (set-union (R src) (R dst))
 		      S)))
 
 	((logand logxor int+ int- int* logor sll sra srl bswap! sll/overflow)
 	 (let ((S (set-rem dst tail.set)))
 	   (set-for-each (lambda (y)
-			   (add-undirected-edge! THE-GRAPH dst y))
-			 S)
+			   (add-edge! THE-GRAPH dst y))
+	     S)
 	   (set-union (set-union (R src) (R dst))
 		      S)))
 
 	((bset)
 	 (when (var? src)
 	   (for-each (lambda (reg)
-		       (add-undirected-edge! THE-GRAPH src reg))
+		       (add-edge! THE-GRAPH src reg))
 	     NON-8BIT-REGISTERS))
 	 (set-union (set-union (R src) (R dst))
 		    tail.set))
@@ -1009,17 +1057,17 @@
 	 (let ((S (set-rem edx tail.set)))
 	   (when (register? edx)
 	     (set-for-each (lambda (y)
-			     (add-undirected-edge! THE-GRAPH edx y))
-			   S))
+			     (add-edge! THE-GRAPH edx y))
+	       S))
 	   (set-union (R eax) S)))
 
 	((idiv)
 	 (let ((S (set-rem eax (set-rem edx tail.set))))
 	   (when (register? eax)
 	     (set-for-each (lambda (y)
-			     (add-undirected-edge! THE-GRAPH eax y)
-			     (add-undirected-edge! THE-GRAPH edx y))
-			   S))
+			     (add-edge! THE-GRAPH eax y)
+			     (add-edge! THE-GRAPH edx y))
+	       S))
 	   (set-union (set-union (R eax) (R edx))
 		      (set-union (R src) S))))
 
@@ -1038,47 +1086,6 @@
 	   "invalid ASM-INSTR operator in E context" (unparse-recordised-code/sexp x)))))
 
     #| end of module: E |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (P x tail-conseq.set tail-altern.set tail-union.set)
-    ;;If we are in "for predicate" context:  there is other code in tail context that
-    ;;has been  processed before X by  the backwards code traversal.   Such tail code
-    ;;has produced the sets:
-    ;;
-    ;;TAIL-CONSEQ.SET -
-    ;;   From the CONSEQ branch, it is to be used for test-true processing.
-    ;;
-    ;;TAIL-ALTERN.SET -
-    ;;  From the ALTERN branch, it is to be used for test-false processing.
-    ;;
-    ;;TAIL-UNION.SET -
-    ;;  The  union between TAIL-CONSEQ.SET  and TAIL-ALTERN.SET;  it is to  be joined
-    ;;  with the sets produced here and the result is returned to the caller.
-    ;;
-    (struct-case x
-      ((constant x.const)
-       (if x.const tail-conseq.set tail-altern.set))
-
-      ((seq e0 e1)
-       (E e0 (P e1 tail-conseq.set tail-altern.set tail-union.set)))
-
-      ((conditional test conseq altern)
-       (let ((conseq.set (P conseq tail-conseq.set tail-altern.set tail-union.set))
-	     (altern.set (P altern tail-conseq.set tail-altern.set tail-union.set)))
-	 (P test conseq.set altern.set (set-union conseq.set altern.set))))
-
-      ((asm-instr op dst src)
-       (set-union (set-union (R dst) (R src))
-		  tail-union.set))
-
-      ((shortcut body handler)
-       (let ((handler.set (P handler tail-conseq.set tail-altern.set tail-union.set)))
-	 (parameterize ((exception-live-set handler.set))
-	   (P body tail-conseq.set tail-altern.set tail-union.set))))
-
-      (else
-       (compiler-internal-error __module_who__ __who__ "invalid pred" (unparse-recordized-code x)))))
 
   (main body))
 
