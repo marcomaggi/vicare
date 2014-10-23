@@ -153,7 +153,7 @@
   ;;This module has the same API of the module INTEGER-SET.
   ;;
   (make-empty-set
-   singleton
+   element->set
    set-member?		empty-set?
    set-add		set-rem
    set-difference	set-union
@@ -162,81 +162,88 @@
   (define-struct set
     ;;Wrapper for a list of elements used as a set.
     ;;
-    (v
-		;The list of elements in the set.
+    (element*
+		;The  list of  elements in  the set:  VAR structs,  FVAR structs  and
+		;symbols representing CPU register names.
      ))
 
+  (define (element? x)
+    (or (var? x) (register? x) (fvar? x)))
+
 ;;; --------------------------------------------------------------------
+;;; constructors
 
   (define-syntax-rule (make-empty-set)
     (make-set '()))
 
-  (define (singleton x)
+  (define (element->set x)
+    (assert (element? x))
     (make-set (list x)))
 
+  (define (list->set element*)
+    (assert (for-all element? element*))
+    (make-set element*))
+
+;;; --------------------------------------------------------------------
+
   (define* (set-member? x {S set?})
-    (memq x ($set-v S)))
+    (memq x ($set-element* S)))
 
   (define* (empty-set? {S set?})
-    (null? ($set-v S)))
+    (null? ($set-element* S)))
 
   (define* (set->list {S set?})
-    ($set-v S))
-
-  (define (list->set ls)
-    (make-set ls))
+    ($set-element* S))
 
   (define* (set-add x {S set?})
-    (if (memq x ($set-v S))
-	S
-      (make-set (cons x ($set-v S)))))
-
-  (define ($remq x ell)
-    ;;Remove X from the list ELL.
+    ;;Add X to S, but only if it is not already contained.
     ;;
-    (cond ((pair? ell)
-	   (cond ((eq? x (car ell))
-		  (cdr ell))
-		 (else
-		  (cons (car ell) ($remq x (cdr ell))))))
-	  (else
-	   ;;(assert (null? ell))
-	   '())))
+    (assert (element? x))
+    (if (memq x ($set-element* S))
+	S
+      (make-set (cons x ($set-element* S)))))
 
   (define* (set-rem x {S set?})
-    (make-set ($remq x ($set-v S))))
+    (assert (element? x))
+    (make-set ($remq x ($set-element* S))))
 
-  (module (set-difference)
+  (define* (set-difference {S1 set?} {S2 set?})
+    (make-set (let $difference ((element1* ($set-element* S1))
+				(element2* ($set-element* S2)))
+		;;Remove  from  the list  ELEMENT1*  all  the  elements of  the  list
+		;;ELEMENT2*.  Use EQ? for comparison.
+		(if (pair? element2*)
+		    ($difference ($remq (car element2*) element1*)
+				 (cdr element2*))
+		  element1*))))
 
-    (define* (set-difference {S1 set?} {S2 set?})
-      (make-set ($difference ($set-v S1) ($set-v S2))))
+  (define* (set-union {S1 set?} {S2 set?})
+    (make-set (let $union ((element1* ($set-element* S1))
+			   (element2* ($set-element* S2)))
+		(cond ((pair? element1*)
+		       (cond ((memq (car element1*) element2*)
+			      ($union (cdr element1*) element2*))
+			     (else
+			      (cons (car element1*)
+				    (union (cdr element1*) element2*)))))
+		      (else
+		       ;;(assert (null? element1*))
+		       element2*)))))
 
-    (define ($difference ell1 ell2)
-      ;;Remove from the list ELL1 all  the elements of the list ELL2.  Use
-      ;;EQ? for comparison.
-      ;;
-      (if (pair? ell2)
-	  ($difference ($remq (car ell2) ell1) (cdr ell2))
-	ell1))
+;;; --------------------------------------------------------------------
 
-    #| end of module: set-difference |# )
-
-  (module (set-union)
-
-    (define* (set-union {S1 set?} {S2 set?})
-      (make-set ($union ($set-v S1) ($set-v S2))))
-
-    (define ($union S1 S2)
-      (cond ((pair? S1)
-	     (cond ((memq (car S1) S2)
-		    ($union (cdr S1) S2))
-		   (else
-		    (cons (car S1) (union (cdr S1) S2)))))
-	    (else
-	     ;;(assert (null? S1))
-	     S2)))
-
-    #| end of module: set-union |# )
+  (define ($remq x element*)
+    ;;Remove X from the list ELEMENT*.
+    ;;
+    (cond ((pair? element*)
+	   (cond ((eq? x (car element*))
+		  (cdr element*))
+		 (else
+		  (cons (car element*)
+			($remq x (cdr element*))))))
+	  (else
+	   ;;(assert (null? element*))
+	   '())))
 
   #| end of module: LISTY-SET |# )
 
@@ -730,6 +737,10 @@
 
 
 (define* (%build-graph body)
+  ;;Process BODY with a depth-first traversal, visiting the tail branches first, in a
+  ;;post-order fashion; while rewinding build a graph of ...
+  ;;
+  ;;Return a GRAPH struct.
   ;;
   ;;A lot of functions  are nested here because they need to  close upon GRAPH, which
   ;;is mutated  as the code  traversal progresses and finally  it is returned  to the
@@ -814,9 +825,9 @@
       ((constant)
        (make-empty-set))
       ((var)
-       (singleton x))
-      ((disp s0 s1)
-       (set-union (R s0) (R s1)))
+       (element->set x))
+      ((disp objref offset)
+       (set-union (R objref) (R offset)))
       ((fvar)
        (make-empty-set))
       ((code-loc)
@@ -826,7 +837,7 @@
 	   ;;Add the register to  the set only if it is a  full machine word register
 	   ;;and *not* a register with special purpose (APR, CPR, FPR, PCR).
 	   (if (memq x ALL-REGISTERS)
-	       (set-add x (make-empty-set))
+	       (element->set x)
 	     (make-empty-set))
 	 (compiler-internal-error __module_who__ __who__
 	   "invalid code in R context" (unparse-recordised-code/sexp x))))))
@@ -870,7 +881,8 @@
 	     (E body tail.set))))
 
 	(else
-	 (compiler-internal-error __module_who__ __who__ "invalid effect" (unparse-recordized-code x)))))
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid code in E context" (unparse-recordized-code/sexp x)))))
 
     (define (E-asm-instr op dst src tail.set x)
       (define-syntax-rule (set-for-each ?func ?set)
@@ -1095,17 +1107,30 @@
       ;;variables  in BODY,  and  whose  values are  the  associated locations:  FVAR
       ;;structs or CPU register symbol names.
       ;;
-      (define register*
-	(let ((cr ($map/stx (lambda (x)
-			      (cond ((register? x)
-				     x)
-				    ((assq x env)
-				     => cdr)
-				    (else #f)))
+      (define available-register*
+	;;Compose a  set containing all the  registers that are alive  here; then and
+	;;remove them from  the set of all  the registers.  The result is  the set of
+	;;registers that are *not* alive here, which can be allocated for to hold the
+	;;VAR struct X.
+	(let ((cr ($fold-right/stx (lambda (x knil)
+				     (cond ((register? x)
+					    (cons x knil))
+					   ((assq x env)
+					    => (lambda (entry)
+						 (let ((loc (cdr entry)))
+						   (if (register? loc)
+						       (cons loc knil)
+						     knil))))
+					   (else
+					    ;;If  we are  here:  X is  either a  FVAR
+					    ;;struct or a VAR struct not in ENV.
+					    (assert (or (var? x) (fvar? x)))
+					    knil)))
+		    '()
 		    (set->list confs))))
 	  (set->list (set-difference ALL-REGISTERS-SET (list->set cr)))))
-      (and (pair? register*)
-	   (car   register*)))
+      (and (pair? available-register*)
+	   (car   available-register*)))
 
     (define-constant ALL-REGISTERS-SET
       (list->set ALL-REGISTERS))
