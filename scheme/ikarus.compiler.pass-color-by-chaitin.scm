@@ -1008,16 +1008,19 @@
 	 ;;?DST as  node of  the interference graph.   The interference  sub-graph of
 	 ;;?DST is:
 	 ;;
-	 ;;   ?dst -> tail.set
+	 ;;   ?dst -> (tail.set - ?dst)
 	 ;;
 	 ;;The live set returned to the caller is:
 	 ;;
 	 ;;   ?src + (tail.set - ?dst)
 	 ;;
 	 (let ((S (set-rem dst tail.set)))
-	   ;;Extract the live locations from S and add edges: ?DST -> ?loc.
-	   (set-for-each (lambda (loc)
-			   (add-edge! THE-GRAPH dst loc))
+	   ;;Extract the live locations from S and add interference edges:
+	   ;;
+	   ;;   ?dst -> ?live-loc
+	   ;;
+	   (set-for-each (lambda (live-loc)
+			   (add-edge! THE-GRAPH dst live-loc))
 	     S)
 	   (set-union (R src) S)))
 
@@ -1034,25 +1037,31 @@
 	 ;;?DST as  node of  the interference graph.   The interference  sub-graph of
 	 ;;?DST is:
 	 ;;
-	 ;;   ?dst -> tail.set
+	 ;;   ?dst -> (tail.set - ?dst)
 	 ;;
 	 ;;The live set returned to the caller is:
 	 ;;
 	 ;;   ?src + (tail.set - ?dst)
 	 ;;
-	 (assert (disp? src))
+	 #;(assert (disp? src))
 	 (let ((S (set-rem dst tail.set)))
-	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH dst y))
+	   ;;Extract the live locations from S and add interference edges:
+	   ;;
+	   ;;   ?dst -> ?live-loc
+	   ;;
+	   (set-for-each (lambda (live-loc)
+			   (add-edge! THE-GRAPH dst live-loc))
 	     S)
+	   ;;The destination of an 8-bit load cannot  be any register: it can be only
+	   ;;a register among the ones that support 8-bit operations; for example EAX
+	   ;;is fine, because we can use the 8-bit register AL as operand.  So, here,
+	   ;;we add interference edges between DST  and all the CPU registers that do
+	   ;;*not* support 8-bit operations; this makes sure that no such register is
+	   ;;allocated to DST.
 	   (when (var? dst)
 	     (for-each (lambda (register)
 			 (add-edge! THE-GRAPH dst register))
 	       NON-8BIT-REGISTERS))
-	   ;; (when (var? src)
-	   ;;   (for-each (lambda (register)
-	   ;; 		 (add-edge! THE-GRAPH src register))
-	   ;;     NON-8BIT-REGISTERS))
 	   (set-union (R src) S)))
 
 	((int-/overflow int+/overflow int*/overflow)
