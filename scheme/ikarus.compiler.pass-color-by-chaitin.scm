@@ -158,7 +158,8 @@
    set-member?		empty-set?
    set-add		set-rem
    set-difference	set-union
-   set->list		list->set)
+   set->list		list->set
+   set-for-each)
 
   (define-struct set
     ;;Wrapper for a list of elements used as a set.
@@ -233,6 +234,9 @@
 		       ;;(assert (null? element1*))
 		       element2*)))))
 
+  (define-syntax-rule (set-for-each ?func ?set)
+    ($for-each/stx ?func (set->list ?set)))
+
 ;;; --------------------------------------------------------------------
 
   (define ($remq x element*)
@@ -299,9 +303,13 @@
 		      ;;Not it is not, so add it.
 		      (%add-directed-edge-to-entry! node1.entry node2)
 		      (cond ((assq node2 old-entry*)
+			     ;;NODE2 is already in the graph.  Add an edge from NODE2
+			     ;;to NODE1.
 			     => (lambda (node2.entry)
 				  (%add-directed-edge-to-entry! node2.entry node1)))
 			    (else
+			     ;;NODE2 is  not in  the graph.  Add  NODE2 to  the graph
+			     ;;with an edge from NODE2 to NODE1.
 			     ($set-graph-entry*! G (cons (%make-singleton-entry node2 node1)
 							 old-entry*)))))))
 	      ((assq node2 old-entry*)
@@ -317,9 +325,14 @@
 					    old-entry*))))))
 
     (define-syntax-rule (%make-singleton-entry ?src-node ?dst-node)
+      ;;Build and  return a new  entry representing  node ?SRC-NODE with  an outgoing
+      ;;edge from ?SRC-NODE to ?DST-NODE.
+      ;;
       (cons ?src-node (element->set ?dst-node)))
 
     (define-syntax (%add-directed-edge-to-entry! stx)
+      ;;Given a node's entry: add an edge from the entry's node to ?DST-NODE.
+      ;;
       (syntax-case stx ()
 	((_ ?src-node-entry ?dst-node)
 	 (and (identifier? #'?src-node-entry)
@@ -330,22 +343,28 @@
     #| end of module: ADD-UNDIRECTED-EDGE! |# )
 
   (define (node-neighbors x G)
+    ;;Return a set containing the nodes connected to X.  Such nodes are the locations
+    ;;alive when X is written.
+    ;;
     (cond ((assq x ($graph-entry* G))
 	   => cdr)
 	  (else
 	   (make-empty-set))))
 
-  (define (delete-node! x G)
-    (let ((ls ($graph-entry* G)))
-      (cond ((assq x ls)
-	     => (lambda (p)
-		  (for-each (lambda (y)
-			      (let ((p (assq y ls)))
-				(set-cdr! p (set-rem x (cdr p)))))
-		    (set->list (cdr p)))
-		  (set-cdr! p (make-empty-set))))
-	    (else
-	     (void)))))
+  (define* (delete-node! x G)
+    ;;Removing a  node means removing  all the  edges to and  from X; the  location X
+    ;;still has an entry in G.  If X is not a node: nothing happens.
+    ;;
+    (let ((entry* ($graph-entry* G)))
+      (cond ((assq x entry*)
+	     => (lambda (x.entry)
+		  ;;For every node Y connected to X: remove the edge from Y to X.
+		  (set-for-each (lambda (y)
+				  (let ((y.entry (assq y entry*)))
+				    (set-cdr! y.entry (set-rem x (cdr y.entry)))))
+		    (cdr x.entry))
+		  ;;Remove all the edges from X to other nodes.
+		  (set-cdr! x.entry (make-empty-set)))))))
 
 ;;; --------------------------------------------------------------------
 
@@ -916,8 +935,6 @@
 	   "invalid code in E context" (unparse-recordized-code/sexp x)))))
 
     (define (E-asm-instr op dst src tail.set x)
-      (define-syntax-rule (set-for-each ?func ?set)
-	($for-each/stx ?func (set->list ?set)))
       (case op
 	((move load32)
 	 ;;We expect X to have the format:
@@ -1316,4 +1333,5 @@
 ;; eval: (put 'make-asmcall		'scheme-indent-function 1)
 ;; eval: (put 'make-conditional		'scheme-indent-function 2)
 ;; eval: (put 'struct-case		'scheme-indent-function 1)
+;; eval: (put 'set-for-each		'scheme-indent-function 1)
 ;; End:
