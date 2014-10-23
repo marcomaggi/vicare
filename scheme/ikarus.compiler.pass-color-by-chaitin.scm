@@ -255,7 +255,7 @@
   ;;This module is like INTEGER-GRAPHS, but it makes use of LISTY-SET.
   ;;
   (empty-graph
-   add-edge!
+   add-undirected-edge!
    empty-graph?
    print-graph
    node-neighbors
@@ -263,8 +263,11 @@
   (import LISTY-SET)
 
   (define-struct graph
-    (ls
-		;An alist representing the interference graph.  The keys of the alist
+    ;;Represent the interference graph.  The graph is undirected: for every edge from
+    ;;NODE1 to NODE2 there is an edge from NODE2 to NODE1.
+    ;;
+    (entry*
+		;An alist  representing the nodes and  edges.  The keys of  the alist
 		;represent graph's  nodes: structs  of type VAR  or FVAR,  or symbols
 		;representing register  names.  The values  of the alist are  sets as
 		;defined  by the  module LISTY-SET,  representing the  edges outgoing
@@ -280,29 +283,71 @@
   (define (empty-graph? G)
     (andmap (lambda (x)
 	      (empty-set? (cdr x)))
-	    ($graph-ls G)))
+	    ($graph-entry* G)))
 
-  (define (add-edge! G src dst)
-    ;;Add an edge to graph G from node SRC to node DST.
-    ;;
-    (let ((ls ($graph-ls G)))
-      (cond ((assq src ls)
-	     => (lambda (p0)
-		  (unless (set-member? dst (cdr p0))
-		    (set-cdr! p0 (set-add dst (cdr p0)))
-		    (cond ((assq dst ls)
-			   => (lambda (p1)
-				(set-cdr! p1 (set-add src (cdr p1)))))
-			  (else
-			   ($set-graph-ls! G (cons (cons dst (element->set src)) ls)))))))
-	    ((assq dst ls)
-	     => (lambda (p1)
-		  (set-cdr! p1 (set-add src (cdr p1)))
-		  ($set-graph-ls! G (cons (cons src (element->set dst)) ls))))
+  (module (add-undirected-edge!)
+
+    (define (add-undirected-edge! G node1 node2)
+      ;;Add an undirected edge to graph G between NODE1 and NODE2.
+      ;;
+      (let ((old-entry* ($graph-entry* G)))
+	(cond ((assq node1 old-entry*)
+	       ;;NODE1 is already in the graph.
+	       => (lambda (node1.entry)
+		    ;;Is NODE2 already in the set of nodes connected to NODE1?
+		    (unless (set-member? node2 (cdr node1.entry))
+		      ;;Not it is not, so add it.
+		      (%add-directed-edge-to-entry! node1.entry node2)
+		      (cond ((assq node2 old-entry*)
+			     => (lambda (node2.entry)
+				  (%add-directed-edge-to-entry! node2.entry node1)))
+			    (else
+			     ($set-graph-entry*! G (cons (%make-singleton-entry node2 node1)
+							 old-entry*)))))))
+	      ((assq node2 old-entry*)
+	       => (lambda (node2.entry)
+		    (%add-directed-edge-to-entry! node2.entry node1)
+		    ($set-graph-entry*! G (cons (%make-singleton-entry node1 node2)
+						old-entry*))))
+	      (else
+	       ;;Neither NODE1 nor NODE2 are already nodes in the graph.  Add both of
+	       ;;them.
+	       ($set-graph-entry*! G (cons* (%make-singleton-entry node1 node2)
+					    (%make-singleton-entry node2 node1)
+					    old-entry*))))))
+
+    (define-syntax-rule (%make-singleton-entry ?src-node ?dst-node)
+      (cons ?src-node (element->set ?dst-node)))
+
+    (define-syntax (%add-directed-edge-to-entry! stx)
+      (syntax-case stx ()
+	((_ ?src-node-entry ?dst-node)
+	 (and (identifier? #'?src-node-entry)
+	      (identifier? #'?dst-noe))
+	 #'(set-cdr! ?src-node-entry (set-add ?dst-node (cdr ?src-node-entry))))
+	))
+
+    #| end of module: ADD-UNDIRECTED-EDGE! |# )
+
+  (define (node-neighbors x G)
+    (cond ((assq x ($graph-entry* G))
+	   => cdr)
+	  (else
+	   (make-empty-set))))
+
+  (define (delete-node! x G)
+    (let ((ls ($graph-entry* G)))
+      (cond ((assq x ls)
+	     => (lambda (p)
+		  (for-each (lambda (y)
+			      (let ((p (assq y ls)))
+				(set-cdr! p (set-rem x (cdr p)))))
+		    (set->list (cdr p)))
+		  (set-cdr! p (make-empty-set))))
 	    (else
-	     ($set-graph-ls! G (cons* (cons src (element->set dst))
-				      (cons dst (element->set src))
-				      ls))))))
+	     (void)))))
+
+;;; --------------------------------------------------------------------
 
   (define (print-graph G)
     (printf "G={\n")
@@ -313,26 +358,8 @@
                     (printf "  ~s => ~s\n"
                             (unparse-recordized-code lhs)
                             (map unparse-recordized-code (set->list rhs*)))))
-        ($graph-ls G)))
+        ($graph-entry* G)))
     (printf "}\n"))
-
-  (define (node-neighbors x G)
-    (cond ((assq x ($graph-ls G))
-	   => cdr)
-	  (else
-	   (make-empty-set))))
-
-  (define (delete-node! x G)
-    (let ((ls ($graph-ls G)))
-      (cond ((assq x ls)
-	     => (lambda (p)
-		  (for-each (lambda (y)
-			      (let ((p (assq y ls)))
-				(set-cdr! p (set-rem x (cdr p)))))
-		    (set->list (cdr p)))
-		  (set-cdr! p (make-empty-set))))
-	    (else
-	     (void)))))
 
   #| end of module: GRAPHS |# )
 
@@ -915,22 +942,22 @@
 	 (let ((S (set-rem dst tail.set)))
 	   ;;Extract the live locations from S and add edges: ?DST -> ?loc.
 	   (set-for-each (lambda (loc)
-			   (add-edge! THE-GRAPH dst loc))
+			   (add-undirected-edge! THE-GRAPH dst loc))
 			 S)
 	   (set-union (R src) S)))
 
 	((load8)
 	 (let ((S (set-rem dst tail.set)))
 	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH dst y))
+			   (add-undirected-edge! THE-GRAPH dst y))
 			 S)
 	   (when (var? dst)
 	     (for-each (lambda (register)
-			 (add-edge! THE-GRAPH dst register))
+			 (add-undirected-edge! THE-GRAPH dst register))
 	       NON-8BIT-REGISTERS))
 	   (when (var? src)
 	     (for-each (lambda (register)
-			 (add-edge! THE-GRAPH src register))
+			 (add-undirected-edge! THE-GRAPH src register))
 	       NON-8BIT-REGISTERS))
 	   (set-union (R src) S)))
 
@@ -940,7 +967,7 @@
 	     "uninitialized live set"))
 	 (let ((S (set-rem dst (set-union tail.set (exception-live-set)))))
 	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH dst y))
+			   (add-undirected-edge! THE-GRAPH dst y))
 			 S)
 	   (set-union (set-union (R src) (R dst))
 		      S)))
@@ -948,7 +975,7 @@
 	((logand logxor int+ int- int* logor sll sra srl bswap! sll/overflow)
 	 (let ((S (set-rem dst tail.set)))
 	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH dst y))
+			   (add-undirected-edge! THE-GRAPH dst y))
 			 S)
 	   (set-union (set-union (R src) (R dst))
 		      S)))
@@ -956,7 +983,7 @@
 	((bset)
 	 (when (var? src)
 	   (for-each (lambda (reg)
-		       (add-edge! THE-GRAPH src reg))
+		       (add-undirected-edge! THE-GRAPH src reg))
 	     NON-8BIT-REGISTERS))
 	 (set-union (set-union (R src) (R dst))
 		    tail.set))
@@ -965,7 +992,7 @@
 	 (let ((S (set-rem edx tail.set)))
 	   (when (register? edx)
 	     (set-for-each (lambda (y)
-			     (add-edge! THE-GRAPH edx y))
+			     (add-undirected-edge! THE-GRAPH edx y))
 			   S))
 	   (set-union (R eax) S)))
 
@@ -973,8 +1000,8 @@
 	 (let ((S (set-rem eax (set-rem edx tail.set))))
 	   (when (register? eax)
 	     (set-for-each (lambda (y)
-			     (add-edge! THE-GRAPH eax y)
-			     (add-edge! THE-GRAPH edx y))
+			     (add-undirected-edge! THE-GRAPH eax y)
+			     (add-undirected-edge! THE-GRAPH edx y))
 			   S))
 	   (set-union (set-union (R eax) (R edx))
 		      (set-union (R src) S))))
