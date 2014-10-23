@@ -1008,7 +1008,7 @@
 	 ;;?DST as  node of  the interference graph.   The interference  sub-graph of
 	 ;;?DST is:
 	 ;;
-	 ;;   ?dst -> (tail.set - ?dst)
+	 ;;   ?dst <--> (tail.set - ?dst)
 	 ;;
 	 ;;The live set returned to the caller is:
 	 ;;
@@ -1017,7 +1017,7 @@
 	 (let ((S (set-rem dst tail.set)))
 	   ;;Extract the live locations from S and add interference edges:
 	   ;;
-	   ;;   ?dst -> ?live-loc
+	   ;;   ?dst <--> ?live-loc
 	   ;;
 	   (set-for-each (lambda (live-loc)
 			   (add-edge! THE-GRAPH dst live-loc))
@@ -1033,11 +1033,11 @@
 	 ;;?DST is dead, in the tail code ?DST is alive; in both the uplevel code and
 	 ;;tail code ?OBJREF and ?OFFSET are alive.
 	 ;;
-	 ;;Here ?DST changes  its status from live  to dead: it is the  moment to add
-	 ;;?DST as  node of  the interference graph.   The interference  sub-graph of
-	 ;;?DST is:
+	 ;;While rewinding the  BODY traversal: ?DST changes its status  from live to
+	 ;;dead, it is the moment to add ?DST as node of the interference graph.  The
+	 ;;interference sub-graph of ?DST is:
 	 ;;
-	 ;;   ?dst -> (tail.set - ?dst)
+	 ;;   ?dst <--> (tail.set - ?dst)
 	 ;;
 	 ;;The live set returned to the caller is:
 	 ;;
@@ -1047,7 +1047,7 @@
 	 (let ((S (set-rem dst tail.set)))
 	   ;;Extract the live locations from S and add interference edges:
 	   ;;
-	   ;;   ?dst -> ?live-loc
+	   ;;   ?dst <--> ?live-loc
 	   ;;
 	   (set-for-each (lambda (live-loc)
 			   (add-edge! THE-GRAPH dst live-loc))
@@ -1065,12 +1065,48 @@
 	   (set-union (R src) S)))
 
 	((int-/overflow int+/overflow int*/overflow)
+	 ;;We expect X to have the format:
+	 ;;
+	 ;;   (asm-instr int+/overflow ?dst ?src)
+	 ;;   (asm-instr int-/overflow ?dst ?src)
+	 ;;   (asm-instr int*/overflow ?dst ?src)
+	 ;;
+	 ;;and  these  instructions  might  jump  to the  handler  of  the  enclosing
+	 ;;SHORTCUT; they will become the Intel Assembly instructions:
+	 ;;
+	 ;;   (addl ?src ?dst)
+	 ;;   (jo ?handler-label)
+	 ;;
+	 ;;   (subl ?src ?dst)
+	 ;;   (jo ?handler-label)
+	 ;;
+	 ;;   (imull ?src ?dst)
+	 ;;   (jo ?handler-label)
+	 ;;
+	 ;;so ?DST is both  read and written and ?SRC is  read.  The continuation can
+	 ;;be either the subsequent instructions  in the enclosing SHORTCUT's body or
+	 ;;the enclosing SHORTCUT's interrupt handler.
+	 ;;
+	 ;;While rewinding the  BODY traversal: ?DST changes its status  from live to
+	 ;;dead, it is the moment to add ?DST as node of the interference graph.  The
+	 ;;interference sub-graph of ?DST is:
+	 ;;
+	 ;;   ?dst <--> (tail.set + handler.set - ?dst)
+	 ;;
+	 ;;The live set returned to the caller is:
+	 ;;
+	 ;;   ?src + (tail.set + handler.set)
+	 ;;
 	 (unless (exception-live-set)
 	   (compiler-internal-error __module_who__ __who__
-	     "uninitialized live set"))
+	     "missing live set for SHORTCUT's handler while processing body"))
 	 (let ((S (set-rem dst (set-union tail.set (exception-live-set)))))
-	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH dst y))
+	   ;;Extract the live locations from S and add interference edges:
+	   ;;
+	   ;;   ?dst -> ?live-loc
+	   ;;
+	   (set-for-each (lambda (live-loc)
+			   (add-edge! THE-GRAPH dst live-loc))
 	     S)
 	   (set-union (set-union (R src) (R dst))
 		      S)))
