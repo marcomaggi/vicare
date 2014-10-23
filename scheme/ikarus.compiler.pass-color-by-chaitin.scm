@@ -150,7 +150,8 @@
   ;;This module implements sets of bits; each  set is a proper list of items, wrapped
   ;;by a struct.
   ;;
-  ;;This module has the same API of the module INTEGER-SET.
+  ;;NOTE This  module has the  same API  of the module  INTEGER-SET, but this  is not
+  ;;actually important.
   ;;
   (make-empty-set
    element->set
@@ -164,7 +165,9 @@
     ;;
     (element*
 		;The  list of  elements in  the set:  VAR structs,  FVAR structs  and
-		;symbols representing CPU register names.
+		;symbols representing CPU register names.  The included registers are
+		;only  the ones  being  full  machine word  registers  and *not*  for
+		;special purpose (not APR, not CPR, not FPR, not PCR).
      ))
 
   (define (element? x)
@@ -177,11 +180,11 @@
     (make-set '()))
 
   (define (element->set x)
-    (assert (element? x))
+    #;(assert (element? x))
     (make-set (list x)))
 
   (define (list->set element*)
-    (assert (for-all element? element*))
+    #;(assert (for-all element? element*))
     (make-set element*))
 
 ;;; --------------------------------------------------------------------
@@ -198,13 +201,13 @@
   (define* (set-add x {S set?})
     ;;Add X to S, but only if it is not already contained.
     ;;
-    (assert (element? x))
+    #;(assert (element? x))
     (if (memq x ($set-element* S))
 	S
       (make-set (cons x ($set-element* S)))))
 
   (define* (set-rem x {S set?})
-    (assert (element? x))
+    #;(assert (element? x))
     (make-set ($remq x ($set-element* S))))
 
   (define* (set-difference {S1 set?} {S2 set?})
@@ -261,17 +264,14 @@
 
   (define-struct graph
     (ls
-		;A list of pairs representing the graph.
+		;An alist representing the interference graph.  The keys of the alist
+		;represent graph's  nodes: structs  of type VAR  or FVAR,  or symbols
+		;representing register  names.  The values  of the alist are  sets as
+		;defined  by the  module LISTY-SET,  representing the  edges outgoing
+		;from the node.
 		;
-		;The car of each pair represents a graph's node: a struct instance of
-		;type VAR or FVAR, or a symbol representing a register.
-		;
-		;The cdr  of each pair  is an instance  of LISTY-SET (whatever  it is
-		;defined in  that module), representing  the edges outgoing  from the
-		;node.
-		;
-		;The LISTY-SET contains  the target nodes of the  edges outgoing from
-		;the node represented by the car of the pair.
+		;The destination  nodes of the edges  outgoing from node N  are alive
+		;when node N is alive.
      ))
 
   (define-syntax-rule (empty-graph)
@@ -282,32 +282,27 @@
 	      (empty-set? (cdr x)))
 	    ($graph-ls G)))
 
-  (module (add-edge!)
-
-    (define (add-edge! G x y)
-      (let ((ls ($graph-ls G)))
-	(cond ((assq x ls)
-	       => (lambda (p0)
-		    (unless (set-member? y (cdr p0))
-		      (set-cdr! p0 (set-add y (cdr p0)))
-		      (cond ((assq y ls)
-			     => (lambda (p1)
-				  (set-cdr! p1 (set-add x (cdr p1)))))
-			    (else
-			     ($set-graph-ls! G (cons (cons y (single x)) ls)))))))
-	      ((assq y ls)
-	       => (lambda (p1)
-		    (set-cdr! p1 (set-add x (cdr p1)))
-		    ($set-graph-ls! G (cons (cons x (single y)) ls))))
-	      (else
-	       ($set-graph-ls! G (cons* (cons x (single y))
-					(cons y (single x))
-					ls))))))
-
-    (define (single x)
-      (set-add x (make-empty-set)))
-
-    #| end of module: add-edge! |# )
+  (define (add-edge! G src dst)
+    ;;Add an edge to graph G from node SRC to node DST.
+    ;;
+    (let ((ls ($graph-ls G)))
+      (cond ((assq src ls)
+	     => (lambda (p0)
+		  (unless (set-member? dst (cdr p0))
+		    (set-cdr! p0 (set-add dst (cdr p0)))
+		    (cond ((assq dst ls)
+			   => (lambda (p1)
+				(set-cdr! p1 (set-add src (cdr p1)))))
+			  (else
+			   ($set-graph-ls! G (cons (cons dst (element->set src)) ls)))))))
+	    ((assq dst ls)
+	     => (lambda (p1)
+		  (set-cdr! p1 (set-add src (cdr p1)))
+		  ($set-graph-ls! G (cons (cons src (element->set dst)) ls))))
+	    (else
+	     ($set-graph-ls! G (cons* (cons src (element->set dst))
+				      (cons dst (element->set src))
+				      ls))))))
 
   (define (print-graph G)
     (printf "G={\n")
@@ -738,13 +733,22 @@
 
 (define* (%build-graph body)
   ;;Process BODY with a depth-first traversal, visiting the tail branches first, in a
-  ;;post-order fashion; while rewinding build a graph of ...
+  ;;post-order fashion; while rewinding:
   ;;
-  ;;Return a GRAPH struct.
+  ;;*  Build  the live  set:  a  SET struct,  as  defined  by the  LISTY-SET  module,
+  ;;  containing all the VAR structs, FVAR structs and CPU register symbol names that
+  ;;  are *read* at least once in the continuation.
   ;;
-  ;;A lot of functions  are nested here because they need to  close upon GRAPH, which
-  ;;is mutated  as the code  traversal progresses and finally  it is returned  to the
-  ;;caller.
+  ;;* Build the interference graph: a GRAPH  struct, as defined by the GRAPHS module,
+  ;;  containing one node for every VAR  struct, FVAR struct and CPU register that is
+  ;;  *written* at least  once.  The edges of each node  represent the locations that
+  ;;  are alive when the node is written.
+  ;;
+  ;;Return the GRAPH struct representing the interference graph.
+  ;;
+  ;;NOTE A lot  of functions are nested  here because they need to  close upon GRAPH,
+  ;;which is mutated as  the code traversal progresses and finally  it is returned to
+  ;;the caller.
   ;;
   (import LISTY-SET)
   (import GRAPHS)
@@ -889,9 +893,29 @@
 	($for-each/stx ?func (set->list ?set)))
       (case op
 	((move load32)
+	 ;;We expect X to have the format:
+	 ;;
+	 ;;   (asm-instr move   ?dst ?src)
+	 ;;   (asm-instr load32 ?dst ?src)
+	 ;;
+	 ;;here ?DST is written  and ?SRC is read: in the uplevel  code ?DST is dead,
+	 ;;in the  tail code ?DST is  alive; in both  the uplevel code and  tail code
+	 ;;?SRC is alive.
+	 ;;
+	 ;;Here ?DST changes  its status from live  to dead: it is the  moment to add
+	 ;;?DST as  node of  the interference graph.   The interference  sub-graph of
+	 ;;?DST is:
+	 ;;
+	 ;;   ?dst -> tail.set
+	 ;;
+	 ;;The live set returned to the caller is:
+	 ;;
+	 ;;   ?src + (tail.set - ?dst)
+	 ;;
 	 (let ((S (set-rem dst tail.set)))
-	   (set-for-each (lambda (y)
-			   (add-edge! THE-GRAPH dst y))
+	   ;;Extract the live locations from S and add edges: ?DST -> ?loc.
+	   (set-for-each (lambda (loc)
+			   (add-edge! THE-GRAPH dst loc))
 			 S)
 	   (set-union (R src) S)))
 
