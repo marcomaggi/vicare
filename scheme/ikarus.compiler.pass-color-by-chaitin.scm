@@ -764,7 +764,7 @@
       ((code-loc)
        (make-empty-set))
       (else
-       (if (symbol? x)
+       (if (register? x)
 	   (if (memq x ALL-REGISTERS)
 	       (set-add x (make-empty-set))
 	     (make-empty-set))
@@ -968,33 +968,33 @@
 
 	  ((find-low-degree (set->list unspillable.set) G)
 	   => (lambda (unspillable)
-		(let ((n* (node-neighbors unspillable G)))
+		(let ((neighbor* (node-neighbors unspillable G)))
 		  (delete-node! unspillable G)
 		  (receive (spilled* spillable.set env)
 		      (%color-graph spillable.set (set-rem unspillable unspillable.set) G)
-		    (let ((register (find-color unspillable n* env)))
+		    (let ((register (find-color unspillable neighbor* env)))
 		      (values spilled*
 			      spillable.set
 			      (cons (cons unspillable register) env)))))))
 
 	  ((find-low-degree (set->list spillable.set) G)
 	   => (lambda (spillable)
-		(let ((n* (node-neighbors spillable G)))
+		(let ((neighbor* (node-neighbors spillable G)))
 		  (delete-node! spillable G)
 		  (receive (spilled* spillable.set env)
 		      (%color-graph (set-rem spillable spillable.set) unspillable.set G)
-		    (let ((register (find-color spillable n* env)))
+		    (let ((register (find-color spillable neighbor* env)))
 		      (values spilled*
 			      (set-add spillable spillable.set)
 			      (cons (cons spillable register) env)))))))
 
 	  ((pair? (set->list spillable.set))
 	   (let* ((spillable (car (set->list spillable.set)))
-		  (n*        (node-neighbors spillable G)))
+		  (neighbor* (node-neighbors spillable G)))
 	     (delete-node! spillable G)
 	     (receive (spilled* spillable.set env)
 		 (%color-graph (set-rem spillable spillable.set) unspillable.set G)
-	       (let ((register (find-color/maybe spillable n* env)))
+	       (let ((register (find-color/maybe spillable neighbor* env)))
 		 (if register
 		     (values spilled*
 			     (set-add spillable spillable.set)
@@ -1035,7 +1035,7 @@
       ;;
       (define register*
 	(let ((cr ($map/stx (lambda (x)
-			      (cond ((symbol? x)
+			      (cond ((register? x)
 				     x)
 				    ((assq x env)
 				     => cdr)
@@ -1083,7 +1083,7 @@
 	((disp objref offset)
 	 (make-disp (R-disp objref) (R-disp offset)))
 	(else
-	 (if (symbol? x)
+	 (if (register? x)
 	     x
 	   (compiler-internal-error __module_who__  __who__
 	     "invalid operand struct" x)))))
@@ -1097,7 +1097,7 @@
 	((fvar)
 	 x)
 	(else
-	 (if (symbol? x)
+	 (if (register? x)
 	     x
 	   (compiler-internal-error __module_who__  __who__
 	     "invalid DISP field value" x)))))
