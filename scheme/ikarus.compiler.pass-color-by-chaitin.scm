@@ -347,8 +347,8 @@
     ;;replace BODY.
     ;;
     ;;A  lot  of  functions  are  nested  here  because  they  call  the  subfunction
-    ;;%MAKE-UNSPILLABLE-VAR, and  the %MAKE-UNSPILLABLE-VAR  needs to  close upon  the argument
-    ;;UNSPILLABLE.SET.
+    ;;%MAKE-UNSPILLABLE-VAR, and  the %MAKE-UNSPILLABLE-VAR  needs to close  upon the
+    ;;argument UNSPILLABLE.SET.
     ;;
 
     (define (main body)
@@ -638,7 +638,7 @@
     (define (T x)
       (struct-case x
 	((asmcall op rands)
-	 (assert (or (eq? op 'return) (eq? op 'direct-jump) (eq? op 'indirect-jump)))
+	 #;(assert (or (eq? op 'return) (eq? op 'direct-jump) (eq? op 'indirect-jump)))
 	 ;;We assume the input code is correct; this means in tail position there are
 	 ;;only ASMCALL  structs with  operand RETURN, DIRECT-JUMP  or INDIRECT-JUMP.
 	 ;;We know that the operands of  such ASMCALL structs are CPU register symbol
@@ -729,29 +729,87 @@
   #| end of module: %add-unspillables |# )
 
 
-(define (%build-graph x)
+(define* (%build-graph body)
   ;;
-  ;;A lot of functions are nested here because they need to close upon GRAPH.
+  ;;A lot of functions  are nested here because they need to  close upon GRAPH, which
+  ;;is mutated  as the code  traversal progresses and finally  it is returned  to the
+  ;;caller.
   ;;
   (import LISTY-SET)
   (import GRAPHS)
 
-  (define-syntax __who__
-    (identifier-syntax '%build-graph))
+  (define (main body)
+    (let ((s (T body)))
+      #;(pretty-print (unparse-recordized-code/sexp x))
+      #;(print-graph THE-GRAPH)
+      THE-GRAPH))
 
-  (define GRAPH
+  (define THE-GRAPH
     (empty-graph))
 
   (define exception-live-set
+    ;;Whenever we enter a SHORTCUT, we.
+    ;;
+    ;;1. Process the handler first.
+    ;;
+    ;;2. Set this parameter to the handler's set.
+    ;;
+    ;;3. Process the body.
+    ;;
+    ;;The handler's  set becomes the set  of ASMCALL structs with  operands INTERRUPT
+    ;;and  INCR/ZERO?,  and  it  is  consumed by  ASM-INSTR  structs  with  operands:
+    ;;INT-/OVERFLOW, INT+/OVERFLOW, INT*/OVERFLOW.
+    ;;
     (make-parameter #f))
 
-  (define (R* ls)
-    (if (pair? ls)
-	(set-union (R  (car ls))
-		   (R* (cdr ls)))
+;;; --------------------------------------------------------------------
+
+  (define (T x)
+    ;;Process the  struct instance X,  representing recordized code,  as if it  is in
+    ;;tail position.
+    ;;
+    (struct-case x
+      ((conditional test conseq altern)
+       (let ((conseq.set (T conseq))
+	     (altern.set (T altern)))
+	 (P test conseq.set altern.set (set-union conseq.set altern.set))))
+
+      ((asmcall op rand*)
+       #;(assert (or (eq? op 'return) (eq? op 'direct-jump) (eq? op 'indirect-jump)))
+       ;;We assume the input  code is correct; this means in  tail position there are
+       ;;only ASMCALL structs with operand  RETURN, DIRECT-JUMP or INDIRECT-JUMP.  We
+       ;;know that the operands of such ASMCALL structs are CPU register symbol names
+       ;;and FVAR structs.
+       (R* rand*))
+
+      ((seq e0 e1)
+       (E e0 (T e1)))
+
+      ((shortcut body handler)
+       ;;Do the handler first, then the body.
+       (let ((handler.set (T handler)))
+	 (parameterize ((exception-live-set handler.set))
+	   (T body))))
+
+      (else
+       (compiler-internal-error __module_who__ __who__
+	 "invalid code in T context" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (define (R* rand*)
+    ;;Process the operands of ASMCALL and  NON-TAIL-CALL structs.  Build and return a
+    ;;set representing ...
+    ;;
+    (if (pair? rand*)
+	(set-union (R  (car rand*))
+		   (R* (cdr rand*)))
       (make-empty-set)))
 
   (define (R x)
+    ;;Process X which must be an operand in a struct of type: ASMCALL, NON-TAIL-CALL,
+    ;;ASM-INSTR, DISP.  Return a set representing...
+    ;;
     (struct-case x
       ((constant)
        (make-empty-set))
@@ -765,28 +823,36 @@
        (make-empty-set))
       (else
        (if (register? x)
+	   ;;Add the register to  the set only if it is a  full machine word register
+	   ;;and *not* a register with special purpose (APR, CPR, FPR, PCR).
 	   (if (memq x ALL-REGISTERS)
 	       (set-add x (make-empty-set))
 	     (make-empty-set))
-	 (compiler-internal-error __module_who__ __who__ "invalid R" x)))))
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid code in R context" (unparse-recordised-code/sexp x))))))
+
+;;; --------------------------------------------------------------------
 
   (module (E)
-
+    ;;If we are in "for effect" context: there is other code in tail context that has
+    ;;been processed  before X by the  backwards code traversal.  Such  tail code has
+    ;;produced the set S used as argument here.
+    ;;
     (define (E x s)
       (struct-case x
-	((asm-instr op d v)
-	 (E-asm-instr op d v s))
+	((asm-instr op dst src)
+	 (E-asm-instr op dst src s x))
 
 	((seq e0 e1)
 	 (E e0 (E e1 s)))
 
-	((conditional e0 e1 e2)
-	 (let ((s1 (E e1 s))
-	       (s2 (E e2 s)))
-	   (P e0 s1 s2 (set-union s1 s2))))
+	((conditional test conseq altern)
+	 (let ((conseq.set (E conseq s))
+	       (altern.set (E altern s)))
+	   (P test conseq.set altern.set (set-union conseq.set altern.set))))
 
-	((non-tail-call targ value args mask size)
-	 (set-union (R* args) s))
+	((non-tail-call unused.target unused.retval-var all-rand*)
+	 (set-union (R* all-rand*) s))
 
 	((asmcall op arg*)
 	 (case op
@@ -806,29 +872,29 @@
 	(else
 	 (compiler-internal-error __module_who__ __who__ "invalid effect" (unparse-recordized-code x)))))
 
-    (define (E-asm-instr op d v s)
+    (define (E-asm-instr op d v s x)
       (define-syntax-rule (set-for-each ?func ?set)
 	(for-each ?func (set->list ?set)))
       (case op
 	((move load32)
 	 (let ((s (set-rem d s)))
 	   (set-for-each (lambda (y)
-			   (add-edge! GRAPH d y))
+			   (add-edge! THE-GRAPH d y))
 			 s)
 	   (set-union (R v) s)))
 
 	((load8)
 	 (let ((s (set-rem d s)))
 	   (set-for-each (lambda (y)
-			   (add-edge! GRAPH d y))
+			   (add-edge! THE-GRAPH d y))
 			 s)
 	   (when (var? d)
 	     (for-each (lambda (r)
-			 (add-edge! GRAPH d r))
+			 (add-edge! THE-GRAPH d r))
 	       NON-8BIT-REGISTERS))
 	   (when (var? v)
 	     (for-each (lambda (r)
-			 (add-edge! GRAPH v r))
+			 (add-edge! THE-GRAPH v r))
 	       NON-8BIT-REGISTERS))
 	   (set-union (R v) s)))
 
@@ -837,21 +903,21 @@
 	   (compiler-internal-error __module_who__ __who__ "uninitialized live set"))
 	 (let ((s (set-rem d (set-union s (exception-live-set)))))
 	   (set-for-each (lambda (y)
-			   (add-edge! GRAPH d y))
+			   (add-edge! THE-GRAPH d y))
 			 s)
 	   (set-union (set-union (R v) (R d)) s)))
 
 	((logand logxor int+ int- int* logor sll sra srl bswap! sll/overflow)
 	 (let ((s (set-rem d s)))
 	   (set-for-each (lambda (y)
-			   (add-edge! GRAPH d y))
+			   (add-edge! THE-GRAPH d y))
 			 s)
 	   (set-union (set-union (R v) (R d)) s)))
 
 	((bset)
 	 (when (var? v)
 	   (for-each (lambda (r)
-		       (add-edge! GRAPH v r))
+		       (add-edge! THE-GRAPH v r))
 	     NON-8BIT-REGISTERS))
 	 (set-union (set-union (R v) (R d)) s))
 
@@ -859,7 +925,7 @@
 	 (let ((s (set-rem edx s)))
 	   (when (register? edx)
 	     (set-for-each (lambda (y)
-			     (add-edge! GRAPH edx y))
+			     (add-edge! THE-GRAPH edx y))
 			   s))
 	   (set-union (R eax) s)))
 
@@ -867,78 +933,69 @@
 	 (let ((s (set-rem eax (set-rem edx s))))
 	   (when (register? eax)
 	     (set-for-each (lambda (y)
-			     (add-edge! GRAPH eax y)
-			     (add-edge! GRAPH edx y))
+			     (add-edge! THE-GRAPH eax y)
+			     (add-edge! THE-GRAPH edx y))
 			   s))
 	   (set-union (set-union (R eax) (R edx))
 		      (set-union (R v) s))))
 
 	(( ;;some assembly instructions
-	  mset		mset32
-			fl:load		fl:store
-			fl:add!		fl:sub!
-			fl:mul!		fl:div!
-			fl:from-int		fl:shuffle
-			fl:store-single	fl:load-single)
+	  mset			mset32
+	  fl:load		fl:store
+	  fl:add!		fl:sub!
+	  fl:mul!		fl:div!
+	  fl:from-int		fl:shuffle
+	  fl:store-single	fl:load-single)
 	 (set-union (R v) (set-union (R d) s)))
 
 	(else
-	 (compiler-internal-error __module_who__ __who__ "invalid effect" x))))
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid ASM-INSTR operator in E context" (unparse-recordised-code/sexp x)))))
 
     #| end of module: E |# )
 
-  (define (P x st sf su)
+;;; --------------------------------------------------------------------
+
+  (define (P x tail-conseq.set tail-altern.set tail-union.set)
+    ;;If we are in "for predicate" context:  there is other code in tail context that
+    ;;has been  processed before X by  the backwards code traversal.   Such tail code
+    ;;has produced the sets:
+    ;;
+    ;;TAIL-CONSEQ.SET -
+    ;;   From the CONSEQ branch, it is to be used for test-true processing.
+    ;;
+    ;;TAIL-ALTERN.SET -
+    ;;  From the ALTERN branch, it is to be used for test-false processing.
+    ;;
+    ;;TAIL-UNION.SET -
+    ;;  The  union between TAIL-CONSEQ.SET  and TAIL-ALTERN.SET;  it is to  be joined
+    ;;  with the sets produced here and the result is returned to the caller.
+    ;;
     (struct-case x
-      ((constant c)
-       (if c st sf))
+      ((constant x.const)
+       (if x.const tail-conseq.set tail-altern.set))
 
       ((seq e0 e1)
-       (E e0 (P e1 st sf su)))
+       (E e0 (P e1 tail-conseq.set tail-altern.set tail-union.set)))
 
-      ((conditional e0 e1 e2)
-       (let ((s1 (P e1 st sf su))
-	     (s2 (P e2 st sf su)))
-	 (P e0 s1 s2 (set-union s1 s2))))
+      ((conditional test conseq altern)
+       (let ((conseq.set (P conseq tail-conseq.set tail-altern.set tail-union.set))
+	     (altern.set (P altern tail-conseq.set tail-altern.set tail-union.set)))
+	 (P test conseq.set altern.set (set-union conseq.set altern.set))))
 
-      ((asm-instr op s0 s1)
-       (set-union (set-union (R s0) (R s1)) su))
+      ((asm-instr op dst src)
+       (set-union (set-union (R dst) (R src))
+		  tail-union.set))
 
       ((shortcut body handler)
-       (let ((s2 (P handler st sf su)))
-	 (parameterize ((exception-live-set s2))
-	   (P body st sf su))))
+       (let ((handler.set (P handler tail-conseq.set tail-altern.set tail-union.set)))
+	 (parameterize ((exception-live-set handler.set))
+	   (P body tail-conseq.set tail-altern.set tail-union.set))))
 
       (else
        (compiler-internal-error __module_who__ __who__ "invalid pred" (unparse-recordized-code x)))))
 
-  (define (T x)
-    ;;Process the  struct instance X,  representing recordized code,  as if it  is in
-    ;;tail position.
-    ;;
-    (struct-case x
-      ((conditional e0 e1 e2)
-       (let ((s1 (T e1))
-	     (s2 (T e2)))
-	 (P e0 s1 s2 (set-union s1 s2))))
-
-      ((asmcall op rands)
-       (R* rands))
-
-      ((seq e0 e1)
-       (E e0 (T e1)))
-
-      ((shortcut body handler)
-       (let ((s2 (T handler)))
-	 (parameterize ((exception-live-set s2))
-	   (T body))))
-
-      (else
-       (compiler-internal-error __module_who__ __who__ "invalid tail" (unparse-recordized-code x)))))
-
-  (let ((s (T x)))
-    ;;(pretty-print (unparse-recordized-code x))
-    ;;(print-graph GRAPH)
-    GRAPH))
+  (main body))
 
 
 (module (%color-graph)
