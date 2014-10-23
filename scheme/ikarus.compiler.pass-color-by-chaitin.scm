@@ -481,16 +481,19 @@
 	     x))
 
 	  ((cltd)
-	   (unless (and (symbol? dst)
-			(symbol? src))
-	     (compiler-internal-error __module_who__  __who__ "invalid args to cltd"))
+	   ;;Here we know that  DST is the register EDX and SRC  is the register EAX.
+	   ;;We know that CLTD and IDIV always come together.
+	   (assert (eq? dst edx))
+	   (assert (eq? src eax))
 	   x)
 
 	  ((idiv)
-	   (unless (symbol? dst)
-	     (compiler-internal-error __module_who__  __who__ "invalid arg to idiv"))
-	   (if (or (var?    src)
-		   (symbol? src))
+	   ;;Here we know  that DST is either  the register EAX or  the register EDX;
+	   ;;SRC is an operand, we do not know which one here.  We know that CLTD and
+	   ;;IDIV always come together.
+	   (assert (or (eq? dst eax) (eq? dst edx)))
+	   (if (or (var?      src)
+		   (register? src))
 	       x
 	     (let ((unspillable (%make-unspillable-var)))
 	       (make-seq
