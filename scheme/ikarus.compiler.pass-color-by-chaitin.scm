@@ -1211,27 +1211,57 @@
 	 (assert (or (eq? dst eax) (eq? dst edx)))
 	 ;;We expect X ot have the format:
 	 ;;
-	 ;;   (asm-instr cltd EDX ?src)
-	 ;;   (asm-instr cltd EAX ?src)
+	 ;;   (asm-instr idiv EAX ?src)
+	 ;;   (asm-instr idiv EDX ?src)
 	 ;;
-	 ;;here EAX is read and EDX is written.
+	 ;;here either EAX or EDX is both written and read and ?SRC is read.
 	 ;;
-	 ;;The interference sub-graph of EDX is:
+	 ;;When EAX  is written  and read,  we add  a node  for it;  the interference
+	 ;;sub-graph of EAX is:
+	 ;;
+	 ;;   EAX <--> (tail.set - EAX)
+	 ;;
+	 ;;and the live set returned to the caller is:
+	 ;;
+	 ;;   ?src + (tail.set)
+	 ;;
+	 ;;When EDX  is written  and read,  we add  a node  for it;  the interference
+	 ;;sub-graph of EDX is:
 	 ;;
 	 ;;   EDX <--> (tail.set - EDX)
 	 ;;
-	 ;;The live set returned to the caller is:
+	 ;;and the live set returned to the caller is:
 	 ;;
-	 ;;   EAX + (tail.set - EDX)
+	 ;;   ?src + (tail.set)
 	 ;;
-	 (let ((S (set-rem eax (set-rem edx tail.set))))
-	   (when (register? eax)
-	     (set-for-each (lambda (y)
-			     (add-edge! THE-GRAPH eax y)
-			     (add-edge! THE-GRAPH edx y))
-	       S))
-	   (set-union (set-union (R eax) (R edx))
-		      (set-union (R src) S))))
+	 (if (eq? dst eax)
+	     (let ((S (set-rem eax tail.set)))
+	       ;;Extract the live locations from S and add interference edges:
+	       ;;
+	       ;;   EAX -> ?live-loc
+	       ;;
+	       (set-for-each (lambda (live-loc)
+			       (add-edge! THE-GRAPH eax live-loc))
+		 S))
+	   (let ((S (set-rem edx tail.set)))
+	     ;;Extract the live locations from S and add interference edges:
+	     ;;
+	     ;;   EDX -> ?live-loc
+	     ;;
+	     (set-for-each (lambda (live-loc)
+			     (add-edge! THE-GRAPH edx live-loc))
+	       S)))
+	 (set-union (R src) tail.set))
+
+	     ;; (let ((S (set-rem eax (set-rem edx tail.set))))
+	     ;;   (when (register? eax)
+	     ;; 	 (set-for-each (lambda (y)
+	     ;; 			 (add-edge! THE-GRAPH eax y)
+	     ;; 			 (add-edge! THE-GRAPH edx y))
+	     ;; 	   S))
+	     ;;   (set-union (set-union (R eax) (R edx))
+	     ;; 		  (set-union (R src) S)))
+
 
 	(( ;;some assembly instructions
 	  mset			mset32
