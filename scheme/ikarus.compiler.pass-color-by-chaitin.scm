@@ -793,6 +793,15 @@
   ;;
   ;;Return the GRAPH struct representing the interference graph.
   ;;
+  ;;NOTE Locations are added  to a live set only by the  function "R" which processes
+  ;;operands.  "R" processes the leaves of the  BODY and creates either an empty live
+  ;;set or  a live set  containing a single  location; other functions  take multiple
+  ;;live sets and compose new live sets with the union operation.
+  ;;
+  ;;NOTE  Edges   are  added  to  the   interference  graph  only  by   the  function
+  ;;"E-asm-instr",  which  is the  only  one  that  processes  code which  writes  to
+  ;;locations.
+  ;;
   ;;NOTE A lot  of functions are nested  here because they need to  close upon GRAPH,
   ;;which is mutated as  the code traversal progresses and finally  it is returned to
   ;;the caller.
@@ -941,11 +950,12 @@
 ;;; --------------------------------------------------------------------
 
   (module (E)
-    ;;If we are in "for effect" context: there is other code in tail context that has
-    ;;been processed  before X by the  backwards code traversal.  Such  tail code has
-    ;;produced the live set TAIL.SET used as argument here.
-    ;;
+
     (define (E x tail.set)
+      ;;If we are in  "for effect" context: there is other code  in tail context that
+      ;;has been processed before X by  the backwards code traversal.  Such tail code
+      ;;has produced the live set TAIL.SET used as argument here.
+      ;;
       (struct-case x
 	((asm-instr op dst src)
 	 (E-asm-instr op dst src tail.set x))
@@ -1012,6 +1022,25 @@
 	   (set-union (R src) S)))
 
 	((load8)
+	 ;;We expect X ot have the format:
+	 ;;
+	 ;;   (asm-instr load8 ?dst (disp ?objref ?offset))
+	 ;;
+	 ;;here ?DST  is written, ?OBJREF and  ?OFFSET are read: in  the uplevel code
+	 ;;?DST is dead, in the tail code ?DST is alive; in both the uplevel code and
+	 ;;tail code ?OBJREF and ?OFFSET are alive.
+	 ;;
+	 ;;Here ?DST changes  its status from live  to dead: it is the  moment to add
+	 ;;?DST as  node of  the interference graph.   The interference  sub-graph of
+	 ;;?DST is:
+	 ;;
+	 ;;   ?dst -> tail.set
+	 ;;
+	 ;;The live set returned to the caller is:
+	 ;;
+	 ;;   ?src + (tail.set - ?dst)
+	 ;;
+	 (assert (disp? src))
 	 (let ((S (set-rem dst tail.set)))
 	   (set-for-each (lambda (y)
 			   (add-edge! THE-GRAPH dst y))
@@ -1020,10 +1049,10 @@
 	     (for-each (lambda (register)
 			 (add-edge! THE-GRAPH dst register))
 	       NON-8BIT-REGISTERS))
-	   (when (var? src)
-	     (for-each (lambda (register)
-			 (add-edge! THE-GRAPH src register))
-	       NON-8BIT-REGISTERS))
+	   ;; (when (var? src)
+	   ;;   (for-each (lambda (register)
+	   ;; 		 (add-edge! THE-GRAPH src register))
+	   ;;     NON-8BIT-REGISTERS))
 	   (set-union (R src) S)))
 
 	((int-/overflow int+/overflow int*/overflow)

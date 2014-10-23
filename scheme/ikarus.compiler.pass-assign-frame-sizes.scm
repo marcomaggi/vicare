@@ -1355,9 +1355,9 @@
     (define* (E-asm-instr/move x op dst src vs rs fs ns)
       ;;We expect the ASM-INSTR struct to have one of the formats:
       ;;
-      ;;   (asm-instr move   (?dst ?src))
-      ;;   (asm-instr load8  (?dst ?src))
-      ;;   (asm-instr load32 (?dst ?src))
+      ;;   (asm-instr move   ?dst ?src)
+      ;;   (asm-instr load8  ?dst (disp ?objref ?offset))
+      ;;   (asm-instr load32 ?dst ?src)
       ;;
       ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
       ;;representing the operands DST and SRC.
