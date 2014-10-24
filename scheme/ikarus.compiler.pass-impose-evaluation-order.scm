@@ -726,7 +726,13 @@
 	 (lambda (rand*)
 	   (multiple-forms-sequence
 	     (%move-dst<-src eax (car rand*))
+	     ;;CLTD sign-extends EAX to EDX:EAX.  Here the destination operand EDX is
+	     ;;just a place-holder, it is not actually used to generate machine code.
 	     (make-asm-instr 'cltd edx eax)
+	     ;;IDIV  divides  with sign  EDX:EAX  by  the  ?SRC operand  placing  the
+	     ;;quotient in EAX and the remainder in  EDX.  In truth IDIV has only one
+	     ;;operand,  the  ?SRC  one;  the  ?DST operand  EAX,  here,  is  just  a
+	     ;;place-holder, it is not actually used to generate machine code.
 	     (make-asm-instr 'idiv eax (cadr rand*))
 	     (%move-dst<-src dst eax)))))
 
@@ -739,7 +745,13 @@
 	 (lambda (rand*)
 	   (multiple-forms-sequence
 	     (%move-dst<-src eax (car rand*))
+	     ;;CLTD sign-extends EAX to EDX:EAX.  Here the destination operand EDX is
+	     ;;just a place-holder, it is not actually used to generate machine code.
 	     (make-asm-instr 'cltd edx eax)
+	     ;;IDIV  divides  with sign  EDX:EAX  by  the  ?SRC operand  placing  the
+	     ;;quotient in EAX and the remainder in  EDX.  In truth IDIV has only one
+	     ;;operand,  the  ?SRC  one;  the  ?DST operand  EDX,  here,  is  just  a
+	     ;;place-holder, it is not actually used to generate machine code.
 	     (make-asm-instr 'idiv edx (cadr rand*))
 	     (%move-dst<-src dst edx)))))
 

@@ -1176,6 +1176,10 @@
 		    tail.set))
 
 	((cltd)
+	 ;;NOTE  CLTD (Convert  Long To  Double)  is the  AT&T conventional  mnemonic
+	 ;;corresponding to the Intel  conventional mnemonic CDQ (Convert Double-word
+	 ;;to Quad-word); it takes the value of EAX and sign-extends it to EDX:EAX.
+	 ;;
 	 ;;Here we know that DST is the register EDX and SRC is the register EAX.  We
 	 ;;know that CLTD and IDIV always come together.
 	 (assert (eq? dst edx))
@@ -1205,63 +1209,43 @@
 	   (set-union (R eax) S)))
 
 	((idiv)
+	 ;;NOTE On  32-bit platforms, as  used by  Vicare, IDIV divides  (signed) the
+	 ;;value EDX:EAX  (where EDX must contain  the sign-extension of EAX)  by the
+	 ;;?SRC operand;  the results  are: EAX=quotient, EDX=remainder.   The source
+	 ;;operand ?SRC can  be a general-purpose register or a  memory location.  As
+	 ;;used by Vicare, the IDIV instruction always comes after a CLTD instruction
+	 ;;that sign-extends the machine word in EAX to EDX:EAX.
+	 ;;
 	 ;;Here we know that DST is either  the register EAX or the register EDX; SRC
 	 ;;is an operand, we do not know which  one here.  We know that CLTD and IDIV
 	 ;;always come together.
 	 (assert (or (eq? dst eax) (eq? dst edx)))
-	 ;;We expect X ot have the format:
+	 ;;We expect X to have the format:
 	 ;;
 	 ;;   (asm-instr idiv EAX ?src)
 	 ;;   (asm-instr idiv EDX ?src)
 	 ;;
-	 ;;here either EAX or EDX is both written and read and ?SRC is read.
+	 ;;here both  EAX and EDX are  written and read  and ?SRC is read.   The ?DST
+	 ;;operand,  here, is  just a  place-holder and  it is  not used  to generate
+	 ;;machine code.
 	 ;;
-	 ;;When EAX  is written  and read,  we add  a node  for it;  the interference
-	 ;;sub-graph of EAX is:
+	 ;;The interference sub-graphs of EAX and EDX are:
 	 ;;
-	 ;;   EAX <--> (tail.set - EAX)
-	 ;;
-	 ;;and the live set returned to the caller is:
-	 ;;
-	 ;;   ?src + (tail.set)
-	 ;;
-	 ;;When EDX  is written  and read,  we add  a node  for it;  the interference
-	 ;;sub-graph of EDX is:
-	 ;;
-	 ;;   EDX <--> (tail.set - EDX)
+	 ;;   EAX <--> (tail.set - EAX - EDX)
+	 ;;   EDX <--> (tail.set - EAX - EDX)
 	 ;;
 	 ;;and the live set returned to the caller is:
 	 ;;
-	 ;;   ?src + (tail.set)
+	 ;;   ?src + EAX + EDX + (tail.set)
 	 ;;
-	 (if (eq? dst eax)
-	     (let ((S (set-rem eax tail.set)))
-	       ;;Extract the live locations from S and add interference edges:
-	       ;;
-	       ;;   EAX -> ?live-loc
-	       ;;
-	       (set-for-each (lambda (live-loc)
-			       (add-edge! THE-GRAPH eax live-loc))
-		 S))
-	   (let ((S (set-rem edx tail.set)))
-	     ;;Extract the live locations from S and add interference edges:
-	     ;;
-	     ;;   EDX -> ?live-loc
-	     ;;
-	     (set-for-each (lambda (live-loc)
-			     (add-edge! THE-GRAPH edx live-loc))
-	       S)))
-	 (set-union (R src) tail.set))
-
-	     ;; (let ((S (set-rem eax (set-rem edx tail.set))))
-	     ;;   (when (register? eax)
-	     ;; 	 (set-for-each (lambda (y)
-	     ;; 			 (add-edge! THE-GRAPH eax y)
-	     ;; 			 (add-edge! THE-GRAPH edx y))
-	     ;; 	   S))
-	     ;;   (set-union (set-union (R eax) (R edx))
-	     ;; 		  (set-union (R src) S)))
-
+	 (let ((S (set-rem eax (set-rem edx tail.set))))
+	   (when (register? eax)
+	     (set-for-each (lambda (y)
+			     (add-edge! THE-GRAPH eax y)
+			     (add-edge! THE-GRAPH edx y))
+	       S))
+	   (set-union (set-union (R eax) (R edx))
+		      (set-union (R src) S))))
 
 	(( ;;some assembly instructions
 	  mset			mset32

@@ -51,6 +51,12 @@
 ;;   Intel 64  and IA-32 Architectures  Software Developer's Manual  Combined Volumes
 ;;   2A, 2B, and 2C: Instruction Set Reference, A-Z.
 ;;
+;;But see also:
+;;
+;;   Wikipedia  contributors.   "X86  instruction  listings."   Wikipedia,  The  Free
+;;   Encyclopedia.   Wikipedia,  The Free  Encyclopedia,  30  Aug.  2014.   Web.   24
+;;   Oct. 2014.  <https://en.wikipedia.org/wiki/X86_instruction_listings>
+;;
 ;;The entry  point in  the assembler  is the  function ASSEMBLE-SOURCES:  it compiles
 ;;assembly  code   into  binary  code   stored  in   code  objects;  every   call  to
 ;;ASSEMBLE-SOURCES can generate a list of code objects.
