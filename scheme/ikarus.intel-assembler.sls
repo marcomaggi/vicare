@@ -40,13 +40,16 @@
 
 ;;;; Introduction
 ;;
-;;As reference  for i686 instructions  we can  look at (URL  last verified on  Oct 9,
-;;2012):
+;;As reference for Intel Architecture instructions  we can look at (URL last verified
+;;on Fri Oct 24, 2014):
 ;;
-;;   Intel(R)  Architecture  Software   Developer's  Manual,  Volume  2:
-;;   Instruction Set Reference Manual
+;;   Intel® 64 and IA-32 Architectures Software Developer Manuals
+;;   <http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html>
 ;;
-;;   <http://www.intel.com/design/intarch/manuals/243191.htm>
+;;and search especially for:
+;;
+;;   Intel 64  and IA-32 Architectures  Software Developer's Manual  Combined Volumes
+;;   2A, 2B, and 2C: Instruction Set Reference, A-Z.
 ;;
 ;;The entry  point in  the assembler  is the  function ASSEMBLE-SOURCES:  it compiles
 ;;assembly  code   into  binary  code   stored  in   code  objects;  every   call  to
