@@ -2442,24 +2442,25 @@
 (section
 
  (define ($flop-aux op fl0 fl1)
-   ;;Flonum operation between two operands.
+   ;;Flonum  operation between  two operands.   We expect  FL0 and  FL1 to  reference
+   ;;Scheme objects of type flonum.
    ;;
-   (with-tmp ((x (asm 'alloc
-		      (K (align flonum-size))
-		      (K vector-tag))))
-     ;;Tag the first word of the result as flonum.
-     (asm 'mset x (K off-flonum-tag) (K flonum-tag))
-     ;;Load the first operand in a register for flonums.
-     (asm 'fl:load  (V-simple-operand fl0) (K off-flonum-data))
-     ;;Perform the operation between the register and FL1.
-     (asm op        (V-simple-operand fl1) (K off-flonum-data))
-     ;;Store the result from the register into memory referenced by X.
-     (asm 'fl:store x       (K off-flonum-data))
-     x))
+   (with-tmp ((result.tagged-ptr (asm 'alloc
+				      (KN (align flonum-size))
+				      (KN vector-tag))))
+     ;;Tag as flonum the first word of the result flonum object.
+     (asm 'mset     result.tagged-ptr      (KN off-flonum-tag) (KN flonum-tag))
+     ;;Load the first double float operand in a register for floats.
+     (asm 'fl:load  (V-simple-operand fl0) (KN off-flonum-data))
+     ;;Perform the operation between the float register and FL1.
+     (asm op        (V-simple-operand fl1) (KN off-flonum-data))
+     ;;Store the result from the float register into the result flonum object.
+     (asm 'fl:store result.tagged-ptr      (KN off-flonum-data))
+     result.tagged-ptr))
 
  (define ($flop-aux* op fl fl*)
-   ;;Flonum operation  between three or  more operands (but also  upon a
-   ;;single operand).
+   ;;Flonum  operation  between three  or  more  operands  (but  also upon  a  single
+   ;;operand).  We expect FL and FL* to reference Scheme objects of type flonum.
    ;;
    (with-tmp ((x (asm 'alloc
 		      (K (align flonum-size))
@@ -4405,40 +4406,42 @@
  (define-core-primitive-operation $bytevector-ieee-single-native-set! unsafe
    ((E bv idx flo)
     (multiple-forms-sequence
-     ;;Load the single into a floating point register.
-     (asm 'fl:load (V-simple-operand flo) (K off-flonum-data))
-     ;;Convert the double into a single.
-     (asm 'fl:double->single)
-     ;;Store the double into the bytevector.
-     (asm 'fl:store-single
-	  (asm 'int+ (V-simple-operand bv) (prm-UNtag-as-fixnum (V-simple-operand idx)))
-	  (K off-bytevector-data)))))
+      ;;Load the double from the flonum object into a floating point register.
+      (asm 'fl:load (V-simple-operand flo) (K off-flonum-data))
+      ;;Convert the double into a single.   This completely happens in floating point
+      ;;registers.
+      (asm 'fl:double->single)
+      (with-tmp ((t (asm 'int+ (V-simple-operand bv) (prm-UNtag-as-fixnum (V-simple-operand idx)))))
+	;;Store the single into the bytevector.
+	(asm 'fl:store-single t (K off-bytevector-data))))))
 
  (define-core-primitive-operation $bytevector-ieee-single-nonnative-set! unsafe
-   ((E bv i flo)
+   ((E bv idx flo)
     (multiple-forms-sequence
-     ;;Load the single into a floating point register.
-     (asm 'fl:load (V-simple-operand flo) (K off-flonum-data))
-     ;;Convert the double into a single.
-     (asm 'fl:double->single)
-     (with-tmp ((t (asm 'int+ (V-simple-operand bv) (prm-UNtag-as-fixnum (V-simple-operand i)))))
-       ;;Store the single into the bytevector data area.
-       (asm 'fl:store-single t (K off-bytevector-data))
-       (boot.case-word-size
-	((32)
-	 ;;Load the single into a register.
-	 (with-tmp ((x0 (asm 'mref t (K off-bytevector-data))))
-	   ;;Reverse the bytes.
-	   (asm 'bswap! x0 x0)
-	   ;;Store the reversed single in the bytevector.
-	   (asm 'mset   t (K off-bytevector-data) x0)))
-	((64)
-	 ;;Load the single into a register.
-	 (with-tmp ((x0 (asm 'mref32 t (K off-bytevector-data))))
-	   ;;Reverse the bytes.
-	   (asm 'bswap! x0 x0)
-	   ;;Store the reversed single in the bytevector.
-	   (asm 'mset32 t (K off-bytevector-data) (asm 'sra x0 (K 32))))))))))
+      ;;Load the double from the flonum object into a floating point register.
+      (asm 'fl:load (V-simple-operand flo) (K off-flonum-data))
+      ;;Convert the double into a single.   This completely happens in floating point
+      ;;registers.
+      (asm 'fl:double->single)
+      (with-tmp ((t (asm 'int+ (V-simple-operand bv) (prm-UNtag-as-fixnum (V-simple-operand idx)))))
+	;;Store the single  into the bytevector data area.  This  is only a temporary
+	;;store to get the single float out of the floating point registers.
+	(asm 'fl:store-single t (K off-bytevector-data))
+	(boot.case-word-size
+	 ((32)
+	  ;;Load the single into a register.
+	  (with-tmp ((x0 (asm 'mref t (K off-bytevector-data))))
+	    ;;Reverse the bytes.
+	    (asm 'bswap! x0 x0)
+	    ;;Store the reversed single in the bytevector.
+	    (asm 'mset   t (K off-bytevector-data) x0)))
+	 ((64)
+	  ;;Load the single into a register.
+	  (with-tmp ((x0 (asm 'mref32 t (K off-bytevector-data))))
+	    ;;Reverse the bytes.
+	    (asm 'bswap! x0 x0)
+	    ;;Store the reversed single in the bytevector.
+	    (asm 'mset32 t (K off-bytevector-data) (asm 'sra x0 (K 32))))))))))
 
  /section)
 

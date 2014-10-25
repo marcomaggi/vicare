@@ -905,11 +905,12 @@
 		 (new-val (caddr simple-rand*)))
 	     (make-asm-instr op objref new-val)))))
 
-      ((fl:load fl:store
-		fl:add! fl:sub! fl:mul! fl:div!
-		fl:from-int fl:shuffle
-		fl:store-single fl:load-single
-		bswap!)
+      ((bswap!
+	fl:load			fl:store
+	fl:add!			fl:sub!
+	fl:mul!			fl:div!
+	fl:from-int		fl:shuffle
+	fl:store-single		fl:load-single)
        ;;Remembering that the floating point operations are performed on the stack of
        ;;the CPU's floating point unit, we expect X to have one of the formats:
        ;;
@@ -922,13 +923,14 @@
        ;;   (asmcall fl:div!  (?flonum-operand ?offset))
        ;;
        ;;   (asmcall fl:from-int (?int-operand ?int-operand))
-       ;;   (asmcall fl:shuffle  (?bv-operand ?offset))
+       ;;   (asmcall fl:shuffle  (?poniter     ?offset))
        ;;
        ;;   (asmcall fl:store-single (?pointer ?offset))
-       ;;   (asmcall fl:load-single  (?flonum-operand ?offset))
+       ;;   (asmcall fl:load-single  (?pointer ?offset))
        ;;
        ;;   (asmcall bswap! (?int-operand ?int-operand))
        ;;
+       ;;where ?FLONUM-OPERAND is a tagged pointer to Scheme object of type flonum.
        (S* rand*
 	 (lambda (simple-rand*)
 	   (make-asm-instr op (car simple-rand*) (cadr simple-rand*)))))

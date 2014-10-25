@@ -1254,6 +1254,33 @@
 	  fl:mul!		fl:div!
 	  fl:from-int		fl:shuffle
 	  fl:store-single	fl:load-single)
+	 ;;We expect X to have the format:
+	 ;;
+	 ;;   (asm-instr mset     (disp ?objref ?offset) ?src)
+	 ;;   (asm-instr mset32   (disp ?objref ?offset) ?src)
+	 ;;
+	 ;;   (asm-instr fl:load  ?flonum-operand ?offset)
+	 ;;   (asm-instr fl:store ?flonum-operand ?offset)
+	 ;;
+	 ;;   (asm-instr fl:add!  ?flonum-operand ?offset)
+	 ;;   (asm-instr fl:sub!  ?flonum-operand ?offset)
+	 ;;   (asm-instr fl:mul!  ?flonum-operand ?offset)
+	 ;;   (asm-instr fl:div!  ?flonum-operand ?offset)
+	 ;;
+	 ;;   (asm-instr fl:from-int  (KN 0) ?int-operand)
+	 ;;   (asm-instr fl:shuffle   ?pointer ?offset)
+	 ;;
+	 ;;   (asm-instr fl:store-single  ?pointer ?offset)
+	 ;;   (asm-instr fl:load-single   ?pointer ?offset)
+	 ;;
+	 ;;where ?FLONUM-OPERAND is a tagged pointer to Scheme object of type flonum.
+	 ;;Here  both ?DST  and ?SRC  are read  and neither  stack locations  nor CPU
+	 ;;registers are written; so no nodes are added to the graph.
+	 ;;
+	 ;;The live set returned to the caller is:
+	 ;;
+	 ;;   ?src + ?dst + (tail.set)
+	 ;;
 	 (set-union (R src)
 		    (set-union (R dst) tail.set)))
 
