@@ -1357,7 +1357,7 @@
       ;;
       ;;   (asm-instr move   ?dst ?src)
       ;;   (asm-instr load8  ?dst (disp ?objref ?offset))
-      ;;   (asm-instr load32 ?dst ?src)
+      ;;   (asm-instr load32 ?dst (disp ?objref ?offset))
       ;;
       ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
       ;;representing the operands DST and SRC.

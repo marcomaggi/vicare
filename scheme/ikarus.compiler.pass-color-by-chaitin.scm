@@ -398,12 +398,13 @@
     (identifier-syntax '%add-unspillables))
 
   (define (%add-unspillables unspillable.set body)
-    ;;The argument UNSPILLABLE.SET  is a set of VAR  structs representing unspillable
-    ;;local variables  in BODY;  it starts  empty and  we fill  it in  this function.
-    ;;Return  2 values:  the filled  UNSPILLABLE.SET  and recordised  code that  must
-    ;;replace BODY.
+    ;;The argument UNSPILLABLE.SET  is a set (as defined by  the LISTY-SET module) of
+    ;;VAR structs representing  unspillable local variables in BODY;  it starts empty
+    ;;and we  fill it  in this  function.  Return 2  values: a  new set  derived from
+    ;;UNSPILLABLE.SET by adding elements; a  struct representing recordised code that
+    ;;must replace BODY.
     ;;
-    ;;A  lot  of  functions  are  nested  here  because  they  call  the  subfunction
+    ;;NOTE  A lot  of functions  are nested  here because  they call  the subfunction
     ;;%MAKE-UNSPILLABLE-VAR, and  the %MAKE-UNSPILLABLE-VAR  needs to close  upon the
     ;;argument UNSPILLABLE.SET.
     ;;
@@ -418,6 +419,8 @@
       (receive-and-return (unspillable)
 	  (make-unique-var 'unspillable-tmp)
 	(set! unspillable.set (set-add unspillable unspillable.set))))
+
+;;; --------------------------------------------------------------------
 
     (module (E)
 
@@ -457,6 +460,12 @@
       (define (E-asm-instr op dst src x)
 	(case op
 	  ((load8 load32)
+	   ;;We expect X ot have the format:
+	   ;;
+	   ;;   (asm-instr load8  ?dst (disp ?objref ?offset))
+	   ;;   (asm-instr load32 ?dst (disp ?objref ?offset))
+	   ;;
+	   (assert (disp? src))
 	   (%fix-address src
 			 (lambda (src)
 			   (if (or (register? dst)
@@ -467,7 +476,14 @@
 				 (make-asm-instr op unspillable src)
 				 (E (make-asm-instr 'move dst unspillable))))))))
 
-	  ((logor logxor logand int+ int- int* move int-/overflow int+/overflow int*/overflow)
+	  ((move
+	    logor		logxor			logand
+	    int+		int-			int*
+	    int+/overflow	int-/overflow		int*/overflow)
+	   ;;We expect X to have the format:
+	   ;;
+	   ;;   (asm-instr move   ?dst ?src)
+	   ;;
 	   (cond ((and (eq? op 'move)
 		       (eq? dst src))
 		  ;;Source and dest are the same: do nothing.
@@ -1007,7 +1023,7 @@
 	 ;;We expect X to have the format:
 	 ;;
 	 ;;   (asm-instr move   ?dst ?src)
-	 ;;   (asm-instr load32 ?dst ?src)
+	 ;;   (asm-instr load32 ?dst (disp ?objref ?offset))
 	 ;;
 	 ;;here ?DST is written  and ?SRC is read: in the uplevel  code ?DST is dead,
 	 ;;in the  tail code ?DST is  alive; in both  the uplevel code and  tail code
