@@ -82,12 +82,14 @@
 		   ;;FIXME This really needs to be inside the loop.  But why?  Insert
 		   ;;explanation here.  (Marco Maggi; Wed Oct 22, 2014)
 		   (%add-unspillables unspillable.set body)
-		 (let ((G (%build-graph body^)))
+		 (let ((G (%build-interference-graph body^)))
 		   #;(print-graph G)
 		   (receive (spilled* spillable.set^ env)
 		       (%color-graph spillable.set unspillable.set^ G)
 		     (if (null? spilled*)
+			 ;;Finished!
 			 (%substitute-vars-with-associated-locations env body^)
+		       ;;Another iteration is needed.
 		       (let* ((env^   (%assign-stack-locations-to-spilled-vars spilled* x.vars.vec))
 			      (body^^ (%substitute-vars-with-associated-locations env^ body^)))
 			 (loop spillable.set^ unspillable.set^ body^^)))))))))))
@@ -157,7 +159,7 @@
    element->set
    set-member?		empty-set?
    set-add		set-rem
-   set-difference	set-union
+   set-difference	set-union	set-union*
    set->list		list->set
    set-for-each)
 
@@ -233,6 +235,13 @@
 		      (else
 		       ;;(assert (null? element1*))
 		       element2*)))))
+
+  (define-syntax set-union*
+    (syntax-rules ()
+      ((_ ?expr)
+       ?expr)
+      ((_ ?expr ... ?last-expr)
+       (set-union (set-union* ?expr ...) ?last-expr))))
 
   (define-syntax-rule (set-for-each ?func ?set)
     ($for-each/stx ?func (set->list ?set)))
@@ -777,19 +786,20 @@
   #| end of module: %add-unspillables |# )
 
 
-(define* (%build-graph body)
+(define* (%build-interference-graph body)
   ;;Process BODY with a depth-first traversal, visiting the tail branches first, in a
   ;;post-order fashion; while rewinding:
   ;;
-  ;;*  Build  the live  set:  a  SET struct,  as  defined  by the  LISTY-SET  module,
-  ;;  containing all the VAR structs, FVAR structs and CPU register symbol names that
-  ;;  are *read* at least once in the continuation.
+  ;;* Build the live  set: upon entering a code struct the live  set is a SET struct,
+  ;;   as defined  by the  LISTY-SET  module, containing  all the  VAR structs,  FVAR
+  ;;  structs  and CPU register  symbol names  that are *read*  at least once  in the
+  ;;  continuation of the code struct.
   ;;
   ;;* Build the interference graph: a GRAPH  struct, as defined by the GRAPHS module,
   ;;  containing one node for every VAR  struct, FVAR struct and CPU register that is
   ;;  *written* at least  once.  The edges of each node  represent the locations that
   ;;  are  alive when the  node is written:  all the locations  that will be  read at
-  ;;  least once in the continuation.
+  ;;  least once in the continuation of the writing instruction.
   ;;
   ;;Return the GRAPH struct representing the interference graph.
   ;;
@@ -935,8 +945,7 @@
 	 (P test conseq.set altern.set (set-union conseq.set altern.set))))
 
       ((asm-instr op dst src)
-       (set-union (set-union (R dst) (R src))
-		  tail-union.set))
+       (set-union* (R dst) (R src) tail-union.set))
 
       ((shortcut body handler)
        (let ((handler.set (P handler tail-conseq.set tail-altern.set tail-union.set)))
@@ -1108,8 +1117,7 @@
 	   (set-for-each (lambda (live-loc)
 			   (add-edge! THE-GRAPH dst live-loc))
 	     S)
-	   (set-union (set-union (R src) (R dst))
-		      S)))
+	   (set-union* (R src) (R dst) S)))
 
 	((logand logor logxor sll sra srl int+ int- int* bswap! sll/overflow)
 	 ;;We expect X to have the format:
@@ -1172,8 +1180,7 @@
 	   (for-each (lambda (reg)
 		       (add-edge! THE-GRAPH src reg))
 	     NON-8BIT-REGISTERS))
-	 (set-union (set-union (R src) (R dst))
-		    tail.set))
+	 (set-union* (R src) (R dst) tail.set))
 
 	((cltd)
 	 ;;NOTE  CLTD (Convert  Long To  Double)  is the  AT&T conventional  mnemonic
@@ -1240,12 +1247,11 @@
 	 ;;
 	 (let ((S (set-rem eax (set-rem edx tail.set))))
 	   (when (register? eax)
-	     (set-for-each (lambda (y)
-			     (add-edge! THE-GRAPH eax y)
-			     (add-edge! THE-GRAPH edx y))
+	     (set-for-each (lambda (live-loc)
+			     (add-edge! THE-GRAPH eax live-loc)
+			     (add-edge! THE-GRAPH edx live-loc))
 	       S))
-	   (set-union (set-union (R eax) (R edx))
-		      (set-union (R src) S))))
+	   (set-union* (R eax) (R edx) (R src) S)))
 
 	(( ;;some assembly instructions
 	  mset			mset32
@@ -1281,8 +1287,7 @@
 	 ;;
 	 ;;   ?src + ?dst + (tail.set)
 	 ;;
-	 (set-union (R src)
-		    (set-union (R dst) tail.set)))
+	 (set-union* (R src) (R dst) tail.set))
 
 	(else
 	 (compiler-internal-error __module_who__ __who__
