@@ -458,6 +458,11 @@
 	     (unparse-recordized-code x)))))
 
       (define (E-asm-instr op dst src x)
+	;;On any host the CPU has limited addressing capabilities.  When two operands
+	;;require unsupported  addressing: the  instruction has to  be split  in two,
+	;;with the introduction of a temporary variable.  The temporary variable must
+	;;be allocated to a CPU register, and so it is not spillable on the stack.
+	;;
 	(case op
 	  ((load8 load32)
 	   ;;We expect X ot have the format:
@@ -466,15 +471,7 @@
 	   ;;   (asm-instr load32 ?dst (disp ?objref ?offset))
 	   ;;
 	   (assert (disp? src))
-	   (%fix-address src
-			 (lambda (src)
-			   (if (or (register? dst)
-				   (var?      dst))
-			       (make-asm-instr op dst src)
-			     (let ((unspillable (%make-unspillable-var)))
-			       (make-seq
-				 (make-asm-instr op unspillable src)
-				 (E (make-asm-instr 'move dst unspillable))))))))
+	   (E-asm-instr/load op dst src x))
 
 	  ((move
 	    logor		logxor			logand
@@ -622,25 +619,44 @@
 	   (compiler-internal-error __module_who__  __who__
 	     "invalid ASM-INSTR operator" op))))
 
-      (define (%fix-address x kont)
-	;;Non-tail recursive function.
+      (module (E-asm-instr/load)
+	;;We expect X ot have the format:
 	;;
-	(if (disp? x)
-	    (let ((s0 (disp-objref x))
-		  (s1 (disp-offset x)))
-	      (cond ((not (small-operand? s0))
-		     (let ((unspillable (%make-unspillable-var)))
-		       (make-seq
-			 (E (make-asm-instr 'move unspillable s0))
-			 (%fix-address (make-disp unspillable s1) kont))))
-		    ((not (small-operand? s1))
-		     (let ((unspillable (%make-unspillable-var)))
-		       (make-seq
-			 (E (make-asm-instr 'move unspillable s1))
-			 (%fix-address (make-disp s0 unspillable) kont))))
-		    (else
-		     (kont x))))
-	  (kont x)))
+	;;   (asm-instr load8  ?dst (disp ?objref ?offset))
+	;;   (asm-instr load32 ?dst (disp ?objref ?offset))
+	;;
+	(define (E-asm-instr/load op dst src x)
+	  (%fix-disp-address src
+			     (lambda (src)
+			       (if (or (register? dst)
+				       (var?      dst))
+				   (make-asm-instr op dst src)
+				 (let ((unspillable (%make-unspillable-var)))
+				   (make-seq
+				     (make-asm-instr op unspillable src)
+				     (E (make-asm-instr 'move dst unspillable))))))))
+
+	(define (%fix-disp-address src kont)
+	  ;;Non-tail recursive function.
+	  ;;
+	  (if (disp? src)
+	      (let ((src.objref (disp-objref src))
+		    (src.offset (disp-offset src)))
+		(cond ((not (small-operand? src.objref))
+		       (let ((unspillable (%make-unspillable-var)))
+			 (make-seq
+			   (E (make-asm-instr 'move unspillable src.objref))
+			   (%fix-disp-address (make-disp unspillable src.offset) kont))))
+		      ((not (small-operand? src.offset))
+		       (let ((unspillable (%make-unspillable-var)))
+			 (make-seq
+			   (E (make-asm-instr 'move unspillable src.offset))
+			   (%fix-disp-address (make-disp src.objref unspillable) kont))))
+		      (else
+		       (kont src))))
+	    (kont src)))
+
+	#| end of module: E-asm-instr/load |# )
 
       #| end of module: E |# )
 
