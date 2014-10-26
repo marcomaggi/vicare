@@ -675,24 +675,25 @@
 					(unparse-recordised-code/sexp x)))))))
 
 	(define (%fix-disp-address src kont)
-	  ;;Non-tail recursive function.
+	  ;;Non-tail recursive  function.  Introduce the MOVE  instructions needed to
+	  ;;transform a complex SRC argument into a simple one.
 	  ;;
-	  (if (disp? src)
-	      (let ((src.objref (disp-objref src))
-		    (src.offset (disp-offset src)))
-		(cond ((not (small-operand? src.objref))
-		       (let ((unspillable (%make-unspillable-var)))
-			 (make-seq
-			   (E (make-asm-instr 'move unspillable src.objref))
-			   (%fix-disp-address (make-disp unspillable src.offset) kont))))
-		      ((not (small-operand? src.offset))
-		       (let ((unspillable (%make-unspillable-var)))
-			 (make-seq
-			   (E (make-asm-instr 'move unspillable src.offset))
-			   (%fix-disp-address (make-disp src.objref unspillable) kont))))
-		      (else
-		       (kont src))))
-	    (kont src)))
+	  (struct-case src
+	    ((disp objref offset)
+	     (cond ((not (small-operand? objref))
+		    (let ((unspillable (%make-unspillable-var)))
+		      (make-seq
+			(E (make-asm-instr 'move unspillable objref))
+			(%fix-disp-address (make-disp unspillable offset) kont))))
+		   ((not (small-operand? offset))
+		    (let ((unspillable (%make-unspillable-var)))
+		      (make-seq
+			(E (make-asm-instr 'move unspillable offset))
+			(%fix-disp-address (make-disp objref unspillable) kont))))
+		   (else
+		    (kont src))))
+	    (else
+	     (kont src))))
 
 	#| end of module: E-asm-instr/load |# )
 
