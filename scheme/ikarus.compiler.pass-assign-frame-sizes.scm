@@ -1755,13 +1755,16 @@
 ;;; --------------------------------------------------------------------
 
     (define (mark-var/var-move! x y)
+      ;;Add preferende edges.
       ($set-var-var-move! x (add-var y ($var-var-move x)))
       ($set-var-var-move! y (add-var x ($var-var-move y))))
 
     (define (mark-var/frm-move! x y)
+      ;;Add preferende edge.
       ($set-var-frm-move! x (add-frm y ($var-frm-move x))))
 
     (define (mark-var/reg-move! x y)
+      ;;Add preferende edge.
       ($set-var-reg-move! x (add-reg y ($var-reg-move x))))
 
     #| end of module: E-asm-instr |# )
