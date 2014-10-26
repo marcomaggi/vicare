@@ -1896,15 +1896,15 @@
 		;*  When a  gensym: this  call is  a  jump to  the entry  point of  a
 		;  combinator function.
    retval-var
-		;False, VAR or NFV struct:
+		;False, VAR, NFV or FVAR struct:
 		;
 		;* When  false: it means  the return value  of this function  call is
 		;  discarded; this function call is performed for its side effects.
 		;
 		;* When  non-false: it  represents the location  to which  the return
 		;   value of  the  function call  must be  stored:  first the  callee
-		;  function stores its return value into the AA-REGISTER, then caller
-		;  moves it into RETVAL-VAR.
+		;  function  stores its return  value into the AA-REGISTER,  then the
+		;  caller moves it into RETVAL-VAR.
 		;
 		;When the function returns a single value: the return value stored in
 		;RETVAL-VAR  is  the  actually  returned  Scheme  object.   When  the
@@ -1921,6 +1921,13 @@
 		;register names being  the register operands; RAND*.NFV is  a list of
 		;NFV structs representing locations on the Scheme stack that hold the
 		;stack operands.
+		;
+		;After  the  pass "assign  frame  sizes":  the  list of  NFV  structs
+		;RAND*.NFV is replaced  by the list of FVAR  structs representing the
+		;actual stack locations:
+		;
+		;   (AAR APR CPR FPR PCR . rand*.fvar)
+		;
    mask
 		;False or the  livemask vector used to build the  non-tail call table
 		;describing the stack frame.

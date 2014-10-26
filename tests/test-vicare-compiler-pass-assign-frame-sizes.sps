@@ -305,15 +305,17 @@
 		(conditional (asm-instr u< %esp (disp %esi (constant 32)))
 		    (asmcall interrupt)
 		  (asmcall nop))
-	      (non-tail-call-frame (rand*: #f) (live: #f)
-				   (seq
-				     (asm-instr move %edi
-						(constant (foreign-label "ik_stack_overflow")))
-				     (asm-instr move %eax (constant 0))
-				     (non-tail-call (target: "ik_stack_overflow")
-						    (retval-var: #f)
-						    (all-rand*: %eax %ebp %edi %esp %esi)
-						    (mask: #f) (size: #f)))))
+	      (non-tail-call-frame
+		(rand*: #f)
+		(live: #f)
+		(seq
+		  (asm-instr move %edi (constant (foreign-label "ik_stack_overflow")))
+		  (asm-instr move %eax (constant 0))
+		  (non-tail-call
+		    (target: "ik_stack_overflow")
+		    (retval-var: #f)
+		    (all-rand*: %eax %ebp %edi %esp %esi)
+		    (mask: #f) (size: #f)))))
 	    ;;Core primitive operation $DO-EVENT.
 	    (shortcut
 		(asmcall incr/zero? %esi (constant 72) (constant 8))
@@ -459,7 +461,7 @@
 	    (asm-instr move %eax (constant -8))
 	    (non-tail-call
 	      (target: asmlabel:g:clambda:case-1)
-	      (retval-var: (nfv.1_0 . fvar.2))
+	      (retval-var: fvar.2)
 	      (all-rand*: %eax %ebp %edi %esp %esi fvar.2)
 	      (mask: #(0))
 	      (size: 1))
@@ -849,7 +851,7 @@
 	    (asm-instr move %eax (constant -8))
 	    (non-tail-call
 	      (target: asmlabel:g:clambda:case-1)
-	      (retval-var: (nfv.1_0 . fvar.2))
+	      (retval-var: fvar.2)
 	      (all-rand*: %eax %ebp %edi %esp %esi fvar.2)
 	      (mask: #(0))
 	      (size: 1))
@@ -882,7 +884,7 @@
 	    (asm-instr move %eax (constant -8))
 	    (non-tail-call
 	      (target: asmlabel:h:clambda:case-1)
-	      (retval-var: (nfv.2_0 . fvar.3))
+	      (retval-var: fvar.3)
 	      (all-rand*: %eax %ebp %edi %esp %esi fvar.4)
 	      (mask: #(4))
 	      (size: 3))

@@ -2038,13 +2038,28 @@
 	   (let ((e0^ (E e0)))
 	     (make-seq e0^ (NFE stack-frame-size mask e1))))
 	  ((non-tail-call target retval-location all-rand*)
-	   (make-non-tail-call target retval-location
+	   (make-non-tail-call target
+			       ;;If  the  return  value  location is  a  NFV  struct:
+			       ;;replace it with the associated FVAR struct.
+			       (cond ((nfv? retval-location)
+				      (assert (nfv-loc retval-location))
+				      ($nfv-loc retval-location))
+				     ((or (var?      retval-location)
+					  (register? retval-location))
+				      retval-location)
+				     ((not retval-location)
+				      retval-location)
+				     (else
+				      (compiler-internal-error __module_who__ __who__
+					"invalid return value location in NON-TAIL-CALL struct"
+					(unparse-recordised-code/sexp retval-location))))
 			       ;;Replace all the NFV  structs in ALL-RAND* with their
 			       ;;assigned location.
 			       (map (lambda (x)
 				      (cond ((register? x)
 					     x)
 					    ((nfv? x)
+					     (assert (nfv-loc x))
 					     ($nfv-loc x))
 					    (else
 					     (compiler-internal-error __module_who__ __who__
