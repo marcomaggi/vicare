@@ -156,6 +156,8 @@
   ;;   nop			interrupt		incr/zero?
   ;;   fl:double->single	fl:single->double
   ;;
+  ;;NOTE The returned code does not contain NFV structs anymore.
+  ;;
   (define-syntax __module_who__
     (identifier-syntax 'assign-frame-sizes))
 
@@ -1783,6 +1785,8 @@
   ;;The  argument LOCALS.VARS  is  a vector  of VAR  structs  representing the  local
   ;;variables in LOCALS.BODY.   The slot index of each VAR  in LOCALS.VARS equals the
   ;;value of the INDEX of the VAR struct itself.
+  ;;
+  ;;NOTE The returned code does not contain NFV structs anymore.
   ;;
   ;;NOTE A  lot of  functions are  nested here because  they need  to close  upon the
   ;;argument LOCALS.VARS.

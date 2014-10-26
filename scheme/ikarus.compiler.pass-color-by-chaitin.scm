@@ -22,9 +22,8 @@
   ;;
   ;;   asm-instr	code-loc	conditional
   ;;   constant		disp		fvar
-  ;;   locals		nfv		non-tail-call
+  ;;   locals		non-tail-call	var
   ;;   asmcall		seq		shortcut
-  ;;   var
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
@@ -479,9 +478,9 @@
 	    int+/overflow	int-/overflow		int*/overflow)
 	   ;;We expect X to have the format:
 	   ;;
-	   ;;   (asm-instr move   ?reg ?src)
-	   ;;   (asm-instr move   ?var ?src)
-	   ;;   (asm-instr move   ?nfv ?src)
+	   ;;   (asm-instr move ?reg  ?src)
+	   ;;   (asm-instr move ?var  ?src)
+	   ;;   (asm-instr move ?fvar ?src)
 	   ;;
 	   (cond ((and (eq? op 'move)
 		       (eq? dst src))
@@ -658,7 +657,7 @@
 					  (E (make-asm-instr 'move dst unspillable)))))
 				     (else
 				      (compiler-internal-error __module_who__ __who__
-					"invalid destination operand, expected VAR, NFV or register"
+					"invalid destination operand, expected VAR, FVAR or register"
 					(unparse-recordised-code/sexp x)))))))
 
 	(define (%fix-disp-address src kont)
@@ -1509,9 +1508,6 @@
 	 (R-var x))
 	((fvar)
 	 x)
-	((nfv unused.idx loc)
-	 #;(assert (fvar? loc))
-	 loc)
 	((disp objref offset)
 	 (make-disp (R-disp objref) (R-disp offset)))
 	(else
