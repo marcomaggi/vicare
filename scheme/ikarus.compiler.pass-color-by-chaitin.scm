@@ -622,28 +622,47 @@
 	;;   (asm-instr load32 ?var  (disp ?objref ?offset))
 	;;   (asm-instr load32 ?fvar (disp ?objref ?offset))
 	;;
-	;;we cannot generate machine code, for example, for:
+	;;There are cases for which we cannot directly generate machine code:
 	;;
-	;;   (asm-instr load8 ?fvar (disp ?objref.src ?offset.src))
+	;;* In the case of destination operand being a stack slot:
 	;;
-	;;because both  the operands  would be  memory references,  so we  split such
-	;;ASM-INSTR into:
+	;;     (asm-instr load8 ?fvar (disp ?objref ?offset))
 	;;
-	;;   (asm-instr load8 ?var.tmp (disp ?objref.src ?offset.src))
-	;;   (asm-instr move  ?fvar ?var.tmp)
+	;;  both the operands would be memory  references and this is not a supported
+	;;  operation; so we split such ASM-INSTR into:
 	;;
-	;;where ?VAR.TMP  is a VAR  struct, representing a temporary  location, which
-	;;must be allocated to  a CPU register and so it is  unspillable.  We do this
-	;;kind of processing  recursively, introducing all the  needed temporary VAR,
-	;;until every generated instruction is simple enough.
+	;;     (asm-instr load8 ?var.tmp (disp ?objref ?offset))
+	;;     (asm-instr move  ?fvar ?var.tmp)
+	;;
+	;;  where ?VAR.TMP is a VAR  struct, representing a temporary location, which
+	;;  must be allocated to a CPU register and so it is unspillable.  We do this
+	;;  kind of processing recursively, introducing all the needed temporary VAR,
+	;;  until every generated instruction is simple enough.
+	;;
+	;;* If ?objref and/or ?offset are not "small operands" we split the ASM-INSTR
+	;;  into:
+	;;
+	;;     (asm-instr move  ?var.tmp ?objref)
+	;;     (asm-instr load8 ?dst     (disp ?var.tmp ?offset))
+	;;
+	;;  or:
+	;;
+	;;     (asm-instr move  ?var.tmp ?offset)
+	;;     (asm-instr load8 ?dst     (disp ?objref ?var.tmp))
+	;;
+	;;  or:
+	;;
+	;;     (asm-instr move  ?var1.tmp ?objref)
+	;;     (asm-instr move  ?var2.tmp ?offset)
+	;;     (asm-instr load8 ?dst      (disp ?var1.tmp ?var2.tmp))
+	;;
 	;;
 	(define (E-asm-instr/load op dst src x)
-	  (assert (or (var? dst) (fvar? dst)))
-	  (assert (disp? src))
+	  #;(assert (or (var? dst) (fvar? dst)))
+	  #;(assert (disp? src))
 	  (%fix-disp-address src
 			     (lambda (src)
-			       (cond ((or (register? dst)
-					  (var?      dst))
+			       (cond ((var?  dst)
 				      (make-asm-instr op dst src))
 				     ((fvar? dst)
 				      (let ((unspillable (%make-unspillable-var)))
@@ -652,7 +671,7 @@
 					  (E (make-asm-instr 'move dst unspillable)))))
 				     (else
 				      (compiler-internal-error __module_who__ __who__
-					"invalid destination operand, expected VAR, FVAR or register"
+					"invalid destination operand, expected VAR or FVAR"
 					(unparse-recordised-code/sexp x)))))))
 
 	(define (%fix-disp-address src kont)
