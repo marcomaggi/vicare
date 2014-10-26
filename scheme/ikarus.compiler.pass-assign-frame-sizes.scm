@@ -702,8 +702,10 @@
    add-interference-edge!/nfv->var
 
    merge-interference-edges!/var->fvar
+   merge-interference-edges!/var->reg
+   merge-interference-edges!/var->var
    merge-interference-edges!/nfv->fvar
-   merge-interference-edges!/var->reg)
+   merge-interference-edges!/nfv->var)
   (import INTEGER-SET)
   (module (register?)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
@@ -920,11 +922,17 @@
   (define* (merge-interference-edges!/var->fvar {src.var var?} set.fvar)
     ($set-var-frm-conf! src.var (union-frms set.fvar ($var-frm-conf src.var))))
 
+  (define* (merge-interference-edges!/var->reg  {src.var var?} set.reg)
+    ($set-var-reg-conf! src.var (union-regs set.reg  ($var-reg-conf src.var))))
+
+  (define* (merge-interference-edges!/var->var  {src.var var?} set.var)
+    ($set-var-var-conf! src.var (union-vars set.var  ($var-var-conf src.var))))
+
+  (define* (merge-interference-edges!/nfv->var  {src.nfv nfv?} set.var)
+    ($set-nfv-var-conf! src.nfv (union-vars set.var  ($nfv-var-conf src.nfv))))
+
   (define* (merge-interference-edges!/nfv->fvar {src.nfv nfv?} set.fvar)
     ($set-nfv-frm-conf! src.nfv (union-frms set.fvar ($nfv-frm-conf src.nfv))))
-
-  (define* (merge-interference-edges!/var->reg  {src.var var?} set.reg)
-    ($set-var-reg-conf! src.var (union-regs set.reg ($var-reg-conf src.var))))
 
   #| end of module: FRAME-CONFLICT-SETS |# )
 
@@ -1682,10 +1690,12 @@
 	  vs locals.vars
 	(lambda (w)
 	  (add-interference-edge!/var->var w v)))
-      ($set-var-var-conf! v (union-vars vs ($var-var-conf v))))
+      #;($set-var-var-conf! v (union-vars vs ($var-var-conf v)))
+      (merge-interference-edges!/var->var v vs))
 
     (define (mark-nfv/vars-conf! n vs)
-      ($set-nfv-var-conf! n (union-vars vs ($nfv-var-conf n))))
+      #;($set-nfv-var-conf! n (union-vars vs ($nfv-var-conf n)))
+      (merge-interference-edges!/nfv->var n vs))
 
 ;;; --------------------------------------------------------------------
 
@@ -1704,21 +1714,15 @@
 ;;; --------------------------------------------------------------------
 
     (define (mark-var/frms-conf! v fs)
-      (merge-interference-edges!/var->fvar v fs)
-      #;($set-var-frm-conf! v (union-frms fs ($var-frm-conf v)))
-      )
+      (merge-interference-edges!/var->fvar v fs))
 
     (define (mark-nfv/frms-conf! n fs)
-      (merge-interference-edges!/nfv->fvar n fs)
-      #;($set-nfv-frm-conf! n (union-frms fs ($nfv-frm-conf n)))
-      )
+      (merge-interference-edges!/nfv->fvar n fs))
 
 ;;; --------------------------------------------------------------------
 
     (define (mark-var/regs-conf! v rs)
-      (merge-interference-edges!/var->reg v rs)
-      #;($set-var-reg-conf! v (union-regs rs ($var-reg-conf v)))
-      )
+      (merge-interference-edges!/var->reg v rs))
 
 ;;; --------------------------------------------------------------------
 
