@@ -464,12 +464,6 @@
 	;;
 	(case op
 	  ((load8 load32)
-	   ;;We expect X ot have the format:
-	   ;;
-	   ;;   (asm-instr load8  ?dst (disp ?objref ?offset))
-	   ;;   (asm-instr load32 ?dst (disp ?objref ?offset))
-	   ;;
-	   (assert (disp? src))
 	   (E-asm-instr/load op dst src x))
 
 	  ((move
@@ -645,6 +639,7 @@
 	;;
 	(define (E-asm-instr/load op dst src x)
 	  (assert (or (var? dst) (fvar? dst)))
+	  (assert (disp? src))
 	  (%fix-disp-address src
 			     (lambda (src)
 			       (cond ((or (register? dst)
