@@ -2015,17 +2015,20 @@
 	    (for-each-var
 		($nfv-var-conf rand.nfv)
 		locals.vars
-	      (lambda (x)
-		;;X  is a  VAR struct  from LOCALS.VARS  that is  alive while  we are
-		;;putting the value of RAND.NFV on the stack.
-		(let ((loc ($var-loc x)))
+	      (lambda (live-var)
+		;;LIVE-VAR is  a VAR struct from  LOCALS.VARS that is alive  while we
+		;;are putting the value of RAND.NFV on the stack.
+		(let ((loc ($var-loc live-var)))
 		  (if (fvar? loc)
-		      ;;If X is assigned to the same FVAR of RAND.NFV: we have made a
-		      ;;mistake; otherwise there is no conflict.
+		      ;;If the LIVE-VAR is assigned to  the same FVAR of RAND.NFV: we
+		      ;;have made a mistake.
 		      (when (fx=? (fvar-idx loc) idx)
 			(compiler-internal-error __module_who__ __who__ "invalid assignment"))
 		    (begin
-		      ($set-var-frm-conf! x (add-frm rand.fvar ($var-frm-conf x)))))))))
+		      ;;The  VAR is  already has  in its  interference edges  the NFV
+		      ;;struct; now  we add an  interference edge for  the associated
+		      ;;FVAR struct.
+		      ($set-var-frm-conf! live-var (add-frm rand.fvar ($var-frm-conf live-var)))))))))
 	  (%assign-frame-locations-to-stack-operands! (cdr rand*.nfv) (fxadd1 idx))))
 
 ;;; --------------------------------------------------------------------
