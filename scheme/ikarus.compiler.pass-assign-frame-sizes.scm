@@ -686,7 +686,8 @@
 
 
 (module FRAME-CONFLICT-SETS
-  (init-var*! init-nfv!
+  (init-var*!
+   init-nfv!
    empty-var-set rem-var add-var union-vars mem-var? for-each-var
    empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv
    empty-frm-set rem-frm add-frm union-frms mem-frm?
@@ -698,8 +699,14 @@
 
    add-interference-edge!/nfv->fvar
    add-interference-edge!/nfv->nfv
-   add-interference-edge!/nfv->var)
+   add-interference-edge!/nfv->var
+
+   merge-interference-edges!/var->fvar
+   merge-interference-edges!/nfv->fvar
+   merge-interference-edges!/var->reg)
   (import INTEGER-SET)
+  (module (register?)
+    (import INTEL-ASSEMBLY-CODE-GENERATION))
 
   (module (init-var*!)
 
@@ -888,25 +895,36 @@
 ;;; --------------------------------------------------------------------
 ;;; interference edges
 
-  (define (add-interference-edge!/var->reg  src.var dst.reg)
+  (define* (add-interference-edge!/var->reg  {src.var var?} {dst.reg register?})
     ($set-var-reg-conf! src.var (add-reg dst.reg  ($var-reg-conf src.var))))
 
-  (define (add-interference-edge!/var->fvar src.var dst.fvar)
+  (define* (add-interference-edge!/var->fvar {src.var var?} {dst.fvar fvar?})
     ($set-var-frm-conf! src.var (add-frm dst.fvar ($var-frm-conf src.var))))
 
-  (define (add-interference-edge!/var->var  src.var dst.var)
+  (define* (add-interference-edge!/var->var  {src.var var?} {dst.var var?})
     ($set-var-var-conf! src.var (add-var dst.var  ($var-var-conf src.var))))
 
 ;;;
 
-  (define (add-interference-edge!/nfv->nfv  src.nfv dst.nfv)
+  (define* (add-interference-edge!/nfv->nfv  {src.nfv nfv?} {dst.nfv nfv?})
     ($set-nfv-nfv-conf! src.nfv (add-reg dst.nfv  ($nfv-nfv-conf src.nfv))))
 
-  (define (add-interference-edge!/nfv->fvar src.nfv dst.fvar)
+  (define* (add-interference-edge!/nfv->fvar {src.nfv nfv?} {dst.fvar fvar?})
     ($set-nfv-frm-conf! src.nfv (add-frm dst.fvar ($nfv-frm-conf src.nfv))))
 
-  (define (add-interference-edge!/nfv->var  src.nfv dst.var)
+  (define* (add-interference-edge!/nfv->var  {src.nfv nfv?} {dst.var var?})
     ($set-nfv-var-conf! src.nfv (add-var dst.var  ($nfv-var-conf src.nfv))))
+
+;;;
+
+  (define* (merge-interference-edges!/var->fvar {src.var var?} set.fvar)
+    ($set-var-frm-conf! src.var (union-frms set.fvar ($var-frm-conf src.var))))
+
+  (define* (merge-interference-edges!/nfv->fvar {src.nfv nfv?} set.fvar)
+    ($set-nfv-frm-conf! src.nfv (union-frms set.fvar ($nfv-frm-conf src.nfv))))
+
+  (define* (merge-interference-edges!/var->reg  {src.var var?} set.reg)
+    ($set-var-reg-conf! src.var (union-regs set.reg ($var-reg-conf src.var))))
 
   #| end of module: FRAME-CONFLICT-SETS |# )
 
@@ -1675,30 +1693,32 @@
       (for-each-nfv
 	  ns
 	(lambda (n)
-	  (add-interference-edge!/nfv->fvar n f)
-	  #;($set-nfv-frm-conf! n (add-frm f ($nfv-frm-conf n)))
-	  )))
+	  (add-interference-edge!/nfv->fvar n f))))
 
     (define (mark-var/nfvs-conf! v ns)
       (for-each-nfv
 	  ns
 	(lambda (n)
-	  (add-interference-edge!/nfv->var n v)
-	  #;($set-nfv-var-conf! n (add-var v ($nfv-var-conf n)))
-	  )))
+	  (add-interference-edge!/nfv->var n v))))
 
 ;;; --------------------------------------------------------------------
 
     (define (mark-var/frms-conf! v fs)
-      ($set-var-frm-conf! v (union-frms fs ($var-frm-conf v))))
+      (merge-interference-edges!/var->fvar v fs)
+      #;($set-var-frm-conf! v (union-frms fs ($var-frm-conf v)))
+      )
 
     (define (mark-nfv/frms-conf! n fs)
-      ($set-nfv-frm-conf! n (union-frms fs ($nfv-frm-conf n))))
+      (merge-interference-edges!/nfv->fvar n fs)
+      #;($set-nfv-frm-conf! n (union-frms fs ($nfv-frm-conf n)))
+      )
 
 ;;; --------------------------------------------------------------------
 
     (define (mark-var/regs-conf! v rs)
-      ($set-var-reg-conf! v (union-regs rs ($var-reg-conf v))))
+      (merge-interference-edges!/var->reg v rs)
+      #;($set-var-reg-conf! v (union-regs rs ($var-reg-conf v)))
+      )
 
 ;;; --------------------------------------------------------------------
 
