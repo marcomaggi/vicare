@@ -2568,7 +2568,8 @@
 	 (interrupt))
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
-	 (asm 'bref (V-simple-operand flo)
+	 (asm 'bref
+	      (V-simple-operand flo)
 	      (K (fx+ (fx- 7 offset.val) off-flonum-data))))))
       ((known offset.expr)
        (cogen-value-$flonum-u8-ref flo offset.expr))
@@ -4150,9 +4151,10 @@
        ;;which, when evaluated, must return a fixnum.
        (prm-tag-as-fixnum
 	(prm-isolate-least-significant-byte
-	 (asm 'bref (V-simple-operand bv) (asm 'int+
-				(prm-UNtag-as-fixnum (V-simple-operand idx))
-				(K off-bytevector-data))))))))
+	 (asm 'bref (V-simple-operand bv)
+	      (asm 'int+
+		   (prm-UNtag-as-fixnum (V-simple-operand idx))
+		   (K off-bytevector-data))))))))
    ((P bv idx)
     (K #t))
    ((E bv idx)
@@ -4196,9 +4198,11 @@
 	 ;;so that  the most  significant bit  is extended  to correctly
 	 ;;represent the sign in the returned fixnum.
 	 (%extend-sign
-	  (asm 'bref (V-simple-operand bv) (asm 'int+
-				 (prm-UNtag-as-fixnum (V-simple-operand idx))
-				 (K off-bytevector-data))))
+	  (asm 'bref
+	       (V-simple-operand bv)
+	       (asm 'int+
+		    (prm-UNtag-as-fixnum (V-simple-operand idx))
+		    (K off-bytevector-data))))
 	 ))))
    ((P bv idx)
     (K #t))
@@ -5079,7 +5083,8 @@
    ((V code idx)
     (prm-tag-as-fixnum
      (prm-isolate-least-significant-byte
-      (asm 'bref (V-simple-operand code)
+      (asm 'bref
+	   (V-simple-operand code)
 	   (asm 'int+ (prm-UNtag-as-fixnum (V-simple-operand idx))
 		(K off-code-data)))))))
 

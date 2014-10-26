@@ -1031,15 +1031,12 @@
   (define (main body)
     ;;Return the spill set.  The VS, RS, FS, NS gathered up to here are discarded.
     ;;
-    (debug-print* 'locals.body (unparse-recordised-code/sexp body))
+    #;(debug-print* 'locals.body (unparse-recordised-code/sexp body))
     (receive (vs rs fs ns)
 	(T body)
-      (debug-print* 'VARs  vs
-		    'REGs  rs
-		    'FVARs fs
-		    'NFVs  ns)
+      #;(debug-print* 'VARs vs 'REGs rs 'FVARs fs 'NFVs  ns)
       (void))
-    (debug-print* 'spill-set spill-set)
+    #;(debug-print* 'spill-set spill-set)
     spill-set)
 
 ;;; --------------------------------------------------------------------
@@ -1355,9 +1352,13 @@
     (define* (E-asm-instr/move x op dst src vs rs fs ns)
       ;;We expect the ASM-INSTR struct to have one of the formats:
       ;;
-      ;;   (asm-instr move   ?dst ?src)
-      ;;   (asm-instr load8  ?dst (disp ?objref ?offset))
-      ;;   (asm-instr load32 ?dst (disp ?objref ?offset))
+      ;;   (asm-instr move   ?reg ?src)
+      ;;   (asm-instr move   ?var ?src)
+      ;;   (asm-instr move   ?nfv ?src)
+      ;;   (asm-instr load8  ?var (disp ?objref ?offset))
+      ;;   (asm-instr load8  ?nfv (disp ?objref ?offset))
+      ;;   (asm-instr load32 ?var (disp ?objref ?offset))
+      ;;   (asm-instr load32 ?nfv (disp ?objref ?offset))
       ;;
       ;;Return  4 values  being the  sets  VS, RS,  FS, NS  updated with  information
       ;;representing the operands DST and SRC.

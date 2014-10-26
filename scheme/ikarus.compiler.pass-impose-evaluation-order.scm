@@ -74,7 +74,7 @@
   ;;returned to  the caller; such  structures will  be processed in  further compiler
   ;;passes.  But *no* FVAR and NFV structs are present in the input recordised code.
   ;;
-  (module (argc-convention
+  (module (argc-convention register?
 	   eax ecx edx
 	   AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
@@ -676,6 +676,7 @@
        ;;
        (S* rand*
 	 (lambda (rand*)
+	   #;(assert (or (var? dst) (register? dst) (nfv? dst)))
 	   (%move-dst<-src dst (make-disp (car rand*) (cadr rand*))))))
 
       ((mref32)
@@ -686,16 +687,18 @@
        ;;MREF32 is used, for example, to extract single characters from a string.
        (S* rand*
 	 (lambda (rand*)
+	   #;(assert (or (var? dst) (nfv? dst)))
 	   (make-asm-instr 'load32 dst (make-disp (car rand*) (cadr rand*))))))
 
       ((bref)
        ;;We expect X to have the format:
        ;;
-       ;;   (asmcall bref (?operand-referencing-scheme-objet ?offset))
+       ;;   (asmcall bref (?operand-referencing-scheme-object ?offset))
        ;;
        ;;BREF is used, for example, to extract single bytes from a bytevector.
        (S* rand*
 	 (lambda (rand*)
+	   #;(assert (or (var? dst) (nfv? dst)))
 	   (make-asm-instr 'load8 dst (make-disp (car rand*) (cadr rand*))))))
 
       ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)

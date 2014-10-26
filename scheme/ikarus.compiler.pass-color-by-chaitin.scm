@@ -479,7 +479,9 @@
 	    int+/overflow	int-/overflow		int*/overflow)
 	   ;;We expect X to have the format:
 	   ;;
-	   ;;   (asm-instr move   ?dst ?src)
+	   ;;   (asm-instr move   ?reg ?src)
+	   ;;   (asm-instr move   ?var ?src)
+	   ;;   (asm-instr move   ?nfv ?src)
 	   ;;
 	   (cond ((and (eq? op 'move)
 		       (eq? dst src))
@@ -620,21 +622,44 @@
 	     "invalid ASM-INSTR operator" op))))
 
       (module (E-asm-instr/load)
-	;;We expect X ot have the format:
+	;;We expect X to have the format:
 	;;
-	;;   (asm-instr load8  ?dst (disp ?objref ?offset))
-	;;   (asm-instr load32 ?dst (disp ?objref ?offset))
+	;;   (asm-instr load8  ?var  (disp ?objref ?offset))
+	;;   (asm-instr load8  ?fvar (disp ?objref ?offset))
+	;;   (asm-instr load32 ?var  (disp ?objref ?offset))
+	;;   (asm-instr load32 ?fvar (disp ?objref ?offset))
+	;;
+	;;we cannot generate machine code, for example, for:
+	;;
+	;;   (asm-instr load8 ?fvar (disp ?objref.src ?offset.src))
+	;;
+	;;because both  the operands  would be  memory references,  so we  split such
+	;;ASM-INSTR into:
+	;;
+	;;   (asm-instr load8 ?var.tmp (disp ?objref.src ?offset.src))
+	;;   (asm-instr move  ?fvar ?var.tmp)
+	;;
+	;;where ?VAR.TMP  is a VAR  struct, representing a temporary  location, which
+	;;must be allocated to  a CPU register and so it is  unspillable.  We do this
+	;;kind of processing  recursively, introducing all the  needed temporary VAR,
+	;;until every generated instruction is simple enough.
 	;;
 	(define (E-asm-instr/load op dst src x)
+	  (assert (or (var? dst) (fvar? dst)))
 	  (%fix-disp-address src
 			     (lambda (src)
-			       (if (or (register? dst)
-				       (var?      dst))
-				   (make-asm-instr op dst src)
-				 (let ((unspillable (%make-unspillable-var)))
-				   (make-seq
-				     (make-asm-instr op unspillable src)
-				     (E (make-asm-instr 'move dst unspillable))))))))
+			       (cond ((or (register? dst)
+					  (var?      dst))
+				      (make-asm-instr op dst src))
+				     ((fvar? dst)
+				      (let ((unspillable (%make-unspillable-var)))
+					(make-seq
+					  (make-asm-instr op unspillable src)
+					  (E (make-asm-instr 'move dst unspillable)))))
+				     (else
+				      (compiler-internal-error __module_who__ __who__
+					"invalid destination operand, expected VAR, NFV or register"
+					(unparse-recordised-code/sexp x)))))))
 
 	(define (%fix-disp-address src kont)
 	  ;;Non-tail recursive function.
@@ -773,39 +798,9 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (mem? x)
-    (or (disp? x) (fvar? x)))
-
-  (module (long-imm? small-operand?)
-
-    (define (long-imm? x)
-      ;;Return true  if X  represents a  constant signed  integer too  big to  fit in
-      ;;32-bit.
-      ;;
-      (struct-case x
-	((constant n)
-	 (cond ((integer? n)
-		(not (<= MIN-SIGNED-32-BIT-INTEGER
-			 n
-			 MAX-SIGNED-32-BIT-INTEGER)))
-	       (else #t)))
-	(else #f)))
-
-    (define (small-operand? x)
-      (boot.case-word-size
-       ((32)
-	(not (mem? x)))
-       ((64)
-	(struct-case x
-	  ((constant n)
-	   (if (integer? n)
-	       (<= MIN-SIGNED-32-BIT-INTEGER
-		   n
-		   MAX-SIGNED-32-BIT-INTEGER)
-	     #f))
-	  (else
-	   (or (register? x)
-	       (var?      x)))))))
+  (module SIGNED-32-BIT-INTEGER-LIMITS
+    (MIN-SIGNED-32-BIT-INTEGER
+     MAX-SIGNED-32-BIT-INTEGER)
 
     (define-inline-constant MIN-SIGNED-32-BIT-INTEGER
       (- (expt 2 31)))
@@ -813,9 +808,44 @@
     (define-inline-constant MAX-SIGNED-32-BIT-INTEGER
       (- (expt 2 31) 1))
 
-    #| end of module |# )
+    #| end of module: SIGNED-32-BIT-INTEGER-LIMITS |# )
 
-  #| end of module: %add-unspillables |# )
+;;; --------------------------------------------------------------------
+
+  (define (mem? x)
+    (or (disp? x) (fvar? x)))
+
+  (define (long-imm? x)
+    ;;Return true if X represents a constant signed integer too big to fit in 32-bit.
+    ;;
+    (import SIGNED-32-BIT-INTEGER-LIMITS)
+    (struct-case x
+      ((constant n)
+       (cond ((integer? n)
+	      (not (<= MIN-SIGNED-32-BIT-INTEGER
+		       n
+		       MAX-SIGNED-32-BIT-INTEGER)))
+	     (else #t)))
+      (else #f)))
+
+  (define (small-operand? x)
+    (import SIGNED-32-BIT-INTEGER-LIMITS)
+    (boot.case-word-size
+     ((32)
+      (not (mem? x)))
+     ((64)
+      (struct-case x
+	((constant n)
+	 (if (integer? n)
+	     (<= MIN-SIGNED-32-BIT-INTEGER
+		 n
+		 MAX-SIGNED-32-BIT-INTEGER)
+	   #f))
+	(else
+	 (or (register? x)
+	     (var?      x)))))))
+
+  #| end of module: %ADD-UNSPILLABLES |# )
 
 
 (define* (%build-interference-graph body)
