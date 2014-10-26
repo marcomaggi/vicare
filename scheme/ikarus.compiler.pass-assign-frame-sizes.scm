@@ -690,7 +690,15 @@
    empty-var-set rem-var add-var union-vars mem-var? for-each-var
    empty-nfv-set rem-nfv add-nfv union-nfvs mem-nfv? for-each-nfv
    empty-frm-set rem-frm add-frm union-frms mem-frm?
-   empty-reg-set rem-reg add-reg union-regs mem-reg?)
+   empty-reg-set rem-reg add-reg union-regs mem-reg?
+
+   add-interference-edge!/var->fvar
+   add-interference-edge!/var->reg
+   add-interference-edge!/var->var
+
+   add-interference-edge!/nfv->fvar
+   add-interference-edge!/nfv->nfv
+   add-interference-edge!/nfv->var)
   (import INTEGER-SET)
 
   (module (init-var*!)
@@ -876,6 +884,29 @@
 
   (define-syntax-rule (for-each-nfv ?ns ?func)
     (for-each ?func ?ns))
+
+;;; --------------------------------------------------------------------
+;;; interference edges
+
+  (define (add-interference-edge!/var->reg  src.var dst.reg)
+    ($set-var-reg-conf! src.var (add-reg dst.reg  ($var-reg-conf src.var))))
+
+  (define (add-interference-edge!/var->fvar src.var dst.fvar)
+    ($set-var-frm-conf! src.var (add-frm dst.fvar ($var-frm-conf src.var))))
+
+  (define (add-interference-edge!/var->var  src.var dst.var)
+    ($set-var-var-conf! src.var (add-var dst.var  ($var-var-conf src.var))))
+
+;;;
+
+  (define (add-interference-edge!/nfv->nfv  src.nfv dst.nfv)
+    ($set-nfv-nfv-conf! src.nfv (add-reg dst.nfv  ($nfv-nfv-conf src.nfv))))
+
+  (define (add-interference-edge!/nfv->fvar src.nfv dst.fvar)
+    ($set-nfv-frm-conf! src.nfv (add-frm dst.fvar ($nfv-frm-conf src.nfv))))
+
+  (define (add-interference-edge!/nfv->var  src.nfv dst.var)
+    ($set-nfv-var-conf! src.nfv (add-var dst.var  ($nfv-var-conf src.nfv))))
 
   #| end of module: FRAME-CONFLICT-SETS |# )
 
@@ -1614,7 +1645,7 @@
       (for-each-var
 	  vs locals.vars
 	(lambda (v)
-	  ($set-var-reg-conf! v (add-reg r ($var-reg-conf v))))))
+	  (add-interference-edge!/var->reg v r))))
 
     (define (mark-frm/vars-conf! f vs)
       ;;Add the FVAR struct F to the FRM-CONF set of every VAR struct in VS.
@@ -1622,7 +1653,7 @@
       (for-each-var
 	  vs locals.vars
 	(lambda (v)
-	  ($set-var-frm-conf! v (add-frm f ($var-frm-conf v))))))
+	  (add-interference-edge!/var->fvar v f))))
 
     (define (mark-var/vars-conf! v vs)
       ;;Add the VAR struct V to the VAR-CONF set of every VAR struct in VS.
@@ -1632,7 +1663,7 @@
       (for-each-var
 	  vs locals.vars
 	(lambda (w)
-	  ($set-var-var-conf! w (add-var v ($var-var-conf w)))))
+	  (add-interference-edge!/var->var w v)))
       ($set-var-var-conf! v (union-vars vs ($var-var-conf v))))
 
     (define (mark-nfv/vars-conf! n vs)
@@ -1644,13 +1675,17 @@
       (for-each-nfv
 	  ns
 	(lambda (n)
-	  ($set-nfv-frm-conf! n (add-frm f ($nfv-frm-conf n))))))
+	  (add-interference-edge!/nfv->fvar n f)
+	  #;($set-nfv-frm-conf! n (add-frm f ($nfv-frm-conf n)))
+	  )))
 
     (define (mark-var/nfvs-conf! v ns)
       (for-each-nfv
 	  ns
 	(lambda (n)
-	  ($set-nfv-var-conf! n (add-var v ($nfv-var-conf n))))))
+	  (add-interference-edge!/nfv->var n v)
+	  #;($set-nfv-var-conf! n (add-var v ($nfv-var-conf n)))
+	  )))
 
 ;;; --------------------------------------------------------------------
 
@@ -1727,7 +1762,7 @@
   ;;
   (module (set-member? set-difference set->list)
     (import INTEGER-SET))
-  (module (for-each-var rem-nfv add-frm)
+  (module (for-each-var rem-nfv add-frm add-interference-edge!/var->fvar)
     (import FRAME-CONFLICT-SETS))
   (module (register?)
     (import INTEL-ASSEMBLY-CODE-GENERATION))
@@ -2028,7 +2063,7 @@
 		      ;;The  VAR is  already has  in its  interference edges  the NFV
 		      ;;struct; now  we add an  interference edge for  the associated
 		      ;;FVAR struct.
-		      ($set-var-frm-conf! live-var (add-frm rand.fvar ($var-frm-conf live-var)))))))))
+		      (add-interference-edge!/var->fvar live-var rand.fvar)))))))
 	  (%assign-frame-locations-to-stack-operands! (cdr rand*.nfv) (fxadd1 idx))))
 
 ;;; --------------------------------------------------------------------
