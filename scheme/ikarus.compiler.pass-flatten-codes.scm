@@ -818,27 +818,25 @@
   (define (P x label-true label-false accum)
     ;;Flatten X as code in predicate position.
     ;;
-    ;;X must be a struct instance representing recordized code.
+    ;;X must be  a struct instance representing recordized code.   LABEL-TRUE must be
+    ;;the label entry point for the code  to be run when X returns true.  LABEL-FALSE
+    ;;must be the label entry point for the code to be run when X returns false.
     ;;
-    ;;LABEL-TRUE must be the label entry  point for the code to be run
-    ;;when X returns true.
-    ;;
-    ;;LABEL-FALSE must be the label entry point for the code to be run
-    ;;when X returns false.
-    ;;
-    ;;ACCUM must be the list  of assembly instructions, accumulated so
-    ;;far, that  must be  included in  binary code  after the  ones to
-    ;;which X will expand.
+    ;;ACCUM must be the list of  assembly instructions, accumulated so far, that must
+    ;;be included in binary code after the ones to which X will expand.
     ;;
     (struct-case x
-      ((constant c)
-       (cond (c
+      ;;If X is a CONSTANT: the predicate is always true or always false.
+      ((constant x.const)
+       (cond (x.const
 	      (if label-true
 		  (cons `(jmp ,label-true) accum)
 		accum))
 	     (label-false
 	      (cons `(jmp ,label-false) accum))
 	     (else
+	      ;;FIXME Is this  correct of should be raise an  exception here?  (Marco
+	      ;;Maggi; Mon Oct 27, 2014)
 	      accum)))
 
       ((seq e0 e1)
@@ -847,8 +845,8 @@
       ((conditional x.test x.conseq x.altern)
        (P-conditional x.test x.conseq x.altern label-true label-false accum))
 
-      ((asm-instr op a0 a1)
-       (P-asm-instr op a0 a1 label-true label-false accum x))
+      ((asm-instr op dst src)
+       (P-asm-instr op dst src x label-true label-false accum))
 
       ((shortcut body handler)
        (let ((L_interrupt (unique-interrupt-label))
@@ -875,45 +873,54 @@
 	   (P x.test label-false label-true accum))
 
 	  ((and label-true label-false)
-	   (let ((label-true^  #f)
-		 (label-false^ (unique-label "L_false")))
-	     (P x.test label-true^ label-false^
+	   (let ((label-conseq #f)
+		 (label-altern (unique-label "L_false")))
+	     (P x.test label-conseq label-altern
 		(P x.conseq label-true label-false
-		   (cons label-false^
-			 (P x.altern label-true label-false accum))))))
+		   (cons label-altern
+			 (P x.altern label-true label-false
+			    accum))))))
 
 	  (label-true
-	   (let ((label-false  (unique-label "L_false"))
-		 (label-true^  #f)
-		 (label-false^ (unique-label "L_false")))
-	     (P x.test label-true^ label-false^
-		(P x.conseq label-true label-false
-		   (cons label-false^
-			 (P x.altern label-true #f (cons label-false accum)))))))
+	   #;(assert (not label-false))
+	   (let ((label-false^ (unique-label "L_false"))
+		 (label-conseq #f)
+		 (label-altern (unique-label "L_altern")))
+	     (P x.test label-conseq label-altern
+		(P x.conseq label-true label-false^
+		   (cons label-altern
+			 (P x.altern label-true #f
+			    (cons label-false^ accum)))))))
 
 	  (label-false
-	   (let ((label-true   (unique-label "L_true"))
-		 (label-true^  #f)
-		 (label-false^ (unique-label "L_false")))
-	     (P x.test label-true^ label-false^
-		(P x.conseq label-true label-false
-		   (cons label-false^
-			 (P x.altern #f label-false (cons label-true accum)))))))
+	   #;(assert (not label-true))
+	   (let ((label-true^  (unique-label "L_true"))
+		 (label-conseq #f)
+		 (label-altern (unique-label "L_altern")))
+	     (P x.test label-conseq label-altern
+		(P x.conseq label-true^ label-false
+		   (cons label-altern
+			 (P x.altern #f label-false
+			    (cons label-true^ accum)))))))
 
 	  (else
-	   (let ((label-false (unique-label "L_false"))
-		 (l           (unique-label "L_false")))
-	     (P x.test #f l (P x.conseq #f #f
-			       (cons `(jmp ,label-false)
-				     (cons l (P x.altern #f #f (cons label-false accum))))))))))
+	   (let ((label-false^ (unique-label "L_false"))
+		 (label-altern (unique-label "L_altern")))
+	     (P x.test #f label-altern
+		(P x.conseq #f #f
+		   (cons `(jmp ,label-false^)
+			 (cons label-altern
+			       (P x.altern #f #f
+				  (cons label-false^ accum))))))))))
 
   (module (P-asm-instr)
 
-    (define (P-asm-instr op dst src label-true label-false accum x)
+    (define* (P-asm-instr op dst src x label-true label-false accum)
       (cond ((and label-true label-false)
-	     (%P-generate-comparison op       dst src x label-true (cons `(jmp ,label-false) accum)))
+	     (let ((accum^ (cons `(jmp ,label-false) accum)))
+	       (%P-generate-comparison op dst src x label-true accum^)))
 	    (label-true
-	     (%P-generate-comparison op       dst src x label-true accum))
+	     (%P-generate-comparison op dst src x label-true accum))
 	    (label-false
 	     (let ((neg-op (%select-negated-P-asm-instr op)))
 	       (%P-generate-comparison neg-op dst src x label-false accum)))
