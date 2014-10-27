@@ -179,16 +179,17 @@
   ;;validate the return value.  If the return  value RV is correct: return RV itself,
   ;;otherwise raise an exception.
   ;;
-  ;;An  implementation handler  for the  P context  can return:
+  ;;An implementation handler for the P context can return:
   ;;
   ;;*  The constants  (K #t)  or  (K #f)  as special  values  to be  recognised in  a
   ;;  subsequent compiler pass.
   ;;
-  ;;* An ASMCALL with operand among: =, !=, <,  <=, >, >=, u<, u<=, u>, u>=.  This is
-  ;;  the "true" return value; it is the proper operation that generates, as Assembly
-  ;;  instructions, a jump to the "label for consequent" or "label for alternate".
+  ;;* An  ASMCALL with operand among:  =, !=, <, <=,  >, >=, u<, u<=,  u>, u>=, fl:=,
+  ;;  fl:<, fl:<=,  fl:>, fl:>=.  This is  the "true" return value; it  is the proper
+  ;;  operation  that generates, as Assembly  instructions, a jump to  the "label for
+  ;;  consequent" or "label for alternate".
   ;;
-  ;;* A  variety of recordised  code which has  one of the  above as last  form.  For
+  ;;* A  variety of recordised  code which has  one of the  above as tail  form.  For
   ;;   example:  a  call  to  SEC-TAG-TEST  used  to  implement  SYMBOL?   returns  a
   ;;  CONDITIONAL; a call to $FLCMP-AUX used to implement "fl=?" returns a SEQ.
   ;;
@@ -211,8 +212,7 @@
        (else
 	(%error "invalid ASMCALL operand in recordised code returned from primitive-operation implementation handler,\
                  expected an operand among: =, !=, <, <=, >, >=, u<, u<=, u>, u>=, interrupt"))))
-    (else
-     rv)))
+    (else rv)))
 
 
 ;;;; syntax helpers

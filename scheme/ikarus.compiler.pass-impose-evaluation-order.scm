@@ -1000,7 +1000,7 @@
       ;;into:
       ;;
       ;;   (asm-instr move (tmp1 ?rand1))
-      ;;   (asmcall   ?op  (tmp1 ?rand2))
+      ;;   (asm-instr ?op  (tmp1 ?rand2))
       ;;
       ;;otherwise we  assume the operands may  be complex, so we  transform the input
       ;;ASMCALL into  code that evaluates the  operands and loads the  results in CPU

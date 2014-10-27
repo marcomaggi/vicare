@@ -421,6 +421,32 @@
 
 ;;; --------------------------------------------------------------------
 
+    (define (T x)
+      (struct-case x
+	((asmcall op rands)
+	 #;(assert (or (eq? op 'return) (eq? op 'direct-jump) (eq? op 'indirect-jump)))
+	 ;;We assume the input code is correct; this means in tail position there are
+	 ;;only ASMCALL  structs with  operand RETURN, DIRECT-JUMP  or INDIRECT-JUMP.
+	 ;;We know that the operands of  such ASMCALL structs are CPU register symbol
+	 ;;names and FVAR structs; so there is  nothing to be done here.  Just return
+	 ;;X itself.
+	 x)
+
+	((conditional e0 e1 e2)
+	 (make-conditional (P e0) (T e1) (T e2)))
+
+	((seq e0 e1)
+	 (make-seq (E e0) (T e1)))
+
+	((shortcut body handler)
+	 (make-shortcut (T body) (T handler)))
+
+	(else
+	 (compiler-internal-error __module_who__  __who__
+	   "invalid code in T context" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
     (module (E)
 
       (define (E x)
@@ -482,19 +508,19 @@
 		  (nop))
 		 ((and (= wordsize 8)
 		       (not (eq? op 'move))
-		       (long-imm? src))
+		       (long-immediate? src))
 		  (let ((unspillable (%make-unspillable-var)))
 		    (make-seq
 		      (E (make-asm-instr 'move unspillable src))
 		      (E (make-asm-instr op dst unspillable)))))
 		 ((and (memq op '(int* int*/overflow))
-		       (mem? dst))
+		       (memory-pointer? dst))
 		  (let ((unspillable (%make-unspillable-var)))
 		    (multiple-forms-sequence
 		      (E (make-asm-instr 'move unspillable dst))
 		      (E (make-asm-instr op unspillable src))
 		      (E (make-asm-instr 'move dst unspillable)))))
-		 ((and (mem? dst)
+		 ((and (memory-pointer? dst)
 		       (not (small-operand? src)))
 		  (let ((unspillable (%make-unspillable-var)))
 		    (make-seq
@@ -537,7 +563,7 @@
 		 (else x)))
 
 	  ((bswap!)
-	   (if (mem? src)
+	   (if (memory-pointer? src)
 	       (let ((unspillable (%make-unspillable-var)))
 		 (multiple-forms-sequence
 		   (E (make-asm-instr 'move   unspillable dst))
@@ -727,27 +753,28 @@
 	     "invalid code in P context" (unparse-recordized-code x)))))
 
       (define (P-asm-instr op dst src x)
+	(assert (memq op '(= != <  <= > >= u< u<= u> u>= fl:= fl:< fl:<= fl:> fl:>=)))
 	(cond ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
-	       (if (mem? dst)
+	       (if (memory-pointer? dst)
 		   (let ((unspillable (%make-unspillable-var)))
 		     (make-seq
 		       (E (make-asm-instr 'move unspillable dst))
 		       (make-asm-instr op unspillable src)))
 		 x))
-	      ((and (not (mem?           dst))
-		    (not (small-operand? dst)))
+	      ((and (not (memory-pointer? dst))
+		    (not (small-operand?  dst)))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
 		   (E (make-asm-instr 'move unspillable dst))
 		   (P (make-asm-instr op unspillable src)))))
-	      ((and (not (mem?           src))
+	      ((and (not (memory-pointer?           src))
 		    (not (small-operand? src)))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
 		   (E (make-asm-instr 'move unspillable src))
 		   (P (make-asm-instr op dst unspillable)))))
-	      ((and (mem? dst)
-		    (mem? src))
+	      ((and (memory-pointer? dst)
+		    (memory-pointer? src))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
 		   (E (make-asm-instr 'move unspillable src))
@@ -760,32 +787,6 @@
 					   (make-asm-instr op dst src))))))))
 
       #| end of module: P |# )
-
-;;; --------------------------------------------------------------------
-
-    (define (T x)
-      (struct-case x
-	((asmcall op rands)
-	 #;(assert (or (eq? op 'return) (eq? op 'direct-jump) (eq? op 'indirect-jump)))
-	 ;;We assume the input code is correct; this means in tail position there are
-	 ;;only ASMCALL  structs with  operand RETURN, DIRECT-JUMP  or INDIRECT-JUMP.
-	 ;;We know that the operands of  such ASMCALL structs are CPU register symbol
-	 ;;names and FVAR structs; so there is  nothing to be done here.  Just return
-	 ;;X itself.
-	 x)
-
-	((conditional e0 e1 e2)
-	 (make-conditional (P e0) (T e1) (T e2)))
-
-	((seq e0 e1)
-	 (make-seq (E e0) (T e1)))
-
-	((shortcut body handler)
-	 (make-shortcut (T body) (T handler)))
-
-	(else
-	 (compiler-internal-error __module_who__  __who__
-	   "invalid code in T context" (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -826,11 +827,12 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (mem? x)
+  (define (memory-pointer? x)
     (or (disp? x) (fvar? x)))
 
-  (define (long-imm? x)
-    ;;Return true if X represents a constant signed integer too big to fit in 32-bit.
+  (define (long-immediate? x)
+    ;;Return true if X represents a constant signed integer too big to fit in 32-bit;
+    ;;otherwise return false.
     ;;
     (import SIGNED-32-BIT-INTEGER-LIMITS)
     (struct-case x
@@ -846,7 +848,7 @@
     (import SIGNED-32-BIT-INTEGER-LIMITS)
     (boot.case-word-size
      ((32)
-      (not (mem? x)))
+      (not (memory-pointer? x)))
      ((64)
       (struct-case x
 	((constant n)
