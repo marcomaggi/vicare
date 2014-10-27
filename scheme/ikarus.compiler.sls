@@ -586,8 +586,8 @@
     &compile-time-error
   make-compile-time-retval-core-type-error compile-time-retval-core-type-error?)
 
-(define (compile-time-error who message . irritants)
-  (%raise-error who message (make-compile-time-error) irritants))
+(define (compile-time-error module-who who message . irritants)
+  (%raise-error module-who who message (make-compile-time-error) irritants))
 
 (define (compile-time-arity-error module-who who message . irritants)
   (%raise-error module-who who message (make-compile-time-arity-error) irritants))
