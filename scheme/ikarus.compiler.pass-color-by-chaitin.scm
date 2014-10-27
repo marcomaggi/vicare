@@ -830,12 +830,22 @@
 		  ((constant src.const)
 		   (eq? src.const off-flonum-data))
 		  (else #f)))
-	(if (memory-pointer? dst)
-	    (let ((unspillable (%make-unspillable-var)))
-	      (make-seq
-		(E (make-asm-instr 'move unspillable dst))
-		(make-asm-instr op unspillable src)))
-	  x))
+	(cond ((or (disp? dst)
+		   (fvar? dst))
+	       (let ((unspillable (%make-unspillable-var)))
+		 (make-seq
+		   (E (make-asm-instr 'move unspillable dst))
+		   (make-asm-instr op unspillable src))))
+	      ((var? dst)
+	       ;;This VAR struct is not yet allocated.
+	       (assert (not (var-loc dst)))
+	       x)
+	      ((register? dst)
+	       x)
+	      (else
+	       (compiler-internal-error __module_who__ __who__
+		 "invalid DST field in ASM-INSTR with float comparison operator"
+		 (unparse-recordised-code/sexp x)))))
 
       #| end of module: P |# )
 
