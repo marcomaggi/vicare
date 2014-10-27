@@ -775,9 +775,9 @@
 	;;
 	;;for unsigned integer comparison:
 	;;
-	;;   (asm-instr u< ?dst ?src)
+	;;   (asm-instr u<  ?dst ?src)
 	;;   (asm-instr u<= ?dst ?src)
-	;;   (asm-instr u> ?dst ?src)
+	;;   (asm-instr u>  ?dst ?src)
 	;;   (asm-instr u>= ?dst ?src)
 	;;
 	(cond ((and (not (memory-pointer? dst))
@@ -819,12 +819,33 @@
 	;;   (asm-instr fl:load ?reference-to-flonum1 (KN ?off-flonum-data))
 	;;   (asm-instr fl:=    ?reference-to-flonum2 (KN ?off-flonum-data))
 	;;
-	;;where the comparison is between the operand in the first float register and
-	;;the one referenced in the instruction.  So ?SRC is always the constant:
+	;;where: "fl:load" loads the first flonum operand in the CPU's float register
+	;;XMM0; "fl:="  performs the comparison between  the operand in XMM0  and the
+	;;flonum referenced in the instruction.  So ?SRC is always the constant:
 	;;
 	;;   (KN ?off-flonum-data)
 	;;
 	;;and ?DST is a simple operand referencing a Scheme object of type flonum.
+	;;
+	;;The actually generated  Intel Assembly looks (more or less)  like this (for
+	;;"fl:="):
+	;;
+	;;   (ucomisd (disp ?ref-to-flonum2 ?off-flonum-data) xmm0)
+	;;   (je ?consequent-label)
+	;;
+	;;where   UCOMISD   is   the   mnemonic   for   "Unordered   Compare   Scalar
+	;;Double-Precision Floating-Point Values and  Set EFLAGS".  The DISP Assembly
+	;;sexp  must  represent   the  address  of  a  64-bit   memory  location,  as
+	;;register+offset.
+	;;
+	;;So ?DST *cannot* be an FVAR or a DISP, because, in that case, it would be a
+	;;reference to memory  location, which in turn holds the  reference to double
+	;;float; ?DSP must  be itself register.  For this reason  here we introduce a
+	;;temporary, unspillable variable when needed, so that the code becomes:
+	;;
+	;;   (move ?register ?ref-to-flonum2)
+	;;   (ucomisd (disp ?register ?off-flonum-data) xmm0)
+	;;   (je ?consequent-label)
 	;;
 	(assert (struct-case src
 		  ((constant src.const)
