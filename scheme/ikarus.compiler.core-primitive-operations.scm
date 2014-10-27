@@ -2486,9 +2486,9 @@
    ;;
    (make-seq
     ;;Load the first operand in a register for flonums.
-    (asm 'fl:load (V-simple-operand fl0) (K off-flonum-data))
+    (asm 'fl:load (V-simple-operand fl0) (KN off-flonum-data))
     ;;Perform the operation between the register and FL1.
-    (asm op       (V-simple-operand fl1) (K off-flonum-data))))
+    (asm op       (V-simple-operand fl1) (KN off-flonum-data))))
 
  (define (check-flonums ls code)
    ;;CODE must be a struct instance representing recordized code.

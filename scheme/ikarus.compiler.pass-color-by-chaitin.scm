@@ -764,6 +764,22 @@
 	     (unparse-recordised-code/sexp x)))))
 
       (define (P-asm-instr/integer-comparison op dst src x)
+	;;We expect X to have the format, for signed integer comparison:
+	;;
+	;;   (asm-instr =  ?dst ?src)
+	;;   (asm-instr != ?dst ?src)
+	;;   (asm-instr <  ?dst ?src)
+	;;   (asm-instr <= ?dst ?src)
+	;;   (asm-instr >  ?dst ?src)
+	;;   (asm-instr >= ?dst ?src)
+	;;
+	;;for unsigned integer comparison:
+	;;
+	;;   (asm-instr u< ?dst ?src)
+	;;   (asm-instr u<= ?dst ?src)
+	;;   (asm-instr u> ?dst ?src)
+	;;   (asm-instr u>= ?dst ?src)
+	;;
 	(cond ((and (not (memory-pointer? dst))
 		    (not (small-operand?  dst)))
 	       (let ((unspillable (%make-unspillable-var)))
@@ -790,6 +806,30 @@
 					   (make-asm-instr op dst src))))))))
 
       (define (P-asm-instr/float-number-comparison op dst src x)
+	;;We expect X to have the format:
+	;;
+	;;   (asm-instr fl:=  ?dst ?src)
+	;;   (asm-instr fl:<  ?dst ?src)
+	;;   (asm-instr fl:<= ?dst ?src)
+	;;   (asm-instr fl:>  ?dst ?src)
+	;;   (asm-instr fl:>= ?dst ?src)
+	;;
+	;;These instructions always come in sequence:
+	;;
+	;;   (asm-instr fl:load ?reference-to-flonum1 (KN ?off-flonum-data))
+	;;   (asm-instr fl:=    ?reference-to-flonum2 (KN ?off-flonum-data))
+	;;
+	;;where the comparison is between the operand in the first float register and
+	;;the one referenced in the instruction.  So ?SRC is always the constant:
+	;;
+	;;   (KN ?off-flonum-data)
+	;;
+	;;and ?DST is a simple operand referencing a Scheme object of type flonum.
+	;;
+	(assert (struct-case src
+		  ((constant src.const)
+		   (eq? src.const off-flonum-data))
+		  (else #f)))
 	(if (memory-pointer? dst)
 	    (let ((unspillable (%make-unspillable-var)))
 	      (make-seq
