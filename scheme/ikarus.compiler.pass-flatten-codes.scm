@@ -875,21 +875,30 @@
 	   (P x.test label-false label-true accum))
 
 	  ((and label-true label-false)
-	   (let ((l (unique-label "L_false")))
-	     (P x.test #f l (P x.conseq label-true label-false
-			       (cons l (P x.altern label-true label-false accum))))))
+	   (let ((label-true^  #f)
+		 (label-false^ (unique-label "L_false")))
+	     (P x.test label-true^ label-false^
+		(P x.conseq label-true label-false
+		   (cons label-false^
+			 (P x.altern label-true label-false accum))))))
 
 	  (label-true
-	   (let ((label-false (unique-label "L_false"))
-		 (l           (unique-label "L_false")))
-	     (P x.test #f l (P x.conseq label-true label-false
-			       (cons l (P x.altern label-true #f (cons label-false accum)))))))
+	   (let ((label-false  (unique-label "L_false"))
+		 (label-true^  #f)
+		 (label-false^ (unique-label "L_false")))
+	     (P x.test label-true^ label-false^
+		(P x.conseq label-true label-false
+		   (cons label-false^
+			 (P x.altern label-true #f (cons label-false accum)))))))
 
 	  (label-false
-	   (let ((label-true (unique-label "L_true"))
-		 (l          (unique-label "L_false")))
-	     (P x.test #f l (P x.conseq label-true label-false
-			       (cons l (P x.altern #f label-false (cons label-true accum)))))))
+	   (let ((label-true   (unique-label "L_true"))
+		 (label-true^  #f)
+		 (label-false^ (unique-label "L_false")))
+	     (P x.test label-true^ label-false^
+		(P x.conseq label-true label-false
+		   (cons label-false^
+			 (P x.altern #f label-false (cons label-true accum)))))))
 
 	  (else
 	   (let ((label-false (unique-label "L_false"))
@@ -902,11 +911,12 @@
 
     (define (P-asm-instr op dst src label-true label-false accum x)
       (cond ((and label-true label-false)
-	     (%P-generate-comparison op dst src x label-true (cons `(jmp ,label-false) accum)))
+	     (%P-generate-comparison op       dst src x label-true (cons `(jmp ,label-false) accum)))
 	    (label-true
-	     (%P-generate-comparison op dst src x label-true accum))
+	     (%P-generate-comparison op       dst src x label-true accum))
 	    (label-false
-	     (%P-generate-comparison (%select-negated-P-asm-instr op) dst src x label-false accum))
+	     (let ((neg-op (%select-negated-P-asm-instr op)))
+	       (%P-generate-comparison neg-op dst src x label-false accum)))
 	    (else
 	     accum)))
 
@@ -921,10 +931,11 @@
 	;;pass.
 	((fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=)
 	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
-		`(jp ,lab)
+		`(jp ,lab) ;jump if parity flag is set
 		`(,(jmpname op) ,lab)
 		accum))
 	((= != <  <= > >= u< u<= u> u>=)
+	 ;;Surprise!  All these operators are just implemented with CMPL.
 	 (cond ((or (symbol? dst) (constant? src))
 		(cons* `(cmpl ,(R src) ,(R dst))
 		       `(,(jmpname op) ,lab)
