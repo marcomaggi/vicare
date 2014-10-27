@@ -812,8 +812,7 @@
    ((name)
     (label (gensym name)))))
 
-;;; --------------------------------------------------------------------
-
+
 (module (P)
 
   (define (P x label-true label-false accum)
@@ -849,7 +848,7 @@
        (P-conditional x.test x.conseq x.altern label-true label-false accum))
 
       ((asm-instr op a0 a1)
-       (P-asm-instr op a0 a1 label-true label-false accum))
+       (P-asm-instr op a0 a1 label-true label-false accum x))
 
       ((shortcut body handler)
        (let ((L_interrupt (unique-interrupt-label))
@@ -901,37 +900,47 @@
 
   (module (P-asm-instr)
 
-    (define (P-asm-instr op a0 a1 label-true label-false accum)
+    (define (P-asm-instr op dst src label-true label-false accum x)
       (cond ((and label-true label-false)
-	     (cmp op a0 a1 label-true (cons `(jmp ,label-false) accum)))
+	     (%P-generate-comparison op dst src x label-true (cons `(jmp ,label-false) accum)))
 	    (label-true
-	     (cmp op a0 a1 label-true accum))
+	     (%P-generate-comparison op dst src x label-true accum))
 	    (label-false
-	     (cmp (%select-negated-P-asm-instr op) a0 a1 label-false accum))
+	     (%P-generate-comparison (%select-negated-P-asm-instr op) dst src x label-false accum))
 	    (else
 	     accum)))
 
-    (define (cmp op a0 a1 lab accum)
-      (cond ((memq op '(fl:= fl:!= fl:< fl:<= fl:> fl:>=))
-	     (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
-		    `(,(jmpname op) ,lab)
-		    ;;BOGUS! (Abdulaziz Ghuloum)
-		    accum))
-	    ((memq op '(fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=))
-	     (cons* `(ucomisd ,(R (make-disp a0 a1)) xmm0)
-		    `(jp ,lab)
-		    `(,(jmpname op) ,lab)
-		    accum))
-	    ((or (symbol? a0) (constant? a1))
-	     (cons* `(cmpl ,(R a1) ,(R a0))
-		    `(,(jmpname op) ,lab)
-		    accum))
-	    ((or (symbol? a1) (constant? a0))
-	     (cons* `(cmpl ,(R a0) ,(R a1))
-		    `(,(revjmpname op) ,lab)
-		    accum))
-	    (else
-	     (error __module_who__ "invalid cmpops" a0 a1))))
+    (define* (%P-generate-comparison op dst src x lab accum)
+      (case op
+	((fl:= fl:!= fl:< fl:<= fl:> fl:>=)
+	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
+		`(,(jmpname op) ,lab)
+		;;BOGUS! (Abdulaziz Ghuloum)
+		accum))
+	;;NOTE This branch lists operators that  are used internally by this compiler
+	;;pass.
+	((fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=)
+	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
+		`(jp ,lab)
+		`(,(jmpname op) ,lab)
+		accum))
+	((= != <  <= > >= u< u<= u> u>=)
+	 (cond ((or (symbol? dst) (constant? src))
+		(cons* `(cmpl ,(R src) ,(R dst))
+		       `(,(jmpname op) ,lab)
+		       accum))
+	       ((or (symbol? src) (constant? dst))
+		(cons* `(cmpl ,(R dst) ,(R src))
+		       `(,(revjmpname op) ,lab)
+		       accum))
+	       (else
+		(compiler-internal-error __module_who__ __who__
+		  "invalid operands in ASM-INSTR for P context"
+		  (unparse-recordised-code/sexp x)))))
+	(else
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid operator in ASM-INSTR for P context"
+	   (unparse-recordised-code/sexp x)))))
 
     (define (%select-negated-P-asm-instr x)
       (cond ((assq x '((= . !=) (!= . =)
@@ -973,8 +982,7 @@
 
   #| end of module: P |# )
 
-;;; --------------------------------------------------------------------
-
+
 (define (FVar i)
   ;;Convert the index  of an FVAR into a reference  to machine word on
   ;;the stack.
