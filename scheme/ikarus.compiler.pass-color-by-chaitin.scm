@@ -753,15 +753,18 @@
 	     "invalid code in P context" (unparse-recordized-code x)))))
 
       (define (P-asm-instr op dst src x)
-	(assert (memq op '(= != <  <= > >= u< u<= u> u>= fl:= fl:< fl:<= fl:> fl:>=)))
-	(cond ((memq op '(fl:= fl:< fl:<= fl:> fl:>=))
-	       (if (memory-pointer? dst)
-		   (let ((unspillable (%make-unspillable-var)))
-		     (make-seq
-		       (E (make-asm-instr 'move unspillable dst))
-		       (make-asm-instr op unspillable src)))
-		 x))
-	      ((and (not (memory-pointer? dst))
+	(case op
+	  ((= != <  <= > >= u< u<= u> u>=)
+	   (P-asm-instr/integer-comparison      op dst src x))
+	  ((fl:= fl:< fl:<= fl:> fl:>=)
+	   (P-asm-instr/float-number-comparison op dst src x))
+	  (else
+	   (compiler-internal-error __module_who__ __who__
+	     "invalid ASM-INSTR operator in P context"
+	     (unparse-recordised-code/sexp x)))))
+
+      (define (P-asm-instr/integer-comparison op dst src x)
+	(cond ((and (not (memory-pointer? dst))
 		    (not (small-operand?  dst)))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
@@ -785,6 +788,14 @@
 			     (check-disp src
 					 (lambda (src)
 					   (make-asm-instr op dst src))))))))
+
+      (define (P-asm-instr/float-number-comparison op dst src x)
+	(if (memory-pointer? dst)
+	    (let ((unspillable (%make-unspillable-var)))
+	      (make-seq
+		(E (make-asm-instr 'move unspillable dst))
+		(make-asm-instr op unspillable src)))
+	  x))
 
       #| end of module: P |# )
 
