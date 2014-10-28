@@ -27,6 +27,11 @@
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
+  ;;NOTE  Upon entering  this  compiler  pass, we  expect  the  ASM-INSTR structs  to
+  ;;contain,  as operands:  DISP  structs, FVAR  structs,  CONSTANT structs,  symbols
+  ;;representing CPU register names, VAR structs with LOC field set to #f.
+  ;;
+  ;;
   (import INTEL-ASSEMBLY-CODE-GENERATION)
 
   (define-syntax __module_who__

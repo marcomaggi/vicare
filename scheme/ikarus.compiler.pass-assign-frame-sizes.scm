@@ -156,6 +156,13 @@
   ;;   nop			interrupt		incr/zero?
   ;;   fl:double->single	fl:single->double
   ;;
+  ;;NOTE In  the input recordised code:  the ASM-INSTR structs contain,  as operands:
+  ;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
+  ;;names, VAR structs with LOC field set to #f.  Among these, the DISP structs have:
+  ;;as  OBJREF field,  a CONSTANT,  FVAR,  VAR struct  or symbol  representing a  CPU
+  ;;register name; as OFFSET field, a CONSTANT or VAR struct.  The VAR structs in the
+  ;;DISP have LOC field set to #f.
+  ;;
   ;;NOTE The returned code does not contain NFV structs anymore.
   ;;
   (define-syntax __module_who__
@@ -1540,7 +1547,7 @@
 
 	    ((or (disp?     src)
 		 (constant? src)
-		 (register?      src))
+		 (register? src))
 	     (let ((ns (rem-nfv dst ns)))
 	       (mark-nfv/vars-conf! dst vs)
 	       (mark-nfv/frms-conf! dst fs)
@@ -2145,25 +2152,48 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (R x)
-    (if (register? x)
-	x
-      (struct-case x
-	((constant)
-	 x)
-	((fvar)
-	 x)
-	((nfv)
-	 (or ($nfv-loc x)
-	     (compiler-internal-error __module_who__ __who__
-	       "invali NFV struct without assigned LOC")))
-	((var)
-	 (R-var x))
-	((disp objref offset)
-	 (make-disp (R objref) (R offset)))
-	(else
-	 (compiler-internal-error __module_who__ __who__
-	   "invalid R" (unparse-recordized-code x))))))
+  (module (R)
+
+    (define* (R x)
+      (if (register? x)
+	  x
+	(struct-case x
+	  ((constant)
+	   x)
+	  ((fvar)
+	   x)
+	  ((nfv)
+	   (or ($nfv-loc x)
+	       (compiler-internal-error __module_who__ __who__
+		 "invali NFV struct without assigned LOC")))
+	  ((var)
+	   (R-var x))
+	  ((disp objref offset)
+	   (%mk-disp (R objref) (R offset)))
+	  (else
+	   (compiler-internal-error __module_who__ __who__
+	     "invalid R" (unparse-recordized-code x))))))
+
+    (module (%mk-disp)
+
+      (define* (%mk-disp {objref %disp-objref?} {offset %disp-offset?})
+	(make-disp objref offset))
+
+      (define (%disp-objref? obj)
+	(or (constant? obj)
+	    (and (var? obj)
+		 (not (var-loc obj)))
+	    (fvar?     obj)
+	    (register? obj)))
+
+      (define (%disp-offset? obj)
+	(or (constant? obj)
+	    (and (var? obj)
+		 (not (var-loc obj)))))
+
+      #| end of module: %mk-disp |# )
+
+    #| end of module: R |# )
 
 ;;; --------------------------------------------------------------------
 

@@ -74,6 +74,13 @@
   ;;returned to  the caller; such  structures will  be processed in  further compiler
   ;;passes.  But *no* FVAR and NFV structs are present in the input recordised code.
   ;;
+  ;;NOTE In the returned recordised code: the ASM-INSTR structs contain, as operands:
+  ;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
+  ;;names, VAR structs with LOC field set to #f.  Among these, the DISP structs have:
+  ;;as  OBJREF field,  a CONSTANT,  FVAR,  VAR struct  or symbol  representing a  CPU
+  ;;register name; as OFFSET field, a CONSTANT or VAR struct.  The VAR structs in the
+  ;;DISP have LOC field set to #f.
+  ;;
   (module (argc-convention register?
 	   eax ecx edx
 	   AA-REGISTER AP-REGISTER CP-REGISTER FP-REGISTER PC-REGISTER)
@@ -94,6 +101,25 @@
 
 (define-syntax-rule (%move-dst<-src ?dst ?src)
   (make-asm-instr 'move ?dst ?src))
+
+(module (%mk-disp)
+
+  (define* (%mk-disp {objref %disp-objref?} {offset %disp-offset?})
+    (make-disp objref offset))
+
+  (define (%disp-objref? obj)
+    (or (constant? obj)
+	(and (var? obj)
+	     (not (var-loc obj)))
+	(fvar?     obj)
+	(register? obj)))
+
+  (define (%disp-offset? obj)
+    (or (constant? obj)
+	(and (var? obj)
+	     (not (var-loc obj)))))
+
+  #| end of module |# )
 
 
 ;;;; local values
@@ -677,7 +703,7 @@
        (S* rand*
 	 (lambda (rand*)
 	   #;(assert (or (var? dst) (register? dst) (nfv? dst)))
-	   (%move-dst<-src dst (make-disp (car rand*) (cadr rand*))))))
+	   (%move-dst<-src dst (%mk-disp (car rand*) (cadr rand*))))))
 
       ((mref32)
        ;;We expect X to have the format:
@@ -688,7 +714,7 @@
        (S* rand*
 	 (lambda (rand*)
 	   #;(assert (or (var? dst) (nfv? dst)))
-	   (make-asm-instr 'load32 dst (make-disp (car rand*) (cadr rand*))))))
+	   (make-asm-instr 'load32 dst (%mk-disp (car rand*) (cadr rand*))))))
 
       ((bref)
        ;;We expect X to have the format:
@@ -699,7 +725,7 @@
        (S* rand*
 	 (lambda (rand*)
 	   #;(assert (or (var? dst) (nfv? dst)))
-	   (make-asm-instr 'load8 dst (make-disp (car rand*) (cadr rand*))))))
+	   (make-asm-instr 'load8 dst (%mk-disp (car rand*) (cadr rand*))))))
 
       ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)
        ;;We expect X to have the format:
@@ -904,7 +930,7 @@
        ;;is used, for example, to store single bytes in a bytevector.
        (S* rand*
 	 (lambda (simple-rand*)
-	   (let ((objref  (make-disp (car simple-rand*) (cadr simple-rand*)))
+	   (let ((objref  (%mk-disp (car simple-rand*) (cadr simple-rand*)))
 		 (new-val (caddr simple-rand*)))
 	     (make-asm-instr op objref new-val)))))
 
@@ -1034,7 +1060,7 @@
 	     ;;
 	     (S* x.rand.rand*
 	       (lambda (simple-x.rand.rand*)
-		 (kont (make-disp (car simple-x.rand.rand*) (cadr simple-x.rand.rand*)))))
+		 (kont (%mk-disp (car simple-x.rand.rand*) (cadr simple-x.rand.rand*)))))
 	   (S x.rand kont)))
 	(else
 	 (S x.rand kont))))
