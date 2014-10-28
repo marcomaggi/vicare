@@ -396,6 +396,66 @@
   (define-syntax __who__
     (identifier-syntax '%add-unspillables))
 
+;;; --------------------------------------------------------------------
+
+  (module ASM-INSTR-HELPERS
+    (disp/fvar? long-immediate? small-operand?)
+    ;;All the  function exported  by this  module are  applied to  the ?SRC  and ?DST
+    ;;operands of ASM-INSTR structs.
+    ;;
+
+    (module SIGNED-32-BIT-INTEGER-LIMITS
+      (MIN-SIGNED-32-BIT-INTEGER MAX-SIGNED-32-BIT-INTEGER)
+      (define-inline-constant MIN-SIGNED-32-BIT-INTEGER
+	(- (expt 2 31)))
+      (define-inline-constant MAX-SIGNED-32-BIT-INTEGER
+	(- (expt 2 31) 1))
+      #| end of module: SIGNED-32-BIT-INTEGER-LIMITS |# )
+
+    (define (disp/fvar? x)
+      (or (disp? x) (fvar? x)))
+
+    (define (long-immediate? x)
+      ;;Return true  if X  represents a  constant signed  integer too  big to  fit in
+      ;;32-bit; otherwise return false.
+      ;;
+      (import SIGNED-32-BIT-INTEGER-LIMITS)
+      (struct-case x
+	((constant n)
+	 (cond ((integer? n)
+		(not (<= MIN-SIGNED-32-BIT-INTEGER
+			 n
+			 MAX-SIGNED-32-BIT-INTEGER)))
+	       (else #t)))
+	(else #f)))
+
+    (define (small-operand? x)
+      (import SIGNED-32-BIT-INTEGER-LIMITS)
+      (assert (or (disp? x)
+		  (fvar? x)
+		  (and (var? x)
+		       (not (var-loc x)))
+		  (register? x)
+		  (constant? x)))
+      (boot.case-word-size
+       ((32)
+	(not (disp/fvar? x)))
+       ((64)
+	(struct-case x
+	  ((constant n)
+	   (if (integer? n)
+	       (<= MIN-SIGNED-32-BIT-INTEGER
+		   n
+		   MAX-SIGNED-32-BIT-INTEGER)
+	     #f))
+	  (else
+	   (or (register? x)
+	       (var?      x)))))))
+
+    #| end of module: ASM-INSTR-HELPERS |# )
+
+;;; --------------------------------------------------------------------
+
   (define (%add-unspillables unspillable.set body)
     ;;The argument UNSPILLABLE.SET  is a set (as defined by  the LISTY-SET module) of
     ;;VAR structs representing  unspillable local variables in BODY;  it starts empty
@@ -488,6 +548,7 @@
 	;;with the introduction of a temporary variable.  The temporary variable must
 	;;be allocated to a CPU register, and so it is not spillable on the stack.
 	;;
+	(import ASM-INSTR-HELPERS)
 	(case op
 	  ((load8 load32)
 	   (E-asm-instr/load op dst src x))
@@ -514,13 +575,13 @@
 		      (E (make-asm-instr 'move unspillable src))
 		      (E (make-asm-instr op dst unspillable)))))
 		 ((and (memq op '(int* int*/overflow))
-		       (memory-pointer? dst))
+		       (disp/fvar? dst))
 		  (let ((unspillable (%make-unspillable-var)))
 		    (multiple-forms-sequence
 		      (E (make-asm-instr 'move unspillable dst))
 		      (E (make-asm-instr op unspillable src))
 		      (E (make-asm-instr 'move dst unspillable)))))
-		 ((and (memory-pointer? dst)
+		 ((and (disp/fvar? dst)
 		       (not (small-operand? src)))
 		  (let ((unspillable (%make-unspillable-var)))
 		    (make-seq
@@ -563,7 +624,7 @@
 		 (else x)))
 
 	  ((bswap!)
-	   (if (memory-pointer? src)
+	   (if (disp/fvar? src)
 	       (let ((unspillable (%make-unspillable-var)))
 		 (multiple-forms-sequence
 		   (E (make-asm-instr 'move   unspillable dst))
@@ -683,6 +744,8 @@
 	;;     (asm-instr load8 ?dst      (disp ?var1.tmp ?var2.tmp))
 	;;
 	;;
+	(import ASM-INSTR-HELPERS)
+
 	(define (E-asm-instr/load op dst src x)
 	  #;(assert (or (var? dst) (fvar? dst)))
 	  #;(assert (disp? src))
@@ -780,24 +843,28 @@
 	;;   (asm-instr u>  ?dst ?src)
 	;;   (asm-instr u>= ?dst ?src)
 	;;
-	(cond ((and (not (memory-pointer? dst))
+	(import ASM-INSTR-HELPERS)
+	(cond ((and (not (disp/fvar? dst))
 		    (not (small-operand?  dst)))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
 		   (E (make-asm-instr 'move unspillable dst))
 		   (P (make-asm-instr op unspillable src)))))
-	      ((and (not (memory-pointer?           src))
-		    (not (small-operand? src)))
+
+	      ((and (not (disp/fvar? src))
+		    (not (small-operand?  src)))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
 		   (E (make-asm-instr 'move unspillable src))
 		   (P (make-asm-instr op dst unspillable)))))
-	      ((and (memory-pointer? dst)
-		    (memory-pointer? src))
+
+	      ((and (disp/fvar? dst)
+		    (disp/fvar? src))
 	       (let ((unspillable (%make-unspillable-var)))
 		 (make-seq
 		   (E (make-asm-instr 'move unspillable src))
 		   (P (make-asm-instr op    dst unspillable)))))
+
 	      (else
 	       (check-disp dst
 			   (lambda (dst)
@@ -847,6 +914,7 @@
 	;;   (ucomisd (disp ?register ?off-flonum-data) xmm0)
 	;;   (je ?consequent-label)
 	;;
+	(import ASM-INSTR-HELPERS)
 	(assert (struct-case src
 		  ((constant src.const)
 		   (eq? src.const off-flonum-data))
@@ -873,6 +941,7 @@
 ;;; --------------------------------------------------------------------
 
     (define (check-disp-arg x kont)
+      (import ASM-INSTR-HELPERS)
       (if (small-operand? x)
 	  (kont x)
 	(let ((unspillable (%make-unspillable-var)))
@@ -892,56 +961,6 @@
 	 (kont x))))
 
     (main body)) ;;end of function %ADD-UNSPILLABLES
-
-;;; --------------------------------------------------------------------
-
-  (module SIGNED-32-BIT-INTEGER-LIMITS
-    (MIN-SIGNED-32-BIT-INTEGER
-     MAX-SIGNED-32-BIT-INTEGER)
-
-    (define-inline-constant MIN-SIGNED-32-BIT-INTEGER
-      (- (expt 2 31)))
-
-    (define-inline-constant MAX-SIGNED-32-BIT-INTEGER
-      (- (expt 2 31) 1))
-
-    #| end of module: SIGNED-32-BIT-INTEGER-LIMITS |# )
-
-;;; --------------------------------------------------------------------
-
-  (define (memory-pointer? x)
-    (or (disp? x) (fvar? x)))
-
-  (define (long-immediate? x)
-    ;;Return true if X represents a constant signed integer too big to fit in 32-bit;
-    ;;otherwise return false.
-    ;;
-    (import SIGNED-32-BIT-INTEGER-LIMITS)
-    (struct-case x
-      ((constant n)
-       (cond ((integer? n)
-	      (not (<= MIN-SIGNED-32-BIT-INTEGER
-		       n
-		       MAX-SIGNED-32-BIT-INTEGER)))
-	     (else #t)))
-      (else #f)))
-
-  (define (small-operand? x)
-    (import SIGNED-32-BIT-INTEGER-LIMITS)
-    (boot.case-word-size
-     ((32)
-      (not (memory-pointer? x)))
-     ((64)
-      (struct-case x
-	((constant n)
-	 (if (integer? n)
-	     (<= MIN-SIGNED-32-BIT-INTEGER
-		 n
-		 MAX-SIGNED-32-BIT-INTEGER)
-	   #f))
-	(else
-	 (or (register? x)
-	     (var?      x)))))))
 
   #| end of module: %ADD-UNSPILLABLES |# )
 
