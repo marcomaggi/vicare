@@ -27,10 +27,18 @@
   ;;
   ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
-  ;;NOTE  Upon entering  this  compiler  pass, we  expect  the  ASM-INSTR structs  to
-  ;;contain,  as operands:  DISP  structs, FVAR  structs,  CONSTANT structs,  symbols
-  ;;representing CPU register names, VAR structs with LOC field set to #f.
+  ;;NOTE In the *input* recordised code:  the ASM-INSTR structs contain, as operands:
+  ;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
+  ;;names, VAR structs with LOC field set to #f.  Among these, the DISP structs have:
+  ;;as  OBJREF field,  a CONSTANT,  FVAR,  VAR struct  or symbol  representing a  CPU
+  ;;register name; as OFFSET field, a CONSTANT or VAR struct.  The VAR structs in the
+  ;;DISP have LOC field set to #f.
   ;;
+  ;;NOTE In the *output* recordised code: the ASM-INSTR structs contain, as operands:
+  ;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
+  ;;names.  Among these, the  DISP structs have: as OBJREF field,  a CONSTANT or FVAR
+  ;;struct or a symbol representing a CPU  register name; as OFFSET field, a CONSTANT
+  ;;or symbol representing a CPU register name.
   ;;
   (import INTEL-ASSEMBLY-CODE-GENERATION)
 
@@ -1632,7 +1640,7 @@
 	((fvar)
 	 x)
 	((disp objref offset)
-	 (make-disp (R-disp objref) (R-disp offset)))
+	 (%mk-disp (R-disp objref) (R-disp offset)))
 	(else
 	 (if (register? x)
 	     x
@@ -1661,6 +1669,30 @@
 	    ;;This VAR struct is not in the  list of spilled variables: just leave it
 	    ;;alone.
       	    (else x)))
+
+    (module (%mk-disp)
+
+      (define* (%mk-disp {objref %disp-objref?} {offset %disp-offset?})
+	(make-disp objref offset))
+
+      (define (%disp-objref? obj)
+	(or (constant? obj)
+	    (fvar?     obj)
+	    (register? obj)
+	    ;;This function  is called also  when not all  the VAR structs  have been
+	    ;;mapped to a location.
+	    (and (var? obj)
+		 (not (var-loc obj)))))
+
+      (define (%disp-offset? obj)
+	(or (constant? obj)
+	    (register? obj)
+	    ;;This function  is called also  when not all  the VAR structs  have been
+	    ;;mapped to a location.
+	    (and (var? obj)
+		 (not (var-loc obj)))))
+
+      #| end of module: %mk-disp |# )
 
     #| end of module: R |# )
 

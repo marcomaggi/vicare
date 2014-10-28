@@ -156,12 +156,12 @@
   ;;   nop			interrupt		incr/zero?
   ;;   fl:double->single	fl:single->double
   ;;
-  ;;NOTE In  the input recordised code:  the ASM-INSTR structs contain,  as operands:
-  ;;DISP structs, FVAR  structs, CONSTANT structs, symbols  representing CPU register
-  ;;names, VAR structs with LOC field set to #f.  Among these, the DISP structs have:
-  ;;as  OBJREF field,  a CONSTANT,  FVAR,  VAR struct  or symbol  representing a  CPU
-  ;;register name; as OFFSET field, a CONSTANT or VAR struct.  The VAR structs in the
-  ;;DISP have LOC field set to #f.
+  ;;NOTE In the  input and output recordised code: the  ASM-INSTR structs contain, as
+  ;;operands: DISP structs, FVAR structs,  CONSTANT structs, symbols representing CPU
+  ;;register names,  VAR structs  with LOC field  set to #f.   Among these,  the DISP
+  ;;structs  have:  as  OBJREF  field,  a   CONSTANT,  FVAR,  VAR  struct  or  symbol
+  ;;representing a CPU register name; as OFFSET field, a CONSTANT or VAR struct.  The
+  ;;VAR structs in the DISP have LOC field set to #f.
   ;;
   ;;NOTE The returned code does not contain NFV structs anymore.
   ;;
