@@ -126,7 +126,7 @@
   (define (E-init-expression x)
     (define accum (list '(nop)))
     (parameterize ((exceptions-concatenation accum))
-      (T x accum)))
+      (E-body x accum)))
 
   (define (E-clambda x)
     ;;Flatten   the  the   struct  instance   X  of   type  CLAMBDA,   using  a   new
@@ -224,11 +224,13 @@
 			 (else
 			  `(jl ,next-clause-entry-point-label)))
 		   (let ((accum^ (cons (label x.info.clause-entry-point-label)
-				       (T x.body
-					  (cons next-clause-entry-point-label accum)))))
+				       (E-body x.body (cons next-clause-entry-point-label accum)))))
 		     (if x.info.proper?
 			 accum^
 		       (%handle-vararg (length (cdr x.info.args)) accum^))))))))))
+
+  (define-syntax-rule (E-body body accum)
+    (T body accum))
 
 ;;; --------------------------------------------------------------------
 
@@ -318,6 +320,8 @@
      (movl (int NULL-OBJECT) ebx)
      (jmp DONE_LABEL)
 
+     ;;There are rest arguments.
+     ;;
      ;;Check that  there is  enough room  on the heap  to allocate  the list  of rest
      ;;arguments; the amount of words needed to  hold the list is twice the number of
      ;;rest arguments.
@@ -328,15 +332,14 @@
      (cmpl ebx APR)
      (jle LOOP_HEAD)
 
-     ;;If we are here: there is not  enough room on the heap; call the
-     ;;primitive  function  DO-VARARG-OVERFLOW  to allocate  new  heap
-     ;;space.
+     ;;If we  are here:  there is  not enough room  on the  heap; call  the primitive
+     ;;function DO-VARARG-OVERFLOW to allocate new heap space.
      ;;
      ;;Advance FPR to step over the plain arguments on the stack.
      (addl AAR FPR)
      (pushl CPR)
      (pushl AAR)
-     ;;Make argc positive.
+     ;;Make argument-count positive.
      (negl AAR)
      ;;Add 4 words to adjust frame size (see the picture below).
      (addl (int (fx* +4 wordsize)) AAR)
@@ -344,27 +347,26 @@
      (pushl AAR)
      ;;Undo adding 4 words.
      ;;
-     ;;NOTE In the original Ikarus code  the number of bytes needed on
-     ;;the  heap   for  the  rest   list  was  computed   by  doubling
-     ;;AAR augmented  with 4 word sizes;  this was reserving
-     ;;extra space on the heap.  We  avoid it here.  (Marco Maggi; Mar
+     ;;NOTE In the  original Ikarus code the  number of bytes needed on  the heap for
+     ;;the rest list was  computed by doubling AAR augmented with  4 word sizes; this
+     ;;was reserving extra space  on the heap.  We avoid it  here.  (Marco Maggi; Mar
      ;;26, 2013)
      (addl (int (fx* -4 wordsize)) AAR)
-     ;;Double the  number of arguments  obtaining the number  of bytes
-     ;;needed on the heap ...
+     ;;Double the  number of arguments  obtaining the number  of bytes needed  on the
+     ;;heap ...
      (addl AAR AAR)
      ;;... pass it as first argument to DO-VARARG-OVERFLOW.
      (movl AAR (mem (fx* -2 wordsize) FPR))
-     ;;DO-VARARG-OVERFLOW is called with one argument.
+     ;;DO-VARARG-OVERFLOW is  called with one  argument.  Load the argument  count in
+     ;;AAR.
      (movl (int (argc-convention 1)) AAR)
-     ;;From the  relocation vector of  this code object:  retrieve the
-     ;;location gensym associated to DO-VARARG-OVERFLOW and load it in
-     ;;the Closure  Pointer Register (CPR).   The "proc" slot  of such
-     ;;loc  gensym   contains  a  reference  to   the  closure  object
-     ;;implementing DO-VARARG-OVERFLOW.
-     (movl (obj (primitive-public-function-name->location-gensym 'do-vararg-overflow)) CPR)
-     ;;Load in the Closure Pointer Register a reference to the closure
+     ;;From the relocation  vector of this code object: retrieve  the location gensym
+     ;;associated to DO-VARARG-OVERFLOW  and load it in the  Closure Pointer Register
+     ;;(CPR).  The "proc" slot of such loc gensym contains a reference to the closure
      ;;object implementing DO-VARARG-OVERFLOW.
+     (movl (obj (primitive-public-function-name->location-gensym 'do-vararg-overflow)) CPR)
+     ;;Load in the  Closure Pointer Register (CPR) a reference  to the closure object
+     ;;implementing DO-VARARG-OVERFLOW.
      (movl (mem off-symbol-record-proc CPR) CPR)
      ;;When arriving here the Scheme stack is as follows:
      ;;
@@ -392,8 +394,8 @@
      ;;   |                |
      ;;       low memory
      ;;
-     ;;the empty  machine word is the  one in which "call"  will store
-     ;;the return address.
+     ;;the  empty machine  word is  the one  in which  "call" will  store the  return
+     ;;address.
      ;;
      (compile-call-table 0	  ;frame words count
 			 '#()	  ;livemask
@@ -405,12 +407,14 @@
      (popl AAR)
      ;;Reload pointer to current closure object.
      (popl CPR)
-     ;;Re-adjust  the  frame  pointer  to step  back  over  the  plain
-     ;;arguments on the stack.
+     ;;Re-adjust  the frame  pointer to  step back  over the  plain arguments  on the
+     ;;stack.
      (subl AAR FPR)
 
-     ;;There is enough room on the heap to allocate the rest list.  We
-     ;;allocate it backwards, the list (2 3) is laid out as:
+     ;;When coming here either: there is enough room on the heap to allocate the rest
+     ;;list, or we have successfully performed a garbage collection and the result is
+     ;;that now there  is enough room on  the heap.  We allocate  the list backwards,
+     ;;the list (2 3) is laid out as:
      ;;
      ;;          ---- growing heap ---->
      ;;
@@ -447,16 +451,12 @@
   #| end of module: FLATTEN-CODES |# )
 
 
-;;;;
-
 (define (T x accum)
-  ;;Flatten the struct instance X, representing recordized code, as if
-  ;;it  is  in  tail  position  in some  enclosing  form;  return  the
-  ;;accumulated list of assembly instructions having ACCUM as tail.
+  ;;Flatten the  struct instance  X, representing recordized  code, as  expression in
+  ;;tail position; return the generated list  of Assembly instructions using ACCUM as
+  ;;tail:
   ;;
-  ;;ACCUM must  be the list  of assembly instructions,  accumulated so
-  ;;far, that must be included in  binary code after the ones to which
-  ;;X will expand.
+  ;;   (?generated-assembly-instr ... . accum)
   ;;
   (struct-case x
     ((seq e0 e1)
