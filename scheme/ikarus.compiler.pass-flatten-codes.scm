@@ -84,16 +84,13 @@
 (define-constant exception-label
   (make-parameter #f))
 
-(define (flatten-codes x)
-  (Program x))
-
 
 ;;;; processing programs
 
-(module (Program)
+(module (flatten-codes)
 
-  (define (Program x)
-    ;;Flatten  the  struct  instance  X  of  type  CODES  into  a  list  of  assembly
+  (define (flatten-codes x)
+    ;;Flatten  the  struct  instance  X  of  type  CODES  into  a  list  of  Assembly
     ;;instructions: the BODY init expression first, the CLAMBDA implementations last.
     ;;Return a list of symbolic expressions with the following format:
     ;;
@@ -113,14 +110,17 @@
 	       (number-of-free-vars:	0)
 	       (annotation:		init-expression)
 	       (label			,(gensym "init_expression_label"))
-	       . ,(let ((accum (list '(nop))))
-		    (parameterize ((exceptions-concatenation accum))
-		      (T x.body accum))))
-	     (map Clambda x.clambda*)))))
+	       . ,(E-init-expression x.body))
+	     (map E-clambda x.clambda*)))))
 
-  (define (Clambda x)
-    ;;Flatten the the  struct instance X of  type CLAMBDA, using a  new error handler
-    ;;routines tail, and generate Assembly instructions as follows:
+  (define (E-init-expression x)
+    (define accum (list '(nop)))
+    (parameterize ((exceptions-concatenation accum))
+      (T x accum)))
+
+  (define (E-clambda x)
+    ;;Flatten   the  the   struct  instance   X  of   type  CLAMBDA,   using  a   new
+    ;;error-handler-routines tail, and generate Assembly instructions as follows:
     ;;
     ;;   (label ?clambda-entry-point)
     ;;   ?asm-instr
@@ -151,84 +151,81 @@
 	      (parameterize ((exceptions-concatenation accum))
 		(let recur ((clause* clause*))
 		  (if (pair? clause*)
-		      (ClambdaCase (car clause*)
-				   (recur (cdr clause*)))
+		      (E-clambda-clause (car clause*)
+					(recur (cdr clause*)))
 		    (cons `(jmp (label ,(sl-invalid-args-label)))
 			  accum)))))))))
 
-  (define (ClambdaCase x accum)
-    ;;Flatten the struct instance of  type CLAMBDA-CASE into a list of
-    ;;assembly instructions  prepended to  the accumulator  ACCUM; the
-    ;;error  handler  routines are  prepended  to  the tail  of  ACCUM
-    ;;referenced by EXCEPTIONS-CONCATENATION.
+  (define (E-clambda-clause x accum)
+    ;;Flatten the  struct instance X, of  type CLAMBDA-CASE, into a  list of Assembly
+    ;;instructions  prepended to  the accumulated  instructions in  ACCUM; the  error
+    ;;handler  routines   are  prepended   to  the  tail   of  ACCUM   referenced  by
+    ;;EXCEPTIONS-CONCATENATION.
     ;;
-    ;;The generated assembly code must  check if this CLAMBDA case has
-    ;;a specification  of requested  arguments matching  the arguments
-    ;;given to the CLAMBDA function application; when arriving to this
-    ;;code: AA-REGISTER  contains a fixnum being  the encoded number
-    ;;of given arguments.
+    ;;The generated assembly code must check if this CLAMBDA-CASE has a specification
+    ;;of requested  arguments matching  the arguments given  to the  CLAMBDA function
+    ;;application;  when arriving  to  this code:  AAR contains  a  fixnum being  the
+    ;;encoded number of given arguments.
     ;;
-    ;;For  a CLAMBDA  case with  fixed number  of requested  arguments
-    ;;(that is: the  formals are a proper list), we  must check if the
-    ;;number  of  requested  arguments  equals  the  number  of  given
-    ;;arguments, else we jump to the next case.  The returned list has
-    ;;the format:
+    ;;* For  a CLAMBDA-CASE with  fixed number of  requested arguments (that  is: the
+    ;;   formals are  a  proper list),  we  must  check if  the  number of  requested
+    ;;  arguments  equals the  number of given  arguments, else we  jump to  the next
+    ;;  clause.  The returned list has the format:
     ;;
-    ;;   ((cmpl ?this-case-number-of-args AA-REGISTER)
-    ;;    (jne ?next-case-entry-point-label)
-    ;;    (label ?case-entry-point)
-    ;;    ?case-asm-instr
-    ;;    ...
-    ;;    (label ?next-case-entry-point-label)
-    ;;    . ACCUM)
+    ;;     ((cmpl ?this-clause-number-of-args AAR)
+    ;;      (jne ?next-clause-entry-point-label)
+    ;;      (label ?clause-entry-point)
+    ;;      ?clause-asm-instr
+    ;;      ...
+    ;;      (label ?next-clause-entry-point-label)
+    ;;      . ACCUM)
     ;;
+    ;;* For a CLAMBDA-CASE with variable  number of requested arguments (that is: the
+    ;;  formals  are an  improper list),  we must  check if  the number  of requested
+    ;;  mandatory arguments is less than the  number of given arguments, else we jump
+    ;;  to the  next clause; remember that the comparison  is between encoded numbers
+    ;;  of arguments.  The returned list has the format:
     ;;
-    ;;For a CLAMBDA  case with variable number  of requested arguments
-    ;;(that is:  the formals are an  improper list), we must  check if
-    ;;the number  of requested  mandatory arguments  is less  than the
-    ;;number  of given  arguments,  else  we jump  to  the next  case;
-    ;;remember  that  the comparison  is  between  encoded numbers  of
-    ;;arguments.  The returned list has the format:
-    ;;
-    ;;   ((cmpl ?this-case-number-of-mandatory-args AA-REGISTER)
-    ;;    (jg ?next-case-entry-point-label)
-    ;;    (label ?case-entry-point)
-    ;;    ?case-asm-instr
-    ;;    ...
-    ;;    (label ?next-case-entry-point-label)
-    ;;    . ACCUM)
+    ;;     ((cmpl ?this-clause-number-of-mandatory-args AAR)
+    ;;      (jg ?next-clause-entry-point-label)
+    ;;      (label ?clause-entry-point)
+    ;;      ?clause-asm-instr
+    ;;      ...
+    ;;      (label ?next-clause-entry-point-label)
+    ;;      . ACCUM)
     ;;
     (struct-case x
       ((clambda-case x.info x.body)
        (struct-case x.info
-	 ((case-info x.info.case-entry-point-label x.info.args x.info.proper?)
-	  ;;Here  X.INFO.ARGS  is  a  pair   whose  car  is  a  symbol
-	  ;;representing the  CPU register holding the  pointer to the
-	  ;;current  closure object,  and  whose cdr  is  the list  of
-	  ;;properized formals.
-	  (let ((next-case-entry-point-label (unique-label "L_clambda_branch")))
+	 ((case-info x.info.clause-entry-point-label x.info.args x.info.proper?)
+	  ;;Here X.INFO.ARGS  is a pair  whose car is  a symbol representing  the CPU
+	  ;;register holding the pointer to the current closure object, and whose cdr
+	  ;;is the list of properized formals.
+	  (let ((next-clause-entry-point-label (unique-label "L_clambda_clause")))
 	    (cons* `(cmpl ,(argc-convention (if x.info.proper?
 						(length (cdr x.info.args))
 					      (length (cddr x.info.args))))
-			  ,AA-REGISTER)
+			  ,AAR)
 		   (cond (x.info.proper?
-			  `(jne ,next-case-entry-point-label))
+			  `(jne ,next-clause-entry-point-label))
 			 ((> (argc-convention 0)
 			     (argc-convention 1))
-			  `(jg ,next-case-entry-point-label))
+			  `(jg ,next-clause-entry-point-label))
 			 (else
-			  `(jl ,next-case-entry-point-label)))
-		   (let ((accum^ (cons (label x.info.case-entry-point-label)
+			  `(jl ,next-clause-entry-point-label)))
+		   (let ((accum^ (cons (label x.info.clause-entry-point-label)
 				       (T x.body
-					  (cons next-case-entry-point-label accum)))))
+					  (cons next-clause-entry-point-label accum)))))
 		     (if x.info.proper?
 			 accum^
 		       (%handle-vararg (length (cdr x.info.args)) accum^))))))))))
 
+;;; --------------------------------------------------------------------
+
   (define (%handle-vararg properized-formals-count accum)
-    ;;Generate the assembly code needed to handle the application of a
-    ;;CLAMBDA  case accepting  a  variable number  of arguments.   The
-    ;;generated code goes in the body of the callee function.
+    ;;Generate the Assembly  code needed to handle the application  of a CLAMBDA case
+    ;;accepting a variable number of arguments.   The generated code goes in the body
+    ;;of the callee function.
     ;;
     ;;PROPERIZED-FORMALS-COUNT is a fixnum  representing the number of
     ;;arguments, including the rest argument.  For the function:
@@ -237,7 +234,7 @@
     ;;
     ;;this argument is 4.
     ;;
-    ;;ACCUM is a  list of assembly instructions  representing the body
+    ;;ACCUM is a  list of Assembly instructions  representing the body
     ;;of this CLAMBDA case.
     ;;
     ;;Let's say we want to call the function:
@@ -247,8 +244,8 @@
     ;;
     ;;this is  the Scheme language,  so the  caller does not  know how
     ;;THE-FUNC  will  handle  its  arguments:  it  can  only  put  the
-    ;;arguments  on  the  Scheme  stack.   Right  after  the  assembly
-    ;;instruction "call" to THE-FUNC  has been executed: AA-REGISTER
+    ;;arguments  on  the  Scheme  stack.   Right  after  the  Assembly
+    ;;instruction "call" to THE-FUNC  has been executed: AAR
     ;;is  set  to the  fixnum  -3,  which  is  the negated  number  of
     ;;arguments, and the Scheme stack is:
     ;;
@@ -261,7 +258,7 @@
     ;; |----------------|
     ;; |    fixnum 2    | <-- FPR - 2 * wordsize
     ;; |----------------|
-    ;; |    fixnum 3    | <-- FPR - 3 * wordsize = FPR + AA-REGISTER
+    ;; |    fixnum 3    | <-- FPR - 3 * wordsize = FPR + AAR
     ;; |----------------|
     ;; |                |
     ;;     low memory
@@ -299,11 +296,11 @@
      ;;Check if there are rest arguments to put into a list.  We could
      ;;check if:
      ;;
-     ;;  (= (argc-convention properized-formals-count) AA-REGISTER)
+     ;;  (= (argc-convention properized-formals-count) AAR)
      ;;
      ;;and jump to CONS_LABEL if they are not equal (jne).  Instead we
      ;;do:
-     (cmpl (int (argc-convention mandatory-formals-count)) AA-REGISTER)
+     (cmpl (int (argc-convention mandatory-formals-count)) AAR)
      (jl CONS_LABEL)
 
      ;;There are no rest arguments:  the function has been called with
@@ -320,10 +317,10 @@
      ;;list of rest arguments; the amount  of words needed to hold the
      ;;list is twice the number of rest arguments.
      CONS_LABEL
-     (movl (mem pcb-allocation-redline PC-REGISTER) ebx)
-     (addl AA-REGISTER ebx)
-     (addl AA-REGISTER ebx)
-     (cmpl ebx AP-REGISTER)
+     (movl (mem pcb-allocation-redline PCR) ebx)
+     (addl AAR ebx)
+     (addl AAR ebx)
+     (cmpl ebx APR)
      (jle LOOP_HEAD)
 
      ;;If we are here: there is not  enough room on the heap; call the
@@ -331,39 +328,39 @@
      ;;space.
      ;;
      ;;Advance FPR to step over the plain arguments on the stack.
-     (addl AA-REGISTER FP-REGISTER)
-     (pushl CP-REGISTER)
-     (pushl AA-REGISTER)
+     (addl AAR FPR)
+     (pushl CPR)
+     (pushl AAR)
      ;;Make argc positive.
-     (negl AA-REGISTER)
+     (negl AAR)
      ;;Add 4 words to adjust frame size (see the picture below).
-     (addl (int (fx* +4 wordsize)) AA-REGISTER)
+     (addl (int (fx* +4 wordsize)) AAR)
      ;;Push the frame size.
-     (pushl AA-REGISTER)
+     (pushl AAR)
      ;;Undo adding 4 words.
      ;;
      ;;NOTE In the original Ikarus code  the number of bytes needed on
      ;;the  heap   for  the  rest   list  was  computed   by  doubling
-     ;;AA-REGISTER augmented  with 4 word sizes;  this was reserving
+     ;;AAR augmented  with 4 word sizes;  this was reserving
      ;;extra space on the heap.  We  avoid it here.  (Marco Maggi; Mar
      ;;26, 2013)
-     (addl (int (fx* -4 wordsize)) AA-REGISTER)
+     (addl (int (fx* -4 wordsize)) AAR)
      ;;Double the  number of arguments  obtaining the number  of bytes
      ;;needed on the heap ...
-     (addl AA-REGISTER AA-REGISTER)
+     (addl AAR AAR)
      ;;... pass it as first argument to DO-VARARG-OVERFLOW.
-     (movl AA-REGISTER (mem (fx* -2 wordsize) FP-REGISTER))
+     (movl AAR (mem (fx* -2 wordsize) FPR))
      ;;DO-VARARG-OVERFLOW is called with one argument.
-     (movl (int (argc-convention 1)) AA-REGISTER)
+     (movl (int (argc-convention 1)) AAR)
      ;;From the  relocation vector of  this code object:  retrieve the
      ;;location gensym associated to DO-VARARG-OVERFLOW and load it in
      ;;the Closure  Pointer Register (CPR).   The "proc" slot  of such
      ;;loc  gensym   contains  a  reference  to   the  closure  object
      ;;implementing DO-VARARG-OVERFLOW.
-     (movl (obj (primitive-public-function-name->location-gensym 'do-vararg-overflow)) CP-REGISTER)
+     (movl (obj (primitive-public-function-name->location-gensym 'do-vararg-overflow)) CPR)
      ;;Load in the Closure Pointer Register a reference to the closure
      ;;object implementing DO-VARARG-OVERFLOW.
-     (movl (mem off-symbol-record-proc CP-REGISTER) CP-REGISTER)
+     (movl (mem off-symbol-record-proc CPR) CPR)
      ;;When arriving here the Scheme stack is as follows:
      ;;
      ;;       high memory
@@ -393,19 +390,19 @@
      ;;the empty  machine word is the  one in which "call"  will store
      ;;the return address.
      ;;
-     (compile-call-table 0	    ;frame words count
-			 '#()	    ;livemask
+     (compile-call-table 0	  ;frame words count
+			 '#()	  ;livemask
 			 '(int 0) ;multivalue return point, NULL because unused
 			 (indirect-cpr-call))
      ;;Pop framesize and drop it.
-     (popl AA-REGISTER)
+     (popl AAR)
      ;;Reload number of arguments for this CLAMBDA case.
-     (popl AA-REGISTER)
+     (popl AAR)
      ;;Reload pointer to current closure object.
-     (popl CP-REGISTER)
+     (popl CPR)
      ;;Re-adjust  the  frame  pointer  to step  back  over  the  plain
      ;;arguments on the stack.
-     (subl AA-REGISTER FP-REGISTER)
+     (subl AAR FPR)
 
      ;;There is enough room on the heap to allocate the rest list.  We
      ;;allocate it backwards, the list (2 3) is laid out as:
@@ -425,24 +422,24 @@
      (movl (int NULL-OBJECT) ebx)
 
      CONTINUE_LABEL
-     (movl ebx (mem disp-cdr AP-REGISTER))	   ;store the cdr
-     (movl (mem FP-REGISTER AA-REGISTER) ebx)  ;load the next car value
-     (movl ebx (mem disp-car AP-REGISTER))	   ;store the car value
-     (movl AP-REGISTER ebx)			   ;load the allocation pointer
+     (movl ebx (mem disp-cdr APR)) ;store the cdr
+     (movl (mem FPR AAR) ebx)	   ;load the next car value
+     (movl ebx (mem disp-car APR)) ;store the car value
+     (movl APR ebx)		   ;load the allocation pointer
      (addl (int pair-tag) ebx)	   ;tag the pointer as reference to pair
-     (addl (int pair-size) AP-REGISTER)	   ;increment the allocation pointer
-     (addl (int wordsize) AA-REGISTER) ;increment the negative arguments count
+     (addl (int pair-size) APR)	   ;increment the allocation pointer
+     (addl (int wordsize) AAR)	   ;increment the negative arguments count
      ;;Loop if more arguments.
-     (cmpl (int properized-formals-argc) AA-REGISTER)
+     (cmpl (int properized-formals-argc) AAR)
      (jle CONTINUE_LABEL)
 
      DONE_LABEL
      ;;Store NULL-OBJECT or the reference to the  rest list on the stack, right below
      ;;the last mandatory argument (overwriting the first rest argument).
-     (movl ebx (mem properized-formals-argc FP-REGISTER))
+     (movl ebx (mem properized-formals-argc FPR))
      accum))
 
-  #| end of module: Program |# )
+  #| end of module: FLATTEN-CODES |# )
 
 
 ;;;;
@@ -474,9 +471,9 @@
 	(cons '(ret) accum))
 
        ((indirect-jump)
-	;;The CPU's Closure Pointer  Register (CP-REGISTER) contains a
+	;;The CPU's Closure Pointer  Register (CPR) contains a
 	;;reference to the closure object we want to jump to.
-	(cons `(jmp (disp ,off-closure-code ,CP-REGISTER))
+	(cons `(jmp (disp ,off-closure-code ,CPR))
 	      accum))
 
        ((direct-jump)
@@ -512,8 +509,7 @@
     (else
      (error __module_who__ "invalid tail" x))))
 
-;;; --------------------------------------------------------------------
-
+
 (module (E)
 
   (define (E x accum)
@@ -619,7 +615,7 @@
 	   (cons (%call-chunk `(call (label ,target)))
 		 accum))
 	  (else ;call to closure object
-	   (cons (%call-chunk `(call (disp ,off-closure-code ,CP-REGISTER)))
+	   (cons (%call-chunk `(call (disp ,off-closure-code ,CPR)))
 		 accum))))
 
   (define (E-asm-instr op d s x accum)
@@ -995,8 +991,7 @@
 
 
 (define (FVar i)
-  ;;Convert the index  of an FVAR into a reference  to machine word on
-  ;;the stack.
+  ;;Convert the index of an FVAR into a reference to machine word on the stack.
   ;;
   ;;       high memory
   ;;   |                |
@@ -1012,7 +1007,7 @@
   ;;   |                |
   ;;       low memory
   ;;
-  `(disp ,(* i (- wordsize)) ,FP-REGISTER))
+  `(disp ,(* i (- wordsize)) ,FPR))
 
 (module (R R/l D)
 

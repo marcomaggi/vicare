@@ -42,6 +42,7 @@
    ;;CPU registers
    al		ah		bh		cl
    eax		ebx		ecx		edx		esp
+   AAR		CPR		APR		FPR		PCR
    AA-REGISTER			CP-REGISTER
    AP-REGISTER			FP-REGISTER
    PC-REGISTER
@@ -92,6 +93,7 @@
 ;;-2; if the number of returned values is 0, the fixnum in AA-REGISTER must be 0.
 ;;
 (define-constant AA-REGISTER '%eax)
+(define-constant AAR AA-REGISTER)
 
 ;;Allocation Pointer Register (APR)
 ;;
@@ -99,6 +101,7 @@
 ;;Scheme heap nursery.
 ;;
 (define-constant AP-REGISTER '%ebp)
+(define-constant APR AP-REGISTER)
 
 ;;Closure Pointer Register (CPR)
 ;;
@@ -111,6 +114,7 @@
 ;;to closure object.
 ;;
 (define-constant CP-REGISTER '%edi)
+(define-constant CPR CP-REGISTER)
 
 ;;Frame Pointer Register (FPR)
 ;;
@@ -120,6 +124,7 @@
 ;;variables.
 ;;
 (define-constant FP-REGISTER '%esp)
+(define-constant FPR FP-REGISTER)
 
 ;;Process Control Register (PCR)
 ;;
@@ -127,6 +132,7 @@
 ;;references the first word in the PCB data structure.
 ;;
 (define-constant PC-REGISTER '%esi)
+(define-constant PCR PC-REGISTER)
 
 ;;The  list of  CPU registers  that the  code in  a code  object can  use to  store
 ;;temporary results.
