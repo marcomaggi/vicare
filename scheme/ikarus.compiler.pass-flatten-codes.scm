@@ -22,33 +22,36 @@
   ;;
   ;;   (?asm-list-for-body ?asm-list-for-clambda ...)
   ;;
-  ;;for each sublist in the returned list a code object will be created.
+  ;;for  each sublist  in the  returned  list a  code  object will  be created.   The
+  ;;symbolic expression ?ASM-LIST-FOR-BODY represents  the generated Assembly for the
+  ;;body  of  the  CODES   struct;  each  symbolic  expression  ?ASM-LIST-FOR-CLAMBDA
+  ;;represents the generated Assembly for the CLAMBDA structs in the CODES struct.
   ;;
   ;;This operation is called "flattening" because the assembly directives like "int+"
   ;;are expanded into actual assembly instructions for the underlying CPU.
   ;;
-  ;;Accept as input recordized code containing the following struct types:
+  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
+  ;;recordized code must be composed by struct instances of the following types:
   ;;
-  ;;   asm-instr	conditional	constant
-  ;;   non-tail-call		asmcall		seq
-  ;;   shortcut
+  ;;   seq		conditional	shortcut
+  ;;   non-tail-call	asmcall		asm-instr
   ;;
-  ;;only the following types are accepted in tail position:
+  ;;structs of the following types may appear as operands in ASM-INSTR structs:
   ;;
-  ;;   conditional
-  ;;   asmcall
-  ;;   seq
-  ;;   shortcut
+  ;;   fvar		constant	disp
+  ;;
+  ;;symbols representing CPU  register names also may appear as  operands; structs of
+  ;;the following types may appear in CONSTANT structs:
+  ;;
+  ;;   object		code-loc	foreign-label
+  ;;   closure-maker
   ;;
   ;;Error handling routines
   ;;-----------------------
   ;;
-  ;;The input of this module X has is  composed of a set of CLAMBDA and an expression
-  ;;BODY; each of them is converted into assembly code.
-  ;;
-  ;;Each block  of assembly code must  have a way to  report errors; this is  done by
-  ;;appending at the end of the main  assembly routine a sequence of subroutines each
-  ;;handling a kind of error:
+  ;;Each block of generated  Assembly code must have a way to  report errors; this is
+  ;;done  by  appending at  the  end  of the  main  assembly  routine a  sequence  of
+  ;;subroutines each handling a kind of error:
   ;;
   ;;  main_label:
   ;;    ... main routine instructions ...
@@ -66,16 +69,6 @@
   ;;  (let ((tail-pair (exceptions-concatenation)))
   ;;    (set-cdr! tail-pair (append ?error-handler-instructions
   ;;                                (cdr tail-pair))))
-  ;;
-  ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
-  ;;recordized code must be composed by struct instances of the following types:
-  ;;
-  ;;   asm-instr	code-loc	conditional
-  ;;   constant		disp		foreign-label
-  ;;   fvar		non-tail-call		object
-  ;;   asmcall		seq		shortcut
-  ;;
-  ;;in addition CLOSURE-MAKER structs can appear in side CONSTANT structs.
   ;;
   (import INTEL-ASSEMBLY-CODE-GENERATION)
 

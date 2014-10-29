@@ -88,7 +88,8 @@
 	    (__WHO__        (datum->syntax #'?ctx '__who__)))
 	 #'(unless (or (register? ?operand)
 		       (fvar?     ?operand)
-		       (constant? ?operand)
+		       (and (constant? ?operand)
+			    (A-constant ?operand ?asm-instr))
 		       (and (disp?  ?operand)
 			    (A-disp ?operand ?asm-instr))
 		       (and (var?   ?operand)
@@ -136,7 +137,8 @@
 	 (with-syntax
 	     ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
 	      (__WHO__        (datum->syntax #'?ctx '__who__)))
-	   #'(unless (or (constant? ?objref)
+	   #'(unless (or (and (constant? ?objref)
+			      (A-constant ?objref ?asm-instr))
 			 (fvar?     ?objref)
 			 (register? ?objref)
 			 (and (var?  ?objref)
@@ -155,7 +157,8 @@
 	 (with-syntax
 	     ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
 	      (__WHO__        (datum->syntax #'?ctx '__who__)))
-	   #'(unless (or (constant? ?offset)
+	   #'(unless (or (and (constant? ?offset)
+			      (A-constant ?offset ?asm-instr))
 			 (register? ?offset)
 			 (and (var? ?offset)
 			      (A-var ?offset ?asm-instr)))
@@ -166,6 +169,28 @@
 	))
 
     #| end of module: A-disp |# )
+
+  (define-syntax (A-constant stx)
+    (syntax-case stx ()
+      ((?ctx ?constant ?asm-instr)
+       (and (identifier? #'?constant)
+	    (identifier? #'?asm-instr))
+       (with-syntax
+	   ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
+	    (__WHO__        (datum->syntax #'?ctx '__who__)))
+	 #'(struct-case ?constant
+	     ((constant obj)
+	      (unless (or (fixnum?        obj)
+			  (object?        obj)
+			  (code-loc?      obj)
+			  (foreign-label? obj)
+			  (closure-maker? obj)
+			  (bignum?        obj))
+		(compiler-internal-error __MODULE_WHO__ __WHO__
+		  "invalid Scheme object in CONSTANT struct as ASM-INSTR operand"
+		  (unparse-recordised-code/sexp ?asm-instr)
+		  (unparse-recordised-code/sexp ?constant)))))))
+      ))
 
 ;;; --------------------------------------------------------------------
 
@@ -291,7 +316,8 @@
 	 (A-operand src x))
 
 	((sll sra srl sll/overflow)
-	 (unless (or (constant? src)
+	 (unless (or (and (constant? src)
+			  (A-constant src x))
 		     (eq? src ecx))
 	   (%compiler-internal-error/src-operand x))
 	 (A-operand dst x))
@@ -401,7 +427,8 @@
 	 ;;
 	 (unless (or (register? dst)
 		     (fvar?     dst)
-		     (constant? dst)
+		     (and (constant? dst)
+			  (A-constant dst x))
 		     (and (var? dst)
 			  (A-var dst x)))
 	   (%compiler-internal-error/dst-operand x))
