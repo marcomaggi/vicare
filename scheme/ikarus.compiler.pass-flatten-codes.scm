@@ -84,6 +84,16 @@
 (define-constant exception-label
   (make-parameter #f))
 
+(define (unique-interrupt-label)
+  (label (gensym "L_shortcut_interrupt_handler")))
+
+(define unique-label
+  (case-lambda
+   (()
+    (label (gensym)))
+   ((name)
+    (label (gensym name)))))
+
 
 ;;;; processing programs
 
@@ -227,27 +237,26 @@
     ;;accepting a variable number of arguments.   The generated code goes in the body
     ;;of the callee function.
     ;;
-    ;;PROPERIZED-FORMALS-COUNT is a fixnum  representing the number of
-    ;;arguments, including the rest argument.  For the function:
+    ;;PROPERIZED-FORMALS-COUNT  is a  fixnum  representing the  number of  arguments,
+    ;;including the rest argument.  For the function:
     ;;
     ;;   (lambda (a b c . rest) . ?body)
     ;;
     ;;this argument is 4.
     ;;
-    ;;ACCUM is a  list of Assembly instructions  representing the body
-    ;;of this CLAMBDA case.
+    ;;ACCUM is a list of Assembly  instructions representing the body of this CLAMBDA
+    ;;case.
     ;;
-    ;;Let's say we want to call the function:
+    ;;Let's say we want to apply the function:
     ;;
     ;;   (define (the-func arg . rest) . ?body)
     ;;   (the-func 1 2 3)
     ;;
-    ;;this is  the Scheme language,  so the  caller does not  know how
-    ;;THE-FUNC  will  handle  its  arguments:  it  can  only  put  the
-    ;;arguments  on  the  Scheme  stack.   Right  after  the  Assembly
-    ;;instruction "call" to THE-FUNC  has been executed: AAR
-    ;;is  set  to the  fixnum  -3,  which  is  the negated  number  of
-    ;;arguments, and the Scheme stack is:
+    ;;this is  the Scheme  language, so the  caller does not  know how  THE-FUNC will
+    ;;handle its arguments: it can only put the arguments on the Scheme stack.  Right
+    ;;after the Assembly instruction "call" to THE-FUNC has been executed: AAR is set
+    ;;to the  fixnum -3,  which is the  negated number of  arguments, and  the Scheme
+    ;;stack is:
     ;;
     ;;     high memory
     ;; |                |
@@ -263,9 +272,8 @@
     ;; |                |
     ;;     low memory
     ;;
-    ;;The fixnum 1 is right where we need it; the fixnums 2 and 3 must
-    ;;be put into a proper list.  In the body of THE-FUNC we need code
-    ;;that sets the stack to:
+    ;;The fixnum 1 is right where we need it;  the fixnums 2 and 3 must be put into a
+    ;;proper list.  In the body of THE-FUNC we need code that sets the stack to:
     ;;
     ;;     high memory
     ;; |                |
@@ -281,30 +289,27 @@
     ;; |                |
     ;;     low memory
     ;;
-    ;;knowing  that  "fixnum  3"  will  be ignored  and  the  list  is
-    ;;allocated on the heap.
+    ;;knowing that "fixnum 3" will be ignored and the list is allocated on the heap.
     ;;
-    (define CONTINUE_LABEL	(unique-label "L_varargs_continue_"))
-    (define DONE_LABEL	(unique-label "L_varargs_done"))
-    (define CONS_LABEL	(unique-label "L_varargs_cons"))
-    (define LOOP_HEAD		(unique-label "L_varargs_loop_head"))
-    (define mandatory-formals-count
-      (fxsub1 properized-formals-count))
-    (define properized-formals-argc
+    (define-constant CONTINUE_LABEL	(unique-label "L_varargs_continue_"))
+    (define-constant DONE_LABEL		(unique-label "L_varargs_done"))
+    (define-constant CONS_LABEL		(unique-label "L_varargs_cons"))
+    (define-constant LOOP_HEAD		(unique-label "L_varargs_loop_head"))
+    (define-constant MANDATORY-FORMALS-ARGC
+      (argc-convention (fxsub1 properized-formals-count)))
+    (define-constant PROPERIZED-FORMALS-ARGC
       (argc-convention properized-formals-count))
     (cons*
-     ;;Check if there are rest arguments to put into a list.  We could
-     ;;check if:
+     ;;Check if there are rest arguments to put into a list.  We could check if:
      ;;
-     ;;  (= (argc-convention properized-formals-count) AAR)
+     ;;  (= PROPERIZED-FORMALS-ARGC AAR)
      ;;
-     ;;and jump to CONS_LABEL if they are not equal (jne).  Instead we
-     ;;do:
-     (cmpl (int (argc-convention mandatory-formals-count)) AAR)
+     ;;and jump to CONS_LABEL if they are not equal (jne).  Instead we do:
+     (cmpl (int MANDATORY-FORMALS-ARGC) AAR)
      (jl CONS_LABEL)
 
-     ;;There are no rest arguments:  the function has been called with
-     ;;enough argument to match the mandatory arguments, as in:
+     ;;There are no rest arguments: the  function has been called with exactly enough
+     ;;argument to match the mandatory arguments, as in:
      ;;
      ;;   (define (the-func arg . rest) . ?body)
      ;;   (the-func 1)
@@ -313,9 +318,9 @@
      (movl (int NULL-OBJECT) ebx)
      (jmp DONE_LABEL)
 
-     ;;Check that  there is enough  room on  the heap to  allocate the
-     ;;list of rest arguments; the amount  of words needed to hold the
-     ;;list is twice the number of rest arguments.
+     ;;Check that  there is  enough room  on the heap  to allocate  the list  of rest
+     ;;arguments; the amount of words needed to  hold the list is twice the number of
+     ;;rest arguments.
      CONS_LABEL
      (movl (mem pcb-allocation-redline PCR) ebx)
      (addl AAR ebx)
@@ -430,13 +435,13 @@
      (addl (int pair-size) APR)	   ;increment the allocation pointer
      (addl (int wordsize) AAR)	   ;increment the negative arguments count
      ;;Loop if more arguments.
-     (cmpl (int properized-formals-argc) AAR)
+     (cmpl (int PROPERIZED-FORMALS-ARGC) AAR)
      (jle CONTINUE_LABEL)
 
      DONE_LABEL
      ;;Store NULL-OBJECT or the reference to the  rest list on the stack, right below
      ;;the last mandatory argument (overwriting the first rest argument).
-     (movl ebx (mem properized-formals-argc FPR))
+     (movl ebx (mem PROPERIZED-FORMALS-ARGC FPR))
      accum))
 
   #| end of module: FLATTEN-CODES |# )
@@ -788,18 +793,6 @@
 	 (error __module_who__ "invalid R/cl" (unparse-recordized-code x))))))
 
   #| end of module: E |# )
-
-;;; --------------------------------------------------------------------
-
-(define (unique-interrupt-label)
-  (label (gensym "L_shortcut_interrupt_handler")))
-
-(define unique-label
-  (case-lambda
-   (()
-    (label (gensym)))
-   ((name)
-    (label (gensym name)))))
 
 
 (module (P)
