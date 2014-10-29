@@ -46,7 +46,7 @@
        (let ((x.vars.vec        (car x.vars))
 	     (x.vars.spillable* (cdr x.vars)))
 	 (assert (vector-for-all var? x.vars.vec))
-	 (assert (vector-for-all var? x.vars.vec)))
+	 (assert (for-all var? x.vars.spillable*)))
        (A-body x.body))))
 
   (define (A-body x)
