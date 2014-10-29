@@ -444,12 +444,12 @@
 
     (define (small-operand? x)
       (import SIGNED-32-BIT-INTEGER-LIMITS)
-      (assert (or (disp? x)
-		  (fvar? x)
-		  (and (var? x)
-		       (not (var-loc x)))
-		  (register? x)
-		  (constant? x)))
+      ;; (assert (or (disp? x)
+      ;;             (fvar? x)
+      ;;             (and (var? x)
+      ;;                  (not (var-loc x)))
+      ;;             (register? x)
+      ;;             (constant? x)))
       (boot.case-word-size
        ((32)
 	(not (disp/fvar? x)))
@@ -855,6 +855,13 @@
 	;;   (asm-instr u<= ?dst ?src)
 	;;   (asm-instr u>  ?dst ?src)
 	;;   (asm-instr u>= ?dst ?src)
+	;;
+	;;all  these instruction,  in  truth,  will be  implemented  by the  Assembly
+	;;instruction  "cmp".
+	;;
+	;;FIXME With this Assembly instruction an  integer in a CONSTANT, as operand,
+	;;can be  at most 32-bit?  Or  can it be  extended to 64-bit in  64-bit mode?
+	;;See the reference manual.  (Marco Maggi; Tue Oct 28, 2014)
 	;;
 	(import ASM-INSTR-HELPERS)
 	(cond ((and (not (disp/fvar? dst))
