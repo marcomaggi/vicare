@@ -75,17 +75,23 @@
 
 * Compiler pass: source optimiser
 
-  Total code review.
+** Finish the table of primitives.
+
+** Total code review.
 
 * Compiler pass: assign-frame-sizes
 
-  Total code review.
+** Total code review.
 
 * Compiler pass: color-by-chaitin
 
-  Total code review.
+** Total code review.
 
 * Compiler pass: flatten-codes
 
-  Total code review.
+** Total code review.
+
+* Compiler pass: intel-assembler
+
+** Total code review.
 
