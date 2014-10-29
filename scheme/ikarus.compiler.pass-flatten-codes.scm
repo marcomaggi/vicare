@@ -451,7 +451,7 @@
   #| end of module: FLATTEN-CODES |# )
 
 
-(define (T x accum)
+(define* (T x accum)
   ;;Flatten the  struct instance  X, representing recordized  code, as  expression in
   ;;tail position; return the generated list  of Assembly instructions using ACCUM as
   ;;tail:
@@ -463,11 +463,24 @@
      (E e0 (T e1 accum)))
 
     ((conditional x.test x.conseq x.altern)
-     (let ((label-for-true-predicate  #f)
-	   (label-for-false-predicate (unique-label "L_false")))
-       (P x.test label-for-true-predicate label-for-false-predicate
+     ;;For  this   CONDITIONAL  in   tail  position,  we   aim  at   generating  this
+     ;;pseudo-Assembly:
+     ;;
+     ;;     ?test-asm-instr
+     ;;     jump-if-false ?label-altern
+     ;;     ?conseq-asm-instr
+     ;;   ?label-altern:
+     ;;     ?altern-asm-instr
+     ;;
+     ;;if the test is true: we fall through and just run the CONSEQ code; if the test
+     ;;is false: we jump to the ?LABEL-ALTERN  and execute the ALTERN code.  There is
+     ;;no need to generate a label for  the CONSEQ.  Being in tail position: both the
+     ;;CONSEQ and the ALTERN end with a return or tail call.
+     (let ((label-conseq  #f)
+	   (label-altern (unique-label "L_conditional_altern")))
+       (P x.test label-conseq label-altern
 	  (T x.conseq
-	     (cons label-for-false-predicate
+	     (cons label-altern
 		   (T x.altern accum))))))
 
     ((asmcall op rands)
@@ -476,8 +489,8 @@
 	(cons '(ret) accum))
 
        ((indirect-jump)
-	;;The CPU's Closure Pointer  Register (CPR) contains a
-	;;reference to the closure object we want to jump to.
+	;;The  CPU's Closure  Pointer  Register  (CPR) contains  a  reference to  the
+	;;closure object we want to jump to.
 	(cons `(jmp (disp ,off-closure-code ,CPR))
 	      accum))
 
@@ -489,7 +502,9 @@
 	      accum))
 
        (else
-	(error __module_who__ "invalid tail" x))))
+	(compiler-internal-error __module_who__ __who__
+	  "invalid code in T context"
+	  (unparse-recordised-code/sexp x)))))
 
     ((shortcut body handler)
      ;;Flatten the body instructions:
@@ -497,8 +512,7 @@
      ;;  (body-asm)
      ;;  ...
      ;;
-     ;;and  prepend to  the exception  routines the  flattened handler
-     ;;instructions:
+     ;;and prepend to the exception routines the flattened handler instructions:
      ;;
      ;;  (label L)
      ;;  (handler-asm)
@@ -506,13 +520,15 @@
      ;;
      (let ((L (unique-interrupt-label)))
        (let* ((handler^ (cons L (T handler '())))
-	      (tc       (exceptions-concatenation)))
-	 (set-cdr! tc (append handler^ (cdr tc))))
+	      (tconc    (exceptions-concatenation)))
+	 (set-cdr! tconc (append handler^ (cdr tconc))))
        (parameterize ((exception-label L))
 	 (T body accum))))
 
     (else
-     (error __module_who__ "invalid tail" x))))
+     (compiler-internal-error __module_who__ __who__
+       "invalid code in T context"
+       (unparse-recordised-code/sexp x)))))
 
 
 (module (E)
@@ -544,24 +560,24 @@
 		(P x.test label-true label-false
 		   (E x.conseq accum))))
 	     (else
-	      ;;For  this conditional  case  we generate  code as  the
-	      ;;following pseudo-code shows:
+	      ;;For  this  conditional  case  we   generate  code  as  the  following
+	      ;;pseudo-code shows:
 	      ;;
 	      ;;     x.test
-	      ;;   jump-if-false label_false
+	      ;;   jump-if-false label_altern
 	      ;;     x.conseq
 	      ;;     jmp label_end
-	      ;;   label_false:
+	      ;;   L_conditional_altern:
 	      ;;     x.altern
-	      ;;   label_end:
+	      ;;   L_conditional_end:
 	      ;;     accum
 	      ;;
-	      (let ((label-true  #f)
-		    (label-false (unique-label "L_false"))
-		    (label-end   (unique-label "L_end")))
-		(P x.test label-true label-false
+	      (let ((label-conseq  #f)
+		    (label-altern  (unique-label "L_conditional_altern"))
+		    (label-end     (unique-label "L_conditional_end")))
+		(P x.test label-conseq label-altern
 		   (E x.conseq (cons* `(jmp ,label-end)
-				      label-false
+				      label-altern
 				      (E x.altern (cons label-end accum)))))))))
 
       ((non-tail-call target value args mask size)
