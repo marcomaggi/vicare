@@ -65,6 +65,7 @@
     (prefix (only (ikarus.compiler)
 		  optimize-level
 		  generate-debug-calls
+		  check-compiler-pass-preconditions
 		  assembler-output
 		  optimizer-output
 		  source-optimizer-passes-count)
@@ -522,6 +523,12 @@
 	  ((%option= "-nd" "--no-debug")
 	   (option.debug-mode-enabled? #f)
 	   (next-option (cdr args) (lambda () (k) (compiler.generate-debug-calls #f))))
+
+	  ((%option= "--check-compiler-pass-preconditions")
+	   (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #t))))
+
+	  ((%option= "--no-check-compiler-pass-preconditions")
+	   (next-option (cdr args) (lambda () (k) (compiler.check-compiler-pass-preconditions #f))))
 
 	  ((%option= "--gc-integrity-checks")
 	   (next-option (cdr args) (lambda () (k) (foreign-call "ikrt_enable_gc_integrity_checks"))))

@@ -205,6 +205,11 @@
 ;;because it would become too big.  (Marco Maggi; Wed Apr 2, 2014)
 (compiler.generate-debug-calls #f)
 
+;;NOTE This  can be #t  while developing and  #f in distributed  tarballs.  Obviously
+;;someone has  to remember to set  it to #f; but  it is not bad  if it is set  to #t,
+;;because it only affects bulding the boot image.  (Marco Maggi; Wed Oct 29, 2014)
+(compiler.check-compiler-pass-preconditions #t)
+
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 

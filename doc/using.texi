@@ -280,6 +280,19 @@ inspection.
 @cindex @option{-nd}, command line option
 Turn off debugging mode.
 
+@item --check-compiler-pass-preconditions
+@cindex Command line option @option{--check-compiler-pass-preconditions}
+@cindex @option{--check-compiler-pass-preconditions}, command line option
+Enable performing additional compiler passes to validate generated code.
+To be used when debugging @value{PRJNAME}'s compiler.  The default is
+@strong{not} to perform such compiler passes.
+
+@item --no-check-compiler-pass-preconditions
+@cindex Command line option @option{--no-check-compiler-pass-preconditions}
+@cindex @option{--no-check-compiler-pass-preconditions}, command line option
+Disable performing additional compiler passes to validate generated
+code.  To be used when debugging @value{PRJNAME}'s compiler.
+
 @item --gc-integrity-checks
 @cindex Command line option @option{--gc-integrity-checks}
 @cindex @option{--gc-integrity-checks}, command line option

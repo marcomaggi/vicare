@@ -47,6 +47,7 @@
     cp0-size-limit
     strip-source-info
     generate-debug-calls
+    check-compiler-pass-preconditions
     enabled-function-application-integration?
     option.descriptive-labels
 
@@ -181,7 +182,7 @@
   ;;When true:  perform additional  compiler code-validation  passes to  validate the
   ;;recordised code between true compiler passes.
   ;;
-  (make-parameter #t
+  (make-parameter #f
     (lambda (obj)
       (and obj #t))))
 
