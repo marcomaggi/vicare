@@ -15,6 +15,412 @@
 ;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+;;;; compiler pass preconditions
+
+(module (preconditions-for-color-by-chaitin)
+  (module (register? eax ecx edx)
+    (import INTEL-ASSEMBLY-CODE-GENERATION))
+
+  (define-syntax __module_who__
+    (identifier-syntax 'preconditions-for-color-by-chaitin))
+
+  (define (preconditions-for-color-by-chaitin x)
+    (struct-case x
+      ((codes x.clambda* x.locals)
+       (make-codes (map A-clambda x.clambda*) (A-locals x.locals))))
+    x)
+
+  (define (A-clambda x)
+    (struct-case x
+      ((clambda label clause* cp freevar* name)
+       (make-clambda label (map A-clambda-clause clause*) cp freevar* name))))
+
+  (define (A-clambda-clause x)
+    (struct-case x
+      ((clambda-case x.info x.locals)
+       (make-clambda-case x.info (A-locals x.locals)))))
+
+  (define (A-locals x)
+    (struct-case x
+      ((locals x.vars x.body)
+       (let ((x.vars.vec        (car x.vars))
+	     (x.vars.spillable* (cdr x.vars)))
+	 (assert (vector-for-all var? x.vars.vec))
+	 (assert (vector-for-all var? x.vars.vec)))
+       (A-body x.body))))
+
+  (define (A-body x)
+    (T x))
+
+;;; --------------------------------------------------------------------
+
+  (define-syntax (%compiler-internal-error/src-operand stx)
+    (syntax-case stx ()
+      ((?ctx ?asm-instr)
+       (identifier? #'?asm-instr)
+       (with-syntax
+	   ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
+	    (__WHO__        (datum->syntax #'?ctx '__who__)))
+	 #'(compiler-internal-error __MODULE_WHO__ __WHO__
+	     "invalid SRC operand in ASM-INSTR struct"
+	     (unparse-recordised-code/sexp ?asm-instr))))
+      ))
+
+  (define-syntax (%compiler-internal-error/dst-operand stx)
+    (syntax-case stx ()
+      ((?ctx ?asm-instr)
+       (identifier? #'?asm-instr)
+       (with-syntax
+	   ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
+	    (__WHO__        (datum->syntax #'?ctx '__who__)))
+	 #'(compiler-internal-error __MODULE_WHO__ __WHO__
+	     "invalid DST operand in ASM-INSTR struct"
+	     (unparse-recordised-code/sexp ?asm-instr))))
+      ))
+
+  (define-syntax (A-operand stx)
+    (syntax-case stx ()
+      ((?ctx ?operand ?asm-instr)
+       (and (identifier? #'?operand)
+	    (identifier? #'?asm-instr))
+       (with-syntax
+	   ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
+	    (__WHO__        (datum->syntax #'?ctx '__who__)))
+	 #'(unless (or (register? ?operand)
+		       (fvar?     ?operand)
+		       (constant? ?operand)
+		       (and (disp?  ?operand)
+			    (A-disp ?operand ?asm-instr))
+		       (and (var?   ?operand)
+			    (A-var  ?operand ?asm-instr)))
+	     (compiler-internal-error __MODULE_WHO__ __WHO__
+	       "invalid ASM-INSTR operand"
+	       (unparse-recordised-code/sexp ?asm-instr)
+	       (unparse-recordised-code/sexp ?operand)))))
+      ))
+
+  (define-syntax (A-var stx)
+    (syntax-case stx ()
+      ((?ctx ?var ?asm-instr)
+       (and (identifier? #'?var)
+	    (identifier? #'?asm-instr))
+       (with-syntax
+	   ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
+	    (__WHO__        (datum->syntax #'?ctx '__who__)))
+	 #'(unless (and (var? ?var)
+			(not (var-loc ?var)))
+	     (compiler-internal-error __MODULE_WHO__ __WHO__
+	       "invalid VAR struct as ASM-INSTR operand"
+	       (unparse-recordised-code/sexp ?asm-instr)
+	       (unparse-recordised-code/sexp ?var)))))
+      ))
+
+  (module (A-disp)
+
+    (define-syntax (A-disp stx)
+      (syntax-case stx ()
+	((?ctx ?disp ?asm-instr)
+	 (and (identifier? #'?disp)
+	      (identifier? #'?asm-instr))
+	 #'(struct-case ?disp
+	     ((disp objref offset)
+	      (A-disp-objref objref ?asm-instr)
+	      (A-disp-offset offset ?asm-instr))))
+	))
+
+    (define-syntax (A-disp-objref stx)
+      (syntax-case stx ()
+	((?ctx ?objref ?asm-instr)
+	 (and (identifier? #'?objref)
+	      (identifier? #'?asm-instr))
+	 (with-syntax
+	     ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
+	      (__WHO__        (datum->syntax #'?ctx '__who__)))
+	   #'(unless (or (constant? ?objref)
+			 (fvar?     ?objref)
+			 (register? ?objref)
+			 (and (var?  ?objref)
+			      (A-var ?objref ?asm-instr)))
+	       (compiler-internal-error __MODULE_WHO__ __WHO__
+		 "invalid OBJREF field in DISP struct as ASM-INSTR operand"
+		 (unparse-recordised-code/sexp ?asm-instr)
+		 (unparse-recordised-code/sexp ?objref)))))
+	))
+
+    (define-syntax (A-disp-offset stx)
+      (syntax-case stx ()
+	((?ctx ?offset ?asm-instr)
+	 (and (identifier? #'?offset)
+	      (identifier? #'?asm-instr))
+	 (with-syntax
+	     ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
+	      (__WHO__        (datum->syntax #'?ctx '__who__)))
+	   #'(unless (or (constant? ?offset)
+			 (register? ?offset)
+			 (and (var? ?offset)
+			      (A-var ?offset ?asm-instr)))
+	       (compiler-internal-error __MODULE_WHO__ __WHO__
+		 "invalid OFFSET field in DISP struct as ASM-INSTR operand"
+		 (unparse-recordised-code/sexp ?asm-instr)
+		 (unparse-recordised-code/sexp ?offset)))))
+	))
+
+    #| end of module: A-disp |# )
+
+;;; --------------------------------------------------------------------
+
+  (define* (T x)
+    ;;Validate expressions in tail position.
+    ;;
+    (struct-case x
+      ((asmcall op rands)
+       (unless (or (eq? op 'return)
+		   (eq? op 'direct-jump)
+		   (eq? op 'indirect-jump))
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid operator in ASMCALL struct in tail position"
+	   (unparse-recordised-code/sexp x))))
+
+      ((conditional test conseq altern)
+       (P test)
+       (T conseq)
+       (T altern))
+
+      ((seq e0 e1)
+       (E e0)
+       (T e1))
+
+      ((shortcut body handler)
+       (T body)
+       (T handler))
+
+      (else
+       (compiler-internal-error __module_who__  __who__
+	 "invalid code in T context" (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
+
+  (module (E)
+
+    (define* (E x)
+      ;;Validate expressions in "for side effects" context.
+      ;;
+      (struct-case x
+	((seq e0 e1)
+	 (E e0)
+	 (E e1))
+
+	((conditional test conseq altern)
+	 (P test)
+	 (E conseq)
+	 (E altern))
+
+	((asm-instr op dst src)
+	 (A-asm-instr op dst src x))
+
+	((asmcall op rands)
+	 (case op
+	   ((nop interrupt incr/zero? fl:single->double fl:double->single)
+	    (void))
+	   (else
+	    (compiler-internal-error __module_who__  __who__
+	      "ASMCALL struct with invalid operator in E context"
+	      (unparse-recordized-code x)))))
+
+	((non-tail-call)
+	 (void))
+
+	((shortcut body handler)
+	 (E body)
+	 (E handler))
+
+	(else
+	 (compiler-internal-error __module_who__  __who__
+	   "invalid code in E context"
+	   (unparse-recordized-code/sexp x)))))
+
+    (define* (A-asm-instr op dst src x)
+      (case op
+	((load8 load32)
+	 ;;We expect X to have the format:
+	 ;;
+	 ;;   (asm-instr load8  ?var  (disp ?objref ?offset))
+	 ;;   (asm-instr load8  ?fvar (disp ?objref ?offset))
+	 ;;   (asm-instr load32 ?var  (disp ?objref ?offset))
+	 ;;   (asm-instr load32 ?fvar (disp ?objref ?offset))
+	 ;;
+	 (unless (or (var?  dst)
+		     (fvar? dst))
+	   (compiler-internal-error __module_who__ __who__
+	     "invalid DST operand in ASM-INSTR struct"
+	     (unparse-recordised-code/sexp x)))
+	 (A-disp src x))
+
+	((move
+	  logor		logxor			logand
+	  int+		int-			int*
+	  int+/overflow	int-/overflow		int*/overflow)
+	 ;;We expect X to have the format:
+	 ;;
+	 ;;   (asm-instr move ?reg  ?src)
+	 ;;   (asm-instr move ?var  ?src)
+	 ;;   (asm-instr move ?fvar ?src)
+	 ;;
+	 (A-operand dst x)
+	 (A-operand src x))
+
+	((bswap!)
+	 (A-operand dst x)
+	 (A-operand src x))
+
+	((cltd)
+	 ;;Here we know that DST is the register EDX and SRC is the register EAX.  We
+	 ;;know that CLTD and IDIV always come together.
+	 (unless (eq? dst edx)
+	   (%compiler-internal-error/dst-operand x))
+	 (unless (eq? src eax)
+	   (%compiler-internal-error/src-operand x)))
+
+	((idiv)
+	 ;;Here we know that DST is either  the register EAX or the register EDX; SRC
+	 ;;is an operand, we do not know which  one here.  We know that CLTD and IDIV
+	 ;;always come together.
+	 (unless (or (eq? dst eax)
+		     (eq? dst edx))
+	   (%compiler-internal-error/dst-operand x))
+	 (A-operand src x))
+
+	((sll sra srl sll/overflow)
+	 (unless (or (constant? src)
+		     (eq? src ecx))
+	   (%compiler-internal-error/src-operand x))
+	 (A-operand dst x))
+
+	((mset mset32 bset)
+	 ;;We expect X to have one of the formats:
+	 ;;
+	 ;;   (asm-instr mset   (disp ?objref ?offset) ?new-val)
+	 ;;   (asm-instr bset   (disp ?objref ?offset) ?new-val)
+	 ;;   (asm-instr mset32 (disp ?objref ?offset) ?new-val)
+	 ;;
+	 (A-disp    dst x)
+	 (A-operand src x))
+
+	((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:load-single fl:store-single)
+	 (A-operand dst x)
+	 (A-operand src x))
+
+	((fl:from-int fl:shuffle)
+	 (A-operand dst x)
+	 (A-operand src x))
+
+	(else
+	 (compiler-internal-error __module_who__  __who__
+	   "invalid ASM-INSTR operator in E context"
+	   (unparse-recordised-code/sexp x)))))
+
+    #| end of module: E |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (P)
+
+    (define* (P x)
+      ;;Validate expressions in predicate position.
+      ;;
+      (struct-case x
+	((constant)
+	 (void))
+
+	((conditional test conseq altern)
+	 (P test)
+	 (P conseq)
+	 (P altern))
+
+	((seq e0 e1)
+	 (E e0)
+	 (P e1))
+
+	((asm-instr op dst src)
+	 (P-asm-instr op dst src x))
+
+	((shortcut body handler)
+	 (P body)
+	 (P handler))
+
+	(else
+	 (compiler-internal-error __module_who__  __who__
+	   "invalid code in P context" (unparse-recordized-code/sexp x)))))
+
+    (define* (P-asm-instr op dst src x)
+      (case op
+	((= != <  <= > >= u< u<= u> u>=)
+	 ;;We expect X to have the format, for signed integer comparison:
+	 ;;
+	 ;;   (asm-instr =  ?dst ?src)
+	 ;;   (asm-instr != ?dst ?src)
+	 ;;   (asm-instr <  ?dst ?src)
+	 ;;   (asm-instr <= ?dst ?src)
+	 ;;   (asm-instr >  ?dst ?src)
+	 ;;   (asm-instr >= ?dst ?src)
+	 ;;
+	 ;;for unsigned integer comparison:
+	 ;;
+	 ;;   (asm-instr u<  ?dst ?src)
+	 ;;   (asm-instr u<= ?dst ?src)
+	 ;;   (asm-instr u>  ?dst ?src)
+	 ;;   (asm-instr u>= ?dst ?src)
+	 ;;
+	 ;;all  these instruction,  in truth,  will  be implemented  by the  Assembly
+	 ;;instruction "cmp".
+	 (A-operand dst x)
+	 (A-operand src x))
+
+	((fl:= fl:< fl:<= fl:> fl:>=)
+	 ;;We expect X to have the format:
+	 ;;
+	 ;;   (asm-instr fl:=  ?dst ?src)
+	 ;;   (asm-instr fl:<  ?dst ?src)
+	 ;;   (asm-instr fl:<= ?dst ?src)
+	 ;;   (asm-instr fl:>  ?dst ?src)
+	 ;;   (asm-instr fl:>= ?dst ?src)
+	 ;;
+	 ;;These instructions always come in sequence:
+	 ;;
+	 ;;   (asm-instr fl:load ?reference-to-flonum1 (KN ?off-flonum-data))
+	 ;;   (asm-instr fl:=    ?reference-to-flonum2 (KN ?off-flonum-data))
+	 ;;
+	 ;;where:  "fl:load"  loads the  first  flonum  operand  in the  CPU's  float
+	 ;;register XMM0; "fl:=" performs the  comparison between the operand in XMM0
+	 ;;and  the flonum  referenced in  the instruction.   So ?SRC  is always  the
+	 ;;constant:
+	 ;;
+	 ;;   (KN ?off-flonum-data)
+	 ;;
+	 ;;and ?DST is a simple operand referencing a Scheme object of type flonum.
+	 ;;
+	 (unless (or (register? dst)
+		     (fvar?     dst)
+		     (constant? dst)
+		     (and (var? dst)
+			  (A-var dst x)))
+	   (%compiler-internal-error/dst-operand x))
+	 (unless (struct-case src
+		   ((constant src.const)
+		    (eq? src.const off-flonum-data))
+		   (else #f))
+	   (%compiler-internal-error/src-operand x)))
+
+	(else
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid ASM-INSTR operator in P context"
+	   (unparse-recordised-code/sexp x)))))
+
+    #| end of module: P |# )
+
+  #| end of module: PRECONDITIONS-FOR-COLOR-BY-CHAITIN |# )
+
+
 (module (color-by-chaitin)
   ;;
   ;;This module  accepts as  input a  struct instance of  type CODES,  whose internal
@@ -539,7 +945,7 @@
 	      x)
 	     (else
 	      (compiler-internal-error __module_who__  __who__
-		"ASMCALL struct with invalid operand in E context"
+		"ASMCALL struct with invalid operator in E context"
 		(unparse-recordized-code x)))))
 
 	  ((non-tail-call)
@@ -1189,7 +1595,7 @@
 		  "missing live set for SHORTCUT's handler while processing body")))
 	   (else
 	    (compiler-internal-error __module_who__ __who__
-	      "invalid ASMCALL operand in E context" op))))
+	      "invalid ASMCALL operator in E context" op))))
 
 	((shortcut body handler)
 	 (let ((handler.set (E handler tail.set)))

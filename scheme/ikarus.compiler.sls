@@ -177,6 +177,14 @@
     (lambda (obj)
       (and obj #t))))
 
+(define check-compiler-pass-preconditions
+  ;;When true:  perform additional  compiler code-validation  passes to  validate the
+  ;;recordised code between true compiler passes.
+  ;;
+  (make-parameter #t
+    (lambda (obj)
+      (and obj #t))))
+
 
 ;;;; helper syntaxes
 
@@ -6412,6 +6420,9 @@
     (let* ((x  (specify-representation x))
 	   (x  (impose-calling-convention/evaluation-order x))
 	   (x  (assign-frame-sizes x))
+	   (x  (if (check-compiler-pass-preconditions)
+		   (preconditions-for-color-by-chaitin x)
+		 x))
 	   (x  (color-by-chaitin x))
 	   (code-object-sexp* (flatten-codes x)))
       code-object-sexp*))
