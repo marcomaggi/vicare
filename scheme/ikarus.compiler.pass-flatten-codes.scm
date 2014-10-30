@@ -82,61 +82,80 @@
 (define-constant exceptions-concatenation
   (make-parameter #f))
 
-(define-constant exception-label
+;;A symbolic expression with the format:
+;;
+;;   (label ?gensym)
+;;
+;;representing the Assembly  label entry point of a SHORTCUT  interrupt handler.  The
+;;SHORTCUT structs:
+;;
+;;   (shortcut ?body ?interrupt-handler)
+;;
+;;generate the following Assembly code:
+;;
+;;   ?body-asm-instr
+;;   ...
+;;
+;;   (label ?interrupt-handler-label)
+;;   ?interrupt-handler-asm-instr
+;;   ...
+;;
+;;this  compiler pass  first processes  the  interrupt handler  code, generating  its
+;;Assembly entry label; then  it processes the body, and somewhere  in the body there
+;;is the instruction:
+;;
+;;   (jmp (label ?interrupt-handler-label))
+;;
+;;So, while processing the body, this parameter is set to the interrupt handler label
+;;to allow its insertion in the code.
+;;
+(define-constant shortcut-interrupt-handler-entry-label
   (make-parameter #f))
+
+
+;;;; beginning of FLATTEN-CODES functions
+
+(define (flatten-codes input-codes)
+  ;;Process the input CODES struct.
+  ;;
+  ;;NOTE The reason we use nested functions here is that we value descriptive labels.
+  ;;So  all the  functions are  closed  upon the  closure UNIQUE-LABEL  which has  an
+  ;;internal table of labels generated at every FLATTEN-CODES invocation.
+  ;;
+
+
+;;;; Assembly label generation
 
 (define (unique-interrupt-handler-label)
   (unique-label "L_shortcut_interrupt_handler"))
 
-;;; --------------------------------------------------------------------
-
-(module (unique-label with-unique-label-maker)
-
-  (define (make-unique-label-maker)
-(debug-print* 'descriptive-labels? (option.descriptive-labels))
-    (if (option.descriptive-labels)
-	(let-constants ((DESCRIPTIVE-NAMES-TABLE (make-hashtable string-hash string=?)))
-	  (case-lambda
-	   (()
-	    (label (gensym)))
-	   ((name)
-	    (cond ((hashtable-ref DESCRIPTIVE-NAMES-TABLE name #f)
-		   => (lambda (idx)
-			(hashtable-set! DESCRIPTIVE-NAMES-TABLE name (add1 idx))
-			(label (gensym (format "~a_~a" name idx)))))
-		  (else
-		   (hashtable-set! DESCRIPTIVE-NAMES-TABLE name 0)
-		   (label (gensym (string-append name "_0")))))
-	    (label (gensym)))))
-      (case-lambda
-       (()
-	(label (gensym)))
-       ((name)
-	;;Ignore NAME.
-	(label (gensym))))))
-
-  (define-constant unique-label-maker
-    (make-parameter #f))
-
-  (define-syntax unique-label
-    (syntax-rules ()
-      ((_)
-       ((unique-label-maker)))
-      ((_ ?name)
-       ((unique-label-maker) ?name))))
-
-  (define-syntax-rule (with-unique-label-maker ?body0 . ?body)
-    (parametrise ((unique-label-maker (make-unique-label-maker)))
-      ?body0 . ?body))
-
-  #| end of module |# )
+(define unique-label
+  (if (option.descriptive-labels)
+      (let-constants ((DESCRIPTIVE-NAMES-TABLE (make-hashtable string-hash string=?)))
+	(case-lambda
+	 (()
+	  (label (gensym)))
+	 ((name)
+	  (cond ((hashtable-ref DESCRIPTIVE-NAMES-TABLE name #f)
+		 => (lambda (idx)
+		      (hashtable-set! DESCRIPTIVE-NAMES-TABLE name (add1 idx))
+		      (label (gensym (format "~a_~a" name idx)))))
+		(else
+		 (hashtable-set! DESCRIPTIVE-NAMES-TABLE name 1)
+		 (label (gensym (string-append name "_0"))))))))
+    (case-lambda
+     (()
+      (label (gensym)))
+     ((name)
+      ;;Ignore NAME.
+      (label (gensym))))))
 
 
 ;;;; processing programs
 
-(module (flatten-codes)
+(module (Z-codes)
 
-  (define (flatten-codes x)
+  (define (Z-codes x)
     ;;Flatten  the  struct  instance  X  of  type  CODES  into  a  list  of  Assembly
     ;;instructions: the BODY init expression first, the CLAMBDA implementations last.
     ;;Return a list of symbolic expressions with the following format:
@@ -153,20 +172,19 @@
     ;;
     (struct-case x
       ((codes x.clambda* x.body)
-       (with-unique-label-maker
-	(cons `(code-object-sexp
-		(number-of-free-vars:	0)
-		(annotation:		init-expression)
-		,(unique-label "init_expression_label")
-		. ,(F-init-expression x.body))
-	      (map F-clambda x.clambda*))))))
+       (cons `(code-object-sexp
+	       (number-of-free-vars:	0)
+	       (annotation:		init-expression)
+	       ,(unique-label "L_init_expression_label")
+	       . ,(Z-init-expression x.body))
+	     (map Z-clambda x.clambda*)))))
 
-  (define (F-init-expression x)
+  (define (Z-init-expression x)
     (define accum (list '(nop)))
     (parameterize ((exceptions-concatenation accum))
-      (F-body x accum)))
+      (Z-body x accum)))
 
-  (define (F-clambda x)
+  (define (Z-clambda x)
     ;;Flatten   the  the   struct  instance   X  of   type  CLAMBDA,   using  a   new
     ;;error-handler-routines tail, and generate Assembly instructions as follows:
     ;;
@@ -199,12 +217,12 @@
 	      (parameterize ((exceptions-concatenation accum))
 		(let recur ((clause* clause*))
 		  (if (pair? clause*)
-		      (F-clambda-clause (car clause*)
+		      (Z-clambda-clause (car clause*)
 					(recur (cdr clause*)))
 		    (cons `(jmp (label ,(sl-invalid-args-label)))
 			  accum)))))))))
 
-  (define (F-clambda-clause x accum)
+  (define (Z-clambda-clause x accum)
     ;;Flatten the  struct instance X, of  type CLAMBDA-CASE, into a  list of Assembly
     ;;instructions  prepended to  the accumulated  instructions in  ACCUM; the  error
     ;;handler  routines   are  prepended   to  the  tail   of  ACCUM   referenced  by
@@ -262,12 +280,12 @@
 			 (else
 			  `(jl ,next-clause-entry-point-label)))
 		   (let ((accum^ (cons (label x.info.clause-entry-point-label)
-				       (F-body x.body (cons next-clause-entry-point-label accum)))))
+				       (Z-body x.body (cons next-clause-entry-point-label accum)))))
 		     (if x.info.proper?
 			 accum^
 		       (%handle-vararg (length (cdr x.info.args)) accum^))))))))))
 
-  (define-syntax-rule (F-body body accum)
+  (define-syntax-rule (Z-body body accum)
      (T body accum))
 
 ;;; --------------------------------------------------------------------
@@ -486,7 +504,7 @@
      (movl ebx (mem PROPERIZED-FORMALS-ARGC FPR))
      accum))
 
-  #| end of module: FLATTEN-CODES |# )
+  #| end of module: Z-codes |# )
 
 
 (define* (T x accum)
@@ -552,15 +570,15 @@
      ;;
      ;;and prepend to the exception routines the flattened handler instructions:
      ;;
-     ;;  (label L)
+     ;;  (label L_interrupt_handler)
      ;;  (handler-asm)
      ;;  ...
      ;;
-     (let ((L (unique-interrupt-handler-label)))
-       (let* ((handler^ (cons L (T handler '())))
+     (let ((interrupt-handler-label (unique-interrupt-handler-label)))
+       (let* ((handler^ (cons interrupt-handler-label (T handler '())))
 	      (tconc    (exceptions-concatenation)))
 	 (set-cdr! tconc (append handler^ (cdr tconc))))
-       (parameterize ((exception-label L))
+       (parameterize ((shortcut-interrupt-handler-entry-label interrupt-handler-label))
 	 (T body accum))))
 
     (else
@@ -586,14 +604,14 @@
 
       ((conditional x.test x.conseq x.altern)
        (cond ((interrupt? x.conseq)
-	      (let ((label-true  (or (exception-label)
+	      (let ((label-true  (or (shortcut-interrupt-handler-entry-label)
 				     (compiler-internal-error __module_who__ __who__ "no exception label")))
 		    (label-false #f))
 		(P x.test label-true label-false
 		   (E x.altern accum))))
 	     ((interrupt? x.altern)
 	      (let ((label-true  #f)
-		    (label-false (or (exception-label)
+		    (label-false (or (shortcut-interrupt-handler-entry-label)
 				     (compiler-internal-error __module_who__ __who__ "no exception label"))))
 		(P x.test label-true label-false
 		   (E x.conseq accum))))
@@ -649,7 +667,7 @@
 	 (let* ((handler^ (cons L_interrupt (E handler `((jmp ,L_return)))))
 		(tc       (exceptions-concatenation)))
 	   (set-cdr! tc (append handler^ (cdr tc))))
-	 (parameterize ((exception-label L_interrupt))
+	 (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
 	   (E body (cons L_return accum)))))
 
       (else
@@ -742,28 +760,28 @@
        (cons `(mov32 ,(R s) ,(R d)) accum))
 
       ((int-/overflow)
-       (let ((L (or (exception-label)
+       (let ((L (or (shortcut-interrupt-handler-entry-label)
 		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(subl ,(R s) ,(R d))
 		`(jo ,L)
 		accum)))
 
       ((sll/overflow)
-       (let ((L (or (exception-label)
+       (let ((L (or (shortcut-interrupt-handler-entry-label)
 		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(sall ,(R/cl s) ,(R d))
 		`(jo ,L)
 		accum)))
 
       ((int*/overflow)
-       (let ((L (or (exception-label)
+       (let ((L (or (shortcut-interrupt-handler-entry-label)
 		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(imull ,(R s) ,(R d))
 		`(jo ,L)
 		accum)))
 
       ((int+/overflow)
-       (let ((L (or (exception-label)
+       (let ((L (or (shortcut-interrupt-handler-entry-label)
 		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(addl ,(R s) ,(R d))
 		`(jo ,L)
@@ -808,12 +826,12 @@
        accum)
 
       ((interrupt)
-       (let ((l (or (exception-label)
+       (let ((l (or (shortcut-interrupt-handler-entry-label)
 		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons `(jmp ,l) accum)))
 
       ((incr/zero?)
-       (let ((l (or (exception-label)
+       (let ((l (or (shortcut-interrupt-handler-entry-label)
 		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
 		`(je ,l)
@@ -885,14 +903,14 @@
 
       ((shortcut body handler)
        (let ((L_interrupt (unique-interrupt-handler-label))
-	     (L_end       (unique-label "L_end")))
+	     (L_end       (unique-label "L_shortcut_end")))
 	 (let ((accum (if (and label-true label-false)
 			  accum
 			(cons L_end accum))))
 	   (let* ((handler^ (cons L_interrupt (P handler (or label-true L_end) (or label-false L_end) '())))
 		  (tc       (exceptions-concatenation)))
 	     (set-cdr! tc (append handler^ (cdr tc))))
-	   (parameterize ((exception-label L_interrupt))
+	   (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
 	     (P body label-true label-false accum)))))
 
       (else
@@ -918,7 +936,7 @@
 
 	  (label-true
 	   #;(assert (not label-false))
-	   (let ((label-false^ (unique-label "L_false"))
+	   (let ((label-false^ (unique-label "L_conditional_altern"))
 		 (label-conseq #f)
 		 (label-altern (unique-label "L_conditional_altern")))
 	     (P x.test label-conseq label-altern
@@ -929,7 +947,7 @@
 
 	  (label-false
 	   #;(assert (not label-true))
-	   (let ((label-true^  (unique-label "L_true"))
+	   (let ((label-true^  (unique-label "L_conditional_conseq"))
 		 (label-conseq #f)
 		 (label-altern (unique-label "L_conditional_altern")))
 	     (P x.test label-conseq label-altern
@@ -939,8 +957,8 @@
 			    (cons label-true^ accum)))))))
 
 	  (else
-	   (let ((label-false^ (unique-label "L_false"))
-		 (label-altern (unique-label "L_altern")))
+	   (let ((label-false^ (unique-label "L_conditional_altern"))
+		 (label-altern (unique-label "L_conditional_altern")))
 	     (P x.test #f label-altern
 		(P x.conseq #f #f
 		   (cons `(jmp ,label-false^)
@@ -1041,6 +1059,11 @@
   #| end of module: P |# )
 
 
+;;;; end of FLATTEN-CODES function
+
+(Z-codes input-codes))
+
+
 ;;;; process ASM-INSTR operands
 
 (module (R R/l D)
@@ -1063,7 +1086,8 @@
   (module (R/l)
 
     (define* (R/l x)
-      ;;Process an ASM-INSTR operand expecting it to represent an 8-bit value.
+      ;;Process an  ASM-INSTR operand expecting it  to represent an 8-bit  value, the
+      ;;least significant byte of machine words.
       ;;
       (struct-case x
 	((constant c)

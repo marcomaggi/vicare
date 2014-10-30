@@ -314,15 +314,15 @@
 	((code-object-sexp
 	  (number-of-free-vars: 0)
 	  (annotation:		init-expression)
-	  (label init_expression_label)
+	  (label L_init_expression_label_0)
 	  ;;Implementation of primitive operation "+": SHORTCUT's body.
 	  (movl 8 %eax)
 	  (addl 16 %eax)
-	  (jo (label L_shortcut_interrupt_handler))
+	  (jo (label L_shortcut_interrupt_handler_0))
 	  (ret)
 	  (nop)
 	  ;;Implementation of primitive operation "+": SHORTCUT's interrupt handler.
-	  (label L_shortcut_interrupt_handler)
+	  (label L_shortcut_interrupt_handler_0)
 	  (movl (obj +) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 8 (disp -8 %esp))
@@ -343,12 +343,12 @@
 	((code-object-sexp
 	  (number-of-free-vars: 0)
 	  (annotation: init-expression)
-	  (label init_expression_label)
+	  (label L_init_expression_label_0)
 
 	  ;;This is the body of the core primitive $STACK-OVERFLOW-CHECK.
 	  (cmpl (disp %esi 32) %esp)
-	  (jb (label L_shortcut_interrupt_handler))
-	  (label L_return_from_interrupt)
+	  (jb (label L_shortcut_interrupt_handler_0))
+	  (label L_return_from_interrupt_0)
 
 	  ;;Call the primitive READ.
 	  (movl (obj read) %eax)     ;Load the loc gensym from the relocation vector.
@@ -368,7 +368,7 @@
 	    (nop))
 	  ;;The single return value is now in AAR.
 	  (cmpl 47 %eax) ;Compare the return value with the boolean #f.
-	  (je (label L_conditional_altern))
+	  (je (label L_conditional_altern_0))
 
 	  ;;This is the CONSEQ branch of the CONDITIONAL.
 	  (movl (obj display) %eax)
@@ -379,7 +379,7 @@
 	  (jmp (disp -3 %edi))
 
 	  ;;This is the ALTERN branch of the CONDITIONAL.
-	  (label L_conditional_altern)
+	  (label L_conditional_altern_0)
 	  (movl (obj display) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 16 (disp -8 %esp)) ;Put the fixnum 2 on the stack as argument.
@@ -390,7 +390,7 @@
 
 	  ;;This    is    the   interrupt    handler    of    the   core    primitive
 	  ;;$STACK-OVERFLOW-CHECK.
-	  (label L_shortcut_interrupt_handler)
+	  (label L_shortcut_interrupt_handler_0)
 	  (movl (foreign-label "ik_stack_overflow") %edi)
 	  (movl 0 %eax)
 	  (movl (foreign-label "ik_foreign_call") %ebx)
@@ -404,7 +404,7 @@
 	    (pad 10 (label call_label)
 		 (call %ebx))
 	    (nop))
-	  (jmp (label L_return_from_interrupt)))))
+	  (jmp (label L_return_from_interrupt_0)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -417,12 +417,12 @@
 	((code-object-sexp
 	  (number-of-free-vars: 0)
 	  (annotation: init-expression)
-	  (label init_expression_label)
+	  (label L_init_expression_label_0)
 
 	  ;;This is the body of the core primitive $STACK-OVERFLOW-CHECK.
 	  (cmpl (disp %esi 32) %esp)
-	  (jb (label L_shortcut_interrupt_handler))
-	  (label L_return_from_interrupt)
+	  (jb (label L_shortcut_interrupt_handler_0))
+	  (label L_return_from_interrupt_0)
 
 	  ;;Call the primitive READ.
 	  (movl (obj read) %eax)     ;Load the loc gensym from the relocation vector.
@@ -442,7 +442,7 @@
 	    (nop))
 	  ;;Now the single return value of READ is in AAR.
 	  (cmpl 47 %eax) ;Compare the return value to the boolean #f.
-	  (je (label L_conditional_altern))
+	  (je (label L_conditional_altern_0))
 
 	  ;;This is the CONSEQ branch of the CONDITIONAL.
 	  (movl 8 (disp -16 %esp))   ;Put the fixnum 1 on the stack as argument.
@@ -462,10 +462,10 @@
 		 (call (disp -3 %edi)))
 	    (nop))
 	  ;;Now the single return value of READ is in AAR; it is discarded.
-	  (jmp (label L_conditional_end)) ;Jump after the CONDITIONAL.
+	  (jmp (label L_conditional_end_0)) ;Jump after the CONDITIONAL.
 
 	  ;;This is the CONSEQ branch of the CONDITIONAL.
-	  (label L_conditional_altern)
+	  (label L_conditional_altern_0)
 	  (movl 16 (disp -16 %esp))  ;Put the fixnum 2 on the stack as argument.
 	  (movl (obj display) %eax)  ;Load the loc gensym from the relocation vector.
 	  (movl (disp %eax 19) %eax) ;Retrieve the value of the PROC field.
@@ -483,7 +483,7 @@
 		 (call (disp -3 %edi)))
 	    (nop))
 
-	  (label L_conditional_end)
+	  (label L_conditional_end_0)
 
 	  ;;Here we are past the conditional.
 	  (movl (obj newline) %eax)  ;Load the loc gensym from the relocation vector.
@@ -495,7 +495,7 @@
 
 	  ;;This    is    the   interrupt    handler    of    the   core    primitive
 	  ;;$STACK-OVERFLOW-CHECK.
-	  (label L_shortcut_interrupt_handler)
+	  (label L_shortcut_interrupt_handler_0)
 	  (movl (foreign-label "ik_stack_overflow") %edi)
 	  (movl 0 %eax)
 	  (movl (foreign-label "ik_foreign_call") %ebx)
@@ -510,7 +510,7 @@
 		 (label call_label)
 		 (call %ebx))
 	    (nop))
-	  (jmp (label L_return_from_interrupt)))))
+	  (jmp (label L_return_from_interrupt_0)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -523,13 +523,15 @@
 	((code-object-sexp
 	  (number-of-free-vars: 0)
 	  (annotation: init-expression)
-	  (label init_expression_label)
+	  (label L_init_expression_label_0)
 
 	  ;;This is the body of the core primitive $STACK-OVERFLOW-CHECK.
 	  (cmpl (disp %esi 32) %esp)
-	  (jb (label L_shortcut_interrupt_handler))
-	  (label L_return_from_interrupt)
+	  (jb (label L_shortcut_interrupt_handler_0))
+	  (label L_return_from_interrupt_0)
 
+	  ;;This is  the TEST  expression of  the inner  CONDITIONAL.  Call  the READ
+	  ;;primitive.
 	  (movl (obj read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
@@ -541,12 +543,16 @@
 	    (int 8)
 	    (current-frame-offset)
 	    (label-address SL_multiple_values_error_rp)
-	    (pad 10 (label call_label)
+	    (pad 10
+		 (label call_label)
 		 (call (disp -3 %edi)))
 	    (nop))
+	  ;;If the result is false: jump to the inner altern.
 	  (cmpl 47 %eax)
-	  (je (label L_altern))
+	  (je (label L_conditional_altern_1))
 
+	  ;;This is  the CONSEQ expression of  the inner CONDITIONAL.  Call  the READ
+	  ;;primitive.
 	  (movl (obj read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
@@ -558,15 +564,19 @@
 	    (int 8)
 	    (current-frame-offset)
 	    (label-address SL_multiple_values_error_rp)
-	    (pad 10 (label call_label)
+	    (pad 10
+		 (label call_label)
 		 (call (disp -3 %edi)))
 	    (nop))
+	  ;;If the result  is non-false: jump to the outer  CONSEQ; otherwise jump to
+	  ;;the outer ALTERN.
 	  (cmpl 47 %eax)
-	  (jne (label L_true))
+	  (jne (label L_conditional_conseq_0))
+	  (jmp (label L_conditional_altern_0))
 
-	  (jmp (label L_conditional_altern))
-
-	  (label L_altern)
+	  ;;This is  the ALTERN expression of  the inner CONDITIONAL.  Call  the READ
+	  ;;primitive.
+	  (label L_conditional_altern_1)
 	  (movl (obj read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
@@ -578,13 +588,17 @@
 	    (int 8)
 	    (current-frame-offset)
 	    (label-address SL_multiple_values_error_rp)
-	    (pad 10 (label call_label)
+	    (pad 10
+		 (label call_label)
 		 (call (disp -3 %edi)))
 	    (nop))
+	  ;;If the  result is  false: jump  to the  outer ALTERN.   If the  result is
+	  ;;non-false: fall through to the outer CONSEQ, which is directly below.
 	  (cmpl 47 %eax)
-	  (je (label L_conditional_altern))
+	  (je (label L_conditional_altern_0))
 
-	  (label L_true)
+	  ;;This is the CONSEQ expression of the outer CONDITIONAL.
+	  (label L_conditional_conseq_0)
 	  (movl (obj display) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 8 (disp -8 %esp))
@@ -592,7 +606,8 @@
 	  (movl -8 %eax)
 	  (jmp (disp -3 %edi))
 
-	  (label L_conditional_altern)
+	  ;;This is the ALTERN expression of the outer CONDITIONAL.
+	  (label L_conditional_altern_0)
 	  (movl (obj display) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 16 (disp -8 %esp))
@@ -603,7 +618,7 @@
 
 	  ;;This    is    the   interrupt    handler    of    the   core    primitive
 	  ;;$STACK-OVERFLOW-CHECK.
-	  (label L_shortcut_interrupt_handler)
+	  (label L_shortcut_interrupt_handler_0)
 	  (movl (foreign-label "ik_stack_overflow") %edi)
 	  (movl 0 %eax)
 	  (movl (foreign-label "ik_foreign_call") %ebx)
@@ -618,7 +633,7 @@
 		 (label call_label)
 		 (call %ebx))
 	    (nop))
-	  (jmp (label L_return_from_interrupt)))))
+	  (jmp (label L_return_from_interrupt_0)))))
 
   #t)
 
