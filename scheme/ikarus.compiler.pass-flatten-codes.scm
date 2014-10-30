@@ -46,31 +46,32 @@
   ;;   object		code-loc	foreign-label
   ;;   closure-maker
   ;;
-  ;;Error handling routines
-  ;;-----------------------
-  ;;
-  ;;Each block of generated  Assembly code must have a way to  report errors; this is
-  ;;done  by  appending at  the  end  of the  main  assembly  routine a  sequence  of
-  ;;subroutines each handling a kind of error:
-  ;;
-  ;;  main_label:
-  ;;    ... main routine instructions ...
-  ;;  error_1:
-  ;;    ... error handler instructions ...
-  ;;  error_2:
-  ;;    ... error handler instructions ...
-  ;;
-  ;;The main routine is built by  traversing the input depth-first and accumulating a
-  ;;list  of  assembly  instructions;  the   error  handlers  are  appended  to  such
-  ;;accumulated list by  storing a reference to  the last pair in the  main list into
-  ;;the parameter EXCEPTIONS-CONCATENATION  and prepending to the  tail error handler
-  ;;routines as follows:
-  ;;
-  ;;  (let ((tail-pair (exceptions-concatenation)))
-  ;;    (set-cdr! tail-pair (append ?error-handler-instructions
-  ;;                                (cdr tail-pair))))
-  ;;
   (import INTEL-ASSEMBLY-CODE-GENERATION)
+
+
+;;; error handling routines
+;;
+;;Each block  of generated Assembly code  must have a  way to report errors;  this is
+;;done by appending at the end of the main assembly routine a sequence of subroutines
+;;each handling a kind of error:
+;;
+;;  main_label:
+;;    ... main routine instructions ...
+;;  error_1:
+;;    ... error handler instructions ...
+;;  error_2:
+;;    ... error handler instructions ...
+;;
+;;The main  routine is built by  traversing the input depth-first  and accumulating a
+;;list of  assembly instructions; the  error handlers  are added to  such accumulated
+;;list by storing  a reference to the last  pair in the main list  into the parameter
+;;EXCEPTIONS-CONCATENATION  and prepending  to  the tail  error  handler routines  as
+;;follows:
+;;
+;;  (let ((tail-pair (exceptions-concatenation)))
+;;    (set-cdr! tail-pair (append ?error-handler-instructions
+;;                                (cdr tail-pair))))
+;;
 
 
 ;;;; helpers
@@ -84,15 +85,51 @@
 (define-constant exception-label
   (make-parameter #f))
 
-(define (unique-interrupt-label)
-  (label (gensym "L_shortcut_interrupt_handler")))
+(define (unique-interrupt-handler-label)
+  (unique-label "L_shortcut_interrupt_handler"))
 
-(define unique-label
-  (case-lambda
-   (()
-    (label (gensym)))
-   ((name)
-    (label (gensym name)))))
+;;; --------------------------------------------------------------------
+
+(module (unique-label with-unique-label-maker)
+
+  (define (make-unique-label-maker)
+(debug-print* 'descriptive-labels? (option.descriptive-labels))
+    (if (option.descriptive-labels)
+	(let-constants ((DESCRIPTIVE-NAMES-TABLE (make-hashtable string-hash string=?)))
+	  (case-lambda
+	   (()
+	    (label (gensym)))
+	   ((name)
+	    (cond ((hashtable-ref DESCRIPTIVE-NAMES-TABLE name #f)
+		   => (lambda (idx)
+			(hashtable-set! DESCRIPTIVE-NAMES-TABLE name (add1 idx))
+			(label (gensym (format "~a_~a" name idx)))))
+		  (else
+		   (hashtable-set! DESCRIPTIVE-NAMES-TABLE name 0)
+		   (label (gensym (string-append name "_0")))))
+	    (label (gensym)))))
+      (case-lambda
+       (()
+	(label (gensym)))
+       ((name)
+	;;Ignore NAME.
+	(label (gensym))))))
+
+  (define-constant unique-label-maker
+    (make-parameter #f))
+
+  (define-syntax unique-label
+    (syntax-rules ()
+      ((_)
+       ((unique-label-maker)))
+      ((_ ?name)
+       ((unique-label-maker) ?name))))
+
+  (define-syntax-rule (with-unique-label-maker ?body0 . ?body)
+    (parametrise ((unique-label-maker (make-unique-label-maker)))
+      ?body0 . ?body))
+
+  #| end of module |# )
 
 
 ;;;; processing programs
@@ -116,19 +153,20 @@
     ;;
     (struct-case x
       ((codes x.clambda* x.body)
-       (cons `(code-object-sexp
-	       (number-of-free-vars:	0)
-	       (annotation:		init-expression)
-	       (label			,(gensym "init_expression_label"))
-	       . ,(E-init-expression x.body))
-	     (map E-clambda x.clambda*)))))
+       (with-unique-label-maker
+	(cons `(code-object-sexp
+		(number-of-free-vars:	0)
+		(annotation:		init-expression)
+		,(unique-label "init_expression_label")
+		. ,(F-init-expression x.body))
+	      (map F-clambda x.clambda*))))))
 
-  (define (E-init-expression x)
+  (define (F-init-expression x)
     (define accum (list '(nop)))
     (parameterize ((exceptions-concatenation accum))
-      (E-body x accum)))
+      (F-body x accum)))
 
-  (define (E-clambda x)
+  (define (F-clambda x)
     ;;Flatten   the  the   struct  instance   X  of   type  CLAMBDA,   using  a   new
     ;;error-handler-routines tail, and generate Assembly instructions as follows:
     ;;
@@ -161,12 +199,12 @@
 	      (parameterize ((exceptions-concatenation accum))
 		(let recur ((clause* clause*))
 		  (if (pair? clause*)
-		      (E-clambda-clause (car clause*)
+		      (F-clambda-clause (car clause*)
 					(recur (cdr clause*)))
 		    (cons `(jmp (label ,(sl-invalid-args-label)))
 			  accum)))))))))
 
-  (define (E-clambda-clause x accum)
+  (define (F-clambda-clause x accum)
     ;;Flatten the  struct instance X, of  type CLAMBDA-CASE, into a  list of Assembly
     ;;instructions  prepended to  the accumulated  instructions in  ACCUM; the  error
     ;;handler  routines   are  prepended   to  the  tail   of  ACCUM   referenced  by
@@ -224,13 +262,13 @@
 			 (else
 			  `(jl ,next-clause-entry-point-label)))
 		   (let ((accum^ (cons (label x.info.clause-entry-point-label)
-				       (E-body x.body (cons next-clause-entry-point-label accum)))))
+				       (F-body x.body (cons next-clause-entry-point-label accum)))))
 		     (if x.info.proper?
 			 accum^
 		       (%handle-vararg (length (cdr x.info.args)) accum^))))))))))
 
-  (define-syntax-rule (E-body body accum)
-    (T body accum))
+  (define-syntax-rule (F-body body accum)
+     (T body accum))
 
 ;;; --------------------------------------------------------------------
 
@@ -518,7 +556,7 @@
      ;;  (handler-asm)
      ;;  ...
      ;;
-     (let ((L (unique-interrupt-label)))
+     (let ((L (unique-interrupt-handler-label)))
        (let* ((handler^ (cons L (T handler '())))
 	      (tconc    (exceptions-concatenation)))
 	 (set-cdr! tconc (append handler^ (cdr tconc))))
@@ -606,7 +644,7 @@
        ;;  ...
        ;;  (jmp L_return_from_interrupt)
        ;;
-       (let ((L_interrupt (unique-interrupt-label))
+       (let ((L_interrupt (unique-interrupt-handler-label))
 	     (L_return    (unique-label "L_return_from_interrupt")))
 	 (let* ((handler^ (cons L_interrupt (E handler `((jmp ,L_return)))))
 		(tc       (exceptions-concatenation)))
@@ -847,7 +885,7 @@
        (P-asm-instr op dst src x label-true label-false accum))
 
       ((shortcut body handler)
-       (let ((L_interrupt (unique-interrupt-label))
+       (let ((L_interrupt (unique-interrupt-handler-label))
 	     (L_end       (unique-label "L_end")))
 	 (let ((accum (if (and label-true label-false)
 			  accum
@@ -862,17 +900,17 @@
        (error __module_who__ "invalid pred" x))))
 
   (define (P-conditional x.test x.conseq x.altern label-true label-false accum)
-    (cond ((and (constant=? x.conseq #t)
-		(constant=? x.altern #f))
+    (cond ((and (%constant-boolean-true?  x.conseq)
+		(%constant-boolean-false? x.altern))
 	   (P x.test label-true label-false accum))
 
-	  ((and (constant=? x.conseq #f)
-		(constant=? x.altern #t))
+	  ((and (%constant-boolean-false? x.conseq)
+		(%constant-boolean-true?  x.altern))
 	   (P x.test label-false label-true accum))
 
 	  ((and label-true label-false)
 	   (let ((label-conseq #f)
-		 (label-altern (unique-label "L_false")))
+		 (label-altern (unique-label "L_conditional_altern")))
 	     (P x.test label-conseq label-altern
 		(P x.conseq label-true label-false
 		   (cons label-altern
@@ -883,7 +921,7 @@
 	   #;(assert (not label-false))
 	   (let ((label-false^ (unique-label "L_false"))
 		 (label-conseq #f)
-		 (label-altern (unique-label "L_altern")))
+		 (label-altern (unique-label "L_conditional_altern")))
 	     (P x.test label-conseq label-altern
 		(P x.conseq label-true label-false^
 		   (cons label-altern
@@ -894,7 +932,7 @@
 	   #;(assert (not label-true))
 	   (let ((label-true^  (unique-label "L_true"))
 		 (label-conseq #f)
-		 (label-altern (unique-label "L_altern")))
+		 (label-altern (unique-label "L_conditional_altern")))
 	     (P x.test label-conseq label-altern
 		(P x.conseq label-true^ label-false
 		   (cons label-altern
@@ -989,12 +1027,17 @@
 
     #| end of module: P-asm-instr |# )
 
-  (define (constant=? x k)
+  (define (%constant-boolean-true? x)
     (struct-case x
-      ((constant k0)
-       (equal? k0 k))
-      (else
-       #f)))
+      ((constant x.const)
+       (eq? #t x.const))
+      (else #f)))
+
+  (define (%constant-boolean-false? x)
+    (struct-case x
+      ((constant x.const)
+       (eq? #f x.const))
+      (else #f)))
 
   #| end of module: P |# )
 

@@ -36,6 +36,8 @@
 (compiler.descriptive-labels   #t)
 (compiler.generate-debug-calls #f)
 
+#;(debug-print-enabled? #t)
+
 
 ;;;; helpers
 
@@ -489,6 +491,114 @@
 	  (movl %eax %edi)	     ;Load in CPR the entry point of NEWLINE.
 	  (movl 0 %eax)		     ;Load in AAR the number of arguments.
 	  (jmp (disp -3 %edi))	     ;Perform the tail call to NEWLINE.
+	  (nop)
+
+	  ;;This    is    the   interrupt    handler    of    the   core    primitive
+	  ;;$STACK-OVERFLOW-CHECK.
+	  (label L_shortcut_interrupt_handler)
+	  (movl (foreign-label "ik_stack_overflow") %edi)
+	  (movl 0 %eax)
+	  (movl (foreign-label "ik_foreign_call") %ebx)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_ignore_rp)
+	    (pad 10
+		 (label call_label)
+		 (call %ebx))
+	    (nop))
+	  (jmp (label L_return_from_interrupt)))))
+
+;;; --------------------------------------------------------------------
+
+  ;;CONDITIONAL in P context, as test for CONDITIONAL in T context.
+  (doit (if (if ((primitive read))
+		((primitive read))
+	      ((primitive read)))
+	    ((primitive display) '1)
+	  ((primitive display) '2))
+	((code-object-sexp
+	  (number-of-free-vars: 0)
+	  (annotation: init-expression)
+	  (label init_expression_label)
+
+	  ;;This is the body of the core primitive $STACK-OVERFLOW-CHECK.
+	  (cmpl (disp %esi 32) %esp)
+	  (jb (label L_shortcut_interrupt_handler))
+	  (label L_return_from_interrupt)
+
+	  (movl (obj read) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl %eax %edi)
+	  (movl 0 %eax)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_error_rp)
+	    (pad 10 (label call_label)
+		 (call (disp -3 %edi)))
+	    (nop))
+	  (cmpl 47 %eax)
+	  (je (label L_altern))
+
+	  (movl (obj read) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl %eax %edi)
+	  (movl 0 %eax)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_error_rp)
+	    (pad 10 (label call_label)
+		 (call (disp -3 %edi)))
+	    (nop))
+	  (cmpl 47 %eax)
+	  (jne (label L_true))
+
+	  (jmp (label L_conditional_altern))
+
+	  (label L_altern)
+	  (movl (obj read) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl %eax %edi)
+	  (movl 0 %eax)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_error_rp)
+	    (pad 10 (label call_label)
+		 (call (disp -3 %edi)))
+	    (nop))
+	  (cmpl 47 %eax)
+	  (je (label L_conditional_altern))
+
+	  (label L_true)
+	  (movl (obj display) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl 8 (disp -8 %esp))
+	  (movl %eax %edi)
+	  (movl -8 %eax)
+	  (jmp (disp -3 %edi))
+
+	  (label L_conditional_altern)
+	  (movl (obj display) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl 16 (disp -8 %esp))
+	  (movl %eax %edi)
+	  (movl -8 %eax)
+	  (jmp (disp -3 %edi))
 	  (nop)
 
 	  ;;This    is    the   interrupt    handler    of    the   core    primitive
