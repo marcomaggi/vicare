@@ -1056,11 +1056,15 @@
       (else
        (if (register? x)
 	   x
-	 (compiler-internal-error __module_who__ __who__ "invalid R" x)))))
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid ASM-INSTR operand"
+	   (unparse-recordised-code/sexp x))))))
 
   (module (R/l)
 
     (define* (R/l x)
+      ;;Process an ASM-INSTR operand expecting it to represent an 8-bit value.
+      ;;
       (struct-case x
 	((constant c)
 	 (%process-constant c))
@@ -1070,27 +1074,36 @@
 	 `(disp ,(D objref) ,(D offset)))
 	(else
 	 (if (register? x)
-	     (reg/l x)
-	   (compiler-internal-error __module_who__ __who__ "invalid R/l" x)))))
+	     (%register-name->8-bit-register-name x)
+	   (compiler-internal-error __module_who__ __who__
+	     "invalid 8-bit ASM-INSTR operand"
+	     (unparse-recordised-code/sexp x))))))
 
-    (define* (reg/l x)
-      (cond ((assq x '((%eax . %al) (%ebx . %bl) (%ecx . %cl) (%edx . %dl)
-		       (%r8  . %r8l) (%r9 . %r9l) (%r10 . %r10l) (%r11 . %r11l)
+    (define* (%register-name->8-bit-register-name x)
+      (cond ((assq x '((%eax . %al)   (%ebx . %bl)   (%ecx . %cl)   (%edx . %dl)
+		       (%r8  . %r8l)  (%r9  . %r9l)  (%r10 . %r10l) (%r11 . %r11l)
 		       (%r12 . %r12l) (%r13 . %r13l) (%r14 . %r14l) (%r15 . %r15l)))
 	     => cdr)
 	    (else
-	     (compiler-internal-error __module_who__ __who__ "invalid reg/l" x))))
+	     (compiler-internal-error __module_who__ __who__
+	       "invalid CPU register name, expected machine word register with usable 8-bit component"
+	       x))))
 
     #| end of module: R/l |# )
 
   (define* (D x)
+    ;;Process  the OBJREF  and  OFFSET fields  of  a DISP  struct  used as  ASM-INSTR
+    ;;operand.
+    ;;
     (struct-case x
       ((constant c)
        (%process-constant c))
       (else
        (if (register? x)
 	   x
-	 (compiler-internal-error __module_who__ __who__ "invalid D" x)))))
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid field of DISP struct"
+	   (unparse-recordised-code/sexp x))))))
 
   (define (R-fvar i)
     ;;Convert the index of an FVAR into a reference to machine word on the stack.
@@ -1115,12 +1128,16 @@
     (struct-case x
       ((code-loc label)
        (label-address label))
+
       ((foreign-label L)
        `(foreign-label ,L))
+
       ((closure-maker)
        `(obj ,x))
+
       ((object o)
        `(obj ,o))
+
       (else
        (if (or (fixnum? x)
 	       (bignum? x))
