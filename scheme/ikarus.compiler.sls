@@ -49,7 +49,7 @@
     generate-debug-calls
     check-compiler-pass-preconditions
     enabled-function-application-integration?
-    option.descriptive-labels
+    (rename (option.descriptive-labels descriptive-labels))
 
     ;; middle pass inspection
     assembler-output

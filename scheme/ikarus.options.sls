@@ -9,18 +9,17 @@
 ;;;
 ;;;Copyright (C) 2012-2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
-;;;This program is free software:  you can redistribute it and/or modify
-;;;it under the terms of the  GNU General Public License as published by
-;;;the Free Software Foundation, either version 3 of the License, or (at
-;;;your option) any later version.
+;;;This program is free software: you can  redistribute it and/or modify it under the
+;;;terms  of  the GNU  General  Public  License as  published  by  the Free  Software
+;;;Foundation,  either version  3  of the  License,  or (at  your  option) any  later
+;;;version.
 ;;;
-;;;This program is  distributed in the hope that it  will be useful, but
-;;;WITHOUT  ANY   WARRANTY;  without   even  the  implied   warranty  of
-;;;MERCHANTABILITY  or FITNESS FOR  A PARTICULAR  PURPOSE.  See  the GNU
-;;;General Public License for more details.
+;;;This program is  distributed in the hope  that it will be useful,  but WITHOUT ANY
+;;;WARRANTY; without  even the implied warranty  of MERCHANTABILITY or FITNESS  FOR A
+;;;PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 ;;;
-;;;You should  have received  a copy of  the GNU General  Public License
-;;;along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;;;You should have received a copy of  the GNU General Public License along with this
+;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
 
 
@@ -99,53 +98,48 @@
 ;;
 ;;   (let ((a 1)) . ?body)
 ;;
-;;the  identifier  A is  the  left-hand  side  of  the binding  and  the
-;;expression 1  is the right-hand side  of the binding; since  A is left
-;;untagged in  the source code,  the expander  will tag it,  by default,
-;;with "<untagged>".
+;;the identifier A is  the left-hand side of the binding and the  expression 1 is the
+;;right-hand side of  the binding; since A  is left untagged in the  source code, the
+;;expander will tag it, by default, with "<untagged>".
 ;;
-;;* If this option  is turned OFF: the identifier A  is left tagged with
-;;  "<untagged>".  We are  free to assign any object to  A, mutating the
-;;  bound value  multiple times with  objects of different tag;  this is
-;;  standard Scheme behaviour.
+;;* If this option is turned OFF:  the identifier A is left tagged with "<untagged>".
+;;  We are free  to assign any object  to A, mutating the bound  value multiple times
+;;  with objects of different tag; this is standard Scheme behaviour.
 ;;
-;;* When this option is turned ON:  the expander infers that the RHS has
-;;  signature "(<fixnum>)", so it propagates the tag from the RHS to the
-;;  LHS  overriding "<untagged>"  with "<fixnum>".   This will  cause an
-;;  error to be raised if we mutate the binding assigning to A an object
-;;  whose tag is not "<fixnum>".
+;;* When  this option is turned  ON: the expander  infers that the RHS  has signature
+;;  "(<fixnum>)",  so it  propagates  the tag  from  the RHS  to  the LHS  overriding
+;;  "<untagged>" with "<fixnum>".  This will cause an error to be raised if we mutate
+;;  the binding assigning to A an object whose tag is not "<fixnum>".
 ;;
 (define-parameter-boolean-option tagged-language.rhs-tag-propagation?)
 
-;;The option "datums as operators" allows us to use a non-closure object
-;;as operator  in call  forms.  When  this option  is on,  the following
-;;example evaluations are possible:
+;;The option "datums as operators" allows us  to use a non-closure object as operator
+;;in  call forms.   When this  option is  on, the  following example  evaluations are
+;;possible:
 ;;
 ;;(123 positive?)	=> #t
 ;;
-;;   The operator is the fixnum 123 and the expander determines that its
-;;   tag is  "<fixnum>"; this  form matches  the syntax  of a  method or
-;;   accessor application.
+;;   The operator  is the  fixnum 123  and the  expander determines  that its  tag is
+;;   "<fixnum>"; this form matches the syntax of a method or accessor application.
 ;;
 ;;("ciao" [1])		=> #\i
 ;;
-;;   The operator is the string  "ciao" and the expander determines that
-;;   its tag  is "<string>"; this  form matches  the syntax of  a getter
-;;   application.
+;;   The operator is  the string "ciao" and  the expander determines that  its tag is
+;;   "<string>"; this form matches the syntax of a getter application.
 ;;
 (define-parameter-boolean-option tagged-language.datums-as-operators?)
 
-;;The option "setter forms" allows us to use a non-identifier expression
-;;as  left-hand side  in a  SET! syntax.   When this  option is  on, the
-;;following evaluations are possible:
+;;The option "setter forms" allows us to use a non-identifier expression as left-hand
+;;side in  a SET!  syntax.  When  this option  is on,  the following  evaluations are
+;;possible:
 ;;
 ;;(set! (?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...) ?new-value)
 ;;(set!  ?expr (?key00 ?key0* ...) (?key11* ?key1** ...) ...  ?new-value)
 ;;
-;;   This is the  setter syntax.  ?EXPR can be any  expression for which
-;;   the  expander can  determine  the retvals  signature.  This  syntax
-;;   mutates  a property  of  the  result of  ?EXPR  to ?NEW-VALUE;  the
-;;   property is selected by the set of specified keys.  Example:
+;;   This is the setter  syntax.  ?EXPR can be any expression  for which the expander
+;;   can determine  the retvals  signature.  This  syntax mutates  a property  of the
+;;   result of ?EXPR to ?NEW-VALUE; the property  is selected by the set of specified
+;;   keys.  Example:
 ;;
 ;;      (define V (vector 1 2 3))
 ;;      (set! V [1] 9)
@@ -153,18 +147,20 @@
 ;;
 ;;(set! (?expr ?field-name) ?new-value)
 ;;
-;;   This is the mutator syntax.  ?EXPR  can be any expression for which
-;;   the  expander can  determine  the retvals  signature.  This  syntax
-;;   mutates the (concrete or virtual)  field selected by ?FIELD-NAME to
-;;   ?NEW-VALUE.
+;;   This is the mutator syntax.  ?EXPR can  be any expression for which the expander
+;;   can  determine the  retvals signature.   This  syntax mutates  the (concrete  or
+;;   virtual) field selected by ?FIELD-NAME to ?NEW-VALUE.
 ;;
 (define-parameter-boolean-option tagged-language.setter-forms?)
 
-;;Turn on  tagged language  extensions.  When this  parameter is  set to
-;;true: we must also set to true all the tagged language sub-parameters.
+;;Turn on tagged  language extensions.  When this  parameter is set to  true: we must
+;;also set to true all the tagged language sub-parameters.
 ;;
 (define-parameter-boolean-option tagged-language?)
 
+;;Turn on generation  of descriptive labels in Assembly language  code and labels for
+;;expander's bindings.  It is used by the compiler and the expander.
+;;
 (define-parameter-boolean-option descriptive-labels)
 
 

@@ -210,6 +210,8 @@
 ;;because it only affects bulding the boot image.  (Marco Maggi; Wed Oct 29, 2014)
 (compiler.check-compiler-pass-preconditions #t)
 
+(compiler.descriptive-labels #f)
+
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 
