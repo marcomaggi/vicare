@@ -386,6 +386,8 @@
 	  (movl %eax %edi)
 	  (movl -8 %eax)
 	  (jmp (disp -3 %edi))
+
+	  ;;Begin the sequence of SHORTCUT's interrupt handler routines.
 	  (nop)
 
 	  ;;This    is    the   interrupt    handler    of    the   core    primitive
@@ -491,6 +493,8 @@
 	  (movl %eax %edi)	     ;Load in CPR the entry point of NEWLINE.
 	  (movl 0 %eax)		     ;Load in AAR the number of arguments.
 	  (jmp (disp -3 %edi))	     ;Perform the tail call to NEWLINE.
+
+	  ;;Begin the sequence of SHORTCUT's interrupt handler routines.
 	  (nop)
 
 	  ;;This    is    the   interrupt    handler    of    the   core    primitive
@@ -614,6 +618,8 @@
 	  (movl %eax %edi)
 	  (movl -8 %eax)
 	  (jmp (disp -3 %edi))
+
+	  ;;Begin the sequence of SHORTCUT's interrupt handler routines.
 	  (nop)
 
 	  ;;This    is    the   interrupt    handler    of    the   core    primitive

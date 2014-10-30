@@ -79,6 +79,60 @@
 (define-syntax __module_who__
   (identifier-syntax 'flatten-codes))
 
+;;This  compiler pass  generates  Assembly  code as  a  sequence  of instructions  as
+;;follows:
+;;
+;;   ?accum-asm-instr
+;;   ...
+;;   (nop)
+;;   (label L_shortcut_interrupt_handler_0)
+;;   ?handler-asm-instr-0
+;;   ...
+;;   (jmp (label L_return_from_interrupt_0))
+;;   (label L_shortcut_interrupt_handler_1)
+;;   ?handler-asm-instr-0
+;;   ...
+;;   (jmp (label L_return_from_interrupt_1))
+;;
+;;The  ACCUM  argument  to all  the  functions  is  a  list representing  a  symbolic
+;;expression; the  first item in  the list is  the first ?ACCUM-ASM-INSTR.   New body
+;;instructions are prepended to the list in ACCUM:
+;;
+;;   (cons ?new-body-asm-instr ?accum)
+;;
+;;while new  SHORTCUT's interrupt handler  instructions are inserted right  after the
+;;NOP instruction, before  the previously inserted handlers.  For  example, let's say
+;;we want to insert the handler represented by the list:
+;;
+;;   ((label L_shortcut_interrupt_handler_0)
+;;    ?handler-asm-instr-0
+;;    (jmp (label L_return_from_interrupt_0)))
+;;
+;;and before the insertion we have the following list as ACCUM:
+;;
+;;   (?accum-asm-instr
+;;    (nop)
+;;    (label L_shortcut_interrupt_handler_1)
+;;    ?handler-asm-instr-1
+;;    (jmp (label L_return_from_interrupt_1)))
+;;
+;;after the insertion we end with the following list as ACCUM:
+;;
+;;   (?accum-asm-instr
+;;    (nop)
+;;    (label L_shortcut_interrupt_handler_0)
+;;    ?handler-asm-instr-0
+;;    (jmp (label L_return_from_interrupt_0))
+;;    (label L_shortcut_interrupt_handler_1)
+;;    ?handler-asm-instr-1
+;;    (jmp (label L_return_from_interrupt_1)))
+;;
+;;This parameter contains a  reference to the sublist of ACCUM  starting with the NOP
+;;instruction; so, to insert a handler right after the NOP we do:
+;;
+;;    (let ((tconc (exceptions-concatenation)))
+;;      (set-cdr! tconc (append ?handler-asm-instr* (cdr tconc))))
+;;
 (define-constant exceptions-concatenation
   (make-parameter #f))
 
@@ -111,6 +165,9 @@
 ;;
 (define-constant shortcut-interrupt-handler-entry-label
   (make-parameter #f))
+
+(define (nop-sexp? x)
+  (equal? x '(nop)))
 
 
 ;;;; beginning of FLATTEN-CODES functions
@@ -574,13 +631,14 @@
      ;;
      ;;and prepend to the exception routines the flattened handler instructions:
      ;;
-     ;;  (label L_interrupt_handler)
+     ;;  (label L_shortcut_interrupt_handler)
      ;;  (handler-asm)
      ;;  ...
      ;;
      (let ((interrupt-handler-label (unique-label/interrupt-handler-entry-point)))
        (let* ((handler^ (cons interrupt-handler-label (T handler '())))
 	      (tconc    (exceptions-concatenation)))
+	 (assert (nop-sexp? (car tconc)))
 	 (set-cdr! tconc (append handler^ (cdr tconc))))
        (parameterize ((shortcut-interrupt-handler-entry-label interrupt-handler-label))
 	 (T body accum))))
@@ -619,32 +677,35 @@
        (E-asmcall op rand* x accum))
 
       ((shortcut body handler)
-       ;;Flatten the body instructions inserting a label at the end:
+       ;;Flatten the BODY instructions inserting a label at the end:
        ;;
-       ;;  (body-asm)
+       ;;  ?body-asm-instr
        ;;  ...
-       ;;  (jmp L_interrupt)
+       ;;  (jump-if-condition L_shortcut_interrupt_handler)
        ;;  ...
        ;;  (label L_return_from_interrupt)
+       ;;  ?accum-asm-instr
        ;;
-       ;;and  prepend to  the exception  routines the  flattened handler
-       ;;instructions:
+       ;;and prepend to the exception routines the flattened handler instructions:
        ;;
-       ;;  (label L_interrupt)
-       ;;  (handler-asm)
+       ;;  (label L_shortcut_interrupt_handler)
+       ;;  ?handler-asm-instr
        ;;  ...
        ;;  (jmp L_return_from_interrupt)
        ;;
        (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
 	     (L_return    (unique-label "L_return_from_interrupt")))
 	 (let* ((handler^ (cons L_interrupt (E handler `((jmp ,L_return)))))
-		(tc       (exceptions-concatenation)))
-	   (set-cdr! tc (append handler^ (cdr tc))))
+		(tconc       (exceptions-concatenation)))
+	   (assert (nop-sexp? (car tconc)))
+	   (set-cdr! tconc (append handler^ (cdr tconc))))
 	 (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
 	   (E body (cons L_return accum)))))
 
       (else
-       (compiler-internal-error __module_who__ __who__ "invalid effect" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ __who__
+	 "invalid code in E context"
+	 (unparse-recordized-code x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -758,8 +819,8 @@
 ;;; --------------------------------------------------------------------
 
   (define (E-non-tail-call target value args mask frame-words-count accum)
-    ;;Flatten a  non-tail call;  this is  the call  making use  of the
-    ;;"call" assembly instruction.
+    ;;Flatten a  non-tail call; this  is the call making  use of the  "call" assembly
+    ;;instruction.
     ;;
     (define (%call-chunk call-sequence)
       (compile-call-table frame-words-count mask
@@ -1022,8 +1083,9 @@
 			  accum
 			(cons L_end accum))))
 	   (let* ((handler^ (cons L_interrupt (P handler (or label-true L_end) (or label-false L_end) '())))
-		  (tc       (exceptions-concatenation)))
-	     (set-cdr! tc (append handler^ (cdr tc))))
+		  (tconc       (exceptions-concatenation)))
+	     (assert (nop-sexp? (car tconc)))
+	     (set-cdr! tconc (append handler^ (cdr tconc))))
 	   (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
 	     (P body label-true label-false accum)))))
 
