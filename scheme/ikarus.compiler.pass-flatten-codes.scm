@@ -120,13 +120,14 @@
   ;;
   ;;NOTE The reason we use nested functions here is that we value descriptive labels.
   ;;So  all the  functions are  closed  upon the  closure UNIQUE-LABEL  which has  an
-  ;;internal table of labels generated at every FLATTEN-CODES invocation.
+  ;;internal table  of labels  generated at  every FLATTEN-CODES  invocation.  (Marco
+  ;;Maggi; Thu Oct 30, 2014)
   ;;
 
 
 ;;;; Assembly label generation
 
-(define (unique-interrupt-handler-label)
+(define-syntax-rule (unique-label/interrupt-handler-entry-point)
   (unique-label "L_shortcut_interrupt_handler"))
 
 (define unique-label
@@ -522,16 +523,19 @@
      ;;For  this   CONDITIONAL  in   tail  position,  we   aim  at   generating  this
      ;;pseudo-Assembly:
      ;;
-     ;;     ?test-asm-instr
-     ;;     jump-if-false ?label-altern
-     ;;     ?conseq-asm-instr
-     ;;   ?label-altern:
-     ;;     ?altern-asm-instr
+     ;;   ?test-asm-instr
+     ;;   (jump-if-false (label L_conditional_altern))
+     ;;
+     ;;   ?conseq-asm-instr
+     ;;
+     ;;   (label L_conditional_altern)
+     ;;   ?altern-asm-instr
      ;;
      ;;if the test is true: we fall through and just run the CONSEQ code; if the test
      ;;is false: we jump to the ?LABEL-ALTERN  and execute the ALTERN code.  There is
      ;;no need to generate a label for  the CONSEQ.  Being in tail position: both the
-     ;;CONSEQ and the ALTERN end with a return or tail call.
+     ;;CONSEQ and the  ALTERN end with a return  or tail call; so the  code of CONSEQ
+     ;;does not fall through to the code of the ALTERN.
      (let ((label-conseq  #f)
 	   (label-altern (unique-label "L_conditional_altern")))
        (P x.test label-conseq label-altern
@@ -574,7 +578,7 @@
      ;;  (handler-asm)
      ;;  ...
      ;;
-     (let ((interrupt-handler-label (unique-interrupt-handler-label)))
+     (let ((interrupt-handler-label (unique-label/interrupt-handler-entry-point)))
        (let* ((handler^ (cons interrupt-handler-label (T handler '())))
 	      (tconc    (exceptions-concatenation)))
 	 (set-cdr! tconc (append handler^ (cdr tconc))))
@@ -592,11 +596,11 @@
   (define* (E x accum)
     ;;Flatten X for side effects.
     ;;
-    ;;X must be a struct instance representing recordized code.
+    ;;X must  be a  struct instance  representing recordized  code in  "side effects"
+    ;;context.
     ;;
-    ;;ACCUM must be the list  of assembly instructions, accumulated so
-    ;;far, that  must be  included in  binary code  after the  ones to
-    ;;which X will expand.
+    ;;ACCUM must be the list of  assembly instructions, accumulated so far, that must
+    ;;be included in binary code after the ones to which X will expand.
     ;;
     (struct-case x
       ((seq e0 e1)
@@ -604,30 +608,97 @@
 
       ((conditional x.test x.conseq x.altern)
        (cond ((interrupt? x.conseq)
-	      (let ((label-true  (or (shortcut-interrupt-handler-entry-label)
-				     (compiler-internal-error __module_who__ __who__ "no exception label")))
-		    (label-false #f))
-		(P x.test label-true label-false
+	      ;;Here the scenario is similar to:
+	      ;;
+	      ;;   (seq
+	      ;;     (shortcut
+	      ;;         (conditional ?test
+	      ;;             (interrupt)
+	      ;;           ?altern)
+	      ;;       ?interrupt-handler)
+	      ;;     ?tail-code)
+	      ;;
+	      ;;we aim at generating the following pseudo-Assembly code:
+	      ;;
+	      ;;   ?test-asm-instr
+	      ;;   (jump-if-true (label L_shortcut_interrupt_handler))
+	      ;;   ?altern-asm-instr
+	      ;;   ?tail-code-asm-instr
+	      ;;
+	      ;;   (label L_shortcut_interrupt_handler)
+	      ;;   ?interrupt-hanlder-asm-instr
+	      ;;
+	      ;;If the test is false: we fall through to the ALTERN, then continue to
+	      ;;the tail code that  will end with a RET or a tail  call.  If the test
+	      ;;is true:  we jump to the  interrupt handler and later  jump back; the
+	      ;;"jumping back" from the interrupt handler is *not* generated here.
+	      (let ((label-conseq  (or (shortcut-interrupt-handler-entry-label)
+				       (compiler-internal-error __module_who__ __who__
+					 "missing interrupt handler label, use of INTERRUPT outside SHORTCUT struct?"
+					 (unparse-recordised-code/sexp x))))
+		    (label-altern  #f))
+		(P x.test label-conseq label-altern
 		   (E x.altern accum))))
+
 	     ((interrupt? x.altern)
-	      (let ((label-true  #f)
-		    (label-false (or (shortcut-interrupt-handler-entry-label)
-				     (compiler-internal-error __module_who__ __who__ "no exception label"))))
-		(P x.test label-true label-false
+	      ;;Here the scenario is similar to:
+	      ;;
+	      ;;   (seq
+	      ;;     (shortcut
+	      ;;         (conditional ?test
+	      ;;             ?conseq
+	      ;;           (interrupt))
+	      ;;       ?interrupt-handler)
+	      ;;     ?tail-code)
+	      ;;
+	      ;;we aim at generating the following pseudo-Assembly code:
+	      ;;
+	      ;;   ?test-asm-instr
+	      ;;   (jump-if-false (label L_shortcut_interrupt_handler))
+	      ;;   ?conseq-asm-instr
+	      ;;   ?tail-code-asm-instr
+	      ;;
+	      ;;   (label L_shortcut_interrupt_handler)
+	      ;;   ?interrupt-hanlder-asm-instr
+	      ;;
+	      ;;If the test is true: we fall  through to the CONSEQ, then continue to
+	      ;;the tail code that  will end with a RET or a tail  call.  If the test
+	      ;;is false  we jump to the  interrupt handler and later  jump back; the
+	      ;;"jumping back" from the interrupt handler is *not* generated here.
+	      (let ((label-conseq  #f)
+		    (label-altern  (or (shortcut-interrupt-handler-entry-label)
+				       (compiler-internal-error __module_who__ __who__
+					 "missing interrupt handler label, use of INTERRUPT outside SHORTCUT struct?"
+					 (unparse-recordised-code/sexp x)))))
+		(P x.test label-conseq label-altern
 		   (E x.conseq accum))))
+
 	     (else
-	      ;;For  this  conditional  case  we   generate  code  as  the  following
-	      ;;pseudo-code shows:
+	      ;;Here the scenario is similar to:
 	      ;;
-	      ;;     x.test
-	      ;;   jump-if-false label_altern
-	      ;;     x.conseq
-	      ;;     jmp label_end
-	      ;;   L_conditional_altern:
-	      ;;     x.altern
-	      ;;   L_conditional_end:
-	      ;;     accum
+	      ;;   (seq
+	      ;;     (conditional ?test
+	      ;;         ?conseq
+	      ;;       ?altern)
+	      ;;     ?tail-code)
 	      ;;
+	      ;;we aim at generating the following pseudo-Assembly code:
+	      ;;
+	      ;;   ?test-asm-instr
+	      ;;   (jump-if-false (label L_conditional_altern))
+	      ;;
+	      ;;   ?conseq-asm-instr
+	      ;;   (jmp (label L_conditional_end))
+	      ;;
+	      ;;   (label L_conditional_altern)
+	      ;;   ?altern-asm-instr
+	      ;;
+	      ;;   (label L_conditional_end)
+	      ;;   ?tail-code-asm-instr
+	      ;;
+	      ;;If the test is true: we fall through to the CONSEQ code, then jump to
+	      ;;the tail  code.  If the  test is false: we  jump to the  ALTERN code,
+	      ;;then fall through to the tail code.
 	      (let ((label-conseq  #f)
 		    (label-altern  (unique-label "L_conditional_altern"))
 		    (label-end     (unique-label "L_conditional_end")))
@@ -639,11 +710,11 @@
       ((non-tail-call target value args mask size)
        (E-non-tail-call target value args mask size accum))
 
-      ((asm-instr op d s)
-       (E-asm-instr op d s x accum))
+      ((asm-instr op dst src)
+       (E-asm-instr op dst src x accum))
 
-      ((asmcall op rands)
-       (E-asmcall op rands x accum))
+      ((asmcall op rand*)
+       (E-asmcall op rand* x accum))
 
       ((shortcut body handler)
        ;;Flatten the body instructions inserting a label at the end:
@@ -662,7 +733,7 @@
        ;;  ...
        ;;  (jmp L_return_from_interrupt)
        ;;
-       (let ((L_interrupt (unique-interrupt-handler-label))
+       (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
 	     (L_return    (unique-label "L_return_from_interrupt")))
 	 (let* ((handler^ (cons L_interrupt (E handler `((jmp ,L_return)))))
 		(tc       (exceptions-concatenation)))
@@ -820,7 +891,7 @@
       (else
        (compiler-internal-error __module_who__ __who__ "invalid instr" (unparse-recordized-code x)))))
 
-  (define* (E-asmcall op rands x accum)
+  (define* (E-asmcall op rand* x accum)
     (case op
       ((nop)
        accum)
@@ -833,7 +904,7 @@
       ((incr/zero?)
        (let ((l (or (shortcut-interrupt-handler-entry-label)
 		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
-	 (cons* `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
+	 (cons* `(addl ,(D (caddr rand*)) ,(R (make-disp (car rand*) (cadr rand*))))
 		`(je ,l)
 		accum)))
 
@@ -869,14 +940,22 @@
 (module (P)
 
   (define* (P x label-true label-false accum)
-    ;;Flatten X as code in predicate position.
+    ;;Flatten X as code in predicate position.  If we are here the scenario is:
     ;;
-    ;;X must be  a struct instance representing recordized code.   LABEL-TRUE must be
-    ;;the label entry point for the code  to be run when X returns true.  LABEL-FALSE
-    ;;must be the label entry point for the code to be run when X returns false.
+    ;;   (conditional ?test
+    ;;       ?conseq
+    ;;     ?altern)
     ;;
-    ;;ACCUM must be the list of  assembly instructions, accumulated so far, that must
-    ;;be included in binary code after the ones to which X will expand.
+    ;;and here we are  processing the ?TEST expression; the code  for the ?CONSEQ and
+    ;;?ALTERN has already been processed and prepended to the ACCUM.
+    ;;
+    ;;X must  be a struct  instance representing  the ?TEST expression  as recordized
+    ;;code.  ACCUM  must be the  list of  assembly instructions, accumulated  so far,
+    ;;that must be included in binary code after the ones to which X will expand.
+    ;;
+    ;;LABEL-TRUE must be the label entry point for  the code to be run when X returns
+    ;;true; LABEL-FALSE must be  the label entry point for the code to  be run when X
+    ;;returns false.
     ;;
     (struct-case x
       ;;If X is a CONSTANT: the predicate is always true or always false.
@@ -902,7 +981,7 @@
        (P-asm-instr op dst src x label-true label-false accum))
 
       ((shortcut body handler)
-       (let ((L_interrupt (unique-interrupt-handler-label))
+       (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
 	     (L_end       (unique-label "L_shortcut_end")))
 	 (let ((accum (if (and label-true label-false)
 			  accum
