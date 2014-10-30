@@ -571,7 +571,7 @@
 
 (module (E)
 
-  (define (E x accum)
+  (define* (E x accum)
     ;;Flatten X for side effects.
     ;;
     ;;X must be a struct instance representing recordized code.
@@ -587,14 +587,14 @@
       ((conditional x.test x.conseq x.altern)
        (cond ((interrupt? x.conseq)
 	      (let ((label-true  (or (exception-label)
-				     (error __module_who__ "no exception label")))
+				     (compiler-internal-error __module_who__ __who__ "no exception label")))
 		    (label-false #f))
 		(P x.test label-true label-false
 		   (E x.altern accum))))
 	     ((interrupt? x.altern)
 	      (let ((label-true  #f)
 		    (label-false (or (exception-label)
-				     (error __module_who__ "no exception label"))))
+				     (compiler-internal-error __module_who__ __who__ "no exception label"))))
 		(P x.test label-true label-false
 		   (E x.conseq accum))))
 	     (else
@@ -653,7 +653,7 @@
 	   (E body (cons L_return accum)))))
 
       (else
-       (error __module_who__ "invalid effect" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ __who__ "invalid effect" (unparse-recordized-code x)))))
 
   (define (E-non-tail-call target value args mask frame-words-count accum)
     ;;Flatten a  non-tail call;  this is  the call  making use  of the
@@ -677,7 +677,7 @@
 	   (cons (%call-chunk `(call (disp ,off-closure-code ,CPR)))
 		 accum))))
 
-  (define (E-asm-instr op d s x accum)
+  (define* (E-asm-instr op d s x accum)
     (case op
       ((logand)
        (cons `(andl ,(R s) ,(R d)) accum))
@@ -732,7 +732,7 @@
        (let ((s (R s))
 	     (d (R d)))
 	 (unless (eq? s d)
-	   (error __module_who__ "invalid instr" (unparse-recordized-code x)))
+	   (compiler-internal-error __module_who__ __who__ "invalid instr" (unparse-recordized-code x)))
 	 (cons `(bswap ,s) accum)))
 
       ((mset32)
@@ -743,28 +743,28 @@
 
       ((int-/overflow)
        (let ((L (or (exception-label)
-		    (error __module_who__ "no exception label" (unparse-recordized-code x)))))
+		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(subl ,(R s) ,(R d))
 		`(jo ,L)
 		accum)))
 
       ((sll/overflow)
        (let ((L (or (exception-label)
-		    (error __module_who__ "no exception label" (unparse-recordized-code x)))))
+		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(sall ,(R/cl s) ,(R d))
 		`(jo ,L)
 		accum)))
 
       ((int*/overflow)
        (let ((L (or (exception-label)
-		    (error __module_who__ "no exception label" (unparse-recordized-code x)))))
+		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(imull ,(R s) ,(R d))
 		`(jo ,L)
 		accum)))
 
       ((int+/overflow)
        (let ((L (or (exception-label)
-		    (error __module_who__ "no exception label" (unparse-recordized-code x)))))
+		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(addl ,(R s) ,(R d))
 		`(jo ,L)
 		accum)))
@@ -800,21 +800,21 @@
        (cons `(divsd ,(R (make-disp s d)) xmm0) accum))
 
       (else
-       (error __module_who__ "invalid instr" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ __who__ "invalid instr" (unparse-recordized-code x)))))
 
-  (define (E-asmcall op rands x accum)
+  (define* (E-asmcall op rands x accum)
     (case op
       ((nop)
        accum)
 
       ((interrupt)
        (let ((l (or (exception-label)
-		    (error __module_who__ "no exception label" (unparse-recordized-code x)))))
+		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons `(jmp ,l) accum)))
 
       ((incr/zero?)
        (let ((l (or (exception-label)
-		    (error __module_who__ "no exception label" (unparse-recordized-code x)))))
+		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
 	 (cons* `(addl ,(D (caddr rands)) ,(R (make-disp (car rands) (cadr rands))))
 		`(je ,l)
 		accum)))
@@ -826,32 +826,31 @@
        (cons '(cvtss2sd xmm0 xmm0) accum))
 
       (else
-       (error __module_who__ "invalid effect" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ __who__ "invalid effect" (unparse-recordized-code x)))))
 
   (define (interrupt? x)
     (struct-case x
       ((asmcall op args)
        (eq? op 'interrupt))
-      (else
-       #f)))
+      (else #f)))
 
-  (define (R/cl x)
+  (define* (R/cl x)
     (struct-case x
       ((constant i)
        (unless (fixnum? i)
-	 (error __module_who__ "invalid R/cl" (unparse-recordized-code x)))
+	 (compiler-internal-error __module_who__ __who__ "invalid R/cl" (unparse-recordized-code x)))
        (fxlogand i (- (* wordsize 8) 1)))
       (else
        (if (eq? x ecx)
 	   '%cl
-	 (error __module_who__ "invalid R/cl" (unparse-recordized-code x))))))
+	 (compiler-internal-error __module_who__ __who__ "invalid R/cl" (unparse-recordized-code x))))))
 
   #| end of module: E |# )
 
 
 (module (P)
 
-  (define (P x label-true label-false accum)
+  (define* (P x label-true label-false accum)
     ;;Flatten X as code in predicate position.
     ;;
     ;;X must be  a struct instance representing recordized code.   LABEL-TRUE must be
@@ -897,9 +896,9 @@
 	     (P body label-true label-false accum)))))
 
       (else
-       (error __module_who__ "invalid pred" x))))
+       (compiler-internal-error __module_who__ __who__ "invalid pred" x))))
 
-  (define (P-conditional x.test x.conseq x.altern label-true label-false accum)
+  (define* (P-conditional x.test x.conseq x.altern label-true label-false accum)
     (cond ((and (%constant-boolean-true?  x.conseq)
 		(%constant-boolean-false? x.altern))
 	   (P x.test label-true label-false accum))
@@ -996,7 +995,7 @@
 	   "invalid operator in ASM-INSTR for P context"
 	   (unparse-recordised-code/sexp x)))))
 
-    (define (%select-negated-P-asm-instr x)
+    (define* (%select-negated-P-asm-instr x)
       (cond ((assq x '((= . !=) (!= . =)
 		       (< . >=) (<= . >) (> . <=) (>= . <)
 		       (u< . u>=) (u<= . u>) (u> . u<=) (u>= . u<)
@@ -1005,9 +1004,9 @@
 		       (fl:> . fl:o<=) (fl:>= . fl:o<)))
 	     => cdr)
 	    (else
-	     (error __module_who__ "assembly instruction invalid in predicate context" x))))
+	     (compiler-internal-error __module_who__ __who__ "assembly instruction invalid in predicate context" x))))
 
-    (define (jmpname x)
+    (define* (jmpname x)
       (cond ((assq x '((= . je) (!= . jne) (< . jl) (<= . jle) (> . jg) (>= . jge)
 		       (u< . jb) (u<= . jbe) (u> . ja) (u>= . jae)
 		       (fl:= . je) (fl:!= . jne)
@@ -1016,14 +1015,14 @@
 		       (fl:o< . jb) (fl:o> . ja) (fl:o<= . jbe) (fl:o>= . jae)))
 	     => cdr)
 	    (else
-	     (error __module_who__ "invalid jmpname" x))))
+	     (compiler-internal-error __module_who__ __who__ "invalid jmpname" x))))
 
-    (define (revjmpname x)
+    (define* (revjmpname x)
       (cond ((assq x '((= . je) (!= . jne) (< . jg) (<= . jge) (> . jl) (>= . jle)
 		       (u< . ja) (u<= . jae) (u> . jb) (u>= . jbe)))
 	     => cdr)
 	    (else
-	     (error __module_who__ "invalid jmpname" x))))
+	     (compiler-internal-error __module_who__ __who__ "invalid jmpname" x))))
 
     #| end of module: P-asm-instr |# )
 
@@ -1042,117 +1041,95 @@
   #| end of module: P |# )
 
 
-(define (FVar i)
-  ;;Convert the index of an FVAR into a reference to machine word on the stack.
-  ;;
-  ;;       high memory
-  ;;   |                |
-  ;;   |----------------|
-  ;;   | return address | <-- frame pointer register (FPR)
-  ;;   |----------------|
-  ;;   |                | <-- index 1
-  ;;   |----------------|
-  ;;   |                | <-- index 2
-  ;;   |----------------|
-  ;;   |                | <-- index 3
-  ;;   |----------------|
-  ;;   |                |
-  ;;       low memory
-  ;;
-  `(disp ,(* i (- wordsize)) ,FPR))
+;;;; process ASM-INSTR operands
 
 (module (R R/l D)
 
-  (define (R x)
+  (define* (R x)
     (struct-case x
-      ((constant c)
-       (%process-constant c))
+      ((constant x.const)
+       (%process-constant x.const))
       ((fvar i)
-       (FVar i))
-      ((disp s0 s1)
-       (let ((s0 (D s0))
-	     (s1 (D s1)))
-	 `(disp ,s0 ,s1)))
+       (R-fvar i))
+      ((disp objref offset)
+       `(disp ,(D objref) ,(D offset)))
       (else
-       (if (symbol? x)
+       (if (register? x)
 	   x
-	 (error __module_who__ "invalid R" x)))))
+	 (compiler-internal-error __module_who__ __who__ "invalid R" x)))))
 
   (module (R/l)
 
-    (define (R/l x)
+    (define* (R/l x)
       (struct-case x
 	((constant c)
 	 (%process-constant c))
 	((fvar i)
-	 (FVar i))
-	((disp s0 s1)
-	 (let ((s0 (D s0))
-	       (s1 (D s1)))
-	   `(disp ,s0 ,s1)))
+	 (R-fvar i))
+	((disp objref offset)
+	 `(disp ,(D objref) ,(D offset)))
 	(else
-	 (if (symbol? x)
+	 (if (register? x)
 	     (reg/l x)
-	   (error __module_who__ "invalid R/l" x)))))
+	   (compiler-internal-error __module_who__ __who__ "invalid R/l" x)))))
 
-    (define (reg/l x)
+    (define* (reg/l x)
       (cond ((assq x '((%eax . %al) (%ebx . %bl) (%ecx . %cl) (%edx . %dl)
 		       (%r8  . %r8l) (%r9 . %r9l) (%r10 . %r10l) (%r11 . %r11l)
 		       (%r12 . %r12l) (%r13 . %r13l) (%r14 . %r14l) (%r15 . %r15l)))
 	     => cdr)
 	    (else
-	     (error __module_who__ "invalid reg/l" x))))
+	     (compiler-internal-error __module_who__ __who__ "invalid reg/l" x))))
 
     #| end of module: R/l |# )
 
-  (define (D x)
+  (define* (D x)
     (struct-case x
       ((constant c)
        (%process-constant c))
       (else
-       (if (symbol? x)
+       (if (register? x)
 	   x
-	 (error __module_who__ "invalid D" x)))))
+	 (compiler-internal-error __module_who__ __who__ "invalid D" x)))))
 
-  (define (%process-constant x)
+  (define (R-fvar i)
+    ;;Convert the index of an FVAR into a reference to machine word on the stack.
+    ;;
+    ;;       high memory
+    ;;   |                |
+    ;;   |----------------|
+    ;;   | return address | <-- Frame Pointer Register (FPR)
+    ;;   |----------------|
+    ;;   |                | <-- index 1
+    ;;   |----------------|
+    ;;   |                | <-- index 2
+    ;;   |----------------|
+    ;;   |                | <-- index 3
+    ;;   |----------------|
+    ;;   |                |
+    ;;       low memory
+    ;;
+    `(disp ,(* i (- wordsize)) ,FPR))
+
+  (define* (%process-constant x)
     (struct-case x
       ((code-loc label)
        (label-address label))
       ((foreign-label L)
        `(foreign-label ,L))
-      ((closure-maker code freevar*)
-       (unless (null? freevar*)
-	 (error __module_who__ "nonempty closure"))
+      ((closure-maker)
        `(obj ,x))
       ((object o)
        `(obj ,o))
       (else
-       (if (integer? x)
+       (if (or (fixnum? x)
+	       (bignum? x))
 	   x
-	 (error __module_who__ "invalid constant C" x)))))
+	 (compiler-internal-error __module_who__ __who__
+	   "invalid constant"
+	   (unparse-recordised-code/sexp x))))))
 
   #| end of module |# )
-
-;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
-;;
-;; (define (BYTE x)
-;;   (struct-case x
-;;     ((constant x)
-;;      (unless (and (integer? x)
-;; 		    (fx<= x +255)
-;; 		    (fx>= x -128))
-;;        (error __module_who__ "invalid byte" x))
-;;      x)
-;;     (else
-;;      (error __module_who__ "invalid byte" x))))
-
-;;Commented out because unused.  (Marco Maggi; Oct 29, 2012)
-;;
-;; (define (reg/h x)
-;;   (cond ((assq x '((%eax %ah) (%ebx %bh) (%ecx %ch) (%edx %dh)))
-;; 	   => cadr)
-;; 	  (else
-;; 	   (error __module_who__ "invalid reg/h" x))))
 
 
 ;;;; done
