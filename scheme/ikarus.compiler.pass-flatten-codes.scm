@@ -128,13 +128,15 @@
 ;;    (jmp (label L_return_from_interrupt_1)))
 ;;
 ;;This parameter contains a  reference to the sublist of ACCUM  starting with the NOP
-;;instruction; so, to insert a handler right after the NOP we do:
-;;
-;;    (let ((tconc (exceptions-concatenation)))
-;;      (set-cdr! tconc (append ?handler-asm-instr* (cdr tconc))))
+;;instruction; so, to insert a handler right after the NOP we use the function below.
 ;;
 (define-constant exceptions-concatenation
   (make-parameter #f))
+
+(define (%accumulate-shortcut-interrupt-handler-routine handler-routine-sexp)
+  (let ((tconc (exceptions-concatenation)))
+    #;(assert (equal? (car tconc) '(nop)))
+    (set-cdr! tconc (append handler-routine-sexp (cdr tconc)))))
 
 ;;A symbolic expression with the format:
 ;;
@@ -165,9 +167,6 @@
 ;;
 (define-constant shortcut-interrupt-handler-entry-label
   (make-parameter #f))
-
-(define (nop-sexp? x)
-  (equal? x '(nop)))
 
 
 ;;;; beginning of FLATTEN-CODES functions
@@ -636,10 +635,8 @@
      ;;  ...
      ;;
      (let ((interrupt-handler-label (unique-label/interrupt-handler-entry-point)))
-       (let* ((handler^ (cons interrupt-handler-label (T handler '())))
-	      (tconc    (exceptions-concatenation)))
-	 (assert (nop-sexp? (car tconc)))
-	 (set-cdr! tconc (append handler^ (cdr tconc))))
+       (%accumulate-shortcut-interrupt-handler-routine (cons interrupt-handler-label
+							     (T handler '())))
        (parameterize ((shortcut-interrupt-handler-entry-label interrupt-handler-label))
 	 (T body accum))))
 
@@ -695,10 +692,10 @@
        ;;
        (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
 	     (L_return    (unique-label "L_return_from_interrupt")))
-	 (let* ((handler^ (cons L_interrupt (E handler `((jmp ,L_return)))))
-		(tconc       (exceptions-concatenation)))
-	   (assert (nop-sexp? (car tconc)))
-	   (set-cdr! tconc (append handler^ (cdr tconc))))
+	 (%accumulate-shortcut-interrupt-handler-routine
+	  (cons L_interrupt
+		(E handler
+		   `((jmp ,L_return)))))
 	 (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
 	   (E body (cons L_return accum)))))
 
@@ -1082,10 +1079,10 @@
 	 (let ((accum (if (and label-true label-false)
 			  accum
 			(cons L_end accum))))
-	   (let* ((handler^ (cons L_interrupt (P handler (or label-true L_end) (or label-false L_end) '())))
-		  (tconc       (exceptions-concatenation)))
-	     (assert (nop-sexp? (car tconc)))
-	     (set-cdr! tconc (append handler^ (cdr tconc))))
+	   (%accumulate-shortcut-interrupt-handler-routine
+	    (cons L_interrupt
+		  (P handler (or label-true L_end) (or label-false L_end)
+		     '())))
 	   (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
 	     (P body label-true label-false accum)))))
 
