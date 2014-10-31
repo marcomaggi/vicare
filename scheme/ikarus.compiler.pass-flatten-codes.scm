@@ -673,8 +673,8 @@
       ((conditional x.test x.conseq x.altern)
        (E-conditional x.test x.conseq x.altern x accum))
 
-      ((non-tail-call target value args mask size)
-       (E-non-tail-call target value args mask size accum))
+      ((non-tail-call target retval-var unused.all-rand* mask size)
+       (E-non-tail-call target retval-var mask size accum))
 
       ((asm-instr op dst src)
        (E-asm-instr op dst src x accum))
@@ -683,42 +683,7 @@
        (E-asmcall op rand* x accum))
 
       ((shortcut body handler)
-       ;;We are in "for side effects" context, which means the scenario is:
-       ;;
-       ;;   (seq
-       ;;     (shortcut
-       ;;         ?body
-       ;;       ?handler)
-       ;;     ?tail-code)
-       ;;
-       ;;so the body  must end with a fall  through to the tail code  and the handler
-       ;;must end with a jump to the tail code.
-       ;;
-       ;;We flatten the BODY instructions inserting a label at the end:
-       ;;
-       ;;  ?body-asm-instr
-       ;;  ...
-       ;;  (jump-if-condition L_shortcut_interrupt_handler)
-       ;;  ...
-       ;;  (label L_return_from_interrupt)
-       ;;  ?tail-code-asm-instr
-       ;;  ...
-       ;;
-       ;;We flatten the handler and generate code as follows:
-       ;;
-       ;;  (label L_shortcut_interrupt_handler)
-       ;;  ?handler-asm-instr
-       ;;  ...
-       ;;  (jmp L_return_from_interrupt)
-       ;;
-       (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
-	     (L_return    (unique-label "L_return_from_interrupt")))
-	 (%accumulate-shortcut-interrupt-handler-routine
-	  (cons L_interrupt
-		(E handler
-		   `((jmp ,L_return)))))
-	 (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
-	   (E body (cons L_return accum)))))
+       (E-shortcut body handler accum))
 
       (else
        (compiler-internal-error __module_who__ __who__
@@ -836,15 +801,20 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (E-non-tail-call target value args mask frame-words-count accum)
+  (define (E-non-tail-call target retval-var mask frame-words-count accum)
     ;;Flatten a  non-tail call; this  is the call making  use of the  "call" assembly
     ;;instruction.
     ;;
     (define (%call-chunk call-sequence)
       (compile-call-table frame-words-count mask
 			  ;;Select the multivalue return point label.
-			  (if value
+			  (if retval-var
+			      ;;This  function call  expects a  single return  value;
+			      ;;select a routine that raises an exception if multiple
+			      ;;values are returned.
 			      (label-address (sl-mv-error-rp-label))
+			    ;;The return  value of  this function call  is discarded;
+			    ;;select a routine that ignores multiple returned values.
 			    (label-address (sl-mv-ignore-rp-label)))
 			  call-sequence))
     (cond ((string? target) ;foreign call
@@ -857,6 +827,104 @@
 	  (else ;call to closure object
 	   (cons (%call-chunk `(call (disp ,off-closure-code ,CPR)))
 		 accum))))
+
+;;; --------------------------------------------------------------------
+
+  (define (E-shortcut body handler accum)
+    ;;We are in "for side effects" context, which means the scenario is:
+    ;;
+    ;;   (seq
+    ;;     (shortcut
+    ;;         ?body
+    ;;       ?handler)
+    ;;     ?tail-code)
+    ;;
+    ;;so the body must end with a fall  through to the tail code and the handler must
+    ;;end with a jump to the tail code.
+    ;;
+    ;;We flatten the BODY instructions inserting a label at the end:
+    ;;
+    ;;  ?body-asm-instr
+    ;;  ...
+    ;;  (jump-if-condition L_shortcut_interrupt_handler)
+    ;;  ...
+    ;;  (label L_return_from_interrupt)
+    ;;  ?tail-code-asm-instr
+    ;;  ...
+    ;;
+    ;;We flatten the handler and generate code as follows:
+    ;;
+    ;;  (label L_shortcut_interrupt_handler)
+    ;;  ?handler-asm-instr
+    ;;  ...
+    ;;  (jmp L_return_from_interrupt)
+    ;;
+    (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
+	  (L_return    (unique-label "L_return_from_interrupt")))
+      (%accumulate-shortcut-interrupt-handler-routine
+       (cons L_interrupt
+	     (E handler
+		`((jmp ,L_return)))))
+      (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
+	(E body (cons L_return accum)))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (E-asmcall op rand* x accum)
+    (case op
+      ((nop)
+       accum)
+
+      ((interrupt)
+       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
+			      (compiler-internal-error __module_who__ __who__
+				"invalid ASMCALL with operator INTERRUPT when no interrupt handler label is registered"
+				(unparse-recordized-code/sexp x)))))
+	 (cons `(jmp ,L_interrupt)
+	       accum)))
+
+      ((incr/zero?)
+       ;;We expect X to have the format:
+       ;;
+       ;;   (asmcall incr/zero? (?pointer ?offset ?increment-step))
+       ;;
+       ;;and more specifically:
+       ;;
+       ;;   (asmcall incr/zero? PCR (KN pcb-engine-counter) (KN (fxsll 1 fx-shift)))
+       ;;
+       ;;This operation is meant to increment  by ?INCREMENT-STEP the machine word at
+       ;;?OFFSET from ?POINTER, then jump if the result of incrementing is zero.
+       ;;
+       ;;NOTE The field "engine_counter" of the PCB structure is set to the fixnum -1
+       ;;to signal an event.
+       ;;
+       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
+			      (compiler-internal-error __module_who__ __who__
+				"invalid ASMCALL with operator INCR/ZERO? when no interrupt handler label is registered"
+				(unparse-recordized-code/sexp x))))
+	     (pointer     (car rand*))
+	     (offset      (cadr rand*))
+	     (incr-step   (caddr rand*)))
+	 (cons* `(addl ,(D incr-step) ,(R (make-disp pointer offset)))
+		`(je ,L_interrupt)
+		accum)))
+
+      ((fl:double->single)
+       (assert (null? rand*))
+       (cons '(cvtsd2ss xmm0 xmm0)
+	     accum))
+
+      ((fl:single->double)
+       (assert (null? rand*))
+       (cons '(cvtss2sd xmm0 xmm0)
+	     accum))
+
+      (else
+       (compiler-internal-error __module_who__ __who__
+	 "invalid code in E context"
+	 (unparse-recordized-code x)))))
+
+;;; --------------------------------------------------------------------
 
   (define* (E-asm-instr op d s x accum)
     (case op
@@ -983,31 +1051,7 @@
       (else
        (compiler-internal-error __module_who__ __who__ "invalid instr" (unparse-recordized-code x)))))
 
-  (define* (E-asmcall op rand* x accum)
-    (case op
-      ((nop)
-       accum)
-
-      ((interrupt)
-       (let ((l (or (shortcut-interrupt-handler-entry-label)
-		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
-	 (cons `(jmp ,l) accum)))
-
-      ((incr/zero?)
-       (let ((l (or (shortcut-interrupt-handler-entry-label)
-		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
-	 (cons* `(addl ,(D (caddr rand*)) ,(R (make-disp (car rand*) (cadr rand*))))
-		`(je ,l)
-		accum)))
-
-      ((fl:double->single)
-       (cons '(cvtsd2ss xmm0 xmm0) accum))
-
-      ((fl:single->double)
-       (cons '(cvtss2sd xmm0 xmm0) accum))
-
-      (else
-       (compiler-internal-error __module_who__ __who__ "invalid effect" (unparse-recordized-code x)))))
+;;; --------------------------------------------------------------------
 
   (define (interrupt? x)
     (struct-case x

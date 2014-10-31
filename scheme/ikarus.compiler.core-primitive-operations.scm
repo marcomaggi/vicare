@@ -5194,7 +5194,8 @@
     (asm 'mset PC-REGISTER (K pcb-interrupted) (K 0))))
 
  (define-core-primitive-operation $do-event safe
-   ;;Set to 1 the field "engine_counter" of the C language struct PCB.
+   ;;Increment by  the fixnum 1 the  field "engine_counter" of the  C language struct
+   ;;PCB; if the result of incrementing is zero: jump to the interrupt handler.
    ;;
    ((E)
     (begin
