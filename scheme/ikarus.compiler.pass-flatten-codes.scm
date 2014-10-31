@@ -926,127 +926,126 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (E-asm-instr op d s x accum)
+  (define* (E-asm-instr op dst src x accum)
     (case op
       ((logand)
-       (cons `(andl ,(R s) ,(R d)) accum))
+       (cons `(andl ,(R src) ,(R dst)) accum))
 
       ((int+)
-       (cons `(addl ,(R s) ,(R d)) accum))
+       (cons `(addl ,(R src) ,(R dst)) accum))
 
       ((int*)
-       (cons `(imull ,(R s) ,(R d)) accum))
+       (cons `(imull ,(R src) ,(R dst)) accum))
 
       ((int-)
-       (cons `(subl ,(R s) ,(R d)) accum))
+       (cons `(subl ,(R src) ,(R dst)) accum))
 
       ((logor)
-       (cons `(orl ,(R s) ,(R d)) accum))
+       (cons `(orl ,(R src) ,(R dst)) accum))
 
       ((logxor)
-       (cons `(xorl ,(R s) ,(R d)) accum))
+       (cons `(xorl ,(R src) ,(R dst)) accum))
 
       ((mset)
-       (cons `(movl ,(R s) ,(R d)) accum))
+       (cons `(movl ,(R src) ,(R dst)) accum))
 
       ((move)
-       (if (eq? d s)
+       (if (eq? dst src)
 	   accum
-	 (cons `(movl ,(R s) ,(R d)) accum)))
+	 (cons `(movl ,(R src) ,(R dst)) accum)))
 
       ((load8)
-       (if (eq? d s)
+       (if (eq? dst src)
 	   accum
-	 (cons `(movb ,(R/l s) ,(R/l d)) accum)))
+	 (cons `(movb ,(R/l src) ,(R/l dst)) accum)))
 
       ((bset)
-       (cons `(movb ,(R/l s) ,(R d)) accum))
+       (cons `(movb ,(R/l src) ,(R dst)) accum))
 
       ((sll)
-       (cons `(sall ,(R/cl s) ,(R d)) accum))
+       (cons `(sall ,(R/cl src) ,(R dst)) accum))
 
       ((sra)
-       (cons `(sarl ,(R/cl s) ,(R d)) accum))
+       (cons `(sarl ,(R/cl src) ,(R dst)) accum))
 
       ((srl)
-       (cons `(shrl ,(R/cl s) ,(R d)) accum))
+       (cons `(shrl ,(R/cl src) ,(R dst)) accum))
 
       ((idiv)
-       (cons `(idivl ,(R s)) accum))
+       (cons `(idivl ,(R src)) accum))
 
       ((cltd)
        (cons `(cltd) accum))
 
       ((bswap!)
-       (let ((s (R s))
-	     (d (R d)))
-	 (unless (eq? s d)
-	   (compiler-internal-error __module_who__ __who__ "invalid instr" (unparse-recordized-code x)))
-	 (cons `(bswap ,s) accum)))
+       (let ((src^ (R src))
+	     (dst^ (R dst)))
+	 (assert (eq? src^ dst^))
+	 (cons `(bswap ,src^) accum)))
 
       ((mset32)
-       (cons `(mov32 ,(R s) ,(R d)) accum))
+       (cons `(mov32 ,(R src) ,(R dst)) accum))
 
       ((load32)
-       (cons `(mov32 ,(R s) ,(R d)) accum))
+       (cons `(mov32 ,(R src) ,(R dst)) accum))
 
       ((int-/overflow)
-       (let ((L (or (shortcut-interrupt-handler-entry-label)
-		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
-	 (cons* `(subl ,(R s) ,(R d))
-		`(jo ,L)
+       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
+			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
+	 (cons* `(subl ,(R src) ,(R dst))
+		`(jo ,L_interrupt)
 		accum)))
 
       ((sll/overflow)
-       (let ((L (or (shortcut-interrupt-handler-entry-label)
-		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
-	 (cons* `(sall ,(R/cl s) ,(R d))
-		`(jo ,L)
+       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
+			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
+	 (cons* `(sall ,(R/cl src) ,(R dst))
+		`(jo ,L_interrupt)
 		accum)))
 
       ((int*/overflow)
-       (let ((L (or (shortcut-interrupt-handler-entry-label)
-		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
-	 (cons* `(imull ,(R s) ,(R d))
-		`(jo ,L)
+       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
+			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
+	 (cons* `(imull ,(R src) ,(R dst))
+		`(jo ,L_interrupt)
 		accum)))
 
       ((int+/overflow)
-       (let ((L (or (shortcut-interrupt-handler-entry-label)
-		    (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
-	 (cons* `(addl ,(R s) ,(R d))
-		`(jo ,L)
+       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
+			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
+	 (cons* `(addl ,(R src) ,(R dst))
+		`(jo ,L_interrupt)
 		accum)))
 
       ((fl:store)
-       (cons `(movsd xmm0 ,(R (make-disp s d))) accum))
+       (cons `(movsd xmm0 ,(R (make-disp src dst))) accum))
 
       ((fl:store-single)
-       (cons `(movss xmm0 ,(R (make-disp s d))) accum))
+       (cons `(movss xmm0 ,(R (make-disp src dst))) accum))
 
       ((fl:load)
-       (cons `(movsd ,(R (make-disp s d)) xmm0) accum))
+       (cons `(movsd ,(R (make-disp src dst)) xmm0) accum))
 
       ((fl:load-single)
-       (cons `(movss ,(R (make-disp s d)) xmm0) accum))
+       (cons `(movss ,(R (make-disp src dst)) xmm0) accum))
 
       ((fl:from-int)
-       (cons `(cvtsi2sd ,(R s) xmm0) accum))
+       (cons `(cvtsi2sd ,(R src) xmm0) accum))
 
       ((fl:shuffle)
-       (cons `(pshufb ,(R (make-disp s d)) xmm0) accum))
+       (cons `(pshufb ,(R (make-disp src dst)) xmm0) accum))
 
       ((fl:add!)
-       (cons `(addsd ,(R (make-disp s d)) xmm0) accum))
+       (cons `(addsd ,(R (make-disp src dst)) xmm0) accum))
 
       ((fl:sub!)
-       (cons `(subsd ,(R (make-disp s d)) xmm0) accum))
+       (cons `(subsd ,(R (make-disp src dst)) xmm0) accum))
 
       ((fl:mul!)
-       (cons `(mulsd ,(R (make-disp s d)) xmm0) accum))
+       (cons `(mulsd ,(R (make-disp src dst)) xmm0) accum))
 
       ((fl:div!)
-       (cons `(divsd ,(R (make-disp s d)) xmm0) accum))
+       (cons `(divsd ,(R (make-disp src dst)) xmm0) accum))
 
       (else
        (compiler-internal-error __module_who__ __who__ "invalid instr" (unparse-recordized-code x)))))
@@ -1060,15 +1059,27 @@
       (else #f)))
 
   (define* (R/cl x)
+    (define (%error)
+      (compiler-internal-error __module_who__ __who__
+	"invalid R/cl"
+	(unparse-recordized-code x)))
     (struct-case x
-      ((constant i)
-       (unless (fixnum? i)
-	 (compiler-internal-error __module_who__ __who__ "invalid R/cl" (unparse-recordized-code x)))
-       (fxlogand i (- (* wordsize 8) 1)))
+      ((constant x.const)
+       ;;In  a 32-bit  machine word  there are  32 bits:  on a  32-bit platform,  the
+       ;;maximum bitwise shift delta that makes sense is 32 = 2^5.
+       ;;
+       ,; on a 64-bit  platform
+       ;;in a  64-bit machine word there
+       ;;are 64  bits.  On a  32-bit platform, ;, the maximum  bitwise shift
+       ;;delta that makes sense is 64 = 2^6.
+       ;;
+       (if (fixnum? x.const)
+	   (fxlogand x.const (- (* wordsize 8) 1))
+	 (%error)))
       (else
        (if (eq? x ecx)
 	   '%cl
-	 (compiler-internal-error __module_who__ __who__ "invalid R/cl" (unparse-recordized-code x))))))
+	 (%error)))))
 
   #| end of module: E |# )
 
