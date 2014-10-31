@@ -48,36 +48,11 @@
   ;;
   (import INTEL-ASSEMBLY-CODE-GENERATION)
 
-
-;;; error handling routines
-;;
-;;Each block  of generated Assembly code  must have a  way to report errors;  this is
-;;done by appending at the end of the main assembly routine a sequence of subroutines
-;;each handling a kind of error:
-;;
-;;  main_label:
-;;    ... main routine instructions ...
-;;  error_1:
-;;    ... error handler instructions ...
-;;  error_2:
-;;    ... error handler instructions ...
-;;
-;;The main  routine is built by  traversing the input depth-first  and accumulating a
-;;list of  assembly instructions; the  error handlers  are added to  such accumulated
-;;list by storing  a reference to the last  pair in the main list  into the parameter
-;;EXCEPTIONS-CONCATENATION  and prepending  to  the tail  error  handler routines  as
-;;follows:
-;;
-;;  (let ((tail-pair (exceptions-concatenation)))
-;;    (set-cdr! tail-pair (append ?error-handler-instructions
-;;                                (cdr tail-pair))))
-;;
+  (define-syntax __module_who__
+    (identifier-syntax 'flatten-codes))
 
 
 ;;;; helpers
-
-(define-syntax __module_who__
-  (identifier-syntax 'flatten-codes))
 
 ;;This  compiler pass  generates  Assembly  code as  a  sequence  of instructions  as
 ;;follows:
@@ -130,11 +105,11 @@
 ;;This parameter contains a  reference to the sublist of ACCUM  starting with the NOP
 ;;instruction; so, to insert a handler right after the NOP we use the function below.
 ;;
-(define-constant exceptions-concatenation
+(define-constant shortcut-interrupt-handler-routine-insertion-point
   (make-parameter #f))
 
 (define (%accumulate-shortcut-interrupt-handler-routine handler-routine-sexp)
-  (let ((tconc (exceptions-concatenation)))
+  (let ((tconc (shortcut-interrupt-handler-routine-insertion-point)))
     #;(assert (equal? (car tconc) '(nop)))
     (set-cdr! tconc (append handler-routine-sexp (cdr tconc)))))
 
@@ -228,41 +203,75 @@
     ;;     ?asm-instr-sexp ...)
     ;;
     (struct-case x
-      ((codes x.clambda* x.body)
+      ((codes x.clambda* x.init-expr)
        (cons `(code-object-sexp
 	       (number-of-free-vars:	0)
 	       (annotation:		init-expression)
 	       ,(unique-label "L_init_expression_label")
-	       . ,(Z-init-expression x.body))
+	       . ,(Z-init-expression x.init-expr))
 	     (map Z-clambda x.clambda*)))))
 
   (define (Z-init-expression x)
-    (define accum (list '(nop)))
-    (parameterize ((exceptions-concatenation accum))
-      (Z-body x accum)))
+    ;;Flatten the  struct X  representing recordised code,  composing a  new Assembly
+    ;;code  symbolic   expression.   The  generated  symbolic   expression  has  this
+    ;;structure:
+    ;;
+    ;;   ?init-asm-instr
+    ;;   ...
+    ;;   (nop)
+    ;;   (shortcut-interrupt-handler-routine-0)
+    ;;   (shortcut-interrupt-handler-routine-1)
+    ;;   ...
+    ;;
+    ;;After  the  Assembly  instructions  representing the  init  expression:  a  NOP
+    ;;instruction marks the beginning of a sequence of Assembly routines representing
+    ;;the interrupt handlers from all the SHORTCUT structs in X.
+    ;;
+    (define handler-routines-head (list '(nop)))
+    (parametrise
+	((shortcut-interrupt-handler-routine-insertion-point handler-routines-head))
+      (Z-body x handler-routines-head)))
 
   (define (Z-clambda x)
-    ;;Flatten   the  the   struct  instance   X  of   type  CLAMBDA,   using  a   new
-    ;;error-handler-routines tail, and generate Assembly instructions as follows:
+    ;;Flatten the  the struct instance  X of type  CLAMBDA, composing a  new Assembly
+    ;;code  symbolic   expression.   The  generated  symbolic   expression  has  this
+    ;;structure:
     ;;
-    ;;   (label ?clambda-entry-point)
-    ;;   ?asm-instr
+    ;;   (label ?L_clambda_entry_point)
+    ;;   (clambda-first-clause)
+    ;;   (clambda-second-clause)
     ;;   ...
     ;;   (jmp (label SL_invalid_args))
-    ;;   ?handler-asm-instr
-    ;;   ...)
+    ;;   (nop)
+    ;;   (shortcut-interrupt-handler-routine-0)
+    ;;   (shortcut-interrupt-handler-routine-1)
+    ;;   ...
     ;;
-    ;;where:
+    ;;the code of every CLAMBDA clause has the following structure:
     ;;
-    ;;* ?ASM-INSTR  are assembly instructions that  select the CLAMBDA case  with the
-    ;;  correct number of arguments and run the actual function code.
+    ;;   (cmpl ?this-clause-number-of-args AAR)
+    ;;   (jne L_next_clause_entry_point)
+    ;;   (label L_clause_entry_point)
+    ;;   ?clause-asm-instr
+    ;;   ...
+    ;;   (label L_next_clause_entry_point)
     ;;
-    ;;*  ?HANDLER-ASM-INSTR  are  assembly instructions  implementing  error  handler
-    ;;  routines.
+    ;;so every clause compares the parameter register AAR (holding the encoded number
+    ;;of given operands) with the number of required arguments:
     ;;
-    ;;If  a CLAMBDA  case with  the correct  number of  arguments is  not found:  the
-    ;;execution jumps  to the default  routine to handle  the error "wrong  number of
-    ;;arguments".
+    ;;* If it matches: the Assembly code of the clause is executed, and it terminates
+    ;;  with a RET or a function tail call.
+    ;;
+    ;;* If it does  not match: the execution flow jumps to the  beginning of the next
+    ;;  clause.
+    ;;
+    ;;* If no clause matches the given  number of operands: the control flow jumps to
+    ;;  the  common Assembly routine  "SL_invalid_args", which takes care  of raising
+    ;;  the appropriate exception.
+    ;;
+    ;;After  all the  clauses'  routines and  the jump  to  "SL_invalid_args": a  NOP
+    ;;instruction marks the beginning of a sequence of Assembly routines representing
+    ;;the interrupt handlers from all the SHORTCUT structs in the CLAMBDA struct.
     ;;
     (struct-case x
       ((clambda label clause* unused.cp freevar* name)
@@ -270,23 +279,23 @@
 	 (number-of-free-vars:	,(length freevar*))
 	 (annotation:		,name)
 	 (label			,label)
-	 . ,(let ((accum (list '(nop))))
-	      (parameterize ((exceptions-concatenation accum))
+	 . ,(let ((handler-routines-head (list '(nop))))
+	      (parametrise
+		  ((shortcut-interrupt-handler-routine-insertion-point handler-routines-head))
 		(let recur ((clause* clause*))
 		  (if (pair? clause*)
 		      (Z-clambda-clause (car clause*)
 					(recur (cdr clause*)))
 		    (cons `(jmp (label ,(sl-invalid-args-label)))
-			  accum)))))))))
+			  handler-routines-head)))))))))
 
   (define (Z-clambda-clause x accum)
     ;;Flatten the  struct instance X, of  type CLAMBDA-CASE, into a  list of Assembly
-    ;;instructions  prepended to  the accumulated  instructions in  ACCUM; the  error
-    ;;handler  routines   are  prepended   to  the  tail   of  ACCUM   referenced  by
-    ;;EXCEPTIONS-CONCATENATION.
+    ;;instructions prepended to the accumulated  instructions in ACCUM; the interrupt
+    ;;handler routines are inserted in ACCUM at the appropriate place.
     ;;
-    ;;The generated assembly code must check if this CLAMBDA-CASE has a specification
-    ;;of requested  arguments matching  the arguments given  to the  CLAMBDA function
+    ;;The generated Assembly code must check if this CLAMBDA-CASE has a specification
+    ;;of  requested arguments  matching the  operands given  to the  CLAMBDA function
     ;;application;  when arriving  to  this code:  AAR contains  a  fixnum being  the
     ;;encoded number of given arguments.
     ;;
@@ -296,11 +305,11 @@
     ;;  clause.  The returned list has the format:
     ;;
     ;;     ((cmpl ?this-clause-number-of-args AAR)
-    ;;      (jne ?next-clause-entry-point-label)
-    ;;      (label ?clause-entry-point)
+    ;;      (jne L_next_clause_entry_point)
+    ;;      (label ?L_clause_entry_point)
     ;;      ?clause-asm-instr
     ;;      ...
-    ;;      (label ?next-clause-entry-point-label)
+    ;;      (label L_next_clause_entry_point)
     ;;      . ACCUM)
     ;;
     ;;* For a CLAMBDA-CASE with variable  number of requested arguments (that is: the
@@ -310,11 +319,11 @@
     ;;  of arguments.  The returned list has the format:
     ;;
     ;;     ((cmpl ?this-clause-number-of-mandatory-args AAR)
-    ;;      (jg ?next-clause-entry-point-label)
-    ;;      (label ?clause-entry-point)
+    ;;      (jg L_next_clause_entry_point)
+    ;;      (label ?L_clause_entry_point)
     ;;      ?clause-asm-instr
     ;;      ...
-    ;;      (label ?next-clause-entry-point-label)
+    ;;      (label L_next_clause_entry_point)
     ;;      . ACCUM)
     ;;
     (struct-case x
@@ -333,6 +342,7 @@
 			  `(jne ,next-clause-entry-point-label))
 			 ((> (argc-convention 0)
 			     (argc-convention 1))
+			  ;;The ARGC encoding convention generates negative numbers.
 			  `(jg ,next-clause-entry-point-label))
 			 (else
 			  `(jl ,next-clause-entry-point-label)))
@@ -587,11 +597,13 @@
      ;;   (label L_conditional_altern)
      ;;   ?altern-asm-instr
      ;;
-     ;;if the test is true: we fall through and just run the CONSEQ code; if the test
-     ;;is false: we jump to the ?LABEL-ALTERN  and execute the ALTERN code.  There is
-     ;;no need to generate a label for  the CONSEQ.  Being in tail position: both the
-     ;;CONSEQ and the  ALTERN end with a return  or tail call; so the  code of CONSEQ
-     ;;does not fall through to the code of the ALTERN.
+     ;;If the  test is true: we  fall through and just  run the CONSEQ code.   If the
+     ;;test is  false: we jump to  the "L_conditional_altern" and execute  the ALTERN
+     ;;code.
+     ;;
+     ;;There is no need to generate a  label for the CONSEQ.  Being in tail position:
+     ;;both the CONSEQ and the ALTERN end with  a return or tail call; so the code of
+     ;;CONSEQ does not fall through to the code of the ALTERN.
      (let ((label-conseq  #f)
 	   (label-altern (unique-label "L_conditional_altern")))
        (P x.test label-conseq label-altern
@@ -623,20 +635,17 @@
 	  (unparse-recordised-code/sexp x)))))
 
     ((shortcut body handler)
-     ;;Flatten the body instructions:
+     ;;We are  in tail position, so  we know that both  the body and the  handler end
+     ;;with  an ASMCALL  having  operand among:  return, indirect-jump,  direct-jump.
+     ;;Both the body and the handler end with a return or a tail function call.
      ;;
-     ;;  (body-asm)
-     ;;  ...
-     ;;
-     ;;and prepend to the exception routines the flattened handler instructions:
-     ;;
-     ;;  (label L_shortcut_interrupt_handler)
-     ;;  (handler-asm)
-     ;;  ...
-     ;;
+     ;;Here we  flatten the  code of  the handler,  inserting the  resulting Assembly
+     ;;routine in the appropriate position of ACCUM.  Then we flatten the code of the
+     ;;body, prepending the resulting expression to ACCUM.
      (let ((interrupt-handler-label (unique-label/interrupt-handler-entry-point)))
-       (%accumulate-shortcut-interrupt-handler-routine (cons interrupt-handler-label
-							     (T handler '())))
+       (%accumulate-shortcut-interrupt-handler-routine
+	(cons interrupt-handler-label
+	      (T handler '())))
        (parameterize ((shortcut-interrupt-handler-entry-label interrupt-handler-label))
 	 (T body accum))))
 
@@ -674,16 +683,28 @@
        (E-asmcall op rand* x accum))
 
       ((shortcut body handler)
-       ;;Flatten the BODY instructions inserting a label at the end:
+       ;;We are in "for side effects" context, which means the scenario is:
+       ;;
+       ;;   (seq
+       ;;     (shortcut
+       ;;         ?body
+       ;;       ?handler)
+       ;;     ?tail-code)
+       ;;
+       ;;so the body  must end with a fall  through to the tail code  and the handler
+       ;;must end with a jump to the tail code.
+       ;;
+       ;;We flatten the BODY instructions inserting a label at the end:
        ;;
        ;;  ?body-asm-instr
        ;;  ...
        ;;  (jump-if-condition L_shortcut_interrupt_handler)
        ;;  ...
        ;;  (label L_return_from_interrupt)
-       ;;  ?accum-asm-instr
+       ;;  ?tail-code-asm-instr
+       ;;  ...
        ;;
-       ;;and prepend to the exception routines the flattened handler instructions:
+       ;;We flatten the handler and generate code as follows:
        ;;
        ;;  (label L_shortcut_interrupt_handler)
        ;;  ?handler-asm-instr
