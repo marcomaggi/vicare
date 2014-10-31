@@ -2565,11 +2565,16 @@
 		;;The data area is 8 bytes wide.
 		(fx>= offset.val 0)
 		(fx<= offset.val 7))
+	   ;;Retrieve the byte and return it as fixnum.
 	   (prm-tag-as-fixnum
 	    (prm-isolate-least-significant-byte
 	     (asm 'bref
 		  (V-simple-operand flo)
 		  (K (fx+ (fx- 7 offset.val) off-flonum-data)))))
+	 ;;Signal error at run-time.
+	 ;;
+	 ;;FIXME Implement  the optional error  at compiler-time.  (Marco  Maggi; Fri
+	 ;;Oct 31, 2014)
 	 (interrupt)))
       ((known offset.expr)
        (cogen-value-$flonum-u8-ref flo offset.expr))
@@ -2605,17 +2610,21 @@
    ((E flo offset octet)
     (struct-case offset
       ((constant offset.val)
-       ;;OFFSET.VAL  is an  exact  integer whose  payload  bits are  the
-       ;;binary representation of the offset as machine word.
-       (unless (and (target-platform-fixnum? offset.val)
+       ;;OFFSET.VAL  is  an   exact  integer  whose  payload  bits   are  the  binary
+       ;;representation of the offset as machine word.
+       (if (and (target-platform-fixnum? offset.val)
 		    ;;The data area is 8 bytes wide.
 		    (fx>= offset.val 0)
 		    (fx<= offset.val 7))
-	 (interrupt))
-       ;;store the byte
-       (asm 'bset (V-simple-operand flo)
-	    (K (fx+ (fx- 7 offset.val) off-flonum-data))
-	    (prm-UNtag-as-fixnum (V-simple-operand octet))))
+	   ;;store the byte
+	   (asm 'bset (V-simple-operand flo)
+		(K (fx+ (fx- 7 offset.val) off-flonum-data))
+		(prm-UNtag-as-fixnum (V-simple-operand octet)))
+	 ;;Signal error at run-time.
+	 ;;
+	 ;;FIXME Implement  the optional error  at compiler-time.  (Marco  Maggi; Fri
+	 ;;Oct 31, 2014)
+	 (interrupt)))
       ((known offset.expr)
        (cogen-effect-$flonum-set! flo offset.expr octet))
       (else
@@ -3412,7 +3421,7 @@
    ((V a . a*)
     ;;NOTE The return value of this  "(interrupt)" is discarded!!!  Its purpose is to
     ;;signal the  presence of a jump  to interrupt handler (in  the implementation of
-    ;;INT*/OVERFLOW).  (Marco Maggi; Fri Oct 31, 2014)
+    ;;INT+/OVERFLOW).  (Marco Maggi; Fri Oct 31, 2014)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
@@ -3463,10 +3472,6 @@
    ((V)
     (K (fxsll -1 fx-shift)))
    ((V a . a*)
-    ;;NOTE The return value of this  "(interrupt)" is discarded!!!  Its purpose is to
-    ;;signal the  presence of a jump  to interrupt handler (in  the implementation of
-    ;;ASSERT-FIXNUMS).  (Marco Maggi; Fri Oct 31, 2014)
-    #;(interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
      (let loop ((a  (V-simple-operand a))
@@ -3619,14 +3624,18 @@
       ((constant len.val)
        ;;LEN.VAL must  be an  exact integer whose  payload bits  are the
        ;;binary representation of a fixnum.
-       (unless (target-platform-fixnum? len.val)
-	 (interrupt))
-       (with-tmp ((stru (asm 'alloc
-			     (K (align (+ (* len.val wordsize) disp-struct-data)))
-			     (K vector-tag))))
-	 ;;Store the STD in the first word.
-	 (asm 'mset stru (K off-struct-std) (V-simple-operand std))
-	 stru))
+       (if (target-platform-fixnum? len.val)
+	   (with-tmp ((stru (asm 'alloc
+				 (K (align (+ (* len.val wordsize) disp-struct-data)))
+				 (K vector-tag))))
+	     ;;Store the STD in the first word.
+	     (asm 'mset stru (K off-struct-std) (V-simple-operand std))
+	     stru)
+	 ;;Signal the error at run-time.
+	 ;;
+	 ;;FIXME Implement the error at compile-time case.  (Marco Maggi; Fri Oct 31,
+	 ;;2014)
+	 (interrupt)))
       ((known len.expr)
        (cogen-value-$make-struct std len.expr))
       (else
@@ -4078,23 +4087,27 @@
    ((V num-of-bytes)
     (struct-case num-of-bytes
       ((constant num-of-bytes.val)
-       ;;NUM-OF-BYTES.VAL is an exact integer whose payload bits are the
-       ;;binary representation of a fixnum.
-       (unless (target-platform-fixnum? num-of-bytes.val)
-	 (interrupt))
-       (with-tmp ((bv (asm 'alloc
-			   (K (align (+ num-of-bytes.val 1 disp-bytevector-data)))
-			   (K bytevector-tag))))
-	 ;;Store the length in the first word.
-	 (asm 'mset bv
-	      (K off-bytevector-length)
-	      ;;Tag as fixnum.
-	      (K (* num-of-bytes.val fx-scale)))
-	 ;;Set to zero the one-off byte.
-	 (asm 'bset bv
-	      (K (+ num-of-bytes.val off-bytevector-data))
-	      (K 0))
-	 bv))
+       ;;NUM-OF-BYTES.VAL must be an exact integer  whose payload bits are the binary
+       ;;representation of a fixnum.
+       (if (target-platform-fixnum? num-of-bytes.val)
+	   (with-tmp ((bv (asm 'alloc
+			       (K (align (+ num-of-bytes.val 1 disp-bytevector-data)))
+			       (K bytevector-tag))))
+	     ;;Store the length in the first word.
+	     (asm 'mset bv
+		  (K off-bytevector-length)
+		  ;;Tag as fixnum.
+		  (K (* num-of-bytes.val fx-scale)))
+	     ;;Set to zero the one-off byte.
+	     (asm 'bset bv
+		  (K (+ num-of-bytes.val off-bytevector-data))
+		  (K 0))
+	     bv)
+	 ;;Signal the error at run-time.
+	 ;;
+	 ;;FIXME Implement the case of compile-time error.  (Marco Maggi; Fri Oct 31,
+	 ;;2014)
+	 (interrupt)))
       ((known num-of-bytes.expr)
        (cogen-value-$make-bytevector num-of-bytes.expr))
       (else
@@ -4132,13 +4145,17 @@
    ((V bv idx)
     (struct-case idx
       ((constant idx.val)
-       ;;IDX.VAL is an  exact integer whose payload bits  are the binary
+       ;;IDX.VAL  must  be  an  exact  integer whose  payload  bits  are  the  binary
        ;;representation of a fixnum.
-       (unless (target-platform-fixnum? idx.val)
-	 (interrupt))
-       (prm-tag-as-fixnum
-	(prm-isolate-least-significant-byte
-	 (asm 'bref (V-simple-operand bv) (K (+ idx.val off-bytevector-data))))))
+       (if (target-platform-fixnum? idx.val)
+	   (prm-tag-as-fixnum
+	    (prm-isolate-least-significant-byte
+	     (asm 'bref (V-simple-operand bv) (K (+ idx.val off-bytevector-data)))))
+	 ;;Signal the error at run-time.
+	 ;;
+	 ;;FIXME Implement  the compile-time error  case.  (Marco Maggi; Fri  Oct 31,
+	 ;;2014)
+	 (interrupt)))
       (else
        ;;Here  IDX is  a  struct instance  representing recordized  code
        ;;which, when evaluated, must return a fixnum.
@@ -4164,25 +4181,28 @@
 			       (K (fx- NUM-OF-BITS-IN-WORD (fx+ 8 fx-shift))))))))
       (struct-case idx
 	((constant idx.val)
-	 ;;IDX.VAL is an exact integer whose payload bits are the binary
+	 ;;IDX.VAL  must be  an  exact  integer whose  payload  bits  are the  binary
 	 ;;representation of a fixnum.
-	 (unless (target-platform-fixnum? idx.val)
-	   (interrupt))
-	 ;;Retrieve the  requested byte than left-shift  and right-shift
-	 ;;so that  the most  significant bit  is extended  to correctly
-	 ;;represent the sign in the returned fixnum.
-	 (%extend-sign
-	  (asm 'bref (V-simple-operand bv) (K (+ idx.val off-bytevector-data))))
-	 ;;
-	 ;;The one below  is the original code from  Ikarus; in addition
-	 ;;to the code  above, it contains a byte  isolation that, IMHO,
-	 ;;it is useless here.  (Marco Maggi; Oct 23, 2012)
-	 ;;
-         ;; (%extend-sign
-         ;;  (prm-isolate-least-significant-byte
-         ;;   (asm 'bref (V-simple-operand bv) (K (+ idx.val off-bytevector-data)))))
-	 ;;
-	 )
+	 (if (target-platform-fixnum? idx.val)
+	     ;;Retrieve the  requested byte than  left-shift and right-shift  so that
+	     ;;the most significant  bit is extended to correctly  represent the sign
+	     ;;in the returned fixnum.
+	     (%extend-sign
+	      (asm 'bref (V-simple-operand bv) (K (+ idx.val off-bytevector-data))))
+	   ;;Signal the error at run-time.
+	   ;;
+	   ;;FIXME Implement the compile-time error  case.  (Marco Maggi; Fri Oct 31,
+	   ;;2014)
+	   (interrupt)))
+	;;
+	;;The one  below is the  original code from Ikarus;  in addition to  the code
+	;;above, it  contains a byte isolation  that, IMHO, is useless  here.  (Marco
+	;;Maggi; Oct 23, 2012)
+	;;
+	;; (%extend-sign
+	;;  (prm-isolate-least-significant-byte
+	;;   (asm 'bref (V-simple-operand bv) (K (+ idx.val off-bytevector-data)))))
+	;;
 	(else
 	 ;;Here IDX  is a  struct instance representing  recordized code
 	 ;;which, when evaluated, must return a fixnum.
@@ -4220,11 +4240,15 @@
        (let ((byte-offset (+ idx.val off-bytevector-data)))
 	 (struct-case byte
 	   ((constant byte.val)
-	    (unless (target-platform-fixnum? byte.val)
-	      (interrupt))
-	    ;;BYTE.VAL is  an exact integer  whose payload bits  are the
-	    ;;binary representation of a fixnum.
-	    (asm 'bset (V-simple-operand bv) (K byte-offset) (%check-byte byte.val)))
+	    (if (target-platform-fixnum? byte.val)
+		;;BYTE.VAL  is an  exact integer  whose payload  bits are  the binary
+		;;representation of a fixnum.
+		(asm 'bset (V-simple-operand bv) (K byte-offset) (%check-byte byte.val))
+	      ;;Signal the error at run-time.
+	      ;;
+	      ;;FIXME Implement  the error at  compile-time case.  (Marco  Maggi; Fri
+	      ;;Oct 31, 2014)
+	      (interrupt)))
 	   (else
 	    ;;BYTE  is a  struct instance  representing recordized  code
 	    ;;which, when evaluate, must return a fixnum.
@@ -4236,11 +4260,15 @@
 	 (asm 'int+ (prm-UNtag-as-fixnum (V-simple-operand idx)) (K off-bytevector-data)))
        (struct-case byte
 	 ((constant byte.val)
-	  (unless (target-platform-fixnum? byte.val)
-	    (interrupt))
-	  ;;BYTE.VAL is  an exact integer  whose payload bits  are the
-	  ;;binary representation of a fixnum.
-	  (asm 'bset (V-simple-operand bv) byte-offset (%check-byte byte.val)))
+	  (if (target-platform-fixnum? byte.val)
+	      ;;BYTE.VAL  is an  exact  integer  whose payload  bits  are the  binary
+	      ;;representation of a fixnum.
+	      (asm 'bset (V-simple-operand bv) byte-offset (%check-byte byte.val))
+	    ;;Signal the error at run-time.
+	    ;;
+	    ;;FIXME Implement the error at  compile-time case.  (Marco Maggi; Fri Oct
+	    ;;31, 2014)
+	    (interrupt)))
 	 (else
 	  ;;BYTE  is a  struct instance  representing recordized  code
 	  ;;which, when evaluate, must return a fixnum.
@@ -4479,16 +4507,20 @@
    ((V num-of-chars)
     (struct-case num-of-chars
       ((constant num-of-chars.val)
-       (unless (target-platform-fixnum? num-of-chars.val)
-	 (interrupt))
-       ;;NUM-OF-CHARS.VAL is an exact integer whose payload bits are the
-       ;;binary representation of a fixnum.
-       (with-tmp ((str (asm 'alloc
-			    (K (align (+ (* num-of-chars.val char-size) disp-string-data)))
-			    (K string-tag))))
-	 ;;Store the string length in the first word.
-	 (asm 'mset str (K off-string-length) (K (* num-of-chars.val fx-scale)))
-	 str))
+       (if (target-platform-fixnum? num-of-chars.val)
+	   ;;NUM-OF-CHARS.VAL is an  exact integer whose payload bits  are the binary
+	   ;;representation of a fixnum.
+	   (with-tmp ((str (asm 'alloc
+				(K (align (+ (* num-of-chars.val char-size) disp-string-data)))
+				(K string-tag))))
+	     ;;Store the string length in the first word.
+	     (asm 'mset str (K off-string-length) (K (* num-of-chars.val fx-scale)))
+	     str)
+	 ;;Signal the error at run-time.
+	 ;;
+	 ;;FIXME Implement the error at compile-time case.  (Marco Maggi; Fri Oct 31,
+	 ;;2014)
+	 (interrupt)))
       ((known num-of-chars.expr)
        (cogen-value-$make-string num-of-chars.expr))
       (else
@@ -4963,12 +4995,16 @@
    ((V clo freevar-idx)
     (struct-case freevar-idx
       ((constant freevar-idx.val)
-       ;;FREEVAR-IDX.VAL is an exact integer  whose payload bits are the
-       ;;binary representation  of the index  of a free variable  in the
-       ;;closure's data area; such index is zero-based.
-       (unless (target-platform-fixnum? freevar-idx.val)
-	 (interrupt))
-       (asm 'mref (V-simple-operand clo) (K (+ off-closure-data (* freevar-idx.val wordsize)))))
+       ;;FREEVAR-IDX.VAL must be  an exact integer whose payload bits  are the binary
+       ;;representation of the  index of a free variable in  the closure's data area;
+       ;;such index is zero-based.
+       (if (target-platform-fixnum? freevar-idx.val)
+	   (asm 'mref (V-simple-operand clo) (K (+ off-closure-data (* freevar-idx.val wordsize))))
+	 ;;Signal the error at run-time.
+	 ;;
+	 ;;FIXME Implement the error at compile-time case.  (Marco Maggi; Fri Oct 31,
+	 ;;2014)
+	 (interrupt)))
       ((known freevar-idx.expr)
        (cogen-value-$cpref clo freevar-idx.expr))
       (else
@@ -5192,6 +5228,9 @@
    ;;
    ((E)
     (begin
+      ;;NOTE The return  value of this "(interrupt)" is discarded!!!   Its purpose is
+      ;;to signal the presence of a  jump to interrupt handler (in the implementation
+      ;;of INCR/ZERO?).
       (interrupt)
       (asm 'incr/zero? PC-REGISTER (K pcb-engine-counter)
 	   (K (fxsll 1 fx-shift))))))
