@@ -963,13 +963,13 @@
        (cons `(movb ,(R/l src) ,(R dst)) accum))
 
       ((sll)
-       (cons `(sall ,(R/cl src) ,(R dst)) accum))
+       (cons `(sall ,(R/shift-delta src x) ,(R dst)) accum))
 
       ((sra)
-       (cons `(sarl ,(R/cl src) ,(R dst)) accum))
+       (cons `(sarl ,(R/shift-delta src x) ,(R dst)) accum))
 
       ((srl)
-       (cons `(shrl ,(R/cl src) ,(R dst)) accum))
+       (cons `(shrl ,(R/shift-delta src x) ,(R dst)) accum))
 
       ((idiv)
        (cons `(idivl ,(R src)) accum))
@@ -999,7 +999,7 @@
       ((sll/overflow)
        (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
 			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
-	 (cons* `(sall ,(R/cl src) ,(R dst))
+	 (cons* `(sall ,(R/shift-delta src x) ,(R dst))
 		`(jo ,L_interrupt)
 		accum)))
 
@@ -1058,26 +1058,35 @@
        (eq? op 'interrupt))
       (else #f)))
 
-  (define* (R/cl x)
+  (define* (R/shift-delta operand x)
     (define (%error)
       (compiler-internal-error __module_who__ __who__
-	"invalid R/cl"
-	(unparse-recordized-code x)))
-    (struct-case x
-      ((constant x.const)
+	"invalid shift delta operand in ASM-INSTR struct"
+	(unparse-recordized-code/sexp x)
+	(unparse-recordized-code/sexp operand)))
+    (struct-case operand
+      ((constant operand.const)
        ;;In  a 32-bit  machine word  there are  32 bits:  on a  32-bit platform,  the
-       ;;maximum bitwise shift delta that makes sense is 32 = 2^5.
+       ;;maximum bitwise shift delta  that makes sense is 32 =  2^5.  Given the shift
+       ;;delta OPERAND.CONST: it makes sense to isolate the 5 least significant bits.
+       ;;So the bitmask is:
        ;;
-       ,; on a 64-bit  platform
-       ;;in a  64-bit machine word there
-       ;;are 64  bits.  On a  32-bit platform, ;, the maximum  bitwise shift
-       ;;delta that makes sense is 64 = 2^6.
+       ;;   wordsize = 4
+       ;;   wordsize * 8 - 1 = 32 - 1 = 31 = #b11111
        ;;
-       (if (fixnum? x.const)
-	   (fxlogand x.const (- (* wordsize 8) 1))
+       ;;In  a 64-bit  machine word  there are  64 bits:  on a  64-bit platform,  the
+       ;;maximum bitwise shift delta  that makes sense is 64 =  2^6.  Given the shift
+       ;;delta OPERAND.CONST: it makes sense to isolate the 6 least significant bits.
+       ;;So the bitmask is:
+       ;;
+       ;;   wordsize = 8
+       ;;   wordsize * 8 - 1 = 64 - 1 = 63 = #b111111
+       ;;
+       (if (fixnum? operand.const)
+	   (fxlogand operand.const (- (* wordsize 8) 1))
 	 (%error)))
       (else
-       (if (eq? x ecx)
+       (if (eq? operand ecx)
 	   '%cl
 	 (%error)))))
 
