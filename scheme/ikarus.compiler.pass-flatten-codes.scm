@@ -688,7 +688,7 @@
       (else
        (compiler-internal-error __module_who__ __who__
 	 "invalid code in E context"
-	 (unparse-recordized-code x)))))
+	 (unparse-recordised-code/sexp x)))))
 
 ;;; --------------------------------------------------------------------
 
@@ -922,11 +922,16 @@
       (else
        (compiler-internal-error __module_who__ __who__
 	 "invalid code in E context"
-	 (unparse-recordized-code x)))))
+	 (unparse-recordised-code/sexp x)))))
 
 ;;; --------------------------------------------------------------------
 
   (define* (E-asm-instr op dst src x accum)
+    (define (%shortcut-interrupt-handler-entry-label)
+      (or (shortcut-interrupt-handler-entry-label)
+	  (compiler-internal-error __module_who__ __who__
+	    "missing interrupt handler label, use of INTERRUPT outside SHORTCUT struct?"
+	    (unparse-recordised-code/sexp x))))
     (case op
       ((logand)
        (cons `(andl ,(R src) ,(R dst)) accum))
@@ -955,9 +960,11 @@
 	 (cons `(movl ,(R src) ,(R dst)) accum)))
 
       ((load8)
-       (if (eq? dst src)
-	   accum
-	 (cons `(movb ,(R/l src) ,(R/l dst)) accum)))
+       (let ((src^ (R/l src))
+	     (dst^ (R/l dst)))
+	 (if (eq? dst^ src^)
+	     accum
+	   (cons `(movb ,src^ ,dst^) accum))))
 
       ((bset)
        (cons `(movb ,(R/l src) ,(R dst)) accum))
@@ -984,35 +991,39 @@
 	 (cons `(bswap ,src^) accum)))
 
       ((mset32)
-       (cons `(mov32 ,(R src) ,(R dst)) accum))
+       (let ((src^ (R src))
+	     (dst^ (R dst)))
+	 (if (eq? dst^ src^)
+	     accum
+	   (cons `(mov32 ,src^ ,dst^) accum))))
 
       ((load32)
-       (cons `(mov32 ,(R src) ,(R dst)) accum))
+       (let ((src^ (R src))
+	     (dst^ (R dst)))
+	 (if (eq? dst^ src^)
+	     accum
+	   (cons `(mov32 ,src^ ,dst^) accum))))
 
       ((int-/overflow)
-       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
-			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
+       (let ((L_interrupt (%shortcut-interrupt-handler-entry-label)))
 	 (cons* `(subl ,(R src) ,(R dst))
 		`(jo ,L_interrupt)
 		accum)))
 
       ((sll/overflow)
-       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
-			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
+       (let ((L_interrupt (%shortcut-interrupt-handler-entry-label)))
 	 (cons* `(sall ,(R/shift-delta src x) ,(R dst))
 		`(jo ,L_interrupt)
 		accum)))
 
       ((int*/overflow)
-       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
-			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
+       (let ((L_interrupt (%shortcut-interrupt-handler-entry-label)))
 	 (cons* `(imull ,(R src) ,(R dst))
 		`(jo ,L_interrupt)
 		accum)))
 
       ((int+/overflow)
-       (let ((L_interrupt (or (shortcut-interrupt-handler-entry-label)
-			      (compiler-internal-error __module_who__ __who__ "no exception label" (unparse-recordized-code x)))))
+       (let ((L_interrupt (%shortcut-interrupt-handler-entry-label)))
 	 (cons* `(addl ,(R src) ,(R dst))
 		`(jo ,L_interrupt)
 		accum)))
@@ -1048,7 +1059,9 @@
        (cons `(divsd ,(R (make-disp src dst)) xmm0) accum))
 
       (else
-       (compiler-internal-error __module_who__ __who__ "invalid instr" (unparse-recordized-code x)))))
+       (compiler-internal-error __module_who__ __who__
+	 "invalid operator in ASM-INSTR struct"
+	 (unparse-recordised-code/sexp x)))))
 
 ;;; --------------------------------------------------------------------
 
