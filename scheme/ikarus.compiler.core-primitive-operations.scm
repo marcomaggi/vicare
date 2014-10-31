@@ -2559,18 +2559,18 @@
    ((V flo offset)
     (struct-case offset
       ((constant offset.val)
-       ;;OFFSET.VAL  is an  exact  integer whose  payload  bits are  the
-       ;;binary representation of the offset as machine word.
-       (unless (and (target-platform-fixnum? offset.val)
-		    ;;The data area is 8 bytes wide.
-		    (fx>= offset.val 0)
-		    (fx<= offset.val 7))
-	 (interrupt))
-       (prm-tag-as-fixnum
-	(prm-isolate-least-significant-byte
-	 (asm 'bref
-	      (V-simple-operand flo)
-	      (K (fx+ (fx- 7 offset.val) off-flonum-data))))))
+       ;;OFFSET.VAL  is  an   exact  integer  whose  payload  bits   are  the  binary
+       ;;representation of the offset as machine word.
+       (if (and (target-platform-fixnum? offset.val)
+		;;The data area is 8 bytes wide.
+		(fx>= offset.val 0)
+		(fx<= offset.val 7))
+	   (prm-tag-as-fixnum
+	    (prm-isolate-least-significant-byte
+	     (asm 'bref
+		  (V-simple-operand flo)
+		  (K (fx+ (fx- 7 offset.val) off-flonum-data)))))
+	 (interrupt)))
       ((known offset.expr)
        (cogen-value-$flonum-u8-ref flo offset.expr))
       (else
@@ -3061,6 +3061,10 @@
        ((constant a.val)
 	(if (target-platform-fixnum? a.val)
 	    (begin
+	      ;;NOTE  The return  value of  this "(interrupt)"  is discarded!!!   Its
+	      ;;purpose is to signal the presence  of a jump to interrupt handler (in
+	      ;;the  implementation of  INT*/OVERFLOW).   (Marco Maggi;  Fri Oct  31,
+	      ;;2014)
 	      (interrupt)
 	      (with-tmp ((b (V-simple-operand b)))
 		(assert-fixnum b)
@@ -3072,6 +3076,9 @@
 	#f)))
 
    (define (cogen-*-non-constants a b)
+     ;;NOTE The return value of this "(interrupt)" is discarded!!!  Its purpose is to
+     ;;signal the presence  of a jump to interrupt handler  (in the implementation of
+     ;;INT*/OVERFLOW).  (Marco Maggi; Fri Oct 31, 2014)
      (interrupt)
      (with-tmp ((a (V-simple-operand a))
 		(b (V-simple-operand b)))
@@ -3311,6 +3318,10 @@
 		      (if (zero? i)
 			  x
 			(begin
+			  ;;NOTE   The  return   value  of   this  "(interrupt)"   is
+			  ;;discarded!!!  Its purpose is to  signal the presence of a
+			  ;;jump  to  interrupt  handler (in  the  implementation  of
+			  ;;SLL/OVERFLOW).  (Marco Maggi; Fri Oct 31, 2014)
 			  (interrupt)
 			  (asm 'sll/overflow
 			       (recur (- i 1))
@@ -3368,31 +3379,17 @@
 
  (define-core-primitive-operation - safe
    ((V a)
-    ;;FIXME Why  do we interrupt  here?  If I  remove the interrupt:  this integrated
-    ;;body uncovers an error in a subsequent compiler pass.
-    ;;
-    ;;My current understanding is: by interrupting  here we jump directly to the full
-    ;;primitive function  call, skipping the  integrated body.   But this is  not the
-    ;;whole story: by  examining the generated assembly code (possibly  by turning of
-    ;;the source optimiser), I see a  correct SHORTCUT generated, without direct jump
-    ;;to the function call.
-    ;;
-    ;;I need to understand and fix this!!! (Marco Maggi; Fri Sep 19, 2014)
+    ;;NOTE The return value of this  "(interrupt)" is discarded!!!  Its purpose is to
+    ;;signal the  presence of a jump  to interrupt handler (in  the implementation of
+    ;;INT-/OVERFLOW).  (Marco Maggi; Fri Oct 31, 2014)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a '())
      (asm 'int-/overflow (K 0) (V-simple-operand a))))
    ((V a . a*)
-    ;;FIXME Why  do we interrupt  here?  If I  remove the interrupt:  this integrated
-    ;;body uncovers an error in a subsequent compiler pass.
-    ;;
-    ;;My current understanding is: by interrupting  here we jump directly to the full
-    ;;primitive function  call, skipping the  integrated body.   But this is  not the
-    ;;whole story: by  examining the generated assembly code (possibly  by turning of
-    ;;the source optimiser), I see a  correct SHORTCUT generated, without direct jump
-    ;;to the function call.
-    ;;
-    ;;I need to understand and fix this!!! (Marco Maggi; Fri Sep 19, 2014)
+    ;;NOTE The return value of this  "(interrupt)" is discarded!!!  Its purpose is to
+    ;;signal the  presence of a jump  to interrupt handler (in  the implementation of
+    ;;INT-/OVERFLOW).  (Marco Maggi; Fri Oct 31, 2014)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
@@ -3413,16 +3410,9 @@
    ((V)
     (K 0))
    ((V a . a*)
-    ;;FIXME Why  do we interrupt  here?  If I  remove the interrupt:  this integrated
-    ;;body uncovers an error in a subsequent compiler pass.
-    ;;
-    ;;My current understanding is: by interrupting  here we jump directly to the full
-    ;;primitive function  call, skipping the  integrated body.   But this is  not the
-    ;;whole story: by  examining the generated assembly code (possibly  by turning of
-    ;;the source optimiser), I see a  correct SHORTCUT generated, without direct jump
-    ;;to the function call.
-    ;;
-    ;;I need to understand and fix this!!! (Marco Maggi; Fri Sep 19, 2014)
+    ;;NOTE The return value of this  "(interrupt)" is discarded!!!  Its purpose is to
+    ;;signal the  presence of a jump  to interrupt handler (in  the implementation of
+    ;;INT*/OVERFLOW).  (Marco Maggi; Fri Oct 31, 2014)
     (interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
@@ -3473,7 +3463,10 @@
    ((V)
     (K (fxsll -1 fx-shift)))
    ((V a . a*)
-    (interrupt)
+    ;;NOTE The return value of this  "(interrupt)" is discarded!!!  Its purpose is to
+    ;;signal the  presence of a jump  to interrupt handler (in  the implementation of
+    ;;ASSERT-FIXNUMS).  (Marco Maggi; Fri Oct 31, 2014)
+    #;(interrupt)
     (multiple-forms-sequence
      (assert-fixnums a a*)
      (let loop ((a  (V-simple-operand a))
