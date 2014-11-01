@@ -1108,7 +1108,7 @@
 
 (module (P)
 
-  (define* (P x label-true label-false accum)
+  (define* (P x L_conditional_conseq L_conditional_altern accum)
     ;;Flatten X as code in predicate position.  If we are here the scenario is:
     ;;
     ;;   (conditional ?test
@@ -1122,27 +1122,27 @@
     ;;code.  ACCUM  must be the  list of  assembly instructions, accumulated  so far,
     ;;that must be included in binary code after the ones to which X will expand.
     ;;
-    ;;LABEL-TRUE must be false or the label entry point for the code to be run when X
-    ;;returns true; LABEL-FALSE must  be false or the label entry  point for the code
-    ;;to be run when X returns false.
+    ;;L_CONDITIONAL_CONSEQ must be false or the label  entry point for the code to be
+    ;;run when X returns true; L_CONDITIONAL_ALTERN  must be false or the label entry
+    ;;point for the code to be run when X returns false.
     ;;
-    ;;* When LABEL-TRUE is #f, it means the generated code has the form:
+    ;;* When L_CONDITIONAL_CONSEQ is #f, it means the generated code has the form:
     ;;
     ;;     ?test-asm-instr
-    ;;     (jump-if-false ?label-false)
+    ;;     (jump-if-false L_conditional_altern)
     ;;     ?conseq-asm-instr
-    ;;     ?label-false
+    ;;     L_conditional_altern
     ;;     ?altern-asm-instr
     ;;
     ;;  which means: if the test is  true, the execution falls through to the ?CONSEQ
     ;;  code; if the test is false, the execution jumps to the ?ALTERN code.
     ;;
-    ;;* When LABEL-FALSE is #f, it means the generated code has the form:
+    ;;* When L_CONDITIONAL_ALTERN is #f, it means the generated code has the form:
     ;;
     ;;     ?test-asm-instr
-    ;;     (jump-if-true ?label-true)
+    ;;     (jump-if-true L_conditional_conseq)
     ;;     ?altern-asm-instr
-    ;;     ?label-true
+    ;;     L_conditional_conseq
     ;;     ?conseq-asm-instr
     ;;
     ;;  which means: if the test is true, the execution jumps to the ?CONSEQ code; if
@@ -1152,37 +1152,38 @@
       ;;If X is a CONSTANT: the predicate is always true or always false.
       ((constant x.const)
        (cond (x.const
-	      (if label-true
-		  (cons `(jmp ,label-true) accum)
+	      ;;The test is always true
+	      (if L_conditional_conseq
+		  (cons `(jmp ,L_conditional_conseq) accum)
 		accum))
-	     (label-false
-	      (cons `(jmp ,label-false) accum))
+	     (L_conditional_altern
+	      (cons `(jmp ,L_conditional_altern) accum))
 	     (else
-	      ;;FIXME Is this  correct of should be raise an  exception here?  (Marco
+	      ;;FIXME Is this  correct or should be raise an  exception here?  (Marco
 	      ;;Maggi; Mon Oct 27, 2014)
 	      accum)))
 
       ((seq e0 e1)
-       (E e0 (P e1 label-true label-false accum)))
+       (E e0 (P e1 L_conditional_conseq L_conditional_altern accum)))
 
       ((conditional x.test x.conseq x.altern)
-       (P-conditional x.test x.conseq x.altern label-true label-false accum))
+       (P-conditional x.test x.conseq x.altern L_conditional_conseq L_conditional_altern accum))
 
       ((asm-instr op dst src)
-       (P-asm-instr op dst src x label-true label-false accum))
+       (P-asm-instr op dst src x L_conditional_conseq L_conditional_altern accum))
 
       ((shortcut body handler)
        (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
 	     (L_end       (unique-label "L_shortcut_end")))
-	 (let ((accum (if (and label-true label-false)
+	 (let ((accum (if (and L_conditional_conseq L_conditional_altern)
 			  accum
 			(cons L_end accum))))
 	   (%accumulate-shortcut-interrupt-handler-routine
 	    (cons L_interrupt
-		  (P handler (or label-true L_end) (or label-false L_end)
+		  (P handler (or L_conditional_conseq L_end) (or L_conditional_altern L_end)
 		     '())))
 	   (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
-	     (P body label-true label-false accum)))))
+	     (P body L_conditional_conseq L_conditional_altern accum)))))
 
       (else
        (compiler-internal-error __module_who__ __who__
