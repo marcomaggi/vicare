@@ -108,7 +108,7 @@
 (define-constant shortcut-interrupt-handler-routine-insertion-point
   (make-parameter #f))
 
-(define (%accumulate-shortcut-interrupt-handler-routine handler-routine-sexp)
+(define (%insert-shortcut-interrupt-handler-routine handler-routine-sexp)
   (let ((tconc (shortcut-interrupt-handler-routine-insertion-point)))
     #;(assert (equal? (car tconc) '(nop)))
     (set-cdr! tconc (append handler-routine-sexp (cdr tconc)))))
@@ -643,7 +643,7 @@
      ;;routine in the appropriate position of ACCUM.  Then we flatten the code of the
      ;;body, prepending the resulting expression to ACCUM.
      (let ((interrupt-handler-label (unique-label/interrupt-handler-entry-point)))
-       (%accumulate-shortcut-interrupt-handler-routine
+       (%insert-shortcut-interrupt-handler-routine
 	(cons interrupt-handler-label
 	      (T handler '())))
        (parameterize ((shortcut-interrupt-handler-entry-label interrupt-handler-label))
@@ -861,7 +861,7 @@
     ;;
     (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
 	  (L_return    (unique-label "L_return_from_interrupt")))
-      (%accumulate-shortcut-interrupt-handler-routine
+      (%insert-shortcut-interrupt-handler-routine
        (cons L_interrupt
 	     (E handler
 		`((jmp ,L_return)))))
@@ -1185,25 +1185,36 @@
        (P-asm-instr op dst src x L_conditional_conseq L_conditional_altern accum))
 
       ((shortcut body handler)
+       ;;The scenario here is:
+       ;;
+       ;;   (conditional (shortcut
+       ;;                    ?body
+       ;;                  ?handler)
+       ;;       ?conseq
+       ;;     ?altern)
+       ;;
+       ;;and here we process the SHORTCUT in test position.
        (let ((L_interrupt      (unique-label/interrupt-handler-entry-point))
 	     (L_shortcut_end   (unique-label "L_shortcut_end")))
-	 (let ((accum (if (and L_conditional_conseq
-			       L_conditional_altern)
-			  accum
-			(cons L_shortcut_end accum))))
-	   (%accumulate-shortcut-interrupt-handler-routine
-	    (cons L_interrupt
-		  (P handler
-		     (or L_conditional_conseq L_shortcut_end)
-		     (or L_conditional_altern L_shortcut_end)
-		     '())))
-	   (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
-	     (P body L_conditional_conseq L_conditional_altern accum)))))
+	 (%insert-shortcut-interrupt-handler-routine
+	  (cons L_interrupt
+		(P handler
+		   (or L_conditional_conseq L_shortcut_end)
+		   (or L_conditional_altern L_shortcut_end)
+		   '())))
+	 (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
+	   (P body L_conditional_conseq L_conditional_altern
+	      (if (and L_conditional_conseq
+		       L_conditional_altern)
+		  accum
+		(cons L_shortcut_end accum))))))
 
       (else
        (compiler-internal-error __module_who__ __who__
 	 "invalid code in P context"
 	 (unparse-recordised-code/sexp x)))))
+
+;;; --------------------------------------------------------------------
 
   (define* (P-conditional x.test x.conseq x.altern label-true label-false accum)
     (cond ((and (%constant-boolean-true?  x.conseq)
