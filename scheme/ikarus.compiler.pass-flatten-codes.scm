@@ -1115,16 +1115,16 @@
     ;;       ?conseq
     ;;     ?altern)
     ;;
-    ;;and here we are  processing the ?TEST expression; the code  for the ?CONSEQ and
+    ;;and  the argument  X is  the ?TEST  expression; the  code for  the ?CONSEQ  and
     ;;?ALTERN has already been processed and prepended to the ACCUM.
     ;;
-    ;;X must  be a struct  instance representing  the ?TEST expression  as recordized
+    ;;X must  be a struct  instance representing  the ?TEST expression  as recordised
     ;;code.  ACCUM  must be the  list of  assembly instructions, accumulated  so far,
     ;;that must be included in binary code after the ones to which X will expand.
     ;;
-    ;;LABEL-TRUE must be the label entry point for  the code to be run when X returns
-    ;;true; LABEL-FALSE must be  the label entry point for the code to  be run when X
-    ;;returns false.
+    ;;LABEL-TRUE must be false or the label entry point for the code to be run when X
+    ;;returns true; LABEL-FALSE must  be false or the label entry  point for the code
+    ;;to be run when X returns false.
     ;;
     ;;* When LABEL-TRUE is #f, it means the generated code has the form:
     ;;
@@ -1257,7 +1257,7 @@
       (case op
 	((fl:= fl:!= fl:< fl:<= fl:> fl:>=)
 	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
-		`(,(jmpname op) ,lab)
+		`(,(comparison-operator->jump-name op) ,lab)
 		;;BOGUS! (Abdulaziz Ghuloum)
 		accum))
 	;;NOTE This branch lists operators that  are used internally by this compiler
@@ -1265,17 +1265,17 @@
 	((fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=)
 	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
 		`(jp ,lab) ;jump if parity flag is set
-		`(,(jmpname op) ,lab)
+		`(,(comparison-operator->jump-name op) ,lab)
 		accum))
 	((= != <  <= > >= u< u<= u> u>=)
 	 ;;Surprise!  All these operators are just implemented with CMPL.
 	 (cond ((or (symbol? dst) (constant? src))
 		(cons* `(cmpl ,(R src) ,(R dst))
-		       `(,(jmpname op) ,lab)
+		       `(,(comparison-operator->jump-name op) ,lab)
 		       accum))
 	       ((or (symbol? src) (constant? dst))
 		(cons* `(cmpl ,(R dst) ,(R src))
-		       `(,(revjmpname op) ,lab)
+		       `(,(comparison-operator->reverse-jump-name op) ,lab)
 		       accum))
 	       (else
 		(compiler-internal-error __module_who__ __who__
@@ -1297,23 +1297,33 @@
 	    (else
 	     (compiler-internal-error __module_who__ __who__ "assembly instruction invalid in predicate context" x))))
 
-    (define* (jmpname x)
-      (cond ((assq x '((= . je) (!= . jne) (< . jl) (<= . jle) (> . jg) (>= . jge)
-		       (u< . jb) (u<= . jbe) (u> . ja) (u>= . jae)
-		       (fl:= . je) (fl:!= . jne)
-		       (fl:< . jb) (fl:> . ja) (fl:<= . jbe) (fl:>= . jae)
-		       (fl:o= . je) (fl:o!= . jne)
-		       (fl:o< . jb) (fl:o> . ja) (fl:o<= . jbe) (fl:o>= . jae)))
+    (define* (comparison-operator->jump-name op)
+      (cond ((assq op '((=      . je)	(!=     . jne)
+			(<      . jl)	(>      . jg)
+			(<=     . jle)	(>=     . jge)
+			(u<     . jb)	(u>     . ja)
+			(u<=    . jbe)	(u>=    . jae)
+			(fl:=   . je)	(fl:!=  . jne)
+			(fl:<   . jb)	(fl:>   . ja)
+			(fl:<=  . jbe)	(fl:>=  . jae)
+			(fl:o=  . je)	(fl:o!= . jne)
+			(fl:o<  . jb)	(fl:o>  . ja)
+			(fl:o<= . jbe)	(fl:o>= . jae)))
 	     => cdr)
 	    (else
-	     (compiler-internal-error __module_who__ __who__ "invalid jmpname" x))))
+	     (compiler-internal-error __module_who__ __who__
+	       "invalid comparison operator in ASM-INSTR struct" op))))
 
-    (define* (revjmpname x)
-      (cond ((assq x '((= . je) (!= . jne) (< . jg) (<= . jge) (> . jl) (>= . jle)
-		       (u< . ja) (u<= . jae) (u> . jb) (u>= . jbe)))
+    (define* (comparison-operator->reverse-jump-name op)
+      (cond ((assq op '((= . je)      (!= . jne)
+			(< . jg)      (> . jl)
+			(<= . jge)    (>= . jle)
+			(u< . ja)     (u> . jb)
+			(u<= . jae)   (u>= . jbe)))
 	     => cdr)
 	    (else
-	     (compiler-internal-error __module_who__ __who__ "invalid jmpname" x))))
+	     (compiler-internal-error __module_who__ __who__
+	       "invalid comparison operator in ASM-INSTR struct" op))))
 
     #| end of module: P-asm-instr |# )
 
