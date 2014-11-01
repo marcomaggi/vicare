@@ -1239,65 +1239,111 @@
 			       (P x.altern #f #f
 				  (cons label-false^ accum))))))))))
 
+;;; --------------------------------------------------------------------
+
   (module (P-asm-instr)
 
-    (define* (P-asm-instr op dst src x label-true label-false accum)
-      (cond ((and label-true label-false)
-	     (let ((accum^ (cons `(jmp ,label-false) accum)))
-	       (%P-generate-comparison op dst src x label-true accum^)))
-	    (label-true
-	     (%P-generate-comparison op dst src x label-true accum))
-	    (label-false
-	     (let ((neg-op (%select-negated-P-asm-instr op)))
-	       (%P-generate-comparison neg-op dst src x label-false accum)))
-	    (else
-	     accum)))
+    (define* (P-asm-instr op dst src x L_conditional_conseq L_conditional_altern accum)
+      (cond ((and L_conditional_conseq L_conditional_altern)
+	     (%P-generate-comparison op dst src x
+				     L_conditional_conseq
+				     (cons `(jmp ,L_conditional_altern)
+					   accum)))
+
+	    (L_conditional_conseq
+	     ;;Here ACCUM begins with  the ALTERN code; we have to  jump to enter the
+	     ;;CONSEQ code.
+	     (%P-generate-comparison op dst src x
+				     L_conditional_conseq accum))
+
+	    (L_conditional_altern
+	     ;;Here ACCUM begins with  the CONSEQ code; we have to  jump to enter the
+	     ;;ALTERN code.
+	     (%P-generate-comparison (%comparison-operator->reverse-comparison-operator op x __who__) dst src x
+				     L_conditional_altern accum))
+
+	    (else accum)))
 
     (define* (%P-generate-comparison op dst src x lab accum)
+      ;;Prepend  to ACCUM  code that  performs the  comparison OP  and jumps  to LAB;
+      ;;return the resulting symbolic expression.
+      ;;
+      ;;NOTE The Assembly instruction mnemonic  UCOMISD stands for "Unordered Compare
+      ;;Scalar Double-Precision Floating-Point Values and set EFLAGS".  (Marco Maggi;
+      ;;Sat Nov 1, 2014)
+      ;;
+      ;;NOTE Surprise!   All integer operators  are just implemented with  CMPL.  The
+      ;;Assembly  instruction  mnemonic CMPL  is  the  AT&T  notation for  the  Intel
+      ;;mnemonic CMP; so  in the Intel guide to Assembly  instructions we must search
+      ;;for CMP.   CMP cannot  compare two memory  locations, the  supported operands
+      ;;are:
+      ;;
+      ;;   (cmp  ?register     ?register)
+      ;;   (cmp  ?register     ?immediate32)
+      ;;   (cmp  ?register     ?memory)
+      ;;   (cmp  ?memory       ?immediate32)
+      ;;
+      ;;so in AT&T notation:
+      ;;
+      ;;   (cmpl ?register     ?register)
+      ;;   (cmpl ?immediate32  ?register)
+      ;;   (cmpl ?memory       ?register)
+      ;;   (cmpl ?immediate32  ?memory)
+      ;;
+      ;;as a  consequence we  have the  predicates below.  (Marco  Maggi; Sat  Nov 1,
+      ;;2014)
+      ;;
       (case op
-	((fl:= fl:!= fl:< fl:<= fl:> fl:>=)
-	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
-		`(,(comparison-operator->jump-name op) ,lab)
-		;;BOGUS! (Abdulaziz Ghuloum)
-		accum))
-	;;NOTE This branch lists operators that  are used internally by this compiler
-	;;pass.
-	((fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=)
-	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
-		`(jp ,lab) ;jump if parity flag is set
-		`(,(comparison-operator->jump-name op) ,lab)
-		accum))
-	((= != <  <= > >= u< u<= u> u>=)
-	 ;;Surprise!  All these operators are just implemented with CMPL.
-	 (cond ((or (symbol? dst) (constant? src))
+	((= != < <= > >= u< u<= u> u>=)
+	 (cond ((or (register? dst)
+		    (constant? src))
 		(cons* `(cmpl ,(R src) ,(R dst))
-		       `(,(comparison-operator->jump-name op) ,lab)
+		       `(,(%comparison-operator->jump-name op x __who__) ,lab)
 		       accum))
-	       ((or (symbol? src) (constant? dst))
+
+	       ((or (register? src)
+		    (constant? dst))
+		;;Here  we reverse  the  operands, so  we have  to  reverse the  jump
+		;;instruction; the semantics of the comparison is unchanged.
 		(cons* `(cmpl ,(R dst) ,(R src))
-		       `(,(comparison-operator->reverse-jump-name op) ,lab)
+		       `(,(%comparison-operator->reverse-jump-name op x __who__) ,lab)
 		       accum))
+
 	       (else
 		(compiler-internal-error __module_who__ __who__
-		  "invalid operands in ASM-INSTR for P context"
+		  "invalid operands in ASM-INSTR struct in P context"
 		  (unparse-recordised-code/sexp x)))))
-	(else
-	 (compiler-internal-error __module_who__ __who__
-	   "invalid operator in ASM-INSTR for P context"
-	   (unparse-recordised-code/sexp x)))))
 
-    (define* (%select-negated-P-asm-instr x)
-      (cond ((assq x '((= . !=) (!= . =)
-		       (< . >=) (<= . >) (> . <=) (>= . <)
-		       (u< . u>=) (u<= . u>) (u> . u<=) (u>= . u<)
-		       (fl:= . fl:o!=) (fl:!= . fl:o=)
-		       (fl:< . fl:o>=) (fl:<= . fl:o>)
-		       (fl:> . fl:o<=) (fl:>= . fl:o<)))
+	((fl:= fl:!= fl:< fl:<= fl:> fl:>=)
+	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
+		`(,(%comparison-operator->jump-name op x __who__) ,lab)
+		accum))
+
+	((fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=)
+	 ;;NOTE This branch lists operators that are used internally by this compiler
+	 ;;pass.
+	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
+		`(jp ,lab) ;jump if parity flag is set
+		`(,(%comparison-operator->jump-name op x __who__) ,lab)
+		accum))
+
+	(else
+	 (%error-invalid-comparison-operator x __who__))))
+
+    (define* (%comparison-operator->reverse-comparison-operator op x who)
+      (cond ((assq op '((=     . !=)		(!=    . =)
+			(<     . >=)		(<=    . >)
+			(>     . <=)		(>=    . <)
+			(u<    . u>=)		(u>    . u<=)
+			(u<=   . u>)		(u>=   . u<)
+			(fl:=  . fl:o!=)	(fl:!= . fl:o=)
+			(fl:<  . fl:o>=)	(fl:>  . fl:o<=)
+			(fl:<= . fl:o>)		(fl:>= . fl:o<)))
 	     => cdr)
 	    (else
-	     (compiler-internal-error __module_who__ __who__ "assembly instruction invalid in predicate context" x))))
+	     (%error-invalid-comparison-operator x who))))
 
-    (define* (comparison-operator->jump-name op)
+    (define* (%comparison-operator->jump-name op x who)
       (cond ((assq op '((=      . je)	(!=     . jne)
 			(<      . jl)	(>      . jg)
 			(<=     . jle)	(>=     . jge)
@@ -1311,21 +1357,26 @@
 			(fl:o<= . jbe)	(fl:o>= . jae)))
 	     => cdr)
 	    (else
-	     (compiler-internal-error __module_who__ __who__
-	       "invalid comparison operator in ASM-INSTR struct" op))))
+	     (%error-invalid-comparison-operator x who))))
 
-    (define* (comparison-operator->reverse-jump-name op)
-      (cond ((assq op '((= . je)      (!= . jne)
-			(< . jg)      (> . jl)
-			(<= . jge)    (>= . jle)
-			(u< . ja)     (u> . jb)
-			(u<= . jae)   (u>= . jbe)))
+    (define* (%comparison-operator->reverse-jump-name op x who)
+      (cond ((assq op '((=   . je)	(!=  . jne)
+			(<   . jg)	(>   . jl)
+			(<=  . jge)	(>=  . jle)
+			(u<  . ja)	(u>  . jb)
+			(u<= . jae)	(u>= . jbe)))
 	     => cdr)
 	    (else
-	     (compiler-internal-error __module_who__ __who__
-	       "invalid comparison operator in ASM-INSTR struct" op))))
+	     (%error-invalid-comparison-operator x who))))
+
+    (define (%error-invalid-comparison-operator x who)
+      (compiler-internal-error __module_who__ who
+	"invalid comparison operator in ASM-INSTR struct in P context"
+	(unparse-recordised-code/sexp x)))
 
     #| end of module: P-asm-instr |# )
+
+;;; --------------------------------------------------------------------
 
   (define (%constant-boolean-true? x)
     (struct-case x
