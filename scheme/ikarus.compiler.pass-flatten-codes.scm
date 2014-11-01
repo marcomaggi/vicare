@@ -1152,15 +1152,23 @@
       ;;If X is a CONSTANT: the predicate is always true or always false.
       ((constant x.const)
        (cond (x.const
-	      ;;The test is always true
+	      ;;The test is always true.
 	      (if L_conditional_conseq
-		  (cons `(jmp ,L_conditional_conseq) accum)
+		  ;;Here we know that ACCUM begins with the ALTERN code; so we insert
+		  ;;a jump to the CONSEQ code.
+		  (cons `(jmp ,L_conditional_conseq)
+			accum)
+		;;Here we know that ACCUM begins with the CONSEQ code; we do nothing,
+		;;everything is fine as it is.
 		accum))
 	     (L_conditional_altern
-	      (cons `(jmp ,L_conditional_altern) accum))
+	      ;;The test is always false and here  we know that ACCUM begins with the
+	      ;;CONSEQ code; so we insert a jump to the ALTERN code.
+	      (cons `(jmp ,L_conditional_altern)
+		    accum))
 	     (else
-	      ;;FIXME Is this  correct or should be raise an  exception here?  (Marco
-	      ;;Maggi; Mon Oct 27, 2014)
+	      ;;The test is always false and here  we know that ACCUM begins with the
+	      ;;ALTERN code; we do nothing, everything is fine as it is.
 	      accum)))
 
       ((seq e0 e1)
@@ -1173,14 +1181,17 @@
        (P-asm-instr op dst src x L_conditional_conseq L_conditional_altern accum))
 
       ((shortcut body handler)
-       (let ((L_interrupt (unique-label/interrupt-handler-entry-point))
-	     (L_end       (unique-label "L_shortcut_end")))
-	 (let ((accum (if (and L_conditional_conseq L_conditional_altern)
+       (let ((L_interrupt      (unique-label/interrupt-handler-entry-point))
+	     (L_shortcut_end   (unique-label "L_shortcut_end")))
+	 (let ((accum (if (and L_conditional_conseq
+			       L_conditional_altern)
 			  accum
-			(cons L_end accum))))
+			(cons L_shortcut_end accum))))
 	   (%accumulate-shortcut-interrupt-handler-routine
 	    (cons L_interrupt
-		  (P handler (or L_conditional_conseq L_end) (or L_conditional_altern L_end)
+		  (P handler
+		     (or L_conditional_conseq L_shortcut_end)
+		     (or L_conditional_altern L_shortcut_end)
 		     '())))
 	   (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
 	     (P body L_conditional_conseq L_conditional_altern accum)))))
@@ -1430,6 +1441,9 @@
 (module (R R/l D)
 
   (define* (R x)
+    ;;Process ASM-INSTR operands representing machine words and references to machine
+    ;;words.
+    ;;
     (struct-case x
       ((constant x.const)
        (%process-constant x.const))
