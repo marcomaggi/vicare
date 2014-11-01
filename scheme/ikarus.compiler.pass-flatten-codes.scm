@@ -1264,26 +1264,44 @@
 
 	    (else accum)))
 
-    (define* (%P-generate-comparison op dst src x lab accum)
-      ;;Prepend  to ACCUM  code that  performs the  comparison OP  and jumps  to LAB;
-      ;;return the resulting symbolic expression.
+    (define* (%P-generate-comparison op dst src x L_conditional_branch accum)
+      ;;Prepend  to  ACCUM  code  that  performs  the  comparison  OP  and  jumps  to
+      ;;L_CONDITIONAL_BRANCH; return the resulting symbolic expression.
       ;;
       ;;NOTE The Assembly instruction mnemonic  UCOMISD stands for "Unordered Compare
-      ;;Scalar Double-Precision Floating-Point Values and set EFLAGS".  (Marco Maggi;
-      ;;Sat Nov 1, 2014)
+      ;;Scalar Double-Precision Floating-Point Values and set EFLAGS".  The supported
+      ;;operands in Intel notation are:
+      ;;
+      ;;   (ucomisd ?xmm-register ?xmm-register)
+      ;;   (ucomisd ?xmm-register ?memory-reference)
+      ;;
+      ;;so in AT&T notation:
+      ;;
+      ;;   (ucomisd ?xmm-register     ?xmm-register)
+      ;;   (ucomisd ?memory-reference ?xmm-register)
+      ;;
+      ;;Vicare always generates:
+      ;;
+      ;;   (ucomisd (disp dst src) ?xmm-register)
+      ;;
+      ;;and specifically:
+      ;;
+      ;;   (ucomisd (disp dst (KN off-flonum-data)) ?xmm-register)
+      ;;
+      ;;(Marco Maggi; Sat Nov 1, 2014)
       ;;
       ;;NOTE Surprise!   All integer operators  are just implemented with  CMPL.  The
       ;;Assembly  instruction  mnemonic CMPL  is  the  AT&T  notation for  the  Intel
       ;;mnemonic CMP; so  in the Intel guide to Assembly  instructions we must search
-      ;;for CMP.   CMP cannot  compare two memory  locations, the  supported operands
-      ;;are:
+      ;;for CMP.  CMP cannot compare two  memory locations so, in Intel notation, the
+      ;;supported operands are:
       ;;
       ;;   (cmp  ?register     ?register)
       ;;   (cmp  ?register     ?immediate32)
       ;;   (cmp  ?register     ?memory)
       ;;   (cmp  ?memory       ?immediate32)
       ;;
-      ;;so in AT&T notation:
+      ;;and in AT&T notation:
       ;;
       ;;   (cmpl ?register     ?register)
       ;;   (cmpl ?immediate32  ?register)
@@ -1298,7 +1316,7 @@
 	 (cond ((or (register? dst)
 		    (constant? src))
 		(cons* `(cmpl ,(R src) ,(R dst))
-		       `(,(%comparison-operator->jump-name op x __who__) ,lab)
+		       `(,(%comparison-operator->jump-name op x __who__) ,L_conditional_branch)
 		       accum))
 
 	       ((or (register? src)
@@ -1306,7 +1324,7 @@
 		;;Here  we reverse  the  operands, so  we have  to  reverse the  jump
 		;;instruction; the semantics of the comparison is unchanged.
 		(cons* `(cmpl ,(R dst) ,(R src))
-		       `(,(%comparison-operator->reverse-jump-name op x __who__) ,lab)
+		       `(,(%comparison-operator->reverse-jump-name op x __who__) ,L_conditional_branch)
 		       accum))
 
 	       (else
@@ -1315,16 +1333,24 @@
 		  (unparse-recordised-code/sexp x)))))
 
 	((fl:= fl:!= fl:< fl:<= fl:> fl:>=)
+	 ;; (assert (struct-case src
+	 ;; 	   ((constant src.const)
+	 ;; 	    (= src.const off-flonum-data))
+	 ;; 	   (else #f)))
 	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
-		`(,(%comparison-operator->jump-name op x __who__) ,lab)
+		`(,(%comparison-operator->jump-name op x __who__) ,L_conditional_branch)
 		accum))
 
 	((fl:o= fl:o!= fl:o< fl:o<= fl:o> fl:o>=)
 	 ;;NOTE This branch lists operators that are used internally by this compiler
 	 ;;pass.
+	 ;; (assert (struct-case src
+	 ;; 	   ((constant src.const)
+	 ;; 	    (= src.const off-flonum-data))
+	 ;; 	   (else #f)))
 	 (cons* `(ucomisd ,(R (make-disp dst src)) xmm0)
-		`(jp ,lab) ;jump if parity flag is set
-		`(,(%comparison-operator->jump-name op x __who__) ,lab)
+		`(jp ,L_conditional_branch) ;jump if parity flag is set
+		`(,(%comparison-operator->jump-name op x __who__) ,L_conditional_branch)
 		accum))
 
 	(else
