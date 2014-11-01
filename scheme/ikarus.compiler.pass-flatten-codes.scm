@@ -1122,28 +1122,32 @@
     ;;code.  ACCUM  must be the  list of  assembly instructions, accumulated  so far,
     ;;that must be included in binary code after the ones to which X will expand.
     ;;
-    ;;L_CONDITIONAL_CONSEQ must be false or the label  entry point for the code to be
-    ;;run when X returns true; L_CONDITIONAL_ALTERN  must be false or the label entry
-    ;;point for the code to be run when X returns false.
+    ;;"L_conditional_conseq" must be  false or the label entry point  for the code to
+    ;;be run when  X returns true; "L_conditional_altern" must be  false or the label
+    ;;entry point for the code to be run when X returns false.
     ;;
-    ;;* When L_CONDITIONAL_CONSEQ is #f, it means the generated code has the form:
+    ;;* When "L_conditional_conseq" is #f, it means the generated code has the form:
     ;;
     ;;     ?test-asm-instr
     ;;     (jump-if-false L_conditional_altern)
-    ;;     ?conseq-asm-instr
-    ;;     L_conditional_altern
-    ;;     ?altern-asm-instr
+    ;;                                           --
+    ;;     ?conseq-asm-instr                     |
+    ;;     L_conditional_altern                  | accum
+    ;;     ?altern-asm-instr                     |
+    ;;                                           --
     ;;
     ;;  which means: if the test is  true, the execution falls through to the ?CONSEQ
     ;;  code; if the test is false, the execution jumps to the ?ALTERN code.
     ;;
-    ;;* When L_CONDITIONAL_ALTERN is #f, it means the generated code has the form:
+    ;;* When "L_conditional_altern" is #f, it means the generated code has the form:
     ;;
     ;;     ?test-asm-instr
     ;;     (jump-if-true L_conditional_conseq)
-    ;;     ?altern-asm-instr
-    ;;     L_conditional_conseq
-    ;;     ?conseq-asm-instr
+    ;;                                           --
+    ;;     ?altern-asm-instr                     |
+    ;;     L_conditional_conseq                  | accum
+    ;;     ?conseq-asm-instr                     |
+    ;;                                           --
     ;;
     ;;  which means: if the test is true, the execution jumps to the ?CONSEQ code; if
     ;;  the test is false, the execution falls through to the ?ALTERN code.
