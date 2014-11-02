@@ -1185,29 +1185,7 @@
        (P-asm-instr op dst src x L_conditional_conseq L_conditional_altern accum))
 
       ((shortcut body handler)
-       ;;The scenario here is:
-       ;;
-       ;;   (conditional (shortcut
-       ;;                    ?body
-       ;;                  ?handler)
-       ;;       ?conseq
-       ;;     ?altern)
-       ;;
-       ;;and here we process the SHORTCUT in test position.
-       (let ((L_interrupt      (unique-label/interrupt-handler-entry-point))
-	     (L_shortcut_end   (unique-label "L_shortcut_end")))
-	 (%insert-shortcut-interrupt-handler-routine
-	  (cons L_interrupt
-		(P handler
-		   (or L_conditional_conseq L_shortcut_end)
-		   (or L_conditional_altern L_shortcut_end)
-		   '())))
-	 (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
-	   (P body L_conditional_conseq L_conditional_altern
-	      (if (and L_conditional_conseq
-		       L_conditional_altern)
-		  accum
-		(cons L_shortcut_end accum))))))
+       (P-shortcut body handler x L_conditional_conseq L_conditional_altern accum))
 
       (else
        (compiler-internal-error __module_who__ __who__
@@ -1268,10 +1246,148 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define (P-shortcut body handler x L_conditional_conseq L_conditional_altern accum)
+    ;;The scenario here is:
+    ;;
+    ;;   (conditional (shortcut
+    ;;                    ?body
+    ;;                  ?handler)
+    ;;       ?conseq
+    ;;     ?altern)
+    ;;
+    ;;and here we process the SHORTCUT in test position.
+    ;;
+    ;;* When  both "L_conditional_conseq"  and "L_conditional_altern"  are non-false,
+    ;;for the BODY we generate code as follows:
+    ;;
+    ;;   ?body-asm-instr
+    ;;   (jump-if-false (label L_conditional_altern))
+    ;;
+    ;;                                            --
+    ;;   (label L_conditional_conseq)             |
+    ;;   ?conseq-asm-instr                        |
+    ;;   ...                                      | ACCUM
+    ;;   (label L_conditional_altern)             |
+    ;;   ?altern-asm-instr                        |
+    ;;   ...                                      --
+    ;;
+    ;;and for the interrupt handler we generated code as follows:
+    ;;
+    ;;   (label L_shortcut_interrupt_handler)
+    ;;   ?handler-asm-instr
+    ;;   ...
+    ;;   (jump-if-true  (label L_conditional_conseq))
+    ;;   (jump-if-false (label L_conditional_altern))
+    ;;
+    ;;* When "L_conditional_conseq" is false and "L_conditional_altern" is non-false,
+    ;;for the BODY we generate code as follows:
+    ;;
+    ;;   ?body-asm-instr
+    ;;   (jump-if-false (label L_conditional_altern))
+    ;;   (label L_shortcut_end)
+    ;;                                            --
+    ;;   ?conseq-asm-instr                        |
+    ;;   ...                                      | ACCUM
+    ;;   (label L_conditional_altern)             |
+    ;;   ?altern-asm-instr                        |
+    ;;   ...                                      --
+    ;;
+    ;;and for the interrupt handler we generated code as follows:
+    ;;
+    ;;   (label L_shortcut_interrupt_handler)
+    ;;   ?handler-asm-instr
+    ;;   ...
+    ;;   (jump-if-true  (label L_shortcut_end))
+    ;;   (jump-if-false (label L_conditional_altern))
+    ;;
+    ;;* When "L_conditional_conseq" is non-false and "L_conditional_altern" is false,
+    ;;for the BODY we generate code as follows:
+    ;;
+    ;;   ?body-asm-instr
+    ;;   (jump-if-true (label L_conditional_conseq))
+    ;;   (label L_shortcut_end)
+    ;;                                            --
+    ;;   ?altern-asm-instr                        |
+    ;;   ...                                      | ACCUM
+    ;;   (label L_conditional_conseq)             |
+    ;;   ?conseq-asm-instr                        |
+    ;;   ...                                      --
+    ;;
+    ;;and for the interrupt handler we generated code as follows:
+    ;;
+    ;;   (label L_shortcut_interrupt_handler)
+    ;;   ?handler-asm-instr
+    ;;   ...
+    ;;   (jump-if-true  (label L_conditional_conseq))
+    ;;   (jump-if-false (label L_shortcut_end))
+    ;;
+    (let ((L_interrupt      (unique-label/interrupt-handler-entry-point))
+	  (L_shortcut_end   (unique-label "L_shortcut_end")))
+      (%insert-shortcut-interrupt-handler-routine
+       (cons L_interrupt
+	     (P handler
+		(or L_conditional_conseq L_shortcut_end)
+		(or L_conditional_altern L_shortcut_end)
+		'())))
+      (parameterize ((shortcut-interrupt-handler-entry-label L_interrupt))
+	(P body L_conditional_conseq L_conditional_altern
+	   (if (and L_conditional_conseq
+		    L_conditional_altern)
+	       accum
+	     (cons L_shortcut_end accum))))))
+
+;;; --------------------------------------------------------------------
+
   (module (P-asm-instr)
 
     (define* (P-asm-instr op dst src x L_conditional_conseq L_conditional_altern accum)
       (cond ((and L_conditional_conseq L_conditional_altern)
+	     ;;Here the scenario is:
+	     ;;
+	     ;;   ?test-asm-instr
+	     ;;   --- insert generated jumps here ---
+	     ;;
+	     ;;   ?nested-asm-instr
+	     ;;   ...
+	     ;;
+	     ;;   (label L_conditional_conseq)
+	     ;;   ?conseq-asm-instr
+	     ;;   ...
+	     ;;
+	     ;;   (label L_conditional_altern)
+	     ;;   ?altern-asm-instr
+	     ;;   ...
+	     ;;
+	     ;;the presence of  other Assembly instructions inserted  in ACCUM before
+	     ;;the CONSEQ and ALTERN branches forbids us to fall through.  The nested
+	     ;;Assembly  code may  come, for  example, from  a nested  CONDITIONAL in
+	     ;;predicate position:
+	     ;;
+	     ;;   (conditional (conditional ?nested-test
+	     ;;                    ?nested-conseq
+	     ;;                  ?nested-altern)
+	     ;;       ?conseq
+	     ;;     ?altern)
+	     ;;
+	     ;;So we generated code as follows:
+	     ;;
+	     ;;   ?test-asm-instr
+	     ;;   (jump-if-true L_conditional_conseq)
+	     ;;   (jmp L_conditional_altern)
+	     ;;
+	     ;;   ?nested-asm-instr
+	     ;;   ...
+	     ;;
+	     ;;   (label L_conditional_conseq)
+	     ;;   ?conseq-asm-instr
+	     ;;   ...
+	     ;;
+	     ;;   (label L_conditional_altern)
+	     ;;   ?altern-asm-instr
+	     ;;   ...
+	     ;;
+	     ;;If the test is true: we jump to  the CONSEQ.  If the test is false: we
+	     ;;fall through the first jump and always jump to the ALTERN.
 	     (%P-generate-comparison op dst src x
 				     L_conditional_conseq
 				     (cons `(jmp ,L_conditional_altern)
@@ -1279,13 +1395,35 @@
 
 	    (L_conditional_conseq
 	     ;;Here ACCUM begins with  the ALTERN code; we have to  jump to enter the
-	     ;;CONSEQ code.
+	     ;;CONSEQ code.  We generate code as follows:
+	     ;;
+	     ;;   ?test-asm-instr
+	     ;;   (jump-if-true (label L_conditional_conseq))
+	     ;;
+	     ;;   ?altern-asm-instr
+	     ;;   ...
+	     ;;
+	     ;;   (label L_conditional_conseq)
+	     ;;   ?conseq-asm-instr
+	     ;;   ...
+	     ;;
 	     (%P-generate-comparison op dst src x
 				     L_conditional_conseq accum))
 
 	    (L_conditional_altern
 	     ;;Here ACCUM begins with  the CONSEQ code; we have to  jump to enter the
-	     ;;ALTERN code.
+	     ;;ALTERN code.  We generate code as follows:
+	     ;;
+	     ;;   ?test-asm-instr
+	     ;;   (jump-if-false (label L_conditional_altern))
+	     ;;
+	     ;;   ?conseq-asm-instr
+	     ;;   ...
+	     ;;
+	     ;;   (label L_conditional_altern)
+	     ;;   ?altern-asm-instr
+	     ;;   ...
+	     ;;
 	     (%P-generate-comparison (%comparison-operator->reverse-comparison-operator op x __who__) dst src x
 				     L_conditional_altern accum))
 
