@@ -28,6 +28,7 @@
   (export
     verbose?
     debug-mode-enabled?
+    drop-assertions?
     verbose-about-libraries?
     print-loaded-libraries
     cache-compiled-libraries
@@ -162,6 +163,18 @@
 ;;expander's bindings.  It is used by the compiler and the expander.
 ;;
 (define-parameter-boolean-option descriptive-labels)
+
+;;When  set to  true: expand  every ASSERT  macro into  its expression,  dropping the
+;;assertions.  Specifically:
+;;
+;;   (assert ?expr)
+;;
+;;is expanded into:
+;;
+;;   ?expr
+;;
+;;so that side effects in ?EXPR are performed and the resulting value is returned.
+(define-parameter-boolean-option drop-assertions?)
 
 
 ;;;; vicare build configuration options

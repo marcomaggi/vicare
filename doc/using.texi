@@ -280,6 +280,32 @@ inspection.
 @cindex @option{-nd}, command line option
 Turn off debugging mode.
 
+@item --drop-assertions
+@cindex Command line option @option{--drop-assertions}
+@cindex @option{--drop-assertions}, command line option
+When used: causes every @func{assert} macro to be expanded into its
+expression, dropping the assertions.  Specifically:
+
+@example
+(assert @meta{expr})
+@end example
+
+@noindent
+is expanded into:
+
+@example
+@meta{expr}
+@end example
+
+@noindent
+so that side effects in @meta{expr} are performed and the resulting
+value is returned.  The default is to include the full assertion.
+
+@item --no-drop-assertions
+@cindex Command line option @option{--no-drop-assertions}
+@cindex @option{--no-drop-assertions}, command line option
+Include the full assertions described by @func{assert} macros.
+
 @item --check-compiler-pass-preconditions
 @cindex Command line option @option{--check-compiler-pass-preconditions}
 @cindex @option{--check-compiler-pass-preconditions}, command line option

@@ -11,12 +11,13 @@ LIBFFI_INCLUDEDIR=${prefix}/lib/libffi-3.0.13/include
 . /etc/profile.d/32dev.sh
 
 ../configure \
-    --enable-maintainer-mode				\
-    --prefix="${prefix}"				\
-    --with-pthread					\
-    CFLAGS='-m32 -O3 -pedantic'				\
-    CPPFLAGS=""						\
-    LDFLAGS='-m32'					\
+    --enable-maintainer-mode							\
+    --prefix="${prefix}"							\
+    --with-pthread								\
+    CFLAGS='-m32 -O3 -pedantic'							\
+    CPPFLAGS=""									\
+    LDFLAGS='-m32'								\
+    VFLAGS='--no-drop-assertions --check-compiler-pass-preconditions'		\
     "$@"
 
 ## LDFLAGS='-L/usr/local/lib -lpthread'

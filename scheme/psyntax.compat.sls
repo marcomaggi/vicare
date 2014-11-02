@@ -61,6 +61,7 @@
     ;; runtime options
     option.verbose-about-libraries?
     option.debug-mode-enabled?
+    option.drop-assertions?
     option.strict-r6rs
     option.enable-arguments-validation?
     option.descriptive-labels
@@ -143,6 +144,7 @@
 			  verbose?
 			  verbose-about-libraries?
 			  debug-mode-enabled?
+			  drop-assertions?
 			  strict-r6rs
 			  descriptive-labels
 			  print-loaded-libraries

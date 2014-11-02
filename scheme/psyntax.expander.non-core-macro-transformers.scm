@@ -4530,17 +4530,19 @@
   ;;
   (syntax-match expr-stx ()
     ((_ ?expr)
-     (let ((pos (or (expression-position expr-stx)
-		    (expression-position ?expr))))
-       (bless
-	(if (source-position-condition? pos)
+     (if (option.drop-assertions?)
+	 ?expr
+       (let ((pos (or (expression-position expr-stx)
+		      (expression-position ?expr))))
+	 (bless
+	  (if (source-position-condition? pos)
+	      `(or ,?expr
+		   (assertion-error
+		    ',?expr ,(source-position-port-id pos)
+		    ,(source-position-byte pos) ,(source-position-character pos)
+		    ,(source-position-line pos) ,(source-position-column    pos)))
 	    `(or ,?expr
-		 (assertion-error
-		  ',?expr ,(source-position-port-id pos)
-		  ,(source-position-byte pos) ,(source-position-character pos)
-		  ,(source-position-line pos) ,(source-position-column    pos)))
-	  `(or ,?expr
-	       (assertion-error ',?expr "unknown source" #f #f #f #f))))))))
+		 (assertion-error ',?expr "unknown source" #f #f #f #f)))))))))
 
 (define (file-options-macro expr-stx)
   ;;Transformer for  the FILE-OPTIONS macro.  File  options selection is
