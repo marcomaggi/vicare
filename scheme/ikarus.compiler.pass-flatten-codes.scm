@@ -1206,43 +1206,43 @@
 	   (P x.test label-false label-true accum))
 
 	  ((and label-true label-false)
-	   (let ((label-conseq #f)
-		 (label-altern (unique-label "L_conditional_altern")))
-	     (P x.test label-conseq label-altern
+	   (let ((label-nested-conseq #f)
+		 (label-nested-altern (unique-label "L_conditional_altern")))
+	     (P x.test label-nested-conseq label-nested-altern
 		(P x.conseq label-true label-false
-		   (cons label-altern
+		   (cons label-nested-altern
 			 (P x.altern label-true label-false
 			    accum))))))
 
 	  (label-true
 	   #;(assert (not label-false))
 	   (let ((label-false^ (unique-label "L_conditional_altern"))
-		 (label-conseq #f)
-		 (label-altern (unique-label "L_conditional_altern")))
-	     (P x.test label-conseq label-altern
+		 (label-nested-conseq #f)
+		 (label-nested-altern (unique-label "L_conditional_altern")))
+	     (P x.test label-nested-conseq label-nested-altern
 		(P x.conseq label-true label-false^
-		   (cons label-altern
+		   (cons label-nested-altern
 			 (P x.altern label-true #f
 			    (cons label-false^ accum)))))))
 
 	  (label-false
 	   #;(assert (not label-true))
 	   (let ((label-true^  (unique-label "L_conditional_conseq"))
-		 (label-conseq #f)
-		 (label-altern (unique-label "L_conditional_altern")))
-	     (P x.test label-conseq label-altern
+		 (label-nested-conseq #f)
+		 (label-nested-altern (unique-label "L_conditional_altern")))
+	     (P x.test label-nested-conseq label-nested-altern
 		(P x.conseq label-true^ label-false
-		   (cons label-altern
+		   (cons label-nested-altern
 			 (P x.altern #f label-false
 			    (cons label-true^ accum)))))))
 
 	  (else
 	   (let ((label-false^ (unique-label "L_conditional_altern"))
-		 (label-altern (unique-label "L_conditional_altern")))
-	     (P x.test #f label-altern
+		 (label-nested-altern (unique-label "L_conditional_altern")))
+	     (P x.test #f label-nested-altern
 		(P x.conseq #f #f
 		   (cons `(jmp ,label-false^)
-			 (cons label-altern
+			 (cons label-nested-altern
 			       (P x.altern #f #f
 				  (cons label-false^ accum))))))))))
 
