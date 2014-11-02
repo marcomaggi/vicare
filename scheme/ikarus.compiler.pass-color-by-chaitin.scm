@@ -862,7 +862,7 @@
 
 ;;; --------------------------------------------------------------------
 
-  (module ASM-INSTR-HELPERS
+  (module ASM-INSTR-OPERANDS-HELPERS
     (disp/fvar? long-immediate? small-operand?)
     ;;All the  function exported  by this  module are  applied to  the ?SRC  and ?DST
     ;;operands of ASM-INSTR structs.
@@ -916,7 +916,7 @@
 	   (or (register? x)
 	       (var?      x)))))))
 
-    #| end of module: ASM-INSTR-HELPERS |# )
+    #| end of module: ASM-INSTR-OPERANDS-HELPERS |# )
 
 ;;; --------------------------------------------------------------------
 
@@ -1012,7 +1012,7 @@
 	;;with the introduction of a temporary variable.  The temporary variable must
 	;;be allocated to a CPU register, and so it is not spillable on the stack.
 	;;
-	(import ASM-INSTR-HELPERS)
+	(import ASM-INSTR-OPERANDS-HELPERS)
 	(case op
 	  ((load8 load32)
 	   (E-asm-instr/load op dst src x))
@@ -1190,7 +1190,14 @@
 	   ;;a Scheme object of type flonum.
 	   ;;
 	   ;;We have to remember that a  core primitive operation "simple operand" is
-	   ;;either a VAR struct or a CONSTANT.
+	   ;;either a VAR struct or a CONSTANT; here we know that ?SRC will always be
+	   ;;a constant.   ?DST and  ?SRC are  used here to  compose a  DISP symbolic
+	   ;;expression for Assembler consumption:
+	   ;;
+	   ;;   (disp ?DST ?SRC)
+	   ;;
+	   ;;in such expressions  we have to make  sure that ?SRC fits  into 32 bits;
+	   ;;?DST can be either a register or FVAR.
 	   ;;
 	   (check-disp-arg dst
 			   (lambda (dst)
@@ -1248,7 +1255,7 @@
 	;;     (asm-instr load8 ?dst      (disp ?var1.tmp ?var2.tmp))
 	;;
 	;;
-	(import ASM-INSTR-HELPERS)
+	(import ASM-INSTR-OPERANDS-HELPERS)
 
 	(define (E-asm-instr/load op dst src x)
 	  #;(assert (or (var? dst) (fvar? dst)))
@@ -1354,7 +1361,7 @@
 	;;can be  at most 32-bit?  Or  can it be  extended to 64-bit in  64-bit mode?
 	;;See the reference manual.  (Marco Maggi; Tue Oct 28, 2014)
 	;;
-	(import ASM-INSTR-HELPERS)
+	(import ASM-INSTR-OPERANDS-HELPERS)
 	(cond ((and (not (disp/fvar? dst))
 		    (not (small-operand?  dst)))
 	       (let ((unspillable (%make-unspillable-var)))
@@ -1425,7 +1432,7 @@
 	;;   (ucomisd (disp ?register ?off-flonum-data) xmm0)
 	;;   (je ?consequent-label)
 	;;
-	(import ASM-INSTR-HELPERS)
+	(import ASM-INSTR-OPERANDS-HELPERS)
 	(assert (struct-case src
 		  ((constant src.const)
 		   (eq? src.const off-flonum-data))
@@ -1452,7 +1459,7 @@
 ;;; --------------------------------------------------------------------
 
     (define (check-disp-arg x kont)
-      (import ASM-INSTR-HELPERS)
+      (import ASM-INSTR-OPERANDS-HELPERS)
       (if (small-operand? x)
 	  (kont x)
 	(let ((unspillable (%make-unspillable-var)))
