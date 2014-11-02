@@ -1126,7 +1126,8 @@
     ;;be run when  X returns true; "L_conditional_altern" must be  false or the label
     ;;entry point for the code to be run when X returns false.
     ;;
-    ;;* When "L_conditional_conseq" is #f, it means the generated code has the form:
+    ;;* When  "L_conditional_conseq" is #f,  it means  ACCUM begins with  the ?CONSEQ
+    ;;  instructions; the generated code has the form:
     ;;
     ;;     ?test-asm-instr
     ;;     (jump-if-false L_conditional_altern)
@@ -1139,7 +1140,8 @@
     ;;  which means: if the test is  true, the execution falls through to the ?CONSEQ
     ;;  code; if the test is false, the execution jumps to the ?ALTERN code.
     ;;
-    ;;* When "L_conditional_altern" is #f, it means the generated code has the form:
+    ;;* When "L_conditional_altern" is #f, it means the ACCUM begins with the ?ALTERN
+    ;;  instructions; the generated code has the form:
     ;;
     ;;     ?test-asm-instr
     ;;     (jump-if-true L_conditional_conseq)
@@ -1271,7 +1273,7 @@
     ;;   ?altern-asm-instr                        |
     ;;   ...                                      --
     ;;
-    ;;and for the interrupt handler we generated code as follows:
+    ;;and for the interrupt handler we generate code as follows:
     ;;
     ;;   (label L_shortcut_interrupt_handler)
     ;;   ?handler-asm-instr
@@ -1292,7 +1294,7 @@
     ;;   ?altern-asm-instr                        |
     ;;   ...                                      --
     ;;
-    ;;and for the interrupt handler we generated code as follows:
+    ;;and for the interrupt handler we generate code as follows:
     ;;
     ;;   (label L_shortcut_interrupt_handler)
     ;;   ?handler-asm-instr
@@ -1369,7 +1371,7 @@
 	     ;;       ?conseq
 	     ;;     ?altern)
 	     ;;
-	     ;;So we generated code as follows:
+	     ;;So we generate code as follows:
 	     ;;
 	     ;;   ?test-asm-instr
 	     ;;   (jump-if-true L_conditional_conseq)
@@ -1387,7 +1389,8 @@
 	     ;;   ...
 	     ;;
 	     ;;If the test is true: we jump to  the CONSEQ.  If the test is false: we
-	     ;;fall through the first jump and always jump to the ALTERN.
+	     ;;fall through the  first conditioned jump and  the second unconditioned
+	     ;;jump always jumps to the ALTERN.
 	     (%P-generate-comparison op dst src x
 				     L_conditional_conseq
 				     (cons `(jmp ,L_conditional_altern)
@@ -1407,6 +1410,7 @@
 	     ;;   ?conseq-asm-instr
 	     ;;   ...
 	     ;;
+	     (assert (not L_conditional_altern))
 	     (%P-generate-comparison op dst src x
 				     L_conditional_conseq accum))
 
@@ -1424,10 +1428,14 @@
 	     ;;   ?altern-asm-instr
 	     ;;   ...
 	     ;;
+	     (assert (not L_conditional_conseq))
 	     (%P-generate-comparison (%comparison-operator->reverse-comparison-operator op x __who__) dst src x
 				     L_conditional_altern accum))
 
-	    (else accum)))
+	    (else
+	     (assert (not L_conditional_altern))
+	     (assert (not L_conditional_conseq))
+	     accum)))
 
     (define* (%P-generate-comparison op dst src x L_conditional_branch accum)
       ;;Prepend  to  ACCUM  code  that  performs  the  comparison  OP  and  jumps  to
