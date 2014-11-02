@@ -2445,41 +2445,40 @@
    ;;Flonum  operation between  two operands.   We expect  FL0 and  FL1 to  reference
    ;;Scheme objects of type flonum.
    ;;
-   (with-tmp ((result.tagged-ptr (asm 'alloc
+   (with-tmp ((flonum.tagged-ptr (asm 'alloc
 				      (KN (align flonum-size))
 				      (KN vector-tag))))
      ;;Tag as flonum the first word of the result flonum object.
-     (asm 'mset     result.tagged-ptr      (KN off-flonum-tag) (KN flonum-tag))
+     (asm 'mset     flonum.tagged-ptr      (KN off-flonum-tag) (KN flonum-tag))
      ;;Load the first double float operand in a register for floats.
      (asm 'fl:load  (V-simple-operand fl0) (KN off-flonum-data))
      ;;Perform the operation between the float register and FL1.
      (asm op        (V-simple-operand fl1) (KN off-flonum-data))
      ;;Store the result from the float register into the result flonum object.
-     (asm 'fl:store result.tagged-ptr      (KN off-flonum-data))
-     result.tagged-ptr))
+     (asm 'fl:store flonum.tagged-ptr      (KN off-flonum-data))
+     flonum.tagged-ptr))
 
  (define ($flop-aux* op fl fl*)
    ;;Flonum  operation  between three  or  more  operands  (but  also upon  a  single
    ;;operand).  We expect FL and FL* to reference Scheme objects of type flonum.
    ;;
-   (with-tmp ((x (asm 'alloc
-		      (K (align flonum-size))
-		      (K vector-tag))))
+   (with-tmp ((flonum.tagged-ptr (asm 'alloc
+				      (K (align flonum-size))
+				      (K vector-tag))))
      ;;Tag the first word of the result as flonum.
-     (asm 'mset x (K off-flonum-tag) (K flonum-tag))
+     (asm 'mset flonum.tagged-ptr (K off-flonum-tag) (K flonum-tag))
      ;;Load the first operand in a register for flonums.
      (asm 'fl:load (V-simple-operand fl) (K off-flonum-data))
      (let recur ((fl* fl*))
        (if (pair? fl*)
 	   (make-seq
-	    ;;Perform  the operation  between  the register  and the  next
-	    ;;operand.
-	    (asm op (V-simple-operand (car fl*)) (K off-flonum-data))
-	    (recur (cdr fl*)))
+	     ;;Perform the operation between the register and the next operand.
+	     (asm op (V-simple-operand (car fl*)) (K off-flonum-data))
+	     (recur (cdr fl*)))
 	 (nop)))
-     ;;Store the result from the register into memory referenced by X.
-     (asm 'fl:store x (K off-flonum-data))
-     x))
+     ;;Store the result from the register into memory referenced by FLONUM.TAGGED-PTR.
+     (asm 'fl:store flonum.tagged-ptr (K off-flonum-data))
+     flonum.tagged-ptr))
 
  (define ($flcmp-aux op fl0 fl1)
    ;;Flonum comparison operation.
@@ -2642,23 +2641,22 @@
  (define-core-primitive-operation $fixnum->flonum unsafe
    ((V fx)
     (boot.case-word-size
-      ((32)
-       (with-tmp ((flo (asm 'alloc
-			    (K (align flonum-size))
-			    (K vector-tag))))
-	 ;;Tag the first word of the result as flonum.
-	 (asm 'mset flo (K off-flonum-tag) (K flonum-tag))
-	 ;;Perform the operation storing the  result in a floating point
-	 ;;register.
-	 (asm 'fl:from-int
-	      (K 0) ; dummy
-	      (prm-UNtag-as-fixnum (V-simple-operand fx)))
-	 ;;Store the result from the register into memory referenced by X
-	 (asm 'fl:store flo (K off-flonum-data))
-	 flo))
-      ((64)
-       (with-tmp ((flo (cogen-value-$make-flonum)))
-	 (make-forcall "ikrt_fixnum_to_flonum" (list (V-simple-operand fx) flo)))))))
+     ((32)
+      (with-tmp ((flonum.tagged-ptr (asm 'alloc
+					 (K (align flonum-size))
+					 (K vector-tag))))
+	;;Tag the first word of the result as flonum.
+	(asm 'mset flonum.tagged-ptr (K off-flonum-tag) (K flonum-tag))
+	;;Perform the operation storing the result in a floating point register.
+	(asm 'fl:from-int
+	     (K 0) ; dummy
+	     (prm-UNtag-as-fixnum (V-simple-operand fx)))
+	;;Store the result from the register into memory referenced by X
+	(asm 'fl:store flonum.tagged-ptr (K off-flonum-data))
+	flonum.tagged-ptr))
+     ((64)
+      (with-tmp ((flonum.tagged-ptr (cogen-value-$make-flonum)))
+	(make-forcall "ikrt_fixnum_to_flonum" (list (V-simple-operand fx) flonum.tagged-ptr)))))))
 
 ;;; --------------------------------------------------------------------
 ;;; UNsafe arithmetic primitive operations
@@ -4279,18 +4277,18 @@
 
  (define-core-primitive-operation $bytevector-ieee-double-native-ref unsafe
    ((V bv idx)
-    (with-tmp ((flo (asm 'alloc
-			 (K (align flonum-size))
-			 (K vector-tag))))
+    (with-tmp ((flonum.tagged-ptr (asm 'alloc
+				       (K (align flonum-size))
+				       (K vector-tag))))
       ;;Tag the first word as flonum.
-      (asm 'mset flo (K off-flonum-tag) (K flonum-tag))
+      (asm 'mset flonum.tagged-ptr (K off-flonum-tag) (K flonum-tag))
       ;;Load the number in a floating point register.
       (asm 'fl:load
 	   (asm 'int+ (V-simple-operand bv) (prm-UNtag-as-fixnum (V-simple-operand idx)))
 	   (K off-bytevector-data))
       ;;Store the number in the data area of the flonum.
-      (asm 'fl:store flo (K off-flonum-data))
-      flo)))
+      (asm 'fl:store flonum.tagged-ptr (K off-flonum-data))
+      flonum.tagged-ptr)))
 
  (define-core-primitive-operation $bytevector-ieee-double-nonnative-ref unsafe
    ((V bv i)
@@ -4326,16 +4324,16 @@
 ;;;
 ;;;(define-core-primitive-operation $bytevector-ieee-double-nonnative-ref unsafe
 ;;;  ((V bv i)
-;;;   (with-tmp ((x (asm 'alloc (K (align flonum-size)) (K vector-tag))))
-;;;     (asm 'mset x (K off-flonum-tag) (K flonum-tag))
+;;;   (with-tmp ((flonum.tagged-ptr (asm 'alloc (K (align flonum-size)) (K vector-tag))))
+;;;     (asm 'mset flonum.tagged-ptr (K off-flonum-tag) (K flonum-tag))
 ;;;     (asm 'fl:load
 ;;;       (asm 'int+ (V-simple-operand bv) (prm-UNtag-as-fixnum (V-simple-operand i)))
 ;;;       (K off-bytevector-data))
 ;;;     (asm 'fl:shuffle
 ;;;       (K (make-object '#vu8(7 6 2 3 4 5 1 0)))
 ;;;       (K off-bytevector-data))
-;;;     (asm 'fl:store x (K off-flonum-data))
-;;;     x)))
+;;;     (asm 'fl:store flonum.tagged-ptr (K off-flonum-data))
+;;;     flonum.tagged-ptr)))
 
 ;;; --------------------------------------------------------------------
 ;;; double flonum set

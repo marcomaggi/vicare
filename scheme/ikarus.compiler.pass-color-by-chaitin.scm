@@ -192,6 +192,24 @@
 		  (unparse-recordised-code/sexp ?constant)))))))
       ))
 
+  (define-syntax (A-constant/offset stx)
+    (syntax-case stx ()
+      ((?ctx ?constant ?asm-instr)
+       (and (identifier? #'?constant)
+	    (identifier? #'?asm-instr))
+       (with-syntax
+	   ((__MODULE_WHO__ (datum->syntax #'?ctx '__module_who__))
+	    (__WHO__        (datum->syntax #'?ctx '__who__)))
+	 #'(struct-case ?constant
+	     ((constant obj)
+	      (unless (or (fixnum? obj)
+			  (bignum? obj))
+		(compiler-internal-error __MODULE_WHO__ __WHO__
+		  "invalid Scheme object in CONSTANT struct as ASM-INSTR operand representing offset"
+		  (unparse-recordised-code/sexp ?asm-instr)
+		  (unparse-recordised-code/sexp ?constant)))))))
+      ))
+
 ;;; --------------------------------------------------------------------
 
   (define* (T x)
@@ -334,7 +352,7 @@
 
 	((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:load-single fl:store-single)
 	 (A-operand dst x)
-	 (A-operand src x))
+	 (A-constant/offset src x))
 
 	((fl:from-int fl:shuffle)
 	 (A-operand dst x)
@@ -1134,6 +1152,46 @@
 			       (make-asm-instr op dst src)))))))
 
 	  ((fl:load fl:store fl:add! fl:sub! fl:mul! fl:div! fl:load-single fl:store-single)
+	   ;;We expect X to have the format:
+	   ;;
+	   ;;   (asm-instr fl:load         ?reference ?offset)
+	   ;;   (asm-instr fl:store        ?reference ?offset)
+	   ;;   (asm-instr fl:load-single  ?reference ?offset)
+	   ;;   (asm-instr fl:store-single ?reference ?offset)
+	   ;;
+	   ;;where:  ?REFERENCE  is   a  simple  operand,  often   (but  not  always)
+	   ;;representing  a tagged  pointer to  flonum object;  ?OFFSET is  a simple
+	   ;;operand, often (but not always) the constant:
+	   ;;
+	   ;;   (KN off-flonum-data)
+	   ;;
+	   ;;but in any case it is a CONSTANT.
+	   ;;
+	   ;;Otherwise, we expect X to have the format:
+	   ;;
+	   ;;   (asm-instr fl:add!  ?reference-to-flonum (KN off-flonum-data))
+	   ;;   (asm-instr fl:sub!  ?reference-to-flonum (KN off-flonum-data))
+	   ;;   (asm-instr fl:mul!  ?reference-to-flonum (KN off-flonum-data))
+	   ;;   (asm-instr fl:div!  ?reference-to-flonum (KN off-flonum-data))
+	   ;;
+	   ;;these arithmetic instructions always come in sequence:
+	   ;;
+	   ;;   (asm-instr fl:load ?reference-to-flonum1 (KN ?off-flonum-data))
+	   ;;   (asm-instr fl:add! ?reference-to-flonum2 (KN ?off-flonum-data))
+	   ;;
+	   ;;where:  "fl:load" loads  the first  flonum  operand in  the CPU's  float
+	   ;;register XMM0; "fl:add!"  performs the  operation between the operand in
+	   ;;XMM0  and  the  flonum  referenced  in the  instruction.   So,  for  the
+	   ;;arithmetic operators, ?SRC is always the constant:
+	   ;;
+	   ;;   (KN ?off-flonum-data)
+	   ;;
+	   ;;and ?DST is a simple  operand representing a tagged pointer, referencing
+	   ;;a Scheme object of type flonum.
+	   ;;
+	   ;;We have to remember that a  core primitive operation "simple operand" is
+	   ;;either a VAR struct or a CONSTANT.
+	   ;;
 	   (check-disp-arg dst
 			   (lambda (dst)
 			     (check-disp-arg src

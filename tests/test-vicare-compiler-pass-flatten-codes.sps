@@ -644,6 +644,128 @@
   #t)
 
 
+(parametrise ((check-test-name	'shortcut-in-predicate-context))
+
+  (doit (let ((x ((primitive read))))
+	  (if ((primitive fl=?) x '1.0)
+	      ((primitive newline))
+	    ((primitive newline))))
+	((code-object-sexp
+	  (number-of-free-vars: 0)
+	  (annotation: init-expression)
+	  (label L_init_expression_label_0)
+
+	  ;;This is the body of the core primitive $STACK-OVERFLOW-CHECK.
+	  (cmpl (disp %esi 32) %esp)
+	  (jb (label L_shortcut_interrupt_handler_1))
+	  (label L_return_from_interrupt_0)
+
+	  ;;Call the READ primitive.
+	  (movl (obj read) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl %eax %edi)
+	  (movl 0 %eax)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_error_rp)
+	    (pad 10 (label call_label)
+		 (call (disp -3 %edi)))
+	    (nop))
+	  (movl %eax %ebx)
+
+	  ;;This is the  body of the core  primitive operation FL=?.  It  is also the
+	  ;;test expression of the CONDITIONAL.
+	  (movl %ebx %edi)
+	  (movl %edi %eax)
+	  ;;Check that  the first operand  is a  fixnum.  If it  is not: jump  to the
+	  ;;interrupt handler.
+	  (andl 7 %eax)
+	  (cmpl 5 %eax)
+	  (jne (label L_shortcut_interrupt_handler_0))
+	  (cmpl 23 (disp %edi -5))
+	  (jne (label L_shortcut_interrupt_handler_0))
+	  ;;Load the first operand in XMM0.
+	  (movsd (disp 3 %ebx) xmm0)
+	  ;;Load the second operand.
+	  (movl (obj 1.0) %eax)
+	  ;;Compare the operands.
+	  (ucomisd (disp %eax 3) xmm0)
+	  ;;If not equal: jump to the ALTERN.  Otherwise fall through to the CONSEQ.
+	  (jp (label L_conditional_altern_0))
+	  (jne (label L_conditional_altern_0))
+
+	  (label L_shortcut_end_0)
+
+	  ;;This is the CONSEQ.
+	  (movl (obj newline) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl %eax %edi)
+	  (movl 0 %eax)
+	  (jmp (disp -3 %edi))
+
+	  ;;This is the ALTERN.
+	  (label L_conditional_altern_0)
+	  (movl (obj newline) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl %eax %edi)
+	  (movl 0 %eax)
+	  (jmp (disp -3 %edi))
+
+	  ;;Start the sequence of interrupt handler routines.
+	  (nop)
+
+	  ;;This is the handler of the core primitive $STACK-OVERFLOW-CHECK.
+	  (label L_shortcut_interrupt_handler_1)
+	  (movl (foreign-label "ik_stack_overflow") %edi)
+	  (movl 0 %eax)
+	  (movl (foreign-label "ik_foreign_call") %ebx)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_ignore_rp)
+	    (pad 10
+		 (label call_label)
+		 (call %ebx))
+	    (nop))
+	  (jmp (label L_return_from_interrupt_0))
+
+	  ;;This is the handler of the core primitive FL=?.
+	  (label L_shortcut_interrupt_handler_0)
+	  (movl %ebx (disp -16 %esp))	;Put the first operand on the stack.
+	  (movl (obj 1.0) %eax)		;Load the second operand.
+	  (movl %eax (disp -24 %esp))	;Put the second operand on the stack.
+	  (movl (obj fl=?) %eax)	;Retrieve the loc gensym.
+	  (movl (disp %eax 19) %eax)	;Retrieve the PROC field of the loc gensym.
+	  (movl %eax %edi)		;Put the function entry point in the CPR.
+	  (movl -16 %eax)		;Store in AAR the encoded number of arguments.
+	  (seq				;Perform the tail call.
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_error_rp)
+	    (pad 10
+		 (label call_label)
+		 (call (disp -3 %edi)))
+	    (nop))
+	  ;;Compare the result with the boolean #f.
+	  (cmpl 47 %eax)
+	  ;;If the result is non-false: jump to the SHORTCUT's end.
+	  (jne (label L_shortcut_end_0))
+	  ;;If the retult is #f: jump to the CONDITIONAL altern.
+	  (jmp (label L_conditional_altern_0)))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
