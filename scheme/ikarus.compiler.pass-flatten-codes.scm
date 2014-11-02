@@ -1196,55 +1196,179 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define* (P-conditional x.test x.conseq x.altern label-true label-false accum)
-    (cond ((and (%constant-boolean-true?  x.conseq)
-		(%constant-boolean-false? x.altern))
-	   (P x.test label-true label-false accum))
+  (define* (P-conditional inner-test inner-conseq inner-altern label-outer-conseq label-outer-altern accum)
+    ;;The scenario is:
+    ;;
+    ;;   (conditional (conditional inner-test
+    ;;                    inner-conseq
+    ;;                  inner-altern)
+    ;;       ?outer-conseq
+    ;;     ?outer-altern)
+    ;;
+    ;;and  here we  are  processing the  inner  CONDITIONAL.  LABEL-OUTER-CONSEQ  and
+    ;;LABEL-OUTER-ALTERN are the entry point labels of the outer CONSEQ and ALTERN.
+    ;;
+    (cond ((and (%constant-boolean-true?  inner-conseq)
+		(%constant-boolean-false? inner-altern))
+	   (P inner-test label-outer-conseq label-outer-altern accum))
 
-	  ((and (%constant-boolean-false? x.conseq)
-		(%constant-boolean-true?  x.altern))
-	   (P x.test label-false label-true accum))
+	  ((and (%constant-boolean-false? inner-conseq)
+		(%constant-boolean-true?  inner-altern))
+	   (P inner-test label-outer-altern label-outer-conseq accum))
 
-	  ((and label-true label-false)
-	   (let ((label-nested-conseq #f)
-		 (label-nested-altern (unique-label "L_conditional_altern")))
-	     (P x.test label-nested-conseq label-nested-altern
-		(P x.conseq label-true label-false
-		   (cons label-nested-altern
-			 (P x.altern label-true label-false
+	  ((and label-outer-conseq label-outer-altern)
+	   ;;The scenario in the ACCUM is:
+	   ;;
+	   ;;   (label L_outer_conditional_conseq)
+	   ;;   ?outer-conseq-asm-instr
+	   ;;   ...
+	   ;;
+	   ;;   (label L_outer_conditional_altern)
+	   ;;   ?outer-altern-asm-instr
+	   ;;   ...
+	   ;;
+	   ;;and we generate code as follows:
+	   ;;
+	   ;;   ?inner-test-asm-instr
+	   ;;   (jump-if-false (label L_inner_conditional_altern))
+	   ;;
+	   ;;   ?inner-conseq-asm-instr
+	   ;;   (jump-if-true (label L_outer_conditional_conseq))
+	   ;;   (jump (label L_outer_conditional_altern))
+	   ;;
+	   ;;   (label L_inner_conditional_altern)
+	   ;;   ?inner-altern-asm-instr
+	   ;;   (jump-if-true (label L_outer_conditional_conseq))
+	   ;;   (jump (label L_outer_conditional_altern))
+	   ;;
+	   ;;   (label L_outer_conditional_conseq)
+	   ;;   ?outer-conseq-asm-instr
+	   ;;   ...
+	   ;;
+	   ;;   (label L_outer_conditional_altern)
+	   ;;   ?outer-altern-asm-instr
+	   ;;   ...
+	   ;;
+	   (let ((label-inner-conseq #f)
+		 (label-inner-altern (unique-label "L_inner_conditional_altern")))
+	     (P inner-test label-inner-conseq label-inner-altern
+		(P inner-conseq label-outer-conseq label-outer-altern
+		   (cons label-inner-altern
+			 (P inner-altern label-outer-conseq label-outer-altern
 			    accum))))))
 
-	  (label-true
-	   #;(assert (not label-false))
-	   (let ((label-false^ (unique-label "L_conditional_altern"))
-		 (label-nested-conseq #f)
-		 (label-nested-altern (unique-label "L_conditional_altern")))
-	     (P x.test label-nested-conseq label-nested-altern
-		(P x.conseq label-true label-false^
-		   (cons label-nested-altern
-			 (P x.altern label-true #f
-			    (cons label-false^ accum)))))))
+	  (label-outer-conseq
+	   #;(assert (not label-outer-altern))
+	   ;;The scenario in the ACCUM is:
+	   ;;
+	   ;;   ?outer-altern-asm-instr
+	   ;;   ...
+	   ;;
+	   ;;   (label L_outer_conditional_conseq)
+	   ;;   ?outer-conseq-asm-instr
+	   ;;   ...
+	   ;;
+	   ;;and we generate code as follows:
+	   ;;                                                       --
+	   ;;   ?inner-test-asm-instr                               |
+	   ;;   (jump-if-false (label L_inner_conditional_altern))  |
+	   ;;                                                       |
+	   ;;   ?inner-conseq-asm-instr                             |
+	   ;;   (jump-if-true (label L_outer_conditional_conseq))   |
+	   ;;   (jump (label L_outer_conditional_altern))           | generated
+	   ;;                                                       | here
+	   ;;   (label L_inner_conditional_altern)                  |
+	   ;;   ?inner-altern-asm-instr                             |
+	   ;;   (jump-if-true (label L_outer_conditional_conseq))   |
+	   ;;                                                       |
+	   ;;   (label L_outer_conditional_altern)                  |
+	   ;;                                                       --
+	   ;;   ?outer-altern-asm-instr                             |
+	   ;;   ...                                                 |
+	   ;;                                                       | already
+	   ;;   (label L_outer_conditional_conseq)                  | in ACCUM
+	   ;;   ?outer-conseq-asm-instr                             |
+	   ;;   ...                                                 |
+	   ;;                                                       --
+	   ;;
+	   (let ((label-outer-altern^ (unique-label "L_outer_conditional_altern"))
+		 (label-inner-conseq  #f)
+		 (label-inner-altern  (unique-label "L_inner_conditional_altern")))
+	     (P inner-test label-inner-conseq label-inner-altern
+		(P inner-conseq label-outer-conseq label-outer-altern^
+		   (cons label-inner-altern
+			 (P inner-altern label-outer-conseq #f
+			    (cons label-outer-altern^ accum)))))))
 
-	  (label-false
-	   #;(assert (not label-true))
-	   (let ((label-true^  (unique-label "L_conditional_conseq"))
-		 (label-nested-conseq #f)
-		 (label-nested-altern (unique-label "L_conditional_altern")))
-	     (P x.test label-nested-conseq label-nested-altern
-		(P x.conseq label-true^ label-false
-		   (cons label-nested-altern
-			 (P x.altern #f label-false
-			    (cons label-true^ accum)))))))
+	  (label-outer-altern
+	   #;(assert (not label-outer-conseq))
+	   ;;The scenario in the ACCUM is:
+	   ;;
+	   ;;   ?outer-conseq-asm-instr
+	   ;;   ...
+	   ;;
+	   ;;   (label L_outer_conditional_altern)
+	   ;;   ?outer-altern-asm-instr
+	   ;;   ...
+	   ;;
+	   ;;and we generate code as follows:
+	   ;;                                                       --
+	   ;;   ?inner-test-asm-instr                               |
+	   ;;   (jump-if-false (label L_inner_conditional_altern))  |
+	   ;;                                                       |
+	   ;;   ?inner-conseq-asm-instr                             |
+	   ;;   (jump-if-true (label L_outer_conditional_conseq))   |
+	   ;;   (jump         (label L_outer_conditional_altern))   | generated
+	   ;;                                                       | here
+	   ;;   (label L_inner_conditional_altern)                  |
+	   ;;   ?inner-altern-asm-instr                             |
+	   ;;   (jump-if-false (label L_outer_conditional_altern))  |
+	   ;;                                                       |
+	   ;;   (label L_outer_conditional_conseq)                  |
+	   ;;                                                       --
+	   ;;   ?outer-conseq-asm-instr                             |
+	   ;;   ...                                                 |
+	   ;;                                                       | already
+	   ;;   (label L_outer_conditional_altern)                  | in ACCUM
+	   ;;   ?outer-altern-asm-instr                             |
+	   ;;   ...                                                 |
+	   ;;                                                       --
+	   ;;
+	   (let ((label-outer-conseq^ (unique-label "L_outer_conditional_conseq"))
+		 (label-inner-conseq  #f)
+		 (label-inner-altern  (unique-label "L_inner_conditional_altern")))
+	     (P inner-test label-inner-conseq label-inner-altern
+		(P inner-conseq label-outer-conseq^ label-outer-altern
+		   (cons label-inner-altern
+			 (P inner-altern #f label-outer-altern
+			    (cons label-outer-conseq^ accum)))))))
 
 	  (else
-	   (let ((label-false^ (unique-label "L_conditional_altern"))
-		 (label-nested-altern (unique-label "L_conditional_altern")))
-	     (P x.test #f label-nested-altern
-		(P x.conseq #f #f
-		   (cons `(jmp ,label-false^)
-			 (cons label-nested-altern
-			       (P x.altern #f #f
-				  (cons label-false^ accum))))))))))
+	   ;;We generate code as follows:
+	   ;;                                                       --
+	   ;;   ?inner-test-asm-instr                               |
+	   ;;   (jump-if-false (label L_inner_conditional_altern))  |
+	   ;;                                                       |
+	   ;;   ?inner-conseq-asm-instr                             |
+	   ;;   (jump          (label L_outer_conditional_altern))  | generated
+	   ;;                                                       | here
+	   ;;   (label L_inner_conditional_altern)                  |
+	   ;;   ?inner-altern-asm-instr                             |
+	   ;;                                                       |
+	   ;;   (label L_outer_conditional_conseq)                  |
+	   ;;                                                       --
+	   ;;   ?accum-asm-instr                                    | already
+	   ;;   ...                                                 | in ACCUM
+	   ;;                                                       --
+	   ;;
+	   (let ((label-outer-altern^ (unique-label "L_outer_conditional_altern"))
+		 (label-inner-altern  (unique-label "L_inner_conditional_altern")))
+	     (P inner-test #f label-inner-altern
+		(P inner-conseq #f #f
+		   (cons `(jmp ,label-outer-altern^)
+			 (cons label-inner-altern
+			       (P inner-altern #f #f
+				  (cons label-outer-altern^ accum))))))))))
 
 ;;; --------------------------------------------------------------------
 
