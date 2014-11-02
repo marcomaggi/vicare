@@ -553,7 +553,7 @@
 	    (nop))
 	  ;;If the result is false: jump to the inner altern.
 	  (cmpl 47 %eax)
-	  (je (label L_conditional_altern_1))
+	  (je (label L_inner_conditional_altern_0))
 
 	  ;;This is  the CONSEQ expression of  the inner CONDITIONAL.  Call  the READ
 	  ;;primitive.
@@ -575,12 +575,12 @@
 	  ;;If the result  is non-false: jump to the outer  CONSEQ; otherwise jump to
 	  ;;the outer ALTERN.
 	  (cmpl 47 %eax)
-	  (jne (label L_conditional_conseq_0))
+	  (jne (label L_outer_conditional_conseq_0))
 	  (jmp (label L_conditional_altern_0))
 
 	  ;;This is  the ALTERN expression of  the inner CONDITIONAL.  Call  the READ
 	  ;;primitive.
-	  (label L_conditional_altern_1)
+	  (label L_inner_conditional_altern_0)
 	  (movl (obj read) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl %eax %edi)
@@ -602,7 +602,7 @@
 	  (je (label L_conditional_altern_0))
 
 	  ;;This is the CONSEQ expression of the outer CONDITIONAL.
-	  (label L_conditional_conseq_0)
+	  (label L_outer_conditional_conseq_0)
 	  (movl (obj display) %eax)
 	  (movl (disp %eax 19) %eax)
 	  (movl 8 (disp -8 %esp))
