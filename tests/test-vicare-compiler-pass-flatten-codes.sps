@@ -766,6 +766,96 @@
   #t)
 
 
+(parametrise ((check-test-name	'conditional-with-constant-branches))
+
+  (doit (if (read)
+	    (quote #t)
+	  (quote #t))
+	((code-object-sexp
+	  (number-of-free-vars: 0)
+	  (annotation: init-expression)
+	  (label L_init_expression_label_0)
+
+	  ;;This is the body of the core primitive $STACK-OVERFLOW-CHECK.
+	  (cmpl (disp %esi 32) %esp)
+	  (jb (label L_shortcut_interrupt_handler_1))
+	  (label L_return_from_interrupt_1)
+
+	  ;;This is the body of the core primitive $DO-EVENT.
+	  (addl 8 (disp %esi 72))
+	  (je (label L_shortcut_interrupt_handler_0))
+	  (label L_return_from_interrupt_0)
+
+	  ;;Call the READ.
+	  (movl (obj read) %eax)
+	  (movl (disp %eax 27) %eax)
+	  (movl %eax %edi)
+	  (movl 0 %eax)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_error_rp)
+	    (pad 10 (label call_label)
+		 (call (disp -3 %edi)))
+	    (nop))
+	  ;;The result is in AAR.  Jump to ALTERN if the result is #f; otherwise fall
+	  ;;through to the CONSEQ.
+	  (cmpl 47 %eax)
+	  (je (label L_conditional_altern_0))
+
+	  ;;This is the CONDITIONAL conseq.
+	  (movl 63 %eax)
+	  (ret)
+
+	  ;;This is the CONDITIONAL altern.
+	  (label L_conditional_altern_0)
+	  (movl 63 %eax)
+	  (ret)
+
+	  ;;Start the sequence of interrupt handlers.
+	  (nop)
+
+	  (label L_shortcut_interrupt_handler_1)
+	  (movl (foreign-label "ik_stack_overflow") %edi)
+	  (movl 0 %eax)
+	  (movl (foreign-label "ik_foreign_call") %ebx)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_ignore_rp)
+	    (pad 10
+		 (label call_label)
+		 (call %ebx))
+	    (nop))
+	  (jmp (label L_return_from_interrupt_1))
+
+	  (label L_shortcut_interrupt_handler_0)
+	  (movl (obj $do-event) %eax)
+	  (movl (disp %eax 19) %eax)
+	  (movl %eax %edi)
+	  (movl 0 %eax)
+	  (seq
+	    (nop)
+	    (jmp (label call_label))
+	    (byte-vector #(0))
+	    (int 8)
+	    (current-frame-offset)
+	    (label-address SL_multiple_values_ignore_rp)
+	    (pad 10
+		 (label call_label)
+		 (call (disp -3 %edi)))
+	    (nop))
+	  (jmp (label L_return_from_interrupt_0)))))
+
+  #t)
+
+
 ;;;; done
 
 (check-report)
