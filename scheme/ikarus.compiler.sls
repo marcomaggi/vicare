@@ -30,11 +30,6 @@
     core-expr->optimized-code		core-expr->assembly-code
 
     ;; these go in (vicare compiler)
-    make-compile-time-error			compile-time-error?
-    make-compile-time-arity-error		compile-time-arity-error?
-    make-compile-time-core-type-error		compile-time-core-type-error?
-    make-compile-time-operand-core-type-error	compile-time-operand-core-type-error?
-    make-compile-time-retval-core-type-error	compile-time-retval-core-type-error?
     optimize-level
 
     ;; configuration parameters
@@ -125,6 +120,7 @@
     ;;"ikarus.config.ss", including the correct value for WORDSIZE.
     (only (ikarus.fasl.write)
 	  fasl-write)
+    (ikarus.compiler.condition-types)
     (ikarus.intel-assembler)
     (prefix (only (ikarus.options)
 		  strict-r6rs
@@ -559,72 +555,6 @@
 	((null? s2) s1)
 	(else
 	 (rem* s2 s1))))
-
-
-;;;; condition objects
-
-(define-condition-type &library
-    &condition
-  make-library-condition library-condition?
-  (name		library-condition-name))
-
-(define-condition-type &module
-    &condition
-  make-module-condition module-condition?
-  (name		module-condition-name))
-
-;;; --------------------------------------------------------------------
-
-(define-condition-type &compile-time-error
-    &assertion
-  make-compile-time-error compile-time-error?)
-
-(define-condition-type &compile-time-arity-error
-    &compile-time-error
-  make-compile-time-arity-error compile-time-arity-error?)
-
-(define-condition-type &compile-time-core-type-error
-    &compile-time-error
-  make-compile-time-core-type-error compile-time-core-type-error?)
-
-(define-condition-type &compile-time-operand-core-type-error
-    &compile-time-error
-  make-compile-time-operand-core-type-error compile-time-operand-core-type-error?)
-
-(define-condition-type &compile-time-retval-core-type-error
-    &compile-time-error
-  make-compile-time-retval-core-type-error compile-time-retval-core-type-error?)
-
-(define (compile-time-error module-who who message . irritants)
-  (%raise-error module-who who message (make-compile-time-error) irritants))
-
-(define (compile-time-arity-error module-who who message . irritants)
-  (%raise-error module-who who message (make-compile-time-arity-error) irritants))
-
-(define (compile-time-operand-core-type-error module-who who message . irritants)
-  (%raise-error module-who who message (make-compile-time-operand-core-type-error) irritants))
-
-(define (compile-time-retval-core-type-error module-who who message . irritants)
-  (%raise-error module-who who message (make-compile-time-retval-core-type-error) irritants))
-
-;;; --------------------------------------------------------------------
-
-(define-condition-type &compiler-internal-error &compile-time-error
-  make-compiler-internal-error compiler-internal-error?)
-
-(define (compiler-internal-error module-who who message . irritants)
-  (%raise-error module-who who message (make-compiler-internal-error) irritants))
-
-;;; --------------------------------------------------------------------
-
-(define (%raise-error module-who who message cnd irritants)
-  (raise
-   (condition cnd
-	      (make-library-condition 'compiler)
-	      (make-module-condition module-who)
-	      (make-who-condition who)
-	      (make-message-condition message)
-	      (make-irritants-condition irritants))))
 
 
 (define current-core-eval

@@ -329,6 +329,7 @@ VICARE_BOOT_SRCS = \
 	scheme/ikarus.handlers.sls				\
 	scheme/ikarus.hash-tables.sls				\
 	scheme/ikarus.keywords.sls				\
+	scheme/ikarus.compiler.condition-types.sls		\
 	scheme/ikarus.intel-assembler.sls			\
 	scheme/ikarus.io.sls					\
 	scheme/ikarus.library-utils.sls				\

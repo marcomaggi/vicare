@@ -327,6 +327,7 @@
     "ikarus.foreign-libraries.sls"
     "ikarus.reader.sls"
     "ikarus.code-objects.sls"
+    "ikarus.compiler.condition-types.sls"
     "ikarus.intel-assembler.sls"
     "ikarus.fasl.write.sls"
     "ikarus.fasl.read.sls"
