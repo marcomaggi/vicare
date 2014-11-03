@@ -196,6 +196,8 @@
 	  (G      (gensym)))
 
       (define (%mark-labels-with-property x)
+	;;Non-tail recursive function.
+	;;
 	(when (pair? x)
 	  (case (car x)
 	    ((label)
@@ -205,6 +207,8 @@
 	     (for-each %mark-labels-with-property (cdr x))))))
 
       (define (%relative->local-relative x)
+	;;Non-tail recursive function.
+	;;
 	(when (pair? x)
 	  (case (car x)
 	    ((relative)
@@ -213,8 +217,8 @@
 	    ((bottom-code)
 	     (for-each %relative->local-relative (cdr x))))))
 
-      ($for-each/stx %mark-labels-with-property octets-and-labels)
-      ($for-each/stx %relative->local-relative  octets-and-labels)
+      (for-each %mark-labels-with-property octets-and-labels)
+      (for-each %relative->local-relative  octets-and-labels)
       ;;Clean up the property lists of label symbols.
       ($for-each/stx (lambda (x)
 		       (remprop x G))
@@ -303,10 +307,10 @@
 			 (if (null? (cdr t))
 			     (let ()
 			       ?body0 . ?body)
-			   (die 'with-args "too many args")))
-		     (die 'with-args "too few args")))
-	       (die 'with-args "too few args")))
-	 (die 'with-args "too few args"))))))
+			   (compiler-internal-error __module_who__  'with-args "too many args")))
+		     (compiler-internal-error __module_who__  'with-args "too few args")))
+	       (compiler-internal-error __module_who__  'with-args "too few args")))
+	 (compiler-internal-error __module_who__  'with-args "too few args"))))))
 
 (define-syntax byte
   ;;Expect  ?X to  be  an  expression evaluating  to  an exact  integer;
@@ -440,7 +444,7 @@
     (cond ((assq x register-mapping)
 	   => caddr)
 	  (else
-	   (die 'register-index "not a register" x))))
+	   (compiler-internal-error __module_who__  'register-index "not a register" x))))
 
   (let-syntax ((define-register-mapping-predicate
 		 (syntax-rules ()
@@ -520,7 +524,7 @@
 	       `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
 		 . ,ac)))
 	    (else
-	     (die 'IMM32 "invalid" n))))))
+	     (compiler-internal-error __module_who__  'IMM32 "invalid" n))))))
   ;;The following  is the original Ikarus's  IMM32 implementation.  (Marco
   ;;Maggi; Oct 8, 2012)
   ;;
@@ -541,7 +545,7 @@
   ;; 		(cons `(relative       . ,(label-name n))
   ;; 		      ac))))
   ;; 	(else
-  ;; 	 (die 'IMM32 "invalid" n))))
+  ;; 	 (compiler-internal-error __module_who__  'IMM32 "invalid" n))))
 
   (define (IMM n ac)
     (cond ((immediate-int? n)
@@ -588,7 +592,7 @@
 	     `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
 	       . ,ac)))
 	  (else
-	   (die 'IMM "invalid" n))))
+	   (compiler-internal-error __module_who__  'IMM "invalid" n))))
 
   (define* (IMM8 {n immediate-int?} ac)
     ;;Prepend  to the  accumulator AC  a fixnum  representing the  byte N,
@@ -631,7 +635,7 @@
 	  ((imm? i)
 	   (CODE c (ModRM 2 d s (IMM i ac))))
 	  (else
-	   (die 'CODErri "invalid i" i))))
+	   (compiler-internal-error __module_who__  'CODErri "invalid i" i))))
 
   (define (CODErr c r1 r2 ac)
     ;;Generate code for register+register operations?
@@ -640,9 +644,9 @@
 
   (define (RegReg r1 r2 r3 ac)
     (cond ((eq? r3 '%esp)
-	   (die 'assembler "BUG: invalid src %esp"))
+	   (compiler-internal-error __module_who__  'assembler "BUG: invalid src %esp"))
 	  ((eq? r1 '%ebp)
-	   (die 'assembler "BUG: invalid src %ebp"))
+	   (compiler-internal-error __module_who__  'assembler "BUG: invalid src %ebp"))
 	  (else
 	   (cons* (byte (fxlogor 4                   (fxsll (register-index r1) 3)))
 		  (byte (fxlogor (register-index r2) (fxsll (register-index r3) 3)))
@@ -662,7 +666,7 @@
 	   (IMM (bitwise-and (+ i1 i2) const.wordsize-bitmask)
 		ac))
 	  (else
-	   (die 'assemble "invalid IMM*2" i1 i2))))
+	   (compiler-internal-error __module_who__  'assemble "invalid IMM*2" i1 i2))))
 
   (define (SIB s i b ac)
     (cons (byte (fxlogor (register-index b)
@@ -968,7 +972,7 @@
 			  #;(error who "unhandledb" a1))
 
 			 (else
-			  (die who "unhandled" a0 a1)))))
+			  (compiler-internal-error __module_who__  who "unhandled" a0 a1)))))
 	     (with-args rm
 	       (lambda (a0 a1)
 		 (cond ((and (imm?   a0)
@@ -1000,7 +1004,7 @@
 			(REX.R 0 ac))
 
 		       (else
-			(die who "unhandled" a0 a1)))))))
+			(compiler-internal-error __module_who__  who "unhandled" a0 a1)))))))
 	  ((reg? rm)
 	   (let* ((bits 0)
 		  (bits (if (reg-requires-REX? r)
@@ -1011,7 +1015,7 @@
 			  bits)))
 	     (REX.R bits ac)))
 	  (else
-	   (die who "unhandled" rm))))
+	   (compiler-internal-error __module_who__  who "unhandled" rm))))
 
   (define (C c ac)
     (if (fx= 4 wordsize)
@@ -1082,11 +1086,11 @@
 			   (imm? a1))
 		      (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
 		     (else
-		      (die who "unhandled" a0 a1))))))
+		      (compiler-internal-error __module_who__  who "unhandled" a0 a1))))))
 	  ((reg? dst)
 	   (ModRM 3 /d dst ac))
 	  (else
-	   (die who "unhandled" dst))))
+	   (compiler-internal-error __module_who__  who "unhandled" dst))))
 
   ;;Commented out because unused.  (Marco Maggi; Oct 4, 2012)
   ;;
@@ -1158,7 +1162,7 @@
 		 (reg? dst))
 	    (CR* #x8B dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((mov32 src dst)
 ;;; FIXME
      (cond ((and (imm? src)
@@ -1181,7 +1185,7 @@
 		(CR* #x8B dst src ac)
 	      (CR*-no-rex #x8B dst src ac)))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((movb src dst)
      (cond ((and (imm8? src)
 		 (mem?  dst))
@@ -1193,7 +1197,7 @@
 		 (reg8? dst))
 	    (CR* #x8A dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((addl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1217,7 +1221,7 @@
 		 (mem? dst))
 	    (CR*  #x01 src dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((subl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1241,7 +1245,7 @@
 		 (mem? dst))
 	    (CR*  #x29 src dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((sall src dst)
      (cond ((and (eqv? 1 src)
 		 (reg? dst))
@@ -1259,7 +1263,7 @@
 		 (mem? dst))
 	    (CR* #xD3 '/4 dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((shrl src dst)
      (cond ((and (eqv? 1 src)
 		 (reg? dst))
@@ -1277,7 +1281,7 @@
 		 (mem? dst))
 	    (CR* #xD3 '/5 dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((sarl src dst)
      (cond ((and (eqv? 1 src)
 		 (reg? dst))
@@ -1295,7 +1299,7 @@
 		 (mem? dst))
 	    (CR* #xD3 '/7 dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((andl src dst)
      (cond ((and (imm32? src)
 		 (mem?   dst))
@@ -1319,7 +1323,7 @@
 		 (reg? dst))
 	    (CR*  #x23 dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((orl src dst)
      (cond ((and (imm32? src)
 		 (mem?   dst))
@@ -1343,7 +1347,7 @@
 		 (reg? dst))
 	    (CR*  #x0B dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((xorl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1364,13 +1368,13 @@
 		 (mem? dst))
 	    (CR*  #x31 src dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((leal src dst)
      (cond ((and (mem? src)
 		 (reg? dst))
 	    (CR* #x8D dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((cmpl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1394,7 +1398,7 @@
 		 (mem?   dst))
 	    (CR*  #x81 '/7 dst (IMM32 src ac)))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((imull src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1409,14 +1413,14 @@
 		 (reg? dst))
 	    (CCR* #x0F #xAF dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((idivl dst)
      (cond ((reg? dst)
 	    (CR* #xF7 '/7 dst ac))
 	   ((mem? dst)
 	    (CR* #xF7 '/7 dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((pushl dst)
      (cond ((imm8? dst)
 	    (CODE #x6A (IMM8 dst ac)))
@@ -1427,31 +1431,31 @@
 	   ((mem? dst)
 	    (CR*  #xFF '/6 dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((popl dst)
      (cond ((reg? dst)
 	    (CR  #x58 dst ac))
 	   ((mem? dst)
 	    (CR* #x8F '/0 dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((notl dst)
      (cond((reg? dst)
 	   (CR* #xF7 '/2 dst ac))
 	  ((mem? dst)
 	   (CR* #xF7 '/7 dst ac))
 	  (else
-	   (die who "invalid" instr))))
+	   (compiler-internal-error __module_who__  who "invalid" instr))))
     ((bswap dst)
      (cond ((reg? dst)
 	    (CCR #x0F #xC8 dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((negl dst)
      (cond ((reg? dst)
 	    (CR* #xF7 '/3 dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((jmp dst)
      (cond ((and (label? dst)
 		 (local-label? (label-name dst)))
@@ -1466,7 +1470,7 @@
 	   ((mem? dst)
 	    (CR*  #xFF '/4 dst ac))
 	   (else
-	    (die who "invalid jmp target" dst))))
+	    (compiler-internal-error __module_who__  who "invalid jmp target" dst))))
     ((call dst)
      (cond ((and (label? dst)
 		 (local-label? (label-name dst)))
@@ -1483,7 +1487,7 @@
 	   ((reg? dst)
 	    (CR* #xFF '/2 dst ac))
 	   (else
-	    (die who "invalid jmp target" dst))))
+	    (compiler-internal-error __module_who__  who "invalid jmp target" dst))))
     ((movsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
@@ -1492,7 +1496,7 @@
 		 (mem? dst))
 	    (CCCR* #xF2 #x0F #x11 src dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((cvtsi2sd src dst)
      (cond ((and (xmmreg? dst)
 		 (reg? src))
@@ -1501,19 +1505,19 @@
 		 (mem? src))
 	    (CCCR* #xF2 #x0F #x2A dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((cvtsd2ss src dst)
      (cond ((and (xmmreg? dst)
 		 (xmmreg? src))
 	    (CCCR* #xF2 #x0F #x5A src dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((cvtss2sd src dst)
      (cond ((and (xmmreg? dst)
 		 (xmmreg? src))
 	    (CCCR* #xF3 #x0F #x5A src dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((movss src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
@@ -1522,37 +1526,37 @@
 		 (mem?    dst))
 	    (CCCR* #xF3 #x0F #x11 src dst ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((addsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #xF2 #x0F #x58 dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((subsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #xF2 #x0F #x5C dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((mulsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #xF2 #x0F #x59 dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((divsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #xF2 #x0F #x5E dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((ucomisd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #x66 #x0F #x2E dst src ac))
 	   (else
-	    (die who "invalid" instr))))
+	    (compiler-internal-error __module_who__  who "invalid" instr))))
     ((ja dst)     (CCI32 #x0F #x87 dst ac))
     ((jae dst)    (CCI32 #x0F #x83 dst ac))
     ((jb dst)     (CCI32 #x0F #x82 dst ac))
@@ -1577,7 +1581,7 @@
     ((byte x)
      (if (byte? x)
 	 (cons (byte x) ac)
-       (die who "not a byte" x)))
+       (compiler-internal-error __module_who__  who "not a byte" x)))
     ((byte-vector x)
      (append (map (lambda (x)
 		    (byte x))
@@ -1588,11 +1592,11 @@
     ((label L)
      (if (symbol? L)
 	 (cons (cons 'label L) ac)
-       (die who "label is not a symbol" L)))
+       (compiler-internal-error __module_who__  who "label is not a symbol" L)))
     ((label-address L)
      (if (symbol? L)
 	 (cons (cons 'label-addr L) ac)
-       (die who "label-address is not a symbol" L)))
+       (compiler-internal-error __module_who__  who "label-address is not a symbol" L)))
     ((current-frame-offset)
      (cons '(current-frame-offset) ac))
     ((nop)
@@ -1691,7 +1695,7 @@
 		    ;;end.
 		    (loop (cdr ls) idx reloc (cons (cdr a) bot*)))
 		   (else
-		    (die 'store-binary-code-in-code-objects "unknown instr" a))))))))
+		    (compiler-internal-error __module_who__  'store-binary-code-in-code-objects "unknown instr" a))))))))
     (loop ls 0 '() '()))
 
   (define* (%set-code-word! code idx {x fixnum?})
@@ -1836,7 +1840,7 @@
     (let ((v #f))
       (case-lambda
        (()
-	(or v (die 'code-entry-adjustment "uninitialized")))
+	(or v (compiler-internal-error __module_who__  'code-entry-adjustment "uninitialized")))
        ((x)
 	(set! v x)))))
 
