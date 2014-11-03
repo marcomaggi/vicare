@@ -426,7 +426,7 @@
 		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
 		     ((current-frame-offset)
 		      ;;Store a  machine word  in the data  area holding  the current
-		      ;;offset in the data area.
+		      ;;offset in the data area; the offset is IDX itself.
 		      ;;
 		      ;;FIXME 64bit (Abdulaziz Ghuloum)
 		      (%set-code-word! x idx idx)
@@ -520,7 +520,8 @@
     (cond ((assq x REGISTER-MAPPING)
 	   => cadddr)
 	  (else
-	   (error 'reg-required-REX? "not a reg" x))))
+	   (compiler-internal-error __module_who__ 'reg-required-REX?
+	     "not a reg" x))))
 
   (define-constant REGISTER-MAPPING
 ;;;     reg  cls  idx  REX.R
@@ -1006,7 +1007,7 @@
 
   (define (REX.R bits ac)
     (if (fx= wordsize 4)
-	(error who "BUG: REX.R invalid in 32-bit mode")
+	(compiler-internal-error __module_who__ who "BUG: REX.R invalid in 32-bit mode")
       (cons (fxlogor #b01001000 bits) ac)))
 
   (define (REX+r r ac)
@@ -1061,7 +1062,7 @@
 
 			 ((and (imm? a0)
 			       (imm? a1))
-			  (error 'REC+RM "not here 4"))
+			  (compiler-internal-error __module_who__ 'REC+RM "not here 4"))
 
 			 (else
 			  (compiler-internal-error __module_who__  who "unhandled" a0 a1)))))
@@ -1083,16 +1084,16 @@
 			     (reg32? a1))
 			(cond ((reg-requires-REX? a0)
 			       (if (reg-requires-REX? a1)
-				   (error who "unhandled x1" a0 a1)
+				   (compiler-internal-error __module_who__ who "unhandled x1" a0 a1)
 				 (REX.R #b010 ac)))
 			      ((reg-requires-REX? a1)
-			       (error who "unhandled x3" a0 a1))
+			       (compiler-internal-error __module_who__ who "unhandled x3" a0 a1))
 			      (else
 			       (REX.R 0 ac))))
 
 		       ((and (imm? a0)
 			     (imm? a1))
-			;;(error 'REC+RM "not here 8")
+			;;(compiler-internal-error __module_who__ 'REC+RM "not here 8")
 			(REX.R 0 ac))
 
 		       (else
@@ -1194,10 +1195,11 @@
   ;; 		(cons (car ls) (f (cdr ls))))))
   ;;   ls)
 
-  (define (jmp-pc-relative code0 code1 dst ac)
+  (define* (jmp-pc-relative code0 code1 dst ac)
     (boot.case-word-size
      ((32)
-      (error 'intel-assembler "no pc-relative jumps in 32-bit mode"))
+      (compiler-internal-error __module_who__ __who__
+	"no pc-relative jumps in 32-bit mode"))
      ((64)
       (let ((G (gensym "L_jump")))
 	(CODE code0
@@ -1259,14 +1261,14 @@
 ;;; FIXME
      (cond ((and (imm? src)
 		 (reg? dst))
-	    (error 'mov32 "here1")
+	    (compiler-internal-error __module_who__ 'mov32 "here1")
 	    (CR #xB8 dst (IMM32 src ac)))
 	   ((and (imm? src)
 		 (mem? dst))
 	    (CR*-no-rex #xC7 '/0 dst (IMM32 src ac)))
 	   ((and (reg? src)
 		 (reg? dst))
-	    (error 'mov32 "here3")
+	    (compiler-internal-error __module_who__ 'mov32 "here3")
 	    (CR* #x89 src dst ac))
 	   ((and (reg? src)
 		 (mem? dst))
@@ -1699,7 +1701,8 @@
 
 (module (make-reloc-vector-record-filler code-entry-adjustment)
 
-  (define who 'make-reloc-vector-record-filler)
+  (define-syntax __who__
+    (identifier-syntax 'make-reloc-vector-record-filler))
 
   (define (make-reloc-vector-record-filler thunk?-label code vec)
     ;;Return  a closure  to be  used to  add records  to the  relocation
@@ -1811,7 +1814,8 @@
     (let ((v #f))
       (case-lambda
        (()
-	(or v (compiler-internal-error __module_who__  'code-entry-adjustment "uninitialized")))
+	(or v (compiler-internal-error __module_who__ 'code-entry-adjustment
+		"uninitialized")))
        ((x)
 	(set! v x)))))
 
@@ -1828,7 +1832,7 @@
 	      (hashtable-set! memoized str bv))))))
 
   (define-syntax-rule (%error ?message . ?irritants)
-    (error who ?message . ?irritants))
+    (compiler-internal-error __module_who__ __who__ ?message . ?irritants))
 
   (define-syntax %store-first-word!
     (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)
@@ -1840,7 +1844,8 @@
 
   (define (%label-loc x)
     (or (getprop x '*label-loc*)
-	(error 'compile "undefined label" x)))
+	(compiler-internal-error __module_who__ __who__
+	  "undefined label" x)))
 
   ;;Commented out because unused.  (Marco Maggi; Oct 9, 2012)
   ;;
