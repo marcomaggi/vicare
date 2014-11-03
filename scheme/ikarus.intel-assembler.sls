@@ -236,6 +236,70 @@
   #| end of module |# )
 
 
+;;;; constants
+
+(define-constant WORDSIZE-BITMASK
+  ;;On 32-bit platforms: this is an exact integer of 32 bits set to 1.
+  ;;
+  ;;On 64-bit platforms: this is an exact integer of 64 bits set to 1.
+  ;;
+  (- (expt 2 (* wordsize 8)) 1))
+
+;;; --------------------------------------------------------------------
+
+(define-constant REGISTER-MAPPING
+;;;   reg  cls  idx  REX.R
+  '((%eax   32    0  #f)
+    (%ecx   32    1  #f)
+    (%edx   32    2  #f)
+    (%ebx   32    3  #f)
+    (%esp   32    4  #f)
+    (%ebp   32    5  #f)
+    (%esi   32    6  #f)
+    (%edi   32    7  #f)
+    (%r8    32    0  #t)
+    (%r9    32    1  #t)
+    (%r10   32    2  #t)
+    (%r11   32    3  #t)
+    (%r12   32    4  #t)
+    (%r13   32    5  #t)
+    (%r14   32    6  #t)
+    (%r15   32    7  #t)
+    (%al     8    0  #f)
+    (%cl     8    1  #f)
+    (%dl     8    2  #f)
+    (%bl     8    3  #f)
+    (%ah     8    4  #f)
+    (%ch     8    5  #f)
+    (%dh     8    6  #f)
+    (%bh     8    7  #f)
+    (/0      0    0  #f)
+    (/1      0    1  #f)
+    (/2      0    2  #f)
+    (/3      0    3  #f)
+    (/4      0    4  #f)
+    (/5      0    5  #f)
+    (/6      0    6  #f)
+    (/7      0    7  #f)
+    (xmm0  xmm    0  #f)
+    (xmm1  xmm    1  #f)
+    (xmm2  xmm    2  #f)
+    (xmm3  xmm    3  #f)
+    (xmm4  xmm    4  #f)
+    (xmm5  xmm    5  #f)
+    (xmm6  xmm    6  #f)
+    (xmm7  xmm    7  #f)
+    (%r8l    8    0  #t)
+    (%r9l    8    1  #t)
+    (%r10l   8    2  #t)
+    (%r11l   8    3  #t)
+    (%r12l   8    4  #t)
+    (%r13l   8    5  #t)
+    (%r14l   8    6  #t)
+    (%r15l   8    7  #t)
+    ))
+
+
 (module (assemble-sources)
 
   (define (assemble-sources thunk?-label code-object-sexp*)
@@ -475,69 +539,6 @@
   #| end of module: ASSEMBLE-SOURCES |# )
 
 
-;;;; constants
-
-(define-constant const.wordsize-bitmask
-  ;;On 32-bit platforms: this  is an exact integer of 32  bits set to 1.
-  ;;On 64-bit platforms: this is an exact integer of 64 bits set to 1.
-  ;;
-  (- (expt 2 (* wordsize 8)) 1))
-
-;;; --------------------------------------------------------------------
-
-(define register-mapping
-;;;   reg  cls  idx  REX.R
-  '((%eax   32    0  #f)
-    (%ecx   32    1  #f)
-    (%edx   32    2  #f)
-    (%ebx   32    3  #f)
-    (%esp   32    4  #f)
-    (%ebp   32    5  #f)
-    (%esi   32    6  #f)
-    (%edi   32    7  #f)
-    (%r8    32    0  #t)
-    (%r9    32    1  #t)
-    (%r10   32    2  #t)
-    (%r11   32    3  #t)
-    (%r12   32    4  #t)
-    (%r13   32    5  #t)
-    (%r14   32    6  #t)
-    (%r15   32    7  #t)
-    (%al     8    0  #f)
-    (%cl     8    1  #f)
-    (%dl     8    2  #f)
-    (%bl     8    3  #f)
-    (%ah     8    4  #f)
-    (%ch     8    5  #f)
-    (%dh     8    6  #f)
-    (%bh     8    7  #f)
-    (/0      0    0  #f)
-    (/1      0    1  #f)
-    (/2      0    2  #f)
-    (/3      0    3  #f)
-    (/4      0    4  #f)
-    (/5      0    5  #f)
-    (/6      0    6  #f)
-    (/7      0    7  #f)
-    (xmm0  xmm    0  #f)
-    (xmm1  xmm    1  #f)
-    (xmm2  xmm    2  #f)
-    (xmm3  xmm    3  #f)
-    (xmm4  xmm    4  #f)
-    (xmm5  xmm    5  #f)
-    (xmm6  xmm    6  #f)
-    (xmm7  xmm    7  #f)
-    (%r8l    8    0  #t)
-    (%r9l    8    1  #t)
-    (%r10l   8    2  #t)
-    (%r11l   8    3  #t)
-    (%r12l   8    4  #t)
-    (%r13l   8    5  #t)
-    (%r14l   8    6  #t)
-    (%r15l   8    7  #t)
-    ))
-
-
 (module stuff
   (register-index
    reg8?		reg32?
@@ -559,7 +560,7 @@
    SIB			imm32?)
 
   (define (register-index x)
-    (cond ((assq x register-mapping)
+    (cond ((assq x REGISTER-MAPPING)
 	   => caddr)
 	  (else
 	   (compiler-internal-error __module_who__  'register-index "not a register" x))))
@@ -568,7 +569,7 @@
 		 (syntax-rules ()
 		   ((_ ?who ?val)
 		    (define (?who x)
-		      (cond ((assq x register-mapping)
+		      (cond ((assq x REGISTER-MAPPING)
 			     => (lambda (x)
 				  (eqv? (cadr x) ?val)))
 			    (else #f)))))))
@@ -577,10 +578,10 @@
     (define-register-mapping-predicate xmmreg? 'xmm))
 
   (define-inline (reg? x)
-    (assq x register-mapping))
+    (assq x REGISTER-MAPPING))
 
   (define (reg-requires-REX? x)
-    (cond ((assq x register-mapping)
+    (cond ((assq x REGISTER-MAPPING)
 	   => cadddr)
 	  (else
 	   (error 'reg-required-REX? "not a reg" x))))
@@ -781,7 +782,7 @@
 	   (IMM*2 i2 i1 ac))
 	  ((and (immediate-int? i1)
 		(immediate-int? i2))
-	   (IMM (bitwise-and (+ i1 i2) const.wordsize-bitmask)
+	   (IMM (bitwise-and (+ i1 i2) WORDSIZE-BITMASK)
 		ac))
 	  (else
 	   (compiler-internal-error __module_who__  'assemble "invalid IMM*2" i1 i2))))
