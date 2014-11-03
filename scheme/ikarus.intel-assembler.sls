@@ -231,23 +231,23 @@
     ;;Compute the  length of the relocation  vector needed to relocate  a code object
     ;;holding the binary code in OCTETS-AND-LABELS.
     ;;
-    (fold (lambda (x ac)
-	    (if (fixnum? x)
-		ac
-	      (case (car x)
-		((word byte label current-frame-offset local-relative)
-		 ac)
-		((reloc-word foreign-label)
-		 (fx+ ac 2))
-		((relative reloc-word+ label-addr)
-		 (fx+ ac 3))
-		((bottom-code)
-		 (fx+ ac (%compute-reloc-vector-size (cdr x))))
-		(else
-		 (compiler-internal-error __module_who__ __who__
-		   "unknown instr" x)))))
-	  0
-	  octets-and-labels))
+    (fold-right (lambda (x ac)
+		  (if (fixnum? x)
+		      ac
+		    (case (car x)
+		      ((word byte label current-frame-offset local-relative)
+		       ac)
+		      ((reloc-word foreign-label)
+		       (fx+ ac 2))
+		      ((relative reloc-word+ label-addr)
+		       (fx+ ac 3))
+		      ((bottom-code)
+		       (fx+ ac (%compute-reloc-vector-size (cdr x))))
+		      (else
+		       (compiler-internal-error __module_who__ __who__
+			 "unknown instr" x)))))
+      0
+      octets-and-labels))
 
   #| end of module: ASSEMBLE-SOURCES |# )
 
@@ -283,11 +283,6 @@
 
 
 ;; ------------------------------------------------------------
-
-(define (fold func init ls)
-  (if (null? ls)
-      init
-    (func (car ls) (fold func init (cdr ls)))))
 
 (define-syntax with-args
   ;;Expect ?X to be an expression evaluating to a list of 2 values; bind
@@ -702,7 +697,7 @@
 
   (define (convert-instructions ls)
     (parametrise ((local-labels (%uncover-local-labels ls)))
-      (fold %convert-single-sexp '() ls)))
+      (fold-right %convert-single-sexp '() ls)))
 
   (define who 'convert-instruction)
 
@@ -752,14 +747,14 @@
 	   ;;where   ?ASM-SEXPS  is   a   list   of  assembly   symbolic
 	   ;;expressions.
 	   ;;
-	   (fold %convert-single-sexp accum (cdr assembly-sexp)))
+	   (fold-right %convert-single-sexp accum (cdr assembly-sexp)))
 	  ((eq? key 'pad)
 	   ;;Process a PAD sexp.  Convert the assembly code and return a
 	   ;;new accumulator list padded with a prefix of zeros.
 	   ;;
 	   (let* ((n              (cadr assembly-sexp))
 		  (asm-sexps      (cddr assembly-sexp))
-		  (new-accum.tail (fold %convert-single-sexp accum asm-sexps))
+		  (new-accum.tail (fold-right %convert-single-sexp accum asm-sexps))
 		  (prefix.len     (compute-code-size (%find-prefix accum new-accum.tail))))
 	     (append (make-list (- n prefix.len) 0)
 		     new-accum.tail)))
@@ -1611,25 +1606,25 @@
   ;;code.  Such  number of bytes  will be the  minimum size of  the data
   ;;area in a code object.
   ;;
-  (fold (lambda (x size)
-	  (if (fixnum? x)
-	      (fxadd1 size)
-	    (case (car x)
-	      ((byte)
-	       (fxadd1 size))
-	      ((relative local-relative)
-	       (fxadd4 size))
-	      ((label)
-	       size)
-	      ((word reloc-word reloc-word+ label-addr
-		     current-frame-offset foreign-label)
-	       (fx+ size wordsize))
-	      ((bottom-code)
-	       (fx+ size (compute-code-size (cdr x))))
-	      (else
-	       (error __who__ "unknown instruction" x)))))
-	0
-	octets-and-labels))
+  (fold-right (lambda (x size)
+		(if (fixnum? x)
+		    (fxadd1 size)
+		  (case (car x)
+		    ((byte)
+		     (fxadd1 size))
+		    ((relative local-relative)
+		     (fxadd4 size))
+		    ((label)
+		     size)
+		    ((word reloc-word reloc-word+ label-addr
+			   current-frame-offset foreign-label)
+		     (fx+ size wordsize))
+		    ((bottom-code)
+		     (fx+ size (compute-code-size (cdr x))))
+		    (else
+		     (error __who__ "unknown instruction" x)))))
+    0
+    octets-and-labels))
 
 
 (module (store-binary-code-in-code-objects)
