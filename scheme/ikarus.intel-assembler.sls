@@ -109,6 +109,35 @@
     ))
 
 
+;;;; helpers
+
+(define* (%compute-code-size octets-and-labels)
+  ;;Non-tail recursive  function.  Given a  list holding octets-as-fixnums  and label
+  ;;sexps: compute  and return the number  of bytes needed to  hold the corresponding
+  ;;binary code.  Such number of bytes will be the minimum size of the data area in a
+  ;;code object.
+  ;;
+  (fold-right (lambda (x size)
+		(if (fixnum? x)
+		    (fxadd1 size)
+		  (case (car x)
+		    ((byte)
+		     (fxadd1 size))
+		    ((relative local-relative)
+		     (fxadd4 size))
+		    ((label)
+		     size)
+		    ((word reloc-word reloc-word+ label-addr current-frame-offset foreign-label)
+		     (fx+ size wordsize))
+		    ((bottom-code)
+		     (fx+ size (%compute-code-size (cdr x))))
+		    (else
+		     (compiler-internal-error __module_who__ __who__
+		       "unknown instruction" x)))))
+    0
+    octets-and-labels))
+
+
 (module (assemble-sources)
 
   (define (assemble-sources thunk?-label code-object-sexp*)
@@ -133,11 +162,11 @@
 	  (code.asm-instr-sexp**  (map %sexp.asm-instr-sexp*     code-object-sexp*)))
       (let* ((octets-and-labels* (map convert-instructions  code.asm-instr-sexp**))
 	     (octets-and-labels* (map %optimize-local-jumps octets-and-labels*)))
-	(let ((code-size*  (map compute-code-size   octets-and-labels*))
+	(let ((code-size*  (map %compute-code-size         octets-and-labels*))
 	      (reloc-size* (map %compute-reloc-vector-size octets-and-labels*)))
 	  (let ((code-objects* (map make-code   code-size* code.num-of-freevars*))
 		(reloc-vector* (map make-vector reloc-size*)))
-	    (let ((reloc** (map store-binary-code-in-code-objects
+	    (let ((reloc** (map %store-binary-code-in-code-objects
 			     code-objects* octets-and-labels*)))
 	      (for-each
 		  (lambda (code-object reloc-vector reloc*)
@@ -249,6 +278,102 @@
       0
       octets-and-labels))
 
+;;; --------------------------------------------------------------------
+
+  (module (%store-binary-code-in-code-objects)
+
+    (define* (%store-binary-code-in-code-objects x ls)
+      ;;Loop over the list of entries LS,  filling the data area of X accordingly.  X
+      ;;is a  code object.   LS is  a list of  fixnums and  lists; the  fixnums being
+      ;;binary code octects  to be stored in  the code object's data  area, the lists
+      ;;representing entries for the relocation vector.
+      ;;
+      ;;Return a list representing data to build a relocation vector.
+      ;;
+      (define (loop ls idx reloc bot*)
+	;;IDX is the  index of the next byte  to be filled in the  code object's data
+	;;area.
+	;;
+	;;BOT* is initially  empty and is filled with subentries  from the entries in
+	;;LS having  key BOTTOM-CODE; such  entries are  processed after LS  has been
+	;;consumed.
+	;;
+	(cond ((null? ls)
+	       (if (null? bot*)
+		   reloc
+		 (loop (car bot*) idx reloc (cdr bot*))))
+	      (else
+	       (let ((a (car ls)))
+		 (if (fixnum? a)
+		     (begin
+		       ;;Store a byte of binary code in the data area.
+		       ($code-set! x idx a)
+		       (loop (cdr ls) (fxadd1 idx) reloc bot*))
+		   (case (car a)
+		     ((byte)
+		      ;;Store a byte of binary code in the data area.
+		      ($code-set! x idx (cdr a))
+		      (loop (cdr ls) (fxadd1 idx) reloc bot*))
+		     ((relative local-relative)
+		      ;;Add an entry to the relocation list; leave 4 bytes of room in
+		      ;;the data area.
+		      (loop (cdr ls) (fx+ idx 4) (cons (cons idx a) reloc) bot*))
+		     ((reloc-word reloc-word+ label-addr foreign-label)
+		      ;;Add an entry to the relocation  list; leave a word of room in
+		      ;;the data area.
+		      (loop (cdr ls) (fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
+		     ((word)
+		      ;;Store a machine word in the data area.
+		      (%set-code-word! x idx (cdr a))
+		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
+		     ((current-frame-offset)
+		      ;;Store a  machine word  in the data  area holding  the current
+		      ;;offset in the data area.
+		      ;;
+		      ;;FIXME 64bit (Abdulaziz Ghuloum)
+		      (%set-code-word! x idx idx)
+		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
+		     ((label)
+		      ;;Store  informations about  the current  location in  the code
+		      ;;object in the symbol (cdr a).
+		      (%set-label-loc! (cdr a) (list x idx))
+		      (loop (cdr ls) idx reloc bot*))
+		     ((bottom-code)
+		      ;;Push this entry in BOT* to be processed at the end.
+		      (loop (cdr ls) idx reloc (cons (cdr a) bot*)))
+		     (else
+		      (compiler-internal-error __module_who__ __who__
+			"unknown instr" a))))))))
+      (loop ls 0 '() '()))
+
+    (define* (%set-code-word! code idx {x fixnum?})
+      ;;Store a machine word,  whose value is X, in the data area  of the code object
+      ;;CODE at index IDX.
+      ;;
+      (boot.case-word-size
+       ((32)
+	($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x3F) 2))
+	($code-set! code (fx+ idx 1) (fxlogand (fxsra x  6) #xFF))
+	($code-set! code (fx+ idx 2) (fxlogand (fxsra x 14) #xFF))
+	($code-set! code (fx+ idx 3) (fxlogand (fxsra x 22) #xFF)))
+       ((64)
+	($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x1F) 3))
+	($code-set! code (fx+ idx 1) (fxlogand (fxsra x  5) #xFF))
+	($code-set! code (fx+ idx 2) (fxlogand (fxsra x 13) #xFF))
+	($code-set! code (fx+ idx 3) (fxlogand (fxsra x 21) #xFF))
+	($code-set! code (fx+ idx 4) (fxlogand (fxsra x 29) #xFF))
+	($code-set! code (fx+ idx 5) (fxlogand (fxsra x 37) #xFF))
+	($code-set! code (fx+ idx 6) (fxlogand (fxsra x 45) #xFF))
+	($code-set! code (fx+ idx 7) (fxlogand (fxsra x 53) #xFF)))))
+
+    (define (%set-label-loc! x loc)
+      (if (getprop x '*label-loc*)
+	  (compiler-internal-error __module_who__ '%set-label-loc!
+	    "label is already defined" x)
+	(putprop x '*label-loc* loc)))
+
+    #| end of module: %STORE-BINARY-CODE-IN-CODE-OBJECTS |# )
+
   #| end of module: ASSEMBLE-SOURCES |# )
 
 
@@ -280,7 +405,6 @@
     ((_ ?op ?N)
      (set! ?op (fx+ ?op ?N)))
     ))
-
 
 ;; ------------------------------------------------------------
 
@@ -755,7 +879,7 @@
 	   (let* ((n              (cadr assembly-sexp))
 		  (asm-sexps      (cddr assembly-sexp))
 		  (new-accum.tail (fold-right %convert-single-sexp accum asm-sexps))
-		  (prefix.len     (compute-code-size (%find-prefix accum new-accum.tail))))
+		  (prefix.len     (%compute-code-size (%find-prefix accum new-accum.tail))))
 	     (append (make-list (- n prefix.len) 0)
 		     new-accum.tail)))
 	  (else
@@ -1596,127 +1720,6 @@
      (cons '(current-frame-offset) ac))
     ((nop)
      ac))
-
-  #| end of module |# )
-
-
-(define* (compute-code-size octets-and-labels)
-  ;;Given a list holding octets-as-fixnums  and label sexps: compute and
-  ;;return the number  of bytes needed to hold  the corresponding binary
-  ;;code.  Such  number of bytes  will be the  minimum size of  the data
-  ;;area in a code object.
-  ;;
-  (fold-right (lambda (x size)
-		(if (fixnum? x)
-		    (fxadd1 size)
-		  (case (car x)
-		    ((byte)
-		     (fxadd1 size))
-		    ((relative local-relative)
-		     (fxadd4 size))
-		    ((label)
-		     size)
-		    ((word reloc-word reloc-word+ label-addr
-			   current-frame-offset foreign-label)
-		     (fx+ size wordsize))
-		    ((bottom-code)
-		     (fx+ size (compute-code-size (cdr x))))
-		    (else
-		     (error __who__ "unknown instruction" x)))))
-    0
-    octets-and-labels))
-
-
-(module (store-binary-code-in-code-objects)
-
-  (define (store-binary-code-in-code-objects x ls)
-    ;;Loop  over the  list of  entries LS,  filling the  data area  of X
-    ;;accordingly.  X is a code object.
-    ;;
-    ;;LS is a  list of fixnums and lists; the  fixnums being binary code
-    ;;octects to  be stored in  the code  object's data area,  the lists
-    ;;representing entries for the relocation vector.
-    ;;
-    ;;Return a list representing data to build a relocation vector.
-    ;;
-    (define (loop ls idx reloc bot*)
-      ;;IDX is  the index  of the  next byte  to be  filled in  the code
-      ;;object's data area.  It is
-      ;;
-      ;;BOT* is initially  empty and is filled with  subentries from the
-      ;;entries in LS having key BOTTOM-CODE; such entries are processed
-      ;;ater LS has been consumed.
-      ;;
-      (cond ((null? ls)
-	     (if (null? bot*)
-		 reloc
-	       (loop (car bot*) idx reloc (cdr bot*))))
-	    (else
-	     (let ((a (car ls)))
-	       (if (fixnum? a)
-		   (begin
-		     ;;Store a byte of binary code in the data area.
-		     ($code-set! x idx a)
-		     (loop (cdr ls) (fxadd1 idx) reloc bot*))
-		 (case (car a)
-		   ((byte)
-		    ;;Store a byte of binary code in the data area.
-		    ($code-set! x idx (cdr a))
-		    (loop (cdr ls) (fxadd1 idx) reloc bot*))
-		   ((relative local-relative)
-		    ;;Add an entry to the relocation list; leave 4 bytes
-		    ;;of room in the data area.
-		    (loop (cdr ls) (fx+ idx 4) (cons (cons idx a) reloc) bot*))
-		   ((reloc-word reloc-word+ label-addr foreign-label)
-		    ;;Add an entry to the  relocation list; leave a word
-		    ;;of room in the data area.
-		    (loop (cdr ls) (fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
-		   ((word)
-		    ;;Store a machine word in the data area.
-		    (%set-code-word! x idx (cdr a))
-		    (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
-		   ((current-frame-offset)
-		    ;;Store a machine word in  the data area holding the
-		    ;;current offset in the data area.
-		    (%set-code-word! x idx idx) ;;; FIXME 64bit
-		    (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
-		   ((label)
-		    ;;Store informations  about the current  location in
-		    ;;the code object in the symbol (cdr a).
-		    (%set-label-loc! (cdr a) (list x idx))
-		    (loop (cdr ls) idx reloc bot*))
-		   ((bottom-code)
-		    ;;Push this  entry in  BOT* to  be processed  at the
-		    ;;end.
-		    (loop (cdr ls) idx reloc (cons (cdr a) bot*)))
-		   (else
-		    (compiler-internal-error __module_who__  'store-binary-code-in-code-objects "unknown instr" a))))))))
-    (loop ls 0 '() '()))
-
-  (define* (%set-code-word! code idx {x fixnum?})
-    ;;Store a machine  word, whose value is  X, in the data  area of the
-    ;;code object CODE at index IDX.
-    ;;
-    (if (fx= wordsize 4)
-	(begin
-	  ($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x3F) 2))
-	  ($code-set! code (fx+ idx 1) (fxlogand (fxsra x 6) #xFF))
-	  ($code-set! code (fx+ idx 2) (fxlogand (fxsra x 14) #xFF))
-	  ($code-set! code (fx+ idx 3) (fxlogand (fxsra x 22) #xFF)))
-      (begin
-	($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x1F) 3))
-	($code-set! code (fx+ idx 1) (fxlogand (fxsra x 5) #xFF))
-	($code-set! code (fx+ idx 2) (fxlogand (fxsra x 13) #xFF))
-	($code-set! code (fx+ idx 3) (fxlogand (fxsra x 21) #xFF))
-	($code-set! code (fx+ idx 4) (fxlogand (fxsra x 29) #xFF))
-	($code-set! code (fx+ idx 5) (fxlogand (fxsra x 37) #xFF))
-	($code-set! code (fx+ idx 6) (fxlogand (fxsra x 45) #xFF))
-	($code-set! code (fx+ idx 7) (fxlogand (fxsra x 53) #xFF)))))
-
-  (define (%set-label-loc! x loc)
-    (if (getprop x '*label-loc*)
-	(error '%set-label-loc! "label is already defined" x)
-      (putprop x '*label-loc* loc)))
 
   #| end of module |# )
 
