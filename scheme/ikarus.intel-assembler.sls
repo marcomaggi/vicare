@@ -809,12 +809,14 @@
     ;;(representing octets) and  sexps; prepend the sequence to  the accumulator list
     ;;ACCUM; return the new accumulator list.
     ;;
-    ;;The items  prepended to ACCUM can  be fixnums or entries  like the
-    ;;following:
+    ;;The items prepended to ACCUM can be fixnums or entries like the following:
     ;;
     ;;	(label . ?symbol)
     ;;  (label-addr . ?symbol)
     ;;  (current-frame-offset)
+    ;;
+    ;;NOTE The actual job os sexp instruction conversion is performed by the function
+    ;;store in the property list of the instruction name's symbol.
     ;;
     (define key
       (car assembly-sexp))
@@ -874,29 +876,30 @@
 	     "unknown instruction" assembly-sexp))))
 
   (define (%extract-prefix old-accum new-accum)
-    ;;Expect NEW-ACCUM to be a list having OLD-ACCUM as tail:
+    ;;Non-tail recursive function.  Expect NEW-ACCUM to be a list having OLD-ACCUM as
+    ;;tail:
     ;;
     ;;   new-accum = (item0 item ... . old-accum)
     ;;
     ;;visit the  prefix of NEW-ACCUM  building a new list  holding the new  ITEMs and
     ;;filtering out the ITEMs being BOTTOM-CODE entries; return the resulting list.
     ;;
-    (let loop ((ls new-accum))
-      (if (eq? ls old-accum)
-	  '()
-	(let ((asm-sexp (car ls)))
-	  (if (bottom-code? asm-sexp)
-	      ;;Skip BOTTOM-CODE sexp.
-	      (loop (cdr ls))
-	    (cons asm-sexp (loop (cdr ls))))))))
+    (if (eq? old-accum new-accum)
+	'()
+      (let ((asm-sexp (car new-accum)))
+	(define-syntax-rule (recur)
+	  (%extract-prefix old-accum (cdr new-accum)))
+	(if (bottom-code? asm-sexp)
+	    ;;Skip BOTTOM-CODE sexp.
+	    (recur)
+	  (cons asm-sexp (recur))))))
 
   (define-entry-predicate bottom-code? bottom-code)
 
   (define (%error-incorrect-args assembly-sexp expected-nargs)
-    (assertion-violation who
-      (string-append
-       "wrong number of arguments in assembly symbolic expression, expected "
-       (number->string expected-nargs))
+    (compiler-internal-error __module_who__ who
+      (string-append "wrong number of arguments in Assembly symbolic expression, expected "
+		     (number->string expected-nargs))
       assembly-sexp))
 
   (define (%uncover-local-labels names accum)
