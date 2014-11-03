@@ -213,10 +213,10 @@
 	    ((bottom-code)
 	     (for-each %relative->local-relative (cdr x))))))
 
-      (for-each %mark-labels-with-property octets-and-labels)
-      (for-each %relative->local-relative  octets-and-labels)
+      ($for-each/stx %mark-labels-with-property octets-and-labels)
+      ($for-each/stx %relative->local-relative  octets-and-labels)
       ;;Clean up the property lists of label symbols.
-      (for-each (lambda (x)
+      ($for-each/stx (lambda (x)
 		       (remprop x G))
 	locals)
       octets-and-labels))
