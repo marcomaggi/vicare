@@ -627,8 +627,8 @@
       (IMM n ac))
      ((64)
       (cond ((imm32? n)
-	     ;;Prepend  to the  accumulator AC  a 32-bit  immediate value,
-	     ;;least significant byte first.
+	     ;;Prepend  to  the  accumulator  AC  a  32-bit  immediate  value,  least
+	     ;;significant byte first.
 	     ;;
 	     ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
 	     ;;
@@ -644,27 +644,6 @@
 		 . ,ac)))
 	    (else
 	     (compiler-internal-error __module_who__  'IMM32 "invalid" n))))))
-  ;;The following  is the original Ikarus's  IMM32 implementation.  (Marco
-  ;;Maggi; Oct 8, 2012)
-  ;;
-  ;; (define (IMM32 n ac)
-  ;;   (cond ((fx= wordsize 4)
-  ;; 	 (IMM n ac))
-  ;; 	((imm32? n)
-  ;; 	 (cons* (byte n)
-  ;; 		(byte (sra n 8))
-  ;; 		(byte (sra n 16))
-  ;; 		(byte (sra n 24))
-  ;; 		ac))
-  ;; 	((label? n)
-  ;; 	 (cond ((local-label? (label-name n))
-  ;; 		(cons `(local-relative . ,(label-name n))
-  ;; 		      ac))
-  ;; 	       (else
-  ;; 		(cons `(relative       . ,(label-name n))
-  ;; 		      ac))))
-  ;; 	(else
-  ;; 	 (compiler-internal-error __module_who__  'IMM32 "invalid" n))))
 
   (define (IMM n ac)
     (cond ((immediate-int? n)
@@ -714,8 +693,8 @@
 	   (compiler-internal-error __module_who__  'IMM "invalid" n))))
 
   (define* (IMM8 {n immediate-int?} ac)
-    ;;Prepend  to the  accumulator AC  a fixnum  representing the  byte N,
-    ;;which is an immediate 8-bit value.
+    ;;Prepend to  the accumulator AC  a fixnum representing the  byte N, which  is an
+    ;;immediate 8-bit value.
     ;;
     (cons (byte n) ac))
 
@@ -724,24 +703,23 @@
 	(obj?		x)
 	(obj+?		x)
 	(label-address?	x)
-	(foreign?		x)
+	(foreign?	x)
 	(label?		x)))
 
   (define-entry-predicate foreign? foreign-label)
 
-  (define-inline (imm8? x)
-    (byte? x))
+  (define-syntax-rule (imm8? ?x)
+    (byte? ?x))
 
   (define-entry-predicate label? label)
   (define-entry-predicate label-address? label-address)
 
-  (define-inline (label-name x)
-    (cadr x))
+  (define-syntax-rule (label-name ?x)
+    (cadr ?x))
 
-  (define-inline (immediate-int? ?x)
-    (let ((X ?x))
-      (or (fixnum? X)
-	  (bignum? X))))
+  (define-inline (immediate-int? x)
+    (or (fixnum? x)
+	(bignum? x)))
 
   (define-entry-predicate obj?	obj)
   (define-entry-predicate obj+?	obj+)
@@ -813,9 +791,10 @@
     (make-parameter '()))
 
   (define (local-label? x)
-    ;;FIXME Would  this be significantly  faster with an  EQ? hashtable?
-    ;;Or is the number of local labels usually small?  (Marco Maggi; Oct
-    ;;9, 2012)
+    ;;Return true if X is a local label previously registered.
+    ;;
+    ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
+    ;;number of local labels usually small?  (Marco Maggi; Oct 9, 2012)
     ;;
     (and (memq x (local-labels)) #t))
 
@@ -826,9 +805,9 @@
   (define who 'convert-instruction)
 
   (define (%convert-single-sexp assembly-sexp accum)
-    ;;Convert  ASSEMBLY-SEXP into  a sequence  of fixnums  (representing
-    ;;octets) and sexps prepended to  the accumulator list ACCUM; return
-    ;;the new accumulator list.
+    ;;Non-tail recursive function.  Convert ASSEMBLY-SEXP  into a sequence of fixnums
+    ;;(representing octets) and  sexps; prepend the sequence to  the accumulator list
+    ;;ACCUM; return the new accumulator list.
     ;;
     ;;The items  prepended to ACCUM can  be fixnums or entries  like the
     ;;following:
@@ -868,22 +847,29 @@
 	   ;;
 	   ;;   (seq . ?asm-sexps)
 	   ;;
-	   ;;where   ?ASM-SEXPS  is   a   list   of  assembly   symbolic
-	   ;;expressions.
+	   ;;where ?ASM-SEXPS is a list of assembly symbolic expressions.
 	   ;;
 	   (fold-right %convert-single-sexp accum (cdr assembly-sexp)))
 	  ((eq? key 'pad)
-	   ;;Process a PAD sexp.  Convert the assembly code and return a
-	   ;;new accumulator list padded with a prefix of zeros.
+	   ;;Process  a  PAD sexp.   Convert  the  assembly  code  and return  a  new
+	   ;;accumulator list padded with a prefix of zeros.
 	   ;;
-	   (let* ((n              (cadr assembly-sexp))
+	   ;;Here is an example PAD sexp, part of a non-tail function call:
+	   ;;
+	   ;;   (pad 10
+	   ;;        (label call_label)
+	   ;;        (call (disp -3 %edi)))
+	   ;;
+	   (let* ((N              (cadr assembly-sexp))
 		  (asm-sexps      (cddr assembly-sexp))
 		  (new-accum.tail (fold-right %convert-single-sexp accum asm-sexps))
 		  (prefix.len     (%compute-code-size (%find-prefix accum new-accum.tail))))
-	     (append (make-list (- n prefix.len) 0)
+	     (append (make-list (- N prefix.len) 0)
 		     new-accum.tail)))
+
 	  (else
-	   (assertion-violation who "unknown instruction" assembly-sexp))))
+	   (compiler-internal-error __module_who__ who
+	     "unknown instruction" assembly-sexp))))
 
   (define (%find-prefix old-accum new-accum)
     ;;Expect NEW-ACCUM to be a list having OLD-ACCUM as tail:
