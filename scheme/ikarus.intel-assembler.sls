@@ -71,9 +71,10 @@
 ;;Scheme  objects.  Both  BSET  and  BREF are  implemented  with  the Intel  Assembly
 ;;instruction MOVB.
 ;;
-;;The only high-level Assembly instructions  acting upon 32-bit integers are: mset32,
-;;mref32, load32; they are used to access Unicode code points representing characters
-;;in the data area of string Scheme objects.
+;;The only high-level Assembly instructions  acting upon 32-bit integers are: MSET32,
+;;MREF32; they are used to access  Unicode code points representing characters in the
+;;data area  of string Scheme objects.   Both MSET32 and MREF32  are implemented with
+;;the Intel Assembly instruction MOV32.
 ;;
 
 

@@ -714,7 +714,7 @@
        (S* rand*
 	 (lambda (rand*)
 	   #;(assert (or (var? dst) (nfv? dst)))
-	   (make-asm-instr 'load32 dst (%mk-disp (car rand*) (cadr rand*))))))
+	   (make-asm-instr 'mref32 dst (%mk-disp (car rand*) (cadr rand*))))))
 
       ((bref)
        ;;We expect X to have the format:

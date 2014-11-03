@@ -284,13 +284,13 @@
 
     (define* (A-asm-instr op dst src x)
       (case op
-	((bref load32)
+	((bref mref32)
 	 ;;We expect X to have the format:
 	 ;;
 	 ;;   (asm-instr bref  ?var  (disp ?objref ?offset))
 	 ;;   (asm-instr bref  ?fvar (disp ?objref ?offset))
-	 ;;   (asm-instr load32 ?var  (disp ?objref ?offset))
-	 ;;   (asm-instr load32 ?fvar (disp ?objref ?offset))
+	 ;;   (asm-instr mref32 ?var  (disp ?objref ?offset))
+	 ;;   (asm-instr mref32 ?fvar (disp ?objref ?offset))
 	 ;;
 	 (unless (or (var?  dst)
 		     (fvar? dst))
@@ -1014,7 +1014,7 @@
 	;;
 	(import ASM-INSTR-OPERANDS-HELPERS)
 	(case op
-	  ((bref load32)
+	  ((bref mref32)
 	   (E-asm-instr/load op dst src x))
 
 	  ((move
@@ -1217,8 +1217,8 @@
 	;;
 	;;   (asm-instr bref  ?var  (disp ?objref ?offset))
 	;;   (asm-instr bref  ?fvar (disp ?objref ?offset))
-	;;   (asm-instr load32 ?var  (disp ?objref ?offset))
-	;;   (asm-instr load32 ?fvar (disp ?objref ?offset))
+	;;   (asm-instr mref32 ?var  (disp ?objref ?offset))
+	;;   (asm-instr mref32 ?fvar (disp ?objref ?offset))
 	;;
 	;;There are cases for which we cannot directly generate machine code:
 	;;
@@ -1700,11 +1700,11 @@
 
     (define (E-asm-instr op dst src tail.set x)
       (case op
-	((move load32)
+	((move mref32)
 	 ;;We expect X to have the format:
 	 ;;
 	 ;;   (asm-instr move   ?dst ?src)
-	 ;;   (asm-instr load32 ?dst (disp ?objref ?offset))
+	 ;;   (asm-instr mref32 ?dst (disp ?objref ?offset))
 	 ;;
 	 ;;here ?DST is written  and ?SRC is read: in the uplevel  code ?DST is dead,
 	 ;;in the  tail code ?DST is  alive; in both  the uplevel code and  tail code

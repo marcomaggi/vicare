@@ -1628,7 +1628,6 @@
 ;;   int*		int*/overflow
 ;;   int-quotient	int-remainder
 ;;   incr/zero?
-;;   load32
 ;;   logand		logor		logxor
 ;;   move
 ;;   mset		mset32

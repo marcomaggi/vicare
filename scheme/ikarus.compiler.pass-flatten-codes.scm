@@ -997,7 +997,7 @@
 	     accum
 	   (cons `(mov32 ,src^ ,dst^) accum))))
 
-      ((load32)
+      ((mref32)
        (let ((src^ (R src))
 	     (dst^ (R dst)))
 	 (if (eq? dst^ src^)
