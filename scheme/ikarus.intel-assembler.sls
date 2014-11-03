@@ -35,10 +35,11 @@
     (prefix (vicare platform words)
 	    words.))
 
-  (include "ikarus.wordsize.scm" #t)
+  (module (wordsize boot.case-word-size)
+    (include "ikarus.wordsize.scm" #t))
 
 
-;;;; Introduction
+;;;; introduction
 ;;
 ;;As reference for Intel Architecture instructions  we can look at (URL last verified
 ;;on Fri Oct 24, 2014):
@@ -57,12 +58,22 @@
 ;;   Encyclopedia.   Wikipedia,  The Free  Encyclopedia,  30  Aug.  2014.   Web.   24
 ;;   Oct. 2014.  <https://en.wikipedia.org/wiki/X86_instruction_listings>
 ;;
-;;The entry  point in  the assembler  is the  function ASSEMBLE-SOURCES:  it compiles
-;;assembly  code   into  binary  code   stored  in   code  objects;  every   call  to
-;;ASSEMBLE-SOURCES can generate a list of code objects.
 ;;
-;;Assembly code is  represented by a symbolic  expression; we can take a  look at the
-;;assembly by using "--print-assembly" option for the executable "vicare".
+;;General notes
+;;-------------
+;;
+;;Almost  all the  Assembly language  instructions used  by Vicare  act upon  machine
+;;words;  which means  32-bit integers  on 32-bit  platforms and  64-bit integers  on
+;;64-bit platforms.
+;;
+;;The only high-level  Assembly instructions acting upon bytes are:  BSET, BREF; they
+;;are used to access bytes and octets in the data area of bytevector, flonum and code
+;;Scheme  objects.  Both  BSET  and  BREF are  implemented  with  the Intel  Assembly
+;;instruction MOVB.
+;;
+;;The only high-level Assembly instructions  acting upon 32-bit integers are: mset32,
+;;mref32, load32; they are used to access Unicode code points representing characters
+;;in the data area of string Scheme objects.
 ;;
 
 

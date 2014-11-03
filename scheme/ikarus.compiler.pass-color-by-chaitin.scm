@@ -284,11 +284,11 @@
 
     (define* (A-asm-instr op dst src x)
       (case op
-	((load8 load32)
+	((bref load32)
 	 ;;We expect X to have the format:
 	 ;;
-	 ;;   (asm-instr load8  ?var  (disp ?objref ?offset))
-	 ;;   (asm-instr load8  ?fvar (disp ?objref ?offset))
+	 ;;   (asm-instr bref  ?var  (disp ?objref ?offset))
+	 ;;   (asm-instr bref  ?fvar (disp ?objref ?offset))
 	 ;;   (asm-instr load32 ?var  (disp ?objref ?offset))
 	 ;;   (asm-instr load32 ?fvar (disp ?objref ?offset))
 	 ;;
@@ -1014,7 +1014,7 @@
 	;;
 	(import ASM-INSTR-OPERANDS-HELPERS)
 	(case op
-	  ((load8 load32)
+	  ((bref load32)
 	   (E-asm-instr/load op dst src x))
 
 	  ((move
@@ -1215,8 +1215,8 @@
       (module (E-asm-instr/load)
 	;;We expect X to have the format:
 	;;
-	;;   (asm-instr load8  ?var  (disp ?objref ?offset))
-	;;   (asm-instr load8  ?fvar (disp ?objref ?offset))
+	;;   (asm-instr bref  ?var  (disp ?objref ?offset))
+	;;   (asm-instr bref  ?fvar (disp ?objref ?offset))
 	;;   (asm-instr load32 ?var  (disp ?objref ?offset))
 	;;   (asm-instr load32 ?fvar (disp ?objref ?offset))
 	;;
@@ -1224,12 +1224,12 @@
 	;;
 	;;* In the case of destination operand being a stack slot:
 	;;
-	;;     (asm-instr load8 ?fvar (disp ?objref ?offset))
+	;;     (asm-instr bref ?fvar (disp ?objref ?offset))
 	;;
 	;;  both the operands would be memory  references and this is not a supported
 	;;  operation; so we split such ASM-INSTR into:
 	;;
-	;;     (asm-instr load8 ?var.tmp (disp ?objref ?offset))
+	;;     (asm-instr bref ?var.tmp (disp ?objref ?offset))
 	;;     (asm-instr move  ?fvar ?var.tmp)
 	;;
 	;;  where ?VAR.TMP is a VAR  struct, representing a temporary location, which
@@ -1241,18 +1241,18 @@
 	;;  into:
 	;;
 	;;     (asm-instr move  ?var.tmp ?objref)
-	;;     (asm-instr load8 ?dst     (disp ?var.tmp ?offset))
+	;;     (asm-instr bref ?dst     (disp ?var.tmp ?offset))
 	;;
 	;;  or:
 	;;
 	;;     (asm-instr move  ?var.tmp ?offset)
-	;;     (asm-instr load8 ?dst     (disp ?objref ?var.tmp))
+	;;     (asm-instr bref ?dst     (disp ?objref ?var.tmp))
 	;;
 	;;  or:
 	;;
 	;;     (asm-instr move  ?var1.tmp ?objref)
 	;;     (asm-instr move  ?var2.tmp ?offset)
-	;;     (asm-instr load8 ?dst      (disp ?var1.tmp ?var2.tmp))
+	;;     (asm-instr bref ?dst      (disp ?var1.tmp ?var2.tmp))
 	;;
 	;;
 	(import ASM-INSTR-OPERANDS-HELPERS)
@@ -1730,10 +1730,10 @@
 	     S)
 	   (set-union (R src) S)))
 
-	((load8)
+	((bref)
 	 ;;We expect X ot have the format:
 	 ;;
-	 ;;   (asm-instr load8 ?dst (disp ?objref ?offset))
+	 ;;   (asm-instr bref ?dst (disp ?objref ?offset))
 	 ;;
 	 ;;here ?DST  is written, ?OBJREF and  ?OFFSET are read: in  the uplevel code
 	 ;;?DST is dead, in the tail code ?DST is alive; in both the uplevel code and
@@ -1856,7 +1856,7 @@
 	((bset)
 	 ;;We expect X ot have the format:
 	 ;;
-	 ;;   (asm-instr load8 (disp ?objref ?offset) ?src)
+	 ;;   (asm-instr bref (disp ?objref ?offset) ?src)
 	 ;;
 	 ;;here  ?SRC is  read, the  machine word  referenced by  the DISP  struct is
 	 ;;written but ?OBJREF and ?OFFSET themselves are read.

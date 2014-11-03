@@ -959,7 +959,7 @@
 	   accum
 	 (cons `(movl ,(R src) ,(R dst)) accum)))
 
-      ((load8)
+      ((bref)
        (let ((src^ (R/l src))
 	     (dst^ (R/l dst)))
 	 (if (eq? dst^ src^)

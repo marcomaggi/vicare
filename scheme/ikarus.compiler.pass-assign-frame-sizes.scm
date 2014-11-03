@@ -1374,7 +1374,7 @@
       ;;representing the operands DST and SRC.
       ;;
       (case op
-	((move load8 load32)
+	((move bref load32)
 	 (E-asm-instr/move x op dst src vs rs fs ns))
 
 	((int-/overflow int+/overflow int*/overflow)
@@ -1421,8 +1421,8 @@
       ;;   (asm-instr move   ?reg ?src)
       ;;   (asm-instr move   ?var ?src)
       ;;   (asm-instr move   ?nfv ?src)
-      ;;   (asm-instr load8  ?var (disp ?objref ?offset))
-      ;;   (asm-instr load8  ?nfv (disp ?objref ?offset))
+      ;;   (asm-instr bref  ?var (disp ?objref ?offset))
+      ;;   (asm-instr bref  ?nfv (disp ?objref ?offset))
       ;;   (asm-instr load32 ?var (disp ?objref ?offset))
       ;;   (asm-instr load32 ?nfv (disp ?objref ?offset))
       ;;
@@ -1896,7 +1896,7 @@
 
     (define* (E-asm-instr x op dst src)
       (case op
-	((move load8 load32)
+	((move bref load32)
 	 ;;If the destination equals the source: convert this instruction into a NOP.
 	 (let ((dst (R dst))
 	       (src (R src)))

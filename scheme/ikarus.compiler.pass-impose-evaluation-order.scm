@@ -725,7 +725,7 @@
        (S* rand*
 	 (lambda (rand*)
 	   #;(assert (or (var? dst) (nfv? dst)))
-	   (make-asm-instr 'load8 dst (%mk-disp (car rand*) (cadr rand*))))))
+	   (make-asm-instr 'bref dst (%mk-disp (car rand*) (cadr rand*))))))
 
       ((logand logxor logor int+ int- int* int-/overflow int+/overflow int*/overflow)
        ;;We expect X to have the format:
