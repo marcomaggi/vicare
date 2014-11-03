@@ -799,7 +799,7 @@
     (and (memq x (local-labels)) #t))
 
   (define (convert-instructions ls)
-    (parametrise ((local-labels (%uncover-local-labels ls)))
+    (parametrise ((local-labels (%uncover-local-labels '() ls)))
       (fold-right %convert-single-sexp '() ls)))
 
   (define who 'convert-instruction)
@@ -825,7 +825,7 @@
 		(let ((n    (car prop))
 		      (proc (cdr prop))
 		      (args (cdr assembly-sexp)))
-		  (define-inline (%with-checked-args ?nargs ?body-form)
+		  (define-syntax-rule (%with-checked-args ?nargs ?body-form)
 		    (if (fx= (length args) ?nargs)
 			?body-form
 		      (%error-incorrect-args assembly-sexp n)))
@@ -842,6 +842,7 @@
 		    (else
 		     (%with-checked-args n
 		       (apply proc assembly-sexp accum args)))))))
+
 	  ((eq? key 'seq)
 	   ;;Process a SEQ sexp.  A SEQ sexp has the format:
 	   ;;
@@ -850,6 +851,7 @@
 	   ;;where ?ASM-SEXPS is a list of assembly symbolic expressions.
 	   ;;
 	   (fold-right %convert-single-sexp accum (cdr assembly-sexp)))
+
 	  ((eq? key 'pad)
 	   ;;Process  a  PAD sexp.   Convert  the  assembly  code  and return  a  new
 	   ;;accumulator list padded with a prefix of zeros.
@@ -863,7 +865,7 @@
 	   (let* ((N              (cadr assembly-sexp))
 		  (asm-sexps      (cddr assembly-sexp))
 		  (new-accum.tail (fold-right %convert-single-sexp accum asm-sexps))
-		  (prefix.len     (%compute-code-size (%find-prefix accum new-accum.tail))))
+		  (prefix.len     (%compute-code-size (%extract-prefix accum new-accum.tail))))
 	     (append (make-list (- N prefix.len) 0)
 		     new-accum.tail)))
 
@@ -871,13 +873,13 @@
 	   (compiler-internal-error __module_who__ who
 	     "unknown instruction" assembly-sexp))))
 
-  (define (%find-prefix old-accum new-accum)
+  (define (%extract-prefix old-accum new-accum)
     ;;Expect NEW-ACCUM to be a list having OLD-ACCUM as tail:
     ;;
     ;;   new-accum = (item0 item ... . old-accum)
     ;;
-    ;;visit the prefix of NEW-ACCUM holding the new ITEMs and filter out
-    ;;the ITEMs being BOTTOM-CODE entries; return the resulting list.
+    ;;visit the  prefix of NEW-ACCUM  building a new list  holding the new  ITEMs and
+    ;;filtering out the ITEMs being BOTTOM-CODE entries; return the resulting list.
     ;;
     (let loop ((ls new-accum))
       (if (eq? ls old-accum)
@@ -897,43 +899,25 @@
        (number->string expected-nargs))
       assembly-sexp))
 
-  (define-inline (%uncover-local-labels accum)
-    ;;Expect ACCUM to be a list of assembly sexps; visit ACCUM, entering
-    ;;PAD and SEQ entries recursively, and build a list of symbols being
-    ;;the names of the LABEL entries.  Return the list of LABEL names.
+  (define (%uncover-local-labels names accum)
+    ;;Tail recursive  function.  Expect ACCUM to  be a list of  assembly sexps; visit
+    ;;ACCUM, visiting  PAD and SEQ entries  recursively, and build a  list of symbols
+    ;;being the names of the LABEL entries.  Return the list of LABEL names.
     ;;
-    (%%uncover-local-labels '() accum))
-
-  (define (%%uncover-local-labels names accum)
-    (define-inline (%next ?names)
-      (%%uncover-local-labels ?names (cdr accum)))
+    (define-syntax-rule (recur ?names)
+      (%uncover-local-labels ?names (cdr accum)))
     (if (null? accum)
 	names
       (let ((entry (car accum)))
 	(if (pair? entry)
 	    (case (car entry)
 	      ((label)
-	       (%next (cons (label-name entry) names)))
+	       (recur (cons (label-name entry) names)))
 	      ((seq pad)
-	       (%next (%%uncover-local-labels names (cdr entry))))
+	       (recur (%uncover-local-labels names (cdr entry))))
 	      (else
-	       (%next names)))
-	  (%next names)))))
-
-  ;;The following is the original Ikarus' version.  (Marco Maggi; Oct 9,
-  ;;2012)
-  ;;
-  ;; (define (uncover-local-labels accum)
-  ;;   (define locals '())
-  ;;   (define (find x)
-  ;;     (when (pair? x)
-  ;; 	(case (car x)
-  ;; 	  ((label)
-  ;; 	   (set! locals (cons (label-name x) locals)))
-  ;; 	  ((seq pad)
-  ;; 	   (for-each find (cdr x))))))
-  ;;   (for-each find accum)
-  ;;   locals)
+	       (recur names)))
+	  (recur names)))))
 
   #| end of module |# )
 
