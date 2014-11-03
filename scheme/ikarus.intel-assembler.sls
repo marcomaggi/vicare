@@ -236,70 +236,6 @@
   #| end of module |# )
 
 
-;;;; constants
-
-(define-constant WORDSIZE-BITMASK
-  ;;On 32-bit platforms: this is an exact integer of 32 bits set to 1.
-  ;;
-  ;;On 64-bit platforms: this is an exact integer of 64 bits set to 1.
-  ;;
-  (- (expt 2 (* wordsize 8)) 1))
-
-;;; --------------------------------------------------------------------
-
-(define-constant REGISTER-MAPPING
-;;;   reg  cls  idx  REX.R
-  '((%eax   32    0  #f)
-    (%ecx   32    1  #f)
-    (%edx   32    2  #f)
-    (%ebx   32    3  #f)
-    (%esp   32    4  #f)
-    (%ebp   32    5  #f)
-    (%esi   32    6  #f)
-    (%edi   32    7  #f)
-    (%r8    32    0  #t)
-    (%r9    32    1  #t)
-    (%r10   32    2  #t)
-    (%r11   32    3  #t)
-    (%r12   32    4  #t)
-    (%r13   32    5  #t)
-    (%r14   32    6  #t)
-    (%r15   32    7  #t)
-    (%al     8    0  #f)
-    (%cl     8    1  #f)
-    (%dl     8    2  #f)
-    (%bl     8    3  #f)
-    (%ah     8    4  #f)
-    (%ch     8    5  #f)
-    (%dh     8    6  #f)
-    (%bh     8    7  #f)
-    (/0      0    0  #f)
-    (/1      0    1  #f)
-    (/2      0    2  #f)
-    (/3      0    3  #f)
-    (/4      0    4  #f)
-    (/5      0    5  #f)
-    (/6      0    6  #f)
-    (/7      0    7  #f)
-    (xmm0  xmm    0  #f)
-    (xmm1  xmm    1  #f)
-    (xmm2  xmm    2  #f)
-    (xmm3  xmm    3  #f)
-    (xmm4  xmm    4  #f)
-    (xmm5  xmm    5  #f)
-    (xmm6  xmm    6  #f)
-    (xmm7  xmm    7  #f)
-    (%r8l    8    0  #t)
-    (%r9l    8    1  #t)
-    (%r10l   8    2  #t)
-    (%r11l   8    3  #t)
-    (%r12l   8    4  #t)
-    (%r13l   8    5  #t)
-    (%r14l   8    6  #t)
-    (%r15l   8    7  #t)
-    ))
-
-
 (module (assemble-sources)
 
   (define (assemble-sources thunk?-label code-object-sexp*)
@@ -586,6 +522,60 @@
 	  (else
 	   (error 'reg-required-REX? "not a reg" x))))
 
+  (define-constant REGISTER-MAPPING
+;;;     reg  cls  idx  REX.R
+    '((%eax   32    0  #f)
+      (%ecx   32    1  #f)
+      (%edx   32    2  #f)
+      (%ebx   32    3  #f)
+      (%esp   32    4  #f)
+      (%ebp   32    5  #f)
+      (%esi   32    6  #f)
+      (%edi   32    7  #f)
+      (%r8    32    0  #t)
+      (%r9    32    1  #t)
+      (%r10   32    2  #t)
+      (%r11   32    3  #t)
+      (%r12   32    4  #t)
+      (%r13   32    5  #t)
+      (%r14   32    6  #t)
+      (%r15   32    7  #t)
+      (%al     8    0  #f)
+      (%cl     8    1  #f)
+      (%dl     8    2  #f)
+      (%bl     8    3  #f)
+      (%ah     8    4  #f)
+      (%ch     8    5  #f)
+      (%dh     8    6  #f)
+      (%bh     8    7  #f)
+      (/0      0    0  #f)
+      (/1      0    1  #f)
+      (/2      0    2  #f)
+      (/3      0    3  #f)
+      (/4      0    4  #f)
+      (/5      0    5  #f)
+      (/6      0    6  #f)
+      (/7      0    7  #f)
+      (xmm0  xmm    0  #f)
+      (xmm1  xmm    1  #f)
+      (xmm2  xmm    2  #f)
+      (xmm3  xmm    3  #f)
+      (xmm4  xmm    4  #f)
+      (xmm5  xmm    5  #f)
+      (xmm6  xmm    6  #f)
+      (xmm7  xmm    7  #f)
+      (%r8l    8    0  #t)
+      (%r9l    8    1  #t)
+      (%r10l   8    2  #t)
+      (%r11l   8    3  #t)
+      (%r12l   8    4  #t)
+      (%r13l   8    5  #t)
+      (%r14l   8    6  #t)
+      (%r15l   8    7  #t)
+      ))
+
+;;; --------------------------------------------------------------------
+
   (define-inline (word x)
     (cons 'word x))
 
@@ -615,8 +605,8 @@
 
   (define (ModRM mod reg r/m ac)
     (cons (byte (fxlogor (register-index r/m)
-			  (fxlogor (fxsll (register-index reg) 3)
-				    (fxsll mod 6))))
+			 (fxlogor (fxsll (register-index reg) 3)
+				  (fxsll mod 6))))
 	  (if (and (not (fx= mod 3)) (eq? r/m '%esp))
 	      (cons (byte #x24) ac)
 	    ac)))
@@ -749,26 +739,37 @@
 		  (byte (fxlogor (register-index r2) (fxsll (register-index r3) 3)))
 		  ac))))
 
-  (define (IMM*2 i1 i2 ac)
-    (cond ((and (immediate-int? i1)
-		(obj? i2))
-	   (let ((d i1)
-		 (v (cadr i2)))
-	     (cons (reloc-word+ v d) ac)))
-	  ((and (immediate-int? i2)
-		(obj? i1))
-	   (IMM*2 i2 i1 ac))
-	  ((and (immediate-int? i1)
-		(immediate-int? i2))
-	   (IMM (bitwise-and (+ i1 i2) WORDSIZE-BITMASK)
-		ac))
-	  (else
-	   (compiler-internal-error __module_who__  'assemble "invalid IMM*2" i1 i2))))
+  (module (IMM*2)
+
+    (define (IMM*2 i1 i2 ac)
+      (cond ((and (immediate-int? i1)
+		  (obj? i2))
+	     (let ((d i1)
+		   (v (cadr i2)))
+	       (cons (reloc-word+ v d) ac)))
+	    ((and (immediate-int? i2)
+		  (obj? i1))
+	     (IMM*2 i2 i1 ac))
+	    ((and (immediate-int? i1)
+		  (immediate-int? i2))
+	     (IMM (bitwise-and (+ i1 i2) WORDSIZE-BITMASK)
+		  ac))
+	    (else
+	     (compiler-internal-error __module_who__  'assemble "invalid IMM*2" i1 i2))))
+
+    (define-constant WORDSIZE-BITMASK
+      ;;On 32-bit platforms: this is an exact integer of 32 bits set to 1.
+      ;;
+      ;;On 64-bit platforms: this is an exact integer of 64 bits set to 1.
+      ;;
+      (- (expt 2 (* wordsize 8)) 1))
+
+    #| end of module: IMM*2 |# )
 
   (define (SIB s i b ac)
     (cons (byte (fxlogor (register-index b)
-			  (fxlogor (fxsll (register-index i) 3)
-				    (fxsll s 6))))
+			 (fxlogor (fxsll (register-index i) 3)
+				  (fxsll s 6))))
 	  ac))
 
   (define (imm32? x)
@@ -805,9 +806,9 @@
   (define who 'convert-instruction)
 
   (define (%convert-single-sexp assembly-sexp accum)
-    ;;Non-tail recursive function.  Convert ASSEMBLY-SEXP  into a sequence of fixnums
-    ;;(representing octets) and  sexps; prepend the sequence to  the accumulator list
-    ;;ACCUM; return the new accumulator list.
+    ;;Non-tail  recursive function.   Convert ASSEMBLY-SEXP  into a  list of  fixnums
+    ;;(representing  machine  code  octets)  and  sexps;  prepend  the  list  to  the
+    ;;accumulator list ACCUM; return the new accumulator list.
     ;;
     ;;The items prepended to ACCUM can be fixnums or entries like the following:
     ;;
@@ -816,7 +817,7 @@
     ;;  (current-frame-offset)
     ;;
     ;;NOTE The actual job os sexp instruction conversion is performed by the function
-    ;;store in the property list of the instruction name's symbol.
+    ;;stored in the property list of the instruction name's symbol.
     ;;
     (define key
       (car assembly-sexp))
@@ -925,78 +926,78 @@
   #| end of module |# )
 
 
-;;Notice that this  module exports nothing; this is  because its purpose
-;;is to put properties in the  property lists of the symbols (ret, cltd,
-;;movl, ...) of the assembly operations:
-;;
-;;   ret
-;;   cltd
-;;   movl src dst
-;;   mov32 src dst
-;;   movb src dst
-;;   addl src dst
-;;   subl src dst
-;;   sall src dst
-;;   shrl src dst
-;;   sarl src dst
-;;   andl src dst
-;;   orl src dst
-;;   xorl src dst
-;;   leal src dst
-;;   cmpl src dst
-;;   imull src dst
-;;   idivl dst
-;;   pushl dst
-;;   popl dst
-;;   notl dst
-;;   bswap dst
-;;   negl dst
-;;   jmp dst
-;;   call dst
-;;   movsd src dst
-;;   cvtsi2sd src dst
-;;   cvtsd2ss src dst
-;;   cvtss2sd src dst
-;;   movss src dst
-;;   addsd src dst
-;;   subsd src dst
-;;   mulsd src dst
-;;   divsd src dst
-;;   ucomisd src dst
-;;   ja dst
-;;   jae dst
-;;   jb dst
-;;   jbe dst
-;;   jg dst
-;;   jge dst
-;;   jl dst
-;;   jle dst
-;;   je dst
-;;   jna dst
-;;   jnae dst
-;;   jnb dst
-;;   jnbe dst
-;;   jng dst
-;;   jnge dst
-;;   jnl dst
-;;   jnle dst
-;;   jne dst
-;;   jo dst
-;;   jp dst
-;;   jnp dst
-;;
-;;and  additionally  to  the   symbols  (byte,  byte-vector,  int,  ...)
-;;representing the following datums:
-;;
-;;   byte x
-;;   byte-vector x
-;;   int a
-;;   label L
-;;   label-address L
-;;   current-frame-offset
-;;   nop ac
-;;
 (module ()
+  ;;Notice that this  module exports nothing; this  is because its purpose  is to put
+  ;;properties in the  property lists of the  symbols (ret, cltd, movl,  ...)  of the
+  ;;assembly operations:
+  ;;
+  ;;   ret
+  ;;   cltd
+  ;;   movl src dst
+  ;;   mov32 src dst
+  ;;   movb src dst
+  ;;   addl src dst
+  ;;   subl src dst
+  ;;   sall src dst
+  ;;   shrl src dst
+  ;;   sarl src dst
+  ;;   andl src dst
+  ;;   orl src dst
+  ;;   xorl src dst
+  ;;   leal src dst
+  ;;   cmpl src dst
+  ;;   imull src dst
+  ;;   idivl dst
+  ;;   pushl dst
+  ;;   popl dst
+  ;;   notl dst
+  ;;   bswap dst
+  ;;   negl dst
+  ;;   jmp dst
+  ;;   call dst
+  ;;   movsd src dst
+  ;;   cvtsi2sd src dst
+  ;;   cvtsd2ss src dst
+  ;;   cvtss2sd src dst
+  ;;   movss src dst
+  ;;   addsd src dst
+  ;;   subsd src dst
+  ;;   mulsd src dst
+  ;;   divsd src dst
+  ;;   ucomisd src dst
+  ;;   ja dst
+  ;;   jae dst
+  ;;   jb dst
+  ;;   jbe dst
+  ;;   jg dst
+  ;;   jge dst
+  ;;   jl dst
+  ;;   jle dst
+  ;;   je dst
+  ;;   jna dst
+  ;;   jnae dst
+  ;;   jnb dst
+  ;;   jnbe dst
+  ;;   jng dst
+  ;;   jnge dst
+  ;;   jnl dst
+  ;;   jnle dst
+  ;;   jne dst
+  ;;   jo dst
+  ;;   jp dst
+  ;;   jnp dst
+  ;;
+  ;;and additionally to  the symbols (byte, byte-vector, int,  ...)  representing the
+  ;;following datums:
+  ;;
+  ;;   byte x
+  ;;   byte-vector x
+  ;;   int a
+  ;;   label L
+  ;;   label-address L
+  ;;   current-frame-offset
+  ;;   nop ac
+  ;;
   (import stuff)
 
   (define who 'assembler)
@@ -1060,8 +1061,7 @@
 
 			 ((and (imm? a0)
 			       (imm? a1))
-			  (error 'REC+RM "not here 4")
-			  #;(error who "unhandledb" a1))
+			  (error 'REC+RM "not here 4"))
 
 			 (else
 			  (compiler-internal-error __module_who__  who "unhandled" a0 a1)))))
