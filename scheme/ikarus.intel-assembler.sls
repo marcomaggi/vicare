@@ -108,6 +108,75 @@
 	     (loop  (cdr t) (cdr T) ...)))))
     ))
 
+;;; --------------------------------------------------------------------
+
+(define-syntax-rule (fxadd2 ?op)
+  (fx+ ?op 2))
+
+(define-syntax-rule (fxadd3 ?op)
+  (fx+ ?op 3))
+
+(define-syntax-rule (fxadd4 ?op)
+  (fx+ ?op 4))
+
+(define-syntax fxincr!
+  (syntax-rules ()
+    ((_ ?op)
+     (fxincr! ?op 1))
+    ((_ ?op 0)
+     ?op)
+    ((_ ?op 1)
+     (set! ?op (fxadd1 ?op)))
+    ((_ ?op 2)
+     (set! ?op (fxadd2 ?op)))
+    ((_ ?op 3)
+     (set! ?op (fxadd3 ?op)))
+    ((_ ?op 4)
+     (set! ?op (fxadd4 ?op)))
+    ((_ ?op ?N)
+     (set! ?op (fx+ ?op ?N)))
+    ))
+
+;; ------------------------------------------------------------
+
+(define-syntax with-args
+  ;;Expect ?X to be an expression evaluating to a list of 2 values; bind these values
+  ;;to ?A0 and ?A1 then evaluate the ?BODY forms in the region of the bindings.
+  ;;
+  (syntax-rules (lambda)
+    ((_ ?x (lambda (?a0 ?a1) ?body0 . ?body))
+     (let ((t ?x))
+       (if (pair? t)
+           (let ((t (cdr t)))
+             (if (pair? t)
+                 (let ((?a0 (car t))
+		       (t   (cdr t)))
+                   (if (pair? t)
+		       (let ((?a1 (car t)))
+			 (if (null? (cdr t))
+			     (let ()
+			       ?body0 . ?body)
+			   (compiler-internal-error __module_who__  'with-args "too many args")))
+		     (compiler-internal-error __module_who__  'with-args "too few args")))
+	       (compiler-internal-error __module_who__  'with-args "too few args")))
+	 (compiler-internal-error __module_who__  'with-args "too few args"))))))
+
+(define-syntax-rule (byte ?x)
+  ;;Expect ?X to be an expression evaluating  to an exact integer; extract and return
+  ;;the 8 least significant bits from the integer.
+  ;;
+  (let ((t ?x))
+    (if (or (fixnum? t)
+	    (bignum? t))
+	(bitwise-and t 255)
+      (compiler-internal-error __module_who__ 'byte
+	"invalid" t '(byte ?x)))))
+
+(define-syntax-rule (define-entry-predicate ?who ?symbol)
+  (define (?who x)
+    (and (pair? x)
+	 (eq? (car x) '?symbol))))
+
 
 ;;;; helpers
 
@@ -136,6 +205,35 @@
 		       "unknown instruction" x)))))
     0
     octets-and-labels))
+
+;;; --------------------------------------------------------------------
+;;; symbols properties
+
+(module (assembler-property-key)
+
+  (define (assembler-property-key)
+    *cogen*)
+
+  (define-syntax (compile-time-gensym stx)
+    ;;Generate a gensym at expand time and expand to the quoted symbol.
+    ;;
+    (syntax-case stx ()
+      ((_ ?template)
+       (let* ((tmp (syntax->datum #'?template))
+	      (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
+	      (str (apply string-append tmp (map (lambda (N)
+						   (string-append "." (number->string N)))
+					      fxs)))
+	      (sym (gensym str)))
+	 (with-syntax
+	     ((SYM (datum->syntax #'here sym)))
+	   (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
+	   #'(quote SYM))))))
+
+  (define-constant *cogen*
+    (compile-time-gensym "assembler-property-key"))
+
+  #| end of module |# )
 
 
 (module (assemble-sources)
@@ -375,105 +473,6 @@
     #| end of module: %STORE-BINARY-CODE-IN-CODE-OBJECTS |# )
 
   #| end of module: ASSEMBLE-SOURCES |# )
-
-
-;;;; helpers
-
-(define-syntax-rule (fxadd2 ?op)
-  (fx+ ?op 2))
-
-(define-syntax-rule (fxadd3 ?op)
-  (fx+ ?op 3))
-
-(define-syntax-rule (fxadd4 ?op)
-  (fx+ ?op 4))
-
-(define-syntax fxincr!
-  (syntax-rules ()
-    ((_ ?op)
-     (fxincr! ?op 1))
-    ((_ ?op 0)
-     ?op)
-    ((_ ?op 1)
-     (set! ?op (fxadd1 ?op)))
-    ((_ ?op 2)
-     (set! ?op (fxadd2 ?op)))
-    ((_ ?op 3)
-     (set! ?op (fxadd3 ?op)))
-    ((_ ?op 4)
-     (set! ?op (fxadd4 ?op)))
-    ((_ ?op ?N)
-     (set! ?op (fx+ ?op ?N)))
-    ))
-
-;; ------------------------------------------------------------
-
-(define-syntax with-args
-  ;;Expect ?X to be an expression evaluating to a list of 2 values; bind
-  ;;these values  to ?A0 and  ?A1 then evaluate  the ?BODY forms  in the
-  ;;region of the bindings.
-  ;;
-  (syntax-rules (lambda)
-    ((_ ?x (lambda (?a0 ?a1) ?body0 . ?body))
-     (let ((t ?x))
-       (if (pair? t)
-           (let ((t (cdr t)))
-             (if (pair? t)
-                 (let ((?a0 (car t))
-		       (t   (cdr t)))
-                   (if (pair? t)
-		       (let ((?a1 (car t)))
-			 (if (null? (cdr t))
-			     (let ()
-			       ?body0 . ?body)
-			   (compiler-internal-error __module_who__  'with-args "too many args")))
-		     (compiler-internal-error __module_who__  'with-args "too few args")))
-	       (compiler-internal-error __module_who__  'with-args "too few args")))
-	 (compiler-internal-error __module_who__  'with-args "too few args"))))))
-
-(define-syntax byte
-  ;;Expect  ?X to  be  an  expression evaluating  to  an exact  integer;
-  ;;extract and return the 8 least significant bits from the integer.
-  ;;
-  (syntax-rules ()
-    ((_ ?x)
-     (let ((t ?x))
-       (if (or (fixnum? t)
-	       (bignum? t))
-           (bitwise-and t 255)
-	 (error 'byte "invalid" t '(byte ?x)))))))
-
-(define-syntax define-entry-predicate
-  (syntax-rules ()
-    ((_ ?who ?symbol)
-     (define (?who x)
-       (and (pair? x)
-	    (eq? (car x) '?symbol))))))
-
-
-;;;; symbols properties
-
-(define-syntax (compile-time-gensym stx)
-  ;;Generate a gensym at expand time and expand to the quoted symbol.
-  ;;
-  (syntax-case stx ()
-    ((_ ?template)
-     (let* ((tmp (syntax->datum #'?template))
-	    (fxs (vector->list (foreign-call "ikrt_current_time_fixnums_2")))
-	    (str (apply string-append tmp (map (lambda (N)
-						 (string-append "." (number->string N)))
-					    fxs)))
-	    (sym (gensym str)))
-       (with-syntax
-	   ((SYM (datum->syntax #'here sym)))
-	 (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
-	 #'(quote SYM))))))
-
-(define-constant *cogen*
-  (compile-time-gensym "assembler-property-key"))
-
-(define (assembler-property-key)
-  *cogen*)
 
 
 ;;;; constants
@@ -839,7 +838,7 @@
     ;;
     (define key
       (car assembly-sexp))
-    (cond ((getprop key *cogen*)
+    (cond ((getprop key (assembler-property-key))
 	   ;;Convert an assembly instruction specification.
 	   ;;
 	   => (lambda (prop)
@@ -1239,7 +1238,7 @@
 		   (syntax-rules ()
 		     ((add-instruction (?name ?instr ?ac ?args ...)
 			?body0 ?body ...)
-		      (putprop '?name *cogen*
+		      (putprop '?name (assembler-property-key)
 			       (cons (length '(?args ...))
 				     (lambda (?instr ?ac ?args ...)
 				       ?body0 ?body ...)))))))
