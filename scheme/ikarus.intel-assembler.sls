@@ -211,7 +211,7 @@
 (module (assembler-property-key)
 
   (define (assembler-property-key)
-    *cogen*)
+    ASSEMBLER-PROPERTY-KEY)
 
   (define-syntax (compile-time-gensym stx)
     ;;Generate a gensym at expand time and expand to the quoted symbol.
@@ -229,7 +229,7 @@
 	   (fprintf (current-error-port) "expand-time gensym ~a\n" sym)
 	   #'(quote SYM))))))
 
-  (define-constant *cogen*
+  (define-constant ASSEMBLER-PROPERTY-KEY
     (compile-time-gensym "assembler-property-key"))
 
   #| end of module |# )
@@ -1706,8 +1706,8 @@
     (identifier-syntax 'make-reloc-vector-record-filler))
 
   (define (make-reloc-vector-record-filler thunk?-label code vec)
-    ;;Return  a closure  to be  used to  add records  to the  relocation
-    ;;vector VEC associated to the code object CODE.
+    ;;Return  a closure  to be  used  to add  records  to the  relocation vector  VEC
+    ;;associated to the code object CODE.
     ;;
     (define reloc-idx 0)
     (lambda (r)
@@ -1736,6 +1736,7 @@
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) val)
 	   (fxincr! reloc-idx 2)))
+
 	((foreign-label)
 	 ;;Add a record of type "foreign address".
 	 (let ((off  (car r)) ;Offset into the data area of the code object.
@@ -1743,6 +1744,7 @@
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) name)
 	   (fxincr! reloc-idx 2)))
+
 	((reloc-word+)
 	 ;;Add a record of type "displaced object".
 	 (let ((off  (car r)) ;Offset into the data area of the code object.
@@ -1752,6 +1754,7 @@
 	   (vector-set! vec (fxadd1 reloc-idx) disp)
 	   (vector-set! vec (fxadd2 reloc-idx) obj)
 	   (fxincr! reloc-idx 3)))
+
 	((label-addr)
 	 ;;Add a record of type "displaced object".
 	 (let* ((off  (car r))	;Offset into the data area of the code object.
@@ -1762,6 +1765,7 @@
 	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
 	   (vector-set! vec (fxadd2 reloc-idx) obj))
 	 (fxincr! reloc-idx 3))
+
 	((local-relative)
 	 ;;This entry requires the address of a label in the binary code
 	 ;;of this very  code object.  There is no need  to add a record
@@ -1795,6 +1799,7 @@
 	     ($code-set! code (fxadd1 off) (fxlogand (fxsra rel 8)  #xFF))
 	     ($code-set! code (fxadd2 off) (fxlogand (fxsra rel 16) #xFF))
 	     ($code-set! code (fxadd3 off) (fxlogand (fxsra rel 24) #xFF)))))
+
 	((relative)
 	 ;;Add a record of type "jump label".
 	 (let* ((off  (car r))	;Offset into the data area of the code object.
@@ -1807,9 +1812,9 @@
 	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
 	   (vector-set! vec (fxadd2 reloc-idx) obj))
 	 (fxincr! reloc-idx 3))
+
 	(else
-	 (%error "invalid entry key while filling relocation vector" key)))
-      ))
+	 (%error "invalid entry key while filling relocation vector" key)))))
 
   (define %foreign-string->bytevector
     ;;Convert  the  string  X  to  a  UTF-8  bytevector.   To  speed  up
