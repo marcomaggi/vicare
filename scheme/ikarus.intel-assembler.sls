@@ -797,6 +797,9 @@
   (module (label-name)
     (import stuff))
 
+  (define-syntax __who__
+    (identifier-syntax 'convert-instruction))
+
   ;;List  of symbols  representing  local labels.
   (define local-labels
     (make-parameter '()))
@@ -812,8 +815,6 @@
   (define (convert-instructions ls)
     (parametrise ((local-labels (%uncover-local-labels '() ls)))
       (fold-right %convert-single-sexp '() ls)))
-
-  (define who 'convert-instruction)
 
   (define (%convert-single-sexp assembly-sexp accum)
     ;;Non-tail  recursive function.   Convert ASSEMBLY-SEXP  into a  list of  fixnums
@@ -883,7 +884,7 @@
 		     new-accum.tail)))
 
 	  (else
-	   (compiler-internal-error __module_who__ who
+	   (compiler-internal-error __module_who__ __who__
 	     "unknown instruction" assembly-sexp))))
 
   (define (%extract-prefix old-accum new-accum)
@@ -908,7 +909,7 @@
   (define-entry-predicate bottom-code? bottom-code)
 
   (define (%error-incorrect-args assembly-sexp expected-nargs)
-    (compiler-internal-error __module_who__ who
+    (compiler-internal-error __module_who__ __who__
       (string-append "wrong number of arguments in Assembly symbolic expression, expected "
 		     (number->string expected-nargs))
       assembly-sexp))
