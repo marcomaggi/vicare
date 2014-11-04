@@ -281,18 +281,6 @@
 (define-constant off-code-unused		(fx- disp-code-unused vector-tag))
 (define-constant off-code-data			(fx- disp-code-data vector-tag))
 
-;;Notify the assembler about the offset of the binary code area from the beginning of
-;;a code object's memory block.
-;;
-;;   |-----------|-----------------------------------|
-;;     meta data           binary data area
-;;
-;;   |...........|
-;;      offset
-;;
-(module ()
-  (code-entry-adjustment off-code-data))
-
 
 ;;;; closure objects
 

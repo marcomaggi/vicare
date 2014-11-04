@@ -19,7 +19,6 @@
 (library (ikarus.intel-assembler)
   (export
     assemble-sources
-    code-entry-adjustment
     assembler-property-key)
   (import (except (vicare)
 		  fixnum-width
@@ -1699,7 +1698,9 @@
   #| end of module |# )
 
 
-(module (make-reloc-vector-record-filler code-entry-adjustment)
+(module (make-reloc-vector-record-filler)
+  (module (off-code-data)
+    (include "ikarus.compiler.scheme-objects-layout.scm" #t))
 
   (define-syntax __who__
     (identifier-syntax 'make-reloc-vector-record-filler))
@@ -1758,7 +1759,7 @@
 		(obj  (car  loc))
 		(disp (cadr loc)))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
-	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp (code-entry-adjustment)))
+	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
 	   (vector-set! vec (fxadd2 reloc-idx) obj))
 	 (fxincr! reloc-idx 3))
 	((local-relative)
@@ -1803,21 +1804,12 @@
 	   (unless (and (code? obj) (fixnum? disp))
 	     (%error "invalid relative jump obj/disp" obj disp))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_TAG off)
-	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp (code-entry-adjustment)))
+	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
 	   (vector-set! vec (fxadd2 reloc-idx) obj))
 	 (fxincr! reloc-idx 3))
 	(else
 	 (%error "invalid entry key while filling relocation vector" key)))
       ))
-
-  (define code-entry-adjustment
-    (let ((v #f))
-      (case-lambda
-       (()
-	(or v (compiler-internal-error __module_who__ 'code-entry-adjustment
-		"uninitialized")))
-       ((x)
-	(set! v x)))))
 
   (define %foreign-string->bytevector
     ;;Convert  the  string  X  to  a  UTF-8  bytevector.   To  speed  up

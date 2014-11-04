@@ -121,7 +121,8 @@
     (only (ikarus.fasl.write)
 	  fasl-write)
     (ikarus.compiler.condition-types)
-    (ikarus.intel-assembler)
+    (only (ikarus.intel-assembler)
+	  assemble-sources)
     (prefix (only (ikarus.options)
 		  strict-r6rs
 		  descriptive-labels
