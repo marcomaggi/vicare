@@ -1831,9 +1831,13 @@
     (compiler-internal-error __module_who__ __who__ ?message . ?irritants))
 
   (define-syntax %store-first-word!
+    ;;
+    ;;Here   we   left-shift  the   offset   so   that   we  can   Inclusive-OR   the
+    ;;IK_RELOC_RECORD_*_TAG, which is 2 bits wide.
+    ;;
     (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)
       ((_ ?vec ?reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG ?binary-code.offset)
-       (vector-set! ?vec ?reloc-idx                (fxsll ?binary-code.offset 2)))
+       (vector-set! ?vec ?reloc-idx               (fxsll ?binary-code.offset 2)))
       ((_ ?vec ?reloc-idx ?tag ?binary-code.offset)
        (vector-set! ?vec ?reloc-idx (fxlogor ?tag (fxsll ?binary-code.offset 2))))
       ))
@@ -1848,10 +1852,13 @@
   ;; (define-inline (unset-label-loc! x)
   ;;   (remprop x '*label-loc*))
 
-  (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	0)
-  (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	1)
-  (define-inline-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	2)
-  (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	3)
+  ;;The following constants  must be kept in sync with  the equivalent definitions in
+  ;;the C language headers.
+  (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	#b00)
+  (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	#b01)
+  (define-inline-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	#b10)
+  (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	#b11)
+  #;(define-inline-constant IK_RELOC_RECORD_MASK_TAG		#b11)
 
   #| end of module |# )
 
