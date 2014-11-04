@@ -1747,10 +1747,11 @@
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) val)
 	   (fxincr! reloc-idx 2)))
+
 	((foreign-label)
 	 ;;Add a record of type "foreign address".
 	 (let ((off  (car r)) ;Offset into the data area of the code object.
-	       (name (%foreign-string->bytevector val)))
+	       (name (string->utf8 val)))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) name)
 	   (fxincr! reloc-idx 2)))
@@ -1825,18 +1826,6 @@
 
 	(else
 	 (%error "invalid entry key while filling relocation vector" key)))))
-
-  (define %foreign-string->bytevector
-    ;;Convert  the  string  X  to  a  UTF-8  bytevector.   To  speed  up
-    ;;operations: keep a cache of conversions in MEMOIZED as association
-    ;;list.
-    ;;
-    (let ((memoized (make-hashtable string-hash string=?)))
-      (lambda* ({str string?})
-	(or (hashtable-ref memoized str #f)
-	    (receive-and-return (bv)
-		(string->utf8 str)
-	      (hashtable-set! memoized str bv))))))
 
   (define-syntax-rule (%error ?message . ?irritants)
     (compiler-internal-error __module_who__ __who__ ?message . ?irritants))
