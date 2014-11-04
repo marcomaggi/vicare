@@ -489,7 +489,7 @@
    imm8?		label?
    label-address?	label-name
    immediate-int?
-   obj?			obj+?
+   obj?			#;obj+?
    CODErri		CODErr
    RegReg		IMM*2
    SIB			imm32?)
@@ -665,20 +665,27 @@
 		       (word v)
 		     (reloc-word v))
 		   ac)))
-	  ((obj+? n)
-	   (let ((v (cadr  n))
-		 (d (caddr n)))
-	     (cons (reloc-word+ v d) ac)))
+
+	  ;;Commented out because unused.  (Marco Maggi; Tue Nov 4, 2014)
+	  ;;
+	  ;; ((obj+? n)
+	  ;;  (let ((v (cadr  n))
+	  ;; 	 (d (caddr n)))
+	  ;;    (cons (reloc-word+ v d) ac)))
+
 	  ((label-address? n)
 	   (cons `(label-addr	. ,(label-name n))
 		 ac))
+
 	  ((foreign? n)
 	   (cons `(foreign-label	. ,(label-name n))
 		 ac))
+
 	  ((label? n)
 	   (let ((LN (label-name n)))
 	     `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
 	       . ,ac)))
+
 	  (else
 	   (compiler-internal-error __module_who__  'IMM "invalid" n))))
 
@@ -691,7 +698,7 @@
   (define (imm? x)
     (or (immediate-int?	x)
 	(obj?		x)
-	(obj+?		x)
+	;;(obj+?	x)
 	(label-address?	x)
 	(foreign?	x)
 	(label?		x)))
@@ -712,7 +719,10 @@
 	(bignum? x)))
 
   (define-entry-predicate obj?	obj)
-  (define-entry-predicate obj+?	obj+)
+
+  ;;Commented out because unused.  (Marco Maggi; Tue Nov 4, 2014)
+  ;;
+  ;;(define-entry-predicate obj+? obj+)
 
   (define (CODErri c d s i ac)
     ;;Generate code for register+register+immediate operations?
@@ -1736,7 +1746,6 @@
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) val)
 	   (fxincr! reloc-idx 2)))
-
 	((foreign-label)
 	 ;;Add a record of type "foreign address".
 	 (let ((off  (car r)) ;Offset into the data area of the code object.
