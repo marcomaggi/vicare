@@ -446,18 +446,22 @@
 		      ;;Store a byte of binary code in the data area.
 		      ($code-set! x idx (cdr a))
 		      (loop (cdr ls) (fxadd1 idx) reloc bot*))
+
 		     ((relative local-relative)
 		      ;;Add an entry to the relocation list; leave 4 bytes of room in
 		      ;;the data area.
 		      (loop (cdr ls) (fx+ idx 4) (cons (cons idx a) reloc) bot*))
+
 		     ((reloc-word reloc-word+ label-addr foreign-label)
 		      ;;Add an entry to the relocation  list; leave a word of room in
 		      ;;the data area.
 		      (loop (cdr ls) (fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
+
 		     ((word)
 		      ;;Store a machine word in the data area.
 		      (%set-code-word-as-fixnum! x idx (cdr a))
 		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
+
 		     ((code-object-self-machine-word-index)
 		      ;;Store a machine word in the data area of the code object; the
 		      ;;machine  word  represents  the index  (zero-based  number  of
@@ -470,17 +474,19 @@
 		      ;;
 		      (%set-code-word-as-fixnum! x idx idx)
 		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
+
 		     ((label)
 		      ;;Store  informations about  the current  location in  the code
 		      ;;object in the symbol (cdr a).
 		      (%set-label-loc! (cdr a) (list x idx))
 		      (loop (cdr ls) idx reloc bot*))
+
 		     ((bottom-code)
 		      ;;Push this entry in BOT* to be processed at the end.
 		      (loop (cdr ls) idx reloc (cons (cdr a) bot*)))
+
 		     (else
-		      (%compiler-internal-error
-			"unknown instr" a))))))))
+		      (%compiler-internal-error "unknown instr" a))))))))
       (loop ls 0 '() '()))
 
     (define* (%set-code-word-as-fixnum! code idx {x fixnum?})
@@ -791,17 +797,7 @@
     (cond ((immediate-int? n)
 	   (boot.case-word-size
 	    ((32)
-	     ;;Prepend  to  the  accumulator  AC an  immediate  integer  value  least
-	     ;;significant bytes first.
-	     ;;
-	     ;;  (IMM #xDDCCBBAA ac)
-	     ;;  => `(#xAA #xBB #xCC #xDD . ,ac)
-	     ;;
-	     (cons* (byte n)
-		    (byte (sra n 8))
-		    (byte (sra n 16))
-		    (byte (sra n 24))
-		    ac))
+	     (%IMM/imm32 n ac))
 	    ((64)
 	     ;;Prepend  to  the  accumulator  AC an  immediate  integer  value  least
 	     ;;significant bytes first.
@@ -819,6 +815,18 @@
 		    (byte (sra n 56))
 		    ac))))
 	  ((obj? n)
+	   ;;The argument is a Scheme object to be handled as immediate value.
+	   ;;
+	   ;;If it is an immediate  Scheme object: the Scheme object's representation
+	   ;;fits into a single machine word, so  we generate a WORD entry; later the
+	   ;;WORD entry  will cause the machine  word representation to be  stored in
+	   ;;the code object as fixnum.
+	   ;;
+	   ;;If it  is a compound  Scheme object: the Scheme  object's representation
+	   ;;must be allocated on the heap,  so we generate a RELOC-WORD entry; laber
+	   ;;the RELOC-WORD entry will cause the  Scheme object to be included in the
+	   ;;relocation vector.
+	   ;;
 	   (let ((v (cadr n)))
 	     (cons (if (immediate? v)
 		       (word v)
@@ -833,17 +841,15 @@
 	  ;;    (cons (reloc-word+ v d) ac)))
 
 	  ((label-address? n)
-	   (cons `(label-addr	. ,(label-name n))
+	   (cons `(label-addr . ,(label-name n))
 		 ac))
 
 	  ((foreign-label? n)
-	   (cons `(foreign-label	. ,(label-name n))
+	   (cons `(foreign-label . ,(label-name n))
 		 ac))
 
 	  ((label? n)
-	   (let ((LN (label-name n)))
-	     `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
-	       . ,ac)))
+	   (%IMM/label n ac))
 
 	  (else
 	   (%compiler-internal-error "invalid" n))))
@@ -860,41 +866,54 @@
       (IMM n ac))
      ((64)
       (cond ((imm32? n)
-	     ;;Prepend  to  the  accumulator  AC  a  32-bit  immediate  value,  least
-	     ;;significant byte first.
-	     ;;
-	     ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
-	     ;;
-	     ;;SRA = shift right arithmetic.
-	     (cons* (byte n)
-		    (byte (sra n 8))
-		    (byte (sra n 16))
-		    (byte (sra n 24))
-		    ac))
+	     (%IMM/imm32 n ac))
 	    ((label? n)
-	     (let ((LN (label-name n)))
-	       `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
-		 . ,ac)))
+	     (%IMM/label n ac))
 	    (else
 	     (%compiler-internal-error "invalid" n))))))
 
+  (define (%IMM/label ival ac)
+    (let* ((LN  (label-name ival))
+	   (key (if (local-label? LN)
+		    'local-relative
+		  'relative)))
+      (cons (cons key LN) ac)))
+
+  (define (%IMM/imm32 n ac)
+    ;;Prepend  to the  accumulator AC  an immediate  integer value  least significant
+    ;;bytes first.
+    ;;
+    ;;  (IMM #xDDCCBBAA ac)
+    ;;  => `(#xAA #xBB #xCC #xDD . ,ac)
+    ;;
+    ;;SRA = shift right arithmetic.
+    ;;
+    (cons* (byte n)
+	   (byte (sra n 8))
+	   (byte (sra n 16))
+	   (byte (sra n 24))
+	   ac))
+
   (module (IMM*2)
 
-    (define* (IMM*2 i1 i2 ac)
-      (cond ((and (immediate-int? i1)
-		  (obj? i2))
-	     (let ((d i1)
-		   (v (cadr i2)))
+    (define* (IMM*2 ival1 ival2 ac)
+      (cond ((and (immediate-int? ival1)
+		  (obj?           ival2))
+	     (let ((d ival1)
+		   (v (cadr ival2)))
 	       (cons (reloc-word+ v d) ac)))
-	    ((and (immediate-int? i2)
-		  (obj? i1))
-	     (IMM*2 i2 i1 ac))
-	    ((and (immediate-int? i1)
-		  (immediate-int? i2))
-	     (IMM (bitwise-and (+ i1 i2) WORDSIZE-BITMASK)
+
+	    ((and (immediate-int? ival2)
+		  (obj?           ival1))
+	     (IMM*2 ival2 ival1 ac))
+
+	    ((and (immediate-int? ival1)
+		  (immediate-int? ival2))
+	     (IMM (bitwise-and (+ ival1 ival2) WORDSIZE-BITMASK)
 		  ac))
+
 	    (else
-	     (%compiler-internal-error "invalid IMM*2" i1 i2))))
+	     (%compiler-internal-error "invalid" ival1 ival2))))
 
     (define-constant WORDSIZE-BITMASK
       ;;On 32-bit platforms: this is an exact integer of 32 bits set to 1.
