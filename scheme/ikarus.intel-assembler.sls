@@ -583,17 +583,370 @@
   #| end of module: ASSEMBLE-SOURCES |# )
 
 
+(module (convert-instructions local-label?)
+
+  (define-fluid-override __who__
+    (identifier-syntax 'convert-instructions))
+
+;;; --------------------------------------------------------------------
+
+  ;;List  of symbols  representing  local labels.
+  (define local-labels
+    (make-parameter '()))
+
+  (define (local-label? x)
+    ;;Return true if X is a local label previously registered.
+    ;;
+    ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
+    ;;number of local labels usually small?  (Marco Maggi; Oct 9, 2012)
+    ;;
+    (and (memq x (local-labels)) #t))
+
+;;; --------------------------------------------------------------------
+
+  (define (convert-instructions assembly-sexp*)
+    (parametrise ((local-labels (%uncover-local-labels '() assembly-sexp*)))
+      (fold-right %convert-single-sexp '() assembly-sexp*)))
+
+  (define (%convert-single-sexp assembly-sexp accum)
+    ;;Non-tail  recursive function.   Convert ASSEMBLY-SEXP  into a  list of  fixnums
+    ;;(representing  machine  code  octets)  and  sexps;  prepend  the  list  to  the
+    ;;accumulator  list   ACCUM;  return  the   new  accumulator  list.    We  expect
+    ;;ASSEMBLY-SEXP to have one of the formats:
+    ;;
+    ;;   (?assembly-instruction-mnemonic ?operand ...)
+    ;;   (seq ?assembly-sexp0 ?assembly-sexp ...)
+    ;;   (pad ?bytes-count ?assembly-sexp0 ?assembly-sexp ...)
+    ;;
+    ;;The items prepended to ACCUM can be fixnums or entries like the following:
+    ;;
+    ;;   (label . ?symbol)
+    ;;   (label-address . ?symbol)
+    ;;   (code-object-self-machine-word-index)
+    ;;
+    ;;NOTE The actual job of sexp instruction conversion is performed by the function
+    ;;stored in the property list of the instruction name's symbol.
+    ;;
+    (define key
+      (car assembly-sexp))
+    (cond ((getprop key (assembler-property-key))
+	   ;;Convert an assembly instruction specification.
+	   ;;
+	   => (lambda (prop)
+		;;We expect PROP to have the format:
+		;;
+		;;   (?num-of-rand* . ?conversion-function)
+		;;
+		(let ((num-of-rand*         (car prop))
+		      (conversion-function  (cdr prop))
+		      (rand*                (cdr assembly-sexp)))
+		  (define-syntax-rule (%with-checked-args ?num-of-rand* ?body-form)
+		    (if (fx=? (length rand*) ?num-of-rand*)
+			?body-form
+		      (%error-incorrect-args assembly-sexp num-of-rand*)))
+		  (case num-of-rand*
+		    ((2)
+		     (%with-checked-args 2
+		       (conversion-function assembly-sexp accum (car rand*) (cadr rand*))))
+		    ((1)
+		     (%with-checked-args 1
+		       (conversion-function assembly-sexp accum (car rand*))))
+		    ((0)
+		     (%with-checked-args 0
+		       (conversion-function assembly-sexp accum)))
+		    (else
+		     (%with-checked-args num-of-rand*
+		       (apply conversion-function assembly-sexp accum rand*)))))))
+
+	  ((eq? key 'seq)
+	   ;;Process a SEQ sexp.  A SEQ sexp has the format:
+	   ;;
+	   ;;   (seq . ?asm-sexps)
+	   ;;
+	   ;;where ?ASM-SEXPS is a list of assembly symbolic expressions.
+	   ;;
+	   (fold-right %convert-single-sexp accum (cdr assembly-sexp)))
+
+	  ((eq? key 'pad)
+	   ;;Process  a  PAD sexp.   Convert  the  assembly  code  and return  a  new
+	   ;;accumulator list padded with a prefix of zeros.
+	   ;;
+	   ;;Here is an example PAD sexp, part of a non-tail function call:
+	   ;;
+	   ;;   (pad 10
+	   ;;        (label call_label)
+	   ;;        (call (disp -3 %edi)))
+	   ;;
+	   (let* ((pad-count      (cadr assembly-sexp))
+		  (asm-sexps      (cddr assembly-sexp))
+		  (new-accum.tail (fold-right %convert-single-sexp accum asm-sexps))
+		  (prefix.len     (%compute-code-size (%extract-prefix accum new-accum.tail))))
+	     (append (make-list (- pad-count prefix.len) 0)
+		     new-accum.tail)))
+
+	  (else
+	   (%compiler-internal-error
+	     "unknown instruction" assembly-sexp))))
+
+  (define (%extract-prefix old-accum new-accum)
+    ;;Non-tail recursive function.  Expect NEW-ACCUM to be a list having OLD-ACCUM as
+    ;;tail:
+    ;;
+    ;;   new-accum = (item0 item ... . old-accum)
+    ;;
+    ;;visit the  prefix of NEW-ACCUM  building a new list  holding the new  ITEMs and
+    ;;filtering out the ITEMs being BOTTOM-CODE entries; return the resulting list.
+    ;;
+    (if (eq? old-accum new-accum)
+	'()
+      (let ((asm-sexp (car new-accum)))
+	(define-syntax-rule (recur)
+	  (%extract-prefix old-accum (cdr new-accum)))
+	(if (bottom-code? asm-sexp)
+	    ;;Skip BOTTOM-CODE sexp.
+	    (recur)
+	  (cons asm-sexp (recur))))))
+
+  (define-entry-predicate bottom-code? bottom-code)
+
+  (define (%error-incorrect-args assembly-sexp expected-num-of-rand*)
+    (%compiler-internal-error
+      (string-append "wrong number of operands in Assembly symbolic expression, expected "
+		     (number->string expected-num-of-rand*))
+      assembly-sexp))
+
+;;; --------------------------------------------------------------------
+
+  (define (%uncover-local-labels names accum)
+    ;;Tail recursive function.  Expect ACCUM to be a list of Assembly sexps; NAMES is
+    ;;initially NULL.  Iterate over ACCUM,  visiting PAD and SEQ entries recursively,
+    ;;and  accumulate in  NAMES  a list  of  symbols being  the  gensyms in  symbolic
+    ;;expressions:
+    ;;
+    ;;   (label ?gensym)
+    ;;
+    ;;representing "local" labels.  Return the resulting NAMES list.
+    ;;
+    (define-syntax-rule (recur ?names)
+      (%uncover-local-labels ?names (cdr accum)))
+    (if (pair? accum)
+	(let ((entry (car accum)))
+	  (if (pair? entry)
+	      (case (car entry)
+		((label)
+		 ;;The ENTRY has the format:
+		 ;;
+		 ;;   (label ?gensym)
+		 ;;
+		 (recur (cons (cadr entry) names)))
+		((seq)
+		 ;;The ENTRY has the format:
+		 ;;
+		 ;;   (seq ?assembly-sexp0 ?assembly-sexp ...)
+		 ;;
+		 (recur (%uncover-local-labels names (cdr entry))))
+		((pad)
+		 ;;The ENTRY has the format:
+		 ;;
+		 ;;   (pad ?bytes-count ?assembly-sexp0 ?assembly-sexp ...)
+		 ;;
+		 (recur (%uncover-local-labels names (cddr entry))))
+		(else
+		 (recur names)))
+	    (recur names)))
+      names))
+
+  #| end of module |# )
+
+
+(module (make-reloc-vector-record-filler)
+  (module (off-code-data)
+    (include "ikarus.compiler.scheme-objects-layout.scm" #t))
+
+  (define-syntax __who__
+    (identifier-syntax 'make-reloc-vector-record-filler))
+
+  (define (make-reloc-vector-record-filler thunk?-label code vec)
+    ;;Return  a closure  to be  used  to add  records  to the  relocation vector  VEC
+    ;;associated to the code object CODE.
+    ;;
+    (define reloc-idx 0)
+    (lambda (r)
+      (define val
+	(let ((v (cddr r)))
+	  (cond ((thunk?-label v)
+		 => (lambda (label)
+		      (let ((p (%label-loc label)))
+			(cond ((fx= (length p) 2)
+			       (let ((code (car  p))
+				     (idx  (cadr p)))
+				 (unless (fxzero? idx)
+				   (%error "cannot create a thunk pointing" idx))
+				 (let ((thunk (code->thunk code)))
+				   (set-cdr! (cdr p) (list thunk))
+				   thunk)))
+			      (else
+			       (caddr p))))))
+		(else v))))
+      (define-syntax key
+	(identifier-syntax (cadr r)))
+      (case key
+	((reloc-word)
+	 ;;Add  a record  of type  "vanilla object".   The value  is a  non-immediate
+	 ;;Scheme object.
+	 (let ((off (car r))) ;Offset into the data area of the code object.
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG off)
+	   (vector-set! vec (fxadd1 reloc-idx) val)
+	   (fxincr! reloc-idx 2)))
+
+	((foreign-label)
+	 ;;Add a  record of  type "foreign  address".  The value  is a  Scheme string
+	 ;;representing the  name of a C  language function to be  called from Scheme
+	 ;;code.
+	 (let ((off  (car r)) ;Offset into the data area of the code object.
+	       (name (string->utf8 val)))
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG off)
+	   (vector-set! vec (fxadd1 reloc-idx) name)
+	   (fxincr! reloc-idx 2)))
+
+	((reloc-word+)
+	 ;;Add a record of type "displaced object".
+	 (let ((off  (car r)) ;Offset into the data area of the code object.
+	       (obj  (car val))
+	       (disp (cdr val)))
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
+	   (vector-set! vec (fxadd1 reloc-idx) disp)
+	   (vector-set! vec (fxadd2 reloc-idx) obj)
+	   (fxincr! reloc-idx 3)))
+
+	((label-address)
+	 ;;Add  a  record  of  type  "displaced  object".   The  value  is  a  gensym
+	 ;;representing an  Assembly label entry  point.  The referenced code  is one
+	 ;;among: the entry  point of a common Assembly routine  (the return value of
+	 ;;the functions  SL-*-LABEL); the entry  point of a "known"  Scheme function
+	 ;;that was  represented by a  CODE-LOC struct; an  entry point in  this very
+	 ;;code object.
+	 ;;
+	 ;;Being an entry  point: it the address  of a code object, to  which we must
+	 ;;add an offset.   We retrieve informations about the  label's location from
+	 ;;the label gensym's property list as:
+	 ;;
+	 ;;   (?code-object-reference ?offset-as-number-of-words)
+	 ;;
+	 ;;such values are stored in the relocation vector.
+	 (let* ((off  (car r)) ;offset into the data area of the code object
+		(loc  (%label-loc val))
+		;;Reference to code object.
+		(obj  (car  loc))
+		;;Offset from the beginning of the code object's data area.
+		(disp (cadr loc)))
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
+	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
+	   (vector-set! vec (fxadd2 reloc-idx) obj))
+	 (fxincr! reloc-idx 3))
+
+	((local-relative)
+	 ;;This entry requires the address of a label in the binary code
+	 ;;of this very  code object.  There is no need  to add a record
+	 ;;to the relocation vector, we  just store in the code object's
+	 ;;data area  the relative offset  of the label with  respect to
+	 ;;the current position in data area itself.
+	 ;;
+	 ;;  meta data     L  data area
+	 ;; |---------|----+-------------|---|---|--------| code object
+	 ;;                ^               ^ |
+	 ;;                |               | |
+	 ;;                |         ------  |
+	 ;;                |        |        |
+	 ;;                |.................| relative offset of L
+	 ;;
+	 ;;           |....| disp        |...| 4
+	 ;;           |..................| off
+	 ;;
+	 ;;Notice that local  labels are specified with  a 32-bit offset
+	 ;;on all the platforms.
+	 ;;
+	 (let* ((off  (car r))	;Offset into the data area of the code object.
+		(loc  (%label-loc val))
+		(obj  (car  loc))
+		(disp (cadr loc)))
+	   (unless (eq? obj code)
+	     (%error "source code object and target code object of \
+                      a local relative jump are not the same"))
+	   (let ((rel (fx- disp (fxadd4 off))))
+	     ($code-set! code          off  (fxlogand         rel     #xFF))
+	     ($code-set! code (fxadd1 off) (fxlogand (fxsra rel 8)  #xFF))
+	     ($code-set! code (fxadd2 off) (fxlogand (fxsra rel 16) #xFF))
+	     ($code-set! code (fxadd3 off) (fxlogand (fxsra rel 24) #xFF)))))
+
+	((relative)
+	 ;;Add a record of type "jump label".
+	 (let* ((off  (car r))	;Offset into the data area of the code object.
+		(loc  (%label-loc val))
+		(obj  (car  loc))
+		(disp (cadr loc)))
+	   (unless (and (code? obj) (fixnum? disp))
+	     (%error "invalid relative jump obj/disp" obj disp))
+	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_TAG off)
+	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
+	   (vector-set! vec (fxadd2 reloc-idx) obj))
+	 (fxincr! reloc-idx 3))
+
+	(else
+	 (%error "invalid entry key while filling relocation vector" key)))))
+
+  (define-syntax-rule (%error ?message . ?irritants)
+    (%compiler-internal-error ?message . ?irritants))
+
+  (define-syntax %store-first-word!
+    ;;
+    ;;Here   we   left-shift  the   offset   so   that   we  can   Inclusive-OR   the
+    ;;IK_RELOC_RECORD_*_TAG, which is 2 bits wide.
+    ;;
+    (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)
+      ((_ ?vec ?reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG ?binary-code.offset)
+       (vector-set! ?vec ?reloc-idx               (fxsll ?binary-code.offset 2)))
+      ((_ ?vec ?reloc-idx ?tag ?binary-code.offset)
+       (vector-set! ?vec ?reloc-idx (fxlogor ?tag (fxsll ?binary-code.offset 2))))
+      ))
+
+  (define (%label-loc x)
+    (or (getprop x '*label-loc*)
+	(%compiler-internal-error
+	  "undefined label" x)))
+
+  ;;Commented out because unused.  (Marco Maggi; Oct 9, 2012)
+  ;;
+  ;; (define-inline (unset-label-loc! x)
+  ;;   (remprop x '*label-loc*))
+
+  ;;The following constants  must be kept in sync with  the equivalent definitions in
+  ;;the C language headers.
+  (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	#b00)
+  (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	#b01)
+  (define-inline-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	#b10)
+  (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	#b11)
+  #;(define-inline-constant IK_RELOC_RECORD_MASK_TAG		#b11)
+
+  #| end of module |# )
+
+
 (module ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS
   ( ;;
    byte?		disp?		small-disp?
 
-   ;; enqueuing bytes in the accumulator
+;;; enqueuing bytes in the accumulator
    CODE			CODE+r		ModRM
 
    ;; register operands
    register-index
    reg?			reg32?		reg8?		xmmreg?
    reg-requires-REX?	RegReg
+   REX.R		REX+r		REX+RM
+   C
+   CR			CR*		CR*-no-rex
+   CCR			CCR*		CCCR*		CCI32
+   RM			jmp-pc-relative
 
    ;; immediate operands
    IMM			IMM32		IMM8		IMM*2
@@ -662,6 +1015,216 @@
 	   (cons* (byte (fxlogor 4                     (fxsll (register-index reg1) 3)))
 		  (byte (fxlogor (register-index reg2) (fxsll (register-index reg3) 3)))
 		  ac))))
+
+;;; --------------------------------------------------------------------
+
+  (define* (REX.R bits ac)
+    (boot.case-word-size
+     ((32)
+      (%compiler-internal-error
+       "invalid in 32-bit mode"))
+     ((64)
+      (cons (fxlogor #b01001000 bits) ac))))
+
+  (define (REX+r r ac)
+    (boot.case-word-size
+     ((32)
+      ac)
+     ((64)
+      (cond ((reg-requires-REX? r)
+	     (REX.R #b001 ac))
+	    (else
+	     (REX.R #b000 ac))))))
+
+  (define* (REX+RM r rm ac)
+    (define (C n ac)
+      ac)
+    ;;(printf "CASE ~s\n" n)
+    ;;(let f ((ac ac) (i 30))
+    ;;  (unless (or (null? ac) (= i 0))
+    ;;    (if (number? (car ac))
+    ;;        (printf " #x~x" (car ac))
+    ;;        (printf " ~s" (car ac)))
+    ;;    (f (cdr ac) (- i 1))))
+    ;;(newline)
+    ;;ac)
+    (boot.case-word-size
+     ((32)
+      ac)
+     ((64)
+      (cond ((disp? rm)
+	     (if (reg-requires-REX? r)
+		 (with-args rm
+		   (lambda (a0 a1)
+		     (cond ((and (imm?   a0)
+				 (reg32? a1))
+			    (if (reg-requires-REX? a1)
+				(REX.R #b101 ac)
+			      (REX.R #b100 ac)))
+
+			   ((and (imm?   a1)
+				 (reg32? a0))
+			    (if (reg-requires-REX? a0)
+				(REX.R #b101 ac)
+			      (REX.R #b100 ac)))
+
+			   ((and (reg32? a0)
+				 (reg32? a1))
+			    (cond ((reg-requires-REX? a0)
+				   (if (reg-requires-REX? a1)
+				       (REX.R #b111 ac)
+				     (REX.R #b110 ac)))
+				  ((reg-requires-REX? a1)
+				   (REX.R #b101 ac))
+				  (else
+				   (REX.R #b100 ac))))
+
+			   ((and (imm? a0)
+				 (imm? a1))
+			    (%compiler-internal-error
+			     "not here 4"))
+
+			   (else
+			    (%compiler-internal-error
+			     "unhandled" a0 a1)))))
+	       (with-args rm
+		 (lambda (a0 a1)
+		   (cond ((and (imm?   a0)
+			       (reg32? a1))
+			  (if (reg-requires-REX? a1)
+			      (REX.R #b001 ac)
+			    (REX.R 0 ac)))
+
+			 ((and (imm?   a1)
+			       (reg32? a0))
+			  (if (reg-requires-REX? a0)
+			      (REX.R #b001 ac)
+			    (REX.R 0 ac)))
+
+			 ((and (reg32? a0)
+			       (reg32? a1))
+			  (cond ((reg-requires-REX? a0)
+				 (if (reg-requires-REX? a1)
+				     (%compiler-internal-error
+				      "unhandled x1" a0 a1)
+				   (REX.R #b010 ac)))
+				((reg-requires-REX? a1)
+				 (%compiler-internal-error
+				  "unhandled x3" a0 a1))
+				(else
+				 (REX.R 0 ac))))
+
+			 ((and (imm? a0)
+			       (imm? a1))
+			  (REX.R 0 ac))
+
+			 (else
+			  (%compiler-internal-error "unhandled" a0 a1)))))))
+	    ((reg? rm)
+	     (let* ((bits 0)
+		    (bits (if (reg-requires-REX? r)
+			      (fxlogor bits #b100)
+			    bits))
+		    (bits (if (reg-requires-REX? rm)
+			      (fxlogor bits #b001)
+			    bits)))
+	       (REX.R bits ac)))
+	    (else
+	     (%compiler-internal-error
+	      "unhandled" rm))))))
+
+  (define (C c ac)
+    (boot.case-word-size
+     ((32)
+      (CODE c ac))
+     ((64)
+      (REX.R 0 (CODE c ac)))))
+
+  ;;Commented out because it is not used (Marco Maggi; Oct 25, 2011).
+  ;;
+  ;; (define trace-ac
+  ;;   (let ((cache '()))
+  ;;     (lambda (ac1 what ac2)
+  ;;       (when (assembler-output)
+  ;;         (let ((diff (let f ((ls ac2))
+  ;; 		      (cond ((eq? ls ac1)
+  ;; 			     '())
+  ;; 			    (else
+  ;; 			     (cons (car ls) (f (cdr ls))))))))
+  ;;           (unless (member diff cache)
+  ;;             (set! cache (cons diff cache))
+  ;;             (printf "~s => ~s\n" what diff))))
+  ;;       ac2)))
+
+  (define (CR c r ac)
+    (REX+r r (CODE+r c r ac)))
+
+  (define (CR* c r rm ac)
+    (REX+RM r rm (CODE c (RM r rm ac))))
+
+  (define (CR*-no-rex c r rm ac)
+    (CODE c (RM r rm ac)))
+
+  (define (CCR* c0 c1 r rm ac)
+    ;;(CODE c0 (CODE c1 (RM r rm ac))))
+    (REX+RM r rm (CODE c0 (CODE c1 (RM r rm ac)))))
+
+  (define (CCR c0 c1 r ac)
+    ;;(CODE c0 (CODE+r c1 r ac)))
+    (REX+r r (CODE c0 (CODE+r c1 r ac))))
+
+  (define (CCCR* c0 c1 c2 r rm ac)
+    ;;(CODE c0 (CODE c1 (CODE c2 (RM r rm ac)))))
+    (REX+RM r rm (CODE c0 (CODE c1 (CODE c2 (RM r rm ac))))))
+
+  (define (CCI32 c0 c1 i32 ac)
+    (CODE c0 (CODE c1 (IMM32 i32 ac))))
+
+  (define* (RM /d dst ac)
+    (cond ((disp? dst)
+	   (with-args dst
+	     (lambda (a0 a1)
+	       (cond ((and (imm8?  a0)
+			   (reg32? a1))
+		      (ModRM 1 /d a1 (IMM8 a0 ac)))
+		     ((and (imm?   a0)
+			   (reg32? a1))
+		      (ModRM 2 /d a1 (IMM32 a0 ac)))
+		     ((and (imm8?  a1)
+			   (reg32? a0))
+		      (ModRM 1 /d a0 (IMM8 a1 ac)))
+		     ((and (imm?   a1)
+			   (reg32? a0))
+		      (ModRM 2 /d a0 (IMM32 a1 ac)))
+		     ((and (reg32? a0)
+			   (reg32? a1))
+		      (RegReg /d a0 a1 ac))
+		     ((and (imm? a0)
+			   (imm? a1))
+		      (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
+		     (else
+		      (%compiler-internal-error
+		       "unhandled" a0 a1))))))
+	  ((reg? dst)
+	   (ModRM 3 /d dst ac))
+	  (else
+	   (%compiler-internal-error
+	    "unhandled" dst))))
+
+  (define* (jmp-pc-relative code0 code1 dst ac)
+    (boot.case-word-size
+     ((32)
+      (%compiler-internal-error
+       "no pc-relative jumps in 32-bit mode"))
+     ((64)
+      (let ((G (gensym "L_jump")))
+	(CODE code0
+	      (CODE code1 (cons* `(local-relative . ,G)
+				 `(bottom-code (label . ,G)
+					       (label-address . ,(label-name dst)))
+				 ac)))))))
+
+;;; --------------------------------------------------------------------
 
   ;;Commented out because unused.  (Marco Maggi; Wed Nov  5, 2014)
   ;;
@@ -995,182 +1558,6 @@
   #| end of module |# )
 
 
-(module (convert-instructions local-label?)
-
-  (define-fluid-override __who__
-    (identifier-syntax 'convert-instructions))
-
-;;; --------------------------------------------------------------------
-
-  ;;List  of symbols  representing  local labels.
-  (define local-labels
-    (make-parameter '()))
-
-  (define (local-label? x)
-    ;;Return true if X is a local label previously registered.
-    ;;
-    ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
-    ;;number of local labels usually small?  (Marco Maggi; Oct 9, 2012)
-    ;;
-    (and (memq x (local-labels)) #t))
-
-;;; --------------------------------------------------------------------
-
-  (define (convert-instructions assembly-sexp*)
-    (parametrise ((local-labels (%uncover-local-labels '() assembly-sexp*)))
-      (fold-right %convert-single-sexp '() assembly-sexp*)))
-
-  (define (%convert-single-sexp assembly-sexp accum)
-    ;;Non-tail  recursive function.   Convert ASSEMBLY-SEXP  into a  list of  fixnums
-    ;;(representing  machine  code  octets)  and  sexps;  prepend  the  list  to  the
-    ;;accumulator  list   ACCUM;  return  the   new  accumulator  list.    We  expect
-    ;;ASSEMBLY-SEXP to have one of the formats:
-    ;;
-    ;;   (?assembly-instruction-mnemonic ?operand ...)
-    ;;   (seq ?assembly-sexp0 ?assembly-sexp ...)
-    ;;   (pad ?bytes-count ?assembly-sexp0 ?assembly-sexp ...)
-    ;;
-    ;;The items prepended to ACCUM can be fixnums or entries like the following:
-    ;;
-    ;;   (label . ?symbol)
-    ;;   (label-address . ?symbol)
-    ;;   (code-object-self-machine-word-index)
-    ;;
-    ;;NOTE The actual job of sexp instruction conversion is performed by the function
-    ;;stored in the property list of the instruction name's symbol.
-    ;;
-    (define key
-      (car assembly-sexp))
-    (cond ((getprop key (assembler-property-key))
-	   ;;Convert an assembly instruction specification.
-	   ;;
-	   => (lambda (prop)
-		;;We expect PROP to have the format:
-		;;
-		;;   (?num-of-rand* . ?conversion-function)
-		;;
-		(let ((num-of-rand*         (car prop))
-		      (conversion-function  (cdr prop))
-		      (rand*                (cdr assembly-sexp)))
-		  (define-syntax-rule (%with-checked-args ?num-of-rand* ?body-form)
-		    (if (fx=? (length rand*) ?num-of-rand*)
-			?body-form
-		      (%error-incorrect-args assembly-sexp num-of-rand*)))
-		  (case num-of-rand*
-		    ((2)
-		     (%with-checked-args 2
-		       (conversion-function assembly-sexp accum (car rand*) (cadr rand*))))
-		    ((1)
-		     (%with-checked-args 1
-		       (conversion-function assembly-sexp accum (car rand*))))
-		    ((0)
-		     (%with-checked-args 0
-		       (conversion-function assembly-sexp accum)))
-		    (else
-		     (%with-checked-args num-of-rand*
-		       (apply conversion-function assembly-sexp accum rand*)))))))
-
-	  ((eq? key 'seq)
-	   ;;Process a SEQ sexp.  A SEQ sexp has the format:
-	   ;;
-	   ;;   (seq . ?asm-sexps)
-	   ;;
-	   ;;where ?ASM-SEXPS is a list of assembly symbolic expressions.
-	   ;;
-	   (fold-right %convert-single-sexp accum (cdr assembly-sexp)))
-
-	  ((eq? key 'pad)
-	   ;;Process  a  PAD sexp.   Convert  the  assembly  code  and return  a  new
-	   ;;accumulator list padded with a prefix of zeros.
-	   ;;
-	   ;;Here is an example PAD sexp, part of a non-tail function call:
-	   ;;
-	   ;;   (pad 10
-	   ;;        (label call_label)
-	   ;;        (call (disp -3 %edi)))
-	   ;;
-	   (let* ((pad-count      (cadr assembly-sexp))
-		  (asm-sexps      (cddr assembly-sexp))
-		  (new-accum.tail (fold-right %convert-single-sexp accum asm-sexps))
-		  (prefix.len     (%compute-code-size (%extract-prefix accum new-accum.tail))))
-	     (append (make-list (- pad-count prefix.len) 0)
-		     new-accum.tail)))
-
-	  (else
-	   (%compiler-internal-error
-	     "unknown instruction" assembly-sexp))))
-
-  (define (%extract-prefix old-accum new-accum)
-    ;;Non-tail recursive function.  Expect NEW-ACCUM to be a list having OLD-ACCUM as
-    ;;tail:
-    ;;
-    ;;   new-accum = (item0 item ... . old-accum)
-    ;;
-    ;;visit the  prefix of NEW-ACCUM  building a new list  holding the new  ITEMs and
-    ;;filtering out the ITEMs being BOTTOM-CODE entries; return the resulting list.
-    ;;
-    (if (eq? old-accum new-accum)
-	'()
-      (let ((asm-sexp (car new-accum)))
-	(define-syntax-rule (recur)
-	  (%extract-prefix old-accum (cdr new-accum)))
-	(if (bottom-code? asm-sexp)
-	    ;;Skip BOTTOM-CODE sexp.
-	    (recur)
-	  (cons asm-sexp (recur))))))
-
-  (define-entry-predicate bottom-code? bottom-code)
-
-  (define (%error-incorrect-args assembly-sexp expected-num-of-rand*)
-    (%compiler-internal-error
-      (string-append "wrong number of operands in Assembly symbolic expression, expected "
-		     (number->string expected-num-of-rand*))
-      assembly-sexp))
-
-;;; --------------------------------------------------------------------
-
-  (define (%uncover-local-labels names accum)
-    ;;Tail recursive function.  Expect ACCUM to be a list of Assembly sexps; NAMES is
-    ;;initially NULL.  Iterate over ACCUM,  visiting PAD and SEQ entries recursively,
-    ;;and  accumulate in  NAMES  a list  of  symbols being  the  gensyms in  symbolic
-    ;;expressions:
-    ;;
-    ;;   (label ?gensym)
-    ;;
-    ;;representing "local" labels.  Return the resulting NAMES list.
-    ;;
-    (define-syntax-rule (recur ?names)
-      (%uncover-local-labels ?names (cdr accum)))
-    (if (pair? accum)
-	(let ((entry (car accum)))
-	  (if (pair? entry)
-	      (case (car entry)
-		((label)
-		 ;;The ENTRY has the format:
-		 ;;
-		 ;;   (label ?gensym)
-		 ;;
-		 (recur (cons (cadr entry) names)))
-		((seq)
-		 ;;The ENTRY has the format:
-		 ;;
-		 ;;   (seq ?assembly-sexp0 ?assembly-sexp ...)
-		 ;;
-		 (recur (%uncover-local-labels names (cdr entry))))
-		((pad)
-		 ;;The ENTRY has the format:
-		 ;;
-		 ;;   (pad ?bytes-count ?assembly-sexp0 ?assembly-sexp ...)
-		 ;;
-		 (recur (%uncover-local-labels names (cddr entry))))
-		(else
-		 (recur names)))
-	    (recur names)))
-      names))
-
-  #| end of module |# )
-
-
 (module ()
   ;;Notice that this  module exports nothing; this  is because its purpose  is to put
   ;;properties in the  property lists of the  symbols (ret, cltd, movl,  ...)  of the
@@ -1244,216 +1631,6 @@
   ;;   nop ac
   ;;
   (import ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS)
-
-;;; --------------------------------------------------------------------
-
-  (define* (REX.R bits ac)
-    (boot.case-word-size
-     ((32)
-      (%compiler-internal-error
-	"invalid in 32-bit mode"))
-     ((64)
-      (cons (fxlogor #b01001000 bits) ac))))
-
-  (define (REX+r r ac)
-    (boot.case-word-size
-     ((32)
-      ac)
-     ((64)
-      (cond ((reg-requires-REX? r)
-	     (REX.R #b001 ac))
-	    (else
-	     (REX.R #b000 ac))))))
-
-  (define* (REX+RM r rm ac)
-    (define (C n ac)
-      ac)
-    ;;(printf "CASE ~s\n" n)
-    ;;(let f ((ac ac) (i 30))
-    ;;  (unless (or (null? ac) (= i 0))
-    ;;    (if (number? (car ac))
-    ;;        (printf " #x~x" (car ac))
-    ;;        (printf " ~s" (car ac)))
-    ;;    (f (cdr ac) (- i 1))))
-    ;;(newline)
-    ;;ac)
-    (boot.case-word-size
-     ((32)
-      ac)
-     ((64)
-      (cond ((disp? rm)
-	     (if (reg-requires-REX? r)
-		 (with-args rm
-		   (lambda (a0 a1)
-		     (cond ((and (imm?   a0)
-				 (reg32? a1))
-			    (if (reg-requires-REX? a1)
-				(REX.R #b101 ac)
-			      (REX.R #b100 ac)))
-
-			   ((and (imm?   a1)
-				 (reg32? a0))
-			    (if (reg-requires-REX? a0)
-				(REX.R #b101 ac)
-			      (REX.R #b100 ac)))
-
-			   ((and (reg32? a0)
-				 (reg32? a1))
-			    (cond ((reg-requires-REX? a0)
-				   (if (reg-requires-REX? a1)
-				       (REX.R #b111 ac)
-				     (REX.R #b110 ac)))
-				  ((reg-requires-REX? a1)
-				   (REX.R #b101 ac))
-				  (else
-				   (REX.R #b100 ac))))
-
-			   ((and (imm? a0)
-				 (imm? a1))
-			    (%compiler-internal-error
-			      "not here 4"))
-
-			   (else
-			    (%compiler-internal-error
-			      "unhandled" a0 a1)))))
-	       (with-args rm
-		 (lambda (a0 a1)
-		   (cond ((and (imm?   a0)
-			       (reg32? a1))
-			  (if (reg-requires-REX? a1)
-			      (REX.R #b001 ac)
-			    (REX.R 0 ac)))
-
-			 ((and (imm?   a1)
-			       (reg32? a0))
-			  (if (reg-requires-REX? a0)
-			      (REX.R #b001 ac)
-			    (REX.R 0 ac)))
-
-			 ((and (reg32? a0)
-			       (reg32? a1))
-			  (cond ((reg-requires-REX? a0)
-				 (if (reg-requires-REX? a1)
-				     (%compiler-internal-error
-				       "unhandled x1" a0 a1)
-				   (REX.R #b010 ac)))
-				((reg-requires-REX? a1)
-				 (%compiler-internal-error
-				   "unhandled x3" a0 a1))
-				(else
-				 (REX.R 0 ac))))
-
-			 ((and (imm? a0)
-			       (imm? a1))
-			  (REX.R 0 ac))
-
-			 (else
-			  (%compiler-internal-error "unhandled" a0 a1)))))))
-	    ((reg? rm)
-	     (let* ((bits 0)
-		    (bits (if (reg-requires-REX? r)
-			      (fxlogor bits #b100)
-			    bits))
-		    (bits (if (reg-requires-REX? rm)
-			      (fxlogor bits #b001)
-			    bits)))
-	       (REX.R bits ac)))
-	    (else
-	     (%compiler-internal-error
-	       "unhandled" rm))))))
-
-  (define (C c ac)
-    (boot.case-word-size
-     ((32)
-      (CODE c ac))
-     ((64)
-      (REX.R 0 (CODE c ac)))))
-
-  ;;Commented out because it is not used (Marco Maggi; Oct 25, 2011).
-  ;;
-  ;; (define trace-ac
-  ;;   (let ((cache '()))
-  ;;     (lambda (ac1 what ac2)
-  ;;       (when (assembler-output)
-  ;;         (let ((diff (let f ((ls ac2))
-  ;; 		      (cond ((eq? ls ac1)
-  ;; 			     '())
-  ;; 			    (else
-  ;; 			     (cons (car ls) (f (cdr ls))))))))
-  ;;           (unless (member diff cache)
-  ;;             (set! cache (cons diff cache))
-  ;;             (printf "~s => ~s\n" what diff))))
-  ;;       ac2)))
-
-  (define (CR c r ac)
-    (REX+r r (CODE+r c r ac)))
-
-  (define (CR* c r rm ac)
-    (REX+RM r rm (CODE c (RM r rm ac))))
-
-  (define (CR*-no-rex c r rm ac)
-    (CODE c (RM r rm ac)))
-
-  (define (CCR* c0 c1 r rm ac)
-    ;;(CODE c0 (CODE c1 (RM r rm ac))))
-    (REX+RM r rm (CODE c0 (CODE c1 (RM r rm ac)))))
-
-  (define (CCR c0 c1 r ac)
-    ;;(CODE c0 (CODE+r c1 r ac)))
-    (REX+r r (CODE c0 (CODE+r c1 r ac))))
-
-  (define (CCCR* c0 c1 c2 r rm ac)
-    ;;(CODE c0 (CODE c1 (CODE c2 (RM r rm ac)))))
-    (REX+RM r rm (CODE c0 (CODE c1 (CODE c2 (RM r rm ac))))))
-
-  (define (CCI32 c0 c1 i32 ac)
-    (CODE c0 (CODE c1 (IMM32 i32 ac))))
-
-  (define* (RM /d dst ac)
-    (cond ((disp? dst)
-	   (with-args dst
-	     (lambda (a0 a1)
-	       (cond ((and (imm8?  a0)
-			   (reg32? a1))
-		      (ModRM 1 /d a1 (IMM8 a0 ac)))
-		     ((and (imm?   a0)
-			   (reg32? a1))
-		      (ModRM 2 /d a1 (IMM32 a0 ac)))
-		     ((and (imm8?  a1)
-			   (reg32? a0))
-		      (ModRM 1 /d a0 (IMM8 a1 ac)))
-		     ((and (imm?   a1)
-			   (reg32? a0))
-		      (ModRM 2 /d a0 (IMM32 a1 ac)))
-		     ((and (reg32? a0)
-			   (reg32? a1))
-		      (RegReg /d a0 a1 ac))
-		     ((and (imm? a0)
-			   (imm? a1))
-		      (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
-		     (else
-		      (%compiler-internal-error
-			"unhandled" a0 a1))))))
-	  ((reg? dst)
-	   (ModRM 3 /d dst ac))
-	  (else
-	   (%compiler-internal-error
-	     "unhandled" dst))))
-
-  (define* (jmp-pc-relative code0 code1 dst ac)
-    (boot.case-word-size
-     ((32)
-      (%compiler-internal-error
-	"no pc-relative jumps in 32-bit mode"))
-     ((64)
-      (let ((G (gensym "L_jump")))
-	(CODE code0
-	      (CODE code1 (cons* `(local-relative . ,G)
-				 `(bottom-code (label . ,G)
-					       (label-address . ,(label-name dst)))
-				 ac)))))))
-
-;;; --------------------------------------------------------------------
 
   (let-syntax
       ((add-single-instruction
@@ -1996,178 +2173,6 @@
      (cons '(code-object-self-machine-word-index) ac))
     ((nop)
      ac))
-
-  #| end of module |# )
-
-
-(module (make-reloc-vector-record-filler)
-  (module (off-code-data)
-    (include "ikarus.compiler.scheme-objects-layout.scm" #t))
-
-  (define-syntax __who__
-    (identifier-syntax 'make-reloc-vector-record-filler))
-
-  (define (make-reloc-vector-record-filler thunk?-label code vec)
-    ;;Return  a closure  to be  used  to add  records  to the  relocation vector  VEC
-    ;;associated to the code object CODE.
-    ;;
-    (define reloc-idx 0)
-    (lambda (r)
-      (define val
-	(let ((v (cddr r)))
-	  (cond ((thunk?-label v)
-		 => (lambda (label)
-		      (let ((p (%label-loc label)))
-			(cond ((fx= (length p) 2)
-			       (let ((code (car  p))
-				     (idx  (cadr p)))
-				 (unless (fxzero? idx)
-				   (%error "cannot create a thunk pointing" idx))
-				 (let ((thunk (code->thunk code)))
-				   (set-cdr! (cdr p) (list thunk))
-				   thunk)))
-			      (else
-			       (caddr p))))))
-		(else v))))
-      (define-syntax key
-	(identifier-syntax (cadr r)))
-      (case key
-	((reloc-word)
-	 ;;Add  a record  of type  "vanilla object".   The value  is a  non-immediate
-	 ;;Scheme object.
-	 (let ((off (car r))) ;Offset into the data area of the code object.
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG off)
-	   (vector-set! vec (fxadd1 reloc-idx) val)
-	   (fxincr! reloc-idx 2)))
-
-	((foreign-label)
-	 ;;Add a  record of  type "foreign  address".  The value  is a  Scheme string
-	 ;;representing the  name of a C  language function to be  called from Scheme
-	 ;;code.
-	 (let ((off  (car r)) ;Offset into the data area of the code object.
-	       (name (string->utf8 val)))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG off)
-	   (vector-set! vec (fxadd1 reloc-idx) name)
-	   (fxincr! reloc-idx 2)))
-
-	((reloc-word+)
-	 ;;Add a record of type "displaced object".
-	 (let ((off  (car r)) ;Offset into the data area of the code object.
-	       (obj  (car val))
-	       (disp (cdr val)))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
-	   (vector-set! vec (fxadd1 reloc-idx) disp)
-	   (vector-set! vec (fxadd2 reloc-idx) obj)
-	   (fxincr! reloc-idx 3)))
-
-	((label-address)
-	 ;;Add  a  record  of  type  "displaced  object".   The  value  is  a  gensym
-	 ;;representing an  Assembly label entry  point.  The referenced code  is one
-	 ;;among: the entry  point of a common Assembly routine  (the return value of
-	 ;;the functions  SL-*-LABEL); the entry  point of a "known"  Scheme function
-	 ;;that was  represented by a  CODE-LOC struct; an  entry point in  this very
-	 ;;code object.
-	 ;;
-	 ;;Being an entry  point: it the address  of a code object, to  which we must
-	 ;;add an offset.   We retrieve informations about the  label's location from
-	 ;;the label gensym's property list as:
-	 ;;
-	 ;;   (?code-object-reference ?offset-as-number-of-words)
-	 ;;
-	 ;;such values are stored in the relocation vector.
-	 (let* ((off  (car r)) ;offset into the data area of the code object
-		(loc  (%label-loc val))
-		;;Reference to code object.
-		(obj  (car  loc))
-		;;Offset from the beginning of the code object's data area.
-		(disp (cadr loc)))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
-	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
-	   (vector-set! vec (fxadd2 reloc-idx) obj))
-	 (fxincr! reloc-idx 3))
-
-	((local-relative)
-	 ;;This entry requires the address of a label in the binary code
-	 ;;of this very  code object.  There is no need  to add a record
-	 ;;to the relocation vector, we  just store in the code object's
-	 ;;data area  the relative offset  of the label with  respect to
-	 ;;the current position in data area itself.
-	 ;;
-	 ;;  meta data     L  data area
-	 ;; |---------|----+-------------|---|---|--------| code object
-	 ;;                ^               ^ |
-	 ;;                |               | |
-	 ;;                |         ------  |
-	 ;;                |        |        |
-	 ;;                |.................| relative offset of L
-	 ;;
-	 ;;           |....| disp        |...| 4
-	 ;;           |..................| off
-	 ;;
-	 ;;Notice that local  labels are specified with  a 32-bit offset
-	 ;;on all the platforms.
-	 ;;
-	 (let* ((off  (car r))	;Offset into the data area of the code object.
-		(loc  (%label-loc val))
-		(obj  (car  loc))
-		(disp (cadr loc)))
-	   (unless (eq? obj code)
-	     (%error "source code object and target code object of \
-                      a local relative jump are not the same"))
-	   (let ((rel (fx- disp (fxadd4 off))))
-	     ($code-set! code          off  (fxlogand         rel     #xFF))
-	     ($code-set! code (fxadd1 off) (fxlogand (fxsra rel 8)  #xFF))
-	     ($code-set! code (fxadd2 off) (fxlogand (fxsra rel 16) #xFF))
-	     ($code-set! code (fxadd3 off) (fxlogand (fxsra rel 24) #xFF)))))
-
-	((relative)
-	 ;;Add a record of type "jump label".
-	 (let* ((off  (car r))	;Offset into the data area of the code object.
-		(loc  (%label-loc val))
-		(obj  (car  loc))
-		(disp (cadr loc)))
-	   (unless (and (code? obj) (fixnum? disp))
-	     (%error "invalid relative jump obj/disp" obj disp))
-	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_JUMP_LABEL_TAG off)
-	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
-	   (vector-set! vec (fxadd2 reloc-idx) obj))
-	 (fxincr! reloc-idx 3))
-
-	(else
-	 (%error "invalid entry key while filling relocation vector" key)))))
-
-  (define-syntax-rule (%error ?message . ?irritants)
-    (%compiler-internal-error ?message . ?irritants))
-
-  (define-syntax %store-first-word!
-    ;;
-    ;;Here   we   left-shift  the   offset   so   that   we  can   Inclusive-OR   the
-    ;;IK_RELOC_RECORD_*_TAG, which is 2 bits wide.
-    ;;
-    (syntax-rules (IK_RELOC_RECORD_VANILLA_OBJECT_TAG)
-      ((_ ?vec ?reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG ?binary-code.offset)
-       (vector-set! ?vec ?reloc-idx               (fxsll ?binary-code.offset 2)))
-      ((_ ?vec ?reloc-idx ?tag ?binary-code.offset)
-       (vector-set! ?vec ?reloc-idx (fxlogor ?tag (fxsll ?binary-code.offset 2))))
-      ))
-
-  (define (%label-loc x)
-    (or (getprop x '*label-loc*)
-	(%compiler-internal-error
-	  "undefined label" x)))
-
-  ;;Commented out because unused.  (Marco Maggi; Oct 9, 2012)
-  ;;
-  ;; (define-inline (unset-label-loc! x)
-  ;;   (remprop x '*label-loc*))
-
-  ;;The following constants  must be kept in sync with  the equivalent definitions in
-  ;;the C language headers.
-  (define-inline-constant IK_RELOC_RECORD_VANILLA_OBJECT_TAG	#b00)
-  (define-inline-constant IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG	#b01)
-  (define-inline-constant IK_RELOC_RECORD_DISPLACED_OBJECT_TAG	#b10)
-  (define-inline-constant IK_RELOC_RECORD_JUMP_LABEL_TAG	#b11)
-  #;(define-inline-constant IK_RELOC_RECORD_MASK_TAG		#b11)
 
   #| end of module |# )
 
