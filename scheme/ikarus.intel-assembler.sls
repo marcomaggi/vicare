@@ -845,6 +845,7 @@
 		 ac))
 
 	  ((foreign-label? n)
+	   (assert (string? (label-name n)))
 	   (cons `(foreign-label . ,(label-name n))
 		 ac))
 
