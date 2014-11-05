@@ -292,14 +292,14 @@
     (let ((code.num-of-freevars*  (map %sexp.number-of-free-vars code-object-sexp*))
 	  (code.annotation*       (map %sexp.annotation          code-object-sexp*))
 	  (code.asm-instr-sexp**  (map %sexp.asm-instr-sexp*     code-object-sexp*)))
-      (let* ((octets-and-labels* (map convert-instructions  code.asm-instr-sexp**))
-	     (octets-and-labels* (map %optimize-local-jumps octets-and-labels*)))
-	(let ((code-size*  (map %compute-code-size         octets-and-labels*))
-	      (reloc-size* (map %compute-reloc-vector-size octets-and-labels*)))
+      (let* ((octets-and-sexps* (map convert-instructions  code.asm-instr-sexp**))
+	     (octets-and-sexps* (map %optimize-local-jumps octets-and-sexps*)))
+	(let ((code-size*  (map %compute-code-size         octets-and-sexps*))
+	      (reloc-size* (map %compute-reloc-vector-size octets-and-sexps*)))
 	  (let ((code-objects* (map make-code   code-size* code.num-of-freevars*))
 		(reloc-vector* (map make-vector reloc-size*)))
 	    (let ((reloc** (map %store-binary-code-in-code-objects
-			     code-objects* octets-and-labels*)))
+			     code-objects* octets-and-sexps*)))
 	      (for-each
 		  (lambda (code-object reloc-vector reloc*)
 		    (for-each
@@ -345,12 +345,12 @@
 
 ;;; --------------------------------------------------------------------
 
-  (define (%optimize-local-jumps octets-and-labels)
-    ;;Scan OCTETS-AND-LABELS and  collect the LABEL entries, which  are "local"; then
-    ;;scan again OCTETS-AND-LABELS and mutate  the RELATIVE entries referencing local
+  (define (%optimize-local-jumps octets-and-sexps)
+    ;;Scan OCTETS-AND-SEXPS and  collect the LABEL entries, which  are "local"; then
+    ;;scan again OCTETS-AND-SEXPS and mutate  the RELATIVE entries referencing local
     ;;labels to be LOCAL-RELATIVE entries.
     ;;
-    ;;Notice that this function does NOT modify the spine of OCTETS-AND-LABELS in any
+    ;;Notice that this function does NOT modify the spine of OCTETS-AND-SEXPS in any
     ;;way; it just mutates some of the entry's CARs.
     ;;
     (let ((locals '())
@@ -378,19 +378,19 @@
 	    ((bottom-code)
 	     (for-each %relative->local-relative (cdr x))))))
 
-      (for-each %mark-labels-with-property octets-and-labels)
-      (for-each %relative->local-relative  octets-and-labels)
+      (for-each %mark-labels-with-property octets-and-sexps)
+      (for-each %relative->local-relative  octets-and-sexps)
       ;;Clean up the property lists of label symbols.
       ($for-each/stx (lambda (x)
 		       (remprop x G))
 	locals)
-      octets-and-labels))
+      octets-and-sexps))
 
 ;;; --------------------------------------------------------------------
 
-  (define* (%compute-reloc-vector-size octets-and-labels)
+  (define* (%compute-reloc-vector-size octets-and-sexps)
     ;;Compute the  length of the relocation  vector needed to relocate  a code object
-    ;;holding the binary code in OCTETS-AND-LABELS.
+    ;;holding the binary code in OCTETS-AND-SEXPS.
     ;;
     (fold-right (lambda (x ac)
 		  (if (fixnum? x)
@@ -408,59 +408,59 @@
 		       (%compiler-internal-error
 			 "unknown instr" x)))))
       0
-      octets-and-labels))
+      octets-and-sexps))
 
 ;;; --------------------------------------------------------------------
 
   (module (%store-binary-code-in-code-objects)
 
-    (define* (%store-binary-code-in-code-objects x ls)
-      ;;Loop over the list of entries LS,  filling the data area of X accordingly.  X
-      ;;is a  code object.   LS is  a list of  fixnums and  lists; the  fixnums being
-      ;;binary code octects  to be stored in  the code object's data  area, the lists
-      ;;representing entries for the relocation vector.
+    (define* (%store-binary-code-in-code-objects x octets-and-sexps)
+      ;;Loop over  the list of entries  OCTETS-AND-SEXPS, filling the data  area of X
+      ;;accordingly.  X is a code object.   OCTETS-AND-SEXPS is a list of fixnums and
+      ;;lists;  the fixnums  being  binary code  octects  to be  stored  in the  code
+      ;;object's data area, the lists representing entries for the relocation vector.
       ;;
       ;;Return a list representing data to build a relocation vector.
       ;;
-      (define (loop ls idx reloc bot*)
+      (define (loop octets-and-sexps idx reloc bot*)
 	;;IDX is the  index of the next byte  to be filled in the  code object's data
 	;;area.
 	;;
 	;;BOT* is initially  empty and is filled with subentries  from the entries in
-	;;LS having  key BOTTOM-CODE; such  entries are  processed after LS  has been
-	;;consumed.
+	;;OCTETS-AND-SEXPS having  key BOTTOM-CODE; such entries  are processed after
+	;;OCTETS-AND-SEXPS has been consumed.
 	;;
-	(cond ((null? ls)
+	(cond ((null? octets-and-sexps)
 	       (if (null? bot*)
 		   reloc
 		 (loop (car bot*) idx reloc (cdr bot*))))
 	      (else
-	       (let ((a (car ls)))
-		 (if (fixnum? a)
+	       (let ((entry (car octets-and-sexps)))
+		 (if (fixnum? entry)
 		     (begin
 		       ;;Store a byte of binary code in the data area.
-		       ($code-set! x idx a)
-		       (loop (cdr ls) (fxadd1 idx) reloc bot*))
-		   (case (car a)
+		       ($code-set! x idx entry)
+		       (loop (cdr octets-and-sexps) (fxadd1 idx) reloc bot*))
+		   (case (car entry)
 		     ((byte)
 		      ;;Store a byte of binary code in the data area.
-		      ($code-set! x idx (cdr a))
-		      (loop (cdr ls) (fxadd1 idx) reloc bot*))
+		      ($code-set! x idx (cdr entry))
+		      (loop (cdr octets-and-sexps) (fxadd1 idx) reloc bot*))
 
 		     ((relative local-relative)
 		      ;;Add an entry to the relocation list; leave 4 bytes of room in
 		      ;;the data area.
-		      (loop (cdr ls) (fx+ idx 4) (cons (cons idx a) reloc) bot*))
+		      (loop (cdr octets-and-sexps) (fx+ idx 4) (cons (cons idx entry) reloc) bot*))
 
 		     ((reloc-word reloc-word+ label-address foreign-label)
 		      ;;Add an entry to the relocation  list; leave a word of room in
 		      ;;the data area.
-		      (loop (cdr ls) (fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
+		      (loop (cdr octets-and-sexps) (fx+ idx wordsize) (cons (cons idx entry) reloc) bot*))
 
 		     ((word)
 		      ;;Store a machine word in the data area.
-		      (%set-code-word-as-fixnum! x idx (cdr a))
-		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
+		      (%set-code-word-as-fixnum! x idx (cdr entry))
+		      (loop (cdr octets-and-sexps) (fx+ idx wordsize) reloc bot*))
 
 		     ((code-object-self-machine-word-index)
 		      ;;Store a machine word in the data area of the code object; the
@@ -473,21 +473,31 @@
 		      ;;access, for example, the relocation vector.
 		      ;;
 		      (%set-code-word-as-fixnum! x idx idx)
-		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
+		      (loop (cdr octets-and-sexps) (fx+ idx wordsize) reloc bot*))
 
 		     ((label)
-		      ;;Store  informations about  the current  location in  the code
-		      ;;object in the symbol (cdr a).
-		      (%set-label-loc! (cdr a) (list x idx))
-		      (loop (cdr ls) idx reloc bot*))
+		      ;;This entry represents an Assembly label; the label is used as
+		      ;;reference to the current entry  point in the code object: the
+		      ;;machine word  at offset  IDX from the  beginning of  the data
+		      ;;area.
+		      ;;
+		      ;;We store informations about the  current location in the code
+		      ;;object in the label gensym's property list as:
+		      ;;
+		      ;;   (?code-object-reference ?offset-as-number-of-words)
+		      ;;
+		      ;;such value will be used  later, when composing the relocation
+		      ;;vector, by entries of type LABEL-ADDRESS.
+		      (%set-label-loc! (cdr entry) (list x idx))
+		      (loop (cdr octets-and-sexps) idx reloc bot*))
 
 		     ((bottom-code)
 		      ;;Push this entry in BOT* to be processed at the end.
-		      (loop (cdr ls) idx reloc (cons (cdr a) bot*)))
+		      (loop (cdr octets-and-sexps) idx reloc (cons (cdr entry) bot*)))
 
 		     (else
-		      (%compiler-internal-error "unknown instr" a))))))))
-      (loop ls 0 '() '()))
+		      (%compiler-internal-error "unknown entry in octets and sexps" entry))))))))
+      (loop octets-and-sexps 0 '() '()))
 
     (define* (%set-code-word-as-fixnum! code idx {x fixnum?})
       ;;Store a machine word,  whose value is X, in the data area  of the code object
@@ -852,11 +862,14 @@
 	   ;;in which  ?VAL is a gensym  representing an Assembly label  entry point.
 	   ;;The referenced code  is one among: the entry point  of a common Assembly
 	   ;;routine (the return value of  the functions SL-*-LABEL); the entry point
-	   ;;of a "known" Scheme function that was represented by a CODE-LOC struct.
+	   ;;of a "known" Scheme function that  was represented by a CODE-LOC struct;
+	   ;;an entry point in this very code object's machine code.
 	   ;;
-	   ;;We generate a LABEL-ADDRRESS entry; later this entry ...
+	   ;;Being an entry point: it the address  of a code object, to which we must
+	   ;;add an  offset.  We  generate a LABEL-ADDRRESS  entry; later  this entry
+	   ;;will be stored in the relocation vector of the code object.
 	   ;;
-	   (assert (gensym? (label-name n)))
+	   #;(assert (gensym? (label-name n)))
 	   (cons `(label-address . ,(label-name n))
 		 ac))
 
@@ -1953,8 +1966,7 @@
     ((label-address L)
      (if (symbol? L)
 	 (cons (cons 'label-address L) ac)
-       (%compiler-internal-error
-	 "label-address is not a symbol" L)))
+       (%compiler-internal-error "value in LABEL-ADDRESS entry is not a symbol" L)))
     ((code-object-self-machine-word-index)
      (cons '(code-object-self-machine-word-index) ac))
     ((nop)
@@ -2024,10 +2036,25 @@
 	   (fxincr! reloc-idx 3)))
 
 	((label-address)
-	 ;;Add a record of type "displaced object".
-	 (let* ((off  (car r))	;Offset into the data area of the code object.
+	 ;;Add  a  record  of  type  "displaced  object".   The  value  is  a  gensym
+	 ;;representing an  Assembly label entry  point.  The referenced code  is one
+	 ;;among: the entry  point of a common Assembly routine  (the return value of
+	 ;;the functions  SL-*-LABEL); the entry  point of a "known"  Scheme function
+	 ;;that was  represented by a  CODE-LOC struct; an  entry point in  this very
+	 ;;code object.
+	 ;;
+	 ;;Being an entry  point: it the address  of a code object, to  which we must
+	 ;;add an offset.   We retrieve informations about the  label's location from
+	 ;;the label gensym's property list as:
+	 ;;
+	 ;;   (?code-object-reference ?offset-as-number-of-words)
+	 ;;
+	 ;;such values are stored in the relocation vector.
+	 (let* ((off  (car r)) ;offset into the data area of the code object
 		(loc  (%label-loc val))
+		;;Reference to code object.
 		(obj  (car  loc))
+		;;Offset from the beginning of the code object's data area.
 		(disp (cadr loc)))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_DISPLACED_OBJECT_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) (fx+ disp off-code-data))
