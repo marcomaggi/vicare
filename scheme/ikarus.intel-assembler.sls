@@ -815,17 +815,21 @@
 		    (byte (sra n 56))
 		    ac))))
 	  ((obj? n)
-	   ;;The argument is a Scheme object to be handled as immediate value.
+	   ;;The operand is a symbolic expression:
+	   ;;
+	   ;;   (obj ?val)
+	   ;;
+	   ;;in which ?VAL is a Scheme object to be handled as immediate value.
 	   ;;
 	   ;;If it is an immediate  Scheme object: the Scheme object's representation
-	   ;;fits into a single machine word, so  we generate a WORD entry; later the
-	   ;;WORD entry  will cause the machine  word representation to be  stored in
-	   ;;the code object as fixnum.
+	   ;;fits into a single machine word, so we generate a WORD entry; later this
+	   ;;entry will  cause the machine  word representation  to be stored  in the
+	   ;;code object as fixnum.
 	   ;;
 	   ;;If it  is a compound  Scheme object: the Scheme  object's representation
-	   ;;must be allocated on the heap,  so we generate a RELOC-WORD entry; laber
-	   ;;the RELOC-WORD entry will cause the  Scheme object to be included in the
-	   ;;relocation vector.
+	   ;;must be allocated on the heap,  so we generate a RELOC-WORD entry; later
+	   ;;this entry will cause the Scheme object to be included in the relocation
+	   ;;vector.
 	   ;;
 	   (let ((v (cadr n)))
 	     (cons (if (immediate? v)
@@ -841,11 +845,32 @@
 	  ;;    (cons (reloc-word+ v d) ac)))
 
 	  ((label-address? n)
+	   ;;The operand is a symbolic expression:
+	   ;;
+	   ;;   (label-address ?val)
+	   ;;
+	   ;;in which  ?VAL is a gensym  representing an Assembly label  entry point.
+	   ;;The referenced code  is one among: the entry point  of a common Assembly
+	   ;;routine (the return value of  the functions SL-*-LABEL); the entry point
+	   ;;of a "known" Scheme function that was represented by a CODE-LOC struct.
+	   ;;
+	   ;;We generate a LABEL-ADDR entry; later this entry ...
+	   ;;
+	   (assert (gensym? (label-name n)))
 	   (cons `(label-addr . ,(label-name n))
 		 ac))
 
 	  ((foreign-label? n)
-	   (assert (string? (label-name n)))
+	   ;;The operand is a symbolic expression:
+	   ;;
+	   ;;   (foreign-label ?val)
+	   ;;
+	   ;;in which ?VAL is  a Scheme string representing the name  of a C function
+	   ;;to be called from Scheme code.  We generate a FOREIGN-LABEL entry; later
+	   ;;this entry  will cause the Scheme  string to be converted  to bytevector
+	   ;;and included in the relocation vector.
+	   ;;
+	   #;(assert (string? (label-name n)))
 	   (cons `(foreign-label . ,(label-name n))
 		 ac))
 
@@ -1971,14 +1996,17 @@
 	(identifier-syntax (cadr r)))
       (case key
 	((reloc-word)
-	 ;;Add a record of type "vanilla object".
+	 ;;Add  a record  of type  "vanilla object".   The value  is a  non-immediate
+	 ;;Scheme object.
 	 (let ((off (car r))) ;Offset into the data area of the code object.
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_VANILLA_OBJECT_TAG off)
 	   (vector-set! vec (fxadd1 reloc-idx) val)
 	   (fxincr! reloc-idx 2)))
 
 	((foreign-label)
-	 ;;Add a record of type "foreign address".
+	 ;;Add a  record of  type "foreign  address".  The value  is a  Scheme string
+	 ;;representing the  name of a C  language function to be  called from Scheme
+	 ;;code.
 	 (let ((off  (car r)) ;Offset into the data area of the code object.
 	       (name (string->utf8 val)))
 	   (%store-first-word! vec reloc-idx IK_RELOC_RECORD_FOREIGN_ADDRESS_TAG off)
