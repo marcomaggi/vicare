@@ -849,7 +849,12 @@
   (define (%convert-single-sexp assembly-sexp accum)
     ;;Non-tail  recursive function.   Convert ASSEMBLY-SEXP  into a  list of  fixnums
     ;;(representing  machine  code  octets)  and  sexps;  prepend  the  list  to  the
-    ;;accumulator list ACCUM; return the new accumulator list.
+    ;;accumulator  list   ACCUM;  return  the   new  accumulator  list.    We  expect
+    ;;ASSEMBLY-SEXP to have one of the formats:
+    ;;
+    ;;   (?assembly-instruction-mnemonic ?operand ...)
+    ;;   (seq ?assembly-sexp0 ?assembly-sexp ...)
+    ;;   (pad ?bytes-count ?assembly-sexp0 ?assembly-sexp ...)
     ;;
     ;;The items prepended to ACCUM can be fixnums or entries like the following:
     ;;
@@ -857,7 +862,7 @@
     ;;  (label-addr . ?symbol)
     ;;  (current-frame-offset)
     ;;
-    ;;NOTE The actual job os sexp instruction conversion is performed by the function
+    ;;NOTE The actual job of sexp instruction conversion is performed by the function
     ;;stored in the property list of the instruction name's symbol.
     ;;
     (define key
@@ -866,26 +871,30 @@
 	   ;;Convert an assembly instruction specification.
 	   ;;
 	   => (lambda (prop)
-		(let ((n    (car prop))
-		      (proc (cdr prop))
-		      (args (cdr assembly-sexp)))
-		  (define-syntax-rule (%with-checked-args ?nargs ?body-form)
-		    (if (fx= (length args) ?nargs)
+		;;We expect PROP to have the format:
+		;;
+		;;   (?num-of-rand* . ?conversion-function)
+		;;
+		(let ((num-of-rand*         (car prop))
+		      (conversion-function  (cdr prop))
+		      (rand*                (cdr assembly-sexp)))
+		  (define-syntax-rule (%with-checked-args ?num-of-rand* ?body-form)
+		    (if (fx=? (length rand*) ?num-of-rand*)
 			?body-form
-		      (%error-incorrect-args assembly-sexp n)))
-		  (case n
+		      (%error-incorrect-args assembly-sexp num-of-rand*)))
+		  (case num-of-rand*
 		    ((2)
 		     (%with-checked-args 2
-		       (proc assembly-sexp accum (car args) (cadr args))))
+		       (conversion-function assembly-sexp accum (car rand*) (cadr rand*))))
 		    ((1)
 		     (%with-checked-args 1
-		       (proc assembly-sexp accum (car args))))
+		       (conversion-function assembly-sexp accum (car rand*))))
 		    ((0)
 		     (%with-checked-args 0
-		       (proc assembly-sexp accum)))
+		       (conversion-function assembly-sexp accum)))
 		    (else
-		     (%with-checked-args n
-		       (apply proc assembly-sexp accum args)))))))
+		     (%with-checked-args num-of-rand*
+		       (apply conversion-function assembly-sexp accum rand*)))))))
 
 	  ((eq? key 'seq)
 	   ;;Process a SEQ sexp.  A SEQ sexp has the format:
@@ -938,10 +947,10 @@
 
   (define-entry-predicate bottom-code? bottom-code)
 
-  (define (%error-incorrect-args assembly-sexp expected-nargs)
+  (define (%error-incorrect-args assembly-sexp expected-num-of-rand*)
     (compiler-internal-error __module_who__ __who__
-      (string-append "wrong number of arguments in Assembly symbolic expression, expected "
-		     (number->string expected-nargs))
+      (string-append "wrong number of operands in Assembly symbolic expression, expected "
+		     (number->string expected-num-of-rand*))
       assembly-sexp))
 
   (define (%uncover-local-labels names accum)
@@ -1266,17 +1275,22 @@
 	  ;;ret, cltd, movl, ...).
 	  ;;
 	  ;;?INSTR  is   an  identifier  used   as  first  formal  argument   in  the
-	  ;;instruction's processing function.
+	  ;;instruction's  conversion   function.   It  is  bound   to  the  symbolic
+	  ;;expression representing the full Assembly instruction:
+	  ;;
+	  ;;   (?assembly-instruction-mnemonic ?operand ...)
 	  ;;
 	  ;;?AC is an identifier user as  second formal argument in the instruction's
-	  ;;processing function.  It is bound to the accumulator list.
+	  ;;conversion function.  It is bound to the accumulator list.
 	  ;;
-	  ;;The ?ARGS are
+	  ;;The ?ARG formals are additional arguments to the instruction's conversion
+	  ;;function.
 	  ;;
 	  ((add-single-instruction (?name ?instr ?ac ?arg ...)
 				   ?body0 ?body ...)
 	   (putprop '?name (assembler-property-key)
 		    (cons (length '(?arg ...))
+			  ;;This LAMBDA builds the instruction's conversion function.
 			  (lambda (?instr ?ac ?arg ...)
 			    (fluid-let-syntax
 				((__who__ (identifier-syntax (quote ?name))))
