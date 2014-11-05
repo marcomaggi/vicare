@@ -230,7 +230,7 @@
 		     (fxadd4 size))
 		    ((label)
 		     size)
-		    ((word reloc-word reloc-word+ label-addr code-object-self-machine-word-index foreign-label)
+		    ((word reloc-word reloc-word+ label-address code-object-self-machine-word-index foreign-label)
 		     (fx+ size wordsize))
 		    ((bottom-code)
 		     (fx+ size (%compute-code-size (cdr x))))
@@ -400,7 +400,7 @@
 		       ac)
 		      ((reloc-word foreign-label)
 		       (fx+ ac 2))
-		      ((relative reloc-word+ label-addr)
+		      ((relative reloc-word+ label-address)
 		       (fx+ ac 3))
 		      ((bottom-code)
 		       (fx+ ac (%compute-reloc-vector-size (cdr x))))
@@ -452,7 +452,7 @@
 		      ;;the data area.
 		      (loop (cdr ls) (fx+ idx 4) (cons (cons idx a) reloc) bot*))
 
-		     ((reloc-word reloc-word+ label-addr foreign-label)
+		     ((reloc-word reloc-word+ label-address foreign-label)
 		      ;;Add an entry to the relocation  list; leave a word of room in
 		      ;;the data area.
 		      (loop (cdr ls) (fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
@@ -854,10 +854,10 @@
 	   ;;routine (the return value of  the functions SL-*-LABEL); the entry point
 	   ;;of a "known" Scheme function that was represented by a CODE-LOC struct.
 	   ;;
-	   ;;We generate a LABEL-ADDR entry; later this entry ...
+	   ;;We generate a LABEL-ADDRRESS entry; later this entry ...
 	   ;;
 	   (assert (gensym? (label-name n)))
-	   (cons `(label-addr . ,(label-name n))
+	   (cons `(label-address . ,(label-name n))
 		 ac))
 
 	  ((foreign-label? n)
@@ -1016,7 +1016,7 @@
     ;;The items prepended to ACCUM can be fixnums or entries like the following:
     ;;
     ;;	(label . ?symbol)
-    ;;  (label-addr . ?symbol)
+    ;;  (label-address . ?symbol)
     ;;  (code-object-self-machine-word-index)
     ;;
     ;;NOTE The actual job of sexp instruction conversion is performed by the function
@@ -1412,7 +1412,7 @@
 	(CODE code0
 	      (CODE code1 (cons* `(local-relative . ,G)
 				 `(bottom-code (label . ,G)
-					       (label-addr . ,(label-name dst)))
+					       (label-address . ,(label-name dst)))
 				 ac)))))))
 
 ;;; --------------------------------------------------------------------
@@ -1952,7 +1952,7 @@
 	 "label is not a symbol" L)))
     ((label-address L)
      (if (symbol? L)
-	 (cons (cons 'label-addr L) ac)
+	 (cons (cons 'label-address L) ac)
        (%compiler-internal-error
 	 "label-address is not a symbol" L)))
     ((code-object-self-machine-word-index)
@@ -2023,7 +2023,7 @@
 	   (vector-set! vec (fxadd2 reloc-idx) obj)
 	   (fxincr! reloc-idx 3)))
 
-	((label-addr)
+	((label-address)
 	 ;;Add a record of type "displaced object".
 	 (let* ((off  (car r))	;Offset into the data area of the code object.
 		(loc  (%label-loc val))
