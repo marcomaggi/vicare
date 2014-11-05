@@ -569,7 +569,7 @@
   ( ;;
    byte?		disp?		small-disp?
 
-   ;; enqueuing bytes in the acccumulator
+   ;; enqueuing bytes in the accumulator
    CODE			CODE+r
    CODErri		CODErr
    ModRM
@@ -596,12 +596,75 @@
    #;obj+?
    )
 
-  (define* (register-index x)
-    (cond ((assq x REGISTER-MAPPING)
-	   ;;Extract the IDX field from the table entry.
-	   => caddr)
+  (define (byte? x)
+    (and (fixnum? x)
+	 (fx>= x -128)
+	 (fx<= x +127)))
+
+  (define-entry-predicate disp? disp)
+
+  (define (small-disp? x)
+    (and (disp? x)
+	 (byte? (cadr x))))
+
+;;; --------------------------------------------------------------------
+;;; enqueuing bytes in the accumulator
+
+  (define (CODE n ac)
+    ;;N must be a fixnum or bignum.
+    ;;
+    (cons (byte n) ac))
+
+  (define (CODE+r n reg ac)
+    ;;N must be a fixnum or bignum.  REG must be a symbol representing a CPU register
+    ;;name.
+    ;;
+    (cons (byte (fxlogor n (register-index reg)))
+	  ac))
+
+  (define* (CODErri c d s i ac)
+    ;;Generate code for register+register+immediate operations?
+    ;;
+    (cond ((imm8? i)
+	   (CODE c (ModRM 1 d s (IMM8 i ac))))
+	  ((imm? i)
+	   (CODE c (ModRM 2 d s (IMM i ac))))
 	  (else
-	   (%compiler-internal-error "expected symbol representing register name" x))))
+	   (%compiler-internal-error "invalid i" i))))
+
+  (define (CODErr c r1 r2 ac)
+    ;;Generate code for register+register operations?
+    ;;
+    (CODE c (ModRM 3 r1 r2 ac)))
+
+  (define (ModRM mod reg r/m ac)
+    ;;REG must be a symbol representing a CPU register name.
+    ;;
+    (cons (byte (fxlogor (register-index r/m)
+			 (fxlogor (fxsll (register-index reg) 3)
+				  (fxsll mod 6))))
+	  (if (and (not (fx= mod 3))
+		   (eq? r/m '%esp))
+	      (cons (byte #x24) ac)
+	    ac)))
+
+  (define* (RegReg reg1 reg2 reg3 ac)
+    ;;REG1, REG2, REG3 must be symbols representing CPU register names.
+    ;;
+    (cond ((eq? reg3 '%esp)
+	   (%compiler-internal-error "invalid src %esp"))
+	  ((eq? reg1 '%ebp)
+	   (%compiler-internal-error "invalid src %ebp"))
+	  (else
+	   (cons* (byte (fxlogor 4                     (fxsll (register-index reg1) 3)))
+		  (byte (fxlogor (register-index reg2) (fxsll (register-index reg3) 3)))
+		  ac))))
+
+;;; --------------------------------------------------------------------
+;;; register opeands
+
+  (define-syntax-rule (reg? ?x)
+    (assq ?x REGISTER-MAPPING))
 
   (let-syntax ((define-register-mapping-predicate
 		 (syntax-rules ()
@@ -615,8 +678,13 @@
     (define-register-mapping-predicate reg32?  32)
     (define-register-mapping-predicate xmmreg? 'xmm))
 
-  (define-inline (reg? x)
-    (assq x REGISTER-MAPPING))
+  (define* (register-index x)
+    ;;Extract the IDX field from the table entry.
+    ;;
+    (cond ((assq x REGISTER-MAPPING)
+	   => caddr)
+	  (else
+	   (%compiler-internal-error "expected symbol representing register name" x))))
 
   (define* (reg-requires-REX? x)
     ;;Return the REX.R field in the table entry.
@@ -678,74 +746,42 @@
       (%r15l   8    7  #t)
       ))
 
+  ;;Commented out because unused.  (Marco Maggi; Wed Nov  5, 2014)
+  ;;
+  ;;(define (SIB s offset-register base-register ac)
+  ;;  (cons (byte (fxlogor (register-index base-register)
+  ;;                       (fxlogor (fxsll (register-index offset-register) 3)
+  ;;                                (fxsll s 6))))
+  ;;        ac))
+
 ;;; --------------------------------------------------------------------
+;;; immediate operands: predicates
 
-  (define-inline (word x)
-    (cons 'word x))
+  (define (imm? x)
+    (or (immediate-int?	x)
+	(obj?		x)
+	;;(obj+?	x)
+	(label-address?	x)
+	(foreign-label?	x)
+	(label?		x)))
 
-  (define-inline (reloc-word x)
-    (cons 'reloc-word x))
+  (define-inline (immediate-int? x)
+    (or (fixnum? x)
+	(bignum? x)))
 
-  (define-inline (reloc-word+ x d)
-    (cons* 'reloc-word+ x d))
+  (define-syntax-rule (imm8? ?x)
+    (byte? ?x))
 
-  (define (byte? x)
-    (and (fixnum? x)
-	 (fx>= x -128)
-	 (fx<= x +127)))
-
-  (define-entry-predicate disp? disp)
-
-  (define (small-disp? x)
-    (and (disp? x)
-	 (byte? (cadr x))))
-
-  (define (CODE n ac)
-    ;;N must be a fixnum or bignum.
-    ;;
-    (cons (byte n) ac))
-
-  (define (CODE+r n reg ac)
-    ;;N must be a fixnum or bignum.  REG must be a symbol representing a CPU register
-    ;;name.
-    ;;
-    (cons (byte (fxlogor n (register-index reg)))
-	  ac))
-
-  (define (ModRM mod reg r/m ac)
-    ;;REG must be a symbol representing a CPU register name.
-    ;;
-    (cons (byte (fxlogor (register-index r/m)
-			 (fxlogor (fxsll (register-index reg) 3)
-				  (fxsll mod 6))))
-	  (if (and (not (fx= mod 3))
-		   (eq? r/m '%esp))
-	      (cons (byte #x24) ac)
-	    ac)))
-
-  (define* (IMM32 n ac)
+  (define (imm32? x)
     (boot.case-word-size
      ((32)
-      (IMM n ac))
+      (imm? x))
      ((64)
-      (cond ((imm32? n)
-	     ;;Prepend  to  the  accumulator  AC  a  32-bit  immediate  value,  least
-	     ;;significant byte first.
-	     ;;
-	     ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
-	     ;;
-	     ;;SRA = shift right arithmetic.
-	     (cons* (byte n)
-		    (byte (sra n 8))
-		    (byte (sra n 16))
-		    (byte (sra n 24))
-		    ac))
-	    ((label? n)
-	     (let ((LN (label-name n)))
-	       `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
-		 . ,ac)))
-	    (else
-	     (%compiler-internal-error "invalid" n))))))
+      (and (immediate-int? x)
+	   (<= LEAST-S32-INTEGER x GREATEST-S32-INTEGER)))))
+
+;;; --------------------------------------------------------------------
+;;; immediate operands: enqueuing
 
   (define* (IMM n ac)
     (cond ((immediate-int? n)
@@ -807,59 +843,29 @@
     ;;
     (cons (byte n) ac))
 
-  (define (imm? x)
-    (or (immediate-int?	x)
-	(obj?		x)
-	;;(obj+?	x)
-	(label-address?	x)
-	(foreign-label?	x)
-	(label?		x)))
-
-  (define-entry-predicate foreign-label? foreign-label)
-
-  (define-syntax-rule (imm8? ?x)
-    (byte? ?x))
-
-  (define-entry-predicate label? label)
-  (define-entry-predicate label-address? label-address)
-
-  (define-syntax-rule (label-name ?x)
-    (cadr ?x))
-
-  (define-inline (immediate-int? x)
-    (or (fixnum? x)
-	(bignum? x)))
-
-  (define-entry-predicate obj?	obj)
-
-  ;;Commented out because unused.  (Marco Maggi; Tue Nov 4, 2014)
-  ;;
-  ;;(define-entry-predicate obj+? obj+)
-
-  (define* (CODErri c d s i ac)
-    ;;Generate code for register+register+immediate operations?
-    ;;
-    (cond ((imm8? i)
-	   (CODE c (ModRM 1 d s (IMM8 i ac))))
-	  ((imm? i)
-	   (CODE c (ModRM 2 d s (IMM i ac))))
-	  (else
-	   (%compiler-internal-error "invalid i" i))))
-
-  (define (CODErr c r1 r2 ac)
-    ;;Generate code for register+register operations?
-    ;;
-    (CODE c (ModRM 3 r1 r2 ac)))
-
-  (define* (RegReg r1 r2 r3 ac)
-    (cond ((eq? r3 '%esp)
-	   (%compiler-internal-error "invalid src %esp"))
-	  ((eq? r1 '%ebp)
-	   (%compiler-internal-error "invalid src %ebp"))
-	  (else
-	   (cons* (byte (fxlogor 4                   (fxsll (register-index r1) 3)))
-		  (byte (fxlogor (register-index r2) (fxsll (register-index r3) 3)))
-		  ac))))
+  (define* (IMM32 n ac)
+    (boot.case-word-size
+     ((32)
+      (IMM n ac))
+     ((64)
+      (cond ((imm32? n)
+	     ;;Prepend  to  the  accumulator  AC  a  32-bit  immediate  value,  least
+	     ;;significant byte first.
+	     ;;
+	     ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
+	     ;;
+	     ;;SRA = shift right arithmetic.
+	     (cons* (byte n)
+		    (byte (sra n 8))
+		    (byte (sra n 16))
+		    (byte (sra n 24))
+		    ac))
+	    ((label? n)
+	     (let ((LN (label-name n)))
+	       `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
+		 . ,ac)))
+	    (else
+	     (%compiler-internal-error "invalid" n))))))
 
   (module (IMM*2)
 
@@ -888,21 +894,32 @@
 
     #| end of module: IMM*2 |# )
 
-  ;;Commented out because unused.  (Marco Maggi; Wed Nov  5, 2014)
-  ;;
-  ;;(define (SIB s offset-register base-register ac)
-  ;;  (cons (byte (fxlogor (register-index base-register)
-  ;;                       (fxlogor (fxsll (register-index offset-register) 3)
-  ;;                                (fxsll s 6))))
-  ;;        ac))
+;;; --------------------------------------------------------------------
 
-  (define (imm32? x)
-    (boot.case-word-size
-     ((32)
-      (imm? x))
-     ((64)
-      (and (immediate-int? x)
-	   (<= LEAST-S32-INTEGER x GREATEST-S32-INTEGER)))))
+  (define-syntax-rule (word x)
+    (cons 'word x))
+
+  (define-syntax-rule (reloc-word x)
+    (cons 'reloc-word x))
+
+  (define-syntax-rule (reloc-word+ x d)
+    (cons* 'reloc-word+ x d))
+
+  (define-entry-predicate obj?	obj)
+
+  ;;Commented out because unused.  (Marco Maggi; Tue Nov 4, 2014)
+  ;;
+  ;;(define-entry-predicate obj+? obj+)
+
+;;; --------------------------------------------------------------------
+;;; label operands
+
+  (define-entry-predicate label? label)
+  (define-entry-predicate label-address? label-address)
+  (define-entry-predicate foreign-label? foreign-label)
+
+  (define-syntax-rule (label-name ?x)
+    (cadr ?x))
 
   #| end of module |# )
 
