@@ -1000,6 +1000,22 @@
   (define-fluid-override __who__
     (identifier-syntax 'convert-instructions))
 
+;;; --------------------------------------------------------------------
+
+  ;;List  of symbols  representing  local labels.
+  (define local-labels
+    (make-parameter '()))
+
+  (define (local-label? x)
+    ;;Return true if X is a local label previously registered.
+    ;;
+    ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
+    ;;number of local labels usually small?  (Marco Maggi; Oct 9, 2012)
+    ;;
+    (and (memq x (local-labels)) #t))
+
+;;; --------------------------------------------------------------------
+
   (define (convert-instructions assembly-sexp*)
     (parametrise ((local-labels (%uncover-local-labels '() assembly-sexp*)))
       (fold-right %convert-single-sexp '() assembly-sexp*)))
@@ -1151,20 +1167,6 @@
 		 (recur names)))
 	    (recur names)))
       names))
-
-;;; --------------------------------------------------------------------
-
-  ;;List  of symbols  representing  local labels.
-  (define local-labels
-    (make-parameter '()))
-
-  (define (local-label? x)
-    ;;Return true if X is a local label previously registered.
-    ;;
-    ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
-    ;;number of local labels usually small?  (Marco Maggi; Oct 9, 2012)
-    ;;
-    (and (memq x (local-labels)) #t))
 
   #| end of module |# )
 
