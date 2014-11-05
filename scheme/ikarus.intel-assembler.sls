@@ -31,15 +31,10 @@
     (except (ikarus.code-objects)
 	    procedure-annotation)
     (except (vicare system $codes)
-	    assembler-property-key)
-    (prefix (vicare platform words)
-	    words.))
+	    assembler-property-key))
 
   (module (wordsize boot.case-word-size)
     (include "ikarus.wordsize.scm" #t))
-
-  (define-syntax __module_who__
-    (identifier-syntax 'assemble-sources))
 
 
 ;;;; introduction
@@ -114,6 +109,9 @@
 
 
 ;;;; syntax helpers
+
+(define-syntax __module_who__
+  (identifier-syntax 'assemble-sources))
 
 (define-syntax ($for-each/stx stx)
   ;;Like FOR-HEACH, but expand the loop inline.   The "function" to be mapped must be
@@ -202,6 +200,14 @@
 
 
 ;;;; helpers
+
+(define-constant LEAST-S32-INTEGER
+  -2147483648)	#;(- (expt 2 31))
+
+(define-constant GREATEST-S32-INTEGER
+  +2147483647)	#;(- (expt 2 31) 1)
+
+;;; --------------------------------------------------------------------
 
 (define* (%compute-code-size octets-and-labels)
   ;;Non-tail recursive  function.  Given a  list holding octets-as-fixnums  and label
@@ -812,7 +818,7 @@
       (imm? x))
      ((64)
       (and (immediate-int? x)
-	   (<= (words.least-s32) x (words.greatest-s32))))))
+	   (<= LEAST-S32-INTEGER x GREATEST-S32-INTEGER)))))
 
   #| end of module |# )
 
