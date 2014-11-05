@@ -566,24 +566,35 @@
 
 
 (module ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS
-  (register-index
-   reg8?		reg32?
-   xmmreg?		reg?
-   reg-requires-REX?
-   word			reloc-word
-   reloc-word+		byte?
-   mem?			small-disp?
+  ( ;;
+   byte?		disp?		small-disp?
+
+   ;; enqueuing bytes in the acccumulator
    CODE			CODE+r
-   ModRM		IMM32
-   IMM			IMM8
-   imm?			foreign?
-   imm8?		label?
-   label-address?	label-name
-   immediate-int?
-   obj?			#;obj+?
    CODErri		CODErr
-   RegReg		IMM*2
-   SIB			imm32?)
+   ModRM
+
+   ;; register operands
+   register-index
+   reg?			reg32?		reg8?		xmmreg?
+   reg-requires-REX?	RegReg
+
+   ;; immediate operands
+   IMM			IMM32		IMM8		IMM*2
+   imm?			imm32?		imm8?
+   immediate-int?
+
+   obj?
+   word			reloc-word	reloc-word+
+
+   ;; label operands
+   label?		label-address?
+   label-name
+
+   ;;These are commented out because unused.
+   #;SIB
+   #;obj+?
+   )
 
   (define* (register-index x)
     (cond ((assq x REGISTER-MAPPING)
@@ -683,10 +694,10 @@
 	 (fx>= x -128)
 	 (fx<= x +127)))
 
-  (define-entry-predicate mem? disp)
+  (define-entry-predicate disp? disp)
 
   (define (small-disp? x)
-    (and (mem? x)
+    (and (disp? x)
 	 (byte? (cadr x))))
 
   (define (CODE n ac)
@@ -702,10 +713,13 @@
 	  ac))
 
   (define (ModRM mod reg r/m ac)
+    ;;REG must be a symbol representing a CPU register name.
+    ;;
     (cons (byte (fxlogor (register-index r/m)
 			 (fxlogor (fxsll (register-index reg) 3)
 				  (fxsll mod 6))))
-	  (if (and (not (fx= mod 3)) (eq? r/m '%esp))
+	  (if (and (not (fx= mod 3))
+		   (eq? r/m '%esp))
 	      (cons (byte #x24) ac)
 	    ac)))
 
@@ -775,7 +789,7 @@
 	   (cons `(label-addr	. ,(label-name n))
 		 ac))
 
-	  ((foreign? n)
+	  ((foreign-label? n)
 	   (cons `(foreign-label	. ,(label-name n))
 		 ac))
 
@@ -798,10 +812,10 @@
 	(obj?		x)
 	;;(obj+?	x)
 	(label-address?	x)
-	(foreign?	x)
+	(foreign-label?	x)
 	(label?		x)))
 
-  (define-entry-predicate foreign? foreign-label)
+  (define-entry-predicate foreign-label? foreign-label)
 
   (define-syntax-rule (imm8? ?x)
     (byte? ?x))
@@ -874,11 +888,13 @@
 
     #| end of module: IMM*2 |# )
 
-  (define (SIB s i b ac)
-    (cons (byte (fxlogor (register-index b)
-			 (fxlogor (fxsll (register-index i) 3)
-				  (fxsll s 6))))
-	  ac))
+  ;;Commented out because unused.  (Marco Maggi; Wed Nov  5, 2014)
+  ;;
+  ;;(define (SIB s offset-register base-register ac)
+  ;;  (cons (byte (fxlogor (register-index base-register)
+  ;;                       (fxlogor (fxsll (register-index offset-register) 3)
+  ;;                                (fxsll s 6))))
+  ;;        ac))
 
   (define (imm32? x)
     (boot.case-word-size
@@ -1154,7 +1170,7 @@
      ((32)
       ac)
      ((64)
-      (cond ((mem? rm)
+      (cond ((disp? rm)
 	     (if (reg-requires-REX? r)
 		 (with-args rm
 		   (lambda (a0 a1)
@@ -1283,7 +1299,7 @@
     (CODE c0 (CODE c1 (IMM32 i32 ac))))
 
   (define* (RM /d dst ac)
-    (cond ((mem? dst)
+    (cond ((disp? dst)
 	   (with-args dst
 	     (lambda (a0 a1)
 	       (cond ((and (imm8?  a0)
@@ -1380,41 +1396,41 @@
      (cond ((and (imm? src)
 		 (reg? dst))
 	    (CR #xB8 dst (IMM src ac)))
-	   ((and (imm? src)
-		 (mem? dst))
+	   ((and (imm?  src)
+		 (disp? dst))
 	    (CR* #xC7 '/0 dst (IMM32 src ac)))
 	   ((and (reg? src)
 		 (reg? dst))
 	    (CR* #x89 src dst ac))
-	   ((and (reg? src)
-		 (mem? dst))
+	   ((and (reg?  src)
+		 (disp? dst))
 	    (CR* #x89 src dst ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (CR* #x8B dst src ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((mov32 src dst)
-;;; FIXME
+     ;;FIXME (Abdulaziz Ghuloum)
      (cond ((and (imm? src)
 		 (reg? dst))
 	    (%compiler-internal-error
 	      "here1")
 	    (CR #xB8 dst (IMM32 src ac)))
-	   ((and (imm? src)
-		 (mem? dst))
+	   ((and (imm?  src)
+		 (disp? dst))
 	    (CR*-no-rex #xC7 '/0 dst (IMM32 src ac)))
 	   ((and (reg? src)
 		 (reg? dst))
 	    (%compiler-internal-error
 	      "here3")
 	    (CR* #x89 src dst ac))
-	   ((and (reg? src)
-		 (mem? dst))
+	   ((and (reg?  src)
+		 (disp? dst))
 	    (CR*-no-rex #x89 src dst ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (boot.case-word-size
 	     ((32)
 	      (CR* #x8B dst src ac))
@@ -1424,12 +1440,12 @@
 	    (%compiler-internal-error "invalid" instr))))
     ((movb src dst)
      (cond ((and (imm8? src)
-		 (mem?  dst))
+		 (disp? dst))
 	    (CR* #xC6 '/0 dst (IMM8 src ac)))
 	   ((and (reg8? src)
-		 (mem?  dst))
+		 (disp? dst))
 	    (CR* #x88 src dst ac))
-	   ((and (mem?  src)
+	   ((and (disp? src)
 		 (reg8? dst))
 	    (CR* #x8A dst src ac))
 	   (else
@@ -1448,14 +1464,14 @@
 	   ((and (reg? src)
 		 (reg? dst))
 	    (CR*  #x01 src dst ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (CR*  #x03 dst src ac))
 	   ((and (imm32? src)
-		 (mem?   dst))
+		 (disp?  dst))
 	    (CR*  #x81 '/0 dst (IMM32 src ac)))
-	   ((and (reg? src)
-		 (mem? dst))
+	   ((and (reg?  src)
+		 (disp? dst))
 	    (CR*  #x01 src dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1473,14 +1489,14 @@
 	   ((and (reg? src)
 		 (reg? dst))
 	    (CR*  #x29 src dst ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (CR*  #x2B dst src ac))
 	   ((and (imm32? src)
-		 (mem?   dst))
+		 (disp?  dst))
 	    (CR*  #x81 '/5 dst (IMM32 src ac)))
-	   ((and (reg? src)
-		 (mem? dst))
+	   ((and (reg?  src)
+		 (disp? dst))
 	    (CR*  #x29 src dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1493,13 +1509,13 @@
 		 (reg? dst))
 	    (CR* #xC1 '/4 dst (IMM8 src ac)))
 	   ((and (imm8? src)
-		 (mem?  dst))
+		 (disp? dst))
 	    (CR* #xC1 '/4 dst (IMM8 src ac)))
 	   ((and (eq? src '%cl)
 		 (reg? dst))
 	    (CR* #xD3 '/4 dst ac))
 	   ((and (eq? src '%cl)
-		 (mem? dst))
+		 (disp? dst))
 	    (CR* #xD3 '/4 dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1515,10 +1531,10 @@
 		 (reg? dst))
 	    (CR* #xD3 '/5 dst ac))
 	   ((and (imm8? src)
-		 (mem?  dst))
+		 (disp? dst))
 	    (CR* #xC1 '/5 dst (IMM8 src ac)))
 	   ((and (eq? src '%cl)
-		 (mem? dst))
+		 (disp? dst))
 	    (CR* #xD3 '/5 dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1531,20 +1547,20 @@
 		 (reg?  dst))
 	    (CR* #xC1 '/7 dst (IMM8 src ac)))
 	   ((and (imm8? src)
-		 (mem?  dst))
+		 (disp? dst))
 	    (CR* #xC1 '/7 dst (IMM8 src ac)))
 	   ((and (eq? src '%cl)
 		 (reg? dst))
 	    (CR* #xD3 '/7 dst ac))
 	   ((and (eq? src '%cl)
-		 (mem? dst))
+		 (disp? dst))
 	    (CR* #xD3 '/7 dst ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((andl src dst)
      (cond ((and (imm32? src)
-		 (mem?   dst))
+		 (disp?  dst))
 	    (CR*  #x81 '/4 dst (IMM32 src ac)))
 	   ((and (imm8? src)
 		 (reg?  dst))
@@ -1558,21 +1574,21 @@
 	   ((and (reg? src)
 		 (reg? dst))
 	    (CR*  #x21 src dst ac))
-	   ((and (reg? src)
-		 (mem? dst))
+	   ((and (reg?  src)
+		 (disp? dst))
 	    (CR*  #x21 src dst ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (CR*  #x23 dst src ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((orl src dst)
      (cond ((and (imm32? src)
-		 (mem?   dst))
+		 (disp?  dst))
 	    (CR*  #x81 '/1 dst (IMM32 src ac)))
-	   ((and (reg? src)
-		 (mem? dst))
+	   ((and (reg?  src)
+		 (disp? dst))
 	    (CR*  #x09 src dst ac))
 	   ((and (imm8? src)
 		 (reg?  dst))
@@ -1586,8 +1602,8 @@
 	   ((and (reg? src)
 		 (reg? dst))
 	    (CR*  #x09 src dst ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (CR*  #x0B dst src ac))
 	   (else
 	    (%compiler-internal-error
@@ -1597,7 +1613,7 @@
 		 (reg?  dst))
 	    (CR*  #x83 '/6 dst (IMM8 src ac)))
 	   ((and (imm8? src)
-		 (mem?  dst))
+		 (disp? dst))
 	    (CR*  #x83 '/6 dst (IMM8 src ac)))
 	   ((and (imm32? src)
 		 (eq? dst '%eax))
@@ -1605,18 +1621,18 @@
 	   ((and (reg? src)
 		 (reg? dst))
 	    (CR*  #x31 src dst ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (CR*  #x33 dst src ac))
-	   ((and (reg? src)
-		 (mem? dst))
+	   ((and (reg?  src)
+		 (disp? dst))
 	    (CR*  #x31 src dst ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((leal src dst)
-     (cond ((and (mem? src)
-		 (reg? dst))
+     (cond ((and (disp? src)
+		 (reg?  dst))
 	    (CR* #x8D dst src ac))
 	   (else
 	    (%compiler-internal-error
@@ -1634,14 +1650,14 @@
 	   ((and (reg? src)
 		 (reg? dst))
 	    (CR*  #x39 src dst ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (CR*  #x3B dst src ac))
 	   ((and (imm8? src)
-		 (mem?  dst))
+		 (disp? dst))
 	    (CR*  #x83 '/7 dst (IMM8 src ac)))
 	   ((and (imm32? src)
-		 (mem?   dst))
+		 (disp?  dst))
 	    (CR*  #x81 '/7 dst (IMM32 src ac)))
 	   (else
 	    (%compiler-internal-error
@@ -1656,8 +1672,8 @@
 	   ((and (reg? src)
 		 (reg? dst))
 	    (CCR* #x0F #xAF dst src ac))
-	   ((and (mem? src)
-		 (reg? dst))
+	   ((and (disp? src)
+		 (reg?  dst))
 	    (CCR* #x0F #xAF dst src ac))
 	   (else
 	    (%compiler-internal-error
@@ -1665,7 +1681,7 @@
     ((idivl dst)
      (cond ((reg? dst)
 	    (CR* #xF7 '/7 dst ac))
-	   ((mem? dst)
+	   ((disp? dst)
 	    (CR* #xF7 '/7 dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1677,7 +1693,7 @@
 	    (CODE #x68 (IMM32 dst ac)))
 	   ((reg? dst)
 	    (CR   #x50 dst ac))
-	   ((mem? dst)
+	   ((disp? dst)
 	    (CR*  #xFF '/6 dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1685,7 +1701,7 @@
     ((popl dst)
      (cond ((reg? dst)
 	    (CR  #x58 dst ac))
-	   ((mem? dst)
+	   ((disp? dst)
 	    (CR* #x8F '/0 dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1693,7 +1709,7 @@
     ((notl dst)
      (cond((reg? dst)
 	   (CR* #xF7 '/2 dst ac))
-	  ((mem? dst)
+	  ((disp? dst)
 	   (CR* #xF7 '/7 dst ac))
 	  (else
 	   (%compiler-internal-error
@@ -1721,7 +1737,7 @@
 	      (CODE #xE9 (IMM32 dst ac)))
 	     ((64)
 	      (jmp-pc-relative #xFF #x25 dst ac))))
-	   ((mem? dst)
+	   ((disp? dst)
 	    (CR*  #xFF '/4 dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1737,7 +1753,7 @@
 	      (CODE #xE8 (IMM32 dst ac)))
 	     ((64)
 	      (jmp-pc-relative #xFF #x15 dst ac))))
-	   ((mem? dst)
+	   ((disp? dst)
 	    (CR* #xFF '/2 dst ac))
 	   ((reg? dst)
 	    (CR* #xFF '/2 dst ac))
@@ -1746,10 +1762,10 @@
 	      "invalid jmp target" dst))))
     ((movsd src dst)
      (cond ((and (xmmreg? dst)
-		 (mem?    src))
+		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x10 dst src ac))
 	   ((and (xmmreg? src)
-		 (mem? dst))
+		 (disp?   dst))
 	    (CCCR* #xF2 #x0F #x11 src dst ac))
 	   (else
 	    (%compiler-internal-error
@@ -1759,7 +1775,7 @@
 		 (reg? src))
 	    (CCCR* #xF2 #x0F #x2A src dst ac))
 	   ((and (xmmreg? dst)
-		 (mem? src))
+		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x2A dst src ac))
 	   (else
 	    (%compiler-internal-error
@@ -1780,45 +1796,45 @@
 	      "invalid" instr))))
     ((movss src dst)
      (cond ((and (xmmreg? dst)
-		 (mem?    src))
+		 (disp?   src))
 	    (CCCR* #xF3 #x0F #x10 dst src ac))
 	   ((and (xmmreg? src)
-		 (mem?    dst))
+		 (disp?   dst))
 	    (CCCR* #xF3 #x0F #x11 src dst ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((addsd src dst)
      (cond ((and (xmmreg? dst)
-		 (mem?    src))
+		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x58 dst src ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((subsd src dst)
      (cond ((and (xmmreg? dst)
-		 (mem?    src))
+		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x5C dst src ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((mulsd src dst)
      (cond ((and (xmmreg? dst)
-		 (mem?    src))
+		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x59 dst src ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((divsd src dst)
      (cond ((and (xmmreg? dst)
-		 (mem?    src))
+		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x5E dst src ac))
 	   (else
 	    (%compiler-internal-error
 	      "invalid" instr))))
     ((ucomisd src dst)
      (cond ((and (xmmreg? dst)
-		 (mem?    src))
+		 (disp?   src))
 	    (CCCR* #x66 #x0F #x2E dst src ac))
 	   (else
 	    (%compiler-internal-error
