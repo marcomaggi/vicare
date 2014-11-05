@@ -189,7 +189,7 @@
   (let ((t ?x))
     (if (or (fixnum? t)
 	    (bignum? t))
-	(bitwise-and t 255)
+	(bitwise-and t #xFF)
       (compiler-internal-error __module_who__ 'byte
 	"invalid" t '(byte ?x)))))
 
@@ -586,11 +586,12 @@
    RegReg		IMM*2
    SIB			imm32?)
 
-  (define (register-index x)
+  (define* (register-index x)
     (cond ((assq x REGISTER-MAPPING)
+	   ;;Extract the IDX field from the table entry.
 	   => caddr)
 	  (else
-	   (compiler-internal-error __module_who__  'register-index "not a register" x))))
+	   (%compiler-internal-error "expected symbol representing register name" x))))
 
   (let-syntax ((define-register-mapping-predicate
 		 (syntax-rules ()
@@ -689,10 +690,15 @@
 	 (byte? (cadr x))))
 
   (define (CODE n ac)
+    ;;N must be a fixnum or bignum.
+    ;;
     (cons (byte n) ac))
 
-  (define (CODE+r n r ac)
-    (cons (byte (fxlogor n (register-index r)))
+  (define (CODE+r n reg ac)
+    ;;N must be a fixnum or bignum.  REG must be a symbol representing a CPU register
+    ;;name.
+    ;;
+    (cons (byte (fxlogor n (register-index reg)))
 	  ac))
 
   (define (ModRM mod reg r/m ac)
@@ -703,7 +709,7 @@
 	      (cons (byte #x24) ac)
 	    ac)))
 
-  (define (IMM32 n ac)
+  (define* (IMM32 n ac)
     (boot.case-word-size
      ((32)
       (IMM n ac))
@@ -725,7 +731,7 @@
 	       `((,(if (local-label? LN) 'local-relative 'relative) . ,LN)
 		 . ,ac)))
 	    (else
-	     (compiler-internal-error __module_who__  'IMM32 "invalid" n))))))
+	     (%compiler-internal-error "invalid" n))))))
 
   (define (IMM n ac)
     (cond ((immediate-int? n)
@@ -1230,9 +1236,11 @@
 	       "unhandled" rm))))))
 
   (define (C c ac)
-    (if (fx= 4 wordsize)
-	(CODE c ac)
-      (REX.R 0 (CODE c ac))))
+    (boot.case-word-size
+     ((32)
+      (CODE c ac))
+     ((64)
+      (REX.R 0 (CODE c ac)))))
 
   ;;Commented out because it is not used (Marco Maggi; Oct 25, 2011).
   ;;
@@ -1304,16 +1312,6 @@
 	  (else
 	   (%compiler-internal-error
 	     "unhandled" dst))))
-
-  ;;Commented out because unused.  (Marco Maggi; Oct 4, 2012)
-  ;;
-  ;; (define (dotrace instr orig ls)
-  ;;   (printf "TRACE: ~s ~s\n" instr
-  ;; 	    (let f ((ls ls))
-  ;; 	      (if (eq? ls orig)
-  ;; 		  '()
-  ;; 		(cons (car ls) (f (cdr ls))))))
-  ;;   ls)
 
   (define* (jmp-pc-relative code0 code1 dst ac)
     (boot.case-word-size
@@ -1417,12 +1415,13 @@
 	    (CR*-no-rex #x89 src dst ac))
 	   ((and (mem? src)
 		 (reg? dst))
-	    (if (fx= wordsize 4)
-		(CR* #x8B dst src ac)
-	      (CR*-no-rex #x8B dst src ac)))
+	    (boot.case-word-size
+	     ((32)
+	      (CR* #x8B dst src ac))
+	     ((64)
+	      (CR*-no-rex #x8B dst src ac))))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" instr))))
     ((movb src dst)
      (cond ((and (imm8? src)
 		 (mem?  dst))
