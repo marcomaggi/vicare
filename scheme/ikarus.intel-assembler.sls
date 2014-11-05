@@ -458,7 +458,9 @@
 		      (loop (cdr octets-and-sexps) (fx+ idx wordsize) (cons (cons idx entry) reloc) bot*))
 
 		     ((word)
-		      ;;Store a machine word in the data area.
+		      ;;Store a machine word in the data area.  This is, for example,
+		      ;;the case of immediate Scheme  objects, that fit into a single
+		      ;;machine word.
 		      (%set-code-word-as-fixnum! x idx (cdr entry))
 		      (loop (cdr octets-and-sexps) (fx+ idx wordsize) reloc bot*))
 
@@ -994,23 +996,9 @@
 
 
 (module (convert-instructions local-label?)
-  (module (label-name)
-    (import ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS))
 
   (define-fluid-override __who__
     (identifier-syntax 'convert-instructions))
-
-  ;;List  of symbols  representing  local labels.
-  (define local-labels
-    (make-parameter '()))
-
-  (define (local-label? x)
-    ;;Return true if X is a local label previously registered.
-    ;;
-    ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
-    ;;number of local labels usually small?  (Marco Maggi; Oct 9, 2012)
-    ;;
-    (and (memq x (local-labels)) #t))
 
   (define (convert-instructions ls)
     (parametrise ((local-labels (%uncover-local-labels '() ls)))
@@ -1028,9 +1016,9 @@
     ;;
     ;;The items prepended to ACCUM can be fixnums or entries like the following:
     ;;
-    ;;	(label . ?symbol)
-    ;;  (label-address . ?symbol)
-    ;;  (code-object-self-machine-word-index)
+    ;;   (label . ?symbol)
+    ;;   (label-address . ?symbol)
+    ;;   (code-object-self-machine-word-index)
     ;;
     ;;NOTE The actual job of sexp instruction conversion is performed by the function
     ;;stored in the property list of the instruction name's symbol.
@@ -1123,25 +1111,53 @@
 		     (number->string expected-num-of-rand*))
       assembly-sexp))
 
+;;; --------------------------------------------------------------------
+
   (define (%uncover-local-labels names accum)
-    ;;Tail recursive  function.  Expect ACCUM to  be a list of  assembly sexps; visit
+    ;;Tail recursive  function.  Expect ACCUM to  be a list of  Assembly sexps; visit
     ;;ACCUM, visiting  PAD and SEQ entries  recursively, and build a  list of symbols
     ;;being the names of the LABEL entries.  Return the list of LABEL names.
     ;;
+    ;;The argument NAMES is initially null and becomes a list of gensyms representing
+    ;;the local labels in ACCUM.
+    ;;
     (define-syntax-rule (recur ?names)
       (%uncover-local-labels ?names (cdr accum)))
-    (if (null? accum)
-	names
-      (let ((entry (car accum)))
-	(if (pair? entry)
-	    (case (car entry)
-	      ((label)
-	       (recur (cons (label-name entry) names)))
-	      ((seq pad)
-	       (recur (%uncover-local-labels names (cdr entry))))
-	      (else
-	       (recur names)))
-	  (recur names)))))
+    (if (pair? accum)
+	(let ((entry (car accum)))
+	  (if (pair? entry)
+	      (case (car entry)
+		((label)
+		 ;;The ENTRY has the format:
+		 ;;
+		 ;;   (label ?gensym)
+		 ;;
+		 (recur (cons (cadr entry) names)))
+		((seq pad)
+		 ;;The ENTRY has the format:
+		 ;;
+		 ;;   (seq ?assembly-sexp0 ?assembly-sexp ...)
+		 ;;   (pad ?bytes-count ?assembly-sexp0 ?assembly-sexp ...)
+		 ;;
+		 (recur (%uncover-local-labels names (cdr entry))))
+		(else
+		 (recur names)))
+	    (recur names)))
+      names))
+
+;;; --------------------------------------------------------------------
+
+  ;;List  of symbols  representing  local labels.
+  (define local-labels
+    (make-parameter '()))
+
+  (define (local-label? x)
+    ;;Return true if X is a local label previously registered.
+    ;;
+    ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
+    ;;number of local labels usually small?  (Marco Maggi; Oct 9, 2012)
+    ;;
+    (and (memq x (local-labels)) #t))
 
   #| end of module |# )
 
