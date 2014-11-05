@@ -97,6 +97,20 @@
 ;;a 64-bit  constant: we have  to load it  into a 64-bit  CPU register, then  use the
 ;;register as operand.
 ;;
+;;
+;;About this compiler pass
+;;------------------------
+;;
+;;The purpose of this compiler pass  is to convert symbolic expressions, representing
+;;Assembly language  code, into code objects  that can be executed  and serialised in
+;;FASL files.  To  understand this compiler pass we need  to understand:
+;;
+;;* The  internals of code  objects and associated  relocation vectors.  For  this we
+;;should read the documentation in Texinfo format.
+;;
+;;* The structure of opcodes of machine code for the Intel Architecture.  For this we
+;;need to study the Intel Architecture manuals.
+;;
 
 
 ;;;; syntax helpers
