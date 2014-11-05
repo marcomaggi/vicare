@@ -555,10 +555,9 @@
 	($code-set! code (fx+ idx 6) (fxlogand (fxsra x 45) #xFF))
 	($code-set! code (fx+ idx 7) (fxlogand (fxsra x 53) #xFF)))))
 
-    (define (%set-label-loc! x loc)
+    (define* (%set-label-loc! x loc)
       (if (getprop x '*label-loc*)
-	  (compiler-internal-error __module_who__ '%set-label-loc!
-	    "label is already defined" x)
+	  (%compiler-internal-error "label is already defined" x)
 	(putprop x '*label-loc* loc)))
 
     #| end of module: %STORE-BINARY-CODE-IN-CODE-OBJECTS |# )
@@ -608,12 +607,13 @@
   (define-inline (reg? x)
     (assq x REGISTER-MAPPING))
 
-  (define (reg-requires-REX? x)
+  (define* (reg-requires-REX? x)
+    ;;Return the REX.R field in the table entry.
+    ;;
     (cond ((assq x REGISTER-MAPPING)
 	   => cadddr)
 	  (else
-	   (compiler-internal-error __module_who__ 'reg-required-REX?
-	     "not a reg" x))))
+	   (%compiler-internal-error "expected symbol representing CPU register name" x))))
 
   (define-constant REGISTER-MAPPING
 ;;;     reg  cls  idx  REX.R
@@ -733,7 +733,7 @@
 	    (else
 	     (%compiler-internal-error "invalid" n))))))
 
-  (define (IMM n ac)
+  (define* (IMM n ac)
     (cond ((immediate-int? n)
 	   ;;Prepend  to the  accumulator  AC an  immediate integer  value
 	   ;;least significant bytes first.
@@ -785,7 +785,7 @@
 	       . ,ac)))
 
 	  (else
-	   (compiler-internal-error __module_who__  'IMM "invalid" n))))
+	   (%compiler-internal-error "invalid" n))))
 
   (define* (IMM8 {n immediate-int?} ac)
     ;;Prepend to  the accumulator AC  a fixnum representing the  byte N, which  is an
@@ -822,7 +822,7 @@
   ;;
   ;;(define-entry-predicate obj+? obj+)
 
-  (define (CODErri c d s i ac)
+  (define* (CODErri c d s i ac)
     ;;Generate code for register+register+immediate operations?
     ;;
     (cond ((imm8? i)
@@ -830,18 +830,18 @@
 	  ((imm? i)
 	   (CODE c (ModRM 2 d s (IMM i ac))))
 	  (else
-	   (compiler-internal-error __module_who__  'CODErri "invalid i" i))))
+	   (%compiler-internal-error "invalid i" i))))
 
   (define (CODErr c r1 r2 ac)
     ;;Generate code for register+register operations?
     ;;
     (CODE c (ModRM 3 r1 r2 ac)))
 
-  (define (RegReg r1 r2 r3 ac)
+  (define* (RegReg r1 r2 r3 ac)
     (cond ((eq? r3 '%esp)
-	   (compiler-internal-error __module_who__  'assembler "BUG: invalid src %esp"))
+	   (%compiler-internal-error "invalid src %esp"))
 	  ((eq? r1 '%ebp)
-	   (compiler-internal-error __module_who__  'assembler "BUG: invalid src %ebp"))
+	   (%compiler-internal-error "invalid src %ebp"))
 	  (else
 	   (cons* (byte (fxlogor 4                   (fxsll (register-index r1) 3)))
 		  (byte (fxlogor (register-index r2) (fxsll (register-index r3) 3)))
@@ -849,7 +849,7 @@
 
   (module (IMM*2)
 
-    (define (IMM*2 i1 i2 ac)
+    (define* (IMM*2 i1 i2 ac)
       (cond ((and (immediate-int? i1)
 		  (obj? i2))
 	     (let ((d i1)
@@ -863,7 +863,7 @@
 	     (IMM (bitwise-and (+ i1 i2) WORDSIZE-BITMASK)
 		  ac))
 	    (else
-	     (compiler-internal-error __module_who__  'assemble "invalid IMM*2" i1 i2))))
+	     (%compiler-internal-error "invalid IMM*2" i1 i2))))
 
     (define-constant WORDSIZE-BITMASK
       ;;On 32-bit platforms: this is an exact integer of 32 bits set to 1.
