@@ -1114,12 +1114,14 @@
 ;;; --------------------------------------------------------------------
 
   (define (%uncover-local-labels names accum)
-    ;;Tail recursive  function.  Expect ACCUM to  be a list of  Assembly sexps; visit
-    ;;ACCUM, visiting  PAD and SEQ entries  recursively, and build a  list of symbols
-    ;;being the names of the LABEL entries.  Return the list of LABEL names.
+    ;;Tail recursive function.  Expect ACCUM to be a list of Assembly sexps; NAMES is
+    ;;initially NULL.  Iterate over ACCUM,  visiting PAD and SEQ entries recursively,
+    ;;and  accumulate in  NAMES  a list  of  symbols being  the  gensyms in  symbolic
+    ;;expressions:
     ;;
-    ;;The argument NAMES is initially null and becomes a list of gensyms representing
-    ;;the local labels in ACCUM.
+    ;;   (label ?gensym)
+    ;;
+    ;;representing "local" labels.  Return the resulting NAMES list.
     ;;
     (define-syntax-rule (recur ?names)
       (%uncover-local-labels ?names (cdr accum)))
@@ -1133,13 +1135,18 @@
 		 ;;   (label ?gensym)
 		 ;;
 		 (recur (cons (cadr entry) names)))
-		((seq pad)
+		((seq)
 		 ;;The ENTRY has the format:
 		 ;;
 		 ;;   (seq ?assembly-sexp0 ?assembly-sexp ...)
-		 ;;   (pad ?bytes-count ?assembly-sexp0 ?assembly-sexp ...)
 		 ;;
 		 (recur (%uncover-local-labels names (cdr entry))))
+		((pad)
+		 ;;The ENTRY has the format:
+		 ;;
+		 ;;   (pad ?bytes-count ?assembly-sexp0 ?assembly-sexp ...)
+		 ;;
+		 (recur (%uncover-local-labels names (cddr entry))))
 		(else
 		 (recur names)))
 	    (recur names)))
