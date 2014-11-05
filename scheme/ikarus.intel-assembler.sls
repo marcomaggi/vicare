@@ -570,9 +570,7 @@
    byte?		disp?		small-disp?
 
    ;; enqueuing bytes in the accumulator
-   CODE			CODE+r
-   CODErri		CODErr
-   ModRM
+   CODE			CODE+r		ModRM
 
    ;; register operands
    register-index
@@ -592,6 +590,8 @@
    label-name
 
    ;;These are commented out because unused.
+   #;CODErr
+   #;CODErri
    #;SIB
    #;obj+?
    )
@@ -622,21 +622,6 @@
     (cons (byte (fxlogor n (register-index reg)))
 	  ac))
 
-  (define* (CODErri c d s i ac)
-    ;;Generate code for register+register+immediate operations?
-    ;;
-    (cond ((imm8? i)
-	   (CODE c (ModRM 1 d s (IMM8 i ac))))
-	  ((imm? i)
-	   (CODE c (ModRM 2 d s (IMM i ac))))
-	  (else
-	   (%compiler-internal-error "invalid i" i))))
-
-  (define (CODErr c r1 r2 ac)
-    ;;Generate code for register+register operations?
-    ;;
-    (CODE c (ModRM 3 r1 r2 ac)))
-
   (define (ModRM mod reg r/m ac)
     ;;REG must be a symbol representing a CPU register name.
     ;;
@@ -659,6 +644,25 @@
 	   (cons* (byte (fxlogor 4                     (fxsll (register-index reg1) 3)))
 		  (byte (fxlogor (register-index reg2) (fxsll (register-index reg3) 3)))
 		  ac))))
+
+  ;;Commented out because unused.  (Marco Maggi; Wed Nov  5, 2014)
+  ;;
+  ;; (define* (CODErri c d s i ac)
+  ;;   ;;Generate code for register+register+immediate operations?
+  ;;   ;;
+  ;;   (cond ((imm8? i)
+  ;;          (CODE c (ModRM 1 d s (IMM8 i ac))))
+  ;;         ((imm? i)
+  ;;          (CODE c (ModRM 2 d s (IMM i ac))))
+  ;;         (else
+  ;;          (%compiler-internal-error "invalid i" i))))
+
+  ;;Commented out because unused.  (Marco Maggi; Wed Nov  5, 2014)
+  ;;
+  ;; (define (CODErr c r1 r2 ac)
+  ;;   ;;Generate code for register+register operations?
+  ;;   ;;
+  ;;   (CODE c (ModRM 3 r1 r2 ac)))
 
 ;;; --------------------------------------------------------------------
 ;;; register opeands
@@ -785,19 +789,26 @@
 
   (define* (IMM n ac)
     (cond ((immediate-int? n)
-	   ;;Prepend  to the  accumulator  AC an  immediate integer  value
-	   ;;least significant bytes first.
-	   ;;
-	   ;;  #xDDCCBBAA -> `(#xAA #xBB #xCC #xDD . ,ac)
-	   ;;
 	   (boot.case-word-size
 	    ((32)
+	     ;;Prepend  to  the  accumulator  AC an  immediate  integer  value  least
+	     ;;significant bytes first.
+	     ;;
+	     ;;  (IMM #xDDCCBBAA ac)
+	     ;;  => `(#xAA #xBB #xCC #xDD . ,ac)
+	     ;;
 	     (cons* (byte n)
 		    (byte (sra n 8))
 		    (byte (sra n 16))
 		    (byte (sra n 24))
 		    ac))
 	    ((64)
+	     ;;Prepend  to  the  accumulator  AC an  immediate  integer  value  least
+	     ;;significant bytes first.
+	     ;;
+	     ;;  (IMM #xHHGGFFEEDDCCBBAA ac)
+	     ;;  => `(#xAA #xBB #xCC #xDD #xEE #xFF #xGG #xHH . ,ac)
+	     ;;
 	     (cons* (byte n)
 		    (byte (sra n 8))
 		    (byte (sra n 16))
