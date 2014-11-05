@@ -360,7 +360,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10
 		 (label call_label)
@@ -401,7 +401,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_ignore_rp)
 	    (pad 10 (label call_label)
 		 (call %ebx))
@@ -436,7 +436,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10
 		 (label call_label)
@@ -457,7 +457,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_ignore_rp)
 	    (pad 10
 		 (label call_label)
@@ -478,7 +478,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_ignore_rp)
 	    (pad 10
 		 (label call_label)
@@ -508,7 +508,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_ignore_rp)
 	    (pad 10
 		 (label call_label)
@@ -545,7 +545,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10
 		 (label call_label)
@@ -566,7 +566,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10
 		 (label call_label)
@@ -590,7 +590,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10
 		 (label call_label)
@@ -633,7 +633,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_ignore_rp)
 	    (pad 10
 		 (label call_label)
@@ -670,7 +670,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10 (label call_label)
 		 (call (disp -3 %edi)))
@@ -728,7 +728,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_ignore_rp)
 	    (pad 10
 		 (label call_label)
@@ -750,7 +750,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10
 		 (label call_label)
@@ -791,7 +791,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10 (label call_label)
 		 (call (disp -3 %edi)))
@@ -822,7 +822,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_ignore_rp)
 	    (pad 10
 		 (label call_label)
@@ -857,7 +857,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_error_rp)
 	    (pad 10
 		 (label call_label)
@@ -890,7 +890,7 @@
 	    (jmp (label call_label))
 	    (byte-vector #(0))
 	    (int 8)
-	    (current-frame-offset)
+	    (code-object-self-machine-word-index)
 	    (label-address SL_multiple_values_ignore_rp)
 	    (pad 10
 		 (label call_label)

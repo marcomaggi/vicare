@@ -562,7 +562,7 @@
 	  (jmp L_CALL)
 	  `(byte-vector ,livemask-vec)
 	  `(int ,(* frame-words-count wordsize))
-	  '(current-frame-offset)
+	  '(code-object-self-machine-word-index)
 	  multiarg-rp
 	  `(pad ,CALL-INSTRUCTION-SIZE ,L_CALL ,call-sequence)
 	  (%adjust-frame-pointer-register 'addl))))

@@ -225,7 +225,7 @@
 		     (fxadd4 size))
 		    ((label)
 		     size)
-		    ((word reloc-word reloc-word+ label-addr current-frame-offset foreign-label)
+		    ((word reloc-word reloc-word+ label-addr code-object-self-machine-word-index foreign-label)
 		     (fx+ size wordsize))
 		    ((bottom-code)
 		     (fx+ size (%compute-code-size (cdr x))))
@@ -391,7 +391,7 @@
 		  (if (fixnum? x)
 		      ac
 		    (case (car x)
-		      ((word byte label current-frame-offset local-relative)
+		      ((word byte label code-object-self-machine-word-index local-relative)
 		       ac)
 		      ((reloc-word foreign-label)
 		       (fx+ ac 2))
@@ -451,14 +451,19 @@
 		      (loop (cdr ls) (fx+ idx wordsize) (cons (cons idx a) reloc) bot*))
 		     ((word)
 		      ;;Store a machine word in the data area.
-		      (%set-code-word! x idx (cdr a))
+		      (%set-code-word-as-fixnum! x idx (cdr a))
 		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
-		     ((current-frame-offset)
-		      ;;Store a  machine word  in the data  area holding  the current
-		      ;;offset in the data area; the offset is IDX itself.
+		     ((code-object-self-machine-word-index)
+		      ;;Store a machine word in the data area of the code object; the
+		      ;;machine  word  represents  the index  (zero-based  number  of
+		      ;;machine  words)  of the  current  machine  word in  the  code
+		      ;;object's data area; the index is IDX itself.
 		      ;;
-		      ;;FIXME 64bit (Abdulaziz Ghuloum)
-		      (%set-code-word! x idx idx)
+		      ;;NOTE This machine word can be used by machine code to compute
+		      ;;the address  of the meta data  in the code object,  and so to
+		      ;;access, for example, the relocation vector.
+		      ;;
+		      (%set-code-word-as-fixnum! x idx idx)
 		      (loop (cdr ls) (fx+ idx wordsize) reloc bot*))
 		     ((label)
 		      ;;Store  informations about  the current  location in  the code
@@ -473,17 +478,69 @@
 			"unknown instr" a))))))))
       (loop ls 0 '() '()))
 
-    (define* (%set-code-word! code idx {x fixnum?})
+    (define* (%set-code-word-as-fixnum! code idx {x fixnum?})
       ;;Store a machine word,  whose value is X, in the data area  of the code object
-      ;;CODE at index IDX.
+      ;;CODE at index IDX.  The machine word is stored encoded as fixnum.
       ;;
       (boot.case-word-size
        ((32)
+	;;On 32-bit platforms,  we know that X has a  payload of 32 - 2 =  30 bits in
+	;;the bit range [0, 29].  We split such bits as follows:
+	;;
+	;;            2         1         0
+	;;   987654321098765432109876543210
+	;;   |----------------------------| 30 bits
+	;;                           |----| 6 bits, bit range [0, 5]
+	;;                   |------|       8 bits, bit range [6, 13]
+	;;           |------|               8 bits, bit range [14, 21]
+	;;   |------|                       8 bits, bit range [22, 29]
+	;;
+	;;*  Bit  range  [0, 5]  is  stored  in  the  first least  significant  byte,
+	;;left-shifted by 2 bits to represent the fixnum tag #b00.
+	;;
+	;;* Bit range [6, 13] is stored in the second byte.
+	;;
+	;;* Bit range [14, 21] is stored in the third byte.
+	;;
+	;;* Bit range [22, 29] is stored in the fourth byte.
+	;;
 	($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x3F) 2))
 	($code-set! code (fx+ idx 1) (fxlogand (fxsra x  6) #xFF))
 	($code-set! code (fx+ idx 2) (fxlogand (fxsra x 14) #xFF))
 	($code-set! code (fx+ idx 3) (fxlogand (fxsra x 22) #xFF)))
        ((64)
+	;;On 64-bit platforms,  we know that X has a  payload of 64 - 3 =  61 bits in
+	;;the bit range 0-60.  We split such bits as follows:
+	;;
+	;;   6         5         4         3         2         1         0
+	;;   0987654321098765432109876543210987654321098765432109876543210
+	;;   |-----------------------------------------------------------| 61 bits
+	;;                                                           |---| 5 bits, bit range [0, 4]
+	;;                                                   |------|      8 bits, bit range [5, 12]
+	;;                                           |------|              8 bits, bit range [13, 20]
+	;;                                   |------|                      8 bits, bit range [21, 28]
+	;;                           |------|                              8 bits, bit range [29, 36]
+	;;                   |------|                                      8 bits, bit range [37, 44]
+	;;           |------|                                              8 bits, bit range [45, 52]
+	;;   |------|                                                      8 bits, bit range [53, 60]
+	;;
+	;;* Bit range 0-4 is stored in the 1st (least significant) byte, left-shifted
+	;;by 3 bits to represent the fixnum tag #b000.
+	;;
+	;;* Bit range [5, 12] is stored in the 2nd byte.
+	;;
+	;;* Bit range [13, 20] is stored in the 3rd byte.
+	;;
+	;;* Bit range [21, 28] is stored in the 4th byte.
+	;;
+	;;* Bit range [29, 36] is stored in the 5th byte.
+	;;
+	;;* Bit range [37, 44] is stored in the 6th byte.
+	;;
+	;;* Bit range [45, 52] is stored in the 7th byte.
+	;;
+	;;* Bit range [53, 60] is stored in the 8th byte.
+	;;
 	($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x1F) 3))
 	($code-set! code (fx+ idx 1) (fxlogand (fxsra x  5) #xFF))
 	($code-set! code (fx+ idx 2) (fxlogand (fxsra x 13) #xFF))
@@ -860,7 +917,7 @@
     ;;
     ;;	(label . ?symbol)
     ;;  (label-addr . ?symbol)
-    ;;  (current-frame-offset)
+    ;;  (code-object-self-machine-word-index)
     ;;
     ;;NOTE The actual job of sexp instruction conversion is performed by the function
     ;;stored in the property list of the instruction name's symbol.
@@ -1045,7 +1102,7 @@
   ;;   int a
   ;;   label L
   ;;   label-address L
-  ;;   current-frame-offset
+  ;;   code-object-self-machine-word-index
   ;;   nop ac
   ;;
   (import ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS)
@@ -1805,8 +1862,8 @@
 	 (cons (cons 'label-addr L) ac)
        (compiler-internal-error __module_who__ __who__
 	 "label-address is not a symbol" L)))
-    ((current-frame-offset)
-     (cons '(current-frame-offset) ac))
+    ((code-object-self-machine-word-index)
+     (cons '(code-object-self-machine-word-index) ac))
     ((nop)
      ac))
 
