@@ -1000,9 +1000,9 @@
   (define-fluid-override __who__
     (identifier-syntax 'convert-instructions))
 
-  (define (convert-instructions ls)
-    (parametrise ((local-labels (%uncover-local-labels '() ls)))
-      (fold-right %convert-single-sexp '() ls)))
+  (define (convert-instructions assembly-sexp*)
+    (parametrise ((local-labels (%uncover-local-labels '() assembly-sexp*)))
+      (fold-right %convert-single-sexp '() assembly-sexp*)))
 
   (define (%convert-single-sexp assembly-sexp accum)
     ;;Non-tail  recursive function.   Convert ASSEMBLY-SEXP  into a  list of  fixnums
@@ -1073,11 +1073,11 @@
 	   ;;        (label call_label)
 	   ;;        (call (disp -3 %edi)))
 	   ;;
-	   (let* ((N              (cadr assembly-sexp))
+	   (let* ((pad-count      (cadr assembly-sexp))
 		  (asm-sexps      (cddr assembly-sexp))
 		  (new-accum.tail (fold-right %convert-single-sexp accum asm-sexps))
 		  (prefix.len     (%compute-code-size (%extract-prefix accum new-accum.tail))))
-	     (append (make-list (- N prefix.len) 0)
+	     (append (make-list (- pad-count prefix.len) 0)
 		     new-accum.tail)))
 
 	  (else
