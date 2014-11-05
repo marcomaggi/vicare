@@ -209,6 +209,11 @@
 
 ;;; --------------------------------------------------------------------
 
+(define-syntax-rule (%compiler-internal-error ?message . ?irritants)
+  (compiler-internal-error __module_who__ __who__ ?message . ?irritants))
+
+;;; --------------------------------------------------------------------
+
 (define* (%compute-code-size octets-and-labels)
   ;;Non-tail recursive  function.  Given a  list holding octets-as-fixnums  and label
   ;;sexps: compute  and return the number  of bytes needed to  hold the corresponding
@@ -230,7 +235,7 @@
 		    ((bottom-code)
 		     (fx+ size (%compute-code-size (cdr x))))
 		    (else
-		     (compiler-internal-error __module_who__ __who__
+		     (%compiler-internal-error
 		       "unknown instruction" x)))))
     0
     octets-and-labels))
@@ -400,7 +405,7 @@
 		      ((bottom-code)
 		       (fx+ ac (%compute-reloc-vector-size (cdr x))))
 		      (else
-		       (compiler-internal-error __module_who__ __who__
+		       (%compiler-internal-error
 			 "unknown instr" x)))))
       0
       octets-and-labels))
@@ -474,7 +479,7 @@
 		      ;;Push this entry in BOT* to be processed at the end.
 		      (loop (cdr ls) idx reloc (cons (cdr a) bot*)))
 		     (else
-		      (compiler-internal-error __module_who__ __who__
+		      (%compiler-internal-error
 			"unknown instr" a))))))))
       (loop ls 0 '() '()))
 
@@ -884,8 +889,8 @@
   (module (label-name)
     (import ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS))
 
-  (define-syntax __who__
-    (identifier-syntax 'convert-instruction))
+  (define-fluid-override __who__
+    (identifier-syntax 'convert-instructions))
 
   ;;List  of symbols  representing  local labels.
   (define local-labels
@@ -980,7 +985,7 @@
 		     new-accum.tail)))
 
 	  (else
-	   (compiler-internal-error __module_who__ __who__
+	   (%compiler-internal-error
 	     "unknown instruction" assembly-sexp))))
 
   (define (%extract-prefix old-accum new-accum)
@@ -1005,7 +1010,7 @@
   (define-entry-predicate bottom-code? bottom-code)
 
   (define (%error-incorrect-args assembly-sexp expected-num-of-rand*)
-    (compiler-internal-error __module_who__ __who__
+    (%compiler-internal-error
       (string-append "wrong number of operands in Assembly symbolic expression, expected "
 		     (number->string expected-num-of-rand*))
       assembly-sexp))
@@ -1112,7 +1117,7 @@
   (define* (REX.R bits ac)
     (boot.case-word-size
      ((32)
-      (compiler-internal-error __module_who__ __who__
+      (%compiler-internal-error
 	"invalid in 32-bit mode"))
      ((64)
       (cons (fxlogor #b01001000 bits) ac))))
@@ -1172,11 +1177,11 @@
 
 			   ((and (imm? a0)
 				 (imm? a1))
-			    (compiler-internal-error __module_who__ __who__
+			    (%compiler-internal-error
 			      "not here 4"))
 
 			   (else
-			    (compiler-internal-error __module_who__  __who__
+			    (%compiler-internal-error
 			      "unhandled" a0 a1)))))
 	       (with-args rm
 		 (lambda (a0 a1)
@@ -1196,11 +1201,11 @@
 			       (reg32? a1))
 			  (cond ((reg-requires-REX? a0)
 				 (if (reg-requires-REX? a1)
-				     (compiler-internal-error __module_who__ __who__
+				     (%compiler-internal-error
 				       "unhandled x1" a0 a1)
 				   (REX.R #b010 ac)))
 				((reg-requires-REX? a1)
-				 (compiler-internal-error __module_who__ __who__
+				 (%compiler-internal-error
 				   "unhandled x3" a0 a1))
 				(else
 				 (REX.R 0 ac))))
@@ -1210,7 +1215,7 @@
 			  (REX.R 0 ac))
 
 			 (else
-			  (compiler-internal-error __module_who__  __who__ "unhandled" a0 a1)))))))
+			  (%compiler-internal-error "unhandled" a0 a1)))))))
 	    ((reg? rm)
 	     (let* ((bits 0)
 		    (bits (if (reg-requires-REX? r)
@@ -1221,7 +1226,7 @@
 			    bits)))
 	       (REX.R bits ac)))
 	    (else
-	     (compiler-internal-error __module_who__  __who__
+	     (%compiler-internal-error
 	       "unhandled" rm))))))
 
   (define (C c ac)
@@ -1292,12 +1297,12 @@
 			   (imm? a1))
 		      (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
 		     (else
-		      (compiler-internal-error __module_who__  __who__
+		      (%compiler-internal-error
 			"unhandled" a0 a1))))))
 	  ((reg? dst)
 	   (ModRM 3 /d dst ac))
 	  (else
-	   (compiler-internal-error __module_who__  __who__
+	   (%compiler-internal-error
 	     "unhandled" dst))))
 
   ;;Commented out because unused.  (Marco Maggi; Oct 4, 2012)
@@ -1313,7 +1318,7 @@
   (define* (jmp-pc-relative code0 code1 dst ac)
     (boot.case-word-size
      ((32)
-      (compiler-internal-error __module_who__ __who__
+      (%compiler-internal-error
 	"no pc-relative jumps in 32-bit mode"))
      ((64)
       (let ((G (gensym "L_jump")))
@@ -1390,13 +1395,13 @@
 		 (reg? dst))
 	    (CR* #x8B dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__  __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((mov32 src dst)
 ;;; FIXME
      (cond ((and (imm? src)
 		 (reg? dst))
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "here1")
 	    (CR #xB8 dst (IMM32 src ac)))
 	   ((and (imm? src)
@@ -1404,7 +1409,7 @@
 	    (CR*-no-rex #xC7 '/0 dst (IMM32 src ac)))
 	   ((and (reg? src)
 		 (reg? dst))
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "here3")
 	    (CR* #x89 src dst ac))
 	   ((and (reg? src)
@@ -1416,7 +1421,7 @@
 		(CR* #x8B dst src ac)
 	      (CR*-no-rex #x8B dst src ac)))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((movb src dst)
      (cond ((and (imm8? src)
@@ -1429,7 +1434,7 @@
 		 (reg8? dst))
 	    (CR* #x8A dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((addl src dst)
      (cond ((and (imm8? src)
@@ -1454,7 +1459,7 @@
 		 (mem? dst))
 	    (CR*  #x01 src dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((subl src dst)
      (cond ((and (imm8? src)
@@ -1479,7 +1484,7 @@
 		 (mem? dst))
 	    (CR*  #x29 src dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((sall src dst)
      (cond ((and (eqv? 1 src)
@@ -1498,7 +1503,7 @@
 		 (mem? dst))
 	    (CR* #xD3 '/4 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((shrl src dst)
      (cond ((and (eqv? 1 src)
@@ -1517,7 +1522,7 @@
 		 (mem? dst))
 	    (CR* #xD3 '/5 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((sarl src dst)
      (cond ((and (eqv? 1 src)
@@ -1536,7 +1541,7 @@
 		 (mem? dst))
 	    (CR* #xD3 '/7 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((andl src dst)
      (cond ((and (imm32? src)
@@ -1561,7 +1566,7 @@
 		 (reg? dst))
 	    (CR*  #x23 dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((orl src dst)
      (cond ((and (imm32? src)
@@ -1586,7 +1591,7 @@
 		 (reg? dst))
 	    (CR*  #x0B dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((xorl src dst)
      (cond ((and (imm8? src)
@@ -1608,14 +1613,14 @@
 		 (mem? dst))
 	    (CR*  #x31 src dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((leal src dst)
      (cond ((and (mem? src)
 		 (reg? dst))
 	    (CR* #x8D dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((cmpl src dst)
      (cond ((and (imm8? src)
@@ -1640,7 +1645,7 @@
 		 (mem?   dst))
 	    (CR*  #x81 '/7 dst (IMM32 src ac)))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((imull src dst)
      (cond ((and (imm8? src)
@@ -1656,7 +1661,7 @@
 		 (reg? dst))
 	    (CCR* #x0F #xAF dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((idivl dst)
      (cond ((reg? dst)
@@ -1664,7 +1669,7 @@
 	   ((mem? dst)
 	    (CR* #xF7 '/7 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((pushl dst)
      (cond ((imm8? dst)
@@ -1676,7 +1681,7 @@
 	   ((mem? dst)
 	    (CR*  #xFF '/6 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((popl dst)
      (cond ((reg? dst)
@@ -1684,7 +1689,7 @@
 	   ((mem? dst)
 	    (CR* #x8F '/0 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((notl dst)
      (cond((reg? dst)
@@ -1692,19 +1697,19 @@
 	  ((mem? dst)
 	   (CR* #xF7 '/7 dst ac))
 	  (else
-	   (compiler-internal-error __module_who__ __who__
+	   (%compiler-internal-error
 	     "invalid" instr))))
     ((bswap dst)
      (cond ((reg? dst)
 	    (CCR #x0F #xC8 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((negl dst)
      (cond ((reg? dst)
 	    (CR* #xF7 '/3 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((jmp dst)
      (cond ((and (label? dst)
@@ -1720,7 +1725,7 @@
 	   ((mem? dst)
 	    (CR*  #xFF '/4 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid jmp target" dst))))
     ((call dst)
      (cond ((and (label? dst)
@@ -1738,7 +1743,7 @@
 	   ((reg? dst)
 	    (CR* #xFF '/2 dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid jmp target" dst))))
     ((movsd src dst)
      (cond ((and (xmmreg? dst)
@@ -1748,7 +1753,7 @@
 		 (mem? dst))
 	    (CCCR* #xF2 #x0F #x11 src dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((cvtsi2sd src dst)
      (cond ((and (xmmreg? dst)
@@ -1758,21 +1763,21 @@
 		 (mem? src))
 	    (CCCR* #xF2 #x0F #x2A dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((cvtsd2ss src dst)
      (cond ((and (xmmreg? dst)
 		 (xmmreg? src))
 	    (CCCR* #xF2 #x0F #x5A src dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((cvtss2sd src dst)
      (cond ((and (xmmreg? dst)
 		 (xmmreg? src))
 	    (CCCR* #xF3 #x0F #x5A src dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((movss src dst)
      (cond ((and (xmmreg? dst)
@@ -1782,42 +1787,42 @@
 		 (mem?    dst))
 	    (CCCR* #xF3 #x0F #x11 src dst ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((addsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #xF2 #x0F #x58 dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((subsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #xF2 #x0F #x5C dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((mulsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #xF2 #x0F #x59 dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((divsd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #xF2 #x0F #x5E dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((ucomisd src dst)
      (cond ((and (xmmreg? dst)
 		 (mem?    src))
 	    (CCCR* #x66 #x0F #x2E dst src ac))
 	   (else
-	    (compiler-internal-error __module_who__ __who__
+	    (%compiler-internal-error
 	      "invalid" instr))))
     ((ja dst)     (CCI32 #x0F #x87 dst ac))
     ((jae dst)    (CCI32 #x0F #x83 dst ac))
@@ -1843,7 +1848,7 @@
     ((byte x)
      (if (byte? x)
 	 (cons (byte x) ac)
-       (compiler-internal-error __module_who__ __who__
+       (%compiler-internal-error
 	 "not a byte" x)))
     ((byte-vector x)
      (append (map (lambda (x)
@@ -1855,12 +1860,12 @@
     ((label L)
      (if (symbol? L)
 	 (cons (cons 'label L) ac)
-       (compiler-internal-error __module_who__ __who__
+       (%compiler-internal-error
 	 "label is not a symbol" L)))
     ((label-address L)
      (if (symbol? L)
 	 (cons (cons 'label-addr L) ac)
-       (compiler-internal-error __module_who__ __who__
+       (%compiler-internal-error
 	 "label-address is not a symbol" L)))
     ((code-object-self-machine-word-index)
      (cons '(code-object-self-machine-word-index) ac))
@@ -1989,7 +1994,7 @@
 	 (%error "invalid entry key while filling relocation vector" key)))))
 
   (define-syntax-rule (%error ?message . ?irritants)
-    (compiler-internal-error __module_who__ __who__ ?message . ?irritants))
+    (%compiler-internal-error ?message . ?irritants))
 
   (define-syntax %store-first-word!
     ;;
@@ -2005,7 +2010,7 @@
 
   (define (%label-loc x)
     (or (getprop x '*label-loc*)
-	(compiler-internal-error __module_who__ __who__
+	(%compiler-internal-error
 	  "undefined label" x)))
 
   ;;Commented out because unused.  (Marco Maggi; Oct 9, 2012)
