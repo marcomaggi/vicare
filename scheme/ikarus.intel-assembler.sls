@@ -137,18 +137,20 @@
 ;;(label ?gensym)
 ;;
 ;;   Represents  a  machine-code  entry-point:  the target  of  a  jump  instruction.
-;;   Somewhere in the code there is an instruction like:
+;;   Somewhere in the code there is a corresponding instruction like:
 ;;
 ;;      (jmp (label ?gensym))
 ;;
-;;   where the jump instruction can be conditioned or not.
+;;   where the  jump instruction can  be conditioned or  not.  The LABEL  sexp itself
+;;   does not generate code it just causes the current position in the code object to
+;;   be associated to the ?GENSYM.
 ;;
 ;;(label-address ?gensym)
 ;;
 ;;   Represents the  address of a  machine-code entry: the target  of a jump  or call
 ;;   instruction.  The functions that are referenced in recordised code by a CODE-LOC
-;;   are represented in the input by this sexp.
-;;
+;;   are represented in the input by this sexp.  The LABEL-ADDRESS sexp is present in
+;;   the input where the address is actually used.
 ;;
 
 
