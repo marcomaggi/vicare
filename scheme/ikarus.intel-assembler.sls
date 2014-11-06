@@ -1341,14 +1341,14 @@
     (cons (byte (fxlogor n (register-index reg)))
 	  ac))
 
-  (define (ModRM mod reg r/m ac)
+  (define (ModRM mod reg reg/mem ac)
     ;;REG must be a symbol representing a CPU register name.
     ;;
-    (cons (byte (fxlogor (register-index r/m)
+    (cons (byte (fxlogor (register-index reg/mem)
 			 (fxlogor (fxsll (register-index reg) 3)
 				  (fxsll mod 6))))
 	  (if (and (not (fx= mod 3))
-		   (eq? r/m '%esp))
+		   (eq? reg/mem '%esp))
 	      (cons (byte #x24) ac)
 	    ac)))
 
@@ -1507,6 +1507,11 @@
     (CODE c0 (CODE c1 (IMM32 i32 ac))))
 
   (define* (RM /d dst ac)
+    ;;The argument "/d" must  be a register.  The argument DST must  be a register or
+    ;;memory reference.
+    ;;
+    (assert (reg? /d))
+    (assert (reg/mem? dst))
     (cond ((disp? dst)
 	   (with-args dst
 	     (lambda (a0 a1)
