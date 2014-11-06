@@ -933,6 +933,8 @@
    ;; register operands
    register-index	reg-requires-REX.R-prefix?
    reg?			reg32?		reg8?		xmmreg?
+   reg-eax?		reg-cl?
+
    REX.R		REX+r		REX+RM		RegReg
    C
    CR			CR*		CR*/no-rex
@@ -942,6 +944,7 @@
    ;; immediate operands
    IMM			IMM32		IMM8		IMM*2
    imm?			imm32?		imm8?		immediate-int?
+   imm-one?
 
    obj?
    byte			word		reloc-word	reloc-word+
@@ -982,6 +985,12 @@
 
   (define-syntax-rule (reg? ?x)
     (assq ?x REGISTER-MAPPING))
+
+  (define-syntax-rule (reg-eax? obj)
+    (eq? obj '%eax))
+
+  (define-syntax-rule (reg-cl? obj)
+    (eq? obj '%cl))
 
   (let-syntax ((define-register-mapping-predicate
 		 (syntax-rules ()
@@ -1104,6 +1113,10 @@
      ((64)
       (and (immediate-int? x)
 	   (<= LEAST-S32-INTEGER x GREATEST-S32-INTEGER)))))
+
+  (define (imm-one? obj)
+    (and (fixnum? obj)
+	 (fx=? 1 obj)))
 
 ;;; --------------------------------------------------------------------
 ;;; immediate operands: enqueuing
@@ -1777,36 +1790,28 @@
 	(CR* #x8A dst src ac))))
 
     ((addl src dst)
-     (cond ((and (imm8? src)
-		 (reg?  dst))
-	    (CR*  #x83 '/0 dst (IMM8 src ac)))
-	   ((and (imm32? src)
-		 (eq? dst '%eax))
-	    (C #x05 (IMM32 src ac)))
-	   ((and (imm32? src)
-		 (reg?   dst))
-	    (CR*  #x81 '/0 dst (IMM32 src ac)))
-	   ((and (reg? src)
-		 (reg? dst))
-	    (CR*  #x01 src dst ac))
-	   ((and (disp? src)
-		 (reg?  dst))
-	    (CR*  #x03 dst src ac))
-	   ((and (imm32? src)
-		 (disp?  dst))
-	    (CR*  #x81 '/0 dst (IMM32 src ac)))
-	   ((and (reg?  src)
-		 (disp? dst))
-	    (CR*  #x01 src dst ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((imm8? reg?)
+	(CR*  #x83 '/0 dst (IMM8 src ac)))
+       ((imm32? reg-eax?)
+	(C    #x05 (IMM32 src ac)))
+       ((imm32? reg?)
+	(CR*  #x81 '/0 dst (IMM32 src ac)))
+       ((reg? reg?)
+	(CR*  #x01 src dst ac))
+       ((disp? reg?)
+	(CR*  #x03 dst src ac))
+       ((imm32? disp?)
+	(CR*  #x81 '/0 dst (IMM32 src ac)))
+       ((reg? disp?)
+	(CR*  #x01 src dst ac))))
 
     ((subl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
 	    (CR*  #x83 '/5 dst (IMM8 src ac)))
 	   ((and (imm32? src)
-		 (eq? dst '%eax))
+		 (reg-eax? dst))
 	    (C #x2D (IMM32 src ac)))
 	   ((and (imm32? src)
 		 (reg?   dst))
@@ -1827,7 +1832,7 @@
 	    (%compiler-internal-error "invalid" asm-sexp))))
 
     ((sall src dst)
-     (cond ((and (eqv? 1 src)
+     (cond ((and (imm-one? src)
 		 (reg? dst))
 	    (CR* #xD1 '/4 dst ac))
 	   ((and (imm8? src)
@@ -1836,36 +1841,36 @@
 	   ((and (imm8? src)
 		 (disp? dst))
 	    (CR* #xC1 '/4 dst (IMM8 src ac)))
-	   ((and (eq? src '%cl)
+	   ((and (reg-cl? src)
 		 (reg? dst))
 	    (CR* #xD3 '/4 dst ac))
-	   ((and (eq? src '%cl)
+	   ((and (reg-cl? src)
 		 (disp? dst))
 	    (CR* #xD3 '/4 dst ac))
 	   (else
 	    (%compiler-internal-error "invalid" asm-sexp))))
 
     ((shrl src dst)
-     (cond ((and (eqv? 1 src)
+     (cond ((and (imm-one? src)
 		 (reg? dst))
 	    (CR* #xD1 '/5 dst ac))
 	   ((and (imm8? src)
 		 (reg? dst))
 	    (CR* #xC1 '/5 dst (IMM8 src ac)))
-	   ((and (eq? src '%cl)
+	   ((and (reg-cl? src)
 		 (reg? dst))
 	    (CR* #xD3 '/5 dst ac))
 	   ((and (imm8? src)
 		 (disp? dst))
 	    (CR* #xC1 '/5 dst (IMM8 src ac)))
-	   ((and (eq? src '%cl)
+	   ((and (reg-cl? src)
 		 (disp? dst))
 	    (CR* #xD3 '/5 dst ac))
 	   (else
 	    (%compiler-internal-error "invalid" asm-sexp))))
 
     ((sarl src dst)
-     (cond ((and (eqv? 1 src)
+     (cond ((and (imm-one? src)
 		 (reg? dst))
 	    (CR* #xD1 '/7 dst ac))
 	   ((and (imm8? src)
@@ -1874,10 +1879,10 @@
 	   ((and (imm8? src)
 		 (disp? dst))
 	    (CR* #xC1 '/7 dst (IMM8 src ac)))
-	   ((and (eq? src '%cl)
+	   ((and (reg-cl? src)
 		 (reg? dst))
 	    (CR* #xD3 '/7 dst ac))
-	   ((and (eq? src '%cl)
+	   ((and (reg-cl? src)
 		 (disp? dst))
 	    (CR* #xD3 '/7 dst ac))
 	   (else
@@ -1891,7 +1896,7 @@
 		 (reg?  dst))
 	    (CR*  #x83 '/4 dst (IMM8 src ac)))
 	   ((and (imm32? src)
-		 (eq? dst '%eax))
+		 (reg-eax? dst))
 	    (C #x25 (IMM32 src ac)))
 	   ((and (imm32? src)
 		 (reg?   dst))
@@ -1919,7 +1924,7 @@
 		 (reg?  dst))
 	    (CR*  #x83 '/1 dst (IMM8 src ac)))
 	   ((and (imm32? src)
-		 (eq? dst '%eax))
+		 (reg-eax? dst))
 	    (C #x0D (IMM32 src ac)))
 	   ((and (imm32? src)
 		 (reg?   dst))
@@ -1941,7 +1946,7 @@
 		 (disp? dst))
 	    (CR*  #x83 '/6 dst (IMM8 src ac)))
 	   ((and (imm32? src)
-		 (eq? dst '%eax))
+		 (reg-eax? dst))
 	    (C #x35 (IMM32 src ac)))
 	   ((and (reg? src)
 		 (reg? dst))
@@ -1967,7 +1972,7 @@
 		 (reg?  dst))
 	    (CR*  #x83 '/7 dst (IMM8 src ac)))
 	   ((and (imm32? src)
-		 (eq? dst '%eax))
+		 (reg-eax? dst))
 	    (C #x3D (IMM32 src ac)))
 	   ((and (imm32? src)
 		 (reg?   dst))
