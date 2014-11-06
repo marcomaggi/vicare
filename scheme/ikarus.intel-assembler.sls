@@ -106,6 +106,50 @@
 ;;* The structure of opcodes of machine code for the Intel Architecture.  For this we
 ;;need to study the Intel Architecture manuals.
 ;;
+;;
+;;About the input symbolic expressions
+;;------------------------------------
+;;
+;;The input to this compiler pass is a list of symbolic expressions:
+;;
+;;   (?code-object-sexp ...)
+;;
+;;each of which has the format:
+;;
+;;   (code-object-sexp
+;;     (number-of-free-vars:	?num)
+;;     (annotation:		?annotation)
+;;     (label			?label)
+;;     ?asm-instr-sexp ...)
+;;
+;;examples of ?ASM-INSTR-SEXP are:
+;;
+;;   (movl (obj +) %eax)
+;;   (movl (disp %eax 19) %eax)
+;;   (movl 8 (disp -8 %esp))
+;;   (movl 16 (disp -16 %esp))
+;;   (movl %eax %edi)
+;;   (movl -16 %eax)
+;;   (jmp (disp -3 %edi))
+;;
+;;Among the input Assembly instructions symbolic expressions, notice the following:
+;;
+;;(label ?gensym)
+;;
+;;   Represents  a  machine-code  entry-point:  the target  of  a  jump  instruction.
+;;   Somewhere in the code there is an instruction like:
+;;
+;;      (jmp (label ?gensym))
+;;
+;;   where the jump instruction can be conditioned or not.
+;;
+;;(label-address ?gensym)
+;;
+;;   Represents the  address of a  machine-code entry: the target  of a jump  or call
+;;   instruction.  The functions that are referenced in recordised code by a CODE-LOC
+;;   are represented in the input by this sexp.
+;;
+;;
 
 
 ;;;; syntax helpers
@@ -265,7 +309,7 @@
 	      (reloc-size* (map %compute-reloc-vector-size octets-and-sexps*)))
 	  (let ((code-objects* (map make-code   code-size* code.num-of-freevars*))
 		(reloc-vector* (map make-vector reloc-size*)))
-	    (let ((reloc** (map %store-binary-code-in-code-objects
+	    (let ((reloc** (map store-binary-code-in-code-objects
 			     code-objects* octets-and-sexps*)))
 	      (for-each
 		  (lambda (code-object reloc-vector reloc*)
@@ -376,176 +420,6 @@
 			 "unknown instr" x)))))
       0
       octets-and-sexps))
-
-;;; --------------------------------------------------------------------
-
-  (module (%store-binary-code-in-code-objects)
-
-    (define* (%store-binary-code-in-code-objects x octets-and-sexps)
-      ;;Loop over  the list of entries  OCTETS-AND-SEXPS, filling the data  area of X
-      ;;accordingly.  X is a code object.   OCTETS-AND-SEXPS is a list of fixnums and
-      ;;lists;  the fixnums  being  binary code  octects  to be  stored  in the  code
-      ;;object's data area, the lists representing entries for the relocation vector.
-      ;;
-      ;;Return a list representing data to build a relocation vector.
-      ;;
-      (define (loop octets-and-sexps idx reloc bot*)
-	;;IDX is the  index of the next byte  to be filled in the  code object's data
-	;;area.
-	;;
-	;;BOT* is initially  empty and is filled with subentries  from the entries in
-	;;OCTETS-AND-SEXPS having  key BOTTOM-CODE; such entries  are processed after
-	;;OCTETS-AND-SEXPS has been consumed.
-	;;
-	(cond ((null? octets-and-sexps)
-	       (if (null? bot*)
-		   reloc
-		 (loop (car bot*) idx reloc (cdr bot*))))
-	      (else
-	       (let ((entry (car octets-and-sexps)))
-		 (if (fixnum? entry)
-		     (begin
-		       ;;Store a byte of binary code in the data area.
-		       ($code-set! x idx entry)
-		       (loop (cdr octets-and-sexps) (fxadd1 idx) reloc bot*))
-		   (case (car entry)
-		     ((byte)
-		      ;;Store a byte of binary code in the data area.
-		      ($code-set! x idx (cdr entry))
-		      (loop (cdr octets-and-sexps) (fxadd1 idx) reloc bot*))
-
-		     ((relative local-relative)
-		      ;;Add an entry to the relocation list; leave 4 bytes of room in
-		      ;;the data area.
-		      (loop (cdr octets-and-sexps) (fx+ idx 4) (cons (cons idx entry) reloc) bot*))
-
-		     ((reloc-word reloc-word+ label-address foreign-label)
-		      ;;Add an entry to the relocation  list; leave a word of room in
-		      ;;the data area.
-		      (loop (cdr octets-and-sexps) (fx+ idx wordsize) (cons (cons idx entry) reloc) bot*))
-
-		     ((word)
-		      ;;Store a machine word in the data area.  This is, for example,
-		      ;;the case of immediate Scheme  objects, that fit into a single
-		      ;;machine word.
-		      (%set-code-word-as-fixnum! x idx (cdr entry))
-		      (loop (cdr octets-and-sexps) (fx+ idx wordsize) reloc bot*))
-
-		     ((code-object-self-machine-word-index)
-		      ;;Store a machine word in the data area of the code object; the
-		      ;;machine  word  represents  the index  (zero-based  number  of
-		      ;;machine  words)  of the  current  machine  word in  the  code
-		      ;;object's data area; the index is IDX itself.
-		      ;;
-		      ;;NOTE This machine word can be used by machine code to compute
-		      ;;the address  of the meta data  in the code object,  and so to
-		      ;;access, for example, the relocation vector.
-		      ;;
-		      (%set-code-word-as-fixnum! x idx idx)
-		      (loop (cdr octets-and-sexps) (fx+ idx wordsize) reloc bot*))
-
-		     ((label)
-		      ;;This entry represents an Assembly label; the label is used as
-		      ;;reference to the current entry  point in the code object: the
-		      ;;machine word  at offset  IDX from the  beginning of  the data
-		      ;;area.
-		      ;;
-		      ;;We store informations about the  current location in the code
-		      ;;object in the label gensym's property list as:
-		      ;;
-		      ;;   (?code-object-reference ?offset-as-number-of-words)
-		      ;;
-		      ;;such value will be used  later, when composing the relocation
-		      ;;vector, by entries of type LABEL-ADDRESS.
-		      (%set-label-loc! (cdr entry) (list x idx))
-		      (loop (cdr octets-and-sexps) idx reloc bot*))
-
-		     ((bottom-code)
-		      ;;Push this entry in BOT* to be processed at the end.
-		      (loop (cdr octets-and-sexps) idx reloc (cons (cdr entry) bot*)))
-
-		     (else
-		      (%compiler-internal-error "unknown entry in octets and sexps" entry))))))))
-      (loop octets-and-sexps 0 '() '()))
-
-    (define* (%set-code-word-as-fixnum! code idx {x fixnum?})
-      ;;Store a machine word,  whose value is X, in the data area  of the code object
-      ;;CODE at index IDX.  The machine word is stored encoded as fixnum.
-      ;;
-      (boot.case-word-size
-       ((32)
-	;;On 32-bit platforms,  we know that X has a  payload of 32 - 2 =  30 bits in
-	;;the bit range [0, 29].  We split such bits as follows:
-	;;
-	;;            2         1         0
-	;;   987654321098765432109876543210
-	;;   |----------------------------| 30 bits
-	;;                           |----| 6 bits, bit range [0, 5]
-	;;                   |------|       8 bits, bit range [6, 13]
-	;;           |------|               8 bits, bit range [14, 21]
-	;;   |------|                       8 bits, bit range [22, 29]
-	;;
-	;;*  Bit  range  [0, 5]  is  stored  in  the  first least  significant  byte,
-	;;left-shifted by 2 bits to represent the fixnum tag #b00.
-	;;
-	;;* Bit range [6, 13] is stored in the second byte.
-	;;
-	;;* Bit range [14, 21] is stored in the third byte.
-	;;
-	;;* Bit range [22, 29] is stored in the fourth byte.
-	;;
-	($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x3F) 2))
-	($code-set! code (fx+ idx 1) (fxlogand (fxsra x  6) #xFF))
-	($code-set! code (fx+ idx 2) (fxlogand (fxsra x 14) #xFF))
-	($code-set! code (fx+ idx 3) (fxlogand (fxsra x 22) #xFF)))
-       ((64)
-	;;On 64-bit platforms,  we know that X has a  payload of 64 - 3 =  61 bits in
-	;;the bit range 0-60.  We split such bits as follows:
-	;;
-	;;   6         5         4         3         2         1         0
-	;;   0987654321098765432109876543210987654321098765432109876543210
-	;;   |-----------------------------------------------------------| 61 bits
-	;;                                                           |---| 5 bits, bit range [0, 4]
-	;;                                                   |------|      8 bits, bit range [5, 12]
-	;;                                           |------|              8 bits, bit range [13, 20]
-	;;                                   |------|                      8 bits, bit range [21, 28]
-	;;                           |------|                              8 bits, bit range [29, 36]
-	;;                   |------|                                      8 bits, bit range [37, 44]
-	;;           |------|                                              8 bits, bit range [45, 52]
-	;;   |------|                                                      8 bits, bit range [53, 60]
-	;;
-	;;* Bit range 0-4 is stored in the 1st (least significant) byte, left-shifted
-	;;by 3 bits to represent the fixnum tag #b000.
-	;;
-	;;* Bit range [5, 12] is stored in the 2nd byte.
-	;;
-	;;* Bit range [13, 20] is stored in the 3rd byte.
-	;;
-	;;* Bit range [21, 28] is stored in the 4th byte.
-	;;
-	;;* Bit range [29, 36] is stored in the 5th byte.
-	;;
-	;;* Bit range [37, 44] is stored in the 6th byte.
-	;;
-	;;* Bit range [45, 52] is stored in the 7th byte.
-	;;
-	;;* Bit range [53, 60] is stored in the 8th byte.
-	;;
-	($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x1F) 3))
-	($code-set! code (fx+ idx 1) (fxlogand (fxsra x  5) #xFF))
-	($code-set! code (fx+ idx 2) (fxlogand (fxsra x 13) #xFF))
-	($code-set! code (fx+ idx 3) (fxlogand (fxsra x 21) #xFF))
-	($code-set! code (fx+ idx 4) (fxlogand (fxsra x 29) #xFF))
-	($code-set! code (fx+ idx 5) (fxlogand (fxsra x 37) #xFF))
-	($code-set! code (fx+ idx 6) (fxlogand (fxsra x 45) #xFF))
-	($code-set! code (fx+ idx 7) (fxlogand (fxsra x 53) #xFF)))))
-
-    (define* (%set-label-loc! x loc)
-      (if (getprop x '*label-loc*)
-	  (%compiler-internal-error "label is already defined" x)
-	(putprop x '*label-loc* loc)))
-
-    #| end of module: %STORE-BINARY-CODE-IN-CODE-OBJECTS |# )
 
   #| end of module: ASSEMBLE-SOURCES |# )
 
@@ -724,6 +598,174 @@
       names))
 
   #| end of module |# )
+
+
+(module (store-binary-code-in-code-objects)
+
+  (define* (store-binary-code-in-code-objects x octets-and-sexps)
+    ;;Loop over  the list  of entries  OCTETS-AND-SEXPS, filling the  data area  of X
+    ;;accordingly.  X  is a code object.   OCTETS-AND-SEXPS is a list  of fixnums and
+    ;;lists; the fixnums being binary code octects  to be stored in the code object's
+    ;;data area, the lists representing entries for the relocation vector.
+    ;;
+    ;;Return a list representing data to build a relocation vector.
+    ;;
+    (define (loop octets-and-sexps idx reloc bot*)
+      ;;IDX is  the index of  the next byte  to be filled  in the code  object's data
+      ;;area.
+      ;;
+      ;;BOT* is  initially empty and  is filled with  subentries from the  entries in
+      ;;OCTETS-AND-SEXPS  having key  BOTTOM-CODE; such  entries are  processed after
+      ;;OCTETS-AND-SEXPS has been consumed.
+      ;;
+      (cond ((null? octets-and-sexps)
+	     (if (null? bot*)
+		 reloc
+	       (loop (car bot*) idx reloc (cdr bot*))))
+	    (else
+	     (let ((entry (car octets-and-sexps)))
+	       (if (fixnum? entry)
+		   (begin
+		     ;;Store a byte of binary code in the data area.
+		     ($code-set! x idx entry)
+		     (loop (cdr octets-and-sexps) (fxadd1 idx) reloc bot*))
+		 (case (car entry)
+		   ((byte)
+		    ;;Store a byte of binary code in the data area.
+		    ($code-set! x idx (cdr entry))
+		    (loop (cdr octets-and-sexps) (fxadd1 idx) reloc bot*))
+
+		   ((relative local-relative)
+		    ;;Add an entry  to the relocation list; leave 4  bytes of room in
+		    ;;the data area.
+		    (loop (cdr octets-and-sexps) (fx+ idx 4) (cons (cons idx entry) reloc) bot*))
+
+		   ((reloc-word reloc-word+ label-address foreign-label)
+		    ;;Add an  entry to the relocation  list; leave a word  of room in
+		    ;;the data area.
+		    (loop (cdr octets-and-sexps) (fx+ idx wordsize) (cons (cons idx entry) reloc) bot*))
+
+		   ((word)
+		    ;;Store a machine  word in the data area.  This  is, for example,
+		    ;;the case  of immediate Scheme  objects, that fit into  a single
+		    ;;machine word.
+		    (%set-code-word-as-fixnum! x idx (cdr entry))
+		    (loop (cdr octets-and-sexps) (fx+ idx wordsize) reloc bot*))
+
+		   ((code-object-self-machine-word-index)
+		    ;;Store a machine  word in the data area of  the code object; the
+		    ;;machine word represents the index (zero-based number of machine
+		    ;;words) of  the current machine  word in the code  object's data
+		    ;;area; the index is IDX itself.
+		    ;;
+		    ;;NOTE This machine  word can be used by machine  code to compute
+		    ;;the address  of the  meta data  in the code  object, and  so to
+		    ;;access, for example, the relocation vector.
+		    ;;
+		    (%set-code-word-as-fixnum! x idx idx)
+		    (loop (cdr octets-and-sexps) (fx+ idx wordsize) reloc bot*))
+
+		   ((label)
+		    ;;This entry represents  an Assembly label; the label  is used as
+		    ;;reference to  the current entry  point in the code  object: the
+		    ;;machine word at offset IDX from the beginning of the data area.
+		    ;;
+		    ;;We store  informations about the  current location in  the code
+		    ;;object in the label gensym's property list as:
+		    ;;
+		    ;;   (?code-object-reference ?offset-as-number-of-words)
+		    ;;
+		    ;;such value  will be used  later, when composing  the relocation
+		    ;;vector, by entries of type LABEL-ADDRESS.
+		    (%set-label-loc! (cdr entry) (list x idx))
+		    (loop (cdr octets-and-sexps) idx reloc bot*))
+
+		   ((bottom-code)
+		    ;;Push this entry in BOT* to be processed at the end.
+		    (loop (cdr octets-and-sexps) idx reloc (cons (cdr entry) bot*)))
+
+		   (else
+		    (%compiler-internal-error "unknown entry in octets and sexps" entry))))))))
+    (loop octets-and-sexps 0 '() '()))
+
+  (define* (%set-code-word-as-fixnum! code idx {x fixnum?})
+    ;;Store a  machine word, whose value  is X, in the  data area of the  code object
+    ;;CODE at index IDX.  The machine word is stored encoded as fixnum.
+    ;;
+    (boot.case-word-size
+     ((32)
+      ;;On 32-bit platforms, we know that X has a  payload of 32 - 2 = 30 bits in the
+      ;;bit range [0, 29].  We split such bits as follows:
+      ;;
+      ;;            2         1         0
+      ;;   987654321098765432109876543210
+      ;;   |----------------------------| 30 bits
+      ;;                           |----| 6 bits, bit range [0, 5]
+      ;;                   |------|       8 bits, bit range [6, 13]
+      ;;           |------|               8 bits, bit range [14, 21]
+      ;;   |------|                       8 bits, bit range [22, 29]
+      ;;
+      ;;*  Bit  range  [0,  5]  is  stored  in  the  first  least  significant  byte,
+      ;;left-shifted by 2 bits to represent the fixnum tag #b00.
+      ;;
+      ;;* Bit range [6, 13] is stored in the second byte.
+      ;;
+      ;;* Bit range [14, 21] is stored in the third byte.
+      ;;
+      ;;* Bit range [22, 29] is stored in the fourth byte.
+      ;;
+      ($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x3F) 2))
+      ($code-set! code (fx+ idx 1) (fxlogand (fxsra x  6) #xFF))
+      ($code-set! code (fx+ idx 2) (fxlogand (fxsra x 14) #xFF))
+      ($code-set! code (fx+ idx 3) (fxlogand (fxsra x 22) #xFF)))
+     ((64)
+      ;;On 64-bit platforms, we know that X has a  payload of 64 - 3 = 61 bits in the
+      ;;bit range 0-60.  We split such bits as follows:
+      ;;
+      ;;   6         5         4         3         2         1         0
+      ;;   0987654321098765432109876543210987654321098765432109876543210
+      ;;   |-----------------------------------------------------------| 61 bits
+      ;;                                                           |---| 5 bits, bit range [0, 4]
+      ;;                                                   |------|      8 bits, bit range [5, 12]
+      ;;                                           |------|              8 bits, bit range [13, 20]
+      ;;                                   |------|                      8 bits, bit range [21, 28]
+      ;;                           |------|                              8 bits, bit range [29, 36]
+      ;;                   |------|                                      8 bits, bit range [37, 44]
+      ;;           |------|                                              8 bits, bit range [45, 52]
+      ;;   |------|                                                      8 bits, bit range [53, 60]
+      ;;
+      ;;* Bit range  0-4 is stored in the 1st  (least significant) byte, left-shifted
+      ;;by 3 bits to represent the fixnum tag #b000.
+      ;;
+      ;;* Bit range [5, 12] is stored in the 2nd byte.
+      ;;
+      ;;* Bit range [13, 20] is stored in the 3rd byte.
+      ;;
+      ;;* Bit range [21, 28] is stored in the 4th byte.
+      ;;
+      ;;* Bit range [29, 36] is stored in the 5th byte.
+      ;;
+      ;;* Bit range [37, 44] is stored in the 6th byte.
+      ;;
+      ;;* Bit range [45, 52] is stored in the 7th byte.
+      ;;
+      ;;* Bit range [53, 60] is stored in the 8th byte.
+      ;;
+      ($code-set! code (fx+ idx 0) (fxsll (fxlogand x #x1F) 3))
+      ($code-set! code (fx+ idx 1) (fxlogand (fxsra x  5) #xFF))
+      ($code-set! code (fx+ idx 2) (fxlogand (fxsra x 13) #xFF))
+      ($code-set! code (fx+ idx 3) (fxlogand (fxsra x 21) #xFF))
+      ($code-set! code (fx+ idx 4) (fxlogand (fxsra x 29) #xFF))
+      ($code-set! code (fx+ idx 5) (fxlogand (fxsra x 37) #xFF))
+      ($code-set! code (fx+ idx 6) (fxlogand (fxsra x 45) #xFF))
+      ($code-set! code (fx+ idx 7) (fxlogand (fxsra x 53) #xFF)))))
+
+  (define* (%set-label-loc! x loc)
+    (if (getprop x '*label-loc*)
+	(%compiler-internal-error "label is already defined" x)
+      (putprop x '*label-loc* loc)))
+
+  #| end of module: STORE-BINARY-CODE-IN-CODE-OBJECTS |# )
 
 
 (module (make-reloc-vector-record-filler)
