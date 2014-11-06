@@ -550,7 +550,7 @@
   #| end of module: ASSEMBLE-SOURCES |# )
 
 
-(module (convert-instructions local-label?)
+(module (convert-instructions local-label-gensym?)
 
   (define-fluid-override __who__
     (identifier-syntax 'convert-instructions))
@@ -561,7 +561,7 @@
   (define local-labels
     (make-parameter '()))
 
-  (define (local-label? x)
+  (define (local-label-gensym? x)
     ;;Return true if X is a local label previously registered.
     ;;
     ;;FIXME Would  this be  significantly faster  with an EQ?  hashtable?  Or  is the
@@ -950,7 +950,7 @@
    byte			word		reloc-word	reloc-word+
 
    ;; label operands
-   label?		label-address?
+   label?		label-address?	label?/local
    label-name
 
    ;; syntaxes
@@ -1231,7 +1231,7 @@
 
   (define (%IMM/label ival ac)
     (let* ((LN  (label-name ival))
-	   (key (if (local-label? LN)
+	   (key (if (local-label-gensym? LN)
 		    'local-relative
 		  'relative)))
       (cons (cons key LN) ac)))
@@ -1316,6 +1316,10 @@
 
   (define-syntax-rule (label-name ?x)
     (cadr ?x))
+
+  (define (label?/local obj)
+    (and (label? obj)
+	 (local-label-gensym? (label-name obj))))
 
 ;;; --------------------------------------------------------------------
 ;;; pushing bytes on the accumulator
@@ -1931,95 +1935,52 @@
        ((reg?)			(CCR #x0F #xC8 dst ac))))
 
     ((negl dst)
-     (cond ((reg? dst)
-	    (CR* #xF7 '/3 dst ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (dst)
+       ((reg?)			(CR* #xF7 '/3 dst ac))))
 
     ((jmp dst)
-     (cond ((and (label? dst)
-		 (local-label? (label-name dst)))
-	    (CODE #xE9 (cons `(local-relative . ,(label-name dst))
-			     ac)))
-	   ((imm? dst)
-	    (boot.case-word-size
-	     ((32)
-	      (CODE #xE9 (IMM32 dst ac)))
-	     ((64)
-	      (jmp-pc-relative #xFF #x25 dst ac))))
-	   ((disp? dst)
-	    (CR*  #xFF '/4 dst ac))
-	   (else
-	    (%compiler-internal-error "invalid jmp target" dst))))
+     (match-operands (dst)
+       ((label?/local)		(CODE #xE9 (cons `(local-relative . ,(label-name dst)) ac)))
+       ((imm?)			(boot.case-word-size
+				 ((32)		(CODE #xE9 (IMM32 dst ac)))
+				 ((64)		(jmp-pc-relative #xFF #x25 dst ac))))
+       ((disp?)			(CR*  #xFF '/4 dst ac))))
 
     ((call dst)
-     (cond ((and (label? dst)
-		 (local-label? (label-name dst)))
-	    (CODE #xE8 (cons `(local-relative . ,(label-name dst))
-			     ac)))
-	   ((imm? dst)
-	    (boot.case-word-size
-	     ((32)
-	      (CODE #xE8 (IMM32 dst ac)))
-	     ((64)
-	      (jmp-pc-relative #xFF #x15 dst ac))))
-	   ((disp? dst)
-	    (CR* #xFF '/2 dst ac))
-	   ((reg? dst)
-	    (CR* #xFF '/2 dst ac))
-	   (else
-	    (%compiler-internal-error "invalid jmp target" dst))))
+     (match-operands (dst)
+       ((label?/local)		(CODE #xE8 (cons `(local-relative . ,(label-name dst)) ac)))
+       ((imm?)			(boot.case-word-size
+				 ((32)		(CODE #xE8 (IMM32 dst ac)))
+				 ((64)		(jmp-pc-relative #xFF #x15 dst ac))))
+       ((disp?)			(CR* #xFF '/2 dst ac))
+       ((reg?)			(CR* #xFF '/2 dst ac))))
 
     ((movsd src dst)
-     (cond ((and (xmmreg? dst)
-		 (disp?   src))
-	    (CCCR* #xF2 #x0F #x10 dst src ac))
-	   ((and (xmmreg? src)
-		 (disp?   dst))
-	    (CCCR* #xF2 #x0F #x11 src dst ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((disp?   xmmreg?)	(CCCR* #xF2 #x0F #x10 dst src ac))
+       ((xmmreg? disp?)		(CCCR* #xF2 #x0F #x11 src dst ac))))
 
     ((cvtsi2sd src dst)
-     (cond ((and (xmmreg? dst)
-		 (reg? src))
-	    (CCCR* #xF2 #x0F #x2A src dst ac))
-	   ((and (xmmreg? dst)
-		 (disp?   src))
-	    (CCCR* #xF2 #x0F #x2A dst src ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((reg?  xmmreg?)		(CCCR* #xF2 #x0F #x2A src dst ac))
+       ((disp? xmmreg?)		(CCCR* #xF2 #x0F #x2A dst src ac))))
 
     ((cvtsd2ss src dst)
-     (cond ((and (xmmreg? dst)
-		 (xmmreg? src))
-	    (CCCR* #xF2 #x0F #x5A src dst ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((xmmreg? xmmreg?)	(CCCR* #xF2 #x0F #x5A src dst ac))))
 
     ((cvtss2sd src dst)
-     (cond ((and (xmmreg? dst)
-		 (xmmreg? src))
-	    (CCCR* #xF3 #x0F #x5A src dst ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((xmmreg? xmmreg?)	(CCCR* #xF3 #x0F #x5A src dst ac))))
 
     ((movss src dst)
-     (cond ((and (xmmreg? dst)
-		 (disp?   src))
-	    (CCCR* #xF3 #x0F #x10 dst src ac))
-	   ((and (xmmreg? src)
-		 (disp?   dst))
-	    (CCCR* #xF3 #x0F #x11 src dst ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((disp?   xmmreg?)	(CCCR* #xF3 #x0F #x10 dst src ac))
+       ((xmmreg? disp?)		(CCCR* #xF3 #x0F #x11 src dst ac))))
 
     ((addsd src dst)
-     (cond ((and (xmmreg? dst)
-		 (disp?   src))
-	    (CCCR* #xF2 #x0F #x58 dst src ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((disp? xmmreg?)		(CCCR* #xF2 #x0F #x58 dst src ac))))
 
     ((subsd src dst)
      (cond ((and (xmmreg? dst)
