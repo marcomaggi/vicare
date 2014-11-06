@@ -1983,32 +1983,20 @@
        ((disp? xmmreg?)		(CCCR* #xF2 #x0F #x58 dst src ac))))
 
     ((subsd src dst)
-     (cond ((and (xmmreg? dst)
-		 (disp?   src))
-	    (CCCR* #xF2 #x0F #x5C dst src ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((disp? xmmreg?)		(CCCR* #xF2 #x0F #x5C dst src ac))))
 
     ((mulsd src dst)
-     (cond ((and (xmmreg? dst)
-		 (disp?   src))
-	    (CCCR* #xF2 #x0F #x59 dst src ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((disp? xmmreg?)		(CCCR* #xF2 #x0F #x59 dst src ac))))
 
     ((divsd src dst)
-     (cond ((and (xmmreg? dst)
-		 (disp?   src))
-	    (CCCR* #xF2 #x0F #x5E dst src ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((disp? xmmreg?)		(CCCR* #xF2 #x0F #x5E dst src ac))))
 
     ((ucomisd src dst)
-     (cond ((and (xmmreg? dst)
-		 (disp?   src))
-	    (CCCR* #x66 #x0F #x2E dst src ac))
-	   (else
-	    (%compiler-internal-error "invalid" asm-sexp))))
+     (match-operands (src dst)
+       ((disp? xmmreg?)		(CCCR* #x66 #x0F #x2E dst src ac))))
 
     ((ja dst)     (CCI32 #x0F #x87 dst ac))
     ((jae dst)    (CCI32 #x0F #x83 dst ac))
@@ -2035,34 +2023,25 @@
 ;;; --------------------------------------------------------------------
 
     ((byte x)
-     (if (byte? x)
-	 (cons (byte x) ac)
-       (%compiler-internal-error	   "not a byte" x)))
+     (match-operands (x)
+       ((byte?)			(cons (byte x) ac))))
 
-    ((byte-vector x)
-     (append (map (lambda (x)
-		    (byte x))
-	       (vector->list x))
-	     ac))
-
-    ((int a)
-     (IMM a ac))
+    ((int a)			(IMM a ac))
 
     ((label L)
-     (if (symbol? L)
-	 (cons (cons 'label L) ac)
-       (%compiler-internal-error	   "label is not a symbol" L)))
+     (match-operands (L)
+       ((symbol?)		(cons (cons 'label         L) ac))))
 
     ((label-address L)
-     (if (symbol? L)
-	 (cons (cons 'label-address L) ac)
-       (%compiler-internal-error "value in LABEL-ADDRESS entry is not a symbol" L)))
+     (match-operands (L)
+       ((symbol?)		(cons (cons 'label-address L) ac))))
 
     ((code-object-self-machine-word-index)
      (cons '(code-object-self-machine-word-index) ac))
 
-    ((nop)
-     ac))
+    ((byte-vector x)		(append (map byte (vector->list x)) ac))
+
+    ((nop)			ac))
 
   #| end of module |# )
 
