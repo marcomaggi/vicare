@@ -968,7 +968,7 @@
    reg?			reg32?		reg8?		xmmreg?
    REX.R		REX+r		REX+RM		RegReg
    C
-   CR			CR*		CR*-no-rex
+   CR			CR*		CR*/no-rex
    CCR			CCR*		CCCR*		CCI32
    RM			jmp-pc-relative
 
@@ -1334,21 +1334,25 @@
     ;;
     (cons (byte n) ac))
 
-  (define (CODE+r n reg ac)
-    ;;N must be a fixnum or bignum.  REG must be a symbol representing a CPU register
+  (define (CODE+r n greek-rho ac)
+    ;;N must be a  fixnum or bignum.  greek-rho must be a symbol  representing a CPU register
     ;;name.
     ;;
-    (cons (byte (fxlogor n (register-index reg)))
+    (cons (byte (fxlogor n (register-index greek-rho)))
 	  ac))
 
-  (define (ModRM mod reg reg/mem ac)
-    ;;REG must be a symbol representing a CPU register name.
+  (define (ModRM mod greek-rho greek-rho/greek-mu ac)
+    ;;GREEK-RHO must be  a symbol representing a  CPU register name.  greek-rho/greek-mu must  be a register
+    ;;name or a memory reference.
     ;;
-    (cons (byte (fxlogor (register-index reg/mem)
-			 (fxlogor (fxsll (register-index reg) 3)
+    #;(assert (fixnum?  mod))
+    #;(assert (reg?     greek-rho))
+    #;(assert (reg/mem? greek-rho/greek-mu))
+    (cons (byte (fxlogor (register-index greek-rho/greek-mu)
+			 (fxlogor (fxsll (register-index greek-rho) 3)
 				  (fxsll mod 6))))
 	  (if (and (not (fx= mod 3))
-		   (eq? reg/mem '%esp))
+		   (eq? greek-rho/greek-mu '%esp))
 	      (cons (byte #x24) ac)
 	    ac)))
 
@@ -1491,7 +1495,9 @@
   (define (CR* c r rm ac)
     (REX+RM r rm (CODE c (RM r rm ac))))
 
-  (define (CR*-no-rex c r rm ac)
+  (define (CR*/no-rex c r rm ac)
+    ;;This is like CR*, but without the REX+RM prefix.
+    ;;
     (CODE c (RM r rm ac)))
 
   (define (CCR* c0 c1 r rm ac)
@@ -1510,8 +1516,8 @@
     ;;The argument "/d" must  be a register.  The argument DST must  be a register or
     ;;memory reference.
     ;;
-    (assert (reg? /d))
-    (assert (reg/mem? dst))
+    #;(assert (reg? /d))
+    #;(assert (reg/mem? dst))
     (cond ((disp? dst)
 	   (with-args dst
 	     (lambda (a0 a1)
@@ -1543,8 +1549,7 @@
   (define* (jmp-pc-relative code0 code1 dst ac)
     (boot.case-word-size
      ((32)
-      (%compiler-internal-error
-	  "no pc-relative jumps in 32-bit mode"))
+      (%compiler-internal-error "no pc-relative jumps in 32-bit mode"))
      ((64)
       (let ((G (gensym "L_jump")))
 	(CODE code0
@@ -1748,7 +1753,7 @@
 	    (CR #xB8 dst (IMM32 src ac)))
 	   ((and (imm?  src)
 		 (disp? dst))
-	    (CR*-no-rex #xC7 '/0 dst (IMM32 src ac)))
+	    (CR*/no-rex #xC7 '/0 dst (IMM32 src ac)))
 	   ((and (reg? src)
 		 (reg? dst))
 	    (%compiler-internal-error
@@ -1756,14 +1761,14 @@
 	    (CR* #x89 src dst ac))
 	   ((and (reg?  src)
 		 (disp? dst))
-	    (CR*-no-rex #x89 src dst ac))
+	    (CR*/no-rex #x89 src dst ac))
 	   ((and (disp? src)
 		 (reg?  dst))
 	    (boot.case-word-size
 	     ((32)
 	      (CR* #x8B dst src ac))
 	     ((64)
-	      (CR*-no-rex #x8B dst src ac))))
+	      (CR*/no-rex #x8B dst src ac))))
 	   (else
 	    (%compiler-internal-error "invalid" asm-sexp))))
 
