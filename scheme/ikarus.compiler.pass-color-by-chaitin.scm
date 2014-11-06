@@ -573,7 +573,12 @@
 	;;Return an ENV  value: an alist whose  keys are the spilled  VAR structs and
 	;;whose values are the associated FVAR structs.
 	;;
-	(fprintf (current-error-port) "start\n")
+	;;FIXME Why  in hell the  FVAR allocated to spilled  vars here do  not always
+	;;have  increasing  index in  a  single  function execution?   Uncomment  the
+	;;FPRINTFs  and see  for yourself.   Almost  always they  are incresing,  but
+	;;sometimes they are not.  (Marco Maggi; Thu Nov 6, 2014)
+	;;
+	#;(fprintf (current-error-port) "start\n")
 	($map/stx
 	    (lambda (spilled)
 	      (module (for-each-var add-frm rem-var mem-frm?)
@@ -587,12 +592,12 @@
 					  ;;another  local variable,  check the  next
 					  ;;one.
 					  (begin
-					    (fprintf (current-error-port) "~a, " stack-offset)
+					    #;(fprintf (current-error-port) "~a, " stack-offset)
 					    (loop stack-frame-conflicts (fxadd1 stack-offset)))
 					;;The  stack  frame  location  referended  by
 					;;STACK-FRAME-LOC is unused: choose it.
 					stack-frame-loc)))))
-		(fprintf (current-error-port) " i=~a\n" (fvar-idx spilled.fvar))
+		#;(fprintf (current-error-port) " i=~a\n" (fvar-idx spilled.fvar))
 		;;For  each local  variable in  X.VARS.VEC: remove  SPILLED from  the
 		;;interference  graph of  VAR structs  (VAR-CONF) and  add it  to the
 		;;interference graph of FVAR structs (FRM-CONF).
