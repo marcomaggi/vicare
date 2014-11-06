@@ -160,39 +160,6 @@
 
 ;; ------------------------------------------------------------
 
-(define-syntax with-args
-  ;;Expect ?X to be an expression evaluating to a list of 2 values; bind these values
-  ;;to ?A0 and ?A1 then evaluate the ?BODY forms in the region of the bindings.
-  ;;
-  (syntax-rules (lambda)
-    ((_ ?x (lambda (?a0 ?a1) ?body0 . ?body))
-     (let ((t ?x))
-       (if (pair? t)
-           (let ((t (cdr t)))
-             (if (pair? t)
-                 (let ((?a0 (car t))
-		       (t   (cdr t)))
-                   (if (pair? t)
-		       (let ((?a1 (car t)))
-			 (if (null? (cdr t))
-			     (let ()
-			       ?body0 . ?body)
-			   (compiler-internal-error __module_who__  'with-args "too many args")))
-		     (compiler-internal-error __module_who__  'with-args "too few args")))
-	       (compiler-internal-error __module_who__  'with-args "too few args")))
-	 (compiler-internal-error __module_who__  'with-args "too few args"))))))
-
-(define-syntax-rule (byte ?x)
-  ;;Expect ?X to be an expression evaluating  to an exact integer; extract and return
-  ;;the 8 least significant bits from the integer.
-  ;;
-  (let ((t ?x))
-    (if (or (fixnum? t)
-	    (bignum? t))
-	(bitwise-and t #xFF)
-      (compiler-internal-error __module_who__ 'byte
-	"invalid" t '(byte ?x)))))
-
 (define-syntax-rule (define-entry-predicate ?who ?symbol)
   (define (?who x)
     (and (pair? x)
@@ -974,15 +941,17 @@
 
    ;; immediate operands
    IMM			IMM32		IMM8		IMM*2
-   imm?			imm32?		imm8?
-   immediate-int?
+   imm?			imm32?		imm8?		immediate-int?
 
    obj?
-   word			reloc-word	reloc-word+
+   byte			word		reloc-word	reloc-word+
 
    ;; label operands
    label?		label-address?
    label-name
+
+   ;; syntaxes
+   case-mem/reg
 
    ;;These are commented out because unused.
    #;CODErr
@@ -1301,6 +1270,15 @@
 
 ;;; --------------------------------------------------------------------
 
+  (define (byte x)
+    ;;Expect X to be an expression evaluating to an exact integer; extract and return
+    ;;the 8 least significant bits from the integer.
+    ;;
+    (if (or (fixnum? x)
+	    (bignum? x))
+	(bitwise-and x #xFF)
+      (%compiler-internal-error "expected byte operand" x)))
+
   (define-syntax-rule (word x)
     (cons 'word x))
 
@@ -1356,16 +1334,16 @@
 	      (cons (byte #x24) ac)
 	    ac)))
 
-  (define* (RegReg reg1 reg2 reg3 ac)
-    ;;REG1, REG2, REG3 must be symbols representing CPU register names.
+  (define* (RegReg greek-rho_1 greek-rho_2 greek-rho_3 ac)
+    ;;GREEK-RHO_1, GREEK-RHO_2, GREEK-RHO_3 must be symbols representing CPU register names.
     ;;
-    (cond ((eq? reg3 '%esp)
+    (cond ((eq? greek-rho_3 '%esp)
 	   (%compiler-internal-error "invalid src %esp"))
-	  ((eq? reg1 '%ebp)
+	  ((eq? greek-rho_1 '%ebp)
 	   (%compiler-internal-error "invalid src %ebp"))
 	  (else
-	   (cons* (byte (fxlogor 4                     (fxsll (register-index reg1) 3)))
-		  (byte (fxlogor (register-index reg2) (fxsll (register-index reg3) 3)))
+	   (cons* (byte (fxlogor 4                    (fxsll (register-index greek-rho_1) 3)))
+		  (byte (fxlogor (register-index greek-rho_2) (fxsll (register-index greek-rho_3) 3)))
 		  ac))))
 
 ;;; --------------------------------------------------------------------
@@ -1406,81 +1384,78 @@
      ((32)
       ac)
      ((64)
-      (cond ((disp? rm)
-	     (if (reg-requires-REX.R-prefix? r)
-		 (with-args rm
-		   (lambda (a0 a1)
-		     (cond ((and (imm?   a0)
-				 (reg32? a1))
-			    (if (reg-requires-REX.R-prefix? a1)
-				(REX.R #b101 ac)
-			      (REX.R #b100 ac)))
+      (case-mem/reg rm
+	((mem)
+	 (let ((a0 (cadr  rm))
+	       (a1 (caddr rm)))
+	   (if (reg-requires-REX.R-prefix? r)
+	       (cond ((and (imm?   a0)
+			   (reg32? a1))
+		      (if (reg-requires-REX.R-prefix? a1)
+			  (REX.R #b101 ac)
+			(REX.R #b100 ac)))
 
-			   ((and (imm?   a1)
-				 (reg32? a0))
-			    (if (reg-requires-REX.R-prefix? a0)
-				(REX.R #b101 ac)
-			      (REX.R #b100 ac)))
+		     ((and (imm?   a1)
+			   (reg32? a0))
+		      (if (reg-requires-REX.R-prefix? a0)
+			  (REX.R #b101 ac)
+			(REX.R #b100 ac)))
 
-			   ((and (reg32? a0)
-				 (reg32? a1))
-			    (cond ((reg-requires-REX.R-prefix? a0)
-				   (if (reg-requires-REX.R-prefix? a1)
-				       (REX.R #b111 ac)
-				     (REX.R #b110 ac)))
-				  ((reg-requires-REX.R-prefix? a1)
-				   (REX.R #b101 ac))
-				  (else
-				   (REX.R #b100 ac))))
+		     ((and (reg32? a0)
+			   (reg32? a1))
+		      (cond ((reg-requires-REX.R-prefix? a0)
+			     (if (reg-requires-REX.R-prefix? a1)
+				 (REX.R #b111 ac)
+			       (REX.R #b110 ac)))
+			    ((reg-requires-REX.R-prefix? a1)
+			     (REX.R #b101 ac))
+			    (else
+			     (REX.R #b100 ac))))
 
-			   ((and (imm? a0)
-				 (imm? a1))
-			    (%compiler-internal-error "not here 4"))
+		     ((and (imm? a0)
+			   (imm? a1))
+		      (%compiler-internal-error "not here 4"))
 
-			   (else
-			    (%compiler-internal-error "unhandled" a0 a1)))))
-	       (with-args rm
-		 (lambda (a0 a1)
-		   (cond ((and (imm?   a0)
-			       (reg32? a1))
-			  (if (reg-requires-REX.R-prefix? a1)
-			      (REX.R #b001 ac)
-			    (REX.R 0 ac)))
+		     (else
+		      (%compiler-internal-error "unhandled" a0 a1)))
+	     (cond ((and (imm?   a0)
+			 (reg32? a1))
+		    (if (reg-requires-REX.R-prefix? a1)
+			(REX.R #b001 ac)
+		      (REX.R 0 ac)))
 
-			 ((and (imm?   a1)
-			       (reg32? a0))
-			  (if (reg-requires-REX.R-prefix? a0)
-			      (REX.R #b001 ac)
-			    (REX.R 0 ac)))
+		   ((and (imm?   a1)
+			 (reg32? a0))
+		    (if (reg-requires-REX.R-prefix? a0)
+			(REX.R #b001 ac)
+		      (REX.R 0 ac)))
 
-			 ((and (reg32? a0)
-			       (reg32? a1))
-			  (cond ((reg-requires-REX.R-prefix? a0)
-				 (if (reg-requires-REX.R-prefix? a1)
-				     (%compiler-internal-error "unhandled x1" a0 a1)
-				   (REX.R #b010 ac)))
-				((reg-requires-REX.R-prefix? a1)
-				 (%compiler-internal-error "unhandled x3" a0 a1))
-				(else
-				 (REX.R 0 ac))))
+		   ((and (reg32? a0)
+			 (reg32? a1))
+		    (cond ((reg-requires-REX.R-prefix? a0)
+			   (if (reg-requires-REX.R-prefix? a1)
+			       (%compiler-internal-error "unhandled x1" a0 a1)
+			     (REX.R #b010 ac)))
+			  ((reg-requires-REX.R-prefix? a1)
+			   (%compiler-internal-error "unhandled x3" a0 a1))
+			  (else
+			   (REX.R 0 ac))))
 
-			 ((and (imm? a0)
-			       (imm? a1))
-			  (REX.R 0 ac))
+		   ((and (imm? a0)
+			 (imm? a1))
+		    (REX.R 0 ac))
 
-			 (else
-			  (%compiler-internal-error "unhandled" a0 a1)))))))
-	    ((reg? rm)
-	     (let* ((bits 0)
-		    (bits (if (reg-requires-REX.R-prefix? r)
-			      (fxlogor bits #b100)
-			    bits))
-		    (bits (if (reg-requires-REX.R-prefix? rm)
-			      (fxlogor bits #b001)
-			    bits)))
-	       (REX.R bits ac)))
-	    (else
-	     (%compiler-internal-error "unhandled" rm))))))
+		   (else
+		    (%compiler-internal-error "unhandled" a0 a1))))))
+	((reg)
+	 (let* ((bits 0)
+		(bits (if (reg-requires-REX.R-prefix? r)
+			  (fxlogor bits #b100)
+			bits))
+		(bits (if (reg-requires-REX.R-prefix? rm)
+			  (fxlogor bits #b001)
+			bits)))
+	   (REX.R bits ac)))))))
 
   (define (C c ac)
     (boot.case-word-size
@@ -1519,32 +1494,32 @@
     #;(assert (reg? /d))
     #;(assert (reg/mem? dst))
     (cond ((disp? dst)
-	   (with-args dst
-	     (lambda (a0 a1)
-	       (cond ((and (imm8?  a0)
-			   (reg32? a1))
-		      (ModRM 1 /d a1 (IMM8 a0 ac)))
-		     ((and (imm?   a0)
-			   (reg32? a1))
-		      (ModRM 2 /d a1 (IMM32 a0 ac)))
-		     ((and (imm8?  a1)
-			   (reg32? a0))
-		      (ModRM 1 /d a0 (IMM8 a1 ac)))
-		     ((and (imm?   a1)
-			   (reg32? a0))
-		      (ModRM 2 /d a0 (IMM32 a1 ac)))
-		     ((and (reg32? a0)
-			   (reg32? a1))
-		      (RegReg /d a0 a1 ac))
-		     ((and (imm? a0)
-			   (imm? a1))
-		      (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
-		     (else
-		      (%compiler-internal-error "unhandled" a0 a1))))))
+	   (let ((a0 (cadr  dst))
+		 (a1 (caddr dst)))
+	     (cond ((and (imm8?  a0)
+			 (reg32? a1))
+		    (ModRM 1 /d a1 (IMM8 a0 ac)))
+		   ((and (imm?   a0)
+			 (reg32? a1))
+		    (ModRM 2 /d a1 (IMM32 a0 ac)))
+		   ((and (imm8?  a1)
+			 (reg32? a0))
+		    (ModRM 1 /d a0 (IMM8 a1 ac)))
+		   ((and (imm?   a1)
+			 (reg32? a0))
+		    (ModRM 2 /d a0 (IMM32 a1 ac)))
+		   ((and (reg32? a0)
+			 (reg32? a1))
+		    (RegReg /d a0 a1 ac))
+		   ((and (imm? a0)
+			 (imm? a1))
+		    (ModRM 0 /d '/5 (IMM*2 a0 a1 ac)))
+		   (else
+		    (%compiler-internal-error "invalid components in DISP operand" a0 a1)))))
 	  ((reg? dst)
 	   (ModRM 3 /d dst ac))
 	  (else
-	   (%compiler-internal-error "unhandled" dst))))
+	   (%compiler-internal-error "invalid operand" dst))))
 
   (define* (jmp-pc-relative code0 code1 dst ac)
     (boot.case-word-size
@@ -1557,6 +1532,29 @@
 				 `(bottom-code (label . ,G)
 					       (label-address . ,(label-name dst)))
 				 ac)))))))
+
+;;; --------------------------------------------------------------------
+
+  (define-syntax (case-mem/reg stx)
+    (syntax-case stx (mem reg else)
+      ((_ ?operand
+	  ((mem) ?mem-body0 ?mem-body ...)
+	  ((reg) ?reg-body0 ?reg-body ...)
+	  (else  ?else-body0 ?else-body ...))
+       (identifier? #'?operand)
+       #'(cond ((disp? ?operand)	?mem-body0 ?mem-body ...)
+	       ((reg?  ?operand)	?reg-body0 ?reg-body ...)
+	       (else			?else-body0 ?else-body ...)))
+      ((?key ?operand
+	     ((mem) ?mem-body0 ?mem-body ...)
+	     ((reg) ?reg-body0 ?reg-body ...))
+       (identifier? #'?operand)
+       #'(?key ?operand
+	       ((mem) ?mem-body0 ?mem-body ...)
+	       ((reg) ?reg-body0 ?reg-body ...)
+	       (else
+		(%compiler-internal-error "invalid operand, expected register or DISP sexp" ?operand))))
+      ))
 
 ;;; --------------------------------------------------------------------
 
@@ -2239,8 +2237,8 @@
 ;; coding: utf-8-unix
 ;; eval: (put 'add-instructions		'scheme-indent-function 2)
 ;; eval: (put 'add-single-instruction	'scheme-indent-function 1)
-;; eval: (put 'with-args		'scheme-indent-function 1)
 ;; eval: (put '%with-checked-args	'scheme-indent-function 1)
 ;; eval: (put 'match-operands		'scheme-indent-function 1)
 ;; eval: (put '%compiler-internal-error	'scheme-indent-function 1)
+;; eval: (put 'case-mem/reg		'scheme-indent-function 1)
 ;; End:
