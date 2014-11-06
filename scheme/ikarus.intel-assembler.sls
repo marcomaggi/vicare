@@ -1632,79 +1632,100 @@
   ;;
   (import ASSEMBLY-INSTRUCTION-OPERANDS-HELPERS)
 
-  (let-syntax
-      ((add-single-instruction
-	(syntax-rules ()
-	  ;;?NAME is a  symbol representing the Assembly  instruction name (examples:
-	  ;;ret, cltd, movl, ...).
-	  ;;
-	  ;;?INSTR  is   an  identifier  used   as  first  formal  argument   in  the
-	  ;;instruction's  conversion   function.   It  is  bound   to  the  symbolic
-	  ;;expression representing the full Assembly instruction:
-	  ;;
-	  ;;   (?assembly-instruction-mnemonic ?operand ...)
-	  ;;
-	  ;;?AC is an identifier user as  second formal argument in the instruction's
-	  ;;conversion function.  It is bound to the accumulator list.
-	  ;;
-	  ;;The ?ARG formals are additional arguments to the instruction's conversion
-	  ;;function.
-	  ;;
-	  ((add-single-instruction (?name ?instr ?ac ?arg ...)
-				   ?body0 ?body ...)
-	   (putprop '?name (assembler-property-key)
-		    (cons (length '(?arg ...))
-			  ;;This LAMBDA builds the instruction's conversion function.
-			  (lambda (?instr ?ac ?arg ...)
-			    (fluid-let-syntax
-				((__who__ (identifier-syntax (quote ?name))))
-			      ?body0 ?body ...))))))))
-    (define-syntax add-instructions
-      (syntax-rules ()
-	((add-instructions ?instr ?accumulator
-	   ((?name ?arg ...) ?body0 ?body ...)
-	   ...)
-	 (begin
-	   (add-single-instruction (?name ?instr ?accumulator ?arg ...)
-	     ?body0 ?body ...)
-	   ...)))))
+  (define-syntax add-instructions
+    (syntax-rules ()
+      ((add-instructions ?asm-sexp ?accumulator
+	 ((?name ?arg ...) ?body0 ?body ...)
+	 ...)
+       (begin
+	 (add-single-instruction (?name ?asm-sexp ?accumulator ?arg ...)
+	   ?body0 ?body ...)
+	 ...))))
+
+  (define-syntax add-single-instruction
+    (syntax-rules ()
+      ;;?NAME is a symbol representing  the Assembly instruction name (examples: ret,
+      ;;cltd, movl, ...).
+      ;;
+      ;;?ASM-SEXP is an identifier used as first formal argument in the instruction's
+      ;;conversion function.  It is bound to the symbolic expression representing the
+      ;;full Assembly instruction:
+      ;;
+      ;;   (?assembly-instruction-mnemonic ?operand ...)
+      ;;
+      ;;?AC is  an identifier  user as  second formal  argument in  the instruction's
+      ;;conversion function.  It is bound to the accumulator list.
+      ;;
+      ;;The ?ARG  formals are  additional arguments  to the  instruction's conversion
+      ;;function.
+      ;;
+      ((_ (?name ?asm-sexp ?ac ?arg ...)
+	  ?body0 ?body ...)
+       (putprop '?name (assembler-property-key)
+		(cons (length '(?arg ...))
+		      ;;This LAMBDA builds the instruction's conversion function.
+		      (lambda (?asm-sexp ?ac ?arg ...)
+			(fluid-let-syntax
+			    ((__who__ (identifier-syntax (quote ?name))))
+			  ?body0 ?body ...)))))))
+
+  (define-syntax (match-operands stx)
+    (syntax-case stx (else)
+      ((_ (?arg0 ?arg ...)
+	  ((?pred0 ?pred ...) ?body0 ?body ...)
+	  ...
+	  (else ?else0 ?else ...))
+       #'(cond ((and (?pred0 ?arg0)
+		     (?pred  ?arg)
+		     ...)
+		?body0 ?body ...)
+	       ...
+	       (else
+		?else0 ?else ...)))
+      ((?key (?arg0 ?arg ...)
+	     ((?pred0 ?pred ...) ?body0 ?body ...)
+	     ...)
+       (with-syntax
+	   ((ASM-SEXP (datum->syntax #'?key 'asm-sexp)))
+	 #'(?key (?arg0 ?arg ...)
+		 ((?pred0 ?pred ...) ?body0 ?body ...)
+		 ...
+		 (else
+		  (%compiler-internal-error "invalid instruction operands"
+		    ASM-SEXP ?arg0 ?arg ...)))))
+      ))
 
 ;;; --------------------------------------------------------------------
-;;; end of module definitions
 
   ;;Store a function  in the properties list of symbols  being the names
   ;;of assembly instructions.
   ;;
-  (add-instructions instr ac
+  (add-instructions asm-sexp ac
     ((ret)
      (CODE #xC3 ac))
+
     ((cltd)
      (C #x99 ac))
+
     ((movl src dst)
-     (cond ((and (imm? src)
-		 (reg? dst))
-	    (CR #xB8 dst (IMM src ac)))
-	   ((and (imm?  src)
-		 (disp? dst))
-	    (CR* #xC7 '/0 dst (IMM32 src ac)))
-	   ((and (reg? src)
-		 (reg? dst))
-	    (CR* #x89 src dst ac))
-	   ((and (reg?  src)
-		 (disp? dst))
-	    (CR* #x89 src dst ac))
-	   ((and (disp? src)
-		 (reg?  dst))
-	    (CR* #x8B dst src ac))
-	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+     (match-operands (src dst)
+       ((imm? reg?)
+	(CR #xB8 dst (IMM src ac)))
+       ((imm? disp?)
+	(CR* #xC7 '/0 dst (IMM32 src ac)))
+       ((reg? reg?)
+	(CR* #x89 src dst ac))
+       ((reg? disp?)
+	(CR* #x89 src dst ac))
+       ((disp? reg?)
+	(CR* #x8B dst src ac))))
+
     ((mov32 src dst)
      ;;FIXME (Abdulaziz Ghuloum)
      (cond ((and (imm? src)
 		 (reg? dst))
 	    (%compiler-internal-error
-	      "here1")
+		"here1")
 	    (CR #xB8 dst (IMM32 src ac)))
 	   ((and (imm?  src)
 		 (disp? dst))
@@ -1712,7 +1733,7 @@
 	   ((and (reg? src)
 		 (reg? dst))
 	    (%compiler-internal-error
-	      "here3")
+		"here3")
 	    (CR* #x89 src dst ac))
 	   ((and (reg?  src)
 		 (disp? dst))
@@ -1725,7 +1746,8 @@
 	     ((64)
 	      (CR*-no-rex #x8B dst src ac))))
 	   (else
-	    (%compiler-internal-error "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((movb src dst)
      (cond ((and (imm8? src)
 		 (disp? dst))
@@ -1737,8 +1759,8 @@
 		 (reg8? dst))
 	    (CR* #x8A dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((addl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1762,8 +1784,8 @@
 		 (disp? dst))
 	    (CR*  #x01 src dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((subl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1787,8 +1809,8 @@
 		 (disp? dst))
 	    (CR*  #x29 src dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((sall src dst)
      (cond ((and (eqv? 1 src)
 		 (reg? dst))
@@ -1806,8 +1828,8 @@
 		 (disp? dst))
 	    (CR* #xD3 '/4 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((shrl src dst)
      (cond ((and (eqv? 1 src)
 		 (reg? dst))
@@ -1825,8 +1847,8 @@
 		 (disp? dst))
 	    (CR* #xD3 '/5 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((sarl src dst)
      (cond ((and (eqv? 1 src)
 		 (reg? dst))
@@ -1844,8 +1866,8 @@
 		 (disp? dst))
 	    (CR* #xD3 '/7 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((andl src dst)
      (cond ((and (imm32? src)
 		 (disp?  dst))
@@ -1869,8 +1891,8 @@
 		 (reg?  dst))
 	    (CR*  #x23 dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((orl src dst)
      (cond ((and (imm32? src)
 		 (disp?  dst))
@@ -1894,8 +1916,8 @@
 		 (reg?  dst))
 	    (CR*  #x0B dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((xorl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1916,15 +1938,15 @@
 		 (disp? dst))
 	    (CR*  #x31 src dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((leal src dst)
      (cond ((and (disp? src)
 		 (reg?  dst))
 	    (CR* #x8D dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((cmpl src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1948,8 +1970,8 @@
 		 (disp?  dst))
 	    (CR*  #x81 '/7 dst (IMM32 src ac)))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((imull src dst)
      (cond ((and (imm8? src)
 		 (reg?  dst))
@@ -1964,16 +1986,16 @@
 		 (reg?  dst))
 	    (CCR* #x0F #xAF dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((idivl dst)
      (cond ((reg? dst)
 	    (CR* #xF7 '/7 dst ac))
 	   ((disp? dst)
 	    (CR* #xF7 '/7 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((pushl dst)
      (cond ((imm8? dst)
 	    (CODE #x6A (IMM8 dst ac)))
@@ -1984,36 +2006,36 @@
 	   ((disp? dst)
 	    (CR*  #xFF '/6 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((popl dst)
      (cond ((reg? dst)
 	    (CR  #x58 dst ac))
 	   ((disp? dst)
 	    (CR* #x8F '/0 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((notl dst)
      (cond((reg? dst)
 	   (CR* #xF7 '/2 dst ac))
 	  ((disp? dst)
 	   (CR* #xF7 '/7 dst ac))
 	  (else
-	   (%compiler-internal-error
-	     "invalid" instr))))
+	   (%compiler-internal-error	       "invalid" asm-sexp))))
+
     ((bswap dst)
      (cond ((reg? dst)
 	    (CCR #x0F #xC8 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((negl dst)
      (cond ((reg? dst)
 	    (CR* #xF7 '/3 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((jmp dst)
      (cond ((and (label? dst)
 		 (local-label? (label-name dst)))
@@ -2028,8 +2050,8 @@
 	   ((disp? dst)
 	    (CR*  #xFF '/4 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid jmp target" dst))))
+	    (%compiler-internal-error "invalid jmp target" dst))))
+
     ((call dst)
      (cond ((and (label? dst)
 		 (local-label? (label-name dst)))
@@ -2046,8 +2068,8 @@
 	   ((reg? dst)
 	    (CR* #xFF '/2 dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid jmp target" dst))))
+	    (%compiler-internal-error "invalid jmp target" dst))))
+
     ((movsd src dst)
      (cond ((and (xmmreg? dst)
 		 (disp?   src))
@@ -2056,8 +2078,8 @@
 		 (disp?   dst))
 	    (CCCR* #xF2 #x0F #x11 src dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((cvtsi2sd src dst)
      (cond ((and (xmmreg? dst)
 		 (reg? src))
@@ -2066,22 +2088,22 @@
 		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x2A dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((cvtsd2ss src dst)
      (cond ((and (xmmreg? dst)
 		 (xmmreg? src))
 	    (CCCR* #xF2 #x0F #x5A src dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((cvtss2sd src dst)
      (cond ((and (xmmreg? dst)
 		 (xmmreg? src))
 	    (CCCR* #xF3 #x0F #x5A src dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((movss src dst)
      (cond ((and (xmmreg? dst)
 		 (disp?   src))
@@ -2090,43 +2112,43 @@
 		 (disp?   dst))
 	    (CCCR* #xF3 #x0F #x11 src dst ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((addsd src dst)
      (cond ((and (xmmreg? dst)
 		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x58 dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((subsd src dst)
      (cond ((and (xmmreg? dst)
 		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x5C dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((mulsd src dst)
      (cond ((and (xmmreg? dst)
 		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x59 dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((divsd src dst)
      (cond ((and (xmmreg? dst)
 		 (disp?   src))
 	    (CCCR* #xF2 #x0F #x5E dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((ucomisd src dst)
      (cond ((and (xmmreg? dst)
 		 (disp?   src))
 	    (CCCR* #x66 #x0F #x2E dst src ac))
 	   (else
-	    (%compiler-internal-error
-	      "invalid" instr))))
+	    (%compiler-internal-error "invalid" asm-sexp))))
+
     ((ja dst)     (CCI32 #x0F #x87 dst ac))
     ((jae dst)    (CCI32 #x0F #x83 dst ac))
     ((jb dst)     (CCI32 #x0F #x82 dst ac))
@@ -2148,29 +2170,36 @@
     ((jo dst)     (CCI32 #x0F #x80 dst ac))
     ((jp dst)     (CCI32 #x0F #x8A dst ac))
     ((jnp dst)    (CCI32 #x0F #x8B dst ac))
+
+;;; --------------------------------------------------------------------
+
     ((byte x)
      (if (byte? x)
 	 (cons (byte x) ac)
-       (%compiler-internal-error
-	 "not a byte" x)))
+       (%compiler-internal-error	   "not a byte" x)))
+
     ((byte-vector x)
      (append (map (lambda (x)
 		    (byte x))
 	       (vector->list x))
 	     ac))
+
     ((int a)
      (IMM a ac))
+
     ((label L)
      (if (symbol? L)
 	 (cons (cons 'label L) ac)
-       (%compiler-internal-error
-	 "label is not a symbol" L)))
+       (%compiler-internal-error	   "label is not a symbol" L)))
+
     ((label-address L)
      (if (symbol? L)
 	 (cons (cons 'label-address L) ac)
        (%compiler-internal-error "value in LABEL-ADDRESS entry is not a symbol" L)))
+
     ((code-object-self-machine-word-index)
      (cons '(code-object-self-machine-word-index) ac))
+
     ((nop)
      ac))
 
@@ -2183,8 +2212,10 @@
 
 ;;; end of file
 ;; Local Variables:
-;; eval: (put 'add-instructions 'scheme-indent-function 2)
-;; eval: (put 'add-instruction 'scheme-indent-function 1)
-;; eval: (put 'with-args 'scheme-indent-function 1)
-;; eval: (put '%with-checked-args 'scheme-indent-function 1)
+;; eval: (put 'add-instructions		'scheme-indent-function 2)
+;; eval: (put 'add-single-instruction	'scheme-indent-function 1)
+;; eval: (put 'with-args		'scheme-indent-function 1)
+;; eval: (put '%with-checked-args	'scheme-indent-function 1)
+;; eval: (put 'match-operands		'scheme-indent-function 1)
+;; eval: (put '%compiler-internal-error	'scheme-indent-function 1)
 ;; End:
