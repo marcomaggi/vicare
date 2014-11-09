@@ -134,8 +134,14 @@
 ;;
 ;;A paper on register allocation:
 ;;
-;;   G. J.  Chaitin.  "Register  allocation and spilling  via graph  coloring.".  IBM
+;;   G. J.   Chaitin.  "Register  allocation and spilling  via graph  coloring".  IBM
 ;;   Research.
+;;
+;;another paper:
+;;
+;;   R. Burger, O.  Waddell, R.  K.  Dybvig.  "Register Allocation  Using Lazy Saves,
+;;   Eager  Restores, and  Greedy  Shuffling".  Indiana  University Computer  Science
+;;   Department.
 ;;
 
 
