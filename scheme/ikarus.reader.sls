@@ -392,18 +392,18 @@
   #\x7F #;($fixnum->char 127))
 
 (define-inline (char-is-single-char-line-ending? ch)
-  (or ($fx= ch #\x000A)	;; linefeed
-      ($fx= ch #\x0085)	;; next line
-      ($fx= ch #\x2028)))	;; line separator
+  (or ($char= ch #\x000A)	;; linefeed
+      ($char= ch #\x0085)	;; next line
+      ($char= ch #\x2028)))	;; line separator
 
 (define-inline (char-is-carriage-return? ch)
-  ($fx= ch #\xD))
+  ($char= ch #\xD))
 
 (define-inline (char-is-newline-after-carriage-return? ch)
   ;;This is used to recognise 2-char newline sequences.
   ;;
-  (or ($fx= ch #\x000A)	;; linefeed
-      ($fx= ch #\x0085)))	;; next line
+  (or ($char= ch #\x000A)	;; linefeed
+      ($char= ch #\x0085)))	;; next line
 
 (define (delimiter? ch)
   (or (char-whitespace? ch)
