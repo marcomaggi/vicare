@@ -8278,6 +8278,33 @@ syntactic binding identifiers.
 @section Additional functions on fixnums
 
 
+@menu
+* iklib fixnums predicates::    Predicate functions.
+* iklib fixnums comparison::    Comparison functions.
+* iklib fixnums arithmetics::   Arithmetics functions.
+* iklib fixnums bitwise::       Bitwise functions.
+* iklib fixnums conversion::    Conversion functions.
+@end menu
+
+@c page
+@node iklib fixnums predicates
+@subsection Predicate functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun fxnonpositive? @var{fx}
+@defunx fxnonnegative? @var{fx}
+Return @true{} if @var{fx} is, respectively, non--positive or
+non--negative; else return @false{}.
+@end defun
+
+@c page
+@node iklib fixnums comparison
+@subsection Comparison functions
+
+
 The following bindings are exported by the library @library{vicare}.
 
 
@@ -8286,6 +8313,23 @@ The following bindings are exported by the library @library{vicare}.
 Return @true{} if the arguments are different; otherwise return
 @false{}.  The arguments must be fixnums.
 @end defun
+
+
+@defun fx= @vari{fx} @var{fx} @dots{}
+@defunx fx< @vari{fx} @var{fx} @dots{}
+@defunx fx> @vari{fx} @var{fx} @dots{}
+@defunx fx<= @vari{fx} @var{fx} @dots{}
+@defunx fx>= @vari{fx} @var{fx} @dots{}
+Aliases for @func{fx=?}, @func{fx<?}, @func{fx>?}, @func{fx<=?},
+@func{fx>=?}.
+@end defun
+
+@c page
+@node iklib fixnums arithmetics
+@subsection Arithmetics functions
+
+
+The following bindings are exported by the library @library{vicare}.
 
 
 @defun fxadd1 @var{fx}
@@ -8310,18 +8354,94 @@ the sign of the fixnum @var{fx}.
 @end defun
 
 
+@deffn Procedure fxquotient @vari{fx} @varii{fx}
+@deffnx Procedure fxremainder @vari{fx} @varii{fx}
+@deffnx Procedure fxmodulo @vari{fx} @varii{fx}
+These procedures implement number--theoretic (integer) division on
+fixnum arguments.  @varii{fx} must be non--zero.  All three procedures
+return fixnum objects.  If @vari{fx}/@varii{fx} is an integer object:
+
+@example
+(quotient @vari{fx} @varii{fx})   @result{} @vari{fx}/@varii{fx}
+(remainder @vari{fx} @varii{fx})  @result{} 0
+(modulo @vari{fx} @varii{fx})     @result{} 0
+@end example
+
+If @vari{fx}/@varii{fx} is not an integer object:
+
+@example
+(quotient @vari{fx} @varii{fx})   @result{} @var{n_q}
+(remainder @vari{fx} @varii{fx})  @result{} @var{n_r}
+(modulo @vari{fx} @varii{fx})     @result{} @var{n_m}
+@end example
+
+@noindent
+where @var{n_q} is @vari{fx}/@varii{fx} rounded towards zero,
+
+@example
+0 < |@var{n_r}| < |@varii{fx}|
+0 < |@var{n_m}| < |@varii{fx}|
+@end example
+
+@noindent
+@var{n_r} and @var{n_m} differ from @vari{fx} by a multiple of @varii{fx},
+@var{n_r} has the same sign as @vari{fx}, and @var{n_m} has the same sign
+as @varii{fx}.
+
+Consequently, for integer objects @vari{fx} and @varii{fx} with @varii{fx}
+not equal to 0,
+
+@example
+(= @vari{fx} (+ (* @varii{fx} (quotient @vari{fx} @varii{fx}))
+               (remainder @vari{fx} @varii{fx})))
+@result{} #t
+@end example
+
+@noindent
+provided all number object involved in that computation are exact.
+
+@example
+(fxmodulo 13 4)           @result{}  1
+(fxremainder 13 4)        @result{}  1
+
+(fxmodulo -13 4)          @result{}  3
+(fxremainder -13 4)       @result{}  -1
+
+(fxmodulo 13 -4)          @result{}  -3
+(fxremainder 13 -4)       @result{}  1
+
+(fxmodulo -13 -4)         @result{}  -1
+(fxremainder -13 -4)      @result{}  -1
+@end example
+@end deffn
+
+@c page
+@node iklib fixnums bitwise
+@subsection Bitwise functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
+@defun fxlogor @vari{fx} @varii{fx}
+@defunx fxlogand @vari{fx} @varii{fx}
+@defunx fxlogxor @vari{fx} @varii{fx}
+Aliases for @func{fxior}, @func{fxand}, @func{fxxor}.
+@end defun
+
+@c page
+@node iklib fixnums conversion
+@subsection Conversion functions
+
+
+The following bindings are exported by the library @library{vicare}.
+
+
 @defun fixnum->string @var{fx}
 @defunx fixnum->string @var{fx} @var{base}
 Return a string representation of @var{fx}.  @var{base} must be one
 among @math{2}, @math{8}, @math{10}, @math{16}; when not given it
 defaults to @math{10}.
-@end defun
-
-
-@defun fxnonpositive? @var{fx}
-@defunx fxnonnegative? @var{fx}
-Return @true{} if @var{fx} is, respectively, non--positive or
-non--negative; else return @false{}.
 @end defun
 
 @c page
