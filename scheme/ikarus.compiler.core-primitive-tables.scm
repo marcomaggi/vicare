@@ -141,11 +141,11 @@
    ((_)			foldable effect-free)))
 
 
-;;;; fixnums
+;;;; fixnums safe operations
 
 ;;; predicates
 
-(declare-core-primitive fx?
+(declare-core-primitive fixnum?
     (safe)
   (signatures
    ((_)				=> (T:boolean)))
@@ -187,6 +187,20 @@
   (attributes
    ((_)				foldable effect-free)))
 
+(declare-core-primitive fxeven?
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive fxodd?
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
 
@@ -212,6 +226,84 @@
    ((T:fixnum T:fixnum)		=> (T:fixnum)))
   (attributes
    ((_ _)			foldable effect-free result-true)))
+
+;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
+;;2014)
+;;
+;; (declare-core-primitive fx+/carry
+;;     (safe)
+;;   (signatures
+;;    ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+;;   (attributes
+;;    ((_ _ _)			foldable effect-free result-true)))
+
+;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
+;;2014)
+;;
+;; (declare-core-primitive fx-/carry
+;;     (safe)
+;;   (signatures
+;;    ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+;;   (attributes
+;;    ((_ _ _)			foldable effect-free result-true)))
+
+;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
+;;2014)
+;;
+;; (declare-core-primitive fx*/carry
+;;     (safe)
+;;   (signatures
+;;    ((T:fixnum T:fixnum T:fixnum) => (T:fixnum T:fixnum)))
+;;   (attributes
+;;    ((_ _ _)			foldable effect-free result-true)))
+
+(declare-core-primitive fxdiv
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive fxdiv0
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive fxmod
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive fxmod0
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
+;;2014)
+;;
+;; (declare-core-primitive fxdiv-and-mod
+;;     (safe)
+;;   (signatures
+;;    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+;;   (attributes
+;;    ((_ _)			foldable effect-free result-true)))
+
+;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
+;;2014)
+;;
+;; (declare-core-primitive fxdiv-and-mod0
+;;     (safe)
+;;   (signatures
+;;    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+;;   (attributes
+;;    ((_ _)			foldable effect-free result-true)))
 
 (declare-core-primitive fxadd1
     (safe)
@@ -334,6 +426,27 @@
   (attributes
    ((_ _)			foldable effect-free result-true)))
 
+(declare-core-primitive fxarithmetic-shift-left
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive fxarithmetic-shift-right
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive fxarithmetic-shift
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
@@ -435,49 +548,324 @@
    ((_)				foldable effect-free result-true)
    ((_ . _)			foldable effect-free)))
 
+;;;
 
+(declare-core-primitive fxmax
+    (safe)
+  (signatures
+   ((T:fixnum . T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ . _)			foldable effect-free result-true)))
+
+(declare-core-primitive fxmin
+    (safe)
+  (signatures
+   ((T:fixnum . T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ . _)			foldable effect-free result-true)))
+
+
+;;;; fixnums unsafe operations
+
+;;; predicates
+
+(declare-core-primitive $fxzero?
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive $fxpositive?
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive $fxnegative?
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive $fxnonpositive?
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive $fxnonnegative?
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive $fxeven?
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive $fxodd?
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
-;;; fixnums
+;;; arithmetics
 
-#|
-      ((fxmin _ _)		   foldable effect-free result-true)
-      ((fxmax _ _)		   foldable effect-free result-true)
+(declare-core-primitive $fx+
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
 
-      (($fixnum->flonum _)	   foldable effect-free result-true)
-      (($char->fixnum _)	   foldable effect-free result-true)
-      (($fixnum->char _)	   foldable effect-free result-true)
-      (($fxzero? _)		   foldable effect-free		   )
-      (($fxpositive? _)		   foldable effect-free		   )
-      (($fxnegative? _)		   foldable effect-free		   )
-      (($fx+ _ _)		   foldable effect-free result-true)
-      (($fx* _ _)		   foldable effect-free result-true)
-      (($fx- _ _)		   foldable effect-free result-true)
-      (($fx= _ _)		   foldable effect-free		   )
-      (($fx>= _ _)		   foldable effect-free		   )
-      (($fx> _ _)		   foldable effect-free		   )
-      (($fx<= _ _)		   foldable effect-free		   )
-      (($fx< _ _)		   foldable effect-free		   )
-      (($fxmin _ _)		   foldable effect-free result-true)
-      (($fxmax _ _)		   foldable effect-free result-true)
-      (($struct-ref _ _)	   foldable effect-free		   )
-      (($struct/rtd? _ _)	   foldable effect-free		   )
-      (($fxsll _ _)		   foldable effect-free result-true)
-      (($fxsra _ _)		   foldable effect-free result-true)
-      (($fxlogor _ _)		   foldable effect-free result-true)
-      (($fxlogand _ _)		   foldable effect-free result-true)
-      (($fxadd1 _)		   foldable effect-free result-true)
-      (($fxsub1 _)		   foldable effect-free result-true)
-      (($fxsign _)		   foldable effect-free result-true)
-      (($fxdiv _ _)		   foldable effect-free result-true)
-      (($fxdiv0 _ _)		   foldable effect-free result-true)
-      (($fxmod _ _)		   foldable effect-free result-true)
-      (($fxmod0 _ _)		   foldable effect-free result-true)
-      ;;Do we support multiple values?  No!!!
-      ;;(($fxdiv-and-mod _ _)	   foldable effect-free result-true)
-      ;;(($fxdiv0-and-mod0 _ _)	   foldable effect-free result-true)
+(declare-core-primitive $fx-
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)
+   ((_ _)			foldable effect-free result-true)))
 
-|#
+(declare-core-primitive $fx*
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxdiv
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxdiv0
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxmod
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxmod0
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
+;;2014)
+;;
+;; (declare-core-primitive $fxdiv-and-mod
+;;     (unsafe)
+;;   (signatures
+;;    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+;;   (attributes
+;;    ((_ _)			foldable effect-free result-true)))
+
+;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
+;;2014)
+;;
+;; (declare-core-primitive $fxdiv-and-mod0
+;;     (unsafe)
+;;   (signatures
+;;    ((T:fixnum T:fixnum)		=> (T:fixnum T:fixnum)))
+;;   (attributes
+;;    ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxadd1
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $fxsub1
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $fxabs
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $fxsign
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $fxremainder
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxquotient
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxmodulo
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; bitwise operations
+
+(declare-core-primitive $fxlogor
+    (unsafe)
+  (signatures
+   (T:fixnum			=> (T:fixnum)))
+  (attributes
+   (()				foldable effect-free result-true)
+   (_				foldable effect-free result-true)))
+
+(declare-core-primitive $fxlogand
+    (unsafe)
+  (signatures
+   (T:fixnum			=> (T:fixnum)))
+  (attributes
+   (()				foldable effect-free result-true)
+   (_				foldable effect-free result-true)))
+
+(declare-core-primitive $fxlogxor
+    (unsafe)
+  (signatures
+   (T:fixnum			=> (T:fixnum)))
+  (attributes
+   (()				foldable effect-free result-true)
+   (_				foldable effect-free result-true)))
+
+(declare-core-primitive $fxnot
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive $fxsll
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxsra
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-core-primitive $fx=
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $fx!=
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $fx<
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $fx>
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $fx<=
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $fx>=
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+;;;
+
+(declare-core-primitive $fxmax
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $fxmin
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive $fixnum->flonum
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $fixnum->char
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:char)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 
 ;;;; general arithmetics
@@ -941,6 +1329,88 @@
    ((_)			effect-free	result-true)))
 
 
+;;;; characters safe operations
+
+;;; predicates
+
+(declare-core-primitive char?
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive char->integer
+    (safe)
+  (signatures
+   ((T:char)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+
+;;;; characters unsafe operations
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-core-primitive $char=
+    (unsafe)
+  (signatures
+   ((T:char T:char)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+;;FIXME Not implemented.  (Marco Maggi; Mon Nov 10, 2014)
+;;
+;; (declare-core-primitive $char!=
+;;     (unsafe)
+;;   (signatures
+;;    ((T:char T:char)		=> (T:boolean)))
+;;   (attributes
+;;    ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $char<
+    (unsafe)
+  (signatures
+   ((T:char T:char)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $char>
+    (unsafe)
+  (signatures
+   ((T:char T:char)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $char<=
+    (unsafe)
+  (signatures
+   ((T:char T:char)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $char>=
+    (unsafe)
+  (signatures
+   ((T:char T:char)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive $char->fixnum
+    (unsafe)
+  (signatures
+   ((T:char)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+
 ;;;; strings
 ;;
 ;;According to R6RS:  STRING and MAKE-STRING must return a  newly allocated string at
@@ -1132,7 +1602,6 @@
       ((not _)			   foldable effect-free		   )
       ((fixnum? _)		   foldable effect-free		   )
       ((vector? _)		   foldable effect-free		   )
-      ((char? _)		   foldable effect-free		   )
       ((symbol? _)		   foldable effect-free		   )
       ((procedure? _)		   foldable effect-free		   )
       ((eof-object? _)		   foldable effect-free		   )
@@ -1190,7 +1659,6 @@
       ((greatest-fixnum)	   foldable effect-free result-true)
       ((least-fixnum)		   foldable effect-free result-true)
       ((fixnum-width)		   foldable effect-free result-true)
-      ((char->integer _)	   foldable effect-free result-true)
       ((integer->char _)	   foldable effect-free result-true)
       ((eof-object)		   foldable effect-free result-true)
       ((zero? _)		   foldable effect-free		   )
@@ -1375,6 +1843,8 @@
 
       ;;This must return a new struct every time.
       (($struct . _)			     effect-free result-true)
+      (($struct-ref _ _)	   foldable effect-free		   )
+      (($struct/rtd? _ _)	   foldable effect-free		   )
 
       ((condition . _))
       ((top-level-value . _))
