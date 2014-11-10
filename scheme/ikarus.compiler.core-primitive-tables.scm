@@ -41,6 +41,37 @@
 ;;;
 
 
+;;;; misc functions
+
+(declare-core-primitive eq?
+    (safe)
+  (signatures
+   ((_ _)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive eqv?
+    (safe)
+  (signatures
+   ((_ _)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive equal?
+    (safe)
+  (signatures
+   ((_ _)			=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive not
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+
 ;;;; pairs and lists
 
 (declare-core-primitive null?
@@ -1574,34 +1605,183 @@
    ((_ _ _)		result-true)))
 
 
+;;;; vectors
+;;
+;;According to R6RS:  VECTOR and MAKE-VECTOR must return a  newly allocated string at
+;;every invocation; so they are not foldable.
+;;
+
+(declare-core-primitive vector?
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive vector
+    (safe)
+  (signatures
+   (()				=> (T:vector))
+   (_				=> (T:vector)))
+  ;;Not foldable because it must return a newly allocated bytevector.
+  (attributes
+   (()				effect-free result-true)
+   (_				effect-free result-true)))
+
+(declare-core-primitive make-vector
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:vector))
+   ((T:fixnum _)		=> (T:vector)))
+  ;;Not foldable because it must return a newly allocated bytevector.
+  (attributes
+   ((0)				effect-free result-true)
+   ((0 _)			effect-free result-true)
+   ((_ _)			effect-free result-true)))
+
+(declare-core-primitive vector-length
+    (safe)
+  (signatures
+   ((T:vector)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements
+   $vector-length))
+
+;;FIXME  This cannot  have $VECTOR-REF  as  replacement because  there is  no way  to
+;;validate the index with respect to the vector.  But in future another primitive can
+;;be added that does not validate the  types, but validates the range.  (Marco Maggi;
+;;Mon Nov 10, 2014)
+(declare-core-primitive vector-ref
+    (safe)
+  (signatures
+   ((T:vector T:fixnum)	=> (T:char)))
+  (attributes
+   ((_ _)		foldable effect-free)))
+
+;;FIXME This  cannot have  $VECTOR-SET!  as  replacement because there  is no  way to
+;;validate the index with respect to the vector.  But in future another primitive can
+;;be added that does not validate the  types, but validates the range.  (Marco Maggi;
+;;Mon Nov 10, 2014)
+(declare-core-primitive vector-set!
+    (safe)
+  (signatures
+   ((T:vector T:fixnum _)	=> (T:void)))
+  (attributes
+   ((_ _ _)			result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $vector-length
+    (unsafe)
+  (signatures
+   ((T:vector)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $vector-ref
+    (safe)
+  (signatures
+   ((T:vector T:fixnum)	=> (T:char)))
+  (attributes
+   ((_ _)		foldable effect-free)))
+
+(declare-core-primitive $vector-set!
+    (safe)
+  (signatures
+   ((T:vector T:fixnum _)	=> (T:void)))
+  (attributes
+   ((_ _ _)			result-true)))
+
+
+;;;; bytevectors, safe functions
+;;
+;;According to  R6RS: MAKE-BYTEVECTOR must return  a newly allocated string  at every
+;;invocation; so it is not foldable.
+;;
+
+(declare-core-primitive make-bytevector
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:bytevector))
+   ((T:fixnum T:fixnum)	=> (T:bytevector)))
+  ;;Not foldable because it must return a newly allocated bytevector.
+  (attributes
+   ((0)				effect-free result-true)
+   ((0 _)			effect-free result-true)
+   ((_ _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive bytevector-length
+    (safe)
+  (signatures
+   ((T:bytevector)	=> (T:fixnum)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive bytevector-u8-ref
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bytevector-s8-ref
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+
+;;;; bytevectors, unsafe functions
+;;
+
+(declare-core-primitive $make-bytevector
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:bytevector))
+   ((T:fixnum T:fixnum)	=> (T:bytevector)))
+  ;;Not foldable because it must return a newly allocated bytevector.
+  (attributes
+   ((0)				effect-free result-true)
+   ((0 _)			effect-free result-true)
+   ((_ _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $bytevector-length
+    (safe)
+  (signatures
+   ((T:bytevector)		=> (T:fixnum)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $bytevector-u8-ref
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $bytevector-s8-ref
+    (safe)
+  (signatures
+   ((T:bytevector T:fixnum)	=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+
 
 #|
-
-      ;;According to R6RS: MAKE-BYTEVECTOR must return a newly allocated
-      ;;string at every invocation; so it is not foldable.
-      ((make-bytevector 0)		    effect-free result-true)
-      ((make-bytevector 0 _)		    effect-free result-true)
-      ((make-bytevector . _)				result-true)
-
-      ;;According to  R6RS: VECTOR and	MAKE-VECTOR must return	 a newly
-      ;;allocated string at every invocation; so they are not foldable.
-      ((vector)				    effect-free result-true)
-      ((vector . _)			    effect-free result-true)
-      ((make-vector 0)			    effect-free result-true)
-      ((make-vector 0 _)		    effect-free result-true)
-      ((make-vector . _)		    effect-free result-true)
-
-      ((vector-length _)	   foldable effect-free result-true)
-      ((vector-ref _ _)		   foldable effect-free		   )
-      ((vector-set! _ _)	   foldable 			   )
-      ((eq? _ _)		   foldable effect-free		   )
-      ((eqv? _ _)		   foldable effect-free		   )
       ((assq _ _)		   foldable effect-free		   )
       ((assv _ _)		   foldable effect-free		   )
       ((assoc _ _)		   foldable effect-free		   )
-      ((not _)			   foldable effect-free		   )
-      ((fixnum? _)		   foldable effect-free		   )
-      ((vector? _)		   foldable effect-free		   )
       ((symbol? _)		   foldable effect-free		   )
       ((procedure? _)		   foldable effect-free		   )
       ((eof-object? _)		   foldable effect-free		   )
@@ -1816,23 +1996,6 @@
       ;;We do not do multiple return values.
       ;;(($fldiv-and-mod _ _)	   foldable effect-free result-true)
       ;;(($fldiv0-and-mod0 _ _)	   foldable effect-free result-true)
-
-;;; --------------------------------------------------------------------
-;;; vectors
-
-      (($vector-length _)	   foldable effect-free result-true)
-      (($vector-ref _ _)	   foldable effect-free)
-
-;;; --------------------------------------------------------------------
-;;; bytevectors
-
-      ;;$MAKE-BYTEVECTOR  must not  be foldable:  it must  return a  new
-      ;;bytevector every time.
-      (($make-bytevector 0)		    effect-free result-true)
-      (($make-bytevector 0 _)		    effect-free result-true)
-      (($make-bytevector . _)		    effect-free result-true)
-      (($bytevector-u8-ref _ _)	   foldable effect-free result-true)
-      (($bytevector-length _)	   foldable effect-free result-true)
 
 ;;; --------------------------------------------------------------------
 
