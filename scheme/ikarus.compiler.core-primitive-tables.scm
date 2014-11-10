@@ -71,8 +71,17 @@
   (attributes
    ((_)				foldable effect-free)))
 
+(declare-core-primitive void
+    (safe)
+  (signatures
+   (()				=> (T:void)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
 
-;;;; pairs and lists
+;;;; pairs and lists, safe functions
+
+;;; predicates
 
 (declare-core-primitive null?
     (safe)
@@ -101,21 +110,8 @@
   (attributes
    ((_)			foldable effect-free)))
 
-(declare-core-primitive car
-    (safe)
-  (signatures
-   ((T:pair) => (_)))
-  (attributes
-   ((_)			foldable effect-free))
-  (replacements $car))
-
-(declare-core-primitive cdr
-    (safe)
-  (signatures
-   ((T:pair) => (_)))
-  (attributes
-   ((_)			foldable effect-free))
-  (replacements $cdr))
+;;; --------------------------------------------------------------------
+;;; constructors
 
 (declare-core-primitive cons
     (safe)
@@ -156,6 +152,159 @@
    ((_)			effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
+;;; inspection
+
+(declare-core-primitive memq
+    (safe)
+  (signatures
+   ((_ T:pair)			=> (_))
+   ((_ T:null)			=> (T:false)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive memv
+    (safe)
+  (signatures
+   ((_ T:pair)			=> (_))
+   ((_ T:null)			=> (T:false)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive member
+    (safe)
+  (signatures
+   ((_ T:pair)			=> (_))
+   ((_ T:null)			=> (T:false)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive memp
+    (safe)
+  (signatures
+   ((T:procedure T:pair)	=> (_))
+   ((T:procedure T:null)	=> (T:false)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive length
+    (safe)
+  (signatures
+   ((T:pair)			=> (_))
+   ((T:null)			=> (T:zero)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; accessors
+
+(declare-core-primitive car
+    (safe)
+  (signatures
+   ((T:pair) => (_)))
+  (attributes
+   ((_)			foldable effect-free))
+  (replacements $car))
+
+(declare-core-primitive cdr
+    (safe)
+  (signatures
+   ((T:pair) => (_)))
+  (attributes
+   ((_)			foldable effect-free))
+  (replacements $cdr))
+
+(let-syntax
+    ((define-safe-accessor (syntax-rules ()
+			     ((_ ?who)
+			      (declare-core-primitive ?who
+				  (safe)
+				(signatures
+				 ((T:pair)		=> (_)))
+				(attributes
+				 ((_)			foldable effect-free)))))))
+  (define-safe-accessor caar)
+  (define-safe-accessor cadr)
+  (define-safe-accessor cdar)
+  (define-safe-accessor cddr)
+  (define-safe-accessor caaar)
+  (define-safe-accessor caadr)
+  (define-safe-accessor cadar)
+  (define-safe-accessor caddr)
+  (define-safe-accessor cdaar)
+  (define-safe-accessor cdadr)
+  (define-safe-accessor cddar)
+  (define-safe-accessor cdddr)
+  (define-safe-accessor caaaar)
+  (define-safe-accessor caaadr)
+  (define-safe-accessor caadar)
+  (define-safe-accessor caaddr)
+  (define-safe-accessor cadaar)
+  (define-safe-accessor cadadr)
+  (define-safe-accessor caddar)
+  (define-safe-accessor cadddr)
+  (define-safe-accessor cdaaar)
+  (define-safe-accessor cdaadr)
+  (define-safe-accessor cdadar)
+  (define-safe-accessor cdaddr)
+  (define-safe-accessor cddaar)
+  (define-safe-accessor cddadr)
+  (define-safe-accessor cdddar)
+  (define-safe-accessor cddddr))
+
+;;; --------------------------------------------------------------------
+;;; mutators
+
+(declare-core-primitive set-car!
+    (safe)
+  (signatures
+   ((T:pair _)			=> (T:void)))
+  (attributes
+   ((_ _)			foldable result-true))
+  (replacements
+   $set-car!))
+
+(declare-core-primitive set-cdr!
+    (safe)
+  (signatures
+   ((T:pair _)			=> (T:void)))
+  (attributes
+   ((_ _)			foldable result-true))
+  (replacements
+   $set-cdr!))
+
+;;; --------------------------------------------------------------------
+;;; associative lists
+
+(declare-core-primitive assq
+    (safe)
+  (signatures
+   ((_ T:pair)			=> (_)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive assv
+    (safe)
+  (signatures
+   ((_ T:pair)			=> (_)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive assoc
+    (safe)
+  (signatures
+   ((_ T:pair)			=> (_)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive assp
+    (safe)
+  (signatures
+   ((T:procedure T:pair)	=> (_)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+
+;;;; pairs and lists, unsafe functions
 
 (declare-core-primitive $car
     (unsafe)
@@ -170,6 +319,23 @@
    ((T:pair) => (_)))
   (attributes
    ((_)			foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+;;; mutators
+
+(declare-core-primitive $set-car!
+    (safe)
+  (signatures
+   ((T:pair _)			=> (T:void)))
+  (attributes
+   ((_ _)			foldable result-true)))
+
+(declare-core-primitive $set-cdr!
+    (safe)
+  (signatures
+   ((T:pair _)			=> (T:void)))
+  (attributes
+   ((_ _)			foldable result-true)))
 
 
 ;;;; fixnums safe operations
@@ -1779,9 +1945,6 @@
 
 
 #|
-      ((assq _ _)		   foldable effect-free		   )
-      ((assv _ _)		   foldable effect-free		   )
-      ((assoc _ _)		   foldable effect-free		   )
       ((symbol? _)		   foldable effect-free		   )
       ((procedure? _)		   foldable effect-free		   )
       ((eof-object? _)		   foldable effect-free		   )
@@ -1792,44 +1955,6 @@
       ((bignum? _)		   foldable effect-free		   )
       ((ratnum? _)		   foldable effect-free		   )
       ((pointer? _)		   foldable effect-free		   )
-      ((void)			   foldable effect-free result-true)
-      ((set-car! _ _)		   foldable			   )
-      ((set-cdr! _ _)		   foldable			   )
-      ((caar _)			   foldable effect-free		   )
-      ((cadr _)			   foldable effect-free		   )
-      ((cdar _)			   foldable effect-free		   )
-      ((cddr _)			   foldable effect-free		   )
-      ((caaar _)		   foldable effect-free		   )
-      ((caadr _)		   foldable effect-free		   )
-      ((cadar _)		   foldable effect-free		   )
-      ((caddr _)		   foldable effect-free		   )
-      ((cdaar _)		   foldable effect-free		   )
-      ((cdadr _)		   foldable effect-free		   )
-      ((cddar _)		   foldable effect-free		   )
-      ((cdddr _)		   foldable effect-free		   )
-      ((caaaar _)		   foldable effect-free		   )
-      ((caaadr _)		   foldable effect-free		   )
-      ((caadar _)		   foldable effect-free		   )
-      ((caaddr _)		   foldable effect-free		   )
-      ((cadaar _)		   foldable effect-free		   )
-      ((cadadr _)		   foldable effect-free		   )
-      ((caddar _)		   foldable effect-free		   )
-      ((cadddr _)		   foldable effect-free		   )
-      ((cdaaar _)		   foldable effect-free		   )
-      ((cdaadr _)		   foldable effect-free		   )
-      ((cdadar _)		   foldable effect-free		   )
-      ((cdaddr _)		   foldable effect-free		   )
-      ((cddaar _)		   foldable effect-free		   )
-      ((cddadr _)		   foldable effect-free		   )
-      ((cdddar _)		   foldable effect-free		   )
-      ((cddddr _)		   foldable effect-free		   )
-      (($car _)			   foldable effect-free		   )
-      (($cdr _)			   foldable effect-free		   )
-      (($set-car! _ _)		   foldable			   )
-      (($set-cdr! _ _)		   foldable			   )
-      ((memq _ _)		   foldable effect-free		   )
-      ((memv _ _)		   foldable effect-free		   )
-      ((length _)		   foldable effect-free result-true)
 ;;;
       ((* . _)			   foldable effect-free result-true)
       ((/ _ . _)		   foldable effect-free result-true)
