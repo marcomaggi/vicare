@@ -6679,7 +6679,8 @@
     ;;The numerator of a ratnum is always non-zero.
     ((ratnum?)	#f)
     ((flonum?)	(or ($fl= x 0.0) ($fl= x -0.0)))
-    ((compnum?)	#f)
+    ((compnum?)	(and (zero? ($compnum-real x))
+		     (zero? ($compnum-imag x))))
     ((cflonum?)	(and ($flzero? ($cflonum-real x))
 		     ($flzero? ($cflonum-imag x))))
     (else
