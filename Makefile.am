@@ -666,6 +666,7 @@ VICARE_SCHEME_CORE_TESTS	= \
 	\
 	tests/test-vicare-compiler-internals.sps			\
 	tests/test-vicare-compiler-pass-source-optimiser.sps		\
+	tests/test-vicare-compiler-pass-core-type-inference.sps		\
 	tests/test-vicare-compiler-pass-introduce-unsafe-primrefs.sps	\
 	tests/test-vicare-compiler-pass-specify-representation.sps	\
 	tests/test-vicare-compiler-pass-impose-eval-order.sps		\
