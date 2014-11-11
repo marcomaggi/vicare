@@ -122,8 +122,70 @@
 
 (parametrise ((check-test-name	'numbers))
 
-  ;;Test for numbers.
+  ;;fixnum predicate
   (doit* (let ((x (read)))
+	   (cond ((fixnum? x)
+		  (display x))))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref fixnum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:fixnum T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))
+	     (funcall (primref void)))))
+
+  ;;bignum predicate
+  (doit* (let ((x (read)))
+	   (cond ((bignum? x)
+		  (display x))))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref bignum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:bignum T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object)))
+	     (funcall (primref void)))))
+
+  ;;ratnum predicate
+  (doit* (let ((x (read)))
+	   (cond ((ratnum? x)
+		  (display x))))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref ratnum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:ratnum T:non-false T:nonimmediate T:real T:exact T:number T:object)))
+	     (funcall (primref void)))))
+
+  ;;flonum predicate
+  (doit* (let ((x (read)))
+	   (cond ((flonum? x)
+		  (display x))))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref flonum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:flonum T:non-false T:nonimmediate T:real T:inexact T:number T:object)))
+	     (funcall (primref void)))))
+
+  ;;cflonum predicate
+  (doit* (let ((x (read)))
+	   (cond ((cflonum? x)
+		  (display x))))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref cflonum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))
+	     (funcall (primref void)))))
+
+  ;;compnum predicate
+  (doit* (let ((x (read)))
+	   (cond ((compnum? x)
+		  (display x))))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref compnum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:compnum T:non-false T:nonimmediate T:complex T:number T:object)))
+	     (funcall (primref void)))))
+
+;;; --------------------------------------------------------------------
+
+  ;;Test for numbers.
+  #;(doit* (let ((x (read)))
 	   (cond ((fixnum? x)
 		  (display x))
 		 ((flonum? x)
@@ -153,37 +215,39 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref fixnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:fixnum T:non-false T:exact T:number T:immediate T:object)))
+		 (known x_0 (T:fixnum T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))
 	     (conditional (funcall (primref flonum?) x_0)
 		 (funcall (primref display)
-		   (known x_0 (T:flonum T:non-false T:nonimmediate T:inexact T:number T:object)))
+		   (known x_0 (T:flonum T:non-false T:real T:nonimmediate T:inexact T:number T:object)))
 	       (conditional (funcall (primref bignum?) x_0)
 		   (funcall (primref display)
-		     (known x_0 (T:bignum T:non-false T:nonimmediate T:exact T:number T:object)))
+		     (known x_0 (T:bignum T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object)))
 		 (conditional (funcall (primref ratnum?) x_0)
 		     (funcall (primref display)
-		       (known x_0 (T:ratnum T:non-false T:nonimmediate T:exact T:number T:object)))
+		       (known x_0 (T:ratnum T:non-false T:nonimmediate T:real T:exact T:number T:object)))
 		   (conditional (funcall (primref compnum?) x_0)
 		       (funcall (primref display)
-			 (known x_0 (T:compnum T:non-false T:nonimmediate T:number T:object)))
+			 (known x_0 ())
+			 #;(known x_0 (T:compnum T:non-false T:nonimmediate T:number T:object))
+			 )
 		     (conditional (funcall (primref cflonum?) x_0)
 			 (funcall (primref display)
-			   (known x_0 (T:cflonum T:non-false T:nonimmediate T:inexact T:number T:object)))
+			   (known x_0 (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))
 		       (conditional (funcall (primref number?) x_0)
 			   (funcall (primref display)
 			     (known x_0 (T:non-false T:number T:object)))
 			 (conditional (funcall (primref complex?) x_0)
 			     (funcall (primref display)
-			       (known x_0 (T:other-number T:non-false T:nonimmediate T:number T:object)))
+			       (known x_0 (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))
 			   (conditional (funcall (primref real?) x_0)
 			       (funcall (primref display)
-				 (known x_0 (T:non-false T:number T:object)))
+				 (known x_0 (T:non-false T:real T:number T:object)))
 			     (conditional (funcall (primref rational?) x_0)
 				 (funcall (primref display)
 				   (known x_0 (T:non-false T:number T:object)))
 			       (conditional (funcall (primref exact?) x_0)
 				   (funcall (primref display)
-				     (known x_0 (T:non-false T:exact T:number T:object)))
+				     (known x_0 (T:non-false T:real T:exact T:number T:object)))
 				 (conditional (funcall (primref inexact?) x_0)
 				     (funcall (primref display)
 				       (known x_0 (T:non-false T:nonimmediate T:inexact T:number T:object)))
@@ -200,7 +264,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant 1)
-		   (T:fixnum T:positive T:non-false T:exact T:number T:immediate T:object)))))
+		   (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))))
 
   #t)
 
@@ -213,7 +277,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant 1152921504606846976)
-		   (T:bignum T:positive T:non-false T:nonimmediate T:exact T:number T:object)))))
+		   (T:bignum T:positive T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f '-1152921504606846977))
@@ -221,7 +285,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -1152921504606846977)
-		   (T:bignum T:negative T:non-false T:nonimmediate T:exact T:number T:object)))))
+		   (T:bignum T:negative T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object)))))
 
   #t)
 
@@ -234,7 +298,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant +2/3)
-		   (T:ratnum T:positive T:non-false T:nonimmediate T:exact T:number T:object)))))
+		   (T:ratnum T:positive T:non-false T:nonimmediate T:real T:exact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -2/3)))
@@ -242,7 +306,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -2/3)
-		   (T:ratnum T:negative T:non-false T:nonimmediate T:exact T:number T:object)))))
+		   (T:ratnum T:negative T:non-false T:nonimmediate T:real T:exact T:number T:object)))))
 
   #t)
 
@@ -255,7 +319,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant +2.3)
-		   (T:flonum T:positive T:non-false T:nonimmediate T:inexact T:number T:object)))))
+		   (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -2.3)))
@@ -263,7 +327,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -2.3)
-		   (T:flonum T:negative T:non-false T:nonimmediate T:inexact T:number T:object)))))
+		   (T:flonum T:negative T:non-false T:nonimmediate T:real T:inexact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -0.0)))
@@ -271,7 +335,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -0.0)
-		   (T:flonum T:zero T:non-false T:nonimmediate T:inexact T:number T:object)))))
+		   (T:flonum T:zero T:non-false T:nonimmediate T:real T:inexact T:number T:object)))))
 
   #t)
 
@@ -284,7 +348,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant +2.3+4.5i)
-		   (T:cflonum T:non-false T:nonimmediate T:inexact T:number T:object)))))
+		   (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -2.3+4.5i)))
@@ -292,7 +356,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -2.3+4.5i)
-		   (T:cflonum T:non-false T:nonimmediate T:inexact T:number T:object)))))
+		   (T:cflonum T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -0.0+0.0i)))
@@ -300,7 +364,35 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -0.0+0.0i)
-		   (T:cflonum T:zero T:non-false T:nonimmediate T:inexact T:number T:object)))))
+		   (T:cflonum T:zero T:non-false T:nonimmediate T:complex T:inexact T:number T:object)))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'compnums))
+
+  (doit (let ((f (lambda (x) x)))
+	  (f (quote +2/3+4/5i)))
+	(bind ((f_0 (lambda (x_0) x_0)))
+	  (funcall (known f_0 (T:procedure T:non-false T:nonimmediate T:object))
+	    (known (constant +2/3+4/5i)
+		   (T:compnum T:non-false T:nonimmediate T:complex T:number T:object)))))
+
+  (doit (let ((f (lambda (x) x)))
+	  (f (quote -2/3+4/5i)))
+	(bind ((f_0 (lambda (x_0) x_0)))
+	  (funcall (known f_0
+			  (T:procedure T:non-false T:nonimmediate T:object))
+	    (known (constant -2/3+4/5i)
+		   (T:compnum T:non-false T:nonimmediate T:complex T:number T:object)))))
+
+  (doit (let ((f (lambda (x) x)))
+	  (f (quote 0+0.0i)))
+	(bind ((f_0 (lambda (x_0) x_0)))
+	  (funcall (known f_0
+			  (T:procedure T:non-false T:nonimmediate T:object))
+	    (known (constant 0+0.0i)
+		   (T:compnum T:zero T:non-false T:nonimmediate T:complex T:number T:object)))))
 
   #t)
 
@@ -390,7 +482,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref fixnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:fixnum T:non-false T:exact T:number T:immediate T:object)))
+		 (known x_0 (T:fixnum T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))
 	     (funcall (primref display)
 	       x_0))))
 
@@ -405,7 +497,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref fixnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:fixnum T:non-false T:exact T:number T:immediate T:object)))
+		 (known x_0 (T:fixnum T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))
 	     (conditional (funcall (primref string?) x_0)
 		 (funcall (primref display)
 		   (known x_0 (T:string T:non-false T:nonimmediate T:object)))

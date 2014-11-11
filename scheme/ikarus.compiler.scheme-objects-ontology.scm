@@ -44,17 +44,17 @@
    ;;CORE-TYPE-TAG-AND and CORE-TYPE-TAG-OR to compose more informative type tags.
    ;;
    T:object		T:immediate		T:boolean
-   T:number		T:exact			T:inexact
    T:nonimmediate	T:non-false		T:other-object
    T:symbol		T:bytevector		T:void
    T:char		T:null			T:pair
    T:vector		T:string		T:procedure
-   T:false		T:true			T:other-exact
-   T:fixnum		T:other-inexact		T:flonum
+   T:false		T:true
+
+   T:number		T:exact			T:inexact
+   T:fixnum		T:bignum		T:ratnum
+   T:flonum		T:compnum		T:cflonum
    T:positive		T:zero			T:negative
-   T:other-number	T:exact-integer
-   T:ratnum		T:bignum		T:compnum
-   T:cflonum
+   T:exact-integer	T:real			T:complex
 
    ;;Types not fully specified.
    T:maybe-port		T:maybe-struct		T:maybe-record
@@ -83,36 +83,27 @@
    ;;T:object?
    ;;   All the Scheme objects satisfy this validator.
    ;;
-   ;;T:other-number?
-   ;;   Tests  for numbers that  are neither  fixnums nor flonums:  ratnums, bignums,
-   ;;   compnums, cflonums.
-   ;;
-   ;;T:other-exact?
-   ;;   Tests for numbers that are exact, but not fixnums: ratnums, bignums.
-   ;;
-   ;;T:other-inexact?
-   ;;   Tests for numbers that are inexact, but not flonums: compnums, cflonums.
-   ;;
    ;;T:other-object?
    ;;   Tests for objects that are not:
    ;;
    ;;	   T:symbol	T:bytevector	T:void		T:char
    ;;      T:null	T:pair		T:vector	T:string
-   ;;      T:procedure	T:false		T:true		T:other-exact
-   ;;      T:fixnum	T:other-inexact	T:flonum
+   ;;      T:procedure	T:false		T:true
+   ;;      T:fixnum	T:bignum	T:ratnum
+   ;;      T:flonum	T:compnum	T:cflonum
    ;;
    T:object?		T:immediate?		T:nonimmediate?
    T:boolean?		T:non-false?
-   T:number?		T:exact?		T:inexact?
    T:other-object?	T:symbol?		T:bytevector?
    T:void?		T:char?			T:null?
    T:pair?		T:vector?		T:string?
    T:procedure?		T:false?		T:true?
    T:positive?		T:zero?			T:negative?
-   T:other-number?	T:other-exact?		T:fixnum?
-   T:other-inexact?	T:flonum?		T:exact-integer?
-   T:ratnum?		T:bignum?		T:compnum?
-   T:cflonum?
+
+   T:number?		T:exact?		T:inexact?
+   T:fixnum?		T:bignum?		T:ratnum?
+   T:flonum?		T:compnum?		T:cflonum?
+   T:exact-integer?	T:real?			T:complex?
 
    ;;These are not fully specified.
    T:maybe-port?	T:maybe-struct?		T:maybe-record?)
@@ -459,6 +450,12 @@
 ;;;; ontology definition
 
 ;;See below for the expansion of this syntax.
+;;
+;;NOTE The last element of the list  represents a "other-?object" value, which is not
+;;one of the  preceeding values; this "everything else" item  *must* be present, even
+;;when it  is not used  as type tag.   So the following  are present even  if unused:
+;;other-number, other-exact, other-exact-integer, other-real, other-complex.
+;;
 (define-ontology core-type-tag
   make-core-type-tag core-type-tag? core-type-tag=?
   core-type-tag-and core-type-tag-or
@@ -471,17 +468,15 @@
 				   boolean char number void bytevector
 				   symbol other-object))
   (boolean		(exclusive true false))
-  (number		(inclusive number-tag number-size number-exactness))
-  (number-size		(exclusive negative zero positive))
+  (number		(inclusive number-tag number-sign number-exactness))
+  (number-sign		(exclusive negative zero positive))
   (number-tag		(exclusive fixnum bignum ratnum flonum cflonum compnum other-number))
   (number-exactness	(exclusive exact inexact))
   (exact		(exclusive fixnum bignum ratnum other-exact))
-  (inexact		(exclusive flonum cflonum other-inexact)))
-
-;;; --------------------------------------------------------------------
-
-(define-underspecified-core-type T:exact-integer
-  (core-type-tag-or* T:fixnum T:bignum))
+  (inexact		(exclusive flonum cflonum other-inexact))
+  (exact-integer	(exclusive fixnum bignum other-exact-integer))
+  (real			(exclusive fixnum bignum ratnum flonum other-real))
+  (complex		(exclusive cflonum compnum other-complex)))
 
 ;;; --------------------------------------------------------------------
 
@@ -524,7 +519,10 @@
 	       (core-type-tag-and T:cflonum T:zero)
 	     T:cflonum))
 	  ((compnum? x)
-	   (if (zero? x)
+	   ;;FIXME After  the next boot image  rotation the test must  be the simple:
+	   ;;"(zero? x)".  (Marco Maggi; Tue Nov 11, 2014)
+	   (if (and (zero? (real-part x))
+		    (zero? (imag-part x)))
 	       (core-type-tag-and T:compnum T:zero)
 	     T:compnum))
 	  (else
@@ -593,7 +591,6 @@
   (check (T:number? T:flonum)			=> yes)
   (check (T:number? T:exact)			=> yes)
   (check (T:number? T:inexact)			=> yes)
-  (check (T:number? T:other-inexact)		=> yes)
   (check (T:number? T:string)			=> no)
 
   (check (T:exact? T:exact)			=> yes)
@@ -603,9 +600,6 @@
   (check (T:exact? T:ratnum)			=> yes)
   (check (T:exact? T:flonum)			=> no)
   (check (T:exact? T:number)			=> maybe)
-  (check (T:exact? T:other-exact)		=> yes)
-  (check (T:exact? T:other-inexact)		=> no)
-  (check (T:exact? T:other-number)		=> maybe)
   (check (T:exact? T:string)			=> no)
 
   (check (T:inexact? T:exact)			=> no)
@@ -614,9 +608,6 @@
   (check (T:inexact? T:bignum)			=> no)
   (check (T:inexact? T:ratnum)			=> no)
   (check (T:inexact? T:flonum)			=> yes)
-  (check (T:inexact? T:other-exact)		=> no)
-  (check (T:inexact? T:other-inexact)		=> yes)
-  (check (T:inexact? T:other-number)		=> maybe) ;T:other-number = not fixnum, not flonum
   (check (T:inexact? T:number)			=> maybe)
   (check (T:inexact? T:string)			=> no)
 
@@ -627,49 +618,7 @@
   (check (T:exact-integer? T:ratnum)		=> no)
   (check (T:exact-integer? T:flonum)		=> no)
   (check (T:exact-integer? T:number)		=> maybe)
-  (check (T:exact-integer? T:other-exact)	=> no)
-  (check (T:exact-integer? T:other-inexact)	=> no)
-  (check (T:exact-integer? T:other-number)	=> no)
   (check (T:exact-integer? T:string)		=> no)
-
-  ;;Tests for exact number, but not fixnum, bignum or ratnum.
-  (check (T:other-exact? T:other-exact)		=> yes)
-  (check (T:other-exact? T:other-inexact)	=> no)
-  (check (T:other-exact? T:exact)		=> maybe)
-  (check (T:other-exact? T:inexact)		=> no)
-  (check (T:other-exact? T:fixnum)		=> no)
-  (check (T:other-exact? T:bignum)		=> no)
-  (check (T:other-exact? T:ratnum)		=> no)
-  (check (T:other-exact? T:flonum)		=> no)
-  (check (T:other-exact? T:number)		=> maybe)
-  (check (T:other-exact? T:string)		=> no)
-
-  ;;Tests for inexact number, but not flonum.
-  (check (T:other-inexact? T:other-inexact)	=> yes)
-  (check (T:other-inexact? T:other-exact)	=> no)
-  (check (T:other-inexact? T:exact)		=> no)
-  (check (T:other-inexact? T:inexact)		=> maybe)
-  (check (T:other-inexact? T:fixnum)		=> no)
-  (check (T:other-inexact? T:bignum)		=> no)
-  (check (T:other-inexact? T:ratnum)		=> no)
-  (check (T:other-inexact? T:flonum)		=> no)
-  (check (T:other-inexact? T:number)		=> maybe)
-  (check (T:other-inexact? T:string)		=> no)
-
-  ;;Tests for numbers that are not: fixnums, bignums, ratnum, flonums.
-  (check (T:other-number? T:other-number)	=> yes)
-  (check (T:other-number? T:number)		=> maybe)
-  (check (T:other-number? T:fixnum)		=> no)
-  (check (T:other-number? T:bignum)		=> no)
-  (check (T:other-number? T:ratnum)		=> no)
-  (check (T:other-number? T:flonum)		=> no)
-  (check (T:other-number? T:cflonum)		=> no)
-  (check (T:other-number? T:compnum)		=> no)
-  (check (T:other-number? T:exact)		=> maybe)
-  (check (T:other-number? T:inexact)		=> maybe)
-  (check (T:other-number? T:other-exact)	=> maybe)
-  (check (T:other-number? T:other-inexact)	=> maybe)
-  (check (T:other-number? T:string)		=> no)
 
   ;;Multitype tests.
   (check (T:fixnum? (core-type-tag-or T:fixnum T:flonum))	=> maybe)
@@ -688,6 +637,7 @@
 ;;;The expansion  of DEFINE-ONTOLOGY above  is the following (minus  some adjustement
 ;;;for readability) (last updated Sat Sep 13, 2014):
 
+(module ()
 (begin
   (define-record-type (core-type-tag make-T core-type-tag?)
     (sealed #t)
@@ -923,7 +873,7 @@
 		 (else ls))))
       ls))
 
-  #| end of BEGIN |# )
+  #| end of BEGIN |# ))
 
 ;;; end of file
 ;; Local Variables:
