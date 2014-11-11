@@ -1144,32 +1144,30 @@
   (signatures (T:number => (T:number)))
   (attributes
    (_			foldable effect-free result-true))
-  ;;The commented out variants  handle operands of a type that  is not categorised by
-  ;;the core type system.
   (replacements
-   $add-fixnum-fixnum		#;$add-fixnum-bignum	$add-fixnum-flonum
-   #;$add-fixnum-ratnum		#;$add-fixnum-compnum	#;$add-fixnum-cflonum
+   $add-fixnum-fixnum		$add-fixnum-bignum	$add-fixnum-flonum
+   $add-fixnum-ratnum		$add-fixnum-compnum	$add-fixnum-cflonum
 
-   #;$add-bignum-fixnum		#;$add-bignum-bignum	#;$add-bignum-flonum
-   #;$add-bignum-ratnum		#;$add-bignum-compnum	#;$add-bignum-cflonum
+   $add-bignum-fixnum		$add-bignum-bignum	$add-bignum-flonum
+   $add-bignum-ratnum		$add-bignum-compnum	$add-bignum-cflonum
 
-   $add-flonum-fixnum		#;$add-flonum-bignum	$add-flonum-flonum
-   #;$add-flonum-ratnum		#;$add-flonum-compnum	#;$add-flonum-cflonum
+   $add-flonum-fixnum		$add-flonum-bignum	$add-flonum-flonum
+   $add-flonum-ratnum		$add-flonum-compnum	$add-flonum-cflonum
 
-   #;$add-ratnum-fixnum		#;$add-ratnum-bignum	#;$add-ratnum-flonum
-   #;$add-ratnum-ratnum		#;$add-ratnum-compnum	#;$add-ratnum-cflonum
+   $add-ratnum-fixnum		$add-ratnum-bignum	$add-ratnum-flonum
+   $add-ratnum-ratnum		$add-ratnum-compnum	$add-ratnum-cflonum
 
-   #;$add-compnum-fixnum	#;$add-compnum-bignum	#;$add-compnum-ratnum
-   #;$add-compnum-compnum	#;$add-compnum-flonum	#;$add-compnum-cflonum
+   $add-compnum-fixnum		$add-compnum-bignum	$add-compnum-ratnum
+   $add-compnum-compnum		$add-compnum-flonum	$add-compnum-cflonum
 
-   #;$add-cflonum-fixnum	#;$add-cflonum-bignum	#;$add-cflonum-ratnum
-   #;$add-cflonum-flonum	#;$add-cflonum-compnum	#;$add-cflonum-cflonum
+   $add-cflonum-fixnum		$add-cflonum-bignum	$add-cflonum-ratnum
+   $add-cflonum-flonum		$add-cflonum-compnum	$add-cflonum-cflonum
 
-   $add-fixnum-number		#;$add-bignum-number	$add-flonum-number
-   #;$add-ratnum-number		#;$add-compnum-number	#;$add-cflonum-number
+   $add-fixnum-number		$add-bignum-number	$add-flonum-number
+   $add-ratnum-number		$add-compnum-number	$add-cflonum-number
 
-   $add-number-fixnum		#;$add-number-bignum	$add-number-flonum
-   #;$add-number-ratnum		#;$add-number-compnum	#;$add-number-cflonum
+   $add-number-fixnum		$add-number-bignum	$add-number-flonum
+   $add-number-ratnum		$add-number-compnum	$add-number-cflonum
 
    $add-number-number))
 
