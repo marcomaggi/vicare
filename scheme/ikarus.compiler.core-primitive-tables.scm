@@ -767,35 +767,35 @@
 ;;; predicates
 
 (declare-core-primitive $fxzero?
-    (safe)
+    (unsafe)
   (signatures
    ((T:fixnum)			=> (T:boolean)))
   (attributes
    ((_)				foldable effect-free)))
 
 (declare-core-primitive $fxpositive?
-    (safe)
+    (unsafe)
   (signatures
    ((T:fixnum)			=> (T:boolean)))
   (attributes
    ((_)				foldable effect-free)))
 
 (declare-core-primitive $fxnegative?
-    (safe)
+    (unsafe)
   (signatures
    ((T:fixnum)			=> (T:boolean)))
   (attributes
    ((_)				foldable effect-free)))
 
 (declare-core-primitive $fxnonpositive?
-    (safe)
+    (unsafe)
   (signatures
    ((T:fixnum)			=> (T:boolean)))
   (attributes
    ((_)				foldable effect-free)))
 
 (declare-core-primitive $fxnonnegative?
-    (safe)
+    (unsafe)
   (signatures
    ((T:fixnum)			=> (T:boolean)))
   (attributes
@@ -1063,6 +1063,44 @@
    ((T:fixnum)			=> (T:char)))
   (attributes
    ((_)				foldable effect-free result-true)))
+
+
+;;; ratnums, unsafe operations
+
+(declare-core-primitive $make-ratnum
+    (unsafe)
+  (signatures
+   ((T:exact-integer T:exact-integer)		=> (T:ratnum)))
+  (attributes
+   ((_ _)					foldable effect-free result-true)))
+
+(declare-core-primitive $ratnum-n
+    (unsafe)
+  (signatures
+   ((T:ratnum)					=> (T:exact-integer)))
+  (attributes
+   ((_)						foldable effect-free result-true)))
+
+(declare-core-primitive $ratnum-d
+    (unsafe)
+  (signatures
+   ((T:ratnum)					=> (T:exact-integer)))
+  (attributes
+   ((_)						foldable effect-free result-true)))
+
+(declare-core-primitive $ratnum-num
+    (unsafe)
+  (signatures
+   ((T:ratnum)					=> (T:exact-integer)))
+  (attributes
+   ((_)						foldable effect-free result-true)))
+
+(declare-core-primitive $ratnum-den
+    (unsafe)
+  (signatures
+   ((T:ratnum)					=> (T:exact-integer)))
+  (attributes
+   ((_)						foldable effect-free result-true)))
 
 
 ;;;; general arithmetics
@@ -2026,16 +2064,6 @@
       ((atan _)			   foldable effect-free result-true)
       ((atan _ _)		   foldable effect-free result-true)
       ((make-eq-hashtable)		    effect-free result-true)
-
-;;; --------------------------------------------------------------------
-;;; ratnums
-
-      (($make-ratnum _ _)	   foldable effect-free result-true)
-      (($make-rational _ _)	   foldable effect-free result-true)
-      (($ratnum-n _)		   foldable effect-free result-true)
-      (($ratnum-d _)		   foldable effect-free result-true)
-      (($ratnum-num _)		   foldable effect-free result-true)
-      (($ratnum-den _)		   foldable effect-free result-true)
 
 ;;; --------------------------------------------------------------------
 ;;; flonums

@@ -48,7 +48,7 @@
    T:false		T:true			T:other-exact
    T:fixnum		T:other-inexact		T:flonum
    T:positive		T:zero			T:negative
-   T:other-number
+   T:other-number	T:exact-integer
 
    ;;Types not fully specified.
    T:ratnum		T:bignum		T:compnum
@@ -107,7 +107,7 @@
    T:procedure?		T:false?		T:true?
    T:positive?		T:zero?			T:negative?
    T:other-number?	T:other-exact?		T:fixnum?
-   T:other-inexact?	T:flonum?
+   T:other-inexact?	T:flonum?		T:exact-integer?
 
    ;;These are not fully specified.
    T:ratnum?		T:bignum?		T:compnum?
@@ -431,15 +431,23 @@
      (core-type-tag-and ?tag0 (core-type-tag-and* ?tag1 ?tag ...)))
     ))
 
+(define-syntax core-type-tag-or*
+  (syntax-rules ()
+    ((_ ?tag)
+     ?tag)
+    ((_ ?tag0 ?tag1 ?tag ...)
+     (core-type-tag-or ?tag0 (core-type-tag-or* ?tag1 ?tag ...)))
+    ))
+
 (define-syntax (define-underspecified-core-type stx)
   (syntax-case stx ()
-    ((_ ?type-name ?tag0 ?tag ...)
-     (all-identifiers? #'(_ ?type-name ?tag0 ?tag ...))
+    ((_ ?type-name ?instance)
+     (identifier? #'?type-name)
      (with-syntax
 	 ((PRED (identifier-suffix #'?type-name "?")))
        #'(begin
 	   (define-constant ?type-name
-	     (core-type-tag-and* ?tag0 ?tag ...))
+	     ?instance)
 	   (define* (PRED {x core-type-tag?})
 	     (%test-bits ($core-type-tag-bits x)
 			 ($core-type-tag-bits ?type-name))))))
@@ -471,27 +479,32 @@
 ;;; --------------------------------------------------------------------
 
 (define-underspecified-core-type T:bignum
-  T:other-number T:nonimmediate T:non-false T:exact)
+  (core-type-tag-and* T:other-number T:nonimmediate T:non-false T:exact))
 
 (define-underspecified-core-type T:ratnum
-  T:other-number T:nonimmediate T:non-false T:exact)
+  (core-type-tag-and* T:other-number T:nonimmediate T:non-false T:exact))
 
 (define-underspecified-core-type T:compnum
-  T:other-number T:nonimmediate T:non-false)
+  (core-type-tag-and* T:other-number T:nonimmediate T:non-false))
 
 (define-underspecified-core-type T:cflonum
-  T:other-number T:nonimmediate T:non-false T:inexact)
+  (core-type-tag-and* T:other-number T:nonimmediate T:non-false T:inexact))
+
+;;; --------------------------------------------------------------------
+
+(define-underspecified-core-type T:exact-integer
+  (core-type-tag-or* T:fixnum T:bignum))
 
 ;;; --------------------------------------------------------------------
 
 (define-underspecified-core-type T:maybe-port
-  T:other-object T:nonimmediate T:non-false)
+  (core-type-tag-and* T:other-object T:nonimmediate T:non-false))
 
 (define-underspecified-core-type T:maybe-struct
-  T:other-object T:nonimmediate T:non-false)
+  (core-type-tag-and* T:other-object T:nonimmediate T:non-false))
 
 (define-underspecified-core-type T:maybe-record
-  T:other-object T:nonimmediate T:non-false)
+  (core-type-tag-and* T:other-object T:nonimmediate T:non-false))
 
 #| end of module: SCHEME-OBJECTS-ONTOLOGY |# )
 
