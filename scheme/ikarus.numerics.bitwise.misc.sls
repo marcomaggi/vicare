@@ -400,6 +400,8 @@
   (define (%fxreverse-bit-field30 v)
     (assert (= (fixnum-width) 30))
     (let* ( ;; Swap pairs of bits
+;;;                                                               2         1         0
+;;;                                                       87654321098765432109876543210
 	   (tmp1     (fxarithmetic-shift-right (fxand v #b10000000000000000000000000000) 28))
 	   (v (fxior (fxarithmetic-shift-right (fxand v #b01010101010101010101010101010) 1)
 		     (fxarithmetic-shift-left  (fxand v #b00101010101010101010101010101) 1)))
@@ -420,59 +422,65 @@
 
   (define (%fxreverse-bit-field61 v)
     ;; Based on <http://aggregate.org/MAGIC/#Bit Reversal>.
+    ;;
+    ;;NOTE The constants in this function are fixnums on 64-bit platforms and bignums
+    ;;on 32-bit  platforms.  For this  reason we  use the BITWISE-*  functions rather
+    ;;than the FX* ones.  (Marco Maggi; Tue Nov 11, 2014)
     (assert (= (fixnum-width) 61))
     (let* ( ;; Swap pairs of bits
-	   (v (fxior
-	       (fxarithmetic-shift-right
-                (fxand v #b101010101010101010101010101010101010101010101010101010101010)
+	   (v (bitwise-ior
+	       (bitwise-arithmetic-shift-right
+;;;                                       5         4         3         2         1         0
+;;;                              987654321098765432109876543210987654321098765432109876543210
+                (bitwise-and v #b101010101010101010101010101010101010101010101010101010101010)
                 1)
-	       (fxarithmetic-shift-left
-                (fxand v #b010101010101010101010101010101010101010101010101010101010101)
+	       (bitwise-arithmetic-shift-left
+                (bitwise-and v #b010101010101010101010101010101010101010101010101010101010101)
                 1)))
 	   ;; Swap 2-bit fields
-	   (v (fxior
-	       (fxarithmetic-shift-right
-                (fxand v #b110011001100110011001100110011001100110011001100110011001100)
+	   (v (bitwise-ior
+	       (bitwise-arithmetic-shift-right
+                (bitwise-and v #b110011001100110011001100110011001100110011001100110011001100)
                 2)
-	       (fxarithmetic-shift-left
-                (fxand v #b001100110011001100110011001100110011001100110011001100110011)
+	       (bitwise-arithmetic-shift-left
+                (bitwise-and v #b001100110011001100110011001100110011001100110011001100110011)
                 2)))
 	   ;; Swap 4-bit fields
-	   (tmp1 (fxarithmetic-shift-right
-		  (fxand v #b111100000000000000000000000000000000000000000000000000000000)
+	   (tmp1 (bitwise-arithmetic-shift-right
+		  (bitwise-and v #b111100000000000000000000000000000000000000000000000000000000)
 		  56))
-	   (v (fxior
-	       (fxarithmetic-shift-right
-                (fxand v #b000011110000111100001111000011110000111100001111000011110000)
+	   (v (bitwise-ior
+	       (bitwise-arithmetic-shift-right
+                (bitwise-and v #b000011110000111100001111000011110000111100001111000011110000)
                 4)
-	       (fxarithmetic-shift-left
-                (fxand v #b000000001111000011110000111100001111000011110000111100001111)
+	       (bitwise-arithmetic-shift-left
+                (bitwise-and v #b000000001111000011110000111100001111000011110000111100001111)
                 4)))
 	   ;; Swap bytes
-	   (tmp2 (fxarithmetic-shift-right
-                  (fxand v #b000011111111000000000000000000000000000000000000000000000000)
+	   (tmp2 (bitwise-arithmetic-shift-right
+                  (bitwise-and v #b000011111111000000000000000000000000000000000000000000000000)
                   44))
-	   (v (fxior
-               (fxarithmetic-shift-right
-		(fxand v #b111100000000111111110000000011111111000000001111111100000000)
+	   (v (bitwise-ior
+               (bitwise-arithmetic-shift-right
+		(bitwise-and v #b111100000000111111110000000011111111000000001111111100000000)
 		8)
-               (fxarithmetic-shift-left
-		(fxand v #b000000000000000000001111111100000000111111110000000011111111)
+               (bitwise-arithmetic-shift-left
+		(bitwise-and v #b000000000000000000001111111100000000111111110000000011111111)
 		8)))
 	   ;; Swap 16-bit fields
-	   (tmp3 (fxarithmetic-shift-right
-                  (fxand v #b000000000000111111111111111100000000000000000000000000000000)
+	   (tmp3 (bitwise-arithmetic-shift-right
+                  (bitwise-and v #b000000000000111111111111111100000000000000000000000000000000)
                   20))
-	   (v (fxior
-               (fxarithmetic-shift-right
-		(fxand v #b111111111111000000000000000011111111111111110000000000000000)
+	   (v (bitwise-ior
+               (bitwise-arithmetic-shift-right
+		(bitwise-and v #b111111111111000000000000000011111111111111110000000000000000)
 		16)
-               (fxarithmetic-shift-left
-		(fxand v #b000000000000000000000000000000000000000000001111111111111111)
+               (bitwise-arithmetic-shift-left
+		(bitwise-and v #b000000000000000000000000000000000000000000001111111111111111)
 		16))))
       ;; Put together the pieces
-      (fxior (fxarithmetic-shift-left v 28)
-	     tmp1 tmp2 tmp3)))
+      (bitwise-ior (bitwise-arithmetic-shift-left v 28)
+		   tmp1 tmp2 tmp3)))
 
 ;;; --------------------------------------------------------------------
 

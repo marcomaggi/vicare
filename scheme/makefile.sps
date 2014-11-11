@@ -184,6 +184,24 @@
 		writing-boot-image?)
 	  fasl-write.))
 
+(module (config.wordsize
+	 config.fixnum-width
+	 config.greatest-fixnum
+	 config.least-fixnum)
+  (define-syntax-rule (config.wordsize)
+    wordsize)
+  (define-syntax-rule (config.fixnum-width)
+    (fixnum-width))
+  (define-syntax-rule (config.greatest-fixnum)
+    (greatest-fixnum))
+  (define-syntax-rule (config.least-fixnum)
+    (least-fixnum))
+  (include "ikarus.wordsize.scm"))
+(fprintf (current-error-port) "wordsize:        ~a\n" (config.wordsize))
+(fprintf (current-error-port) "fixnum width:    ~a\n" (config.fixnum-width))
+(fprintf (current-error-port) "greatest fixnum: ~a\n" (config.greatest-fixnum))
+(fprintf (current-error-port) "least fixnum:    ~a\n" (config.least-fixnum))
+
 (fasl-write.writing-boot-image? #t)
 
 ;;The optimisation level should already default to  2.  By commenting out this we let

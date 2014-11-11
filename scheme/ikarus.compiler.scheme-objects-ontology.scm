@@ -134,17 +134,17 @@
 	       (fields (immutable bits))
 	       (protocol
 		(lambda (make-instance)
-		  (lambda* ({bits fixnum?})
+		  (lambda* ({bits exact-integer?})
 		    (make-instance bits)))))
 
 	     (define* (T:=? {x T?} {y T?})
-	       (fx=? ($T-bits x) ($T-bits y)))
+	       (= ($T-bits x) ($T-bits y)))
 
 	     (define* (T:and {x0 T?} {x1 T?})
-	       (make-T (fxlogand ($T-bits x0) ($T-bits x1))))
+	       (make-T (bitwise-and ($T-bits x0) ($T-bits x1))))
 
 	     (define* (T:or {x0 T?} {x1 T?})
-	       (make-T (fxlogor ($T-bits x0) ($T-bits x1))))
+	       (make-T (bitwise-ior ($T-bits x0) ($T-bits x1))))
 
 	     (define-constant NAME (make-T VAL))
 	     ...
@@ -373,7 +373,7 @@
 
 
 (define (%test-bits bits predefined-type-bits)
-  (cond ((fxzero? (fxlogand bits predefined-type-bits))
+  (cond ((zero? (bitwise-and bits predefined-type-bits))
 	 ;;None of the  PREDEFINED-TYPE-BITS are set in BITS; some  other bits may be
 	 ;;set in BITS.  Bits examples:
 	 ;;
@@ -386,7 +386,7 @@
 	 ;;   (T:string? (T:or T:fixnum T:pair))	=> no
 	 ;;
 	 'no)
-	((fx=? predefined-type-bits (fxlogor bits predefined-type-bits))
+	((= predefined-type-bits (bitwise-ior bits predefined-type-bits))
 	 ;;All  the  BITS   are  also  set  in  PREDEFINED-TYPE-BITS;   some  of  the
 	 ;;PREDEFINED-TYPE-BITS are not set in BITS.  Bits examples:
 	 ;;
@@ -546,7 +546,7 @@
 ;;;inline tests
 
 ;;Uncomment this form to test.
-#;(module ()
+(module ()
   (import SCHEME-OBJECTS-ONTOLOGY)
 
   (define (%do-check expr result expected)
@@ -678,24 +678,27 @@
 
   (define* (core-type-tag=? (brace x core-type-tag?)
 			    (brace y core-type-tag?))
-    (fx=? ($core-type-tag-bits x)
-	  ($core-type-tag-bits y)))
+    (= ($core-type-tag-bits x)
+       ($core-type-tag-bits y)))
 
   (define* (core-type-tag-and (brace x0 core-type-tag?)
 			      (brace x1 core-type-tag?))
-    (make-core-type-tag (fxlogand ($core-type-tag-bits x0)
-				  ($core-type-tag-bits x1))))
+    (make-core-type-tag (bitwise-and ($core-type-tag-bits x0)
+				     ($core-type-tag-bits x1))))
 
   (define* (core-type-tag-or (brace x0 core-type-tag?)
 			     (brace x1 core-type-tag?))
-    (make-core-type-tag (fxlogor ($core-type-tag-bits x0)
-				 ($core-type-tag-bits x1))))
+    (make-core-type-tag (bitwise-ior ($core-type-tag-bits x0)
+				     ($core-type-tag-bits x1))))
 
-;;;Define  the exact  integers representing  the type  informations.  By  keeping the
-;;;values in the 24-bit  range we make sure that they fit into  fixnums as defined by
-;;;R6RS; by keeping  the values in the 30-bit  range we make sure that  they fit into
-;;;fixnum as defined  by Vicare on a  32-bit platform (and automatically  on a 64-bit
-;;;platform).
+;;;Define the exact integers representing the type informations.
+;;;
+;;;By keeping the values in the 24-bit range  we make sure that they fit into fixnums
+;;;as defined by  R6RS; by keeping the values  in the 30-bit range we  make sure that
+;;;they fit into fixnums as defined by Vicare on a 32-bit platform (and automatically
+;;;on a  64-bit platform).  If we  go over 30 bits:  on 32-bit platforms we  will use
+;;;bignums, on  64-bit platforms  we still  use fixnums  up to  61 bits;  bignums are
+;;;slower.
 ;;;
 ;;;                                                                                                      9876543210
 ;;;                                                                                            9876543210
@@ -715,9 +718,9 @@
   (define-constant T:false		(make-core-type-tag 1024))
   (define-constant T:true		(make-core-type-tag 2048))
   (define-constant T:boolean		(make-core-type-tag 3072))
-  (define-constant T:immediate		(make-core-type-tag 939527224))	   ;         111000000000000000110000111000
+  (define-constant T:immediate		(make-core-type-tag 939527224))	;         111000000000000000110000111000
   (define-constant T:number		(make-core-type-tag 549755809792)) ;111111111111111111111111111000000000000
-  (define-constant T:exact		(make-core-type-tag 8587866112))   ;      111111111111000000111000000000000
+  (define-constant T:exact		(make-core-type-tag 8587866112)) ;      111111111111000000111000000000000
   (define-constant T:inexact		(make-core-type-tag 541167943680)) ;111111000000000000111111000000000000000
   (define-constant T:exact-integer	(make-core-type-tag 1056964608))
   (define-constant T:real		(make-core-type-tag 1073479680))
