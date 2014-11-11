@@ -51,11 +51,10 @@
    T:other-number
 
    ;;Types not fully specified.
-   T:port
-
-   ;;These are not fully implemented.
    T:ratnum		T:bignum		T:compnum
    T:cflonum
+
+   T:maybe-port		T:maybe-struct		T:maybe-record
 
    ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
    ;;
@@ -110,12 +109,11 @@
    T:other-number?	T:other-exact?		T:fixnum?
    T:other-inexact?	T:flonum?
 
-   ;;Predicates for types not fully specified.
-   T:port?
-
-   ;;These are not fully implemented.
+   ;;These are not fully specified.
    T:ratnum?		T:bignum?		T:compnum?
-   T:cflonum?)
+   T:cflonum?
+
+   T:maybe-port?	T:maybe-struct?		T:maybe-record?)
 
 
 (define-syntax (define-ontology x)
@@ -470,30 +468,6 @@
   (exact		(exclusive fixnum other-exact))
   (inexact		(exclusive flonum other-inexact)))
 
-;; (define* (T:ratnum? (brace x core-type-tag?))
-;;   (case (T:other-number? x)
-;;     ((yes)	'maybe)
-;;     ((no)	'no)
-;;     ((maybe)	'maybe)))
-
-;; (define* (T:bignum? (brace x core-type-tag?))
-;;   (case (T:other-number? x)
-;;     ((yes)	'maybe)
-;;     ((no)	'no)
-;;     ((maybe)	'maybe)))
-
-;; (define* (T:compnum? (brace x core-type-tag?))
-;;   (case (T:other-number? x)
-;;     ((yes)	'maybe)
-;;     ((no)	'no)
-;;     ((maybe)	'maybe)))
-
-;; (define* (T:cflonum? (brace x core-type-tag?))
-;;   (case (T:other-number? x)
-;;     ((yes)	'maybe)
-;;     ((no)	'no)
-;;     ((maybe)	'maybe)))
-
 ;;; --------------------------------------------------------------------
 
 (define-underspecified-core-type T:bignum
@@ -510,7 +484,13 @@
 
 ;;; --------------------------------------------------------------------
 
-(define-underspecified-core-type T:port
+(define-underspecified-core-type T:maybe-port
+  T:other-object T:nonimmediate T:non-false)
+
+(define-underspecified-core-type T:maybe-struct
+  T:other-object T:nonimmediate T:non-false)
+
+(define-underspecified-core-type T:maybe-record
   T:other-object T:nonimmediate T:non-false)
 
 #| end of module: SCHEME-OBJECTS-ONTOLOGY |# )
