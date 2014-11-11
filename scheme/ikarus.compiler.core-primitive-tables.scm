@@ -1111,14 +1111,14 @@
 (declare-core-primitive $ratnum-n
     (unsafe)
   (signatures
-   ((T:number)					=> (T:exact-integer)))
+   ((T:ratnum)					=> (T:exact-integer)))
   (attributes
    ((_)						foldable effect-free result-true)))
 
 (declare-core-primitive $ratnum-d
     (unsafe)
   (signatures
-   ((T:number)					=> (T:exact-integer)))
+   ((T:ratnum)					=> (T:exact-integer)))
   (attributes
    ((_)						foldable effect-free result-true)))
 
