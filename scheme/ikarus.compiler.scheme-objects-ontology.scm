@@ -50,9 +50,12 @@
    T:positive		T:zero			T:negative
    T:other-number
 
+   ;;Types not fully specified.
+   T:port
+
    ;;These are not fully implemented.
-   ;; T:ratnum		T:bignum		T:compnum
-   ;; T:cflonum
+   T:ratnum		T:bignum		T:compnum
+   T:cflonum
 
    ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
    ;;
@@ -107,6 +110,9 @@
    T:other-number?	T:other-exact?		T:fixnum?
    T:other-inexact?	T:flonum?
 
+   ;;Predicates for types not fully specified.
+   T:port?
+
    ;;These are not fully implemented.
    T:ratnum?		T:bignum?		T:compnum?
    T:cflonum?)
@@ -148,50 +154,6 @@
 
 	     (define* (T:or {x0 T?} {x1 T?})
 	       (make-T (fxlogor ($T-bits x0) ($T-bits x1))))
-
-	     (define (%test-bits bits predefined-type-bits)
-	       (cond ((fxzero? (fxlogand bits predefined-type-bits))
-		      ;;None of the PREDEFINED-TYPE-BITS are  set in BITS; some other
-		      ;;bits may be set in BITS.  Bits examples:
-		      ;;
-		      ;;   BITS   := #b110000
-		      ;;   PREDEF := #b001111
-		      ;;
-		      ;;BITS and PREDEF is disjunct.  Validator examples:
-		      ;;
-		      ;;   (T:string? T:fixnum)			=> no
-		      ;;   (T:string? (T:or T:fixnum T:pair))	=> no
-		      ;;
-		      'no)
-		     ((fx=? predefined-type-bits (fxlogor bits predefined-type-bits))
-		      ;;All the  BITS are also  set in PREDEFINED-TYPE-BITS;  some of
-		      ;;the PREDEFINED-TYPE-BITS are not set in BITS.  Bits examples:
-		      ;;
-		      ;;   BITS   := #b001111
-		      ;;   PREDEF := #b001111
-		      ;;
-		      ;;   BITS   := #b000011
-		      ;;   PREDEF := #b001111
-		      ;;
-		      ;;BITS is equal to, or a subset of, PREDEF.  Validator examples:
-		      ;;
-		      ;;   (T:number? T:number)			=> yes
-		      ;;   (T:number? T:fixnum)			=> yes
-		      ;;   (T:exact?  T:fixnum)			=> yes
-		      ;;
-		      'yes)
-		     (else
-		      ;;Some of the PREDEFINED-TYPE-BITS are set in BITS; some of the
-		      ;;BITS are not set in PREDEFINED-TYPE-BITS.  Bits examples:
-		      ;;
-		      ;;   BITS   := #b110011
-		      ;;   PREDEF := #b001111
-		      ;;
-		      ;;Validator examples:
-		      ;;
-		      ;;   (T:string? (T:or T:fixnum T:string))	=> maybe
-		      ;;
-		      'maybe)))
 
 	     (define-constant NAME (make-T VAL))
 	     ...
@@ -419,6 +381,73 @@
     (void)))
 
 
+(define (%test-bits bits predefined-type-bits)
+  (cond ((fxzero? (fxlogand bits predefined-type-bits))
+	 ;;None of the  PREDEFINED-TYPE-BITS are set in BITS; some  other bits may be
+	 ;;set in BITS.  Bits examples:
+	 ;;
+	 ;;   BITS   := #b110000
+	 ;;   PREDEF := #b001111
+	 ;;
+	 ;;BITS and PREDEF is disjunct.  Validator examples:
+	 ;;
+	 ;;   (T:string? T:fixnum)			=> no
+	 ;;   (T:string? (T:or T:fixnum T:pair))	=> no
+	 ;;
+	 'no)
+	((fx=? predefined-type-bits (fxlogor bits predefined-type-bits))
+	 ;;All  the  BITS   are  also  set  in  PREDEFINED-TYPE-BITS;   some  of  the
+	 ;;PREDEFINED-TYPE-BITS are not set in BITS.  Bits examples:
+	 ;;
+	 ;;   BITS   := #b001111
+	 ;;   PREDEF := #b001111
+	 ;;
+	 ;;   BITS   := #b000011
+	 ;;   PREDEF := #b001111
+	 ;;
+	 ;;BITS is equal to, or a subset of, PREDEF.  Validator examples:
+	 ;;
+	 ;;   (T:number? T:number)			=> yes
+	 ;;   (T:number? T:fixnum)			=> yes
+	 ;;   (T:exact?  T:fixnum)			=> yes
+	 ;;
+	 'yes)
+	(else
+	 ;;Some of the PREDEFINED-TYPE-BITS are set in BITS; some of the BITS are not
+	 ;;set in PREDEFINED-TYPE-BITS.  Bits examples:
+	 ;;
+	 ;;   BITS   := #b110011
+	 ;;   PREDEF := #b001111
+	 ;;
+	 ;;Validator examples:
+	 ;;
+	 ;;   (T:string? (T:or T:fixnum T:string))	=> maybe
+	 ;;
+	 'maybe)))
+
+(define-syntax core-type-tag-and*
+  (syntax-rules ()
+    ((_ ?tag)
+     ?tag)
+    ((_ ?tag0 ?tag1 ?tag ...)
+     (core-type-tag-and ?tag0 (core-type-tag-and* ?tag1 ?tag ...)))
+    ))
+
+(define-syntax (define-underspecified-core-type stx)
+  (syntax-case stx ()
+    ((_ ?type-name ?tag0 ?tag ...)
+     (all-identifiers? #'(_ ?type-name ?tag0 ?tag ...))
+     (with-syntax
+	 ((PRED (identifier-suffix #'?type-name "?")))
+       #'(begin
+	   (define-constant ?type-name
+	     (core-type-tag-and* ?tag0 ?tag ...))
+	   (define* (PRED {x core-type-tag?})
+	     (%test-bits ($core-type-tag-bits x)
+			 ($core-type-tag-bits ?type-name))))))
+    ))
+
+
 ;;;; ontology definition
 
 ;;See below for the expansion of this syntax.
@@ -441,29 +470,48 @@
   (exact		(exclusive fixnum other-exact))
   (inexact		(exclusive flonum other-inexact)))
 
-(define* (T:ratnum? (brace x core-type-tag?))
-  (case (T:other-number? x)
-    ((yes)	'maybe)
-    ((no)	'no)
-    ((maybe)	'maybe)))
+;; (define* (T:ratnum? (brace x core-type-tag?))
+;;   (case (T:other-number? x)
+;;     ((yes)	'maybe)
+;;     ((no)	'no)
+;;     ((maybe)	'maybe)))
 
-(define* (T:bignum? (brace x core-type-tag?))
-  (case (T:other-number? x)
-    ((yes)	'maybe)
-    ((no)	'no)
-    ((maybe)	'maybe)))
+;; (define* (T:bignum? (brace x core-type-tag?))
+;;   (case (T:other-number? x)
+;;     ((yes)	'maybe)
+;;     ((no)	'no)
+;;     ((maybe)	'maybe)))
 
-(define* (T:compnum? (brace x core-type-tag?))
-  (case (T:other-number? x)
-    ((yes)	'maybe)
-    ((no)	'no)
-    ((maybe)	'maybe)))
+;; (define* (T:compnum? (brace x core-type-tag?))
+;;   (case (T:other-number? x)
+;;     ((yes)	'maybe)
+;;     ((no)	'no)
+;;     ((maybe)	'maybe)))
 
-(define* (T:cflonum? (brace x core-type-tag?))
-  (case (T:other-number? x)
-    ((yes)	'maybe)
-    ((no)	'no)
-    ((maybe)	'maybe)))
+;; (define* (T:cflonum? (brace x core-type-tag?))
+;;   (case (T:other-number? x)
+;;     ((yes)	'maybe)
+;;     ((no)	'no)
+;;     ((maybe)	'maybe)))
+
+;;; --------------------------------------------------------------------
+
+(define-underspecified-core-type T:bignum
+  T:other-number T:nonimmediate T:non-false T:exact)
+
+(define-underspecified-core-type T:ratnum
+  T:other-number T:nonimmediate T:non-false T:exact)
+
+(define-underspecified-core-type T:compnum
+  T:other-number T:nonimmediate T:non-false)
+
+(define-underspecified-core-type T:cflonum
+  T:other-number T:nonimmediate T:non-false T:inexact)
+
+;;; --------------------------------------------------------------------
+
+(define-underspecified-core-type T:port
+  T:other-object T:nonimmediate T:non-false)
 
 #| end of module: SCHEME-OBJECTS-ONTOLOGY |# )
 
@@ -828,4 +876,5 @@
 ;;; end of file
 ;; Local Variables:
 ;; mode: vicare
+;; eval: (put 'define-underspecified-core-type	'scheme-indent-function 1)
 ;; End:

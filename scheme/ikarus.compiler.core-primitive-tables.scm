@@ -1943,6 +1943,42 @@
    ((_ _)			foldable effect-free result-true)))
 
 
+;;;; input/output
+
+(declare-core-primitive current-input-port
+    (safe)
+  (signatures
+   (()				=> (T:port))
+   ((T:port)			=> (T:void))
+   ((T:port T:boolean)		=> (T:void)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				result-true)
+   ((_ _)			result-true)))
+
+(declare-core-primitive current-output-port
+    (safe)
+  (signatures
+   (()				=> (T:port))
+   ((T:port)			=> (T:void))
+   ((T:port T:boolean)		=> (T:void)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				result-true)
+   ((_ _)			result-true)))
+
+(declare-core-primitive current-error-port
+    (safe)
+  (signatures
+   (()				=> (T:port))
+   ((T:port)			=> (T:void))
+   ((T:port T:boolean)		=> (T:void)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				result-true)
+   ((_ _)			result-true)))
+
+
 
 #|
       ((symbol? _)		   foldable effect-free		   )
@@ -2172,13 +2208,6 @@
       ((standard-input-port . _))
       ((standard-output-port . _))
       ((standard-error-port . _))
-
-      ;;It appears that something can go  wrong if we do these, not sure
-      ;;why.  (Marco Maggi; Nov 3, 2012)
-      ;;
-      ;;((current-input-port . _)		 effect-free result-true)
-      ;;((current-output-port . _)		 effect-free result-true)
-      ;;((current-error-port . _)		 effect-free result-true)
 
       ((standard-input-port . _)		 effect-free result-true)
       ((standard-output-port . _)		 effect-free result-true)
