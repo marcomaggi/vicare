@@ -82,7 +82,7 @@
     ;;
     (struct-case x
       ((constant k)
-       (values x env (%determine-constant-type k)))
+       (values x env (determine-constant-core-type k)))
 
       ((prelex)
        ;;We search  the PRELEX in  the environment collected  so far to  retrieve its
@@ -274,41 +274,6 @@
   #| end of module: V |# )
 
 
-(module (%determine-constant-type)
-
-  (define (%determine-constant-type x)
-    (cond ((number?     x)   (%determine-numeric-constant-type x))
-	  ((boolean?    x)   (if x T:true T:false))
-	  ((null?       x)   T:null)
-	  ((char?       x)   T:char)
-	  ((string?     x)   T:string)
-	  ((symbol?     x)   T:symbol)
-	  ((vector?     x)   T:vector)
-	  ((pair?       x)   T:pair)
-	  ((bytevector? x)   T:bytevector)
-	  ((eq? x (void))    T:void)
-	  (else              T:object)))
-
-  (define (%determine-numeric-constant-type x)
-    (cond ((fixnum? x)
-	   (%sign x T:fixnum))
-	  ((flonum? x)
-	   (%sign x T:flonum))
-	  ((or (bignum? x)
-	       (ratnum? x))
-	   (%sign x (core-type-tag-and T:exact T:other-number)))
-	  (else
-	   T:number)))
-
-  (define (%sign x t)
-    (core-type-tag-and t (cond ((< x 0) T:negative)
-			       ((> x 0) T:positive)
-			       ((= x 0) T:zero)
-			       (else    t))))
-
-  #| end of module: %DETERMINE-CONSTANT-TYPE |# )
-
-
 (module (%augment-env-with-conditional-test-info)
   ;;There is a special, but common, case of TEST expression:
   ;;
@@ -368,8 +333,20 @@
       ((fixnum?)
        (values (extend-env rand T:fixnum env)
 	       env))
+      ((bignum?)
+       (values (extend-env rand T:bignum env)
+	       env))
+      ((ratnum?)
+       (values (extend-env rand T:ratnum env)
+	       env))
       ((flonum?)
        (values (extend-env rand T:flonum env)
+	       env))
+      ((cflonum?)
+       (values (extend-env rand T:cflonum env)
+	       env))
+      ((compnum?)
+       (values (extend-env rand T:compnum env)
 	       env))
       ((string?)
        (values (extend-env rand T:string env)

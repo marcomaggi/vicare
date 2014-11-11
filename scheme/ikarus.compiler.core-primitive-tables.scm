@@ -1065,6 +1065,40 @@
    ((_)				foldable effect-free result-true)))
 
 
+;;; bignums, safe operations
+
+(declare-core-primitive bignum?
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+(declare-core-primitive least-positive-bignum
+    (safe)
+  (signatures
+   (()				=> (T:bignum)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
+(declare-core-primitive greatest-negative-bignum
+    (safe)
+  (signatures
+   (()				=> (T:bignum)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
+
+;;; ratnums, safe operations
+
+(declare-core-primitive ratnum?
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+
 ;;; ratnums, unsafe operations
 
 (declare-core-primitive $make-ratnum
@@ -1077,14 +1111,14 @@
 (declare-core-primitive $ratnum-n
     (unsafe)
   (signatures
-   ((T:ratnum)					=> (T:exact-integer)))
+   ((T:number)					=> (T:exact-integer)))
   (attributes
    ((_)						foldable effect-free result-true)))
 
 (declare-core-primitive $ratnum-d
     (unsafe)
   (signatures
-   ((T:ratnum)					=> (T:exact-integer)))
+   ((T:number)					=> (T:exact-integer)))
   (attributes
    ((_)						foldable effect-free result-true)))
 
@@ -2026,8 +2060,6 @@
       ((cflonum? _)		   foldable effect-free		   )
       ((compnum? _)		   foldable effect-free		   )
       ((integer? _)		   foldable effect-free		   )
-      ((bignum? _)		   foldable effect-free		   )
-      ((ratnum? _)		   foldable effect-free		   )
       ((pointer? _)		   foldable effect-free		   )
 ;;;
       ((* . _)			   foldable effect-free result-true)
