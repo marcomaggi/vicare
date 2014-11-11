@@ -210,7 +210,10 @@
 	($fx- sbe 1022))))
 
   (define (%fxlength64 x)
-    (if ($fx> x #x7FFFFFFF)
+    ;;NOTE The constant #x7FFFFFFF  is a fixnum on 64-bit platforms,  but a bignum on
+    ;;32-bit platforms.  For this  reason we use > here to  compare, rather than fx>.
+    ;;(Marco Maggi; Tue Nov 11, 2014)
+    (if (> x #x7FFFFFFF)
 	($fx+ 31 (%fxlength32 ($fxsra x 31)))
       (%fxlength32 x)))
 
