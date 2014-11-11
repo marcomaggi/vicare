@@ -11391,13 +11391,6 @@ a fixnum representing the second octet.
 @end defun
 
 
-@deffn Parameter current-input-port
-@deffnx Parameter current-output-port
-@deffnx Parameter current-error-port
-These are like defined by @rnrs{6}, but in addition they are parameters.
-@end deffn
-
-
 @defun console-input-port
 Return the default value of the @func{current-input-port} parameter.
 When the readline interface is not used, this port is used by the
@@ -11478,6 +11471,27 @@ Socket ports do @strong{not} support port position operations.
 
 
 The following bindings are exported by the @library{vicare} library.
+
+
+@deffn Parameter current-input-port
+As defined by @rnrs{6}: return a default textual port for input.
+@value{PRJNAME} extends its definition to allow selecting a new textual
+input port.
+@end deffn
+
+
+@deffn Parameter current-output-port
+As defined by @rnrs{6}: return a default textual port for output.
+@value{PRJNAME} extends its definition to allow selecting a new textual
+output port.
+@end deffn
+
+
+@deffn Parameter current-error-port
+As defined by @rnrs{6}: return a default textual port for error messages
+ouptut.  @value{PRJNAME} extends its definition to allow selecting a new
+textual output port.
+@end deffn
 
 
 @defun textual-input-port? @var{obj}
