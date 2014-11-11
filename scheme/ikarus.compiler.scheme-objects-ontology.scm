@@ -546,8 +546,7 @@
 ;;;inline tests
 
 ;;Uncomment this form to test.
-
-(module ()
+#;(module ()
   (import SCHEME-OBJECTS-ONTOLOGY)
 
   (define (%do-check expr result expected)
@@ -665,11 +664,11 @@
 
 
 ;;;The expansion  of DEFINE-ONTOLOGY above  is the following (minus  some adjustement
-;;;for readability) (last updated Sat Sep 13, 2014):
+;;;for readability) (last updated Tue Nov 11, 2014):
 
-(module ()
 (begin
-  (define-record-type (core-type-tag make-T core-type-tag?)
+  (define-record-type
+    (core-type-tag make-core-type-tag core-type-tag?)
     (sealed #t)
     (fields (immutable bits))
     (protocol
@@ -677,83 +676,105 @@
        (lambda* ((brace bits fixnum?))
 	 (make-instance bits)))))
 
-  (define* (core-type-tag=? (brace x core-type-tag?) (brace y core-type-tag?))
-    (fx=? ($core-type-tag-bits x) ($core-type-tag-bits y)))
+  (define* (core-type-tag=? (brace x core-type-tag?)
+			    (brace y core-type-tag?))
+    (fx=? ($core-type-tag-bits x)
+	  ($core-type-tag-bits y)))
 
-  (define* (core-type-tag-and (brace x0 core-type-tag?) (brace x1 core-type-tag?))
-    (make-T (fxlogand ($core-type-tag-bits x0)
-		      ($core-type-tag-bits x1))))
+  (define* (core-type-tag-and (brace x0 core-type-tag?)
+			      (brace x1 core-type-tag?))
+    (make-core-type-tag (fxlogand ($core-type-tag-bits x0)
+				  ($core-type-tag-bits x1))))
 
-  (define* (core-type-tag-or (brace x0 core-type-tag?) (brace x1 core-type-tag?))
-    (make-T (fxlogor ($core-type-tag-bits x0)
-		     ($core-type-tag-bits x1))))
-
-  (define (%test-bits bits predefined-type-bits)
-    (cond ((fxzero? (fxlogand bits predefined-type-bits))
-	   'no)
-	  ((fx=? predefined-type-bits
-		 (fxlogor bits predefined-type-bits))
-	   'yes)
-	  (else 'maybe)))
+  (define* (core-type-tag-or (brace x0 core-type-tag?)
+			     (brace x1 core-type-tag?))
+    (make-core-type-tag (fxlogor ($core-type-tag-bits x0)
+				 ($core-type-tag-bits x1))))
 
 ;;;Define  the exact  integers representing  the type  informations.  By  keeping the
-;;;values in the 24-bit range we make sure that they fit into fixnums.
+;;;values in the 24-bit  range we make sure that they fit into  fixnums as defined by
+;;;R6RS; by keeping  the values in the 30-bit  range we make sure that  they fit into
+;;;fixnum as defined  by Vicare on a  32-bit platform (and automatically  on a 64-bit
+;;;platform).
 ;;;
-;;;                                                                            9876543210
-;;;                                                                  9876543210
-;;;                                                              3210
-  (define-constant T:object		(make-T 16777215))	;111111111111111111111111
-  (define-constant T:immediate		(make-T 232504))	;      111000110000111000
-  (define-constant T:boolean		(make-T 3072))		;            110000000000
-  (define-constant T:number		(make-T 16773120))	;111111111111000000000000
-  (define-constant T:exact		(make-T 258048))	;      111111000000000000
-  (define-constant T:inexact		(make-T 16515072))	;111111000000000000000000
-  (define-constant T:nonimmediate	(make-T 16544711))	;111111000111001111000111
-  (define-constant T:non-false		(make-T 16776191))	;111111111111101111111111
-  (define-constant T:other-object	(make-T 1))		;                       1
-  (define-constant T:symbol		(make-T 2))		;                      10
-  (define-constant T:bytevector		(make-T 4))		;                     100
-  (define-constant T:void		(make-T 8))		;                    1000
-  (define-constant T:char		(make-T 16))		;                   10000
-  (define-constant T:null		(make-T 32))		;                  100000
-  (define-constant T:pair		(make-T 64))		;                 1000000
-  (define-constant T:vector		(make-T 128))		;                10000000
-  (define-constant T:string		(make-T 256))		;               100000000
-  (define-constant T:procedure		(make-T 512))		;              1000000000
-  (define-constant T:false		(make-T 1024))		;             10000000000
-  (define-constant T:true		(make-T 2048))		;            100000000000
-  (define-constant T:other-exact	(make-T 28672))		;         111000000000000
-  (define-constant T:fixnum		(make-T 229376))	;      111000000000000000
-  (define-constant T:other-inexact	(make-T 1835008))	;   111000000000000000000
-  (define-constant T:flonum		(make-T 14680064))	;111000000000000000000000
-  (define-constant T:positive		(make-T 2396160))	;  1001001001000000000000
-  (define-constant T:zero		(make-T 4792320))	; 10010010010000000000000
-  (define-constant T:negative		(make-T 9584640))	;100100100100000000000000
-  (define-constant T:other-number	(make-T 1863680))	;   111000111000000000000
+;;;                                                                                                      9876543210
+;;;                                                                                            9876543210
+;;;                                                                                  9876543210
+;;;                                                                        9876543210
+  (define-constant T:object		(make-core-type-tag 549755813887)) ;111111111111111111111111111111111111111
+  (define-constant T:other-object	(make-core-type-tag 1))
+  (define-constant T:symbol		(make-core-type-tag 2))
+  (define-constant T:bytevector		(make-core-type-tag 4))
+  (define-constant T:void		(make-core-type-tag 8))
+  (define-constant T:char		(make-core-type-tag 16))
+  (define-constant T:null		(make-core-type-tag 32))
+  (define-constant T:pair		(make-core-type-tag 64))
+  (define-constant T:vector		(make-core-type-tag 128))
+  (define-constant T:string		(make-core-type-tag 256))
+  (define-constant T:procedure		(make-core-type-tag 512))
+  (define-constant T:false		(make-core-type-tag 1024))
+  (define-constant T:true		(make-core-type-tag 2048))
+  (define-constant T:boolean		(make-core-type-tag 3072))
+  (define-constant T:immediate		(make-core-type-tag 939527224))	   ;         111000000000000000110000111000
+  (define-constant T:number		(make-core-type-tag 549755809792)) ;111111111111111111111111111000000000000
+  (define-constant T:exact		(make-core-type-tag 8587866112))   ;      111111111111000000111000000000000
+  (define-constant T:inexact		(make-core-type-tag 541167943680)) ;111111000000000000111111000000000000000
+  (define-constant T:exact-integer	(make-core-type-tag 1056964608))
+  (define-constant T:real		(make-core-type-tag 1073479680))
+  (define-constant T:complex		(make-core-type-tag 548682072064))
+  (define-constant T:nonimmediate	(make-core-type-tag 548816286663))
+  (define-constant T:non-false		(make-core-type-tag 549755812863))
+  (define-constant T:positive		(make-core-type-tag 78536544256))
+  (define-constant T:zero		(make-core-type-tag 157073088512))
+  (define-constant T:negative		(make-core-type-tag 314146177024))
+  (define-constant T:other-number	(make-core-type-tag 258048))
+  (define-constant T:flonum		(make-core-type-tag 1835008))
+  (define-constant T:ratnum		(make-core-type-tag 14680064))
+  (define-constant T:bignum		(make-core-type-tag 117440512))
+  (define-constant T:fixnum		(make-core-type-tag 939524096))
+  (define-constant T:compnum		(make-core-type-tag 67645734912))
+  (define-constant T:cflonum		(make-core-type-tag 481036337152))
+
+  (define-constant T:other-exact	(make-core-type-tag 7516221440))
+  (define-constant T:other-inexact	(make-core-type-tag 60129771520))
+  (define-constant T:other-exact-integer (make-core-type-tag 0))
+  (define-constant T:other-real		(make-core-type-tag 0))
+  (define-constant T:other-complex	(make-core-type-tag 0))
+
+;;; --------------------------------------------------------------------
 
   (define* (T:object? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 16777215))
+    (%test-bits ($core-type-tag-bits x) 549755813887))
 
   (define* (T:immediate? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 232504))
+    (%test-bits ($core-type-tag-bits x) 939527224))
 
   (define* (T:boolean? (brace x core-type-tag?))
     (%test-bits ($core-type-tag-bits x) 3072))
 
   (define* (T:number? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 16773120))
+    (%test-bits ($core-type-tag-bits x) 549755809792))
 
   (define* (T:exact? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 258048))
+    (%test-bits ($core-type-tag-bits x) 8587866112))
 
   (define* (T:inexact? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 16515072))
+    (%test-bits ($core-type-tag-bits x) 541167943680))
+
+  (define* (T:exact-integer? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 1056964608))
+
+  (define* (T:real? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 1073479680))
+
+  (define* (T:complex? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 548682072064))
 
   (define* (T:nonimmediate? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 16544711))
+    (%test-bits ($core-type-tag-bits x) 548816286663))
 
   (define* (T:non-false? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 16776191))
+    (%test-bits ($core-type-tag-bits x) 549755812863))
 
   (define* (T:other-object? (brace x core-type-tag?))
     (%test-bits ($core-type-tag-bits x) 1))
@@ -792,118 +813,207 @@
     (%test-bits ($core-type-tag-bits x) 2048))
 
   (define* (T:positive? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 2396160))
+    (%test-bits ($core-type-tag-bits x) 78536544256))
 
   (define* (T:zero? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 4792320))
+    (%test-bits ($core-type-tag-bits x) 157073088512))
 
   (define* (T:negative? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 9584640))
+    (%test-bits ($core-type-tag-bits x) 314146177024))
 
   (define* (T:other-number? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 1863680))
+    (%test-bits ($core-type-tag-bits x) 258048))
 
   (define* (T:other-exact? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 28672))
-
-  (define* (T:fixnum? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 229376))
+    (%test-bits ($core-type-tag-bits x) 7516221440))
 
   (define* (T:other-inexact? (brace x core-type-tag?))
-    (%test-bits ($core-type-tag-bits x) 1835008))
+    (%test-bits ($core-type-tag-bits x) 60129771520))
+
+  (define* (T:other-exact-integer? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 0))
+
+  (define* (T:other-real? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 0))
 
   (define* (T:flonum? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 1835008))
+
+  (define* (T:ratnum? (brace x core-type-tag?))
     (%test-bits ($core-type-tag-bits x) 14680064))
+
+  (define* (T:bignum? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 117440512))
+
+  (define* (T:fixnum? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 939524096))
+
+  (define* (T:other-complex? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 0))
+
+  (define* (T:compnum? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 67645734912))
+
+  (define* (T:cflonum? (brace x core-type-tag?))
+    (%test-bits ($core-type-tag-bits x) 481036337152))
 
   (define (core-type-tag-description x)
     (let* ((ls '())
-	   (ls (case (T:object? x)
-		 ((yes) (cons 'T:object ls))
-		 (else ls)))
-	   (ls (case (T:immediate? x)
-		 ((yes) (cons 'T:immediate ls))
-		 (else ls)))
-	   (ls (case (T:boolean? x)
-		 ((yes) (cons 'T:boolean ls))
-		 (else ls)))
-	   (ls (case (T:number? x)
-		 ((yes) (cons 'T:number ls))
-		 (else ls)))
-	   (ls (case (T:exact? x)
-		 ((yes) (cons 'T:exact ls))
-		 (else ls)))
-	   (ls (case (T:inexact? x)
-		 ((yes) (cons 'T:inexact ls))
-		 (else ls)))
-	   (ls (case (T:nonimmediate? x)
-		 ((yes) (cons 'T:nonimmediate ls))
-		 (else ls)))
-	   (ls (case (T:non-false? x)
-		 ((yes) (cons 'T:non-false ls))
-		 (else ls)))
-	   (ls (case (T:other-object? x)
-		 ((yes) (cons 'T:other-object ls))
-		 (else ls)))
-	   (ls (case (T:symbol? x)
-		 ((yes) (cons 'T:symbol ls))
-		 (else ls)))
-	   (ls (case (T:bytevector? x)
-		 ((yes) (cons 'T:bytevector ls))
-		 (else ls)))
-	   (ls (case (T:void? x)
-		 ((yes) (cons 'T:void ls))
-		 (else ls)))
-	   (ls (case (T:char? x)
-		 ((yes) (cons 'T:char ls))
-		 (else ls)))
-	   (ls (case (T:null? x)
-		 ((yes) (cons 'T:null ls))
-		 (else ls)))
-	   (ls (case (T:pair? x)
-		 ((yes) (cons 'T:pair ls))
-		 (else ls)))
-	   (ls (case (T:vector? x)
-		 ((yes) (cons 'T:vector ls))
-		 (else ls)))
-	   (ls (case (T:string? x)
-		 ((yes) (cons 'T:string ls))
-		 (else ls)))
-	   (ls (case (T:procedure? x)
-		 ((yes) (cons 'T:procedure ls))
-		 (else ls)))
-	   (ls (case (T:false? x)
-		 ((yes) (cons 'T:false ls))
-		 (else ls)))
-	   (ls (case (T:true? x)
-		 ((yes) (cons 'T:true ls))
-		 (else ls)))
-	   (ls (case (T:positive? x)
-		 ((yes) (cons 'T:positive ls))
-		 (else ls)))
-	   (ls (case (T:zero? x)
-		 ((yes) (cons 'T:zero ls))
-		 (else ls)))
-	   (ls (case (T:negative? x)
-		 ((yes) (cons 'T:negative ls))
-		 (else ls)))
-	   (ls (case (T:other-number? x)
-		 ((yes) (cons 'T:other-number ls))
-		 (else ls)))
-	   (ls (case (T:other-exact? x)
-		 ((yes) (cons 'T:other-exact ls))
-		 (else ls)))
-	   (ls (case (T:fixnum? x)
-		 ((yes) (cons 'T:fixnum ls))
-		 (else ls)))
-	   (ls (case (T:other-inexact? x)
-		 ((yes) (cons 'T:other-inexact ls))
-		 (else ls)))
-	   (ls (case (T:flonum? x)
-		 ((yes) (cons 'T:flonum ls))
-		 (else ls))))
+	   (ls
+	    (case (T:object? x)
+	      ((yes) (cons 'T:object ls))
+	      (else ls)))
+	   (ls
+	    (case (T:immediate? x)
+	      ((yes) (cons 'T:immediate ls))
+	      (else ls)))
+	   (ls
+	    (case (T:boolean? x)
+	      ((yes) (cons 'T:boolean ls))
+	      (else ls)))
+	   (ls
+	    (case (T:number? x)
+	      ((yes) (cons 'T:number ls))
+	      (else ls)))
+	   (ls
+	    (case (T:exact? x)
+	      ((yes) (cons 'T:exact ls))
+	      (else ls)))
+	   (ls
+	    (case (T:inexact? x)
+	      ((yes) (cons 'T:inexact ls))
+	      (else ls)))
+	   (ls
+	    (case (T:exact-integer? x)
+	      ((yes) (cons 'T:exact-integer ls))
+	      (else ls)))
+	   (ls
+	    (case (T:real? x)
+	      ((yes) (cons 'T:real ls))
+	      (else ls)))
+	   (ls
+	    (case (T:complex? x)
+	      ((yes) (cons 'T:complex ls))
+	      (else ls)))
+	   (ls
+	    (case (T:nonimmediate? x)
+	      ((yes) (cons 'T:nonimmediate ls))
+	      (else ls)))
+	   (ls
+	    (case (T:non-false? x)
+	      ((yes) (cons 'T:non-false ls))
+	      (else ls)))
+	   (ls
+	    (case (T:other-object? x)
+	      ((yes) (cons 'T:other-object ls))
+	      (else ls)))
+	   (ls
+	    (case (T:symbol? x)
+	      ((yes) (cons 'T:symbol ls))
+	      (else ls)))
+	   (ls
+	    (case (T:bytevector? x)
+	      ((yes) (cons 'T:bytevector ls))
+	      (else ls)))
+	   (ls
+	    (case (T:void? x)
+	      ((yes) (cons 'T:void ls))
+	      (else ls)))
+	   (ls
+	    (case (T:char? x)
+	      ((yes) (cons 'T:char ls))
+	      (else ls)))
+	   (ls
+	    (case (T:null? x)
+	      ((yes) (cons 'T:null ls))
+	      (else ls)))
+	   (ls
+	    (case (T:pair? x)
+	      ((yes) (cons 'T:pair ls))
+	      (else ls)))
+	   (ls
+	    (case (T:vector? x)
+	      ((yes) (cons 'T:vector ls))
+	      (else ls)))
+	   (ls
+	    (case (T:string? x)
+	      ((yes) (cons 'T:string ls))
+	      (else ls)))
+	   (ls
+	    (case (T:procedure? x)
+	      ((yes) (cons 'T:procedure ls))
+	      (else ls)))
+	   (ls
+	    (case (T:false? x)
+	      ((yes) (cons 'T:false ls))
+	      (else ls)))
+	   (ls
+	    (case (T:true? x)
+	      ((yes) (cons 'T:true ls))
+	      (else ls)))
+	   (ls
+	    (case (T:positive? x)
+	      ((yes) (cons 'T:positive ls))
+	      (else ls)))
+	   (ls
+	    (case (T:zero? x)
+	      ((yes) (cons 'T:zero ls))
+	      (else ls)))
+	   (ls
+	    (case (T:negative? x)
+	      ((yes) (cons 'T:negative ls))
+	      (else ls)))
+	   (ls
+	    (case (T:other-number? x)
+	      ((yes) (cons 'T:other-number ls))
+	      (else ls)))
+	   (ls
+	    (case (T:other-exact? x)
+	      ((yes) (cons 'T:other-exact ls))
+	      (else ls)))
+	   (ls
+	    (case (T:other-inexact? x)
+	      ((yes) (cons 'T:other-inexact ls))
+	      (else ls)))
+	   (ls
+	    (case (T:other-exact-integer? x)
+	      ((yes) (cons 'T:other-exact-integer ls))
+	      (else ls)))
+	   (ls
+	    (case (T:other-real? x)
+	      ((yes) (cons 'T:other-real ls))
+	      (else ls)))
+	   (ls
+	    (case (T:flonum? x)
+	      ((yes) (cons 'T:flonum ls))
+	      (else ls)))
+	   (ls
+	    (case (T:ratnum? x)
+	      ((yes) (cons 'T:ratnum ls))
+	      (else ls)))
+	   (ls
+	    (case (T:bignum? x)
+	      ((yes) (cons 'T:bignum ls))
+	      (else ls)))
+	   (ls
+	    (case (T:fixnum? x)
+	      ((yes) (cons 'T:fixnum ls))
+	      (else ls)))
+	   (ls
+	    (case (T:other-complex? x)
+	      ((yes) (cons 'T:other-complex ls))
+	      (else ls)))
+	   (ls
+	    (case (T:compnum? x)
+	      ((yes) (cons 'T:compnum ls))
+	      (else ls)))
+	   (ls
+	    (case (T:cflonum? x)
+	      ((yes) (cons 'T:cflonum ls))
+	      (else ls))))
       ls))
 
-  #| end of BEGIN |# ))
+  #| end of BEGIN |# )
 
 ;;; end of file
 ;; Local Variables:
