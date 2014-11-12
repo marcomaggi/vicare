@@ -41,6 +41,152 @@
 ;;;
 
 
+;;;; syntax helpers
+
+(define-syntax (declare-type-predicate stx)
+  (syntax-case stx ()
+    ((_ ?who)
+     #'(declare-core-primitive ?who
+	   (safe)
+	 (signatures
+	  ((_)		=> (T:boolean)))
+	 (attributes
+	  ((_)		foldable effect-free))))
+    ))
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-object-predicate-declarer stx)
+  (syntax-case stx ()
+    ((_ ?declarer ?type-tag)
+     #'(define-syntax ?declarer
+	 (syntax-rules (safe unsafe)
+	   ((_ ?who)
+	    (?declarer ?who safe))
+	   ((_ ?who ?safety)
+	    (declare-core-primitive ?who
+		(?safety)
+	      (signatures
+	       ((?type-tag)	=> (T:boolean)))
+	      (attributes
+	       ((_)		foldable effect-free))))
+	   )))
+    ))
+
+(define-object-predicate-declarer declare-flonum-predicate T:flonum)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-object-comparison-declarer stx)
+  (syntax-case stx ()
+    ((_ ?declarer ?type-tag)
+     #'(define-syntax ?declarer
+	 (syntax-rules ()
+	   ((_ ?who)
+	    (?declarer ?who safe))
+	   ((_ ?who ?safety)
+	    (declare-core-primitive ?who
+		(?safety)
+	      (signatures
+	       ((?type-tag ?type-tag)	=> (T:boolean)))
+	      (attributes
+	       ((_ _)			foldable effect-free))))
+	   )))
+    ))
+
+(define-object-comparison-declarer declare-flonum-comparison T:flonum)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-object-unary-operation-declarer stx)
+  (syntax-case stx ()
+    ((_ ?declarer ?type-tag)
+    #'(define-syntax ?declarer
+	(syntax-rules ()
+	  ((_ ?who)
+	   (?declarer ?who safe))
+	  ((_ ?who ?safety)
+	   #'(declare-core-primitive ?who
+		 (?safety)
+	       (signatures
+		((?type-tag)	=> (?type-tag)))
+	       (attributes
+		((_)		foldable effect-free result-true))))
+	  )))
+    ))
+
+(define-object-unary-operation-declarer declare-flonum-unary T:flonum)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-object-binary-operation-declarer stx)
+  (syntax-case stx ()
+    ((_ ?declarer ?type-tag)
+    #'(define-syntax ?declarer
+	(syntax-rules ()
+	  ((_ ?who)
+	   (?declarer ?who safe))
+	  ((_ ?who ?safety)
+	   #'(declare-core-primitive ?who
+		 (?safety)
+	       (signatures
+		((?type-tag ?type-tag)	=> (?type-tag)))
+	       (attributes
+		((_ _)			foldable effect-free result-true))))
+	  )))
+    ))
+
+(define-object-binary-operation-declarer declare-flonum-binary T:flonum)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-object-unary/binary-operation-declarer stx)
+  (syntax-case stx ()
+    ((_ ?declarer ?type-tag)
+    #'(define-syntax ?declarer
+	(syntax-rules ()
+	  ((_ ?who)
+	   (?declarer ?who safe))
+	  ((_ ?who ?safety)
+	   #'(declare-core-primitive ?who
+		 (?safety)
+	       (signatures
+		((?type-tag)		=> (?type-tag))
+		((?type-tag ?type-tag)	=> (?type-tag)))
+	       (attributes
+		((_)		foldable effect-free result-true)
+		((_ _)		foldable effect-free result-true))))
+	  )))
+    ))
+
+(define-object-unary/binary-operation-declarer declare-flonum-unary/binary T:flonum)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-object-unary/multi-operation-declarer stx)
+  (syntax-case stx ()
+    ((_ ?declarer ?type-tag)
+    #'(define-syntax ?declarer
+	(syntax-rules ()
+	  ((_ ?who)
+	   (?declarer ?who safe))
+	  ((_ ?who ?safety)
+	   #'(declare-core-primitive ?who
+		 (?safety)
+	       (signatures
+		((?type-tag)				=> (?type-tag))
+		((?type-tag ?type-tag)			=> (?type-tag))
+		((?type-tag ?type-tag . ?type-tag)	=> (?type-tag)))
+	       (attributes
+		((_)			foldable effect-free result-true)
+		((_ _)			foldable effect-free result-true)
+		((_ _ . _)		foldable effect-free result-true))))
+	  )))
+    ))
+
+(define-object-unary/multi-operation-declarer declare-flonum-unary/multi T:flonum)
+
+
 ;;;; misc functions
 
 (declare-core-primitive eq?
@@ -1065,7 +1211,7 @@
    ((_)				foldable effect-free result-true)))
 
 
-;;; bignums, safe operations
+;;;; bignums, safe operations
 
 (declare-core-primitive bignum?
     (safe)
@@ -1089,7 +1235,7 @@
    (()				foldable effect-free result-true)))
 
 
-;;; ratnums, safe operations
+;;;; ratnums, safe operations
 
 (declare-core-primitive ratnum?
     (safe)
@@ -1099,7 +1245,7 @@
    ((_)				foldable effect-free)))
 
 
-;;; ratnums, unsafe operations
+;;;; ratnums, unsafe operations
 
 (declare-core-primitive $make-ratnum
     (unsafe)
@@ -1137,7 +1283,209 @@
    ((_)						foldable effect-free result-true)))
 
 
-;;;; general arithmetics
+;;;; flonums, safe functions
+
+;;; predicates
+
+(declare-type-predicate flonum?)
+
+(declare-flonum-predicate flzero?)
+(declare-flonum-predicate flzero?/negative)
+(declare-flonum-predicate flzero?/positive)
+(declare-flonum-predicate flpositive?)
+(declare-flonum-predicate flnegative?)
+(declare-flonum-predicate flnonpositive?)
+(declare-flonum-predicate flnonnegative?)
+(declare-flonum-predicate fleven?)
+(declare-flonum-predicate flodd?)
+
+(declare-flonum-predicate flinteger?)
+(declare-flonum-predicate flnan?)
+(declare-flonum-predicate flfinite?)
+(declare-flonum-predicate flinfinite?)
+
+;;; --------------------------------------------------------------------
+;;; rounding
+
+(declare-flonum-unary flround)
+(declare-flonum-unary flfloor)
+(declare-flonum-unary flceiling)
+(declare-flonum-unary fltruncate)
+
+;;; --------------------------------------------------------------------
+;;; parts
+
+(declare-flonum-unary flnumerator)
+(declare-flonum-unary fldenominator)
+(declare-flonum-unary flabs)
+
+;;; --------------------------------------------------------------------
+;;; trigonometric
+
+(declare-flonum-unary flsin)
+(declare-flonum-unary flcos)
+(declare-flonum-unary fltan)
+(declare-flonum-unary flasin)
+(declare-flonum-unary flacos)
+
+(declare-core-primitive flatan
+    (safe)
+  (signatures
+   ((T:flonum)			=> (T:flonum))
+   ((T:flonum T:flonum)		=> (T:flonum)))
+  (attributes
+   ((_)			foldable effect-free result-true)
+   ((_ _)		foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; exponentiation, exponentials, logarithms
+
+(declare-flonum-unary flexp)
+(declare-flonum-unary/binary fllog)
+(declare-flonum-unary flexpm1)
+(declare-flonum-unary fllog1p)
+(declare-flonum-unary flexpt)
+(declare-flonum-unary flsqrt)
+(declare-flonum-unary flsquare)
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-flonum-comparison fl=?)
+(declare-flonum-comparison fl<?)
+(declare-flonum-comparison fl>?)
+(declare-flonum-comparison fl<=?)
+(declare-flonum-comparison fl>=?)
+
+;;; --------------------------------------------------------------------
+;;; arithmetics
+
+(declare-flonum-unary/multi fl+)
+(declare-flonum-unary/multi fl-)
+(declare-flonum-unary/multi fl*)
+(declare-flonum-unary/multi fl/)
+
+(declare-flonum-unary/multi flmin)
+(declare-flonum-unary/multi flmax)
+
+(declare-flonum-binary fldiv)
+(declare-flonum-binary fldiv0)
+(declare-flonum-binary flmod)
+(declare-flonum-binary flmod0)
+
+;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
+;;
+;; (declare-flonum-binary fldiv-and-mod)
+;; (declare-flonum-binary fldiv0-and-mod0)
+
+
+;;;; flonums, unsafe functions
+
+(declare-core-primitive $make-flonum
+    (unsafe)
+  (signatures
+   (()				=> (T:flonum)))
+  ;;Not foldable because $MAKE-FLONUM must return a new flonum every time.
+  (attributes
+   (()				effect-free result-true)))
+
+(declare-core-primitive $flonum->exact
+    (unsafe)
+  (signatures
+   ((T:flonum)			=> (T:exact-real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(declare-flonum-predicate $flzero? unsafe)
+(declare-flonum-predicate $flzero?/positive unsafe)
+(declare-flonum-predicate $flzero?/negative unsafe)
+(declare-flonum-predicate $flpositive? unsafe)
+(declare-flonum-predicate $flnegative? unsafe)
+(declare-flonum-predicate $flnonpositive? unsafe)
+(declare-flonum-predicate $flnonnegative? unsafe)
+
+(declare-flonum-predicate $fleven? unsafe)
+(declare-flonum-predicate $flodd? unsafe)
+
+(declare-flonum-predicate $flnan? unsafe)
+(declare-flonum-predicate $flfinite? unsafe)
+(declare-flonum-predicate $flinfinite? unsafe)
+(declare-flonum-predicate $flonum-integer? unsafe)
+(declare-flonum-predicate $flonum-rational? unsafe)
+
+;;; --------------------------------------------------------------------
+;;; rounding
+
+(declare-flonum-unary $flround unsafe)
+(declare-flonum-unary $flfloor unsafe)
+(declare-flonum-unary $flceiling unsafe)
+(declare-flonum-unary $fltruncate unsafe)
+
+;;; --------------------------------------------------------------------
+;;; parts
+
+(declare-flonum-unary $flnumerator unsafe)
+(declare-flonum-unary $fldenominator unsafe)
+(declare-flonum-unary $flabs unsafe)
+
+;;; --------------------------------------------------------------------
+;;; trigonometric
+
+(declare-flonum-unary $flsin unsafe)
+(declare-flonum-unary $flcos unsafe)
+(declare-flonum-unary $fltan unsafe)
+(declare-flonum-unary $flasin unsafe)
+(declare-flonum-unary $flacos unsafe)
+(declare-flonum-unary $flatan unsafe)
+(declare-flonum-binary $flatan2 unsafe)
+
+;;; --------------------------------------------------------------------
+;;; exponentiation, exponentials, logarithms
+
+(declare-flonum-unary $flexp unsafe)
+(declare-flonum-unary $fllog unsafe)
+(declare-flonum-binary $fllog2 unsafe)
+(declare-flonum-unary $flexpm1 unsafe)
+(declare-flonum-unary $fllog1p unsafe)
+(declare-flonum-unary $flexpt unsafe)
+(declare-flonum-unary $flsqrt unsafe)
+(declare-flonum-unary $flsquare unsafe)
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(declare-flonum-comparison $fl= unsafe)
+(declare-flonum-comparison $fl< unsafe)
+(declare-flonum-comparison $fl> unsafe)
+(declare-flonum-comparison $fl<= unsafe)
+(declare-flonum-comparison $fl>= unsafe)
+
+;;; --------------------------------------------------------------------
+;;; arithmetics
+
+(declare-flonum-binary $fl+ unsafe)
+(declare-flonum-unary/binary $fl- unsafe)
+(declare-flonum-binary $fl* unsafe)
+(declare-flonum-binary $fl/ unsafe)
+
+(declare-flonum-binary $fldiv unsafe)
+(declare-flonum-binary $flmod unsafe)
+(declare-flonum-binary $fldiv0 unsafe)
+(declare-flonum-binary $flmod0 unsafe)
+
+(declare-flonum-binary $flmax unsafe)
+(declare-flonum-binary $flmin unsafe)
+
+;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
+;;
+;;(($fldiv-and-mod _ _)		   foldable effect-free result-true)
+;;(($fldiv0-and-mod0 _ _)	   foldable effect-free result-true)
+
+
+;;;; general arithmetics, addition
 
 (declare-core-primitive +
     (safe)
@@ -1528,6 +1876,30 @@
    ((T:number T:number) => (T:number)))
   (attributes
    ((_ _)		foldable effect-free result-true)))
+
+
+;;;; general arithmetics, misc functions
+
+(declare-core-primitive inexact->exact
+    (safe)
+  (signatures
+   ((T:number)		=> (T:exact)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive exact
+    (safe)
+  (signatures
+   ((T:number)		=> (T:exact)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive fixnum->flonum
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:flonum)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
 
 
 ;;;; core primitives: symbols
@@ -2054,7 +2426,6 @@
       ((symbol? _)		   foldable effect-free		   )
       ((procedure? _)		   foldable effect-free		   )
       ((eof-object? _)		   foldable effect-free		   )
-      ((flonum? _)		   foldable effect-free		   )
       ((cflonum? _)		   foldable effect-free		   )
       ((compnum? _)		   foldable effect-free		   )
       ((integer? _)		   foldable effect-free		   )
@@ -2094,127 +2465,6 @@
       ((atan _)			   foldable effect-free result-true)
       ((atan _ _)		   foldable effect-free result-true)
       ((make-eq-hashtable)		    effect-free result-true)
-
-;;; --------------------------------------------------------------------
-;;; flonums
-
-      ((inexact->exact _)	   foldable effect-free result-true)
-      ((exact _)		   foldable effect-free result-true)
-      ((fixnum->flonum _)	   foldable effect-free result-true)
-      ((flzero? _)		   foldable effect-free            )
-      ((flpositive? _)		   foldable effect-free            )
-      ((flnegative? _)		   foldable effect-free            )
-      ((fleven? _)		   foldable effect-free            )
-      ((flodd? _)		   foldable effect-free            )
-      ((flround _)		   foldable effect-free result-true)
-      ((flfloor _)		   foldable effect-free result-true)
-      ((flceiling _)		   foldable effect-free result-true)
-      ((fltruncate _)		   foldable effect-free result-true)
-      ((flnumerator _)		   foldable effect-free result-true)
-      ((fldenominator _)	   foldable effect-free result-true)
-      ((flabs _)		   foldable effect-free result-true)
-      ((flsin _)		   foldable effect-free result-true)
-      ((flcos _)		   foldable effect-free result-true)
-      ((fltan _)		   foldable effect-free result-true)
-      ((flasin _)		   foldable effect-free result-true)
-      ((flacos _)		   foldable effect-free result-true)
-      ((flatan _)		   foldable effect-free result-true)
-      ((flatan _ _)		   foldable effect-free result-true)
-      ((flexp _)		   foldable effect-free result-true)
-      ((fllog _)		   foldable effect-free result-true)
-      ((fllog _ _)		   foldable effect-free result-true)
-      ((flexpm1 _)		   foldable effect-free result-true)
-      ((fllog1p _)		   foldable effect-free result-true)
-      ((flexpt _)		   foldable effect-free result-true)
-      ((flsqrt _)		   foldable effect-free result-true)
-      ((flsquare _)		   foldable effect-free result-true)
-      ((flinteger? _)		   foldable effect-free            )
-      ((flnan? _)		   foldable effect-free            )
-      ((flfinite? _)		   foldable effect-free            )
-      ((flinfinite? _)		   foldable effect-free            )
-      ((fl=? _ _)		   foldable effect-free            )
-      ((fl<? _ _)		   foldable effect-free            )
-      ((fl>? _ _)		   foldable effect-free            )
-      ((fl<=? _ _)		   foldable effect-free            )
-      ((fl>=? _ _)		   foldable effect-free            )
-      ((fl+)			   foldable effect-free result-true)
-      ((fl+ _)			   foldable effect-free result-true)
-      ((fl+ _ _)		   foldable effect-free result-true)
-      ((fl+ _ _ _)		   foldable effect-free result-true)
-      ((fl+ _ _ _ _ . _)	   foldable effect-free result-true)
-      ((fl- _)			   foldable effect-free result-true)
-      ((fl- _ _)		   foldable effect-free result-true)
-      ((fl- _ _ _)		   foldable effect-free result-true)
-      ((fl- _ _ _ _ . _)	   foldable effect-free result-true)
-      ((fl*)			   foldable effect-free result-true)
-      ((fl* _)			   foldable effect-free result-true)
-      ((fl* _ _)		   foldable effect-free result-true)
-      ((fl* _ _ _)		   foldable effect-free result-true)
-      ((fl* _ _ _ . _)		   foldable effect-free result-true)
-      ((fl/ _)			   foldable effect-free result-true)
-      ((fl/ _ _)		   foldable effect-free result-true)
-      ((fl/ _ _ _)		   foldable effect-free result-true)
-      ((fl/ _ _ _ . _)		   foldable effect-free result-true)
-      ((flmax _)		   foldable effect-free result-true)
-      ((flmax _ _)		   foldable effect-free result-true)
-      ((flmax _ _ _ . _)	   foldable effect-free result-true)
-      ((flmin _)		   foldable effect-free result-true)
-      ((flmin _ _)		   foldable effect-free result-true)
-      ((flmin _ _ _ . _)	   foldable effect-free result-true)
-
-      ;;$MAKE-FLONUM must return a new flonum every time.
-      (($make-flonum . _)	            effect-free result-true)
-      (($flonum->exact _)	   foldable effect-free result-true)
-      (($flzero? _)		   foldable effect-free            )
-      (($flpositive? _)		   foldable effect-free            )
-      (($flnegative? _)		   foldable effect-free            )
-      (($fleven? _)		   foldable effect-free            )
-      (($flodd? _)		   foldable effect-free            )
-      (($flnan? _)		   foldable effect-free            )
-      (($flfinite? _)		   foldable effect-free            )
-      (($flinfinite? _)		   foldable effect-free            )
-      (($flonum-integer? _)	   foldable effect-free            )
-      (($flonum-rational? _)	   foldable effect-free            )
-      (($flround _)		   foldable effect-free result-true)
-      (($flfloor _)		   foldable effect-free result-true)
-      (($flceiling _)		   foldable effect-free result-true)
-      (($fltruncate _)		   foldable effect-free result-true)
-      (($flnumerator _)		   foldable effect-free result-true)
-      (($fldenominator _)	   foldable effect-free result-true)
-      (($flabs _)		   foldable effect-free result-true)
-      (($flsin _)		   foldable effect-free result-true)
-      (($flcos _)		   foldable effect-free result-true)
-      (($fltan _)		   foldable effect-free result-true)
-      (($flasin _)		   foldable effect-free result-true)
-      (($flacos _)		   foldable effect-free result-true)
-      (($flatan _)		   foldable effect-free result-true)
-      (($flatan2 _ _)		   foldable effect-free result-true)
-      (($flexp _)		   foldable effect-free result-true)
-      (($fllog _)		   foldable effect-free result-true)
-      (($fllog2 _ _)		   foldable effect-free result-true)
-      (($flexpm1 _)		   foldable effect-free result-true)
-      (($fllog1p _)		   foldable effect-free result-true)
-      (($flexpt _)		   foldable effect-free result-true)
-      (($flsqrt _)		   foldable effect-free result-true)
-      (($flsquare _)		   foldable effect-free result-true)
-      (($flmax _ _)		   foldable effect-free result-true)
-      (($flmin _ _)		   foldable effect-free result-true)
-      (($fl= _ _)		   foldable effect-free            )
-      (($fl< _ _)		   foldable effect-free            )
-      (($fl> _ _)		   foldable effect-free            )
-      (($fl<= _ _)		   foldable effect-free            )
-      (($fl>= _ _)		   foldable effect-free            )
-      (($fl+ _ _)		   foldable effect-free result-true)
-      (($fl- _ _)		   foldable effect-free result-true)
-      (($fl* _ _)		   foldable effect-free result-true)
-      (($fl/ _ _)		   foldable effect-free result-true)
-      (($fldiv _ _)		   foldable effect-free result-true)
-      (($flmod _ _)		   foldable effect-free result-true)
-      (($fldiv0 _ _)		   foldable effect-free result-true)
-      (($flmod0 _ _)		   foldable effect-free result-true)
-      ;;We do not do multiple return values.
-      ;;(($fldiv-and-mod _ _)	   foldable effect-free result-true)
-      ;;(($fldiv0-and-mod0 _ _)	   foldable effect-free result-true)
 
 ;;; --------------------------------------------------------------------
 

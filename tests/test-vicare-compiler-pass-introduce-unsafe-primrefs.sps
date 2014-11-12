@@ -178,11 +178,11 @@
   (doit ((primitive +) '1 '2 '3)
   	(funcall (primref +)
   	  (known (constant 1)
-  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
+  		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))
   	  (known (constant 2)
-  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
+  		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))
   	  (known (constant 3)
-  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
+  		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))))
 
 ;;; --------------------------------------------------------------------
 
@@ -190,15 +190,15 @@
   (doit ((primitive +) '1 '2)
   	(funcall (primref $add-fixnum-fixnum)
   	  (known (constant 1)
-  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
+  		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))
   	  (known (constant 2)
-  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
+  		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))))
 
   ;;Operands: fixnum, flonum; successful replacement.
   (doit ((primitive +) '1 '2.2)
 	(funcall (primref $add-fixnum-flonum)
 	  (known (constant 1)
-		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
+		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))
 	  (known (constant 2.2)
 		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))))
 
@@ -208,7 +208,7 @@
 	  (known (constant 1.1)
 		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))
 	  (known (constant 2)
-		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
+		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))))
 
   ;;Operands: flonum, flonum; successful replacement.
   (doit ((primitive +) '1.1 '2.2)
@@ -222,9 +222,9 @@
   (doit ((primitive +) '1/2 '#e2e20)
 	(funcall (primref $add-ratnum-bignum)
 	  (known (constant 1/2)
-		 (T:ratnum T:positive T:non-false T:nonimmediate T:real T:exact T:number T:object))
+		 (T:ratnum T:positive T:non-false T:nonimmediate T:exact-real T:real T:exact T:number T:object))
 	  (known (constant #e2e20)
-		 (T:bignum T:positive T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object))))
+		 (T:bignum T:positive T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object))))
 
 
   #t)
@@ -259,7 +259,7 @@
 	(funcall (primref $putprop)
 	  (known (constant a) (T:symbol T:non-false T:nonimmediate T:object))
 	  (known (constant b) (T:symbol T:non-false T:nonimmediate T:object))
-	  (known (constant 1) (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
+	  (known (constant 1) (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))))
 
   (doit ((primitive remprop) 'a 'b)
 	(funcall (primref $remprop)

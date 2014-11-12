@@ -310,7 +310,9 @@
 	 T:fixnum		T:bignum		T:ratnum
 	 T:flonum		T:compnum		T:cflonum
 	 T:positive		T:zero			T:negative
-	 T:exact-integer	T:real			T:complex)
+	 T:exact-integer
+	 T:real			T:exact-real
+	 T:complex)
       (T:object				#f)
       (T:other-object			type)
       (T:immediate			type)
@@ -357,6 +359,7 @@
       (T:negative			type)
       (T:exact-integer			type)
       (T:real				type)
+      (T:exact-real			type)
       (T:complex			type)
       (_
        (if (identifier? type)

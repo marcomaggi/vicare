@@ -58,7 +58,9 @@
    T:fixnum		T:bignum		T:ratnum
    T:flonum		T:compnum		T:cflonum
    T:positive		T:zero			T:negative
-   T:exact-integer	T:real			T:complex
+   T:exact-integer
+   T:real		T:exact-real
+   T:complex
 
    ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
    ;;
@@ -108,7 +110,9 @@
    T:fixnum?		T:bignum?		T:ratnum?
    T:flonum?		T:compnum?		T:cflonum?
    T:positive?		T:zero?			T:negative?
-   T:exact-integer?	T:real?			T:complex?
+   T:exact-integer?
+   T:real?		T:exact-real?
+   T:complex?
 
    #| end of module's export list|# )
 
@@ -485,6 +489,7 @@
 
   (exact-integer	(exclusive fixnum bignum other-exact-integer))
   (real			(exclusive fixnum bignum ratnum flonum other-real))
+  (exact-real		(exclusive fixnum bignum ratnum other-exact-real))
   (complex		(exclusive cflonum compnum other-complex))
 
   (struct		(exclusive record other-struct))
@@ -695,6 +700,21 @@
   (check (T:complex? T:real)			=> no)
   (check (T:complex? T:complex)			=> yes)
   (check (T:complex? T:string)			=> no)
+
+  (check (T:exact-real? T:exact)		=> maybe)
+  (check (T:exact-real? T:inexact)		=> no)
+  (check (T:exact-real? T:fixnum)		=> yes)
+  (check (T:exact-real? T:bignum)		=> yes)
+  (check (T:exact-real? T:ratnum)		=> yes)
+  (check (T:exact-real? T:flonum)		=> no)
+  (check (T:exact-real? T:cflonum)		=> no)
+  (check (T:exact-real? T:compnum)		=> no)
+  (check (T:exact-real? T:number)		=> maybe)
+  (check (T:exact-real? T:exact-integer)	=> yes)
+  (check (T:exact-real? T:exact-real)		=> yes)
+  (check (T:exact-real? T:real)			=> maybe)
+  (check (T:exact-real? T:complex)		=> no)
+  (check (T:exact-real? T:string)		=> no)
 
 ;;; --------------------------------------------------------------------
 

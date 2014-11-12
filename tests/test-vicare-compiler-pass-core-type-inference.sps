@@ -129,7 +129,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref fixnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:fixnum T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))
+		 (known x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))
 	     (funcall (primref void)))))
 
   ;;bignum predicate
@@ -139,7 +139,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref bignum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:bignum T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object)))
+		 (known x_0 (T:bignum T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object)))
 	     (funcall (primref void)))))
 
   ;;ratnum predicate
@@ -149,7 +149,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref ratnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:ratnum T:non-false T:nonimmediate T:real T:exact T:number T:object)))
+		 (known x_0 (T:ratnum T:non-false T:nonimmediate T:exact-real T:real T:exact T:number T:object)))
 	     (funcall (primref void)))))
 
   ;;flonum predicate
@@ -215,16 +215,16 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref fixnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:fixnum T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))
+		 (known x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))
 	     (conditional (funcall (primref flonum?) x_0)
 		 (funcall (primref display)
 		   (known x_0 (T:flonum T:non-false T:real T:nonimmediate T:inexact T:number T:object)))
 	       (conditional (funcall (primref bignum?) x_0)
 		   (funcall (primref display)
-		     (known x_0 (T:bignum T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object)))
+		     (known x_0 (T:bignum T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object)))
 		 (conditional (funcall (primref ratnum?) x_0)
 		     (funcall (primref display)
-		       (known x_0 (T:ratnum T:non-false T:nonimmediate T:real T:exact T:number T:object)))
+		       (known x_0 (T:ratnum T:non-false T:nonimmediate T:exact-real T:real T:exact T:number T:object)))
 		   (conditional (funcall (primref compnum?) x_0)
 		       (funcall (primref display)
 			 (known x_0 ())
@@ -264,7 +264,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant 1)
-		   (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))))
+		   (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))))
 
   #t)
 
@@ -277,7 +277,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant 1152921504606846976)
-		   (T:bignum T:positive T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object)))))
+		   (T:bignum T:positive T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f '-1152921504606846977))
@@ -285,7 +285,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -1152921504606846977)
-		   (T:bignum T:negative T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object)))))
+		   (T:bignum T:negative T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object)))))
 
   #t)
 
@@ -298,7 +298,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant +2/3)
-		   (T:ratnum T:positive T:non-false T:nonimmediate T:real T:exact T:number T:object)))))
+		   (T:ratnum T:positive T:non-false T:nonimmediate T:exact-real T:real T:exact T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -2/3)))
@@ -306,7 +306,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -2/3)
-		   (T:ratnum T:negative T:non-false T:nonimmediate T:real T:exact T:number T:object)))))
+		   (T:ratnum T:negative T:non-false T:nonimmediate T:exact-real T:real T:exact T:number T:object)))))
 
   #t)
 
@@ -482,7 +482,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref fixnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:fixnum T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))
+		 (known x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))
 	     (funcall (primref display)
 	       x_0))))
 
@@ -497,7 +497,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref fixnum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:fixnum T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object)))
+		 (known x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))
 	     (conditional (funcall (primref string?) x_0)
 		 (funcall (primref display)
 		   (known x_0 (T:string T:non-false T:nonimmediate T:object)))
