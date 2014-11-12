@@ -400,6 +400,20 @@
       ((zero?)
        (values (extend-env rand T:zero env)
 	       env))
+
+
+      ((port?)
+       (values (extend-env rand T:port env)
+	       env))
+
+      ((struct?)
+       (values (extend-env rand T:struct env)
+	       env))
+
+      ((record?)
+       (values (extend-env rand T:record env)
+	       env))
+
       (else
        (values env env))))
 

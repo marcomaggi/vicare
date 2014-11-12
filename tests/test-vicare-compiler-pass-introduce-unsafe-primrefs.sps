@@ -164,39 +164,15 @@
   #t)
 
 
-(parametrise ((check-test-name	'arithmetics))
+(parametrise ((check-test-name	'arithmetics-addition))
 
   ;;Two fixnum operands: successful replacement.
-  (doit ((primitive +) '1 '2)
-  	(funcall (primref $add-fixnum-fixnum)
-  	  (known (constant 1)
-  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
-  	  (known (constant 2)
-  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
-
-  ;;Fixnum, flonum operands: successful replacement.
-  (doit ((primitive +) '1 '2.2)
-	(funcall (primref $add-fixnum-flonum)
-	  (known (constant 1)
-		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
-	  (known (constant 2.2)
-		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))))
-
-  ;;Flonum, fixnum operands: successful replacement.
-  (doit ((primitive +) '1.1 '2)
-	(funcall (primref $add-flonum-fixnum)
-	  (known (constant 1.1)
-		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))
-	  (known (constant 2)
-		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
-
-  ;;Flonum, flonum operands: successful replacement.
-  (doit ((primitive +) '1.1 '2.2)
-	(funcall (primref $add-flonum-flonum)
-	  (known (constant 1.1)
-		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))
-	  (known (constant 2.2)
-		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))))
+  (doit (let ((x ((primitive read)))
+	      (y ((primitive read))))
+	  ((primitive +) x y))
+	(bind ((x_0 (funcall (primref read)))
+	       (y_0 (funcall (primref read))))
+	  (funcall (primref +) x_0 y_0)))
 
   ;;No replacement for "+" when there are more than 2 operands.
   (doit ((primitive +) '1 '2 '3)
@@ -207,6 +183,49 @@
   		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
   	  (known (constant 3)
   		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
+
+;;; --------------------------------------------------------------------
+
+  ;;Operands: fixnum, fixnum; successful replacement.
+  (doit ((primitive +) '1 '2)
+  	(funcall (primref $add-fixnum-fixnum)
+  	  (known (constant 1)
+  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
+  	  (known (constant 2)
+  		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
+
+  ;;Operands: fixnum, flonum; successful replacement.
+  (doit ((primitive +) '1 '2.2)
+	(funcall (primref $add-fixnum-flonum)
+	  (known (constant 1)
+		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))
+	  (known (constant 2.2)
+		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))))
+
+  ;;Operands: flonum, fixnum; successful replacement.
+  (doit ((primitive +) '1.1 '2)
+	(funcall (primref $add-flonum-fixnum)
+	  (known (constant 1.1)
+		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))
+	  (known (constant 2)
+		 (T:fixnum T:positive T:non-false T:real T:exact-integer T:exact T:number T:immediate T:object))))
+
+  ;;Operands: flonum, flonum; successful replacement.
+  (doit ((primitive +) '1.1 '2.2)
+	(funcall (primref $add-flonum-flonum)
+	  (known (constant 1.1)
+		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))
+	  (known (constant 2.2)
+		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))))
+
+  ;;Operands: ratnum, bignum; successful replacement.
+  (doit ((primitive +) '1/2 '#e2e20)
+	(funcall (primref $add-ratnum-bignum)
+	  (known (constant 1/2)
+		 (T:ratnum T:positive T:non-false T:nonimmediate T:real T:exact T:number T:object))
+	  (known (constant #e2e20)
+		 (T:bignum T:positive T:non-false T:nonimmediate T:real T:exact-integer T:exact T:number T:object))))
+
 
   #t)
 

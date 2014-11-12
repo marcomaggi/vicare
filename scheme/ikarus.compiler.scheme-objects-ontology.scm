@@ -43,21 +43,18 @@
    ;;themselves they  represent valid type tags;  they are also used  as arguments to
    ;;CORE-TYPE-TAG-AND and CORE-TYPE-TAG-OR to compose more informative type tags.
    ;;
-   T:object		T:immediate		T:boolean
-   T:nonimmediate	T:non-false		T:other-object
-   T:symbol		T:bytevector		T:void
-   T:char		T:null			T:pair
-   T:vector		T:string		T:procedure
-   T:false		T:true
+   T:object		T:other-object		T:immediate	T:nonimmediate
+   T:non-false		T:false			T:true		T:void
+   T:boolean		T:char			T:symbol	T:string
+   T:null		T:pair			T:vector	T:bytevector
+   T:procedure		T:port			T:struct	T:record
+   T:transcoder
 
    T:number		T:exact			T:inexact
    T:fixnum		T:bignum		T:ratnum
    T:flonum		T:compnum		T:cflonum
    T:positive		T:zero			T:negative
    T:exact-integer	T:real			T:complex
-
-   ;;Types not fully specified.
-   T:maybe-port		T:maybe-struct		T:maybe-record
 
    ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
    ;;
@@ -92,21 +89,20 @@
    ;;      T:fixnum	T:bignum	T:ratnum
    ;;      T:flonum	T:compnum	T:cflonum
    ;;
-   T:object?		T:immediate?		T:nonimmediate?
-   T:boolean?		T:non-false?
-   T:other-object?	T:symbol?		T:bytevector?
-   T:void?		T:char?			T:null?
-   T:pair?		T:vector?		T:string?
-   T:procedure?		T:false?		T:true?
-   T:positive?		T:zero?			T:negative?
+   T:object?		T:other-object?		T:immediate?	T:nonimmediate?
+   T:non-false?		T:false?		T:true?		T:void?
+   T:boolean?		T:char?			T:symbol?	T:string?
+   T:null?		T:pair?			T:vector?	T:bytevector?
+   T:procedure?		T:port?			T:struct?	T:record?
+   T:transcoder
 
    T:number?		T:exact?		T:inexact?
    T:fixnum?		T:bignum?		T:ratnum?
    T:flonum?		T:compnum?		T:cflonum?
+   T:positive?		T:zero?			T:negative?
    T:exact-integer?	T:real?			T:complex?
 
-   ;;These are not fully specified.
-   T:maybe-port?	T:maybe-struct?		T:maybe-record?)
+   #| end of module's export list|# )
 
 
 (define-syntax (define-ontology x)
@@ -454,40 +450,38 @@
 ;;NOTE The last element of the list  represents a "other-?object" value, which is not
 ;;one of the  preceeding values; this "everything else" item  *must* be present, even
 ;;when it  is not used  as type tag.   So the following  are present even  if unused:
-;;other-number, other-exact, other-exact-integer, other-real, other-complex.
+;;other-number,   other-exact,    other-exact-integer,   other-real,   other-complex,
+;;other-struct.
 ;;
 (define-ontology core-type-tag
   make-core-type-tag core-type-tag? core-type-tag=?
   core-type-tag-and core-type-tag-or
   core-type-tag-description
+
   (object		(inclusive obj-tag obj-immediacy obj-truth))
   (obj-immediacy	(exclusive nonimmediate immediate))
-  (immediate		(exclusive fixnum boolean null char void))
+  (immediate		(exclusive fixnum boolean null char transcoder void))
   (obj-truth		(exclusive false non-false))
   (obj-tag		(exclusive procedure string vector pair null
-				   boolean char number void bytevector
-				   symbol other-object))
+				   boolean char transcoder number void bytevector
+				   symbol port struct other-object))
   (boolean		(exclusive true false))
+
   (number		(inclusive number-tag number-sign number-exactness))
   (number-sign		(exclusive negative zero positive))
   (number-tag		(exclusive fixnum bignum ratnum flonum cflonum compnum other-number))
+
   (number-exactness	(exclusive exact inexact))
   (exact		(exclusive fixnum bignum ratnum other-exact))
   (inexact		(exclusive flonum cflonum other-inexact))
+
   (exact-integer	(exclusive fixnum bignum other-exact-integer))
   (real			(exclusive fixnum bignum ratnum flonum other-real))
-  (complex		(exclusive cflonum compnum other-complex)))
+  (complex		(exclusive cflonum compnum other-complex))
 
-;;; --------------------------------------------------------------------
+  (struct		(exclusive record other-struct))
 
-(define-underspecified-core-type T:maybe-port
-  (core-type-tag-and* T:other-object T:nonimmediate T:non-false))
-
-(define-underspecified-core-type T:maybe-struct
-  (core-type-tag-and* T:other-object T:nonimmediate T:non-false))
-
-(define-underspecified-core-type T:maybe-record
-  (core-type-tag-and* T:other-object T:nonimmediate T:non-false))
+  #| end of ontology definition |# )
 
 
 (module (determine-constant-core-type)
@@ -502,6 +496,14 @@
 	  ((vector?     x)   T:vector)
 	  ((pair?       x)   T:pair)
 	  ((bytevector? x)   T:bytevector)
+
+	  ;;NOTE  These are  here for  completeness, but  commented out  because such
+	  ;;objects can never be hard-coded constants.
+	  ;;
+	  ;;((port?      x)  T:port)
+	  ;;((struct?    x)  T:struct)
+	  ;;((record?    x)  T:record)
+
 	  ((eq? x (void))    T:void)
 	  (else              T:object)))
 
@@ -543,9 +545,15 @@
 #| end of module: SCHEME-OBJECTS-ONTOLOGY |# )
 
 
-;;;inline tests
+;;;;inline tests
+;;
+;;These tests (when included) are executed every time the init code in the boot image
+;;is executed.
+;;
 
-;;Uncomment this form to test.
+;;Comment this EOF to include the tests.
+;;#!eof
+
 (module ()
   (import SCHEME-OBJECTS-ONTOLOGY)
 
@@ -575,14 +583,14 @@
   (check (T:non-false? T:boolean)		=> maybe)
   (check (T:non-false? T:object)		=> maybe)
 
+;;; --------------------------------------------------------------------
+
   (check (T:boolean? T:true)			=> yes)
   (check (T:boolean? T:false)			=> yes)
-  (check
-      (T:boolean? (core-type-tag-or T:true T:false))
-    => yes)
-  (check
-      (T:boolean? (core-type-tag-and T:true T:false))
-    => no)
+  (check (T:boolean? (core-type-tag-or  T:true T:false)) => yes)
+  (check (T:boolean? (core-type-tag-and T:true T:false)) => no)
+
+;;; --------------------------------------------------------------------
 
   (check (T:number? T:fixnum)			=> yes)
   (check (T:number? T:bignum)			=> yes)
@@ -590,8 +598,12 @@
   (check (T:number? T:flonum)			=> yes)
   (check (T:number? T:cflonum)			=> yes)
   (check (T:number? T:compnum)			=> yes)
+  (check (T:number? T:number)			=> yes)
   (check (T:number? T:exact)			=> yes)
   (check (T:number? T:inexact)			=> yes)
+  (check (T:number? T:exact-integer)		=> yes)
+  (check (T:number? T:real)			=> yes)
+  (check (T:number? T:complex)			=> yes)
   (check (T:number? T:string)			=> no)
 
   (check (T:exact? T:exact)			=> yes)
@@ -603,6 +615,9 @@
   (check (T:exact? T:cflonum)			=> no)
   (check (T:exact? T:compnum)			=> maybe)
   (check (T:exact? T:number)			=> maybe)
+  (check (T:exact? T:exact-integer)		=> yes)
+  (check (T:exact? T:real)			=> maybe)
+  (check (T:exact? T:complex)			=> maybe)
   (check (T:exact? T:string)			=> no)
 
   (check (T:inexact? T:exact)			=> no)
@@ -614,6 +629,9 @@
   (check (T:inexact? T:cflonum)			=> yes)
   (check (T:inexact? T:compnum)			=> maybe)
   (check (T:inexact? T:number)			=> maybe)
+  (check (T:inexact? T:exact-integer)		=> no)
+  (check (T:inexact? T:real)			=> maybe)
+  (check (T:inexact? T:complex)			=> maybe)
   (check (T:inexact? T:string)			=> no)
 
   (check (T:exact-integer? T:exact)		=> maybe)
@@ -625,6 +643,9 @@
   (check (T:exact-integer? T:cflonum)		=> no)
   (check (T:exact-integer? T:compnum)		=> no)
   (check (T:exact-integer? T:number)		=> maybe)
+  (check (T:exact-integer? T:exact-integer)	=> yes)
+  (check (T:exact-integer? T:real)		=> maybe)
+  (check (T:exact-integer? T:complex)		=> no)
   (check (T:exact-integer? T:string)		=> no)
 
   (check (T:real? T:exact)			=> maybe)
@@ -636,6 +657,9 @@
   (check (T:real? T:cflonum)			=> no)
   (check (T:real? T:compnum)			=> no)
   (check (T:real? T:number)			=> maybe)
+  (check (T:real? T:exact-integer)		=> yes)
+  (check (T:real? T:real)			=> yes)
+  (check (T:real? T:complex)			=> no)
   (check (T:real? T:string)			=> no)
 
   (check (T:complex? T:exact)			=> maybe)
@@ -647,9 +671,93 @@
   (check (T:complex? T:cflonum)			=> yes)
   (check (T:complex? T:compnum)			=> yes)
   (check (T:complex? T:number)			=> maybe)
+  (check (T:complex? T:exact-integer)		=> no)
+  (check (T:complex? T:real)			=> no)
+  (check (T:complex? T:complex)			=> yes)
   (check (T:complex? T:string)			=> no)
 
-  ;;Multitype tests.
+;;; --------------------------------------------------------------------
+
+  (check (T:immediate? T:immediate)		=> yes)
+  (check (T:immediate? T:nonimmediate)		=> no)
+
+  (check (T:immediate? T:boolean)		=> yes)
+  (check (T:immediate? T:null)			=> yes)
+  (check (T:immediate? T:char)			=> yes)
+  (check (T:immediate? T:transcoder)		=> yes)
+  (check (T:immediate? T:void)			=> yes)
+  (check (T:immediate? T:pair)			=> no)
+  (check (T:immediate? T:procedure)		=> no)
+  (check (T:immediate? T:string)		=> no)
+  (check (T:immediate? T:symbol)		=> no)
+  (check (T:immediate? T:vector)		=> no)
+  (check (T:immediate? T:bytevector)		=> no)
+  (check (T:immediate? T:port)			=> no)
+  (check (T:immediate? T:struct)		=> no)
+  (check (T:immediate? T:record)		=> no)
+  (check (T:immediate? T:other-object)		=> no)
+
+  (check (T:immediate? T:fixnum)		=> yes)
+  (check (T:immediate? T:bignum)		=> no)
+  (check (T:immediate? T:ratnum)		=> no)
+  (check (T:immediate? T:flonum)		=> no)
+  (check (T:immediate? T:cflonum)		=> no)
+  (check (T:immediate? T:compnum)		=> no)
+
+  (check (T:immediate? T:negative)		=> maybe)
+  (check (T:immediate? T:zero)			=> maybe)
+  (check (T:immediate? T:positive)		=> maybe)
+
+;;; --------------------------------------------------------------------
+
+  (check (T:nonimmediate? T:immediate)		=> no)
+  (check (T:nonimmediate? T:nonimmediate)	=> yes)
+
+  #;(check (T:nonimmediate? T:boolean)		=> yes)
+  ;; (check (T:nonimmediate? T:null)		=> yes)
+  ;; (check (T:nonimmediate? T:char)		=> yes)
+  ;; (check (T:nonimmediate? T:transcoder)		=> yes)
+  ;; (check (T:nonimmediate? T:void)		=> yes)
+  ;; (check (T:nonimmediate? T:pair)		=> no)
+  ;; (check (T:nonimmediate? T:procedure)		=> no)
+  ;; (check (T:nonimmediate? T:string)		=> no)
+  ;; (check (T:nonimmediate? T:symbol)		=> no)
+  ;; (check (T:nonimmediate? T:vector)		=> no)
+  ;; (check (T:nonimmediate? T:bytevector)		=> no)
+  ;; (check (T:nonimmediate? T:port)		=> no)
+  ;; (check (T:nonimmediate? T:struct)		=> no)
+  ;; (check (T:nonimmediate? T:record)		=> no)
+  ;; (check (T:nonimmediate? T:other-object)	=> no)
+
+  ;; (check (T:nonimmediate? T:fixnum)		=> yes)
+  ;; (check (T:nonimmediate? T:bignum)		=> no)
+  ;; (check (T:nonimmediate? T:ratnum)		=> no)
+  ;; (check (T:nonimmediate? T:flonum)		=> no)
+  ;; (check (T:nonimmediate? T:cflonum)		=> no)
+  ;; (check (T:nonimmediate? T:compnum)		=> no)
+
+  ;; (check (T:nonimmediate? T:negative)		=> maybe)
+  ;; (check (T:nonimmediate? T:zero)		=> maybe)
+  ;; (check (T:nonimmediate? T:positive)		=> maybe)
+
+;;; --------------------------------------------------------------------
+
+  (check (T:struct? T:struct)			=> yes)
+  (check (T:struct? T:record)			=> yes)
+  (check (T:struct? T:string)			=> no)
+
+  (check (T:record? T:struct)			=> maybe)
+  (check (T:record? T:record)			=> yes)
+  (check (T:record? T:string)			=> no)
+
+;;; --------------------------------------------------------------------
+
+  (check (T:port? T:port)			=> yes)
+  (check (T:port? T:string)			=> no)
+
+;;; --------------------------------------------------------------------
+;;; multitype tests
+
   (check (T:fixnum? (core-type-tag-or T:fixnum T:flonum))	=> maybe)
   (check (T:flonum? (core-type-tag-or T:fixnum T:flonum))	=> maybe)
   (check (T:string? (core-type-tag-or T:fixnum T:flonum))	=> no)
@@ -663,8 +771,9 @@
 #!eof
 
 
-;;;The expansion  of DEFINE-ONTOLOGY above  is the following (minus  some adjustement
-;;;for readability) (last updated Tue Nov 11, 2014):
+;;;The expansion of  DEFINE-ONTOLOGY above is the following  (minus some adjustements
+;;;for readability) (last updated Tue Nov 11, 2014; I do *not* update it every time I
+;;;change the ontology!!!).
 
 (begin
   (define-record-type
@@ -700,45 +809,53 @@
 ;;;bignums, on  64-bit platforms  we still  use fixnums  up to  61 bits;  bignums are
 ;;;slower.
 ;;;
-;;;                                                                                                      9876543210
+;;;                                                                                                        9876543210
 ;;;                                                                                            9876543210
 ;;;                                                                                  9876543210
 ;;;                                                                        9876543210
-  (define-constant T:object		(make-core-type-tag 549755813887)) ;111111111111111111111111111111111111111
-  (define-constant T:other-object	(make-core-type-tag 1))
-  (define-constant T:symbol		(make-core-type-tag 2))
-  (define-constant T:bytevector		(make-core-type-tag 4))
-  (define-constant T:void		(make-core-type-tag 8))
-  (define-constant T:char		(make-core-type-tag 16))
-  (define-constant T:null		(make-core-type-tag 32))
-  (define-constant T:pair		(make-core-type-tag 64))
-  (define-constant T:vector		(make-core-type-tag 128))
-  (define-constant T:string		(make-core-type-tag 256))
-  (define-constant T:procedure		(make-core-type-tag 512))
-  (define-constant T:false		(make-core-type-tag 1024))
-  (define-constant T:true		(make-core-type-tag 2048))
-  (define-constant T:boolean		(make-core-type-tag 3072))
-  (define-constant T:immediate		(make-core-type-tag 939527224))	;         111000000000000000110000111000
-  (define-constant T:number		(make-core-type-tag 549755809792)) ;111111111111111111111111111000000000000
-  (define-constant T:exact		(make-core-type-tag 8587866112)) ;      111111111111000000111000000000000
-  (define-constant T:inexact		(make-core-type-tag 541167943680)) ;111111000000000000111111000000000000000
-  (define-constant T:exact-integer	(make-core-type-tag 1056964608))
-  (define-constant T:real		(make-core-type-tag 1073479680))
-  (define-constant T:complex		(make-core-type-tag 548682072064))
-  (define-constant T:nonimmediate	(make-core-type-tag 548816286663))
-  (define-constant T:non-false		(make-core-type-tag 549755812863))
-  (define-constant T:positive		(make-core-type-tag 78536544256))
-  (define-constant T:zero		(make-core-type-tag 157073088512))
-  (define-constant T:negative		(make-core-type-tag 314146177024))
-  (define-constant T:other-number	(make-core-type-tag 258048))
-  (define-constant T:flonum		(make-core-type-tag 1835008))
-  (define-constant T:ratnum		(make-core-type-tag 14680064))
-  (define-constant T:bignum		(make-core-type-tag 117440512))
-  (define-constant T:fixnum		(make-core-type-tag 939524096))
-  (define-constant T:compnum		(make-core-type-tag 67645734912))
-  (define-constant T:cflonum		(make-core-type-tag 481036337152))
+  (define-constant T:object		(make-core-type-tag 549755813887)) ;;;111111111111111111111111111111111111111
+  (define-constant T:other-object	(make-core-type-tag 1))            ;;;000000000000000000000000000000000000001
 
-  (define-constant T:other-exact	(make-core-type-tag 7516221440))
+  (define-constant T:symbol		(make-core-type-tag 2))            ;;;000000000000000000000000000000000000010
+  (define-constant T:bytevector		(make-core-type-tag 4))            ;;;000000000000000000000000000000000000100
+  (define-constant T:void		(make-core-type-tag 8))            ;;;000000000000000000000000000000000001000
+  (define-constant T:char		(make-core-type-tag 16))           ;;;000000000000000000000000000000000010000
+  (define-constant T:null		(make-core-type-tag 32))           ;;;000000000000000000000000000000000100000
+  (define-constant T:pair		(make-core-type-tag 64))           ;;;000000000000000000000000000000001000000
+  (define-constant T:vector		(make-core-type-tag 128))          ;;;000000000000000000000000000000010000000
+  (define-constant T:string		(make-core-type-tag 256))          ;;;000000000000000000000000000000100000000
+  (define-constant T:procedure		(make-core-type-tag 512))          ;;;000000000000000000000000000001000000000
+  (define-constant T:false		(make-core-type-tag 1024))         ;;;000000000000000000000000000010000000000
+  (define-constant T:true		(make-core-type-tag 2048))         ;;;000000000000000000000000000100000000000
+
+  (define-constant T:boolean		(make-core-type-tag 3072))         ;;;000000000000000000000000000110000000000
+  (define-constant T:non-false		(make-core-type-tag 549755812863)) ;;;111111111111111111111111111101111111111
+
+  (define-constant T:immediate		(make-core-type-tag 939527224))	   ;;;000000000111000000000000000110000111000
+  (define-constant T:nonimmediate	(make-core-type-tag 548816286663)) ;;;111111111000111111111111111001111000111
+
+  (define-constant T:number		(make-core-type-tag 549755809792)) ;;;111111111111111111111111111000000000000
+  (define-constant T:other-number	(make-core-type-tag 258048))       ;;;000000000000000000000111111000000000000
+
+  (define-constant T:fixnum		(make-core-type-tag 939524096))    ;;;000000000111000000000000000000000000000
+  (define-constant T:bignum		(make-core-type-tag 117440512))    ;;;000000000000111000000000000000000000000
+  (define-constant T:ratnum		(make-core-type-tag 14680064))     ;;;000000000000000111000000000000000000000
+  (define-constant T:flonum		(make-core-type-tag 1835008))      ;;;000000000000000000111000000000000000000
+  (define-constant T:cflonum		(make-core-type-tag 481036337152)) ;;;111000000000000000000000000000000000000
+  (define-constant T:compnum		(make-core-type-tag 67645734912))  ;;;000111111000000000000000000000000000000
+
+  (define-constant T:exact		(make-core-type-tag 8587866112))   ;;;000000111111111111000000111000000000000
+  (define-constant T:inexact		(make-core-type-tag 541167943680)) ;;;111111000000000000111111000000000000000
+  (define-constant T:exact-integer	(make-core-type-tag 1056964608))   ;;;000000000111111000000000000000000000000
+
+  (define-constant T:real		(make-core-type-tag 1073479680))   ;;;000000000111111111111000000000000000000
+  (define-constant T:complex		(make-core-type-tag 548682072064)) ;;;111111111000000000000000000000000000000
+
+  (define-constant T:positive		(make-core-type-tag 78536544256))  ;;;001001001001001001001001001000000000000
+  (define-constant T:zero		(make-core-type-tag 157073088512)) ;;;010010010010010010010010010000000000000
+  (define-constant T:negative		(make-core-type-tag 314146177024)) ;;;100100100100100100100100100000000000000
+
+  (define-constant T:other-exact	(make-core-type-tag 7516221440))   ;;;000000111000000000000000111000000000000
   (define-constant T:other-inexact	(make-core-type-tag 60129771520))
   (define-constant T:other-exact-integer (make-core-type-tag 0))
   (define-constant T:other-real		(make-core-type-tag 0))

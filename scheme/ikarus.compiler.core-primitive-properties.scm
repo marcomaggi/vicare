@@ -293,46 +293,55 @@
   (define (%parse-core-object-type type)
     ;;We accept a  core type identifier and  return it; "T:object" and  "_" mean "any
     ;;type" and we convert them to false.
-    (syntax-case type (T:object
-		       T:immediate		T:boolean
-		       T:number			T:exact			T:inexact
-		       T:nonimmediate		T:non-false		T:other-object
-		       T:symbol			T:bytevector		T:void
-		       T:char			T:null			T:pair
-		       T:vector			T:string		T:procedure
-		       T:false			T:true
-		       T:fixnum			T:flonum		T:ratnum
-		       T:bignum			T:compnum		T:cflonum
-		       T:positive		T:zero			T:negative)
+    (syntax-case type ( ;;
+		       T:object		T:other-object		T:immediate	T:nonimmediate
+		       T:non-false	T:false			T:true		T:void
+		       T:boolean	T:char			T:symbol	T:string
+		       T:null		T:pair			T:vector	T:bytevector
+		       T:procedure	T:port			T:struct	T:record
+		       T:transcoder
+
+		       T:number		T:exact			T:inexact
+		       T:fixnum		T:bignum		T:ratnum
+		       T:flonum		T:compnum		T:cflonum
+		       T:positive	T:zero			T:negative
+		       T:exact-integer	T:real			T:complex)
       (T:object			#f)
+      (T:other-object		type)
       (T:immediate		type)
-      (T:boolean		type)
-      (T:number			type)
-      (T:exact			type)
-      (T:inexact		type)
       (T:nonimmediate		type)
       (T:non-false		type)
-      (T:other-object		type)
-      (T:symbol			type)
-      (T:bytevector		type)
+      (T:false			type)
+      (T:true			type)
       (T:void			type)
+      (T:boolean		type)
       (T:char			type)
+      (T:symbol			type)
+      (T:string			type)
       (T:null			type)
       (T:pair			type)
       (T:vector			type)
-      (T:string			type)
+      (T:bytevector		type)
       (T:procedure		type)
-      (T:false			type)
-      (T:true			type)
+      (T:port			type)
+      (T:struct			type)
+      (T:record			type)
+      (T:transcoder		type)
+      (T:number			type)
+      (T:exact			type)
+      (T:inexact		type)
       (T:fixnum			type)
-      (T:flonum			type)
-      (T:ratnum			type)
       (T:bignum			type)
+      (T:ratnum			type)
+      (T:flonum			type)
       (T:compnum		type)
       (T:cflonum		type)
       (T:positive		type)
       (T:zero			type)
       (T:negative		type)
+      (T:exact-integer		type)
+      (T:real			type)
+      (T:complex		type)
       (_
        (if (identifier? type)
 	   (if (eq? '_ (syntax->datum type))
