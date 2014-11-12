@@ -2018,9 +2018,9 @@
 (declare-core-primitive current-input-port
     (safe)
   (signatures
-   (()				=> (T:port))
-   ((T:port)			=> (T:void))
-   ((T:port T:boolean)		=> (T:void)))
+   (()					=> (T:textual-input-port))
+   ((T:textual-input-port)		=> (T:void))
+   ((T:textual-input-port T:boolean)	=> (T:void)))
   (attributes
    (()				effect-free result-true)
    ((_)				result-true)
@@ -2029,9 +2029,9 @@
 (declare-core-primitive current-output-port
     (safe)
   (signatures
-   (()				=> (T:port))
-   ((T:port)			=> (T:void))
-   ((T:port T:boolean)		=> (T:void)))
+   (()					=> (T:textual-output-port))
+   ((T:textual-output-port)		=> (T:void))
+   ((T:textual-output-port T:boolean)	=> (T:void)))
   (attributes
    (()				effect-free result-true)
    ((_)				result-true)
@@ -2040,9 +2040,9 @@
 (declare-core-primitive current-error-port
     (safe)
   (signatures
-   (()				=> (T:port))
-   ((T:port)			=> (T:void))
-   ((T:port T:boolean)		=> (T:void)))
+   (()					=> (T:textual-output-port))
+   ((T:textual-output-port)		=> (T:void))
+   ((T:textual-output-port T:boolean)	=> (T:void)))
   (attributes
    (()				effect-free result-true)
    ((_)				result-true)

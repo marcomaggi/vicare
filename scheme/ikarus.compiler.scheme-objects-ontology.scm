@@ -47,8 +47,12 @@
    T:non-false		T:false			T:true		T:void
    T:boolean		T:char			T:symbol	T:string
    T:null		T:pair			T:vector	T:bytevector
-   T:procedure		T:port			T:struct	T:record
-   T:transcoder
+   T:procedure		T:struct		T:record	T:transcoder
+
+   T:port		T:textual-port		T:binary-port
+   T:input-port		T:output-port		T:input/output-port
+   T:textual-input-port	T:textual-output-port	T:textual-input/output-port
+   T:binary-input-port	T:binary-output-port	T:binary-input/output-port
 
    T:number		T:exact			T:inexact
    T:fixnum		T:bignum		T:ratnum
@@ -93,8 +97,12 @@
    T:non-false?		T:false?		T:true?		T:void?
    T:boolean?		T:char?			T:symbol?	T:string?
    T:null?		T:pair?			T:vector?	T:bytevector?
-   T:procedure?		T:port?			T:struct?	T:record?
-   T:transcoder
+   T:procedure?		T:struct?		T:record?	T:transcoder?
+
+   T:port?		T:textual-port?		T:binary-port?
+   T:input-port?	T:output-port?		T:input/output-port?
+   T:textual-input-port? T:textual-output-port?	T:textual-input/output-port?
+   T:binary-input-port?	T:binary-output-port?	T:binary-input/output-port?
 
    T:number?		T:exact?		T:inexact?
    T:fixnum?		T:bignum?		T:ratnum?
@@ -451,7 +459,7 @@
 ;;one of the  preceeding values; this "everything else" item  *must* be present, even
 ;;when it  is not used  as type tag.   So the following  are present even  if unused:
 ;;other-number,   other-exact,    other-exact-integer,   other-real,   other-complex,
-;;other-struct.
+;;other-struct, other-port.
 ;;
 (define-ontology core-type-tag
   make-core-type-tag core-type-tag? core-type-tag=?
@@ -480,6 +488,18 @@
   (complex		(exclusive cflonum compnum other-complex))
 
   (struct		(exclusive record other-struct))
+
+  ;;NOTE I  am unable to  define the port attributes  so that input/output  ports are
+  ;;correctly recognised as input  port or output port when needed.   But most of the
+  ;;predicates work fine, see the test suite.  (Marco Maggi; Wed Nov 12, 2014)
+  (port			(exclusive textual-input-port textual-output-port textual-input/output-port
+  				   binary-input-port binary-output-port binary-input/output-port
+  				   other-port))
+  (input-port		(exclusive textual-input-port binary-input-port other-input-port))
+  (output-port		(exclusive textual-output-port binary-output-port other-output-port))
+  (input/output-port	(exclusive textual-input/output-port binary-input/output-port other-input/output-port))
+  (textual-port		(exclusive textual-input-port textual-output-port textual-input/output-port other-textual-port))
+  (binary-port		(exclusive binary-input-port binary-output-port binary-input/output-port other-binary-port))
 
   #| end of ontology definition |# )
 
@@ -754,6 +774,112 @@
 
   (check (T:port? T:port)			=> yes)
   (check (T:port? T:string)			=> no)
+
+  (check (T:textual-input-port? T:port)				=> maybe)
+  (check (T:textual-input-port? T:input-port)			=> maybe)
+  (check (T:textual-input-port? T:output-port)			=> no)
+  #;(check (T:textual-input-port? T:input/output-port)		=> maybe)
+  (check (T:textual-input-port? T:binary-port)			=> no)
+  (check (T:textual-input-port? T:binary-input-port)		=> no)
+  (check (T:textual-input-port? T:binary-output-port)		=> no)
+  (check (T:textual-input-port? T:binary-input/output-port)	=> no)
+  (check (T:textual-input-port? T:textual-port)			=> maybe)
+  (check (T:textual-input-port? T:textual-input-port)		=> yes)
+  (check (T:textual-input-port? T:textual-output-port)		=> no)
+  #;(check (T:textual-input-port? T:textual-input/output-port)	=> yes)
+
+  (check (T:textual-output-port? T:port)			=> maybe)
+  (check (T:textual-output-port? T:input-port)			=> no)
+  (check (T:textual-output-port? T:output-port)			=> maybe)
+  #;(check (T:textual-output-port? T:input/output-port)		=> maybe)
+  (check (T:textual-output-port? T:binary-port)			=> no)
+  (check (T:textual-output-port? T:binary-input-port)		=> no)
+  (check (T:textual-output-port? T:binary-output-port)		=> no)
+  (check (T:textual-output-port? T:binary-input/output-port)	=> no)
+  (check (T:textual-output-port? T:textual-port)		=> maybe)
+  (check (T:textual-output-port? T:textual-input-port)		=> no)
+  (check (T:textual-output-port? T:textual-output-port)		=> yes)
+  #;(check (T:textual-output-port? T:textual-input/output-port)	=> yes)
+
+  (check (T:textual-input/output-port? T:port)			=> maybe)
+  (check (T:textual-input/output-port? T:input-port)		=> no)
+  (check (T:textual-input/output-port? T:output-port)		=> no)
+  (check (T:textual-input/output-port? T:input/output-port)	=> maybe)
+  (check (T:textual-input/output-port? T:binary-port)		=> no)
+  (check (T:textual-input/output-port? T:binary-input-port)	=> no)
+  (check (T:textual-input/output-port? T:binary-output-port)	=> no)
+  (check (T:textual-input/output-port? T:binary-input/output-port) => no)
+  (check (T:textual-input/output-port? T:textual-port)		=> maybe)
+  (check (T:textual-input/output-port? T:textual-input-port)	=> no)
+  (check (T:textual-input/output-port? T:textual-output-port)	=> no)
+  (check (T:textual-input/output-port? T:textual-input/output-port) => yes)
+
+  (check (T:binary-input-port? T:port)				=> maybe)
+  (check (T:binary-input-port? T:input-port)			=> maybe)
+  (check (T:binary-input-port? T:output-port)			=> no)
+  #;(check (T:binary-input-port? T:input/output-port)		=> maybe)
+  (check (T:binary-input-port? T:binary-port)			=> maybe)
+  (check (T:binary-input-port? T:binary-input-port)		=> yes)
+  (check (T:binary-input-port? T:binary-output-port)		=> no)
+  #;(check (T:binary-input-port? T:binary-input/output-port)	=> yes)
+  (check (T:binary-input-port? T:textual-port)			=> no)
+  (check (T:binary-input-port? T:textual-input-port)		=> no)
+  (check (T:binary-input-port? T:textual-output-port)		=> no)
+  (check (T:binary-input-port? T:textual-input/output-port)	=> no)
+
+  (check (T:binary-output-port? T:port)				=> maybe)
+  (check (T:binary-output-port? T:input-port)			=> no)
+  (check (T:binary-output-port? T:output-port)			=> maybe)
+  #;(check (T:binary-output-port? T:input/output-port)		=> maybe)
+  (check (T:binary-output-port? T:binary-port)			=> maybe)
+  (check (T:binary-output-port? T:binary-input-port)		=> no)
+  (check (T:binary-output-port? T:binary-output-port)		=> yes)
+  #;(check (T:binary-output-port? T:binary-input/output-port)	=> yes)
+  (check (T:binary-output-port? T:textual-port)			=> no)
+  (check (T:binary-output-port? T:textual-input-port)		=> no)
+  (check (T:binary-output-port? T:textual-output-port)		=> no)
+  (check (T:binary-output-port? T:textual-input/output-port)	=> no)
+
+  (check (T:binary-input/output-port? T:port)			=> maybe)
+  (check (T:binary-input/output-port? T:input-port)		=> no)
+  (check (T:binary-input/output-port? T:output-port)		=> no)
+  (check (T:binary-input/output-port? T:input/output-port)	=> maybe)
+  (check (T:binary-input/output-port? T:binary-port)		=> maybe)
+  (check (T:binary-input/output-port? T:binary-input-port)	=> no)
+  (check (T:binary-input/output-port? T:binary-output-port)	=> no)
+  (check (T:binary-input/output-port? T:binary-input/output-port) => yes)
+  (check (T:binary-input/output-port? T:textual-port)		=> no)
+  (check (T:binary-input/output-port? T:textual-input-port)	=> no)
+  (check (T:binary-input/output-port? T:textual-output-port)	=> no)
+  (check (T:binary-input/output-port? T:textual-input/output-port) => no)
+
+  (check (T:textual-port? T:textual-port)	=> yes)
+  (check (T:textual-port? T:binary-port)	=> no)
+  (check (T:textual-port? T:input-port)		=> maybe)
+  (check (T:textual-port? T:output-port)	=> maybe)
+  (check (T:textual-port? T:input/output-port)	=> maybe)
+  (check (T:textual-port? T:port)		=> maybe)
+
+  (check (T:binary-port? T:textual-port)	=> no)
+  (check (T:binary-port? T:binary-port)		=> yes)
+  (check (T:binary-port? T:input-port)		=> maybe)
+  (check (T:binary-port? T:output-port)		=> maybe)
+  (check (T:binary-port? T:input/output-port)	=> maybe)
+  (check (T:binary-port? T:port)		=> maybe)
+
+  (check (T:input-port? T:textual-port)		=> maybe)
+  (check (T:input-port? T:binary-port)		=> maybe)
+  (check (T:input-port? T:input-port)		=> yes)
+  (check (T:input-port? T:output-port)		=> no)
+  #;(check (T:input-port? T:input/output-port)	=> yes)
+  (check (T:input-port? T:port)			=> maybe)
+
+  (check (T:output-port? T:textual-port)	=> maybe)
+  (check (T:output-port? T:binary-port)		=> maybe)
+  (check (T:output-port? T:input-port)		=> no)
+  (check (T:output-port? T:output-port)		=> yes)
+  #;(check (T:output-port? T:input/output-port)	=> yes)
+  (check (T:output-port? T:port)		=> maybe)
 
 ;;; --------------------------------------------------------------------
 ;;; multitype tests
