@@ -62,6 +62,8 @@
    T:real		T:exact-real
    T:complex
 
+   T:positive-fixnum	T:negative-fixnum
+
    ;;Type validators; applied to a record of type CORE-TYPE-TAG return the symbol:
    ;;
    ;;yes -
@@ -113,6 +115,8 @@
    T:exact-integer?
    T:real?		T:exact-real?
    T:complex?
+
+   T:positive-fixnum?	T:negative-fixnum?
 
    #| end of module's export list|# )
 
@@ -508,6 +512,15 @@
 
   #| end of ontology definition |# )
 
+;;; --------------------------------------------------------------------
+;;; more fixnum types
+
+(define-underspecified-core-type T:positive-fixnum
+  (core-type-tag-and* T:fixnum T:positive))
+
+(define-underspecified-core-type T:negative-fixnum
+  (core-type-tag-and* T:fixnum T:negative))
+
 
 (module (determine-constant-core-type)
 
@@ -577,7 +590,7 @@
 ;;
 
 ;;Comment this EOF to include the tests.
-;;#!eof
+#!eof
 
 (module ()
   (import SCHEME-OBJECTS-ONTOLOGY)

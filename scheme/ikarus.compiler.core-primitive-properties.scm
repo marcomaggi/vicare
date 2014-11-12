@@ -312,7 +312,9 @@
 	 T:positive		T:zero			T:negative
 	 T:exact-integer
 	 T:real			T:exact-real
-	 T:complex)
+	 T:complex
+
+	 T:positive-fixnum	T:negative-fixnum)
       (T:object				#f)
       (T:other-object			type)
       (T:immediate			type)
@@ -361,6 +363,8 @@
       (T:real				type)
       (T:exact-real			type)
       (T:complex			type)
+      (T:positive-fixnum		type)
+      (T:negative-fixnum		type)
       (_
        (if (identifier? type)
 	   (if (eq? '_ (syntax->datum type))

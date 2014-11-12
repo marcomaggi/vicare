@@ -486,6 +486,16 @@
 	     (funcall (primref display)
 	       x_0))))
 
+  (doit* (let ((x (read)))
+	   (and (number? x)
+		(nan?    x)))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref number?) x_0)
+	       (seq
+		 (constant #f)
+		 (funcall (primref nan?) (known x_0 (T:non-false T:number T:object))))
+	     (constant #f))))
+
   ;;Miscellaneous predicates.
   (doit* (let ((x (read)))
 	   (cond ((fixnum? x)
