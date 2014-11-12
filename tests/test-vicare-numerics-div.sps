@@ -8,7 +8,7 @@
 ;;;
 ;;;
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -654,8 +654,8 @@
 
   (let-syntax ((test (make-compnum-test / $div-ratnum-compnum)))
     (test VRN01 10+20i 1/6150-1/3075i)
-    (test VRN01 1.0+20.0i 2.027451695963344e-05-0.0004054903391926688i)
-    (test VRN01 10.0+2.0i 0.0007817385866166355-0.0001563477173233271i)
+    (test VRN01 1+20.0i 2.027451695963344e-05-0.0004054903391926688i)
+    (test VRN01 10+2.0i 0.0007817385866166355-0.0001563477173233271i)
     (test VRN01 1/2+20i 2/196923-80/196923i)
     (test VRN01 10+2/3i 15/18532-1/18532i)
     (test VRN01 (C VRN02 20) -1/6051601-2460/6051601i)
