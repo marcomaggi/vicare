@@ -88,6 +88,7 @@
 
 #!r6rs
 (library (srfi :67 compare-procedures)
+  (options strict-r6rs)
   (export
     </<=? </<? <=/<=? <=/<? <=? <? =?
     >/>=? >/>? >=/>=? >=/>? >=? >?
