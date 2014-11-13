@@ -41,52 +41,76 @@
 ;;;
 
 
-;;;; syntax helpers
+;;;; syntax helpers: predicates
 
-(define-syntax (declare-type-predicate stx)
+(define-syntax declare-type-predicate
   ;;Usage examples:
   ;;
-  ;;   (declare-type-predicate fixnum?)
-  ;;   (declare-type-predicate vector?)
+  ;;   (declare-type-predicate fixnum? T:fixnum)
+  ;;   (declare-type-predicate vector? T:vector)
   ;;
-  (syntax-case stx ()
+  (syntax-rules ()
     ((_ ?who)
-     #'(declare-core-primitive ?who
-	   (safe)
-	 (signatures
-	  ((_)		=> (T:boolean)))
-	 (attributes
-	  ((_)		foldable effect-free))))
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((_)		=> (T:boolean)))
+       (attributes
+	((_)		foldable effect-free))))
+    ((_ ?who ?obj-tag)
+     (declare-core-primitive ?who
+	 (safe)
+       (signatures
+	((?obj-tag)	=> (T:true))
+	((_)		=> (T:boolean)))
+       (attributes
+	((_)		foldable effect-free))))
     ))
 
 ;;; --------------------------------------------------------------------
 
-(define-syntax (define-object-predicate-declarer stx)
-  ;;Usage examples:
-  ;;
-  ;;   (define-object-predicate-declarer declare-number-predicate T:number)
-  ;;   (declare-number-predicate zero?)
-  ;;   (declare-number-predicate positive?)
-  ;;   (declare-number-predicate negative?)
-  ;;
-  (syntax-case stx ()
-    ((_ ?declarer ?type-tag)
-     #'(define-syntax ?declarer
-	 (syntax-rules (safe unsafe)
-	   ((_ ?who)
-	    (?declarer ?who safe))
-	   ((_ ?who ?safety)
-	    (declare-core-primitive ?who
-		(?safety)
-	      (signatures
-	       ((?type-tag)	=> (T:boolean)))
-	      (attributes
-	       ((_)		foldable effect-free))))
+(module (define-object-predicate-declarer)
+
+  (define-syntax define-object-predicate-declarer
+    ;;Usage examples:
+    ;;
+    ;;   (define-object-predicate-declarer declare-number-predicate T:number)
+    ;;   (declare-number-predicate zero?)
+    ;;   (declare-number-predicate positive?)
+    ;;   (declare-number-predicate negative?)
+    ;;
+    (syntax-rules ()
+      ((_ ?declarer ?obj-tag)
+       (define-syntax ?declarer
+	 (syntax-rules (safe unsafe replacements)
+	   ((_ ?who)						(%define-predicate ?who ?obj-tag safe   (replacements)))
+	   ((_ ?who safe)					(%define-predicate ?who ?obj-tag safe   (replacements)))
+	   ((_ ?who unsafe)					(%define-predicate ?who ?obj-tag unsafe (replacements)))
+
+	   ((_ ?who		(replacements . ?replacements))	(%define-predicate ?who ?obj-tag safe   (replacements . ?replacements)))
+	   ((_ ?who safe	(replacements . ?replacements))	(%define-predicate ?who ?obj-tag safe   (replacements . ?replacements)))
+	   ((_ ?who unsafe	(replacements . ?replacements))	(%define-predicate ?who ?obj-tag unsafe (replacements . ?replacements)))
 	   )))
-    ))
+      ))
+
+  (define-syntax %define-predicate
+    (syntax-rules (replacements)
+      ((_ ?who ?obj-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?obj-tag)		=> (T:true))
+	  ((_)			=> (T:boolean)))
+	 (attributes
+	  ((_)			foldable effect-free))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module: DEFINE-OBJECT-PREDICATE-DECLARER |# )
 
 (define-object-predicate-declarer declare-object-predicate T:object)
 (define-object-predicate-declarer declare-number-predicate T:number)
+(define-object-predicate-declarer declare-fixnum-predicate T:fixnum)
 (define-object-predicate-declarer declare-flonum-predicate T:flonum)
 
 ;;; --------------------------------------------------------------------
@@ -124,7 +148,8 @@
 (define-object-comparison-declarer declare-number-comparison T:number)
 (define-object-comparison-declarer declare-flonum-comparison T:flonum)
 
-;;; --------------------------------------------------------------------
+
+;;;; syntax helpers: math operations
 
 (define-syntax (define-object-unary-operation-declarer stx)
   ;;Usage example:
@@ -530,63 +555,39 @@
 
 ;;;; fixnums safe operations
 
+(declare-core-primitive greatest-fixnum
+    (unsafe)
+  (signatures
+   (()				=> (T:positive-fixnum)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
+(declare-core-primitive least-fixnum
+    (unsafe)
+  (signatures
+   (()				=> (T:negative-fixnum)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
+(declare-core-primitive fixnum-width
+    (unsafe)
+  (signatures
+   (()				=> (T:positive-fixnum)))
+  (attributes
+   (()				foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
 ;;; predicates
 
-(declare-core-primitive fixnum?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+(declare-type-predicate fixnum? T:fixnum)
 
-(declare-core-primitive fxzero?
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive fxpositive?
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive fxnegative?
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive fxnonpositive?
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive fxnonnegative?
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive fxeven?
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive fxodd?
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+(declare-fixnum-predicate fxzero?		(replacements $fxzero?))
+(declare-fixnum-predicate fxpositive?		(replacements $fxpositive?))
+(declare-fixnum-predicate fxnegative?		(replacements $fxnegative?))
+(declare-fixnum-predicate fxnonpositive?	(replacements $fxnonpositive?))
+(declare-fixnum-predicate fxnonnegative?	(replacements $fxnonnegative?))
+(declare-fixnum-predicate fxeven?		(replacements $fxeven?))
+(declare-fixnum-predicate fxodd?		(replacements $fxodd?))
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
@@ -964,78 +965,15 @@
 
 ;;;; fixnums unsafe operations
 
-(declare-core-primitive greatest-fixnum
-    (unsafe)
-  (signatures
-   (()				=> (T:positive-fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive least-fixnum
-    (unsafe)
-  (signatures
-   (()				=> (T:positive-fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive fixnum-width
-    (unsafe)
-  (signatures
-   (()				=> (T:positive-fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-;;; --------------------------------------------------------------------
 ;;; predicates
 
-(declare-core-primitive $fxzero?
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive $fxpositive?
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive $fxnegative?
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive $fxnonpositive?
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive $fxnonnegative?
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive $fxeven?
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive $fxodd?
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+(declare-fixnum-predicate $fxzero? unsafe)
+(declare-fixnum-predicate $fxpositive? unsafe)
+(declare-fixnum-predicate $fxnegative? unsafe)
+(declare-fixnum-predicate $fxnonpositive? unsafe)
+(declare-fixnum-predicate $fxnonnegative? unsafe)
+(declare-fixnum-predicate $fxeven? unsafe)
+(declare-fixnum-predicate $fxodd? unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
@@ -1363,7 +1301,7 @@
 
 ;;; predicates
 
-(declare-type-predicate flonum?)
+(declare-type-predicate flonum? T:flonum)
 
 (declare-flonum-predicate flzero?)
 (declare-flonum-predicate flzero?/negative)
@@ -1563,13 +1501,13 @@
 
 ;;;; cflonums, safe functions
 
-(declare-type-predicate cflonum?)
+(declare-type-predicate cflonum? T:cflonum)
 
 
 
 ;;;; compnums, safe functions
 
-(declare-type-predicate compnum?)
+(declare-type-predicate compnum? T:compnum)
 
 
 ;;;; general arithmetics, addition
@@ -3217,7 +3155,7 @@
 
 ;;;; general arithmetics, misc functions
 
-(declare-type-predicate number?)
+(declare-type-predicate number? T:number)
 (declare-type-predicate complex?)
 (declare-type-predicate real?)
 (declare-type-predicate rational?)
