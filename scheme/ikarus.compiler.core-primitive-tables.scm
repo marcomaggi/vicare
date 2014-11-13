@@ -73,6 +73,7 @@
 	   )))
     ))
 
+(define-object-predicate-declarer declare-object-predicate T:object)
 (define-object-predicate-declarer declare-number-predicate T:number)
 (define-object-predicate-declarer declare-flonum-predicate T:flonum)
 
@@ -95,6 +96,7 @@
 	   )))
     ))
 
+(define-object-comparison-declarer declare-object-comparison _)
 (define-object-comparison-declarer declare-number-comparison T:number)
 (define-object-comparison-declarer declare-flonum-comparison T:flonum)
 
@@ -195,40 +197,18 @@
 
 ;;;; misc functions
 
-(declare-core-primitive eq?
-    (safe)
-  (signatures
-   ((_ _)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+(declare-object-comparison eq?)
+(declare-object-comparison eqv?)
+(declare-object-comparison equal?)
 
-(declare-core-primitive eqv?
-    (safe)
-  (signatures
-   ((_ _)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive equal?
-    (safe)
-  (signatures
-   ((_ _)			=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive not
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+(declare-object-predicate not)
 
 (declare-core-primitive void
     (safe)
   (signatures
    (()				=> (T:void)))
   (attributes
-   ((_)				foldable effect-free result-true)))
+   (()				foldable effect-free result-true)))
 
 
 ;;;; pairs and lists, safe functions
@@ -268,26 +248,27 @@
 (declare-core-primitive cons
     (safe)
   (signatures
-   ((_ _)	=> (T:pair)))
+   ((_ _)		=> (T:pair)))
   (attributes
+   ;;This is not foldable because it must return a newly allocated pair every time.
    ((_ _)		effect-free result-true)))
 
 (declare-core-primitive cons*
     (safe)
   (signatures
-   (_		=> (_)))
+   ((_)			=> (_))
+   ((_ _ . _)		=> (T:pair)))
   (attributes
    ;;This will return the operand itself, so it is foldable.
    ((_)			foldable effect-free)
-   ;;This is  not foldable because  it needs to return  a newly allocated  list every
-   ;;time.
-   ((_ . _)		effect-free result-true)))
+   ;;This is not foldable because it must return a newly allocated list every time.
+   ((_ _ . _)		effect-free result-true)))
 
 (declare-core-primitive list
     (safe)
   (signatures
-   (()		=> (T:null))
-   ((_ . _)	=> (T:pair)))
+   (()			=> (T:null))
+   ((_ . _)		=> (T:pair)))
   (attributes
    ;;Foldable because it returns null.
    (()			foldable effect-free result-true)
@@ -297,9 +278,11 @@
 (declare-core-primitive reverse
     (safe)
   (signatures
-   ((T:null)	=> (T:null))
-   ((T:pair)	=> (T:pair)))
+   ((T:null)		=> (T:null))
+   ((T:pair)		=> (T:pair)))
   (attributes
+   ;;This is foldable because it returns null itself.
+   ((())		foldable effect-free result-true)
    ;;Not foldable because it must return a newly allocated list every time.
    ((_)			effect-free result-true)))
 
