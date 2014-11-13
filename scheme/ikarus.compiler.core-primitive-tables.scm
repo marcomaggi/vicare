@@ -111,6 +111,8 @@
 (define-object-predicate-declarer declare-object-predicate T:object)
 (define-object-predicate-declarer declare-number-predicate T:number)
 (define-object-predicate-declarer declare-fixnum-predicate T:fixnum)
+(define-object-predicate-declarer declare-ratnum-predicate T:ratnum)
+(define-object-predicate-declarer declare-bignum-predicate T:bignum)
 (define-object-predicate-declarer declare-flonum-predicate T:flonum)
 
 
@@ -926,6 +928,9 @@
   (attributes
    ((_ _)					foldable effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+;;; accessors
+
 (declare-core-primitive $ratnum-n
     (unsafe)
   (signatures
@@ -953,6 +958,22 @@
    ((T:ratnum)					=> (T:exact-integer)))
   (attributes
    ((_)						foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-ratnum-predicate $ratnum-positive? unsafe)
+(declare-ratnum-predicate $ratnum-negative? unsafe)
+(declare-ratnum-predicate $ratnum-non-positive? unsafe)
+(declare-ratnum-predicate $ratnum-non-negative? unsafe)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $ratnum->flonum
+    (unsafe)
+  (signatures
+   ((T:ratnum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 
 ;;;; flonums, safe functions
