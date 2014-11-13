@@ -961,44 +961,49 @@
 
 (declare-type-predicate flonum? T:flonum)
 
-(declare-flonum-predicate flzero?)
-(declare-flonum-predicate flzero?/negative)
-(declare-flonum-predicate flzero?/positive)
-(declare-flonum-predicate flpositive?)
-(declare-flonum-predicate flnegative?)
-(declare-flonum-predicate flnonpositive?)
-(declare-flonum-predicate flnonnegative?)
-(declare-flonum-predicate fleven?)
-(declare-flonum-predicate flodd?)
+(declare-flonum-predicate flzero?		(replacements $flzero?))
+(declare-flonum-predicate flzero?/negative	(replacements $flzero?/negative))
+(declare-flonum-predicate flzero?/positive	(replacements $flzero?/positive))
+(declare-flonum-predicate flpositive?		(replacements $flpositive?))
+(declare-flonum-predicate flnegative?		(replacements $flnegative?))
+(declare-flonum-predicate flnonpositive?	(replacements $flnonpositive?))
+(declare-flonum-predicate flnonnegative?	(replacements $flnonnegative?))
+(declare-flonum-predicate fleven?		(replacements $fleven?))
+(declare-flonum-predicate flodd?		(replacements $flodd?))
 
-(declare-flonum-predicate flinteger?)
-(declare-flonum-predicate flnan?)
-(declare-flonum-predicate flfinite?)
-(declare-flonum-predicate flinfinite?)
+(declare-flonum-predicate flnan?		(replacements $flnan?))
+(declare-flonum-predicate flfinite?		(replacements $flfinite?))
+(declare-flonum-predicate flinfinite?		(replacements $flinfinite?))
+(declare-flonum-predicate flinteger?		(replacements $flinteger?))
 
 ;;; --------------------------------------------------------------------
 ;;; rounding
 
-(declare-flonum-unary flround)
-(declare-flonum-unary flfloor)
-(declare-flonum-unary flceiling)
-(declare-flonum-unary fltruncate)
+(declare-flonum-unary flround		(replacements $flround))
+(declare-flonum-unary flfloor		(replacements $flfloor))
+(declare-flonum-unary flceiling		(replacements $flceiling))
+(declare-flonum-unary fltruncate	(replacements $fltruncate))
 
 ;;; --------------------------------------------------------------------
 ;;; parts
 
-(declare-flonum-unary flnumerator)
-(declare-flonum-unary fldenominator)
-(declare-flonum-unary flabs)
+(declare-flonum-unary flnumerator	(replacements $flnumerator))
+(declare-flonum-unary fldenominator	(replacements $fldenominator))
+(declare-flonum-unary flabs		(replacements $flabs))
+
+;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Thu Nov 13, 2014)
+;;
+;; (declare-flonum-unary flonum-bytes)
+;; (declare-flonum-unary flonum-parts)
 
 ;;; --------------------------------------------------------------------
 ;;; trigonometric
 
-(declare-flonum-unary flsin)
-(declare-flonum-unary flcos)
-(declare-flonum-unary fltan)
-(declare-flonum-unary flasin)
-(declare-flonum-unary flacos)
+(declare-flonum-unary flsin		(replacements $flsin))
+(declare-flonum-unary flcos		(replacements $flcos))
+(declare-flonum-unary fltan		(replacements $fltan))
+(declare-flonum-unary flasin		(replacements $flasin))
+(declare-flonum-unary flacos		(replacements $flacos))
 
 (declare-core-primitive flatan
     (safe)
@@ -1007,48 +1012,86 @@
    ((T:flonum T:flonum)		=> (T:flonum)))
   (attributes
    ((_)			foldable effect-free result-true)
-   ((_ _)		foldable effect-free result-true)))
+   ((_ _)		foldable effect-free result-true))
+  (replacements $flatan $flatan2))
+
+;;; --------------------------------------------------------------------
+;;; hyperbolic
+
+(declare-flonum-unary flsinh		(replacements $flsinh))
+(declare-flonum-unary flcosh		(replacements $flcosh))
+(declare-flonum-unary fltanh		(replacements $fltanh))
+(declare-flonum-unary flasinh		(replacements $flasinh))
+(declare-flonum-unary flacosh		(replacements $flacosh))
+(declare-flonum-unary flatanh		(replacements $flatanh))
 
 ;;; --------------------------------------------------------------------
 ;;; exponentiation, exponentials, logarithms
 
-(declare-flonum-unary flexp)
-(declare-flonum-unary/binary fllog)
-(declare-flonum-unary flexpm1)
-(declare-flonum-unary fllog1p)
-(declare-flonum-binary flexpt)
-(declare-flonum-unary flsqrt)
-(declare-flonum-unary flsquare)
+(declare-flonum-unary flexp		(replacements $flexp))
+(declare-flonum-unary/binary fllog	(replacements $fllog $fllog2))
+(declare-flonum-unary flexpm1		(replacements $flexpm1))
+(declare-flonum-unary fllog1p		(replacements $fllog1p))
+(declare-flonum-binary flexpt		(replacements $flexpt))
+(declare-flonum-unary flsqrt		(replacements $flsqrt))
+(declare-flonum-unary flsquare		(replacements $flsquare))
+(declare-flonum-unary flcube		(replacements $flcube))
+(declare-flonum-unary flcbrt		(replacements $flcbrt))
+(declare-flonum-unary flhypot		(replacements $flhypot))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-flonum-unary/multi-comparison fl=?)
-(declare-flonum-unary/multi-comparison fl<?)
-(declare-flonum-unary/multi-comparison fl>?)
-(declare-flonum-unary/multi-comparison fl<=?)
-(declare-flonum-unary/multi-comparison fl>=?)
+(declare-flonum-unary/multi-comparison fl=?	(replacements $fl=?))
+(declare-flonum-unary/multi-comparison fl<?	(replacements $fl<?))
+(declare-flonum-unary/multi-comparison fl>?	(replacements $fl>?))
+(declare-flonum-unary/multi-comparison fl<=?	(replacements $fl<=?))
+(declare-flonum-unary/multi-comparison fl>=?	(replacements $fl>=?))
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
 
-(declare-flonum-unary/multi fl+)
-(declare-flonum-unary/multi fl-)
-(declare-flonum-unary/multi fl*)
-(declare-flonum-unary/multi fl/)
+(declare-flonum-unary/multi fl+		(replacements $fl+))
+(declare-flonum-unary/multi fl-		(replacements $fl-))
+(declare-flonum-unary/multi fl*		(replacements $fl*))
+(declare-flonum-unary/multi fl/		(replacements $fl/))
 
-(declare-flonum-unary/multi flmin)
-(declare-flonum-unary/multi flmax)
+(declare-flonum-unary/multi flmin	(replacements $flmin))
+(declare-flonum-unary/multi flmax	(replacements $flmax))
 
-(declare-flonum-binary fldiv)
-(declare-flonum-binary fldiv0)
-(declare-flonum-binary flmod)
-(declare-flonum-binary flmod0)
+(declare-flonum-binary fldiv		(replacements $fldiv))
+(declare-flonum-binary fldiv0		(replacements $fldiv0))
+(declare-flonum-binary flmod		(replacements $flmod))
+(declare-flonum-binary flmod0		(replacements $flmod0))
 
 ;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
 ;;
-;; (declare-flonum-binary fldiv-and-mod)
-;; (declare-flonum-binary fldiv0-and-mod0)
+;; (declare-flonum-binary fldiv-and-mod		(replacements $fldiv-and-mod))
+;; (declare-flonum-binary fldiv0-and-mod0	(replacements $fldiv0-and-mod0))
+
+;;; --------------------------------------------------------------------
+;;; conversion
+
+(declare-core-primitive flonum->string
+    (safe)
+  (signatures
+   ((T:flonum)		=> (T:string)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive flonum->bytevector
+    (safe)
+  (signatures
+   ((T:flonum)		=> (T:bytevector)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive real->flonum
+    (safe)
+  (signatures
+   ((T:real)		=> (T:flonum)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
 
 
 ;;;; flonums, unsafe functions
@@ -3097,7 +3140,7 @@
    ((_)				foldable effect-free result-true)))
 
 
-;;;; strings
+;;;; strings, safe functions
 ;;
 ;;According to R6RS:  STRING and MAKE-STRING must return a  newly allocated string at
 ;;every invocation;  if we want the  same string we  just use the double  quotes.  So
@@ -3236,7 +3279,15 @@
   (attributes
    ((_)			effect-free result-true)))
 
-;;; --------------------------------------------------------------------
+(declare-core-primitive string->flonum
+    (safe)
+  (signatures
+   ((T:string)		=> (T:flonum)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+
+;;;; strings, unsafe functions
 
 (declare-core-primitive $string-length
     (unsafe)
