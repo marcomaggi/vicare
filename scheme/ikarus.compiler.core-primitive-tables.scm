@@ -1037,7 +1037,7 @@
 (declare-flonum-unary flsquare		(replacements $flsquare))
 (declare-flonum-unary flcube		(replacements $flcube))
 (declare-flonum-unary flcbrt		(replacements $flcbrt))
-(declare-flonum-unary flhypot		(replacements $flhypot))
+(declare-flonum-binary flhypot		(replacements $flhypot))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -1047,6 +1047,10 @@
 (declare-flonum-unary/multi-comparison fl>?	(replacements $fl>?))
 (declare-flonum-unary/multi-comparison fl<=?	(replacements $fl<=?))
 (declare-flonum-unary/multi-comparison fl>=?	(replacements $fl>=?))
+
+;;FIXME To be implemented.  (Marco Maggi; Thu Nov 13, 2014)
+;;
+;;(declare-flonum-unary/multi-comparison fl!=?	(replacements $fl!=?))
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
@@ -1158,6 +1162,16 @@
 (declare-flonum-binary $flatan2 unsafe)
 
 ;;; --------------------------------------------------------------------
+;;; hyperbolic
+
+(declare-flonum-unary $flsinh unsafe)
+(declare-flonum-unary $flcosh unsafe)
+(declare-flonum-unary $fltanh unsafe)
+(declare-flonum-unary $flasinh unsafe)
+(declare-flonum-unary $flacosh unsafe)
+(declare-flonum-unary $flatanh unsafe)
+
+;;; --------------------------------------------------------------------
 ;;; exponentiation, exponentials, logarithms
 
 (declare-flonum-unary $flexp unsafe)
@@ -1168,6 +1182,10 @@
 (declare-flonum-unary $flexpt unsafe)
 (declare-flonum-unary $flsqrt unsafe)
 (declare-flonum-unary $flsquare unsafe)
+(declare-flonum-unary $flsquare unsafe)
+(declare-flonum-unary $flcube unsafe)
+(declare-flonum-unary $flcbrt unsafe)
+(declare-flonum-binary $flhypot unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
@@ -1177,6 +1195,10 @@
 (declare-flonum-binary-comparison $fl> unsafe)
 (declare-flonum-binary-comparison $fl<= unsafe)
 (declare-flonum-binary-comparison $fl>= unsafe)
+
+;;FIXME To be implemented.  (Marco Maggi; Thu Nov 13, 2014)
+;;
+;;(declare-flonum-binary-comparison $fl!=? unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
@@ -1204,11 +1226,38 @@
 
 (declare-type-predicate cflonum? T:cflonum)
 
+(declare-core-primitive $cflonum-real
+    (unsafe)
+  (signatures
+   ((T:cflonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $cflonum-imag
+    (unsafe)
+  (signatures
+   ((T:cflonum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 
 ;;;; compnums, safe functions
 
 (declare-type-predicate compnum? T:compnum)
+
+(declare-core-primitive $compnum-real
+    (unsafe)
+  (signatures
+   ((T:compnum)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $compnum-imag
+    (unsafe)
+  (signatures
+   ((T:compnum)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
 
 
 ;;;; general arithmetics, addition
