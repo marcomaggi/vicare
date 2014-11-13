@@ -113,40 +113,96 @@
 (define-object-predicate-declarer declare-fixnum-predicate T:fixnum)
 (define-object-predicate-declarer declare-flonum-predicate T:flonum)
 
+
+;;;; syntax helpers: comparison functions
+
+(module (define-object-binary-comparison-declarer)
+
+  (define-syntax define-object-binary-comparison-declarer
+    ;;Usage examples:
+    ;;
+    ;;   (define-object-binary-comparison-declarer declare-object-binary-comparison _)
+    ;;   (declare-object-binary-comparison eq?)
+    ;;   (declare-object-binary-comparison eqv?)
+    ;;   (declare-object-binary-comparison equal?)
+    ;;
+    (syntax-rules (safe unsafe replacements)
+      ((_ ?declarer ?type-tag)
+       (define-syntax ?declarer
+	 (syntax-rules (safe unsafe replacements)
+	   ((_ ?who)						(%define-declarer ?who ?type-tag safe   (replacements)))
+	   ((_ ?who safe)					(%define-declarer ?who ?type-tag safe   (replacements)))
+	   ((_ ?who unsafe)					(%define-declarer ?who ?type-tag unsafe (replacements)))
+
+	   ((_ ?who        (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	   ((_ ?who safe   (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	   ((_ ?who unsafe (replacements . ?replacements))	(%define-declarer ?who ?type-tag unsafe (replacements . ?replacements)))
+	   )))
+      ))
+
+  (define-syntax %define-declarer
+    (syntax-rules (replacements)
+      ((_ ?who ?type-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?type-tag ?type-tag)	=> (T:boolean)))
+	 (attributes
+	  ((_ _)			foldable effect-free))))
+      ))
+
+  #| end of module: DEFINE-OBJECT-BINARY-COMPARISON-DECLARER |# )
+
+(define-object-binary-comparison-declarer declare-object-binary-comparison T:object)
+(define-object-binary-comparison-declarer declare-fixnum-binary-comparison T:fixnum)
+(define-object-binary-comparison-declarer declare-flonum-binary-comparison T:flonum)
+
 ;;; --------------------------------------------------------------------
 
-(define-syntax (define-object-comparison-declarer stx)
-  ;;Usage example:
-  ;;
-  ;;   (define-object-comparison-declarer declare-object-comparison _)
-  ;;   (declare-object-comparison eq?)
-  ;;   (declare-object-comparison eqv?)
-  ;;   (declare-object-comparison equal?)
-  ;;
-  ;;   (define-object-comparison-declarer declare-flonum-comparison T:flonum)
-  ;;   (declare-flonum-comparison fl=?)
-  ;;   (declare-flonum-comparison fl<?)
-  ;;   (declare-flonum-comparison fl>?)
-  ;;
-  (syntax-case stx ()
-    ((_ ?declarer ?type-tag)
-     #'(define-syntax ?declarer
-	 (syntax-rules ()
-	   ((_ ?who)
-	    (?declarer ?who safe))
-	   ((_ ?who ?safety)
-	    (declare-core-primitive ?who
-		(?safety)
-	      (signatures
-	       ((?type-tag ?type-tag)	=> (T:boolean)))
-	      (attributes
-	       ((_ _)			foldable effect-free))))
-	   )))
-    ))
+(module (define-object-unary/multi-comparison-declarer)
 
-(define-object-comparison-declarer declare-object-comparison _)
-(define-object-comparison-declarer declare-number-comparison T:number)
-(define-object-comparison-declarer declare-flonum-comparison T:flonum)
+  (define-syntax define-object-unary/multi-comparison-declarer
+    ;;Usage examples:
+    ;;
+    ;;   (define-object-unary/multi-comparison-declarer declare-flonum-unary/multi-comparison T:flonum)
+    ;;   (declare-flonum-unary/multi-comparison fl=?)
+    ;;   (declare-flonum-unary/multi-comparison fl<?)
+    ;;   (declare-flonum-unary/multi-comparison fl>?)
+    ;;
+    (syntax-rules (safe unsafe replacements)
+      ((_ ?declarer ?type-tag)
+       (define-syntax ?declarer
+	 (syntax-rules (safe unsafe replacements)
+	   ((_ ?who)						(%define-declarer ?who ?type-tag safe   (replacements)))
+	   ((_ ?who safe)					(%define-declarer ?who ?type-tag safe   (replacements)))
+	   ((_ ?who unsafe)					(%define-declarer ?who ?type-tag unsafe (replacements)))
+
+	   ((_ ?who        (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	   ((_ ?who safe   (replacements . ?replacements))	(%define-declarer ?who ?type-tag safe   (replacements . ?replacements)))
+	   ((_ ?who unsafe (replacements . ?replacements))	(%define-declarer ?who ?type-tag unsafe (replacements . ?replacements)))
+	   )))
+      ))
+
+  (define-syntax %define-declarer
+    (syntax-rules (replacements)
+      ((_ ?who ?type-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?type-tag)				=> (T:boolean))
+	  ((?type-tag ?type-tag)		=> (T:boolean))
+	  ((?type-tag ?type-tag . ?type-tag)	=> (T:boolean)))
+	 (attributes
+	  ((_)				foldable effect-free)
+	  ((_ _)			foldable effect-free)
+	  ((_ _ . _)			foldable effect-free))))
+      ))
+
+  #| end of module: DEFINE-OBJECT-UNARY/MULTI-COMPARISON-DECLARER |# )
+
+(define-object-unary/multi-comparison-declarer declare-number-unary/multi-comparison T:number)
+(define-object-unary/multi-comparison-declarer declare-fixnum-unary/multi-comparison T:fixnum)
+(define-object-unary/multi-comparison-declarer declare-flonum-unary/multi-comparison T:flonum)
 
 
 ;;;; syntax helpers: math operations
@@ -176,6 +232,7 @@
     ))
 
 (define-object-unary-operation-declarer declare-number-unary T:number)
+(define-object-unary-operation-declarer declare-fixnum-unary T:fixnum)
 (define-object-unary-operation-declarer declare-flonum-unary T:flonum)
 
 ;;; --------------------------------------------------------------------
@@ -203,6 +260,7 @@
     ))
 
 (define-object-binary-operation-declarer declare-number-binary T:number)
+(define-object-binary-operation-declarer declare-fixnum-binary T:fixnum)
 (define-object-binary-operation-declarer declare-flonum-binary T:flonum)
 
 ;;; --------------------------------------------------------------------
@@ -232,6 +290,7 @@
     ))
 
 (define-object-unary/binary-operation-declarer declare-number-unary/binary T:number)
+(define-object-unary/binary-operation-declarer declare-fixnum-unary/binary T:fixnum)
 (define-object-unary/binary-operation-declarer declare-flonum-unary/binary T:flonum)
 
 ;;; --------------------------------------------------------------------
@@ -266,7 +325,38 @@
     ))
 
 (define-object-unary/multi-operation-declarer declare-number-unary/multi T:number)
+(define-object-unary/multi-operation-declarer declare-fixnum-unary/multi T:fixnum)
 (define-object-unary/multi-operation-declarer declare-flonum-unary/multi T:flonum)
+
+;;; --------------------------------------------------------------------
+
+(define-syntax (define-object-multi-operation-declarer stx)
+  ;;Usage examples:
+  ;;
+  ;;   (define-object-multi-operation-declarer declare-fixnum-multi T:fixnum)
+  ;;   (declare-fixnum-multi fxior)
+  ;;
+  (syntax-case stx ()
+    ((_ ?declarer ?type-tag)
+     #'(define-syntax ?declarer
+	 (syntax-rules ()
+	   ((_ ?who)
+	    (?declarer ?who safe))
+	   ((_ ?who ?safety)
+	    #'(declare-core-primitive ?who
+		  (?safety)
+		(signatures
+		 (()					=> (?type-tag))
+		 (?type-tag				=> (?type-tag)))
+		(attributes
+		 (()			foldable effect-free result-true)
+		 ((_ . _)		foldable effect-free result-true))))
+	   )))
+    ))
+
+(define-object-multi-operation-declarer declare-number-multi T:number)
+(define-object-multi-operation-declarer declare-fixnum-multi T:fixnum)
+(define-object-multi-operation-declarer declare-flonum-multi T:flonum)
 
 
 ;;;; syntax helpers: pairs, lists, alists
@@ -381,9 +471,9 @@
 
 ;;;; misc functions
 
-(declare-object-comparison eq?)
-(declare-object-comparison eqv?)
-(declare-object-comparison equal?)
+(declare-object-binary-comparison eq?)
+(declare-object-binary-comparison eqv?)
+(declare-object-binary-comparison equal?)
 
 (declare-object-predicate not)
 
@@ -592,28 +682,21 @@
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
 
-(declare-core-primitive fx+
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-fixnum-binary fx+)
+(declare-fixnum-unary/binary fx-)
+(declare-fixnum-binary fx*)
+(declare-fixnum-binary fxdiv)
+(declare-fixnum-binary fxmod)
+(declare-fixnum-binary fxdiv0)
+(declare-fixnum-binary fxmod0)
+(declare-fixnum-unary fxadd1)
+(declare-fixnum-unary fxsub1)
 
-(declare-core-primitive fx-
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum))
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fx*
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-fixnum-unary fxabs)
+(declare-fixnum-unary fxsign)
+(declare-fixnum-binary fxremainder)
+(declare-fixnum-binary fxquotient)
+(declare-fixnum-binary fxmodulo)
 
 ;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
 ;;2014)
@@ -645,34 +728,6 @@
 ;;   (attributes
 ;;    ((_ _ _)			foldable effect-free result-true)))
 
-(declare-core-primitive fxdiv
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxdiv0
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxmod
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxmod0
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
 ;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
 ;;2014)
 ;;
@@ -693,264 +748,44 @@
 ;;   (attributes
 ;;    ((_ _)			foldable effect-free result-true)))
 
-(declare-core-primitive fxadd1
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive fxsub1
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive fxabs
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive fxsign
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive fxremainder
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxquotient
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxmodulo
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
 ;;; --------------------------------------------------------------------
 ;;; bitwise operations
 
-(declare-core-primitive fxior
-    (safe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
+(declare-fixnum-unary fxnot		(replacements $fxlognot))
+(declare-fixnum-multi fxand		(replacements $fxlogand))
+(declare-fixnum-multi fxior		(replacements $fxlogor))
+(declare-fixnum-multi fxxor		(replacements $fxlogxor))
+(declare-fixnum-multi fxlogor		(replacements $fxlogor))
+(declare-fixnum-multi fxlogand		(replacements $fxlogand))
+(declare-fixnum-multi fxlogxor		(replacements $fxlogxor))
 
-(declare-core-primitive fxand
-    (safe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
-
-(declare-core-primitive fxxor
-    (safe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
-
-(declare-core-primitive fxlogor
-    (safe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
-
-(declare-core-primitive fxlogand
-    (safe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
-
-(declare-core-primitive fxlogxor
-    (safe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
-
-(declare-core-primitive fxnot
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive fxsll
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxsra
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxarithmetic-shift-left
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxarithmetic-shift-right
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxarithmetic-shift
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-fixnum-binary fxsll)
+(declare-fixnum-binary fxsra)
+(declare-fixnum-binary fxarithmetic-shift-left)
+(declare-fixnum-binary fxarithmetic-shift-right)
+(declare-fixnum-binary fxarithmetic-shift)
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-core-primitive fx=?
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx!=?
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx<?
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx>?
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx<=?
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx>=?
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
+(declare-fixnum-unary/multi-comparison fx=?	(replacements $fx=))
+(declare-fixnum-unary/multi-comparison fx!=?	(replacements $fx!=))
+(declare-fixnum-unary/multi-comparison fx<?	(replacements $fx<))
+(declare-fixnum-unary/multi-comparison fx>?	(replacements $fx>))
+(declare-fixnum-unary/multi-comparison fx<=?	(replacements $fx<=))
+(declare-fixnum-unary/multi-comparison fx>=?	(replacements $fx>=))
 
 ;;;
 
-(declare-core-primitive fx=
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
+(declare-fixnum-unary/multi-comparison fx=	(replacements $fx=))
+(declare-fixnum-unary/multi-comparison fx!=	(replacements $fx!=))
+(declare-fixnum-unary/multi-comparison fx<	(replacements $fx<))
+(declare-fixnum-unary/multi-comparison fx>	(replacements $fx>))
+(declare-fixnum-unary/multi-comparison fx<=	(replacements $fx<=))
+(declare-fixnum-unary/multi-comparison fx>=	(replacements $fx>=))
 
-(declare-core-primitive fx!=
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx<
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx>
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx<=
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-(declare-core-primitive fx>=
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ . _)			foldable effect-free)))
-
-;;;
-
-(declare-core-primitive fxmax
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:fixnum)))
-  (attributes
-   ((_ . _)			foldable effect-free result-true)))
-
-(declare-core-primitive fxmin
-    (safe)
-  (signatures
-   ((T:fixnum . T:fixnum)	=> (T:fixnum)))
-  (attributes
-   ((_ . _)			foldable effect-free result-true)))
+(declare-fixnum-unary/multi-comparison fxmax	(replacements $fxmax))
+(declare-fixnum-unary/multi-comparison fxmin	(replacements $fxmin))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -978,56 +813,13 @@
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
 
-(declare-core-primitive $fx+
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fx-
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum))
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fx*
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fxdiv
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fxdiv0
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fxmod
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fxmod0
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-fixnum-binary $fx+ unsafe)
+(declare-fixnum-unary/binary $fx- unsafe)
+(declare-fixnum-binary $fx* unsafe)
+(declare-fixnum-binary $fxdiv unsafe)
+(declare-fixnum-binary $fxmod unsafe)
+(declare-fixnum-binary $fxdiv0 unsafe)
+(declare-fixnum-binary $fxmod0 unsafe)
 
 ;;FIXME We  do not  support multiple return  value, yet.  (Marco  Maggi; Mon  Nov 10,
 ;;2014)
@@ -1049,163 +841,36 @@
 ;;   (attributes
 ;;    ((_ _)			foldable effect-free result-true)))
 
-(declare-core-primitive $fxadd1
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $fxsub1
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $fxabs
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $fxsign
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $fxremainder
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fxquotient
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fxmodulo
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-fixnum-unary $fxadd1 unsafe)
+(declare-fixnum-unary $fxsub1 unsafe)
+(declare-fixnum-unary $fxabs unsafe)
+(declare-fixnum-unary $fxsign unsafe)
+(declare-fixnum-unary $fxremainder unsafe)
+(declare-fixnum-unary $fxquotient unsafe)
+(declare-fixnum-unary $fxmodulo unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; bitwise operations
 
-(declare-core-primitive $fxlogor
-    (unsafe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
-
-(declare-core-primitive $fxlogand
-    (unsafe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
-
-(declare-core-primitive $fxlogxor
-    (unsafe)
-  (signatures
-   (T:fixnum			=> (T:fixnum)))
-  (attributes
-   (()				foldable effect-free result-true)
-   (_				foldable effect-free result-true)))
-
-(declare-core-primitive $fxnot
-    (unsafe)
-  (signatures
-   ((T:fixnum)			=> (T:fixnum)))
-  (attributes
-   ((_)				foldable effect-free)))
-
-(declare-core-primitive $fxsll
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fxsra
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-fixnum-binary $fxlogor unsafe)
+(declare-fixnum-binary $fxlogand unsafe)
+(declare-fixnum-binary $fxlogxor unsafe)
+(declare-fixnum-unary $fxnot unsafe)
+(declare-fixnum-binary $fxsll unsafe)
+(declare-fixnum-binary $fxsra unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-core-primitive $fx=
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
+(declare-fixnum-binary-comparison $fx= unsafe)
+(declare-fixnum-binary-comparison $fx!= unsafe)
+(declare-fixnum-binary-comparison $fx< unsafe)
+(declare-fixnum-binary-comparison $fx> unsafe)
+(declare-fixnum-binary-comparison $fx<= unsafe)
+(declare-fixnum-binary-comparison $fx>= unsafe)
 
-(declare-core-primitive $fx!=
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive $fx<
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive $fx>
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive $fx<=
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive $fx>=
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:boolean)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-;;;
-
-(declare-core-primitive $fxmax
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive $fxmin
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:fixnum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
+(declare-fixnum-binary-comparison $fxmax unsafe)
+(declare-fixnum-binary-comparison $fxmin unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
@@ -1227,13 +892,6 @@
 
 ;;;; bignums, safe operations
 
-(declare-core-primitive bignum?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
-
 (declare-core-primitive least-positive-bignum
     (safe)
   (signatures
@@ -1248,15 +906,15 @@
   (attributes
    (()				foldable effect-free result-true)))
 
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(declare-type-predicate bignum? T:bignum)
+
 
 ;;;; ratnums, safe operations
 
-(declare-core-primitive ratnum?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+(declare-type-predicate ratnum? T:ratnum)
 
 
 ;;;; ratnums, unsafe operations
@@ -1365,11 +1023,11 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-flonum-comparison fl=?)
-(declare-flonum-comparison fl<?)
-(declare-flonum-comparison fl>?)
-(declare-flonum-comparison fl<=?)
-(declare-flonum-comparison fl>=?)
+(declare-flonum-unary/multi-comparison fl=?)
+(declare-flonum-unary/multi-comparison fl<?)
+(declare-flonum-unary/multi-comparison fl>?)
+(declare-flonum-unary/multi-comparison fl<=?)
+(declare-flonum-unary/multi-comparison fl>=?)
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
@@ -1471,11 +1129,11 @@
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-flonum-comparison $fl= unsafe)
-(declare-flonum-comparison $fl< unsafe)
-(declare-flonum-comparison $fl> unsafe)
-(declare-flonum-comparison $fl<= unsafe)
-(declare-flonum-comparison $fl>= unsafe)
+(declare-flonum-binary-comparison $fl= unsafe)
+(declare-flonum-binary-comparison $fl< unsafe)
+(declare-flonum-binary-comparison $fl> unsafe)
+(declare-flonum-binary-comparison $fl<= unsafe)
+(declare-flonum-binary-comparison $fl>= unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
