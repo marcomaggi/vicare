@@ -44,6 +44,11 @@
 ;;;; syntax helpers
 
 (define-syntax (declare-type-predicate stx)
+  ;;Usage examples:
+  ;;
+  ;;   (declare-type-predicate fixnum?)
+  ;;   (declare-type-predicate vector?)
+  ;;
   (syntax-case stx ()
     ((_ ?who)
      #'(declare-core-primitive ?who
@@ -57,6 +62,13 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax (define-object-predicate-declarer stx)
+  ;;Usage examples:
+  ;;
+  ;;   (define-object-predicate-declarer declare-number-predicate T:number)
+  ;;   (declare-number-predicate zero?)
+  ;;   (declare-number-predicate positive?)
+  ;;   (declare-number-predicate negative?)
+  ;;
   (syntax-case stx ()
     ((_ ?declarer ?type-tag)
      #'(define-syntax ?declarer
@@ -80,6 +92,18 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax (define-object-comparison-declarer stx)
+  ;;Usage example:
+  ;;
+  ;;   (define-object-comparison-declarer declare-object-comparison _)
+  ;;   (declare-object-comparison eq?)
+  ;;   (declare-object-comparison eqv?)
+  ;;   (declare-object-comparison equal?)
+  ;;
+  ;;   (define-object-comparison-declarer declare-flonum-comparison T:flonum)
+  ;;   (declare-flonum-comparison fl=?)
+  ;;   (declare-flonum-comparison fl<?)
+  ;;   (declare-flonum-comparison fl>?)
+  ;;
   (syntax-case stx ()
     ((_ ?declarer ?type-tag)
      #'(define-syntax ?declarer
@@ -103,20 +127,27 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax (define-object-unary-operation-declarer stx)
+  ;;Usage example:
+  ;;
+  ;;   (define-object-unary-operation-declarer declare-flonum-unary T:flonum)
+  ;;   (declare-flonum-unary flsin)
+  ;;   (declare-flonum-unary flcos)
+  ;;   (declare-flonum-unary fltan)
+  ;;
   (syntax-case stx ()
     ((_ ?declarer ?type-tag)
-    #'(define-syntax ?declarer
-	(syntax-rules ()
-	  ((_ ?who)
-	   (?declarer ?who safe))
-	  ((_ ?who ?safety)
-	   #'(declare-core-primitive ?who
-		 (?safety)
-	       (signatures
-		((?type-tag)	=> (?type-tag)))
-	       (attributes
-		((_)		foldable effect-free result-true))))
-	  )))
+     #'(define-syntax ?declarer
+	 (syntax-rules ()
+	   ((_ ?who)
+	    (?declarer ?who safe))
+	   ((_ ?who ?safety)
+	    #'(declare-core-primitive ?who
+		  (?safety)
+		(signatures
+		 ((?type-tag)	=> (?type-tag)))
+		(attributes
+		 ((_)		foldable effect-free result-true))))
+	   )))
     ))
 
 (define-object-unary-operation-declarer declare-number-unary T:number)
@@ -125,6 +156,11 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax (define-object-binary-operation-declarer stx)
+  ;;Usage examples:
+  ;;
+  ;;   (define-object-binary-operation-declarer declare-flonum-binary T:flonum)
+  ;;   (declare-flonum-binary flexpt)
+  ;;
   (syntax-case stx ()
     ((_ ?declarer ?type-tag)
     #'(define-syntax ?declarer
@@ -147,6 +183,11 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax (define-object-unary/binary-operation-declarer stx)
+  ;;Usage examples:
+  ;;
+  ;;   (define-object-unary/binary-operation-declarer declare-flonum-unary/binary T:flonum)
+  ;;   (declare-flonum-unary/binary fllog)
+  ;;
   (syntax-case stx ()
     ((_ ?declarer ?type-tag)
     #'(define-syntax ?declarer
@@ -171,28 +212,146 @@
 ;;; --------------------------------------------------------------------
 
 (define-syntax (define-object-unary/multi-operation-declarer stx)
+  ;;Usage examples:
+  ;;
+  ;;   (define-object-unary/multi-operation-declarer declare-flonum-unary/multi T:flonum)
+  ;;   (declare-flonum-unary/multi fl+)
+  ;;   (declare-flonum-unary/multi fl-)
+  ;;   (declare-flonum-unary/multi fl*)
+  ;;   (declare-flonum-unary/multi fl/)
+  ;;
   (syntax-case stx ()
     ((_ ?declarer ?type-tag)
-    #'(define-syntax ?declarer
-	(syntax-rules ()
-	  ((_ ?who)
-	   (?declarer ?who safe))
-	  ((_ ?who ?safety)
-	   #'(declare-core-primitive ?who
-		 (?safety)
-	       (signatures
-		((?type-tag)				=> (?type-tag))
-		((?type-tag ?type-tag)			=> (?type-tag))
-		((?type-tag ?type-tag . ?type-tag)	=> (?type-tag)))
-	       (attributes
-		((_)			foldable effect-free result-true)
-		((_ _)			foldable effect-free result-true)
-		((_ _ . _)		foldable effect-free result-true))))
-	  )))
+     #'(define-syntax ?declarer
+	 (syntax-rules ()
+	   ((_ ?who)
+	    (?declarer ?who safe))
+	   ((_ ?who ?safety)
+	    #'(declare-core-primitive ?who
+		  (?safety)
+		(signatures
+		 ((?type-tag)				=> (?type-tag))
+		 ((?type-tag ?type-tag)			=> (?type-tag))
+		 ((?type-tag ?type-tag . ?type-tag)	=> (?type-tag)))
+		(attributes
+		 ((_)			foldable effect-free result-true)
+		 ((_ _)			foldable effect-free result-true)
+		 ((_ _ . _)		foldable effect-free result-true))))
+	   )))
     ))
 
 (define-object-unary/multi-operation-declarer declare-number-unary/multi T:number)
 (define-object-unary/multi-operation-declarer declare-flonum-unary/multi T:flonum)
+
+
+;;;; syntax helpers: pairs, lists, alists
+
+(module (declare-list-accessor)
+
+  (define-syntax declare-list-accessor
+    ;;This is for: CAR, CDR, CAAR, CADR, ...
+    ;;
+    (syntax-rules (safe unsafe replacements)
+      ((_ ?who)						(%declare-list-accessor ?who safe   (replacements)))
+      ((_ ?who safe)					(%declare-list-accessor ?who safe   (replacements)))
+      ((_ ?who unsafe)					(%declare-list-accessor ?who unsafe (replacements)))
+      ((_ ?who        (replacements . ?replacements))	(%declare-list-accessor ?who safe   (replacements . ?replacements)))
+      ((_ ?who safe   (replacements . ?replacements))	(%declare-list-accessor ?who safe   (replacements . ?replacements)))
+      ((_ ?who unsafe (replacements . ?replacements))	(%declare-list-accessor ?who unsafe (replacements . ?replacements)))
+      ))
+
+  (define-syntax %declare-list-accessor
+    (syntax-rules (replacements)
+      ((_ ?who ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((T:pair)		=> (_)))
+	 (attributes
+	  ((_)			foldable effect-free))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module |# )
+
+;;; --------------------------------------------------------------------
+
+(module (declare-list-mutator)
+
+  (define-syntax declare-list-mutator
+    ;;This is for: SET-CAR!, SET-CDR!, ...
+    ;;
+    (syntax-rules (safe unsafe replacements)
+      ((_ ?who)						(%declare-list-mutator ?who safe   (replacements)))
+      ((_ ?who safe)					(%declare-list-mutator ?who safe   (replacements)))
+      ((_ ?who unsafe)					(%declare-list-mutator ?who unsafe (replacements)))
+      ((_ ?who        (replacements . ?replacements))	(%declare-list-mutator ?who safe   (replacements . ?replacements)))
+      ((_ ?who safe   (replacements . ?replacements))	(%declare-list-mutator ?who safe   (replacements . ?replacements)))
+      ((_ ?who unsafe (replacements . ?replacements))	(%declare-list-mutator ?who unsafe (replacements . ?replacements)))
+      ))
+
+  (define-syntax %declare-list-mutator
+    (syntax-rules (replacements)
+      ((_ ?who ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((T:pair _)		=> (T:void)))
+	 (attributes
+	  ((_ _)		result-true))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module: DECLARE-LIST-MUTATOR |# )
+
+;;; --------------------------------------------------------------------
+
+(module (declare-alist-accessor)
+
+  (define-syntax declare-alist-accessor
+    ;;This is for: ASSQ, ASSV, ...
+    ;;
+    (syntax-rules (safe unsafe replacements)
+      ((_ ?who ?obj-tag)					(%declare-alist-accessor ?who ?obj-tag safe   (replacements)))
+      ((_ ?who ?obj-tag safe)					(%declare-alist-accessor ?who ?obj-tag safe   (replacements)))
+      ((_ ?who ?obj-tag unsafe)					(%declare-alist-accessor ?who ?obj-tag unsafe (replacements)))
+      ((_ ?who ?obj-tag        (replacements . ?replacements))	(%declare-alist-accessor ?who ?obj-tag safe   (replacements . ?replacements)))
+      ((_ ?who ?obj-tag safe   (replacements . ?replacements))	(%declare-alist-accessor ?who ?obj-tag safe   (replacements . ?replacements)))
+      ((_ ?who ?obj-tag unsafe (replacements . ?replacements))	(%declare-alist-accessor ?who ?obj-tag unsafe (replacements . ?replacements)))
+      ))
+
+  (define-syntax %declare-alist-accessor
+    (syntax-rules (replacements)
+      ((_ ?who ?obj-tag ?safety (replacements . ?replacements))
+       (declare-core-primitive ?who
+	   (?safety)
+	 (signatures
+	  ((?obj-tag T:pair)	=> (_)))
+	 (attributes
+	  ((_ _)		foldable effect-free))
+	 (replacements . ?replacements)))
+      ))
+
+  #| end of module: DECLARE-ALIST-ACCESSOR |# )
+
+;;; --------------------------------------------------------------------
+
+(define-syntax declare-list-finder
+  ;;This is for: MEMQ, MEMV, ...
+  ;;
+  (syntax-rules ()
+    ((_ ?who ?obj-tag)
+     (declare-list-finder ?who ?obj-tag safe))
+    ((_ ?who ?obj-tag ?safety)
+     (declare-core-primitive ?who
+	 (?safety)
+       (signatures
+	((?obj-tag T:pair)	=> (_))
+	((?obj-tag T:null)	=> (T:false)))
+       (attributes
+	((_ ())			foldable effect-free result-false)
+	((_ _)			foldable effect-free))))
+    ))
 
 
 ;;;; misc functions
@@ -218,28 +377,30 @@
 (declare-core-primitive null?
     (safe)
   (signatures
-   ((T:null)	=> (T:true))
-   ((T:pair)	=> (T:false))
-   ((_)		=> (T:boolean)))
+   ((T:null)		=> (T:true))
+   ((T:pair)		=> (T:false))
+   ((_)			=> (T:boolean)))
   (attributes
+   ((())		foldable effect-free result-true)
    ((_)			foldable effect-free)))
 
 (declare-core-primitive pair?
     (safe)
   (signatures
-   ((T:null)	=> (T:false))
-   ((T:pair)	=> (T:true))
-   ((_)		=> (T:boolean)))
+   ((T:null)		=> (T:false))
+   ((T:pair)		=> (T:true))
+   ((_)			=> (T:boolean)))
   (attributes
    ((_)			foldable effect-free)))
 
 (declare-core-primitive list?
     (safe)
   (signatures
-   ((T:null)	=> (T:true))
-   ((T:pair)	=> (T:true))
-   ((_)		=> (T:boolean)))
+   ((T:null)		=> (T:true))
+   ((T:pair)		=> (T:true))
+   ((_)			=> (T:boolean)))
   (attributes
+   ((())		foldable effect-free result-true)
    ((_)			foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
@@ -289,37 +450,10 @@
 ;;; --------------------------------------------------------------------
 ;;; inspection
 
-(declare-core-primitive memq
-    (safe)
-  (signatures
-   ((_ T:pair)			=> (_))
-   ((_ T:null)			=> (T:false)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive memv
-    (safe)
-  (signatures
-   ((_ T:pair)			=> (_))
-   ((_ T:null)			=> (T:false)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive member
-    (safe)
-  (signatures
-   ((_ T:pair)			=> (_))
-   ((_ T:null)			=> (T:false)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive memp
-    (safe)
-  (signatures
-   ((T:procedure T:pair)	=> (_))
-   ((T:procedure T:null)	=> (T:false)))
-  (attributes
-   ((_ _)			foldable effect-free)))
+(declare-list-finder memq T:object)
+(declare-list-finder memv T:object)
+(declare-list-finder member T:object)
+(declare-list-finder memp T:procedure)
 
 (declare-core-primitive length
     (safe)
@@ -332,145 +466,66 @@
 ;;; --------------------------------------------------------------------
 ;;; accessors
 
-(declare-core-primitive car
-    (safe)
-  (signatures
-   ((T:pair) => (_)))
-  (attributes
-   ((_)			foldable effect-free))
+(declare-list-accessor car
   (replacements $car))
 
-(declare-core-primitive cdr
-    (safe)
-  (signatures
-   ((T:pair) => (_)))
-  (attributes
-   ((_)			foldable effect-free))
+(declare-list-accessor cdr
   (replacements $cdr))
 
-(let-syntax
-    ((define-safe-accessor (syntax-rules ()
-			     ((_ ?who)
-			      (declare-core-primitive ?who
-				  (safe)
-				(signatures
-				 ((T:pair)		=> (_)))
-				(attributes
-				 ((_)			foldable effect-free)))))))
-  (define-safe-accessor caar)
-  (define-safe-accessor cadr)
-  (define-safe-accessor cdar)
-  (define-safe-accessor cddr)
-  (define-safe-accessor caaar)
-  (define-safe-accessor caadr)
-  (define-safe-accessor cadar)
-  (define-safe-accessor caddr)
-  (define-safe-accessor cdaar)
-  (define-safe-accessor cdadr)
-  (define-safe-accessor cddar)
-  (define-safe-accessor cdddr)
-  (define-safe-accessor caaaar)
-  (define-safe-accessor caaadr)
-  (define-safe-accessor caadar)
-  (define-safe-accessor caaddr)
-  (define-safe-accessor cadaar)
-  (define-safe-accessor cadadr)
-  (define-safe-accessor caddar)
-  (define-safe-accessor cadddr)
-  (define-safe-accessor cdaaar)
-  (define-safe-accessor cdaadr)
-  (define-safe-accessor cdadar)
-  (define-safe-accessor cdaddr)
-  (define-safe-accessor cddaar)
-  (define-safe-accessor cddadr)
-  (define-safe-accessor cdddar)
-  (define-safe-accessor cddddr))
+(declare-list-accessor caar)
+(declare-list-accessor cadr)
+(declare-list-accessor cdar)
+(declare-list-accessor cddr)
+(declare-list-accessor caaar)
+(declare-list-accessor caadr)
+(declare-list-accessor cadar)
+(declare-list-accessor caddr)
+(declare-list-accessor cdaar)
+(declare-list-accessor cdadr)
+(declare-list-accessor cddar)
+(declare-list-accessor cdddr)
+(declare-list-accessor caaaar)
+(declare-list-accessor caaadr)
+(declare-list-accessor caadar)
+(declare-list-accessor caaddr)
+(declare-list-accessor cadaar)
+(declare-list-accessor cadadr)
+(declare-list-accessor caddar)
+(declare-list-accessor cadddr)
+(declare-list-accessor cdaaar)
+(declare-list-accessor cdaadr)
+(declare-list-accessor cdadar)
+(declare-list-accessor cdaddr)
+(declare-list-accessor cddaar)
+(declare-list-accessor cddadr)
+(declare-list-accessor cdddar)
+(declare-list-accessor cddddr)
 
 ;;; --------------------------------------------------------------------
 ;;; mutators
 
-(declare-core-primitive set-car!
-    (safe)
-  (signatures
-   ((T:pair _)			=> (T:void)))
-  (attributes
-   ((_ _)			foldable result-true))
-  (replacements
-   $set-car!))
+(declare-list-mutator set-car!
+  (replacements $set-car!))
 
-(declare-core-primitive set-cdr!
-    (safe)
-  (signatures
-   ((T:pair _)			=> (T:void)))
-  (attributes
-   ((_ _)			foldable result-true))
-  (replacements
-   $set-cdr!))
+(declare-list-mutator set-cdr!
+  (replacements $set-cdr!))
 
 ;;; --------------------------------------------------------------------
 ;;; associative lists
 
-(declare-core-primitive assq
-    (safe)
-  (signatures
-   ((_ T:pair)			=> (_)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive assv
-    (safe)
-  (signatures
-   ((_ T:pair)			=> (_)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive assoc
-    (safe)
-  (signatures
-   ((_ T:pair)			=> (_)))
-  (attributes
-   ((_ _)			foldable effect-free)))
-
-(declare-core-primitive assp
-    (safe)
-  (signatures
-   ((T:procedure T:pair)	=> (_)))
-  (attributes
-   ((_ _)			foldable effect-free)))
+(declare-alist-accessor assq T:object)
+(declare-alist-accessor assv T:object)
+(declare-alist-accessor assoc T:object)
+(declare-alist-accessor assp T:procedure)
 
 
 ;;;; pairs and lists, unsafe functions
 
-(declare-core-primitive $car
-    (unsafe)
-  (signatures
-   ((T:pair) => (_)))
-  (attributes
-   ((_)			foldable effect-free)))
+(declare-list-accessor $car unsafe)
+(declare-list-accessor $cdr unsafe)
 
-(declare-core-primitive $cdr
-    (unsafe)
-  (signatures
-   ((T:pair) => (_)))
-  (attributes
-   ((_)			foldable effect-free)))
-
-;;; --------------------------------------------------------------------
-;;; mutators
-
-(declare-core-primitive $set-car!
-    (safe)
-  (signatures
-   ((T:pair _)			=> (T:void)))
-  (attributes
-   ((_ _)			foldable result-true)))
-
-(declare-core-primitive $set-cdr!
-    (safe)
-  (signatures
-   ((T:pair _)			=> (T:void)))
-  (attributes
-   ((_ _)			foldable result-true)))
+(declare-list-mutator $set-car! unsafe)
+(declare-list-mutator $set-cdr! unsafe)
 
 
 ;;;; fixnums safe operations
@@ -3936,4 +3991,6 @@
 ;; Local Variables:
 ;; mode: vicare
 ;; eval: (put 'declare-core-primitive	'scheme-indent-function 2)
+;; eval: (put 'declare-list-accessor	'scheme-indent-function 1)
+;; eval: (put 'declare-list-mutator	'scheme-indent-function 1)
 ;; End:

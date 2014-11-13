@@ -156,8 +156,25 @@
 	       (attributes ?attr-spec ...)
 	       (replacements)))
 
-      ;;Safe primitive.
+      ;;Safe primitive with replacements.
       ((?ctx ?prim-name (safe)
+	     (signatures ?signature ...)
+	     (attributes ?attr-spec ...)
+	     (replacements ?replacement-prim-name ...))
+       (let* ((prim-name		(%parse-prim-name #'?prim-name))
+	      (signature*		(%parse-signatures-sexp #'(?signature ...)))
+	      (attribute*		(%parse-application-attributes-sexp #'(?attr-spec ...)))
+	      (replacement-prim-name*	(%parse-replacements-sexp #'(?replacement-prim-name ...)))
+	      (signature-pred*		(%signatures->signature-pred* #'?ctx signature*)))
+	 (with-syntax
+	     ((SIGNATURES-FORM		(%compose-signature-output-form signature-pred*))
+	      (ATTRIBUTES-FORM		(%compose-attributes-output-form attribute*))
+	      (REPLACEMENTS-FORM	(%compose-replacements-output-orm replacement-prim-name*)))
+	   #`(putprop (quote ?prim-name) CORE-PRIMITIVE-PROPKEY
+		      (make-core-primitive-properties SIGNATURES-FORM ATTRIBUTES-FORM REPLACEMENTS-FORM)))))
+
+      ;;UNsafe primitive with replacements.
+      ((?ctx ?prim-name (unsafe)
 	     (signatures ?signature ...)
 	     (attributes ?attr-spec ...)
 	     (replacements ?replacement-prim-name ...))
