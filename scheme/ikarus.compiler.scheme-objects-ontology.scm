@@ -48,6 +48,7 @@
    T:boolean		T:char			T:symbol	T:string
    T:null		T:pair			T:vector	T:bytevector
    T:procedure		T:struct		T:record	T:transcoder
+   T:pointer		T:hashtable
 
    T:port		T:textual-port		T:binary-port
    T:input-port		T:output-port		T:input/output-port
@@ -89,19 +90,14 @@
    ;;   All the Scheme objects satisfy this validator.
    ;;
    ;;T:other-object?
-   ;;   Tests for objects that are not:
-   ;;
-   ;;	   T:symbol	T:bytevector	T:void		T:char
-   ;;      T:null	T:pair		T:vector	T:string
-   ;;      T:procedure	T:false		T:true
-   ;;      T:fixnum	T:bignum	T:ratnum
-   ;;      T:flonum	T:compnum	T:cflonum
+   ;;   Tests for objects that do not have a tag defined here.
    ;;
    T:object?		T:other-object?		T:immediate?	T:nonimmediate?
    T:non-false?		T:false?		T:true?		T:void?
    T:boolean?		T:char?			T:symbol?	T:string?
    T:null?		T:pair?			T:vector?	T:bytevector?
    T:procedure?		T:struct?		T:record?	T:transcoder?
+   T:pointer?		T:hashtable?
 
    T:port?		T:textual-port?		T:binary-port?
    T:input-port?	T:output-port?		T:input/output-port?
@@ -480,7 +476,7 @@
   (obj-truth		(exclusive false non-false))
   (obj-tag		(exclusive procedure string vector pair null
 				   boolean char transcoder number void bytevector
-				   symbol port struct other-object))
+				   symbol port pointer hashtable struct other-object))
   (boolean		(exclusive true false))
 
   (number		(inclusive number-tag number-sign number-exactness))

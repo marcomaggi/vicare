@@ -317,6 +317,7 @@
 	 T:boolean		T:char			T:symbol	T:string
 	 T:null			T:pair			T:vector	T:bytevector
 	 T:procedure		T:struct		T:record	T:transcoder
+	 T:pointer		T:hashtable
 
 	 T:port			T:textual-port		T:binary-port
 	 T:input-port		T:output-port		T:input-output-port
@@ -364,6 +365,8 @@
       (T:struct				type)
       (T:record				type)
       (T:transcoder			type)
+      (T:pointer			type)
+      (T:hashtable			type)
       (T:number				type)
       (T:exact				type)
       (T:inexact			type)

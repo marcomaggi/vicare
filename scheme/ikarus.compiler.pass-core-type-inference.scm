@@ -379,6 +379,9 @@
       ((char?)
        (values (extend-env rand T:char env)
 	       env))
+      ((transcoder?)
+       (values (extend-env rand T:transcoder env)
+	       env))
       ((symbol?)
        (values (extend-env rand T:symbol env)
 	       env))
@@ -401,7 +404,6 @@
        (values (extend-env rand T:zero env)
 	       env))
 
-
       ((port?)
        (values (extend-env rand T:port env)
 	       env))
@@ -412,6 +414,14 @@
 
       ((record?)
        (values (extend-env rand T:record env)
+	       env))
+
+      ((pointer?)
+       (values (extend-env rand T:pointer env)
+	       env))
+
+      ((hashtable?)
+       (values (extend-env rand T:hashtable env)
 	       env))
 
       (else

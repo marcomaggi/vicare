@@ -3237,7 +3237,12 @@
 (declare-number-unary/binary atan)
 
 
-;;;; core primitives: symbols
+;;;; symbols, safe functions
+
+(declare-type-predicate symbol? T:symbol)
+
+;;; --------------------------------------------------------------------
+;;; property lists
 
 (declare-core-primitive putprop
     (safe)
@@ -3272,7 +3277,10 @@
    ((_)			effect-free result-true))
   (replacements $property-list))
 
-;;; --------------------------------------------------------------------
+
+;;;; symbols, unsafe functions
+
+;;; property lists
 
 (declare-core-primitive $putprop
     (unsafe)
@@ -3379,6 +3387,11 @@
    ((T:char)			=> (T:fixnum)))
   (attributes
    ((_)				foldable effect-free result-true)))
+
+
+;;;; pointers, safe functions
+
+(declare-type-predicate pointer?)
 
 
 ;;;; strings, safe functions
@@ -3685,7 +3698,6 @@
 
 
 ;;;; bytevectors, unsafe functions
-;;
 
 (declare-core-primitive $make-bytevector
     (safe)
@@ -3724,6 +3736,36 @@
    ((_ _)			foldable effect-free result-true)))
 
 
+;;;; hashtables, safe functions
+
+(declare-core-primitive make-eq-hashtable
+    (safe)
+  (signatures
+   (()				=> (T:hashtable))
+   ((T:exact-integer)		=> (T:hashtable)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive make-eqv-hashtable
+    (safe)
+  (signatures
+   (()				=> (T:hashtable))
+   ((T:exact-integer)		=> (T:hashtable)))
+  (attributes
+   (()				effect-free result-true)
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive make-hashtable
+    (safe)
+  (signatures
+   ((T:procedure T:procedure)			=> (T:hashtable))
+   ((T:procedure T:procedure T:exact-integer)	=> (T:hashtable)))
+  (attributes
+   ((_ _)				effect-free result-true)
+   ((_ _ _)				effect-free result-true)))
+
+
 ;;;; input/output
 
 (declare-core-primitive current-input-port
@@ -3760,17 +3802,31 @@
    ((_ _)			result-true)))
 
 
+;;;; generic functions
+
+(declare-type-predicate procedure? T:procedure)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive eof-object
+    (safe)
+  (signatures
+   (()				=> (T:object)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive eof-object?
+    (safe)
+  (signatures
+   ((_)				=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)))
+
+
 
 #|
-      ((symbol? _)		   foldable effect-free		   )
-      ((procedure? _)		   foldable effect-free		   )
-      ((eof-object? _)		   foldable effect-free		   )
-      ((pointer? _)		   foldable effect-free		   )
-;;;
-      ((make-eq-hashtable)		    effect-free result-true)
 
       ((integer->char _)	   foldable effect-free result-true)
-      ((eof-object)		   foldable effect-free result-true)
 
 ;;; --------------------------------------------------------------------
 
