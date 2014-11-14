@@ -408,8 +408,12 @@
        (values (extend-env rand T:port env)
 	       env))
 
-      ((struct? annotation?)
+      ((struct?)
        (values (extend-env rand T:struct env)
+	       env))
+
+      ((annotation?)
+       (values (extend-env rand T:other-struct env)
 	       env))
 
       ((record?)

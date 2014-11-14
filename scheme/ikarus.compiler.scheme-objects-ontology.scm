@@ -586,7 +586,7 @@
 ;;
 
 ;;Comment this EOF to include the tests.
-#;#!eof
+#!eof
 
 (module ()
   (import SCHEME-OBJECTS-ONTOLOGY)

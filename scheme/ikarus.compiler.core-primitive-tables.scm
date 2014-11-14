@@ -1991,7 +1991,7 @@
 (declare-core-primitive annotation?
     (safe)
   (signatures
-   ((T:struct)			=> (T:boolean)))
+   ((T:other-struct)		=> (T:boolean)))
   (attributes
    ((#f)			foldable effect-free result-false)
    ((_)				foldable effect-free)))
@@ -2007,26 +2007,26 @@
 (declare-core-primitive annotation-expression
     (safe)
   (signatures
-   ((T:struct)			=> (_)))
+   ((T:other-struct)		=> (_)))
   (attributes))
 
 (declare-core-primitive annotation-stripped
     (safe)
   (signatures
-   ((T:struct)			=> (_)))
+   ((T:other-struct)		=> (_)))
   (attributes
    ((#f)			foldable effect-free result-false)))
 
 (declare-core-primitive annotation-textual-position
     (safe)
   (signatures
-   ((T:struct)			=> (_)))
+   ((T:other-struct)		=> (_)))
   (attributes))
 
 (declare-core-primitive annotation-source
     (safe)
   (signatures
-   ((T:struct)			=> (_)))
+   ((T:other-struct)		=> (_)))
   (attributes))
 
 
@@ -2085,6 +2085,24 @@
    ((_)				=> (T:boolean)))
   (attributes
    ((_)				foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive interrupt-handler
+    (safe)
+  (signatures
+   (()				=> (T:procedure))
+   ((T:procedure)		=> (T:void))
+   ((T:procedure T:boolean)	=> (T:void)))
+  (attributes))
+
+(declare-core-primitive engine-handler
+    (safe)
+  (signatures
+   (()				=> (T:procedure))
+   ((T:procedure)		=> (T:void))
+   ((T:procedure T:boolean)	=> (T:void)))
+  (attributes))
 
 
 ;;;; numerics, general arithmetics, addition
@@ -3880,9 +3898,6 @@
 
 #|
 
-
-;;; --------------------------------------------------------------------
-
       ;;This must return a new struct every time.
       (($struct . _)			     effect-free result-true)
       (($struct-ref _ _)	   foldable effect-free		   )
@@ -3917,7 +3932,6 @@
       ((environment . _))
       ((print-gensym . _))
       ((exit . _))
-      ((interrupt-handler . _))
       ((display . _))
       ((write-char . _))
       ((current-input-port . _))
