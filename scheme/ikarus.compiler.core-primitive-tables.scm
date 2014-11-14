@@ -1216,14 +1216,11 @@
 ;;; comparison
 
  (declare-flonum-unary/multi-comparison fl=?	(replacements $fl=))
+ (declare-flonum-unary/multi-comparison fl!=?	(replacements $fl!=))
  (declare-flonum-unary/multi-comparison fl<?	(replacements $fl<))
  (declare-flonum-unary/multi-comparison fl>?	(replacements $fl>))
  (declare-flonum-unary/multi-comparison fl<=?	(replacements $fl<=))
  (declare-flonum-unary/multi-comparison fl>=?	(replacements $fl>=))
-
- ;;FIXME To be implemented.  (Marco Maggi; Thu Nov 13, 2014)
- ;;
- ;;(declare-flonum-unary/multi-comparison fl!=?	(replacements $fl!=))
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
