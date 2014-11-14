@@ -1457,1786 +1457,6 @@
    ((_)				foldable effect-free result-true)))
 
 
-;;;; general arithmetics, addition
-
-(declare-core-primitive +
-    (safe)
-  (signatures
-   (T:number => (T:number)))
-  (attributes
-   (_			foldable effect-free result-true))
-  (replacements
-   $add-fixnum-fixnum		$add-fixnum-bignum	$add-fixnum-flonum
-   $add-fixnum-ratnum		$add-fixnum-compnum	$add-fixnum-cflonum
-
-   $add-bignum-fixnum		$add-bignum-bignum	$add-bignum-flonum
-   $add-bignum-ratnum		$add-bignum-compnum	$add-bignum-cflonum
-
-   $add-flonum-fixnum		$add-flonum-bignum	$add-flonum-flonum
-   $add-flonum-ratnum		$add-flonum-compnum	$add-flonum-cflonum
-
-   $add-ratnum-fixnum		$add-ratnum-bignum	$add-ratnum-flonum
-   $add-ratnum-ratnum		$add-ratnum-compnum	$add-ratnum-cflonum
-
-   $add-compnum-fixnum		$add-compnum-bignum	$add-compnum-ratnum
-   $add-compnum-compnum		$add-compnum-flonum	$add-compnum-cflonum
-
-   $add-cflonum-fixnum		$add-cflonum-bignum	$add-cflonum-ratnum
-   $add-cflonum-flonum		$add-cflonum-compnum	$add-cflonum-cflonum
-
-   $add-fixnum-number		$add-bignum-number	$add-flonum-number
-   $add-ratnum-number		$add-compnum-number	$add-cflonum-number
-
-   $add-number-fixnum		$add-number-bignum	$add-number-flonum
-   $add-number-ratnum		$add-number-compnum	$add-number-cflonum
-
-   $add-number-number))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive $add-fixnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-fixnum-bignum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-fixnum-flonum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-fixnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-fixnum-compnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-fixnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $add-bignum-fixnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-bignum-bignum
-    (unsafe)
-  (signatures
-   ((T:bignum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-bignum-flonum
-    (unsafe)
-  (signatures
-   ((T:bignum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-bignum-ratnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-bignum-compnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-bignum-cflonum
-    (unsafe)
-  (signatures
-   ((T:bignum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $add-flonum-fixnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-flonum-bignum
-    (unsafe)
-  (signatures
-   ((T:flonum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-flonum-flonum
-    (unsafe)
-  (signatures
-   ((T:flonum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-flonum-ratnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-flonum-compnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-flonum-cflonum
-    (unsafe)
-  (signatures
-   ((T:flonum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $add-ratnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-ratnum-bignum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-ratnum-flonum
-    (unsafe)
-  (signatures ((T:ratnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-ratnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-ratnum-compnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-ratnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $add-compnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-compnum-bignum
-    (unsafe)
-  (signatures
-   ((T:compnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-compnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-compnum-compnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-compnum-flonum
-    (unsafe)
-  (signatures
-   ((T:compnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-compnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:compnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $add-cflonum-fixnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-cflonum-bignum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-cflonum-ratnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-cflonum-flonum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-cflonum-compnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-cflonum-cflonum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $add-fixnum-number
-    (unsafe)
-  (signatures
-   ((T:fixnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-bignum-number
-    (unsafe)
-  (signatures
-   ((T:bignum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-flonum-number
-    (unsafe)
-  (signatures
-   ((T:flonum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-ratnum-number
-    (unsafe)
-  (signatures
-   ((T:ratnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-compnum-number
-    (unsafe)
-  (signatures
-   ((T:compnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-cflonum-number
-    (unsafe)
-  (signatures
-   ((T:cflonum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $add-number-fixnum
-    (unsafe)
-  (signatures
-   ((T:number T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-number-bignum
-    (unsafe)
-  (signatures
-   ((T:number T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-number-flonum
-    (unsafe)
-  (signatures
-   ((T:number T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-number-ratnum
-    (unsafe)
-  (signatures
-   ((T:number T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-number-compnum
-    (unsafe)
-  (signatures
-   ((T:number T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-number-cflonum
-    (unsafe)
-  (signatures
-   ((T:number T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $add-number-number
-    (unsafe)
-  (signatures
-   ((T:number T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-
-;;;; general arithmetics, subtraction
-
-(declare-core-primitive -
-    (safe)
-  (signatures
-   ((T:number . T:number)	=> (T:number)))
-  (attributes
-   ((_ . _)			foldable effect-free result-true))
-  (replacements
-   $sub-fixnum-fixnum		$sub-fixnum-bignum	$sub-fixnum-flonum
-   $sub-fixnum-ratnum		$sub-fixnum-compnum	$sub-fixnum-cflonum
-
-   $sub-bignum-fixnum		$sub-bignum-bignum	$sub-bignum-flonum
-   $sub-bignum-ratnum		$sub-bignum-compnum	$sub-bignum-cflonum
-
-   $sub-flonum-fixnum		$sub-flonum-bignum	$sub-flonum-flonum
-   $sub-flonum-ratnum		$sub-flonum-compnum	$sub-flonum-cflonum
-
-   $sub-ratnum-fixnum		$sub-ratnum-bignum	$sub-ratnum-flonum
-   $sub-ratnum-ratnum		$sub-ratnum-compnum	$sub-ratnum-cflonum
-
-   $sub-compnum-fixnum		$sub-compnum-bignum	$sub-compnum-ratnum
-   $sub-compnum-compnum		$sub-compnum-flonum	$sub-compnum-cflonum
-
-   $sub-cflonum-fixnum		$sub-cflonum-bignum	$sub-cflonum-ratnum
-   $sub-cflonum-flonum		$sub-cflonum-compnum	$sub-cflonum-cflonum
-
-   $sub-fixnum-number		$sub-bignum-number	$sub-flonum-number
-   $sub-ratnum-number		$sub-compnum-number	$sub-cflonum-number
-
-   $sub-number-fixnum		$sub-number-bignum	$sub-number-flonum
-   $sub-number-ratnum		$sub-number-compnum	$sub-number-cflonum
-
-   $sub-number-number))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive $sub-fixnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-fixnum-bignum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-fixnum-flonum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-fixnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-fixnum-compnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-fixnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $sub-bignum-fixnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-bignum-bignum
-    (unsafe)
-  (signatures
-   ((T:bignum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-bignum-flonum
-    (unsafe)
-  (signatures
-   ((T:bignum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-bignum-ratnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-bignum-compnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-bignum-cflonum
-    (unsafe)
-  (signatures
-   ((T:bignum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $sub-flonum-fixnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-flonum-bignum
-    (unsafe)
-  (signatures
-   ((T:flonum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-flonum-flonum
-    (unsafe)
-  (signatures
-   ((T:flonum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-flonum-ratnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-flonum-compnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-flonum-cflonum
-    (unsafe)
-  (signatures
-   ((T:flonum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $sub-ratnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-ratnum-bignum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-ratnum-flonum
-    (unsafe)
-  (signatures ((T:ratnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-ratnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-ratnum-compnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-ratnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $sub-compnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-compnum-bignum
-    (unsafe)
-  (signatures
-   ((T:compnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-compnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-compnum-compnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-compnum-flonum
-    (unsafe)
-  (signatures
-   ((T:compnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-compnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:compnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $sub-cflonum-fixnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-cflonum-bignum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-cflonum-ratnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-cflonum-flonum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-cflonum-compnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-cflonum-cflonum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $sub-fixnum-number
-    (unsafe)
-  (signatures
-   ((T:fixnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-bignum-number
-    (unsafe)
-  (signatures
-   ((T:bignum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-flonum-number
-    (unsafe)
-  (signatures
-   ((T:flonum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-ratnum-number
-    (unsafe)
-  (signatures
-   ((T:ratnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-compnum-number
-    (unsafe)
-  (signatures
-   ((T:compnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-cflonum-number
-    (unsafe)
-  (signatures
-   ((T:cflonum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $sub-number-fixnum
-    (unsafe)
-  (signatures
-   ((T:number T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-number-bignum
-    (unsafe)
-  (signatures
-   ((T:number T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-number-flonum
-    (unsafe)
-  (signatures
-   ((T:number T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-number-ratnum
-    (unsafe)
-  (signatures
-   ((T:number T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-number-compnum
-    (unsafe)
-  (signatures
-   ((T:number T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-number-cflonum
-    (unsafe)
-  (signatures
-   ((T:number T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $sub-number-number
-    (unsafe)
-  (signatures
-   ((T:number T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-
-;;;; general arithmetics, multiplication
-
-(declare-core-primitive *
-    (safe)
-  (signatures (T:number => (T:number)))
-  (attributes
-   (_			foldable effect-free result-true))
-  (replacements
-   $mul-fixnum-fixnum		$mul-fixnum-bignum	$mul-fixnum-flonum
-   $mul-fixnum-ratnum		$mul-fixnum-compnum	$mul-fixnum-cflonum
-
-   $mul-bignum-fixnum		$mul-bignum-bignum	$mul-bignum-flonum
-   $mul-bignum-ratnum		$mul-bignum-compnum	$mul-bignum-cflonum
-
-   $mul-flonum-fixnum		$mul-flonum-bignum	$mul-flonum-flonum
-   $mul-flonum-ratnum		$mul-flonum-compnum	$mul-flonum-cflonum
-
-   $mul-ratnum-fixnum		$mul-ratnum-bignum	$mul-ratnum-flonum
-   $mul-ratnum-ratnum		$mul-ratnum-compnum	$mul-ratnum-cflonum
-
-   $mul-compnum-fixnum		$mul-compnum-bignum	$mul-compnum-ratnum
-   $mul-compnum-compnum		$mul-compnum-flonum	$mul-compnum-cflonum
-
-   $mul-cflonum-fixnum		$mul-cflonum-bignum	$mul-cflonum-ratnum
-   $mul-cflonum-flonum		$mul-cflonum-compnum	$mul-cflonum-cflonum
-
-   $mul-fixnum-number		$mul-bignum-number	$mul-flonum-number
-   $mul-ratnum-number		$mul-compnum-number	$mul-cflonum-number
-
-   $mul-number-fixnum		$mul-number-bignum	$mul-number-flonum
-   $mul-number-ratnum		$mul-number-compnum	$mul-number-cflonum
-
-   $mul-number-number))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive $mul-fixnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-fixnum-bignum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-fixnum-flonum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-fixnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-fixnum-compnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-fixnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $mul-bignum-fixnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-bignum-bignum
-    (unsafe)
-  (signatures
-   ((T:bignum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-bignum-flonum
-    (unsafe)
-  (signatures
-   ((T:bignum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-bignum-ratnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-bignum-compnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-bignum-cflonum
-    (unsafe)
-  (signatures
-   ((T:bignum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $mul-flonum-fixnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-flonum-bignum
-    (unsafe)
-  (signatures
-   ((T:flonum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-flonum-flonum
-    (unsafe)
-  (signatures
-   ((T:flonum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-flonum-ratnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-flonum-compnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-flonum-cflonum
-    (unsafe)
-  (signatures
-   ((T:flonum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $mul-ratnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-ratnum-bignum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-ratnum-flonum
-    (unsafe)
-  (signatures ((T:ratnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-ratnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-ratnum-compnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-ratnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $mul-compnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-compnum-bignum
-    (unsafe)
-  (signatures
-   ((T:compnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-compnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-compnum-compnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-compnum-flonum
-    (unsafe)
-  (signatures
-   ((T:compnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-compnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:compnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $mul-cflonum-fixnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-cflonum-bignum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-cflonum-ratnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-cflonum-flonum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-cflonum-compnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-cflonum-cflonum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $mul-fixnum-number
-    (unsafe)
-  (signatures
-   ((T:fixnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-bignum-number
-    (unsafe)
-  (signatures
-   ((T:bignum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-flonum-number
-    (unsafe)
-  (signatures
-   ((T:flonum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-ratnum-number
-    (unsafe)
-  (signatures
-   ((T:ratnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-compnum-number
-    (unsafe)
-  (signatures
-   ((T:compnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-cflonum-number
-    (unsafe)
-  (signatures
-   ((T:cflonum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $mul-number-fixnum
-    (unsafe)
-  (signatures
-   ((T:number T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-number-bignum
-    (unsafe)
-  (signatures
-   ((T:number T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-number-flonum
-    (unsafe)
-  (signatures
-   ((T:number T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-number-ratnum
-    (unsafe)
-  (signatures
-   ((T:number T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-number-compnum
-    (unsafe)
-  (signatures
-   ((T:number T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-number-cflonum
-    (unsafe)
-  (signatures
-   ((T:number T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $mul-number-number
-    (unsafe)
-  (signatures
-   ((T:number T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-
-;;;; general arithmetics, division
-
-(declare-core-primitive /
-    (safe)
-  (signatures
-   ((T:number . T:number)	=> (T:number)))
-  (attributes
-   ((_ . _)			foldable effect-free result-true))
-  (replacements
-   $div-fixnum-fixnum		$div-fixnum-bignum	$div-fixnum-flonum
-   $div-fixnum-ratnum		$div-fixnum-compnum	$div-fixnum-cflonum
-
-   $div-bignum-fixnum		$div-bignum-bignum	$div-bignum-flonum
-   $div-bignum-ratnum		$div-bignum-compnum	$div-bignum-cflonum
-
-   $div-flonum-fixnum		$div-flonum-bignum	$div-flonum-flonum
-   $div-flonum-ratnum		$div-flonum-compnum	$div-flonum-cflonum
-
-   $div-ratnum-fixnum		$div-ratnum-bignum	$div-ratnum-flonum
-   $div-ratnum-ratnum		$div-ratnum-compnum	$div-ratnum-cflonum
-
-   $div-compnum-fixnum		$div-compnum-bignum	$div-compnum-ratnum
-   $div-compnum-compnum		$div-compnum-flonum	$div-compnum-cflonum
-
-   $div-cflonum-fixnum		$div-cflonum-bignum	$div-cflonum-ratnum
-   $div-cflonum-flonum		$div-cflonum-compnum	$div-cflonum-cflonum
-
-   $div-fixnum-number		$div-bignum-number	$div-flonum-number
-   $div-ratnum-number		$div-compnum-number	$div-cflonum-number
-
-   $div-number-fixnum		$div-number-bignum	$div-number-flonum
-   $div-number-ratnum		$div-number-compnum	$div-number-cflonum
-
-   $div-number-number))
-
-;;; --------------------------------------------------------------------
-
-(declare-core-primitive $div-fixnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-fixnum-bignum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-fixnum-flonum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-fixnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-fixnum-compnum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-fixnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:fixnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $div-bignum-fixnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-bignum-bignum
-    (unsafe)
-  (signatures
-   ((T:bignum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-bignum-flonum
-    (unsafe)
-  (signatures
-   ((T:bignum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-bignum-ratnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-bignum-compnum
-    (unsafe)
-  (signatures
-   ((T:bignum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-bignum-cflonum
-    (unsafe)
-  (signatures
-   ((T:bignum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $div-flonum-fixnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-flonum-bignum
-    (unsafe)
-  (signatures
-   ((T:flonum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-flonum-flonum
-    (unsafe)
-  (signatures
-   ((T:flonum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-flonum-ratnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-flonum-compnum
-    (unsafe)
-  (signatures
-   ((T:flonum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-flonum-cflonum
-    (unsafe)
-  (signatures
-   ((T:flonum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $div-ratnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-ratnum-bignum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-ratnum-flonum
-    (unsafe)
-  (signatures ((T:ratnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-ratnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-ratnum-compnum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-ratnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:ratnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $div-compnum-fixnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-compnum-bignum
-    (unsafe)
-  (signatures
-   ((T:compnum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-compnum-ratnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-compnum-compnum
-    (unsafe)
-  (signatures
-   ((T:compnum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-compnum-flonum
-    (unsafe)
-  (signatures
-   ((T:compnum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-compnum-cflonum
-    (unsafe)
-  (signatures
-   ((T:compnum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $div-cflonum-fixnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-cflonum-bignum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-cflonum-ratnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-cflonum-flonum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-cflonum-compnum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-cflonum-cflonum
-    (unsafe)
-  (signatures
-   ((T:cflonum T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $div-fixnum-number
-    (unsafe)
-  (signatures
-   ((T:fixnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-bignum-number
-    (unsafe)
-  (signatures
-   ((T:bignum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-flonum-number
-    (unsafe)
-  (signatures
-   ((T:flonum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-ratnum-number
-    (unsafe)
-  (signatures
-   ((T:ratnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-compnum-number
-    (unsafe)
-  (signatures
-   ((T:compnum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-cflonum-number
-    (unsafe)
-  (signatures
-   ((T:cflonum T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-;;;
-
-(declare-core-primitive $div-number-fixnum
-    (unsafe)
-  (signatures
-   ((T:number T:fixnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-number-bignum
-    (unsafe)
-  (signatures
-   ((T:number T:bignum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-number-flonum
-    (unsafe)
-  (signatures
-   ((T:number T:flonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-number-ratnum
-    (unsafe)
-  (signatures
-   ((T:number T:ratnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-number-compnum
-    (unsafe)
-  (signatures
-   ((T:number T:compnum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-number-cflonum
-    (unsafe)
-  (signatures
-   ((T:number T:cflonum) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-(declare-core-primitive $div-number-number
-    (unsafe)
-  (signatures
-   ((T:number T:number) => (T:number)))
-  (attributes
-   ((_ _)		foldable effect-free result-true)))
-
-
-;;;; general arithmetics, add1
-
-(declare-core-primitive add1
-    (safe)
-  (signatures
-   ((T:number)			=> (T:number)))
-  (attributes
-   ((_)				foldable effect-free result-true))
-  (replacements
-   $add1-integer		$add1-bignum	$add1-fixnum))
-
-(declare-core-primitive $add1-integer
-    (safe)
-  (signatures
-   ;;FIXME This should be T:integer.  (Marco Maggi; Wed Nov 12, 2014)
-   ((T:real)			=> (T:real)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $add1-bignum
-    (safe)
-  (signatures
-   ((T:bignum)			=> (T:exact-integer)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $add1-fixnum
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:exact-integer)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-
-;;;; general arithmetics, sub1
-
-(declare-core-primitive sub1
-    (safe)
-  (signatures
-   ((T:number)			=> (T:number)))
-  (attributes
-   ((_)				foldable effect-free result-true))
-  (replacements
-   $sub1-integer		$sub1-bignum	$sub1-fixnum))
-
-(declare-core-primitive $sub1-integer
-    (safe)
-  (signatures
-   ;;FIXME This should be T:integer.  (Marco Maggi; Wed Nov 12, 2014)
-   ((T:real)			=> (T:real)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $sub1-bignum
-    (safe)
-  (signatures
-   ((T:bignum)			=> (T:exact-integer)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-(declare-core-primitive $sub1-fixnum
-    (safe)
-  (signatures
-   ((T:fixnum)			=> (T:exact-integer)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
-
-
-;;;; general arithmetics, misc functions
-
-(declare-type-predicate number? T:number)
-(declare-type-predicate complex? T:number)
-(declare-type-predicate real? T:real)
-(declare-type-predicate rational?)
-(declare-type-predicate integer?)
-
-(declare-type-predicate real-valued?)
-(declare-type-predicate rational-valued?)
-(declare-type-predicate integer-valued?)
-
-;;; --------------------------------------------------------------------
-;;; exactness
-
-(declare-core-primitive inexact->exact
-    (safe)
-  (signatures
-   ((T:number)		=> (T:exact)))
-  (attributes
-   ((_)			foldable effect-free result-true)))
-
-(declare-core-primitive exact
-    (safe)
-  (signatures
-   ((T:number)		=> (T:exact)))
-  (attributes
-   ((_)			foldable effect-free result-true)))
-
-(declare-core-primitive inexact
-    (safe)
-  (signatures
-   ((T:number)		=> (T:inexact)))
-  (attributes
-   ((_)			foldable effect-free result-true)))
-
-;;; --------------------------------------------------------------------
-;;; parts
-
-(declare-core-primitive make-rectangular
-    (safe)
-  (signatures
-   ((T:real T:real)		=> (T:complex)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive make-polar
-    (safe)
-  (signatures
-   ((T:real T:real)		=> (T:complex)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-number-unary real-part)
-(declare-number-unary imag-part)
-
-;;; --------------------------------------------------------------------
-;;; predicates
-
-(declare-number-predicate zero?)
-(declare-number-predicate positive?)
-(declare-number-predicate negative?)
-(declare-number-predicate odd?)
-(declare-number-predicate even?)
-(declare-number-predicate finite?)
-(declare-number-predicate infinite?)
-(declare-number-predicate nan?)
-
-;;; --------------------------------------------------------------------
-;;; comparison
-
-(let-syntax
-    ((declare-real-comparison-unary/multi (syntax-rules ()
-					    ((_ ?who)
-					     (declare-core-primitive ?who
-						 (safe)
-					       (signatures
-						((T:real . T:real)	=> (T:boolean)))
-					       (attributes
-						((_ . _)		foldable effect-free)))))))
-  (declare-real-comparison-unary/multi =)
-  (declare-real-comparison-unary/multi !=)
-  (declare-real-comparison-unary/multi <)
-  (declare-real-comparison-unary/multi >=)
-  (declare-real-comparison-unary/multi <)
-  (declare-real-comparison-unary/multi >=)
-  #| end of LET-SYNTAX |# )
-
-;;; --------------------------------------------------------------------
-;;; exponentiation, exponentials and logarithms
-
-(declare-number-binary expt)
-(declare-number-unary/binary log)
-
-;;; --------------------------------------------------------------------
-;;; bitwise
-
-(declare-core-primitive sll
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:exact-integer))
-   ((T:bignum T:fixnum)		=> (T:exact-integer)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive sra
-    (safe)
-  (signatures
-   ((T:fixnum T:fixnum)		=> (T:exact-integer))
-   ((T:bignum T:fixnum)		=> (T:exact-integer)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-(declare-core-primitive bitwise-and
-    (safe)
-  (signatures
-   (()				=> (T:fixnum))
-   ((T:fixnum)			=> (T:fixnum))
-   ((T:bignum)			=> (T:bignum))
-   ((T:fixnum T:fixnum)		=> (T:fixnum))
-   ((T:bignum T:bignum)		=> (T:bignum))
-   ((T:fixnum T:bignum)		=> (T:bignum))
-   ((T:bignum T:fixnum)		=> (T:bignum)))
-  (attributes
-   ((_ _)			foldable effect-free result-true)))
-
-;;; --------------------------------------------------------------------
-;;; trigonometric
-
-(declare-number-unary sin)
-(declare-number-unary cos)
-(declare-number-unary tan)
-(declare-number-unary asin)
-(declare-number-unary acos)
-(declare-number-unary/binary atan)
-
-
 ;;;; symbols, safe functions
 
 (declare-type-predicate symbol? T:symbol)
@@ -3823,10 +2043,1799 @@
    ((_)				foldable effect-free)))
 
 
+;;;; numerics, general arithmetics, addition
+
+(declare-core-primitive +
+    (safe)
+  (signatures
+   (T:number => (T:number)))
+  (attributes
+   (_			foldable effect-free result-true))
+  (replacements
+   $add-fixnum-fixnum		$add-fixnum-bignum	$add-fixnum-flonum
+   $add-fixnum-ratnum		$add-fixnum-compnum	$add-fixnum-cflonum
+
+   $add-bignum-fixnum		$add-bignum-bignum	$add-bignum-flonum
+   $add-bignum-ratnum		$add-bignum-compnum	$add-bignum-cflonum
+
+   $add-flonum-fixnum		$add-flonum-bignum	$add-flonum-flonum
+   $add-flonum-ratnum		$add-flonum-compnum	$add-flonum-cflonum
+
+   $add-ratnum-fixnum		$add-ratnum-bignum	$add-ratnum-flonum
+   $add-ratnum-ratnum		$add-ratnum-compnum	$add-ratnum-cflonum
+
+   $add-compnum-fixnum		$add-compnum-bignum	$add-compnum-ratnum
+   $add-compnum-compnum		$add-compnum-flonum	$add-compnum-cflonum
+
+   $add-cflonum-fixnum		$add-cflonum-bignum	$add-cflonum-ratnum
+   $add-cflonum-flonum		$add-cflonum-compnum	$add-cflonum-cflonum
+
+   $add-fixnum-number		$add-bignum-number	$add-flonum-number
+   $add-ratnum-number		$add-compnum-number	$add-cflonum-number
+
+   $add-number-fixnum		$add-number-bignum	$add-number-flonum
+   $add-number-ratnum		$add-number-compnum	$add-number-cflonum
+
+   $add-number-number))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $add-fixnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-fixnum-bignum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-fixnum-flonum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-fixnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-fixnum-compnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-fixnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $add-bignum-fixnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-bignum-bignum
+    (unsafe)
+  (signatures
+   ((T:bignum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-bignum-flonum
+    (unsafe)
+  (signatures
+   ((T:bignum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-bignum-ratnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-bignum-compnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-bignum-cflonum
+    (unsafe)
+  (signatures
+   ((T:bignum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $add-flonum-fixnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-flonum-bignum
+    (unsafe)
+  (signatures
+   ((T:flonum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-flonum-flonum
+    (unsafe)
+  (signatures
+   ((T:flonum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-flonum-ratnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-flonum-compnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-flonum-cflonum
+    (unsafe)
+  (signatures
+   ((T:flonum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $add-ratnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-ratnum-bignum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-ratnum-flonum
+    (unsafe)
+  (signatures ((T:ratnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-ratnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-ratnum-compnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-ratnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $add-compnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-compnum-bignum
+    (unsafe)
+  (signatures
+   ((T:compnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-compnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-compnum-compnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-compnum-flonum
+    (unsafe)
+  (signatures
+   ((T:compnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-compnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:compnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $add-cflonum-fixnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-cflonum-bignum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-cflonum-ratnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-cflonum-flonum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-cflonum-compnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-cflonum-cflonum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $add-fixnum-number
+    (unsafe)
+  (signatures
+   ((T:fixnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-bignum-number
+    (unsafe)
+  (signatures
+   ((T:bignum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-flonum-number
+    (unsafe)
+  (signatures
+   ((T:flonum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-ratnum-number
+    (unsafe)
+  (signatures
+   ((T:ratnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-compnum-number
+    (unsafe)
+  (signatures
+   ((T:compnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-cflonum-number
+    (unsafe)
+  (signatures
+   ((T:cflonum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $add-number-fixnum
+    (unsafe)
+  (signatures
+   ((T:number T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-number-bignum
+    (unsafe)
+  (signatures
+   ((T:number T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-number-flonum
+    (unsafe)
+  (signatures
+   ((T:number T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-number-ratnum
+    (unsafe)
+  (signatures
+   ((T:number T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-number-compnum
+    (unsafe)
+  (signatures
+   ((T:number T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-number-cflonum
+    (unsafe)
+  (signatures
+   ((T:number T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $add-number-number
+    (unsafe)
+  (signatures
+   ((T:number T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+
+;;;; numerics, general arithmetics, subtraction
+
+(declare-core-primitive -
+    (safe)
+  (signatures
+   ((T:number . T:number)	=> (T:number)))
+  (attributes
+   ((_ . _)			foldable effect-free result-true))
+  (replacements
+   $sub-fixnum-fixnum		$sub-fixnum-bignum	$sub-fixnum-flonum
+   $sub-fixnum-ratnum		$sub-fixnum-compnum	$sub-fixnum-cflonum
+
+   $sub-bignum-fixnum		$sub-bignum-bignum	$sub-bignum-flonum
+   $sub-bignum-ratnum		$sub-bignum-compnum	$sub-bignum-cflonum
+
+   $sub-flonum-fixnum		$sub-flonum-bignum	$sub-flonum-flonum
+   $sub-flonum-ratnum		$sub-flonum-compnum	$sub-flonum-cflonum
+
+   $sub-ratnum-fixnum		$sub-ratnum-bignum	$sub-ratnum-flonum
+   $sub-ratnum-ratnum		$sub-ratnum-compnum	$sub-ratnum-cflonum
+
+   $sub-compnum-fixnum		$sub-compnum-bignum	$sub-compnum-ratnum
+   $sub-compnum-compnum		$sub-compnum-flonum	$sub-compnum-cflonum
+
+   $sub-cflonum-fixnum		$sub-cflonum-bignum	$sub-cflonum-ratnum
+   $sub-cflonum-flonum		$sub-cflonum-compnum	$sub-cflonum-cflonum
+
+   $sub-fixnum-number		$sub-bignum-number	$sub-flonum-number
+   $sub-ratnum-number		$sub-compnum-number	$sub-cflonum-number
+
+   $sub-number-fixnum		$sub-number-bignum	$sub-number-flonum
+   $sub-number-ratnum		$sub-number-compnum	$sub-number-cflonum
+
+   $sub-number-number))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $sub-fixnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-fixnum-bignum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-fixnum-flonum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-fixnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-fixnum-compnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-fixnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $sub-bignum-fixnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-bignum-bignum
+    (unsafe)
+  (signatures
+   ((T:bignum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-bignum-flonum
+    (unsafe)
+  (signatures
+   ((T:bignum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-bignum-ratnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-bignum-compnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-bignum-cflonum
+    (unsafe)
+  (signatures
+   ((T:bignum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $sub-flonum-fixnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-flonum-bignum
+    (unsafe)
+  (signatures
+   ((T:flonum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-flonum-flonum
+    (unsafe)
+  (signatures
+   ((T:flonum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-flonum-ratnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-flonum-compnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-flonum-cflonum
+    (unsafe)
+  (signatures
+   ((T:flonum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $sub-ratnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-ratnum-bignum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-ratnum-flonum
+    (unsafe)
+  (signatures ((T:ratnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-ratnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-ratnum-compnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-ratnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $sub-compnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-compnum-bignum
+    (unsafe)
+  (signatures
+   ((T:compnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-compnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-compnum-compnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-compnum-flonum
+    (unsafe)
+  (signatures
+   ((T:compnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-compnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:compnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $sub-cflonum-fixnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-cflonum-bignum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-cflonum-ratnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-cflonum-flonum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-cflonum-compnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-cflonum-cflonum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $sub-fixnum-number
+    (unsafe)
+  (signatures
+   ((T:fixnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-bignum-number
+    (unsafe)
+  (signatures
+   ((T:bignum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-flonum-number
+    (unsafe)
+  (signatures
+   ((T:flonum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-ratnum-number
+    (unsafe)
+  (signatures
+   ((T:ratnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-compnum-number
+    (unsafe)
+  (signatures
+   ((T:compnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-cflonum-number
+    (unsafe)
+  (signatures
+   ((T:cflonum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $sub-number-fixnum
+    (unsafe)
+  (signatures
+   ((T:number T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-number-bignum
+    (unsafe)
+  (signatures
+   ((T:number T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-number-flonum
+    (unsafe)
+  (signatures
+   ((T:number T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-number-ratnum
+    (unsafe)
+  (signatures
+   ((T:number T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-number-compnum
+    (unsafe)
+  (signatures
+   ((T:number T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-number-cflonum
+    (unsafe)
+  (signatures
+   ((T:number T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $sub-number-number
+    (unsafe)
+  (signatures
+   ((T:number T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+
+;;;; numerics, general arithmetics, multiplication
+
+(declare-core-primitive *
+    (safe)
+  (signatures (T:number => (T:number)))
+  (attributes
+   (_			foldable effect-free result-true))
+  (replacements
+   $mul-fixnum-fixnum		$mul-fixnum-bignum	$mul-fixnum-flonum
+   $mul-fixnum-ratnum		$mul-fixnum-compnum	$mul-fixnum-cflonum
+
+   $mul-bignum-fixnum		$mul-bignum-bignum	$mul-bignum-flonum
+   $mul-bignum-ratnum		$mul-bignum-compnum	$mul-bignum-cflonum
+
+   $mul-flonum-fixnum		$mul-flonum-bignum	$mul-flonum-flonum
+   $mul-flonum-ratnum		$mul-flonum-compnum	$mul-flonum-cflonum
+
+   $mul-ratnum-fixnum		$mul-ratnum-bignum	$mul-ratnum-flonum
+   $mul-ratnum-ratnum		$mul-ratnum-compnum	$mul-ratnum-cflonum
+
+   $mul-compnum-fixnum		$mul-compnum-bignum	$mul-compnum-ratnum
+   $mul-compnum-compnum		$mul-compnum-flonum	$mul-compnum-cflonum
+
+   $mul-cflonum-fixnum		$mul-cflonum-bignum	$mul-cflonum-ratnum
+   $mul-cflonum-flonum		$mul-cflonum-compnum	$mul-cflonum-cflonum
+
+   $mul-fixnum-number		$mul-bignum-number	$mul-flonum-number
+   $mul-ratnum-number		$mul-compnum-number	$mul-cflonum-number
+
+   $mul-number-fixnum		$mul-number-bignum	$mul-number-flonum
+   $mul-number-ratnum		$mul-number-compnum	$mul-number-cflonum
+
+   $mul-number-number))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $mul-fixnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-fixnum-bignum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-fixnum-flonum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-fixnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-fixnum-compnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-fixnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $mul-bignum-fixnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-bignum-bignum
+    (unsafe)
+  (signatures
+   ((T:bignum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-bignum-flonum
+    (unsafe)
+  (signatures
+   ((T:bignum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-bignum-ratnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-bignum-compnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-bignum-cflonum
+    (unsafe)
+  (signatures
+   ((T:bignum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $mul-flonum-fixnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-flonum-bignum
+    (unsafe)
+  (signatures
+   ((T:flonum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-flonum-flonum
+    (unsafe)
+  (signatures
+   ((T:flonum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-flonum-ratnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-flonum-compnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-flonum-cflonum
+    (unsafe)
+  (signatures
+   ((T:flonum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $mul-ratnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-ratnum-bignum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-ratnum-flonum
+    (unsafe)
+  (signatures ((T:ratnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-ratnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-ratnum-compnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-ratnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $mul-compnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-compnum-bignum
+    (unsafe)
+  (signatures
+   ((T:compnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-compnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-compnum-compnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-compnum-flonum
+    (unsafe)
+  (signatures
+   ((T:compnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-compnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:compnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $mul-cflonum-fixnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-cflonum-bignum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-cflonum-ratnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-cflonum-flonum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-cflonum-compnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-cflonum-cflonum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $mul-fixnum-number
+    (unsafe)
+  (signatures
+   ((T:fixnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-bignum-number
+    (unsafe)
+  (signatures
+   ((T:bignum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-flonum-number
+    (unsafe)
+  (signatures
+   ((T:flonum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-ratnum-number
+    (unsafe)
+  (signatures
+   ((T:ratnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-compnum-number
+    (unsafe)
+  (signatures
+   ((T:compnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-cflonum-number
+    (unsafe)
+  (signatures
+   ((T:cflonum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $mul-number-fixnum
+    (unsafe)
+  (signatures
+   ((T:number T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-number-bignum
+    (unsafe)
+  (signatures
+   ((T:number T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-number-flonum
+    (unsafe)
+  (signatures
+   ((T:number T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-number-ratnum
+    (unsafe)
+  (signatures
+   ((T:number T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-number-compnum
+    (unsafe)
+  (signatures
+   ((T:number T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-number-cflonum
+    (unsafe)
+  (signatures
+   ((T:number T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $mul-number-number
+    (unsafe)
+  (signatures
+   ((T:number T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+
+;;;; numerics, general arithmetics, division
+
+(declare-core-primitive /
+    (safe)
+  (signatures
+   ((T:number . T:number)	=> (T:number)))
+  (attributes
+   ((_ . _)			foldable effect-free result-true))
+  (replacements
+   $div-fixnum-fixnum		$div-fixnum-bignum	$div-fixnum-flonum
+   $div-fixnum-ratnum		$div-fixnum-compnum	$div-fixnum-cflonum
+
+   $div-bignum-fixnum		$div-bignum-bignum	$div-bignum-flonum
+   $div-bignum-ratnum		$div-bignum-compnum	$div-bignum-cflonum
+
+   $div-flonum-fixnum		$div-flonum-bignum	$div-flonum-flonum
+   $div-flonum-ratnum		$div-flonum-compnum	$div-flonum-cflonum
+
+   $div-ratnum-fixnum		$div-ratnum-bignum	$div-ratnum-flonum
+   $div-ratnum-ratnum		$div-ratnum-compnum	$div-ratnum-cflonum
+
+   $div-compnum-fixnum		$div-compnum-bignum	$div-compnum-ratnum
+   $div-compnum-compnum		$div-compnum-flonum	$div-compnum-cflonum
+
+   $div-cflonum-fixnum		$div-cflonum-bignum	$div-cflonum-ratnum
+   $div-cflonum-flonum		$div-cflonum-compnum	$div-cflonum-cflonum
+
+   $div-fixnum-number		$div-bignum-number	$div-flonum-number
+   $div-ratnum-number		$div-compnum-number	$div-cflonum-number
+
+   $div-number-fixnum		$div-number-bignum	$div-number-flonum
+   $div-number-ratnum		$div-number-compnum	$div-number-cflonum
+
+   $div-number-number))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $div-fixnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-fixnum-bignum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-fixnum-flonum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-fixnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-fixnum-compnum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-fixnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:fixnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $div-bignum-fixnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-bignum-bignum
+    (unsafe)
+  (signatures
+   ((T:bignum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-bignum-flonum
+    (unsafe)
+  (signatures
+   ((T:bignum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-bignum-ratnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-bignum-compnum
+    (unsafe)
+  (signatures
+   ((T:bignum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-bignum-cflonum
+    (unsafe)
+  (signatures
+   ((T:bignum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $div-flonum-fixnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-flonum-bignum
+    (unsafe)
+  (signatures
+   ((T:flonum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-flonum-flonum
+    (unsafe)
+  (signatures
+   ((T:flonum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-flonum-ratnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-flonum-compnum
+    (unsafe)
+  (signatures
+   ((T:flonum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-flonum-cflonum
+    (unsafe)
+  (signatures
+   ((T:flonum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $div-ratnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-ratnum-bignum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-ratnum-flonum
+    (unsafe)
+  (signatures ((T:ratnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-ratnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-ratnum-compnum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-ratnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:ratnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $div-compnum-fixnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-compnum-bignum
+    (unsafe)
+  (signatures
+   ((T:compnum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-compnum-ratnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-compnum-compnum
+    (unsafe)
+  (signatures
+   ((T:compnum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-compnum-flonum
+    (unsafe)
+  (signatures
+   ((T:compnum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-compnum-cflonum
+    (unsafe)
+  (signatures
+   ((T:compnum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $div-cflonum-fixnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-cflonum-bignum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-cflonum-ratnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-cflonum-flonum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-cflonum-compnum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-cflonum-cflonum
+    (unsafe)
+  (signatures
+   ((T:cflonum T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $div-fixnum-number
+    (unsafe)
+  (signatures
+   ((T:fixnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-bignum-number
+    (unsafe)
+  (signatures
+   ((T:bignum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-flonum-number
+    (unsafe)
+  (signatures
+   ((T:flonum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-ratnum-number
+    (unsafe)
+  (signatures
+   ((T:ratnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-compnum-number
+    (unsafe)
+  (signatures
+   ((T:compnum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-cflonum-number
+    (unsafe)
+  (signatures
+   ((T:cflonum T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+;;;
+
+(declare-core-primitive $div-number-fixnum
+    (unsafe)
+  (signatures
+   ((T:number T:fixnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-number-bignum
+    (unsafe)
+  (signatures
+   ((T:number T:bignum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-number-flonum
+    (unsafe)
+  (signatures
+   ((T:number T:flonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-number-ratnum
+    (unsafe)
+  (signatures
+   ((T:number T:ratnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-number-compnum
+    (unsafe)
+  (signatures
+   ((T:number T:compnum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-number-cflonum
+    (unsafe)
+  (signatures
+   ((T:number T:cflonum) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+(declare-core-primitive $div-number-number
+    (unsafe)
+  (signatures
+   ((T:number T:number) => (T:number)))
+  (attributes
+   ((_ _)		foldable effect-free result-true)))
+
+
+;;;; numerics, general arithmetics, add1
+
+(declare-core-primitive add1
+    (safe)
+  (signatures
+   ((T:number)			=> (T:number)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements
+   $add1-integer		$add1-bignum	$add1-fixnum))
+
+(declare-core-primitive $add1-integer
+    (safe)
+  (signatures
+   ;;FIXME This should be T:integer.  (Marco Maggi; Wed Nov 12, 2014)
+   ((T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $add1-bignum
+    (safe)
+  (signatures
+   ((T:bignum)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $add1-fixnum
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+
+;;;; numerics, general arithmetics, sub1
+
+(declare-core-primitive sub1
+    (safe)
+  (signatures
+   ((T:number)			=> (T:number)))
+  (attributes
+   ((_)				foldable effect-free result-true))
+  (replacements
+   $sub1-integer		$sub1-bignum	$sub1-fixnum))
+
+(declare-core-primitive $sub1-integer
+    (safe)
+  (signatures
+   ;;FIXME This should be T:integer.  (Marco Maggi; Wed Nov 12, 2014)
+   ((T:real)			=> (T:real)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $sub1-bignum
+    (safe)
+  (signatures
+   ((T:bignum)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+(declare-core-primitive $sub1-fixnum
+    (safe)
+  (signatures
+   ((T:fixnum)			=> (T:exact-integer)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+
+;;;; numerics, general arithmetics, misc functions
+
+(declare-type-predicate number? T:number)
+(declare-type-predicate complex? T:number)
+(declare-type-predicate real? T:real)
+(declare-type-predicate rational?)
+(declare-type-predicate integer?)
+
+(declare-type-predicate real-valued?)
+(declare-type-predicate rational-valued?)
+(declare-type-predicate integer-valued?)
+
+;;; --------------------------------------------------------------------
+;;; exactness
+
+(declare-core-primitive inexact->exact
+    (safe)
+  (signatures
+   ((T:number)		=> (T:exact)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive exact
+    (safe)
+  (signatures
+   ((T:number)		=> (T:exact)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+(declare-core-primitive inexact
+    (safe)
+  (signatures
+   ((T:number)		=> (T:inexact)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; parts
+
+(declare-core-primitive make-rectangular
+    (safe)
+  (signatures
+   ((T:real T:real)		=> (T:complex)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive make-polar
+    (safe)
+  (signatures
+   ((T:real T:real)		=> (T:complex)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-number-unary real-part)
+(declare-number-unary imag-part)
+
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(declare-number-predicate zero?)
+(declare-number-predicate positive?)
+(declare-number-predicate negative?)
+(declare-number-predicate odd?)
+(declare-number-predicate even?)
+(declare-number-predicate finite?)
+(declare-number-predicate infinite?)
+(declare-number-predicate nan?)
+
+;;; --------------------------------------------------------------------
+;;; comparison
+
+(let-syntax
+    ((declare-real-comparison-unary/multi (syntax-rules ()
+					    ((_ ?who)
+					     (declare-core-primitive ?who
+						 (safe)
+					       (signatures
+						((T:real . T:real)	=> (T:boolean)))
+					       (attributes
+						((_ . _)		foldable effect-free)))))))
+  (declare-real-comparison-unary/multi =)
+  (declare-real-comparison-unary/multi !=)
+  (declare-real-comparison-unary/multi <)
+  (declare-real-comparison-unary/multi >=)
+  (declare-real-comparison-unary/multi <)
+  (declare-real-comparison-unary/multi >=)
+  #| end of LET-SYNTAX |# )
+
+;;; --------------------------------------------------------------------
+;;; exponentiation, exponentials and logarithms
+
+(declare-number-binary expt)
+(declare-number-unary/binary log)
+
+;;; --------------------------------------------------------------------
+;;; bitwise
+
+(declare-core-primitive sll
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:exact-integer))
+   ((T:bignum T:fixnum)		=> (T:exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive sra
+    (safe)
+  (signatures
+   ((T:fixnum T:fixnum)		=> (T:exact-integer))
+   ((T:bignum T:fixnum)		=> (T:exact-integer)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive bitwise-and
+    (safe)
+  (signatures
+   (()				=> (T:fixnum))
+   ((T:fixnum)			=> (T:fixnum))
+   ((T:bignum)			=> (T:bignum))
+   ((T:fixnum T:fixnum)		=> (T:fixnum))
+   ((T:bignum T:bignum)		=> (T:bignum))
+   ((T:fixnum T:bignum)		=> (T:bignum))
+   ((T:bignum T:fixnum)		=> (T:bignum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; trigonometric
+
+(declare-number-unary sin)
+(declare-number-unary cos)
+(declare-number-unary tan)
+(declare-number-unary asin)
+(declare-number-unary acos)
+(declare-number-unary/binary atan)
+
+
+;;;; numerics
+
+(declare-core-primitive integer->char
+    (safe)
+  (signatures
+   ((T:fixnum)		=> (T:char)))
+  (attributes
+   ((_)			foldable effect-free result-true)))
+
+
 
 #|
 
-      ((integer->char _)	   foldable effect-free result-true)
 
 ;;; --------------------------------------------------------------------
 
