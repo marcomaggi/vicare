@@ -316,8 +316,8 @@
 	 T:non-false		T:false			T:true		T:void
 	 T:boolean		T:char			T:symbol	T:string
 	 T:null			T:pair			T:vector	T:bytevector
-	 T:procedure		T:struct		T:record	T:transcoder
-	 T:pointer		T:hashtable
+	 T:procedure		T:struct		T:record	T:other-struct
+	 T:transcoder		T:pointer		T:hashtable
 
 	 T:port			T:textual-port		T:binary-port
 	 T:input-port		T:output-port		T:input-output-port
@@ -363,6 +363,7 @@
       (T:binary-output-port		type)
       (T:binary-input/output-port	type)
       (T:struct				type)
+      (T:other-struct			type)
       (T:record				type)
       (T:transcoder			type)
       (T:pointer			type)
@@ -423,7 +424,7 @@
 	 (map (lambda (attr-spec)
 		(syntax-case attr-spec ()
 		  ((?args-spec . ?attr*)
-		   (cons (%parse-appliation-attributes-operands-template  #'?args-spec)
+		   (cons (%parse-application-attributes-operands-template  #'?args-spec)
 			 (%parse-appliaction-attributes-attributes-specification #'?attr*)))
 		  (_
 		   (%syntax-error))))
@@ -431,7 +432,7 @@
 	(_
 	 (%syntax-error))))
 
-    (define (%parse-appliation-attributes-operands-template args-spec)
+    (define (%parse-application-attributes-operands-template args-spec)
       ;;Non-tail recursive function.  Parse the arguments specification ARGS-SPEC for
       ;;the attributes of a core primitive  application.  Return a proper or improper
       ;;list representing the arguments specification.
@@ -453,7 +454,7 @@
 	((?car . ?cdr)
 	 (let ((A (syntax->datum #'?car)))
 	   (if (%arg-spec? A)
-	       (cons #'?car (%parse-appliation-attributes-operands-template #'?cdr))
+	       (cons #'?car (%parse-application-attributes-operands-template #'?cdr))
 	     (%error-invalid-argument-spec))))
 	(()
 	 '())

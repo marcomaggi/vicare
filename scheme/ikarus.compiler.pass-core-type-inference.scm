@@ -408,7 +408,7 @@
        (values (extend-env rand T:port env)
 	       env))
 
-      ((struct?)
+      ((struct? annotation?)
        (values (extend-env rand T:struct env)
 	       env))
 

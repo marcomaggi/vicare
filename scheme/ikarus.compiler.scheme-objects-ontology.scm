@@ -47,8 +47,8 @@
    T:non-false		T:false			T:true		T:void
    T:boolean		T:char			T:symbol	T:string
    T:null		T:pair			T:vector	T:bytevector
-   T:procedure		T:struct		T:record	T:transcoder
-   T:pointer		T:hashtable
+   T:procedure		T:struct		T:record	T:other-struct
+   T:transcoder		T:pointer		T:hashtable
 
    T:port		T:textual-port		T:binary-port
    T:input-port		T:output-port		T:input/output-port
@@ -96,8 +96,8 @@
    T:non-false?		T:false?		T:true?		T:void?
    T:boolean?		T:char?			T:symbol?	T:string?
    T:null?		T:pair?			T:vector?	T:bytevector?
-   T:procedure?		T:struct?		T:record?	T:transcoder?
-   T:pointer?		T:hashtable?
+   T:procedure?		T:struct?		T:record?	T:other-struct?
+   T:transcoder?	T:pointer?		T:hashtable?
 
    T:port?		T:textual-port?		T:binary-port?
    T:input-port?	T:output-port?		T:input/output-port?
@@ -586,7 +586,7 @@
 ;;
 
 ;;Comment this EOF to include the tests.
-#!eof
+#;#!eof
 
 (module ()
   (import SCHEME-OBJECTS-ONTOLOGY)
@@ -744,6 +744,7 @@
   (check (T:immediate? T:port)			=> no)
   (check (T:immediate? T:struct)		=> no)
   (check (T:immediate? T:record)		=> no)
+  (check (T:immediate? T:other-struct)		=> no)
   (check (T:immediate? T:other-object)		=> no)
 
   (check (T:immediate? T:fixnum)		=> yes)
@@ -776,6 +777,7 @@
   (check (T:nonimmediate? T:port)		=> yes)
   (check (T:nonimmediate? T:struct)		=> yes)
   (check (T:nonimmediate? T:record)		=> yes)
+  (check (T:nonimmediate? T:other-struct)	=> yes)
   (check (T:nonimmediate? T:other-object)	=> yes)
 
   (check (T:nonimmediate? T:fixnum)		=> no)
@@ -798,6 +800,10 @@
   (check (T:record? T:struct)			=> maybe)
   (check (T:record? T:record)			=> yes)
   (check (T:record? T:string)			=> no)
+
+  (check (T:other-struct? T:struct)		=> maybe)
+  (check (T:other-struct? T:record)		=> no)
+  (check (T:other-struct? T:string)		=> no)
 
 ;;; --------------------------------------------------------------------
 

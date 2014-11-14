@@ -1986,6 +1986,50 @@
    ((_ _ _)				effect-free result-true)))
 
 
+;;;; annotations
+
+(declare-core-primitive annotation?
+    (safe)
+  (signatures
+   ((T:struct)			=> (T:boolean)))
+  (attributes
+   ((#f)			foldable effect-free result-false)
+   ((_)				foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive get-annotated-datum
+    (safe)
+  (signatures
+   ((T:input-port)		=> (_)))
+  (attributes))
+
+(declare-core-primitive annotation-expression
+    (safe)
+  (signatures
+   ((T:struct)			=> (_)))
+  (attributes))
+
+(declare-core-primitive annotation-stripped
+    (safe)
+  (signatures
+   ((T:struct)			=> (_)))
+  (attributes
+   ((#f)			foldable effect-free result-false)))
+
+(declare-core-primitive annotation-textual-position
+    (safe)
+  (signatures
+   ((T:struct)			=> (_)))
+  (attributes))
+
+(declare-core-primitive annotation-source
+    (safe)
+  (signatures
+   ((T:struct)			=> (_)))
+  (attributes))
+
+
 ;;;; input/output
 
 (declare-core-primitive current-input-port
@@ -3836,11 +3880,6 @@
 
 #|
 
-
-;;; --------------------------------------------------------------------
-
-      ((annotation? #f)		    foldable effect-free result-false)
-      ((annotation-stripped #f)	    foldable effect-free result-false)
 
 ;;; --------------------------------------------------------------------
 
