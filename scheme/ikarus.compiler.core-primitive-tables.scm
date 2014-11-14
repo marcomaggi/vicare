@@ -10,11 +10,73 @@
 ;;;   functions and primitive operations.
 ;;;
 ;;;
+;;;Core type signatures
+;;;--------------------
+;;;
+;;;Used by  the compiler  passes "core type  inference", "introduce  unsafe primitive
+;;;references" and "specify representation" to:
+;;;
+;;;*  Validate the  input  code, detecting  operands  of invalid  core  type in  core
+;;;primitive  applications.
+;;;
+;;;*  Substitute  the  application  of   safe  primitives  with  application  of  the
+;;;corresponding unsafe  primitives, whenever  it is known  at compile-time  that the
+;;;operands are of the correct type.
+;;;
+;;;*  Generate  optimised  integrated  code  to implement  the  application  of  core
+;;;primitive operations.
+;;;
+;;;Core  type  signatures  are   specified  via  the  ?CORE-SIGNATURES-SPEC  symbolic
+;;;expression:
+;;;
+;;;   ?core-signatures-spec  = (signatures ?sign-spec ...)
+;;;   ?sign-spec             = (?arguments-spec => ?return-values-spec)
+;;;   ?arguments-spec        = (?core-type-tag ... . ())
+;;;                          | (?core-type-tag ... . ?core-type-tag)
+;;;   ?return-values-spec    = (?core-type-tag ... . ())
+;;;                          | (?core-type-tag ... . ?core-type-tag)
+;;;
+;;;where SIGNATURES is an auxiliary syntax and ?CORE-TYPE-TAG is an identifier among:
+;;;"T:object", "T:fixnum", ..., with "_" acting as wildcard equivalent to "T:object".
+;;;
+;;;Whenever a  core type signature  is examined by  the compiler: the  ?SIGN-SPEC are
+;;;considered in the order  in which they appear in the  declaration (left to right),
+;;;stopping at the first that matches the operands.
+;;;
+;;;Example:
+;;;
+;;;   (signatures
+;;;	((T:fixnum)	=> (T:true))
+;;;	((_)		=> (T:boolean)))
+;;;
+;;;this ?CORE-SIGNATURES-SPEC specifies that:
+;;;
+;;;* When the core primitive is applied  to a single operand of type "T:fixnum" there
+;;;is a single return value of type "T:true".
+;;;
+;;;* When the core primitive is applied  to a single operand of unspecified type (but
+;;;not "T:fixnum") there is a single return value of type "T:boolean".
+;;;
+;;;
 ;;;Core primitive attributes
 ;;;-------------------------
 ;;;
 ;;;Used  by  the  source  optimiser  to  precompute  the  result  of  core  primitive
-;;;applications.  Attributes are the symbols:
+;;;applications.   A tuple  of  attributes  can be  specified  for  a core  primitive
+;;;invocation with  selected number  of operands;  if a primitive  can be  applied to
+;;;different  numbers  of  operands,  each  arity  can  have  a  different  tuple  of
+;;;attributes.
+;;;
+;;;Attributes are specified via the ?ATTRIBUTES-SPEC symbolic expression:
+;;;
+;;;   ?attributes-spec  = (attributes ?attr-spec)
+;;;   ?attr-spec        = (?attr-signature . ?attr-tuple)
+;;;   ?attr-signature   = (?operand-spec ... . ?operand-spec)
+;;;   ?operand-spec     = _ | 0 | #f | ()
+;;;   ?attr-tuple       = (?attr-symbol ...)
+;;;   ?attr-symbol      = effect-free | foldable | result-true | result-false
+;;;
+;;;where ATTRIBUTES is an auxiliary syntax and the attributes are the symbols:
 ;;;
 ;;;   effect-free -  The application produces no side effects.
 ;;;
@@ -23,6 +85,29 @@
 ;;;   result-true -  The application always has non-#f result.
 ;;;
 ;;;   result-false - The application always has #f result.
+;;;
+;;;The ?OPERAND-SPEC can be the symbol "_"  to represent any operand or one among: 0,
+;;;#f, () to represent an operand that is known at compile-time to be such datum.
+;;;
+;;;Example:
+;;;
+;;;   (attributes
+;;;     (()		foldable)
+;;;     ((_)		effect-free)
+;;;     ((_ _)		result-true)
+;;;     ((_ _ _ . _)    result-false))
+;;;
+;;;this ?ATTRIBUTES-SPEC specifies that:
+;;;
+;;;* The core primitive can be applied to 0, 1, 2, 3 or more operands.
+;;;
+;;;* When the number of operands is 0: the application is foldable.
+;;;
+;;;* When the number of operands is 1: the application has no side effects.
+;;;
+;;;* When the number of operands is 2: the application always returns non-false.
+;;;
+;;;* When the number of operands is 3 or more: the application always returns false.
 ;;;
 ;;;
 ;;;Copyright (C) 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
@@ -39,6 +124,27 @@
 ;;;You should have received a copy of  the GNU General Public License along with this
 ;;;program.  If not, see <http://www.gnu.org/licenses/>.
 ;;;
+
+
+;;;; syntax helpers
+
+(define-syntax /section
+  (syntax-rules ()))
+
+(define-syntax section
+  ;;By enclosing code in:
+  ;;
+  ;;   (section ?body ... /section)
+  ;;
+  ;;we can comment out a section by just commenting out the form:
+  ;;
+  ;;   #;(section ?body ... /section)
+  ;;
+  ;;This is sometimes useful when debugging.
+  ;;
+  (syntax-rules (/section)
+    ((section ?body ... /section)
+     (begin ?body ...))))
 
 
 ;;;; syntax helpers: predicates
@@ -913,6 +1019,50 @@
 
 (declare-type-predicate bignum? T:bignum)
 
+(declare-bignum-predicate bignum-positive?	(replacements $bignum-positive?))
+(declare-bignum-predicate bignum-negative?	(replacements $bignum-negative?))
+(declare-bignum-predicate bignum-non-positive?	(replacements $bignum-non-positive?))
+(declare-bignum-predicate bignum-non-negative?	(replacements $bignum-non-negative?))
+
+(declare-bignum-predicate bignum-even?		(replacements $bignum-even?))
+(declare-bignum-predicate bignum-odd?		(replacements $bignum-odd?))
+
+
+;;;; bignums, unsafe operations
+
+(declare-bignum-predicate $bignum-positive? unsafe)
+(declare-bignum-predicate $bignum-negative? unsafe)
+(declare-bignum-predicate $bignum-non-positive? unsafe)
+(declare-bignum-predicate $bignum-non-negative? unsafe)
+
+(declare-bignum-predicate $bignum-even? unsafe)
+(declare-bignum-predicate $bignum-odd? unsafe)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $bignum-byte-ref
+    (unsafe)
+  (signatures
+   ((T:bignum T:fixnum)		=> (T:fixnum)))
+  (attributes
+   ((_ _)			foldable effect-free result-true)))
+
+(declare-core-primitive $bignum-size
+    (unsafe)
+  (signatures
+   ((T:bignum)			=> (T:fixnum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $bignum->flonum
+    (unsafe)
+  (signatures
+   ((T:bignum)			=> (T:flonum)))
+  (attributes
+   ((_)				foldable effect-free result-true)))
+
 
 ;;;; ratnums, safe operations
 
@@ -978,269 +1128,298 @@
 
 ;;;; flonums, safe functions
 
+(section
+
 ;;; predicates
 
-(declare-type-predicate flonum? T:flonum)
+ (declare-type-predicate flonum? T:flonum)
 
-(declare-flonum-predicate flzero?		(replacements $flzero?))
-(declare-flonum-predicate flzero?/negative	(replacements $flzero?/negative))
-(declare-flonum-predicate flzero?/positive	(replacements $flzero?/positive))
-(declare-flonum-predicate flpositive?		(replacements $flpositive?))
-(declare-flonum-predicate flnegative?		(replacements $flnegative?))
-(declare-flonum-predicate flnonpositive?	(replacements $flnonpositive?))
-(declare-flonum-predicate flnonnegative?	(replacements $flnonnegative?))
-(declare-flonum-predicate fleven?		(replacements $fleven?))
-(declare-flonum-predicate flodd?		(replacements $flodd?))
+ (declare-flonum-predicate flzero?		(replacements $flzero?))
+ (declare-flonum-predicate flzero?/negative	(replacements $flzero?/negative))
+ (declare-flonum-predicate flzero?/positive	(replacements $flzero?/positive))
+ (declare-flonum-predicate flpositive?		(replacements $flpositive?))
+ (declare-flonum-predicate flnegative?		(replacements $flnegative?))
+ (declare-flonum-predicate flnonpositive?	(replacements $flnonpositive?))
+ (declare-flonum-predicate flnonnegative?	(replacements $flnonnegative?))
+ (declare-flonum-predicate fleven?		(replacements $fleven?))
+ (declare-flonum-predicate flodd?		(replacements $flodd?))
 
-(declare-flonum-predicate flnan?		(replacements $flnan?))
-(declare-flonum-predicate flfinite?		(replacements $flfinite?))
-(declare-flonum-predicate flinfinite?		(replacements $flinfinite?))
-(declare-flonum-predicate flinteger?		(replacements $flinteger?))
+ (declare-flonum-predicate flnan?		(replacements $flnan?))
+ (declare-flonum-predicate flfinite?		(replacements $flfinite?))
+ (declare-flonum-predicate flinfinite?		(replacements $flinfinite?))
+ (declare-flonum-predicate flinteger?		(replacements $flinteger?))
 
 ;;; --------------------------------------------------------------------
 ;;; rounding
 
-(declare-flonum-unary flround		(replacements $flround))
-(declare-flonum-unary flfloor		(replacements $flfloor))
-(declare-flonum-unary flceiling		(replacements $flceiling))
-(declare-flonum-unary fltruncate	(replacements $fltruncate))
+ (declare-flonum-unary flround		(replacements $flround))
+ (declare-flonum-unary flfloor		(replacements $flfloor))
+ (declare-flonum-unary flceiling	(replacements $flceiling))
+ (declare-flonum-unary fltruncate	(replacements $fltruncate))
 
 ;;; --------------------------------------------------------------------
 ;;; parts
 
-(declare-flonum-unary flnumerator	(replacements $flnumerator))
-(declare-flonum-unary fldenominator	(replacements $fldenominator))
-(declare-flonum-unary flabs		(replacements $flabs))
+ (declare-flonum-unary flnumerator	(replacements $flnumerator))
+ (declare-flonum-unary fldenominator	(replacements $fldenominator))
+ (declare-flonum-unary flabs		(replacements $flabs))
 
-;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Thu Nov 13, 2014)
-;;
-;; (declare-flonum-unary flonum-bytes)
-;; (declare-flonum-unary flonum-parts)
+ ;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Thu Nov 13, 2014)
+ ;;
+ ;; (declare-flonum-unary flonum-bytes)
+ ;; (declare-flonum-unary flonum-parts)
 
 ;;; --------------------------------------------------------------------
 ;;; trigonometric
 
-(declare-flonum-unary flsin		(replacements $flsin))
-(declare-flonum-unary flcos		(replacements $flcos))
-(declare-flonum-unary fltan		(replacements $fltan))
-(declare-flonum-unary flasin		(replacements $flasin))
-(declare-flonum-unary flacos		(replacements $flacos))
+ (declare-flonum-unary flsin		(replacements $flsin))
+ (declare-flonum-unary flcos		(replacements $flcos))
+ (declare-flonum-unary fltan		(replacements $fltan))
+ (declare-flonum-unary flasin		(replacements $flasin))
+ (declare-flonum-unary flacos		(replacements $flacos))
 
-(declare-core-primitive flatan
-    (safe)
-  (signatures
-   ((T:flonum)			=> (T:flonum))
-   ((T:flonum T:flonum)		=> (T:flonum)))
-  (attributes
-   ((_)			foldable effect-free result-true)
-   ((_ _)		foldable effect-free result-true))
-  (replacements $flatan $flatan2))
+ (declare-core-primitive flatan
+     (safe)
+   (signatures
+    ((T:flonum)			=> (T:flonum))
+    ((T:flonum T:flonum)		=> (T:flonum)))
+   (attributes
+    ((_)			foldable effect-free result-true)
+    ((_ _)		foldable effect-free result-true))
+   (replacements $flatan $flatan2))
 
 ;;; --------------------------------------------------------------------
 ;;; hyperbolic
 
-(declare-flonum-unary flsinh		(replacements $flsinh))
-(declare-flonum-unary flcosh		(replacements $flcosh))
-(declare-flonum-unary fltanh		(replacements $fltanh))
-(declare-flonum-unary flasinh		(replacements $flasinh))
-(declare-flonum-unary flacosh		(replacements $flacosh))
-(declare-flonum-unary flatanh		(replacements $flatanh))
+ (declare-flonum-unary flsinh		(replacements $flsinh))
+ (declare-flonum-unary flcosh		(replacements $flcosh))
+ (declare-flonum-unary fltanh		(replacements $fltanh))
+ (declare-flonum-unary flasinh		(replacements $flasinh))
+ (declare-flonum-unary flacosh		(replacements $flacosh))
+ (declare-flonum-unary flatanh		(replacements $flatanh))
 
 ;;; --------------------------------------------------------------------
 ;;; exponentiation, exponentials, logarithms
 
-(declare-flonum-unary flexp		(replacements $flexp))
-(declare-flonum-unary/binary fllog	(replacements $fllog $fllog2))
-(declare-flonum-unary flexpm1		(replacements $flexpm1))
-(declare-flonum-unary fllog1p		(replacements $fllog1p))
-(declare-flonum-binary flexpt		(replacements $flexpt))
-(declare-flonum-unary flsqrt		(replacements $flsqrt))
-(declare-flonum-unary flsquare		(replacements $flsquare))
-(declare-flonum-unary flcube		(replacements $flcube))
-(declare-flonum-unary flcbrt		(replacements $flcbrt))
-(declare-flonum-binary flhypot		(replacements $flhypot))
+ (declare-flonum-unary flexp		(replacements $flexp))
+ (declare-flonum-unary/binary fllog	(replacements $fllog $fllog2))
+ (declare-flonum-unary flexpm1		(replacements $flexpm1))
+ (declare-flonum-unary fllog1p		(replacements $fllog1p))
+ (declare-flonum-binary flexpt		(replacements $flexpt))
+ (declare-flonum-unary flsqrt		(replacements $flsqrt))
+ (declare-flonum-unary flsquare		(replacements $flsquare))
+ (declare-flonum-unary flcube		(replacements $flcube))
+ (declare-flonum-unary flcbrt		(replacements $flcbrt))
+ (declare-flonum-binary flhypot		(replacements $flhypot))
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-flonum-unary/multi-comparison fl=?	(replacements $fl=?))
-(declare-flonum-unary/multi-comparison fl<?	(replacements $fl<?))
-(declare-flonum-unary/multi-comparison fl>?	(replacements $fl>?))
-(declare-flonum-unary/multi-comparison fl<=?	(replacements $fl<=?))
-(declare-flonum-unary/multi-comparison fl>=?	(replacements $fl>=?))
+ (declare-flonum-unary/multi-comparison fl=?	(replacements $fl=))
+ (declare-flonum-unary/multi-comparison fl<?	(replacements $fl<))
+ (declare-flonum-unary/multi-comparison fl>?	(replacements $fl>))
+ (declare-flonum-unary/multi-comparison fl<=?	(replacements $fl<=))
+ (declare-flonum-unary/multi-comparison fl>=?	(replacements $fl>=))
 
-;;FIXME To be implemented.  (Marco Maggi; Thu Nov 13, 2014)
-;;
-;;(declare-flonum-unary/multi-comparison fl!=?	(replacements $fl!=?))
+ ;;FIXME To be implemented.  (Marco Maggi; Thu Nov 13, 2014)
+ ;;
+ ;;(declare-flonum-unary/multi-comparison fl!=?	(replacements $fl!=))
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
 
-(declare-flonum-unary/multi fl+		(replacements $fl+))
-(declare-flonum-unary/multi fl-		(replacements $fl-))
-(declare-flonum-unary/multi fl*		(replacements $fl*))
-(declare-flonum-unary/multi fl/		(replacements $fl/))
+ (declare-flonum-unary/multi fl+		(replacements $fl+))
+ (declare-flonum-unary/multi fl-		(replacements $fl-))
+ (declare-flonum-unary/multi fl*		(replacements $fl*))
+ (declare-flonum-unary/multi fl/		(replacements $fl/))
 
-(declare-flonum-unary/multi flmin	(replacements $flmin))
-(declare-flonum-unary/multi flmax	(replacements $flmax))
+ (declare-flonum-unary/multi flmin	(replacements $flmin))
+ (declare-flonum-unary/multi flmax	(replacements $flmax))
 
-(declare-flonum-binary fldiv		(replacements $fldiv))
-(declare-flonum-binary fldiv0		(replacements $fldiv0))
-(declare-flonum-binary flmod		(replacements $flmod))
-(declare-flonum-binary flmod0		(replacements $flmod0))
+ (declare-flonum-binary fldiv		(replacements $fldiv))
+ (declare-flonum-binary fldiv0		(replacements $fldiv0))
+ (declare-flonum-binary flmod		(replacements $flmod))
+ (declare-flonum-binary flmod0		(replacements $flmod0))
 
-;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
-;;
-;; (declare-flonum-binary fldiv-and-mod		(replacements $fldiv-and-mod))
-;; (declare-flonum-binary fldiv0-and-mod0	(replacements $fldiv0-and-mod0))
+ ;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
+ ;;
+ ;; (declare-flonum-binary fldiv-and-mod		(replacements $fldiv-and-mod))
+ ;; (declare-flonum-binary fldiv0-and-mod0	(replacements $fldiv0-and-mod0))
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
 
-(declare-core-primitive flonum->string
-    (safe)
-  (signatures
-   ((T:flonum)		=> (T:string)))
-  (attributes
-   ((_)			foldable effect-free result-true)))
+ (declare-core-primitive flonum->string
+     (safe)
+   (signatures
+    ((T:flonum)		=> (T:string)))
+   (attributes
+    ((_)			foldable effect-free result-true)))
 
-(declare-core-primitive flonum->bytevector
-    (safe)
-  (signatures
-   ((T:flonum)		=> (T:bytevector)))
-  (attributes
-   ((_)			foldable effect-free result-true)))
+ (declare-core-primitive flonum->bytevector
+     (safe)
+   (signatures
+    ((T:flonum)		=> (T:bytevector)))
+   (attributes
+    ((_)			foldable effect-free result-true)))
 
-(declare-core-primitive real->flonum
-    (safe)
-  (signatures
-   ((T:real)		=> (T:flonum)))
-  (attributes
-   ((_)			foldable effect-free result-true)))
+ (declare-core-primitive real->flonum
+     (safe)
+   (signatures
+    ((T:real)		=> (T:flonum)))
+   (attributes
+    ((_)			foldable effect-free result-true)))
+
+ /section)
 
 
 ;;;; flonums, unsafe functions
 
-(declare-core-primitive $make-flonum
-    (unsafe)
-  (signatures
-   (()				=> (T:flonum)))
-  ;;Not foldable because $MAKE-FLONUM must return a new flonum every time.
-  (attributes
-   (()				effect-free result-true)))
+(section
 
-(declare-core-primitive $flonum->exact
-    (unsafe)
-  (signatures
-   ((T:flonum)			=> (T:exact-real)))
-  (attributes
-   ((_)				foldable effect-free result-true)))
+ (declare-core-primitive $make-flonum
+     (unsafe)
+   (signatures
+    (()				=> (T:flonum)))
+   ;;Not foldable because $MAKE-FLONUM must return a new flonum every time.
+   (attributes
+    (()				effect-free result-true)))
+
+ (declare-core-primitive $flonum->exact
+     (unsafe)
+   (signatures
+    ((T:flonum)			=> (T:exact-real)))
+   (attributes
+    ((_)				foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates
 
-(declare-flonum-predicate $flzero? unsafe)
-(declare-flonum-predicate $flzero?/positive unsafe)
-(declare-flonum-predicate $flzero?/negative unsafe)
-(declare-flonum-predicate $flpositive? unsafe)
-(declare-flonum-predicate $flnegative? unsafe)
-(declare-flonum-predicate $flnonpositive? unsafe)
-(declare-flonum-predicate $flnonnegative? unsafe)
+ (declare-flonum-predicate $flzero? unsafe)
+ (declare-flonum-predicate $flzero?/positive unsafe)
+ (declare-flonum-predicate $flzero?/negative unsafe)
+ (declare-flonum-predicate $flpositive? unsafe)
+ (declare-flonum-predicate $flnegative? unsafe)
+ (declare-flonum-predicate $flnonpositive? unsafe)
+ (declare-flonum-predicate $flnonnegative? unsafe)
 
-(declare-flonum-predicate $fleven? unsafe)
-(declare-flonum-predicate $flodd? unsafe)
+ (declare-flonum-predicate $fleven? unsafe)
+ (declare-flonum-predicate $flodd? unsafe)
 
-(declare-flonum-predicate $flnan? unsafe)
-(declare-flonum-predicate $flfinite? unsafe)
-(declare-flonum-predicate $flinfinite? unsafe)
-(declare-flonum-predicate $flonum-integer? unsafe)
-(declare-flonum-predicate $flonum-rational? unsafe)
+ (declare-flonum-predicate $flnan? unsafe)
+ (declare-flonum-predicate $flfinite? unsafe)
+ (declare-flonum-predicate $flinfinite? unsafe)
+ (declare-flonum-predicate $flonum-integer? unsafe)
+ (declare-flonum-predicate $flonum-rational? unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; rounding
 
-(declare-flonum-unary $flround unsafe)
-(declare-flonum-unary $flfloor unsafe)
-(declare-flonum-unary $flceiling unsafe)
-(declare-flonum-unary $fltruncate unsafe)
+ (declare-flonum-unary $flround unsafe)
+ (declare-flonum-unary $flfloor unsafe)
+ (declare-flonum-unary $flceiling unsafe)
+ (declare-flonum-unary $fltruncate unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; parts
 
-(declare-flonum-unary $flnumerator unsafe)
-(declare-flonum-unary $fldenominator unsafe)
-(declare-flonum-unary $flabs unsafe)
+ (declare-flonum-unary $flnumerator unsafe)
+ (declare-flonum-unary $fldenominator unsafe)
+ (declare-flonum-unary $flabs unsafe)
+
+ (declare-core-primitive $flonum-u8-ref
+     (unsafe)
+   (signatures
+    ((T:flonum T:fixnum)		=> (T:fixnum)))
+   (attributes
+    ((_ _)			effect-free result-true)))
+
+ (declare-core-primitive $flonum-sbe
+     (unsafe)
+   (signatures
+    ((T:flonum)			=> (T:fixnum)))
+   (attributes
+    ((_)				effect-free result-true)))
+
+ (declare-core-primitive $flonum-set!
+     (unsafe)
+   (signatures
+    ((T:flonum T:fixnum T:fixnum)	=> (T:void)))
+   (attributes
+    ((_ _ _)				result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; trigonometric
 
-(declare-flonum-unary $flsin unsafe)
-(declare-flonum-unary $flcos unsafe)
-(declare-flonum-unary $fltan unsafe)
-(declare-flonum-unary $flasin unsafe)
-(declare-flonum-unary $flacos unsafe)
-(declare-flonum-unary $flatan unsafe)
-(declare-flonum-binary $flatan2 unsafe)
+ (declare-flonum-unary $flsin unsafe)
+ (declare-flonum-unary $flcos unsafe)
+ (declare-flonum-unary $fltan unsafe)
+ (declare-flonum-unary $flasin unsafe)
+ (declare-flonum-unary $flacos unsafe)
+ (declare-flonum-unary $flatan unsafe)
+ (declare-flonum-binary $flatan2 unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; hyperbolic
 
-(declare-flonum-unary $flsinh unsafe)
-(declare-flonum-unary $flcosh unsafe)
-(declare-flonum-unary $fltanh unsafe)
-(declare-flonum-unary $flasinh unsafe)
-(declare-flonum-unary $flacosh unsafe)
-(declare-flonum-unary $flatanh unsafe)
+ (declare-flonum-unary $flsinh unsafe)
+ (declare-flonum-unary $flcosh unsafe)
+ (declare-flonum-unary $fltanh unsafe)
+ (declare-flonum-unary $flasinh unsafe)
+ (declare-flonum-unary $flacosh unsafe)
+ (declare-flonum-unary $flatanh unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; exponentiation, exponentials, logarithms
 
-(declare-flonum-unary $flexp unsafe)
-(declare-flonum-unary $fllog unsafe)
-(declare-flonum-binary $fllog2 unsafe)
-(declare-flonum-unary $flexpm1 unsafe)
-(declare-flonum-unary $fllog1p unsafe)
-(declare-flonum-unary $flexpt unsafe)
-(declare-flonum-unary $flsqrt unsafe)
-(declare-flonum-unary $flsquare unsafe)
-(declare-flonum-unary $flsquare unsafe)
-(declare-flonum-unary $flcube unsafe)
-(declare-flonum-unary $flcbrt unsafe)
-(declare-flonum-binary $flhypot unsafe)
+ (declare-flonum-unary $flexp unsafe)
+ (declare-flonum-unary $fllog unsafe)
+ (declare-flonum-binary $fllog2 unsafe)
+ (declare-flonum-unary $flexpm1 unsafe)
+ (declare-flonum-unary $fllog1p unsafe)
+ (declare-flonum-unary $flexpt unsafe)
+ (declare-flonum-unary $flsqrt unsafe)
+ (declare-flonum-unary $flsquare unsafe)
+ (declare-flonum-unary $flsquare unsafe)
+ (declare-flonum-unary $flcube unsafe)
+ (declare-flonum-unary $flcbrt unsafe)
+ (declare-flonum-binary $flhypot unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; comparison
 
-(declare-flonum-binary-comparison $fl= unsafe)
-(declare-flonum-binary-comparison $fl< unsafe)
-(declare-flonum-binary-comparison $fl> unsafe)
-(declare-flonum-binary-comparison $fl<= unsafe)
-(declare-flonum-binary-comparison $fl>= unsafe)
+ (declare-flonum-binary-comparison $fl= unsafe)
+ (declare-flonum-binary-comparison $fl< unsafe)
+ (declare-flonum-binary-comparison $fl> unsafe)
+ (declare-flonum-binary-comparison $fl<= unsafe)
+ (declare-flonum-binary-comparison $fl>= unsafe)
 
-;;FIXME To be implemented.  (Marco Maggi; Thu Nov 13, 2014)
-;;
-;;(declare-flonum-binary-comparison $fl!=? unsafe)
+ ;;FIXME To be implemented.  (Marco Maggi; Thu Nov 13, 2014)
+ ;;
+ ;;(declare-flonum-binary-comparison $fl!=? unsafe)
 
 ;;; --------------------------------------------------------------------
 ;;; arithmetics
 
-(declare-flonum-binary $fl+ unsafe)
-(declare-flonum-unary/binary $fl- unsafe)
-(declare-flonum-binary $fl* unsafe)
-(declare-flonum-binary $fl/ unsafe)
+ (declare-flonum-binary $fl+ unsafe)
+ (declare-flonum-unary/binary $fl- unsafe)
+ (declare-flonum-binary $fl* unsafe)
+ (declare-flonum-binary $fl/ unsafe)
 
-(declare-flonum-binary $fldiv unsafe)
-(declare-flonum-binary $flmod unsafe)
-(declare-flonum-binary $fldiv0 unsafe)
-(declare-flonum-binary $flmod0 unsafe)
+ (declare-flonum-binary $fldiv unsafe)
+ (declare-flonum-binary $flmod unsafe)
+ (declare-flonum-binary $fldiv0 unsafe)
+ (declare-flonum-binary $flmod0 unsafe)
 
-(declare-flonum-binary $flmax unsafe)
-(declare-flonum-binary $flmin unsafe)
+ (declare-flonum-binary $flmax unsafe)
+ (declare-flonum-binary $flmin unsafe)
 
-;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
-;;
-;;(($fldiv-and-mod _ _)		   foldable effect-free result-true)
-;;(($fldiv0-and-mod0 _ _)	   foldable effect-free result-true)
+ ;;FIXME We do not do multiple return values, yet.  (Marco Maggi; Wed Nov 12, 2014)
+ ;;
+ ;;(($fldiv-and-mod _ _)		   foldable effect-free result-true)
+ ;;(($fldiv0-and-mod0 _ _)	   foldable effect-free result-true)
+
+ /section)
 
 
 ;;;; cflonums, safe functions
@@ -2927,8 +3106,8 @@
 ;;;; general arithmetics, misc functions
 
 (declare-type-predicate number? T:number)
-(declare-type-predicate complex?)
-(declare-type-predicate real?)
+(declare-type-predicate complex? T:number)
+(declare-type-predicate real? T:real)
 (declare-type-predicate rational?)
 (declare-type-predicate integer?)
 
@@ -3131,12 +3310,7 @@
 
 ;;; predicates
 
-(declare-core-primitive char?
-    (safe)
-  (signatures
-   ((_)				=> (T:boolean)))
-  (attributes
-   ((_)				foldable effect-free)))
+(declare-type-predicate char? T:char)
 
 ;;; --------------------------------------------------------------------
 ;;; conversion
