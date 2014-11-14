@@ -69,7 +69,7 @@
     flfinite?		$flfinite?
     flinfinite?		$flinfinite?
 
-    fl=?
+    fl=?		fl!=?
     fl<?		fl>?
     fl<=?		fl>=?
     fl+			fl-
@@ -97,8 +97,9 @@
 		  flsquare		flcube		flhypot
 		  flcbrt
 		  flinteger?		flnan?		flfinite?
-		  flinfinite?		fl=?		fl<?
-		  fl>?			fl<=?		fl>=?
+		  flinfinite?		fl=?		fl!=?
+		  fl<?			fl>?
+		  fl<=?			fl>=?
 		  fl+			fl-		fl*
 		  fl/			flmax		flmin
 		  flonum-parts		flonum-bytes
@@ -124,6 +125,9 @@
 	    $flnan?
 	    $flonum-integer?
 	    $flonum-rational?
+	    ;;FIXME To be removed at the next boot image rotation.  (Marco Maggi; Fri
+	    ;;Nov 14, 2014)
+	    $fl!=
 	    $flround
 	    $flfloor
 	    $flceiling
@@ -705,10 +709,17 @@
 		    #| end of module |# )
 		  ))))
   (define-flcmp fl=?	$fl=)
+  (define-flcmp fl!=?	$fl!=)
   (define-flcmp fl<?	$fl<)
   (define-flcmp fl<=?	$fl<=)
   (define-flcmp fl>?	$fl>)
   (define-flcmp fl>=?	$fl>=))
+
+;;FIXME To  be removed at the  next boot image  rotation.  (Marco Maggi; Fri  Nov 14,
+;;2014)
+;;
+(define-syntax-rule ($fl!= x y)
+  (not ($fl= x y)))
 
 
 ;;;; arithmetic

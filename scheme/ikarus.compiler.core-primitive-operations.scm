@@ -2753,6 +2753,13 @@
    ((P x y)
     ($flcmp-aux 'fl:= x y)))
 
+ (define-core-primitive-operation $fl!= unsafe
+   ;;Notice that  this predicate does  not distinguish between  +0.0 and
+   ;;-0.0 and this is compliant with what R6RS states.
+   ;;
+   ((P x y)
+    ($flcmp-aux 'fl:!= x y)))
+
  (define-core-primitive-operation $fl< unsafe
    ((P x y)
     ($flcmp-aux 'fl:< x y)))

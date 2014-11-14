@@ -807,6 +807,18 @@ result.
 
 @c ------------------------------------------------------------
 
+@subsubheading Comparison
+
+
+@deffn {Unsafe Operation} $fl!= @vari{fl} @varii{fl}
+Return true if the operands are equal; otherwise return @false{}.  This
+operation does @strong{not} distinguish between @code{+0.0} and
+@code{-0.0}.
+@end deffn
+
+
+@c ------------------------------------------------------------
+
 @subsubheading Predicates
 
 

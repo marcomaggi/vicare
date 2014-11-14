@@ -420,10 +420,11 @@
 	 (A-operand dst x)
 	 (A-operand src x))
 
-	((fl:= fl:< fl:<= fl:> fl:>=)
+	((fl:= fl:!= fl:< fl:<= fl:> fl:>=)
 	 ;;We expect X to have the format:
 	 ;;
 	 ;;   (asm-instr fl:=  ?dst ?src)
+	 ;;   (asm-instr fl:!=  ?dst ?src)
 	 ;;   (asm-instr fl:<  ?dst ?src)
 	 ;;   (asm-instr fl:<= ?dst ?src)
 	 ;;   (asm-instr fl:>  ?dst ?src)
@@ -1335,7 +1336,7 @@
 	(case op
 	  ((= != <  <= > >= u< u<= u> u>=)
 	   (P-asm-instr/integer-comparison      op dst src x))
-	  ((fl:= fl:< fl:<= fl:> fl:>=)
+	  ((fl:= fl:!= fl:< fl:<= fl:> fl:>=)
 	   (P-asm-instr/float-number-comparison op dst src x))
 	  (else
 	   (compiler-internal-error __module_who__ __who__
@@ -1399,6 +1400,7 @@
 	;;We expect X to have the format:
 	;;
 	;;   (asm-instr fl:=  ?dst ?src)
+	;;   (asm-instr fl:!= ?dst ?src)
 	;;   (asm-instr fl:<  ?dst ?src)
 	;;   (asm-instr fl:<= ?dst ?src)
 	;;   (asm-instr fl:>  ?dst ?src)
