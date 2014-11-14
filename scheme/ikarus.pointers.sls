@@ -552,11 +552,8 @@
 ;;; pointer manipulation procedures
 
 (define (pointer? obj)
-  ;;FIXME Why  in hell do I have  to keep this function  rather than use
-  ;;the  $FIXNUM?   primitive   operation  exported  by  (ikarus  system
-  ;;$pointers)? (Marco Maggi; Nov 30, 2011)
-  ;;
-  (capi.ffi-pointer? obj))
+  (import (prefix (only (vicare) pointer?) sys:))
+  (sys:pointer? obj))
 
 (define (null-pointer)
   (capi.ffi-fixnum->pointer 0))

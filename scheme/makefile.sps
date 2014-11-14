@@ -1345,7 +1345,6 @@
 
 ;;; --------------------------------------------------------------------
 ;;; (ikarus system $pointers)
-    ($pointer?					$pointers)
     ($pointer=					$pointers)
 ;;;
     ($closure-code				$codes)
