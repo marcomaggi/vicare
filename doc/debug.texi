@@ -30,6 +30,7 @@ The implementation is mostly in @file{ikarus.debugger.sls} and
 
 
 @deffn Parameter generate-debug-calls
+@cindex Parameter @func{generate-debug-calls}
 Set to true when debug mode is turned on.  Defined in
 @file{ikarus.compiler.sls}, configured in @file{ikarus.main.sls}.
 @end deffn

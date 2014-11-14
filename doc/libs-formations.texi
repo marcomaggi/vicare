@@ -124,6 +124,7 @@ format string, but any excess arguments are ignored.
 
 
 @deffn Parameter format-output-column
+@cindex Parameter @func{format-output-column}
 The zero--based starting column number for the next invocations of
 @func{format}.  The value is initialised to @math{0} and must be a
 non--negative fixnum.

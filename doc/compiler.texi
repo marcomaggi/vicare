@@ -723,6 +723,7 @@ compiler}.
 
 
 @deffn Parameter descriptive-labels
+@cindex Parameter @func{descriptive-labels}
 When set to true: attempt to generate descriptive pretty names for
 gensyms used by the compiler as lexical gensyms, loc gensyms and code
 labels; this is useful for debugging purposes and code generation
@@ -1526,6 +1527,7 @@ level binding constructs and assignments.
 
 
 @deffn Parameter check-for-illegal-letrec
+@cindex Parameter @func{check-for-illegal-letrec}
 If set to true: @func{optimize-letrec} will perform an additional
 recordized code pass to check for illegal binding references in the
 right--hand sides of @func{letrec}, @func{letrec*} and
@@ -1538,6 +1540,7 @@ for no problems in code.
 
 
 @deffn Parameter current-letrec-pass
+@cindex Parameter @func{current-letrec-pass}
 Select the transformations performed by @func{optimize-letrec}; possible
 values are the symbols:
 
@@ -2232,6 +2235,7 @@ hierarchy.
 
 
 @deffn Parameter source-optimizer-passes-count
+@cindex Parameter @func{source-optimizer-passes-count}
 Specify how many passes to perform with the source optimizer; it must be
 a positive fixnum.  Defaults to @code{1}; it is set to 2 when the
 optimisation level is @code{3}.
@@ -2245,12 +2249,14 @@ The following bindings are exported by the library @library{vicare}.
 
 
 @deffn Parameter optimize-level
+@cindex Parameter @func{optimize-level}
 The optimization level; accepted values are the fixnums @code{0},
 @code{1}, @code{2}, @code{3}.  Defaults to @code{2}.
 @end deffn
 
 
 @deffn Parameter cp0-effort-limit
+@cindex Parameter @func{cp0-effort-limit}
 The initial value of an "effort counter" that is decremented every time
 an optimisation is performed by the source optimiser; when the counter
 reaches zero: the current optimisation effort is abandoned and the
@@ -2260,6 +2266,7 @@ optimiser enters specific subexpressions of the input.
 
 
 @deffn Parameter cp0-size-limit
+@cindex Parameter @func{cp0-size-limit}
 The initial value of a (estimated) code size counter that is decremented
 every time an optimisation is performed by the source optimiser; when
 the counter reaches zero: the current optimisation effort is abandoned
@@ -2470,6 +2477,7 @@ hierarchy.
 
 
 @deffn Parameter perform-core-type-inference
+@cindex Parameter @func{perform-core-type-inference}
 When true the pass @func{core-type-inference} is performed, else it is
 skipped.  Defaults to @true{}.
 @end deffn
@@ -2565,6 +2573,7 @@ hierarchy.
 
 
 @deffn Parameter perform-unsafe-primrefs-introduction
+@cindex Parameter @func{perform-unsafe-primrefs-introduction}
 When true the pass @func{introduce-unsafe-primrefs} is performed, else
 it is skipped.  Defaults to @true{}.
 @end deffn

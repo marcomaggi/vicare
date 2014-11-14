@@ -3315,6 +3315,7 @@ or number @var{service}.  This function is similar to
 
 
 @deffn Parameter tcp-connect.connect-proc
+@cindex Parameter @func{tcp-connect.connect-proc}
 References a function used by @func{tcp-connect} to actually attempt a
 @tcp{} connection.  It is initialised to @func{connect}.
 
@@ -5903,6 +5904,7 @@ errors appropriately in the handlers.
 
 
 @deffn Parameter log-procedure
+@cindex Parameter @func{log-procedure}
 When set to @true{} causes debugging messages to be displayed on the
 current error port.  When set to a procedure: such procedure is called
 with a single argument whenever a log message must be reported; such
@@ -6101,6 +6103,7 @@ pid-files}.
 
 
 @deffn Parameter pid-pathname
+@cindex Parameter @func{pid-pathname}
 Hold @false{} or a string representing the @acronym{PID} file
 @strong{absolute} pathname; beware of setting a relative pathname and
 then changing the current process directory.  When set to @false{}: no
@@ -6109,12 +6112,14 @@ then changing the current process directory.  When set to @false{}: no
 
 
 @deffn Parameter file-existence-procedure
+@cindex Parameter @func{file-existence-procedure}
 Hold a function that tests @acronym{PID} file existence.  It is
 initialised to @file{file-exists?}.
 @end deffn
 
 
 @deffn Parameter textual-contents-reading-procedure
+@cindex Parameter @func{textual-contents-reading-procedure}
 Hold a function that reads the @acronym{PID} file contents and returns
 them as a Scheme string.  It is initialised to:
 
@@ -6130,6 +6135,7 @@ them as a Scheme string.  It is initialised to:
 
 
 @deffn Parameter textual-contents-writing-procedure
+@cindex Parameter @func{textual-contents-writing-procedure}
 Hold a function that writes the @acronym{PID} file.  It is initialised
 to:
 
@@ -6143,12 +6149,14 @@ to:
 
 
 @deffn Parameter file-removal-procedure
+@cindex Parameter @func{file-removal-procedure}
 Hold a function that removes the @acronym{PID} file.  It is initialised
 to @func{delete-file}.
 @end deffn
 
 
 @deffn Parameter log-procedure
+@cindex Parameter @func{log-procedure}
 Hold a function accepting @func{format}--like arguments and logging the
 result:
 
@@ -6633,12 +6641,14 @@ log-files}.
 
 
 @deffn Parameter logging-enabled?
+@cindex Parameter @func{logging-enabled?}
 Boolean: true if logging is enabled, false otherwise.  It is initialised
 to @false{}.
 @end deffn
 
 
 @deffn Parameter log-port
+@cindex Parameter @func{log-port}
 A textual output port to which log messages must be written; the port is
 expected to have @code{line} buffering, but this is not required.  It is
 initialised to the value of the parameter @func{current-output-port} at
@@ -6649,6 +6659,7 @@ This parameter is configured by calls to @func{open-logging}.
 
 
 @deffn Parameter log-prefix
+@cindex Parameter @func{log-prefix}
 A string representing the prefix for every log message; it can be the
 empty string.  It is initialised to the empty string.  It is useful to
 include the ID of the current process in this prefix string, @ref{posix
@@ -6657,6 +6668,7 @@ pid, getpid}.
 
 
 @deffn Parameter log-pathname
+@cindex Parameter @func{log-pathname}
 False or a Scheme string representing the log file pathname.  The
 special string @code{"-"} means: log to the error port.  It is
 initialised to @code{"-"}.

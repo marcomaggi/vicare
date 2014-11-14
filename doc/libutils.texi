@@ -777,24 +777,28 @@ search paths}.  The following bindings are exported by the library
 
 
 @deffn Parameter library-path
+@cindex Parameter @func{library-path}
 Hold a list of strings representing directory pathnames.  It is used as
 search path for source libraries.
 @end deffn
 
 
 @deffn Parameter library-extensions
+@cindex Parameter @func{library-extensions}
 Hold a list of strings representing source library file name extensions,
 leading dot included.
 @end deffn
 
 
 @deffn Parameter fasl-search-path
+@cindex Parameter @func{fasl-search-path}
 Hold a list of strings representing directory pathnames.  It is used as
 search path for binary libraries stored in @fasl{} files.
 @end deffn
 
 
 @deffn Parameter fasl-directory
+@cindex Parameter @func{fasl-directory}
 Hold a string representing a directory pathname.  It is used as
 directory prefix under which new binary library @fasl{} files are
 created.
@@ -818,6 +822,7 @@ libraries}.
 
 
 @deffn Parameter current-library-locator
+@cindex Parameter @func{current-library-locator}
 Hold a function used to locate a library from its @rnrs{6} library
 reference; this parameter is usually initialised to one of the
 functions:
@@ -1028,6 +1033,7 @@ libraries}.
 
 
 @deffn Parameter current-source-library-file-locator
+@cindex Parameter @func{current-source-library-file-locator}
 Hold a function used to convert a @rnrs{6} library reference into the
 corresponding source file pathname.
 
@@ -1040,6 +1046,7 @@ must return @false{} and @false{}.
 
 
 @deffn Parameter current-binary-library-file-locator
+@cindex Parameter @func{current-binary-library-file-locator}
 Hold a function used to convert a @rnrs{6} library reference into the
 corresponding @fasl{} file pathname.
 

@@ -766,6 +766,7 @@ fixnum generator referenced by @func{amb-random-fixnum-maker}.
 
 
 @deffn Parameter amb-random-fixnum-maker
+@cindex Parameter @func{amb-random-fixnum-maker}
 Hold a procedure accepting a fixnum as single argument: when applied to
 the fixnum @math{N} it must return a fixnum in the range @math{[0, N)}.
 It is initialised with @func{random} from the library @library{vicare},
