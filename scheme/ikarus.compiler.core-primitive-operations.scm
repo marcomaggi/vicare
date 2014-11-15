@@ -1633,6 +1633,7 @@
     (nop)))
 
  (define-core-primitive-operation $make-symbol unsafe
+   ;;The operand STR can be a string object or #f.
    ((V str)
     (with-tmp ((sym (asm 'alloc
 			 (K (align symbol-record-size))

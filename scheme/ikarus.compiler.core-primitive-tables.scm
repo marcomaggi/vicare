@@ -1558,9 +1558,22 @@
    ((_)				foldable effect-free result-true)))
 
 
-;;;; symbols, safe functions
+;;;; symbols, safe primitives
 
 (declare-type-predicate symbol? T:symbol)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive gensym
+    (safe)
+  (signatures
+   (()				=> (T:symbol))
+   ((T:symbol)			=> (T:symbol))
+   ((T:string)			=> (T:symbol)))
+  (attributes
+   ;;It must return a new gensym every time.
+   (()				effect-free result-true)
+   ((_)				effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; property lists
@@ -1599,8 +1612,17 @@
   (replacements $property-list))
 
 
-;;;; symbols, unsafe functions
+;;;; symbols, unsafe primitives
 
+(declare-core-primitive $make-symbol
+    (unsafe)
+  (signatures
+   ((T:false)			=> (T:symbol))
+   ((T:string)			=> (T:symbol)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
 ;;; property lists
 
 (declare-core-primitive $putprop
@@ -2107,6 +2129,7 @@
 
 ;;; constructors
 
+;;The base struct type descriptor is a constant created at process boot time.
 (declare-core-primitive base-rtd
     (unsafe)
   (signatures
@@ -2194,7 +2217,7 @@
   (attributes))
 
 
-;;;; input/output
+;;;; input/output, safe primitives
 
 (declare-core-primitive current-input-port
     (safe)
@@ -2228,6 +2251,71 @@
    (()				effect-free result-true)
    ((_)				result-true)
    ((_ _)			result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive standard-input-port
+    (safe)
+  (signatures
+   (()				=> (T:binary-input-port)))
+  (attributes
+   (()				effect-free result-true)))
+
+(declare-core-primitive standard-output-port
+    (safe)
+  (signatures
+   (()				=> (T:binary-output-port)))
+  (attributes
+   (()				effect-free result-true)))
+
+(declare-core-primitive standard-error-port
+    (safe)
+  (signatures
+   (()				=> (T:binary-output-port)))
+  (attributes
+   (()				effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive console-input-port
+    (safe)
+  (signatures
+   (()				=> (T:textual-input-port)))
+  (attributes
+   (()				effect-free result-true)))
+
+(declare-core-primitive console-output-port
+    (safe)
+  (signatures
+   (()				=> (T:textual-output-port)))
+  (attributes
+   (()				effect-free result-true)))
+
+(declare-core-primitive console-error-port
+    (safe)
+  (signatures
+   (()				=> (T:textual-output-port)))
+  (attributes
+   (()				effect-free result-true)))
+
+
+;;;; input/output, safe primitives
+
+;;; transcoders
+
+(declare-core-primitive $data->transcoder
+    (unsafe)
+  (signatures
+   ((T:fixnum)			=> (T:transcoder)))
+  (attributes
+   ((_)				effect-free result-true)))
+
+(declare-core-primitive $transcoder->data
+    (unsafe)
+  (signatures
+   ((T:transcoder)		=> (T:fixnum)))
+  (attributes
+   ((_)				effect-free result-true)))
 
 
 ;;;; generic functions
@@ -2267,6 +2355,15 @@
    ((T:procedure)		=> (T:void))
    ((T:procedure T:boolean)	=> (T:void)))
   (attributes))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive make-guardian
+    (safe)
+  (signatures
+   (()				=> (T:procedure)))
+  (attributes
+   (()				effect-free result-true)))
 
 
 ;;;; numerics, general arithmetics, addition
@@ -4062,87 +4159,10 @@
 
 #|
 
-
-      ((condition . _))
-      ((top-level-value . _))
-      ((make-message-condition . _))
-      ((make-lexical-violation . _))
-      ((make-who-condition . _))
-      ((make-error . _))
-      ((make-i/o-error . _))
-      ((make-i/o-write-error . _))
-      ((make-i/o-read-error . _))
-      ((make-i/o-file-already-exists-error . _))
-      ((make-i/o-file-is-read-only-error . _))
-      ((make-i/o-file-protection-error . _))
-      ((make-i/o-file-does-not-exist-error . _))
-      ((make-undefined-violation . _))
-      ((die . _))
-      ;;This must return a new gensym every time.
-      ((gensym . _)				effect-free result-true)
-      ((values . _))
-      ((error . _))
-      ((assertion-violation . _))
-      ;;FIXME Reduce to display.  (Abdulaziz Ghuloum)
-      ((printf . _))
-      ((newline . _))
-      ((native-transcoder . _))
-      ((open-string-output-port . _))
-      ((open-string-input-port . _))
-      ((environment . _))
-      ((print-gensym . _))
-      ((exit . _))
-      ((display . _))
-      ((write-char . _))
-      ((current-input-port . _))
-      ((current-output-port . _))
-      ((current-error-port . _))
-      ((standard-input-port . _))
-      ((standard-output-port . _))
-      ((standard-error-port . _))
-
-      ((standard-input-port . _)		 effect-free result-true)
-      ((standard-output-port . _)		 effect-free result-true)
-      ((standard-error-port . _)		 effect-free result-true)
-      ((console-input-port . _)			 effect-free result-true)
-      ((console-output-port . _)		 effect-free result-true)
-      ((console-error-port . _)			 effect-free result-true)
-      (($current-frame . _))
-      ((pretty-width . _))
-      (($fp-at-base . _))
-      (($collect-key . _))
-      ((make-non-continuable-violation . _))
-
-      ;;FIXME Reduce to string-copy (Abdulaziz Ghuloum).
-      ((format . _))
-      ((uuid . _))
-      ((print-graph . _))
-      ((interaction-environment . _))
-      ((make-guardian)					 effect-free result-true)
-      ((command-line-arguments))
-      ;;FIXME (Abdulaziz Ghuloum)
-      ((make-record-type-descriptor . _))
       ((record-constructor _)				 effect-free result-true)
       ((record-predicate _)				 effect-free result-true)
       ((record-accessor . _)				 effect-free result-true)
       ((record-mutator . _)				 effect-free result-true)
-      ((make-assertion-violation . _))
-      ((new-cafe . _))
-      ((getenv . _))
-      ((gensym-prefix . _))
-      (($arg-list . _))
-      (($make-symbol . _)				 effect-free result-true)
-      (($make-call-with-values-procedure . _))
-      (($make-values-procedure . _))
-      (($unset-interrupted! . _))
-      ((make-interrupted-condition . _))
-      (($interrupted? . _))
-      (($symbol-value . _))
-      ((library-extensions . _))
-      ;;The base struct type descriptor is a constant created at process
-      ;;boot time.
-      (($data->transcoder . _)			foldable effect-free result-true)
-      ((current-time . _))
 
 |#
 
