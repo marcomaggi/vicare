@@ -2217,6 +2217,53 @@
   (attributes))
 
 
+;;;; R6RS records
+
+(declare-type-predicate record? T:record)
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive record-constructor
+    (safe)
+  (signatures
+   ((_)				=> (T:procedure)))
+  (attributes
+   ((_)				effect-free result-false)))
+
+(declare-core-primitive record-predicate
+    (safe)
+  (signatures
+   ((_)				=> (T:procedure)))
+  (attributes
+   ((_)				effect-free result-false)))
+
+(declare-core-primitive record-accessor
+    (safe)
+  (signatures
+   ((_ T:fixnum)		=> (T:procedure))
+   ((_ T:fixnum T:false)	=> (T:procedure))
+   ((_ T:fixnum T:symbol)	=> (T:procedure))
+   ((_ T:symbol)		=> (T:procedure))
+   ((_ T:symbol T:false)	=> (T:procedure))
+   ((_ T:symbol T:symbol)	=> (T:procedure)))
+  (attributes
+   ((_ _)			effect-free result-false)
+   ((_ _ _)			effect-free result-false)))
+
+(declare-core-primitive record-mutator
+    (safe)
+  (signatures
+   ((_ T:fixnum)		=> (T:procedure))
+   ((_ T:fixnum T:false)	=> (T:procedure))
+   ((_ T:fixnum T:symbol)	=> (T:procedure))
+   ((_ T:symbol)		=> (T:procedure))
+   ((_ T:symbol T:false)	=> (T:procedure))
+   ((_ T:symbol T:symbol)	=> (T:procedure)))
+  (attributes
+   ((_ _)			effect-free result-false)
+   ((_ _ _)			effect-free result-false)))
+
+
 ;;;; input/output, safe primitives
 
 (declare-core-primitive current-input-port
@@ -4154,17 +4201,6 @@
    ((T:fixnum)		=> (T:char)))
   (attributes
    ((_)			foldable effect-free result-true)))
-
-
-
-#|
-
-      ((record-constructor _)				 effect-free result-true)
-      ((record-predicate _)				 effect-free result-true)
-      ((record-accessor . _)				 effect-free result-true)
-      ((record-mutator . _)				 effect-free result-true)
-
-|#
 
 
 ;;;; done
