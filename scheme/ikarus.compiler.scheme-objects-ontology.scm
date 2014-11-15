@@ -47,8 +47,8 @@
    T:non-false		T:false			T:true		T:void
    T:boolean		T:char			T:symbol	T:string
    T:null		T:pair			T:vector	T:bytevector
-   T:procedure		T:struct		T:record	T:other-struct
-   T:transcoder		T:pointer		T:hashtable
+   T:procedure		T:transcoder		T:pointer	T:hashtable
+   T:struct		T:record		T:struct-rtd	T:other-struct
 
    T:port		T:textual-port		T:binary-port
    T:input-port		T:output-port		T:input/output-port
@@ -96,8 +96,8 @@
    T:non-false?		T:false?		T:true?		T:void?
    T:boolean?		T:char?			T:symbol?	T:string?
    T:null?		T:pair?			T:vector?	T:bytevector?
-   T:procedure?		T:struct?		T:record?	T:other-struct?
-   T:transcoder?	T:pointer?		T:hashtable?
+   T:procedure?		T:transcoder?		T:pointer?	T:hashtable?
+   T:struct?		T:record?		T:struct-rtd?	T:other-struct?
 
    T:port?		T:textual-port?		T:binary-port?
    T:input-port?	T:output-port?		T:input/output-port?
@@ -492,7 +492,7 @@
   (exact-real		(exclusive fixnum bignum ratnum other-exact-real))
   (complex		(exclusive cflonum compnum other-complex))
 
-  (struct		(exclusive record other-struct))
+  (struct		(exclusive record struct-rtd other-struct))
 
   ;;NOTE I  am unable to  define the port attributes  so that input/output  ports are
   ;;correctly recognised as input  port or output port when needed.   But most of the
@@ -744,6 +744,7 @@
   (check (T:immediate? T:port)			=> no)
   (check (T:immediate? T:struct)		=> no)
   (check (T:immediate? T:record)		=> no)
+  (check (T:immediate? T:struct-rtd)		=> no)
   (check (T:immediate? T:other-struct)		=> no)
   (check (T:immediate? T:other-object)		=> no)
 
@@ -777,6 +778,7 @@
   (check (T:nonimmediate? T:port)		=> yes)
   (check (T:nonimmediate? T:struct)		=> yes)
   (check (T:nonimmediate? T:record)		=> yes)
+  (check (T:nonimmediate? T:struct-rtd)		=> yes)
   (check (T:nonimmediate? T:other-struct)	=> yes)
   (check (T:nonimmediate? T:other-object)	=> yes)
 
@@ -795,14 +797,22 @@
 
   (check (T:struct? T:struct)			=> yes)
   (check (T:struct? T:record)			=> yes)
+  (check (T:struct? T:struct-rtd)		=> yes)
   (check (T:struct? T:string)			=> no)
+
+  (check (T:struct-rtd? T:struct)		=> maybe)
+  (check (T:struct-rtd? T:record)		=> no)
+  (check (T:struct-rtd? T:struct-rtd)		=> yes)
+  (check (T:struct-rtd? T:string)		=> no)
 
   (check (T:record? T:struct)			=> maybe)
   (check (T:record? T:record)			=> yes)
+  (check (T:record? T:struct-rtd)		=> no)
   (check (T:record? T:string)			=> no)
 
   (check (T:other-struct? T:struct)		=> maybe)
   (check (T:other-struct? T:record)		=> no)
+  (check (T:other-struct? T:struct-rtd)		=> no)
   (check (T:other-struct? T:string)		=> no)
 
 ;;; --------------------------------------------------------------------

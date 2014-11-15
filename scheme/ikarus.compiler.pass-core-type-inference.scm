@@ -412,6 +412,10 @@
        (values (extend-env rand T:struct env)
 	       env))
 
+      ((struct-type-descriptor?)
+       (values (extend-env rand T:struct-rtd env)
+	       env))
+
       ((annotation?)
        (values (extend-env rand T:other-struct env)
 	       env))

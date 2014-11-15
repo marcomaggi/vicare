@@ -1956,7 +1956,7 @@
    ((_ _)			foldable effect-free result-true)))
 
 
-;;;; hashtables, safe functions
+;;;; hashtables, safe primitives
 
 (declare-core-primitive make-eq-hashtable
     (safe)
@@ -1984,6 +1984,69 @@
   (attributes
    ((_ _)				effect-free result-true)
    ((_ _ _)				effect-free result-true)))
+
+
+;;;; structs, safe primitives
+
+(declare-core-primitive struct?
+    (unsafe)
+  (signatures
+   ((T:struct)			=> (T:true))
+   ((_)				=> (T:boolean))
+   ((T:struct T:struct-rtd)	=> (T:boolean)))
+  (attributes
+   ((_)				foldable effect-free)
+   ((_ _)			foldable effect-free)))
+
+(declare-type-predicate struct-type-descriptor? T:struct-rtd)
+
+
+
+;;;; structs, unsafe primitives
+
+;;; constructors
+
+(declare-core-primitive base-rtd
+    (unsafe)
+  (signatures
+   (()				=> (T:struct-rtd)))
+  (attributes
+   (()				effect-free result-true)))
+
+(declare-core-primitive $struct
+    (unsafe)
+  (signatures
+   ((T:struct-rtd . _)		=> (T:struct)))
+  (attributes
+   ;;It must return a new struct every time.
+   ((_ . _)			effect-free result-true)))
+
+;;; --------------------------------------------------------------------
+;;; predicates
+
+(declare-core-primitive $struct/rtd?
+    (unsafe)
+  (signatures
+   ((_ T:struct-rtd)		=> (T:boolean)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+;;; --------------------------------------------------------------------
+
+(declare-core-primitive $struct-ref
+    (unsafe)
+  (signatures
+   ((T:struct T:fixnum)		=> (_)))
+  (attributes
+   ((_ _)			foldable effect-free)))
+
+(declare-core-primitive $struct-set!
+    (unsafe)
+  (signatures
+   ((T:struct T:fixnum _)	=> (T:void)))
+  (attributes
+   ((_ _)			foldable result-true)))
+
 
 
 ;;;; annotations
@@ -3898,10 +3961,6 @@
 
 #|
 
-      ;;This must return a new struct every time.
-      (($struct . _)			     effect-free result-true)
-      (($struct-ref _ _)	   foldable effect-free		   )
-      (($struct/rtd? _ _)	   foldable effect-free		   )
 
       ((condition . _))
       ((top-level-value . _))
@@ -3950,7 +4009,6 @@
       (($current-frame . _))
       ((pretty-width . _))
       (($fp-at-base . _))
-      ((get-annotated-datum . _))
       (($collect-key . _))
       ((make-non-continuable-violation . _))
 
@@ -3982,7 +4040,6 @@
       ((library-extensions . _))
       ;;The base struct type descriptor is a constant created at process
       ;;boot time.
-      ((base-rtd . _))
       (($data->transcoder . _)			foldable effect-free result-true)
       ((current-time . _))
 
