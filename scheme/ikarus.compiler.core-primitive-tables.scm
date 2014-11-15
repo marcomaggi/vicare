@@ -205,7 +205,6 @@
        (declare-core-primitive ?who
 	   (?safety)
 	 (signatures
-	  ((?obj-tag)		=> (T:true))
 	  ((_)			=> (T:boolean)))
 	 (attributes
 	  ((_)			foldable effect-free))
@@ -1144,18 +1143,72 @@
  (declare-flonum-predicate fleven?		(replacements $fleven?))
  (declare-flonum-predicate flodd?		(replacements $flodd?))
 
- (declare-flonum-predicate flnan?		(replacements $flnan?))
- (declare-flonum-predicate flfinite?		(replacements $flfinite?))
- (declare-flonum-predicate flinfinite?		(replacements $flinfinite?))
- (declare-flonum-predicate flinteger?		(replacements $flinteger?))
+ (declare-core-primitive flinteger?
+     (safe)
+   (signatures
+    ((T:flonum-integer)		=> (T:true))
+    ((T:flonum-fractional)	=> (T:false))
+    ((T:flonum-infinite)	=> (T:false))
+    ((T:flonum-nan)		=> (T:false))
+    ((T:flonum)			=> (T:boolean)))
+   (attributes
+    ((_)			foldable effect-free))
+   (replacements $flonum-integer?))
+
+ (declare-core-primitive flfinite?
+     (safe)
+   (signatures
+    ((T:flonum-integer)		=> (T:true))
+    ((T:flonum-fractional)	=> (T:true))
+    ((T:flonum-infinite)	=> (T:false))
+    ((T:flonum-nan)		=> (T:false))
+    ((T:flonum)			=> (T:boolean)))
+   (attributes
+    ((_)			foldable effect-free))
+   (replacements $flonum-rational?))
+
+ (declare-core-primitive flinfinite?
+     (safe)
+   (signatures
+    ((T:flonum-integer)		=> (T:false))
+    ((T:flonum-fractional)	=> (T:false))
+    ((T:flonum-infinite)	=> (T:true))
+    ((T:flonum-nan)		=> (T:false))
+    ((T:flonum)			=> (T:boolean)))
+   (attributes
+    ((_)			foldable effect-free))
+   (replacements $flinfinite?))
+
+ (declare-core-primitive flnan?
+     (safe)
+   (signatures
+    ((T:flonum-integer)		=> (T:false))
+    ((T:flonum-fractional)	=> (T:false))
+    ((T:flonum-infinite)	=> (T:false))
+    ((T:flonum-nan)		=> (T:true))
+    ((T:flonum)			=> (T:boolean)))
+   (attributes
+    ((_)			foldable effect-free))
+   (replacements $flnan?))
 
 ;;; --------------------------------------------------------------------
 ;;; rounding
 
- (declare-flonum-unary flround		(replacements $flround))
- (declare-flonum-unary flfloor		(replacements $flfloor))
- (declare-flonum-unary flceiling	(replacements $flceiling))
- (declare-flonum-unary fltruncate	(replacements $fltruncate))
+ (let-syntax
+     ((declare-flonum-rounding (syntax-rules ()
+				 ((_ ?who ?replacement)
+				  (declare-core-primitive ?who
+				      (safe)
+				    (signatures
+				     ((T:flonum)	=> (T:flonum-integer)))
+				    (attributes
+				     ((_)		foldable effect-free result-true))
+				    (replacements ?replacement))))))
+   (declare-flonum-rounding flround	 $flround)
+   (declare-flonum-rounding flfloor	 $flfloor)
+   (declare-flonum-rounding flceiling	 $flceiling)
+   (declare-flonum-rounding fltruncate	 $fltruncate)
+   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 ;;; parts
@@ -1287,7 +1340,7 @@
    (signatures
     ((T:flonum)			=> (T:exact-real)))
    (attributes
-    ((_)				foldable effect-free result-true)))
+    ((_)			foldable effect-free result-true)))
 
 ;;; --------------------------------------------------------------------
 ;;; predicates
@@ -1303,19 +1356,67 @@
  (declare-flonum-predicate $fleven? unsafe)
  (declare-flonum-predicate $flodd? unsafe)
 
- (declare-flonum-predicate $flnan? unsafe)
- (declare-flonum-predicate $flfinite? unsafe)
- (declare-flonum-predicate $flinfinite? unsafe)
- (declare-flonum-predicate $flonum-integer? unsafe)
- (declare-flonum-predicate $flonum-rational? unsafe)
+ (declare-core-primitive $flonum-integer?
+     (unsafe)
+   (signatures
+    ((T:flonum-integer)		=> (T:true))
+    ((T:flonum-fractional)	=> (T:false))
+    ((T:flonum-infinite)	=> (T:false))
+    ((T:flonum-nan)		=> (T:false))
+    ((T:flonum)			=> (T:boolean)))
+   (attributes
+    ((_)			foldable effect-free)))
+
+ (declare-core-primitive $flonum-rational?
+     (unsafe)
+   (signatures
+    ((T:flonum-integer)		=> (T:true))
+    ((T:flonum-fractional)	=> (T:true))
+    ((T:flonum-infinite)	=> (T:false))
+    ((T:flonum-nan)		=> (T:false))
+    ((T:flonum)			=> (T:boolean)))
+   (attributes
+    ((_)			foldable effect-free)))
+
+ (declare-core-primitive $flinfinite?
+     (unsafe)
+   (signatures
+    ((T:flonum-integer)		=> (T:false))
+    ((T:flonum-fractional)	=> (T:false))
+    ((T:flonum-infinite)	=> (T:true))
+    ((T:flonum-nan)		=> (T:false))
+    ((T:flonum)			=> (T:boolean)))
+   (attributes
+    ((_)			foldable effect-free)))
+
+ (declare-core-primitive $flnan?
+     (unsafe)
+   (signatures
+    ((T:flonum-integer)		=> (T:false))
+    ((T:flonum-fractional)	=> (T:false))
+    ((T:flonum-infinite)	=> (T:false))
+    ((T:flonum-nan)		=> (T:true))
+    ((T:flonum)			=> (T:boolean)))
+   (attributes
+    ((_)			foldable effect-free)))
 
 ;;; --------------------------------------------------------------------
 ;;; rounding
 
- (declare-flonum-unary $flround unsafe)
- (declare-flonum-unary $flfloor unsafe)
- (declare-flonum-unary $flceiling unsafe)
- (declare-flonum-unary $fltruncate unsafe)
+ (let-syntax
+     ((declare-flonum-rounding (syntax-rules ()
+				 ((_ ?who)
+				  (declare-core-primitive ?who
+				      (unsafe)
+				    (signatures
+				     ((T:flonum)	=> (T:flonum-integer)))
+				    (attributes
+				     ((_)		foldable effect-free result-true)))))))
+   (declare-flonum-rounding $flround)
+   (declare-flonum-rounding $flfloor)
+   (declare-flonum-rounding $flceiling)
+   (declare-flonum-rounding $fltruncate)
+   #| end of LET-SYNTAX |# )
 
 ;;; --------------------------------------------------------------------
 ;;; parts

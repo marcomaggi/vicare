@@ -888,6 +888,18 @@ Return true if the operand is rational.  All the flonums are rational
 with the exception of infinities and not--a--number.
 @end deffn
 
+
+@deffn {Unsafe Operation} $flinfinite? @var{fl}
+Return true if the operand is infinite.  This means @samp{+inf.0} or
+@samp{-inf.0}.
+@end deffn
+
+
+@deffn {Unsafe Operation} $flnan? @var{fl}
+Return true if the operand is not--a--number.  This means @samp{+nan.0}
+or @samp{-nan.0} (which are the same semantic value).
+@end deffn
+
 @c ------------------------------------------------------------
 
 @subsubheading Rounding

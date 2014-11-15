@@ -316,8 +316,8 @@
 	 T:non-false		T:false			T:true		T:void
 	 T:boolean		T:char			T:symbol	T:string
 	 T:null			T:pair			T:vector	T:bytevector
-	 T:procedure		T:struct		T:record	T:other-struct
-	 T:transcoder		T:pointer		T:hashtable
+	 T:procedure		T:transcoder		T:pointer	T:hashtable
+	 T:struct		T:record		T:struct-rtd	T:other-struct
 
 	 T:port			T:textual-port		T:binary-port
 	 T:input-port		T:output-port		T:input-output-port
@@ -326,7 +326,9 @@
 
 	 T:number		T:exact			T:inexact
 	 T:fixnum		T:bignum		T:ratnum
-	 T:flonum		T:compnum		T:cflonum
+	 T:flonum		T:flonum-integer	T:flonum-fractional
+	 T:flonum-finite	T:flonum-infinite	T:flonum-nan
+	 T:compnum		T:cflonum
 	 T:positive		T:zero			T:negative
 	 T:exact-integer
 	 T:real			T:exact-real
@@ -363,8 +365,10 @@
       (T:binary-output-port		type)
       (T:binary-input/output-port	type)
       (T:struct				type)
-      (T:other-struct			type)
+      (T:struct				type)
+      (T:struct-rtd			type)
       (T:record				type)
+      (T:other-struct			type)
       (T:transcoder			type)
       (T:pointer			type)
       (T:hashtable			type)
@@ -375,6 +379,11 @@
       (T:bignum				type)
       (T:ratnum				type)
       (T:flonum				type)
+      (T:flonum-integer			type)
+      (T:flonum-fractional		type)
+      (T:flonum-finite			type)
+      (T:flonum-infinite		type)
+      (T:flonum-nan			type)
       (T:compnum			type)
       (T:cflonum			type)
       (T:positive			type)
@@ -387,11 +396,16 @@
       (T:positive-fixnum		type)
       (T:negative-fixnum		type)
       (_
-       (if (identifier? type)
-	   (if (eq? '_ (syntax->datum type))
-	       #f
-	     type)
-	 (synner "expected identifier as core type name in core primitive declaration" type)))))
+       ;; (if (identifier? type)
+       ;; 	   (if (eq? '_ (syntax->datum type))
+       ;; 	       #f
+       ;; 	     type)
+       ;; 	 (synner "expected identifier as core type name in core primitive declaration" type))
+       (if (and (identifier? type)
+		(eq? '_ (syntax->datum type)))
+	   #f
+	 (synner "expected identifier as core type name in core primitive declaration" type))
+       )))
 
 ;;; --------------------------------------------------------------------
 

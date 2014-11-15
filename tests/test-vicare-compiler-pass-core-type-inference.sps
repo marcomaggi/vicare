@@ -159,7 +159,7 @@
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref flonum?) x_0)
 	       (funcall (primref display)
-		 (known x_0 (T:flonum T:non-false T:nonimmediate T:real T:inexact T:number T:object)))
+		 (known x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
 	     (funcall (primref void)))))
 
   ;;cflonum predicate
@@ -218,7 +218,7 @@
 		 (known x_0 (T:fixnum T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object)))
 	     (conditional (funcall (primref flonum?) x_0)
 		 (funcall (primref display)
-		   (known x_0 (T:flonum T:non-false T:real T:nonimmediate T:inexact T:number T:object)))
+		   (known x_0 (T:non-false T:real T:nonimmediate T:inexact T:flonum T:number T:object)))
 	       (conditional (funcall (primref bignum?) x_0)
 		   (funcall (primref display)
 		     (known x_0 (T:bignum T:non-false T:nonimmediate T:exact-real T:real T:exact-integer T:exact T:number T:object)))
@@ -319,7 +319,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant +2.3)
-		   (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object)))))
+		   (T:flonum-fractional T:positive T:non-false T:nonimmediate T:real T:inexact T:flonum T:flonum-finite T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -2.3)))
@@ -327,7 +327,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -2.3)
-		   (T:flonum T:negative T:non-false T:nonimmediate T:real T:inexact T:number T:object)))))
+		   (T:flonum-fractional T:negative T:non-false T:nonimmediate T:real T:inexact T:flonum T:flonum-finite T:number T:object)))))
 
   (doit (let ((f (lambda (x) x)))
 	  (f (quote -0.0)))
@@ -335,7 +335,7 @@
 	  (funcall (known f_0
 			  (T:procedure T:non-false T:nonimmediate T:object))
 	    (known (constant -0.0)
-		   (T:flonum T:zero T:non-false T:nonimmediate T:real T:inexact T:number T:object)))))
+		   (T:flonum-integer T:zero T:non-false T:nonimmediate T:real T:inexact T:flonum T:flonum-finite T:number T:object)))))
 
   #t)
 

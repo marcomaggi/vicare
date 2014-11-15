@@ -369,7 +369,54 @@
        (values (extend-env rand T:inexact env)
 	       env))
 
+      ((infinite?)
+       (values (extend-env rand T:number env)
+	       env))
+      ((finite?)
+       (values (extend-env rand T:number env)
+	       env))
+      ((nan?)
+       (values (extend-env rand T:number env)
+	       env))
 
+      ((flinteger?)
+       (values (extend-env rand T:flonum-integer env)
+	       env))
+      ((flfinite?)
+       (values (extend-env rand T:flonum-finite env)
+	       env))
+      ((flinfinite?)
+       (values (extend-env rand T:flonum-infinite env)
+	       env))
+      ((flnan?)
+       (values (extend-env rand T:flonum-nan env)
+	       env))
+
+      (($flonum-integer?)
+       (values (extend-env rand T:flonum-integer env)
+	       env))
+      (($flonum-rational?)
+       (values (extend-env rand T:flonum-finite env)
+	       env))
+      (($flinfinite?)
+       (values (extend-env rand T:flonum-infinite env)
+	       env))
+      (($flnan?)
+       (values (extend-env rand T:flonum-nan env)
+	       env))
+
+
+      ((positive?)
+       (values (extend-env rand T:positive env)
+	       env))
+      ((negative?)
+       (values (extend-env rand T:negative env)
+	       env))
+      ((zero?)
+       (values (extend-env rand T:zero env)
+	       env))
+
+      ;; other objects
       ((string?)
        (values (extend-env rand T:string env)
 	       env))
@@ -394,20 +441,20 @@
       ((procedure?)
        (values (extend-env rand T:procedure env)
 	       env))
-      ((positive?)
-       (values (extend-env rand T:positive env)
-	       env))
-      ((negative?)
-       (values (extend-env rand T:negative env)
-	       env))
-      ((zero?)
-       (values (extend-env rand T:zero env)
-	       env))
 
       ((port?)
        (values (extend-env rand T:port env)
 	       env))
 
+      ((pointer?)
+       (values (extend-env rand T:pointer env)
+	       env))
+
+      ((hashtable?)
+       (values (extend-env rand T:hashtable env)
+	       env))
+
+      ;; structs and records
       ((struct?)
        (values (extend-env rand T:struct env)
 	       env))
@@ -422,14 +469,6 @@
 
       ((record?)
        (values (extend-env rand T:record env)
-	       env))
-
-      ((pointer?)
-       (values (extend-env rand T:pointer env)
-	       env))
-
-      ((hashtable?)
-       (values (extend-env rand T:hashtable env)
 	       env))
 
       (else

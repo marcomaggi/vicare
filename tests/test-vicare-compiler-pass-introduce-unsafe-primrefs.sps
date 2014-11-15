@@ -200,23 +200,23 @@
 	  (known (constant 1)
 		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))
 	  (known (constant 2.2)
-		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))))
+		 (T:flonum-fractional T:positive T:non-false T:nonimmediate T:real T:inexact T:flonum T:flonum-finite T:number T:object))))
 
   ;;Operands: flonum, fixnum; successful replacement.
   (doit ((primitive +) '1.1 '2)
 	(funcall (primref $add-flonum-fixnum)
 	  (known (constant 1.1)
-		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))
+		 (T:flonum-fractional T:positive T:non-false T:nonimmediate T:real T:inexact T:flonum T:flonum-finite T:number T:object))
 	  (known (constant 2)
 		 (T:fixnum T:positive T:non-false T:exact-real T:real T:exact-integer T:exact T:number T:immediate T:object))))
 
   ;;Operands: flonum, flonum; successful replacement.
-  (doit ((primitive +) '1.1 '2.2)
+  (doit ((primitive +) '1.0 '2.2)
 	(funcall (primref $add-flonum-flonum)
-	  (known (constant 1.1)
-		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))
+	  (known (constant 1.0)
+		 (T:flonum-integer T:positive T:non-false T:nonimmediate T:real T:inexact T:flonum T:flonum-finite T:number T:object))
 	  (known (constant 2.2)
-		 (T:flonum T:positive T:non-false T:nonimmediate T:real T:inexact T:number T:object))))
+		 (T:flonum-fractional T:positive T:non-false T:nonimmediate T:real T:inexact T:flonum T:flonum-finite T:number T:object))))
 
   ;;Operands: ratnum, bignum; successful replacement.
   (doit ((primitive +) '1/2 '#e2e20)

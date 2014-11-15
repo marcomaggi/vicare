@@ -57,7 +57,9 @@
 
    T:number		T:exact			T:inexact
    T:fixnum		T:bignum		T:ratnum
-   T:flonum		T:compnum		T:cflonum
+   T:flonum		T:flonum-integer	T:flonum-fractional
+   T:flonum-finite	T:flonum-infinite	T:flonum-nan
+   T:compnum		T:cflonum
    T:positive		T:zero			T:negative
    T:exact-integer
    T:real		T:exact-real
@@ -106,7 +108,9 @@
 
    T:number?		T:exact?		T:inexact?
    T:fixnum?		T:bignum?		T:ratnum?
-   T:flonum?		T:compnum?		T:cflonum?
+   T:flonum?		T:flonum-integer?	T:flonum-fractional?
+   T:flonum-finite?	T:flonum-infinite?	T:flonum-nan?
+   T:compnum?		T:cflonum?
    T:positive?		T:zero?			T:negative?
    T:exact-integer?
    T:real?		T:exact-real?
@@ -481,14 +485,26 @@
 
   (number		(inclusive number-tag number-sign number-exactness))
   (number-sign		(exclusive negative zero positive))
-  (number-tag		(exclusive fixnum bignum ratnum flonum cflonum compnum other-number))
+  (number-tag		(exclusive fixnum bignum ratnum
+				   flonum-integer flonum-fractional flonum-infinite flonum-nan
+				   cflonum compnum other-number))
+
+  ;; T:flonum-integer		- flonums representing integers (example: 12.0)
+  ;; T:flonum-fractional	- all flonums being non-integer, non-infinite, non-nan
+  ;; T:flonum-finite		- all flonums being non-infinite, non-nan
+  ;; T:flonum-infinite		- only flonums being +inf.0, -inf.0
+  ;; T:flonum-nan		- only flonums being +nan.0, -nan.0
+  (flonum-finite	(exclusive flonum-integer flonum-fractional))
+  (flonum		(exclusive flonum-integer flonum-fractional flonum-infinite flonum-nan))
 
   (number-exactness	(exclusive exact inexact))
   (exact		(exclusive fixnum bignum ratnum other-exact))
-  (inexact		(exclusive flonum cflonum other-inexact))
+  (inexact		(exclusive flonum-integer flonum-fractional flonum-infinite flonum-nan
+				   cflonum other-inexact))
 
   (exact-integer	(exclusive fixnum bignum other-exact-integer))
-  (real			(exclusive fixnum bignum ratnum flonum other-real))
+  (real			(exclusive fixnum bignum ratnum
+				   flonum-integer flonum-fractional flonum-infinite flonum-nan))
   (exact-real		(exclusive fixnum bignum ratnum other-exact-real))
   (complex		(exclusive cflonum compnum other-complex))
 
@@ -549,7 +565,16 @@
 	  ((ratnum? x)
 	   (%sign x T:ratnum))
 	  ((flonum? x)
-	   (%sign x T:flonum))
+	   (cond ((flinteger? x)
+		  (%sign x T:flonum-integer))
+		 ((flfinite? x)
+		  (%sign x T:flonum-fractional))
+		 ((flinfinite? x)
+		  (%sign x T:flonum-infinite))
+		 ((flnan? x)
+		  (%sign x T:flonum-nan))
+		 (else
+		  (%sign x T:flonum))))
 	  ((cflonum? x)
 	   (if (zero? x)
 	       (core-type-tag-and T:cflonum T:zero)
@@ -724,6 +749,126 @@
   (check (T:exact-real? T:real)			=> maybe)
   (check (T:exact-real? T:complex)		=> no)
   (check (T:exact-real? T:string)		=> no)
+
+  (check (T:flonum? T:exact)			=> no)
+  (check (T:flonum? T:inexact)			=> maybe)
+  (check (T:flonum? T:fixnum)			=> no)
+  (check (T:flonum? T:bignum)			=> no)
+  (check (T:flonum? T:ratnum)			=> no)
+  (check (T:flonum? T:flonum)			=> yes)
+  (check (T:flonum? T:flonum-integer)		=> yes)
+  (check (T:flonum? T:flonum-fractional)	=> yes)
+  (check (T:flonum? T:flonum-finite)		=> yes)
+  (check (T:flonum? T:flonum-infinite)		=> yes)
+  (check (T:flonum? T:flonum-nan)		=> yes)
+  (check (T:flonum? T:cflonum)			=> no)
+  (check (T:flonum? T:compnum)			=> no)
+  (check (T:flonum? T:number)			=> maybe)
+  (check (T:flonum? T:exact-integer)		=> no)
+  (check (T:flonum? T:exact-real)		=> no)
+  (check (T:flonum? T:real)			=> maybe)
+  (check (T:flonum? T:complex)			=> no)
+  (check (T:flonum? T:string)			=> no)
+
+  (check (T:flonum-integer? T:exact)		=> no)
+  (check (T:flonum-integer? T:inexact)		=> maybe)
+  (check (T:flonum-integer? T:fixnum)		=> no)
+  (check (T:flonum-integer? T:bignum)		=> no)
+  (check (T:flonum-integer? T:ratnum)		=> no)
+  (check (T:flonum-integer? T:flonum)		=> maybe)
+  (check (T:flonum-integer? T:flonum-integer)	=> yes)
+  (check (T:flonum-integer? T:flonum-fractional) => no)
+  (check (T:flonum-integer? T:flonum-finite)	=> maybe)
+  (check (T:flonum-integer? T:flonum-infinite)	=> no)
+  (check (T:flonum-integer? T:flonum-nan)	=> no)
+  (check (T:flonum-integer? T:cflonum)		=> no)
+  (check (T:flonum-integer? T:compnum)		=> no)
+  (check (T:flonum-integer? T:number)		=> maybe)
+  (check (T:flonum-integer? T:exact-integer)	=> no)
+  (check (T:flonum-integer? T:exact-real)	=> no)
+  (check (T:flonum-integer? T:real)		=> maybe)
+  (check (T:flonum-integer? T:complex)		=> no)
+  (check (T:flonum-integer? T:string)		=> no)
+
+  (check (T:flonum-fractional? T:exact)			=> no)
+  (check (T:flonum-fractional? T:inexact)		=> maybe)
+  (check (T:flonum-fractional? T:fixnum)		=> no)
+  (check (T:flonum-fractional? T:bignum)		=> no)
+  (check (T:flonum-fractional? T:ratnum)		=> no)
+  (check (T:flonum-fractional? T:flonum)		=> maybe)
+  (check (T:flonum-fractional? T:flonum-integer)	=> no)
+  (check (T:flonum-fractional? T:flonum-fractional)	=> yes)
+  (check (T:flonum-fractional? T:flonum-finite)		=> maybe)
+  (check (T:flonum-fractional? T:flonum-infinite)	=> no)
+  (check (T:flonum-fractional? T:flonum-nan)		=> no)
+  (check (T:flonum-fractional? T:cflonum)		=> no)
+  (check (T:flonum-fractional? T:compnum)		=> no)
+  (check (T:flonum-fractional? T:number)		=> maybe)
+  (check (T:flonum-fractional? T:exact-integer)		=> no)
+  (check (T:flonum-fractional? T:exact-real)		=> no)
+  (check (T:flonum-fractional? T:real)			=> maybe)
+  (check (T:flonum-fractional? T:complex)		=> no)
+  (check (T:flonum-fractional? T:string)		=> no)
+
+  (check (T:flonum-finite? T:exact)		=> no)
+  (check (T:flonum-finite? T:inexact)		=> maybe)
+  (check (T:flonum-finite? T:fixnum)		=> no)
+  (check (T:flonum-finite? T:bignum)		=> no)
+  (check (T:flonum-finite? T:ratnum)		=> no)
+  (check (T:flonum-finite? T:flonum)		=> maybe)
+  (check (T:flonum-finite? T:flonum-integer)	=> yes)
+  (check (T:flonum-finite? T:flonum-fractional)	=> yes)
+  (check (T:flonum-finite? T:flonum-finite)	=> yes)
+  (check (T:flonum-finite? T:flonum-infinite)	=> no)
+  (check (T:flonum-finite? T:flonum-nan)	=> no)
+  (check (T:flonum-finite? T:cflonum)		=> no)
+  (check (T:flonum-finite? T:compnum)		=> no)
+  (check (T:flonum-finite? T:number)		=> maybe)
+  (check (T:flonum-finite? T:exact-integer)	=> no)
+  (check (T:flonum-finite? T:exact-real)	=> no)
+  (check (T:flonum-finite? T:real)		=> maybe)
+  (check (T:flonum-finite? T:complex)		=> no)
+  (check (T:flonum-finite? T:string)		=> no)
+
+  (check (T:flonum-infinite? T:exact)			=> no)
+  (check (T:flonum-infinite? T:inexact)			=> maybe)
+  (check (T:flonum-infinite? T:fixnum)			=> no)
+  (check (T:flonum-infinite? T:bignum)			=> no)
+  (check (T:flonum-infinite? T:ratnum)			=> no)
+  (check (T:flonum-infinite? T:flonum)			=> maybe)
+  (check (T:flonum-infinite? T:flonum-integer)		=> no)
+  (check (T:flonum-infinite? T:flonum-fractional)	=> no)
+  (check (T:flonum-infinite? T:flonum-finite)		=> no)
+  (check (T:flonum-infinite? T:flonum-infinite)		=> yes)
+  (check (T:flonum-infinite? T:flonum-nan)		=> no)
+  (check (T:flonum-infinite? T:cflonum)			=> no)
+  (check (T:flonum-infinite? T:compnum)			=> no)
+  (check (T:flonum-infinite? T:number)			=> maybe)
+  (check (T:flonum-infinite? T:exact-integer)		=> no)
+  (check (T:flonum-infinite? T:exact-real)		=> no)
+  (check (T:flonum-infinite? T:real)			=> maybe)
+  (check (T:flonum-infinite? T:complex)			=> no)
+  (check (T:flonum-infinite? T:string)			=> no)
+
+  (check (T:flonum-nan? T:exact)		=> no)
+  (check (T:flonum-nan? T:inexact)		=> maybe)
+  (check (T:flonum-nan? T:fixnum)		=> no)
+  (check (T:flonum-nan? T:bignum)		=> no)
+  (check (T:flonum-nan? T:ratnum)		=> no)
+  (check (T:flonum-nan? T:flonum)		=> maybe)
+  (check (T:flonum-nan? T:flonum-integer)	=> no)
+  (check (T:flonum-nan? T:flonum-fractional)	=> no)
+  (check (T:flonum-nan? T:flonum-finite)	=> no)
+  (check (T:flonum-nan? T:flonum-infinite)	=> no)
+  (check (T:flonum-nan? T:flonum-nan)		=> yes)
+  (check (T:flonum-nan? T:cflonum)		=> no)
+  (check (T:flonum-nan? T:compnum)		=> no)
+  (check (T:flonum-nan? T:number)		=> maybe)
+  (check (T:flonum-nan? T:exact-integer)	=> no)
+  (check (T:flonum-nan? T:exact-real)		=> no)
+  (check (T:flonum-nan? T:real)			=> maybe)
+  (check (T:flonum-nan? T:complex)		=> no)
+  (check (T:flonum-nan? T:string)		=> no)
 
 ;;; --------------------------------------------------------------------
 
