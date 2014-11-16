@@ -17,15 +17,13 @@
 
 ;;;; the source code optimizer
 ;;
-;;Check the  "makefile.sps" used to build  the boot image to  see if the
-;;source  optimizer  is used  (it  should  be, at  maximum  optimization
-;;level).
+;;Check  the "makefile.sps"  used  to build  the  boot  image to  see  if the  source
+;;optimizer is used (it should be, at maximum optimization level).
 ;;
 ;;See the thesis:
 ;;
-;;   Oscar  Waddell.  "Extending  the Scope  of Syntactic  Abstraction".
-;;   PhD.   Thesis.   Indiana  University Computer  Science  Department.
-;;   August 1999.
+;;   Oscar Waddell.  "Extending  the Scope of Syntactic  Abstraction".  PhD.  Thesis.
+;;   Indiana University Computer Science Department.  August 1999.
 ;;
 ;;available online:
 ;;
@@ -33,16 +31,16 @@
 ;;
 ;;See also the paper:
 ;;
-;;   Oscar  Waddell,  R. Kent  Dybvig.   "Fast  and Effective  Procedure
-;;   Inlining".   Indiana  University.    Computer  Science  Department.
-;;   Technical Report No. 484.
+;;   Oscar  Waddell,  R.  Kent  Dybvig.  "Fast  and  Effective  Procedure  Inlining".
+;;   Indiana University.  Computer Science Department.  Technical Report No. 484.
 ;;
 (module (source-optimize
 	 optimize-level
 	 source-optimizer-passes-count
 	 cp0-effort-limit
 	 cp0-size-limit)
-  (define who 'source-optimize)
+  (define-syntax __module_who__
+    (identifier-syntax 'source-optimize))
 
   (define-constant DEFAULT-CP0-EFFORT-LIMIT	50)
   (define-constant DEFAULT-CP0-SIZE-LIMIT	8)
@@ -223,7 +221,7 @@
       (debug-print* 'leave
 		    (unparse-recordized-code/pretty rv))))
 
-  (define (%E x ctxt env ec sc)
+  (define* (%E x ctxt env ec sc)
     ;;Recursive function performing source optimizations.
     ;;
     ;;X must be a struct instance representing recordized code.
@@ -302,7 +300,7 @@
        (E-fix  lhs* rhs* body ctxt env ec sc))
 
       (else
-       (error who
+       (compile-time-error __module_who__ __who__
 	 "invalid expression for source optimizer"
 	 (unparse-recordized-code (source-optimizer-input))
 	 x))))
