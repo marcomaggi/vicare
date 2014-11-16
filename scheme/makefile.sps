@@ -97,7 +97,7 @@
 ;;operation.    Then,  in   this   makefile,   we  add   an   entry   to  the   table
 ;;IDENTIFIER->LIBRARY-MAP as follows:
 ;;
-;;   (define identifier->library-map
+;;   (define IDENTIFIER->LIBRARY-MAP
 ;;     '(($swirl-pair		$pairs)
 ;;       ---))
 ;;
@@ -144,14 +144,14 @@
 ;;operation.   Then, in  this makefile,  we add  an  entry at  the end  of the  table
 ;;LIBRARY-LEGEND as follows:
 ;;
-;;   (define library-legend
+;;   (define LIBRARY-LEGEND
 ;;     '(---
 ;;       ($spiffy  (ikarus system $spiffy)  #t	#f))
 ;;
 ;;marking the library as visible but not required.  Then we add an entry to the table
 ;;IDENTIFIER->LIBRARY-MAP as follows:
 ;;
-;;   (define identifier->library-map
+;;   (define IDENTIFIER->LIBRARY-MAP
 ;;     '(($swirl $spiffy)
 ;;       ---))
 ;;
@@ -292,7 +292,7 @@
 	(flush-output-port port))))))
 
 
-(define scheme-library-files
+(define-constant SCHEME-LIBRARY-FILES
   ;;Listed in the order in which they're loaded.
   ;;
   ;;Loading  of  the boot  file  may  segfault if  a  library  is loaded  before  its
@@ -389,7 +389,7 @@
     ))
 
 
-(define ikarus-system-macros
+(define-constant VICARE-SYSTEM-MACROS
   (append
    `((__who__					($fluid . ,(gensym "fluid-label.__who__")))
      (return					($fluid . ,(gensym "fluid-label.return")))
@@ -712,7 +712,7 @@
      )))
 
 
-(define library-legend
+(define-constant LIBRARY-LEGEND
   ;;The library legend  lists all the library  that will be implemented  by the newly
   ;;built boot image.  If a library is  listed here: after building and loading a new
   ;;boot image, it is possible to IMPORT such library.
@@ -806,7 +806,7 @@
     ))
 
 
-(define identifier->library-map
+(define-constant IDENTIFIER->LIBRARY-MAP
   ;;Map  all the  identifiers of  exported  bindings (and  more) to  the
   ;;libraries   exporting   them,  using   the   nicknames  defined   by
   ;;LIBRARY-LEGEND.
@@ -4003,7 +4003,7 @@
   ;;image which will have the new library as REQUIRED?.
   ;;
   (let ((list-of-library-records
-	 (let next-library-entry ((entries library-legend))
+	 (let next-library-entry ((entries LIBRARY-LEGEND))
 	   (define required?	cadddr)
 	   (define library-name	cadr)
 	   (cond ((null? entries)
@@ -4232,7 +4232,7 @@
     ;;
     (define-constant __who__ 'make-system-data)
     (define-syntax-rule (macro-identifier? x)
-      (and (assq x ikarus-system-macros) #t))
+      (and (assq x VICARE-SYSTEM-MACROS) #t))
     (define-syntax-rule (procedure-identifier? x)
       (not (macro-identifier? x)))
     (let ((export-subst-clt    (make-collection))
@@ -4254,7 +4254,7 @@
       ;;We accumulate  in the subst  and env collections the  associations name/label
       ;;and label/binding
       ;;
-      (each-for ikarus-system-macros
+      (each-for VICARE-SYSTEM-MACROS
 	(lambda (entry)
 	  (let* ((name		(car  entry))
 		 (binding	(cadr entry))
@@ -4278,7 +4278,7 @@
       ;;
       ;;   (?prim-name . ?loc)
       ;;
-      (each-for (map car identifier->library-map)
+      (each-for (map car IDENTIFIER->LIBRARY-MAP)
 	(lambda (prim-name)
 	  (when (procedure-identifier? prim-name)
 	    (cond ((assq prim-name (export-subst-clt))
@@ -4386,7 +4386,7 @@
 	   ;;This evaluates to a spliced list of INSTALL-LIBRARY forms.
 	   ,@(map (lambda (legend-entry)
 		    (build-install-library-form legend-entry export-subst export-env))
-	       library-legend)))
+	       LIBRARY-LEGEND)))
 
       ;;Logging this  symbolic expression  gives some insight  about what  happens at
       ;;boot image initialisation time.
@@ -4448,7 +4448,7 @@
 	    '()
 	  (let ((x (car ls)))
 	    (let ((name (car x)))
-	      (cond ((assq name identifier->library-map)
+	      (cond ((assq name IDENTIFIER->LIBRARY-MAP)
 		     => (lambda (q)
 			  (if (memq nickname (cdr q))
 			      (cons x (loop (cdr ls)))
@@ -4509,10 +4509,10 @@
 ;;
 (for-each (lambda (x)
 	    (for-each (lambda (x)
-			(unless (assq x library-legend)
-			  (error 'identifier->library-map "not in the libraries list" x)))
+			(unless (assq x LIBRARY-LEGEND)
+			  (error 'IDENTIFIER->LIBRARY-MAP "not in the libraries list" x)))
 	      (cdr x)))
-  identifier->library-map)
+  IDENTIFIER->LIBRARY-MAP)
 
 ;;Perform the bootstrap process generating the boot image.
 ;;
@@ -4522,7 +4522,7 @@
 	(time-it "macro expansion"
 	  (lambda ()
 	    (parameterize ((bootstrap.current-library-collection bootstrap-collection))
-	      (expand-all scheme-library-files))))
+	      (expand-all SCHEME-LIBRARY-FILES))))
       ;;Before applying COMPILE-CORE-EXPR-TO-PORT to the invoke code of each library:
       ;;we must register  in the state of  the compiler a closure  capable of mapping
       ;;lexical-primitive symbol-names to their location gensyms.
