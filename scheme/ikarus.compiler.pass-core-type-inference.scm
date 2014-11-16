@@ -80,9 +80,21 @@
     ;;
     ;;ENV maps PRELEX structs to records of type CORE-TYPE-TAG.
     ;;
+    ;;Return 3 values:
+    ;;
+    ;;1.  A struct  representing  recordised  code, which  is  meant  to replace  the
+    ;;argument X.
+    ;;
+    ;;2. An  ENV value representing the  type informations gathered by  inspecting X;
+    ;;such informations can be used to process expressions that are evaluated *after*
+    ;;X.
+    ;;
+    ;;3. A record  of type CORE-TYPE-TAG representing the type  of the value returned
+    ;;by X.
+    ;;
     (struct-case x
-      ((constant k)
-       (values x env (determine-constant-core-type k)))
+      ((constant x.const)
+       (values x env (determine-constant-core-type x.const)))
 
       ((prelex)
        ;;We search  the PRELEX in  the environment collected  so far to  retrieve its
@@ -100,6 +112,14 @@
        ;;First we  do X.E0  and after we  do X.E1; this  allows type  propagation for
        ;;PRELEX structures  used as arguments to  core primitives: a type  tag can be
        ;;inferred in E0 and it can be used in E1.
+       ;;
+       ;;NOTE The  return value of X.E0  is discarded.  E0.TAG.UNUSED is  a record of
+       ;;type CORE-TYPE-TAG  representing the type  of the X.E0's return  value; such
+       ;;record is unused.
+       ;;
+       ;;NOTE The initial  environment ENV is first augmented  with type informations
+       ;;from X.E0;  then augmented with type  informations from X.E1; finally  it is
+       ;;returned to the caller.
        (receive (e0 e0.env e0.tag.unused)
 	   (V x.e0 env)
 	 (receive (e1 e1.env e1.tag)
@@ -109,25 +129,25 @@
       ((conditional x.test x.conseq x.altern)
        (V-conditional x.test x.conseq x.altern env))
 
-      ((bind lhs* x.rhs* x.body)
+      ((bind x.lhs* x.rhs* x.body)
        (receive (rhs* env^ rhs*.tag)
 	   (V* x.rhs* env)
 	 ;;Assign a unique number to each  PRELEX.  Remember that the RHS expressions
 	 ;;of a BIND do *not* reference the LHS PRELEX structs.
-	 ($for-each/stx %assign-index-to-prelex! lhs*)
+	 ($for-each/stx %assign-index-to-prelex! x.lhs*)
 	 (receive (body body.env body.tag)
-	     (V x.body (extend-env* lhs* rhs*.tag env^))
-	   (values (make-bind lhs* rhs* body) body.env body.tag))))
+	     (V x.body (extend-env* x.lhs* rhs*.tag env^))
+	   (values (make-bind x.lhs* rhs* body) body.env body.tag))))
 
-      ((fix lhs* x.rhs* x.body)
+      ((fix x.lhs* x.rhs* x.body)
        ;;Assign a unique number to each PRELEX.  Remember that the RHS expressions of
        ;;a FIX might reference the LHS PRELEX structs.
-       ($for-each/stx %assign-index-to-prelex! lhs*)
+       ($for-each/stx %assign-index-to-prelex! x.lhs*)
        (receive (rhs* env^ rhs*.tag)
 	   (V* x.rhs* env)
 	 (receive (body body.env body.tag)
-	     (V x.body (extend-env* lhs* rhs*.tag env^))
-	   (values (make-fix lhs* rhs* body) body.env body.tag))))
+	     (V x.body (extend-env* x.lhs* rhs*.tag env^))
+	   (values (make-fix x.lhs* rhs* body) body.env body.tag))))
 
       ((clambda)
        (V-clambda x env))
@@ -152,11 +172,11 @@
     ;;Apply V to all the structs in the list X*; gather the environment.
     ;;
     (if (pair? x*)
-	(let-values (((x  env1 t)  (V  (car x*) env))
-		     ((x* env2 t*) (V* (cdr x*) env)))
+	(let-values (((x  env1 tag)  (V  (car x*) env))
+		     ((x* env2 tag*) (V* (cdr x*) env)))
 	  (values (cons x x*)
 		  (%and-envs env1 env2)
-		  (cons t t*)))
+		  (cons tag tag*)))
       (values '() env '())))
 
 ;;; --------------------------------------------------------------------
@@ -865,89 +885,6 @@
       (cons (cons x v) env)))
 
   #| end of module: %and-envs |# )
-
-
-;;;; miscellaneous stuff
-
-;;Commented out by Abdulaziz Ghuloum.
-;;
-;; (define primitive-return-types
-;;   '((=                     boolean)
-;;     (<                     boolean)
-;;     (<=                    boolean)
-;;     (>                     boolean)
-;;     (>=                    boolean)
-;;     (even?                 boolean)
-;;     (odd?                  boolean)
-;;     (rational?             boolean)
-;;     (rational-valued?      boolean)
-;;     (real?                 boolean)
-;;     (real-valued?          boolean)
-;;     (bignum?               boolean)
-;;     (ratnum?               boolean)
-;;     (flonum?               boolean)
-;;     (fixnum?               boolean)
-;;     (integer?              boolean)
-;;     (exact?                boolean)
-;;     (finite?               boolean)
-;;     (inexact?              boolean)
-;;     (infinite?             boolean)
-;;     (positive?             boolean)
-;;     (negative?             boolean)
-;;     (nan?                  boolean)
-;;     (number?               boolean)
-;;     (compnum?              boolean)
-;;     (cflonum?              boolean)
-;;     (complex?              boolean)
-;;     (list?                 boolean)
-;;     (eq?                   boolean)
-;;     (eqv?                  boolean)
-;;     (equal?                boolean)
-;;     (gensym?               boolean)
-;;     (symbol-bound?         boolean)
-;;     (code?                 boolean)
-;;     (immediate?            boolean)
-;;     (pair?                 boolean)
-;;     (procedure?            boolean)
-;;     (symbol?               boolean)
-;;     (symbol=?              boolean)
-;;     (boolean?              boolean)
-;;     (boolean=?             boolean)
-;;     (vector?               boolean)
-;;     (bitwise-bit-set?      boolean)
-;;     (bytevector?           boolean)
-;;     (bytevector=?          boolean)
-;;     (enum-set=?            boolean)
-;;     (binary-port?          boolean)
-;;     (textual-port?         boolean)
-;;     (input-port?           boolean)
-;;     (output-port?          boolean)
-;;     (port?                 boolean)
-;;     (port-eof?             boolean)
-;;     (port-closed?          boolean)
-;;     (eof-object?           boolean)
-;;     (hashtable?            boolean)
-;;     (hashtable-mutable?    boolean)
-;;     (file-exists?          boolean)
-;;     (file-readable?        boolean)
-;;     (file-writable?        boolean)
-;;     (file-executable?      boolean)
-;;     (file-symbolic-link?   boolean)
-;;     (record?               boolean)
-;;     (record-field-mutable? boolean)
-;;     (record-type-generative? boolean)
-;;     (record-type-sealed?   boolean)
-;;     (record-type-descriptor boolean)
-;;     (free-identifier=?     boolean)
-;;     (bound-identifier=?    boolean)
-;;     (identifier?           boolean)
-;;     (char-lower-case?      boolean)
-;;     (char-upper-case?      boolean)
-;;     (char-title-case?      boolean)
-;;     (char-whitespace?      boolean)
-;;     (char-numeric?         boolean)
-;;     (char-alphabetic?      boolean)
-;;     ))
 
 
 ;;;; done
