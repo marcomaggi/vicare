@@ -24,7 +24,7 @@
     host-info)
   (import (except (vicare)
 		  host-info))
-  (include "ikarus.config.ss" #t))
+  (include "ikarus.config.scm" #t))
 
 
 (library (ikarus main)

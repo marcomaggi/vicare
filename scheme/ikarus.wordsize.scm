@@ -11,15 +11,15 @@
   ;;Remember  that WORDSIZE  is  the  number of  bytes  in a  platform's
   ;;machine word: 4 on 32-bit platforms, 8 on 64-bit platforms.
   (module (wordsize)
-    (include "ikarus.config.ss" #t))
+    (include "ikarus.config.scm" #t))
 
   (define-syntax boot.case-word-size
     ;;We really need to  define this macro so that it  uses the value of
-    ;;WORDSIZE just defined by the "ikarus.config.ss" file.
+    ;;WORDSIZE just defined by the "ikarus.config.scm" file.
     ;;
     (lambda (stx)
       (module (wordsize)
-	(include "ikarus.config.ss" #t))
+	(include "ikarus.config.scm" #t))
       (syntax-case stx ()
 	((_ ((32) . ?body-32) ((64) . ?body-64))
 	 (case wordsize

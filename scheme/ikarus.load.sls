@@ -331,7 +331,7 @@
 	  (module (target-os-uid
 		   scheme-lib-dir
 		   vicare-lib-dir)
-	    (include "ikarus.config.ss"))
+	    (include "ikarus.config.scm"))
 	  (case target-os-uid
 	    ((linux bsd darwin cygwin)
 	     (list scheme-lib-dir vicare-lib-dir))

@@ -11,7 +11,7 @@
 ;;;	source  files and  FASL files;  dynamically load  foreign shared
 ;;;	library in the appropriate way.
 ;;;
-;;;Copyright (C) 2012, 2013 Marco Maggi <marco.maggi-ipsu@poste.it>
+;;;Copyright (C) 2012, 2013, 2014 Marco Maggi <marco.maggi-ipsu@poste.it>
 ;;;
 ;;;This program is free software:  you can redistribute it and/or modify
 ;;;it under the terms of the  GNU General Public License as published by
@@ -79,7 +79,7 @@
   (define-inline (%make-libname-cygwin id)	(string-append id ".dll"))
   (define-inline (%make-libname-darwin id)	(string-append "lib" id ".dylib"))
   (module (target-os-uid)
-    (include "ikarus.config.ss"))
+    (include "ikarus.config.scm"))
   (let* ((libname	(case target-os-uid
 			  ((linux)	(%make-libname-unix   libid))
 			  ((bsd)	(%make-libname-bsd    libid))

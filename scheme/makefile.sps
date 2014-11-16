@@ -184,32 +184,48 @@
 		writing-boot-image?)
 	  fasl-write.))
 
-(module (config.wordsize
-	 config.fixnum-width
-	 config.greatest-fixnum
-	 config.least-fixnum)
-  (define-syntax-rule (config.wordsize)
-    wordsize)
-  (define-syntax-rule (config.fixnum-width)
-    (fixnum-width))
-  (define-syntax-rule (config.greatest-fixnum)
-    (greatest-fixnum))
-  (define-syntax-rule (config.least-fixnum)
-    (least-fixnum))
-  (include "ikarus.wordsize.scm"))
-(fprintf (current-error-port) "wordsize:        ~a\n" (config.wordsize))
-(fprintf (current-error-port) "fixnum width:    ~a\n" (config.fixnum-width))
-(fprintf (current-error-port) "greatest fixnum: ~a\n" (config.greatest-fixnum))
-(fprintf (current-error-port) "least fixnum:    ~a\n" (config.least-fixnum))
+(module (BOOT-IMAGE-MAJOR-VERSION BOOT-IMAGE-MINOR-VERSION)
+  (include "ikarus.config.scm" #t))
+
+
+;;;; configuration inspection
+
+;;Print some platform-specific  constants to make sure that we  are building with the
+;;correct configuration.
+;;
+(begin
+  (module (config.wordsize
+	   config.fixnum-width
+	   config.greatest-fixnum
+	   config.least-fixnum)
+    (define-syntax-rule (config.wordsize)
+      wordsize)
+    (define-syntax-rule (config.fixnum-width)
+      (fixnum-width))
+    (define-syntax-rule (config.greatest-fixnum)
+      (greatest-fixnum))
+    (define-syntax-rule (config.least-fixnum)
+      (least-fixnum))
+    (include "ikarus.wordsize.scm"))
+  (fprintf (current-error-port) "wordsize:        ~a\n" (config.wordsize))
+  (fprintf (current-error-port) "fixnum width:    ~a\n" (config.fixnum-width))
+  (fprintf (current-error-port) "greatest fixnum: ~a\n" (config.greatest-fixnum))
+  (fprintf (current-error-port) "least fixnum:    ~a\n" (config.least-fixnum)))
+
+
+;;;; parameters configuration
+
+(define-constant BOOT-FILE-NAME
+  "vicare.boot")
+
+(define-constant BOOT-IMAGE-FILES-SOURCE-DIR
+  (or (getenv "VICARE_SRC_DIR") "."))
+
+(define verbose-output? #t)
+
+;;; --------------------------------------------------------------------
 
 (fasl-write.writing-boot-image? #t)
-
-;;The optimisation level should already default to  2.  By commenting out this we let
-;;the user set it to 3, if he wants, at package configuration time with:
-;;
-;;   $ configure VFLAGS='-O3'
-;;
-;;(compiler.optimize-level 2)
 
 (compiler.perform-core-type-inference #t)
 (compiler.perform-unsafe-primrefs-introduction #t)
@@ -221,30 +237,25 @@
 
 ;;NOTE This turns off some debug mode features  that cannot be used in the boot image
 ;;because it would become too big.  (Marco Maggi; Wed Apr 2, 2014)
+;;
 (compiler.generate-debug-calls #f)
 
 ;;NOTE This  can be #t  while developing and  #f in distributed  tarballs.  Obviously
 ;;someone has  to remember to set  it to #f; but  it is not bad  if it is set  to #t,
 ;;because it only affects bulding the boot image.  (Marco Maggi; Wed Oct 29, 2014)
+;;
 (compiler.check-compiler-pass-preconditions #t)
 
+;;NOTE  This is  for debugging  purposes: it  causes the  compiler to  generate human
+;;readable labels.  Generating  descriptive labels is slower, so this  is usually set
+;;to false.  (Marco Maggi; Sun Nov 16, 2014)
+;;
 (compiler.descriptive-labels #f)
 
 ;;(set-port-buffer-mode! (current-output-port) (buffer-mode none))
 
 
 ;;;; helpers
-
-(define BOOT-IMAGE-MAJOR-VERSION 0)
-(define BOOT-IMAGE-MINOR-VERSION 4)
-
-(define boot-file-name
-  "vicare.boot")
-
-(define src-dir
-  (or (getenv "VICARE_SRC_DIR") "."))
-
-(define verbose-output? #t)
 
 (define-syntax each-for
   (syntax-rules ()
@@ -4017,7 +4028,8 @@
   ;;
   (define (expand-all files)
     ;;Expand all the libraries in FILES, which must be a list of strings representing
-    ;;file pathnames under the directory referenced by SRC-DIR.  Return 3 values:
+    ;;file pathnames  under the directory referenced  by BOOT-IMAGE-FILES-SOURCE-DIR.
+    ;;Return 3 values:
     ;;
     ;;1. The list of library specifications.
     ;;
@@ -4065,7 +4077,7 @@
 		  (debug-printf " ~s\n" file)
 		  ;;For  each library  in the  file apply  the closure  for its  side
 		  ;;effects.
-		  (load (string-append src-dir "/" file)
+		  (load (string-append BOOT-IMAGE-FILES-SOURCE-DIR "/" file)
 			(lambda (library-sexp)
 			  (receive (name code subst env)
 			      (boot-library-expand library-sexp)
@@ -4525,7 +4537,7 @@
 		(error 'bootstrap
 		  "no location gensym found for boot image lexical primitive"
 		  primitive-name.sym)))))
-      (let ((port (open-file-output-port boot-file-name (file-options no-fail))))
+      (let ((port (open-file-output-port BOOT-FILE-NAME (file-options no-fail))))
 	(time-it "code generation and serialization"
 	  (lambda ()
 	    (debug-printf "Compiling and writing to fasl (one code object for each library form): ")
