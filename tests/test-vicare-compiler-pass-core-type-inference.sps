@@ -447,10 +447,10 @@
   #t)
 
 
-(parametrise ((check-test-name	'misc))
+(parametrise ((check-test-name	'conditionals))
 
-;;; inference of type after successful variable test
-
+  ;;Inference of  type after  successful variable  test: if X  is non-false,  its tag
+  ;;contains T:non-false; if X is false, its tag contains T:false.
   (doit* (let ((x (read)))
 	   (if x
 	       (display x)
@@ -462,17 +462,30 @@
 	     (funcall (primref display)
 	       (known x_0 (T:false T:boolean T:immediate T:object))))))
 
+  ;;Test for NOT in conditional's test position:  if X is non-false, its tag contains
+  ;;T:non-false; if X is false, its tag contains T:false.
+  (doit* (let ((x (read)))
+	   (if (not x)
+	       (display x)
+	     (display x)))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref not) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:false T:boolean T:immediate T:object)))
+	     (funcall (primref display)
+	       (known x_0 (T:non-false T:object))))))
+
+  ;;Test for AND syntax type propagation.  AND expands to IF.
+  (doit* (let ((x (read)))
+	   (and (pair? x)
+		(car   x)))
+	 (bind ((x_0 (funcall (primref read))))
+	   (conditional (funcall (primref pair?) x_0)
+	       (funcall (primref car)
+		 (known x_0 (T:pair T:non-false T:nonimmediate T:object)))
+	     (constant #f))))
+
 ;;; --------------------------------------------------------------------
-;;; return value type descriptors
-
-  ;;Test for NOT return value type descriptor.
-  (doit (let ((x ((primitive not) ((primitive read)))))
-	  ((primitive display) x))
-	(bind ((x_0 (funcall (primref not)
-		      (funcall (primref read)))))
-	  (funcall (primref display)
-	    (known x_0 (T:boolean T:immediate T:object)))))
-
 ;;; inference of type after successful type predicate application
 
   (doit* (let ((x (read)))
@@ -491,9 +504,7 @@
 		(nan?    x)))
 	 (bind ((x_0 (funcall (primref read))))
 	   (conditional (funcall (primref number?) x_0)
-	       (seq
-		 (constant #f)
-		 (funcall (primref nan?) (known x_0 (T:non-false T:number T:object))))
+	       (funcall (primref nan?) (known x_0 (T:non-false T:number T:object)))
 	     (constant #f))))
 
   ;;Miscellaneous predicates.
@@ -514,32 +525,37 @@
 	       (funcall (primref display)
 		 x_0)))))
 
-  ;;Test for NOT in conditional's test position.
-  (doit* (let ((x (read)))
-	   (if (not x)
-	       (display x)
-	     (display x)))
-	 (bind ((x_0 (funcall (primref read))))
-	   (conditional (funcall (primref not) x_0)
-	       (funcall (primref display)
-		 (known x_0 (T:false T:boolean T:immediate T:object)))
-	     (funcall (primref display)
-	       (known x_0 (T:non-false T:object))))))
+;;; --------------------------------------------------------------------
+;;; flonum predicates
 
-  ;;Test for AND syntax type propagation.  AND expands to IF.
+  ;;FLONUM?
   (doit* (let ((x (read)))
-	   (and (pair? x)
-		(car   x)))
+	   (and (flonum? x)
+		(display x)))
 	 (bind ((x_0 (funcall (primref read))))
-	   (conditional (funcall (primref pair?) x_0)
-	       (seq
-		 (constant #f)
-		 (funcall (primref car)
-		   (known x_0 (T:pair T:non-false T:nonimmediate T:object))))
+	   (conditional (funcall (primref flonum?) x_0)
+	       (funcall (primref display)
+		 (known x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
 	     (constant #f))))
 
-;;; --------------------------------------------------------------------
-;;; propagation of type after successful primitive argument validation
+  ;;FLINFINITE?
+  (doit (let ((x ((primitive read))))
+	  (if ((primitive flinfinite?) x)
+	      ((primitive display) x)
+	    ((primitive display) x)))
+	(bind ((x_0 (funcall (primref read))))
+	  (conditional (funcall (primref flinfinite?) x_0)
+	      (funcall (primref display)
+		(known x_0 (T:flonum-infinite T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object)))
+	    (funcall (primref display)
+	      (known x_0 (T:non-false T:nonimmediate T:real T:inexact T:flonum T:number T:object))))))
+
+  #t)
+
+
+(parametrise ((check-test-name	'arguments))
+
+  ;; propagation of type after successful primitive argument validation
 
   ;;The following tests are related.  We  test what happens when a variable reference
   ;;is used as operand for CDR; the primitive CDR accepts a pair as operand.
@@ -584,6 +600,19 @@
 		 (known x_0 (T:pair T:non-false T:nonimmediate T:object))))))
 
     #| end of BEGIN |# )
+
+  #t)
+
+
+(parametrise ((check-test-name	'return-values))
+
+  ;;Test for NOT return value type descriptor.  NOT has a T:boolean as return value.
+  (doit (let ((x ((primitive not) ((primitive read)))))
+	  ((primitive display) x))
+	(bind ((x_0 (funcall (primref not)
+		      (funcall (primref read)))))
+	  (funcall (primref display)
+	    (known x_0 (T:boolean T:immediate T:object)))))
 
   #t)
 

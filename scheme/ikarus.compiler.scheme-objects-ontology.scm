@@ -16,7 +16,11 @@
 
 #!vicare
 (module SCHEME-OBJECTS-ONTOLOGY
-  (core-type-tag-description
+  (core-type-tag?
+		;Return  true  if the  single  argument  is a  CORE-TYPE-TAG  record,
+		;otherwise return false.
+
+   core-type-tag-description
 		;Given an  instance of record  type CORE-TYPE-TAG: convert it  into a
 		;descriptive and human readable list of symbols representing the type
 		;bits that are set in X.

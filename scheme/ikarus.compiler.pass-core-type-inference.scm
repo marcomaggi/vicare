@@ -74,6 +74,159 @@
       y))
 
 
+;;;; env functions
+;;
+;;Environmentsa map PRELEX structs  to the type tag of the  values they reference.  An
+;;environment is an association list with the format:
+;;
+;;   ((?number . ?prelex-type) ...)
+;;
+;;where:  ?NUMBER  is an  exact  integer  uniquely  associated  to a  PRELEX  struct;
+;;?PRELEX-TYPE  is a  record of  type  T representing  the type  informations of  the
+;;PRELEX.  The entries are kept sorted in the alist:
+;;
+;;   ((0 . ?prelex-type-0)
+;;    (1 . ?prelex-type-1)
+;;    (2 . ?prelex-type-2)
+;;    ...)
+;;
+;;to make  it faster to  merge multiple  enviroments and search  for an entry  with a
+;;given key.
+;;
+
+(define-inline-constant EMPTY-ENV
+  '())
+
+(define (extend-env* x* v* env)
+  (if (pair? x*)
+      (extend-env* (cdr x*) (cdr v*)
+		   (extend-env (car x*) (car v*) env))
+    env))
+
+(define (extend-env prel tag env)
+  ;;Add the given PRELEX  and the record of type TAG to  the environment.  Return the
+  ;;new environment.
+  ;;
+  #;(assert (prelex? prel))
+  #;(assert (core-type-tag? tag))
+  (if (core-type-tag=? tag T:object)
+      ;;It is useless to  tag a value with "T:object", because  any Scheme object has
+      ;;tag "T:object"; so we do not extent ENV.
+      env
+    ;;In this loop we scan ENV searching for the entry associated to PREL.
+    (let recur ((prel.index (prelex-operand prel))
+		(env        env))
+      (if (pair? env)
+	  (cond ((fx<? prel.index (caar env))
+		 ;;If we are here: we can stop  recursing because we know in a sorted
+		 ;;alist all the following entries have greater key.
+		 (cons (cons prel.index tag) env))
+		((fx=? prel.index (caar env))
+		 ;;There is already an entry associated to PREL.
+		 (if (core-type-tag=? (cdar env) tag)
+		     ;;The entry in ENV has type equal to TAG, so there is no need to
+		     ;;push a new entry.
+		     env
+		   ;;The entry  in ENV  has type  different from TAG:  we push  a new
+		   ;;entry that shadows the old one.
+		   (begin
+		     ;; (debug-print 'extend-env 'found-prel-in-env
+		     ;; 		  'old-entry (cons (caar env) (core-type-tag-description (cdar env)))
+		     ;; 		  'new-entry (cons prel.index (core-type-tag-description tag)))
+		     (cons (cons prel.index tag) env))))
+		(else
+		 (cons (car env) (recur prel.index (cdr env)))))
+	;;Add the new entry as last item in ENV.
+	(list (cons prel.index tag))))))
+
+;;; --------------------------------------------------------------------
+
+(module (%or-envs)
+
+  (define-syntax-rule (%or-envs env1 env2)
+    (%merge-envs env1 env2))
+
+  (define (%merge-envs env1 env2)
+    (cond ((eq? env1 env2)
+	   env1)
+	  ((pair? env1)
+	   (if (pair? env2)
+	       (%merge-envs2 (car env1) (cdr env1)
+			     (car env2) (cdr env2))
+	     EMPTY-ENV))
+	  (else
+	   EMPTY-ENV)))
+
+  (define (%merge-envs2 a1 env1 a2 env2)
+    (let ((x1 (car a1))
+	  (x2 (car a2)))
+      (cond ((eq? x1 x2)
+	     (cons-env x1 (core-type-tag-or (cdr a1) (cdr a2))
+		       (%merge-envs env1 env2)))
+	    ((< x2 x1)
+	     (%merge-envs1 a1 env1 env2))
+	    (else
+	     #;(assert (>= x2 x1))
+	     (%merge-envs1 a2 env2 env1)))))
+
+  (define (%merge-envs1 a1 env1 env2)
+    (if (pair? env2)
+	(%merge-envs2 a1 env1 (car env2) (cdr env2))
+      EMPTY-ENV))
+
+  (define (cons-env x v env)
+    (if (core-type-tag=? v T:object)
+	;;It is useless to tag a value with "T:object", because any Scheme object has
+	;;tag "T:object"; so we skip this PRELEX.
+	env
+      (cons (cons x v) env)))
+
+  #| end of module: %or-envs |# )
+
+;;; --------------------------------------------------------------------
+
+(module (%and-envs)
+
+  (define-syntax-rule (%and-envs env1 env2)
+    (%merge-envs env1 env2))
+
+  (define (%merge-envs env1 env2)
+    (cond ((eq? env1 env2)
+	   env1)
+	  ((pair? env1)
+	   (if (pair? env2)
+	       (%merge-envs2 (car env1) (cdr env1)
+			     (car env2) (cdr env2))
+	     env1))
+	  (else
+	   env2)))
+
+  (define (%merge-envs2 a1 env1 a2 env2)
+    (let ((x1 (car a1))
+	  (x2 (car a2)))
+      (cond ((eq? x1 x2)
+	     (cons-env x1 (core-type-tag-and (cdr a1) (cdr a2))
+		       (%merge-envs env1 env2)))
+	    ((< x2 x1)
+	     (cons a2 (%merge-envs1 a1 env1 env2)))
+	    (else
+	     (cons a1 (%merge-envs1 a2 env2 env1))))))
+
+  (define (%merge-envs1 a1 env1 env2)
+    (if (pair? env2)
+	(%merge-envs2 a1 env1 (car env2) (cdr env2))
+      env1))
+
+  (define (cons-env x v env)
+    (if (core-type-tag=? v T:object)
+	;;It is useless to tag a value with "T:object", because any Scheme object has
+	;;tag "T:object"; so we skip this PRELEX.
+	env
+      (cons (cons x v) env)))
+
+  #| end of module: %and-envs |# )
+
+
 (module (V)
 
   (define* (V x env)
@@ -184,10 +337,8 @@
   (define (V-conditional x.test x.conseq x.altern x.env)
     (receive (test test.env test.tag)
 	(V x.test x.env)
-      ;;FIXME Should TEST.ENV  be merged with CONSEQ.ENV and  ALTERN.ENV to propagate
-      ;;tag informations?  I am not sure.  (Marco Maggi; Sat Sep 13, 2014)
       (receive (x.conseq.env x.altern.env)
-	  (%augment-env-with-conditional-test-info test x.env)
+	  (%augment-env-with-conditional-test-info test test.env)
 	(case (T:false? test.tag)
 	  ((yes)
 	   ;;We know the test is false, so do the transformation:
@@ -627,6 +778,7 @@
       ((fl=? fl<? fl<=? fl>? fl>=?
 	     fleven? flodd? flzero? flpositive? flnegative?
 	     flfinite? flinfinite? flinteger? flnan?)
+(debug-print 'inject op)
        (%inject* T:boolean T:flonum))
 
       ((exact)
@@ -749,142 +901,6 @@
     #| end of module: inject* |# )
 
   #| end of module: %PROCESS-PRIMITIVE-APPLICATION |# )
-
-
-;;;; env functions
-;;
-;;Environments have the purpose  to map PRELEX structs to the type  tag of the values
-;;they reference.  An environment is an association list with the format:
-;;
-;;   ((?number . ?prelex-type) ...)
-;;
-;;where:  ?NUMBER  is an  exact  integer  uniquely  associated  to a  PRELEX  struct;
-;;?PRELEX-TYPE  is a  record of  type  T representing  the type  informations of  the
-;;PRELEX.  The entries are kept sorted in the alist:
-;;
-;;   ((0 . ?prelex-type-0)
-;;    (1 . ?prelex-type-1)
-;;    (2 . ?prelex-type-2)
-;;    ...)
-;;
-;;to make  it faster to  merge multiple  enviroments and search  for an entry  with a
-;;given key.
-;;
-
-(define-inline-constant EMPTY-ENV
-  '())
-
-(define (extend-env* x* v* env)
-  (if (pair? x*)
-      (extend-env* (cdr x*) (cdr v*)
-		   (extend-env (car x*) (car v*) env))
-    env))
-
-(define (extend-env x t env)
-  ;;Add the given PRELEX and the record of type T to the environment.  Return the new
-  ;;environment.
-  ;;
-  #;(assert (prelex? x))
-  #;(assert (core-type-tag? x))
-  (if (core-type-tag=? t T:object)
-      ;;It is useless to  tag a value with "T:object", because  any Scheme object has
-      ;;tag "T:object"; so we skip this PRELEX.
-      env
-    (let ((x.index (prelex-operand x)))
-      (let recur ((env env))
-	(if (or (null? env)
-		;;If this is true: we can stop  recursing because we know in a sorted
-		;;alist all the following entries have greater key.
-		(< x.index (caar env)))
-	    (cons (cons x.index t) env)
-	  (cons (car env) (recur (cdr env))))))))
-
-;;; --------------------------------------------------------------------
-
-(module (%or-envs)
-
-  (define-syntax-rule (%or-envs env1 env2)
-    (%merge-envs env1 env2))
-
-  (define (%merge-envs env1 env2)
-    (cond ((eq? env1 env2)
-	   env1)
-	  ((pair? env1)
-	   (if (pair? env2)
-	       (%merge-envs2 (car env1) (cdr env1)
-			     (car env2) (cdr env2))
-	     EMPTY-ENV))
-	  (else
-	   EMPTY-ENV)))
-
-  (define (%merge-envs2 a1 env1 a2 env2)
-    (let ((x1 (car a1))
-	  (x2 (car a2)))
-      (cond ((eq? x1 x2)
-	     (cons-env x1 (core-type-tag-or (cdr a1) (cdr a2))
-		       (%merge-envs env1 env2)))
-	    ((< x2 x1)
-	     (%merge-envs1 a1 env1 env2))
-	    (else
-	     #;(assert (>= x2 x1))
-	     (%merge-envs1 a2 env2 env1)))))
-
-  (define (%merge-envs1 a1 env1 env2)
-    (if (pair? env2)
-	(%merge-envs2 a1 env1 (car env2) (cdr env2))
-      EMPTY-ENV))
-
-  (define (cons-env x v env)
-    (if (core-type-tag=? v T:object)
-	;;It is useless to tag a value with "T:object", because any Scheme object has
-	;;tag "T:object"; so we skip this PRELEX.
-	env
-      (cons (cons x v) env)))
-
-  #| end of module: %or-envs |# )
-
-;;; --------------------------------------------------------------------
-
-(module (%and-envs)
-
-  (define-syntax-rule (%and-envs env1 env2)
-    (%merge-envs env1 env2))
-
-  (define (%merge-envs env1 env2)
-    (cond ((eq? env1 env2)
-	   env1)
-	  ((pair? env1)
-	   (if (pair? env2)
-	       (%merge-envs2 (car env1) (cdr env1)
-			     (car env2) (cdr env2))
-	     env1))
-	  (else
-	   env2)))
-
-  (define (%merge-envs2 a1 env1 a2 env2)
-    (let ((x1 (car a1))
-	  (x2 (car a2)))
-      (cond ((eq? x1 x2)
-	     (cons-env x1 (core-type-tag-and (cdr a1) (cdr a2))
-		       (%merge-envs env1 env2)))
-	    ((< x2 x1)
-	     (cons a2 (%merge-envs1 a1 env1 env2)))
-	    (else
-	     (cons a1 (%merge-envs1 a2 env2 env1))))))
-
-  (define (%merge-envs1 a1 env1 env2)
-    (if (pair? env2)
-	(%merge-envs2 a1 env1 (car env2) (cdr env2))
-      env1))
-
-  (define (cons-env x v env)
-    (if (core-type-tag=? v T:object)
-	;;It is useless to tag a value with "T:object", because any Scheme object has
-	;;tag "T:object"; so we skip this PRELEX.
-	env
-      (cons (cons x v) env)))
-
-  #| end of module: %and-envs |# )
 
 
 ;;;; done
