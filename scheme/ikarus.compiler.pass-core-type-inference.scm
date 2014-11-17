@@ -76,14 +76,14 @@
 
 ;;;; env functions
 ;;
-;;Environmentsa map PRELEX structs  to the type tag of the  values they reference.  An
+;;Environments map PRELEX structs  to the type tag of the  values they reference.  An
 ;;environment is an association list with the format:
 ;;
 ;;   ((?number . ?prelex-type) ...)
 ;;
-;;where:  ?NUMBER  is an  exact  integer  uniquely  associated  to a  PRELEX  struct;
-;;?PRELEX-TYPE  is a  record of  type  T representing  the type  informations of  the
-;;PRELEX.  The entries are kept sorted in the alist:
+;;where: ?NUMBER is a fixnum uniquely  associated to a PRELEX struct; ?PRELEX-TYPE is
+;;a record of type  T representing the type informations of  the PRELEX.  The entries
+;;are kept sorted in the alist:
 ;;
 ;;   ((0 . ?prelex-type-0)
 ;;    (1 . ?prelex-type-1)
@@ -230,8 +230,8 @@
 (module (V)
 
   (define* (V x env)
-    ;;
-    ;;ENV maps PRELEX structs to records of type CORE-TYPE-TAG.
+    ;;Recursively  process the  recordised code  in X.   ENV maps  PRELEX structs  to
+    ;;records of type CORE-TYPE-TAG.
     ;;
     ;;Return 3 values:
     ;;
@@ -445,8 +445,274 @@
   #| end of module: V |# )
 
 
+(module (%process-primitive-application)
+  ;;This module  processes a core  primitive application, either a  lexical primitive
+  ;;function or primitive operation (or both):
+  ;;
+  ;;   (funcall (primref ?op) (known ?rand ?rand-type) ...)
+  ;;
+  ;;A core primitive  might care about the type  of its operands or not.   If it does
+  ;;not care, either it is because: any operand will do; no optimisation is possible;
+  ;;some optimisation is possible, but at present it is not implemented.
+  ;;
+  ;;This module has two purposes:
+  ;;
+  ;;* To specify the type tag of the  FUNCALL return value; this can be done for both
+  ;;  safe and unsafe core primitives.
+  ;;
+  ;;* To  attach additional type informations  to PRELEX structs used  as operands to
+  ;;  the core primitive;  this can be done only for safe  primitives.  We extend the
+  ;;   environment with  informations gathered  from the  fact that:  after the  safe
+  ;;  primitive has been successfully executed,  its arguments have been validated as
+  ;;  correct, so we know their type.
+  ;;
+  ;;As example of second purpose, let's consider the following standard code:
+  ;;
+  ;;   (let ((f (lambda (y) y))
+  ;;         (x (read)))
+  ;;     (f (cdr x))
+  ;;     (f x))
+  ;;
+  ;;the body  of the LET  form contains a  sequence of forms:  "(f (cdr x))"  will be
+  ;;executed first, "(f x)"  will be executed last.  We know that  CDR accepts a pair
+  ;;as argument:  after "(cdr  x)" has  been executed without  raising a  "wrong type
+  ;;argument" exception,  we know that the  variable X is  a pair.  So when,  in this
+  ;;very  module, we  process  "(cdr x)"  we extend  the  environment by  associating
+  ;;"T:pair" to X; when later we process "(f x)", X is tagged.
+  ;;
+  (define (%process-primitive-application op rand* env)
+    (define (return retval.tag)
+      ;;We use  this when  the core  primitive does not  care about  the type  of its
+      ;;operands, but we known the type of the return value.
+      (values (make-funcall (mk-primref op) rand*) env retval.tag))
+
+    (define-syntax-rule (%inject ?retval.tag ?rand.tag ...)
+      ;;This is for core primitives accepting a fixed number of arguments.
+      (inject op rand* env ?retval.tag ?rand.tag ...))
+
+    (define-syntax-rule (%inject* ?retval.tag ?rand.tag)
+      ;;This  is for  core  primitives accepting  any number  of  operands after  the
+      ;;mandatory ones, but with all the operands of the same type RAND.TAG.
+      (inject* op rand* env ?retval.tag ?rand.tag))
+
+    (case op
+      ((cons)
+       (return T:pair))
+
+      ((car cdr
+	    caar cadr cdar cddr
+	    caaar caadr cadar caddr cdaar cdadr cddar cdddr
+	    caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
+	    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
+       ;;All of these accept a pair as operand and return some object.
+       (%inject T:object T:pair))
+
+      ((set-car! set-cdr!)
+       ;;All of these accept a pair and some object as operands and return void.
+       (%inject T:void T:pair T:object))
+
+      ((vector make-vector list->vector)
+       (return T:vector))
+
+      ((string make-string list->string)
+       (return T:string))
+
+      ((string-length)
+       (%inject T:fixnum T:string))
+
+      ((vector-length)
+       (%inject T:fixnum T:vector))
+
+      ((string-ref)
+       (%inject T:char T:string T:fixnum))
+
+      ((string-set!)
+       (%inject T:void T:string T:fixnum T:char))
+
+      ((vector-ref)
+       (%inject T:object T:vector T:fixnum))
+
+      ((vector-set!)
+       (%inject T:void T:vector T:fixnum T:object))
+
+      ((length)
+       (%inject T:fixnum (core-type-tag-or T:null T:pair)))
+
+      ((bytevector-length)
+       (%inject T:fixnum T:bytevector))
+
+      ((integer->char)
+       (%inject T:char T:fixnum))
+
+      ((char->integer)
+       (%inject T:fixnum T:char))
+
+      ((bytevector-u8-ref bytevector-s8-ref bytevector-u16-native-ref bytevector-s16-native-ref)
+       (%inject T:fixnum T:bytevector T:fixnum))
+
+      ((bytevector-u16-ref bytevector-s16-ref)
+       (%inject T:fixnum T:bytevector T:fixnum T:symbol))
+
+      ((bytevector-u8-set! bytevector-s8-set! bytevector-u16-native-set! bytevector-s16-native-set!)
+       (%inject T:void T:bytevector T:fixnum T:fixnum))
+
+      ((bytevector-u16-set! bytevector-s16-set!)
+       (%inject T:void T:bytevector T:fixnum T:fixnum T:symbol))
+
+      ((fx+         fx-         fx*         fxadd1      fxsub1
+		    fxquotient  fxremainder fxmodulo    fxsll       fxsra
+		    fxand       fxdiv       fxdiv0      fxif        fxior
+		    fxlength    fxmax       fxmin       fxmod       fxmod0
+		    fxnot       fxxor       fxlogand    fxlogor     fxlognot
+		    fxlogxor)
+       (%inject* T:fixnum T:fixnum))
+
+      ((fx= fx< fx<= fx> fx>= fx=? fx<? fx<=? fx>? fx>=?
+	    fxeven? fxodd? fxnegative? fxpositive? fxzero?
+	    fxbit-set?)
+       (%inject* T:boolean T:fixnum))
+
+      ((fl=? fl<? fl<=? fl>? fl>=?
+	     fleven? flodd? flzero? flpositive? flnegative?
+	     flfinite? flinfinite? flinteger? flnan?)
+       (%inject* T:boolean T:flonum))
+
+      ((exact)
+       (%inject T:exact T:number))
+
+      ((inexact)
+       (%inject T:inexact T:number))
+
+      ((char=? char<? char<=? char>? char>=?
+	       char-ci=? char-ci<? char-ci<=? char-ci>? char-ci>=?)
+       (%inject* T:boolean T:char))
+
+      ((string=? string<? string<=? string>? string>=?
+		 string-ci=? string-ci<? string-ci<=? string-ci>?
+		 string-ci>=?)
+       (%inject* T:boolean T:string))
+
+      ((make-parameter
+	   record-constructor record-accessor record-constructor record-predicate
+	   condition-accessor condition-predicate
+	   enum-set-constructor enum-set-indexer
+	   make-guardian)
+       (return T:procedure))
+
+      ((fixnum-width greatest-fixnum least-fixnum)
+       (return T:fixnum))
+
+      ((not)
+       (return T:boolean))
+
+      (else
+       (return T:object))))
+
+;;; --------------------------------------------------------------------
+
+  (module (inject)
+    ;;Extend the environment with informations gathered from the fact that: after the
+    ;;safe  primitive  has  been  successfully  executed,  its  arguments  have  been
+    ;;determined as correct, so we know their type.
+    ;;
+    (define (inject op rand* env retval.tag . rand*.tag)
+      ;;This is for core primitives accepting a fixed number of arguments.
+      ;;
+      (let ((env^ (if (fx=? (length rand*.tag)
+			    (length rand*))
+		      (%extend* rand* rand*.tag env)
+		    ;;If we assume to have specified the number of operands correctly
+		    ;;above: here we have a "wrong number of args" error.
+		    env)))
+	(values (make-funcall (mk-primref op) rand*)
+		env^ retval.tag)))
+
+    (define (%extend* rand* rand.tag* env)
+      ;;Non-tail  recursive   function.   Extend   the  environment  ENV   with  type
+      ;;informations  about the  PRELEX  structs in  RAND*,  using the  CORE-TYPE-TAG
+      ;;records in RAND.TAG*.  Return the extended environment.
+      ;;
+      ;;RAND* can  be a list of  structs representing recordised code,  either PRELEX
+      ;;structs, KNOWN  structs or  some other struct  type; if a  RAND is  neither a
+      ;;PRELEX nor a KNOWN  holding a PRELEX: it is silently  skipped because no type
+      ;;informations can be associated to it.
+      ;;
+      (if (pair? rand*)
+	  (%extend (car rand*) (car rand.tag*)
+		   (%extend* (cdr rand*) (cdr rand.tag*) env))
+	env))
+
+    (define (%extend rand rand.tag env)
+      (struct-case rand
+	((known rand.expr rand.accum-tag)
+	 (%extend rand.expr (core-type-tag-and rand.tag rand.accum-tag) env))
+	((prelex)
+	 (extend-env rand rand.tag env))
+	(else
+	 ;;The RAND is not a PRELEX struct: just return the original environment.
+	 env)))
+
+    #| end of module: inject |# )
+
+;;; --------------------------------------------------------------------
+
+  (module (inject*)
+    ;;Extend the environment with informations gathered from the fact that: after the
+    ;;safe  primitive  has  been  successfully  executed,  its  arguments  have  been
+    ;;determined as correct, so we know their type.
+    ;;
+    (define (inject* op rand* env retval.tag rand.tag)
+      ;;This  is for  core  primitives accepting  any number  of  operands after  the
+      ;;mandatory ones, but with all the operands of the same type RAND.TAG.
+      ;;
+      (values (make-funcall (mk-primref op) rand*)
+	      (%extend* rand* env rand.tag)
+	      retval.tag))
+
+    (define (%extend* rand* env rand.tag)
+      ;;Non-tail  recursive   function.   Extend   the  environment  ENV   with  type
+      ;;informations about  the PRELEX structs  in RAND*, using  for all of  them the
+      ;;same CORE-TYPE-TAG record RAND.TAG.  Return the extended environment.
+      ;;
+      ;;RAND* can  be a list of  structs representing recordised code,  either PRELEX
+      ;;structs, KNOWN  structs or  some other struct  type; if a  RAND is  neither a
+      ;;PRELEX nor a KNOWN  holding a PRELEX: it is silently  skipped because no type
+      ;;informations can be associated to it.
+      ;;
+      (if (pair? rand*)
+	  (%extend (car rand*) rand.tag
+		   (%extend* (cdr rand*) env rand.tag))
+	env))
+
+    (define (%extend rand rand.tag env)
+      (struct-case rand
+	((known rand.expr rand.accum-tag)
+	 (%extend rand.expr (core-type-tag-and rand.tag rand.accum-tag) env))
+	((prelex)
+	 (extend-env rand rand.tag env))
+	(else
+	 ;;The RAND is not a PRELEX struct: just return the original environment.
+	 env)))
+
+    #| end of module: inject* |# )
+
+  #| end of module: %PROCESS-PRIMITIVE-APPLICATION |# )
+
+
 (module (%augment-env-with-conditional-test-info)
-  ;;There is a special, but common, case of TEST expression:
+  ;;Here process the ?TEST expression from a conditional:
+  ;;
+  ;;   (conditional ?test ?conseq ?altern)
+  ;;
+  ;;with the  purpose of adding informations  to the environment used  to process the
+  ;;?CONSEQ and ?ALTERN.   This module must be used *after*  ?TEST has been processed
+  ;;by  the function  V;  in this  module  we do  not  change ?TEST,  we  try to  add
+  ;;informations to the argument ENV.
+  ;;
+  ;;Return  2 values:  an augmented  environment to  be used  to process  ?CONSEQ; an
+  ;;augmented environment to be used to process ?ALTERN.
+  ;;
+  ;;There is a special, but common, case of ?TEST expression:
   ;;
   ;;   (funcall (primref ?type-pred) ?var)
   ;;
@@ -460,9 +726,30 @@
   ;;
   ;;here we know that the VAR is non-false in the ?CONSEQ and false in the ?ALTERN.
   ;;
+  ;;
+  ;;Note about non-type predicates
+  ;;------------------------------
+  ;;
+  ;;Let's consider the recordised code:
+  ;;
+  ;;   (conditional ?test ?conseq ?altern)
+  ;;
+  ;;where ?TEST is:
+  ;;
+  ;;   ((primitive flinfinite?) x)
+  ;;
+  ;;FLINFINITE? is a predicate, but not a type predicate.  It is known, and described
+  ;;by this compiler  pass, that FLINFINITE?  raises an exception  if its argument is
+  ;;not a flonum; so the continuation of ?TEST  is executed only if the argument is a
+  ;;flonum.
+  ;;
+  ;;The function V processes ?TEST and determines that when either ?CONSEQ or ?ALTERN
+  ;;are processed X is  known to be a "T:finxum"; this  happens regardless the result
+  ;;of applying FLINFINITE?  to X, and it is done by %PROCESS-PRIMITIVE-APPLICATION.
+  ;;
   (define (%augment-env-with-conditional-test-info test env)
     ;;TEST must  be recordised code  representing the  test of a  CONDITIONAL struct.
-    ;;ENV must be the environment in which the CONDITIONAL is processed.
+    ;;ENV must be the environment in which the conseq and altern will be processed.
     ;;
     ;;Inspect TEST and  augment ENV with inferred type properties.   Return 2 values:
     ;;the  augmented  environment in  which  the  consequent  can be  processed;  the
@@ -646,261 +933,6 @@
        (values env env))))
 
   #| end of module: %AUGMENT-ENV-WITH-CONDITIONAL-TEST-INFO |# )
-
-
-(module (%process-primitive-application)
-  ;;This module  processes a core  primitive application, either a  lexical primitive
-  ;;function or primitive operation (or both):
-  ;;
-  ;;   (funcall (primref ?op) (known ?rand ?rand-type) ...)
-  ;;
-  ;;A core primitive  might care about the type  of its operands or not.   If it does
-  ;;not care, either it is because: any operand will do; no optimisation is possible;
-  ;;some optimisation is possible, but at present it is not implemented.
-  ;;
-  ;;This module has two purposes:
-  ;;
-  ;;* To specify the type tag of the  FUNCALL return value; this can be done for both
-  ;;  safe and unsafe core primitives.
-  ;;
-  ;;* To  attach additional type informations  to PRELEX structs used  as operands to
-  ;;  the core primitive;  this can be done only for safe  primitives.  We extend the
-  ;;   environment with  informations gathered  from the  fact that:  after the  safe
-  ;;  primitive has been successfully executed,  its arguments have been validated as
-  ;;  correct, so we know their type.
-  ;;
-  ;;As example of second purpose, let's consider the following standard code:
-  ;;
-  ;;   (let ((f (lambda (y) y))
-  ;;         (x (read)))
-  ;;     (f (cdr x))
-  ;;     (f x))
-  ;;
-  ;;the body  of the LET  form contains a  sequence of forms:  "(f (cdr x))"  will be
-  ;;executed first, "(f x)"  will be executed last.  We know that  CDR accepts a pair
-  ;;as argument:  after "(cdr  x)" has  been executed without  raising a  "wrong type
-  ;;argument" exception,  we know that the  variable X is  a pair.  So when,  in this
-  ;;very  module, we  process  "(cdr x)"  we extend  the  environment by  associating
-  ;;"T:pair" to X; when later we process "(f x)", X is tagged.
-  ;;
-  (define (%process-primitive-application op rand* env)
-    (define (return retval.tag)
-      ;;We use  this when  the core  primitive does not  care about  the type  of its
-      ;;operands, but we known the type of the return value.
-      (values (make-funcall (mk-primref op) rand*) env retval.tag))
-
-    (define-syntax-rule (%inject ?retval.tag ?rand.tag ...)
-      ;;This is for core primitives accepting a fixed number of arguments.
-      (inject op rand* env ?retval.tag ?rand.tag ...))
-
-    (define-syntax-rule (%inject* ?retval.tag ?rand.tag)
-      ;;This  is for  core  primitives accepting  any number  of  operands after  the
-      ;;mandatory ones, but with all the operands of the same type RAND.TAG.
-      (inject* op rand* env ?retval.tag ?rand.tag))
-
-    (case op
-      ((cons)
-       (return T:pair))
-
-      ((car cdr
-	    caar cadr cdar cddr
-	    caaar caadr cadar caddr cdaar cdadr cddar cdddr
-	    caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
-	    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr)
-       ;;All of these accept a pair as operand and return some object.
-       (%inject T:object T:pair))
-
-      ((set-car! set-cdr!)
-       ;;All of these accept a pair and some object as operands and return void.
-       (%inject T:void T:pair T:object))
-
-      ((vector make-vector list->vector)
-       (return T:vector))
-
-      ((string make-string list->string)
-       (return T:string))
-
-      ((string-length)
-       (%inject T:fixnum T:string))
-
-      ((vector-length)
-       (%inject T:fixnum T:vector))
-
-      ((string-ref)
-       (%inject T:char T:string T:fixnum))
-
-      ((string-set!)
-       (%inject T:void T:string T:fixnum T:char))
-
-      ((vector-ref)
-       (%inject T:object T:vector T:fixnum))
-
-      ((vector-set!)
-       (%inject T:void T:vector T:fixnum T:object))
-
-      ((length)
-       (%inject T:fixnum (core-type-tag-or T:null T:pair)))
-
-      ((bytevector-length)
-       (%inject T:fixnum T:bytevector))
-
-      ((integer->char)
-       (%inject T:char T:fixnum))
-
-      ((char->integer)
-       (%inject T:fixnum T:char))
-
-      ((bytevector-u8-ref bytevector-s8-ref bytevector-u16-native-ref bytevector-s16-native-ref)
-       (%inject T:fixnum T:bytevector T:fixnum))
-
-      ((bytevector-u16-ref bytevector-s16-ref)
-       (%inject T:fixnum T:bytevector T:fixnum T:symbol))
-
-      ((bytevector-u8-set! bytevector-s8-set! bytevector-u16-native-set! bytevector-s16-native-set!)
-       (%inject T:void T:bytevector T:fixnum T:fixnum))
-
-      ((bytevector-u16-set! bytevector-s16-set!)
-       (%inject T:void T:bytevector T:fixnum T:fixnum T:symbol))
-
-      ((fx+         fx-         fx*         fxadd1      fxsub1
-		    fxquotient  fxremainder fxmodulo    fxsll       fxsra
-		    fxand       fxdiv       fxdiv0      fxif        fxior
-		    fxlength    fxmax       fxmin       fxmod       fxmod0
-		    fxnot       fxxor       fxlogand    fxlogor     fxlognot
-		    fxlogxor)
-       (%inject* T:fixnum T:fixnum))
-
-      ((fx= fx< fx<= fx> fx>= fx=? fx<? fx<=? fx>? fx>=?
-	    fxeven? fxodd? fxnegative? fxpositive? fxzero?
-	    fxbit-set?)
-       (%inject* T:boolean T:fixnum))
-
-      ((fl=? fl<? fl<=? fl>? fl>=?
-	     fleven? flodd? flzero? flpositive? flnegative?
-	     flfinite? flinfinite? flinteger? flnan?)
-(debug-print 'inject op)
-       (%inject* T:boolean T:flonum))
-
-      ((exact)
-       (%inject T:exact T:number))
-
-      ((inexact)
-       (%inject T:inexact T:number))
-
-      ((char=? char<? char<=? char>? char>=?
-	       char-ci=? char-ci<? char-ci<=? char-ci>? char-ci>=?)
-       (%inject* T:boolean T:char))
-
-      ((string=? string<? string<=? string>? string>=?
-		 string-ci=? string-ci<? string-ci<=? string-ci>?
-		 string-ci>=?)
-       (%inject* T:boolean T:string))
-
-      ((make-parameter
-	   record-constructor record-accessor record-constructor record-predicate
-	   condition-accessor condition-predicate
-	   enum-set-constructor enum-set-indexer
-	   make-guardian)
-       (return T:procedure))
-
-      ((fixnum-width greatest-fixnum least-fixnum)
-       (return T:fixnum))
-
-      ((not)
-       (return T:boolean))
-
-      (else
-       (return T:object))))
-
-;;; --------------------------------------------------------------------
-
-  (module (inject)
-    ;;Extend the environment with informations gathered from the fact that: after the
-    ;;safe  primitive  has  been  successfully  executed,  its  arguments  have  been
-    ;;determined as correct, so we know their type.
-    ;;
-    (define (inject op rand* env retval.tag . rand*.tag)
-      ;;This is for core primitives accepting a fixed number of arguments.
-      ;;
-      (let ((env^ (if (fx=? (length rand*.tag)
-			    (length rand*))
-		      (%extend* rand* rand*.tag env)
-		    ;;If we assume to have specified the number of operands correctly
-		    ;;above: here we have a "wrong number of args" error.
-		    env)))
-	(values (make-funcall (mk-primref op) rand*)
-		env^ retval.tag)))
-
-    (define (%extend* rand* rand.tag* env)
-      ;;Non-tail  recursive   function.   Extend   the  environment  ENV   with  type
-      ;;informations  about the  PRELEX  structs in  RAND*,  using the  CORE-TYPE-TAG
-      ;;records in RAND.TAG*.  Return the extended environment.
-      ;;
-      ;;RAND* can  be a list of  structs representing recordised code,  either PRELEX
-      ;;structs, KNOWN  structs or  some other struct  type; if a  RAND is  neither a
-      ;;PRELEX nor a KNOWN  holding a PRELEX: it is silently  skipped because no type
-      ;;informations can be associated to it.
-      ;;
-      (if (pair? rand*)
-	  (%extend (car rand*) (car rand.tag*)
-		   (%extend* (cdr rand*) (cdr rand.tag*) env))
-	env))
-
-    (define (%extend rand rand.tag env)
-      (struct-case rand
-	((known rand.expr rand.accum-tag)
-	 (%extend rand.expr (core-type-tag-and rand.tag rand.accum-tag) env))
-	((prelex)
-	 (extend-env rand rand.tag env))
-	(else
-	 ;;The RAND is not a PRELEX struct: just return the original environment.
-	 env)))
-
-    #| end of module: inject |# )
-
-;;; --------------------------------------------------------------------
-
-  (module (inject*)
-    ;;Extend the environment with informations gathered from the fact that: after the
-    ;;safe  primitive  has  been  successfully  executed,  its  arguments  have  been
-    ;;determined as correct, so we know their type.
-    ;;
-    (define (inject* op rand* env retval.tag rand.tag)
-      ;;This  is for  core  primitives accepting  any number  of  operands after  the
-      ;;mandatory ones, but with all the operands of the same type RAND.TAG.
-      ;;
-      (values (make-funcall (mk-primref op) rand*)
-	      (%extend* rand* env rand.tag)
-	      retval.tag))
-
-    (define (%extend* rand* env rand.tag)
-      ;;Non-tail  recursive   function.   Extend   the  environment  ENV   with  type
-      ;;informations about  the PRELEX structs  in RAND*, using  for all of  them the
-      ;;same CORE-TYPE-TAG record RAND.TAG.  Return the extended environment.
-      ;;
-      ;;RAND* can  be a list of  structs representing recordised code,  either PRELEX
-      ;;structs, KNOWN  structs or  some other struct  type; if a  RAND is  neither a
-      ;;PRELEX nor a KNOWN  holding a PRELEX: it is silently  skipped because no type
-      ;;informations can be associated to it.
-      ;;
-      (if (pair? rand*)
-	  (%extend (car rand*) rand.tag
-		   (%extend* (cdr rand*) env rand.tag))
-	env))
-
-    (define (%extend rand rand.tag env)
-      (struct-case rand
-	((known rand.expr rand.accum-tag)
-	 (%extend rand.expr (core-type-tag-and rand.tag rand.accum-tag) env))
-	((prelex)
-	 (extend-env rand rand.tag env))
-	(else
-	 ;;The RAND is not a PRELEX struct: just return the original environment.
-	 env)))
-
-    #| end of module: inject* |# )
-
-  #| end of module: %PROCESS-PRIMITIVE-APPLICATION |# )
 
 
 ;;;; done
